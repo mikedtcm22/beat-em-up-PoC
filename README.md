@@ -2,6 +2,34 @@
 
 One playable level that tests whether a first-person beat-em-up feels good to play. The full design is in [docs/SPEC.md](docs/SPEC.md).
 
+## Play it
+
+```bash
+godot --path .
+```
+
+This opens the Milestone 1 graybox test room: the player, three training dummies and a pipe. To open the editor instead, run `godot --path . -e`.
+
+| Action | Gamepad (Xbox) | Keyboard + mouse |
+| --- | --- | --- |
+| Move / look | Left stick / right stick | WASD / mouse |
+| Punch / kick | X / Y | Left / right mouse |
+| Jump / dodge | A / B (+ stick) | Space / Shift (+ WASD) |
+| Back elbow | RB | Q |
+| Grab, pick up, throw weapon | LB | E |
+| Quick turn | Right stick click | Tab |
+| Pause (R restarts while paused) | Menu | Esc |
+| Cycle camera: first person, side view, free fly | | F2 |
+| Debug draw: hitboxes, hurtboxes, magnetism, states | | F3 |
+| Time scale 0.25× / 1× (stand-in for the cheat menu) | | F4 |
+| Controls help | | H |
+
+The free-fly camera moves with the arrow keys and PgUp/PgDn, and turns while you hold the middle mouse button. The player keeps WASD and the mouse.
+
+**Combos:** P P P P · P P (pause) P, then mash · K K K · K (pause) K · P P K · hold P, then release (haymaker). The pause means waiting about a quarter second after a hit finishes before pressing again.
+
+**Other moves:** Jump + K (flying kick), Jump + K at the top of the jump (spin kick), K next to a downed enemy (stomp), LB on a staggered enemy, then P (knee) or K (throw).
+
 ## Repo layout
 
 ```
