@@ -114,7 +114,7 @@ func _build_moves() -> void:
 			[_sphere(&"LeftFistPoint", 0.12)])
 	_add(&"jab_2", "Jab", Vector3i(4, 3, 10), 6.0, LIGHT, FLINCH, Vector3(0.0, 0.0, 1.5),
 			[_sphere(&"RightFistPoint", 0.12)])
-	_add(&"hook", "Hook", Vector3i(6, 3, 14), 8.0, HEAVY, STAGGER, Vector3(-1.5, 0.0, 1.5),
+	_add(&"hook", "Hook", Vector3i(6, 3, 14), 8.0, HEAVY, STAGGER, Vector3(-2.2, 0.0, 0.6),
 			[_sphere(&"LeftFistPoint", 0.14)])
 	_add(&"uppercut", "Uppercut", Vector3i(8, 3, 22), 12.0, FINISHER, LAUNCH, Vector3(0.0, 6.0, 3.0),
 			[_sphere(&"RightFistPoint", 0.14)])

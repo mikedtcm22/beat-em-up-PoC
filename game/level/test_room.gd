@@ -14,14 +14,17 @@ const GRID_SHADER := "res://game/level/grid.gdshader"
 
 @export var street_length: float = 40.0
 @export var street_width: float = 14.0
-@export var player_start: Vector3 = Vector3(0.0, 0.0, 3.0)
+## The fight runs down the street (+X), as in a belt-scroller, so the side-view debug
+## camera sees attacker and target side by side.
+@export var player_start: Vector3 = Vector3(-4.0, 0.0, 0.0)
+@export_range(-180.0, 180.0, 1.0) var player_yaw_deg: float = -90.0
 @export var dummy_positions: Array[Vector3] = [
-	Vector3(-1.8, 0.0, -0.3), Vector3(0.0, 0.0, 0.0), Vector3(1.8, 0.0, -0.3)
+	Vector3(-0.8, 0.0, -1.8), Vector3(-0.5, 0.0, 0.0), Vector3(-0.8, 0.0, 1.8)
 ]
 @export var dummy_colors: Array[Color] = [
 	Color(0.86, 0.5, 0.16), Color(0.5, 0.72, 0.2), Color(0.62, 0.32, 0.72)
 ]
-@export var pipe_position: Vector3 = Vector3(3.0, 0.15, 3.0)
+@export var pipe_position: Vector3 = Vector3(-3.0, 0.15, 2.6)
 ## Build the presentation layer (cameras, HUD). Tests can turn this off.
 @export var with_presentation: bool = true
 
@@ -111,6 +114,7 @@ func _build_street() -> void:
 func _spawn_actors() -> void:
 	player = (load(PLAYER_SCENE) as PackedScene).instantiate() as PlayerCharacter
 	player.position = player_start
+	player.rotation.y = deg_to_rad(player_yaw_deg)
 	add_child(player)
 	for n in dummy_positions.size():
 		var dummy := (load(DUMMY_SCENE) as PackedScene).instantiate() as TrainingDummy
@@ -118,7 +122,8 @@ func _spawn_actors() -> void:
 		dummy.display_name = "Dummy %d" % (n + 1)
 		dummy.color = dummy_colors[n % dummy_colors.size()]
 		dummy.position = dummy_positions[n]
-		dummy.rotation.y = PI  # face +Z, toward the player start
+		var to_player := player_start - dummy_positions[n]
+		dummy.rotation.y = atan2(-to_player.x, -to_player.z)  # face the player start
 		add_child(dummy)
 		dummies.append(dummy)
 	var pipe := (load(PIPE_SCENE) as PackedScene).instantiate() as Weapon

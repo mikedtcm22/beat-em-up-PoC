@@ -96,7 +96,7 @@ Ids are the `.tres` names in `game/combat/moves/`. Each move's animation id equa
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `jab_1` | P | 4/3/10 | 6 | LIGHT | FLINCH | 0,0,1.5 | LeftFistPoint r0.12 | z ≤ −0.65, y 1.35–1.65 |
 | `jab_2` | P P | 4/3/10 | 6 | LIGHT | FLINCH | 0,0,1.5 | RightFistPoint r0.12 | z ≤ −0.65, y 1.35–1.65 |
-| `hook` | P P P | 6/3/14 | 8 | HEAVY | STAGGER | −1.5,0,1.5 | LeftFistPoint r0.14 | z ≤ −0.5, y 1.35–1.65 |
+| `hook` | P P P | 6/3/14 | 8 | HEAVY | STAGGER | −2.2,0,0.6 (snaps the head sideways) | LeftFistPoint r0.14 | z ≤ −0.5, y 1.35–1.65 |
 | `uppercut` | P P P P | 8/3/22 | 12 | FINISHER | LAUNCH | 0,6,3 | RightFistPoint r0.14 | z ≤ −0.45, y 1.4–1.8 |
 | `body_flurry` | P P · P, repeat P up to 6 | 2/2/6 | 2 | LIGHT | FLINCH (hitstun 10) | 0,0,0.3 | both FistPoints r0.12 | z ≤ −0.55, y 1.0–1.3 |
 | `shove` | flurry's auto_next | 6/3/18 | 6 | FINISHER | STAGGER (shoves into others) | 0,0,7 | both FistPoints r0.16 | z ≤ −0.55, y 1.1–1.45 |

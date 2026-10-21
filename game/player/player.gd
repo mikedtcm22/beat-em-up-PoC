@@ -351,7 +351,7 @@ func _plan_lunge(move: MoveData) -> void:
 		to.y = 0.0
 		var max_lunge := move.lunge if move.lunge > 0.0 else Tuning.data.magnet_lunge
 		var distance := clampf(to.length() - _stop_distance(move), 0.0, max_lunge)
-		set_lunge(to, distance, _lunge_frames(move))
+		set_lunge(to, distance, _lunge_frames(move), max_lunge)
 		var target_yaw := atan2(-to.x, -to.z)
 		var max_turn := deg_to_rad(Tuning.data.magnet_turn_deg)
 		_turn_left = clampf(wrapf(target_yaw - look_yaw, -PI, PI), -max_turn, max_turn)
@@ -366,7 +366,8 @@ func _update_lunge() -> void:
 	var to := _magnet_target.get_chest_position() - global_position
 	to.y = 0.0
 	_lunge_dir = to.normalized() if to.length_squared() > 0.0001 else _lunge_dir
-	_lunge_left = clampf(to.length() - _stop_distance(current_move), 0.0, _lunge_left)
+	# Re-aim every frame: close in on a target that is reeling away, within the budget.
+	_lunge_left = clampf(to.length() - _stop_distance(current_move), 0.0, _lunge_budget)
 
 
 func _stop_distance(move: MoveData) -> float:

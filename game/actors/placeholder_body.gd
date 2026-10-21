@@ -106,7 +106,13 @@ const POINT_OFFSET: Dictionary[StringName, Vector3] = {
 }
 
 ## Bones whose meshes go on CombatTypes.VIS_FP_HIDDEN when the rig is a first-person body.
-const FP_HIDDEN_BONES: Array[StringName] = [&"Neck", &"Head"]
+## Shoulders and upper arms sit right beside the eye, so in first person they filled the
+## lower corners at rest and the middle of the screen on every punch; hiding them leaves
+## forearms and fists coming in from the bottom edge. They still cast shadows and show
+## in the side and free-fly views.
+const FP_HIDDEN_BONES: Array[StringName] = [
+	&"Neck", &"Head", &"LeftShoulder", &"RightShoulder", &"LeftUpperArm", &"RightUpperArm",
+]
 
 ## Points on each sole (bone, offset at REF_HEIGHT) that PlaceholderAnims keeps at or
 ## above y = 0 when it plants a pose: heel, ball and toe tip.

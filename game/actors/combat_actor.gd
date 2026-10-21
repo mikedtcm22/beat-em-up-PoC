@@ -47,6 +47,8 @@ var _move_landed_hit: bool = false
 var _active_this_tick: bool = false
 var _lunge_dir: Vector3 = Vector3.ZERO
 var _lunge_left: float = 0.0
+## Most the lunge may still travel; _update_lunge() may re-aim within it.
+var _lunge_budget: float = 0.0
 var _lunge_frames_left: int = 0
 var _lunge_velocity: Vector3 = Vector3.ZERO
 ## Reaction a flying (or shoved) body inflicts on actors it runs into; NONE when not flying.
@@ -198,11 +200,13 @@ func start_move(move: MoveData, chain_step: int = 1, input_timing: StringName = 
 	CombatEvents.attack_started.emit(self, move, chain_step, input_timing)
 
 
-## Lunge `distance` meters along `dir` spread over `frames` sim frames.
-func set_lunge(dir: Vector3, distance: float, frames: int) -> void:
+## Lunge `distance` meters along `dir` spread over `frames` sim frames. `budget` (default
+## `distance`) caps the total, so a subclass can lengthen a lunge that chases a target.
+func set_lunge(dir: Vector3, distance: float, frames: int, budget: float = -1.0) -> void:
 	_lunge_dir = Vector3(dir.x, 0.0, dir.z).normalized()
 	_lunge_left = maxf(distance, 0.0)
-	_lunge_frames_left = maxi(frames, 1) if distance > 0.0 else 0
+	_lunge_budget = maxf(budget if budget >= 0.0 else distance, _lunge_left)
+	_lunge_frames_left = maxi(frames, 1) if _lunge_budget > 0.0 else 0
 
 
 func start_grabbed(by: CombatActor) -> void:
@@ -374,6 +378,7 @@ func _apply_move_frame() -> void:
 	if _lunge_frames_left > 0:
 		var step := _lunge_left / float(_lunge_frames_left)
 		_lunge_left -= step
+		_lunge_budget -= step
 		_lunge_frames_left -= 1
 		_lunge_velocity = _lunge_dir * step * Engine.physics_ticks_per_second
 	else:

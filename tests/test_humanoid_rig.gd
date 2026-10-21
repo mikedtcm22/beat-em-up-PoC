@@ -359,12 +359,16 @@ func test_meshes_cast_shadows_and_use_few_flat_colors() -> void:
 	assert_has(colors, rig.skin_color)
 
 
-func test_first_person_body_hides_only_head_and_neck() -> void:
+func test_first_person_body_hides_only_head_neck_and_upper_arms() -> void:
 	var fp := _rig(true)
 	var hidden := CombatTypes.bit(CombatTypes.VIS_FP_HIDDEN)
 	var default := CombatTypes.bit(CombatTypes.VIS_DEFAULT)
-	var head_meshes := _meshes_under(fp.get_attachment(&"Head")) + _meshes_under(fp.get_attachment(&"Neck"))
-	assert_gt(head_meshes.size(), 2, "head, cap, shades and neck meshes")
+	var head_meshes: Array[MeshInstance3D] = []
+	for bone: StringName in PlaceholderBody.FP_HIDDEN_BONES:
+		head_meshes.append_array(_meshes_under(fp.get_attachment(bone)))
+	assert_gt(head_meshes.size(), 6, "head, cap, shades, neck, shoulder and upper-arm meshes")
+	assert_true(_meshes_under(fp.get_attachment(&"RightLowerArm")).all(
+		func(m: MeshInstance3D) -> bool: return m.layers == default), "forearms stay visible")
 	for mesh: MeshInstance3D in _meshes_under(fp):
 		var expected := hidden if head_meshes.has(mesh) else default
 		assert_eq(mesh.layers, expected, "%s render layers" % mesh.name)

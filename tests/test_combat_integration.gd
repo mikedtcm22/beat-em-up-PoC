@@ -43,16 +43,24 @@ func _on_whiff(_attacker: Node3D, move: MoveData) -> void:
 
 
 ## Build the room; `posts` are dummy positions relative to the player (x right, -z ahead).
-func _setup(posts: Array[Vector3], presentation: bool = false) -> void:
+## `yaw_deg` overrides the player's facing (default: the room's, down the street).
+func _setup(posts: Array[Vector3], presentation: bool = false, yaw_deg: float = NAN) -> void:
+	if is_instance_valid(room):
+		room.queue_free()
+		await _ticks(2)
 	room = ROOM.instantiate()
 	room.set(&"with_presentation", presentation)
 	add_child_autofree(room)
 	await _ticks(2)
 	player = room.get(&"player")
 	player.input.scripted = true
+	if not is_nan(yaw_deg):
+		player.look_yaw = deg_to_rad(yaw_deg)
+		player.rotation.y = player.look_yaw
 	dummies.assign(room.get(&"dummies"))
 	for i in dummies.size():
-		var pos := player.global_position + posts[i] if i < posts.size() else FAR + Vector3(i * 3.0, 0.0, 0.0)
+		# Posts are in the player's frame (x right, -z ahead), whichever way the room faces it.
+		var pos := player.global_position + player.global_basis * posts[i] if i < posts.size() else FAR + Vector3(i * 3.0, 0.0, 0.0)
 		var to_player := player.global_position - pos
 		dummies[i].set_post(pos, atan2(-to_player.x, -to_player.z), true)
 	await _ticks(3)
@@ -147,6 +155,21 @@ func test_mash_punch_is_jab_jab_hook_uppercut() -> void:
 		assert_eq(landed[3].tier, CombatTypes.HitTier.FINISHER, "uppercut is a finisher")
 		assert_eq(landed[3].chain_step, 4)
 		assert_eq(landed[1].input_timing, &"chain")
+
+
+## Direction-dependent bugs (a stagger picking back vs. sideways from rounding) once made
+## the uppercut miss in only some facings, so the core chains run in several.
+func test_chains_land_whichever_way_the_player_faces() -> void:
+	for yaw: float in [0.0, -90.0, 45.0, 180.0, 135.0, -30.0]:
+		for chain: Array in [[&"P", &"P", &"P", &"P"], [&"K", &"K", &"K"]]:
+			await _setup([Vector3(0, 0, -1.6)], false, yaw)
+			for button: StringName in chain:
+				player.input.push_press(button, 2)
+				player.input.push_wait(9)
+			await _drain()
+			assert_true(await _wait_idle())
+			assert_eq(_player_hits().size(), chain.size(), "%s at yaw %.0f: every hit lands (%s)" % [
+				"".join(chain), yaw, _ids(_player_hits())])
 
 
 func test_pause_branch_flurry_ends_in_shove() -> void:
@@ -312,7 +335,7 @@ func test_stomp_hits_a_downed_dummy() -> void:
 func test_pipe_pickup_swings_and_throw() -> void:
 	await _setup([Vector3(0, 0, -1.6), Vector3(0, 0, -6.0)])
 	var pipe := get_tree().get_first_node_in_group(&"weapon") as Weapon
-	pipe.global_position = player.global_position + Vector3(0, 0.1, -0.6)
+	pipe.global_position = player.global_position + player.global_basis * Vector3(0, 0.1, -0.6)
 	pipe.linear_velocity = Vector3.ZERO
 	await _ticks(5)
 	await _press(&"GRAB", 2, 14)
@@ -336,7 +359,7 @@ func test_pipe_pickup_swings_and_throw() -> void:
 func test_pipe_breaks_after_durability_runs_out() -> void:
 	await _setup([Vector3(0, 0, -1.6)])
 	var pipe := get_tree().get_first_node_in_group(&"weapon") as Weapon
-	pipe.global_position = player.global_position + Vector3(0, 0.1, -0.6)
+	pipe.global_position = player.global_position + player.global_basis * Vector3(0, 0.1, -0.6)
 	await _ticks(5)
 	await _press(&"GRAB", 2, 14)
 	assert_true(player.holding_weapon())
@@ -369,7 +392,7 @@ func test_dodge_sidesteps_three_meters_with_iframes() -> void:
 	assert_true(await _wait_idle())
 	var moved := player.global_position - start
 	assert_almost_eq(moved.length(), Tuning.data.dodge_distance, 0.15, "about 3 m")
-	assert_gt(moved.x, 2.0, "to the right")
+	assert_gt(moved.dot(player.global_basis.x), 2.0, "to the right")
 
 
 func test_dodge_cancels_recovery() -> void:
@@ -392,10 +415,11 @@ func test_quick_turn_is_180_in_a_fifth_of_a_second() -> void:
 func test_magnetism_turns_toward_an_off_center_target() -> void:
 	var off := Vector3(0, 0, -1.5).rotated(Vector3.UP, deg_to_rad(-20.0))
 	await _setup([off])
+	var start_yaw := player.look_yaw
 	await _press(&"P", 2)
 	assert_true(await _wait_idle())
 	assert_eq(_ids(_player_hits()), [&"jab_1"])
-	var turned := rad_to_deg(absf(player.look_yaw))
+	var turned := rad_to_deg(absf(wrapf(player.look_yaw - start_yaw, -PI, PI)))
 	assert_between(turned, 5.0, Tuning.data.magnet_turn_deg + 0.5, "turned toward the target, capped")
 
 

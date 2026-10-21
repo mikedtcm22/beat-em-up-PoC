@@ -49,6 +49,10 @@ func _run() -> void:
 	player.input.scripted = true
 	dummies.assign(room.get(&"dummies"))
 	director = get_tree().get_first_node_in_group(&"camera_director")
+	# The help overlay would cover the captures; the combat log stays for timing review.
+	for child in room.get_children():
+		if child.has_method(&"set_help_visible"):
+			child.call(&"set_help_visible", false)
 	var acts: Array[Dictionary] = [
 		{title = "P P P P: jab, jab, hook, uppercut", cam = &"first_person", fn = _act_pppp},
 		{title = "P P P P (side view)", cam = &"side_view", fn = _act_pppp},
@@ -186,7 +190,7 @@ func _act_pipe() -> void:
 	var pipe := get_tree().get_first_node_in_group(&"weapon") as Weapon
 	if pipe == null:
 		return
-	pipe.global_position = player.global_position + Vector3(0, 0.1, -0.6)
+	pipe.global_position = player.global_position + player.global_basis * Vector3(0, 0.1, -0.6)
 	pipe.linear_velocity = Vector3.ZERO
 	await _ticks(10)
 	await _press(&"GRAB", 2, 16)
@@ -215,9 +219,10 @@ func _act_dodge_turn() -> void:
 func _reset(cam: StringName) -> void:
 	player.input.clear_queue()
 	player.input.scripted_move = Vector2.ZERO
-	player.global_position = Vector3(0, 0, 3)
+	player.global_position = room.get(&"player_start")
 	player.sim_velocity = Vector3.ZERO
-	player.look_yaw = 0.0
+	player.look_yaw = deg_to_rad(room.get(&"player_yaw_deg"))
+	player.rotation.y = player.look_yaw
 	player.look_pitch = deg_to_rad(-6.0)
 	player.parser.reset_chain()
 	player.parser.clear_buffer()
@@ -233,7 +238,8 @@ func _reset(cam: StringName) -> void:
 func _stage(posts: Array[Vector3]) -> void:
 	for i in dummies.size():
 		var d := dummies[i]
-		var pos := player.global_position + posts[i] if i < posts.size() else Vector3(30 + i * 3, 0, -30)
+		# Posts are in the player's frame (x right, -z ahead).
+		var pos := player.global_position + player.global_basis * posts[i] if i < posts.size() else Vector3(30 + i * 3, 0, -30)
 		var to_player := player.global_position - pos
 		d.max_health = 500.0
 		d.set_post(pos, atan2(-to_player.x, -to_player.z), true)
