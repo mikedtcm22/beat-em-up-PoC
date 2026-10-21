@@ -317,6 +317,9 @@ func test_fp_follows_body_motion_without_lag() -> void:
 func test_fp_moves_evenly_between_physics_ticks_with_interpolation() -> void:
 	# Physics interpolation on, as the project needs it, and a 144 Hz display: about 2.4
 	# frames per 60 Hz tick, so most frames land between ticks.
+	if OS.get_environment("GODOT_FIXED_FPS") != "":
+		pending("needs real-time frame pacing; tools/run_tests.sh uses --fixed-fps 60 (one tick per frame)")
+		return
 	var old_interpolation := get_tree().physics_interpolation
 	var old_max_fps := Engine.max_fps
 	get_tree().physics_interpolation = true
