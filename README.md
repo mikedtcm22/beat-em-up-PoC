@@ -30,6 +30,27 @@ The free-fly camera moves with the arrow keys and PgUp/PgDn, and turns while you
 
 **Other moves:** Jump + K (flying kick), Jump + K at the top of the jump (spin kick), K next to a downed enemy (stomp), LB on a staggered enemy, then P (knee) or K (throw).
 
+## Milestone 1 status: graybox combat
+
+Every Spec §4 combo and move can be performed and lands on the training dummies, and the side-view debug camera works:
+- **Chains:** P P P P, P P · P with the flurry mash ending in the shove, K K K, K · K, P P K, and the haymaker.
+- **Air moves:** flying kick and spin kick.
+- **Grabs:** grab, three knees, then a throw that knocks down whoever the body hits.
+- **Other moves:** back elbow, stomp, the pipe (pick up, three swings, break, throw), dodge and quick turn.
+- **Hitstop and slow-mo:** both already run on finisher-tier hits.
+- **Live tuning:** every number lives in `game/autoload/tuning_data.gd` or the move `.tres` files, ready for the Milestone 2 tuning panel.
+
+The characters are procedural placeholders. Real art, VFX and audio come in Milestones 2 and 4.
+
+**Where M1 departs from the spec, for Game-boy to rule on:**
+- **Upper arms in first person:** the player's shoulders and upper arms are hidden from the first-person camera, like the head and neck. They sit right beside the eye, and with chunky proportions they filled the screen on every punch. They still cast shadows and show in the side and free-fly views. The spec says the full body renders in first person; its fallback (a first-person-only arm pose) can replace this once real art exists.
+- **Camera position:** the first-person camera sits 12 cm ahead of the eye point (`cam_forward_offset_m`, tunable), so the guard's forearms at the chin don't fill the lower corners.
+- **Flying kick:** it dives forward and down, and its camera pitches down 25° (like the stomp) instead of the 8–12° of the standing kicks. From the air, a foot at hip height passed over a standing enemy's head.
+
+**Automated checks:**
+- `tools/run_tests.sh` runs 220 tests headless in about 5 seconds, including an end-to-end suite where a scripted player performs every combo in the real test room.
+- `tools/capture_combos.sh` records the combo bot with Movie Maker to `captures/combos.avi`, writes a hit log to `captures/bot.log`, and extracts stills for review. Pass text to run only matching acts, for example `tools/capture_combos.sh "haymaker"`.
+
 ## Repo layout
 
 ```
@@ -43,7 +64,9 @@ The free-fly camera moves with the arrow keys and PgUp/PgDn, and turns while you
 /game/fx/                toon shader, outlines, VFX scenes, comic sprites
 /game/audio/             SFX banks
 /game/level/             level scene, modules, encounter data
-/game/ui/                HUD, tuning panel
+/game/ui/                HUD, combat log, debug draw, overlays
+/game/actors/            CombatActor base and the placeholder humanoid rig
+/game/weapons/           pick-up weapons (the pipe)
 /assets/source/          .blend, raw generator output, mocap, SFX (LFS)
 /assets/export/          .glb files ready for Godot (LFS)
 /reference/dd2-nes-mission1/   level reference screenshots + notes
@@ -81,6 +104,7 @@ Checked on 2026-10-21 on the dev Mac (Apple M1, macOS 26.3).
 | Video mocap | ❓ unknown | |
 | SFX library / API | ❌ missing | `assets/source/sfx/` is empty. |
 | GUT (unit tests) | ✅ 9.7.1 | Vendored in `addons/gut/`. |
+| Movie Maker capture | ✅ works | Records at about half real-time speed on the M1; `tools/capture_combos.sh`. |
 | Gamepad | ❓ unknown | |
 | ffmpeg | ✅ installed | Useful for audio and capture processing. |
 | GPU | ⚠️ Apple M1 integrated | The spec asks for a dedicated GPU and targets an RTX 3060 on Windows. Development works on Metal, but the performance target and Windows export need a Windows test machine. |
