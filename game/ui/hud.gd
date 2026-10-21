@@ -11,9 +11,11 @@ extends CanvasLayer
 ## draws in 3D, in group "debug_draw".
 ##
 ## All time-based parts are driven from advance(delta), which _process() calls; tests can
-## turn processing off and call advance() with chosen deltas.
+## turn processing off and call advance() with chosen deltas. The HUD processes after the
+## cameras (HudStyle.PROCESS_PRIORITY), so the over-head bars follow this frame's view.
 
 ## Seconds the help overlay stays up after start before it hides itself (then H toggles).
+## Time spent paused does not count.
 @export var help_startup_seconds: float = 8.0
 
 @onready var player_panel: PlayerHealthPanel = $PlayerHealthPanel
@@ -35,6 +37,7 @@ var _help_auto_hide_left: float = 0.0
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	process_priority = HudStyle.PROCESS_PRIORITY
 	CombatEvents.hit_landed.connect(_on_hit_landed)
 	CombatEvents.attack_started.connect(combat_log.on_attack_started)
 	CombatEvents.attack_whiffed.connect(combat_log.add_whiff)
@@ -60,14 +63,16 @@ func _unhandled_input(event: InputEvent) -> void:
 ## Step every time-based part of the HUD by `delta` real seconds.
 func advance(delta: float) -> void:
 	_refresh_director()
+	# The startup help and the over-head bars count game time: they keep their remaining
+	# seconds through a pause.
+	var game_delta := 0.0 if get_tree().paused else delta
 	if _help_auto_hide_left > 0.0:
-		_help_auto_hide_left -= delta
+		_help_auto_hide_left -= game_delta
 		if _help_auto_hide_left <= 0.0:
 			help_overlay.visible = false
 	player_panel.advance(delta)
 	boss_bar.advance(delta)
-	# Over-head bars count game time: they keep their remaining seconds through a pause.
-	enemy_bars.advance(0.0 if get_tree().paused else delta)
+	enemy_bars.advance(game_delta)
 	center_dot.refresh(director)
 	camera_toast.advance(delta)
 

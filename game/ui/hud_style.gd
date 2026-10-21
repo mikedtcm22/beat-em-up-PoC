@@ -17,6 +17,14 @@ const MUTED := Color(0.62, 0.62, 0.68)
 ## Only for finisher accents (Spec §10).
 const FINISHER_ACCENT := Color(1.0, 0.42, 0.32)
 
+## process_priority of the HUD and the debug draw. They must process after the camera
+## director and its cameras (CameraDirector.PROCESS_PRIORITY = 50, game/camera/), which
+## place the view in their own _process: anything projected through the camera (over-head
+## bars) or measured from it (debug draw clearances) then uses the transform of the frame
+## being rendered instead of the previous one. Becomes CameraDirector.PROCESS_PRIORITY + 1
+## once the camera module is on the same branch.
+const PROCESS_PRIORITY := 100
+
 static var _bold_font: FontVariation
 
 

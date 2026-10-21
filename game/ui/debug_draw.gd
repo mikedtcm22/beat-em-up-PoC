@@ -11,7 +11,8 @@ extends Node3D
 ##   - each actor's debug_state_text() as a billboard Label3D above its head.
 ## Hurtboxes and labels hugging the active camera are skipped, so the player's own head
 ## does not wrap the first-person view. Actors come from group "actor". Reads only; never
-## writes simulation state.
+## writes simulation state. Processes after the cameras (HudStyle.PROCESS_PRIORITY), so
+## those camera checks use this frame's view.
 ##
 ## The node joins group "debug_draw", so a scene that also wants debug draw on its own
 ## (game/ui/debug_draw.tscn) can check for an existing one, such as the HUD's, first.
@@ -58,13 +59,18 @@ func _init() -> void:
 
 
 func _ready() -> void:
+	# Its own node (debug_draw.tscn), so it does not inherit the HUD's priority.
+	process_priority = HudStyle.PROCESS_PRIORITY
 	_material = StandardMaterial3D.new()
 	_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	_material.vertex_color_use_as_albedo = true
+	# The line colors are sRGB like every Color in the project; convert them to linear.
+	_material.vertex_color_is_srgb = true
 	_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	_material.no_depth_test = true
 	_material.disable_fog = true
-	_material.render_priority = Material.RENDER_PRIORITY_MAX
+	# Over the scene's other transparent geometry, under the state labels (outline, text).
+	_material.render_priority = Material.RENDER_PRIORITY_MAX - 2
 
 	_mesh_instance = MeshInstance3D.new()
 	_mesh_instance.name = "Lines"
@@ -94,6 +100,20 @@ func set_enabled(value: bool) -> void:
 ## The line mesh, rebuilt by rebuild() (for tests and tools).
 func get_mesh() -> ImmediateMesh:
 	return _mesh
+
+
+## The color of each line in the last rebuild(), in mesh order (for tests and tools).
+func get_line_colors() -> PackedColorArray:
+	var colors := PackedColorArray()
+	colors.resize(line_count)
+	for i: int in line_count:
+		colors[i] = _colors[i * 2]
+	return colors
+
+
+## Lines of exactly `color` in the last rebuild().
+func count_lines_of_color(color: Color) -> int:
+	return get_line_colors().count(color)
 
 
 ## State labels alive, one per actor drawn in the last rebuild().
@@ -275,6 +295,7 @@ func _update_label(actor: CombatActor) -> void:
 		label.modulate = Color(1.0, 1.0, 1.0)
 		label.outline_modulate = Color(0.0, 0.0, 0.0, 0.9)
 		label.render_priority = Material.RENDER_PRIORITY_MAX
+		label.outline_render_priority = Material.RENDER_PRIORITY_MAX - 1
 		label.layers = CombatTypes.bit(CombatTypes.VIS_DEBUG)
 		label.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		add_child(label)

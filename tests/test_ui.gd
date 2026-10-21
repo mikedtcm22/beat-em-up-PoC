@@ -187,6 +187,11 @@ func test_hud_scene_instantiates_with_every_part() -> void:
 	assert_false(_hud.boss_bar.visible, "boss bar hidden until show_boss")
 	assert_false(_hud.pause_overlay.visible)
 	assert_false(_hud.debug_draw.enabled, "debug draw off by default")
+	# Both process after the camera director and its cameras (CameraDirector.PROCESS_PRIORITY
+	# is 50), so projections use the view of the frame being drawn.
+	assert_eq(_hud.process_priority, HudStyle.PROCESS_PRIORITY)
+	assert_eq(_hud.debug_draw.process_priority, HudStyle.PROCESS_PRIORITY)
+	assert_gt(HudStyle.PROCESS_PRIORITY, 50, "after the camera director")
 	# A frame of real processing with nothing in the world must not error either.
 	_hud.set_process(true)
 	await wait_physics_frames(2)
@@ -336,6 +341,19 @@ func test_enemy_bar_from_health_drop_and_not_for_player_hits() -> void:
 	CombatEvents.health_changed.emit(enemy, 20.0, 30.0)
 	_hud.advance(0.016)
 	assert_true(_hud.enemy_bars.has_bar(enemy))
+	_hud.advance(2.1)
+	assert_false(_hud.enemy_bars.has_bar(enemy), "expired")
+	CombatEvents.health_changed.emit(enemy, 20.0, 30.0)
+	_hud.advance(0.016)
+	assert_false(_hud.enemy_bars.has_bar(enemy), "a repeat of the same health is not a hit")
+	enemy.health = 30.0
+	CombatEvents.health_changed.emit(enemy, 30.0, 30.0)
+	_hud.advance(0.016)
+	assert_false(_hud.enemy_bars.has_bar(enemy), "nor is a revive")
+	enemy.health = 25.0
+	CombatEvents.health_changed.emit(enemy, 25.0, 30.0)
+	_hud.advance(0.016)
+	assert_true(_hud.enemy_bars.has_bar(enemy), "a new drop is")
 
 
 func test_enemy_bar_hidden_behind_camera_and_dropped_when_freed() -> void:
@@ -381,6 +399,16 @@ func test_help_overlay_shows_at_start_then_toggles_with_h() -> void:
 	assert_true(_hud.help_overlay.visible, "no auto-hide after a manual toggle")
 	_hud._unhandled_input(_action_event(&"help"))
 	assert_false(_hud.help_overlay.visible, "H hides it")
+
+
+func test_help_startup_time_holds_while_paused() -> void:
+	_hud.advance(_hud.help_startup_seconds - 1.0)
+	get_tree().paused = true
+	_hud.advance(5.0)
+	get_tree().paused = false
+	assert_true(_hud.help_overlay.visible, "a pause does not use up the startup seconds")
+	_hud.advance(1.1)
+	assert_false(_hud.help_overlay.visible)
 
 
 func test_help_overlay_lists_controls_from_bindings() -> void:
@@ -486,6 +514,8 @@ func test_debug_draw_builds_hitboxes_hurtboxes_cone_and_labels() -> void:
 	var material := draw.get_mesh().surface_get_material(0) as StandardMaterial3D
 	assert_true(material.no_depth_test, "lines show through bodies")
 	assert_eq(material.shading_mode, BaseMaterial3D.SHADING_MODE_UNSHADED)
+	assert_true(material.vertex_color_use_as_albedo and material.vertex_color_is_srgb, "line colors shown as authored")
+	assert_eq(draw.count_lines_of_color(draw.hitbox_color), draw.line_count, "hitbox lines are all hitbox-colored")
 	var sphere_lines := draw.line_count
 
 	enemy.debug_hitbox_volumes.append({
@@ -513,6 +543,9 @@ func test_debug_draw_builds_hitboxes_hurtboxes_cone_and_labels() -> void:
 	rig.boxes.append(_make_hurtbox(rig, torso, Vector3(0.0, 0.9, 0.0)))
 	draw.rebuild()
 	assert_gt(draw.line_count, sphere_lines + arc_lines, "hurtboxes drawn")
+	assert_eq(draw.count_lines_of_color(draw.hitbox_color), sphere_lines + arc_lines, "arc lines are hitbox-colored")
+	assert_eq(draw.count_lines_of_color(draw.hurtbox_color), draw.line_count - sphere_lines - arc_lines,
+			"hurtbox lines are hurtbox-colored")
 	var with_hurtboxes := draw.line_count
 
 	# A hurtbox around the camera (the player's own head in first person) is skipped.
@@ -529,6 +562,15 @@ func test_debug_draw_builds_hitboxes_hurtboxes_cone_and_labels() -> void:
 	}
 	draw.rebuild()
 	assert_gt(draw.line_count, with_hurtboxes, "cone and target marker drawn")
+	var cone_lines := draw.count_lines_of_color(draw.cone_color)
+	var target_lines := draw.count_lines_of_color(draw.target_color)
+	assert_gt(cone_lines, 0, "cone lines are cone-colored")
+	assert_gt(target_lines, 0, "the target is highlighted")
+	assert_eq(with_hurtboxes + cone_lines + target_lines, draw.line_count, "nothing else drawn")
+	# Spec §11 colors: red hitboxes, green hurtboxes, a yellow cone.
+	assert_true(draw.hitbox_color.h < 0.03 or draw.hitbox_color.h > 0.97, "hitboxes red")
+	assert_between(draw.hurtbox_color.h, 0.25, 0.45, "hurtboxes green")
+	assert_between(draw.cone_color.h, 0.11, 0.19, "cone yellow")
 	assert_eq(draw.get_label_count(), 2, "one state label per actor")
 
 	draw.enabled = false

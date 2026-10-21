@@ -47,7 +47,9 @@ func on_hit_landed(hit: HitInfo) -> void:
 
 
 ## CombatEvents.health_changed: a drop on an enemy shows or refreshes its bar; any other
-## change only updates a bar that is already showing.
+## change only updates a bar that is already showing. A drop is measured from the last
+## health seen for that enemy (its max health if none), so a repeated or rising value on
+## an enemy that is already hurt does not bring its bar back.
 func on_health_changed(actor: Node3D, health: float, max_health: float) -> void:
 	if not is_instance_valid(actor):
 		return
@@ -56,7 +58,8 @@ func on_health_changed(actor: Node3D, health: float, max_health: float) -> void:
 		return
 	var bar := _find(enemy)
 	if bar == null:
-		if health < max_health:
+		var before: float = _known_health.get(enemy.get_instance_id(), max_health)
+		if health < before:
 			_touch(enemy)
 	elif health < bar.last_health:
 		_touch(enemy)
