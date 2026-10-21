@@ -1,0 +1,25 @@
+extends Node
+## Global combat event bus (autoload "CombatEvents"). The simulation emits; presentation
+## (camera, VFX, audio, HUD, rumble, debug) subscribes and never writes game state.
+
+signal attack_started(attacker: Node3D, move: MoveData, chain_step: int, input_timing: StringName)
+signal attack_whiffed(attacker: Node3D, move: MoveData)
+signal hit_landed(hit: HitInfo)
+signal windup_started(attacker: Node3D, move: MoveData)
+signal windup_ended(attacker: Node3D, interrupted: bool)
+signal knocked_down(victim: Node3D, hit: HitInfo)
+signal got_up(actor: Node3D)
+signal ko(victim: Node3D, hit: HitInfo)
+signal revived(actor: Node3D)
+signal health_changed(actor: Node3D, health: float, max_health: float)
+signal actor_state_changed(actor: Node3D, old_state: int, new_state: int)
+signal grabbed(holder: Node3D, victim: Node3D)
+signal released(holder: Node3D, victim: Node3D)
+signal thrown(holder: Node3D, victim: Node3D)
+signal weapon_picked_up(actor: Node3D, weapon: Node3D)
+signal weapon_thrown(actor: Node3D, weapon: Node3D)
+signal weapon_broke(actor: Node3D, weapon: Node3D)
+signal dodged(actor: Node3D, direction: Vector3)
+signal jumped(actor: Node3D)
+signal landed(actor: Node3D)
+signal quick_turned(actor: Node3D)

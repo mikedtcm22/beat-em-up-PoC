@@ -1,0 +1,128 @@
+class_name TuningData
+extends Resource
+## Every global tunable value (Spec §11). Per-move numbers live in each MoveData .tres.
+## Exported properties with range hints become tuning-panel sliders (Milestone 2), so
+## add new values here with @export_range and a group, never as script constants.
+
+@export_group("Player movement")
+@export_range(1.0, 12.0, 0.1) var move_speed: float = 6.0
+@export_range(5.0, 200.0, 1.0) var move_accel: float = 60.0
+@export_range(5.0, 200.0, 1.0) var move_decel: float = 80.0
+## Fraction of move_speed the player may steer with while attacking.
+@export_range(0.0, 1.0, 0.05) var attack_move_mult: float = 0.2
+@export_range(2.0, 15.0, 0.1) var jump_velocity: float = 6.5
+@export_range(5.0, 60.0, 0.5) var gravity: float = 22.0
+## A K press within this many frames of the jump's apex becomes the spin kick.
+@export_range(0, 20, 1) var apex_window_frames: int = 6
+@export_range(0.5, 6.0, 0.1) var dodge_distance: float = 3.0
+@export_range(4, 40, 1) var dodge_frames: int = 14
+@export_range(0, 30, 1) var dodge_invuln_frames: int = 8
+@export_range(4, 40, 1) var quick_turn_frames: int = 12
+## Degrees of look per pixel of mouse motion.
+@export_range(0.01, 1.0, 0.01) var mouse_sensitivity: float = 0.12
+## Degrees per second of look at full right-stick deflection.
+@export_range(30.0, 600.0, 5.0) var stick_look_speed: float = 200.0
+@export_range(0.0, 0.5, 0.01) var stick_deadzone: float = 0.15
+@export var invert_look_y: bool = false
+
+@export_group("Combo windows")
+@export_range(0, 20, 1) var input_buffer_frames: int = 8
+@export_range(0, 60, 1) var pause_min_frames: int = 12
+@export_range(0, 120, 1) var pause_max_frames: int = 30
+@export_range(6, 90, 1) var hold_frames: int = 24
+
+@export_group("Magnetism")
+@export_range(0.0, 90.0, 1.0) var magnet_half_angle_deg: float = 35.0
+@export_range(0.0, 6.0, 0.1) var magnet_range: float = 2.5
+@export_range(0.0, 3.0, 0.05) var magnet_lunge: float = 0.8
+@export_range(0.0, 45.0, 1.0) var magnet_turn_deg: float = 15.0
+## Lunges stop when the attacker's center is this close to the target's center.
+@export_range(0.4, 1.5, 0.05) var magnet_stop_distance: float = 0.85
+
+@export_group("Grab and weapons")
+@export_range(0.5, 3.0, 0.1) var grab_range: float = 1.3
+@export_range(0.0, 90.0, 1.0) var grab_half_angle_deg: float = 60.0
+@export_range(30, 600, 10) var hold_max_frames: int = 180
+@export_range(1, 5, 1) var max_knees: int = 3
+@export_range(2.0, 20.0, 0.5) var throw_speed: float = 9.0
+@export_range(0.0, 8.0, 0.5) var throw_lift: float = 3.0
+@export_range(0.5, 3.0, 0.1) var pickup_range: float = 1.5
+@export_range(1, 20, 1) var weapon_durability: int = 8
+@export_range(5.0, 30.0, 0.5) var weapon_throw_speed: float = 16.0
+@export_range(0.5, 3.0, 0.1) var stomp_range: float = 1.5
+
+@export_group("Reactions")
+@export_range(10, 90, 1) var stagger_frames: int = 40
+@export_range(30, 150, 1) var downed_frames: int = 75
+@export_range(10, 60, 1) var getup_frames: int = 30
+@export_range(0, 60, 1) var getup_invuln_frames: int = 30
+## Deceleration of knockback slides on the ground (m/s^2).
+@export_range(0.0, 60.0, 0.5) var ground_friction: float = 14.0
+## A flying body must move at least this fast (m/s) to knock down whoever it hits.
+@export_range(0.5, 15.0, 0.5) var body_impact_min_speed: float = 3.0
+@export_range(5.0, 500.0, 1.0) var dummy_health: float = 30.0
+@export_range(0.0, 10.0, 0.1) var dummy_revive_s: float = 2.5
+
+@export_group("Hit feel")
+@export_range(0.0, 300.0, 1.0) var hitstop_light_ms: float = 50.0
+@export_range(0.0, 300.0, 1.0) var hitstop_heavy_ms: float = 85.0
+@export_range(0.0, 300.0, 1.0) var hitstop_finisher_ms: float = 140.0
+@export_range(0.0, 10.0, 0.1) var cam_punch_light_deg: float = 0.5
+@export_range(0.0, 10.0, 0.1) var cam_punch_heavy_deg: float = 1.5
+@export_range(0.0, 10.0, 0.1) var cam_punch_finisher_deg: float = 3.0
+@export_range(0.0, 1.0, 0.01) var shake_light: float = 0.1
+@export_range(0.0, 1.0, 0.01) var shake_heavy: float = 0.25
+@export_range(0.0, 1.0, 0.01) var shake_finisher: float = 0.5
+@export_range(0.05, 1.0, 0.05) var slowmo_scale: float = 0.3
+@export_range(0.0, 1000.0, 10.0) var slowmo_ms: float = 250.0
+@export var impact_frame_enabled: bool = true
+
+@export_group("Camera")
+@export_range(75.0, 110.0, 1.0) var fov_deg: float = 90.0
+@export_range(0.0, 0.3, 0.005) var cam_smoothing_s: float = 0.05
+@export_range(0.0, 0.05, 0.001) var cam_bob_clamp_m: float = 0.015
+@export_range(0.0, 1.0, 0.05) var screen_shake_intensity: float = 1.0
+@export var show_center_dot: bool = true
+
+@export_group("Enemies")
+## Max simultaneous attackers; 0 = unlimited (Milestone 3).
+@export_range(0, 6, 1) var attacker_cap: int = 3
+@export_range(0.0, 1.0, 0.05) var blind_spot_priority: float = 1.0
+@export_range(0.25, 3.0, 0.05) var windup_mult: float = 1.0
+
+@export_group("Rear warning")
+@export_range(20.0, 120.0, 1.0) var rear_warning_angle_deg: float = 55.0
+@export_range(0.25, 3.0, 0.05) var rear_warning_size: float = 1.0
+@export_range(0.0, 1.0, 0.05) var rear_warning_opacity: float = 0.9
+@export var rear_warning_audio: bool = true
+
+@export_group("Debug")
+@export var god_mode: bool = false
+@export var one_hit_ko: bool = false
+
+
+func hitstop_s(tier: CombatTypes.HitTier) -> float:
+	match tier:
+		CombatTypes.HitTier.HEAVY:
+			return hitstop_heavy_ms / 1000.0
+		CombatTypes.HitTier.FINISHER:
+			return hitstop_finisher_ms / 1000.0
+	return hitstop_light_ms / 1000.0
+
+
+func shake(tier: CombatTypes.HitTier) -> float:
+	match tier:
+		CombatTypes.HitTier.HEAVY:
+			return shake_heavy
+		CombatTypes.HitTier.FINISHER:
+			return shake_finisher
+	return shake_light
+
+
+func cam_punch_deg(tier: CombatTypes.HitTier) -> float:
+	match tier:
+		CombatTypes.HitTier.HEAVY:
+			return cam_punch_heavy_deg
+		CombatTypes.HitTier.FINISHER:
+			return cam_punch_finisher_deg
+	return cam_punch_light_deg
