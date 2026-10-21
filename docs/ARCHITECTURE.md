@@ -107,8 +107,8 @@ Ids are the `.tres` names in `game/combat/moves/`. Each move's animation id equa
 | `push_kick` | P P K | 8/3/20 | 10 | FINISHER | KNOCKDOWN | 0,1.5,9 | RightFootPoint r0.16 | z ≤ −0.75, y 0.8–1.2 |
 | `haymaker` | hold P 24f, release | 14/3/26 | 18 | FINISHER | LAUNCH, breaks armor | 0,4,8 | RightFistPoint r0.16 | z ≤ −0.65, y 1.35–1.65 |
 | `flying_kick` | air K | 5/8/14 | 12 | HEAVY | KNOCKDOWN | 0,2,5 | RightFootPoint r0.18; lunge 2.0 | z ≤ −0.7, y 0.5–1.2 |
-| `spin_kick` | air K at apex | 6/10/16 | 10 | HEAVY | KNOCKDOWN | 0,2,4 | ARC r1.8, ±180° | (spin) |
-| `back_elbow` | RB | 5/3/18 | 12 | HEAVY | KNOCKDOWN | 0,2,4 | ARC r1.4, center 180°, ±50° | elbow z ≥ +0.3 |
+| `spin_kick` | air K at apex | 6/10/16 | 10 | HEAVY | KNOCKDOWN | 0,2,4 | ARC r1.8, ±180°, y −0.6–1.8 (reaches below the airborne attacker) | (spin) |
+| `back_elbow` | RB | 5/3/18 | 12 | HEAVY | KNOCKDOWN | 0,2,4 | ARC r1.4, center 180°, ±50°, y 0.6–1.8 | elbow z ≥ +0.3 |
 | `knee` | P while holding | 5/3/12 | 6 | LIGHT | FLINCH | 0,0,0 | RightKneePoint r0.18, no magnetism | z ≤ −0.35, y 0.9–1.25 |
 | `throw` | K while holding | 8/2/20 | 15 | HEAVY | THROWN | 0,3,9 (stick dir) | none (applied to held victim) | — |
 | `stomp` | K near a downed enemy | 8/3/14 | 8 | LIGHT | GROUND, hits downed only | 0,0,0 | RightFootPoint r0.22 | z ≤ −0.5, y 0.0–0.3 |
@@ -174,6 +174,14 @@ The knee count, releasing the victim on the third knee, the throw direction, dod
 - `mode: StringName`: one of `&"first_person"`, `&"side_view"` or `&"free_fly"`
 - `cycle()`: bound to `camera_cycle` (F2)
 - `active_camera() -> Camera3D`
+
+**ComboParser usage** (decisions settled during the build):
+- Interrupt branches, such as RB into the back elbow from a recovery, continue the chain: timing `&"chain"` and `chain_step + 1`. Only root branches give `&"root"` with step 1.
+- `ComboBranch.timing` only matters on a move's own branches. Root and interrupt branches ignore it.
+- The owner calls `reset_chain()` whenever a move is cut short (hit, dodge cancel, grab, KO) and whenever the context changes (jump, landing, grab or release, picking up or losing a weapon).
+- `HitInfo.input_timing` is one of `root`, `chain`, `pause`, `repeat` or `auto` from the parser. Code-applied hits add `body` (flying or shoved bodies) and `thrown` (thrown weapons).
+
+**First-person camera smoothing:** the camera follows the player's origin rigidly and damps only the eye's offset from that origin (about 0.05 s). Damping the whole world position would make the camera trail the body by speed × 0.05 s.
 
 **Input:** actions are registered by the `GameInput` autoload (`game/autoload/game_input.gd`). Mouse look comes from `GameInput.consume_mouse_delta()`. The free-fly camera uses `consume_fly_mouse_delta()` and the `fly_*` actions, so the player keeps WASD and the mouse.
 
