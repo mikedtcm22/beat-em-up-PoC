@@ -564,17 +564,20 @@ func test_shake_decays_in_real_time_during_hitstop() -> void:
 	await wait_physics_frames(1)
 	var frozen := TimeController.is_in_hitstop(player)
 	var before := cam.trauma
+	var decay_per_s := cam.trauma_decay_per_s
+	cam.update_camera(0.1)
+	var after := cam.trauma
+	# With trauma held constant, only the noise running on can move the view.
+	cam.trauma_decay_per_s = 0.0
 	cam.update_camera(DT)
 	var first := cam.global_transform
 	cam.update_camera(DT)
 	var second := cam.global_transform
-	cam.update_camera(0.1)
-	var after := cam.trauma
 	var still_frozen := TimeController.is_in_hitstop(player)
 	TimeController.clear()
 	assert_true(frozen, "the player is in hitstop while the camera updates")
 	assert_true(still_frozen, "and still is at the end")
-	assert_almost_eq(after, before - (2.0 * DT + 0.1) * cam.trauma_decay_per_s, 0.0001,
+	assert_almost_eq(after, before - 0.1 * decay_per_s, 0.0001,
 			"trauma keeps decaying in real time while the player is frozen")
 	var moved := first.origin.distance_to(second.origin)
 	var turned := first.basis.get_rotation_quaternion().angle_to(
