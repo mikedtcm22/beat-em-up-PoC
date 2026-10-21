@@ -5,7 +5,8 @@ One playable level that tests whether a first-person beat-em-up feels good to pl
 ## Repo layout
 
 ```
-/project.godot           (added once Godot is installed)
+/project.godot           Godot 4.7 project (GDScript, Forward+, Jolt, 60 Hz physics)
+/addons/gut/             GUT 9.7.1 unit-test framework (vendored)
 /game/autoload/          CombatEvents, TimeController, Tuning
 /game/player/            player scene and scripts
 /game/enemies/           one folder per archetype + shared AI
@@ -41,7 +42,7 @@ Checked on 2026-10-21 on the dev Mac (Apple M1, macOS 26.3).
 
 | Tool | Status | Notes |
 | --- | --- | --- |
-| Godot 4 (standard) | ❌ missing | Not on PATH or in /Applications. Homebrew offers 4.7.2. |
+| Godot 4 (standard) | ✅ 4.7.2 | Installed via Homebrew; `godot` is on PATH. Headless import and tests work. |
 | Blender + Blender MCP | ❌ missing | Not installed, and no Blender MCP is connected to Claude. |
 | Git | ✅ 2.50.1 | |
 | Git LFS | ✅ 3.8.0 | Initialized for this repo only. |
@@ -51,10 +52,17 @@ Checked on 2026-10-21 on the dev Mac (Apple M1, macOS 26.3).
 | Mixamo | ❓ unknown | Needs Game-boy's Adobe account. |
 | Video mocap | ❓ unknown | |
 | SFX library / API | ❌ missing | `assets/source/sfx/` is empty. |
+| GUT (unit tests) | ✅ 9.7.1 | Vendored in `addons/gut/`. |
 | Gamepad | ❓ unknown | |
 | ffmpeg | ✅ installed | Useful for audio and capture processing. |
 | GPU | ⚠️ Apple M1 integrated | The spec asks for a dedicated GPU and targets an RTX 3060 on Windows. Development works on Metal, but the performance target and Windows export need a Windows test machine. |
 
 ## Running tests
 
-Will be added with the Godot project skeleton (Milestone 0).
+```bash
+tools/run_tests.sh
+```
+
+Runs every `tests/test_*.gd` file headless with GUT and exits non-zero on failure. Pass extra GUT flags through, for example `tools/run_tests.sh -gselect=test_combo_parser`.
+
+Folders containing a `.gdignore` file (`reference/`, `docs/`, `assets/source/`, `tools/`) are skipped by Godot's importer.
