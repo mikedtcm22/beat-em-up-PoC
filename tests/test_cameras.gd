@@ -225,6 +225,31 @@ func test_cameras_hold_still_when_paused() -> void:
 		assert_true(cam.can_process(), "cameras process again after unpausing")
 
 
+func test_paused_view_holds_while_the_player_moves() -> void:
+	var player := _make_player()
+	# Under an always-processing parent (a level or UI root may be one), so the director
+	# holds still on its own account rather than by inheriting pause from the test.
+	var holder := Node3D.new()
+	holder.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child_autofree(holder)
+	var director := CameraDirector.new()
+	holder.add_child(director)
+	var cam := director.first_person_camera
+	await wait_process_frames(2)
+	var held := cam.global_transform
+	get_tree().paused = true
+	player.global_position += Vector3(2.0, 0.0, -1.0)
+	player.look_yaw = 1.0
+	await wait_process_frames(3)
+	var paused_view := cam.global_transform
+	get_tree().paused = false
+	_assert_transform_almost_eq(paused_view, held, "the view holds while paused")
+	await wait_process_frames(2)
+	assert_almost_eq(cam.global_position, player.get_eye_transform().origin, V_EPS,
+			"follows again after unpausing")
+	_assert_basis_almost_eq(cam.global_basis, player.get_look_basis(), "and turns with the look")
+
+
 func test_director_finds_late_player_and_survives_replacement() -> void:
 	var director := _make_director()
 	assert_null(director.player, "no player yet")
@@ -315,12 +340,17 @@ func test_fp_follows_body_motion_without_lag() -> void:
 
 
 func test_fp_moves_evenly_between_physics_ticks_with_interpolation() -> void:
-	# Physics interpolation on, as the project needs it, and a 144 Hz display: about 2.4
-	# frames per 60 Hz tick, so most frames land between ticks.
+	# Physics interpolation on, as the project needs it, and more frames than physics
+	# ticks: 24 Hz physics under a 60 fps frame cap gives 2.5 frames per tick, as a 144 Hz
+	# display does at 60 Hz, so most frames land between ticks. Lowering the tick rate
+	# rather than raising the frame rate keeps that true when the runner steps fixed
+	# 1/60 s frames (--fixed-fps 60) as well as in real time.
 	var old_interpolation := get_tree().physics_interpolation
 	var old_max_fps := Engine.max_fps
+	var old_ticks := Engine.physics_ticks_per_second
 	get_tree().physics_interpolation = true
-	Engine.max_fps = 144
+	Engine.max_fps = 60
+	Engine.physics_ticks_per_second = 24
 	var player := MovingPlayer.new()
 	player.name = "MovingPlayer"
 	add_child_autofree(player)
@@ -329,11 +359,14 @@ func test_fp_moves_evenly_between_physics_ticks_with_interpolation() -> void:
 	recorder.camera = director.first_person_camera
 	recorder.player = player
 	add_child_autofree(recorder)
-	await wait_physics_frames(40)
+	await wait_physics_frames(24)
+	var meters_per_tick := player.speed / float(Engine.physics_ticks_per_second)
 	get_tree().physics_interpolation = old_interpolation
 	Engine.max_fps = old_max_fps
+	Engine.physics_ticks_per_second = old_ticks
+	recorder.set_process(false)
+	player.set_physics_process(false)
 
-	var meters_per_tick := player.speed / float(Engine.physics_ticks_per_second)
 	var max_rate_error := 0.0
 	var max_body_gap := 0.0
 	var between_ticks := 0
