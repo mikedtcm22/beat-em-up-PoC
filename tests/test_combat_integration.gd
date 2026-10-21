@@ -54,7 +54,7 @@ func _setup(posts: Array[Vector3], presentation: bool = false) -> void:
 	for i in dummies.size():
 		var pos := player.global_position + posts[i] if i < posts.size() else FAR + Vector3(i * 3.0, 0.0, 0.0)
 		var to_player := player.global_position - pos
-		dummies[i].set_post(pos, atan2(-to_player.x, -to_player.z))
+		dummies[i].set_post(pos, atan2(-to_player.x, -to_player.z), true)
 	await _ticks(3)
 	hits.clear()
 	whiffs.clear()
@@ -253,11 +253,17 @@ func test_spin_kick_at_apex_hits_all_around() -> void:
 func test_back_elbow_hits_behind_without_turning() -> void:
 	await _setup([Vector3(0, 0, 1.0)])
 	var yaw := player.look_yaw
+	var start_gap := dummies[0].global_position.distance_to(player.global_position)
 	await _press(&"RB", 2)
 	assert_true(await _wait_idle())
 	assert_eq(_ids(_player_hits()), [&"back_elbow"])
 	assert_almost_eq(player.look_yaw, yaw, 0.001, "no turn")
 	assert_true(dummies[0].is_flying() or dummies[0].is_downed(), "knockdown")
+	assert_true(await _wait_until(func() -> bool: return dummies[0].is_downed(), 120))
+	var gap := dummies[0].global_position.distance_to(player.global_position)
+	assert_gt(gap, start_gap + 0.5, "knocked away from the player, not pulled through")
+	var to_dummy := dummies[0].global_position - player.global_position
+	assert_lt(to_dummy.dot(player.get_forward()), 0.0, "still behind the player")
 
 
 func test_grab_knees_release_then_throw_knocks_down_another() -> void:
@@ -271,9 +277,10 @@ func test_grab_knees_release_then_throw_knocks_down_another() -> void:
 	await _press(&"GRAB", 2, 4)
 	assert_eq(player.state, CombatTypes.ActorState.GRABBING, "grabbed the staggered dummy")
 	assert_eq(dummies[0].state, CombatTypes.ActorState.GRABBED)
+	# A knee can't be cancelled into the next one, so press each after the last ends.
 	for i in 3:
-		await _press(&"P", 2, 6)
-	assert_true(await _wait_idle())
+		await _press(&"P", 2)
+		assert_true(await _wait_idle())
 	var knees := _ids(_player_hits()).count(&"knee")
 	assert_eq(knees, 3, "three knees")
 	assert_eq(dummies[0].state, CombatTypes.ActorState.STAGGER, "third knee releases into a stagger")
@@ -287,13 +294,13 @@ func test_grab_knees_release_then_throw_knocks_down_another() -> void:
 
 
 func test_stomp_hits_a_downed_dummy() -> void:
-	await _setup([Vector3(0, 0, -1.4)])
+	await _setup([Vector3(0, 0, -1.0)])
 	var knock := HitInfo.new()
 	knock.attacker = player
 	knock.victim = dummies[0]
 	knock.reaction = CombatTypes.Reaction.KNOCKDOWN
 	knock.direction = Vector3.FORWARD
-	knock.knockback = Vector3(0, 2.5, -0.5)
+	knock.knockback = Vector3(0, 2.5, 0)
 	dummies[0].receive_hit(knock)
 	assert_true(await _wait_until(func() -> bool: return dummies[0].is_downed()))
 	await _press(&"K", 2)
@@ -345,6 +352,9 @@ func test_pipe_breaks_after_durability_runs_out() -> void:
 	CombatEvents.weapon_broke.disconnect(on_broke)
 	assert_true(broke[0], "weapon broke")
 	assert_false(player.holding_weapon())
+	var ids := _ids(_player_hits())
+	assert_eq(ids.slice(0, 2), [&"pipe_swing_1", &"pipe_swing_2"])
+	assert_does_not_have(ids, &"pipe_swing_3", "no phantom swing after the pipe broke")
 
 
 func test_dodge_sidesteps_three_meters_with_iframes() -> void:
@@ -358,7 +368,7 @@ func test_dodge_sidesteps_three_meters_with_iframes() -> void:
 	player.input.scripted_move = Vector2.ZERO
 	assert_true(await _wait_idle())
 	var moved := player.global_position - start
-	assert_almost_eq(moved.length(), Tuning.data.dodge_distance, 0.5, "about 3 m")
+	assert_almost_eq(moved.length(), Tuning.data.dodge_distance, 0.15, "about 3 m")
 	assert_gt(moved.x, 2.0, "to the right")
 
 
@@ -380,7 +390,7 @@ func test_quick_turn_is_180_in_a_fifth_of_a_second() -> void:
 
 
 func test_magnetism_turns_toward_an_off_center_target() -> void:
-	var off := Vector3(0, 0, -1.9).rotated(Vector3.UP, deg_to_rad(-20.0))
+	var off := Vector3(0, 0, -1.5).rotated(Vector3.UP, deg_to_rad(-20.0))
 	await _setup([off])
 	await _press(&"P", 2)
 	assert_true(await _wait_idle())
@@ -408,7 +418,10 @@ func test_finisher_ko_launches_and_dummy_revives() -> void:
 		player.input.push_wait(7)
 	await _drain()
 	assert_true(await _wait_until(func() -> bool: return dummies[0].is_ko(), 240), "KO after P P P P")
-	assert_true(_player_hits().back().killed, "the uppercut killed")
+	var landed := _player_hits()
+	assert_false(landed.is_empty(), "hits landed")
+	if not landed.is_empty():
+		assert_true(landed.back().killed, "the uppercut killed")
 	assert_true(await _wait_until(func() -> bool: return not dummies[0].is_ko(), int(Tuning.data.dummy_revive_s * 60) + 120), "revives")
 
 

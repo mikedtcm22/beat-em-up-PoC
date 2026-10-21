@@ -34,8 +34,8 @@ func _tick_control() -> void:
 	to_home.y = 0.0
 	if return_home and _idle_frames > 60 and to_home.length() > 0.3:
 		var dir := to_home.normalized()
-		sim_velocity.x = dir.x * 2.5
-		sim_velocity.z = dir.z * 2.5
+		sim_velocity.x = dir.x * Tuning.data.dummy_walk_speed
+		sim_velocity.z = dir.z * Tuning.data.dummy_walk_speed
 		_turn_toward(dir, 6.0)
 		rig.play_locomotion(Vector2(0.0, 1.0), 0.45)
 		return
@@ -50,12 +50,16 @@ func _tick_control() -> void:
 	rig.play_locomotion(Vector2.ZERO, 0.0)
 
 
-## Move the dummy and make `pos` the post it walks back to.
-func set_post(pos: Vector3, yaw: float = rotation.y) -> void:
+## Move the dummy and make `pos` the post it walks back to. With `fresh`, also reset it
+## to standing at full health (bots and tests stage dummies this way).
+func set_post(pos: Vector3, yaw: float = rotation.y, fresh: bool = false) -> void:
+	if fresh:
+		reset_state()
 	global_position = pos
 	rotation.y = yaw
 	_home = pos
 	sim_velocity = Vector3.ZERO
+	_idle_frames = 0
 
 
 func _tick_ko() -> void:

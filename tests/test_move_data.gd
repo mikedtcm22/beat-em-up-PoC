@@ -404,7 +404,8 @@ func test_magnetism_and_lunge() -> void:
 
 
 func test_back_elbow_pushes_backward() -> void:
-	assert_lt(_load_move(&"back_elbow").knockback.z, 0.0, "back elbow knockback points behind the attacker")
+	# Knockback z runs along attacker -> victim (radial), so +z pushes the rear victim away.
+	assert_gt(_load_move(&"back_elbow").knockback.z, 0.0, "back elbow knocks the victim away")
 
 
 func test_hitboxes() -> void:

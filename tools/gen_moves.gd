@@ -141,7 +141,7 @@ func _build_moves() -> void:
 
 	# Back elbow: arc centered behind. Height band not in the table: torso and head height.
 	var elbow := _add(&"back_elbow", "Back Elbow", Vector3i(5, 3, 18), 12.0, HEAVY, KNOCKDOWN,
-			Vector3(0.0, 2.0, -4.0), [_arc(1.4, 50.0, 180.0, Vector2(0.6, 1.8))])
+			Vector3(0.0, 2.0, 4.0), [_arc(1.4, 50.0, 180.0, Vector2(0.6, 1.8))])
 	elbow.magnetism = false
 
 	# Holding an enemy.

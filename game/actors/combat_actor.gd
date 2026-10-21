@@ -91,6 +91,11 @@ func _physics_process(delta: float) -> void:
 	elif scale > 0.0:
 		_integrate(delta * scale, scale)
 	rig.advance(delta * scale)
+	# The hit flash counts real ticks so it stays 2 frames even through hitstop.
+	if _flash_frames > 0:
+		_flash_frames -= 1
+		if _flash_frames == 0:
+			rig.set_flash(0.0)
 	if ticks > 0:
 		if _active_this_tick and current_move:
 			var hits := _hit_detector.process(current_move, move_frame)
@@ -162,8 +167,8 @@ func receive_hit(hit: HitInfo) -> bool:
 	health = maxf(0.0, health - damage)
 	hit.killed = health <= 0.0
 	CombatEvents.health_changed.emit(self, health, max_health)
-	_flash_frames = 2
-	rig.set_flash(1.0)
+	_flash_frames = Tuning.data.hit_flash_frames
+	rig.set_flash(1.0 if _flash_frames > 0 else 0.0)
 	if current_move:
 		_cancel_move()
 	_on_hit_received(hit)
@@ -223,6 +228,24 @@ func release_from_grab(push: Vector3, stagger: bool) -> void:
 	else:
 		_enter_state(CombatTypes.ActorState.FREE)
 	CombatEvents.released.emit(by, self)
+
+
+## Snap back to a fresh standing state with full health (debug tools, bots, respawns).
+func reset_state() -> void:
+	if current_move:
+		_cancel_move()
+	holder = null
+	health = max_health
+	sim_velocity = Vector3.ZERO
+	_invuln_frames = 0
+	_flying_reaction = CombatTypes.Reaction.NONE
+	_flash_frames = 0
+	rig.set_flash(0.0)
+	_set_ghost(false)
+	rig.set_hurtboxes_enabled(true)
+	_enter_state(CombatTypes.ActorState.FREE)
+	rig.play(&"idle", 0.0)
+	CombatEvents.health_changed.emit(self, health, max_health)
 
 
 func debug_state_text() -> String:
@@ -288,6 +311,11 @@ func _tick_ko() -> void:
 	pass
 
 
+## Whether AIRBORNE ends automatically on touching the floor (the player lands itself).
+func _auto_land() -> bool:
+	return true
+
+
 # --- Simulation step ----------------------------------------------------------------
 
 
@@ -295,10 +323,6 @@ func _sim_tick() -> void:
 	state_frame += 1
 	if _invuln_frames > 0:
 		_invuln_frames -= 1
-	if _flash_frames > 0:
-		_flash_frames -= 1
-		if _flash_frames == 0:
-			rig.set_flash(0.0)
 	_tick_reaction_timers()
 	if state == CombatTypes.ActorState.ATTACK and current_move:
 		_advance_move()
@@ -322,10 +346,21 @@ func _tick_reaction_timers() -> void:
 				_enter_state(CombatTypes.ActorState.FREE)
 		CombatTypes.ActorState.KO:
 			_tick_ko()
+		CombatTypes.ActorState.AIRBORNE:
+			if _auto_land() and is_on_floor() and state_frame > 2:
+				_enter_state(CombatTypes.ActorState.FREE)
 
 
 func _advance_move() -> void:
 	move_frame += 1
+	var move := current_move
+	if (
+		move_frame == move.startup + move.active
+		and move.active > 0
+		and not move.hitboxes.is_empty()
+		and not _move_landed_hit
+	):
+		CombatEvents.attack_whiffed.emit(self, move)
 	if move_frame >= current_move.total_frames():
 		var finished := current_move
 		current_move = null
@@ -344,13 +379,6 @@ func _apply_move_frame() -> void:
 	else:
 		_lunge_velocity = Vector3.ZERO
 	_active_this_tick = move.is_active(move_frame)
-	if (
-		move_frame == move.startup + move.active
-		and move.active > 0
-		and not move.hitboxes.is_empty()
-		and not _move_landed_hit
-	):
-		CombatEvents.attack_whiffed.emit(self, move)
 	_on_move_frame(move, move_frame)
 
 
@@ -395,8 +423,11 @@ func _apply_reaction(hit: HitInfo) -> void:
 		return
 	if hit.killed and reaction in [CombatTypes.Reaction.NONE, CombatTypes.Reaction.FLINCH, CombatTypes.Reaction.STAGGER, CombatTypes.Reaction.GROUND]:
 		reaction = CombatTypes.Reaction.KNOCKDOWN
-		kb = hit.direction * maxf(Vector2(kb.x, kb.z).length(), 2.5) + Vector3.UP * 3.0
+		kb = hit.direction * maxf(Vector2(kb.x, kb.z).length(), Tuning.data.ko_push) + Vector3.UP * Tuning.data.ko_lift
 	match reaction:
+		CombatTypes.Reaction.NONE:
+			if state == CombatTypes.ActorState.ATTACK:
+				_return_to_neutral()
 		CombatTypes.Reaction.FLINCH:
 			sim_velocity = Vector3(kb.x, 0.0, kb.z)
 			var stun := hit.move.hitstun if hit.move else 12
@@ -419,7 +450,7 @@ func _apply_reaction(hit: HitInfo) -> void:
 func _launch(hit: HitInfo, reaction: CombatTypes.Reaction, kb: Vector3) -> void:
 	holder = null
 	var v := kb
-	v.y = maxf(v.y, 2.5)
+	v.y = maxf(v.y, Tuning.data.min_launch_up)
 	sim_velocity = v
 	_face_up = not hit.from_behind
 	_set_ghost(true)
@@ -441,7 +472,8 @@ func _begin_flying(reaction: CombatTypes.Reaction, source: Node3D) -> void:
 
 func _land_from_flight() -> void:
 	_flying_reaction = CombatTypes.Reaction.NONE
-	sim_velocity = Vector3(sim_velocity.x * 0.35, 0.0, sim_velocity.z * 0.35)
+	var keep := Tuning.data.landing_slide_keep
+	sim_velocity = Vector3(sim_velocity.x * keep, 0.0, sim_velocity.z * keep)
 	if health <= 0.0:
 		_enter_ko()
 		return

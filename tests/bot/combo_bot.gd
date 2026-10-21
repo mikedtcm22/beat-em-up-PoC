@@ -153,9 +153,11 @@ func _act_grab() -> void:
 	await _press(&"P", 2)
 	await _wait_idle()
 	await _press(&"GRAB", 2, 10)
+	# Knees can't cancel into each other: press each one after the last ends.
 	for i in 3:
-		await _press(&"P", 2, 10)
-	await _wait_idle()
+		await _press(&"P", 2)
+		await _wait_idle()
+		await _ticks(4)
 	await _press(&"GRAB", 2, 15)
 	await _press(&"K", 2)
 
@@ -234,8 +236,7 @@ func _stage(posts: Array[Vector3]) -> void:
 		var pos := player.global_position + posts[i] if i < posts.size() else Vector3(30 + i * 3, 0, -30)
 		var to_player := player.global_position - pos
 		d.max_health = 500.0
-		d.health = 500.0
-		d.set_post(pos, atan2(-to_player.x, -to_player.z))
+		d.set_post(pos, atan2(-to_player.x, -to_player.z), true)
 	await _ticks(20)
 
 

@@ -93,6 +93,8 @@ func break_apart() -> void:
 
 
 func _set_ground_physics() -> void:
+	if holder != null:
+		return  # picked up on the frame it landed
 	freeze = false
 	collision_layer = CombatTypes.bit(CombatTypes.LAYER_PICKUP)
 	collision_mask = CombatTypes.bit(CombatTypes.LAYER_WORLD)

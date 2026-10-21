@@ -61,6 +61,29 @@ extends Resource
 @export_range(5.0, 500.0, 1.0) var dummy_health: float = 30.0
 @export_range(0.0, 10.0, 0.1) var dummy_revive_s: float = 2.5
 
+@export_group("Feel details")
+## Fraction of move speed while holding a grabbed enemy, and while airborne.
+@export_range(0.0, 1.0, 0.05) var hold_move_mult: float = 0.5
+@export_range(0.0, 1.0, 0.05) var air_control_mult: float = 0.5
+## Push given to a grabbed enemy when released (m/s).
+@export_range(0.0, 8.0, 0.1) var release_push: float = 2.5
+## Stomps stop this close to the downed body's chest; stomp targets must sit in this cone.
+@export_range(0.2, 1.2, 0.05) var stomp_stop_distance: float = 0.45
+@export_range(10.0, 120.0, 1.0) var stomp_half_angle_deg: float = 70.0
+## Frames the player can't act after landing a jump / picking up a weapon.
+@export_range(0, 20, 1) var land_lock_frames: int = 3
+@export_range(0, 30, 1) var pickup_lock_frames: int = 10
+## Every launch leaves the ground at least this fast (m/s).
+@export_range(0.0, 8.0, 0.1) var min_launch_up: float = 2.5
+## A killing light hit still knocks the victim down at least this hard (m/s).
+@export_range(0.0, 8.0, 0.1) var ko_push: float = 2.5
+@export_range(0.0, 8.0, 0.1) var ko_lift: float = 3.0
+## Fraction of horizontal speed kept when a flying body lands.
+@export_range(0.0, 1.0, 0.05) var landing_slide_keep: float = 0.35
+## Frames of white flash on a struck victim (Spec §6: 2), counted in real ticks.
+@export_range(0, 10, 1) var hit_flash_frames: int = 2
+@export_range(0.5, 6.0, 0.1) var dummy_walk_speed: float = 2.5
+
 @export_group("Hit feel")
 @export_range(0.0, 300.0, 1.0) var hitstop_light_ms: float = 50.0
 @export_range(0.0, 300.0, 1.0) var hitstop_heavy_ms: float = 85.0

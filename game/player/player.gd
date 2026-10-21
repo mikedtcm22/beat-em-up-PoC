@@ -24,8 +24,8 @@ var parser: ComboParser = ComboParser.new()
 
 var _sets: Dictionary[StringName, MoveSet] = {}
 var _weapon_throw_move: MoveData
-var _pending_pressed: Array[StringName] = []
-var _pending_released: Array[StringName] = []
+## Button edges since the last sim frame, in arrival order: [button, pressed].
+var _pending_edges: Array[Array] = []
 var _move_input: Vector2 = Vector2.ZERO
 var _magnet_target: CombatActor
 var _magnet_preview: CombatActor
@@ -69,8 +69,11 @@ func _configure_rig(r: HumanoidRig) -> void:
 func _physics_process(delta: float) -> void:
 	var frame := input.poll()
 	_move_input = frame.move
-	_pending_pressed.append_array(frame.pressed)
-	_pending_released.append_array(frame.released)
+	# Within one poll presses come before releases (a same-tick tap is press, release).
+	for button in frame.pressed:
+		_pending_edges.append([button, true])
+	for button in frame.released:
+		_pending_edges.append([button, false])
 	super._physics_process(delta)
 
 
@@ -169,12 +172,12 @@ func _feed_parser() -> void:
 	parser.pause_max_frames = Tuning.data.pause_max_frames
 	parser.hold_frames = Tuning.data.hold_frames
 	parser.tick()
-	for button in _pending_pressed:
-		parser.press(button)
-	for button in _pending_released:
-		parser.release(button)
-	_pending_pressed.clear()
-	_pending_released.clear()
+	for edge in _pending_edges:
+		if edge[1]:
+			parser.press(edge[0])
+		else:
+			parser.release(edge[0])
+	_pending_edges.clear()
 
 
 func _control_free() -> void:
@@ -183,7 +186,7 @@ func _control_free() -> void:
 		_start_quick_turn()
 	if _action_lock > 0:
 		_action_lock -= 1
-		_locomotion(1.0)
+		_locomotion(1.0, false)
 		return
 	if parser.consume(&"DODGE"):
 		_start_dodge()
@@ -201,7 +204,7 @@ func _control_free() -> void:
 
 
 func _control_air() -> void:
-	_steer(Tuning.data.move_speed, Tuning.data.move_accel * 0.5)
+	_steer(Tuning.data.move_speed, Tuning.data.move_accel * Tuning.data.air_control_mult)
 	if is_on_floor() and state_frame > 2:
 		_land()
 		return
@@ -223,7 +226,10 @@ func _control_attack() -> void:
 			_cancel_move()
 			_land()
 			return
-		_steer(Tuning.data.move_speed * 0.5, Tuning.data.move_accel * 0.25)
+		_steer(
+			Tuning.data.move_speed * Tuning.data.air_control_mult,
+			Tuning.data.move_accel * Tuning.data.air_control_mult * 0.5
+		)
 	else:
 		_steer(Tuning.data.move_speed * Tuning.data.attack_move_mult, Tuning.data.move_accel)
 	if not (move.is_recovery(move_frame) and move.can_cancel(move_frame)):
@@ -258,7 +264,7 @@ func _control_holding() -> void:
 		_release_held(true)
 		_enter_state(CombatTypes.ActorState.FREE)
 		return
-	_steer(Tuning.data.move_speed * 0.5, Tuning.data.move_accel)
+	_steer(Tuning.data.move_speed * Tuning.data.hold_move_mult, Tuning.data.move_accel)
 	_use_set(&"hold")
 	if parser.consume(&"GRAB"):
 		_release_held(false)
@@ -267,7 +273,7 @@ func _control_holding() -> void:
 	var selection := parser.select(false, _conditions())
 	if selection:
 		_start_selection(selection)
-	elif rig.current_anim() != &"hold":
+	elif rig.current_anim() != &"hold" and (rig.current_anim() != &"grab" or _hold_frames > 12):
 		rig.play(&"hold", 0.1)
 
 
@@ -275,6 +281,9 @@ func _control_holding() -> void:
 
 
 func _start_selection(selection: ComboParser.Selection) -> void:
+	if _weapon == null and selection.move.id.begins_with("pipe_swing"):
+		parser.reset_chain()
+		return
 	parser.notify_started(selection)
 	start_move(selection.move, selection.chain_step, selection.timing)
 
@@ -320,6 +329,7 @@ func _on_move_hits(move: MoveData, hits: Array[HitInfo]) -> void:
 			var broken := _weapon
 			_weapon = null
 			_use_set(&"ground")
+			parser.reset_chain()
 			CombatEvents.weapon_broke.emit(self, broken)
 			broken.break_apart()
 
@@ -361,7 +371,7 @@ func _update_lunge() -> void:
 
 func _stop_distance(move: MoveData) -> float:
 	# Stomps stand over the body; everything else stops at striking distance.
-	return 0.45 if move.hits_downed else Tuning.data.magnet_stop_distance
+	return Tuning.data.stomp_stop_distance if move.hits_downed else Tuning.data.magnet_stop_distance
 
 
 func _lunge_frames(move: MoveData) -> int:
@@ -373,21 +383,29 @@ func _lunge_frames(move: MoveData) -> int:
 func _find_magnet_target(move: MoveData) -> CombatActor:
 	var wants_downed := move != null and move.hits_downed
 	var aim := get_look_basis() * Vector3.FORWARD
-	var eye := get_eye_transform().origin
+	# Measured from chest height, so an enemy in your face isn't "below center" and
+	# losing to one farther away (the eye sits ~0.4 m above enemy chests).
+	var origin := get_chest_position()
+	var cone := deg_to_rad(Tuning.data.magnet_half_angle_deg)
 	var best: CombatActor = null
-	var best_angle := deg_to_rad(Tuning.data.magnet_half_angle_deg)
+	var best_score := INF
 	for node in get_tree().get_nodes_in_group(&"enemy"):
 		var enemy := node as CombatActor
 		if enemy == null or enemy.is_ko() or enemy.is_flying() or enemy.is_downed() != wants_downed:
 			continue
-		var to := enemy.get_chest_position() - eye
+		var to := enemy.get_chest_position() - origin
 		var flat := Vector3(to.x, 0.0, to.z)
-		if flat.length() > Tuning.data.magnet_range:
+		var dist := flat.length()
+		if dist > Tuning.data.magnet_range:
 			continue
 		# Downed bodies are below the view; judge them by heading alone.
 		var angle := aim.angle_to(to) if not wants_downed else Vector3(aim.x, 0.0, aim.z).angle_to(flat)
-		if angle <= best_angle:
-			best_angle = angle
+		if angle > cone:
+			continue
+		# Closest to screen center wins; a few degrees per meter break near-ties toward the nearer enemy.
+		var score := angle + deg_to_rad(4.0) * dist
+		if score < best_score:
+			best_score = score
 			best = enemy
 	return best
 
@@ -407,7 +425,7 @@ func _downed_target_near() -> bool:
 			continue
 		var to := enemy.get_chest_position() - global_position
 		to.y = 0.0
-		if to.length() <= Tuning.data.stomp_range and fwd.angle_to(to) <= deg_to_rad(70.0):
+		if to.length() <= Tuning.data.stomp_range and fwd.angle_to(to) <= deg_to_rad(Tuning.data.stomp_half_angle_deg):
 			return true
 	return false
 
@@ -434,11 +452,12 @@ func _update_camera_offset() -> void:
 # --- Movement -----------------------------------------------------------------------
 
 
-func _locomotion(speed_mult: float) -> void:
+func _locomotion(speed_mult: float, animate: bool = true) -> void:
 	_steer(Tuning.data.move_speed * speed_mult, Tuning.data.move_accel)
 	_cam_offset = Vector2.ZERO
-	var speed := Vector2(sim_velocity.x, sim_velocity.z).length()
-	rig.play_locomotion(_move_input, speed / Tuning.data.move_speed)
+	if animate:
+		var speed := Vector2(sim_velocity.x, sim_velocity.z).length()
+		rig.play_locomotion(_move_input, speed / Tuning.data.move_speed)
 
 
 ## Accelerate horizontal velocity toward the stick direction (relative to look yaw).
@@ -474,7 +493,7 @@ func _land() -> void:
 	_use_set(&"weapon" if _weapon else &"ground")
 	_enter_state(CombatTypes.ActorState.FREE)
 	rig.play(&"land", 0.04)
-	_action_lock = 3
+	_action_lock = Tuning.data.land_lock_frames
 	CombatEvents.landed.emit(self)
 
 
@@ -488,6 +507,8 @@ func _start_dodge() -> void:
 	var dir := (right * local.x + forward * local.y).normalized()
 	var frames := maxi(Tuning.data.dodge_frames, 1)
 	_dodge_velocity = dir * Tuning.data.dodge_distance / (frames / 60.0)
+	sim_velocity.x = _dodge_velocity.x
+	sim_velocity.z = _dodge_velocity.z
 	_enter_state(CombatTypes.ActorState.DODGE, frames)
 	_invuln_frames = Tuning.data.dodge_invuln_frames
 	var anim := &"dodge_back"
@@ -518,6 +539,10 @@ func _tick_turns() -> void:
 		look_yaw = wrapf(look_yaw + q_step, -PI, PI)
 		_quick_turn_left -= q_step
 		_quick_turn_frames -= 1
+
+
+func _auto_land() -> bool:
+	return false
 
 
 func _can_steer_body() -> bool:
@@ -595,7 +620,7 @@ func _holding_valid() -> bool:
 
 func _release_held(stagger: bool) -> void:
 	if _holding_valid():
-		_held.release_from_grab(get_forward() * 2.5, stagger)
+		_held.release_from_grab(get_forward() * Tuning.data.release_push, stagger)
 	_held = null
 	_use_set(&"weapon" if _weapon else &"ground")
 
@@ -650,5 +675,5 @@ func _pick_up(weapon: Weapon) -> void:
 	weapon.attach_to(self)
 	_use_set(&"weapon")
 	rig.play(&"pickup", 0.05)
-	_action_lock = 10
+	_action_lock = Tuning.data.pickup_lock_frames
 	CombatEvents.weapon_picked_up.emit(self, weapon)
