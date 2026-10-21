@@ -12,6 +12,7 @@ config_version=5
 
 config/name="Beat-em-Up PoC"
 config/description="First-person beat-em-up proof of concept."
+run/main_scene="res://game/level/test_room.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 
 [autoload]

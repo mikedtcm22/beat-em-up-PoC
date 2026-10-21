@@ -39,7 +39,7 @@ Rules:
 ## Coordinates and units
 
 - Meters, seconds and frames (at 60 Hz). Godot axes: +Y up, and characters face **−Z**.
-- `MoveData.knockback` is in the attacker's frame: x = the attacker's right, y = up, z = the attacker's forward (toward the victim).
+- `MoveData.knockback` is in the hit's frame. z runs along the horizontal direction from the attacker to the victim, so a positive z pushes the victim away, including for hits behind the attacker. x is that direction's right, and y is up.
 - The test room's street axis is world **X**. The side-view camera looks along −Z from +Z.
 
 ## Physics and visual layers (`CombatTypes`)
@@ -108,7 +108,7 @@ Ids are the `.tres` names in `game/combat/moves/`. Each move's animation id equa
 | `haymaker` | hold P 24f, release | 14/3/26 | 18 | FINISHER | LAUNCH, breaks armor | 0,4,8 | RightFistPoint r0.16 | z ≤ −0.65, y 1.35–1.65 |
 | `flying_kick` | air K | 5/8/14 | 12 | HEAVY | KNOCKDOWN | 0,2,5 | RightFootPoint r0.18; lunge 2.0 | z ≤ −0.7, y 0.5–1.2 |
 | `spin_kick` | air K at apex | 6/10/16 | 10 | HEAVY | KNOCKDOWN | 0,2,4 | ARC r1.8, ±180° | (spin) |
-| `back_elbow` | RB | 5/3/18 | 12 | HEAVY | KNOCKDOWN | 0,2,−4 (pushes back) | ARC r1.4, center 180°, ±50° | elbow z ≥ +0.3 |
+| `back_elbow` | RB | 5/3/18 | 12 | HEAVY | KNOCKDOWN | 0,2,4 | ARC r1.4, center 180°, ±50° | elbow z ≥ +0.3 |
 | `knee` | P while holding | 5/3/12 | 6 | LIGHT | FLINCH | 0,0,0 | RightKneePoint r0.18, no magnetism | z ≤ −0.35, y 0.9–1.25 |
 | `throw` | K while holding | 8/2/20 | 15 | HEAVY | THROWN | 0,3,9 (stick dir) | none (applied to held victim) | — |
 | `stomp` | K near a downed enemy | 8/3/14 | 8 | LIGHT | GROUND, hits downed only | 0,0,0 | RightFootPoint r0.22 | z ≤ −0.5, y 0.0–0.3 |

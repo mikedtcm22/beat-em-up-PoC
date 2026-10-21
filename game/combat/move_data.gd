@@ -20,8 +20,8 @@ extends Resource
 @export_range(0.0, 100.0, 0.5) var damage: float = 6.0
 ## Hitstun frames applied on FLINCH (STAGGER/KNOCKDOWN use Tuning durations).
 @export_range(0, 120, 1) var hitstun: int = 14
-## Knockback velocity in m/s in the attacker's frame: x = attacker's right, y = up,
-## z = attacker's forward (toward the victim).
+## Knockback velocity in m/s in the hit's frame: z = along the horizontal direction from
+## attacker to victim (positive pushes the victim away), x = that direction's right, y = up.
 @export var knockback: Vector3 = Vector3(0.0, 0.0, 1.5)
 @export var reaction: CombatTypes.Reaction = CombatTypes.Reaction.FLINCH
 @export var tier: CombatTypes.HitTier = CombatTypes.HitTier.LIGHT
