@@ -537,7 +537,11 @@ func test_weapon_set() -> void:
 func test_kick_camera_offsets() -> void:
 	for id: StringName in KICKS:
 		var move := _load_move(id)
-		assert_between(move.camera_pitch_deg, -12.0, -8.0, "%s: camera pitches down 8-12 degrees" % id)
+		if id == &"flying_kick":
+			# Diving kick from the air: the view tips further down to show the foot.
+			assert_between(move.camera_pitch_deg, -27.0, -20.0, "flying_kick: camera pitches down ~25 degrees")
+		else:
+			assert_between(move.camera_pitch_deg, -12.0, -8.0, "%s: camera pitches down 8-12 degrees" % id)
 		assert_almost_eq(move.camera_drop_m, 0.05, 0.0001, "%s: camera drops 5 cm" % id)
 	var stomp := _load_move(&"stomp")
 	assert_almost_eq(stomp.camera_pitch_deg, -25.0, 0.0001, "stomp: camera pitch")

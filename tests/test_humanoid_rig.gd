@@ -108,7 +108,8 @@ func _reach_rows() -> Array[Reach]:
 		Reach.new(&"stomp_kick", [&"RightFootPoint"], -0.75, 0.7, 1.1, 0.16, &"stand", torso, foot_bury),
 		Reach.new(&"push_kick", [&"RightFootPoint"], -0.75, 0.8, 1.2, 0.16, &"stand", torso, foot_bury),
 		Reach.new(&"haymaker", [&"RightFistPoint"], -0.65, 1.35, 1.65, 0.16, &"stand", head, fist_bury),
-		Reach.new(&"flying_kick", [&"RightFootPoint"], -0.7, 0.5, 1.2, 0.18, &"stand", torso, foot_bury),
+		# Airborne (origin 0.4-1.0 m up), so the foot aims forward and down at the chest.
+		Reach.new(&"flying_kick", [&"RightFootPoint"], -0.7, 0.35, 0.75, 0.18),
 		Reach.new(&"knee", [&"RightKneePoint"], -0.35, 0.9, 1.25, 0.18, &"held", torso),
 		Reach.new(&"stomp", [&"RightFootPoint"], -0.5, 0.0, 0.3, 0.22, &"downed"),
 		Reach.new(&"pipe_swing_1", [&"WeaponTip"], -0.7, 1.0, 1.7, 0.18, &"stand", head),
@@ -750,7 +751,9 @@ func test_kicks_come_into_first_person_view() -> void:
 	var rig := _rig(true)
 	for id: StringName in [&"front_kick", &"roundhouse", &"stomp_kick", &"push_kick", &"flying_kick"]:
 		_to_first_active_frame(rig, _move_by_id(id))
-		var view := _view(rig, &"RightFootPoint", -10.0, 0.05)
+		# The flying kick dives at the target, with the camera pitched further down.
+		var pitch := -25.0 if id == &"flying_kick" else -10.0
+		var view := _view(rig, &"RightFootPoint", pitch, 0.05)
 		assert_true(_in_fp_view(view), "%s foot in the pitched-down view (angles %s)" % [id, view])
 		assert_lt(view.y, 0.0, "%s foot in the lower part of the view" % id)
 	# Straight kicks land sole first: the ankle stays (nearly) in front of a target at

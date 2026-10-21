@@ -144,8 +144,10 @@ func _build_moves() -> void:
 	# Air moves. The spin kick's height band is not in the table: the attacker is up to
 	# about 1 m off the ground, so the band reaches below its feet to catch standing torsos.
 	var flying := _add(&"flying_kick", "Flying Kick", Vector3i(5, 8, 14), 12.0, HEAVY, KNOCKDOWN,
-			Vector3(0.0, 2.0, 5.0), [_sphere(&"RightFootPoint", 0.18)])
+			Vector3(0.0, 2.0, 5.0), [_sphere(&"RightFootPoint", 0.24)])
 	_kick(flying)
+	# A diving kick: the camera looks further down so the foot driving at the target shows.
+	flying.camera_pitch_deg = -25.0
 	flying.lunge = 2.0
 	flying.free_lunge = 2.0
 	var spin := _add(&"spin_kick", "Spin Kick", Vector3i(6, 10, 16), 10.0, HEAVY, KNOCKDOWN,

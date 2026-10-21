@@ -106,7 +106,7 @@ Ids are the `.tres` names in `game/combat/moves/`. Each move's animation id equa
 | `stomp_kick` | K · K | 10/3/22 | 16 | FINISHER | LAUNCH | 0,2,10 | RightFootPoint r0.16 | z ≤ −0.75, y 0.7–1.1 |
 | `push_kick` | P P K | 8/3/20 | 10 | FINISHER | KNOCKDOWN | 0,1.5,9 | RightFootPoint r0.16 | z ≤ −0.75, y 0.8–1.2 |
 | `haymaker` | hold P 24f, release | 14/3/26 | 18 | FINISHER | LAUNCH, breaks armor | 0,4,8 | RightFistPoint r0.16 | z ≤ −0.65, y 1.35–1.65 |
-| `flying_kick` | air K | 5/8/14 | 12 | HEAVY | KNOCKDOWN | 0,2,5 | RightFootPoint r0.18; lunge 2.0 | z ≤ −0.7, y 0.5–1.2 |
+| `flying_kick` | air K | 5/8/14 | 12 | HEAVY | KNOCKDOWN | 0,2,5 | RightFootPoint r0.24; lunge 2.0 | z ≤ −0.7, y 0.35–0.75 (airborne: aims forward and down) |
 | `spin_kick` | air K at apex | 6/10/16 | 10 | HEAVY | KNOCKDOWN | 0,2,4 | ARC r1.8, ±180°, y −0.6–1.8 (reaches below the airborne attacker) | (spin) |
 | `back_elbow` | RB | 5/3/18 | 12 | HEAVY | KNOCKDOWN | 0,2,4 | ARC r1.4, center 180°, ±50°, y 0.6–1.8 | elbow z ≥ +0.3 |
 | `knee` | P while holding | 5/3/12 | 6 | LIGHT | FLINCH | 0,0,0 | RightKneePoint r0.18, no magnetism | z ≤ −0.35, y 0.9–1.25 |
@@ -119,7 +119,7 @@ Ids are the `.tres` names in `game/combat/moves/`. Each move's animation id equa
 | `impact_body_knockdown` | flying body hits someone | 0/1/0 | 5 | HEAVY | KNOCKDOWN | 0,2,3 | none | — |
 | `impact_body_stagger` | shoved body hits someone | 0/1/0 | 0 | LIGHT | STAGGER | 0,0,2 | none | — |
 
-Kicks use the camera offsets `camera_pitch_deg = −10` and `camera_drop_m = 0.05`. The stomp uses −25 and 0.05.
+Kicks use the camera offsets `camera_pitch_deg = −10` and `camera_drop_m = 0.05`. The flying kick (it dives at the target) and the stomp use −25, with the same 0.05 drop.
 
 **Move sets** (`game/combat/movesets/`):
 - `ground.tres`

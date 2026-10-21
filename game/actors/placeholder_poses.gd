@@ -1278,10 +1278,12 @@ static func _flying_kick() -> MovePoses:
 		&"Chest": Vector3(0.0, 0.0, 0.0),
 		&"Neck": Vector3(-5.0, 0.0, 0.0),
 		&"Head": Vector3(-3.0, 0.0, 0.0),
-		&"RightUpperLeg": Vector3(111.5, 1.0, 2.0),
-		&"RightLowerLeg": Vector3(-35.0, 0.0, 0.0),
-		&"RightFoot": Vector3(7.0, 0.0, 0.0),
-		&"RightToes": Vector3(32.0, 0.0, 0.0),
+		# The kicker is 0.4-1.0 m off the ground, so the straight leg drives forward and
+		# down: the foot lands at a standing target's chest, not over its head.
+		&"RightUpperLeg": Vector3(67.0, 1.0, 2.0),
+		&"RightLowerLeg": Vector3(-8.0, 0.0, 0.0),
+		&"RightFoot": Vector3(30.0, 0.0, 0.0),
+		&"RightToes": Vector3(20.0, 0.0, 0.0),
 		&"LeftUpperLeg": Vector3(50.0, 0.0, -4.0),
 		&"LeftLowerLeg": Vector3(-120.0, 0.0, 0.0),
 		&"LeftUpperArm": Vector3(50.0, 0.0, -40.0),

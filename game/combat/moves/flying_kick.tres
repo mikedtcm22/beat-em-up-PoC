@@ -7,7 +7,7 @@
 [sub_resource type="Resource" id="hitbox_0"]
 script = ExtResource("hitbox_spec_gd")
 point = &"RightFootPoint"
-radius = 0.18
+radius = 0.24
 
 [resource]
 script = ExtResource("move_data_gd")
@@ -23,5 +23,5 @@ tier = 1
 hitboxes = Array[ExtResource("hitbox_spec_gd")]([SubResource("hitbox_0")])
 lunge = 2.0
 free_lunge = 2.0
-camera_pitch_deg = -10.0
+camera_pitch_deg = -25.0
 camera_drop_m = 0.05
