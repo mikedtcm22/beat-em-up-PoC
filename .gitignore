@@ -1,0 +1,29 @@
+# Secrets (Spec §2): API keys live here, never in git.
+.env
+.env.*
+!.env.example
+
+# Godot
+.godot/
+.import/
+*.translation
+export_presets.cfg.bak
+/builds/
+
+# Movie Maker captures and other local renders
+/captures/
+
+# Blender
+*.blend1
+*.blend2
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
