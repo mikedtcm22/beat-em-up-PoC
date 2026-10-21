@@ -44,8 +44,6 @@ extends Resource
 @export_range(0.0, 90.0, 1.0) var grab_half_angle_deg: float = 60.0
 @export_range(30, 600, 10) var hold_max_frames: int = 180
 @export_range(1, 5, 1) var max_knees: int = 3
-@export_range(2.0, 20.0, 0.5) var throw_speed: float = 9.0
-@export_range(0.0, 8.0, 0.5) var throw_lift: float = 3.0
 @export_range(0.5, 3.0, 0.1) var pickup_range: float = 1.5
 @export_range(1, 20, 1) var weapon_durability: int = 8
 @export_range(5.0, 30.0, 0.5) var weapon_throw_speed: float = 16.0

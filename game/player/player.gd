@@ -617,7 +617,8 @@ func _throw_held(move: MoveData) -> void:
 	hit.region = CombatTypes.Region.TORSO
 	hit.contact_point = victim.get_chest_position()
 	hit.direction = dir
-	hit.knockback = dir * Tuning.data.throw_speed + Vector3.UP * Tuning.data.throw_lift
+	# throw.tres knockback, turned toward the stick direction (z along it, y up).
+	hit.knockback = dir * move.knockback.z + dir.cross(Vector3.UP) * move.knockback.x + Vector3.UP * move.knockback.y
 	hit.from_behind = victim.get_forward().dot(dir) > 0.0
 	hit.physics_frame = Engine.get_physics_frames()
 	hit.move_frame = move_frame
