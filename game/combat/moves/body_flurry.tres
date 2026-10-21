@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="MoveData" format=3 uid="uid://c4iavcfujjo0w"]
+
+[ext_resource type="Script" uid="uid://c7u6g52wmmok0" path="res://game/combat/combo_branch.gd" id="combo_branch_gd"]
+[ext_resource type="Script" uid="uid://cgv6sg6uflq2j" path="res://game/combat/hitbox_spec.gd" id="hitbox_spec_gd"]
+[ext_resource type="Script" uid="uid://difuwhwjj1vue" path="res://game/combat/move_data.gd" id="move_data_gd"]
+[ext_resource type="Resource" uid="uid://dcdbwc7j50s18" path="res://game/combat/moves/shove.tres" id="shove"]
+
+[sub_resource type="Resource" id="hitbox_0"]
+script = ExtResource("hitbox_spec_gd")
+point = &"LeftFistPoint"
+
+[sub_resource type="Resource" id="hitbox_1"]
+script = ExtResource("hitbox_spec_gd")
+
+[resource]
+script = ExtResource("move_data_gd")
+id = &"body_flurry"
+display_name = "Body Blow"
+startup = 2
+active = 2
+recovery = 6
+damage = 2.0
+hitstun = 10
+knockback = Vector3(0, 0, 0.3)
+hitboxes = Array[ExtResource("hitbox_spec_gd")]([SubResource("hitbox_0"), SubResource("hitbox_1")])
+repeat_input = &"P"
+repeat_max = 6
+auto_next = ExtResource("shove")

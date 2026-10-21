@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="MoveSet" format=3 uid="uid://jho3o71jfjll"]
+
+[ext_resource type="Script" uid="uid://c7u6g52wmmok0" path="res://game/combat/combo_branch.gd" id="combo_branch_gd"]
+[ext_resource type="Resource" uid="uid://c188kyp0prk3g" path="res://game/combat/moves/flying_kick.tres" id="flying_kick"]
+[ext_resource type="Script" uid="uid://dn23gy67ktucq" path="res://game/combat/move_set.gd" id="move_set_gd"]
+[ext_resource type="Resource" uid="uid://ds1tbl3mdvwvk" path="res://game/combat/moves/spin_kick.tres" id="spin_kick"]
+
+[sub_resource type="Resource" id="root_0"]
+script = ExtResource("combo_branch_gd")
+input = &"K"
+move = ExtResource("spin_kick")
+require = &"at_apex"
+
+[sub_resource type="Resource" id="root_1"]
+script = ExtResource("combo_branch_gd")
+input = &"K"
+move = ExtResource("flying_kick")
+
+[resource]
+script = ExtResource("move_set_gd")
+id = &"air"
+root_branches = Array[ExtResource("combo_branch_gd")]([SubResource("root_0"), SubResource("root_1")])
