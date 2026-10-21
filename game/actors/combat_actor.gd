@@ -173,7 +173,8 @@ func receive_hit(hit: HitInfo) -> bool:
 	return true
 
 
-## Begin executing `move` (from FREE, a cancellable recovery, or a chain).
+## Begin executing `move` (from FREE, a cancellable recovery, or a chain). Call it from
+## _tick_control() or a move hook: the sim tick then applies the move's frame 0.
 func start_move(move: MoveData, chain_step: int = 1, input_timing: StringName = &"root") -> void:
 	current_move = move
 	move_frame = 0
@@ -190,7 +191,6 @@ func start_move(move: MoveData, chain_step: int = 1, input_timing: StringName = 
 	rig.play_move(move)
 	_plan_lunge(move)
 	CombatEvents.attack_started.emit(self, move, chain_step, input_timing)
-	_apply_move_frame()
 
 
 ## Lunge `distance` meters along `dir` spread over `frames` sim frames.
