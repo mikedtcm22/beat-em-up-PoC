@@ -177,6 +177,10 @@ func _follow(delta: float) -> Transform3D:
 	var move_offset := player.get_camera_move_offset()
 	var root := player.get_global_transform_interpolated().origin
 	var eye_position := root + _eye_offset + Vector3.DOWN * move_offset.y
+	var ahead := player.get_look_basis() * Vector3.FORWARD
+	ahead.y = 0.0
+	if ahead.length_squared() > 0.0001:
+		eye_position += ahead.normalized() * Tuning.data.cam_forward_offset_m
 	var look := _add_pitch(player.get_look_basis(), deg_to_rad(move_offset.x))
 	return Transform3D(look, eye_position)
 

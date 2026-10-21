@@ -418,9 +418,10 @@ func _apply_reaction(hit: HitInfo) -> void:
 	var reaction := hit.reaction
 	var kb := hit.knockback
 	if state == CombatTypes.ActorState.GRABBED and hit.attacker == holder and reaction != CombatTypes.Reaction.THROWN:
-		# Knees on a held victim: flinch in place, stay held (unless this hit killed).
+		# Knees on a held victim: jolt in the hunched held pose and stay held (unless this
+		# hit killed). A standing flinch here would raise the head into the holder's view.
 		if not hit.killed:
-			rig.play(_flinch_anim(hit), 0.03)
+			rig.play(&"held", 0.03)
 			return
 		holder = null
 	if hit.killed and state == CombatTypes.ActorState.DOWNED:

@@ -71,6 +71,8 @@ const V_EPS := Vector3(EPS, EPS, EPS)
 
 func before_each() -> void:
 	Tuning.apply(TuningData.new())
+	# These tests pin the camera to the eye point; the forward offset has its own test.
+	Tuning.data.cam_forward_offset_m = 0.0
 
 
 func after_all() -> void:
@@ -368,6 +370,19 @@ func test_fp_uses_look_basis_never_the_head() -> void:
 	cam.update_camera(DT)
 	_assert_basis_almost_eq(cam.global_basis, player.get_look_basis(),
 			"rotation follows look at once")
+
+
+func test_fp_sits_ahead_of_the_eye_along_the_flat_look() -> void:
+	Tuning.data.cam_forward_offset_m = 0.12
+	var player := _make_player(Vector3(1.0, 0.0, 1.0))
+	player.look_yaw = 0.8
+	player.look_pitch = -0.6
+	var cam := _make_fp(player)
+	cam.update_camera(DT)
+	var flat := Vector3(-sin(0.8), 0.0, -cos(0.8))
+	var expected := player.get_eye_transform().origin + flat * 0.12
+	assert_almost_eq(cam.global_position.distance_to(expected), 0.0, 0.002,
+			"0.12 m ahead of the eye, level even when looking down")
 
 
 func test_fp_applies_move_pitch_and_drop() -> void:
