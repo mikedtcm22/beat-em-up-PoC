@@ -50,6 +50,14 @@ func _tick_control() -> void:
 	rig.play_locomotion(Vector2.ZERO, 0.0)
 
 
+## Move the dummy and make `pos` the post it walks back to.
+func set_post(pos: Vector3, yaw: float = rotation.y) -> void:
+	global_position = pos
+	rotation.y = yaw
+	_home = pos
+	sim_velocity = Vector3.ZERO
+
+
 func _tick_ko() -> void:
 	if state_frame >= int(Tuning.data.dummy_revive_s * 60.0):
 		_revive()
