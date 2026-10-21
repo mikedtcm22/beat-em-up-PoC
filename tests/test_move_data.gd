@@ -4,8 +4,14 @@ extends GutTest
 ##
 ## Loads the .tres files and walks the branch graph directly (no ComboParser), so these
 ## tests pin the data, not the cadence logic. Only design-fixed values are pinned: damage,
-## tiers, reactions, branch shape, rig points, arc angles and camera ranges. Frame data,
-## knockback and radii are tuning values and only get sanity checks.
+## tiers, reactions, the exact branch graph, rig points, arc angles and camera ranges.
+## Frame data, knockback and radii are tuning values and only get sanity checks.
+##
+## Knockback uses the radial hit frame HitDetector builds: z points along the horizontal
+## direction from attacker to victim (positive pushes the victim away), x is its right,
+## y is up. ARCHITECTURE.md still describes the attacker-facing frame and lists the back
+## elbow as 0,2,-4; under the radial frame that would pull a victim behind the attacker
+## forward through them, so the data uses +4 (see tools/gen_moves.gd).
 
 const MOVES_DIR := "res://game/combat/moves/"
 const SETS_DIR := "res://game/combat/movesets/"
@@ -94,6 +100,90 @@ const KICKS := [&"front_kick", &"roundhouse", &"spinning_heel", &"stomp_kick", &
 const INPUTS := [CombatTypes.IN_PUNCH, CombatTypes.IN_KICK, CombatTypes.IN_PUNCH_HOLD, CombatTypes.IN_BACK]
 const CONDITIONS := [&"", CombatTypes.COND_DOWNED_TARGET_NEAR, CombatTypes.COND_AT_APEX]
 
+const P := CombatTypes.IN_PUNCH
+const K := CombatTypes.IN_KICK
+const P_HOLD := CombatTypes.IN_PUNCH_HOLD
+const RB := CombatTypes.IN_BACK
+const NORMAL := CombatTypes.BranchTiming.NORMAL
+const PAUSE := CombatTypes.BranchTiming.PAUSE
+const DOWNED_NEAR := CombatTypes.COND_DOWNED_TARGET_NEAR
+const AT_APEX := CombatTypes.COND_AT_APEX
+
+## ARCHITECTURE "Move sets": each set's root branches, in order, as
+## [input, timing, require, target move id].
+const EXPECTED_ROOTS := {
+	&"ground": [
+		[K, NORMAL, DOWNED_NEAR, &"stomp"],
+		[K, NORMAL, &"", &"front_kick"],
+		[P, NORMAL, &"", &"jab_1"],
+		[P_HOLD, NORMAL, &"", &"haymaker"],
+		[RB, NORMAL, &"", &"back_elbow"],
+	],
+	&"air": [
+		[K, NORMAL, AT_APEX, &"spin_kick"],
+		[K, NORMAL, &"", &"flying_kick"],
+	],
+	&"hold": [
+		[P, NORMAL, &"", &"knee"],
+		[K, NORMAL, &"", &"throw"],
+	],
+	&"weapon": [
+		[P, NORMAL, &"", &"pipe_swing_1"],
+		[K, NORMAL, DOWNED_NEAR, &"stomp"],
+		[K, NORMAL, &"", &"front_kick"],
+		[RB, NORMAL, &"", &"back_elbow"],
+	],
+}
+
+## ARCHITECTURE "Move sets": each set's interrupt branches, same form. Air and hold have none.
+const EXPECTED_INTERRUPTS := {
+	&"ground": [[RB, NORMAL, &"", &"back_elbow"]],
+	&"air": [],
+	&"hold": [],
+	&"weapon": [[RB, NORMAL, &"", &"back_elbow"]],
+}
+
+## ARCHITECTURE "Branches": every move's own branches, in order, same form.
+const EXPECTED_BRANCHES := {
+	&"jab_1": [[P, NORMAL, &"", &"jab_2"]],
+	&"jab_2": [
+		[P, NORMAL, &"", &"hook"],
+		[K, NORMAL, &"", &"push_kick"],
+		[P, PAUSE, &"", &"body_flurry"],
+	],
+	&"hook": [[P, NORMAL, &"", &"uppercut"]],
+	&"uppercut": [],
+	&"body_flurry": [],
+	&"shove": [],
+	&"front_kick": [
+		[K, NORMAL, &"", &"roundhouse"],
+		[K, PAUSE, &"", &"stomp_kick"],
+	],
+	&"roundhouse": [[K, NORMAL, &"", &"spinning_heel"]],
+	&"spinning_heel": [],
+	&"stomp_kick": [],
+	&"push_kick": [],
+	&"haymaker": [],
+	&"flying_kick": [],
+	&"spin_kick": [],
+	&"back_elbow": [],
+	&"knee": [],
+	&"throw": [],
+	&"stomp": [],
+	&"pipe_swing_1": [[P, NORMAL, &"", &"pipe_swing_2"]],
+	&"pipe_swing_2": [[P, NORMAL, &"", &"pipe_swing_3"]],
+	&"pipe_swing_3": [],
+	&"weapon_throw": [],
+	&"impact_body_knockdown": [],
+	&"impact_body_stagger": [],
+}
+
+## ARCHITECTURE "Branches": moves that repeat or chain automatically, as
+## [repeat_input, repeat_max, auto_next id]. Every other move has none of these.
+const EXPECTED_REPEATS := {
+	&"body_flurry": [P, 6, &"shove"],
+}
+
 
 # --- Helpers ----------------------------------------------------------------------------
 
@@ -175,6 +265,37 @@ func _root_index(move_set: MoveSet, move_id: StringName) -> int:
 		if branch != null and branch.move != null and branch.move.id == move_id:
 			return i
 	return -1
+
+
+## One branch in ARCHITECTURE notation, e.g. "K [downed_target_near] -> stomp" or
+## "P (PAUSE) -> body_flurry", so whole lists compare and diff readably.
+func _branch_text(input: StringName, timing: int, require: StringName, target: String) -> String:
+	var text := String(input)
+	if timing != NORMAL:
+		text += " (%s)" % CombatTypes.BranchTiming.find_key(timing)
+	if require != &"":
+		text += " [%s]" % require
+	return "%s -> %s" % [text, target]
+
+
+## The actual branches, in order, in the same notation as `_expected_texts()`.
+func _branch_texts(branches: Array[ComboBranch]) -> PackedStringArray:
+	var texts := PackedStringArray()
+	for branch: ComboBranch in branches:
+		if branch == null:
+			texts.append("<null branch>")
+			continue
+		var target := String(branch.move.id) if branch.move != null else "<null move>"
+		texts.append(_branch_text(branch.input, branch.timing, branch.require, target))
+	return texts
+
+
+## Expected [input, timing, require, target id] entries in `_branch_texts()` notation.
+func _expected_texts(entries: Array) -> PackedStringArray:
+	var texts := PackedStringArray()
+	for entry: Array in entries:
+		texts.append(_branch_text(entry[0], entry[1], entry[2], String(entry[3])))
+	return texts
 
 
 func _resource_paths() -> PackedStringArray:
@@ -316,6 +437,47 @@ func test_finisher_tier_matches_branch_graph() -> void:
 			assert_eq(move.tier, FINISHER, "%s ends a chain, so it is a finisher" % id)
 
 
+# --- Exact branch graph -----------------------------------------------------------------
+
+func test_move_sets_match_architecture_exactly() -> void:
+	# Whole ordered lists, so an extra, missing or reordered branch (e.g. a spurious
+	# conditional root ahead of P -> jab_1) fails even when the combo walks still resolve.
+	assert_eq(EXPECTED_ROOTS.size(), SET_IDS.size(), "every move set has expected roots")
+	assert_eq(EXPECTED_INTERRUPTS.size(), SET_IDS.size(), "every move set has expected interrupts")
+	for set_id: StringName in SET_IDS:
+		var move_set := _load_set(set_id)
+		assert_not_null(move_set, "loads: %s" % set_id)
+		if move_set == null:
+			continue
+		assert_eq(_branch_texts(move_set.root_branches), _expected_texts(EXPECTED_ROOTS[set_id]),
+				"%s: root branches, in order" % set_id)
+		assert_eq(_branch_texts(move_set.interrupt_branches), _expected_texts(EXPECTED_INTERRUPTS[set_id]),
+				"%s: interrupt branches, in order" % set_id)
+
+
+func test_move_branches_match_architecture_exactly() -> void:
+	for id: StringName in TABLE:
+		assert_true(EXPECTED_BRANCHES.has(id), "%s: expected branches are listed" % id)
+	assert_eq(EXPECTED_BRANCHES.size(), TABLE.size(), "expected branches cover only table moves")
+	for id: StringName in EXPECTED_BRANCHES:
+		var move := _load_move(id)
+		assert_not_null(move, "loads: %s" % id)
+		if move == null:
+			continue
+		assert_eq(_branch_texts(move.branches), _expected_texts(EXPECTED_BRANCHES[id]),
+				"%s: branches, in order" % id)
+
+
+func test_repeats_and_auto_next_match_architecture_exactly() -> void:
+	for id: StringName in TABLE:
+		var move := _load_move(id)
+		var expected: Array = EXPECTED_REPEATS.get(id, [&"", 0, &""])
+		assert_eq(move.repeat_input, expected[0], "%s: repeat_input" % id)
+		assert_eq(move.repeat_max, expected[1], "%s: repeat_max" % id)
+		var auto_next: StringName = move.auto_next.id if move.auto_next != null else &""
+		assert_eq(auto_next, expected[2], "%s: auto_next" % id)
+
+
 # --- Move sets ----------------------------------------------------------------------------
 
 func test_ground_set_roots() -> void:
@@ -403,9 +565,18 @@ func test_magnetism_and_lunge() -> void:
 	assert_almost_eq(flying.free_lunge, 2.0, 0.0001, "flying kick lunges 2 m with no target")
 
 
-func test_back_elbow_pushes_backward() -> void:
-	# Knockback z runs along attacker -> victim (radial), so +z pushes the rear victim away.
-	assert_gt(_load_move(&"back_elbow").knockback.z, 0.0, "back elbow knocks the victim away")
+func test_back_elbow_pushes_victim_away() -> void:
+	# Radial frame: +z pushes the victim away from the attacker. The back elbow hits
+	# victims behind, so +z pushes them further behind; a negative z would throw them
+	# forward through the attacker.
+	assert_gt(_load_move(&"back_elbow").knockback.z, 0.0,
+			"back elbow: positive knockback z pushes the victim away from the attacker")
+
+
+func test_no_move_pulls_its_victim_toward_the_attacker() -> void:
+	for id: StringName in TABLE:
+		assert_gte(_load_move(id).knockback.z, 0.0,
+				"%s: knockback z >= 0 (radial frame: negative z pulls the victim in)" % id)
 
 
 func test_hitboxes() -> void:

@@ -5,11 +5,18 @@ extends SceneTree
 ## from docs/ARCHITECTURE.md ("Moves (Spec §4) and their data", "Move sets", "Branches").
 ##
 ## Usage, from the project root:
+##     godot --headless --import --quit     (build the class cache; required on a fresh clone)
 ##     godot --headless -s tools/gen_moves.gd
 ##     godot --headless --import --quit     (refresh the editor's file and UID caches)
 ##     tools/run_tests.sh -gselect=test_move_data
 ## tools/ has a .gdignore, so the editor never imports this script, but -s loads it by
-## path just fine. Exit code 0 means every file was saved and passed the checks below.
+## path. It uses the contract class_names (MoveData, MoveSet, ComboBranch, CombatTypes),
+## which only resolve once .godot/ holds the global class cache; that is why the first
+## import step is needed. Without it the script fails to parse ("Could not find type
+## MoveData"), writes nothing, and Godot STILL exits 0.
+## Success is the "gen_moves: wrote N moves and M move sets" line. When the script runs,
+## any failed save or check prints "gen_moves: FAILED" and exits 1, but a parse error
+## exits 0, so check for that line rather than trusting the exit code alone.
 ##
 ## The .tres files are the runtime source of truth. Re-running this script OVERWRITES
 ## every move and move set with the starting values below, so once tuning starts either
@@ -95,6 +102,12 @@ func _init() -> void:
 
 ## The move table (docs/ARCHITECTURE.md). Frame data, knockback and radii are starting
 ## values for tuning; damage values are fixed by Spec §4.
+##
+## Knockback is in the radial hit frame used by HitDetector: z points along the horizontal
+## direction from attacker to victim (positive pushes the victim away), x is that
+## direction's right, y is up. ARCHITECTURE.md and the move_data.gd comment still describe
+## the attacker-facing frame, which cannot work for the 360-degree spin kick or the
+## rear-facing back elbow (one of them would pull its victims through the attacker).
 func _build_moves() -> void:
 	# Punch chain: P P P P, P P · P (flurry), P P K, and the held-P haymaker.
 	_add(&"jab_1", "Jab", Vector3i(4, 3, 10), 6.0, LIGHT, FLINCH, Vector3(0.0, 0.0, 1.5),
@@ -140,6 +153,9 @@ func _build_moves() -> void:
 	spin.magnetism = false
 
 	# Back elbow: arc centered behind. Height band not in the table: torso and head height.
+	# The table lists knockback 0,2,-4 ("pushes back", written for the attacker-facing
+	# frame). In the radial frame the victim behind is pushed further behind by +z, so the
+	# sign flips here; -4 would throw the victim forward through the attacker.
 	var elbow := _add(&"back_elbow", "Back Elbow", Vector3i(5, 3, 18), 12.0, HEAVY, KNOCKDOWN,
 			Vector3(0.0, 2.0, 4.0), [_arc(1.4, 50.0, 180.0, Vector2(0.6, 1.8))])
 	elbow.magnetism = false
