@@ -1,0 +1,7 @@
+[gd_scene format=3 uid="uid://br8cmdba7oejl"]
+
+[ext_resource type="Script" uid="uid://bb6lle3jx671k" path="res://game/ui/debug_draw.gd" id="1_debug"]
+
+[node name="DebugDraw" type="Node3D"]
+process_mode = 3
+script = ExtResource("1_debug")
