@@ -9,8 +9,16 @@ extends Camera3D
 ## Smoothing: the camera follows the player's origin rigidly and damps only the eye's
 ## offset from that origin, with time constant Tuning.data.cam_smoothing_s. Head-bone
 ## jitter from the animation is steadied, while walking, lunges, dodges and knockback
-## never leave the view trailing behind the head. With physics interpolation enabled the
-## origin used is the interpolated one, so the view stays smooth above 60 fps.
+## never leave the view trailing behind the head.
+##
+## Even motion at frame rates other than 60 fps needs project physics interpolation
+## (physics/common/physics_interpolation = true). The origin is read with
+## get_global_transform_interpolated(), which then lies between the last two physics
+## ticks, so the view moves evenly at any frame rate and in step with the interpolated
+## body. With interpolation off that call returns the latest tick, and the view moves in
+## 60 Hz steps (as do the body and every other actor), which judders on faster displays.
+## The camera does not smooth those steps on its own: the full body renders in first
+## person (Spec §5) and would then jitter against the view instead.
 
 ## Seconds a camera punch takes to snap out and spring back to rest.
 @export_range(0.03, 0.5, 0.01) var punch_duration_s: float = 0.12
@@ -111,11 +119,29 @@ func add_trauma(amount: float) -> void:
 
 
 ## Start a camera punch that peaks at `kick_deg` (x = pitch, positive looks up; y = yaw,
-## positive turns left) and springs back over punch_duration_s. Overlapping punches add.
+## positive turns left) and springs back over punch_duration_s. A punch that arrives while
+## another is still snapping out (one strike hitting several victims) joins it: one punch
+## toward their combined direction, as strong as the stronger of the two. Later punches
+## overlap, but the total never exceeds the strongest live punch.
 func add_punch(kick_deg: Vector2) -> void:
 	if kick_deg.is_zero_approx():
 		return
-	_punches.append(Vector3(deg_to_rad(kick_deg.x), deg_to_rad(kick_deg.y), 0.0))
+	var kick := Vector2(deg_to_rad(kick_deg.x), deg_to_rad(kick_deg.y))
+	var attack_s := punch_duration_s * punch_attack_share
+	for i: int in _punches.size():
+		var live := _punches[i]
+		if live.z >= attack_s:
+			continue
+		var peak := Vector2(live.x, live.y)
+		var strength := maxf(peak.length(), kick.length())
+		var combined := peak + kick
+		if combined.is_zero_approx():
+			# Opposite kicks cancel: keep the stronger one's direction.
+			combined = peak if peak.length() >= kick.length() else kick
+		combined = combined.normalized() * strength
+		_punches[i] = Vector3(combined.x, combined.y, live.z)
+		return
+	_punches.append(Vector3(kick.x, kick.y, 0.0))
 
 
 ## Current punch rotation in degrees (x = pitch, y = yaw).
@@ -183,12 +209,16 @@ func _effects_transform() -> Transform3D:
 	return Transform3D(Basis.from_euler(rotation_rad), offset)
 
 
-## Sum of the live punches in radians (x = pitch, y = yaw).
+## Sum of the live punches in radians (x = pitch, y = yaw), no longer than the strongest
+## live punch's peak, so overlapping hits never punch harder than their tier.
 func _punch_rad() -> Vector2:
 	var total := Vector2.ZERO
+	var strongest := 0.0
 	for punch: Vector3 in _punches:
-		total += Vector2(punch.x, punch.y) * _punch_envelope(punch.z / punch_duration_s)
-	return total
+		var peak := Vector2(punch.x, punch.y)
+		total += peak * _punch_envelope(punch.z / punch_duration_s)
+		strongest = maxf(strongest, peak.length())
+	return total.limit_length(strongest)
 
 
 ## Smooth noise in -1..1, one independent channel per shake axis.

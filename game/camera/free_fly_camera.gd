@@ -15,6 +15,11 @@ const PITCH_LIMIT_RAD := PI * 89.0 / 180.0
 
 var _yaw: float = 0.0
 var _pitch: float = 0.0
+## True from activate_from() until the start transform is copied, which waits until this
+## camera is in the tree.
+var _activation_pending: bool = false
+## The camera to start from, or null to stay put.
+var _activation_source: Camera3D = null
 
 
 func _init() -> void:
@@ -27,15 +32,17 @@ func _process(delta: float) -> void:
 
 
 ## Start where `source` is, with its field of view, so switching does not jump. With a
-## null source it stays where it is.
+## null source it stays where it is. Outside the tree (a director switching modes before
+## it is added) the transform is copied on this camera's first update in the tree, when
+## the source has been placed.
 func activate_from(source: Camera3D) -> void:
 	if source != null:
-		global_transform = source.global_transform
 		fov = source.fov
 		keep_aspect = source.keep_aspect
-	var euler := global_basis.get_euler()
-	_pitch = euler.x
-	_yaw = euler.y
+	_activation_source = source
+	_activation_pending = true
+	if is_inside_tree():
+		_finish_activation()
 	# Drop look motion gathered before this camera took over.
 	GameInput.consume_fly_mouse_delta()
 
@@ -43,6 +50,8 @@ func activate_from(source: Camera3D) -> void:
 ## Advance one presentation frame of `delta` real seconds from the fly_* actions and the
 ## fly mouse delta. Only the current camera moves; otherwise the mouse delta is discarded.
 func update_camera(delta: float) -> void:
+	if _activation_pending and is_inside_tree():
+		_finish_activation()
 	var look_pixels := GameInput.consume_fly_mouse_delta()
 	if not current:
 		return
@@ -67,3 +76,15 @@ func fly(delta: float, move: Vector3, look_pixels: Vector2) -> void:
 	var axes := global_basis.orthonormalized()
 	var velocity := (axes.x * input.x + Vector3.UP * input.y + axes.z * input.z) * fly_speed
 	global_position += velocity * delta
+
+
+## Copy the pending source's transform (when it is still around and placed) and take the
+## look angles from where this camera now points. Needs this camera in the tree.
+func _finish_activation() -> void:
+	if is_instance_valid(_activation_source) and _activation_source.is_inside_tree():
+		global_transform = _activation_source.global_transform
+	_activation_source = null
+	_activation_pending = false
+	var euler := global_basis.get_euler()
+	_pitch = euler.x
+	_yaw = euler.y

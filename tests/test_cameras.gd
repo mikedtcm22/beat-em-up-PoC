@@ -38,6 +38,32 @@ class FakePlayer extends PlayerCharacter:
 		return walking
 
 
+## A fake player that walks along +X at a constant speed in its physics ticks.
+class MovingPlayer extends FakePlayer:
+	var speed: float = 6.0
+
+	func _physics_process(delta: float) -> void:
+		global_position.x += speed * delta
+
+
+## Records, after the cameras have run each process frame, the physics time (ticks plus
+## the interpolation fraction) and where the camera and the rendered player are along X.
+class FrameRecorder extends Node:
+	var camera: Camera3D
+	var player: Node3D
+	var ticks: Array[float] = []
+	var camera_x: Array[float] = []
+	var player_x: Array[float] = []
+
+	func _init() -> void:
+		process_priority = CameraDirector.PROCESS_PRIORITY + 10
+
+	func _process(_delta: float) -> void:
+		ticks.append(float(Engine.get_physics_frames()) + Engine.get_physics_interpolation_fraction())
+		camera_x.append(camera.global_position.x)
+		player_x.append(player.get_global_transform_interpolated().origin.x)
+
+
 const DT := 1.0 / 60.0
 const EPS := 0.0005
 const V_EPS := Vector3(EPS, EPS, EPS)
@@ -288,6 +314,45 @@ func test_fp_follows_body_motion_without_lag() -> void:
 			"moving the whole body moves the camera at once; only head motion is smoothed")
 
 
+func test_fp_moves_evenly_between_physics_ticks_with_interpolation() -> void:
+	# Physics interpolation on, as the project needs it, and a 144 Hz display: about 2.4
+	# frames per 60 Hz tick, so most frames land between ticks.
+	var old_interpolation := get_tree().physics_interpolation
+	var old_max_fps := Engine.max_fps
+	get_tree().physics_interpolation = true
+	Engine.max_fps = 144
+	var player := MovingPlayer.new()
+	player.name = "MovingPlayer"
+	add_child_autofree(player)
+	var director := _make_director()
+	var recorder := FrameRecorder.new()
+	recorder.camera = director.first_person_camera
+	recorder.player = player
+	add_child_autofree(recorder)
+	await wait_physics_frames(40)
+	get_tree().physics_interpolation = old_interpolation
+	Engine.max_fps = old_max_fps
+
+	var meters_per_tick := player.speed / float(Engine.physics_ticks_per_second)
+	var max_rate_error := 0.0
+	var max_body_gap := 0.0
+	var between_ticks := 0
+	# Skip the first frames while the interpolation history fills up.
+	for i: int in range(6, recorder.ticks.size()):
+		max_body_gap = maxf(max_body_gap, absf(recorder.camera_x[i] - recorder.player_x[i]))
+		var elapsed := recorder.ticks[i] - recorder.ticks[i - 1]
+		if elapsed < 0.05:
+			continue
+		if absf(elapsed - roundf(elapsed)) > 0.05:
+			between_ticks += 1
+		var rate := (recorder.camera_x[i] - recorder.camera_x[i - 1]) / elapsed
+		max_rate_error = maxf(max_rate_error, absf(rate - meters_per_tick))
+	assert_gt(between_ticks, 10, "many frames advanced by part of a tick")
+	assert_lt(max_rate_error, 0.002,
+			"every frame moves the view in proportion to the time it covers: even steps")
+	assert_lt(max_body_gap, 0.0005, "the view stays with the interpolated body")
+
+
 func test_fp_uses_look_basis_never_the_head() -> void:
 	var player := _make_player(Vector3(1.0, 0.0, 1.0))
 	player.look_yaw = 0.8
@@ -385,6 +450,8 @@ func test_trauma_adds_clamps_and_decays() -> void:
 
 
 func test_shake_from_player_hit_moves_view_then_returns_to_rest() -> void:
+	# No camera punch, so whatever moves the view is the hit's trauma shake alone.
+	Tuning.set_value(&"cam_punch_finisher_deg", 0.0)
 	var player := _make_player()
 	var cam := _make_fp(player)
 	var dummy := _make_dummy(Vector3(0.0, 0.0, -0.9))
@@ -397,10 +464,13 @@ func test_shake_from_player_hit_moves_view_then_returns_to_rest() -> void:
 	var max_angle := 0.0
 	for i: int in 20:
 		cam.update_camera(DT)
+		assert_eq(cam.get_punch_deg(), Vector2.ZERO, "no punch at 0 degrees")
 		var view := cam.view_transform()
 		max_offset = maxf(max_offset, cam.global_position.distance_to(view.origin))
-		max_angle = maxf(max_angle, (view.basis.inverse() * cam.global_basis).get_euler().abs().x)
-	assert_gt(max_offset + max_angle, 0.0005, "the view shakes")
+		var local_rot := (view.basis.inverse() * cam.global_basis).get_euler().abs()
+		max_angle = maxf(max_angle, maxf(local_rot.x, maxf(local_rot.y, local_rot.z)))
+	assert_gt(max_offset, 0.001, "the hit's shake moves the view (a punch never offsets it)")
+	assert_gt(max_angle, deg_to_rad(0.05), "the hit's shake turns the view")
 
 	_run_fp(cam, 1.0)
 	assert_true(cam.is_settled(), "trauma and punch gone after a second")
@@ -474,6 +544,83 @@ func test_punch_toward_contact_when_attacking_springs_back() -> void:
 	assert_lt(peak_forward.x, 0.0, "the camera actually turned left")
 	assert_eq(cam.get_punch_deg(), Vector2.ZERO, "sprung back within 0.12 s")
 	_assert_transform_almost_eq(cam.global_transform, cam.view_transform(), "at rest")
+
+
+## Highest get_punch_deg() length while updating `cam` for `seconds` in small steps.
+func _peak_punch_deg(cam: FirstPersonCamera, seconds: float) -> float:
+	var peak := 0.0
+	var dt := 1.0 / 480.0
+	for i: int in roundi(seconds / dt):
+		cam.update_camera(dt)
+		peak = maxf(peak, cam.get_punch_deg().length())
+	return peak
+
+
+func test_same_frame_hits_punch_once_at_the_tier_value() -> void:
+	Tuning.set_value(&"screen_shake_intensity", 0.0)
+	var player := _make_player()
+	var cam := _make_fp(player)
+	cam.update_camera(DT)
+	var eye := player.get_eye_transform().origin
+	var tier_deg := Tuning.data.cam_punch_finisher_deg
+
+	# One strike hits two victims standing close together, ahead and to the left.
+	var a := _make_dummy(Vector3(-0.5, 0.0, -0.8))
+	var b := _make_dummy(Vector3(-0.4, 0.0, -0.9))
+	CombatEvents.hit_landed.emit(_hit(player, a, CombatTypes.HitTier.FINISHER,
+			eye + Vector3(-0.5, -0.2, -0.6), Vector3.FORWARD))
+	CombatEvents.hit_landed.emit(_hit(player, b, CombatTypes.HitTier.FINISHER,
+			eye + Vector3(-0.4, -0.2, -0.7), Vector3.FORWARD))
+	assert_almost_eq(_peak_punch_deg(cam, 0.15), tier_deg, 0.02,
+			"two victims in one frame punch once, at the tier's degrees")
+	assert_eq(cam.get_punch_deg(), Vector2.ZERO, "and springs back")
+
+	# A spin kick hits three victims: left, center and right at chest height.
+	for x: float in [-0.9, 0.0, 0.9]:
+		var victim := _make_dummy(Vector3(x, 0.0, -0.9))
+		CombatEvents.hit_landed.emit(_hit(player, victim, CombatTypes.HitTier.FINISHER,
+				eye + Vector3(x, -0.3, -0.7), Vector3.FORWARD))
+	assert_lte(_peak_punch_deg(cam, 0.15), tier_deg + 0.02, "three victims: still one punch")
+
+	# A second hit landing while the first punch springs back overlaps it, capped too.
+	CombatEvents.hit_landed.emit(_hit(player, a, CombatTypes.HitTier.FINISHER,
+			eye + Vector3(-0.5, 0.0, -0.6), Vector3.FORWARD))
+	var peak := _peak_punch_deg(cam, 0.04)
+	CombatEvents.hit_landed.emit(_hit(player, b, CombatTypes.HitTier.FINISHER,
+			eye + Vector3(-0.5, 0.0, -0.6), Vector3.FORWARD))
+	peak = maxf(peak, _peak_punch_deg(cam, 0.2))
+	assert_almost_eq(peak, tier_deg, 0.02, "overlapping punches never pass the tier's degrees")
+	assert_eq(cam.get_punch_deg(), Vector2.ZERO, "all punches over")
+
+
+func test_punches_while_snapping_out_merge_into_one() -> void:
+	var player := _make_player()
+	var single := _make_fp(player)
+	var merged := _make_fp(player)
+	single.update_camera(DT)
+	merged.update_camera(DT)
+	single.add_punch(Vector2(0.0, 3.0))
+	merged.add_punch(Vector2(0.0, 3.0))
+	merged.add_punch(Vector2(0.0, 3.0))
+	merged.add_punch(Vector2(0.0, 1.5))
+	var dt := 1.0 / 480.0
+	for i: int in roundi(0.15 / dt):
+		single.update_camera(dt)
+		merged.update_camera(dt)
+		assert_almost_eq(merged.get_punch_deg(), single.get_punch_deg(), Vector2(0.001, 0.001),
+				"same curve as one punch at %.3f s" % (i * dt))
+
+	# Two kicks at right angles: one punch halfway between them, as strong as the stronger.
+	merged.add_punch(Vector2(2.0, 0.0))
+	merged.add_punch(Vector2(0.0, 3.0))
+	var peak := Vector2.ZERO
+	for i: int in roundi(0.15 / dt):
+		merged.update_camera(dt)
+		if merged.get_punch_deg().length() > peak.length():
+			peak = merged.get_punch_deg()
+	assert_almost_eq(peak.length(), 3.0, 0.02, "as strong as the stronger kick")
+	assert_almost_eq(peak.normalized(), Vector2(2.0, 3.0).normalized(), Vector2(0.01, 0.01),
+			"toward the combined direction")
 
 
 func test_punch_dips_for_centered_contact() -> void:
@@ -585,6 +732,29 @@ func test_free_fly_starts_at_previous_camera() -> void:
 	_assert_transform_almost_eq(other.free_fly_camera.global_transform,
 			other.first_person_camera.global_transform, "starts at the first-person view")
 	assert_eq(other.free_fly_camera.keep_aspect, Camera3D.KEEP_WIDTH, "keeps the FP projection")
+
+
+func test_free_fly_chosen_before_the_director_enters_the_tree() -> void:
+	var player := _make_player(Vector3(1.0, 0.0, -2.0))
+	player.look_yaw = 0.7
+	player.look_pitch = -0.3
+	var director := CameraDirector.new()
+	watch_signals(director)
+	director.set_mode(CameraDirector.MODE_FREE_FLY)
+	assert_signal_emit_count(director, "camera_changed", 1)
+	add_child_autofree(director)
+	assert_eq(director.mode, CameraDirector.MODE_FREE_FLY)
+	assert_true(director.free_fly_camera.current, "free fly is current once in the tree")
+	assert_eq(_current_count(director), 1, "exactly one current camera")
+	# The first-person camera places itself before free fly in a frame (tree order).
+	director.first_person_camera.update_camera(DT)
+	director.free_fly_camera.update_camera(DT)
+	_assert_transform_almost_eq(director.free_fly_camera.global_transform,
+			director.first_person_camera.global_transform, "starts at the first-person view")
+	director.free_fly_camera.fly(0.0, Vector3.ZERO, Vector2(0.0, 50.0))
+	var pitch := -0.3 - deg_to_rad(50.0 * Tuning.data.mouse_sensitivity)
+	_assert_basis_almost_eq(director.free_fly_camera.global_basis,
+			Basis.from_euler(Vector3(pitch, 0.7, 0.0)), "looks on from the copied view")
 
 
 func test_free_fly_moves_in_look_direction_frame_rate_independent() -> void:
