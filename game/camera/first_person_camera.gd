@@ -61,6 +61,9 @@ func _init() -> void:
 	top_level = true
 	keep_aspect = Camera3D.KEEP_WIDTH
 	near = 0.05
+	# Also set in _init, so a camera that takes over this view before it enters the tree
+	# (free fly picked early) copies the right field of view.
+	fov = Tuning.data.fov_deg
 	set_cull_mask_value(CombatTypes.VIS_FP_HIDDEN, false)
 	physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
 	_noise.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH

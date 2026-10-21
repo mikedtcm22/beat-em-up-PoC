@@ -10,6 +10,10 @@ extends GutTest
 class FakePlayer extends PlayerCharacter:
 	## Eye point relative to the player's origin.
 	var eye_offset: Vector3 = Vector3(0.0, 1.68, 0.0)
+	## Rotation of the head bone's EyePoint. Deliberately unlike any look basis the tests
+	## use, as an animated head would be, so a camera that took its rotation from the head
+	## instead of the look would fail.
+	var head_basis: Basis = Basis.from_euler(Vector3(0.35, -0.6, 0.25))
 	var walking: bool = false
 	var move_offset: Vector2 = Vector2.ZERO
 
@@ -29,7 +33,7 @@ class FakePlayer extends PlayerCharacter:
 		pass
 
 	func get_eye_transform() -> Transform3D:
-		return Transform3D(get_look_basis(), global_position + eye_offset)
+		return Transform3D(head_basis, global_position + eye_offset)
 
 	func get_camera_move_offset() -> Vector2:
 		return move_offset
@@ -390,6 +394,8 @@ func test_fp_uses_look_basis_never_the_head() -> void:
 	var player := _make_player(Vector3(1.0, 0.0, 1.0))
 	player.look_yaw = 0.8
 	player.look_pitch = -0.4
+	assert_false(player.get_eye_transform().basis.is_equal_approx(player.get_look_basis()),
+			"the head points elsewhere than the look, so the test can tell them apart")
 	var cam := _make_fp(player)
 	cam.update_camera(DT)
 	_assert_basis_almost_eq(cam.global_basis, player.get_look_basis(), "rotation = look basis")
@@ -398,6 +404,11 @@ func test_fp_uses_look_basis_never_the_head() -> void:
 	cam.update_camera(DT)
 	_assert_basis_almost_eq(cam.global_basis, player.get_look_basis(),
 			"rotation follows look at once")
+	# The head animates (a flinch snaps it sideways); the view does not turn with it.
+	player.head_basis = Basis.from_euler(Vector3(-0.5, 1.2, -0.4))
+	cam.update_camera(DT)
+	_assert_basis_almost_eq(cam.global_basis, player.get_look_basis(),
+			"head motion never turns the view")
 
 
 func test_fp_applies_move_pitch_and_drop() -> void:
@@ -544,12 +555,31 @@ func test_shake_intensity_zero_disables_shake() -> void:
 func test_shake_decays_in_real_time_during_hitstop() -> void:
 	var player := _make_player()
 	var cam := _make_fp(player)
-	cam.add_trauma(0.5)
+	# Driven by hand below; its own frames would also decay the trauma.
+	cam.set_process(false)
+	cam.update_camera(DT)
+	cam.add_trauma(0.8)
+	# Hitstop freezes from the next physics tick on.
 	TimeController.hitstop([player], 1.0)
+	await wait_physics_frames(1)
+	var frozen := TimeController.is_in_hitstop(player)
+	var before := cam.trauma
+	cam.update_camera(DT)
+	var first := cam.global_transform
+	cam.update_camera(DT)
+	var second := cam.global_transform
 	cam.update_camera(0.1)
+	var after := cam.trauma
+	var still_frozen := TimeController.is_in_hitstop(player)
 	TimeController.clear()
-	assert_almost_eq(cam.trauma, 0.5 - 0.1 * cam.trauma_decay_per_s, 0.0001,
-			"trauma keeps decaying while the player is frozen")
+	assert_true(frozen, "the player is in hitstop while the camera updates")
+	assert_true(still_frozen, "and still is at the end")
+	assert_almost_eq(after, before - (2.0 * DT + 0.1) * cam.trauma_decay_per_s, 0.0001,
+			"trauma keeps decaying in real time while the player is frozen")
+	var moved := first.origin.distance_to(second.origin)
+	var turned := first.basis.get_rotation_quaternion().angle_to(
+			second.basis.get_rotation_quaternion())
+	assert_gt(moved + turned, 0.0005, "the shake keeps moving while the player is frozen")
 
 
 func test_punch_toward_contact_when_attacking_springs_back() -> void:
@@ -784,10 +814,66 @@ func test_free_fly_chosen_before_the_director_enters_the_tree() -> void:
 	director.free_fly_camera.update_camera(DT)
 	_assert_transform_almost_eq(director.free_fly_camera.global_transform,
 			director.first_person_camera.global_transform, "starts at the first-person view")
+	assert_almost_eq(director.free_fly_camera.fov, Tuning.data.fov_deg, 0.0001,
+			"with the first-person field of view, not Camera3D's default")
+	assert_eq(director.free_fly_camera.keep_aspect, Camera3D.KEEP_WIDTH, "and its projection")
 	director.free_fly_camera.fly(0.0, Vector3.ZERO, Vector2(0.0, 50.0))
 	var pitch := -0.3 - deg_to_rad(50.0 * Tuning.data.mouse_sensitivity)
 	_assert_basis_almost_eq(director.free_fly_camera.global_basis,
 			Basis.from_euler(Vector3(pitch, 0.7, 0.0)), "looks on from the copied view")
+
+
+func test_free_fly_levels_shake_roll_on_activation() -> void:
+	var player := _make_player(Vector3(1.0, 0.0, -2.0))
+	player.look_yaw = 0.4
+	player.look_pitch = -0.2
+	var director := _make_director()
+	var fp := director.first_person_camera
+	var fly := director.free_fly_camera
+	fp.update_camera(DT)
+	fp.add_trauma(1.0)
+	# Shake until the view is visibly rolled.
+	var rolled := false
+	for i: int in 30:
+		fp.update_camera(DT)
+		if absf(fp.global_basis.get_euler().z) > deg_to_rad(0.5):
+			rolled = true
+			break
+	assert_true(rolled, "the shake rolls the first-person view")
+	director.set_mode(CameraDirector.MODE_FREE_FLY)
+	assert_almost_eq(fly.global_position, fp.global_position, V_EPS, "starts at the shaken view")
+	assert_almost_eq(-fly.global_basis.z, -fp.global_basis.z, V_EPS, "looking the same way")
+	assert_almost_eq(fly.global_basis.get_euler().z, 0.0, 0.0001, "with the roll leveled")
+	var start := fly.global_basis.get_euler()
+	fly.fly(0.0, Vector3.ZERO, Vector2(1.0, 0.0))
+	var yaw := start.y - deg_to_rad(Tuning.data.mouse_sensitivity)
+	_assert_basis_almost_eq(fly.global_basis, Basis.from_euler(Vector3(start.x, yaw, 0.0)),
+			"a 1-pixel mouse move turns 1 pixel's worth and nothing snaps")
+
+
+func test_free_fly_steers_with_the_fly_mouse_delta_only() -> void:
+	# Another camera holds the viewport, or the first camera added would become current.
+	var other := Camera3D.new()
+	add_child_autofree(other)
+	other.make_current()
+	var cam := FreeFlyCamera.new()
+	add_child_autofree(cam)
+	# Driven by hand below; its own frames would also consume the deltas.
+	cam.set_process(false)
+	cam.activate_from(null)
+	cam.make_current()
+	var player_delta := Vector2(7.0, -3.0)
+	GameInput.consume_mouse_delta()
+	GameInput._mouse_delta = player_delta
+	GameInput._fly_mouse_delta = Vector2(50.0, 0.0)
+	cam.update_camera(DT)
+	var player_left := GameInput.consume_mouse_delta()
+	var fly_left := GameInput.consume_fly_mouse_delta()
+	var yaw := -deg_to_rad(50.0 * Tuning.data.mouse_sensitivity)
+	_assert_basis_almost_eq(cam.global_basis, Basis.from_euler(Vector3(0.0, yaw, 0.0)),
+			"turned by the fly mouse delta alone")
+	assert_eq(fly_left, Vector2.ZERO, "the fly delta was consumed")
+	assert_eq(player_left, player_delta, "the player's mouse delta is left for the player")
 
 
 func test_free_fly_moves_in_look_direction_frame_rate_independent() -> void:
