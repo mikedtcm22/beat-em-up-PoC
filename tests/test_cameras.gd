@@ -75,8 +75,9 @@ const V_EPS := Vector3(EPS, EPS, EPS)
 
 func before_each() -> void:
 	Tuning.apply(TuningData.new())
-	# These tests pin the camera to the eye point; the forward offset has its own test.
+	# These tests pin the camera to the eye point; the lens offsets have their own test.
 	Tuning.data.cam_forward_offset_m = 0.0
+	Tuning.data.cam_height_offset_m = 0.0
 
 
 func after_all() -> void:
@@ -413,17 +414,20 @@ func test_fp_uses_look_basis_never_the_head() -> void:
 			"head motion never turns the view")
 
 
-func test_fp_sits_ahead_of_the_eye_along_the_flat_look() -> void:
+func test_fp_lens_sits_lower_and_ahead_of_the_eye() -> void:
 	Tuning.data.cam_forward_offset_m = 0.12
+	Tuning.data.cam_height_offset_m = -0.2
 	var player := _make_player(Vector3(1.0, 0.0, 1.0))
 	player.look_yaw = 0.8
 	player.look_pitch = -0.6
 	var cam := _make_fp(player)
 	cam.update_camera(DT)
 	var flat := Vector3(-sin(0.8), 0.0, -cos(0.8))
-	var expected := player.get_eye_transform().origin + flat * 0.12
+	var expected := player.get_eye_transform().origin + flat * 0.12 + Vector3.DOWN * 0.2
 	assert_almost_eq(cam.global_position.distance_to(expected), 0.0, 0.002,
-			"0.12 m ahead of the eye, level even when looking down")
+			"0.2 m below and 0.12 m ahead of the eye, level even when looking down")
+	assert_almost_eq(FirstPersonCamera.lens_offset(player.get_look_basis()).distance_to(flat * 0.12 + Vector3.DOWN * 0.2),
+			0.0, 0.0001, "lens_offset() matches the camera")
 
 
 func test_fp_applies_move_pitch_and_drop() -> void:

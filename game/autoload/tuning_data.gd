@@ -102,9 +102,11 @@ extends Resource
 @export_range(75.0, 110.0, 1.0) var fov_deg: float = 90.0
 @export_range(0.0, 0.3, 0.005) var cam_smoothing_s: float = 0.05
 @export_range(0.0, 0.05, 0.001) var cam_bob_clamp_m: float = 0.015
-## First-person view sits this far ahead of EyePoint (horizontally, along the look), so
-## the guard's forearms, held at the chin, fall behind the lens instead of filling the
-## lower corners. Presentation only: aim and hit detection never use it.
+## The first-person lens sits this far from EyePoint: up/down (negative = lower) and ahead
+## along the flat look. Game-boy's call after the M1 playtest: lower, near the throat, so
+## hands and feet both fit in the view (Mirror's Edge style) instead of an eye-level
+## "dukes up" gun view. Presentation only: aim and hit detection never use it.
+@export_range(-0.5, 0.1, 0.01) var cam_height_offset_m: float = -0.2
 @export_range(0.0, 0.3, 0.01) var cam_forward_offset_m: float = 0.12
 @export_range(0.0, 1.0, 0.05) var screen_shake_intensity: float = 1.0
 @export var show_center_dot: bool = true

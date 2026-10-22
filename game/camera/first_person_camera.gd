@@ -180,12 +180,21 @@ func _follow(delta: float) -> Transform3D:
 	var move_offset := player.get_camera_move_offset()
 	var root := player.get_global_transform_interpolated().origin
 	var eye_position := root + _eye_offset + Vector3.DOWN * move_offset.y
-	var ahead := player.get_look_basis() * Vector3.FORWARD
-	ahead.y = 0.0
-	if ahead.length_squared() > 0.0001:
-		eye_position += ahead.normalized() * Tuning.data.cam_forward_offset_m
+	eye_position += lens_offset(player.get_look_basis())
 	var look := _add_pitch(player.get_look_basis(), deg_to_rad(move_offset.x))
 	return Transform3D(look, eye_position)
+
+
+## Where the first-person lens sits relative to EyePoint, for a look basis: lowered by
+## Tuning.cam_height_offset_m and moved ahead along the flat look by
+## Tuning.cam_forward_offset_m. Rig tests use it to judge poses from the real viewpoint.
+static func lens_offset(look_basis: Basis) -> Vector3:
+	var offset := Vector3.UP * Tuning.data.cam_height_offset_m
+	var ahead := look_basis * Vector3.FORWARD
+	ahead.y = 0.0
+	if ahead.length_squared() > 0.0001:
+		offset += ahead.normalized() * Tuning.data.cam_forward_offset_m
+	return offset
 
 
 func _advance_effects(delta: float) -> void:
