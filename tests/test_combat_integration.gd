@@ -2,7 +2,9 @@ extends GutTest
 ## End-to-end combat in the real test room: a scripted player performs every Spec §4
 ## combo and move against training dummies; asserts which moves land, in what order,
 ## for how much, and with what tier. Milestone 1's "done when": every combo can be
-## performed and registers hits.
+## performed and registers hits. The held block (Game-boy's addition to Spec §4) is
+## tested against a sparring dummy's telegraphed jab: coverage, chip, guard meter,
+## blockstun, recoil, perfect block, guard break and the B press rule.
 
 const ROOM := preload("res://game/level/test_room.tscn")
 const FPView := preload("res://tests/fp_view.gd")
@@ -44,8 +46,10 @@ func _on_whiff(_attacker: Node3D, move: MoveData) -> void:
 
 
 ## Build the room; `posts` are dummy positions relative to the player (x right, -z ahead).
-## `yaw_deg` overrides the player's facing (default: the room's, down the street).
-func _setup(posts: Array[Vector3], presentation: bool = false, yaw_deg: float = NAN) -> void:
+## `yaw_deg` overrides the player's facing (default: the room's, down the street). No
+## dummy spars (the room's centre dummy does by default) unless its index is in `sparring`.
+func _setup(posts: Array[Vector3], presentation: bool = false, yaw_deg: float = NAN,
+		sparring: Array[int] = []) -> void:
 	if is_instance_valid(room):
 		room.queue_free()
 		await _ticks(2)
@@ -63,6 +67,7 @@ func _setup(posts: Array[Vector3], presentation: bool = false, yaw_deg: float = 
 		# Posts are in the player's frame (x right, -z ahead), whichever way the room faces it.
 		var pos := player.global_position + player.global_basis * posts[i] if i < posts.size() else FAR + Vector3(i * 3.0, 0.0, 0.0)
 		var to_player := player.global_position - pos
+		dummies[i].sparring = sparring.has(i)
 		dummies[i].set_post(pos, atan2(-to_player.x, -to_player.z), true)
 	await _ticks(3)
 	hits.clear()
@@ -451,9 +456,11 @@ func test_dodge_sidesteps_three_meters_with_iframes() -> void:
 	assert_gt(moved.dot(player.global_basis.x), 2.0, "to the right")
 
 
-func test_player_stands_relaxed_and_a_neutral_dodge_puts_the_guard_up() -> void:
+func test_player_stands_relaxed_and_b_back_backsteps_with_the_stance_arms() -> void:
 	# Game-boy's M1 playtest: the player's arms hang loose until a strike (enemies keep the
-	# boxer guard), and a dodge with no stick backsteps with the guard up by the face.
+	# boxer guard). The backstep is B + back now (neutral B blocks) and keeps the stance's
+	# arms: the guard is the held block's. (This test pinned the old neutral-B backstep
+	# with the guard up; the held block changed both on purpose.)
 	await _setup([Vector3(0, 0, -2.5)])
 	assert_eq(player.rig.stance, PlaceholderPoses.STANCE_RELAXED, "the player stands relaxed")
 	assert_true(player.rig.wrapped_hands, "with wrapped hands")
@@ -463,26 +470,40 @@ func test_player_stands_relaxed_and_a_neutral_dodge_puts_the_guard_up() -> void:
 	var chest := player.rig.get_point_position(&"ChestPoint").y
 	assert_lt(player.rig.get_point_position(&"LeftFistPoint").y, chest, "the lead hand hangs low")
 	var start := player.global_position
+	player.input.scripted_move = Vector2(0, -1)
 	player.input.push_press(&"DODGE", 2)
 	await _ticks(6)
 	assert_eq(player.state, CombatTypes.ActorState.DODGE)
-	assert_eq(player.rig.current_anim(), &"dodge_back", "no stick: the backstep")
+	assert_eq(player.rig.current_anim(), &"dodge_back", "B + back: the backstep")
 	for point: StringName in [&"LeftFistPoint", &"RightFistPoint"]:
-		assert_gt(player.rig.get_point_position(point).y, player.rig.get_point_position(&"ChestPoint").y + 0.15,
-				"%s up by the face during the backstep" % point)
+		assert_lt(player.rig.get_point_position(point).y, player.rig.get_point_position(&"ChestPoint").y,
+				"%s stays low during the backstep" % point)
+	player.input.scripted_move = Vector2.ZERO
 	assert_true(await _wait_idle())
 	var moved := player.global_position - start
 	assert_almost_eq(moved.length(), Tuning.data.dodge_distance, 0.15, "about 3 m")
 	assert_gt(moved.dot(player.global_basis.z), 2.0, "backward")
 
 
-func test_dodge_cancels_recovery() -> void:
-	await _setup([])
-	await _press(&"P", 2)
-	assert_true(await _wait_until(func() -> bool: return player.current_move and player.current_move.is_recovery(player.move_frame)))
-	await _press(&"DODGE", 2)
-	await _ticks(1)
-	assert_eq(player.state, CombatTypes.ActorState.DODGE, "dodge cancelled the jab's recovery")
+func test_dodge_and_block_cancel_recovery() -> void:
+	# B + stick dodges out of a recovery; neutral B blocks out of it (this test used a
+	# neutral B for the dodge before the held block took it).
+	for blocking: bool in [false, true]:
+		await _setup([])
+		await _press(&"P", 2)
+		assert_true(await _wait_until(func() -> bool: return player.current_move and player.current_move.is_recovery(player.move_frame)))
+		player.input.scripted_move = Vector2.ZERO if blocking else Vector2(-1, 0)
+		player.input.push_down(&"DODGE")
+		await _drain()
+		await _ticks(1)
+		player.input.scripted_move = Vector2.ZERO
+		if blocking:
+			assert_eq(player.state, CombatTypes.ActorState.BLOCK, "neutral B blocked out of the jab's recovery")
+			assert_null(player.current_move, "the jab was cancelled")
+		else:
+			assert_eq(player.state, CombatTypes.ActorState.DODGE, "B + left dodged out of the jab's recovery")
+		player.input.push_up(&"DODGE")
+		assert_true(await _wait_idle())
 
 
 func test_quick_turn_is_180_in_a_fifth_of_a_second() -> void:
@@ -556,3 +577,509 @@ func test_side_view_camera_cycles_while_gameplay_runs() -> void:
 	director.call(&"cycle")
 	await _ticks(2)
 	assert_eq(director.get(&"mode"), &"first_person")
+
+
+# --- Held block (Game-boy-approved addition to Spec §4) -----------------------------
+# A sparring dummy's telegraphed jab (dummy_jab: 18 frames of wind-up, 6 damage, LIGHT)
+# connects out to about 1.05 m; JAB_DIST keeps the dummy inside that.
+
+const JAB_DIST := 0.95
+
+
+## One dummy JAB_DIST ahead of the player (sparring off; tests throw its jabs).
+func _partner(yaw_deg: float = NAN) -> TrainingDummy:
+	await _setup([Vector3(0, 0, -JAB_DIST)], false, yaw_deg)
+	return dummies[0]
+
+
+## Put `dummy` back JAB_DIST from the player, on the line between them (blocked jabs push
+## the player out of reach).
+func _restage(dummy: TrainingDummy) -> void:
+	var to_player := player.global_position - dummy.global_position
+	to_player.y = 0.0
+	dummy.set_post(player.global_position - to_player.normalized() * JAB_DIST, atan2(-to_player.x, -to_player.z))
+
+
+func _player_hits_taken() -> Array[HitInfo]:
+	var out: Array[HitInfo] = []
+	for hit in hits:
+		if hit.victim == player:
+			out.append(hit)
+	return out
+
+
+## Throw `dummy`'s jab (or `move` as a telegraphed attack) and wait for it to reach the
+## player. Returns the hit, or null if it never landed.
+func _jab_lands(dummy: TrainingDummy, move: MoveData = null) -> HitInfo:
+	var before := _player_hits_taken().size()
+	if move:
+		dummy.start_move(move, 1, &"root", true)
+	else:
+		dummy.start_jab()
+	var landed := await _wait_until(func() -> bool: return _player_hits_taken().size() > before, 90)
+	return _player_hits_taken().back() if landed else null
+
+
+## Hold B with the stick centered for `ticks` ticks: the guard is up (well past the
+## perfect-block window) when it returns.
+func _raise_guard(ticks: int = 24) -> void:
+	player.input.scripted_move = Vector2.ZERO
+	player.input.push_down(&"DODGE")
+	await _drain()
+	await _ticks(ticks)
+
+
+func test_sparring_jab_hits_an_idle_player() -> void:
+	var dummy := await _partner()
+	var hit := await _jab_lands(dummy)
+	assert_not_null(hit, "the jab lands")
+	if hit == null:
+		return
+	assert_eq(hit.move.id, &"dummy_jab")
+	assert_eq(hit.attacker, dummy)
+	assert_false(hit.blocked)
+	assert_eq(hit.damage, 6.0)
+	assert_eq(hit.reaction, CombatTypes.Reaction.FLINCH)
+	assert_eq(player.state, CombatTypes.ActorState.HITSTUN, "the player flinches")
+	assert_almost_eq(player.health, 94.0, 0.001)
+	assert_true(await _wait_idle(), "and recovers")
+
+
+func test_sparring_dummy_winds_up_on_its_own_when_the_player_is_in_front() -> void:
+	# Sparring: the jab comes every sparring_interval_s (seeded jitter) while the player
+	# stands within sparring_range in front of the dummy; the startup is a WINDUP that
+	# scales with Tuning.windup_mult; a light hit knocks the dummy out of it.
+	var events: Array = []
+	var on_start := func(actor: Node3D, move: MoveData) -> void: events.append([&"start", actor, move.id, Engine.get_physics_frames()])
+	var on_end := func(actor: Node3D, interrupted: bool) -> void: events.append([&"end", actor, interrupted, Engine.get_physics_frames()])
+	CombatEvents.windup_started.connect(on_start)
+	CombatEvents.windup_ended.connect(on_end)
+	await _setup([Vector3(0, 0, -JAB_DIST)], false, NAN, [0])
+	var dummy := dummies[0]
+	assert_true(dummy.sparring)
+	var interval := Tuning.data.sparring_interval_s + Tuning.data.sparring_jitter_s
+	assert_true(await _wait_until(func() -> bool: return dummy.state == CombatTypes.ActorState.WINDUP,
+			ceili(interval * 60.0) + 10), "the dummy winds up within an interval")
+	assert_eq(dummy.current_move.id, &"dummy_jab")
+	assert_true(await _wait_until(func() -> bool: return dummy.state == CombatTypes.ActorState.ATTACK, 40))
+	assert_eq(events.size(), 2, "windup_started, then windup_ended")
+	if events.size() == 2:
+		assert_eq(events[0][2], &"dummy_jab")
+		assert_false(events[1][2], "the wind-up ran its course")
+		assert_eq(events[1][3] - events[0][3], dummy.current_move.startup, "the wind-up is the jab's startup")
+	assert_true(await _wait_idle())
+	# Out of range, or behind the dummy: no jab.
+	for post: Vector3 in [Vector3(0, 0, -2.5)]:
+		dummy.set_post(player.global_position + player.global_basis * post, dummy.rotation.y)
+		dummy.spar_in(0)
+		await _ticks(40)
+		assert_eq(dummy.state, CombatTypes.ActorState.FREE, "no jab with the player %.1f m away" % absf(post.z))
+	var behind := player.global_position + player.global_basis * Vector3(0, 0, -JAB_DIST)
+	dummy.face_player = false
+	dummy.set_post(behind, player.rotation.y)  # facing away from the player
+	dummy.spar_in(0)
+	await _ticks(40)
+	assert_eq(dummy.state, CombatTypes.ActorState.FREE, "no jab at a player behind the dummy")
+	# Wind-ups scale with windup_mult, and a light hit interrupts one.
+	dummy.face_player = true
+	var to_player := player.global_position - behind
+	dummy.set_post(behind, atan2(-to_player.x, -to_player.z))
+	Tuning.data.windup_mult = 2.0
+	events.clear()
+	hits.clear()
+	dummy.start_jab()
+	assert_eq(dummy.current_move.startup, 36, "startup doubled")
+	await _ticks(10)
+	await _press(&"P", 2)
+	assert_true(await _wait_until(func() -> bool: return events.size() >= 2, 30))
+	assert_eq(events.back()[0], &"end")
+	assert_true(events.back()[2], "the jab hit the dummy out of its wind-up")
+	assert_null(dummy.current_move)
+	assert_eq(_player_hits_taken().size(), 0, "the interrupted jab never came out")
+	CombatEvents.windup_started.disconnect(on_start)
+	CombatEvents.windup_ended.disconnect(on_end)
+
+
+func test_neutral_b_blocks_the_jab_from_the_front() -> void:
+	var events: Array[StringName] = []
+	var on_blocked := func(defender: Node3D, _hit: HitInfo) -> void:
+		if defender == player:
+			events.append(&"blocked")
+	var on_started := func(actor: Node3D) -> void:
+		if actor == player:
+			events.append(&"block_started")
+	var on_ended := func(actor: Node3D) -> void:
+		if actor == player:
+			events.append(&"block_ended")
+	CombatEvents.blocked.connect(on_blocked)
+	CombatEvents.block_started.connect(on_started)
+	CombatEvents.block_ended.connect(on_ended)
+	var dummy := await _partner()
+	await _raise_guard()
+	assert_eq(player.state, CombatTypes.ActorState.BLOCK, "neutral B raises the guard")
+	assert_true(player.is_guard_effective())
+	assert_eq(player.rig.current_anim(), &"block")
+	var start := player.global_position
+	var hit := await _jab_lands(dummy)
+	assert_not_null(hit)
+	if hit == null:
+		return
+	assert_true(hit.blocked, "blocked")
+	assert_false(hit.perfect_block, "raised long before: not perfect")
+	assert_false(hit.guard_broken)
+	assert_almost_eq(hit.damage, 6.0 * Tuning.data.chip_ratio, 0.001, "chip damage 15%")
+	assert_almost_eq(player.health, 100.0 - 6.0 * Tuning.data.chip_ratio, 0.001)
+	assert_almost_eq(player.guard, Tuning.data.guard_max - 24.0, 0.001, "guard drained by 4 x 6")
+	assert_eq(player.state, CombatTypes.ActorState.BLOCKSTUN)
+	assert_eq(player.rig.current_anim(), &"block_hit")
+	assert_eq(dummy.state, CombatTypes.ActorState.HITSTUN, "the attacker recoils")
+	assert_null(dummy.current_move, "its jab is cut short")
+	assert_eq(dummy.rig.current_anim(), &"recoil")
+	assert_string_contains(dummy.debug_state_text(), "recoil")
+	# Blockstun: pushed straight back, still in the guard, then the plain guard again.
+	var dir := hit.direction
+	assert_true(await _wait_until(func() -> bool: return player.state == CombatTypes.ActorState.BLOCK, 30))
+	var pushed := player.global_position - start
+	assert_almost_eq(pushed.length(), Tuning.data.block_push_light_m, 0.04, "pushed back about 0.3 m")
+	assert_gt(pushed.normalized().dot(dir), 0.95, "along the hit")
+	assert_true(await _wait_until(func() -> bool: return dummy.state == CombatTypes.ActorState.FREE, 30), "the recoil ends")
+	player.input.push_up(&"DODGE")
+	assert_true(await _wait_idle())
+	assert_eq(events, [&"block_started", &"blocked", &"block_ended"])
+	CombatEvents.blocked.disconnect(on_blocked)
+	CombatEvents.block_started.disconnect(on_started)
+	CombatEvents.block_ended.disconnect(on_ended)
+
+
+func test_jabs_from_behind_or_the_side_land_in_full() -> void:
+	# Only attackers within block_arc_half_angle_deg (60) of the look are blocked: turned
+	# away, the player eats the jab whole (the rear warning still matters).
+	for turn: float in [180.0, 90.0, -90.0, 45.0]:
+		var dummy := await _partner()
+		await _raise_guard()
+		player.look_yaw = wrapf(player.look_yaw + deg_to_rad(turn), -PI, PI)
+		await _ticks(2)
+		assert_eq(player.state, CombatTypes.ActorState.BLOCK)
+		var hit := await _jab_lands(dummy)
+		assert_not_null(hit, "turned %.0f: the jab reaches the player" % turn)
+		if hit == null:
+			continue
+		if absf(turn) <= Tuning.data.block_arc_half_angle_deg:
+			assert_true(hit.blocked, "turned %.0f: still inside the guard's arc" % turn)
+			continue
+		assert_false(hit.blocked, "turned %.0f: the guard does not cover it" % turn)
+		assert_eq(hit.damage, 6.0, "turned %.0f: full damage" % turn)
+		assert_almost_eq(player.health, 94.0, 0.001)
+		assert_eq(player.state, CombatTypes.ActorState.HITSTUN, "turned %.0f: the player flinches" % turn)
+		assert_almost_eq(player.guard, Tuning.data.guard_max, 0.001, "no guard drained")
+		player.input.push_up(&"DODGE")
+		await _drain()
+
+
+func test_a_guard_raised_just_in_time_is_a_perfect_block_and_the_attacker_can_be_grabbed() -> void:
+	var events: Array[StringName] = []
+	var on_perfect := func(defender: Node3D, _hit: HitInfo) -> void:
+		if defender == player:
+			events.append(&"perfect_blocked")
+	CombatEvents.perfect_blocked.connect(on_perfect)
+	var dummy := await _partner()
+	dummy.start_jab()
+	var startup := dummy.current_move.startup
+	# Raise the guard 7 frames before the jab comes out: up (4 frames) just before it lands.
+	assert_true(await _wait_until(func() -> bool: return dummy.move_frame >= startup - 7, 30))
+	player.input.push_down(&"DODGE")
+	assert_true(await _wait_until(func() -> bool: return not _player_hits_taken().is_empty(), 30), "the jab lands")
+	var hit := _player_hits_taken()[0]
+	assert_true(hit.blocked and hit.perfect_block, "a perfect block")
+	assert_eq(hit.damage, 0.0, "no chip")
+	assert_eq(player.health, 100.0)
+	assert_almost_eq(player.guard, Tuning.data.guard_max, 0.001, "no guard drained")
+	assert_eq(player.state, CombatTypes.ActorState.BLOCK, "no blockstun")
+	assert_eq(dummy.state, CombatTypes.ActorState.STAGGER, "the attacker staggers")
+	assert_true(dummy.can_be_grabbed(), "a real stagger: grabbable")
+	assert_eq(events, [&"perfect_blocked"])
+	# Drop the guard and grab the staggered dummy (LB does nothing while blocking).
+	player.input.push_up(&"DODGE")
+	player.input.push_press(&"GRAB", 2)
+	await _drain()
+	assert_true(await _wait_until(func() -> bool: return player.state == CombatTypes.ActorState.GRABBING, 20), "grabbed")
+	assert_eq(dummy.state, CombatTypes.ActorState.GRABBED)
+	CombatEvents.perfect_blocked.disconnect(on_perfect)
+	# Perfect blocks can be turned off: the same timing is an ordinary block.
+	Tuning.data.perfect_block_enabled = false
+	dummy = await _partner()
+	dummy.start_jab()
+	assert_true(await _wait_until(func() -> bool: return dummy.move_frame >= startup - 7, 30))
+	player.input.push_down(&"DODGE")
+	assert_true(await _wait_until(func() -> bool: return not _player_hits_taken().is_empty(), 30))
+	assert_true(_player_hits_taken()[0].blocked)
+	assert_false(_player_hits_taken()[0].perfect_block, "perfect_block_enabled = false")
+	assert_eq(dummy.state, CombatTypes.ActorState.HITSTUN, "an ordinary recoil")
+
+
+func test_too_late_a_guard_is_not_up_yet() -> void:
+	# The guard stops hits only after block_raise_frames of holding.
+	var dummy := await _partner()
+	dummy.start_jab()
+	var startup := dummy.current_move.startup
+	assert_true(await _wait_until(func() -> bool: return dummy.move_frame >= startup - 2, 30))
+	player.input.push_down(&"DODGE")
+	assert_true(await _wait_until(func() -> bool: return not _player_hits_taken().is_empty(), 30))
+	assert_false(_player_hits_taken()[0].blocked, "raised 2 frames before the hit: not up yet")
+	assert_eq(_player_hits_taken()[0].damage, 6.0)
+
+
+func test_repeated_blocked_hits_break_the_guard() -> void:
+	var broken: Array[HitInfo] = []
+	var on_broken := func(defender: Node3D, hit: HitInfo) -> void:
+		if defender == player:
+			broken.append(hit)
+	CombatEvents.guard_broken.connect(on_broken)
+	var dummy := await _partner()
+	await _raise_guard()
+	var expected := Tuning.data.guard_max
+	for i in 5:
+		# Back in reach (each blocked jab pushes the player 0.3 m away); jabs come faster
+		# than guard_regen_delay_s, so the meter does not refill in between.
+		_restage(dummy)
+		var hit := await _jab_lands(dummy)
+		assert_not_null(hit, "jab %d lands" % (i + 1))
+		if hit == null:
+			return
+		assert_true(hit.blocked, "jab %d is blocked" % (i + 1))
+		expected -= 24.0
+		if i < 4:
+			assert_false(hit.guard_broken)
+			assert_almost_eq(player.guard, expected, 0.001, "jab %d drains 24" % (i + 1))
+			assert_true(await _wait_until(func() -> bool: return dummy.state == CombatTypes.ActorState.FREE, 40))
+			continue
+		assert_true(hit.guard_broken, "the fifth jab empties the meter")
+		assert_eq(hit.reaction, CombatTypes.Reaction.STAGGER)
+		assert_eq(player.guard, 0.0)
+		assert_eq(player.state, CombatTypes.ActorState.STAGGER, "the guard is knocked apart")
+		assert_eq(player.rig.current_anim(), &"guard_break")
+		assert_false(player.is_guarding(), "the guard drops")
+		assert_eq(dummy.state, CombatTypes.ActorState.ATTACK, "breaking the guard is no recoil")
+	assert_eq(broken.size(), 1, "guard_broken emitted once")
+	await _ticks(Tuning.data.guard_break_frames - 5)
+	assert_eq(player.guard, 0.0, "still empty during the break")
+	await _ticks(10)
+	assert_almost_eq(player.guard, Tuning.data.guard_break_refill, 0.001, "refilled to 50 after the break")
+	assert_ne(player.state, CombatTypes.ActorState.STAGGER, "the stagger is over")
+	CombatEvents.guard_broken.disconnect(on_broken)
+
+
+func test_unblockable_moves_go_through_a_block() -> void:
+	var dummy := await _partner()
+	var grab_like := (load("res://game/combat/moves/dummy_jab.tres") as MoveData).duplicate() as MoveData
+	grab_like.unblockable = true
+	await _raise_guard()
+	var hit := await _jab_lands(dummy, grab_like)
+	assert_not_null(hit)
+	if hit == null:
+		return
+	assert_false(hit.blocked, "unblockable")
+	assert_eq(hit.damage, 6.0)
+	assert_eq(player.state, CombatTypes.ActorState.HITSTUN)
+	assert_almost_eq(player.guard, Tuning.data.guard_max, 0.001)
+
+
+func test_b_with_a_stick_direction_dodges_and_neutral_b_blocks() -> void:
+	# The press decides: stick under block_stick_threshold blocks, otherwise B dodges that
+	# way (sidestep, and the backstep on B + back).
+	for stick: Vector2 in [Vector2(1, 0), Vector2(-1, 0), Vector2(0, -1), Vector2(0.2, 0.1), Vector2.ZERO]:
+		await _setup([])
+		var start := player.global_position
+		player.input.scripted_move = stick
+		player.input.push_press(&"DODGE", 2)
+		await _drain()
+		player.input.scripted_move = Vector2.ZERO
+		if stick.length() < Tuning.data.block_stick_threshold:
+			assert_true(player.is_guarding(), "stick %s: B blocks" % stick)
+			assert_true(await _wait_idle())
+			assert_lt(start.distance_to(player.global_position), 0.05, "stick %s: no dodge" % stick)
+			continue
+		assert_eq(player.state, CombatTypes.ActorState.DODGE, "stick %s: B dodges" % stick)
+		assert_true(await _wait_idle())
+		var moved := player.global_basis.inverse() * (player.global_position - start)
+		assert_almost_eq(moved.length(), Tuning.data.dodge_distance, 0.15, "stick %s: about 3 m" % stick)
+		assert_gt(Vector2(moved.x, -moved.z).normalized().dot(stick.normalized()), 0.95, "stick %s: that way" % stick)
+
+
+func test_the_stick_at_press_time_decides_block_or_dodge() -> void:
+	# A B press buffered during a jab's startup is decided by the stick when it was pressed.
+	await _setup([])
+	await _press(&"P", 2)
+	player.input.scripted_move = Vector2.ZERO
+	player.input.push_down(&"DODGE")
+	await _drain()
+	player.input.scripted_move = Vector2(1, 0)
+	assert_true(await _wait_until(func() -> bool: return player.is_guarding(), 30), "pressed with the stick centered: a block")
+	player.input.scripted_move = Vector2.ZERO
+	player.input.push_up(&"DODGE")
+	assert_true(await _wait_idle())
+
+
+func test_p_while_blocking_attacks_after_the_cancel_frames() -> void:
+	await _setup([Vector3(0, 0, -1.6)])
+	await _raise_guard(10)
+	player.input.push_press(&"P", 2)
+	await _ticks(1)
+	assert_true(player.is_dropping_guard(), "P drops the guard")
+	assert_false(player.is_guard_effective(), "a dropping guard stops nothing")
+	await _ticks(Tuning.data.block_attack_cancel_frames - 1)
+	assert_eq(player.state, CombatTypes.ActorState.BLOCK, "still coming down")
+	await _ticks(1)
+	assert_eq(player.state, CombatTypes.ActorState.ATTACK, "the jab starts %d frames after the press" % Tuning.data.block_attack_cancel_frames)
+	assert_eq(player.current_move.id, &"jab_1")
+	player.input.push_up(&"DODGE")
+	assert_true(await _wait_idle())
+	assert_eq(_ids(_player_hits()), [&"jab_1"], "and lands")
+	# K works the same way.
+	await _raise_guard(10)
+	player.input.push_press(&"K", 2)
+	await _ticks(Tuning.data.block_attack_cancel_frames + 1)
+	assert_eq(player.state, CombatTypes.ActorState.ATTACK)
+	assert_eq(player.current_move.id, &"front_kick")
+	player.input.push_up(&"DODGE")
+	assert_true(await _wait_idle())
+
+
+func test_releasing_b_drops_the_guard_after_the_release_frames() -> void:
+	await _setup([])
+	await _raise_guard(10)
+	player.input.push_up(&"DODGE")
+	await _ticks(1)
+	assert_true(player.is_dropping_guard())
+	await _ticks(Tuning.data.block_release_frames - 1)
+	assert_eq(player.state, CombatTypes.ActorState.BLOCK, "still coming down")
+	await _ticks(1)
+	assert_eq(player.state, CombatTypes.ActorState.FREE, "back to neutral after %d frames" % Tuning.data.block_release_frames)
+
+
+func test_blocking_walks_slowly_turns_freely_and_ignores_jump_and_grab() -> void:
+	await _setup([])
+	await _raise_guard(10)
+	var start := player.global_position
+	player.input.scripted_move = Vector2(0, 1)
+	await _ticks(60)
+	var speed := Vector2(player.sim_velocity.x, player.sim_velocity.z).length()
+	assert_almost_eq(speed, Tuning.data.move_speed * Tuning.data.block_move_mult, 0.05, "walks at 35% speed")
+	assert_gt(start.distance_to(player.global_position), 1.0, "and moves")
+	player.input.scripted_move = Vector2.ZERO
+	player.input.push_press(&"JUMP", 2)
+	player.input.push_press(&"GRAB", 2)
+	await _drain()
+	await _ticks(2)
+	assert_eq(player.state, CombatTypes.ActorState.BLOCK, "no jump or grab in the guard")
+	assert_true(player.is_on_floor())
+	var yaw := player.look_yaw
+	player.input.push_press(&"TURN", 2)
+	await _drain()
+	await _ticks(Tuning.data.quick_turn_frames + 2)
+	assert_almost_eq(absf(wrapf(player.look_yaw - yaw, -PI, PI)), PI, 0.05, "quick turn works")
+	assert_almost_eq(player.get_forward().dot(player.get_look_basis() * Vector3.FORWARD), 1.0, 0.01,
+			"the guard swings with the look")
+	player.input.push_up(&"DODGE")
+	assert_true(await _wait_idle())
+
+
+func test_guard_regenerates_after_the_delay() -> void:
+	var dummy := await _partner()
+	await _raise_guard()
+	assert_not_null(await _jab_lands(dummy))
+	var drained := player.guard
+	assert_almost_eq(drained, Tuning.data.guard_max - 24.0, 0.001)
+	var delay := roundi(Tuning.data.guard_regen_delay_s * 60.0)
+	await _ticks(delay - 6)
+	assert_almost_eq(player.guard, drained, 0.001, "no regeneration before the delay")
+	await _ticks(36)
+	# About half a second of regeneration at 35/s.
+	assert_between(player.guard, drained + 12.0, drained + 24.0, "regenerating at guard_regen_per_s")
+	assert_true(await _wait_until(func() -> bool: return player.guard >= Tuning.data.guard_max, 90), "back to full")
+	assert_eq(player.guard, Tuning.data.guard_max)
+
+
+func test_chip_never_takes_the_last_point_of_health() -> void:
+	var dummy := await _partner()
+	player.health = 1.4
+	await _raise_guard()
+	var hit := await _jab_lands(dummy)
+	assert_true(hit != null and hit.blocked)
+	assert_almost_eq(player.health, 1.0, 0.001, "chip stops at 1 health")
+	assert_almost_eq(hit.damage, 0.4, 0.001, "the chip that got through")
+	assert_true(await _wait_until(func() -> bool: return dummy.state == CombatTypes.ActorState.FREE, 40))
+	_restage(dummy)
+	hit = await _jab_lands(dummy)
+	assert_true(hit != null and hit.blocked)
+	assert_almost_eq(player.health, 1.0, 0.001, "and stays there")
+
+
+func test_bodies_and_weapons_hitting_the_guard_drain_it_harder() -> void:
+	# Code-applied hits from the front: a flying body drains guard x body_impact_guard_mult,
+	# a thrown weapon (or a pipe swing) x its move's guard_damage_mult.
+	var dummy := await _partner()
+	await _raise_guard()
+	var cases := {
+		&"impact_body_knockdown": [&"body", true, 4.0 * 5.0 * Tuning.data.body_impact_guard_mult],
+		&"weapon_throw": [&"thrown", true, 4.0 * 15.0],
+		&"pipe_swing_1": [&"root", false, 4.0 * 10.0 * 1.5],
+	}
+	for id: StringName in cases:
+		var move := load("res://game/combat/moves/%s.tres" % id) as MoveData
+		var row: Array = cases[id]
+		player.guard = Tuning.data.guard_max
+		var hit := HitInfo.new()
+		hit.attacker = dummy
+		hit.victim = player
+		hit.move = move
+		hit.damage = move.damage
+		hit.tier = move.tier
+		hit.reaction = move.reaction
+		hit.direction = (player.global_position - dummy.global_position).normalized()
+		hit.is_body_impact = row[1]
+		hit.input_timing = row[0]
+		assert_true(player.receive_hit(hit))
+		assert_true(hit.blocked, "%s from the front is blocked" % id)
+		assert_almost_eq(Tuning.data.guard_max - player.guard, float(row[2]), 0.001, "%s drains %.0f" % [id, row[2]])
+		player.reset_state()
+		await _raise_guard()
+
+
+func test_the_player_is_knocked_out_and_gets_back_up_in_the_test_room() -> void:
+	var dummy := await _partner()
+	player.health = 4.0
+	var hit := await _jab_lands(dummy)
+	assert_true(hit != null and hit.killed, "the jab finishes the player")
+	assert_true(await _wait_until(func() -> bool: return player.is_ko(), 120), "KO")
+	assert_true(player.is_invulnerable())
+	var revive := roundi(Tuning.data.player_revive_s * 60.0)
+	assert_true(await _wait_until(func() -> bool: return not player.is_ko(), revive + 30), "gets back up")
+	assert_eq(player.health, player.max_health, "at full health")
+	assert_true(await _wait_idle())
+	# God mode: hits still land, without damage.
+	Tuning.data.god_mode = true
+	_restage(dummy)
+	hit = await _jab_lands(dummy)
+	assert_true(hit != null and not hit.blocked)
+	assert_eq(player.health, player.max_health, "god mode keeps the health")
+	assert_eq(player.state, CombatTypes.ActorState.HITSTUN, "but the player still flinches")
+
+
+func test_f5_toggles_sparring_on_every_dummy() -> void:
+	var fresh: Node3D = ROOM.instantiate()
+	fresh.set(&"with_presentation", false)
+	add_child_autofree(fresh)
+	await _ticks(2)
+	var all: Array[TrainingDummy] = []
+	all.assign(fresh.get(&"dummies"))
+	assert_eq(all.map(func(d: TrainingDummy) -> bool: return d.sparring), [false, true, false],
+			"the centre dummy spars by default")
+	var press := InputEventAction.new()
+	press.action = &"sparring"
+	press.pressed = true
+	fresh.call(&"_unhandled_input", press)
+	assert_eq(all.map(func(d: TrainingDummy) -> bool: return d.sparring), [true, true, true], "F5: all three spar")
+	fresh.call(&"_unhandled_input", press)
+	assert_eq(all.map(func(d: TrainingDummy) -> bool: return d.sparring), [false, false, false], "F5 again: none")
+	assert_true(InputMap.has_action(&"sparring"))

@@ -1,7 +1,8 @@
 extends Node
 ## Scripted combo bot (Spec §11): performs every combo and move against training dummies
 ## in the test room, alternating first-person and side-view cameras, with a caption per
-## act. Record it with Movie Maker:
+## act; the block acts use a dummy's telegraphed sparring jab (the bot times it). Record it
+## with Movie Maker:
 ##   godot --path . --write-movie captures/combos.avi --fixed-fps 60 res://tests/bot/combo_bot.tscn
 ## (tools/capture_combos.sh wraps this and extracts review stills.)
 
@@ -32,12 +33,20 @@ func _ready() -> void:
 
 
 func _on_hit(hit: HitInfo) -> void:
-	var line := "f%d %s: %s %.0f dmg %s" % [
+	var flags := ""
+	if hit.perfect_block:
+		flags = " PERFECT"
+	elif hit.guard_broken:
+		flags = " BLOCKED GUARD BREAK"
+	elif hit.blocked:
+		flags = " BLOCKED"
+	var line := "f%d %s: %s %.1f dmg %s%s" % [
 		hit.physics_frame,
 		hit.victim.name,
 		hit.move.display_name if hit.move else "body",
 		hit.damage,
 		CombatTypes.tier_name(hit.tier),
+		flags,
 	]
 	log_lines.append(line)
 	print(line)
@@ -72,7 +81,15 @@ func _run() -> void:
 		{title = "Pipe: pick up, 3 swings, throw", cam = &"first_person", fn = _act_pipe},
 		{title = "Dodge right, quick turn", cam = &"first_person", fn = _act_dodge_turn},
 		{title = "Stance: idle, walk, look down", cam = &"first_person", fn = _act_stance},
-		{title = "Dodge back: guard", cam = &"first_person", fn = _act_dodge_back},
+		{title = "Dodge back: B + back", cam = &"first_person", fn = _act_dodge_back},
+		{title = "Block: sparring jab from the front", cam = &"first_person", fn = _act_block},
+		{title = "Block: sparring jab (side view)", cam = &"side_view", fn = _act_block},
+		{title = "Perfect block, then grab", cam = &"first_person", fn = _act_perfect_block},
+		{title = "Perfect block, then grab (side view)", cam = &"side_view", fn = _act_perfect_block},
+		{title = "Guard break", cam = &"first_person", fn = _act_guard_break},
+		{title = "Guard break (side view)", cam = &"side_view", fn = _act_guard_break},
+		{title = "Flank hit lands", cam = &"first_person", fn = _act_flank_hit},
+		{title = "Flank hit lands (side view, debug draw)", cam = &"side_view", fn = _act_flank_hit_debug},
 	]
 	for act in acts:
 		var title: String = act.title
@@ -236,15 +253,158 @@ func _act_stance() -> void:
 	await _ticks(20)
 
 
-## A dodge with no stick: the backstep, with the block guard up for its frames.
+## B + back: the backstep, arms in the stance (neutral B blocks now).
 func _act_dodge_back() -> void:
 	await _stage([Vector3(0, 0, -1.6)])
 	await _look_to(0.0, 6)
 	for i in 2:
-		player.input.scripted_move = Vector2.ZERO
+		player.input.scripted_move = Vector2(0, -1)
 		await _press(&"DODGE", 2)
+		player.input.scripted_move = Vector2.ZERO
 		await _wait_idle()
 		await _ticks(40)
+
+
+## Distance between the sparring dummy and the player at which its jab connects.
+const SPAR_DIST := 0.95
+
+
+## Hold B with the stick centered: the held block's guard.
+func _hold_block() -> void:
+	player.input.scripted_move = Vector2.ZERO
+	player.input.push_down(&"DODGE")
+	while player.input.queued() > 0:
+		await get_tree().physics_frame
+
+
+func _release_block() -> void:
+	player.input.push_up(&"DODGE")
+	while player.input.queued() > 0:
+		await get_tree().physics_frame
+
+
+## Walk forward (in the guard, if held) until `dummy` is back within SPAR_DIST.
+func _close_in(dummy: TrainingDummy) -> void:
+	player.input.scripted_move = Vector2(0, 1)
+	await _wait_until(
+		func() -> bool:
+			var d := dummy.global_position - player.global_position
+			return Vector2(d.x, d.z).length() <= SPAR_DIST,
+		90
+	)
+	player.input.scripted_move = Vector2.ZERO
+
+
+## Throw `dummy`'s telegraphed jab and wait for it to be over (blocked, landed or missed).
+func _jab(dummy: TrainingDummy) -> void:
+	await _wait_until(func() -> bool: return dummy.state == CombatTypes.ActorState.FREE, 90)
+	dummy.start_jab()
+	await _wait_until(func() -> bool: return dummy.current_move == null, 90)
+
+
+## The guard up early, two sparring jabs blocked from the front: the jab glances off the
+## guard (chip, guard meter, blockstun push-back), the dummy recoils.
+func _act_block() -> void:
+	await _stage([Vector3(0, 0, -SPAR_DIST)])
+	await _look_to(0.0, 6)
+	await _hold_block()
+	await _ticks(30)
+	var dummy := dummies[0]
+	for i in 2:
+		await _jab(dummy)
+		await _ticks(24)
+		await _close_in(dummy)
+		await _ticks(12)
+	await _ticks(20)
+	await _release_block()
+
+
+## The guard raised just as the jab comes out: a perfect block (no chip, PARRY), the dummy
+## staggers; drop the guard and grab it, then a knee.
+func _act_perfect_block() -> void:
+	await _stage([Vector3(0, 0, -SPAR_DIST)])
+	await _look_to(0.0, 6)
+	await _ticks(20)
+	var dummy := dummies[0]
+	dummy.start_jab()
+	var startup := dummy.current_move.startup
+	await _wait_until(func() -> bool: return dummy.move_frame >= startup - 7, 40)
+	await _hold_block()
+	await _wait_until(func() -> bool: return dummy.state == CombatTypes.ActorState.STAGGER, 30)
+	await _ticks(6)
+	await _release_block()
+	await _press(&"GRAB", 2, 20)
+	await _press(&"P", 2)
+	await _wait_idle()
+	await _ticks(20)
+
+
+## Jab after jab into the held guard, faster than it regenerates (walking back in after each
+## push-back): the meter empties on the fifth, the guard is knocked apart, and the next
+## jab lands clean.
+func _act_guard_break() -> void:
+	await _stage([Vector3(0, 0, -SPAR_DIST)])
+	await _look_to(0.0, 6)
+	await _hold_block()
+	await _ticks(20)
+	var dummy := dummies[0]
+	for i in 6:
+		# Each jab starts as soon as the dummy is out of its recoil; the player walks back
+		# into reach during the wind-up, after the push-back of the last one.
+		await _wait_until(func() -> bool: return dummy.state == CombatTypes.ActorState.FREE, 90)
+		dummy.start_jab()
+		await _wait_until(func() -> bool: return player.state == CombatTypes.ActorState.BLOCK, 30)
+		await _close_in(dummy)
+		await _wait_until(func() -> bool: return dummy.current_move == null, 60)
+		if player.state == CombatTypes.ActorState.STAGGER:
+			break
+	await _wait_until(func() -> bool: return player.state != CombatTypes.ActorState.STAGGER, 90)
+	await _release_block()
+	await _close_in(dummy)
+	await _jab(dummy)
+	await _ticks(30)
+
+
+## Holding the guard but turned away from the dummy (90 degrees): its jab comes from outside
+## the guard's arc and lands in full.
+func _act_flank_hit() -> void:
+	await _stage([Vector3(0, 0, -SPAR_DIST)])
+	await _look_to(0.0, 6)
+	await _hold_block()
+	await _ticks(20)
+	await _turn_by(90.0, 12)
+	await _ticks(10)
+	await _jab(dummies[0])
+	await _ticks(30)
+	await _release_block()
+	await _turn_by(-90.0, 12)
+	await _ticks(20)
+
+
+## The flank hit seen from the side with debug draw (F3) on: the cyan block arc swings
+## away with the look, the dummy's label reads WINDUP, and the jab lands outside the arc.
+func _act_flank_hit_debug() -> void:
+	var hud := _hud()
+	if hud:
+		hud.call(&"set_debug_draw_enabled", true)
+	await _act_flank_hit()
+	if hud:
+		hud.call(&"set_debug_draw_enabled", false)
+
+
+func _hud() -> Node:
+	for child in room.get_children():
+		if child.has_method(&"set_debug_draw_enabled"):
+			return child
+	return null
+
+
+## Turn the look by `degrees` (positive turns left) evenly over `ticks` physics ticks.
+func _turn_by(degrees: float, ticks: int) -> void:
+	var from := player.look_yaw
+	for i in ticks:
+		await get_tree().physics_frame
+		player.look_yaw = wrapf(from + deg_to_rad(degrees) * float(i + 1) / ticks, -PI, PI)
 
 
 # --- Harness ------------------------------------------------------------------------
@@ -262,6 +422,8 @@ func _look_to(pitch_deg: float, ticks: int) -> void:
 func _reset(cam: StringName) -> void:
 	player.input.clear_queue()
 	player.input.scripted_move = Vector2.ZERO
+	player.parser.release(&"DODGE")
+	player.reset_state()
 	player.global_position = room.get(&"player_start")
 	player.sim_velocity = Vector3.ZERO
 	player.look_yaw = deg_to_rad(room.get(&"player_yaw_deg"))
@@ -277,10 +439,12 @@ func _reset(cam: StringName) -> void:
 	await _ticks(2)
 
 
-## Place dummies relative to the player (x right, -z ahead); the rest go far away.
+## Place dummies relative to the player (x right, -z ahead); the rest go far away. No dummy
+## spars on its own (the block acts throw the jabs themselves).
 func _stage(posts: Array[Vector3]) -> void:
 	for i in dummies.size():
 		var d := dummies[i]
+		d.sparring = false
 		# Posts are in the player's frame (x right, -z ahead).
 		var pos := player.global_position + player.global_basis * posts[i] if i < posts.size() else Vector3(30 + i * 3, 0, -30)
 		var to_player := player.global_position - pos

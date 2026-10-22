@@ -1,9 +1,10 @@
 class_name PlayerHealthPanel
 extends Control
 ## Bottom-left comic panel with the player's health (Spec §5): bold "HP" lettering, a
-## slanted yellow bar with a damage ghost, the numbers, and a row of weapon durability
-## pips while the player holds a weapon. Reads the player in group "player"; never writes.
-## Driven by GameHud.advance().
+## slanted yellow bar with a damage ghost, the numbers, a row of weapon durability pips
+## while the player holds a weapon, and the guard meter (the held block) while the player
+## blocks or the guard is below full; it flashes when the guard breaks. Reads the player in
+## group "player"; never writes. Driven by GameHud.advance().
 
 ## Horizontal shear of the panel (pixels of shift per pixel of height).
 @export var slant: float = 0.16
@@ -11,6 +12,8 @@ extends Control
 @export var border: float = 6.0
 ## Below this health fraction the bar pulses.
 @export var low_health_ratio: float = 0.25
+## Seconds the guard meter flashes after a guard break.
+@export var guard_break_flash_s: float = 0.8
 
 var player: PlayerCharacter
 var gauge := HealthGauge.new()
@@ -19,6 +22,12 @@ var max_health: float = 0.0
 ## Durability pips: filled = hits left on the held weapon, total = row length; 0 = no weapon.
 var pips_filled: int = 0
 var pips_total: int = 0
+## Displayed guard meter, 0..1 of the player's max guard.
+var guard_gauge := HealthGauge.new()
+## The guard meter shows while the player blocks, the guard is below full, or it flashes.
+var guard_shown: bool = false
+## Seconds left of the guard-break flash.
+var guard_flash_left: float = 0.0
 
 var _time: float = 0.0
 
@@ -32,6 +41,19 @@ func set_player(node: PlayerCharacter) -> void:
 	player = node
 	if player != null:
 		gauge.reset(HealthGauge.ratio_of(player))
+		guard_gauge.reset(PlayerHealthPanel.guard_ratio_of(player))
+
+
+## CombatEvents.guard_broken for the player: flash the guard meter.
+func on_guard_broken() -> void:
+	guard_flash_left = guard_break_flash_s
+	queue_redraw()
+
+
+## Guard fraction of `actor`, safe for a zero max.
+static func guard_ratio_of(actor: CombatActor) -> float:
+	var top := actor.max_guard()
+	return clampf(actor.guard / top, 0.0, 1.0) if top > 0.0 else 0.0
 
 
 ## CombatEvents.health_changed for the player: react on the same frame (flash, ghost).
@@ -64,6 +86,10 @@ func advance(delta: float) -> void:
 	else:
 		pips_filled = 0
 		pips_total = 0
+	guard_gauge.set_target(PlayerHealthPanel.guard_ratio_of(player))
+	guard_gauge.advance(delta)
+	guard_flash_left = maxf(guard_flash_left - delta, 0.0)
+	guard_shown = player.is_guarding() or guard_gauge.value < 0.999 or guard_flash_left > 0.0
 	queue_redraw()
 
 
@@ -86,6 +112,32 @@ func _draw() -> void:
 
 	if pips_total > 0:
 		_draw_pips(Rect2(Vector2(bar.position.x - 6.0, bar.end.y + 14.0), Vector2(bar.size.x * 0.62, 18.0)))
+
+	if guard_shown:
+		_draw_guard(Rect2(Vector2(bar.position.x - 10.0, bar.end.y + 40.0), Vector2(bar.size.x * 0.62, 14.0)),
+				body.position.x + 24.0)
+
+
+## The guard meter under the health bar: "GUARD" lettering at `label_x` and a thin slanted
+## bar in `area`. During a guard-break flash the trough pulses red-orange.
+func _draw_guard(area: Rect2, label_x: float) -> void:
+	var flash := 0.0
+	if guard_flash_left > 0.0:
+		flash = 0.5 + 0.5 * sin(_time * TAU * 6.0)
+	var label_color := HudStyle.INK.lerp(HudStyle.FINISHER_ACCENT, flash)
+	HudStyle.draw_text(self, Vector2(label_x, area.end.y + 1.0), "GUARD", 17, label_color)
+	var trough := HudStyle.TROUGH.lerp(HudStyle.FINISHER_ACCENT, flash)
+	draw_colored_polygon(HudStyle.slanted_quad(area.grow(3.0), slant), HudStyle.INK)
+	draw_colored_polygon(HudStyle.slanted_quad(area, slant), trough)
+	var shift := minf(slant * area.size.y, area.size.x * 0.5)
+	var length := guard_gauge.value * (area.size.x - shift)
+	if length >= 0.5:
+		draw_colored_polygon(PackedVector2Array([
+			Vector2(area.position.x + shift, area.position.y),
+			Vector2(area.position.x + shift + length, area.position.y),
+			Vector2(area.position.x + length, area.end.y),
+			Vector2(area.position.x, area.end.y),
+		]), HudStyle.GUARD.lerp(Color.WHITE, guard_gauge.flash * 0.6))
 
 
 ## One slanted pip per weapon hit left (filled) or used (empty), fitted into `area`.

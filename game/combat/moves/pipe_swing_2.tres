@@ -24,5 +24,6 @@ damage = 10.0
 knockback = Vector3(1, 0, 2)
 reaction = 2
 tier = 1
+guard_damage_mult = 1.5
 hitboxes = Array[ExtResource("hitbox_spec_gd")]([SubResource("hitbox_0")])
 branches = Array[ExtResource("combo_branch_gd")]([SubResource("branch_0")])

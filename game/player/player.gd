@@ -1,8 +1,9 @@
 class_name PlayerCharacter
 extends CombatActor
 ## The hero. Doom-style movement, look-driven body yaw, cadence combos through
-## ComboParser, target magnetism, jump and air attacks, dodge, quick turn, grabs (knees
-## and throws) and weapons. Cameras and HUD read only the public members (ARCHITECTURE.md).
+## ComboParser, target magnetism, jump and air attacks, the held block and the dodge (both
+## on B), quick turn, grabs (knees and throws) and weapons. Cameras and HUD read only the
+## public members (ARCHITECTURE.md).
 
 const MOVE_SETS: Dictionary[StringName, String] = {
 	&"ground": "res://game/combat/movesets/ground.tres",
@@ -23,12 +24,17 @@ var standing_eye_height: float = 1.68
 ## Input source; set `input.scripted = true` to drive the player from code.
 var input: PlayerInput = PlayerInput.new()
 var parser: ComboParser = ComboParser.new()
+## Test room only: get back up at full health Tuning.player_revive_s after a KO (the real
+## game over comes later). Off by default.
+var auto_revive: bool = false
 
 var _sets: Dictionary[StringName, MoveSet] = {}
 var _weapon_throw_move: MoveData
 ## Button edges since the last sim frame, in arrival order: [button, pressed].
 var _pending_edges: Array[Array] = []
 var _move_input: Vector2 = Vector2.ZERO
+## The stick when B (&"DODGE") was last pressed: it decides block or dodge (_b_action()).
+var _dodge_stick: Vector2 = Vector2.ZERO
 var _magnet_target: CombatActor
 var _magnet_preview: CombatActor
 var _turn_left: float = 0.0
@@ -167,6 +173,16 @@ func _tick_control() -> void:
 			_control_dodge()
 		CombatTypes.ActorState.GRABBING:
 			_control_holding()
+		CombatTypes.ActorState.BLOCK:
+			_control_block()
+			if state == CombatTypes.ActorState.FREE:
+				# The guard dropped this frame: a buffered attack starts now.
+				_control_free()
+		CombatTypes.ActorState.BLOCKSTUN:
+			# Pushed back in the guard: no attacks or steps, but presses stay buffered.
+			if parser.consume(&"TURN"):
+				_start_quick_turn()
+			_cam_offset = Vector2.ZERO
 		_:
 			parser.clear_buffer()
 	_magnet_preview = _find_magnet_target(null)
@@ -180,6 +196,8 @@ func _feed_parser() -> void:
 	parser.tick()
 	for edge in _pending_edges:
 		if edge[1]:
+			if edge[0] == &"DODGE":
+				_dodge_stick = _move_input
 			parser.press(edge[0])
 		else:
 			parser.release(edge[0])
@@ -195,7 +213,7 @@ func _control_free() -> void:
 		_locomotion(1.0, false)
 		return
 	if parser.consume(&"DODGE"):
-		_start_dodge()
+		_b_action()
 		return
 	if is_on_floor() and parser.consume(&"JUMP"):
 		_start_jump()
@@ -258,7 +276,7 @@ func _control_attack() -> void:
 		return
 	if not _air_attack and _held == null and parser.consume(&"DODGE"):
 		_cancel_move()
-		_start_dodge()
+		_b_action()
 		return
 	if parser.consume(&"TURN"):
 		_start_quick_turn()
@@ -274,6 +292,26 @@ func _control_dodge() -> void:
 		sim_velocity.x = 0.0
 		sim_velocity.z = 0.0
 		_return_to_neutral()
+
+
+## Holding the guard: walk slowly, look and quick turn freely (the guard swings with the
+## look), no jump or grab. Releasing B drops the guard after Tuning.block_release_frames;
+## P or K drops it after Tuning.block_attack_cancel_frames and the buffered press starts
+## its attack once FREE.
+func _control_block() -> void:
+	if parser.consume(&"TURN"):
+		_start_quick_turn()
+	_steer(Tuning.data.move_speed * Tuning.data.block_move_mult, Tuning.data.move_accel)
+	_cam_offset = Vector2.ZERO
+	if is_dropping_guard():
+		return
+	if not parser.is_held(&"DODGE"):
+		drop_guard(Tuning.data.block_release_frames)
+	elif parser.has_buffered(CombatTypes.IN_PUNCH) or parser.has_buffered(CombatTypes.IN_KICK):
+		drop_guard(Tuning.data.block_attack_cancel_frames)
+	elif rig.current_anim() != &"block":
+		# Back in the plain guard after a blockstun's push-back.
+		rig.play(&"block", 0.06)
 
 
 func _control_holding() -> void:
@@ -364,6 +402,33 @@ func _on_hit_received(_hit: HitInfo) -> void:
 	if _holding_valid():
 		_release_held(false)
 	_held = null
+
+
+func _on_move_interrupted() -> void:
+	parser.reset_chain()
+	parser.clear_buffer()
+	_air_attack = false
+	_cam_offset = Vector2.ZERO
+
+
+## The guard faces where the player looks (the body follows the look while blocking).
+func _guard_facing() -> Vector3:
+	return Vector3(-sin(look_yaw), 0.0, -cos(look_yaw))
+
+
+func _tick_ko() -> void:
+	if auto_revive and state_frame >= roundi(Tuning.data.player_revive_s * Engine.physics_ticks_per_second):
+		_revive()
+
+
+## Test room: back up from a KO with full health and guard.
+func _revive() -> void:
+	health = max_health
+	rig.set_hurtboxes_enabled(true)
+	_set_guard(max_guard())
+	CombatEvents.health_changed.emit(self, health, max_health)
+	CombatEvents.revived.emit(self)
+	_start_getup()
 
 
 func _plan_lunge(move: MoveData) -> void:
@@ -520,10 +585,26 @@ func _land() -> void:
 	CombatEvents.landed.emit(self)
 
 
-func _start_dodge() -> void:
+## B at press time (Game-boy's held block, approved after the M1 playtest): with the
+## stick under Tuning.block_stick_threshold it raises the guard, otherwise it dodges that
+## way (the backstep is B + back).
+func _b_action() -> void:
+	if _dodge_stick.length() < Tuning.data.block_stick_threshold:
+		_start_block()
+	else:
+		_start_dodge(_dodge_stick)
+
+
+func _start_block() -> void:
 	parser.reset_chain()
-	var local := _move_input
-	if local.length() < 0.3:
+	_cam_offset = Vector2.ZERO
+	start_block()
+
+
+## Dodge along the stick direction `local` (x = right, y = forward).
+func _start_dodge(local: Vector2) -> void:
+	parser.reset_chain()
+	if local.length() < Tuning.data.block_stick_threshold:
 		local = Vector2(0.0, -1.0)
 	var forward := Vector3(-sin(look_yaw), 0.0, -cos(look_yaw))
 	var right := Vector3(cos(look_yaw), 0.0, -sin(look_yaw))
@@ -575,6 +656,8 @@ func _can_steer_body() -> bool:
 		CombatTypes.ActorState.ATTACK,
 		CombatTypes.ActorState.DODGE,
 		CombatTypes.ActorState.GRABBING,
+		CombatTypes.ActorState.BLOCK,
+		CombatTypes.ActorState.BLOCKSTUN,
 	]
 
 

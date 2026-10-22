@@ -33,7 +33,8 @@ const POINTS: Array[StringName] = [
 const ANIM_IDS: Array[StringName] = [
 	&"idle", &"walk_forward", &"walk_back", &"walk_left", &"walk_right",
 	&"jump", &"fall", &"land",
-	&"dodge_left", &"dodge_right", &"dodge_back", &"dodge_forward", &"block",
+	&"dodge_left", &"dodge_right", &"dodge_back", &"dodge_forward",
+	&"block", &"block_hit", &"guard_break", &"recoil",
 	&"grab", &"hold", &"held", &"thrown", &"pickup", &"haymaker_charge",
 	&"flinch_head_front", &"flinch_head_left", &"flinch_head_right", &"flinch_gut",
 	&"flinch_legs", &"stagger_back", &"stagger_left", &"stagger_right", &"stagger_forward",
@@ -57,6 +58,7 @@ const MOVES: Array = [
 	[&"throw", 8, 2, 20], [&"stomp", 8, 3, 14], [&"pipe_swing_1", 7, 3, 12],
 	[&"pipe_swing_2", 7, 3, 12], [&"pipe_swing_3", 9, 4, 20], [&"weapon_throw", 6, 1, 14],
 	[&"impact_body_knockdown", 0, 1, 0], [&"impact_body_stagger", 0, 1, 0],
+	[&"dummy_jab", 18, 3, 16],
 ]
 
 
@@ -102,6 +104,7 @@ func _reach_rows() -> Array[Reach]:
 	return [
 		Reach.new(&"jab_1", [&"LeftFistPoint"], -0.65, 1.35, 1.65, 0.12, &"stand", head, fist_bury),
 		Reach.new(&"jab_2", [&"RightFistPoint"], -0.65, 1.35, 1.65, 0.12, &"stand", head, fist_bury),
+		Reach.new(&"dummy_jab", [&"RightFistPoint"], -0.65, 1.35, 1.65, 0.14, &"stand", head, fist_bury),
 		Reach.new(&"hook", [&"LeftFistPoint"], -0.5, 1.35, 1.65, 0.14, &"stand", head, fist_bury),
 		Reach.new(&"uppercut", [&"RightFistPoint"], -0.45, 1.4, 1.8, 0.14, &"stand", head, fist_bury),
 		Reach.new(&"shove", [&"LeftFistPoint", &"RightFistPoint"], -0.55, 1.1, 1.45, 0.16, &"stand", torso, fist_bury),
@@ -1513,39 +1516,191 @@ func test_block_holds_the_guard_up_over_the_stance_legs() -> void:
 		assert_lt(fist.z, _local(rig, &"Head").z - 0.25, "the %s fist out in front of the face (%s)" % [side, _fmt(fist)])
 
 
-func test_neutral_dodges_put_the_guard_up() -> void:
-	# The backstep (dodge with no left/right stick) and the forward dodge cover up with the
-	# block guard's arms from frame 3 to frame 13 of the 14-frame dodge: the only "dukes up"
-	# image the relaxed stance shows besides the block. Raising and dropping it, the arms
-	# never fill more than the guard does. Side dodges slip with the arms low.
+func test_dodges_keep_the_stance_arms_and_only_block_puts_the_guard_up() -> void:
+	# Every dodge slips with the stance's arms, the backstep (B + back) and the forward step
+	# included: the held block (B with no stick) is the "dukes up" image now. (The neutral
+	# dodges covered up with the guard before the held block took neutral B.)
+	for rig: HumanoidRig in _stance_rigs():
+		rig.play(&"idle", 0.0)
+		rig.advance(0.0)
+		var stance: Array[Vector3] = []
+		for side: String in ["Left", "Right"]:
+			stance.append(rig.get_point_transform(&"UpperChest").affine_inverse() * rig.get_point_position(StringName(side + "FistPoint")))
+		for anim: StringName in [&"dodge_back", &"dodge_forward", &"dodge_left", &"dodge_right"]:
+			rig.play(&"idle", 0.0)
+			rig.advance(0.5)
+			rig.play(anim, 0.03)
+			for f: int in 18:
+				rig.advance(FRAME)
+				var chest := rig.get_point_transform(&"UpperChest").affine_inverse()
+				# dodge_left mirrors dodge_right, arms included: checked by the low hands below.
+				for s: int in (0 if anim == &"dodge_left" else 2):
+					var side: String = ["Left", "Right"][s]
+					var fist := chest * rig.get_point_position(StringName(side + "FistPoint"))
+					assert_almost_eq(fist, stance[s], Vector3.ONE * 0.02, "%s frame %d: the %s arm keeps the stance's pose" % [
+							_tag(rig, anim), f + 1, side])
+				if rig.stance == PlaceholderPoses.STANCE_RELAXED:
+					for side: String in ["Left", "Right"]:
+						assert_lt(_local(rig, StringName(side + "FistPoint")).y, 1.1, "%s frame %d: the %s hand stays low" % [
+								anim, f + 1, side])
+					assert_lt(_body_share(_fp_hits(rig, _fp_camera(rig))), 0.05, "%s frame %d: no guard in the view" % [anim, f + 1])
 	var rig := _player_rig()
 	rig.play(&"block", 0.0)
 	rig.advance(0.0)
-	# The guard's fists relative to the upper chest: the arms' own pose.
-	var guard: Array[Vector3] = []
-	for side: String in ["Left", "Right"]:
-		guard.append(rig.get_point_transform(&"UpperChest").affine_inverse() * rig.get_point_position(StringName(side + "FistPoint")))
-	for anim: StringName in [&"dodge_back", &"dodge_forward", &"dodge_left", &"dodge_right"]:
-		var covers := anim == &"dodge_back" or anim == &"dodge_forward"
-		rig.play(&"idle", 0.0)
+	_assert_guard_view(rig, "block")
+
+
+func test_block_hit_jolts_the_guard_back_and_returns_to_it() -> void:
+	# Blockstun's &"block_hit": the hips and torso rock back while the guard jams in (the
+	# fists come toward the lens and the view center), then back into the guard by the end
+	# (10 frames, the light blockstun). From the lens the arms keep to the first-person
+	# rules: the body covers at most a third of the view, no forearm or hand comes within
+	# 0.3 m of the lens, both fists stay up on their own sides and the center stays clear.
+	for rig: HumanoidRig in _stance_rigs():
+		rig.play(&"block", 0.0)
 		rig.advance(0.5)
-		rig.play(anim, 0.03)
-		for f: int in 18:
+		var guard_hips := _local(rig, &"Hips")
+		var guard_eye := _local(rig, &"EyePoint")
+		var guard_fist := _view(rig, &"LeftFistPoint")
+		rig.play(&"block_hit", 0.02)
+		var length := rig.anim_player.get_animation(&"block_hit").length
+		assert_almost_eq(length, 10.0 * FRAME, 1e-4, "authored for the light blockstun")
+		var deepest := 0.0
+		var widest := 0.0
+		var inward := 0.0
+		for f: int in 10:
 			rig.advance(FRAME)
-			if not covers:
-				for side: String in ["Left", "Right"]:
-					var fist := _local(rig, StringName(side + "FistPoint"))
-					assert_lt(fist.y, 1.1, "%s frame %d: the %s hand stays low (%s)" % [anim, f + 1, side, _fmt(fist)])
+			deepest = maxf(deepest, _local(rig, &"Hips").z - guard_hips.z)
+			widest = maxf(widest, _local(rig, &"EyePoint").z - guard_eye.z)
+			if rig.stance != PlaceholderPoses.STANCE_RELAXED:
 				continue
-			assert_lt(_body_share(_fp_hits(rig, _fp_camera(rig))), 0.3, "%s frame %d: the arms stay out of the lens" % [anim, f + 1])
-			if f < 2 or f > 12:
+			var cam := _fp_camera(rig)
+			var hits := _fp_hits(rig, cam)
+			var tag := "block_hit frame %d" % (f + 1)
+			assert_lt(_body_share(hits), 0.34, "%s: the arms fill %.0f%% of the view" % [tag, _body_share(hits) * 100.0])
+			var near_parts := _arm_parts("Left")
+			near_parts.append_array(_arm_parts("Right"))
+			assert_gt(_nearest_part(rig, cam, near_parts), 0.3, "%s: forearms 0.3 m or more from the lens" % tag)
+			for side: String in ["Left", "Right"]:
+				var fist := _view(rig, StringName(side + "FistPoint"))
+				assert_true(_in_fp_view(fist) and fist.y > 5.0, "%s: the %s fist up in view (angles %s)" % [tag, side, fist])
+				assert_true(fist.x < -10.0 if side == "Left" else fist.x > 10.0, "%s: the %s fist on its own side" % [tag, side])
+			inward = maxf(inward, absf(guard_fist.x) - absf(_view(rig, &"LeftFistPoint").x))
+			var center := Vector2(FP_COLS, FPView.rows()) * 0.5
+			for i: int in hits.size():
+				if (Vector2(i % FP_COLS, i / FP_COLS) + Vector2(0.5, 0.5) - center).length() < 8.0:
+					assert_null(hits[i], "%s: the view center stays clear" % tag)
+		assert_gt(deepest, 0.03, "%s: the hips are driven back" % rig.stance)
+		assert_gt(widest, 0.08, "%s: the head rocks back with the torso (side view)" % rig.stance)
+		if rig.stance == PlaceholderPoses.STANCE_RELAXED:
+			assert_gt(inward, 3.0, "the fists jam in toward the view center")
+		assert_eq(rig.current_anim(), &"block_hit")
+		for side: String in ["Left", "Right"]:
+			rig.play(&"block", 0.0)
+			rig.advance(0.0)
+			var held := _local(rig, StringName(side + "FistPoint"))
+			rig.play(&"block_hit", 0.0)
+			rig.advance(0.0)
+			rig.advance(length)
+			assert_almost_eq(_local(rig, StringName(side + "FistPoint")), held, Vector3.ONE * 0.01,
+					"%s: block_hit ends back in the guard (%s fist)" % [rig.stance, side])
+
+
+func test_guard_break_knocks_the_arms_apart_into_a_stagger() -> void:
+	# &"guard_break" (45 frames, Tuning.guard_break_frames): the arms are forced apart and
+	# flung up and out, the head snaps back, the body reels and recovers into the stance.
+	# From the lens the fists swing out toward the upper corners over a few frames instead
+	# of vanishing at once, and the view is clear while the body reels.
+	for rig: HumanoidRig in _stance_rigs():
+		rig.play(&"idle", 0.0)
+		rig.advance(0.0)
+		var stance: Array[Vector3] = []
+		for point: StringName in [&"LeftFistPoint", &"RightFistPoint", &"EyePoint"]:
+			stance.append(_local(rig, point))
+		rig.play(&"block", 0.0)
+		rig.advance(0.5)
+		var guard_gap := _local(rig, &"RightFistPoint").x - _local(rig, &"LeftFistPoint").x
+		var guard_eye := _local(rig, &"EyePoint")
+		rig.play(&"guard_break", 0.03)
+		var length := rig.anim_player.get_animation(&"guard_break").length
+		assert_almost_eq(length, Tuning.data.guard_break_frames * FRAME, 0.02, "lasts the guard break")
+		var widest := 0.0
+		var snapped := 0.0
+		var in_view_frames := 0
+		for f: int in roundi(length / FRAME):
+			rig.advance(FRAME)
+			var gap := _local(rig, &"RightFistPoint").x - _local(rig, &"LeftFistPoint").x
+			widest = maxf(widest, gap)
+			snapped = maxf(snapped, _local(rig, &"EyePoint").z - guard_eye.z)
+			if rig.stance != PlaceholderPoses.STANCE_RELAXED:
 				continue
-			var chest := rig.get_point_transform(&"UpperChest").affine_inverse()
-			for s: int in 2:
-				var side: String = ["Left", "Right"][s]
-				assert_almost_eq(chest * rig.get_point_position(StringName(side + "FistPoint")), guard[s], Vector3.ONE * 0.01,
-						"%s frame %d: the %s arm is in the guard" % [anim, f + 1, side])
-			_assert_guard_view(rig, "%s frame %d" % [anim, f + 1])
+			var hits := _fp_hits(rig, _fp_camera(rig))
+			assert_lt(_body_share(hits), 0.3, "frame %d: the arms fill %.0f%% of the view" % [f + 1, _body_share(hits) * 100.0])
+			if f < 8 and _in_fp_view(_view(rig, &"LeftFistPoint")) and _in_fp_view(_view(rig, &"RightFistPoint")):
+				in_view_frames += 1
+				assert_gt(absf(_view(rig, &"LeftFistPoint").x), 30.0, "frame %d: the fists swing outward" % [f + 1])
+		assert_gt(widest, guard_gap + 0.8, "%s: the arms are knocked apart (fists %.2f m apart)" % [rig.stance, widest])
+		assert_gt(snapped, 0.15, "%s: the head snaps back" % rig.stance)
+		if rig.stance == PlaceholderPoses.STANCE_RELAXED:
+			assert_between(in_view_frames, 2, 5, "the fists leave the view over a few frames")
+		for i: int in 3:
+			var point: StringName = [&"LeftFistPoint", &"RightFistPoint", &"EyePoint"][i]
+			assert_almost_eq(_local(rig, point), stance[i], Vector3.ONE * 0.01, "%s: ends in the stance (%s)" % [rig.stance, point])
+
+
+func test_recoil_knocks_the_striking_arm_back() -> void:
+	# &"recoil" (an attack stopped by a guard, 14 frames): the striking right arm is knocked
+	# back from the strike to beside the shoulder at once, held, and the body returns to the
+	# stance by the end. The other arm stays in the stance's pose.
+	var jab := load("res://game/combat/moves/dummy_jab.tres") as MoveData
+	for rig: HumanoidRig in _stance_rigs():
+		rig.play(&"idle", 0.0)
+		rig.advance(0.0)
+		var stance: Array[Vector3] = []
+		for point: StringName in [&"LeftFistPoint", &"RightFistPoint", &"EyePoint"]:
+			stance.append(_local(rig, point))
+		_to_first_active_frame(rig, jab)
+		var strike := _local(rig, &"RightFistPoint")
+		rig.play(&"recoil", 0.03)
+		var length := rig.anim_player.get_animation(&"recoil").length
+		assert_almost_eq(length, 14.0 * FRAME, 1e-4, "authored for the default blocked_recoil_frames")
+		for f: int in 4:
+			rig.advance(FRAME)
+		var knocked := _local(rig, &"RightFistPoint")
+		assert_gt(knocked.z - strike.z, 0.6, "%s: the right fist knocked back (%s from %s)" % [rig.stance, _fmt(knocked), _fmt(strike)])
+		assert_gt(knocked.x, 0.3, "%s: and out to the right" % rig.stance)
+		assert_between(knocked.y, 1.4, 1.8, "%s: at shoulder height" % rig.stance)
+		assert_lt(knocked.z, 0.1, "%s: beside the shoulder, not behind the back" % rig.stance)
+		rig.advance(length)
+		for i: int in 3:
+			var point: StringName = [&"LeftFistPoint", &"RightFistPoint", &"EyePoint"][i]
+			assert_almost_eq(_local(rig, point), stance[i], Vector3.ONE * 0.01, "%s: ends in the stance (%s)" % [rig.stance, point])
+
+
+func test_dummy_jab_telegraphs_its_wind_up() -> void:
+	# The sparring dummy's jab (boxer stance): over its 18-frame startup the right fist
+	# draws back beside the head, the shoulders turned away, by 60% of the startup, then
+	# drives straight in to the jab's reach.
+	var rig := _rig()
+	var jab := load("res://game/combat/moves/dummy_jab.tres") as MoveData
+	rig.play(&"idle", 0.0)
+	rig.advance(0.5)
+	var guard := _local(rig, &"RightFistPoint")
+	var head := _local(rig, &"Head")
+	rig.play_move(jab, 0.0)
+	var cocked := roundi(jab.startup * 0.6)
+	for f: int in cocked:
+		rig.advance(FRAME)
+	var windup := _local(rig, &"RightFistPoint")
+	assert_gt(windup.z - guard.z, 0.3, "the fist draws back %.2f m (%s)" % [windup.z - guard.z, _fmt(windup)])
+	assert_gt(windup.z, head.z, "behind the face, beside the head")
+	assert_gt(windup.x, 0.3, "out to the right")
+	assert_gt(windup.y, head.y, "up by the ear")
+	for f: int in jab.startup - cocked:
+		rig.advance(FRAME)
+	var strike := _local(rig, &"RightFistPoint")
+	assert_lt(strike.z, -0.65, "then the straight right reaches out (%s)" % _fmt(strike))
+	assert_lt(absf(strike.x), 0.1, "on the center line")
 
 
 func test_haymaker_charge_keeps_the_view_center_clear() -> void:

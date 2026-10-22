@@ -13,6 +13,9 @@ const GHOST := Color(1.0, 1.0, 1.0)
 const HEALTH := Color(1.0, 0.82, 0.16)
 const BOSS := Color(0.7, 0.42, 0.98)
 const DURABILITY := Color(0.55, 0.86, 1.0)
+## The guard meter (held block) and the PARRY callout.
+const GUARD := Color(0.42, 0.96, 0.82)
+const PARRY := Color(0.35, 0.92, 1.0)
 const MUTED := Color(0.62, 0.62, 0.68)
 ## Only for finisher accents (Spec §10).
 const FINISHER_ACCENT := Color(1.0, 0.42, 0.32)

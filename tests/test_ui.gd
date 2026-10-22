@@ -238,6 +238,56 @@ func test_player_panel_reads_the_player_and_weapon_durability() -> void:
 	assert_almost_eq(_hud.player_panel.gauge.ghost, 0.4, 0.001)
 
 
+func test_guard_meter_shows_while_blocking_or_below_full_and_flashes_on_a_break() -> void:
+	var player := _spawn_player()
+	_hud.advance(0.016)
+	assert_false(_hud.player_panel.guard_shown, "full guard, not blocking: hidden")
+	player.state = CombatTypes.ActorState.BLOCK
+	_hud.advance(0.016)
+	assert_true(_hud.player_panel.guard_shown, "shown while blocking")
+	assert_almost_eq(_hud.player_panel.guard_gauge.value, 1.0, 0.001)
+	player.state = CombatTypes.ActorState.FREE
+	player.guard = player.max_guard() * 0.4
+	_hud.advance(0.016)
+	assert_true(_hud.player_panel.guard_shown, "shown below full")
+	assert_almost_eq(_hud.player_panel.guard_gauge.value, 0.4, 0.001)
+	player.guard = player.max_guard()
+	_hud.advance(0.016)
+	assert_false(_hud.player_panel.guard_shown, "hidden again when full")
+	# A guard break flashes the meter (and pops the callout) for the player only.
+	player.guard = 0.0
+	CombatEvents.guard_broken.emit(_spawn_enemy(), HitInfo.new())
+	assert_eq(_hud.player_panel.guard_flash_left, 0.0, "another actor's guard break: no flash")
+	CombatEvents.guard_broken.emit(player, HitInfo.new())
+	assert_gt(_hud.player_panel.guard_flash_left, 0.0, "flashing")
+	assert_true(_hud.block_callout.visible)
+	assert_eq(_hud.block_callout.text, "GUARD BREAK!")
+	player.guard = player.max_guard()
+	_hud.advance(0.016)
+	assert_true(_hud.player_panel.guard_shown, "shown while it flashes")
+	_hud.advance(_hud.player_panel.guard_break_flash_s)
+	_hud.advance(1.0)
+	assert_false(_hud.player_panel.guard_shown)
+	assert_false(_hud.block_callout.visible, "the callout fades")
+
+
+func test_perfect_block_pops_a_parry_callout_for_the_player() -> void:
+	var player := _spawn_player()
+	var enemy := _spawn_enemy()
+	_hud.advance(0.016)
+	CombatEvents.perfect_blocked.emit(enemy, HitInfo.new())
+	assert_false(_hud.block_callout.visible, "not for other actors")
+	CombatEvents.perfect_blocked.emit(player, HitInfo.new())
+	assert_true(_hud.block_callout.visible)
+	assert_eq(_hud.block_callout.text, "PARRY!")
+	var screen := _hud.get_viewport().get_visible_rect().size
+	var rect := _hud.block_callout.get_global_rect()
+	assert_gt(rect.position.y, screen.y * 0.5, "below the view center")
+	assert_almost_eq(rect.get_center().x, screen.x * 0.5, 1.0, "centered")
+	_hud.advance(_hud.block_callout.show_seconds + 0.1)
+	assert_false(_hud.block_callout.visible)
+
+
 func test_player_panel_hides_without_a_player() -> void:
 	_hud.advance(0.016)
 	assert_false(_hud.player_panel.visible)
@@ -280,6 +330,30 @@ func test_combat_log_visibility_toggle() -> void:
 	assert_eq(_hud.combat_log.entry_count(), 1, "still records while hidden")
 	_hud.set_combat_log_visible(true)
 	assert_true(_hud.combat_log.visible)
+
+
+func test_combat_log_flags_blocked_perfect_and_guard_break_hits() -> void:
+	var player := _spawn_player()
+	var enemy := _spawn_enemy()
+	var move := _make_move(&"dummy_jab", "Sparring Jab")
+	var cases := [
+		["blocked", ["0.9 chip", "BLOCKED"], ["PERFECT", "GUARD BREAK", " dmg"]],
+		["perfect", ["0 chip", "PERFECT"], ["BLOCKED", "GUARD BREAK"]],
+		["broken", ["0.9 chip", "BLOCKED GUARD BREAK"], ["PERFECT"]],
+		["clean", ["6 dmg"], ["chip", "BLOCKED", "PERFECT", "GUARD BREAK"]],
+	]
+	for row: Array in cases:
+		var hit := _make_hit(enemy, player, move, 200)
+		hit.blocked = row[0] != "clean"
+		hit.perfect_block = row[0] == "perfect"
+		hit.guard_broken = row[0] == "broken"
+		hit.damage = 0.0 if hit.perfect_block else (6.0 if not hit.blocked else 0.9)
+		CombatEvents.hit_landed.emit(hit)
+		var line: String = _hud.combat_log.get_lines()[-1]
+		for part: String in row[1]:
+			assert_string_contains(line, part)
+		for part: String in row[2]:
+			assert_false(line.contains(part), "%s: no '%s' in %s" % [row[0], part, line])
 
 
 func test_combat_log_body_impacts_flags_and_line_fitting() -> void:
@@ -426,8 +500,9 @@ func test_help_overlay_shows_controls_and_debug_keys() -> void:
 	for node: Node in _hud.help_overlay.find_children("*", "Label", true, false):
 		texts.append((node as Label).text)
 	for expected: String in ["GAMEPAD", "KEYBOARD + MOUSE", "Left stick", "W A S D", "Mouse", "Left mouse",
-			"Right mouse", "RB", "Q", "LB", "E", "F1", "F2", "F3", "F4", "H", "Esc", "R", "Menu", "View",
-			"Restart (while paused)"]:
+			"Right mouse", "RB", "Q", "LB", "E", "F1", "F2", "F3", "F4", "F5", "H", "Esc", "R", "Menu", "View",
+			"Restart (while paused)", "Block (hold, no direction)", "Dodge (with a direction)",
+			"Sparring dummies on / off"]:
 		assert_has(texts, expected, "help lists %s" % expected)
 
 
@@ -577,6 +652,30 @@ func test_debug_draw_builds_hitboxes_hurtboxes_cone_and_labels() -> void:
 	assert_eq(draw.line_count, 0)
 	assert_eq(draw.get_mesh().get_surface_count(), 0)
 	assert_eq(draw.get_label_count(), 0)
+
+
+func test_debug_draw_shows_the_block_arc_while_guarding() -> void:
+	var draw := _hud.debug_draw
+	var player := _spawn_player()
+	draw.enabled = true
+	draw.rebuild()
+	assert_eq(draw.count_lines_of_color(draw.block_color), 0, "no arc while not blocking")
+	player.state = CombatTypes.ActorState.BLOCK
+	player.look_yaw = 0.0
+	draw.rebuild()
+	var dim := Color(draw.block_color, 0.35)
+	assert_gt(draw.count_lines_of_color(dim), 0, "a dim arc while the guard rises")
+	var arc := player.get_block_arc()
+	assert_eq(arc.get("half_angle_deg"), Tuning.data.block_arc_half_angle_deg)
+	assert_almost_eq(arc.get("forward") as Vector3, Vector3.FORWARD, Vector3.ONE * 0.001, "faces the look")
+	player._guard_frames = Tuning.data.block_raise_frames
+	draw.rebuild()
+	assert_gt(draw.count_lines_of_color(draw.block_color), 0, "cyan once the guard is up")
+	assert_between(draw.block_color.h, 0.45, 0.55, "cyan")
+	var bounds := draw.get_mesh().get_aabb().grow(0.01)
+	var reach := draw.block_arc_radius
+	assert_true(bounds.has_point(Vector3(0.0, draw.block_arc_heights.y, -reach)), "reaches ahead of the look")
+	assert_false(bounds.has_point(Vector3(0.0, draw.block_arc_heights.y, reach * 0.9)), "nothing behind")
 
 
 func test_debug_draw_survives_freed_actors_and_full_circle_arcs() -> void:

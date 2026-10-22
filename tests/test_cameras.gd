@@ -748,6 +748,30 @@ func test_punch_jolts_away_when_player_is_hit() -> void:
 	assert_eq(cam.get_punch_deg(), Vector2.ZERO, "springs back")
 
 
+func test_blocked_hits_shake_and_punch_the_view_less() -> void:
+	# A hit the player's guard stopped (hit.blocked) still jolts the view, scaled down by
+	# blocked_feel_scale.
+	var player := _make_player()
+	var cam := _make_fp(player)
+	var enemy := _make_dummy(Vector3(0.0, 0.0, -0.9))
+	cam.update_camera(DT)
+	var contact := player.get_eye_transform().origin + Vector3(0.0, 0.0, -0.3)
+	var hit := _hit(enemy, player, CombatTypes.HitTier.LIGHT, contact, Vector3.BACK)
+	hit.blocked = true
+	CombatEvents.hit_landed.emit(hit)
+	assert_almost_eq(cam.trauma, Tuning.data.shake_light * cam.blocked_feel_scale, 0.0001, "less trauma")
+	assert_lt(cam.blocked_feel_scale, 1.0)
+	Tuning.set_value(&"screen_shake_intensity", 0.0)
+	cam.update_camera(0.03)
+	var blocked_punch := cam.get_punch_deg().length()
+	assert_gt(blocked_punch, 0.0, "the guard still jolts the view")
+	_run_fp(cam, 1.0)
+	CombatEvents.hit_landed.emit(_hit(enemy, player, CombatTypes.HitTier.LIGHT, contact, Vector3.BACK))
+	cam.update_camera(0.03)
+	assert_almost_eq(blocked_punch, cam.get_punch_deg().length() * cam.blocked_feel_scale, 0.001,
+			"a clean hit punches harder")
+
+
 func test_ignores_hits_without_the_player() -> void:
 	var player := _make_player()
 	var cam := _make_fp(player)

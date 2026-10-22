@@ -8,13 +8,15 @@ One playable level that tests whether a first-person beat-em-up feels good to pl
 godot --path .
 ```
 
-This opens the Milestone 1 graybox test room: the player, three training dummies and a pipe. To open the editor instead, run `godot --path . -e`.
+This opens the Milestone 1 graybox test room: the player, three training dummies and a pipe. The centre dummy spars: stand in front of it and it throws a telegraphed jab every couple of seconds, to block (or dodge, or hit it out of its wind-up). To open the editor instead, run `godot --path . -e`.
 
 | Action | Gamepad (Xbox) | Keyboard + mouse |
 | --- | --- | --- |
 | Move / look | Left stick / right stick | WASD / mouse |
 | Punch / kick | X / Y | Left / right mouse |
-| Jump / dodge | A / B (+ stick) | Space / Shift (+ WASD) |
+| Jump | A | Space |
+| Block (held) | B with no stick direction | Shift alone |
+| Dodge | B + stick direction | Shift + WASD |
 | Back elbow | RB | Q |
 | Grab, pick up, throw weapon | LB | E |
 | Quick turn | Right stick click | Tab |
@@ -22,6 +24,7 @@ This opens the Milestone 1 graybox test room: the player, three training dummies
 | Cycle camera: first person, side view, free fly | | F2 |
 | Debug draw: hitboxes, hurtboxes, magnetism, states | | F3 |
 | Time scale 0.25× / 1× (stand-in for the cheat menu) | | F4 |
+| Sparring: all three dummies throw jabs / none do | | F5 |
 | Controls help | | H |
 
 The free-fly camera moves with the arrow keys and PgUp/PgDn, and turns while you hold the middle mouse button. The player keeps WASD and the mouse.
@@ -29,6 +32,8 @@ The free-fly camera moves with the arrow keys and PgUp/PgDn, and turns while you
 **Combos:** P P P P · P P (pause) P, then mash · K K K · K (pause) K · P P K · hold P, then release (haymaker). The pause means waiting about a quarter second after a hit finishes before pressing again.
 
 **Other moves:** Jump + K (flying kick), Jump + K at the top of the jump (spin kick), K next to a downed enemy (stomp), LB on a staggered enemy, then P (knee) or K (throw).
+
+**Blocking:** hold B (Shift) with no direction to put the guard up; it stops hits from the front (within 60° of where you look) for a little chip damage and drains the guard meter under your health bar. Raise it just as a hit arrives for a perfect block ("PARRY!"): no damage, and the attacker staggers, so you can let go of B and grab it. An empty guard meter breaks the guard. P or K out of the guard attacks at once.
 
 ## Milestone 1 status: graybox combat
 
@@ -38,19 +43,21 @@ Every Spec §4 combo and move can be performed and lands on the training dummies
 - **Grabs:** grab, three knees, then a throw that knocks down whoever the body hits.
 - **Other moves:** back elbow, stomp, the pipe (pick up, three swings, break, throw), dodge and quick turn.
 - **Hitstop and slow-mo:** both already run on finisher-tier hits.
+- **Held block:** guard, chip, guard meter, blockstun and push-back, attacker recoil, guard break and perfect block, against a sparring training dummy's telegraphed jab; the player now takes hits and gets back up after a KO in the test room.
 - **Live tuning:** every number lives in `game/autoload/tuning_data.gd` or the move `.tres` files, ready for the Milestone 2 tuning panel.
 
 The characters are procedural placeholders. Real art, VFX and audio come in Milestones 2 and 4.
 
 **Where M1 departs from the spec, for Game-boy to rule on:**
+- **Held block (Game-boy-approved addition to Spec §4):** B with no stick direction blocks while held; B + a direction dodges (the backstep is B + back, where the spec's neutral B backstepped). The guard covers 60° either side of the look, chips 15% of the damage and drains a guard meter (guard break when it empties), with a perfect block for a guard raised just in time. Numbers are in the "Block" and "Sparring" groups of `tuning_data.gd`; details in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) "Block". The sparring dummy's jab connects within about 1.05 m, so between that and its 1.7 m sparring range it whiffs.
 - **Camera position (Game-boy's call after the M1 playtest):** the first-person lens sits at throat height, 20 cm below the eye point and 4 cm ahead of it (`cam_height_offset_m`, `cam_forward_offset_m`, tunable), where the spec has the camera ride the eye. Punches come in from below or the side, the arm running off the edge of the view, and kicks bring the foot and shin into it. Looking down 45 degrees shows the lead hand; the feet stand under the body, below the view's bottom edge at that angle, so the lead shoe comes in from about 60 degrees and the lead leg from about 65 (walking, the striding foot from 55; Mirror's Edge style). The lens used to sit 12 cm ahead to clear the guard's forearms at the chin; the relaxed arms no longer need that, and a lens closer over the body keeps the block guard's forearms 30 cm or more away and the lead foot ahead of it when looking down.
-- **Relaxed player stance:** the player stands in a loose "Bruce Lee" stance, arms low until a strike, instead of a boxer's high guard, so nothing of the arms shows while looking ahead. It keeps the guard's body and footing, so strikes move the camera no more than before. The "dukes up" image is now the block guard (the `block` animation, for the held block that comes next): fists up in the upper corners of the view, forearms rising from the lower corners, the center clear. Until the held block lands it shows on the neutral dodge (the backstep, and the forward dodge). Enemies keep the boxer guard. The player's hands are smaller and skin-colored, with light wraps and a dark fingerless-glove plate (Spec §10).
+- **Relaxed player stance:** the player stands in a loose "Bruce Lee" stance, arms low until a strike, instead of a boxer's high guard, so nothing of the arms shows while looking ahead. It keeps the guard's body and footing, so strikes move the camera no more than before. The "dukes up" image is the held block's guard (the `block` animation): fists up in the upper corners of the view, forearms rising from the lower corners, the center clear. The dodges keep the stance's arms. Enemies keep the boxer guard. The player's hands are smaller and skin-colored, with light wraps and a dark fingerless-glove plate (Spec §10).
 - **Upper body in first person:** the player's head, neck, chest, upper chest, shoulder balls and the shoulder end of each upper arm are hidden from the first-person camera; the elbow end of the upper arm, the forearms and hands, the belly, belt and legs show. Re-checked with the relaxed stance and the new lens: hiding the whole upper arm left a punch's forearm floating mid-view, its rounded elbow end inside the frame, while showing all of it let the shoulders sweep across the view on every twist (two fifths of it on a spinning heel or a spin kick). Hiding only the shoulder end keeps both right: a jab covers about a quarter of the view and the spins under a sixth. The chest is still hidden (it swept across half the view on every twist), so the belly has a rounded top for looking steeply down. The hidden parts still cast shadows and show in the side and free-fly views. The spec says the full body renders in first person; its fallback (a first-person-only arm pose) can replace this once real art exists.
 - **Clinch:** a held enemy bends over further than before, so its head sits just under the throat-height view instead of filling it. A grab eases the victim in from where it stood while it bends over, head first, so its head and shoulders never sweep through the lens; released on its feet, it stands up around its hips, away from the holder.
 - **Flying kick:** it dives forward and down, and its camera pitches down 25° (like the stomp) instead of the 8–12° of the standing kicks. From the air, a foot at hip height passed over a standing enemy's head.
 
 **Automated checks:**
-- `tools/run_tests.sh` runs 241 tests headless in about 5 seconds, including an end-to-end suite where a scripted player performs every combo in the real test room.
+- `tools/run_tests.sh` runs 270 tests headless in about 7 seconds, including an end-to-end suite where a scripted player performs every combo in the real test room.
 - `tools/capture_combos.sh` records the combo bot with Movie Maker to `captures/combos.avi`, writes a hit log to `captures/bot.log`, and extracts stills for review. Pass text to run only matching acts, for example `tools/capture_combos.sh "haymaker"`.
 
 ## Repo layout

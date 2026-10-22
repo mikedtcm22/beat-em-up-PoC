@@ -71,6 +71,22 @@ func push_press(button: StringName, hold_ticks: int = 2) -> void:
 	_queue.append(up)
 
 
+## Queue a press of `button` that stays held until push_up() (the held block).
+func push_down(button: StringName) -> void:
+	var down := Frame.new()
+	down.move = scripted_move
+	down.pressed.append(button)
+	_queue.append(down)
+
+
+## Queue the release of a button pressed with push_down().
+func push_up(button: StringName) -> void:
+	var up := Frame.new()
+	up.move = scripted_move
+	up.released.append(button)
+	_queue.append(up)
+
+
 func queued() -> int:
 	return _queue.size()
 

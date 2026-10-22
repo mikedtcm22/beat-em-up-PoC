@@ -4,9 +4,10 @@ extends CanvasLayer
 ## paused (process_mode ALWAYS). Presentation only: it subscribes to CombatEvents,
 ## GameInput and the camera director, reads actors, and never writes simulation state.
 ##
-## Layout (1920x1080 canvas): player health bottom-left, boss bar bottom-center, combat log
-## right-middle, camera toast and pause caption top-center, help left-middle, over-head
-## enemy bars and the center dot in the 3D view. The top-left and top-right corners stay
+## Layout (1920x1080 canvas): player health (and guard meter) bottom-left, boss bar
+## bottom-center, combat log right-middle, camera toast and pause caption top-center, help
+## left-middle, the PARRY / GUARD BREAK callout just below the center, over-head enemy bars
+## and the center dot in the 3D view. The top-left and top-right corners stay
 ## clear for the rear-attack warning (Spec §8). The DebugDraw child (CombatDebugDraw, F3)
 ## draws in 3D, in group "debug_draw".
 ##
@@ -23,6 +24,7 @@ extends CanvasLayer
 @onready var enemy_bars: EnemyHealthBars = $EnemyHealthBars
 @onready var center_dot: CenterDot = $CenterDot
 @onready var combat_log: CombatLogOverlay = $CombatLog
+@onready var block_callout: BlockCallout = $BlockCallout
 @onready var camera_toast: CameraModeToast = $CameraToast
 @onready var help_overlay: HelpOverlay = $HelpOverlay
 @onready var pause_overlay: PauseOverlay = $PauseOverlay
@@ -42,6 +44,8 @@ func _ready() -> void:
 	CombatEvents.attack_started.connect(combat_log.on_attack_started)
 	CombatEvents.attack_whiffed.connect(combat_log.add_whiff)
 	CombatEvents.health_changed.connect(_on_health_changed)
+	CombatEvents.perfect_blocked.connect(_on_perfect_blocked)
+	CombatEvents.guard_broken.connect(_on_guard_broken)
 	GameInput.paused_changed.connect(pause_overlay.set_paused)
 	pause_overlay.set_paused(GameInput.paused)
 	boss_bar.hide_boss()
@@ -75,6 +79,7 @@ func advance(delta: float) -> void:
 	enemy_bars.advance(game_delta)
 	center_dot.refresh(director)
 	camera_toast.advance(delta)
+	block_callout.advance(game_delta)
 
 
 ## Show the bottom-center boss bar for `actor` (Milestone 5).
@@ -116,6 +121,17 @@ func set_debug_draw_enabled(on: bool) -> void:
 func _on_hit_landed(hit: HitInfo) -> void:
 	combat_log.add_hit(hit)
 	enemy_bars.on_hit_landed(hit)
+
+
+func _on_perfect_blocked(defender: Node3D, _hit: HitInfo) -> void:
+	if is_instance_valid(defender) and defender == player_panel.player:
+		block_callout.show_parry()
+
+
+func _on_guard_broken(defender: Node3D, _hit: HitInfo) -> void:
+	if is_instance_valid(defender) and defender == player_panel.player:
+		player_panel.on_guard_broken()
+		block_callout.show_guard_break()
 
 
 func _on_health_changed(actor: Node3D, health: float, max_health: float) -> void:

@@ -20,4 +20,5 @@ damage = 10.0
 knockback = Vector3(0, 2, 6)
 reaction = 3
 tier = 2
+guard_damage_mult = 1.5
 hitboxes = Array[ExtResource("hitbox_spec_gd")]([SubResource("hitbox_0")])

@@ -128,7 +128,7 @@ func _on_body_entered(body: Node) -> void:
 			hit.input_timing = &"thrown"
 			if victim.receive_hit(hit):
 				durability -= 1
-				TimeController.hitstop([victim], Tuning.data.hitstop_s(_throw_move.tier))
+				TimeController.hitstop([victim], HitDetector.hitstop_for(hit))
 				CombatEvents.hit_landed.emit(hit)
 		linear_velocity *= -0.2
 	_flying = false

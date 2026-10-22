@@ -10,6 +10,7 @@
 [ext_resource type="Script" uid="uid://df40mbepumvax" path="res://game/ui/help_overlay.gd" id="8_help"]
 [ext_resource type="Script" uid="uid://bic0kuq8cqf7e" path="res://game/ui/pause_overlay.gd" id="9_pause"]
 [ext_resource type="PackedScene" uid="uid://br8cmdba7oejl" path="res://game/ui/debug_draw.tscn" id="10_debug"]
+[ext_resource type="Script" uid="uid://cldj37t3p4a64" path="res://game/ui/block_callout.gd" id="11_callout"]
 
 [node name="Hud" type="CanvasLayer"]
 process_mode = 3
@@ -73,6 +74,23 @@ grow_horizontal = 2
 grow_vertical = 0
 mouse_filter = 2
 script = ExtResource("5_boss")
+
+[node name="BlockCallout" type="Control" parent="."]
+visible = false
+layout_mode = 3
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -340.0
+offset_top = 70.0
+offset_right = 340.0
+offset_bottom = 160.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("11_callout")
 
 [node name="CombatLog" type="Control" parent="."]
 clip_contents = true

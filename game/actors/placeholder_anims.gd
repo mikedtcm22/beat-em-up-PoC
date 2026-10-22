@@ -20,7 +20,8 @@ const MAX_STEP_DEG := 90.0
 const ANIM_IDS: Array[StringName] = [
 	&"idle", &"walk_forward", &"walk_back", &"walk_left", &"walk_right",
 	&"jump", &"fall", &"land",
-	&"dodge_left", &"dodge_right", &"dodge_back", &"dodge_forward", &"block",
+	&"dodge_left", &"dodge_right", &"dodge_back", &"dodge_forward",
+	&"block", &"block_hit", &"guard_break", &"recoil",
 	&"grab", &"hold", &"held", &"thrown", &"pickup", &"haymaker_charge",
 	&"flinch_head_front", &"flinch_head_left", &"flinch_head_right", &"flinch_gut",
 	&"flinch_legs", &"stagger_back", &"stagger_left", &"stagger_right", &"stagger_forward",
@@ -55,7 +56,7 @@ const MOVE_IDS: Array[StringName] = [
 	&"front_kick", &"roundhouse", &"spinning_heel", &"stomp_kick", &"push_kick",
 	&"haymaker", &"flying_kick", &"spin_kick", &"back_elbow", &"knee", &"throw",
 	&"stomp", &"pipe_swing_1", &"pipe_swing_2", &"pipe_swing_3", &"weapon_throw",
-	&"impact_body_knockdown", &"impact_body_stagger",
+	&"impact_body_knockdown", &"impact_body_stagger", &"dummy_jab",
 ]
 
 
@@ -159,6 +160,26 @@ static func build_named(id: StringName, scale: float,
 			# The held guard over the stance's legs; the owner's play() blend raises it.
 			var guard := PlaceholderPoses.block_guard(g)
 			keys = [_k(0.0, guard), _k(length, guard)]
+		&"block_hit":
+			# Blockstun: jolted back in the guard and back into it. Authored for the light
+			# blockstun (10 frames); CombatActor plays it at the speed that fits the stun.
+			length = 10.0 * FRAME_S
+			var held_guard := PlaceholderPoses.block_guard(g)
+			var jolt := PlaceholderPoses.block_hit(g)
+			keys = [_k(0.0, held_guard), _k(2.0 * FRAME_S, jolt), _k(4.0 * FRAME_S, jolt),
+				_k(length, held_guard)]
+		&"guard_break":
+			# Tuning.guard_break_frames (45) of stagger: arms knocked apart, reel, recover.
+			length = 0.75
+			var broken := PlaceholderPoses.guard_break_a(g)
+			keys = [_k(0.0, PlaceholderPoses.block_guard(g)), _k(0.05, PlaceholderPoses.guard_break_open(g)),
+				_k(0.14, broken), _k(0.22, broken), _k(0.46, PlaceholderPoses.guard_break_b(g)), _k(length, g)]
+		&"recoil":
+			# A blocked attack's recoil (MoveData.blocked_recoil_frames, 14 by default):
+			# knocked back at once (the play() blend), held, then back to the stance.
+			length = 14.0 * FRAME_S
+			var knocked := PlaceholderPoses.recoil(g)
+			keys = [_k(0.0, knocked), _k(6.0 * FRAME_S, knocked), _k(length, g)]
 		&"grab":
 			length = 0.25
 			keys = [_k(0.0, g), _k(0.12, PlaceholderPoses.grab_reach(g)),

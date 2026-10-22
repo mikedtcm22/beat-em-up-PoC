@@ -335,10 +335,12 @@ func set_hurtboxes_enabled(enabled: bool) -> void:
 		_hurt_shapes[i].disabled = not enabled
 
 
-## White hit flash, 0..1 (Spec §6: 2 frames on contact).
-func set_flash(amount: float) -> void:
+## Hit flash, 0..1 (Spec §6: white for 2 frames on contact). `color` tints it (a perfect
+## block flashes the defender cyan).
+func set_flash(amount: float, color: Color = Color.WHITE) -> void:
 	var energy := clampf(amount, 0.0, 1.0)
 	for mat: StandardMaterial3D in _materials.values():
+		mat.emission = color
 		mat.emission_energy_multiplier = energy
 
 

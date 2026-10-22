@@ -8,6 +8,8 @@ extends Node3D
 ##   - hurtboxes in green, from rig.get_hurtboxes() (each Hurtbox's CollisionShape3D
 ##     children: SphereShape3D or CapsuleShape3D at their global transform),
 ##   - the player's magnetism cone in yellow, with a line and marker on its target,
+##   - the block arc in cyan while an actor guards (CombatActor.get_block_arc()): the
+##     covered angle at chest height, dimmed while the guard is rising or dropping,
 ##   - each actor's debug_state_text() as a billboard Label3D above its head.
 ## Hurtboxes and labels hugging the active camera are skipped, so the player's own head
 ## does not wrap the first-person view. Actors come from group "actor". Reads only; never
@@ -30,6 +32,11 @@ const HALF_CIRCLE_SEGMENTS := 12
 @export var hurtbox_color: Color = Color(0.25, 1.0, 0.4)
 @export var cone_color: Color = Color(1.0, 0.88, 0.1)
 @export var target_color: Color = Color(1.0, 1.0, 0.65)
+@export var block_color: Color = Color(0.15, 0.95, 1.0)
+## Radius (meters) the block arc is drawn at around a guarding actor, and its height band
+## above the feet.
+@export var block_arc_radius: float = 1.1
+@export var block_arc_heights: Vector2 = Vector2(0.9, 1.6)
 ## Height of the state label's bottom edge above get_head_top_position(), in meters.
 @export var label_lift: float = 0.2
 ## State label size in meters per font pixel (Label3D pixel_size). Labels are sized in the
@@ -167,7 +174,7 @@ func _add_actor(actor: CombatActor) -> void:
 			var radius: float = volume.get("radius", 0.0)
 			_add_sphere(Transform3D(Basis(), center), radius, hitbox_color)
 		elif kind == &"arc":
-			_add_arc_volume(volume)
+			_add_arc_volume(volume, hitbox_color)
 	if actor.rig != null and is_instance_valid(actor.rig):
 		for hurtbox: Hurtbox in actor.rig.get_hurtboxes():
 			if is_instance_valid(hurtbox) and hurtbox.is_inside_tree():
@@ -175,6 +182,17 @@ func _add_actor(actor: CombatActor) -> void:
 	var player := actor as PlayerCharacter
 	if player != null:
 		_add_magnetism_cone(player.get_magnetism_cone())
+	var block := actor.get_block_arc()
+	if not block.is_empty():
+		var color := block_color if block.get("effective", false) else Color(block_color, 0.35)
+		_add_arc_volume({
+			origin = block.get("origin", actor.global_position),
+			forward = block.get("forward", Vector3.FORWARD),
+			radius = block_arc_radius,
+			half_angle_deg = block.get("half_angle_deg", 0.0),
+			h_min = block_arc_heights.x,
+			h_max = block_arc_heights.y,
+		}, color)
 
 
 ## A hurtbox's sphere and capsule shapes, dimmed while it cannot be hit (KO, grabbed).
@@ -209,8 +227,9 @@ func _hugs_camera(a: Vector3, b: Vector3, radius: float) -> bool:
 
 
 ## {kind = &"arc", origin, forward, radius, half_angle_deg, h_min, h_max}: the arc at both
-## heights (meters above origin), radial edges to its ends, and verticals joining them.
-func _add_arc_volume(volume: Dictionary) -> void:
+## heights (meters above origin), radial edges to its ends, and verticals joining them, in
+## `color`.
+func _add_arc_volume(volume: Dictionary, color: Color) -> void:
 	var origin: Vector3 = volume.get("origin", Vector3.ZERO)
 	var forward: Vector3 = volume.get("forward", Vector3.FORWARD)
 	var radius: float = volume.get("radius", 0.0)
@@ -227,16 +246,16 @@ func _add_arc_volume(volume: Dictionary) -> void:
 	# In this frame: x = right, y = up, -z = forward. Angle a from forward toward right.
 	for h: float in [h_min, h_max]:
 		var center := Vector3(0.0, h, 0.0)
-		_add_circle(xform, center, Vector3.FORWARD, Vector3.RIGHT, radius, hitbox_color, -half, half, segments)
+		_add_circle(xform, center, Vector3.FORWARD, Vector3.RIGHT, radius, color, -half, half, segments)
 		if not full:
-			_add_line(xform * center, xform * (center + _arc_point(-half, radius)), hitbox_color)
-			_add_line(xform * center, xform * (center + _arc_point(half, radius)), hitbox_color)
+			_add_line(xform * center, xform * (center + _arc_point(-half, radius)), color)
+			_add_line(xform * center, xform * (center + _arc_point(half, radius)), color)
 	var posts: Array[float] = [-half, 0.0, half]
 	if full:
 		posts = [0.0, PI * 0.5, PI, PI * 1.5]
 	for angle: float in posts:
 		var edge := _arc_point(angle, radius)
-		_add_line(xform * (edge + Vector3.UP * h_min), xform * (edge + Vector3.UP * h_max), hitbox_color)
+		_add_line(xform * (edge + Vector3.UP * h_min), xform * (edge + Vector3.UP * h_max), color)
 
 
 ## {origin, forward, half_angle_deg, range, target}: generator lines and the far ring, plus a

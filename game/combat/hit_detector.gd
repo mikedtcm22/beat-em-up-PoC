@@ -49,7 +49,11 @@ func process(move: MoveData, move_frame: int) -> Array[HitInfo]:
 	var ordered: Array[Dictionary] = []
 	ordered.assign(candidates.values())
 	ordered.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a.dist < b.dist)
+	# Clean hits freeze with the attacker for the tier's hitstop; blocked hits only for the
+	# short block hitstop (and never start the finisher slow-mo).
 	var frozen: Array = [attacker]
+	var guarded: Array = [attacker]
+	var blocked: HitInfo
 	for c: Dictionary in ordered:
 		if move.max_targets > 0 and landed >= move.max_targets:
 			break
@@ -59,16 +63,36 @@ func process(move: MoveData, move_frame: int) -> Array[HitInfo]:
 			_hit_ids[victim.get_instance_id()] = true
 			landed += 1
 			hits.append(hit)
-			frozen.append(victim)
+			if hit.blocked:
+				guarded.append(victim)
+				# The attacker answers the strongest block: a perfect one, else an ordinary one.
+				if blocked == null or (hit.perfect_block and not blocked.perfect_block) or blocked.guard_broken:
+					blocked = hit
+			else:
+				frozen.append(victim)
 	if hits.is_empty():
 		return hits
-	var stop := Tuning.data.hitstop_s(move.tier)
-	TimeController.hitstop(frozen, stop)
-	if move.tier == CombatTypes.HitTier.FINISHER and Tuning.data.slowmo_ms > 0.0:
-		TimeController.slowmo(Tuning.data.slowmo_scale, Tuning.data.slowmo_ms / 1000.0, stop)
+	if frozen.size() > 1:
+		var stop := Tuning.data.hitstop_s(move.tier)
+		TimeController.hitstop(frozen, stop)
+		if move.tier == CombatTypes.HitTier.FINISHER and Tuning.data.slowmo_ms > 0.0:
+			TimeController.slowmo(Tuning.data.slowmo_scale, Tuning.data.slowmo_ms / 1000.0, stop)
+	if guarded.size() > 1:
+		TimeController.hitstop(guarded, Tuning.data.block_hitstop_ms / 1000.0)
 	for hit in hits:
 		CombatEvents.hit_landed.emit(hit)
+	# Every hit of this frame was blocked: the attack recoils (or staggers on a parry).
+	if blocked and frozen.size() == 1:
+		attacker.react_to_block(blocked)
 	return hits
+
+
+## Hitstop for one code-applied hit (body impacts, throws, thrown weapons): the tier's,
+## or the short block hitstop when the guard stopped it.
+static func hitstop_for(hit: HitInfo) -> float:
+	if hit.blocked:
+		return Tuning.data.block_hitstop_ms / 1000.0
+	return Tuning.data.hitstop_s(hit.tier)
 
 
 func _query_point(

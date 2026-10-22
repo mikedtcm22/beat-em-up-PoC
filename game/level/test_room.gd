@@ -2,6 +2,8 @@ extends Node3D
 ## Milestone 1 graybox test room: a short street (axis = world X), the player, three
 ## training dummies, a pipe, the camera director and the HUD. Built in code so it stays
 ## readable as text; layout numbers live in the exports below.
+## The centre dummy spars (throws telegraphed jabs to block); F5 ("sparring") toggles
+## sparring on all three. A KO'd player gets back up after Tuning.player_revive_s.
 
 const PLAYER_SCENE := "res://game/player/player.tscn"
 const DUMMY_SCENE := "res://game/enemies/dummy/training_dummy.tscn"
@@ -25,6 +27,8 @@ const GRID_SHADER := "res://game/level/grid.gdshader"
 	Color(0.86, 0.5, 0.16), Color(0.5, 0.72, 0.2), Color(0.62, 0.32, 0.72)
 ]
 @export var pipe_position: Vector3 = Vector3(-3.0, 0.15, 2.6)
+## Indices of the dummies that spar from the start (Dummy 2, the centre one).
+@export var sparring_dummies: Array[int] = [1]
 ## Build the presentation layer (cameras, HUD). Tests can turn this off.
 @export var with_presentation: bool = true
 
@@ -45,6 +49,18 @@ func _unhandled_input(event: InputEvent) -> void:
 		# Milestone 1 stand-in for the F4 cheat menu: toggle 0.25x time.
 		TimeController.debug_scale = 0.25 if is_equal_approx(TimeController.debug_scale, 1.0) else 1.0
 		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed(&"sparring"):
+		toggle_sparring()
+		get_viewport().set_input_as_handled()
+
+
+## F5: every dummy spars (guard-break and crowd practice), or, if all already do, none.
+func toggle_sparring() -> void:
+	var all_on := true
+	for dummy: TrainingDummy in dummies:
+		all_on = all_on and dummy.sparring
+	for dummy: TrainingDummy in dummies:
+		dummy.sparring = not all_on
 
 
 func _build_environment() -> void:
@@ -115,6 +131,7 @@ func _spawn_actors() -> void:
 	player = (load(PLAYER_SCENE) as PackedScene).instantiate() as PlayerCharacter
 	player.position = player_start
 	player.rotation.y = deg_to_rad(player_yaw_deg)
+	player.auto_revive = true
 	add_child(player)
 	for n in dummy_positions.size():
 		var dummy := (load(DUMMY_SCENE) as PackedScene).instantiate() as TrainingDummy
@@ -124,6 +141,7 @@ func _spawn_actors() -> void:
 		dummy.position = dummy_positions[n]
 		var to_player := player_start - dummy_positions[n]
 		dummy.rotation.y = atan2(-to_player.x, -to_player.z)  # face the player start
+		dummy.sparring = sparring_dummies.has(n)
 		add_child(dummy)
 		dummies.append(dummy)
 	var pipe := (load(PIPE_SCENE) as PackedScene).instantiate() as Weapon

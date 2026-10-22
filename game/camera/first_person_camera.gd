@@ -32,6 +32,8 @@ extends Camera3D
 @export_range(0.0, 0.2, 0.005) var shake_max_offset_m: float = 0.04
 ## How fast the shake noise is sampled; higher rattles faster.
 @export_range(1.0, 60.0, 1.0) var shake_frequency_hz: float = 15.0
+## Shake and punch of a hit the guard stopped (hit.blocked), relative to a clean hit.
+@export_range(0.0, 1.0, 0.05) var blocked_feel_scale: float = 0.5
 
 ## Total pitch is clamped to this, so a downward move offset on top of looking straight
 ## down never flips the view over.
@@ -258,9 +260,10 @@ func _on_hit_landed(hit: HitInfo) -> void:
 	var is_attacker := hit.attacker == player
 	if not is_attacker and hit.victim != player:
 		return
-	add_trauma(Tuning.data.shake(hit.tier))
+	var feel := blocked_feel_scale if hit.blocked else 1.0
+	add_trauma(Tuning.data.shake(hit.tier) * feel)
 	var direction := _toward(hit.contact_point) if is_attacker else _away(hit)
-	add_punch(direction * Tuning.data.cam_punch_deg(hit.tier))
+	add_punch(direction * Tuning.data.cam_punch_deg(hit.tier) * feel)
 
 
 ## Unit kick (x = pitch up, y = yaw left) that turns the view toward `point`. A contact at

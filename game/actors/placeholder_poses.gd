@@ -498,10 +498,123 @@ static func fall_pose(base: Dictionary[StringName, Vector3]) -> Dictionary[Strin
 
 
 ## The held guard ("dukes up"): `base` (a stance pose: its legs and torso) with
-## block_guard_arms(). &"block" holds it, and the neutral dodges (dodge_back,
-## dodge_forward) cover up with its arms.
+## block_guard_arms(). &"block" holds it (the held block, B with no stick); in the relaxed
+## stance it is the only "dukes up" image.
 static func block_guard(base: Dictionary[StringName, Vector3]) -> Dictionary[StringName, Vector3]:
 	return merge(base, block_guard_arms())
+
+
+## A blocked hit's push-back in the guard (&"block_hit"): the hips driven back, the torso
+## rocked back over a deeper rear knee, the chin tucked, and the guard jammed in: the
+## forearms fold back and the elbows pull in, so from the first-person lens both fists
+## jolt toward the view center and down while the body slides back. Side on, the torso
+## rocks back behind the fists.
+static func block_hit(base: Dictionary[StringName, Vector3]) -> Dictionary[StringName, Vector3]:
+	return add(block_guard(base), {
+		HIPS_NUDGE: Vector3(0.0, 0.0, 0.05),
+		&"Spine": Vector3(6.0, 0.0, 0.0),
+		&"Chest": Vector3(3.0, 0.0, 0.0),
+		&"Neck": Vector3(-6.0, 0.0, 0.0),
+		&"Head": Vector3(-4.0, 0.0, 0.0),
+		&"LeftUpperArm": Vector3(-8.0, 0.0, 9.0),
+		&"LeftLowerArm": Vector3(5.0, 0.0, 0.0),
+		&"RightUpperArm": Vector3(-8.0, 0.0, -9.0),
+		&"RightLowerArm": Vector3(5.0, 0.0, 0.0),
+		&"LeftUpperLeg": Vector3(-4.0, 0.0, 0.0),
+		&"LeftLowerLeg": Vector3(4.0, 0.0, 0.0),
+		&"RightUpperLeg": Vector3(8.0, 0.0, 0.0),
+		&"RightLowerLeg": Vector3(-14.0, 0.0, 0.0),
+		&"RightFoot": Vector3(6.0, 0.0, 0.0),
+	})
+
+
+## A broken guard (&"guard_break"), first key: the blow forces the guard open, the elbows
+## knocked up and out so from the first-person lens both fists swing out toward the upper
+## corners of the view while the head starts to snap back.
+static func guard_break_open(base: Dictionary[StringName, Vector3]) -> Dictionary[StringName, Vector3]:
+	return add(block_guard(base), {
+		&"Spine": Vector3(4.0, 0.0, 0.0),
+		&"Neck": Vector3(3.0, 0.0, 0.0),
+		&"Head": Vector3(4.0, 0.0, 0.0),
+		&"LeftUpperArm": Vector3(10.0, 0.0, -14.0),
+		&"LeftLowerArm": Vector3(-14.0, 0.0, 0.0),
+		&"RightUpperArm": Vector3(10.0, 0.0, 14.0),
+		&"RightLowerArm": Vector3(-14.0, 0.0, 0.0),
+	})
+
+
+## A broken guard, second key: the arms knocked apart, flung up and out to the sides, the
+## head and torso snapped back and the rear foot stepping back. From the first-person lens
+## the fists fly out of the upper corners of the view.
+static func guard_break_a(base: Dictionary[StringName, Vector3]) -> Dictionary[StringName, Vector3]:
+	return merge(base, {
+		&"Spine": Vector3(12.0, 0.0, 0.0),
+		&"Chest": Vector3(8.0, 0.0, 0.0),
+		&"Neck": Vector3(8.0, 0.0, 0.0),
+		&"Head": Vector3(10.0, 0.0, 0.0),
+		&"LeftShoulder": Vector3(0.0, 10.0, -12.0),
+		&"LeftUpperArm": Vector3(62.0, 0.0, -78.0),
+		&"LeftLowerArm": Vector3(34.0, 0.0, 0.0),
+		&"LeftHand": Vector3(-20.0, 0.0, 0.0),
+		&"RightShoulder": Vector3(0.0, -10.0, 12.0),
+		&"RightUpperArm": Vector3(62.0, 0.0, 78.0),
+		&"RightLowerArm": Vector3(34.0, 0.0, 0.0),
+		&"RightHand": Vector3(-20.0, 0.0, 0.0),
+		&"LeftUpperLeg": Vector3(24.0, 0.0, -4.0),
+		&"LeftLowerLeg": Vector3(-12.0, 0.0, 0.0),
+		&"LeftFoot": Vector3(10.0, 0.0, 4.0),
+		&"RightUpperLeg": Vector3(-24.0, 0.0, 5.0),
+		&"RightLowerLeg": Vector3(-30.0, 0.0, 0.0),
+		&"RightFoot": Vector3(28.0, 0.0, -5.0),
+	})
+
+
+## A broken guard, third key: reeling, the arms hanging wide and low, the weight over the
+## rear foot (then the stagger recovers to the stance).
+static func guard_break_b(base: Dictionary[StringName, Vector3]) -> Dictionary[StringName, Vector3]:
+	return merge(guard_break_a(base), {
+		&"Spine": Vector3(6.0, 0.0, 0.0),
+		&"Chest": Vector3(3.0, 0.0, 0.0),
+		&"Neck": Vector3(2.0, 0.0, 0.0),
+		&"Head": Vector3(4.0, 0.0, 0.0),
+		&"LeftShoulder": Vector3.ZERO,
+		&"LeftUpperArm": Vector3(22.0, 0.0, -42.0),
+		&"LeftLowerArm": Vector3(30.0, 0.0, 0.0),
+		&"LeftHand": Vector3.ZERO,
+		&"RightShoulder": Vector3.ZERO,
+		&"RightUpperArm": Vector3(18.0, 0.0, 44.0),
+		&"RightLowerArm": Vector3(34.0, 0.0, 0.0),
+		&"RightHand": Vector3.ZERO,
+		&"LeftUpperLeg": Vector3(-8.0, 0.0, -4.0),
+		&"LeftLowerLeg": Vector3(-36.0, 0.0, 0.0),
+		&"LeftFoot": Vector3(26.0, 0.0, 4.0),
+		&"RightUpperLeg": Vector3(-14.0, 0.0, 5.0),
+		&"RightLowerLeg": Vector3(-22.0, 0.0, 0.0),
+		&"RightFoot": Vector3(28.0, 0.0, -5.0),
+	})
+
+
+## An attack stopped by a guard (&"recoil"): the striking (right) arm knocked back and
+## out, its shoulder thrown back so the torso twists away and the head jerks back; the
+## other arm keeps the stance's. Short: the attacker's punish window.
+static func recoil(base: Dictionary[StringName, Vector3]) -> Dictionary[StringName, Vector3]:
+	return merge(base, {
+		HIPS_NUDGE: Vector3(0.0, 0.0, 0.03),
+		&"Hips": Vector3(0.0, -8.0, 0.0),
+		&"Spine": Vector3(6.0, -6.0, 0.0),
+		&"Chest": Vector3(3.0, -4.0, 0.0),
+		&"Neck": Vector3(6.0, 8.0, 0.0),
+		&"Head": Vector3(6.0, 8.0, 0.0),
+		&"RightShoulder": Vector3(0.0, -8.0, 8.0),
+		&"RightUpperArm": Vector3(44.0, -6.0, 56.0),
+		&"RightLowerArm": Vector3(112.0, 0.0, 0.0),
+		&"RightHand": Vector3(-24.0, 0.0, 0.0),
+		&"LeftUpperLeg": Vector3(12.0, 0.0, -4.0),
+		&"LeftLowerLeg": Vector3(-18.0, 0.0, 0.0),
+		&"RightUpperLeg": Vector3(-12.0, 0.0, 5.0),
+		&"RightLowerLeg": Vector3(-26.0, 0.0, 0.0),
+		&"RightFoot": Vector3(30.0, 0.0, -5.0),
+	})
 
 
 ## Arms of the held guard: both fists up at about mouth height, 0.36 m ahead of the
@@ -525,9 +638,8 @@ static func block_guard_arms() -> Dictionary[StringName, Vector3]:
 
 
 # --- Dodges (right / back / forward; dodge_left mirrors dodge_right) --------------------
-# Side dodges slip with the stance's arms. The neutral dodge (backstep) and the forward
-# dodge cover up: the block guard's arms over the stance torso (block_guard()), the only
-# "dukes up" image the relaxed stance shows until the held block arrives.
+# Every dodge keeps the stance's arms: the backstep (B + back) and the forward step no
+# longer cover up, since the held block (B with no stick) is the "dukes up" image now.
 
 
 static func dodge_right(base: Dictionary[StringName, Vector3]) -> Dictionary[StringName, Vector3]:
@@ -546,10 +658,10 @@ static func dodge_right(base: Dictionary[StringName, Vector3]) -> Dictionary[Str
 	})
 
 
-## Backstep behind the guard: the stance torso stays up (block_guard()), the rear leg folds
-## under as the weight shifts back.
+## Backstep (B + back): the stance torso stays up, the rear leg folds under as the weight
+## shifts back.
 static func dodge_back(base: Dictionary[StringName, Vector3]) -> Dictionary[StringName, Vector3]:
-	return merge(block_guard(base), {
+	return merge(base, {
 		&"LeftUpperLeg": Vector3(30.0, 0.0, -5.0),
 		&"LeftLowerLeg": Vector3(-30.0, 0.0, 0.0),
 		&"LeftFoot": Vector3(0.0, 0.0, 5.0),
@@ -559,9 +671,9 @@ static func dodge_back(base: Dictionary[StringName, Vector3]) -> Dictionary[Stri
 	})
 
 
-## Lunging in behind the guard (block_guard()): the lead knee deep, the rear leg trailing.
+## Lunging in (B + forward): the lead knee deep, the rear leg trailing.
 static func dodge_forward(base: Dictionary[StringName, Vector3]) -> Dictionary[StringName, Vector3]:
-	return merge(block_guard(base), {
+	return merge(base, {
 		&"LeftUpperLeg": Vector3(70.0, 0.0, -5.0),
 		&"LeftLowerLeg": Vector3(-80.0, 0.0, 0.0),
 		&"LeftFoot": Vector3(10.0, 0.0, 5.0),
@@ -1056,6 +1168,8 @@ static func _recipe(id: StringName, g: Dictionary[StringName, Vector3],
 			return _weapon_throw(wg)
 		&"impact_body_knockdown", &"impact_body_stagger":
 			return _mp(g, g, g)
+		&"dummy_jab":
+			return _dummy_jab(g)
 	return null
 
 
@@ -1118,6 +1232,32 @@ static func _jab_2(g: Dictionary[StringName, Vector3]) -> MovePoses:
 		&"RightToes": Vector3(20.0, 0.0, 0.0),
 	})
 	return _mp(g, windup, strike)
+
+
+## The sparring dummy's telegraphed right (dummy_jab, 18 frames of startup): a big,
+## readable wind-up (the right fist cocked back by the ear, the elbow up and out, the hips
+## and shoulders turned away, the weight on the rear foot) reached at 60% of the startup,
+## then jab_2's straight right. From the defender's first-person view the fist draws back
+## beside the dummy's head, on the defender's left, before it comes straight in.
+static func _dummy_jab(g: Dictionary[StringName, Vector3]) -> MovePoses:
+	var m := _jab_2(g)
+	m.windup = merge(g, {
+		&"Hips": Vector3(0.0, -20.0, 0.0),
+		&"Spine": Vector3(2.0, -10.0, 0.0),
+		&"Chest": Vector3(2.0, -8.0, 0.0),
+		&"Neck": Vector3(4.0, 18.0, 0.0),
+		&"Head": Vector3(2.0, 18.0, 0.0),
+		&"RightShoulder": Vector3(0.0, -12.0, 10.0),
+		&"RightUpperArm": Vector3(36.0, -24.0, 62.0),
+		&"RightLowerArm": Vector3(128.0, 0.0, 0.0),
+		&"LeftUpperLeg": Vector3(10.0, -10.0, -4.0),
+		&"LeftLowerLeg": Vector3(-16.0, 0.0, 0.0),
+		&"RightUpperLeg": Vector3(0.0, -10.0, 5.0),
+		&"RightLowerLeg": Vector3(-30.0, 0.0, 0.0),
+		&"RightFoot": Vector3(26.0, 0.0, -5.0),
+	})
+	m.windup_at = 0.6
+	return m
 
 
 static func _hook(g: Dictionary[StringName, Vector3]) -> MovePoses:

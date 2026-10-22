@@ -4,8 +4,9 @@ extends Control
 ## a semi-transparent backing, oldest at the top. Each line reads
 ##   f<physics frame> +<frames since the previous entry>  attacker > victim  move #<chain step>
 ##   <input timing>  <damage> dmg <tier> <reaction> <region>  mf<move frame> [flags]
-## so combo-timing problems can be reported precisely. Fed by GameHud from
-## CombatEvents.hit_landed, attack_started and attack_whiffed.
+## so combo-timing problems can be reported precisely. A hit the guard stopped shows its chip
+## ("<chip> chip" instead of "<damage> dmg") and the flag BLOCKED, PERFECT or GUARD BREAK.
+## Fed by GameHud from CombatEvents.hit_landed, attack_started and attack_whiffed.
 
 @export var max_entries: int = 10
 @export var font_size: int = 14
@@ -46,6 +47,12 @@ func add_hit(hit: HitInfo) -> void:
 		return
 	var frame := hit.physics_frame if hit.physics_frame > 0 else Engine.get_physics_frames()
 	var flags := ""
+	if hit.perfect_block:
+		flags += " PERFECT"
+	elif hit.guard_broken:
+		flags += " BLOCKED GUARD BREAK"
+	elif hit.blocked:
+		flags += " BLOCKED"
 	if hit.from_behind:
 		flags += " BEHIND"
 	if hit.is_body_impact:
@@ -54,16 +61,16 @@ func add_hit(hit: HitInfo) -> void:
 		flags += " ARMOR"
 	if hit.killed:
 		flags += " KO"
-	var text := "f%d %s  %s > %s  %s #%d %s  %s dmg %s %s %s  mf%d%s" % [
+	var text := "f%d %s  %s > %s  %s #%d %s  %s %s %s %s %s  mf%d%s" % [
 		frame, _gap_text(frame),
 		_actor_name(hit.attacker), _actor_name(hit.victim),
 		_move_name(hit.move), hit.chain_step, hit.input_timing,
-		_number_text(hit.damage),
+		_number_text(hit.damage), "chip" if hit.blocked else "dmg",
 		CombatTypes.tier_name(hit.tier), CombatTypes.reaction_name(hit.reaction),
 		CombatTypes.Region.keys()[hit.region],
 		hit.move_frame, flags,
 	]
-	_push(text, _tier_color(hit.tier), frame, &"hit")
+	_push(text, _hit_color(hit), frame, &"hit")
 
 
 ## CombatEvents.attack_whiffed: chain step and timing come from the matching attack_started.
@@ -116,6 +123,16 @@ func _push(text: String, color: Color, frame: int, kind: StringName) -> void:
 
 func _gap_text(frame: int) -> String:
 	return "+--" if _last_frame < 0 else "+%d" % (frame - _last_frame)
+
+
+func _hit_color(hit: HitInfo) -> Color:
+	if hit.perfect_block:
+		return HudStyle.PARRY
+	if hit.guard_broken:
+		return HudStyle.FINISHER_ACCENT
+	if hit.blocked:
+		return HudStyle.GUARD
+	return _tier_color(hit.tier)
 
 
 func _tier_color(tier: CombatTypes.HitTier) -> Color:

@@ -1,12 +1,19 @@
 class_name CombatActor
 extends CharacterBody3D
 ## Base for every fighter (player, dummies, enemies): health, the hit-reaction state
-## machine, move execution with hitboxes, flying-body impacts, grabs, and the sim-time
-## step. Subclasses drive behavior from _tick_control() and the hooks at the bottom.
+## machine, move execution with hitboxes (and enemy wind-ups), the held block and its
+## guard meter, flying-body impacts, grabs, and the sim-time step. Subclasses drive
+## behavior from _tick_control() and the hooks at the bottom.
 ##
 ## Each physics tick: the actor's sim scale comes from TimeController (0 in hitstop).
 ## Whole sim frames run _sim_tick(); motion and animation then advance by the scaled
 ## delta, and hitboxes are tested against the freshly posed skeleton.
+##
+## Blocking (docs/ARCHITECTURE.md "Block"): a controller calls start_block() and later
+## drop_guard(); while the guard is up (BLOCK, BLOCKSTUN) receive_hit() stops frontal,
+## blockable hits: chip damage, guard drain, blockstun and pushback, or a guard break or
+## a perfect block. The attacker's side of a blocked hit is react_to_block(), which
+## HitDetector calls. Every number comes from Tuning.data (group "Block") or the move.
 
 signal state_changed(old_state: int, new_state: int)
 
@@ -23,6 +30,10 @@ const _GRAB_EASE_S := 0.23
 ## (release_from_grab()): the head rises while the release pushes the body away, not up
 ## through the holder's view at arm's length.
 const _RELEASE_BLEND_S := 0.22
+## Hit-flash color of a perfect block on the defender's rig (the parry flash), and the
+## strength of the contact flash on an ordinary blocked hit (a clean hit flashes at 1).
+const PARRY_FLASH_COLOR := Color(0.3, 0.9, 1.0)
+const BLOCK_FLASH_AMOUNT := 0.45
 
 @export var max_health: float = 100.0
 ## 0 = player, 1 = enemies.
@@ -48,8 +59,25 @@ var debug_hitbox_volumes: Array[Dictionary] = []
 var sim_velocity: Vector3 = Vector3.ZERO
 ## The actor holding this one while GRABBED.
 var holder: CombatActor
+## Guard meter, 0..Tuning.data.guard_max (max_guard()). Blocked hits drain it; it
+## regenerates after a pause and refills partly after a guard break.
+var guard: float = Tuning.data.guard_max
 
 var _tick_accum: float = 0.0
+## Sim frames since the guard started rising (start_block()); keeps counting through
+## blockstun. The guard stops hits from Tuning.block_raise_frames on.
+var _guard_frames: int = 0
+## Frames left until a dropping guard (released, or cancelled into an attack) ends the
+## block; -1 while the guard is not dropping. A dropping guard no longer blocks.
+var _guard_drop_left: int = -1
+## Blockstun pushback: the velocity it starts with, slowing evenly to 0 by its end.
+var _block_push: Vector3 = Vector3.ZERO
+## Sim seconds left before the guard meter regenerates (reset by every blocked hit).
+var _guard_regen_wait: float = 0.0
+## Sim frames left of a guard break; the meter refills to guard_break_refill at the end.
+var _guard_break_left: int = 0
+## This HITSTUN is the recoil of an attack that was blocked (react_to_block()).
+var _recoiling: bool = false
 ## Timed states (HITSTUN, STAGGER, GETUP, DODGE) end after this many frames; 0 = untimed.
 var _state_length: int = 0
 var _invuln_frames: int = 0
@@ -91,6 +119,7 @@ func _ready() -> void:
 		CombatTypes.bit(CombatTypes.LAYER_PLAYER_BODY) | CombatTypes.bit(CombatTypes.LAYER_ENEMY_BODY)
 	)
 	_set_ghost(false)
+	guard = max_guard()
 	CombatEvents.health_changed.emit.call_deferred(self, health, max_health)
 
 
@@ -115,10 +144,12 @@ func _physics_process(delta: float) -> void:
 			rig.set_flash(0.0)
 	if ticks > 0:
 		if _active_this_tick and current_move:
-			var hits := _hit_detector.process(current_move, move_frame)
+			# A blocked hit can end the move inside process() (react_to_block()).
+			var move := current_move
+			var hits := _hit_detector.process(move, move_frame)
 			if not hits.is_empty():
 				_move_landed_hit = true
-				_on_move_hits(current_move, hits)
+				_on_move_hits(move, hits)
 		else:
 			debug_hitbox_volumes.clear()
 
@@ -171,10 +202,109 @@ func get_chest_position() -> Vector3:
 	return rig.get_point_position(&"ChestPoint")
 
 
-## Apply a landed hit. Returns false if the hit was ignored.
+## True while holding a guard (BLOCK, or pushed back in it in BLOCKSTUN).
+func is_guarding() -> bool:
+	return state == CombatTypes.ActorState.BLOCK or state == CombatTypes.ActorState.BLOCKSTUN
+
+
+## True while the guard stops hits: raised for Tuning.block_raise_frames and not dropping.
+func is_guard_effective() -> bool:
+	return (
+		is_guarding()
+		and _guard_drop_left < 0
+		and _guard_frames >= Tuning.data.block_raise_frames
+	)
+
+
+## True while a released (or attack-cancelled) guard comes down.
+func is_dropping_guard() -> bool:
+	return is_guarding() and _guard_drop_left >= 0
+
+
+## The full guard meter (Tuning.data.guard_max).
+func max_guard() -> float:
+	return Tuning.data.guard_max
+
+
+## The block's coverage while guarding, for debug draw: {origin, forward,
+## half_angle_deg, effective}; empty when not guarding.
+func get_block_arc() -> Dictionary:
+	if not is_guarding():
+		return {}
+	return {
+		origin = global_position,
+		forward = _guard_facing(),
+		half_angle_deg = Tuning.data.block_arc_half_angle_deg,
+		effective = is_guard_effective(),
+	}
+
+
+## Raise the guard (BLOCK) from FREE or a cancellable recovery. It stops hits once it has
+## been up for Tuning.block_raise_frames; the controller ends it with drop_guard().
+func start_block() -> void:
+	if current_move:
+		_cancel_move()
+	_guard_frames = 0
+	_guard_drop_left = -1
+	_block_push = Vector3.ZERO
+	_enter_state(CombatTypes.ActorState.BLOCK)
+	rig.play(&"block", Tuning.data.block_raise_frames / float(Engine.physics_ticks_per_second))
+	CombatEvents.block_started.emit(self)
+
+
+## Lower the guard: it stops blocking now and the block ends `frames` sim frames later
+## (back to FREE). A shorter drop already running is kept. 0 ends the block at once.
+func drop_guard(frames: int) -> void:
+	if not is_guarding():
+		return
+	if _guard_drop_left >= 0 and _guard_drop_left <= frames:
+		return
+	_guard_drop_left = maxi(frames, 0)
+	if state == CombatTypes.ActorState.BLOCK:
+		rig.play(&"idle", _guard_drop_left / float(Engine.physics_ticks_per_second))
+	if _guard_drop_left == 0:
+		_end_block()
+
+
+## The attacker's side of a blocked hit (called by HitDetector once a move's hits this
+## frame were all blocked): staggered by a perfect block (grabbable), knocked into a
+## short recoil by an ordinary one (move.blocked_recoil_frames; 0 = none), unaffected
+## when the hit broke the guard. The new pose shows at once, through the block hitstop:
+## the strike is never seen at full reach inside the guard (from the defender's lens the
+## fist meets the guard and is knocked back).
+func react_to_block(hit: HitInfo) -> void:
+	if hit.guard_broken or is_ko():
+		return
+	if hit.perfect_block:
+		if current_move:
+			_cancel_move()
+		sim_velocity = Vector3(0.0, sim_velocity.y, 0.0)
+		_enter_state(CombatTypes.ActorState.STAGGER, Tuning.data.perfect_block_stagger_frames)
+		rig.play(_directional_anim(&"stagger", -hit.direction), 0.0)
+		rig.advance(0.0)
+		_on_move_interrupted()
+		return
+	var frames := hit.move.blocked_recoil_frames if hit.move else 0
+	if frames <= 0:
+		return
+	if current_move:
+		_cancel_move()
+	sim_velocity = Vector3(0.0, sim_velocity.y, 0.0)
+	_enter_state(CombatTypes.ActorState.HITSTUN, frames)
+	_recoiling = true
+	var length := rig.anim_player.get_animation(&"recoil").length
+	rig.play(&"recoil", 0.0, length * Engine.physics_ticks_per_second / frames)
+	rig.advance(0.0)
+	_on_move_interrupted()
+
+
+## Apply a landed hit. Returns false if the hit was ignored. A hit the guard stops is
+## still accepted (true), with hit.blocked set and hit.damage reduced to the chip.
 func receive_hit(hit: HitInfo) -> bool:
 	if is_ko() or is_invulnerable():
 		return false
+	if _try_block(hit):
+		return true
 	var damage := hit.damage
 	if team == 0 and Tuning.data.god_mode:
 		damage = 0.0
@@ -197,7 +327,10 @@ func receive_hit(hit: HitInfo) -> bool:
 
 ## Begin executing `move` (from FREE, a cancellable recovery, or a chain). Call it from
 ## _tick_control() or a move hook: the sim tick then applies the move's frame 0.
-func start_move(move: MoveData, chain_step: int = 1, input_timing: StringName = &"root") -> void:
+## With `windup` (enemy attacks, Spec §7) the startup frames run in WINDUP, a readable
+## telegraph (CombatEvents.windup_started / windup_ended), and the active frames in ATTACK.
+func start_move(move: MoveData, chain_step: int = 1, input_timing: StringName = &"root",
+		windup: bool = false) -> void:
 	current_move = move
 	move_frame = 0
 	move_chain_step = chain_step
@@ -206,13 +339,17 @@ func start_move(move: MoveData, chain_step: int = 1, input_timing: StringName = 
 	_lunge_frames_left = 0
 	_lunge_velocity = Vector3.ZERO
 	_hit_detector.begin()
-	if state != CombatTypes.ActorState.ATTACK:
+	if windup and move.startup > 0:
+		_enter_state(CombatTypes.ActorState.WINDUP)
+	elif state != CombatTypes.ActorState.ATTACK:
 		_enter_state(CombatTypes.ActorState.ATTACK)
 	else:
 		state_frame = 0
 	rig.play_move(move)
 	_plan_lunge(move)
 	CombatEvents.attack_started.emit(self, move, chain_step, input_timing)
+	if state == CombatTypes.ActorState.WINDUP:
+		CombatEvents.windup_started.emit(self, move)
 
 
 ## Lunge `distance` meters along `dir` spread over `frames` sim frames. `budget` (default
@@ -278,11 +415,16 @@ func reset_state() -> void:
 	rig.set_hurtboxes_enabled(true)
 	_enter_state(CombatTypes.ActorState.FREE)
 	rig.play(&"idle", 0.0)
+	_guard_break_left = 0
+	_guard_regen_wait = 0.0
+	_set_guard(max_guard())
 	CombatEvents.health_changed.emit(self, health, max_health)
 
 
 func debug_state_text() -> String:
 	var text := "%s  %.0f/%.0f\n%s" % [display_name, health, max_health, CombatTypes.state_name(state)]
+	if _recoiling and state == CombatTypes.ActorState.HITSTUN:
+		text += " recoil"
 	if current_move:
 		var phase := "startup"
 		if current_move.is_active(move_frame):
@@ -292,6 +434,13 @@ func debug_state_text() -> String:
 		text += " %s f%d %s" % [current_move.id, move_frame, phase]
 	elif _state_length > 0:
 		text += " %d/%d" % [state_frame, _state_length]
+	if is_guarding() or guard < max_guard():
+		var note := ""
+		if is_dropping_guard():
+			note = " (dropping)"
+		elif is_guarding() and not is_guard_effective():
+			note = " (raising)"
+		text += "\nguard %.0f%s" % [guard, note]
 	return text
 
 
@@ -324,8 +473,25 @@ func _on_move_hits(_move: MoveData, _hits: Array[HitInfo]) -> void:
 
 
 ## A hit was accepted, before its reaction is applied (cancel chains, drop held things).
+## Not called for hits the guard stopped (see _on_hit_blocked()).
 func _on_hit_received(_hit: HitInfo) -> void:
 	pass
+
+
+## The guard stopped `hit` (hit.blocked; also hit.perfect_block or hit.guard_broken), after
+## its effects were applied.
+func _on_hit_blocked(_hit: HitInfo) -> void:
+	pass
+
+
+## This actor's running move was cut short by the defender's guard (react_to_block()).
+func _on_move_interrupted() -> void:
+	pass
+
+
+## Horizontal unit direction the guard faces (the body's facing; the player uses its look).
+func _guard_facing() -> Vector3:
+	return get_forward()
 
 
 ## Decide this move's lunge (magnetism) right after it starts.
@@ -356,12 +522,20 @@ func _sim_tick() -> void:
 	state_frame += 1
 	if _invuln_frames > 0:
 		_invuln_frames -= 1
+	if is_guarding():
+		_guard_frames += 1
+	_tick_guard_meter()
 	_tick_reaction_timers()
-	if state == CombatTypes.ActorState.ATTACK and current_move:
+	if _running_move() and current_move:
 		_advance_move()
 	_tick_control()
-	if state == CombatTypes.ActorState.ATTACK and current_move:
+	if _running_move() and current_move:
 		_apply_move_frame()
+
+
+## True in the states a move runs in: ATTACK, and WINDUP (an enemy's startup).
+func _running_move() -> bool:
+	return state == CombatTypes.ActorState.ATTACK or state == CombatTypes.ActorState.WINDUP
 
 
 func _tick_reaction_timers() -> void:
@@ -370,6 +544,20 @@ func _tick_reaction_timers() -> void:
 			if state_frame >= _state_length:
 				_enter_state(CombatTypes.ActorState.FREE)
 				_flying_reaction = CombatTypes.Reaction.NONE
+		CombatTypes.ActorState.BLOCKSTUN:
+			if state_frame >= _state_length:
+				_block_push = Vector3.ZERO
+				sim_velocity = Vector3(0.0, sim_velocity.y, 0.0)
+				_enter_state(CombatTypes.ActorState.BLOCK)
+			else:
+				# The pushback slows evenly to a stop at the end of the blockstun.
+				var left := 1.0 - float(state_frame) / maxf(_state_length, 1.0)
+				sim_velocity = Vector3(_block_push.x * left, sim_velocity.y, _block_push.z * left)
+		CombatTypes.ActorState.BLOCK:
+			if _guard_drop_left >= 0:
+				_guard_drop_left -= 1
+				if _guard_drop_left <= 0:
+					_end_block()
 		CombatTypes.ActorState.DOWNED:
 			if state_frame >= Tuning.data.downed_frames:
 				_start_getup()
@@ -387,6 +575,10 @@ func _tick_reaction_timers() -> void:
 func _advance_move() -> void:
 	move_frame += 1
 	var move := current_move
+	if state == CombatTypes.ActorState.WINDUP and move_frame >= move.startup:
+		# The telegraph is over: the strike comes out.
+		_enter_state(CombatTypes.ActorState.ATTACK)
+		CombatEvents.windup_ended.emit(self, false)
 	if (
 		move_frame == move.startup + move.active
 		and move.active > 0
@@ -417,6 +609,9 @@ func _apply_move_frame() -> void:
 
 
 func _cancel_move() -> void:
+	if state == CombatTypes.ActorState.WINDUP and current_move:
+		# Hit (or grabbed) out of the wind-up: Spec §7, light hits interrupt grunt wind-ups.
+		CombatEvents.windup_ended.emit(self, true)
 	current_move = null
 	_lunge_frames_left = 0
 	_lunge_velocity = Vector3.ZERO
@@ -432,12 +627,150 @@ func _return_to_neutral() -> void:
 
 func _enter_state(new_state: CombatTypes.ActorState, length: int = 0) -> void:
 	var old := state
+	var was_guarding := is_guarding()
 	state = new_state
 	state_frame = 0
 	_state_length = length
+	_recoiling = false
+	if was_guarding and not is_guarding():
+		_guard_drop_left = -1
+		_block_push = Vector3.ZERO
 	if old != new_state:
 		state_changed.emit(old, new_state)
 		CombatEvents.actor_state_changed.emit(self, old, new_state)
+		if was_guarding and not is_guarding():
+			CombatEvents.block_ended.emit(self)
+
+
+# --- Blocking -----------------------------------------------------------------------
+
+
+## The dropped guard is down: back to FREE (block_ended is emitted by _enter_state()).
+func _end_block() -> void:
+	sim_velocity = Vector3(0.0, sim_velocity.y, 0.0)
+	_return_to_neutral()
+
+
+## Whether the guard stops `hit` (see "Block" in docs/ARCHITECTURE.md), and if so its
+## effects: perfect block, guard break, or chip + guard drain + blockstun. Returns true
+## when the hit was blocked; `hit` then carries blocked / perfect_block / guard_broken,
+## the chip as its damage and the reaction actually applied.
+func _try_block(hit: HitInfo) -> bool:
+	if not is_guard_effective() or (hit.move and hit.move.unblockable) or not _in_guard_arc(hit):
+		return false
+	var tuning := Tuning.data
+	hit.blocked = true
+	hit.killed = false
+	var raw := hit.damage
+	if tuning.perfect_block_enabled and _guard_frames <= tuning.block_raise_frames + tuning.perfect_block_window_frames:
+		hit.perfect_block = true
+		hit.damage = 0.0
+		hit.reaction = CombatTypes.Reaction.NONE
+		hit.knockback = Vector3.ZERO
+		_flash(tuning.parry_flash_frames, 1.0, PARRY_FLASH_COLOR)
+		CombatEvents.blocked.emit(self, hit)
+		CombatEvents.perfect_blocked.emit(self, hit)
+		_on_hit_blocked(hit)
+		return true
+	# Chip damage, never below 1 health.
+	var chip := raw * tuning.chip_ratio
+	if team == 0 and tuning.god_mode:
+		chip = 0.0
+	chip = clampf(chip, 0.0, maxf(health - 1.0, 0.0))
+	hit.damage = chip
+	if chip > 0.0:
+		health -= chip
+		CombatEvents.health_changed.emit(self, health, max_health)
+	var drain := tuning.guard_drain_per_damage * raw * (hit.move.guard_damage_mult if hit.move else 1.0)
+	if hit.is_body_impact and hit.input_timing == &"body":
+		drain *= tuning.body_impact_guard_mult
+	_guard_regen_wait = tuning.guard_regen_delay_s
+	_set_guard(guard - drain)
+	var flat := Vector3(hit.direction.x, 0.0, hit.direction.z)
+	var dir := flat.normalized() if flat.length_squared() > 0.0001 else -_guard_facing()
+	var heavy := hit.tier != CombatTypes.HitTier.LIGHT
+	var push_m := tuning.block_push_heavy_m if heavy else tuning.block_push_light_m
+	if guard <= 0.0:
+		# Guard break: the arms are knocked apart into a stagger; the meter refills later.
+		hit.guard_broken = true
+		hit.reaction = CombatTypes.Reaction.STAGGER
+		_guard_break_left = maxi(tuning.guard_break_frames, 1)
+		# A friction slide (STAGGER) that covers the blocked hit's pushback distance.
+		var speed := sqrt(2.0 * tuning.ground_friction * push_m)
+		hit.knockback = dir * speed
+		sim_velocity = Vector3(dir.x * speed, sim_velocity.y, dir.z * speed)
+		_flash(tuning.hit_flash_frames, 1.0, Color.WHITE)
+		_enter_state(CombatTypes.ActorState.STAGGER, tuning.guard_break_frames)
+		rig.play(&"guard_break", 0.03)
+		CombatEvents.blocked.emit(self, hit)
+		CombatEvents.guard_broken.emit(self, hit)
+		_on_hit_blocked(hit)
+		return true
+	# Blockstun: pushed back along the hit in the guard, unable to act.
+	hit.reaction = CombatTypes.Reaction.NONE
+	var stun := tuning.blockstun_heavy_frames if heavy else tuning.blockstun_light_frames
+	_flash(tuning.hit_flash_frames, BLOCK_FLASH_AMOUNT, Color.WHITE)
+	if stun > 0:
+		var seconds := stun / float(Engine.physics_ticks_per_second)
+		# The push runs over the blockstun's frames 1..stun-1, slowing evenly to a stop
+		# (_tick_reaction_timers()): that covers half the starting speed x (stun - 1) frames.
+		var moving_s := maxi(stun - 1, 1) / float(Engine.physics_ticks_per_second)
+		_block_push = dir * (2.0 * push_m / moving_s)
+		hit.knockback = _block_push
+		sim_velocity = Vector3(0.0, sim_velocity.y, 0.0)
+		_enter_state(CombatTypes.ActorState.BLOCKSTUN, stun)
+		var length := rig.anim_player.get_animation(&"block_hit").length
+		rig.play(&"block_hit", 0.02, length / seconds)
+	CombatEvents.blocked.emit(self, hit)
+	_on_hit_blocked(hit)
+	return true
+
+
+## True when `hit` comes from within Tuning.block_arc_half_angle_deg of the guard's
+## facing: from the attacker's position for strikes, from where a flying body or thrown
+## object came for those (hit.is_body_impact).
+func _in_guard_arc(hit: HitInfo) -> bool:
+	var from := -hit.direction
+	if not hit.is_body_impact and is_instance_valid(hit.attacker):
+		from = hit.attacker.global_position - global_position
+	from.y = 0.0
+	if from.length_squared() < 0.0001:
+		return true
+	return rad_to_deg(_guard_facing().angle_to(from.normalized())) <= Tuning.data.block_arc_half_angle_deg
+
+
+## Per sim frame: a guard break's countdown and refill, otherwise regeneration after
+## Tuning.guard_regen_delay_s without a blocked hit.
+func _tick_guard_meter() -> void:
+	var dt := 1.0 / Engine.physics_ticks_per_second
+	if _guard_break_left > 0:
+		_guard_break_left -= 1
+		if _guard_break_left == 0:
+			_set_guard(maxf(guard, Tuning.data.guard_break_refill))
+		return
+	if guard >= max_guard():
+		if guard > max_guard():
+			_set_guard(max_guard())
+		return
+	if _guard_regen_wait > 0.0:
+		_guard_regen_wait -= dt
+		return
+	_set_guard(guard + Tuning.data.guard_regen_per_s * dt)
+
+
+func _set_guard(value: float) -> void:
+	var clamped := clampf(value, 0.0, max_guard())
+	if is_equal_approx(clamped, guard):
+		guard = clamped
+		return
+	guard = clamped
+	CombatEvents.guard_changed.emit(self, guard, max_guard())
+
+
+## Hit flash for `frames` real ticks at `amount` in `color` (white contact, cyan parry).
+func _flash(frames: int, amount: float, color: Color) -> void:
+	_flash_frames = frames
+	rig.set_flash(amount if frames > 0 else 0.0, color)
 
 
 # --- Reactions ----------------------------------------------------------------------
@@ -461,7 +794,7 @@ func _apply_reaction(hit: HitInfo) -> void:
 		kb = hit.direction * maxf(Vector2(kb.x, kb.z).length(), Tuning.data.ko_push) + Vector3.UP * Tuning.data.ko_lift
 	match reaction:
 		CombatTypes.Reaction.NONE:
-			if state == CombatTypes.ActorState.ATTACK:
+			if _running_move():
 				_return_to_neutral()
 		CombatTypes.Reaction.FLINCH:
 			sim_velocity = Vector3(kb.x, 0.0, kb.z)
@@ -583,7 +916,7 @@ func _integrate(dt: float, scale: float) -> void:
 		flat = flat.move_toward(Vector2.ZERO, Tuning.data.ground_friction * dt)
 		sim_velocity.x = flat.x
 		sim_velocity.z = flat.y
-	var lunge := _lunge_velocity if state == CombatTypes.ActorState.ATTACK else Vector3.ZERO
+	var lunge := _lunge_velocity if _running_move() else Vector3.ZERO
 	velocity = (sim_velocity + lunge) * scale
 	move_and_slide()
 	var after := velocity / scale
@@ -602,9 +935,11 @@ func _self_propelled() -> bool:
 	return state in [
 		CombatTypes.ActorState.FREE,
 		CombatTypes.ActorState.ATTACK,
+		CombatTypes.ActorState.WINDUP,
 		CombatTypes.ActorState.AIRBORNE,
 		CombatTypes.ActorState.DODGE,
 		CombatTypes.ActorState.GRABBING,
+		CombatTypes.ActorState.BLOCK,
 	]
 
 
@@ -665,7 +1000,7 @@ func _impact(other: CombatActor, speed: float) -> void:
 	hit.physics_frame = Engine.get_physics_frames()
 	hit.input_timing = &"body"
 	if other.receive_hit(hit):
-		TimeController.hitstop([other], Tuning.data.hitstop_s(move.tier))
+		TimeController.hitstop([other], HitDetector.hitstop_for(hit))
 		CombatEvents.hit_landed.emit(hit)
 
 

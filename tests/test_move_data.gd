@@ -55,6 +55,8 @@ const TABLE := {
 	&"weapon_throw": [15.0, HEAVY, KNOCKDOWN],
 	&"impact_body_knockdown": [5.0, HEAVY, KNOCKDOWN],
 	&"impact_body_stagger": [0.0, LIGHT, STAGGER],
+	# The sparring training dummy's telegraphed jab (the held block's practice partner).
+	&"dummy_jab": [6.0, LIGHT, FLINCH],
 }
 
 ## POINT_SPHERE moves: the rig point of each hitbox, in order.
@@ -76,6 +78,7 @@ const SPHERE_POINTS := {
 	&"pipe_swing_1": [&"WeaponTip"],
 	&"pipe_swing_2": [&"WeaponTip"],
 	&"pipe_swing_3": [&"WeaponTip"],
+	&"dummy_jab": [&"RightFistPoint"],
 }
 
 ## ARC moves: [half_angle_deg, center_yaw_deg], plus the height band where the table lists one.
@@ -91,7 +94,7 @@ const NO_HITBOX := [&"throw", &"weapon_throw", &"impact_body_knockdown", &"impac
 ## Moves that do not use target magnetism; every other move does.
 const NO_MAGNETISM := [
 	&"knee", &"spinning_heel", &"spin_kick", &"back_elbow", &"throw", &"weapon_throw",
-	&"impact_body_knockdown", &"impact_body_stagger",
+	&"impact_body_knockdown", &"impact_body_stagger", &"dummy_jab",
 ]
 
 ## Kicks that pitch the first-person camera down (Spec §5: 8-12 degrees, 5 cm drop).
@@ -176,6 +179,7 @@ const EXPECTED_BRANCHES := {
 	&"weapon_throw": [],
 	&"impact_body_knockdown": [],
 	&"impact_body_stagger": [],
+	&"dummy_jab": [],
 }
 
 ## ARCHITECTURE "Branches": moves that repeat or chain automatically, as
@@ -349,6 +353,26 @@ func test_move_sets_exist_with_matching_ids() -> void:
 		if move_set:
 			assert_eq(move_set.id, set_id, "move set id matches the file name")
 			assert_gt(move_set.root_branches.size(), 0, "%s has roots" % set_id)
+
+
+func test_blocking_fields() -> void:
+	# The held block (docs/ARCHITECTURE.md "Block"): nothing in Milestone 1 is unblockable
+	# (grabs and ground pounds come with the Bruiser and the boss), pipe swings drain the
+	# guard 1.5 times as fast, and every move recoils for the default 14 frames when blocked.
+	for id: StringName in TABLE:
+		var move := _load_move(id)
+		assert_false(move.unblockable, "%s: blockable" % id)
+		var mult := 1.5 if String(id).begins_with("pipe_swing") else 1.0
+		assert_eq(move.guard_damage_mult, mult, "%s: guard_damage_mult" % id)
+		assert_eq(move.blocked_recoil_frames, 14, "%s: blocked_recoil_frames" % id)
+
+
+func test_dummy_jab_is_a_telegraphed_light_jab() -> void:
+	var jab := _load_move(&"dummy_jab")
+	assert_eq([jab.startup, jab.active, jab.recovery], [18, 3, 16], "an 18-frame wind-up (Spec §7 grunts: at least 18)")
+	assert_eq(jab.knockback, Vector3(0.0, 0.0, 1.5))
+	assert_almost_eq(jab.hitboxes[0].radius, 0.14, 0.0001)
+	assert_false(jab.magnetism, "no tracking: turning away or stepping aside makes it miss")
 
 
 func test_flurry_uses_listed_hitstun() -> void:

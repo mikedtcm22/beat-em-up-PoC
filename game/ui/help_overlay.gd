@@ -15,7 +15,8 @@ const CONTROL_ROWS: Array[Array] = [
 	["Punch", [&"punch"]],
 	["Kick", [&"kick"]],
 	["Jump", [&"jump"]],
-	["Dodge", [&"dodge"]],
+	["Block (hold, no direction)", [&"dodge"]],
+	["Dodge (with a direction)", [&"dodge"]],
 	["Back attack", [&"back_attack"]],
 	["Grab / pick up / throw weapon", [&"grab"]],
 	["Quick turn (180°)", [&"quick_turn"]],
@@ -29,6 +30,7 @@ const DEBUG_ROWS: Array[Array] = [
 	["Cycle camera", &"camera_cycle"],
 	["Debug draw", &"debug_draw"],
 	["Cheats", &"cheats"],
+	["Sparring dummies on / off", &"sparring"],
 	["Help", &"help"],
 	["Pause", &"pause"],
 	["Restart (while paused)", &"restart"],
@@ -45,6 +47,7 @@ const COMBO_ROWS: Array[Array] = [
 	["Jump, K", "Flying kick"],
 	["Jump, K at peak", "Spin kick (all around)"],
 	["Grab, then P / K", "Knee (x3) / throw"],
+	["Block just in time", "Parry: the attacker staggers, grab it"],
 ]
 
 const PAD_BUTTONS: Dictionary[int, String] = {

@@ -61,6 +61,8 @@ const THROWN := CombatTypes.Reaction.THROWN
 const KICK_PITCH_DEG := -10.0
 const KICK_DROP_M := 0.05
 const STOMP_PITCH_DEG := -25.0
+## Weapons hit a guard harder (the held block): pipe swings drain it 1.5 times as fast.
+const PIPE_GUARD_MULT := 1.5
 
 ## Fixed ext_resource ids for the contract scripts (keeps re-runs diff-free).
 const SCRIPT_IDS: Dictionary[String, String] = {
@@ -178,12 +180,14 @@ func _build_moves() -> void:
 	stomp.camera_drop_m = KICK_DROP_M
 
 	# Weapon (pipe) chain and weapon throw.
-	_add(&"pipe_swing_1", "Pipe Swing", Vector3i(7, 3, 12), 10.0, LIGHT, FLINCH,
+	var pipe_1 := _add(&"pipe_swing_1", "Pipe Swing", Vector3i(7, 3, 12), 10.0, LIGHT, FLINCH,
 			Vector3(0.0, 0.0, 2.0), [_sphere(&"WeaponTip", 0.18)])
-	_add(&"pipe_swing_2", "Pipe Backswing", Vector3i(7, 3, 12), 10.0, HEAVY, STAGGER,
+	var pipe_2 := _add(&"pipe_swing_2", "Pipe Backswing", Vector3i(7, 3, 12), 10.0, HEAVY, STAGGER,
 			Vector3(1.0, 0.0, 2.0), [_sphere(&"WeaponTip", 0.18)])
-	_add(&"pipe_swing_3", "Pipe Smash", Vector3i(9, 4, 20), 10.0, FINISHER, KNOCKDOWN,
+	var pipe_3 := _add(&"pipe_swing_3", "Pipe Smash", Vector3i(9, 4, 20), 10.0, FINISHER, KNOCKDOWN,
 			Vector3(0.0, 2.0, 6.0), [_sphere(&"WeaponTip", 0.2)])
+	for pipe: MoveData in [pipe_1, pipe_2, pipe_3]:
+		pipe.guard_damage_mult = PIPE_GUARD_MULT
 	var weapon_throw := _add(&"weapon_throw", "Weapon Throw", Vector3i(6, 1, 14), 15.0, HEAVY,
 			KNOCKDOWN, Vector3(0.0, 2.0, 6.0), [])
 	weapon_throw.magnetism = false
@@ -195,6 +199,14 @@ func _build_moves() -> void:
 	var shoved_body := _add(&"impact_body_stagger", "Stumbling Body", Vector3i(0, 1, 0), 0.0, LIGHT,
 			STAGGER, Vector3(0.0, 0.0, 2.0), [])
 	shoved_body.magnetism = false
+
+	# Sparring training dummy (the held block's practice partner): a telegraphed right jab.
+	# Its startup is the wind-up the dummy shows (ActorState.WINDUP); no tracking, so
+	# turning away or stepping aside makes it miss. Blocked, it recoils for the default
+	# blocked_recoil_frames.
+	var dummy_jab := _add(&"dummy_jab", "Sparring Jab", Vector3i(18, 3, 16), 6.0, LIGHT, FLINCH,
+			Vector3(0.0, 0.0, 1.5), [_sphere(&"RightFistPoint", 0.14)])
+	dummy_jab.magnetism = false
 
 
 ## Combo branches (docs/ARCHITECTURE.md "Branches").
