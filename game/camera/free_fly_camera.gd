@@ -33,12 +33,9 @@ func _process(delta: float) -> void:
 
 ## Start where `source` is, with its field of view, so switching does not jump. With a
 ## null source it stays where it is. Outside the tree (a director switching modes before
-## it is added) the transform is copied on this camera's first update in the tree, when
-## the source has been placed.
+## it is added) the view is copied on this camera's first update in the tree, when the
+## source has been placed and has its own field of view.
 func activate_from(source: Camera3D) -> void:
-	if source != null:
-		fov = source.fov
-		keep_aspect = source.keep_aspect
 	_activation_source = source
 	_activation_pending = true
 	if is_inside_tree():
@@ -78,13 +75,21 @@ func fly(delta: float, move: Vector3, look_pixels: Vector2) -> void:
 	global_position += velocity * delta
 
 
-## Copy the pending source's transform (when it is still around and placed) and take the
-## look angles from where this camera now points. Needs this camera in the tree.
+## Copy the pending source's projection and transform (when it is still around and
+## placed) and take the look angles from where this camera now points. Any roll (the
+## first-person screen shake tilts the view a little) is leveled here, keeping the look
+## direction, so the horizon does not snap level on the first mouse move instead.
+## Needs this camera in the tree.
 func _finish_activation() -> void:
-	if is_instance_valid(_activation_source) and _activation_source.is_inside_tree():
-		global_transform = _activation_source.global_transform
+	var source := _activation_source
 	_activation_source = null
 	_activation_pending = false
+	if is_instance_valid(source):
+		fov = source.fov
+		keep_aspect = source.keep_aspect
+		if source.is_inside_tree():
+			global_transform = source.global_transform
 	var euler := global_basis.get_euler()
-	_pitch = euler.x
+	_pitch = clampf(euler.x, -PITCH_LIMIT_RAD, PITCH_LIMIT_RAD)
 	_yaw = euler.y
+	global_basis = Basis.from_euler(Vector3(_pitch, _yaw, 0.0))
