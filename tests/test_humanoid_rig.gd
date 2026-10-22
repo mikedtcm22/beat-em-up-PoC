@@ -523,6 +523,33 @@ func test_body_goes_down_and_comes_back_up() -> void:
 	assert_gt(tuck, 0.2, "jump tucks the feet up")
 
 
+func test_falls_from_the_air_never_raise_the_head() -> void:
+	# Launched and thrown bodies are already off their feet: a KO or knockdown (or the
+	# landing) must not stand them back up in a buckle, nor swing them up through upright
+	# when they come down on the other face. Blend times as in CombatActor.
+	var rig := _rig()
+	var falls := {
+		&"ko_back": 0.1, &"ko_front": 0.1, &"knockdown_back": 0.03, &"knockdown_forward": 0.03,
+		&"downed_back": 0.08, &"downed_front": 0.08,
+	}
+	for from: StringName in [&"launched", &"thrown"]:
+		for t: float in [0.0, 0.1, 0.2, 0.3, 0.45, 0.7]:
+			for anim: StringName in falls:
+				rig.play(from, 0.0)
+				rig.advance(0.0)
+				rig.advance(t)
+				var start := rig.get_point_position(&"Head").y
+				rig.play(anim, falls[anim])
+				var highest := start
+				for i: int in 60:
+					rig.advance(FRAME)
+					highest = maxf(highest, rig.get_point_position(&"Head").y)
+				assert_lt(highest - start, 0.05, "%s from %s at %.2f s: head rises %.3f m" % [
+						anim, from, t, highest - start])
+				assert_lt(rig.get_point_position(&"Head").y, 0.4, "%s from %s at %.2f s ends lying" % [
+						anim, from, t])
+
+
 func test_spins_turn_a_full_circle_and_back_elbow_does_not() -> void:
 	var rig := _rig()
 	for id: StringName in [&"spinning_heel", &"spin_kick", &"back_elbow"]:
@@ -631,6 +658,125 @@ func test_strike_reach_on_every_active_frame() -> void:
 						row.id, point, _fmt(p), f])
 				assert_gte(p.z, row.bury_z, "%s %s lands on the target instead of sinking into it (%s)" % [
 						row.id, point, _fmt(p)])
+
+
+func test_strikes_reach_full_weight_after_a_cross_fade_still_running() -> void:
+	# A move that starts while an earlier cross-fade is still running (a locomotion switch,
+	# a dodge) must still hit its strike pose exactly: nothing of the old pose may linger.
+	var rig := _rig()
+	var lead_ins := {
+		&"idle_to_walk": func() -> void:
+			rig.play_locomotion(Vector2(0.0, 1.0), 1.0)
+			rig.advance(FRAME),
+		&"walk_to_idle": func() -> void:
+			rig.play_locomotion(Vector2(0.0, 1.0), 1.0)
+			rig.advance(0.4)
+			rig.play_locomotion(Vector2.ZERO, 0.0)
+			rig.advance(FRAME),
+		&"mid_dodge": func() -> void:
+			rig.play(&"dodge_left")
+			rig.advance(FRAME),
+		&"dodge_then_idle": func() -> void:
+			rig.play(&"dodge_right", 0.03)
+			rig.advance(0.3)
+			rig.play_locomotion(Vector2.ZERO, 0.0)
+			rig.advance(FRAME),
+	}
+	for row: Reach in _reach_rows():
+		var move := _move_by_id(row.id)
+		_to_first_active_frame(rig, move)
+		var expected: Array[Vector3] = []
+		for point: StringName in row.points:
+			expected.append(_local(rig, point))
+		for lead: StringName in lead_ins:
+			rig.play(&"idle", 0.0)
+			rig.advance(0.5)
+			(lead_ins[lead] as Callable).call()
+			rig.play_move(move)
+			for i: int in move.startup:
+				rig.advance(FRAME)
+			for p: int in row.points.size():
+				var at := _local(rig, row.points[p])
+				assert_almost_eq(at, expected[p], Vector3.ONE * 0.01, "%s after %s: %s at %s, from idle %s" % [
+						row.id, lead, row.points[p], _fmt(at), _fmt(expected[p])])
+			for f: int in move.active:
+				if f > 0:
+					rig.advance(FRAME)
+				for point: StringName in row.points:
+					var p := _local(rig, point)
+					assert_true(_in_envelope(p, row), "%s after %s: %s at %s on active frame %d" % [
+							row.id, lead, point, _fmt(p), f])
+
+
+func test_cross_fades_are_continuous_and_advance_zero_keeps_them() -> void:
+	var rig := _rig()
+	rig.play(&"idle", 0.0)
+	rig.advance(0.5)
+	var before := rig.get_point_position(&"LeftFistPoint")
+	rig.play(&"flinch_gut", 0.2)
+	rig.advance(0.0)
+	assert_almost_eq(rig.get_point_position(&"LeftFistPoint"), before, Vector3.ONE * 1e-4,
+			"a cross-fade starts from the pose on screen")
+	rig.advance(0.05)
+	var mid := rig.get_point_position(&"LeftFistPoint")
+	rig.advance(0.0)
+	rig.advance(0.0)
+	assert_almost_eq(rig.get_point_position(&"LeftFistPoint"), mid, Vector3.ONE * 1e-5,
+			"advance(0) keeps a cross-fade where it is")
+	# A new animation fades from what is shown, even halfway through another fade.
+	rig.play(&"stagger_back", 0.1)
+	rig.advance(0.0)
+	assert_almost_eq(rig.get_point_position(&"LeftFistPoint"), mid, Vector3.ONE * 1e-4,
+			"no jump when a fade starts during a fade")
+	assert_eq(rig.anim_player.assigned_animation, &"stagger_back")
+
+
+func test_haymaker_released_from_its_charge_swings_straight_in() -> void:
+	# haymaker_charge holds the haymaker's wind-up. Released from it, the haymaker drives
+	# straight from the cocked fist into the strike, with no trip back to guard first.
+	var rig := _rig()
+	var move := _move_by_id(&"haymaker")
+	_to_first_active_frame(rig, move)
+	var strike := _local(rig, &"RightFistPoint")
+	rig.play(&"idle", 0.0)
+	rig.advance(0.5)
+	rig.play(&"haymaker_charge")
+	rig.advance(0.5)
+	assert_eq(rig.current_anim(), &"haymaker_charge")
+	var cocked := _local(rig, &"RightFistPoint")
+	assert_gt(cocked.distance_to(strike), 0.4, "the charge cocks the fist far from the strike")
+	rig.play_move(move)
+	var last := cocked
+	for i: int in move.startup:
+		rig.advance(FRAME)
+		var fist := _local(rig, &"RightFistPoint")
+		if i == 0:
+			assert_lt(fist.distance_to(cocked), 0.02, "the release starts from the cocked fist")
+		assert_lt(fist.distance_to(strike), last.distance_to(strike) + 0.01,
+				"frame %d: the fist never pulls back from the strike (%s)" % [i + 1, _fmt(fist)])
+		last = fist
+	assert_almost_eq(last, strike, Vector3.ONE * 0.01, "the charged haymaker reaches the same strike pose")
+	assert_eq(rig.current_anim(), &"haymaker")
+	# Released early, before the charge is fully cocked, it still lands the same strike.
+	rig.play(&"idle", 0.0)
+	rig.advance(0.5)
+	rig.play(&"haymaker_charge")
+	rig.advance(0.12)
+	rig.play_move(move)
+	for i: int in move.startup:
+		rig.advance(FRAME)
+	assert_almost_eq(_local(rig, &"RightFistPoint"), strike, Vector3.ONE * 0.01,
+			"a partly charged haymaker reaches the strike pose")
+	# Without the charge it still winds up from guard (the uncharged animation).
+	rig.play(&"idle", 0.0)
+	rig.advance(0.5)
+	var guard := _local(rig, &"RightFistPoint")
+	rig.play_move(move, 0.0)
+	var pulled_back := 0.0
+	for i: int in move.startup:
+		rig.advance(FRAME)
+		pulled_back = maxf(pulled_back, _local(rig, &"RightFistPoint").distance_to(strike) - guard.distance_to(strike))
+	assert_gt(pulled_back, 0.1, "the uncharged haymaker winds up from guard")
 
 
 func test_back_elbow_drives_back() -> void:

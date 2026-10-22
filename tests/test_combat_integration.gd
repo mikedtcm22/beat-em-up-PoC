@@ -226,7 +226,14 @@ func test_punch_punch_kick_is_push_kick() -> void:
 
 func test_hold_punch_releases_haymaker() -> void:
 	await _setup([Vector3(0, 0, -1.6)])
-	await _press(&"P", Tuning.data.hold_frames + 8)
+	player.input.push_press(&"P", Tuning.data.hold_frames + 8)
+	# Held past hold_frames (the jab from the press is over): the cocked fist shows.
+	var charged := await _wait_until(func() -> bool:
+		return player.parser.held_frames(CombatTypes.IN_PUNCH) > Tuning.data.hold_frames)
+	assert_true(charged, "P is still held past hold_frames")
+	assert_eq(player.state, CombatTypes.ActorState.FREE)
+	assert_eq(player.rig.current_anim(), &"haymaker_charge", "the rig shows the haymaker charge")
+	await _drain()
 	assert_true(await _wait_idle())
 	var ids := _ids(_player_hits())
 	assert_has(ids, &"haymaker")

@@ -12,6 +12,8 @@ const MOVE_SETS: Dictionary[StringName, String] = {
 }
 const WEAPON_THROW_PATH := "res://game/combat/moves/weapon_throw.tres"
 const ATTACK_IDS: Array[StringName] = [&"P", &"K", &"RB"]
+## Rig animation shown while a charged P waits for its release (_charging_hold()).
+const CHARGE_ANIM := &"haymaker_charge"
 
 ## Radians. Yaw 0 faces -Z; positive pitch looks up.
 var look_yaw: float = 0.0
@@ -200,7 +202,23 @@ func _control_free() -> void:
 	if selection:
 		_start_selection(selection)
 		return
-	_locomotion(1.0)
+	var charging := _charging_hold()
+	_locomotion(1.0, not charging)
+	if charging and rig.current_anim() != CHARGE_ANIM:
+		rig.play(CHARGE_ANIM)
+
+
+## True once P has been held long enough that releasing it starts the move set's hold
+## move (the haymaker, Spec §4): the rig then shows the cocked fist until the release.
+func _charging_hold() -> bool:
+	if not parser.is_held(CombatTypes.IN_PUNCH) or parser.move_set == null:
+		return false
+	if parser.held_frames(CombatTypes.IN_PUNCH) < parser.hold_frames:
+		return false
+	for branch: ComboBranch in parser.move_set.root_branches:
+		if branch and branch.input == CombatTypes.IN_PUNCH_HOLD and branch.move:
+			return true
+	return false
 
 
 func _control_air() -> void:

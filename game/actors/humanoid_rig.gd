@@ -22,6 +22,24 @@ extends Node3D
 ## advance() sees this tick's pose. If the owner moves its body after advance() in the same
 ## tick, call advance(0.0) again to re-sync (it re-applies the pose without moving time).
 ##
+## Cross-fades: the rig blends by itself instead of stacking AnimationPlayer blends (Godot
+## keeps every earlier blend running with its own time, so an old pose would still weigh
+## on a strike that started mid-fade). Starting an animation snapshots the pose on screen
+## (local bone rotations and the Hips position) and plays the new animation at full
+## weight; advance() then slerps from the snapshot to the animation's pose over the blend
+## time. Each new animation fades from exactly what was shown, and nothing older survives
+## its fade.
+##
+## Skeleton modifiers (limitation): advance() computes the FK itself from the skeleton's
+## local (animation) poses and drives the bone followers, meshes, rig points and
+## hurtboxes from that. A SkeletonModifier3D under the Skeleton3D, such as the
+## PhysicalBoneSimulator3D partial ragdoll of Spec §6 (Milestone 2), would change only
+## Skeleton3D's own global poses and never reach the meshes. The intended Milestone 2 path:
+## after skeleton.advance() has run the modifiers, the visual followers (meshes and
+## attachments) read the post-modifier global poses (get_bone_global_pose()), while
+## hurtboxes and get_point_transform() keep this pure-animation FK so hits stay
+## deterministic and independent of the ragdoll.
+##
 ## Grabs: the held animation is authored for a victim whose origin stands on the floor
 ## directly below the holder's HoldPoint, facing the holder (&"hold" on the holder,
 ## &"held" on the victim). The victim's head then sits low in the holder's first-person
@@ -75,6 +93,15 @@ const _LYING_ANIMS: Array[StringName] = [
 	&"downed_back", &"downed_front", &"knockdown_back", &"knockdown_forward",
 	&"ko_back", &"ko_front",
 ]
+## Animations whose body is already off its feet (flying through the air).
+const _OFF_FEET_ANIMS: Array[StringName] = [&"launched", &"thrown"]
+## A fall (PlaceholderAnims.FALL_JOIN_S) played from an off-feet animation may raise the
+## head this much (meters at PlaceholderBody.REF_HEIGHT) above where it already is.
+const _FALL_HEAD_SLACK := 0.02
+## A fade out of an off-feet animation rolls over a side (_plan_roll()) only when a
+## straight fade would point the spine this much higher (y of its unit up axis) than it
+## points at either end.
+const _ROLL_MIN_GAIN := 0.1
 
 var _built: bool = false
 ## Rig lengths are PlaceholderBody lengths times this.
@@ -94,6 +121,20 @@ var _body_meshes: Array[MeshInstance3D] = []
 var _current: StringName = &""
 ## The body flurry alternates its leading fist on consecutive plays.
 var _flurry_mirrored: bool = false
+## Rig-side cross-fade (see the class docs): the local bone rotations and Hips position on
+## screen when the current animation started, the fade length (0 = no fade running) and
+## the sim time faded so far.
+var _fade_rot: Array[Quaternion] = []
+var _fade_hips: Vector3 = Vector3.ZERO
+var _fade_s: float = 0.0
+var _fade_t: float = 0.0
+## When set, the Hips rotation fades by rolling over a side (spine flat along _fade_side
+## halfway through) instead of slerping straight, so a body flying face up rolls onto its
+## front without swinging up through upright (see _plan_roll()).
+var _fade_rolls: bool = false
+var _fade_side: Vector3 = Vector3.RIGHT
+## Animation name -> Head height (rig space) sampled every 1/60 s, for _fall_join_time().
+var _head_curves: Dictionary[StringName, PackedFloat32Array] = {}
 
 
 ## Create skeleton, meshes, hurtboxes, rig points and the animation library. Idempotent:
@@ -117,6 +158,9 @@ func build() -> void:
 ## Play a named (non-move) animation such as &"idle", &"flinch_gut" or &"getup_back".
 ## `speed` scales playback. Restarts it if it is already playing. Non-looping animations
 ## hold their last pose when they end (current_anim() keeps returning them).
+## A body that is already down or flying does not stand back up first: ko_* from a lying
+## animation skips to the end of the slump, and ko_* or knockdown_* from launched or
+## thrown skips the buckle and joins the fall where the head is no higher than it is now.
 func play(anim: StringName, blend_s: float = 0.08, speed: float = 1.0) -> void:
 	if not _built:
 		push_warning("HumanoidRig.play('%s') before build()" % anim)
@@ -125,11 +169,20 @@ func play(anim: StringName, blend_s: float = 0.08, speed: float = 1.0) -> void:
 		push_warning("HumanoidRig: unknown animation '%s'" % anim)
 		return
 	var was_lying := _LYING_ANIMS.has(_current)
+	var was_off_feet := _OFF_FEET_ANIMS.has(_current)
+	# Rig space, as shown now (before the new animation's first advance()).
+	var head_y := _bone_globals[_bone_index[&"Head"]].origin.y
 	_flurry_mirrored = false
 	_start(anim, anim, blend_s, speed)
 	if was_lying and String(anim).begins_with("ko_"):
 		var length := anim_player.get_animation(anim).length
 		anim_player.seek(maxf(length - _KO_FROM_LYING_S, 0.0))
+	elif was_off_feet:
+		var start := 0.0
+		if PlaceholderAnims.FALL_JOIN_S.has(anim):
+			start = _fall_join_time(anim, head_y)
+			anim_player.seek(start)
+		_plan_roll(anim, start)
 
 
 ## Play the animation for `move`, built (and cached) so its length is exactly
@@ -137,6 +190,11 @@ func play(anim: StringName, blend_s: float = 0.08, speed: float = 1.0) -> void:
 ## through the active frames, and returns to guard by the end of recovery.
 ## The blend is capped at 75% of the startup so the strike pose is reached unblended.
 ## Consecutive body_flurry plays alternate the leading fist.
+## Started while the move's charge animation (PlaceholderAnims.CHARGE_ANIMS, e.g.
+## &"haymaker_charge") is the current one, it plays a variant that starts from the cocked
+## charge pose and holds it until the wind-up time, so the release drives straight into
+## the strike instead of winding up a second time. That fade lasts at least until the
+## wind-up time, easing a partly reached charge into the cocked pose.
 func play_move(move: MoveData, blend_s: float = 0.04) -> void:
 	if move == null:
 		push_warning("HumanoidRig.play_move(null)")
@@ -150,13 +208,18 @@ func play_move(move: MoveData, blend_s: float = 0.04) -> void:
 		_flurry_mirrored = not _flurry_mirrored
 	else:
 		_flurry_mirrored = false
-	var key := StringName("%s__%d_%d_%d%s" % [move.get_anim(), move.startup, move.active,
-			move.recovery, "_m" if mirrored else ""])
+	var charge: StringName = PlaceholderAnims.CHARGE_ANIMS.get(move.get_anim(), &"")
+	var from_charge := charge != &"" and charge == _current
+	var key := StringName("%s__%d_%d_%d%s%s" % [move.get_anim(), move.startup, move.active,
+			move.recovery, "_m" if mirrored else "", "_c" if from_charge else ""])
 	var full := StringName("%s/%s" % [_MOVE_LIBRARY, key])
 	if not anim_player.has_animation(full):
 		anim_player.get_animation_library(_MOVE_LIBRARY).add_animation(key,
-				PlaceholderAnims.build_move(move, _scale, mirrored))
-	var blend := minf(maxf(blend_s, 0.0), 0.75 * move.startup * PlaceholderAnims.FRAME_S)
+				PlaceholderAnims.build_move(move, _scale, mirrored, from_charge))
+	var blend := maxf(blend_s, 0.0)
+	if from_charge:
+		blend = maxf(blend, PlaceholderAnims.windup_time(move))
+	blend = minf(blend, 0.75 * move.startup * PlaceholderAnims.FRAME_S)
 	_start(full, move.get_anim(), blend, 1.0)
 
 
@@ -182,13 +245,14 @@ func play_locomotion(local_move: Vector2, speed_ratio: float) -> void:
 	_start(anim, anim, locomotion_blend_s, speed)
 
 
-## Advance animation by `dt` sim seconds, update the skeleton pose, sync hurtboxes.
-## advance(0) applies the current animation time without moving it.
+## Advance animation (and any cross-fade) by `dt` sim seconds, update the skeleton pose,
+## sync hurtboxes. advance(0) applies the current animation time without moving it.
 func advance(dt: float) -> void:
 	if not _built:
 		return
 	var step := maxf(dt, 0.0)
 	anim_player.advance(step)
+	_apply_fade(step)
 	skeleton.advance(step)
 	_refresh_pose()
 
@@ -276,6 +340,7 @@ func _build_skeleton() -> void:
 		_bone_nodes[bone] = follower
 	skeleton.reset_bone_poses()
 	_bone_globals.resize(skeleton.get_bone_count())
+	_fade_rot.resize(skeleton.get_bone_count())
 
 
 func _build_materials() -> void:
@@ -385,9 +450,9 @@ func _build_animation() -> void:
 	add_child(anim_player)
 	anim_player.root_node = NodePath("..")
 	anim_player.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
-	# Every animation keys every animated bone (PlaceholderAnims.make), so nothing is left
-	# stale. Deterministic mixing would blend cross-fades toward the rest pose (arms
-	# dropping mid-blend), so cross-fades use normalized weights instead.
+	# The rig cross-fades by itself (_start(), _apply_fade()), so the player only ever runs
+	# one animation at full weight. Every animation keys every animated bone
+	# (PlaceholderAnims.make), so nothing is left stale.
 	anim_player.deterministic = false
 	anim_player.add_animation_library(&"", PlaceholderAnims.build_library(_scale))
 	anim_player.add_animation_library(_MOVE_LIBRARY, AnimationLibrary.new())
@@ -396,13 +461,141 @@ func _build_animation() -> void:
 # --- Runtime ---------------------------------------------------------------------------
 
 
+## Start `full_name` at full weight and fade into it from the pose on screen over
+## `blend_s` sim seconds (see the class docs).
 func _start(full_name: StringName, id: StringName, blend_s: float, speed: float) -> void:
 	var restart := anim_player.assigned_animation == full_name
+	_fade_s = maxf(blend_s, 0.0)
+	_fade_t = 0.0
+	_fade_rolls = false
+	if _fade_s > 0.0:
+		for i: int in skeleton.get_bone_count():
+			_fade_rot[i] = skeleton.get_bone_pose_rotation(i)
+		_fade_hips = skeleton.get_bone_pose_position(_bone_index[&"Hips"])
 	anim_player.speed_scale = maxf(speed, 0.0)
-	anim_player.play(full_name, maxf(blend_s, 0.0))
+	# Blend 0 clears Godot's own blend list: no earlier cross-fade keeps weighting its pose.
+	anim_player.play(full_name, 0.0)
 	if restart:
 		anim_player.seek(0.0)
 	_current = id
+
+
+## Blend the animation's pose (just applied to the skeleton) with the snapshot taken by
+## _start(). Ends exactly `_fade_s` after the start; advance(0) re-applies the same weight.
+func _apply_fade(step: float) -> void:
+	if _fade_s <= 0.0:
+		return
+	_fade_t += step
+	var w := _fade_t / _fade_s
+	if w >= 1.0 - 1e-6:
+		_fade_s = 0.0
+		return
+	var hips := _bone_index[&"Hips"]
+	for i: int in skeleton.get_bone_count():
+		var to := skeleton.get_bone_pose_rotation(i)
+		if _fade_rolls and i == hips:
+			skeleton.set_bone_pose_rotation(i, _roll_path(_fade_rot[i], to, _fade_side, w))
+		else:
+			skeleton.set_bone_pose_rotation(i, _fade_rot[i].slerp(to, w))
+	skeleton.set_bone_pose_position(hips, _fade_hips.lerp(skeleton.get_bone_pose_position(hips), w))
+
+
+## Hips rotation `w` of the way from `from` to `to` rolling over a side: the spine (the
+## Hips' up axis) runs along great circles down to the horizontal `side` at w = 0.5 and
+## on to its end direction, so it never points higher than at either end; the twist
+## about the spine is slerped on its own.
+static func _roll_path(from: Quaternion, to: Quaternion, side: Vector3, w: float) -> Quaternion:
+	var spine_from := from * Vector3.UP
+	var spine_to := to * Vector3.UP
+	var spine := spine_from.slerp(side, w * 2.0) if w < 0.5 else side.slerp(spine_to, w * 2.0 - 1.0)
+	return Quaternion(Vector3.UP, spine.normalized()) * _twist(from).slerp(_twist(to), w)
+
+
+## The part of `q` that turns about its own up axis (q = swing * twist).
+static func _twist(q: Quaternion) -> Quaternion:
+	return Quaternion(Vector3.UP, q * Vector3.UP).inverse() * q
+
+
+## For a fade out of an off-feet animation into `anim` (from `start` seconds): roll the
+## Hips over a side (_roll_path()) when a straight slerp would swing the spine up through
+## upright. A body launched face up (arched back) that lands face down would otherwise
+## raise its head on the way down.
+func _plan_roll(anim: StringName, start: float) -> void:
+	if _fade_s <= 0.0:
+		return
+	var animation := anim_player.get_animation(anim)
+	var track := animation.find_track(^"Skeleton3D:Hips", Animation.TYPE_ROTATION_3D)
+	if track < 0:
+		return
+	var from := _fade_rot[_bone_index[&"Hips"]]
+	var to := animation.rotation_track_interpolate(track, start)
+	var spine_from := from * Vector3.UP
+	var spine_to := to * Vector3.UP
+	var straight_peak := -1.0
+	for s: int in range(1, 16):
+		straight_peak = maxf(straight_peak, (from.slerp(to, s / 16.0) * Vector3.UP).y)
+	if straight_peak - maxf(spine_from.y, spine_to.y) < _ROLL_MIN_GAIN:
+		return
+	# The sides lie across the plane a straight fade swings the spine through; take the
+	# one the spine reaches with the shorter swing.
+	var side := spine_from.cross(spine_to)
+	side.y = 0.0
+	side = side.normalized() if side.length_squared() > 1e-4 else Vector3.RIGHT
+	var swing := spine_from.angle_to(side) + side.angle_to(spine_to)
+	if spine_from.angle_to(-side) + (-side).angle_to(spine_to) < swing:
+		side = -side
+	_fade_side = side
+	_fade_rolls = true
+
+
+## Where a fall (PlaceholderAnims.FALL_JOIN_S) starts when the body is already off its
+## feet with the head at `head_y`: after the buckle, and late enough that the head never
+## rises more than _FALL_HEAD_SLACK above `head_y` for the rest of the animation.
+func _fall_join_time(anim: StringName, head_y: float) -> float:
+	var curve := _head_curve(anim)
+	var limit := head_y + _FALL_HEAD_SLACK * _scale
+	var first := curve.size() - 1
+	# Walk back from the end while the rest of the animation stays under the limit.
+	while first > 0 and curve[first - 1] <= limit:
+		first -= 1
+	var length := anim_player.get_animation(anim).length
+	var join: float = PlaceholderAnims.FALL_JOIN_S[anim]
+	return minf(maxf(join, first * PlaceholderAnims.FRAME_S), length)
+
+
+## Head height (rig space) of `anim` sampled every 1/60 s, end included. Pure FK over the
+## Head's parent chain from the animation tracks; cached per animation.
+func _head_curve(anim: StringName) -> PackedFloat32Array:
+	if _head_curves.has(anim):
+		return _head_curves[anim]
+	var animation := anim_player.get_animation(anim)
+	var chain: Array[int] = []
+	var bone := _bone_index[&"Head"]
+	while bone >= 0:
+		chain.push_front(bone)
+		bone = skeleton.get_bone_parent(bone)
+	var tracks: Array[int] = []
+	for idx: int in chain:
+		tracks.append(animation.find_track(NodePath("Skeleton3D:%s" % skeleton.get_bone_name(idx)),
+				Animation.TYPE_ROTATION_3D))
+	var hips_track := animation.find_track(^"Skeleton3D:Hips", Animation.TYPE_POSITION_3D)
+	var curve := PackedFloat32Array()
+	var samples := ceili(animation.length / PlaceholderAnims.FRAME_S - 1e-4)
+	for s: int in samples + 1:
+		var t := minf(s * PlaceholderAnims.FRAME_S, animation.length)
+		var xf := Transform3D.IDENTITY
+		for c: int in chain.size():
+			var idx := chain[c]
+			var origin := skeleton.get_bone_rest(idx).origin
+			if idx == _bone_index[&"Hips"] and hips_track >= 0:
+				origin = animation.position_track_interpolate(hips_track, t)
+			var rot := Quaternion.IDENTITY
+			if tracks[c] >= 0:
+				rot = animation.rotation_track_interpolate(tracks[c], t)
+			xf = xf * Transform3D(Basis(rot), origin)
+		curve.append(xf.origin.y)
+	_head_curves[anim] = curve
+	return curve
 
 
 ## Recompute bone poses from the skeleton's local poses, then move bone followers and

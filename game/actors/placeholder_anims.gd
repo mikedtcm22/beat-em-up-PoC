@@ -34,6 +34,17 @@ const LOOPING: Array[StringName] = [
 	&"hold", &"held", &"downed_back", &"downed_front",
 ]
 
+## Move id -> the animation that holds its charge (it ends on the move's wind-up pose).
+## HumanoidRig.play_move() starts such a move from the charge pose when it is released
+## out of that animation.
+const CHARGE_ANIMS: Dictionary[StringName, StringName] = {&"haymaker": &"haymaker_charge"}
+
+## Falls that start with a standing buckle -> the time of their falling key, where a body
+## that is already off its feet (launched, thrown) joins them (HumanoidRig.play()).
+const FALL_JOIN_S: Dictionary[StringName, float] = {
+	&"knockdown_back": 0.18, &"knockdown_forward": 0.18, &"ko_back": 0.3, &"ko_front": 0.3,
+}
+
 ## False silences the warning for move ids without a recipe (for tests that use the
 ## fallback on purpose).
 static var warn_on_fallback: bool = true
@@ -201,14 +212,14 @@ static func build_named(id: StringName, scale: float) -> Animation:
 		&"knockdown_back":
 			length = 0.5
 			var down := PlaceholderPoses.downed_back()
-			keys = [_k(0.0, PlaceholderPoses.buckle()), _k(0.18, PlaceholderPoses.falling_back()),
+			keys = [_k(0.0, PlaceholderPoses.buckle()), _k(FALL_JOIN_S[id], PlaceholderPoses.falling_back()),
 				_k(0.36, PlaceholderPoses.add(down, {&"Spine": Vector3(-8.0, 0.0, 0.0),
 					&"LeftUpperLeg": Vector3(12.0, 0.0, 0.0), &"RightUpperLeg": Vector3(12.0, 0.0, 0.0)})),
 				_k(0.5, down)]
 		&"knockdown_forward":
 			length = 0.5
 			var down_f := PlaceholderPoses.downed_front()
-			keys = [_k(0.0, PlaceholderPoses.buckle()), _k(0.18, PlaceholderPoses.falling_front()),
+			keys = [_k(0.0, PlaceholderPoses.buckle()), _k(FALL_JOIN_S[id], PlaceholderPoses.falling_front()),
 				_k(0.36, PlaceholderPoses.add(down_f, {&"Spine": Vector3(8.0, 0.0, 0.0),
 					&"Neck": Vector3(10.0, 0.0, 0.0)})),
 				_k(0.5, down_f)]
@@ -231,14 +242,14 @@ static func build_named(id: StringName, scale: float) -> Animation:
 		&"ko_back":
 			length = 0.8
 			var ko := PlaceholderPoses.ko_back()
-			keys = [_k(0.0, PlaceholderPoses.buckle()), _k(0.3, PlaceholderPoses.falling_back()),
+			keys = [_k(0.0, PlaceholderPoses.buckle()), _k(FALL_JOIN_S[id], PlaceholderPoses.falling_back()),
 				_k(0.52, PlaceholderPoses.add(ko, {&"Spine": Vector3(-8.0, 0.0, 0.0),
 					&"LeftUpperLeg": Vector3(10.0, 0.0, 0.0), &"RightUpperLeg": Vector3(14.0, 0.0, 0.0)})),
 				_k(0.8, ko)]
 		&"ko_front":
 			length = 0.8
 			var ko_f := PlaceholderPoses.ko_front()
-			keys = [_k(0.0, PlaceholderPoses.buckle()), _k(0.3, PlaceholderPoses.falling_front()),
+			keys = [_k(0.0, PlaceholderPoses.buckle()), _k(FALL_JOIN_S[id], PlaceholderPoses.falling_front()),
 				_k(0.52, PlaceholderPoses.add(ko_f, {&"Spine": Vector3(8.0, 0.0, 0.0)})),
 				_k(0.8, ko_f)]
 		_:
@@ -251,12 +262,13 @@ static func build_named(id: StringName, scale: float) -> Animation:
 ## windup_at x startup, the strike pose exactly at startup / 60 s held until
 ## (startup + active) / 60 s, an optional follow-through, and back to guard at the end.
 ## `mirrored` swaps the upper body left for right, keeping the stance (the body flurry
-## alternates fists this way). Ids
+## alternates fists this way). `from_charge` starts from the wind-up pose instead of guard
+## (released out of its CHARGE_ANIMS animation, which ends on that pose), so the startup
+## holds the cocked pose until the wind-up time and then drives into the strike. Ids
 ## without a recipe fall back to a generic punch or kick picked from the first hitbox.
-static func build_move(move: MoveData, scale: float, mirrored: bool = false) -> Animation:
-	var poses := PlaceholderPoses.move_poses(move.get_anim())
-	if poses == null:
-		poses = _fallback_poses(move)
+static func build_move(move: MoveData, scale: float, mirrored: bool = false,
+		from_charge: bool = false) -> Animation:
+	var poses := _poses_for(move)
 	if mirrored:
 		poses = poses.mirrored(true)
 	var startup := move.startup * FRAME_S
@@ -265,8 +277,8 @@ static func build_move(move: MoveData, scale: float, mirrored: bool = false) -> 
 	var length := maxi(move.total_frames(), 1) * FRAME_S
 	var keys: Array[PoseKey] = []
 	if move.startup > 0:
-		keys.append(_k(0.0, poses.guard))
-		keys.append(_k(startup * clampf(poses.windup_at, 0.05, 0.95), poses.windup))
+		keys.append(_k(0.0, poses.windup if from_charge else poses.guard))
+		keys.append(_k(windup_time(move, poses), poses.windup))
 	keys.append(_k(startup, poses.strike))
 	var strike_end := poses.strike if poses.strike_end.is_empty() else poses.strike_end
 	if move.active > 0:
@@ -276,6 +288,19 @@ static func build_move(move: MoveData, scale: float, mirrored: bool = false) -> 
 			keys.append(_k(startup + active + recovery * clampf(poses.follow_at, 0.05, 0.95), poses.follow))
 		keys.append(_k(length, poses.guard if poses.finish.is_empty() else poses.finish))
 	return make(keys, length, false, scale)
+
+
+## Seconds into `move`'s animation where its wind-up pose is keyed. `poses` defaults to
+## the move's recipe (or its fallback).
+static func windup_time(move: MoveData, poses: PlaceholderPoses.MovePoses = null) -> float:
+	if poses == null:
+		poses = _poses_for(move)
+	return move.startup * FRAME_S * clampf(poses.windup_at, 0.05, 0.95)
+
+
+static func _poses_for(move: MoveData) -> PlaceholderPoses.MovePoses:
+	var poses := PlaceholderPoses.move_poses(move.get_anim())
+	return poses if poses != null else _fallback_poses(move)
 
 
 ## The first hitbox's strike point, or &"RightFootPoint" for an arc (spins are kicks).
