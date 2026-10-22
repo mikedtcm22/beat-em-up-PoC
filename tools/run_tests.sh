@@ -11,5 +11,4 @@ GODOT="${GODOT:-godot}"
 
 # --fixed-fps 60 steps exactly one 1/60 s physics tick per frame without waiting for
 # real time, so frame-timed combat tests run many times faster and deterministically.
-# GODOT_FIXED_FPS lets the few tests that need real frame pacing skip themselves.
-GODOT_FIXED_FPS=60 "$GODOT" --headless --fixed-fps 60 -s addons/gut/gut_cmdln.gd -gconfig=res://.gutconfig.json "$@"
+"$GODOT" --headless --fixed-fps 60 -s addons/gut/gut_cmdln.gd -gconfig=res://.gutconfig.json "$@"

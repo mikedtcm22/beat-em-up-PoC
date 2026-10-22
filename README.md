@@ -48,7 +48,7 @@ The characters are procedural placeholders. Real art, VFX and audio come in Mile
 - **Flying kick:** it dives forward and down, and its camera pitches down 25° (like the stomp) instead of the 8–12° of the standing kicks. From the air, a foot at hip height passed over a standing enemy's head.
 
 **Automated checks:**
-- `tools/run_tests.sh` runs 220 tests headless in about 5 seconds, including an end-to-end suite where a scripted player performs every combo in the real test room.
+- `tools/run_tests.sh` runs 229 tests headless in about 5 seconds, including an end-to-end suite where a scripted player performs every combo in the real test room.
 - `tools/capture_combos.sh` records the combo bot with Movie Maker to `captures/combos.avi`, writes a hit log to `captures/bot.log`, and extracts stills for review. Pass text to run only matching acts, for example `tools/capture_combos.sh "haymaker"`.
 
 ## Repo layout
