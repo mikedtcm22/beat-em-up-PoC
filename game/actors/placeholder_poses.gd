@@ -1341,7 +1341,10 @@ static func _haymaker() -> MovePoses:
 		&"RightShoulder": Vector3(0.0, -12.0, 6.0),
 		&"RightUpperArm": Vector3(10.0, 0.0, 70.0),
 		&"RightLowerArm": Vector3(120.0, 0.0, 0.0),
-		&"LeftUpperArm": Vector3(60.0, 10.0, -20.0),
+		# The lead arm reaches out toward the target, low and to the left of the first-person
+		# view. With the torso twisted away, a guard-like left arm would park the glove over
+		# the view center (and haymaker_charge holds this pose for as long as P is held).
+		&"LeftUpperArm": Vector3(40.0, 40.0, -40.0),
 		&"LeftLowerArm": Vector3(90.0, 0.0, 0.0),
 		&"LeftUpperLeg": Vector3(26.0, 24.0, -4.0),
 		&"LeftLowerLeg": Vector3(-20.0, 0.0, 0.0),
@@ -1373,7 +1376,8 @@ static func _haymaker() -> MovePoses:
 	return _mp(g, windup, strike)
 
 
-## Haymaker charge pose: the haymaker's wind-up, held while P is held.
+## Haymaker charge pose: the haymaker's wind-up, held while P is held. The right fist is
+## cocked back out of the first-person view; the lead glove shows low on the left.
 static func haymaker_charge() -> Dictionary[StringName, Vector3]:
 	return _haymaker().windup
 

@@ -226,6 +226,15 @@ func _in_fp_view(view: Vector3) -> bool:
 	return view.z > 0.05 and absf(view.x) < FP_HALF_H_DEG and absf(view.y) < FP_HALF_V_DEG
 
 
+## Angle (degrees) between the view center and a point given as _view() angles; 180 for a
+## point behind the camera.
+func _off_center_deg(view: Vector3) -> float:
+	if view.z <= 0.0:
+		return 180.0
+	var off := Vector2(tan(deg_to_rad(view.x)), tan(deg_to_rad(view.y)))
+	return rad_to_deg(atan(off.length()))
+
+
 func _meshes_under(node: Node) -> Array[MeshInstance3D]:
 	var out: Array[MeshInstance3D] = []
 	for child: Node in node.find_children("*", "MeshInstance3D", true, false):
@@ -526,26 +535,34 @@ func test_body_goes_down_and_comes_back_up() -> void:
 func test_falls_from_the_air_never_raise_the_head() -> void:
 	# Launched and thrown bodies are already off their feet: a KO or knockdown (or the
 	# landing) must not stand them back up in a buckle, nor swing them up through upright
-	# when they come down on the other face. Blend times as in CombatActor.
+	# when they come down on the other face, nor drop flat and bounce back up into the
+	# fall (rolling onto the front must not dip below the pose it lands in). The head
+	# never rises more than 5 cm above the lowest point it has reached so far (the
+	# downed_* breathing moves it about 3.5 cm). Blend times as in CombatActor.
 	var rig := _rig()
 	var falls := {
 		&"ko_back": 0.1, &"ko_front": 0.1, &"knockdown_back": 0.03, &"knockdown_forward": 0.03,
 		&"downed_back": 0.08, &"downed_front": 0.08,
 	}
 	for from: StringName in [&"launched", &"thrown"]:
-		for t: float in [0.0, 0.1, 0.2, 0.3, 0.45, 0.7]:
+		for t: float in [0.0, 0.1, 0.15, 0.2, 0.25, 0.3, 0.45, 0.7]:
 			for anim: StringName in falls:
 				rig.play(from, 0.0)
 				rig.advance(0.0)
 				rig.advance(t)
-				var start := rig.get_point_position(&"Head").y
+				var lowest := rig.get_point_position(&"Head").y
 				rig.play(anim, falls[anim])
-				var highest := start
+				var rebound := 0.0
+				var worst_frame := 0
 				for i: int in 60:
 					rig.advance(FRAME)
-					highest = maxf(highest, rig.get_point_position(&"Head").y)
-				assert_lt(highest - start, 0.05, "%s from %s at %.2f s: head rises %.3f m" % [
-						anim, from, t, highest - start])
+					var y := rig.get_point_position(&"Head").y
+					if y - lowest > rebound:
+						rebound = y - lowest
+						worst_frame = i + 1
+					lowest = minf(lowest, y)
+				assert_lt(rebound, 0.05, "%s from %s at %.2f s: head rises %.3f m above its lowest (frame %d)" % [
+						anim, from, t, rebound, worst_frame])
 				assert_lt(rig.get_point_position(&"Head").y, 0.4, "%s from %s at %.2f s ends lying" % [
 						anim, from, t])
 
@@ -920,6 +937,42 @@ func test_guard_fists_show_at_the_bottom_of_the_first_person_view() -> void:
 		var view := _view(rig, point)
 		assert_lt(view.y, -15.0, "%s low in the view" % point)
 		assert_gt(view.y, -FP_HALF_V_DEG - 6.0, "%s at least partly on screen (angles %s)" % [point, view])
+
+
+func test_haymaker_charge_keeps_the_view_center_clear() -> void:
+	# The player holds haymaker_charge for as long as P is held. The torso twists away
+	# for the swing, but the lead (left) glove stays low and to the left, the way the
+	# guard holds it: it never covers the center dot or the target's head. That holds
+	# through the charge and through the haymaker's startup, charged or not.
+	var rig := _rig(true)
+	var move := _move_by_id(&"haymaker")
+	var phases := {
+		&"charge": func() -> void:
+			rig.play(&"haymaker_charge"),
+		&"release": func() -> void:
+			rig.play_move(move),
+		&"uncharged": func() -> void:
+			rig.play(&"idle", 0.0)
+			rig.advance(0.5)
+			rig.play_move(move),
+	}
+	rig.play(&"idle", 0.0)
+	rig.advance(0.5)
+	for phase: StringName in phases:
+		(phases[phase] as Callable).call()
+		var frames := 40 if phase == &"charge" else move.startup
+		for i: int in frames:
+			rig.advance(FRAME)
+			for point: StringName in [&"LeftFistPoint", &"LeftHand"]:
+				var view := _view(rig, point)
+				assert_gt(_off_center_deg(view), 12.0, "%s frame %d: %s clear of the view center (angles %s)" % [
+						phase, i + 1, point, view])
+		if phase == &"charge":
+			assert_eq(rig.current_anim(), &"haymaker_charge")
+			var lead := _view(rig, &"LeftFistPoint")
+			assert_true(_in_fp_view(lead), "the cocked stance still shows the lead glove (angles %s)" % lead)
+			assert_lt(lead.x, -15.0, "the lead glove sits to the left (angles %s)" % lead)
+			assert_lt(lead.y, -10.0, "the lead glove sits low (angles %s)" % lead)
 
 
 func test_unknown_moves_fall_back_to_a_generic_strike() -> void:

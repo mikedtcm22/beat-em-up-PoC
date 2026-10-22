@@ -128,9 +128,10 @@ var _fade_rot: Array[Quaternion] = []
 var _fade_hips: Vector3 = Vector3.ZERO
 var _fade_s: float = 0.0
 var _fade_t: float = 0.0
-## When set, the Hips rotation fades by rolling over a side (spine flat along _fade_side
-## halfway through) instead of slerping straight, so a body flying face up rolls onto its
-## front without swinging up through upright (see _plan_roll()).
+## When set, the Hips rotation fades by rolling over a side (the spine turns about the
+## vertical through _fade_side, see _roll_path()) instead of slerping straight, so a body
+## flying face up rolls onto its front without swinging up through upright (see
+## _plan_roll()).
 var _fade_rolls: bool = false
 var _fade_side: Vector3 = Vector3.RIGHT
 ## Animation name -> Head height (rig space) sampled every 1/60 s, for _fall_join_time().
@@ -501,14 +502,26 @@ func _apply_fade(step: float) -> void:
 
 
 ## Hips rotation `w` of the way from `from` to `to` rolling over a side: the spine (the
-## Hips' up axis) runs along great circles down to the horizontal `side` at w = 0.5 and
-## on to its end direction, so it never points higher than at either end; the twist
-## about the spine is slerped on its own.
+## Hips' up axis) turns about the vertical through the horizontal `side` while its height
+## (y of the unit axis) moves straight from its start to its end value, so it always
+## stays between the two: it never swings up past upright, nor drops flat below an end
+## pose that is tilted up (the head would bounce back up into it); the twist about the
+## spine is slerped on its own.
 static func _roll_path(from: Quaternion, to: Quaternion, side: Vector3, w: float) -> Quaternion:
 	var spine_from := from * Vector3.UP
 	var spine_to := to * Vector3.UP
-	var spine := spine_from.slerp(side, w * 2.0) if w < 0.5 else side.slerp(spine_to, w * 2.0 - 1.0)
+	var flat_from := _heading(spine_from, side)
+	var turn := flat_from.signed_angle_to(side, Vector3.UP) \
+			+ side.signed_angle_to(_heading(spine_to, side), Vector3.UP)
+	var y := lerpf(spine_from.y, spine_to.y, w)
+	var spine := flat_from.rotated(Vector3.UP, turn * w) * sqrt(maxf(1.0 - y * y, 0.0)) + Vector3.UP * y
 	return Quaternion(Vector3.UP, spine.normalized()) * _twist(from).slerp(_twist(to), w)
+
+
+## Horizontal unit direction of `axis`, or `fallback` when `axis` is (nearly) vertical.
+static func _heading(axis: Vector3, fallback: Vector3) -> Vector3:
+	var flat := Vector3(axis.x, 0.0, axis.z)
+	return flat.normalized() if flat.length_squared() > 1e-6 else fallback
 
 
 ## The part of `q` that turns about its own up axis (q = swing * twist).
