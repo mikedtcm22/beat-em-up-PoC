@@ -54,7 +54,7 @@ Rules:
 | 6 | downed_body | bodies lying down (collide with world only) |
 | 7 | projectile | thrown weapons |
 
-Visual layer 2 (`fp_hidden`) holds the player's head, neck, chest, upper chest, shoulders and upper arms (`PlaceholderBody.FP_HIDDEN_BONES`). The first-person camera's cull mask excludes it, and those meshes still cast shadows. Visual layer 3 holds debug geometry.
+Visual layer 2 (`fp_hidden`) holds the player's head, neck, chest and upper chest (`PlaceholderBody.FP_HIDDEN_BONES`), plus the shoulder balls and the shoulder end of each upper arm (`FP_HIDDEN_PARTS`; the elbow end, forearm and hand stay visible). The first-person camera's cull mask excludes it, and those meshes still cast shadows. Visual layer 3 holds debug geometry.
 
 ## Humanoid rig
 
@@ -66,7 +66,7 @@ The rig origin is at the feet, the character faces −Z, and the default height 
 
 | Point | Where |
 | --- | --- |
-| `EyePoint` | between the eyes, about 1.68 m in the boxer guard (1.61 m in the player's relaxed stance); the first-person lens rides 0.2 m below it (see "First-person lens") |
+| `EyePoint` | between the eyes, about 1.66 m in either stance; the first-person lens rides 0.2 m below it (see "First-person lens") |
 | `HeadTopPoint` | about 0.25 m above the top of the head; anchor for over-head UI |
 | `ChestPoint` | center of the chest; aim and magnetism target |
 | `LeftFistPoint`, `RightFistPoint` | center of each fist |
@@ -81,16 +81,18 @@ The rig origin is at the feet, the character faces −Z, and the default height 
 
 **Stance** (`HumanoidRig.stance`, set before `build()`): the pose a body stands and walks in, starts every move from and returns to.
 - `&"boxer"` (default): fists up by the chin. Enemies and training dummies keep it; a raised guard reads as a threat from the player's view.
-- `&"relaxed"`: the player's (`PlayerCharacter._configure_rig()`). A loose "Bruce Lee" stance: upright and light, the lead foot forward and the rear heel up, the lead hand hanging a little forward at belt height and the rear hand by the hip. Looking ahead in first person, nothing of the arms shows. Idle, the walks (with a small arm swing), the dodges, landing, hit reactions, get-ups, the grab and the haymaker charge start or end in it.
+- `&"relaxed"`: the player's (`PlayerCharacter._configure_rig()`). A loose "Bruce Lee" stance: the boxer guard's body, footing and head (the torso a little forward, the lead foot forward) on knees a little softer, the rear heel up so the weight sits on the balls of the feet; the lead hand hangs a little forward at belt height and the rear hand by the hip. The two stances differ in the arms, so a strike (authored on the guard's body) moves the eye, and the first-person camera riding it, no more from one than from the other. Looking ahead in first person, nothing of the arms shows. Idle, the walks (with a small arm swing), the side dodges, landing, hit reactions, get-ups, the grab and the haymaker charge start or end in it.
 - Strike poses are authored on the boxer guard's body and legs and reach the same envelopes in both stances (the "Strike reach" table below). In the relaxed stance a move starts and ends in the stance, an arm a key pose leaves alone stays loose, and the arm a punch does not throw stays low by the solar plexus instead of guarding the chin (`PlaceholderPoses._FREE_ARM`). The haymaker's wind-up keeps its lead hand reaching out on the left, since it is the charge pose. Clinch moves (knee, throw) run in the hold, pipe moves in a relaxed weapon carry (the pipe held low, angled down), and air moves in the air guard.
-- The neutral dodge covers up: `dodge_back` (no stick) and `dodge_forward` (forward-only stick) put the boxer guard's arms up by the face from frame 3 to frame 13 of the 14-frame dodge, in either stance. In the relaxed stance that is the only time the "dukes up" image fills the first-person view. Side dodges slip with the stance's arms.
 
-**Hands** (`HumanoidRig.wrapped_hands`, the player only, Spec §10): skin-colored fists with light wraps across the knuckles and at the wrist and a dark fingerless-glove plate on the back of the hand, on a slimmer forearm. About 0.9 times the enemies' fist block in each direction (about 75% of its volume). Enemies keep the slightly oversized fist blocks. Fist points, `WeaponGrip` and `WeaponTip` stay where they were, and hitbox radii are move data and do not change.
+**Block guard** (`PlaceholderPoses.block_guard()`, animation `block`): the "dukes up" guard, both fists raised in front of the face over the stance's legs and torso, held. Its arms (`block_guard_arms()`) are authored for the throat-height lens: from first person both fists sit whole in the upper third of the view, about 34 degrees either side of the center and 0.36 m ahead of the lens, the forearms rise to them from elbows held low and wide outside the lower corners, no forearm or hand comes within 0.3 m of the lens, the arms fill about a quarter of the view, and the center stays clear, framing whoever stands ahead. The neutral dodges cover up with it: `dodge_back` (no stick, or back) and `dodge_forward` (forward-only stick) raise the block guard's arms from frame 3 to frame 13 of the 14-frame dodge, in either stance. In the relaxed stance they and `block` are the only "dukes up" images. Side dodges slip with the stance's arms. `block` is the pose of the held block (B with no stick) that comes next.
+
+**Hands** (`HumanoidRig.wrapped_hands`, the player only, Spec §10): skin-colored fists with light wraps across the knuckles and at the wrist and a dark fingerless-glove plate on the back of the hand, on a slimmer forearm. About 0.9 times the enemies' fist block in each direction (about 75% of its volume). Each wrap caps the hand's face it ends at instead of ending flush with it (flush faces z-fight). Enemies keep the slightly oversized fist blocks. Fist points, `WeaponGrip` and `WeaponTip` stay where they were, and hitbox radii are move data and do not change.
 
 **Animation ids** the rig must provide (all procedural placeholders in Milestone 1):
 - Locomotion: `idle`, `walk_forward`, `walk_back`, `walk_left`, `walk_right`
 - Air: `jump`, `fall`, `land`
 - Dodge: `dodge_left`, `dodge_right`, `dodge_back`, `dodge_forward`
+- Guard: `block` (the block guard, held)
 - Grab: `grab`, `hold` (holding someone), `held` (being held), `thrown`, `pickup`, `haymaker_charge`
 - Hit reacts: `flinch_head_front`, `flinch_head_left`, `flinch_head_right`, `flinch_gut`, `flinch_legs`, `stagger_back`, `stagger_left`, `stagger_right`, `stagger_forward`
 - Down: `launched`, `knockdown_back`, `knockdown_forward`, `downed_back`, `downed_front`, `getup_back`, `getup_front`, `ko_back`, `ko_front`
@@ -197,7 +199,13 @@ The knee count, releasing the victim on the third knee, the throw direction, dod
 
 **First-person camera smoothing:** the camera follows the player's origin rigidly and damps only the eye's offset from that origin (about 0.05 s). Damping the whole world position would make the camera trail the body by speed × 0.05 s.
 
-**First-person lens** (Game-boy's call after the M1 playtest): the camera sits at `EyePoint + FirstPersonCamera.lens_offset(look_basis)`, 0.2 m below the eye at throat height (`Tuning.cam_height_offset_m`) and 0.04 m ahead along the flat look (`cam_forward_offset_m`), so punches come up into the view and kicks and the lead foot show below it, Mirror's Edge style. It is presentation only: aim, magnetism and hit detection never use it. The rig tests judge every first-person view from this lens (`tests/test_humanoid_rig.gd`, `_fp_camera()` and the ray-cast `_fp_hits()`): looking ahead at rest or walking the arms stay out of view; a punch's forearm and fist come in from below or the side and the body covers at most a third of the view; kicks show the foot and lower leg; looking down 45 degrees shows the lead hand and the toe of the lead foot, and 55 degrees the lead leg too, with no torso in the way. The forward offset stays small because the relaxed arms no longer need clearing at the chin, and it keeps the lead foot inside the view when looking down; at 0.02 m or less the belly sits under the lens and comes up over the legs.
+**First-person lens** (Game-boy's call after the M1 playtest): the camera sits at `EyePoint + FirstPersonCamera.lens_offset(look_basis)`, 0.2 m below the eye at throat height (`Tuning.cam_height_offset_m`) and 0.04 m ahead along the flat look (`cam_forward_offset_m`), Mirror's Edge style. It is presentation only: aim, magnetism and hit detection never use it. The rig tests judge every first-person view from this lens (`tests/test_humanoid_rig.gd` with the ray-cast helpers in `tests/fp_view.gd`):
+- Looking ahead at rest or walking, the arms stay out of view.
+- A punch comes in from below or the side: the arm (the elbow end of the upper arm, forearm and fist) runs off the edge of the view, and the body covers at most a third of it.
+- Kicks show the foot and lower leg, with the move's camera pitch and drop.
+- Looking down, nothing of the torso stands in front of the legs. The view's bottom edge is 74 degrees below level when looking down 45 degrees, short of the feet under the body: 45 degrees shows the lead hand, the lead shoe comes in from about 60 degrees and the lead thigh from about 65 (walking, the striding foot and shin from 55). Looking steeply down shows the belly's rounded top (`BellyTop`), not a flat lid.
+- The block guard keeps its fists in the upper third and its forearms 0.3 m or more from the lens.
+The forward offset stays small: the guard's forearms stay that far from the lens, the lead foot stays ahead of it when looking down, and a held victim's head stays further off. At 0.02 m or less the belly sits under the lens and comes up over the legs.
 
 **Input:** actions are registered by the `GameInput` autoload (`game/autoload/game_input.gd`). Mouse look comes from `GameInput.consume_mouse_delta()`. The free-fly camera uses `consume_fly_mouse_delta()` and the `fly_*` actions, so the player keeps WASD and the mouse.
 

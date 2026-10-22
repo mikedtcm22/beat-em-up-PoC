@@ -20,7 +20,7 @@ const MAX_STEP_DEG := 90.0
 const ANIM_IDS: Array[StringName] = [
 	&"idle", &"walk_forward", &"walk_back", &"walk_left", &"walk_right",
 	&"jump", &"fall", &"land",
-	&"dodge_left", &"dodge_right", &"dodge_back", &"dodge_forward",
+	&"dodge_left", &"dodge_right", &"dodge_back", &"dodge_forward", &"block",
 	&"grab", &"hold", &"held", &"thrown", &"pickup", &"haymaker_charge",
 	&"flinch_head_front", &"flinch_head_left", &"flinch_head_right", &"flinch_gut",
 	&"flinch_legs", &"stagger_back", &"stagger_left", &"stagger_right", &"stagger_forward",
@@ -31,7 +31,7 @@ const ANIM_IDS: Array[StringName] = [
 ## Animations that loop. Every other animation plays once and then holds its last pose.
 const LOOPING: Array[StringName] = [
 	&"idle", &"walk_forward", &"walk_back", &"walk_left", &"walk_right",
-	&"hold", &"held", &"downed_back", &"downed_front",
+	&"block", &"hold", &"held", &"downed_back", &"downed_front",
 ]
 
 ## Move id -> the animation that holds its charge (it ends on the move's wind-up pose).
@@ -155,6 +155,10 @@ static func build_named(id: StringName, scale: float,
 				dodge = PlaceholderPoses.dodge_forward(g)
 			# In by 3 frames and held to frame 13 of the 14-frame dodge (Tuning.dodge_frames).
 			keys = [_k(0.0, g), _k(0.05, dodge), _k(0.22, dodge), _k(0.3, g)]
+		&"block":
+			# The held guard over the stance's legs; the owner's play() blend raises it.
+			var guard := PlaceholderPoses.block_guard(g)
+			keys = [_k(0.0, guard), _k(length, guard)]
 		&"grab":
 			length = 0.25
 			keys = [_k(0.0, g), _k(0.12, PlaceholderPoses.grab_reach(g)),

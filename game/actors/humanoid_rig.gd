@@ -69,8 +69,8 @@ extends Node3D
 ## Player only (Spec §10): smaller, skin-colored hands with light wraps and a dark
 ## fingerless-glove plate instead of the oversized fist blocks. Set before build().
 @export var wrapped_hands: bool = false
-## Player only: put the meshes of PlaceholderBody.FP_HIDDEN_BONES (head, neck, chest,
-## shoulders, upper arms) on CombatTypes.VIS_FP_HIDDEN.
+## Player only: put the meshes PlaceholderBody.is_fp_hidden() names (head, neck, chest,
+## shoulder balls and the shoulder end of each upper arm) on CombatTypes.VIS_FP_HIDDEN.
 @export var first_person_body: bool = false:
 	set(value):
 		first_person_body = value
@@ -233,6 +233,18 @@ func play_move(move: MoveData, blend_s: float = 0.04) -> void:
 	_start(full, move.get_anim(), blend, 1.0)
 
 
+## The owner just moved this rig by `offset` (world meters) after starting an animation:
+## the running cross-fade keeps starting from where the body was on screen (its Hips start
+## moves back by `offset`), so the move does not show and the new animation takes the body
+## from there. Without a fade running it does nothing. Call advance(0.0) after it to show
+## the result in the same tick.
+func carry_fade(offset: Vector3) -> void:
+	if not _built or _fade_s <= 0.0:
+		return
+	var to_local := (global_transform if is_inside_tree() else transform).basis.inverse()
+	_fade_hips -= to_local * offset
+
+
 ## Locomotion while FREE: idle or walk_forward/back/left/right, picked from the local move
 ## direction (x = right, y = forward) and played at `speed_ratio` (1 = full walk speed).
 ## Idle below a speed ratio of 0.1. Keeps the current cycle running (only its speed
@@ -376,7 +388,7 @@ func _build_meshes() -> void:
 		mesh_instance.position = part.offset * _scale
 		mesh_instance.rotation_degrees = part.rot_deg
 		_bone_nodes[part.bone].add_child(mesh_instance)
-		if PlaceholderBody.FP_HIDDEN_BONES.has(part.bone):
+		if PlaceholderBody.is_fp_hidden(part):
 			_head_meshes.append(mesh_instance)
 		else:
 			_body_meshes.append(mesh_instance)

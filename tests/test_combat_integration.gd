@@ -5,6 +5,7 @@ extends GutTest
 ## performed and registers hits.
 
 const ROOM := preload("res://game/level/test_room.tscn")
+const FPView := preload("res://tests/fp_view.gd")
 const FAR := Vector3(30.0, 0.0, -30.0)
 
 var room: Node3D
@@ -321,6 +322,54 @@ func test_grab_knees_release_then_throw_knocks_down_another() -> void:
 	assert_has(_ids(_player_hits()), &"throw")
 	var impacts := hits.filter(func(h: HitInfo) -> bool: return h.is_body_impact and h.victim == dummies[1])
 	assert_eq(impacts.size(), 1, "one body impact on the second dummy")
+
+
+## Nearest distance from the player's first-person lens to `victim`'s meshes, and the share
+## of the player's view `victim` covers (the camera at EyePoint + lens offset, looking along
+## the player's look).
+func _victim_in_lens(victim: CombatActor) -> Vector2:
+	var cam := FPView.camera(player.get_eye_transform().origin, player.get_look_basis())
+	return Vector2(FPView.nearest_mesh(victim.rig, cam.origin), FPView.covered(FPView.hits(victim.rig, cam, 32)))
+
+
+func test_grabbed_victim_stays_out_of_the_holders_lens() -> void:
+	# A grab pulls the victim in from where it stood while it bends over into &"held", head
+	# first: its head and shoulders never sweep through the holder's throat-height lens (the
+	# view never goes dark), on the grab and on the regrab after the third knee. Released on
+	# its feet, it stands up away from the holder.
+	await _setup([Vector3(0, 0, -1.4)])
+	await _press(&"P", 2, 7)
+	await _press(&"P", 2, 7)
+	await _press(&"P", 2)
+	assert_true(await _wait_until(func() -> bool: return dummies[0].state == CombatTypes.ActorState.STAGGER))
+	assert_true(await _wait_idle())
+	for phase: String in ["grab", "release", "regrab"]:
+		if phase == "release":
+			for i in 3:
+				await _press(&"P", 2)
+				if i < 2:
+					assert_true(await _wait_idle())
+		else:
+			player.input.push_press(&"GRAB", 2)
+		# Grabs are watched while the dummy is held, the release through the third knee.
+		var nearest := INF
+		var widest := 0.0
+		var watched := 0
+		for i in 40:
+			await _ticks(1)
+			if phase != "release" and dummies[0].state != CombatTypes.ActorState.GRABBED:
+				continue
+			watched += 1
+			var seen := _victim_in_lens(dummies[0])
+			nearest = minf(nearest, seen.x)
+			widest = maxf(widest, seen.y)
+		assert_gt(watched, 20, "%s: frames watched" % phase)
+		var bound := 0.2 if phase == "release" else 0.25
+		assert_gt(nearest, bound, "%s: the dummy stays %.2f m or more from the lens (nearest %.2f m)" % [phase, bound, nearest])
+		assert_lt(widest, 0.5, "%s: the dummy covers at most %.0f%% of the view" % [phase, widest * 100.0])
+		if phase == "release":
+			assert_eq(dummies[0].state, CombatTypes.ActorState.STAGGER, "the third knee releases into a stagger")
+			assert_true(await _wait_idle())
 
 
 func test_stomp_hits_a_downed_dummy() -> void:

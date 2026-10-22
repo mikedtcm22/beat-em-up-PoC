@@ -217,7 +217,8 @@ func _act_dodge_turn() -> void:
 
 
 ## The relaxed stance in first person: idle looking level, a walk, then a look down at
-## the player's own hands, legs and feet (45 degrees, then a little further) and back up.
+## the player's own hands, legs and feet (45 degrees for a second, then 65, where the lead
+## leg comes in) and back up.
 func _act_stance() -> void:
 	await _stage([Vector3(1.5, 0, -9.0)])
 	await _look_to(0.0, 10)
@@ -229,13 +230,13 @@ func _act_stance() -> void:
 	await _ticks(10)
 	await _look_to(-45.0, 15)
 	await _ticks(60)
-	await _look_to(-60.0, 10)
+	await _look_to(-65.0, 10)
 	await _ticks(30)
 	await _look_to(0.0, 15)
 	await _ticks(20)
 
 
-## A dodge with no stick: the backstep, with the boxer guard up for its frames.
+## A dodge with no stick: the backstep, with the block guard up for its frames.
 func _act_dodge_back() -> void:
 	await _stage([Vector3(0, 0, -1.6)])
 	await _look_to(0.0, 6)

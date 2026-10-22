@@ -177,9 +177,9 @@ static func stance_pose(stance: StringName) -> Dictionary[StringName, Vector3]:
 	return relaxed() if stance == STANCE_RELAXED else guard()
 
 
-## Boxer stance: left foot forward, knees soft, fists up in front of the chin. From the
-## first-person lens (throat height) the fists sit in the middle of the view: the "dukes
-## up" image, which the relaxed stance shows only on a neutral dodge.
+## Boxer stance: left foot forward, knees soft, fists up in front of the chin (enemies and
+## dummies). Seen from the player's throat-height lens these fists would fill the middle of
+## the view, so the player's own "dukes up" is the block guard (block_guard_arms()).
 static func guard() -> Dictionary[StringName, Vector3]:
 	return {
 		&"Spine": Vector3(-3.0, 0.0, 0.0),
@@ -199,29 +199,28 @@ static func guard() -> Dictionary[StringName, Vector3]:
 	}
 
 
-## Relaxed ("Bruce Lee") stance: upright and light, the lead (left) foot forward and the
-## rear heel up, weight on the balls of the feet; the arms hang loose, the lead hand a
-## little forward at belt height and the rear hand by the hip. Seen from the first-person
-## lens, nothing of the arms shows while looking ahead.
+## Relaxed ("Bruce Lee") stance: the boxer guard's body and footing (the torso a little
+## forward, the lead foot forward) on soft knees, the rear heel up so the weight sits on
+## the balls of the feet; the arms hang loose, the lead hand a little forward at belt
+## height and the rear hand by the hip. Seen from the first-person lens, nothing of the
+## arms shows while looking ahead.
+## The hips, torso and head match the guard's (the hips about 4 mm lower), so strike
+## poses, which are authored on the guard's body, move EyePoint (and the first-person
+## camera riding it) no more in this stance than in the guard.
 static func relaxed() -> Dictionary[StringName, Vector3]:
-	return {
-		HIPS_NUDGE: Vector3(0.0, 0.0, 0.03),
-		&"Spine": Vector3(4.0, 0.0, 0.0),
-		&"Chest": Vector3(3.0, 0.0, 0.0),
-		&"Neck": Vector3(-3.0, 0.0, 0.0),
-		&"Head": Vector3(-4.0, 0.0, 0.0),
+	return merge(guard(), {
 		&"LeftUpperArm": Vector3(14.0, -6.0, -6.0),
 		&"LeftLowerArm": Vector3(36.0, 0.0, 0.0),
 		&"RightUpperArm": Vector3(2.0, 6.0, 8.0),
 		&"RightLowerArm": Vector3(22.0, 0.0, 0.0),
-		&"LeftUpperLeg": Vector3(32.0, 0.0, -4.0),
-		&"LeftLowerLeg": Vector3(-24.0, 0.0, 0.0),
-		&"LeftFoot": Vector3(-8.0, 0.0, 4.0),
-		&"RightUpperLeg": Vector3(4.0, 0.0, 5.0),
-		&"RightLowerLeg": Vector3(-46.0, 0.0, 0.0),
-		&"RightFoot": Vector3(22.0, 0.0, -5.0),
-		&"RightToes": Vector3(20.0, 0.0, 0.0),
-	}
+		&"LeftUpperLeg": Vector3(17.0, 0.0, -4.0),
+		&"LeftLowerLeg": Vector3(-27.0, 0.0, 0.0),
+		&"LeftFoot": Vector3(10.0, 0.0, 4.0),
+		&"RightUpperLeg": Vector3(0.0, 0.0, 5.0),
+		&"RightLowerLeg": Vector3(-30.0, 0.0, 0.0),
+		&"RightFoot": Vector3(14.0, 0.0, -5.0),
+		&"RightToes": Vector3(16.0, 0.0, 0.0),
+	})
 
 
 ## The relaxed stance's arm that does not strike (`side` &"Left" or &"Right"): low and
@@ -283,18 +282,18 @@ static func held() -> Dictionary[StringName, Vector3]:
 		&"Spine": Vector3(-30.0, 0.0, 0.0),
 		&"Chest": Vector3(-26.0, 0.0, 0.0),
 		&"UpperChest": Vector3(-18.0, 0.0, 0.0),
-		&"Neck": Vector3(-14.0, 0.0, 0.0),
-		&"Head": Vector3(-20.0, 0.0, 0.0),
+		&"Neck": Vector3(-24.0, 0.0, 0.0),
+		&"Head": Vector3(-36.0, 0.0, 0.0),
 		&"LeftUpperArm": Vector3(18.0, 0.0, -10.0),
 		&"LeftLowerArm": Vector3(30.0, 0.0, 0.0),
 		&"RightUpperArm": Vector3(14.0, 0.0, 12.0),
 		&"RightLowerArm": Vector3(34.0, 0.0, 0.0),
-		&"LeftUpperLeg": Vector3(30.0, 0.0, -4.0),
-		&"LeftLowerLeg": Vector3(-30.0, 0.0, 0.0),
-		&"LeftFoot": Vector3(10.0, 0.0, 4.0),
-		&"RightUpperLeg": Vector3(24.0, 0.0, 4.0),
-		&"RightLowerLeg": Vector3(-26.0, 0.0, 0.0),
-		&"RightFoot": Vector3(12.0, 0.0, -4.0),
+		&"LeftUpperLeg": Vector3(36.0, 0.0, -4.0),
+		&"LeftLowerLeg": Vector3(-42.0, 0.0, 0.0),
+		&"LeftFoot": Vector3(16.0, 0.0, 4.0),
+		&"RightUpperLeg": Vector3(30.0, 0.0, 4.0),
+		&"RightLowerLeg": Vector3(-38.0, 0.0, 0.0),
+		&"RightFoot": Vector3(18.0, 0.0, -4.0),
 	}
 
 
@@ -495,15 +494,40 @@ static func fall_pose(base: Dictionary[StringName, Vector3]) -> Dictionary[Strin
 	})
 
 
+# --- Guard (block) ----------------------------------------------------------------------
+
+
+## The held guard ("dukes up"): `base` (a stance pose: its legs and torso) with
+## block_guard_arms(). &"block" holds it, and the neutral dodges (dodge_back,
+## dodge_forward) cover up with its arms.
+static func block_guard(base: Dictionary[StringName, Vector3]) -> Dictionary[StringName, Vector3]:
+	return merge(base, block_guard_arms())
+
+
+## Arms of the held guard: both fists up at about mouth height, 0.36 m ahead of the
+## first-person lens and about 34 degrees either side of the view center, whole inside the
+## upper third of the view (14 degrees up); the forearms rise to them from elbows held low
+## and wide, outside the view's lower corners, so no forearm comes within 0.3 m of the lens
+## and the arms fill about a quarter of the view, framing whoever stands ahead. The
+## shoulders roll forward and up a little, like a shell. From the side the fists stand in
+## front of the face, the elbows bent square.
+## Authored with two-bone IK on the stance torso (guard()'s spine, chest, neck and head,
+## which relaxed() shares) for the lens at EyePoint + FirstPersonCamera.lens_offset() with
+## the shipped Tuning offsets. Mirrored for the right arm.
+static func block_guard_arms() -> Dictionary[StringName, Vector3]:
+	var left: Dictionary[StringName, Vector3] = {
+		&"LeftShoulder": Vector3(0.0, -30.0, -10.0),
+		&"LeftUpperArm": Vector3(46.5, 6.0, -53.0),
+		&"LeftLowerArm": Vector3(90.0, 0.0, 0.0),
+		&"LeftHand": Vector3.ZERO,
+	}
+	return merge(left, mirror(left))
+
+
 # --- Dodges (right / back / forward; dodge_left mirrors dodge_right) --------------------
 # Side dodges slip with the stance's arms. The neutral dodge (backstep) and the forward
-# dodge cover up: they put the boxer guard's fists up by the face in either stance, so in
-# the relaxed stance the "dukes up" image shows only there.
-
-
-## The boxer guard's arms, for the dodges that cover up.
-static func _guard_arms() -> Dictionary[StringName, Vector3]:
-	return only(guard(), ARM_BONES)
+# dodge cover up: the block guard's arms over the stance torso (block_guard()), the only
+# "dukes up" image the relaxed stance shows until the held block arrives.
 
 
 static func dodge_right(base: Dictionary[StringName, Vector3]) -> Dictionary[StringName, Vector3]:
@@ -522,11 +546,10 @@ static func dodge_right(base: Dictionary[StringName, Vector3]) -> Dictionary[Str
 	})
 
 
+## Backstep behind the guard: the stance torso stays up (block_guard()), the rear leg folds
+## under as the weight shifts back.
 static func dodge_back(base: Dictionary[StringName, Vector3]) -> Dictionary[StringName, Vector3]:
-	return merge(merge(crouch(base), _guard_arms()), {
-		&"Spine": Vector3(0.0, 0.0, 0.0),
-		&"Chest": Vector3(2.0, 0.0, 0.0),
-		&"Neck": Vector3(0.0, 0.0, 0.0),
+	return merge(block_guard(base), {
 		&"LeftUpperLeg": Vector3(30.0, 0.0, -5.0),
 		&"LeftLowerLeg": Vector3(-30.0, 0.0, 0.0),
 		&"LeftFoot": Vector3(0.0, 0.0, 5.0),
@@ -536,12 +559,9 @@ static func dodge_back(base: Dictionary[StringName, Vector3]) -> Dictionary[Stri
 	})
 
 
+## Lunging in behind the guard (block_guard()): the lead knee deep, the rear leg trailing.
 static func dodge_forward(base: Dictionary[StringName, Vector3]) -> Dictionary[StringName, Vector3]:
-	return merge(merge(crouch(base), _guard_arms()), {
-		&"Spine": Vector3(-24.0, 0.0, 0.0),
-		&"Chest": Vector3(-10.0, 0.0, 0.0),
-		&"Neck": Vector3(22.0, 0.0, 0.0),
-		&"Head": Vector3(10.0, 0.0, 0.0),
+	return merge(block_guard(base), {
 		&"LeftUpperLeg": Vector3(70.0, 0.0, -5.0),
 		&"LeftLowerLeg": Vector3(-80.0, 0.0, 0.0),
 		&"LeftFoot": Vector3(10.0, 0.0, 5.0),
@@ -556,9 +576,9 @@ static func dodge_forward(base: Dictionary[StringName, Vector3]) -> Dictionary[S
 
 static func grab_reach(base: Dictionary[StringName, Vector3]) -> Dictionary[StringName, Vector3]:
 	return merge(base, {
-		&"Spine": Vector3(-12.0, 0.0, 0.0),
-		&"Chest": Vector3(-4.0, 0.0, 0.0),
-		&"Neck": Vector3(12.0, 0.0, 0.0),
+		&"Spine": Vector3(-5.0, 0.0, 0.0),
+		&"Chest": Vector3(-2.0, 0.0, 0.0),
+		&"Neck": Vector3(5.0, 0.0, 0.0),
 		&"LeftUpperArm": Vector3(84.0, -12.0, -10.0),
 		&"LeftLowerArm": Vector3(20.0, 0.0, 0.0),
 		&"RightUpperArm": Vector3(84.0, 12.0, 10.0),
@@ -1616,10 +1636,12 @@ static func _throw() -> MovePoses:
 		&"Chest": Vector3(-6.0, 6.0, 0.0),
 		&"Neck": Vector3(10.0, -24.0, 0.0),
 		&"Head": Vector3(4.0, -16.0, 0.0),
-		&"LeftUpperArm": Vector3(100.0, 10.0, -10.0),
-		&"LeftLowerArm": Vector3(20.0, 0.0, 0.0),
-		&"RightUpperArm": Vector3(110.0, 10.0, 10.0),
-		&"RightLowerArm": Vector3(20.0, 0.0, 0.0),
+		# Heaving forward and out to the sides, so the arms frame the throw in first person
+		# instead of sweeping up across the middle of the view.
+		&"LeftUpperArm": Vector3(80.0, 10.0, -26.0),
+		&"LeftLowerArm": Vector3(24.0, 0.0, 0.0),
+		&"RightUpperArm": Vector3(84.0, 10.0, 28.0),
+		&"RightLowerArm": Vector3(24.0, 0.0, 0.0),
 		&"LeftUpperLeg": Vector3(30.0, -30.0, -4.0),
 		&"LeftLowerLeg": Vector3(-30.0, 0.0, 0.0),
 		&"RightUpperLeg": Vector3(-16.0, -30.0, 5.0),
