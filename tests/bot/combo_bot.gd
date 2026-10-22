@@ -62,6 +62,7 @@ func _run() -> void:
 		{title = "K · K: front kick, stomp kick", cam = &"first_person", fn = _act_k_pause_k},
 		{title = "P P K: jab, jab, push kick", cam = &"first_person", fn = _act_ppk},
 		{title = "Hold P, release: haymaker", cam = &"first_person", fn = _act_haymaker},
+		{title = "Hold P, release: haymaker (side view)", cam = &"side_view", fn = _act_haymaker},
 		{title = "Jump + K: flying kick", cam = &"side_view", fn = _act_flying_kick},
 		{title = "Jump + K at apex: spin kick", cam = &"side_view", fn = _act_spin_kick},
 		{title = "RB: back elbow", cam = &"side_view", fn = _act_back_elbow},
