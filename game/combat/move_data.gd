@@ -32,6 +32,15 @@ extends Resource
 ## Max victims per activation; 0 = unlimited.
 @export_range(0, 16, 1) var max_targets: int = 0
 
+@export_group("Blocking")
+## Goes straight through a guard (grabs, ground pounds).
+@export var unblockable: bool = false
+## Multiplies the guard drain when this move is blocked (weapons hit the guard harder).
+@export_range(0.0, 5.0, 0.05) var guard_damage_mult: float = 1.0
+## Frames the attacker recoils when this move is blocked (a punish window); 0 = none
+## (Bruiser and boss attacks).
+@export_range(0, 60, 1) var blocked_recoil_frames: int = 14
+
 @export_group("Hitboxes")
 @export var hitboxes: Array[HitboxSpec] = []
 

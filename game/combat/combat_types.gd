@@ -41,6 +41,8 @@ enum ActorState {
 	THROWN,     ## Flying after a throw; a flying body.
 	KO,         ## Knocked out; limp and inert.
 	WINDUP,     ## Enemy telegraph before an attack (Milestone 3).
+	BLOCK,      ## Holding a guard: frontal hits are blocked (Game-boy-approved addition to Spec §4).
+	BLOCKSTUN,  ## Pushed back by a blocked hit; still guarding, can't act.
 }
 
 ## Input ids fed to ComboParser. P_HOLD is synthesized when P is released after

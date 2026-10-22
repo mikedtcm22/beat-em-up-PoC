@@ -123,6 +123,48 @@ extends Resource
 @export_range(0.0, 1.0, 0.05) var rear_warning_opacity: float = 0.9
 @export var rear_warning_audio: bool = true
 
+@export_group("Block")
+## B with the stick under this deflection blocks; above it, B dodges that way.
+@export_range(0.05, 0.9, 0.05) var block_stick_threshold: float = 0.3
+## Frames of holding before the guard is effective.
+@export_range(0, 15, 1) var block_raise_frames: int = 4
+## Frames back to neutral after releasing B.
+@export_range(0, 20, 1) var block_release_frames: int = 4
+## Frames from pressing P/K while blocking until the attack starts.
+@export_range(0, 15, 1) var block_attack_cancel_frames: int = 2
+## Hits from attackers within this many degrees of the facing are blocked.
+@export_range(10.0, 180.0, 1.0) var block_arc_half_angle_deg: float = 60.0
+@export_range(0.0, 1.0, 0.05) var block_move_mult: float = 0.35
+## Share of a blocked hit's damage that still gets through (never below 1 health).
+@export_range(0.0, 1.0, 0.01) var chip_ratio: float = 0.15
+@export_range(0, 40, 1) var blockstun_light_frames: int = 10
+@export_range(0, 40, 1) var blockstun_heavy_frames: int = 16
+@export_range(0.0, 2.0, 0.05) var block_push_light_m: float = 0.3
+@export_range(0.0, 2.0, 0.05) var block_push_heavy_m: float = 0.6
+@export_range(0.0, 300.0, 1.0) var block_hitstop_ms: float = 30.0
+@export_range(10.0, 400.0, 5.0) var guard_max: float = 100.0
+## Guard drained per point of blocked damage (times the move's guard_damage_mult).
+@export_range(0.0, 20.0, 0.5) var guard_drain_per_damage: float = 4.0
+@export_range(0.0, 200.0, 1.0) var guard_regen_per_s: float = 35.0
+@export_range(0.0, 5.0, 0.05) var guard_regen_delay_s: float = 0.75
+@export_range(0, 120, 1) var guard_break_frames: int = 45
+## Guard the meter returns to after a guard break.
+@export_range(0.0, 400.0, 5.0) var guard_break_refill: float = 50.0
+## Thrown or launched bodies blocked from the front drain the guard this many times harder.
+@export_range(0.0, 5.0, 0.1) var body_impact_guard_mult: float = 2.0
+@export var perfect_block_enabled: bool = true
+## A hit landing within this many frames of the guard coming up is a perfect block.
+@export_range(0, 30, 1) var perfect_block_window_frames: int = 8
+@export_range(0, 90, 1) var perfect_block_stagger_frames: int = 30
+
+@export_group("Sparring")
+## Seconds between a sparring dummy's jabs (varied a little).
+@export_range(0.5, 10.0, 0.1) var sparring_interval_s: float = 2.0
+## A sparring dummy swings when the player is within this range in front of it.
+@export_range(0.8, 4.0, 0.1) var sparring_range: float = 1.7
+## Test room: seconds before a KO'd player gets back up at full health.
+@export_range(0.5, 10.0, 0.1) var player_revive_s: float = 2.5
+
 @export_group("Debug")
 @export var god_mode: bool = false
 @export var one_hit_ko: bool = false

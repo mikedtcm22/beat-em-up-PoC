@@ -30,6 +30,7 @@ const BINDINGS := {
 	&"debug_draw": [KEY_F3],
 	&"cheats": [KEY_F4],
 	&"help": [KEY_H],
+	&"sparring": [KEY_F5],  # toggle sparring on every training dummy
 	# Free-fly debug camera (keeps WASD/mouse for the player).
 	&"fly_forward": [KEY_UP],
 	&"fly_back": [KEY_DOWN],

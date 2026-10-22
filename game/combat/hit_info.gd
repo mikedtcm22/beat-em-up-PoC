@@ -32,6 +32,12 @@ var move_frame: int = 0
 var chain_step: int = 1
 ## How the move was selected: &"root", &"chain", &"pause", &"repeat", &"auto", &"context".
 var input_timing: StringName = &"root"
+## The defender's guard stopped this hit (damage is then only the chip).
+var blocked: bool = false
+## Blocked within the perfect-block window: no chip or guard drain; the attacker staggers.
+var perfect_block: bool = false
+## This blocked hit emptied the guard meter and broke the guard.
+var guard_broken: bool = false
 
 
 func describe() -> String:
