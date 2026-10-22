@@ -402,6 +402,31 @@ func test_dodge_sidesteps_three_meters_with_iframes() -> void:
 	assert_gt(moved.dot(player.global_basis.x), 2.0, "to the right")
 
 
+func test_player_stands_relaxed_and_a_neutral_dodge_puts_the_guard_up() -> void:
+	# Game-boy's M1 playtest: the player's arms hang loose until a strike (enemies keep the
+	# boxer guard), and a dodge with no stick backsteps with the guard up by the face.
+	await _setup([Vector3(0, 0, -2.5)])
+	assert_eq(player.rig.stance, PlaceholderPoses.STANCE_RELAXED, "the player stands relaxed")
+	assert_true(player.rig.wrapped_hands, "with wrapped hands")
+	for dummy: TrainingDummy in dummies:
+		assert_eq(dummy.rig.stance, PlaceholderPoses.STANCE_BOXER, "%s keeps the boxer guard" % dummy.name)
+		assert_false(dummy.rig.wrapped_hands, "%s keeps its fist blocks" % dummy.name)
+	var chest := player.rig.get_point_position(&"ChestPoint").y
+	assert_lt(player.rig.get_point_position(&"LeftFistPoint").y, chest, "the lead hand hangs low")
+	var start := player.global_position
+	player.input.push_press(&"DODGE", 2)
+	await _ticks(6)
+	assert_eq(player.state, CombatTypes.ActorState.DODGE)
+	assert_eq(player.rig.current_anim(), &"dodge_back", "no stick: the backstep")
+	for point: StringName in [&"LeftFistPoint", &"RightFistPoint"]:
+		assert_gt(player.rig.get_point_position(point).y, player.rig.get_point_position(&"ChestPoint").y + 0.15,
+				"%s up by the face during the backstep" % point)
+	assert_true(await _wait_idle())
+	var moved := player.global_position - start
+	assert_almost_eq(moved.length(), Tuning.data.dodge_distance, 0.15, "about 3 m")
+	assert_gt(moved.dot(player.global_basis.z), 2.0, "backward")
+
+
 func test_dodge_cancels_recovery() -> void:
 	await _setup([])
 	await _press(&"P", 2)

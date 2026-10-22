@@ -83,17 +83,20 @@ static func animated_bones() -> Array[StringName]:
 
 
 ## Library holding every id in ANIM_IDS, lengths scaled for a rig of
-## `scale` x PlaceholderBody.REF_HEIGHT.
-static func build_library(scale: float) -> AnimationLibrary:
+## `scale` x PlaceholderBody.REF_HEIGHT standing in `stance` (PlaceholderPoses.STANCE_*).
+static func build_library(scale: float,
+		stance: StringName = PlaceholderPoses.STANCE_BOXER) -> AnimationLibrary:
 	var lib := AnimationLibrary.new()
 	for id: StringName in ANIM_IDS:
-		lib.add_animation(id, build_named(id, scale))
+		lib.add_animation(id, build_named(id, scale, stance))
 	return lib
 
 
-## One named (non-move) animation.
-static func build_named(id: StringName, scale: float) -> Animation:
-	var g := PlaceholderPoses.guard()
+## One named (non-move) animation. Everything that starts or ends standing does so in
+## `stance`'s pose.
+static func build_named(id: StringName, scale: float,
+		stance: StringName = PlaceholderPoses.STANCE_BOXER) -> Animation:
+	var g := PlaceholderPoses.stance_pose(stance)
 	var keys: Array[PoseKey] = []
 	var length := 1.0
 	match id:
@@ -109,11 +112,15 @@ static func build_named(id: StringName, scale: float) -> Animation:
 			keys = [_k(0.0, g), _k(1.0, breathe), _k(2.0, g)]
 		&"walk_forward", &"walk_back":
 			length = 0.6
-			var contact := PlaceholderPoses.walk_contact()
-			var pass_pose := PlaceholderPoses.walk_pass()
+			var contact := PlaceholderPoses.walk_contact(g)
+			var pass_pose := PlaceholderPoses.walk_pass(g)
 			var contact_r := _legs(g, PlaceholderPoses.mirror(contact))
 			contact_r[&"Hips"] = PlaceholderPoses.mirror(contact)[&"Hips"]
 			var pass_r := _legs(g, PlaceholderPoses.mirror(pass_pose))
+			if stance == PlaceholderPoses.STANCE_RELAXED:
+				# Loose arms swing against the legs (the boxer guard keeps its fists up).
+				contact = PlaceholderPoses.add(contact, PlaceholderPoses.arm_swing(true))
+				contact_r = PlaceholderPoses.add(contact_r, PlaceholderPoses.arm_swing(false))
 			keys = [_k(0.0, contact), _k(0.15, pass_pose), _k(0.3, contact_r), _k(0.45, pass_r),
 				_k(0.6, contact)]
 			if id == &"walk_back":
@@ -121,35 +128,36 @@ static func build_named(id: StringName, scale: float) -> Animation:
 					key.time = length - key.time
 		&"walk_right", &"walk_left":
 			length = 0.6
-			var wide := PlaceholderPoses.step_wide()
-			var close := PlaceholderPoses.step_close()
+			var wide := PlaceholderPoses.step_wide(g)
+			var close := PlaceholderPoses.step_close(g)
 			if id == &"walk_left":
 				wide = _legs(g, PlaceholderPoses.mirror(wide))
 				close = _legs(g, PlaceholderPoses.mirror(close))
 			keys = [_k(0.0, g), _k(0.2, wide), _k(0.4, close), _k(0.6, g)]
 		&"jump":
 			length = 0.35
-			keys = [_k(0.0, g), _k(0.1, PlaceholderPoses.jump_takeoff()),
-				_k(0.35, PlaceholderPoses.jump_tuck())]
+			keys = [_k(0.0, g), _k(0.1, PlaceholderPoses.jump_takeoff(g)),
+				_k(0.35, PlaceholderPoses.jump_tuck(g))]
 		&"fall":
 			length = 0.3
-			keys = [_k(0.0, PlaceholderPoses.jump_tuck()), _k(0.3, PlaceholderPoses.fall_pose())]
+			keys = [_k(0.0, PlaceholderPoses.jump_tuck(g)), _k(0.3, PlaceholderPoses.fall_pose(g))]
 		&"land":
 			length = 0.25
-			keys = [_k(0.0, PlaceholderPoses.crouch()), _k(0.25, g)]
+			keys = [_k(0.0, PlaceholderPoses.crouch(g)), _k(0.25, g)]
 		&"dodge_left", &"dodge_right", &"dodge_back", &"dodge_forward":
 			length = 0.3
-			var dodge := PlaceholderPoses.dodge_right()
+			var dodge := PlaceholderPoses.dodge_right(g)
 			if id == &"dodge_left":
 				dodge = PlaceholderPoses.mirror(dodge)
 			elif id == &"dodge_back":
-				dodge = PlaceholderPoses.dodge_back()
+				dodge = PlaceholderPoses.dodge_back(g)
 			elif id == &"dodge_forward":
-				dodge = PlaceholderPoses.dodge_forward()
-			keys = [_k(0.0, g), _k(0.07, dodge), _k(0.2, dodge), _k(0.3, g)]
+				dodge = PlaceholderPoses.dodge_forward(g)
+			# In by 3 frames and held to frame 13 of the 14-frame dodge (Tuning.dodge_frames).
+			keys = [_k(0.0, g), _k(0.05, dodge), _k(0.22, dodge), _k(0.3, g)]
 		&"grab":
 			length = 0.25
-			keys = [_k(0.0, g), _k(0.12, PlaceholderPoses.grab_reach()),
+			keys = [_k(0.0, g), _k(0.12, PlaceholderPoses.grab_reach(g)),
 				_k(0.25, PlaceholderPoses.hold())]
 		&"hold":
 			length = 1.2
@@ -168,25 +176,25 @@ static func build_named(id: StringName, scale: float) -> Animation:
 			keys = [_k(0.0, PlaceholderPoses.thrown_a()), _k(0.5, PlaceholderPoses.thrown_b())]
 		&"pickup":
 			length = 0.45
-			keys = [_k(0.0, g), _k(0.2, PlaceholderPoses.pickup_reach()),
-				_k(0.26, PlaceholderPoses.pickup_reach()), _k(0.45, g)]
+			keys = [_k(0.0, g), _k(0.2, PlaceholderPoses.pickup_reach(g)),
+				_k(0.26, PlaceholderPoses.pickup_reach(g)), _k(0.45, g)]
 		&"haymaker_charge":
 			length = 0.3
-			keys = [_k(0.0, g), _k(0.3, PlaceholderPoses.haymaker_charge())]
+			keys = [_k(0.0, g), _k(0.3, PlaceholderPoses.haymaker_charge(stance))]
 		&"flinch_head_front", &"flinch_head_left", &"flinch_head_right", &"flinch_gut", &"flinch_legs":
 			length = 0.25
 			var f: Dictionary[StringName, Vector3]
 			match id:
 				&"flinch_head_front":
-					f = PlaceholderPoses.flinch_head_front()
+					f = PlaceholderPoses.flinch_head_front(g)
 				&"flinch_head_left":
-					f = PlaceholderPoses.flinch_head_side(true)
+					f = PlaceholderPoses.flinch_head_side(g, true)
 				&"flinch_head_right":
-					f = PlaceholderPoses.flinch_head_side(false)
+					f = PlaceholderPoses.flinch_head_side(g, false)
 				&"flinch_gut":
-					f = PlaceholderPoses.flinch_gut()
+					f = PlaceholderPoses.flinch_gut(g)
 				_:
-					f = PlaceholderPoses.flinch_legs()
+					f = PlaceholderPoses.flinch_legs(g)
 			keys = [_k(0.0, g), _k(0.06, f), _k(0.1, f), _k(0.25, g)]
 		&"stagger_back", &"stagger_left", &"stagger_right", &"stagger_forward":
 			length = 0.6
@@ -194,17 +202,17 @@ static func build_named(id: StringName, scale: float) -> Animation:
 			var b: Dictionary[StringName, Vector3]
 			match id:
 				&"stagger_back":
-					a = PlaceholderPoses.stagger_back_a()
-					b = PlaceholderPoses.stagger_back_b()
+					a = PlaceholderPoses.stagger_back_a(g)
+					b = PlaceholderPoses.stagger_back_b(g)
 				&"stagger_forward":
-					a = PlaceholderPoses.stagger_forward_a()
-					b = PlaceholderPoses.stagger_forward_b()
+					a = PlaceholderPoses.stagger_forward_a(g)
+					b = PlaceholderPoses.stagger_forward_b(g)
 				&"stagger_right":
-					a = PlaceholderPoses.stagger_right_a()
-					b = PlaceholderPoses.stagger_right_b()
+					a = PlaceholderPoses.stagger_right_a(g)
+					b = PlaceholderPoses.stagger_right_b(g)
 				_:
-					a = PlaceholderPoses.mirror(PlaceholderPoses.stagger_right_a())
-					b = PlaceholderPoses.mirror(PlaceholderPoses.stagger_right_b())
+					a = PlaceholderPoses.mirror(PlaceholderPoses.stagger_right_a(g))
+					b = PlaceholderPoses.mirror(PlaceholderPoses.stagger_right_b(g))
 			keys = [_k(0.0, g), _k(0.12, a), _k(0.34, b), _k(0.6, g)]
 		&"launched":
 			length = 0.4
@@ -212,14 +220,14 @@ static func build_named(id: StringName, scale: float) -> Animation:
 		&"knockdown_back":
 			length = 0.5
 			var down := PlaceholderPoses.downed_back()
-			keys = [_k(0.0, PlaceholderPoses.buckle()), _k(FALL_JOIN_S[id], PlaceholderPoses.falling_back()),
+			keys = [_k(0.0, PlaceholderPoses.buckle(g)), _k(FALL_JOIN_S[id], PlaceholderPoses.falling_back()),
 				_k(0.36, PlaceholderPoses.add(down, {&"Spine": Vector3(-8.0, 0.0, 0.0),
 					&"LeftUpperLeg": Vector3(12.0, 0.0, 0.0), &"RightUpperLeg": Vector3(12.0, 0.0, 0.0)})),
 				_k(0.5, down)]
 		&"knockdown_forward":
 			length = 0.5
 			var down_f := PlaceholderPoses.downed_front()
-			keys = [_k(0.0, PlaceholderPoses.buckle()), _k(FALL_JOIN_S[id], PlaceholderPoses.falling_front()),
+			keys = [_k(0.0, PlaceholderPoses.buckle(g)), _k(FALL_JOIN_S[id], PlaceholderPoses.falling_front()),
 				_k(0.36, PlaceholderPoses.add(down_f, {&"Spine": Vector3(8.0, 0.0, 0.0),
 					&"Neck": Vector3(10.0, 0.0, 0.0)})),
 				_k(0.5, down_f)]
@@ -234,22 +242,22 @@ static func build_named(id: StringName, scale: float) -> Animation:
 		&"getup_back":
 			length = 0.5
 			keys = [_k(0.0, PlaceholderPoses.downed_back()), _k(0.18, PlaceholderPoses.getup_back_sit()),
-				_k(0.34, PlaceholderPoses.getup_crouch()), _k(0.5, g)]
+				_k(0.34, PlaceholderPoses.getup_crouch(g)), _k(0.5, g)]
 		&"getup_front":
 			length = 0.5
 			keys = [_k(0.0, PlaceholderPoses.downed_front()), _k(0.2, PlaceholderPoses.getup_front_push()),
-				_k(0.36, PlaceholderPoses.getup_crouch()), _k(0.5, g)]
+				_k(0.36, PlaceholderPoses.getup_crouch(g)), _k(0.5, g)]
 		&"ko_back":
 			length = 0.8
 			var ko := PlaceholderPoses.ko_back()
-			keys = [_k(0.0, PlaceholderPoses.buckle()), _k(FALL_JOIN_S[id], PlaceholderPoses.falling_back()),
+			keys = [_k(0.0, PlaceholderPoses.buckle(g)), _k(FALL_JOIN_S[id], PlaceholderPoses.falling_back()),
 				_k(0.52, PlaceholderPoses.add(ko, {&"Spine": Vector3(-8.0, 0.0, 0.0),
 					&"LeftUpperLeg": Vector3(10.0, 0.0, 0.0), &"RightUpperLeg": Vector3(14.0, 0.0, 0.0)})),
 				_k(0.8, ko)]
 		&"ko_front":
 			length = 0.8
 			var ko_f := PlaceholderPoses.ko_front()
-			keys = [_k(0.0, PlaceholderPoses.buckle()), _k(FALL_JOIN_S[id], PlaceholderPoses.falling_front()),
+			keys = [_k(0.0, PlaceholderPoses.buckle(g)), _k(FALL_JOIN_S[id], PlaceholderPoses.falling_front()),
 				_k(0.52, PlaceholderPoses.add(ko_f, {&"Spine": Vector3(8.0, 0.0, 0.0)})),
 				_k(0.8, ko_f)]
 		_:
@@ -258,17 +266,18 @@ static func build_named(id: StringName, scale: float) -> Animation:
 	return make(keys, length, LOOPING.has(id), scale)
 
 
-## Animation for `move`: length move.total_frames() / 60 s; guard at 0, the wind-up at
-## windup_at x startup, the strike pose exactly at startup / 60 s held until
-## (startup + active) / 60 s, an optional follow-through, and back to guard at the end.
-## `mirrored` swaps the upper body left for right, keeping the stance (the body flurry
-## alternates fists this way). `from_charge` starts from the wind-up pose instead of guard
+## Animation for `move` in `stance`: length move.total_frames() / 60 s; the move's start
+## pose (the stance, the clinch or a weapon carry, PlaceholderPoses.move_poses()) at 0, the
+## wind-up at windup_at x startup, the strike pose exactly at startup / 60 s held until
+## (startup + active) / 60 s, an optional follow-through, and back to the start pose at the
+## end. `mirrored` swaps the upper body left for right, keeping the legs (the body flurry
+## alternates fists this way). `from_charge` starts from the wind-up pose instead
 ## (released out of its CHARGE_ANIMS animation, which ends on that pose), so the startup
 ## holds the cocked pose until the wind-up time and then drives into the strike. Ids
 ## without a recipe fall back to a generic punch or kick picked from the first hitbox.
 static func build_move(move: MoveData, scale: float, mirrored: bool = false,
-		from_charge: bool = false) -> Animation:
-	var poses := _poses_for(move)
+		from_charge: bool = false, stance: StringName = PlaceholderPoses.STANCE_BOXER) -> Animation:
+	var poses := _poses_for(move, stance)
 	if mirrored:
 		poses = poses.mirrored(true)
 	var startup := move.startup * FRAME_S
@@ -298,9 +307,10 @@ static func windup_time(move: MoveData, poses: PlaceholderPoses.MovePoses = null
 	return move.startup * FRAME_S * clampf(poses.windup_at, 0.05, 0.95)
 
 
-static func _poses_for(move: MoveData) -> PlaceholderPoses.MovePoses:
-	var poses := PlaceholderPoses.move_poses(move.get_anim())
-	return poses if poses != null else _fallback_poses(move)
+static func _poses_for(move: MoveData,
+		stance: StringName = PlaceholderPoses.STANCE_BOXER) -> PlaceholderPoses.MovePoses:
+	var poses := PlaceholderPoses.move_poses(move.get_anim(), stance)
+	return poses if poses != null else _fallback_poses(move, stance)
 
 
 ## The first hitbox's strike point, or &"RightFootPoint" for an arc (spins are kicks).
@@ -319,12 +329,12 @@ static func fallback_is_kick(move: MoveData) -> bool:
 			or point.contains("Leg")
 
 
-static func _fallback_poses(move: MoveData) -> PlaceholderPoses.MovePoses:
+static func _fallback_poses(move: MoveData, stance: StringName) -> PlaceholderPoses.MovePoses:
 	var is_kick := fallback_is_kick(move)
 	if warn_on_fallback:
 		push_warning("HumanoidRig: no animation recipe for move '%s'; using a generic %s" % [
 				move.get_anim(), "kick" if is_kick else "punch"])
-	var poses := PlaceholderPoses.generic_kick() if is_kick else PlaceholderPoses.generic_punch()
+	var poses := PlaceholderPoses.generic_kick(stance) if is_kick else PlaceholderPoses.generic_punch(stance)
 	return poses.mirrored() if String(_fallback_point(move)).begins_with("Left") else poses
 
 
