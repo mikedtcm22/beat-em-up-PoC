@@ -105,14 +105,23 @@ const POINT_OFFSET: Dictionary[StringName, Vector3] = {
 	&"HoldPoint": Vector3(0.0, 0.07, -0.55),
 }
 
-## Bones whose meshes go on CombatTypes.VIS_FP_HIDDEN when the rig is a first-person body.
-## Shoulders and upper arms sit right beside the eye, so in first person they filled the
-## lower corners at rest and the middle of the screen on every punch; hiding them leaves
-## forearms and fists coming in from the bottom edge. They still cast shadows and show
-## in the side and free-fly views.
+## Bones whose meshes go on CombatTypes.VIS_FP_HIDDEN when the rig is a first-person body,
+## plus single parts on other bones (FP_HIDDEN_PARTS; see is_fp_hidden()). They still cast
+## shadows and show in the side and free-fly views.
+##   - Head and neck: the lens is in them.
+##   - Chest and upper chest: the lens sits at throat height just in front of them
+##     (FirstPersonCamera.lens_offset()), so every torso twist (spins, the back elbow)
+##     swept the chest box and the shoulder balls across half the view.
+##   - The shoulder balls (Delt) and the shoulder end of each upper arm: they sit right
+##     beside the lens and swept across the view on every twist (a spinning heel or a spin
+##     kick filled two fifths of it). The elbow end of the upper arm (Elbow) stays, so a
+##     punch's arm comes in from the edge of the view as sleeve, forearm and fist instead of
+##     a forearm floating in mid-view.
+## Looking down, the lens sees the belly (its rounded top), belt and legs below it.
 const FP_HIDDEN_BONES: Array[StringName] = [
-	&"Neck", &"Head", &"LeftShoulder", &"RightShoulder", &"LeftUpperArm", &"RightUpperArm",
+	&"Chest", &"UpperChest", &"Neck", &"Head", &"LeftShoulder", &"RightShoulder",
 ]
+const FP_HIDDEN_PARTS: Array[StringName] = [&"LeftDelt", &"RightDelt", &"LeftUpperArm", &"RightUpperArm"]
 
 ## Points on each sole (bone, offset at REF_HEIGHT) that PlaceholderAnims keeps at or
 ## above y = 0 when it plants a pose: heel, ball and toe tip.
@@ -181,13 +190,19 @@ class HurtSpec:
 		return bone_b != &""
 
 
-## Chunky placeholder body: broad V torso, thick limbs, oversized wrapped fists and
-## sneakers, and a covered face (cap pulled low plus a wrap-around shades band).
-static func parts() -> Array[Part]:
+## Chunky placeholder body: broad V torso, thick limbs, oversized fists and sneakers, and a
+## covered face (cap pulled low plus a wrap-around shades band). With `wrapped_hands` (the
+## player, Spec §10) the fist blocks become smaller skin-colored hands (_wrapped_hand()).
+static func parts(wrapped_hands: bool = false) -> Array[Part]:
 	var out: Array[Part] = [
 		Part.new(&"Pelvis", &"Hips", Shape.BOX, Vector3(0.36, 0.2, 0.25), Vector3(0.0, -0.03, 0.0), Paint.PANTS),
 		Part.new(&"Belt", &"Hips", Shape.BOX, Vector3(0.37, 0.05, 0.26), Vector3(0.0, 0.07, 0.0), Paint.DARK),
 		Part.new(&"Belly", &"Spine", Shape.BOX, Vector3(0.36, 0.17, 0.24), Vector3(0.0, 0.07, 0.0), Paint.BODY),
+		# A rounded top on the belly: a half-sunk cylinder lying across it, as wide and deep
+		# as the belly. The chest box hides it from outside; with the chest hidden from the
+		# first-person camera (FP_HIDDEN_BONES), looking steeply down shows a rounded shirt
+		# front instead of the belly box's flat lid.
+		Part.new(&"BellyTop", &"Spine", Shape.CYLINDER, Vector3(0.12, 0.36, 0.0), Vector3(0.0, 0.155, 0.0), Paint.BODY, Vector3(0.0, 0.0, 90.0)),
 		Part.new(&"Chest", &"Chest", Shape.BOX, Vector3(0.43, 0.17, 0.27), Vector3(0.0, 0.07, 0.0), Paint.BODY),
 		Part.new(&"UpperChest", &"UpperChest", Shape.BOX, Vector3(0.52, 0.17, 0.28), Vector3(0.0, 0.075, 0.0), Paint.BODY),
 		Part.new(&"Neck", &"Neck", Shape.CYLINDER, Vector3(0.065, 0.15, 0.0), Vector3(0.0, 0.05, 0.0), Paint.SKIN),
@@ -201,10 +216,11 @@ static func parts() -> Array[Part]:
 		var sx: float = -1.0 if side == "Left" else 1.0
 		out.append_array([
 			Part.new(StringName(side + "Delt"), StringName(side + "UpperArm"), Shape.SPHERE, Vector3(0.095, 0.19, 0.0), Vector3(0.0, -0.02, 0.0), Paint.BODY),
-			Part.new(StringName(side + "UpperArm"), StringName(side + "UpperArm"), Shape.CAPSULE, Vector3(0.075, 0.34, 0.0), Vector3(0.0, -0.145, 0.0), Paint.BODY),
-			Part.new(StringName(side + "Forearm"), StringName(side + "LowerArm"), Shape.CAPSULE, Vector3(0.066, 0.3, 0.0), Vector3(0.0, -0.125, 0.0), Paint.SKIN),
-			Part.new(StringName(side + "Wrap"), StringName(side + "LowerArm"), Shape.CYLINDER, Vector3(0.07, 0.08, 0.0), Vector3(0.0, -0.225, 0.0), Paint.ACCENT),
-			Part.new(StringName(side + "Fist"), StringName(side + "Hand"), Shape.BOX, Vector3(0.12, 0.13, 0.135), Vector3(0.0, -0.065, -0.005), Paint.ACCENT),
+			# The upper arm in two overlapping capsules of one radius whose union is a single
+			# capsule from the shoulder to the elbow: the shoulder end (FP_HIDDEN_PARTS) and the
+			# elbow end, which the first-person camera still draws.
+			Part.new(StringName(side + "UpperArm"), StringName(side + "UpperArm"), Shape.CAPSULE, Vector3(0.075, 0.275, 0.0), Vector3(0.0, -0.1125, 0.0), Paint.BODY),
+			Part.new(StringName(side + "Elbow"), StringName(side + "UpperArm"), Shape.CAPSULE, Vector3(0.075, 0.215, 0.0), Vector3(0.0, -0.2075, 0.0), Paint.BODY),
 			Part.new(StringName(side + "Thigh"), StringName(side + "UpperLeg"), Shape.CAPSULE, Vector3(0.1, 0.48, 0.0), Vector3(0.0, -0.205, 0.0), Paint.PANTS),
 			Part.new(StringName(side + "Shin"), StringName(side + "LowerLeg"), Shape.CAPSULE, Vector3(0.085, 0.46, 0.0), Vector3(0.0, -0.2, 0.0), Paint.PANTS),
 			Part.new(StringName(side + "Shoe"), StringName(side + "Foot"), Shape.BOX, Vector3(0.135, 0.095, 0.25), Vector3(0.0, -0.04, -0.035), Paint.ACCENT),
@@ -212,9 +228,35 @@ static func parts() -> Array[Part]:
 			Part.new(StringName(side + "ToeCap"), StringName(side + "Toes"), Shape.BOX, Vector3(0.13, 0.07, 0.13), Vector3(0.0, 0.0, -0.06), Paint.ACCENT),
 			Part.new(StringName(side + "ToeSole"), StringName(side + "Toes"), Shape.BOX, Vector3(0.135, 0.025, 0.13), Vector3(0.0, -0.025, -0.06), Paint.DARK),
 		])
+		if wrapped_hands:
+			out.append_array(_wrapped_hand(side, sx))
+		else:
+			out.append_array([
+				Part.new(StringName(side + "Forearm"), StringName(side + "LowerArm"), Shape.CAPSULE, Vector3(0.066, 0.3, 0.0), Vector3(0.0, -0.125, 0.0), Paint.SKIN),
+				Part.new(StringName(side + "Wrap"), StringName(side + "LowerArm"), Shape.CYLINDER, Vector3(0.07, 0.08, 0.0), Vector3(0.0, -0.225, 0.0), Paint.ACCENT),
+				Part.new(StringName(side + "Fist"), StringName(side + "Hand"), Shape.BOX, Vector3(0.12, 0.13, 0.135), Vector3(0.0, -0.065, -0.005), Paint.ACCENT),
+			])
 		# Slight outward splay of the shoulder ball so the silhouette reads broad.
 		out.append(Part.new(StringName(side + "Trap"), &"UpperChest", Shape.SPHERE, Vector3(0.1, 0.16, 0.0), Vector3(sx * 0.14, 0.13, 0.01), Paint.BODY))
 	return out
+
+
+## The player's forearm and hand on `side` (sx = -1 left, +1 right): a slimmer forearm with
+## a light wrap at the wrist, and a skin-colored fist about 0.9 times the size of the
+## standard fist block in each direction (about 75% of its volume), wrapped across the
+## knuckles and at the wrist, with a dark fingerless-glove plate on the back of the hand
+## (the outer side when the arm hangs). Centered on the FistPoint, like the fist block.
+static func _wrapped_hand(side: String, sx: float) -> Array[Part]:
+	var lower := StringName(side + "LowerArm")
+	var hand := StringName(side + "Hand")
+	return [
+		Part.new(StringName(side + "Forearm"), lower, Shape.CAPSULE, Vector3(0.056, 0.3, 0.0), Vector3(0.0, -0.125, 0.0), Paint.SKIN),
+		Part.new(StringName(side + "Wrap"), lower, Shape.CYLINDER, Vector3(0.059, 0.07, 0.0), Vector3(0.0, -0.23, 0.0), Paint.ACCENT),
+		Part.new(StringName(side + "Hand"), hand, Shape.BOX, Vector3(0.1, 0.118, 0.116), Vector3(0.0, -0.065, -0.005), Paint.SKIN),
+		Part.new(StringName(side + "KnuckleWrap"), hand, Shape.BOX, Vector3(0.106, 0.034, 0.122), Vector3(0.0, -0.078, -0.005), Paint.ACCENT),
+		Part.new(StringName(side + "WristWrap"), hand, Shape.BOX, Vector3(0.106, 0.026, 0.122), Vector3(0.0, -0.017, -0.005), Paint.ACCENT),
+		Part.new(StringName(side + "GloveBack"), hand, Shape.BOX, Vector3(0.012, 0.03, 0.09), Vector3(sx * 0.052, -0.047, -0.005), Paint.DARK),
+	]
 
 
 ## Region hurtboxes (docs/ARCHITECTURE.md "Hurtboxes").
@@ -225,6 +267,11 @@ static func hurt_specs() -> Array[HurtSpec]:
 		HurtSpec.new(&"HurtboxLegL", CombatTypes.Region.LEGS, 0.1, &"LeftUpperLeg", Vector3.ZERO, &"LeftFoot", Vector3.ZERO),
 		HurtSpec.new(&"HurtboxLegR", CombatTypes.Region.LEGS, 0.1, &"RightUpperLeg", Vector3.ZERO, &"RightFoot", Vector3.ZERO),
 	]
+
+
+## True when `part` goes on CombatTypes.VIS_FP_HIDDEN on a first-person body.
+static func is_fp_hidden(part: Part) -> bool:
+	return FP_HIDDEN_BONES.has(part.bone) or FP_HIDDEN_PARTS.has(part.name)
 
 
 ## Rotation basis for Euler angles in degrees (YXZ, Godot's default order).

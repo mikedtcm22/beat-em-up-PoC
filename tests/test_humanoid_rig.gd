@@ -3,11 +3,13 @@ extends GutTest
 ## builders: skeleton, rig points, hurtboxes, layers, the animation library, move timing
 ## and the "Strike reach" envelopes of docs/ARCHITECTURE.md.
 
+const FPView := preload("res://tests/fp_view.gd")
+
 const FRAME := 1.0 / 60.0
-## Horizontal FOV of the first-person camera and the vertical half-angle that gives at
-## 16:9 with Camera3D.KEEP_WIDTH (Spec §5).
-const FP_HALF_H_DEG := 45.0
-const FP_HALF_V_DEG := 29.36
+## First-person view (see tests/fp_view.gd): FOV half-angles at 16:9 and the default grid.
+const FP_HALF_H_DEG := FPView.HALF_H_DEG
+const FP_HALF_V_DEG := FPView.HALF_V_DEG
+const FP_COLS := FPView.COLS
 ## Distance between two fighters' centers in the strike tests (docs/ARCHITECTURE.md).
 const TARGET_DISTANCE := 0.85
 
@@ -31,7 +33,7 @@ const POINTS: Array[StringName] = [
 const ANIM_IDS: Array[StringName] = [
 	&"idle", &"walk_forward", &"walk_back", &"walk_left", &"walk_right",
 	&"jump", &"fall", &"land",
-	&"dodge_left", &"dodge_right", &"dodge_back", &"dodge_forward",
+	&"dodge_left", &"dodge_right", &"dodge_back", &"dodge_forward", &"block",
 	&"grab", &"hold", &"held", &"thrown", &"pickup", &"haymaker_charge",
 	&"flinch_head_front", &"flinch_head_left", &"flinch_head_right", &"flinch_gut",
 	&"flinch_legs", &"stagger_back", &"stagger_left", &"stagger_right", &"stagger_forward",
@@ -42,7 +44,7 @@ const ANIM_IDS: Array[StringName] = [
 ## Looping or holding animations (everything else plays once and holds its last pose).
 const LOOPING: Array[StringName] = [
 	&"idle", &"walk_forward", &"walk_back", &"walk_left", &"walk_right",
-	&"hold", &"held", &"downed_back", &"downed_front",
+	&"block", &"hold", &"held", &"downed_back", &"downed_front",
 ]
 
 ## docs/ARCHITECTURE.md moves table: [id, startup, active, recovery].
@@ -121,6 +123,15 @@ func _reach_rows() -> Array[Reach]:
 # --- Helpers ---------------------------------------------------------------------------
 
 
+func before_all() -> void:
+	# First-person checks use the shipped lens offsets (Tuning defaults).
+	Tuning.apply(TuningData.new())
+
+
+func after_all() -> void:
+	Tuning.apply(TuningData.new())
+
+
 func _rig(first_person: bool = false, height: float = 1.8, actor: Node3D = null) -> HumanoidRig:
 	var rig := HumanoidRig.new()
 	rig.first_person_body = first_person
@@ -129,6 +140,29 @@ func _rig(first_person: bool = false, height: float = 1.8, actor: Node3D = null)
 	add_child_autofree(rig)
 	rig.build()
 	return rig
+
+
+## A rig dressed like the player (PlayerCharacter._configure_rig()): first-person body,
+## relaxed stance and wrapped hands.
+func _player_rig() -> HumanoidRig:
+	var rig := HumanoidRig.new()
+	rig.first_person_body = true
+	rig.stance = PlaceholderPoses.STANCE_RELAXED
+	rig.wrapped_hands = true
+	add_child_autofree(rig)
+	rig.build()
+	return rig
+
+
+## One rig per stance: a boxer (enemies, the default) and the player's relaxed rig. Strikes
+## must reach the same envelopes in both.
+func _stance_rigs() -> Array[HumanoidRig]:
+	return [_rig(), _player_rig()]
+
+
+## `id` with the rig's stance, for failure messages.
+func _tag(rig: HumanoidRig, id: StringName) -> String:
+	return "%s (%s)" % [id, rig.stance]
 
 
 func _move(row: Array) -> MoveData:
@@ -212,18 +246,42 @@ func _touched_regions(target: HumanoidRig, center: Vector3, radius: float) -> Ar
 	return out
 
 
+## How `rig` faces (its yaw; the rigs in these tests face -Z).
+func _facing(rig: HumanoidRig) -> Basis:
+	return rig.global_basis.orthonormalized()
+
+
+## Where the first-person lens sits for `rig`: EyePoint dropped by `drop` (a move's camera
+## drop) plus FirstPersonCamera.lens_offset() for the rig's facing, exactly as the camera
+## places it (Tuning's height and forward offsets).
+func _lens(rig: HumanoidRig, drop: float = 0.0) -> Vector3:
+	return rig.get_point_position(&"EyePoint") + Vector3.DOWN * drop + FirstPersonCamera.lens_offset(_facing(rig))
+
+
+## The first-person camera of `rig`: the lens, looking the way the rig faces, pitched by
+## `pitch_deg`.
+func _fp_camera(rig: HumanoidRig, pitch_deg: float = 0.0, drop: float = 0.0) -> Transform3D:
+	return Transform3D(_facing(rig) * Basis.from_euler(Vector3(deg_to_rad(pitch_deg), 0.0, 0.0)), _lens(rig, drop))
+
+
 ## Camera-space angles (degrees: x = right of center, y = above center) of a rig point
-## seen from EyePoint looking down -Z, pitched by `pitch_deg` and dropped by `drop`.
-## z is the distance in front of the camera.
+## seen through _fp_camera(rig, pitch_deg, drop). z is the distance in front of the camera.
 func _view(rig: HumanoidRig, point: StringName, pitch_deg: float = 0.0, drop: float = 0.0) -> Vector3:
-	var eye := rig.get_point_position(&"EyePoint") + Vector3.DOWN * drop
-	var cam := Basis.from_euler(Vector3(deg_to_rad(pitch_deg), 0.0, 0.0))
-	var q := cam.inverse() * (rig.get_point_position(point) - eye)
+	return _view_from(_fp_camera(rig, pitch_deg, drop), rig.get_point_position(point))
+
+
+func _view_from(cam: Transform3D, world: Vector3) -> Vector3:
+	var q := cam.basis.inverse() * (world - cam.origin)
 	return Vector3(rad_to_deg(atan2(q.x, -q.z)), rad_to_deg(atan2(q.y, -q.z)), -q.z)
 
 
 func _in_fp_view(view: Vector3) -> bool:
 	return view.z > 0.05 and absf(view.x) < FP_HALF_H_DEG and absf(view.y) < FP_HALF_V_DEG
+
+
+## True when a point given as _view() angles lies in the upper third of the view.
+func _in_upper_third(view: Vector3) -> bool:
+	return _in_fp_view(view) and tan(deg_to_rad(view.y)) > tan(deg_to_rad(FP_HALF_V_DEG)) / 3.0
 
 
 ## Angle (degrees) between the view center and a point given as _view() angles; 180 for a
@@ -236,9 +294,109 @@ func _off_center_deg(view: Vector3) -> float:
 
 
 func _meshes_under(node: Node) -> Array[MeshInstance3D]:
-	var out: Array[MeshInstance3D] = []
-	for child: Node in node.find_children("*", "MeshInstance3D", true, false):
-		out.append(child as MeshInstance3D)
+	return FPView.meshes_under(node)
+
+
+## What `cam` sees of `rig`'s own body (FPView.hits()).
+func _fp_hits(rig: HumanoidRig, cam: Transform3D, cols: int = FP_COLS,
+		skip: Array[MeshInstance3D] = []) -> Array[MeshInstance3D]:
+	return FPView.hits(rig, cam, cols, skip)
+
+
+## Share of the view (0..1) whose nearest body mesh (from _fp_hits()) passes `keep`.
+func _share(hits: Array[MeshInstance3D], keep: Callable) -> float:
+	return FPView.share(hits, keep)
+
+
+## Share of the view any of the body covers.
+func _body_share(hits: Array[MeshInstance3D]) -> float:
+	return FPView.covered(hits)
+
+
+## Share of the view covered by the meshes of the parts in `names`.
+func _parts_share(hits: Array[MeshInstance3D], names: Array[String]) -> float:
+	return _share(hits, func(m: MeshInstance3D) -> bool: return names.has(String(m.name)))
+
+
+## Nearest distance from the lens of `cam` to the surface of `rig`'s drawn parts in `names`.
+func _nearest_part(rig: HumanoidRig, cam: Transform3D, names: Array[String]) -> float:
+	return FPView.nearest_mesh(rig, cam.origin, func(m: MeshInstance3D) -> bool: return names.has(String(m.name)))
+
+
+## True when the cells of the parts in `from` connect, through cells of the parts in
+## `through` (4-neighbours), to the bottom row or a side column of the view: the limb comes
+## in from the edge instead of floating in mid-view.
+func _reaches_edge(hits: Array[MeshInstance3D], from: Array[String], through: Array[String], cols: int = FP_COLS) -> bool:
+	var rows := hits.size() / cols
+	var seen := {}
+	var stack: Array[int] = []
+	for i: int in hits.size():
+		if hits[i] and from.has(String(hits[i].name)):
+			stack.append(i)
+			seen[i] = true
+	while not stack.is_empty():
+		var i: int = stack.pop_back()
+		var col := i % cols
+		var row := i / cols
+		if col == 0 or col == cols - 1 or row == rows - 1:
+			return true
+		for step: Vector2i in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+			var c := col + step.x
+			var r := row + step.y
+			if c < 0 or c >= cols or r < 0 or r >= rows:
+				continue
+			var j := r * cols + c
+			if seen.has(j) or hits[j] == null or not through.has(String(hits[j].name)):
+				continue
+			seen[j] = true
+			stack.append(j)
+	return false
+
+
+## Forearm and hand part names of `side` (&"Left" or &"Right").
+func _arm_parts(side: String) -> Array[String]:
+	var out: Array[String] = []
+	for part: String in ["Forearm", "Wrap", "Fist", "Hand", "KnuckleWrap", "WristWrap", "GloveBack"]:
+		out.append(side + part)
+	return out
+
+
+## Every part of the `side` arm the first-person camera draws: the elbow end of the upper
+## arm, the forearm and the hand.
+func _whole_arm_parts(side: String) -> Array[String]:
+	var out := _arm_parts(side)
+	out.append(side + "Elbow")
+	return out
+
+
+func _hand_parts(side: String) -> Array[String]:
+	var out: Array[String] = []
+	for part: String in ["Fist", "Hand", "KnuckleWrap", "WristWrap", "GloveBack"]:
+		out.append(side + part)
+	return out
+
+
+func _foot_parts(side: String) -> Array[String]:
+	var out: Array[String] = []
+	for part: String in ["Shoe", "Sole", "ToeCap", "ToeSole"]:
+		out.append(side + part)
+	return out
+
+
+## Names of every mesh part of `rig`.
+func _part_names(rig: HumanoidRig) -> Array[String]:
+	var out: Array[String] = []
+	for mesh: MeshInstance3D in _meshes_under(rig):
+		out.append(String(mesh.name))
+	return out
+
+
+## Rows (0 = top) and columns of the cells whose nearest mesh is one of `names`.
+func _cells_of(hits: Array[MeshInstance3D], names: Array[String], cols: int = FP_COLS) -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	for i: int in hits.size():
+		if hits[i] and names.has(String(hits[i].name)):
+			out.append(Vector2i(i % cols, i / cols))
 	return out
 
 
@@ -368,16 +526,25 @@ func test_meshes_cast_shadows_and_use_few_flat_colors() -> void:
 	assert_has(colors, rig.skin_color)
 
 
-func test_first_person_body_hides_only_head_neck_and_upper_arms() -> void:
+func test_first_person_body_hides_only_head_neck_chest_and_shoulder_ends() -> void:
 	var fp := _rig(true)
 	var hidden := CombatTypes.bit(CombatTypes.VIS_FP_HIDDEN)
 	var default := CombatTypes.bit(CombatTypes.VIS_DEFAULT)
 	var head_meshes: Array[MeshInstance3D] = []
 	for bone: StringName in PlaceholderBody.FP_HIDDEN_BONES:
 		head_meshes.append_array(_meshes_under(fp.get_attachment(bone)))
-	assert_gt(head_meshes.size(), 6, "head, cap, shades, neck, shoulder and upper-arm meshes")
-	assert_true(_meshes_under(fp.get_attachment(&"RightLowerArm")).all(
-		func(m: MeshInstance3D) -> bool: return m.layers == default), "forearms stay visible")
+	for part: StringName in PlaceholderBody.FP_HIDDEN_PARTS:
+		head_meshes.append(fp.find_child(String(part), true, false) as MeshInstance3D)
+	assert_gt(head_meshes.size(), 6, "head, cap, shades, neck, chest, shoulder balls and shoulder ends")
+	assert_false(head_meshes.has(null), "every FP_HIDDEN_PARTS part exists")
+	for bone: StringName in [&"RightLowerArm", &"RightHand", &"Spine", &"Hips", &"LeftUpperLeg", &"LeftFoot"]:
+		assert_true(_meshes_under(fp.get_attachment(bone)).all(
+			func(m: MeshInstance3D) -> bool: return m.layers == default), "%s meshes stay visible" % bone)
+	for side: String in ["Left", "Right"]:
+		var elbow := fp.find_child(side + "Elbow", true, false) as MeshInstance3D
+		assert_not_null(elbow, "the %s upper arm has an elbow end" % side)
+		if elbow:
+			assert_eq(elbow.layers, default, "the elbow end of the %s upper arm stays visible" % side)
 	for mesh: MeshInstance3D in _meshes_under(fp):
 		var expected := hidden if head_meshes.has(mesh) else default
 		assert_eq(mesh.layers, expected, "%s render layers" % mesh.name)
@@ -387,6 +554,29 @@ func test_first_person_body_hides_only_head_neck_and_upper_arms() -> void:
 	fp.first_person_body = false
 	for mesh: MeshInstance3D in head_meshes:
 		assert_eq(mesh.layers, default, "turning first_person_body off shows the head again")
+
+
+func test_upper_arm_parts_join_into_one_limb() -> void:
+	# The shoulder end and the elbow end of the upper arm are capsules of one radius on one
+	# axis whose union runs from the shoulder to the elbow joint without a gap.
+	var rig := _rig()
+	var parts: Dictionary[String, PlaceholderBody.Part] = {}
+	for part: PlaceholderBody.Part in PlaceholderBody.parts():
+		parts[String(part.name)] = part
+	for side: String in ["Left", "Right"]:
+		var top: PlaceholderBody.Part = parts[side + "UpperArm"]
+		var low: PlaceholderBody.Part = parts[side + "Elbow"]
+		assert_eq(top.bone, low.bone, "%s upper arm parts share the bone" % side)
+		assert_almost_eq(top.size.x, low.size.x, 1e-6, "%s upper arm parts share the radius" % side)
+		var r := top.size.x
+		var top_low := top.offset.y - top.size.y * 0.5
+		var low_high := low.offset.y + low.size.y * 0.5
+		# The shoulder end's straight part reaches past the elbow end's rounded top.
+		assert_lt(top_low + r, low_high - r + 1e-6, "%s: no waist where the parts meet" % side)
+		var elbow_joint := PlaceholderBody.BONE_REST[StringName(side + "LowerArm")].y
+		var low_end := low.offset.y - low.size.y * 0.5
+		assert_between(elbow_joint, low_end, low_end + r, "%s: the elbow end rounds off over the elbow joint" % side)
+	assert_not_null(rig.find_child("LeftElbow", true, false), "the rig builds the elbow ends")
 
 
 func test_flash_is_white_emission_per_rig() -> void:
@@ -405,6 +595,87 @@ func test_flash_is_white_emission_per_rig() -> void:
 	for mesh: MeshInstance3D in _meshes_under(rig):
 		var mat := mesh.material_override as StandardMaterial3D
 		assert_almost_eq(mat.emission_energy_multiplier, 0.0, 1e-4, "flash cleared")
+
+
+func test_player_hands_are_smaller_wrapped_and_keep_the_rig_points() -> void:
+	# Spec §10: the player has wrapped hands and fingerless gloves, about 70-80% of the
+	# volume of the fist blocks that enemies keep.
+	var enemy := _rig()
+	var player := _player_rig()
+	for side: String in ["Left", "Right"]:
+		var hand_bone := StringName(side + "Hand")
+		var block := enemy.get_attachment(hand_bone).get_node(side + "Fist") as MeshInstance3D
+		assert_not_null(block, "enemies keep the %s fist block" % side)
+		assert_null(player.get_attachment(hand_bone).get_node_or_null(side + "Fist"), "the player has no %s fist block" % side)
+		var bounds := AABB()
+		var first := true
+		for name: String in _hand_parts(side):
+			var part := player.get_attachment(hand_bone).get_node_or_null(name) as MeshInstance3D
+			if part == null:
+				continue
+			var box := part.transform * part.mesh.get_aabb()
+			bounds = box if first else bounds.merge(box)
+			first = false
+		var ratio := bounds.get_volume() / block.mesh.get_aabb().get_volume()
+		assert_between(ratio, 0.65, 0.85, "the %s hand is %.0f%% of the fist block's volume" % [side, ratio * 100.0])
+		var colors := {}
+		for name: String in _hand_parts(side):
+			var part := player.get_attachment(hand_bone).get_node_or_null(name) as MeshInstance3D
+			if part:
+				colors[(part.material_override as StandardMaterial3D).albedo_color] = true
+		assert_has(colors, player.skin_color, "a skin-colored %s hand" % side)
+		assert_has(colors, player.accent_color, "light %s wraps" % side)
+		assert_eq(colors.size(), 3, "skin, wraps and a dark glove accent")
+		var skin := player.get_attachment(hand_bone).get_node(side + "Hand") as MeshInstance3D
+		assert_eq((skin.material_override as StandardMaterial3D).albedo_color, player.skin_color)
+		# The strike points stay where they were: the fist point at the hand's center, in the
+		# same place on the hand bone as on an enemy.
+		assert_almost_eq(skin.position.distance_to(PlaceholderBody.POINT_OFFSET[StringName(side + "FistPoint")]), 0.0, 0.005,
+				"the %s fist point is the center of the hand" % side)
+		for rig: HumanoidRig in [enemy, player]:
+			var on_hand := rig.get_point_transform(hand_bone).affine_inverse() * rig.get_point_position(StringName(side + "FistPoint"))
+			assert_almost_eq(on_hand, PlaceholderBody.POINT_OFFSET[StringName(side + "FistPoint")], Vector3.ONE * 1e-4)
+	assert_almost_eq(player.get_point_position(&"WeaponGrip").distance_to(player.get_point_position(&"RightFistPoint")),
+			0.0, 0.03, "WeaponGrip sits in the player's right fist")
+	assert_almost_eq(player.get_point_position(&"WeaponGrip").distance_to(player.get_point_position(&"WeaponTip")),
+			0.7, 0.01, "WeaponTip is 0.7 m along the weapon")
+	var colors: Array[Color] = []
+	for mesh: MeshInstance3D in _meshes_under(player):
+		var color := (mesh.material_override as StandardMaterial3D).albedo_color
+		if not colors.has(color):
+			colors.append(color)
+	assert_between(colors.size(), 4, 6, "the player keeps 4 to 6 flat colors (Spec §10)")
+
+
+func test_player_hand_boxes_never_share_a_face_plane() -> void:
+	# Two boxes with faces in one plane flicker between their colors (z-fighting): each wrap
+	# caps the hand's face it ends at (or stops short of it), never ends flush with it.
+	var boxes: Array[PlaceholderBody.Part] = []
+	for part: PlaceholderBody.Part in PlaceholderBody.parts(true):
+		if part.shape == PlaceholderBody.Shape.BOX and String(part.bone).ends_with("Hand"):
+			boxes.append(part)
+	assert_gte(boxes.size(), 8, "hand, wraps and glove plate on each hand")
+	for i: int in boxes.size():
+		var a := boxes[i]
+		assert_eq(a.rot_deg, Vector3.ZERO, "%s is axis-aligned on its bone" % a.name)
+		for j: int in range(i + 1, boxes.size()):
+			var b := boxes[j]
+			if a.bone != b.bone:
+				continue
+			for axis: int in 3:
+				for face_a: float in [-0.5, 0.5]:
+					for face_b: float in [-0.5, 0.5]:
+						if absf(a.offset[axis] + face_a * a.size[axis] - b.offset[axis] - face_b * b.size[axis]) > 0.0005:
+							continue
+						# Flush faces only fight where they overlap.
+						var overlap := true
+						for other: int in 3:
+							if other == axis:
+								continue
+							var lo := maxf(a.offset[other] - a.size[other] * 0.5, b.offset[other] - b.size[other] * 0.5)
+							var hi := minf(a.offset[other] + a.size[other] * 0.5, b.offset[other] + b.size[other] * 0.5)
+							overlap = overlap and hi - lo > 1e-6
+						assert_false(overlap, "%s and %s share a face plane (axis %d)" % [a.name, b.name, axis])
 
 
 # --- Hurtboxes -------------------------------------------------------------------------
@@ -568,25 +839,25 @@ func test_falls_from_the_air_never_raise_the_head() -> void:
 
 
 func test_spins_turn_a_full_circle_and_back_elbow_does_not() -> void:
-	var rig := _rig()
-	for id: StringName in [&"spinning_heel", &"spin_kick", &"back_elbow"]:
-		var move := _move_by_id(id)
-		rig.play(&"idle", 0.0)
-		rig.advance(0.5)
-		rig.play_move(move, 0.0)
-		var total := 0.0
-		var widest := 0.0
-		var last := rig.get_point_transform(&"Hips").basis.z
-		for i: int in move.total_frames():
-			rig.advance(FRAME)
-			var now := rig.get_point_transform(&"Hips").basis.z
-			total += rad_to_deg(Vector2(last.x, last.z).angle_to(Vector2(now.x, now.z)))
-			widest = maxf(widest, absf(total))
-			last = now
-		if id == &"back_elbow":
-			assert_lt(widest, 60.0, "back_elbow strikes backward without turning around")
-		else:
-			assert_almost_eq(absf(total), 360.0, 10.0, "%s turns the body a full circle" % id)
+	for rig: HumanoidRig in _stance_rigs():
+		for id: StringName in [&"spinning_heel", &"spin_kick", &"back_elbow"]:
+			var move := _move_by_id(id)
+			rig.play(&"idle", 0.0)
+			rig.advance(0.5)
+			rig.play_move(move, 0.0)
+			var total := 0.0
+			var widest := 0.0
+			var last := rig.get_point_transform(&"Hips").basis.z
+			for i: int in move.total_frames():
+				rig.advance(FRAME)
+				var now := rig.get_point_transform(&"Hips").basis.z
+				total += rad_to_deg(Vector2(last.x, last.z).angle_to(Vector2(now.x, now.z)))
+				widest = maxf(widest, absf(total))
+				last = now
+			if id == &"back_elbow":
+				assert_lt(widest, 60.0, "back_elbow strikes backward without turning around")
+			else:
+				assert_almost_eq(absf(total), 360.0, 10.0, "%s turns the body a full circle" % _tag(rig, id))
 
 
 func test_play_restarts_and_advance_zero_does_not_move_time() -> void:
@@ -613,37 +884,98 @@ func test_play_restarts_and_advance_zero_does_not_move_time() -> void:
 
 
 func test_play_move_length_and_strike_key_timing() -> void:
-	var rig := _rig()
+	for rig: HumanoidRig in _stance_rigs():
+		for row: Array in MOVES:
+			var move := _move(row)
+			rig.play_move(move)
+			var anim := _current_animation(rig)
+			assert_almost_eq(anim.length, move.total_frames() * FRAME, 1e-4, "%s length" % _tag(rig, move.id))
+			assert_eq(anim.loop_mode, Animation.LOOP_NONE, "%s plays once" % _tag(rig, move.id))
+			var track := _track(anim, "Skeleton3D:RightUpperArm")
+			var strike_t := move.startup * FRAME
+			var end_t := (move.startup + move.active) * FRAME
+			assert_gte(anim.track_find_key(track, strike_t, Animation.FIND_MODE_APPROX), 0,
+					"%s keys the strike pose at startup / 60 s" % _tag(rig, move.id))
+			assert_gte(anim.track_find_key(track, end_t, Animation.FIND_MODE_APPROX), 0,
+					"%s keys the end of the active frames" % _tag(rig, move.id))
+			if move.startup > 1:
+				var windup_key := false
+				for k: int in anim.track_get_key_count(track):
+					var t := anim.track_get_key_time(track, k)
+					windup_key = windup_key or (t >= strike_t * 0.4 - 1e-4 and t <= strike_t * 0.6 + 1e-4)
+				assert_true(windup_key, "%s has a wind-up key at 40-60%% of startup" % _tag(rig, move.id))
+			for bone: StringName in BONES:
+				if bone == &"Root":
+					continue
+				var t_bone := _track(anim, "Skeleton3D:%s" % bone)
+				var start := anim.rotation_track_interpolate(t_bone, 0.0)
+				var finish := anim.rotation_track_interpolate(t_bone, anim.length)
+				assert_lt(rad_to_deg(start.angle_to(finish)), 0.5, "%s returns %s to guard" % [_tag(rig, move.id), bone])
+				if move.id != &"spinning_heel" and move.id != &"spin_kick":
+					var a := anim.rotation_track_interpolate(t_bone, strike_t)
+					var b := anim.rotation_track_interpolate(t_bone, end_t)
+					assert_lt(rad_to_deg(a.angle_to(b)), 0.5, "%s holds the strike pose (%s)" % [_tag(rig, move.id), bone])
+
+
+func test_player_moves_and_animations_start_and_end_in_the_relaxed_stance() -> void:
+	# The player's relaxed stance is where everything starts and lands: every move (from
+	# idle and, for the haymaker, released from its charge), the dodges, the landing, the
+	# pickup, the hit reactions and the get-ups. Clinch moves start and end in the hold,
+	# pipe moves in the relaxed weapon carry, and air moves in the air guard.
+	var rig := _player_rig()
+	rig.play(&"idle", 0.0)
+	rig.advance(0.0)
+	var points: Array[StringName] = [&"LeftFistPoint", &"RightFistPoint", &"LeftFootPoint", &"RightFootPoint", &"EyePoint"]
+	var stance: Array[Vector3] = []
+	for point: StringName in points:
+		stance.append(_local(rig, point))
+	var check := func(what: String) -> void:
+		for i: int in points.size():
+			assert_almost_eq(_local(rig, points[i]), stance[i], Vector3.ONE * 0.01, "%s: %s in the stance" % [what, points[i]])
+	var other: Array[StringName] = [&"knee", &"throw", &"pipe_swing_1", &"pipe_swing_2", &"pipe_swing_3",
+			&"weapon_throw", &"flying_kick", &"spin_kick"]
 	for row: Array in MOVES:
 		var move := _move(row)
-		rig.play_move(move)
-		var anim := _current_animation(rig)
-		assert_almost_eq(anim.length, move.total_frames() * FRAME, 1e-4, "%s length" % move.id)
-		assert_eq(anim.loop_mode, Animation.LOOP_NONE, "%s plays once" % move.id)
-		var track := _track(anim, "Skeleton3D:RightUpperArm")
-		var strike_t := move.startup * FRAME
-		var end_t := (move.startup + move.active) * FRAME
-		assert_gte(anim.track_find_key(track, strike_t, Animation.FIND_MODE_APPROX), 0,
-				"%s keys the strike pose at startup / 60 s" % move.id)
-		assert_gte(anim.track_find_key(track, end_t, Animation.FIND_MODE_APPROX), 0,
-				"%s keys the end of the active frames" % move.id)
-		if move.startup > 1:
-			var windup_key := false
-			for k: int in anim.track_get_key_count(track):
-				var t := anim.track_get_key_time(track, k)
-				windup_key = windup_key or (t >= strike_t * 0.4 - 1e-4 and t <= strike_t * 0.6 + 1e-4)
-			assert_true(windup_key, "%s has a wind-up key at 40-60%% of startup" % move.id)
-		for bone: StringName in BONES:
-			if bone == &"Root":
-				continue
-			var t_bone := _track(anim, "Skeleton3D:%s" % bone)
-			var start := anim.rotation_track_interpolate(t_bone, 0.0)
-			var finish := anim.rotation_track_interpolate(t_bone, anim.length)
-			assert_lt(rad_to_deg(start.angle_to(finish)), 0.5, "%s returns %s to guard" % [move.id, bone])
-			if move.id != &"spinning_heel" and move.id != &"spin_kick":
-				var a := anim.rotation_track_interpolate(t_bone, strike_t)
-				var b := anim.rotation_track_interpolate(t_bone, end_t)
-				assert_lt(rad_to_deg(a.angle_to(b)), 0.5, "%s holds the strike pose (%s)" % [move.id, bone])
+		rig.play(&"idle", 0.0)
+		rig.advance(0.0)
+		rig.play_move(move, 0.0)
+		rig.advance(0.0)
+		var start: Array[Vector3] = []
+		for point: StringName in points:
+			start.append(_local(rig, point))
+		rig.advance(move.total_frames() * FRAME)
+		if other.has(move.id):
+			for i: int in points.size():
+				assert_almost_eq(_local(rig, points[i]), start[i], Vector3.ONE * 0.01, "%s ends where it started" % move.id)
+			continue
+		for i: int in points.size():
+			assert_almost_eq(start[i], stance[i], Vector3.ONE * 0.01, "%s starts in the stance (%s)" % [move.id, points[i]])
+		check.call("%s end" % move.id)
+	var haymaker := _move_by_id(&"haymaker")
+	rig.play(&"haymaker_charge")
+	rig.advance(0.5)
+	rig.play_move(haymaker)
+	rig.advance(haymaker.total_frames() * FRAME)
+	check.call("haymaker released from its charge, end")
+	for anim: StringName in [&"land", &"dodge_left", &"dodge_right", &"dodge_back", &"dodge_forward", &"pickup",
+			&"flinch_head_front", &"flinch_head_left", &"flinch_head_right", &"flinch_gut", &"flinch_legs",
+			&"stagger_back", &"stagger_left", &"stagger_right", &"stagger_forward", &"getup_back", &"getup_front"]:
+		rig.play(anim, 0.0)
+		rig.advance(0.0)
+		rig.advance(rig.anim_player.get_animation(anim).length)
+		check.call("%s end" % anim)
+	for anim: StringName in [&"jump", &"grab", &"haymaker_charge"]:
+		rig.play(anim, 0.0)
+		rig.advance(0.0)
+		check.call("%s start" % anim)
+	# The walks swing the legs but keep the arms loose and low.
+	for anim: StringName in [&"walk_forward", &"walk_back", &"walk_left", &"walk_right"]:
+		rig.play(anim, 0.0)
+		rig.advance(0.0)
+		for k: int in 8:
+			rig.advance(0.6 / 8.0)
+			for side: String in ["Left", "Right"]:
+				assert_lt(_local(rig, StringName(side + "FistPoint")).y, 1.05, "%s: the %s hand stays low" % [anim, side])
 
 
 func test_play_move_caches_per_move_and_frame_data() -> void:
@@ -662,67 +994,67 @@ func test_play_move_caches_per_move_and_frame_data() -> void:
 
 
 func test_strike_reach_on_every_active_frame() -> void:
-	var rig := _rig()
-	for row: Reach in _reach_rows():
-		var move := _move_by_id(row.id)
-		_to_first_active_frame(rig, move)
-		for f: int in move.active:
-			if f > 0:
-				rig.advance(FRAME)
-			for point: StringName in row.points:
-				var p := _local(rig, point)
-				assert_true(_in_envelope(p, row), "%s %s at %s on active frame %d" % [
-						row.id, point, _fmt(p), f])
-				assert_gte(p.z, row.bury_z, "%s %s lands on the target instead of sinking into it (%s)" % [
-						row.id, point, _fmt(p)])
-
-
-func test_strikes_reach_full_weight_after_a_cross_fade_still_running() -> void:
-	# A move that starts while an earlier cross-fade is still running (a locomotion switch,
-	# a dodge) must still hit its strike pose exactly: nothing of the old pose may linger.
-	var rig := _rig()
-	var lead_ins := {
-		&"idle_to_walk": func() -> void:
-			rig.play_locomotion(Vector2(0.0, 1.0), 1.0)
-			rig.advance(FRAME),
-		&"walk_to_idle": func() -> void:
-			rig.play_locomotion(Vector2(0.0, 1.0), 1.0)
-			rig.advance(0.4)
-			rig.play_locomotion(Vector2.ZERO, 0.0)
-			rig.advance(FRAME),
-		&"mid_dodge": func() -> void:
-			rig.play(&"dodge_left")
-			rig.advance(FRAME),
-		&"dodge_then_idle": func() -> void:
-			rig.play(&"dodge_right", 0.03)
-			rig.advance(0.3)
-			rig.play_locomotion(Vector2.ZERO, 0.0)
-			rig.advance(FRAME),
-	}
-	for row: Reach in _reach_rows():
-		var move := _move_by_id(row.id)
-		_to_first_active_frame(rig, move)
-		var expected: Array[Vector3] = []
-		for point: StringName in row.points:
-			expected.append(_local(rig, point))
-		for lead: StringName in lead_ins:
-			rig.play(&"idle", 0.0)
-			rig.advance(0.5)
-			(lead_ins[lead] as Callable).call()
-			rig.play_move(move)
-			for i: int in move.startup:
-				rig.advance(FRAME)
-			for p: int in row.points.size():
-				var at := _local(rig, row.points[p])
-				assert_almost_eq(at, expected[p], Vector3.ONE * 0.01, "%s after %s: %s at %s, from idle %s" % [
-						row.id, lead, row.points[p], _fmt(at), _fmt(expected[p])])
+	for rig: HumanoidRig in _stance_rigs():
+		for row: Reach in _reach_rows():
+			var move := _move_by_id(row.id)
+			_to_first_active_frame(rig, move)
 			for f: int in move.active:
 				if f > 0:
 					rig.advance(FRAME)
 				for point: StringName in row.points:
 					var p := _local(rig, point)
-					assert_true(_in_envelope(p, row), "%s after %s: %s at %s on active frame %d" % [
-							row.id, lead, point, _fmt(p), f])
+					assert_true(_in_envelope(p, row), "%s %s at %s on active frame %d" % [
+							row.id, point, _fmt(p), f])
+					assert_gte(p.z, row.bury_z, "%s %s lands on the target instead of sinking into it (%s)" % [
+							row.id, point, _fmt(p)])
+
+
+func test_strikes_reach_full_weight_after_a_cross_fade_still_running() -> void:
+	# A move that starts while an earlier cross-fade is still running (a locomotion switch,
+	# a dodge) must still hit its strike pose exactly: nothing of the old pose may linger.
+	for rig: HumanoidRig in _stance_rigs():
+		var lead_ins := {
+			&"idle_to_walk": func() -> void:
+				rig.play_locomotion(Vector2(0.0, 1.0), 1.0)
+				rig.advance(FRAME),
+			&"walk_to_idle": func() -> void:
+				rig.play_locomotion(Vector2(0.0, 1.0), 1.0)
+				rig.advance(0.4)
+				rig.play_locomotion(Vector2.ZERO, 0.0)
+				rig.advance(FRAME),
+			&"mid_dodge": func() -> void:
+				rig.play(&"dodge_left")
+				rig.advance(FRAME),
+			&"dodge_then_idle": func() -> void:
+				rig.play(&"dodge_right", 0.03)
+				rig.advance(0.3)
+				rig.play_locomotion(Vector2.ZERO, 0.0)
+				rig.advance(FRAME),
+		}
+		for row: Reach in _reach_rows():
+			var move := _move_by_id(row.id)
+			_to_first_active_frame(rig, move)
+			var expected: Array[Vector3] = []
+			for point: StringName in row.points:
+				expected.append(_local(rig, point))
+			for lead: StringName in lead_ins:
+				rig.play(&"idle", 0.0)
+				rig.advance(0.5)
+				(lead_ins[lead] as Callable).call()
+				rig.play_move(move)
+				for i: int in move.startup:
+					rig.advance(FRAME)
+				for p: int in row.points.size():
+					var at := _local(rig, row.points[p])
+					assert_almost_eq(at, expected[p], Vector3.ONE * 0.01, "%s after %s: %s at %s, from idle %s" % [
+							row.id, lead, row.points[p], _fmt(at), _fmt(expected[p])])
+				for f: int in move.active:
+					if f > 0:
+						rig.advance(FRAME)
+					for point: StringName in row.points:
+						var p := _local(rig, point)
+						assert_true(_in_envelope(p, row), "%s after %s: %s at %s on active frame %d" % [
+								row.id, lead, point, _fmt(p), f])
 
 
 func test_cross_fades_are_continuous_and_advance_zero_keeps_them() -> void:
@@ -751,178 +1083,258 @@ func test_cross_fades_are_continuous_and_advance_zero_keeps_them() -> void:
 func test_haymaker_released_from_its_charge_swings_straight_in() -> void:
 	# haymaker_charge holds the haymaker's wind-up. Released from it, the haymaker drives
 	# straight from the cocked fist into the strike, with no trip back to guard first.
-	var rig := _rig()
-	var move := _move_by_id(&"haymaker")
-	_to_first_active_frame(rig, move)
-	var strike := _local(rig, &"RightFistPoint")
-	rig.play(&"idle", 0.0)
-	rig.advance(0.5)
-	rig.play(&"haymaker_charge")
-	rig.advance(0.5)
-	assert_eq(rig.current_anim(), &"haymaker_charge")
-	var cocked := _local(rig, &"RightFistPoint")
-	assert_gt(cocked.distance_to(strike), 0.4, "the charge cocks the fist far from the strike")
-	rig.play_move(move)
-	var last := cocked
-	for i: int in move.startup:
-		rig.advance(FRAME)
-		var fist := _local(rig, &"RightFistPoint")
-		if i == 0:
-			assert_lt(fist.distance_to(cocked), 0.02, "the release starts from the cocked fist")
-		assert_lt(fist.distance_to(strike), last.distance_to(strike) + 0.01,
-				"frame %d: the fist never pulls back from the strike (%s)" % [i + 1, _fmt(fist)])
-		last = fist
-	assert_almost_eq(last, strike, Vector3.ONE * 0.01, "the charged haymaker reaches the same strike pose")
-	assert_eq(rig.current_anim(), &"haymaker")
-	# Released early, before the charge is fully cocked, it still lands the same strike.
-	rig.play(&"idle", 0.0)
-	rig.advance(0.5)
-	rig.play(&"haymaker_charge")
-	rig.advance(0.12)
-	rig.play_move(move)
-	for i: int in move.startup:
-		rig.advance(FRAME)
-	assert_almost_eq(_local(rig, &"RightFistPoint"), strike, Vector3.ONE * 0.01,
-			"a partly charged haymaker reaches the strike pose")
-	# Without the charge it still winds up from guard (the uncharged animation).
-	rig.play(&"idle", 0.0)
-	rig.advance(0.5)
-	var guard := _local(rig, &"RightFistPoint")
-	rig.play_move(move, 0.0)
-	var pulled_back := 0.0
-	for i: int in move.startup:
-		rig.advance(FRAME)
-		pulled_back = maxf(pulled_back, _local(rig, &"RightFistPoint").distance_to(strike) - guard.distance_to(strike))
-	assert_gt(pulled_back, 0.1, "the uncharged haymaker winds up from guard")
+	for rig: HumanoidRig in _stance_rigs():
+		var move := _move_by_id(&"haymaker")
+		_to_first_active_frame(rig, move)
+		var strike := _local(rig, &"RightFistPoint")
+		rig.play(&"idle", 0.0)
+		rig.advance(0.5)
+		rig.play(&"haymaker_charge")
+		rig.advance(0.5)
+		assert_eq(rig.current_anim(), &"haymaker_charge")
+		var cocked := _local(rig, &"RightFistPoint")
+		assert_gt(cocked.distance_to(strike), 0.4, "the charge cocks the fist far from the strike")
+		rig.play_move(move)
+		var last := cocked
+		for i: int in move.startup:
+			rig.advance(FRAME)
+			var fist := _local(rig, &"RightFistPoint")
+			if i == 0:
+				assert_lt(fist.distance_to(cocked), 0.02, "the release starts from the cocked fist")
+			assert_lt(fist.distance_to(strike), last.distance_to(strike) + 0.01,
+					"frame %d: the fist never pulls back from the strike (%s)" % [i + 1, _fmt(fist)])
+			last = fist
+		assert_almost_eq(last, strike, Vector3.ONE * 0.01, "the charged haymaker reaches the same strike pose")
+		assert_eq(rig.current_anim(), &"haymaker")
+		# Released early, before the charge is fully cocked, it still lands the same strike.
+		rig.play(&"idle", 0.0)
+		rig.advance(0.5)
+		rig.play(&"haymaker_charge")
+		rig.advance(0.12)
+		rig.play_move(move)
+		for i: int in move.startup:
+			rig.advance(FRAME)
+		assert_almost_eq(_local(rig, &"RightFistPoint"), strike, Vector3.ONE * 0.01,
+				"a partly charged haymaker reaches the strike pose")
+		# Without the charge it still winds up from the stance (the uncharged animation): it
+		# passes through the cocked fist at its wind-up time.
+		rig.play(&"idle", 0.0)
+		rig.advance(0.5)
+		var stance := _local(rig, &"RightFistPoint")
+		rig.play_move(move, 0.0)
+		rig.advance(PlaceholderAnims.windup_time(move))
+		assert_gt(stance.distance_to(cocked), 0.15, "%s: the stance holds the fist away from the cocked spot" % rig.stance)
+		assert_almost_eq(_local(rig, &"RightFistPoint"), cocked, Vector3.ONE * 0.02,
+				"%s: the uncharged haymaker winds up through the cocked fist" % rig.stance)
 
 
 func test_back_elbow_drives_back() -> void:
-	var rig := _rig()
-	var move := _move_by_id(&"back_elbow")
-	_to_first_active_frame(rig, move)
-	var elbow := _local(rig, &"RightElbowPoint")
-	assert_gte(elbow.z, 0.3, "back_elbow elbow behind the body at %s" % _fmt(elbow))
-	assert_between(elbow.y, 1.0, 1.6, "back_elbow at torso height")
+	for rig: HumanoidRig in _stance_rigs():
+		var move := _move_by_id(&"back_elbow")
+		_to_first_active_frame(rig, move)
+		var elbow := _local(rig, &"RightElbowPoint")
+		assert_gte(elbow.z, 0.3, "back_elbow elbow behind the body at %s" % _fmt(elbow))
+		assert_between(elbow.y, 1.0, 1.6, "back_elbow at torso height")
 
 
 func test_body_flurry_alternates_fists_at_gut_height() -> void:
-	var rig := _rig()
-	var move := _move_by_id(&"body_flurry")
-	var row := Reach.new(&"body_flurry", [], -0.55, 1.0, 1.3, 0.12)
-	_to_first_active_frame(rig, move)
-	var left := _local(rig, &"LeftFistPoint")
-	assert_true(_in_envelope(left, row), "first flurry blow leads with the left fist at %s" % _fmt(left))
-	var left_foot := _local(rig, &"LeftFoot")
-	for i: int in move.recovery + move.active:
-		rig.advance(FRAME)
-	rig.play_move(move)
-	for i: int in move.startup:
-		rig.advance(FRAME)
-	var right := _local(rig, &"RightFistPoint")
-	assert_true(_in_envelope(right, row), "the repeat leads with the right fist at %s" % _fmt(right))
-	assert_almost_eq(_local(rig, &"LeftFoot"), left_foot, Vector3.ONE * 0.08, "alternating keeps the stance")
+	for rig: HumanoidRig in _stance_rigs():
+		var move := _move_by_id(&"body_flurry")
+		var row := Reach.new(&"body_flurry", [], -0.55, 1.0, 1.3, 0.12)
+		_to_first_active_frame(rig, move)
+		var left := _local(rig, &"LeftFistPoint")
+		assert_true(_in_envelope(left, row), "first flurry blow leads with the left fist at %s" % _fmt(left))
+		var left_foot := _local(rig, &"LeftFoot")
+		for i: int in move.recovery + move.active:
+			rig.advance(FRAME)
+		rig.play_move(move)
+		for i: int in move.startup:
+			rig.advance(FRAME)
+		var right := _local(rig, &"RightFistPoint")
+		assert_true(_in_envelope(right, row), "the repeat leads with the right fist at %s" % _fmt(right))
+		assert_almost_eq(_local(rig, &"LeftFoot"), left_foot, Vector3.ONE * 0.08, "alternating keeps the stance")
 
 
 func test_strikes_connect_with_a_target_at_arms_length() -> void:
-	var rig := _rig()
 	var target := _rig()
-	for row: Reach in _reach_rows():
-		var move := _move_by_id(row.id)
-		_place_target(rig, target, row.target)
-		_to_first_active_frame(rig, move)
-		var touched: Array[int] = []
-		for point: StringName in row.points:
-			touched.append_array(_touched_regions(target, rig.get_point_position(point), row.radius))
-		assert_false(touched.is_empty(), "%s connects with a %s target (strike point %s)" % [
-				row.id, row.target, _fmt(_local(rig, row.points[0]))])
-		if row.region >= 0:
-			assert_has(touched, row.region, "%s hits the %s (touched %s)" % [
-					row.id, CombatTypes.Region.keys()[row.region], touched])
+	for rig: HumanoidRig in _stance_rigs():
+		for row: Reach in _reach_rows():
+			var move := _move_by_id(row.id)
+			_place_target(rig, target, row.target)
+			_to_first_active_frame(rig, move)
+			var touched: Array[int] = []
+			for point: StringName in row.points:
+				touched.append_array(_touched_regions(target, rig.get_point_position(point), row.radius))
+			assert_false(touched.is_empty(), "%s connects with a %s target (strike point %s)" % [
+					row.id, row.target, _fmt(_local(rig, row.points[0]))])
+			if row.region >= 0:
+				assert_has(touched, row.region, "%s hits the %s (touched %s)" % [
+						row.id, CombatTypes.Region.keys()[row.region], touched])
 
 
 func test_pipe_swings_meet_the_head_without_passing_through_it() -> void:
-	var rig := _rig()
 	var target := _rig()
-	_place_target(rig, target, &"stand")
 	var head := _hurtboxes_of(target, CombatTypes.Region.HEAD)[0]
-	for id: StringName in [&"pipe_swing_1", &"pipe_swing_2", &"pipe_swing_3"]:
-		_to_first_active_frame(rig, _move_by_id(id))
-		var grip := rig.get_point_position(&"WeaponGrip")
-		var tip := rig.get_point_position(&"WeaponTip")
-		var center := head.global_position
-		var closest := Geometry3D.get_closest_point_to_segment(center, grip, tip)
-		# 0.125 m is the head mesh radius (PlaceholderBody.parts()).
-		assert_gt(closest.distance_to(center), 0.125 * 1.05,
-				"%s: the pipe passes beside the head, not through it" % id)
-		# Nor through the neck (0.065 m mesh radius) into the chest.
-		var neck := Geometry3D.get_closest_points_between_segments(grip, tip,
-				target.get_point_position(&"Neck"), target.get_point_position(&"Head"))
-		assert_gt(neck[0].distance_to(neck[1]), 0.09, "%s: the pipe passes beside the neck" % id)
-		assert_lt(tip.distance_to(center), head.radius + 0.2, "%s: the tip reaches the head" % id)
+	for rig: HumanoidRig in _stance_rigs():
+		_place_target(rig, target, &"stand")
+		for id: StringName in [&"pipe_swing_1", &"pipe_swing_2", &"pipe_swing_3"]:
+			_to_first_active_frame(rig, _move_by_id(id))
+			var grip := rig.get_point_position(&"WeaponGrip")
+			var tip := rig.get_point_position(&"WeaponTip")
+			var center := head.global_position
+			var closest := Geometry3D.get_closest_point_to_segment(center, grip, tip)
+			# 0.125 m is the head mesh radius (PlaceholderBody.parts()).
+			assert_gt(closest.distance_to(center), 0.125 * 1.05,
+					"%s: the pipe passes beside the head, not through it" % _tag(rig, id))
+			# Nor through the neck (0.065 m mesh radius) into the chest.
+			var neck := Geometry3D.get_closest_points_between_segments(grip, tip,
+					target.get_point_position(&"Neck"), target.get_point_position(&"Head"))
+			assert_gt(neck[0].distance_to(neck[1]), 0.09, "%s: the pipe passes beside the neck" % _tag(rig, id))
+			assert_lt(tip.distance_to(center), head.radius + 0.2, "%s: the tip reaches the head" % _tag(rig, id))
 
 
 func test_held_victim_sits_at_the_bottom_of_the_holders_view() -> void:
-	var rig := _rig(true)
+	var rig := _player_rig()
 	var victim := _rig()
 	_place_target(rig, victim, &"held")
 	var head := _hurtboxes_of(victim, CombatTypes.Region.HEAD)[0]
-	var eye := rig.get_point_position(&"EyePoint")
-	assert_gt(head.global_position.distance_to(eye), 0.25, "the victim's head is not in the holder's face")
-	var to_head := head.global_position - eye
-	var pitch := rad_to_deg(atan2(to_head.y, -to_head.z))
-	assert_between(pitch, -40.0, -15.0, "the victim's head sits low in the first-person view")
+	var cam := _fp_camera(rig)
+	assert_gt(head.global_position.distance_to(cam.origin), 0.25, "the victim's head is not in the holder's face")
+	# Bent over, the victim's head sits just under the view: its top and back show at the
+	# bottom edge, and the upper half of the view stays clear.
+	var view := _view_from(cam, head.global_position)
+	assert_between(view.y, -FP_HALF_V_DEG - 25.0, -FP_HALF_V_DEG + 5.0, "the victim's head sits at the bottom of the first-person view (angles %s)" % view)
+	var seen := _fp_hits(victim, cam)
+	assert_gt(_body_share(seen), 0.02, "the victim shows at the bottom of the view")
+	for cell: Vector2i in _cells_of(seen, _part_names(victim)):
+		assert_gte(cell.y, FPView.rows() / 2, "the upper half of the view stays clear (cell %s)" % cell)
 	# The holder's hands rest on the victim's shoulders (left fist on the victim's right).
 	for pair: Array in [[&"LeftFistPoint", &"RightUpperArm"], [&"RightFistPoint", &"LeftUpperArm"]]:
 		var fist := rig.get_point_position(pair[0])
 		assert_lt(fist.distance_to(victim.get_point_position(pair[1])), 0.15, "%s on the victim's shoulder" % pair[0])
 
-
 func test_eye_point_stays_steady_through_strikes() -> void:
 	# The first-person camera rides EyePoint (Spec §5: steady camera). Spins orbit the eye
-	# around the neck and the stomp leans over a downed body, so they are left out.
-	var rig := _rig()
-	rig.play(&"idle", 0.0)
-	rig.advance(0.0)
-	var idle := rig.get_point_position(&"EyePoint")
-	for row: Array in MOVES:
-		if [&"spinning_heel", &"spin_kick", &"stomp"].has(row[0]):
-			continue
-		var move := _move(row)
+	# around the neck and the stomp leans over a downed body, so they are left out. Strike
+	# poses are authored on the boxer guard's body, and the relaxed stance shares that body
+	# (it differs in the arms), so a strike moves the eye no more from the relaxed stance
+	# than from the guard: at most 3 cm further in all, and it lifts it at most 1 cm more
+	# (punches at most about 2 cm in all, or what the boxer's own uppercut does).
+	var travel := {}
+	var rise := {}
+	for rig: HumanoidRig in _stance_rigs():
 		rig.play(&"idle", 0.0)
-		rig.advance(0.5)
-		rig.play_move(move)
-		var widest := 0.0
-		for i: int in move.total_frames():
-			rig.advance(FRAME)
-			widest = maxf(widest, rig.get_point_position(&"EyePoint").distance_to(idle))
-		assert_lt(widest, 0.22, "%s moves EyePoint at most 0.22 m" % row[0])
+		rig.advance(0.0)
+		var idle := rig.get_point_position(&"EyePoint")
+		for row: Array in MOVES:
+			if [&"spinning_heel", &"spin_kick", &"stomp"].has(row[0]):
+				continue
+			var move := _move(row)
+			rig.play(&"idle", 0.0)
+			rig.advance(0.5)
+			rig.play_move(move)
+			var widest := 0.0
+			var highest := 0.0
+			for i: int in move.total_frames():
+				rig.advance(FRAME)
+				var eye := rig.get_point_position(&"EyePoint")
+				widest = maxf(widest, eye.distance_to(idle))
+				highest = maxf(highest, eye.y - idle.y)
+			assert_lt(widest, 0.22, "%s moves EyePoint at most 0.22 m" % _tag(rig, row[0]))
+			travel[_tag(rig, row[0])] = widest
+			rise[_tag(rig, row[0])] = highest
+	var punches: Array[StringName] = [&"jab_1", &"jab_2", &"hook", &"uppercut", &"haymaker", &"body_flurry", &"shove"]
+	for row: Array in MOVES:
+		var boxer := "%s (%s)" % [row[0], PlaceholderPoses.STANCE_BOXER]
+		var relaxed := "%s (%s)" % [row[0], PlaceholderPoses.STANCE_RELAXED]
+		if not travel.has(relaxed):
+			continue
+		assert_lt(travel[relaxed], travel[boxer] + 0.03, "%s moves the eye %.3f m, the boxer's %.3f m" % [
+				relaxed, travel[relaxed], travel[boxer]])
+		assert_lt(rise[relaxed], rise[boxer] + 0.01, "%s lifts the eye %.3f m, the boxer's %.3f m" % [
+				relaxed, rise[relaxed], rise[boxer]])
+		if punches.has(row[0]):
+			assert_lt(rise[relaxed], maxf(0.02, rise[boxer]) + 0.005, "%s lifts the eye %.3f m" % [relaxed, rise[relaxed]])
 
 
 func test_punches_come_into_first_person_view() -> void:
-	var rig := _rig(true)
-	var fists := {
-		&"jab_1": &"Left", &"jab_2": &"Right", &"hook": &"Left", &"uppercut": &"Right",
-		&"haymaker": &"Right",
+	# Seen from the throat-height lens, a punch comes in from below or the side and reads
+	# as a fist and forearm, and the body fills at most about a third of the view. The arm
+	# reaches the edge of the view (the elbow end of the upper arm runs off it) instead of
+	# a forearm floating in mid-view.
+	var rig := _player_rig()
+	# Move -> striking side(s). Straight punches show the forearm; the gut-level flurry and
+	# the shove come in low, so only the fists rise into the bottom of the view.
+	var punches := {
+		&"jab_1": ["Left"], &"jab_2": ["Right"], &"hook": ["Left"], &"uppercut": ["Right"],
+		&"haymaker": ["Right"], &"body_flurry": ["Left"], &"shove": ["Left", "Right"],
 	}
-	for id: StringName in fists:
-		_to_first_active_frame(rig, _move_by_id(id))
-		var side: String = fists[id]
-		for point: StringName in [StringName(side + "FistPoint"), StringName(side + "Hand")]:
-			var view := _view(rig, point)
-			assert_true(_in_fp_view(view), "%s %s in the first-person view (angles %s)" % [id, point, view])
-			assert_lt(view.y, 5.0, "%s %s in the lower half or center" % [id, point])
-			assert_gt(view.x, -20.0, "%s %s lower-center or right" % [id, point])
+	var low_blows: Array[StringName] = [&"body_flurry", &"shove"]
+	var rows := FPView.rows()
+	for id: StringName in punches:
+		var move := _move_by_id(id)
+		_to_first_active_frame(rig, move)
+		for f: int in move.active:
+			if f > 0:
+				rig.advance(FRAME)
+			var hits := _fp_hits(rig, _fp_camera(rig))
+			assert_lt(_body_share(hits), 0.34, "%s frame %d: the body fills %.0f%% of the view" % [
+					id, f, _body_share(hits) * 100.0])
+			for side: String in punches[id]:
+				assert_gt(_parts_share(hits, _hand_parts(side)), 0.004, "%s frame %d: the %s fist shows" % [id, f, side])
+				assert_true(_reaches_edge(hits, _hand_parts(side), _whole_arm_parts(side)),
+						"%s frame %d: the %s arm comes in from the edge of the view" % [id, f, side])
+				if low_blows.has(id):
+					var lowest := 0
+					for cell: Vector2i in _cells_of(hits, _hand_parts(side)):
+						lowest = maxi(lowest, cell.y)
+					assert_gte(lowest, rows - 3, "%s: the %s fist rises in from the bottom edge" % [id, side])
+					continue
+				assert_gt(_parts_share(hits, [side + "Forearm"]), 0.01, "%s frame %d: the %s forearm shows" % [id, f, side])
+				var fist := _view(rig, StringName(side + "FistPoint"))
+				assert_true(_in_fp_view(fist), "%s: the %s fist in view (angles %s)" % [id, side, fist])
+				# The arm points in from below or the side: the elbow is further off center than the fist.
+				var elbow := _view(rig, StringName(side + "LowerArm"))
+				assert_true(elbow.y < fist.y or absf(elbow.x) > absf(fist.x), "%s: from below or the side (elbow %s, fist %s)" % [
+						id, elbow, fist])
 
+
+func test_pipe_swings_come_into_first_person_view() -> void:
+	# A pipe swing sweeps in from the edge of the view (the side, or above for the overhead
+	# smash): the grip stays further out than the tip, and the body fills at most about a
+	# third of the view.
+	var rig := _player_rig()
+	for id: StringName in [&"pipe_swing_1", &"pipe_swing_2", &"pipe_swing_3"]:
+		_to_first_active_frame(rig, _move_by_id(id))
+		var hits := _fp_hits(rig, _fp_camera(rig))
+		assert_lt(_body_share(hits), 0.34, "%s: the body fills %.0f%% of the view" % [id, _body_share(hits) * 100.0])
+		var grip := rig.get_point_position(&"WeaponGrip")
+		var tip := rig.get_point_position(&"WeaponTip")
+		var shown := 0
+		for k: int in 11:
+			if _in_fp_view(_view_from(_fp_camera(rig), grip.lerp(tip, k / 10.0))):
+				shown += 1
+		assert_gte(shown, 2, "%s: the pipe's head shows in the view" % id)
+		assert_true(_in_fp_view(_view(rig, &"WeaponTip")), "%s: the pipe's tip in the view" % id)
+		assert_gt(_off_center_deg(_view(rig, &"WeaponGrip")), _off_center_deg(_view(rig, &"WeaponTip")),
+				"%s: the pipe sweeps in from the edge" % id)
 
 func test_kicks_come_into_first_person_view() -> void:
-	var rig := _rig(true)
+	# With the move's own camera offsets (pitched down and dropped during the kick), the
+	# kicking foot and lower leg come into view.
+	var rig := _player_rig()
 	for id: StringName in [&"front_kick", &"roundhouse", &"stomp_kick", &"push_kick", &"flying_kick"]:
-		_to_first_active_frame(rig, _move_by_id(id))
-		# The flying kick dives at the target, with the camera pitched further down.
-		var pitch := -25.0 if id == &"flying_kick" else -10.0
-		var view := _view(rig, &"RightFootPoint", pitch, 0.05)
-		assert_true(_in_fp_view(view), "%s foot in the pitched-down view (angles %s)" % [id, view])
-		assert_lt(view.y, 0.0, "%s foot in the lower part of the view" % id)
+		var move := load("res://game/combat/moves/%s.tres" % id) as MoveData
+		_to_first_active_frame(rig, move)
+		for f: int in move.active:
+			if f > 0:
+				rig.advance(FRAME)
+			var cam := _fp_camera(rig, move.camera_pitch_deg, move.camera_drop_m)
+			var hits := _fp_hits(rig, cam)
+			assert_gt(_parts_share(hits, _foot_parts("Right")), 0.005, "%s frame %d: the foot shows" % [id, f])
+			assert_gt(_parts_share(hits, ["RightShin"]), 0.003, "%s frame %d: the lower leg shows" % [id, f])
+			var view := _view_from(cam, rig.get_point_position(&"RightFootPoint"))
+			assert_true(_in_fp_view(view), "%s foot in the view (angles %s)" % [id, view])
 	# Straight kicks land sole first: the ankle stays (nearly) in front of a target at
 	# arm's length, so the shoe is not hidden inside the target's belly.
 	for id: StringName in [&"front_kick", &"stomp_kick", &"push_kick", &"flying_kick"]:
@@ -930,21 +1342,218 @@ func test_kicks_come_into_first_person_view() -> void:
 		var ankle := _local(rig, &"RightFoot")
 		assert_gt(ankle.z, -0.77, "%s ankle in front of the target at %s" % [id, _fmt(ankle)])
 
+func test_player_stands_relaxed_and_enemies_keep_the_boxer_guard() -> void:
+	var boxer := _rig()
+	var player := _player_rig()
+	for rig: HumanoidRig in [boxer, player]:
+		rig.play(&"idle", 0.0)
+		rig.advance(0.0)
+	var chin := _local(boxer, &"Head")
+	for side: String in ["Left", "Right"]:
+		var up := _local(boxer, StringName(side + "FistPoint"))
+		assert_gt(up.y, 1.4, "the boxer guard holds the %s fist up (%s)" % [side, _fmt(up)])
+		assert_lt(up.distance_to(chin), 0.45, "by the chin")
+		var loose := _local(player, StringName(side + "FistPoint"))
+		assert_lt(loose.y, 1.0, "the relaxed %s hand hangs at belt height or lower (%s)" % [side, _fmt(loose)])
+	assert_lt(_local(player, &"LeftFistPoint").z, _local(player, &"RightFistPoint").z - 0.1,
+			"the lead hand hangs forward of the rear hand")
+	# The guard's body and footing, light on the feet: the head where the guard holds it
+	# (so strikes, authored on the guard's body, move the eye no more), the lead step about
+	# the guard's, the knees at least as soft, and the rear heel up.
+	assert_almost_eq(_local(player, &"EyePoint"), _local(boxer, &"EyePoint"), Vector3.ONE * 0.01, "the head as in the guard")
+	assert_almost_eq(_local(player, &"LeftFootPoint").z, _local(boxer, &"LeftFootPoint").z, 0.03, "the guard's lead step")
+	for side: String in ["Left", "Right"]:
+		var bend := func(rig: HumanoidRig) -> float:
+			return rad_to_deg(rig.get_point_transform(StringName(side + "UpperLeg")).basis.y.angle_to(
+					rig.get_point_transform(StringName(side + "LowerLeg")).basis.y))
+		assert_gte(bend.call(player), bend.call(boxer) - 0.5, "the %s knee at least as soft as the guard's" % side)
+	var heel := player.get_point_transform(&"RightFoot") * Vector3(0.0, -0.085, 0.085)
+	var ball := player.get_point_transform(&"RightToes") * Vector3(0.0, -0.035, 0.0)
+	assert_gt(heel.y - ball.y, 0.04, "the rear heel is raised")
+	assert_lt(ball.y, 0.02, "on the ball of the rear foot")
 
-func test_guard_fists_show_at_the_bottom_of_the_first_person_view() -> void:
-	var rig := _rig(true)
-	for point: StringName in [&"LeftFistPoint", &"RightFistPoint"]:
-		var view := _view(rig, point)
-		assert_lt(view.y, -15.0, "%s low in the view" % point)
-		assert_gt(view.y, -FP_HALF_V_DEG - 6.0, "%s at least partly on screen (angles %s)" % [point, view])
+
+func test_relaxed_arms_stay_out_of_the_level_first_person_view() -> void:
+	# Looking ahead at rest or walking, the player's arms do not clutter the view: at most
+	# a sliver of a hand at the very bottom edge, and nothing else of the body.
+	var rig := _player_rig()
+	var arms: Array[String] = _whole_arm_parts("Left")
+	arms.append_array(_whole_arm_parts("Right"))
+	var rows := FPView.rows()
+	for anim: StringName in [&"idle", &"walk_forward", &"walk_back", &"walk_left", &"walk_right"]:
+		rig.play(anim, 0.0)
+		rig.advance(0.0)
+		var step := rig.anim_player.get_animation(anim).length / 8.0
+		for k: int in 8:
+			if k > 0:
+				rig.advance(step)
+			var hits := _fp_hits(rig, _fp_camera(rig))
+			assert_lt(_parts_share(hits, arms), 0.01, "%s at %d/8: the arms stay out of the view" % [anim, k])
+			assert_almost_eq(_body_share(hits), _parts_share(hits, arms), 1e-6, "%s at %d/8: no other body part in view" % [anim, k])
+			for cell: Vector2i in _cells_of(hits, arms):
+				assert_gte(cell.y, rows - 2, "%s at %d/8: only a sliver at the bottom edge (cell %s)" % [anim, k, cell])
+
+
+func test_looking_down_shows_the_lead_leg_and_foot() -> void:
+	# Mirror's Edge feel: looking down at rest shows the player's own lead hand, foot and leg,
+	# and no torso mesh stands in front of them with the lens at throat height (the chest is
+	# hidden from the first-person camera). Looking down 45 degrees, the bottom edge of the
+	# view is 74 degrees below level, short of the feet under the body: the lead shoe comes
+	# in from about 60 degrees and the lead thigh from about 65. Walking, the striding foot
+	# and shin come in from 55.
+	var rig := _player_rig()
+	rig.play(&"idle", 0.0)
+	rig.advance(0.0)
+	var torso_names: Array[String] = ["Pelvis", "Belt", "Belly", "BellyTop", "Chest", "UpperChest", "LeftTrap", "RightTrap"]
+	var torso: Array[MeshInstance3D] = []
+	for mesh: MeshInstance3D in _meshes_under(rig):
+		if torso_names.has(String(mesh.name)):
+			torso.append(mesh)
+	var legs: Array[String] = _foot_parts("Left")
+	legs.append_array(["LeftThigh", "LeftShin"])
+	for pitch: float in [-45.0, -60.0, -65.0]:
+		var cam := _fp_camera(rig, pitch)
+		var hits := _fp_hits(rig, cam, 96)
+		assert_gt(_parts_share(hits, _hand_parts("Left")), 0.004, "%.0f deg: the lead hand shows" % pitch)
+		assert_eq(_parts_share(hits, torso_names), 0.0, "%.0f deg: the torso stays out of the view" % pitch)
+		var bare := _fp_hits(rig, cam, 96, torso)
+		assert_almost_eq(_parts_share(bare, legs), _parts_share(hits, legs), 1e-6,
+				"%.0f deg: the torso hides nothing of the lead leg" % pitch)
+	assert_gt(_parts_share(_fp_hits(rig, _fp_camera(rig, -60.0), 96), _foot_parts("Left")), 0.002,
+			"60 deg down: the lead shoe shows")
+	assert_gt(_parts_share(_fp_hits(rig, _fp_camera(rig, -65.0), 96), ["LeftThigh", "LeftShin"]), 0.005,
+			"65 deg down: the lead leg shows")
+	var foot := 0.0
+	var shin := 0.0
+	rig.play(&"walk_forward", 0.0)
+	rig.advance(0.0)
+	for k: int in 8:
+		rig.advance(0.6 / 8.0)
+		var hits := _fp_hits(rig, _fp_camera(rig, -55.0), 96)
+		foot = maxf(foot, _parts_share(hits, _foot_parts("Left")))
+		shin = maxf(shin, _parts_share(hits, ["LeftShin"]))
+	assert_gt(foot, 0.005, "walking, 55 deg down: the striding lead foot shows")
+	assert_gt(shin, 0.0, "walking, 55 deg down: the lead shin shows")
+
+
+func test_looking_straight_down_shows_a_rounded_shirt_front() -> void:
+	# With the chest hidden from the first-person camera, looking steeply down would show
+	# the belly box's flat top as a lid across the bottom of the view: the rounded top on
+	# the belly (BellyTop) covers it, so only a sliver of the lid shows.
+	var rig := _player_rig()
+	rig.play(&"idle", 0.0)
+	rig.advance(0.0)
+	var belly := rig.find_child("Belly", true, false) as MeshInstance3D
+	var half := (belly.mesh as BoxMesh).size * 0.5
+	for pitch: float in [-75.0, -88.0]:
+		var cam := _fp_camera(rig, pitch)
+		var hits := _fp_hits(rig, cam, 96)
+		assert_gt(_parts_share(hits, ["BellyTop"]), 0.02, "%.0f deg: the rounded shirt front shows" % pitch)
+		var lid := 0
+		var rows := FPView.rows(96)
+		var tan_h := tan(deg_to_rad(FP_HALF_H_DEG))
+		var tan_v := tan_h * 9.0 / 16.0
+		for i: int in hits.size():
+			if hits[i] != belly:
+				continue
+			var ray := Vector3(((i % 96 + 0.5) / 96.0 * 2.0 - 1.0) * tan_h, (1.0 - (i / 96 + 0.5) / rows * 2.0) * tan_v, -1.0)
+			var dir := cam.basis * ray
+			var at := belly.global_transform.affine_inverse() * (cam.origin + dir * FPView.ray_hit(belly, cam.origin, dir))
+			if absf(at.y - half.y) < 1e-3:
+				lid += 1
+		assert_lt(lid / float(hits.size()), 0.005, "%.0f deg: the belly box's flat top shows in %d cells" % [pitch, lid])
+
+
+## The held guard as the first-person lens sees it ("dukes up"): both fists up in the
+## upper third of the view either side of the center, each arm rising to its fist from the
+## edge of the view, no forearm or hand within 0.3 m of the lens, the arms filling under a
+## third of the view and its center clear between the fists.
+func _assert_guard_view(rig: HumanoidRig, what: String) -> void:
+	var cam := _fp_camera(rig)
+	var hits := _fp_hits(rig, cam)
+	assert_lt(_body_share(hits), 0.3, "%s: the guard fills %.0f%% of the view" % [what, _body_share(hits) * 100.0])
+	var near_parts := _arm_parts("Left")
+	near_parts.append_array(_arm_parts("Right"))
+	var near := _nearest_part(rig, cam, near_parts)
+	assert_gt(near, 0.3, "%s: the nearest forearm or hand is %.2f m from the lens" % [what, near])
+	for side: String in ["Left", "Right"]:
+		var fist := _view(rig, StringName(side + "FistPoint"))
+		assert_true(_in_upper_third(fist), "%s: the %s fist up in the upper third of the view (angles %s)" % [what, side, fist])
+		assert_true(fist.x < -10.0 if side == "Left" else fist.x > 10.0, "%s: the %s fist on its own side (angles %s)" % [
+				what, side, fist])
+		assert_true(_reaches_edge(hits, _hand_parts(side), _whole_arm_parts(side)),
+				"%s: the %s forearm rises from the edge of the view" % [what, side])
+	var center := Vector2(FP_COLS, FPView.rows()) * 0.5
+	for i: int in hits.size():
+		var off := Vector2(i % FP_COLS, i / FP_COLS) + Vector2(0.5, 0.5) - center
+		if off.length() < 8.0:
+			assert_null(hits[i], "%s: the view center stays clear between the fists" % what)
+
+
+func test_block_holds_the_guard_up_over_the_stance_legs() -> void:
+	# &"block" holds the guard (PlaceholderPoses.block_guard()) over the stance's legs and
+	# torso: the "dukes up" image, authored for the throat-height lens.
+	var rig := _player_rig()
+	rig.play(&"idle", 0.0)
+	rig.advance(0.0)
+	var stance: Array[Vector3] = []
+	for point: StringName in [&"LeftFootPoint", &"RightFootPoint", &"EyePoint"]:
+		stance.append(_local(rig, point))
+	rig.play(&"block", 0.1)
+	rig.advance(0.5)
+	assert_eq(rig.current_anim(), &"block")
+	_assert_guard_view(rig, "block")
+	var i := 0
+	for point: StringName in [&"LeftFootPoint", &"RightFootPoint", &"EyePoint"]:
+		assert_almost_eq(_local(rig, point), stance[i], Vector3.ONE * 0.01, "block keeps the stance's %s" % point)
+		i += 1
+	for side: String in ["Left", "Right"]:
+		var fist := _local(rig, StringName(side + "FistPoint"))
+		assert_gt(fist.y, _local(rig, &"ChestPoint").y + 0.2, "the %s fist up by the face (%s)" % [side, _fmt(fist)])
+		assert_lt(fist.z, _local(rig, &"Head").z - 0.25, "the %s fist out in front of the face (%s)" % [side, _fmt(fist)])
+
+
+func test_neutral_dodges_put_the_guard_up() -> void:
+	# The backstep (dodge with no left/right stick) and the forward dodge cover up with the
+	# block guard's arms from frame 3 to frame 13 of the 14-frame dodge: the only "dukes up"
+	# image the relaxed stance shows besides the block. Raising and dropping it, the arms
+	# never fill more than the guard does. Side dodges slip with the arms low.
+	var rig := _player_rig()
+	rig.play(&"block", 0.0)
+	rig.advance(0.0)
+	# The guard's fists relative to the upper chest: the arms' own pose.
+	var guard: Array[Vector3] = []
+	for side: String in ["Left", "Right"]:
+		guard.append(rig.get_point_transform(&"UpperChest").affine_inverse() * rig.get_point_position(StringName(side + "FistPoint")))
+	for anim: StringName in [&"dodge_back", &"dodge_forward", &"dodge_left", &"dodge_right"]:
+		var covers := anim == &"dodge_back" or anim == &"dodge_forward"
+		rig.play(&"idle", 0.0)
+		rig.advance(0.5)
+		rig.play(anim, 0.03)
+		for f: int in 18:
+			rig.advance(FRAME)
+			if not covers:
+				for side: String in ["Left", "Right"]:
+					var fist := _local(rig, StringName(side + "FistPoint"))
+					assert_lt(fist.y, 1.1, "%s frame %d: the %s hand stays low (%s)" % [anim, f + 1, side, _fmt(fist)])
+				continue
+			assert_lt(_body_share(_fp_hits(rig, _fp_camera(rig))), 0.3, "%s frame %d: the arms stay out of the lens" % [anim, f + 1])
+			if f < 2 or f > 12:
+				continue
+			var chest := rig.get_point_transform(&"UpperChest").affine_inverse()
+			for s: int in 2:
+				var side: String = ["Left", "Right"][s]
+				assert_almost_eq(chest * rig.get_point_position(StringName(side + "FistPoint")), guard[s], Vector3.ONE * 0.01,
+						"%s frame %d: the %s arm is in the guard" % [anim, f + 1, side])
+			_assert_guard_view(rig, "%s frame %d" % [anim, f + 1])
 
 
 func test_haymaker_charge_keeps_the_view_center_clear() -> void:
 	# The player holds haymaker_charge for as long as P is held. The torso twists away
-	# for the swing, but the lead (left) glove stays low and to the left, the way the
-	# guard holds it: it never covers the center dot or the target's head. That holds
-	# through the charge and through the haymaker's startup, charged or not.
-	var rig := _rig(true)
+	# for the swing, and the lead (left) hand reaches out to the left: it never covers the
+	# center dot or the target's head. That holds through the charge and through the
+	# haymaker's startup, charged or not.
+	var rig := _player_rig()
 	var move := _move_by_id(&"haymaker")
 	var phases := {
 		&"charge": func() -> void:
@@ -970,10 +1579,9 @@ func test_haymaker_charge_keeps_the_view_center_clear() -> void:
 		if phase == &"charge":
 			assert_eq(rig.current_anim(), &"haymaker_charge")
 			var lead := _view(rig, &"LeftFistPoint")
-			assert_true(_in_fp_view(lead), "the cocked stance still shows the lead glove (angles %s)" % lead)
-			assert_lt(lead.x, -15.0, "the lead glove sits to the left (angles %s)" % lead)
-			assert_lt(lead.y, -10.0, "the lead glove sits low (angles %s)" % lead)
-
+			assert_true(_in_fp_view(lead), "the cocked stance shows the lead hand (angles %s)" % lead)
+			assert_lt(lead.x, -15.0, "the lead hand reaches out on the left (angles %s)" % lead)
+			assert_lt(_body_share(_fp_hits(rig, _fp_camera(rig))), 0.2, "the charge keeps most of the view clear")
 
 func test_unknown_moves_fall_back_to_a_generic_strike() -> void:
 	var punch := MoveData.new()

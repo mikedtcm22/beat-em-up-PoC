@@ -61,7 +61,16 @@ extends Node3D
 	set(value):
 		skin_color = value
 		_apply_colors()
-## Player only: put head and neck meshes on CombatTypes.VIS_FP_HIDDEN.
+## How the body stands, walks, and starts and ends every move (PlaceholderPoses.STANCE_*):
+## &"boxer" keeps the fists up by the chin (enemies, dummies); &"relaxed" lets the arms
+## hang loose until a strike (the player, so the first-person view stays clear). Strike
+## poses reach the same spots in both. Other values mean &"boxer". Set before build().
+@export var stance: StringName = PlaceholderPoses.STANCE_BOXER
+## Player only (Spec §10): smaller, skin-colored hands with light wraps and a dark
+## fingerless-glove plate instead of the oversized fist blocks. Set before build().
+@export var wrapped_hands: bool = false
+## Player only: put the meshes PlaceholderBody.is_fp_hidden() names (head, neck, chest,
+## shoulder balls and the shoulder end of each upper arm) on CombatTypes.VIS_FP_HIDDEN.
 @export var first_person_body: bool = false:
 	set(value):
 		first_person_body = value
@@ -188,7 +197,7 @@ func play(anim: StringName, blend_s: float = 0.08, speed: float = 1.0) -> void:
 
 ## Play the animation for `move`, built (and cached) so its length is exactly
 ## move.total_frames() / 60 s, it reaches the strike pose at move.startup / 60 s, holds it
-## through the active frames, and returns to guard by the end of recovery.
+## through the active frames, and returns to the stance by the end of recovery.
 ## The blend is capped at 75% of the startup so the strike pose is reached unblended.
 ## Consecutive body_flurry plays alternate the leading fist.
 ## Started while the move's charge animation (PlaceholderAnims.CHARGE_ANIMS, e.g.
@@ -216,12 +225,24 @@ func play_move(move: MoveData, blend_s: float = 0.04) -> void:
 	var full := StringName("%s/%s" % [_MOVE_LIBRARY, key])
 	if not anim_player.has_animation(full):
 		anim_player.get_animation_library(_MOVE_LIBRARY).add_animation(key,
-				PlaceholderAnims.build_move(move, _scale, mirrored, from_charge))
+				PlaceholderAnims.build_move(move, _scale, mirrored, from_charge, stance))
 	var blend := maxf(blend_s, 0.0)
 	if from_charge:
 		blend = maxf(blend, PlaceholderAnims.windup_time(move))
 	blend = minf(blend, 0.75 * move.startup * PlaceholderAnims.FRAME_S)
 	_start(full, move.get_anim(), blend, 1.0)
+
+
+## The owner just moved this rig by `offset` (world meters) after starting an animation:
+## the running cross-fade keeps starting from where the body was on screen (its Hips start
+## moves back by `offset`), so the move does not show and the new animation takes the body
+## from there. Without a fade running it does nothing. Call advance(0.0) after it to show
+## the result in the same tick.
+func carry_fade(offset: Vector3) -> void:
+	if not _built or _fade_s <= 0.0:
+		return
+	var to_local := (global_transform if is_inside_tree() else transform).basis.inverse()
+	_fade_hips -= to_local * offset
 
 
 ## Locomotion while FREE: idle or walk_forward/back/left/right, picked from the local move
@@ -358,7 +379,7 @@ func _build_materials() -> void:
 
 
 func _build_meshes() -> void:
-	for part: PlaceholderBody.Part in PlaceholderBody.parts():
+	for part: PlaceholderBody.Part in PlaceholderBody.parts(wrapped_hands):
 		var mesh_instance := MeshInstance3D.new()
 		mesh_instance.name = part.name
 		mesh_instance.mesh = _make_mesh(part)
@@ -367,7 +388,7 @@ func _build_meshes() -> void:
 		mesh_instance.position = part.offset * _scale
 		mesh_instance.rotation_degrees = part.rot_deg
 		_bone_nodes[part.bone].add_child(mesh_instance)
-		if PlaceholderBody.FP_HIDDEN_BONES.has(part.bone):
+		if PlaceholderBody.is_fp_hidden(part):
 			_head_meshes.append(mesh_instance)
 		else:
 			_body_meshes.append(mesh_instance)
@@ -455,7 +476,7 @@ func _build_animation() -> void:
 	# one animation at full weight. Every animation keys every animated bone
 	# (PlaceholderAnims.make), so nothing is left stale.
 	anim_player.deterministic = false
-	anim_player.add_animation_library(&"", PlaceholderAnims.build_library(_scale))
+	anim_player.add_animation_library(&"", PlaceholderAnims.build_library(_scale, stance))
 	anim_player.add_animation_library(_MOVE_LIBRARY, AnimationLibrary.new())
 
 

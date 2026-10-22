@@ -71,6 +71,8 @@ func _run() -> void:
 		{title = "Stomp a downed enemy", cam = &"first_person", fn = _act_stomp},
 		{title = "Pipe: pick up, 3 swings, throw", cam = &"first_person", fn = _act_pipe},
 		{title = "Dodge right, quick turn", cam = &"first_person", fn = _act_dodge_turn},
+		{title = "Stance: idle, walk, look down", cam = &"first_person", fn = _act_stance},
+		{title = "Dodge back: guard", cam = &"first_person", fn = _act_dodge_back},
 	]
 	for act in acts:
 		var title: String = act.title
@@ -214,7 +216,47 @@ func _act_dodge_turn() -> void:
 	await _press(&"TURN", 2, 20)
 
 
+## The relaxed stance in first person: idle looking level, a walk, then a look down at
+## the player's own hands, legs and feet (45 degrees for a second, then 65, where the lead
+## leg comes in) and back up.
+func _act_stance() -> void:
+	await _stage([Vector3(1.5, 0, -9.0)])
+	await _look_to(0.0, 10)
+	await _ticks(60)
+	player.input.scripted_move = Vector2(0, 1)
+	await _ticks(60)
+	player.input.scripted_move = Vector2.ZERO
+	await _wait_until(func() -> bool: return not player.is_walking(), 60)
+	await _ticks(10)
+	await _look_to(-45.0, 15)
+	await _ticks(60)
+	await _look_to(-65.0, 10)
+	await _ticks(30)
+	await _look_to(0.0, 15)
+	await _ticks(20)
+
+
+## A dodge with no stick: the backstep, with the block guard up for its frames.
+func _act_dodge_back() -> void:
+	await _stage([Vector3(0, 0, -1.6)])
+	await _look_to(0.0, 6)
+	for i in 2:
+		player.input.scripted_move = Vector2.ZERO
+		await _press(&"DODGE", 2)
+		await _wait_idle()
+		await _ticks(40)
+
+
 # --- Harness ------------------------------------------------------------------------
+
+
+## Turn the view to `pitch_deg` (negative looks down) evenly over `ticks` physics ticks.
+func _look_to(pitch_deg: float, ticks: int) -> void:
+	var from := player.look_pitch
+	var to := deg_to_rad(pitch_deg)
+	for i in ticks:
+		await get_tree().physics_frame
+		player.look_pitch = lerpf(from, to, float(i + 1) / ticks)
 
 
 func _reset(cam: StringName) -> void:

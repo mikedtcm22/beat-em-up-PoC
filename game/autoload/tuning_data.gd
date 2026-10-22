@@ -105,9 +105,14 @@ extends Resource
 ## The first-person lens sits this far from EyePoint: up/down (negative = lower) and ahead
 ## along the flat look. Game-boy's call after the M1 playtest: lower, near the throat, so
 ## hands and feet both fit in the view (Mirror's Edge style) instead of an eye-level
-## "dukes up" gun view. Presentation only: aim and hit detection never use it.
+## "dukes up" gun view. Only a little ahead: with the relaxed stance's arms low there is no
+## guard to clear at rest, and a lens close over the body keeps the block guard's forearms
+## 0.3 m or more away (PlaceholderPoses.block_guard_arms() is authored for these values),
+## the lead foot ahead of it when looking down and a held victim's head further off (much
+## closer, the belly comes up under the lens over the legs). Presentation only: aim and
+## hit detection never use it.
 @export_range(-0.5, 0.1, 0.01) var cam_height_offset_m: float = -0.2
-@export_range(0.0, 0.3, 0.01) var cam_forward_offset_m: float = 0.12
+@export_range(0.0, 0.3, 0.01) var cam_forward_offset_m: float = 0.04
 @export_range(0.0, 1.0, 0.05) var screen_shake_intensity: float = 1.0
 @export var show_center_dot: bool = true
 

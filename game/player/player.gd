@@ -63,6 +63,10 @@ func _ready() -> void:
 
 func _configure_rig(r: HumanoidRig) -> void:
 	r.first_person_body = true
+	# Loose arms and smaller wrapped hands keep the first-person view clear (Game-boy's
+	# M1 playtest); enemies keep the boxer guard.
+	r.stance = PlaceholderPoses.STANCE_RELAXED
+	r.wrapped_hands = true
 	r.body_color = Color(0.2, 0.36, 0.62)
 	r.accent_color = Color(0.93, 0.9, 0.82)
 	r.skin_color = Color(0.82, 0.6, 0.45)

@@ -5,6 +5,7 @@ extends GutTest
 ## performed and registers hits.
 
 const ROOM := preload("res://game/level/test_room.tscn")
+const FPView := preload("res://tests/fp_view.gd")
 const FAR := Vector3(30.0, 0.0, -30.0)
 
 var room: Node3D
@@ -323,6 +324,54 @@ func test_grab_knees_release_then_throw_knocks_down_another() -> void:
 	assert_eq(impacts.size(), 1, "one body impact on the second dummy")
 
 
+## Nearest distance from the player's first-person lens to `victim`'s meshes, and the share
+## of the player's view `victim` covers (the camera at EyePoint + lens offset, looking along
+## the player's look).
+func _victim_in_lens(victim: CombatActor) -> Vector2:
+	var cam := FPView.camera(player.get_eye_transform().origin, player.get_look_basis())
+	return Vector2(FPView.nearest_mesh(victim.rig, cam.origin), FPView.covered(FPView.hits(victim.rig, cam, 32)))
+
+
+func test_grabbed_victim_stays_out_of_the_holders_lens() -> void:
+	# A grab pulls the victim in from where it stood while it bends over into &"held", head
+	# first: its head and shoulders never sweep through the holder's throat-height lens (the
+	# view never goes dark), on the grab and on the regrab after the third knee. Released on
+	# its feet, it stands up away from the holder.
+	await _setup([Vector3(0, 0, -1.4)])
+	await _press(&"P", 2, 7)
+	await _press(&"P", 2, 7)
+	await _press(&"P", 2)
+	assert_true(await _wait_until(func() -> bool: return dummies[0].state == CombatTypes.ActorState.STAGGER))
+	assert_true(await _wait_idle())
+	for phase: String in ["grab", "release", "regrab"]:
+		if phase == "release":
+			for i in 3:
+				await _press(&"P", 2)
+				if i < 2:
+					assert_true(await _wait_idle())
+		else:
+			player.input.push_press(&"GRAB", 2)
+		# Grabs are watched while the dummy is held, the release through the third knee.
+		var nearest := INF
+		var widest := 0.0
+		var watched := 0
+		for i in 40:
+			await _ticks(1)
+			if phase != "release" and dummies[0].state != CombatTypes.ActorState.GRABBED:
+				continue
+			watched += 1
+			var seen := _victim_in_lens(dummies[0])
+			nearest = minf(nearest, seen.x)
+			widest = maxf(widest, seen.y)
+		assert_gt(watched, 20, "%s: frames watched" % phase)
+		var bound := 0.2 if phase == "release" else 0.25
+		assert_gt(nearest, bound, "%s: the dummy stays %.2f m or more from the lens (nearest %.2f m)" % [phase, bound, nearest])
+		assert_lt(widest, 0.5, "%s: the dummy covers at most %.0f%% of the view" % [phase, widest * 100.0])
+		if phase == "release":
+			assert_eq(dummies[0].state, CombatTypes.ActorState.STAGGER, "the third knee releases into a stagger")
+			assert_true(await _wait_idle())
+
+
 func test_stomp_hits_a_downed_dummy() -> void:
 	await _setup([Vector3(0, 0, -1.0)])
 	var knock := HitInfo.new()
@@ -400,6 +449,31 @@ func test_dodge_sidesteps_three_meters_with_iframes() -> void:
 	var moved := player.global_position - start
 	assert_almost_eq(moved.length(), Tuning.data.dodge_distance, 0.15, "about 3 m")
 	assert_gt(moved.dot(player.global_basis.x), 2.0, "to the right")
+
+
+func test_player_stands_relaxed_and_a_neutral_dodge_puts_the_guard_up() -> void:
+	# Game-boy's M1 playtest: the player's arms hang loose until a strike (enemies keep the
+	# boxer guard), and a dodge with no stick backsteps with the guard up by the face.
+	await _setup([Vector3(0, 0, -2.5)])
+	assert_eq(player.rig.stance, PlaceholderPoses.STANCE_RELAXED, "the player stands relaxed")
+	assert_true(player.rig.wrapped_hands, "with wrapped hands")
+	for dummy: TrainingDummy in dummies:
+		assert_eq(dummy.rig.stance, PlaceholderPoses.STANCE_BOXER, "%s keeps the boxer guard" % dummy.name)
+		assert_false(dummy.rig.wrapped_hands, "%s keeps its fist blocks" % dummy.name)
+	var chest := player.rig.get_point_position(&"ChestPoint").y
+	assert_lt(player.rig.get_point_position(&"LeftFistPoint").y, chest, "the lead hand hangs low")
+	var start := player.global_position
+	player.input.push_press(&"DODGE", 2)
+	await _ticks(6)
+	assert_eq(player.state, CombatTypes.ActorState.DODGE)
+	assert_eq(player.rig.current_anim(), &"dodge_back", "no stick: the backstep")
+	for point: StringName in [&"LeftFistPoint", &"RightFistPoint"]:
+		assert_gt(player.rig.get_point_position(point).y, player.rig.get_point_position(&"ChestPoint").y + 0.15,
+				"%s up by the face during the backstep" % point)
+	assert_true(await _wait_idle())
+	var moved := player.global_position - start
+	assert_almost_eq(moved.length(), Tuning.data.dodge_distance, 0.15, "about 3 m")
+	assert_gt(moved.dot(player.global_basis.z), 2.0, "backward")
 
 
 func test_dodge_cancels_recovery() -> void:

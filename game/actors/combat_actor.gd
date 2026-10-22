@@ -13,6 +13,17 @@ signal state_changed(old_state: int, new_state: int)
 const IMPACT_KNOCKDOWN_PATH := "res://game/combat/moves/impact_body_knockdown.tres"
 const IMPACT_STAGGER_PATH := "res://game/combat/moves/impact_body_stagger.tres"
 
+## Grabbed, the body bends over into &"held" over this blend (sim seconds) while its origin
+## eases in from where it stood to the holder's HoldPoint over _GRAB_EASE_S, slowly at
+## first: the head drops below the holder's first-person lens (at the throat) before the
+## body closes in, instead of sweeping through it.
+const _HELD_BLEND_S := 0.12
+const _GRAB_EASE_S := 0.23
+## Released on its feet, the body stands up over this blend, around its bent-over hips
+## (release_from_grab()): the head rises while the release pushes the body away, not up
+## through the holder's view at arm's length.
+const _RELEASE_BLEND_S := 0.22
+
 @export var max_health: float = 100.0
 ## 0 = player, 1 = enemies.
 @export var team: int = 1
@@ -58,6 +69,10 @@ var _flying_hit_ids: Dictionary[int, bool] = {}
 ## Lying face up (hit from the front) or face down.
 var _face_up: bool = true
 var _flash_frames: int = 0
+## Grab ease-in (see _GRAB_EASE_S): where the body stood relative to its pin spot when it
+## was grabbed (in the holder's frame), and the sim time eased so far.
+var _pin_from: Vector3 = Vector3.ZERO
+var _pin_ease_s: float = 0.0
 var _impact_query: PhysicsShapeQueryParameters3D
 var _impact_shape: CapsuleShape3D
 
@@ -89,7 +104,7 @@ func _physics_process(delta: float) -> void:
 		ticks += 1
 		_sim_tick()
 	if state == CombatTypes.ActorState.GRABBED:
-		_pin_to_holder()
+		_pin_to_holder(delta * scale)
 	elif scale > 0.0:
 		_integrate(delta * scale, scale)
 	rig.advance(delta * scale)
@@ -209,18 +224,26 @@ func set_lunge(dir: Vector3, distance: float, frames: int, budget: float = -1.0)
 	_lunge_frames_left = maxi(frames, 1) if _lunge_budget > 0.0 else 0
 
 
+## Held by `by` from now on: pinned in front of it (_pin_to_holder()), easing in from where
+## it stands while it bends over into &"held".
 func start_grabbed(by: CombatActor) -> void:
 	if current_move:
 		_cancel_move()
 	holder = by
 	sim_velocity = Vector3.ZERO
+	_pin_from = by.global_basis.inverse() * (global_position - _pin_spot())
+	_pin_from.y = 0.0
+	_pin_ease_s = 0.0
 	_set_ghost(true)
 	_enter_state(CombatTypes.ActorState.GRABBED)
-	rig.play(&"held", 0.06)
+	rig.play(&"held", _HELD_BLEND_S)
 	CombatEvents.grabbed.emit(by, self)
 
 
-## Leave a grab on your feet, optionally staggering with `push` velocity.
+## Leave a grab on your feet, optionally staggering with `push` velocity. The body stands
+## up around its bent-over hips: the origin moves under them (the pose on screen stays put,
+## HumanoidRig.carry_fade()), so the head rises away from the holder instead of up through
+## its first-person view.
 func release_from_grab(push: Vector3, stagger: bool) -> void:
 	var by := holder
 	holder = null
@@ -228,9 +251,15 @@ func release_from_grab(push: Vector3, stagger: bool) -> void:
 	if stagger:
 		sim_velocity = Vector3(push.x, 0.0, push.z)
 		_enter_state(CombatTypes.ActorState.STAGGER, Tuning.data.stagger_frames)
-		rig.play(_directional_anim(&"stagger", push), 0.05)
+		rig.play(_directional_anim(&"stagger", push), _RELEASE_BLEND_S)
 	else:
 		_enter_state(CombatTypes.ActorState.FREE)
+		rig.play(&"idle", _RELEASE_BLEND_S)
+	var under_hips := rig.get_point_position(&"Hips") - global_position
+	under_hips.y = 0.0
+	global_position += under_hips
+	rig.carry_fade(under_hips)
+	rig.advance(0.0)
 	CombatEvents.released.emit(by, self)
 
 
@@ -640,12 +669,23 @@ func _impact(other: CombatActor, speed: float) -> void:
 		CombatEvents.hit_landed.emit(hit)
 
 
-func _pin_to_holder() -> void:
+## Where a held body stands: on the holder's floor below its HoldPoint.
+func _pin_spot() -> Vector3:
+	var p := holder.rig.get_point_position(&"HoldPoint")
+	return Vector3(p.x, holder.global_position.y, p.z)
+
+
+## Pin the held body below the holder's HoldPoint, facing it. Over the first _GRAB_EASE_S
+## of the grab (`dt` sim seconds this frame) it eases in from where it stood (ease-in).
+func _pin_to_holder(dt: float) -> void:
 	if not is_instance_valid(holder):
 		release_from_grab(Vector3.ZERO, false)
 		return
-	var p := holder.rig.get_point_position(&"HoldPoint")
-	global_position = Vector3(p.x, holder.global_position.y, p.z)
+	global_position = _pin_spot()
+	if _pin_ease_s < _GRAB_EASE_S:
+		_pin_ease_s += dt
+		var u := clampf(_pin_ease_s / _GRAB_EASE_S, 0.0, 1.0)
+		global_position += holder.global_basis * _pin_from * (1.0 - u * u)
 	var to_holder := holder.global_position - global_position
 	to_holder.y = 0.0
 	if to_holder.length_squared() > 0.0001:
