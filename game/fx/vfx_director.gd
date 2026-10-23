@@ -215,9 +215,13 @@ func spawn_splat(point: Vector3, normal: Vector3) -> ComicSprite:
 	var t := Tuning.data
 	if t.vfx_blood_splat_max <= 0 or t.vfx_blood_splat_s <= 0.0:
 		return null
-	var lying := live_effects(&"", ComicSprite.Motion.LYING)
-	if lying.size() >= t.vfx_blood_splat_max:
-		lying[0].age = lying[0].life  # the oldest goes on the next advance()
+	# The oldest splats give way (retired on the next advance()).
+	var lying := live_effects(&"", ComicSprite.Motion.LYING).filter(
+			func(s: ComicSprite) -> bool: return s.age < s.life)
+	while lying.size() >= t.vfx_blood_splat_max:
+		var oldest: ComicSprite = lying.pop_front()
+		oldest.age = oldest.life
+		oldest.visible = false
 	var kind := VfxArt.BLOOD_SPLATS[rng.randi() % VfxArt.BLOOD_SPLATS.size()]
 	var sprite := _acquire(kind, VfxArt.texture(kind), ComicSprite.Motion.LYING)
 	sprite.normal = normal
