@@ -36,6 +36,12 @@ const SPIT := "#dff6ff"
 const BRUISE := "#4a2466"
 const BRUISE_BLUE := "#2e3a78"
 const BRUISE_OLD := "#8c8f2e"
+## A bruise's dark middle and outline, and the purple-gray wash over bruised skin.
+const BRUISE_DARK := "#1e0f2e"
+const BRUISE_WASH := "#5c3d6e"
+## Dirt on scuffed clothes: the wash and the smudges.
+const DIRT := "#2a2018"
+const DIRT_DARK := "#16110d"
 
 ## The comic lettering set: word -> style. "finisher" words get the red extrusion accent.
 const WORDS := {
@@ -107,8 +113,9 @@ func _draw_all() -> void:
 	_save("guard_break", _guard_break())
 	_save("rear_warning", _rear_warning())
 	_save("damage_bruised", _damage_tile(true, false))
-	_save("damage_blood", _damage_tile(false, true))
+	_save("damage_scuffed", _damage_tile(false, false))
 	_save("damage_bloodied", _damage_tile(true, true))
+	_save("damage_blood", _damage_tile(false, true))
 
 
 ## "KRAK!" -> "krak"
@@ -510,34 +517,50 @@ func _rear_warning() -> String:
 # --- Damage tiles ----------------------------------------------------------------------
 
 
-## A seamless 512 px tile for the enemies' damage looks (triplanar detail texture):
-## bruises (purple and blue blotches with olive rims, scrapes) and/or blood splats.
-func _damage_tile(bruises: bool, blood: bool) -> String:
-	var defs := ""
+## A seamless 512 px tile for the enemies' damage looks (triplanar detail texture), drawn
+## to read from 1 m in first person and from the side view, with no red until the blood:
+##   skin     a purple-gray wash and big comic bruises (an olive rim, a purple or blue body
+##            with a dark middle and an ink edge) and ink scrapes;
+##   clothes  a dirt wash, dark scuffs and ink tears;
+## with `blood`, comic blood splats over either (the bloodied look keeps the bruises).
+func _damage_tile(skin: bool, blood: bool) -> String:
 	var shapes := ""
-	if bruises:
+	if skin:
 		_rng.seed = 4100
-		defs += _radial("bruise", BRUISE, BRUISE, 0.8, 0.0) + _radial("bruise_b", BRUISE_BLUE, BRUISE_BLUE, 0.7, 0.0)
-		defs += _radial("old", BRUISE_OLD, BRUISE_OLD, 0.0, 0.35)
-		for i in 9:
-			var c := _cell_point(i, 3, 3)
-			var r := _rng.randf_range(42, 74)
-			var fill := "url(#bruise)" if i % 3 != 2 else "url(#bruise_b)"
-			var d := _blob(Vector2.ZERO, r, 8, 0.25)
-			for o in _wraps(c, r):
-				shapes += '<g transform="translate(%s %s)">' % [_n(o.x), _n(o.y)]
-				shapes += _path(d, "url(#old)").trim_suffix("\n") + _path(d, fill).trim_suffix("\n") + "</g>\n"
-		for i in 4:
+		shapes += '<rect x="0" y="0" width="512" height="512" fill="%s" opacity="0.24"/>\n' % BRUISE_WASH
+		for i in 6:
+			var c := _cell_point([0, 2, 3, 5, 6, 7][i], 3, 3)
+			var r := _rng.randf_range(40, 86)
+			var fill := BRUISE if i % 3 != 2 else BRUISE_BLUE
+			var rim := _blob(Vector2.ZERO, r * 1.3, 10, 0.3)
+			var body := _blob(Vector2.ZERO, r, 9, 0.35)
+			var core := _blob(Vector2(_rng.randf_range(-0.35, 0.35), _rng.randf_range(-0.35, 0.35)) * r, r * 0.35, 7, 0.4)
+			var shape := 'rotate(%s) scale(1 %s)' % [_n(_rng.randf_range(0.0, 180.0)), String.num(_rng.randf_range(0.6, 0.95), 2)]
+			# The rim reaches 1.3 x (1 + jitter) of the radius.
+			for o in _wraps(c, r * 1.75):
+				shapes += '<g transform="translate(%s %s) %s">' % [_n(o.x), _n(o.y), shape]
+				shapes += _path(rim, BRUISE_OLD, "", 0.0, ' opacity="0.5"').trim_suffix("\n")
+				shapes += _path(body, fill, BRUISE_DARK, 5.0, ' opacity="0.9"').trim_suffix("\n")
+				shapes += _path(core, BRUISE_DARK, "", 0.0, ' opacity="0.6"').trim_suffix("\n") + "</g>\n"
+		shapes += _scratches(4, INK, 6.0, 0.75)
+	else:
+		_rng.seed = 4300
+		shapes += '<rect x="0" y="0" width="512" height="512" fill="%s" opacity="0.2"/>\n' % DIRT
+		for i in 7:
+			var c := _cell_point([0, 1, 2, 4, 6, 7, 8][i], 3, 3)
+			var r := _rng.randf_range(44, 78)
+			var d := _blob(Vector2.ZERO, r, 11, 0.35)
+			var shape := 'rotate(%s) scale(1 %s)' % [_n(_rng.randf_range(0.0, 180.0)), String.num(_rng.randf_range(0.35, 0.6), 2)]
+			for o in _wraps(c, r * 1.4):
+				shapes += '<g transform="translate(%s %s) %s">' % [_n(o.x), _n(o.y), shape]
+				shapes += _path(d, DIRT_DARK, "", 0.0, ' opacity="0.62"').trim_suffix("\n") + "</g>\n"
+		for i in 6:
 			var c := Vector2(_rng.randf_range(0, 512), _rng.randf_range(0, 512))
-			var a := _rng.randf_range(0.0, PI)
-			var scrape := ""
-			for k in 3:
-				var off := Vector2.from_angle(a + PI * 0.5) * (k - 1) * 9.0
-				var half := Vector2.from_angle(a) * _rng.randf_range(22, 34)
-				scrape += "M%s %s L%s %s " % [_n(off.x - half.x), _n(off.y - half.y), _n(off.x + half.x), _n(off.y + half.y)]
-			for o in _wraps(c, 40.0):
+			var tear := _tear(_rng.randf_range(70, 120), _rng.randf_range(12, 20), _rng.randf_range(0.0, PI))
+			for o in _wraps(c, 70.0):
 				shapes += '<g transform="translate(%s %s)">' % [_n(o.x), _n(o.y)]
-				shapes += _path(scrape, "none", "#a3242b", 4.0, ' opacity="0.75"').trim_suffix("\n") + "</g>\n"
+				shapes += _path(tear, INK, "", 0.0, ' opacity="0.92"').trim_suffix("\n") + "</g>\n"
+		shapes += _scratches(4, INK, 5.0, 0.6)
 	if blood:
 		_rng.seed = 4200
 		for i in 12:
@@ -556,9 +579,44 @@ func _damage_tile(bruises: bool, blood: bool) -> String:
 				shapes += '<g transform="translate(%s %s)">' % [_n(o.x), _n(o.y)]
 				shapes += _path(d, BLOOD, BLOOD_DARK, 6.0).trim_suffix("\n") + _path(d, BLOOD).trim_suffix("\n")
 				shapes += drops + "</g>\n"
-	var note := "Damage-look tile (seamless): " + ("bruises" if bruises else "") + (" and " if bruises and blood else "") \
-		+ ("blood" if blood else "") + "."
-	return _doc(Rect2(0, 0, 512, 512), defs, shapes, note)
+	var note := "Damage-look tile (seamless): " + ("bruised skin" if skin else "scuffed clothes") \
+		+ (" with blood" if blood else "") + "."
+	return _doc(Rect2(0, 0, 512, 512), "", shapes, note)
+
+
+## `count` comic scratches (three short parallel strokes each) in `color`, wrapping.
+func _scratches(count: int, color: String, width: float, opacity: float) -> String:
+	var out := ""
+	for i in count:
+		var c := Vector2(_rng.randf_range(0, 512), _rng.randf_range(0, 512))
+		var a := _rng.randf_range(0.0, PI)
+		var d := ""
+		for k in 3:
+			var off := Vector2.from_angle(a + PI * 0.5) * (k - 1) * 11.0
+			var half := Vector2.from_angle(a) * _rng.randf_range(24, 38)
+			d += "M%s %s L%s %s " % [_n(off.x - half.x), _n(off.y - half.y), _n(off.x + half.x), _n(off.y + half.y)]
+		for o in _wraps(c, 45.0):
+			out += '<g transform="translate(%s %s)">' % [_n(o.x), _n(o.y)]
+			out += _path(d, "none", color, width, ' opacity="%s"' % _n(opacity)).trim_suffix("\n") + "</g>\n"
+	return out
+
+
+## A ripped tear in cloth: a jagged slit `length` long and up to `width` wide along `angle`,
+## centered on the origin.
+func _tear(length: float, width: float, angle: float) -> String:
+	var dir := Vector2.from_angle(angle)
+	var side := Vector2(-dir.y, dir.x)
+	var top := PackedVector2Array()
+	var bottom := PackedVector2Array()
+	var steps := 7
+	for k in steps + 1:
+		var u := float(k) / steps
+		var along := dir * (u - 0.5) * length
+		var w := width * sin(u * PI) * 0.5
+		top.append(along + side * w * _rng.randf_range(0.5, 1.3))
+		bottom.append(along - side * w * _rng.randf_range(0.5, 1.3))
+	bottom.reverse()
+	return _pts(top + bottom)
 
 
 ## A random point in cell `i` of a `cols` x `rows` grid over the 512 px tile, so shapes

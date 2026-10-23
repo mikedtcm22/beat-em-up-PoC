@@ -4,10 +4,11 @@ extends RefCounted
 ## bloodied as its health falls (Tuning.vfx_bruised_at, vfx_bloodied_at: 66% and 33%).
 ## Applied by HumanoidRig.set_damage_look() to the rig's per-paint materials, as a detail
 ## texture mixed over the flat albedo and mapped triplanar in each part's own space, so the
-## marks ride the body:
-##   bruised    the skin takes bruises (damage_bruised.png);
-##   bloodied   the skin takes bruises and blood (damage_bloodied.png), the clothes, cap
-##              and shoes blood splats (damage_blood.png). Shades, belts and soles stay.
+## marks ride the body. No red before the blood (Spec §10 keeps red for blood):
+##   bruised    the skin darkens and takes big comic bruises (damage_bruised.png); the
+##              clothes, cap and shoes take dirt, scuffs and tears (damage_scuffed.png);
+##   bloodied   the same with blood splats over both (damage_bloodied.png on the skin,
+##              damage_blood.png on the clothes). Shades, belts and soles stay.
 ## Materials only: no mesh, pose or hurtbox changes. The hit flash (emission) still covers
 ## the marks.
 
@@ -35,7 +36,7 @@ static func texture_for(paint: int, level: int) -> Texture2D:
 		PlaceholderBody.Paint.SKIN:
 			return VfxArt.texture(&"damage_bruised" if level == Level.BRUISED else &"damage_bloodied")
 		PlaceholderBody.Paint.BODY, PlaceholderBody.Paint.PANTS, PlaceholderBody.Paint.ACCENT:
-			return VfxArt.texture(&"damage_blood") if level >= Level.BLOODIED else null
+			return VfxArt.texture(&"damage_blood" if level >= Level.BLOODIED else &"damage_scuffed")
 	return null
 
 

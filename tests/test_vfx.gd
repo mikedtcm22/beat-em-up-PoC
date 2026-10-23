@@ -13,7 +13,7 @@ const CONTACT := Vector3(0.0, 0.1, -1.2)
 const ART := [
 	&"burst_small", &"burst_medium", &"burst_large", &"speed_lines", &"blood_drop", &"blood_splat_1",
 	&"blood_splat_2", &"blood_splat_3", &"blood_spray", &"spit", &"tooth", &"block_spark", &"parry_spark",
-	&"guard_break", &"rear_warning", &"damage_bruised", &"damage_blood", &"damage_bloodied",
+	&"guard_break", &"rear_warning", &"damage_bruised", &"damage_scuffed", &"damage_blood", &"damage_bloodied",
 ]
 
 
@@ -575,12 +575,15 @@ func test_finisher_lines_focus_between_the_center_and_the_contact() -> void:
 	var follow := Tuning.data.vfx_speed_lines_focus_follow
 	assert_almost_eq(vfx.speed_lines.focus.x, lerpf(center.x, contact.x, follow), 0.5)
 	assert_almost_eq(vfx.speed_lines.focus.y, lerpf(center.y, contact.y, follow), 0.5)
-	# The middle of the view stays clear of lines.
+	# The middle of the view stays clear of lines: every tip is at least the clear radius
+	# from the focus, which sits only `follow` of the way out to the contact.
+	var clear := vfx.speed_lines.size.length() * 0.5 * Tuning.data.vfx_speed_lines_clear
+	var off_center := vfx.speed_lines.focus.distance_to(center)
+	assert_lt(off_center, clear * 0.5, "the focus stays near the middle")
 	for line: Vector4 in vfx.speed_lines.lines():
 		var ends := vfx.speed_lines.streak_ends(line)
 		var tip := vfx.speed_lines.focus + Vector2.from_angle(line.x) * ends.x
-		assert_gt(tip.distance_to(center), vfx.speed_lines.size.length() * 0.5 * Tuning.data.vfx_speed_lines_clear
-				* (1.0 - follow) * 0.9, "line tip %s clear of the view center" % tip)
+		assert_gt(tip.distance_to(center), clear - off_center - 0.5, "line tip %s clear of the view center" % tip)
 
 
 func test_player_lunges_show_lunge_lines_in_first_person() -> void:
@@ -685,7 +688,9 @@ func test_rig_damage_look_changes_materials_only() -> void:
 	assert_true(mats[PlaceholderBody.Paint.SKIN].detail_enabled, "bruised skin")
 	assert_eq(mats[PlaceholderBody.Paint.SKIN].detail_albedo, VfxArt.texture(&"damage_bruised"))
 	assert_true(mats[PlaceholderBody.Paint.SKIN].uv1_triplanar, "mapped triplanar")
-	assert_false(mats[PlaceholderBody.Paint.BODY].detail_enabled, "clothes still clean")
+	for paint: int in [PlaceholderBody.Paint.BODY, PlaceholderBody.Paint.PANTS, PlaceholderBody.Paint.ACCENT]:
+		assert_eq(mats[paint].detail_albedo, VfxArt.texture(&"damage_scuffed"), "scuffed clothes: paint %d" % paint)
+	assert_false(mats[PlaceholderBody.Paint.DARK].detail_enabled, "shades and soles stay")
 	rig.set_damage_look(DamageLook.Level.BLOODIED)
 	assert_eq(mats[PlaceholderBody.Paint.SKIN].detail_albedo, VfxArt.texture(&"damage_bloodied"))
 	for paint: int in [PlaceholderBody.Paint.BODY, PlaceholderBody.Paint.PANTS, PlaceholderBody.Paint.ACCENT]:
@@ -699,6 +704,9 @@ func test_rig_damage_look_changes_materials_only() -> void:
 	assert_eq(rig.get_point_transform(&"RightFistPoint"), fist, "pose untouched")
 
 
+## The flash is white emission added over the lit, marked albedo; whether it whites the
+## marks out is a rendering question, checked in the "damage looks held" bot captures (the
+## jab on the bloodied dummy). Here: every marked material flashes, and keeps its marks.
 func test_hit_flash_still_covers_the_damage_look() -> void:
 	var rig := HumanoidRig.new()
 	rig.build_hurtboxes = false
@@ -707,8 +715,40 @@ func test_hit_flash_still_covers_the_damage_look() -> void:
 	rig.set_damage_look(DamageLook.Level.BLOODIED)
 	rig.set_flash(1.0)
 	var mats: Dictionary[int, StandardMaterial3D] = rig.get(&"_materials")
-	assert_eq(mats[PlaceholderBody.Paint.SKIN].emission_energy_multiplier, 1.0)
-	assert_true(mats[PlaceholderBody.Paint.SKIN].detail_enabled)
+	for paint: int in mats:
+		assert_true(mats[paint].emission_enabled, "paint %d can flash" % paint)
+		assert_eq(mats[paint].emission, Color.WHITE)
+		assert_eq(mats[paint].emission_energy_multiplier, 1.0, "paint %d flashes" % paint)
+	assert_true(mats[PlaceholderBody.Paint.SKIN].detail_enabled, "the marks stay under the flash")
+	rig.set_flash(0.0)
+	assert_eq(mats[PlaceholderBody.Paint.SKIN].emission_energy_multiplier, 0.0)
+	assert_eq(mats[PlaceholderBody.Paint.SKIN].detail_albedo, VfxArt.texture(&"damage_bloodied"), "and show again")
+
+
+func test_bruises_are_not_red_paint() -> void:
+	# Spec §10: red is for blood, the rear warning and finisher accents. The bruised look's
+	# textures hold no blood-red pixels; the bloodied ones do.
+	for name: StringName in [&"damage_bruised", &"damage_scuffed"]:
+		assert_eq(_red_share(name), 0.0, "%s has no red" % name)
+	for name: StringName in [&"damage_bloodied", &"damage_blood"]:
+		assert_gt(_red_share(name), 0.02, "%s has blood" % name)
+
+
+## Share of the visible pixels of FX texture `name` that are saturated red.
+func _red_share(name: StringName) -> float:
+	var image := VfxArt.texture(name).get_image()
+	image.decompress()
+	var seen := 0
+	var red := 0
+	for y in range(0, image.get_height(), 4):
+		for x in range(0, image.get_width(), 4):
+			var c := image.get_pixel(x, y)
+			if c.a < 0.3:
+				continue
+			seen += 1
+			if c.r > 0.55 and c.r > c.g * 2.5 and c.r > c.b * 2.5:
+				red += 1
+	return float(red) / maxf(seen, 1.0)
 
 
 func test_director_steps_enemy_looks_from_health() -> void:
