@@ -796,3 +796,39 @@ func test_the_test_room_hears_a_real_jab_from_the_players_eyes() -> void:
 		var fist := player.rig.get_point_position(whiffed[0].hitboxes[0].point)
 		assert_lt((_plays[0].at as Vector3).distance_to(fist), 0.5, "at the striking fist")
 	assert_eq(_pulses.size(), 0)
+	# The dummy's jab lands on the player from the front: its layers sound ahead of the
+	# listener and unmuffled (the real contact sits on the head or chest, around the
+	# listener), and the player grunts and feels it.
+	for i in 120:
+		if player.state == CombatTypes.ActorState.FREE:
+			break
+		await get_tree().physics_frame
+	var post := player.global_position + player.get_forward() * Tuning.data.sparring_step_in_m
+	var to_player := player.global_position - post
+	dummy.set_post(post, atan2(-to_player.x, -to_player.z), true)
+	for i in 10:
+		await get_tree().physics_frame
+	_plays.clear()
+	_pulses.clear()
+	landed.clear()
+	CombatEvents.hit_landed.connect(on_hit)
+	dummy.start_jab()
+	for i in 90:
+		await get_tree().physics_frame
+		if not landed.is_empty():
+			break
+	CombatEvents.hit_landed.disconnect(on_hit)
+	assert_eq(landed.size(), 1, "the dummy's jab lands")
+	if landed.is_empty():
+		return
+	assert_eq(landed[0].victim, player)
+	assert_true(_pools().has(&"thud"), "a clean hit's thud")
+	var view := director.listener_transform()
+	for play in _plays:
+		if play.pool in IMPACT_POOLS and play.pool != &"whoosh":
+			var local: Vector3 = view.affine_inverse() * (play.at as Vector3)
+			assert_lt(local.z, -0.3, "%s ahead of the listener" % play.pool)
+			assert_lt(absf(local.x), 0.1, "%s centred" % play.pool)
+			assert_eq(play.bus, AudioDirector.SFX_BUS, "%s not muffled" % play.pool)
+	assert_true(_pools(false).has(&"player_grunt"))
+	assert_eq(_pulses.size(), 1)
