@@ -88,6 +88,8 @@ var actor: Node3D:
 			hurtbox.actor = value
 var skeleton: Skeleton3D
 var anim_player: AnimationPlayer
+## The damage look shown (DamageLook.Level), set through set_damage_look().
+var damage_look: int = 0
 
 ## Library name for the move animations built by play_move().
 const _MOVE_LIBRARY := &"moves"
@@ -351,6 +353,15 @@ func set_flash(amount: float, color: Color = Color.WHITE) -> void:
 	for mat: StandardMaterial3D in _materials.values():
 		mat.emission = color
 		mat.emission_energy_multiplier = energy
+
+
+## Damage look (Spec §6, "Damage you can see"): DamageLook.Level CLEAN, BRUISED or BLOODIED
+## (game/fx/damage_look.gd). Materials only: bruises, then blood, on the skin and clothes.
+## Set by presentation (VfxDirector) from the health; re-applying a level re-reads its tuning.
+func set_damage_look(level: int) -> void:
+	damage_look = level
+	for paint: int in _materials:
+		DamageLook.apply(_materials[paint], paint, level)
 
 
 # --- Building --------------------------------------------------------------------------

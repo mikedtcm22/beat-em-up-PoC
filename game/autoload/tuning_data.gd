@@ -98,6 +98,104 @@ extends Resource
 @export_range(0.0, 1000.0, 10.0) var slowmo_ms: float = 250.0
 @export var impact_frame_enabled: bool = true
 
+@export_group("VFX")
+## Comic effects (Spec §6; VfxDirector, game/fx/). Sizes are meters at the contact point
+## (a word's or a burst's width); times are seconds of sim time, so slow-mo stretches them.
+## Every effect size is multiplied by this.
+@export_range(0.0, 3.0, 0.05) var vfx_scale: float = 1.0
+## A world effect never covers more than this share of the view's width, so a hit a meter
+## from the first-person lens never fills the screen (the side view sees full sizes).
+@export_range(0.05, 1.0, 0.01) var vfx_max_view_share: float = 0.3
+## Effects nearer the camera than this are pushed out along the view ray (hits on the
+## first-person player land at the lens).
+@export_range(0.1, 1.5, 0.05) var vfx_min_camera_dist_m: float = 0.45
+@export_range(0.0, 2.0, 0.01) var vfx_burst_small_m: float = 0.24
+@export_range(0.0, 2.0, 0.01) var vfx_burst_medium_m: float = 0.4
+@export_range(0.0, 2.0, 0.01) var vfx_burst_large_m: float = 0.62
+@export_range(0.03, 1.0, 0.01) var vfx_burst_s: float = 0.18
+## Share of a burst's, a spark's or a splash's time spent fading out at its end.
+@export_range(0.0, 1.0, 0.05) var vfx_burst_fade_share: float = 0.4
+## Seconds a burst or a word takes to pop in: from vfx_pop_start of its size up past it to
+## vfx_pop_peak, then back to full size.
+@export_range(0.0, 0.3, 0.005) var vfx_pop_s: float = 0.07
+@export_range(0.0, 1.0, 0.05) var vfx_pop_start: float = 0.5
+@export_range(1.0, 2.0, 0.05) var vfx_pop_peak: float = 1.25
+## Chance of comic lettering per hit tier (Spec §6: light hits none or a small word).
+@export_range(0.0, 1.0, 0.05) var vfx_word_chance_light: float = 0.0
+@export_range(0.0, 1.0, 0.05) var vfx_word_chance_heavy: float = 1.0
+@export_range(0.0, 1.0, 0.05) var vfx_word_chance_finisher: float = 1.0
+## Word widths: small (light), medium (heavy), large (finisher).
+@export_range(0.0, 2.0, 0.01) var vfx_word_small_m: float = 0.3
+@export_range(0.0, 2.0, 0.01) var vfx_word_medium_m: float = 0.42
+@export_range(0.0, 2.0, 0.01) var vfx_word_large_m: float = 0.6
+@export_range(0.1, 2.0, 0.05) var vfx_word_s: float = 0.6
+## Share of a word's time spent fading out at its end.
+@export_range(0.0, 1.0, 0.05) var vfx_word_fade_share: float = 0.35
+## A word sits this many of its widths above the contact point and this many to a random
+## side (on screen), drifts up vfx_word_rise_m over its time and tilts up to the angle.
+@export_range(0.0, 1.5, 0.05) var vfx_word_lift: float = 0.45
+@export_range(0.0, 1.0, 0.05) var vfx_word_side: float = 0.3
+@export_range(0.0, 0.5, 0.01) var vfx_word_rise_m: float = 0.06
+@export_range(0.0, 30.0, 1.0) var vfx_word_tilt_deg: float = 10.0
+## Radial speed lines (a screen overlay) on finishers and on the player's lunges (first
+## person), fading over these times.
+@export_range(0.0, 1.5, 0.05) var vfx_speed_lines_s: float = 0.35
+@export_range(0.0, 1.5, 0.05) var vfx_lunge_lines_s: float = 0.2
+@export_range(0, 80, 1) var vfx_speed_lines_count: int = 34
+## Thickness of the lines (1 = as drawn in speed_lines.png).
+@export_range(0.1, 3.0, 0.05) var vfx_speed_lines_width: float = 1.0
+@export_range(0.0, 1.0, 0.05) var vfx_speed_lines_opacity: float = 0.85
+@export_range(0.0, 1.0, 0.05) var vfx_lunge_lines_opacity: float = 0.45
+## The lines stay outside this share of the screen's half-diagonal around their focus.
+@export_range(0.0, 0.9, 0.05) var vfx_speed_lines_clear: float = 0.5
+## Real 60 Hz frames between redraws of the lines in new places (the comic flicker).
+@export_range(1, 10, 1) var vfx_speed_lines_redraw_frames: int = 2
+## A player attack that has lunged this far (meters) shows the lunge lines.
+@export_range(0.1, 3.0, 0.05) var vfx_lunge_lines_min_m: float = 0.6
+## The finisher impact frame (Spec §6: 1-2 frames), in 60 Hz frames, and the luminance
+## above which its inverted ink flash prints ink (the rest prints paper).
+@export_range(0, 6, 1) var vfx_impact_frame_frames: int = 2
+@export_range(0.0, 1.0, 0.01) var vfx_impact_frame_threshold: float = 0.45
+## Blood (heavy and finisher hits): chance, droplets, and the splash at the contact.
+@export_range(0.0, 1.0, 0.05) var vfx_blood_chance_heavy: float = 1.0
+@export_range(0.0, 1.0, 0.05) var vfx_blood_chance_finisher: float = 1.0
+@export_range(0, 40, 1) var vfx_blood_drops_heavy: int = 5
+@export_range(0, 40, 1) var vfx_blood_drops_finisher: int = 12
+@export_range(0.0, 0.3, 0.005) var vfx_blood_drop_m: float = 0.05
+## Droplet launch speed (m/s), along the hit (spread either side by the angle) and up.
+@export_range(0.0, 10.0, 0.1) var vfx_blood_speed: float = 2.6
+@export_range(0.0, 90.0, 1.0) var vfx_blood_spread_deg: float = 40.0
+## Droplets, spit and teeth vary their size and launch speed by up to these shares.
+@export_range(0.0, 0.9, 0.05) var vfx_particle_size_jitter: float = 0.3
+@export_range(0.0, 0.9, 0.05) var vfx_particle_speed_jitter: float = 0.5
+@export_range(0.0, 1.0, 0.01) var vfx_blood_spray_m: float = 0.32
+@export_range(0.03, 1.0, 0.01) var vfx_blood_spray_s: float = 0.22
+## Splats left where droplets land: size, seconds before they fade, and how many at most.
+@export_range(0.0, 1.0, 0.01) var vfx_blood_splat_m: float = 0.22
+@export_range(0.0, 60.0, 0.5) var vfx_blood_splat_s: float = 8.0
+@export_range(0, 200, 1) var vfx_blood_splat_max: int = 40
+## Head finishers: spit droplets and the chance of a tooth.
+@export_range(0, 20, 1) var vfx_spit_drops: int = 6
+@export_range(0.0, 0.2, 0.005) var vfx_spit_drop_m: float = 0.035
+@export_range(0.1, 3.0, 0.05) var vfx_spit_s: float = 0.6
+@export_range(0.0, 1.0, 0.05) var vfx_tooth_chance: float = 0.6
+@export_range(0.0, 0.2, 0.005) var vfx_tooth_m: float = 0.05
+## Turns per second a flying tooth tumbles (either way, up to this).
+@export_range(0.0, 6.0, 0.25) var vfx_tooth_spin: float = 2.0
+## Gravity on blood, spit and teeth (m/s²), and the longest a droplet flies.
+@export_range(0.0, 40.0, 0.5) var vfx_gravity: float = 14.0
+@export_range(0.1, 3.0, 0.05) var vfx_particle_s: float = 1.2
+## Blocked hits: the block spark, the parry spark (perfect block) and the guard-break burst.
+@export_range(0.0, 2.0, 0.01) var vfx_block_spark_m: float = 0.2
+@export_range(0.0, 2.0, 0.01) var vfx_parry_spark_m: float = 0.42
+@export_range(0.0, 2.0, 0.01) var vfx_guard_break_m: float = 0.5
+@export_range(0.03, 1.5, 0.01) var vfx_block_fx_s: float = 0.22
+## Damage looks (Spec §6): an enemy looks bruised at or below this share of its health,
+## bloodied at or below the next; one damage-texture tile spans this many meters.
+@export_range(0.0, 1.0, 0.01) var vfx_bruised_at: float = 0.66
+@export_range(0.0, 1.0, 0.01) var vfx_bloodied_at: float = 0.33
+@export_range(0.05, 2.0, 0.05) var vfx_damage_tile_m: float = 0.4
+
 @export_group("Camera")
 @export_range(75.0, 110.0, 1.0) var fov_deg: float = 90.0
 @export_range(0.0, 0.3, 0.005) var cam_smoothing_s: float = 0.05
