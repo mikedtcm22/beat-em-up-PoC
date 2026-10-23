@@ -128,6 +128,9 @@ func set_panel_open(open: bool) -> void:
 	if open:
 		panel.refresh_presets()
 		panel.refresh_all()
+		# The HUD's startup help sits where the panel docks; H brings it back.
+		for hud: Node in get_tree().root.find_children("*", "GameHud", true, false):
+			(hud as GameHud).set_help_visible(false)
 	_update(panel if open else null)
 
 

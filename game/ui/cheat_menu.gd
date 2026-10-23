@@ -214,7 +214,7 @@ func _build() -> void:
 	font_theme.default_font_size = font_size
 	theme = font_theme
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(HudStyle.INK, 0.92)
+	style.bg_color = Color(HudStyle.INK, 0.95)
 	style.border_color = HudStyle.PAPER
 	style.set_border_width_all(3)
 	style.set_content_margin_all(14.0)

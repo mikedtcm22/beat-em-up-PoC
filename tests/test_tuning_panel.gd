@@ -573,8 +573,11 @@ func test_the_test_room_wires_the_overlay_and_f1_f4_toggle_it() -> void:
 	assert_false(player.input.scripted, "the live player")
 	assert_false(overlay.window.visible, "closed at start")
 
+	var hud: GameHud = room.find_children("*", "GameHud", false, false)[0]
+	hud.set_help_visible(true)
 	_tap(KEY_F1)
 	assert_true(overlay.panel.visible, "F1 opens the panel")
+	assert_false(hud.help_overlay.visible, "the startup help steps aside")
 	assert_true(overlay.window.visible)
 	assert_true(player.input.scripted, "the player stands still")
 	assert_true(overlay.is_player_frozen())
