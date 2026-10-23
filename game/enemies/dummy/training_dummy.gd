@@ -50,6 +50,23 @@ func _ready() -> void:
 	if ResourceLoader.exists(DUMMY_JAB_PATH):
 		_jab = load(DUMMY_JAB_PATH) as MoveData
 	_spar_wait = _next_spar_wait()
+	Tuning.changed.connect(_on_tuning_changed)
+
+
+## Milestone 2 tuning panel: a new Tuning.dummy_health applies at once, keeping the share of
+## health left (max_health is otherwise read only at start and on revive), and an edit of the
+## jab's move data drops the wind-up-scaled copy, rebuilt on its next use.
+func _on_tuning_changed(property: StringName) -> void:
+	if property == &"" or String(property).begins_with("%s%s/" % [Tuning.MOVE_PREFIX, DUMMY_JAB_ID]):
+		_scaled_jab = null
+	if property != &"dummy_health" and property != &"":
+		return
+	if is_equal_approx(max_health, Tuning.data.dummy_health):
+		return
+	var share := health / max_health if max_health > 0.0 else 1.0
+	max_health = Tuning.data.dummy_health
+	health = max_health * share
+	CombatEvents.health_changed.emit(self, health, max_health)
 
 
 func _physics_process(delta: float) -> void:

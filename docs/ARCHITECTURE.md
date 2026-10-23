@@ -266,6 +266,50 @@ Blocking lives in `CombatActor`, so any actor can block (enemies may in Mileston
 
 **Player taking hits:** the player reacts like any actor (flinch, stagger, knockdown). In the test room (`auto_revive`) a KO'd player gets back up after `player_revive_s` (2.5 s) at full health; the real game over comes later. `Tuning.god_mode` still prevents damage.
 
+## Tuning panel, presets and cheats (Milestone 2, Spec §11)
+
+**`Tuning`** (autoload, `game/autoload/tuning.gd`):
+- `data: TuningData`, `set_value(property, value)`, `apply(new_data)`, `defaults()` (the shipped values; don't edit).
+- `signal changed(property)` after every edit: the TuningData property's name; `&""` after a preset load, a reset or `apply()` (anything may have changed); `"moves/<move id>/<field>"` after a move edit. Code that keeps a tunable re-reads it on `changed`: a training dummy updates `max_health` from `dummy_health` (keeping its share of health) and drops its wind-up-scaled jab after a `dummy_jab` edit. The cameras read theirs (FOV and the rest) every frame.
+- `tuning_properties()`: TuningData's exported properties in declaration order, each property-list entry with its `group`.
+- Moves: `move_ids()`; `get_move(id)` returns the loaded, shared MoveData (every `.tres` in `game/combat/moves/`, kept for the session, so edits survive a restart with R). `move_properties()` lists the editable fields, the groups in `MOVE_GROUPS`: frame data, damage and reaction (damage, hitstun, knockback, reaction, tier...), blocking, movement and camera. Hitboxes and combo branches are structure and stay out. `set_move_value(id, field, value)` edits one; `shipped_move_value()` (from a fresh load of the `.tres`), `move_overrides()` (the fields that differ), `reset_move(id)` and `reset_moves()`. An edit applies on the move's next use: move sets and branches reference the same resources, and the rig keys its move animations by frame data, so a startup edit gets a re-timed animation.
+- Presets are JSON: `{"preset": name, "format": 1, "tuning": {property: value}, "moves": {id: {field: value}}}`, in TuningData declaration order, with vectors and colors as arrays. A preset holds every TuningData value and only the move fields that differ from the shipped `.tres`.
+  - `save_preset(name)` writes `user://tuning/<name>.json`. `export_preset(name)` writes `res://tuning/<name>.json` (only when running from the project folder), and refuses `default` unless every value is the shipped default.
+  - `load_preset(name)` reads the user's copy first, then the shipped one. `load_preset_file(path)`, `apply_preset(dict)` and `preset_dict(name)` are the parts underneath.
+  - Loading starts from the shipped defaults (TuningData and moves), so a value a preset lacks keeps its default. Unknown names and unreadable values are skipped and listed in `last_warnings`.
+  - `reset_to_default()`, `is_default()`, `list_presets()` and `sanitize_preset_name()` complete the API.
+  - `res://tuning/default.json` is the shipped defaults. `godot --headless -s tools/gen_default_preset.gd` regenerates it after a TuningData default changes or a tunable is added, and `tests/test_tuning_panel.gd` fails until it matches.
+
+**`TuningOverlay`** (`game/ui/tuning_overlay.gd`/`.tscn`; the test room adds one in `_build_presentation()`):
+- It hosts the panel and the cheat menu in one full-screen, transparent, embedded `Window` over the game. Nothing pauses.
+- **Input:** an embedded window's input never reaches the game's `_input` / `_unhandled_input` handlers. A click on the panel therefore can't recapture the mouse (`GameInput._input`) or punch, and keys typed into a field don't reach the debug keys. The window covers the screen, so clicks around the menus land on it too.
+- **Player:** while open, the live player's `PlayerInput` is switched to scripted, so it gets idle frames with no look. It is switched back `UNFREEZE_TICKS` (2) physics ticks after closing, so the key or button that closed the overlay (gamepad B is also the dodge) never reaches the player. A player that is already scripted (the combo bot, tests) is left alone.
+- **Mouse:** released while open, and captured again on closing unless the game is paused.
+- **Keys:** F1 / View toggles the panel and F4 the cheat menu, from the game or the window. Esc (`ui_cancel`, also gamepad B) closes both and does not pause. The other debug keys (F2, F3, F5, H) work once the overlay is closed.
+- **Help:** opening the panel hides the HUD's startup help, which sits where the panel docks. H shows it again.
+
+**`TuningPanel`** and **`TuningField`** (`game/ui/tuning_panel.gd`, `tuning_field.gd`): the panel is docked left, clear of the view center and the combat log.
+- **Built from the data:** one category per TuningData `@export_group`, in declaration order, with a row per exported property. New tunables, the M2 VFX, Audio and ragdoll groups included, appear with no UI code.
+- **Editors by type:**
+  - a ranged number gets a slider plus a number field (the field allows the hint's `or_greater` / `or_less`);
+  - a bool gets a toggle that says on or off, and an enum a drop-down;
+  - a Vector2 or Vector3 gets one number field per axis, a Color a color button, and a String a text field.
+- **Changed values:** a value away from its default turns yellow and lights its "reset". Categories and moves holding one are marked " *".
+- **Moves page:** pick a move, edit its `move_properties()`, or reset the move.
+- **Presets:** a name field with Save and Export, a list of presets with Load, and Reset to default, with a status line for the result.
+- **Tooltips:** the `##` doc comments, plus the default and the range. They are read from the script source, so an exported build shows only the default and the range.
+- **Gamepad:** the D-pad walks the category buttons, sliders, toggles and drop-downs, and left/right steps a slider. Number fields take the mouse and keyboard only, because up and down would step them instead of moving on.
+
+**`CheatMenu`** (`game/ui/cheat_menu.gd`, docked top right): a debug tool. Like `TimeController`, it is an exception to "presentation never writes game state". Every action is a public method:
+- `set_god_mode()` and `set_one_hit_ko()` set Tuning's "Debug" group, so they are part of presets.
+- `set_time_scale()` sets `TimeController.debug_scale` to 0.25× or 1×.
+- `spawn_dummy()` places a training dummy at the crosshair (`spawn_point()`):
+  - The ray runs from the active camera's view center, or from the player's eye and look when there is no camera. It meets the floor or a wall within `spawn_max_distance_m` (6 m), kept 0.5 m off a wall. A ray that meets nothing ends `spawn_open_distance_m` (3 m) out.
+  - The spot drops to the floor and stays at least 1 m from the player. It steps back toward the player while another actor stands within 0.7 m.
+  - The dummy faces the player.
+- `reset_dummies()` puts every dummy back on the post recorded when the menu first saw it, standing, at full `dummy_health`. `remove_spawned_dummies()` removes the spawned ones.
+- "Skip to arena N" shows disabled until Milestone 5.
+
 ## Ownership (Milestone 1 build)
 
 | Area | Files |
