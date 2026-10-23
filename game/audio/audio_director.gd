@@ -35,12 +35,13 @@ extends Node
 ## Every one-shot takes a random variant of its pool, never the pool's last one, with its
 ## pitch and volume varied by up to `sfx_pitch_variation` / `sfx_volume_variation` (±8%).
 ## With every voice busy, the sound started longest ago gives way. The listener rides the
-## player's eyes and look, in every camera mode. A sound plays at
-## its layer's volume within `sfx_unit_size_m` of it, 6 dB quieter each time the distance
-## doubles beyond that (updated every frame), and not at all beyond `sfx_max_distance_m`.
-## Sounds more than
+## player's eyes and look, in every camera mode. A sound plays at its layer's volume within
+## `sfx_unit_size_m` of it, 6 dB quieter each time the distance doubles beyond that
+## (updated every frame), and not at all beyond `sfx_max_distance_m`. Sounds more than
 ## `rear_muffle_angle_deg` off the look play through the "SFX Rear" bus, low-passed at
-## `rear_muffle_hz`: stereo alone can't tell behind from in front.
+## `rear_muffle_hz`: stereo alone can't tell behind from in front. Everything runs on real
+## time: a sound starts on its event's frame and never stretches with hitstop, slow-mo or
+## the debug time scale.
 ##
 ## Buses (created on first use when the project has none): "SFX" (a hard limiter, so
 ## stacked layers never clip, with `sfx_volume_db` as its pre-gain) and "SFX Rear" (a

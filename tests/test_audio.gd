@@ -680,6 +680,18 @@ func test_a_weaker_pulse_never_cuts_a_stronger_one_short() -> void:
 	] as Array[Vector3])
 
 
+## Paused between a finisher's two pulses, the second never comes (it used to fire on
+## unpausing).
+func test_pausing_drops_a_finishers_second_pulse() -> void:
+	var player := _actor("Player", &"player", Vector3.ZERO)
+	CombatEvents.hit_landed.emit(_hit(CombatTypes.HitTier.FINISHER, _enemy, player))
+	assert_eq(_rumble.queued_pulses(), 1)
+	_rumble.notification(Node.NOTIFICATION_PAUSED)
+	_rumble.notification(Node.NOTIFICATION_UNPAUSED)
+	await _frames(30)
+	assert_eq(_pulses.size(), 1)
+
+
 ## A finisher through three bodies queues its second pulse once, not three times.
 func test_a_finisher_through_several_bodies_queues_one_second_pulse() -> void:
 	var player := _actor("Player", &"player", Vector3.ZERO)

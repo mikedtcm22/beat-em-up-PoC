@@ -51,6 +51,13 @@ func _exit_tree() -> void:
 			Input.stop_joy_vibration(device)
 
 
+func _notification(what: int) -> void:
+	# Paused (the pause menu) between a finisher's two pulses, the second would come out of
+	# the blue on unpausing.
+	if what == NOTIFICATION_PAUSED:
+		_queued.clear()
+
+
 func _process(delta: float) -> void:
 	_clock_s += delta
 	while not _queued.is_empty() and float(_queued[0].at) <= _clock_s:
