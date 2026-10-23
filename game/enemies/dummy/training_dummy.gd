@@ -3,14 +3,17 @@ extends CombatActor
 ## A training target (Milestone 1). Full hit reactions, health from Tuning, revives after a
 ## KO, faces the player, and walks back to its post when left alone.
 ##
-## Sparring (`sparring`, F5 in the test room): while FREE, with the player within
-## Tuning.sparring_range in front of it, the dummy throws a telegraphed jab (DUMMY_JAB_PATH)
-## every Tuning.sparring_interval_s, give or take a seeded Tuning.sparring_jitter_s. The
-## jab's startup is its wind-up (ActorState.WINDUP, scaled by Tuning.windup_mult), so the
-## player can block, dodge or hit it out of it; it never moves to flank. This is the first
-## piece of Milestone 3's enemy-attack plumbing.
+## Sparring (`sparring`, F5 in the test room): with the player within Tuning.sparring_range
+## in front of it, the dummy walks in (facing the player, at Tuning.dummy_walk_speed) until
+## the player is within Tuning.sparring_step_in_m, inside its jab's reach, and throws a
+## telegraphed jab (DUMMY_JAB_PATH) every Tuning.sparring_interval_s from one jab's start
+## to the next, give or take a seeded Tuning.sparring_jitter_s. The jab's startup is its
+## wind-up (ActorState.WINDUP, scaled by Tuning.windup_mult), so the player can block,
+## dodge or hit it out of it. It only steps straight in, never moves to flank. This is the
+## first piece of Milestone 3's enemy-attack plumbing.
 
 const DUMMY_JAB_PATH := "res://game/combat/moves/dummy_jab.tres"
+const DUMMY_JAB_ID := &"dummy_jab"
 
 @export var face_player: bool = true
 @export var return_home: bool = true
@@ -29,7 +32,8 @@ var _jab: MoveData
 ## The jab with its startup scaled by Tuning.windup_mult, for the multiplier it was built for.
 var _scaled_jab: MoveData
 var _scaled_for: float = 1.0
-## Sim frames until the next jab; counts down only while the player is in reach.
+## Sim frames until the next jab, re-armed when a jab starts; counts down while the player
+## is in sparring reach or the dummy is busy with its jab (_tick_spar_clock()).
 var _spar_wait: int = 0
 var _rng := RandomNumberGenerator.new()
 ## set_post() made the body a ghost until the physics step has moved it (see there).
@@ -64,29 +68,29 @@ func _configure_rig(r: HumanoidRig) -> void:
 
 
 func _tick_control() -> void:
+	var player := get_tree().get_first_node_in_group(&"player") as CombatActor
+	var partner := _sparring_partner(player)
+	_tick_spar_clock(partner)
 	if state != CombatTypes.ActorState.FREE:
 		_idle_frames = 0
+		return
+	if partner:
+		_idle_frames = 0
+		_spar(partner)
 		return
 	_idle_frames += 1
 	var to_home := _home - global_position
 	to_home.y = 0.0
 	if return_home and _idle_frames > 60 and to_home.length() > 0.3:
-		var dir := to_home.normalized()
-		sim_velocity.x = dir.x * Tuning.data.dummy_walk_speed
-		sim_velocity.z = dir.z * Tuning.data.dummy_walk_speed
-		_turn_toward(dir, 6.0)
-		rig.play_locomotion(Vector2(0.0, 1.0), 0.45)
+		_walk(to_home.normalized(), 6.0)
 		return
 	sim_velocity.x = 0.0
 	sim_velocity.z = 0.0
-	var player := get_tree().get_first_node_in_group(&"player") as Node3D
 	if face_player and player:
 		var to_player := player.global_position - global_position
 		to_player.y = 0.0
 		if to_player.length_squared() > 0.01:
 			_turn_toward(to_player.normalized(), 4.0)
-	if sparring and _tick_sparring(player as CombatActor):
-		return
 	rig.play_locomotion(Vector2.ZERO, 0.0)
 
 
@@ -131,22 +135,61 @@ func debug_state_text() -> String:
 	return text
 
 
-## Count down to the next jab while the player stands within Tuning.sparring_range in
-## front of the dummy (Tuning.sparring_facing_deg), and throw it. True if a jab started.
-func _tick_sparring(player: CombatActor) -> bool:
-	if player == null or _jab_move() == null or not player.can_be_hit_by(self, _jab_move()):
-		return false
+## `player` when this dummy spars with it now: sparring, the player within
+## Tuning.sparring_range and Tuning.sparring_facing_deg of the dummy's facing, and open to
+## the jab (not dodging through it, down or KO'd). Otherwise null.
+func _sparring_partner(player: CombatActor) -> CombatActor:
+	if not sparring or player == null or _jab_move() == null:
+		return null
+	if not player.can_be_hit_by(self, _jab_move()):
+		return null
 	var to_player := player.global_position - global_position
 	to_player.y = 0.0
-	if to_player.length() > Tuning.data.sparring_range:
-		return false
+	if to_player.length() > Tuning.data.sparring_range or to_player.length_squared() < 0.0001:
+		return null
 	if rad_to_deg(get_forward().angle_to(to_player.normalized())) > Tuning.data.sparring_facing_deg:
-		return false
-	if _spar_wait > 0:
+		return null
+	return player
+
+
+## The jab clock runs from one jab's start to the next: through the jab itself and its
+## blocked recoil, and otherwise while `partner` is in sparring reach (it waits while the
+## player is away).
+func _tick_spar_clock(partner: CombatActor) -> void:
+	if not sparring or _spar_wait <= 0:
+		return
+	var jabbing := current_move != null and current_move.id == DUMMY_JAB_ID
+	if partner or jabbing or (_recoiling and state == CombatTypes.ActorState.HITSTUN):
 		_spar_wait -= 1
-		return false
-	start_jab()
-	return true
+
+
+## FREE with a sparring partner: face it, walk in until it is within
+## Tuning.sparring_step_in_m, and jab when the clock is due.
+func _spar(partner: CombatActor) -> void:
+	var to_player := partner.global_position - global_position
+	to_player.y = 0.0
+	var dir := to_player.normalized()
+	if to_player.length() > Tuning.data.sparring_step_in_m:
+		_walk(dir, 4.0 if face_player else 0.0)
+		return
+	sim_velocity.x = 0.0
+	sim_velocity.z = 0.0
+	if face_player:
+		_turn_toward(dir, 4.0)
+	if _spar_wait <= 0:
+		start_jab()
+		return
+	rig.play_locomotion(Vector2.ZERO, 0.0)
+
+
+## Walk along the horizontal `dir` at Tuning.dummy_walk_speed, turning toward it at
+## `turn_rate` radians per second.
+func _walk(dir: Vector3, turn_rate: float) -> void:
+	sim_velocity.x = dir.x * Tuning.data.dummy_walk_speed
+	sim_velocity.z = dir.z * Tuning.data.dummy_walk_speed
+	if turn_rate > 0.0:
+		_turn_toward(dir, turn_rate)
+	rig.play_locomotion(Vector2(0.0, 1.0), Tuning.data.dummy_walk_speed / Tuning.data.move_speed)
 
 
 ## The jab, its startup (the wind-up) scaled by Tuning.windup_mult.

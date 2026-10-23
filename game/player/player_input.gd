@@ -29,8 +29,14 @@ var scripted: bool = false
 var scripted_move: Vector2 = Vector2.ZERO
 
 var _queue: Array[Frame] = []
+## Live mode: the buttons whose press poll() reported and whose release it has not.
+var _down: Dictionary[StringName, bool] = {}
 
 
+## This tick's intent. Live, a button reported held whose action is no longer pressed is
+## released even without a release edge: an edge poll() never saw (let go while the game
+## was paused, when the player does not poll) would otherwise leave it held, a raised guard
+## or a haymaker charge stuck until the button is pressed and let go again.
 func poll() -> Frame:
 	if scripted:
 		if _queue.is_empty():
@@ -43,10 +49,13 @@ func poll() -> Frame:
 		&"move_left", &"move_right", &"move_back", &"move_forward", Tuning.data.stick_deadzone
 	)
 	for action: StringName in BUTTONS:
+		var button: StringName = BUTTONS[action]
 		if Input.is_action_just_pressed(action):
-			frame.pressed.append(BUTTONS[action])
-		if Input.is_action_just_released(action):
-			frame.released.append(BUTTONS[action])
+			frame.pressed.append(button)
+			_down[button] = true
+		if Input.is_action_just_released(action) or (_down.has(button) and not Input.is_action_pressed(action)):
+			frame.released.append(button)
+			_down.erase(button)
 	return frame
 
 

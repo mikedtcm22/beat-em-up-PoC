@@ -35,6 +35,13 @@ var _pending_edges: Array[Array] = []
 var _move_input: Vector2 = Vector2.ZERO
 ## The stick when B (&"DODGE") was last pressed: it decides block or dodge (_b_action()).
 var _dodge_stick: Vector2 = Vector2.ZERO
+## The B press still held was a block press (stick centered): holding it keeps the guard,
+## and raises it again whenever the player is back to FREE (_holding_block()).
+var _block_press_held: bool = false
+## A P or K pressed while the guard is up (BLOCK, BLOCKSTUN), held back here instead of
+## aging in the parser's buffer: it drops the guard and is handed to the parser fresh once
+## the guard is down, so it always starts its attack (&"" = none).
+var _held_attack: StringName = &""
 var _magnet_target: CombatActor
 var _magnet_preview: CombatActor
 var _turn_left: float = 0.0
@@ -154,11 +161,20 @@ func debug_state_text() -> String:
 	return text
 
 
+## CombatActor.reset_state(), forgetting the block press and a P or K held back by the guard.
+func reset_state() -> void:
+	super.reset_state()
+	_held_attack = &""
+	_block_press_held = false
+
+
 # --- Control ------------------------------------------------------------------------
 
 
 func _tick_control() -> void:
 	_feed_parser()
+	if not is_guarding():
+		_hand_back_held_attack()
 	_tick_turns()
 	if _can_steer_body():
 		rotation.y = look_yaw
@@ -176,13 +192,11 @@ func _tick_control() -> void:
 		CombatTypes.ActorState.BLOCK:
 			_control_block()
 			if state == CombatTypes.ActorState.FREE:
-				# The guard dropped this frame: a buffered attack starts now.
+				# The guard dropped at once (no cancel frames): its attack starts now.
+				_hand_back_held_attack()
 				_control_free()
 		CombatTypes.ActorState.BLOCKSTUN:
-			# Pushed back in the guard: no attacks or steps, but presses stay buffered.
-			if parser.consume(&"TURN"):
-				_start_quick_turn()
-			_cam_offset = Vector2.ZERO
+			_control_blockstun()
 		_:
 			parser.clear_buffer()
 	_magnet_preview = _find_magnet_target(null)
@@ -198,8 +212,11 @@ func _feed_parser() -> void:
 		if edge[1]:
 			if edge[0] == &"DODGE":
 				_dodge_stick = _move_input
+				_block_press_held = _move_input.length() < Tuning.data.block_stick_threshold
 			parser.press(edge[0])
 		else:
+			if edge[0] == &"DODGE":
+				_block_press_held = false
 			parser.release(edge[0])
 	_pending_edges.clear()
 
@@ -223,6 +240,12 @@ func _control_free() -> void:
 	var selection := parser.select(false, _conditions())
 	if selection:
 		_start_selection(selection)
+		return
+	if _holding_block():
+		# Holding B keeps the block: back to FREE with it still held (after a hit, a guard
+		# break, an attack out of the guard, a grab), the guard comes up again. Only a
+		# fresh press can parry.
+		_start_block(false)
 		return
 	var charging := _charging_hold()
 	_locomotion(1.0, not charging)
@@ -296,22 +319,65 @@ func _control_dodge() -> void:
 
 ## Holding the guard: walk slowly, look and quick turn freely (the guard swings with the
 ## look), no jump or grab. Releasing B drops the guard after Tuning.block_release_frames;
-## P or K drops it after Tuning.block_attack_cancel_frames and the buffered press starts
-## its attack once FREE.
+## P or K (held back by _hold_back_attack(), also from a blockstun) drops it after
+## Tuning.block_attack_cancel_frames, and the press starts its attack once FREE.
 func _control_block() -> void:
 	if parser.consume(&"TURN"):
 		_start_quick_turn()
 	_steer(Tuning.data.move_speed * Tuning.data.block_move_mult, Tuning.data.move_accel)
 	_cam_offset = Vector2.ZERO
-	if is_dropping_guard():
-		return
-	if not parser.is_held(&"DODGE"):
-		drop_guard(Tuning.data.block_release_frames)
-	elif parser.has_buffered(CombatTypes.IN_PUNCH) or parser.has_buffered(CombatTypes.IN_KICK):
+	_hold_back_attack()
+	if _held_attack != &"":
 		drop_guard(Tuning.data.block_attack_cancel_frames)
-	elif rig.current_anim() != &"block":
+	elif not parser.is_held(&"DODGE"):
+		drop_guard(Tuning.data.block_release_frames)
+	if is_dropping_guard():
+		# JUMP and GRAB pressed from the release on stay buffered: LB right after letting
+		# go of B grabs a parried attacker.
+		return
+	_discard_jump_and_grab()
+	if rig.current_anim() != &"block":
 		# Back in the plain guard after a blockstun's push-back.
 		rig.play(&"block", 0.06)
+
+
+## Pushed back in the guard (blockstun): no attacks or steps, quick turn works. A P or K
+## press waits for the guard to come down (_hold_back_attack()), so punching back during
+## the stun attacks right after it.
+func _control_blockstun() -> void:
+	if parser.consume(&"TURN"):
+		_start_quick_turn()
+	_hold_back_attack()
+	_discard_jump_and_grab()
+	_cam_offset = Vector2.ZERO
+
+
+## While guarding: the first P or K press is held back (_held_attack) for when the guard is
+## down; later ones are dropped.
+func _hold_back_attack() -> void:
+	for input: StringName in [CombatTypes.IN_PUNCH, CombatTypes.IN_KICK]:
+		while parser.consume(input):
+			if _held_attack == &"":
+				_held_attack = input
+
+
+## While the guard is up: no jump, LB ignored (the presses are dropped, not buffered).
+func _discard_jump_and_grab() -> void:
+	for input: StringName in [&"JUMP", &"GRAB"]:
+		while parser.consume(input):
+			pass
+
+
+## The guard is down: a P or K held back while blocking enters the parser as a fresh press.
+func _hand_back_held_attack() -> void:
+	if _held_attack != &"":
+		parser.buffer(_held_attack)
+		_held_attack = &""
+
+
+## B is held and its press was a block press: the guard stays up, or comes back up.
+func _holding_block() -> bool:
+	return _block_press_held and parser.is_held(&"DODGE")
 
 
 func _control_holding() -> void:
@@ -397,6 +463,7 @@ func _on_move_hits(move: MoveData, hits: Array[HitInfo]) -> void:
 func _on_hit_received(_hit: HitInfo) -> void:
 	parser.reset_chain()
 	parser.clear_buffer()
+	_held_attack = &""
 	_air_attack = false
 	_cam_offset = Vector2.ZERO
 	if _holding_valid():
@@ -409,6 +476,15 @@ func _on_move_interrupted() -> void:
 	parser.clear_buffer()
 	_air_attack = false
 	_cam_offset = Vector2.ZERO
+
+
+## A guard break staggers the player: what was pressed in the guard is dropped (a held B
+## raises the guard again after the stagger).
+func _on_hit_blocked(hit: HitInfo) -> void:
+	if hit.guard_broken:
+		parser.reset_chain()
+		parser.clear_buffer()
+		_held_attack = &""
 
 
 ## The guard faces where the player looks (the body follows the look while blocking).
@@ -595,10 +671,11 @@ func _b_action() -> void:
 		_start_dodge(_dodge_stick)
 
 
-func _start_block() -> void:
+## Raise the guard; `can_parry` false for one re-raised by a held B (no perfect block).
+func _start_block(can_parry: bool = true) -> void:
 	parser.reset_chain()
 	_cam_offset = Vector2.ZERO
-	start_block()
+	start_block(can_parry)
 
 
 ## Dodge along the stick direction `local` (x = right, y = forward).

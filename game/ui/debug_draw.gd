@@ -10,7 +10,8 @@ extends Node3D
 ##   - the player's magnetism cone in yellow, with a line and marker on its target,
 ##   - the block arc in cyan while an actor guards (CombatActor.get_block_arc()): the
 ##     covered angle at chest height, dimmed while the guard is rising or dropping,
-##   - each actor's debug_state_text() as a billboard Label3D above its head.
+##   - each actor's debug_state_text() as a billboard Label3D above its head; labels of
+##     actors side by side that would print over each other are stacked (_stack_labels()).
 ## Hurtboxes and labels hugging the active camera are skipped, so the player's own head
 ## does not wrap the first-person view. Actors come from group "actor". Reads only; never
 ## writes simulation state. Processes after the cameras (HudStyle.PROCESS_PRIORITY), so
@@ -47,6 +48,13 @@ const HALF_CIRCLE_SEGMENTS := 12
 @export var camera_clearance: float = 0.15
 ## State labels closer than this to the active camera are hidden.
 @export var label_hide_distance: float = 1.0
+## Labels of actors closer than this to each other (meters, on the ground) whose text would
+## overlap from the active camera are stacked: the later actor's label rises above the
+## earlier one's (at sparring range the player's "guard 100" printed over the dummy's
+## "WINDUP ...").
+@export var label_stack_distance: float = 2.0
+## Gap between stacked labels (meters).
+@export var label_stack_gap: float = 0.03
 
 ## Lines in the mesh after the last rebuild().
 var line_count: int = 0
@@ -59,6 +67,8 @@ var _verts := PackedVector3Array()
 var _colors := PackedColorArray()
 var _has_camera: bool = false
 var _camera_position: Vector3 = Vector3.ZERO
+## The active camera's horizontal right axis (screen x of the billboard labels).
+var _camera_right: Vector3 = Vector3.RIGHT
 
 
 func _init() -> void:
@@ -144,6 +154,8 @@ func rebuild() -> void:
 		_has_camera = camera != null and camera.is_inside_tree()
 		if _has_camera:
 			_camera_position = camera.global_position
+			_camera_right = camera.global_basis.x
+		var order: Array[CombatActor] = []
 		for node: Node in get_tree().get_nodes_in_group(&"actor"):
 			var actor := node as CombatActor
 			if actor == null or not actor.is_inside_tree():
@@ -151,6 +163,8 @@ func rebuild() -> void:
 			_add_actor(actor)
 			_update_label(actor)
 			seen[actor.get_instance_id()] = true
+			order.append(actor)
+		_stack_labels(order)
 	for id: int in _labels.keys():
 		if not seen.has(id):
 			var label := _labels[id]
@@ -322,6 +336,46 @@ func _update_label(actor: CombatActor) -> void:
 	label.text = actor.debug_state_text()
 	label.global_position = actor.get_head_top_position() + Vector3.UP * label_lift
 	label.visible = not _has_camera or label.global_position.distance_to(_camera_position) >= label_hide_distance
+
+
+## Lift the labels of `actors` (in order) that would print over an earlier one's: actors
+## within label_stack_distance whose label boxes, seen from the camera (across its right
+## axis, and up from each label's bottom edge), overlap. A lifted label sits
+## label_stack_gap above the top of the one it cleared.
+func _stack_labels(actors: Array[CombatActor]) -> void:
+	var right := Vector3(_camera_right.x, 0.0, _camera_right.z)
+	right = right.normalized() if right.length_squared() > 0.0001 else Vector3.RIGHT
+	var anchors: Array[Vector3] = []
+	var boxes: Array[Rect2] = []
+	for actor: CombatActor in actors:
+		var label := get_label(actor)
+		if label == null or not label.visible:
+			continue
+		var anchor := label.global_position
+		var size := label_size(label)
+		var box := Rect2(anchor.dot(right) - size.x * 0.5, anchor.y, size.x, size.y)
+		var lifted := true
+		while lifted:
+			lifted = false
+			for i: int in boxes.size():
+				var apart := Vector2(anchor.x - anchors[i].x, anchor.z - anchors[i].z).length()
+				if apart <= label_stack_distance and box.intersects(boxes[i]):
+					box.position.y = boxes[i].end.y + label_stack_gap
+					lifted = true
+		label.global_position.y = box.position.y
+		anchors.append(anchor)
+		boxes.append(box)
+
+
+## A state label's size in the world (meters): its widest line by its lines' height.
+static func label_size(label: Label3D) -> Vector2:
+	var font := label.font if label.font else ThemeDB.fallback_font
+	var lines := label.text.split("\n")
+	var width := 0.0
+	for line: String in lines:
+		width = maxf(width, font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, label.font_size).x)
+	var line_height := font.get_height(label.font_size) + label.line_spacing
+	return Vector2(width + label.outline_size, line_height * lines.size()) * label.pixel_size
 
 
 ## Three great circles in `xform`'s local XY, XZ and YZ planes.

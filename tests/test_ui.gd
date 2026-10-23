@@ -284,6 +284,12 @@ func test_perfect_block_pops_a_parry_callout_for_the_player() -> void:
 	var rect := _hud.block_callout.get_global_rect()
 	assert_gt(rect.position.y, screen.y * 0.5, "below the view center")
 	assert_almost_eq(rect.get_center().x, screen.x * 0.5, 1.0, "centered")
+	# "GUARD BREAK!" reaches under the combat log (shown by default) and the help panel:
+	# the callout draws over both.
+	for panel: Control in [_hud.combat_log, _hud.help_overlay]:
+		if rect.intersects(panel.get_global_rect()):
+			assert_gt(_hud.block_callout.get_index(), panel.get_index(), "drawn over %s" % panel.name)
+	assert_gt(_hud.block_callout.get_index(), _hud.combat_log.get_index(), "drawn over the combat log")
 	_hud.advance(_hud.block_callout.show_seconds + 0.1)
 	assert_false(_hud.block_callout.visible)
 
@@ -676,6 +682,38 @@ func test_debug_draw_shows_the_block_arc_while_guarding() -> void:
 	var reach := draw.block_arc_radius
 	assert_true(bounds.has_point(Vector3(0.0, draw.block_arc_heights.y, -reach)), "reaches ahead of the look")
 	assert_false(bounds.has_point(Vector3(0.0, draw.block_arc_heights.y, reach * 0.9)), "nothing behind")
+
+
+func test_debug_draw_stacks_labels_that_would_print_over_each_other() -> void:
+	# Side by side at sparring range (seen from the side), the guarding player's three-line
+	# label and the dummy's long WINDUP line used to print over each other: the later
+	# actor's label rises above the earlier one's. Labels far apart, or clear of each other,
+	# stay where they are.
+	var draw := _hud.debug_draw
+	var lift := draw.label_lift
+	var player := _spawn_enemy(Vector3(0.0, 2.0, -5.0))
+	player.state_text = "Player  100/100\nBLOCK\nguard 100"
+	var dummy := _spawn_enemy(Vector3(0.95, 2.0, -5.0))
+	dummy.state_text = "Dummy 2  30/30\nWINDUP dummy_jab f8 startup"
+	var far := _spawn_enemy(Vector3(5.0, 2.0, -5.0))
+	far.state_text = dummy.state_text
+	draw.enabled = true
+	draw.rebuild()
+	var boxes: Array[Rect2] = []
+	for actor: FakeEnemy in [player, dummy]:
+		var label := draw.get_label(actor)
+		var size := CombatDebugDraw.label_size(label)
+		boxes.append(Rect2(label.global_position.x - size.x * 0.5, label.global_position.y, size.x, size.y))
+	assert_almost_eq(boxes[0].position.y, 2.0 + lift, 0.001, "the first label stays put")
+	assert_true(Rect2(boxes[0].position.x, 2.0 + lift, boxes[0].size.x, boxes[0].size.y).intersects(
+			Rect2(boxes[1].position.x, 2.0 + lift, boxes[1].size.x, boxes[1].size.y)), "they would overlap")
+	assert_false(boxes[0].intersects(boxes[1]), "stacked instead")
+	assert_gt(boxes[1].position.y, boxes[0].end.y, "the second sits above the first")
+	assert_almost_eq(draw.get_label(far).global_position.y, 2.0 + lift, 0.001, "a label clear of the others stays put")
+	dummy.state_text = "Dummy 2  30/30\nFREE"
+	player.state_text = "Player  100/100\nFREE"
+	draw.rebuild()
+	assert_almost_eq(draw.get_label(dummy).global_position.y, 2.0 + lift, 0.001, "short labels side by side stay put")
 
 
 func test_debug_draw_survives_freed_actors_and_full_circle_arcs() -> void:

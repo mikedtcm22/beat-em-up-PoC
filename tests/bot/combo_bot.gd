@@ -1,7 +1,7 @@
 extends Node
 ## Scripted combo bot (Spec §11): performs every combo and move against training dummies
 ## in the test room, alternating first-person and side-view cameras, with a caption per
-## act; the block acts use a dummy's telegraphed sparring jab (the bot times it). Record it
+## act; the block acts use a sparring dummy's telegraphed jab (the bot times it). Record it
 ## with Movie Maker:
 ##   godot --path . --write-movie captures/combos.avi --fixed-fps 60 res://tests/bot/combo_bot.tscn
 ## (tools/capture_combos.sh wraps this and extracts review stills.)
@@ -283,39 +283,45 @@ func _release_block() -> void:
 		await get_tree().physics_frame
 
 
-## Walk forward (in the guard, if held) until `dummy` is back within SPAR_DIST.
-func _close_in(dummy: TrainingDummy) -> void:
-	player.input.scripted_move = Vector2(0, 1)
-	await _wait_until(
-		func() -> bool:
-			var d := dummy.global_position - player.global_position
-			return Vector2(d.x, d.z).length() <= SPAR_DIST,
-		90
-	)
-	player.input.scripted_move = Vector2.ZERO
-
-
-## Throw `dummy`'s telegraphed jab and wait for it to be over (blocked, landed or missed).
+## Throw `dummy`'s telegraphed jab now, from where it stands, and wait for it to be over
+## (blocked, landed or missed).
 func _jab(dummy: TrainingDummy) -> void:
 	await _wait_until(func() -> bool: return dummy.state == CombatTypes.ActorState.FREE, 90)
 	dummy.start_jab()
 	await _wait_until(func() -> bool: return dummy.current_move == null, 90)
 
 
-## The guard up early, two sparring jabs blocked from the front: the jab glances off the
-## guard (chip, guard meter, blockstun push-back), the dummy recoils.
+## Let `dummy` spar for one jab, due at once: it steps in to its jab distance (after a
+## push-back, too), winds up and jabs. Returns once the jab has started.
+func _spar_jab(dummy: TrainingDummy) -> void:
+	dummy.sparring = true
+	dummy.spar_in(0)
+	await _wait_until(func() -> bool: return dummy.state == CombatTypes.ActorState.WINDUP, 120)
+	dummy.sparring = false
+
+
+## The guard held in front of a sparring dummy that starts 1.5 m away: it steps in and jabs
+## every couple of seconds, each jab glancing off the guard (chip, guard meter, blockstun
+## push-back) and the dummy recoiling; it steps back in for the next. P pressed early in
+## the second blockstun punches back right after it, and with B still held the guard comes
+## back up after the jab.
 func _act_block() -> void:
-	await _stage([Vector3(0, 0, -SPAR_DIST)])
+	await _stage([Vector3(0, 0, -1.5)])
 	await _look_to(0.0, 6)
 	await _hold_block()
-	await _ticks(30)
 	var dummy := dummies[0]
-	for i in 2:
-		await _jab(dummy)
-		await _ticks(24)
-		await _close_in(dummy)
-		await _ticks(12)
-	await _ticks(20)
+	dummy.sparring = true
+	dummy.spar_in(40)
+	await _wait_until(func() -> bool: return dummy.state == CombatTypes.ActorState.WINDUP, 200)
+	await _wait_until(func() -> bool: return player.state == CombatTypes.ActorState.BLOCKSTUN, 60)
+	await _wait_until(func() -> bool: return dummy.state == CombatTypes.ActorState.WINDUP, 200)
+	await _wait_until(func() -> bool: return player.state == CombatTypes.ActorState.BLOCKSTUN, 60)
+	dummy.sparring = false
+	await _ticks(3)
+	await _press(&"P", 2)
+	await _wait_until(func() -> bool: return player.state == CombatTypes.ActorState.ATTACK, 40)
+	await _wait_until(func() -> bool: return player.state == CombatTypes.ActorState.BLOCK, 60)
+	await _ticks(40)
 	await _release_block()
 
 
@@ -339,9 +345,11 @@ func _act_perfect_block() -> void:
 	await _ticks(20)
 
 
-## Jab after jab into the held guard, faster than it regenerates (walking back in after each
-## push-back): the meter empties on the fifth, the guard is knocked apart, and the next
-## jab lands clean.
+## Jab after jab into the held guard, faster than it regenerates: the sparring dummy steps
+## back in after each push-back and jabs as soon as it is out of its recoil. The meter
+## empties on the fifth and the guard is knocked apart; B still held, the guard comes back
+## up after the stagger. Let go, the next jab lands clean (and is pulled back out of the
+## view after its hitstop).
 func _act_guard_break() -> void:
 	await _stage([Vector3(0, 0, -SPAR_DIST)])
 	await _look_to(0.0, 6)
@@ -349,24 +357,23 @@ func _act_guard_break() -> void:
 	await _ticks(20)
 	var dummy := dummies[0]
 	for i in 6:
-		# Each jab starts as soon as the dummy is out of its recoil; the player walks back
-		# into reach during the wind-up, after the push-back of the last one.
 		await _wait_until(func() -> bool: return dummy.state == CombatTypes.ActorState.FREE, 90)
-		dummy.start_jab()
-		await _wait_until(func() -> bool: return player.state == CombatTypes.ActorState.BLOCK, 30)
-		await _close_in(dummy)
+		await _spar_jab(dummy)
 		await _wait_until(func() -> bool: return dummy.current_move == null, 60)
 		if player.state == CombatTypes.ActorState.STAGGER:
 			break
-	await _wait_until(func() -> bool: return player.state != CombatTypes.ActorState.STAGGER, 90)
+	await _wait_until(func() -> bool: return player.state == CombatTypes.ActorState.BLOCK, 90)
+	await _ticks(20)
 	await _release_block()
-	await _close_in(dummy)
-	await _jab(dummy)
+	await _wait_until(func() -> bool: return dummy.state == CombatTypes.ActorState.FREE, 90)
+	await _spar_jab(dummy)
+	await _wait_until(func() -> bool: return dummy.current_move == null, 60)
 	await _ticks(30)
 
 
 ## Holding the guard but turned away from the dummy (90 degrees): its jab comes from outside
-## the guard's arc and lands in full.
+## the guard's arc and lands in full. B still held, the guard comes back up after the
+## flinch, and turned back to the dummy it blocks the next jab.
 func _act_flank_hit() -> void:
 	await _stage([Vector3(0, 0, -SPAR_DIST)])
 	await _look_to(0.0, 6)
@@ -375,9 +382,13 @@ func _act_flank_hit() -> void:
 	await _turn_by(90.0, 12)
 	await _ticks(10)
 	await _jab(dummies[0])
+	await _ticks(20)
+	await _turn_by(-90.0, 12)
+	await _ticks(10)
+	await _spar_jab(dummies[0])
+	await _wait_until(func() -> bool: return dummies[0].current_move == null, 60)
 	await _ticks(30)
 	await _release_block()
-	await _turn_by(-90.0, 12)
 	await _ticks(20)
 
 
@@ -440,7 +451,7 @@ func _reset(cam: StringName) -> void:
 
 
 ## Place dummies relative to the player (x right, -z ahead); the rest go far away. No dummy
-## spars on its own (the block acts throw the jabs themselves).
+## spars on its own (the block acts start and time the jabs themselves).
 func _stage(posts: Array[Vector3]) -> void:
 	for i in dummies.size():
 		var d := dummies[i]

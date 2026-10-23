@@ -6,8 +6,9 @@ extends CanvasLayer
 ##
 ## Layout (1920x1080 canvas): player health (and guard meter) bottom-left, boss bar
 ## bottom-center, combat log right-middle, camera toast and pause caption top-center, help
-## left-middle, the PARRY / GUARD BREAK callout just below the center, over-head enemy bars
-## and the center dot in the 3D view. The top-left and top-right corners stay
+## left-middle, the PARRY / GUARD BREAK callout just below the center (drawn over the log
+## and the help, which "GUARD BREAK!" reaches into), over-head enemy bars and the center dot
+## in the 3D view. The top-left and top-right corners stay
 ## clear for the rear-attack warning (Spec §8). The DebugDraw child (CombatDebugDraw, F3)
 ## draws in 3D, in group "debug_draw".
 ##

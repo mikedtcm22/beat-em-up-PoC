@@ -721,6 +721,29 @@ func test_press_stays_usable_for_buffer_frames_ticks() -> void:
 	assert_null(_parser.select(false))
 
 
+func test_buffer_hands_back_a_fresh_press_without_holding_the_button() -> void:
+	# buffer(): a press the owner held back (P during the player's block) re-enters at age
+	# 0, lives buffer_frames ticks like any press, and leaves the hold timers alone (no
+	# P_HOLD charge for a button already released).
+	_parser.buffer(P)
+	assert_false(_parser.is_held(P), "not held")
+	for i: int in _parser.buffer_frames:
+		_parser.tick()
+	assert_true(_parser.has_buffered(P), "fresh: usable for buffer_frames ticks")
+	assert_eq(_parser.select(false).move, _m(&"jab_1"))
+	_parser.press(K)
+	_parser.release(K)
+	assert_true(_parser.consume(K), "the owner takes the press and holds it back")
+	_parser.buffer(K)
+	_parser.tick()
+	assert_false(_parser.is_held(K), "a held-back press of a released button stays released")
+	assert_true(_parser.consume(K), "handed back")
+	_parser.buffer(P)
+	for i: int in _parser.buffer_frames + 1:
+		_parser.tick()
+	assert_false(_parser.has_buffered(P), "and expires like any press")
+
+
 func test_buffered_press_fires_when_cancel_window_opens() -> void:
 	# roundhouse starts at 10; its recovery (and cancel window) opens at 22.
 	var cancel_frame := 10 + _m(&"roundhouse").startup + _m(&"roundhouse").active

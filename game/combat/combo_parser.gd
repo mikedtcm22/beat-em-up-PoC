@@ -129,6 +129,13 @@ func press(input: StringName) -> void:
 	_held[input] = 0
 
 
+## Buffer a press of `input` with age 0 without touching the hold timers: a press the
+## owner held back while it could not act on it (the player's P or K during a block) is
+## handed back fresh the frame it can.
+func buffer(input: StringName) -> void:
+	_buffer.append(_BufferedPress.new(input))
+
+
 ## Register a button release this frame. Releasing P after hold_frames buffers P_HOLD.
 func release(input: StringName) -> void:
 	if not _held.has(input):

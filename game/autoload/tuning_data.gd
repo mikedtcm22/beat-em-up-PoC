@@ -165,14 +165,17 @@ extends Resource
 @export_range(0, 30, 1) var parry_flash_frames: int = 8
 
 @export_group("Sparring")
-## Seconds between a sparring dummy's jabs (varied a little).
+## Seconds from the start of one of a sparring dummy's jabs to the next (varied a little).
 @export_range(0.5, 10.0, 0.1) var sparring_interval_s: float = 2.0
 ## Each wait is sparring_interval_s plus or minus up to this much (seeded per dummy).
 @export_range(0.0, 2.0, 0.05) var sparring_jitter_s: float = 0.3
-## A sparring dummy swings when the player is within this range in front of it.
+## A sparring dummy spars with the player within this range in front of it.
 @export_range(0.8, 4.0, 0.1) var sparring_range: float = 1.7
 ## ...and within this many degrees of the dummy's facing.
 @export_range(5.0, 90.0, 1.0) var sparring_facing_deg: float = 30.0
+## Sparring, the dummy walks in (at dummy_walk_speed) until the player is this close,
+## center to center, and only jabs from there: inside the jab's reach (about 1.05 m).
+@export_range(0.7, 1.05, 0.01) var sparring_step_in_m: float = 0.9
 ## Test room: seconds before a KO'd player gets back up at full health.
 @export_range(0.5, 10.0, 0.1) var player_revive_s: float = 2.5
 

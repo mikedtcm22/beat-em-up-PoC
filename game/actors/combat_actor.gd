@@ -14,6 +14,11 @@ extends CharacterBody3D
 ## blockable hits: chip damage, guard drain, blockstun and pushback, or a guard break or
 ## a perfect block. The attacker's side of a blocked hit is react_to_block(), which
 ## HitDetector calls. Every number comes from Tuning.data (group "Block") or the move.
+##
+## A strike that lands on a first-person body (the player's rig, first_person_body) is
+## pulled back into the stance once the hit's hitstop is over (_pull_strike), unless the
+## guard already knocked it back (react_to_block()): a fist that reached the face would
+## otherwise retract through the throat-height lens and fill the view for a few frames.
 
 signal state_changed(old_state: int, new_state: int)
 
@@ -70,6 +75,9 @@ var _guard_frames: int = 0
 ## Frames left until a dropping guard (released, or cancelled into an attack) ends the
 ## block; -1 while the guard is not dropping. A dropping guard no longer blocks.
 var _guard_drop_left: int = -1
+## This guard can make a perfect block (start_block(true): a fresh B press, not a guard
+## re-raised by a B that stayed held).
+var _guard_can_parry: bool = true
 ## Blockstun pushback: the velocity it starts with, slowing evenly to 0 by its end.
 var _block_push: Vector3 = Vector3.ZERO
 ## Sim seconds left before the guard meter regenerates (reset by every blocked hit).
@@ -83,6 +91,9 @@ var _state_length: int = 0
 var _invuln_frames: int = 0
 var _hit_detector: HitDetector
 var _move_landed_hit: bool = false
+## The running move struck a first-person body: on the next sim frame (after the hitstop)
+## the striking limb snaps back into the stance (see the class docs).
+var _pull_strike: bool = false
 var _active_this_tick: bool = false
 var _lunge_dir: Vector3 = Vector3.ZERO
 var _lunge_left: float = 0.0
@@ -150,6 +161,7 @@ func _physics_process(delta: float) -> void:
 			if not hits.is_empty():
 				_move_landed_hit = true
 				_on_move_hits(move, hits)
+				_pull_strike = _pull_strike or (current_move == move and _strikes_first_person(hits))
 		else:
 			debug_hitbox_volumes.clear()
 
@@ -240,12 +252,15 @@ func get_block_arc() -> Dictionary:
 
 
 ## Raise the guard (BLOCK) from FREE or a cancellable recovery. It stops hits once it has
-## been up for Tuning.block_raise_frames; the controller ends it with drop_guard().
-func start_block() -> void:
+## been up for Tuning.block_raise_frames; the controller ends it with drop_guard(). With
+## `can_parry` false (a guard re-raised by a held button, not a fresh press) it never makes
+## a perfect block.
+func start_block(can_parry: bool = true) -> void:
 	if current_move:
 		_cancel_move()
 	_guard_frames = 0
 	_guard_drop_left = -1
+	_guard_can_parry = can_parry
 	_block_push = Vector3.ZERO
 	_enter_state(CombatTypes.ActorState.BLOCK)
 	rig.play(&"block", Tuning.data.block_raise_frames / float(Engine.physics_ticks_per_second))
@@ -336,6 +351,7 @@ func start_move(move: MoveData, chain_step: int = 1, input_timing: StringName = 
 	move_chain_step = chain_step
 	move_input_timing = input_timing
 	_move_landed_hit = false
+	_pull_strike = false
 	_lunge_frames_left = 0
 	_lunge_velocity = Vector3.ZERO
 	_hit_detector.begin()
@@ -520,6 +536,11 @@ func _auto_land() -> bool:
 
 func _sim_tick() -> void:
 	state_frame += 1
+	if _pull_strike:
+		# The first sim frame after the hitstop of a strike on a first-person body.
+		_pull_strike = false
+		if current_move and _running_move():
+			rig.play(&"idle", 0.0)
 	if _invuln_frames > 0:
 		_invuln_frames -= 1
 	if is_guarding():
@@ -613,9 +634,19 @@ func _cancel_move() -> void:
 		# Hit (or grabbed) out of the wind-up: Spec §7, light hits interrupt grunt wind-ups.
 		CombatEvents.windup_ended.emit(self, true)
 	current_move = null
+	_pull_strike = false
 	_lunge_frames_left = 0
 	_lunge_velocity = Vector3.ZERO
 	debug_hitbox_volumes.clear()
+
+
+## True when one of `hits` landed on a first-person body (the player's rig).
+func _strikes_first_person(hits: Array[HitInfo]) -> bool:
+	for hit in hits:
+		var victim := hit.victim as CombatActor
+		if victim and victim.rig and victim.rig.first_person_body:
+			return true
+	return false
 
 
 func _return_to_neutral() -> void:
@@ -662,7 +693,11 @@ func _try_block(hit: HitInfo) -> bool:
 	hit.blocked = true
 	hit.killed = false
 	var raw := hit.damage
-	if tuning.perfect_block_enabled and _guard_frames <= tuning.block_raise_frames + tuning.perfect_block_window_frames:
+	if (
+		tuning.perfect_block_enabled
+		and _guard_can_parry
+		and _guard_frames <= tuning.block_raise_frames + tuning.perfect_block_window_frames
+	):
 		hit.perfect_block = true
 		hit.damage = 0.0
 		hit.reaction = CombatTypes.Reaction.NONE
