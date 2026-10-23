@@ -53,14 +53,15 @@ const LOOPING: Array[StringName] = [
 ## docs/ARCHITECTURE.md moves table: [id, startup, active, recovery].
 const MOVES: Array = [
 	[&"jab_1", 4, 3, 10], [&"jab_2", 4, 3, 10], [&"hook", 6, 3, 14], [&"uppercut", 8, 3, 22],
-	[&"body_flurry", 2, 2, 6], [&"shove", 6, 3, 18], [&"front_kick", 7, 3, 14],
+	[&"body_flurry", 2, 2, 6], [&"shove", 6, 3, 18], [&"spinning_backfist", 12, 3, 20],
+	[&"front_kick", 7, 3, 14],
 	[&"roundhouse", 9, 3, 16], [&"spinning_heel", 12, 5, 24], [&"stomp_kick", 10, 3, 22],
 	[&"push_kick", 8, 3, 20], [&"haymaker", 14, 3, 26], [&"flying_kick", 5, 8, 14],
 	[&"spin_kick", 6, 10, 16], [&"back_elbow", 5, 3, 18], [&"knee", 5, 3, 12],
 	[&"throw", 8, 2, 20], [&"stomp", 8, 3, 14], [&"pipe_swing_1", 7, 3, 12],
 	[&"pipe_swing_2", 7, 3, 12], [&"pipe_swing_3", 9, 4, 20], [&"weapon_throw", 6, 1, 14],
 	[&"impact_body_knockdown", 0, 1, 0], [&"impact_body_stagger", 0, 1, 0],
-	[&"dummy_jab", 18, 3, 16],
+	[&"dummy_jab", 24, 3, 16],
 ]
 
 
@@ -110,6 +111,7 @@ func _reach_rows() -> Array[Reach]:
 		Reach.new(&"hook", [&"LeftFistPoint"], -0.5, 1.35, 1.65, 0.14, &"stand", head, fist_bury),
 		Reach.new(&"uppercut", [&"RightFistPoint"], -0.45, 1.4, 1.8, 0.14, &"stand", head, fist_bury),
 		Reach.new(&"shove", [&"LeftFistPoint", &"RightFistPoint"], -0.55, 1.1, 1.45, 0.16, &"stand", torso, fist_bury),
+		Reach.new(&"spinning_backfist", [&"RightFistPoint"], -0.65, 1.35, 1.65, 0.15, &"stand", head, fist_bury),
 		Reach.new(&"front_kick", [&"RightFootPoint"], -0.75, 0.8, 1.2, 0.15, &"stand", torso, foot_bury),
 		Reach.new(&"roundhouse", [&"RightFootPoint"], -0.6, 1.1, 1.6, 0.16),
 		Reach.new(&"stomp_kick", [&"RightFootPoint"], -0.75, 0.7, 1.1, 0.16, &"stand", torso, foot_bury),
@@ -895,7 +897,7 @@ func test_falls_from_the_air_never_raise_the_head() -> void:
 
 func test_spins_turn_a_full_circle_and_back_elbow_does_not() -> void:
 	for rig: HumanoidRig in _stance_rigs():
-		for id: StringName in [&"spinning_heel", &"spin_kick", &"back_elbow"]:
+		for id: StringName in [&"spinning_heel", &"spin_kick", &"spinning_backfist", &"back_elbow"]:
 			var move := _move_by_id(id)
 			rig.play(&"idle", 0.0)
 			rig.advance(0.5)
@@ -966,7 +968,7 @@ func test_play_move_length_and_strike_key_timing() -> void:
 				var start := anim.rotation_track_interpolate(t_bone, 0.0)
 				var finish := anim.rotation_track_interpolate(t_bone, anim.length)
 				assert_lt(rad_to_deg(start.angle_to(finish)), 0.5, "%s returns %s to guard" % [_tag(rig, move.id), bone])
-				if move.id != &"spinning_heel" and move.id != &"spin_kick":
+				if not [&"spinning_heel", &"spin_kick", &"spinning_backfist"].has(move.id):
 					var a := anim.rotation_track_interpolate(t_bone, strike_t)
 					var b := anim.rotation_track_interpolate(t_bone, end_t)
 					assert_lt(rad_to_deg(a.angle_to(b)), 0.5, "%s holds the strike pose (%s)" % [_tag(rig, move.id), bone])
@@ -1282,7 +1284,7 @@ func test_eye_point_stays_steady_through_strikes() -> void:
 		rig.advance(0.0)
 		var idle := rig.get_point_position(&"EyePoint")
 		for row: Array in MOVES:
-			if [&"spinning_heel", &"spin_kick", &"stomp"].has(row[0]):
+			if [&"spinning_heel", &"spin_kick", &"spinning_backfist", &"stomp"].has(row[0]):
 				continue
 			var move := _move(row)
 			rig.play(&"idle", 0.0)
@@ -1352,6 +1354,92 @@ func test_punches_come_into_first_person_view() -> void:
 				var elbow := _view(rig, StringName(side + "LowerArm"))
 				assert_true(elbow.y < fist.y or absf(elbow.x) > absf(fist.x), "%s: from below or the side (elbow %s, fist %s)" % [
 						id, elbow, fist])
+
+
+## The first-person camera of `rig` with the view turned `yaw_deg` from the rig's facing
+## (positive left), as FirstPersonCamera turns it for a spin (MoveData.camera_spin_follow)
+## or the back elbow (camera_yaw_deg); pitched and dropped like _fp_camera().
+func _turned_fp_camera(rig: HumanoidRig, yaw_deg: float, pitch_deg: float = 0.0, drop: float = 0.0) -> Transform3D:
+	var look := Basis(Vector3.UP, deg_to_rad(yaw_deg)) * _facing(rig)
+	var lens := rig.get_point_position(&"EyePoint") + Vector3.DOWN * drop + FirstPersonCamera.lens_offset(look)
+	return Transform3D(look * Basis.from_euler(Vector3(deg_to_rad(pitch_deg), 0.0, 0.0)), lens)
+
+
+func test_spinning_backfist_sweeps_in_from_the_right_in_first_person() -> void:
+	# The view follows the eyes through the turn (camera_spin_follow 1), which face the
+	# target again at contact: the right arm sweeps in from the right edge, the back of the
+	# fist in view, and the body fills at most a third of the view.
+	var rig := _player_rig()
+	var move := _move_by_id(&"spinning_backfist")
+	_to_first_active_frame(rig, move)
+	for f: int in move.active:
+		if f > 0:
+			rig.advance(FRAME)
+		var yaw := rad_to_deg(rig.eye_yaw())
+		assert_lt(absf(yaw), 20.0, "frame %d: the eyes face the target again (%.0f degrees off)" % [f, yaw])
+		var cam := _turned_fp_camera(rig, yaw)
+		var hits := _fp_hits(rig, cam)
+		assert_lt(_body_share(hits), 0.34, "frame %d: the body fills %.0f%% of the view" % [f, _body_share(hits) * 100.0])
+		assert_gt(_parts_share(hits, _hand_parts("Right")), 0.004, "frame %d: the right fist shows" % f)
+		assert_true(_reaches_edge(hits, _hand_parts("Right"), _whole_arm_parts("Right")),
+				"frame %d: the right arm comes in from the edge of the view" % f)
+		var fist := _view_from(cam, rig.get_point_position(&"RightFistPoint"))
+		assert_true(_in_fp_view(fist), "frame %d: the fist in view (angles %s)" % [f, fist])
+		var elbow := _view_from(cam, rig.get_point_position(&"RightLowerArm"))
+		assert_gt(elbow.x, fist.x, "frame %d: from the right (elbow %s, fist %s)" % [f, elbow, fist])
+
+
+func test_spins_never_fill_the_view_that_turns_with_them() -> void:
+	# Through every frame of the spins, seen from the lens turned with the eyes (as the
+	# first-person camera does), the body never fills more than a third of the view, and
+	# the eyes turn a full circle, steadily (no frame turns them more than 40 degrees, and
+	# never back the other way by more than a few degrees).
+	var rig := _player_rig()
+	for id: StringName in [&"spinning_heel", &"spin_kick", &"spinning_backfist"]:
+		var move := load("res://game/combat/moves/%s.tres" % id) as MoveData
+		rig.play(&"idle", 0.0)
+		rig.advance(0.5)
+		rig.play_move(move, 0.0)
+		rig.advance(0.0)
+		var last := rig.eye_yaw()
+		var turn := 0.0
+		var widest_step := 0.0
+		var back := 0.0
+		var fullest := 0.0
+		for i: int in move.total_frames():
+			rig.advance(FRAME)
+			var eye := rig.eye_yaw()
+			var step := rad_to_deg(wrapf(eye - last, -PI, PI))
+			last = eye
+			turn += step
+			widest_step = maxf(widest_step, absf(step))
+			back = maxf(back, step)
+			var hits := _fp_hits(rig, _turned_fp_camera(rig, rad_to_deg(eye), move.camera_pitch_deg, move.camera_drop_m), 24)
+			fullest = maxf(fullest, _body_share(hits))
+		gut.p("%s: the eyes turn %.0f degrees, at most %.0f per frame; the body fills at most %.0f%% of the view" % [
+				id, turn, widest_step, fullest * 100.0])
+		assert_almost_eq(turn, -360.0, 5.0, "%s: the eyes turn a full circle to the right" % id)
+		assert_lt(widest_step, 40.0, "%s: no frame turns the eyes more than 40 degrees" % id)
+		assert_lt(back, 3.0, "%s: the eyes never turn back the other way" % id)
+		assert_lt(fullest, 0.34, "%s: the body fills at most a third of the turning view" % id)
+
+
+func test_back_elbow_turned_view_shows_the_elbow_driving_back() -> void:
+	# The back elbow turns the first-person view toward the elbow (camera_yaw_deg, about 150
+	# degrees right, and camera_pitch_deg a little down): on the active frames the right
+	# elbow and forearm show in the view without filling it.
+	var rig := _player_rig()
+	var move := load("res://game/combat/moves/back_elbow.tres") as MoveData
+	_to_first_active_frame(rig, move)
+	for f: int in move.active:
+		if f > 0:
+			rig.advance(FRAME)
+		var cam := _turned_fp_camera(rig, move.camera_yaw_deg, move.camera_pitch_deg)
+		var hits := _fp_hits(rig, cam)
+		assert_lt(_body_share(hits), 0.34, "frame %d: the body fills %.0f%% of the view" % [f, _body_share(hits) * 100.0])
+		assert_gt(_parts_share(hits, _whole_arm_parts("Right")), 0.01, "frame %d: the right arm shows" % f)
+		var elbow := _view_from(cam, rig.get_point_position(&"RightElbowPoint"))
+		assert_true(_in_fp_view(elbow), "frame %d: the elbow's tip in view (angles %s)" % [f, elbow])
 
 
 func test_pipe_swings_come_into_first_person_view() -> void:

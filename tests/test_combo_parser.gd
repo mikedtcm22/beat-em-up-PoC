@@ -185,6 +185,7 @@ func _build_fixtures() -> void:
 	var uppercut := _move(&"uppercut", 8, 3, 22, FINISHER)
 	var body_flurry := _move(&"body_flurry", 2, 2, 6, LIGHT)
 	var shove := _move(&"shove", 6, 3, 18, FINISHER)
+	var spinning_backfist := _move(&"spinning_backfist", 12, 3, 20, FINISHER)
 	var front_kick := _move(&"front_kick", 7, 3, 14, LIGHT)
 	var roundhouse := _move(&"roundhouse", 9, 3, 16, HEAVY)
 	var spinning_heel := _move(&"spinning_heel", 12, 5, 24, FINISHER)
@@ -202,9 +203,10 @@ func _build_fixtures() -> void:
 	var pipe_swing_3 := _move(&"pipe_swing_3", 9, 4, 20, FINISHER)
 
 	jab_1.branches.append(_branch(P, jab_2))
+	jab_1.branches.append(_branch(P, body_flurry, PAUSE))
 	jab_2.branches.append(_branch(P, hook))
 	jab_2.branches.append(_branch(K, push_kick))
-	jab_2.branches.append(_branch(P, body_flurry, PAUSE))
+	jab_2.branches.append(_branch(P, spinning_backfist, PAUSE))
 	hook.branches.append(_branch(P, uppercut))
 	body_flurry.repeat_input = P
 	body_flurry.repeat_max = 6
@@ -511,32 +513,46 @@ func test_p_p_k_is_push_kick() -> void:
 	assert_true(_sim.last().finisher)
 
 
-# --- Spec §4: pause branches (P P · P, K · K) ----------------------------------------
+# --- Spec §4: pause branches (P · P, P P · P, K · K) -----------------------------------
 
-func test_p_p_pause_p_is_body_flurry_then_auto_shove() -> void:
-	_sim.run({0: [P], 9: [P]}, 10)
+func test_p_pause_p_is_body_flurry_then_auto_shove() -> void:
+	_sim.run({0: [P]}, 1)
 	_sim.run_until_free()
 	_sim.idle(_parser.pause_min_frames)
 	_sim.step([P])
-	assert_eq(_sim.ids(), [&"jab_1", &"jab_2", &"body_flurry"])
+	assert_eq(_sim.ids(), [&"jab_1", &"body_flurry"])
 	var flurry := _sim.last()
 	assert_eq(flurry.timing, &"pause")
-	assert_eq(flurry.chain_step, 3)
+	assert_eq(flurry.chain_step, 2)
 	assert_eq(flurry.f, _parser.pause_min_frames)
 	assert_eq(flurry.input, P)
 	# Stop pressing: shove starts automatically right after the flurry's recovery.
 	_sim.run_until_free()
-	assert_eq(_sim.ids(), [&"jab_1", &"jab_2", &"body_flurry", &"shove"])
+	assert_eq(_sim.ids(), [&"jab_1", &"body_flurry", &"shove"])
 	var shove := _sim.last()
 	assert_eq(shove.timing, &"auto")
-	assert_eq(shove.chain_step, 4)
+	assert_eq(shove.chain_step, 3)
 	assert_eq(shove.input, &"")
 	assert_eq(shove.frame, flurry.frame + _m(&"body_flurry").total_frames())
 	assert_true(shove.finisher)
 
 
-func test_flurry_repeats_up_to_repeat_max_then_auto_shove_then_new_chain() -> void:
+func test_p_p_pause_p_is_spinning_backfist() -> void:
 	_sim.run({0: [P], 9: [P]}, 10)
+	_sim.run_until_free()
+	_sim.idle(_parser.pause_min_frames)
+	_sim.step([P])
+	assert_eq(_sim.ids(), [&"jab_1", &"jab_2", &"spinning_backfist"])
+	var backfist := _sim.last()
+	assert_eq(backfist.timing, &"pause")
+	assert_eq(backfist.chain_step, 3)
+	assert_true(backfist.finisher)
+	_sim.run_until_free()
+	assert_eq(_sim.ids().size(), 3, "nothing follows the backfist on its own")
+
+
+func test_flurry_repeats_up_to_repeat_max_then_auto_shove_then_new_chain() -> void:
+	_sim.run({0: [P]}, 1)
 	_sim.run_until_free()
 	_sim.idle(_parser.pause_min_frames + 3)
 	_sim.step([P])
@@ -544,29 +560,29 @@ func test_flurry_repeats_up_to_repeat_max_then_auto_shove_then_new_chain() -> vo
 	# Keep mashing P every 5 frames: each press lands in the flurry's recovery.
 	_sim.run(_every(P, 4, 5, 15), 90)
 	var repeat_max := _m(&"body_flurry").repeat_max
-	var expected_ids: Array[StringName] = [&"jab_1", &"jab_2", &"body_flurry"]
-	var expected_timings: Array[StringName] = [&"root", &"chain", &"pause"]
-	var expected_steps: Array[int] = [1, 2, 3]
+	var expected_ids: Array[StringName] = [&"jab_1", &"body_flurry"]
+	var expected_timings: Array[StringName] = [&"root", &"pause"]
+	var expected_steps: Array[int] = [1, 2]
 	for i: int in repeat_max:
 		expected_ids.append(&"body_flurry")
 		expected_timings.append(&"repeat")
-		expected_steps.append(4 + i)
+		expected_steps.append(3 + i)
 	expected_ids.append_array([&"shove", &"jab_1"])
 	expected_timings.append_array([&"auto", &"root"])
-	expected_steps.append_array([4 + repeat_max, 1])
+	expected_steps.append_array([3 + repeat_max, 1])
 	assert_eq(_sim.ids().slice(0, expected_ids.size()), expected_ids)
 	assert_eq(_sim.timings().slice(0, expected_ids.size()), expected_timings)
 	assert_eq(_sim.steps().slice(0, expected_ids.size()), expected_steps)
 	# Repeats cancel the recovery 5 frames apart; the press in the last flurry's recovery
 	# finds no repeat left and does not cut it short.
-	var last_repeat: Started = _sim.started[2 + repeat_max]
+	var last_repeat: Started = _sim.started[1 + repeat_max]
 	assert_eq(last_repeat.frame, flurry_frame + 5 * repeat_max)
-	var shove: Started = _sim.started[3 + repeat_max]
+	var shove: Started = _sim.started[2 + repeat_max]
 	assert_eq(shove.frame, last_repeat.frame + _m(&"body_flurry").total_frames())
 
 
 func test_repeat_count_tracks_repeats_and_resets_on_other_moves() -> void:
-	_sim.run({0: [P], 9: [P]}, 10)
+	_sim.run({0: [P]}, 1)
 	_sim.run_until_free()
 	_sim.idle(_parser.pause_min_frames)
 	_sim.step([P])
@@ -578,7 +594,7 @@ func test_repeat_count_tracks_repeats_and_resets_on_other_moves() -> void:
 	_sim.run_until_free()
 	assert_eq(_sim.last().id, &"shove")
 	assert_eq(_sim.last().timing, &"auto")
-	assert_eq(_sim.last().chain_step, 6)
+	assert_eq(_sim.last().chain_step, 5)
 	assert_eq(_parser.repeat_count, 0)
 
 
@@ -618,11 +634,12 @@ func test_grace_window_continues_normal_chain_after_recovery() -> void:
 
 
 func test_pause_window_without_pause_branch_falls_back_to_normal() -> void:
+	# The hook has no PAUSE branch: P in its pause window is still the uppercut.
 	for wait: int in range(_parser.pause_min_frames, _parser.pause_max_frames + 1):
-		var record := _press_after_chain({0: [P]}, 1, wait, P)
-		assert_eq(record.id, &"jab_2", "f=%d" % wait)
+		var record := _press_after_chain({0: [P], 9: [P], 18: [P]}, 19, wait, P)
+		assert_eq(record.id, &"uppercut", "f=%d" % wait)
 		assert_eq(record.timing, &"chain", "f=%d" % wait)
-		assert_eq(record.chain_step, 2, "f=%d" % wait)
+		assert_eq(record.chain_step, 4, "f=%d" % wait)
 
 
 func test_waiting_past_pause_max_resets_to_root() -> void:
@@ -643,7 +660,7 @@ func test_every_wait_after_jab_2_picks_the_documented_branch() -> void:
 			assert_eq(record.timing, &"chain", "f=%d" % wait)
 			assert_eq(record.chain_step, 3, "f=%d" % wait)
 		elif wait <= max_f:
-			assert_eq(record.id, &"body_flurry", "f=%d" % wait)
+			assert_eq(record.id, &"spinning_backfist", "f=%d" % wait)
 			assert_eq(record.timing, &"pause", "f=%d" % wait)
 			assert_eq(record.chain_step, 3, "f=%d" % wait)
 		else:
@@ -657,8 +674,13 @@ func test_exact_pause_window_boundaries() -> void:
 	var max_f := _parser.pause_max_frames
 	var jab_2_prefix := {0: [P], 9: [P]}
 	assert_eq(_press_after_chain(jab_2_prefix, 10, min_f - 1, P).id, &"hook", "pause_min - 1")
-	assert_eq(_press_after_chain(jab_2_prefix, 10, min_f, P).id, &"body_flurry", "pause_min")
-	assert_eq(_press_after_chain(jab_2_prefix, 10, max_f, P).id, &"body_flurry", "pause_max")
+	assert_eq(_press_after_chain(jab_2_prefix, 10, min_f, P).id, &"spinning_backfist", "pause_min")
+	assert_eq(_press_after_chain(jab_2_prefix, 10, max_f, P).id, &"spinning_backfist", "pause_max")
+	var jab_1_prefix := {0: [P]}
+	assert_eq(_press_after_chain(jab_1_prefix, 1, min_f - 1, P).id, &"jab_2", "pause_min - 1")
+	assert_eq(_press_after_chain(jab_1_prefix, 1, min_f, P).id, &"body_flurry", "pause_min")
+	assert_eq(_press_after_chain(jab_1_prefix, 1, max_f, P).id, &"body_flurry", "pause_max")
+	assert_eq(_press_after_chain(jab_1_prefix, 1, max_f + 1, P).id, &"jab_1", "pause_max + 1")
 	assert_eq(_press_after_chain(jab_2_prefix, 10, max_f + 1, P).id, &"jab_1", "pause_max + 1")
 	var kick_prefix := {0: [K]}
 	assert_eq(_press_after_chain(kick_prefix, 1, min_f - 1, K).id, &"roundhouse", "pause_min - 1")
@@ -689,7 +711,7 @@ func test_pause_branch_listed_first_still_needs_the_pause_window() -> void:
 	assert_eq(_sim.ids(), [&"jab_1", &"jab_2", &"hook"], "P in jab_2's recovery")
 	assert_eq(_press_after_chain({0: [P], 9: [P]}, 10, 0, P).id, &"hook", "grace f=0")
 	assert_eq(_press_after_chain({0: [P], 9: [P]}, 10, _parser.pause_min_frames, P).id,
-			&"body_flurry", "pause window")
+			&"spinning_backfist", "pause window")
 
 
 func test_pause_only_branch_does_not_fire_from_recovery() -> void:
@@ -1225,13 +1247,16 @@ func test_every_spec_combo_ends_in_a_finisher() -> void:
 		assert_true(sim.last().finisher, combo["name"])
 	# Pause combos and the hold.
 	var flurry_sim := OwnerSim.new(_new_parser(_ground))
-	flurry_sim.run({0: [P], 9: [P]}, 10)
+	flurry_sim.run({0: [P]}, 1)
 	flurry_sim.run_until_free()
 	flurry_sim.idle(_parser.pause_min_frames)
 	flurry_sim.run(_every(P, 0, 5, 4), 20)
 	flurry_sim.run_until_free()
-	assert_eq(flurry_sim.last().id, &"shove", "P P · P (mash)")
+	assert_eq(flurry_sim.last().id, &"shove", "P · P (mash)")
 	assert_true(flurry_sim.last().finisher)
+	var backfist := _press_after_chain({0: [P], 9: [P]}, 10, _parser.pause_min_frames, P)
+	assert_eq(backfist.id, &"spinning_backfist", "P P · P")
+	assert_true(backfist.finisher)
 	var stomp_kick := _press_after_chain({0: [K]}, 1, _parser.pause_min_frames, K)
 	assert_eq(stomp_kick.id, &"stomp_kick", "K · K")
 	assert_true(stomp_kick.finisher)

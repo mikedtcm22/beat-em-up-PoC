@@ -61,6 +61,17 @@ const THROWN := CombatTypes.Reaction.THROWN
 const KICK_PITCH_DEG := -10.0
 const KICK_DROP_M := 0.05
 const STOMP_PITCH_DEG := -25.0
+## Spinning moves turn the first-person view with the body (Game-boy's second playtest).
+const SPIN_FOLLOW := 1.0
+## The back elbow turns the view this far toward the elbow (right is negative) and a little
+## down, so the player sees it connect, and holds it this many recovery frames before
+## turning back. Game-boy asked for about 100-120 degrees, but the elbow drives straight
+## back behind the spine: at the 90-degree FOV a 120-degree turn shows neither it nor a body
+## straight behind (from about 121 that body's edge, from about 140 the elbow's tip). 150
+## puts both in the right half of the view.
+const BACK_ELBOW_VIEW_YAW_DEG := -150.0
+const BACK_ELBOW_VIEW_PITCH_DEG := -10.0
+const BACK_ELBOW_VIEW_HOLD := 6
 ## Weapons hit a guard harder (the held block): pipe swings drain it 1.5 times as fast.
 const PIPE_GUARD_MULT := 1.5
 
@@ -111,7 +122,8 @@ func _init() -> void:
 ## the attacker-facing frame, which cannot work for the 360-degree spin kick or the
 ## rear-facing back elbow (one of them would pull its victims through the attacker).
 func _build_moves() -> void:
-	# Punch chain: P P P P, P P · P (flurry), P P K, and the held-P haymaker.
+	# Punch chain: P P P P, P · P (flurry), P P · P (spinning backfist), P P K, and the
+	# held-P haymaker.
 	_add(&"jab_1", "Jab", Vector3i(4, 3, 10), 6.0, LIGHT, FLINCH, Vector3(0.0, 0.0, 1.5),
 			[_sphere(&"LeftFistPoint", 0.12)])
 	_add(&"jab_2", "Jab", Vector3i(4, 3, 10), 6.0, LIGHT, FLINCH, Vector3(0.0, 0.0, 1.5),
@@ -125,6 +137,11 @@ func _build_moves() -> void:
 	flurry.hitstun = 10
 	_add(&"shove", "Shove", Vector3i(6, 3, 18), 6.0, FINISHER, STAGGER, Vector3(0.0, 0.0, 7.0),
 			[_sphere(&"LeftFistPoint", 0.16), _sphere(&"RightFistPoint", 0.16)])
+	# A full turn to the right, the back of the right fist whipping in at head height from
+	# the right; the victim is knocked down and to the attacker's left, the way the fist sweeps.
+	var backfist := _add(&"spinning_backfist", "Spinning Backfist", Vector3i(12, 3, 20), 14.0,
+			FINISHER, KNOCKDOWN, Vector3(-1.5, 3.0, 6.0), [_sphere(&"RightFistPoint", 0.15)])
+	backfist.camera_spin_follow = SPIN_FOLLOW
 	var haymaker := _add(&"haymaker", "Haymaker", Vector3i(14, 3, 26), 18.0, FINISHER, LAUNCH,
 			Vector3(0.0, 4.0, 8.0), [_sphere(&"RightFistPoint", 0.16)])
 	haymaker.breaks_armor = true
@@ -138,6 +155,7 @@ func _build_moves() -> void:
 			KNOCKDOWN, Vector3(0.0, 3.0, 6.0), [_arc(1.9, 75.0, 0.0, Vector2(0.3, 1.8))])
 	_kick(heel)
 	heel.magnetism = false
+	heel.camera_spin_follow = SPIN_FOLLOW
 	_kick(_add(&"stomp_kick", "Stomp Kick", Vector3i(10, 3, 22), 16.0, FINISHER, LAUNCH,
 			Vector3(0.0, 2.0, 10.0), [_sphere(&"RightFootPoint", 0.16)]))
 	_kick(_add(&"push_kick", "Push Kick", Vector3i(8, 3, 20), 10.0, FINISHER, KNOCKDOWN,
@@ -155,6 +173,7 @@ func _build_moves() -> void:
 	var spin := _add(&"spin_kick", "Spin Kick", Vector3i(6, 10, 16), 10.0, HEAVY, KNOCKDOWN,
 			Vector3(0.0, 2.0, 4.0), [_arc(1.8, 180.0, 0.0, Vector2(-0.6, 1.8))])
 	spin.magnetism = false
+	spin.camera_spin_follow = SPIN_FOLLOW
 
 	# Back elbow: arc centered behind. Height band not in the table: torso and head height.
 	# The table lists knockback 0,2,-4 ("pushes back", written for the attacker-facing
@@ -163,6 +182,9 @@ func _build_moves() -> void:
 	var elbow := _add(&"back_elbow", "Back Elbow", Vector3i(5, 3, 18), 12.0, HEAVY, KNOCKDOWN,
 			Vector3(0.0, 2.0, 4.0), [_arc(1.4, 50.0, 180.0, Vector2(0.6, 1.8))])
 	elbow.magnetism = false
+	elbow.camera_yaw_deg = BACK_ELBOW_VIEW_YAW_DEG
+	elbow.camera_pitch_deg = BACK_ELBOW_VIEW_PITCH_DEG
+	elbow.camera_hold_frames = BACK_ELBOW_VIEW_HOLD
 
 	# Holding an enemy.
 	var knee := _add(&"knee", "Knee", Vector3i(5, 3, 12), 6.0, LIGHT, FLINCH, Vector3.ZERO,
@@ -201,11 +223,12 @@ func _build_moves() -> void:
 	shoved_body.magnetism = false
 
 	# Sparring training dummy (the held block's practice partner): a telegraphed right jab.
-	# Its startup is the wind-up the dummy shows (ActorState.WINDUP); no tracking, so
+	# Its startup is the wind-up the dummy shows (ActorState.WINDUP), 24 frames (0.4 s) since
+	# Game-boy's second playtest, so a guard raised on reaction parries; no tracking, so
 	# turning away or stepping aside makes it miss. Blocked, it recoils for 20 frames: the
 	# player's fastest punish (blockstun 10 + cancel 2 + jab startup 4 = 16 frames) must land
 	# while it is still recoiling, or blocking opens no punish window.
-	var dummy_jab := _add(&"dummy_jab", "Sparring Jab", Vector3i(18, 3, 16), 6.0, LIGHT, FLINCH,
+	var dummy_jab := _add(&"dummy_jab", "Sparring Jab", Vector3i(24, 3, 16), 6.0, LIGHT, FLINCH,
 			Vector3(0.0, 0.0, 1.5), [_sphere(&"RightFistPoint", 0.14)])
 	dummy_jab.magnetism = false
 	dummy_jab.blocked_recoil_frames = 20
@@ -213,11 +236,14 @@ func _build_moves() -> void:
 
 ## Combo branches (docs/ARCHITECTURE.md "Branches").
 func _build_branches() -> void:
-	_set_branches(&"jab_1", [_branch(P, &"jab_2")])
+	_set_branches(&"jab_1", [
+		_branch(P, &"jab_2"),
+		_branch(P, &"body_flurry", PAUSE),
+	])
 	_set_branches(&"jab_2", [
 		_branch(P, &"hook"),
 		_branch(K, &"push_kick"),
-		_branch(P, &"body_flurry", PAUSE),
+		_branch(P, &"spinning_backfist", PAUSE),
 	])
 	_set_branches(&"hook", [_branch(P, &"uppercut")])
 	var flurry: MoveData = _moves[&"body_flurry"]

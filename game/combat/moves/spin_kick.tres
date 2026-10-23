@@ -24,3 +24,4 @@ reaction = 3
 tier = 1
 hitboxes = Array[ExtResource("hitbox_spec_gd")]([SubResource("hitbox_0")])
 magnetism = false
+camera_spin_follow = 1.0

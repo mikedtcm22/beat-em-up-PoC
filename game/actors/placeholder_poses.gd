@@ -162,7 +162,7 @@ const _STILL_MOVES: Array[StringName] = [&"impact_body_knockdown", &"impact_body
 ## shove, kicks, grabs, the weapon throw) keep both arms as authored.
 const _FREE_ARM: Dictionary[StringName, StringName] = {
 	&"jab_1": &"Right", &"jab_2": &"Left", &"hook": &"Right", &"uppercut": &"Left",
-	&"haymaker": &"Left", &"back_elbow": &"Left", &"pipe_swing_1": &"Left",
+	&"haymaker": &"Left", &"back_elbow": &"Left", &"spinning_backfist": &"Left", &"pipe_swing_1": &"Left",
 	&"pipe_swing_2": &"Left", &"pipe_swing_3": &"Left",
 }
 ## Moves whose wind-up keeps its authored free arm in the relaxed stance: the haymaker's
@@ -1146,6 +1146,8 @@ static func _recipe(id: StringName, g: Dictionary[StringName, Vector3],
 			return _body_flurry(g)
 		&"shove":
 			return _shove(g)
+		&"spinning_backfist":
+			return _spinning_backfist(g)
 		&"front_kick":
 			return _front_kick(g)
 		&"roundhouse":
@@ -1421,6 +1423,62 @@ static func _shove(g: Dictionary[StringName, Vector3]) -> MovePoses:
 	return _mp(g, windup, strike)
 
 
+## Spinning backfist (P P · P, Game-boy's second playtest): a full turn to the right on
+## the spot, the head leading it (spotting), and the back of the right fist whipping in at
+## head height from the right as the turn comes round. Wind-up half way: the back to the
+## target, the right fist chambered low across the belly, under the first-person view. At contact
+## the hips are 40 degrees short of the full turn, the torso and head twisted the rest of
+## the way, so the eyes and the first-person view following them
+## (MoveData.camera_spin_follow) face the target and the arm sweeps in from the right edge
+## of the view; after it the hips finish the turn while the twist unwinds, the head held on
+## the target.
+static func _spinning_backfist(g: Dictionary[StringName, Vector3]) -> MovePoses:
+	var windup := merge(g, {
+		&"Hips": Vector3(0.0, -150.0, 0.0),
+		&"Spine": Vector3(-4.0, -10.0, 0.0),
+		&"Chest": Vector3(-3.0, -10.0, 0.0),
+		&"Neck": Vector3(4.0, -5.0, 0.0),
+		&"Head": Vector3(2.0, -5.0, 0.0),
+		&"RightUpperArm": Vector3(10.0, 30.0, 10.0),
+		&"RightLowerArm": Vector3(95.0, 0.0, 0.0),
+	})
+	var strike := merge(g, {
+		&"Hips": Vector3(0.0, -320.0, 0.0),
+		&"Spine": Vector3(-4.0, -8.0, 0.0),
+		&"Chest": Vector3(-2.0, -8.0, 0.0),
+		&"UpperChest": Vector3(0.0, -8.0, 0.0),
+		&"Neck": Vector3(4.0, -8.0, 0.0),
+		&"Head": Vector3(2.0, -8.0, 0.0),
+		&"RightShoulder": Vector3(0.0, -6.0, 0.0),
+		&"RightUpperArm": Vector3(92.0, 10.0, 10.0),
+		&"RightLowerArm": Vector3(12.0, 0.0, 0.0),
+		&"LeftUpperArm": Vector3(40.0, 0.0, -16.0),
+		&"LeftLowerArm": Vector3(120.0, 0.0, 0.0),
+	})
+	var strike_end := merge(strike, {
+		&"Hips": Vector3(0.0, -335.0, 0.0),
+		&"Spine": Vector3(-4.0, -5.0, 0.0),
+		&"Chest": Vector3(-2.0, -5.0, 0.0),
+		&"UpperChest": Vector3(0.0, -5.0, 0.0),
+		&"Neck": Vector3(4.0, -5.0, 0.0),
+		&"Head": Vector3(2.0, -5.0, 0.0),
+		&"RightUpperArm": Vector3(92.0, 25.0, 10.0),
+	})
+	var follow := merge(g, {
+		&"Hips": Vector3(0.0, -352.0, 0.0),
+		&"Neck": Vector3(4.0, -4.0, 0.0),
+		&"Head": Vector3(2.0, -4.0, 0.0),
+		&"RightUpperArm": Vector3(20.0, 10.0, 15.0),
+		&"RightLowerArm": Vector3(80.0, 0.0, 0.0),
+	})
+	var m := _mp(g, windup, strike)
+	m.strike_end = strike_end
+	m.follow = follow
+	m.follow_at = 0.4
+	m.finish = merge(g, {&"Hips": Vector3(0.0, -360.0, 0.0)})
+	return m
+
+
 ## Right-leg kick chamber: knee up, shin folded under.
 static func _kick_chamber(g: Dictionary[StringName, Vector3]) -> Dictionary[StringName, Vector3]:
 	return merge(g, {
@@ -1560,11 +1618,14 @@ static func _spinning_heel(g: Dictionary[StringName, Vector3]) -> MovePoses:
 		&"RightUpperArm": Vector3(-25.0, 0.0, 25.0),
 		&"RightLowerArm": Vector3(70.0, 0.0, 0.0),
 	}
+	# The head leads the turn (spotting): about half way round at the wind-up key and on
+	# the target from the strike on, so the eyes, and the first-person view following them
+	# (MoveData.camera_spin_follow), turn at an even rate and land on the target at contact.
 	var windup := merge(g, {
 		&"Hips": Vector3(0.0, -120.0, 0.0),
 		&"Spine": Vector3(-6.0, -10.0, 0.0),
-		&"Neck": Vector3(4.0, 30.0, 0.0),
-		&"Head": Vector3(2.0, 30.0, 0.0),
+		&"Neck": Vector3(4.0, -25.0, 0.0),
+		&"Head": Vector3(2.0, -25.0, 0.0),
 		&"RightUpperLeg": Vector3(30.0, 0.0, 30.0),
 		&"RightLowerLeg": Vector3(-60.0, 0.0, 0.0),
 	})
@@ -1578,9 +1639,21 @@ static func _spinning_heel(g: Dictionary[StringName, Vector3]) -> MovePoses:
 	strike[&"UpperChest"] = Vector3(0.0, -15.0, 0.0)
 	strike[&"Neck"] = Vector3(0.0, -22.0, -4.0)
 	strike[&"Head"] = Vector3(0.0, -23.0, 0.0)
+	# The hips keep turning after contact while the twist unwinds, so the head stays on the
+	# target (a full turn in all) until the end.
 	var strike_end := strike.duplicate()
 	strike_end[&"Hips"] = Vector3(0.0, -300.0, 0.0)
-	var follow := merge(g, {&"Hips": Vector3(0.0, -335.0, 0.0)})
+	strike_end[&"Spine"] = Vector3(0.0, -10.0, 6.0)
+	strike_end[&"Chest"] = Vector3(0.0, -10.0, 2.0)
+	strike_end[&"UpperChest"] = Vector3(0.0, -10.0, 0.0)
+	strike_end[&"Neck"] = Vector3(0.0, -15.0, -4.0)
+	strike_end[&"Head"] = Vector3(0.0, -15.0, 0.0)
+	var follow := merge(g, {
+		&"Hips": Vector3(0.0, -335.0, 0.0),
+		&"Spine": Vector3(-3.0, -10.0, 0.0),
+		&"Neck": Vector3(4.0, -8.0, 0.0),
+		&"Head": Vector3(2.0, -7.0, 0.0),
+	})
 	var m := _mp(g, windup, strike)
 	m.strike_end = strike_end
 	m.follow = follow
@@ -1634,21 +1707,23 @@ static func _flying_kick(base: Dictionary[StringName, Vector3]) -> MovePoses:
 
 
 ## Air spin kick at the apex: a full right turn with the right leg straight out to the
-## side through all the active frames.
+## side through all the active frames. The head turns with the hips, a little ahead of them
+## near the end, so the eyes (and the first-person view following them) turn steadily and
+## finish the turn facing the way they started.
 static func _spin_kick(base: Dictionary[StringName, Vector3]) -> MovePoses:
 	var g := _air_guard(base)
 	var windup := merge(g, {
 		&"Hips": Vector3(0.0, -50.0, 0.0),
-		&"Neck": Vector3(0.0, 20.0, 0.0),
-		&"Head": Vector3(0.0, 20.0, 0.0),
+		&"Neck": Vector3(0.0, 5.0, 0.0),
+		&"Head": Vector3(0.0, 5.0, 0.0),
 		&"RightUpperLeg": Vector3(40.0, 0.0, 40.0),
 		&"RightLowerLeg": Vector3(-80.0, 0.0, 0.0),
 	})
 	var strike := merge(g, {
 		&"Hips": Vector3(0.0, -100.0, 0.0),
 		&"Spine": Vector3(0.0, 0.0, 6.0),
-		&"Neck": Vector3(0.0, 45.0, -10.0),
-		&"Head": Vector3(0.0, 45.0, 0.0),
+		&"Neck": Vector3(0.0, 0.0, -10.0),
+		&"Head": Vector3(0.0, 0.0, 0.0),
 		&"RightUpperLeg": Vector3(10.0, 0.0, 84.0),
 		&"RightLowerLeg": Vector3(-4.0, 0.0, 0.0),
 		&"RightFoot": Vector3(10.0, 0.0, 0.0),
@@ -1663,7 +1738,11 @@ static func _spin_kick(base: Dictionary[StringName, Vector3]) -> MovePoses:
 	strike_end[&"Head"] = Vector3(0.0, -10.0, 0.0)
 	var m := _mp(g, windup, strike)
 	m.strike_end = strike_end
-	m.follow = merge(g, {&"Hips": Vector3(0.0, -350.0, 0.0)})
+	m.follow = merge(g, {
+		&"Hips": Vector3(0.0, -350.0, 0.0),
+		&"Neck": Vector3(4.0, -5.0, 0.0),
+		&"Head": Vector3(2.0, -5.0, 0.0),
+	})
 	m.finish = merge(g, {&"Hips": Vector3(0.0, -360.0, 0.0)})
 	return m
 

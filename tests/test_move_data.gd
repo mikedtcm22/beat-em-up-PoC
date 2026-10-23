@@ -37,6 +37,8 @@ const TABLE := {
 	&"uppercut": [12.0, FINISHER, LAUNCH],
 	&"body_flurry": [2.0, LIGHT, FLINCH],
 	&"shove": [6.0, FINISHER, STAGGER],
+	# P P · P since Game-boy's second playtest (Spec §4 change).
+	&"spinning_backfist": [14.0, FINISHER, KNOCKDOWN],
 	&"front_kick": [8.0, LIGHT, FLINCH],
 	&"roundhouse": [10.0, HEAVY, STAGGER],
 	&"spinning_heel": [14.0, FINISHER, KNOCKDOWN],
@@ -67,6 +69,7 @@ const SPHERE_POINTS := {
 	&"uppercut": [&"RightFistPoint"],
 	&"body_flurry": [&"LeftFistPoint", &"RightFistPoint"],
 	&"shove": [&"LeftFistPoint", &"RightFistPoint"],
+	&"spinning_backfist": [&"RightFistPoint"],
 	&"front_kick": [&"RightFootPoint"],
 	&"roundhouse": [&"RightFootPoint"],
 	&"stomp_kick": [&"RightFootPoint"],
@@ -148,16 +151,20 @@ const EXPECTED_INTERRUPTS := {
 
 ## ARCHITECTURE "Branches": every move's own branches, in order, same form.
 const EXPECTED_BRANCHES := {
-	&"jab_1": [[P, NORMAL, &"", &"jab_2"]],
+	&"jab_1": [
+		[P, NORMAL, &"", &"jab_2"],
+		[P, PAUSE, &"", &"body_flurry"],
+	],
 	&"jab_2": [
 		[P, NORMAL, &"", &"hook"],
 		[K, NORMAL, &"", &"push_kick"],
-		[P, PAUSE, &"", &"body_flurry"],
+		[P, PAUSE, &"", &"spinning_backfist"],
 	],
 	&"hook": [[P, NORMAL, &"", &"uppercut"]],
 	&"uppercut": [],
 	&"body_flurry": [],
 	&"shove": [],
+	&"spinning_backfist": [],
 	&"front_kick": [
 		[K, NORMAL, &"", &"roundhouse"],
 		[K, PAUSE, &"", &"stomp_kick"],
@@ -371,7 +378,8 @@ func test_blocking_fields() -> void:
 
 func test_dummy_jab_is_a_telegraphed_light_jab() -> void:
 	var jab := _load_move(&"dummy_jab")
-	assert_eq([jab.startup, jab.active, jab.recovery], [18, 3, 16], "an 18-frame wind-up (Spec §7 grunts: at least 18)")
+	assert_eq([jab.startup, jab.active, jab.recovery], [24, 3, 16],
+			"a 24-frame wind-up (Spec §7 grunts: at least 18; 24 since Game-boy's second playtest)")
 	assert_eq(jab.knockback, Vector3(0.0, 0.0, 1.5))
 	assert_almost_eq(jab.hitboxes[0].radius, 0.14, 0.0001)
 	assert_false(jab.magnetism, "no tracking: turning away or stepping aside makes it miss")
@@ -390,9 +398,9 @@ func test_combo_punch_chain() -> void:
 
 
 func test_combo_pause_flurry_ends_in_shove() -> void:
-	var moves := _walk(_load_set(&"ground"), "P P · P")
-	assert_eq(_ids(moves), PackedStringArray(["jab_1", "jab_2", "body_flurry"]), "P P · P")
-	assert_eq(_damages(moves), PackedFloat64Array([6, 6, 2]), "P P · P damage")
+	var moves := _walk(_load_set(&"ground"), "P · P")
+	assert_eq(_ids(moves), PackedStringArray(["jab_1", "body_flurry"]), "P · P")
+	assert_eq(_damages(moves), PackedFloat64Array([6, 2]), "P · P damage")
 	var flurry := _load_move(&"body_flurry")
 	assert_eq(flurry.repeat_input, CombatTypes.IN_PUNCH, "the flurry repeats on P")
 	assert_eq(flurry.repeat_max, 6, "up to 6 repeats")
@@ -401,6 +409,13 @@ func test_combo_pause_flurry_ends_in_shove() -> void:
 	if flurry.auto_next:
 		assert_eq(flurry.auto_next.id, &"shove", "the flurry's auto_next is the shove")
 		assert_eq(flurry.auto_next.damage, 6.0, "shove damage")
+
+
+func test_combo_pause_spinning_backfist() -> void:
+	var moves := _walk(_load_set(&"ground"), "P P · P")
+	assert_eq(_ids(moves), PackedStringArray(["jab_1", "jab_2", "spinning_backfist"]), "P P · P")
+	assert_eq(_damages(moves), PackedFloat64Array([6, 6, 14]), "P P · P damage")
+	assert_true(moves.back().is_finisher(), "the spinning backfist is a finisher")
 
 
 func test_combo_kick_chain() -> void:
@@ -429,7 +444,7 @@ func test_combo_haymaker() -> void:
 
 
 func test_every_chain_ends_in_a_finisher() -> void:
-	for combo: String in ["P P P P", "P P · P", "K K K", "K · K", "P P K", "P_HOLD"]:
+	for combo: String in ["P P P P", "P · P", "P P · P", "K K K", "K · K", "P P K", "P_HOLD"]:
 		var moves := _walk(_load_set(&"ground"), combo)
 		assert_gt(moves.size(), 0, "%s resolves" % combo)
 		if moves.is_empty():
@@ -573,11 +588,29 @@ func test_kick_camera_offsets() -> void:
 	assert_almost_eq(stomp.camera_pitch_deg, -25.0, 0.0001, "stomp: camera pitch")
 	assert_almost_eq(stomp.camera_drop_m, 0.05, 0.0001, "stomp: camera drop")
 	for id: StringName in TABLE:
-		if id in KICKS or id == &"stomp" or id == &"spin_kick":
+		if id in KICKS or id == &"stomp" or id == &"spin_kick" or id == &"back_elbow":
 			continue
 		var move := _load_move(id)
 		assert_eq(move.camera_pitch_deg, 0.0, "%s: no camera pitch" % id)
 		assert_eq(move.camera_drop_m, 0.0, "%s: no camera drop" % id)
+
+
+## Game-boy's second playtest: the view spins with the 360-degree moves and the back
+## elbow turns it over the shoulder; nothing else turns the view.
+func test_view_turns_only_on_spins_and_the_back_elbow() -> void:
+	var spins := [&"spin_kick", &"spinning_heel", &"spinning_backfist"]
+	for id: StringName in TABLE:
+		var move := _load_move(id)
+		assert_eq(move.camera_spin_follow, 1.0 if id in spins else 0.0, "%s: camera_spin_follow" % id)
+		if id == &"back_elbow":
+			# Game-boy asked for about 100-120; the elbow and a body straight behind only come
+			# into the 90-degree view from about 140 (tools/gen_moves.gd).
+			assert_between(move.camera_yaw_deg, -160.0, -100.0, "back elbow: the view turns right, toward the elbow")
+			assert_between(move.camera_pitch_deg, -15.0, 0.0, "back elbow: and a little down")
+			assert_almost_eq(move.camera_drop_m, 0.0, 0.0001, "back elbow: no camera drop")
+			assert_gt(move.camera_hold_frames, 0, "back elbow: the turn holds a few frames past the active frames")
+		else:
+			assert_eq(move.camera_yaw_deg, 0.0, "%s: no view turn" % id)
 
 
 func test_only_stomp_hits_downed_and_only_haymaker_breaks_armor() -> void:

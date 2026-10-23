@@ -52,7 +52,7 @@ static var warn_on_fallback: bool = true
 
 ## Move ids with a dedicated recipe in PlaceholderPoses (docs/ARCHITECTURE.md "Moves").
 const MOVE_IDS: Array[StringName] = [
-	&"jab_1", &"jab_2", &"hook", &"uppercut", &"body_flurry", &"shove",
+	&"jab_1", &"jab_2", &"hook", &"uppercut", &"body_flurry", &"shove", &"spinning_backfist",
 	&"front_kick", &"roundhouse", &"spinning_heel", &"stomp_kick", &"push_kick",
 	&"haymaker", &"flying_kick", &"spin_kick", &"back_elbow", &"knee", &"throw",
 	&"stomp", &"pipe_swing_1", &"pipe_swing_2", &"pipe_swing_3", &"weapon_throw",

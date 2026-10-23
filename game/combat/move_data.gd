@@ -57,6 +57,15 @@ extends Resource
 ## eased out over recovery. Negative pitch looks down (kicks use about -10).
 @export_range(-30.0, 30.0, 0.5) var camera_pitch_deg: float = 0.0
 @export_range(0.0, 0.3, 0.005) var camera_drop_m: float = 0.0
+## First-person view turn at full weight, eased in and out like the pitch (positive turns
+## left): the back elbow turns the view over the shoulder toward its elbow.
+@export_range(-180.0, 180.0, 1.0) var camera_yaw_deg: float = 0.0
+## Recovery frames the offsets above stay at full weight before they ease out.
+@export_range(0, 60, 1) var camera_hold_frames: int = 0
+## Share (0..1) of the body's spin since the move started that the view turns with
+## (the eyes' facing, EyePoint): 1 for 360-degree spins, so the view spins with the body
+## and lands back on the heading. Times Tuning.cam_spin_follow_mult.
+@export_range(0.0, 1.0, 0.05) var camera_spin_follow: float = 0.0
 
 @export_group("Combo")
 @export var branches: Array[ComboBranch] = []

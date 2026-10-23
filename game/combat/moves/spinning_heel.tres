@@ -26,3 +26,4 @@ hitboxes = Array[ExtResource("hitbox_spec_gd")]([SubResource("hitbox_0")])
 magnetism = false
 camera_pitch_deg = -10.0
 camera_drop_m = 0.05
+camera_spin_follow = 1.0

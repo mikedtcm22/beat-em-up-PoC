@@ -310,6 +310,15 @@ func get_point_position(point: StringName) -> Vector3:
 	return get_point_transform(point).origin
 
 
+## Yaw in radians (positive turns left, -PI..PI) of the eyes' facing (EyePoint's -Z, flat)
+## relative to the rig's forward, after the latest advance(). The first-person camera
+## turns with it through spinning moves (MoveData.camera_spin_follow).
+func eye_yaw() -> float:
+	var to_world := global_transform if is_inside_tree() else transform
+	var forward := to_world.basis.inverse() * (get_point_transform(&"EyePoint").basis * Vector3.FORWARD)
+	return atan2(-forward.x, -forward.z)
+
+
 ## Node that follows a bone or rig point, for attaching visuals (held weapon at WeaponGrip).
 ## Children added to it follow the pose after every advance(). For the weapon, parent it
 ## to WeaponGrip with its handle at the origin and its length along -Z.
