@@ -216,7 +216,7 @@ extends Resource
 ## Each actor's voice is pitched up or down by up to this share, the same every time.
 @export_range(0.0, 0.3, 0.01) var voice_pitch_spread: float = 0.1
 @export_range(-40.0, 12.0, 0.5) var block_clack_db: float = -8.0
-@export_range(-40.0, 12.0, 0.5) var parry_ting_db: float = -12.0
+@export_range(-40.0, 12.0, 0.5) var parry_ting_db: float = -7.0
 @export_range(-40.0, 12.0, 0.5) var guard_break_db: float = -7.0
 ## An enemy's wind-up: an effort grunt and a whoosh at the attacker (Spec §8's audio cue,
 ## on while rear_warning_audio).

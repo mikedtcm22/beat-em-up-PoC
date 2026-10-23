@@ -127,6 +127,23 @@ func test_bank_never_picks_the_same_variant_twice_in_a_row() -> void:
 		assert_eq(seen.size(), bank.count(pool), "%s: every variant comes up" % pool)
 
 
+func test_the_audio_tuning_group_sits_before_debug() -> void:
+	var groups: Array[String] = []
+	var audio_props: Array[String] = []
+	for prop in TuningData.new().get_property_list():
+		if prop.usage & PROPERTY_USAGE_GROUP:
+			groups.append(prop.name)
+		elif groups.size() > 0 and groups[-1] == "Audio" and prop.usage & PROPERTY_USAGE_EDITOR:
+			audio_props.append(prop.name)
+			if prop.type == TYPE_FLOAT:
+				assert_eq(prop.hint, PROPERTY_HINT_RANGE, "%s is a slider" % prop.name)
+	var at := groups.find("Audio")
+	assert_gt(at, -1)
+	assert_eq(groups[at + 1] if at + 1 < groups.size() else "", "Debug")
+	for prop_name: String in ["sfx_pitch_variation", "sfx_volume_variation", "whoosh_db", "rumble_strength", "music_enabled"]:
+		assert_has(audio_props, prop_name)
+
+
 # --- Hits -----------------------------------------------------------------------------
 
 
@@ -495,3 +512,25 @@ func test_the_test_room_hears_a_real_jab_from_the_players_eyes() -> void:
 			assert_almost_eq(play.at as Vector3, landed[0].contact_point, Vector3.ONE * 0.001)
 	assert_true(_pools(false).has(&"grunt"), "the dummy grunts")
 	assert_eq(_pulses.size(), 1, "the player's light hit rumbles once")
+	# A swing at nothing: only a whoosh, at the player's fist, and no rumble.
+	var dummy: TrainingDummy = dummies[0]
+	dummy.set_post(Vector3(30.0, 0.0, 30.0), 0.0, true)
+	for i in 40:
+		await get_tree().physics_frame
+	_plays.clear()
+	_pulses.clear()
+	var whiffed: Array[MoveData] = []
+	var on_whiff := func(_attacker: Node3D, move: MoveData) -> void: whiffed.append(move)
+	CombatEvents.attack_whiffed.connect(on_whiff)
+	player.input.push_press(&"P", 2)
+	for i in 40:
+		await get_tree().physics_frame
+		if not whiffed.is_empty():
+			break
+	CombatEvents.attack_whiffed.disconnect(on_whiff)
+	assert_eq(whiffed.size(), 1, "the jab whiffs")
+	assert_eq(_pools(false), [&"whoosh"], "a whiff: a whoosh and nothing else")
+	if not _plays.is_empty():
+		var fist := player.rig.get_point_position(whiffed[0].hitboxes[0].point)
+		assert_lt((_plays[0].at as Vector3).distance_to(fist), 0.5, "at the striking fist")
+	assert_eq(_pulses.size(), 0)
