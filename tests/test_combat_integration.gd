@@ -1690,3 +1690,47 @@ func test_back_elbow_turns_the_view_over_the_shoulder_and_back() -> void:
 	assert_gte(seen_frames, contact.size() - 1, "the dummy behind is in the turned view while the elbow connects (%s)" % [contact])
 	assert_almost_eq(player.look_yaw, yaw, 0.001, "aim unchanged")
 	assert_almost_eq(player.rotation.y, yaw, 0.001, "body facing unchanged")
+
+
+## Review finding: a turning move cancelled into another (the back elbow interrupts any
+## recovery, its own included) made the view jump, or sweep almost a full turn the wrong
+## way between two ticks (134 and 333 degrees). Each tick's turn, and the span the camera
+## interpolates over, stay within the elbow's own ease-in, and the view ends on the look.
+func test_chained_view_turns_never_jump_or_sweep_round() -> void:
+	var started: Array[StringName] = []
+	var on_start := func(attacker: Node3D, move: MoveData, _step: int, _timing: StringName) -> void:
+		if attacker == player:
+			started.append(move.id)
+	CombatEvents.attack_started.connect(on_start)
+	for first: StringName in [&"back_elbow", &"spinning_heel"]:
+		await _setup([Vector3(0, 0, -1.6), Vector3(0, 0, 1.0)])
+		started.clear()
+		if first == &"back_elbow":
+			player.input.push_press(&"RB", 2)
+		else:
+			for i in 3:
+				player.input.push_press(&"K", 2)
+				player.input.push_wait(10)
+		# In the hold of the elbow's turn; late in the heel kick's spin, still unwrapped.
+		var cancel_at := 9 if first == &"back_elbow" else 30
+		var widest := 0.0
+		var widest_span := 0.0
+		var pressed := false
+		for i in 300:
+			await get_tree().physics_frame
+			if not pressed and player.current_move and player.current_move.id == first and player.move_frame >= cancel_at:
+				player.input.push_press(&"RB", 2)
+				pressed = true
+			var last := player.get_camera_view_yaw(0.0)
+			var now := player.get_camera_view_yaw(1.0)
+			widest = maxf(widest, absf(wrapf(now - last, -180.0, 180.0)))
+			widest_span = maxf(widest_span, absf(now - last))
+			if pressed and i > 20 and player.current_move == null and is_zero_approx(now):
+				break
+		assert_true(pressed, "%s: cancelled into the back elbow" % first)
+		assert_eq(started.back() if not started.is_empty() else &"", &"back_elbow", "%s: the elbow came out (%s)" % [first, started])
+		# The elbow's own 150-degree turn eases in over 5 frames, up to about 44 degrees a tick.
+		assert_lt(widest, 50.0, "%s, then the back elbow: at most 50 degrees a tick (%.1f)" % [first, widest])
+		assert_lt(widest_span, 50.0, "%s, then the back elbow: the camera interpolates over less than 50 degrees (%.1f)" % [first, widest_span])
+		assert_almost_eq(player.get_camera_view_yaw(), 0.0, 0.01, "%s: back on the look" % first)
+	CombatEvents.attack_started.disconnect(on_start)

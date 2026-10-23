@@ -167,8 +167,9 @@ extends Resource
 ## Thrown or launched bodies blocked from the front drain the guard this many times harder.
 @export_range(0.0, 5.0, 0.1) var body_impact_guard_mult: float = 2.0
 @export var perfect_block_enabled: bool = true
-## A hit landing within this many frames of the B press that raised the guard is a perfect
-## block (about 0.23 s: a press on reaction to a sparring jab's 24-frame wind-up parries).
+## A hit landing within this many frames of a guard raised by a fresh B press (counted from
+## the raise; a press buffered in a move raises it when the move can be cancelled) is a
+## perfect block (about 0.23 s: a press on reaction to a sparring jab's 24-frame wind-up parries).
 @export_range(0, 30, 1) var perfect_block_window_frames: int = 14
 @export_range(0, 90, 1) var perfect_block_stagger_frames: int = 30
 ## Real ticks the defender's rig flashes cyan on a perfect block (the parry flash).
