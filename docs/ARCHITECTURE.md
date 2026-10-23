@@ -123,8 +123,9 @@ Ids are the `.tres` names in `game/combat/moves/`. Each move's animation id equa
 | `jab_2` | P P | 4/3/10 | 6 | LIGHT | FLINCH | 0,0,1.5 | RightFistPoint r0.12 | z ≤ −0.65, y 1.35–1.65 |
 | `hook` | P P P | 6/3/14 | 8 | HEAVY | STAGGER | −2.2,0,0.6 (snaps the head sideways) | LeftFistPoint r0.14 | z ≤ −0.5, y 1.35–1.65 |
 | `uppercut` | P P P P | 8/3/22 | 12 | FINISHER | LAUNCH | 0,6,3 | RightFistPoint r0.14 | z ≤ −0.45, y 1.4–1.8 |
-| `body_flurry` | P P · P, repeat P up to 6 | 2/2/6 | 2 | LIGHT | FLINCH (hitstun 10) | 0,0,0.3 | both FistPoints r0.12 | z ≤ −0.55, y 1.0–1.3 |
+| `body_flurry` | P · P, repeat P up to 6 | 2/2/6 | 2 | LIGHT | FLINCH (hitstun 10) | 0,0,0.3 | both FistPoints r0.12 | z ≤ −0.55, y 1.0–1.3 |
 | `shove` | flurry's auto_next | 6/3/18 | 6 | FINISHER | STAGGER (shoves into others) | 0,0,7 | both FistPoints r0.16 | z ≤ −0.55, y 1.1–1.45 |
+| `spinning_backfist` | P P · P | 12/3/20 | 14 | FINISHER | KNOCKDOWN | −1.5,3,6 | RightFistPoint r0.15 | z ≤ −0.65, y 1.35–1.65 (after a full turn) |
 | `front_kick` | K | 7/3/14 | 8 | LIGHT | FLINCH | 0,0,2 | RightFootPoint r0.15 | z ≤ −0.75, y 0.8–1.2 |
 | `roundhouse` | K K | 9/3/16 | 10 | HEAVY | STAGGER | 2,0,1 | RightFootPoint r0.16 | z ≤ −0.6, y 1.1–1.6 |
 | `spinning_heel` | K K K | 12/5/24 | 14 | FINISHER | KNOCKDOWN | 0,3,6 | ARC r1.9, ±75°, y 0.3–1.8 | (spin) |
@@ -143,13 +144,17 @@ Ids are the `.tres` names in `game/combat/moves/`. Each move's animation id equa
 | `weapon_throw` | LB with weapon | 6/1/14 | 15 | HEAVY | KNOCKDOWN | 0,2,6 | none (spawns projectile) | — |
 | `impact_body_knockdown` | flying body hits someone | 0/1/0 | 5 | HEAVY | KNOCKDOWN | 0,2,3 | none | — |
 | `impact_body_stagger` | shoved body hits someone | 0/1/0 | 0 | LIGHT | STAGGER | 0,0,2 | none | — |
-| `dummy_jab` | sparring training dummy | 18/3/16 | 6 | LIGHT | FLINCH | 0,0,1.5 | RightFistPoint r0.14, no magnetism | z ≤ −0.65, y 1.35–1.65 |
+| `dummy_jab` | sparring training dummy | 24/3/16 | 6 | LIGHT | FLINCH | 0,0,1.5 | RightFistPoint r0.14, no magnetism | z ≤ −0.65, y 1.35–1.65 |
 
-`dummy_jab` is the sparring dummy's telegraphed right (see "Block"): its 18 frames of startup are the wind-up (the fist cocked back beside the head by 60% of it, the lead fist holding its side of the chin while the shoulders turn away, so from the defender's lens the face and the cocked fist both stay in view), then `jab_2`'s straight right. It connects out to about 1.05 m between the two bodies' centers; the sparring dummy steps in to `sparring_step_in_m` (0.9 m) before it throws it.
+`dummy_jab` is the sparring dummy's telegraphed right (see "Block"): its 24 frames (0.4 s; 18 until Game-boy's second playtest) of startup are the wind-up (the fist cocked back beside the head by 60% of it, the lead fist holding its side of the chin while the shoulders turn away, so from the defender's lens the face and the cocked fist both stay in view), then `jab_2`'s straight right. It connects out to about 1.05 m between the two bodies' centers; the sparring dummy steps in to `sparring_step_in_m` (0.9 m) before it throws it.
 
 **Blocking fields** (every move): `unblockable` (false for all of Milestone 1), `guard_damage_mult` (1.0; the pipe swings 1.5), `blocked_recoil_frames` (14).
 
 Kicks use the camera offsets `camera_pitch_deg = −10` and `camera_drop_m = 0.05`. The flying kick (it dives at the target) and the stomp use −25, with the same 0.05 drop.
+
+**View-turn fields** (Game-boy's second playtest; first-person presentation only, aim and hits never use them):
+- `camera_spin_follow` (0..1): the share of the eyes' turn since the move started (`HumanoidRig.eye_yaw()`, unwrapped) the view turns with, eased onto whole turns over the recovery so it lands back on the heading. 1 on `spin_kick`, `spinning_heel` and `spinning_backfist`; times `Tuning.cam_spin_follow_mult` (1; 0 turns it off). The three spins key the head to lead the turn (spotting): the eyes turn 360° at an even rate (at most 30° a frame from idle, about 40 chained out of the roundhouse) and face the target at contact.
+- `camera_yaw_deg` (positive turns left) with `camera_hold_frames`: a view turn eased in over the startup, held through the active frames and `camera_hold_frames` more, eased out over the rest of the recovery (the pitch and drop use the same weight). The back elbow: −150° and pitch −10, held 6 frames. Game-boy asked for about 100–120°, but the elbow drives straight back behind the spine: at the 90° FOV a 120° turn shows neither it nor a body straight behind (that body's edge comes in from about 121°, the elbow's tip from about 140°); at 150° both are in the right half of the view while it connects. The player's own right upper arm then shows large near the lens, under the third of the view the rig tests allow.
 
 **Move sets** (`game/combat/movesets/`):
 - `ground.tres`
@@ -164,8 +169,8 @@ Kicks use the camera offsets `camera_pitch_deg = −10` and `camera_drop_m = 0.0
   - Interrupt: `RB → back_elbow`
 
 **Branches:**
-- `jab_1`: `P → jab_2`
-- `jab_2`: `P → hook`, `K → push_kick`, `P (PAUSE) → body_flurry`
+- `jab_1`: `P → jab_2`, `P (PAUSE) → body_flurry`
+- `jab_2`: `P → hook`, `K → push_kick`, `P (PAUSE) → spinning_backfist`
 - `hook`: `P → uppercut`
 - `body_flurry`: `repeat_input P`, `repeat_max 6`, `auto_next shove`
 - `front_kick`: `K → roundhouse`, `K (PAUSE) → stomp_kick`
@@ -185,6 +190,7 @@ The knee count, releasing the victim on the third knee, the throw direction, dod
 - Blocking: `guard: float`, `max_guard() -> float`, `is_guarding() -> bool` (BLOCK or BLOCKSTUN), `is_guard_effective() -> bool`, `is_dropping_guard() -> bool`, `start_block(can_parry = true)` (false: a guard re-raised by a held button, which never parries), `drop_guard(frames)`, `react_to_block(hit)` (the attacker's side, called by HitDetector), `get_block_arc() -> Dictionary` (`{origin, forward, half_angle_deg, effective}`, empty when not guarding)
 - `start_move(move, chain_step, input_timing, windup = false)`: with `windup` the startup runs in WINDUP (enemy telegraphs) and emits `windup_started` / `windup_ended`
 - `get_head_top_position() -> Vector3`, `get_chest_position() -> Vector3`
+- `can_be_grabbed() -> bool` (grab anytime, Game-boy's second playtest): standing and not held, in FREE, WINDUP, HITSTUN, STAGGER, BLOCK, BLOCKSTUN, or ATTACK outside the active frames; never invulnerable, dodging, airborne, downed, flying, getting up or KO
 - `receive_hit(hit: HitInfo) -> bool`
 - `debug_state_text() -> String`
 - `debug_hitbox_volumes: Array[Dictionary]` holds this sim frame's active hitboxes:
@@ -196,6 +202,7 @@ The knee count, releasing the victim on the third knee, the throw direction, dod
 - `get_eye_transform() -> Transform3D`: the world transform of `EyePoint`.
 - `get_look_basis() -> Basis`: `Basis.from_euler(Vector3(look_pitch, look_yaw, 0))`.
 - `get_camera_move_offset() -> Vector2`: x is the extra pitch in degrees (negative is down), y is the camera drop in meters. Both are already eased.
+- `get_camera_view_yaw(fraction = 1.0) -> float`: the view's turn away from the look in degrees (positive left): spin follow plus `camera_yaw_deg`, computed once per physics tick after the rig advances; `fraction` interpolates from the last tick to this one. Whenever the turning move changes (it ends, is cut short, or is cancelled into another, such as a back elbow out of a spin) the turn on screen is wrapped to ±180°, on both ticks alike, and carried over, settling back by a quarter per tick on top of the new move: the view never jumps or sweeps round between ticks.
 - `is_walking() -> bool`: on the ground and moving under the player's own control.
 - `standing_eye_height: float`: the eye height above the player's origin in the idle pose.
 - `get_magnetism_cone() -> Dictionary`: `{origin, forward, half_angle_deg, range, target}` for debug draw.
@@ -217,6 +224,8 @@ The knee count, releasing the victim on the third knee, the throw direction, dod
 - `buffer(input)` hands a press back at age 0 without touching the hold timers: the player holds a P or K pressed in the guard outside the buffer and buffers it fresh once the guard is down.
 - `HitInfo.input_timing` is one of `root`, `chain`, `pause`, `repeat` or `auto` from the parser. Code-applied hits add `body` (flying or shoved bodies) and `thrown` (thrown weapons).
 
+**First-person view turn:** the camera turns the look basis about world up by `player.get_camera_view_yaw(Engine.get_physics_interpolation_fraction())` before the move's pitch, and puts the lens ahead along the turned view. Interpolated always (unlike the origin), so a spin turns smoothly on displays faster than 60 Hz, at the cost of up to a tick of lag behind the body.
+
 **First-person camera smoothing:** the camera follows the player's origin rigidly and damps only the eye's offset from that origin (about 0.05 s). Damping the whole world position would make the camera trail the body by speed × 0.05 s.
 
 **First-person lens** (Game-boy's call after the M1 playtest): the camera sits at `EyePoint + FirstPersonCamera.lens_offset(look_basis)`, 0.2 m below the eye at throat height (`Tuning.cam_height_offset_m`) and 0.04 m ahead along the flat look (`cam_forward_offset_m`), Mirror's Edge style. It is presentation only: aim, magnetism and hit detection never use it. The rig tests judge every first-person view from this lens (`tests/test_humanoid_rig.gd` with the ray-cast helpers in `tests/fp_view.gd`):
@@ -235,11 +244,12 @@ The forward offset stays small: the guard's forearms stay that far from the lens
 Blocking lives in `CombatActor`, so any actor can block (enemies may in Milestone 3); for now the player controller drives it. Every number is a `TuningData` default in the groups "Block" and "Sparring" (`Tuning.data.*`), or a `MoveData` field.
 
 **Input** (`PlayerCharacter._b_action()`): the B (`dodge`) press decides when it is pressed. With the stick under `block_stick_threshold` (0.3) it raises the guard; otherwise it dodges that way (the backstep is B + back). Keyboard: Shift alone blocks, Shift + WASD dodges. A press buffered during a move is decided by the stick when it was pressed. The block starts from FREE or a cancellable recovery, like the dodge.
+- Late stick (Game-boy's second playtest, "I couldn't get the character to dodge"): replayed through live input (joypad motion and button events, keyboard, `Input.action_press`, through `PlayerInput.poll()`), stick-then-B dodged, but B or Shift pressed a moment before the direction raised the guard. A guard raised by a fresh B press with the stick centered now turns into a dodge when the stick passes the threshold within `dodge_late_stick_frames` (8) of the press, B still held, unless the guard has stopped a hit. Later, the stick walks in the guard as before.
 - Holding B keeps the "dukes up" guard (`block`): walking at `block_move_mult` (0.35) of the move speed, looking and quick-turning freely (the body, and the guard, follow the look), no jump, LB ignored: JUMP and GRAB presses are dropped while the guard is up (from the release on they stay buffered, so LB right after letting go grabs a parried attacker).
 - Releasing B drops the guard; the block ends `block_release_frames` (4) later. P or K drops it too and starts its attack `block_attack_cancel_frames` (2) later. The press is held back outside the ComboParser buffer while guarding, blockstun included, and buffered fresh (`ComboParser.buffer()`) once the guard is down, so it always attacks: pressed during a blockstun, the guard stays up through it and the attack starts 2 frames after it. A dropping guard stops nothing.
 - Holding B keeps the block (Game-boy): back to FREE with the B press that blocked still held (after a hit, a knockdown, a guard break's stagger, an attack out of the guard, a grab), the guard comes up again, raise frames and all. A guard re-raised that way never parries (`start_block(false)`): a perfect block needs a fresh press. B pressed with a stick direction and held is a dodge, not a block.
 
-**Coverage** (`CombatActor._try_block()`): the guard stops a hit once it has been up `block_raise_frames` (4), when the attacker stands within `block_arc_half_angle_deg` (60) of the guard's facing (the player's look). Flying bodies and thrown objects (`hit.is_body_impact`) are judged by where they came from. Side and back hits land in full. `MoveData.unblockable` moves go through. Thrown or launched bodies are blockable from the front and drain the guard `body_impact_guard_mult` (2.0) times harder; thrown weapons by their move's `guard_damage_mult`.
+**Coverage** (`CombatActor._try_block()`): the guard stops a hit once it has been up `block_raise_frames` (1; 4 until Game-boy's second playtest), when the attacker stands within `block_arc_half_angle_deg` (60) of the guard's facing (the player's look). Flying bodies and thrown objects (`hit.is_body_impact`) are judged by where they came from. Side and back hits land in full. `MoveData.unblockable` moves go through. Thrown or launched bodies are blockable from the front and drain the guard `body_impact_guard_mult` (2.0) times harder; thrown weapons by their move's `guard_damage_mult`.
 
 **A blocked hit** keeps its contact: `CombatEvents.hit_landed` still fires, with `hit.blocked`, `hit.damage` = the chip and `hit.reaction` = what the defender did (NONE, or STAGGER for a guard break), followed by `blocked(defender, hit)`.
 - Chip: `chip_ratio` (0.15) of the damage, never below 1 health (god mode: none).
@@ -248,7 +258,7 @@ Blocking lives in `CombatActor`, so any actor can block (enemies may in Mileston
 - Hitstop: `block_hitstop_ms` (30) on attacker and defender, not the tier's, and no finisher slow-mo (`HitDetector.hitstop_for()` for code-applied hits).
 - Attacker recoil: when every hit of the frame was blocked, HitDetector calls `react_to_block()`: HITSTUN for `blocked_recoil_frames` with `recoil` (0 = none, for Bruiser and boss moves): the punish window.
 - Guard break: the meter at 0 staggers the defender (STAGGER, `guard_break`, grabbable) for `guard_break_frames` (45); the guard drops (`guard_broken(defender, hit)`, `hit.guard_broken`), the meter stays empty for those frames and then refills to `guard_break_refill` (50). The attacker does not recoil.
-- Perfect block (`perfect_block_enabled`): a blockable frontal hit landing at most `block_raise_frames + perfect_block_window_frames` (4 + 8) frames after a block started by a fresh B press: no chip, drain or blockstun, `hit.perfect_block`, `perfect_blocked(defender, hit)` after `blocked`, the defender's rig flashes cyan for `parry_flash_frames` (8), and the attacker staggers (a real STAGGER, grabbable) for `perfect_block_stagger_frames` (30).
+- Perfect block (`perfect_block_enabled`): a blockable frontal hit landing at most `perfect_block_window_frames` (14) frames after a block started by a fresh B press (until Game-boy's second playtest: raise 4 + window 8, which only an early guess could hit). Against the 24-frame sparring jab any press from 10 frames into the wind-up until 2 frames before contact parries, a reaction 200 ms in included: no chip, drain or blockstun, `hit.perfect_block`, `perfect_blocked(defender, hit)` after `blocked`, the defender's rig flashes cyan for `parry_flash_frames` (8), and the attacker staggers (a real STAGGER, grabbable) for `perfect_block_stagger_frames` (30).
 
 **Presentation:** the guard meter sits under the player's health bar while blocking or below full and flashes red-orange on a guard break; "PARRY!" or "GUARD BREAK!" pops just below the view center (`BlockCallout`, drawn over the combat log and the help); the combat log shows "<chip> chip" and BLOCKED, PERFECT or BLOCKED GUARD BREAK; the first-person camera shakes and punches blocked hits at `blocked_feel_scale` (0.5); debug draw (F3) draws the block arc in cyan (dimmed while the guard rises or drops), and state labels show BLOCK, BLOCKSTUN, "recoil", the guard and a dummy's WINDUP (labels of actors side by side that would print over each other are stacked).
 
