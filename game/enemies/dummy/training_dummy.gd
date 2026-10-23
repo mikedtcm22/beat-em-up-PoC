@@ -54,8 +54,11 @@ func _ready() -> void:
 
 
 ## Milestone 2 tuning panel: a new Tuning.dummy_health applies at once, keeping the share of
-## health left (max_health is otherwise read only at start and on revive).
+## health left (max_health is otherwise read only at start and on revive), and an edit of the
+## jab's move data drops the wind-up-scaled copy, rebuilt on its next use.
 func _on_tuning_changed(property: StringName) -> void:
+	if property == &"" or String(property).begins_with("%s%s/" % [Tuning.MOVE_PREFIX, DUMMY_JAB_ID]):
+		_scaled_jab = null
 	if property != &"dummy_health" and property != &"":
 		return
 	if is_equal_approx(max_health, Tuning.data.dummy_health):

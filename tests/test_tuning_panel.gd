@@ -253,6 +253,29 @@ func test_a_move_edit_applies_on_the_next_use() -> void:
 		assert_almost_eq(hits[0].damage, 21.0, 0.0001, "with the edited damage")
 
 
+func test_dummies_re_read_what_they_cache() -> void:
+	var room: Node3D = await _room()
+	var dummies: Array[TrainingDummy] = []
+	dummies.assign(room.get(&"dummies"))
+	var dummy := dummies[0]
+	dummy.sparring = false
+	dummy.set_post(FAR, 0.0, true)
+	await _ticks(2)
+	dummy.health = dummy.max_health * 0.5
+	Tuning.set_value(&"dummy_health", 60.0)
+	assert_almost_eq(dummy.max_health, 60.0, 0.0001, "dummy_health applies at once")
+	assert_almost_eq(dummy.health, 30.0, 0.0001, "keeping the share of health left")
+	# The sparring jab's wind-up-scaled copy follows edits of the jab.
+	Tuning.set_value(&"windup_mult", 2.0)
+	dummy.start_jab()
+	assert_eq(dummy.current_move.startup, 48, "24-frame wind-up, doubled")
+	dummy.reset_state()
+	Tuning.set_move_value(&"dummy_jab", &"startup", 30)
+	dummy.start_jab()
+	assert_eq(dummy.current_move.startup, 60, "the edited 30 frames, doubled")
+	dummy.reset_state()
+
+
 # --- Presets ----------------------------------------------------------------------------
 
 
@@ -572,6 +595,16 @@ func test_the_test_room_wires_the_overlay_and_f1_f4_toggle_it() -> void:
 	await _ticks(TuningOverlay.UNFREEZE_TICKS + 1)
 	assert_false(player.input.scripted, "then the player has input again")
 	assert_false(overlay.is_player_frozen())
+
+	# The gamepad's View button toggles the panel too.
+	var view := InputEventJoypadButton.new()
+	view.button_index = JOY_BUTTON_BACK
+	view.pressed = true
+	get_tree().root.push_input(view)
+	assert_true(overlay.panel.visible, "View opens the panel")
+	get_tree().root.push_input(view)
+	assert_false(overlay.panel.visible, "View closes it")
+	await _ticks(TuningOverlay.UNFREEZE_TICKS + 1)
 
 	# The combo bot's scripted player is left alone.
 	player.input.scripted = true
