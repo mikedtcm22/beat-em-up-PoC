@@ -30,7 +30,10 @@ func _ready() -> void:
 func flash(seconds: float) -> void:
 	time_left = maxf(seconds, 0.0)
 	frames_shown = 0
-	(material as ShaderMaterial).set_shader_parameter(&"threshold", Tuning.data.vfx_impact_frame_threshold)
+	var mat := material as ShaderMaterial
+	mat.set_shader_parameter(&"threshold", Tuning.data.vfx_impact_frame_threshold)
+	mat.set_shader_parameter(&"local_mix", Tuning.data.vfx_impact_frame_local_mix)
+	mat.set_shader_parameter(&"blur_lod", Tuning.data.vfx_impact_frame_blur_mip)
 	visible = true
 
 

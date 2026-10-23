@@ -14,17 +14,25 @@ extends Node3D
 ##             and on the head spit and (by chance) a tooth.
 ## A blocked hit gets a block spark, a parry spark (perfect block) or a guard-break burst
 ## instead. Words are picked at random from their tier's pool, never the same word twice
-## in a row. The player's lunges get light speed lines (first person only).
+## in a row. The player's real lunges (a move with its own lunge, such as the flying kick,
+## carrying the player Tuning.vfx_lunge_lines_min_m; not the magnetism step-in of jabs and
+## chain hits) get light speed lines (first person only).
 ##
 ## Damage looks: an enemy's materials step from clean to bruised to bloodied as its health
 ## falls to Tuning.vfx_bruised_at and vfx_bloodied_at (HumanoidRig.set_damage_look()).
 ##
 ## World effects are pooled ComicSprites that face the active camera, capped in size so a
-## hit a meter from the first-person lens never fills the view. Time: they run on sim time
-## (TimeController.sim_scale(): slow-mo and the debug time scale stretch them, hitstop does
-## not freeze them, so a word pops during the freeze); the impact frame and the speed
-## lines' flicker count real frames. advance() drives everything; _process() calls it and
-## tests may call it directly.
+## hit a meter from the first-person lens never fills the view; each kind's tiers keep
+## their size ratios. A hit's burst, splash, spark and word sit at the contact, pulled
+## inside the view when the contact is just outside it (Tuning.vfx_clamp_reach_side_deg
+## and _low_deg: a knee or a stomp under the first-person view); a hit behind the camera or farther
+## out shows nothing on screen. Hits on the player land at the lens and always show.
+## Time: they run on sim time (TimeController.sim_scale(): slow-mo and the debug time
+## scale stretch them, hitstop does not freeze them, so a word pops during the freeze); the
+## impact frame and the speed lines' flicker count real frames. advance() drives
+## everything; _process() calls it, after the cameras have placed this frame's view
+## (process_priority), and tests may call it directly. Every effect texture is loaded when
+## the director is created (VfxArt.preload_all()), never in a hit's frame.
 
 const GROUP := &"vfx_director"
 ## Canvas layers: the speed lines draw under the HUD (layer 10), the impact frame over it.
@@ -62,6 +70,9 @@ var _ray: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.new()
 func _init() -> void:
 	name = &"VfxDirector"
 	add_to_group(GROUP)
+	# After the cameras, so effects are placed against the view being rendered this frame.
+	process_priority = CameraDirector.PROCESS_PRIORITY + 1
+	VfxArt.preload_all()
 	rng.randomize()
 	_ray.collision_mask = CombatTypes.bit(CombatTypes.LAYER_WORLD)
 	_ray.collide_with_areas = false
@@ -115,6 +126,7 @@ func advance(real_dt: float) -> void:
 			continue
 		sprite.place(camera)
 	_watch_lunge(camera)
+	speed_lines.keep_clear = _effect_rects(camera) if speed_lines.is_active() else ([] as Array[Rect2])
 	speed_lines.advance(dt, real_dt)
 	impact_frame.advance(real_dt)
 
@@ -141,8 +153,8 @@ func spawn_pop(kind: StringName, point: Vector3, size_m: float, seconds: float, 
 
 
 ## A comic word for `tier` at `point`: lifted above the contact and to a side on screen,
-## tilted, drifting up as it fades.
-func spawn_word(tier: CombatTypes.HitTier, point: Vector3) -> ComicSprite:
+## tilted, drifting up as it fades. `on_player`: the hit landed on the first-person player.
+func spawn_word(tier: CombatTypes.HitTier, point: Vector3, on_player: bool = false) -> ComicSprite:
 	var word := pick_word(tier)
 	if word == "":
 		return null
@@ -150,16 +162,18 @@ func spawn_word(tier: CombatTypes.HitTier, point: Vector3) -> ComicSprite:
 	for old: ComicSprite in live_effects(&"word"):
 		old.age = old.life
 	var t := Tuning.data
-	var width: float = [t.vfx_word_small_m, t.vfx_word_medium_m, t.vfx_word_large_m][tier] * t.vfx_scale
+	var sizes: Array[float] = [t.vfx_word_small_m, t.vfx_word_medium_m, t.vfx_word_large_m]
+	var width: float = sizes[tier] * t.vfx_scale
 	var sprite := spawn_pop(&"word", point, width, t.vfx_word_s, PRIORITY_WORD, VfxArt.word_texture(word))
 	if sprite == null:
 		return null
+	_set_kind_sizes(sprite, sizes)
+	_frame(sprite, on_player)
 	var side := 1.0 if rng.randf() < 0.5 else -1.0
 	sprite.screen_offset = Vector2(side * t.vfx_word_side * width, t.vfx_word_lift * width)
 	sprite.rise_m = t.vfx_word_rise_m
-	sprite.roll = -side * deg_to_rad(rng.randf_range(0.3, 1.0) * t.vfx_word_tilt_deg)
+	sprite.roll = -side * deg_to_rad(rng.randf_range(minf(t.vfx_word_tilt_min_deg, t.vfx_word_tilt_deg), t.vfx_word_tilt_deg))
 	sprite.fade_share = t.vfx_word_fade_share
-	sprite.keep_in_view = true
 	sprite.set_meta(&"word", word)
 	return sprite
 
@@ -187,7 +201,7 @@ func spawn_blood(hit: HitInfo) -> void:
 	var splash := spawn_pop(&"blood_spray", hit.contact_point, t.vfx_blood_spray_m * t.vfx_scale, t.vfx_blood_spray_s,
 			PRIORITY_SPRAY)
 	if splash:
-		splash.keep_in_view = is_instance_valid(hit.victim) and hit.victim.is_in_group(&"player")
+		_frame(splash, _on_player(hit))
 	var count := t.vfx_blood_drops_finisher if finisher else t.vfx_blood_drops_heavy
 	for i in count:
 		var drop := _throw(&"blood_drop", hit, t.vfx_blood_drop_m, t.vfx_blood_speed, t.vfx_particle_s)
@@ -278,32 +292,35 @@ func _on_hit_landed(hit: HitInfo) -> void:
 	var t := Tuning.data
 	var point := hit.contact_point
 	# Hits on the player land at or above the first-person lens: keep their effects in view.
-	var on_player := is_instance_valid(hit.victim) and hit.victim.is_in_group(&"player")
+	var on_player := _on_player(hit)
 	var pop: ComicSprite
 	if hit.blocked:
+		var sparks: Array[float] = [t.vfx_block_spark_m, t.vfx_parry_spark_m, t.vfx_guard_break_m]
 		if hit.perfect_block:
-			pop = spawn_pop(&"parry_spark", point, t.vfx_parry_spark_m * t.vfx_scale, t.vfx_block_fx_s, PRIORITY_SPLASH)
+			pop = spawn_pop(&"parry_spark", point, sparks[1] * t.vfx_scale, t.vfx_block_fx_s, PRIORITY_SPLASH)
 		elif hit.guard_broken:
-			pop = spawn_pop(&"guard_break", point, t.vfx_guard_break_m * t.vfx_scale, t.vfx_block_fx_s, PRIORITY_SPLASH)
+			pop = spawn_pop(&"guard_break", point, sparks[2] * t.vfx_scale, t.vfx_block_fx_s, PRIORITY_SPLASH)
 		else:
-			pop = spawn_pop(&"block_spark", point, t.vfx_block_spark_m * t.vfx_scale, t.vfx_block_fx_s, PRIORITY_SPLASH)
+			pop = spawn_pop(&"block_spark", point, sparks[0] * t.vfx_scale, t.vfx_block_fx_s, PRIORITY_SPLASH)
 		if pop:
-			pop.keep_in_view = on_player
+			_set_kind_sizes(pop, sparks)
+			_frame(pop, on_player)
 		return
 	var tier := hit.tier
-	var burst: float = [t.vfx_burst_small_m, t.vfx_burst_medium_m, t.vfx_burst_large_m][tier]
-	pop = spawn_pop(VfxArt.BURSTS[tier], point, burst * t.vfx_scale, t.vfx_burst_s, PRIORITY_BURST)
+	var bursts: Array[float] = [t.vfx_burst_small_m, t.vfx_burst_medium_m, t.vfx_burst_large_m]
+	pop = spawn_pop(VfxArt.BURSTS[tier], point, bursts[tier] * t.vfx_scale, t.vfx_burst_s, PRIORITY_BURST)
 	if pop:
-		pop.keep_in_view = on_player
+		_set_kind_sizes(pop, bursts)
+		_frame(pop, on_player)
 	if _chance([t.vfx_word_chance_light, t.vfx_word_chance_heavy, t.vfx_word_chance_finisher][tier]):
-		spawn_word(tier, point)
+		spawn_word(tier, point, on_player)
 	if tier != CombatTypes.HitTier.LIGHT:
 		if _chance(t.vfx_blood_chance_finisher if tier == CombatTypes.HitTier.FINISHER else t.vfx_blood_chance_heavy):
 			spawn_blood(hit)
 	if tier == CombatTypes.HitTier.FINISHER:
 		if hit.region == CombatTypes.Region.HEAD:
 			spawn_spit_and_tooth(hit)
-		speed_lines.start(_screen_point(point), t.vfx_speed_lines_s, t.vfx_speed_lines_opacity)
+		speed_lines.start(finisher_lines_focus(point), t.vfx_speed_lines_s, t.vfx_speed_lines_opacity)
 		if t.impact_frame_enabled and t.vfx_impact_frame_frames > 0:
 			impact_frame.flash(t.vfx_impact_frame_frames / 60.0)
 
@@ -312,7 +329,8 @@ func _on_attack_started(attacker: Node3D, move: MoveData, _chain_step: int, _inp
 	if attacker == null or not attacker.is_in_group(&"player") or not is_inside_tree():
 		return
 	_lunge_actor = null
-	if not (get_viewport().get_camera_3d() is FirstPersonCamera):
+	# Only a move with its own lunge: the magnetism step-in of jabs and chain hits is no lunge.
+	if move == null or maxf(move.lunge, move.free_lunge) <= 0.0 or not (get_viewport().get_camera_3d() is FirstPersonCamera):
 		return
 	_lunge_actor = attacker as CombatActor
 	_lunge_move = move
@@ -347,8 +365,8 @@ func _update_damage_look(actor: CombatActor, health: float, max_health: float, f
 		actor.rig.set_damage_look(level)
 
 
-## The player's attack has carried it Tuning.vfx_lunge_lines_min_m since it started: light
-## speed lines on the view center, once per attack.
+## The player's lunging attack has carried it Tuning.vfx_lunge_lines_min_m since it
+## started: light speed lines on the view center, once per attack.
 func _watch_lunge(camera: Camera3D) -> void:
 	if _lunge_actor == null:
 		return
@@ -376,8 +394,9 @@ func _throw(kind: StringName, hit: HitInfo, size_m: float, speed: float, seconds
 	var t := Tuning.data
 	var spread := deg_to_rad(t.vfx_blood_spread_deg)
 	dir = dir.normalized().rotated(Vector3.UP, rng.randf_range(-spread, spread))
-	# Out along the hit, launched between about 17 and 45 degrees up.
-	var launch := (dir + Vector3.UP * rng.randf_range(0.3, 1.0)).normalized()
+	# Out along the hit, launched up at an angle between the two tunables.
+	var up := deg_to_rad(rng.randf_range(minf(t.vfx_blood_launch_min_deg, t.vfx_blood_launch_max_deg), t.vfx_blood_launch_max_deg))
+	var launch := dir * cos(up) + Vector3.UP * sin(up)
 	var sprite := _acquire(kind, art, ComicSprite.Motion.THROWN)
 	sprite.anchor = hit.contact_point
 	sprite.velocity = launch * speed * _jitter(t.vfx_particle_speed_jitter)
@@ -415,15 +434,68 @@ func _land(sprite: ComicSprite, from: Vector3) -> bool:
 	return false
 
 
-## `point` on screen (speed-line coordinates), or the screen center when it is behind the view.
-func _screen_point(point: Vector3) -> Vector2:
+## Where a finisher's speed lines converge for a hit at `point`: from the view center
+## toward the contact on screen by Tuning.vfx_speed_lines_focus_follow, so a contact near
+## an edge still leaves the middle of the view clear. The center when it is behind the view.
+func finisher_lines_focus(point: Vector3) -> Vector2:
 	var center := speed_lines.size * 0.5
 	if not is_inside_tree():
 		return center
 	var camera := get_viewport().get_camera_3d()
 	if camera == null or camera.is_position_behind(point):
 		return center
-	return camera.unproject_position(point)
+	var contact := camera.unproject_position(point).clamp(Vector2.ZERO, speed_lines.size)
+	return center.lerp(contact, clampf(Tuning.data.vfx_speed_lines_focus_follow, 0.0, 1.0))
+
+
+## Screen rects (speed-line coordinates) of the visible popping effects (bursts, words,
+## sparks, splashes), which the speed lines keep clear of.
+func _effect_rects(camera: Camera3D) -> Array[Rect2]:
+	var out: Array[Rect2] = []
+	if camera == null:
+		return out
+	for sprite: ComicSprite in _live:
+		if sprite.motion != ComicSprite.Motion.POP or not sprite.visible or sprite.texture == null:
+			continue
+		var half := Vector2(sprite.texture.get_width(), sprite.texture.get_height()) * sprite.pixel_size * 0.5
+		var rect := Rect2()
+		var behind := false
+		for k in 4:
+			var corner := sprite.global_transform * Vector3(half.x * (1 - 2 * (k & 1)), half.y * (1 - (k & 2)), 0.0)
+			if camera.is_position_behind(corner):
+				behind = true
+				break
+			var p := camera.unproject_position(corner)
+			rect = Rect2(p, Vector2.ZERO) if k == 0 else rect.expand(p)
+		if not behind:
+			out.append(rect)
+	return out
+
+
+## Effects of `hit` show at the lens when it landed on the player.
+static func _on_player(hit: HitInfo) -> bool:
+	return is_instance_valid(hit.victim) and hit.victim.is_in_group(&"player")
+
+
+## Keep `sprite`, an effect of a hit, in view (see the class doc).
+static func _frame(sprite: ComicSprite, on_player: bool) -> void:
+	sprite.keep_in_view = true
+	sprite.at_lens = on_player
+	sprite.clamp_reach_deg = Vector2(Tuning.data.vfx_clamp_reach_side_deg, Tuning.data.vfx_clamp_reach_low_deg)
+
+
+## `sprite` is one of a kind sized `sizes` (meters before vfx_scale): its tiers share one
+## view-share factor (ComicSprite).
+static func _set_kind_sizes(sprite: ComicSprite, sizes: Array[float]) -> void:
+	var smallest := INF
+	var largest := 0.0
+	for size: float in sizes:
+		if size > 0.0:
+			smallest = minf(smallest, size)
+			largest = maxf(largest, size)
+	if largest > 0.0:
+		sprite.kind_min_m = smallest * Tuning.data.vfx_scale
+		sprite.kind_max_m = largest * Tuning.data.vfx_scale
 
 
 ## A random factor within `share` of 1 (0.3: 0.7 to 1.3).
@@ -457,6 +529,10 @@ func _acquire(kind: StringName, art: Texture2D, motion: ComicSprite.Motion) -> C
 	sprite.shaded = false
 	sprite.no_depth_test = false
 	sprite.keep_in_view = false
+	sprite.at_lens = false
+	sprite.clamp_reach_deg = Vector2.ZERO
+	sprite.kind_min_m = 0.0
+	sprite.kind_max_m = 0.0
 	sprite.modulate = Color.WHITE
 	sprite.drawn_width = 0.0
 	if sprite.has_meta(&"word"):

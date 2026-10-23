@@ -32,6 +32,20 @@ class FakeMover:
 		pass
 
 
+## A camera that turns in its own _process after default-priority nodes, as the game's
+## cameras do (CameraDirector.PROCESS_PRIORITY).
+class TurningCamera:
+	extends Camera3D
+
+	var step_deg: float = 0.0
+
+	func _init() -> void:
+		process_priority = CameraDirector.PROCESS_PRIORITY
+
+	func _process(_delta: float) -> void:
+		rotate_y(deg_to_rad(step_deg))
+
+
 var vfx: VfxDirector
 var camera: Camera3D
 
@@ -83,6 +97,24 @@ func _advance(seconds: float) -> void:
 func _ticks(n: int) -> void:
 	for i in n:
 		await get_tree().physics_frame
+
+
+func _screen() -> Rect2:
+	return Rect2(Vector2.ZERO, camera.get_viewport().get_visible_rect().size)
+
+
+## The drawn width of each tier's burst and word for hits at `point` (light words forced on).
+func _tier_widths(point: Vector3) -> Dictionary:
+	Tuning.data.vfx_word_chance_light = 1.0
+	var bursts: Array[float] = []
+	var words: Array[float] = []
+	for tier: int in [CombatTypes.HitTier.LIGHT, CombatTypes.HitTier.HEAVY, CombatTypes.HitTier.FINISHER]:
+		vfx.clear()
+		_land(_hit(tier, point))
+		_advance(Tuning.data.vfx_pop_s + TICK)
+		bursts.append(vfx.live_effects(VfxArt.BURSTS[tier])[0].drawn_width)
+		words.append(vfx.live_effects(&"word")[0].drawn_width)
+	return {bursts = bursts, words = words}
 
 
 func _add_floor() -> void:
@@ -243,7 +275,94 @@ func test_words_stay_inside_the_view() -> void:
 		assert_true(Rect2(Vector2.ZERO, size).has_point(p), "word corner %s on screen: %s" % [corner, p])
 
 
+func test_effects_follow_the_camera_of_the_frame_being_drawn() -> void:
+	assert_gt(vfx.process_priority, CameraDirector.PROCESS_PRIORITY, "processes after the cameras")
+	var turning := TurningCamera.new()
+	add_child_autofree(turning)
+	turning.make_current()
+	camera = turning
+	vfx.set_process(true)
+	_land(_hit(CombatTypes.HitTier.FINISHER))
+	await get_tree().process_frame
+	# The view turns 6 degrees a frame (a spin or a mouse flick).
+	turning.step_deg = 6.0
+	for i in 4:
+		await get_tree().process_frame
+		var word := vfx.live_effects(&"word")[0]
+		assert_gt(word.global_basis.z.normalized().dot(turning.global_basis.z), 0.9999, "frame %d: faces this frame's view" % i)
+		assert_true(_screen().has_point(turning.unproject_position(word.global_position)), "frame %d: on screen" % i)
+
+
+func test_words_of_hits_behind_or_far_beside_the_camera_stay_at_the_contact() -> void:
+	# A back elbow: the contact is behind the camera. Nothing floats in front of the lens.
+	_land(_hit(CombatTypes.HitTier.HEAVY, Vector3(0.0, 0.1, 1.0)))
+	_advance(Tuning.data.vfx_pop_s + TICK)
+	assert_false(vfx.live_effects(&"word")[0].visible, "the word stays behind")
+	assert_false(vfx.live_effects(&"burst_medium")[0].visible, "and so does the burst")
+	# A spin kick's side victim, far outside the view: the word stays beside it, off screen.
+	vfx.clear()
+	var beside := Vector3(3.0, 0.1, -0.6)
+	_land(_hit(CombatTypes.HitTier.HEAVY, beside))
+	_advance(Tuning.data.vfx_pop_s + TICK)
+	var word := vfx.live_effects(&"word")[0]
+	assert_false(_screen().has_point(camera.unproject_position(word.global_position)), "off screen")
+	assert_lt(word.global_position.distance_to(beside), word.size_m * 2.0, "at its contact")
+	# Just outside the side edge (within vfx_clamp_reach_side_deg): pulled inside the view.
+	vfx.clear()
+	var depth := 1.2
+	var half_angle := atan2(VfxDirector.view_width_at(camera, depth) * 0.5, depth)
+	var edge := Vector3(depth * tan(half_angle + deg_to_rad(Tuning.data.vfx_clamp_reach_side_deg * 0.5)), 0.0, -depth)
+	assert_false(_screen().has_point(camera.unproject_position(edge)), "the contact is off screen")
+	_land(_hit(CombatTypes.HitTier.HEAVY, edge))
+	_advance(Tuning.data.vfx_pop_s + TICK)
+	word = vfx.live_effects(&"word")[0]
+	assert_true(word.visible and _screen().has_point(camera.unproject_position(word.global_position)), "word in view")
+	var burst := vfx.live_effects(&"burst_medium")[0]
+	assert_true(burst.visible and _screen().has_point(camera.unproject_position(burst.global_position)), "burst in view")
+
+
+func test_a_knee_or_stomp_under_the_view_still_shows_its_burst() -> void:
+	# Contact 0.5 m ahead of and 0.8 m under the first-person lens.
+	var knee := Vector3(0.0, -0.8, -0.5)
+	assert_false(_screen().has_point(camera.unproject_position(knee)), "the contact itself is under the view")
+	_land(_hit(CombatTypes.HitTier.LIGHT, knee))
+	_advance(Tuning.data.vfx_pop_s + TICK)
+	var burst := vfx.live_effects(&"burst_small")[0]
+	assert_true(burst.visible)
+	var p := camera.unproject_position(burst.global_position)
+	assert_true(_screen().has_point(p), "the burst sits inside the view: %s" % p)
+	assert_gt(p.y, _screen().size.y * 0.5, "at the bottom, on the contact's side")
+
+
 # --- Sizes, caps and time ------------------------------------------------------------
+
+
+func test_tier_sizes_keep_their_order_near_far_and_in_the_side_view() -> void:
+	var side := Camera3D.new()
+	side.fov = 38.0
+	side.keep_aspect = Camera3D.KEEP_HEIGHT
+	add_child_autofree(side)
+	# First person at a dummy's chest from striking range and from 4 m; the side view's depth.
+	for setup: Array in [[camera, 0.8], [camera, 4.0], [side, 11.15]]:
+		var cam: Camera3D = setup[0]
+		var depth: float = setup[1]
+		cam.make_current()
+		var widths := _tier_widths(Vector3(0.0, 0.0, -depth))
+		var view_w := VfxDirector.view_width_at(cam, depth)
+		for kind: String in ["bursts", "words"]:
+			var w: Array[float] = widths[kind]
+			assert_lt(w[0], w[1], "%s at %.1f m: light < heavy (%s)" % [kind, depth, w])
+			assert_lt(w[1], w[2], "%s at %.1f m: heavy < finisher (%s)" % [kind, depth, w])
+			assert_lte(w[2], Tuning.data.vfx_max_view_share * view_w + 0.001, "%s at %.1f m: capped" % [kind, depth])
+			assert_gte(w[0], Tuning.data.vfx_min_view_share * view_w - 0.001, "%s at %.1f m: readable" % [kind, depth])
+	# The side view shows each tier's own slider: a smaller finisher burst draws smaller.
+	side.make_current()
+	var before: Array[float] = _tier_widths(Vector3(0.0, 0.0, -11.15)).bursts
+	Tuning.data.vfx_burst_large_m = Tuning.data.vfx_burst_medium_m * 1.2
+	var after: Array[float] = _tier_widths(Vector3(0.0, 0.0, -11.15)).bursts
+	assert_lt(after[2], before[2], "the finisher slider changes the side view")
+
+
 
 
 func test_vfx_scale_scales_every_size() -> void:
@@ -298,12 +417,13 @@ func test_effects_face_the_camera_and_pop_in() -> void:
 	_land(_hit(CombatTypes.HitTier.HEAVY))
 	vfx.advance(0.0)
 	var burst := vfx.live_effects(&"burst_medium")[0]
-	assert_almost_eq(burst.drawn_width, burst.size_m * Tuning.data.vfx_pop_start, 0.001, "pops from small")
+	var full := burst.size_m * burst.size_factor(VfxDirector.view_width_at(camera, -burst.global_position.z))
+	assert_almost_eq(burst.drawn_width, full * Tuning.data.vfx_pop_start, 0.001, "pops from small")
 	assert_gt(burst.global_basis.z.normalized().dot(Vector3.BACK), 0.999, "faces the camera")
 	_advance(Tuning.data.vfx_pop_s * 0.5)
-	assert_gt(burst.drawn_width, burst.size_m * 1.05, "past full size")
+	assert_gt(burst.drawn_width, full * 1.05, "past full size")
 	_advance(Tuning.data.vfx_pop_s)
-	assert_almost_eq(burst.drawn_width, burst.size_m, 0.001, "settles at full size")
+	assert_almost_eq(burst.drawn_width, full, 0.001, "settles at full size")
 
 
 func test_effects_expire_and_are_pooled() -> void:
@@ -359,6 +479,81 @@ func test_impact_frame_lasts_its_frames_and_respects_the_toggle() -> void:
 	hud.free()
 
 
+func test_fx_textures_are_loaded_once_and_held() -> void:
+	var files := Array(ResourceLoader.list_directory(VfxArt.DIR)).filter(
+		func(f: String) -> bool: return f.get_extension() == "png")
+	assert_eq(VfxArt.held_count(), files.size(), "the director loaded the whole set when it was made")
+	var rids := {}
+	for name: StringName in ART:
+		rids[name] = VfxArt.texture(name).get_rid()
+	vfx.set_process(true)
+	_land(_hit(CombatTypes.HitTier.FINISHER, CONTACT, CombatTypes.Region.HEAD))
+	assert_true(vfx.speed_lines.is_active())
+	for i in 4:
+		await get_tree().process_frame
+	vfx.clear()
+	for i in 2:
+		await get_tree().process_frame
+	for name: StringName in ART:
+		assert_true(ResourceLoader.has_cached(VfxArt.DIR + name + ".png"), "%s still loaded" % name)
+		assert_eq(VfxArt.texture(name).get_rid(), rids[name], "%s is the same texture, never reloaded" % name)
+
+
+func test_speed_lines_do_not_flicker_with_the_photosensitivity_toggle_off() -> void:
+	_land(_hit(CombatTypes.HitTier.FINISHER))
+	_advance(Tuning.data.vfx_speed_lines_s * 0.5)
+	assert_gt(vfx.speed_lines.shuffles, 1, "they flicker by default")
+	vfx.clear()
+	Tuning.data.impact_frame_enabled = false
+	_land(_hit(CombatTypes.HitTier.FINISHER))
+	var placed := vfx.speed_lines.lines()
+	_advance(Tuning.data.vfx_speed_lines_s * 0.8)
+	assert_true(vfx.speed_lines.is_active(), "still fading")
+	assert_eq(vfx.speed_lines.shuffles, 1, "never redrawn in new places")
+	assert_eq(vfx.speed_lines.lines(), placed)
+
+
+func test_speed_lines_stop_at_the_burst_and_the_word() -> void:
+	_land(_hit(CombatTypes.HitTier.FINISHER))
+	_advance(Tuning.data.vfx_pop_s + TICK)
+	var lines := vfx.speed_lines
+	assert_gte(lines.keep_clear.size(), 2, "the burst's and the word's rects")
+	var crossings := 0
+	for line: Vector4 in lines.lines():
+		var ends := lines.streak_ends(line)
+		var dir := Vector2.from_angle(line.x)
+		for k in 24:
+			var p := lines.focus + dir * lerpf(ends.x + 1.0, ends.y, k / 23.0)
+			for rect: Rect2 in lines.keep_clear:
+				if rect.grow(-1.0).has_point(p):
+					crossings += 1
+	assert_eq(crossings, 0, "no line runs over a live effect")
+
+
+func test_line_droplet_and_word_randomness_follow_their_tunables() -> void:
+	var t := Tuning.data
+	t.vfx_speed_lines_width_min = 0.9
+	t.vfx_speed_lines_width_max = 1.0
+	t.vfx_speed_lines_inner_max = 1.1
+	t.vfx_blood_launch_min_deg = 30.0
+	t.vfx_blood_launch_max_deg = 31.0
+	t.vfx_word_tilt_min_deg = 8.0
+	t.vfx_word_tilt_deg = 9.0
+	t.vfx_impact_frame_local_mix = 0.25
+	t.vfx_impact_frame_blur_mip = 3.0
+	_land(_hit(CombatTypes.HitTier.FINISHER))
+	for line: Vector4 in vfx.speed_lines.lines():
+		assert_between(line.w, 0.9, 1.0, "line thickness")
+		assert_between(line.y, 1.0, 1.1, "line inner end")
+	for drop: ComicSprite in vfx.live_effects(&"blood_drop"):
+		var v := drop.velocity
+		assert_between(rad_to_deg(atan2(v.y, Vector2(v.x, v.z).length())), 29.9, 31.1, "launch angle")
+	assert_between(rad_to_deg(absf(vfx.live_effects(&"word")[0].roll)), 7.99, 9.01, "word tilt")
+	var mat := vfx.impact_frame.material as ShaderMaterial
+	assert_almost_eq(float(mat.get_shader_parameter(&"local_mix")), 0.25, 0.0001)
+	assert_almost_eq(float(mat.get_shader_parameter(&"blur_lod")), 3.0, 0.0001)
+
+
 func test_speed_lines_respect_screen_shake_intensity() -> void:
 	Tuning.data.screen_shake_intensity = 0.0
 	_land(_hit(CombatTypes.HitTier.FINISHER))
@@ -371,11 +566,21 @@ func test_speed_lines_respect_screen_shake_intensity() -> void:
 	assert_false(vfx.speed_lines.is_active(), "fades out")
 
 
-func test_finisher_lines_focus_on_the_contact() -> void:
-	var point := Vector3(0.4, 0.2, -1.5)
+func test_finisher_lines_focus_between_the_center_and_the_contact() -> void:
+	# A contact near the top edge, as an uppercut to a head seen from close up.
+	var point := Vector3(0.4, 0.95, -1.5)
 	_land(_hit(CombatTypes.HitTier.FINISHER, point))
-	assert_almost_eq(vfx.speed_lines.focus.x, camera.unproject_position(point).x, 0.5)
-	assert_almost_eq(vfx.speed_lines.focus.y, camera.unproject_position(point).y, 0.5)
+	var center := vfx.speed_lines.size * 0.5
+	var contact := camera.unproject_position(point)
+	var follow := Tuning.data.vfx_speed_lines_focus_follow
+	assert_almost_eq(vfx.speed_lines.focus.x, lerpf(center.x, contact.x, follow), 0.5)
+	assert_almost_eq(vfx.speed_lines.focus.y, lerpf(center.y, contact.y, follow), 0.5)
+	# The middle of the view stays clear of lines.
+	for line: Vector4 in vfx.speed_lines.lines():
+		var ends := vfx.speed_lines.streak_ends(line)
+		var tip := vfx.speed_lines.focus + Vector2.from_angle(line.x) * ends.x
+		assert_gt(tip.distance_to(center), vfx.speed_lines.size.length() * 0.5 * Tuning.data.vfx_speed_lines_clear
+				* (1.0 - follow) * 0.9, "line tip %s clear of the view center" % tip)
 
 
 func test_player_lunges_show_lunge_lines_in_first_person() -> void:
@@ -384,13 +589,24 @@ func test_player_lunges_show_lunge_lines_in_first_person() -> void:
 	fp.make_current()
 	var mover := FakeMover.new()
 	add_child_autofree(mover)
+	# A plain magnetism move (a jab or a chain hit) steps in without lines, however far.
+	var jab := MoveData.new()
+	jab.magnetism = true
+	mover.current_move = jab
+	CombatEvents.attack_started.emit(mover, jab, 1, &"root")
+	mover.global_position += Vector3(0.0, 0.0, -Tuning.data.vfx_lunge_lines_min_m * 2.0)
+	vfx.advance(TICK)
+	assert_false(vfx.speed_lines.is_active(), "the magnetism step-in is no lunge")
+	# A move with its own lunge (the flying kick) shows them once it has carried the player.
 	var move := MoveData.new()
+	move.lunge = 2.0
+	move.free_lunge = 2.0
 	mover.current_move = move
 	CombatEvents.attack_started.emit(mover, move, 1, &"root")
 	mover.global_position += Vector3(0.0, 0.0, -Tuning.data.vfx_lunge_lines_min_m * 0.5)
 	vfx.advance(TICK)
 	assert_false(vfx.speed_lines.is_active(), "a short step shows nothing")
-	mover.global_position += Vector3(0.0, 0.0, -Tuning.data.vfx_lunge_lines_min_m)
+	mover.global_position += Vector3(0.0, 0.0, -Tuning.data.vfx_lunge_lines_min_m * 0.6)
 	vfx.advance(TICK)
 	assert_true(vfx.speed_lines.is_active(), "a lunge shows lines")
 	assert_almost_eq(vfx.speed_lines.opacity, Tuning.data.vfx_lunge_lines_opacity, 0.0001)

@@ -10,7 +10,10 @@ extends Sprite3D
 ## Sizes are widths in meters. Facing effects are capped to Tuning.vfx_max_view_share of
 ## the view's width at their depth and kept Tuning.vfx_min_camera_dist_m off the lens, so
 ## a hit a meter from the first-person lens never fills the screen; popping effects are at
-## least Tuning.vfx_min_view_share of it, so hits seen from afar stay readable.
+## least Tuning.vfx_min_view_share of it, so hits seen from afar stay readable. Effects of
+## one kind (the three bursts, the three word sizes, the block sparks) share one factor for
+## that, set by the smallest (the floor) and the largest (the cap) of the kind, so the
+## light, heavy and finisher sizes keep their ratios at every distance; the cap wins.
 
 enum Motion { POP, THROWN, LYING }
 
@@ -38,9 +41,19 @@ var fade_share: float = 0.3
 var velocity: Vector3 = Vector3.ZERO
 var gravity: float = 0.0
 var trail: bool = false
-## POP: kept whole inside the view, Tuning.vfx_word_view_margin from its edges (words, and
-## effects of hits on the player, which land at or above the first-person lens).
+## The smallest and largest size of this effect's kind (meters; 0: its own size), which
+## set the shared floor and cap factor (see the class doc).
+var kind_min_m: float = 0.0
+var kind_max_m: float = 0.0
+## POP: kept whole inside the view, Tuning.vfx_word_view_margin from its edges, while its
+## contact (the anchor) is in front of the camera and at most `clamp_reach_deg` outside the
+## view: degrees beyond its side edges (x) and its top or bottom edge (y). Farther out, or
+## behind the camera, it stays at its contact.
 var keep_in_view: bool = false
+var clamp_reach_deg: Vector2 = Vector2.ZERO
+## POP: the hit landed at or behind the lens (on the first-person player): the effect is
+## brought out ahead to the minimum distance and always kept in view.
+var at_lens: bool = false
 ## THROWN: leaves a blood splat where it lands (droplets); otherwise it lies where it lands
 ## (a tooth) or vanishes (spit).
 var leaves_splat: bool = false
@@ -92,7 +105,7 @@ func place(camera: Camera3D) -> void:
 	var to := pos - cam.origin
 	var depth := -cam.basis.z.dot(to)
 	var min_depth := Tuning.data.vfx_min_camera_dist_m
-	if keep_in_view:
+	if at_lens:
 		# A hit on the first-person player lands at the lens, even a little behind it: bring
 		# it out to the minimum distance straight ahead, keeping its offset across the view.
 		if depth < min_depth:
@@ -106,11 +119,8 @@ func place(camera: Camera3D) -> void:
 		pos = cam.origin + to
 		depth = min_depth
 	var view_w := VfxDirector.view_width_at(camera, depth)
-	var width := minf(size_m, Tuning.data.vfx_max_view_share * view_w)
-	if motion == Motion.POP:
-		width = maxf(width, Tuning.data.vfx_min_view_share * view_w)
-	drawn_width = width * pop_factor()
-	if keep_in_view:
+	drawn_width = size_m * size_factor(view_w) * pop_factor()
+	if keep_in_view and (at_lens or contact_near_view(camera)):
 		pos = _inside_view(cam, pos, depth, view_w, VfxDirector.view_aspect(camera))
 	var angle := roll
 	if trail and velocity.length_squared() > 0.0001:
@@ -120,6 +130,34 @@ func place(camera: Camera3D) -> void:
 	global_transform = Transform3D(Basis(basis.x * drawn_width, basis.y * drawn_width, basis.z * drawn_width), pos)
 	modulate.a = fade_alpha()
 	visible = drawn_width > 0.0
+
+
+## The factor on size_m that keeps this effect's kind between the view-share floor and cap,
+## for a view `view_w` meters wide at its depth (1 when the kind fits as it is).
+func size_factor(view_w: float) -> float:
+	var smallest := kind_min_m if kind_min_m > 0.0 else size_m
+	var largest := maxf(kind_max_m if kind_max_m > 0.0 else size_m, size_m)
+	if smallest <= 0.0 or largest <= 0.0:
+		return 1.0
+	var factor := 1.0
+	if motion == Motion.POP:
+		factor = maxf(factor, Tuning.data.vfx_min_view_share * view_w / smallest)
+	return minf(factor, Tuning.data.vfx_max_view_share * view_w / largest)
+
+
+## True when the contact (the anchor) is in front of `camera` and no farther outside its
+## view than clamp_reach_deg.
+func contact_near_view(camera: Camera3D) -> bool:
+	var cam := camera.global_transform.orthonormalized()
+	var local := cam.basis.inverse() * (anchor - cam.origin)
+	var depth := -local.z
+	if depth < 0.02:
+		return false
+	var view_w := VfxDirector.view_width_at(camera, depth)
+	var half := Vector2(view_w, view_w / maxf(VfxDirector.view_aspect(camera), 0.01)) * 0.5
+	var beyond_x := rad_to_deg(atan2(absf(local.x), depth) - atan2(half.x, depth))
+	var beyond_y := rad_to_deg(atan2(absf(local.y), depth) - atan2(half.y, depth))
+	return beyond_x <= clamp_reach_deg.x and beyond_y <= clamp_reach_deg.y
 
 
 ## Size multiplier of the pop-in: from Tuning.vfx_pop_start up to vfx_pop_peak over the
