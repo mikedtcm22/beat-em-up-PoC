@@ -7,7 +7,8 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 ### Milestone 2 phase 1 started
 - **Milestone 1:** done. Game-boy signed it off after three playtest rounds, and it's merged into `main` (PR #1, merge `c3e6a98`).
 - **Milestone 2 (hit feel):** branch `m2/hit-feel`, from `main`. The plan, with self-contained work-package briefs, is [docs/milestones/M2-plan.md](milestones/M2-plan.md).
-- **Phase 1:** WP1 (tuning panel, presets, cheats), WP2 (comic VFX, damage looks) and WP3 (audio, rumble) are being built in parallel. Each is in its own worktree under `.worktrees/` (`m2-tuning`, `m2-vfx`, `m2-audio`) on branches `m2/tuning`, `m2/vfx` and `m2/audio`, each with build, review and fix. They run as one Workflow from the original session.
+- **Phase 1:** WP1 (tuning panel, presets, cheats), WP2 (comic VFX, damage looks) and WP3 (audio, rumble) are being built in parallel. Each is in its own worktree under `.worktrees/` (`m2-tuning`, `m2-vfx`, `m2-audio`) on branches `m2/tuning`, `m2/vfx` and `m2/audio`, each with build, review and fix. They run as one Workflow from the original session (run `wf_0bfbae1d-6d1`; script at `~/.claude/projects/-Users-arachne-repos-beat-em-up-PoC/51b08ae0-62e1-4065-87dc-6d4672de274b/workflows/scripts/m2-phase1-wf_0bfbae1d-6d1.js`). Another account can't resume that run, so use the per-worktree steps below.
+- **Usage watcher:** running as the session "Beat-em-up: usage watcher" (Haiku, every 15 min).
 - **If the session stops mid-phase:**
   1. Run `git -C .worktrees/<wp> log --oneline main..` and `git -C .worktrees/<wp> status` for each WP.
   2. A WP with a build commit but no review: run a review, then a fix (the patterns are in CLAUDE.md).
