@@ -80,8 +80,9 @@ const LAYER_DB: Dictionary = {
 }
 
 ## Pooled one-shot voices; with all of them busy, a new sound takes the one started longest
-## ago.
-@export var voice_count: int = 24
+## ago. A voice budget, not a feel number: a synthetic six-enemy brawl (three attackers on
+## the player, the player's chains, a three-body finisher every 2 s) peaks at about 30.
+@export var voice_count: int = 32
 ## The listener rides the player's eyes and look, so every camera (the debug views too)
 ## hears what the player would. Off, or with no player, the active camera hears.
 @export var listen_from_player: bool = true
