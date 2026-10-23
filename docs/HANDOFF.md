@@ -12,7 +12,7 @@ A third account's working session took over at 0% of its 5-hour window (resets 2
   - **WP1:** verifies the 17 findings and fixes them in `.worktrees/m2-tuning`, including the panel showing `@export_subgroup` headings. WP2 and WP3 put their own groups into subgroups.
   - Each agent commits "M2 WPn: review fixes (...)" and pushes its branch, committing `wip:` along the way.
 - **If cut off:** check each WP branch for a "review fixes" commit. A WP without one needs its pass redone. Copy that WP's prompt from the workflow script in this session's transcript, or rewrite it from this entry. Within the same session, resume with `resumeFromRunId`.
-- **Then:** merge into `m2/hit-feel` as the trial did, regenerate the preset, run the tests, push. Ask Game-boy the player-ragdoll question before WP4.
+- **Then:** merge into `m2/hit-feel` as the trial did, regenerate the preset, run the tests, push. Then WP4: Game-boy confirmed the player-ragdoll default at 18:20 CDT (enemies and dummies ragdoll; the player keeps animated reactions, with a toggle).
 
 ### 2026-10-23 17:25 CDT: handoff, account B's 5-hour window at 72% (switched accounts 17:55)
 The watcher warned at 72% of account B's 5-hour window, which resets at 21:40 CDT; B's weekly is at 12%. Account A's weekly is still at 95% until Mon 2026-10-26 01:00 CDT. Everything is committed and pushed; the worktrees are clean.
@@ -87,6 +87,7 @@ Every approved spec change so far is in README.md, "Where M1 departs from the sp
   - the view follows the spin of the spin kick, the heel kick and the spinning backfist;
   - the spinning backfist is on P P · P and the flurry on P · P;
   - the back elbow turns the view 150° (Game-boy is to confirm whether 110° is preferred).
+- **Ragdoll (M2 WP4, 2026-10-23):** enemies and training dummies ragdoll. The player keeps animated reactions by default, with a toggle in the "Ragdoll" tuning group.
 - **Process:** at each usage limit, hand off to Game-boy's second Claude account. Never assume the same session resumes.
 
 ## Usage watcher
