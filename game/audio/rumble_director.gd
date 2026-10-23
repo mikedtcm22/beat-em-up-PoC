@@ -14,6 +14,11 @@ extends Node
 ## Tuning's "Audio" group (`rumble_*`), times `rumble_strength`, read when the pulse fires.
 ## `rumble_enabled` turns it all off. The second finisher pulse runs on real (_process)
 ## time, so hitstop and slow-mo don't stretch it.
+##
+## A joypad plays one vibration at a time (start_joy_vibration replaces the running one), so
+## a pulse that comes while another runs takes the stronger of each motor and lasts until
+## the later end: a block tick or a light hit never cuts a heavy or finisher pulse short.
+## Pulses due at the same moment (a finisher hitting several bodies) queue once.
 
 ## Test stub: when valid, every pulse calls `vibrate.call(weak, strong, duration_s)`
 ## instead of Input.start_joy_vibration() on each connected joypad.
@@ -23,6 +28,10 @@ var vibrate: Callable
 var _clock_s: float = 0.0
 ## Pulses waiting for their time, earliest first: {at (s), weak, strong, ms}.
 var _queued: Array[Dictionary] = []
+## The vibration running now: its motors and when (_clock_s) it ends.
+var _weak_now: float = 0.0
+var _strong_now: float = 0.0
+var _until_s: float = 0.0
 
 
 func _init() -> void:
@@ -36,6 +45,7 @@ func _ready() -> void:
 
 func _exit_tree() -> void:
 	_queued.clear()
+	_until_s = 0.0
 	if not vibrate.is_valid():
 		for device in Input.get_connected_joypads():
 			Input.stop_joy_vibration(device)
@@ -49,7 +59,8 @@ func _process(delta: float) -> void:
 			pulse(due.weak, due.strong, due.ms)
 
 
-## One pulse: both motors (0..1, times rumble_strength) for `ms` milliseconds.
+## One pulse: both motors (0..1, times rumble_strength) for `ms` milliseconds, merged with
+## a pulse still running (the stronger of each motor, until the later end).
 func pulse(weak: float, strong: float, ms: float) -> void:
 	var scale := Tuning.data.rumble_strength
 	var w := clampf(weak * scale, 0.0, 1.0)
@@ -57,6 +68,13 @@ func pulse(weak: float, strong: float, ms: float) -> void:
 	var seconds := ms / 1000.0
 	if seconds <= 0.0 or (w <= 0.0 and s <= 0.0):
 		return
+	if _clock_s < _until_s:
+		w = maxf(w, _weak_now)
+		s = maxf(s, _strong_now)
+		seconds = maxf(seconds, _until_s - _clock_s)
+	_weak_now = w
+	_strong_now = s
+	_until_s = _clock_s + seconds
 	if vibrate.is_valid():
 		vibrate.call(w, s, seconds)
 		return
@@ -90,7 +108,11 @@ func _on_hit_landed(hit: HitInfo) -> void:
 
 
 func _queue(delay_s: float, weak: float, strong: float, ms: float) -> void:
-	_queued.append({at = _clock_s + delay_s, weak = weak, strong = strong, ms = ms})
+	var at := _clock_s + delay_s
+	for due in _queued:
+		if is_equal_approx(float(due.at), at) and due.weak == weak and due.strong == strong and due.ms == ms:
+			return
+	_queued.append({at = at, weak = weak, strong = strong, ms = ms})
 	_queued.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return float(a.at) < float(b.at))
 
 

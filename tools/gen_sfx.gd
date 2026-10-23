@@ -30,6 +30,9 @@ const RATE := 44100
 const PEAK := 0.89
 ## Fade-out at the end of each one-shot, so a cut tail never clicks.
 const FADE_OUT_S := 0.008
+## Fade-in of the voices: their breath noise starts at full level (the hits start from zero
+## on their own attack envelopes).
+const VOICE_FADE_IN_S := 0.004
 
 enum F { LOW, BAND, HIGH }
 
@@ -180,22 +183,25 @@ func _init() -> void:
 # --- Sounds ----------------------------------------------------------------------------
 
 
-## Air past the ear: band-passed noise whose center sweeps up to a peak and back down,
-## louder at the peak, over a darker low-passed body.
+## Air past the ear as the limb goes by: band-passed noise, loudest a couple of hundredths
+## of a second in, its center sweeping down (a pass-by), over a darker low-passed body.
+## Front-loaded because it plays when the swing has arrived: layered on a hit at the contact
+## frame it rides the impact, and a whiff (attack_whiffed, as the active frames end) hears
+## the limb pass at once. A slow swell peaked 0.1-0.24 s late, after the thud (M2 review).
 func _whoosh(v: int) -> PackedFloat32Array:
-	var d := 0.22 + 0.035 * v + rng.randf_range(-0.015, 0.015)
-	var b := _new(d)
-	var f_lo := rng.randf_range(350.0, 550.0)
-	var f_hi := rng.randf_range(1500.0, 2600.0)
-	var peak := rng.randf_range(0.45, 0.65)
-	var q := rng.randf_range(1.2, 2.2)
-	var curve := log(0.5) / log(peak)
+	# Variants step through the fall time (short and sharp to long and airy), then jitter.
+	var rise := rng.randf_range(0.01, 0.016)
+	var fall := lerpf(0.04, 0.085, v / 3.0) * rng.randf_range(0.9, 1.1)
+	var b := _new(rise + fall * 6.0)
+	var f_hi := lerpf(2900.0, 1900.0, v / 3.0) * rng.randf_range(0.9, 1.1)
+	var f_lo := rng.randf_range(320.0, 520.0)
+	var q := rng.randf_range(1.2, 2.0)
 	var bp := Svf.new()
 	var lp := Svf.new()
 	for i in b.size():
-		var u := float(i) / b.size()
-		var shape := pow(sin(PI * pow(u, curve)), 2.0)
-		var fc := f_lo + (f_hi - f_lo) * shape
+		var t := float(i) / RATE
+		var shape := _env(t, rise, fall)
+		var fc := f_lo + (f_hi - f_lo) * exp(-t / (fall * 1.5))
 		var x := rng.randf_range(-1.0, 1.0)
 		bp.run(x, fc, q)
 		lp.run(x, fc * 0.45, 0.7)
@@ -214,12 +220,13 @@ func _thud(_v: int) -> PackedFloat32Array:
 
 
 ## Bone: a sharp high transient, a few fast-decaying modes, a splinter just after, and a
-## short knock under it.
-func _crack(_v: int) -> PackedFloat32Array:
+## short knock under it. Variants step through the modes' pitch and ring, so they tell apart.
+func _crack(v: int) -> PackedFloat32Array:
 	var b := _new(0.25)
 	_noise_hit(b, 0.0, F.HIGH, rng.randf_range(1800.0, 2600.0), 0.7, 0.0002, rng.randf_range(0.004, 0.008), 1.0)
-	var f := rng.randf_range(1500.0, 2200.0)
-	_modes(b, 0.0, [f, f * 1.47, f * 2.09], [0.03, 0.02, 0.012], [0.5, 0.35, 0.25], 1.0)
+	var f := lerpf(1400.0, 2400.0, v / 2.0) * rng.randf_range(0.96, 1.04)
+	var ring := lerpf(1.3, 0.75, v / 2.0)
+	_modes(b, 0.0, [f, f * 1.47, f * 2.09], [0.03 * ring, 0.02 * ring, 0.012 * ring], [0.5, 0.35, 0.25], 1.0)
 	var t2 := rng.randf_range(0.008, 0.02)
 	_noise_hit(b, t2, F.HIGH, 2500.0, 0.7, 0.0002, 0.004, 0.6)
 	_noise_hit(b, t2 * 2.1, F.BAND, 1800.0, 1.5, 0.0003, 0.006, 0.35)
@@ -261,9 +268,10 @@ func _sub_thump(_v: int) -> PackedFloat32Array:
 
 
 ## A forearm or glove stopping a strike: a bright tick and woody modes over a leather knock.
-func _block_clack(_v: int) -> PackedFloat32Array:
+## Variants step through the wood's pitch.
+func _block_clack(v: int) -> PackedFloat32Array:
 	var b := _new(0.25)
-	_clack(b, 0.0, 1.0)
+	_clack(b, 0.0, 1.0, lerpf(600.0, 950.0, v / 2.0))
 	_saturate(b, 1.3)
 	return b
 
@@ -287,19 +295,19 @@ func _parry_ting(_v: int) -> PackedFloat32Array:
 
 
 ## The guard knocked apart: a clack, a wide noise crash closing down, a low boom and a
-## shatter of grains.
-func _guard_break(_v: int) -> PackedFloat32Array:
+## shatter of grains. Variants differ in the clack's wood, the crash's length and the boom.
+func _guard_break(v: int) -> PackedFloat32Array:
 	var b := _new(1.1)
-	_clack(b, 0.0, 0.8)
+	_clack(b, 0.0, 0.8, lerpf(640.0, 900.0, float(v)))
 	var lp := Svf.new()
 	var hp := Svf.new()
-	var decay := rng.randf_range(0.18, 0.26)
+	var decay := lerpf(0.17, 0.27, float(v)) * rng.randf_range(0.95, 1.05)
 	for i in b.size():
 		var t := float(i) / RATE
 		lp.run(rng.randf_range(-1.0, 1.0), 1500.0 + 5500.0 * exp(-t / 0.15), 0.7)
 		hp.run(lp.low, 200.0, 0.7)
 		b[i] += hp.high * _env(t, 0.002, decay) * 0.9
-	_tone_drop(b, 0.0, 75.0, 40.0, 0.08, 0.002, 0.25, 0.8)
+	_tone_drop(b, 0.0, lerpf(82.0, 66.0, float(v)), lerpf(44.0, 36.0, float(v)), 0.08, 0.002, 0.25, 0.8)
 	_grains(b, 0.05, 0.45, 30, 2500.0, 6000.0, 0.5)
 	_saturate(b, 1.5)
 	return b
@@ -359,7 +367,7 @@ func _voice(_v: int, p: Dictionary) -> PackedFloat32Array:
 		var breath_env := breath * (1.0 - smoothstep(0.7, 1.0, u))
 		if onset > 0.0 and tv < 0.0:
 			breath_env = breath * 2.5 * smoothstep(0.0, onset, t)
-		b[i] = voiced * voice_env + asp.band * breath_env
+		b[i] = (voiced * voice_env + asp.band * breath_env) * smoothstep(0.0, VOICE_FADE_IN_S, t)
 	return b
 
 
@@ -461,10 +469,11 @@ func _grains(b: PackedFloat32Array, start: float, window: float, count: int, f_l
 		_noise_hit(b, start + at, F.BAND, rng.randf_range(f_lo, f_hi), rng.randf_range(2.0, 4.0), 0.0002, rng.randf_range(0.001, 0.004), amp * gain)
 
 
-## The block clack (also under the guard break): a bright tick, woody modes, a leather knock.
-func _clack(b: PackedFloat32Array, start: float, gain: float) -> void:
+## The block clack (also under the guard break): a bright tick, woody modes around `wood` Hz,
+## a leather knock.
+func _clack(b: PackedFloat32Array, start: float, gain: float, wood: float) -> void:
 	_noise_hit(b, start, F.BAND, rng.randf_range(2600.0, 3400.0), 1.0, 0.0002, 0.004, 0.8 * gain)
-	var f := rng.randf_range(650.0, 900.0)
+	var f := wood * rng.randf_range(0.96, 1.04)
 	_modes(b, start, [f, f * 2.31, f * 3.87], [0.05, 0.03, 0.018], [1.0, 0.6, 0.35], 0.8 * gain)
 	_tone_drop(b, start, 150.0, 120.0, 0.02, 0.0005, 0.04, 0.5 * gain)
 

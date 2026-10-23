@@ -8,8 +8,13 @@ extends Node
 ##
 ## - **Hits** (`hit_landed`): the tier's layers together at the contact point. Light:
 ##   whoosh + thud. Heavy: whoosh + thud + crack. Finisher: whoosh + thud + crunch + body
-##   fall + sub thump. A flying or shoved body hitting someone (`input_timing` &"body") has
-##   no whoosh: nothing swung.
+##   fall + sub thump. Every one-shot of a hit is `hit_<tier>_db` louder, so the tiers rank
+##   in loudness and not only in layers. A flying or shoved body hitting someone
+##   (`input_timing` &"body") has no whoosh: nothing swung.
+## - **One swing, several bodies** (hits from one attacker in one physics frame, such as the
+##   spinning heel's arc): the swing's own layers (SWING_LAYERS: the whoosh and the sub
+##   thump) play once, and every victim after the first is `extra_victim_db` quieter, so a
+##   crowd hit doesn't outshout a finisher or pile up in the limiter.
 ## - **Grunts:** the victim of a clean hit grunts at its eyes (enemies with the enemy voice,
 ##   the player with its own), at most once per `grunt_min_interval_ms`, each actor's voice
 ##   pitched by a fixed share of `voice_pitch_spread`.
@@ -18,12 +23,15 @@ extends Node
 ##   No grunt.
 ## - **Whiffs** (`attack_whiffed`): a whoosh at the striking limb, no impact.
 ## - **Wind-ups** (`windup_started`, while `Tuning.rear_warning_audio`): an effort grunt
-##   and a whoosh at the attacker, so the player hears where an attack is coming from.
+##   and a whoosh at the attacker, so the player hears where an attack is coming from. A
+##   wind-up knocked out of (`windup_ended` interrupted) cuts both: the effort would talk
+##   over the pain grunt that follows.
 ## - **Music:** a placeholder loop while `Tuning.music_enabled` (off by default).
 ##
 ## Every one-shot takes a random variant of its pool, never the pool's last one, with its
 ## pitch and volume varied by up to `sfx_pitch_variation` / `sfx_volume_variation` (±8%).
-## The listener rides the player's eyes and look, in every camera mode. A sound plays at
+## With every voice busy, the sound started longest ago gives way. The listener rides the
+## player's eyes and look, in every camera mode. A sound plays at
 ## its layer's volume within `sfx_unit_size_m` of it, 6 dB quieter each time the distance
 ## doubles beyond that (updated every frame), and not at all beyond `sfx_max_distance_m`.
 ## Sounds more than
@@ -49,6 +57,10 @@ const TIER_LAYERS: Dictionary = {
 	CombatTypes.HitTier.FINISHER: [&"whoosh", &"thud", &"crunch", &"body_fall", &"sub_thump"],
 }
 
+## Layers heard once per swing, however many bodies it hits in one frame: the whoosh (one
+## limb went by) and the sub thump (the finisher's weight). The others play per victim.
+const SWING_LAYERS: Array[StringName] = [&"whoosh", &"sub_thump"]
+
 ## The TuningData property holding each hit or block pool's volume in dB.
 const LAYER_DB: Dictionary = {
 	&"whoosh": &"whoosh_db",
@@ -62,7 +74,8 @@ const LAYER_DB: Dictionary = {
 	&"guard_break": &"guard_break_db",
 }
 
-## Pooled one-shot voices; with all of them busy, a new sound takes the oldest.
+## Pooled one-shot voices; with all of them busy, a new sound takes the one started longest
+## ago.
 @export var voice_count: int = 24
 ## The listener rides the player's eyes and look, so every camera (the debug views too)
 ## hears what the player would. Off, or with no player, the active camera hears.
@@ -76,7 +89,16 @@ var music: AudioStreamPlayer
 var _voices: Array[AudioStreamPlayer3D] = []
 ## Each voice's volume before the distance fall-off (its layer's, varied).
 var _base_db: Array[float] = []
+## When each voice's sound started, as a count of play() calls (higher is newer).
+var _started: Array[int] = []
+## Instance id of the actor whose wind-up each voice is sounding (0: none).
+var _windup_of: Array[int] = []
+var _plays: int = 0
 var _next: int = 0
+## The swing the last hit came from (attacker instance id, physics frame), and the victims
+## it has hit in that frame.
+var _swing: Vector2i = Vector2i.ZERO
+var _swing_victims: Array[int] = []
 var _music_on: bool = false
 ## Seconds of _process time, for the grunt interval.
 var _clock_s: float = 0.0
@@ -110,6 +132,8 @@ func _ready() -> void:
 		add_child(voice)
 		_voices.append(voice)
 		_base_db.append(0.0)
+		_started.append(0)
+		_windup_of.append(0)
 	music = AudioStreamPlayer.new()
 	music.name = &"Music"
 	music.bus = MUSIC_BUS
@@ -118,6 +142,7 @@ func _ready() -> void:
 	CombatEvents.hit_landed.connect(_on_hit_landed)
 	CombatEvents.attack_whiffed.connect(_on_attack_whiffed)
 	CombatEvents.windup_started.connect(_on_windup_started)
+	CombatEvents.windup_ended.connect(_on_windup_ended)
 	_follow_player()
 	_apply_mix()
 
@@ -145,6 +170,9 @@ func play(pool: StringName, at: Vector3, volume_db: float, pitch: float = 1.0) -
 		return null
 	var index := _take_voice()
 	var voice := _voices[index]
+	_plays += 1
+	_started[index] = _plays
+	_windup_of[index] = 0
 	voice.stream = stream
 	voice.global_position = at
 	voice.bus = REAR_BUS if is_behind_listener(at) else SFX_BUS
@@ -192,21 +220,25 @@ func is_behind_listener(at: Vector3) -> bool:
 func _on_hit_landed(hit: HitInfo) -> void:
 	var tuning := Tuning.data
 	var at := hit.contact_point
-	var swung := hit.input_timing != &"body"
+	var first := _first_victim_of_swing(hit)
+	var gain := tier_db(hit.tier) + (0.0 if first else tuning.extra_victim_db)
+	var swung := first and hit.input_timing != &"body"
 	if hit.blocked:
 		if swung:
-			play(&"whoosh", at, tuning.whoosh_db)
+			play(&"whoosh", at, tuning.whoosh_db + gain)
 		if hit.perfect_block:
-			play(&"parry_ting", at, tuning.parry_ting_db)
+			play(&"parry_ting", at, tuning.parry_ting_db + gain)
 		else:
-			play(&"block_clack", at, tuning.block_clack_db)
+			play(&"block_clack", at, tuning.block_clack_db + gain)
 		if hit.guard_broken:
-			play(&"guard_break", at, tuning.guard_break_db)
+			play(&"guard_break", at, tuning.guard_break_db + gain)
 		return
 	for pool: StringName in TIER_LAYERS.get(hit.tier, []):
 		if pool == &"whoosh" and not swung:
 			continue
-		play(pool, at, layer_db(pool))
+		if pool in SWING_LAYERS and not first:
+			continue
+		play(pool, at, layer_db(pool) + gain)
 	_grunt(hit.victim)
 
 
@@ -220,11 +252,38 @@ func _on_windup_started(attacker: Node3D, move: MoveData) -> void:
 	var tuning := Tuning.data
 	if attacker == null or not tuning.rear_warning_audio:
 		return
-	play(&"effort", _voice_position(attacker), tuning.windup_db, voice_pitch(attacker))
-	play(&"whoosh", _strike_position(attacker, move), tuning.windup_db)
+	var id := attacker.get_instance_id()
+	for voice: AudioStreamPlayer3D in [
+		play(&"effort", _voice_position(attacker), tuning.windup_db, voice_pitch(attacker)),
+		play(&"whoosh", _strike_position(attacker, move), tuning.windup_db),
+	]:
+		if voice:
+			_windup_of[_voices.find(voice)] = id
+
+
+## A wind-up knocked out of (a hit, a grab) cuts its effort and whoosh at once.
+func _on_windup_ended(attacker: Node3D, interrupted: bool) -> void:
+	if not interrupted or attacker == null:
+		return
+	var id := attacker.get_instance_id()
+	for i in _voices.size():
+		if _windup_of[i] == id:
+			_windup_of[i] = 0
+			if _voices[i].playing:
+				_voices[i].stop()
 
 
 # --- Helpers -----------------------------------------------------------------------------
+
+
+## The extra volume in dB of every one-shot of a `tier` hit (Tuning.data.hit_<tier>_db).
+static func tier_db(tier: CombatTypes.HitTier) -> float:
+	match tier:
+		CombatTypes.HitTier.HEAVY:
+			return Tuning.data.hit_heavy_db
+		CombatTypes.HitTier.FINISHER:
+			return Tuning.data.hit_finisher_db
+	return Tuning.data.hit_light_db
 
 
 ## A hit or block pool's volume in dB (Tuning.data.<pool>_db).
@@ -250,8 +309,14 @@ func _grunt(actor: Node3D) -> void:
 		return
 	var tuning := Tuning.data
 	var id := actor.get_instance_id()
-	if _last_grunt_s.has(id) and (_clock_s - _last_grunt_s[id]) * 1000.0 < tuning.grunt_min_interval_ms:
+	var interval_s := tuning.grunt_min_interval_ms / 1000.0
+	if _last_grunt_s.has(id) and _clock_s - _last_grunt_s[id] < interval_s:
 		return
+	# Forget the actors whose interval has run out (freed ones included), so the table only
+	# holds who grunted lately.
+	for other: int in _last_grunt_s.keys():
+		if _clock_s - _last_grunt_s[other] >= interval_s:
+			_last_grunt_s.erase(other)
 	_last_grunt_s[id] = _clock_s
 	if is_player:
 		play(&"player_grunt", _voice_position(actor), tuning.player_grunt_db, voice_pitch(actor))
@@ -279,7 +344,23 @@ func _strike_position(actor: Node3D, move: MoveData) -> Vector3:
 	return combat_actor.get_chest_position()
 
 
-## The index of a free voice, else of the one started longest ago (stopped).
+## True for the first victim `hit`'s swing (its attacker, this physics frame) strikes, false
+## for every further body the same swing hits in the frame. A victim hit again starts a
+## new swing (two hits on one body are two swings).
+func _first_victim_of_swing(hit: HitInfo) -> bool:
+	var attacker_id := hit.attacker.get_instance_id() if is_instance_valid(hit.attacker) else 0
+	var victim_id := hit.victim.get_instance_id() if is_instance_valid(hit.victim) else 0
+	var swing := Vector2i(attacker_id, Engine.get_physics_frames())
+	if swing != _swing or victim_id in _swing_victims:
+		_swing = swing
+		_swing_victims = [victim_id]
+		return true
+	_swing_victims.append(victim_id)
+	return false
+
+
+## The index of a free voice, else of the busy one started longest ago (stopped). Searching
+## from the last one taken keeps a voice's tail free as long as possible.
 func _take_voice() -> int:
 	var n := _voices.size()
 	for k in n:
@@ -287,8 +368,10 @@ func _take_voice() -> int:
 		if not _voices[index].playing:
 			_next = (index + 1) % n
 			return index
-	var oldest := _next
-	_next = (_next + 1) % n
+	var oldest := 0
+	for i in n:
+		if _started[i] < _started[oldest]:
+			oldest = i
 	_voices[oldest].stop()
 	return oldest
 

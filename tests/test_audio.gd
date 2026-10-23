@@ -1,10 +1,12 @@
 extends GutTest
 ## Audio and rumble (game/audio/, M2 WP3; Spec §6 "Audio" and the audio and rumble rows):
-## the generated SFX bank, the AudioDirector's layers per tier, no immediate repeats, the
-## pitch and volume variation, positional placement, grunts, whiff, block, wind-up and
-## music sounds, the rear muffle, and the RumbleDirector's pulses with the Input calls
-## stubbed. Events are emitted on CombatEvents directly, with plain Node3Ds in the "enemy"
-## and "player" groups as actors; the last tests play a real jab in the test room.
+## the generated SFX bank (and the samples themselves: front-loaded whooshes, no clicks, the
+## tiers ranking in loudness), the AudioDirector's layers per tier, one swing through several
+## bodies, no immediate repeats, the pitch and volume variation, positional placement,
+## grunts, whiff, block, wind-up and music sounds, the rear muffle, voice stealing, and the
+## RumbleDirector's pulses with the Input calls stubbed. Events are emitted on CombatEvents
+## directly, with plain Node3Ds in the "enemy" and "player" groups as actors; the last tests
+## play a real jab in the test room.
 
 const ROOM := preload("res://game/level/test_room.tscn")
 const IMPACT_POOLS: Array[StringName] = [
@@ -88,6 +90,34 @@ func _frames(n: int) -> void:
 		await get_tree().process_frame
 
 
+## A generated sample's 16-bit PCM (read from the .wav file itself, not the imported,
+## compressed stream), as floats in -1..1.
+static func _pcm(file: String) -> PackedFloat32Array:
+	var bytes := FileAccess.get_file_as_bytes(SfxBank.DIR.path_join(file))
+	var at := 12
+	while at + 8 <= bytes.size():
+		var chunk := bytes.slice(at, at + 4).get_string_from_ascii()
+		var size := bytes.decode_u32(at + 4)
+		if chunk == "data":
+			var out := PackedFloat32Array()
+			out.resize(size / 2)
+			for i in out.size():
+				out[i] = bytes.decode_s16(at + 8 + i * 2) / 32768.0
+			return out
+		at += 8 + size + size % 2
+	return PackedFloat32Array()
+
+
+## RMS of `pcm` over `from`..`to` seconds (44.1 kHz).
+static func _rms(pcm: PackedFloat32Array, from: float, to: float) -> float:
+	var i0 := int(from * 44100.0)
+	var i1 := mini(pcm.size(), int(to * 44100.0))
+	var sum := 0.0
+	for i in range(i0, i1):
+		sum += pcm[i] * pcm[i]
+	return sqrt(sum / maxf(1.0, i1 - i0))
+
+
 # --- The bank -----------------------------------------------------------------------------
 
 
@@ -130,9 +160,12 @@ func test_bank_never_picks_the_same_variant_twice_in_a_row() -> void:
 func test_the_audio_tuning_group_sits_before_debug() -> void:
 	var groups: Array[String] = []
 	var audio_props: Array[String] = []
+	var subgroups: Array[String] = []
 	for prop in TuningData.new().get_property_list():
 		if prop.usage & PROPERTY_USAGE_GROUP:
 			groups.append(prop.name)
+		elif groups.size() > 0 and groups[-1] == "Audio" and prop.usage & PROPERTY_USAGE_SUBGROUP:
+			subgroups.append(prop.name)
 		elif groups.size() > 0 and groups[-1] == "Audio" and prop.usage & PROPERTY_USAGE_EDITOR:
 			audio_props.append(prop.name)
 			if prop.type == TYPE_FLOAT:
@@ -140,8 +173,69 @@ func test_the_audio_tuning_group_sits_before_debug() -> void:
 	var at := groups.find("Audio")
 	assert_gt(at, -1)
 	assert_eq(groups[at + 1] if at + 1 < groups.size() else "", "Debug")
-	for prop_name: String in ["sfx_pitch_variation", "sfx_volume_variation", "whoosh_db", "rumble_strength", "music_enabled"]:
+	for prop_name: String in [
+		"sfx_pitch_variation", "sfx_volume_variation", "whoosh_db", "rumble_strength", "music_enabled",
+		"hit_light_db", "hit_heavy_db", "hit_finisher_db", "extra_victim_db",
+	]:
 		assert_has(audio_props, prop_name)
+	# Subgroup headings, so the panel doesn't show some 45 sliders as one flat list.
+	assert_eq(subgroups, ["Mix", "Tiers", "Layers", "Voices", "Blocks", "Distance", "Music", "Rumble"])
+
+
+## The swing's whoosh plays at the contact frame (a hit) or as the active frames end (a whiff),
+## after the limb has come through, so its loudest part comes first: the earlier slow swell
+## peaked 0.1-0.24 s in, after the thud it was layered on.
+func test_whooshes_are_loudest_right_away() -> void:
+	var bank := SfxBank.new()
+	for i in bank.count(&"whoosh"):
+		var pcm := _pcm("whoosh_%02d.wav" % (i + 1))
+		assert_gt(pcm.size(), 0)
+		var window := 0.005
+		var loudest := 0
+		var level := 0.0
+		for w in int(pcm.size() / (window * 44100.0)):
+			var rms := _rms(pcm, w * window, (w + 1) * window)
+			if rms > level:
+				level = rms
+				loudest = w
+		assert_lt(loudest * window, 0.05, "whoosh %d peaks %.0f ms in" % [i + 1, loudest * window * 1000.0])
+
+
+## Every one-shot starts and ends at silence: a sample that starts on a step clicks (the
+## voices' breath noise did).
+func test_one_shots_start_and_end_without_a_click() -> void:
+	var bank := SfxBank.new()
+	for pool: StringName in bank.pools:
+		if pool == &"music_loop":
+			continue
+		for i in bank.count(pool):
+			var pcm := _pcm("%s_%02d.wav" % [pool, i + 1])
+			assert_lt(absf(pcm[0]), 0.004, "%s %d starts at silence" % [pool, i + 1])
+			assert_lt(absf(pcm[-1]), 0.004, "%s %d ends at silence" % [pool, i + 1])
+
+
+## The tiers rank in loudness, not only in layers: each tier's layers summed at their tuned
+## volumes (the samples themselves, variant 1), over the first 0.4 s. The crack alone added
+## a fraction of a dB, so heavy hits sounded as loud as light ones.
+func test_the_tiers_rank_in_loudness() -> void:
+	var t := Tuning.data
+	assert_lt(t.hit_light_db, t.hit_heavy_db)
+	assert_lt(t.hit_heavy_db, t.hit_finisher_db)
+	var level := {}
+	for tier: CombatTypes.HitTier in AudioDirector.TIER_LAYERS:
+		var mix := PackedFloat32Array()
+		mix.resize(int(0.4 * 44100.0))
+		for pool: StringName in AudioDirector.TIER_LAYERS[tier]:
+			var pcm := _pcm("%s_01.wav" % pool)
+			var gain := db_to_linear(AudioDirector.layer_db(pool) + AudioDirector.tier_db(tier))
+			for i in mini(mix.size(), pcm.size()):
+				mix[i] += pcm[i] * gain
+		level[tier] = linear_to_db(_rms(mix, 0.0, 0.4))
+	var light: float = level[CombatTypes.HitTier.LIGHT]
+	var heavy: float = level[CombatTypes.HitTier.HEAVY]
+	var finisher: float = level[CombatTypes.HitTier.FINISHER]
+	assert_gt(heavy - light, 2.0, "heavy over light")
+	assert_gt(finisher - heavy, 2.0, "finisher over heavy")
 
 
 # --- Hits -----------------------------------------------------------------------------
@@ -209,7 +303,7 @@ func test_pitch_and_volume_vary_within_the_tuned_range() -> void:
 	assert_between(gains.max(), 1.0, 1.08 + 0.0001, "volume up at most 8%")
 	assert_gt(pitches.max() - pitches.min(), 0.12, "pitch uses most of the range")
 	assert_gt(gains.max() - gains.min(), 0.12, "volume uses most of the range")
-	# Variation 0: exactly the layer's volume and pitch.
+	# Variation 0: exactly the layer's volume (plus the tier's) and pitch.
 	Tuning.data.sfx_pitch_variation = 0.0
 	Tuning.data.sfx_volume_variation = 0.0
 	_plays.clear()
@@ -217,7 +311,7 @@ func test_pitch_and_volume_vary_within_the_tuned_range() -> void:
 	for play in _plays:
 		if play.pool in IMPACT_POOLS:
 			assert_eq(play.pitch, 1.0)
-			assert_almost_eq(float(play.volume_db), AudioDirector.layer_db(play.pool), 0.0001)
+			assert_almost_eq(float(play.volume_db), AudioDirector.layer_db(play.pool) + Tuning.data.hit_heavy_db, 0.0001)
 
 
 func test_no_layer_repeats_a_sample_twice_in_a_row() -> void:
@@ -233,13 +327,27 @@ func test_no_layer_repeats_a_sample_twice_in_a_row() -> void:
 	assert_gt(count, 250)
 
 
-func test_layer_volumes_follow_tuning_live() -> void:
+func test_layer_and_tier_volumes_follow_tuning_live() -> void:
 	Tuning.data.sfx_volume_variation = 0.0
 	Tuning.data.crack_db = -17.0
+	Tuning.data.hit_heavy_db = 1.5
 	CombatEvents.hit_landed.emit(_hit(CombatTypes.HitTier.HEAVY))
 	var cracks := _plays.filter(func(p: Dictionary) -> bool: return p.pool == &"crack")
 	assert_eq(cracks.size(), 1)
-	assert_almost_eq(float(cracks[0].volume_db), -17.0, 0.0001)
+	assert_almost_eq(float(cracks[0].volume_db), -15.5, 0.0001)
+	# Each tier's gain lifts every one-shot of its hits, blocked ones too.
+	for tier: CombatTypes.HitTier in [CombatTypes.HitTier.LIGHT, CombatTypes.HitTier.FINISHER]:
+		_plays.clear()
+		var hit := _hit(tier)
+		CombatEvents.hit_landed.emit(hit)
+		var thud: Array = _plays.filter(func(p: Dictionary) -> bool: return p.pool == &"thud")
+		assert_almost_eq(float(thud[0].volume_db), Tuning.data.thud_db + AudioDirector.tier_db(tier), 0.0001)
+		_plays.clear()
+		hit = _hit(tier)
+		hit.blocked = true
+		CombatEvents.hit_landed.emit(hit)
+		var clack: Array = _plays.filter(func(p: Dictionary) -> bool: return p.pool == &"block_clack")
+		assert_almost_eq(float(clack[0].volume_db), Tuning.data.block_clack_db + AudioDirector.tier_db(tier), 0.0001)
 	Tuning.data.sfx_volume_db = -12.0
 	await _frames(1)
 	assert_almost_eq(AudioServer.get_bus_volume_db(AudioServer.get_bus_index(AudioDirector.SFX_BUS)), -12.0, 0.001)
@@ -260,6 +368,40 @@ func test_flying_bodies_hit_without_a_whoosh() -> void:
 	assert_eq(_pools(), [&"whoosh", &"thud", &"crack"])
 
 
+## One swing through several bodies in a frame (the spinning heel's arc): one whoosh and one
+## sub thump, every body its own thud, crunch and fall (the ones after the first
+## extra_victim_db quieter) and its own grunt. Three full finisher stacks used to play, 18
+## voices at once, louder than a single finisher and flattened by the limiter.
+func test_one_swing_through_several_bodies_whooshes_once() -> void:
+	var t := Tuning.data
+	t.sfx_volume_variation = 0.0
+	var victims: Array[Node3D] = [
+		_enemy,
+		_actor("Dummy3", &"enemy", Vector3(1.0, 0.0, -1.0)),
+		_actor("Dummy4", &"enemy", Vector3(-1.0, 0.0, -1.0)),
+	]
+	for victim in victims:
+		CombatEvents.hit_landed.emit(_hit(CombatTypes.HitTier.FINISHER, victim))
+	var pools := _pools()
+	assert_eq(pools.count(&"whoosh"), 1, "one limb went by")
+	assert_eq(pools.count(&"sub_thump"), 1, "one finisher's weight")
+	for pool: StringName in [&"thud", &"crunch", &"body_fall"]:
+		assert_eq(pools.count(pool), 3, "%s per body" % pool)
+	assert_eq(_pools(false).count(&"grunt"), 3, "every body grunts")
+	var thuds := _plays.filter(func(p: Dictionary) -> bool: return p.pool == &"thud")
+	var full := t.thud_db + t.hit_finisher_db
+	assert_almost_eq(float(thuds[0].volume_db), full, 0.0001)
+	assert_almost_eq(float(thuds[1].volume_db), full + t.extra_victim_db, 0.0001)
+	assert_almost_eq(float(thuds[2].volume_db), full + t.extra_victim_db, 0.0001)
+	# The same attacker's next swing (a later frame) whooshes again, and so does a second hit
+	# on a body already struck this frame (two swings, not one through two bodies).
+	await get_tree().physics_frame
+	_plays.clear()
+	CombatEvents.hit_landed.emit(_hit(CombatTypes.HitTier.LIGHT, victims[1]))
+	CombatEvents.hit_landed.emit(_hit(CombatTypes.HitTier.LIGHT, victims[1]))
+	assert_eq(_pools(), [&"whoosh", &"thud", &"whoosh", &"thud"])
+
+
 # --- Grunts -------------------------------------------------------------------------------
 
 
@@ -278,6 +420,11 @@ func test_enemies_grunt_when_hit_at_their_own_pitch_and_not_too_often() -> void:
 	CombatEvents.hit_landed.emit(_hit(CombatTypes.HitTier.LIGHT))
 	grunts = _plays.filter(func(p: Dictionary) -> bool: return p.pool == &"grunt")
 	assert_eq(grunts.size(), 2)
+	# The table of recent grunts forgets the actors whose interval has run out (it held every
+	# actor ever hit).
+	await _frames(int(ceil(Tuning.data.grunt_min_interval_ms / 1000.0 * 60.0)) + 2)
+	CombatEvents.hit_landed.emit(_hit(CombatTypes.HitTier.LIGHT, _attacker, _enemy))
+	assert_eq(_director._last_grunt_s.keys(), [_attacker.get_instance_id()])
 
 
 func test_the_player_grunts_with_its_own_voice() -> void:
@@ -331,6 +478,31 @@ func test_a_windup_plays_an_effort_and_a_whoosh_at_the_attacker() -> void:
 	assert_eq(_plays.size(), 0, "rear_warning_audio off: silent")
 
 
+## Hit (or grabbed) out of its wind-up, an attacker's effort and whoosh stop at once: the
+## effort talked over the pain grunt that follows. Another attacker's wind-up, and a wind-up
+## that ends in its strike, ring out.
+func test_a_windup_knocked_out_of_cuts_its_effort_and_whoosh() -> void:
+	var move := load("res://game/combat/moves/dummy_jab.tres") as MoveData
+	CombatEvents.windup_started.emit(_attacker, move)
+	CombatEvents.windup_started.emit(_enemy, move)
+	assert_eq(_plays.size(), 4)
+	var cut: Array[AudioStreamPlayer3D] = [_plays[0].voice, _plays[1].voice]
+	var kept: Array[AudioStreamPlayer3D] = [_plays[2].voice, _plays[3].voice]
+	for voice in cut + kept:
+		assert_true(voice.playing)
+	CombatEvents.windup_ended.emit(_attacker, true)
+	for voice in cut:
+		assert_false(voice.playing, "the interrupted wind-up's %s stopped" % voice.name)
+	CombatEvents.windup_ended.emit(_enemy, false)
+	for voice in kept:
+		assert_true(voice.playing, "a wind-up that struck rings out")
+	# A voice reused for another sound is no longer the wind-up's.
+	CombatEvents.windup_ended.emit(_enemy, true)
+	var reused := _director.play(&"thud", Vector3(0.0, 1.0, -2.0), 0.0)
+	CombatEvents.windup_ended.emit(_attacker, true)
+	assert_true(reused.playing)
+
+
 func test_sounds_behind_the_listener_are_muffled() -> void:
 	var front := _director.play(&"thud", Vector3(0.0, 1.0, -3.0), 0.0)
 	var side := _director.play(&"thud", Vector3(3.0, 1.0, 0.0), 0.0)
@@ -353,14 +525,25 @@ func test_sounds_behind_the_listener_are_muffled() -> void:
 
 
 func test_the_voice_pool_takes_the_oldest_when_all_are_busy() -> void:
+	var at := Vector3(0.0, 1.0, -2.0)
+	var voices: Array[AudioStreamPlayer3D] = []
+	for i in _director.voice_count:
+		voices.append(_director.play(&"parry_ting", at, 0.0))
+	assert_eq(voices.filter(func(v: AudioStreamPlayer3D) -> bool: return v != null and v.playing).size(), _director.voice_count)
+	# One sound ends early (a short one): the next takes its voice.
+	voices[3].stop()
+	assert_eq(_director.play(&"parry_ting", at, 0.0), voices[3])
+	# All busy: each new sound takes the one started longest ago, not the next in turn.
+	assert_eq(_director.play(&"parry_ting", at, 0.0), voices[0])
+	assert_eq(_director.play(&"parry_ting", at, 0.0), voices[1])
+	assert_eq(_director.play(&"parry_ting", at, 0.0), voices[2])
+	assert_eq(_director.play(&"parry_ting", at, 0.0), voices[4], "voice 3 is newer")
 	var used := {}
 	for i in _director.voice_count * 3:
-		var voice := _director.play(&"whoosh", Vector3(0.0, 1.0, -2.0), 0.0)
-		assert_not_null(voice)
-		used[voice] = true
+		used[_director.play(&"whoosh", at, 0.0)] = true
 	assert_eq(used.size(), _director.voice_count, "every voice is used, and no more are made")
-	var voices := _director.get_children().filter(func(n: Node) -> bool: return n is AudioStreamPlayer3D)
-	assert_eq(voices.size(), _director.voice_count)
+	var children := _director.get_children().filter(func(n: Node) -> bool: return n is AudioStreamPlayer3D)
+	assert_eq(children.size(), _director.voice_count)
 
 
 func test_music_is_off_by_default_and_follows_the_toggle() -> void:
@@ -436,6 +619,40 @@ func test_blocks_tick_and_guard_breaks_pulse_heavy() -> void:
 	hit.guard_broken = true
 	CombatEvents.hit_landed.emit(hit)
 	assert_eq(_pulses, [Vector3(t.rumble_heavy_weak, t.rumble_heavy_strong, t.rumble_heavy_ms / 1000.0)] as Array[Vector3])
+
+
+## A joypad plays one vibration at a time: a block tick or a light hit while a heavy pulse
+## runs keeps the heavy's motors to its end (it used to cut it to a 40 ms tick); once it has
+## ended, a tick is a tick again.
+func test_a_weaker_pulse_never_cuts_a_stronger_one_short() -> void:
+	var player := _actor("Player", &"player", Vector3.ZERO)
+	var t := Tuning.data
+	CombatEvents.hit_landed.emit(_hit(CombatTypes.HitTier.HEAVY, _enemy, player))
+	await _frames(2)
+	var hit := _hit(CombatTypes.HitTier.LIGHT, player, _enemy)
+	hit.blocked = true
+	CombatEvents.hit_landed.emit(hit)
+	assert_eq(_pulses.size(), 2)
+	assert_almost_eq(_pulses[1].x, t.rumble_heavy_weak, 0.0001)
+	assert_almost_eq(_pulses[1].y, t.rumble_heavy_strong, 0.0001)
+	assert_between(_pulses[1].z, t.rumble_block_ms / 1000.0, t.rumble_heavy_ms / 1000.0, "the heavy's remaining time")
+	# A stronger pulse during a weaker one takes over at its own strength and length.
+	await _frames(int(ceil(t.rumble_heavy_ms / 1000.0 * 60.0)) + 2)
+	_pulses.clear()
+	CombatEvents.hit_landed.emit(hit)
+	CombatEvents.hit_landed.emit(_hit(CombatTypes.HitTier.HEAVY, _enemy, player))
+	assert_eq(_pulses, [
+		Vector3(t.rumble_block_weak, t.rumble_block_strong, t.rumble_block_ms / 1000.0),
+		Vector3(t.rumble_heavy_weak, t.rumble_heavy_strong, t.rumble_heavy_ms / 1000.0),
+	] as Array[Vector3])
+
+
+## A finisher through three bodies queues its second pulse once, not three times.
+func test_a_finisher_through_several_bodies_queues_one_second_pulse() -> void:
+	var player := _actor("Player", &"player", Vector3.ZERO)
+	for victim: Node3D in [_enemy, _attacker, _actor("Dummy3", &"enemy", Vector3(1.0, 0.0, -1.0))]:
+		CombatEvents.hit_landed.emit(_hit(CombatTypes.HitTier.FINISHER, victim, player))
+	assert_eq(_rumble.queued_pulses(), 1)
 
 
 func test_rumble_strength_scales_and_the_toggle_turns_it_off() -> void:
