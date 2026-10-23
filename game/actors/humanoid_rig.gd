@@ -62,12 +62,12 @@ extends Node3D
 		skin_color = value
 		_apply_colors()
 ## How the body stands, walks, and starts and ends every move (PlaceholderPoses.STANCE_*):
-## &"boxer" keeps the fists up by the chin (enemies, dummies); &"relaxed" lets the arms
+## &"boxer" keeps the fists up at the chin (enemies, dummies); &"relaxed" lets the arms
 ## hang loose until a strike (the player, so the first-person view stays clear). Strike
 ## poses reach the same spots in both. Other values mean &"boxer". Set before build().
 @export var stance: StringName = PlaceholderPoses.STANCE_BOXER
-## Player only (Spec §10): smaller, skin-colored hands with light wraps and a dark
-## fingerless-glove plate instead of the oversized fist blocks. Set before build().
+## Player only (Spec §10): skin-colored hands with light wraps and a dark fingerless-glove
+## plate instead of the enemies' dark fingerless gloves (the same size). Set before build().
 @export var wrapped_hands: bool = false
 ## Player only: put the meshes PlaceholderBody.is_fp_hidden() names (head, neck, chest,
 ## shoulder balls and the shoulder end of each upper arm) on CombatTypes.VIS_FP_HIDDEN.

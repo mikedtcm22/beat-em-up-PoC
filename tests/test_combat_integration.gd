@@ -466,7 +466,7 @@ func test_player_stands_relaxed_and_b_back_backsteps_with_the_stance_arms() -> v
 	assert_true(player.rig.wrapped_hands, "with wrapped hands")
 	for dummy: TrainingDummy in dummies:
 		assert_eq(dummy.rig.stance, PlaceholderPoses.STANCE_BOXER, "%s keeps the boxer guard" % dummy.name)
-		assert_false(dummy.rig.wrapped_hands, "%s keeps its fist blocks" % dummy.name)
+		assert_false(dummy.rig.wrapped_hands, "%s wears gloves" % dummy.name)
 	var chest := player.rig.get_point_position(&"ChestPoint").y
 	assert_lt(player.rig.get_point_position(&"LeftFistPoint").y, chest, "the lead hand hangs low")
 	var start := player.global_position
@@ -1306,7 +1306,8 @@ func test_a_jab_landing_on_the_player_never_fills_the_lens() -> void:
 		if case == "guard break":
 			await _raise_guard()
 			player.guard = 10.0
-		var glove := func(m: MeshInstance3D) -> bool: return m.name == &"RightFist" or m.name == &"RightWrap"
+		# The dummy's right glove (PlaceholderBody._gloved_hand()).
+		var glove := func(m: MeshInstance3D) -> bool: return m.name in [&"RightFist", &"RightFingers", &"RightStrap"]
 		var arm := func(m: MeshInstance3D) -> bool: return String(m.name).begins_with("Right")
 		var hit := await _jab_lands(dummy)
 		assert_not_null(hit, case)

@@ -190,9 +190,10 @@ class HurtSpec:
 		return bone_b != &""
 
 
-## Chunky placeholder body: broad V torso, thick limbs, oversized fists and sneakers, and a
-## covered face (cap pulled low plus a wrap-around shades band). With `wrapped_hands` (the
-## player, Spec §10) the fist blocks become smaller skin-colored hands (_wrapped_hand()).
+## Chunky placeholder body: broad V torso, thick limbs, slightly oversized fists and
+## sneakers, and a covered face (cap pulled low plus a wrap-around shades band). The hands
+## are one size on everyone: with `wrapped_hands` (the player, Spec §10) skin-colored and
+## wrapped (_wrapped_hand()), otherwise dark fingerless gloves (_gloved_hand()).
 static func parts(wrapped_hands: bool = false) -> Array[Part]:
 	var out: Array[Part] = [
 		Part.new(&"Pelvis", &"Hips", Shape.BOX, Vector3(0.36, 0.2, 0.25), Vector3(0.0, -0.03, 0.0), Paint.PANTS),
@@ -228,29 +229,45 @@ static func parts(wrapped_hands: bool = false) -> Array[Part]:
 			Part.new(StringName(side + "ToeCap"), StringName(side + "Toes"), Shape.BOX, Vector3(0.13, 0.07, 0.13), Vector3(0.0, 0.0, -0.06), Paint.ACCENT),
 			Part.new(StringName(side + "ToeSole"), StringName(side + "Toes"), Shape.BOX, Vector3(0.135, 0.025, 0.13), Vector3(0.0, -0.025, -0.06), Paint.DARK),
 		])
-		if wrapped_hands:
-			out.append_array(_wrapped_hand(side, sx))
-		else:
-			out.append_array([
-				Part.new(StringName(side + "Forearm"), StringName(side + "LowerArm"), Shape.CAPSULE, Vector3(0.066, 0.3, 0.0), Vector3(0.0, -0.125, 0.0), Paint.SKIN),
-				Part.new(StringName(side + "Wrap"), StringName(side + "LowerArm"), Shape.CYLINDER, Vector3(0.07, 0.08, 0.0), Vector3(0.0, -0.225, 0.0), Paint.ACCENT),
-				Part.new(StringName(side + "Fist"), StringName(side + "Hand"), Shape.BOX, Vector3(0.12, 0.13, 0.135), Vector3(0.0, -0.065, -0.005), Paint.ACCENT),
-			])
+		out.append_array(_wrapped_hand(side, sx) if wrapped_hands else _gloved_hand(side))
 		# Slight outward splay of the shoulder ball so the silhouette reads broad.
 		out.append(Part.new(StringName(side + "Trap"), &"UpperChest", Shape.SPHERE, Vector3(0.1, 0.16, 0.0), Vector3(sx * 0.14, 0.13, 0.01), Paint.BODY))
 	return out
 
 
-## The player's forearm and hand on `side` (sx = -1 left, +1 right): a slimmer forearm with
-## a light wrap at the wrist, and a skin-colored fist about 0.9 times the size of the
-## standard fist block in each direction (about 75% of its volume), wrapped across the
-## knuckles and at the wrist, with a dark fingerless-glove plate on the back of the hand
-## (the outer side when the arm hangs). Centered on the FistPoint, like the fist block.
+## The forearm on `side`, the same on everyone.
+static func _forearm(side: String) -> Part:
+	return Part.new(StringName(side + "Forearm"), StringName(side + "LowerArm"), Shape.CAPSULE, Vector3(0.056, 0.3, 0.0), Vector3(0.0, -0.125, 0.0), Paint.SKIN)
+
+
+## An enemy's forearm and hand on `side`: a dark fingerless glove (the fist), the bare
+## fingers showing across its knuckle end and a strap in the accent color across its
+## wrist end. The same size as the player's hand (_wrapped_hand()): about 0.9 times the old
+## fist block (0.12 x 0.13 x 0.135 m, the enemies' hands until Game-boy's first-person
+## playtest) in each direction, about 73% of its volume, so the guard's fists no longer
+## fill the player's view at sparring range while they still read as fists from 2-10 m.
+## No wrap on the forearm: the dark part of the hand stays as compact as the fist.
+## Centered on the FistPoint. The fingers and the strap cap the glove's faces instead of
+## ending flush with them (flush faces z-fight).
+static func _gloved_hand(side: String) -> Array[Part]:
+	var hand := StringName(side + "Hand")
+	return [
+		_forearm(side),
+		Part.new(StringName(side + "Fist"), hand, Shape.BOX, Vector3(0.1, 0.118, 0.116), Vector3(0.0, -0.065, -0.005), Paint.DARK),
+		Part.new(StringName(side + "Fingers"), hand, Shape.BOX, Vector3(0.106, 0.034, 0.122), Vector3(0.0, -0.108, -0.005), Paint.SKIN),
+		Part.new(StringName(side + "Strap"), hand, Shape.BOX, Vector3(0.106, 0.026, 0.122), Vector3(0.0, -0.017, -0.005), Paint.ACCENT),
+	]
+
+
+## The player's forearm and hand on `side` (sx = -1 left, +1 right): a light wrap at the
+## wrist, and a skin-colored fist the size of the enemies' gloves (_gloved_hand()), wrapped
+## across the knuckles and at the wrist, with a dark fingerless-glove plate on the back of
+## the hand (the outer side when the arm hangs). Centered on the FistPoint.
 static func _wrapped_hand(side: String, sx: float) -> Array[Part]:
 	var lower := StringName(side + "LowerArm")
 	var hand := StringName(side + "Hand")
 	return [
-		Part.new(StringName(side + "Forearm"), lower, Shape.CAPSULE, Vector3(0.056, 0.3, 0.0), Vector3(0.0, -0.125, 0.0), Paint.SKIN),
+		_forearm(side),
 		Part.new(StringName(side + "Wrap"), lower, Shape.CYLINDER, Vector3(0.059, 0.07, 0.0), Vector3(0.0, -0.23, 0.0), Paint.ACCENT),
 		Part.new(StringName(side + "Hand"), hand, Shape.BOX, Vector3(0.1, 0.118, 0.116), Vector3(0.0, -0.065, -0.005), Paint.SKIN),
 		Part.new(StringName(side + "KnuckleWrap"), hand, Shape.BOX, Vector3(0.106, 0.034, 0.122), Vector3(0.0, -0.078, -0.005), Paint.ACCENT),

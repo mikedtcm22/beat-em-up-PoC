@@ -12,6 +12,8 @@ const FP_HALF_V_DEG := FPView.HALF_V_DEG
 const FP_COLS := FPView.COLS
 ## Distance between two fighters' centers in the strike tests (docs/ARCHITECTURE.md).
 const TARGET_DISTANCE := 0.85
+## An enemy's head parts: what the player sees of its face (cap, shades, face).
+const ENEMY_HEAD: Array[String] = ["Head", "Cap", "CapBrim", "Shades", "ShadesFront"]
 
 ## docs/ARCHITECTURE.md "Bones", spelled out here so a typo in the rig cannot hide.
 const BONES: Array[StringName] = [
@@ -135,26 +137,36 @@ func after_all() -> void:
 	Tuning.apply(TuningData.new())
 
 
-func _rig(first_person: bool = false, height: float = 1.8, actor: Node3D = null) -> HumanoidRig:
+## A rig dressed like an enemy (the boxer stance and gloves), under `parent` if given.
+func _rig(first_person: bool = false, height: float = 1.8, actor: Node3D = null,
+		parent: Node = null) -> HumanoidRig:
 	var rig := HumanoidRig.new()
 	rig.first_person_body = first_person
 	rig.height = height
 	rig.actor = actor
-	add_child_autofree(rig)
+	_adopt(rig, parent)
 	rig.build()
 	return rig
 
 
 ## A rig dressed like the player (PlayerCharacter._configure_rig()): first-person body,
-## relaxed stance and wrapped hands.
-func _player_rig() -> HumanoidRig:
+## relaxed stance and wrapped hands. Under `parent` if given.
+func _player_rig(parent: Node = null) -> HumanoidRig:
 	var rig := HumanoidRig.new()
 	rig.first_person_body = true
 	rig.stance = PlaceholderPoses.STANCE_RELAXED
 	rig.wrapped_hands = true
-	add_child_autofree(rig)
+	_adopt(rig, parent)
 	rig.build()
 	return rig
+
+
+## Add `rig` to `parent` (freed with it), or to the test (freed after it).
+func _adopt(rig: HumanoidRig, parent: Node) -> void:
+	if parent:
+		parent.add_child(rig)
+	else:
+		add_child_autofree(rig)
 
 
 ## One rig per stance: a boxer (enemies, the default) and the player's relaxed rig. Strikes
@@ -359,7 +371,7 @@ func _reaches_edge(hits: Array[MeshInstance3D], from: Array[String], through: Ar
 ## Forearm and hand part names of `side` (&"Left" or &"Right").
 func _arm_parts(side: String) -> Array[String]:
 	var out: Array[String] = []
-	for part: String in ["Forearm", "Wrap", "Fist", "Hand", "KnuckleWrap", "WristWrap", "GloveBack"]:
+	for part: String in ["Forearm", "Wrap", "Fist", "Fingers", "Strap", "Hand", "KnuckleWrap", "WristWrap", "GloveBack"]:
 		out.append(side + part)
 	return out
 
@@ -372,9 +384,11 @@ func _whole_arm_parts(side: String) -> Array[String]:
 	return out
 
 
+## Hand part names of `side`: an enemy's glove (Fist, Fingers, Strap) or the player's
+## wrapped hand.
 func _hand_parts(side: String) -> Array[String]:
 	var out: Array[String] = []
-	for part: String in ["Fist", "Hand", "KnuckleWrap", "WristWrap", "GloveBack"]:
+	for part: String in ["Fist", "Fingers", "Strap", "Hand", "KnuckleWrap", "WristWrap", "GloveBack"]:
 		out.append(side + part)
 	return out
 
@@ -600,64 +614,102 @@ func test_flash_is_white_emission_per_rig() -> void:
 		assert_almost_eq(mat.emission_energy_multiplier, 0.0, 1e-4, "flash cleared")
 
 
-func test_player_hands_are_smaller_wrapped_and_keep_the_rig_points() -> void:
-	# Spec §10: the player has wrapped hands and fingerless gloves, about 70-80% of the
-	# volume of the fist blocks that enemies keep.
+## Bounds of `rig`'s hand parts on `side`, in the hand bone's frame.
+func _hand_bounds(rig: HumanoidRig, side: String) -> AABB:
+	var bounds := AABB()
+	var first := true
+	for name: String in _hand_parts(side):
+		var part := rig.get_attachment(StringName(side + "Hand")).get_node_or_null(name) as MeshInstance3D
+		if part == null:
+			continue
+		var box := part.transform * part.mesh.get_aabb()
+		bounds = box if first else bounds.merge(box)
+		first = false
+	return bounds
+
+
+## The albedo colors of `rig`'s hand parts on `side`.
+func _hand_colors(rig: HumanoidRig, side: String) -> Array[Color]:
+	var out: Array[Color] = []
+	for name: String in _hand_parts(side):
+		var part := rig.get_attachment(StringName(side + "Hand")).get_node_or_null(name) as MeshInstance3D
+		if part and not out.has((part.material_override as StandardMaterial3D).albedo_color):
+			out.append((part.material_override as StandardMaterial3D).albedo_color)
+	return out
+
+
+func test_hands_are_slightly_oversized_one_size_and_keep_the_rig_points() -> void:
+	# Spec §10: slightly oversized hands; the player's are wrapped with fingerless gloves.
+	# Enemies wear dark fingerless gloves of the same size. This test pinned the enemies'
+	# old fist blocks (0.12 x 0.13 x 0.135 m) as the reference the player's hands were
+	# 70-80% of; Game-boy's first-person playtest shrank the enemies' fists to the player's
+	# hand size (their guard's gloves filled the view at sparring range), so both are now
+	# held to about 70-75% of that old block (the player's glove plate adds a little), still
+	# at least 0.1 m across.
+	var old_block := 0.12 * 0.13 * 0.135
 	var enemy := _rig()
 	var player := _player_rig()
 	for side: String in ["Left", "Right"]:
 		var hand_bone := StringName(side + "Hand")
-		var block := enemy.get_attachment(hand_bone).get_node(side + "Fist") as MeshInstance3D
-		assert_not_null(block, "enemies keep the %s fist block" % side)
-		assert_null(player.get_attachment(hand_bone).get_node_or_null(side + "Fist"), "the player has no %s fist block" % side)
-		var bounds := AABB()
-		var first := true
-		for name: String in _hand_parts(side):
-			var part := player.get_attachment(hand_bone).get_node_or_null(name) as MeshInstance3D
-			if part == null:
-				continue
-			var box := part.transform * part.mesh.get_aabb()
-			bounds = box if first else bounds.merge(box)
-			first = false
-		var ratio := bounds.get_volume() / block.mesh.get_aabb().get_volume()
-		assert_between(ratio, 0.65, 0.85, "the %s hand is %.0f%% of the fist block's volume" % [side, ratio * 100.0])
-		var colors := {}
-		for name: String in _hand_parts(side):
-			var part := player.get_attachment(hand_bone).get_node_or_null(name) as MeshInstance3D
-			if part:
-				colors[(part.material_override as StandardMaterial3D).albedo_color] = true
+		var glove := enemy.get_attachment(hand_bone).get_node_or_null(side + "Fist") as MeshInstance3D
+		assert_not_null(glove, "enemies wear a %s glove" % side)
+		assert_null(player.get_attachment(hand_bone).get_node_or_null(side + "Fist"), "the player has no %s glove" % side)
+		assert_null(enemy.find_child(side + "Wrap", true, false), "no wrap on the enemy's %s forearm" % side)
+		for rig: HumanoidRig in [enemy, player]:
+			var bounds := _hand_bounds(rig, side)
+			var ratio := bounds.get_volume() / old_block
+			assert_between(ratio, 0.7, 0.78, "%s: the %s hand is %.0f%% of the old fist block's volume" % [
+					rig.stance, side, ratio * 100.0])
+			assert_gte(minf(bounds.size.x, minf(bounds.size.y, bounds.size.z)), 0.1, "%s: the %s fist is still slightly oversized" % [
+					rig.stance, side])
+			# The strike points stay where they were: the fist point at the hand's center.
+			assert_almost_eq(bounds.get_center().distance_to(PlaceholderBody.POINT_OFFSET[StringName(side + "FistPoint")]), 0.0, 0.005,
+					"%s: the %s fist point is the center of the hand" % [rig.stance, side])
+			var on_hand := rig.get_point_transform(hand_bone).affine_inverse() * rig.get_point_position(StringName(side + "FistPoint"))
+			assert_almost_eq(on_hand, PlaceholderBody.POINT_OFFSET[StringName(side + "FistPoint")], Vector3.ONE * 1e-4)
+			assert_almost_eq(rig.get_point_position(&"WeaponGrip").distance_to(rig.get_point_position(&"RightFistPoint")),
+					0.0, 0.03, "%s: WeaponGrip sits in the right fist" % rig.stance)
+			assert_almost_eq(rig.get_point_position(&"WeaponGrip").distance_to(rig.get_point_position(&"WeaponTip")),
+					0.7, 0.01, "%s: WeaponTip is 0.7 m along the weapon" % rig.stance)
+		var skin := player.get_attachment(hand_bone).get_node(side + "Hand") as MeshInstance3D
+		assert_eq((glove.mesh as BoxMesh).size, (skin.mesh as BoxMesh).size, "the enemy's %s glove is the player's hand size" % side)
+		assert_almost_eq(glove.position, skin.position, Vector3.ONE * 1e-6, "on the same spot of the %s hand bone" % side)
+		# The player: a skin-colored hand, light wraps and a dark glove plate.
+		var colors := _hand_colors(player, side)
 		assert_has(colors, player.skin_color, "a skin-colored %s hand" % side)
 		assert_has(colors, player.accent_color, "light %s wraps" % side)
 		assert_eq(colors.size(), 3, "skin, wraps and a dark glove accent")
-		var skin := player.get_attachment(hand_bone).get_node(side + "Hand") as MeshInstance3D
 		assert_eq((skin.material_override as StandardMaterial3D).albedo_color, player.skin_color)
-		# The strike points stay where they were: the fist point at the hand's center, in the
-		# same place on the hand bone as on an enemy.
-		assert_almost_eq(skin.position.distance_to(PlaceholderBody.POINT_OFFSET[StringName(side + "FistPoint")]), 0.0, 0.005,
-				"the %s fist point is the center of the hand" % side)
-		for rig: HumanoidRig in [enemy, player]:
-			var on_hand := rig.get_point_transform(hand_bone).affine_inverse() * rig.get_point_position(StringName(side + "FistPoint"))
-			assert_almost_eq(on_hand, PlaceholderBody.POINT_OFFSET[StringName(side + "FistPoint")], Vector3.ONE * 1e-4)
-	assert_almost_eq(player.get_point_position(&"WeaponGrip").distance_to(player.get_point_position(&"RightFistPoint")),
-			0.0, 0.03, "WeaponGrip sits in the player's right fist")
-	assert_almost_eq(player.get_point_position(&"WeaponGrip").distance_to(player.get_point_position(&"WeaponTip")),
-			0.7, 0.01, "WeaponTip is 0.7 m along the weapon")
-	var colors: Array[Color] = []
-	for mesh: MeshInstance3D in _meshes_under(player):
-		var color := (mesh.material_override as StandardMaterial3D).albedo_color
-		if not colors.has(color):
-			colors.append(color)
-	assert_between(colors.size(), 4, 6, "the player keeps 4 to 6 flat colors (Spec §10)")
+		# An enemy: a dark glove, the bare fingers and a strap in the accent color.
+		colors = _hand_colors(enemy, side)
+		var glove_color := (glove.material_override as StandardMaterial3D).albedo_color
+		assert_lt(glove_color.get_luminance(), 0.1, "a dark %s glove" % side)
+		assert_has(colors, enemy.skin_color, "bare %s fingers" % side)
+		assert_has(colors, enemy.accent_color, "a %s strap in the accent color" % side)
+		assert_eq(colors.size(), 3, "glove, fingers and strap")
+	for rig: HumanoidRig in [enemy, player]:
+		var colors: Array[Color] = []
+		for mesh: MeshInstance3D in _meshes_under(rig):
+			var color := (mesh.material_override as StandardMaterial3D).albedo_color
+			if not colors.has(color):
+				colors.append(color)
+		assert_between(colors.size(), 4, 6, "%s: 4 to 6 flat colors (Spec §10)" % rig.stance)
 
 
-func test_player_hand_boxes_never_share_a_face_plane() -> void:
-	# Two boxes with faces in one plane flicker between their colors (z-fighting): each wrap
-	# caps the hand's face it ends at (or stops short of it), never ends flush with it.
-	var boxes: Array[PlaceholderBody.Part] = []
-	for part: PlaceholderBody.Part in PlaceholderBody.parts(true):
-		if part.shape == PlaceholderBody.Shape.BOX and String(part.bone).ends_with("Hand"):
-			boxes.append(part)
-	assert_gte(boxes.size(), 8, "hand, wraps and glove plate on each hand")
+func test_hand_boxes_never_share_a_face_plane() -> void:
+	# Two boxes with faces in one plane flicker between their colors (z-fighting): each wrap,
+	# strap or finger band caps the hand's face it ends at (or stops short of it), never
+	# ends flush with it. The player's wrapped hands and the enemies' gloves.
+	for wrapped: bool in [true, false]:
+		var boxes: Array[PlaceholderBody.Part] = []
+		for part: PlaceholderBody.Part in PlaceholderBody.parts(wrapped):
+			if part.shape == PlaceholderBody.Shape.BOX and String(part.bone).ends_with("Hand"):
+				boxes.append(part)
+		assert_gte(boxes.size(), 8 if wrapped else 6, "hand and its bands on each hand")
+		_assert_no_flush_faces(boxes)
+
+
+func _assert_no_flush_faces(boxes: Array[PlaceholderBody.Part]) -> void:
 	for i: int in boxes.size():
 		var a := boxes[i]
 		assert_eq(a.rot_deg, Vector3.ZERO, "%s is axis-aligned on its bone" % a.name)
@@ -1356,6 +1408,15 @@ func test_player_stands_relaxed_and_enemies_keep_the_boxer_guard() -> void:
 		var up := _local(boxer, StringName(side + "FistPoint"))
 		assert_gt(up.y, 1.4, "the boxer guard holds the %s fist up (%s)" % [side, _fmt(up)])
 		assert_lt(up.distance_to(chin), 0.45, "by the chin")
+		# Fists up, ready to fight, from 2-10 m and side on: in front of the face, each on its
+		# own side, the forearm rising to it from an elbow held low. At the chin or mouth, not
+		# at eye level (the guard was lowered and pulled in for the player's throat-height
+		# lens, see test_enemy_guard_leaves_the_players_view_clear()).
+		var eye := _local(boxer, &"EyePoint")
+		assert_lt(up.y, eye.y - 0.1, "the %s fist at the chin or mouth, not eye level (%s)" % [side, _fmt(up)])
+		assert_lt(up.z, eye.z - 0.08, "the %s fist out in front of the face (%s)" % [side, _fmt(up)])
+		assert_gt(up.x * (-1.0 if side == "Left" else 1.0), 0.08, "the %s fist on its own side (%s)" % [side, _fmt(up)])
+		assert_lt(_local(boxer, StringName(side + "LowerArm")).y, up.y - 0.2, "the %s forearm rises from a low elbow" % side)
 		var loose := _local(player, StringName(side + "FistPoint"))
 		assert_lt(loose.y, 1.0, "the relaxed %s hand hangs at belt height or lower (%s)" % [side, _fmt(loose)])
 	assert_lt(_local(player, &"LeftFistPoint").z, _local(player, &"RightFistPoint").z - 0.1,
@@ -1374,6 +1435,18 @@ func test_player_stands_relaxed_and_enemies_keep_the_boxer_guard() -> void:
 	var ball := player.get_point_transform(&"RightToes") * Vector3(0.0, -0.035, 0.0)
 	assert_gt(heel.y - ball.y, 0.04, "the rear heel is raised")
 	assert_lt(ball.y, 0.02, "on the ball of the rear foot")
+	# The boxer keeps its fists up, above the chest, through idle and every walk.
+	for anim: StringName in [&"idle", &"walk_forward", &"walk_back", &"walk_left", &"walk_right"]:
+		boxer.play(anim, 0.0)
+		boxer.advance(0.0)
+		var step := boxer.anim_player.get_animation(anim).length / 8.0
+		for k: int in 8:
+			if k > 0:
+				boxer.advance(step)
+			for side: String in ["Left", "Right"]:
+				var fist := _local(boxer, StringName(side + "FistPoint"))
+				assert_gt(fist.y, _local(boxer, &"ChestPoint").y + 0.2, "%s at %d/8: the %s fist up above the chest (%s)" % [
+						anim, k, side, _fmt(fist)])
 
 
 func test_relaxed_arms_stay_out_of_the_level_first_person_view() -> void:
@@ -1395,6 +1468,78 @@ func test_relaxed_arms_stay_out_of_the_level_first_person_view() -> void:
 			assert_almost_eq(_body_share(hits), _parts_share(hits, arms), 1e-6, "%s at %d/8: no other body part in view" % [anim, k])
 			for cell: Vector2i in _cells_of(hits, arms):
 				assert_gte(cell.y, rows - 2, "%s at %d/8: only a sliver at the bottom edge (cell %s)" % [anim, k, cell])
+
+
+## Share of the view (from FPView.hits()) whose nearest mesh is one of `rig`'s parts in
+## `names`.
+func _rig_share(hits: Array[MeshInstance3D], rig: HumanoidRig, names: Array[String]) -> float:
+	return _share(hits, func(m: MeshInstance3D) -> bool: return rig.is_ancestor_of(m) and names.has(String(m.name)))
+
+
+## Every arm mesh of `rig` (upper arms, forearms and hands).
+func _arm_meshes(rig: HumanoidRig) -> Array[MeshInstance3D]:
+	var out: Array[MeshInstance3D] = []
+	for mesh: MeshInstance3D in _meshes_under(rig):
+		var name := String(mesh.name)
+		for side: String in ["Left", "Right"]:
+			if _whole_arm_parts(side).has(name) or name in [side + "UpperArm", side + "Delt"]:
+				out.append(mesh)
+	return out
+
+
+## Stand `enemy` on the line of sight of a player rig at the origin (facing -Z),
+## `distance` in front of the player's origin and facing it.
+func _enemy_facing(enemy: HumanoidRig, distance: float) -> void:
+	enemy.position = Vector3(0.0, 0.0, -distance)
+	enemy.rotation = Vector3(0.0, PI, 0.0)
+
+
+func test_enemy_guard_leaves_the_players_view_clear() -> void:
+	# Game-boy's playtest: an enemy's boxer guard in front of the player's throat-height
+	# lens filled most of the view with two oversized fist blocks at the lens's eye line,
+	# for the whole sparring exchange. The gloves are the player's hand size now, held at
+	# the chin a hand's width in front of it, the forearms angled in from low elbows. An
+	# enemy in its idle guard standing 0.9 m in front of the player's lens (EyePoint +
+	# FirstPersonCamera.lens_offset()) covers at most about 12% of the view with its hands
+	# and forearms (the fist blocks covered 16% and hid part of the head), and its head
+	# (cap, shades, face) shows whole above and between the gloves. At the sparring dummy's
+	# step-in (Tuning.sparring_step_in_m between the bodies, about 0.72 m from the lens)
+	# the gloves alone cover at most 8% (the fist blocks covered 20%) and the head still
+	# shows whole.
+	var scene := Node3D.new()
+	add_child_autofree(scene)
+	var player := _player_rig(scene)
+	var enemy := _rig(false, 1.8, null, scene)
+	player.play(&"idle", 0.0)
+	player.advance(0.0)
+	var cam := _fp_camera(player)
+	var hands: Array[String] = _hand_parts("Left")
+	hands.append_array(_hand_parts("Right"))
+	var arms: Array[String] = _arm_parts("Left")
+	arms.append_array(_arm_parts("Right"))
+	var cases := {
+		"0.9 m in front of the lens": -cam.origin.z + 0.9,
+		"at the sparring step-in": Tuning.data.sparring_step_in_m,
+	}
+	for what: String in cases:
+		_enemy_facing(enemy, cases[what])
+		enemy.play(&"idle", 0.0)
+		enemy.advance(0.0)
+		var hits := FPView.hits(scene, cam)
+		var bare := FPView.hits(scene, cam, FP_COLS, _arm_meshes(enemy))
+		var arm_share := _rig_share(hits, enemy, arms)
+		var glove_share := _rig_share(hits, enemy, hands)
+		if what == "at the sparring step-in":
+			assert_lt(glove_share, 0.08, "%s: the gloves cover %.1f%% of the view" % [what, glove_share * 100.0])
+		else:
+			assert_lt(arm_share, 0.12, "%s: the hands and forearms cover %.1f%% of the view" % [what, arm_share * 100.0])
+		var head := _rig_share(hits, enemy, ENEMY_HEAD)
+		var whole_head := _rig_share(bare, enemy, ENEMY_HEAD)
+		assert_gt(whole_head, 0.02, "%s: the head is in the view" % what)
+		assert_gt(head, whole_head * 0.97, "%s: the head shows whole (%.1f%% of the view, %.1f%% without the arms)" % [
+				what, head * 100.0, whole_head * 100.0])
+		assert_almost_eq(_rig_share(hits, enemy, ["Shades", "ShadesFront"]), _rig_share(bare, enemy, ["Shades", "ShadesFront"]),
+				1e-6, "%s: nothing of the arms in front of the shades" % what)
 
 
 func test_looking_down_shows_the_lead_leg_and_foot() -> void:
@@ -1675,13 +1820,45 @@ func test_recoil_knocks_the_striking_arm_back() -> void:
 		for i: int in 3:
 			var point: StringName = [&"LeftFistPoint", &"RightFistPoint", &"EyePoint"][i]
 			assert_almost_eq(_local(rig, point), stance[i], Vector3.ONE * 0.01, "%s: ends in the stance (%s)" % [rig.stance, point])
+	# The boxer's lead glove holds its side of the chin while the torso twists away (turned
+	# with it, it swung in front of the face for the whole punish window): seen from the
+	# defender's lens with the attacker at the sparring step-in, the face shows through the
+	# recoil.
+	var scene := Node3D.new()
+	add_child_autofree(scene)
+	var player := _player_rig(scene)
+	player.play(&"idle", 0.0)
+	player.advance(0.0)
+	var cam := _fp_camera(player)
+	var boxer := _rig(false, 1.8, null, scene)
+	_enemy_facing(boxer, Tuning.data.sparring_step_in_m)
+	_to_first_active_frame(boxer, jab)
+	boxer.play(&"recoil", 0.03)
+	for f: int in 14:
+		boxer.advance(FRAME)
+		var lead := _local(boxer, &"LeftFistPoint")
+		assert_lt(lead.x, -0.08, "recoil frame %d: the lead glove holds its side (%s)" % [f + 1, _fmt(lead)])
+		var face := _rig_share(FPView.hits(scene, cam), boxer, ENEMY_HEAD)
+		var whole := _rig_share(FPView.hits(scene, cam, FP_COLS, _arm_meshes(boxer)), boxer, ENEMY_HEAD)
+		assert_gt(face, whole * 0.9, "recoil frame %d: the face shows (%.1f%% of the view, %.1f%% without the arms)" % [
+				f + 1, face * 100.0, whole * 100.0])
 
 
 func test_dummy_jab_telegraphs_its_wind_up() -> void:
 	# The sparring dummy's jab (boxer stance): over its 18-frame startup the right fist
 	# draws back beside the head, the shoulders turned away, by 60% of the startup, then
-	# drives straight in to the jab's reach.
-	var rig := _rig()
+	# drives straight in to the jab's reach. Seen from the defender's lens with the dummy at
+	# its step-in, the face shows whole through the startup (the lead fist holds its side
+	# of the chin while the shoulders turn) and the cocked fist shows beside the head, on
+	# the defender's left.
+	var scene := Node3D.new()
+	add_child_autofree(scene)
+	var player := _player_rig(scene)
+	player.play(&"idle", 0.0)
+	player.advance(0.0)
+	var cam := _fp_camera(player)
+	var rig := _rig(false, 1.8, null, scene)
+	_enemy_facing(rig, Tuning.data.sparring_step_in_m)
 	var jab := load("res://game/combat/moves/dummy_jab.tres") as MoveData
 	rig.play(&"idle", 0.0)
 	rig.advance(0.5)
@@ -1689,8 +1866,20 @@ func test_dummy_jab_telegraphs_its_wind_up() -> void:
 	var head := _local(rig, &"Head")
 	rig.play_move(jab, 0.0)
 	var cocked := roundi(jab.startup * 0.6)
-	for f: int in cocked:
+	for f: int in jab.startup:
 		rig.advance(FRAME)
+		var hits := FPView.hits(scene, cam)
+		var bare := FPView.hits(scene, cam, FP_COLS, _arm_meshes(rig))
+		var face := _rig_share(hits, rig, ENEMY_HEAD)
+		var whole := _rig_share(bare, rig, ENEMY_HEAD)
+		assert_gt(face, whole * 0.95, "startup frame %d: the face shows (%.1f%% of the view, %.1f%% without the arms)" % [
+				f + 1, face * 100.0, whole * 100.0])
+		if f + 1 == cocked:
+			break
+	var fist := _view_from(cam, rig.get_point_position(&"RightFistPoint"))
+	assert_true(_in_fp_view(fist) and fist.x < -10.0 and fist.y > 0.0,
+			"the cocked fist shows up beside the head, on the defender's left (angles %s)" % fist)
+	assert_gt(_rig_share(FPView.hits(scene, cam), rig, _hand_parts("Right")), 0.003, "the cocked glove is not hidden")
 	var windup := _local(rig, &"RightFistPoint")
 	assert_gt(windup.z - guard.z, 0.3, "the fist draws back %.2f m (%s)" % [windup.z - guard.z, _fmt(windup)])
 	assert_gt(windup.z, head.z, "behind the face, beside the head")

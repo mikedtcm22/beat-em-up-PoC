@@ -140,7 +140,7 @@ const ARM_BONES: Array[StringName] = [
 
 ## HumanoidRig.stance values: the pose a body stands and walks in, starts every move from
 ## and returns to (stance_pose()).
-## Boxer guard, fists up by the chin: enemies and dummies (a raised guard reads as a threat
+## Boxer guard, fists up at the chin: enemies and dummies (a raised guard reads as a threat
 ## from the player's view).
 const STANCE_BOXER := &"boxer"
 ## Loose, low arms until a strike (the player: the first-person view stays clear).
@@ -177,19 +177,24 @@ static func stance_pose(stance: StringName) -> Dictionary[StringName, Vector3]:
 	return relaxed() if stance == STANCE_RELAXED else guard()
 
 
-## Boxer stance: left foot forward, knees soft, fists up in front of the chin (enemies and
-## dummies). Seen from the player's throat-height lens these fists would fill the middle of
-## the view, so the player's own "dukes up" is the block guard (block_guard_arms()).
+## Boxer stance: left foot forward, knees soft, fists up at the chin (enemies and dummies).
+## The gloves sit at chin height a hand's width in front of it, either side of the face
+## (the lead a little further out), the forearms angled in from elbows held low and a
+## little wide: "fists up" from 2-10 m and side on, while from the player's throat-height
+## lens facing it at sparring range the face and cap show whole above and between the
+## gloves (they used to stand out at the lens's eye line and fill most of the view).
+## Authored with two-bone IK for gloves 0.26 m in front of the body, the forearms clear of
+## the chest. The player's own "dukes up" is the block guard (block_guard_arms()).
 static func guard() -> Dictionary[StringName, Vector3]:
 	return {
 		&"Spine": Vector3(-3.0, 0.0, 0.0),
 		&"Chest": Vector3(-3.0, 0.0, 0.0),
 		&"Neck": Vector3(4.0, 0.0, 0.0),
 		&"Head": Vector3(2.0, 0.0, 0.0),
-		&"LeftUpperArm": Vector3(57.0, -16.0, -4.0),
-		&"LeftLowerArm": Vector3(102.0, 0.0, 0.0),
-		&"RightUpperArm": Vector3(53.0, 18.0, 7.0),
-		&"RightLowerArm": Vector3(109.0, 0.0, 0.0),
+		&"LeftUpperArm": Vector3(43.5, -22.0, -13.5),
+		&"LeftLowerArm": Vector3(130.0, 0.0, 0.0),
+		&"RightUpperArm": Vector3(40.0, 22.5, 13.0),
+		&"RightLowerArm": Vector3(134.5, 0.0, 0.0),
 		&"LeftUpperLeg": Vector3(16.0, 0.0, -4.0),
 		&"LeftLowerLeg": Vector3(-24.0, 0.0, 0.0),
 		&"LeftFoot": Vector3(8.0, 0.0, 4.0),
@@ -596,13 +601,20 @@ static func guard_break_b(base: Dictionary[StringName, Vector3]) -> Dictionary[S
 
 ## An attack stopped by a guard (&"recoil"): the striking (right) arm knocked back and
 ## out, its shoulder thrown back so the torso twists away and the head jerks back; the
-## other arm keeps the stance's. Short: the attacker's punish window.
+## other arm keeps the stance's, turned back against the twist so it holds its side (the
+## boxer's lead glove would otherwise swing in front of its face for the whole punish
+## window). Short: the attacker's punish window.
 static func recoil(base: Dictionary[StringName, Vector3]) -> Dictionary[StringName, Vector3]:
+	var hips_yaw := -8.0
+	var spine_yaw := -6.0
+	var chest_yaw := -4.0
+	var other_arm: Vector3 = base.get(&"LeftUpperArm", Vector3.ZERO)
 	return merge(base, {
 		HIPS_NUDGE: Vector3(0.0, 0.0, 0.03),
-		&"Hips": Vector3(0.0, -8.0, 0.0),
-		&"Spine": Vector3(6.0, -6.0, 0.0),
-		&"Chest": Vector3(3.0, -4.0, 0.0),
+		&"Hips": Vector3(0.0, hips_yaw, 0.0),
+		&"Spine": Vector3(6.0, spine_yaw, 0.0),
+		&"Chest": Vector3(3.0, chest_yaw, 0.0),
+		&"LeftUpperArm": other_arm - Vector3(0.0, hips_yaw + spine_yaw + chest_yaw, 0.0),
 		&"Neck": Vector3(6.0, 8.0, 0.0),
 		&"Head": Vector3(6.0, 8.0, 0.0),
 		&"RightShoulder": Vector3(0.0, -8.0, 8.0),
@@ -1238,7 +1250,10 @@ static func _jab_2(g: Dictionary[StringName, Vector3]) -> MovePoses:
 ## readable wind-up (the right fist cocked back by the ear, the elbow up and out, the hips
 ## and shoulders turned away, the weight on the rear foot) reached at 60% of the startup,
 ## then jab_2's straight right. From the defender's first-person view the fist draws back
-## beside the dummy's head, on the defender's left, before it comes straight in.
+## beside the dummy's head, on the defender's left, before it comes straight in. The lead
+## (left) fist holds its side of the chin while the shoulders turn away (left in the
+## guard's angles, the turn would carry it in front of the face), so the face and the
+## cocked fist both stay in view.
 static func _dummy_jab(g: Dictionary[StringName, Vector3]) -> MovePoses:
 	var m := _jab_2(g)
 	m.windup = merge(g, {
@@ -1247,6 +1262,8 @@ static func _dummy_jab(g: Dictionary[StringName, Vector3]) -> MovePoses:
 		&"Chest": Vector3(2.0, -8.0, 0.0),
 		&"Neck": Vector3(4.0, 18.0, 0.0),
 		&"Head": Vector3(2.0, 18.0, 0.0),
+		&"LeftUpperArm": Vector3(23.0, 32.5, -22.5),
+		&"LeftLowerArm": Vector3(147.0, 0.0, 0.0),
 		&"RightShoulder": Vector3(0.0, -12.0, 10.0),
 		&"RightUpperArm": Vector3(36.0, -24.0, 62.0),
 		&"RightLowerArm": Vector3(128.0, 0.0, 0.0),
