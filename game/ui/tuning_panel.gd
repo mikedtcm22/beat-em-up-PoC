@@ -281,6 +281,8 @@ func _build() -> void:
 		button.button_group = buttons
 		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		button.clip_text = true
+		button.add_theme_color_override(&"font_pressed_color", HudStyle.HEALTH)
+		button.add_theme_color_override(&"font_hover_pressed_color", HudStyle.HEALTH)
 		button.pressed.connect(show_category.bind(category_name))
 		category_list.add_child(button)
 		_category_buttons[category_name] = button

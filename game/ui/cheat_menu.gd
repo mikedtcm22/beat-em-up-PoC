@@ -19,6 +19,9 @@ const DUMMY_SCENE := "res://game/enemies/dummy/training_dummy.tscn"
 @export_range(0.5, 3.0, 0.1) var spawn_min_distance_m: float = 1.0
 ## ...and stays this far off a wall the ray meets.
 @export_range(0.0, 2.0, 0.05) var spawn_wall_clearance_m: float = 0.5
+## A spot closer than this to another actor steps back toward the player (half this a step)
+## until it is clear, so a dummy never spawns inside another body.
+@export_range(0.0, 2.0, 0.05) var spawn_actor_clearance_m: float = 0.7
 @export var spawn_colors: Array[Color] = [
 	Color(0.2, 0.62, 0.66), Color(0.72, 0.62, 0.18), Color(0.56, 0.4, 0.3), Color(0.36, 0.5, 0.78),
 ]
@@ -53,8 +56,14 @@ func _exit_tree() -> void:
 
 ## Show the current cheat states (Tuning and TimeController may change elsewhere).
 func refresh() -> void:
-	god_mode_toggle.set_pressed_no_signal(Tuning.data.god_mode)
-	one_hit_toggle.set_pressed_no_signal(Tuning.data.one_hit_ko)
+	for toggle: CheckButton in [god_mode_toggle, one_hit_toggle]:
+		var on: bool = Tuning.data.god_mode if toggle == god_mode_toggle else Tuning.data.one_hit_ko
+		toggle.set_pressed_no_signal(on)
+		# The state spelled out: the default theme's "off" switch is hard to see here.
+		toggle.text = "%s: %s" % [toggle.get_meta(&"label"), "ON" if on else "off"]
+		var color := HudStyle.HEALTH if on else HudStyle.PAPER
+		for slot: StringName in [&"font_color", &"font_pressed_color", &"font_hover_color", &"font_hover_pressed_color", &"font_focus_color"]:
+			toggle.add_theme_color_override(slot, color)
 	for i in time_scale_buttons.size():
 		time_scale_buttons[i].set_pressed_no_signal(is_equal_approx(TimeController.debug_scale, time_scales[i]))
 
@@ -91,7 +100,8 @@ func record_posts() -> void:
 ## crosshair is the center of the view: the ray from the active camera (the player's eye
 ## and look without one) meets the floor or a wall (kept spawn_wall_clearance_m off it)
 ## within spawn_max_distance_m, or else ends spawn_open_distance_m out; the spot drops to
-## the floor, stays spawn_min_distance_m from the player and faces the player.
+## the floor, stays spawn_min_distance_m from the player, steps back toward the player while
+## another actor stands within spawn_actor_clearance_m, and faces the player.
 func spawn_point() -> Dictionary:
 	var player := get_tree().get_first_node_in_group(&"player") as PlayerCharacter
 	var camera := get_tree().root.get_camera_3d()
@@ -115,13 +125,22 @@ func spawn_point() -> Dictionary:
 	if not hit.is_empty():
 		var normal: Vector3 = hit.normal
 		spot = hit.position
-		if normal.y < 0.7:
+		if normal.y < 0.7:  # a wall, not the floor
 			spot -= flat * spawn_wall_clearance_m
 	if player:
 		var away := spot - player.global_position
 		away.y = 0.0
 		if away.length() < spawn_min_distance_m:
 			spot = player.global_position + flat * spawn_min_distance_m
+		var step := maxf(spawn_actor_clearance_m * 0.5, 0.05)
+		var candidate := spot
+		var reach := spot - player.global_position
+		var room_left := Vector2(reach.x, reach.z).length() - spawn_min_distance_m
+		while not _clear_of_actors(candidate) and room_left >= step:
+			candidate -= flat * step
+			room_left -= step
+		if _clear_of_actors(candidate):
+			spot = candidate
 	var floor_hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(
 			spot + Vector3.UP * 2.0, spot + Vector3.DOWN * 20.0, mask))
 	if not floor_hit.is_empty():
@@ -216,11 +235,11 @@ func _build() -> void:
 	header.add_child(_label("F4 or Esc closes", font_size - 2, HudStyle.MUTED))
 
 	god_mode_toggle = CheckButton.new()
-	god_mode_toggle.text = "God mode (the player takes no damage)"
+	god_mode_toggle.set_meta(&"label", "God mode (the player takes no damage)")
 	god_mode_toggle.toggled.connect(set_god_mode)
 	box.add_child(god_mode_toggle)
 	one_hit_toggle = CheckButton.new()
-	one_hit_toggle.text = "One-hit KOs (enemies)"
+	one_hit_toggle.set_meta(&"label", "One-hit KOs (enemies)")
 	one_hit_toggle.toggled.connect(set_one_hit_ko)
 	box.add_child(one_hit_toggle)
 
@@ -235,6 +254,8 @@ func _build() -> void:
 		button.toggle_mode = true
 		button.button_group = group
 		button.custom_minimum_size.x = 72.0
+		button.add_theme_color_override(&"font_pressed_color", HudStyle.HEALTH)
+		button.add_theme_color_override(&"font_hover_pressed_color", HudStyle.HEALTH)
 		button.pressed.connect(set_time_scale.bind(scale))
 		time_row.add_child(button)
 		time_scale_buttons.append(button)
@@ -275,6 +296,19 @@ func _button(text: String, action: Callable) -> Button:
 func _on_tuning_changed(property: StringName) -> void:
 	if property in [&"", &"god_mode", &"one_hit_ko"]:
 		refresh()
+
+
+## No actor stands within spawn_actor_clearance_m of `spot` (on the ground plane).
+func _clear_of_actors(spot: Vector3) -> bool:
+	for node: Node in get_tree().get_nodes_in_group(&"actor"):
+		var actor := node as Node3D
+		if actor == null or actor.is_queued_for_deletion():
+			continue
+		var gap := actor.global_position - spot
+		gap.y = 0.0
+		if gap.length() < spawn_actor_clearance_m:
+			return false
+	return true
 
 
 func _say(text: String) -> void:

@@ -42,6 +42,7 @@ var value_label: Label
 var reset_button: Button
 
 var _value: Variant
+var _editor: HBoxContainer
 
 
 ## Build the row for the property-list entry `info` (name, type, hint, hint_string).
@@ -60,6 +61,11 @@ func setup(info: Dictionary, default: Variant, doc: String, name_width: float,
 	add_child(name_label)
 	var hint: int = info.get("hint", PROPERTY_HINT_NONE)
 	var hint_string: String = info.get("hint_string", "")
+	# Every editor sits in a box of one width, so the reset buttons line up.
+	_editor = HBoxContainer.new()
+	_editor.add_theme_constant_override(&"separation", 8)
+	_editor.custom_minimum_size.x = slider_width + field_width + 8.0
+	add_child(_editor)
 	if type == TYPE_BOOL:
 		_build_bool()
 	elif type == TYPE_INT and hint == PROPERTY_HINT_ENUM:
@@ -67,16 +73,15 @@ func setup(info: Dictionary, default: Variant, doc: String, name_width: float,
 	elif type == TYPE_INT or type == TYPE_FLOAT:
 		_build_number(hint == PROPERTY_HINT_RANGE, hint_string, slider_width, field_width)
 	elif type == TYPE_VECTOR2 or type == TYPE_VECTOR3:
-		_build_vector(3 if type == TYPE_VECTOR3 else 2, slider_width + field_width)
+		_build_vector(3 if type == TYPE_VECTOR3 else 2)
 	elif type == TYPE_COLOR:
-		_build_color(slider_width + field_width)
+		_build_color()
 	elif type == TYPE_STRING or type == TYPE_STRING_NAME:
-		_build_text(slider_width + field_width)
+		_build_text()
 	else:
 		kind = &"none"
 		value_label = Label.new()
-		value_label.custom_minimum_size.x = slider_width + field_width
-		add_child(value_label)
+		_fill(value_label)
 	reset_button = Button.new()
 	reset_button.text = "reset"
 	reset_button.flat = true
@@ -105,6 +110,7 @@ func show_value(value: Variant) -> void:
 				slider.set_value_no_signal(float(value))
 		&"bool":
 			check.set_pressed_no_signal(bool(value))
+			_show_switch(check)
 		&"enum":
 			var index := option.get_item_index(int(value))
 			option.select(index)
@@ -153,7 +159,7 @@ func _build_bool() -> void:
 	kind = &"bool"
 	check = CheckButton.new()
 	check.toggled.connect(func(on: bool) -> void: _commit(on))
-	add_child(check)
+	_editor.add_child(check)
 	focus_control = check
 
 
@@ -167,7 +173,7 @@ func _build_enum(hint_string: String) -> void:
 		option.add_item(parts[0].strip_edges(), id)
 		next = id + 1
 	option.item_selected.connect(func(index: int) -> void: _commit(option.get_item_id(index)))
-	add_child(option)
+	_fill(option)
 	focus_control = option
 
 
@@ -194,21 +200,21 @@ func _build_number(ranged: bool, hint_string: String, slider_width: float, field
 		spin.allow_greater = parts.has("or_greater")
 		spin.allow_lesser = parts.has("or_less")
 		slider.value_changed.connect(_on_number.bind(slider))
-		add_child(slider)
+		_editor.add_child(slider)
 		focus_control = slider
 	else:
 		kind = &"number"
-		spin.custom_minimum_size.x = slider_width + field_width
 		_open_range(spin, 1.0 if is_int else OPEN_STEP)
+		spin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	spin.value_changed.connect(_on_number.bind(spin))
-	add_child(spin)
+	_editor.add_child(spin)
 
 
-func _build_vector(count: int, width: float) -> void:
+func _build_vector(count: int) -> void:
 	kind = &"vector"
 	for i in count:
 		var axis := SpinBox.new()
-		axis.custom_minimum_size.x = (width - 8.0 * (count - 1)) / count
+		axis.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		axis.select_all_on_focus = true
 		axis.prefix = AXIS_NAMES[i]
 		axis.focus_mode = Control.FOCUS_CLICK
@@ -216,26 +222,39 @@ func _build_vector(count: int, width: float) -> void:
 		_open_range(axis, OPEN_STEP)
 		axis.value_changed.connect(_on_axis)
 		axes.append(axis)
-		add_child(axis)
+		_editor.add_child(axis)
 
 
-func _build_color(width: float) -> void:
+func _build_color() -> void:
 	kind = &"color"
 	color_button = ColorPickerButton.new()
-	color_button.custom_minimum_size = Vector2(width, 28.0)
+	color_button.custom_minimum_size.y = 28.0
 	color_button.color_changed.connect(func(c: Color) -> void: _commit(c))
-	add_child(color_button)
+	_fill(color_button)
 	focus_control = color_button
 
 
-func _build_text(width: float) -> void:
+func _build_text() -> void:
 	kind = &"text"
 	line = LineEdit.new()
-	line.custom_minimum_size.x = width
 	line.text_submitted.connect(func(_t: String) -> void: _commit_text())
 	line.focus_exited.connect(_commit_text)
-	add_child(line)
+	_fill(line)
 	focus_control = line
+
+
+## Spell a toggle's state out next to the switch (the default theme's "off" switch is hard
+## to see on the dark panel).
+static func _show_switch(button: CheckButton) -> void:
+	button.text = "on" if button.button_pressed else "off"
+	button.add_theme_color_override(&"font_color", HudStyle.PAPER if button.button_pressed else HudStyle.MUTED)
+	button.add_theme_color_override(&"font_pressed_color", HudStyle.PAPER)
+	button.add_theme_color_override(&"font_hover_pressed_color", HudStyle.PAPER)
+
+
+func _fill(control: Control) -> void:
+	control.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_editor.add_child(control)
 
 
 func _open_range(box: SpinBox, step: float) -> void:

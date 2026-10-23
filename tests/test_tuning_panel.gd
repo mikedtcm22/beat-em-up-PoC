@@ -428,11 +428,24 @@ func test_cheats_spawn_a_dummy_at_the_crosshair_and_reset_dummies() -> void:
 	var room: Node3D = await _room()
 	var player: PlayerCharacter = room.get(&"player")
 	player.input.scripted = true
+	var dummies: Array[TrainingDummy] = []
+	dummies.assign(room.get(&"dummies"))
+	for i in dummies.size():
+		dummies[i].sparring = false
+		dummies[i].set_post(FAR + Vector3(i * 3.0, 0.0, 0.0), 0.0, true)
+	await _ticks(2)
 	var cheats := CheatMenu.new()
 	cheats.world = room
 	add_child_autofree(cheats)
 	var start_count := get_tree().get_nodes_in_group(&"enemy").size()
 
+	# Looking level: nothing within reach, so it stands spawn_open_distance_m along the ray.
+	player.look_pitch = 0.0
+	var ahead := cheats.spawn_point()
+	var flat := Vector3(-player.get_look_basis().z.x, 0.0, -player.get_look_basis().z.z).normalized()
+	var expected: Vector3 = player.get_eye_transform().origin + flat * cheats.spawn_open_distance_m
+	assert_almost_eq((ahead.position as Vector3).x, expected.x, 0.02, "open ray: spawn ahead")
+	assert_almost_eq((ahead.position as Vector3).y, 0.0, 0.02, "dropped to the floor")
 	# Looking 30 degrees down: the crosshair ray meets the floor.
 	player.look_pitch = deg_to_rad(-30.0)
 	var eye := player.get_eye_transform().origin
@@ -451,23 +464,24 @@ func test_cheats_spawn_a_dummy_at_the_crosshair_and_reset_dummies() -> void:
 	assert_gt(dummy.get_forward().dot(to_player), 0.99, "facing the player")
 	assert_eq(get_tree().get_nodes_in_group(&"enemy").size(), start_count + 1)
 
-	# Looking level: nothing within reach, so it stands spawn_open_distance_m along the ray.
-	player.look_pitch = 0.0
-	var ahead := cheats.spawn_point()
-	var flat := Vector3(-player.get_look_basis().z.x, 0.0, -player.get_look_basis().z.z).normalized()
-	var expected: Vector3 = player.get_eye_transform().origin + flat * cheats.spawn_open_distance_m
-	assert_almost_eq((ahead.position as Vector3).x, expected.x, 0.02, "open ray: spawn ahead")
-	assert_almost_eq((ahead.position as Vector3).y, 0.0, 0.02, "dropped to the floor")
 	# Looking at one's feet: never on top of the player.
 	player.look_pitch = deg_to_rad(-85.0)
 	var feet: Vector3 = cheats.spawn_point().position
 	var off := feet - player.global_position
 	off.y = 0.0
 	assert_gt(off.length(), cheats.spawn_min_distance_m - 0.01, "kept off the player")
+	# Never inside another body: a dummy standing at the crosshair moves the spot back.
+	player.look_pitch = deg_to_rad(-30.0)
+	dummies[1].global_position = Vector3(floor_spot.x, 0.0, floor_spot.z)
+	var clear: Vector3 = cheats.spawn_point().position
+	var gap := clear - dummies[1].global_position
+	gap.y = 0.0
+	assert_gt(gap.length(), cheats.spawn_actor_clearance_m - 0.01, "clear of the dummy there")
+	assert_lt((clear - player.global_position).length(), (floor_spot - player.global_position).length(),
+			"stepped back toward the player")
+	dummies[1].global_position = FAR + Vector3(3.0, 0.0, 0.0)
 
 	# Reset dummies: back on their posts, standing, at full (re-read) health.
-	var dummies: Array[TrainingDummy] = []
-	dummies.assign(room.get(&"dummies"))
 	var post := dummies[0].global_position
 	dummies[0].global_position = post + Vector3(2.0, 0.0, 1.0)
 	dummies[0].health = 3.0
