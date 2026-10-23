@@ -529,6 +529,34 @@ func test_sounds_behind_the_listener_are_muffled() -> void:
 	assert_eq(low_pass.cutoff_hz, 1800.0)
 
 
+## A hit on the player sounds from where the blow came from: its contact point sits within
+## centimetres of the listener at the eyes, and a frontal block's clack, 3 cm behind the eye,
+## went through the rear muffle (2 of 5 blocks in the guard-break act) and panned at random.
+func test_hits_on_the_player_sound_from_the_attackers_side() -> void:
+	var player := _actor("Player", &"player", Vector3(0.0, -1.6, 0.0))
+	var t := Tuning.data
+	var hit := _hit(CombatTypes.HitTier.LIGHT, player, _enemy, Vector3(-0.03, -0.08, 0.03))
+	hit.direction = Vector3(0.0, 0.0, 1.0)  # pushed toward +Z: the attacker stands at -Z, ahead
+	hit.blocked = true
+	CombatEvents.hit_landed.emit(hit)
+	for play in _plays:
+		assert_almost_eq(play.at as Vector3, Vector3(0.0, 0.0, -t.self_hit_offset_m), Vector3.ONE * 0.001, "%s ahead" % play.pool)
+		assert_eq(play.bus, AudioDirector.SFX_BUS, "%s not muffled" % play.pool)
+	# From behind-right: behind-right, and muffled.
+	_plays.clear()
+	hit = _hit(CombatTypes.HitTier.LIGHT, player, _enemy, Vector3(0.0, -0.1, -0.02))
+	hit.direction = Vector3(-1.0, 0.0, -1.0).normalized()
+	CombatEvents.hit_landed.emit(hit)
+	var thud: Dictionary = _plays.filter(func(p: Dictionary) -> bool: return p.pool == &"thud")[0]
+	assert_gt((thud.at as Vector3).x, 0.0)
+	assert_gt((thud.at as Vector3).z, 0.0)
+	assert_eq(thud.bus, AudioDirector.REAR_BUS)
+	# Anyone else's hit plays at its contact point.
+	_plays.clear()
+	CombatEvents.hit_landed.emit(_hit(CombatTypes.HitTier.LIGHT, _enemy, player, Vector3(0.2, 1.4, -0.9)))
+	assert_almost_eq(_plays[0].at as Vector3, Vector3(0.2, 1.4, -0.9), Vector3.ONE * 0.001)
+
+
 func test_the_voice_pool_takes_the_oldest_when_all_are_busy() -> void:
 	var at := Vector3(0.0, 1.0, -2.0)
 	var voices: Array[AudioStreamPlayer3D] = []

@@ -246,6 +246,9 @@ extends Resource
 @export_range(60.0, 180.0, 5.0) var rear_muffle_angle_deg: float = 110.0
 ## 20500 turns the muffle off.
 @export_range(500.0, 20500.0, 100.0) var rear_muffle_hz: float = 2500.0
+## Hits on the player sound this far (m) from its eyes toward the attacker: their contact
+## point sits around the listener itself, too close to tell a direction.
+@export_range(0.1, 2.0, 0.05) var self_hit_offset_m: float = 0.5
 @export_subgroup("Music")
 ## Placeholder fight loop (Spec §13 leaves music open: off by default).
 @export var music_enabled: bool = false

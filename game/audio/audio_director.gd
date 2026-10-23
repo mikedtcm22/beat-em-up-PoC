@@ -18,6 +18,10 @@ extends Node
 ## - **Grunts:** the victim of a clean hit grunts at its eyes (enemies with the enemy voice,
 ##   the player with its own), at most once per `grunt_min_interval_ms`, each actor's voice
 ##   pitched by a fixed share of `voice_pitch_spread`.
+## - **Hits on the player** sound from `self_hit_offset_m` toward where the blow came from
+##   (`-hit.direction`), not from the contact point: that sits within a few centimetres of
+##   the listener at the player's eyes, on any side of it, so a frontal block could pan
+##   off-center or fall in the rear muffle.
 ## - **Blocks** (a hit_landed with `hit.blocked`): whoosh + block clack; a perfect block
 ##   plays the parry ting instead of the clack; a guard break adds the guard-break crash.
 ##   No grunt.
@@ -219,7 +223,7 @@ func is_behind_listener(at: Vector3) -> bool:
 
 func _on_hit_landed(hit: HitInfo) -> void:
 	var tuning := Tuning.data
-	var at := hit.contact_point
+	var at := impact_position(hit)
 	var first := _first_victim_of_swing(hit)
 	var gain := tier_db(hit.tier) + (0.0 if first else tuning.extra_victim_db)
 	var swung := first and hit.input_timing != &"body"
@@ -274,6 +278,18 @@ func _on_windup_ended(attacker: Node3D, interrupted: bool) -> void:
 
 
 # --- Helpers -----------------------------------------------------------------------------
+
+
+## Where `hit`'s one-shots play: its contact point, or on the player, Tuning.self_hit_offset_m
+## from the listener toward the attacker (the contact sits around the listener itself).
+func impact_position(hit: HitInfo) -> Vector3:
+	if not (is_instance_valid(hit.victim) and hit.victim.is_in_group(&"player")):
+		return hit.contact_point
+	var from := -hit.direction
+	from.y = 0.0
+	if from.length_squared() < 0.0001:
+		return hit.contact_point
+	return listener_transform().origin + from.normalized() * Tuning.data.self_hit_offset_m
 
 
 ## The extra volume in dB of every one-shot of a `tier` hit (Tuning.data.hit_<tier>_db).
