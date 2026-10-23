@@ -4,6 +4,16 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-23 17:05 CDT: account B took over; phase 1 review and fix running
+Account B's working session took over at 1% of its 5-hour window (resets 21:39 CDT) and 0% weekly (resets Tue 2026-10-27 17:00 CDT). Its usage watcher runs (Haiku, `/loop 5m`, session "Beat-em-up: usage watcher").
+- **WP2 tests:** all 332 pass in `.worktrees/m2-vfx`. The lead recorded the whole `vfx_bot` (13 acts, first person and side view) and judged it. Bursts, words, the 2-frame impact frame and its toggle, blood, spit and tooth, and the block, parry and guard-break sparks all read well. Three defects:
+  - the speed lines render as wide gray translucent rectangles instead of tapered ink streaks (about 40% of the screen in side view on finishers);
+  - lunge lines fire on ordinary jab steps;
+  - the bruised look barely reads at 1 m.
+- **Trial merge:** `.worktrees/m2-trial` (branch `m2/trial-merge`, local scratch, never merge it) has all three WPs merged, with only the expected conflicts (the `test_room.gd` presentation lines, keep all four; `ASSETS.md` Effects and Audio sections, keep both; `tuning_data.gd` merged cleanly). With `tools/gen_default_preset.gd` re-run, **all 371 tests pass**.
+- **Running:** workflow `m2-phase1-review-fix` (run `wf_18e38241-91a`). Per WP, a mechanics reviewer and a feel reviewer (from captures) feed one adversarial verifier, then a fixer in that WP's worktree that commits "M2 WPn: review fixes ..." and pushes its branch. A usage gate drops to 2 agents at once past 50% of the 5-hour window and stops at 75%.
+- **If cut off:** check each WP branch for a "review fixes" commit. Any WP without one needs its review/fix redone, or resume the workflow in the same session with `resumeFromRunId`. Then merge into `m2/hit-feel` as the trial did, regenerate the preset, run the tests and push.
+
 ### 2026-10-23 13:05 CDT: handoff to the second account (account A's weekly limit is at 95%)
 Account A's weekly limit is at 95% and resets Mon 2026-10-26 about 01:00 CDT. Its 5-hour window has just reset. Everything is committed and pushed. Milestone 2, phase 1:
 
