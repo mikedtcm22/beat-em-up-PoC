@@ -69,7 +69,7 @@ Fix it and add a live-input test.
 - The back elbow turns about 110° toward the elbow's side, so the view sweeps over the shoulder and the elbow connecting is visible, then returns.
 - Presentation only: aim and body facing are unchanged.
 
-## Open questions (defaults used unless Game-boy answers)
-1. **Flurry placement:** with the spinning backhand on P P · P, does the flurry move to P · P? Default: yes.
-2. **Dodge:** keep (fixed) or remove? Default: keep, fixed.
-3. **Grab:** should an enemy in its strike's active frames beat the grab? Default: yes, the grab whiffs.
+## Open questions: answered by Game-boy (use these)
+1. **Flurry placement:** the spinning backfist goes on P P · P, and the flurry moves to P · P (then mash), ending in the shove. Confirmed.
+2. **Dodge:** keep it, fixed. Confirmed.
+3. **Grab:** a grab whiffs against an enemy in its strike's active frames. Confirmed.
