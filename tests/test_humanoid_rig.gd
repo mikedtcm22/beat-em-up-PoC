@@ -1531,6 +1531,8 @@ func test_enemy_guard_leaves_the_players_view_clear() -> void:
 		var glove_share := _rig_share(hits, enemy, hands)
 		if what == "at the sparring step-in":
 			assert_lt(glove_share, 0.08, "%s: the gloves cover %.1f%% of the view" % [what, glove_share * 100.0])
+			# The forearms still bring this to ~17% (the old guard: 34%); keep it from creeping back.
+			assert_lt(arm_share, 0.19, "%s: the hands and forearms cover %.1f%% of the view" % [what, arm_share * 100.0])
 		else:
 			assert_lt(arm_share, 0.12, "%s: the hands and forearms cover %.1f%% of the view" % [what, arm_share * 100.0])
 		var head := _rig_share(hits, enemy, ENEMY_HEAD)
