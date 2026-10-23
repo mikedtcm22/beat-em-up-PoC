@@ -265,6 +265,27 @@ func test_close_effects_are_capped_and_kept_off_the_lens() -> void:
 	assert_lt(burst.drawn_width, burst.size_m)
 
 
+func test_hits_on_the_player_show_in_view_even_at_the_lens() -> void:
+	var me := FakeMover.new()
+	add_child_autofree(me)
+	# A jab parried at the player's face: a little above and just behind the lens.
+	var parry := _hit(CombatTypes.HitTier.LIGHT, Vector3(0.05, 0.2, 0.03), CombatTypes.Region.HEAD, me)
+	parry.blocked = true
+	parry.perfect_block = true
+	_land(parry)
+	vfx.advance(0.0)
+	var spark := vfx.live_effects(&"parry_spark")[0]
+	assert_true(spark.visible, "shown from the first frame")
+	assert_almost_eq(-spark.global_position.z, Tuning.data.vfx_min_camera_dist_m, 0.001, "out at the minimum distance")
+	var p := camera.unproject_position(spark.global_position)
+	assert_true(Rect2(Vector2.ZERO, camera.get_viewport().get_visible_rect().size).has_point(p), "on screen")
+	# The same contact on an enemy (not the camera's body) is behind the view: hidden.
+	var other := _hit(CombatTypes.HitTier.LIGHT, Vector3(0.05, 0.2, 0.03))
+	_land(other)
+	vfx.advance(0.0)
+	assert_false(vfx.live_effects(&"burst_small")[0].visible)
+
+
 func test_far_effects_keep_a_readable_size() -> void:
 	_land(_hit(CombatTypes.HitTier.LIGHT, Vector3(0.0, 0.0, -40.0)))
 	_advance(Tuning.data.vfx_pop_s + TICK)

@@ -91,11 +91,17 @@ func place(camera: Camera3D) -> void:
 	var pos := anchor + right * screen_offset.x + up * (screen_offset.y + rise_m * t)
 	var to := pos - cam.origin
 	var depth := -cam.basis.z.dot(to)
-	if depth < 0.02:
+	var min_depth := Tuning.data.vfx_min_camera_dist_m
+	if keep_in_view:
+		# A hit on the first-person player lands at the lens, even a little behind it: bring
+		# it out to the minimum distance straight ahead, keeping its offset across the view.
+		if depth < min_depth:
+			pos += -cam.basis.z * (min_depth - depth)
+			depth = min_depth
+	elif depth < 0.02:
 		visible = false
 		return
-	var min_depth := Tuning.data.vfx_min_camera_dist_m
-	if depth < min_depth:
+	elif depth < min_depth:
 		to *= min_depth / depth
 		pos = cam.origin + to
 		depth = min_depth
