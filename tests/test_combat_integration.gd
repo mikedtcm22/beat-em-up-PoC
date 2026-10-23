@@ -751,6 +751,27 @@ func test_neutral_b_blocks_the_jab_from_the_front() -> void:
 	CombatEvents.block_ended.disconnect(on_ended)
 
 
+## The approved design: a blocked grunt attack opens a punish window. A jab pressed during
+## the blockstun must land while the attacker is still recoiling.
+func test_punch_in_blockstun_lands_inside_the_attackers_recoil() -> void:
+	var dummy := await _partner()
+	await _raise_guard()
+	var recovered := [false]
+	var on_state := func(actor: Node3D, _old: int, new_state: int) -> void:
+		if actor == dummy and new_state == CombatTypes.ActorState.FREE:
+			recovered[0] = true
+	var hit := await _jab_lands(dummy)
+	assert_true(hit != null and hit.blocked, "blocked")
+	CombatEvents.actor_state_changed.connect(on_state)
+	player.input.push_press(&"P", 2)
+	assert_true(await _wait_until(func() -> bool: return _player_hits().size() > 0, 40), "the punish lands")
+	CombatEvents.actor_state_changed.disconnect(on_state)
+	assert_false(recovered[0], "the jab connected before the attacker's recoil ended")
+	if not _player_hits().is_empty():
+		assert_eq(_player_hits()[0].move.id, &"jab_1")
+	player.input.push_up(&"DODGE")
+
+
 func test_jabs_from_behind_or_the_side_land_in_full() -> void:
 	# Only attackers within block_arc_half_angle_deg (60) of the look are blocked: turned
 	# away, the player eats the jab whole (the rear warning still matters).

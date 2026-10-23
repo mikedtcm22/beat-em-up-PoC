@@ -16,3 +16,4 @@ startup = 18
 recovery = 16
 hitboxes = Array[ExtResource("hitbox_spec_gd")]([SubResource("hitbox_0")])
 magnetism = false
+blocked_recoil_frames = 20

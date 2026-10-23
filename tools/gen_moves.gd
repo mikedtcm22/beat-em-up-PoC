@@ -202,11 +202,13 @@ func _build_moves() -> void:
 
 	# Sparring training dummy (the held block's practice partner): a telegraphed right jab.
 	# Its startup is the wind-up the dummy shows (ActorState.WINDUP); no tracking, so
-	# turning away or stepping aside makes it miss. Blocked, it recoils for the default
-	# blocked_recoil_frames.
+	# turning away or stepping aside makes it miss. Blocked, it recoils for 20 frames: the
+	# player's fastest punish (blockstun 10 + cancel 2 + jab startup 4 = 16 frames) must land
+	# while it is still recoiling, or blocking opens no punish window.
 	var dummy_jab := _add(&"dummy_jab", "Sparring Jab", Vector3i(18, 3, 16), 6.0, LIGHT, FLINCH,
 			Vector3(0.0, 0.0, 1.5), [_sphere(&"RightFistPoint", 0.14)])
 	dummy_jab.magnetism = false
+	dummy_jab.blocked_recoil_frames = 20
 
 
 ## Combo branches (docs/ARCHITECTURE.md "Branches").

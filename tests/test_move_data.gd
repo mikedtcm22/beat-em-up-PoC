@@ -358,13 +358,15 @@ func test_move_sets_exist_with_matching_ids() -> void:
 func test_blocking_fields() -> void:
 	# The held block (docs/ARCHITECTURE.md "Block"): nothing in Milestone 1 is unblockable
 	# (grabs and ground pounds come with the Bruiser and the boss), pipe swings drain the
-	# guard 1.5 times as fast, and every move recoils for the default 14 frames when blocked.
+	# guard 1.5 times as fast, and every move recoils for the default 14 frames when blocked,
+	# except the sparring jab: 20, so a punch thrown in blockstun (16 frames) punishes it.
 	for id: StringName in TABLE:
 		var move := _load_move(id)
 		assert_false(move.unblockable, "%s: blockable" % id)
 		var mult := 1.5 if String(id).begins_with("pipe_swing") else 1.0
 		assert_eq(move.guard_damage_mult, mult, "%s: guard_damage_mult" % id)
-		assert_eq(move.blocked_recoil_frames, 14, "%s: blocked_recoil_frames" % id)
+		var recoil := 20 if id == &"dummy_jab" else 14
+		assert_eq(move.blocked_recoil_frames, recoil, "%s: blocked_recoil_frames" % id)
 
 
 func test_dummy_jab_is_a_telegraphed_light_jab() -> void:
