@@ -29,9 +29,11 @@ Every approved spec change so far is in README.md, "Where M1 departs from the sp
 A separate low-cost Claude Code session (the cheapest model, Haiku), started from the working session with `start_session`. Its standing instructions:
 
 > Every 15 minutes (use the `loop` skill: `/loop 15m ...`), call `mcp__ccd_session_mgmt__get_usage` (load it with ToolSearch first) and read `plan.windows`.
-> - If the "5-hour limit" or "Weekly" window is at 85% or more, and you haven't already warned for that window's `resetsAt`, send a message to the working session on this repo (find it with ListAgents; it's the session whose title mentions the beat-em-up milestone). The message says: "Usage at N% (window W, resets R). Do the handoff now per CLAUDE.md: stop new work, commit and push WIP on every branch and worktree, update and push docs/HANDOFF.md, then tell Game-boy." Remember that you warned for that `resetsAt`.
+> - If the "5-hour limit" or "Weekly" window is at 85% or more, and you haven't already warned for that window's `resetsAt`, send a message to the working session on this repo (find it with ListAgents: the session titled "Beat-em-up: working session"). The message says: "Usage at N% (window W, resets R). Do the handoff now per CLAUDE.md: stop new work, commit and push WIP on every branch and worktree, update and push docs/HANDOFF.md, then tell Game-boy." Remember that you warned for that `resetsAt`.
 > - If a window is at 95% or more, also write `HANDOFF-SNAPSHOT.md` at the repo root (untracked; don't commit). It holds the time, the usage numbers, `git status`, `git branch -vv`, `git worktree list`, and for each worktree under `.worktrees/` its `git status --short` and `git log --oneline -3`.
 > - Otherwise do nothing and say nothing beyond one short line.
 > - Never edit tracked files, run builds or start other work.
 
 If no watcher is running (for example after an account switch), start one with that prompt. A new account's watcher reports that account's usage.
+
+**The working session must be titled "Beat-em-up: working session"** so the watcher can find it. A new account's working session renames itself to that first, with `mcp__ccd_session_mgmt__set_session_title`, and the previous holder of the title should already be idle or archived.

@@ -3,7 +3,7 @@
 A first-person beat-em-up proof of concept in Godot 4.7.2 (GDScript with static typing, Forward+, Jolt, 60 Hz). The project owner, called **Game-boy** in the docs, plays each milestone build and signs it off. The design is [docs/SPEC.md](docs/SPEC.md), and the module contract is [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Start here
-1. **Read [docs/HANDOFF.md](docs/HANDOFF.md) first.** It is the live status: what's done, what's in flight, the exact next steps, and how to resume work that was cut off. Work moves between Claude accounts at every usage limit, so assume you're picking up someone else's work in progress.
+1. **Title your session "Beat-em-up: working session"** (`mcp__ccd_session_mgmt__set_session_title`) so the usage watcher can reach you. Then **read [docs/HANDOFF.md](docs/HANDOFF.md).** It is the live status: what's done, what's in flight, the exact next steps, and how to resume work that was cut off. Work moves between Claude accounts at every usage limit, so assume you're picking up someone else's work in progress.
 2. Then read the current milestone plan in `docs/milestones/` and the parts of ARCHITECTURE.md your task touches.
 
 ## Run, test, look
