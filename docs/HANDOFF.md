@@ -26,7 +26,7 @@ The watcher warned at 72% of account B's 5-hour window, which resets at 21:40 CD
   2. WP3 still needs its two reviews (mechanics; feel by audio analysis of the WAVs and a capture's audio track).
   3. Then merge into `m2/hit-feel`. The trial merge at `.worktrees/m2-trial` (local only) shows how: keep all four `_build_presentation()` lines and both ASSETS.md sections, then `godot --headless --import --quit && godot --headless -s tools/gen_default_preset.gd`, then `tools/run_tests.sh` (371 pass).
   4. Then WP4.
-- **WP4 brief:** the lead's design decisions for the ragdoll are drafted. The player keeps animation-only reactions by default, with a toggle (asked of Game-boy, no answer yet). Staggers get a partial ragdoll on the upper body. Every off-feet reaction gets a full ragdoll held to the simulation's body by a soft spring. The ragdoll follows each actor's hitstop and slow-mo scale. A "Ragdoll" tuning group.
+- **WP4 brief:** the lead's design decisions for the ragdoll are drafted in [docs/milestones/M2-WP4-brief.md](milestones/M2-WP4-brief.md). The player keeps animation-only reactions by default, with a toggle (asked of Game-boy, no answer yet). Staggers get a partial ragdoll on the upper body. Every off-feet reaction gets a full ragdoll held to the simulation's body by a soft spring. The ragdoll follows each actor's hitstop and slow-mo scale. A "Ragdoll" tuning group.
 - **Game-boy:** decide whether to wait for account B's reset at 21:40 CDT or switch accounts. Answer the player-ragdoll default.
 
 ### 2026-10-23 17:05 CDT: account B took over; phase 1 review and fix running
