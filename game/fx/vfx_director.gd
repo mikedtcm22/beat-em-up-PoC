@@ -30,8 +30,9 @@ const GROUP := &"vfx_director"
 ## Canvas layers: the speed lines draw under the HUD (layer 10), the impact frame over it.
 const LINES_LAYER := 5
 const FLASH_LAYER := 20
-## Draw order of the world effects (Sprite3D.render_priority): bursts, then splashes and
-## sparks, then words on top.
+## Draw order of the world effects (Sprite3D.render_priority): the blood splash behind the
+## burst (its droplets ring it), then sparks and particles, then words on top.
+const PRIORITY_SPRAY := 0
 const PRIORITY_BURST := 1
 const PRIORITY_SPLASH := 2
 const PRIORITY_WORD := 3
@@ -145,6 +146,9 @@ func spawn_word(tier: CombatTypes.HitTier, point: Vector3) -> ComicSprite:
 	var word := pick_word(tier)
 	if word == "":
 		return null
+	# One word at a time: a new beat ends the last word.
+	for old: ComicSprite in live_effects(&"word"):
+		old.age = old.life
 	var t := Tuning.data
 	var width: float = [t.vfx_word_small_m, t.vfx_word_medium_m, t.vfx_word_large_m][tier] * t.vfx_scale
 	var sprite := spawn_pop(&"word", point, width, t.vfx_word_s, PRIORITY_WORD, VfxArt.word_texture(word))
@@ -155,6 +159,7 @@ func spawn_word(tier: CombatTypes.HitTier, point: Vector3) -> ComicSprite:
 	sprite.rise_m = t.vfx_word_rise_m
 	sprite.roll = -side * deg_to_rad(rng.randf_range(0.3, 1.0) * t.vfx_word_tilt_deg)
 	sprite.fade_share = t.vfx_word_fade_share
+	sprite.keep_in_view = true
 	sprite.set_meta(&"word", word)
 	return sprite
 
@@ -180,7 +185,9 @@ func spawn_blood(hit: HitInfo) -> void:
 	var t := Tuning.data
 	var finisher := hit.tier == CombatTypes.HitTier.FINISHER
 	var splash := spawn_pop(&"blood_spray", hit.contact_point, t.vfx_blood_spray_m * t.vfx_scale, t.vfx_blood_spray_s,
-			PRIORITY_SPLASH)
+			PRIORITY_SPRAY)
+	if splash:
+		splash.keep_in_view = is_instance_valid(hit.victim) and hit.victim.is_in_group(&"player")
 	var count := t.vfx_blood_drops_finisher if finisher else t.vfx_blood_drops_heavy
 	for i in count:
 		var drop := _throw(&"blood_drop", hit, t.vfx_blood_drop_m, t.vfx_blood_speed, t.vfx_particle_s)
@@ -243,11 +250,16 @@ func clear() -> void:
 	impact_frame.visible = false
 
 
-## Width in meters the view of `camera` spans at `depth` meters in front of it.
-static func view_width_at(camera: Camera3D, depth: float) -> float:
+## Width over height of `camera`'s view.
+static func view_aspect(camera: Camera3D) -> float:
 	var vp := camera.get_viewport()
 	var rect := vp.get_visible_rect().size if vp else Vector2(16.0, 9.0)
-	var aspect := rect.x / maxf(rect.y, 1.0)
+	return rect.x / maxf(rect.y, 1.0)
+
+
+## Width in meters the view of `camera` spans at `depth` meters in front of it.
+static func view_width_at(camera: Camera3D, depth: float) -> float:
+	var aspect := view_aspect(camera)
 	var span := camera.size if camera.projection == Camera3D.PROJECTION_ORTHOGONAL \
 		else 2.0 * depth * tan(deg_to_rad(camera.fov) * 0.5)
 	return span if camera.keep_aspect == Camera3D.KEEP_WIDTH else span * aspect
@@ -261,17 +273,24 @@ func _on_hit_landed(hit: HitInfo) -> void:
 		return
 	var t := Tuning.data
 	var point := hit.contact_point
+	# Hits on the player land at or above the first-person lens: keep their effects in view.
+	var on_player := is_instance_valid(hit.victim) and hit.victim.is_in_group(&"player")
+	var pop: ComicSprite
 	if hit.blocked:
 		if hit.perfect_block:
-			spawn_pop(&"parry_spark", point, t.vfx_parry_spark_m * t.vfx_scale, t.vfx_block_fx_s, PRIORITY_SPLASH)
+			pop = spawn_pop(&"parry_spark", point, t.vfx_parry_spark_m * t.vfx_scale, t.vfx_block_fx_s, PRIORITY_SPLASH)
 		elif hit.guard_broken:
-			spawn_pop(&"guard_break", point, t.vfx_guard_break_m * t.vfx_scale, t.vfx_block_fx_s, PRIORITY_SPLASH)
+			pop = spawn_pop(&"guard_break", point, t.vfx_guard_break_m * t.vfx_scale, t.vfx_block_fx_s, PRIORITY_SPLASH)
 		else:
-			spawn_pop(&"block_spark", point, t.vfx_block_spark_m * t.vfx_scale, t.vfx_block_fx_s, PRIORITY_SPLASH)
+			pop = spawn_pop(&"block_spark", point, t.vfx_block_spark_m * t.vfx_scale, t.vfx_block_fx_s, PRIORITY_SPLASH)
+		if pop:
+			pop.keep_in_view = on_player
 		return
 	var tier := hit.tier
 	var burst: float = [t.vfx_burst_small_m, t.vfx_burst_medium_m, t.vfx_burst_large_m][tier]
-	spawn_pop(VfxArt.BURSTS[tier], point, burst * t.vfx_scale, t.vfx_burst_s, PRIORITY_BURST)
+	pop = spawn_pop(VfxArt.BURSTS[tier], point, burst * t.vfx_scale, t.vfx_burst_s, PRIORITY_BURST)
+	if pop:
+		pop.keep_in_view = on_player
 	if _chance([t.vfx_word_chance_light, t.vfx_word_chance_heavy, t.vfx_word_chance_finisher][tier]):
 		spawn_word(tier, point)
 	if tier != CombatTypes.HitTier.LIGHT:
@@ -433,6 +452,7 @@ func _acquire(kind: StringName, art: Texture2D, motion: ComicSprite.Motion) -> C
 	sprite.lies_on_landing = false
 	sprite.shaded = false
 	sprite.no_depth_test = false
+	sprite.keep_in_view = false
 	sprite.modulate = Color.WHITE
 	sprite.drawn_width = 0.0
 	if sprite.has_meta(&"word"):

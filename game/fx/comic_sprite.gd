@@ -9,7 +9,8 @@ extends Sprite3D
 ##   LYING   a blood splat on the ground (or a wall), flat along the surface, lit.
 ## Sizes are widths in meters. Facing effects are capped to Tuning.vfx_max_view_share of
 ## the view's width at their depth and kept Tuning.vfx_min_camera_dist_m off the lens, so
-## a hit a meter from the first-person lens never fills the screen.
+## a hit a meter from the first-person lens never fills the screen; popping effects are at
+## least Tuning.vfx_min_view_share of it, so hits seen from afar stay readable.
 
 enum Motion { POP, THROWN, LYING }
 
@@ -37,6 +38,9 @@ var fade_share: float = 0.3
 var velocity: Vector3 = Vector3.ZERO
 var gravity: float = 0.0
 var trail: bool = false
+## POP: kept whole inside the view, Tuning.vfx_word_view_margin from its edges (words, and
+## effects of hits on the player, which land at or above the first-person lens).
+var keep_in_view: bool = false
 ## THROWN: leaves a blood splat where it lands (droplets); otherwise it lies where it lands
 ## (a tooth) or vanishes (spit).
 var leaves_splat: bool = false
@@ -95,8 +99,13 @@ func place(camera: Camera3D) -> void:
 		to *= min_depth / depth
 		pos = cam.origin + to
 		depth = min_depth
-	var cap := Tuning.data.vfx_max_view_share * VfxDirector.view_width_at(camera, depth)
-	drawn_width = minf(size_m, cap) * pop_factor()
+	var view_w := VfxDirector.view_width_at(camera, depth)
+	var width := minf(size_m, Tuning.data.vfx_max_view_share * view_w)
+	if motion == Motion.POP:
+		width = maxf(width, Tuning.data.vfx_min_view_share * view_w)
+	drawn_width = width * pop_factor()
+	if keep_in_view:
+		pos = _inside_view(cam, pos, depth, view_w, VfxDirector.view_aspect(camera))
 	var angle := roll
 	if trail and velocity.length_squared() > 0.0001:
 		var v := cam.basis.inverse() * velocity
@@ -125,6 +134,23 @@ func fade_alpha() -> float:
 		return 1.0
 	var left := 1.0 - age / maxf(life, 0.001)
 	return clampf(left / fade_share, 0.0, 1.0)
+
+
+## `pos` (at `depth`) moved so the whole sprite sits inside the view, `view_w` wide at that
+## depth with screen aspect `aspect`.
+func _inside_view(cam: Transform3D, pos: Vector3, depth: float, view_w: float, aspect: float) -> Vector3:
+	var local := cam.basis.inverse() * (pos - cam.origin)
+	var margin := Tuning.data.vfx_word_view_margin * view_w
+	var half := Vector2(view_w, view_w / maxf(aspect, 0.01)) * 0.5
+	var tex_aspect := 1.0
+	if texture:
+		tex_aspect = float(texture.get_height()) / maxf(1.0, texture.get_width())
+	var extent := Vector2(drawn_width, drawn_width * tex_aspect) * 0.5 + Vector2(margin, margin)
+	var limit := (half - extent).max(Vector2.ZERO)
+	local.x = clampf(local.x, -limit.x, limit.x)
+	local.y = clampf(local.y, -limit.y, limit.y)
+	local.z = -depth
+	return cam.origin + cam.basis * local
 
 
 func _place_lying() -> void:

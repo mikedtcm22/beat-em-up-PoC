@@ -105,12 +105,15 @@ extends Resource
 @export_range(0.0, 3.0, 0.05) var vfx_scale: float = 1.0
 ## A world effect never covers more than this share of the view's width, so a hit a meter
 ## from the first-person lens never fills the screen (the side view sees full sizes).
-@export_range(0.05, 1.0, 0.01) var vfx_max_view_share: float = 0.3
+@export_range(0.05, 1.0, 0.01) var vfx_max_view_share: float = 0.25
+## ...and never less than this share (bursts, sparks and words), so hits seen from afar
+## (the side view) stay readable.
+@export_range(0.0, 0.3, 0.01) var vfx_min_view_share: float = 0.06
 ## Effects nearer the camera than this are pushed out along the view ray (hits on the
 ## first-person player land at the lens).
 @export_range(0.1, 1.5, 0.05) var vfx_min_camera_dist_m: float = 0.45
 @export_range(0.0, 2.0, 0.01) var vfx_burst_small_m: float = 0.24
-@export_range(0.0, 2.0, 0.01) var vfx_burst_medium_m: float = 0.4
+@export_range(0.0, 2.0, 0.01) var vfx_burst_medium_m: float = 0.36
 @export_range(0.0, 2.0, 0.01) var vfx_burst_large_m: float = 0.62
 @export_range(0.03, 1.0, 0.01) var vfx_burst_s: float = 0.18
 ## Share of a burst's, a spark's or a splash's time spent fading out at its end.
@@ -137,13 +140,15 @@ extends Resource
 @export_range(0.0, 1.0, 0.05) var vfx_word_side: float = 0.3
 @export_range(0.0, 0.5, 0.01) var vfx_word_rise_m: float = 0.06
 @export_range(0.0, 30.0, 1.0) var vfx_word_tilt_deg: float = 10.0
+## Words stay inside the view, at least this share of its width from the edges.
+@export_range(0.0, 0.3, 0.01) var vfx_word_view_margin: float = 0.04
 ## Radial speed lines (a screen overlay) on finishers and on the player's lunges (first
 ## person), fading over these times.
 @export_range(0.0, 1.5, 0.05) var vfx_speed_lines_s: float = 0.35
 @export_range(0.0, 1.5, 0.05) var vfx_lunge_lines_s: float = 0.2
 @export_range(0, 80, 1) var vfx_speed_lines_count: int = 34
 ## Thickness of the lines (1 = as drawn in speed_lines.png).
-@export_range(0.1, 3.0, 0.05) var vfx_speed_lines_width: float = 1.0
+@export_range(0.1, 3.0, 0.05) var vfx_speed_lines_width: float = 1.6
 @export_range(0.0, 1.0, 0.05) var vfx_speed_lines_opacity: float = 0.85
 @export_range(0.0, 1.0, 0.05) var vfx_lunge_lines_opacity: float = 0.45
 ## The lines stay outside this share of the screen's half-diagonal around their focus.
@@ -168,7 +173,8 @@ extends Resource
 ## Droplets, spit and teeth vary their size and launch speed by up to these shares.
 @export_range(0.0, 0.9, 0.05) var vfx_particle_size_jitter: float = 0.3
 @export_range(0.0, 0.9, 0.05) var vfx_particle_speed_jitter: float = 0.5
-@export_range(0.0, 1.0, 0.01) var vfx_blood_spray_m: float = 0.32
+## The splash is drawn behind the burst, so its droplets ring the burst.
+@export_range(0.0, 1.0, 0.01) var vfx_blood_spray_m: float = 0.5
 @export_range(0.03, 1.0, 0.01) var vfx_blood_spray_s: float = 0.22
 ## Splats left where droplets land: size, seconds before they fade, and how many at most.
 @export_range(0.0, 1.0, 0.01) var vfx_blood_splat_m: float = 0.22
