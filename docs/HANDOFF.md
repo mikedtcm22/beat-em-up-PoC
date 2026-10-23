@@ -4,6 +4,31 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-23 17:25 CDT: handoff, account B's 5-hour window at 72%
+The watcher warned at 72% of account B's 5-hour window, which resets at 21:40 CDT; B's weekly is at 12%. Account A's weekly is still at 95% until Mon 2026-10-26 01:00 CDT. Everything is committed and pushed; the worktrees are clean.
+- **Burn rate.** In about 20 minutes, four parallel review agents took the window from 7% to 62%. Each heavy reviewer costs about 13% of a 5-hour window here, so run at most 2 at once and gate every launch on `get_usage`.
+- **Stopped:** workflow `m2-phase1-review-fix` (run `wf_18e38241-91a`). Four of its six reviewers finished.
+  - Their 30 findings are saved in [docs/reviews/M2-phase1-review-findings.json](reviews/M2-phase1-review-findings.json) (WP1 mechanics and feel, WP2 mechanics and feel).
+  - None are verified or fixed yet.
+  - The two WP3 reviewers were cut off with no result. Their scratch probes sit in `.worktrees/m2-audio/captures/scratch_probes/` and `.worktrees/m2-trial/captures/scratch_probes/` (untracked, ignored).
+- **Headline findings, unverified:**
+  - WP2: the speed-line defect has a root cause. `VfxArt` keeps no texture alive, so `speed_lines.png` is freed after every `_draw` and reloads from disk, and every FX texture loads at the moment of the hit.
+  - WP2: a per-sprite view clamp makes the light, heavy and finisher bursts the same size.
+  - WP2: effects are placed against the previous frame's camera.
+  - WP2: words are forced into view even for hits behind the camera.
+  - WP2: the speed lines flicker at 30 Hz regardless of the photosensitivity toggle.
+  - WP1: the gamepad can't reach the sliders, and A/B do nothing (`ui_accept`/`ui_cancel` have no joypad buttons in 4.7).
+  - WP1: spawn-at-crosshair can place dummies in walls or bodies.
+  - WP1: presets aren't range-checked.
+  - WP1: the 0.25x cheat doesn't slow hitstop or slow-mo.
+- **Resume steps:**
+  1. Run a verify-then-fix pass per WP from the JSON, at most 2 heavy agents at once: one skeptic per WP, then one fixer per worktree that commits "M2 WPn: review fixes" and pushes.
+  2. WP3 still needs its two reviews (mechanics; feel by audio analysis of the WAVs and a capture's audio track).
+  3. Then merge into `m2/hit-feel`. The trial merge at `.worktrees/m2-trial` (local only) shows how: keep all four `_build_presentation()` lines and both ASSETS.md sections, then `godot --headless --import --quit && godot --headless -s tools/gen_default_preset.gd`, then `tools/run_tests.sh` (371 pass).
+  4. Then WP4.
+- **WP4 brief:** the lead's design decisions for the ragdoll are drafted. The player keeps animation-only reactions by default, with a toggle (asked of Game-boy, no answer yet). Staggers get a partial ragdoll on the upper body. Every off-feet reaction gets a full ragdoll held to the simulation's body by a soft spring. The ragdoll follows each actor's hitstop and slow-mo scale. A "Ragdoll" tuning group.
+- **Game-boy:** decide whether to wait for account B's reset at 21:40 CDT or switch accounts. Answer the player-ragdoll default.
+
 ### 2026-10-23 17:05 CDT: account B took over; phase 1 review and fix running
 Account B's working session took over at 1% of its 5-hour window (resets 21:39 CDT) and 0% weekly (resets Tue 2026-10-27 17:00 CDT). Its usage watcher runs (Haiku, `/loop 5m`, session "Beat-em-up: usage watcher").
 - **WP2 tests:** all 332 pass in `.worktrees/m2-vfx`. The lead recorded the whole `vfx_bot` (13 acts, first person and side view) and judged it. Bursts, words, the 2-frame impact frame and its toggle, blood, spit and tooth, and the block, parry and guard-break sparks all read well. Three defects:

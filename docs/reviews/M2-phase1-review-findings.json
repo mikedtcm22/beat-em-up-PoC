@@ -1,0 +1,396 @@
+{
+ "review:wp2:mechanics": {
+  "summary": "I reviewed WP2 (m2/vfx, 34ba247) for mechanics and contract. All 332 tests pass in the m2-vfx worktree, with no SCRIPT ERROR or ERROR lines. I left all tracked files untouched and deleted my scratch scripts in both worktrees, including the .uid files. The other agents' _scratch_* files are still there. My captures are git-ignored and kept as evidence.\n\nThe main result is the root cause of known issue 1 (the broken speed lines). VfxArt.texture() keeps no reference to what it loads. speed_lines.png is therefore freed as soon as each _draw returns, and the canvas draws a freed texture RID as plain gray rectangles. The fix is proven by recording the same uppercut act with a scratch bot that holds one extra reference to the texture: the lines come out as thin, tapered ink streaks in first person and side view. The same flaw causes a new performance problem. Textures are reloaded from disk on the main thread, which costs about 2.5-2.9 ms per load: on every frame while speed lines show, and on most finisher hits (a head finisher's spawn takes 3.7-7.6 ms warm and 20 ms the first time; with the textures held, 52 \u00b5s).\n\nNew smaller defects:\n- Effects are placed against the previous frame's camera, because VfxDirector processes before the cameras. During spins, words at the trailing edge of the view vanish.\n- Words are pulled into view even when their hit is behind the camera. A back elbow leaves \"SMAK!\" floating over an empty street.\n- The 30 Hz speed-line flicker ignores the photosensitivity toggle.\n- Some random ranges are hard-coded feel numbers in scripts.\n- Several tests only check state flags, so none could catch these.\n\nChecked and fine:\n- **Hit cases:** blocked, perfect and guard-break sparks; flying-body and thrown-weapon hits; clean hits on the player (a small burst kept in view); the spinning kick's three victims in one frame (one word at a time); the flurry; the stomp (light: burst only).\n- **Bounds:** splats stay capped at vfx_blood_splat_max, and in a 400-round stress test the pool stayed bounded.\n- **Time:** sim time under the 0.25x debug scale and slow-mo; the impact frame holds 2 real frames and its toggle works.\n- **Damage looks:** enemies only. They reset through reset_state, revive and WP1's reset_dummies, touch per-rig materials only, and re-read Tuning.changed for their own tunables.\n- **Merge:** with WP1 and WP3 merged in m2-trial, nothing conflicts beyond these findings.",
+  "findings": [
+   {
+    "title": "Root cause of known issue 1, plus main-thread disk reloads: VfxArt keeps no texture alive, so speed_lines.png is freed after every _draw",
+    "severity": "major",
+    "file": "game/fx/vfx_art.gd",
+    "line": 15,
+    "detail": "VfxArt.texture() returns load(path) and relies on ResourceLoader's cache. That cache keeps no strong reference, which contradicts the class doc at lines 4-5 ('keeps a loaded texture cached while anything uses it'). SpeedLines._draw() (speed_lines.gd:90) loads the texture into a local variable and passes it to draw_texture_rect_region, which records only the RID. When _draw returns, the Texture2D is freed along with its RID, and the renderer falls back to its default white texture. Every streak then becomes a full row-height rectangle tinted INK at the line opacity: the wide flat gray blocks of known issue 1. The PNG itself is fine; each row holds a clean wedge, 14-48 px tall at the thick end and 2-7 px at the tip. The same flaw reloads textures from disk on the main thread. The speed-line texture is reloaded on every frame the lines show, about 21 frames per finisher. Word, tooth, spit and burst textures are reloaded whenever no pooled sprite happens to hold them, because _acquire() reassigns pooled sprites' textures.",
+    "scenario": "Any finisher (uppercut, spinning heel, haymaker, shove), or a lunge, renders gray blocks instead of ink lines. Every frame while the lines show costs about 2.9 ms reloading speed_lines.png. A head finisher's hit handler takes 3.7-7.6 ms warm and 20 ms the first time, almost all of it texture reloads: spawn_word costs 2.5 ms against 52 \u00b5s when the word textures are held, and 5 words cost 6.4 ms against 133 \u00b5s.",
+    "evidence": "A scratch -s script showed that after load(speed_lines.png) and dropping the only reference, ResourceLoader.has_cached() is false and the next load returns a new RID. In the running director, a scratch GUT test showed has_cached(speed_lines.png) is false while the lines are active. For visual proof, a scratch bot identical to vfx_bot apart from one held reference (var _keep := VfxArt.texture(&\"speed_lines\")) re-recorded 'VFX: P P P P, light to finisher'. m2-vfx captures/r_keep_sheet.png (frames 70-91) shows thin tapered ink streaks from the edges with the middle clear. captures/r_orig_sheet.png, the same frames from the lead's vfx.avi, shows the gray blocks. In side view, the spinning heel finisher with the reference held (captures/r_spins.avi frames 528-549, captures/s4.png) shows crisp comic lines. Timings came from scratch GUT tests: Time.get_ticks_usec around spawn_word, spawn_pop, spawn_blood and spawn_spit_and_tooth, with and without the textures held, and 10 VfxArt.texture(&\"speed_lines\") calls taking 28.9 ms.",
+    "fix": "Give VfxArt a static strong cache, e.g. static var _cache: Dictionary[StringName, Texture2D], filled on first use, and preload the whole set in VfxDirector._init() so no hit frame loads from disk. Have SpeedLines keep its texture in a member variable. Correct the class doc. Add a test that a VfxArt texture is still cached, with the same RID, after effects using it have retired, and that the speed-line texture survives a few process frames while the lines are active."
+   },
+   {
+    "title": "Effects are placed against the previous frame's camera (VfxDirector processes before the cameras); words vanish during spins",
+    "severity": "minor",
+    "file": "game/fx/vfx_director.gd",
+    "line": 99,
+    "detail": "VfxDirector._process() runs at the default process_priority 0. The cameras, which move themselves in _process, run at CameraDirector.PROCESS_PRIORITY = 50 (camera_director.gd:20 and :41), so after VfxDirector. Every ComicSprite.place() therefore billboards, applies the size cap and lens push-out, and clamps keep-in-view against the camera transform of the previous frame. While the view turns, sprites face a stale basis. Worse, a word clamped to the trailing edge of last frame's view is outside the current view on every frame of the turn, so it blinks out and pops back when the turn slows.",
+    "scenario": "Spin kick on three dummies in first person (combined build): 'SMAK!' is visible, disappears on frames 57-61 while the view still turns, then pops back at frame 62. The same applies to the spinning backfist and spinning heel finishers, quick turns and mouse flicks.",
+    "evidence": "m2-trial captures/r_review.avi frames 47-82 (sheets captures/r1b.png and captures/r1c.png). A scratch GUT test loaded the test room, spawned a finisher word and turned player.look_yaw 20 degrees per frame. It printed 'camera priority 50; vfx priority 0'. The word's facing against the current camera was 0.940 (= cos 20 degrees) on every frame, and the word's center was off screen on 5 of 6 frames.",
+    "fix": "In VfxDirector._init(), set process_priority = CameraDirector.PROCESS_PRIORITY + 1, or place sprites in a hook that runs after the cameras. Add a test that turns the camera between frames and checks that a word faces the current camera and stays on screen."
+   },
+   {
+    "title": "Words are pulled into view even when their hit is behind the camera or off screen, so they float detached from any hit",
+    "severity": "minor",
+    "file": "game/fx/comic_sprite.gd",
+    "line": 95,
+    "detail": "spawn_word() sets keep_in_view = true for every word (vfx_director.gd:162). For keep_in_view sprites, place() moves any point closer than vfx_min_camera_dist_m, including points behind the camera, forward to 0.45 m straight ahead. _inside_view() then clamps it into the view. The code comment says this is meant for hits on the first-person player, but it applies to every word. Spec \u00a76 says words spawn at the contact point. A hit behind the camera or far out of view gets a word hanging in front of the lens, unrelated to the fight, and words slide along the screen edges while the view moves.",
+    "scenario": "Back elbow in first person: after the elbow, the view swings back forward and 'SMAK!' fades over the empty street at the top of the view while the dummy lies behind the player (m2-vfx captures/r_spins.avi frames 82-88, captures/s1_f84.png). Spin kick on three victims: the word sits pinned to the right edge, then slides along the top edge over the caption while the knocked-down dummy is at the bottom center (m2-trial captures/r_review.avi frames 47-82). The free-fly camera looking away from a fight would show every word in front of it.",
+    "evidence": "I recorded scratch bots: in m2-vfx, the back elbow, spinning backfist and K K K in first person and side view; in m2-trial, spin kick, flurry, stomp, pipe and throw, a body throw into a dummy, 0.25x time scale, and a camera switch on the uppercut. I extracted sheets and single frames with ffmpeg and looked at them. I read comic_sprite.gd:95-100 and :147-159 and vfx_director.gd:145-164.",
+    "fix": "Push points forward from behind the lens only for hits on the player (on_player). For words, clamp into view only when the contact point is in front of the camera and on screen, or within a small margin of the view, for example a new VFX tunable vfx_word_clamp_margin. Otherwise leave the word at its contact (off screen) or end it. Add a test for a word whose contact is behind the camera."
+   },
+   {
+    "title": "Speed-line flicker (30 Hz reshuffle) ignores the photosensitivity toggle",
+    "severity": "minor",
+    "file": "game/fx/speed_lines.gd",
+    "line": 70,
+    "detail": "SpeedLines redraws its lines in new random places every vfx_speed_lines_redraw_frames real frames (2 by default, so 30 Hz). That is a high-contrast ink pattern changing about 10 times in 0.35 s, on every finisher, across the outer screen. Only Tuning.screen_shake_intensity scales it. Tuning.impact_frame_enabled, the photosensitivity toggle, gates only the impact frame. The WP2 brief says to respect screen_shake_intensity and the photosensitivity toggle, and the flicker is WP2's own addition, not in the spec. With known issue 1 the flicker covers about 40% of the screen; after the fix it is thinner but still a 30 Hz flashing pattern, well over the usual limit of 3 flashes per second.",
+    "scenario": "A player who has switched the impact frame off for photosensitivity (and left screen shake on) still gets a 30 Hz-flickering ink pattern on every finisher and lunge.",
+    "evidence": "Code read: start() and advance() at speed_lines.gd:34-75 never read impact_frame_enabled. The reshuffle is visible in captures: lines change position between samples taken 3 frames apart (m2-vfx captures/s4.png and captures/r_keep_sheet.png). The vfx_bot act 'P P P P, impact frame off' leaves the lines' code path unchanged.",
+    "fix": "When Tuning.impact_frame_enabled is false, draw one set of lines and fade it without reshuffling. Alternatively add a separate comfort toggle, but that would be a spec change for Game-boy to approve. Add a test that with the toggle off, the lines do not reshuffle."
+   },
+   {
+    "title": "Feel numbers hard-coded in scripts and the impact-frame shader",
+    "severity": "nit",
+    "file": "game/fx/speed_lines.gd",
+    "line": 84,
+    "detail": "Project rule: feel numbers are never script constants. Random ranges that set the look are hard-coded. In speed_lines.gd:84-86: angle jitter of \u00b10.35 of the spacing, inner end 1.0-1.4 times the clear radius, thickness 0.55-1.2. In vfx_director.gd:160: a word's tilt is at least 0.3 of vfx_word_tilt_deg. In vfx_director.gd:380: droplet launch elevation 0.3-1.0 up, about 17-45 degrees. In impact_frame.gdshader:10: local_mix 0.6, and the blur mip 5.0 at line 20, while threshold is tunable. Borderline: vfx_director.gd:409, the tooth rests 0.4 of its size off the surface. Legitimate constants are the z-fight offsets at line 228, the PRIORITY_* and layer constants, and epsilons.",
+    "scenario": "Game-boy cannot tune line density spread, line thickness variation, droplet arc or the impact frame's contrast from the panel; changing them needs a code edit.",
+    "evidence": "Read game/fx/speed_lines.gd, game/fx/vfx_director.gd and game/fx/impact_frame.gdshader against the CLAUDE.md code rules and the brief ('every size, duration and probability is a new TuningData group VFX').",
+    "fix": "Add VFX-group tunables, for example vfx_speed_lines_angle_jitter, vfx_speed_lines_inner_min/max, vfx_speed_lines_width_min/max, vfx_word_tilt_min_share, vfx_blood_launch_min_deg/max_deg and vfx_impact_frame_local_mix (set as a shader parameter in ImpactFrame.flash()). Read them in place of the literals."
+   },
+   {
+    "title": "Hollow tests: none of the VFX tests could catch the rendering, camera-order or word-placement defects",
+    "severity": "minor",
+    "file": "tests/test_vfx.gd",
+    "line": 362,
+    "detail": "The speed-line tests (test_finisher_full_stack lines 135-145, test_speed_lines_respect_screen_shake_intensity 362-372, test_finisher_lines_focus_on_the_contact 374-379) check only state (is_active, opacity, line_count, focus). Lines that rendered as gray blocks and reloaded from disk every frame passed them all. test_effects_face_the_camera_and_pop_in (297-307) drives advance() by hand with a camera that never moves, so the stale-camera order cannot show. test_words_stay_inside_the_view (232-244) covers only a contact in front of the camera; nothing checks a word whose hit is behind the lens. test_hit_flash_still_covers_the_damage_look (486-495) asserts only that emission energy is 1 and detail is enabled, which is true whether or not anything is covered.",
+    "scenario": "The three defects above (gray speed lines, words vanishing in spins, words over an empty street) all pass the current 332-test suite.",
+    "evidence": "Ran tools/run_tests.sh in m2-vfx (332/332 pass) and read tests/test_vfx.gd in full against the defects reproduced in the captures and scratch tests.",
+    "fix": "Add tests for:\n- textures staying cached with a stable RID across frames while in use (the speed lines in particular);\n- the director in the test room with the first-person camera turning between process frames (a word faces the current camera and stays on screen);\n- a word whose contact is behind the camera not being moved in front of the lens;\n- the lines not reshuffling with impact_frame_enabled off."
+   }
+  ],
+  "captures_reviewed": [
+   "m2-vfx captures/vfx.avi frames 70-93 (lead's capture, uppercut, first person; sheet captures/r_orig_sheet.png)",
+   "m2-vfx captures/vfx.avi frames 2366-2377 and 2466-2477 (guard break, then a clean jab on the player in first person; captures/r_gb.png, captures/r_playerhit.png)",
+   "m2-vfx captures/r_keep_pppp.avi frames 70-93 (my scratch: same act with the speed-line texture held; captures/r_keep_sheet.png)",
+   "m2-vfx captures/r_spins.avi frames 55-88 (back elbow, first person; captures/s1.png, captures/s1_f84.png)",
+   "m2-vfx captures/r_spins.avi frames 215-259 (spinning backfist, first person, lines fixed; captures/s2.png)",
+   "m2-vfx captures/r_spins.avi frames 528-549 (spinning heel, side view, lines fixed; captures/s4.png)",
+   "m2-trial captures/r_review.avi frames 46-82 (spin kick, three victims, first person; captures/r1.png, r1b.png, r1c.png)",
+   "m2-trial captures/r_review.avi frames 170-247 (flurry and shove finisher, first person; captures/r2.png)",
+   "m2-trial captures/r_review.avi frames 462-517 (stomp, first person; captures/r3.png)",
+   "m2-trial captures/r_review.avi frames 700-723 (pipe throw hit, first person; captures/r4.png)",
+   "m2-trial captures/r_review.avi frames 964-1011 (throw and flying-body hit, side view; captures/r5.png)",
+   "m2-trial captures/r_review.avi frames 1150-1227 (P P P P at 0.25x debug scale, first person; captures/r6.png)",
+   "m2-trial captures/r_review.avi frames 1394-1417 (uppercut, switched to side view mid-effect; captures/r7.png)"
+  ]
+ },
+ "review:wp1:mechanics": {
+  "summary": "WP1 (m2/tuning) review, mechanics and contract lens. Tests pass: 313/313 in m2-tuning and 371/371 in the m2-trial integration, with no SCRIPT ERROR. Most of the brief is in place and holds up merged:\n- every TuningData property gets a row, including the VFX and Audio groups;\n- edits, number fields, toggles, the Moves page, preset load, reset and cheats all emit Tuning.changed;\n- the camera FOV, the dummies (dummy_health, scaled jab) and the VFX and Audio directors re-read their values;\n- move edits hit the shared resources and are undone by Reset and by loading a preset without them; edits mid-move are safe (phase checks use >=);\n- a preset missing keys or with unknown keys or moves loads with warnings;\n- the player is frozen, keys and clicks stay out of the game, and the scripted bot player is left alone;\n- reset dummies while grabbing a dummy and removing a spawned dummy after hitting it both behave;\n- in captures the panel and cheats render cleanly at 1280x720, stay readable over the finisher impact frame, keep clear of the view center, and the long VFX and Audio pages scroll.\n\nDefects found:\n1. Major: gamepad focus navigation from the category list mostly misses the page. From \"Hit feel\", where the panel opens, D-pad Right lands on the preset dropdown, and Down from there returns to the category list. The test that claims D-pad navigation only checks that focus moved.\n2. Minor: the spawn cheat puts dummies into walls, into the player or into other bodies.\n3. Minor: in side view and free-fly the spawn lands about 3 m in front of the camera (on the near curb, about 7 m from the player).\n4. Minor: preset values are not checked against their ranges or enums. FOV 500 spams engine errors every frame; move tier 9 raises SCRIPT ERRORs in the VfxDirector and the combat log on every hit.\n5. Minor: Export as \"Default\" overwrites res://tuning/default.json on this case-insensitive macOS disk, bypassing the guard.\n6. Minor: the free-fly camera's arrow and page keys still act while the panel is open.\n7. Minor: every tunable edit rebuilds move_overrides(), about 0.65 ms of a 0.75 ms edit.\n8. Minor: the tests write to the user://tuning folder shared by all worktrees and by Game-boy's own presets.\n9. Minor: show_category() called from code leaves the old category button highlighted.\n10. Spec question: the 0.25x cheat does not stretch hitstop or slow-mo, which count real time.\n\nScratch probes and the capture bot were deleted. Evidence frames are in /Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-trial/captures/wp1_*.png, copied to /private/tmp/claude-501/-Users-arachne-repos-beat-em-up-PoC/9e1c268f-0fa4-4aaf-b97d-eef853150b9f/scratchpad/wp1/.",
+  "findings": [
+   {
+    "title": "Gamepad: the D-pad cannot get from the category list into the panel's sliders for most categories, including the default Hit feel",
+    "severity": "major",
+    "file": "game/ui/tuning_panel.gd",
+    "line": 276,
+    "detail": "The category buttons and the page rows get no focus neighbours, so Godot's geometric search decides where the D-pad goes. From each of the first seven category buttons (Player movement through Hit feel), D-pad Right goes to the preset dropdown (OptionButton 'default (shipped)'), and a second Right goes to Load. Down from the dropdown goes back to the category list. From the lower categories, Right lands on whichever row happens to be level with the button (for example vfx_burst_large_m or grunt_min_interval_ms), not the first row. The only way into Hit feel's sliders is Right, Right (Load), Down. Once on a slider, Left/Right step the value as intended, so the only way back to the categories is Up to the preset rows and then Down. ARCHITECTURE line 301 says 'the D-pad walks the category buttons, sliders, toggles and drop-downs'. test_the_overlay_keeps_gameplay_input_out (tests/test_tuning_panel.gd:638-646) only asserts that D-pad Down changed focus (Hit feel button to the next category button), so it passes while the brief's 'minimally with a gamepad' item is not met for the main page.",
+    "scenario": "Game-boy presses View, and focus is on 'Hit feel'. He presses D-pad Right expecting hitstop_light_ms, and lands on the preset dropdown. He presses Down and is back at 'Player movement' in the category list. The hit-feel sliders look unreachable with the pad.",
+    "evidence": "Scratch GUT probe in m2-trial (deleted), with held D-pad presses through Input.parse_input_event. From the panel open: Right -> OptionButton'default (shipped)', Down -> Button'Player movement', Right -> OptionButton again. Right from each category: the 7 upper categories -> preset OptionButton; VFX -> HSlider(vfx_burst_large_m); Audio -> HSlider(grunt_min_interval_ms). Right, Right, Down -> HSlider(hitstop_light_ms). A held D-pad Right on a focused slider stepped cam_punch_light_deg 0.5 -> 0.6, so stepping itself works.",
+    "fix": "In show_category(), set every category button's focus_neighbor_right to the shown page's first focus_control. Set each row's focus_control focus_neighbor_left to the shown category's button; Left on a slider steps it, so also let the category button take focus on ui_focus_prev, or map LB/RB to switch category. Set the preset dropdown's and Load's focus_neighbor_bottom to the shown page's first row. Make the test walk Right from 'Hit feel' into the hitstop_light_ms slider and Down through the rows.",
+    "spec_question": false
+   },
+   {
+    "title": "Spawn at crosshair places dummies inside walls, on top of the player, or inside other bodies",
+    "severity": "minor",
+    "file": "game/ui/cheat_menu.gd",
+    "line": 125,
+    "detail": "Three gaps in spawn_point():\n(1) Wall clearance is applied along the flat look (spot -= flat * spawn_wall_clearance_m), not along the wall normal. At a shallow angle a 0.5 m step back leaves the spot closer to the wall than the 0.35 m body radius.\n(2) The minimum-distance fallback, spot = player + flat * spawn_min_distance_m (line 134), ignores walls. Facing a wall from under 1 m therefore puts the spot inside the wall. Jolt then pushes the dummy out toward the player: it ends 0.25 m from the player's center, overlapping it and filling the first-person view.\n(3) When no clear spot is found stepping back (room_left < step), the original spot is kept even though it is blocked (line 142), so a dummy can spawn inside another actor. That contradicts the docstring's 'never spawns inside another body'.\nThe WP's spawn test only covers open floor and an actor far enough away to step back from.",
+    "scenario": "(a) The player stands 0.6 m from the north wall, facing it, and presses 'Spawn': the spot is (-2, 0, -7.4), 0.4 m inside the wall. After 60 ticks the dummy is at z -6.65, 0.25 m from the player, whose view is filled by its torso. (b) Looking 70 degrees off the wall's normal from 1.2 m: the spot is 0.17 m from the wall surface. (c) Crosshair on the feet of a dummy 1.25 m ahead: the spot is 0.12 m from that dummy.",
+    "evidence": "Scratch probe in m2-trial calling CheatMenu.spawn_point() plus a capsule overlap query (r 0.3) against LAYER_WORLD: wall 0.6 m -> world_overlaps=[StaticBody3D]; shallow wall -> overlap; dummy case -> nearest_other_actor=0.12. The capture captures/wp1mech.avi (scratch bot), frame 540, shows the spawned dummy's torso filling the first-person view (wp1_wallspawn.png); the contact sheet is wp1_sheet_spawn.png.",
+    "fix": "Use the hit normal: spot = hit.position + Vector3(normal.x, 0, normal.z).normalized() * (spawn_wall_clearance_m + body radius). After the min-distance and actor-clearance steps, check the candidate with a capsule shape query against LAYER_WORLD and the actors. If it is blocked, search a few sideways and back offsets, and refuse with 'No room to spawn' rather than keep a blocked spot. Add test cases for facing a wall from 0.6 m and for the crosshair on a nearby dummy.",
+    "spec_question": false
+   },
+   {
+    "title": "Side view and free fly: 'spawn at crosshair' drops the dummy about 3 m in front of the camera, outside the fight lane",
+    "severity": "minor",
+    "file": "game/ui/cheat_menu.gd",
+    "line": 107,
+    "detail": "spawn_point() casts from the active camera, with spawn_max_distance_m 6 and spawn_open_distance_m 3. The side-view camera sits about 11 m from the player (distance_m 11, height 3.5), so the ray hits nothing and the spot ends 3 m from the camera, on the near curb. The min-distance step also uses that camera's flat direction, so 'toward the player' really means toward the camera. Free fly starts from the current camera's pose, so it does the same; from a high free-fly pose the downward ray can also land the dummy on a building-front box. The brief asks for 'at the crosshair'. In side view there is no crosshair and the view centre is the player's lane.",
+    "scenario": "Side view, the player at (-4, 0, 0), press Spawn: the dummy appears at (-3.98, 0, 6.82), 6.8 m from the player against the near curb (curb spans z 7.0-7.5). It shows large at the bottom of the side view with its back to the camera.",
+    "evidence": "Scratch probe: side cam at (0, 3.5, 10.58), spot (-0.02, 0, 7.66), overlapping the curb StaticBody, 7.66 m from the player; free fly as entered gave the same. Capture captures/wp1mech.avi, frames 765/800/850 (wp1_sidespawn.png): the spawned dummy stands at the bottom centre next to the curb, far from the fight.",
+    "fix": "When the active camera is not the first-person one, cast from the player's eye and look (the current no-camera fallback). Or in side view, spawn in front of the player along its facing at spawn_open_distance_m. Clamp the final spot inside the street bounds or the navigable floor.",
+    "spec_question": false
+   },
+   {
+    "title": "Preset values are not checked against their range hint or enum ids: a stale or hand-edited preset breaks the camera, the VFX and the combat log",
+    "severity": "minor",
+    "file": "game/autoload/tuning.gd",
+    "line": 256,
+    "detail": "apply_preset() takes any number of the right JSON type. decode_value() only converts types: it never clamps to the @export_range hint (unless or_greater/or_less) and never checks an enum value against the hint's ids (MoveData.tier, MoveData.reaction). The panel's controls can't produce such values, but a preset file can, whether hand-edited, from another branch, or written before an enum or range changed. The brief asks for robust presets (missing, unknown, wrong types).",
+    "scenario": "Load a preset with {\"tuning\": {\"fov_deg\": 500}, \"moves\": {\"jab_1\": {\"tier\": 9, \"reaction\": 42}}}: it returns OK with no warnings. Every frame then logs 'Condition p_fov < 1 || p_fov > 179' from first_person_camera.gd:108. Each jab raises 'SCRIPT ERROR: Out of bounds get index 9' in CombatTypes.tier_name (the combat log) and in VfxDirector._on_hit_landed (vfx_director.gd:294), and 'index 42' in reaction_name.",
+    "evidence": "Scratch GUT probe in m2-trial: apply_preset(...) gave err=0 with empty warnings, then a scripted jab on a dummy in the test room with presentation. GUT reported Unexpected Errors: Out of bounds get index '9' (tier_name, VfxDirector._on_hit_landed) and '42' (reaction_name), plus the per-frame set_fov errors.",
+    "fix": "In apply_preset() (both the tuning and move loops), take the property-list entry's hint. For PROPERTY_HINT_RANGE, clamp to min..max unless or_greater/or_less, and note the clamp in last_warnings. For PROPERTY_HINT_ENUM, accept only ids in the hint_string and otherwise skip with a warning. Add both cases to test_presets_skip_unknown_values_and_default_missing_ones.",
+    "spec_question": false
+   },
+   {
+    "title": "Export as 'Default' (any capitalization) overwrites the shipped res://tuning/default.json on macOS; a user preset named 'default' shadows it in load_preset()",
+    "severity": "minor",
+    "file": "game/autoload/tuning.gd",
+    "line": 307,
+    "detail": "export_preset() guards only sanitize_preset_name(name) == \"default\" (case-sensitive). sanitize_preset_name keeps case, but this checkout's file system (APFS) is case-insensitive, so writing res://tuning/Default.json replaces default.json. The shipped defaults then hold Game-boy's tuned values: test_the_default_preset_equals_the_shipped_defaults fails, the panel lists them as 'default (shipped)', and they may get committed. Separately, save_preset(\"default\") is allowed. load_preset() (lines 314-320) reads user:// first, so a user 'default' shadows the shipped one; the default-preset test calls Tuning.load_preset(DEFAULT_PRESET) (tests/test_tuning_panel.gd:353) and would fail on a machine where Game-boy saved one.",
+    "scenario": "Game-boy tunes, types 'Default' in the name field and clicks Export. The status says 'Exported res://tuning/Default.json', and tuning/default.json now holds his values with \"preset\": \"Default\".",
+    "evidence": "Scratch probe: sanitize_preset_name('Default') -> 'Default' (guard false). Tuning.write_preset_file('<scratch dir>/Default.json', ...) over an existing '<scratch dir>/default.json' left one file, 'default.json', whose content starts '{ \"preset\": \"Default\" ...'. touch CaseProbe.txt; ls caseprobe.txt succeeded in this repo.",
+    "fix": "Compare case-insensitively (to_lower() == DEFAULT_PRESET) in export_preset(), and lower-case preset names in sanitize_preset_name() so names map to one file on every OS. Refuse or rename saving a user preset named 'default', or have load_preset(DEFAULT_PRESET) read only EXPORT_DIR.",
+    "spec_question": false
+   },
+   {
+    "title": "While the panel is open, the arrow and Page keys still fly the free-fly camera",
+    "severity": "minor",
+    "file": "game/ui/tuning_overlay.gd",
+    "line": 190,
+    "detail": "The overlay keeps input out of the game only through the embedded window (which blocks events) and the scripted PlayerInput. FreeFlyCamera.update_camera() polls Input.get_axis(fly_left/right, fly_up/down, fly_forward/back) directly (free_fly_camera.gd:56-58); those actions are the arrow keys and PageUp/PageDown (game_input.gd:35-40). The panel uses the same keys for focus navigation and slider steps, and LineEdits use them to move the caret, so in free fly every arrow press also moves the camera. This breaks 'doesn't capture gameplay input while open' for one of the three debug cameras.",
+    "scenario": "Free-fly camera active, open F1, press Up to move focus to the row above: the camera flies forward (3 m for a half-second press) while focus moves.",
+    "evidence": "Scratch probe in m2-trial: CameraDirector.set_mode(free_fly), overlay.set_panel_open(true), Input.parse_input_event(KEY_UP pressed) for 30 ticks: the camera moved 3.00 m and focus changed buttons.",
+    "fix": "Gate the free-fly movement while the overlay is open. For example, TuningOverlay sets a GameInput flag (such as GameInput.ui_captured) that FreeFlyCamera checks before polling. Or read the fly axes in FreeFlyCamera from events the window already blocks.",
+    "spec_question": false
+   },
+   {
+    "title": "Every tunable edit rebuilds Tuning.move_overrides() for the change markers (~0.65 ms of a ~0.75 ms edit)",
+    "severity": "minor",
+    "file": "game/ui/tuning_panel.gd",
+    "line": 420,
+    "detail": "TuningPanel._on_tuning_changed() calls _refresh_markers() for every TuningData edit. That walks all 216 rows, rebuilds Tuning.move_overrides() (26 moves x 23 fields of values_equal checks plus new Dictionaries each time), and resets the text of all 26 move-picker items and 17 category buttons. Dragging a slider emits one edit per mouse-motion event, so this runs about every frame while dragging and allocates each time. reset_to_default() costs 11.5 ms. Rebuilding the overlay on each R restart costs about 85 ms (headless).",
+    "scenario": "Dragging hitstop_heavy_ms: each value_changed costs about 0.75 ms on this Mac (headless). Of that, move_overrides() is about 0.65 ms, even though no move changed.",
+    "evidence": "Scratch probe in m2-trial with the room, panel and directors: 100 slider edits averaged 780 us each; _refresh_markers() alone 806 us; Tuning.move_overrides() alone 647 us; reset_to_default 11.5 ms; overlay instantiate plus add_child 81-87 ms.",
+    "fix": "On a TuningData property edit, update only that row and its category's marker. Recompute the move markers only on 'moves/...' or &\"\" (and for 'moves/<id>/<field>' only that move). Skip set_item_text when the text is unchanged.",
+    "spec_question": false
+   },
+   {
+    "title": "Preset tests write to the real user://tuning, shared by every worktree and by Game-boy's own presets",
+    "severity": "minor",
+    "file": "tests/test_tuning_panel.gd",
+    "line": 28,
+    "detail": "The tests save user://tuning/gut_tuning_roundtrip.json and delete it in after_each. All worktrees share the project name 'Beat-em-Up PoC', so they all use ~/Library/Application Support/Godot/app_userdata/Beat-em-Up PoC/tuning, the same folder Game-boy's in-game saves land in. This project routinely runs tests in several worktrees at once, so one run's after_each can delete the file between another run's save and load. test_the_default_preset_equals_the_shipped_defaults also depends on that folder holding no 'default.json' (see the Default finding).",
+    "scenario": "m2-tuning and m2-trial run tools/run_tests.sh at the same time. Run A saves gut_tuning_roundtrip.json, run B's after_each removes it, and A's load_preset returns ERR_FILE_NOT_FOUND: a flaky failure.",
+    "evidence": "Code read: TEST_PRESET and USER_DIR are used directly (tests/test_tuning_panel.gd:8, 28-32, 301, 313). project.godot config/name is the same in all worktrees. The user dir listed above is shared, and it was empty at review time.",
+    "fix": "Give Tuning a test-overridable user directory (for example a var user_dir defaulting to USER_DIR) and point the tests at a unique folder per run, such as user://tuning_test_<pid>/, removed afterwards. Load the default preset in the test from its res:// path (load_preset_file(DEFAULT_PATH)).",
+    "spec_question": false
+   },
+   {
+    "title": "show_category() from code leaves the previous category button pressed (several categories highlighted)",
+    "severity": "minor",
+    "file": "game/ui/tuning_panel.gd",
+    "line": 91,
+    "detail": "show_category() calls button.set_pressed_no_signal(true). That bypasses the ButtonGroup, so the previously pressed category button is not released. A user's click goes through the group and is fine. But show_category() is public API used by _ready(), tests and bots, and after a few programmatic calls several category buttons show the pressed style at once.",
+    "scenario": "A bot or test calls panel.show_category('VFX'), then 'Audio', then 'Moves'. 'Hit feel', 'Audio' and 'Moves' all show the pressed style, so the capture misreports which page is shown.",
+    "evidence": "Capture captures/wp1mech.avi (scratch bot calling show_category), frames 230/270/310/390 (wp1_pages.png): with the Moves page shown, 'Hit feel', 'Audio' and 'Moves' are all highlighted.",
+    "fix": "Use button.button_pressed = true, which goes through the ButtonGroup and emits only toggled (show_category is connected to pressed, so it doesn't recurse). Or unpress the other category buttons explicitly.",
+    "spec_question": false
+   },
+   {
+    "title": "The 0.25x time-scale cheat slows the simulation but not hitstop or the finisher slow-mo window, so slow-motion review misjudges hit feel",
+    "severity": "minor",
+    "file": "game/ui/cheat_menu.gd",
+    "line": 85,
+    "detail": "set_time_scale() sets TimeController.debug_scale. TimeController.hitstop() turns seconds into real physics ticks with no regard for debug_scale (time_controller.gd:24), and the slow-mo delay and length count real delta (lines 95, 100). At 0.25x, moves, knockback and the WP2 VFX (sim time) run four times slower, but a heavy hit still freezes for 85 ms real (5 ticks) and a finisher for 140 ms. Meanwhile camera punch and shake, audio and rumble run in real time. Relative to the action, the freeze reads as a quarter of its tuned length, so 0.25x can't be used to judge hitstop or slow-mo. The behavior comes from M1's TimeController, not WP1's code, but the cheat is WP1's brief item.",
+    "scenario": "Game-boy sets 0.25x to study a finisher. The uppercut's startup takes 4x as long, but the impact freeze lasts the same 8 real ticks, so the hit looks barely to stop.",
+    "evidence": "Code read: time_controller.gd:24 `var ticks := maxi(1, roundi(duration_s * Engine.physics_ticks_per_second))`; lines 95/100 subtract the real `delta`; sim_scale() multiplies only the scale, not the durations.",
+    "fix": "Proposal for Game-boy, default yes: make the debug time scale uniform. TimeController.hitstop() would use roundi(duration_s * 60 / debug_scale) ticks, and the slow-mo delay and length would count delta * debug_scale. Camera punch and shake would optionally scale by debug_scale too. Alternative: keep the current behavior and label the button '0.25x sim (hitstop real time)'.",
+    "spec_question": true
+   }
+  ],
+  "captures_reviewed": [
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-trial/captures/wp1mech.avi (scratch bot, 902 frames): act 'panel open over P P P P' frames 26-146 (wp1_sheet_fight.png, wp1_f30.png, wp1_f71.png, wp1_f150.png); finisher impact frames 68-90 every 2 (wp1_sheet_impact.png); panel pages VFX/Audio/Moves/Audio-bottom frames 230/270/310/390 (wp1_pages.png); cheats spawn act frames 470-730 every 20 (wp1_sheet_spawn.png) and frame 540 (wp1_wallspawn.png); side-view spawn frames 765/800/850 (wp1_sidespawn.png)",
+   "Copies of all frames: /private/tmp/claude-501/-Users-arachne-repos-beat-em-up-PoC/9e1c268f-0fa4-4aaf-b97d-eef853150b9f/scratchpad/wp1/"
+  ]
+ },
+ "review:wp2:feel": {
+  "summary": "WP2 review (feel and readability), m2/vfx at 34ba247. Tests: 332/332 pass in m2-vfx, with no SCRIPT ERROR or ERROR lines.\n\n**Root cause of known issue 1 (speed lines).** SpeedLines._draw() (game/fx/speed_lines.gd:90) loads the texture into a local variable, and nothing else holds a reference to it. The texture is freed as soon as _draw() returns, so the canvas draws the recorded quads untextured: each one is a full 128 px row drawn as a solid INK rectangle. I proved it with a scratch Control that draws the same calls. It drew clean tapered wedges while a reference was held and solid rectangles when none was. Fix: keep the texture in a member variable or a preload. That also stops the texture being reloaded from disk on every redraw (see the hitch finding below).\n\n**Other known issues.** The bruised look is also invisible in side view (vfx.avi frames 1300 and 1360); bloodied reads at frame 1440. That extends known issue 3.\n\n**New findings (8):**\n- **Major:** the per-sprite clamp flattens the tier sizes.\n  - In side view, every burst, word and splash draws at exactly 0.82 m.\n  - In first person at 0.8 m, heavy and finisher draw at the same size.\n  - At 3.8 m, light and heavy draw at the same size.\n  - So tuning the size sliders in side view changes nothing.\n- **Minor:**\n  - VfxDirector places effects before the cameras update, so they lag one frame; keep-in-view words leave the screen during fast turns.\n  - The finisher lines' clear zone follows a contact near the screen edge, so the lines cross the view centre and the finisher's own word.\n  - Words for off-screen hits are dragged into view and parked at the screen edges.\n  - Knees and stomps show no burst in first person.\n  - The speed lines still flicker at 30 Hz with the photosensitivity toggle off.\n  - Each FX texture loads at the moment of the hit, which drops frames.\n\n**Reads well (keep):**\n- What the player sees when it is hit cleanly. Synthetic heavy and finisher hits on the player put the burst, splash and word on the attacker's face at 25% of the view width each, not screen-filling.\n- The spin kick hitting 3 dummies: 3 bursts, 1 word, no clutter.\n- The thrown pipe and the thrown body hit at 4-5 m read.\n- Red appears only in blood, finisher accents (large burst, finisher-word extrusion, tooth root) and the rear warning.\n\n**Out of WP2 scope, for the lead (not findings):**\n- M1's white hit flash fills large parts of the first-person view: the player's own arms on a guard break (about 35% of the view; vfx.avi 2366), and a dummy at 0.7 m during the flurry (about 60%; combos.avi 378-420).\n- In side view, the M1 combat log sits over the dummy and its effects.\n- Words sometimes overlap the transient \"CAMERA: ...\" toast.\n\n**Files:**\n- I recorded a full combo_bot run in the integration worktree: /Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-trial/captures/combos.avi and combos.log (git-ignored).\n- All my scratch scripts and scratch captures are deleted, and m2-vfx's git status is clean.\n- The untracked tests/bot/_scratch_panel.* in m2-trial is not mine.\n- The contact sheets I looked at are in /private/tmp/claude-501/-Users-arachne-repos-beat-em-up-PoC/9e1c268f-0fa4-4aaf-b97d-eef853150b9f/scratchpad/.",
+  "captures_reviewed": [
+   "m2-vfx/captures/vfx.avi frames 28-75 every 3 and 37-44 every frame (P P P P, first person)",
+   "m2-vfx/captures/vfx.avi frames 185-245 every 4, plus crops of 190, 214, 230, 236 (P P P P, side view)",
+   "m2-vfx/captures/vfx.avi frames 540-600 every 4 (haymaker, first person)",
+   "m2-vfx/captures/vfx.avi crops of frames 1205, 1300, 1360, 1440 (damage looks, side view)",
+   "m2-vfx/captures/vfx.avi frames 2362-2382 and 2464-2482 (guard break and a clean hit on the player, first person)",
+   "m2-vfx/captures/vfx.avi frames 3070-3130 every 4 (flying kick lunge lines)",
+   "m2-vfx/captures/vfx.avi frames 3228-3235 every frame (impact frame off: speed-line flicker)",
+   "m2-trial/captures/combos.avi (full combo_bot run that I recorded, 7078 frames; combos.log has the hit frames): 374-449 (flurry and shove)",
+   "m2-trial/captures/combos.avi first frames after each finisher: 73, 440, 614, 942, 1271, 1413, 1571, 3006, 3243",
+   "m2-trial/captures/combos.avi 2080-2140 (spin kick, first person, 3 dummies)",
+   "m2-trial/captures/combos.avi 2320-2380 and 2343-2354 every frame (back elbow, first person)",
+   "m2-trial/captures/combos.avi 1980, 2206, 2210 (spin kick and back elbow, side view)",
+   "m2-trial/captures/combos.avi 2453, 2488-2503 every frame, 2522, 2590-2650, 2599 (hook, knees, grab and throw, flying-body hit)",
+   "m2-trial/captures/combos.avi 3080-3095 every frame (stomp, bottom half)",
+   "m2-trial/captures/combos.avi 3205-3265 and 3318-3378 (pipe swings, weapon throw at about 5 m)",
+   "m2-trial/captures/combos.avi 4186-4197, 4542-4553, 5403-5414, 6303-6314 (block first person and side view, parry side view, guard break side view)",
+   "m2-trial/captures/combos.avi 6590-6650 (flank hit on the player, first person)",
+   "m2-trial/captures/combos.avi frame 231 crop (speed-line rectangles at full resolution)",
+   "scratch capture m2-vfx/captures/_scratch.avi (now deleted), synthetic hits: side-view tier sizes 34/82/130; first-person sizes at 0.8 m (230/278/326) and 3.8 m (374/422/470); heavy and finisher hits on the player 560-595 and 620-660",
+   "scratch capture m2-vfx/captures/_scratch_lines.avi (now deleted) frame 5: the speed-line texture drawn with a reference held (wedges) and without one (solid rectangles)"
+  ],
+  "findings": [
+   {
+    "title": "Per-sprite view clamp flattens the light/heavy/finisher sizes (all equal in side view; heavy = finisher at close range in first person)",
+    "severity": "major",
+    "file": "game/fx/comic_sprite.gd",
+    "line": 109,
+    "detail": "ComicSprite.place() clamps each effect on its own. The width is capped at vfx_max_view_share (25%) of the view width at its depth and floored at vfx_min_view_share (6%), so any tier size that hits the cap or the floor loses its difference from the other tiers.\n\nSide view (depth 11.15 m): the floor is 0.82 m, and burst_small (0.24 m), burst_medium (0.36 m), burst_large (0.62 m), the BOFF and WHUMP words (0.42 and 0.60 m) and the blood splash (0.50 m) all draw at exactly 0.82 m. Light, heavy and finisher are identical in size.\n\nFirst person, contact 3.8 m away: the floor is 0.46 m, so the light burst, the medium burst and the medium word are all 0.46 m.\n\nFirst person, contact 0.8 m away (a dummy 1 m away; also flurry and grab range): the cap is 0.40 m. The medium burst is 0.36 m against the large burst's 0.40 m, and the heavy word (0.41 m) is wider than the finisher word (0.40 m).\n\nThe SPEC \u00a76 tier table (small/medium/large) only holds in a band around 1-1.5 m. For the milestone's done-when, \"Game-boy tunes each tier live\": moving vfx_burst_*_m or vfx_word_*_m changes nothing in side view unless the value goes above 0.82 m.",
+    "scenario": "Side view, P P P P or K K K (vfx.avi frames 190, 214, 230; scratch frames 34, 82, 130): the jab burst, the hook burst with THUD and the uppercut burst with KRAK! are the same size on screen. In side view Game-boy drags vfx_burst_large_m from 0.62 to 0.3 and sees no change.",
+    "evidence": "I wrote a scratch bot (deleted) that emits HitInfo per tier on a dummy and prints each live POP sprite's drawn_width, depth and share of the view after 8 ticks. Side view: drawn=0.82 m and view_share=0.060 for every burst, word and splash. First person at 0.81 m depth: 0.24, 0.36 and 0.40 m bursts; BOFF 0.41 m, WHUMP 0.40 m. First person at 3.8 m depth: burst_small 0.46, burst_medium 0.46, BOFF 0.46, burst_large 0.62, KAPOW 0.60 m. Matching crops in vfx.avi (side view) and in _scratch.avi.",
+    "fix": "Clamp once per effect class with one shared factor, so the tier ratios survive the clamp:\n1. Compute factor = clamp(ref_m, min_share*view_w, max_share*view_w) / ref_m, where ref_m is the class's largest tier size (vfx_burst_large_m for bursts, vfx_word_large_m for words; sparks and the splash use their own size).\n2. Draw width = size_m * factor.\n3. VfxDirector passes ref_m to the sprite, for example through a new ComicSprite.clamp_ref_m field.\n\nAdd a test that the three tiers' drawn widths strictly increase at 0.8 m, at 4 m and in the side view.",
+    "spec_question": false
+   },
+   {
+    "title": "VfxDirector places effects before the cameras update: a one-frame lag, so keep-in-view words leave the screen during fast turns",
+    "severity": "minor",
+    "file": "game/fx/vfx_director.gd",
+    "line": 99,
+    "detail": "The cameras run at process_priority CameraDirector.PROCESS_PRIORITY (50) and set global_transform in _process, after default-priority nodes. VfxDirector keeps the default priority (0), so advance() runs first and reads the previous frame's camera transform (shake and punch included). That stale transform is used for the billboard facing, the keep-in-view clamp (_inside_view), the minimum-distance push for hits on the player, and _screen_point() for the speed-line focus. During fast view turns (back elbow, spinning backfist, spin kick) a word that was clamped inside the view shows partly or fully off-screen. During shake, effects placed in camera space jitter against the scene.",
+    "scenario": "Back elbow in first person: \"BOFF!\" is cut off at the right screen edge for about 8 frames while the view swings back (combos.avi frames 2345-2353). Spin kick in first person: the word is entirely off-screen for 5 or more frames although it is meant to be kept in view.",
+    "evidence": "Scratch bot (deleted) hooked to RenderingServer.frame_pre_draw, projecting each live word's left and right edges with the current camera:\n- back elbow: off view on frames f72-f82 (x 1868..2775 of 1920 at the worst);\n- spin kick: frames f182-f187 (x -1912..-337, fully off).\nThe same run with vfx.process_priority set to 100 at runtime: zero off-view frames. Code: camera_director.gd:20 and :41 set PROCESS_PRIORITY 50; first_person_camera.gd:90 _process -> update_camera.",
+    "fix": "In VfxDirector._init(), set process_priority = CameraDirector.PROCESS_PRIORITY + 1 (an ordering value, not a feel number). Alternatively, do the place() pass in a callback that runs after the cameras. Add a test: yaw the first-person camera in the same frame, call advance(), and check that a keep-in-view word's projected rect stays inside the viewport.",
+    "spec_question": false
+   },
+   {
+    "title": "Finisher speed lines lose their clear middle when the contact is near a screen edge, and draw over the finisher's own word and burst",
+    "severity": "minor",
+    "file": "game/fx/vfx_director.gd",
+    "line": 306,
+    "detail": "Finisher lines converge on the contact's screen point (_screen_point) and keep clear only a circle around it of radius vfx_speed_lines_clear x half the screen diagonal. In first person many finisher contacts sit near an edge: the shove and push kick to the gut at the bottom, the uppercut and haymaker to the head near the top. The clear circle moves to that edge, and the lines then run across the view centre and over the target's head and torso. The lines are a CanvasLayer (layer 5) above the 3D world, so they also draw over the finisher's own lettering and large burst and dim them. This is separate from known issue 1 (the texture): it remains after the texture is fixed, and works against the stated goal of keeping the middle clear.",
+    "scenario": "P \u00b7 P flurry, ending in the shove (contact at the bottom of the view): the lines cover the dummy's head and chest and run across KRAK! (combos.avi frame 440). K K K spinning heel: WHUMP! and the large burst sit under the lines (combos.avi 942, 3006; vfx.avi 3228-3235).",
+    "evidence": "Looked at the first frame after each finisher in combos.avi (73, 440, 614, 942, 1271, 1413, 1571, 3006, 3243) and at vfx.avi 3228-3235. Read speed_lines.gd _draw() (clear = vfx_speed_lines_clear * size.length() * 0.5 around focus) and vfx_director.gd:306.",
+    "fix": "1. Pull the focus toward the view centre: focus = center.lerp(contact_px, Tuning.vfx_speed_lines_focus_follow), clamped to a central box. The new tunable goes in the VFX group; the default keeps the focus within about 25% of the half-size from the centre.\n2. Make the clear zone at least cover the live word's and burst's projected rects. For example, pass their screen rects to SpeedLines and skip or shorten any line whose inner end would enter them.",
+    "spec_question": false
+   },
+   {
+    "title": "Every word is forced into view: words for hits beside or behind the camera slide around the screen edges and park in a corner, detached from the hit",
+    "severity": "minor",
+    "file": "game/fx/vfx_director.gd",
+    "line": 162,
+    "detail": "spawn_word() sets keep_in_view = true for every word. ComicSprite.place() then moves a word whose contact is behind the lens straight ahead to vfx_min_camera_dist_m and clamps it inside the view. For a hit outside the view (spin kick on the side or rear dummy, back elbow), the word slides along the screen edge as the view turns, then sits in a corner for its 0.6 s life with no target near it, often over the top-centre camera toast or caption area. SPEC \u00a76 says words spawn at the contact point. Once Milestone 3 adds more enemies and the rear-warning burst near the screen edges, edge-parked words will compete with that cue.",
+    "scenario": "Spin kick in first person with dummies ahead, behind and to the side: \"BAM!\" from the side dummy appears bottom-right, slides to top-left and sits in the corner over the camera label for about 0.5 s (combos.avi 2088-2120). Back elbow in first person: \"BOFF!\" floats over an empty street once the view turns back forward (combos.avi 2352-2370).",
+    "evidence": "combos.avi contact sheets of 2080-2140 and 2320-2380, every 4 frames. Code: vfx_director.gd:162; comic_sprite.gd:95-100 (\"bring it out to the minimum distance straight ahead\") and _inside_view().",
+    "fix": "Keep the in-view clamp only when the contact is inside the view frustum, or just outside it by the margin, at spawn. Otherwise, either drop the word or pin it once in screen space at the edge on the hit's side, without sliding. Default: drop the word when the contact is behind the camera and clamp as now when it is on screen. Hits on the player keep their current behaviour.",
+    "spec_question": false
+   },
+   {
+    "title": "Knees and stomps show no burst in first person: the light burst lands below the bottom edge of the view",
+    "severity": "minor",
+    "file": "game/fx/vfx_director.gd",
+    "line": 297,
+    "detail": "Bursts are kept in view only for hits on the player (pop.keep_in_view = on_player). The knee into a held enemy and the stomp on a downed enemy make contact below the first-person frustum: with the pitch around -6 degrees and contact about 0.5 m ahead and 0.8 m down, roughly 58 degrees below the view axis. So the tier's small burst is off-screen. Grab, knee x3 and the stomp, both core moves, show no comic effect in first person, only part of M1's white flash and the audio. The tier table gives every light hit a small burst.",
+    "scenario": "Grab, knee x3: only the tip of the burst's top spike shows at the bottom edge for about 2 frames per knee (combos.avi 2491-2494, 2520-2525). Stomp a downed enemy: nothing at all (combos.avi 3080-3095, bottom half).",
+    "evidence": "Frame-by-frame sheets of combos.avi 2488-2503 and of the bottom half of 3080-3095; the hit frames come from combos.log (f2492, f2520, f2548, f3086).",
+    "fix": "For hits the player lands while in first person, clamp the burst into view at the bottom edge as well: keep_in_view, or a bottom-only clamp so it sits just above the edge on the contact's side. Alternatively, raise the burst's anchor toward the view when the contact is below the frustum. Add a test that a knee or stomp contact below the view still yields a visible burst inside the viewport.",
+    "spec_question": false
+   },
+   {
+    "title": "Speed lines keep flickering at 30 Hz with the photosensitivity toggle off",
+    "severity": "minor",
+    "file": "game/fx/speed_lines.gd",
+    "line": 70,
+    "detail": "SpeedLines re-shuffles every line to new random angles every vfx_speed_lines_redraw_frames real frames (2, so 30 Hz). That ignores Tuning.impact_frame_enabled, the photosensitivity toggle; only the impact frame is gated by it. Once the lines are fixed into high-contrast ink streaks, a dark pattern changing 30 times a second around the screen is exactly the kind of flicker the toggle exists to remove (common guidance is under 3 flashes per second). The brief says to respect screen_shake_intensity and the photosensitivity toggle. The lines only scale with screen_shake_intensity.",
+    "scenario": "Photosensitivity toggle off (impact_frame_enabled = false), P P P P: the impact frame is gone, but the uppercut's lines still jump to a new pattern every 2 frames for about 0.5 s (vfx.avi 3228-3235: frames come in identical pairs, then change).",
+    "evidence": "vfx.avi 3228-3235 viewed frame by frame (the \"P P P P, impact frame off\" act). Code: speed_lines.gd:70 has no check of impact_frame_enabled; vfx_director.gd:306-308 gates only impact_frame.flash().",
+    "fix": "When Tuning.data.impact_frame_enabled is false, draw one shuffle at start() and let it fade without re-shuffling (or raise the redraw interval to 20 or more frames, 3 Hz or less). Document in the tooltip that the toggle covers both effects, and add a test that line positions don't change during advance() with the toggle off.",
+    "spec_question": false
+   },
+   {
+    "title": "Each FX texture loads from disk at the moment of the hit, dropping frames; the speed-line texture reloads on every redraw",
+    "severity": "minor",
+    "file": "game/fx/vfx_art.gd",
+    "line": 17,
+    "detail": "VfxArt.texture() calls load() on use, and nothing preloads or holds the textures:\n- each burst, word, blood, spit or tooth texture and each damage-look texture is read synchronously in the hit's frame;\n- SpeedLines._draw() (speed_lines.gd:90) holds its texture only in a local variable, so it is freed after every draw and re-read on the next one. This is also the root cause of known issue 1: the quads are drawn untextured.\nThe damage looks also toggle detail_enabled and uv1_triplanar, a new material variant at runtime. The rig's set_flash() avoids that on purpose.",
+    "scenario": "Measured in the test room on the M1 under Metal (1280x720 window), against control frames of 16-18 ms:\n- first finisher: 39-47 ms;\n- a later finisher: 25-30 ms;\n- first bruised look (on a light jab with 50 ms hitstop): 22-25 ms;\n- first bloodied look: 27-28 ms.\nThe hit itself stutters.",
+    "evidence": "Scratch scene (deleted) that measures the real time between _process calls, run twice:\n- control: 16-19 ms;\n- set_damage_look(BRUISED): 24.4 / 21.8 ms;\n- set_damage_look(BLOODIED): 27.5 / 27.9 ms;\n- first finisher _on_hit_landed: 46.7 / 46.2 ms;\n- second finisher: 28.2 / 24.9 ms.\nWith every assets/export/fx PNG loaded and held beforehand:\n- bruised: 16.1 / 18.0 ms;\n- bloodied: 16.6 / 16.4 ms;\n- second finisher: 18.6 / 17.8 ms;\n- the first finisher still costs 30-35 ms (shader and material compiles).\nA separate scratch Control proved the speed-line texture is freed: wedges render while a reference is held, solid rectangles when it is not.",
+    "fix": "1. Have VfxDirector hold every VfxArt texture (an Array[Texture2D] filled in _ready, or preload constants in VfxArt).\n2. Have SpeedLines keep its texture in a member variable.\n3. Warm up at room load: flash the impact-frame shader once at alpha 0, spawn each sprite flag combination once off-screen, and apply a damage look once to a hidden material. Alternatively, keep detail_enabled and triplanar always on with a blank detail texture, the way set_flash keeps emission enabled.",
+    "spec_question": false
+   }
+  ]
+ },
+ "review:wp1:feel": {
+  "summary": "WP1 (tuning panel, presets, cheats) review, judged from Movie Maker captures as Game-boy would use it. I drove it with real input events (Input.parse_input_event for mouse, keys and gamepad) from a scratch bot, in m2-tuning and in the integration worktree m2-trial. The scratch files are deleted and both worktrees are clean. The scratch preset was removed from user://tuning, and nothing was written to res://tuning. The m2-tuning suite passes, 313/313.\n\nWhat works, confirmed in the captures:\n- **Pages:** every category builds and scrolls, including VFX (2297 px of rows, 3.4 screens), Audio, Block and Moves.\n- **Editing:** slider drags and typed values apply. A typed value applies on Enter, and also when F1 closes the panel without Enter. The mouse wheel never changes a field.\n- **Changed values:** the yellow markers and the \" *\" marks on categories and moves are clear.\n- **Live hitstop:** raising hitstop_heavy_ms to 300 in the panel takes effect on the next hook. Hitstop on the dummy went from 5 to 18 ticks, and the fist visibly freezes for about 18 frames (wp1rev_hitstop.avi, frames 340-375).\n- **Live move edits:** these apply on the move's next use. With jab_1 startup at 20, the jab lands 21 frames after the press instead of 5. Setting the hook's tier to Finisher gives KRAK, speed lines and the finisher burst at once (wp1rev_moves.avi, frames 446-512).\n- **Presets:** Save, then Reset to default, then Load round-trips. The status line shows the full user:// path. Exporting as \"default\" with changed values is refused with a clear message.\n- **Input while open:** keys and clicks don't reach gameplay. The player doesn't move, attack or turn under W, Space, E, Q, R, H, F5, a left or right click on the scene, or mouse motion. The mouse stays free while open. Esc closes both menus without pausing and captures the mouse again.\n- **Readability and layout:** at 1280x720 the text is small but legible on an opaque ink panel. The panel clears the HP panel and the combat log, and in side view the fight is still visible to the right of it.\n\nDefects found:\n- **Major: the gamepad can't activate anything.** Godot 4.7's default ui_accept and ui_cancel have no joypad buttons, so A does nothing and B doesn't close the panel, although the docs say it does. With a pad you can only step the sliders on the page already shown.\n- **Minor:**\n  - The free-fly camera flies on the arrow keys while you use the panel.\n  - Reset to default and Load throw away unsaved edits with no confirmation or backup.\n  - \"Spawn at crosshair\" puts the new dummy out of sight behind the dummy you are looking at.\n  - The Moves page's move picker scrolls out of view.\n  - The VFX and Audio pages are long flat lists, so per-tier knobs are hard to find.\n  - Cheat states (god mode, one-hit KOs) are saved into and loaded from presets. This one is a spec question for Game-boy.",
+  "captures_reviewed": [
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-tuning/captures/panel_wp1.avi: frames 90, 250, 700 (F1 open, Hit feel, tooltip); contact sheet 108-520 every 23 (every category plus scrolled Block and Moves); 800, 860, 900, 1000 (drag, typed value, move picker dropdown, Moves page top and scrolled); 1140, 1250, 1350 (Save status with path, Load, refused default export); 1560, 1600 (F4 cheats beside the panel, spawn, reset); 1670 (Esc closes, mouse recaptured); 1750/1785/1840 crops and 1850 (gamepad focus and slider stepping)",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-trial/captures/wp1rev_panel.avi: frames 280, 330, 371 (VFX page scrolled), 640, 700, 733 (Audio page scrolled); log for every category, presets, input isolation, cheats, gamepad",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-trial/captures/wp1rev_hitstop.avi: frames 84-107 every 2 (hook at hitstop_heavy_ms 85), 340-375 every 3 (hook at 300, set live through the panel slider)",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-trial/captures/wp1rev_moves.avi: frames 300, 330, 360, 385 (Moves page dropdown edits), 446-466 and 488-512 every 4 (jab_1 startup 20, hook as Finisher, live)",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-trial/captures/wp1rev_freefly.avi: frames 85 and 158 (free-fly camera moved while arrow keys stepped a panel slider)",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-trial/captures/wp1rev_side.avi: frames 60 and 107 (side view with panel and cheats open)",
+   "headless probe (m2-trial, --act=wheel): mouse wheel over number fields, typed value then F1, F1 while typing a preset name"
+  ],
+  "findings": [
+   {
+    "title": "Gamepad A and B do nothing in the panel: ui_accept and ui_cancel have no joypad buttons in Godot 4.7",
+    "severity": "major",
+    "file": "game/ui/tuning_overlay.gd",
+    "line": 109,
+    "detail": "The overlay closes on `ui_cancel` and relies on `ui_accept` for buttons, toggles and drop-downs. In Godot 4.7's default InputMap, ui_accept is only Enter, Kp Enter and Space, and ui_cancel is only Escape. Neither has a joypad button, and neither GameInput nor project.godot adds one. With a pad:\n- B does not close the panel, although the overlay doc (line 15) and ARCHITECTURE.md lines 286 and 288 say 'Esc (ui_cancel, also gamepad B) closes both'.\n- A does not press a focused category button, so the D-pad can walk the category list but never shows another page.\n- A can't flip a toggle (impact_frame_enabled, the cheats), open a drop-down (Moves page, tier, preset list), or press Save, Load or Reset.\n- The gamepad can only step the sliders on whatever page the mouse last opened, and only View closes the panel.\n- The focused slider is marked only by a slightly brighter fill; its row name doesn't highlight, so it's hard to see which row the D-pad is on.\n- Spec \u00a74 is gamepad first, and the brief asks for the panel to be usable minimally with a gamepad. The tests (test_tuning_panel.gd, around lines 602-646) only cover View and D-pad focus movement.",
+    "scenario": "Game-boy plays on the pad. He presses View, and the panel opens with focus on 'Hit feel'. He moves the D-pad down to 'Camera' and presses A: the Hit feel page stays up. He presses B: the panel stays open. Only View closes it.",
+    "evidence": "Scratch bot sending InputEventJoypadButton through Input.parse_input_event, in m2-tuning (panel_wp1.log) and m2-trial (wp1rev_panel.log). View opened the panel and the D-pad moved focus. After A on the focused 'Enemies' button the log reads 'category=Hit feel focus=Button'Enemies''. After B it reads 'open=true'. Frame 1850 of panel_wp1.avi still shows the panel after B, and the crops at frames 1750, 1785 and 1840 show the weak slider focus. Printing InputMap.action_get_events in a blank 4.7 project gives 'ui_accept: Enter, Kp Enter, Space' and 'ui_cancel: Escape'. grep finds no ui_accept or ui_cancel bindings in game/ or project.godot.",
+    "fix": "In TuningOverlay._ready (WP1's own file), add InputEventJoypadButton A to ui_accept and B to ui_cancel when they are missing (InputMap.action_has_event / action_add_event). Alternatively, handle JOY_BUTTON_A and JOY_BUTTON_B in _Relay and the overlay. Also:\n- Show a category's page when its button gains focus (focus_entered \u2192 show_category), so D-pad browsing previews the pages.\n- Highlight the focused row (for example, the name label in DURABILITY color while the slider, toggle or drop-down has focus).\n- Add tests that a JOY_BUTTON_B press closes the overlay and that A presses a focused category button and toggles a focused CheckButton.",
+    "spec_question": false
+   },
+   {
+    "title": "Free-fly camera flies on the arrow keys while the panel is open",
+    "severity": "minor",
+    "file": "game/ui/tuning_overlay.gd",
+    "line": 190,
+    "detail": "The overlay freezes only the player's PlayerInput. FreeFlyCamera.update_camera (game/camera/free_fly_camera.gd:55-58) polls Input.get_axis on fly_* every frame. Those actions are the arrow keys and PageUp/PageDown, the same keys the panel uses for focus moves (Up/Down) and slider steps (Left/Right). The window takes the events, but the Input singleton's action state is global, so the camera moves anyway. Game-boy uses free-fly to look at hits from an angle while tuning, so his framing drifts each time he fine-tunes a value with the keyboard.",
+    "scenario": "F2 to free-fly, then F1, click the shake_heavy slider, press Right five times and Down once. shake_heavy goes from 0.25 to 0.3 as intended, but the camera has flown 3.6 m and the dummy he was framing is out of view.",
+    "evidence": "Scratch act 'freefly' in m2-trial: director.set_mode(free_fly), open the panel, focus a slider, then 5 \u00d7 Right (6 ticks each) and Down (20 ticks). The log reads 'camera FreeFlyCamera moved 3.61 m with the panel open; shake_heavy=0.3'. wp1rev_freefly.avi frames 85 and 158 show the view moved from the orange dummy to the purple one.",
+    "fix": "While the overlay is open, stop the free-fly camera's key motion. For example, TuningOverlay could add itself to a group (\"tuning_overlay\") or set a GameInput flag such as `ui_has_input` that FreeFlyCamera.update_camera checks before reading the fly_* axes. That's a one-line guard in a file outside WP1, so the lead decides who makes it.",
+    "spec_question": false
+   },
+   {
+    "title": "Reset to default and Load discard unsaved tuning with no confirmation or backup",
+    "severity": "minor",
+    "file": "game/ui/tuning_panel.gd",
+    "line": 318,
+    "detail": "'Reset to default' sits right next to 'Load' in the same row. One click restores every TuningData value and every move at once. Load likewise replaces everything with the picked preset. Neither asks first or keeps a copy, and there's no undo. Values are also not kept between runs, so quitting without Save loses the session. For a panel Game-boy must use unassisted to tune for a long stretch, one misclick next to Load wipes the work.",
+    "scenario": "Game-boy spends 20 minutes on the Hit feel, VFX and Audio values without saving. He moves to click Load and hits 'Reset to default'. Every value and move edit is gone, and the status line just reads 'Every value and move is back to the shipped defaults.'",
+    "evidence": "Scratch bot: one click on 'Reset to default' took hitstop_heavy_ms from 300 back to 85 and cleared the throw damage override at once (panel_wp1.log f1196, frame 1140). Code read: tuning_panel.gd reset_to_default() (line 188) and load_picked_preset() (line 170) call Tuning directly. tuning.gd apply_preset() overwrites data and restores every move first.",
+    "fix": "Make Reset two-step: the first click changes the label to 'Reset? click again' for about 3 s, and only a second click resets. Before any Reset or Load, write the current values to user://tuning/_backup.json, which shows in the preset list. Optionally also write it on every panel close, so a quit or crash never loses a session. Report the backup in the status line.",
+    "spec_question": false
+   },
+   {
+    "title": "'Spawn training dummy at crosshair' hides the new dummy behind the one you're aiming at",
+    "severity": "minor",
+    "file": "game/ui/cheat_menu.gd",
+    "line": 121,
+    "detail": "spawn_point() casts the crosshair ray against LAYER_WORLD only, so it passes through actors. At the normal look pitch (about -6\u00b0) from the lens height, the ray doesn't meet the floor within spawn_max_distance_m (6 m). The spot therefore ends spawn_open_distance_m (3 m) along the view. When the crosshair is on a training partner (the usual case), the new dummy stands directly behind that partner and is fully hidden in first person. Only the small grey 'Spawned Dummy 4.' line shows anything happened.",
+    "scenario": "Game-boy stands 1.6 m in front of Dummy 1, looking at it, and presses Spawn. The status says 'Spawned Dummy 4.', but no new body appears: it stands 1.56 m behind Dummy 1, on the same line of sight.",
+    "evidence": "Scratch bot in m2-trial: 'spawned=1 status=Spawned Dummy 4. at (0.76, 0, -1.8) (player (-2.4, 0, -1.8), dummy0 (-0.8, 0, -1.8))'. Frame 1560 of panel_wp1.avi (m2-tuning) shows only the dummy that was already there after the spawn.",
+    "fix": "Include the actor layer in the crosshair ray. If it meets an actor first, place the spawn in front of that actor toward the player, or beside it (one spawn_actor_clearance_m to the side, whichever side is clear). Otherwise keep the current floor, wall or open-distance logic.",
+    "spec_question": false
+   },
+   {
+    "title": "The Moves page's move picker and 'Reset move' scroll out of view",
+    "severity": "minor",
+    "file": "game/ui/tuning_panel.gd",
+    "line": 324,
+    "detail": "_build_moves_page() adds the move picker and 'Reset move' row to the page itself, which sits inside the scrolling content (990 px of content in a 681 px view). Once Game-boy scrolls down to Movement or Camera, the picker is gone. To switch moves, for example to compare hook and uppercut camera fields, he has to scroll back up each time, and he can't see which move he is editing.",
+    "scenario": "On the Moves page with 'hook *' picked, Game-boy scrolls to the CAMERA fields to edit camera_pitch_deg. The view now starts at 'knockback', with no move name or picker visible. Scrolling up is the only way to switch moves or reset this one.",
+    "evidence": "panel_wp1.avi frame 1000 (scrolled Moves page, no picker visible) against frame 900 (top). wp1rev_panel.log: 'category Moves ... max_scroll=990 page=681', scrolled to 309.",
+    "fix": "Build the picker row outside the ScrollContainer, between the presets and the body, or as a fixed header above `_content`. Show it only while category == MOVES_CATEGORY. Include the move's display_name and tier in the row, for example 'hook \u00b7 Hook \u00b7 Heavy'.",
+    "spec_question": false
+   },
+   {
+    "title": "VFX (about 65 rows) and Audio (about 39 rows) are flat lists, so per-tier knobs are hard to find",
+    "severity": "minor",
+    "file": "game/autoload/tuning.gd",
+    "line": 103,
+    "detail": "In the merged build, the VFX page is 2297 px tall, 3.4 screens of rows like vfx_word_chance_heavy and vfx_blood_drops_finisher. Audio is 1387 px, two screens. Both have no sub-headers. TuningData already sorts them into sections (bursts, words, speed lines, impact frame, blood, spit and teeth, blocks, damage looks; mix, layers, voices, positional, music, rumble), but only as ## comments. exported_properties() skips @export_subgroup entries (PROPERTY_USAGE_SUBGROUP), so even subgroups wouldn't show. To 'tune the heavy tier', Game-boy has to scan three long pages for names with 'heavy' in them.",
+    "scenario": "Game-boy wants every heavy-tier value: hitstop, punch and shake on Hit feel, then word chance, word size, burst size, blood chance and blood drops scattered through the 65 VFX rows, then rumble on the second screen of Audio. There's no grouping or search to narrow it down.",
+    "evidence": "wp1rev_panel.log: 'category VFX ... max_scroll=2297 page=681' and 'category Audio ... max_scroll=1387'. Frames 280/330/371 and 640/700/733 of wp1rev_panel.avi show unbroken name columns. awk count of TuningData groups: VFX 65, Audio 39.",
+    "fix": "Have Tuning.exported_properties() record a `subgroup` from PROPERTY_USAGE_SUBGROUP entries, and have TuningPanel draw a sub-header for each one (like the Moves page's group labels). The VFX and Audio owners then wrap their sections in @export_subgroup, which costs no extra UI code. Optionally add a filter field above the categories that shows matching rows across all groups (type 'heavy' to see every heavy-tier knob in one place).",
+    "spec_question": false
+   },
+   {
+    "title": "Cheat states (god mode, one-hit KOs) are saved into presets and set again on Load",
+    "severity": "minor",
+    "file": "game/autoload/tuning.gd",
+    "line": 221,
+    "detail": "god_mode and one_hit_ko live in TuningData's Debug group. preset_dict() writes every TuningData value, and apply_preset() sets every one, so a preset carries the cheats that were on when it was saved. Loading or exporting it silently turns them on again, and Reset to default turns off a cheat that F4 had just switched on. That matches the brief's 'a preset holds every TuningData value', and ARCHITECTURE documents it as intended. For tuning, though, it mixes session cheats into feel presets.",
+    "scenario": "Game-boy turns on one-hit KOs with F4 to check the finisher launch, then saves 'heavy_v2'. Next session he loads 'heavy_v2' to keep tuning chains, and every jab now KOs the dummy, so he can never reach the heavy and finisher hits. Or the preset is exported to res://tuning with god_mode on and handed over as the new defaults.",
+    "evidence": "Code read: tuning.gd preset_dict() (lines 221-233) iterates every tuning_properties() entry, including the Debug group. apply_preset() (lines 266-267) sets them all, and cheat_menu.gd set_god_mode()/set_one_hit_ko() write those same properties. The capture showed 'Debug *' marked as changed after the cheats were toggled (panel_wp1.avi frame 1600).",
+    "fix": "Proposal for Game-boy: leave the 'Debug' group out of presets. Save, Load and Reset to default would skip god_mode and one_hit_ko, so cheats keep their session state. Default if he doesn't rule: exclude them, and note it in README's Milestone 2 departures. The alternative is to keep them in presets and show a warning in the status line when a loaded preset turns a cheat on.",
+    "spec_question": true
+   }
+  ]
+ }
+}
