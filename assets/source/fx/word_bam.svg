@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="216" viewBox="-24.2 -25.3 362.2 153.1">
+<!-- Comic lettering "BAM!". Drawn by tools/gen_fx.gd (original art, Beat-em-up PoC). -->
+<defs>
+<linearGradient id="fill" gradientUnits="userSpaceOnUse" x1="0" x2="0" y1="-15.8" y2="106.5"><stop offset="0" stop-color="#fff6b8"/><stop offset="1" stop-color="#ff9a1f"/></linearGradient>
+</defs>
+<g transform="translate(7.0 9.0)"><path d="M15.0 -15.8 L77.1 -10.3 L94.2 5.1 L86.5 34.5 L72.4 43.7 L85.2 57.6 L76.3 91.6 L56.6 103.7 L-14.7 97.5 Z M35.0 6.8 L62.6 9.2 L66.0 14.2 L62.1 28.9 L56.3 33.0 L28.7 30.6 Z M23.1 52.1 L53.0 54.7 L57.3 60.9 L53.1 76.8 L45.9 81.9 L16.0 79.3 Z" fill="#120f17" stroke="#120f17" stroke-width="11.0" stroke-linejoin="round" stroke-linecap="round" fill-rule="evenodd"/></g>
+<g transform="translate(7.0 9.0)"><path d="M85.0 106.5 L123.1 1.2 L151.3 -1.4 L173.8 98.3 L149.6 100.5 L145.1 80.6 L116.8 83.2 L109.2 104.3 Z M124.4 62.2 L140.6 60.7 L135.0 28.6 Z" fill="#120f17" stroke="#120f17" stroke-width="11.0" stroke-linejoin="round" stroke-linecap="round" fill-rule="evenodd"/></g>
+<g transform="translate(7.0 9.0)"><path d="M168.9 101.0 L188.9 5.2 L214.0 6.1 L229.7 47.3 L262.3 7.9 L287.4 8.9 L267.3 104.7 L245.1 103.9 L256.3 50.2 L220.9 89.5 L202.3 48.2 L191.1 101.9 Z" fill="#120f17" stroke="#120f17" stroke-width="11.0" stroke-linejoin="round" stroke-linecap="round" fill-rule="evenodd"/></g>
+<g transform="translate(7.0 9.0)"><path d="M292.6 1.9 L318.8 3.8 L296.1 70.8 L282.0 69.8 Z M277.8 78.6 L296.9 80.0 L291.3 102.8 L272.2 101.4 Z" fill="#120f17" stroke="#120f17" stroke-width="11.0" stroke-linejoin="round" stroke-linecap="round" fill-rule="evenodd"/></g>
+<path d="M15.0 -15.8 L77.1 -10.3 L94.2 5.1 L86.5 34.5 L72.4 43.7 L85.2 57.6 L76.3 91.6 L56.6 103.7 L-14.7 97.5 Z M35.0 6.8 L62.6 9.2 L66.0 14.2 L62.1 28.9 L56.3 33.0 L28.7 30.6 Z M23.1 52.1 L53.0 54.7 L57.3 60.9 L53.1 76.8 L45.9 81.9 L16.0 79.3 Z" fill="#120f17" stroke="#120f17" stroke-width="11.0" stroke-linejoin="round" stroke-linecap="round" fill-rule="evenodd"/>
+<path d="M85.0 106.5 L123.1 1.2 L151.3 -1.4 L173.8 98.3 L149.6 100.5 L145.1 80.6 L116.8 83.2 L109.2 104.3 Z M124.4 62.2 L140.6 60.7 L135.0 28.6 Z" fill="#120f17" stroke="#120f17" stroke-width="11.0" stroke-linejoin="round" stroke-linecap="round" fill-rule="evenodd"/>
+<path d="M168.9 101.0 L188.9 5.2 L214.0 6.1 L229.7 47.3 L262.3 7.9 L287.4 8.9 L267.3 104.7 L245.1 103.9 L256.3 50.2 L220.9 89.5 L202.3 48.2 L191.1 101.9 Z" fill="#120f17" stroke="#120f17" stroke-width="11.0" stroke-linejoin="round" stroke-linecap="round" fill-rule="evenodd"/>
+<path d="M292.6 1.9 L318.8 3.8 L296.1 70.8 L282.0 69.8 Z M277.8 78.6 L296.9 80.0 L291.3 102.8 L272.2 101.4 Z" fill="#120f17" stroke="#120f17" stroke-width="11.0" stroke-linejoin="round" stroke-linecap="round" fill-rule="evenodd"/>
+<path d="M15.0 -15.8 L77.1 -10.3 L94.2 5.1 L86.5 34.5 L72.4 43.7 L85.2 57.6 L76.3 91.6 L56.6 103.7 L-14.7 97.5 Z M35.0 6.8 L62.6 9.2 L66.0 14.2 L62.1 28.9 L56.3 33.0 L28.7 30.6 Z M23.1 52.1 L53.0 54.7 L57.3 60.9 L53.1 76.8 L45.9 81.9 L16.0 79.3 Z" fill="url(#fill)" fill-rule="evenodd"/>
+<path d="M85.0 106.5 L123.1 1.2 L151.3 -1.4 L173.8 98.3 L149.6 100.5 L145.1 80.6 L116.8 83.2 L109.2 104.3 Z M124.4 62.2 L140.6 60.7 L135.0 28.6 Z" fill="url(#fill)" fill-rule="evenodd"/>
+<path d="M168.9 101.0 L188.9 5.2 L214.0 6.1 L229.7 47.3 L262.3 7.9 L287.4 8.9 L267.3 104.7 L245.1 103.9 L256.3 50.2 L220.9 89.5 L202.3 48.2 L191.1 101.9 Z" fill="url(#fill)" fill-rule="evenodd"/>
+<path d="M292.6 1.9 L318.8 3.8 L296.1 70.8 L282.0 69.8 Z M277.8 78.6 L296.9 80.0 L291.3 102.8 L272.2 101.4 Z" fill="url(#fill)" fill-rule="evenodd"/>
+<path d="M50.1 -4.1 l14 -3 l-2 6 l-14 3 Z" fill="#ffffff"/>
+</svg>

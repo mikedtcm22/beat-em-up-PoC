@@ -163,6 +163,7 @@ func _build_presentation() -> void:
 	# Milestone 2 (WP1): the F1 tuning panel and the F4 cheat menu (game/ui/tuning_overlay.gd).
 	if ResourceLoader.exists(TUNING_OVERLAY_SCENE):
 		add_child((load(TUNING_OVERLAY_SCENE) as PackedScene).instantiate())
+	add_child(VfxDirector.new())  # M2 WP2: comic VFX and damage looks (game/fx/vfx_director.gd)
 
 
 func _add_box(pos: Vector3, size: Vector3, material: Material) -> StaticBody3D:

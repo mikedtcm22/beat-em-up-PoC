@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0.0 0.0 512.0 512.0">
+<!-- Impact burst, small (light hits). Drawn by tools/gen_fx.gd (original art, Beat-em-up PoC). -->
+<defs>
+<radialGradient id="core" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#ffffff" stop-opacity="1.0"/><stop offset="1" stop-color="#fff6b8" stop-opacity="1.0"/></radialGradient>
+</defs>
+<path d="M493.3 231.8 L363.5 292.5 L430.3 417.6 L314.9 348.9 L348.4 462.5 L248.9 369.8 L158.0 471.9 L192.9 338.2 L83.1 378.9 L143.2 292.1 L27.0 227.2 L142.2 225.1 L103.1 110.0 L202.5 176.1 L186.6 33.3 L250.1 154.8 L311.2 39.4 L310.8 173.6 L421.4 118.7 L353.8 230.5 Z" fill="url(#core)" stroke="#120f17" stroke-width="16.0" stroke-linejoin="round" stroke-linecap="round"/>
+</svg>
