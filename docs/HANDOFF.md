@@ -4,6 +4,16 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-23 18:10 CDT: account C took over; phase 1 verify-and-fix running
+A third account's working session took over at 0% of its 5-hour window (resets 23:00 CDT) and 0% weekly (resets Wed 2026-10-28 11:00 CDT). Its usage watcher runs (Haiku, low effort, `/loop 5m`, session "Beat-em-up: usage watcher").
+- **Running:** workflow `m2-phase1-verify-fix` (run `wf_3d9df549-bac`, started from this session). It runs one heavy agent per WP and at most two at once: WP2 and WP3 first, then WP1. A Haiku usage gate runs before each launch and stops new launches at 65% (5-hour) or 85% (weekly).
+  - **WP2:** verifies the 13 findings and fixes them in `.worktrees/m2-vfx`. It also fixes the speed-line texture lifetime (the lines must end as crisp tapered ink), lunge lines on plain jabs, and the bruised look at 1 m. It leaves after-sheets in `.worktrees/m2-vfx/captures/review/`.
+  - **WP3:** reviews from scratch (mechanics, plus feel by WAV and capture-audio analysis), then verifies and fixes in `.worktrees/m2-audio`.
+  - **WP1:** verifies the 17 findings and fixes them in `.worktrees/m2-tuning`, including the panel showing `@export_subgroup` headings. WP2 and WP3 put their own groups into subgroups.
+  - Each agent commits "M2 WPn: review fixes (...)" and pushes its branch, committing `wip:` along the way.
+- **If cut off:** check each WP branch for a "review fixes" commit. A WP without one needs its pass redone. Copy that WP's prompt from the workflow script in this session's transcript, or rewrite it from this entry. Within the same session, resume with `resumeFromRunId`.
+- **Then:** merge into `m2/hit-feel` as the trial did, regenerate the preset, run the tests, push. Ask Game-boy the player-ragdoll question before WP4.
+
 ### 2026-10-23 17:25 CDT: handoff, account B's 5-hour window at 72% (switched accounts 17:55)
 The watcher warned at 72% of account B's 5-hour window, which resets at 21:40 CDT; B's weekly is at 12%. Account A's weekly is still at 95% until Mon 2026-10-26 01:00 CDT. Everything is committed and pushed; the worktrees are clean.
 - **Burn rate.** In about 20 minutes, four parallel review agents took the window from 7% to 62%. Each heavy reviewer costs about 13% of a 5-hour window here, so run at most 2 at once and gate every launch on `get_usage`.
