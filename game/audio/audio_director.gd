@@ -39,8 +39,8 @@ extends Node
 ## `rear_muffle_hz`: stereo alone can't tell behind from in front.
 ##
 ## Buses (created on first use when the project has none): "SFX" (a hard limiter, so
-## stacked layers never clip) and "SFX Rear" (a low-pass, into "SFX") for one-shots, and
-## "Music".
+## stacked layers never clip, with `sfx_volume_db` as its pre-gain) and "SFX Rear" (a
+## low-pass, into "SFX") for one-shots, and "Music".
 
 ## Emitted for every one-shot played: its pool and the pooled voice it plays on.
 signal played(pool: StringName, voice: AudioStreamPlayer3D)
@@ -393,7 +393,14 @@ func _apply_mix() -> void:
 	var tuning := Tuning.data
 	var sfx := AudioServer.get_bus_index(SFX_BUS)
 	if sfx >= 0:
-		AudioServer.set_bus_volume_db(sfx, tuning.sfx_volume_db)
+		# A bus's volume applies after its effects, so on the SFX bus it left the limiter
+		# squashing as hard at any setting: the SFX volume goes in as the limiter's pre-gain.
+		var limiter := sfx_limiter()
+		if limiter:
+			limiter.pre_gain_db = tuning.sfx_volume_db
+			AudioServer.set_bus_volume_db(sfx, 0.0)
+		else:
+			AudioServer.set_bus_volume_db(sfx, tuning.sfx_volume_db)
 	var rear := AudioServer.get_bus_index(REAR_BUS)
 	if rear >= 0 and AudioServer.get_bus_effect_count(rear) > 0:
 		var low_pass := AudioServer.get_bus_effect(rear, 0) as AudioEffectLowPassFilter
@@ -407,6 +414,18 @@ func _apply_mix() -> void:
 			music.play()
 		else:
 			music.stop()
+
+
+## The SFX bus's hard limiter (null without one: a project bus layout may leave it out).
+func sfx_limiter() -> AudioEffectHardLimiter:
+	var sfx := AudioServer.get_bus_index(SFX_BUS)
+	if sfx < 0:
+		return null
+	for i in AudioServer.get_bus_effect_count(sfx):
+		var limiter := AudioServer.get_bus_effect(sfx, i) as AudioEffectHardLimiter
+		if limiter:
+			return limiter
+	return null
 
 
 func _ensure_buses() -> void:

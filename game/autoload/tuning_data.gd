@@ -192,8 +192,9 @@ extends Resource
 
 @export_group("Audio")
 @export_subgroup("Mix")
-## Volume of every sound effect (the SFX bus), in dB.
-@export_range(-40.0, 6.0, 0.5) var sfx_volume_db: float = 0.0
+## Volume of every sound effect, in dB: the SFX bus limiter's pre-gain, so turning it down
+## also leaves the limiter headroom (below 0 by default: finishers barely touch it).
+@export_range(-40.0, 6.0, 0.5) var sfx_volume_db: float = -3.0
 ## Each one-shot's pitch varies at random by up to plus or minus this share (Spec §6: 8%).
 @export_range(0.0, 0.3, 0.01) var sfx_pitch_variation: float = 0.08
 ## ...and its volume (as amplitude) by up to plus or minus this share (Spec §6: 8%).
@@ -231,9 +232,9 @@ extends Resource
 ## on while rear_warning_audio).
 @export_range(-40.0, 12.0, 0.5) var windup_db: float = -10.0
 @export_subgroup("Blocks")
-@export_range(-40.0, 12.0, 0.5) var block_clack_db: float = -4.0
+@export_range(-40.0, 12.0, 0.5) var block_clack_db: float = -2.5
 @export_range(-40.0, 12.0, 0.5) var parry_ting_db: float = -6.0
-@export_range(-40.0, 12.0, 0.5) var guard_break_db: float = -3.0
+@export_range(-40.0, 12.0, 0.5) var guard_break_db: float = -1.0
 @export_subgroup("Distance")
 ## Sounds play at their layer's volume within this distance (m) of the listener (the
 ## player's eyes), 6 dB quieter at twice it, and so on.

@@ -348,9 +348,14 @@ func test_layer_and_tier_volumes_follow_tuning_live() -> void:
 		CombatEvents.hit_landed.emit(hit)
 		var clack: Array = _plays.filter(func(p: Dictionary) -> bool: return p.pool == &"block_clack")
 		assert_almost_eq(float(clack[0].volume_db), Tuning.data.block_clack_db + AudioDirector.tier_db(tier), 0.0001)
+	# The SFX volume is the limiter's pre-gain: the bus volume applies after the limiter, so
+	# turning it down never gave the limiter headroom.
 	Tuning.data.sfx_volume_db = -12.0
 	await _frames(1)
-	assert_almost_eq(AudioServer.get_bus_volume_db(AudioServer.get_bus_index(AudioDirector.SFX_BUS)), -12.0, 0.001)
+	var limiter := _director.sfx_limiter()
+	assert_not_null(limiter)
+	assert_almost_eq(limiter.pre_gain_db, -12.0, 0.001)
+	assert_almost_eq(AudioServer.get_bus_volume_db(AudioServer.get_bus_index(AudioDirector.SFX_BUS)), 0.0, 0.001)
 
 
 func test_flying_bodies_hit_without_a_whoosh() -> void:
