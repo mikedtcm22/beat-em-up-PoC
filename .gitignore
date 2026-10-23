@@ -30,3 +30,6 @@ Thumbs.db
 
 # Agent worktrees (parallel module builds)
 .worktrees/
+
+# Usage watcher's emergency snapshot (untracked by design)
+HANDOFF-SNAPSHOT.md
