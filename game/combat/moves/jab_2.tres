@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="MoveData" format=3 uid="uid://cje3wpruqj0xx"]
+
+[ext_resource type="Script" uid="uid://c7u6g52wmmok0" path="res://game/combat/combo_branch.gd" id="combo_branch_gd"]
+[ext_resource type="Script" uid="uid://cgv6sg6uflq2j" path="res://game/combat/hitbox_spec.gd" id="hitbox_spec_gd"]
+[ext_resource type="Resource" uid="uid://qsqihv8qblhh" path="res://game/combat/moves/hook.tres" id="hook"]
+[ext_resource type="Script" uid="uid://difuwhwjj1vue" path="res://game/combat/move_data.gd" id="move_data_gd"]
+[ext_resource type="Resource" uid="uid://dskx2fkps3xwj" path="res://game/combat/moves/push_kick.tres" id="push_kick"]
+[ext_resource type="Resource" uid="uid://dkox74bohfq2l" path="res://game/combat/moves/spinning_backfist.tres" id="spinning_backfist"]
+
+[sub_resource type="Resource" id="branch_0"]
+script = ExtResource("combo_branch_gd")
+move = ExtResource("hook")
+
+[sub_resource type="Resource" id="branch_1"]
+script = ExtResource("combo_branch_gd")
+input = &"K"
+move = ExtResource("push_kick")
+
+[sub_resource type="Resource" id="branch_2"]
+script = ExtResource("combo_branch_gd")
+timing = 1
+move = ExtResource("spinning_backfist")
+
+[sub_resource type="Resource" id="hitbox_0"]
+script = ExtResource("hitbox_spec_gd")
+
+[resource]
+script = ExtResource("move_data_gd")
+id = &"jab_2"
+display_name = "Jab"
+hitboxes = Array[ExtResource("hitbox_spec_gd")]([SubResource("hitbox_0")])
+branches = Array[ExtResource("combo_branch_gd")]([SubResource("branch_0"), SubResource("branch_1"), SubResource("branch_2")])

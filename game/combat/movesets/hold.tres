@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="MoveSet" format=3 uid="uid://ch5oevbp7hu0"]
+
+[ext_resource type="Script" uid="uid://c7u6g52wmmok0" path="res://game/combat/combo_branch.gd" id="combo_branch_gd"]
+[ext_resource type="Resource" uid="uid://vbpfybtfkd82" path="res://game/combat/moves/knee.tres" id="knee"]
+[ext_resource type="Script" uid="uid://dn23gy67ktucq" path="res://game/combat/move_set.gd" id="move_set_gd"]
+[ext_resource type="Resource" uid="uid://d1jt3no3c8c8l" path="res://game/combat/moves/throw.tres" id="throw"]
+
+[sub_resource type="Resource" id="root_0"]
+script = ExtResource("combo_branch_gd")
+move = ExtResource("knee")
+
+[sub_resource type="Resource" id="root_1"]
+script = ExtResource("combo_branch_gd")
+input = &"K"
+move = ExtResource("throw")
+
+[resource]
+script = ExtResource("move_set_gd")
+id = &"hold"
+root_branches = Array[ExtResource("combo_branch_gd")]([SubResource("root_0"), SubResource("root_1")])

@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="MoveData" format=3 uid="uid://i3bnkelrgm8e"]
+
+[ext_resource type="Resource" uid="uid://c4iavcfujjo0w" path="res://game/combat/moves/body_flurry.tres" id="body_flurry"]
+[ext_resource type="Script" uid="uid://c7u6g52wmmok0" path="res://game/combat/combo_branch.gd" id="combo_branch_gd"]
+[ext_resource type="Script" uid="uid://cgv6sg6uflq2j" path="res://game/combat/hitbox_spec.gd" id="hitbox_spec_gd"]
+[ext_resource type="Resource" uid="uid://cje3wpruqj0xx" path="res://game/combat/moves/jab_2.tres" id="jab_2"]
+[ext_resource type="Script" uid="uid://difuwhwjj1vue" path="res://game/combat/move_data.gd" id="move_data_gd"]
+
+[sub_resource type="Resource" id="branch_0"]
+script = ExtResource("combo_branch_gd")
+move = ExtResource("jab_2")
+
+[sub_resource type="Resource" id="branch_1"]
+script = ExtResource("combo_branch_gd")
+timing = 1
+move = ExtResource("body_flurry")
+
+[sub_resource type="Resource" id="hitbox_0"]
+script = ExtResource("hitbox_spec_gd")
+point = &"LeftFistPoint"
+
+[resource]
+script = ExtResource("move_data_gd")
+id = &"jab_1"
+display_name = "Jab"
+hitboxes = Array[ExtResource("hitbox_spec_gd")]([SubResource("hitbox_0")])
+branches = Array[ExtResource("combo_branch_gd")]([SubResource("branch_0"), SubResource("branch_1")])

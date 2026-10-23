@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://ckbd3m3ke3l24"]
+
+[ext_resource type="Script" uid="uid://oeltctnsgqj0" path="res://game/camera/camera_director.gd" id="1_kprw3"]
+
+[node name="CameraDirector" type="Node3D" unique_id=1294948189]
+script = ExtResource("1_kprw3")
