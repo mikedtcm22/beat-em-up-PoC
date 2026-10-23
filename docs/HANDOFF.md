@@ -4,7 +4,7 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
-### 2026-10-23 17:25 CDT: handoff, account B's 5-hour window at 72%
+### 2026-10-23 17:25 CDT: handoff, account B's 5-hour window at 72% (switched accounts 17:55)
 The watcher warned at 72% of account B's 5-hour window, which resets at 21:40 CDT; B's weekly is at 12%. Account A's weekly is still at 95% until Mon 2026-10-26 01:00 CDT. Everything is committed and pushed; the worktrees are clean.
 - **Burn rate.** In about 20 minutes, four parallel review agents took the window from 7% to 62%. Each heavy reviewer costs about 13% of a 5-hour window here, so run at most 2 at once and gate every launch on `get_usage`.
 - **Stopped:** workflow `m2-phase1-review-fix` (run `wf_18e38241-91a`). Four of its six reviewers finished.
@@ -27,7 +27,7 @@ The watcher warned at 72% of account B's 5-hour window, which resets at 21:40 CD
   3. Then merge into `m2/hit-feel`. The trial merge at `.worktrees/m2-trial` (local only) shows how: keep all four `_build_presentation()` lines and both ASSETS.md sections, then `godot --headless --import --quit && godot --headless -s tools/gen_default_preset.gd`, then `tools/run_tests.sh` (371 pass).
   4. Then WP4.
 - **WP4 brief:** the lead's design decisions for the ragdoll are drafted in [docs/milestones/M2-WP4-brief.md](milestones/M2-WP4-brief.md). The player keeps animation-only reactions by default, with a toggle (asked of Game-boy, no answer yet). Staggers get a partial ragdoll on the upper body. Every off-feet reaction gets a full ragdoll held to the simulation's body by a soft spring. The ragdoll follows each actor's hitstop and slow-mo scale. A "Ragdoll" tuning group.
-- **Game-boy:** decide whether to wait for account B's reset at 21:40 CDT or switch accounts. Answer the player-ragdoll default.
+- **17:55 CDT: Game-boy switched accounts.** Account B's watcher has been told to end its loop, and B's working session was renamed "Beat-em-up: account B session (handed off)", which frees the title. The new account's session renames itself "Beat-em-up: working session" and starts its own watcher. The player-ragdoll default is still unanswered; ask Game-boy before WP4 starts.
 
 ### 2026-10-23 17:05 CDT: account B took over; phase 1 review and fix running
 Account B's working session took over at 1% of its 5-hour window (resets 21:39 CDT) and 0% weekly (resets Tue 2026-10-27 17:00 CDT). Its usage watcher runs (Haiku, `/loop 5m`, session "Beat-em-up: usage watcher").
