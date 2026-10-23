@@ -142,9 +142,7 @@ func test_each_tier_layers_its_one_shots() -> void:
 		assert_eq(_pools(), expected[tier], CombatTypes.tier_name(tier))
 
 
-func test_layers_play_at_the_contact_point_with_the_tuned_distances() -> void:
-	Tuning.data.sfx_unit_size_m = 4.5
-	Tuning.data.sfx_max_distance_m = 25.0
+func test_layers_play_at_the_contact_point() -> void:
 	var at := Vector3(1.2, 1.4, -2.3)
 	CombatEvents.hit_landed.emit(_hit(CombatTypes.HitTier.FINISHER, null, null, at))
 	assert_eq(_pools().size(), 5)
@@ -152,10 +150,29 @@ func test_layers_play_at_the_contact_point_with_the_tuned_distances() -> void:
 		if play.pool in IMPACT_POOLS:
 			assert_almost_eq(play.at as Vector3, at, Vector3.ONE * 0.001, "%s at the contact point" % play.pool)
 			var voice: AudioStreamPlayer3D = play.voice
-			assert_eq(voice.unit_size, 4.5)
-			assert_eq(voice.max_distance, 25.0)
-			assert_eq(voice.max_db, 0.0, "never boosted near the listener")
-			assert_true(voice.playing or voice.has_stream_playback(), "%s started" % play.pool)
+			assert_eq(voice.attenuation_model, AudioStreamPlayer3D.ATTENUATION_DISABLED, "the director's own fall-off")
+			assert_true(voice.playing, "%s started" % play.pool)
+
+
+## Within sfx_unit_size_m every layer keeps its own volume (Godot's max_db would flatten
+## them all to one loudness); beyond it, 6 dB per doubling, live as the listener moves; past
+## sfx_max_distance_m, nothing plays.
+func test_sounds_fall_off_with_distance_from_the_listener() -> void:
+	var t := Tuning.data
+	t.sfx_volume_variation = 0.0
+	t.sfx_unit_size_m = 3.0
+	t.sfx_max_distance_m = 20.0
+	var near_thud := _director.play(&"thud", Vector3(0.0, 0.0, -0.8), t.thud_db)
+	var near_whoosh := _director.play(&"whoosh", Vector3(0.0, 0.0, -0.8), t.whoosh_db)
+	assert_almost_eq(near_thud.volume_db, t.thud_db, 0.001, "close by: the layer's volume")
+	assert_almost_eq(near_whoosh.volume_db, t.whoosh_db, 0.001, "...each its own")
+	var far := _director.play(&"thud", Vector3(0.0, 0.0, -12.0), t.thud_db)
+	assert_almost_eq(far.volume_db, t.thud_db - 12.04, 0.01, "4x the unit size: -12 dB")
+	assert_null(_director.play(&"thud", Vector3(0.0, 0.0, -21.0), t.thud_db), "beyond the max distance")
+	# The listener walks up to the far sound: it gets louder while it plays.
+	_director.listener.global_position = Vector3(0.0, 0.0, -9.0)
+	await _frames(1)
+	assert_almost_eq(far.volume_db, t.thud_db, 0.01)
 
 
 func test_pitch_and_volume_vary_within_the_tuned_range() -> void:

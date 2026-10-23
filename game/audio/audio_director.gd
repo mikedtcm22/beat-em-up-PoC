@@ -23,7 +23,10 @@ extends Node
 ##
 ## Every one-shot takes a random variant of its pool, never the pool's last one, with its
 ## pitch and volume varied by up to `sfx_pitch_variation` / `sfx_volume_variation` (±8%).
-## The listener rides the player's eyes and look, in every camera mode. Sounds more than
+## The listener rides the player's eyes and look, in every camera mode. A sound plays at
+## its layer's volume within `sfx_unit_size_m` of it, 6 dB quieter each time the distance
+## doubles beyond that (updated every frame), and not at all beyond `sfx_max_distance_m`.
+## Sounds more than
 ## `rear_muffle_angle_deg` off the look play through the "SFX Rear" bus, low-passed at
 ## `rear_muffle_hz`: stereo alone can't tell behind from in front.
 ##
@@ -71,6 +74,8 @@ var listener: AudioListener3D
 var music: AudioStreamPlayer
 
 var _voices: Array[AudioStreamPlayer3D] = []
+## Each voice's volume before the distance fall-off (its layer's, varied).
+var _base_db: Array[float] = []
 var _next: int = 0
 var _music_on: bool = false
 ## Seconds of _process time, for the grunt interval.
@@ -96,11 +101,15 @@ func _ready() -> void:
 		var voice := AudioStreamPlayer3D.new()
 		voice.name = "Voice%d" % i
 		voice.bus = SFX_BUS
-		# Never louder than the layer's own volume, however close: unit_size sets where the
-		# fall-off starts.
-		voice.max_db = 0.0
+		# The fall-off is distance_db(), applied every frame: Godot's own models raise sounds
+		# inside unit_size, and max_db clamps volume and distance gain together, which
+		# flattened every layer within reach to one loudness. Its distance low-pass (tied to
+		# that gain) is off too; the rear muffle is the one filter.
+		voice.attenuation_model = AudioStreamPlayer3D.ATTENUATION_DISABLED
+		voice.attenuation_filter_db = 0.0
 		add_child(voice)
 		_voices.append(voice)
+		_base_db.append(0.0)
 	music = AudioStreamPlayer.new()
 	music.name = &"Music"
 	music.bus = MUSIC_BUS
@@ -117,26 +126,33 @@ func _process(delta: float) -> void:
 	_clock_s += delta
 	_follow_player()
 	_apply_mix()
+	for i in _voices.size():
+		if _voices[i].playing:
+			_voices[i].volume_db = _base_db[i] + distance_db(_voices[i].global_position)
 
 
 ## Plays a random variant of `pool` (never the pool's last one) at `at`, at `volume_db`
 ## varied by up to ±sfx_volume_variation (as amplitude), and at `pitch` varied by up to
-## ±sfx_pitch_variation. Returns the voice it plays on, or null when the pool is empty.
+## ±sfx_pitch_variation, quieter with distance (distance_db()). Returns the voice it plays
+## on, or null when the pool is empty or `at` is beyond Tuning.sfx_max_distance_m.
 func play(pool: StringName, at: Vector3, volume_db: float, pitch: float = 1.0) -> AudioStreamPlayer3D:
+	var tuning := Tuning.data
+	var far := tuning.sfx_max_distance_m
+	if far > 0.0 and listener_transform().origin.distance_to(at) > far:
+		return null
 	var stream := bank.pick(pool, rng)
 	if stream == null:
 		return null
-	var tuning := Tuning.data
-	var voice := _take_voice()
+	var index := _take_voice()
+	var voice := _voices[index]
 	voice.stream = stream
 	voice.global_position = at
-	voice.unit_size = tuning.sfx_unit_size_m
-	voice.max_distance = tuning.sfx_max_distance_m
 	voice.bus = REAR_BUS if is_behind_listener(at) else SFX_BUS
 	var pitch_var := tuning.sfx_pitch_variation
 	voice.pitch_scale = pitch * (1.0 + rng.randf_range(-pitch_var, pitch_var))
 	var volume_var := tuning.sfx_volume_variation
-	voice.volume_db = volume_db + linear_to_db(1.0 + rng.randf_range(-volume_var, volume_var))
+	_base_db[index] = volume_db + linear_to_db(1.0 + rng.randf_range(-volume_var, volume_var))
+	voice.volume_db = _base_db[index] + distance_db(at)
 	voice.play()
 	played.emit(pool, voice)
 	return voice
@@ -148,6 +164,14 @@ func listener_transform() -> Transform3D:
 		return listener.global_transform
 	var camera := get_viewport().get_camera_3d()
 	return camera.global_transform if camera else listener.global_transform
+
+
+## The distance fall-off for a sound at `at`, in dB: 0 within Tuning.sfx_unit_size_m of
+## the listener, 6 dB less each time the distance doubles beyond it (inverse distance).
+func distance_db(at: Vector3) -> float:
+	var unit := Tuning.data.sfx_unit_size_m
+	var distance := listener_transform().origin.distance_to(at)
+	return linear_to_db(unit / maxf(distance, unit))
 
 
 ## True when `at` lies more than Tuning.rear_muffle_angle_deg off the listener's flat look.
@@ -255,17 +279,17 @@ func _strike_position(actor: Node3D, move: MoveData) -> Vector3:
 	return combat_actor.get_chest_position()
 
 
-## A free voice, else the one started longest ago (stopped).
-func _take_voice() -> AudioStreamPlayer3D:
+## The index of a free voice, else of the one started longest ago (stopped).
+func _take_voice() -> int:
 	var n := _voices.size()
 	for k in n:
 		var index := (_next + k) % n
 		if not _voices[index].playing:
 			_next = (index + 1) % n
-			return _voices[index]
-	var oldest := _voices[_next]
+			return index
+	var oldest := _next
 	_next = (_next + 1) % n
-	oldest.stop()
+	_voices[oldest].stop()
 	return oldest
 
 

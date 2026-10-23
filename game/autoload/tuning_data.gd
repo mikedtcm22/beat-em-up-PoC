@@ -200,29 +200,29 @@ extends Resource
 ## Layer volumes in dB (every sample is normalized to the same peak). Light hits play whoosh
 ## + thud, heavy hits add the crack, finishers play whoosh + thud + crunch + body fall + sub
 ## thump (Spec §6).
-@export_range(-40.0, 12.0, 0.5) var whoosh_db: float = -9.0
-@export_range(-40.0, 12.0, 0.5) var thud_db: float = -2.0
-@export_range(-40.0, 12.0, 0.5) var crack_db: float = -3.0
-@export_range(-40.0, 12.0, 0.5) var crunch_db: float = -4.0
-@export_range(-40.0, 12.0, 0.5) var body_fall_db: float = -6.0
-@export_range(-40.0, 12.0, 0.5) var sub_thump_db: float = -4.0
+@export_range(-40.0, 12.0, 0.5) var whoosh_db: float = -13.0
+@export_range(-40.0, 12.0, 0.5) var thud_db: float = -6.0
+@export_range(-40.0, 12.0, 0.5) var crack_db: float = -7.0
+@export_range(-40.0, 12.0, 0.5) var crunch_db: float = -8.0
+@export_range(-40.0, 12.0, 0.5) var body_fall_db: float = -10.0
+@export_range(-40.0, 12.0, 0.5) var sub_thump_db: float = -8.0
 ## A missed swing's whoosh (attack_whiffed): no impact and no hitstop.
-@export_range(-40.0, 12.0, 0.5) var whiff_db: float = -8.0
+@export_range(-40.0, 12.0, 0.5) var whiff_db: float = -12.0
 ## An enemy hit cleanly grunts; the player grunts too, at the listener.
-@export_range(-40.0, 12.0, 0.5) var grunt_db: float = -5.0
-@export_range(-40.0, 12.0, 0.5) var player_grunt_db: float = -9.0
+@export_range(-40.0, 12.0, 0.5) var grunt_db: float = -9.0
+@export_range(-40.0, 12.0, 0.5) var player_grunt_db: float = -13.0
 ## An actor grunts at most once per this many ms (a body-blow flurry lands every few frames).
 @export_range(0.0, 1000.0, 10.0) var grunt_min_interval_ms: float = 300.0
 ## Each actor's voice is pitched up or down by up to this share, the same every time.
 @export_range(0.0, 0.3, 0.01) var voice_pitch_spread: float = 0.1
-@export_range(-40.0, 12.0, 0.5) var block_clack_db: float = -4.0
-@export_range(-40.0, 12.0, 0.5) var parry_ting_db: float = -8.0
-@export_range(-40.0, 12.0, 0.5) var guard_break_db: float = -3.0
+@export_range(-40.0, 12.0, 0.5) var block_clack_db: float = -8.0
+@export_range(-40.0, 12.0, 0.5) var parry_ting_db: float = -12.0
+@export_range(-40.0, 12.0, 0.5) var guard_break_db: float = -7.0
 ## An enemy's wind-up: an effort grunt and a whoosh at the attacker (Spec §8's audio cue,
 ## on while rear_warning_audio).
-@export_range(-40.0, 12.0, 0.5) var windup_db: float = -6.0
-## Sounds play at full volume within this distance (m) of the listener (the player's
-## eyes), 6 dB quieter at twice it, and so on.
+@export_range(-40.0, 12.0, 0.5) var windup_db: float = -10.0
+## Sounds play at their layer's volume within this distance (m) of the listener (the
+## player's eyes), 6 dB quieter at twice it, and so on.
 @export_range(0.5, 20.0, 0.5) var sfx_unit_size_m: float = 3.0
 ## Sounds further away than this (m) are not heard; 0 = no limit.
 @export_range(0.0, 100.0, 1.0) var sfx_max_distance_m: float = 40.0

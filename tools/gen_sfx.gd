@@ -15,8 +15,9 @@ extends SceneTree
 ##
 ## Output is deterministic: every sound seeds its own random numbers from its file name, so
 ## a re-run with unchanged code leaves git clean, and changing one sound leaves the others
-## alone. The music loop is written with a forward loop (a WAV "smpl" chunk), which the
-## importer's default "Detect From WAV" loop mode picks up.
+## alone. AudioStreamWAV.save_to_wav() writes no loop points, so the music loop loops
+## through its .import file (edit/loop_mode=2, Forward): the script never touches .import
+## files, so keep that one when regenerating.
 ##
 ## The numbers below are the placeholders' sound design. The in-game balance (each
 ## layer's volume, the pitch and volume variation, distances) is tuned live in Tuning's
@@ -242,7 +243,7 @@ func _crunch(_v: int) -> PackedFloat32Array:
 func _body_fall(_v: int) -> PackedFloat32Array:
 	var b := _new(0.7)
 	_noise_hit(b, 0.0, F.LOW, rng.randf_range(250.0, 380.0), 0.7, 0.003, rng.randf_range(0.09, 0.14), 1.0)
-	_tone_drop(b, 0.0, 95.0, rng.randf_range(48.0, 58.0), 0.04, 0.002, 0.12, 0.8)
+	_tone_drop(b, 0.0, 95.0, rng.randf_range(48.0, 58.0), 0.04, 0.002, 0.12, 0.35)
 	var t2 := rng.randf_range(0.07, 0.13)
 	_noise_hit(b, t2, F.LOW, 650.0, 0.7, 0.002, 0.05, 0.45)
 	_tone_drop(b, t2, 140.0, 80.0, 0.02, 0.001, 0.04, 0.3)
