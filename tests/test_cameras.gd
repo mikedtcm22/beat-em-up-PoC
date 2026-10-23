@@ -16,6 +16,9 @@ class FakePlayer extends PlayerCharacter:
 	var head_basis: Basis = Basis.from_euler(Vector3(0.35, -0.6, 0.25))
 	var walking: bool = false
 	var move_offset: Vector2 = Vector2.ZERO
+	## View turn (degrees, left positive) and the interpolation fraction the camera asked for.
+	var view_yaw: float = 0.0
+	var asked_fraction: float = -1.0
 
 	func _ready() -> void:
 		add_to_group(&"player")
@@ -37,6 +40,10 @@ class FakePlayer extends PlayerCharacter:
 
 	func get_camera_move_offset() -> Vector2:
 		return move_offset
+
+	func get_camera_view_yaw(fraction: float = 1.0) -> float:
+		asked_fraction = fraction
+		return view_yaw
 
 	func is_walking() -> bool:
 		return walking
@@ -441,6 +448,33 @@ func test_fp_applies_move_pitch_and_drop() -> void:
 	_assert_basis_almost_eq(cam.global_basis, expected, "pitched down 10 degrees")
 	assert_almost_eq(cam.global_position, player.get_eye_transform().origin + Vector3.DOWN * 0.05,
 			V_EPS, "dropped 5 cm along world -Y")
+
+
+func test_fp_turns_the_view_by_the_players_view_yaw_without_touching_the_look() -> void:
+	# Spins (MoveData.camera_spin_follow) and the back elbow (camera_yaw_deg) turn the view
+	# about world up, on top of the look and before the move's pitch; the lens moves ahead
+	# along the turned view. The camera asks for the turn interpolated between physics ticks.
+	Tuning.data.cam_forward_offset_m = 0.04
+	var player := _make_player()
+	player.look_yaw = 0.5
+	player.look_pitch = 0.1
+	player.move_offset = Vector2(-10.0, 0.0)
+	player.view_yaw = -150.0
+	var cam := _make_fp(player)
+	cam.update_camera(DT)
+	var turned := 0.5 + deg_to_rad(-150.0)
+	_assert_basis_almost_eq(cam.global_basis, Basis.from_euler(Vector3(0.1 + deg_to_rad(-10.0), turned, 0.0)),
+			"turned 150 degrees right and pitched down")
+	var flat := Vector3(-sin(turned), 0.0, -cos(turned))
+	var expected := player.get_eye_transform().origin + flat * 0.04 + Vector3.UP * Tuning.data.cam_height_offset_m
+	assert_almost_eq(cam.global_position, expected, V_EPS, "the lens sits ahead along the turned view")
+	assert_almost_eq(player.look_yaw, 0.5, 0.0, "the look (aim) is untouched")
+	assert_almost_eq(player.asked_fraction, Engine.get_physics_interpolation_fraction(), 1e-6,
+			"interpolated between physics ticks")
+	player.view_yaw = -360.0
+	cam.update_camera(DT)
+	_assert_basis_almost_eq(cam.global_basis, Basis.from_euler(Vector3(0.1 + deg_to_rad(-10.0), 0.5, 0.0)),
+			"a whole turn is the look again")
 
 
 func test_fp_total_pitch_never_flips() -> void:

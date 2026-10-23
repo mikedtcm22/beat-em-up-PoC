@@ -114,6 +114,10 @@ extends Resource
 @export_range(-0.5, 0.1, 0.01) var cam_height_offset_m: float = -0.2
 @export_range(0.0, 0.3, 0.01) var cam_forward_offset_m: float = 0.04
 @export_range(0.0, 1.0, 0.05) var screen_shake_intensity: float = 1.0
+## Scales every move's camera_spin_follow: 1 turns the first-person view with a spinning
+## move's body (the spin kick, spinning heel kick and spinning backfist land back on the
+## heading), 0 keeps the view on the look. Presentation only.
+@export_range(0.0, 1.0, 0.05) var cam_spin_follow_mult: float = 1.0
 @export var show_center_dot: bool = true
 
 @export_group("Enemies")
@@ -131,8 +135,13 @@ extends Resource
 @export_group("Block")
 ## B with the stick under this deflection blocks; above it, B dodges that way.
 @export_range(0.05, 0.9, 0.05) var block_stick_threshold: float = 0.3
-## Frames of holding before the guard is effective.
-@export_range(0, 15, 1) var block_raise_frames: int = 4
+## Frames of holding before the guard is effective. 1 since Game-boy's second playtest:
+## a press on reaction to a wind-up has to be up in time.
+@export_range(0, 15, 1) var block_raise_frames: int = 1
+## A guard raised by B with the stick centered turns into a dodge when the stick passes
+## block_stick_threshold within this many frames of the press: B (or Shift) pressed a
+## moment before the direction still dodges. Never after the guard has stopped a hit.
+@export_range(0, 20, 1) var dodge_late_stick_frames: int = 8
 ## Frames back to neutral after releasing B.
 @export_range(0, 20, 1) var block_release_frames: int = 4
 ## Frames from pressing P/K while blocking until the attack starts.
@@ -158,8 +167,9 @@ extends Resource
 ## Thrown or launched bodies blocked from the front drain the guard this many times harder.
 @export_range(0.0, 5.0, 0.1) var body_impact_guard_mult: float = 2.0
 @export var perfect_block_enabled: bool = true
-## A hit landing within this many frames of the guard coming up is a perfect block.
-@export_range(0, 30, 1) var perfect_block_window_frames: int = 8
+## A hit landing within this many frames of the B press that raised the guard is a perfect
+## block (about 0.23 s: a press on reaction to a sparring jab's 24-frame wind-up parries).
+@export_range(0, 30, 1) var perfect_block_window_frames: int = 14
 @export_range(0, 90, 1) var perfect_block_stagger_frames: int = 30
 ## Real ticks the defender's rig flashes cyan on a perfect block (the parry flash).
 @export_range(0, 30, 1) var parry_flash_frames: int = 8

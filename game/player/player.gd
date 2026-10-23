@@ -15,6 +15,9 @@ const WEAPON_THROW_PATH := "res://game/combat/moves/weapon_throw.tres"
 const ATTACK_IDS: Array[StringName] = [&"P", &"K", &"RB"]
 ## Rig animation shown while a charged P waits for its release (_charging_hold()).
 const CHARGE_ANIM := &"haymaker_charge"
+## Share of a leftover first-person view turn (a spin or the back elbow cut short) taken
+## back toward the look per physics tick.
+const _VIEW_SETTLE := 0.25
 
 ## Radians. Yaw 0 faces -Z; positive pitch looks up.
 var look_yaw: float = 0.0
@@ -38,6 +41,10 @@ var _dodge_stick: Vector2 = Vector2.ZERO
 ## The B press still held was a block press (stick centered): holding it keeps the guard,
 ## and raises it again whenever the player is back to FREE (_holding_block()).
 var _block_press_held: bool = false
+## The guard up now was raised by a fresh B press with the stick centered and has stopped
+## no hit yet: the stick passing block_stick_threshold within Tuning.dodge_late_stick_frames
+## (B still held) turns it into a dodge (_control_block()).
+var _late_dodge_open: bool = false
 ## A P or K pressed while the guard is up (BLOCK, BLOCKSTUN), held back here instead of
 ## aging in the parser's buffer: it drops the guard and is handed to the parser fresh once
 ## the guard is down, so it always starts its attack (&"" = none).
@@ -49,6 +56,18 @@ var _turn_frames: int = 0
 var _quick_turn_left: float = 0.0
 var _quick_turn_frames: int = 0
 var _cam_offset: Vector2 = Vector2.ZERO
+## First-person view turn away from the look in degrees (positive turns left), this
+## physics tick and the last (_update_view_yaw(); the camera interpolates between them).
+var _view_yaw: float = 0.0
+var _view_yaw_last: float = 0.0
+## Spin follow (MoveData.camera_spin_follow): the move it follows, its frame and the eyes'
+## yaw (radians) last tick, the eyes' turn since it started (radians, unwrapped) and the
+## whole turns the view lands on (degrees; NAN until the recovery).
+var _spin_move: MoveData
+var _spin_frame: int = 0
+var _spin_eye: float = 0.0
+var _spin_turn: float = 0.0
+var _spin_land: float = NAN
 var _dodge_velocity: Vector3 = Vector3.ZERO
 var _air_attack: bool = false
 var _held: CombatActor
@@ -94,6 +113,7 @@ func _physics_process(delta: float) -> void:
 	for button in frame.released:
 		_pending_edges.append([button, false])
 	super._physics_process(delta)
+	_update_view_yaw()
 
 
 func _process(delta: float) -> void:
@@ -122,6 +142,14 @@ func get_look_basis() -> Basis:
 
 func get_camera_move_offset() -> Vector2:
 	return _cam_offset
+
+
+## The first-person view's turn away from the look in degrees (positive turns left): a
+## spinning move's body turn (MoveData.camera_spin_follow) and a move's camera_yaw_deg (the
+## back elbow). `fraction` (0..1) interpolates from the last physics tick to this one, so
+## render frames between ticks turn smoothly. Presentation only: aim never uses it.
+func get_camera_view_yaw(fraction: float = 1.0) -> float:
+	return lerpf(_view_yaw_last, _view_yaw, clampf(fraction, 0.0, 1.0))
 
 
 func is_walking() -> bool:
@@ -166,6 +194,10 @@ func reset_state() -> void:
 	super.reset_state()
 	_held_attack = &""
 	_block_press_held = false
+	_late_dodge_open = false
+	_view_yaw = 0.0
+	_view_yaw_last = 0.0
+	_spin_move = null
 
 
 # --- Control ------------------------------------------------------------------------
@@ -322,6 +354,17 @@ func _control_dodge() -> void:
 ## P or K (held back by _hold_back_attack(), also from a blockstun) drops it after
 ## Tuning.block_attack_cancel_frames, and the press starts its attack once FREE.
 func _control_block() -> void:
+	if (
+		_late_dodge_open
+		and _guard_frames <= Tuning.data.dodge_late_stick_frames
+		and parser.is_held(&"DODGE")
+		and _move_input.length() >= Tuning.data.block_stick_threshold
+	):
+		# B came a moment before the stick: a dodge after all (Game-boy's second playtest).
+		_block_press_held = false
+		drop_guard(0)
+		_start_dodge(_move_input)
+		return
 	if parser.consume(&"TURN"):
 		_start_quick_turn()
 	_steer(Tuning.data.move_speed * Tuning.data.block_move_mult, Tuning.data.move_accel)
@@ -481,6 +524,7 @@ func _on_move_interrupted() -> void:
 ## A guard break staggers the player: what was pressed in the guard is dropped (a held B
 ## raises the guard again after the stagger).
 func _on_hit_blocked(hit: HitInfo) -> void:
+	_late_dodge_open = false
 	if hit.guard_broken:
 		parser.reset_chain()
 		parser.clear_buffer()
@@ -603,14 +647,57 @@ func _update_camera_offset() -> void:
 	if move == null:
 		_cam_offset = Vector2.ZERO
 		return
-	var f := move_frame
+	var w := _camera_weight(move, move_frame)
+	_cam_offset = Vector2(move.camera_pitch_deg * w, move.camera_drop_m * w)
+
+
+## Weight (0..1) of `move`'s camera offsets on its frame `f`: eased in over the startup,
+## full through the active frames and camera_hold_frames more, eased out over the rest.
+static func _camera_weight(move: MoveData, f: int) -> float:
 	var w := 1.0
 	if f < move.startup:
 		w = float(f + 1) / float(maxi(move.startup, 1))
-	elif f >= move.startup + move.active:
-		w = 1.0 - float(f - move.startup - move.active + 1) / float(maxi(move.recovery, 1))
-	w = smoothstep(0.0, 1.0, clampf(w, 0.0, 1.0))
-	_cam_offset = Vector2(move.camera_pitch_deg * w, move.camera_drop_m * w)
+	else:
+		var out := f - move.startup - move.active - move.camera_hold_frames
+		if out >= 0:
+			w = 1.0 - float(out + 1) / float(maxi(move.recovery - move.camera_hold_frames, 1))
+	return smoothstep(0.0, 1.0, clampf(w, 0.0, 1.0))
+
+
+## The first-person view turn this physics tick, after the rig advanced (presentation; see
+## get_camera_view_yaw()): the running move's camera_yaw_deg, eased like the pitch, plus
+## its camera_spin_follow share (times Tuning.cam_spin_follow_mult) of the eyes' turn
+## since it started (HumanoidRig.eye_yaw()), eased onto whole turns over the recovery so
+## the view lands back on the heading. With no move turning the view, a turn left over (a
+## move cut short) settles back to the look.
+func _update_view_yaw() -> void:
+	_view_yaw_last = _view_yaw
+	var move := current_move if _running_move() else null
+	var follow := move.camera_spin_follow * Tuning.data.cam_spin_follow_mult if move else 0.0
+	if move == null or (follow <= 0.0 and is_zero_approx(move.camera_yaw_deg)):
+		_spin_move = null
+		# Whole turns are the look itself: drop them from both ticks alike.
+		var wrapped := wrapf(_view_yaw, -180.0, 180.0)
+		_view_yaw_last += wrapped - _view_yaw
+		_view_yaw = lerpf(wrapped, 0.0, _VIEW_SETTLE) if absf(wrapped) > 0.01 else 0.0
+		return
+	var spin := 0.0
+	if follow > 0.0:
+		var eye := rig.eye_yaw()
+		if _spin_move != move or move_frame < _spin_frame:
+			_spin_move = move
+			_spin_turn = 0.0
+			_spin_land = NAN
+		else:
+			_spin_turn += wrapf(eye - _spin_eye, -PI, PI)
+		_spin_eye = eye
+		_spin_frame = move_frame
+		spin = follow * rad_to_deg(_spin_turn)
+		if move_frame >= move.startup + move.active:
+			if is_nan(_spin_land):
+				_spin_land = roundf(spin / 360.0) * 360.0
+			spin = lerpf(spin, _spin_land, 1.0 - _camera_weight(move, move_frame))
+	_view_yaw = spin + move.camera_yaw_deg * _camera_weight(move, move_frame)
 
 
 # --- Movement -----------------------------------------------------------------------
@@ -667,6 +754,7 @@ func _land() -> void:
 func _b_action() -> void:
 	if _dodge_stick.length() < Tuning.data.block_stick_threshold:
 		_start_block()
+		_late_dodge_open = true
 	else:
 		_start_dodge(_dodge_stick)
 
@@ -675,6 +763,7 @@ func _b_action() -> void:
 func _start_block(can_parry: bool = true) -> void:
 	parser.reset_chain()
 	_cam_offset = Vector2.ZERO
+	_late_dodge_open = false
 	start_block(can_parry)
 
 
@@ -746,7 +835,8 @@ func _use_set(key: StringName) -> void:
 # --- Grabs and weapons --------------------------------------------------------------
 
 
-## LB: throw the held weapon, else grab a staggered enemy, else pick up a weapon.
+## LB: throw the held weapon, else grab an enemy in front (CombatActor.can_be_grabbed():
+## anytime it stands, outside its strike's active frames), else pick up a weapon.
 func _grab_action() -> bool:
 	if _weapon and _weapon_throw_move:
 		parser.reset_chain()

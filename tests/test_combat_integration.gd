@@ -178,24 +178,51 @@ func test_chains_land_whichever_way_the_player_faces() -> void:
 				"".join(chain), yaw, _ids(_player_hits())])
 
 
+## P · P, then mash (Game-boy's second playtest moved the flurry here from P P · P).
 func test_pause_branch_flurry_ends_in_shove() -> void:
 	await _setup([Vector3(0, 0, -1.6)])
-	await _press(&"P", 2, 7)
 	await _press(&"P", 2)
-	assert_true(await _wait_until(_chain_ready_for_pause(&"jab_2", 15)), "waited into the pause window")
+	assert_true(await _wait_until(_chain_ready_for_pause(&"jab_1", 15)), "waited into the pause window")
 	for i in 7:
 		player.input.push_press(&"P", 2)
 		player.input.push_wait(3)
 	await _drain()
 	assert_true(await _wait_idle())
 	var ids := _ids(_player_hits())
-	assert_eq(ids.slice(0, 3), [&"jab_1", &"jab_2", &"body_flurry"])
+	assert_eq(ids.slice(0, 2), [&"jab_1", &"body_flurry"])
 	assert_gt(ids.count(&"body_flurry"), 2, "mashing repeats the flurry")
 	assert_eq(ids.back(), &"shove", "flurry ends in the shove finisher")
 	var flurry_hits := _player_hits().filter(func(h: HitInfo) -> bool: return h.move.id == &"body_flurry")
 	if not flurry_hits.is_empty():
 		assert_eq(flurry_hits[0].input_timing, &"pause")
 		assert_eq(flurry_hits[0].damage, 2.0)
+
+
+## P P · P: the spinning backfist (Game-boy's second playtest), a full turn and the back
+## of the right fist; the first-person view spins with it and lands back on the heading.
+func test_punch_punch_pause_punch_is_the_spinning_backfist() -> void:
+	await _setup([Vector3(0, 0, -1.6)])
+	var yaw := player.look_yaw
+	await _press(&"P", 2, 7)
+	await _press(&"P", 2)
+	assert_true(await _wait_until(_chain_ready_for_pause(&"jab_2", 15)), "waited into the pause window")
+	await _press(&"P", 2)
+	var widest := 0.0
+	while player.current_move != null or TimeController.is_in_hitstop(player):
+		widest = maxf(widest, absf(wrapf(player.get_camera_view_yaw(), -180.0, 180.0)))
+		await get_tree().physics_frame
+	assert_true(await _wait_idle())
+	assert_eq(_ids(_player_hits()), [&"jab_1", &"jab_2", &"spinning_backfist"])
+	assert_eq(_damages(_player_hits()), [6.0, 6.0, 14.0])
+	if _player_hits().size() == 3:
+		var backfist := _player_hits()[2]
+		assert_eq(backfist.tier, CombatTypes.HitTier.FINISHER)
+		assert_eq(backfist.input_timing, &"pause")
+		assert_eq(backfist.chain_step, 3)
+	assert_true(await _wait_until(func() -> bool: return dummies[0].is_downed(), 120), "knocked down")
+	assert_gt(widest, 150.0, "the view spun round with the body")
+	assert_almost_eq(wrapf(player.get_camera_view_yaw(), -180.0, 180.0), 0.0, 0.01, "and landed back on the heading")
+	assert_lt(absf(angle_difference(player.look_yaw, yaw)), deg_to_rad(16.0), "aim untouched (magnetism aside)")
 
 
 func test_mash_kick_is_front_roundhouse_spinning_heel() -> void:
@@ -688,7 +715,7 @@ func test_sparring_dummy_winds_up_on_its_own_when_the_player_is_in_front() -> vo
 	events.clear()
 	hits.clear()
 	dummy.start_jab()
-	assert_eq(dummy.current_move.startup, 36, "startup doubled")
+	assert_eq(dummy.current_move.startup, 48, "startup doubled")
 	await _ticks(10)
 	await _press(&"P", 2)
 	assert_true(await _wait_until(func() -> bool: return events.size() >= 2, 30))
@@ -839,15 +866,45 @@ func test_a_guard_raised_just_in_time_is_a_perfect_block_and_the_attacker_can_be
 
 
 func test_too_late_a_guard_is_not_up_yet() -> void:
-	# The guard stops hits only after block_raise_frames of holding.
+	# The guard stops hits only after block_raise_frames of holding (1 since Game-boy's
+	# second playtest; raised here to 4 to see it).
+	Tuning.data.block_raise_frames = 4
 	var dummy := await _partner()
 	dummy.start_jab()
 	var startup := dummy.current_move.startup
-	assert_true(await _wait_until(func() -> bool: return dummy.move_frame >= startup - 2, 30))
+	assert_true(await _wait_until(func() -> bool: return dummy.move_frame >= startup - 2, 40))
 	player.input.push_down(&"DODGE")
 	assert_true(await _wait_until(func() -> bool: return not _player_hits_taken().is_empty(), 30))
 	assert_false(_player_hits_taken()[0].blocked, "raised 2 frames before the hit: not up yet")
 	assert_eq(_player_hits_taken()[0].damage, 6.0)
+
+
+## Game-boy's second playtest: a parry has to work on reaction to the wind-up. B pressed
+## `offset` frames after the sparring jab's wind-up starts (24 frames): early presses are
+## an ordinary block, presses from 10 frames in until 2 frames before contact parry (the
+## press is polled a tick later), a reaction press 200 ms (12 frames) in included.
+func test_parry_timing_sweep_covers_a_reaction_to_the_wind_up() -> void:
+	var results := {}
+	for offset: int in [0, 4, 8, 10, 12, 14, 16, 18, 20, 22, 23]:
+		var dummy := await _partner()
+		dummy.start_jab()
+		assert_eq(dummy.current_move.startup, 24, "the sparring jab winds up for 0.4 s")
+		assert_true(await _wait_until(func() -> bool: return dummy.move_frame >= offset, 40))
+		player.input.push_down(&"DODGE")
+		assert_true(await _wait_until(func() -> bool: return not _player_hits_taken().is_empty(), 40), "offset %d: the jab lands" % offset)
+		var hit := _player_hits_taken()[0]
+		results[offset] = &"parry" if hit.perfect_block else (&"block" if hit.blocked else &"hit")
+		player.input.push_up(&"DODGE")
+		await _drain()
+	gut.p("parry sweep (press frames after the wind-up starts): %s" % results)
+	# The press reaches the player on the next tick: pressed on the frame before contact
+	# (23) the guard is not up yet.
+	for offset: int in results:
+		var expected := &"parry" if offset >= 10 else &"block"
+		if offset >= 23:
+			expected = &"hit"
+		assert_eq(results[offset], expected, "B pressed %d frames into the wind-up" % offset)
+	assert_eq(results[12], &"parry", "a reaction press 200 ms after the wind-up starts parries")
 
 
 func test_repeated_blocked_hits_break_the_guard() -> void:
@@ -1357,3 +1414,279 @@ func test_sparring_dummy_steps_in_and_jabs_every_interval_from_start_to_start() 
 			assert_between(starts[i][0] - starts[i - 1][0], low - 1, high + 1, "jab %d starts an interval after the last" % (i + 1))
 	assert_gt(player.global_position.distance_to(dummy._home), 0.3, "the dummy left its post to follow")
 	player.input.push_up(&"DODGE")
+
+
+# --- Grab anytime (Game-boy's second playtest, a Spec §4 change) ---------------------
+
+
+func test_lb_grabs_an_idle_dummy() -> void:
+	await _setup([Vector3(0, 0, -1.0)])
+	assert_eq(dummies[0].state, CombatTypes.ActorState.FREE)
+	await _press(&"GRAB", 2, 4)
+	assert_eq(player.state, CombatTypes.ActorState.GRABBING, "grabbed a dummy just standing there")
+	assert_eq(dummies[0].state, CombatTypes.ActorState.GRABBED)
+	await _press(&"P", 2)
+	assert_true(await _wait_idle())
+	assert_eq(_ids(_player_hits()), [&"knee"], "and kneed it")
+
+
+func test_lb_grabs_out_of_a_wind_up_but_whiffs_in_the_active_frames() -> void:
+	var interrupted: Array[bool] = []
+	var on_end := func(_actor: Node3D, was_interrupted: bool) -> void:
+		interrupted.append(was_interrupted)
+	CombatEvents.windup_ended.connect(on_end)
+	var dummy := await _partner()
+	dummy.start_jab()
+	assert_true(await _wait_until(func() -> bool: return dummy.move_frame >= 8, 20))
+	assert_eq(dummy.state, CombatTypes.ActorState.WINDUP)
+	await _press(&"GRAB", 2, 4)
+	assert_eq(player.state, CombatTypes.ActorState.GRABBING, "grabbed out of the wind-up")
+	assert_eq(dummy.state, CombatTypes.ActorState.GRABBED)
+	assert_eq(interrupted, [true], "the wind-up ended, interrupted")
+	assert_eq(_player_hits_taken().size(), 0, "the jab never came out")
+	CombatEvents.windup_ended.disconnect(on_end)
+	# Turned 90 degrees away, its jab misses the player, who presses LB on its first active
+	# frame (read the frame after): no grab while the fist is out.
+	dummy = await _partner()
+	dummy.rotation.y += PI * 0.5
+	dummy.start_jab()
+	assert_true(await _wait_until(func() -> bool: return dummy.state == CombatTypes.ActorState.ATTACK, 40))
+	assert_false(dummy.can_be_grabbed(), "not grabbable in its active frames")
+	await _press(&"GRAB", 2)
+	assert_ne(player.state, CombatTypes.ActorState.GRABBING, "LB whiffs during the active frames")
+	assert_ne(dummy.state, CombatTypes.ActorState.GRABBED)
+	assert_eq(_player_hits_taken().size(), 0)
+	# In its recovery it can be grabbed again.
+	assert_true(await _wait_until(func() -> bool: return dummy.current_move != null and dummy.current_move.is_recovery(dummy.move_frame), 20))
+	assert_true(dummy.can_be_grabbed(), "grabbable again in the recovery")
+
+
+func test_downed_flying_and_ko_bodies_cannot_be_grabbed() -> void:
+	await _setup([Vector3(0, 0, -1.6)])
+	for i in 3:
+		player.input.push_press(&"K", 2)
+		player.input.push_wait(10)
+	await _drain()
+	assert_true(await _wait_until(func() -> bool: return dummies[0].is_flying() or dummies[0].is_downed(), 60))
+	assert_false(dummies[0].can_be_grabbed(), "a body knocked off its feet")
+	assert_true(await _wait_until(func() -> bool: return dummies[0].is_downed(), 120))
+	assert_false(dummies[0].can_be_grabbed(), "a downed body")
+
+
+# --- Dodge with stick + B through the live input path (Game-boy's second playtest) ----
+
+
+func _joy_axis(axis: JoyAxis, value: float) -> void:
+	var event := InputEventJoypadMotion.new()
+	event.axis = axis
+	event.axis_value = value
+	Input.parse_input_event(event)
+
+
+func _joy_button(button: JoyButton, pressed: bool) -> void:
+	var event := InputEventJoypadButton.new()
+	event.button_index = button
+	event.pressed = pressed
+	Input.parse_input_event(event)
+
+
+func _key(key: Key, pressed: bool) -> void:
+	var event := InputEventKey.new()
+	event.physical_keycode = key
+	event.keycode = key
+	event.pressed = pressed
+	event.shift_pressed = key == KEY_SHIFT and pressed
+	Input.parse_input_event(event)
+
+
+## Let go of every device input the live dodge tests use.
+func _release_live_input() -> void:
+	_joy_axis(JOY_AXIS_LEFT_X, 0.0)
+	_joy_axis(JOY_AXIS_LEFT_Y, 0.0)
+	_joy_button(JOY_BUTTON_B, false)
+	_key(KEY_SHIFT, false)
+	_key(KEY_D, false)
+	for action: StringName in [&"dodge", &"move_left", &"move_right", &"move_back", &"move_forward"]:
+		Input.action_release(action)
+
+
+## One live-input case: `steps` is a list of [Callable, ticks to wait after it]. Returns
+## DODGE if the player dodged at any point, else its state at the end and how far the player moved in its own frame (x right, y ahead).
+func _live_case(steps: Array) -> Array:
+	await _setup([])
+	player.input.scripted = false
+	var start := player.global_position
+	# A dodge seen at any point wins (a guard turned into a dodge), else the last state.
+	var state := -1
+	for step: Array in steps:
+		(step[0] as Callable).call()
+		for i: int in step[1]:
+			await get_tree().physics_frame
+			if state != CombatTypes.ActorState.DODGE:
+				state = player.state
+	_release_live_input()
+	assert_true(await _wait_until(func() -> bool: return player.state == CombatTypes.ActorState.FREE, 60))
+	var moved := player.global_basis.inverse() * (player.global_position - start)
+	player.input.scripted = true
+	return [state, Vector2(moved.x, -moved.z)]
+
+
+func test_stick_and_b_dodge_through_the_live_input_path() -> void:
+	var dodge := CombatTypes.ActorState.DODGE
+	var block := CombatTypes.ActorState.BLOCK
+	var cases := [
+		# [name, steps, expected state, expected direction or ZERO]
+		["stick left, then B", [[_joy_axis.bind(JOY_AXIS_LEFT_X, -1.0), 3], [_joy_button.bind(JOY_BUTTON_B, true), 2]], dodge, Vector2.LEFT],
+		["stick back, then B (backstep)", [[_joy_axis.bind(JOY_AXIS_LEFT_Y, 1.0), 3], [_joy_button.bind(JOY_BUTTON_B, true), 2]], dodge, Vector2(0, -1)],
+		["B and the stick in the same frame", [[func() -> void:
+			_joy_button(JOY_BUTTON_B, true)
+			_joy_axis(JOY_AXIS_LEFT_X, 1.0), 3]], dodge, Vector2.RIGHT],
+		["B a few frames before the stick", [[_joy_button.bind(JOY_BUTTON_B, true), 4], [_joy_axis.bind(JOY_AXIS_LEFT_X, 1.0), 3]], dodge, Vector2.RIGHT],
+		["B, the stick well after: a guard walked in", [[_joy_button.bind(JOY_BUTTON_B, true), 20], [_joy_axis.bind(JOY_AXIS_LEFT_X, 1.0), 6]], block, Vector2.ZERO],
+		["B alone blocks", [[_joy_button.bind(JOY_BUTTON_B, true), 6]], block, Vector2.ZERO],
+		["D, then Shift", [[_key.bind(KEY_D, true), 3], [_key.bind(KEY_SHIFT, true), 2]], dodge, Vector2.RIGHT],
+		["Shift, then D", [[_key.bind(KEY_SHIFT, true), 2], [_key.bind(KEY_D, true), 3]], dodge, Vector2.RIGHT],
+		["action_press: move right, dodge", [[Input.action_press.bind(&"move_right", 1.0), 3], [Input.action_press.bind(&"dodge", 1.0), 2]], dodge, Vector2.RIGHT],
+	]
+	for case: Array in cases:
+		var result: Array = await _live_case(case[1])
+		var name: String = case[0]
+		assert_eq(result[0], case[2], "%s: %s" % [name, CombatTypes.state_name(case[2])])
+		var moved: Vector2 = result[1]
+		if case[3] == Vector2.ZERO:
+			assert_lt(moved.length(), 0.8, "%s: no dodge (moved %s)" % [name, moved])
+		else:
+			assert_gt(moved.length(), Tuning.data.dodge_distance - 0.3, "%s: a full dodge (moved %s)" % [name, moved])
+			assert_gt(moved.normalized().dot(case[3]), 0.9, "%s: that way (moved %s)" % [name, moved])
+
+
+func test_a_guard_that_stopped_a_hit_never_turns_into_a_dodge() -> void:
+	var dummy := await _partner()
+	dummy.start_jab()
+	var startup := dummy.current_move.startup
+	assert_true(await _wait_until(func() -> bool: return dummy.move_frame >= startup - 3, 40))
+	player.input.scripted_move = Vector2.ZERO
+	player.input.push_down(&"DODGE")
+	assert_true(await _wait_until(func() -> bool: return not _player_hits_taken().is_empty(), 20))
+	assert_true(_player_hits_taken()[0].blocked)
+	player.input.scripted_move = Vector2(1, 0)
+	await _ticks(4)
+	assert_true(player.is_guarding(), "the stick after a parry walks in the guard, no dodge")
+	player.input.scripted_move = Vector2.ZERO
+	player.input.push_up(&"DODGE")
+	assert_true(await _wait_idle())
+
+
+# --- The first-person view turns with spins and the back elbow (presentation only) ---
+
+
+## The first-person camera's yaw relative to the player's look, in degrees (left positive).
+func _view_turn_deg(cam: FirstPersonCamera) -> float:
+	var forward := cam.view_transform().basis * Vector3.FORWARD
+	return rad_to_deg(wrapf(atan2(-forward.x, -forward.z) - player.look_yaw, -PI, PI))
+
+
+## Runs frames until the player is idle, following the first-person view's turn as each
+## frame shows it (after the camera's _process; `each_frame` is called then too):
+## [total turn (unwrapped, degrees), largest turn in one frame, largest turn back against
+## the total's direction, the turn at the end, every frame's turn].
+func _follow_view_turn(cam: FirstPersonCamera, each_frame: Callable = Callable()) -> Array:
+	var last := _view_turn_deg(cam)
+	var total := 0.0
+	var widest := 0.0
+	var turns: Array[float] = []
+	var steps: Array[float] = []
+	for i in 400:
+		await get_tree().process_frame
+		if each_frame.is_valid():
+			each_frame.call()
+		var now := _view_turn_deg(cam)
+		var step := wrapf(now - last, -180.0, 180.0)
+		last = now
+		total += step
+		steps.append(step)
+		turns.append(now)
+		widest = maxf(widest, absf(step))
+		if (player.input.queued() == 0 and player.current_move == null and player.state == CombatTypes.ActorState.FREE
+				and not TimeController.is_in_hitstop(player) and absf(now) < 0.01 and i > 20):
+			break
+	var back := 0.0
+	for step in steps:
+		if signf(step) != signf(total):
+			back = maxf(back, absf(step))
+	return [total, widest, back, last, turns]
+
+
+func test_first_person_view_spins_with_the_spinning_heel_and_spin_kick_and_lands_on_the_heading() -> void:
+	for spin: StringName in [&"spinning_heel", &"spin_kick"]:
+		await _setup([Vector3(0, 0, -1.6), Vector3(0, 0, 1.4)], true)
+		var cam := get_tree().get_first_node_in_group(&"camera_director").call(&"active_camera") as FirstPersonCamera
+		assert_not_null(cam, "first person")
+		var yaw := player.look_yaw
+		if spin == &"spinning_heel":
+			for i in 3:
+				player.input.push_press(&"K", 2)
+				player.input.push_wait(10)
+		else:
+			player.input.push_press(&"JUMP", 2)
+			await _drain()
+			assert_true(await _wait_until(func() -> bool: return player.sim_velocity.y < 1.0, 60))
+			player.input.push_press(&"K", 2)
+		var result: Array = await _follow_view_turn(cam)
+		assert_has(_ids(_player_hits()), spin, "%s lands" % spin)
+		gut.p("%s: the view turns %.0f degrees, at most %.1f per frame" % [spin, result[0], result[1]])
+		assert_almost_eq(result[0], -360.0, 6.0, "%s: the view spins a full turn with the body" % spin)
+		# 30 degrees a frame from idle; chained out of the roundhouse, the cross-fade from
+		# its recovery adds a little at the start.
+		assert_lt(result[1], 45.0, "%s: smoothly, at most 45 degrees a frame" % spin)
+		assert_lt(result[2], 3.0, "%s: never turning back against the spin" % spin)
+		assert_almost_eq(result[3], 0.0, 0.01, "%s: back on the heading" % spin)
+		assert_almost_eq(player.look_yaw, yaw, 0.001, "%s: aim and body facing untouched" % spin)
+	# Tuning.cam_spin_follow_mult 0 keeps the view on the look.
+	Tuning.data.cam_spin_follow_mult = 0.0
+	await _setup([Vector3(0, 0, -1.6)], true)
+	var flat := get_tree().get_first_node_in_group(&"camera_director").call(&"active_camera") as FirstPersonCamera
+	for i in 3:
+		player.input.push_press(&"K", 2)
+		player.input.push_wait(10)
+	var off: Array = await _follow_view_turn(flat)
+	assert_lt(absf(off[0]) + off[1], 1.0, "cam_spin_follow_mult 0: no turn")
+
+
+func test_back_elbow_turns_the_view_over_the_shoulder_and_back() -> void:
+	await _setup([Vector3(0, 0, 1.0)], true)
+	var cam := get_tree().get_first_node_in_group(&"camera_director").call(&"active_camera") as FirstPersonCamera
+	var elbow := load("res://game/combat/moves/back_elbow.tres") as MoveData
+	var yaw := player.look_yaw
+	# The dummy's chest, seen from the turned view, on the frames of the contact's hitstop
+	# (the frozen moment the elbow connects).
+	var contact: Array[Vector3] = []
+	var at_contact := func() -> void:
+		if not _player_hits().is_empty() and TimeController.is_in_hitstop(player):
+			var local := cam.view_transform().affine_inverse() * dummies[0].get_chest_position()
+			contact.append(Vector3(rad_to_deg(atan2(local.x, -local.z)), rad_to_deg(atan2(local.y, -local.z)), -local.z))
+	player.input.push_press(&"RB", 2)
+	var result: Array = await _follow_view_turn(cam, at_contact)
+	assert_eq(_ids(_player_hits()), [&"back_elbow"])
+	var turns: Array[float] = result[4]
+	var deepest := 0.0
+	var deepest_at := 0
+	for i in turns.size():
+		if turns[i] < deepest:
+			deepest = turns[i]
+			deepest_at = i
+	assert_almost_eq(deepest, elbow.camera_yaw_deg, 1.0, "the view turns right, over the shoulder toward the elbow")
+	for i in deepest_at:
+		assert_lte(turns[i + 1], turns[i] + 0.01, "eased in: always turning further toward it")
+	for i in range(deepest_at, turns.size() - 1):
+		assert_gte(turns[i + 1], turns[i] - 0.01, "eased out: always turning back")
+	assert_gt(turns.size() - deepest_at, elbow.recovery - elbow.camera_hold_frames, "the turn back takes the recovery")
+	assert_almost_eq(result[3], 0.0, 0.01, "back on the look")
+	assert_gt(contact.size(), 2, "the contact's hitstop lasts a few frames")
+	var seen_frames := 0
+	for seen: Vector3 in contact:
+		if seen.z > 0.0 and absf(seen.x) < FPView.HALF_H_DEG - 5.0 and absf(seen.y) < FPView.HALF_V_DEG:
+			seen_frames += 1
+	assert_gte(seen_frames, contact.size() - 1, "the dummy behind is in the turned view while the elbow connects (%s)" % [contact])
+	assert_almost_eq(player.look_yaw, yaw, 0.001, "aim unchanged")
+	assert_almost_eq(player.rotation.y, yaw, 0.001, "body facing unchanged")

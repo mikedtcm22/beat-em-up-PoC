@@ -65,7 +65,9 @@ func _run() -> void:
 	var acts: Array[Dictionary] = [
 		{title = "P P P P: jab, jab, hook, uppercut", cam = &"first_person", fn = _act_pppp},
 		{title = "P P P P (side view)", cam = &"side_view", fn = _act_pppp},
-		{title = "P P · P: jab, jab, flurry (mash), shove", cam = &"first_person", fn = _act_flurry},
+		{title = "P · P: jab, flurry (mash), shove", cam = &"first_person", fn = _act_flurry},
+		{title = "P P · P: jab, jab, spinning backfist", cam = &"first_person", fn = _act_backfist},
+		{title = "P P · P: spinning backfist (side view)", cam = &"side_view", fn = _act_backfist},
 		{title = "K K K: front kick, roundhouse, spinning heel", cam = &"first_person", fn = _act_kkk},
 		{title = "K K K (side view)", cam = &"side_view", fn = _act_kkk},
 		{title = "K · K: front kick, stomp kick", cam = &"first_person", fn = _act_k_pause_k},
@@ -74,7 +76,9 @@ func _run() -> void:
 		{title = "Hold P, release: haymaker (side view)", cam = &"side_view", fn = _act_haymaker},
 		{title = "Jump + K: flying kick", cam = &"side_view", fn = _act_flying_kick},
 		{title = "Jump + K at apex: spin kick", cam = &"side_view", fn = _act_spin_kick},
+		{title = "Jump + K at apex: spin kick (first person)", cam = &"first_person", fn = _act_spin_kick},
 		{title = "RB: back elbow", cam = &"side_view", fn = _act_back_elbow},
+		{title = "RB: back elbow (first person)", cam = &"first_person", fn = _act_back_elbow},
 		{title = "Grab, knee x3, grab, throw", cam = &"first_person", fn = _act_grab},
 		{title = "Grab and throw (side view)", cam = &"side_view", fn = _act_grab},
 		{title = "Stomp a downed enemy", cam = &"first_person", fn = _act_stomp},
@@ -85,6 +89,8 @@ func _run() -> void:
 		{title = "Block: sparring jab from the front", cam = &"first_person", fn = _act_block},
 		{title = "Block: sparring jab (side view)", cam = &"side_view", fn = _act_block},
 		{title = "Perfect block, then grab", cam = &"first_person", fn = _act_perfect_block},
+		{title = "Parry on reaction (B 0.2 s into the wind-up), then grab", cam = &"first_person", fn = _act_parry_on_reaction},
+		{title = "Grab anytime: an idle dummy, then a throw", cam = &"first_person", fn = _act_grab_idle},
 		{title = "Perfect block, then grab (side view)", cam = &"side_view", fn = _act_perfect_block},
 		{title = "Guard break", cam = &"first_person", fn = _act_guard_break},
 		{title = "Guard break (side view)", cam = &"side_view", fn = _act_guard_break},
@@ -117,13 +123,25 @@ func _act_pppp() -> void:
 		await _press(&"P", 2, 8)
 
 
+## P · P, then mash: the body-blow flurry (moved here from P P · P after Game-boy's second
+## playtest), ending in the shove.
 func _act_flurry() -> void:
 	await _stage([Vector3(0, 0, -1.6)])
-	await _press(&"P", 2, 8)
 	await _press(&"P", 2)
 	await _wait_until(func() -> bool: return player.parser.current != null and player.parser.frames_since_recovery >= 16)
 	for i in 7:
 		await _press(&"P", 2, 3)
+
+
+## P P · P: a full turn and the back of the right fist; in first person the view spins with
+## the body and lands back on the dummy.
+func _act_backfist() -> void:
+	await _stage([Vector3(0, 0, -1.6)])
+	await _look_to(0.0, 6)
+	await _press(&"P", 2, 8)
+	await _press(&"P", 2)
+	await _wait_until(func() -> bool: return player.parser.current != null and player.parser.frames_since_recovery >= 16)
+	await _press(&"P", 2)
 
 
 func _act_kkk() -> void:
@@ -166,6 +184,7 @@ func _act_spin_kick() -> void:
 
 func _act_back_elbow() -> void:
 	await _stage([Vector3(0, 0, 1.0)])
+	await _look_to(0.0, 6)
 	await _ticks(20)
 	await _press(&"RB", 2)
 
@@ -343,6 +362,38 @@ func _act_perfect_block() -> void:
 	await _press(&"P", 2)
 	await _wait_idle()
 	await _ticks(20)
+
+
+## B pressed on reaction: 12 frames (0.2 s) after the sparring jab's wind-up starts, a
+## perfect block (Game-boy's second playtest: the window now covers a reaction), then a grab.
+func _act_parry_on_reaction() -> void:
+	await _stage([Vector3(0, 0, -SPAR_DIST)])
+	await _look_to(0.0, 6)
+	await _ticks(20)
+	var dummy := dummies[0]
+	dummy.start_jab()
+	await _wait_until(func() -> bool: return dummy.move_frame >= 12, 40)
+	await _hold_block()
+	await _wait_until(func() -> bool: return dummy.state == CombatTypes.ActorState.STAGGER, 30)
+	await _ticks(6)
+	await _release_block()
+	await _press(&"GRAB", 2, 20)
+	await _press(&"K", 2)
+	await _wait_idle()
+	await _ticks(20)
+
+
+## LB on a dummy just standing there (grab anytime, Game-boy's second playtest), a knee,
+## then a throw.
+func _act_grab_idle() -> void:
+	await _stage([Vector3(0, 0, -1.1)])
+	await _look_to(0.0, 6)
+	await _ticks(10)
+	await _press(&"GRAB", 2, 12)
+	await _press(&"P", 2)
+	await _wait_idle()
+	await _ticks(6)
+	await _press(&"K", 2)
 
 
 ## Jab after jab into the held guard, faster than it regenerates: the sparring dummy steps

@@ -185,8 +185,20 @@ func is_invulnerable() -> bool:
 	return _invuln_frames > 0 or state == CombatTypes.ActorState.KO
 
 
+## Grab anytime (Game-boy's second playtest, a Spec §4 change): a standing actor can be
+## grabbed when free, winding up, attacking outside its active frames, in hitstun,
+## staggered or guarding. Its strike's active frames, a dodge, the air, the ground,
+## a get-up and a KO are out.
 func can_be_grabbed() -> bool:
-	return state == CombatTypes.ActorState.STAGGER and holder == null
+	if holder != null or is_invulnerable():
+		return false
+	match state:
+		CombatTypes.ActorState.FREE, CombatTypes.ActorState.WINDUP, CombatTypes.ActorState.HITSTUN, \
+				CombatTypes.ActorState.STAGGER, CombatTypes.ActorState.BLOCK, CombatTypes.ActorState.BLOCKSTUN:
+			return true
+		CombatTypes.ActorState.ATTACK:
+			return current_move == null or not current_move.is_active(move_frame)
+	return false
 
 
 ## Whether `attacker`'s `move` may hit this actor right now.
@@ -696,7 +708,7 @@ func _try_block(hit: HitInfo) -> bool:
 	if (
 		tuning.perfect_block_enabled
 		and _guard_can_parry
-		and _guard_frames <= tuning.block_raise_frames + tuning.perfect_block_window_frames
+		and _guard_frames <= tuning.perfect_block_window_frames
 	):
 		hit.perfect_block = true
 		hit.damage = 0.0

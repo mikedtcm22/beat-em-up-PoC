@@ -182,8 +182,12 @@ func _follow(delta: float) -> Transform3D:
 	var move_offset := player.get_camera_move_offset()
 	var root := player.get_global_transform_interpolated().origin
 	var eye_position := root + _eye_offset + Vector3.DOWN * move_offset.y
-	eye_position += lens_offset(player.get_look_basis())
-	var look := _add_pitch(player.get_look_basis(), deg_to_rad(move_offset.x))
+	# A spinning move's body turn and the back elbow's turn over the shoulder, interpolated
+	# between physics ticks so a spin turns smoothly at any frame rate.
+	var view_yaw := deg_to_rad(player.get_camera_view_yaw(Engine.get_physics_interpolation_fraction()))
+	var look_basis := Basis(Vector3.UP, view_yaw) * player.get_look_basis()
+	eye_position += lens_offset(look_basis)
+	var look := _add_pitch(look_basis, deg_to_rad(move_offset.x))
 	return Transform3D(look, eye_position)
 
 
