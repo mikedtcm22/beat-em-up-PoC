@@ -161,6 +161,8 @@ func _build_presentation() -> void:
 		add_child((load(HUD_SCENE) as PackedScene).instantiate())
 	if ResourceLoader.exists(DEBUG_DRAW_SCENE) and get_tree().get_first_node_in_group(&"debug_draw") == null:
 		add_child((load(DEBUG_DRAW_SCENE) as PackedScene).instantiate())
+	add_child(AudioDirector.new())  # M2 WP3: hit-feel audio (game/audio/audio_director.gd)
+	add_child(RumbleDirector.new())  # M2 WP3: controller rumble (game/audio/rumble_director.gd)
 
 
 func _add_box(pos: Vector3, size: Vector3, material: Material) -> StaticBody3D:

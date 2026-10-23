@@ -1,0 +1,319 @@
+class_name AudioDirector
+extends Node
+## Hit-feel audio (Spec §6 "Audio" and the audio row of the tier table; Spec §8's audio
+## cue). Plays the placeholder one-shots of tools/gen_sfx.gd (an SfxBank) for CombatEvents,
+## positionally, through a pool of AudioStreamPlayer3D voices. Presentation only: it
+## subscribes to CombatEvents and reads actor poses, and never writes game state. Every
+## volume, variation and distance is in Tuning's "Audio" group, read when a sound plays.
+##
+## - **Hits** (`hit_landed`): the tier's layers together at the contact point. Light:
+##   whoosh + thud. Heavy: whoosh + thud + crack. Finisher: whoosh + thud + crunch + body
+##   fall + sub thump. A flying or shoved body hitting someone (`input_timing` &"body") has
+##   no whoosh: nothing swung.
+## - **Grunts:** the victim of a clean hit grunts at its eyes (enemies with the enemy voice,
+##   the player with its own), at most once per `grunt_min_interval_ms`, each actor's voice
+##   pitched by a fixed share of `voice_pitch_spread`.
+## - **Blocks** (a hit_landed with `hit.blocked`): whoosh + block clack; a perfect block
+##   plays the parry ting instead of the clack; a guard break adds the guard-break crash.
+##   No grunt.
+## - **Whiffs** (`attack_whiffed`): a whoosh at the striking limb, no impact.
+## - **Wind-ups** (`windup_started`, while `Tuning.rear_warning_audio`): an effort grunt
+##   and a whoosh at the attacker, so the player hears where an attack is coming from.
+## - **Music:** a placeholder loop while `Tuning.music_enabled` (off by default).
+##
+## Every one-shot takes a random variant of its pool, never the pool's last one, with its
+## pitch and volume varied by up to `sfx_pitch_variation` / `sfx_volume_variation` (±8%).
+## The listener rides the player's eyes and look, in every camera mode. Sounds more than
+## `rear_muffle_angle_deg` off the look play through the "SFX Rear" bus, low-passed at
+## `rear_muffle_hz`: stereo alone can't tell behind from in front.
+##
+## Buses (created on first use when the project has none): "SFX" (a hard limiter, so
+## stacked layers never clip) and "SFX Rear" (a low-pass, into "SFX") for one-shots, and
+## "Music".
+
+## Emitted for every one-shot played: its pool and the pooled voice it plays on.
+signal played(pool: StringName, voice: AudioStreamPlayer3D)
+
+const SFX_BUS := &"SFX"
+const REAR_BUS := &"SFX Rear"
+const MUSIC_BUS := &"Music"
+const MUSIC_POOL := &"music_loop"
+
+## The pools layered on a clean hit of each tier (Spec §6).
+const TIER_LAYERS: Dictionary = {
+	CombatTypes.HitTier.LIGHT: [&"whoosh", &"thud"],
+	CombatTypes.HitTier.HEAVY: [&"whoosh", &"thud", &"crack"],
+	CombatTypes.HitTier.FINISHER: [&"whoosh", &"thud", &"crunch", &"body_fall", &"sub_thump"],
+}
+
+## The TuningData property holding each hit or block pool's volume in dB.
+const LAYER_DB: Dictionary = {
+	&"whoosh": &"whoosh_db",
+	&"thud": &"thud_db",
+	&"crack": &"crack_db",
+	&"crunch": &"crunch_db",
+	&"body_fall": &"body_fall_db",
+	&"sub_thump": &"sub_thump_db",
+	&"block_clack": &"block_clack_db",
+	&"parry_ting": &"parry_ting_db",
+	&"guard_break": &"guard_break_db",
+}
+
+## Pooled one-shot voices; with all of them busy, a new sound takes the oldest.
+@export var voice_count: int = 24
+## The listener rides the player's eyes and look, so every camera (the debug views too)
+## hears what the player would. Off, or with no player, the active camera hears.
+@export var listen_from_player: bool = true
+
+var bank: SfxBank
+var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+var listener: AudioListener3D
+var music: AudioStreamPlayer
+
+var _voices: Array[AudioStreamPlayer3D] = []
+var _next: int = 0
+var _music_on: bool = false
+## Seconds of _process time, for the grunt interval.
+var _clock_s: float = 0.0
+## Actor instance id -> _clock_s of its last grunt.
+var _last_grunt_s: Dictionary[int, float] = {}
+var _player: PlayerCharacter
+
+
+func _init() -> void:
+	name = &"AudioDirector"
+
+
+func _ready() -> void:
+	add_to_group(&"audio_director")
+	rng.randomize()
+	_ensure_buses()
+	bank = SfxBank.new()
+	listener = AudioListener3D.new()
+	listener.name = &"Listener"
+	add_child(listener)
+	for i in voice_count:
+		var voice := AudioStreamPlayer3D.new()
+		voice.name = "Voice%d" % i
+		voice.bus = SFX_BUS
+		# Never louder than the layer's own volume, however close: unit_size sets where the
+		# fall-off starts.
+		voice.max_db = 0.0
+		add_child(voice)
+		_voices.append(voice)
+	music = AudioStreamPlayer.new()
+	music.name = &"Music"
+	music.bus = MUSIC_BUS
+	music.stream = bank.pick(MUSIC_POOL, rng)
+	add_child(music)
+	CombatEvents.hit_landed.connect(_on_hit_landed)
+	CombatEvents.attack_whiffed.connect(_on_attack_whiffed)
+	CombatEvents.windup_started.connect(_on_windup_started)
+	_follow_player()
+	_apply_mix()
+
+
+func _process(delta: float) -> void:
+	_clock_s += delta
+	_follow_player()
+	_apply_mix()
+
+
+## Plays a random variant of `pool` (never the pool's last one) at `at`, at `volume_db`
+## varied by up to ±sfx_volume_variation (as amplitude), and at `pitch` varied by up to
+## ±sfx_pitch_variation. Returns the voice it plays on, or null when the pool is empty.
+func play(pool: StringName, at: Vector3, volume_db: float, pitch: float = 1.0) -> AudioStreamPlayer3D:
+	var stream := bank.pick(pool, rng)
+	if stream == null:
+		return null
+	var tuning := Tuning.data
+	var voice := _take_voice()
+	voice.stream = stream
+	voice.global_position = at
+	voice.unit_size = tuning.sfx_unit_size_m
+	voice.max_distance = tuning.sfx_max_distance_m
+	voice.bus = REAR_BUS if is_behind_listener(at) else SFX_BUS
+	var pitch_var := tuning.sfx_pitch_variation
+	voice.pitch_scale = pitch * (1.0 + rng.randf_range(-pitch_var, pitch_var))
+	var volume_var := tuning.sfx_volume_variation
+	voice.volume_db = volume_db + linear_to_db(1.0 + rng.randf_range(-volume_var, volume_var))
+	voice.play()
+	played.emit(pool, voice)
+	return voice
+
+
+## Where sounds are heard from: the listener riding the player, else the active camera.
+func listener_transform() -> Transform3D:
+	if listener.is_current():
+		return listener.global_transform
+	var camera := get_viewport().get_camera_3d()
+	return camera.global_transform if camera else listener.global_transform
+
+
+## True when `at` lies more than Tuning.rear_muffle_angle_deg off the listener's flat look.
+func is_behind_listener(at: Vector3) -> bool:
+	var view := listener_transform()
+	var to := at - view.origin
+	to.y = 0.0
+	var ahead := -view.basis.z
+	ahead.y = 0.0
+	if to.length_squared() < 0.0001 or ahead.length_squared() < 0.0001:
+		return false
+	return rad_to_deg(ahead.angle_to(to)) > Tuning.data.rear_muffle_angle_deg
+
+
+# --- CombatEvents ------------------------------------------------------------------------
+
+
+func _on_hit_landed(hit: HitInfo) -> void:
+	var tuning := Tuning.data
+	var at := hit.contact_point
+	var swung := hit.input_timing != &"body"
+	if hit.blocked:
+		if swung:
+			play(&"whoosh", at, tuning.whoosh_db)
+		if hit.perfect_block:
+			play(&"parry_ting", at, tuning.parry_ting_db)
+		else:
+			play(&"block_clack", at, tuning.block_clack_db)
+		if hit.guard_broken:
+			play(&"guard_break", at, tuning.guard_break_db)
+		return
+	for pool: StringName in TIER_LAYERS.get(hit.tier, []):
+		if pool == &"whoosh" and not swung:
+			continue
+		play(pool, at, layer_db(pool))
+	_grunt(hit.victim)
+
+
+func _on_attack_whiffed(attacker: Node3D, move: MoveData) -> void:
+	if attacker == null:
+		return
+	play(&"whoosh", _strike_position(attacker, move), Tuning.data.whiff_db)
+
+
+func _on_windup_started(attacker: Node3D, move: MoveData) -> void:
+	var tuning := Tuning.data
+	if attacker == null or not tuning.rear_warning_audio:
+		return
+	play(&"effort", _voice_position(attacker), tuning.windup_db, voice_pitch(attacker))
+	play(&"whoosh", _strike_position(attacker, move), tuning.windup_db)
+
+
+# --- Helpers -----------------------------------------------------------------------------
+
+
+## A hit or block pool's volume in dB (Tuning.data.<pool>_db).
+static func layer_db(pool: StringName) -> float:
+	if not LAYER_DB.has(pool):
+		return 0.0
+	return float(Tuning.data.get(LAYER_DB[pool]))
+
+
+## `actor`'s voice pitch: 1 plus a fixed share (from its name) of ±voice_pitch_spread.
+static func voice_pitch(actor: Node) -> float:
+	var spread := Tuning.data.voice_pitch_spread
+	var voice := RandomNumberGenerator.new()
+	voice.seed = hash(str(actor.name))
+	return 1.0 + voice.randf_range(-spread, spread)
+
+
+func _grunt(actor: Node3D) -> void:
+	if actor == null:
+		return
+	var is_player := actor.is_in_group(&"player")
+	if not is_player and not actor.is_in_group(&"enemy"):
+		return
+	var tuning := Tuning.data
+	var id := actor.get_instance_id()
+	if _last_grunt_s.has(id) and (_clock_s - _last_grunt_s[id]) * 1000.0 < tuning.grunt_min_interval_ms:
+		return
+	_last_grunt_s[id] = _clock_s
+	if is_player:
+		play(&"player_grunt", _voice_position(actor), tuning.player_grunt_db, voice_pitch(actor))
+	else:
+		play(&"grunt", _voice_position(actor), tuning.grunt_db, voice_pitch(actor))
+
+
+## Where `actor`'s voice comes from: its eyes.
+func _voice_position(actor: Node3D) -> Vector3:
+	var combat_actor := actor as CombatActor
+	if combat_actor and combat_actor.rig:
+		return combat_actor.rig.get_point_position(&"EyePoint")
+	return actor.global_position
+
+
+## Where `move`'s swing is: its first point hitbox (the fist or foot), else the chest.
+func _strike_position(actor: Node3D, move: MoveData) -> Vector3:
+	var combat_actor := actor as CombatActor
+	if combat_actor == null or combat_actor.rig == null:
+		return actor.global_position
+	if move:
+		for spec in move.hitboxes:
+			if spec.kind == HitboxSpec.Kind.POINT_SPHERE:
+				return combat_actor.rig.get_point_transform(spec.point) * spec.offset
+	return combat_actor.get_chest_position()
+
+
+## A free voice, else the one started longest ago (stopped).
+func _take_voice() -> AudioStreamPlayer3D:
+	var n := _voices.size()
+	for k in n:
+		var index := (_next + k) % n
+		if not _voices[index].playing:
+			_next = (index + 1) % n
+			return _voices[index]
+	var oldest := _voices[_next]
+	_next = (_next + 1) % n
+	oldest.stop()
+	return oldest
+
+
+func _follow_player() -> void:
+	if not listen_from_player:
+		return
+	if not is_instance_valid(_player):
+		_player = get_tree().get_first_node_in_group(&"player") as PlayerCharacter
+	if _player == null or _player.rig == null:
+		return
+	listener.global_transform = Transform3D(_player.get_look_basis(), _player.get_eye_transform().origin)
+	if not listener.is_current():
+		listener.make_current()
+
+
+## Bus volumes, the rear muffle and the music, from Tuning (every frame: values change live).
+func _apply_mix() -> void:
+	var tuning := Tuning.data
+	var sfx := AudioServer.get_bus_index(SFX_BUS)
+	if sfx >= 0:
+		AudioServer.set_bus_volume_db(sfx, tuning.sfx_volume_db)
+	var rear := AudioServer.get_bus_index(REAR_BUS)
+	if rear >= 0 and AudioServer.get_bus_effect_count(rear) > 0:
+		var low_pass := AudioServer.get_bus_effect(rear, 0) as AudioEffectLowPassFilter
+		if low_pass:
+			low_pass.cutoff_hz = tuning.rear_muffle_hz
+	music.volume_db = tuning.music_volume_db
+	var want_music := tuning.music_enabled and music.stream != null
+	if want_music != _music_on:
+		_music_on = want_music
+		if want_music:
+			music.play()
+		else:
+			music.stop()
+
+
+func _ensure_buses() -> void:
+	if AudioServer.get_bus_index(SFX_BUS) < 0:
+		AudioServer.add_bus_effect(_add_bus(SFX_BUS, &"Master"), AudioEffectHardLimiter.new())
+	if AudioServer.get_bus_index(REAR_BUS) < 0:
+		AudioServer.add_bus_effect(_add_bus(REAR_BUS, SFX_BUS), AudioEffectLowPassFilter.new())
+	if AudioServer.get_bus_index(MUSIC_BUS) < 0:
+		_add_bus(MUSIC_BUS, &"Master")
+
+
+static func _add_bus(bus_name: StringName, send: StringName) -> int:
+	AudioServer.add_bus()
+	var index := AudioServer.bus_count - 1
+	AudioServer.set_bus_name(index, bus_name)
+	AudioServer.set_bus_send(index, send)
+	return index
