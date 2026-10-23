@@ -217,6 +217,12 @@ The knee count, releasing the victim on the third knee, the throw direction, dod
 - `cycle()`: bound to `camera_cycle` (F2)
 - `active_camera() -> Camera3D`
 
+**VFX** (Milestone 2 WP2, `game/fx/`; the test room adds a `VfxDirector`, group `"vfx_director"`). Presentation only: it subscribes to `CombatEvents` and never writes game state; the damage look changes rig materials only (`HumanoidRig.set_damage_look(level)`). Every size, time and chance is in Tuning's "VFX" group.
+- It processes after the cameras (`CameraDirector.PROCESS_PRIORITY + 1`), so billboards, size caps and keep-in-view clamps use the view being rendered this frame.
+- `VfxArt` holds every effect texture for the run and the director loads the whole set when it is created: a canvas draw keeps only a texture's RID, and Godot's resource cache holds no reference, so an unheld texture is freed after the frame (the speed lines once drew as gray boxes) and reloaded from disk on the next hit.
+- A hit's world effects are pooled `ComicSprite`s. Each kind (bursts, words, block sparks) scales its tiers by one shared factor between `vfx_min_view_share` (the smallest of the kind) and `vfx_max_view_share` (the largest), so light, heavy and finisher keep their size ratios at any distance. They sit at the contact, pulled inside the view only when the contact is within `vfx_clamp_reach_side_deg` / `_low_deg` of it; hits on the player are brought out ahead of the lens and always shown.
+- `SpeedLines` (a canvas layer under the HUD) converge between the view center and the contact (`vfx_speed_lines_focus_follow`) and stop at the screen rects of the live bursts and words. Lunge lines need a move with its own lunge (`MoveData.lunge` / `free_lunge`), not the magnetism step-in. With `impact_frame_enabled` off they never re-shuffle (no flicker).
+
 **ComboParser usage** (decisions settled during the build):
 - Interrupt branches, such as RB into the back elbow from a recovery, continue the chain: timing `&"chain"` and `chain_step + 1`. Only root branches give `&"root"` with step 1.
 - `ComboBranch.timing` only matters on a move's own branches. Root and interrupt branches ignore it.

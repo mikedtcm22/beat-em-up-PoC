@@ -527,7 +527,7 @@ func _damage_tile(skin: bool, blood: bool) -> String:
 	var shapes := ""
 	if skin:
 		_rng.seed = 4100
-		shapes += '<rect x="0" y="0" width="512" height="512" fill="%s" opacity="0.24"/>\n' % BRUISE_WASH
+		shapes += '<rect x="0" y="0" width="512" height="512" fill="%s" opacity="0.3"/>\n' % BRUISE_WASH
 		for i in 6:
 			var c := _cell_point([0, 2, 3, 5, 6, 7][i], 3, 3)
 			var r := _rng.randf_range(40, 86)
@@ -545,15 +545,15 @@ func _damage_tile(skin: bool, blood: bool) -> String:
 		shapes += _scratches(4, INK, 6.0, 0.75)
 	else:
 		_rng.seed = 4300
-		shapes += '<rect x="0" y="0" width="512" height="512" fill="%s" opacity="0.2"/>\n' % DIRT
-		for i in 7:
-			var c := _cell_point([0, 1, 2, 4, 6, 7, 8][i], 3, 3)
-			var r := _rng.randf_range(44, 78)
+		shapes += '<rect x="0" y="0" width="512" height="512" fill="%s" opacity="0.28"/>\n' % DIRT
+		for i in 9:
+			var c := _cell_point(i, 3, 3)
+			var r := _rng.randf_range(50, 84)
 			var d := _blob(Vector2.ZERO, r, 11, 0.35)
 			var shape := 'rotate(%s) scale(1 %s)' % [_n(_rng.randf_range(0.0, 180.0)), String.num(_rng.randf_range(0.35, 0.6), 2)]
 			for o in _wraps(c, r * 1.4):
 				shapes += '<g transform="translate(%s %s) %s">' % [_n(o.x), _n(o.y), shape]
-				shapes += _path(d, DIRT_DARK, "", 0.0, ' opacity="0.62"').trim_suffix("\n") + "</g>\n"
+				shapes += _path(d, DIRT_DARK, "", 0.0, ' opacity="0.7"').trim_suffix("\n") + "</g>\n"
 		for i in 6:
 			var c := Vector2(_rng.randf_range(0, 512), _rng.randf_range(0, 512))
 			var tear := _tear(_rng.randf_range(70, 120), _rng.randf_range(12, 20), _rng.randf_range(0.0, PI))
