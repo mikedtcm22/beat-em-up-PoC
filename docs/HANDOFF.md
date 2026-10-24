@@ -4,6 +4,17 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-24 10:08 CDT: account D resumed after its reset; WP4 verify-and-fix finishing
+Game-boy stayed on account D. The 5-hour window is at 4% (resets 13:40 CDT), and weekly is at 56% (resets Tue 2026-10-27 12:00 CDT). Extra usage now shows as enabled ($0 spent). The watcher `usage-watcher-e` is still running.
+- **Running:** one background agent, started from this session, finishes the WP4 verify-and-fix pass in `.worktrees/m2-ragdoll`, as in the 23:50 entry's resume step 1. It will:
+  - give a verdict for each of the 18 findings;
+  - finish or revert `5be9500`'s half-done edits;
+  - re-record into `captures/review_after/`;
+  - write `docs/reviews/M2-WP4-fix-results.json`;
+  - commit "M2 WP4: review fixes (...)" and push, with `wip:` commits every 15-20 minutes.
+- **If cut off:** check `m2/ragdoll` for the "review fixes" commit. Without one, rerun the same step from the newest `wip:` commit.
+- **Still open with Game-boy:** the white hit flash, and the builder's three ragdoll spec questions. The agent leaves all three ragdoll behaviours as they are.
+
 ### 2026-10-23 23:50 CDT: handoff, account D's 5-hour window at 84%
 The watcher warned at 84% of the 5-hour window (resets 03:30 CDT on 10-24), climbing about 1.2 points a minute. Weekly is at about 47%. The workflow `wf_6868f11f-7bd` is stopped, and nothing else is running. Every branch is committed and pushed, and the worktrees are clean apart from the untracked `captures/` folders.
 - **WP4 state** (`m2/ragdoll`, `.worktrees/m2-ragdoll`):
