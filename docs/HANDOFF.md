@@ -18,6 +18,12 @@ A new working session took over at 79% of its 5-hour window (resets 21:39 CDT) a
   - WP1, debug time scale: 0.25x also stretches hitstop and the slow-mo timers, while camera punch and shake stay real time. Default: keep.
   - WP1, cheats out of presets: Save, Load and Reset skip the Debug group. Default: keep, and note it in README's Milestone 2 departures.
 - **Next:** WP4 starts only after the 21:39 CDT reset (a heavy agent costs about 25%), per [docs/milestones/M2-WP4-brief.md](milestones/M2-WP4-brief.md), in a new worktree off `m2/hit-feel`.
+- **WP4 setup (20:35 CDT):** worktree `.worktrees/m2-ragdoll` on branch `m2/ragdoll` (from `8f0b5f7`, imported, pushed). Ultracode is on, so WP4 runs as a workflow once the window resets and passes the 65% gate:
+  - one builder;
+  - then two reviewers at once, one on mechanics and one on feel from captures;
+  - then one agent that verifies each finding adversarially and fixes the ones that hold.
+  - A Haiku usage gate runs before each launch.
+  - If cut off: check `m2/ragdoll` for its "M2 WP4" commits and resume from the last finished stage.
 
 ### 2026-10-23 20:20 CDT: Game-boy switches to a fresh account
 Account C stopped work at 76% of its 5-hour window and 13% weekly. Both of its watchers are told to stop and are being archived. This session is renamed "Beat-em-up: account C session (handed off)", which frees the working-session title.
