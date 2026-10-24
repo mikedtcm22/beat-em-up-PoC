@@ -113,6 +113,9 @@ const _FALL_HEAD_SLACK := 0.02
 ## straight fade would point the spine this much higher (y of its unit up axis) than it
 ## points at either end.
 const _ROLL_MIN_GAIN := 0.1
+## The contact flash's overlay shader (flash_at()). Loaded with the rig, so it is compiled
+## long before the first hit.
+const _FLASH_SHADER := preload("res://game/fx/hit_flash.gdshader")
 
 var _built: bool = false
 ## Rig lengths are PlaceholderBody lengths times this.
@@ -127,6 +130,12 @@ var _hurt_shapes: Array[CollisionShape3D] = []
 var _hurt_specs: Array[PlaceholderBody.HurtSpec] = []
 ## Paint (PlaceholderBody.Paint) -> material. One set per rig so flashes stay per actor.
 var _materials: Dictionary[int, StandardMaterial3D] = {}
+## The contact flash's overlay (flash_at()), made on first use: every material's next_pass
+## while it runs, nobody's otherwise. Its point, in the frame of the bone node nearest it.
+var _flash_overlay: ShaderMaterial
+var _flash_on: bool = false
+var _flash_anchor: Node3D
+var _flash_local: Vector3 = Vector3.ZERO
 var _head_meshes: Array[MeshInstance3D] = []
 var _body_meshes: Array[MeshInstance3D] = []
 var _current: StringName = &""
@@ -346,13 +355,80 @@ func set_hurtboxes_enabled(enabled: bool) -> void:
 		_hurt_shapes[i].disabled = not enabled
 
 
-## Hit flash, 0..1 (Spec §6: white for 2 frames on contact). `color` tints it (a perfect
-## block flashes the defender cyan).
+## Whole-body flash, 0..1, as emission on every material: the cyan parry flash (a perfect
+## block flashes the defender). Ends a contact flash (flash_at()); 0 clears both.
 func set_flash(amount: float, color: Color = Color.WHITE) -> void:
+	_show_flash_overlay(false)
 	var energy := clampf(amount, 0.0, 1.0)
 	for mat: StandardMaterial3D in _materials.values():
 		mat.emission = color
 		mat.emission_energy_multiplier = energy
+
+
+## Contact flash (Spec §6, localized by Game-boy on 2026-10-24): the body mixes toward
+## `color` around `point` (world space, the hit's contact point), at `strength` (0..1) out
+## to `core` (0..1) of `radius` meters, fading smoothly to nothing at `radius`. A radius
+## that covers the body (3 m) whites it all, the flash before the departure. Drawn by this
+## rig's overlay (game/fx/hit_flash.gdshader) as every material's next_pass, set only while
+## the flash runs; the base materials (DamageLook's marks) stay as they are. The point rides
+## the nearest bone (follow_flash()). Ends a whole-body flash; set_flash(0.0) clears it.
+func flash_at(point: Vector3, strength: float, radius: float, core: float,
+		color: Color = Color.WHITE) -> void:
+	set_flash(0.0)
+	if not _built or strength <= 0.0 or radius <= 0.0:
+		return
+	if _flash_overlay == null:
+		_flash_overlay = ShaderMaterial.new()
+		_flash_overlay.shader = _FLASH_SHADER
+		# First among the transparent passes, so the comic effects draw over it.
+		_flash_overlay.render_priority = Material.RENDER_PRIORITY_MIN
+	_flash_anchor = self
+	_flash_local = point
+	if is_inside_tree():
+		var nearest := INF
+		for node: Node3D in _bone_nodes.values():
+			var dist := node.global_position.distance_squared_to(point)
+			if dist < nearest:
+				nearest = dist
+				_flash_anchor = node
+		_flash_local = _flash_anchor.to_local(point)
+	_flash_overlay.set_shader_parameter(&"flash_point", point)
+	_flash_overlay.set_shader_parameter(&"flash_radius", radius)
+	_flash_overlay.set_shader_parameter(&"flash_core", clampf(core, 0.0, 1.0))
+	_flash_overlay.set_shader_parameter(&"flash_strength", clampf(strength, 0.0, 1.0))
+	_flash_overlay.set_shader_parameter(&"flash_color", color)
+	_show_flash_overlay(true)
+
+
+## Keep a running contact flash on the spot it struck after the body moved (its owner calls
+## this each tick while the flash runs, after advance()).
+func follow_flash() -> void:
+	if _flash_on and _flash_anchor != null and _flash_anchor.is_inside_tree():
+		_flash_overlay.set_shader_parameter(&"flash_point", _flash_anchor.to_global(_flash_local))
+
+
+## The contact flash's overlay while one runs (shader parameters flash_point, flash_radius,
+## flash_core, flash_strength, flash_color), else null.
+func flash_overlay() -> ShaderMaterial:
+	return _flash_overlay if _flash_on else null
+
+
+## The contact flash's strength share at `dist` meters from its point, as the overlay shader
+## computes it: 1 out to `core` of `radius`, then a smoothstep down to 0 at `radius`.
+static func flash_falloff(dist: float, radius: float, core: float) -> float:
+	var inner := radius * clampf(core, 0.0, 1.0)
+	var span := radius - inner
+	if span <= 0.0:
+		return 1.0 if dist <= radius else 0.0
+	return 1.0 - smoothstep(0.0, 1.0, clampf((dist - inner) / span, 0.0, 1.0))
+
+
+func _show_flash_overlay(on: bool) -> void:
+	if on == _flash_on:
+		return
+	_flash_on = on
+	for mat: StandardMaterial3D in _materials.values():
+		mat.next_pass = _flash_overlay if on else null
 
 
 ## Damage look (Spec §6, "Damage you can see"): DamageLook.Level CLEAN, BRUISED or BLOODIED

@@ -80,8 +80,6 @@ extends Resource
 @export_range(0.0, 8.0, 0.1) var ko_lift: float = 3.0
 ## Fraction of horizontal speed kept when a flying body lands.
 @export_range(0.0, 1.0, 0.05) var landing_slide_keep: float = 0.35
-## Frames of white flash on a struck victim (Spec §6: 2), counted in real ticks.
-@export_range(0, 10, 1) var hit_flash_frames: int = 2
 @export_range(0.5, 6.0, 0.1) var dummy_walk_speed: float = 2.5
 
 @export_group("Hit feel")
@@ -99,6 +97,20 @@ extends Resource
 ## The finisher impact frame (Spec §6); off for photosensitive players, which also stops
 ## the speed lines' flicker.
 @export var impact_frame_enabled: bool = true
+@export_subgroup("Hit flash")
+## The white flash on a struck body (Spec §6), localized by Game-boy (2026-10-24): full white
+## at the hit's contact point, fading out by hit_flash_radius_m. A blocked hit flashes at
+## CombatActor.BLOCK_FLASH_AMOUNT of the strength; the cyan parry flash stays whole-body.
+## Frames it shows for (Spec: 2), counted in real ticks (one rendered frame each at 60 Hz),
+## so hitstop doesn't stretch it.
+@export_range(0, 10, 1) var hit_flash_frames: int = 2
+## How far from the contact point the flash reaches (meters, on the struck body only). 0.25
+## is about a head's width; 3 or more covers the whole body, the flash before the change.
+@export_range(0.0, 4.0, 0.01, "or_greater") var hit_flash_radius_m: float = 0.25
+## How white the flash gets at the contact point (1 = pure white).
+@export_range(0.0, 1.0, 0.05) var hit_flash_strength: float = 1.0
+## Share of hit_flash_radius_m flashing at full strength before the smooth fade to nothing.
+@export_range(0.0, 1.0, 0.05) var hit_flash_core: float = 0.5
 
 @export_group("VFX")
 ## Comic effects (Spec §6; VfxDirector, game/fx/). Sizes are meters at the contact point
