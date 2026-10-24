@@ -23,11 +23,14 @@ This opens the Milestone 1 graybox test room: the player, three training dummies
 | Pause (R restarts while paused) | Menu | Esc |
 | Cycle camera: first person, side view, free fly | | F2 |
 | Debug draw: hitboxes, hurtboxes, magnetism, states | | F3 |
-| Time scale 0.25× / 1× (stand-in for the cheat menu) | | F4 |
+| Tuning panel: every tunable and move, presets | View | F1 |
+| Cheats: god mode, one-hit KOs, spawn a dummy, time scale 0.25× / 1×, reset dummies | | F4 |
 | Sparring: all three dummies throw jabs / none do | | F5 |
 | Controls help | | H |
 
 The free-fly camera moves with the arrow keys and PgUp/PgDn, and turns while you hold the middle mouse button. The player keeps WASD and the mouse.
+
+The tuning panel and the cheat menu take every key while open, and the player stands still: close them (F1, F4 or Esc) before using F2, F3, F5 or H. The panel works with the mouse, and with a gamepad's D-pad, A and B. Presets save to `user://tuning/`; "Export" writes `tuning/<name>.json` in the project, and `tuning/default.json` holds the shipped values.
 
 **Combos:** P P P P · P (pause) P, then mash (body-blow flurry into the shove) · P P (pause) P (spinning backfist) · K K K · K (pause) K · P P K · hold P, then release (haymaker). The pause means waiting about a quarter second after a hit finishes before pressing again.
 

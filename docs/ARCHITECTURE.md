@@ -1,4 +1,4 @@
-# Architecture (Milestone 1 contracts)
+# Architecture (module contracts, Milestones 1 and 2)
 
 This is the working contract between modules. [SPEC.md](SPEC.md) §3 decides the shape. This file pins down names, units and interfaces so modules can be built in parallel.
 
