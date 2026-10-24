@@ -4,7 +4,7 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
-### 2026-10-24 17:35 CDT: two fix packages merged; hold-view running; ko-respawn-bars left
+### 2026-10-24 17:25 CDT: two fix packages merged; hold-view running; ko-respawn-bars left
 The 5-hour window is at about 62% (resets about 21:30 CDT); weekly is at 40%. The first fix run (`wf_3e329695-5fc`) took the window from 10% to 58% in 35 minutes: two fixers at about 24% each.
 - **Merged into `m2/hit-feel`** (`4683f81`, `4cc2f56`, pushed). Both merged cleanly, and the preset regenerated unchanged (299 values).
   - **`launch-from-hold`** (`999d565`, 461/461 in its worktree). All four findings are fixed:
