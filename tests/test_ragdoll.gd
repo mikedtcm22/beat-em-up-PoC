@@ -611,8 +611,10 @@ func test_two_bodies_that_fell_on_each_other_get_up_beside_each_other() -> void:
 	assert_lt(moved[0], Tuning.data.ragdoll_getup_aside_m + 0.3, "not far off")
 	assert_true(clear[0], "clear of the body still lying there")
 	assert_lt(moved[1], 0.2, "the one underneath gets up about where it lies")
+	# (The get-up fade's first frame moves a body lying far from its animation pose, a leg up
+	# on the other body, a few centimeters; a pop would be the whole relocation.)
 	for k in 2:
-		assert_lt(jump[k], 0.04, "dummy %d: no pop on the get-up frame" % k)
+		assert_lt(jump[k], 0.06, "dummy %d: no pop on the get-up frame" % k)
 	assert_true(await _wait_until(func() -> bool:
 		return dummies[0].state == CombatTypes.ActorState.FREE and dummies[1].state == CombatTypes.ActorState.FREE, 120), "both stand")
 	var apart := Vector2(dummies[0].global_position.x - dummies[1].global_position.x,

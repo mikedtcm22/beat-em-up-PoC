@@ -276,7 +276,7 @@ extends Resource
 ## How hard the staggering upper body (spine, neck, head) and its arms are pulled back
 ## toward the animation's joint angles, and the share of gravity on it (0: the stagger
 ## animation carries its weight, the ragdoll only gives way).
-@export_range(0.0, 6.0, 0.05) var ragdoll_partial_pose_hz: float = 1.0
+@export_range(0.0, 6.0, 0.05) var ragdoll_partial_pose_hz: float = 0.7
 @export_range(0.0, 8.0, 0.05) var ragdoll_partial_limb_pose_hz: float = 3.0
 @export_range(0.0, 1.0, 0.05) var ragdoll_partial_gravity: float = 0.0
 ## A perfect block knocks the attacker's striking arm back as a hit at this speed would
@@ -336,10 +336,11 @@ extends Resource
 @export_range(5.0, 100.0, 1.0) var ragdoll_max_spin: float = 40.0
 @export_subgroup("Rest and get-up")
 ## A lying ragdoll sleeps once every body has moved slower than this (m/s) for
-## ragdoll_rest_s, and at the latest ragdoll_settle_max_s after it started lying.
+## ragdoll_rest_s, and at the latest ragdoll_settle_max_s after it started lying (about as
+## long as a knockdown lies, downed_frames: a body about to get up is not frozen mid-motion).
 @export_range(0.0, 1.0, 0.01) var ragdoll_rest_speed: float = 0.25
 @export_range(0.0, 2.0, 0.05) var ragdoll_rest_s: float = 0.3
-@export_range(0.2, 5.0, 0.1) var ragdoll_settle_max_s: float = 1.25
+@export_range(0.2, 5.0, 0.05) var ragdoll_settle_max_s: float = 1.25
 ## The get-up fades from the pose the ragdoll lies in over this long, and longer when the
 ## body has further to go to where it stands up (it slides there no faster than this, m/s;
 ## at most over the whole get-up).

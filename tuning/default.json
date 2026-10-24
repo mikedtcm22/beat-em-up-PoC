@@ -151,7 +151,7 @@
 		"ragdoll_partial_fade_s": 0.4,
 		"ragdoll_partial_rise_s": 0.08,
 		"ragdoll_partial_impulse": 7.0,
-		"ragdoll_partial_pose_hz": 1.0,
+		"ragdoll_partial_pose_hz": 0.7,
 		"ragdoll_partial_limb_pose_hz": 3.0,
 		"ragdoll_partial_gravity": 0.0,
 		"ragdoll_parry_push": 0.8,

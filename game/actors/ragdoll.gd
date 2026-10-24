@@ -435,12 +435,13 @@ func body_sim_velocity(bone: StringName) -> Vector3:
 	return Vector3.ZERO
 
 
-## The joints that exist now, and the farthest any simulating body's joint has pulled
-## apart (meters between its bone origin and its anchor on the parent body). For tests.
+## The joints that exist now (for tests).
 func joint_count() -> int:
 	return _joints.filter(func(joint: RID) -> bool: return joint.is_valid()).size()
 
 
+## The farthest any simulating body's joint has pulled apart: meters between its bone
+## origin and its anchor on the parent body (for tests).
 func joint_stretch() -> float:
 	var worst := 0.0
 	var scale := rig.rig_scale()
@@ -771,11 +772,17 @@ func _queue_impulse(contact: Vector3, push: Vector3, part: Part) -> void:
 			break
 	var change := push.limit_length(Tuning.data.ragdoll_max_kick)
 	_pending.append([best, change])
+	# A kick on an arm moves the whole arm; a stagger's kick on the trunk, the whole trunk
+	# (on one light body the joints soak it up and the chest hardly gives).
 	if _part[best] == Part.ARMS:
 		var up := _parent_body[best]
 		while up >= 0 and _part[up] == Part.ARMS and _sim.has(up):
 			_pending.append([up, change])
 			up = _parent_body[up]
+	elif mode == Mode.PARTIAL and _part[best] == Part.TORSO:
+		for i: int in _sim:
+			if i != best and _part[i] == Part.TORSO:
+				_pending.append([i, change])
 
 
 ## Rest detection for a lying ragdoll: asleep once every body has moved slower than
