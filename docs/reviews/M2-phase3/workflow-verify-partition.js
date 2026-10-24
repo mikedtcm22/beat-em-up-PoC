@@ -15,7 +15,9 @@ const GRAB_WT = `${ROOT}/.worktrees/m2-review-grab`
 const LIMIT = 90
 const COST = { perFinding: 2, partition: 4 }
 const TRAILER = 'Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>'
-const TODO = [
+const A = args || {}
+// args.skip_verify: grab-06..08 are already verified (they are, since 2026-10-24 14:35 CDT); run only the partition.
+const TODO = A.skip_verify ? [] : [
   { id: 'grab-06', lens: 'grab', severity: 'low', title: "The hold view's pitch adds to the player's own look pitch with no limit" },
   { id: 'grab-07', lens: 'grab', severity: 'low', title: "The throw shows the player's right elbow end as a blue ball in the middle of the view" },
   { id: 'grab-08', lens: 'grab', severity: 'low', title: "From the hold view the held enemy's head reads as a big bald skin dome" },
@@ -149,7 +151,7 @@ async function verifyFinding(f) {
 // ---------- verify grab-06..08 ----------
 phase('Verify')
 let newVerdicts = []
-const gv = await gate('verify:grab-06..08', 'Verify')
+const gv = TODO.length ? await gate('verify:grab-06..08', 'Verify') : null
 const k = gv ? Math.max(0, Math.min(TODO.length, Math.floor(gv.headroom / COST.perFinding))) : 0
 const batch = TODO.slice(0, k)
 const pending = TODO.slice(k).map(f => f.id)
@@ -181,7 +183,7 @@ if (!gp || COST.partition > gp.headroom) {
   partition = await agent(`${COMMON}
 
 YOUR JOB: PARTITION the surviving review findings of package C into fix packages for parallel fixers (read-only; read code in ${ROOT}/.worktrees/m2-review-code, a detached checkout at c27afaf; write nothing).
-The findings are in ${REVIEWS}/review-code.json, review-ragdoll.json and review-grab.json (each has a findings array with ids), and the skeptics' verdicts in verify-code.json, verify-ragdoll.json and verify-grab.json (each verdict has survives, spec_question, root_cause, files). Partition every finding whose verdict has survives true and spec_question false. That should be code-01 to code-06, ragdoll-01 to ragdoll-05, grab-01, grab-02 and grab-04, plus whichever of these fresh verdicts (data) survive without a spec question: ${JSON.stringify(newSummary)}. grab-03 and grab-05 are spec questions for Game-boy: leave them out. Read each finding's detail, suggested_fix and root_cause, and the code as needed, to confirm which files each fix touches.
+The findings are in ${REVIEWS}/review-code.json, review-ragdoll.json and review-grab.json (each has a findings array with ids), and the skeptics' verdicts in verify-code.json, verify-ragdoll.json and verify-grab.json (each verdict has survives, spec_question, root_cause, files). Partition every finding whose verdict has survives true and spec_question false. That should be code-01 to code-06, ragdoll-01 to ragdoll-05, grab-01, grab-02, grab-04 and grab-06 to grab-08, plus whichever of these fresh verdicts (data) survive without a spec question: ${JSON.stringify(newSummary)}. grab-03 and grab-05 are spec questions for Game-boy: leave them out. Read each finding's detail, suggested_fix and root_cause, and the code as needed, to confirm which files each fix touches.
 Rules:
 - packages own DISJOINT files, except these shared files several fixers may append to in their own place: game/autoload/tuning_data.gd (each in its own group or subgroup), tuning/default.json (regenerated; the lead regenerates it after merging), docs/ARCHITECTURE.md (each in its own section). Tests count as files: give each test file to one package, or have a package add a new test file;
 - at most 4 packages, balanced in work (a fixer costs about a quarter of a usage window, so a package should be a few hours of careful work, not a day), ordered by priority (high severity first: code-01 and grab-01 are high); merge findings with the same root cause or duplicates across lenses into one package and say so in notes;

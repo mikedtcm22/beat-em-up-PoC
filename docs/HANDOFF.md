@@ -4,6 +4,19 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-24 14:40 CDT: handoff, account E's 5-hour window at 89%
+The watcher called the handoff at 89% of the 5-hour window (resets 16:30 CDT); weekly is at 28% (resets Tue 2026-10-27 17:00 CDT). The first task took the window from 76% to 89% in about 25 minutes: nine Sonnet skeptics cost about 6 points, and the lead's reading about 4. The workflow `wf_338da5ae-007` is stopped mid-partition, and nothing else is running. Every branch is pushed. The reviewer worktrees have no tracked changes.
+- **Done:** grab-06, -07 and -08 are verified. All three survive with 3 of 3 confirmations, with no spec question. They're merged into `verify-grab.json` on `m2/phase3-review` (`5b77fcd`), and its `pending` is now empty.
+  - grab-06: the hold pitch adds to the look pitch with no limit. Looking down 25°, the player's own body fills 52-62% of the view at the knee's peak.
+  - grab-07: the hold view's ease is advanced per sim tick, so it stands still through the throw's hitstop. The lens stays back and up while the right upper arm swings out, which leaves the elbow as a blue ball mid-view.
+  - grab-08: the placeholder head has no hair or back-of-head part.
+- **Not done:** the partition. It was stopped before it returned, so there's no `packages.json` yet.
+- **Survivors to fix:** 17 findings with no spec question, from code-01 to -06, ragdoll-01 to -05, and grab-01, -02, -04, -06, -07 and -08. The spec questions grab-03 and grab-05 are Game-boy's.
+- **Resume (next account or after the 16:30 reset):**
+  1. Run [reviews/M2-phase3/workflow-verify-partition.js](reviews/M2-phase3/workflow-verify-partition.js) inline (`scriptPath`) with `args: {"skip_verify": true}`. Only the usage gate and the partition run (about 4%). A scribe commits `packages.json`.
+  2. Then follow steps 1-4 of "C's order from here" in the 14:15 entry below. Start with `workflow-fix.js`, two fixers at once.
+- **Waiting on Game-boy:** grab-03 and grab-05 (13:55 entry), plus the 12:40 entry's items. Each has a default.
+
 ### 2026-10-24 14:15 CDT: account E back at 74%; first task: verify grab-06 to -08, partition the survivors
 The account Game-boy switched to at 14:10 has account E's reset times. It was at 74% of its 5-hour window (resets 16:30 CDT) and 27% weekly (resets Tue 2026-10-27 17:00 CDT). That left 16 points below 90%, less than one reviewer (18). Per the usage rules, this session split off a first task that fits. Its watcher runs: "Beat-em-up: usage watcher", name `usage-watcher-h` (Haiku, low effort, self-paced).
 - **Running:** workflow `m2-phase3-c-verify-partition` (run `wf_338da5ae-007`), a copy in [reviews/M2-phase3/workflow-verify-partition.js](reviews/M2-phase3/workflow-verify-partition.js). It does two things, each usage-gated:
@@ -545,7 +558,7 @@ USAGE RULES:
 
 Next steps (Milestone 2; details are in docs/HANDOFF.md):
 - Phases 1 and 2, the localized flash and phase 3's packages A (ragdoll: contact push, KO blink-off, staggers at 0.9) and B (grab view and waist bend) are merged into m2/hit-feel. 457/457 tests pass with no SCRIPT ERROR, at f98bb21. README has the three approved M2 ragdoll departures. WP3's audio was judged by analysis only, so I'll listen to it.
-- Phase 3's package C runs as a Workflow (I turned ultracode on), per docs/milestones/M2-phase3-plan.md, "C", step 2. Account F ran it on 2026-10-24 until its 90% handoff at 13:55. The code, ragdoll and grab reviews are done, and 16 findings are verified; 16 survive, 2 of them spec questions for me. The hit and performance reviews, 3 low grab findings and all the fixes are left. The results are JSON in docs/reviews/M2-phase3/ on branch m2/phase3-review, and the script is docs/reviews/M2-phase3/workflow.js. Resume it as docs/HANDOFF.md's newest entry says: pass the earlier results as args so it skips finished work, and set COST.reviewer to 18 first. After it: merge the fix branches and m2/phase3-review into m2/hit-feel, regenerate the preset, run the tests, record the final sheets and show me. Then D: check ARCHITECTURE against the code, README's Milestone 2 status, and the M2 PR, which is never merged without my sign-off.
+- Phase 3's package C runs as a Workflow (I turned ultracode on), per docs/milestones/M2-phase3-plan.md, "C", step 2. The code, ragdoll and grab reviews are done, and all 19 of their findings are verified: every one survives, and 2 are spec questions for me (grab-03, grab-05). The results are JSON in docs/reviews/M2-phase3/ on branch m2/phase3-review. Next, as docs/HANDOFF.md's newest entry says: run docs/reviews/M2-phase3/workflow-verify-partition.js with args {"skip_verify": true} (the partition into fix packages, about 4%), then workflow-fix.js (the fixers, two at once, about 25% each; no args). Then merge the fix branches and m2/phase3-review into m2/hit-feel, regenerate the preset and run the tests. Then round 2: the hit-feel and performance reviews on the merged build (workflow.js), and their fixes. Then record the final sheets and show me. Then D: check ARCHITECTURE against the code, README's Milestone 2 status, and the M2 PR, which is never merged without my sign-off.
 - Open for me (each has a default; none blocks C): more contortion on the ragdoll contact push (default: as it is); the grab's lens pull-back and the bend's depth (default: as they are); the combat log over the knee contact (default: C proposes a fix); a minimum on-screen size for the side-view flash (default: leave it). And I'll listen to WP3's audio.
 
 Ground rules:
