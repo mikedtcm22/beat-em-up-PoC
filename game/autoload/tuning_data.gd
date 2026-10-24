@@ -267,12 +267,17 @@ extends Resource
 @export_range(0.0, 1.0, 0.01) var ragdoll_partial_influence: float = 0.6
 @export_range(0.0, 1.0, 0.01) var ragdoll_partial_hold_s: float = 0.25
 @export_range(0.05, 1.5, 0.01) var ragdoll_partial_fade_s: float = 0.4
+## A stagger on a body already staggering: the influence rises back from where its fade had
+## got to over this long (no pop).
+@export_range(0.0, 0.5, 0.01) var ragdoll_partial_rise_s: float = 0.08
 ## The hit's push (its knockback speed) times this is the kick given to the struck body
 ## part at the contact point (up to ragdoll_max_kick).
 @export_range(0.0, 12.0, 0.1) var ragdoll_partial_impulse: float = 7.0
-## How hard the staggering upper body is pulled back toward the animation, and the share of
-## gravity on it (0: the stagger animation carries its weight, the ragdoll only gives way).
+## How hard the staggering upper body (spine, neck, head) and its arms are pulled back
+## toward the animation's joint angles, and the share of gravity on it (0: the stagger
+## animation carries its weight, the ragdoll only gives way).
 @export_range(0.0, 6.0, 0.05) var ragdoll_partial_pose_hz: float = 1.0
+@export_range(0.0, 8.0, 0.05) var ragdoll_partial_limb_pose_hz: float = 1.0
 @export_range(0.0, 1.0, 0.05) var ragdoll_partial_gravity: float = 0.0
 ## A perfect block knocks the attacker's striking arm back as a hit at this speed would
 ## (times ragdoll_partial_impulse, like every stagger's push).
@@ -280,25 +285,37 @@ extends Resource
 @export_subgroup("Knocked off the feet (full)")
 ## The kick at the contact point, times the hit's knockback speed (up to ragdoll_max_kick).
 @export_range(0.0, 5.0, 0.05) var ragdoll_full_impulse: float = 0.5
+## A body knocked off its feet shows the animation's snap first: the ragdoll's influence
+## rises from what showed to full over this long, its pose springs this strong (Hz) at
+## first, easing to the flight's.
+@export_range(0.0, 0.6, 0.01) var ragdoll_full_rise_s: float = 0.15
+@export_range(0.0, 10.0, 0.1) var ragdoll_full_rise_pose_hz: float = 6.0
 ## No kick at a contact point changes its body part's speed by more than this (m/s).
 @export_range(0.0, 30.0, 0.5) var ragdoll_max_kick: float = 14.0
 ## Share of the knocked body's new velocity every ragdoll body starts with (the rest comes
 ## from the hips spring).
 @export_range(0.0, 1.0, 0.05) var ragdoll_inherit_velocity: float = 1.0
-## How hard each bone is pulled toward the animation's pose while flying, while lying down
-## (a downed body lies where its hurtboxes are) and when KO'd (0 = limp).
+## How hard each bone is pulled toward the animation's joint angles while flying, while
+## lying down (the torso, neck and head, then the arms and legs: a downed body lies where
+## its hurtboxes are) and when KO'd (0 = limp).
 @export_range(0.0, 6.0, 0.05) var ragdoll_flight_pose_hz: float = 2.5
 @export_range(0.0, 6.0, 0.05) var ragdoll_down_pose_hz: float = 3.0
+@export_range(0.0, 6.0, 0.05) var ragdoll_down_limb_pose_hz: float = 3.0
 @export_range(0.0, 6.0, 0.05) var ragdoll_ko_pose_hz: float = 0.0
 ## Damping ratio of those pose springs.
 @export_range(0.0, 2.0, 0.05) var ragdoll_pose_damping: float = 0.8
-## A stomp on a downed body jolts it this hard (m/s at the contact).
+## A stomp on a downed body jolts it this hard (m/s at the contact), down into the floor
+## and tilted this much along the stomp (1 = as much along it as down).
 @export_range(0.0, 10.0, 0.1) var ragdoll_ground_push: float = 2.5
+@export_range(0.0, 1.0, 0.05) var ragdoll_ground_push_tilt: float = 0.25
 @export_subgroup("Hips spring")
 ## The whole ragdoll is held to the animation's hips (where the sim body is): position
-## spring frequency and damping ratio, and the hips' rotation spring (and a KO's, weaker).
+## spring frequency and damping ratio, and the whole body's turn toward the animation's
+## hips rotation while flying (it rolls over in the air as the animation does), lying (and
+## a KO's, weaker).
 @export_range(0.5, 6.0, 0.05) var ragdoll_hips_hz: float = 3.0
 @export_range(0.1, 2.0, 0.05) var ragdoll_hips_damping: float = 1.0
+@export_range(0.0, 8.0, 0.05) var ragdoll_flight_turn_hz: float = 2.5
 @export_range(0.0, 6.0, 0.05) var ragdoll_hips_turn_hz: float = 2.5
 @export_range(0.0, 6.0, 0.05) var ragdoll_ko_hips_turn_hz: float = 0.6
 @export_subgroup("Body")
@@ -321,8 +338,11 @@ extends Resource
 @export_range(0.0, 1.0, 0.01) var ragdoll_rest_speed: float = 0.25
 @export_range(0.0, 2.0, 0.05) var ragdoll_rest_s: float = 0.3
 @export_range(0.2, 5.0, 0.1) var ragdoll_settle_max_s: float = 1.0
-## The get-up fades from the pose the ragdoll lies in over this long.
+## The get-up fades from the pose the ragdoll lies in over this long, and longer when the
+## body has further to go to where it stands up (it slides there no faster than this, m/s;
+## at most over the whole get-up).
 @export_range(0.0, 0.5, 0.01) var ragdoll_getup_blend_s: float = 0.2
+@export_range(0.5, 6.0, 0.1) var ragdoll_getup_slide_speed: float = 1.5
 ## A ragdoll cut short (a staggering body grabbed) fades back over this long.
 @export_range(0.0, 0.5, 0.01) var ragdoll_stop_blend_s: float = 0.1
 

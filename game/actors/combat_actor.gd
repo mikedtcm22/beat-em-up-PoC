@@ -18,7 +18,8 @@ extends CharacterBody3D
 ## Ragdoll (Spec §6, game/actors/ragdoll.gd): staggers start the rig's partial ragdoll and
 ## bodies knocked off their feet its full ragdoll (_ragdoll_stagger(), _ragdoll_full()); a
 ## landing switches it to lying and a KO to limp, and the get-up moves the body to where the
-## ragdoll's hips lie (_move_under_ragdoll()) and fades from its pose. Enemies and dummies
+## ragdoll's hips lie if there is room (_move_under_ragdoll()) and fades from its pose.
+## Enemies and dummies
 ## only, unless Tuning.ragdoll_player. Visual only: every timing, flight, impact and hurtbox
 ## here stays the animation's.
 ##
@@ -47,14 +48,11 @@ const _RELEASE_BLEND_S := 0.22
 const PARRY_FLASH_COLOR := Color(0.3, 0.9, 1.0)
 const BLOCK_FLASH_AMOUNT := 0.45
 ## Getting up out of a ragdoll (_move_under_ragdoll()): the spots tried, from the ragdoll's
-## hips back toward the body's origin (this many steps), and how far above the floor the
-## body's capsule is checked for room...
+## hips back toward the body's origin (this many steps; search resolution, not feel), and
+## how far above the floor the body's capsule is checked for room (clear of the floor it
+## stands on).
 const _GETUP_TRIES := 4
 const _GETUP_FLOOR_CLEARANCE := 0.03
-## ...and with no room on the way, spots around the hips this many body radii out, in this
-## many directions.
-const _GETUP_RINGS: Array[float] = [2.0, 3.0]
-const _GETUP_RING_DIRECTIONS := 8
 
 @export var max_health: float = 100.0
 ## 0 = player, 1 = enemies.
@@ -324,9 +322,10 @@ func react_to_block(hit: HitInfo) -> void:
 		sim_velocity = Vector3(0.0, sim_velocity.y, 0.0)
 		_enter_state(CombatTypes.ActorState.STAGGER, Tuning.data.perfect_block_stagger_frames)
 		rig.play(_directional_anim(&"stagger", -hit.direction), 0.0)
-		# The guard knocks the striking arm back.
-		_ragdoll_stagger(hit.contact_point, -hit.direction * Tuning.data.ragdoll_parry_push, Ragdoll.Part.ARMS)
 		rig.advance(0.0)
+		# The guard knocks the striking arm back: the partial ragdoll starts from the snapped
+		# stagger pose, not from the strike at full reach.
+		_ragdoll_stagger(hit.contact_point, -hit.direction * Tuning.data.ragdoll_parry_push, Ragdoll.Part.ARMS)
 		_on_move_interrupted()
 		return
 	var frames := hit.move.blocked_recoil_frames if hit.move else 0
@@ -445,6 +444,9 @@ func release_from_grab(push: Vector3, stagger: bool) -> void:
 	global_position += under_hips
 	rig.carry_fade(under_hips)
 	rig.advance(0.0)
+	if stagger:
+		# Like every stagger, the upper body gives way to the push.
+		_ragdoll_stagger(get_chest_position(), sim_velocity, Ragdoll.Part.TORSO)
 	CombatEvents.released.emit(by, self)
 
 
@@ -884,7 +886,7 @@ func _apply_reaction(hit: HitInfo) -> void:
 			state_frame = maxi(0, state_frame - 20)
 			rig.play(&"downed_back" if _face_up else &"downed_front", 0.02)
 			# The body lying there takes the blow.
-			var down := (hit.direction * 0.25 + Vector3.DOWN).normalized()
+			var down := (hit.direction * Tuning.data.ragdoll_ground_push_tilt + Vector3.DOWN).normalized()
 			rig.ragdoll_hit(hit.contact_point, down * Tuning.data.ragdoll_ground_push, _ragdoll_part(hit))
 
 
@@ -902,6 +904,10 @@ func _launch(hit: HitInfo, reaction: CombatTypes.Reaction, kb: Vector3) -> void:
 	else:
 		rig.play(&"launched", 0.03)
 	_ragdoll_full(hit.contact_point, kb, _ragdoll_part(hit))
+	if not _face_up and reaction != CombatTypes.Reaction.KNOCKDOWN:
+		# Launched from behind: the flying animation arches back and flips face down on
+		# landing; the ragdoll pitches over in the air instead.
+		rig.ragdoll_aim_landing(&"downed_front")
 	_begin_flying(CombatTypes.Reaction.KNOCKDOWN, hit.attacker)
 	CombatEvents.knocked_down.emit(self, hit)
 
@@ -932,8 +938,12 @@ func _start_getup() -> void:
 	_invuln_frames = Tuning.data.getup_invuln_frames
 	rig.play(&"getup_back" if _face_up else &"getup_front", 0.06)
 	if from_ragdoll:
-		# The get-up starts from the pose the ragdoll lies in.
-		rig.ragdoll_stop(Tuning.data.ragdoll_getup_blend_s)
+		# The get-up starts from the pose the ragdoll lies in, and slides the body to where
+		# it stands up no faster than Tuning.ragdoll_getup_slide_speed.
+		var tuning := Tuning.data
+		var slide := rig.ragdoll_hips_offset().length() / tuning.ragdoll_getup_slide_speed
+		var getup_s := tuning.getup_frames / float(Engine.physics_ticks_per_second)
+		rig.ragdoll_stop(minf(maxf(tuning.ragdoll_getup_blend_s, slide), getup_s))
 	CombatEvents.got_up.emit(self)
 
 
@@ -984,11 +994,12 @@ func _ragdoll_full(contact: Vector3, push: Vector3, part: Ragdoll.Part) -> void:
 	rig.ragdoll_start(true, contact, push, sim_velocity, part)
 
 
-## Getting up out of a ragdoll: the origin moves along the floor to where the ragdoll's hips
-## lie (HumanoidRig.ragdoll_hips_offset()), as far toward it as the world and the other
-## bodies (standing or lying) leave room for the body's capsule, so the body stands up where
-## it is seen lying. Two bodies that fell on each other get up beside each other: with no
-## room anywhere on the way, it takes the nearest free spot around the hips.
+## Getting up out of a ragdoll: the origin moves along the floor toward where the ragdoll's
+## hips lie (HumanoidRig.ragdoll_hips_offset()), to the spot nearest them where the world
+## and the other bodies (standing or lying) leave room for the body's capsule, so the body
+## stands up where it is seen lying. With no room on the way (a player standing over it, a
+## body lying on another) it gets up where the sim body is, as without a ragdoll, and the
+## get-up fade carries the visible body there (_start_getup()).
 func _move_under_ragdoll() -> void:
 	var offset := rig.ragdoll_hips_offset()
 	if offset.length_squared() < 1e-6:
@@ -1013,26 +1024,11 @@ func _move_under_ragdoll() -> void:
 	query.exclude = [get_rid()]
 	# Lifted clear of the floor it stands on.
 	var lift := Vector3.UP * (body_height * 0.5 + _GETUP_FLOOR_CLEARANCE)
-	for step: int in range(_GETUP_TRIES, -1, -1):
+	for step: int in range(_GETUP_TRIES, 0, -1):
 		var move := offset * (float(step) / _GETUP_TRIES)
 		query.transform = Transform3D(Basis.IDENTITY, global_position + move + lift)
 		if space.intersect_shape(query, 1).is_empty():
 			global_position += move
-			return
-	# No room anywhere on the way, not even where the body is (another body lies there too):
-	# the free spot around the ragdoll's hips nearest to the body.
-	var best := Vector3.ZERO
-	var best_d := INF
-	for ring: float in _GETUP_RINGS:
-		for k: int in _GETUP_RING_DIRECTIONS:
-			var around := Vector3.FORWARD.rotated(Vector3.UP, TAU * k / _GETUP_RING_DIRECTIONS) * ring * body_radius
-			var move := offset + around
-			query.transform = Transform3D(Basis.IDENTITY, global_position + move + lift)
-			if move.length() < best_d and space.intersect_shape(query, 1).is_empty():
-				best = move
-				best_d = move.length()
-		if best_d < INF:
-			global_position += best
 			return
 
 

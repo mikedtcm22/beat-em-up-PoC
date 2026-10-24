@@ -9,27 +9,35 @@ extends SkeletonModifier3D
 ## PhysicalBoneSimulator3D under the skeleton with one PhysicalBone3D per
 ## PlaceholderBody.ragdoll_specs() bone, joints between them with human limits (cone twist,
 ## hinges for elbows, knees and ankles), and this modifier after the simulator. Idle, both
-## modifiers are inactive and the bodies static with no collision layer: no cost, and the
-## visuals are exactly the animation's.
+## modifiers are inactive and the bodies static with no collision layer, and they ignore
+## their parents' moves (no transform notifications): no cost, and the visuals are exactly
+## the animation's.
 ##
 ## Modes:
 ##   PARTIAL (staggers): the upper body (Spine and up, the arms) simulates on the hips and
 ##     legs, which stay kinematic on the animation; the simulator's influence
 ##     (Tuning.ragdoll_partial_influence) blends it over the animation, holds, fades back to
 ##     the animation and stops.
-##   FULL (a body knocked off its feet, and a KO): every body simulates at full influence.
-## Either way each simulated bone is pulled toward its animation pose by a soft rotation
-## spring (per phase: a stagger, flight, lying down, and a nearly limp KO), and a FULL
-## ragdoll as a whole toward the animation's hips (Tuning.ragdoll_hips_hz), so the visible
-## body never drifts from the sim body and a downed body lies where its hurtboxes are. A hit
-## adds an impulse at its contact point. A lying body comes to rest and sleeps.
+##   FULL (a body knocked off its feet, and a KO): every body simulates; its influence rises
+##     from what showed to 1 over Tuning.ragdoll_full_rise_s, so the animation's snap of the
+##     hit shows first and the bodies take over from it.
+## Either way each simulated bone is pulled toward its animation pose relative to its
+## parent body by a soft rotation spring (per phase: a stagger, flight, lying down, and a
+## nearly limp KO; stronger while a FULL ragdoll's influence rises), so the springs ask for
+## joint angles the animation uses, inside the joint limits. A FULL ragdoll's hips turn
+## toward the animation's and the ragdoll as a whole is pulled toward the animation's hips
+## (Tuning.ragdoll_hips_hz), so the visible body never drifts from the sim body and a
+## downed body lies where its hurtboxes are. A hit adds a kick on the struck part. A lying
+## body comes to rest and sleeps.
 ##
 ## Time: the bodies run in the actor's sim time (HumanoidRig passes
 ## TimeController.scale_for(actor) every tick, sim_scale): when the scale changes from a to
 ## b their velocities scale by b/a, gravity by b² and damping by b; at 0 (the actor's
-## hitstop) they hold still, their velocities kept, and impulses wait until it ends.
-## Engine.time_scale stays 1. Gravity, damping and the springs are applied here, as
-## velocity changes before each physics step (the bodies' own gravity is off).
+## hitstop) they hold still, their velocities kept. The physics step of the frame a kick
+## was queued (the hit's frame, whose hitstop starts on the next) holds still too, so a kick
+## lands on the first step after the hitstop. Engine.time_scale stays 1. Gravity, damping
+## and the springs are applied here, as velocity changes before each physics step (the
+## bodies' own gravity is off).
 ##
 ## Visuals: this modifier runs after the simulator in the skeleton's deferred update (the
 ## end of the physics frame, after every actor has posed), reads the post-modifier local
@@ -50,6 +58,10 @@ const PART_BONES: Dictionary[Part, Array] = {
 	Part.LEGS: [&"UpperLeg", &"LowerLeg", &"Foot"],
 }
 
+## Share of a joint's excess past its limit turned back each step (_step(); a solver
+## constant, not feel).
+const _LIMIT_RETURN := 0.5
+
 ## Bones that simulate in a PARTIAL ragdoll (the upper body); the rest stay kinematic.
 const PARTIAL_BONES: Array[StringName] = [
 	&"Spine", &"Chest", &"UpperChest", &"Neck", &"Head",
@@ -57,9 +69,13 @@ const PARTIAL_BONES: Array[StringName] = [
 	&"RightShoulder", &"RightUpperArm", &"RightLowerArm",
 ]
 
+## The rig this ragdoll belongs to (setup()).
 var rig: HumanoidRig
+## The modifier that runs the bodies; it sits before this one under the skeleton.
 var simulator: PhysicalBoneSimulator3D
+## NONE while idle, otherwise the running mode.
 var mode: Mode = Mode.NONE
+## The pose springs a running ragdoll uses (set_phase()).
 var phase: Phase = Phase.FLIGHT
 ## The actor's sim time scale this tick (set by the rig every tick while running).
 var sim_scale: float = 1.0
@@ -68,14 +84,20 @@ var asleep: bool = false
 ## The rig's world transform when the visual pose (visual_pose()) was last read.
 var visual_rig_transform: Transform3D = Transform3D.IDENTITY
 
-## Per body (PlaceholderBody.ragdoll_specs() order): the node, its skeleton bone index and
-## its mass.
+## Per body (PlaceholderBody.ragdoll_specs() order, parents before children): the node, its
+## skeleton bone index, its mass and its parent body (-1 for the Hips, the root).
 var _bodies: Array[PhysicalBone3D] = []
 var _bone_of: PackedInt32Array = PackedInt32Array()
 var _mass: PackedFloat32Array = PackedFloat32Array()
+var _parent_body: PackedInt32Array = PackedInt32Array()
 ## Each body's Part, and its shape's center in its bone's frame.
 var _part: Array[Part] = []
 var _center: PackedVector3Array = PackedVector3Array()
+## Each body's joint to its parent (PlaceholderBody.RagdollSpec): its spec, and its frames
+## in the parent's and its own bone frame (as _make_joint() builds them; cone twists only).
+var _spec: Array[PlaceholderBody.RagdollSpec] = []
+var _frame_a: Array[Quaternion] = []
+var _frame_b: Array[Quaternion] = []
 var _joints: Array[RID] = []
 ## Bodies simulating now (indices into _bodies).
 var _sim: PackedInt32Array = PackedInt32Array()
@@ -84,22 +106,29 @@ var _sim: PackedInt32Array = PackedInt32Array()
 var _applied_scale: float = 1.0
 ## Asleep through a freeze (scale 0), not at rest.
 var _frozen: bool = false
-## A PARTIAL just went FULL: the simulator's copy of the bodies' poses is stale until the
-## next physics step, so this update poses them itself.
-var _reseat: bool = false
 var _held_lin: Array[Vector3] = []
 var _held_ang: Array[Vector3] = []
-## Impulses waiting for the next unfrozen step: [body index, sim velocity change, world
-## contact point].
+## Kicks waiting for the next unfrozen step: [body index, sim velocity change].
 var _pending: Array[Array] = []
-## Each body's animation target (world) last step, for the target velocities.
-var _prev_target: Array[Transform3D] = []
-var _prev_hips_target: Vector3 = Vector3.ZERO
-var _has_prev_target: bool = false
-## Sim seconds since a PARTIAL started; sim seconds calm and lying (rest detection).
+## The physics frame the latest ragdoll start or kick came in (its step holds still).
+var _hold_frame: int = -1
+## Each body's animation pose (world) last step, for the targets' velocities.
+var _prev_anim: Array[Transform3D] = []
+var _has_prev: bool = false
+## Sim seconds since a PARTIAL started, and its hold and fade lengths.
 var _partial_t: float = 0.0
 var _partial_hold: float = 0.0
 var _partial_fade: float = 0.0
+## The influence rise of the latest start(): from this influence, over this many sim
+## seconds (0 = none), and the sim seconds risen so far.
+var _rise_from: float = 0.0
+var _rise_s: float = 0.0
+var _rise_t: float = 0.0
+## A flight that lands face down turns the whole body toward this hips rotation (rig
+## space) instead of the flying animation's (aim_landing()).
+var _landing: Quaternion = Quaternion.IDENTITY
+var _aims_landing: bool = false
+## Sim seconds calm and lying (rest detection).
 var _calm_s: float = 0.0
 var _lying_s: float = 0.0
 ## Skeleton-space post-ragdoll pose of every bone after the latest update.
@@ -139,11 +168,21 @@ func setup(p_rig: HumanoidRig) -> void:
 		shape.rotation_degrees = spec.rot_deg
 		body.add_child(shape)
 		simulator.add_child(body)
+		# Idle, a body ignores the actor's moves (the server would move every static body
+		# each frame the actor walks); start() puts it onto the pose on screen.
+		body.set_notify_transform(false)
+		# A light hand or foot flung onto the floor does not tunnel into it.
+		PhysicsServer3D.body_set_enable_continuous_collision_detection(body.get_rid(), true)
+		_parent_body.append(body_of.get(PlaceholderBody.BONE_PARENT.get(spec.bone, &""), -1))
 		body_of[spec.bone] = _bodies.size()
 		_bodies.append(body)
 		_bone_of.append(skeleton.find_bone(spec.bone))
 		_mass.append(body.mass)
 		_center.append(spec.offset * scale)
+		_spec.append(spec)
+		var along := Quaternion(Vector3.RIGHT, spec.axis)
+		_frame_b.append(along)
+		_frame_a.append(Quaternion(spec.axis, spec.center) * along)
 		var part := Part.ANY
 		var side_free := String(spec.bone).trim_prefix("Left").trim_prefix("Right")
 		for key: Part in PART_BONES:
@@ -152,15 +191,21 @@ func setup(p_rig: HumanoidRig) -> void:
 		_part.append(part)
 	_held_lin.resize(_bodies.size())
 	_held_ang.resize(_bodies.size())
-	_prev_target.resize(_bodies.size())
+	_prev_anim.resize(_bodies.size())
 	_visual.resize(skeleton.get_bone_count())
 	apply_tuning()
 	Tuning.changed.connect(_on_tuning_changed)
+	_build_joints()
 	for i: int in specs.size():
-		if i > 0:
-			_joints.append(_make_joint(specs[i], body_of, scale))
 		for j: int in i:
 			PhysicsServer3D.body_add_collision_exception(_bodies[i].get_rid(), _bodies[j].get_rid())
+
+
+func _enter_tree() -> void:
+	# Back in the tree after leaving it (pooled, reparented): the joints _exit_tree() freed
+	# come back.
+	if not _bodies.is_empty() and _joints.is_empty():
+		_build_joints()
 
 
 func _exit_tree() -> void:
@@ -176,14 +221,16 @@ func apply_tuning() -> void:
 	var mask := CombatTypes.bit(CombatTypes.LAYER_WORLD)
 	if tuning.ragdoll_collide_ragdolls:
 		mask |= CombatTypes.bit(CombatTypes.LAYER_RAGDOLL)
-	for body: PhysicalBone3D in _bodies:
+	for i: int in _bodies.size():
+		var body := _bodies[i]
 		body.friction = tuning.ragdoll_friction
 		body.bounce = tuning.ragdoll_bounce
-		# The node keeps the layers the simulator gives a body when it simulates; an idle body
-		# stays on none (setting them reaches the server at once).
+		# The node keeps the layers the simulator gives a body when it simulates; a body not
+		# simulating (idle, or a PARTIAL's kinematic hips and legs) stays on none (setting them
+		# reaches the server at once).
 		body.collision_layer = CombatTypes.bit(CombatTypes.LAYER_RAGDOLL)
 		body.collision_mask = mask
-		if not is_running():
+		if not _sim.has(i):
 			PhysicsServer3D.body_set_collision_layer(body.get_rid(), 0)
 			PhysicsServer3D.body_set_collision_mask(body.get_rid(), 0)
 
@@ -192,17 +239,20 @@ func _on_tuning_changed(_property: StringName) -> void:
 	apply_tuning()
 
 
+## True while a PARTIAL or FULL ragdoll runs.
 func is_running() -> bool:
 	return mode != Mode.NONE
 
 
 ## Start (or switch to) `new_mode` from the pose on screen. `contact` and `push` (world, m/s)
-## place the hit's impulse (scaled by the mode's impulse tuning) on the `part` body nearest
-## to the contact; every simulating body also
-## gets `body_velocity` (the actor's new sim velocity, world m/s, times
-## Tuning.ragdoll_inherit_velocity) on top of the velocity its bone already had in the
-## animation (`bone_velocity`, sim m/s per skeleton bone; may be empty). `partial_length_s` caps a
-## PARTIAL's hold and fade (the stagger's length).
+## place the hit's kick (scaled by the mode's impulse tuning) on the `part` body nearest to
+## the contact; every body that starts simulating also gets `body_velocity` (the actor's
+## new sim velocity, world m/s, times Tuning.ragdoll_inherit_velocity) on top of the
+## velocity its bone already had in the animation (`bone_velocity`, sim m/s per skeleton
+## bone; may be empty; a PARTIAL drops the part of it running against the push, so a parried
+## jab's arm does not carry on into the defender). `partial_length_s` caps a PARTIAL's hold
+## and fade (the stagger's length). Bodies already simulating keep their pose and motion:
+## the influence rises from what showed, so nothing jumps.
 func start(new_mode: Mode, contact: Vector3, push: Vector3, body_velocity: Vector3,
 		bone_velocity: Array[Vector3], part: Part = Part.ANY, partial_length_s: float = INF) -> void:
 	if new_mode == Mode.NONE:
@@ -211,6 +261,7 @@ func start(new_mode: Mode, contact: Vector3, push: Vector3, body_velocity: Vecto
 	var tuning := Tuning.data
 	var was := mode
 	var previous_sim := _sim.duplicate()
+	var shown_influence := simulator.influence if was != Mode.NONE else 0.0
 	# The pose on screen, before the simulator takes over (world).
 	var shown: Array[Transform3D] = []
 	for i: int in _bodies.size():
@@ -224,19 +275,32 @@ func start(new_mode: Mode, contact: Vector3, push: Vector3, body_velocity: Vecto
 		for i: int in _sim:
 			PhysicsServer3D.body_set_state(_bodies[i].get_rid(), PhysicsServer3D.BODY_STATE_SLEEPING, false)
 	if new_mode == Mode.PARTIAL:
-		simulator.influence = tuning.ragdoll_partial_influence
 		_partial_t = 0.0
 		var length := maxf(partial_length_s, 0.0)
 		_partial_hold = minf(tuning.ragdoll_partial_hold_s, length)
 		_partial_fade = minf(tuning.ragdoll_partial_fade_s, maxf(length - _partial_hold, 0.0))
-	else:
-		simulator.influence = 1.0
 	_calm_s = 0.0
 	_lying_s = 0.0
+	_hold_frame = Engine.get_physics_frames()
+	if was != Mode.FULL:
+		_aims_landing = false
 	if was == Mode.FULL and new_mode == Mode.FULL:
-		# Already flying or lying: only the new hit's impulse.
+		# Already flying or lying: only the new hit's kick.
 		_queue_impulse(contact, push * tuning.ragdoll_full_impulse, part)
 		return
+	# The influence rises from what shows: a fresh stagger's bodies start on the animation,
+	# so it shows at once; a stagger on a stagger rises back from where its fade had got to;
+	# a body knocked off its feet shows the animation's snap first.
+	_rise_t = 0.0
+	_rise_from = shown_influence
+	if new_mode == Mode.FULL:
+		_rise_s = tuning.ragdoll_full_rise_s
+	elif was == Mode.PARTIAL:
+		_rise_s = tuning.ragdoll_partial_rise_s
+	else:
+		_rise_from = tuning.ragdoll_partial_influence
+		_rise_s = 0.0
+	simulator.influence = _rise_from
 	var names: Array[StringName] = []
 	_sim.clear()
 	for i: int in _bodies.size():
@@ -253,47 +317,63 @@ func start(new_mode: Mode, contact: Vector3, push: Vector3, body_velocity: Vecto
 	active = true
 	simulator.physical_bones_start_simulation(names)
 	var scale := maxf(sim_scale, 0.0)
-	_applied_scale = scale
 	var inherit := body_velocity * tuning.ragdoll_inherit_velocity
+	var away := push.normalized() if push.length_squared() > 1e-8 else Vector3.ZERO
 	for i: int in _sim:
 		var rid := _bodies[i].get_rid()
-		var kept := previous_sim.has(i)
-		if kept and was == Mode.PARTIAL:
-			# The PARTIAL showed its bodies only partly (its influence): at full influence they
-			# start from that blend, keeping their motion, so nothing jumps.
-			PhysicsServer3D.body_set_state(rid, PhysicsServer3D.BODY_STATE_TRANSFORM, shown[i])
-			_reseat = true
-		if not kept:
-			PhysicsServer3D.body_set_state(rid, PhysicsServer3D.BODY_STATE_TRANSFORM, shown[i])
-			var lin := inherit
-			if not bone_velocity.is_empty():
-				lin += bone_velocity[_bone_of[i]]
-			lin = lin.limit_length(tuning.ragdoll_max_speed)
-			_held_lin[i] = lin
-			_held_ang[i] = Vector3.ZERO
-			PhysicsServer3D.body_set_state(rid, PhysicsServer3D.BODY_STATE_LINEAR_VELOCITY, lin * scale)
-			PhysicsServer3D.body_set_state(rid, PhysicsServer3D.BODY_STATE_ANGULAR_VELOCITY, Vector3.ZERO)
+		if previous_sim.has(i):
+			_rescale_body(i, _applied_scale, scale)
+			continue
+		PhysicsServer3D.body_set_state(rid, PhysicsServer3D.BODY_STATE_TRANSFORM, shown[i])
+		var lin := inherit
+		if not bone_velocity.is_empty():
+			var bone_v := bone_velocity[_bone_of[i]]
+			if new_mode == Mode.PARTIAL:
+				bone_v -= away * minf(bone_v.dot(away), 0.0)
+			lin += bone_v
+		lin = lin.limit_length(tuning.ragdoll_max_speed)
+		_held_lin[i] = lin
+		_held_ang[i] = Vector3.ZERO
+		PhysicsServer3D.body_set_state(rid, PhysicsServer3D.BODY_STATE_LINEAR_VELOCITY, lin * scale)
+		PhysicsServer3D.body_set_state(rid, PhysicsServer3D.BODY_STATE_ANGULAR_VELOCITY, Vector3.ZERO)
+	_applied_scale = scale
+	# The kinematic bodies of a PARTIAL stay off every layer (apply_tuning()).
+	apply_tuning()
 	var impulse_scale := tuning.ragdoll_partial_impulse if new_mode == Mode.PARTIAL else tuning.ragdoll_full_impulse
 	_pending.clear()
 	_queue_impulse(contact, push * impulse_scale, part)
-	_has_prev_target = false
+	_has_prev = false
 
 
-## An extra hit on a running ragdoll (a stomp on a downed body): wakes it and adds an
-## impulse of `push` (world m/s) at `contact`, on the `part` body nearest to it.
+## An extra hit on a running ragdoll (a stomp on a downed body): wakes it and adds a kick
+## of `push` (world m/s) on the `part` body nearest to `contact`.
 func hit(contact: Vector3, push: Vector3, part: Part = Part.ANY) -> void:
 	if mode == Mode.NONE:
 		return
 	_wake()
 	_calm_s = 0.0
 	_lying_s = 0.0
+	_hold_frame = Engine.get_physics_frames()
 	_queue_impulse(contact, push, part)
+
+
+## A FULL ragdoll flying to a face-down landing: while it flies, the whole body turns toward
+## `hips_rotation` (rig space; the lying animation's hips), not toward the flying
+## animation's (a back-arched launch pose that the animation flips over on landing, which a
+## body on the floor cannot do): the body pitches over in the air and lands face down.
+func aim_landing(hips_rotation: Quaternion) -> void:
+	if mode != Mode.FULL:
+		return
+	_landing = hips_rotation.normalized()
+	_aims_landing = true
 
 
 ## Switch a running ragdoll's pose springs (a FULL ragdoll lands: DOWN, or is KO'd: LIMP).
 func set_phase(new_phase: Phase) -> void:
 	if mode == Mode.NONE:
 		return
+	if new_phase != Phase.FLIGHT:
+		_aims_landing = false
 	if new_phase != phase:
 		_calm_s = 0.0
 		if new_phase == Phase.LIMP:
@@ -309,7 +389,6 @@ func stop() -> void:
 	mode = Mode.NONE
 	asleep = false
 	_frozen = false
-	_reseat = false
 	_sim.clear()
 	_pending.clear()
 	simulator.physical_bones_stop_simulation()
@@ -341,6 +420,11 @@ func body_transforms() -> Array[Transform3D]:
 	return out
 
 
+## Kicks waiting for a step to land in (for tests).
+func pending_kicks() -> int:
+	return _pending.size()
+
+
 # --- Skeleton update ------------------------------------------------------------------
 
 
@@ -348,12 +432,6 @@ func _process_modification_with_delta(_delta: float) -> void:
 	var skeleton := get_skeleton()
 	if skeleton == null or rig == null:
 		return
-	if _reseat and mode == Mode.FULL:
-		_reseat = false
-		var to_skeleton := skeleton.global_transform.affine_inverse()
-		for i: int in _sim:
-			var body: Transform3D = PhysicsServer3D.body_get_state(_bodies[i].get_rid(), PhysicsServer3D.BODY_STATE_TRANSFORM)
-			skeleton.set_bone_global_pose(_bone_of[i], to_skeleton * body)
 	for i: int in skeleton.get_bone_count():
 		var local := skeleton.get_bone_pose(i)
 		var parent := skeleton.get_bone_parent(i)
@@ -365,14 +443,25 @@ func _process_modification_with_delta(_delta: float) -> void:
 
 
 ## One physics tick of control, before the physics step: time scale, gravity, damping, the
-## springs, impulses, the PARTIAL fade and rest.
+## springs, kicks, the influence (rise, PARTIAL fade) and rest.
 func _step() -> void:
 	var tuning := Tuning.data
 	var dt := 1.0 / Engine.physics_ticks_per_second
 	var scale := maxf(sim_scale, 0.0)
+	if Engine.get_physics_frames() == _hold_frame:
+		# The frame a ragdoll started or took a kick: the hit's hitstop starts on the next
+		# one, so this step holds still and the kick lands after the hitstop.
+		scale = 0.0
 	var states: Array[PhysicsDirectBodyState3D] = []
 	for i: int in _sim:
 		states.append(PhysicsServer3D.body_get_direct_state(_bodies[i].get_rid()))
+	# How fast the bodies moved in the last physics step (sim m/s), before this step adds
+	# gravity and the springs: rest detection.
+	var moving := INF
+	if not _frozen and _applied_scale > 0.0:
+		moving = 0.0
+		for state: PhysicsDirectBodyState3D in states:
+			moving = maxf(moving, state.linear_velocity.length() / _applied_scale)
 	if asleep:
 		var woke := false
 		for state: PhysicsDirectBodyState3D in states:
@@ -380,7 +469,11 @@ func _step() -> void:
 		if not woke:
 			_applied_scale = scale
 			return
+		# A contact woke it (another body fell on it): it settles again from now.
 		asleep = false
+		_calm_s = 0.0
+		_lying_s = 0.0
+		_has_prev = false
 	if scale <= 0.0:
 		# Frozen (the actor's hitstop): the velocities are kept and the bodies put to sleep,
 		# so the solver moves nothing at all (it would replay the last step's joint impulses).
@@ -389,7 +482,7 @@ func _step() -> void:
 			for state: PhysicsDirectBodyState3D in states:
 				state.sleeping = true
 			_frozen = true
-		_has_prev_target = false
+		_has_prev = false
 		return
 	if _frozen:
 		_frozen = false
@@ -399,6 +492,7 @@ func _step() -> void:
 	# The waiting kicks land first, so the speed caps below hold them too.
 	_apply_pending(states, scale)
 	var sim_dt := dt * scale
+	var influence := 1.0
 	if mode == Mode.PARTIAL:
 		_partial_t += sim_dt
 		var fade_t := _partial_t - _partial_hold
@@ -406,21 +500,33 @@ func _step() -> void:
 			stop()
 			return
 		var w := 1.0 - fade_t / _partial_fade if fade_t > 0.0 else 1.0
-		simulator.influence = tuning.ragdoll_partial_influence * w
-	# Animation targets (world) and their velocities.
+		influence = tuning.ragdoll_partial_influence * w
+	_rise_t += sim_dt
+	var rise := clampf(_rise_t / _rise_s, 0.0, 1.0) if _rise_s > 0.0 else 1.0
+	rise = smoothstep(0.0, 1.0, rise)
+	simulator.influence = lerpf(_rise_from, influence, rise)
+	# Every body's animation pose (world) and its angular velocity (real rad/s).
 	var to_world := rig.global_transform
+	var anim: Array[Transform3D] = []
+	var anim_w: Array[Vector3] = []
+	for i: int in _bodies.size():
+		var pose := to_world * rig.animation_pose(_bone_of[i])
+		anim.append(pose)
+		anim_w.append(_turn_rate(_prev_anim[i].basis, pose.basis, dt) if _has_prev else Vector3.ZERO)
+	# Body index -> its state's index (-1: not simulating).
+	var k_of := PackedInt32Array()
+	k_of.resize(_bodies.size())
+	k_of.fill(-1)
+	for k: int in _sim.size():
+		k_of[_sim[k]] = k
 	if mode == Mode.PARTIAL:
 		# The kinematic hips and legs ride the animation (this tick's pose, not the
 		# simulator's copy from the last update).
 		for i: int in _bodies.size():
-			if not _sim.has(i):
-				PhysicsServer3D.body_set_state(_bodies[i].get_rid(), PhysicsServer3D.BODY_STATE_TRANSFORM,
-						to_world * rig.animation_pose(_bone_of[i]))
-	var targets: Array[Transform3D] = []
-	for i: int in _sim:
-		targets.append(to_world * rig.animation_pose(_bone_of[i]))
-	var hips_target := (to_world * rig.animation_pose(_bone_of[0])).origin
-	var hips_target_v := (hips_target - _prev_hips_target) / dt if _has_prev_target else Vector3.ZERO
+			if k_of[i] < 0:
+				PhysicsServer3D.body_set_state(_bodies[i].get_rid(), PhysicsServer3D.BODY_STATE_TRANSFORM, anim[i])
+	var hips_target := anim[0].origin
+	var hips_target_v := (hips_target - _prev_anim[0].origin) / dt if _has_prev else Vector3.ZERO
 	var gravity_mult := tuning.ragdoll_partial_gravity if mode == Mode.PARTIAL else tuning.ragdoll_gravity_mult
 	var gravity := Vector3.DOWN * tuning.gravity * gravity_mult * scale * scale * dt
 	var lin_keep := maxf(1.0 - tuning.ragdoll_linear_damp * scale * dt, 0.0)
@@ -436,57 +542,159 @@ func _step() -> void:
 			momentum += states[k].linear_velocity * _mass[_sim[k]]
 			total += _mass[_sim[k]]
 		var mean_v := momentum / maxf(total, 1e-6)
-		var error := hips_target - states[0].transform.origin
+		var error := hips_target - states[k_of[0]].transform.origin
 		shift = (error * hips_k * scale * scale - (mean_v - hips_target_v) * hips_c * scale) * dt
-	var pose_k := _stiffness(_pose_hz())
-	var pose_c := _damping(_pose_hz(), tuning.ragdoll_pose_damping)
+	# While a FULL ragdoll's influence rises, its springs are stronger: the bodies catch up
+	# with the animation's snap before they show alone.
+	var rise_hz := tuning.ragdoll_full_rise_pose_hz if mode == Mode.FULL and rise < 1.0 else 0.0
+	var lin: Array[Vector3] = []
+	var ang: Array[Vector3] = []
+	for state: PhysicsDirectBodyState3D in states:
+		lin.append(state.linear_velocity * lin_keep + gravity + shift)
+		ang.append(state.angular_velocity * ang_keep)
+	# The animation's pose, re-anchored on the hips as they are (a FULL ragdoll's; a
+	# PARTIAL's are the animation's): how the hips are turned from the animation's, and where
+	# they are and how they move.
+	var anchor := Quaternion.IDENTITY
+	var hips_now := hips_target
+	var hips_v := hips_target_v
+	var hips_w := anim_w[0]
+	if mode == Mode.FULL:
+		var hips_state := states[k_of[0]]
+		anchor = (hips_state.transform.basis.get_rotation_quaternion()
+				* anim[0].basis.get_rotation_quaternion().inverse()).normalized()
+		hips_now = hips_state.transform.origin
+		hips_v = hips_state.linear_velocity
+		# The whole FULL ragdoll turns as one, about its hips, toward the animation's hips
+		# rotation: a rigid turn (no strain on the joints), so the body rolls as a body.
+		var turn_hz := tuning.ragdoll_hips_turn_hz
+		match phase:
+			Phase.FLIGHT:
+				turn_hz = tuning.ragdoll_flight_turn_hz
+			Phase.LIMP:
+				turn_hz = tuning.ragdoll_ko_hips_turn_hz
+		if rise_hz > turn_hz:
+			turn_hz = lerpf(rise_hz, turn_hz, rise)
+		var turn_to := anim[0].basis
+		var turn_w := anim_w[0]
+		if _aims_landing and phase == Phase.FLIGHT:
+			turn_to = Basis(to_world.basis.get_rotation_quaternion() * _landing)
+			turn_w = Vector3.ZERO
+		var error := _rotation_error(turn_to, hips_state.transform.basis)
+		var turn := (error * _stiffness(turn_hz) * scale * scale
+				- (hips_state.angular_velocity - turn_w) * _damping(turn_hz, tuning.ragdoll_hips_damping) * scale) * dt
+		for k: int in _sim.size():
+			ang[k] += turn
+			lin[k] += turn.cross(states[k].transform.origin - hips_now)
+		hips_w = hips_state.angular_velocity + turn
+	# The pose springs pull each body toward the re-anchored animation pose relative to the
+	# hips (where it sits from them, and how it is turned): the shape of the pose, not where
+	# the whole body is (the hips spring's job) nor how it is turned (the turn's). A body's
+	# turn is kept inside its joint's limits from its parent body as it is.
+	for k: int in _sim.size():
+		var i := _sim[k]
+		var parent := _parent_body[i]
+		if parent < 0:
+			continue
+		var state := states[k]
+		var hz := _pose_hz(i)
+		var pose_k := _stiffness(hz)
+		var pose_c := _damping(hz, tuning.ragdoll_pose_damping)
+		# The rise strengthens only the turns: a strong pull on where a light head or hand
+		# sits would wrench its joint past the limit while its parent lags.
+		var turn_hz := lerpf(rise_hz, hz, rise) if rise_hz > hz else hz
+		var turn_k := _stiffness(turn_hz)
+		var turn_c := _damping(turn_hz, tuning.ragdoll_pose_damping)
+		var parent_xf := states[k_of[parent]].transform if k_of[parent] >= 0 else anim[parent]
+		var parent_rot := parent_xf.basis.get_rotation_quaternion()
+		var target := (anchor * anim[i].basis.get_rotation_quaternion()).normalized()
+		target = parent_rot * _within_limits(i, parent_rot.inverse() * target)
+		var target_v := (anim[i].origin - _prev_anim[i].origin) / dt if _has_prev else Vector3.ZERO
+		var error := anchor * (anim[i].origin - hips_target) - (state.transform.origin - hips_now)
+		var relative_v := (state.linear_velocity - hips_v) - anchor * (target_v - hips_target_v)
+		lin[k] += (error * pose_k * scale * scale - relative_v * pose_c * scale) * dt
+		var target_w := hips_w + anim_w[i] - anim_w[0]
+		ang[k] += (_rotation_error(Basis(target), state.transform.basis) * turn_k * scale * scale
+				- (ang[k] - target_w) * turn_c * scale) * dt
+	# A joint past its limit (a body landing on its arm, a kick on a light head) is turned
+	# back inside it by an angular impulse pair (Jolt's limits are soft against the velocity
+	# changes above): part of the way back each step.
+	for k: int in _sim.size():
+		var i := _sim[k]
+		var parent := _parent_body[i]
+		if parent < 0:
+			continue
+		var kp := k_of[parent]
+		var parent_q := (states[kp].transform.basis if kp >= 0 else anim[parent].basis).get_rotation_quaternion()
+		var child_q := states[k].transform.basis.get_rotation_quaternion()
+		var inside := parent_q * _within_limits(i, parent_q.inverse() * child_q)
+		var excess := _rotation_error(Basis(inside), Basis(child_q))
+		if excess.length_squared() < 1e-6:
+			continue
+		var change := excess * (_LIMIT_RETURN / dt)
+		var inv_i := states[k].inverse_inertia_tensor
+		if kp < 0:
+			ang[k] += change
+			continue
+		var inv_p := states[kp].inverse_inertia_tensor
+		var impulse := Basis(inv_i.x + inv_p.x, inv_i.y + inv_p.y, inv_i.z + inv_p.z).inverse() * change
+		ang[k] += inv_i * impulse
+		ang[kp] -= inv_p * impulse
 	var max_v := tuning.ragdoll_max_speed * scale
 	var max_w := tuning.ragdoll_max_spin * scale
-	# The pose springs pull each body toward its animation pose relative to the hips (where
-	# it sits from them, and how it is turned): the shape of the pose, not where the whole
-	# body is (the hips spring's job). A PARTIAL's hips are the animation's (kinematic).
-	var hips_now := hips_target if mode == Mode.PARTIAL else states[0].transform.origin
-	var hips_v := hips_target_v if mode == Mode.PARTIAL else states[0].linear_velocity
 	for k: int in _sim.size():
-		var state := states[k]
-		var i := _sim[k]
-		var k_rot := pose_k
-		var c_rot := pose_c
-		if i == 0 and mode == Mode.FULL:
-			var turn_hz := tuning.ragdoll_ko_hips_turn_hz if phase == Phase.LIMP else tuning.ragdoll_hips_turn_hz
-			k_rot = _stiffness(turn_hz)
-			c_rot = _damping(turn_hz, tuning.ragdoll_hips_damping)
-		var lin := state.linear_velocity * lin_keep + gravity + shift
-		if i != 0:
-			var target_v := (targets[k].origin - _prev_target[i].origin) / dt if _has_prev_target else Vector3.ZERO
-			var error := (targets[k].origin - hips_target) - (state.transform.origin - hips_now)
-			var relative_v := (state.linear_velocity - hips_v) - (target_v - hips_target_v)
-			lin += (error * pose_k * scale * scale - relative_v * pose_c * scale) * dt
-		var ang := state.angular_velocity * ang_keep
-		var current := state.transform.basis.get_rotation_quaternion()
-		var target := targets[k].basis.get_rotation_quaternion()
-		var error_q := (target * current.inverse()).normalized()
-		if error_q.w < 0.0:
-			error_q = -error_q
-		var angle := error_q.get_angle()
-		var axis := error_q.get_axis() if angle > 1e-5 else Vector3.ZERO
-		var target_w := Vector3.ZERO
-		if _has_prev_target:
-			var step_q := (target * _prev_target[i].basis.get_rotation_quaternion().inverse()).normalized()
-			if step_q.w < 0.0:
-				step_q = -step_q
-			var step_angle := step_q.get_angle()
-			if step_angle > 1e-5:
-				target_w = step_q.get_axis() * step_angle / dt
-		ang += (axis * angle * k_rot * scale * scale - (ang - target_w) * c_rot * scale) * dt
-		state.linear_velocity = _finite(lin).limit_length(max_v)
-		state.angular_velocity = _finite(ang).limit_length(max_w)
-	for k: int in _sim.size():
-		_prev_target[_sim[k]] = targets[k]
-	_prev_hips_target = hips_target
-	_has_prev_target = true
+		states[k].linear_velocity = _finite(lin[k]).limit_length(max_v)
+		states[k].angular_velocity = _finite(ang[k]).limit_length(max_w)
+	for i: int in _bodies.size():
+		_prev_anim[i] = anim[i]
+	_has_prev = true
 	if mode == Mode.FULL and (phase == Phase.DOWN or phase == Phase.LIMP):
-		_rest(states, scale, sim_dt)
+		_rest(states, moving, sim_dt)
+
+
+## `relative` (body `i`'s rotation in its parent's bone frame) clamped into its joint's
+## limits: a motor never pushes a joint against its limit (an animation pose a little past
+## one would hold the bodies there and wrench the light ones past theirs).
+func _within_limits(i: int, relative: Quaternion) -> Quaternion:
+	var spec := _spec[i]
+	if spec.joint == PlaceholderBody.RagdollJoint.HINGE:
+		var bend := _twist_angle(relative, Vector3.RIGHT)
+		return Quaternion(Vector3.RIGHT, clampf(bend, deg_to_rad(spec.lower_deg), deg_to_rad(spec.upper_deg)))
+	# A cone twist: swing and twist about the frames' X, in the joint's frames.
+	var joint := _frame_a[i].inverse() * relative * _frame_b[i]
+	var twist_angle := _twist_angle(joint, Vector3.RIGHT)
+	var twist := Quaternion(Vector3.RIGHT, twist_angle)
+	var swing := (joint * twist.inverse()).normalized()
+	if swing.w < 0.0:
+		swing = -swing
+	var limit_swing := deg_to_rad(spec.swing_deg)
+	var limit_twist := deg_to_rad(spec.twist_deg)
+	if swing.get_angle() > limit_swing:
+		swing = Quaternion(swing.get_axis(), limit_swing)
+	if absf(twist_angle) > limit_twist:
+		twist = Quaternion(Vector3.RIGHT, signf(twist_angle) * limit_twist)
+	return _frame_a[i] * (swing * twist) * _frame_b[i].inverse()
+
+
+## The signed angle (radians, -PI..PI) `q` turns about the unit `axis` (its twist part).
+static func _twist_angle(q: Quaternion, axis: Vector3) -> float:
+	var along := Vector3(q.x, q.y, q.z).dot(axis)
+	var angle := 2.0 * atan2(along, q.w)
+	return wrapf(angle, -PI, PI)
+
+
+## The rotation (world axis times angle, radians) that turns `current` into `target`.
+static func _rotation_error(target: Basis, current: Basis) -> Vector3:
+	var q := (target.get_rotation_quaternion() * current.get_rotation_quaternion().inverse()).normalized()
+	if q.w < 0.0:
+		q = -q
+	var angle := q.get_angle()
+	return q.get_axis() * angle if angle > 1e-5 else Vector3.ZERO
+
+
+## World angular velocity (rad/s) that turns `from` into `to` in `dt` seconds.
+static func _turn_rate(from: Basis, to: Basis, dt: float) -> Vector3:
+	return _rotation_error(to, from) / dt
 
 
 ## Scale the bodies' velocities from the scale they are in to `scale` (see the class docs).
@@ -510,7 +718,19 @@ func _rescale(states: Array[PhysicsDirectBodyState3D], scale: float) -> void:
 	_applied_scale = scale
 
 
-## Apply the waiting impulses (velocity changes at contact points) at sim scale `scale`.
+## _rescale() for one body (by index) from scale `from` to `to`, through the server.
+func _rescale_body(i: int, from: float, to: float) -> void:
+	if is_equal_approx(from, to):
+		return
+	var rid := _bodies[i].get_rid()
+	if from > 0.0:
+		_held_lin[i] = PhysicsServer3D.body_get_state(rid, PhysicsServer3D.BODY_STATE_LINEAR_VELOCITY) / from
+		_held_ang[i] = PhysicsServer3D.body_get_state(rid, PhysicsServer3D.BODY_STATE_ANGULAR_VELOCITY) / from
+	PhysicsServer3D.body_set_state(rid, PhysicsServer3D.BODY_STATE_LINEAR_VELOCITY, _held_lin[i] * to)
+	PhysicsServer3D.body_set_state(rid, PhysicsServer3D.BODY_STATE_ANGULAR_VELOCITY, _held_ang[i] * to)
+
+
+## Apply the waiting kicks (velocity changes) at sim scale `scale`.
 func _apply_pending(states: Array[PhysicsDirectBodyState3D], scale: float) -> void:
 	for entry: Array in _pending:
 		var i: int = entry[0]
@@ -525,8 +745,9 @@ func _apply_pending(states: Array[PhysicsDirectBodyState3D], scale: float) -> vo
 	_pending.clear()
 
 
-## Queue an impulse of `push` (sim m/s) at `contact` on the simulating `part` body (any
-## body if none of that part simulates) whose shape's center is nearest to it.
+## Queue a kick of `push` (sim m/s) on the simulating `part` body (any body if none of that
+## part simulates) whose shape's center is nearest to `contact`. A kick on an arm moves the
+## whole arm, up to the shoulder, not just its light end.
 func _queue_impulse(contact: Vector3, push: Vector3, part: Part) -> void:
 	if push.length_squared() < 1e-8 or _sim.is_empty():
 		return
@@ -542,19 +763,23 @@ func _queue_impulse(contact: Vector3, push: Vector3, part: Part) -> void:
 				best = i
 		if best >= 0:
 			break
-	_pending.append([best, push.limit_length(Tuning.data.ragdoll_max_kick), contact])
+	var change := push.limit_length(Tuning.data.ragdoll_max_kick)
+	_pending.append([best, change])
+	if _part[best] == Part.ARMS:
+		var up := _parent_body[best]
+		while up >= 0 and _part[up] == Part.ARMS and _sim.has(up):
+			_pending.append([up, change])
+			up = _parent_body[up]
 
 
 ## Rest detection for a lying ragdoll: asleep once every body has moved slower than
-## Tuning.ragdoll_rest_speed for Tuning.ragdoll_rest_s, or Tuning.ragdoll_settle_max_s
-## after it started lying, whichever comes first.
-func _rest(states: Array[PhysicsDirectBodyState3D], scale: float, sim_dt: float) -> void:
+## Tuning.ragdoll_rest_speed (`moving`, the last step's top speed) for Tuning.ragdoll_rest_s,
+## or Tuning.ragdoll_settle_max_s after it started lying (or was last woken), whichever
+## comes first.
+func _rest(states: Array[PhysicsDirectBodyState3D], moving: float, sim_dt: float) -> void:
 	var tuning := Tuning.data
 	_lying_s += sim_dt
-	var top := 0.0
-	for state: PhysicsDirectBodyState3D in states:
-		top = maxf(top, state.linear_velocity.length() / scale)
-	_calm_s = _calm_s + sim_dt if top < tuning.ragdoll_rest_speed else 0.0
+	_calm_s = _calm_s + sim_dt if moving < tuning.ragdoll_rest_speed else 0.0
 	if _calm_s >= tuning.ragdoll_rest_s or _lying_s >= tuning.ragdoll_settle_max_s:
 		for state: PhysicsDirectBodyState3D in states:
 			state.linear_velocity = Vector3.ZERO
@@ -562,7 +787,7 @@ func _rest(states: Array[PhysicsDirectBodyState3D], scale: float, sim_dt: float)
 			state.sleeping = true
 		asleep = true
 		# Woken later (a stomp), the targets' motion restarts from then.
-		_has_prev_target = false
+		_has_prev = false
 
 
 func _wake() -> void:
@@ -573,13 +798,16 @@ func _wake() -> void:
 		PhysicsServer3D.body_set_state(_bodies[i].get_rid(), PhysicsServer3D.BODY_STATE_SLEEPING, false)
 
 
-func _pose_hz() -> float:
+## The pose-spring frequency of body `i` in this phase (its arms and legs have their own
+## while staggering and lying).
+func _pose_hz(i: int) -> float:
 	var tuning := Tuning.data
+	var limb := _part[i] == Part.ARMS or _part[i] == Part.LEGS
 	match phase:
 		Phase.STAGGER:
-			return tuning.ragdoll_partial_pose_hz
+			return tuning.ragdoll_partial_limb_pose_hz if limb else tuning.ragdoll_partial_pose_hz
 		Phase.DOWN:
-			return tuning.ragdoll_down_pose_hz
+			return tuning.ragdoll_down_limb_pose_hz if limb else tuning.ragdoll_down_pose_hz
 		Phase.LIMP:
 			return tuning.ragdoll_ko_pose_hz
 	return tuning.ragdoll_flight_pose_hz
@@ -625,12 +853,21 @@ func _make_shape(spec: PlaceholderBody.RagdollSpec, scale: float) -> Shape3D:
 	return sphere
 
 
-## The joint from `spec`'s bone to its parent's body, its frames at the rest pose (every
-## rest rotation is identity, so the bone sits at its rest offset in its parent's frame).
-func _make_joint(spec: PlaceholderBody.RagdollSpec, body_of: Dictionary[StringName, int], scale: float) -> RID:
-	var parent_bone: StringName = PlaceholderBody.BONE_PARENT[spec.bone]
-	var body_a := _bodies[body_of[parent_bone]].get_rid()
-	var body_b := _bodies[body_of[spec.bone]].get_rid()
+## Every joint, body to its parent body (_make_joint()).
+func _build_joints() -> void:
+	var specs := PlaceholderBody.ragdoll_specs()
+	var scale := rig.rig_scale()
+	for i: int in specs.size():
+		if _parent_body[i] >= 0:
+			_joints.append(_make_joint(specs[i], i, scale))
+
+
+## The joint from body `i` (`spec`'s bone) to its parent's body, its frames at the rest pose
+## (every rest rotation is identity, so the bone sits at its rest offset in its parent's
+## frame).
+func _make_joint(spec: PlaceholderBody.RagdollSpec, i: int, scale: float) -> RID:
+	var body_a := _bodies[_parent_body[i]].get_rid()
+	var body_b := _bodies[i].get_rid()
 	var anchor: Vector3 = PlaceholderBody.BONE_REST[spec.bone] * scale
 	var joint := PhysicsServer3D.joint_create()
 	if spec.joint == PlaceholderBody.RagdollJoint.HINGE:

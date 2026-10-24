@@ -409,6 +409,18 @@ func ragdoll_hit(contact: Vector3, push: Vector3, part: Ragdoll.Part = Ragdoll.P
 		_ragdoll.hit(contact, push, part)
 
 
+## A running full ragdoll flies to a landing in `lying_anim` (a face-down one): it turns
+## toward that animation's hips in the air (Ragdoll.aim_landing()).
+func ragdoll_aim_landing(lying_anim: StringName) -> void:
+	if not is_ragdolling() or not anim_player.has_animation(lying_anim):
+		return
+	var animation := anim_player.get_animation(lying_anim)
+	var track := animation.find_track(^"Skeleton3D:Hips", Animation.TYPE_ROTATION_3D)
+	if track >= 0:
+		# Root is never animated: the Hips' local rotation is their rig-space one.
+		_ragdoll.aim_landing(animation.rotation_track_interpolate(track, 0.0))
+
+
 ## The pose springs of a running ragdoll: Ragdoll.Phase.DOWN once it lies, LIMP for a KO.
 func ragdoll_set_phase(phase: Ragdoll.Phase) -> void:
 	if is_ragdolling():
@@ -422,7 +434,8 @@ func ragdoll_stop(blend_s: float = 0.0) -> void:
 	if not is_ragdolling():
 		return
 	if blend_s > 0.0:
-		# The pose on screen, in the rig's frame now (the owner may have moved it since).
+		# The pose on screen, in the rig's frame now (the owner may have moved it since, a
+		# get-up moving it under the ragdoll's hips).
 		var to_rig := (global_transform if is_inside_tree() else transform).affine_inverse() \
 				* _ragdoll.visual_rig_transform
 		var hips := _bone_index[&"Hips"]
@@ -432,13 +445,18 @@ func ragdoll_stop(blend_s: float = 0.0) -> void:
 			var local := shown if parent < 0 else (to_rig * _ragdoll.visual_pose(parent)).affine_inverse() * shown
 			_fade_rot[i] = local.basis.get_rotation_quaternion()
 			if i == hips:
-				_fade_hips = local.origin
+				# The fade places the Hips on its parent (Root, a root bone) as the fade starts
+				# it: Root's faded rotation at its animation position in the rig's frame now.
+				# Taken from the old frame instead, the body would jump by the owner's move.
+				var root_start := Transform3D(Basis(_fade_rot[parent]), skeleton.get_bone_pose_position(parent))
+				_fade_hips = (root_start.affine_inverse() * shown).origin
 		_fade_s = blend_s
 		_fade_t = 0.0
 		_fade_rolls = false
 	_ragdoll.stop()
 
 
+## True while a ragdoll (partial or full) runs on this rig.
 func is_ragdolling() -> bool:
 	return _ragdoll != null and _ragdoll.is_running()
 
