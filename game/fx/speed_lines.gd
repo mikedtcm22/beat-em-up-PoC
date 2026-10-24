@@ -23,9 +23,11 @@ var opacity: float = 0.0
 var keep_clear: Array[Rect2] = []
 ## Times the lines were placed since start() (1 = never redrawn in new places).
 var shuffles: int = 0
+## Draws the lines' placement. VfxDirector hands over its own, so seeding the director's
+## rng (the bots do) repeats the lines too.
+var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
 var _tex: Texture2D = VfxArt.texture(&"speed_lines")
-var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var _since_shuffle: float = 0.0
 ## One per line: x = angle (radians), y = inner end (times the clear radius), z = texture
 ## row, w = thickness multiplier.
@@ -143,13 +145,13 @@ func _shuffle() -> void:
 	_lines.clear()
 	var t := Tuning.data
 	var count := t.vfx_speed_lines_count
-	var phase := _rng.randf() * TAU
+	var phase := rng.randf() * TAU
 	var jitter := t.vfx_speed_lines_jitter
 	for i in count:
-		var angle := phase + TAU * (i + _rng.randf_range(-jitter, jitter)) / count
-		var inner := _rng.randf_range(1.0, maxf(t.vfx_speed_lines_inner_max, 1.0))
-		var width := _rng.randf_range(t.vfx_speed_lines_width_min, maxf(t.vfx_speed_lines_width_max, t.vfx_speed_lines_width_min))
-		_lines.append(Vector4(angle, inner, _rng.randi() % VfxArt.SPEED_LINE_ROWS, width))
+		var angle := phase + TAU * (i + rng.randf_range(-jitter, jitter)) / count
+		var inner := rng.randf_range(1.0, maxf(t.vfx_speed_lines_inner_max, 1.0))
+		var width := rng.randf_range(t.vfx_speed_lines_width_min, maxf(t.vfx_speed_lines_width_max, t.vfx_speed_lines_width_min))
+		_lines.append(Vector4(angle, inner, rng.randi() % VfxArt.SPEED_LINE_ROWS, width))
 
 
 func _draw() -> void:

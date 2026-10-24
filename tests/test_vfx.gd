@@ -513,6 +513,16 @@ func test_speed_lines_do_not_flicker_with_the_photosensitivity_toggle_off() -> v
 	assert_eq(vfx.speed_lines.lines(), placed)
 
 
+## Captures repeat: the lines draw from the director's rng, which the bots seed.
+func test_seeding_the_director_repeats_the_speed_lines() -> void:
+	_land(_hit(CombatTypes.HitTier.FINISHER))
+	var first := vfx.speed_lines.lines()
+	vfx.clear()
+	vfx.rng.seed = 1
+	_land(_hit(CombatTypes.HitTier.FINISHER))
+	assert_eq(vfx.speed_lines.lines(), first)
+
+
 func test_speed_lines_stop_at_the_burst_and_the_word() -> void:
 	_land(_hit(CombatTypes.HitTier.FINISHER))
 	_advance(Tuning.data.vfx_pop_s + TICK)
@@ -704,10 +714,10 @@ func test_rig_damage_look_changes_materials_only() -> void:
 	assert_eq(rig.get_point_transform(&"RightFistPoint"), fist, "pose untouched")
 
 
-## The flash is white emission added over the lit, marked albedo; whether it whites the
-## marks out is a rendering question, checked in the "damage looks held" bot captures (the
-## jab on the bloodied dummy). Here: every marked material flashes, and keeps its marks.
-func test_hit_flash_still_covers_the_damage_look() -> void:
+## The whole-body flash (set_flash(), the parry's) is emission added over the lit, marked
+## albedo; the hit flash is the contact overlay instead (test_hit_flash.gd checks it keeps
+## the marks). Here: every marked material flashes whole-body, and keeps its marks.
+func test_whole_body_flash_still_covers_the_damage_look() -> void:
 	var rig := HumanoidRig.new()
 	rig.build_hurtboxes = false
 	add_child_autofree(rig)

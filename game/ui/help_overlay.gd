@@ -26,7 +26,7 @@ const CONTROL_ROWS: Array[Array] = [
 
 ## [label, action] debug keys (keyboard).
 const DEBUG_ROWS: Array[Array] = [
-	["Tuning panel (Milestone 2)", &"tuning_panel"],
+	["Tuning panel", &"tuning_panel"],
 	["Cycle camera", &"camera_cycle"],
 	["Debug draw", &"debug_draw"],
 	["Cheats", &"cheats"],

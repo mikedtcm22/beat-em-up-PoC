@@ -81,6 +81,7 @@ func _init() -> void:
 	lines_layer.layer = LINES_LAYER
 	speed_lines = SpeedLines.new()
 	speed_lines.name = &"SpeedLines"
+	speed_lines.rng = rng
 	lines_layer.add_child(speed_lines)
 	add_child(lines_layer)
 	var flash_layer := CanvasLayer.new()

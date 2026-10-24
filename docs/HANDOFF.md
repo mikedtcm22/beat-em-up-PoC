@@ -4,6 +4,15 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-24 11:34 CDT: account E took over; phase 3 packages A and B running
+A fresh account's working session took over at 1% of its 5-hour window (resets 16:29 CDT) and 15% weekly (resets Tue 2026-10-27 16:59 CDT). Its watcher runs: "Beat-em-up: usage watcher", name `usage-watcher-f` (Haiku, low effort, self-paced).
+- **Running:** two background agents (Agent tool, started from this session), per [M2-phase3-plan.md](milestones/M2-phase3-plan.md):
+  - **A, ragdoll:** `.worktrees/m2-ragdoll2`, branch `m2/ragdoll-tune` (off `f43ab9a`, imported, pushed). Contact push behind `ragdoll_kick_at_contact` (default on) with spin caps, A/B sheets central vs contact in `captures/ab_contact/`; KO blink-off (`ko_linger_s`, `ko_blink_s`, blink rates), dummies respawn at home after `dummy_revive_s` with a blink-in, sheets in `captures/ko/`; stronger staggers with A/B sheets in `captures/ab_stagger/`. Ends with a commit "M2 phase 3: ragdoll contact push, KO blink-off, stronger staggers (...)".
+  - **B, grab:** `.worktrees/m2-grab`, branch `m2/grab-view` (off `f43ab9a`, imported, pushed). `grab_view_pitch_deg` eased in and out, the waist bend in `hold()` and the knee, before/after sheets in `captures/grab/`. Ends with a commit "M2 phase 3: grab view and waist bend (...)".
+  - Both commit `wip:` every 15-20 minutes and push. Both regenerate `tuning/default.json` on their branch; expect a conflict there and in `tuning_data.gd` (different groups) at the merge, and regenerate the preset after it.
+- **If cut off:** check each branch for its final commit. Without one, rerun that package from its newest `wip:` commit with the brief in the plan (package A or B).
+- **Then:** show Game-boy A's contact-vs-central and stagger sheets, merge A and B into `m2/hit-feel`, and go on with package C.
+
 ### 2026-10-24 11:05 CDT: Game-boy answered the ragdoll questions; phase 3 plan written
 Account D, already handed off, wrote [docs/milestones/M2-phase3-plan.md](milestones/M2-phase3-plan.md) from Game-boy's answers (see the Decisions log) and his new grab fix. The takeover prompt's "Next steps" now point to that plan. Nothing else changed: `m2/hit-feel` code is still at `33fcc98`, 437/437 tests pass, and nothing is running. Only the flash's side-view question and WP3's audio are still open with Game-boy.
 
