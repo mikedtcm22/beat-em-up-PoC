@@ -190,6 +190,7 @@ func test_a_launched_dummy_ragdolls_rests_and_gets_up_where_its_hips_lie() -> vo
 	assert_eq(dummy.rig.ragdoll_mode(), Ragdoll.Mode.FULL, "a full ragdoll")
 	var ragdoll := dummy.rig.get_ragdoll()
 	var flight_gap := 0.0
+	var steady_gap := 0.0
 	var lying_gap := 0.0
 	var slept_at := -1
 	var down_frames := 0
@@ -198,6 +199,10 @@ func test_a_launched_dummy_ragdolls_rests_and_gets_up_where_its_hips_lie() -> vo
 		assert_true(_sane(dummy), "no NaN, no runaway")
 		if dummy.is_flying():
 			flight_gap = maxf(flight_gap, _gap(dummy))
+			# Once the body has caught up with the launch (the animation snaps into its flying
+			# pose in two frames; the bodies take a few tenths of a second to swing there).
+			if dummy.state_frame > 12:
+				steady_gap = maxf(steady_gap, _gap(dummy))
 		elif dummy.is_downed():
 			down_frames += 1
 			# After the landing's first bounce: lying where its hurtboxes are.
@@ -207,13 +212,18 @@ func test_a_launched_dummy_ragdolls_rests_and_gets_up_where_its_hips_lie() -> vo
 				slept_at = down_frames
 		if dummy.is_downed() and dummy.state_frame == Tuning.data.downed_frames - 1:
 			break
-	gut.p("full ragdoll gap to the animation: %.3f m flying, %.3f m lying; asleep %d frames after landing" % [flight_gap, lying_gap, slept_at])
+	gut.p("full ragdoll gap to the animation: %.3f m flying (%.3f m once caught up), %.3f m lying; asleep %d frames after landing"
+			% [flight_gap, steady_gap, lying_gap, slept_at])
 	assert_lt(lying_gap, 0.3, "a downed body lies where its hurtboxes are")
-	assert_lt(flight_gap, 1.0, "the flying body stays with the sim body")
+	assert_lt(steady_gap, 0.5, "the flying body keeps with the sim body")
+	assert_lt(flight_gap, 1.2, "even right after the launch")
 	assert_between(slept_at, 1, roundi(Tuning.data.ragdoll_settle_max_s * 60.0) + 1, "comes to rest")
-	# The frame before the get-up: where it will stand.
+	# The frame before the get-up: where it will stand, and the body as it lies.
 	var spot := dummy.global_position + dummy.rig.ragdoll_hips_offset()
+	var lying_head := dummy.rig.get_attachment(&"Head").global_position
 	assert_true(await _wait_until(func() -> bool: return dummy.state == CombatTypes.ActorState.GETUP, 5), "gets up")
+	assert_almost_eq(dummy.rig.get_attachment(&"Head").global_position, lying_head, Vector3.ONE * 0.08,
+			"the get-up starts from the pose the ragdoll lies in")
 	assert_almost_eq(dummy.global_position, spot, Vector3.ONE * 2e-3, "stands where its ragdoll's hips lay")
 	assert_false(dummy.rig.is_ragdolling(), "the get-up is animated")
 	assert_true(_room_for(dummy), "with no overlap")
@@ -414,3 +424,20 @@ func test_ragdoll_bodies_collide_with_the_world_and_ragdolls_only() -> void:
 		assert_eq(PhysicsServer3D.body_get_collision_mask(rid) & ~allowed, 0, "%s sees the world and ragdolls only" % body.name)
 	for actor: CombatActor in [player, dummy]:
 		assert_eq(actor.collision_mask & CombatTypes.bit(CombatTypes.LAYER_RAGDOLL), 0, "%s's body never meets a ragdoll" % actor.name)
+
+
+func test_grabbing_a_staggering_dummy_hands_back_to_the_animation_without_a_jump() -> void:
+	await _setup([Vector3(0, 0, -1.1)])
+	var dummy := dummies[0]
+	assert_true(dummy.receive_hit(_hit(dummy, CombatTypes.Reaction.STAGGER, Vector3(2.0, 0.0, 1.0), CombatTypes.Region.HEAD, player)))
+	await _ticks(8)
+	assert_eq(dummy.rig.ragdoll_mode(), Ragdoll.Mode.PARTIAL)
+	var shown := dummy.rig.get_attachment(&"Head").global_position
+	dummy.start_grabbed(player)
+	assert_false(dummy.rig.is_ragdolling(), "the grab ends the partial ragdoll")
+	dummy.rig.advance(0.0)
+	# (The fade keeps the rotations and the hips; the joints' few centimeters of stretch
+	# under the springs are let go.)
+	assert_almost_eq(dummy.rig.get_attachment(&"Head").global_position, shown, Vector3.ONE * 0.06,
+			"the held pose fades in from the pose on screen")
+	dummy.release_from_grab(Vector3.ZERO, false)

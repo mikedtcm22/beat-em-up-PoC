@@ -323,7 +323,7 @@ extends Resource
 @export_range(0.2, 5.0, 0.1) var ragdoll_settle_max_s: float = 1.0
 ## The get-up fades from the pose the ragdoll lies in over this long.
 @export_range(0.0, 0.5, 0.01) var ragdoll_getup_blend_s: float = 0.2
-## A ragdoll cut short (a staggering body grabbed, a reset) fades back over this long.
+## A ragdoll cut short (a staggering body grabbed) fades back over this long.
 @export_range(0.0, 0.5, 0.01) var ragdoll_stop_blend_s: float = 0.1
 
 @export_group("Camera")

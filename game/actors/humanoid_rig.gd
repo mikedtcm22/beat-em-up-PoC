@@ -16,8 +16,9 @@ extends Node3D
 ## itself (it does not wait for Skeleton3D's deferred update), then moves the bone
 ## followers, rig points and hurtboxes. When advance() returns, get_point_transform(),
 ## the attachment nodes and the hurtbox transforms (scene and physics server) all show
-## the same pose. play() and play_move() only choose the animation; the pose changes on
-## the next advance(), whose dt is the first slice of the new animation.
+## the same pose (the attachment nodes show a running ragdoll's instead, see "Ragdoll").
+## play() and play_move() only choose the animation; the pose changes on the next
+## advance(), whose dt is the first slice of the new animation.
 ## Hurtboxes are written straight to the physics server, so a shape query run right after
 ## advance() sees this tick's pose. If the owner moves its body after advance() in the same
 ## tick, call advance(0.0) again to re-sync (it re-applies the pose without moving time).
