@@ -183,11 +183,113 @@
      "evidence": "Read game/actors/combat_actor.gd lines 409, 836, 847 and 915-920: _flash_at() passes tuning.hit_flash_radius_m unchanged to rig.flash_at(), with no scaling by distance or hold. Read game/fx/hit_flash.gdshader: the falloff uses only world-space distance from flash_point, and nothing reads a camera. Read game/autoload/tuning_data.gd lines 118-131: hit_flash_radius_m is a single 0.25 default. Greps for flash_at and hit_flash_radius_m show no other call path."
     }
    }
+  },
+  {
+   "id": "grab-06",
+   "lens": "grab",
+   "severity": "low",
+   "title": "The hold view's pitch adds to the player's own look pitch with no limit",
+   "survives": true,
+   "confirmations": 3,
+   "spec_question": false,
+   "files": [
+    "game/player/player.gd",
+    "game/autoload/tuning_data.gd",
+    "tests/test_grab_view.gd"
+   ],
+   "root_cause": "The hold view's pitch is a fixed additive term. get_camera_move_offset() in game/player/player.gd returns _cam_offset plus -grab_view_pitch_deg times the hold weight, and view_from_eye() in game/camera/first_person_camera.gd adds it to look_pitch unclamped. Nothing relates the hold pitch to how far down the player already looks, so a player looking down at the held enemy stacks the hold pitch and the knee's pitch on top of their own.",
+   "open_question": "None directly. It loosely touches the open question on the grab's lens pull-back and the bend's depth, since a hold-pitch target or clamp would be a new \"Hold view\" tunable alongside them.",
+   "votes": {
+    "reproduce": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "Reproduced. At look -25 the knee peak has the player's own body at 52-62% of the view and 78-84% covered. The nearest mesh, BellyTop, is about 1 cm to 13 cm from the lens. The hold pitch is stacked on the look pitch with no limit. The reviewer's still shows no street, only the belly slab, sleeves and a close-up of the victim. This is a low-severity feel defect, not intended behaviour.",
+     "evidence": "Read the reviewer's still captures/review_grab/p2_look-25_knee_peak_f386.png. It shows sleeves and belly filling the frame with a blue slab along the bottom. Read get_camera_move_offset() in game/player/player.gd line 153. It returns _cam_offset plus (-grab_view_pitch_deg, -grab_view_rise_m) times the hold weight, with no clamp on the total. I re-ran one recording of the probe: `godot --path . --write-movie captures/verify/grab-06-reproduce/p.avi ... captures/review_grab/probe_bot.tscn -- \"--act=grab staggered\"`, with the log in captures/verify/grab-06-reproduce/p.log. P2 f383-389 gave own=62% down to 52%, cov=84% down to 78%, nearest=BellyTop, look=-25. These match the reviewer's figures (own 54-62%, cov 78-84%), and there was no SCRIPT ERROR. I did not tile a sheet from my recording, because the reviewer's still and the matching numbers were enough. The gap column in the log falls from 0.024 to 0.001, so the lens approaches the belly mesh in this act. I did not re-run the look -6 contrast, so the reviewer's 29-30% own and 66-69% covered at -6 is taken from probe2.log."
+    },
+    "spec": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "No document approves or requires the hold pitch to stack unlimited on the player's look pitch, and none rules out a cap. SPEC §6 says look input is the only camera rotation, with per-move offsets in the move resource as the exception. The plan (M2-phase3-plan.md, B.1) asks for a tunable pitch eased in and out, and does not say what happens when the player already looks down. ARCHITECTURE.md line 269 states the lens-clearance bounds (own body at most a third of the view, victim at most half, no forearm within 0.3 m), but only checks them looking level. Those bounds are the intent, and the reported behaviour at look -25 breaks them. The additive pitch is not on the approved or open-with-Game-boy lists.",
+     "evidence": "Read grab-06 in /Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-notes/docs/reviews/M2-phase3/review-grab.json. Grepped and read docs/SPEC.md (§6 lines 154-156, camera offsets and kick pitch), docs/milestones/M2-phase3-plan.md (lines 55-70), docs/ARCHITECTURE.md (line 269), README.md departures and docs/HANDOFF.md (Decisions log and B-done note, line 49). I found no grep hits on a pitch clamp or limit for the hold view or the camera offsets. Did not run Godot, as instructed."
+    },
+    "code": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "The code does what the finding says. get_camera_move_offset() adds the hold pitch (-16 deg) and the move's own pitch (the knee's -12 deg) to the look pitch with no dependence on look_pitch. view_from_eye() then applies _add_pitch(look_basis, move_offset.x) on top of get_look_basis(), with no clamp on the total. The only limit is look_pitch's own clamp of +/-85 deg. Look -25 plus -16 plus -12 gives -53 deg, as reported. tests/test_grab_view.gd sets look_pitch = 0.0 in _setup (line 50), so no test covers the stacked case. The finding is real but low severity, since it needs the player to look well down while holding.",
+     "evidence": "I read game/player/player.gd get_camera_move_offset() (about line 153) and get_hold_view_weight(). I read game/camera/first_person_camera.gd view_from_eye() (lines 191-204) and the grab_view_* @export_range values in game/autoload/tuning_data.gd (lines 55-65). I grepped tests/test_grab_view.gd, where look_pitch is only set to 0.0 at line 50. I did not run any tests or probes, since the code path was unambiguous."
+    }
+   }
+  },
+  {
+   "id": "grab-07",
+   "lens": "grab",
+   "severity": "low",
+   "title": "The throw shows the player's right elbow end as a blue ball in the middle of the view",
+   "survives": true,
+   "confirmations": 3,
+   "spec_question": false,
+   "files": [
+    "game/player/player.gd",
+    "game/actors/placeholder_poses.gd",
+    "tests/test_grab_view.gd"
+   ],
+   "root_cause": "The hold-view ramp is advanced per sim tick and stands still during the throw's hitstop, so the lens stays pulled back 0.24 m and raised 0.1 m while the throw's right upper arm swings out. The elbow capsule is not hidden in first person and is not in the lens-clearance test, so it shows as a blue ball in the view.",
+   "open_question": "The grab's lens pull-back and the bend's depth (open with Game-boy). Moving the ease-out earlier touches the pull-back timing but not its size.",
+   "votes": {
+    "reproduce": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "I reproduced it. In my own recording of the combo_bot act \"Grab, knee x3, grab, throw\", a large round blue blob sits center-right of the first-person view through the throw. It is visible in the throw's hitstop and the frames just after, then drifts to the bottom-right as the victim flies off. It reads as a rounded capsule end, not a forearm or glove. This is the \"rounded elbow end inside the frame\" look that the M1 rejection precedent describes. Severity is low, as the reviewer says, since it lasts about 20 frames. It is judged by eye, and the precedent is the reviewer's claim, not something I checked.",
+     "evidence": "Reviewer's sheet captures/review_grab/a1_throw_f194-213.png shows the blue ball in tiles 3-19. probe3.log P1 f198-219 shows elbow 0-9% of the view with elbow_near 0.254-0.333 m during the throw and hitstop. In my run I re-recorded the act, 1280x720 at 60 fps, with Movie Maker (one Godot process, c27afaf checkout). I tiled the throw moment, about 3.25-3.75 s, to captures/verify/grab-07-reproduce/s.png (recording a.avi, log a.log). Tiles 1-3 show the blue ball clearly, and tile 4 shows it at the bottom right. I did not rerun the probe. The Godot process still running (pid 8163) is another agent's grab-06 recording, not mine."
+    },
+    "spec": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "No document approves or requires the elbow ball in the throw's view. README's \"Upper body in first person\" entry shows the elbow end of the upper arm but records that a \"rounded elbow end inside the frame\" was the look M1 rejected for punches. ARCHITECTURE's hold-view rule (no forearm or hand within 0.3 m of the lens, nothing filling the view) never mentions the elbow, so this is a gap in the rule, not a ruling. The approved list says the hold view eases out \"on throw or release\", and the finding's fix (start easing out at the throw's first frame) fits that. The decisions log and the plan do not discuss the hitstop timing of the ease-out. The finding rules nothing out and asks for nothing outside the spec.",
+     "evidence": "Read the repo's docs by grep only, in /Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-grab. README.md \"Upper body in first person\" says the elbow end, forearms and hands show, and says hiding the whole arm left \"its rounded elbow end inside the frame\". docs/ARCHITECTURE.md lines 60 and 87-96 cover the visible elbow end and the strike hold-pose rule. docs/milestones/M2-phase3-plan.md line 62 and line 83 state the 0.3 m forearm and hand rule. docs/HANDOFF.md line 49 lists the hold view tunables and departures. The reviewer's entry, grab-07, came from review-grab.json. I did not run Godot."
+    },
+    "code": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The code supports the stated mechanism. _throw_held() clears _held on the throw's startup frame (frame 8), so _holding_valid() goes false. But _tick_hold_view() runs in sim ticks, and player.gd:166 says it holds still through hitstop. TimeController.hitstop([self, victim]) is called in _throw_held, so the ease-out (grab_view_out_s 0.45 s) only starts once the hitstop ends. Until then the lens stays at the full 0.24 m pull-back and 0.1 m rise. The throw windup and strike poses swing the right upper arm out to 40 and 84 degrees. PlaceholderBody hides only the shoulder end of the upper arm in first person, so the \"Elbow\" capsule stays visible. tests/test_grab_view.gd has no elbow check, so nothing flags this. I did not run a probe or measure the elbow-to-lens distance, so the 0.25-0.33 m figure and the 6-9% view share rest on the reviewer's probe logs.",
+     "evidence": "Read game/player/player.gd lines 150-170, 255-262, 495-520, 921-985 (_tick_hold_view, _holding_valid, _on_move_frame, _throw_held). Read game/autoload/time_controller.gd hitstop() and tuning_data.gd grab_view_* values. Read PlaceholderPoses._throw() in game/actors/placeholder_poses.gd line 1875. Read the first-person hiding note in game/actors/humanoid_rig.gd line 76 and placeholder_body.gd line 117. grep for elbow in tests/test_grab_view.gd returned nothing. I ran no tests or probes."
+    }
+   }
+  },
+  {
+   "id": "grab-08",
+   "lens": "grab",
+   "severity": "low",
+   "title": "From the hold view the held enemy's head reads as a big bald skin dome",
+   "survives": true,
+   "confirmations": 3,
+   "spec_question": false,
+   "files": [
+    "game/actors/placeholder_body.gd"
+   ],
+   "root_cause": "The placeholder head is a skin sphere with only a crown-hemisphere Cap (DOME) and a front brim. There is no hair or back-of-head part, so from behind the head reads as a large bare skin dome with the brown cap band looking like a brow.",
+   "open_question": "",
+   "votes": {
+    "reproduce": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The finding holds in the reviewer's own frames, and nothing in them reads as intended. A large bare skin hemisphere sits under the aim dot in every hold frame. It spans roughly a third of the frame width in the full-size shot, with a brown band across it that reads like a brow. The dome is the largest shape on screen. The cap does not cover it, even though the enemy's cap is dark and covers the whole head once the enemy is thrown (last frame of the p7 sheet). Severity stays low, since this is placeholder art that Milestone 4 replaces.",
+     "evidence": "I did not record anything and ran no Godot process. The reviewer's captures were enough, and I looked at two of them. In a1_f97_full.png, a skin dome fills the centre of the hold view. A brown band and a black shades band cross it, and it is far bigger than the fists or the combat log. In p7_walk_holding_every5.png, all 19 hold frames show the same dome and brown band, and the last frame, after the throw, shows a black dome on the same head. In game/actors/placeholder_body.gd, the Cap (a DOME of radius 0.134 at y 0.135) is only slightly larger than the Head sphere (radius 0.125, centre y 0.11). I did not check whether the exposed skin is the nape or the top of the skull. Paths: /Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-grab/captures/review_grab/a1_f97_full.png, /Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-grab/captures/review_grab/p7_walk_holding_every5.png, and /Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-grab/game/actors/placeholder_body.gd (around line 211). Reviewer's evidence: a6_level_grab_knee_f1130-1168.png rows 2-3. Not looked at."
+    },
+    "spec": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "No doc approves or intends the bald dome. HANDOFF line 49 (package B done) lists \"the head reads as a skin dome from behind\" as an open item. M2-phase3-plan.md line 83 assigns the grab reviewer to check it. It is not in the approved list or the Decisions log. SPEC §10 has no hair or head requirement for the held enemy, and the SPEC says faces are covered or simplified (line 294). The fix is placeholder art only (a hair or cap dome in placeholder_body.gd). It changes no spec, departure or decision. M2-plan.md line 15 says real art comes in Milestone 4.",
+     "evidence": "Read the grab-08 entry in /Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-notes/docs/reviews/M2-phase3/review-grab.json. Grepped docs/SPEC.md, README.md, docs/HANDOFF.md, docs/milestones/M2-phase3-plan.md, docs/milestones/M2-plan.md and docs/ARCHITECTURE.md for dome, bald, skin, hair, head and hold view under /Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-grab. I did not run Godot."
+    },
+    "code": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The code matches the finding. The enemy head is a bare SKIN sphere with a single ACCENT hemisphere Cap above it and no hair or back-of-head part, so the back and lower head from behind is skin colored. This is a harmless placeholder-art issue, as the finding says (low severity, no spec change).",
+     "evidence": "Read game/actors/placeholder_body.gd lines 209-214 and game/actors/humanoid_rig.gd line 712 in the m2-review-grab worktree (c27afaf). The Head part is Shape.SPHERE, radius 0.125, centered 0.11 above the Head bone, Paint.SKIN. The only head covering is Cap, Shape.DOME (SphereMesh.is_hemisphere), radius 0.134, offset y 0.135, Paint.ACCENT. CapBrim, Shades and ShadesFront all sit at z -0.12 to -0.16, which is the face side. Nothing covers the back of the head, so a camera behind and above the held head sees skin below the cap. I did not run tests or probes. I did not check the exact hemisphere mesh extents or the reviewer's 29% size figure."
+    }
+   }
   }
  ],
- "pending": [
-  "grab-06",
-  "grab-07",
-  "grab-08"
- ]
+ "pending": []
 }
