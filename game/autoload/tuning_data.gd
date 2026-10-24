@@ -53,6 +53,11 @@ extends Resource
 ## 2026-10-24), so the knees show landing on the held body; a knee's own camera_pitch_deg
 ## adds to it. Presentation only: aim never uses it.
 @export_range(0.0, 45.0, 0.5) var grab_view_pitch_deg: float = 16.0
+## The hold's pitch only takes the view down to this many degrees below level in all
+## (grab_view_pitch_deg at most): a player already looking down at the held body gets less
+## of it, and none from this far down, so the two never stack into a view of the own belly.
+## The bots look 6 degrees down and get all of it.
+@export_range(0.0, 60.0, 0.5) var grab_view_target_pitch_deg: float = 22.0
 ## The hold bends the player at the waist, which leans the eyes out over the held body.
 ## While holding, the first-person lens moves back this far along the flat look and up by
 ## grab_view_rise_m, so the held enemy stays readable (not a wall of shirt) and the hands

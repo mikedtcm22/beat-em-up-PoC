@@ -78,6 +78,21 @@ var _hold_frames: int = 0
 ## Hold view ramp (0..1, linear in sim ticks): toward 1 while an enemy is held, back to 0
 ## after a throw or release (_tick_hold_view(); eased by get_hold_view_weight()).
 var _hold_view: float = 0.0
+## EyePoint relative to the origin in the idle pose (body frame: x right, y up, -z ahead),
+## and how far the hold pose moves it from there (measured on the rig in _ready()).
+var _standing_eye: Vector3 = Vector3.ZERO
+var _hold_bend: Vector3 = Vector3.ZERO
+## Hold view lens ramp (0..1, linear in sim ticks): toward 1 while the hold's bend is kept,
+## back to 0 once it is let go (_keeps_hold_bend()).
+var _hold_lens: float = 0.0
+## Shares (0..1) of the hold view's rise (x) and pull-back (y) on screen: what makes up the
+## difference between the eye and the lens's eased path (_tick_hold_shift()).
+var _hold_shift: Vector2 = Vector2.ZERO
+## Whether the hold's bend was kept last tick, and where the lens sat when it was let go
+## (from where it sits standing, body frame y up and z back, per unit of the ease): the
+## lens eases back from there.
+var _hold_kept: bool = false
+var _hold_from: Vector2 = Vector2.ZERO
 var _knees: int = 0
 var _weapon: Weapon
 var _action_lock: int = 0
@@ -96,7 +111,14 @@ func _ready() -> void:
 		_weapon_throw_move = load(WEAPON_THROW_PATH) as MoveData
 	parser.move_set = _sets.get(&"ground")
 	rig.advance(0.0)
-	standing_eye_height = rig.get_point_position(&"EyePoint").y - global_position.y
+	_standing_eye = _eye_in_body()
+	standing_eye_height = _standing_eye.y
+	# The hold's bend on this rig: the hold view's rise and pull-back follow the eye toward it.
+	rig.play(&"hold", 0.0)
+	rig.advance(0.0)
+	_hold_bend = _eye_in_body() - _standing_eye
+	rig.play(&"idle", 0.0)
+	rig.advance(0.0)
 
 
 func _configure_rig(r: HumanoidRig) -> void:
@@ -125,6 +147,7 @@ func _physics_process(delta: float) -> void:
 		_pending_edges.append([button, false])
 	super._physics_process(delta)
 	_update_view_yaw()
+	_tick_hold_shift()
 
 
 func _process(delta: float) -> void:
@@ -153,24 +176,45 @@ func get_look_basis() -> Basis:
 
 ## The first-person view's extra pitch (x, degrees, negative looks down) and drop (y,
 ## meters, negative raises it): the running move's (MoveData.camera_pitch_deg and
-## camera_drop_m) plus the hold view's (Tuning.grab_view_pitch_deg, grab_view_rise_m), each
-## already eased, so a knee's own pitch adds to the hold's without a jump.
+## camera_drop_m) plus the hold view's (get_hold_view_pitch_deg() eased by
+## get_hold_view_weight(), and get_hold_view_shift()'s rise), so a knee's own pitch adds to
+## the hold's without a jump.
 func get_camera_move_offset() -> Vector2:
-	var hold := Vector2(-Tuning.data.grab_view_pitch_deg, -Tuning.data.grab_view_rise_m)
-	return _cam_offset + hold * get_hold_view_weight()
+	var hold := Vector2(-get_hold_view_pitch_deg() * get_hold_view_weight(), -get_hold_view_shift().x)
+	return _cam_offset + hold
 
 
 ## Meters the first-person lens moves back along the flat look: the hold view's
-## (Tuning.grab_view_back_m, eased).
+## (get_hold_view_shift().y).
 func get_camera_pull_back() -> float:
-	return Tuning.data.grab_view_back_m * get_hold_view_weight()
+	return get_hold_view_shift().y
 
 
-## Weight (0..1, smoothstepped) of the hold view: it eases in over Tuning.grab_view_in_s
-## once an enemy is held and back out over grab_view_out_s after a throw or a release.
-## Runs in sim ticks, so it holds still through hitstop like the moves' camera offsets.
+## Weight (0..1, smoothstepped) of the hold view's pitch: it eases in over
+## Tuning.grab_view_in_s once an enemy is held and back out over grab_view_out_s after a
+## throw or a release. Runs in sim ticks, so it holds still through hitstop like the moves'
+## camera offsets.
 func get_hold_view_weight() -> float:
 	return smoothstep(0.0, 1.0, _hold_view)
+
+
+## Degrees the hold view tips the first-person view down at full weight: enough to bring the
+## look down to Tuning.grab_view_target_pitch_deg, at most grab_view_pitch_deg (all of it
+## looking level, none looking down that far already), so a player who looks down at the
+## held body does not stack the two.
+func get_hold_view_pitch_deg() -> float:
+	var look_down := -rad_to_deg(look_pitch)
+	return clampf(Tuning.data.grab_view_target_pitch_deg - look_down, 0.0, Tuning.data.grab_view_pitch_deg)
+
+
+## The hold view's rise (x) and pull-back (y) of the first-person lens in meters, at most
+## Tuning.grab_view_rise_m and grab_view_back_m. The hold's bend drops the eye and leans it
+## out over the held body; these make up for wherever the eye is on its way into or out of
+## that bend, so the lens itself eases in over grab_view_in_s and out over grab_view_out_s
+## without bobbing past either end, whatever the pose's own timing (_tick_hold_shift()).
+## The camera smooths them with the eye.
+func get_hold_view_shift() -> Vector2:
+	return Vector2(Tuning.data.grab_view_rise_m * _hold_shift.x, Tuning.data.grab_view_back_m * _hold_shift.y)
 
 
 ## The first-person view's turn away from the look in degrees (positive turns left): a
@@ -229,6 +273,10 @@ func reset_state() -> void:
 	_view_carry = 0.0
 	_view_move = null
 	_hold_view = 0.0
+	_hold_lens = 0.0
+	_hold_shift = Vector2.ZERO
+	_hold_kept = false
+	_hold_from = Vector2.ZERO
 
 
 # --- Control ------------------------------------------------------------------------
@@ -536,14 +584,18 @@ func _on_move_hits(move: MoveData, hits: Array[HitInfo]) -> void:
 			broken.break_apart()
 
 
-func _on_hit_received(_hit: HitInfo) -> void:
+func _on_hit_received(hit: HitInfo) -> void:
 	parser.reset_chain()
 	parser.clear_buffer()
 	_held_attack = &""
 	_air_attack = false
 	_cam_offset = Vector2.ZERO
 	if _holding_valid():
-		_release_held(false)
+		# The hit tears the clinch apart: the body let go freezes with the hit's hitstop, then
+		# staggers away. Standing up in place instead, its head came up through the frozen,
+		# bent-over first-person view and stayed in the player's face.
+		TimeController.hitstop([_held], HitDetector.hitstop_for(hit))
+		_release_held(true)
 	_held = null
 
 
@@ -922,15 +974,75 @@ func _start_grab(victim: CombatActor) -> void:
 	_use_set(&"hold")
 
 
-## One sim tick of the hold view ramp: toward 1 over Tuning.grab_view_in_s while an enemy
-## is held (knees included), toward 0 over grab_view_out_s once it is not (thrown on the
-## throw's startup frame, released, or the hold broken by a hit). From wherever it is, so
-## a hold that ends while the view is still easing in turns back without a jump.
+## One sim tick of the hold view ramps, the pitch's and the lens's: toward 1 over
+## Tuning.grab_view_in_s while an enemy is held (knees included), toward 0 over
+## grab_view_out_s once it is not (thrown on the throw's startup frame, released, or the
+## hold broken by a hit); the lens's only once a knee that let go has ended
+## (_keeps_hold_bend()). From wherever they are, so a hold that ends while the view is
+## still easing in turns back without a jump.
 func _tick_hold_view() -> void:
 	var holding := _holding_valid()
-	var seconds := Tuning.data.grab_view_in_s if holding else Tuning.data.grab_view_out_s
+	_hold_view = _ramp(_hold_view, holding)
+	var kept := _keeps_hold_bend()
+	if kept and not _hold_kept:
+		# Into the hold again while the lens is still easing out: on from where it is.
+		_hold_lens = 1.0 - sqrt(1.0 - _lens_ease(_hold_lens, false))
+	_hold_lens = _ramp(_hold_lens, kept)
+
+
+## `ramp` one sim tick on toward 1 over Tuning.grab_view_in_s if `up`, else toward 0 over
+## grab_view_out_s.
+static func _ramp(ramp: float, up: bool) -> float:
+	var seconds := Tuning.data.grab_view_in_s if up else Tuning.data.grab_view_out_s
 	var step := 1.0 if seconds <= 0.0 else 1.0 / (seconds * Engine.physics_ticks_per_second)
-	_hold_view = move_toward(_hold_view, 1.0 if holding else 0.0, step)
+	return move_toward(ramp, 1.0 if up else 0.0, step)
+
+
+## The lens ramp eased: quick to start on the way in (`kept`), so the lens is already
+## moving back as the grab's reach brings the forearms up, and smoothstepped on the way out.
+static func _lens_ease(ramp: float, kept: bool) -> float:
+	return 1.0 - (1.0 - ramp) * (1.0 - ramp) if kept else smoothstep(0.0, 1.0, ramp)
+
+
+## The hold's bend is kept while an enemy is held, and through the rest of a knee that let
+## go of it (the knee ends in the hold).
+func _keeps_hold_bend() -> bool:
+	return _holding_valid() or (_running_move() and current_move != null and current_move.id == &"knee")
+
+
+## Each physics tick, after the rig advanced: the shares of the hold view's rise and
+## pull-back. The lens itself eases from where it sits standing to where it sits in the
+## hold (the hold's bend plus the full rise and pull-back) over grab_view_in_s, and once
+## the bend is let go back from wherever it then is over grab_view_out_s (_hold_lens,
+## _lens_ease()); the rise and pull-back make up the difference from wherever the eye is.
+## So the pose's own timing (the grab bends the body late, a release straightens it in a
+## third of the ease) never bobs the lens past either end. Each share stays within 0..the
+## ease, so a body that will not straighten (knocked down) still loses them as the view
+## eases out. While the bend is kept the shares only grow: in the hold the lens rides the
+## eye's sway through the knees as it always has.
+func _tick_hold_shift() -> void:
+	var eye := _eye_in_body() - _standing_eye
+	# Body frame: the rise lifts the lens (+y), the pull-back moves it back (+z).
+	var now := Vector2(eye.y, eye.z)
+	var lift := Vector2(Tuning.data.grab_view_rise_m, Tuning.data.grab_view_back_m)
+	var kept := _keeps_hold_bend()
+	var eased := _lens_ease(_hold_lens, kept)
+	if _hold_kept and not kept:
+		var lens := now + _hold_shift * lift
+		_hold_from = lens / eased if eased > 0.0 else Vector2.ZERO
+	_hold_kept = kept
+	# Where the lens is headed, from where it sits standing, per unit of the ease.
+	var target: Vector2 = Vector2(_hold_bend.y, _hold_bend.z) + lift if kept else _hold_from
+	for axis: int in 2:
+		var share := eased
+		if lift[axis] > 0.001:
+			share = clampf((eased * target[axis] - now[axis]) / lift[axis], 0.0, eased)
+		_hold_shift[axis] = maxf(_hold_shift[axis], share) if kept else share
+
+
+## EyePoint relative to the origin, in the body frame (x right, y up, -z ahead).
+func _eye_in_body() -> Vector3:
+	return global_basis.inverse() * (get_eye_transform().origin - global_position)
 
 
 func _holding_valid() -> bool:
