@@ -46,9 +46,10 @@ const IMPACT_STAGGER_PATH := "res://game/combat/moves/impact_body_stagger.tres"
 ## body closes in, instead of sweeping through it.
 const _HELD_BLEND_S := 0.12
 const _GRAB_EASE_S := 0.23
-## Released on its feet, the body stands up over this blend, around its bent-over hips
-## (release_from_grab()): the head rises while the release pushes the body away, not up
-## through the holder's view at arm's length.
+## Leaving a grab, the body unbends over this blend, around its bent-over hips
+## (_leave_hold_under_hips()): released on its feet (release_from_grab()), or launched out of
+## the hold (thrown, or KO'd by a knee: _launch()). The head rises while the body moves away,
+## not up through the holder's view at arm's length.
 const _RELEASE_BLEND_S := 0.22
 ## Hit-flash color of a perfect block on the defender's rig (the parry flash), and the
 ## strength of the contact flash on an ordinary blocked hit (a clean hit flashes at 1).
@@ -486,11 +487,7 @@ func release_from_grab(push: Vector3, stagger: bool) -> void:
 	else:
 		_enter_state(CombatTypes.ActorState.FREE)
 		rig.play(&"idle", _RELEASE_BLEND_S)
-	var under_hips := rig.get_point_position(&"Hips") - global_position
-	under_hips.y = 0.0
-	global_position += under_hips
-	rig.carry_fade(under_hips)
-	rig.advance(0.0)
+	_leave_hold_under_hips()
 	if stagger:
 		# Like every stagger, the upper body gives way to the push.
 		_ragdoll_stagger(get_chest_position(), sim_velocity, Ragdoll.Part.TORSO)
@@ -968,7 +965,13 @@ func _apply_reaction(hit: HitInfo) -> void:
 			rig.ragdoll_hit(hit.contact_point, down * Tuning.data.ragdoll_ground_push, _ragdoll_part(hit))
 
 
+## Knocked off the feet: flying with `kb` (lifted at least Tuning.min_launch_up), the hit's
+## pose snapping in, and the full ragdoll. Launched out of a hold (thrown, or a knee that KOs
+## the held body; GRABBED until now, the holder already gone) the body leaves it as a
+## release does: from where it is drawn, unbending around its bent-over hips over
+## _RELEASE_BLEND_S, never snapping upright inside the holder.
 func _launch(hit: HitInfo, reaction: CombatTypes.Reaction, kb: Vector3) -> void:
+	var from_hold := state == CombatTypes.ActorState.GRABBED
 	holder = null
 	var v := kb
 	v.y = maxf(v.y, Tuning.data.min_launch_up)
@@ -977,11 +980,14 @@ func _launch(hit: HitInfo, reaction: CombatTypes.Reaction, kb: Vector3) -> void:
 	_set_ghost(true)
 	var new_state := CombatTypes.ActorState.THROWN if reaction == CombatTypes.Reaction.THROWN else CombatTypes.ActorState.LAUNCHED
 	_enter_state(new_state)
+	var blend := _RELEASE_BLEND_S if from_hold else 0.03
 	if reaction == CombatTypes.Reaction.KNOCKDOWN:
-		rig.play(&"knockdown_back" if _face_up else &"knockdown_forward", 0.03)
+		rig.play(&"knockdown_back" if _face_up else &"knockdown_forward", blend)
 	else:
-		rig.play(&"launched", 0.03)
-	_ragdoll_full(hit.contact_point, kb, _ragdoll_part(hit))
+		rig.play(&"launched", blend)
+	if from_hold:
+		_leave_hold_under_hips()
+	_ragdoll_full(hit.contact_point, kb, _ragdoll_part(hit), from_hold)
 	if not _face_up and reaction != CombatTypes.Reaction.KNOCKDOWN:
 		# Launched from behind: the flying animation arches back and flips face down on
 		# landing; the ragdoll pitches over in the air instead.
@@ -1099,11 +1105,12 @@ func _ragdoll_stagger(contact: Vector3, push: Vector3, part: Ragdoll.Part) -> vo
 
 
 ## Knocked off the feet (launch, knockdown, throw; sim_velocity already set): the full
-## ragdoll, kicked by `push` (world m/s) at `contact` on `part`.
-func _ragdoll_full(contact: Vector3, push: Vector3, part: Ragdoll.Part) -> void:
+## ragdoll, kicked by `push` (world m/s) at `contact` on `part`. `at_once`: it takes over
+## from the pose on screen at once (out of a hold) instead of rising in from the animation.
+func _ragdoll_full(contact: Vector3, push: Vector3, part: Ragdoll.Part, at_once: bool = false) -> void:
 	if not _ragdoll_allowed():
 		return
-	rig.ragdoll_start(true, contact, push, sim_velocity, part)
+	rig.ragdoll_start(true, contact, push, sim_velocity, part, INF, at_once)
 
 
 ## Getting up out of a ragdoll: the origin moves along the floor toward where the ragdoll's
@@ -1339,6 +1346,19 @@ func _pin_to_holder(dt: float) -> void:
 		rotation.y = atan2(-to_holder.x, -to_holder.z)
 	velocity = Vector3.ZERO
 	sim_velocity = Vector3.ZERO
+
+
+## Leaving a hold, right after playing the animation that leaves it (with a blend): the
+## origin moves along the floor under the hips as they are drawn (the held pose holds them
+## back from the pin spot) and the cross-fade keeps starting from the pose on screen
+## (HumanoidRig.carry_fade()). The body leaves from where it is seen and unbends around its
+## hips, away from the holder, instead of straightening over the pin spot inside it.
+func _leave_hold_under_hips() -> void:
+	var under_hips := rig.get_point_position(&"Hips") - global_position
+	under_hips.y = 0.0
+	global_position += under_hips
+	rig.carry_fade(under_hips)
+	rig.advance(0.0)
 
 
 ## Ghost bodies (flying, downed, held, KO) only collide with the world, so the living

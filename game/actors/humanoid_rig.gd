@@ -496,9 +496,11 @@ func set_damage_look(level: int) -> void:
 ## knockback) at `contact` (world), on the `part` body (Ragdoll.Part) nearest to it; every
 ## simulated body starts with `body_velocity` (the actor's new sim velocity) on top of its
 ## bone's velocity in the animation. A full ragdoll already running only takes the new
-## kick. Builds the ragdoll on first use.
+## kick. A full one started `at_once` shows alone from the start, from the pose on screen
+## (a body launched out of a hold), instead of rising in from the animation's snap
+## (Ragdoll.start()). Builds the ragdoll on first use.
 func ragdoll_start(full: bool, contact: Vector3, push: Vector3, body_velocity: Vector3,
-		part: Ragdoll.Part = Ragdoll.Part.ANY, partial_length_s: float = INF) -> void:
+		part: Ragdoll.Part = Ragdoll.Part.ANY, partial_length_s: float = INF, at_once: bool = false) -> void:
 	if not _built:
 		return
 	if _ragdoll == null:
@@ -509,7 +511,7 @@ func ragdoll_start(full: bool, contact: Vector3, push: Vector3, body_velocity: V
 	var bone_velocity: Array[Vector3] = []
 	if _motion_valid:
 		bone_velocity = _bone_velocity
-	_ragdoll.start(mode, contact, push, body_velocity, bone_velocity, part, partial_length_s)
+	_ragdoll.start(mode, contact, push, body_velocity, bone_velocity, part, partial_length_s, at_once)
 
 
 ## An extra hit on a running ragdoll (a stomp on a downed body): `push` (world m/s) at

@@ -252,9 +252,12 @@ func is_running() -> bool:
 ## bone; may be empty; a PARTIAL drops the part of it running against the push, so a parried
 ## jab's arm does not carry on into the defender). `partial_length_s` caps a PARTIAL's hold
 ## and fade (the stagger's length). Bodies already simulating keep their pose and motion:
-## the influence rises from what showed, so nothing jumps.
+## the influence rises from what showed, so nothing jumps. A FULL ragdoll started `at_once`
+## shows alone from the start, taking over from the pose on screen instead of rising in from
+## the animation's snap (a body launched out of a hold leaves from its held pose).
 func start(new_mode: Mode, contact: Vector3, push: Vector3, body_velocity: Vector3,
-		bone_velocity: Array[Vector3], part: Part = Part.ANY, partial_length_s: float = INF) -> void:
+		bone_velocity: Array[Vector3], part: Part = Part.ANY, partial_length_s: float = INF,
+		at_once: bool = false) -> void:
 	if new_mode == Mode.NONE:
 		stop()
 		return
@@ -291,12 +294,13 @@ func start(new_mode: Mode, contact: Vector3, push: Vector3, body_velocity: Vecto
 	# The influence rises from what shows: a fresh stagger's bodies start on the animation,
 	# so it shows at once; a stagger on a stagger rises back from where its fade had got to.
 	# A body knocked off its feet shows the animation's snap first, from standing or
-	# staggering alike (the hit's frame snaps into the hit's pose, as without a ragdoll).
+	# staggering alike (the hit's frame snaps into the hit's pose, as without a ragdoll),
+	# unless it takes over at once.
 	_rise_t = 0.0
 	_rise_from = shown_influence
 	if new_mode == Mode.FULL:
-		_rise_from = 0.0
-		_rise_s = tuning.ragdoll_full_rise_s
+		_rise_from = 1.0 if at_once else 0.0
+		_rise_s = 0.0 if at_once else tuning.ragdoll_full_rise_s
 	elif was == Mode.PARTIAL:
 		_rise_s = tuning.ragdoll_partial_rise_s
 	else:
