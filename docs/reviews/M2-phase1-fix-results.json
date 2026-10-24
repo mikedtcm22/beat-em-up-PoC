@@ -196,9 +196,9 @@
     },
     {
      "id": "wp3:mech[12]",
-     "title": "Layering per tier, \u00b18% variation, no immediate repeats, positional playback",
+     "title": "Layering per tier, ±8% variation, no immediate repeats, positional playback",
      "verdict": "refuted",
-     "reason": "Capture logs show exactly whoosh+thud / +crack / whoosh+thud+crunch+body fall+sub thump at the contact point, with pitch and volume within \u00b18%. The bank never repeats a pool's last variant (the existing test does 200 picks per pool). Panning works: a wind-up from the right is +5.9 dB R, and rear hits use the muffle bus.",
+     "reason": "Capture logs show exactly whoosh+thud / +crack / whoosh+thud+crunch+body fall+sub thump at the contact point, with pitch and volume within ±8%. The bank never repeats a pool's last variant (the existing test does 200 picks per pool). Panning works: a wind-up from the right is +5.9 dB R, and rear hits use the muffle bus.",
      "fixed": false
     },
     {
@@ -259,10 +259,10 @@
    ],
    "feel_judgement": "Judged by analysis, not by ear. Before the fixes the mix had three audible problems. Every hit's whoosh swelled about 0.15 s after the thud, so hits read as 'thud... fff', and whiffs were late in the same way. Heavy hits were only 0.3-1 LU louder than light ones, so the tiers differed in timbre but hardly in weight. A spinning heel through three bodies was louder than a haymaker and was flattened by the limiter. Now each hit's air sits on its impact, and whiffs peak 20-40 ms after the event. The tiers step clearly: light about -22.5, heavy -19.3, finisher -15.6 LUFS (momentary, at the player). Crowd hits sit between heavy and finisher. Blocks are a clear mid-range clack 1.5 LU under a light hit, a guard break is louder than a heavy, and a parry is a long bright ting. Frontal blocks now sound centred in front instead of muffled behind. Real combos peak at -0.8 to -1.4 dBFS with nothing clipped, and every sound starts within about a frame of its contact frame, at 1x and at 0.25x. Still placeholder-grade: the crack is a woody modal 'tok' rather than a bone snap, the body fall plays at contact rather than when the body lands, and absolute levels are a starting point for Game-boy to tune live.",
    "spec_questions": [
-    "Body fall timing (SPEC \u00a76 tier table): it plays as a finisher layer at contact, but the launched body lands 0.5-1 s later. Proposal: play the body-fall layer when the body hits the ground, which needs a sim event at ground contact, and keep the sub thump at contact. Default: keep it at contact, as the spec's layer list says.",
-    "Swing whoosh trigger (SPEC \u00a76 'Missed swings get a whoosh'): attack_whiffed fires when the active frames end, so even a front-loaded whoosh comes 1-3+ frames after the limb's extension. Proposal: one swing whoosh per attack, timed to its first active frame for hits and misses alike, via a new sim event such as attack_active(attacker, move); contact would then add only thud and the rest. Default: keep whoosh at contact plus whoosh on attack_whiffed, with the front-loaded samples.",
-    "Wind-up whoosh (SPEC \u00a78 'the wind-up's grunt and whoosh play positionally'): the whoosh sounds at wind-up start, at least 0.3 s before the strike, which also gets its own whoosh. Proposal: keep only the effort grunt at wind-up start as the directional cue. Default: keep both, as written.",
-    "Finisher slow-mo audio (SPEC \u00a76 is silent): optionally pitch down or low-pass the SFX during the 0.3x slow-mo for drama, as a tunable that defaults off. Default: real-time audio, as now."
+    "Body fall timing (SPEC §6 tier table): it plays as a finisher layer at contact, but the launched body lands 0.5-1 s later. Proposal: play the body-fall layer when the body hits the ground, which needs a sim event at ground contact, and keep the sub thump at contact. Default: keep it at contact, as the spec's layer list says.",
+    "Swing whoosh trigger (SPEC §6 'Missed swings get a whoosh'): attack_whiffed fires when the active frames end, so even a front-loaded whoosh comes 1-3+ frames after the limb's extension. Proposal: one swing whoosh per attack, timed to its first active frame for hits and misses alike, via a new sim event such as attack_active(attacker, move); contact would then add only thud and the rest. Default: keep whoosh at contact plus whoosh on attack_whiffed, with the front-loaded samples.",
+    "Wind-up whoosh (SPEC §8 'the wind-up's grunt and whoosh play positionally'): the whoosh sounds at wind-up start, at least 0.3 s before the strike, which also gets its own whoosh. Proposal: keep only the effort grunt at wind-up start as the directional cue. Default: keep both, as written.",
+    "Finisher slow-mo audio (SPEC §6 is silent): optionally pitch down or low-pass the SFX during the 0.3x slow-mo for drama, as a tunable that defaults off. Default: real-time audio, as now."
    ],
    "out_of_scope_edits": [],
    "notes_for_merge": "1. game/autoload/tuning_data.gd: only the \"Audio\" group changed. It now has @export_subgroup headings Mix, Tiers, Layers, Voices, Blocks, Distance, Music and Rumble. No property was renamed.\n   - New properties: hit_light_db 0, hit_heavy_db 3, hit_finisher_db 4, extra_victim_db -8, self_hit_offset_m 0.5.\n   - Changed defaults: sfx_volume_db -3 (it is now the SFX limiter's pre-gain), whoosh_db -10, thud_db -8, crunch_db -10, body_fall_db -12, sub_thump_db -10, whiff_db -6, block_clack_db -2.5, parry_ting_db -6, guard_break_db -1.\n2. WP1 must regenerate res://tuning/default.json after this merge, or its \"default preset equals shipped defaults\" test will fail. WP1's panel must also handle PROPERTY_USAGE_SUBGROUP entries.\n3. test_the_audio_tuning_group_sits_before_debug asserts that the group after \"Audio\" is \"Debug\" and lists the Audio subgroups exactly. If WP2's \"VFX\" group ends up between Audio and Debug, put VFX before Audio or adjust that one assertion.\n4. Likely trivial conflicts:\n   - docs/ARCHITECTURE.md: a new \"Audio and rumble\" paragraph just above \"## Block\", where WP2 may add a VfxDirector note.\n   - ASSETS.md: I edited only the \"## Audio\" rows; WP2 adds its own section.\n   - game/level/test_room.gd: the original WP3 build (not this pass) adds two lines at the end of _build_presentation(), AudioDirector.new() and RumbleDirector.new(), next to where WP2 will likely add its VfxDirector.\n5. 23 regenerated WAVs are LFS objects: whoosh, crack, block clack, guard break, grunt, player grunt and effort. The generator is deterministic; a re-run leaves git clean. Run godot --headless --import --quit after merging.\n6. Buses are created at runtime when the project has no layout. If anyone adds default_bus_layout.tres, keep \"SFX\" with an AudioEffectHardLimiter (AudioDirector drives its pre_gain_db) and \"SFX Rear\" with a LowPass as effect 0, sending to SFX.\n7. Phase 3 can reuse the scratch probes in /Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-audio/captures/review/. They load from res://captures/ directly; that folder is ignored and nothing there is committed.\n   - level_probe.tscn + run_probe.sh: isolated-hit loudness report; the PROBE_TUNING env var overrides tunables.\n   - audio_probe.tscn + cap.sh \"<act>\": bot acts with per-sound logs.\n   - sync.py: checks onsets against contact frames.\n   - brawl_probe.tscn: voice budget under a synthetic brawl.\n   - whiff_probe.tscn and interrupt_probe.tscn.\n8. Nothing outside the owned files was edited in this pass.",
@@ -463,6 +463,45 @@
     "The bruised step is subtler in the side view (about 100 px tall dummy) than in first person. It reads as darker and mottled; vfx_damage_tile_m and the scuff contrast in tools/gen_fx.gd are the knobs.",
     "Not verified on a real 1080p display or under the full combo_bot run in the integration worktree; judged from per-act vfx_bot captures at 1600x900.",
     "Out of WP2 scope, unchanged: M1's white hit flash filling large parts of the first-person view, and the combat log covering the side-view fight in combo_bot captures."
+   ]
+  },
+  "WP1-tuning": {
+   "checked_by": "the lead, 2026-10-23, against wip: a9f2aca and 77455ed (the fixer agent was cut off before reporting)",
+   "commit": "99ff984 (marker commit; the code is in a9f2aca and 77455ed)",
+   "pushed": true,
+   "tests": "324/324 on m2/tuning, no SCRIPT ERROR; 400/400 after the merge into m2/hit-feel",
+   "verdicts": {
+    "review:wp1:mechanics": {
+     "0": "fixed: focus links from categories into pages and back, LB/RB switch category, category pages show on focus",
+     "1": "fixed: wall normal clearance, capsule body test against the world, ring search, 'No room' refusal",
+     "2": "fixed: non first-person cameras cast from the player's eye and look",
+     "3": "fixed: range hints clamped (noted in last_warnings), unknown enum ids skipped",
+     "4": "fixed: preset names lower-cased; a user preset can't be named default; default loads from EXPORT_DIR",
+     "5": "fixed: the overlay lifts GameInput bindings from the InputMap while open",
+     "6": "fixed: markers refresh per edited row and category; move markers only on moves/ edits",
+     "7": "fixed: Tuning.user_dir/export_dir point at a per-run scratch folder in tests, removed afterwards",
+     "8": "fixed: show_category() sets button_pressed through the ButtonGroup",
+     "9": "fixed per the reviewer's default (yes): debug_scale stretches hitstop ticks and the slow-mo timers; camera punch and shake unscaled. Needs Game-boy's confirmation"
+    },
+    "review:wp1:feel": {
+     "0": "fixed: A added to ui_accept and B to ui_cancel at runtime; focus bar on the focused row",
+     "1": "fixed (same as mechanics 5)",
+     "2": "fixed: Load and Reset first write user://tuning/_backup.json, reported in the status line (no two-step confirm)",
+     "3": "fixed: the crosshair ray meets bodies; the spawn goes spawn_beside_m to the clear side",
+     "4": "fixed: the move picker and Reset move sit in a fixed header above the scroll",
+     "5": "fixed: exported_properties() records subgroups and the panel draws a heading per subgroup (WP2/WP3 use them)",
+     "6": "fixed per the reviewer's default: the Debug group is left out of presets (PRESET_SKIPPED_GROUPS). Needs Game-boy's confirmation and a README departure note"
+    }
+   },
+   "captures": [
+    {
+     "path": ".worktrees/m2-tuning/captures/panel_after.avi (local)",
+     "shows": "pad-driven panel: focus bar walking a Hit feel page with previewed subgroup headings, change markers, Moves page header, F4 menu and a dummy spawned beside another"
+    }
+   ],
+   "spec_questions": [
+    "debug time scale also stretches hitstop and slow-mo (mechanics 9)",
+    "cheats left out of presets (feel 6)"
    ]
   }
  }

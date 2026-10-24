@@ -4,6 +4,21 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-23 20:25 CDT: phase 1 merged into `m2/hit-feel`; spec questions with Game-boy
+A new working session took over at 79% of its 5-hour window (resets 21:39 CDT) and 14% weekly (resets Tue 2026-10-27 17:00 CDT). These are account B's reset times. Its watcher runs: "Beat-em-up: usage watcher", name `usage-watcher-d`. It launched no agents (over the 65% gate) and did the rest itself.
+- **WP1 done:** the lead checked all 17 findings against `a9f2aca` and `77455ed`; every one is fixed. Marker commit `99ff984`, "M2 WP1: review fixes (...)", pushed. Per-finding verdicts are in [docs/reviews/M2-phase1-fix-results.json](reviews/M2-phase1-fix-results.json) under `WP1-tuning`. The panel capture is `.worktrees/m2-tuning/captures/panel_after.avi` (local): pad focus walks a subgrouped page.
+- **WP2 judged from its after-sheets** (and shown to Game-boy):
+  - The speed lines are now crisp, tapered ink with a clear middle, in both views.
+  - The three tier sizes read distinctly. The jab step has no lunge lines and the flying kick does.
+  - Words stay with their dummies.
+  - Damage looks read at 1 m in first person. In the full side view the bruised step is near invisible and bloodied faint, and the bloodied splats tile evenly over the shirt, like a print.
+  - Phase 3 item, out of WP2's scope: M1's white hit flash fills about 40% of the first-person view on a jab at contact, and a wide band on knees.
+- **Merged** `m2/tuning`, `m2/vfx` and `m2/audio` into `m2/hit-feel` (`361b4ec`, `4fbfef6`, `a3579fd`), keeping all four presentation lines and both ASSETS.md sections. The default preset is regenerated (231 values, `8a00724`). **400/400 tests pass with no SCRIPT ERROR.** Pushed.
+- **Waiting on Game-boy:** answers to the 8 spec questions below (WP3 ×4, WP2 ×2, and WP1 ×2, which are already implemented with the reviewers' defaults). Nothing acts on them until he answers.
+  - WP1, debug time scale: 0.25x also stretches hitstop and the slow-mo timers, while camera punch and shake stay real time. Default: keep.
+  - WP1, cheats out of presets: Save, Load and Reset skip the Debug group. Default: keep, and note it in README's Milestone 2 departures.
+- **Next:** WP4 starts only after the 21:39 CDT reset (a heavy agent costs about 25%), per [docs/milestones/M2-WP4-brief.md](milestones/M2-WP4-brief.md), in a new worktree off `m2/hit-feel`.
+
 ### 2026-10-23 20:20 CDT: Game-boy switches to a fresh account
 Account C stopped work at 76% of its 5-hour window and 13% weekly. Both of its watchers are told to stop and are being archived. This session is renamed "Beat-em-up: account C session (handed off)", which frees the working-session title.
 - **The next account:** start from the takeover prompt under "Takeover prompt". Its "Next steps" are current.
@@ -199,19 +214,11 @@ USAGE RULES:
 - Prefer one agent per work package doing review, then fix, over many reviewers per package.
 - The watcher checks every 20 minutes below 70%, every 10 minutes up to 85% and every 5 minutes above that. It tells you to halt and hand off at 90%.
 
-Next steps (Milestone 2; details and merge notes are in docs/HANDOFF.md):
-- Finish WP1 (tuning panel, .worktrees/m2-tuning, branch m2/tuning):
-  - its fixes for all 17 findings are in the wip: commits, and the tests pass (324/324);
-  - check each finding (keys review:wp1:*) against them and close any gap;
-  - record a short panel capture (gamepad focus, a subgrouped category);
-  - commit "M2 WP1: review fixes (...)" and push.
-- WP2 (comic VFX) and WP3 (audio) review fixes are done and pushed:
-  - judge WP2's after-sheets in .worktrees/m2-vfx/captures/review/ yourself and show me what you saw;
-  - WP3's feel was judged by analysis only, so I'll listen to it.
-- Merge m2/tuning, m2/vfx and m2/audio into m2/hit-feel (keep all four presentation lines in test_room.gd and both ASSETS.md sections). Then run godot --headless --import --quit && godot --headless -s tools/gen_default_preset.gd, then tools/run_tests.sh: everything must pass, with no SCRIPT ERROR. Push and update docs/HANDOFF.md.
-- Ask me the open spec questions listed in docs/HANDOFF.md (WP2 and WP3 proposals, with defaults) before acting on any of them.
-- Then phase 2, WP4 (partial and full ragdoll), per docs/milestones/M2-WP4-brief.md. The player default is confirmed: enemies and dummies ragdoll, and the player keeps animated reactions, with a toggle.
-- Then phase 3 for my playtest: integrate, review from captures, update README and ARCHITECTURE, open the Milestone 2 PR.
+Next steps (Milestone 2; details are in docs/HANDOFF.md):
+- Phase 1 is done and merged into m2/hit-feel (400/400 tests pass). WP3's audio is judged by analysis only, so Game-boy will listen to it.
+- Get my answers to the 8 open spec questions in the newest HANDOFF entry and the 19:15 entry (WP3 ×4, WP2 ×2, WP1 ×2). Act only on the ones I approve; record approved departures in README ("Where M2 departs from the spec").
+- Phase 2, WP4 (partial and full ragdoll), per docs/milestones/M2-WP4-brief.md, in a new worktree off m2/hit-feel. The player default is confirmed: enemies and dummies ragdoll, and the player keeps animated reactions, with a toggle. One heavy agent builds; then one reviews and fixes.
+- Then phase 3 for my playtest: integrate, review from captures (include M1's white hit flash, which fills much of the first-person view at close range), update README and ARCHITECTURE, open the Milestone 2 PR.
 
 Ground rules:
 - Never merge a milestone PR into main until I've played it and signed it off.
