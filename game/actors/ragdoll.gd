@@ -140,6 +140,9 @@ var _calm_s: float = 0.0
 var _lying_s: float = 0.0
 ## Skeleton-space post-ragdoll pose of every bone after the latest update.
 var _visual: Array[Transform3D] = []
+## Per Part: the fastest the contact push has turned a struck body of it (sim rad/s), since
+## the ragdoll was built (top_contact_twist(); for tests).
+var _top_twist: Dictionary[Part, float] = {}
 
 
 ## Build the bodies and joints for `p_rig` (once). Adds the simulator and this modifier to
@@ -477,6 +480,13 @@ func body_sim_spin(bone: StringName) -> Vector3:
 		var ang: Vector3 = PhysicsServer3D.body_get_state(_bodies[i].get_rid(), PhysicsServer3D.BODY_STATE_ANGULAR_VELOCITY)
 		return ang / _applied_scale
 	return Vector3.ZERO
+
+
+## The fastest the kick at the contact point has turned a struck body of `part` (sim rad/s,
+## as its spin changed), since the ragdoll was built; 0 if none was struck. For tests: each
+## stays within its part's cap (Tuning.ragdoll_contact_spin_*).
+func top_contact_twist(part: Part) -> float:
+	return _top_twist.get(part, 0.0)
 
 
 ## The joints that exist now (for tests).
@@ -861,10 +871,14 @@ func _twist_at_contact(states: Array[PhysicsDirectBodyState3D], i: int, contact:
 		Part.ARMS, Part.LEGS:
 			cap = tuning.ragdoll_contact_spin_limb
 	var turn := axis * minf(angular.length() / maxf(inertia, 1e-6), cap) * scale
+	var spun := struck.angular_velocity
 	for b: int in chain:
 		var state := states[_sim.find(b)]
 		state.angular_velocity += turn
 		state.linear_velocity += turn.cross(state.transform.origin + state.center_of_mass - pivot)
+	if scale > 0.0:
+		var rate := (struck.angular_velocity - spun).length() / scale
+		_top_twist[_part[i]] = maxf(_top_twist.get(_part[i], 0.0), rate)
 
 
 ## Queue a kick of `push` (sim m/s) on the simulating `part` body (any body if none of that
