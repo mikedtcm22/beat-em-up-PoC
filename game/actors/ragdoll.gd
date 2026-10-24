@@ -804,8 +804,8 @@ func _wake() -> void:
 		PhysicsServer3D.body_set_state(_bodies[i].get_rid(), PhysicsServer3D.BODY_STATE_SLEEPING, false)
 
 
-## The pose-spring frequency of body `i` in this phase (its arms and legs have their own
-## while staggering and lying).
+## The pose-spring frequency of body `i` in this phase (its arms have their own while
+## staggering, its arms and legs theirs while lying).
 func _pose_hz(i: int) -> float:
 	var tuning := Tuning.data
 	var limb := _part[i] == Part.ARMS or _part[i] == Part.LEGS
@@ -813,7 +813,12 @@ func _pose_hz(i: int) -> float:
 		Phase.STAGGER:
 			return tuning.ragdoll_partial_limb_pose_hz if limb else tuning.ragdoll_partial_pose_hz
 		Phase.DOWN:
-			return tuning.ragdoll_down_limb_pose_hz if limb else tuning.ragdoll_down_pose_hz
+			match _part[i]:
+				Part.ARMS:
+					return tuning.ragdoll_down_arm_pose_hz
+				Part.LEGS:
+					return tuning.ragdoll_down_leg_pose_hz
+			return tuning.ragdoll_down_pose_hz
 		Phase.LIMP:
 			return tuning.ragdoll_ko_pose_hz
 	return tuning.ragdoll_flight_pose_hz

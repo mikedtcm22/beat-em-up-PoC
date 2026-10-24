@@ -296,11 +296,13 @@ extends Resource
 ## from the hips spring).
 @export_range(0.0, 1.0, 0.05) var ragdoll_inherit_velocity: float = 1.0
 ## How hard each bone is pulled toward the animation's joint angles while flying, while
-## lying down (the torso, neck and head, then the arms and legs: a downed body lies where
-## its hurtboxes are) and when KO'd (0 = limp).
+## lying down (the torso, neck and head, then the arms, then the legs: a downed body lies
+## where its hurtboxes are, the head, torso and legs; the arms, which have none, lie more
+## as they fell) and when KO'd (0 = limp).
 @export_range(0.0, 6.0, 0.05) var ragdoll_flight_pose_hz: float = 2.5
 @export_range(0.0, 6.0, 0.05) var ragdoll_down_pose_hz: float = 3.0
-@export_range(0.0, 6.0, 0.05) var ragdoll_down_limb_pose_hz: float = 3.0
+@export_range(0.0, 6.0, 0.05) var ragdoll_down_arm_pose_hz: float = 2.0
+@export_range(0.0, 6.0, 0.05) var ragdoll_down_leg_pose_hz: float = 3.0
 @export_range(0.0, 6.0, 0.05) var ragdoll_ko_pose_hz: float = 0.0
 ## Damping ratio of those pose springs.
 @export_range(0.0, 2.0, 0.05) var ragdoll_pose_damping: float = 0.8
@@ -337,7 +339,7 @@ extends Resource
 ## ragdoll_rest_s, and at the latest ragdoll_settle_max_s after it started lying.
 @export_range(0.0, 1.0, 0.01) var ragdoll_rest_speed: float = 0.25
 @export_range(0.0, 2.0, 0.05) var ragdoll_rest_s: float = 0.3
-@export_range(0.2, 5.0, 0.1) var ragdoll_settle_max_s: float = 1.0
+@export_range(0.2, 5.0, 0.1) var ragdoll_settle_max_s: float = 1.25
 ## The get-up fades from the pose the ragdoll lies in over this long, and longer when the
 ## body has further to go to where it stands up (it slides there no faster than this, m/s;
 ## at most over the whole get-up).

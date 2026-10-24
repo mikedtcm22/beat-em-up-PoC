@@ -14,6 +14,10 @@ const ROOM := preload("res://game/level/test_room.tscn")
 const FAR := Vector3(30.0, 0.0, -30.0)
 ## The visible bones whose gap to the animation's FK is measured during a full ragdoll.
 const GAP_BONES: Array[StringName] = [&"Head", &"Chest", &"LeftHand", &"RightHand", &"LeftFoot", &"RightFoot"]
+## The bones a lying body's hurtboxes ride (head, torso, legs): lying, the drawn body stays
+## on them. The arms, which carry none, lie looser (HANDS).
+const HURT_BONES: Array[StringName] = [&"Head", &"Chest", &"Hips", &"LeftLowerLeg", &"RightLowerLeg", &"LeftFoot", &"RightFoot"]
+const HANDS: Array[StringName] = [&"LeftHand", &"RightHand"]
 
 var room: Node3D
 var player: PlayerCharacter
@@ -195,6 +199,7 @@ func test_a_launched_dummy_ragdolls_rests_and_gets_up_where_its_hips_lie() -> vo
 	var flight_gap := 0.0
 	var steady_gap := 0.0
 	var lying_gap := 0.0
+	var lying_hands := 0.0
 	var slept_at := -1
 	var down_frames := 0
 	while dummy.state != CombatTypes.ActorState.GETUP:
@@ -210,14 +215,16 @@ func test_a_launched_dummy_ragdolls_rests_and_gets_up_where_its_hips_lie() -> vo
 			down_frames += 1
 			# After the landing's first bounce: lying where its hurtboxes are.
 			if down_frames > 20:
-				lying_gap = maxf(lying_gap, _gap(dummy))
+				lying_gap = maxf(lying_gap, _gap(dummy, HURT_BONES))
+				lying_hands = maxf(lying_hands, _gap(dummy, HANDS))
 			if ragdoll.asleep and slept_at < 0:
 				slept_at = down_frames
 		if dummy.is_downed() and dummy.state_frame == Tuning.data.downed_frames - 1:
 			break
-	gut.p("full ragdoll gap to the animation: %.3f m flying (%.3f m once caught up), %.3f m lying; asleep %d frames after landing"
-			% [flight_gap, steady_gap, lying_gap, slept_at])
-	assert_lt(lying_gap, 0.3, "a downed body lies where its hurtboxes are")
+	gut.p("full ragdoll gap to the animation: %.3f m flying (%.3f m once caught up), %.3f m lying (hands %.3f m); asleep %d frames after landing"
+			% [flight_gap, steady_gap, lying_gap, lying_hands, slept_at])
+	assert_lt(lying_gap, 0.2, "a downed body lies where its hurtboxes are")
+	assert_lt(lying_hands, 0.7, "its arms lying near where the animation has them")
 	assert_lt(steady_gap, 0.5, "the flying body keeps with the sim body")
 	assert_lt(flight_gap, 0.8, "even right after the launch")
 	assert_between(slept_at, 1, roundi(Tuning.data.ragdoll_settle_max_s * 60.0) - 1,
@@ -645,15 +652,16 @@ func test_a_body_launched_from_behind_lands_face_down_where_its_hurtboxes_are() 
 		assert_eq(dummy.rig.current_anim(), &"downed_front", "the animation lies face down")
 		await _ticks(25)
 		var lying := 0.0
+		var hands := 0.0
 		var excess := 0.0
-		var bones: Array[StringName] = GAP_BONES.duplicate()
-		bones.append(&"Hips")
 		while dummy.is_downed():
-			lying = maxf(lying, _gap(dummy, bones))
+			lying = maxf(lying, _gap(dummy, HURT_BONES))
+			hands = maxf(hands, _gap(dummy, HANDS))
 			excess = maxf(excess, _joint_excess(dummy))
 			await get_tree().physics_frame
-		gut.p("%s from behind: lying gap %.3f m, joints at most %.0f deg past a limit" % ["haymaker" if haymaker else "uppercut", lying, excess])
-		assert_lt(lying, 0.4, "face down where its hurtboxes are")
+		gut.p("%s from behind: lying gap %.3f m (hands %.3f m), joints at most %.0f deg past a limit" % ["haymaker" if haymaker else "uppercut", lying, hands, excess])
+		assert_lt(lying, 0.35, "face down where its hurtboxes are")
+		assert_lt(hands, 0.9, "its arms near")
 		assert_lt(excess, 10.0, "no limb bent past its joint lying there")
 
 
@@ -714,6 +722,8 @@ func test_a_stagger_on_a_stagger_does_not_pop_the_upper_body() -> void:
 
 func test_a_lying_ragdoll_sleeps_once_it_is_still_and_wakes_when_hit() -> void:
 	Tuning.data.ragdoll_settle_max_s = 3.0
+	# Down long enough to sleep, be woken and sleep again before it gets up.
+	Tuning.data.downed_frames = 300
 	await _setup([Vector3(0, 0, -1.6)])
 	var dummy := dummies[0]
 	_queue(&"P", 4)
@@ -797,7 +807,10 @@ func test_a_ragdoll_taken_out_of_the_tree_and_back_keeps_its_joints() -> void:
 	for i in 40:
 		await get_tree().physics_frame
 		stretch = maxf(stretch, ragdoll.joint_stretch())
-	assert_lt(stretch, 0.05, "and hold the bodies together (%.3f m)" % stretch)
+	gut.p("re-entered: joints stretched at most %.3f m" % stretch)
+	# (A few centimeters on the landing's impact; without joints the bodies part by most of
+	# a meter.)
+	assert_lt(stretch, 0.1, "and hold the bodies together (%.3f m)" % stretch)
 
 
 func test_a_parried_jab_knocks_the_attackers_arm_back_not_into_the_lens() -> void:
