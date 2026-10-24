@@ -312,6 +312,17 @@ extends Resource
 ## A perfect block knocks the attacker's striking arm back as a hit at this speed would
 ## (times ragdoll_partial_impulse, like every stagger's push).
 @export_range(0.0, 5.0, 0.05) var ragdoll_parry_push: float = 0.8
+## How much of the simulation the neck and head show on their joints, and the arms on
+## theirs unless the kick landed on them (a guard break, a parry): the trunk gives way at
+## ragdoll_partial_influence and they ride it, so the head does not loll onto a shoulder nor
+## a far arm string out behind a trunk thrown sideways (M2 phase 3 review: the hook).
+@export_range(0.0, 1.0, 0.01) var ragdoll_partial_head_influence: float = 0.45
+@export_range(0.0, 1.0, 0.01) var ragdoll_partial_arm_influence: float = 0.45
+## A stagger pushed sideways (the hook) also leans the trunk back, away from the attacker,
+## as a push of this share of its sideways speed would: visual only (a kick on the trunk; the
+## body slides as the move says), so the side view, looking along the sideways push, sees
+## the body give way too.
+@export_range(0.0, 2.0, 0.05) var ragdoll_stagger_back_share: float = 0.5
 @export_subgroup("Knocked off the feet (full)")
 ## The kick at the contact point, times the hit's knockback speed (up to ragdoll_max_kick).
 @export_range(0.0, 5.0, 0.05) var ragdoll_full_impulse: float = 0.5

@@ -951,7 +951,7 @@ func _apply_reaction(hit: HitInfo) -> void:
 			sim_velocity = Vector3(kb.x, 0.0, kb.z)
 			_enter_state(CombatTypes.ActorState.STAGGER, Tuning.data.stagger_frames)
 			rig.play(_directional_anim(&"stagger", kb), 0.04)
-			_ragdoll_stagger(hit.contact_point, kb, _ragdoll_part(hit))
+			_ragdoll_stagger(hit.contact_point, kb, _ragdoll_part(hit), hit.direction)
 			if Vector2(kb.x, kb.z).length() >= Tuning.data.body_impact_min_speed:
 				_begin_flying(CombatTypes.Reaction.STAGGER, hit.attacker)
 		CombatTypes.Reaction.KNOCKDOWN, CombatTypes.Reaction.LAUNCH, CombatTypes.Reaction.THROWN:
@@ -1096,12 +1096,24 @@ func _ragdoll_part(hit: HitInfo) -> Ragdoll.Part:
 
 ## A stagger just started (its animation playing): the partial ragdoll gives way to `push`
 ## (world m/s) at `contact` on `part`, and fades back to the animation within the stagger.
-## (A guard break's and a parry's kick lands on the arms.)
-func _ragdoll_stagger(contact: Vector3, push: Vector3, part: Ragdoll.Part) -> void:
+## (A guard break's and a parry's kick lands on the arms.) With `away` (the hit's horizontal
+## direction, from the attacker) the kick also leans back along it by
+## Tuning.ragdoll_stagger_back_share of the push's speed across it: a sideways stagger gives
+## way backward too, for the side view (visual only; the body slides with `push`).
+func _ragdoll_stagger(contact: Vector3, push: Vector3, part: Ragdoll.Part, away: Vector3 = Vector3.ZERO) -> void:
 	if not _ragdoll_allowed() or rig.ragdoll_mode() == Ragdoll.Mode.FULL:
 		return
+	var lean := Vector3(away.x, 0.0, away.z)
+	if lean.length_squared() > 1e-6:
+		lean = lean.normalized()
+		var flat := Vector3(push.x, 0.0, push.z)
+		lean *= (flat - lean * flat.dot(lean)).length() * Tuning.data.ragdoll_stagger_back_share
 	var length_s := _state_length / float(Engine.physics_ticks_per_second)
 	rig.ragdoll_start(false, contact, push, Vector3(sim_velocity.x, 0.0, sim_velocity.z), part, length_s)
+	if lean.length_squared() > 1e-6:
+		# The lean lands on the trunk (a stagger's trunk kick moves the whole trunk), scaled as
+		# the push's kick is.
+		rig.ragdoll_hit(get_chest_position(), lean * Tuning.data.ragdoll_partial_impulse, Ragdoll.Part.TORSO)
 
 
 ## Knocked off the feet (launch, knockdown, throw; sim_velocity already set): the full
