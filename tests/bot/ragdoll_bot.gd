@@ -2,8 +2,10 @@ extends "res://tests/bot/combo_bot.gd"
 ## Ragdoll acts (Milestone 2 WP4, Spec §6 "Hit reactions") for review captures, built on
 ## the combo bot's harness: staggers that give way (partial ragdoll), bodies knocked off
 ## their feet flying and landing (full ragdoll), a flying body knocking a second one down,
-## the throw, a KO going limp and staying, the get-ups, a guard break, the finisher shove
-## and a parried jab, each in first person and side view. Record it with Movie Maker:
+## the throw, a KO going limp and staying, the get-ups, a guard break, the finisher shove,
+## a parried jab, a body launched from behind landing face down, and a stomp on a lying body
+## that then gets up under the player, each in first person and side view. Record it with
+## Movie Maker:
 ##   godot --path . --write-movie captures/ragdoll/ragdoll.avi --fixed-fps 60 \
 ##     --resolution 1280x720 res://tests/bot/ragdoll_bot.tscn [-- --act=<title text>]
 ## Every act waits for its bodies to get up (or, the KO, to lie still and revive).
@@ -50,6 +52,10 @@ func _run() -> void:
 		{title = "Ragdoll: flurry, finisher shove (side view)", cam = &"side_view", fn = _act_shove},
 		{title = "Ragdoll: parried jab, the arm knocked back", cam = &"first_person", fn = _act_perfect_block},
 		{title = "Ragdoll: parried jab (side view)", cam = &"side_view", fn = _act_perfect_block},
+		{title = "Ragdoll: uppercut from behind, lands face down", cam = &"first_person", fn = _act_from_behind},
+		{title = "Ragdoll: uppercut from behind, lands face down (side view)", cam = &"side_view", fn = _act_from_behind},
+		{title = "Ragdoll: stomp a lying dummy, it gets up where it lies", cam = &"first_person", fn = _act_stomp_getup},
+		{title = "Ragdoll: stomp a lying dummy, it gets up where it lies (side view)", cam = &"side_view", fn = _act_stomp_getup},
 	]
 	for act in acts:
 		var title: String = act.title
@@ -165,6 +171,27 @@ func _act_guard_break_dummy() -> void:
 func _act_shove() -> void:
 	await _act_flurry()
 	await _watch(1.2)
+
+
+## P P P P on a dummy facing away: launched from behind, the body pitches over in the air,
+## lands face down where its hurtboxes are and gets up from its front.
+func _act_from_behind() -> void:
+	await _stage([Vector3(0, 0, -1.6)])
+	var dummy := dummies[0]
+	dummy.face_player = false
+	dummy.set_post(dummy.global_position, dummy.rotation.y + PI, true)
+	await _ticks(10)
+	for i in 4:
+		await _press(&"P", 2, 8)
+	await _watch(WATCH_S)
+	dummy.face_player = true
+
+
+## K K K knocks the dummy down; the player walks up and stomps the body lying there, then
+## stands over it: it takes the stomp and gets up where it lies, not shoved aside.
+func _act_stomp_getup() -> void:
+	await _act_stomp()
+	await _watch(WATCH_S)
 
 
 ## Wait `seconds` (sim time at 60 Hz ticks).

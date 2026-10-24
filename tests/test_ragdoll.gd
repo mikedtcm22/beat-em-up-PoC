@@ -788,6 +788,42 @@ func test_idle_bodies_ignore_the_actor_moving() -> void:
 	assert_lt(_gap(dummy), 0.1, "starts on the body where it is now")
 
 
+func test_six_full_ragdolls_stay_cheap() -> void:
+	# Decision 9: six bodies flying and lying at once add little to a physics frame (headless,
+	# --fixed-fps 60 runs the frames back to back, so wall time per frame is their cost). The
+	# bound is generous (a few times what an M1 measures, about 1 ms) so a slower machine
+	# passes; a ragdoll left awake or stepped twice would not.
+	var cost: Array[float] = []
+	for enabled: bool in [false, true]:
+		Tuning.data.ragdoll_enabled = enabled
+		await _setup([Vector3(-1.5, 0, -2.0), Vector3(0, 0, -2.0), Vector3(1.5, 0, -2.0)])
+		var six: Array[CombatActor] = []
+		six.assign(dummies)
+		for k in 3:
+			var extra := (load("res://game/enemies/dummy/training_dummy.tscn") as PackedScene).instantiate() as TrainingDummy
+			room.add_child(extra)
+			extra.sparring = false
+			extra.set_post(player.global_position + player.global_basis * Vector3(-1.5 + 1.5 * k, 0, -4.0), 0.0, true)
+			six.append(extra)
+		await _ticks(5)
+		var running := 0
+		var t0 := Time.get_ticks_usec()
+		for i in 240:
+			if i % 60 == 0:
+				for d: CombatActor in six:
+					d.reset_state()
+					d.receive_hit(_hit(d, CombatTypes.Reaction.LAUNCH, Vector3(0.0, 4.0, 2.0), CombatTypes.Region.TORSO))
+			await get_tree().physics_frame
+			for d: CombatActor in six:
+				running += 1 if d.rig.is_ragdolling() else 0
+		cost.append((Time.get_ticks_usec() - t0) / 240.0)
+		if enabled:
+			assert_gt(running / 240.0, 5.5, "all six ragdolling")
+	Tuning.data.ragdoll_enabled = true
+	gut.p("six bodies: %.0f us per frame animated, %.0f us with six full ragdolls" % [cost[0], cost[1]])
+	assert_lt(cost[1] - cost[0], 4000.0, "six full ragdolls add little to a frame (%.0f us)" % (cost[1] - cost[0]))
+
+
 func test_a_ragdoll_taken_out_of_the_tree_and_back_keeps_its_joints() -> void:
 	await _setup([Vector3(0, 0, -1.6)])
 	var dummy := dummies[0]
