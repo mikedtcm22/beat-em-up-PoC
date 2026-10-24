@@ -4,6 +4,19 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-24 12:25 CDT: A and B merged (457/457); C waits for usage
+- **A done:** `m2/ragdoll-tune` @ `7010250` (448/448 in its worktree, re-run by the lead). Tunables:
+  - `ragdoll_partial_influence` 0.6 -> 0.9 (`ragdoll_partial_impulse` stays 7.0: the hook and guard-break kicks already reach `ragdoll_max_kick` 14);
+  - "Kick at the contact point": `ragdoll_kick_at_contact` on, `ragdoll_contact_lever_m` 0.15, `ragdoll_contact_twist` 1.0, `ragdoll_contact_chain` 2, spin caps head 14, trunk 8, limb 14 rad/s;
+  - "KO and blink-off": `ko_linger_s` 1.5, `ko_blink_s` 1.0, `ko_blink_start_hz` 4, `ko_blink_end_hz` 12, `ko_blink_in_s` 0.5, `ko_blink_in_hz` 8; `dummy_revive_s` 2.5 -> 1.0, counted from the blink-off (4.0 s from KO to back).
+  - New: `CombatEvents.vanished`, `HumanoidRig.set_shown()`, `tests/test_ko_blink.gd`; bot switches `--central-kick` and `--set=<tunable>=<value>`.
+  - Departures: a dummy whose post is occupied comes back at the nearest free spot beside it; it can't be hit or grabbed during its blink-in.
+- **The lead's judgement of A's sheets** (local, `.worktrees/m2-ragdoll2/captures/ab_contact/`, `ab_stagger/`, `ko/`): the contact push is stable (no tearing, spin or jitter; 60 hits in a row stay in the caps) but looks almost the same as the central kick, since the joint limits and pose springs already hold the head and neck at their limits. More contortion would need wider joint limits or softer stagger pose springs. Staggers at 0.9 bend a little further from the side; the hook pushes along the side camera's depth axis. The KO cycle reads well.
+- **A's known items:** in side view the enemy health bar sits on the head when a stagger bends it toward the camera; the central kick alone already spins the neck and head at the 40 rad/s cap in staggers; blood splats stay on the floor after a body vanishes.
+- **Merged:** `2543cc6` (A) and `f98bb21` (B) into `m2/hit-feel`, no conflicts. The preset regenerated unchanged (296 values). **457/457 tests pass with no SCRIPT ERROR or ERROR.** Pushed. README has the three approved departures (heavy knockdowns full ragdoll, staggers at 0.9, KO blink-off); the central kick isn't kept, so it has no entry.
+- **Usage:** 68% of the 5-hour window at 12:22 (resets 16:30 CDT), 26% weekly. Past the 65% launch line, so package C's workflow waits for the reset or a fresh account (Game-boy's call). The watcher checks every 10 minutes.
+- **Waiting on Game-boy:** A's sheets (more contortion, or as it is?), B's questions (the lens pull-back, the bend's depth), the combat log over the knee contact, the flash's minimum size in side view, WP3's audio, and when to run C.
+
 ### 2026-10-24 11:34 CDT: account E took over; phase 3 packages A and B running
 A fresh account's working session took over at 1% of its 5-hour window (resets 16:29 CDT) and 15% weekly (resets Tue 2026-10-27 16:59 CDT). Its watcher runs: "Beat-em-up: usage watcher", name `usage-watcher-f` (Haiku, low effort, self-paced).
 - **Running:** two background agents (Agent tool, started from this session), per [M2-phase3-plan.md](milestones/M2-phase3-plan.md):
@@ -406,13 +419,8 @@ USAGE RULES:
 - The watcher checks every 20 minutes below 70%, every 10 minutes up to 85% and every 5 minutes above that. It tells you to halt and hand off at 90%.
 
 Next steps (Milestone 2; details are in docs/HANDOFF.md):
-- Phases 1 and 2 are done and merged into m2/hit-feel: WP1 tuning panel, WP2 comic VFX, WP3 audio, WP4 partial and full ragdoll. The localized white hit flash, which I approved on 2026-10-24, is merged too. 437/437 tests pass with no SCRIPT ERROR, at 33fcc98. WP3's audio was judged by analysis only, so I'll listen to it.
-- Phase 3, for my playtest: follow docs/milestones/M2-phase3-plan.md. It holds my 2026-10-24 decisions:
-  - the ragdoll push at the exact contact point, shown to me as A/B captures first;
-  - KO bodies lie briefly, then blink off;
-  - stronger staggers;
-  - heavy-tier knockdowns get the full ragdoll, and KO bodies take no hits.
-  It also holds my new grab fix: the view pans down while holding so I see the knees land, and the player bends at the waist. Run packages A (ragdoll) and B (grab) as two agents at once, in their own worktrees. Then C: the lead integrates, records every act, and runs one review-then-fix agent. Then D: README departures, ARCHITECTURE, and the M2 PR, which is never merged without my sign-off. Check get_usage before each agent launch; nothing new at 65% or more.
+- Phases 1 and 2, the localized flash and phase 3's packages A (ragdoll: contact push, KO blink-off, staggers at 0.9) and B (grab view and waist bend) are merged into m2/hit-feel. 457/457 tests pass with no SCRIPT ERROR, at f98bb21. README has the three approved M2 ragdoll departures. WP3's audio was judged by analysis only, so I'll listen to it.
+- Next is phase 3's package C, run as a Workflow (I turned ultracode on): see the newest docs/HANDOFF.md entry for its plan. Per-reviewer worktrees at the merge commit, review lenses (phase 3 code, ragdoll feel, grab feel, hit feel per tier and view with the known items, performance), three skeptics per finding, fixers in their own worktrees with disjoint files, a completeness critic, and a Haiku usage gate before every launch (nothing new at 65%; at most two heavy agents at once). Then D: check ARCHITECTURE against the code, README Milestone 2 status, and the M2 PR, which is never merged without my sign-off.
 - Open for me: whether the localized flash gets a minimum on-screen size, since in side view the 0.25 m flash hides under the comic burst (default: leave it as it is). And I'll listen to WP3's audio.
 
 Ground rules:
