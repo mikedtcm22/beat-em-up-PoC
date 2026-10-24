@@ -12,6 +12,13 @@ A fresh account's working session took over at 1% of its 5-hour window (resets 1
   - Both commit `wip:` every 15-20 minutes and push. Both regenerate `tuning/default.json` on their branch; expect a conflict there and in `tuning_data.gd` (different groups) at the merge, and regenerate the preset after it.
 - **If cut off:** check each branch for its final commit. Without one, rerun that package from its newest `wip:` commit with the brief in the plan (package A or B).
 - **Then:** show Game-boy A's contact-vs-central and stagger sheets, merge A and B into `m2/hit-feel`, and go on with package C.
+- **Package C runs as a Workflow (Game-boy turned ultracode on at 11:38).** Plan:
+  - per-reviewer worktrees detached at the merge commit (the Workflow tool's `isolation: 'worktree'` fails here);
+  - review lenses: the phase 3 code (mechanics), ragdoll feel, grab feel, hit feel across all tiers and both views (including HANDOFF 10:55's known items), and performance;
+  - three skeptics per finding, then fixers in their own worktrees with disjoint files;
+  - a completeness critic at the end;
+  - a Haiku usage gate before each launch: nothing new at 65%, and at most two heavy agents at once.
+- **Done meanwhile on `m2/hit-feel`:** `ac58377` (speed lines seeded, F1 help label, flash test comment) and `dbf0dcc` (README F1/F4 controls, ARCHITECTURE title). 438/438 tests.
 
 ### 2026-10-24 11:05 CDT: Game-boy answered the ragdoll questions; phase 3 plan written
 Account D, already handed off, wrote [docs/milestones/M2-phase3-plan.md](milestones/M2-phase3-plan.md) from Game-boy's answers (see the Decisions log) and his new grab fix. The takeover prompt's "Next steps" now point to that plan. Nothing else changed: `m2/hit-feel` code is still at `33fcc98`, 437/437 tests pass, and nothing is running. Only the flash's side-view question and WP3's audio are still open with Game-boy.
