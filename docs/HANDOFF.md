@@ -4,6 +4,9 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-24 12:40 CDT: new usage rule, work up to the 90% handoff
+Game-boy finds stopping launches at 65-70% too conservative. From now on, work runs up to the watcher's 90% handoff, and each launch is sized to the headroom left below 90%. When a new phase or milestone doesn't fit, split off a first task that does, run it, and hand off at 90%. The rules are under "Usage rules for the working session"; the takeover prompt, CLAUDE.md and the phase 3 plan match. Nothing else changed since the 12:40 handoff entry below.
+
 ### 2026-10-24 12:40 CDT: handoff to a fresh account for package C (Game-boy's call)
 Account E is at 70% of its 5-hour window (resets 16:30 CDT) and 26% weekly (resets Tue 2026-10-27 17:00 CDT), past the 65% launch line. Game-boy chose to switch accounts now rather than wait for the reset. This session is renamed "Beat-em-up: account E session (handed off)", which frees the working-session title. Its watcher `usage-watcher-f` is told to end its loop.
 - **State:** `m2/hit-feel` @ the commit after `c9ec777` (this entry) has phases 1-2, the flash, and phase 3's A and B merged. **457/457 tests pass with no SCRIPT ERROR or ERROR.** **No agents or workflows are running.** Every branch is pushed. The worktrees are clean apart from untracked `captures/`. `m2/ragdoll-tune` and `m2/grab-view` are merged; their worktrees hold the A/B, KO and grab sheets (local only).
@@ -366,6 +369,7 @@ Every approved spec change so far is in README.md, "Where M1 departs from the sp
 - **Grab view (2026-10-24 11:05 CDT):** while holding, the first-person view pans down so the knees show landing on the held enemy, and the player bends at the waist for the hold and the knees. The spec doesn't cover it, so it's not a departure. Details: [milestones/M2-phase3-plan.md](milestones/M2-phase3-plan.md).
 - **Ultracode (2026-10-24 11:38 CDT):** Game-boy turned ultracode on. Substantive work runs as Workflow scripts (multi-lens review, adversarial verification, completeness critic), with the usage rules still in force.
 - **Handoff for package C (2026-10-24 12:38 CDT):** switch accounts now rather than wait for account E's 16:30 reset.
+- **Usage thresholds (2026-10-24 12:40 CDT):** work up to the 90% handoff instead of stopping new launches at 65%. Size each launch to the headroom left below 90%. When a new phase or milestone doesn't fit, split off a first task that does, run it, and hand off at 90%. See "Usage rules for the working session".
 - **Process:** at each usage limit, hand off to Game-boy's second Claude account. Never assume the same session resumes.
 
 ## Usage watcher
@@ -400,10 +404,29 @@ Its prompt:
 Otherwise say nothing beyond one short line: the two percentages and the next check time. Never edit tracked files, run builds or start other work.
 ```
 
-**Usage rules for the working session** (measured on account C, 2026-10-23):
-- One heavy agent that both reviews and fixes costs about 25% of a 5-hour window, and a review-only agent about 13%.
-- Run at most two heavy agents at once.
-- Call `mcp__ccd_session_mgmt__get_usage` before every launch, and launch nothing new at 65% or more. An agent started at 65% ends near the 90% handoff.
+**Usage rules for the working session** (Game-boy, 2026-10-24 12:40 CDT; they replace the old "launch nothing new at 65%" line, which stopped work too early):
+- **Work up to the 90% handoff.** The watcher's 90% message is the only stop. Don't stop, idle or hand off at 65-70% because a big piece won't fit.
+- **Size each launch to the headroom.** Call `mcp__ccd_session_mgmt__get_usage` before every launch. The headroom is 90% minus the higher of the 5-hour and weekly `percentUsed`. Launch work whose estimated cost fits it. Measured costs, in % of a 5-hour window:
+
+  | Work | Cost |
+  | --- | --- |
+  | A builder the size of WP4, or phase 3's A or B | 30-50% |
+  | A heavy agent that both reviews and fixes | about 25% |
+  | A fixer | about 25% |
+  | A review-only agent | about 13% |
+  | Lead work (merging, judging sheets, docs) | a few % |
+  | Two heavy agents at once | about 1.2-1.6 points a minute |
+
+- **When the next phase or milestone doesn't fit:** say it's 70% and a new phase is next. Spend a little of the headroom splitting that phase into a first task that fits the rest, and run that task. Examples:
+  - the setup: worktrees, imports, briefs, the workflow script;
+  - one reviewer instead of five;
+  - one fix package;
+  - one well-scoped build step.
+
+  Commit `wip:` as it goes, and hand off at 90%. Write the split into the milestone plan and HANDOFF, so the next account starts at the next task.
+- **Keep the 90% cut cheap:** agents commit `wip:` and push every 15-20 minutes, so a halt loses little.
+- **At most two heavy agents at once.** Near the top of the window, prefer one: two burn about 1.2-1.6 points a minute, and the watcher's 20-minute checks below 70% can't catch a faster burn.
+- **Tighter checks during heavy runs:** while two heavy agents run, ask the watcher to check every 10 minutes even below 70%.
 
 If no watcher is running, for example after an account switch, start one with that prompt. A new account's watcher reports that account's usage.
 
@@ -426,15 +449,15 @@ Start by doing these, in order:
 4. Check usage (mcp__ccd_session_mgmt__get_usage) before launching any workflow or agent.
 
 USAGE RULES:
-- A heavy agent that both reviews and fixes costs about 25% of a 5-hour window; a review-only agent about 13%.
+- A builder the size of a work package costs 30-50% of a 5-hour window; a heavy agent that both reviews and fixes about 25%; a review-only agent about 13%.
 - Run at most TWO heavy agents at once.
-- Check get_usage before each launch, and launch nothing new at 65% or more.
+- Work up to the 90% handoff; don't stop early. Check get_usage before each launch and size the launch to the headroom left below 90%. If the next phase or milestone doesn't fit (say at 70%), spend a little of the headroom splitting it into a first task that fits, run it with wip commits, and hand off at 90%. Details: docs/HANDOFF.md, "Usage rules for the working session".
 - Prefer one agent per work package doing review, then fix, over many reviewers per package.
 - The watcher checks every 20 minutes below 70%, every 10 minutes up to 85% and every 5 minutes above that. It tells you to halt and hand off at 90%.
 
 Next steps (Milestone 2; details are in docs/HANDOFF.md):
 - Phases 1 and 2, the localized flash and phase 3's packages A (ragdoll: contact push, KO blink-off, staggers at 0.9) and B (grab view and waist bend) are merged into m2/hit-feel. 457/457 tests pass with no SCRIPT ERROR, at f98bb21. README has the three approved M2 ragdoll departures. WP3's audio was judged by analysis only, so I'll listen to it.
-- Next is phase 3's package C, run as a Workflow (I turned ultracode on): follow docs/milestones/M2-phase3-plan.md, "C", step 2. Reviewer worktrees at the m2/hit-feel head, five review lenses (phase 3 code, ragdoll feel, grab feel, hit feel per tier and view with the known items, performance), three skeptics per finding, fixers in their own worktrees with disjoint files, a completeness critic, and a Haiku usage gate before every launch (nothing new at 65%; at most two heavy agents at once). Then D: check ARCHITECTURE against the code, README's Milestone 2 status, and the M2 PR, which is never merged without my sign-off.
+- Next is phase 3's package C, run as a Workflow (I turned ultracode on): follow docs/milestones/M2-phase3-plan.md, "C", step 2. Reviewer worktrees at the m2/hit-feel head, five review lenses (phase 3 code, ragdoll feel, grab feel, hit feel per tier and view with the known items, performance), three skeptics per finding, fixers in their own worktrees with disjoint files, a completeness critic, and a Haiku usage gate before every launch (each launch sized to the headroom left below 90%; at most two heavy agents at once). Then D: check ARCHITECTURE against the code, README's Milestone 2 status, and the M2 PR, which is never merged without my sign-off.
 - Open for me (each has a default; none blocks C): more contortion on the ragdoll contact push (default: as it is); the grab's lens pull-back and the bend's depth (default: as they are); the combat log over the knee contact (default: C proposes a fix); a minimum on-screen size for the side-view flash (default: leave it). And I'll listen to WP3's audio.
 
 Ground rules:

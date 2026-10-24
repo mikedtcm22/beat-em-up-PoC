@@ -39,7 +39,7 @@ A first-person beat-em-up proof of concept in Godot 4.7.2 (GDScript with static 
 - Never commit `captures/`.
 
 ## Handoff protocol (every usage limit)
-A low-cost **usage-watcher** session paces itself. It checks the plan usage every 20 minutes below 70%, every 10 minutes up to 85% and every 5 minutes above that. At 90% of the 5-hour window or of the weekly limit, or sooner on a fast burn, it messages the working session to halt work and hand off. Launch no new heavy agent at 65% or more.
+A low-cost **usage-watcher** session paces itself. It checks the plan usage every 20 minutes below 70%, every 10 minutes up to 85% and every 5 minutes above that. At 90% of the 5-hour window or of the weekly limit, or sooner on a fast burn, it messages the working session to halt work and hand off. Work up to that 90% handoff; don't stop early. Size each launch to the headroom left below 90%. When a new phase or milestone doesn't fit, split off a first task that does, run it, and hand off at 90%. The rules and measured costs are in docs/HANDOFF.md, under "Usage rules for the working session".
 
 On that message, or whenever you're near a limit:
 1. Stop starting new work.
