@@ -1,0 +1,186 @@
+{
+ "lens": "ragdoll",
+ "verdicts": [
+  {
+   "id": "ragdoll-01",
+   "lens": "ragdoll",
+   "severity": "medium",
+   "title": "The throw pops the held victim upright in one frame, then it skates away on its feet and trips onto its face",
+   "survives": true,
+   "confirmations": 3,
+   "spec_question": false,
+   "files": [
+    "game/actors/combat_actor.gd",
+    "game/actors/ragdoll.gd",
+    "tools/gen_moves.gd",
+    "game/autoload/tuning_data.gd",
+    "game/actors/humanoid_rig.gd"
+   ],
+   "root_cause": "`_launch()` treats the THROWN reaction like a launch from standing. It plays the \"launched\" animation with a 0.03 s blend while the full ragdoll rises over 0.15 s from that animation, so the held victim jumps from the bent clinch to the upright pose in one frame. The throw's knockback (0, 3, 9) adds little lift.",
+   "open_question": "Possibly the grab's lens pull-back and the bend's depth, since the first-person victim-distance fix may touch the hold view. The finding's own fix does not touch it.",
+   "votes": {
+    "reproduce": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "I reproduced the side-view throw. The victim goes from a bent clinch to an upright pose in one 30 fps step and holds it there. It then moves away upright with arms out and falls flat. It does not arc. It reads as a pop and a shove, which is a feel defect. I did not re-record the first-person view, so the lens-proximity and white-disc claims are unverified.",
+     "evidence": "I recorded one run: `godot --path . --write-movie captures/verify/ragdoll-01-reproduce/t.avi ... ragdoll_bot.tscn -- \"--act=Ragdoll: throw (side view)\"`. The log shows the throw hit \"Dummy1: Throw 15.0 dmg HEAVY\" at f65, about 1.08 s. I tiled 1.0-1.33 s at 30 fps into a.png. Frames 1-2 show the bent clinch, and frame 3 onward shows the victim fully upright with the BAM burst. The upright pose then holds for several frames, with the arms flung out. I tiled 1.3-2.2 s at 12 fps into b.png. The victim stays upright with arms out as it moves away, then drops flat and lies face down at the far side. The throw uses `_launch()` in game/actors/combat_actor.gd lines 971-984, which calls `rig.play(&\"launched\", 0.03)` and then `_ragdoll_full()`. Files are in /Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-ragdoll/captures/verify/ragdoll-01-reproduce/."
+    },
+    "spec": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "No document approves or requires the throw's one-frame pop to upright or the skating glide. SPEC §4 says only \"Thrown in the stick direction; knocks down anyone hit\". SPEC §6 gives full ragdoll launch for finishers. The phase 3 plan and README approve heavy knockdowns getting the full ragdoll, not a pose snap from the held pose. Neither the finding's fix (start the ragdoll from the held pose, blend or skip the 'launched' snap, add arc to the knockback) nor the 'victim stands 6 cm closer' or 'throw ends in the stance' decisions rule it out.",
+     "evidence": "grep and read of docs/SPEC.md (lines 140, 179-185, 331-332), docs/milestones/M2-phase3-plan.md (heavy-tier ragdoll line 12; package B items 1-4, lines 55-70), README.md line 71 (departures), and docs/HANDOFF.md B-done entry (line 49) in /Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-ragdoll. I found no text about the thrown victim's launch pose, blend or arc. I did not run Godot."
+    },
+    "code": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "The code path does what the finding says. For a THROWN victim, `_launch()` plays the \"launched\" animation with a 0.03 s blend, with no special case for coming out of the held pose. The `Ragdoll.start` comment says a body knocked off its feet \"shows the animation's snap first\", and the full ragdoll's influence rises from 0 over `ragdoll_full_rise_s` (0.15 s). The hit frame therefore snaps from the bent clinch into the upright launched pose, and the ragdoll takes over from that pose. The throw's knockback is Vector3(0, 3, 9), as stated. I did not check the visual claims (the 0.5 m head move, the trip after the glide), which need the captures.",
+     "evidence": "Read in /Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-ragdoll: game/actors/combat_actor.gd lines 971-987 (`_launch`: `rig.play(&\"launched\", 0.03)` for any reaction other than KNOCKDOWN, then `_ragdoll_full()`); game/actors/ragdoll.gd lines 285-305 (full-mode rise from 0 over `ragdoll_full_rise_s`, comment on the animation's snap); game/autoload/tuning_data.gd line 321 (`ragdoll_full_rise_s` = 0.15); game/actors/placeholder_anims.gd lines 242-244 (`launched_a` to `launched_b` over 0.4 s); tools/gen_moves.gd lines 200-201 (throw knockback (0, 3, 9))."
+    }
+   }
+  },
+  {
+   "id": "ragdoll-02",
+   "lens": "ragdoll",
+   "severity": "medium",
+   "title": "The hook stagger at 0.9 flops like a rag in first person but still doesn't read from the side",
+   "survives": true,
+   "confirmations": 2,
+   "spec_question": false,
+   "files": [
+    "game/actors/ragdoll.gd",
+    "game/actors/combat_actor.gd",
+    "game/autoload/tuning_data.gd",
+    "tools/gen_moves.gd"
+   ],
+   "root_cause": "The hook's knockback is mostly lateral, so it moves the trunk across the side camera's view instead of along its depth axis. Only ARMS and LEGS get the stiffer limb spring, so the neck and head share the trunk's loose 0.7 Hz spring at 0.9 influence and flop.",
+   "open_question": "HANDOFF line 16 asks Game-boy about \"more contortion on the contact push\" (default: as it is). This is related to the finding but not the same: it concerns joint limits and pose springs. Per-part influence or stiffer partial pose springs for the head and neck sits close to that question, and it is also close to the approved 0.9 global influence. If the fix lowers the global influence, or loosens or stiffens joint limits and pose springs enough to change the approved look, it touches that open item.",
+   "votes": {
+    "reproduce": {
+     "refuted": true,
+     "confidence": "low",
+     "reason": "I couldn't confirm the finding from my own recording, and the instructions say to refute when I can't tell. In my first-person tiles (0.95-1.6 s) the dummy's parts do swing through the frame fast, and the contrast with the straight-back staggers is plausible. My crops at 1280x720 mostly framed the player's own arm, the camera and the floor, so I never saw the head hanging on the shoulder or the far arm strung out straight. The side-view tiles at 3.55-4.2 s show only a small white shape and a floor slab, with no health bar over a head and no bowed head. My crop was probably off, so this is not evidence against the finding.",
+     "evidence": "I ran one recording with `godot --path . --write-movie captures/verify/ragdoll-02-reproduce/hook.avi --fixed-fps 60 --resolution 1280x720 res://tests/bot/ragdoll_bot.tscn -- \"--act=hook stagger\"`, in /Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-ragdoll. The `--act=` match ran both hook acts in one 5.5 s movie. hook.log shows the first-person act at 0.08 s, with the Hook hit on f54 (0.9 s). The side-view act starts at 2.70 s, with the Hook hit on f211 (3.52 s). Both timings match the reviewer's. I tiled two sheets with ffmpeg, `fp.png` and `side.png`, in captures/verify/ragdoll-02-reproduce/. I did not re-run the contrasting back-push staggers."
+    },
+    "spec": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The docs approve 0.9 influence for staggers as a global setting. The README departure says the upper body \"gives way further\" and names the hook at 0.32 m against 0.22 m. They don't approve floppy head and arm behaviour on the lateral hook, and they don't rule out the suggested fix. The phase 3 plan (line 44) says \"Check first person isn't too floppy: the hook already knocks the head out of the frame\", so first-person floppiness on the hook was a known concern to check, not an approved outcome. The HANDOFF notes (lines 29-30) say the hook pushes along the side camera's depth axis, so it reads weakly from the side. They also list the side-view health bar sitting on a bent head as a known item. Both are acknowledged, not approved. The finding's own fix keeps the trunk at 0.9 and adds per-part influence on the neck, head and arm, or a backward component on the hook's kick. That is a tuning change and doesn't touch the approved 0.9. Lowering the global value would need Game-boy.",
+     "evidence": "Read with grep only, no Godot run. README.md lines 71-72 (departures: heavy knockdowns full ragdoll; stagger influence 0.9, hook 0.32 m vs 0.22 m). docs/milestones/M2-phase3-plan.md lines 13, 43-44 and 82. docs/HANDOFF.md lines 24, 29-30 (A's known items), 72, 92 and 104. docs/SPEC.md lines 185 and 193 (influence 0.3-0.6)."
+    },
+    "code": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The code supports the finding's main claims. The hook's knockback is mostly lateral, and the neck and head get no softer treatment than the trunk. The \"far arm strings out\" part is only partly explained. I read the code and ran nothing.",
+     "evidence": "tools/gen_moves.gd:136 gives the hook knockback Vector3(-2.2, 0, 0.6), which is mostly lateral. combat_actor.gd:955-957 passes that knockback unchanged to _ragdoll_stagger(). ragdoll.gd:_queue_impulse then kicks the whole TORSO group with it (PARTIAL mode), so the push runs sideways relative to the side camera's depth axis. ragdoll.gd:_pose_hz treats only ARMS and LEGS as limbs (3.0 Hz). The head and neck use ragdoll_partial_pose_hz (0.7 Hz), the same loose spring as the trunk, at influence 0.9 (tuning_data.gd:297, 309-310). That fits a head that lolls onto the shoulder. The arms already use the stiffer 3 Hz spring, so the arm fling is not explained by the pose spring alone. It more likely comes from the arm's share of the lateral kick or from the 0.9 influence, so the suggested far-arm fix is less certain than the head fix."
+    }
+   }
+  },
+  {
+   "id": "ragdoll-03",
+   "lens": "ragdoll",
+   "severity": "medium",
+   "title": "Side-view enemy health bar sits on the head or body whenever the head isn't on top (known item A)",
+   "survives": true,
+   "confirmations": 3,
+   "spec_question": false,
+   "files": [
+    "game/ui/enemy_health_bars.gd",
+    "game/actors/combat_actor.gd"
+   ],
+   "root_cause": "EnemyHealthBars.advance() anchors the bar to get_head_top_position(). During a ragdoll that is the Head bone's pose times a bone-local (0, 0.485, 0) offset (PlaceholderBody.POINT_OFFSET, via HumanoidRig.get_visual_point_transform). The anchor tilts and drops with the head instead of staying above the body, so the bar overlaps the head or body when the head is not the topmost point.",
+   "open_question": "",
+   "votes": {
+    "reproduce": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "Reproduced in the haymaker side-view act. The bar is anchored to the visible head top, so it sits on the head and beside the raised arms while the body is launched, and it stays at head level on the floor while the body lies. It reads as a real presentation defect, not as intended. It is cosmetic only. I did not check the other acts (hold, KO from behind, first-person uppercut).",
+     "evidence": "Read game/ui/enemy_health_bars.gd (lift_px 6, doc says anchored above actor.get_head_top_position()) and game/actors/combat_actor.gd:283. get_head_top_position() returns rig.get_visual_point_transform(&\"HeadTopPoint\").origin, which follows the visible head. I ran one recording: godot --write-movie captures/verify/ragdoll-03-reproduce/t.avi ragdoll_bot \"--act=Ragdoll: haymaker (side view)\" (log t.log). Sheet s.png (frames 1-4): during flight the yellow bar is drawn across the head and raised arms. Crop z.png: the bar overlaps the head's right edge at head level, not above the body. Sheet s.png (frames 5-14): on the lying body the bar sits at floor level, on the head. Also seen: the bar vanishes as the dummy blinks (frames 13-14) and is absent once it is up."
+    },
+    "spec": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "No doc approves the bar landing on the body. SPEC only says the bar sits \"over its head\" for 2 s after a hit. The phase 3 plan and HANDOFF list the side-view bar on a staggered head as a known item for review to judge, not as an approved departure. The suggested fix, anchoring above the body, does not contradict any decision.",
+     "evidence": "Grepped docs/SPEC.md, README.md, docs/HANDOFF.md, docs/milestones/M2-phase3-plan.md, M2-plan.md and docs/ARCHITECTURE.md in /Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-ragdoll. SPEC.md:170 says the bar sits \"over its head\" for 2 s after a hit. HANDOFF.md:30 lists it as an A known item, and HANDOFF.md:96 says get_head_top_position() now follows the visible head and only the health bars and debug draw read it. M2-phase3-plan.md:82 asks the ragdoll-feel review to judge it. README departures and the approved list do not mention the bar. I did not read the code or run Godot."
+    },
+    "code": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "The code does what the finding says. The bar's anchor is the head-top point. While ragdolling, that point follows the visible head bone, so it is not guaranteed to be the highest point of the body.",
+     "evidence": "Read game/ui/enemy_health_bars.gd. advance() sets anchor = bar.actor.get_head_top_position(), projects it with camera.unproject_position(), and _draw() puts the bar's bottom lift_px (6) above that point. Read game/actors/combat_actor.gd:283. get_head_top_position() returns rig.get_visual_point_transform(&\"HeadTopPoint\").origin. Read game/actors/humanoid_rig.gd:598-609. While is_ragdolling(), that function returns visual_rig_transform * visual_pose(Head bone) * Transform3D(IDENTITY, offset), and the offset is a bone-local (0, 0.485, 0) from placeholder_body.gd:93. The point therefore rotates with the head bone: it is not a world-up offset and not a standing-height anchor. When the head bends, lies down or sits below raised arms, the anchor moves with it and the bar lands on the face or body. I ran no recordings or tests. Nothing in advance() clamps the anchor to the body's top."
+    }
+   }
+  },
+  {
+   "id": "ragdoll-04",
+   "lens": "ragdoll",
+   "severity": "low",
+   "title": "The KO'd body's empty health bar hangs, steady, through its first blink-offs",
+   "survives": true,
+   "confirmations": 2,
+   "spec_question": false,
+   "files": [
+    "game/ui/enemy_health_bars.gd"
+   ],
+   "root_cause": "EnemyHealthBars removes a bar only when its 2 s timer runs out or on CombatEvents.vanished, which fires after the full KO linger and blink. The bar never reads the KO state or rig visibility, so an empty bar stays steady over a lying or blinking-off body until one of those two events.",
+   "open_question": "",
+   "votes": {
+    "reproduce": {
+     "refuted": true,
+     "confidence": "medium",
+     "reason": "I re-recorded the first-person KO act and could not see the bar outlast the body's visible time. Its bar was already gone by the first blink-off. The code does allow an overlap (the bar expires 2 s after the last hit and is removed on vanished), but the overlap is small or absent in the act and reads as minor.",
+     "evidence": "I ran one recording: ragdoll_bot with --act=KO on a low-health dummy, first person and side view (captures/verify/ragdoll-04-reproduce/ko.avi and ko.log). The KO hit is the Hook at f54, about 0.9 s. In the 5 fps sheet (fp.png), a small white dash sits over the lying head up to about t=2.8 s, with the body still shown. By t=3.0 s the dash is gone and the body is still fully drawn. The 30 fps crop from 3.0 s (blink.png) shows the body blinking on and off with no bar dash above it. The only dot in those frames is the fixed crosshair at screen centre. I did not tile the side-view segment, and the reviewer's 49.3 s and 56.0 s moments come from a different recording (all.avi) with different timing. In game/ui/enemy_health_bars.gd, a bar lasts show_seconds (2.0 s) from the last hit or health drop and is removed on on_vanished. A longer KO sequence or a multi-hit KO could therefore overlap the blink, but I did not see that here."
+    },
+    "spec": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "No doc approves or rules out the bar staying drawn during the KO blink. SPEC.md line 170 says only that a bar shows for 2 s after a hit. ARCHITECTURE.md line 130 says CombatEvents.vanished drops the bar, which matches the code. That is the mechanism that causes the finding, not an approval of it. The phase 3 plan lists \"the side-view health bar on a staggered head\" as a known item, but not this one. The suggested fix (drop or hide the bar sooner) fits \"for 2 s\" as a maximum and touches no approved decision.",
+     "evidence": "Read the following in /Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-ragdoll: docs/SPEC.md:170, docs/ARCHITECTURE.md:130 (KO and blink-off paragraph), docs/milestones/M2-phase3-plan.md:82, docs/HANDOFF.md:30 (A's known items). I grepped README.md, HANDOFF.md, M2-plan.md and the phase 3 plan for health bar / show_seconds. Nothing there covers the bar while the body blinks. I did not run Godot."
+    },
+    "code": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "The code does what the finding says. The bar's life is a plain timer, time_left = show_seconds (2.0 s) from the last hit, and nothing ties it to the rig's visibility or the KO state. It is removed early only by on_vanished, which fires when the body blinks off for good (combat_actor.gd:1072). The KO linger is ko_linger_s = 1.5 s measured from the landing, then the blink runs ko_blink_s = 1.0 s. Blinking therefore starts about 1.5 s plus the fall time after the KO hit. A bar born at the KO hit has about 2 s, so it overlaps the first blink-offs by roughly the 0.2 s reported. A longer show_seconds or a multi-hit KO would stretch that overlap, up to the full blink. Nothing in the bar code reads rig visibility, so it cannot flicker with the body.",
+     "evidence": "Read game/ui/enemy_health_bars.gd in full: advance() drops a bar only on time_left <= 0, an invalid actor, or a node outside the tree, and on_vanished() is the only other removal. Grepped the repo for the vanished, ko_linger_s and ko_blink_s wiring: game/ui/hud.gd:48 connects CombatEvents.vanished to enemy_bars.on_vanished, combat_actor.gd:1049-1072 holds the linger, blink and vanish timing, and tuning_data.gd:405-407 has the defaults. Ran no tests or recordings."
+    }
+   }
+  },
+  {
+   "id": "ragdoll-05",
+   "lens": "ragdoll",
+   "severity": "low",
+   "title": "The stomping foot sinks into the lying body",
+   "survives": true,
+   "confirmations": 3,
+   "spec_question": false,
+   "files": [
+    "game/actors/placeholder_poses.gd",
+    "game/player/player.gd",
+    "game/autoload/tuning_data.gd"
+   ],
+   "root_cause": "The stomp strike pose is a fixed, collision-free keyframe that lands the foot at floor height, and the player stops 0.45 m from the body's chest. The foot overlaps the lying torso for the contact frames. The finding's stated cause is right, but its suggested fix of aiming at the chest does not fit this design, because the pose is fixed and does not track the body.",
+   "open_question": "",
+   "votes": {
+    "reproduce": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "Reproduced. In the side-view stomp the shoe first lands on top of the lying dummy's back. During the contact the shin goes down into the torso and the shoe disappears inside the body, for about 0.2 s of the frames I tiled. It reads as a mesh clip, not as a stomp pressing on the body. It is low severity, as reported: it is brief and only visible in side view.",
+     "evidence": "I ran one recording: `godot --path . --write-movie captures/verify/ragdoll-05-reproduce/s.avi --fixed-fps 60 --resolution 1280x720 res://tests/bot/ragdoll_bot.tscn -- \"--act=stomp a lying dummy, it gets up where it lies (side view)\"`. The log shows the Stomp hit on Dummy1 at f152, about 2.53 s into the act. I tiled crop 640:330 300x240 at 20 fps from 2.45 s into zoom.png, and an earlier wider sheet is sheet.png, both in captures/verify/ragdoll-05-reproduce/. In zoom.png, tile 1 shows the shoe on the body's upper surface. Tiles 2-6 show the shin and shoe inside the orange torso under the hit star, with no shoe visible. In game/actors/placeholder_poses.gd, `_stomp` (line 1911) poses the strike with the foot at floor height. It does not aim at the body's top, which fits the clip."
+    },
+    "spec": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "No doc approves the foot passing through the lying body. SPEC §10 lists the stomp only as \"K next to a downed enemy | 8 | Ground hit\". ARCHITECTURE.md gives the stomp hitbox as RightFootPoint r0.22 at y 0.0-0.3, which explains a floor-height foot but doesn't say the foot should clip the body. The phase 3 plan, README departures and HANDOFF decisions log have nothing on stomp foot placement, and none of the APPROVED items (push at contact point, KO lie/blink, flash) covers it. The finding doesn't ask for anything the docs rule out. Aiming the pose at the body's top is a presentation change to the stomp pose. It would leave the hit volume, damage and camera pitch as they are, unless the fix also moved the hitbox.",
+     "evidence": "grep -rniE stomp over docs/SPEC.md (lines 127 and 142), docs/ARCHITECTURE.md (lines 158, 171, 179, 186), README.md (lines 37, 47, 65), docs/HANDOFF.md (line 135, on stomp get-up spot) and docs/milestones/M2-phase3-plan.md (line 75, which only mentions a body vanishing under a stomp). I read the grep lines only, not the full files, and I did not run Godot."
+    },
+    "code": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The code supports the finding. The stomp is a fixed keyframed pose with no collision against the ragdoll, so the foot can pass through the body. I did not run a probe to measure the foot position.",
+     "evidence": "Read _stomp() in game/actors/placeholder_poses.gd (lines 1911-1943): the strike pose is a fixed leg extension (RightUpperLeg 38, RightLowerLeg -6, RightFoot -32). Nothing aims it at the body or stops it at the torso. In tools/gen_moves.gd (lines 205-209) the stomp is a hits_downed move whose hit is a 0.22 m sphere on RightFootPoint, with no body collision. game/player/player.gd _stop_distance() (lines 609-610) stops the player at Tuning.data.stomp_stop_distance (0.45 m from the body's chest, game/autoload/tuning_data.gd line 89), so the animated foot ends up over or inside the lying torso whatever the pose reaches. I did not run a probe or a test."
+    }
+   }
+  }
+ ],
+ "pending": []
+}
