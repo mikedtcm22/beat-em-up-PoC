@@ -4,6 +4,32 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-24 18:10 CDT: handoff, account E's 5-hour window at 91%
+The watcher called the handoff at 91% of the 5-hour window (resets 21:30 CDT); weekly is at about 45% (resets Tue 2026-10-27 17:00 CDT). The hold-view fixer alone took the window from about 62% to 91% in about 40 minutes, more than the 25% estimate. The workflow `wf_5656a5ef-18c` is stopped, and nothing else is running. Every branch is pushed. The worktrees have no uncommitted tracked changes.
+- **`hold-view`: cut off with two `wip:` commits**, pushed on `m2/phase3-fix-hold-view` (worktree `.worktrees/m2-fix-hold-view`, off `m2/hit-feel` at `0905690`, which has the two merged packages).
+  - `d50348c`, in `player.gd`, `first_person_camera.gd` and `tuning_data.gd`:
+    - the hold-view lens moves on an eased path (code-03);
+    - the hold pitch has a target total (grab-06);
+    - a hit breaks the hold into a stagger (grab-02).
+  - `06733a3`, in `placeholder_poses.gd` and `test_grab_view.gd`:
+    - the throw strike's right arm is out wide (grab-07);
+    - the ease-in is front-loaded;
+    - the tests follow the lens (code-06's grab-view half).
+  - **Unknown:** whether the full suite passes on it, whether the after-sheets were recorded and judged, and whether `ARCHITECTURE`'s "First-person hold view" and the preset are updated. There's no `fix-hold-view.json`.
+- **Resume (next account or after 21:30):**
+  1. Run `workflow-fix.js` with `only: ["hold-view", "ko-respawn-bars"]` and a `note`. The loader sees hold-view as `wip`, and its fixer reuses the worktree and goes on from `06733a3`. The note should say:
+     - the merge state (as in the 17:25 entry's run);
+     - the known pile-test failure;
+     - for ko-respawn-bars: also make `test_ragdoll.gd`'s pile test set up its pile without a chaotic flight. launch-from-hold, which owned that file, is done.
+  2. Merge both branches into `m2/hit-feel`, regenerate the preset, run the tests (all pass, no SCRIPT ERROR), push.
+  3. Round 2, review: the hit-feel and performance lenses on the merged build, plus the critic's medium gaps (the 14:15 entry's step 3). Then round 2's fixes, the final sheets for Game-boy, and D. D also updates README's hook figures (17:25 entry).
+- **Waiting on Game-boy:**
+  - grab-03 and grab-05 (13:55 entry);
+  - the new look (17:25 entry, `side_looks.png`);
+  - the FYI on `ragdoll_partial_head_influence`;
+  - the 12:40 entry's items.
+  - Each has a default.
+
 ### 2026-10-24 17:25 CDT: two fix packages merged; hold-view running; ko-respawn-bars left
 The 5-hour window is at about 62% (resets about 21:30 CDT); weekly is at 40%. The first fix run (`wf_3e329695-5fc`) took the window from 10% to 58% in 35 minutes: two fixers at about 24% each.
 - **Merged into `m2/hit-feel`** (`4683f81`, `4cc2f56`, pushed). Both merged cleanly, and the preset regenerated unchanged (299 values).
@@ -608,7 +634,7 @@ USAGE RULES:
 
 Next steps (Milestone 2; details are in docs/HANDOFF.md):
 - Phases 1 and 2, the localized flash and phase 3's packages A (ragdoll: contact push, KO blink-off, staggers at 0.9) and B (grab view and waist bend) are merged into m2/hit-feel. 457/457 tests pass with no SCRIPT ERROR, at f98bb21. README has the three approved M2 ragdoll departures. WP3's audio was judged by analysis only, so I'll listen to it.
-- Phase 3's package C runs as a Workflow (I turned ultracode on), per docs/milestones/M2-phase3-plan.md, "C", step 2. The code, ragdoll and grab reviews are done, and all 19 of their findings are verified: every one survives, and 2 are spec questions for me (grab-03, grab-05). The results are JSON in docs/reviews/M2-phase3/ on branch m2/phase3-review. Next, as docs/HANDOFF.md's newest entry says: run docs/reviews/M2-phase3/workflow-verify-partition.js with args {"skip_verify": true} (the partition into fix packages, about 4%), then workflow-fix.js (the fixers, two at once, about 25% each; no args). Then merge the fix branches and m2/phase3-review into m2/hit-feel, regenerate the preset and run the tests. Then round 2: the hit-feel and performance reviews on the merged build (workflow.js), and their fixes. Then record the final sheets and show me. Then D: check ARCHITECTURE against the code, README's Milestone 2 status, and the M2 PR, which is never merged without my sign-off.
+- Phase 3's package C runs as a Workflow (I turned ultracode on), per docs/milestones/M2-phase3-plan.md, "C", step 2. The code, ragdoll and grab reviews are done, and all 19 of their findings are verified: every one survives, and 2 are spec questions for me (grab-03, grab-05). The 17 others are split into four fix packages (docs/reviews/M2-phase3/packages.json on branch m2/phase3-review). launch-from-hold and flash-and-looks are fixed and merged into m2/hit-feel (466/467: one old order-dependent pile test fails). hold-view was cut off with two pushed wip commits; ko-respawn-bars hasn't started. Next, as docs/HANDOFF.md's newest entry says: run docs/reviews/M2-phase3/workflow-fix.js with only ["hold-view", "ko-respawn-bars"] and a lead's note, then merge both, regenerate the preset and run the tests. Then round 2: the hit-feel and performance reviews on the merged build (workflow.js), and their fixes. Then record the final sheets and show me. Then D: check ARCHITECTURE against the code, README's Milestone 2 status, and the M2 PR, which is never merged without my sign-off.
 - Open for me (each has a default; none blocks C): more contortion on the ragdoll contact push (default: as it is); the grab's lens pull-back and the bend's depth (default: as they are); the combat log over the knee contact (default: C proposes a fix); a minimum on-screen size for the side-view flash (default: leave it). And I'll listen to WP3's audio.
 
 Ground rules:
