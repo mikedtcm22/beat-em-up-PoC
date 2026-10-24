@@ -4,6 +4,32 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-24 17:35 CDT: two fix packages merged; hold-view running; ko-respawn-bars left
+The 5-hour window is at about 62% (resets about 21:30 CDT); weekly is at 40%. The first fix run (`wf_3e329695-5fc`) took the window from 10% to 58% in 35 minutes: two fixers at about 24% each.
+- **Merged into `m2/hit-feel`** (`4683f81`, `4cc2f56`, pushed). Both merged cleanly, and the preset regenerated unchanged (299 values).
+  - **`launch-from-hold`** (`999d565`, 461/461 in its worktree). All four findings are fixed:
+    - grab-01 and ragdoll-01: a launch out of the hold starts from the drawn pose, with `carry_fade`. The throw now arcs about 0.6 m up and lands about 3 m away. A knee KO stays 0.30 m from the lens and fills at most 39% of the view; before, it was 0.12 m and 47%.
+    - ragdoll-02: new tunables `ragdoll_partial_head_influence` 0.45, `ragdoll_partial_arm_influence` 0.45 and `ragdoll_stagger_back_share` 0.5. The hook stagger now rocks back from the side.
+    - code-06: its `test_ragdoll.gd` half.
+    - A new ragdoll_bot act, "knee KOs the held dummy".
+    - Sheets (local): `.worktrees/m2-fix-launch-from-hold/captures/fix/after/`.
+  - **`flash-and-looks`** (`50af435`, 463/463). All four findings are fixed:
+    - code-01: `flash_at()` clamps the contact onto the nearest hurtbox and rides the drawn bone (new `hurt_point()`).
+    - grab-04: the player wears gray trousers (new `HumanoidRig.pants_color`).
+    - grab-08: every rig has a dark "Hair" part on the back of its head.
+    - ragdoll-05: the stomp's strike foot lands on top of the lying torso.
+    - Sheets (local): `.worktrees/m2-fix-flash-and-looks/captures/fix/`.
+- **Tests at the merge: 466/467, no SCRIPT ERROR.** `test_ragdoll.gd`'s `test_two_bodies_that_fell_on_each_other_get_up_beside_each_other` fails in the full suite ("the kicked body lies on the other"; the one underneath moves 0.211 m against a 0.2 m limit).
+  - The cause is an **old order dependence**. At `c27afaf`, before any fix, it already fails whenever `test_grab_view.gd` or `test_humanoid_rig.gd` runs before `test_ragdoll.gd`. The kick's flight lands differently after other tests have created and freed bodies, probably through Jolt's body order. The new suite order exposed it.
+  - **To do:** make the pile test set up its pile without depending on a chaotic flight. Do it in the `ko-respawn-bars` run (pass it in `note`) or as lead work.
+  - To reproduce in about 30 s: a GUT config without `dirs`, run with `-gtest=res://tests/test_grab_view.gd,res://tests/test_ragdoll.gd`.
+- **For Game-boy to see:** the player's new gray trousers and the dark hair on every head change the side view: `.worktrees/m2-fix-flash-and-looks/captures/fix/side_looks.png`. On dummies with a dark accent colour, the cap and hair read as one dark helmet.
+- **FYI for Game-boy** (no spec change): `ragdoll_partial_head_influence` 0.45 halves how much of the simulated head turn shows in a stagger, including the contact twist on a struck head. Raising it toward 0.9 brings back the old head look without touching the spin caps. This sits next to the open "more contortion" question.
+- **README note (not edited yet):** the approved stagger departure quotes the hook at about 0.32 m against 0.22 m. It now measures 0.346 m at 0.9 against 0.217 m at 0.6. Update the number in D.
+- **Running:** workflow `wf_5656a5ef-18c`, `workflow-fix.js` with `only: ["hold-view"]`, `max_fixers` 1 and a lead's note (the merge state, and the known failure). `workflow-fix.js` gained the `note` arg.
+- **Left:** `ko-respawn-bars` (code-02, code-04, code-05, ragdoll-03, ragdoll-04). Both gates found 7 points of headroom while flash-and-looks still ran, so it waits for the next window. Then come the merge, the pile test, and round 2 (the 14:15 entry's step 3).
+- **If cut off:** rerun `workflow-fix.js` (no args, or `only` with the keys left). Within this session, use `resumeFromRunId: "wf_5656a5ef-18c"`.
+
 ### 2026-10-24 16:45 CDT: account E after its reset; partition done, fix round running
 The 5-hour window reset at 16:30 (next reset about 21:30 CDT); weekly is at 30%. This session resumed as Game-boy decided at 14:29. The watcher `usage-watcher-h` still runs, asked to check every 10 minutes during the heavy run.
 - **Partition done:** `packages.json` on `m2/phase3-review` (`e7c3255`) holds four packages with all 17 survivors. Where two packages share a hub file, each package's notes say which functions it may touch.
