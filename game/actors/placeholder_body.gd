@@ -135,9 +135,9 @@ const SOLE_OFFSETS: Array[Vector3] = [
 
 enum Shape { BOX, CAPSULE, SPHERE, CYLINDER, DOME }
 
-## Which rig color a part takes: BODY = body_color, PANTS = body_color darkened,
-## ACCENT = accent_color (cap, hand wraps, shoes), SKIN = skin_color, DARK = shades,
-## belt and soles.
+## Which rig color a part takes: BODY = body_color, PANTS = pants_color (body_color
+## darkened unless set), ACCENT = accent_color (cap, hand wraps, shoes), SKIN = skin_color,
+## DARK = shades, belt and soles.
 enum Paint { BODY, PANTS, ACCENT, SKIN, DARK }
 
 
@@ -191,7 +191,8 @@ class HurtSpec:
 
 
 ## Chunky placeholder body: broad V torso, thick limbs, slightly oversized fists and
-## sneakers, and a covered face (cap pulled low plus a wrap-around shades band). The hands
+## sneakers, a covered face (cap pulled low plus a wrap-around shades band) and dark hair
+## at the back of the head. The hands
 ## are one size on everyone: with `wrapped_hands` (the player, Spec §10) skin-colored and
 ## wrapped (_wrapped_hand()), otherwise dark fingerless gloves (_gloved_hand()).
 static func parts(wrapped_hands: bool = false) -> Array[Part]:
@@ -209,6 +210,10 @@ static func parts(wrapped_hands: bool = false) -> Array[Part]:
 		Part.new(&"Neck", &"Neck", Shape.CYLINDER, Vector3(0.065, 0.15, 0.0), Vector3(0.0, 0.05, 0.0), Paint.SKIN),
 		Part.new(&"Head", &"Head", Shape.SPHERE, Vector3(0.125, 0.27, 0.0), Vector3(0.0, 0.11, -0.01), Paint.SKIN),
 		Part.new(&"Cap", &"Head", Shape.DOME, Vector3(0.134, 0.134, 0.0), Vector3(0.0, 0.135, -0.01), Paint.ACCENT),
+		# Dark hair over the back of the head: a ball the head's size set back and up from it,
+		# so the back of the head from the nape up (the held head seen from the hold view, the
+		# back of anyone's head) is hair, not a bare skin dome, while the face stays as it was.
+		Part.new(&"Hair", &"Head", Shape.SPHERE, Vector3(0.127, 0.254, 0.0), Vector3(0.0, 0.125, 0.015), Paint.DARK),
 		Part.new(&"CapBrim", &"Head", Shape.BOX, Vector3(0.21, 0.022, 0.12), Vector3(0.0, 0.14, -0.16), Paint.ACCENT, Vector3(-6.0, 0.0, 0.0)),
 		Part.new(&"Shades", &"Head", Shape.CYLINDER, Vector3(0.129, 0.045, 0.0), Vector3(0.0, 0.105, -0.01), Paint.DARK),
 		Part.new(&"ShadesFront", &"Head", Shape.BOX, Vector3(0.22, 0.055, 0.04), Vector3(0.0, 0.105, -0.12), Paint.DARK),

@@ -4,9 +4,20 @@ extends GutTest
 ## victim's body around the contact point through its rig's overlay (HumanoidRig.flash_at(),
 ## game/fx/hit_flash.gdshader) for exactly Tuning.hit_flash_frames rendered frames, whichever
 ## actor runs first in the tick; the cyan parry flash stays whole-body; idle rigs draw no
-## extra pass; a large radius whites the whole body.
+## extra pass; a large radius whites the whole body. The flash lands on the struck part as it
+## is drawn: contacts off the body (a thrown pipe, a flying body) and bodies drawn away from
+## their hurtboxes (a stagger's partial ragdoll, a full ragdoll) flash at full strength there.
 
 const ROOM := preload("res://game/level/test_room.tscn")
+const FPView := preload("res://tests/fp_view.gd")
+## The bones whose meshes draw each hurtbox region (HumanoidRig names its followers
+## "Bone<name>").
+const REGION_BONES: Dictionary[int, Array] = {
+	CombatTypes.Region.HEAD: [&"Head", &"Neck"],
+	CombatTypes.Region.TORSO: [&"Hips", &"Spine", &"Chest", &"UpperChest"],
+	CombatTypes.Region.LEGS: [&"LeftUpperLeg", &"LeftLowerLeg", &"LeftFoot", &"LeftToes",
+			&"RightUpperLeg", &"RightLowerLeg", &"RightFoot", &"RightToes"],
+}
 
 var room: Node3D
 var player: PlayerCharacter
@@ -15,6 +26,10 @@ var hits: Array[HitInfo] = []
 ## The victim's overlay point as each hit landed (CombatEvents.hit_landed follows
 ## receive_hit()), or NAN when it had no overlay.
 var points_at_hit: Array[Vector3] = []
+## How far that point lay from the struck region's meshes, and from the whole body, as they
+## were drawn then (INF with no overlay; see _drawn_gap()).
+var gaps_at_hit: Array[float] = []
+var body_gaps_at_hit: Array[float] = []
 
 
 func before_each() -> void:
@@ -35,6 +50,8 @@ func after_each() -> void:
 func _clear_hits() -> void:
 	hits.clear()
 	points_at_hit.clear()
+	gaps_at_hit.clear()
+	body_gaps_at_hit.clear()
 
 
 func _on_hit(hit: HitInfo) -> void:
@@ -42,6 +59,8 @@ func _on_hit(hit: HitInfo) -> void:
 	var victim := hit.victim as CombatActor
 	var overlay := victim.rig.flash_overlay() if victim else null
 	points_at_hit.append(overlay.get_shader_parameter(&"flash_point") if overlay else Vector3(NAN, NAN, NAN))
+	gaps_at_hit.append(_drawn_gap(victim, points_at_hit.back(), REGION_BONES[hit.region]) if overlay else INF)
+	body_gaps_at_hit.append(_drawn_gap(victim, points_at_hit.back()) if overlay else INF)
 
 
 # --- Harness ------------------------------------------------------------------------
@@ -96,6 +115,18 @@ func _player_jab(victim: CombatActor) -> HitInfo:
 func _point_at(hit: HitInfo) -> Vector3:
 	var i := hits.find(hit)
 	return points_at_hit[i] if i >= 0 else Vector3(NAN, NAN, NAN)
+
+
+## How far `point` lies from `victim`'s body as it is drawn: from the meshes on `bones` when
+## given, from every mesh otherwise.
+func _drawn_gap(victim: CombatActor, point: Vector3, bones: Array = []) -> float:
+	return FPView.nearest_mesh(victim.rig, point, func(mesh: MeshInstance3D) -> bool:
+		return bones.is_empty() or bones.has(StringName(String(mesh.get_parent().name).trim_prefix("Bone"))))
+
+
+## The distance from its point inside which the contact flash is at full strength.
+func _core_m() -> float:
+	return Tuning.data.hit_flash_radius_m * Tuning.data.hit_flash_core
 
 
 func _hits_on(victim: CombatActor) -> Array[HitInfo]:
@@ -340,3 +371,117 @@ func test_the_flash_rides_the_body_it_struck() -> void:
 	assert_null(rig.flash_overlay())
 	for mat in _materials(rig):
 		assert_null(mat.next_pass)
+
+
+func test_a_thrown_pipe_and_a_flying_body_flash_the_struck_body_at_full_strength() -> void:
+	# Neither contact comes from a hitbox: the pipe's meets the body's capsule, short of the
+	# body, and a body impact's lies between the two bodies. Both used to flash the air in
+	# front of the struck body (0.29 m and 0.18 m from it: none, and 61%).
+	await _setup(3.0)
+	var dummy := dummies[0]
+	var pipe := get_tree().get_first_node_in_group(&"weapon") as Weapon
+	pipe.global_position = player.global_position + player.global_basis * Vector3(0.0, 0.1, -0.4)
+	pipe.linear_velocity = Vector3.ZERO
+	await _ticks(10)
+	player.input.push_press(&"GRAB", 2)
+	assert_true(await _wait_until(func() -> bool: return player.holding_weapon(), 30), "picks the pipe up")
+	await _ticks(30)
+	_clear_hits()
+	player.input.push_press(&"GRAB", 2)
+	assert_true(await _wait_until(func() -> bool: return not _hits_on(dummy).is_empty(), 90), "the thrown pipe hits")
+	if _hits_on(dummy).is_empty():
+		return
+	var thrown := _hits_on(dummy)[0]
+	assert_eq(thrown.move.id, &"weapon_throw")
+	assert_lte(body_gaps_at_hit[hits.find(thrown)], _core_m(), "the pipe: full strength on the struck body")
+	assert_lte(_drawn_gap(dummy, thrown.contact_point), _core_m(), "its contact (the comic effects, the sound) on the body too")
+	# A push kick sends the first dummy flying into the second.
+	await _setup(1.5)
+	var second := dummies[1]
+	var spot := player.global_position + player.global_basis * Vector3(0.15, 0.0, -3.6)
+	var to_player := player.global_position - spot
+	second.set_post(spot, atan2(-to_player.x, -to_player.z), true)
+	await _ticks(3)
+	_clear_hits()
+	for button: StringName in [&"P", &"P", &"K"]:
+		player.input.push_press(button, 2)
+		player.input.push_wait(8)
+	assert_true(await _wait_until(func() -> bool: return not _hits_on(second).is_empty(), 150), "the flying body hits the second dummy")
+	if _hits_on(second).is_empty():
+		return
+	var impact := _hits_on(second)[0]
+	assert_true(impact.is_body_impact, "a body impact")
+	assert_lte(body_gaps_at_hit[hits.find(impact)], _core_m(), "the impact: full strength on the struck body")
+
+
+func test_a_hit_on_a_staggering_body_flashes_the_struck_part_as_drawn() -> void:
+	# The stagger's partial ragdoll (ragdoll_partial_influence 0.9) draws the head away from
+	# its hurtbox, where the next hit's contact lands; the flash used to stay at that contact,
+	# beyond its radius from the head as drawn (none on it).
+	await _setup(1.6)
+	var dummy := dummies[0]
+	var hit := _synthetic_hit(dummy, CombatTypes.Reaction.STAGGER, CombatTypes.Region.TORSO)
+	hit.contact_point = dummy.rig.get_point_position(&"ChestPoint") + dummy.get_forward() * 0.15
+	assert_true(dummy.receive_hit(hit), "the first hit staggers")
+	# The re-hit's contact on the head's hurtbox (the animation pose), facing the player, as
+	# the player's hitbox finds it: wait until it lies beyond the flash radius from the head
+	# as drawn.
+	var head_bones: Array = REGION_BONES[CombatTypes.Region.HEAD]
+	var contact := func() -> Vector3:
+		return dummy.rig.get_point_position(&"Head") + Vector3.UP * 0.11 + dummy.get_forward() * 0.13
+	var off := func() -> float: return _drawn_gap(dummy, contact.call(), head_bones)
+	assert_true(await _wait_until(func() -> bool: return off.call() > Tuning.data.hit_flash_radius_m, 40),
+			"the drawn head leaves its hurtbox (%.2f m)" % off.call())
+	assert_true(dummy.rig.is_ragdolling(), "in the partial ragdoll")
+	var again := _synthetic_hit(dummy, CombatTypes.Reaction.FLINCH, CombatTypes.Region.HEAD)
+	again.contact_point = contact.call()
+	assert_true(dummy.receive_hit(again), "the re-hit lands")
+	var overlay := dummy.rig.flash_overlay()
+	assert_not_null(overlay)
+	if overlay == null:
+		return
+	assert_lte(_drawn_gap(dummy, overlay.get_shader_parameter(&"flash_point"), head_bones), _core_m(),
+			"full strength on the drawn head")
+	for i in Tuning.data.hit_flash_frames - 1:
+		await get_tree().process_frame
+		overlay = dummy.rig.flash_overlay()
+		if overlay:
+			assert_lte(_drawn_gap(dummy, overlay.get_shader_parameter(&"flash_point"), head_bones), _core_m(),
+					"and it stays on it while the body moves")
+
+
+func test_p_p_p_p_flashes_each_struck_part_as_drawn() -> void:
+	# Jab, jab, hook (a stagger: the partial ragdoll), then, once the hooked head swings
+	# away, the uppercut on the staggering body (a launch: the full ragdoll). The uppercut
+	# used to flash beside the drawn head it struck (0.26 m from it).
+	await _setup(1.4)
+	var dummy := dummies[0]
+	for i in 4:
+		player.input.push_press(&"P", 2)
+		player.input.push_wait(24 if i == 2 else 8)
+	assert_true(await _wait_until(func() -> bool: return _hits_on(dummy).size() >= 4, 200), "four hits land")
+	var on_dummy := _hits_on(dummy)
+	var ids: Array[StringName] = []
+	for hit in on_dummy:
+		ids.append(hit.move.id)
+		assert_lte(gaps_at_hit[hits.find(hit)], _core_m(),
+				"%s: full strength on the drawn %s" % [hit.move.id, CombatTypes.Region.keys()[hit.region]])
+	assert_eq(ids.slice(0, 4), [&"jab_1", &"jab_2", &"hook", &"uppercut"] as Array[StringName])
+	if on_dummy.size() >= 4:
+		assert_eq(on_dummy[2].reaction, CombatTypes.Reaction.STAGGER, "the hook staggers, so the uppercut re-hits a staggering body")
+		assert_eq(on_dummy[3].region, CombatTypes.Region.HEAD, "on the head")
+
+
+## A hit on `victim` from the player, pushing it straight back (contact point unset).
+func _synthetic_hit(victim: CombatActor, reaction: CombatTypes.Reaction, region: CombatTypes.Region) -> HitInfo:
+	var hit := HitInfo.new()
+	hit.attacker = player
+	hit.victim = victim
+	hit.damage = 1.0
+	hit.tier = CombatTypes.HitTier.HEAVY
+	hit.reaction = reaction
+	hit.region = region
+	hit.direction = -victim.get_forward()
+	hit.knockback = hit.direction * 4.0
+	hit.physics_frame = Engine.get_physics_frames()
+	return hit

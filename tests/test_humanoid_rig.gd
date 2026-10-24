@@ -13,7 +13,7 @@ const FP_COLS := FPView.COLS
 ## Distance between two fighters' centers in the strike tests (docs/ARCHITECTURE.md).
 const TARGET_DISTANCE := 0.85
 ## An enemy's head parts: what the player sees of its face (cap, shades, face).
-const ENEMY_HEAD: Array[String] = ["Head", "Cap", "CapBrim", "Shades", "ShadesFront"]
+const ENEMY_HEAD: Array[String] = ["Head", "Cap", "Hair", "CapBrim", "Shades", "ShadesFront"]
 
 ## docs/ARCHITECTURE.md "Bones", spelled out here so a typo in the rig cannot hide.
 const BONES: Array[StringName] = [
@@ -152,12 +152,13 @@ func _rig(first_person: bool = false, height: float = 1.8, actor: Node3D = null,
 
 
 ## A rig dressed like the player (PlayerCharacter._configure_rig()): first-person body,
-## relaxed stance and wrapped hands. Under `parent` if given.
+## relaxed stance, wrapped hands and the player's colors. Under `parent` if given.
 func _player_rig(parent: Node = null) -> HumanoidRig:
 	var rig := HumanoidRig.new()
-	rig.first_person_body = true
-	rig.stance = PlaceholderPoses.STANCE_RELAXED
-	rig.wrapped_hands = true
+	var dresser := PlayerCharacter.new()
+	dresser._configure_rig(rig)
+	dresser.free()
+	assert_true(rig.first_person_body and rig.wrapped_hands and rig.stance == PlaceholderPoses.STANCE_RELAXED)
 	_adopt(rig, parent)
 	rig.build()
 	return rig
@@ -543,6 +544,43 @@ func test_meshes_cast_shadows_and_use_few_flat_colors() -> void:
 	assert_has(colors, rig.body_color)
 	assert_has(colors, rig.accent_color)
 	assert_has(colors, rig.skin_color)
+
+
+func test_the_players_trousers_stand_apart_from_its_shirt() -> void:
+	# In the first-person hold the rising knee sits beside the shaded right sleeve. Trousers
+	# in the shirt's navy darkened merged the two into one blue lump (M2 phase 3 review);
+	# gray ones stand apart from it and from the held head's dark hair.
+	var player := _player_rig()
+	var enemy := _rig()
+	var shirt := _paint_color(player, PlaceholderBody.Paint.BODY)
+	var pants := _paint_color(player, PlaceholderBody.Paint.PANTS)
+	assert_eq(pants, player.pants_color, "the player's own trousers")
+	assert_eq(_paint_color(player, PlaceholderBody.Paint.BODY), player.body_color)
+	assert_lte(pants.s, shirt.s * 0.3, "a neutral gray against the shirt's navy, not the navy darkened")
+	# Lighter than the dark paint: the belt shows on them, and the rising knee stands apart
+	# from the held enemy's dark hair beside it.
+	assert_gt(pants.get_luminance(), _paint_color(player, PlaceholderBody.Paint.DARK).get_luminance() + 0.15,
+			"a mid gray, well clear of the dark paint")
+	# Enemies and dummies keep trousers in their shirt's color darkened.
+	var enemy_pants := _paint_color(enemy, PlaceholderBody.Paint.PANTS)
+	assert_eq(enemy.pants_color.a, 0.0, "no pants color of their own")
+	assert_almost_eq(enemy_pants.h, enemy.body_color.h, 0.01, "the enemy's shirt hue")
+	assert_lt(enemy_pants.v, enemy.body_color.v, "darkened")
+	enemy.pants_color = Color(0.3, 0.2, 0.1)
+	assert_eq(_paint_color(enemy, PlaceholderBody.Paint.PANTS), Color(0.3, 0.2, 0.1), "set after build, it repaints them")
+	for rig: HumanoidRig in [player, enemy]:
+		var colors: Array[Color] = []
+		for mesh: MeshInstance3D in _meshes_under(rig):
+			var color := (mesh.material_override as StandardMaterial3D).albedo_color
+			if not colors.has(color):
+				colors.append(color)
+		assert_between(colors.size(), 4, 6, "%s: 4 to 6 flat colors (Spec §10)" % rig.stance)
+
+
+## The albedo of `rig`'s parts painted `paint` (PlaceholderBody.Paint).
+func _paint_color(rig: HumanoidRig, paint: int) -> Color:
+	var mats: Dictionary[int, StandardMaterial3D] = rig.get(&"_materials")
+	return mats[paint].albedo_color
 
 
 func test_first_person_body_hides_only_head_neck_chest_and_shoulder_ends() -> void:
@@ -1236,6 +1274,57 @@ func test_strikes_connect_with_a_target_at_arms_length() -> void:
 						row.id, CombatTypes.Region.keys()[row.region], touched])
 
 
+func test_the_stomp_lands_on_top_of_a_lying_body() -> void:
+	# The stomp's foot went down to the floor through the lying body's torso (M2 phase 3
+	# review): it comes down flat on top of the body (the target lies across the path, as in
+	# the reach checks) and lifts off it again before it steps back.
+	var target := _rig()
+	var stomp := _move_by_id(&"stomp")
+	for rig: HumanoidRig in _stance_rigs():
+		_place_target(rig, target, &"downed")
+		_to_first_active_frame(rig, stomp)
+		var strike_sole := INF
+		for f: int in stomp.active:
+			if f > 0:
+				rig.advance(FRAME)
+			var deepest := -INF
+			for sole: Vector3 in _right_sole(rig):
+				deepest = maxf(deepest, _top_below(target, sole) - sole.y)
+				strike_sole = minf(strike_sole, sole.y)
+			assert_between(deepest, -0.05, 0.03, "%s: on active frame %d the sole rests on top of the body (%.3f m into it)" % [
+					rig.stance, f, deepest])
+		var highest := -INF
+		for f: int in roundi(stomp.recovery * 0.5):
+			rig.advance(FRAME)
+			var low := INF
+			for sole: Vector3 in _right_sole(rig):
+				low = minf(low, sole.y)
+			highest = maxf(highest, low)
+		assert_gt(highest, strike_sole + 0.08, "%s: the foot lifts off the body before it steps back (to %.2f m from %.2f m)" % [
+				rig.stance, highest, strike_sole])
+
+
+## World positions of the right sole's heel, ball and toe tip (PlaceholderBody.SOLE_*).
+func _right_sole(rig: HumanoidRig) -> Array[Vector3]:
+	var out: Array[Vector3] = []
+	for i: int in PlaceholderBody.SOLE_BONES.size():
+		var bone := PlaceholderBody.SOLE_BONES[i]
+		if String(bone).begins_with("Right"):
+			out.append(rig.get_point_transform(bone) * (PlaceholderBody.SOLE_OFFSETS[i] * rig.rig_scale()))
+	return out
+
+
+## Height of the top of `rig`'s meshes straight below (or above) `point`, or -INF.
+func _top_below(rig: HumanoidRig, point: Vector3) -> float:
+	var from := Vector3(point.x, 3.0, point.z)
+	var top := -INF
+	for mesh: MeshInstance3D in _meshes_under(rig):
+		var depth := FPView.ray_hit(mesh, from, Vector3.DOWN)
+		if depth < INF:
+			top = maxf(top, from.y - depth)
+	return top
+
+
 func test_pipe_swings_meet_the_head_without_passing_through_it() -> void:
 	var target := _rig()
 	var head := _hurtboxes_of(target, CombatTypes.Region.HEAD)[0]
@@ -1283,8 +1372,7 @@ func test_held_victim_sits_low_in_the_holders_view() -> void:
 	var view := _view_from(cam, head.global_position)
 	assert_between(view.y, -FP_HALF_V_DEG - 10.0, -FP_HALF_V_DEG + 5.0, "the victim's head sits at the bottom edge (angles %s)" % view)
 	var seen := _fp_hits(victim, cam)
-	var head_parts: Array[String] = ["Head", "Cap", "CapBrim", "Shades", "ShadesFront"]
-	assert_gt(_parts_share(seen, head_parts), 0.03, "the back of the victim's head and its cap show")
+	assert_gt(_parts_share(seen, ENEMY_HEAD), 0.03, "the back of the victim's head and its cap show")
 	assert_between(_body_share(seen), 0.15, 0.4, "the victim shows without filling the view (%.0f%%)" % (_body_share(seen) * 100.0))
 	for cell: Vector2i in _cells_of(seen, _part_names(victim)):
 		assert_gte(cell.y, FPView.rows() / 3, "the upper third of the view stays clear (cell %s)" % cell)
@@ -1292,6 +1380,26 @@ func test_held_victim_sits_low_in_the_holders_view() -> void:
 	for pair: Array in [[&"LeftFistPoint", &"RightUpperArm"], [&"RightFistPoint", &"LeftUpperArm"]]:
 		var fist := rig.get_point_position(pair[0])
 		assert_lt(fist.distance_to(victim.get_point_position(pair[1])), 0.15, "%s on the victim's shoulder" % pair[0])
+
+
+func test_the_held_head_shows_hair_not_a_bare_dome() -> void:
+	# From the hold view the back of the held head was a bare skin dome, the biggest shape
+	# in the view, with the cap's edge across it like a brow (M2 phase 3 review): dark hair
+	# covers the back of the head, looking level and through the knee's own pitch.
+	var rig := _player_rig()
+	var victim := _rig()
+	_place_target(rig, victim, &"held")
+	victim.advance(0.0)
+	var knee := load("res://game/combat/moves/knee.tres") as MoveData
+	for view: Array in [[0.0, 0.0], [knee.camera_pitch_deg, knee.camera_drop_m]]:
+		var seen := _fp_hits(victim, _hold_fp_camera(rig, view[0], view[1]))
+		var head := _parts_share(seen, ENEMY_HEAD)
+		var skin := _parts_share(seen, ["Head"])
+		var hair := _parts_share(seen, ["Hair"])
+		assert_gt(head, 0.03, "pitch %.0f: the held head shows" % view[0])
+		assert_gt(hair, head * 0.6, "pitch %.0f: mostly as hair (%.1f%% of the view, the head %.1f%%)" % [
+				view[0], hair * 100.0, head * 100.0])
+		assert_lt(skin, head * 0.25, "pitch %.0f: little bare skin (%.1f%%)" % [view[0], skin * 100.0])
 
 
 func test_eye_point_stays_steady_through_strikes() -> void:
