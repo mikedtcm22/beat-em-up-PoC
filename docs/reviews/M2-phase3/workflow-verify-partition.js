@@ -16,7 +16,7 @@ const LIMIT = 90
 const COST = { perFinding: 2, partition: 4 }
 const TRAILER = 'Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>'
 const A = args || {}
-// args.skip_verify: grab-06..08 are already verified (they are, since 2026-10-24 14:35 CDT); run only the partition.
+// args.skip_verify: grab-06..08 are already verified (they are, since 2026-10-24 14:20 CDT); run only the partition.
 const TODO = A.skip_verify ? [] : [
   { id: 'grab-06', lens: 'grab', severity: 'low', title: "The hold view's pitch adds to the player's own look pitch with no limit" },
   { id: 'grab-07', lens: 'grab', severity: 'low', title: "The throw shows the player's right elbow end as a blue ball in the middle of the view" },

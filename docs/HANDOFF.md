@@ -4,7 +4,7 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
-### 2026-10-24 14:40 CDT: handoff, account E's 5-hour window at 89%
+### 2026-10-24 14:25 CDT: handoff, account E's 5-hour window at 89%
 The watcher called the handoff at 89% of the 5-hour window (resets 16:30 CDT); weekly is at 28% (resets Tue 2026-10-27 17:00 CDT). The first task took the window from 76% to 89% in about 25 minutes: nine Sonnet skeptics cost about 6 points, and the lead's reading about 4. The workflow `wf_338da5ae-007` is stopped mid-partition, and nothing else is running. Every branch is pushed. The reviewer worktrees have no tracked changes.
 - **Done:** grab-06, -07 and -08 are verified. All three survive with 3 of 3 confirmations, with no spec question. They're merged into `verify-grab.json` on `m2/phase3-review` (`5b77fcd`), and its `pending` is now empty.
   - grab-06: the hold pitch adds to the look pitch with no limit. Looking down 25°, the player's own body fills 52-62% of the view at the knee's peak.
@@ -12,7 +12,7 @@ The watcher called the handoff at 89% of the 5-hour window (resets 16:30 CDT); w
   - grab-08: the placeholder head has no hair or back-of-head part.
 - **Not done:** the partition. It was stopped before it returned, so there's no `packages.json` yet.
 - **Survivors to fix:** 17 findings with no spec question, from code-01 to -06, ragdoll-01 to -05, and grab-01, -02, -04, -06, -07 and -08. The spec questions grab-03 and grab-05 are Game-boy's.
-- **Decision (Game-boy, 14:45):** stay on this account. The working session waits for the 16:30 CDT reset, with the watcher `usage-watcher-h` still running, and then resumes here with the steps below.
+- **Decision (Game-boy, 14:29):** stay on this account. The working session waits for the 16:30 CDT reset, with the watcher `usage-watcher-h` still running, and then resumes here with the steps below.
 - **Resume (next account or after the 16:30 reset):**
   1. Run [reviews/M2-phase3/workflow-verify-partition.js](reviews/M2-phase3/workflow-verify-partition.js) inline (`scriptPath`) with `args: {"skip_verify": true}`. Only the usage gate and the partition run (about 4%). A scribe commits `packages.json`.
   2. Then follow steps 1-4 of "C's order from here" in the 14:15 entry below. Start with `workflow-fix.js`, two fixers at once.
