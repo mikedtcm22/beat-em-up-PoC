@@ -216,8 +216,9 @@ func test_a_launched_dummy_ragdolls_rests_and_gets_up_where_its_hips_lie() -> vo
 			% [flight_gap, steady_gap, lying_gap, slept_at])
 	assert_lt(lying_gap, 0.3, "a downed body lies where its hurtboxes are")
 	assert_lt(steady_gap, 0.5, "the flying body keeps with the sim body")
-	assert_lt(flight_gap, 1.2, "even right after the launch")
-	assert_between(slept_at, 1, roundi(Tuning.data.ragdoll_settle_max_s * 60.0) + 1, "comes to rest")
+	assert_lt(flight_gap, 0.8, "even right after the launch")
+	assert_between(slept_at, 1, roundi(Tuning.data.ragdoll_settle_max_s * 60.0) - 1,
+			"comes to rest, by being at rest (before the settle cap)")
 	# The frame before the get-up: where it will stand, and the body as it lies.
 	var spot := dummy.global_position + dummy.rig.ragdoll_hips_offset()
 	var lying_head := dummy.rig.get_attachment(&"Head").global_position
@@ -291,29 +292,42 @@ func test_a_kod_dummy_goes_limp_settles_and_stays() -> void:
 func test_the_ragdoll_freezes_in_hitstop_and_slows_in_slow_mo() -> void:
 	await _setup([Vector3(0, 0, -1.6)])
 	var dummy := dummies[0]
-	# Launched by a synthetic hit with a hitstop, from standing still.
+	# Launched by a synthetic hit with a hitstop, from standing still: the reference is the
+	# pose the ragdoll starts from, before any physics step (the hit's frame included).
 	var hit := _hit(dummy, CombatTypes.Reaction.LAUNCH, Vector3(0.0, 5.0, 4.0))
 	assert_true(dummy.receive_hit(hit))
 	TimeController.hitstop([dummy], 0.2)
 	var ragdoll := dummy.rig.get_ragdoll()
 	assert_not_null(ragdoll)
-	await get_tree().physics_frame
-	assert_true(TimeController.is_in_hitstop(dummy), "frozen")
 	var frozen := ragdoll.body_transforms()
+	var head_v := ragdoll.body_sim_velocity(&"Head")
+	assert_eq(ragdoll.pending_kicks(), 1, "the hit's kick waits")
 	var drift := 0.0
-	while TimeController.is_in_hitstop(dummy):
+	var frames := 0
+	while frames == 0 or TimeController.is_in_hitstop(dummy):
 		await get_tree().physics_frame
+		frames += 1
 		var now := ragdoll.body_transforms()
 		for k in now.size():
 			drift = maxf(drift, now[k].origin.distance_to(frozen[k].origin))
-	assert_lt(drift, 2e-3, "the ragdoll holds still through the actor's hitstop (%.5f m)" % drift)
+		if TimeController.is_in_hitstop(dummy):
+			assert_eq(ragdoll.pending_kicks(), 1, "the kick is held through the freeze")
+			assert_almost_eq(ragdoll.body_sim_velocity(&"Head"), head_v, Vector3.ONE * 1e-3,
+					"the struck head keeps its velocity, kick not yet in")
+	assert_gt(frames, 10, "watched the whole hitstop")
+	assert_lt(drift, 2e-3, "the ragdoll holds still from the hit's frame through the hitstop (%.5f m)" % drift)
 	assert_eq(Engine.time_scale, 1.0, "Engine.time_scale stays 1")
-	await _ticks(3)
+	await get_tree().physics_frame
+	assert_eq(ragdoll.pending_kicks(), 0, "the kick lands on the first step after the hitstop")
+	var kicked := (ragdoll.body_sim_velocity(&"Head") - head_v).length()
+	assert_gt(kicked, 0.5 * hit.knockback.length() * Tuning.data.ragdoll_full_impulse,
+			"the struck head took the kick then (%.2f m/s)" % kicked)
+	await _ticks(2)
 	var moved := 0.0
 	var after := ragdoll.body_transforms()
 	for k in after.size():
 		moved = maxf(moved, after[k].origin.distance_to(frozen[k].origin))
-	assert_gt(moved, 0.05, "and flies once it ends (with the kick held till then)")
+	assert_gt(moved, 0.05, "and flies once it ends")
 	# Slow-mo (the debug scale): the bodies' real speed drops to the scale, their sim speed
 	# carries on, and the visible body stays with the slowed sim body.
 	await _ticks(4)
@@ -443,3 +457,358 @@ func test_grabbing_a_staggering_dummy_hands_back_to_the_animation_without_a_jump
 	assert_almost_eq(dummy.rig.get_attachment(&"Head").global_position, shown, Vector3.ONE * 0.06,
 			"the held pose fades in from the pose on screen")
 	dummy.release_from_grab(Vector3.ZERO, false)
+
+
+# --- Review fixes (docs/reviews/M2-WP4-review-findings.json) -------------------------
+
+
+## Largest amount (degrees) any drawn joint is past its PlaceholderBody.ragdoll_specs()
+## limit: a cone's swing of the bone's axis from its center in the parent's frame, a hinge's
+## bend about X.
+func _joint_excess(d: CombatActor) -> float:
+	var worst := 0.0
+	for spec: PlaceholderBody.RagdollSpec in PlaceholderBody.ragdoll_specs():
+		if spec.bone == &"Hips":
+			continue
+		var parent: StringName = PlaceholderBody.BONE_PARENT[spec.bone]
+		var pb := d.rig.get_attachment(parent).global_basis.orthonormalized()
+		var cb := d.rig.get_attachment(spec.bone).global_basis.orthonormalized()
+		if spec.joint == PlaceholderBody.RagdollJoint.CONE:
+			worst = maxf(worst, rad_to_deg((pb * spec.center).angle_to(cb * spec.axis)) - spec.swing_deg)
+		else:
+			var bend := rad_to_deg((pb.inverse() * cb).get_euler().x)
+			worst = maxf(worst, maxf(spec.lower_deg - bend, bend - spec.upper_deg))
+	return worst
+
+
+## Turn dummy `d` to face away from the player (it stops turning toward it).
+func _face_away(d: TrainingDummy) -> void:
+	d.face_player = false
+	d.set_post(d.global_position, d.rotation.y + PI, true)
+	await _ticks(3)
+
+
+func test_the_get_up_fade_starts_where_the_ragdoll_lies_after_the_body_moves_under_it() -> void:
+	# Just before the get-up the sim body is moved 0.45 m away from where its ragdoll lies
+	# (woken, so it shows where its bodies are): the get-up moves the body back under the
+	# ragdoll's hips, and the visible body must not jump by that.
+	await _setup([Vector3(0, 0, -1.6)])
+	var dummy := dummies[0]
+	_queue(&"P", 4)
+	assert_true(await _wait_until(func() -> bool:
+		return dummy.is_downed() and dummy.state_frame >= Tuning.data.downed_frames - 4, 300), "lies")
+	var ragdoll := dummy.rig.get_ragdoll()
+	dummy.global_position += dummy.global_basis.x * 0.45
+	ragdoll.hit(dummy.get_chest_position(), Vector3.ZERO)
+	var before := dummy.global_position
+	var lying_head := dummy.rig.get_attachment(&"Head").global_position
+	for i in 20:
+		if dummy.state == CombatTypes.ActorState.GETUP:
+			break
+		before = dummy.global_position
+		lying_head = dummy.rig.get_attachment(&"Head").global_position
+		await get_tree().physics_frame
+	assert_eq(dummy.state, CombatTypes.ActorState.GETUP, "gets up")
+	var moved := Vector2(dummy.global_position.x - before.x, dummy.global_position.z - before.z).length()
+	var jump := dummy.rig.get_attachment(&"Head").global_position.distance_to(lying_head)
+	gut.p("get-up: moved %.3f m under the ragdoll, drawn head jumped %.3f m" % [moved, jump])
+	assert_gt(moved, 0.35, "the body moved back under its ragdoll's hips")
+	assert_lt(jump, 0.02, "the drawn body stays where it lay on the get-up frame")
+	# And it slides there no faster than Tuning.ragdoll_getup_slide_speed.
+	var step := 0.0
+	var last := dummy.rig.get_attachment(&"Hips").global_position
+	for i in 20:
+		await get_tree().physics_frame
+		var now := dummy.rig.get_attachment(&"Hips").global_position
+		step = maxf(step, Vector2(now.x - last.x, now.z - last.z).length())
+		last = now
+	assert_lt(step * 60.0, Tuning.data.ragdoll_getup_slide_speed * 1.6, "a slide, not a pop (%.2f m/s)" % (step * 60.0))
+
+
+func test_a_stomped_ragdoll_gets_up_where_it_lies_with_the_player_over_it() -> void:
+	# The stomp (K on a downed enemy) leaves the player standing over the body: like without
+	# a ragdoll, it gets up where it lies, not shoved aside.
+	await _setup([Vector3(0, 0, -1.6)])
+	var dummy := dummies[0]
+	dummy.face_player = false
+	_queue(&"P", 4)
+	assert_true(await _wait_until(func() -> bool: return dummy.is_downed(), 200), "down")
+	await _ticks(10)
+	var chest := dummy.get_chest_position()
+	var from_dir := player.global_position - chest
+	from_dir.y = 0.0
+	from_dir = from_dir.normalized()
+	player.global_position = Vector3(chest.x, player.global_position.y, chest.z) + from_dir * 1.0
+	player.look_yaw = atan2(from_dir.x, from_dir.z)
+	player.rotation.y = player.look_yaw
+	await _ticks(2)
+	var stomps := [0]
+	var on_hit := func(hit: HitInfo) -> void:
+		if hit.victim == dummy and hit.reaction == CombatTypes.Reaction.GROUND:
+			stomps[0] += 1
+	CombatEvents.hit_landed.connect(on_hit)
+	player.input.push_press(&"K", 2)
+	var before := dummy.global_position
+	var lying_head := dummy.rig.get_attachment(&"Head").global_position
+	for i in 300:
+		if dummy.state == CombatTypes.ActorState.GETUP:
+			break
+		before = dummy.global_position
+		lying_head = dummy.rig.get_attachment(&"Head").global_position
+		await get_tree().physics_frame
+	assert_eq(dummy.state, CombatTypes.ActorState.GETUP, "gets up")
+	CombatEvents.hit_landed.disconnect(on_hit)
+	assert_eq(stomps[0], 1, "the stomp landed on the lying ragdoll")
+	var moved := Vector2(dummy.global_position.x - before.x, dummy.global_position.z - before.z).length()
+	assert_lt(moved, 0.1, "gets up where it lies (moved %.3f m)" % moved)
+	assert_lt(dummy.rig.get_attachment(&"Head").global_position.distance_to(lying_head), 0.03, "no pop")
+
+
+func test_a_body_launched_from_behind_lands_face_down_where_its_hurtboxes_are() -> void:
+	for haymaker: bool in [false, true]:
+		await _setup([Vector3(0, 0, -1.6)])
+		var dummy := dummies[0]
+		await _face_away(dummy)
+		if haymaker:
+			player.input.push_press(&"P", Tuning.data.hold_frames + 10)
+		else:
+			_queue(&"P", 4)
+		assert_true(await _wait_until(func() -> bool: return dummy.is_downed(), 240), "down")
+		assert_eq(dummy.rig.current_anim(), &"downed_front", "the animation lies face down")
+		await _ticks(25)
+		var lying := 0.0
+		var excess := 0.0
+		var bones: Array[StringName] = GAP_BONES.duplicate()
+		bones.append(&"Hips")
+		while dummy.is_downed():
+			lying = maxf(lying, _gap(dummy, bones))
+			excess = maxf(excess, _joint_excess(dummy))
+			await get_tree().physics_frame
+		gut.p("%s from behind: lying gap %.3f m, joints at most %.0f deg past a limit" % ["haymaker" if haymaker else "uppercut", lying, excess])
+		assert_lt(lying, 0.4, "face down where its hurtboxes are")
+		assert_lt(excess, 10.0, "no limb bent past its joint lying there")
+
+
+func test_drawn_joints_stay_inside_their_limits() -> void:
+	# A transient overshoot on impact is let through (a few frames); a joint held past its
+	# limit is not.
+	var scenarios: Array[String] = ["uppercut", "haymaker", "throw"]
+	for title: String in scenarios:
+		await _setup([Vector3(0, 0, -1.1) if title == "throw" else Vector3(0, 0, -1.6)])
+		var dummy := dummies[0]
+		match title:
+			"uppercut":
+				_queue(&"P", 4)
+			"haymaker":
+				player.input.push_press(&"P", Tuning.data.hold_frames + 10)
+			"throw":
+				player.input.push_wait(10)
+				player.input.push_press(&"GRAB", 2)
+				player.input.push_wait(12)
+				player.input.push_press(&"K", 2)
+		var worst := 0.0
+		var run := 0
+		var longest := 0
+		for i in 220:
+			await get_tree().physics_frame
+			if dummy.rig.ragdoll_mode() != Ragdoll.Mode.FULL:
+				continue
+			var excess := _joint_excess(dummy)
+			worst = maxf(worst, excess)
+			run = run + 1 if excess > 10.0 else 0
+			longest = maxi(longest, run)
+		gut.p("%s: joints at most %.0f deg past a limit, %d frames running more than 10" % [title, worst, longest])
+		assert_lt(longest, 12, "%s: no joint held past its limit (a throw's whip lasts a few frames)" % title)
+		assert_lt(worst, 20.0, "%s: nor far past it" % title)
+
+
+func test_a_stagger_on_a_stagger_does_not_pop_the_upper_body() -> void:
+	for wait: int in [6, 14, 22]:
+		await _setup([Vector3(0, 0, -1.6)])
+		var dummy := dummies[0]
+		assert_true(dummy.receive_hit(_hit(dummy, CombatTypes.Reaction.STAGGER, Vector3(2.0, 0.0, 1.0))))
+		await _ticks(wait)
+		assert_eq(dummy.rig.ragdoll_mode(), Ragdoll.Mode.PARTIAL)
+		var head := dummy.rig.get_attachment(&"Head").global_position
+		var anim_head := dummy.rig.get_point_position(&"Head")
+		# A second stagger with no push: nothing new should show but the animation's restart.
+		assert_true(dummy.receive_hit(_hit(dummy, CombatTypes.Reaction.STAGGER, Vector3.ZERO)))
+		var worst := 0.0
+		for i in 3:
+			await get_tree().physics_frame
+			var now := dummy.rig.get_attachment(&"Head").global_position
+			var anim_now := dummy.rig.get_point_position(&"Head")
+			worst = maxf(worst, now.distance_to(head) - anim_now.distance_to(anim_head))
+			head = now
+			anim_head = anim_now
+		assert_lt(worst, 0.045, "after %d frames: the drawn head moves no more than the animation's (%.3f m more)" % [wait, worst])
+
+
+func test_a_lying_ragdoll_sleeps_once_it_is_still_and_wakes_when_hit() -> void:
+	Tuning.data.ragdoll_settle_max_s = 3.0
+	await _setup([Vector3(0, 0, -1.6)])
+	var dummy := dummies[0]
+	_queue(&"P", 4)
+	assert_true(await _wait_until(func() -> bool: return dummy.is_downed(), 200), "down")
+	var ragdoll := dummy.rig.get_ragdoll()
+	var frames := 0
+	while not ragdoll.asleep and frames < 200:
+		await get_tree().physics_frame
+		frames += 1
+	assert_true(ragdoll.asleep, "sleeps")
+	assert_lt(frames / 60.0, 1.6, "at rest, long before the 3 s cap (%.2f s)" % (frames / 60.0))
+	# A stomp-like hit wakes it; it settles again.
+	ragdoll.hit(dummy.get_chest_position(), Vector3.DOWN * 2.0, Ragdoll.Part.TORSO)
+	await _ticks(2)
+	assert_false(ragdoll.asleep, "woken")
+	assert_true(await _wait_until(func() -> bool: return ragdoll.asleep, 200), "settles again")
+
+
+func test_a_partials_kinematic_hips_and_legs_stay_off_every_layer() -> void:
+	await _setup([Vector3(0, 0, -1.6)])
+	var dummy := dummies[0]
+	assert_true(dummy.receive_hit(_hit(dummy, CombatTypes.Reaction.STAGGER, Vector3(2.0, 0.0, 1.0))))
+	await _ticks(4)
+	for edit: bool in [false, true]:
+		if edit:
+			# A tuning edit (the F1 panel) mid-stagger.
+			Tuning.changed.emit(&"ragdoll_friction")
+			await _ticks(1)
+		assert_eq(dummy.rig.ragdoll_mode(), Ragdoll.Mode.PARTIAL)
+		for body: Node in dummy.rig.skeleton.find_children("*", "PhysicalBone3D", true, false):
+			var bone := String((body as PhysicalBone3D).get(&"bone_name"))
+			var rid := (body as PhysicalBone3D).get_rid()
+			var layer := PhysicsServer3D.body_get_collision_layer(rid)
+			if Ragdoll.PARTIAL_BONES.has(StringName(bone)):
+				assert_eq(layer, CombatTypes.bit(CombatTypes.LAYER_RAGDOLL), "%s simulates on the ragdoll layer (edit %s)" % [bone, edit])
+			else:
+				assert_eq(layer, 0, "%s, kinematic, on no layer (edit %s)" % [bone, edit])
+				assert_eq(PhysicsServer3D.body_get_collision_mask(rid), 0, "%s sees nothing (edit %s)" % [bone, edit])
+
+
+func test_idle_bodies_ignore_the_actor_moving() -> void:
+	# Decision 9: built bodies cost nothing idle, not even being moved with a walking actor.
+	await _setup([Vector3(0, 0, -1.6)])
+	var dummy := dummies[0]
+	assert_true(dummy.receive_hit(_hit(dummy, CombatTypes.Reaction.STAGGER, Vector3(2.0, 0.0, 1.0))))
+	assert_true(await _wait_until(func() -> bool: return not dummy.rig.is_ragdolling(), 120), "the stagger ends")
+	var bodies := dummy.rig.skeleton.find_children("*", "PhysicalBone3D", true, false)
+	var before: Array[Transform3D] = []
+	for body: Node in bodies:
+		before.append(PhysicsServer3D.body_get_state((body as PhysicalBone3D).get_rid(), PhysicsServer3D.BODY_STATE_TRANSFORM))
+	for i in 10:
+		dummy.global_position += Vector3(0.1, 0.0, 0.0)
+		await get_tree().physics_frame
+	for k in bodies.size():
+		var now: Transform3D = PhysicsServer3D.body_get_state((bodies[k] as PhysicalBone3D).get_rid(), PhysicsServer3D.BODY_STATE_TRANSFORM)
+		assert_eq(now, before[k], "%s stays put on the server" % bodies[k].name)
+	# And a new ragdoll still starts from the pose on screen.
+	assert_true(dummy.receive_hit(_hit(dummy, CombatTypes.Reaction.LAUNCH, Vector3(0.0, 4.0, 3.0))))
+	await _ticks(1)
+	assert_lt(_gap(dummy), 0.1, "starts on the body where it is now")
+
+
+func test_a_ragdoll_taken_out_of_the_tree_and_back_keeps_its_joints() -> void:
+	await _setup([Vector3(0, 0, -1.6)])
+	var dummy := dummies[0]
+	assert_true(dummy.receive_hit(_hit(dummy, CombatTypes.Reaction.LAUNCH, Vector3(0.0, 4.0, 3.0))))
+	await _ticks(5)
+	var expected := PlaceholderBody.ragdoll_specs().size() - 1
+	assert_eq(dummy.rig.get_ragdoll().joint_count(), expected, "every joint")
+	var parent := dummy.get_parent()
+	parent.remove_child(dummy)
+	await _ticks(2)
+	parent.add_child(dummy)
+	await _ticks(2)
+	dummy.reset_state()
+	await _ticks(2)
+	var ragdoll := dummy.rig.get_ragdoll()
+	assert_eq(ragdoll.joint_count(), expected, "the joints are back")
+	assert_true(dummy.receive_hit(_hit(dummy, CombatTypes.Reaction.LAUNCH, Vector3(0.0, 4.0, 3.0))))
+	var stretch := 0.0
+	for i in 40:
+		await get_tree().physics_frame
+		stretch = maxf(stretch, ragdoll.joint_stretch())
+	assert_lt(stretch, 0.05, "and hold the bodies together (%.3f m)" % stretch)
+
+
+func test_a_parried_jab_knocks_the_attackers_arm_back_not_into_the_lens() -> void:
+	# The sparring dummy's jab, perfect-blocked: its fists never come closer to the player's
+	# eyes after the parry than without a ragdoll (the animation snaps the arm back).
+	var closest: Array[float] = []
+	for enabled: bool in [false, true]:
+		Tuning.data.ragdoll_enabled = enabled
+		await _setup([Vector3(0, 0, -0.95)])
+		var dummy := dummies[0]
+		await _ticks(10)
+		dummy.start_jab()
+		var startup := dummy.current_move.startup
+		assert_true(await _wait_until(func() -> bool: return dummy.move_frame >= startup - 7, 40))
+		player.input.push_down(&"DODGE")
+		assert_true(await _wait_until(func() -> bool: return dummy.state == CombatTypes.ActorState.STAGGER, 30), "parried")
+		assert_eq(dummy.rig.is_ragdolling(), enabled)
+		var near := INF
+		for i in 30:
+			await get_tree().physics_frame
+			var eye := player.rig.get_point_position(&"EyePoint")
+			for fist: StringName in [&"LeftFistPoint", &"RightFistPoint"]:
+				near = minf(near, dummy.rig.get_visual_point_transform(fist).origin.distance_to(eye))
+		closest.append(near)
+		player.input.push_up(&"DODGE")
+		await _ticks(2)
+	Tuning.data.ragdoll_enabled = true
+	gut.p("parry: closest fist to the eyes %.3f m with the ragdoll, %.3f m without" % [closest[1], closest[0]])
+	assert_gt(closest[1], closest[0] - 0.03, "the ragdoll never brings the fist closer to the lens")
+
+
+func test_a_launch_shows_the_animations_snap_first() -> void:
+	# The finisher's hitstop and slow-mo show the hit's pose: from standing, the FULL ragdoll
+	# rises in from the animation (Tuning.ragdoll_full_rise_s), so the first frames are the
+	# animation's and the bodies take over from there.
+	await _setup([Vector3(0, 0, -1.6)])
+	var dummy := dummies[0]
+	assert_true(dummy.receive_hit(_hit(dummy, CombatTypes.Reaction.LAUNCH, Vector3(0.0, 6.0, 3.0))))
+	TimeController.hitstop([dummy], 0.1)
+	var early := 0.0
+	while TimeController.is_in_hitstop(dummy) or early == 0.0:
+		await get_tree().physics_frame
+		early = maxf(early, _gap(dummy) + 1e-6)
+	assert_lt(early, 0.02, "through the hitstop the visible body is the animation's (%.3f m)" % early)
+	var rise := 0.0
+	for i in 4:
+		await get_tree().physics_frame
+		rise = maxf(rise, _gap(dummy))
+	assert_lt(rise, 0.2, "and the first frames after it stay close to it (%.3f m)" % rise)
+	assert_true(await _wait_until(func() -> bool: return dummy.rig.get_ragdoll().simulator.influence >= 1.0, 30),
+			"then the ragdoll shows alone")
+
+
+func test_a_staggering_release_from_a_grab_gives_way_too() -> void:
+	await _setup([Vector3(0, 0, -1.1)])
+	var dummy := dummies[0]
+	dummy.start_grabbed(player)
+	await _ticks(10)
+	dummy.release_from_grab(Vector3(0.0, 0.0, 2.0), true)
+	assert_eq(dummy.state, CombatTypes.ActorState.STAGGER)
+	assert_eq(dummy.rig.ragdoll_mode(), Ragdoll.Mode.PARTIAL, "the partial ragdoll, like every stagger")
+	assert_true(await _wait_until(func() -> bool: return not dummy.rig.is_ragdolling(), 120), "and fades out")
+
+
+func test_bodies_use_continuous_collision_and_stay_out_of_the_floor() -> void:
+	await _setup([Vector3(0, 0, -1.6)])
+	var dummy := dummies[0]
+	assert_true(dummy.receive_hit(_hit(dummy, CombatTypes.Reaction.LAUNCH, Vector3(0.0, 9.0, 12.0))))
+	for body: Node in dummy.rig.skeleton.find_children("*", "PhysicalBone3D", true, false):
+		assert_true(PhysicsServer3D.body_is_continuous_collision_detection_enabled((body as PhysicalBone3D).get_rid()), "%s" % body.name)
+	var lowest := INF
+	var sunk := 0
+	for i in 120:
+		await get_tree().physics_frame
+		var frame_lowest := INF
+		for bone: StringName in GAP_BONES:
+			frame_lowest = minf(frame_lowest, dummy.rig.get_visual_point_transform(bone).origin.y)
+		lowest = minf(lowest, frame_lowest)
+		sunk += 1 if frame_lowest < -0.03 else 0
+	# (A foot slammed in at 15 m/s may show a few centimeters in for the one frame of impact.)
+	assert_lte(sunk, 1, "a hard landing leaves nothing in the floor after its impact")
+	assert_gt(lowest, -0.1, "and only just in at impact (lowest %.3f m)" % lowest)

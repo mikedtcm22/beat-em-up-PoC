@@ -425,6 +425,38 @@ func pending_kicks() -> int:
 	return _pending.size()
 
 
+## Sim velocity (m/s) of the simulating body on bone `bone`, or zero (for tests).
+func body_sim_velocity(bone: StringName) -> Vector3:
+	for i: int in _sim:
+		if _spec[i].bone != bone:
+			continue
+		if _frozen or _applied_scale <= 0.0:
+			return _held_lin[i]
+		var lin: Vector3 = PhysicsServer3D.body_get_state(_bodies[i].get_rid(), PhysicsServer3D.BODY_STATE_LINEAR_VELOCITY)
+		return lin / _applied_scale
+	return Vector3.ZERO
+
+
+## The joints that exist now, and the farthest any simulating body's joint has pulled
+## apart (meters between its bone origin and its anchor on the parent body). For tests.
+func joint_count() -> int:
+	return _joints.filter(func(joint: RID) -> bool: return joint.is_valid()).size()
+
+
+func joint_stretch() -> float:
+	var worst := 0.0
+	var scale := rig.rig_scale()
+	for i: int in _sim:
+		var parent := _parent_body[i]
+		if parent < 0:
+			continue
+		var parent_xf: Transform3D = PhysicsServer3D.body_get_state(_bodies[parent].get_rid(), PhysicsServer3D.BODY_STATE_TRANSFORM)
+		var child_xf: Transform3D = PhysicsServer3D.body_get_state(_bodies[i].get_rid(), PhysicsServer3D.BODY_STATE_TRANSFORM)
+		var anchor: Vector3 = parent_xf * (PlaceholderBody.BONE_REST[_spec[i].bone] * scale)
+		worst = maxf(worst, anchor.distance_to(child_xf.origin))
+	return worst
+
+
 # --- Skeleton update ------------------------------------------------------------------
 
 

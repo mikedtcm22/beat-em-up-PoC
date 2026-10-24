@@ -277,7 +277,7 @@ extends Resource
 ## toward the animation's joint angles, and the share of gravity on it (0: the stagger
 ## animation carries its weight, the ragdoll only gives way).
 @export_range(0.0, 6.0, 0.05) var ragdoll_partial_pose_hz: float = 1.0
-@export_range(0.0, 8.0, 0.05) var ragdoll_partial_limb_pose_hz: float = 1.0
+@export_range(0.0, 8.0, 0.05) var ragdoll_partial_limb_pose_hz: float = 3.0
 @export_range(0.0, 1.0, 0.05) var ragdoll_partial_gravity: float = 0.0
 ## A perfect block knocks the attacker's striking arm back as a hit at this speed would
 ## (times ragdoll_partial_impulse, like every stagger's push).
