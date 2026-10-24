@@ -4,6 +4,33 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-23 23:50 CDT: handoff, account D's 5-hour window at 84%
+The watcher warned at 84% of the 5-hour window (resets 03:30 CDT on 10-24), climbing about 1.2 points a minute. Weekly is at about 47%. The workflow `wf_6868f11f-7bd` is stopped, and nothing else is running. Every branch is committed and pushed, and the worktrees are clean apart from the untracked `captures/` folders.
+- **WP4 state** (`m2/ragdoll`, `.worktrees/m2-ragdoll`):
+  - **Build:** done at `96defb9` (see the 21:55 entry).
+  - **Reviews:** done. 18 findings (13 mechanics, 5 feel) are committed in [docs/reviews/M2-WP4-review-findings.json](reviews/M2-WP4-review-findings.json) on `m2/ragdoll` (`f51cc42`).
+    - High: mechanics F1 (the get-up fade drops the relocation, a pop), F2 (a player standing over the body moves the get-up spot about 0.7 m after a stomp) and F3 (face-down landings lie twisted, up to 1.42 m from the hurtboxes). Feel F1 (a parried jab's forearm swings into the lens) and F2 (finisher launches stay upright through the hitstop exit and the slow-mo).
+    - Mechanics F13 is a spec question (the README departure for heavy-tier knockdowns).
+  - **Verify and fix: cut off mid-pass.**
+    - Its `wip:` commits are `47758b4`, `a599de1` and `73fb051`, plus the lead's `5be9500`, which commits the agent's uncommitted `combat_actor.gd`, `tuning_data.gd` and `default.json` edits. Those edits may be half done.
+    - Going by the commit messages, the pass touched almost every finding:
+      - the get-up fade, no ring jump, re-anchored and limit-clamped pose springs, a whole-body turn, landing aim, influence rise, kick hold and rest from real motion;
+      - new tests (kick held, forced relocation, stomp get-up, face-down, joint limits, re-stagger, calm sleep, idle bodies, re-entered tree, parry, launch snap, CCD), and the arms tracking a stagger.
+    - It recorded **no verdicts**, no after-captures and no final commit.
+    - **`5be9500` passes 425/425 tests**, with no SCRIPT ERROR.
+- **Resume steps:**
+  1. Run **one** agent in `.worktrees/m2-ragdoll` (absolute path; `cd` there for every command). Give it each of the 18 findings in `docs/reviews/M2-WP4-review-findings.json`, and have it:
+     - check each against `96defb9..5be9500` and give a verdict (confirmed, partial or refuted; fixed or not);
+     - finish any gaps;
+     - re-record `tests/bot/ragdoll_bot.tscn` in both views into `captures/review_after/` and judge the frames;
+     - run `tools/run_tests.sh`;
+     - write the verdicts to `docs/reviews/M2-WP4-fix-results.json`;
+     - commit "M2 WP4: review fixes (...)" and push.
+  2. Merge `m2/ragdoll` into `m2/hit-feel`, run the tests (all pass, no SCRIPT ERROR), push and update this file.
+  3. Phase 3 (see the takeover prompt).
+- **Usage this window:** the two reviewers together took the window from 0% to 44%, about 22% each. The verify-and-fix agent then took it from 44% to 84% in about 35 minutes and wasn't finished. Plan on a full window for a WP4-sized build, and about half a window for its fix pass.
+- **Waiting on Game-boy:** the white hit flash (localize it, or keep it as the spec says), and the builder's three ragdoll spec questions (in the 21:55 entry).
+
 ### 2026-10-23 21:55 CDT: WP4 built; reviews wait for the 22:30 reset
 - **Builder done:** `m2/ragdoll` @ `96defb9`, "M2 WP4: partial and full ragdoll". **412/412 tests pass** with no SCRIPT ERROR, and the branch is pushed.
   - Core: `game/actors/ragdoll.gd`, a SkeletonModifier3D after the PhysicalBoneSimulator3D.
@@ -277,12 +304,13 @@ USAGE RULES:
 
 Next steps (Milestone 2; details are in docs/HANDOFF.md):
 - Phase 1 (WP1 tuning panel, WP2 comic VFX, WP3 audio) is done and merged into m2/hit-feel, and 400/400 tests pass. The 8 phase 1 spec questions are answered (all defaults kept), and README notes the two WP1 departures. WP3's audio was judged by analysis only, so I'll listen to it.
-- Phase 2, WP4 (partial and full ragdoll), per docs/milestones/M2-WP4-brief.md. The worktree is ready: .worktrees/m2-ragdoll, branch m2/ragdoll, up to date with m2/hit-feel and imported. The player default is confirmed: enemies and dummies ragdoll, and the player keeps animated reactions, with a toggle. Run it as one workflow:
-  - one builder: implements the brief, tests, ragdoll bot acts, captures in first person and side view; commits wip: often and ends with "M2 WP4: partial and full ragdoll";
-  - then two reviewers at once: mechanics, and feel judged from the captures;
-  - then one agent that verifies each finding adversarially, fixes the ones that hold, and commits "M2 WP4: review fixes (...)";
-  - a get_usage gate before each launch, and nothing new at 65% or more;
-  - tell each agent the absolute worktree path and to cd there (Workflow's isolation: 'worktree' fails here).
+- Phase 2, WP4 (partial and full ragdoll), per docs/milestones/M2-WP4-brief.md, in .worktrees/m2-ragdoll (branch m2/ragdoll). The build (96defb9) and both reviews are done. The 18 findings are in docs/reviews/M2-WP4-review-findings.json on m2/ragdoll. The verify-and-fix pass was cut off at the handoff after several wip: commits; 5be9500 passes 425/425 tests. Finish it with ONE agent (check get_usage first; nothing new at 65% or more):
+  - tell it the absolute worktree path and to cd there for every command (Workflow's isolation: 'worktree' fails here);
+  - for each of the 18 findings, check it against 96defb9..5be9500 and give a verdict (confirmed, partial or refuted; fixed or not), and finish any gaps;
+  - re-record tests/bot/ragdoll_bot.tscn in first person and side view into captures/review_after/ and judge the frames;
+  - run tools/run_tests.sh, write the verdicts to docs/reviews/M2-WP4-fix-results.json, commit "M2 WP4: review fixes (...)" and push;
+  - it may cost about half a 5-hour window.
+- Open questions for me (ask before phase 3 acts on them): M1's white hit flash (localize it to the contact point, or keep the spec's whole-body flash), and the WP4 builder's three ragdoll spec questions in docs/HANDOFF.md's 21:55 entry.
 - Then merge m2/ragdoll into m2/hit-feel, run tools/run_tests.sh (everything must pass, no SCRIPT ERROR), push, and update docs/HANDOFF.md.
 - Then phase 3 for my playtest: integrate, record every act and review it from captures (include M1's white hit flash, which fills much of the first-person view at close range), update README and ARCHITECTURE, and open the Milestone 2 PR.
 
