@@ -61,9 +61,10 @@ The characters are procedural placeholders. Real art, VFX and audio come in Mile
 - **Clinch:** a held enemy bends over further than before, so its head sits just under the throat-height view instead of filling it. A grab eases the victim in from where it stood while it bends over, head first, so its head and shoulders never sweep through the lens; released on its feet, it stands up around its hips, away from the holder.
 - **Flying kick:** it dives forward and down, and its camera pitches down 25° (like the stomp) instead of the 8–12° of the standing kicks. From the air, a foot at hip height passed over a standing enemy's head.
 
-**Where M2 departs from the spec (approved by Game-boy on 2026-10-23):**
+**Where M2 departs from the spec (approved by Game-boy on 2026-10-23 and 2026-10-24):**
 - **The 0.25x cheat slows the hit feel too (Spec §11):** the F4 time scale stretches hitstop and the finisher slow-mo as well as the simulation, so a slowed-down hit keeps its feel, only slower. Camera punch and shake stay at full speed.
 - **Cheats stay out of presets (Spec §11):** god mode and one-hit KOs are session state. Saving, loading or resetting a preset skips the "Debug" group, so a preset never turns a cheat on, and loading one never turns a cheat off.
+- **The white hit flash is localized (Spec §6, approved 2026-10-24):** on contact, the victim flashes white only around the point the hit landed instead of over the whole body. It is full white at the contact point and fades out by a radius (default about 0.25 m, about a head's width), at a strength you can set. Both are in the "Hit feel" tuning group, and a large radius brings back the whole-body flash. At 1 m in first person, the whole-body flash turned 27-36% of the view white on a jab.
 
 **Automated checks:**
 - `tools/run_tests.sh` runs 297 tests headless in about 13 seconds, including an end-to-end suite where a scripted player performs every combo in the real test room.

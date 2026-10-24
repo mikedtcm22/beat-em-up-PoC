@@ -13,7 +13,7 @@ Game-boy stayed on account D. The 5-hour window is at 4% (resets 13:40 CDT), and
   - write `docs/reviews/M2-WP4-fix-results.json`;
   - commit "M2 WP4: review fixes (...)" and push, with `wip:` commits every 15-20 minutes.
 - **If cut off:** check `m2/ragdoll` for the "review fixes" commit. Without one, rerun the same step from the newest `wip:` commit.
-- **Still open with Game-boy:** the white hit flash, and the builder's three ragdoll spec questions. The agent leaves all three ragdoll behaviours as they are.
+- **Still open with Game-boy:** the builder's three ragdoll spec questions. The agent leaves all three ragdoll behaviours as they are. (The white hit flash was decided at 10:40: localize it; see the Decisions log.)
 
 ### 2026-10-23 23:50 CDT: handoff, account D's 5-hour window at 84%
 The watcher warned at 84% of the 5-hour window (resets 03:30 CDT on 10-24), climbing about 1.2 points a minute. Weekly is at about 47%. The workflow `wf_6868f11f-7bd` is stopped, and nothing else is running. Every branch is committed and pushed, and the worktrees are clean apart from the untracked `captures/` folders.
@@ -247,6 +247,7 @@ Every approved spec change so far is in README.md, "Where M1 departs from the sp
   - WP3: the body fall stays at contact, there's no new `attack_active` event, the wind-up whoosh stays, and there's no slow-mo audio filter.
   - WP2: bruised still scuffs the clothes, and there's no separate "reduce flashing" toggle.
   - WP1: the 0.25x cheat also stretches hitstop and slow-mo, and cheats stay out of presets. Both are recorded in README, "Where M2 departs from the spec".
+- **White hit flash (2026-10-24 10:40 CDT): localized.** Full white at the contact point, fading out by a tunable radius (default about 0.25 m), with a tunable strength, both in "Hit feel". A large radius gives the old whole-body look. Recorded in README's M2 departures. It's implemented in phase 3, after WP4 merges: `combat_actor.gd` and `humanoid_rig.gd` overlap WP4. Also check that it really shows `hit_flash_frames` (2) frames, since the WP2 captures show one white frame per hit.
 - **Process:** at each usage limit, hand off to Game-boy's second Claude account. Never assume the same session resumes.
 
 ## Usage watcher
@@ -321,7 +322,7 @@ Next steps (Milestone 2; details are in docs/HANDOFF.md):
   - re-record tests/bot/ragdoll_bot.tscn in first person and side view into captures/review_after/ and judge the frames;
   - run tools/run_tests.sh, write the verdicts to docs/reviews/M2-WP4-fix-results.json, commit "M2 WP4: review fixes (...)" and push;
   - it may cost about half a 5-hour window.
-- Open questions for me (ask before phase 3 acts on them): M1's white hit flash (localize it to the contact point, or keep the spec's whole-body flash), and the WP4 builder's three ragdoll spec questions in docs/HANDOFF.md's 21:55 entry.
+- Decided: localize M1's white hit flash (see docs/HANDOFF.md's Decisions log), and implement it in phase 3 after WP4 merges. Still open for me: the WP4 builder's three ragdoll spec questions in docs/HANDOFF.md's 21:55 entry.
 - Then merge m2/ragdoll into m2/hit-feel, run tools/run_tests.sh (everything must pass, no SCRIPT ERROR), push, and update docs/HANDOFF.md.
 - Then phase 3 for my playtest: integrate, record every act and review it from captures (include M1's white hit flash, which fills much of the first-person view at close range), update README and ARCHITECTURE, and open the Milestone 2 PR.
 
