@@ -18,7 +18,7 @@ Still open with Game-boy:
 - WP3's audio, which only he can judge by ear.
 
 ## Work
-Check `mcp__ccd_session_mgmt__get_usage` before every agent launch, and launch nothing new at 65% or more of either window. Plan on about 25-50% of a 5-hour window per heavy agent. Packages A and B own disjoint files, so they can run as two agents at once, each in its own worktree off `m2/hit-feel`: create them with `git worktree add .worktrees/<name> -b <branch> m2/hit-feel`, then run `godot --headless --import --quit` in each. Tell each agent its absolute worktree path and to `cd` there for every command. The Workflow tool's `isolation: 'worktree'` fails here.
+Check `mcp__ccd_session_mgmt__get_usage` before every agent launch, and size each launch to the headroom left below the 90% handoff (HANDOFF, "Usage rules for the working session"). Plan on about 25-50% of a 5-hour window per heavy agent. Packages A and B own disjoint files, so they can run as two agents at once, each in its own worktree off `m2/hit-feel`: create them with `git worktree add .worktrees/<name> -b <branch> m2/hit-feel`, then run `godot --headless --import --quit` in each. Tell each agent its absolute worktree path and to `cd` there for every command. The Workflow tool's `isolation: 'worktree'` fails here.
 
 ### A. Ragdoll changes (worktree `.worktrees/m2-ragdoll2`, branch `m2/ragdoll-tune`)
 Owned files:
