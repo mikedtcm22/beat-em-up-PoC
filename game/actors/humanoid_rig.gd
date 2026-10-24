@@ -64,6 +64,12 @@ extends Node3D
 	set(value):
 		skin_color = value
 		_apply_colors()
+## The trousers' color. Fully transparent (the default) paints them body_color darkened, as
+## on the enemies and dummies; the player's are a color of their own (_configure_rig()).
+@export var pants_color: Color = Color.TRANSPARENT:
+	set(value):
+		pants_color = value
+		_apply_colors()
 ## How the body stands, walks, and starts and ends every move (PlaceholderPoses.STANCE_*):
 ## &"boxer" keeps the fists up at the chin (enemies, dummies); &"relaxed" lets the arms
 ## hang loose until a strike (the player, so the first-person view stays clear). Strike
@@ -98,7 +104,7 @@ var damage_look: int = 0
 const _MOVE_LIBRARY := &"moves"
 ## Shades, belt and soles.
 const _DARK_COLOR := Color(0.07, 0.07, 0.08)
-## Trousers are body_color darkened by this much.
+## Trousers without a pants_color of their own are body_color darkened by this much.
 const _PANTS_DARKEN := 0.45
 ## A KO that starts while the body is already lying skips to this many seconds before
 ## the end of the ko_* slump, so the body does not stand back up first.
@@ -1051,7 +1057,8 @@ func _apply_colors() -> void:
 	if _materials.is_empty():
 		return
 	_materials[PlaceholderBody.Paint.BODY].albedo_color = body_color
-	_materials[PlaceholderBody.Paint.PANTS].albedo_color = body_color.darkened(_PANTS_DARKEN)
+	_materials[PlaceholderBody.Paint.PANTS].albedo_color = \
+			body_color.darkened(_PANTS_DARKEN) if pants_color.a <= 0.0 else pants_color
 	_materials[PlaceholderBody.Paint.ACCENT].albedo_color = accent_color
 	_materials[PlaceholderBody.Paint.SKIN].albedo_color = skin_color
 	_materials[PlaceholderBody.Paint.DARK].albedo_color = _DARK_COLOR

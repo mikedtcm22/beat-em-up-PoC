@@ -106,6 +106,11 @@ func _configure_rig(r: HumanoidRig) -> void:
 	r.stance = PlaceholderPoses.STANCE_RELAXED
 	r.wrapped_hands = true
 	r.body_color = Color(0.2, 0.36, 0.62)
+	# Gray trousers, apart from the navy shirt: in the first-person hold the rising knee sits
+	# beside the shaded right sleeve, and the shirt's navy darkened (the enemies' trousers)
+	# merged the two into one blue lump. Lighter than charcoal, so the knee also stands apart
+	# from the held head's dark hair beside it.
+	r.pants_color = Color(0.3, 0.3, 0.32)
 	r.accent_color = Color(0.93, 0.9, 0.82)
 	r.skin_color = Color(0.82, 0.6, 0.45)
 
