@@ -264,7 +264,7 @@ static func relaxed_weapon_guard() -> Dictionary[StringName, Vector3]:
 ## clinch. The bend leans the eyes about 0.12 m forward and 0.07 m down, out over the
 ## victim; the first-person hold view (Tuning "Grab and weapons" > "Hold view") moves the
 ## lens back and up from there and pitches it down onto the victim. Clinch moves (knee,
-## throw) start and end here.
+## throw) start here; the knee ends here, the throw in the stance.
 static func hold() -> Dictionary[StringName, Vector3]:
 	return merge(guard(), {
 		HIPS_NUDGE: Vector3(0.0, 0.0, 0.08),
