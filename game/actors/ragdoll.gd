@@ -414,6 +414,18 @@ func max_body_speed() -> float:
 	return top
 
 
+## Largest sim spin (rad/s) of any simulating body, and of the bodies on these skeleton
+## bones if `bones` is not empty (0 when none). For tests.
+func max_body_spin(bones: Array[StringName] = []) -> float:
+	var top := 0.0
+	for i: int in _sim:
+		if not bones.is_empty() and not bones.has(_spec[i].bone):
+			continue
+		var ang: Vector3 = PhysicsServer3D.body_get_state(_bodies[i].get_rid(), PhysicsServer3D.BODY_STATE_ANGULAR_VELOCITY)
+		top = maxf(top, ang.length() / _applied_scale if _applied_scale > 0.0 else _held_ang[i].length())
+	return top
+
+
 ## The simulating bodies' world transforms (for tests and debug draw).
 func body_transforms() -> Array[Transform3D]:
 	var out: Array[Transform3D] = []
@@ -436,6 +448,18 @@ func body_sim_velocity(bone: StringName) -> Vector3:
 			return _held_lin[i]
 		var lin: Vector3 = PhysicsServer3D.body_get_state(_bodies[i].get_rid(), PhysicsServer3D.BODY_STATE_LINEAR_VELOCITY)
 		return lin / _applied_scale
+	return Vector3.ZERO
+
+
+## Sim spin (rad/s) of the simulating body on bone `bone`, or zero (for tests).
+func body_sim_spin(bone: StringName) -> Vector3:
+	for i: int in _sim:
+		if _spec[i].bone != bone:
+			continue
+		if _frozen or _applied_scale <= 0.0:
+			return _held_ang[i]
+		var ang: Vector3 = PhysicsServer3D.body_get_state(_bodies[i].get_rid(), PhysicsServer3D.BODY_STATE_ANGULAR_VELOCITY)
+		return ang / _applied_scale
 	return Vector3.ZERO
 
 

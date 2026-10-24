@@ -701,25 +701,31 @@ func test_drawn_joints_stay_inside_their_limits() -> void:
 
 
 func test_a_stagger_on_a_stagger_does_not_pop_the_upper_body() -> void:
+	# A second stagger with no push: nothing new should show but the animation's restart. The
+	# first stagger's give is still moving the head then (more of it shows at a higher
+	# Tuning.ragdoll_partial_influence), so the reference is the same body left alone.
 	for wait: int in [6, 14, 22]:
-		await _setup([Vector3(0, 0, -1.6)])
-		var dummy := dummies[0]
-		assert_true(dummy.receive_hit(_hit(dummy, CombatTypes.Reaction.STAGGER, Vector3(2.0, 0.0, 1.0))))
-		await _ticks(wait)
-		assert_eq(dummy.rig.ragdoll_mode(), Ragdoll.Mode.PARTIAL)
-		var head := dummy.rig.get_attachment(&"Head").global_position
-		var anim_head := dummy.rig.get_point_position(&"Head")
-		# A second stagger with no push: nothing new should show but the animation's restart.
-		assert_true(dummy.receive_hit(_hit(dummy, CombatTypes.Reaction.STAGGER, Vector3.ZERO)))
-		var worst := 0.0
-		for i in 3:
-			await get_tree().physics_frame
-			var now := dummy.rig.get_attachment(&"Head").global_position
-			var anim_now := dummy.rig.get_point_position(&"Head")
-			worst = maxf(worst, now.distance_to(head) - anim_now.distance_to(anim_head))
-			head = now
-			anim_head = anim_now
-		assert_lt(worst, 0.045, "after %d frames: the drawn head moves no more than the animation's (%.3f m more)" % [wait, worst])
+		var moved: Array[float] = []
+		for again: bool in [false, true]:
+			await _setup([Vector3(0, 0, -1.6)])
+			var dummy := dummies[0]
+			assert_true(dummy.receive_hit(_hit(dummy, CombatTypes.Reaction.STAGGER, Vector3(2.0, 0.0, 1.0))))
+			await _ticks(wait)
+			assert_eq(dummy.rig.ragdoll_mode(), Ragdoll.Mode.PARTIAL)
+			var head := dummy.rig.get_attachment(&"Head").global_position
+			var anim_head := dummy.rig.get_point_position(&"Head")
+			if again:
+				assert_true(dummy.receive_hit(_hit(dummy, CombatTypes.Reaction.STAGGER, Vector3.ZERO)))
+			var worst := 0.0
+			for i in 3:
+				await get_tree().physics_frame
+				var now := dummy.rig.get_attachment(&"Head").global_position
+				var anim_now := dummy.rig.get_point_position(&"Head")
+				worst = maxf(worst, now.distance_to(head) - anim_now.distance_to(anim_head))
+				head = now
+				anim_head = anim_now
+			moved.append(worst)
+		assert_lt(moved[1], moved[0] + 0.015, "after %d frames: the drawn head moves no more than the animation's beyond the give already under way (%.3f m, left alone %.3f m)" % [wait, moved[1], moved[0]])
 
 
 func test_a_lying_ragdoll_sleeps_once_it_is_still_and_wakes_when_hit() -> void:
@@ -954,3 +960,90 @@ func test_bodies_use_continuous_collision_and_stay_out_of_the_floor() -> void:
 	# (A foot slammed in at 15 m/s may show a few centimeters in for the one frame of impact.)
 	assert_lte(sunk, 1, "a hard landing leaves nothing in the floor after its impact")
 	assert_gt(lowest, -0.1, "and only just in at impact (lowest %.3f m)" % lowest)
+
+
+# --- Milestone 2 phase 3: the kick at the contact point, stronger staggers ----------------
+
+
+func test_a_kick_off_center_twists_the_struck_part_within_its_cap() -> void:
+	# The same glancing stagger kick on the head (pushed sideways, struck in front of the
+	# face) with the contact push off and on: on, the head turns faster on the step the kick
+	# lands, by the head's cap (the raw twist is far above it) and no more.
+	var spins: Array[Vector3] = []
+	var cap := 10.0
+	for at_contact: bool in [false, true]:
+		await _setup([Vector3(0, 0, -1.6)])
+		Tuning.data.ragdoll_kick_at_contact = at_contact
+		Tuning.data.ragdoll_contact_spin_head = cap
+		var dummy := dummies[0]
+		var hit := _hit(dummy, CombatTypes.Reaction.STAGGER, dummy.get_forward().cross(Vector3.UP) * 3.0)
+		hit.contact_point = dummy.rig.get_point_position(&"Head") + dummy.get_forward() * 0.12
+		assert_true(dummy.receive_hit(hit))
+		var ragdoll := dummy.rig.get_ragdoll()
+		assert_true(await _wait_until(func() -> bool: return ragdoll.pending_kicks() == 0, 10), "the kick lands")
+		await get_tree().physics_frame
+		spins.append(ragdoll.body_sim_spin(&"Head"))
+	var twist := (spins[1] - spins[0]).length()
+	gut.p("contact twist on the head: %.1f rad/s (cap %.1f; central %.1f, contact %.1f)" % [twist, cap, spins[0].length(), spins[1].length()])
+	assert_gt(twist, cap * 0.5, "the kick off the head's center twists it")
+	assert_lt(twist, cap * 1.3, "no faster than the head's cap (the joints add a little in the step)")
+
+
+func test_the_contact_push_stays_within_its_caps_after_many_hits_in_a_row() -> void:
+	# Staggers, launches, knockdowns and stomps, struck well off each part's center in every
+	# direction: no NaN, no body faster or spinning faster than the safety caps (the joints may
+	# add a little within a step), no joint pulled apart.
+	await _setup([Vector3(0, 0, -1.6)])
+	assert_true(Tuning.data.ragdoll_kick_at_contact, "on by default")
+	var dummy := dummies[0]
+	var reactions: Array[CombatTypes.Reaction] = [
+		CombatTypes.Reaction.STAGGER, CombatTypes.Reaction.STAGGER, CombatTypes.Reaction.LAUNCH,
+		CombatTypes.Reaction.STAGGER, CombatTypes.Reaction.KNOCKDOWN,
+	]
+	var regions: Array[CombatTypes.Region] = [CombatTypes.Region.HEAD, CombatTypes.Region.TORSO, CombatTypes.Region.LEGS]
+	var spin := 0.0
+	var stretch := 0.0
+	for i in 60:
+		var reaction := reactions[i % reactions.size()]
+		if dummy.is_downed():
+			reaction = CombatTypes.Reaction.GROUND
+		var kb := Vector3(sin(i * 1.7) * 7.0, 1.0 + (i % 3) * 2.0, cos(i * 0.9) * 7.0)
+		var hit := _hit(dummy, reaction, kb, regions[i % regions.size()])
+		hit.contact_point += Vector3(sin(i * 2.3), cos(i * 1.1), sin(i * 0.5)) * 0.4
+		dummy.receive_hit(hit)
+		if i % 13 == 12:
+			dummy.reset_state()
+		for t in 3:
+			await get_tree().physics_frame
+			assert_true(_sane(dummy), "sane after hit %d" % i)
+			var ragdoll := dummy.rig.get_ragdoll()
+			if ragdoll and ragdoll.is_running():
+				spin = maxf(spin, ragdoll.max_body_spin())
+				stretch = maxf(stretch, ragdoll.joint_stretch())
+	gut.p("many off-center hits: top spin %.1f rad/s (cap %.0f), joints pulled apart at most %.3f m" % [spin, Tuning.data.ragdoll_max_spin, stretch])
+	assert_lt(spin, Tuning.data.ragdoll_max_spin * 1.25, "no body spins away")
+	assert_lt(stretch, 0.12, "the joints hold the bodies together")
+	assert_true(await _wait_until(func() -> bool: return dummy.state == CombatTypes.ActorState.FREE, 400), "and recovers")
+
+
+func test_staggers_give_way_more_at_the_new_influence() -> void:
+	# Game-boy's call: above Spec §6's 0.3-0.6, so staggers read from the side view too. The
+	# hook's stagger at 0.6 and at the default: the upper body gives way visibly more, and it
+	# is still a stagger.
+	assert_gt(Tuning.data.ragdoll_partial_influence, 0.6, "above the spec's range")
+	var influences: Array[float] = [0.6, Tuning.data.ragdoll_partial_influence]
+	var gaps: Array[float] = []
+	for influence: float in influences:
+		await _setup([Vector3(0, 0, -1.6)])
+		Tuning.data.ragdoll_partial_influence = influence
+		var dummy := dummies[0]
+		_queue(&"P", 3)
+		assert_true(await _wait_until(func() -> bool: return dummy.state == CombatTypes.ActorState.STAGGER, 120), "staggered")
+		var upper := 0.0
+		while dummy.state == CombatTypes.ActorState.STAGGER:
+			await get_tree().physics_frame
+			upper = maxf(upper, _gap(dummy, [&"Head", &"Chest", &"LeftHand", &"RightHand"]))
+		gaps.append(upper)
+	gut.p("hook stagger: the upper body gave way %.3f m at 0.6, %.3f m at %.2f" % [gaps[0], gaps[1], influences[1]])
+	assert_gt(gaps[1], gaps[0] * 1.3, "gives way visibly more")
+	assert_lt(gaps[1], 0.6, "still a stagger")
