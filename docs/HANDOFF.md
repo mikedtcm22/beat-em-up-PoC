@@ -4,6 +4,18 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-24 12:40 CDT: handoff to a fresh account for package C (Game-boy's call)
+Account E is at 70% of its 5-hour window (resets 16:30 CDT) and 26% weekly (resets Tue 2026-10-27 17:00 CDT), past the 65% launch line. Game-boy chose to switch accounts now rather than wait for the reset. This session is renamed "Beat-em-up: account E session (handed off)", which frees the working-session title. Its watcher `usage-watcher-f` is told to end its loop.
+- **State:** `m2/hit-feel` @ the commit after `c9ec777` (this entry) has phases 1-2, the flash, and phase 3's A and B merged. **457/457 tests pass with no SCRIPT ERROR or ERROR.** **No agents or workflows are running.** Every branch is pushed. The worktrees are clean apart from untracked `captures/`. `m2/ragdoll-tune` and `m2/grab-view` are merged; their worktrees hold the A/B, KO and grab sheets (local only).
+- **Next: package C as a Workflow.** Follow [M2-phase3-plan.md](milestones/M2-phase3-plan.md), "C", step 2: reviewer worktrees, five review lenses, three skeptics per finding, fixers in worktrees with disjoint files, a completeness critic, and usage gates. Then D: check ARCHITECTURE's VFX, Audio, Ragdoll, Hit flash and hold-view sections against the code, add README's Milestone 2 status and the test count, then the M2 PR (never merged without Game-boy's sign-off). D's README controls, the three departures and ARCHITECTURE's title are done.
+- **Usage this account (E):** A and B, run together, took the window from 1% to 68% in about 50 minutes: A about 417k tokens, B about 464k. Plan on about 30-35% of a 5-hour window per builder of that size.
+- **Waiting on Game-boy** (each has a default; none blocks C):
+  - A: more contortion on the contact push? It would mean wider joint limits or softer stagger pose springs. Default: as it is.
+  - B: is the lens pull-back while holding acceptable, and is the bend deep enough? Default: as it is.
+  - The combat log sits over the knee contact. Default: C's review proposes a fix.
+  - The flash's minimum on-screen size in side view. Default: leave it.
+  - A listen to WP3's audio.
+
 ### 2026-10-24 12:25 CDT: A and B merged (457/457); C waits for usage
 - **A done:** `m2/ragdoll-tune` @ `7010250` (448/448 in its worktree, re-run by the lead). Tunables:
   - `ragdoll_partial_influence` 0.6 -> 0.9 (`ragdoll_partial_impulse` stays 7.0: the hook and guard-break kicks already reach `ragdoll_max_kick` 14);
@@ -352,6 +364,8 @@ Every approved spec change so far is in README.md, "Where M1 departs from the sp
   - heavy-tier knockdowns get the full ragdoll (a departure);
   - staggers may exceed SPEC §6's 0.6 influence (a departure).
 - **Grab view (2026-10-24 11:05 CDT):** while holding, the first-person view pans down so the knees show landing on the held enemy, and the player bends at the waist for the hold and the knees. The spec doesn't cover it, so it's not a departure. Details: [milestones/M2-phase3-plan.md](milestones/M2-phase3-plan.md).
+- **Ultracode (2026-10-24 11:38 CDT):** Game-boy turned ultracode on. Substantive work runs as Workflow scripts (multi-lens review, adversarial verification, completeness critic), with the usage rules still in force.
+- **Handoff for package C (2026-10-24 12:38 CDT):** switch accounts now rather than wait for account E's 16:30 reset.
 - **Process:** at each usage limit, hand off to Game-boy's second Claude account. Never assume the same session resumes.
 
 ## Usage watcher
@@ -420,8 +434,8 @@ USAGE RULES:
 
 Next steps (Milestone 2; details are in docs/HANDOFF.md):
 - Phases 1 and 2, the localized flash and phase 3's packages A (ragdoll: contact push, KO blink-off, staggers at 0.9) and B (grab view and waist bend) are merged into m2/hit-feel. 457/457 tests pass with no SCRIPT ERROR, at f98bb21. README has the three approved M2 ragdoll departures. WP3's audio was judged by analysis only, so I'll listen to it.
-- Next is phase 3's package C, run as a Workflow (I turned ultracode on): see the newest docs/HANDOFF.md entry for its plan. Per-reviewer worktrees at the merge commit, review lenses (phase 3 code, ragdoll feel, grab feel, hit feel per tier and view with the known items, performance), three skeptics per finding, fixers in their own worktrees with disjoint files, a completeness critic, and a Haiku usage gate before every launch (nothing new at 65%; at most two heavy agents at once). Then D: check ARCHITECTURE against the code, README Milestone 2 status, and the M2 PR, which is never merged without my sign-off.
-- Open for me: whether the localized flash gets a minimum on-screen size, since in side view the 0.25 m flash hides under the comic burst (default: leave it as it is). And I'll listen to WP3's audio.
+- Next is phase 3's package C, run as a Workflow (I turned ultracode on): follow docs/milestones/M2-phase3-plan.md, "C", step 2. Reviewer worktrees at the m2/hit-feel head, five review lenses (phase 3 code, ragdoll feel, grab feel, hit feel per tier and view with the known items, performance), three skeptics per finding, fixers in their own worktrees with disjoint files, a completeness critic, and a Haiku usage gate before every launch (nothing new at 65%; at most two heavy agents at once). Then D: check ARCHITECTURE against the code, README's Milestone 2 status, and the M2 PR, which is never merged without my sign-off.
+- Open for me (each has a default; none blocks C): more contortion on the ragdoll contact push (default: as it is); the grab's lens pull-back and the bend's depth (default: as they are); the combat log over the knee contact (default: C proposes a fix); a minimum on-screen size for the side-view flash (default: leave it). And I'll listen to WP3's audio.
 
 Ground rules:
 - Never merge a milestone PR into main until I've played it and signed it off.

@@ -65,24 +65,52 @@ Owned files:
 5. Commit "M2 phase 3: grab view and waist bend (...)", and push.
 
 ### C. Integrate, record, review (the lead, after A and B)
-1. Merge A and B into `m2/hit-feel`. Then run `godot --headless --import --quit && godot --headless -s tools/gen_default_preset.gd`, run `tools/run_tests.sh` (all pass, no SCRIPT ERROR or ERROR), and push. Update HANDOFF.
-2. Record every act in first person and side view: `tests/bot/combo_bot.tscn`, `vfx_bot.tscn` and `ragdoll_bot.tscn`. Judge them from the frames as Game-boy would:
-   - hit feel per tier, and readability;
-   - no effect fills the first-person view;
-   - the localized flash with the ragdoll;
-   - the grab and the knees;
-   - KO blink-off and respawn.
+1. **Done (account E, 2026-10-24 12:25 CDT):** A and B are merged into `m2/hit-feel` (`2543cc6`, `f98bb21`), the preset regenerated unchanged (296 values), and 457/457 tests pass with no SCRIPT ERROR or ERROR. Also done: the speed lines draw from VfxDirector's seeded `rng` (`ac58377`), the help overlay's F1 label and the stale emission comment in `tests/test_vfx.gd` are fixed, and README has the controls and the three approved departures.
+2. **Review, verify and fix as one Workflow** (Game-boy turned ultracode on at 11:38: thoroughness over cost; the usage rules still hold). Author the script inline (load the `workflow-authoring` skill first). The Workflow tool's `isolation: 'worktree'` fails here, so the lead makes every worktree before the launch and each prompt names its absolute path:
+   - one per reviewer, detached at the `m2/hit-feel` head: `git worktree add --detach .worktrees/m2-review-<lens> m2/hit-feel`, then `godot --headless --import --quit` inside it;
+   - fixers later, one branch each: `git worktree add .worktrees/m2-fix-<area> -b m2/phase3-fix-<area> m2/hit-feel`.
 
-   Also check the known items in HANDOFF's 10:55 entry:
-   - a hit on the player shows no flash in first person; does it still read?
-   - the side-view flash hides under the burst (an open question for Game-boy: a minimum on-screen size for the flash, which would be new design; default: leave it as it is);
-   - WP4 and WP2 leftovers;
-   - the unseeded speed-line random generator, which makes captures differ after a finisher;
-   - the stale emission comment in `tests/test_vfx.gd`;
-   - the help overlay's F1 label.
+   **Stage 1, review (review only; each records its own captures in its worktree's `captures/`):**
+   - **Code:** the phase 3 diff `f43ab9a..m2/hit-feel` (A, B and the lead's fixes). Correctness; layer rules (simulation never reads a camera; presentation never writes game state, including the vanish path through `CombatEvents.vanished`, `HumanoidRig.set_shown()`, `hud.gd`, `enemy_health_bars.gd` and `debug_draw.gd`); no feel numbers in scripts; edge cases:
+     - a body that vanishes while held, thrown, in a pile or under a stomp;
+     - a grab or lock-on aimed at a blinking body;
+     - a respawn into an occupied post;
+     - the player's own KO;
+     - the hold view when the hold ends early: hit while holding, the held enemy KO'd by a knee, `hold_max_frames`, a release;
+     - presets that predate the new tunables;
+     - the contact push's caps and NaN guards.
+   - **Ragdoll feel:** every `ragdoll_bot` act in both views. Whether the contact push reads, the staggers at 0.9, the KO lie, blink, vanish and respawn, and the localized flash on a ragdoll. Also A's known items: the side-view health bar on a staggered head, and blood splats left after a vanish.
+   - **Grab feel:** the `combo_bot` grab acts (including "Grab looking level") and `vfx_bot` "VFX: knees under the view", first person and side view. The first-person rules (no forearm or hand within 0.3 m of the lens, nothing fills the view), the combat log over the knee contact, the blue sleeves against the blue knee, and the head as a skin dome from behind.
+   - **Hit feel:** every `combo_bot` and `vfx_bot` act in both views, tier by tier: readability, and no effect filling the first-person view. Also HANDOFF 10:55's known items:
+     - a hit on the player shows no flash in first person; does it still read?
+     - the side-view flash hides under the burst;
+     - the first finisher of a run drops about one frame;
+     - light bursts are about 10% of the view at jab range;
+     - the bruised look is subtle in side view;
+     - the combat log covers the side view in `combo_bot` captures;
+     - the speed lines now repeat between captures.
+   - **Performance:** frame times with six ragdolls (about 1.2-1.5 ms before), the contact push, the flash overlay and the first finisher's dropped frame (shader or texture warm-up?).
+   - Each reviewer returns findings through a schema: id, lens, title, severity, evidence (capture path and frame, test or log line), repro steps, suggested fix, and the files a fix touches.
 
-   Show Game-boy the most telling sheets.
-3. One adversarial review-then-fix agent over the integrated build (mechanics, plus feel from captures). It commits "M2 phase 3: review fixes (...)" and pushes.
+   **Stage 2, verify:** in a `pipeline()`, so each lens's findings verify as soon as its review ends. For every finding, three skeptics, each told to refute it, one per lens:
+   - reproduce it from captures or a test;
+   - check it against SPEC, README's departures and HANDOFF's Decisions log, since approved behaviour isn't a defect;
+   - read the code path.
+
+   A finding survives with two or more confirmations. Skeptics are cheaper: a narrow scope, and a Sonnet model with medium effort is fine.
+
+   **Stage 3, fix:** partition the surviving findings into fix packages with disjoint files. That needs all findings at once, so a barrier is justified here. Run at most two fixers at once, each in its own fix worktree. Each fixer:
+   - fixes its findings and adds tests;
+   - re-records the affected acts and judges them;
+   - runs `tools/run_tests.sh` (all pass, no SCRIPT ERROR or ERROR);
+   - commits `wip:` along the way, then "M2 phase 3: review fixes (<area>)", and pushes.
+
+   Spec questions go back to the lead for Game-boy, not into code.
+
+   **Stage 4, completeness critic:** which lens, act, view or finding went unchecked? What it names becomes another round, or goes in the report.
+
+   **Usage gates:** a Haiku agent calls `mcp__ccd_session_mgmt__get_usage` before every heavy launch. Nothing new launches at 65% or more of either window, and at most two heavy agents run at once (reviewers and fixers count as heavy). Expect C to need more than one 5-hour window: a reviewer costs about 13% and a fixer about 25%. Within a session, resume with `resumeFromRunId`. Across accounts, the findings must be in the repo: have the workflow's first verify step write `docs/reviews/M2-phase3-review-findings.json` and commit it in a fix worktree, or have the lead do it.
+3. **After the workflow:** the lead merges the fix branches into `m2/hit-feel`, regenerates the preset, runs the tests, pushes, records the final sheets (both views: grab, knees, ragdoll acts, KO cycle, a finisher), shows Game-boy the most telling ones, and updates HANDOFF.
 
 ### D. Docs and the PR
 1. README:
