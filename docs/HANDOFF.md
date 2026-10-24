@@ -4,6 +4,16 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-23 20:33 CDT: Game-boy switches to a fresh account now
+This account is at 86% of its 5-hour window, which resets at 21:39 CDT; weekly is at 15%. Game-boy chose a fresh account over waiting for that reset. This session stopped its 21:41 WP4 launch timer, so nothing launches here. It told its watcher (`usage-watcher-d`) to end its loop and renamed itself "Beat-em-up: 20:20 takeover session (handed off)", which frees the working-session title.
+- **State:** everything is committed and pushed, and the worktrees are clean. No workflows or agents are running.
+  - `m2/hit-feel` @ `584be65` (this entry follows): phase 1 merged, 400/400 tests.
+  - `m2/ragdoll` @ `584be65`, `.worktrees/m2-ragdoll`: up to date and imported, with no WP4 work yet.
+- **Decisions since the last entry:** Game-boy kept all eight phase 1 spec defaults (see "Decisions log"). README now has "Where M2 departs from the spec" with the two WP1 items.
+- **Resume steps:**
+  1. Start from the takeover prompt under "Takeover prompt". Its "Next steps" are current.
+  2. Run WP4 as a workflow in `.worktrees/m2-ragdoll`: one builder, then two reviewers at once, then one verify-and-fix agent, with a usage gate before each launch. Tell each agent the absolute worktree path, since the Workflow tool's `isolation: 'worktree'` fails here.
+
 ### 2026-10-23 20:25 CDT: phase 1 merged into `m2/hit-feel`; spec questions with Game-boy
 A new working session took over at 79% of its 5-hour window (resets 21:39 CDT) and 14% weekly (resets Tue 2026-10-27 17:00 CDT). These are account B's reset times. Its watcher runs: "Beat-em-up: usage watcher", name `usage-watcher-d`. It launched no agents (over the 65% gate) and did the rest itself.
 - **WP1 done:** the lead checked all 17 findings against `a9f2aca` and `77455ed`; every one is fixed. Marker commit `99ff984`, "M2 WP1: review fixes (...)", pushed. Per-finding verdicts are in [docs/reviews/M2-phase1-fix-results.json](reviews/M2-phase1-fix-results.json) under `WP1-tuning`. The panel capture is `.worktrees/m2-tuning/captures/panel_after.avi` (local): pad focus walks a subgrouped page.
@@ -14,11 +24,11 @@ A new working session took over at 79% of its 5-hour window (resets 21:39 CDT) a
   - Damage looks read at 1 m in first person. In the full side view the bruised step is near invisible and bloodied faint, and the bloodied splats tile evenly over the shirt, like a print.
   - Phase 3 item, out of WP2's scope: M1's white hit flash fills about 40% of the first-person view on a jab at contact, and a wide band on knees.
 - **Merged** `m2/tuning`, `m2/vfx` and `m2/audio` into `m2/hit-feel` (`361b4ec`, `4fbfef6`, `a3579fd`), keeping all four presentation lines and both ASSETS.md sections. The default preset is regenerated (231 values, `8a00724`). **400/400 tests pass with no SCRIPT ERROR.** Pushed.
-- **Answered at 20:40 CDT: keep all eight defaults** (see "Decisions log"). Before that, the session was waiting on Game-boy for answers to the 8 spec questions below (WP3 ×4, WP2 ×2, and WP1 ×2, which are already implemented with the reviewers' defaults). Nothing acts on them until he answers.
+- **Answered at 20:30 CDT: keep all eight defaults** (see "Decisions log"). Before that, the session was waiting on Game-boy for answers to the 8 spec questions below (WP3 ×4, WP2 ×2, and WP1 ×2, which are already implemented with the reviewers' defaults). Nothing acts on them until he answers.
   - WP1, debug time scale: 0.25x also stretches hitstop and the slow-mo timers, while camera punch and shake stay real time. Default: keep.
   - WP1, cheats out of presets: Save, Load and Reset skip the Debug group. Default: keep, and note it in README's Milestone 2 departures.
 - **Next:** WP4 starts only after the 21:39 CDT reset (a heavy agent costs about 25%), per [docs/milestones/M2-WP4-brief.md](milestones/M2-WP4-brief.md), in a new worktree off `m2/hit-feel`.
-- **WP4 setup (20:35 CDT):** worktree `.worktrees/m2-ragdoll` on branch `m2/ragdoll` (from `8f0b5f7`, imported, pushed). Ultracode is on, so WP4 runs as a workflow once the window resets and passes the 65% gate:
+- **WP4 setup (20:26 CDT):** worktree `.worktrees/m2-ragdoll` on branch `m2/ragdoll` (from `8f0b5f7`, imported, pushed). WP4 is to run as a workflow:
   - one builder;
   - then two reviewers at once, one on mechanics and one on feel from captures;
   - then one agent that verifies each finding adversarially and fixes the ones that hold.
@@ -154,7 +164,7 @@ Every approved spec change so far is in README.md, "Where M1 departs from the sp
   - the back elbow turns the view 150° (Game-boy is to confirm whether 110° is preferred).
 - **Ragdoll (M2 WP4, 2026-10-23):** enemies and training dummies ragdoll. The player keeps animated reactions by default, with a toggle in the "Ragdoll" tuning group.
 - **Usage watcher cadence (20:13 CDT):** checks every 20 minutes below 70%, every 10 minutes up to 85%, every 5 minutes above that. It halts work and hands off at 90% (it was 70% before). See "Usage watcher".
-- **Phase 1 spec questions (20:40 CDT): all eight defaults kept.**
+- **Phase 1 spec questions (20:30 CDT): all eight defaults kept.**
   - WP3: the body fall stays at contact, there's no new `attack_active` event, the wind-up whoosh stays, and there's no slow-mo audio filter.
   - WP2: bruised still scuffs the clothes, and there's no separate "reduce flashing" toggle.
   - WP1: the 0.25x cheat also stretches hitstop and slow-mo, and cheats stay out of presets. Both are recorded in README, "Where M2 departs from the spec".
@@ -225,10 +235,15 @@ USAGE RULES:
 - The watcher checks every 20 minutes below 70%, every 10 minutes up to 85% and every 5 minutes above that. It tells you to halt and hand off at 90%.
 
 Next steps (Milestone 2; details are in docs/HANDOFF.md):
-- Phase 1 is done and merged into m2/hit-feel (400/400 tests pass). WP3's audio is judged by analysis only, so Game-boy will listen to it.
-- The 8 phase 1 spec questions are answered: all defaults kept (Decisions log). README has the two WP1 departures under "Where M2 departs from the spec".
-- Phase 2, WP4 (partial and full ragdoll), per docs/milestones/M2-WP4-brief.md, in a new worktree off m2/hit-feel. The player default is confirmed: enemies and dummies ragdoll, and the player keeps animated reactions, with a toggle. One heavy agent builds; then one reviews and fixes.
-- Then phase 3 for my playtest: integrate, review from captures (include M1's white hit flash, which fills much of the first-person view at close range), update README and ARCHITECTURE, open the Milestone 2 PR.
+- Phase 1 (WP1 tuning panel, WP2 comic VFX, WP3 audio) is done and merged into m2/hit-feel, and 400/400 tests pass. The 8 phase 1 spec questions are answered (all defaults kept), and README notes the two WP1 departures. WP3's audio was judged by analysis only, so I'll listen to it.
+- Phase 2, WP4 (partial and full ragdoll), per docs/milestones/M2-WP4-brief.md. The worktree is ready: .worktrees/m2-ragdoll, branch m2/ragdoll, up to date with m2/hit-feel and imported. The player default is confirmed: enemies and dummies ragdoll, and the player keeps animated reactions, with a toggle. Run it as one workflow:
+  - one builder: implements the brief, tests, ragdoll bot acts, captures in first person and side view; commits wip: often and ends with "M2 WP4: partial and full ragdoll";
+  - then two reviewers at once: mechanics, and feel judged from the captures;
+  - then one agent that verifies each finding adversarially, fixes the ones that hold, and commits "M2 WP4: review fixes (...)";
+  - a get_usage gate before each launch, and nothing new at 65% or more;
+  - tell each agent the absolute worktree path and to cd there (Workflow's isolation: 'worktree' fails here).
+- Then merge m2/ragdoll into m2/hit-feel, run tools/run_tests.sh (everything must pass, no SCRIPT ERROR), push, and update docs/HANDOFF.md.
+- Then phase 3 for my playtest: integrate, record every act and review it from captures (include M1's white hit flash, which fills much of the first-person view at close range), update README and ARCHITECTURE, and open the Milestone 2 PR.
 
 Ground rules:
 - Never merge a milestone PR into main until I've played it and signed it off.
