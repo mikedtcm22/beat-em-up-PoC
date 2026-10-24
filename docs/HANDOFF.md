@@ -4,6 +4,58 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-24 13:55 CDT: handoff, account F's 5-hour window at 90%
+The watcher called the handoff at 90% of the 5-hour window (resets 17:39 CDT); weekly is at 28% (resets Wed 2026-10-28 10:59 CDT). The workflow `wf_f6697464-ea0` is stopped, and nothing else is running. Every branch is pushed. The reviewer worktrees have no tracked changes (only untracked `captures/`).
+- **Package C state.** Everything below is committed as JSON on `m2/phase3-review` (`a39ba62`), in `docs/reviews/M2-phase3/`.
+
+  | Lens | Findings | Verified (3 skeptics each) |
+  | --- | --- | --- |
+  | code | 6 | 6 of 6 survive |
+  | ragdoll feel | 5 | 5 of 5 survive |
+  | grab feel | 8 | 5 of 5 survive; grab-06, -07 and -08 (low) are unverified |
+  | hit feel | not run (usage) | |
+  | performance | not run (usage) | |
+
+  `critic.json` holds the completeness critic: 13 gaps. The high ones are the two lenses not run and no verdicts on the 10:55 known items. Medium: the flash on a ragdoll in side view, the player's KO while holding, bodies against a wall or the curb. Its `gap_review_brief` merges hit feel and performance into one reviewer. Run them as the two planned lenses instead. The partition agent was stopped mid-run, so no packages exist yet, and no fixer ran.
+- **The surviving findings** (no fix is needed from Game-boy):
+  - code-01 (high): the contact flash misses the struck body. A thrown pipe shows none, body impacts a faint one, and a staggering body flashes on the wrong part.
+  - code-02: a respawning dummy can blink in inside a body lying on its post.
+  - code-03: the hold view bobs the lens 5-7 cm on every grab and release, and pops 3.5 cm on a release while walking.
+  - code-04: a dummy blinking in still attracts magnetism and blocks a thrown pipe.
+  - code-05: `dummy_revive_s` changed meaning under the same preset key, so older presets give a 5.5 s comeback.
+  - code-06: two tests would pass with what they guard broken: the per-part spin caps and the lens rules on an LB release.
+  - ragdoll-01: the throw pops the held victim upright in one frame, then it skates away on its feet and trips onto its face.
+  - ragdoll-02: the hook stagger at 0.9 flops like a rag in first person but still doesn't read from the side.
+  - ragdoll-03: the side-view health bar sits on the head or body when the head isn't on top.
+  - ragdoll-04: a KO'd body's empty health bar hangs through its first blink-offs.
+  - ragdoll-05: the stomping foot sinks into the lying body.
+  - grab-01 (high): a body launched out of the hold, by a knee that KOs it or by the throw, pops into the holder and fills the view.
+  - grab-02: a hit that breaks the hold lets the victim stand up through the holder's frozen view.
+  - grab-04: in first person the knee is the same navy as the shaded right sleeve, a blue lump.
+- **New spec questions for Game-boy:**
+  - grab-03, the combat log over the knee contact (the open question). Proposal: a key that toggles the combat log, shown in the help overlay, and the log moved to the upper right below the rear-warning zone, narrower or with fewer lines; optionally faded while holding in first person. Default: as it is until Game-boy answers.
+  - grab-05: the knee's localized flash whitens about 16% of the first-person view, three times per hold. Proposal: cap the flash's on-screen size in first person, for example by scaling `hit_flash_radius_m` with the contact's distance from the camera. Default: leave it.
+- **On the open contact-push question:** both the code and the ragdoll reviewer found the contact push near frame-for-frame the same as the central kick. Their evidence is the hook A/B in `.worktrees/m2-review-ragdoll/captures/review_ragdoll/ab_hook_*.png` and a probe in which the head reaches 41-47 rad/s either way. The joint limits and pose springs decide the contortion, not the twist. More contortion would need wider joint limits or softer stagger springs. Default: as it is.
+- **Sheets for Game-boy** (local): `review_ragdoll/throw_side60.png`, `throw_fp60.png`, `hook_fp60.png`, `bar_overlap_side.png`; `review_grab/p6_knee_ko_fp_f1340-1359.png`, `p5_hit_while_holding_fp.png`; `review_code/pipe_throw_zoom.png`, `grab_release_moment.png`. Each is under `captures/` in its reviewer's worktree.
+- **Measured cost (correct the estimates):** the window went from 5% to 90% in about 58 minutes. That was three reviewers, 16 findings verified (48 Sonnet skeptics), the critic and part of the partition. A reviewer costs about **17-20%**, not 13%. Verifying a finding costs about **1.5-2%**. In `workflow.js`, set `COST.reviewer` to 18 before the next run.
+- **Resume (next account):**
+  1. Load `docs/reviews/M2-phase3/*.json` from `m2/phase3-review`. Run `docs/reviews/M2-phase3/workflow.js` inline (with `COST.reviewer` 18) with `args`:
+     - `reviews`: {code, ragdoll, grab: the three `review-<lens>.json` objects};
+     - `verdicts`: {each id in the three `verify-<lens>.json` files: its verdict object}.
+  2. It then runs, all usage-gated:
+     - the hit and performance reviews;
+     - verification of their findings and of grab-06 to -08;
+     - the critic again, and a gap round (it should cover the critic's medium gaps);
+     - the partition and the fixers.
+  3. The reviewer worktrees `.worktrees/m2-review-*` must stay; they're at `c27afaf`, imported.
+  - A whole window covers about the two reviews, their verification, the critic and the partition. The fixers (about 25% each) likely need the window after that.
+  - To fix the 14 survivors first instead (the lead's call), also pass:
+    - `reviews.hit` and `reviews.perf` as `{"lens": "<lens>", "skipped": true}`;
+    - `no_gap_round: true`.
+
+    The script then goes straight to the critic, the partition and the fixers. Run hit and perf in a later run.
+- **Waiting on Game-boy:** grab-03 and grab-05 above, plus the 12:40 entry's items (each has a default).
+
 ### 2026-10-24 12:52 CDT: account F took over; package C workflow running
 A fresh account's working session took over at 2% of its 5-hour window (resets 17:39 CDT) and 13% weekly (resets Wed 2026-10-28 10:59 CDT). Its watcher runs: "Beat-em-up: usage watcher", name `usage-watcher-g` (Haiku, low effort, self-paced), asked to check every 10 minutes during the heavy run.
 - **Running:** workflow `m2-phase3-review-fix` (run `wf_f6697464-ea0`, started from this session). A copy of the script is in the repo: [docs/reviews/M2-phase3/workflow.js](reviews/M2-phase3/workflow.js).
@@ -478,7 +530,7 @@ USAGE RULES:
 
 Next steps (Milestone 2; details are in docs/HANDOFF.md):
 - Phases 1 and 2, the localized flash and phase 3's packages A (ragdoll: contact push, KO blink-off, staggers at 0.9) and B (grab view and waist bend) are merged into m2/hit-feel. 457/457 tests pass with no SCRIPT ERROR, at f98bb21. README has the three approved M2 ragdoll departures. WP3's audio was judged by analysis only, so I'll listen to it.
-- Phase 3's package C runs as a Workflow (I turned ultracode on), per docs/milestones/M2-phase3-plan.md, "C", step 2. Account F started it at 12:52 on 2026-10-24: five review lenses in reviewer worktrees, three skeptics per finding, a completeness critic, then fixers in their own worktrees with disjoint files, every launch usage-gated. Its results are committed as JSON to docs/reviews/M2-phase3/ on branch m2/phase3-review, and the script is docs/reviews/M2-phase3/workflow.js. If it didn't finish, resume it as docs/HANDOFF.md's newest entry says (it skips finished work when given the earlier results as args). After it: merge the fix branches and m2/phase3-review into m2/hit-feel, regenerate the preset, run the tests, record the final sheets and show me. Then D: check ARCHITECTURE against the code, README's Milestone 2 status, and the M2 PR, which is never merged without my sign-off.
+- Phase 3's package C runs as a Workflow (I turned ultracode on), per docs/milestones/M2-phase3-plan.md, "C", step 2. Account F ran it on 2026-10-24 until its 90% handoff at 13:55. The code, ragdoll and grab reviews are done, and 16 findings are verified; 16 survive, 2 of them spec questions for me. The hit and performance reviews, 3 low grab findings and all the fixes are left. The results are JSON in docs/reviews/M2-phase3/ on branch m2/phase3-review, and the script is docs/reviews/M2-phase3/workflow.js. Resume it as docs/HANDOFF.md's newest entry says: pass the earlier results as args so it skips finished work, and set COST.reviewer to 18 first. After it: merge the fix branches and m2/phase3-review into m2/hit-feel, regenerate the preset, run the tests, record the final sheets and show me. Then D: check ARCHITECTURE against the code, README's Milestone 2 status, and the M2 PR, which is never merged without my sign-off.
 - Open for me (each has a default; none blocks C): more contortion on the ragdoll contact push (default: as it is); the grab's lens pull-back and the bend's depth (default: as they are); the combat log over the knee contact (default: C proposes a fix); a minimum on-screen size for the side-view flash (default: leave it). And I'll listen to WP3's audio.
 
 Ground rules:
