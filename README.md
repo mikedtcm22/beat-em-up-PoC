@@ -61,6 +61,10 @@ The characters are procedural placeholders. Real art, VFX and audio come in Mile
 - **Clinch:** a held enemy bends over further than before, so its head sits just under the throat-height view instead of filling it. A grab eases the victim in from where it stood while it bends over, head first, so its head and shoulders never sweep through the lens; released on its feet, it stands up around its hips, away from the holder.
 - **Flying kick:** it dives forward and down, and its camera pitches down 25° (like the stomp) instead of the 8–12° of the standing kicks. From the air, a foot at hip height passed over a standing enemy's head.
 
+**Where M2 departs from the spec (approved by Game-boy on 2026-10-23):**
+- **The 0.25x cheat slows the hit feel too (Spec §11):** the F4 time scale stretches hitstop and the finisher slow-mo as well as the simulation, so a slowed-down hit keeps its feel, only slower. Camera punch and shake stay at full speed.
+- **Cheats stay out of presets (Spec §11):** god mode and one-hit KOs are session state. Saving, loading or resetting a preset skips the "Debug" group, so a preset never turns a cheat on, and loading one never turns a cheat off.
+
 **Automated checks:**
 - `tools/run_tests.sh` runs 297 tests headless in about 13 seconds, including an end-to-end suite where a scripted player performs every combo in the real test room.
 - `tools/capture_combos.sh` records the combo bot with Movie Maker to `captures/combos.avi`, writes a hit log to `captures/bot.log`, and extracts stills for review. Pass text to run only matching acts, for example `tools/capture_combos.sh "haymaker"`.

@@ -14,7 +14,7 @@ A new working session took over at 79% of its 5-hour window (resets 21:39 CDT) a
   - Damage looks read at 1 m in first person. In the full side view the bruised step is near invisible and bloodied faint, and the bloodied splats tile evenly over the shirt, like a print.
   - Phase 3 item, out of WP2's scope: M1's white hit flash fills about 40% of the first-person view on a jab at contact, and a wide band on knees.
 - **Merged** `m2/tuning`, `m2/vfx` and `m2/audio` into `m2/hit-feel` (`361b4ec`, `4fbfef6`, `a3579fd`), keeping all four presentation lines and both ASSETS.md sections. The default preset is regenerated (231 values, `8a00724`). **400/400 tests pass with no SCRIPT ERROR.** Pushed.
-- **Waiting on Game-boy:** answers to the 8 spec questions below (WP3 ×4, WP2 ×2, and WP1 ×2, which are already implemented with the reviewers' defaults). Nothing acts on them until he answers.
+- **Answered at 20:40 CDT: keep all eight defaults** (see "Decisions log"). Before that, the session was waiting on Game-boy for answers to the 8 spec questions below (WP3 ×4, WP2 ×2, and WP1 ×2, which are already implemented with the reviewers' defaults). Nothing acts on them until he answers.
   - WP1, debug time scale: 0.25x also stretches hitstop and the slow-mo timers, while camera punch and shake stay real time. Default: keep.
   - WP1, cheats out of presets: Save, Load and Reset skip the Debug group. Default: keep, and note it in README's Milestone 2 departures.
 - **Next:** WP4 starts only after the 21:39 CDT reset (a heavy agent costs about 25%), per [docs/milestones/M2-WP4-brief.md](milestones/M2-WP4-brief.md), in a new worktree off `m2/hit-feel`.
@@ -154,6 +154,10 @@ Every approved spec change so far is in README.md, "Where M1 departs from the sp
   - the back elbow turns the view 150° (Game-boy is to confirm whether 110° is preferred).
 - **Ragdoll (M2 WP4, 2026-10-23):** enemies and training dummies ragdoll. The player keeps animated reactions by default, with a toggle in the "Ragdoll" tuning group.
 - **Usage watcher cadence (20:13 CDT):** checks every 20 minutes below 70%, every 10 minutes up to 85%, every 5 minutes above that. It halts work and hands off at 90% (it was 70% before). See "Usage watcher".
+- **Phase 1 spec questions (20:40 CDT): all eight defaults kept.**
+  - WP3: the body fall stays at contact, there's no new `attack_active` event, the wind-up whoosh stays, and there's no slow-mo audio filter.
+  - WP2: bruised still scuffs the clothes, and there's no separate "reduce flashing" toggle.
+  - WP1: the 0.25x cheat also stretches hitstop and slow-mo, and cheats stay out of presets. Both are recorded in README, "Where M2 departs from the spec".
 - **Process:** at each usage limit, hand off to Game-boy's second Claude account. Never assume the same session resumes.
 
 ## Usage watcher
@@ -222,7 +226,7 @@ USAGE RULES:
 
 Next steps (Milestone 2; details are in docs/HANDOFF.md):
 - Phase 1 is done and merged into m2/hit-feel (400/400 tests pass). WP3's audio is judged by analysis only, so Game-boy will listen to it.
-- Get my answers to the 8 open spec questions in the newest HANDOFF entry and the 19:15 entry (WP3 ×4, WP2 ×2, WP1 ×2). Act only on the ones I approve; record approved departures in README ("Where M2 departs from the spec").
+- The 8 phase 1 spec questions are answered: all defaults kept (Decisions log). README has the two WP1 departures under "Where M2 departs from the spec".
 - Phase 2, WP4 (partial and full ragdoll), per docs/milestones/M2-WP4-brief.md, in a new worktree off m2/hit-feel. The player default is confirmed: enemies and dummies ragdoll, and the player keeps animated reactions, with a toggle. One heavy agent builds; then one reviews and fixes.
 - Then phase 3 for my playtest: integrate, review from captures (include M1's white hit flash, which fills much of the first-person view at close range), update README and ARCHITECTURE, open the Milestone 2 PR.
 
