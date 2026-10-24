@@ -1,0 +1,230 @@
+{
+ "work_package": "M2 WP4: partial and full ragdoll, review verify-and-fix pass",
+ "branch": "m2/ragdoll",
+ "reviewed_build": "96defb9",
+ "code_commit": "6d05837",
+ "final_commit": "the commit that adds this file (subject 'M2 WP4: review fixes (...)'); the code is as at 6d05837",
+ "fix_commits": [
+  "47758b4",
+  "a599de1",
+  "73fb051",
+  "5be9500 (cut off)",
+  "f728e28",
+  "a1af5bd",
+  "273d100",
+  "16c2487",
+  "6d05837"
+ ],
+ "cut_off_edits_5be9500": "Read and kept. They were the get-up relocation rewrite (game/actors/combat_actor.gd _move_under_ragdoll(), the ragdoll_getup_aside_m tunable and the preset): a stepped search toward the ragdoll's hips; in place when only standing bodies block (the stomp); beside a body lying under it at ragdoll_getup_aside_m with a world cast on the way. The code was complete and correct; what was missing was the ARCHITECTURE note (it still said a pile gets up in place) and a test of the pile, both added in f728e28.",
+ "tests": {
+  "command": "tools/run_tests.sh",
+  "count": 429,
+  "passing": 429,
+  "failing": 0,
+  "asserts": 23122,
+  "script_errors": 0,
+  "errors": 0
+ },
+ "verdicts": {
+  "mech-F1": {
+   "verdict": "confirmed",
+   "reason": "At 96defb9 ragdoll_stop() took the Hips' fade source relative to the old origin, so the drawn body jumped by the get-up relocation (0.70 m after a stomp, 0.69 m on the push-kick pile).",
+   "fixed": true,
+   "fix": "47758b4: the Hips' fade source is taken against Root's faded rotation at its animation position in the rig's frame after the move (HumanoidRig.ragdoll_stop()), and the fade lasts long enough to slide no faster than ragdoll_getup_slide_speed. Now: a forced 0.415 m relocation moves the drawn head 0.009 m (test_the_get_up_fade_starts_where_the_ragdoll_lies_after_the_body_moves_under_it); the push-kick top body moves 0.78 m aside with a 0.037 m head step, which is the fade's first frame (probe_gaps; test_two_bodies_that_fell_on_each_other_get_up_beside_each_other, new). Sheets 06b and 08b show no pop."
+  },
+  "mech-F2": {
+   "verdict": "confirmed",
+   "reason": "At 96defb9 standing bodies blocked the relocation, so after every stomp the dummy was moved 0.70 m (0 m with the ragdoll off), and the ring spots had no path check.",
+   "fixed": true,
+   "fix": "5be9500 (finished and verified here): the search steps toward the ragdoll's hips. If only standing bodies block it, the body gets up where the sim body is, as in M1: after a stomp it moves 0.000 m (was 0.703) with a 0.010 m head step (probe_stomp_getup; test_a_stomped_ragdoll_gets_up_where_it_lies_with_the_player_over_it; sheet 17). Only a body lying on another gets up beside it: the nearest free spot ragdoll_getup_aside_m (0.8 m, tunable) around its hips, with a cast_motion against the world on the way. The 2-3 radius ring is gone. f728e28 corrects the ARCHITECTURE get-up note and adds the pile test. The world-path cast is checked by inspection only; no test puts a wall there."
+  },
+  "mech-F3": {
+   "verdict": "confirmed",
+   "reason": "At 96defb9 face-down landings lay twisted on the side, a leg through the torso and a foot 1.42 m from its hurtbox, and slept like that.",
+   "fixed": true,
+   "fix": "47758b4: the body launched from behind turns toward the face-down lying pose in the air (Ragdoll.aim_landing()), so it pitches over and lands face down, and the spring targets are clamped into the joint limits from the parent body. Now, uppercut from behind: chest 0.078 m from its hurtbox (was 0.249), feet 0.06-0.16 m (was 1.42), hips' up axis 9 deg off (was 90). Lying on the hurtbox bones (head, chest, hips, legs): 0.105 m uppercut and 0.125 m haymaker (test_a_body_launched_from_behind_lands_face_down_where_its_hurtboxes_are). No limb passes through the torso: the nearest hand or elbow is 0.33 m from the trunk axis (probe_hand_in_body). Sheets 16 and 16b: pitch-over, a straight face-down landing, the get-up from the front. The landing still overshoots one shoulder for a few frames (see mech-F4)."
+  },
+  "mech-F4": {
+   "verdict": "partial",
+   "reason": "The springs held joints past their limits (throw neck 33 deg over for 19 frames). That part is fixed. Contact transients at impact remain.",
+   "fixed": "partly",
+   "fix": "47758b4: each spring's rotation target is clamped into its joint's cone or hinge from the parent body as it is, and while the influence rises only the turns strengthen. No joint is held past its limit any more: haymaker none, uppercut at most the head 7 deg, lying after the first 25 frames at most 7 deg, throw at most 10 frames above 10 deg (test_drawn_joints_stay_inside_their_limits). Still there: a face-down landing pushes the RightShoulder up to 57 deg past its 36 deg cone for about 10 frames, driven by the whole-body lying turn against the floor contact. The throw's neck is 15 deg over for about 14 frames in flight and landing, and a knee hyperextends 12 deg for 1-2 frames. Two fixes were tried and dropped. A velocity-level limit guard had no effect (contacts override it). A trunk-only lying turn halved the shoulder transient, but rest came later and the face-down hands lay looser."
+  },
+  "mech-F5": {
+   "verdict": "confirmed",
+   "reason": "At 96defb9 the kick stepped on the hit's frame (hitstop starts next tick) and showed through the freeze (+7.4 cm head on the hook).",
+   "fixed": true,
+   "fix": "47758b4: the physics step of the frame a ragdoll starts or takes a kick holds still (_hold_frame), so the kick lands on the first step after the hitstop. Probe: the hook's drawn head is constant from f1 to f5 of the freeze (was +7.4 cm on f1), and the uppercut is constant through its whole freeze. The test takes its reference before receive_hit() and checks that the kick stays pending and the struck head's velocity is unchanged through the freeze, then that the kick lands (test_the_ragdoll_freezes_in_hitstop_and_slows_in_slow_mo). Left over: a 1.9 cm settle on the hit's own frame, as the partial influence shows one frame late. It is negligible."
+  },
+  "mech-F6": {
+   "verdict": "confirmed",
+   "reason": "At 96defb9 a PARTIAL-to-PARTIAL restart re-seated the bodies on the blended pose and reset the influence: a 9-12 cm pop.",
+   "fixed": true,
+   "fix": "47758b4: a stagger on a stagger keeps the bodies as they are and raises the influence back from where its fade had got to (ragdoll_partial_rise_s 0.08). Probe: the drawn head moves 0.064-0.069 m per frame at the restart against the animation's 0.051 (was 0.115 against 0.051). test_a_stagger_on_a_stagger_does_not_pop_the_upper_body."
+  },
+  "mech-F7": {
+   "verdict": "confirmed",
+   "reason": "At 96defb9 rest was judged from post-spring velocities, so every lying body slept on the 1.0 s cap and a woken body was re-frozen at once.",
+   "fixed": true,
+   "fix": "47758b4: rest is judged from the bodies' motion in the last step, before this step's gravity and springs, and a contact that wakes a sleeping body restarts the counts (probe_wake: woken 87 frames, was 0). This pass: ragdoll_settle_max_s goes from 1.0 to 1.25 s, the downed time, so a body about to get up is not frozen mid-motion. Every single body now sleeps on the calm path: uppercut 1.18 s, from behind 0.97, haymaker 1.02, throw 0.82, KO 1.23 (probe_sleep). The push-kick pile still reaches the cap, which falls on its get-up frame. test_a_launched_dummy_ragdolls... asserts the sleep comes before the cap. test_a_lying_ragdoll_sleeps_once_it_is_still_and_wakes_when_hit now keeps the body down long enough to sleep twice."
+  },
+  "mech-F8": {
+   "verdict": "confirmed",
+   "reason": "The listed tests would have passed with the features broken.",
+   "fixed": true,
+   "fix": "Tests now cover:\n- the kick held through the hitstop, measured from before the hit;\n- a forced relocation with drawn-head continuity;\n- a stomp then get-up in place;\n- the pile get-up (new);\n- the face-down lying gap;\n- re-stagger continuity;\n- drawn joint limits;\n- calm sleep before the cap;\n- a partial's kinematic bodies on layer 0, through a tuning edit;\n- the flight-gap bound, 1.2 m cut to 0.8 m;\n- idle bodies;\n- joints after re-entering the tree;\n- the parry and the lens;\n- the launch snap, now also from a stagger (new);\n- the health-bar anchor (new);\n- the trunk-wide stagger kick (new);\n- the cost of six full ragdolls, decision 9 (new).\nLying gaps are now measured on the bones the hurtboxes ride, with a separate, looser bound for the hands."
+  },
+  "mech-F9": {
+   "verdict": "confirmed",
+   "reason": "Ragdoll._exit_tree() freed the joints and nothing rebuilt them.",
+   "fixed": true,
+   "fix": "47758b4: _enter_tree() rebuilds the joints. Probe: 17 valid joints after re-entry. In test_a_ragdoll_taken_out_of_the_tree_and_back_keeps_its_joints the stretch bound went from 0.05 to 0.1 m: the landing impact gives 0.06 m, while missing joints part by 0.9 m."
+  },
+  "mech-F10": {
+   "verdict": "confirmed",
+   "reason": "Idle bodies kept transform notifications and followed every move of the actor.",
+   "fixed": true,
+   "fix": "47758b4: idle bodies use set_notify_transform(false), and start() teleports them onto the visible pose. Probes: the idle head body moves 0.000 m while the dummy walks 1.25 m. Six walking dummies cost the same with the ragdoll built or not (446-531 us, noise). Covered by test_idle_bodies_ignore_the_actor_moving."
+  },
+  "mech-F11": {
+   "verdict": "confirmed",
+   "reason": "No CCD: a light body exceeded the speed cap by 22 % and a foot sat 0.149 m in the floor for a frame.",
+   "fixed": true,
+   "fix": "47758b4: continuous collision on every body. Stress probe: worst speed 25.6 m/s against the 25 cap (was 30.5), lowest drawn bone +0.045 m (was -0.149), no NaN. Covered by test_bodies_use_continuous_collision_and_stay_out_of_the_floor."
+  },
+  "mech-F12": {
+   "verdict": "confirmed",
+   "reason": "Code-rule and doc nits.",
+   "fixed": "mostly",
+   "fix": "Done:\n- the stomp tilt is now ragdoll_ground_push_tilt;\n- the ring radii are gone (ragdoll_getup_aside_m);\n- ## docs on Ragdoll.rig, simulator, mode, phase, is_running() and joint_stretch(), and on HumanoidRig.is_ragdolling();\n- apply_tuning() keeps a running partial's kinematic bodies on layer 0 (tested);\n- release_from_grab(stagger) starts the partial ragdoll (tested);\n- the ARCHITECTURE claims are corrected (lying gap, kick held on the hit's step, get-up fade in the new frame, pile get-up, rise from 0).\nKept as script constants: _GETUP_TRIES, _GETUP_DIRECTIONS and _GETUP_FLOOR_CLEARANCE. They are search resolution and a query clearance, not feel."
+  },
+  "mech-F13": {
+   "verdict": "confirmed",
+   "reason": "SPEC §6 says 'an impulse at the contact point'. The build gives a central velocity change to the struck part's body nearest the contact: the whole arm for an arm, and now the whole trunk for a stagger's trunk hit. It is scaled and capped. That is a spec departure.",
+   "fixed": false,
+   "fix": "Not implemented (spec_change). See spec_questions[0]."
+  },
+  "feel-F1": {
+   "verdict": "confirmed",
+   "reason": "A parried jab's forearm swung into the lens: the partial ragdoll inherited the jab's forward velocity.",
+   "fixed": true,
+   "fix": "47758b4: the parry's partial ragdoll starts after the snapped stagger pose (rig.advance(0) first), drops the part of the striking arm's velocity that runs toward the defender, and an arm's kick moves the whole arm. After-sheet 14 (first person): the forearm never enters the lens, and the frames match the no-ragdoll version. Sheet 15 (side view): the arm is knocked back. Test: the closest fist to the eye is 0.547 m with the ragdoll, 0.526 m without."
+  },
+  "feel-F2": {
+   "verdict": "confirmed",
+   "reason": "Launches showed the bodies upright through the finisher's hitstop and slow-mo.",
+   "fixed": true,
+   "fix": "47758b4's influence rise fixed launches from standing. It did not fix the combo uppercut: the hook's partial ragdoll sat at 0.6 influence and the rise started there, leaving a 0.24-0.33 m gap through the hitstop and slow-mo. f728e28: a FULL ragdoll's influence always rises from 0. Probe on P P P P: the drawn body is the animation's exactly through the hitstop (0.000 m, was 0.241). test_a_launch_shows_the_animations_snap_first now also starts from a stagger (it fails without the fix: 0.339 and 0.598 m). After-sheets 03-06: the launch matches the no-ragdoll snap frame for frame through the slow-mo, then the bodies take over in flight and on landing."
+  },
+  "feel-F3": {
+   "verdict": "partial",
+   "reason": "Staggers were subtle side on, and the shove's arm fling was muted.",
+   "fixed": "partly",
+   "fix": "47758b4: the arms' stagger spring is 3 Hz (ragdoll_partial_limb_pose_hz), so the shove's arm fling stays (sheet 12 matches the no-ragdoll fling). 273d100:\n- a stagger's kick on the trunk lands on every simulating trunk body (test_a_staggers_kick_on_the_trunk_moves_the_whole_trunk);\n- the spine and head spring drops from 1.0 to 0.7 Hz.\nThe head gives 0.19-0.23 m along the push (was 0.14-0.16) and the chest 0.04-0.09 m (was 0.04). In first person the hook throws the head out of frame longer than M1 (sheet 01). Side on, the hook stays subtle because it pushes toward the camera, and the shove leans a little more than M1 (sheet 13). The influence sits at the spec's 0.6 ceiling (spec_questions[2])."
+  },
+  "feel-F4": {
+   "verdict": "confirmed",
+   "reason": "Lying bodies settled into the downed animation's symmetric pose.",
+   "fixed": "partly",
+   "fix": "a1af5bd splits the lying spring:\n- the arms at 2 Hz (ragdoll_down_arm_pose_hz);\n- the legs at 3 Hz (ragdoll_down_leg_pose_hz) and the trunk at 3 Hz, which hold the hurtboxes.\nThe arms now lie more as they fell (hands 0.15-0.46 m from the animation's face up). The trunk and legs still settle toward the downed pose, so the silhouettes stay close to M1's. 1.0-1.5 Hz arms were tried: rest then ran past the cap and face-down hands drifted about 1 m, so they were not used."
+  },
+  "feel-F5": {
+   "verdict": "confirmed",
+   "reason": "Health bars and debug labels anchored on the animation's HeadTopPoint, off a body lying on another and sliding at its get-up.",
+   "fixed": true,
+   "fix": "f728e28: CombatActor.get_head_top_position(), which EnemyHealthBars and the debug label read, returns the visible head-top while a ragdoll runs (HumanoidRig.get_visual_point_transform()). Otherwise it returns the rig point, bit for bit. It is presentation only, with no sim reader (grep). Covered by test_the_health_bar_anchor_follows_the_visible_head. enemy_health_bars.gd is unchanged, since it is not a WP4-owned file. combat_actor.gd is owned only for reaction hooks, so the lead may want to confirm this accessor change."
+  }
+ },
+ "captures": {
+  "after_all_acts": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-ragdoll/captures/review_after/ragdoll_after.avi",
+  "after_all_acts_log": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-ragdoll/captures/review_after/ragdoll_after.log",
+  "no_ragdoll_all_acts": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-ragdoll/captures/review_after/norag_after.avi",
+  "after_face_down": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-ragdoll/captures/review_after/ragdoll_after_behind.avi",
+  "no_ragdoll_face_down": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-ragdoll/captures/review_after/norag_after_behind.avi",
+  "after_stomp_getup": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-ragdoll/captures/review_after/ragdoll_after_stomp.avi",
+  "no_ragdoll_stomp_getup": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-ragdoll/captures/review_after/norag_after_stomp.avi",
+  "note": "Recorded at 1280x720 with --fixed-fps 60; the files are 1600x900 (display scaling). The ragdoll and no-ragdoll runs share one timeline (identical hit frames), so the A/B sheets are frame-matched. Act start times are in the logs; movie time is about (physics frame - 3) / 60. captures/review_after/pass1 and pass2 hold intermediate recordings."
+ },
+ "sheets": {
+  "note": "In *_ab.png sheets each still is the ragdoll (top) over no ragdoll (bottom) at the same frame. Made with captures/review_after/ab.sh and stills.sh.",
+  "files": [
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-ragdoll/captures/review_after/sheets_after/01_hook_fp_ab.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-ragdoll/captures/review_after/sheets_after/02_hook_side_ab.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-ragdoll/captures/review_after/sheets_after/03_uppercut_fp_ab.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-ragdoll/captures/review_after/sheets_after/04_uppercut_side_ab.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-ragdoll/captures/review_after/sheets_after/05_haymaker_fp_ab.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-ragdoll/captures/review_after/sheets_after/06_haymaker_side_ab.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-ragdoll/captures/review_after/sheets_after/06b_haymaker_side_getup_30fps.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-ragdoll/captures/review_after/sheets_after/07_heel_side_ab.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-ragdoll/captures/review_after/sheets_after/08_pushkick_side_ab.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-ragdoll/captures/review_after/sheets_after/08b_pushkick_side_getup_15fps.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-ragdoll/captures/review_after/sheets_after/09_throw_side_ab.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-ragdoll/captures/review_after/sheets_after/10_ko_side_ab.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-ragdoll/captures/review_after/sheets_after/11_guardbreak_side_ab.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-ragdoll/captures/review_after/sheets_after/12_shove_fp_ab.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-ragdoll/captures/review_after/sheets_after/13_shove_side_ab.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-ragdoll/captures/review_after/sheets_after/14_parry_fp_ab.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-ragdoll/captures/review_after/sheets_after/15_parry_side_ab.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-ragdoll/captures/review_after/sheets_after/16_from_behind_side_ab.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-ragdoll/captures/review_after/sheets_after/16b_from_behind_side_getup_ab.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-ragdoll/captures/review_after/sheets_after/16c_facedown_lying_zoom.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-ragdoll/captures/review_after/sheets_after/17_stomp_getup_side_ab.png"
+  ]
+ },
+ "sheets_for_game_boy": [
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-ragdoll/captures/review_after/sheets_after/06_haymaker_side_ab.png",
+   "shows": "The haymaker: the snap shows at once and holds through the slow-mo exactly as in M1, then the body flies and lands flat with weight."
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-ragdoll/captures/review_after/sheets_after/16_from_behind_side_ab.png",
+   "shows": "An uppercut on a dummy facing away: the body pitches over in the air and lands face down and straight (it used to lie twisted with a leg through the torso)."
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-ragdoll/captures/review_after/sheets_after/08b_pushkick_side_getup_15fps.png",
+   "shows": "The push-kick pile: the body lying on top gets up beside the other with no pop, and both stand side by side."
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-ragdoll/captures/review_after/sheets_after/17_stomp_getup_side_ab.png",
+   "shows": "A stomp on a lying body, then the get-up in place under the player, the same as without the ragdoll (it used to be shoved 0.7 m)."
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-ragdoll/captures/review_after/sheets_after/14_parry_fp_ab.png",
+   "shows": "Parried jab in first person: the dummy's forearm stays out of the lens and matches the M1 reaction."
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-ragdoll/captures/review_after/sheets_after/01_hook_fp_ab.png",
+   "shows": "Hook stagger in first person: the upper body gives way further than M1 (the head leaves the frame), then it is back in guard."
+  }
+ ],
+ "feel_judgement": "Judged from the after-frames as Game-boy would.\n- Staggers: in first person they give way and recover; the hook throws the head out of view, and the shove's arm fling and the parry's knocked-back arm match M1 with some extra give. Side on they stay subtle (the hook pushes toward the camera).\n- Launches react right after the hitstop. The snap shows through the finisher's hitstop and slow-mo frame for frame like M1, from standing and from the combo's stagger alike, then the bodies trail and land flat with weight.\n- Face-down launches pitch over in the air and lie straight.\n- No explosions, jitter, sinking or limbs through the floor anywhere in the 24 acts.\n- Get-ups start from where the body lies and slide smoothly, with no pop: the haymaker at 30 fps, the pile at 15 fps, the stomp.\n- The KO goes limp and stays.\n- Health bars sit on the visible body; the VFX words and bursts land on it.\n- Lying arms vary a little more, but the trunk and legs still settle toward the downed pose, so lying silhouettes stay close to M1's.\n- Not in any recorded act, only in probes: a face-down landing overshoots one shoulder for a few frames at impact (see remaining).",
+ "spec_questions": [
+  {
+   "id": "mech-F13",
+   "question": "SPEC §6 says finishers switch to full ragdoll 'with an impulse at the contact point'. The build gives a central velocity change to the struck part's body nearest the contact, capped by ragdoll_max_kick and scaled by ragdoll_full_impulse (0.5 x knockback). On an arm it lands on the whole arm chain, and on a stagger's trunk hit on every trunk body. An off-center impulse spun light bodies at about 50 m/s.",
+   "proposal": "Approve this as an M2 departure and add a 'Where M2 departs from the spec' entry to README.md (lead). The alternative is an off-center impulse at the contact point with a spin cap.",
+   "default": "Keep the current behaviour (central kick on the struck part, capped)."
+  },
+  {
+   "id": "builder-KO",
+   "question": "The builder's open questions: KO bodies sleep until the arena clears in Milestone 3; KO bodies take no hits; heavy-tier knockdowns get the full ragdoll.",
+   "proposal": "Game-boy to confirm each.",
+   "default": "Keep the current behaviour for all three (KO sleeps and stays, takes no hits, heavy knockdowns ragdoll fully)."
+  },
+  {
+   "id": "stagger-influence",
+   "question": "Staggers give way clearly in first person but stay subtle side on. The partial influence is at the spec's 0.6 ceiling (SPEC §6: 0.3-0.6).",
+   "proposal": "If Game-boy wants more give, allow influence up to about 0.8 for staggers (a spec change). Otherwise tune only within the Ragdoll group.",
+   "default": "Keep 0.6."
+  }
+ ],
+ "remaining": [
+  "mech-F4 transients: a face-down landing pushes one shoulder up to 57 deg past its cone for about 10 frames (driven by the whole-body lying turn against the floor); the throw's neck runs 15 deg over for about 14 frames; a knee hyperextends 12 deg for 1-2 frames. Not visible in the recorded acts. Options: apply the lying turn as a torque on the trunk only (tried: halves it, but rest comes later), or self-collision for the arms.",
+  "Lead's call on decision 3: two bodies that fell on each other get up 0.8 m apart (ragdoll_getup_aside_m), which moves the top body's sim origin about 0.8 m. In M1 they stood up overlapping and pushed apart.",
+  "The aside spot's world-path cast (no getting up behind a wall or curb) is verified by inspection only.",
+  "Cost: six full ragdolls add about 1.2-1.5 ms per frame headless on the M1, up from about 0.6 ms at 96defb9 (continuous collision, the per-body limit clamps). Six walking dummies with idle ragdolls cost nothing extra. test_six_full_ragdolls_stay_cheap bounds it at 4 ms.",
+  "The push-kick pile's lower body reaches the settle cap on its get-up frame while still settling (the top body has just stood up off it). It is not visible.",
+  "README.md: an M2 'departs from the spec' entry once Game-boy answers spec_questions[0] (not edited here).",
+  "tests/bot/ragdoll_bot.gd has 4 new acts at the end (face-down landing and stomp then get-up, in first person and side view). Filtered headless runs of the bot print ObjectDB leak warnings at exit. Those were there before this pass; Movie Maker runs are clean."
+ ]
+}
