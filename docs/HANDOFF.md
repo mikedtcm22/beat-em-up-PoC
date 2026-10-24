@@ -12,6 +12,7 @@ The watcher called the handoff at 89% of the 5-hour window (resets 16:30 CDT); w
   - grab-08: the placeholder head has no hair or back-of-head part.
 - **Not done:** the partition. It was stopped before it returned, so there's no `packages.json` yet.
 - **Survivors to fix:** 17 findings with no spec question, from code-01 to -06, ragdoll-01 to -05, and grab-01, -02, -04, -06, -07 and -08. The spec questions grab-03 and grab-05 are Game-boy's.
+- **Decision (Game-boy, 14:45):** stay on this account. The working session waits for the 16:30 CDT reset, with the watcher `usage-watcher-h` still running, and then resumes here with the steps below.
 - **Resume (next account or after the 16:30 reset):**
   1. Run [reviews/M2-phase3/workflow-verify-partition.js](reviews/M2-phase3/workflow-verify-partition.js) inline (`scriptPath`) with `args: {"skip_verify": true}`. Only the usage gate and the partition run (about 4%). A scribe commits `packages.json`.
   2. Then follow steps 1-4 of "C's order from here" in the 14:15 entry below. Start with `workflow-fix.js`, two fixers at once.
