@@ -276,6 +276,110 @@ static func _wrapped_hand(side: String, sx: float) -> Array[Part]:
 	]
 
 
+## Ragdoll body total mass (kg at REF_HEIGHT; it scales with the cube of the height).
+## Ragdoll springs and impulses are velocity changes, so the mass only weighs in where two
+## ragdolls collide.
+const RAGDOLL_MASS := 75.0
+
+## How a ragdoll bone hangs off its physical parent.
+enum RagdollJoint {
+	CONE,   ## A ball joint: the bone's axis swings within a cone and twists about itself.
+	HINGE,  ## Bends about the bone's X axis only (elbows, knees, ankles).
+}
+
+
+## One ragdoll body (Ragdoll, game/actors/ragdoll.gd): a rigid body on `bone`, jointed to
+## its parent bone's body at the bone's origin. Shapes are Part-style (BOX size = extents;
+## CAPSULE x = radius, y = total height; SPHERE x = radius) in the bone's frame, meters at
+## REF_HEIGHT, and cover the placeholder meshes so a lying body rests on its surface.
+## Joints are body data, not feel: a CONE's `axis` is the bone's direction at rest (toward
+## its child), `center` the direction in the parent's frame its cone is centered on, and
+## `swing_deg` / `twist_deg` its half-angles; a HINGE bends from `lower_deg` to `upper_deg`
+## about X (+x flexes elbows, -x knees, +x points the toes up; PlaceholderBody's header).
+## The ranges hold every enemy animation pose (sampled from PlaceholderAnims) and stay
+## within a human body's.
+class RagdollSpec:
+	var bone: StringName
+	var shape: Shape
+	var size: Vector3
+	var offset: Vector3
+	var rot_deg: Vector3
+	var mass_share: float
+	var joint: RagdollJoint = RagdollJoint.CONE
+	var axis: Vector3 = Vector3.UP
+	var center: Vector3 = Vector3.UP
+	var swing_deg: float = 0.0
+	var twist_deg: float = 0.0
+	var lower_deg: float = 0.0
+	var upper_deg: float = 0.0
+
+	func _init(p_bone: StringName, p_shape: Shape, p_size: Vector3, p_offset: Vector3,
+			p_mass_share: float, p_rot_deg: Vector3 = Vector3.ZERO) -> void:
+		bone = p_bone
+		shape = p_shape
+		size = p_size
+		offset = p_offset
+		mass_share = p_mass_share
+		rot_deg = p_rot_deg
+
+	func cone(p_axis: Vector3, p_center: Vector3, p_swing_deg: float, p_twist_deg: float) -> RagdollSpec:
+		joint = RagdollJoint.CONE
+		axis = p_axis.normalized()
+		center = p_center.normalized()
+		swing_deg = p_swing_deg
+		twist_deg = p_twist_deg
+		return self
+
+	func hinge(p_lower_deg: float, p_upper_deg: float) -> RagdollSpec:
+		joint = RagdollJoint.HINGE
+		axis = Vector3.DOWN
+		lower_deg = p_lower_deg
+		upper_deg = p_upper_deg
+		return self
+
+
+## The ragdoll bodies, parents before children; every bone from the Hips to the head, the
+## arms and the legs has one, so a jointed pair never has an animated bone between them.
+## Root, the hands and the toes have none: they keep their animation pose on their parent.
+## The Hips have no joint (the ragdoll's root).
+static func ragdoll_specs() -> Array[RagdollSpec]:
+	var out: Array[RagdollSpec] = [
+		RagdollSpec.new(&"Hips", Shape.BOX, Vector3(0.34, 0.24, 0.24), Vector3(0.0, -0.02, 0.0), 0.15),
+		RagdollSpec.new(&"Spine", Shape.BOX, Vector3(0.34, 0.15, 0.22), Vector3(0.0, 0.07, 0.0), 0.09) \
+				.cone(Vector3.UP, Vector3(0.0, 1.0, -0.065), 36.0, 20.0),
+		RagdollSpec.new(&"Chest", Shape.BOX, Vector3(0.4, 0.14, 0.25), Vector3(0.0, 0.07, 0.0), 0.09) \
+				.cone(Vector3.UP, Vector3(0.0, 1.0, -0.045), 28.0, 16.0),
+		RagdollSpec.new(&"UpperChest", Shape.BOX, Vector3(0.48, 0.16, 0.26), Vector3(0.0, 0.075, 0.0), 0.1) \
+				.cone(Vector3.UP, Vector3(0.0, 1.0, -0.01), 20.0, 16.0),
+		RagdollSpec.new(&"Neck", Shape.CAPSULE, Vector3(0.06, 0.15, 0.0), Vector3(0.0, 0.045, 0.0), 0.02) \
+				.cone(Vector3.UP, Vector3(0.0, 1.0, 0.04), 32.0, 30.0),
+		RagdollSpec.new(&"Head", Shape.SPHERE, Vector3(0.125, 0.25, 0.0), Vector3(0.0, 0.11, -0.01), 0.065) \
+				.cone(Vector3.UP, Vector3(-0.02, 1.0, 0.0), 44.0, 62.0),
+	]
+	for side: String in ["Left", "Right"]:
+		var sx: float = -1.0 if side == "Left" else 1.0
+		out.append_array([
+			RagdollSpec.new(StringName(side + "Shoulder"), Shape.CAPSULE, Vector3(0.06, 0.2, 0.0),
+					Vector3(sx * 0.085, 0.0, 0.0), 0.02, Vector3(0.0, 0.0, 90.0)) \
+					.cone(Vector3(sx, 0.0, 0.0), Vector3(sx, 0.01, -0.02), 36.0, 10.0),
+			RagdollSpec.new(StringName(side + "UpperArm"), Shape.CAPSULE, Vector3(0.075, 0.34, 0.0),
+					Vector3(0.0, -0.13, 0.0), 0.032) \
+					.cone(Vector3.DOWN, Vector3(sx * 0.42, -0.69, -0.58), 100.0, 90.0),
+			# The forearm's body carries the fist.
+			RagdollSpec.new(StringName(side + "LowerArm"), Shape.CAPSULE, Vector3(0.06, 0.42, 0.0),
+					Vector3(0.0, -0.18, 0.0), 0.026).hinge(0.0, 150.0),
+			RagdollSpec.new(StringName(side + "UpperLeg"), Shape.CAPSULE, Vector3(0.1, 0.5, 0.0),
+					Vector3(0.0, -0.205, 0.0), 0.1) \
+					.cone(Vector3.DOWN, Vector3(sx * 0.12, -0.96, -0.22), 95.0, 30.0),
+			RagdollSpec.new(StringName(side + "LowerLeg"), Shape.CAPSULE, Vector3(0.085, 0.46, 0.0),
+					Vector3(0.0, -0.2, 0.0), 0.05).hinge(-130.0, 0.0),
+			# The foot's body carries the toes.
+			RagdollSpec.new(StringName(side + "Foot"), Shape.BOX, Vector3(0.13, 0.1, 0.26),
+					Vector3(0.0, -0.04, -0.05), 0.015).hinge(-72.0, 62.0),
+		])
+	return out
+
+
 ## Region hurtboxes (docs/ARCHITECTURE.md "Hurtboxes").
 static func hurt_specs() -> Array[HurtSpec]:
 	return [

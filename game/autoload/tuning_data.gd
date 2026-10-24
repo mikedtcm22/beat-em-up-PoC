@@ -246,6 +246,111 @@ extends Resource
 @export_range(0.0, 1.0, 0.01) var vfx_bloodied_at: float = 0.33
 @export_range(0.05, 2.0, 0.05) var vfx_damage_tile_m: float = 0.4
 
+@export_group("Ragdoll")
+## Victim reactions (Spec §6, the tier table's "Victim reaction" row; game/actors/ragdoll.gd):
+## staggers blend a partial ragdoll of the upper body over the animation, and a body knocked
+## off its feet (launch, knockdown, throw, KO) goes full ragdoll, then gets up from where it
+## lies or goes limp. A visual layer: hits, hurtboxes and the sim body never read it, except
+## where a body gets up. Spring strengths are natural frequencies (Hz) with damping ratios
+## (1 = critical); speeds are sim m/s; times are sim seconds, so hitstop freezes and slow-mo
+## stretches them.
+@export_subgroup("Who")
+## Enemies and training dummies ragdoll; off, every reaction stays animated.
+@export var ragdoll_enabled: bool = true
+## The player ragdolls too (Game-boy's call: off, so its own arms and legs never flop in the
+## first-person view; the camera rides the animated eyes either way).
+@export var ragdoll_player: bool = false
+@export_subgroup("Stagger (partial)")
+## How much of the simulated upper body shows over the animation (Spec §6: 0.3-0.6), how
+## long it holds, then how long it fades back to the animation (both cut to the stagger's
+## length).
+@export_range(0.0, 1.0, 0.01) var ragdoll_partial_influence: float = 0.6
+@export_range(0.0, 1.0, 0.01) var ragdoll_partial_hold_s: float = 0.25
+@export_range(0.05, 1.5, 0.01) var ragdoll_partial_fade_s: float = 0.4
+## A stagger on a body already staggering: the influence rises back from where its fade had
+## got to over this long (no pop).
+@export_range(0.0, 0.5, 0.01) var ragdoll_partial_rise_s: float = 0.08
+## The hit's push (its knockback speed) times this is the kick given to the struck body
+## part at the contact point (up to ragdoll_max_kick).
+@export_range(0.0, 12.0, 0.1) var ragdoll_partial_impulse: float = 7.0
+## How hard the staggering upper body (spine, neck, head) and its arms are pulled back
+## toward the animation's joint angles, and the share of gravity on it (0: the stagger
+## animation carries its weight, the ragdoll only gives way).
+@export_range(0.0, 6.0, 0.05) var ragdoll_partial_pose_hz: float = 0.7
+@export_range(0.0, 8.0, 0.05) var ragdoll_partial_limb_pose_hz: float = 3.0
+@export_range(0.0, 1.0, 0.05) var ragdoll_partial_gravity: float = 0.0
+## A perfect block knocks the attacker's striking arm back as a hit at this speed would
+## (times ragdoll_partial_impulse, like every stagger's push).
+@export_range(0.0, 5.0, 0.05) var ragdoll_parry_push: float = 0.8
+@export_subgroup("Knocked off the feet (full)")
+## The kick at the contact point, times the hit's knockback speed (up to ragdoll_max_kick).
+@export_range(0.0, 5.0, 0.05) var ragdoll_full_impulse: float = 0.5
+## A body knocked off its feet shows the animation's snap first (from standing or from a
+## stagger): the ragdoll's influence rises from 0 to full over this long, its pose springs
+## this strong (Hz) at first, easing to the flight's.
+@export_range(0.0, 0.6, 0.01) var ragdoll_full_rise_s: float = 0.15
+@export_range(0.0, 10.0, 0.1) var ragdoll_full_rise_pose_hz: float = 6.0
+## No kick at a contact point changes its body part's speed by more than this (m/s).
+@export_range(0.0, 30.0, 0.5) var ragdoll_max_kick: float = 14.0
+## Share of the knocked body's new velocity every ragdoll body starts with (the rest comes
+## from the hips spring).
+@export_range(0.0, 1.0, 0.05) var ragdoll_inherit_velocity: float = 1.0
+## How hard each bone is pulled toward the animation's joint angles while flying, while
+## lying down (the torso, neck and head, then the arms, then the legs: a downed body lies
+## where its hurtboxes are, the head, torso and legs; the arms, which have none, lie more
+## as they fell) and when KO'd (0 = limp).
+@export_range(0.0, 6.0, 0.05) var ragdoll_flight_pose_hz: float = 2.5
+@export_range(0.0, 6.0, 0.05) var ragdoll_down_pose_hz: float = 3.0
+@export_range(0.0, 6.0, 0.05) var ragdoll_down_arm_pose_hz: float = 2.0
+@export_range(0.0, 6.0, 0.05) var ragdoll_down_leg_pose_hz: float = 3.0
+@export_range(0.0, 6.0, 0.05) var ragdoll_ko_pose_hz: float = 0.0
+## Damping ratio of those pose springs.
+@export_range(0.0, 2.0, 0.05) var ragdoll_pose_damping: float = 0.8
+## A stomp on a downed body jolts it this hard (m/s at the contact), down into the floor
+## and tilted this much along the stomp (1 = as much along it as down).
+@export_range(0.0, 10.0, 0.1) var ragdoll_ground_push: float = 2.5
+@export_range(0.0, 1.0, 0.05) var ragdoll_ground_push_tilt: float = 0.25
+@export_subgroup("Hips spring")
+## The whole ragdoll is held to the animation's hips (where the sim body is): position
+## spring frequency and damping ratio, and the whole body's turn toward the animation's
+## hips rotation while flying (it rolls over in the air as the animation does), lying (and
+## a KO's, weaker).
+@export_range(0.5, 6.0, 0.05) var ragdoll_hips_hz: float = 3.0
+@export_range(0.1, 2.0, 0.05) var ragdoll_hips_damping: float = 1.0
+@export_range(0.0, 8.0, 0.05) var ragdoll_flight_turn_hz: float = 2.5
+@export_range(0.0, 6.0, 0.05) var ragdoll_hips_turn_hz: float = 2.5
+@export_range(0.0, 6.0, 0.05) var ragdoll_ko_hips_turn_hz: float = 0.6
+@export_subgroup("Body")
+## Gravity on the ragdoll, times Tuning.gravity (the sim's).
+@export_range(0.0, 2.0, 0.05) var ragdoll_gravity_mult: float = 1.0
+## Velocity lost per second (linear, angular).
+@export_range(0.0, 5.0, 0.05) var ragdoll_linear_damp: float = 0.1
+@export_range(0.0, 10.0, 0.1) var ragdoll_angular_damp: float = 1.0
+@export_range(0.0, 1.0, 0.05) var ragdoll_friction: float = 0.8
+@export_range(0.0, 1.0, 0.05) var ragdoll_bounce: float = 0.0
+## Ragdoll bodies collide with other ragdolls (a flying body tumbles over the one it knocks
+## down); off, they pass through each other.
+@export var ragdoll_collide_ragdolls: bool = true
+## Safety caps: no ragdoll body moves faster (m/s) or spins faster (rad/s) than this.
+@export_range(5.0, 60.0, 1.0) var ragdoll_max_speed: float = 25.0
+@export_range(5.0, 100.0, 1.0) var ragdoll_max_spin: float = 40.0
+@export_subgroup("Rest and get-up")
+## A lying ragdoll sleeps once every body has moved slower than this (m/s) for
+## ragdoll_rest_s, and at the latest ragdoll_settle_max_s after it started lying (about as
+## long as a knockdown lies, downed_frames: a body about to get up is not frozen mid-motion).
+@export_range(0.0, 1.0, 0.01) var ragdoll_rest_speed: float = 0.25
+@export_range(0.0, 2.0, 0.05) var ragdoll_rest_s: float = 0.3
+@export_range(0.2, 5.0, 0.05) var ragdoll_settle_max_s: float = 1.25
+## The get-up fades from the pose the ragdoll lies in over this long, and longer when the
+## body has further to go to where it stands up (it slides there no faster than this, m/s;
+## at most over the whole get-up).
+@export_range(0.0, 0.5, 0.01) var ragdoll_getup_blend_s: float = 0.2
+@export_range(0.5, 6.0, 0.1) var ragdoll_getup_slide_speed: float = 1.5
+## A body that fell on another gets up beside it, this far (m) from where its hips lie.
+@export_range(0.5, 2.0, 0.05) var ragdoll_getup_aside_m: float = 0.8
+## A ragdoll cut short (a staggering body grabbed) fades back over this long.
+@export_range(0.0, 0.5, 0.01) var ragdoll_stop_blend_s: float = 0.1
+
 @export_group("Camera")
 @export_range(75.0, 110.0, 1.0) var fov_deg: float = 90.0
 @export_range(0.0, 0.3, 0.005) var cam_smoothing_s: float = 0.05

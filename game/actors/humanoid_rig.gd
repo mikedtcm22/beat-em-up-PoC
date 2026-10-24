@@ -16,8 +16,9 @@ extends Node3D
 ## itself (it does not wait for Skeleton3D's deferred update), then moves the bone
 ## followers, rig points and hurtboxes. When advance() returns, get_point_transform(),
 ## the attachment nodes and the hurtbox transforms (scene and physics server) all show
-## the same pose. play() and play_move() only choose the animation; the pose changes on
-## the next advance(), whose dt is the first slice of the new animation.
+## the same pose (the attachment nodes show a running ragdoll's instead, see "Ragdoll").
+## play() and play_move() only choose the animation; the pose changes on the next
+## advance(), whose dt is the first slice of the new animation.
 ## Hurtboxes are written straight to the physics server, so a shape query run right after
 ## advance() sees this tick's pose. If the owner moves its body after advance() in the same
 ## tick, call advance(0.0) again to re-sync (it re-applies the pose without moving time).
@@ -30,15 +31,17 @@ extends Node3D
 ## time. Each new animation fades from exactly what was shown, and nothing older survives
 ## its fade.
 ##
-## Skeleton modifiers (limitation): advance() computes the FK itself from the skeleton's
-## local (animation) poses and drives the bone followers, meshes, rig points and
-## hurtboxes from that. A SkeletonModifier3D under the Skeleton3D, such as the
-## PhysicalBoneSimulator3D partial ragdoll of Spec §6 (Milestone 2), would change only
-## Skeleton3D's own global poses and never reach the meshes. The intended Milestone 2 path:
-## after skeleton.advance() has run the modifiers, the visual followers (meshes and
-## attachments) read the post-modifier global poses (get_bone_global_pose()), while
-## hurtboxes and get_point_transform() keep this pure-animation FK so hits stay
-## deterministic and independent of the ragdoll.
+## Ragdoll (Spec §6; Milestone 2, game/actors/ragdoll.gd): advance() computes the FK itself
+## from the skeleton's local (animation) poses; hurtboxes, rig points and
+## get_point_transform() always use that pure-animation FK, so hits stay deterministic and
+## independent of the ragdoll. The ragdoll is a pair of SkeletonModifier3Ds under the
+## skeleton (a PhysicalBoneSimulator3D, then the Ragdoll), built on the first
+## ragdoll_start() and inactive otherwise. While one runs, the skeleton's update (deferred by
+## skeleton.advance() to the end of the physics frame) runs the modifiers and the Ragdoll
+## moves the visual followers (meshes and attachment nodes) to the post-modifier pose
+## (show_visual_pose(); get_visual_point_transform() reads it). With no ragdoll running the
+## followers take the animation FK in advance(), exactly as before. Stopping a ragdoll
+## (ragdoll_stop()) cross-fades from the last visual pose, like any animation start.
 ##
 ## Grabs: the held animation is authored for a victim whose origin stands on the floor
 ## directly below the holder's HoldPoint, facing the holder (&"hold" on the holder,
@@ -147,6 +150,13 @@ var _fade_rolls: bool = false
 var _fade_side: Vector3 = Vector3.RIGHT
 ## Animation name -> Head height (rig space) sampled every 1/60 s, for _fall_join_time().
 var _head_curves: Dictionary[StringName, PackedFloat32Array] = {}
+## The visual ragdoll, built on the first ragdoll_start().
+var _ragdoll: Ragdoll
+## Each bone's world position after the latest advance() that moved time, and its velocity
+## then (sim m/s), for a ragdoll's start velocities.
+var _last_world: PackedVector3Array = PackedVector3Array()
+var _bone_velocity: Array[Vector3] = []
+var _motion_valid: bool = false
 
 
 ## Create skeleton, meshes, hurtboxes, rig points and the animation library. Idempotent:
@@ -279,6 +289,9 @@ func advance(dt: float) -> void:
 	_apply_fade(step)
 	skeleton.advance(step)
 	_refresh_pose()
+	_track_motion(step)
+	if _ragdoll and _ragdoll.is_running():
+		_ragdoll.sim_scale = TimeController.scale_for(actor) if actor else TimeController.sim_scale()
 
 
 ## The animation id last started: a named animation, or the move's anim id for play_move().
@@ -364,6 +377,146 @@ func set_damage_look(level: int) -> void:
 		DamageLook.apply(_materials[paint], paint, level)
 
 
+# --- Ragdoll (see the class docs and game/actors/ragdoll.gd) ---------------------------
+
+
+## Start a ragdoll from the pose on screen: `full` for a body knocked off its feet (every
+## bone), otherwise the stagger's partial ragdoll of the upper body, which fades back to the
+## animation within `partial_length_s` sim seconds. The hit's kick is `push` (world m/s, the
+## knockback) at `contact` (world), on the `part` body (Ragdoll.Part) nearest to it; every
+## simulated body starts with `body_velocity` (the actor's new sim velocity) on top of its
+## bone's velocity in the animation. A full ragdoll already running only takes the new
+## kick. Builds the ragdoll on first use.
+func ragdoll_start(full: bool, contact: Vector3, push: Vector3, body_velocity: Vector3,
+		part: Ragdoll.Part = Ragdoll.Part.ANY, partial_length_s: float = INF) -> void:
+	if not _built:
+		return
+	if _ragdoll == null:
+		_ragdoll = Ragdoll.new()
+		_ragdoll.setup(self)
+	_ragdoll.sim_scale = TimeController.scale_for(actor) if actor else TimeController.sim_scale()
+	var mode := Ragdoll.Mode.FULL if full else Ragdoll.Mode.PARTIAL
+	var bone_velocity: Array[Vector3] = []
+	if _motion_valid:
+		bone_velocity = _bone_velocity
+	_ragdoll.start(mode, contact, push, body_velocity, bone_velocity, part, partial_length_s)
+
+
+## An extra hit on a running ragdoll (a stomp on a downed body): `push` (world m/s) at
+## `contact` (world), on the `part` body nearest to it.
+func ragdoll_hit(contact: Vector3, push: Vector3, part: Ragdoll.Part = Ragdoll.Part.ANY) -> void:
+	if is_ragdolling():
+		_ragdoll.hit(contact, push, part)
+
+
+## A running full ragdoll flies to a landing in `lying_anim` (a face-down one): it turns
+## toward that animation's hips in the air (Ragdoll.aim_landing()).
+func ragdoll_aim_landing(lying_anim: StringName) -> void:
+	if not is_ragdolling() or not anim_player.has_animation(lying_anim):
+		return
+	var animation := anim_player.get_animation(lying_anim)
+	var track := animation.find_track(^"Skeleton3D:Hips", Animation.TYPE_ROTATION_3D)
+	if track >= 0:
+		# Root is never animated: the Hips' local rotation is their rig-space one.
+		_ragdoll.aim_landing(animation.rotation_track_interpolate(track, 0.0))
+
+
+## The pose springs of a running ragdoll: Ragdoll.Phase.DOWN once it lies, LIMP for a KO.
+func ragdoll_set_phase(phase: Ragdoll.Phase) -> void:
+	if is_ragdolling():
+		_ragdoll.set_phase(phase)
+
+
+## Stop a running ragdoll. The animation takes over again, fading from the pose the ragdoll
+## shows over `blend_s` sim seconds (0 = at once); call it after play() to fade into that
+## animation from the ragdoll's pose (the get-up) instead of from the animation's.
+func ragdoll_stop(blend_s: float = 0.0) -> void:
+	if not is_ragdolling():
+		return
+	if blend_s > 0.0:
+		# The pose on screen, in the rig's frame now (the owner may have moved it since, a
+		# get-up moving it under the ragdoll's hips).
+		var to_rig := (global_transform if is_inside_tree() else transform).affine_inverse() \
+				* _ragdoll.visual_rig_transform
+		var hips := _bone_index[&"Hips"]
+		for i: int in skeleton.get_bone_count():
+			var shown := to_rig * _ragdoll.visual_pose(i)
+			var parent := skeleton.get_bone_parent(i)
+			var local := shown if parent < 0 else (to_rig * _ragdoll.visual_pose(parent)).affine_inverse() * shown
+			_fade_rot[i] = local.basis.get_rotation_quaternion()
+			if i == hips:
+				# The fade places the Hips on its parent (Root, a root bone) as the fade starts
+				# it: Root's faded rotation at its animation position in the rig's frame now.
+				# Taken from the old frame instead, the body would jump by the owner's move.
+				var root_start := Transform3D(Basis(_fade_rot[parent]), skeleton.get_bone_pose_position(parent))
+				_fade_hips = (root_start.affine_inverse() * shown).origin
+		_fade_s = blend_s
+		_fade_t = 0.0
+		_fade_rolls = false
+	_ragdoll.stop()
+
+
+## True while a ragdoll (partial or full) runs on this rig.
+func is_ragdolling() -> bool:
+	return _ragdoll != null and _ragdoll.is_running()
+
+
+## Ragdoll.Mode.NONE, PARTIAL or FULL.
+func ragdoll_mode() -> Ragdoll.Mode:
+	return _ragdoll.mode if _ragdoll else Ragdoll.Mode.NONE
+
+
+## The ragdoll (null until the first ragdoll_start()).
+func get_ragdoll() -> Ragdoll:
+	return _ragdoll
+
+
+## Where a running ragdoll's hips lie relative to the animation's hips: the world offset
+## along the floor (y = 0). Zero without a ragdoll.
+func ragdoll_hips_offset() -> Vector3:
+	if not is_ragdolling():
+		return Vector3.ZERO
+	var hips := _bone_index[&"Hips"]
+	var to_world := global_transform if is_inside_tree() else transform
+	var shown := (_ragdoll.visual_rig_transform * _ragdoll.visual_pose(hips)).origin
+	var animated := (to_world * _bone_globals[hips]).origin
+	return Vector3(shown.x - animated.x, 0.0, shown.z - animated.z)
+
+
+## World transform of a bone or rig point as it is shown: the ragdoll's pose while one
+## runs, otherwise get_point_transform() (the animation).
+func get_visual_point_transform(point: StringName) -> Transform3D:
+	if not is_ragdolling():
+		return get_point_transform(point)
+	var bone := point
+	var offset := Vector3.ZERO
+	if PlaceholderBody.POINT_BONE.has(point):
+		bone = PlaceholderBody.POINT_BONE[point]
+		offset = PlaceholderBody.POINT_OFFSET[point] * _scale
+	if not _bone_index.has(bone):
+		return get_point_transform(point)
+	return _ragdoll.visual_rig_transform * _ragdoll.visual_pose(_bone_index[bone]) \
+			* Transform3D(Basis.IDENTITY, offset)
+
+
+## Rig lengths are PlaceholderBody lengths times this (height / REF_HEIGHT).
+func rig_scale() -> float:
+	return _scale
+
+
+## Skeleton-space pose of skeleton bone `bone` in the animation (the FK hurtboxes and
+## get_point_transform() use), after the latest advance().
+func animation_pose(bone: int) -> Transform3D:
+	return _bone_globals[bone]
+
+
+## Ragdoll only: move the bone followers (meshes, attachments) to `globals`, the
+## post-modifier skeleton-space pose of every bone.
+func show_visual_pose(globals: Array[Transform3D]) -> void:
+	for bone: StringName in _bone_nodes:
+		_bone_nodes[bone].transform = globals[_bone_index[bone]]
+
+
 # --- Building --------------------------------------------------------------------------
 
 
@@ -385,6 +538,8 @@ func _build_skeleton() -> void:
 	skeleton.reset_bone_poses()
 	_bone_globals.resize(skeleton.get_bone_count())
 	_fade_rot.resize(skeleton.get_bone_count())
+	_last_world.resize(skeleton.get_bone_count())
+	_bone_velocity.resize(skeleton.get_bone_count())
 
 
 func _build_materials() -> void:
@@ -661,13 +816,29 @@ func _refresh_pose() -> void:
 		var local := skeleton.get_bone_pose(i)
 		var parent := skeleton.get_bone_parent(i)
 		_bone_globals[i] = local if parent < 0 else _bone_globals[parent] * local
-	for bone: StringName in _bone_nodes:
-		_bone_nodes[bone].transform = _bone_globals[_bone_index[bone]]
+	# A running ragdoll moves the followers itself (show_visual_pose()).
+	if not is_ragdolling():
+		for bone: StringName in _bone_nodes:
+			_bone_nodes[bone].transform = _bone_globals[_bone_index[bone]]
 	for i: int in _hurtboxes.size():
 		var hurtbox := _hurtboxes[i]
 		hurtbox.transform = _hurtbox_transform(_hurt_specs[i])
 		if hurtbox.is_inside_tree():
 			PhysicsServer3D.area_set_transform(hurtbox.get_rid(), hurtbox.global_transform)
+
+
+## After an advance() that moved time by `step` sim seconds: each bone's world velocity
+## (sim m/s) since the last such advance(), for a ragdoll's start (ragdoll_start()).
+func _track_motion(step: float) -> void:
+	if step <= 0.0:
+		return
+	var to_world := global_transform if is_inside_tree() else transform
+	for i: int in _bone_globals.size():
+		var p := (to_world * _bone_globals[i]).origin
+		if _motion_valid:
+			_bone_velocity[i] = (p - _last_world[i]) / step
+		_last_world[i] = p
+	_motion_valid = true
 
 
 func _hurtbox_transform(spec: PlaceholderBody.HurtSpec) -> Transform3D:

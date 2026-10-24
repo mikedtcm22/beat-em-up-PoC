@@ -64,6 +64,10 @@ const LAYER_HURTBOX := 4
 const LAYER_PICKUP := 5
 const LAYER_DOWNED_BODY := 6
 const LAYER_PROJECTILE := 7
+## Ragdoll bodies (game/actors/ragdoll.gd): a visual layer that collides with the world
+## (and, with Tuning.ragdoll_collide_ragdolls, other ragdolls) only. No actor body, hurtbox
+## or hit query ever sees it.
+const LAYER_RAGDOLL := 8
 
 ## Visual layers (1-based). Head and neck meshes of the player go on FP_HIDDEN,
 ## which the first-person camera's cull mask excludes; they still cast shadows.
