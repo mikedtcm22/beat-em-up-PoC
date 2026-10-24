@@ -1,0 +1,193 @@
+{
+ "lens": "grab",
+ "verdicts": [
+  {
+   "id": "grab-01",
+   "lens": "grab",
+   "severity": "high",
+   "title": "A body launched out of the hold (a knee that KOs it, or the throw) pops into the holder and fills the view",
+   "survives": true,
+   "confirmations": 3,
+   "spec_question": false,
+   "files": [
+    "game/actors/combat_actor.gd",
+    "game/actors/humanoid_rig.gd",
+    "tests/test_grab_view.gd"
+   ],
+   "root_cause": "The launch path (CombatActor._launch(), and the killing-knee branch of _apply_reaction) changes pose from 'held' (hips nudged 0.3 m toward the holder) to the launch pose in 0.03 s with the origin still pinned at the hold point. Unlike release_from_grab(), it does not move the origin under the drawn hips or call rig.carry_fade(), so the body snaps upright inside the holder. The ragdoll's animation-first rise then keeps showing that snap.",
+   "open_question": "",
+   "votes": {
+    "reproduce": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "I reproduced it. I reran the P6 act (knee KOs the held dummy, first person) and the victim covers about 47% of the view at 0.12 m from the lens for 4 frames (f97-f100). That is the same as the reviewer's numbers. The sheet from the earlier run shows a black cap filling the top half of the view with the flash on it, then the body dropping away. The frames show no cap in view through the hold, so the pop begins at the launch.",
+     "evidence": "Reran `godot --path . --write-movie captures/verify/grab-01-reproduce/p6.avi --fixed-fps 60 --resolution 1280x720 res://captures/review_grab/probe_bot.tscn -- --act=P6`, one run. The log is captures/verify/grab-01-reproduce/p6.log. I did not tile or view stills from this rerun, only the log numbers and the reviewer's sheet (captures/review_grab/p6_knee_ko_fp_f1340-1359.png).\n\np6.log: f96 vst=LAUNCHED vic_near 0.299 vic 35%; f97 vic_near 0.126 vic 47% cov 74%; f98-f99 vic_near 0.124/0.123 vic 47% cov 75%; f100 0.161 vic 41%; f101 0.327 vic 36%; f102 0.398. The probe column vhead shows the head at z -0.33 against an eye at z -0.27, with vorig z -0.58 until f99. Then the head moves away, so the cap is in view for 4 frames and in front of the lens at 0.12 m.\n\nThe mechanism matches the code. `_launch()` in game/actors/combat_actor.gd (line 971) sets holder = null and calls rig.play(..., 0.03) with no origin shift. `release_from_grab()` (line 478) moves the origin under the hips and calls rig.carry_fade() for exactly this reason, as its doc comment says. I did not check the probe's sample at f96 against f97 beyond the numbers above.\n\nNot a defect only if the cap-in-lens is intended. Nothing in the approved list covers it, and release_from_grab's own comment treats the same effect as a bug."
+    },
+    "spec": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "No doc approves or requires a launched victim popping upright inside the holder. The README clinch departure only covers a victim released on its feet standing up around its hips, which is the carry_fade behaviour. The approved items (the throw ends in the stance, victim 6 cm closer, a thrown body knocks others down) do not cover the launch pop. The plan's review list includes \"the held enemy KO'd by a knee\", and the plan's first-person rules (nothing fills the view, no hand within 0.3 m) support the finding. The suggested fix applies the existing release_from_grab approach and changes no tunable or approved behaviour.",
+     "evidence": "Grepped README.md \"Clinch\" (line 64), M2-phase3-plan.md (lines 61-62, 75-83), HANDOFF.md B-done entry (line 49), SPEC.md and ARCHITECTURE. Found no mention of throw or KO-launch behaviour from the hold being approved. Did not run Godot, as the lens required."
+    },
+    "code": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The code does what the finding says. _launch() sets holder = null and calls rig.play(launched or knockdown pose, 0.03) straight from 'held'. It never moves the origin under the hips and never calls carry_fade(), unlike release_from_grab(). The held pose has HIPS_NUDGE (0, 0, 0.3), and the launch poses use different nudges. The ragdoll does not rescue it: Ragdoll.start() on a FULL ragdoll uses _rise_from = 0 and ragdoll_full_rise_s, so the animation snap shows first. The 'shown' pose captured at ragdoll_start is the held pose, since the skeleton has not advanced yet. I did not run a recording or test, so the exact distances (0.12 m, 48%) rest on the reviewer's probe, not on my code reading.",
+     "evidence": "Read in /Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-grab: game/actors/combat_actor.gd (_apply_reaction ~930-965, _launch 971-992, release_from_grab 478-496, _enter_ko, _ragdoll_full), game/actors/humanoid_rig.gd (carry_fade 267, ragdoll_start 500), game/actors/ragdoll.gd start() (rise_from = 0 for FULL), game/actors/placeholder_poses.gd held() at line 296 (HIPS_NUDGE z 0.3)."
+    }
+   }
+  },
+  {
+   "id": "grab-02",
+   "lens": "grab",
+   "severity": "medium",
+   "title": "A hit that breaks the hold lets the victim stand up through the holder's frozen view",
+   "survives": true,
+   "confirmations": 3,
+   "spec_question": false,
+   "files": [
+    "game/player/player.gd",
+    "game/actors/combat_actor.gd",
+    "tests/test_grab_view.gd"
+   ],
+   "root_cause": "_on_hit_received() releases the held body with stagger=false on the frame the player is hit, but the hitstop list covers only the attacker and the player. The victim stands up at full speed around its hips, right under the holder's frozen, bent, pulled-back eye. Nothing keeps it out of the lens for the hitstop's frames.",
+   "open_question": "The grab's lens pull-back and the bend's depth (open with Game-boy, default as they are). Any fix must leave both unchanged.",
+   "votes": {
+    "reproduce": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "Reproduced. A hit on the holding player releases the victim (player.gd _on_hit_received -> _release_held(false)), and the victim stands up through the frozen bent-over first-person view. The cap comes up through the lens, 0.263 -> 0.145 m in 4 frames, then 0.127 m. The victim then sits at about 0.34 m covering 58% of the view for roughly 70 frames. It reads as a defect, not as intended: a black cap wall fills the center of the view.",
+     "evidence": "Code: game/player/player.gd:534-542 (_on_hit_received calls _release_held(false)) and :939-943. I re-ran `godot --path . --write-movie captures/verify/grab-02-reproduce/p.avi ... res://captures/review_grab/probe_bot.tscn -- \"--act=P5 hit\"` in /Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-grab. Log: captures/verify/grab-02-reproduce/p.log. In frames 84-91 the player is pst=HITSTUN and the victim vst=FREE. vic_near was 0.263, 0.221, 0.178, 0.145, 0.127, 0.158, 0.225, 0.303. Victim view coverage went 35% -> 47%. Frames 126-131 show vic_near 0.336 at 58%, and frames 151-156 show 0.37 at 50%. The tiled sheet captures/verify/grab-02-reproduce/s.png (movie frames 82-93) shows the victim's head rising through the view centre and filling it in about 5 frames. The log's frame numbers differ from the reviewer's because of the act's start offset, but the numbers match."
+    },
+    "spec": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The docs approve that a hit breaks the hold and that the view eases out from wherever it is, still through hitstop. They don't approve the victim's head rising through the frozen lens. The phase 3 plan names \"hit while holding\" as an edge case to review, and its first-person rule says nothing fills the view. ARCHITECTURE.md also keeps the rule that no forearm or hand comes within 0.3 m of the lens. Nothing rules out the suggested fix. It would change only how the released body leaves the hold (stagger with a push, or a stand-up held back by the same hitstop), which no doc specifies.",
+     "evidence": "I read docs only and ran no Godot. M2-phase3-plan.md line 62 (first-person rules still hold: nothing filling the view) and line 79 (review the hold view when the hold ends early: hit while holding, KO'd by a knee, hold_max_frames, a release). ARCHITECTURE.md line 267 (the ease-out runs after a \"hit that breaks the hold\", in sim ticks, still through hitstop). Greps of SPEC.md, README.md and HANDOFF.md found no approval of the victim's stand-up path or of the victim being in or out of hitstop on a hit-break."
+    },
+    "code": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The code path matches the finding. PlayerCharacter._on_hit_received() calls _release_held(false) when the player is hit. That calls victim.release_from_grab(push, false), which puts the victim in FREE, plays idle and moves its origin under its hips. The hitstop that goes with the hit is TimeController.hitstop([attacker, victim]), and for a hit on the player its list is the attacker and the player. The released body is in neither list, so it keeps simulating while the holder is frozen. The hold-view easing runs in sim ticks, so it is also frozen in hitstop. I did not run any probe or test, so the reported lens distances and view coverage are unconfirmed by me.",
+     "evidence": "I read game/player/player.gd (_on_hit_received around line 534, _release_held around line 939, _throw_held's hitstop call around line 971), game/actors/combat_actor.gd release_from_grab (around line 478) and TimeController.hitstop() in game/autoload/time_controller.gd. Nothing in these frees the released victim from the stand-up or keeps it away from the frozen eye. I read the attacker-side hitstop call only through the finding, not in code. I did not run tests, probes or recordings."
+    }
+   }
+  },
+  {
+   "id": "grab-03",
+   "lens": "grab",
+   "severity": "medium",
+   "title": "The combat log sits over the knee contact in every first-person hold (spec question, proposal)",
+   "survives": true,
+   "confirmations": 3,
+   "spec_question": true,
+   "files": [
+    "game/ui/hud.tscn",
+    "game/ui/hud.gd",
+    "game/ui/combat_log_overlay.gd",
+    "game/ui/help_overlay.gd",
+    "project.godot"
+   ],
+   "root_cause": "The log panel is a fixed, always-visible HUD Control at the right-middle of the screen, drawn over the 3D view. It is never hidden or moved during a first-person hold, because set_combat_log_visible() has no in-game caller and no input toggles it.",
+   "open_question": "The combat log over the knee contact (default: propose a fix as a spec question). A toggle key, a move to the upper right and a fade while holding all add to SPEC §11.",
+   "votes": {
+    "reproduce": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "Reproduced. In the first-person hold the always-on combat log panel sits right of centre, over the knee burst. The burst draws as a gray star under the translucent panel. This is a legibility and spec question (SPEC §11 sets only the log's content), not a mechanics bug. The log has no player toggle.",
+     "evidence": "I recorded one run: combo_bot --act=\"Grab, knee x3\" at 1280x720. The output is in captures/verify/grab-03-reproduce/ (g.avi, g.log, s.png). The log shows knees at f95, f123 and f151. I tiled the sheet at 10 fps from t=1.4 s and looked at it. The CombatLog panel (translucent, about x 280-470 of each 480 px tile, y 125-185) sits over the right half of the held head. The knee burst star appears gray and half behind the panel in the tiles around the knee frames. In another tile a white flash is visible, but the panel still covers the right part. Code checks: game/ui/hud.tscn CombatLog has anchors right and 0.5, offsets -800/-40/-40/204, and clip_contents. game/ui/hud.gd set_combat_log_visible() is called only from tests/bot/vfx_bot.gd, tests/bot/ragdoll_bot.gd and tests/test_ui.gd. Nothing in game/ calls it. There is no combat-log input in project.godot or help_overlay.gd. The docstring says the log is shown by default."
+    },
+    "spec": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "The docs don't approve the log covering the knee contact. They list it as an open question for Game-boy. HANDOFF sets the default as \"C's review proposes a fix\", and the phase 3 plan tells the review to check the combat log over the knee contact. SPEC §11 only fixes the log's content (last 10 hits), not its placement or toggling. The finding is a proposal, so it matches the stated default. Any fix changes HUD behavior and needs Game-boy's sign-off, so it goes up as a spec question.",
+     "evidence": "grep of docs/SPEC.md (line 356: log shows the last 10 hits with move, damage and frame timing; no placement and no toggle), docs/HANDOFF.md (lines 18, 33 and 461: \"the combat log over the knee contact (default: C proposes a fix)\"), docs/milestones/M2-phase3-plan.md (line 83 lists \"the combat log over the knee contact\" as a review item; line 90 notes the log covers the side view in combo_bot captures), docs/ARCHITECTURE.md (lines 22, 301 and 336 mention the log but set no placement). README departures: no mention of the log. I did not run Godot or check the code claims (hud.tscn anchors, no callers of set_combat_log_visible)."
+    },
+    "code": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "The code matches the finding. CombatLog is anchored right-middle (anchor_left and anchor_right 1.0, anchor_top and anchor_bottom 0.5, offsets -800/-40/-40/204) and is visible by default. Nothing in game/ calls set_combat_log_visible(), and no input action toggles it. Only tests/test_ui.gd and the bots use it. The HUD builds the overlay and connects it to CombatEvents in hud.gd with no hold or camera-mode condition, so it is on during every first-person hold. I did not check the overlap with the knee contact in captures, and a code read can't settle that. The finding's evidence covers it.",
+     "evidence": "Worktree /Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-grab. I grepped game, tests and project.godot for set_combat_log_visible and combat_log. hud.gd lines 27, 45-46, 98-104 and 124 hold the node, the signal wiring and the setter. The only other callers are in tests/test_ui.gd. I read the CombatLog node in game/ui/hud.tscn (lines 78-93): clip_contents true, mouse_filter 2, anchors and offsets as in the finding. I ran no test and no probe."
+    }
+   }
+  },
+  {
+   "id": "grab-04",
+   "lens": "grab",
+   "severity": "medium",
+   "title": "In first person the knee is the same navy as the shaded right sleeve, so it reads as a blue lump",
+   "survives": true,
+   "confirmations": 3,
+   "spec_question": false,
+   "files": [
+    "game/actors/humanoid_rig.gd",
+    "game/player/player.gd",
+    "game/actors/placeholder_body.gd"
+   ],
+   "root_cause": "The pants colour is derived from body_color (darkened 0.45) with no hue shift and no separate pants export. The player's legs are therefore a dark version of the shirt navy, and the rising knee merges with the shaded right sleeve.",
+   "open_question": "",
+   "votes": {
+    "reproduce": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "Reproduced. On the knee's active frame in first person, the knee is a dark navy rounded mass at the bottom right, right beside the shaded navy right sleeve. The two merge into one blob, and the knee's thigh line and kneecap don't show. Only the white burst marks it as a knee. The lit left sleeve is clearly brighter blue, which makes the dark right-side pair read as one shape. It is a legibility problem rather than a mechanical bug, and I rate it medium at most.",
+     "evidence": "I ran one recording: `godot --path . --write-movie captures/verify/grab-04-reproduce/k.avi --fixed-fps 60 --resolution 1280x720 res://tests/bot/vfx_bot.tscn -- \"--act=knees under\"`. It produced 283 frames. I tiled 0.5 s from t=1.4 s with ffmpeg into captures/verify/grab-04-reproduce/s.png and looked at it. The third tile (knee contact) shows a dark navy shape with the burst, touching the right sleeve with no visible edge between them. I did not measure pixels. Code check: _PANTS_DARKEN is 0.45 at game/actors/humanoid_rig.gd:102, and line 977 applies it to the body_color."
+    },
+    "spec": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "No doc approves or requires the navy knee against the navy sleeves. The plan and HANDOFF both list it as an open item to check, not an accepted behaviour. SPEC §10 only asks for 4-6 flat colours per character, and a pants colour change fits that.",
+     "evidence": "grep of docs/SPEC.md, README.md, docs/HANDOFF.md, docs/milestones/M2-phase3-plan.md and docs/ARCHITECTURE.md for pants, sleeve, body_color and colour terms. docs/milestones/M2-phase3-plan.md:83 names \"the blue sleeves against the blue knee\" as a thing to check in grab feel. docs/HANDOFF.md:49 (B done, 12:25) lists \"the player's blue sleeves match the knee's blue\" under Open. docs/SPEC.md:295 requires only \"4-6 flat colors per character on a shared palette atlas\". No Decisions log entry or departure section mentions pants or sleeve colours."
+    },
+    "code": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The code matches the finding's cause. The player's body_color is (0.2, 0.36, 0.62). Pants are that colour darkened by 0.45 (about 28, 50, 87 in 8-bit, before lighting), so they share the shirt's hue and sit at a similar value to a shaded sleeve. Nothing in the code gives the legs their own hue or a contrasting knee band. The 'shaded' half of the claim, that the right sleeve ends up at nearly the same value as the knee, depends on scene lighting. I did not check that from the code, so I'm leaving it to the frame measurements the reviewer reported.",
+     "evidence": "Read /Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-grab/game/actors/humanoid_rig.gd. Line 102 is `const _PANTS_DARKEN := 0.45`. Line 977 is `_materials[PlaceholderBody.Paint.PANTS].albedo_color = body_color.darkened(_PANTS_DARKEN)`. Line 976 gives BODY the plain body_color. In game/player/player.gd line 108, `r.body_color = Color(0.2, 0.36, 0.62)`. Nothing sets a separate pants colour for the player. I ran no tests or probes."
+    }
+   }
+  },
+  {
+   "id": "grab-05",
+   "lens": "grab",
+   "severity": "low",
+   "title": "The knee's localized flash whitens about 16% of the first-person view, three times per hold (spec question)",
+   "survives": true,
+   "confirmations": 3,
+   "spec_question": true,
+   "files": [
+    "game/actors/humanoid_rig.gd",
+    "game/fx/hit_flash.gdshader",
+    "game/autoload/tuning_data.gd",
+    "game/actors/combat_actor.gd"
+   ],
+   "root_cause": "The flash radius is a single fixed world-space tunable (hit_flash_radius_m = 0.25 m), applied unchanged by CombatActor._flash_at() and drawn by hit_flash.gdshader by world distance only. The hold puts the victim's head 0.3-0.4 m from the lens, so the same radius covers a large share of the screen. No cap by distance or by hold exists.",
+   "open_question": "The flash's minimum on-screen size in side view (default: leave it). A maximum on-screen size in first person at close range, as in a held victim, would be the same kind of new design, and it is not currently an open question.",
+   "votes": {
+    "reproduce": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "Reproduced: each knee's flash whitens about 12% of the first-person view (17% at a threshold of 200) for 2 frames. The size is a consequence of close range and the approved localized flash, and it is a spec question, not a bug, so severity stays low.",
+     "evidence": "I re-recorded the act once: `vfx_bot --act=\"knees under\"` at 1280x720 with Movie Maker, into captures/verify/grab-05-reproduce/k.avi (log k.log). I measured it with the reviewer's white.py, adapted to 1280x720 (w.py in the same folder). Frames 94-95, 122-123 and 150-151 are the three knees. Newly white pixels (all channels >= 235) against 2 frames earlier were 11.3-12.2% of the frame. At a threshold of 200 they were 16.7-17.2% on frames 94-95. The reviewer reported 10.0% and 15.7%. The sheet s.png (frames about 93-95 and 96) shows a soft white blob over the held head, the right shoulder and part of the chest on the two flash frames, with the hit star beside it. It is gone on the next frame. No SCRIPT ERROR appeared in the tail of the log, which I only skimmed. I did not check the throw's 7% figure."
+    },
+    "spec": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The docs approve the localized flash and its 0.25 m default. README (\"The white hit flash is localized\") and the Decisions log both say a large radius brings back the whole-body look. Nothing approves or requires a first-person size cap. The only related open item is a minimum on-screen size for the side-view flash (default: leave it), and the plan calls that kind of cap \"new design\". The finding is a valid but low-severity spec question about a flash that covers about 16% of the view at hold range, so it is not refuted. It asks for new behaviour that the docs neither rule out nor approve. The measured 16% is the reviewer's, not checked here.",
+     "evidence": "grep of docs/HANDOFF.md (lines 19, 33, 67, 362, 461), README.md line 70, and docs/milestones/M2-phase3-plan.md (lines 17, 63, 85-86). Plan line 63 says to check how the knee bursts combine with the localized flash, with both landing in view. I did not read docs/SPEC.md or ARCHITECTURE.md, and I did not run Godot."
+    },
+    "code": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "The code matches the finding. The flash radius is fixed in world space with no camera or hold dependence. A victim held 0.3-0.4 m from the lens therefore gets a flash covering a large part of the view. I did not run a test or probe, so the 16% figure itself is the reviewer's capture measurement.",
+     "evidence": "Read game/actors/combat_actor.gd lines 409, 836, 847 and 915-920: _flash_at() passes tuning.hit_flash_radius_m unchanged to rig.flash_at(), with no scaling by distance or hold. Read game/fx/hit_flash.gdshader: the falloff uses only world-space distance from flash_point, and nothing reads a camera. Read game/autoload/tuning_data.gd lines 118-131: hit_flash_radius_m is a single 0.25 default. Greps for flash_at and hit_flash_radius_m show no other call path."
+    }
+   }
+  }
+ ],
+ "pending": [
+  "grab-06",
+  "grab-07",
+  "grab-08"
+ ]
+}
