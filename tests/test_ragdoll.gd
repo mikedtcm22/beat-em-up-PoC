@@ -909,6 +909,22 @@ func test_a_launch_shows_the_animations_snap_first() -> void:
 				"then the ragdoll shows alone")
 
 
+func test_a_staggers_kick_on_the_trunk_moves_the_whole_trunk() -> void:
+	# A shove to the chest (TORSO): the kick lands on every simulating trunk body, so the
+	# chest gives way along the push, not only the light head above it.
+	await _setup([Vector3(0, 0, -1.6)])
+	var dummy := dummies[0]
+	var push := -dummy.get_forward() * 4.0
+	assert_true(dummy.receive_hit(_hit(dummy, CombatTypes.Reaction.STAGGER, push, CombatTypes.Region.TORSO, player)))
+	assert_eq(dummy.rig.get_ragdoll().pending_kicks(), 3, "on the spine, chest and upper chest")
+	var give := 0.0
+	for i in 30:
+		await get_tree().physics_frame
+		give = maxf(give, (dummy.rig.get_attachment(&"Chest").global_position - dummy.rig.get_point_position(&"Chest")).dot(push.normalized()))
+	gut.p("trunk kick: the chest gave %.3f m along the push" % give)
+	assert_gt(give, 0.04, "the chest gives way")
+
+
 func test_a_staggering_release_from_a_grab_gives_way_too() -> void:
 	await _setup([Vector3(0, 0, -1.1)])
 	var dummy := dummies[0]

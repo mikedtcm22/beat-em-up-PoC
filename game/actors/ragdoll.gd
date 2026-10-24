@@ -754,7 +754,8 @@ func _apply_pending(states: Array[PhysicsDirectBodyState3D], scale: float) -> vo
 
 ## Queue a kick of `push` (sim m/s) on the simulating `part` body (any body if none of that
 ## part simulates) whose shape's center is nearest to `contact`. A kick on an arm moves the
-## whole arm, up to the shoulder, not just its light end.
+## whole arm, up to the shoulder, not just its light end; a PARTIAL's kick on the trunk, every
+## simulating trunk body.
 func _queue_impulse(contact: Vector3, push: Vector3, part: Part) -> void:
 	if push.length_squared() < 1e-8 or _sim.is_empty():
 		return
