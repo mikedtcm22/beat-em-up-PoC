@@ -1,0 +1,227 @@
+{
+ "lens": "code",
+ "verdicts": [
+  {
+   "id": "code-01",
+   "lens": "code",
+   "severity": "high",
+   "title": "Contact flash misses the struck body: no flash from a thrown pipe, a faint one from body impacts, and the wrong part on a staggering body",
+   "survives": true,
+   "confirmations": 3,
+   "spec_question": false,
+   "files": [
+    "game/actors/humanoid_rig.gd",
+    "game/weapons/weapon.gd",
+    "game/actors/combat_actor.gd",
+    "tests/test_hit_flash.gd"
+   ],
+   "root_cause": "flash_at() trusts the raw contact point. Non-HitDetector contacts (the pipe's origin, the body-impact midpoint) are not on any mesh. HitDetector contacts sit on animation-driven hurtboxes, while a ragdolling body is drawn elsewhere. Nothing clamps the point onto the drawn body, so the flash falls outside the shader's 0.25 m radius or lands on the wrong bone.",
+   "open_question": "Related but distinct: the side-view flash's minimum on-screen size (default: leave it). The finding does not touch it.",
+   "votes": {
+    "reproduce": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "I reproduced the off-body numbers by rerunning the reviewer's probe. A thrown pipe's flash point is 0.293 m from the nearest drawn mesh, where the falloff is 0.00, so that hit shows no flash on the struck body. A flying-body knockdown's point is 0.178 m away, with falloff 0.61. The code matches the finding. weapon.gd:118 uses the pipe's origin, and combat_actor.gd:1307 uses the midpoint of the two bodies at 1 m height. flash_at() passes the raw point to the shader and anchors it only to the nearest bone follower. I did not rerun the staggering-body probes (probe2 and probe3) or record a new capture, so the staggering-body part of the finding rests on the reviewer's logs. Its mechanism is plausible, because hurtboxes follow the animation while a partly ragdolled body is drawn elsewhere.",
+     "evidence": "I ran `godot --headless --fixed-fps 60 -s addons/gut/gut_cmdln.gd -gdir=res://captures/review_code/ -gprefix=probe_review7 -gexit` once from the worktree. The output is in captures/verify/code-01-reproduce/p7.log. It printed 'PIPE: weapon_throw on Dummy1 (body impact true...): flash point 0.293 m from the nearest drawn mesh; falloff there 0.00' and 'IMPACT: impact_body_knockdown on Dummy2: 0.178 m; falloff 0.61'. The on-body jab_1, jab_2 and push_kick lines show 0.000 m and falloff 1.00, so the probe separates the cases. The run had no SCRIPT ERROR. I read game/weapons/weapon.gd:105-125 and game/actors/combat_actor.gd:1295-1312. I read HumanoidRig.flash_at() in game/actors/humanoid_rig.gd near line 400, which has no remapping onto the drawn body part. I also read the reviewer's captures/review_code/probe2.log line 24 and probe3.log line 18."
+    },
+    "spec": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "No document approves a flash that misses the struck body. SPEC §6 says the victim's toon shader flashes white on contact. README's approved departure says the victim flashes white only around the point the hit landed, full white at the contact point. That intent is a flash visible on the body. The only flash-related items marked as open or known are the side-view minimum on-screen size and the first-person player-hit case. HANDOFF line 82 says the flash and ragdoll \"have not been recorded together yet\", so that pair was untested, not approved. Anchoring the point to the drawn struck part does not contradict any decision or departure.",
+     "evidence": "grep of README.md:70, docs/SPEC.md:196, docs/HANDOFF.md (lines 12-19, 33, 67-69, 82, 362, 459-461) and docs/milestones/M2-phase3-plan.md (lines 17, 63, 82-92). None mention a thrown pipe, body-impact points or a staggering body failing to flash. I did not run Godot."
+    },
+    "code": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "The code does what the finding says. flash_at() uses the raw world contact point and anchors it to the nearest bone origin, with no clamping onto a hurtbox or mesh. weapon.gd:118 sets the contact point to the pipe's origin. combat_actor.gd:1307 sets it to the midpoint of the two bodies, 1 m up. HitDetector contacts sit on hurtboxes, which follow the animation, while a staggering or ragdolling body is drawn offset from them. The reviewer's probe logs give the resulting distances.",
+     "evidence": "I read humanoid_rig.gd:395-430 (flash_at, follow_flash), weapon.gd:105-125 and combat_actor.gd:1295-1315 in the worktree. I also read the lines in captures/review_code/probe7.log, probe3.log and probe2.log that the finding quotes. They say the thrown pipe's flash point is 0.293 m from the nearest drawn mesh (falloff 0.00) and the body impact's is 0.178 m (falloff 0.61). They also say the uppercut anchors to BoneLeftUpperArm, 0.363 m from the drawn Head, and the stagger's flash point is 0.346 m from the drawn head. I did not re-run any probes or tests."
+    }
+   }
+  },
+  {
+   "id": "code-02",
+   "lens": "code",
+   "severity": "medium",
+   "title": "A respawning dummy ignores ghost bodies and can blink back in inside a body lying on its post",
+   "survives": true,
+   "confirmations": 2,
+   "spec_question": false,
+   "files": [
+    "game/enemies/dummy/training_dummy.gd",
+    "tests/test_ko_blink.gd"
+   ],
+   "root_cause": "The _respawn_spot() query mask in training_dummy.gd leaves out LAYER_DOWNED_BODY, where every ghost body sits (lying, KO, held, flying, and a dummy just re-posted this tick). So a body lying or held over the post, or a dummy that comes back in the same tick, goes unseen. The ring spots also have no path or floor check, and a shape and query are built on every tick.",
+   "open_question": "",
+   "votes": {
+    "reproduce": {
+     "refuted": true,
+     "confidence": "medium",
+     "reason": "The mechanics are as described, but they read as intended design rather than a defect. Ghost bodies (lying, KO'd, flying, held) are on LAYER_DOWNED_BODY precisely so that the living can overlap them; the _set_ghost doc comment says so. A dummy blinking in over a lying body is the same overlap that walking over one already gives, and it blinks in with no hits or grabs allowed. The approved wording is \"post occupied, nearest free spot\", which fits solid occupants, and the existing test covers a solid player. The extra claims (two dummies picking the same spot in one tick, no path or floor check on the ring spots, a shape allocated per tick while waiting) are corner cases or cleanups. None was shown to produce a wrong result such as a dummy stuck in a wall, and the review's own probe does not show one.",
+     "evidence": "I ran no Godot process and made no recordings or probe runs. I read /Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-code/captures/review_code/probe1.log. Its lines 16-17 show d0 coming back 0.00 m from its post, with a drawn bone of the lying d1 0.08 m from its axis. That is what the reviewer reported. I also read game/enemies/dummy/training_dummy.gd. The _respawn_spot mask is WORLD | PLAYER_BODY | ENEMY_BODY with no DOWNED_BODY, and the ring spots have no cast_motion path check. I confirmed that set_post keeps a fresh dummy a ghost until the next physics step (lines 132-134). game/actors/combat_actor.gd _set_ghost (around line 1340) documents that ghost bodies only collide with the world \"so the living can walk over them\"."
+    },
+    "spec": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The docs approve that a dummy whose post is occupied comes back at the nearest free spot beside the post, and that it waits when no spot is free. They do not say what counts as occupied. They never approve coming back inside a lying, held or flying body. \"Nearest free spot\" implies the spot is free, so the finding asks for nothing the docs rule out. Adding LAYER_DOWNED_BODY to the query, the same-tick double pick and the path and floor checks are implementation gaps, not approved behaviour.",
+     "evidence": "grep of docs/SPEC.md, README.md, docs/HANDOFF.md, docs/milestones/M2-phase3-plan.md and docs/ARCHITECTURE.md in the m2-review-code worktree. HANDOFF.md line 28: \"a dummy whose post is occupied comes back at the nearest free spot beside it; it can't be hit or grabbed during its blink-in\". ARCHITECTURE.md line 130: \"when someone stands on the post... at the nearest free spot one or two body widths around it; with none it waits\". M2-phase3-plan.md line 77 lists \"a respawn into an occupied post\" as a test case. README.md line 73 has no occupancy rule. I found no doc text that defines the occupancy mask, the ring path check or the floor check."
+    },
+    "code": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "The code does what the finding says. _respawn_spot() masks only WORLD, PLAYER_BODY and ENEMY_BODY. _set_ghost(true) moves lying, KO, held and flying bodies to LAYER_DOWNED_BODY, so the query can't see them. Ring spots have no path or floor check. The sibling _move_under_ragdoll() (combat_actor.gd ~1130) includes DOWNED_BODY in its mask, which shows the omission is an oversight.",
+     "evidence": "Read game/enemies/dummy/training_dummy.gd lines 120-140 (set_post leaves the body a ghost until the next step) and 225-300 (_respawn_spot mask, no DOWNED_BODY, a new CapsuleShape3D and query on every call, ring spots with no cast_motion). Read game/actors/combat_actor.gd 1125-1155 and 1340-1350 (_set_ghost puts the body on LAYER_DOWNED_BODY; _move_under_ragdoll includes that layer). I did not run the probe."
+    }
+   }
+  },
+  {
+   "id": "code-03",
+   "lens": "code",
+   "severity": "medium",
+   "title": "Hold view: the first-person lens bobs 5-7 cm on every grab and release, and pops 3.5 cm in one frame on a release while walking",
+   "survives": true,
+   "confirmations": 3,
+   "spec_question": false,
+   "files": [
+    "game/camera/first_person_camera.gd",
+    "game/player/player.gd",
+    "tests/test_grab_view.gd"
+   ],
+   "root_cause": "The hold view's rise and pull-back ease on their own sim-tick ramp (_hold_view, 0.2 s in and 0.45 s out). The rig's bent eye follows the pose blends, which run on a different timeline. first_person_camera.gd:_follow also switches the walking bob clamp on the instant _held is nulled (holding_enemy() returns _held), so the eye height is clamped in one frame while the hold view is still easing out.",
+   "open_question": "B: is the lens pull-back while holding acceptable, and is the bend deep enough? Default: as it is. Easing the rise and pull-back with the pose would keep the values and fix only the timing, so it does not decide this question.",
+   "votes": {
+    "reproduce": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The probe reproduces the numbers exactly. The view moves 3.5 cm in one frame on a release while walking, and the lens rises and sinks about 4.7 cm after a standing release. The cause is in the code: the bob clamp at first_person_camera.gd:170 switches on the instant holding_enemy() clears, and the rise eases on its own timer. Whether a 3.5 cm one-frame pop reads as bad in play is a judgement call, so I kept the severity medium and did not escalate.",
+     "evidence": "I read first_person_camera.gd:165-175 and player.gd:915-930. The clamp condition is `player.is_walking() and not is_instance_valid(player.holding_enemy())`, so it is a hard switch. I read captures/review_code/probe1.log, then re-ran test_probe_walk_release_eye once (godot --headless --fixed-fps 60 gut_cmdln, probe_review.gd). The output is in captures/verify/code-03-reproduce/run.log. Standing release: view y 1.467 -> 1.514 -> 1.467, worst step 0.0079 m. Walking release: first step 0.0350 m at tick 0, y 1.501 -> 1.529 -> 1.461. I did not run probe_review6 or look at a recording."
+    },
+    "spec": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The docs approve the hold view's values (rise 0.10, pull-back 0.24, in 0.2 s, out 0.45 s) as B's departures. HANDOFF line 49 also records \"no walking-bob clamp while holding\". None of the docs I grepped (the phase 3 plan, HANDOFF, README) approves or mentions the timing side effects: the 5-7 cm bob on grab and release, or the 3.5 cm one-frame pop when the bob clamp switches on at release. The finding's suggested fix only changes how the rise and pull-back are timed or weighted, and the clamp's blend. It leaves the approved values as they are, and the docs rule neither out.",
+     "evidence": "I ran grep over docs/milestones/M2-phase3-plan.md, README.md and docs/HANDOFF.md for hold view, pull-back, rise and bob. Relevant hits: HANDOFF.md:17 and :33 (open question: the lens pull-back and the bend's depth, default as they are), HANDOFF.md:49 (B's tunables and departures, including \"no walking-bob clamp while holding\"), HANDOFF.md:461 (the open items). The plan mentions only testing the hold view when it ends early (line 79). I did not read SPEC.md or ARCHITECTURE.md, and I did not run Godot."
+    },
+    "code": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The code matches the finding's mechanism. I did not run the probes, and I did not check how much the eye smoothing (cam_smoothing_s) softens the 3.5 cm clamp jump in the real camera path. The finding's measured numbers come from the real camera, so I did not dispute them.",
+     "evidence": "I read game/camera/first_person_camera.gd (_follow, around line 170) and game/player/player.gd (_tick_hold_view, _holding_valid, _release_held, holding_enemy, get_camera_move_offset, get_hold_view_weight). I also read the tuning defaults in game/autoload/tuning_data.gd (grab_view_rise_m 0.1, grab_view_in_s 0.2, grab_view_out_s 0.45) and grep'd captures/review_code/probe1.log for the 'worst view step' lines (0.0350 m at tick 0 walking, 0.0079 m standing)."
+    }
+   }
+  },
+  {
+   "id": "code-04",
+   "lens": "code",
+   "severity": "low",
+   "title": "A dummy blinking in still attracts magnetism and blocks a thrown pipe, though no hit can land on it",
+   "survives": true,
+   "confirmations": 3,
+   "spec_question": false,
+   "files": [
+    "game/player/player.gd",
+    "game/actors/combat_actor.gd",
+    "game/enemies/dummy/training_dummy.gd",
+    "tests/test_ko_blink.gd",
+    "game/weapons/weapon.gd"
+   ],
+   "root_cause": "The blink-in is modelled only as invulnerability (_invuln_frames), not as a ghost or \"unavailable\" state. The magnetism search, the dummy's collision layer and the thrown-weapon body-entered handler all ignore invulnerability. So the dummy is a magnet target and a solid blocker while no hit or grab can land on it.",
+   "open_question": "",
+   "votes": {
+    "reproduce": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "Reproduced by reading the code and the reviewer's saved probe log. I did not re-run the probe or record anything. The magnetism skip list and the pipe's bounce are both as described, and the effect is a small low-severity polish issue. It is not a rule or spec violation.",
+     "evidence": "Read game/player/player.gd:630-650. _find_magnet_target skips only is_ko(), is_flying() and is_downed() != wants_downed, with no check on is_invulnerable() or a blink-in, so a blinking-in dummy stays a magnet target. Read game/actors/combat_actor.gd:230-233. blink_in() sets _invuln_frames to the blink length, so can_be_hit_by() (line 264) is false, as is can_be_grabbed(). Read game/weapons/weapon.gd:86 and 103-133. A thrown pipe's mask includes LAYER_ENEMY_BODY. When can_be_hit_by is false, execution falls through to `linear_velocity *= -0.2` with no durability loss, so the pipe bounces off the blinking-in dummy. captures/review_code/probe2.log line 21 reads \"BLINK-IN: invulnerable true, can_be_hit_by false, can_be_grabbed false, magnet target is it true\". Not checked: whether the dummy's collision is solid during the blink-in. training_dummy.gd has no per-blink collision toggle (grep found only one collision_layer line, at 132), which fits the reviewer's claim."
+    },
+    "spec": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The docs approve that a dummy can't be hit or grabbed during the blink-in (README line 73, HANDOFF line 28, plan line 39). They don't mention magnetism or thrown-pipe collision with a blinking-in body. Plan line 76 lists \"a grab or lock-on aimed at a blinking body\" as a review target, so the case is expected to be examined, not approved. The fix is to skip blinking bodies in magnetism or to let a pipe pass through. That is consistent with the approved \"no hits or grabs during the blink-in\" and does not change any approved behaviour.",
+     "evidence": "grep of docs/milestones/M2-phase3-plan.md (lines 9, 38-42, 75-76), README.md line 73 and docs/HANDOFF.md lines 26-31. No hit for magnetism or thrown weapons against a blinking-in body. I did not run Godot or read the code, as the lens requires."
+    },
+    "code": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "The code does what the finding says. The one gap is that the dummy turns solid one physics step after respawn, not after the blink-in ends. The finding words this as \"one physics step after it comes back\", so that is consistent.",
+     "evidence": "I read the code and ran nothing. player.gd:630-650 (_find_magnet_target) skips only is_ko(), is_flying() and a mismatched is_downed(), so a blinking-in dummy stays a magnet target. combat_actor.gd:218 shows is_invulnerable() is true while _invuln_frames > 0, and blink_in() (line 233) sets _invuln_frames to the blink length, so can_be_hit_by and can_be_grabbed both return false. training_dummy.gd:123-137 (set_post) ghosts the body for one step only (_solid_after_step), and _respawn() (line ~296) calls blink_in() right after, so nothing keeps the dummy a ghost during the blink. weapon.gd:~86 gives a thrown pipe a mask that includes LAYER_ENEMY_BODY. In _on_body_entered (lines 103-133), can_be_hit_by returns false so durability is untouched, but linear_velocity *= -0.2 and _flying = false still run, so the pipe bounces off and drops."
+    }
+   }
+  },
+  {
+   "id": "code-05",
+   "lens": "code",
+   "severity": "low",
+   "title": "dummy_revive_s changed meaning under the same preset key, so older presets now give a 5.5 s comeback",
+   "survives": true,
+   "confirmations": 2,
+   "spec_question": false,
+   "files": [
+    "game/autoload/tuning_data.gd",
+    "game/autoload/tuning.gd",
+    "game/enemies/dummy/training_dummy.gd",
+    "tuning/default.json",
+    "tests/test_ko_blink.gd",
+    "tests/test_combat_integration.gd",
+    "tests/bot/ragdoll_bot.gd"
+   ],
+   "root_cause": "The tunable's meaning changed from counting from the KO to counting from the blink-off, but the key name and PRESET_FORMAT (1) stayed the same. Presets saved before phase 3 carry the old 2.5 and apply_preset trusts it.",
+   "open_question": "",
+   "votes": {
+    "reproduce": {
+     "refuted": true,
+     "confidence": "medium",
+     "reason": "The mechanism is real but it is not a defect worth fixing. A preset is a snapshot of every value, and loading an old one restores the old values on purpose; this one is the same case as the old ragdoll_partial_influence 0.6, which the finding itself calls expected. No pre-phase-3 preset exists anywhere in the repo or in the user's tuning folder, so nothing is affected today. Renaming the key or bumping PRESET_FORMAT would only matter if someone has such a preset saved.",
+     "evidence": "I read the code and did no recordings or probe runs.\n- game/autoload/tuning_data.gd:80 sets dummy_revive_s to 1.0.\n- game/enemies/dummy/training_dummy.gd:242 counts _gone_frames against it.\n- game/autoload/tuning.gd:39 has PRESET_FORMAT = 1, and apply_preset (about 306-345) takes saved keys as they are. A preset holding \"dummy_revive_s\": 2.5 would give about 1.5 + 1.0 + 2.5 + 0.5 = 5.5 s, so the claimed arithmetic holds.\n- `git ls-files | grep -i preset` finds only tools/gen_default_preset.gd.\n- The tuning folder in the user's Godot app_userdata (\"Beat-em-Up PoC/tuning\") is empty.\n- tuning/default.json already holds 1.0.\n- tests/test_ko_blink.gd and tests/test_combat_integration.gd:581 use the new meaning."
+    },
+    "spec": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The docs approve the new meaning of dummy_revive_s: 1.0 s counted from the blink-off, about 4 s from KO to back. Nothing in them approves or rules out an old preset's 2.5 giving a 5.5 s comeback. M2-phase3-plan.md names \"presets that predate the new tunables\" as a review edge case, so the concern is in scope. The docs only say missing keys fall back to defaults, and they promise no migration for a changed key. The suggested fix (rename the tunable, or bump the format and migrate) leaves the approved behaviour unchanged: the default stays at 1.0 s and about 4 s. So the fix needs no spec change. The finding is a low-severity code or compatibility point that the spec lens neither approves nor refutes.",
+     "evidence": "I grepped docs/HANDOFF.md, docs/milestones/M2-phase3-plan.md, README.md, docs/SPEC.md and docs/ARCHITECTURE.md for dummy_revive and preset. HANDOFF.md:26 and README.md:73 give dummy_revive_s 2.5 -> 1.0, counted from the blink-off, about 4 s from KO to back. ARCHITECTURE.md:130 gives the same timing. ARCHITECTURE.md:314-318 describes the preset format, \"format\": 1, with no migration rule. M2-phase3-plan.md:80 lists \"presets that predate the new tunables\" as a review edge case. SPEC.md:348 only says presets are saved, loaded, exported and shipped. I did not run Godot or read the code, as the lens requires."
+    },
+    "code": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "The code does what the finding says. dummy_revive_s is the same preset key but now counts from the blink-off, and apply_preset loads a saved value as is, with no migration or warning. A preset holding 2.5 therefore gives about 5.5 s from KO to back. The impact is small: it only affects presets saved before phase 3 and changes a timing, so low severity stands. I did not run it; this rests on reading the code.",
+     "evidence": "In tuning_data.gd:80 the default is 1.0. training_dummy.gd:242 (_tick_ko) waits until _gone_frames reaches roundi(dummy_revive_s * ticks), and _gone_frames counts from the blink-off. tests/test_ko_blink.gd:185 and test_combat_integration.gd:581 assert KO-to-back as ko_linger_s + ko_blink_s + dummy_revive_s. tuning.gd:39 has PRESET_FORMAT := 1 with no migration code. apply_preset (tuning.gd:306-345) sets every key found in the preset through _checked(), and 2.5 is within the 0..10 range, so it loads silently. tuning/default.json:49 already holds 1.0."
+    }
+   }
+  },
+  {
+   "id": "code-06",
+   "lens": "code",
+   "severity": "low",
+   "title": "Two tests would still pass with what they guard broken: per-part spin caps, and the lens rules on an LB release",
+   "survives": true,
+   "confirmations": 3,
+   "spec_question": false,
+   "files": [
+    "tests/test_ragdoll.gd",
+    "tests/test_grab_view.gd"
+   ],
+   "root_cause": "The many-hits test checks only the global safety bound (spin < ragdoll_max_spin * 1.25 = 50 rad/s), so the per-part caps are not tested after many hits. The lens test's guard skips ticks once the victim is released and no move is running, so the release window is never checked against the lens rules.",
+   "open_question": "The open question on more contortion for the contact push touches the spin caps, but a stricter test does not change its default.",
+   "votes": {
+    "reproduce": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "Both test gaps are there in the code. No recording or test run was needed, since the finding is about what the asserts check. The two tests pass today, so the weakness is in how they are written, not in game behaviour.",
+     "evidence": "I read tests/test_ragdoll.gd lines 985-1030 and tests/test_grab_view.gd lines 300-330 in the review worktree. I also read the reviewer's logs in captures/review_code/. I ran no Godot process and made no recording.\n\nThe many-hits test, test_the_contact_push_stays_within_its_caps_after_many_hits_in_a_row, asserts only `spin < ragdoll_max_spin * 1.25` (line 1025) and `stretch < 0.12`. It checks no per-part twist cap. The single-kick test just above it, test_a_kick_off_center_twists_the_struck_part_within_its_cap, is the only test that checks a per-part cap.\n\nprobe1.log shows a central stagger kick alone spinning the head to 47.1 rad/s. The head cap is 14 rad/s, so the global bound of about 50 rad/s sits above spin a central kick already produces. The same log shows the head at 41 rad/s and the chest at 8.1 on a trunk cap of 8.\n\nIn test_hold_knees_and_throw_keep_the_lens_clear, the `check` closure returns early on every tick where the victim is not GRABBED and no move runs. After an LB release, or the third knee's release, the victim stands up and the checks stop.\n\nprobe4.log shows what the test skips, and that it is within limits today: LB release, 30% at most, nearest 0.40 m. After the third knee, 38% at most, nearest 0.30 m. After the throw, 39% at most, nearest 0.30 m."
+    },
+    "spec": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "The docs set the spin caps (head 14, trunk 8, limb 14 rad/s) and ask for comic contortions with caps. Nothing approves or requires the weak assertions. The finding asks for stricter tests only, which no spec, departure or decision rules out.",
+     "evidence": "grep of docs/HANDOFF.md (line 25 lists the caps as defaults; line 364 says the contact push is built with spin caps) and of docs/SPEC.md and docs/milestones/M2-phase3-plan.md for per-part, lens-rule and LB-release terms. The grep found nothing that approves or requires weaker tests. Did not run Godot, as instructed."
+    },
+    "code": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "The code does what the finding says. The many-hits test only checks ragdoll.max_body_spin() against ragdoll_max_spin * 1.25, which is a global bound. It has no per-part cap check, so it cannot tell whether the head, trunk or limb twist caps hold. The lens test's check closure returns early whenever the victim is not GRABBED and player.current_move is null. That skips every tick after an LB release or after the last knee's release. The finding is low severity and only concerns test coverage. It is not a product bug.",
+     "evidence": "I read tests/test_ragdoll.gd lines 985-1030 and tests/test_grab_view.gd lines 300-335 in the worktree. In test_ragdoll.gd the only spin assert is assert_lt(spin, Tuning.data.ragdoll_max_spin * 1.25, ...) at about line 1025, and only the single-head-kick test above it measures a per-part twist against its cap. In test_grab_view.gd the early return is the first statement of the check closure (about lines 318-320). I did not run the tests or the reviewer's probes (probe1.log, probe4.log), so the 47.1 rad/s and 30% / 0.40 m figures are the reviewer's."
+    }
+   }
+  }
+ ],
+ "pending": []
+}
