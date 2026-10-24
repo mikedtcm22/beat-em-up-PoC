@@ -1274,6 +1274,57 @@ func test_strikes_connect_with_a_target_at_arms_length() -> void:
 						row.id, CombatTypes.Region.keys()[row.region], touched])
 
 
+func test_the_stomp_lands_on_top_of_a_lying_body() -> void:
+	# The stomp's foot went down to the floor through the lying body's torso (M2 phase 3
+	# review): it comes down flat on top of the body (the target lies across the path, as in
+	# the reach checks) and lifts off it again before it steps back.
+	var target := _rig()
+	var stomp := _move_by_id(&"stomp")
+	for rig: HumanoidRig in _stance_rigs():
+		_place_target(rig, target, &"downed")
+		_to_first_active_frame(rig, stomp)
+		var strike_sole := INF
+		for f: int in stomp.active:
+			if f > 0:
+				rig.advance(FRAME)
+			var deepest := -INF
+			for sole: Vector3 in _right_sole(rig):
+				deepest = maxf(deepest, _top_below(target, sole) - sole.y)
+				strike_sole = minf(strike_sole, sole.y)
+			assert_between(deepest, -0.05, 0.03, "%s: on active frame %d the sole rests on top of the body (%.3f m into it)" % [
+					rig.stance, f, deepest])
+		var highest := -INF
+		for f: int in roundi(stomp.recovery * 0.5):
+			rig.advance(FRAME)
+			var low := INF
+			for sole: Vector3 in _right_sole(rig):
+				low = minf(low, sole.y)
+			highest = maxf(highest, low)
+		assert_gt(highest, strike_sole + 0.08, "%s: the foot lifts off the body before it steps back (to %.2f m from %.2f m)" % [
+				rig.stance, highest, strike_sole])
+
+
+## World positions of the right sole's heel, ball and toe tip (PlaceholderBody.SOLE_*).
+func _right_sole(rig: HumanoidRig) -> Array[Vector3]:
+	var out: Array[Vector3] = []
+	for i: int in PlaceholderBody.SOLE_BONES.size():
+		var bone := PlaceholderBody.SOLE_BONES[i]
+		if String(bone).begins_with("Right"):
+			out.append(rig.get_point_transform(bone) * (PlaceholderBody.SOLE_OFFSETS[i] * rig.rig_scale()))
+	return out
+
+
+## Height of the top of `rig`'s meshes straight below (or above) `point`, or -INF.
+func _top_below(rig: HumanoidRig, point: Vector3) -> float:
+	var from := Vector3(point.x, 3.0, point.z)
+	var top := -INF
+	for mesh: MeshInstance3D in _meshes_under(rig):
+		var depth := FPView.ray_hit(mesh, from, Vector3.DOWN)
+		if depth < INF:
+			top = maxf(top, from.y - depth)
+	return top
+
+
 func test_pipe_swings_meet_the_head_without_passing_through_it() -> void:
 	var target := _rig()
 	var head := _hurtboxes_of(target, CombatTypes.Region.HEAD)[0]

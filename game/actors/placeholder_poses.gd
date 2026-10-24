@@ -1908,14 +1908,20 @@ static func _throw(neutral: Dictionary[StringName, Vector3]) -> MovePoses:
 	return m
 
 
+## Stomp on a body lying in front: the knee pulled up high, then the foot driven down flat
+## onto the top of the body (its sole about 0.26 m up, where a lying torso's top is, and
+## RightFootPoint inside the stomp's reach, y 0.0-0.3) instead of through it to the floor.
+## The pose is fixed and does not track the body; the player stops stomp_stop_distance
+## from the body's chest, so the foot comes down on the chest or just past it. The foot
+## lifts off the body again before it steps back (follow).
 static func _stomp(g: Dictionary[StringName, Vector3]) -> MovePoses:
 	var windup := merge(g, {
 		&"Spine": Vector3(-12.0, 0.0, 0.0),
 		&"Chest": Vector3(-6.0, 0.0, 0.0),
 		&"Neck": Vector3(-6.0, 0.0, 0.0),
 		&"Head": Vector3(-8.0, 0.0, 0.0),
-		&"RightUpperLeg": Vector3(84.0, 0.0, 2.0),
-		&"RightLowerLeg": Vector3(-96.0, 0.0, 0.0),
+		&"RightUpperLeg": Vector3(100.0, 0.0, 2.0),
+		&"RightLowerLeg": Vector3(-110.0, 0.0, 0.0),
 		&"RightFoot": Vector3(10.0, 0.0, 0.0),
 		&"LeftUpperLeg": Vector3(10.0, 0.0, -3.0),
 		&"LeftLowerLeg": Vector3(-20.0, 0.0, 0.0),
@@ -1928,9 +1934,10 @@ static func _stomp(g: Dictionary[StringName, Vector3]) -> MovePoses:
 		&"Chest": Vector3(-8.0, 0.0, 0.0),
 		&"Neck": Vector3(-4.0, 0.0, 0.0),
 		&"Head": Vector3(-10.0, 0.0, 0.0),
-		&"RightUpperLeg": Vector3(38.0, 0.0, 2.0),
-		&"RightLowerLeg": Vector3(-6.0, 0.0, 0.0),
-		&"RightFoot": Vector3(-32.0, 0.0, 0.0),
+		# The knee high, the shin near upright and the foot flat (thigh + knee + foot = 0).
+		&"RightUpperLeg": Vector3(80.0, 0.0, 2.0),
+		&"RightLowerLeg": Vector3(-66.0, 0.0, 0.0),
+		&"RightFoot": Vector3(-14.0, 0.0, 0.0),
 		&"LeftUpperLeg": Vector3(30.0, 0.0, -4.0),
 		&"LeftLowerLeg": Vector3(-56.0, 0.0, 0.0),
 		&"LeftFoot": Vector3(26.0, 0.0, 4.0),
@@ -1938,7 +1945,14 @@ static func _stomp(g: Dictionary[StringName, Vector3]) -> MovePoses:
 		&"RightUpperArm": Vector3(10.0, 0.0, 36.0),
 		&"RightLowerArm": Vector3(90.0, 0.0, 0.0),
 	})
-	return _mp(g, windup, strike)
+	var m := _mp(g, windup, strike)
+	# Off the body first: the knee comes back up, still leaning over it.
+	m.follow = merge(strike, {
+		&"RightUpperLeg": windup[&"RightUpperLeg"],
+		&"RightLowerLeg": windup[&"RightLowerLeg"],
+		&"RightFoot": windup[&"RightFoot"],
+	})
+	return m
 
 
 ## Forehand pipe swing, right to left: the arm sweeps across the front, the weapon level.
