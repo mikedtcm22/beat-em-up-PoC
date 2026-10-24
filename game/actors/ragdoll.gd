@@ -21,14 +21,14 @@ extends SkeletonModifier3D
 ##   FULL (a body knocked off its feet, and a KO): every body simulates; its influence rises
 ##     from what showed to 1 over Tuning.ragdoll_full_rise_s, so the animation's snap of the
 ##     hit shows first and the bodies take over from it.
-## Either way each simulated bone is pulled toward its animation pose relative to its
-## parent body by a soft rotation spring (per phase: a stagger, flight, lying down, and a
-## nearly limp KO; stronger while a FULL ragdoll's influence rises), so the springs ask for
-## joint angles the animation uses, inside the joint limits. A FULL ragdoll's hips turn
-## toward the animation's and the ragdoll as a whole is pulled toward the animation's hips
-## (Tuning.ragdoll_hips_hz), so the visible body never drifts from the sim body and a
-## downed body lies where its hurtboxes are. A hit adds a kick on the struck part. A lying
-## body comes to rest and sleeps.
+## Either way soft pose springs pull each simulated bone toward the animation's pose
+## re-anchored on the hips as they are (per phase: a stagger, flight, lying down, and a
+## nearly limp KO; the turns stronger while a FULL ragdoll's influence rises), with each
+## turn target kept inside its joint's limits from its parent body. A FULL ragdoll as a whole is pulled toward the
+## animation's hips (Tuning.ragdoll_hips_hz) and turned as one toward their rotation (or,
+## flying to a face-down landing, toward the lying pose's: aim_landing()), so the visible
+## body never drifts from the sim body and a downed body lies where its hurtboxes are. A
+## hit adds a kick on the struck part. A lying body comes to rest and sleeps.
 ##
 ## Time: the bodies run in the actor's sim time (HumanoidRig passes
 ## TimeController.scale_for(actor) every tick, sim_scale): when the scale changes from a to
@@ -57,10 +57,6 @@ const PART_BONES: Dictionary[Part, Array] = {
 	Part.ARMS: [&"Shoulder", &"UpperArm", &"LowerArm"],
 	Part.LEGS: [&"UpperLeg", &"LowerLeg", &"Foot"],
 }
-
-## Share of a joint's excess past its limit turned back each step (_step(); a solver
-## constant, not feel).
-const _LIMIT_RETURN := 0.5
 
 ## Bones that simulate in a PARTIAL ragdoll (the upper body); the rest stay kinematic.
 const PARTIAL_BONES: Array[StringName] = [
@@ -540,10 +536,12 @@ func _step() -> void:
 	# Every body's animation pose (world) and its angular velocity (real rad/s).
 	var to_world := rig.global_transform
 	var anim: Array[Transform3D] = []
+	var anim_q: Array[Quaternion] = []
 	var anim_w: Array[Vector3] = []
 	for i: int in _bodies.size():
 		var pose := to_world * rig.animation_pose(_bone_of[i])
 		anim.append(pose)
+		anim_q.append(pose.basis.get_rotation_quaternion())
 		anim_w.append(_turn_rate(_prev_anim[i].basis, pose.basis, dt) if _has_prev else Vector3.ZERO)
 	# Body index -> its state's index (-1: not simulating).
 	var k_of := PackedInt32Array()
@@ -593,8 +591,7 @@ func _step() -> void:
 	var hips_w := anim_w[0]
 	if mode == Mode.FULL:
 		var hips_state := states[k_of[0]]
-		anchor = (hips_state.transform.basis.get_rotation_quaternion()
-				* anim[0].basis.get_rotation_quaternion().inverse()).normalized()
+		anchor = (hips_state.transform.basis.get_rotation_quaternion() * anim_q[0].inverse()).normalized()
 		hips_now = hips_state.transform.origin
 		hips_v = hips_state.linear_velocity
 		# The whole FULL ragdoll turns as one, about its hips, toward the animation's hips
@@ -637,10 +634,9 @@ func _step() -> void:
 		var turn_hz := lerpf(rise_hz, hz, rise) if rise_hz > hz else hz
 		var turn_k := _stiffness(turn_hz)
 		var turn_c := _damping(turn_hz, tuning.ragdoll_pose_damping)
-		var parent_xf := states[k_of[parent]].transform if k_of[parent] >= 0 else anim[parent]
-		var parent_rot := parent_xf.basis.get_rotation_quaternion()
-		var target := (anchor * anim[i].basis.get_rotation_quaternion()).normalized()
-		target = parent_rot * _within_limits(i, parent_rot.inverse() * target)
+		var parent_rot := states[k_of[parent]].transform.basis.get_rotation_quaternion() if k_of[parent] >= 0 \
+				else anim_q[parent]
+		var target := parent_rot * _within_limits(i, parent_rot.inverse() * (anchor * anim_q[i]).normalized())
 		var target_v := (anim[i].origin - _prev_anim[i].origin) / dt if _has_prev else Vector3.ZERO
 		var error := anchor * (anim[i].origin - hips_target) - (state.transform.origin - hips_now)
 		var relative_v := (state.linear_velocity - hips_v) - anchor * (target_v - hips_target_v)
@@ -648,30 +644,6 @@ func _step() -> void:
 		var target_w := hips_w + anim_w[i] - anim_w[0]
 		ang[k] += (_rotation_error(Basis(target), state.transform.basis) * turn_k * scale * scale
 				- (ang[k] - target_w) * turn_c * scale) * dt
-	# A joint past its limit (a body landing on its arm, a kick on a light head) is turned
-	# back inside it by an angular impulse pair (Jolt's limits are soft against the velocity
-	# changes above): part of the way back each step.
-	for k: int in _sim.size():
-		var i := _sim[k]
-		var parent := _parent_body[i]
-		if parent < 0:
-			continue
-		var kp := k_of[parent]
-		var parent_q := (states[kp].transform.basis if kp >= 0 else anim[parent].basis).get_rotation_quaternion()
-		var child_q := states[k].transform.basis.get_rotation_quaternion()
-		var inside := parent_q * _within_limits(i, parent_q.inverse() * child_q)
-		var excess := _rotation_error(Basis(inside), Basis(child_q))
-		if excess.length_squared() < 1e-6:
-			continue
-		var change := excess * (_LIMIT_RETURN / dt)
-		var inv_i := states[k].inverse_inertia_tensor
-		if kp < 0:
-			ang[k] += change
-			continue
-		var inv_p := states[kp].inverse_inertia_tensor
-		var impulse := Basis(inv_i.x + inv_p.x, inv_i.y + inv_p.y, inv_i.z + inv_p.z).inverse() * change
-		ang[k] += inv_i * impulse
-		ang[kp] -= inv_p * impulse
 	var max_v := tuning.ragdoll_max_speed * scale
 	var max_w := tuning.ragdoll_max_spin * scale
 	for k: int in _sim.size():

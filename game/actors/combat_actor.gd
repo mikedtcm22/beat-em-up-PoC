@@ -19,9 +19,8 @@ extends CharacterBody3D
 ## bodies knocked off their feet its full ragdoll (_ragdoll_stagger(), _ragdoll_full()); a
 ## landing switches it to lying and a KO to limp, and the get-up moves the body to where the
 ## ragdoll's hips lie if there is room (_move_under_ragdoll()) and fades from its pose.
-## Enemies and dummies
-## only, unless Tuning.ragdoll_player. Visual only: every timing, flight, impact and hurtbox
-## here stays the animation's.
+## Enemies and dummies only, unless Tuning.ragdoll_player. Visual only: every timing,
+## flight, impact and hurtbox here stays the animation's.
 ##
 ## A strike that lands on a first-person body (the player's rig, first_person_body) is
 ## pulled back into the stance once the hit's hitstop is over (_pull_strike), unless the

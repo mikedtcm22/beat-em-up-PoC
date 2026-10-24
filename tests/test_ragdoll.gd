@@ -5,7 +5,10 @@ extends GutTest
 ## fly, land, come to rest and get up where their hips lie; a KO goes limp and stays; the
 ## ragdoll runs in each actor's sim time (frozen in hitstop, slowed in slow-mo); a flying
 ## body still knocks a standing one down; the player keeps animated reactions by default;
-## nothing explodes after many hits.
+## nothing explodes after many hits. The review fixes (docs/reviews/M2-WP4-review-findings.json)
+## add: the hit's kick held through the hitstop, a get-up with no pop or shove, face-down
+## landings, joints inside their limits, re-staggers, rest, idle cost, the parry and the
+## launch's first frames.
 
 const ROOM := preload("res://game/level/test_room.tscn")
 const FAR := Vector3(30.0, 0.0, -30.0)
