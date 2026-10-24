@@ -4,6 +4,12 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-23 20:13 CDT: watcher relaxed; takeover prompt drafted
+Account C sits idle at 74% of its 5-hour window (resets 23:00 CDT) and 13% weekly, after the 19:15 handoff below.
+- **New watcher cadence**, set by Game-boy: every 20 minutes below 70%, every 10 minutes up to 85%, every 5 minutes above that. Halt and hand off at 90%. "Usage watcher" has the full rules and the prompt.
+- **Takeover prompt:** the prompt for the next account is under "Takeover prompt".
+- **Resume steps** are unchanged from the 19:15 entry.
+
 ### 2026-10-23 19:15 CDT: handoff, account C's 5-hour window at 71%
 The watcher warned at 71% of account C's 5-hour window, which resets at 23:00 CDT; C's weekly is at about 10%. The workflow `m2-phase1-verify-fix` (run `wf_3d9df549-bac`) is stopped. Every branch is committed and pushed, and the worktrees are clean. The agents' full results are in [docs/reviews/M2-phase1-fix-results.json](reviews/M2-phase1-fix-results.json): verdicts, test counts, capture paths, spec questions and remaining items.
 
@@ -121,17 +127,92 @@ Every approved spec change so far is in README.md, "Where M1 departs from the sp
   - the spinning backfist is on P P · P and the flurry on P · P;
   - the back elbow turns the view 150° (Game-boy is to confirm whether 110° is preferred).
 - **Ragdoll (M2 WP4, 2026-10-23):** enemies and training dummies ragdoll. The player keeps animated reactions by default, with a toggle in the "Ragdoll" tuning group.
+- **Usage watcher cadence (20:13 CDT):** checks every 20 minutes below 70%, every 10 minutes up to 85%, every 5 minutes above that. It halts work and hands off at 90% (it was 70% before). See "Usage watcher".
 - **Process:** at each usage limit, hand off to Game-boy's second Claude account. Never assume the same session resumes.
 
 ## Usage watcher
-A separate low-cost Claude Code session (the cheapest model, Haiku, low effort), started from the working session with `start_session` (initiation user_asked, `model` claude-haiku-5-5, `use_worktree` false, prompt starting "/loop 5m"). Its standing instructions:
+A separate low-cost Claude Code session, "Beat-em-up: usage watcher". Start it from the working session with `start_session`: initiation `user_asked`, `model` claude-haiku-5-5, `effort` low, `use_worktree` false, and the prompt below verbatim.
 
-> Every 5 minutes (use the `loop` skill: `/loop 5m ...`), call `mcp__ccd_session_mgmt__get_usage` (load it with ToolSearch first) and read `plan.windows`.
-> - If the "5-hour limit" window is at 70% or more, OR it rose 15 points or more since your previous check (fast burn), OR the "Weekly" window is at 85% or more, and you haven't already warned for that window's `resetsAt` (fast-burn warnings may repeat once per 30 minutes), send a message to the working session on this repo (find it with ListAgents: the session titled "Beat-em-up: working session"). The message says: "Usage at N% (window W, resets R). Do the handoff now per CLAUDE.md: stop new work, commit and push WIP on every branch and worktree, update and push docs/HANDOFF.md, then tell Game-boy." Remember that you warned for that `resetsAt`.
-> - If a window is at 95% or more, also write `HANDOFF-SNAPSHOT.md` at the repo root (untracked; don't commit). It holds the time, the usage numbers, `git status`, `git branch -vv`, `git worktree list`, and for each worktree under `.worktrees/` its `git status --short` and `git log --oneline -3`.
-> - Otherwise do nothing and say nothing beyond one short line.
-> - Never edit tracked files, run builds or start other work.
+It paces itself (`/loop` with no interval), on Game-boy's cadence from 2026-10-23:
 
-If no watcher is running (for example after an account switch), start one with that prompt. A new account's watcher reports that account's usage.
+| Usage (the higher of the 5-hour and weekly windows) | Next check |
+| --- | --- |
+| below 70% | in 20 minutes |
+| 70% up to 85% | in 10 minutes |
+| 85% and up | in 5 minutes |
 
-**The working session must be titled "Beat-em-up: working session"** so the watcher can find it. A new account's working session renames itself to that first, with `mcp__ccd_session_mgmt__set_session_title`, and the previous holder of the title should already be idle or archived.
+At 90% of either window it tells the working session to halt work and hand off. On a fast burn it checks sooner, and it warns early if it would cross 90% before its next check.
+
+Its prompt:
+
+```
+/loop Usage watcher for the beat-em-up repo. You pace yourself. On each check:
+1. Call mcp__ccd_session_mgmt__get_usage (load it with ToolSearch the first time). Read plan.windows: the "5-hour limit" window and the window whose label starts with "Weekly". Let U be the higher of their percentUsed values.
+2. Handoff. If either window is at 90% or more, and you haven't already warned for that window's resetsAt, send a message to the session titled "Beat-em-up: working session" (find it with ListAgents). The message: "Usage at N% (window W, resets R). Halt work and do the handoff now per CLAUDE.md: stop new work, commit and push WIP on every branch and worktree, update and push docs/HANDOFF.md, then tell Game-boy." Remember that you warned for that resetsAt.
+3. Snapshot. If either window is at 95% or more, write HANDOFF-SNAPSHOT.md at the repo root (untracked; never commit it). It holds:
+   - the time and the usage numbers;
+   - git status, git branch -vv and git worktree list;
+   - for each worktree under .worktrees/, its git status --short and git log --oneline -3.
+4. Next check, from U:
+   - below 70: in 20 minutes (1200 s);
+   - 70 up to 85: in 10 minutes (600 s);
+   - 85 or more: in 5 minutes (300 s).
+5. Fast burn. Estimate the rate from your previous check. If at that rate either window would reach 90% before that next check, check again in 5 minutes instead. If it would reach 90% within those 5 minutes, send the step 2 warning now (once per resetsAt).
+6. Schedule the next check with ScheduleWakeup, passing this same prompt back.
+Otherwise say nothing beyond one short line: the two percentages and the next check time. Never edit tracked files, run builds or start other work.
+```
+
+**Usage rules for the working session** (measured on account C, 2026-10-23):
+- One heavy agent that both reviews and fixes costs about 25% of a 5-hour window, and a review-only agent about 13%.
+- Run at most two heavy agents at once.
+- Call `mcp__ccd_session_mgmt__get_usage` before every launch, and launch nothing new at 65% or more. An agent started at 65% ends near the 90% handoff.
+
+If no watcher is running, for example after an account switch, start one with that prompt. A new account's watcher reports that account's usage.
+
+**The working session must be titled "Beat-em-up: working session"** so the watcher can find it. A new account's working session renames itself to that first, with `mcp__ccd_session_mgmt__set_session_title`.
+
+**At an account switch, the old working session:**
+- renames itself "Beat-em-up: account X session (handed off)", which frees the title;
+- tells its watcher to end its loop: "End your loop now: call ScheduleWakeup with stop: true, or CronDelete your job if you run on a fixed interval."
+
+## Takeover prompt
+Game-boy pastes this into a new account's session. Keep the "Next steps" list current at every handoff; the rest changes rarely.
+
+```
+You're taking over an in-progress Godot 4.7.2 project: a first-person beat-em-up proof of concept at /Users/arachne/repos/beat-em-up-PoC (GitHub: mikedtcm22/beat-em-up-PoC). I'm Game-boy, the project owner. Other Claude accounts did the work so far and handed off at their usage limits. We switch accounts at every usage limit, so treat the repo as the only source of truth. Work happens on branch m2/hit-feel and the worktrees under .worktrees/.
+
+Start by doing these, in order:
+1. Rename this session to "Beat-em-up: working session" (mcp__ccd_session_mgmt__set_session_title). The usage watcher finds you by that title.
+2. Read CLAUDE.md, then docs/HANDOFF.md (live status and exact resume steps; the newest entry is at the top). Then read the milestone docs and review files it points to: docs/milestones/M2-plan.md, docs/milestones/M2-WP4-brief.md, docs/reviews/M2-phase1-review-findings.json and docs/reviews/M2-phase1-fix-results.json. Read docs/ARCHITECTURE.md and docs/SPEC.md §6, §10 and §11 before touching code.
+3. Start a usage watcher exactly as docs/HANDOFF.md describes under "Usage watcher" (Haiku, low effort, self-paced /loop, shares this checkout, its prompt verbatim). Confirm it's running.
+4. Check usage (mcp__ccd_session_mgmt__get_usage) before launching any workflow or agent.
+
+USAGE RULES:
+- A heavy agent that both reviews and fixes costs about 25% of a 5-hour window; a review-only agent about 13%.
+- Run at most TWO heavy agents at once.
+- Check get_usage before each launch, and launch nothing new at 65% or more.
+- Prefer one agent per work package doing review, then fix, over many reviewers per package.
+- The watcher checks every 20 minutes below 70%, every 10 minutes up to 85% and every 5 minutes above that. It tells you to halt and hand off at 90%.
+
+Next steps (Milestone 2; details and merge notes are in docs/HANDOFF.md):
+- Finish WP1 (tuning panel, .worktrees/m2-tuning, branch m2/tuning):
+  - its fixes for all 17 findings are in the wip: commits, and the tests pass (324/324);
+  - check each finding (keys review:wp1:*) against them and close any gap;
+  - record a short panel capture (gamepad focus, a subgrouped category);
+  - commit "M2 WP1: review fixes (...)" and push.
+- WP2 (comic VFX) and WP3 (audio) review fixes are done and pushed:
+  - judge WP2's after-sheets in .worktrees/m2-vfx/captures/review/ yourself and show me what you saw;
+  - WP3's feel was judged by analysis only, so I'll listen to it.
+- Merge m2/tuning, m2/vfx and m2/audio into m2/hit-feel (keep all four presentation lines in test_room.gd and both ASSETS.md sections). Then run godot --headless --import --quit && godot --headless -s tools/gen_default_preset.gd, then tools/run_tests.sh: everything must pass, with no SCRIPT ERROR. Push and update docs/HANDOFF.md.
+- Ask me the open spec questions listed in docs/HANDOFF.md (WP2 and WP3 proposals, with defaults) before acting on any of them.
+- Then phase 2, WP4 (partial and full ragdoll), per docs/milestones/M2-WP4-brief.md. The player default is confirmed: enemies and dummies ragdoll, and the player keeps animated reactions, with a toggle.
+- Then phase 3 for my playtest: integrate, review from captures, update README and ARCHITECTURE, open the Milestone 2 PR.
+
+Ground rules:
+- Never merge a milestone PR into main until I've played it and signed it off.
+- Any change to the spec needs my approval. Ask me with a short proposal and defaults.
+- Commit early on branches (prefix "wip:" for unfinished work), push often, and update docs/HANDOFF.md at every phase boundary.
+- When the watcher warns, do the handoff in CLAUDE.md immediately. Stop running workflows and agents, commit and push everything, save any unfinished agents' findings into the repo, and update HANDOFF.md, including this prompt's "Next steps". Then tell me.
+- Judge visual and feel work from recorded captures (Movie Maker via tools/capture_combos.sh or tests/bot/vfx_bot.tscn), not just tests, and show me what you saw.
+- Keep me posted briefly: what's done, what's running, what you need from me.
+```
