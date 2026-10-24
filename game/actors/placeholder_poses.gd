@@ -262,16 +262,22 @@ static func relaxed_weapon_guard() -> Dictionary[StringName, Vector3]:
 ## victim at HoldPoint.
 static func hold() -> Dictionary[StringName, Vector3]:
 	return merge(guard(), {
-		&"Spine": Vector3(2.0, 0.0, 0.0),
-		&"Chest": Vector3(0.0, 0.0, 0.0),
-		&"Neck": Vector3(0.0, 0.0, 0.0),
-		&"Head": Vector3(0.0, 0.0, 0.0),
-		&"LeftUpperArm": Vector3(54.0, -24.0, -26.0),
-		&"LeftLowerArm": Vector3(30.0, 0.0, 0.0),
+		HIPS_NUDGE: Vector3(0.0, 0.0, 0.08),
+		&"Spine": Vector3(-18.0, 0.0, 0.0),
+		&"Chest": Vector3(-10.0, 0.0, 0.0),
+		&"UpperChest": Vector3(-6.0, 0.0, 0.0),
+		&"Neck": Vector3(16.0, 0.0, 0.0),
+		&"Head": Vector3(8.0, 0.0, 0.0),
+		&"LeftUpperArm": Vector3(60.0, -24.0, -33.5),
+		&"LeftLowerArm": Vector3(82.0, 0.0, 0.0),
 		&"LeftHand": Vector3(10.0, 0.0, 0.0),
-		&"RightUpperArm": Vector3(54.0, 24.0, 26.0),
-		&"RightLowerArm": Vector3(30.0, 0.0, 0.0),
+		&"RightUpperArm": Vector3(60.0, 24.0, 33.5),
+		&"RightLowerArm": Vector3(82.0, 0.0, 0.0),
 		&"RightHand": Vector3(10.0, 0.0, 0.0),
+		&"LeftUpperLeg": Vector3(24.0, 0.0, -4.0),
+		&"LeftLowerLeg": Vector3(-32.0, 0.0, 0.0),
+		&"RightUpperLeg": Vector3(2.0, 0.0, 5.0),
+		&"RightLowerLeg": Vector3(-24.0, 0.0, 0.0),
 	})
 
 
@@ -1829,26 +1835,25 @@ static func _back_elbow(g: Dictionary[StringName, Vector3]) -> MovePoses:
 static func _knee() -> MovePoses:
 	var g := hold()
 	var windup := merge(g, {
-		&"Spine": Vector3(-2.0, 0.0, 0.0),
+		&"Spine": Vector3(-20.0, 0.0, 0.0),
 		&"RightUpperLeg": Vector3(-24.0, 0.0, 5.0),
 		&"RightLowerLeg": Vector3(-50.0, 0.0, 0.0),
 		&"RightFoot": Vector3(10.0, 0.0, -5.0),
 	})
 	# The hips drive forward into the knee while the hands pull the victim's head down.
 	var strike := merge(g, {
-		HIPS_NUDGE: Vector3(0.0, 0.0, -0.08),
-		&"Spine": Vector3(6.0, 0.0, 0.0),
-		&"Chest": Vector3(-6.0, 0.0, 0.0),
-		&"Neck": Vector3(6.0, 0.0, 0.0),
-		&"LeftUpperArm": Vector3(42.0, -24.0, -26.0),
-		&"LeftLowerArm": Vector3(36.0, 0.0, 0.0),
-		&"RightUpperArm": Vector3(42.0, 24.0, 26.0),
-		&"RightLowerArm": Vector3(36.0, 0.0, 0.0),
-		&"RightUpperLeg": Vector3(113.5, 0.0, 2.0),
-		&"RightLowerLeg": Vector3(-108.0, 0.0, 0.0),
+		HIPS_NUDGE: Vector3(0.0, 0.0, 0.02),
+		&"Spine": Vector3(-14.0, 0.0, 0.0),
+		&"Chest": Vector3(-10.0, 0.0, 0.0),
+		&"LeftUpperArm": Vector3(55.5, -31.5, -42.0),
+		&"LeftLowerArm": Vector3(72.0, 0.0, 0.0),
+		&"RightUpperArm": Vector3(55.5, 31.5, 42.0),
+		&"RightLowerArm": Vector3(72.0, 0.0, 0.0),
+		&"RightUpperLeg": Vector3(128.0, 0.0, 12.0),
+		&"RightLowerLeg": Vector3(-112.0, 0.0, 0.0),
 		&"RightFoot": Vector3(-30.0, 0.0, 0.0),
-		&"LeftUpperLeg": Vector3(6.0, 0.0, -3.0),
-		&"LeftLowerLeg": Vector3(-14.0, 0.0, 0.0),
+		&"LeftUpperLeg": Vector3(20.0, 0.0, -3.0),
+		&"LeftLowerLeg": Vector3(-28.0, 0.0, 0.0),
 		&"LeftFoot": Vector3(8.0, 0.0, 3.0),
 	})
 	return _mp(g, windup, strike)

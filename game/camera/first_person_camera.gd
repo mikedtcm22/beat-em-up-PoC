@@ -167,8 +167,10 @@ func _player_ok() -> bool:
 func _follow(delta: float) -> Transform3D:
 	var origin := player.global_position
 	var eye := player.get_eye_transform().origin - origin
-	if player.is_walking():
+	if player.is_walking() and not is_instance_valid(player.holding_enemy()):
 		# Steady view while walking: the eye may bob only this far from its idle height.
+		# Walking with a held enemy shows the hold pose (no walk cycle), whose bent-over eye
+		# sits well under the standing height, so it is left as it is.
 		var bob := Tuning.data.cam_bob_clamp_m
 		var idle := player.standing_eye_height
 		eye.y = clampf(eye.y, idle - bob, idle + bob)
@@ -178,28 +180,41 @@ func _follow(delta: float) -> Transform3D:
 	else:
 		_eye_offset = eye
 		_has_eye = true
-	# x = extra pitch in degrees, y = drop in meters along world -Y. Already eased.
-	var move_offset := player.get_camera_move_offset()
 	var root := player.get_global_transform_interpolated().origin
-	var eye_position := root + _eye_offset + Vector3.DOWN * move_offset.y
+	return view_from_eye(player, root + _eye_offset, Engine.get_physics_interpolation_fraction())
+
+
+## The first-person view (before punch and shake) of `player` with its eye at world `eye`:
+## the running move's and the hold view's drop and extra pitch
+## (PlayerCharacter.get_camera_move_offset()), the view turn (interpolated by `fraction`
+## between physics ticks), and the lens offset less the hold view's pull-back. _follow()
+## passes the smoothed eye; tests pass EyePoint itself to judge the real view.
+static func view_from_eye(player: PlayerCharacter, eye: Vector3, fraction: float = 1.0) -> Transform3D:
+	# x = extra pitch in degrees, y = drop in meters along world -Y (negative rises). Already
+	# eased.
+	var move_offset := player.get_camera_move_offset()
+	var eye_position := eye + Vector3.DOWN * move_offset.y
 	# A spinning move's body turn and the back elbow's turn over the shoulder, interpolated
 	# between physics ticks so a spin turns smoothly at any frame rate.
-	var view_yaw := deg_to_rad(player.get_camera_view_yaw(Engine.get_physics_interpolation_fraction()))
+	var view_yaw := deg_to_rad(player.get_camera_view_yaw(fraction))
 	var look_basis := Basis(Vector3.UP, view_yaw) * player.get_look_basis()
-	eye_position += lens_offset(look_basis)
+	# While an enemy is held the lens also moves back (the hold view, eased by the player).
+	eye_position += lens_offset(look_basis, player.get_camera_pull_back())
 	var look := _add_pitch(look_basis, deg_to_rad(move_offset.x))
 	return Transform3D(look, eye_position)
 
 
 ## Where the first-person lens sits relative to EyePoint, for a look basis: lowered by
 ## Tuning.cam_height_offset_m and moved ahead along the flat look by
-## Tuning.cam_forward_offset_m. Rig tests use it to judge poses from the real viewpoint.
-static func lens_offset(look_basis: Basis) -> Vector3:
+## Tuning.cam_forward_offset_m, less `back` meters (the hold view's pull-back,
+## PlayerCharacter.get_camera_pull_back()). Rig tests use it to judge poses from the real
+## viewpoint.
+static func lens_offset(look_basis: Basis, back: float = 0.0) -> Vector3:
 	var offset := Vector3.UP * Tuning.data.cam_height_offset_m
 	var ahead := look_basis * Vector3.FORWARD
 	ahead.y = 0.0
 	if ahead.length_squared() > 0.0001:
-		offset += ahead.normalized() * Tuning.data.cam_forward_offset_m
+		offset += ahead.normalized() * (Tuning.data.cam_forward_offset_m - back)
 	return offset
 
 

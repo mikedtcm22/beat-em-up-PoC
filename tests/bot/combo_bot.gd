@@ -9,7 +9,8 @@ extends Node
 const ROOM := preload("res://game/level/test_room.tscn")
 
 ## Only run acts whose title contains this text (empty = all). Set with
-## `-- --act=<text>` after the scene path.
+## `-- --act=<text>` after the scene path; `--tune=<property>=<number>` (repeatable) sets a
+## TuningData value for the run.
 var act_filter: String = ""
 
 var room: Node3D
@@ -24,6 +25,11 @@ func _ready() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--act="):
 			act_filter = arg.trim_prefix("--act=")
+		elif arg.begins_with("--tune="):
+			# `--tune=<TuningData property>=<number>`: record with a tunable changed (A/B sheets).
+			var pair := arg.trim_prefix("--tune=").split("=")
+			if pair.size() == 2 and pair[0] in Tuning.data:
+				Tuning.data.set(pair[0], type_convert(float(pair[1]), typeof(Tuning.data.get(pair[0]))))
 	Tuning.data.dummy_health = 500.0
 	room = ROOM.instantiate()
 	add_child(room)

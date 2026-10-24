@@ -75,6 +75,9 @@ var _dodge_velocity: Vector3 = Vector3.ZERO
 var _air_attack: bool = false
 var _held: CombatActor
 var _hold_frames: int = 0
+## Hold view ramp (0..1, linear in sim ticks): toward 1 while an enemy is held, back to 0
+## after a throw or release (_tick_hold_view(); eased by get_hold_view_weight()).
+var _hold_view: float = 0.0
 var _knees: int = 0
 var _weapon: Weapon
 var _action_lock: int = 0
@@ -143,8 +146,26 @@ func get_look_basis() -> Basis:
 	return Basis.from_euler(Vector3(look_pitch, look_yaw, 0.0))
 
 
+## The first-person view's extra pitch (x, degrees, negative looks down) and drop (y,
+## meters, negative raises it): the running move's (MoveData.camera_pitch_deg and
+## camera_drop_m) plus the hold view's (Tuning.grab_view_pitch_deg, grab_view_rise_m), each
+## already eased, so a knee's own pitch adds to the hold's without a jump.
 func get_camera_move_offset() -> Vector2:
-	return _cam_offset
+	var hold := Vector2(-Tuning.data.grab_view_pitch_deg, -Tuning.data.grab_view_rise_m)
+	return _cam_offset + hold * get_hold_view_weight()
+
+
+## Meters the first-person lens moves back along the flat look: the hold view's
+## (Tuning.grab_view_back_m, eased).
+func get_camera_pull_back() -> float:
+	return Tuning.data.grab_view_back_m * get_hold_view_weight()
+
+
+## Weight (0..1, smoothstepped) of the hold view: it eases in over Tuning.grab_view_in_s
+## once an enemy is held and back out over grab_view_out_s after a throw or a release.
+## Runs in sim ticks, so it holds still through hitstop like the moves' camera offsets.
+func get_hold_view_weight() -> float:
+	return smoothstep(0.0, 1.0, _hold_view)
 
 
 ## The first-person view's turn away from the look in degrees (positive turns left): a
@@ -202,6 +223,7 @@ func reset_state() -> void:
 	_view_yaw_last = 0.0
 	_view_carry = 0.0
 	_view_move = null
+	_hold_view = 0.0
 
 
 # --- Control ------------------------------------------------------------------------
@@ -236,6 +258,7 @@ func _tick_control() -> void:
 		_:
 			parser.clear_buffer()
 	_magnet_preview = _find_magnet_target(null)
+	_tick_hold_view()
 
 
 func _feed_parser() -> void:
@@ -892,6 +915,17 @@ func _start_grab(victim: CombatActor) -> void:
 	_enter_state(CombatTypes.ActorState.GRABBING)
 	rig.play(&"grab", 0.04)
 	_use_set(&"hold")
+
+
+## One sim tick of the hold view ramp: toward 1 over Tuning.grab_view_in_s while an enemy
+## is held (knees included), toward 0 over grab_view_out_s once it is not (thrown on the
+## throw's startup frame, released, or the hold broken by a hit). From wherever it is, so
+## a hold that ends while the view is still easing in turns back without a jump.
+func _tick_hold_view() -> void:
+	var holding := _holding_valid()
+	var seconds := Tuning.data.grab_view_in_s if holding else Tuning.data.grab_view_out_s
+	var step := 1.0 if seconds <= 0.0 else 1.0 / (seconds * Engine.physics_ticks_per_second)
+	_hold_view = move_toward(_hold_view, 1.0 if holding else 0.0, step)
 
 
 func _holding_valid() -> bool:
