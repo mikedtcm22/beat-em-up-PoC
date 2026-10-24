@@ -4,6 +4,11 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-23 20:20 CDT: Game-boy switches to a fresh account
+Account C stopped work at 76% of its 5-hour window and 13% weekly. Both of its watchers are told to stop and are being archived. This session is renamed "Beat-em-up: account C session (handed off)", which frees the working-session title.
+- **The next account:** start from the takeover prompt under "Takeover prompt". Its "Next steps" are current.
+- **State:** everything is committed and pushed, and the worktrees are clean. The resume steps are those of the 19:15 entry.
+
 ### 2026-10-23 20:13 CDT: watcher relaxed; takeover prompt drafted
 Account C sits idle at 74% of its 5-hour window (resets 23:00 CDT) and 13% weekly, after the 19:15 handoff below.
 - **New watcher cadence**, set by Game-boy: every 20 minutes below 70%, every 10 minutes up to 85%, every 5 minutes above that. Halt and hand off at 90%. "Usage watcher" has the full rules and the prompt.
