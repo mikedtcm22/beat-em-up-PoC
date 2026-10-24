@@ -10,6 +10,10 @@ signal windup_ended(attacker: Node3D, interrupted: bool)
 signal knocked_down(victim: Node3D, hit: HitInfo)
 signal got_up(actor: Node3D)
 signal ko(victim: Node3D, hit: HitInfo)
+## A KO'd body blinked off for good (CombatActor.is_gone()): its health bar and anything
+## else drawn on it goes.
+signal vanished(actor: Node3D)
+## Back from a KO: the player getting up, a dummy blinking back in at its post.
 signal revived(actor: Node3D)
 signal health_changed(actor: Node3D, health: float, max_health: float)
 signal actor_state_changed(actor: Node3D, old_state: int, new_state: int)

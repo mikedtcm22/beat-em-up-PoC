@@ -373,6 +373,13 @@ func set_hurtboxes_enabled(enabled: bool) -> void:
 		_hurt_shapes[i].disabled = not enabled
 
 
+## Show or hide the whole body: a KO's blink-off and a comeback's blink-in, both timed by
+## the owner (CombatActor). Nothing else changes: the pose, the hurtboxes and a running
+## ragdoll carry on as they were.
+func set_shown(shown: bool) -> void:
+	visible = shown
+
+
 ## Whole-body flash, 0..1, as emission on every material: the cyan parry flash (a perfect
 ## block flashes the defender). Ends a contact flash (flash_at()); 0 clears both.
 func set_flash(amount: float, color: Color = Color.WHITE) -> void:

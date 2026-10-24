@@ -4,7 +4,8 @@ extends Control
 ## `show_seconds` after it takes a hit (CombatEvents.hit_landed, or a health drop through
 ## CombatEvents.health_changed). Each bar is anchored above actor.get_head_top_position(),
 ## projected through the viewport's current Camera3D, hidden while that point is behind
-## the camera, and dropped when the actor is freed. Full-rect, draws every bar itself.
+## the camera, and dropped when the actor is freed or blinks off after a KO
+## (CombatEvents.vanished). Full-rect, draws every bar itself.
 ## Driven by GameHud.advance().
 
 ## Seconds a bar stays up after the latest hit.
@@ -66,6 +67,14 @@ func on_health_changed(actor: Node3D, health: float, max_health: float) -> void:
 	else:
 		bar.last_health = health
 	_remember_health(enemy, health)
+
+
+## CombatEvents.vanished: a KO'd enemy that blinked off loses its bar at once.
+func on_vanished(actor: Node3D) -> void:
+	for i: int in range(_bars.size() - 1, -1, -1):
+		if _bars[i].actor == actor:
+			_bars.remove_at(i)
+	queue_redraw()
 
 
 ## Age every bar by `delta` seconds, drop expired or freed ones, and re-project the

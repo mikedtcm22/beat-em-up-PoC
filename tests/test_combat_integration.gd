@@ -575,7 +575,9 @@ func test_finisher_ko_launches_and_dummy_revives() -> void:
 	assert_false(landed.is_empty(), "hits landed")
 	if not landed.is_empty():
 		assert_true(landed.back().killed, "the uppercut killed")
-	assert_true(await _wait_until(func() -> bool: return not dummies[0].is_ko(), int(Tuning.data.dummy_revive_s * 60) + 120), "revives")
+	# It lies, blinks off and comes back (Tuning "KO and blink-off").
+	var back_s := Tuning.data.ko_linger_s + Tuning.data.ko_blink_s + Tuning.data.dummy_revive_s
+	assert_true(await _wait_until(func() -> bool: return not dummies[0].is_ko(), int(back_s * 60) + 120), "revives")
 
 
 # --- Presentation smoke -------------------------------------------------------------

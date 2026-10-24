@@ -158,7 +158,8 @@ func rebuild() -> void:
 		var order: Array[CombatActor] = []
 		for node: Node in get_tree().get_nodes_in_group(&"actor"):
 			var actor := node as CombatActor
-			if actor == null or not actor.is_inside_tree():
+			# A KO'd body that blinked off shows nothing.
+			if actor == null or not actor.is_inside_tree() or actor.is_gone():
 				continue
 			_add_actor(actor)
 			_update_label(actor)
