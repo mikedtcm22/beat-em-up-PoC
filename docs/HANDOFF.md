@@ -4,7 +4,24 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
-### 2026-10-24 10:50 CDT: two agents running (WP4 fixes, localized hit flash)
+### 2026-10-24 10:45 CDT: WP4 merged into `m2/hit-feel` (429/429); flash agent running; weekly at 65%
+- **WP4 done:** `m2/ragdoll` @ `4181f53`, "M2 WP4: review fixes (...)".
+  - Of the 18 findings, 15 are fixed and 3 partly (mech-F4 joint-limit transients on impact, feel-F3 staggers still subtle from the side, feel-F4 lying poses close to M1's). mech-F13 is a spec question.
+  - The verdicts are in [docs/reviews/M2-WP4-fix-results.json](reviews/M2-WP4-fix-results.json). The A/B after-sheets (local) are in `.worktrees/m2-ragdoll/captures/review_after/sheets_after/`.
+  - The lead judged the haymaker, face-down and hook A/B sheets, and they read as reported.
+  - The lead accepts two changes:
+    - `get_head_top_position()` now follows the visible head; only the health bars and debug draw read it;
+    - a pile's top body gets up about 0.8 m aside (brief decision 3).
+- **Merged:** `398a2ad`. The preset regenerated unchanged (275 values). **429/429 tests pass with no SCRIPT ERROR or ERROR.** Pushed.
+- **Running:** the localized-flash agent in `.worktrees/m2-flash` (see the 10:38 entry). Merge `m2/hit-flash` next; its `tuning_data.gd`, `combat_actor.gd` and `humanoid_rig.gd` edits sit beside WP4's.
+- **Usage:** 53% of the 5-hour window (resets 13:40 CDT). **Weekly is at 65%** (resets Tue 2026-10-27 12:00 CDT), the "launch nothing new" line. This account launches no new heavy agent; that is Game-boy's call.
+- **Waiting on Game-boy:**
+  - mech-F13: approve the capped central kick on the struck part instead of SPEC §6's "impulse at the contact point", with a README entry;
+  - the builder's three questions (KO bodies sleep until the arena clears; KO bodies take no hits; heavy-tier knockdowns get the full ragdoll);
+  - whether staggers may go above the spec's 0.6 influence to read better from the side.
+  - All are left as they are until he answers.
+
+### 2026-10-24 10:38 CDT: two agents running (WP4 fixes, localized hit flash)
 Usage is at 14% of the 5-hour window (resets 13:40 CDT) and 58% weekly.
 - **Running (agent 1):** the WP4 verify-and-fix finish in `.worktrees/m2-ragdoll` (see the 10:08 entry).
 - **Running (agent 2):** the localized white hit flash (Game-boy approved it at 10:40) in a new worktree `.worktrees/m2-flash`, branch `m2/hit-flash` (off `m2/hit-feel` @ `d99eecf`, imported and pushed). It builds:
