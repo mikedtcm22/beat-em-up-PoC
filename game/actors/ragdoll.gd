@@ -94,11 +94,11 @@ var _mass: PackedFloat32Array = PackedFloat32Array()
 var _parent_body: PackedInt32Array = PackedInt32Array()
 ## Each body's Part, and its shape's center in its bone's frame.
 var _part: Array[Part] = []
+var _center: PackedVector3Array = PackedVector3Array()
 ## Per skeleton bone: the Part of its body, or -1 for a bone without one.
 var _bone_part: PackedInt32Array = PackedInt32Array()
 ## The Part a PARTIAL's latest kick landed on (its arms keep the full influence).
 var _partial_part: Part = Part.ANY
-var _center: PackedVector3Array = PackedVector3Array()
 ## Each body's joint to its parent (PlaceholderBody.RagdollSpec): its spec, and its frames
 ## in the parent's and its own bone frame (as _make_joint() builds them; cone twists only).
 var _spec: Array[PlaceholderBody.RagdollSpec] = []

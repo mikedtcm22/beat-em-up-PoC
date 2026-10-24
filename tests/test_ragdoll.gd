@@ -9,7 +9,9 @@ extends GutTest
 ## add: the hit's kick held through the hitstop, a get-up with no pop or shove, face-down
 ## landings, joints inside their limits, re-staggers, rest, idle cost, the parry and the
 ## launch's first frames. Phase 3 adds the kick at the contact point (a capped twist, no NaN
-## after many off-center hits) and the stronger staggers (above Spec §6's 0.6 influence).
+## after many off-center hits) and the stronger staggers (above Spec §6's 0.6 influence); its
+## review, each part's cap after many hits and the hook's stagger (the head and arms riding
+## the trunk, the trunk leaning back). Launches out of a hold: tests/test_launch_from_hold.gd.
 
 const ROOM := preload("res://game/level/test_room.tscn")
 const FAR := Vector3(30.0, 0.0, -30.0)

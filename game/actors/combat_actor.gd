@@ -969,7 +969,8 @@ func _apply_reaction(hit: HitInfo) -> void:
 ## pose snapping in, and the full ragdoll. Launched out of a hold (thrown, or a knee that KOs
 ## the held body; GRABBED until now, the holder already gone) the body leaves it as a
 ## release does: from where it is drawn, unbending around its bent-over hips over
-## _RELEASE_BLEND_S, never snapping upright inside the holder.
+## _RELEASE_BLEND_S, and the full ragdoll takes over at once from the held pose, so it leaves
+## bent over and straightens in the air, never snapping upright inside the holder.
 func _launch(hit: HitInfo, reaction: CombatTypes.Reaction, kb: Vector3) -> void:
 	var from_hold := state == CombatTypes.ActorState.GRABBED
 	holder = null
@@ -1097,9 +1098,10 @@ func _ragdoll_part(hit: HitInfo) -> Ragdoll.Part:
 ## A stagger just started (its animation playing): the partial ragdoll gives way to `push`
 ## (world m/s) at `contact` on `part`, and fades back to the animation within the stagger.
 ## (A guard break's and a parry's kick lands on the arms.) With `away` (the hit's horizontal
-## direction, from the attacker) the kick also leans back along it by
-## Tuning.ragdoll_stagger_back_share of the push's speed across it: a sideways stagger gives
-## way backward too, for the side view (visual only; the body slides with `push`).
+## direction, from the attacker) the trunk also leans back along it, kicked as a push of
+## Tuning.ragdoll_stagger_back_share of the push's speed across it would be: a sideways
+## stagger gives way backward too, for the side view (visual only; the body slides with
+## `push`).
 func _ragdoll_stagger(contact: Vector3, push: Vector3, part: Ragdoll.Part, away: Vector3 = Vector3.ZERO) -> void:
 	if not _ragdoll_allowed() or rig.ragdoll_mode() == Ragdoll.Mode.FULL:
 		return
