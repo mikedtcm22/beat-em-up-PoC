@@ -9,13 +9,16 @@ extends Node
 ##   those shared resources apply on each move's next use and survive a restart (R). The
 ##   fields in MOVE_GROUPS are editable (set_move_value()); the shipped values come from a
 ##   fresh load of each .tres.
-## - Presets: JSON files named `<name>.json`, saved and loaded in USER_DIR and exported to
-##   EXPORT_DIR (writable when the game runs from the project folder). A preset holds every
-##   TuningData value plus the move fields that differ from the shipped .tres:
+## - Presets: JSON files named `<name>.json` (names lower case, so one name is one file on
+##   every OS), saved and loaded in `user_dir` (USER_DIR) and exported to `export_dir`
+##   (EXPORT_DIR, writable when the game runs from the project folder). A preset holds every
+##   TuningData value outside PRESET_SKIPPED_GROUPS (the F4 cheats are session state) plus
+##   the move fields that differ from the shipped .tres:
 ##   `{"preset": name, "format": 1, "tuning": {property: value}, "moves": {id: {field: value}}}`,
 ##   vectors and colors as arrays. Loading starts from the shipped defaults, so values a
-##   preset lacks (tunables added later) keep their defaults. EXPORT_DIR/default.json is the
-##   shipped defaults; `godot --headless -s tools/gen_default_preset.gd` regenerates it.
+##   preset lacks (tunables added later) keep their defaults; values outside their range hint
+##   are clamped and unknown enum ids skipped. EXPORT_DIR/default.json is the shipped
+##   defaults; `godot --headless -s tools/gen_default_preset.gd` regenerates it.
 
 ## Emitted after every edit. `property` is the TuningData property; &"" after a preset load,
 ## a reset or apply() (anything may have changed); "moves/<move id>/<field>" for a move edit.
@@ -24,7 +27,14 @@ signal changed(property: StringName)
 const USER_DIR := "user://tuning"
 const EXPORT_DIR := "res://tuning"
 const MOVES_DIR := "res://game/combat/moves"
+## The shipped defaults (EXPORT_DIR only: a user preset can't take this name).
 const DEFAULT_PRESET := "default"
+## The user preset backup_unsaved() keeps unsaved values in before a load or reset replaces
+## them (overwritten each time, so it can't be saved over by hand).
+const BACKUP_PRESET := "_backup"
+## TuningData groups presets leave out: the F4 cheats are session state, so a preset never
+## turns one on and loading or resetting never turns one off.
+const PRESET_SKIPPED_GROUPS: PackedStringArray = ["Debug"]
 ## Preset file layout version.
 const PRESET_FORMAT := 1
 ## The MoveData groups the panel edits and presets override: frame data, damage, knockback,
@@ -42,12 +52,20 @@ const VALUE_TYPES: Array[int] = [
 const MOVE_PREFIX := "moves/"
 
 static var _tuning_props: Array[Dictionary] = []
+static var _preset_props: Array[Dictionary] = []
 static var _move_props: Array[Dictionary] = []
 
 var data: TuningData = TuningData.new()
 ## Problems met by the last apply_preset() or load: unknown names and unreadable values,
-## which were skipped.
+## which were skipped, and values clamped into their range.
 var last_warnings: PackedStringArray = []
+## Where user presets are saved and loaded (tests point it at a scratch folder).
+var user_dir: String = USER_DIR
+## Where export_preset() writes and shipped presets are read (tests point it elsewhere).
+var export_dir: String = EXPORT_DIR
+
+## True after an edit no saved, exported or loaded preset holds (see backup_unsaved()).
+var _unsaved: bool = false
 
 var _defaults: TuningData
 var _moves: Dictionary[StringName, MoveData] = {}
@@ -58,12 +76,15 @@ var _shipped: Dictionary[StringName, Dictionary] = {}
 
 func set_value(property: StringName, value: Variant) -> void:
 	data.set(property, value)
+	if not _property_info(preset_properties(), property).is_empty():
+		_unsaved = true
 	changed.emit(property)
 
 
 ## Replace all values at once (tests). Emits `changed` with an empty name.
 func apply(new_data: TuningData) -> void:
 	data = new_data
+	_unsaved = true
 	changed.emit(&"")
 
 
@@ -85,6 +106,16 @@ static func tuning_properties() -> Array[Dictionary]:
 	return _tuning_props
 
 
+## The TuningData properties a preset holds: tuning_properties() of the VALUE_TYPES, outside
+## PRESET_SKIPPED_GROUPS.
+static func preset_properties() -> Array[Dictionary]:
+	if _preset_props.is_empty():
+		for info: Dictionary in tuning_properties():
+			if VALUE_TYPES.has(int(info.type)) and not PRESET_SKIPPED_GROUPS.has(str(info.group)):
+				_preset_props.append(info)
+	return _preset_props
+
+
 ## The editable MoveData fields (MOVE_GROUPS, VALUE_TYPES), with "group" like
 ## tuning_properties().
 static func move_properties() -> Array[Dictionary]:
@@ -96,19 +127,26 @@ static func move_properties() -> Array[Dictionary]:
 
 
 ## The script's exported properties of `object`, in declaration order, each entry a copy of
-## its property-list dictionary with "group" added.
+## its property-list dictionary with "group" (its @export_group, "" before the first) and
+## "subgroup" (its @export_subgroup within that group, "" outside one) added.
 static func exported_properties(object: Object) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var group := ""
+	var subgroup := ""
 	for info: Dictionary in object.get_property_list():
 		var usage: int = info.usage
 		if usage & PROPERTY_USAGE_CATEGORY:
 			group = ""
+			subgroup = ""
 		elif usage & PROPERTY_USAGE_GROUP:
 			group = str(info.name)
+			subgroup = ""
+		elif usage & PROPERTY_USAGE_SUBGROUP:
+			subgroup = str(info.name)
 		elif usage & PROPERTY_USAGE_SCRIPT_VARIABLE and usage & PROPERTY_USAGE_EDITOR:
 			var entry := info.duplicate()
 			entry.group = group
+			entry.subgroup = subgroup
 			out.append(entry)
 	return out
 
@@ -145,6 +183,7 @@ func set_move_value(id: StringName, field: StringName, value: Variant) -> void:
 		push_warning("Tuning: no editable move field %s/%s" % [id, field])
 		return
 	move.set(field, value)
+	_unsaved = true
 	changed.emit(StringName(MOVE_PREFIX + "%s/%s" % [id, field]))
 
 
@@ -159,20 +198,30 @@ func shipped_move_value(id: StringName, field: StringName) -> Variant:
 func move_overrides() -> Dictionary:
 	var out := {}
 	for id: StringName in move_ids():
-		var move: MoveData = _moves[id]
-		var fields := {}
-		for info: Dictionary in move_properties():
-			var field := StringName(info.name)
-			if not values_equal(move.get(field), shipped_move_value(id, field)):
-				fields[field] = move.get(field)
+		var fields := move_override(id)
 		if not fields.is_empty():
 			out[id] = fields
 	return out
 
 
+## {field: value} for each editable field of move `id` that differs from its shipped .tres.
+func move_override(id: StringName) -> Dictionary:
+	var fields := {}
+	var move := get_move(id)
+	if move == null:
+		return fields
+	var shipped: Dictionary = _shipped.get(id, {})
+	for info: Dictionary in move_properties():
+		var field := StringName(info.name)
+		if not values_equal(move.get(field), shipped.get(field)):
+			fields[field] = move.get(field)
+	return fields
+
+
 ## Put the shipped values back into move `id` and emit `changed` (&"").
 func reset_move(id: StringName) -> void:
 	_restore_move(id)
+	_unsaved = true
 	changed.emit(&"")
 
 
@@ -180,6 +229,7 @@ func reset_move(id: StringName) -> void:
 func reset_moves() -> void:
 	for id: StringName in move_ids():
 		_restore_move(id)
+	_unsaved = true
 	changed.emit(&"")
 
 
@@ -220,9 +270,8 @@ func _ensure_moves() -> void:
 ## The current values as a preset dictionary (see the class docs).
 func preset_dict(preset_name: String) -> Dictionary:
 	var values := {}
-	for info: Dictionary in tuning_properties():
-		if VALUE_TYPES.has(int(info.type)):
-			values[str(info.name)] = encode_value(data.get(info.name))
+	for info: Dictionary in preset_properties():
+		values[str(info.name)] = encode_value(data.get(info.name))
 	var moves := {}
 	var overrides := move_overrides()
 	for id: StringName in overrides:
@@ -236,15 +285,16 @@ func preset_dict(preset_name: String) -> Dictionary:
 ## The shipped defaults as a preset dictionary (what EXPORT_DIR/default.json holds).
 func default_preset_dict() -> Dictionary:
 	var values := {}
-	for info: Dictionary in tuning_properties():
-		if VALUE_TYPES.has(int(info.type)):
-			values[str(info.name)] = encode_value(defaults().get(info.name))
+	for info: Dictionary in preset_properties():
+		values[str(info.name)] = encode_value(defaults().get(info.name))
 	return {"preset": DEFAULT_PRESET, "format": PRESET_FORMAT, "tuning": values, "moves": {}}
 
 
 ## Load a preset dictionary: every value starts from the shipped defaults (TuningData and
-## moves), then takes the preset's. Unknown names and unreadable values are skipped and
-## listed in `last_warnings`. Emits `changed` (&"") once.
+## moves), then takes the preset's. Unknown names, unreadable values and enum ids the hint
+## lacks are skipped, and numbers outside their range hint clamped (_checked()), each listed
+## in `last_warnings`. PRESET_SKIPPED_GROUPS (the cheats) are left as they are, even if the
+## preset holds them. Emits `changed` (&"") once.
 func apply_preset(preset: Dictionary) -> Error:
 	last_warnings.clear()
 	var tuning: Variant = preset.get("tuning", {})
@@ -254,16 +304,17 @@ func apply_preset(preset: Dictionary) -> Error:
 		return ERR_INVALID_DATA
 	var values := defaults().duplicate() as TuningData
 	for key: Variant in tuning:
-		var info := _property_info(tuning_properties(), StringName(str(key)))
+		var info := _property_info(preset_properties(), StringName(str(key)))
 		if info.is_empty():
-			last_warnings.append("unknown tunable %s" % key)
+			if _property_info(tuning_properties(), StringName(str(key))).is_empty():
+				last_warnings.append("unknown tunable %s" % key)
 			continue
-		var value: Variant = decode_value(tuning[key], int(info.type))
+		var value: Variant = _checked(info, decode_value(tuning[key], int(info.type)), str(key))
 		if value == null:
 			last_warnings.append("unreadable value for %s" % key)
 			continue
 		values.set(info.name, value)
-	for info: Dictionary in tuning_properties():
+	for info: Dictionary in preset_properties():
 		data.set(info.name, values.get(info.name))
 	for id: StringName in move_ids():
 		_restore_move(id)
@@ -275,45 +326,69 @@ func apply_preset(preset: Dictionary) -> Error:
 			continue
 		for key: Variant in fields:
 			var info := _property_info(move_properties(), StringName(str(key)))
-			var value: Variant = decode_value(fields[key], int(info.type)) if not info.is_empty() else null
+			var label := "%s/%s" % [id, key]
+			var value: Variant = _checked(info, decode_value(fields[key], int(info.type)), label) if not info.is_empty() else null
 			if value == null:
-				last_warnings.append("skipped %s/%s" % [id, key])
+				last_warnings.append("skipped %s" % label)
 				continue
 			move.set(info.name, value)
+	_unsaved = false
 	changed.emit(&"")
 	return OK
 
 
-## Every TuningData value and every move back to the shipped defaults. Emits `changed` (&"").
+## Every preset value and every move back to the shipped defaults (the cheats stay as they
+## are). Emits `changed` (&"").
 func reset_to_default() -> void:
 	apply_preset(default_preset_dict())
 
 
-## True when every value equals the shipped defaults.
+## True when every value a preset holds (and every move) equals the shipped defaults.
 func is_default() -> bool:
-	for info: Dictionary in tuning_properties():
+	for info: Dictionary in preset_properties():
 		if not values_equal(data.get(info.name), defaults().get(info.name)):
 			return false
 	return move_overrides().is_empty()
 
 
-## Save the current values as USER_DIR/<name>.json.
+## True after an edit that no preset saved, exported or loaded since holds.
+func has_unsaved() -> bool:
+	return _unsaved
+
+
+## Keep the current values as the user preset BACKUP_PRESET when they hold edits no saved,
+## exported or loaded preset holds, before a load or reset replaces them. True if it wrote one.
+func backup_unsaved() -> bool:
+	if not _unsaved or is_default():
+		return false
+	return write_preset_file(user_dir.path_join(BACKUP_PRESET + ".json"), preset_dict(BACKUP_PRESET)) == OK
+
+
+## Save the current values as `user_dir`/<name>.json. Refuses (ERR_ALREADY_IN_USE) the
+## reserved names (is_reserved_preset_name()).
 func save_preset(preset_name: String) -> Error:
-	return _write_named(USER_DIR, preset_name)
+	if is_reserved_preset_name(preset_name):
+		return ERR_ALREADY_IN_USE
+	return _write_named(user_dir, preset_name)
 
 
-## Write the current values to EXPORT_DIR/<name>.json (a res:// preset to commit). Refuses
-## (ERR_INVALID_PARAMETER) to write "default" unless the values are the shipped defaults.
+## Write the current values to `export_dir`/<name>.json (a res:// preset to commit). Refuses
+## (ERR_INVALID_PARAMETER) to write "default", in any case, unless the values are the
+## shipped defaults.
 func export_preset(preset_name: String) -> Error:
 	if sanitize_preset_name(preset_name) == DEFAULT_PRESET and not is_default():
 		return ERR_INVALID_PARAMETER
-	return _write_named(EXPORT_DIR, preset_name)
+	return _write_named(export_dir, preset_name)
 
 
-## Load preset `<name>`: the user's copy (USER_DIR) if there is one, else the shipped one.
+## Load preset `<name>`: the user's copy (`user_dir`) if there is one, else the shipped one
+## (`export_dir`). "default" is always the shipped one.
 func load_preset(preset_name: String) -> Error:
 	var clean := sanitize_preset_name(preset_name)
-	for dir: String in [USER_DIR, EXPORT_DIR]:
+	var dirs: Array[String] = [export_dir]
+	if clean != DEFAULT_PRESET:
+		dirs.push_front(user_dir)
+	for dir: String in dirs:
 		var path := dir.path_join(clean + ".json")
 		if FileAccess.file_exists(path):
 			return load_preset_file(path)
@@ -328,10 +403,11 @@ func load_preset_file(path: String) -> Error:
 	return apply_preset(preset)
 
 
-## Saved and shipped presets: [{name, path, shipped}], user presets first, each by name.
+## Saved and shipped presets: [{name, path, shipped}], user presets first, each by name. A
+## user "default" (from before the name was reserved) is left out: "default" is the shipped one.
 func list_presets() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
-	for dir: String in [USER_DIR, EXPORT_DIR]:
+	for dir: String in [user_dir, export_dir]:
 		var names: Array[String] = []
 		if not DirAccess.dir_exists_absolute(dir):
 			continue
@@ -340,18 +416,27 @@ func list_presets() -> Array[Dictionary]:
 				names.append(file.get_basename())
 		names.sort()
 		for preset_name: String in names:
-			out.append({name = preset_name, path = dir.path_join(preset_name + ".json"), shipped = dir == EXPORT_DIR})
+			if dir == user_dir and preset_name.to_lower() == DEFAULT_PRESET:
+				continue
+			out.append({name = preset_name, path = dir.path_join(preset_name + ".json"), shipped = dir == export_dir})
 	return out
 
 
-## A file-safe preset name: trimmed, spaces and anything outside [A-Za-z0-9_-] become "_".
+## A file-safe preset name: trimmed and lower case (one name is one file on every OS, also
+## on case-insensitive disks), with spaces and anything outside [a-z0-9_-] as "_".
 static func sanitize_preset_name(text: String) -> String:
 	var out := ""
-	for c: String in text.strip_edges():
+	for c: String in text.strip_edges().to_lower():
 		var code := c.unicode_at(0)
-		var ok := (code >= 48 and code <= 57) or (code >= 65 and code <= 90) or (code >= 97 and code <= 122) or c == "_" or c == "-"
+		var ok := (code >= 48 and code <= 57) or (code >= 97 and code <= 122) or c == "_" or c == "-"
 		out += c if ok else "_"
 	return out
+
+
+## True for the names a user preset can't take: DEFAULT_PRESET (the shipped defaults) and
+## BACKUP_PRESET (backup_unsaved() overwrites it), in any case.
+static func is_reserved_preset_name(preset_name: String) -> bool:
+	return sanitize_preset_name(preset_name) in [DEFAULT_PRESET, BACKUP_PRESET]
 
 
 ## Write `preset` to `path` as tab-indented JSON in declaration order.
@@ -379,7 +464,38 @@ func _write_named(dir: String, preset_name: String) -> Error:
 	var clean := sanitize_preset_name(preset_name)
 	if clean.is_empty():
 		return ERR_INVALID_PARAMETER
-	return write_preset_file(dir.path_join(clean + ".json"), preset_dict(clean))
+	var err := write_preset_file(dir.path_join(clean + ".json"), preset_dict(clean))
+	if err == OK:
+		_unsaved = false
+	return err
+
+
+## `value` (decoded, or null) checked against the property-list entry's hint: a number past
+## a range hint's end is clamped to it (unless the hint's or_greater / or_less allows that
+## side), noted in last_warnings as `label`; an enum id the hint lacks gives null.
+func _checked(info: Dictionary, value: Variant, label: String) -> Variant:
+	if not (value is int or value is float):
+		return value
+	var hint: int = info.get("hint", PROPERTY_HINT_NONE)
+	var hint_string: String = info.get("hint_string", "")
+	if hint == PROPERTY_HINT_ENUM:
+		return value if enum_ids(hint_string).has(int(value)) else null
+	var parts := hint_string.split(",")
+	if hint != PROPERTY_HINT_RANGE or parts.size() < 2 or not parts[0].strip_edges().is_valid_float() \
+			or not parts[1].strip_edges().is_valid_float():
+		return value
+	var number := float(value)
+	var flags: Array[String] = []
+	for part: String in parts:
+		flags.append(part.strip_edges())
+	if number < float(parts[0]) and not flags.has("or_less"):
+		number = float(parts[0])
+	elif number > float(parts[1]) and not flags.has("or_greater"):
+		number = float(parts[1])
+	else:
+		return value
+	last_warnings.append("%s clamped to %s" % [label, number])
+	return roundi(number) if value is int else number
 
 
 # --- Values -----------------------------------------------------------------------------
@@ -427,6 +543,19 @@ static func decode_value(raw: Variant, type: int) -> Variant:
 			if type == TYPE_COLOR and parts.size() in [3, 4]:
 				return Color(parts[0], parts[1], parts[2], parts[3] if parts.size() == 4 else 1.0)
 	return null
+
+
+## The ids an enum hint_string lists ("Name:id" entries; a bare "Name" takes the id after the
+## previous one), as the editor reads them.
+static func enum_ids(hint_string: String) -> PackedInt32Array:
+	var ids := PackedInt32Array()
+	var next := 0
+	for entry: String in hint_string.split(",", false):
+		var parts := entry.split(":")
+		var id := int(parts[1]) if parts.size() > 1 else next
+		ids.append(id)
+		next = id + 1
+	return ids
 
 
 ## Equal, with float tolerance for floats, vectors and colors.

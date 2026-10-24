@@ -6,17 +6,26 @@ extends Node
 ## - The window takes the mouse and keyboard. An embedded window's input never reaches the
 ##   game's _input / _unhandled_input handlers, so a click on the panel can't recapture the
 ##   mouse (GameInput) and keys typed into a field don't reach the debug keys.
+## - The game's own bindings (GameInput.BINDINGS, all but F1 / View and F4) are lifted out of
+##   the InputMap while open and put back on closing, so code that polls the Input singleton
+##   (the free-fly camera's arrow and Page keys) doesn't move while the panel uses those keys.
 ## - The player stands still: its live PlayerInput is switched to scripted (idle frames, no
 ##   look) and back UNFREEZE_TICKS physics ticks after closing, so the key or button that
 ##   closed it (gamepad B is also the dodge) never reaches the player. A scripted player (the
 ##   combo bot, tests) is left alone.
 ## - The mouse is released, and captured again on closing unless the game is paused.
 ## F1 / View toggles the panel and F4 the cheat menu, from the game or from the window; Esc
-## (ui_cancel, also gamepad B) closes both. The D-pad walks the controls (focus navigation).
+## (ui_cancel, also gamepad B) closes both. Gamepad: the D-pad walks the controls (focus
+## navigation), A presses (ui_accept), LB / RB switch the panel's category. Godot's default
+## ui_accept and ui_cancel have no joypad buttons, so the overlay adds A and B to them.
 ## The test room adds one (TestRoom._build_presentation()).
 
 ## Physics ticks after closing before the player takes input again.
 const UNFREEZE_TICKS := 2
+## GameInput actions that keep their bindings while open: the overlay's own toggles.
+const KEPT_ACTIONS: Array[StringName] = [&"tuning_panel", &"cheats"]
+## Joypad buttons the overlay adds to Godot's UI actions (absent from its defaults).
+const GAMEPAD_UI := {&"ui_accept": JOY_BUTTON_A, &"ui_cancel": JOY_BUTTON_B}
 
 ## Canvas pixels between the menus and the screen edges.
 @export var margin: float = 24.0
@@ -32,6 +41,8 @@ var cheats: CheatMenu
 ## The live player input switched to scripted while open (null = none).
 var _frozen_input: PlayerInput
 var _unfreeze_left: int = 0
+## Action -> its InputMap events, lifted out while open (empty while closed).
+var _lifted: Dictionary[StringName, Array] = {}
 
 
 ## Hands the window's unused key and button presses to the overlay.
@@ -46,6 +57,7 @@ class _Relay:
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	add_gamepad_ui_events()
 	window = Window.new()
 	window.name = "TuningWindow"
 	window.visible = false
@@ -85,6 +97,20 @@ func _exit_tree() -> void:
 	if get_tree().root.size_changed.is_connected(_fit_window):
 		get_tree().root.size_changed.disconnect(_fit_window)
 	_unfreeze_player(true)
+	_restore_bindings()
+
+
+## Add gamepad A to ui_accept and B to ui_cancel where they are missing (GAMEPAD_UI), so the
+## pad can press buttons, flip toggles, open drop-downs and close the menus.
+static func add_gamepad_ui_events() -> void:
+	for action: StringName in GAMEPAD_UI:
+		if not InputMap.has_action(action):
+			continue
+		var event := InputEventJoypadButton.new()
+		event.button_index = GAMEPAD_UI[action]
+		event.device = -1  # every pad, like Godot's own ui_* joypad events
+		if not InputMap.action_has_event(action, event):
+			InputMap.action_add_event(action, event)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -164,6 +190,7 @@ func _update(opened: Control) -> void:
 	if not is_open():
 		window.hide()
 		_unfreeze_left = UNFREEZE_TICKS
+		_restore_bindings()
 		_set_mouse_free(false)
 		return
 	_unfreeze_left = 0
@@ -172,6 +199,7 @@ func _update(opened: Control) -> void:
 		window.show()
 	window.grab_focus()
 	_freeze_player()
+	_lift_bindings()
 	_set_mouse_free(true)
 	var focused := window.gui_get_focus_owner()
 	if opened == null and focused != null and focused.is_visible_in_tree():
@@ -203,6 +231,31 @@ func _unfreeze_player(force: bool = false) -> void:
 		_frozen_input.clear_queue()
 		_frozen_input.scripted = false
 		_frozen_input = null
+
+
+## Take the game's bindings out of the InputMap (all of GameInput.BINDINGS but KEPT_ACTIONS)
+## and release those actions, so nothing that polls Input reacts to the keys the menus use.
+func _lift_bindings() -> void:
+	if not _lifted.is_empty():
+		return
+	for action: StringName in GameInput.BINDINGS:
+		if KEPT_ACTIONS.has(action) or not InputMap.has_action(action):
+			continue
+		_lifted[action] = InputMap.action_get_events(action)
+		InputMap.action_erase_events(action)
+		Input.action_release(action)
+
+
+## Put the lifted bindings back.
+func _restore_bindings() -> void:
+	for action: StringName in _lifted:
+		if not InputMap.has_action(action):
+			continue
+		for event: InputEvent in _lifted[action]:
+			if not InputMap.action_has_event(action, event):
+				InputMap.action_add_event(action, event)
+		Input.action_release(action)
+	_lifted.clear()
 
 
 func _set_mouse_free(free: bool) -> void:

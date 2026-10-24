@@ -1,8 +1,10 @@
 extends GutTest
 ## Milestone 2 WP1 (Spec §11): the F1 tuning panel, presets and the F4 cheat menu, and the
 ## TuningOverlay that hosts them in the test room. Every test starts and ends at the shipped
-## defaults (Tuning.reset_to_default() also restores the shared move resources), and the
-## preset files it writes are removed afterwards.
+## defaults (Tuning.reset_to_default() also restores the shared move resources). Presets
+## are saved and exported into a scratch folder of this run (Tuning.user_dir and
+## export_dir), never into the user://tuning that every worktree and Game-boy share, and the
+## folder is removed afterwards.
 
 const ROOM := preload("res://game/level/test_room.tscn")
 const TEST_PRESET := "gut_tuning_roundtrip"
@@ -11,27 +13,54 @@ const DEFAULT_PATH := "res://tuning/default.json"
 const FAR := Vector3(30.0, 0.0, -30.0)
 
 var hits: Array[HitInfo] = []
+## This run's scratch preset folder.
+var scratch_dir: String = ""
+
+
+func before_all() -> void:
+	scratch_dir = "user://gut_tuning_%d" % OS.get_process_id()
+	Tuning.user_dir = scratch_dir.path_join("user")
+	Tuning.export_dir = scratch_dir.path_join("export")
+
+
+func after_all() -> void:
+	_remove_tree(scratch_dir)
+	Tuning.user_dir = Tuning.USER_DIR
+	Tuning.export_dir = Tuning.EXPORT_DIR
 
 
 func before_each() -> void:
 	Tuning.reset_to_default()
+	Tuning.set_value(&"god_mode", false)
+	Tuning.set_value(&"one_hit_ko", false)
 	TimeController.clear()
 	TimeController.debug_scale = 1.0
 	hits.clear()
+	# A shipped default to list and load, as in res://tuning.
+	_remove_tree(scratch_dir)
+	DirAccess.make_dir_recursive_absolute(Tuning.export_dir)
+	DirAccess.copy_absolute(DEFAULT_PATH, Tuning.export_dir.path_join(Tuning.DEFAULT_PRESET + ".json"))
 
 
 func after_each() -> void:
 	Tuning.reset_to_default()
+	Tuning.set_value(&"god_mode", false)
+	Tuning.set_value(&"one_hit_ko", false)
 	TimeController.clear()
 	TimeController.debug_scale = 1.0
-	for path: String in [
-		Tuning.USER_DIR.path_join(TEST_PRESET + ".json"),
-		Tuning.EXPORT_DIR.path_join(TEST_EXPORT + ".json"),
-	]:
-		if FileAccess.file_exists(path):
-			DirAccess.remove_absolute(path)
+	_remove_tree(scratch_dir)
 	if CombatEvents.hit_landed.is_connected(_on_hit):
 		CombatEvents.hit_landed.disconnect(_on_hit)
+
+
+func _remove_tree(dir: String) -> void:
+	if dir == "" or not DirAccess.dir_exists_absolute(dir):
+		return
+	for sub: String in DirAccess.get_directories_at(dir):
+		_remove_tree(dir.path_join(sub))
+	for file: String in DirAccess.get_files_at(dir):
+		DirAccess.remove_absolute(dir.path_join(file))
+	DirAccess.remove_absolute(dir)
 
 
 func _on_hit(hit: HitInfo) -> void:
@@ -165,7 +194,7 @@ func test_changes_made_elsewhere_show_in_the_panel() -> void:
 	assert_true(panel.field(&"god_mode").check.button_pressed, "a cheat toggled elsewhere shows")
 	Tuning.reset_to_default()
 	assert_almost_eq(panel.field(&"fov_deg").slider.value, 90.0, 0.0001, "a reset shows")
-	assert_false(panel.field(&"god_mode").check.button_pressed)
+	assert_true(panel.field(&"god_mode").check.button_pressed, "a reset leaves the cheats as they are")
 
 
 func test_doc_comments_become_tooltips() -> void:
@@ -191,6 +220,12 @@ func test_the_moves_page_edits_the_loaded_move_resources() -> void:
 		assert_not_null(panel.move_field(field_name), "a move row for %s" % field_name)
 	assert_null(panel.move_field(&"hitboxes"), "hitboxes are structure, not tuning")
 	assert_null(panel.move_field(&"id"))
+	# The picker stays above the scrolling rows, on the Moves page only.
+	assert_false(panel._content.is_ancestor_of(panel.move_picker), "the move picker doesn't scroll away")
+	panel.show_category(TuningPanel.MOVES_CATEGORY)
+	assert_true(panel.move_picker.is_visible_in_tree(), "shown with the Moves page")
+	panel.show_category("Camera")
+	assert_false(panel.move_picker.is_visible_in_tree(), "hidden with any other page")
 
 	panel.select_move(&"hook")
 	var hook := load("res://game/combat/moves/hook.tres") as MoveData
@@ -276,12 +311,100 @@ func test_dummies_re_read_what_they_cache() -> void:
 	dummy.reset_state()
 
 
+func test_show_category_presses_only_its_own_button() -> void:
+	var panel := _panel()
+	for category_name: String in ["Camera", "Block", TuningPanel.MOVES_CATEGORY]:
+		panel.show_category(category_name)
+	var pressed: PackedStringArray = []
+	for category_name: String in panel.categories():
+		if panel.category_button(category_name).button_pressed:
+			pressed.append(category_name)
+	assert_eq(pressed, PackedStringArray([TuningPanel.MOVES_CATEGORY]), "one category highlighted")
+
+
+func test_a_value_edit_refreshes_only_its_own_markers() -> void:
+	var panel := _panel()
+	# A TuningData edit leaves the move markers alone (no move_overrides() rebuild per edit).
+	panel.move_picker.set_item_text(0, "untouched")
+	panel.field(&"hitstop_heavy_ms").slider.value = 120.0
+	assert_eq(panel.move_picker.get_item_text(0), "untouched", "the move picker isn't rebuilt")
+	assert_string_ends_with(panel.category_button("Hit feel").text, TuningPanel.CHANGED_MARK)
+	assert_false(panel.category_button("Camera").text.ends_with(TuningPanel.CHANGED_MARK))
+	panel.field(&"hitstop_heavy_ms").slider.value = 85.0
+	assert_eq(panel.category_button("Hit feel").text, "Hit feel", "and its mark goes with the change")
+	# A move edit marks that move and Moves.
+	Tuning.set_move_value(&"hook", &"startup", 9)
+	var hook_index := -1
+	for i in panel.move_picker.item_count:
+		if panel.move_picker.get_item_metadata(i) == &"hook":
+			hook_index = i
+	assert_eq(panel.move_picker.get_item_text(hook_index), "hook" + TuningPanel.CHANGED_MARK)
+	assert_string_ends_with(panel.category_button(TuningPanel.MOVES_CATEGORY).text, TuningPanel.CHANGED_MARK)
+	Tuning.reset_move(&"hook")
+	assert_eq(panel.move_picker.get_item_text(hook_index), "hook")
+	assert_eq(panel.category_button(TuningPanel.MOVES_CATEGORY).text, TuningPanel.MOVES_CATEGORY)
+	assert_ne(panel.move_picker.get_item_text(0), "untouched", "a full refresh (&\"\") rebuilds them")
+
+
+func test_subgroups_are_parsed_and_shown_as_headings() -> void:
+	# exported_properties() records each property's @export_subgroup within its group.
+	var script := GDScript.new()
+	script.source_code = "\n".join([
+		"extends Resource",
+		"@export var a: float = 1.0",
+		"@export_group(\"G\")",
+		"@export_subgroup(\"S1\")",
+		"@export var b: float = 1.0",
+		"@export var c: float = 1.0",
+		"@export_subgroup(\"S2\")",
+		"@export var d: bool = true",
+		"@export_group(\"H\")",
+		"@export var e: int = 2",
+	])
+	assert_eq(script.reload(), OK)
+	var places := {}
+	for info: Dictionary in Tuning.exported_properties(script.new()):
+		places[str(info.name)] = [info.group, info.subgroup]
+	assert_eq(places, {a = ["", ""], b = ["G", "S1"], c = ["G", "S1"], d = ["G", "S2"], e = ["H", ""]},
+			"group and subgroup per property; a new group ends the subgroup")
+	# The panel draws a heading above each subgroup's rows. TuningData's own subgroups arrive
+	# with the VFX and Audio groups, so this gives Hit feel some for the test.
+	var saved: Array[Dictionary] = Tuning._tuning_props
+	var with_subgroups: Array[Dictionary] = []
+	var expected: PackedStringArray = []
+	var first_rows: Array[StringName] = []
+	for info: Dictionary in Tuning.tuning_properties():
+		var entry := info.duplicate()
+		if entry.group == "Hit feel":
+			var prop := str(entry.name)
+			entry.subgroup = "Hitstop" if prop.begins_with("hitstop") else ("Camera punch" if prop.begins_with("cam_punch") \
+					else ("Shake" if prop.begins_with("shake") else "Slow-mo and impact"))
+			if not expected.has(entry.subgroup):
+				expected.append(entry.subgroup)
+				first_rows.append(StringName(prop))
+		with_subgroups.append(entry)
+	Tuning._tuning_props = with_subgroups
+	var panel := _panel()
+	Tuning._tuning_props = saved
+	assert_eq(panel.headings("Hit feel"), expected, "a heading per subgroup, in order")
+	assert_eq(panel.headings("Camera"), PackedStringArray(), "none where there are no subgroups")
+	var page: Control = panel._pages["Hit feel"]
+	for i in expected.size():
+		var row := panel.field(first_rows[i])
+		var heading := page.get_child(row.get_index() - 1)
+		var label := heading.get_child(0) as Label if heading.get_child_count() > 0 else null
+		assert_not_null(label, "a heading above %s" % first_rows[i])
+		if label:
+			assert_string_contains(label.text, expected[i])
+	assert_eq(panel.focus_chain("Hit feel").size(), 12, "the D-pad still walks every Hit feel row, past the headings")
+
+
 # --- Presets ----------------------------------------------------------------------------
 
 
 func test_a_preset_round_trips_through_json_including_move_overrides() -> void:
 	# Every value away from its default, plus move overrides of each field type.
-	for info: Dictionary in Tuning.tuning_properties():
+	for info: Dictionary in Tuning.preset_properties():
 		var value: Variant = Tuning.data.get(info.name)
 		if value is bool:
 			Tuning.set_value(info.name, not value)
@@ -299,7 +422,7 @@ func test_a_preset_round_trips_through_json_including_move_overrides() -> void:
 	assert_eq((overrides[&"uppercut"] as Dictionary).size(), 2, "only the fields that differ")
 
 	assert_eq(Tuning.save_preset(TEST_PRESET), OK, "saved")
-	var path := Tuning.USER_DIR.path_join(TEST_PRESET + ".json")
+	var path := Tuning.user_dir.path_join(TEST_PRESET + ".json")
 	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
 	assert_true(parsed is Dictionary, "the file is JSON")
 	if not parsed is Dictionary:
@@ -312,9 +435,7 @@ func test_a_preset_round_trips_through_json_including_move_overrides() -> void:
 	assert_true(Tuning.is_default(), "back to defaults before loading")
 	assert_eq(Tuning.load_preset(TEST_PRESET), OK, "loaded")
 	assert_eq(Tuning.last_warnings, PackedStringArray(), "nothing skipped")
-	for info: Dictionary in Tuning.tuning_properties():
-		if not _supported(info):
-			continue
+	for info: Dictionary in Tuning.preset_properties():
 		var expected: Variant = Tuning.decode_value(before.tuning[str(info.name)], int(info.type))
 		var got: Variant = Tuning.data.get(info.name)
 		assert_eq(typeof(got), int(info.type), "%s keeps its type" % info.name)
@@ -335,7 +456,7 @@ func test_the_default_preset_equals_the_shipped_defaults() -> void:
 	var regenerate := " (regenerate: godot --headless -s tools/gen_default_preset.gd)"
 	var tuning: Dictionary = preset.tuning
 	var names: Array[String] = []
-	for info: Dictionary in Tuning.tuning_properties():
+	for info: Dictionary in Tuning.preset_properties():
 		if _supported(info):
 			names.append(str(info.name))
 			assert_true(tuning.has(str(info.name)), "default.json has %s%s" % [info.name, regenerate])
@@ -350,7 +471,7 @@ func test_the_default_preset_equals_the_shipped_defaults() -> void:
 	Tuning.set_value(&"hitstop_light_ms", 99.0)
 	Tuning.set_move_value(&"jab_1", &"startup", 9)
 	assert_false(Tuning.is_default())
-	assert_eq(Tuning.load_preset(Tuning.DEFAULT_PRESET), OK)
+	assert_eq(Tuning.load_preset_file(DEFAULT_PATH), OK)
 	assert_true(Tuning.is_default(), "default.json loads the shipped defaults")
 	assert_eq(JSON.stringify(Tuning.default_preset_dict(), "\t", false) + "\n",
 			FileAccess.get_file_as_string(DEFAULT_PATH), "the file is the generator's output" + regenerate)
@@ -376,6 +497,124 @@ func test_presets_skip_unknown_values_and_default_missing_ones() -> void:
 	assert_eq(Tuning.load_preset("gut_no_such_preset"), ERR_FILE_NOT_FOUND)
 
 
+func test_presets_clamp_ranges_and_skip_unknown_enum_ids() -> void:
+	# A stale or hand-edited preset can't break the camera, the VFX or the combat log.
+	var err := Tuning.apply_preset({
+		"tuning": {"fov_deg": 500, "hitstop_light_ms": -20, "dodge_frames": 9999, "shake_light": 0.2},
+		"moves": {"jab_1": {"tier": 9, "reaction": 42, "startup": 500, "damage": 7.5},
+				"hook": {"tier": CombatTypes.HitTier.FINISHER}},
+	})
+	assert_eq(err, OK)
+	var fov := Tuning._property_info(Tuning.tuning_properties(), &"fov_deg")
+	assert_almost_eq(Tuning.data.fov_deg, float(str(fov.hint_string).split(",")[1]), 0.0001, "FOV clamped to its range")
+	assert_almost_eq(Tuning.data.hitstop_light_ms, 0.0, 0.0001, "clamped at the low end too")
+	assert_eq(Tuning.data.dodge_frames, 40, "ints clamp to ints")
+	assert_eq(typeof(Tuning.data.dodge_frames), TYPE_INT)
+	assert_almost_eq(Tuning.data.shake_light, 0.2, 0.0001, "values in range load as they are")
+	var jab := Tuning.get_move(&"jab_1")
+	assert_eq(jab.tier, Tuning.shipped_move_value(&"jab_1", &"tier"), "an unknown tier id is skipped")
+	assert_eq(jab.reaction, Tuning.shipped_move_value(&"jab_1", &"reaction"), "an unknown reaction id is skipped")
+	assert_eq(jab.startup, 120, "move fields clamp to their range")
+	assert_almost_eq(jab.damage, 7.5, 0.0001)
+	assert_eq(Tuning.get_move(&"hook").tier, CombatTypes.HitTier.FINISHER, "a known enum id loads")
+	var warnings := ", ".join(Tuning.last_warnings)
+	for part: String in ["fov_deg clamped", "hitstop_light_ms clamped", "dodge_frames clamped", "skipped jab_1/tier",
+			"skipped jab_1/reaction", "jab_1/startup clamped"]:
+		assert_string_contains(warnings, part)
+	assert_eq(Tuning.last_warnings.size(), 6, "nothing else: %s" % warnings)
+	# or_greater / or_less let a value past that end of the slider.
+	var open := {name = &"x", type = TYPE_FLOAT, hint = PROPERTY_HINT_RANGE, hint_string = "0,2,0.1,or_greater"}
+	assert_almost_eq(float(Tuning._checked(open, 5.0, "x")), 5.0, 0.0001, "or_greater")
+	assert_almost_eq(float(Tuning._checked(open, -1.0, "x")), 0.0, 0.0001, "but not below")
+	assert_eq(Tuning.enum_ids("Light,Heavy,Finisher"), PackedInt32Array([0, 1, 2]))
+	assert_eq(Tuning.enum_ids("Low:0,High:5,Max"), PackedInt32Array([0, 5, 6]))
+
+
+func test_preset_names_are_lower_case_and_default_is_reserved() -> void:
+	assert_eq(Tuning.sanitize_preset_name(" Heavy V2! "), "heavy_v2_", "lower case, file-safe")
+	for reserved: String in ["default", "Default", "_BACKUP"]:
+		assert_true(Tuning.is_reserved_preset_name(reserved))
+		assert_eq(Tuning.save_preset(reserved), ERR_ALREADY_IN_USE, "a user preset can't be called %s" % reserved)
+	assert_false(DirAccess.dir_exists_absolute(Tuning.user_dir) and not DirAccess.get_files_at(Tuning.user_dir).is_empty(),
+			"nothing saved")
+	var panel := _panel()
+	assert_eq(panel.save_preset("Default"), ERR_ALREADY_IN_USE)
+	assert_string_contains(panel.status_label.text, "reserved")
+	# A user default.json (from before the name was reserved) doesn't shadow the shipped one.
+	Tuning.set_value(&"hitstop_light_ms", 99.0)
+	Tuning.write_preset_file(Tuning.user_dir.path_join("default.json"), Tuning.preset_dict("default"))
+	assert_eq(Tuning.load_preset("Default"), OK)
+	assert_true(Tuning.is_default(), "'default' always loads the shipped defaults")
+	for preset: Dictionary in Tuning.list_presets():
+		assert_false(str(preset.name) == "default" and not preset.shipped, "and the user copy isn't listed")
+	# Exporting "Default" with changed values is refused in any case.
+	Tuning.set_value(&"hitstop_light_ms", 99.0)
+	assert_eq(Tuning.export_preset("DeFaUlT"), ERR_INVALID_PARAMETER)
+
+
+func test_cheat_states_stay_out_of_presets() -> void:
+	Tuning.set_value(&"god_mode", true)
+	Tuning.set_value(&"one_hit_ko", true)
+	assert_false(Tuning.has_unsaved(), "a cheat isn't an unsaved tuning edit")
+	assert_true(Tuning.is_default(), "nor a changed value")
+	var preset := Tuning.preset_dict("x")
+	for cheat: String in ["god_mode", "one_hit_ko"]:
+		assert_false((preset.tuning as Dictionary).has(cheat), "%s isn't saved" % cheat)
+		assert_false((Tuning.default_preset_dict().tuning as Dictionary).has(cheat), "nor in default.json")
+	Tuning.reset_to_default()
+	assert_true(Tuning.data.god_mode, "Reset to default leaves the cheats on")
+	assert_true(Tuning.data.one_hit_ko)
+	Tuning.set_value(&"god_mode", false)
+	assert_eq(Tuning.apply_preset({"tuning": {"god_mode": true, "one_hit_ko": false}}), OK)
+	assert_false(Tuning.data.god_mode, "an older preset holding a cheat doesn't turn it on")
+	assert_true(Tuning.data.one_hit_ko, "or off")
+	assert_eq(Tuning.last_warnings, PackedStringArray(), "and isn't reported as unknown")
+
+
+func _pick(panel: TuningPanel, label: String) -> bool:
+	panel.refresh_presets()
+	for i in panel.preset_picker.item_count:
+		if panel.preset_picker.get_item_text(i) == label:
+			panel.preset_picker.select(i)
+			return true
+	return false
+
+
+func test_reset_and_load_keep_unsaved_values_as_a_backup() -> void:
+	var panel := _panel()
+	var backup := Tuning.user_dir.path_join(Tuning.BACKUP_PRESET + ".json")
+	panel.field(&"hitstop_heavy_ms").slider.value = 140.0
+	Tuning.set_move_value(&"hook", &"startup", 9)
+	assert_true(Tuning.has_unsaved())
+	panel.reset_to_default()
+	assert_true(Tuning.is_default(), "reset")
+	assert_true(FileAccess.file_exists(backup), "the unsaved values are kept")
+	assert_string_contains(panel.status_label.text, Tuning.BACKUP_PRESET, "and the status line says so")
+	# Another Reset, with nothing unsaved, leaves that backup alone.
+	panel.reset_to_default()
+	var kept := Tuning.read_preset_file(backup)
+	assert_almost_eq(float(kept.tuning.hitstop_heavy_ms), 140.0, 0.0001, "the backup still holds the edits")
+	assert_eq(int(kept.moves.hook.startup), 9)
+	# Loading the backup undoes the reset.
+	assert_true(_pick(panel, Tuning.BACKUP_PRESET), "the backup is listed")
+	assert_eq(panel.load_picked_preset(), OK)
+	assert_almost_eq(Tuning.data.hitstop_heavy_ms, 140.0, 0.0001, "the edits are back")
+	assert_eq(Tuning.get_move(&"hook").startup, 9)
+	# Loading another preset over unsaved edits keeps them too.
+	panel.field(&"shake_light").slider.value = 0.3
+	assert_true(_pick(panel, "default  (shipped)"))
+	assert_eq(panel.load_picked_preset(), OK)
+	assert_true(Tuning.is_default())
+	kept = Tuning.read_preset_file(backup)
+	assert_almost_eq(float(kept.tuning.shake_light), 0.3, 0.0001, "the newer edits are the backup now")
+	# Saved values aren't backed up again: the save holds them.
+	panel.field(&"shake_light").slider.value = 0.35
+	assert_eq(panel.save_preset(TEST_PRESET), OK)
+	panel.reset_to_default()
+	assert_almost_eq(float(Tuning.read_preset_file(backup).tuning.shake_light), 0.3, 0.0001, "the backup is unchanged")
+	assert_false(panel.status_label.text.contains(Tuning.BACKUP_PRESET))
+
+
 func test_the_panel_saves_loads_exports_and_resets_presets() -> void:
 	var panel := _panel()
 	panel.field(&"shake_heavy").slider.value = 0.4
@@ -383,7 +622,7 @@ func test_the_panel_saves_loads_exports_and_resets_presets() -> void:
 	assert_eq(panel.save_preset(" gut tuning roundtrip "), OK, "Save")
 	assert_eq(panel.preset_name_edit.text, TEST_PRESET, "names are made file-safe")
 	assert_string_contains(panel.status_label.text, "Saved")
-	assert_true(FileAccess.file_exists(Tuning.USER_DIR.path_join(TEST_PRESET + ".json")))
+	assert_true(FileAccess.file_exists(Tuning.user_dir.path_join(TEST_PRESET + ".json")))
 	assert_eq(panel.save_preset("  "), ERR_INVALID_PARAMETER, "a name is needed")
 
 	panel.reset_to_default()
@@ -403,8 +642,8 @@ func test_the_panel_saves_loads_exports_and_resets_presets() -> void:
 	assert_almost_eq(panel.field(&"shake_heavy").slider.value, 0.4, 0.0001, "and shown")
 
 	assert_eq(panel.export_preset(TEST_EXPORT), OK, "Export")
-	var exported := Tuning.EXPORT_DIR.path_join(TEST_EXPORT + ".json")
-	assert_true(FileAccess.file_exists(exported), "written to res://tuning/")
+	var exported := Tuning.export_dir.path_join(TEST_EXPORT + ".json")
+	assert_true(FileAccess.file_exists(exported), "written to the export folder (res://tuning/ in the game)")
 	var exported_moves: Dictionary = Tuning.read_preset_file(exported).moves
 	assert_eq(exported_moves.keys(), ["roundhouse"], "the move override is exported")
 	assert_eq(int(exported_moves.get("roundhouse", {}).get("recovery", 0)), 20)
@@ -412,9 +651,12 @@ func test_the_panel_saves_loads_exports_and_resets_presets() -> void:
 	for i in panel.preset_picker.item_count:
 		listed = listed or panel.preset_picker.get_item_text(i) == TEST_EXPORT + "  (shipped)"
 	assert_true(listed, "exported presets are listed as shipped")
-	var shipped_default := FileAccess.get_file_as_string(DEFAULT_PATH)
-	assert_eq(panel.export_preset(Tuning.DEFAULT_PRESET), ERR_INVALID_PARAMETER, "default.json stays the defaults")
-	assert_eq(FileAccess.get_file_as_string(DEFAULT_PATH), shipped_default, "untouched")
+	var default_copy := Tuning.export_dir.path_join(Tuning.DEFAULT_PRESET + ".json")
+	var shipped_default := FileAccess.get_file_as_string(default_copy)
+	for name_text: String in [Tuning.DEFAULT_PRESET, "Default", " DEFAULT "]:
+		assert_eq(panel.export_preset(name_text), ERR_INVALID_PARAMETER, "'%s' can't replace default.json" % name_text)
+	assert_eq(FileAccess.get_file_as_string(default_copy), shipped_default, "untouched")
+	assert_eq(DirAccess.get_files_at(Tuning.export_dir).size(), 2, "no Default.json beside it either")
 
 
 # --- Cheats -----------------------------------------------------------------------------
@@ -493,19 +735,25 @@ func test_cheats_spawn_a_dummy_at_the_crosshair_and_reset_dummies() -> void:
 	var off := feet - player.global_position
 	off.y = 0.0
 	assert_gt(off.length(), cheats.spawn_min_distance_m - 0.01, "kept off the player")
-	# Never inside another body: a dummy standing at the crosshair moves the spot back.
-	player.look_pitch = deg_to_rad(-30.0)
-	dummies[1].global_position = Vector3(floor_spot.x, 0.0, floor_spot.z)
-	var clear: Vector3 = cheats.spawn_point().position
-	var gap := clear - dummies[1].global_position
+	# The crosshair on a body: the new dummy stands beside it, in view (not hidden behind it,
+	# not inside it).
+	player.look_pitch = deg_to_rad(-6.0)
+	var target := player.global_position + flat * 1.6
+	dummies[1].global_position = target
+	await _ticks(2)
+	var beside: Vector3 = cheats.spawn_point().position
+	var gap := beside - target
 	gap.y = 0.0
 	assert_gt(gap.length(), cheats.spawn_actor_clearance_m - 0.01, "clear of the dummy there")
-	assert_lt((clear - player.global_position).length(), (floor_spot - player.global_position).length(),
-			"stepped back toward the player")
+	assert_lt(absf(gap.dot(flat)), 0.3, "beside it, not behind it")
+	var sight := beside - player.global_position
+	sight.y = 0.0
+	assert_gt(sight.normalized().dot(flat), cos(deg_to_rad(40.0)), "in view")
 	dummies[1].global_position = FAR + Vector3(3.0, 0.0, 0.0)
 
 	# Reset dummies: back on their posts, standing, at full (re-read) health.
-	var post := dummies[0].global_position
+	var recorded: Vector4 = cheats._posts[dummies[0].get_instance_id()]
+	var post := Vector3(recorded.x, recorded.y, recorded.z)
 	dummies[0].global_position = post + Vector3(2.0, 0.0, 1.0)
 	dummies[0].health = 3.0
 	Tuning.set_value(&"dummy_health", 80.0)
@@ -519,6 +767,100 @@ func test_cheats_spawn_a_dummy_at_the_crosshair_and_reset_dummies() -> void:
 	await _ticks(1)
 	assert_false(is_instance_valid(dummy))
 	assert_eq(get_tree().get_nodes_in_group(&"enemy").size(), start_count)
+
+
+## How far `spot` is inside the near side of the north building fronts (their face is at z = -7).
+func _past_north_wall(spot: Vector3, radius: float) -> float:
+	return -7.0 + radius - spot.z
+
+
+func test_spawning_keeps_out_of_walls_and_follows_the_player_in_other_views() -> void:
+	var room: Node3D = await _room(true)
+	var player: PlayerCharacter = room.get(&"player")
+	player.input.scripted = true
+	var dummies: Array[TrainingDummy] = []
+	dummies.assign(room.get(&"dummies"))
+	for i in dummies.size():
+		dummies[i].sparring = false
+		dummies[i].set_post(FAR + Vector3(i * 3.0, 0.0, 0.0), 0.0, true)
+	var overlay: TuningOverlay = room.find_children("*", "TuningOverlay", false, false)[0]
+	var cheats := overlay.cheats
+	var radius := dummies[0].body_radius
+	var cases: Array[Array] = [
+		# [player position, look yaw (deg), look pitch (deg), what]
+		[Vector3(-2.0, 0.0, -6.4), 0.0, -6.0, "facing a wall from 0.6 m"],
+		[Vector3(-2.0, 0.0, -5.8), 70.0, -6.0, "70 degrees off a wall from 1.2 m"],
+		[Vector3(-2.0, 0.0, -5.0), 0.0, -20.0, "the crosshair low on a wall"],
+	]
+	for case: Array in cases:
+		player.global_position = case[0]
+		player.look_yaw = deg_to_rad(case[1])
+		player.look_pitch = deg_to_rad(case[2])
+		await _ticks(3)
+		var point := cheats.spawn_point()
+		assert_false(point.is_empty(), "%s: a spot" % case[3])
+		if point.is_empty():
+			continue
+		var spot: Vector3 = point.position
+		assert_lt(_past_north_wall(spot, radius), 0.01, "%s: out of the wall (%s)" % [case[3], spot])
+		var off := spot - player.global_position
+		off.y = 0.0
+		assert_gt(off.length(), cheats.spawn_min_distance_m - 0.01, "%s: off the player" % case[3])
+		assert_almost_eq(spot.y, 0.0, 0.02, "%s: on the floor" % case[3])
+	# Side view and free fly have no crosshair: the spot is in front of the player, not the
+	# camera (which stands 11 m off, by the near curb).
+	var director := room.find_child("CameraDirector", true, false)
+	player.global_position = Vector3(-4.0, 0.0, 0.0)
+	player.look_yaw = deg_to_rad(-90.0)
+	player.look_pitch = 0.0
+	for mode: StringName in [&"side_view", &"free_fly"]:
+		director.call(&"set_mode", mode)
+		await _ticks(3)
+		var point := cheats.spawn_point()
+		assert_false(point.is_empty(), "%s: a spot" % mode)
+		if point.is_empty():
+			continue
+		var spot: Vector3 = point.position
+		assert_almost_eq(spot.distance_to(player.global_position), cheats.spawn_open_distance_m, 0.3,
+				"%s: in front of the player (%s)" % [mode, spot])
+		assert_lt(absf(spot.z), 1.0, "%s: in the fight lane" % mode)
+	director.call(&"set_mode", &"first_person")
+
+
+func test_the_slow_time_scale_stretches_hitstop_and_slow_mo() -> void:
+	var actor := Node.new()
+	add_child_autofree(actor)
+	var frozen_ticks := func(scale: float) -> int:
+		TimeController.clear()
+		TimeController.debug_scale = scale
+		TimeController.hitstop([actor], Tuning.data.hitstop_light_ms / 1000.0)
+		var count := 0
+		for i in 60:
+			await get_tree().physics_frame
+			if TimeController.is_in_hitstop(actor):
+				count += 1
+		return count
+	var normal: int = await frozen_ticks.call(1.0)
+	var slow: int = await frozen_ticks.call(0.25)
+	assert_eq(normal, roundi(Tuning.data.hitstop_light_ms * 0.06), "3 ticks of hitstop at 1x")
+	assert_eq(slow, normal * 4, "four times as long at 0.25x")
+	# Slow-mo (and its delay after the finisher's hitstop) stretches the same way.
+	var slowmo_ticks := func(scale: float) -> int:
+		TimeController.clear()
+		TimeController.debug_scale = scale
+		TimeController.slowmo(Tuning.data.slowmo_scale, Tuning.data.slowmo_ms / 1000.0, 0.1)
+		var count := 0
+		for i in 120:
+			await get_tree().physics_frame
+			if TimeController.is_slowmo():
+				count += 1
+		return count
+	var slowmo_normal: int = await slowmo_ticks.call(1.0)
+	var slowmo_slow: int = await slowmo_ticks.call(0.25)
+	assert_almost_eq(slowmo_normal, roundi(Tuning.data.slowmo_ms * 0.06), 1, "250 ms of slow-mo at 1x")
+	assert_almost_eq(slowmo_slow, roundi(Tuning.data.slowmo_ms * 0.06 * 4.0), 1, "four times as long, after a 4x delay")
+	TimeController.debug_scale = 1.0
+	TimeController.clear()
 
 
 # --- Overlay (the test room's F1 / F4 host) -----------------------------------------------
@@ -647,3 +989,149 @@ func test_the_overlay_keeps_gameplay_input_out() -> void:
 	overlay.close_all()
 	_tap(KEY_W)
 	assert_gt(probe.keys, 0, "closed, the game gets its input again")
+
+
+## A gamepad button pressed and let go, through the Input singleton like a real pad.
+func _pad(button: JoyButton) -> void:
+	for pressed: bool in [true, false]:
+		var event := InputEventJoypadButton.new()
+		event.button_index = button
+		event.pressed = pressed
+		Input.parse_input_event(event)
+	Input.flush_buffered_events()
+
+
+func test_the_gamepad_reaches_every_row_and_a_b_lb_rb_work() -> void:
+	var room: Node3D = await _room(true)
+	var overlay: TuningOverlay = room.find_children("*", "TuningOverlay", false, false)[0]
+	var panel := overlay.panel
+	var a := InputEventJoypadButton.new()
+	a.button_index = JOY_BUTTON_A
+	var b := InputEventJoypadButton.new()
+	b.button_index = JOY_BUTTON_B
+	assert_true(a.is_action(&"ui_accept"), "A is ui_accept")
+	assert_true(b.is_action(&"ui_cancel"), "B is ui_cancel")
+	var focus := func() -> Control: return overlay.window.gui_get_focus_owner()
+
+	_pad(JOY_BUTTON_BACK)
+	assert_true(panel.visible, "View opens the panel")
+	assert_eq(focus.call(), panel.category_button("Hit feel"), "on Hit feel")
+	_pad(JOY_BUTTON_DPAD_RIGHT)
+	assert_eq(focus.call(), panel.field(&"hitstop_light_ms").focus_control, "D-pad right enters Hit feel's first slider")
+
+	# RB walks every category; down walks every row of each, and the last row holds.
+	var order := panel.categories()
+	var start := order.find("Hit feel")
+	for step in order.size():
+		var category_name := order[(start + step) % order.size()]
+		var chain := panel.focus_chain(category_name)
+		assert_eq(panel.category, category_name)
+		assert_eq(focus.call(), chain[0] if not chain.is_empty() else null, "%s: on its first row" % category_name)
+		if category_name != TuningPanel.MOVES_CATEGORY:
+			var rows: Array[Control] = []
+			for property: StringName in panel._category_fields[category_name]:
+				rows.append(panel.field(property).focus_control)
+			assert_eq(chain, rows, "%s: every row is on the D-pad" % category_name)
+		for i in range(1, chain.size()):
+			_pad(JOY_BUTTON_DPAD_DOWN)
+			assert_eq(focus.call(), chain[i], "%s: down to row %d" % [category_name, i])
+		_pad(JOY_BUTTON_DPAD_DOWN)
+		assert_eq(focus.call(), chain[-1], "%s: the last row holds" % category_name)
+		for i in range(chain.size() - 2, -1, -1):
+			_pad(JOY_BUTTON_DPAD_UP)
+		assert_eq(focus.call(), chain[0], "%s: back up to the first row" % category_name)
+		_pad(JOY_BUTTON_RIGHT_SHOULDER)
+	assert_eq(panel.category, "Hit feel", "RB wraps around")
+	_pad(JOY_BUTTON_LEFT_SHOULDER)
+	assert_eq(panel.category, order[start - 1], "LB goes back")
+	_pad(JOY_BUTTON_RIGHT_SHOULDER)
+
+	# A flips a toggle; left from it goes back to the category, where down browses the list.
+	var toggle := panel.field(&"impact_frame_enabled")
+	for i in panel.focus_chain("Hit feel").size():
+		if focus.call() == toggle.focus_control:
+			break
+		_pad(JOY_BUTTON_DPAD_DOWN)
+	assert_true(toggle.has_row_focus(), "the focused row is marked")
+	_pad(JOY_BUTTON_A)
+	assert_false(Tuning.data.impact_frame_enabled, "A flips the toggle")
+	_pad(JOY_BUTTON_A)
+	assert_true(Tuning.data.impact_frame_enabled)
+	_pad(JOY_BUTTON_DPAD_LEFT)
+	assert_eq(focus.call(), panel.category_button("Hit feel"), "left goes back to the category")
+	assert_false(toggle.has_row_focus())
+	_pad(JOY_BUTTON_DPAD_DOWN)
+	assert_eq(focus.call(), panel.category_button(order[start + 1]))
+	assert_eq(panel.category, order[start + 1], "browsing the list shows each page")
+	_pad(JOY_BUTTON_A)
+	assert_eq(panel.category, order[start + 1], "A on a category keeps it shown")
+	# Right on a slider steps it.
+	_pad(JOY_BUTTON_DPAD_RIGHT)
+	var slider_row: TuningField = null
+	for property: StringName in panel._category_fields[order[start + 1]]:
+		if panel.field(property).focus_control == focus.call():
+			slider_row = panel.field(property)
+	assert_not_null(slider_row)
+	if slider_row and slider_row.slider:
+		var before: float = slider_row.slider.value
+		# A slider reads a pad press as Input.is_action_just_pressed(), which only holds in a
+		# process frame (as for a real pad's events), not in the physics frame tests run in.
+		await get_tree().process_frame
+		_pad(JOY_BUTTON_DPAD_RIGHT)
+		assert_almost_eq(float(Tuning.data.get(slider_row.property)), minf(before + slider_row.slider.step, slider_row.slider.max_value),
+				0.0001, "right steps the slider")
+
+	# The Moves page: A opens the move picker, B closes the list, then B closes the panel.
+	for i in order.size():
+		if panel.category == TuningPanel.MOVES_CATEGORY:
+			break
+		_pad(JOY_BUTTON_RIGHT_SHOULDER)
+	assert_eq(focus.call(), panel.move_picker)
+	_pad(JOY_BUTTON_A)
+	await get_tree().process_frame
+	assert_true(panel.move_picker.get_popup().visible, "A opens the drop-down")
+	_pad(JOY_BUTTON_B)
+	await get_tree().process_frame
+	assert_false(panel.move_picker.get_popup().visible, "B closes the drop-down")
+	assert_true(overlay.is_open(), "but not the panel")
+	_pad(JOY_BUTTON_B)
+	assert_false(overlay.is_open(), "B closes the panel")
+	await _ticks(TuningOverlay.UNFREEZE_TICKS + 1)
+
+
+func test_the_free_fly_camera_stays_put_while_the_overlay_is_open() -> void:
+	var room: Node3D = await _room(true)
+	var overlay: TuningOverlay = room.find_children("*", "TuningOverlay", false, false)[0]
+	var director := room.find_child("CameraDirector", true, false)
+	director.call(&"set_mode", &"free_fly")
+	await _ticks(2)
+	var camera := get_tree().root.get_camera_3d()
+	assert_true(camera is FreeFlyCamera, "free fly")
+	var fly_events := InputMap.action_get_events(&"fly_forward").size()
+	# Up held when the panel opens, then pressed again inside it.
+	Input.parse_input_event(_key(KEY_UP, true))
+	for i in 3:
+		await get_tree().process_frame
+	overlay.set_panel_open(true)
+	assert_false(Input.is_action_pressed(&"fly_forward"), "the held key lets go of the action")
+	var start := camera.global_position
+	for keycode: Key in [KEY_UP, KEY_DOWN, KEY_PAGEUP, KEY_LEFT]:
+		Input.parse_input_event(_key(keycode, true))
+		for i in 6:
+			await get_tree().process_frame
+		Input.parse_input_event(_key(keycode, false))
+	await get_tree().process_frame
+	assert_almost_eq(camera.global_position.distance_to(start), 0.0, 0.0001, "the panel's keys don't fly the camera")
+	overlay.close_all()
+	assert_eq(InputMap.action_get_events(&"fly_forward").size(), fly_events, "the bindings are back on closing")
+	assert_false(Input.is_action_pressed(&"fly_forward"), "and nothing is stuck down")
+	await get_tree().process_frame
+	start = camera.global_position
+	Input.parse_input_event(_key(KEY_UP, true))
+	for i in 6:
+		await get_tree().process_frame
+	Input.parse_input_event(_key(KEY_UP, false))
+	await get_tree().process_frame
+	assert_gt(camera.global_position.distance_to(start), 0.1, "closed, the arrow keys fly it again")
+	director.call(&"set_mode", &"first_person")
+	await _ticks(TuningOverlay.UNFREEZE_TICKS + 1)

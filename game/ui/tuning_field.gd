@@ -7,7 +7,8 @@ extends HBoxContainer
 ## - a number without one: a number field; a bool: a toggle; an enum: a drop-down;
 ## - a Vector2 or Vector3: a number field per axis; a Color: a color button;
 ## - a String or StringName: a text field; anything else: the value, read-only.
-## The name turns yellow and "reset" lights up while the value differs from `default_value`.
+## The name turns yellow and "reset" lights up while the value differs from `default_value`;
+## a bar lights behind the name while the row's gamepad editor (focus_control) has focus.
 ## `edited` reports the user's changes; show_value() never emits it.
 
 signal edited(property: StringName, value: Variant)
@@ -17,6 +18,8 @@ const OPEN_RANGE := 10000.0
 ## Step for float fields without a hint (and vector axes).
 const OPEN_STEP := 0.01
 const AXIS_NAMES: PackedStringArray = ["x", "y", "z"]
+## Opacity of the bar behind the name of the focused row.
+const FOCUS_BAR_ALPHA := 0.28
 
 var property: StringName = &""
 var type: int = TYPE_NIL
@@ -98,6 +101,14 @@ func setup(info: Dictionary, default: Variant, doc: String, name_width: float,
 			tip += "   Range: %s to %s" % [parts[0], parts[1]]
 	tooltip_text = tip
 	name_label.tooltip_text = tip
+	if focus_control:
+		focus_control.focus_entered.connect(_show_focus.bind(true))
+		focus_control.focus_exited.connect(_show_focus.bind(false))
+
+
+## True while the row's gamepad editor has focus (its name has the focus bar).
+func has_row_focus() -> bool:
+	return focus_control != null and focus_control.has_focus()
 
 
 ## Show `value` without emitting `edited`.
@@ -146,6 +157,17 @@ func set_default(new_default: Variant) -> void:
 func _commit(new_value: Variant) -> void:
 	show_value(new_value)
 	edited.emit(property, new_value)
+
+
+func _show_focus(on: bool) -> void:
+	if not on:
+		name_label.remove_theme_stylebox_override(&"normal")
+		return
+	var bar := StyleBoxFlat.new()
+	bar.bg_color = Color(HudStyle.DURABILITY, FOCUS_BAR_ALPHA)
+	bar.border_color = HudStyle.DURABILITY
+	bar.border_width_left = 3
+	name_label.add_theme_stylebox_override(&"normal", bar)
 
 
 func _update_marker() -> void:

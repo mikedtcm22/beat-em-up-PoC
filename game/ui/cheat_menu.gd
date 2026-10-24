@@ -11,17 +11,29 @@ const DUMMY_SCENE := "res://game/enemies/dummy/training_dummy.tscn"
 
 ## The time scale buttons, in order (TimeController.debug_scale).
 @export var time_scales: PackedFloat64Array = [0.25, 1.0]
-## Spawning: the crosshair ray looks this far for a wall or the floor...
+## Spawning: the crosshair ray looks this far for a wall, the floor or a body...
 @export_range(1.0, 30.0, 0.5) var spawn_max_distance_m: float = 6.0
 ## ...and a ray that meets nothing spawns this far along it, dropped to the floor.
 @export_range(0.5, 10.0, 0.1) var spawn_open_distance_m: float = 3.0
 ## A dummy never spawns closer than this to the player (looking at one's own feet)...
 @export_range(0.5, 3.0, 0.1) var spawn_min_distance_m: float = 1.0
-## ...and stays this far off a wall the ray meets.
+## ...and stands this far off a wall the ray meets, along the wall's normal.
 @export_range(0.0, 2.0, 0.05) var spawn_wall_clearance_m: float = 0.5
-## A spot closer than this to another actor steps back toward the player (half this a step)
-## until it is clear, so a dummy never spawns inside another body.
+## No other actor stands closer than this to a spawn, center to center.
 @export_range(0.0, 2.0, 0.05) var spawn_actor_clearance_m: float = 0.7
+## A body the crosshair is on gets the new dummy this far to its side (whichever side is
+## clear), so it stands beside that body in view instead of hidden behind it.
+@export_range(0.5, 3.0, 0.05) var spawn_beside_m: float = 1.0
+## A blocked spot (a wall, a crate, a body) looks this far around it for a clear one, in
+## rings spawn_search_step_m apart; with none, nothing spawns.
+@export_range(0.0, 5.0, 0.1) var spawn_search_radius_m: float = 2.0
+@export_range(0.1, 1.0, 0.05) var spawn_search_step_m: float = 0.35
+## The body test (a capsule the dummy's size against the world) starts this far above the
+## floor, so the floor it stands on is not an obstacle.
+@export_range(0.0, 0.5, 0.01) var spawn_floor_gap_m: float = 0.1
+## A spot whose floor is more than this above or below the player's is skipped (a crate top,
+## the curb).
+@export_range(0.0, 2.0, 0.05) var spawn_max_rise_m: float = 0.3
 @export var spawn_colors: Array[Color] = [
 	Color(0.2, 0.62, 0.66), Color(0.72, 0.62, 0.18), Color(0.56, 0.4, 0.3), Color(0.36, 0.5, 0.78),
 ]
@@ -40,6 +52,8 @@ var spawned: Array[TrainingDummy] = []
 ## Instance id -> Vector4(post x, y, z, yaw) of each dummy seen (record_posts()).
 var _posts: Dictionary[int, Vector4] = {}
 var _status: Label
+## The training dummy's Vector2(radius, height) (_dummy_body()).
+var _body_size: Vector2 = Vector2.ZERO
 
 
 func _ready() -> void:
@@ -96,18 +110,26 @@ func record_posts() -> void:
 			_posts[dummy.get_instance_id()] = _post_of(dummy.global_position, dummy.rotation.y)
 
 
-## Where a dummy spawned now would stand and face: {position: Vector3, yaw: float}. The
-## crosshair is the center of the view: the ray from the active camera (the player's eye
-## and look without one) meets the floor or a wall (kept spawn_wall_clearance_m off it)
-## within spawn_max_distance_m, or else ends spawn_open_distance_m out; the spot drops to
-## the floor, stays spawn_min_distance_m from the player, steps back toward the player while
-## another actor stands within spawn_actor_clearance_m, and faces the player.
+## Where a dummy spawned now would stand and face: {position: Vector3, yaw: float}, or {}
+## when there is no clear spot. The crosshair is the center of the first-person view: the
+## ray from the first-person camera (from the player's eye and look in the other camera
+## modes, or with no camera; the side view has no crosshair) meets, within
+## spawn_max_distance_m:
+## - a body: the spot is spawn_beside_m to its side;
+## - a wall: the spot is spawn_wall_clearance_m off it, along its normal;
+## - the floor: the spot is there;
+## - nothing: the spot is spawn_open_distance_m along the ray.
+## The spot drops to the floor and stays spawn_min_distance_m from the player. If a capsule
+## the dummy's size would overlap the world there, another actor stands within
+## spawn_actor_clearance_m, or the player can't see the spot, the nearest clear spot within
+## spawn_search_radius_m is used (beside the spot before toward the player, before behind
+## it). The dummy faces the player.
 func spawn_point() -> Dictionary:
 	var player := get_tree().get_first_node_in_group(&"player") as PlayerCharacter
 	var camera := get_tree().root.get_camera_3d()
 	var origin: Vector3
 	var dir: Vector3
-	if camera:
+	if camera and (camera is FirstPersonCamera or player == null):
 		origin = camera.global_position
 		dir = -camera.global_basis.z
 	elif player:
@@ -118,39 +140,48 @@ func spawn_point() -> Dictionary:
 	var space := _space()
 	if space == null:
 		return {}
-	var mask := CombatTypes.bit(CombatTypes.LAYER_WORLD)
-	var flat := Vector3(dir.x, 0.0, dir.z).normalized() if Vector2(dir.x, dir.z).length() > 0.001 else Vector3.FORWARD
-	var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(origin, origin + dir * spawn_max_distance_m, mask))
+	var world_mask := CombatTypes.bit(CombatTypes.LAYER_WORLD)
+	var body_mask := CombatTypes.bit(CombatTypes.LAYER_PLAYER_BODY) | CombatTypes.bit(CombatTypes.LAYER_ENEMY_BODY) \
+			| CombatTypes.bit(CombatTypes.LAYER_DOWNED_BODY)
+	var flat := _flat(dir, Vector3.FORWARD)
+	var query := PhysicsRayQueryParameters3D.create(origin, origin + dir * spawn_max_distance_m, world_mask | body_mask)
+	if player:
+		query.exclude = [player.get_rid()]
+	var hit := space.intersect_ray(query)
 	var spot := origin + dir * spawn_open_distance_m
+	# Which way "beside" and "toward the player" point: across and back along the view.
+	var back := -flat
 	if not hit.is_empty():
 		var normal: Vector3 = hit.normal
-		spot = hit.position
-		if normal.y < 0.7:  # a wall, not the floor
-			spot -= flat * spawn_wall_clearance_m
+		var body := hit.collider as Node3D
+		if body is CombatActor:
+			# Beside the body, on its right unless only its left is clear.
+			var side := flat.cross(Vector3.UP).normalized()
+			spot = _on_floor(space, body.global_position + side * spawn_beside_m, player)
+			var left := _on_floor(space, body.global_position - side * spawn_beside_m, player)
+			if not _spot_clear(space, spot, player) and _spot_clear(space, left, player):
+				spot = left
+		elif normal.y < 0.7:  # a wall, not the floor
+			spot = hit.position + _flat(normal, back) * spawn_wall_clearance_m
+		else:
+			spot = hit.position
+	spot = _on_floor(space, spot, player)
 	if player:
 		var away := spot - player.global_position
 		away.y = 0.0
 		if away.length() < spawn_min_distance_m:
-			spot = player.global_position + flat * spawn_min_distance_m
-		var step := maxf(spawn_actor_clearance_m * 0.5, 0.05)
-		var candidate := spot
-		var reach := spot - player.global_position
-		var room_left := Vector2(reach.x, reach.z).length() - spawn_min_distance_m
-		while not _clear_of_actors(candidate) and room_left >= step:
-			candidate -= flat * step
-			room_left -= step
-		if _clear_of_actors(candidate):
-			spot = candidate
-	var floor_hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(
-			spot + Vector3.UP * 2.0, spot + Vector3.DOWN * 20.0, mask))
-	if not floor_hit.is_empty():
-		spot.y = (floor_hit.position as Vector3).y
-	elif player:
-		spot.y = player.global_position.y
+			spot = _on_floor(space, player.global_position + flat * spawn_min_distance_m, player)
+		var to_player := player.global_position - spot
+		if Vector2(to_player.x, to_player.z).length() > 0.001:
+			back = _flat(to_player, back)
+	var clear := _clear_spot_near(space, spot, back, player)
+	if clear.is_empty():
+		return {}
+	spot = clear.position
 	var yaw := 0.0
 	if player:
-		var to_player := player.global_position - spot
-		yaw = atan2(-to_player.x, -to_player.z)
+		var facing := player.global_position - spot
+		yaw = atan2(-facing.x, -facing.z)
 	return {position = spot, yaw = yaw}
 
 
@@ -159,7 +190,7 @@ func spawn_dummy() -> TrainingDummy:
 	var point := spawn_point()
 	var host := _world()
 	if point.is_empty() or host == null or not ResourceLoader.exists(DUMMY_SCENE):
-		_say("Nothing to spawn on.")
+		_say("No room to spawn a dummy there.")
 		return null
 	var dummy := (load(DUMMY_SCENE) as PackedScene).instantiate() as TrainingDummy
 	var number := get_tree().get_nodes_in_group(&"enemy").size() + 1
@@ -309,6 +340,84 @@ func _clear_of_actors(spot: Vector3) -> bool:
 		if gap.length() < spawn_actor_clearance_m:
 			return false
 	return true
+
+
+## The first clear spot (_spot_clear()) on the floor around `spot`: the spot itself, then
+## rings spawn_search_step_m apart out to spawn_search_radius_m, each trying beside the spot
+## first, then toward `back` (the player), then away. {position} or {} when none is clear.
+func _clear_spot_near(space: PhysicsDirectSpaceState3D, spot: Vector3, back: Vector3, player: Node3D) -> Dictionary:
+	if _spot_clear(space, spot, player):
+		return {position = spot}
+	var side := back.cross(Vector3.UP).normalized()
+	var directions: Array[Vector3] = [
+		side, -side, back, (back + side).normalized(), (back - side).normalized(),
+		(side - back).normalized(), (-side - back).normalized(), -back,
+	]
+	var rings := floori(spawn_search_radius_m / spawn_search_step_m)
+	for ring in range(1, rings + 1):
+		for direction: Vector3 in directions:
+			var candidate := _on_floor(space, spot + direction * spawn_search_step_m * ring, player)
+			if _spot_clear(space, candidate, player):
+				return {position = candidate}
+	return {}
+
+
+## A dummy can stand at `spot` (on the floor): spawn_min_distance_m from the player and
+## within spawn_max_rise_m of their floor, no other actor within spawn_actor_clearance_m, a
+## capsule its size overlapping no world geometry, and the player able to see it (no wall
+## between their chests).
+func _spot_clear(space: PhysicsDirectSpaceState3D, spot: Vector3, player: Node3D) -> bool:
+	if player:
+		var away := spot - player.global_position
+		if absf(away.y) > spawn_max_rise_m:
+			return false
+		away.y = 0.0
+		if away.length() < spawn_min_distance_m - 0.001:
+			return false
+	if not _clear_of_actors(spot):
+		return false
+	var body := _dummy_body()
+	var capsule := CapsuleShape3D.new()
+	capsule.radius = body.x
+	capsule.height = maxf(body.y - spawn_floor_gap_m, body.x * 2.0)
+	var shape := PhysicsShapeQueryParameters3D.new()
+	shape.shape = capsule
+	shape.collision_mask = CombatTypes.bit(CombatTypes.LAYER_WORLD)
+	shape.transform = Transform3D(Basis.IDENTITY, spot + Vector3.UP * (spawn_floor_gap_m + capsule.height * 0.5))
+	if not space.intersect_shape(shape, 1).is_empty():
+		return false
+	if player:
+		var chest := Vector3.UP * body.y * 0.5
+		var sight := PhysicsRayQueryParameters3D.create(player.global_position + chest, spot + chest,
+				CombatTypes.bit(CombatTypes.LAYER_WORLD))
+		if not space.intersect_ray(sight).is_empty():
+			return false
+	return true
+
+
+## `spot` dropped (or raised) onto the floor below it; the player's height if there is none.
+func _on_floor(space: PhysicsDirectSpaceState3D, spot: Vector3, player: Node3D) -> Vector3:
+	var floor_hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(
+			spot + Vector3.UP * 2.0, spot + Vector3.DOWN * 20.0, CombatTypes.bit(CombatTypes.LAYER_WORLD)))
+	if not floor_hit.is_empty():
+		spot.y = (floor_hit.position as Vector3).y
+	elif player:
+		spot.y = player.global_position.y
+	return spot
+
+
+## The training dummy's body: Vector2(radius, height), read once from its scene.
+func _dummy_body() -> Vector2:
+	if _body_size == Vector2.ZERO:
+		var dummy := (load(DUMMY_SCENE) as PackedScene).instantiate() as CombatActor
+		_body_size = Vector2(dummy.body_radius, dummy.body_height)
+		dummy.free()
+	return _body_size
+
+
+## `v` flattened onto the ground plane and normalized; `fallback` when it is (nearly) vertical.
+static func _flat(v: Vector3, fallback: Vector3) -> Vector3:
+	return Vector3(v.x, 0.0, v.z).normalized() if Vector2(v.x, v.z).length() > 0.001 else fallback
 
 
 func _say(text: String) -> void:

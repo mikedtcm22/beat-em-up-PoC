@@ -111,9 +111,7 @@
 		"sparring_range": 1.7,
 		"sparring_facing_deg": 30.0,
 		"sparring_step_in_m": 0.9,
-		"player_revive_s": 2.5,
-		"god_mode": false,
-		"one_hit_ko": false
+		"player_revive_s": 2.5
 	},
 	"moves": {}
 }
