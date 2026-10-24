@@ -4,6 +4,29 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-24 16:45 CDT: account E after its reset; partition done, fix round running
+The 5-hour window reset at 16:30 (next reset about 21:30 CDT); weekly is at 30%. This session resumed as Game-boy decided at 14:29. The watcher `usage-watcher-h` still runs, asked to check every 10 minutes during the heavy run.
+- **Partition done:** `packages.json` on `m2/phase3-review` (`e7c3255`) holds four packages with all 17 survivors. Where two packages share a hub file, each package's notes say which functions it may touch.
+
+  | Package | Findings | Main files |
+  | --- | --- | --- |
+  | `launch-from-hold` | grab-01, ragdoll-01, ragdoll-02, code-06 (ragdoll half) | owns `combat_actor.gd`, `ragdoll.gd`, `gen_moves.gd` (throw, hook) |
+  | `flash-and-looks` | code-01, grab-04, grab-08, ragdoll-05 | `humanoid_rig.gd` (except `ragdoll_start()`, `carry_fade()`), `weapon.gd`, `placeholder_body.gd`, `placeholder_poses.gd` (except `_throw()`) |
+  | `hold-view` | code-03, grab-07, grab-06, grab-02, code-06 (grab-view half) | owns `player.gd` (except `_configure_rig()`, `_find_magnet_target()`), `first_person_camera.gd`, `_throw()` |
+  | `ko-respawn-bars` | code-02, code-04, code-05, ragdoll-03, ragdoll-04 | `training_dummy.gd`, `enemy_health_bars.gd`, `tuning.gd` (preset migration) |
+
+- **Running:** workflow `m2-phase3-fix` (run `wf_3e329695-5fc`, [reviews/M2-phase3/workflow-fix.js](reviews/M2-phase3/workflow-fix.js), no args). Fixers run in that order, two at once, each usage-gated (about 25%):
+  - each works in `.worktrees/m2-fix-<key>` on branch `m2/phase3-fix-<key>` off `m2/hit-feel`;
+  - each commits `wip:` and pushes every 15-20 minutes, and ends with "M2 phase 3: review fixes (<key>: ...)";
+  - a scribe commits `fix-<key>.json` to `m2/phase3-review`.
+  - A package the gate skips stays for a later run.
+- **Things to watch at the merge:**
+  - hold-view's grab-07 fix may ease the hold view out during the throw's hitstop, a change to B's design ("still through hitstop"), which its fixer flags;
+  - launch-from-hold re-measures the hook's side-view stagger quoted in README's departure, and reports any change rather than editing README;
+  - `tuning_data.gd`, `tuning/default.json` and `docs/ARCHITECTURE.md` get additions from several packages (regenerate the preset after merging).
+- **If cut off:** rerun `workflow-fix.js` (no args). Its loader skips a package whose branch has the final commit and reuses a `wip:`-only branch. Within this session, use `resumeFromRunId: "wf_3e329695-5fc"`.
+- **Then:** merge the four fix branches and `m2/phase3-review` into `m2/hit-feel`, regenerate the preset, run the tests, push. Then round 2 (the 14:15 entry's step 3).
+
 ### 2026-10-24 14:25 CDT: handoff, account E's 5-hour window at 89%
 The watcher called the handoff at 89% of the 5-hour window (resets 16:30 CDT); weekly is at 28% (resets Tue 2026-10-27 17:00 CDT). The first task took the window from 76% to 89% in about 25 minutes: nine Sonnet skeptics cost about 6 points, and the lead's reading about 4. The workflow `wf_338da5ae-007` is stopped mid-partition, and nothing else is running. Every branch is pushed. The reviewer worktrees have no tracked changes.
 - **Done:** grab-06, -07 and -08 are verified. All three survive with 3 of 3 confirmations, with no spec question. They're merged into `verify-grab.json` on `m2/phase3-review` (`5b77fcd`), and its `pending` is now empty.
