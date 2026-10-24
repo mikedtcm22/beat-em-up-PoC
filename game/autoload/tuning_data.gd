@@ -285,9 +285,9 @@ extends Resource
 @export_subgroup("Knocked off the feet (full)")
 ## The kick at the contact point, times the hit's knockback speed (up to ragdoll_max_kick).
 @export_range(0.0, 5.0, 0.05) var ragdoll_full_impulse: float = 0.5
-## A body knocked off its feet shows the animation's snap first: the ragdoll's influence
-## rises from what showed to full over this long, its pose springs this strong (Hz) at
-## first, easing to the flight's.
+## A body knocked off its feet shows the animation's snap first (from standing or from a
+## stagger): the ragdoll's influence rises from 0 to full over this long, its pose springs
+## this strong (Hz) at first, easing to the flight's.
 @export_range(0.0, 0.6, 0.01) var ragdoll_full_rise_s: float = 0.15
 @export_range(0.0, 10.0, 0.1) var ragdoll_full_rise_pose_hz: float = 6.0
 ## No kick at a contact point changes its body part's speed by more than this (m/s).

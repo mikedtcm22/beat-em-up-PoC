@@ -19,8 +19,8 @@ extends SkeletonModifier3D
 ##     (Tuning.ragdoll_partial_influence) blends it over the animation, holds, fades back to
 ##     the animation and stops.
 ##   FULL (a body knocked off its feet, and a KO): every body simulates; its influence rises
-##     from what showed to 1 over Tuning.ragdoll_full_rise_s, so the animation's snap of the
-##     hit shows first and the bodies take over from it.
+##     from 0 to 1 over Tuning.ragdoll_full_rise_s (from a stagger too), so the animation's
+##     snap of the hit shows first and the bodies take over from it.
 ## Either way soft pose springs pull each simulated bone toward the animation's pose
 ## re-anchored on the hips as they are (per phase: a stagger, flight, lying down, and a
 ## nearly limp KO; the turns stronger while a FULL ragdoll's influence rises), with each
@@ -285,11 +285,13 @@ func start(new_mode: Mode, contact: Vector3, push: Vector3, body_velocity: Vecto
 		_queue_impulse(contact, push * tuning.ragdoll_full_impulse, part)
 		return
 	# The influence rises from what shows: a fresh stagger's bodies start on the animation,
-	# so it shows at once; a stagger on a stagger rises back from where its fade had got to;
-	# a body knocked off its feet shows the animation's snap first.
+	# so it shows at once; a stagger on a stagger rises back from where its fade had got to.
+	# A body knocked off its feet shows the animation's snap first, from standing or
+	# staggering alike (the hit's frame snaps into the hit's pose, as without a ragdoll).
 	_rise_t = 0.0
 	_rise_from = shown_influence
 	if new_mode == Mode.FULL:
+		_rise_from = 0.0
 		_rise_s = tuning.ragdoll_full_rise_s
 	elif was == Mode.PARTIAL:
 		_rise_s = tuning.ragdoll_partial_rise_s

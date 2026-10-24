@@ -232,8 +232,11 @@ func get_forward() -> Vector3:
 	return f.normalized() if f.length_squared() > 0.0001 else Vector3.FORWARD
 
 
+## Where the top of the head shows: the anchor of the enemy health bar and the debug label
+## (presentation). While a ragdoll runs that is the visible body's (a body lying on another
+## is drawn above its hurtboxes), otherwise the animation's rig point, exactly.
 func get_head_top_position() -> Vector3:
-	return rig.get_point_position(&"HeadTopPoint")
+	return rig.get_visual_point_transform(&"HeadTopPoint").origin
 
 
 func get_chest_position() -> Vector3:

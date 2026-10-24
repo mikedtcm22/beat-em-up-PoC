@@ -567,6 +567,71 @@ func test_a_stomped_ragdoll_gets_up_where_it_lies_with_the_player_over_it() -> v
 	assert_lt(dummy.rig.get_attachment(&"Head").global_position.distance_to(lying_head), 0.03, "no pop")
 
 
+func test_two_bodies_that_fell_on_each_other_get_up_beside_each_other() -> void:
+	# The push kick throws the first dummy onto the second (the flying-body knockdown): the
+	# one lying on top gets up beside the other, clear of it, without a pop; the other gets
+	# up about where it lies.
+	await _setup([Vector3(0, 0, -1.5), Vector3(0.15, 0, -3.6)])
+	_queue(&"P", 2)
+	_queue(&"K", 1)
+	var moved: Array[float] = [-1.0, -1.0]
+	var jump: Array[float] = [0.0, 0.0]
+	var clear: Array[bool] = [false, false]
+	var on_top: Array[bool] = [false, false]
+	var before: Array[Vector3] = [Vector3.ZERO, Vector3.ZERO]
+	var head: Array[Vector3] = [Vector3.ZERO, Vector3.ZERO]
+	for i in 400:
+		if moved[0] >= 0.0 and moved[1] >= 0.0:
+			break
+		for k in 2:
+			before[k] = dummies[k].global_position
+			head[k] = dummies[k].rig.get_attachment(&"Head").global_position
+			if dummies[k].is_downed():
+				# Lying on the other body: its drawn hips well above the animation's.
+				on_top[k] = dummies[k].rig.get_attachment(&"Hips").global_position.y \
+						- dummies[k].rig.get_point_position(&"Hips").y > 0.08
+		var was: Array[CombatTypes.ActorState] = [dummies[0].state, dummies[1].state]
+		await get_tree().physics_frame
+		for k in 2:
+			var d := dummies[k]
+			if d.state == CombatTypes.ActorState.GETUP and was[k] != CombatTypes.ActorState.GETUP:
+				moved[k] = Vector2(d.global_position.x - before[k].x, d.global_position.z - before[k].z).length()
+				jump[k] = d.rig.get_attachment(&"Head").global_position.distance_to(head[k])
+				clear[k] = _room_for(d)
+	gut.p("pile: top %s, get-ups moved %.3f / %.3f m, drawn head jumped %.3f / %.3f m" % [on_top, moved[0], moved[1], jump[0], jump[1]])
+	assert_true(on_top[0], "the kicked body lies on the other")
+	assert_gt(moved[0], 0.4, "and gets up beside it")
+	assert_lt(moved[0], Tuning.data.ragdoll_getup_aside_m + 0.3, "not far off")
+	assert_true(clear[0], "clear of the body still lying there")
+	assert_lt(moved[1], 0.2, "the one underneath gets up about where it lies")
+	for k in 2:
+		assert_lt(jump[k], 0.04, "dummy %d: no pop on the get-up frame" % k)
+	assert_true(await _wait_until(func() -> bool:
+		return dummies[0].state == CombatTypes.ActorState.FREE and dummies[1].state == CombatTypes.ActorState.FREE, 120), "both stand")
+	var apart := Vector2(dummies[0].global_position.x - dummies[1].global_position.x,
+			dummies[0].global_position.z - dummies[1].global_position.z).length()
+	assert_gt(apart, dummies[0].body_radius * 2.0, "side by side, not inside each other (%.2f m)" % apart)
+
+
+func test_the_health_bar_anchor_follows_the_visible_head() -> void:
+	# EnemyHealthBars (and the debug label) sit above get_head_top_position(): on the body as
+	# drawn while a ragdoll runs, so a bar never floats off a body lying on another or slides
+	# across at its get-up; the animation's rig point otherwise.
+	await _setup([Vector3(0, 0, -1.6)])
+	var dummy := dummies[0]
+	assert_eq(dummy.get_head_top_position(), dummy.rig.get_point_position(&"HeadTopPoint"), "no ragdoll: the rig point")
+	assert_true(dummy.receive_hit(_hit(dummy, CombatTypes.Reaction.LAUNCH, Vector3(0.0, 4.0, 3.0))))
+	var apart := 0.0
+	var off_drawn := 0.0
+	for i in 40:
+		await get_tree().physics_frame
+		var drawn := dummy.rig.get_attachment(&"HeadTopPoint").global_position
+		off_drawn = maxf(off_drawn, dummy.get_head_top_position().distance_to(drawn))
+		apart = maxf(apart, dummy.get_head_top_position().distance_to(dummy.rig.get_point_position(&"HeadTopPoint")))
+	assert_lt(off_drawn, 1e-3, "on the drawn head (%.4f m)" % off_drawn)
+	assert_gt(apart, 0.05, "not on the animation's while the two differ (%.3f m)" % apart)
+
+
 func test_a_body_launched_from_behind_lands_face_down_where_its_hurtboxes_are() -> void:
 	for haymaker: bool in [false, true]:
 		await _setup([Vector3(0, 0, -1.6)])
@@ -765,25 +830,32 @@ func test_a_parried_jab_knocks_the_attackers_arm_back_not_into_the_lens() -> voi
 
 
 func test_a_launch_shows_the_animations_snap_first() -> void:
-	# The finisher's hitstop and slow-mo show the hit's pose: from standing, the FULL ragdoll
-	# rises in from the animation (Tuning.ragdoll_full_rise_s), so the first frames are the
-	# animation's and the bodies take over from there.
-	await _setup([Vector3(0, 0, -1.6)])
-	var dummy := dummies[0]
-	assert_true(dummy.receive_hit(_hit(dummy, CombatTypes.Reaction.LAUNCH, Vector3(0.0, 6.0, 3.0))))
-	TimeController.hitstop([dummy], 0.1)
-	var early := 0.0
-	while TimeController.is_in_hitstop(dummy) or early == 0.0:
-		await get_tree().physics_frame
-		early = maxf(early, _gap(dummy) + 1e-6)
-	assert_lt(early, 0.02, "through the hitstop the visible body is the animation's (%.3f m)" % early)
-	var rise := 0.0
-	for i in 4:
-		await get_tree().physics_frame
-		rise = maxf(rise, _gap(dummy))
-	assert_lt(rise, 0.2, "and the first frames after it stay close to it (%.3f m)" % rise)
-	assert_true(await _wait_until(func() -> bool: return dummy.rig.get_ragdoll().simulator.influence >= 1.0, 30),
-			"then the ragdoll shows alone")
+	# The finisher's hitstop and slow-mo show the hit's pose: the FULL ragdoll rises in from
+	# the animation (Tuning.ragdoll_full_rise_s), so the first frames are the animation's and
+	# the bodies take over from there. From standing, and from a stagger (the uppercut that
+	# ends P P P P lands on a body still in the hook's partial ragdoll).
+	for from_stagger: bool in [false, true]:
+		await _setup([Vector3(0, 0, -1.6)])
+		var dummy := dummies[0]
+		if from_stagger:
+			assert_true(dummy.receive_hit(_hit(dummy, CombatTypes.Reaction.STAGGER, Vector3(2.0, 0.0, 2.0))))
+			await _ticks(12)
+			assert_eq(dummy.rig.ragdoll_mode(), Ragdoll.Mode.PARTIAL, "staggering")
+			assert_gt(_gap(dummy), 0.03, "its upper body giving way")
+		assert_true(dummy.receive_hit(_hit(dummy, CombatTypes.Reaction.LAUNCH, Vector3(0.0, 6.0, 3.0))))
+		TimeController.hitstop([dummy], 0.1)
+		var early := 0.0
+		while TimeController.is_in_hitstop(dummy) or early == 0.0:
+			await get_tree().physics_frame
+			early = maxf(early, _gap(dummy) + 1e-6)
+		assert_lt(early, 0.02, "through the hitstop the visible body is the animation's (%.3f m, from a stagger %s)" % [early, from_stagger])
+		var rise := 0.0
+		for i in 4:
+			await get_tree().physics_frame
+			rise = maxf(rise, _gap(dummy))
+		assert_lt(rise, 0.2, "and the first frames after it stay close to it (%.3f m, from a stagger %s)" % [rise, from_stagger])
+		assert_true(await _wait_until(func() -> bool: return dummy.rig.get_ragdoll().simulator.influence >= 1.0, 30),
+				"then the ragdoll shows alone")
 
 
 func test_a_staggering_release_from_a_grab_gives_way_too() -> void:
