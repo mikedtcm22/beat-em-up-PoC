@@ -44,7 +44,10 @@ extends SkeletonModifier3D
 ##
 ## Visuals: this modifier runs after the simulator in the skeleton's deferred update (the
 ## end of the physics frame, after every actor has posed), reads the post-modifier local
-## poses and moves the rig's bone followers (meshes and attachments) to them.
+## poses and moves the rig's bone followers (meshes and attachments) to them. In a PARTIAL
+## ragdoll the neck and head, and the arms unless the kick landed on them, show less of the
+## simulation on their joints (Tuning.ragdoll_partial_head_influence, _arm_influence): they
+## ride the trunk as it gives way instead of lolling or trailing behind it.
 
 enum Mode { NONE, PARTIAL, FULL }
 ## The body part a hit's impulse lands on (the struck hurtbox's region, or the striking
@@ -92,6 +95,10 @@ var _parent_body: PackedInt32Array = PackedInt32Array()
 ## Each body's Part, and its shape's center in its bone's frame.
 var _part: Array[Part] = []
 var _center: PackedVector3Array = PackedVector3Array()
+## Per skeleton bone: the Part of its body, or -1 for a bone without one.
+var _bone_part: PackedInt32Array = PackedInt32Array()
+## The Part a PARTIAL's latest kick landed on (its arms keep the full influence).
+var _partial_part: Part = Part.ANY
 ## Each body's joint to its parent (PlaceholderBody.RagdollSpec): its spec, and its frames
 ## in the parent's and its own bone frame (as _make_joint() builds them; cone twists only).
 var _spec: Array[PlaceholderBody.RagdollSpec] = []
@@ -133,6 +140,9 @@ var _calm_s: float = 0.0
 var _lying_s: float = 0.0
 ## Skeleton-space post-ragdoll pose of every bone after the latest update.
 var _visual: Array[Transform3D] = []
+## Per Part: the fastest the contact push has turned a struck body of it (sim rad/s), since
+## the ragdoll was built (top_contact_twist(); for tests).
+var _top_twist: Dictionary[Part, float] = {}
 
 
 ## Build the bodies and joints for `p_rig` (once). Adds the simulator and this modifier to
@@ -193,6 +203,10 @@ func setup(p_rig: HumanoidRig) -> void:
 	_held_ang.resize(_bodies.size())
 	_prev_anim.resize(_bodies.size())
 	_visual.resize(skeleton.get_bone_count())
+	_bone_part.resize(skeleton.get_bone_count())
+	_bone_part.fill(-1)
+	for i: int in _bodies.size():
+		_bone_part[_bone_of[i]] = _part[i]
 	apply_tuning()
 	Tuning.changed.connect(_on_tuning_changed)
 	_build_joints()
@@ -252,9 +266,12 @@ func is_running() -> bool:
 ## bone; may be empty; a PARTIAL drops the part of it running against the push, so a parried
 ## jab's arm does not carry on into the defender). `partial_length_s` caps a PARTIAL's hold
 ## and fade (the stagger's length). Bodies already simulating keep their pose and motion:
-## the influence rises from what showed, so nothing jumps.
+## the influence rises from what showed, so nothing jumps. A FULL ragdoll started `at_once`
+## shows alone from the start, taking over from the pose on screen instead of rising in from
+## the animation's snap (a body launched out of a hold leaves from its held pose).
 func start(new_mode: Mode, contact: Vector3, push: Vector3, body_velocity: Vector3,
-		bone_velocity: Array[Vector3], part: Part = Part.ANY, partial_length_s: float = INF) -> void:
+		bone_velocity: Array[Vector3], part: Part = Part.ANY, partial_length_s: float = INF,
+		at_once: bool = false) -> void:
 	if new_mode == Mode.NONE:
 		stop()
 		return
@@ -275,6 +292,7 @@ func start(new_mode: Mode, contact: Vector3, push: Vector3, body_velocity: Vecto
 		for i: int in _sim:
 			PhysicsServer3D.body_set_state(_bodies[i].get_rid(), PhysicsServer3D.BODY_STATE_SLEEPING, false)
 	if new_mode == Mode.PARTIAL:
+		_partial_part = part
 		_partial_t = 0.0
 		var length := maxf(partial_length_s, 0.0)
 		_partial_hold = minf(tuning.ragdoll_partial_hold_s, length)
@@ -291,12 +309,13 @@ func start(new_mode: Mode, contact: Vector3, push: Vector3, body_velocity: Vecto
 	# The influence rises from what shows: a fresh stagger's bodies start on the animation,
 	# so it shows at once; a stagger on a stagger rises back from where its fade had got to.
 	# A body knocked off its feet shows the animation's snap first, from standing or
-	# staggering alike (the hit's frame snaps into the hit's pose, as without a ragdoll).
+	# staggering alike (the hit's frame snaps into the hit's pose, as without a ragdoll),
+	# unless it takes over at once.
 	_rise_t = 0.0
 	_rise_from = shown_influence
 	if new_mode == Mode.FULL:
-		_rise_from = 0.0
-		_rise_s = tuning.ragdoll_full_rise_s
+		_rise_from = 1.0 if at_once else 0.0
+		_rise_s = 0.0 if at_once else tuning.ragdoll_full_rise_s
 	elif was == Mode.PARTIAL:
 		_rise_s = tuning.ragdoll_partial_rise_s
 	else:
@@ -463,6 +482,13 @@ func body_sim_spin(bone: StringName) -> Vector3:
 	return Vector3.ZERO
 
 
+## The fastest the kick at the contact point has turned a struck body of `part` (sim rad/s,
+## as its spin changed), since the ragdoll was built; 0 if none was struck. For tests: each
+## stays within its part's cap (Tuning.ragdoll_contact_spin_*).
+func top_contact_twist(part: Part) -> float:
+	return _top_twist.get(part, 0.0)
+
+
 ## The joints that exist now (for tests).
 func joint_count() -> int:
 	return _joints.filter(func(joint: RID) -> bool: return joint.is_valid()).size()
@@ -491,9 +517,27 @@ func _process_modification_with_delta(_delta: float) -> void:
 	var skeleton := get_skeleton()
 	if skeleton == null or rig == null:
 		return
+	var head_share := 1.0
+	var arm_share := 1.0
+	if mode == Mode.PARTIAL:
+		var tuning := Tuning.data
+		head_share = _partial_share(tuning.ragdoll_partial_head_influence)
+		if _partial_part != Part.ARMS:
+			arm_share = _partial_share(tuning.ragdoll_partial_arm_influence)
 	for i: int in skeleton.get_bone_count():
 		var local := skeleton.get_bone_pose(i)
 		var parent := skeleton.get_bone_parent(i)
+		var share := 1.0
+		match _bone_part[i]:
+			Part.HEAD:
+				share = head_share
+			Part.ARMS:
+				share = arm_share
+		if share < 1.0 and parent >= 0:
+			# The simulator blended this joint's turn from the animation's by its influence;
+			# this joint shows `share` of that (the same arc, so share x influence of it).
+			var anim := (rig.animation_pose(parent).basis.inverse() * rig.animation_pose(i).basis).get_rotation_quaternion()
+			local = Transform3D(Basis(anim.slerp(local.basis.get_rotation_quaternion(), share)), local.origin)
 		_visual[i] = local if parent < 0 else _visual[parent] * local
 	visual_rig_transform = rig.global_transform
 	rig.show_visual_pose(_visual)
@@ -827,10 +871,14 @@ func _twist_at_contact(states: Array[PhysicsDirectBodyState3D], i: int, contact:
 		Part.ARMS, Part.LEGS:
 			cap = tuning.ragdoll_contact_spin_limb
 	var turn := axis * minf(angular.length() / maxf(inertia, 1e-6), cap) * scale
+	var spun := struck.angular_velocity
 	for b: int in chain:
 		var state := states[_sim.find(b)]
 		state.angular_velocity += turn
 		state.linear_velocity += turn.cross(state.transform.origin + state.center_of_mass - pivot)
+	if scale > 0.0:
+		var rate := (struck.angular_velocity - spun).length() / scale
+		_top_twist[_part[i]] = maxf(_top_twist.get(_part[i], 0.0), rate)
 
 
 ## Queue a kick of `push` (sim m/s) on the simulating `part` body (any body if none of that
@@ -892,6 +940,12 @@ func _wake() -> void:
 	asleep = false
 	for i: int in _sim:
 		PhysicsServer3D.body_set_state(_bodies[i].get_rid(), PhysicsServer3D.BODY_STATE_SLEEPING, false)
+
+
+## A PARTIAL body part's own influence as a share of ragdoll_partial_influence (0..1).
+static func _partial_share(influence: float) -> float:
+	var whole := Tuning.data.ragdoll_partial_influence
+	return clampf(influence / whole, 0.0, 1.0) if whole > 0.0 else 1.0
 
 
 ## The pose-spring frequency of body `i` in this phase (its arms have their own while

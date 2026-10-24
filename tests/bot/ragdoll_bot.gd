@@ -2,7 +2,8 @@ extends "res://tests/bot/combo_bot.gd"
 ## Ragdoll acts (Milestone 2 WP4, Spec §6 "Hit reactions") for review captures, built on
 ## the combo bot's harness: staggers that give way (partial ragdoll), bodies knocked off
 ## their feet flying and landing (full ragdoll), a flying body knocking a second one down,
-## the throw, a KO going limp and staying, the get-ups, a guard break, the finisher shove,
+## the throw, a knee that KOs the held body, a KO going limp and staying, the get-ups, a
+## guard break, the finisher shove,
 ## a parried jab, a body launched from behind landing face down, and a stomp on a lying body
 ## that then gets up under the player, each in first person and side view. The KO act shows
 ## the whole blink-off: the body lies, blinks, is gone, and the dummy blinks back in at its
@@ -54,6 +55,8 @@ func _run() -> void:
 		{title = "Ragdoll: push kick into a second dummy (side view)", cam = &"side_view", fn = _act_push_kick},
 		{title = "Ragdoll: throw", cam = &"first_person", fn = _act_throw},
 		{title = "Ragdoll: throw (side view)", cam = &"side_view", fn = _act_throw},
+		{title = "Ragdoll: knee KOs the held dummy", cam = &"first_person", fn = _act_knee_ko},
+		{title = "Ragdoll: knee KOs the held dummy (side view)", cam = &"side_view", fn = _act_knee_ko},
 		{title = "Ragdoll: KO on a low-health dummy", cam = &"first_person", fn = _act_ko},
 		{title = "Ragdoll: KO on a low-health dummy (side view)", cam = &"side_view", fn = _act_ko},
 		{title = "Ragdoll: guard-break stagger", cam = &"first_person", fn = _act_guard_break_dummy},
@@ -133,6 +136,26 @@ func _act_throw() -> void:
 	await _press(&"GRAB", 2, 12)
 	await _press(&"K", 2)
 	await _watch(WATCH_S)
+
+
+## P P P on a dummy at the default dummy health (30), grab it, knee, knee: the second knee
+## KOs the held body. It leaves the hold from where it is drawn, falls back away from the
+## player (full ragdoll) and goes limp where it lands.
+func _act_knee_ko() -> void:
+	await _stage([Vector3(0, 0, -1.4)])
+	var dummy := dummies[0]
+	dummy.max_health = TuningData.new().dummy_health
+	dummy.reset_state()
+	CombatEvents.health_changed.emit(dummy, dummy.health, dummy.max_health)
+	for i in 3:
+		await _press(&"P", 2, 8)
+	await _wait_idle()
+	await _press(&"GRAB", 2, 10)
+	for i in 2:
+		await _press(&"P", 2)
+		await _wait_idle()
+		await _ticks(4)
+	await _watch(1.5)
 
 
 ## A dummy on its last few points: the hook KOs it; it goes limp and lies

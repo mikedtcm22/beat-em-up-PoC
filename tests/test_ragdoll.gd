@@ -9,7 +9,9 @@ extends GutTest
 ## add: the hit's kick held through the hitstop, a get-up with no pop or shove, face-down
 ## landings, joints inside their limits, re-staggers, rest, idle cost, the parry and the
 ## launch's first frames. Phase 3 adds the kick at the contact point (a capped twist, no NaN
-## after many off-center hits) and the stronger staggers (above Spec §6's 0.6 influence).
+## after many off-center hits) and the stronger staggers (above Spec §6's 0.6 influence); its
+## review, each part's cap after many hits and the hook's stagger (the head and arms riding
+## the trunk, the trunk leaning back). Launches out of a hold: tests/test_launch_from_hold.gd.
 
 const ROOM := preload("res://game/level/test_room.tscn")
 const FAR := Vector3(30.0, 0.0, -30.0)
@@ -1024,6 +1026,25 @@ func test_the_contact_push_stays_within_its_caps_after_many_hits_in_a_row() -> v
 	gut.p("many off-center hits: top spin %.1f rad/s (cap %.0f), joints pulled apart at most %.3f m" % [spin, Tuning.data.ragdoll_max_spin, stretch])
 	assert_lt(spin, Tuning.data.ragdoll_max_spin * 1.25, "no body spins away")
 	assert_lt(stretch, 0.12, "the joints hold the bodies together")
+	# Each part's own cap held on every kick (a central kick alone spins a head past the
+	# global safety cap above, so that cap cannot tell): the fastest the contact push turned a
+	# struck head, trunk or leg, against its part's cap. Struck far off center, the head and
+	# the trunk reach theirs.
+	var ragdoll := dummy.rig.get_ragdoll()
+	var caps: Dictionary[Ragdoll.Part, float] = {
+		Ragdoll.Part.HEAD: Tuning.data.ragdoll_contact_spin_head,
+		Ragdoll.Part.TORSO: Tuning.data.ragdoll_contact_spin_trunk,
+		Ragdoll.Part.ARMS: Tuning.data.ragdoll_contact_spin_limb,
+		Ragdoll.Part.LEGS: Tuning.data.ragdoll_contact_spin_limb,
+	}
+	var twists: Array[String] = []
+	for part: Ragdoll.Part in caps:
+		var twist := ragdoll.top_contact_twist(part)
+		twists.append("%s %.1f (cap %.1f)" % [Ragdoll.Part.keys()[part], twist, caps[part]])
+		assert_lte(twist, caps[part] + 1e-3, "%s: the contact push turns it no faster than its cap (%.2f rad/s, cap %.1f)" % [Ragdoll.Part.keys()[part], twist, caps[part]])
+	gut.p("many off-center hits: top contact twist per part: %s" % ", ".join(twists))
+	for part: Ragdoll.Part in [Ragdoll.Part.HEAD, Ragdoll.Part.TORSO]:
+		assert_gt(ragdoll.top_contact_twist(part), caps[part] * 0.9, "%s: the twist reached its cap" % Ragdoll.Part.keys()[part])
 	assert_true(await _wait_until(func() -> bool: return dummy.state == CombatTypes.ActorState.FREE, 400), "and recovers")
 
 
@@ -1048,3 +1069,81 @@ func test_staggers_give_way_more_at_the_new_influence() -> void:
 	gut.p("hook stagger: the upper body gave way %.3f m at 0.6, %.3f m at %.2f" % [gaps[0], gaps[1], influences[1]])
 	assert_gt(gaps[1], gaps[0] * 1.3, "gives way visibly more")
 	assert_lt(gaps[1], 0.6, "still a stagger")
+
+
+# --- M2 phase 3 review: the hook's stagger (ragdoll-02) ----------------------------------
+
+
+## The hook's stagger (P P P) watched to its end: the most the head turns on the upper chest
+## and a hand moves in the upper chest's frame beyond the animation's (the head lolling onto
+## a shoulder, an arm trailing behind a trunk thrown sideways), how far the chest leans back
+## away from the player (the side view sees that), and where the body ends up.
+func _hook_stagger() -> Dictionary:
+	await _setup([Vector3(0, 0, -1.6)])
+	var dummy := dummies[0]
+	_queue(&"P", 3)
+	assert_true(await _wait_until(func() -> bool: return dummy.state == CombatTypes.ActorState.STAGGER, 120), "staggered")
+	var back_dir := -dummy.get_forward()
+	var out := {tilt = 0.0, hand = 0.0, lean = 0.0, gap = 0.0}
+	var rig := dummy.rig
+	while dummy.state == CombatTypes.ActorState.STAGGER:
+		await get_tree().physics_frame
+		var chest := rig.get_visual_point_transform(&"UpperChest")
+		var chest_anim := rig.get_point_transform(&"UpperChest")
+		var tilt := rig.get_visual_point_transform(&"Head").basis.y.angle_to(chest.basis.y) \
+				- rig.get_point_transform(&"Head").basis.y.angle_to(chest_anim.basis.y)
+		out.tilt = maxf(out.tilt, rad_to_deg(tilt))
+		for hand: StringName in [&"LeftHand", &"RightHand"]:
+			var shown := chest.affine_inverse() * rig.get_visual_point_transform(hand).origin
+			out.hand = maxf(out.hand, shown.distance_to(chest_anim.affine_inverse() * rig.get_point_position(hand)))
+		out.lean = maxf(out.lean, (rig.get_visual_point_transform(&"Chest").origin - rig.get_point_position(&"Chest")).dot(back_dir))
+		out.gap = maxf(out.gap, _gap(dummy, [&"Head", &"Chest", &"LeftHand", &"RightHand"]))
+	out.end = dummy.global_position
+	return out
+
+
+func test_the_hook_staggers_head_and_arms_ride_the_trunk_and_it_leans_back() -> void:
+	# The neck and head, and the arms, show less of the simulation on their joints than the
+	# trunk (ragdoll_partial_head_influence, _arm_influence), and the sideways push also leans
+	# the trunk back (ragdoll_stagger_back_share): against the same hook with them at the
+	# trunk's influence and no lean, the head lolls less, the arms trail less, the chest leans
+	# back further, and the body slides just the same (visual only).
+	var plain := TuningData.new()
+	plain.ragdoll_partial_head_influence = plain.ragdoll_partial_influence
+	plain.ragdoll_partial_arm_influence = plain.ragdoll_partial_influence
+	plain.ragdoll_stagger_back_share = 0.0
+	Tuning.apply(plain)
+	Tuning.data.dummy_health = 500.0
+	var before := await _hook_stagger()
+	Tuning.apply(TuningData.new())
+	Tuning.data.dummy_health = 500.0
+	var now := await _hook_stagger()
+	gut.p("hook stagger: head on the chest %.0f -> %.0f degrees, hand off the chest's frame %.3f -> %.3f m, chest leans back %.3f -> %.3f m, gives way %.3f -> %.3f m"
+			% [before.tilt, now.tilt, before.hand, now.hand, before.lean, now.lean, before.gap, now.gap])
+	assert_lt(now.tilt, 45.0, "the head stays on the neck, not lolled onto a shoulder (%.0f degrees)" % now.tilt)
+	assert_lt(now.tilt, before.tilt * 0.7, "the head lolls less than at the trunk's influence")
+	assert_lt(now.hand, before.hand * 0.8, "the arms trail the trunk less (%.3f m, %.3f m)" % [now.hand, before.hand])
+	assert_gt(now.lean, before.lean + 0.04, "the chest leans back away from the player (%.3f m, %.3f m)" % [now.lean, before.lean])
+	assert_gt(now.gap, 0.25, "the upper body still gives way (%.3f m)" % now.gap)
+	assert_almost_eq(now.end, before.end, Vector3.ONE * 1e-4, "the body slides the same: the lean is visual only")
+
+
+func test_arms_kicked_by_a_stagger_keep_the_full_influence() -> void:
+	# A guard break's or a parry's kick lands on the arms (Ragdoll.Part.ARMS): they show the
+	# simulation at the trunk's influence whatever ragdoll_partial_arm_influence says. A kick
+	# elsewhere (the head) and they show their own.
+	for part: Ragdoll.Part in [Ragdoll.Part.ARMS, Ragdoll.Part.HEAD]:
+		var hands: Array[Vector3] = []
+		for arm_influence: float in [0.9, 0.2]:
+			await _setup([Vector3(0, 0, -1.6)])
+			Tuning.data.ragdoll_partial_arm_influence = arm_influence
+			var dummy := dummies[0]
+			var push := dummy.get_forward().cross(Vector3.UP) * 3.0
+			dummy.rig.ragdoll_start(false, dummy.rig.get_point_position(&"RightHand"), push, Vector3.ZERO, part, 1.0)
+			await _ticks(10)
+			hands.append(dummy.rig.get_visual_point_transform(&"RightHand").origin)
+		var moved := hands[0].distance_to(hands[1])
+		if part == Ragdoll.Part.ARMS:
+			assert_lt(moved, 1e-4, "kicked on the arms, they show the same at any arm influence (%.5f m)" % moved)
+		else:
+			assert_gt(moved, 0.01, "kicked elsewhere, the arms show their own influence (%.3f m apart)" % moved)

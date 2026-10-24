@@ -197,8 +197,11 @@ func _build_moves() -> void:
 	knee.magnetism = false
 	knee.camera_pitch_deg = KNEE_PITCH_DEG
 	knee.camera_drop_m = KNEE_DROP_M
+	# 0,3,9 (until the M2 phase 3 review) barely lifted the body (0.2 m, 0.27 s in the air:
+	# it skated off on its feet and tripped). Thrown higher and a little less far, it arcs
+	# (about 0.6 m up, 0.45 s in the air) and lands about as far off.
 	var throw := _add(&"throw", "Throw", Vector3i(8, 2, 20), 15.0, HEAVY, THROWN,
-			Vector3(0.0, 3.0, 9.0), [])
+			Vector3(0.0, 5.0, 6.5), [])
 	throw.magnetism = false
 
 	# Ground hit on a downed enemy.
