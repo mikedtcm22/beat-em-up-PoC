@@ -149,7 +149,7 @@
 		"vfx_damage_tile_m": 0.4,
 		"ragdoll_enabled": true,
 		"ragdoll_player": false,
-		"ragdoll_partial_influence": 0.6,
+		"ragdoll_partial_influence": 0.9,
 		"ragdoll_partial_hold_s": 0.25,
 		"ragdoll_partial_fade_s": 0.4,
 		"ragdoll_partial_rise_s": 0.08,

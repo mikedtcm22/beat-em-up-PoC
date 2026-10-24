@@ -276,10 +276,10 @@ extends Resource
 ## first-person view; the camera rides the animated eyes either way).
 @export var ragdoll_player: bool = false
 @export_subgroup("Stagger (partial)")
-## How much of the simulated upper body shows over the animation (Spec §6: 0.3-0.6), how
-## long it holds, then how long it fades back to the animation (both cut to the stagger's
-## length).
-@export_range(0.0, 1.0, 0.01) var ragdoll_partial_influence: float = 0.6
+## How much of the simulated upper body shows over the animation (above Spec §6's 0.3-0.6,
+## Game-boy's call: staggers that read from the side view too), how long it holds, then how
+## long it fades back to the animation (both cut to the stagger's length).
+@export_range(0.0, 1.0, 0.01) var ragdoll_partial_influence: float = 0.9
 @export_range(0.0, 1.0, 0.01) var ragdoll_partial_hold_s: float = 0.25
 @export_range(0.05, 1.5, 0.01) var ragdoll_partial_fade_s: float = 0.4
 ## A stagger on a body already staggering: the influence rises back from where its fade had
