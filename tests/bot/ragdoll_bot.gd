@@ -135,9 +135,10 @@ func _act_throw() -> void:
 	await _watch(WATCH_S)
 
 
-## A dummy on its last few points: the uppercut KOs it; it goes limp and lies
+## A dummy on its last few points: the hook KOs it; it goes limp and lies
 ## (Tuning.ko_linger_s), blinks faster and faster (ko_blink_s) and is gone; after
-## Tuning.dummy_revive_s it blinks back in, standing at its post, at full health.
+## Tuning.dummy_revive_s it blinks back in, standing at its post, at full health. The player
+## steps back meanwhile (the combo's step-ins carried it toward the post).
 func _act_ko() -> void:
 	await _stage([Vector3(0, 0, -1.6)])
 	var dummy := dummies[0]
@@ -154,6 +155,10 @@ func _act_ko() -> void:
 	await _wait_until(func() -> bool: return dummy.is_ko(), 90)
 	await _look_to(-24.0, 14)
 	await _wait_until(func() -> bool: return dummy.is_gone(), 400)
+	var post: Vector3 = dummy.get(&"_home")
+	player.input.scripted_move = Vector2(0, -1)
+	await _wait_until(func() -> bool: return Vector2(player.global_position.x - post.x, player.global_position.z - post.z).length() >= 1.6, 60)
+	player.input.scripted_move = Vector2.ZERO
 	await _look_to(-6.0, 14)
 	await _wait_until(func() -> bool: return not dummy.is_ko(), 400)
 	await _watch(Tuning.data.ko_blink_in_s + 1.0)

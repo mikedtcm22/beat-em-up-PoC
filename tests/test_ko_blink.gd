@@ -275,3 +275,19 @@ func test_the_blink_speeds_up() -> void:
 		was = now
 	assert_false(CombatActor.blink_shown(0.0, 1.0, 4.0, 12.0), "a blink starts off")
 	assert_gt(last, first, "more changes in the last quarter than the first (%d, %d)" % [last, first])
+
+
+func test_a_dummy_comes_back_beside_its_post_when_someone_stands_on_it() -> void:
+	# The player that knocked it out often stands on its post (the combo's step-ins).
+	await _setup([Vector3(0, 0, -1.6)])
+	var dummy := dummies[0]
+	var home := dummy.global_position
+	_kill(dummy)
+	assert_true(await _wait_until(func() -> bool: return dummy.is_gone(), 400), "gone")
+	player.global_position = home + Vector3(0.2, 0.0, 0.0)
+	assert_true(await _wait_until(func() -> bool: return not dummy.is_ko(), _ticks_of(Tuning.data.dummy_revive_s) + 10), "comes back on time")
+	var gap := Vector2(dummy.global_position.x - player.global_position.x, dummy.global_position.z - player.global_position.z).length()
+	gut.p("came back %.2f m from its post, %.2f m from the player on it" % [dummy.global_position.distance_to(home), gap])
+	assert_gte(gap, dummy.body_radius + player.body_radius, "not inside the player")
+	assert_lt(dummy.global_position.distance_to(home), dummy.body_radius * 4.0 + 0.01, "beside its post")
+	assert_almost_eq(dummy.get(&"_home"), home, Vector3.ONE * 1e-4, "which stays its post")

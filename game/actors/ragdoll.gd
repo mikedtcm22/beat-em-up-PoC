@@ -769,7 +769,6 @@ func _rescale_body(i: int, from: float, to: float) -> void:
 ## its body, and the struck body's (Tuning.ragdoll_kick_at_contact) the twist of the
 ## kick landing off its center too (_twist_at_contact()).
 func _apply_pending(states: Array[PhysicsDirectBodyState3D], scale: float) -> void:
-	var at_contact := Tuning.data.ragdoll_kick_at_contact
 	for entry: Array in _pending:
 		var i: int = entry[0]
 		var k := _sim.find(i)
@@ -777,7 +776,7 @@ func _apply_pending(states: Array[PhysicsDirectBodyState3D], scale: float) -> vo
 			continue
 		var change: Vector3 = entry[1]
 		states[k].apply_central_impulse(change * _mass[i] * scale)
-	if at_contact:
+	if Tuning.data.ragdoll_kick_at_contact:
 		for entry: Array in _pending:
 			var contact: Variant = entry[2]
 			if contact != null and _sim.has(entry[0]):

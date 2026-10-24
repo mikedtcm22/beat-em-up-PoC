@@ -2,13 +2,14 @@ extends GutTest
 ## Milestone 2 WP4: the partial and full ragdoll (game/actors/ragdoll.gd, Spec §6 "Hit
 ## reactions"). A visual layer: hurtboxes, rig points and get_point_transform() keep the
 ## animation's FK while it runs; staggers give way and return; bodies knocked off their feet
-## fly, land, come to rest and get up where their hips lie; a KO goes limp and stays; the
-## ragdoll runs in each actor's sim time (frozen in hitstop, slowed in slow-mo); a flying
-## body still knocks a standing one down; the player keeps animated reactions by default;
-## nothing explodes after many hits. The review fixes (docs/reviews/M2-WP4-review-findings.json)
+## fly, land, come to rest and get up where their hips lie; a KO goes limp and lies still
+## (then blinks off: tests/test_ko_blink.gd); the ragdoll runs in each actor's sim time
+## (frozen in hitstop, slowed in slow-mo); a flying body still knocks a standing one down;
+## the player keeps animated reactions by default; nothing explodes after many hits. The review fixes (docs/reviews/M2-WP4-review-findings.json)
 ## add: the hit's kick held through the hitstop, a get-up with no pop or shove, face-down
 ## landings, joints inside their limits, re-staggers, rest, idle cost, the parry and the
-## launch's first frames.
+## launch's first frames. Phase 3 adds the kick at the contact point (a capped twist, no NaN
+## after many off-center hits) and the stronger staggers (above Spec §6's 0.6 influence).
 
 const ROOM := preload("res://game/level/test_room.tscn")
 const FAR := Vector3(30.0, 0.0, -30.0)
@@ -271,7 +272,7 @@ func _room_for(d: CombatActor) -> bool:
 	return d.get_world_3d().direct_space_state.intersect_shape(query, 1).is_empty()
 
 
-func test_a_kod_dummy_goes_limp_settles_and_stays() -> void:
+func test_a_kod_dummy_goes_limp_settles_and_lies_still() -> void:
 	await _setup([Vector3(0, 0, -1.6)])
 	var dummy := dummies[0]
 	dummy.max_health = 30.0
@@ -291,7 +292,7 @@ func test_a_kod_dummy_goes_limp_settles_and_stays() -> void:
 	var moved := 0.0
 	for i in GAP_BONES.size():
 		moved = maxf(moved, dummy.rig.get_visual_point_transform(GAP_BONES[i]).origin.distance_to(pose[i]))
-	assert_lt(moved, 1e-3, "stays where it settled")
+	assert_lt(moved, 1e-3, "lies where it settled (until it blinks off)")
 	var lowest := INF
 	for bone: StringName in GAP_BONES:
 		lowest = minf(lowest, dummy.rig.get_visual_point_transform(bone).origin.y)
