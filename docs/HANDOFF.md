@@ -4,6 +4,33 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-23 21:55 CDT: WP4 built; reviews wait for the 22:30 reset
+- **Builder done:** `m2/ragdoll` @ `96defb9`, "M2 WP4: partial and full ragdoll". **412/412 tests pass** with no SCRIPT ERROR, and the branch is pushed.
+  - Core: `game/actors/ragdoll.gd`, a SkeletonModifier3D after the PhysicalBoneSimulator3D.
+  - Layer 8 "ragdoll", a "Ragdoll" tuning group (34 values in 6 subgroups), and `tuning/default.json` regenerated (265 values).
+  - Tests in `tests/test_ragdoll.gd` (12), and `tests/bot/ragdoll_bot.tscn` with 10 acts × 2 views.
+  - Captures (local) in `.worktrees/m2-ragdoll/captures/ragdoll/`: `ragdoll_acts.avi` and 20 sheets in `sheets/`.
+- **Builder's departures from the brief:**
+  - joints are made on the physics server;
+  - time scaling uses velocity changes, not a custom integrator;
+  - per-body pose springs, besides the hips spring;
+  - central kicks on the struck body part, chosen by hurtbox region;
+  - no gravity on the partial ragdoll;
+  - ragdolls collide with each other.
+- **Builder's known issues:**
+  - the visible body is up to 0.96 m from the hurtboxes for about 0.05 s just after a finisher's hitstop, 0.13 m lying;
+  - the get-up position now depends on Jolt;
+  - lying bodies sleep, so the downed breathing stops.
+- **Stopped:** the workflow `wf_6868f11f-7bd` ended at the review gate at 68% of the 5-hour window. The builder alone took the window from 16% to 68%, about 52% (twice the estimate). Weekly is at 40%.
+- **Resume (this session, after 22:30 CDT):** `Workflow({scriptPath: "<session>/workflows/scripts/m2-wp4-ragdoll-wf_6868f11f-7bd.js", resumeFromRunId: "wf_6868f11f-7bd", args: {review_gate_attempt: 2}})`. The builder comes back from cache; the reviewers and then the verify-and-fix agent run live.
+- **Resume (another account):** run the two reviews (mechanics; feel from re-recorded captures) and then the verify-and-fix pass on `m2/ragdoll`, as in the 20:38 entry.
+- **Waiting on Game-boy:**
+  - phase 3's white hit flash (localize it, or keep it as the spec says);
+  - the builder's three spec questions:
+    - KO bodies sleep where they lie until the arena clears (Milestone 3);
+    - KO bodies take no hits;
+    - heavy-tier knockdowns get the full ragdoll, because the reaction decides, not the tier.
+
 ### 2026-10-23 20:38 CDT: account D took over; WP4 workflow running
 A fresh account's working session took over at 15% of its 5-hour window (resets 22:30 CDT) and 31% weekly (resets Tue 2026-10-27 17:00 CDT). Its watcher runs: "Beat-em-up: usage watcher", name `usage-watcher-e` (Haiku, low effort, self-paced).
 - **Running:** workflow `m2-wp4-ragdoll` (run `wf_6868f11f-7bd`, started from this session), all in `.worktrees/m2-ragdoll`:
