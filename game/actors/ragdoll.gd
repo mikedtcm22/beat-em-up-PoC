@@ -84,6 +84,9 @@ var _sim: PackedInt32Array = PackedInt32Array()
 var _applied_scale: float = 1.0
 ## Asleep through a freeze (scale 0), not at rest.
 var _frozen: bool = false
+## A PARTIAL just went FULL: the simulator's copy of the bodies' poses is stale until the
+## next physics step, so this update poses them itself.
+var _reseat: bool = false
 var _held_lin: Array[Vector3] = []
 var _held_ang: Array[Vector3] = []
 ## Impulses waiting for the next unfrozen step: [body index, sim velocity change, world
@@ -250,6 +253,11 @@ func start(new_mode: Mode, contact: Vector3, push: Vector3, body_velocity: Vecto
 	for i: int in _sim:
 		var rid := _bodies[i].get_rid()
 		var kept := previous_sim.has(i)
+		if kept and was == Mode.PARTIAL:
+			# The PARTIAL showed its bodies only partly (its influence): at full influence they
+			# start from that blend, keeping their motion, so nothing jumps.
+			PhysicsServer3D.body_set_state(rid, PhysicsServer3D.BODY_STATE_TRANSFORM, shown[i])
+			_reseat = true
 		if not kept:
 			PhysicsServer3D.body_set_state(rid, PhysicsServer3D.BODY_STATE_TRANSFORM, shown[i])
 			var lin := inherit
@@ -296,6 +304,7 @@ func stop() -> void:
 	mode = Mode.NONE
 	asleep = false
 	_frozen = false
+	_reseat = false
 	_sim.clear()
 	_pending.clear()
 	simulator.physical_bones_stop_simulation()
@@ -306,11 +315,6 @@ func stop() -> void:
 ## Skeleton-space post-ragdoll pose of skeleton bone `bone` after the latest update.
 func visual_pose(bone: int) -> Transform3D:
 	return _visual[bone]
-
-
-## World position of the simulated Hips body (the visible hips).
-func hips_position() -> Vector3:
-	return PhysicsServer3D.body_get_state(_bodies[0].get_rid(), PhysicsServer3D.BODY_STATE_TRANSFORM).origin
 
 
 ## Largest sim speed (m/s) of any simulating body (0 when none). For tests.
@@ -339,6 +343,12 @@ func _process_modification_with_delta(_delta: float) -> void:
 	var skeleton := get_skeleton()
 	if skeleton == null or rig == null:
 		return
+	if _reseat and mode == Mode.FULL:
+		_reseat = false
+		var to_skeleton := skeleton.global_transform.affine_inverse()
+		for i: int in _sim:
+			var body: Transform3D = PhysicsServer3D.body_get_state(_bodies[i].get_rid(), PhysicsServer3D.BODY_STATE_TRANSFORM)
+			skeleton.set_bone_global_pose(_bone_of[i], to_skeleton * body)
 	for i: int in skeleton.get_bone_count():
 		var local := skeleton.get_bone_pose(i)
 		var parent := skeleton.get_bone_parent(i)
@@ -404,6 +414,8 @@ func _step() -> void:
 	var targets: Array[Transform3D] = []
 	for i: int in _sim:
 		targets.append(to_world * rig.animation_pose(_bone_of[i]))
+	var hips_target := (to_world * rig.animation_pose(_bone_of[0])).origin
+	var hips_target_v := (hips_target - _prev_hips_target) / dt if _has_prev_target else Vector3.ZERO
 	var gravity_mult := tuning.ragdoll_partial_gravity if mode == Mode.PARTIAL else tuning.ragdoll_gravity_mult
 	var gravity := Vector3.DOWN * tuning.gravity * gravity_mult * scale * scale * dt
 	var lin_keep := maxf(1.0 - tuning.ragdoll_linear_damp * scale * dt, 0.0)
@@ -413,10 +425,6 @@ func _step() -> void:
 	if mode == Mode.FULL:
 		var hips_k := _stiffness(tuning.ragdoll_hips_hz)
 		var hips_c := _damping(tuning.ragdoll_hips_hz, tuning.ragdoll_hips_damping)
-		var hips_target := targets[0].origin
-		var hips_target_v := Vector3.ZERO
-		if _has_prev_target:
-			hips_target_v = (hips_target - _prev_target[0].origin) / dt
 		var total := 0.0
 		var momentum := Vector3.ZERO
 		for k: int in _sim.size():
@@ -431,13 +439,9 @@ func _step() -> void:
 	var max_w := tuning.ragdoll_max_spin * scale
 	# The pose springs pull each body toward its animation pose relative to the hips (where
 	# it sits from them, and how it is turned): the shape of the pose, not where the whole
-	# body is (the hips spring's job). A PARTIAL's hips are the animation's.
-	var hips_now := targets[0].origin if mode == Mode.PARTIAL else states[0].transform.origin
-	var hips_v := Vector3.ZERO if mode == Mode.PARTIAL else states[0].linear_velocity
-	var hips_target_v := Vector3.ZERO
-	var hips_target := to_world * rig.animation_pose(_bone_of[0])
-	if mode == Mode.PARTIAL:
-		hips_now = hips_target.origin
+	# body is (the hips spring's job). A PARTIAL's hips are the animation's (kinematic).
+	var hips_now := hips_target if mode == Mode.PARTIAL else states[0].transform.origin
+	var hips_v := hips_target_v if mode == Mode.PARTIAL else states[0].linear_velocity
 	for k: int in _sim.size():
 		var state := states[k]
 		var i := _sim[k]
@@ -449,11 +453,8 @@ func _step() -> void:
 			c_rot = _damping(turn_hz, tuning.ragdoll_hips_damping)
 		var lin := state.linear_velocity * lin_keep + gravity + shift
 		if i != 0:
-			var target_v := Vector3.ZERO
-			if _has_prev_target:
-				target_v = (targets[k].origin - _prev_target[i].origin) / dt
-				hips_target_v = (hips_target.origin - _prev_hips_target) / dt
-			var error := (targets[k].origin - hips_target.origin) - (state.transform.origin - hips_now)
+			var target_v := (targets[k].origin - _prev_target[i].origin) / dt if _has_prev_target else Vector3.ZERO
+			var error := (targets[k].origin - hips_target) - (state.transform.origin - hips_now)
 			var relative_v := (state.linear_velocity - hips_v) - (target_v - hips_target_v)
 			lin += (error * pose_k * scale * scale - relative_v * pose_c * scale) * dt
 		var ang := state.angular_velocity * ang_keep
@@ -477,7 +478,7 @@ func _step() -> void:
 		state.angular_velocity = _finite(ang).limit_length(max_w)
 	for k: int in _sim.size():
 		_prev_target[_sim[k]] = targets[k]
-	_prev_hips_target = hips_target.origin
+	_prev_hips_target = hips_target
 	_has_prev_target = true
 	if mode == Mode.FULL and (phase == Phase.DOWN or phase == Phase.LIMP):
 		_rest(states, scale, sim_dt)
@@ -555,6 +556,8 @@ func _rest(states: Array[PhysicsDirectBodyState3D], scale: float, sim_dt: float)
 			state.angular_velocity = Vector3.ZERO
 			state.sleeping = true
 		asleep = true
+		# Woken later (a stomp), the targets' motion restarts from then.
+		_has_prev_target = false
 
 
 func _wake() -> void:
@@ -592,12 +595,12 @@ static func _finite(v: Vector3) -> Vector3:
 	return v if v.is_finite() else Vector3.ZERO
 
 
-## World transform of skeleton bone `bone` as shown now.
+## World transform of skeleton bone `bone` as shown now: the animation's, or a running
+## ragdoll's last visual pose.
 func _world_visual(bone: int) -> Transform3D:
-	var to_world := rig.global_transform
 	if mode == Mode.NONE:
-		return to_world * rig.animation_pose(bone)
-	return to_world * _visual[bone]
+		return rig.global_transform * rig.animation_pose(bone)
+	return visual_rig_transform * _visual[bone]
 
 
 func _make_shape(spec: PlaceholderBody.RagdollSpec, scale: float) -> Shape3D:

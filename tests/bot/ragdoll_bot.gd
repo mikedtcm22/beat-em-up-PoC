@@ -130,7 +130,12 @@ func _act_ko() -> void:
 		await _press(&"P", 2, 8)
 		if dummy.is_ko():
 			break
-	await _watch(Tuning.data.dummy_revive_s + 1.6)
+	# In first person, look down at the body lying limp, and back up before it revives.
+	await _wait_until(func() -> bool: return dummy.is_ko(), 60)
+	await _look_to(-38.0, 14)
+	await _watch(Tuning.data.dummy_revive_s - 0.4)
+	await _look_to(-6.0, 14)
+	await _watch(1.6)
 
 
 ## The dummy holds a guard; jab after jab drains it until it breaks: the arms knocked
