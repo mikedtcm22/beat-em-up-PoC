@@ -5,7 +5,7 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 ## Status (newest first)
 
 ### 2026-10-24 13:55 CDT: handoff, account F's 5-hour window at 90%
-The watcher called the handoff at 90% of the 5-hour window (resets 17:39 CDT); weekly is at 28% (resets Wed 2026-10-28 10:59 CDT). The workflow `wf_f6697464-ea0` is stopped, and nothing else is running. Every branch is pushed. The reviewer worktrees have no tracked changes (only untracked `captures/`).
+The watcher called the handoff at 90% of the 5-hour window (resets 17:39 CDT); weekly is at 28% (resets Wed 2026-10-28 10:59 CDT). **Game-boy switched to a fresh account at 14:10.** This session is renamed "Beat-em-up: account F session (handed off)", which frees the working-session title, and its watcher `usage-watcher-g` is told to end its loop. The new account starts its own watcher. The workflow `wf_f6697464-ea0` is stopped, and nothing else is running. Every branch is pushed. The reviewer worktrees have no tracked changes (only untracked `captures/`).
 - **Package C state.** Everything below is committed as JSON on `m2/phase3-review` (`a39ba62`), in `docs/reviews/M2-phase3/`.
 
   | Lens | Findings | Verified (3 skeptics each) |
