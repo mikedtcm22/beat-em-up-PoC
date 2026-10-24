@@ -18,3 +18,5 @@ recovery = 12
 knockback = Vector3(0, 0, 0)
 hitboxes = Array[ExtResource("hitbox_spec_gd")]([SubResource("hitbox_0")])
 magnetism = false
+camera_pitch_deg = -12.0
+camera_drop_m = 0.05

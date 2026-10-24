@@ -587,8 +587,13 @@ func test_kick_camera_offsets() -> void:
 	var stomp := _load_move(&"stomp")
 	assert_almost_eq(stomp.camera_pitch_deg, -25.0, 0.0001, "stomp: camera pitch")
 	assert_almost_eq(stomp.camera_drop_m, 0.05, 0.0001, "stomp: camera drop")
+	# The knee tips the hold view (Tuning.grab_view_pitch_deg) a little further down and drops
+	# it like a kick, so it shows rising into the held body (Game-boy, 2026-10-24).
+	var knee := _load_move(&"knee")
+	assert_between(knee.camera_pitch_deg, -15.0, -8.0, "knee: camera pitches down 8-15 degrees")
+	assert_almost_eq(knee.camera_drop_m, 0.05, 0.0001, "knee: camera drops 5 cm")
 	for id: StringName in TABLE:
-		if id in KICKS or id == &"stomp" or id == &"spin_kick" or id == &"back_elbow":
+		if id in KICKS or id in [&"stomp", &"spin_kick", &"back_elbow", &"knee"]:
 			continue
 		var move := _load_move(id)
 		assert_eq(move.camera_pitch_deg, 0.0, "%s: no camera pitch" % id)

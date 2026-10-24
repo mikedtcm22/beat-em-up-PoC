@@ -48,6 +48,21 @@ extends Resource
 @export_range(1, 20, 1) var weapon_durability: int = 8
 @export_range(5.0, 30.0, 0.5) var weapon_throw_speed: float = 16.0
 @export_range(0.5, 3.0, 0.1) var stomp_range: float = 1.5
+@export_subgroup("Hold view")
+## While an enemy is held, the first-person view pitches down this many degrees (Game-boy,
+## 2026-10-24), so the knees show landing on the held body; a knee's own camera_pitch_deg
+## adds to it. Presentation only: aim never uses it.
+@export_range(0.0, 45.0, 0.5) var grab_view_pitch_deg: float = 16.0
+## The hold bends the player at the waist, which leans the eyes out over the held body.
+## While holding, the first-person lens moves back this far along the flat look and up by
+## grab_view_rise_m, so the held enemy stays readable (not a wall of shirt) and the hands
+## on its shoulders stay 0.3 m or more from the lens.
+@export_range(0.0, 0.3, 0.005) var grab_view_back_m: float = 0.24
+@export_range(0.0, 0.15, 0.005) var grab_view_rise_m: float = 0.1
+## Seconds the hold view eases in over after a grab, and back out over after a throw or a
+## release (any way the hold ends).
+@export_range(0.0, 1.0, 0.01) var grab_view_in_s: float = 0.2
+@export_range(0.0, 1.0, 0.01) var grab_view_out_s: float = 0.45
 
 @export_group("Reactions")
 @export_range(10, 90, 1) var stagger_frames: int = 40

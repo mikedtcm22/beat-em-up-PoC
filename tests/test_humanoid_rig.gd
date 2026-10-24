@@ -967,7 +967,10 @@ func test_play_move_length_and_strike_key_timing() -> void:
 				var t_bone := _track(anim, "Skeleton3D:%s" % bone)
 				var start := anim.rotation_track_interpolate(t_bone, 0.0)
 				var finish := anim.rotation_track_interpolate(t_bone, anim.length)
-				assert_lt(rad_to_deg(start.angle_to(finish)), 0.5, "%s returns %s to guard" % [_tag(rig, move.id), bone])
+				# The throw starts in the hold and lands in the stance (checked in
+				# test_player_moves_and_animations_start_and_end_in_the_relaxed_stance()).
+				if move.id != &"throw":
+					assert_lt(rad_to_deg(start.angle_to(finish)), 0.5, "%s returns %s to guard" % [_tag(rig, move.id), bone])
 				if not [&"spinning_heel", &"spin_kick", &"spinning_backfist"].has(move.id):
 					var a := anim.rotation_track_interpolate(t_bone, strike_t)
 					var b := anim.rotation_track_interpolate(t_bone, end_t)
@@ -977,8 +980,9 @@ func test_play_move_length_and_strike_key_timing() -> void:
 func test_player_moves_and_animations_start_and_end_in_the_relaxed_stance() -> void:
 	# The player's relaxed stance is where everything starts and lands: every move (from
 	# idle and, for the haymaker, released from its charge), the dodges, the landing, the
-	# pickup, the hit reactions and the get-ups. Clinch moves start and end in the hold,
-	# pipe moves in the relaxed weapon carry, and air moves in the air guard.
+	# pickup, the hit reactions and the get-ups. Clinch moves start in the hold (the knee
+	# ends there too, the throw, with nothing left to hold, in the stance), pipe moves start
+	# and end in the relaxed weapon carry, and air moves in the air guard.
 	var rig := _player_rig()
 	rig.play(&"idle", 0.0)
 	rig.advance(0.0)
@@ -989,7 +993,7 @@ func test_player_moves_and_animations_start_and_end_in_the_relaxed_stance() -> v
 	var check := func(what: String) -> void:
 		for i: int in points.size():
 			assert_almost_eq(_local(rig, points[i]), stance[i], Vector3.ONE * 0.01, "%s: %s in the stance" % [what, points[i]])
-	var other: Array[StringName] = [&"knee", &"throw", &"pipe_swing_1", &"pipe_swing_2", &"pipe_swing_3",
+	var other: Array[StringName] = [&"knee", &"pipe_swing_1", &"pipe_swing_2", &"pipe_swing_3",
 			&"weapon_throw", &"flying_kick", &"spin_kick"]
 	for row: Array in MOVES:
 		var move := _move(row)
@@ -1001,6 +1005,9 @@ func test_player_moves_and_animations_start_and_end_in_the_relaxed_stance() -> v
 		for point: StringName in points:
 			start.append(_local(rig, point))
 		rig.advance(move.total_frames() * FRAME)
+		if move.id == &"throw":
+			check.call("throw end")
+			continue
 		if other.has(move.id):
 			for i: int in points.size():
 				assert_almost_eq(_local(rig, points[i]), start[i], Vector3.ONE * 0.01, "%s ends where it started" % move.id)
@@ -1250,25 +1257,42 @@ func test_pipe_swings_meet_the_head_without_passing_through_it() -> void:
 			assert_lt(tip.distance_to(center), head.radius + 0.2, "%s: the tip reaches the head" % _tag(rig, id))
 
 
-func test_held_victim_sits_at_the_bottom_of_the_holders_view() -> void:
+## The first-person camera of `rig` holding an enemy, as FirstPersonCamera places it with
+## the hold view at full weight (Tuning "Grab and weapons" > "Hold view"): the lens pulled
+## back by grab_view_back_m and raised by grab_view_rise_m, the view pitched down by
+## grab_view_pitch_deg, plus a move's own `pitch_deg` and `drop` (the knee's).
+func _hold_fp_camera(rig: HumanoidRig, pitch_deg: float = 0.0, drop: float = 0.0) -> Transform3D:
+	var lens := rig.get_point_position(&"EyePoint") + Vector3.DOWN * (drop - Tuning.data.grab_view_rise_m) \
+			+ FirstPersonCamera.lens_offset(_facing(rig), Tuning.data.grab_view_back_m)
+	var pitch := deg_to_rad(pitch_deg - Tuning.data.grab_view_pitch_deg)
+	return Transform3D(_facing(rig) * Basis.from_euler(Vector3(pitch, 0.0, 0.0)), lens)
+
+
+func test_held_victim_sits_low_in_the_holders_view() -> void:
+	# Bent over in front of the holder, the victim fills the lower part of the hold view
+	# (pitched down, Game-boy 2026-10-24): looking level, its shoulders and back sit below the
+	# view center with the back of its head and its cap at the bottom edge (a knee's own
+	# pitch brings the whole head in, test_grab_view.gd), and the upper third stays clear for
+	# the fight around them.
 	var rig := _player_rig()
 	var victim := _rig()
 	_place_target(rig, victim, &"held")
 	var head := _hurtboxes_of(victim, CombatTypes.Region.HEAD)[0]
-	var cam := _fp_camera(rig)
-	assert_gt(head.global_position.distance_to(cam.origin), 0.25, "the victim's head is not in the holder's face")
-	# Bent over, the victim's head sits just under the view: its top and back show at the
-	# bottom edge, and the upper half of the view stays clear.
+	var cam := _hold_fp_camera(rig)
+	assert_gt(head.global_position.distance_to(cam.origin), 0.3, "the victim's head is not in the holder's face")
 	var view := _view_from(cam, head.global_position)
-	assert_between(view.y, -FP_HALF_V_DEG - 25.0, -FP_HALF_V_DEG + 5.0, "the victim's head sits at the bottom of the first-person view (angles %s)" % view)
+	assert_between(view.y, -FP_HALF_V_DEG - 10.0, -FP_HALF_V_DEG + 5.0, "the victim's head sits at the bottom edge (angles %s)" % view)
 	var seen := _fp_hits(victim, cam)
-	assert_gt(_body_share(seen), 0.02, "the victim shows at the bottom of the view")
+	var head_parts: Array[String] = ["Head", "Cap", "CapBrim", "Shades", "ShadesFront"]
+	assert_gt(_parts_share(seen, head_parts), 0.03, "the back of the victim's head and its cap show")
+	assert_between(_body_share(seen), 0.15, 0.4, "the victim shows without filling the view (%.0f%%)" % (_body_share(seen) * 100.0))
 	for cell: Vector2i in _cells_of(seen, _part_names(victim)):
-		assert_gte(cell.y, FPView.rows() / 2, "the upper half of the view stays clear (cell %s)" % cell)
+		assert_gte(cell.y, FPView.rows() / 3, "the upper third of the view stays clear (cell %s)" % cell)
 	# The holder's hands rest on the victim's shoulders (left fist on the victim's right).
 	for pair: Array in [[&"LeftFistPoint", &"RightUpperArm"], [&"RightFistPoint", &"LeftUpperArm"]]:
 		var fist := rig.get_point_position(pair[0])
 		assert_lt(fist.distance_to(victim.get_point_position(pair[1])), 0.15, "%s on the victim's shoulder" % pair[0])
+
 
 func test_eye_point_stays_steady_through_strikes() -> void:
 	# The first-person camera rides EyePoint (Spec §5: steady camera). Spins orbit the eye

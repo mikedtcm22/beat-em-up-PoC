@@ -359,8 +359,10 @@ func test_grab_knees_release_then_throw_knocks_down_another() -> void:
 ## Nearest distance from the player's first-person lens to `victim`'s meshes, and the share
 ## of the player's view `victim` covers (the camera at EyePoint + lens offset, looking along
 ## the player's look).
+## Nearest distance (x) from the player's first-person lens to `victim`'s meshes, and the
+## share of the view (y) they cover, seen through the real view (the hold view included).
 func _victim_in_lens(victim: CombatActor) -> Vector2:
-	var cam := FPView.camera(player.get_eye_transform().origin, player.get_look_basis())
+	var cam := FirstPersonCamera.view_from_eye(player, player.get_eye_transform().origin)
 	return Vector2(FPView.nearest_mesh(victim.rig, cam.origin), FPView.covered(FPView.hits(victim.rig, cam, 32)))
 
 
