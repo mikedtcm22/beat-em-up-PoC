@@ -1,0 +1,147 @@
+{
+ "lens": "ragdoll",
+ "worktree": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-ragdoll",
+ "summary": "I recorded all 24 ragdoll_bot acts in both views in one Movie Maker run (captures/review_ragdoll/all.avi, act start times in all.log), plus one A/B of the hook stagger with --central-kick (hook.avi against hook_central.avi). I looked at 6-60 stills per second around every hit, flight, landing, pile, KO, blink-off, respawn and get-up. Overall the ragdoll is stable. Nothing explodes, tears, sinks or keeps twitching, no knee or elbow bends backwards, and hitstop visibly freezes the body (5 frames on the hook, 6 on the throw). The 0.3x slow-mo visibly slows the uppercut's rise in side view. The KO cycle reads well in both views. The body lies, blinks off-first at a rate rising from about 4 Hz to 12 Hz, and is gone at about 50.3 s. The dummy blinks back in at its post at 8 Hz about 0.9 s later, with a clean, unbruised look and no shadow, word or burst left behind. The localized flash sits on the contact in first person (the hook's chin glow at 0.883-0.90 s; the guard break's face at 62.07 s). It always ends inside the hitstop, so following a moving body never comes up. Five problems stand out. (1) The throw: the bent, held victim pops fully upright in one 60 Hz frame, 0.3-0.4 m from the lens with a big white flash disc, then glides away upright on its feet and trips onto its face. It reads as a pop and a shove, not a throw. (2) The hook stagger at 0.9 is rag-floppy in first person (the arm flung straight out, the head lolling onto the shoulder) but still barely reads from the side, because the hook pushes along the side camera's depth axis. The shove and guard break read well in both views. (3) Known: the side-view enemy health bar sits on the head of staggered, flying, held and lying bodies. (4) The empty health bar keeps hanging, steady, through the first blink-off of a KO. (5) The stomping foot sinks into the lying body. The contact push looks the same as the central kick in both views.",
+ "acts_checked": [
+  "Ragdoll: hook stagger (first person): all.avi 0.08 s, hook 0.90 s; hook.avi 60/30/12 fps sheets; A/B against hook_central.avi",
+  "Ragdoll: hook stagger (side view): 2.70 s, hook 3.52 s; 60 fps head and health-bar sheet; A/B against central",
+  "Ragdoll: uppercut launch (first person): 5.32 s, uppercut 6.40 s; 6/30/60 fps (snap into the launched pose, flight, landing, lying, get-up)",
+  "Ragdoll: uppercut launch (side view): 9.52 s, uppercut 10.60 s; 6 fps overview, 60 fps contact (impact frame, burst, slow-mo)",
+  "Ragdoll: haymaker (first person): 13.72 s, hit 14.87 s; 8 fps and 60 fps contact",
+  "Ragdoll: haymaker (side view): 17.77 s, hit 18.92 s; cropped, uncropped and native-resolution lying zoom (feet, floor contact)",
+  "Ragdoll: spinning heel, two dummies (first person): 21.82 s, hit 22.87 s; Dummy2 never in view",
+  "Ragdoll: spinning heel, two dummies (side view): 25.93 s, hit 26.98 s; both bodies fly and land in frame",
+  "Ragdoll: push kick into a second dummy (first person): 30.05 s, kick 30.90 s, flying body 31.35 s; 6/15/60 fps pile and get-up",
+  "Ragdoll: push kick into a second dummy (side view): 34.33 s; 6 fps and 30 fps pile get-up (top body gets up 0.8 m aside)",
+  "Ragdoll: throw (first person): 38.62 s, throw 39.62 s; 6/30/60 fps (pop upright, flash disc, glide, trip, lying)",
+  "Ragdoll: throw (side view): 42.65 s, throw 43.65 s; 6/30/60 fps (pop, frozen hitstop, upright glide, face-down landing)",
+  "Ragdoll: KO on a low-health dummy (first person): 46.68 s, KO hook 47.50 s; 6 fps whole cycle, 60 fps blink-off, 30 fps vanish and blink-in",
+  "Ragdoll: KO on a low-health dummy (side view): 53.37 s, KO hook 54.18 s; 6 fps cycle, 30 fps fall, 30 fps blink-off zoom",
+  "Ragdoll: guard-break stagger (first person): 60.05 s, break 62.10 s; 15 fps and 60 fps recovery",
+  "Ragdoll: guard-break stagger (side view): 63.63 s, break 65.68 s; 15 fps and 60 fps head",
+  "Ragdoll: flurry, finisher shove (first person): 67.22 s, shove 69.20 s; 15 fps",
+  "Ragdoll: flurry, finisher shove (side view): 70.60 s, shove 72.58 s; 15 fps and 60 fps",
+  "Ragdoll: parried jab, the arm knocked back (first person): 73.98 s, parry 75.15 s; 15 fps",
+  "Ragdoll: parried jab (side view): 76.92 s, parry 78.08 s; 15 fps (bar across the waists during the hold)",
+  "Ragdoll: uppercut from behind, lands face down (first person): 79.85 s, uppercut 81.10 s; 6 fps and 20 fps (feet swing up at the lens)",
+  "Ragdoll: uppercut from behind, lands face down (side view): 84.22 s, uppercut 85.47 s; 6 fps and 30 fps landing",
+  "Ragdoll: stomp a lying dummy, it gets up where it lies (first person): 88.58 s, stomp 91.02 s; 6 fps and 15 fps get-up",
+  "Ragdoll: stomp a lying dummy, it gets up where it lies (side view): 94.05 s, stomp 96.48 s; 6/12/30/60 fps (foot into the body, get-up through the player)",
+  "A/B: hook stagger with --central-kick, both views (hook_central.avi)"
+ ],
+ "captures_reviewed": [
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-ragdoll/captures/review_ragdoll/all.avi (all 24 ragdoll_bot acts, 1600x900 at 60 fps) + all.log",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-ragdoll/captures/review_ragdoll/hook.avi + hook.log",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-ragdoll/captures/review_ragdoll/hook_central.avi + hook_central.log (--central-kick A/B)",
+  "sheets: hook_fp.png, hook_fp_30.png, hook_fp60.png, hook_fp_flash60.png, hook_side.png, hook_side_crop.png, hook_side60.png, ab_hook_fp.png, ab_hook_side.png",
+  "sheets: upper_fp_overview.png, upper_fp_30.png, upper_side_overview.png, upper_side_hit60.png, hay_fp.png, hay_fp_hit60.png, hay_side.png, hay_side_full.png, hay_side_lie.png, hay_side_lie_zoom.png",
+  "sheets: heel_fp.png, heel_side.png, heel_side_full.png, push_fp.png, push_fp_pile15.png, push_fp_body_hit60.png, push_side.png, push_side_getup30.png",
+  "sheets: throw_fp.png, throw_fp30.png, throw_fp60.png, throw_fp_flash60.png, throw_side.png, throw_side30.png, throw_side60.png, throw_side_flight30.png, throw_side_lie_zoom.png, throw_fp_lie_zoom.png",
+  "sheets: ko_fp.png, ko_fp_blink60.png, ko_fp_gone_in.png, ko_side.png, ko_side_fall30.png, ko_side_blink30.png",
+  "sheets: gb_fp.png, gb_fp_return60.png, gb_side.png, gb_side60.png, shove_fp.png, shove_side.png, shove_side60.png, parry_fp.png, parry_side.png",
+  "sheets: behind_fp.png, behind_fp_flip20.png, behind_side.png, behind_side_land30.png, stomp_fp.png, stomp_fp_getup15.png, stomp_side.png, stomp_side_getup12.png, stomp_side_hit60.png, stomp_side_foot.png, stomp_side_line.png, bar_overlap_side.png"
+ ],
+ "sheets_for_game_boy": [
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-ragdoll/captures/review_ragdoll/throw_side60.png",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-ragdoll/captures/review_ragdoll/throw_fp60.png",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-ragdoll/captures/review_ragdoll/hook_fp60.png",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-ragdoll/captures/review_ragdoll/ab_hook_side.png",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-ragdoll/captures/review_ragdoll/bar_overlap_side.png",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-ragdoll/captures/review_ragdoll/ko_fp_blink60.png"
+ ],
+ "open_question_notes": "More contortion on the contact push: the A/B of the hook (hook.avi against hook_central.avi) is near frame-for-frame the same in both views (ab_hook_fp.png, 0.95-1.55 s; ab_hook_side.png, 3.52-4.12 s). Both show the same torso yank, the same arm flung straight out, the same head loll and the same recovery; only the burst's word differs. Neither shows tearing, a part spinning on its own, or jitter. So the contact push is harmless but adds no visible twist along the hit. If Game-boy wants the comic contortion he asked for, the push as tuned won't give it; that would take wider joint limits, softer partial pose springs, or a longer lever or more twist (the lead said the same at 12:25). Default (as it is) is fine to keep from a stability standpoint. The grab's lens pull-back and the bend: my lens only touches the throw. Because the victim is held 6 cm closer and bent, it pops upright 0.3-0.4 m from the lens on the throw (finding 1). Minimum on-screen size for the side-view flash: on ragdolls in side view the flash never shows; the burst covers it on every hit I zoomed (uppercut 10.61-10.68 s, guard break 65.72-65.85 s, KO hook 54.17 s). In first person it sits on the contact (hook 0.883-0.90 s, guard break 62.07 s). Up close it becomes a white disc about a quarter of the view wide (throw 39.60-39.617 s). The combat log over the knee contact: the ragdoll bot hides the combat log, so I didn't see it.",
+ "also_noticed": [
+  "Known item, blood splats after a vanish: the splats stay where the body lay (first person 50.4-51.2 s), and the dummy blinks back in standing on them (51.2-53.3 s); they fade after vfx_blood_splat_s (8 s). This reads naturally to me as blood on the floor, so I'd leave it.",
+  "Known item, neck and head spin in staggers: at 60 fps I saw no head whip or spin in any side-view stagger (hook 3.55-4.15 s, guard break 65.72-66.1 s). The fastest motion in all the acts is the hook's first four frames after hitstop in first person (1.02-1.07 s), a hard yank of the upper body rather than a spin.",
+  "Every lying body, the limp KO included, settles into the same spread-eagle: arms straight out at 90 degrees, legs straight (first person: uppercut 7.2-8.5 s, haymaker 15.5-16.6 s, heel 23.45-24.6 s, KO 48.0-49.3 s). This is WP4's known 'lying poses close to M1's', and the 'limp' KO can't be told apart from a posed down.",
+  "Stomp get-up under the player (as ARCHITECTURE documents it): in first person the dummy's shoulder and forearm fill the right fifth of the view, about 0.2-0.3 m from the lens, for about 0.6 s (91.93-92.6 s). In side view it rises through the player's legs (97.45-97.7 s), then walks past the player back to its post (98.6-99.0 s).",
+  "Uppercut from behind, first person: as the body pitches over, one shoe swings up to the lens at about a third of the view's height for about 0.1 s (81.6-81.65 s). The side view's superman dive and face-down landing read well (85.8-86.9 s).",
+  "Spinning heel, two dummies, first person: Dummy2 is never in view (22.7-25.7 s). That's the bot's framing; the side view shows both bodies fly (27.2-28.6 s).",
+  "Push-kick pile, first person: the two bodies read as one merged heap (31.8-32.6 s). It is still, with no twitching; the top body then gets up 0.8 m aside as decided.",
+  "First-person health bar on a body launched backwards: it draws across the chest while the head is thrown back behind it (uppercut 6.55-6.75 s, haymaker 15.0-15.25 s). Same root as finding 3.",
+  "The knee's localized flash in the parried-jab act is a white smear over the lower centre of the first-person view (75.73 s). That's the grab lens's area.",
+  "Launches snap into the launched or knockdown pose on the hit frame (arms up in a Y). On finishers the impact frame hides the snap (haymaker 14.85-14.87 s); on the KO hook and the throw it shows.",
+  "No ragdoll act puts a body near a wall or the curb, so 'limbs through walls' isn't covered by any capture.",
+  "The movies come out at 1600x900 even with --resolution 1280x720 (all.log: 'recording movie in 1600x900'). Crop offsets in any review notes are in 1600x900 pixels."
+ ],
+ "findings": [
+  {
+   "severity": "medium",
+   "title": "The throw pops the held victim upright in one frame, then it skates away on its feet and trips onto its face",
+   "detail": "The held victim stands bent over in the clinch. On the throw's hit frame it snaps to a fully upright 'launched' pose within a single 60 Hz frame: the head moves about 0.5 m, and the hitstop then holds it there, frozen upright, for about 6 frames. In first person this puts the victim's torso suddenly 0.3-0.4 m from the lens, filling the left 40% of the view with the head cut off by the top edge. The localized flash at the contact becomes a white disc about a quarter of the view wide for 2 frames. After the hitstop the body doesn't fly. It glides about 1.5 m away upright, legs straight and feet on or near the floor, arms out like a skater, then pitches forward and lands face down (side 43.75-44.03 s; first person 39.65-40.0 s). Thrown from the front, it 'trips' rather than arcs. The knockback is (0, 3, 9) but the lift barely shows. It reads as a pop and a shove, not SPEC §4's throw. The snap comes from _launch(): rig.play(&\"launched\", 0.03) plus the full ragdoll rising from that animated snap (ragdoll_full_rise_s), which is fine from a standing guard. From the held pose it's a teleport, and finishers hide it under the impact frame but the throw (heavy, no impact frame) doesn't.",
+   "evidence": "all.avi side view: 43.617 s bent clinch, 43.633 s upright with the THUD burst, 43.633-43.717 s frozen upright, 43.75-44.03 s upright glide then a face-down landing (throw_side60.png, throw_side30.png, throw_side_flight30.png, throw_side_lie_zoom.png). First person: 39.583 s bent, 39.600 s upright filling the left of the view, 39.600-39.617 s white flash disc at the lower left, 39.65-40.0 s glide and trip (throw_fp60.png, throw_fp_flash60.png, throw_fp30.png). Code: game/actors/combat_actor.gd _launch() plays &\"launched\" with a 0.03 s blend before _ragdoll_full(); tools/gen_moves.gd:200-201 gives the throw knockback Vector3(0.0, 3.0, 9.0).",
+   "repro": "godot --path . --write-movie <dir>/throw.avi --fixed-fps 60 --resolution 1280x720 res://tests/bot/ragdoll_bot.tscn -- --act=throw. Tile 60 fps around each act's throw hit (first person about 1.0 s after the act start, side view the same).",
+   "suggested_fix": "For a THROWN victim coming out of GRABBED, start the full ragdoll from the held pose. Skip the 'launched' snap, or blend it over the hitstop instead of 0.03 s, so the body rotates out of the bend during the flight. Give the throw a visible arc: more up, or a pitch-back spin from the holder's side, via the throw's knockback in gen_moves.gd. Optionally lower foot friction while flying, so the feet don't drag and trip the body. Then re-record both throw acts and check that the first-person lens never has the victim within about 0.4 m.",
+   "files": [
+    "game/actors/combat_actor.gd",
+    "game/actors/ragdoll.gd",
+    "tools/gen_moves.gd",
+    "game/autoload/tuning_data.gd"
+   ],
+   "spec_change": false,
+   "id": "ragdoll-01",
+   "lens": "ragdoll"
+  },
+  {
+   "severity": "medium",
+   "title": "The hook stagger at 0.9 flops like a rag in first person but still doesn't read from the side",
+   "detail": "First person: after the hitstop, the dummy's upper body yanks about 90 degrees in 4 frames (1.02-1.07 s). The head is at or past the left edge of the frame for about 0.2 s (1.07-1.25 s). The far arm flings out dead straight to the side, like a rope (1.12-1.25 s). The head then comes back lolled about 70-90 degrees onto the shoulder (1.30-1.45 s), and the guard swings up through the middle of the view in about 0.1 s (1.47-1.55 s). It's comic but floppy; it reads as a cloth doll, not a staggered fighter. Side view: the same hit only bows the head toward the camera, and the health bar covers that head for most of the stagger (3.62-3.97 s). The hook's push runs along the side camera's depth axis, so the higher influence buys almost nothing from the side. The staggers that push straight back read well in both views at 0.9: the guard break (first person 62.2-62.8 s, side 65.87-66.0 s), the shove (first person 69.5-69.9 s, side 72.6-73.2 s) and the parry (side 78.15-78.3 s). So 0.9 works for back-pushes and overshoots for the lateral hook.",
+   "evidence": "hook.avi / all.avi: hook_fp60.png (0.97-1.55 s at 60 fps), hook_fp_30.png; side: hook_side60.png (3.55-4.15 s), ab_hook_side.png. Contrast: gb_fp.png, gb_side.png, gb_side60.png, shove_fp.png, shove_side.png.",
+   "repro": "Record ragdoll_bot -- --act=hook stagger. Tile first person at 60 fps from 0.95 s and side view at 60 fps from 3.55 s, cropped to the dummy (x 760-1040, y 200-460 at 1600x900).",
+   "suggested_fix": "Keep the trunk at the approved 0.9. Give the neck and head (and the far arm) their own lower partial influence or a stiffer partial pose spring, so the head doesn't hang on the shoulder and the arm doesn't string out. Add a backward component to lateral stagger kicks (the hook's knockback direction in gen_moves.gd, or in _ragdoll_stagger), so the side view sees the body give way too. Lowering the global ragdoll_partial_influence instead would change the number README's approved departure states (0.9), so that route needs Game-boy.",
+   "files": [
+    "game/actors/ragdoll.gd",
+    "game/actors/combat_actor.gd",
+    "game/autoload/tuning_data.gd",
+    "tools/gen_moves.gd"
+   ],
+   "spec_change": false,
+   "id": "ragdoll-02",
+   "lens": "ragdoll"
+  },
+  {
+   "severity": "medium",
+   "title": "Side-view enemy health bar sits on the head or body whenever the head isn't on top (known item A)",
+   "detail": "The bar is anchored 6 px above get_head_top_position(), which follows the visible head since WP4, so it lands on the body whenever the head isn't the highest point. Side view: (a) on a staggered head bent toward the camera, for about 0.3 s it crosses the face (3.67-3.97 s); (b) on a launched body, across the head and raised arms (haymaker 19.25 s, uppercut 10.75-11.1 s); (c) during the hold, across both bodies' waists (78.3-79.3 s); (d) on lying bodies, through the head at floor level (KO 54.7-56.0 s, from behind 86.6-87.5 s). In first person the same anchor draws the bar across the chest of a body launched backwards (6.55-6.75 s). Game-boy will see it on nearly every ragdoll hit in side view.",
+   "evidence": "bar_overlap_side.png (stills: hook stagger hook.avi 3.80 s, haymaker flight all.avi 19.25 s, held victim 78.9 s); hook_side60.png frames 7-24; ko_side_blink30.png; behind_side_land30.png; upper_fp_30.png. Code: game/ui/enemy_health_bars.gd advance() uses actor.get_head_top_position() with lift_px 6.",
+   "repro": "Record ragdoll_bot -- --act=(side view). Look at the hook stagger, haymaker, parried jab hold, KO and from-behind acts, cropped around the dummy.",
+   "suggested_fix": "Anchor the bar to something that stays above the body: the higher of the head top and the actor's standing capsule top (origin + body_height), or the screen-space top of the body's bounds plus a margin. Or hold the bar at its standing height while the actor is staggered, flying, held or down. Presentation only reads state, so this stays inside the layer rules.",
+   "files": [
+    "game/ui/enemy_health_bars.gd",
+    "game/actors/combat_actor.gd"
+   ],
+   "spec_change": false,
+   "id": "ragdoll-03",
+   "lens": "ragdoll"
+  },
+  {
+   "severity": "low",
+   "title": "The KO'd body's empty health bar hangs, steady, through its first blink-offs",
+   "detail": "The bar lives show_seconds (2 s) after the last hit and is removed only on CombatEvents.vanished. The KO linger runs ko_linger_s (1.5 s) from the landing. So when the body starts blinking, its empty bar is still drawn, unflickering, where the head was while the body is hidden: first person, a dark dash in mid-air at 49.32-49.42 s; side view, a dark bar lying on the empty floor at 56.0 s. It's brief (about 0.2 s here), but it's the one thing that visibly doesn't blink with the body. It would last longer after a multi-hit KO or a longer show_seconds.",
+   "evidence": "ko_fp_blink60.png (from 48.90 s at 60 fps; frames 25-31 hidden body, bar dash visible); ko_side_blink30.png (frame at 56.0 s); KO hits all.log f2850 and f3251.",
+   "repro": "Record ragdoll_bot -- --act=KO. Tile 60 fps from 48.9 s (first person) and 30 fps from 55.6 s (side view), cropped around the lying body.",
+   "suggested_fix": "In EnemyHealthBars, drop or fade a bar once its actor is KO'd and its KO linger ends, or skip drawing while the actor's rig is hidden (reading state, as presentation may). Better still, hide a KO'd enemy's bar shortly after the KO, since an empty bar on a lying body adds nothing.",
+   "files": [
+    "game/ui/enemy_health_bars.gd"
+   ],
+   "spec_change": false,
+   "id": "ragdoll-04",
+   "lens": "ragdoll"
+  },
+  {
+   "severity": "low",
+   "title": "The stomping foot sinks into the lying body",
+   "detail": "In side view the stomp's foot and shin go down to floor height through the lying dummy's torso. The shoe disappears inside the body for the whole contact, about 0.1 s (96.43-96.6 s), instead of landing on top of it. First person doesn't show it, because the body is below the frame. Small, but it's the one place where a body visibly passes through another in the ragdoll acts.",
+   "evidence": "stomp_side_foot.png (96.40-96.60 s at 30 fps), stomp_side_hit60.png; stomp hit all.log f5789.",
+   "repro": "Record ragdoll_bot -- --act=stomp. Crop the side view around the lying body (x 640-940, y 330-570) at 30-60 fps from 96.4 s.",
+   "suggested_fix": "Aim the stomp's foot at the top of the lying body (its chest or hurtbox top) instead of the floor, or stop the foot when it meets the ragdoll's torso.",
+   "files": [
+    "game/actors/placeholder_poses.gd",
+    "game/player/player.gd"
+   ],
+   "spec_change": false,
+   "id": "ragdoll-05",
+   "lens": "ragdoll"
+  }
+ ]
+}
