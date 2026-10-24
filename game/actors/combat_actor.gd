@@ -122,6 +122,8 @@ var _flying_hit_ids: Dictionary[int, bool] = {}
 ## Lying face up (hit from the front) or face down.
 var _face_up: bool = true
 var _flash_frames: int = 0
+## Engine.get_physics_frames() when the flash started: that tick does not count down.
+var _flash_tick: int = -1
 ## Grab ease-in (see _GRAB_EASE_S): where the body stood relative to its pin spot when it
 ## was grabbed (in the holder's frame), and the sim time eased so far.
 var _pin_from: Vector3 = Vector3.ZERO
@@ -162,11 +164,15 @@ func _physics_process(delta: float) -> void:
 	elif scale > 0.0:
 		_integrate(delta * scale, scale)
 	rig.advance(delta * scale)
-	# The hit flash counts real ticks so it stays 2 frames even through hitstop.
-	if _flash_frames > 0:
+	# The hit flash counts real ticks so it stays 2 frames even through hitstop. The tick it
+	# started in does not count, so it shows for exactly that many rendered frames whether
+	# the attacker ran before or after this actor in that tick.
+	if _flash_frames > 0 and Engine.get_physics_frames() != _flash_tick:
 		_flash_frames -= 1
 		if _flash_frames == 0:
 			rig.set_flash(0.0)
+	if _flash_frames > 0:
+		rig.follow_flash()
 	if ticks > 0:
 		if _active_this_tick and current_move:
 			# A blocked hit can end the move inside process() (react_to_block()).
@@ -361,8 +367,7 @@ func receive_hit(hit: HitInfo) -> bool:
 	health = maxf(0.0, health - damage)
 	hit.killed = health <= 0.0
 	CombatEvents.health_changed.emit(self, health, max_health)
-	_flash_frames = Tuning.data.hit_flash_frames
-	rig.set_flash(1.0 if _flash_frames > 0 else 0.0)
+	_flash_at(hit.contact_point, Tuning.data.hit_flash_frames, 1.0)
 	if current_move:
 		_cancel_move()
 	_on_hit_received(hit)
@@ -772,7 +777,7 @@ func _try_block(hit: HitInfo) -> bool:
 		var speed := sqrt(2.0 * tuning.ground_friction * push_m)
 		hit.knockback = dir * speed
 		sim_velocity = Vector3(dir.x * speed, sim_velocity.y, dir.z * speed)
-		_flash(tuning.hit_flash_frames, 1.0, Color.WHITE)
+		_flash_at(hit.contact_point, tuning.hit_flash_frames, 1.0)
 		_enter_state(CombatTypes.ActorState.STAGGER, tuning.guard_break_frames)
 		rig.play(&"guard_break", 0.03)
 		_ragdoll_stagger(hit.contact_point, hit.knockback, Ragdoll.Part.ARMS)
@@ -783,7 +788,7 @@ func _try_block(hit: HitInfo) -> bool:
 	# Blockstun: pushed back along the hit in the guard, unable to act.
 	hit.reaction = CombatTypes.Reaction.NONE
 	var stun := tuning.blockstun_heavy_frames if heavy else tuning.blockstun_light_frames
-	_flash(tuning.hit_flash_frames, BLOCK_FLASH_AMOUNT, Color.WHITE)
+	_flash_at(hit.contact_point, tuning.hit_flash_frames, BLOCK_FLASH_AMOUNT)
 	if stun > 0:
 		var seconds := stun / float(Engine.physics_ticks_per_second)
 		# The push runs over the blockstun's frames 1..stun-1, slowing evenly to a stop
@@ -841,10 +846,24 @@ func _set_guard(value: float) -> void:
 	CombatEvents.guard_changed.emit(self, guard, max_guard())
 
 
-## Hit flash for `frames` real ticks at `amount` in `color` (white contact, cyan parry).
+## Whole-body flash for `frames` real ticks at `amount` in `color` (the cyan parry flash).
 func _flash(frames: int, amount: float, color: Color) -> void:
 	_flash_frames = frames
+	_flash_tick = Engine.get_physics_frames()
 	rig.set_flash(amount if frames > 0 else 0.0, color)
+
+
+## The white contact flash for `frames` real ticks around `point` (world space, the hit's
+## contact point): `amount` (1 for a clean hit or a guard break, BLOCK_FLASH_AMOUNT for a
+## blocked one) of Tuning's hit_flash_strength, over hit_flash_radius_m and hit_flash_core.
+func _flash_at(point: Vector3, frames: int, amount: float) -> void:
+	var tuning := Tuning.data
+	_flash_frames = frames
+	_flash_tick = Engine.get_physics_frames()
+	if frames > 0:
+		rig.flash_at(point, amount * tuning.hit_flash_strength, tuning.hit_flash_radius_m, tuning.hit_flash_core)
+	else:
+		rig.set_flash(0.0)
 
 
 # --- Reactions ----------------------------------------------------------------------

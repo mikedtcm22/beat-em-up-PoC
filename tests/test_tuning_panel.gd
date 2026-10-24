@@ -396,7 +396,7 @@ func test_subgroups_are_parsed_and_shown_as_headings() -> void:
 		assert_not_null(label, "a heading above %s" % first_rows[i])
 		if label:
 			assert_string_contains(label.text, expected[i])
-	assert_eq(panel.focus_chain("Hit feel").size(), 12, "the D-pad still walks every Hit feel row, past the headings")
+	assert_eq(panel.focus_chain("Hit feel").size(), 16, "the D-pad still walks every Hit feel row, past the headings")
 
 
 # --- Presets ----------------------------------------------------------------------------
