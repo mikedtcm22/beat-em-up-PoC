@@ -34,7 +34,8 @@ Rules:
 - Each `CombatActor._physics_process` asks `TimeController.scale_for(self)`. The answer is 0 during that actor's hitstop, 0.3 during slow-mo, and is also multiplied by the debug scale. The actor adds the scale to an accumulator and runs one `sim_tick()` per whole unit. Frame counters therefore advance in whole sim frames, and the actor's frames stop while it is frozen.
 - Motion (`move_and_slide`) and animation (`rig.advance(dt)`) use the scaled delta every physics tick, so slow-mo looks smooth.
 - `ComboParser` buffers age in sim frames, so a press made during hitstop is still usable afterward.
-- `TimeController.hitstop(actors, seconds)` freezes from the next physics tick, for `round(seconds × 60)` ticks.
+- `TimeController.hitstop(actors, seconds)` freezes from the next physics tick, for `round(seconds × 60 / debug_scale)` ticks.
+- The debug scale (F4's 0.25×) slows everything the simulation times, hitstop and slow-mo included: hitstop lasts `1 / debug_scale` times as many ticks, and the slow-mo delay and length count `delta × debug_scale`. A slowed-down hit therefore keeps its feel, only slower. Presentation timers (camera punch and shake, audio, rumble) still run in real time.
 
 ## Coordinates and units
 
@@ -271,12 +272,17 @@ Blocking lives in `CombatActor`, so any actor can block (enemies may in Mileston
 **`Tuning`** (autoload, `game/autoload/tuning.gd`):
 - `data: TuningData`, `set_value(property, value)`, `apply(new_data)`, `defaults()` (the shipped values; don't edit).
 - `signal changed(property)` after every edit: the TuningData property's name; `&""` after a preset load, a reset or `apply()` (anything may have changed); `"moves/<move id>/<field>"` after a move edit. Code that keeps a tunable re-reads it on `changed`: a training dummy updates `max_health` from `dummy_health` (keeping its share of health) and drops its wind-up-scaled jab after a `dummy_jab` edit. The cameras read theirs (FOV and the rest) every frame.
-- `tuning_properties()`: TuningData's exported properties in declaration order, each property-list entry with its `group`.
+- `tuning_properties()`: TuningData's exported properties in declaration order, each property-list entry with its `group` and `subgroup`.
 - Moves: `move_ids()`; `get_move(id)` returns the loaded, shared MoveData (every `.tres` in `game/combat/moves/`, kept for the session, so edits survive a restart with R). `move_properties()` lists the editable fields, the groups in `MOVE_GROUPS`: frame data, damage and reaction (damage, hitstun, knockback, reaction, tier...), blocking, movement and camera. Hitboxes and combo branches are structure and stay out. `set_move_value(id, field, value)` edits one; `shipped_move_value()` (from a fresh load of the `.tres`), `move_overrides()` (the fields that differ), `reset_move(id)` and `reset_moves()`. An edit applies on the move's next use: move sets and branches reference the same resources, and the rig keys its move animations by frame data, so a startup edit gets a re-timed animation.
-- Presets are JSON: `{"preset": name, "format": 1, "tuning": {property: value}, "moves": {id: {field: value}}}`, in TuningData declaration order, with vectors and colors as arrays. A preset holds every TuningData value and only the move fields that differ from the shipped `.tres`.
-  - `save_preset(name)` writes `user://tuning/<name>.json`. `export_preset(name)` writes `res://tuning/<name>.json` (only when running from the project folder), and refuses `default` unless every value is the shipped default.
-  - `load_preset(name)` reads the user's copy first, then the shipped one. `load_preset_file(path)`, `apply_preset(dict)` and `preset_dict(name)` are the parts underneath.
-  - Loading starts from the shipped defaults (TuningData and moves), so a value a preset lacks keeps its default. Unknown names and unreadable values are skipped and listed in `last_warnings`.
+- Presets are JSON: `{"preset": name, "format": 1, "tuning": {property: value}, "moves": {id: {field: value}}}`, in TuningData declaration order, with vectors and colors as arrays. A preset holds every TuningData value outside the "Debug" group and only the move fields that differ from the shipped `.tres`.
+  - The F4 cheats stay out: `PRESET_SKIPPED_GROUPS` ("Debug": `god_mode`, `one_hit_ko`) is never saved, loaded or reset, so a preset can't turn a cheat on and Reset to default doesn't turn one off. `preset_properties()` lists what a preset holds.
+  - Names are lower case and file-safe (`sanitize_preset_name()`), so one name is one file on every OS, including this case-insensitive macOS disk.
+  - `save_preset(name)` writes `user_dir/<name>.json` (`user://tuning`). It refuses (`ERR_ALREADY_IN_USE`) the reserved names `default` and `_backup` (`is_reserved_preset_name()`).
+  - `export_preset(name)` writes `export_dir/<name>.json` (`res://tuning`, only when running from the project folder). It refuses `default`, in any case, unless every value is the shipped default.
+  - `load_preset(name)` reads the user's copy first, then the shipped one; `default` is always the shipped one. `load_preset_file(path)`, `apply_preset(dict)` and `preset_dict(name)` are the parts underneath.
+  - Loading starts from the shipped defaults (TuningData and moves), so a value a preset lacks keeps its default. Unknown names, unreadable values and enum ids the hint lacks are skipped; a number past its `@export_range` end is clamped to it (unless `or_greater` / `or_less`). Each is listed in `last_warnings`.
+  - `backup_unsaved()` writes the current values to the user preset `_backup` when they hold edits no saved, exported or loaded preset holds (`has_unsaved()`). The panel calls it before Load and Reset to default, so loading `_backup` undoes either.
+  - `user_dir` and `export_dir` default to `USER_DIR` and `EXPORT_DIR`. The tests point them at a scratch folder of their own run, so they never touch the `user://tuning` that every worktree and Game-boy's own presets share.
   - `reset_to_default()`, `is_default()`, `list_presets()` and `sanitize_preset_name()` complete the API.
   - `res://tuning/default.json` is the shipped defaults. `godot --headless -s tools/gen_default_preset.gd` regenerates it after a TuningData default changes or a tunable is added, and `tests/test_tuning_panel.gd` fails until it matches.
 
@@ -285,27 +291,37 @@ Blocking lives in `CombatActor`, so any actor can block (enemies may in Mileston
 - **Input:** an embedded window's input never reaches the game's `_input` / `_unhandled_input` handlers. A click on the panel therefore can't recapture the mouse (`GameInput._input`) or punch, and keys typed into a field don't reach the debug keys. The window covers the screen, so clicks around the menus land on it too.
 - **Player:** while open, the live player's `PlayerInput` is switched to scripted, so it gets idle frames with no look. It is switched back `UNFREEZE_TICKS` (2) physics ticks after closing, so the key or button that closed the overlay (gamepad B is also the dodge) never reaches the player. A player that is already scripted (the combo bot, tests) is left alone.
 - **Mouse:** released while open, and captured again on closing unless the game is paused.
+- **Bindings:** while open, every `GameInput.BINDINGS` action except `tuning_panel` and `cheats` has its events lifted out of the InputMap (and is released); closing puts them back. Code that polls the Input singleton, such as the free-fly camera's arrow and Page keys, therefore stays still while the panel uses those keys.
 - **Keys:** F1 / View toggles the panel and F4 the cheat menu, from the game or the window. Esc (`ui_cancel`, also gamepad B) closes both and does not pause. The other debug keys (F2, F3, F5, H) work once the overlay is closed.
+- **Gamepad UI:** Godot 4.7's default `ui_accept` and `ui_cancel` have no joypad buttons. The overlay adds A and B to them (`add_gamepad_ui_events()`), so A presses buttons, flips toggles and opens drop-downs, and B closes a drop-down, then the menus.
 - **Help:** opening the panel hides the HUD's startup help, which sits where the panel docks. H shows it again.
 
 **`TuningPanel`** and **`TuningField`** (`game/ui/tuning_panel.gd`, `tuning_field.gd`): the panel is docked left, clear of the view center and the combat log.
-- **Built from the data:** one category per TuningData `@export_group`, in declaration order, with a row per exported property. New tunables, the M2 VFX, Audio and ragdoll groups included, appear with no UI code.
+- **Built from the data:** one category per TuningData `@export_group`, in declaration order, with a row per exported property and a heading per `@export_subgroup` (`Tuning.exported_properties()` records each property's `group` and `subgroup`). New tunables, the M2 VFX, Audio and ragdoll groups included, appear with no UI code; a long group is organized by wrapping its sections in `@export_subgroup`, which renames nothing (presets key on property names).
 - **Editors by type:**
   - a ranged number gets a slider plus a number field (the field allows the hint's `or_greater` / `or_less`);
   - a bool gets a toggle that says on or off, and an enum a drop-down;
   - a Vector2 or Vector3 gets one number field per axis, a Color a color button, and a String a text field.
 - **Changed values:** a value away from its default turns yellow and lights its "reset". Categories and moves holding one are marked " *".
-- **Moves page:** pick a move, edit its `move_properties()`, or reset the move.
-- **Presets:** a name field with Save and Export, a list of presets with Load, and Reset to default, with a status line for the result.
+- **Moves page:** pick a move, edit its `move_properties()`, or reset the move. The picker row sits above the scrolling rows, so it stays in view.
+- **Presets:** a name field with Save and Export, a list of presets with Load, and Reset to default, with a status line for the result. Load and Reset first keep unsaved values as `_backup` and say so.
+- **Markers:** an edit updates only its own row and category mark; the move markers are rebuilt only on a move edit or a full refresh.
 - **Tooltips:** the `##` doc comments, plus the default and the range. They are read from the script source, so an exported build shows only the default and the range.
-- **Gamepad:** the D-pad walks the category buttons, sliders, toggles and drop-downs, and left/right steps a slider. Number fields take the mouse and keyboard only, because up and down would step them instead of moving on.
+- **Gamepad:** focus links are set explicitly, never left to where rows happen to line up.
+  - The category buttons chain up and down; focusing one shows its page. Right enters the page's first row.
+  - A page's rows (sliders, toggles, drop-downs) chain up and down; the first goes up to Load, and the last holds. Left goes back to the category button, except on a slider, where left and right step the value.
+  - LB / RB switch to the previous / next category from anywhere in the panel, keeping the focus in the page or in the list.
+  - The focused row's name gets a bar behind it.
+  - Number fields and vectors take the mouse and keyboard only, because up and down would step them instead of moving on.
 
 **`CheatMenu`** (`game/ui/cheat_menu.gd`, docked top right): a debug tool. Like `TimeController`, it is an exception to "presentation never writes game state". Every action is a public method:
-- `set_god_mode()` and `set_one_hit_ko()` set Tuning's "Debug" group, so they are part of presets.
-- `set_time_scale()` sets `TimeController.debug_scale` to 0.25× or 1×.
-- `spawn_dummy()` places a training dummy at the crosshair (`spawn_point()`):
-  - The ray runs from the active camera's view center, or from the player's eye and look when there is no camera. It meets the floor or a wall within `spawn_max_distance_m` (6 m), kept 0.5 m off a wall. A ray that meets nothing ends `spawn_open_distance_m` (3 m) out.
-  - The spot drops to the floor and stays at least 1 m from the player. It steps back toward the player while another actor stands within 0.7 m.
+- `set_god_mode()` and `set_one_hit_ko()` set Tuning's "Debug" group, which presets leave out (session state).
+- `set_time_scale()` sets `TimeController.debug_scale` to 0.25× or 1×, which also stretches hitstop and slow-mo (see "Time model").
+- `spawn_dummy()` places a training dummy at the crosshair (`spawn_point()`), or says "No room" when there is no clear spot:
+  - The ray runs from the first-person camera's view center. In side view and free fly (no crosshair) or with no camera, it runs from the player's eye and look. It reaches `spawn_max_distance_m` (6 m) and meets the world and actor bodies.
+  - On a body, the spot is `spawn_beside_m` (1 m) to its side, whichever side is clear, so the new dummy stands in view rather than behind it. On a wall, the spot is `spawn_wall_clearance_m` (0.5 m) off it along its normal. On the floor, it's where the ray lands. A ray that meets nothing ends `spawn_open_distance_m` (3 m) out.
+  - The spot drops to the floor and stays at least `spawn_min_distance_m` (1 m) from the player.
+  - A spot is clear when a capsule the dummy's size overlaps no world geometry, no actor stands within `spawn_actor_clearance_m` (0.7 m), its floor is within `spawn_max_rise_m` of the player's, and the player can see it. Otherwise the nearest clear spot within `spawn_search_radius_m` (2 m) is used, trying beside it first, then toward the player, then behind.
   - The dummy faces the player.
 - `reset_dummies()` puts every dummy back on the post recorded when the menu first saw it, standing, at full `dummy_health`. `remove_spawned_dummies()` removes the spawned ones.
 - "Skip to arena N" shows disabled until Milestone 5.

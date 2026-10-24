@@ -53,6 +53,7 @@ const MOVE_PREFIX := "moves/"
 
 static var _tuning_props: Array[Dictionary] = []
 static var _preset_props: Array[Dictionary] = []
+static var _preset_names: Dictionary[StringName, bool] = {}
 static var _move_props: Array[Dictionary] = []
 
 var data: TuningData = TuningData.new()
@@ -76,7 +77,7 @@ var _shipped: Dictionary[StringName, Dictionary] = {}
 
 func set_value(property: StringName, value: Variant) -> void:
 	data.set(property, value)
-	if not _property_info(preset_properties(), property).is_empty():
+	if is_preset_property(property):
 		_unsaved = true
 	changed.emit(property)
 
@@ -113,7 +114,14 @@ static func preset_properties() -> Array[Dictionary]:
 		for info: Dictionary in tuning_properties():
 			if VALUE_TYPES.has(int(info.type)) and not PRESET_SKIPPED_GROUPS.has(str(info.group)):
 				_preset_props.append(info)
+				_preset_names[StringName(info.name)] = true
 	return _preset_props
+
+
+## True if TuningData property `property` is one a preset holds (preset_properties()).
+static func is_preset_property(property: StringName) -> bool:
+	preset_properties()
+	return _preset_names.has(property)
 
 
 ## The editable MoveData fields (MOVE_GROUPS, VALUE_TYPES), with "group" like
@@ -304,11 +312,12 @@ func apply_preset(preset: Dictionary) -> Error:
 		return ERR_INVALID_DATA
 	var values := defaults().duplicate() as TuningData
 	for key: Variant in tuning:
-		var info := _property_info(preset_properties(), StringName(str(key)))
+		var info := _property_info(tuning_properties(), StringName(str(key)))
 		if info.is_empty():
-			if _property_info(tuning_properties(), StringName(str(key))).is_empty():
-				last_warnings.append("unknown tunable %s" % key)
+			last_warnings.append("unknown tunable %s" % key)
 			continue
+		if not is_preset_property(StringName(info.name)):
+			continue  # a cheat (PRESET_SKIPPED_GROUPS), from a preset saved before they were left out
 		var value: Variant = _checked(info, decode_value(tuning[key], int(info.type)), str(key))
 		if value == null:
 			last_warnings.append("unreadable value for %s" % key)
