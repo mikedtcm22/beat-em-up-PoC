@@ -102,7 +102,7 @@ var damage_look: int = 0
 
 ## Library name for the move animations built by play_move().
 const _MOVE_LIBRARY := &"moves"
-## Shades, belt and soles.
+## Shades, belt, soles and hair.
 const _DARK_COLOR := Color(0.07, 0.07, 0.08)
 ## Trousers without a pants_color of their own are body_color darkened by this much.
 const _PANTS_DARKEN := 0.45
@@ -441,7 +441,8 @@ func flash_at(point: Vector3, strength: float, radius: float, core: float,
 
 
 ## Keep a running contact flash on the spot it struck after the body moved (its owner calls
-## this each tick while the flash runs, after advance()).
+## this each tick while the flash runs, after advance(); show_visual_pose() calls it as a
+## ragdoll moves the body).
 func follow_flash() -> void:
 	if _flash_on and _flash_anchor != null and _flash_anchor.is_inside_tree():
 		_flash_overlay.set_shader_parameter(&"flash_point", _flash_anchor.to_global(_flash_local))
