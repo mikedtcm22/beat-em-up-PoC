@@ -115,7 +115,9 @@ func _on_body_entered(body: Node) -> void:
 			hit.tier = _throw_move.tier
 			hit.reaction = _throw_move.reaction
 			hit.region = CombatTypes.Region.TORSO
-			hit.contact_point = global_position
+			# The pipe meets the body's capsule, short of the body itself: the contact (the
+			# flash, the comic effects, the sound) goes on the nearest hurtbox.
+			hit.contact_point = victim.rig.hurt_point(global_position)
 			hit.direction = dir
 			hit.knockback = (
 				dir * _throw_move.knockback.z

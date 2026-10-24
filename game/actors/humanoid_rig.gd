@@ -395,8 +395,14 @@ func set_flash(amount: float, color: Color = Color.WHITE) -> void:
 ## to `core` (0..1) of `radius` meters, fading smoothly to nothing at `radius`. A radius
 ## that covers the body (3 m) whites it all, the flash before the departure. Drawn by this
 ## rig's overlay (game/fx/hit_flash.gdshader) as every material's next_pass, set only while
-## the flash runs; the base materials (DamageLook's marks) stay as they are. The point rides
-## the nearest bone (follow_flash()). Ends a whole-body flash; set_flash(0.0) clears it.
+## the flash runs; the base materials (DamageLook's marks) stay as they are.
+## The point goes on the struck part as it is drawn: `point` is clamped onto the nearest
+## hurtbox (hurt_point(); a thrown weapon's or a flying body's contact lies off the body),
+## taken into the animation frame of the bone along that hurtbox nearest it, and placed on
+## that bone's drawn follower, which it then rides (follow_flash()). A body that is not
+## ragdolling is drawn in its animation pose, so a contact inside a hurtbox stays where it
+## is; a ragdolling or staggering body (drawn away from its hurtboxes) flashes on the
+## struck part where it is shown. Ends a whole-body flash; set_flash(0.0) clears it.
 func flash_at(point: Vector3, strength: float, radius: float, core: float,
 		color: Color = Color.WHITE) -> void:
 	set_flash(0.0)
@@ -413,13 +419,13 @@ func flash_at(point: Vector3, strength: float, radius: float, core: float,
 	_flash_anchor = self
 	_flash_local = point
 	if is_inside_tree():
-		var nearest := INF
-		for node: Node3D in _bone_nodes.values():
-			var dist := node.global_position.distance_squared_to(point)
-			if dist < nearest:
-				nearest = dist
-				_flash_anchor = node
-		_flash_local = _flash_anchor.to_local(point)
+		var local := global_transform.affine_inverse() * point
+		var spec := _nearest_hurt(local)
+		local = _onto_hurt(spec, local)
+		var bone := _carrier_bone(spec, local)
+		_flash_anchor = _bone_nodes[bone]
+		_flash_local = _bone_globals[_bone_index[bone]].affine_inverse() * local
+		point = _flash_anchor.to_global(_flash_local)
 	_flash_overlay.set_shader_parameter(&"flash_point", point)
 	_flash_overlay.set_shader_parameter(&"flash_radius", radius)
 	_flash_overlay.set_shader_parameter(&"flash_core", clampf(core, 0.0, 1.0))
@@ -439,6 +445,18 @@ func follow_flash() -> void:
 ## flash_core, flash_strength, flash_color), else null.
 func flash_overlay() -> ShaderMaterial:
 	return _flash_overlay if _flash_on else null
+
+
+## The point on the body nearest `point` (world space) as the hurtboxes see it, in the
+## animation pose like every hit: `point` itself inside a hurtbox, otherwise the nearest
+## point on the surface of the nearest hurtbox. For contacts that are not on the body, such
+## as a thrown weapon's (Weapon) or a flying body's.
+func hurt_point(point: Vector3) -> Vector3:
+	if not _built:
+		return point
+	var to_world := global_transform if is_inside_tree() else transform
+	var local := to_world.affine_inverse() * point
+	return to_world * _onto_hurt(_nearest_hurt(local), local)
 
 
 ## The contact flash's strength share at `dist` meters from its point, as the overlay shader
@@ -621,10 +639,12 @@ func animation_pose(bone: int) -> Transform3D:
 
 
 ## Ragdoll only: move the bone followers (meshes, attachments) to `globals`, the
-## post-modifier skeleton-space pose of every bone.
+## post-modifier skeleton-space pose of every bone. A running contact flash moves with them
+## (it would otherwise trail the drawn body by the tick until the owner's follow_flash()).
 func show_visual_pose(globals: Array[Transform3D]) -> void:
 	for bone: StringName in _bone_nodes:
 		_bone_nodes[bone].transform = globals[_bone_index[bone]]
+	follow_flash()
 
 
 # --- Building --------------------------------------------------------------------------
@@ -968,6 +988,63 @@ func _hurtbox_transform(spec: PlaceholderBody.HurtSpec) -> Transform3D:
 		side = pose_a.basis.z - axis * pose_a.basis.z.dot(axis)
 	side = side.normalized()
 	return Transform3D(Basis(side, axis, side.cross(axis)), (a + b) * 0.5)
+
+
+## The hurtbox layout the contact flash and hurt_point() map onto: the hurtboxes', or the
+## layout's when this rig builds none.
+func _hurt_layout() -> Array[PlaceholderBody.HurtSpec]:
+	return _hurt_specs if not _hurt_specs.is_empty() else PlaceholderBody.hurt_specs()
+
+
+## The ends of `spec`'s axis in rig space in the animation pose (both the center for a
+## sphere).
+func _hurt_ends(spec: PlaceholderBody.HurtSpec) -> PackedVector3Array:
+	var a := _bone_globals[_bone_index[spec.bone_a]] * (spec.offset_a * _scale)
+	var b := _bone_globals[_bone_index[spec.bone_b]] * (spec.offset_b * _scale) if spec.is_capsule() else a
+	return PackedVector3Array([a, b])
+
+
+## The hurtbox nearest `p` (rig space): the least distance to its surface (negative inside).
+func _nearest_hurt(p: Vector3) -> PlaceholderBody.HurtSpec:
+	var best: PlaceholderBody.HurtSpec = null
+	var best_gap := INF
+	for spec: PlaceholderBody.HurtSpec in _hurt_layout():
+		var ends := _hurt_ends(spec)
+		var gap := p.distance_to(Geometry3D.get_closest_point_to_segment(p, ends[0], ends[1])) \
+				- spec.radius * _scale
+		if gap < best_gap:
+			best_gap = gap
+			best = spec
+	return best
+
+
+## `p` (rig space) moved onto `spec`'s hurtbox: unchanged inside it, else onto its surface.
+func _onto_hurt(spec: PlaceholderBody.HurtSpec, p: Vector3) -> Vector3:
+	var ends := _hurt_ends(spec)
+	var axis := Geometry3D.get_closest_point_to_segment(p, ends[0], ends[1])
+	return axis + (p - axis).limit_length(spec.radius * _scale)
+
+
+## The bone along `spec`'s hurtbox (from bone_a down to bone_b) whose stretch of the axis
+## in the animation pose lies nearest `p` (rig space): the bone whose drawn follower carries
+## that part of the body (a chest hit rides the upper chest, a shin hit the lower leg).
+func _carrier_bone(spec: PlaceholderBody.HurtSpec, p: Vector3) -> StringName:
+	if not spec.is_capsule():
+		return spec.bone_a
+	var chain: Array[StringName] = [spec.bone_b]
+	while chain[0] != spec.bone_a and PlaceholderBody.BONE_PARENT.has(chain[0]):
+		chain.push_front(PlaceholderBody.BONE_PARENT[chain[0]])
+	var ends := _hurt_ends(spec)
+	var bone := spec.bone_a
+	var best := INF
+	for i: int in chain.size():
+		var from := ends[0] if i == 0 else _bone_globals[_bone_index[chain[i]]].origin
+		var to := ends[1] if i == chain.size() - 1 else _bone_globals[_bone_index[chain[i + 1]]].origin
+		var dist := p.distance_squared_to(Geometry3D.get_closest_point_to_segment(p, from, to))
+		if dist < best:
+			best = dist
+			bone = chain[i]
+	return bone
 
 
 func _apply_colors() -> void:
