@@ -4,6 +4,20 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-23 20:38 CDT: account D took over; WP4 workflow running
+A fresh account's working session took over at 15% of its 5-hour window (resets 22:30 CDT) and 31% weekly (resets Tue 2026-10-27 17:00 CDT). Its watcher runs: "Beat-em-up: usage watcher", name `usage-watcher-e` (Haiku, low effort, self-paced).
+- **Running:** workflow `m2-wp4-ragdoll` (run `wf_6868f11f-7bd`, started from this session), all in `.worktrees/m2-ragdoll`:
+  1. A usage gate, then **one builder**. It implements M2-WP4-brief.md, writes `tests/test_ragdoll.gd` and `tests/bot/ragdoll_bot.*`, records into `captures/ragdoll/` and ends with a commit "M2 WP4: partial and full ragdoll".
+  2. A usage gate, then **two reviewers at once**, both review-only: mechanics (scratch in `captures/review_mech/`) and feel from re-recorded captures (`captures/review_feel/`).
+  3. A usage gate, then **one verify-and-fix agent**. Its first step writes the reviewers' findings to `docs/reviews/M2-WP4-review-findings.json` and commits them. It then verifies each finding, fixes those that hold, records `captures/review_after/` and ends with a commit "M2 WP4: review fixes (...)".
+  - Every gate stops new launches at 65% of either window. The verify-and-fix gate will probably land before the 22:30 reset. If it stops there, resume after the reset in this session: `Workflow({scriptPath, resumeFromRunId: "wf_6868f11f-7bd", args: {fix_gate_attempt: 2}})`. The script is under this session's `workflows/scripts/`. The finished stages come back from cache.
+- **If cut off (another account):**
+  - check `m2/ragdoll` for its "M2 WP4" commits;
+  - with no "partial and full ragdoll" commit, rerun the builder from its last `wip:` commit, using the brief;
+  - with no findings file, run the two reviews;
+  - with no "review fixes" commit, run the verify-and-fix pass on `docs/reviews/M2-WP4-review-findings.json`.
+- **Then:** merge `m2/ragdoll` into `m2/hit-feel`, run `tools/run_tests.sh` (all pass, no SCRIPT ERROR), push, then phase 3 (see the takeover prompt's "Next steps").
+
 ### 2026-10-23 20:33 CDT: Game-boy switches to a fresh account now
 This account is at 86% of its 5-hour window, which resets at 21:39 CDT; weekly is at 15%. Game-boy chose a fresh account over waiting for that reset. This session stopped its 21:41 WP4 launch timer, so nothing launches here. It told its watcher (`usage-watcher-d`) to end its loop and renamed itself "Beat-em-up: 20:20 takeover session (handed off)", which frees the working-session title.
 - **State:** everything is committed and pushed, and the worktrees are clean. No workflows or agents are running.
