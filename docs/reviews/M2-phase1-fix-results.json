@@ -1,0 +1,469 @@
+{
+ "note": "Results of workflow m2-phase1-verify-fix (run wf_3d9df549-bac), account C, 2026-10-23. WP1 was cut off at the usage limit (see HANDOFF.md).",
+ "usage_gates": [
+  {
+   "usage-gate:WP2-vfx": {
+    "five_hour": 3,
+    "weekly": 0
+   }
+  },
+  {
+   "usage-gate:WP3-audio": {
+    "five_hour": 3,
+    "weekly": 0
+   }
+  },
+  {
+   "usage-gate:WP1-tuning": {
+    "five_hour": 55,
+    "weekly": 10
+   }
+  }
+ ],
+ "results": {
+  "WP3-audio": {
+   "verdicts": [
+    {
+     "id": "wp3:feel[0]",
+     "title": "The whoosh peaks after the impact on every hit, and after the swing on whiffs",
+     "verdict": "confirmed",
+     "reason": "Analysed the WAVs (5 ms RMS): whoosh_01-04 peaked 110-239 ms after their start. A spectrogram of an in-game light hit shows the 1.4-6 kHz band swelling 0.2-0.33 s after the thud. Whiff capture: the whoosh first became audible 30-105 ms after attack_whiffed and peaked 130-260 ms after it (8-15 frames after the fist's extension).",
+     "fixed": true,
+     "fix_summary": "tools/gen_sfx.gd _whoosh now front-loads the sound: a 10-16 ms rise, a fall of 40-85 ms that steps by variant, and a band sweeping downward like a pass-by. WAVs regenerated and reimported. The whooshes now peak 15-35 ms in. A re-captured whiff is audible within 5 ms of the event and peaks 20-40 ms after it. New test test_whooshes_are_loudest_right_away reads the PCM; it failed on the old files."
+    },
+    {
+     "id": "wp3:feel[1]",
+     "title": "The tiers barely differ in loudness (heavy is about as loud as light)",
+     "verdict": "confirmed",
+     "reason": "An isolated-hit probe through the real AudioDirector in Movie Maker, measured with ebur128 (momentary max): light -18.1, heavy -17.1, finisher -14.7 LUFS. In the real haymaker act a finisher was only +1.3 LU over a jab. Offline layer sums agree: the crack adds just 0.3-0.5 LU.",
+     "fixed": true,
+     "fix_summary": "New Tiers subgroup: hit_light_db 0, hit_heavy_db +3, hit_finisher_db +4, applied to every one-shot of a hit, blocked hits included. Layers rebalanced (thud -8, crunch -10, body fall -12, sub thump -10, whoosh -10). After: light -22.5, heavy -19.3, finisher -15.6 LUFS, ordered event by event. New test test_the_tiers_rank_in_loudness sums the real samples and failed before (heavy - light = 0.3 dB)."
+    },
+    {
+     "id": "wp3:feel[2]",
+     "title": "Blocks are 7 LU quieter than a light hit; a guard-break crash is quieter than a light hit",
+     "verdict": "confirmed",
+     "reason": "Probe: block -24.9, parry -19.4, guard break -20.4 LUFS, against light -18.1.",
+     "fixed": true,
+     "fix_summary": "block_clack_db -2.5, parry_ting_db -6, guard_break_db -1. After: block -24.0 (1.5 below light), parry -21.3, guard break -18.1 (between heavy and finisher)."
+    },
+    {
+     "id": "wp3:feel[3]",
+     "title": "The finisher stack sums above full scale and leans on the limiter; the SFX volume can't relieve it",
+     "verdict": "partial",
+     "reason": "The offline finisher sum peaks at +2.4 dBFS. In-game finishers and the 3-body spin kick sat on the -0.3 dBFS limiter ceiling. Nothing clipped, because the hard limiter held. The mechanics part is wp3:mech[4].",
+     "fixed": true,
+     "fix_summary": "sfx_volume_db is now the limiter's pre-gain, at -3 dB by default. In the re-captured PPPP, flurry, KKK, spin kick, guard-break and parry acts, peaks are -0.8 to -1.4 dBFS, with 0 samples at the ceiling and 0 clipped. Isolated finishers touch the ceiling now and then."
+    },
+    {
+     "id": "wp3:feel[4]",
+     "title": "Grunts start on a step (click)",
+     "verdict": "confirmed",
+     "reason": "wavstats: the first sample of grunt_01/02/03/05 and player_grunt_01/03 was 0.007-0.028, because the breath noise starts at full level at t=0. Every other one-shot started at 0.",
+     "fixed": true,
+     "fix_summary": "_voice applies a 4 ms fade-in (VOICE_FADE_IN_S). New test test_one_shots_start_and_end_without_a_click requires every one-shot's first and last sample to be under 0.004; it failed on the old grunts."
+    },
+    {
+     "id": "wp3:feel[5]",
+     "title": "Variants within crack, block clack and guard break are nearly identical",
+     "verdict": "partial",
+     "reason": "Thud variants (centroid 313-447 Hz) and whoosh variants differ. The crack modes landed at 1480-1650 Hz despite a 1500-2200 Hz random range. Block-clack centroids were within 1.3% of each other, and the two guard breaks had identical envelopes (envelope correlation 1.00). The spectrogram of the pools confirms it.",
+     "fixed": true,
+     "fix_summary": "Variants now step by index plus jitter. Crack modes run 1.4/1.9/2.4 kHz with ring 1.3x to 0.75x; clack wood 600/775/950 Hz; the guard breaks differ in clack, crash length and boom. pools_after_spectrum.png shows them apart."
+    },
+    {
+     "id": "wp3:feel[6]",
+     "title": "Does the sub thump really carry energy under 80 Hz?",
+     "verdict": "refuted",
+     "reason": "Spectral centroid 63-74 Hz and rolloff 72 Hz. An 80 Hz low-pass keeps all but 2 dB of the RMS. Above 2 kHz is at -82 dB. It does sit under 80 Hz; small speakers will mostly hear its saturation harmonics.",
+     "fixed": false
+    },
+    {
+     "id": "wp3:feel[7]",
+     "title": "Spectral balance: crack bright, thud and body fall low",
+     "verdict": "refuted",
+     "reason": "Crack centroid is about 3.4 kHz, with the band above 2 kHz at -4 to -6 dB of total RMS. Thud centroid is 313-447 Hz, with 250 Hz low-passed content at -0.3 to -0.5 dB. Body fall and crunch are low-weighted. Subjectively, the crack's sine modes make it a woody 'tok' more than a bone snap (noted for Game-boy).",
+     "fixed": false
+    },
+    {
+     "id": "wp3:feel[8]",
+     "title": "DC offset or end clicks in the WAV set",
+     "verdict": "refuted",
+     "reason": "DC is under 0.006 in every file. Every one-shot ends faded to 0 (8 ms fade). Every file peaks at -1.0 dBFS with no clipping. The music loop seam step is 0.0013, against a median sample step of 0.0026.",
+     "fixed": false
+    },
+    {
+     "id": "wp3:feel[9]",
+     "title": "Sync, whiff-only whoosh, distinct blocks in captures",
+     "verdict": "refuted",
+     "reason": "Audio onsets land 0.2-1.4 frames after the logged contact frame in the PPPP, flurry, KKK, spin kick, guard break, perfect block and flank acts. Two flurry blows were masked by the previous blow's tail, which is a detection limit, not lateness. Whiff logs show a whoosh only. Blocks play whoosh plus a mid-range clack (about 1 kHz); a parry plays a 1 s bright ting.",
+     "fixed": false
+    },
+    {
+     "id": "wp3:mech[0]",
+     "title": "One swing through several bodies stacks the full tier layers per victim",
+     "verdict": "confirmed",
+     "reason": "Earlier spin-kick capture: one frame hit 3 dummies, giving 3 whooshes, 3 thuds, 3 cracks and 3 grunts (12 voices). Its peak sat at the -0.3 ceiling and it measured -13.3 LUFS, louder than a single finisher (-16.1). Probe: a 3-body heavy at -14.4 beat a finisher at -14.7. A 3-body finisher used 18 voices.",
+     "fixed": true,
+     "fix_summary": "Hits from one attacker in one physics frame on different victims count as one swing. The SWING_LAYERS (whoosh, sub thump) play once, and each further victim's layers are extra_victim_db (-8) quieter; each victim still grunts. After: 3-body heavy -17.1 LUFS (between heavy and finisher), 3-body finisher -14.9. New test test_one_swing_through_several_bodies_whooshes_once failed before (3 whooshes)."
+    },
+    {
+     "id": "wp3:mech[1]",
+     "title": "Voice stealing takes the round-robin next voice, not the oldest",
+     "verdict": "confirmed",
+     "reason": "Code read: with all voices busy, _take_voice stole _next. After a short sound freed voice 3 and was reused, the next steal took voice 4, although voices 0-2 were older. The old test only counted voices, so it couldn't see this.",
+     "fixed": true,
+     "fix_summary": "Each voice records its play order, and a steal takes the busy voice started earliest. The rewritten test (stop voice 3, reuse it, then steal 0, 1, 2, 4) fails on the old code."
+    },
+    {
+     "id": "wp3:mech[2]",
+     "title": "An interrupted wind-up's effort and whoosh keep playing over the pain grunt",
+     "verdict": "confirmed",
+     "reason": "No windup_ended handler existed. In-game probe (player jabs a dummy 12 frames into its wind-up): Voice0 (effort) and Voice1 (wind-up whoosh) were still playing on the hit frame f58, so the effort overlapped the grunt from the same mouth.",
+     "fixed": true,
+     "fix_summary": "Wind-up voices are tagged with the attacker. windup_ended(interrupted) stops them; it arrives before hit_landed, as the probe confirmed. After the fix, one frame later only the hit's whoosh, thud and grunt play. New test test_a_windup_knocked_out_of_cuts_its_effort_and_whoosh covers it, including another attacker's wind-up and a reused voice."
+    },
+    {
+     "id": "wp3:mech[3]",
+     "title": "Hits on the player play at a contact point centimetres from the listener, so frontal blocks were muffled as rear sounds and panned at random",
+     "verdict": "confirmed",
+     "reason": "Guard-break act: 2 of 5 frontal blocked jabs played on the 'SFX Rear' bus (low-pass 2500 Hz), with contacts at local (-0.03,-0.08,+0.01..0.02). The flank capture's frontal block was 3.5 dB left. The real contact of a dummy jab sat 1.8 cm ahead of the listener.",
+     "fixed": true,
+     "fix_summary": "New impact_position(): hits whose victim is the player play self_hit_offset_m (0.5 m, a new tunable) from the listener toward -hit.direction (where the blow came from). Re-captured: frontal blocks are on the SFX bus, centred (L/R 0.0 dB); a side hit is +5.8 dB right. A new unit test and a new in-room dummy-jab check both fail with the old placement."
+    },
+    {
+     "id": "wp3:mech[4]",
+     "title": "The SFX bus volume applies after its limiter, so sfx_volume_db never gives the limiter headroom",
+     "verdict": "confirmed",
+     "reason": "Probe with sfx_volume_db -6: finisher peaks read exactly -6.3 dBFS, which is the -0.3 ceiling minus 6 dB. The limiter squashed as hard as at 0 dB.",
+     "fixed": true,
+     "fix_summary": "_apply_mix drives the SFX bus limiter's pre_gain_db from sfx_volume_db and keeps the bus volume at 0, falling back to the bus volume when there is no limiter. New public sfx_limiter(). The default is -3 dB. The test now asserts the pre-gain and fails on the old code."
+    },
+    {
+     "id": "wp3:mech[5]",
+     "title": "A weaker rumble pulse cuts a stronger running one short",
+     "verdict": "confirmed",
+     "reason": "Code read: start_joy_vibration replaces the running vibration. With the stub, a block tick 2 frames into a heavy pulse issued (0.25, 0, 0.04 s), ending the heavy 140 ms pulse early.",
+     "fixed": true,
+     "fix_summary": "pulse() merges with a running pulse: the stronger of each motor, lasting until the later end. A stronger pulse during a weaker one still takes over at its own values. New test test_a_weaker_pulse_never_cuts_a_stronger_one_short."
+    },
+    {
+     "id": "wp3:mech[6]",
+     "title": "A finisher through several bodies queues one second pulse per victim",
+     "verdict": "partial",
+     "reason": "Three identical second pulses were queued at the same moment. On hardware that is harmless (the same vibration restarts), but it is redundant.",
+     "fixed": true,
+     "fix_summary": "_queue skips a pulse identical to one already queued for the same time. New test test_a_finisher_through_several_bodies_queues_one_second_pulse."
+    },
+    {
+     "id": "wp3:mech[7]",
+     "title": "Pausing between a finisher's two pulses fires the second on unpause",
+     "verdict": "confirmed",
+     "reason": "Code read: the game pauses with get_tree().paused, the RumbleDirector's _process stops, and the queue survives, so the pulse fires after the pause menu closes.",
+     "fixed": true,
+     "fix_summary": "NOTIFICATION_PAUSED clears the queue. New test test_pausing_drops_a_finishers_second_pulse."
+    },
+    {
+     "id": "wp3:mech[8]",
+     "title": "The grunt-interval table grows with every actor ever hit",
+     "verdict": "confirmed",
+     "reason": "Code read: _last_grunt_s entries were never erased, including those of freed actors. Minor.",
+     "fixed": true,
+     "fix_summary": "Entries whose interval has run out are pruned when a grunt is recorded. The grunt test now asserts the table holds only the latest grunter."
+    },
+    {
+     "id": "wp3:mech[9]",
+     "title": "Whiff whoosh lands well after the swing",
+     "verdict": "partial",
+     "reason": "attack_whiffed fires when the active frames end. That is the simulation's timing and outside WP3's files: it comes about 1-3 frames after the extension for a jab. Most of the lateness came from the whoosh sample's late swell (see feel[0]).",
+     "fixed": true,
+     "fix_summary": "Fixed by the front-loaded whooshes: audible within 5 ms of the event, peaking 20-40 ms after it. Moving the trigger itself is a spec question."
+    },
+    {
+     "id": "wp3:mech[10]",
+     "title": "Audio sync under hitstop, finisher slow-mo and the 0.25x debug time scale",
+     "verdict": "refuted",
+     "reason": "Every one-shot plays in real time on its event's frame. Captures: onsets 0.2-1.4 frames after contact at 1x, and 0.4-0.6 frames at 0.25x debug scale (slow probe). The finisher's second rumble pulse and the grunt interval run on _process time, so hitstop and slow-mo don't stretch them. Nothing is delayed by sim time.",
+     "fixed": false
+    },
+    {
+     "id": "wp3:mech[11]",
+     "title": "Voice pool under a 6-enemy brawl",
+     "verdict": "partial",
+     "reason": "Synthetic brawl with real Movie Maker mixing, 12 s: three attackers winding up and striking the player, the player's L-L-H-F chains, and a 3-body finisher every 2 s. With 24 voices the pool saturated (about 38 steals in 534 one-shots). With 32 voices, peak busy was about 30 with no steals. The flurry act peaks at 10 busy.",
+     "fixed": true,
+     "fix_summary": "voice_count 24 to 32, documented as a voice budget. Steals now take the oldest voice (mech[1]), and Godot's stop() fades rather than clicks."
+    },
+    {
+     "id": "wp3:mech[12]",
+     "title": "Layering per tier, \u00b18% variation, no immediate repeats, positional playback",
+     "verdict": "refuted",
+     "reason": "Capture logs show exactly whoosh+thud / +crack / whoosh+thud+crunch+body fall+sub thump at the contact point, with pitch and volume within \u00b18%. The bank never repeats a pool's last variant (the existing test does 200 picks per pool). Panning works: a wind-up from the right is +5.9 dB R, and rear hits use the muffle bus.",
+     "fixed": false
+    },
+    {
+     "id": "wp3:mech[13]",
+     "title": "Rumble: no stuck vibration, safe with no joypad, strength tunable",
+     "verdict": "refuted",
+     "reason": "Code read and tests: every pulse has a positive duration (zero-length or zero-strength pulses are skipped). With no joypads, get_connected_joypads() is empty, so there are no calls. _exit_tree stops all vibration. rumble_strength scales both motors and rumble_enabled gates everything (existing tests).",
+     "fixed": false
+    },
+    {
+     "id": "wp3:mech[14]",
+     "title": "Presentation never writes game state",
+     "verdict": "refuted",
+     "reason": "Code read: AudioDirector only reads rig points, the player's eye and look, and Tuning, and changes only its own nodes and buses. RumbleDirector only calls Input. Nothing writes actors, TimeController or Tuning.",
+     "fixed": false
+    },
+    {
+     "id": "wp3:mech[15]",
+     "title": "Tests checked flags and would miss real defects",
+     "verdict": "confirmed",
+     "reason": "No test looked at the samples (envelope, clicks, tier loudness). The voice-steal test only counted voices. No test checked a real hit on the player against HitDetector's contact geometry. Each defect above passed the old suite.",
+     "fixed": true,
+     "fix_summary": "Added 9 tests, including PCM-reading tests of the WAVs, and an in-room check that a sparring dummy's real jab on the player sounds ahead, centred and unmuffled. Each was checked to fail against the old behaviour. Suite: 320 to 329 tests."
+    },
+    {
+     "id": "wp3:mech[16]",
+     "title": "Flying bodies, thrown weapons, enemy and player grunts, music default",
+     "verdict": "refuted",
+     "reason": "Body impacts (input_timing body) play no whoosh, and thrown weapons keep it (existing test). Enemies and the player grunt in their own voices (tests, plus the capture of the dummy jab on the player). Music defaults off and follows the toggle (test), and the loop has no seam.",
+     "fixed": false
+    }
+   ],
+   "commit": "73f0a39 M2 WP3: review fixes (front-loaded whooshes, tier loudness, one swing through several bodies, wind-up cut, self-hit placement, limiter pre-gain, oldest-voice stealing, rumble merge)",
+   "pushed": true,
+   "tests": {
+    "passed": 329,
+    "failed": 0,
+    "script_errors": false,
+    "summary": "Full tools/run_tests.sh run: 329/329 passing with 16636 asserts, and no SCRIPT ERROR, ERROR or WARNING lines (baseline was 320/320). Nine new tests in tests/test_audio.gd: front-loaded whooshes, click-free one-shots, tier loudness ranking, one swing through several bodies, wind-up cut, hits on the player from the attacker's side, weaker pulse never cuts a stronger one, a pause drops the second pulse, and multi-victim finisher queues once. The voice-steal, tier-volume, limiter and in-room tests were strengthened. Running test_audio.gd alone with -gselect prints 'ERROR: 3 resources still in use at exit'. That predates this pass (it happens on the baseline commit too) and does not occur in the full run."
+   },
+   "captures": [
+    {
+     "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-audio/captures/review/light_hit_spectrum_before_after.png",
+     "shows": "Spectrogram of one in-game light hit, before (left) and after (right). Before, the whoosh's 1.4-6 kHz band swells 0.2-0.33 s after the thud, a backwards 'thud... fff'. After, the highs sit on the onset and decay with the impact."
+    },
+    {
+     "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-audio/captures/review/tiers_waveform_before_after.png",
+     "shows": "Waveform of the isolated-hit probe, before (blue) and after (orange): 4 light, 4 heavy, 4 finisher, block, parry, guard break, whiff, then 3-body heavy and 3-body finisher. Before, light and heavy are the same size. After, the tiers step up clearly and blocks and guard breaks are fuller."
+    },
+    {
+     "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-audio/captures/review/pools_impact_spectrum.png",
+     "shows": "The original impact pools (whoosh x4, thud x4, crack x3, crunch x3, body fall x3, sub thump x2): late-swelling whooshes, near-identical crack variants, and sub thumps under 100 Hz."
+    },
+    {
+     "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-audio/captures/review/pools_after_spectrum.png",
+     "shows": "The regenerated pools (whoosh x4, crack x3, block clack x3, guard break x2, grunt x5): front-loaded pass-by whooshes, crack variants at distinct pitches (1.4, 1.9 and 2.4 kHz) and clack variants at 600, 775 and 950 Hz."
+    }
+   ],
+   "feel_judgement": "Judged by analysis, not by ear. Before the fixes the mix had three audible problems. Every hit's whoosh swelled about 0.15 s after the thud, so hits read as 'thud... fff', and whiffs were late in the same way. Heavy hits were only 0.3-1 LU louder than light ones, so the tiers differed in timbre but hardly in weight. A spinning heel through three bodies was louder than a haymaker and was flattened by the limiter. Now each hit's air sits on its impact, and whiffs peak 20-40 ms after the event. The tiers step clearly: light about -22.5, heavy -19.3, finisher -15.6 LUFS (momentary, at the player). Crowd hits sit between heavy and finisher. Blocks are a clear mid-range clack 1.5 LU under a light hit, a guard break is louder than a heavy, and a parry is a long bright ting. Frontal blocks now sound centred in front instead of muffled behind. Real combos peak at -0.8 to -1.4 dBFS with nothing clipped, and every sound starts within about a frame of its contact frame, at 1x and at 0.25x. Still placeholder-grade: the crack is a woody modal 'tok' rather than a bone snap, the body fall plays at contact rather than when the body lands, and absolute levels are a starting point for Game-boy to tune live.",
+   "spec_questions": [
+    "Body fall timing (SPEC \u00a76 tier table): it plays as a finisher layer at contact, but the launched body lands 0.5-1 s later. Proposal: play the body-fall layer when the body hits the ground, which needs a sim event at ground contact, and keep the sub thump at contact. Default: keep it at contact, as the spec's layer list says.",
+    "Swing whoosh trigger (SPEC \u00a76 'Missed swings get a whoosh'): attack_whiffed fires when the active frames end, so even a front-loaded whoosh comes 1-3+ frames after the limb's extension. Proposal: one swing whoosh per attack, timed to its first active frame for hits and misses alike, via a new sim event such as attack_active(attacker, move); contact would then add only thud and the rest. Default: keep whoosh at contact plus whoosh on attack_whiffed, with the front-loaded samples.",
+    "Wind-up whoosh (SPEC \u00a78 'the wind-up's grunt and whoosh play positionally'): the whoosh sounds at wind-up start, at least 0.3 s before the strike, which also gets its own whoosh. Proposal: keep only the effort grunt at wind-up start as the directional cue. Default: keep both, as written.",
+    "Finisher slow-mo audio (SPEC \u00a76 is silent): optionally pitch down or low-pass the SFX during the 0.3x slow-mo for drama, as a tunable that defaults off. Default: real-time audio, as now."
+   ],
+   "out_of_scope_edits": [],
+   "notes_for_merge": "1. game/autoload/tuning_data.gd: only the \"Audio\" group changed. It now has @export_subgroup headings Mix, Tiers, Layers, Voices, Blocks, Distance, Music and Rumble. No property was renamed.\n   - New properties: hit_light_db 0, hit_heavy_db 3, hit_finisher_db 4, extra_victim_db -8, self_hit_offset_m 0.5.\n   - Changed defaults: sfx_volume_db -3 (it is now the SFX limiter's pre-gain), whoosh_db -10, thud_db -8, crunch_db -10, body_fall_db -12, sub_thump_db -10, whiff_db -6, block_clack_db -2.5, parry_ting_db -6, guard_break_db -1.\n2. WP1 must regenerate res://tuning/default.json after this merge, or its \"default preset equals shipped defaults\" test will fail. WP1's panel must also handle PROPERTY_USAGE_SUBGROUP entries.\n3. test_the_audio_tuning_group_sits_before_debug asserts that the group after \"Audio\" is \"Debug\" and lists the Audio subgroups exactly. If WP2's \"VFX\" group ends up between Audio and Debug, put VFX before Audio or adjust that one assertion.\n4. Likely trivial conflicts:\n   - docs/ARCHITECTURE.md: a new \"Audio and rumble\" paragraph just above \"## Block\", where WP2 may add a VfxDirector note.\n   - ASSETS.md: I edited only the \"## Audio\" rows; WP2 adds its own section.\n   - game/level/test_room.gd: the original WP3 build (not this pass) adds two lines at the end of _build_presentation(), AudioDirector.new() and RumbleDirector.new(), next to where WP2 will likely add its VfxDirector.\n5. 23 regenerated WAVs are LFS objects: whoosh, crack, block clack, guard break, grunt, player grunt and effort. The generator is deterministic; a re-run leaves git clean. Run godot --headless --import --quit after merging.\n6. Buses are created at runtime when the project has no layout. If anyone adds default_bus_layout.tres, keep \"SFX\" with an AudioEffectHardLimiter (AudioDirector drives its pre_gain_db) and \"SFX Rear\" with a LowPass as effect 0, sending to SFX.\n7. Phase 3 can reuse the scratch probes in /Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-audio/captures/review/. They load from res://captures/ directly; that folder is ignored and nothing there is committed.\n   - level_probe.tscn + run_probe.sh: isolated-hit loudness report; the PROBE_TUNING env var overrides tunables.\n   - audio_probe.tscn + cap.sh \"<act>\": bot acts with per-sound logs.\n   - sync.py: checks onsets against contact frames.\n   - brawl_probe.tscn: voice budget under a synthetic brawl.\n   - whiff_probe.tscn and interrupt_probe.tscn.\n8. Nothing outside the owned files was edited in this pass.",
+   "remaining": [
+    "Running test_audio.gd alone (-gselect) ends with 'ERROR: 3 resources still in use at exit'. It predates this pass (the baseline commit does it too): the AudioServer still holds playbacks of sounds in flight when GUT quits right after the in-room test. The full run and the bot captures are clean.",
+    "Nothing was judged by ear; all feel calls come from WAV and capture analysis (ebur128, spectra, envelopes). Game-boy should listen, especially to the crack, which is a tonal 'tok' more than a bone snap.",
+    "The absolute levels (light hit about -22.5 LUFS momentary at the player) and the tier gains are starting points for Game-boy to tune live in the Audio/Tiers subgroup.",
+    "The voice budget (32) was checked only against a synthetic brawl. Re-check with Milestone 3's real 6-enemy crowd.",
+    "Whiffs still sound 1-3+ frames after the limb's extension, because attack_whiffed fires when the active frames end (see the spec question).",
+    "Rumble is verified only through the stubbed Input calls; not felt on a real controller.",
+    "body_fall_01's loudest moment is its limb slap at about 0.1 s rather than the first flump; left as is."
+   ]
+  },
+  "WP2-vfx": {
+   "verdicts": [
+    {
+     "id": "review:wp2:mechanics[0]",
+     "title": "VfxArt keeps no texture alive: speed_lines.png freed after every _draw; textures reloaded from disk at hit time",
+     "verdict": "confirmed",
+     "reason": "Code read (VfxArt.texture() returned load() with nothing holding it). A scratch run of the new test against the old loader failed: textures were no longer cached after a few frames and came back with new RIDs. The old capture (captures/vfx.avi) shows gray blocks. A scratch frame-timing scene (deleted) in the test room at 1280x720 on Metal gave: control 16.7 ms; first finisher 21.3/12.3 ms (one frame over budget, while the hitstop freeze is on screen; the reviewer measured 39-47 ms); second finisher, bruised and bloodied all 15-18 ms.",
+     "fixed": true,
+     "fix_summary": "VfxArt now holds every texture for the run in a static dictionary. preload_all() loads the whole assets/export/fx set when VfxDirector is created. SpeedLines keeps its texture in a member. The class doc is corrected. New test test_fx_textures_are_loaded_once_and_held checks that the set is held, that each texture keeps the same RID, and that it is still cached after effects retire over real frames."
+    },
+    {
+     "id": "review:wp2:mechanics[1]",
+     "title": "Effects placed against the previous frame's camera (VfxDirector processes before the cameras)",
+     "verdict": "confirmed",
+     "reason": "VfxDirector ran at the default priority 0, while the cameras run at 50. A new test with a TurningCamera at priority 50 failed with priority 0: the word faced the previous camera (dot 0.9945 = cos 6 degrees).",
+     "fixed": true,
+     "fix_summary": "VfxDirector._init sets process_priority = CameraDirector.PROCESS_PRIORITY + 1. New test test_effects_follow_the_camera_of_the_frame_being_drawn turns the camera 6 degrees per frame and checks that the word faces this frame's view and stays on screen."
+    },
+    {
+     "id": "review:wp2:mechanics[2]",
+     "title": "Words pulled into view even when their hit is behind the camera or off screen",
+     "verdict": "confirmed",
+     "reason": "Code read: keep_in_view was set on every word, and place() pushed any point closer than the minimum distance forward, including points behind the camera. The back-elbow capture shows SMAK! over an empty street.",
+     "fixed": true,
+     "fix_summary": "ComicSprite separates at_lens (hits on the player: brought out ahead of the lens and always shown) from keep_in_view. keep_in_view now clamps only while the contact is in front of the camera and within clamp_reach_deg of the view (new tunables vfx_clamp_reach_side_deg 10 and vfx_clamp_reach_low_deg 40). Otherwise the effect stays at its contact. New test test_words_of_hits_behind_or_far_beside_the_camera_stay_at_the_contact covers the contact behind the camera, far beside it, and just outside the edge. Capture after_effects_outside_the_view.png: after the back elbow no word floats over the street, and the spin kick's side word stays with its dummy."
+    },
+    {
+     "id": "review:wp2:mechanics[3]",
+     "title": "30 Hz speed-line flicker ignores the photosensitivity toggle",
+     "verdict": "confirmed",
+     "reason": "Code read: advance() reshuffled the lines without checking impact_frame_enabled. The old capture (frames 3228-3235) shows the reshuffle.",
+     "fixed": true,
+     "fix_summary": "With Tuning.impact_frame_enabled off, SpeedLines places one set of lines and fades it without reshuffling. The tooltips of impact_frame_enabled and vfx_speed_lines_redraw_frames say so. New test test_speed_lines_do_not_flicker_with_the_photosensitivity_toggle_off. In the capture ifoff.avi, frames 70-77 show the lines held still."
+    },
+    {
+     "id": "review:wp2:mechanics[4]",
+     "title": "Feel numbers hard-coded in scripts and the impact-frame shader",
+     "verdict": "partial",
+     "reason": "Confirmed for the speed lines' angle jitter, inner-end range and width range, the word's minimum tilt, the droplet launch angles, and the shader's local_mix and blur mip. The tooth's 0.4-of-its-size rest offset is placement geometry (the billboard's half height above the floor), not a feel number, and the splat z-fight offsets are technical. Both stay.",
+     "fixed": true,
+     "fix_summary": "New VFX tunables replace the feel literals: vfx_speed_lines_jitter, _inner_max, _width_min, _width_max; vfx_word_tilt_min_deg; vfx_blood_launch_min_deg and _max_deg; vfx_impact_frame_local_mix and _blur_mip (ImpactFrame.flash() passes them to the shader). The redraw interval divides by Engine.physics_ticks_per_second. New test test_line_droplet_and_word_randomness_follow_their_tunables."
+    },
+    {
+     "id": "review:wp2:mechanics[5]",
+     "title": "Hollow tests could not catch the rendering, camera-order or word-placement defects",
+     "verdict": "confirmed",
+     "reason": "Read tests/test_vfx.gd: the speed-line tests checked state only, the camera never moved, and no word had its contact behind the camera. Each new test was checked to fail on the old behaviour (old texture loader, priority 0) or tests what the old code lacked.",
+     "fixed": true,
+     "fix_summary": "Added tests: textures held with stable RIDs; camera-order behaviour; words behind or beside the camera; a knee contact under the view; the flicker gate; lines stopping at the live burst and word rects; tier ordering at 0.8 m, at 4 m and in the side view; tunable ranges; bruise textures with no red pixels. test_hit_flash_still_covers_the_damage_look now checks every marked material, and the capture is the evidence that the flash covers the marks: after_damage_looks... and dmg_fp.avi frame 215 show the bloodied dummy fully white. 341 tests in total."
+    },
+    {
+     "id": "review:wp2:feel[0]",
+     "title": "Per-sprite view clamp flattens the light/heavy/finisher sizes",
+     "verdict": "confirmed",
+     "reason": "Code read: each sprite was clamped on its own. The old side-view captures show every tier at 0.82 m.",
+     "fixed": true,
+     "fix_summary": "ComicSprite.size_factor(): each kind (bursts, words, block sparks) gets one factor shared by its tiers. The smallest of the kind sets the floor (vfx_min_view_share) and the largest sets the cap (vfx_max_view_share); the cap wins. The vfx_min_view_share default goes from 0.06 to 0.04, so the side-view finisher burst is about 10% of the view rather than 15%. New test test_tier_sizes_keep_their_order_near_far_and_in_the_side_view also checks that the finisher slider changes the side view. Capture after_tier_sizes_light_heavy_finisher.png shows three distinct sizes at 3 m, at 1.4 m and in the side view."
+    },
+    {
+     "id": "review:wp2:feel[1]",
+     "title": "VfxDirector places effects before the cameras update (duplicate of mechanics[1])",
+     "verdict": "confirmed",
+     "reason": "Same defect as mechanics[1], verified by the same failing test.",
+     "fixed": true,
+     "fix_summary": "Fixed with mechanics[1] (process_priority after the cameras)."
+    },
+    {
+     "id": "review:wp2:feel[2]",
+     "title": "Finisher speed lines lose their clear middle near a screen edge and draw over the finisher's own word and burst",
+     "verdict": "confirmed",
+     "reason": "Code read: the focus was exactly the contact on screen, and nothing protected the lettering.",
+     "fixed": true,
+     "fix_summary": "VfxDirector.finisher_lines_focus() places the focus between the view center and the contact, by the new tunable vfx_speed_lines_focus_follow (default 0.35). Each frame the director passes the screen rects of the visible popping effects to SpeedLines.keep_clear, and a streak stops where it would enter one. Tests: test_finisher_lines_focus_between_the_center_and_the_contact and test_speed_lines_stop_at_the_burst_and_the_word. In the captures the lines frame KRAK!/CRUNCH! and the burst instead of crossing them."
+    },
+    {
+     "id": "review:wp2:feel[3]",
+     "title": "Every word forced into view (duplicate of mechanics[2])",
+     "verdict": "confirmed",
+     "reason": "Same as mechanics[2].",
+     "fixed": true,
+     "fix_summary": "Fixed with mechanics[2] (clamp only near the view; behind or far beside, the word stays at its contact)."
+    },
+    {
+     "id": "review:wp2:feel[4]",
+     "title": "Knees and stomps show no burst in first person (contact below the view)",
+     "verdict": "confirmed",
+     "reason": "Code read: bursts were kept in view only for hits on the player, and a contact 58 degrees below the view axis is off screen.",
+     "fixed": true,
+     "fix_summary": "Every hit's burst, spark and splash gets the clamp rule. A contact up to vfx_clamp_reach_low_deg (40) above or below the view is pulled up inside it. New test test_a_knee_or_stomp_under_the_view_still_shows_its_burst. Capture after_effects_outside_the_view.png (rows 1-2): the knee burst sits at the bottom right over the held dummy, and the stomp burst sits at the bottom next to the downed head."
+    },
+    {
+     "id": "review:wp2:feel[5]",
+     "title": "Speed lines flicker at 30 Hz with the photosensitivity toggle off (duplicate of mechanics[3])",
+     "verdict": "confirmed",
+     "reason": "Same as mechanics[3].",
+     "fixed": true,
+     "fix_summary": "Fixed with mechanics[3]."
+    },
+    {
+     "id": "review:wp2:feel[6]",
+     "title": "FX textures load at the moment of the hit; the damage looks switch material variants at runtime",
+     "verdict": "partial",
+     "reason": "The texture loading is confirmed and fixed (see mechanics[0]). The shader-variant part is refuted by measurement: with the textures held, the first bruised and bloodied steps cost 17.2 and 17.1 ms against a 16.7 ms control, so the variant switch causes no hitch. Only the first finisher of a run is still about 5 ms over in one frame (shader and screen-texture setup), hidden under the 140 ms hitstop.",
+     "fixed": true,
+     "fix_summary": "Textures are preloaded when the director is created. The material variant switch is left as is (no measurable cost). No shader warm-up was added."
+    },
+    {
+     "id": "lead:speed-lines",
+     "title": "Speed lines render as wide gray translucent rectangles",
+     "verdict": "confirmed",
+     "reason": "Root cause as mechanics[0]. The old capture (r_orig_sheet.png) shows the gray blocks.",
+     "fixed": true,
+     "fix_summary": "Textures are held (VfxArt) and SpeedLines keeps its own texture. The after captures show crisp, tapered black ink streaks from the edges with a clear middle, in first person (after_speed_lines_first_person.png) and side view (after_speed_lines_side_view.png)."
+    },
+    {
+     "id": "lead:lunge-threshold",
+     "title": "Lunge lines fire on ordinary jab steps",
+     "verdict": "confirmed",
+     "reason": "Old capture captures/vfx.avi frames 28-37: the first jab of P P P P shows lunge lines (as gray blocks). Code read: the threshold was 0.6 m, but the jab's magnetism step-in travels up to 0.75-0.8 m (magnet_lunge 0.8).",
+     "fixed": true,
+     "fix_summary": "VfxDirector watches only moves with their own lunge (MoveData.lunge or free_lunge, so the flying kick qualifies and the magnetism step-in does not). The vfx_lunge_lines_min_m default goes from 0.6 to 1.0 m. The updated test test_player_lunges_show_lunge_lines_in_first_person moves a magnetism-only move 2 m with no lines, then shows lines for a lunging move. Captures: after_jab_step_no_lunge_lines.png (none) and after_flying_kick_lunge_lines.png (light lines)."
+    },
+    {
+     "id": "lead:damage-looks",
+     "title": "The bruised look barely reads at 1 m (and not at all in side view)",
+     "verdict": "confirmed",
+     "reason": "Old capture (captures/vfx.avi frames 940-1000 and 1300-1360): the bruises were faint, appeared on the forearms only and used red scrape marks; the side view looked the same as clean.",
+     "fixed": true,
+     "fix_summary": "New tiles from tools/gen_fx.gd. Bruised skin: a purple-gray wash, big outlined purple and blue bruises with olive rims, ink scrapes. Clothes, cap and shoes now change at bruised too: new damage_scuffed.png with a dirt wash, dark scuffs and ink tears (logged in ASSETS.md). Bloodied adds blood splats over both. No red before the blood. DamageLook.texture_for maps the tiles; the rig change stays materials-only. Tests: scuffed clothes at bruised, and test_bruises_are_not_red_paint. Capture after_damage_looks_clean_bruised_bloodied.png: each step reads at 1 m in first person; in the side view at true size, bruised is a darker, mottled body with a bruised face and bloodied shows red splats."
+    }
+   ],
+   "commit": "0d9a8a3 M2 WP2: review fixes (held FX textures and speed-line texture, VFX after the cameras, tier size ratios, words and bursts clamp only near the view, knee and stomp bursts, lines frame the effects, no flicker without the photosensitivity toggle, lunge threshold, feel numbers to VFX subgroups, readable damage looks)",
+   "pushed": true,
+   "tests": {
+    "passed": 341,
+    "failed": 0,
+    "script_errors": false,
+    "summary": "tools/run_tests.sh in /Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-vfx: 341/341 tests pass across 9 scripts (15382 asserts), with no SCRIPT ERROR or ERROR lines in the full output. The baseline was 332/332. 9 new tests are in tests/test_vfx.gd, and 4 existing ones were updated to the new rules (shared size factor, focus follow, lunge gate, scuffed clothes)."
+   },
+   "captures": [
+    {
+     "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-vfx/captures/review/after_speed_lines_first_person.png",
+     "shows": "P P P P uppercut finisher in first person, frames 70-98: crisp tapered black ink streaks from the edges with a clear middle, framing KRAK! and the large burst"
+    },
+    {
+     "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-vfx/captures/review/after_speed_lines_side_view.png",
+     "shows": "K K K spinning heel finisher in side view, frames 66-90: thin tapered ink streaks around the edges with the fight clear, fading out"
+    },
+    {
+     "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-vfx/captures/review/after_flying_kick_lunge_lines.png",
+     "shows": "Flying kick from 2.4 m in first person: light lunge lines during the lunge, then SMAK! on contact"
+    },
+    {
+     "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-vfx/captures/review/after_jab_step_no_lunge_lines.png",
+     "shows": "One jab from 1.6 m (magnetism step-in of about 0.75 m): no lunge lines, only the small light burst"
+    },
+    {
+     "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-vfx/captures/review/after_damage_looks_clean_bruised_bloodied.png",
+     "shows": "Columns clean / bruised (65%) / bloodied (30%). Row 1: first person at 1 m. Row 2: side-view crop at about 2.5x. Row 3: the full side view. Bruised shows bruises and scuffed, torn clothes with no red; bloodied adds red splats"
+    },
+    {
+     "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-vfx/captures/review/after_tier_sizes_light_heavy_finisher.png",
+     "shows": "Light, heavy and finisher bursts hit at once on three dummies: first person at 3 m, first person at 1.4 m, and side view (crop), with three distinct sizes in each"
+    },
+    {
+     "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-vfx/captures/review/after_effects_outside_the_view.png",
+     "shows": "Rows: knee (burst pulled up into the bottom of the view), stomp (burst at the bottom by the downed head), back elbow (SMAK! with the dummy, then nothing over the empty street), spin kick on three dummies (the side word stays with its dummy, no corner-parked word)"
+    }
+   ],
+   "feel_judgement": "Judged from the after sheets the way Game-boy will see them.\n\n**Speed lines.** They now read as a comic effect: thin, tapered black ink streaks from past the edges, a clear middle, and lines that stop at the word and burst instead of crossing them. This holds in first person and in the side view. With the photosensitivity toggle off they hold still and fade.\n\n**Tier sizes.** Light, heavy and finisher are clearly different at every distance, including the side view, so the size sliders now do something there.\n\n**Light burst up close.** The trade-off: at jab range in first person the light burst is now about 10% of the view width (it was about 20%), because the tiers keep their ratio under the 25% cap. It still reads as a small spark, which matches the spec's 'small burst', but it is quieter than before. If Game-boy wants more punch, the knob is vfx_burst_small_m or vfx_max_view_share.\n\n**Lunge lines.** They appear only on the flying kick's lunge, as faint light lines at the edges. Jab steps show nothing.\n\n**Damage looks.** At 1 m in first person, clean, bruised and bloodied are unmistakable. Bruised gives the forearms and face purple-blue bruises, and gives the shirt dark scuffs and ink tears, with no red. In the side view at true size the dummy is about 100 px tall: bruised reads as a darker, mottled body with a bruised face, and bloodied as red splats. The bruised step is the subtler of the two there, but it is visibly different from clean.\n\n**Style note.** The scuff pattern on the green and purple dummies can look a little like camouflage. This is placeholder art.\n\n**Effects outside the view.** Knee and stomp bursts now show at the bottom edge. No word floats over an empty street after the back elbow or the spin kick.\n\n**Out of WP2 scope.** M1's white hit flash still fills large areas in first person (the held dummy during the knees, the dummy's arm in P P P P). The combat log covers the side-view fight (the VFX bot now hides it, the combo bot does not).",
+   "spec_questions": [
+    "None of the fixes changes SPEC behaviour, so no spec change is implemented.",
+    "Proposal, defaulting to no change: the spec says 'enemy materials step from clean to bruised to bloodied'. I read 'bruised' as covering scuffed and torn clothes as well as bruised skin, because the dummies' skin barely shows from 1 m or in the side view. If Game-boy wants bruises on the skin only, revert DamageLook.texture_for to return null for the clothes at BRUISED (one line).",
+    "Proposal, defaulting to keep the current behaviour: the photosensitivity toggle (impact_frame_enabled) now also stops the speed lines' flicker, as the WP2 brief asks, but there is no separate comfort toggle. A separate 'reduce flashing' toggle would be a spec change for Game-boy to approve."
+   ],
+   "out_of_scope_edits": [
+    "game/autoload/tuning_data.gd: added a 2-line ## tooltip above impact_frame_enabled in the 'Hit feel' group, saying it also stops the speed-line flicker (review:wp2:mechanics[3] fix). No value or name changed.",
+    "docs/ARCHITECTURE.md: added a 'VFX' paragraph after the CameraDirector interface (allowed by the brief). I put it there rather than next to WP3's 'Audio and rumble' note after 'Input' so the two do not collide in the merge.",
+    "tests/bot/vfx_bot.gd: also hides the combat log for VFX captures, using the HUD's existing set_combat_log_visible (bot-only, in scope)."
+   ],
+   "notes_for_merge": "Branch m2/vfx is at 0d9a8a3. Since the review it adds e6f9027 (wip), a16abfd (wip) and 0d9a8a3.\n\n**tuning_data.gd**\n- The VFX group is reorganized into `@export_subgroup` sections: Size and view, Bursts, Lettering, Speed lines and impact frame, Blood spit and teeth, Block sparks, Damage looks. Blank lines separate them.\n- Every old property name is unchanged.\n- New properties: vfx_clamp_reach_side_deg, vfx_clamp_reach_low_deg, vfx_word_tilt_min_deg, vfx_speed_lines_width_min, vfx_speed_lines_width_max, vfx_speed_lines_inner_max, vfx_speed_lines_jitter, vfx_speed_lines_focus_follow, vfx_impact_frame_local_mix, vfx_impact_frame_blur_mip, vfx_blood_launch_min_deg, vfx_blood_launch_max_deg.\n- Default changes: vfx_min_view_share 0.06 -> 0.04, vfx_lunge_lines_min_m 0.6 -> 1.0. If WP1's shipped default preset snapshotted the old defaults, regenerate it or update those two keys, or the preset will undo the side-view sizing and the lunge threshold.\n- impact_frame_enabled (Hit feel group) gained a doc comment. It may touch the same lines as WP1 and WP3 edits near the end of Hit feel and the VFX header.\n- The VFX test still requires that the VFX group follows 'Hit feel' directly and that every vfx_ property is in it (subgroups are fine).\n- WP1's panel must show the subgroups. Their usage flag is PROPERTY_USAGE_SUBGROUP, not GROUP.\n\n**Process priority.** VfxDirector depends on CameraDirector.PROCESS_PRIORITY (game/camera/camera_director.gd), which is on main already.\n\n**ARCHITECTURE.md.** The VFX note sits after the CameraDirector block. WP3's audio note sits after 'Input', so they should merge cleanly.\n\n**ASSETS.md.** The Effects section gained damage_scuffed and reworded the damage rows.\n\n**New art.** assets/export/fx/damage_scuffed.png, plus its .import (LFS, mipmaps, lossless) and assets/source/fx/damage_scuffed.svg. After merging, run `godot --headless --import --quit` in the merged checkout.\n\n**Room wiring.** ComicSprite gained public fields at_lens, clamp_reach_deg, kind_min_m and kind_max_m. spawn_word() gained an optional on_player argument. VfxDirector.finisher_lines_focus() is public. No other module calls these, and the test-room wiring is unchanged.\n\n**Bot captures.** New vfx_bot acts and filter text: 'jab step-in', 'damage looks held at 1 m', 'damage looks held (side', 'tier sizes side by side (first', 'tier sizes side by side (side', 'knees under the view', 'stomp under the view', 'back elbow, word stays', 'spin kick, three dummies'. Movie Maker writes 1600x900 even with --resolution 1280x720 (the project window size wins). A bot that hits a parse error never quits and records forever, so the recording script I used wraps godot in a perl alarm.",
+   "remaining": [
+    "The first finisher of a run still costs about one dropped frame (21 ms, first-use shader and screen-texture setup), hidden under the 140 ms hitstop. No warm-up was added.",
+    "Light bursts at jab range in first person are now about 10% of the view width (the tier ratio is kept under the 25% cap). Game-boy should judge this; the knobs are vfx_burst_small_m and vfx_max_view_share.",
+    "The bruised step is subtler in the side view (about 100 px tall dummy) than in first person. It reads as darker and mottled; vfx_damage_tile_m and the scuff contrast in tools/gen_fx.gd are the knobs.",
+    "Not verified on a real 1080p display or under the full combo_bot run in the integration worktree; judged from per-act vfx_bot captures at 1600x900.",
+    "Out of WP2 scope, unchanged: M1's white hit flash filling large parts of the first-person view, and the combat log covering the side-view fight in combo_bot captures."
+   ]
+  }
+ }
+}

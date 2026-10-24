@@ -4,6 +4,39 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-23 19:15 CDT: handoff, account C's 5-hour window at 71%
+The watcher warned at 71% of account C's 5-hour window, which resets at 23:00 CDT; C's weekly is at about 10%. The workflow `m2-phase1-verify-fix` (run `wf_3d9df549-bac`) is stopped. Every branch is committed and pushed, and the worktrees are clean. The agents' full results are in [docs/reviews/M2-phase1-fix-results.json](reviews/M2-phase1-fix-results.json): verdicts, test counts, capture paths, spec questions and remaining items.
+
+| WP | Branch / worktree | State |
+| --- | --- | --- |
+| WP2 VFX | `m2/vfx` @ `0d9a8a3`, `.worktrees/m2-vfx` | **Done.** "M2 WP2: review fixes". 16 findings (the 13 reviewed plus the lead's 3): 14 confirmed and 2 partial, all fixed. 341/341 tests pass with no errors. Fixes: speed lines are now crisp tapered ink (FX textures are held and preloaded), lunge lines need a ≥1.0 m lunge (`vfx_lunge_lines_min_m`), damage looks read at 1 m (bruised skin plus scuffed clothes, new `damage_scuffed.png`), VFX run after the cameras, tier size ratios, word and burst clamp rules, no flicker without the photosensitivity toggle, VFX subgroups. After-sheets (local, untracked) are in `.worktrees/m2-vfx/captures/review/after_*.png`. **Not yet judged by the lead.** |
+| WP3 audio | `m2/audio` @ `73f0a39`, `.worktrees/m2-audio` | **Done.** "M2 WP3: review fixes". Its own review found 27 items: 13 confirmed, 5 partial and 9 refuted; 18 fixed. 329/329 tests pass. Fixes: front-loaded whooshes, tier loudness order, blocks louder, one swing through several bodies layers once, wind-up cut on interrupt, hits on the player placed from the attacker's side, limiter pre-gain, oldest-voice stealing (32 voices), rumble merge and pause handling. Spectrograms are in `.worktrees/m2-audio/captures/review/`. |
+| WP1 tuning | `m2/tuning` @ `77455ed`, `.worktrees/m2-tuning` | **Cut off near the end.** The agent reproduced all 17 findings and implemented the fixes: gamepad A/B and D-pad focus links, free fly held while the panel is open, preset range and enum checks and backups, cheats left out of presets, "default" export and shadowing, spawn clear of walls, the debug scale stretching hitstop (TimeController), subgroup headings, cheaper change markers, and tests in a scratch preset folder. The `wip:` commit passes **324/324 tests with no SCRIPT ERROR**. It was recording its panel capture. |
+
+**Resume steps:**
+1. **Finish WP1** with one agent in `.worktrees/m2-tuning`:
+   - check each of the 17 findings in `docs/reviews/M2-phase1-review-findings.json` (keys `review:wp1:*`) against the `wip:` commits `a9f2aca` and `77455ed`, and fix any gap;
+   - record a short panel capture (gamepad focus, a subgrouped category);
+   - run the tests, commit "M2 WP1: review fixes (...)" and push.
+2. **The lead judges the WP2 after-sheets** in `.worktrees/m2-vfx/captures/review/` and shows them to Game-boy.
+3. **Merge** `m2/tuning`, `m2/vfx` and `m2/audio` into `m2/hit-feel`:
+   - keep all four `_build_presentation()` lines in `test_room.gd` and both ASSETS.md sections;
+   - WP2's ARCHITECTURE "VFX" paragraph sits after CameraDirector, WP3's "Audio and rumble" after "Input";
+   - WP2 changed `vfx_min_view_share` to 0.04 and `vfx_lunge_lines_min_m` to 1.0;
+   - WP2 added a `##` doc comment above `impact_frame_enabled` in "Hit feel".
+4. **After merging:** `godot --headless --import --quit && godot --headless -s tools/gen_default_preset.gd`, then `tools/run_tests.sh`. Everything must pass with no SCRIPT ERROR. Push and update this file.
+5. **WP4:** the player-ragdoll default is confirmed.
+
+**Spec questions for Game-boy (defaults keep the spec as written; none implemented):**
+- **WP3, body fall:** the body-fall layer plays at contact, but the body lands 0.5-1 s later. Proposal: play it on ground contact (needs a new sim event).
+- **WP3, swing whoosh:** `attack_whiffed` fires when the active frames end, so whiffs sound 1-3 frames late. Proposal: a new `attack_active` event, and one swing whoosh per attack at its first active frame.
+- **WP3, wind-up whoosh:** it plays at wind-up start. Proposal: keep only the effort grunt as the cue.
+- **WP3, slow-mo audio:** an optional pitch-down or low-pass of the SFX during the finisher slow-mo, a tunable that defaults off.
+- **WP2, bruised look:** "bruised" now also scuffs the clothes, because the skin barely shows at 1 m or in side view. If Game-boy wants skin only, it's a one-line revert.
+- **WP2, flashing toggle:** the photosensitivity toggle (`impact_frame_enabled`) also stops the speed-line flicker. A separate "reduce flashing" toggle would be a spec change.
+
+**Usage this window:** WP2 and WP3 ran together and took account C from 3% to 55% in about 40 minutes, about 26% each for a combined review and fix. WP1 launched at 55%, and the window reached 71% by 19:11. **Plan on roughly 25% of a 5-hour window per combined review-and-fix agent.**
+
 ### 2026-10-23 18:10 CDT: account C took over; phase 1 verify-and-fix running
 A third account's working session took over at 0% of its 5-hour window (resets 23:00 CDT) and 0% weekly (resets Wed 2026-10-28 11:00 CDT). Its usage watcher runs (Haiku, low effort, `/loop 5m`, session "Beat-em-up: usage watcher").
 - **Running:** workflow `m2-phase1-verify-fix` (run `wf_3d9df549-bac`, started from this session). It runs one heavy agent per WP and at most two at once: WP2 and WP3 first, then WP1. A Haiku usage gate runs before each launch and stops new launches at 65% (5-hour) or 85% (weekly).
