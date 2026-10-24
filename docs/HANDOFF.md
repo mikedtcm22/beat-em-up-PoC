@@ -4,6 +4,18 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-24 10:50 CDT: two agents running (WP4 fixes, localized hit flash)
+Usage is at 14% of the 5-hour window (resets 13:40 CDT) and 58% weekly.
+- **Running (agent 1):** the WP4 verify-and-fix finish in `.worktrees/m2-ragdoll` (see the 10:08 entry).
+- **Running (agent 2):** the localized white hit flash (Game-boy approved it at 10:40) in a new worktree `.worktrees/m2-flash`, branch `m2/hit-flash` (off `m2/hit-feel` @ `d99eecf`, imported and pushed). It builds:
+  - a per-rig overlay ShaderMaterial, used as `next_pass` only while flashing; the parry flash stays whole-body;
+  - `hit_flash_radius_m` (0.25), `hit_flash_strength` (1.0) and `hit_flash_core` (0.5) in "Hit feel";
+  - a fix so the flash shows for `hit_flash_frames` rendered frames (the captures show one);
+  - `tests/test_hit_flash.gd`, and captures in `captures/flash/`.
+  - It ends with a commit "M2 phase 3: localized white hit flash (...)".
+- **Merge plan:** merge `m2/ragdoll` and `m2/hit-flash` into `m2/hit-feel`. Both touch `combat_actor.gd`, `humanoid_rig.gd` and `tuning_data.gd` in different places. Then regenerate `tuning/default.json` (`godot --headless --import --quit && godot --headless -s tools/gen_default_preset.gd`), run the tests and push.
+- **If cut off:** check each branch for its final commit. Without one, rerun that agent's step from its newest `wip:` commit.
+
 ### 2026-10-24 10:08 CDT: account D resumed after its reset; WP4 verify-and-fix finishing
 Game-boy stayed on account D. The 5-hour window is at 4% (resets 13:40 CDT), and weekly is at 56% (resets Tue 2026-10-27 12:00 CDT). Extra usage now shows as enabled ($0 spent). The watcher `usage-watcher-e` is still running.
 - **Running:** one background agent, started from this session, finishes the WP4 verify-and-fix pass in `.worktrees/m2-ragdoll`, as in the 23:50 entry's resume step 1. It will:
