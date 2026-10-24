@@ -47,10 +47,11 @@ const _RELEASE_BLEND_S := 0.22
 const PARRY_FLASH_COLOR := Color(0.3, 0.9, 1.0)
 const BLOCK_FLASH_AMOUNT := 0.45
 ## Getting up out of a ragdoll (_move_under_ragdoll()): the spots tried, from the ragdoll's
-## hips back toward the body's origin (this many steps; search resolution, not feel), and
-## how far above the floor the body's capsule is checked for room (clear of the floor it
-## stands on).
+## hips back toward the body's origin (this many steps), the directions tried around the
+## hips for a body lying on another (search resolution, not feel), and how far above the
+## floor the body's capsule is checked for room (clear of the floor it stands on).
 const _GETUP_TRIES := 4
+const _GETUP_DIRECTIONS := 8
 const _GETUP_FLOOR_CLEARANCE := 0.03
 
 @export var max_health: float = 100.0
@@ -996,13 +997,14 @@ func _ragdoll_full(contact: Vector3, push: Vector3, part: Ragdoll.Part) -> void:
 ## Getting up out of a ragdoll: the origin moves along the floor toward where the ragdoll's
 ## hips lie (HumanoidRig.ragdoll_hips_offset()), to the spot nearest them where the world
 ## and the other bodies (standing or lying) leave room for the body's capsule, so the body
-## stands up where it is seen lying. With no room on the way (a player standing over it, a
-## body lying on another) it gets up where the sim body is, as without a ragdoll, and the
-## get-up fade carries the visible body there (_start_getup()).
+## stands up where it is seen lying. With no room on the way and only standing bodies in
+## it (the player standing over it after a stomp) it gets up where the sim body is, as
+## without a ragdoll. Where another body lies too (two that fell on each other) it gets up
+## beside it: the free spot Tuning.ragdoll_getup_aside_m around the ragdoll's hips nearest
+## to the body, with no wall or curb on the way there. The get-up fade carries the visible
+## body to where it stands up (_start_getup()).
 func _move_under_ragdoll() -> void:
 	var offset := rig.ragdoll_hips_offset()
-	if offset.length_squared() < 1e-6:
-		return
 	var space := get_world_3d().direct_space_state if is_inside_tree() else null
 	if space == null:
 		return
@@ -1023,12 +1025,44 @@ func _move_under_ragdoll() -> void:
 	query.exclude = [get_rid()]
 	# Lifted clear of the floor it stands on.
 	var lift := Vector3.UP * (body_height * 0.5 + _GETUP_FLOOR_CLEARANCE)
-	for step: int in range(_GETUP_TRIES, 0, -1):
-		var move := offset * (float(step) / _GETUP_TRIES)
+	if offset.length_squared() > 1e-6:
+		for step: int in range(_GETUP_TRIES, 0, -1):
+			var move := offset * (float(step) / _GETUP_TRIES)
+			query.transform = Transform3D(Basis.IDENTITY, global_position + move + lift)
+			if space.intersect_shape(query, 1).is_empty():
+				global_position += move
+				return
+	# No room on the way. Another body lying where this one is?
+	var lying := PhysicsShapeQueryParameters3D.new()
+	lying.shape = shape
+	lying.collide_with_areas = false
+	lying.collision_mask = CombatTypes.bit(CombatTypes.LAYER_DOWNED_BODY)
+	lying.exclude = [get_rid()]
+	lying.transform = Transform3D(Basis.IDENTITY, global_position + lift)
+	if space.intersect_shape(lying, 1).is_empty():
+		return
+	var way := PhysicsShapeQueryParameters3D.new()
+	way.shape = shape
+	way.collide_with_areas = false
+	way.collision_mask = CombatTypes.bit(CombatTypes.LAYER_WORLD)
+	way.exclude = [get_rid()]
+	way.transform = Transform3D(Basis.IDENTITY, global_position + lift)
+	var best := Vector3.ZERO
+	var best_d := INF
+	for k: int in _GETUP_DIRECTIONS:
+		var around := Vector3.FORWARD.rotated(Vector3.UP, TAU * k / _GETUP_DIRECTIONS) * Tuning.data.ragdoll_getup_aside_m
+		var move := offset + around
+		if move.length() >= best_d:
+			continue
 		query.transform = Transform3D(Basis.IDENTITY, global_position + move + lift)
-		if space.intersect_shape(query, 1).is_empty():
-			global_position += move
-			return
+		if not space.intersect_shape(query, 1).is_empty():
+			continue
+		way.motion = move
+		if space.cast_motion(way)[0] < 1.0:
+			continue
+		best = move
+		best_d = move.length()
+	global_position += best
 
 
 func _flinch_anim(hit: HitInfo) -> StringName:

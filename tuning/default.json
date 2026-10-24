@@ -185,6 +185,7 @@
 		"ragdoll_settle_max_s": 1.0,
 		"ragdoll_getup_blend_s": 0.2,
 		"ragdoll_getup_slide_speed": 1.5,
+		"ragdoll_getup_aside_m": 0.8,
 		"ragdoll_stop_blend_s": 0.1,
 		"fov_deg": 90.0,
 		"cam_smoothing_s": 0.05,

@@ -343,6 +343,8 @@ extends Resource
 ## at most over the whole get-up).
 @export_range(0.0, 0.5, 0.01) var ragdoll_getup_blend_s: float = 0.2
 @export_range(0.5, 6.0, 0.1) var ragdoll_getup_slide_speed: float = 1.5
+## A body that fell on another gets up beside it, this far (m) from where its hips lie.
+@export_range(0.5, 2.0, 0.05) var ragdoll_getup_aside_m: float = 0.8
 ## A ragdoll cut short (a staggering body grabbed) fades back over this long.
 @export_range(0.0, 0.5, 0.01) var ragdoll_stop_blend_s: float = 0.1
 
