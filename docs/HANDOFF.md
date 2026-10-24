@@ -4,6 +4,41 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-24 10:55 CDT: handoff to a fresh account for phase 3 (account D's weekly at 66%)
+Game-boy chose to hand phase 3 to a fresh account once the flash merged. Account D is at 59% of its 5-hour window (resets 13:40 CDT) and **66% weekly** (resets Tue 2026-10-27 12:00 CDT), past the 65% launch line. This session is renamed "Beat-em-up: account D session (handed off)", which frees the working-session title. Its watcher `usage-watcher-e` is told to end its loop. **No agents or workflows are running.** Every branch is pushed, and the worktrees are clean apart from untracked `captures/`.
+- **State:** `m2/hit-feel` @ `33fcc98` has phases 1 and 2 plus the localized flash. **437/437 tests pass with no SCRIPT ERROR or ERROR.** The preset has 278 values.
+  - WP4: `398a2ad` merged `m2/ragdoll` @ `4181f53` (see the 10:45 entry).
+  - Flash: `33fcc98` merged `m2/hit-flash` @ `dfc56e8`:
+    - `game/fx/hit_flash.gdshader` is a per-rig overlay, `next_pass` only while flashing, and warmed up at load;
+    - `HumanoidRig.flash_at()` and `follow_flash()`; `set_flash()` stays whole-body for the cyan parry flash;
+    - a "Hit flash" subgroup in "Hit feel": `hit_flash_radius_m` 0.25, `hit_flash_strength` 1.0, `hit_flash_core` 0.5, and `hit_flash_frames`, which moved there;
+    - it lasts exactly `hit_flash_frames` rendered frames: before, the player's own hits showed one, because of the tick order;
+    - first-person white on a jab at 1 m fell from 27.5% to 3.8%; a 4 m radius gives the old whole-body look;
+    - sheets (local) in `.worktrees/m2-flash/captures/flash/`.
+- **Known items for phase 3** (judge from captures; fix or ask Game-boy):
+  - Flash: in side view the 0.25 m flash hides under the comic burst (the burst has a minimum view share). A minimum on-screen size for the flash would be new design: ask Game-boy.
+  - Flash: when the player is hit, the contact is behind the lens, so the flash no longer shows in first person; before, the player's arms flashed white. Judge whether a hit on the player still reads (shake, HUD).
+  - Flash: `tests/test_vfx.gd`, `test_hit_flash_still_covers_the_damage_look`, has a doc comment that still says emission.
+  - WP4 leftovers:
+    - joint-limit transients on impact (probes only);
+    - staggers subtle from the side (influence is at the spec's 0.6);
+    - lying poses close to M1's;
+    - six ragdolls cost about 1.2-1.5 ms a frame.
+  - WP2 leftovers:
+    - the first finisher of a run drops about one frame;
+    - light bursts are about 10% of the view at jab range;
+    - the bruised look is subtle in side view;
+    - the combat log covers the side view in combo_bot captures.
+  - The speed lines use an unseeded random generator, so captures differ after a finisher.
+  - WP1 notes: the F1/F4 overlay takes all keys while open, and the help overlay still labels F1 "Tuning panel (Milestone 2)".
+  - The flash and the ragdoll have not been recorded together yet.
+- **Resume:** start from the takeover prompt below. Its "Next steps" are current.
+- **Waiting on Game-boy:** the four open questions in the takeover prompt, and a listen to WP3's audio.
+- **Usage this account (D):**
+  - WP4's builder cost about 52% of a window; its two reviewers about 22% each.
+  - The WP4 fix pass cost about 40% and was cut off; its finish took about a third of a window, run alongside the flash agent.
+  - Plan on about a whole 5-hour window for phase 3's review and fix.
+
 ### 2026-10-24 10:45 CDT: WP4 merged into `m2/hit-feel` (429/429); flash agent running; weekly at 65%
 - **WP4 done:** `m2/ragdoll` @ `4181f53`, "M2 WP4: review fixes (...)".
   - Of the 18 findings, 15 are fixed and 3 partly (mech-F4 joint-limit transients on impact, feel-F3 staggers still subtle from the side, feel-F4 lying poses close to M1's). mech-F13 is a spec question.
@@ -344,16 +379,22 @@ USAGE RULES:
 - The watcher checks every 20 minutes below 70%, every 10 minutes up to 85% and every 5 minutes above that. It tells you to halt and hand off at 90%.
 
 Next steps (Milestone 2; details are in docs/HANDOFF.md):
-- Phase 1 (WP1 tuning panel, WP2 comic VFX, WP3 audio) is done and merged into m2/hit-feel, and 400/400 tests pass. The 8 phase 1 spec questions are answered (all defaults kept), and README notes the two WP1 departures. WP3's audio was judged by analysis only, so I'll listen to it.
-- Phase 2, WP4 (partial and full ragdoll), per docs/milestones/M2-WP4-brief.md, in .worktrees/m2-ragdoll (branch m2/ragdoll). The build (96defb9) and both reviews are done. The 18 findings are in docs/reviews/M2-WP4-review-findings.json on m2/ragdoll. The verify-and-fix pass was cut off at the handoff after several wip: commits; 5be9500 passes 425/425 tests. Finish it with ONE agent (check get_usage first; nothing new at 65% or more):
-  - tell it the absolute worktree path and to cd there for every command (Workflow's isolation: 'worktree' fails here);
-  - for each of the 18 findings, check it against 96defb9..5be9500 and give a verdict (confirmed, partial or refuted; fixed or not), and finish any gaps;
-  - re-record tests/bot/ragdoll_bot.tscn in first person and side view into captures/review_after/ and judge the frames;
-  - run tools/run_tests.sh, write the verdicts to docs/reviews/M2-WP4-fix-results.json, commit "M2 WP4: review fixes (...)" and push;
-  - it may cost about half a 5-hour window.
-- Decided: localize M1's white hit flash (see docs/HANDOFF.md's Decisions log), and implement it in phase 3 after WP4 merges. Still open for me: the WP4 builder's three ragdoll spec questions in docs/HANDOFF.md's 21:55 entry.
-- Then merge m2/ragdoll into m2/hit-feel, run tools/run_tests.sh (everything must pass, no SCRIPT ERROR), push, and update docs/HANDOFF.md.
-- Then phase 3 for my playtest: integrate, record every act and review it from captures (include M1's white hit flash, which fills much of the first-person view at close range), update README and ARCHITECTURE, and open the Milestone 2 PR.
+- Phases 1 and 2 are done and merged into m2/hit-feel: WP1 tuning panel, WP2 comic VFX, WP3 audio, WP4 partial and full ragdoll. The localized white hit flash, which I approved on 2026-10-24, is merged too. 437/437 tests pass with no SCRIPT ERROR, at 33fcc98. WP3's audio was judged by analysis only, so I'll listen to it.
+- Phase 3, for my playtest (docs/milestones/M2-plan.md "Phase 3"). Check get_usage before each agent launch; nothing new at 65% or more.
+  1. Record every act in first person and side view: tests/bot/combo_bot.tscn, vfx_bot.tscn and ragdoll_bot.tscn. Review them from the frames as I would:
+     - hit feel per tier, and readability;
+     - no screen-filling effects in first person;
+     - the localized flash together with the ragdoll;
+     - the items under "Known items for phase 3" in docs/HANDOFF.md's newest entry.
+     Show me the most telling sheets.
+  2. Run one adversarial review-then-fix agent over the integrated build (mechanics, plus feel from captures). Commit "M2 phase 3: review fixes (...)" and push.
+  3. Update README: M2 status, controls (F1 tuning panel, F4 cheats), the help overlay's F1 label. Update ARCHITECTURE: the title still says Milestone 1, and the VFX, audio, ragdoll and flash sections need checking.
+  4. Open the Milestone 2 PR from m2/hit-feel into main. Never merge it; I play it, tune each tier, save a preset and sign it off.
+- Open questions for me, all left as they are until I answer:
+  - the hit's push on the ragdoll: SPEC §6's "impulse at the contact point" versus the capped central kick on the struck body part (WP4 mech-F13);
+  - KO bodies sleep until the arena clears; KO bodies take no hits; heavy-tier knockdowns get the full ragdoll (WP4 builder);
+  - stagger influence above the spec's 0.6, so staggers read from the side;
+  - a minimum on-screen size for the localized flash, because in side view the 0.25 m flash hides under the comic burst.
 
 Ground rules:
 - Never merge a milestone PR into main until I've played it and signed it off.
