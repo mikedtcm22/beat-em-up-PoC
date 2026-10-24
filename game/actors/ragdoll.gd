@@ -28,7 +28,10 @@ extends SkeletonModifier3D
 ## animation's hips (Tuning.ragdoll_hips_hz) and turned as one toward their rotation (or,
 ## flying to a face-down landing, toward the lying pose's: aim_landing()), so the visible
 ## body never drifts from the sim body and a downed body lies where its hurtboxes are. A
-## hit adds a kick on the struck part. A lying body comes to rest and sleeps.
+## hit adds a kick on the struck part, landing at the contact point
+## (Tuning.ragdoll_kick_at_contact): a central kick, plus the twist of its off-center part
+## on the struck body and its parents, turned as one from their joint and capped per part
+## (_twist_at_contact()). A lying body comes to rest and sleeps.
 ##
 ## Time: the bodies run in the actor's sim time (HumanoidRig passes
 ## TimeController.scale_for(actor) every tick, sim_scale): when the scale changes from a to
@@ -104,7 +107,8 @@ var _applied_scale: float = 1.0
 var _frozen: bool = false
 var _held_lin: Array[Vector3] = []
 var _held_ang: Array[Vector3] = []
-## Kicks waiting for the next unfrozen step: [body index, sim velocity change].
+## Kicks waiting for the next unfrozen step: [body index, sim velocity change, the contact
+## (world) whose twist the body takes, or null] (_queue_impulse()).
 var _pending: Array[Array] = []
 ## The physics frame the latest ragdoll start or kick came in (its step holds still).
 var _hold_frame: int = -1
@@ -410,6 +414,18 @@ func max_body_speed() -> float:
 	return top
 
 
+## Largest sim spin (rad/s) of any simulating body, and of the bodies on these skeleton
+## bones if `bones` is not empty (0 when none). For tests.
+func max_body_spin(bones: Array[StringName] = []) -> float:
+	var top := 0.0
+	for i: int in _sim:
+		if not bones.is_empty() and not bones.has(_spec[i].bone):
+			continue
+		var ang: Vector3 = PhysicsServer3D.body_get_state(_bodies[i].get_rid(), PhysicsServer3D.BODY_STATE_ANGULAR_VELOCITY)
+		top = maxf(top, ang.length() / _applied_scale if _applied_scale > 0.0 else _held_ang[i].length())
+	return top
+
+
 ## The simulating bodies' world transforms (for tests and debug draw).
 func body_transforms() -> Array[Transform3D]:
 	var out: Array[Transform3D] = []
@@ -432,6 +448,18 @@ func body_sim_velocity(bone: StringName) -> Vector3:
 			return _held_lin[i]
 		var lin: Vector3 = PhysicsServer3D.body_get_state(_bodies[i].get_rid(), PhysicsServer3D.BODY_STATE_LINEAR_VELOCITY)
 		return lin / _applied_scale
+	return Vector3.ZERO
+
+
+## Sim spin (rad/s) of the simulating body on bone `bone`, or zero (for tests).
+func body_sim_spin(bone: StringName) -> Vector3:
+	for i: int in _sim:
+		if _spec[i].bone != bone:
+			continue
+		if _frozen or _applied_scale <= 0.0:
+			return _held_ang[i]
+		var ang: Vector3 = PhysicsServer3D.body_get_state(_bodies[i].get_rid(), PhysicsServer3D.BODY_STATE_ANGULAR_VELOCITY)
+		return ang / _applied_scale
 	return Vector3.ZERO
 
 
@@ -737,19 +765,72 @@ func _rescale_body(i: int, from: float, to: float) -> void:
 	PhysicsServer3D.body_set_state(rid, PhysicsServer3D.BODY_STATE_ANGULAR_VELOCITY, _held_ang[i] * to)
 
 
-## Apply the waiting kicks (velocity changes) at sim scale `scale`.
+## Apply the waiting kicks (velocity changes) at sim scale `scale`: each a central kick on
+## its body, and the struck body's (Tuning.ragdoll_kick_at_contact) the twist of the
+## kick landing off its center too (_twist_at_contact()).
 func _apply_pending(states: Array[PhysicsDirectBodyState3D], scale: float) -> void:
 	for entry: Array in _pending:
 		var i: int = entry[0]
 		var k := _sim.find(i)
 		if k < 0:
 			continue
-		var state := states[k]
 		var change: Vector3 = entry[1]
-		# A central kick on the struck body: the joints turn it into the chain's swing (an
-		# off-center impulse on a light body, a hand or the neck, would spin it wildly).
-		state.apply_central_impulse(change * _mass[i] * scale)
+		states[k].apply_central_impulse(change * _mass[i] * scale)
+	if Tuning.data.ragdoll_kick_at_contact:
+		for entry: Array in _pending:
+			var contact: Variant = entry[2]
+			if contact != null and _sim.has(entry[0]):
+				_twist_at_contact(states, entry[0], contact, entry[1], scale)
 	_pending.clear()
+
+
+## The off-center part of a kick of `change` (sim m/s) landing at `contact` (world) on body
+## `i` (Spec §6, "an impulse at the contact point"): its angular impulse about the body's
+## center of mass, the lever clamped to Tuning.ragdoll_contact_lever_m and scaled by
+## Tuning.ragdoll_contact_twist. It turns the struck body and its simulating parents (up to
+## Tuning.ragdoll_contact_chain bodies) as one rigid piece about the joint the piece hangs
+## from (the body's center for the hips), at the rate that impulse gives that piece's
+## inertia, capped per body part (Tuning.ragdoll_contact_spin_*). A light hand or neck alone
+## would spin wildly (the joints then fight it: a glitch, not a contortion); the piece
+## turning as one from its joint twists the body along the hit instead, and the joints stay
+## together.
+func _twist_at_contact(states: Array[PhysicsDirectBodyState3D], i: int, contact: Vector3,
+		change: Vector3, scale: float) -> void:
+	var tuning := Tuning.data
+	var struck := states[_sim.find(i)]
+	var lever := (contact - (struck.transform.origin + struck.center_of_mass)).limit_length(tuning.ragdoll_contact_lever_m)
+	var angular := lever.cross(change * _mass[i]) * tuning.ragdoll_contact_twist
+	if angular.length_squared() < 1e-10:
+		return
+	var chain: PackedInt32Array = [i]
+	var top := i
+	while chain.size() < tuning.ragdoll_contact_chain and _parent_body[top] >= 0 and _sim.has(_parent_body[top]):
+		top = _parent_body[top]
+		chain.append(top)
+	var top_state := states[_sim.find(top)]
+	var pivot := top_state.transform.origin
+	if _parent_body[top] < 0:
+		pivot += top_state.center_of_mass
+	# The piece's inertia about the axis through the pivot: each body's own, plus its mass
+	# times its distance from the axis squared.
+	var axis := angular.normalized()
+	var inertia := 0.0
+	for b: int in chain:
+		var state := states[_sim.find(b)]
+		var arm := state.transform.origin + state.center_of_mass - pivot
+		inertia += axis.dot(state.inverse_inertia_tensor.inverse() * axis) \
+				+ _mass[b] * (arm.length_squared() - pow(arm.dot(axis), 2.0))
+	var cap := tuning.ragdoll_contact_spin_trunk
+	match _part[i]:
+		Part.HEAD:
+			cap = tuning.ragdoll_contact_spin_head
+		Part.ARMS, Part.LEGS:
+			cap = tuning.ragdoll_contact_spin_limb
+	var turn := axis * minf(angular.length() / maxf(inertia, 1e-6), cap) * scale
+	for b: int in chain:
+		var state := states[_sim.find(b)]
+		state.angular_velocity += turn
+		state.linear_velocity += turn.cross(state.transform.origin + state.center_of_mass - pivot)
 
 
 ## Queue a kick of `push` (sim m/s) on the simulating `part` body (any body if none of that
@@ -772,18 +853,19 @@ func _queue_impulse(contact: Vector3, push: Vector3, part: Part) -> void:
 		if best >= 0:
 			break
 	var change := push.limit_length(Tuning.data.ragdoll_max_kick)
-	_pending.append([best, change])
+	# [body, sim velocity change, contact (the struck body's: its twist) or null].
+	_pending.append([best, change, contact])
 	# A kick on an arm moves the whole arm; a stagger's kick on the trunk, the whole trunk
 	# (on one light body the joints soak it up and the chest hardly gives).
 	if _part[best] == Part.ARMS:
 		var up := _parent_body[best]
 		while up >= 0 and _part[up] == Part.ARMS and _sim.has(up):
-			_pending.append([up, change])
+			_pending.append([up, change, null])
 			up = _parent_body[up]
 	elif mode == Mode.PARTIAL and _part[best] == Part.TORSO:
 		for i: int in _sim:
 			if i != best and _part[i] == Part.TORSO:
-				_pending.append([i, change])
+				_pending.append([i, change, null])
 
 
 ## Rest detection for a lying ragdoll: asleep once every body has moved slower than

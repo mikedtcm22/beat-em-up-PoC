@@ -59,7 +59,10 @@ extends Resource
 ## A flying body must move at least this fast (m/s) to knock down whoever it hits.
 @export_range(0.5, 15.0, 0.5) var body_impact_min_speed: float = 3.0
 @export_range(5.0, 500.0, 1.0) var dummy_health: float = 30.0
-@export_range(0.0, 10.0, 0.1) var dummy_revive_s: float = 2.5
+## A training dummy that blinked off after a KO (Ragdoll > "KO and blink-off") is gone this
+## long, then blinks back in standing at its post at full health: about 4 s from the KO to
+## back with the KO defaults.
+@export_range(0.0, 10.0, 0.1) var dummy_revive_s: float = 1.0
 
 @export_group("Feel details")
 ## Fraction of move speed while holding a grabbed enemy, and while airborne.
@@ -273,10 +276,10 @@ extends Resource
 ## first-person view; the camera rides the animated eyes either way).
 @export var ragdoll_player: bool = false
 @export_subgroup("Stagger (partial)")
-## How much of the simulated upper body shows over the animation (Spec §6: 0.3-0.6), how
-## long it holds, then how long it fades back to the animation (both cut to the stagger's
-## length).
-@export_range(0.0, 1.0, 0.01) var ragdoll_partial_influence: float = 0.6
+## How much of the simulated upper body shows over the animation (above Spec §6's 0.3-0.6,
+## Game-boy's call: staggers that read from the side view too), how long it holds, then how
+## long it fades back to the animation (both cut to the stagger's length).
+@export_range(0.0, 1.0, 0.01) var ragdoll_partial_influence: float = 0.9
 @export_range(0.0, 1.0, 0.01) var ragdoll_partial_hold_s: float = 0.25
 @export_range(0.05, 1.5, 0.01) var ragdoll_partial_fade_s: float = 0.4
 ## A stagger on a body already staggering: the influence rises back from where its fade had
@@ -322,6 +325,23 @@ extends Resource
 ## and tilted this much along the stomp (1 = as much along it as down).
 @export_range(0.0, 10.0, 0.1) var ragdoll_ground_push: float = 2.5
 @export_range(0.0, 1.0, 0.05) var ragdoll_ground_push_tilt: float = 0.25
+@export_subgroup("Kick at the contact point")
+## The hit's kick lands at its contact point (Spec §6): besides the central kick, its
+## off-center part twists the struck body part and its parents as one piece from the joint
+## it hangs on. Off, only the central kick (the body part pushed straight along the hit).
+@export var ragdoll_kick_at_contact: bool = true
+## The twist's lever: the contact's distance (m) from the struck body's center counts up to
+## this much. Times this on the twist (above 1 exaggerates it).
+@export_range(0.0, 0.4, 0.01) var ragdoll_contact_lever_m: float = 0.15
+@export_range(0.0, 3.0, 0.05) var ragdoll_contact_twist: float = 1.0
+## How many bodies turn as one piece: the struck one and its parents up the chain (1 = the
+## struck body alone, about its own joint).
+@export_range(1, 4, 1) var ragdoll_contact_chain: int = 2
+## The twist turns its piece no faster than this (rad/s) on the head and neck, the trunk,
+## and the arms and legs.
+@export_range(0.0, 40.0, 0.5) var ragdoll_contact_spin_head: float = 14.0
+@export_range(0.0, 40.0, 0.5) var ragdoll_contact_spin_trunk: float = 8.0
+@export_range(0.0, 40.0, 0.5) var ragdoll_contact_spin_limb: float = 14.0
 @export_subgroup("Hips spring")
 ## The whole ragdoll is held to the animation's hips (where the sim body is): position
 ## spring frequency and damping ratio, and the whole body's turn toward the animation's
@@ -362,6 +382,19 @@ extends Resource
 @export_range(0.5, 2.0, 0.05) var ragdoll_getup_aside_m: float = 0.8
 ## A ragdoll cut short (a staggering body grabbed) fades back over this long.
 @export_range(0.0, 0.5, 0.01) var ragdoll_stop_blend_s: float = 0.1
+@export_subgroup("KO and blink-off")
+## A KO'd enemy or dummy (never the player) lies limp this long, then blinks on and off for
+## ko_blink_s, its rate (on-off cycles per second) rising from ko_blink_start_hz to
+## ko_blink_end_hz, and is gone for good (Game-boy's departure from Spec §6's "bodies stay
+## until the arena clears"; README). Sim seconds.
+@export_range(0.0, 5.0, 0.05) var ko_linger_s: float = 1.5
+@export_range(0.0, 3.0, 0.05) var ko_blink_s: float = 1.0
+@export_range(0.5, 30.0, 0.5) var ko_blink_start_hz: float = 4.0
+@export_range(0.5, 30.0, 0.5) var ko_blink_end_hz: float = 12.0
+## A body that comes back (a training dummy, dummy_revive_s after it blinked off) blinks in
+## over this long at this rate, out of reach until it is solid.
+@export_range(0.0, 2.0, 0.05) var ko_blink_in_s: float = 0.5
+@export_range(0.5, 30.0, 0.5) var ko_blink_in_hz: float = 8.0
 
 @export_group("Camera")
 @export_range(75.0, 110.0, 1.0) var fov_deg: float = 90.0

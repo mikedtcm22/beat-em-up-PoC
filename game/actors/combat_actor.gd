@@ -22,6 +22,14 @@ extends CharacterBody3D
 ## Enemies and dummies only, unless Tuning.ragdoll_player. Visual only: every timing,
 ## flight, impact and hurtbox here stays the animation's.
 ##
+## A KO (Spec §6; Game-boy's blink-off, README's M2 departures): the body goes limp and
+## lies for Tuning.ko_linger_s, blinks for ko_blink_s (faster and faster), and blinks off
+## for good (is_gone(): hidden, its ragdoll stopped, no hurtboxes, no collision; still KO'd,
+## so nothing hits, grabs, aims at or piles onto it; CombatEvents.vanished). Enemies and
+## dummies only (_blinks_off_when_ko()); the timing lives here, the rig only shows or hides
+## (HumanoidRig.set_shown()). A body that comes back (a respawned dummy) blinks in
+## (blink_in()).
+##
 ## A strike that lands on a first-person body (the player's rig, first_person_body) is
 ## pulled back into the stance once the hit's hitstop is over (_pull_strike), unless the
 ## guard already knocked it back (react_to_block()): a fist that reached the face would
@@ -130,6 +138,12 @@ var _pin_from: Vector3 = Vector3.ZERO
 var _pin_ease_s: float = 0.0
 var _impact_query: PhysicsShapeQueryParameters3D
 var _impact_shape: CapsuleShape3D
+## KO'd and blinked off (is_gone()), and the sim frames since.
+var _gone: bool = false
+var _gone_frames: int = 0
+## A blink-in (blink_in()): its length and the sim frames left of it.
+var _blink_in_frames: int = 0
+var _blink_in_left: int = 0
 
 
 func _ready() -> void:
@@ -161,7 +175,7 @@ func _physics_process(delta: float) -> void:
 		_sim_tick()
 	if state == CombatTypes.ActorState.GRABBED:
 		_pin_to_holder(delta * scale)
-	elif scale > 0.0:
+	elif scale > 0.0 and not _gone:
 		_integrate(delta * scale, scale)
 	rig.advance(delta * scale)
 	# The hit flash counts real ticks so it stays 2 frames even through hitstop. The tick it
@@ -203,6 +217,31 @@ func is_flying() -> bool:
 
 func is_invulnerable() -> bool:
 	return _invuln_frames > 0 or state == CombatTypes.ActorState.KO
+
+
+## KO'd and blinked off (see the class docs): hidden, no ragdoll, no hurtboxes, no
+## collision. It stays KO'd, so every search for bodies passes it over.
+func is_gone() -> bool:
+	return _gone
+
+
+## Blink in over Tuning.ko_blink_in_s (a body that comes back, such as a respawned dummy),
+## out of reach meanwhile: no hit lands on it and it cannot be grabbed.
+func blink_in() -> void:
+	_blink_in_frames = roundi(Tuning.data.ko_blink_in_s * Engine.physics_ticks_per_second)
+	_blink_in_left = _blink_in_frames
+	_invuln_frames = maxi(_invuln_frames, _blink_in_frames)
+	rig.set_shown(_blink_in_left == 0 or blink_shown(0.0, Tuning.data.ko_blink_in_s,
+			Tuning.data.ko_blink_in_hz, Tuning.data.ko_blink_in_hz))
+
+
+## Whether a blink shows the body `t` sim seconds into a blink `length` seconds long whose
+## rate goes evenly from `from_hz` to `to_hz` (on-off cycles per second): each cycle off
+## first, then on.
+static func blink_shown(t: float, length: float, from_hz: float, to_hz: float) -> bool:
+	var u := clampf(t, 0.0, length)
+	var cycles := from_hz * u + (to_hz - from_hz) * u * u / (2.0 * maxf(length, 1e-6))
+	return fposmod(cycles, 1.0) >= 0.5
 
 
 ## Grab anytime (Game-boy's second playtest, a Spec §4 change): a standing actor can be
@@ -469,6 +508,10 @@ func reset_state() -> void:
 	_flying_reaction = CombatTypes.Reaction.NONE
 	_flash_frames = 0
 	rig.set_flash(0.0)
+	_gone = false
+	_gone_frames = 0
+	_blink_in_left = 0
+	rig.set_shown(true)
 	_set_ghost(false)
 	rig.set_hurtboxes_enabled(true)
 	_enter_state(CombatTypes.ActorState.FREE)
@@ -564,9 +607,15 @@ func _update_lunge() -> void:
 	pass
 
 
-## Sim frames spent KO'd; dummies revive from here.
+## Sim frames spent KO'd, after the blink-off's (_tick_ko_blink()); dummies come back from
+## here, the player gets up.
 func _tick_ko() -> void:
 	pass
+
+
+## A KO'd body blinks off (see the class docs): enemies and dummies; the player's KO stays.
+func _blinks_off_when_ko() -> bool:
+	return team != 0
 
 
 ## Whether AIRBORNE ends automatically on touching the floor (the player lands itself).
@@ -586,6 +635,11 @@ func _sim_tick() -> void:
 			rig.play(&"idle", 0.0)
 	if _invuln_frames > 0:
 		_invuln_frames -= 1
+	if _blink_in_left > 0:
+		_blink_in_left -= 1
+		var tuning := Tuning.data
+		var t := (_blink_in_frames - _blink_in_left) / float(Engine.physics_ticks_per_second)
+		rig.set_shown(_blink_in_left == 0 or blink_shown(t, tuning.ko_blink_in_s, tuning.ko_blink_in_hz, tuning.ko_blink_in_hz))
 	if is_guarding():
 		_guard_frames += 1
 	_tick_guard_meter()
@@ -630,6 +684,8 @@ func _tick_reaction_timers() -> void:
 				_set_ghost(false)
 				_enter_state(CombatTypes.ActorState.FREE)
 		CombatTypes.ActorState.KO:
+			if _blinks_off_when_ko():
+				_tick_ko_blink()
 			_tick_ko()
 		CombatTypes.ActorState.AIRBORNE:
 			if _auto_land() and is_on_floor() and state_frame > 2:
@@ -980,6 +1036,40 @@ func _enter_ko() -> void:
 	if rig.ragdoll_mode() != Ragdoll.Mode.FULL and _ragdoll_allowed():
 		rig.ragdoll_start(true, Vector3.ZERO, Vector3.ZERO, sim_velocity)
 	rig.ragdoll_set_phase(Ragdoll.Phase.LIMP)
+
+
+## A KO'd body lies Tuning.ko_linger_s, blinks for ko_blink_s, faster and faster
+## (ko_blink_start_hz to ko_blink_end_hz), and blinks off (_vanish()). Sim time: hitstop
+## and slow-mo hold and stretch it.
+func _tick_ko_blink() -> void:
+	if _gone:
+		_gone_frames += 1
+		return
+	var tuning := Tuning.data
+	var blink_t := state_frame / float(Engine.physics_ticks_per_second) - tuning.ko_linger_s
+	if blink_t < 0.0:
+		return
+	if blink_t >= tuning.ko_blink_s:
+		_vanish()
+		return
+	rig.set_shown(blink_shown(blink_t, tuning.ko_blink_s, tuning.ko_blink_start_hz, tuning.ko_blink_end_hz))
+
+
+## The KO'd body blinks off for good: hidden, its ragdoll stopped, no hurtboxes, no
+## collision and no motion. It stays KO'd.
+func _vanish() -> void:
+	_gone = true
+	_gone_frames = 0
+	rig.ragdoll_stop()
+	rig.set_shown(false)
+	rig.set_hurtboxes_enabled(false)
+	_flash_frames = 0
+	rig.set_flash(0.0)
+	collision_layer = 0
+	collision_mask = 0
+	sim_velocity = Vector3.ZERO
+	velocity = Vector3.ZERO
+	CombatEvents.vanished.emit(self)
 
 
 ## The rig ragdolls for this actor: enemies and dummies, the player with

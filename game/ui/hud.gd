@@ -45,6 +45,7 @@ func _ready() -> void:
 	CombatEvents.attack_started.connect(combat_log.on_attack_started)
 	CombatEvents.attack_whiffed.connect(combat_log.add_whiff)
 	CombatEvents.health_changed.connect(_on_health_changed)
+	CombatEvents.vanished.connect(enemy_bars.on_vanished)
 	CombatEvents.perfect_blocked.connect(_on_perfect_blocked)
 	CombatEvents.guard_broken.connect(_on_guard_broken)
 	GameInput.paused_changed.connect(pause_overlay.set_paused)

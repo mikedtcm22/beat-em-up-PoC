@@ -1,7 +1,10 @@
 class_name TrainingDummy
 extends CombatActor
-## A training target (Milestone 1). Full hit reactions, health from Tuning, revives after a
-## KO, faces the player, and walks back to its post when left alone.
+## A training target (Milestone 1). Full hit reactions, health from Tuning, faces the
+## player, and walks back to its post when left alone. KO'd, it lies, blinks off like every
+## enemy (CombatActor), and Tuning.dummy_revive_s later blinks back in standing at its post
+## (set_post()), or beside it when someone stands there, at full health, its damage look
+## clean (_respawn()).
 ##
 ## Sparring (`sparring`, F5 in the test room): with the player within Tuning.sparring_range
 ## in front of it, the dummy walks in (facing the player, at Tuning.dummy_walk_speed) until
@@ -27,6 +30,8 @@ const DUMMY_JAB_ID := &"dummy_jab"
 			_spar_wait = _next_spar_wait()
 
 var _home: Vector3
+## The yaw it comes back at after a KO (set_post()).
+var _home_yaw: float = 0.0
 var _idle_frames: int = 0
 var _jab: MoveData
 ## The jab with its startup scaled by Tuning.windup_mult, for the multiplier it was built for.
@@ -46,6 +51,7 @@ func _ready() -> void:
 	max_health = Tuning.data.dummy_health
 	super._ready()
 	_home = global_position
+	_home_yaw = rotation.y
 	_rng.seed = hash(String(name))
 	if ResourceLoader.exists(DUMMY_JAB_PATH):
 		_jab = load(DUMMY_JAB_PATH) as MoveData
@@ -111,8 +117,9 @@ func _tick_control() -> void:
 	rig.play_locomotion(Vector2.ZERO, 0.0)
 
 
-## Move the dummy and make `pos` the post it walks back to. With `fresh`, also reset it
-## to standing at full health (bots and tests stage dummies this way).
+## Move the dummy and make `pos` (facing `yaw`) the post it walks back to and comes back
+## at after a KO. With `fresh`, also reset it to standing at full health (bots and tests
+## stage dummies this way).
 func set_post(pos: Vector3, yaw: float = rotation.y, fresh: bool = false) -> void:
 	global_position = pos
 	rotation.y = yaw
@@ -126,6 +133,7 @@ func set_post(pos: Vector3, yaw: float = rotation.y, fresh: bool = false) -> voi
 		_set_ghost(true)
 		_solid_after_step = true
 	_home = pos
+	_home_yaw = yaw
 	sim_velocity = Vector3.ZERO
 	_idle_frames = 0
 
@@ -231,17 +239,65 @@ func _next_spar_wait() -> int:
 
 
 func _tick_ko() -> void:
-	if state_frame >= int(Tuning.data.dummy_revive_s * 60.0):
-		_revive()
+	if not is_gone() or _gone_frames < roundi(Tuning.data.dummy_revive_s * Engine.physics_ticks_per_second):
+		return
+	var spot := _respawn_spot()
+	if spot.is_finite():
+		_respawn(spot)
 
 
-func _revive() -> void:
+## Where the dummy comes back: its post, or, when someone stands there (the player who
+## knocked it out often does), the nearest spot around it with room for its body (one, then
+## two body widths out, the one farthest from the player first). Vector3.INF while there is
+## none; it waits.
+func _respawn_spot() -> Vector3:
+	var space := get_world_3d().direct_space_state if is_inside_tree() else null
+	if space == null:
+		return _home
+	var shape := CapsuleShape3D.new()
+	shape.radius = body_radius
+	shape.height = body_height
+	var query := PhysicsShapeQueryParameters3D.new()
+	query.shape = shape
+	query.collide_with_areas = false
+	query.collision_mask = (
+		CombatTypes.bit(CombatTypes.LAYER_WORLD)
+		| CombatTypes.bit(CombatTypes.LAYER_PLAYER_BODY)
+		| CombatTypes.bit(CombatTypes.LAYER_ENEMY_BODY)
+	)
+	query.exclude = [get_rid()]
+	var lift := Vector3.UP * (body_height * 0.5 + _GETUP_FLOOR_CLEARANCE)
+	query.transform = Transform3D(Basis.IDENTITY, _home + lift)
+	if space.intersect_shape(query, 1).is_empty():
+		return _home
+	var player := get_tree().get_first_node_in_group(&"player") as Node3D
+	for ring: int in [1, 2]:
+		var best := Vector3.INF
+		var best_d := -INF
+		for k: int in _GETUP_DIRECTIONS:
+			var spot := _home + Vector3.FORWARD.rotated(Vector3.UP, TAU * k / _GETUP_DIRECTIONS) * body_radius * 2.0 * ring
+			query.transform = Transform3D(Basis.IDENTITY, spot + lift)
+			if not space.intersect_shape(query, 1).is_empty():
+				continue
+			var d := spot.distance_to(player.global_position) if player else 0.0
+			if d > best_d:
+				best_d = d
+				best = spot
+		if best.is_finite():
+			return best
+	return Vector3.INF
+
+
+## Back from a KO: standing at `spot` (its post, or beside it), facing as it was posted, at
+## full health (Tuning.dummy_health; the damage look follows the health), blinking in. The
+## post stays where it was.
+func _respawn(spot: Vector3) -> void:
 	max_health = Tuning.data.dummy_health
-	health = max_health
-	rig.set_hurtboxes_enabled(true)
-	CombatEvents.health_changed.emit(self, health, max_health)
+	var post := _home
+	set_post(spot, _home_yaw, true)
+	_home = post
 	CombatEvents.revived.emit(self)
-	_start_getup()
+	blink_in()
 
 
 ## Rotate toward a horizontal direction at `rate` radians per second.

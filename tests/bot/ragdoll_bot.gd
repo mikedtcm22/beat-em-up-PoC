@@ -4,13 +4,18 @@ extends "res://tests/bot/combo_bot.gd"
 ## their feet flying and landing (full ragdoll), a flying body knocking a second one down,
 ## the throw, a KO going limp and staying, the get-ups, a guard break, the finisher shove,
 ## a parried jab, a body launched from behind landing face down, and a stomp on a lying body
-## that then gets up under the player, each in first person and side view. Record it with
-## Movie Maker:
+## that then gets up under the player, each in first person and side view. The KO act shows
+## the whole blink-off: the body lies, blinks, is gone, and the dummy blinks back in at its
+## post. Record it with Movie Maker:
 ##   godot --path . --write-movie captures/ragdoll/ragdoll.avi --fixed-fps 60 \
 ##     --resolution 1280x720 res://tests/bot/ragdoll_bot.tscn [-- --act=<title text>]
-## Every act waits for its bodies to get up (or, the KO, to lie still and revive).
-## `-- --no-ragdoll` records the same acts with Tuning.ragdoll_enabled off (the animated
-## reactions of Milestone 1), for comparison.
+## Every act waits for its bodies to get up (or, the KO, to come back).
+## Switches after `--`, for A/B comparisons of the same acts:
+##   --no-ragdoll     Tuning.ragdoll_enabled off (the animated reactions of Milestone 1);
+##   --central-kick   Tuning.ragdoll_kick_at_contact off (the hit's kick central on the
+##                    struck part, no twist at the contact point);
+##   --set=<tunable>=<value>   any TuningData value, e.g. --set=ragdoll_partial_influence=0.6
+##                    (repeatable).
 
 ## Seconds a body is watched after the last hit of an act: long enough to land, lie, sleep
 ## and get up (Tuning.downed_frames + getup_frames, about 1.8 s).
@@ -18,8 +23,13 @@ const WATCH_S := 2.6
 
 
 func _run() -> void:
-	if OS.get_cmdline_user_args().has("--no-ragdoll"):
-		Tuning.data.ragdoll_enabled = false
+	for arg: String in OS.get_cmdline_user_args():
+		if arg == "--no-ragdoll":
+			Tuning.data.ragdoll_enabled = false
+		elif arg == "--central-kick":
+			Tuning.data.ragdoll_kick_at_contact = false
+		elif arg.begins_with("--set="):
+			_set_tunable(arg.trim_prefix("--set="))
 	await _ticks(3)
 	player = room.get(&"player")
 	player.input.scripted = true
@@ -125,8 +135,10 @@ func _act_throw() -> void:
 	await _watch(WATCH_S)
 
 
-## A dummy on its last few points: the uppercut KOs it; it goes limp, settles and stays,
-## then revives (Tuning.dummy_revive_s) and gets up where it lies.
+## A dummy on its last few points: the hook KOs it; it goes limp and lies
+## (Tuning.ko_linger_s), blinks faster and faster (ko_blink_s) and is gone; after
+## Tuning.dummy_revive_s it blinks back in, standing at its post, at full health. The player
+## steps back meanwhile (the combo's step-ins carried it toward the post).
 func _act_ko() -> void:
 	await _stage([Vector3(0, 0, -1.6)])
 	var dummy := dummies[0]
@@ -138,12 +150,18 @@ func _act_ko() -> void:
 		await _press(&"P", 2, 8)
 		if dummy.is_ko():
 			break
-	# In first person, look down at the body lying limp, and back up before it revives.
-	await _wait_until(func() -> bool: return dummy.is_ko(), 60)
-	await _look_to(-38.0, 14)
-	await _watch(Tuning.data.dummy_revive_s - 0.4)
+	# In first person, look down at the body lying limp, and back up at the post before the
+	# dummy comes back there.
+	await _wait_until(func() -> bool: return dummy.is_ko(), 90)
+	await _look_to(-24.0, 14)
+	await _wait_until(func() -> bool: return dummy.is_gone(), 400)
+	var post: Vector3 = dummy.get(&"_home")
+	player.input.scripted_move = Vector2(0, -1)
+	await _wait_until(func() -> bool: return Vector2(player.global_position.x - post.x, player.global_position.z - post.z).length() >= 1.6, 60)
+	player.input.scripted_move = Vector2.ZERO
 	await _look_to(-6.0, 14)
-	await _watch(1.6)
+	await _wait_until(func() -> bool: return not dummy.is_ko(), 400)
+	await _watch(Tuning.data.ko_blink_in_s + 1.0)
 
 
 ## The dummy holds a guard; jab after jab drains it until it breaks: the arms knocked
@@ -192,6 +210,25 @@ func _act_from_behind() -> void:
 func _act_stomp_getup() -> void:
 	await _act_stomp()
 	await _watch(WATCH_S)
+
+
+## `name=value`: set that TuningData value (parsed as the property's type).
+func _set_tunable(pair: String) -> void:
+	var parts := pair.split("=")
+	if parts.size() != 2 or Tuning.data.get(parts[0]) == null:
+		push_warning("ragdoll_bot: no tunable in --set=%s" % pair)
+		return
+	var current: Variant = Tuning.data.get(parts[0])
+	var value: Variant = parts[1]
+	match typeof(current):
+		TYPE_BOOL:
+			value = parts[1] == "true" or parts[1] == "1"
+		TYPE_INT:
+			value = int(parts[1])
+		TYPE_FLOAT:
+			value = float(parts[1])
+	Tuning.set_value(StringName(parts[0]), value)
+	print("ragdoll_bot: %s = %s" % [parts[0], str(value)])
 
 
 ## Wait `seconds` (sim time at 60 Hz ticks).
