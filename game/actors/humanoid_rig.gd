@@ -382,11 +382,12 @@ func set_damage_look(level: int) -> void:
 ## Start a ragdoll from the pose on screen: `full` for a body knocked off its feet (every
 ## bone), otherwise the stagger's partial ragdoll of the upper body, which fades back to the
 ## animation within `partial_length_s` sim seconds. The hit's kick is `push` (world m/s, the
-## knockback) at `contact` (world); every simulated body starts with `body_velocity` (the
-## actor's new sim velocity) on top of its bone's velocity in the animation. A full ragdoll
-## already running only takes the new kick. Builds the ragdoll on first use.
+## knockback) at `contact` (world), on the `part` body (Ragdoll.Part) nearest to it; every
+## simulated body starts with `body_velocity` (the actor's new sim velocity) on top of its
+## bone's velocity in the animation. A full ragdoll already running only takes the new
+## kick. Builds the ragdoll on first use.
 func ragdoll_start(full: bool, contact: Vector3, push: Vector3, body_velocity: Vector3,
-		partial_length_s: float = INF) -> void:
+		part: Ragdoll.Part = Ragdoll.Part.ANY, partial_length_s: float = INF) -> void:
 	if not _built:
 		return
 	if _ragdoll == null:
@@ -397,14 +398,14 @@ func ragdoll_start(full: bool, contact: Vector3, push: Vector3, body_velocity: V
 	var bone_velocity: Array[Vector3] = []
 	if _motion_valid:
 		bone_velocity = _bone_velocity
-	_ragdoll.start(mode, contact, push, body_velocity, bone_velocity, partial_length_s)
+	_ragdoll.start(mode, contact, push, body_velocity, bone_velocity, part, partial_length_s)
 
 
 ## An extra hit on a running ragdoll (a stomp on a downed body): `push` (world m/s) at
-## `contact` (world).
-func ragdoll_hit(contact: Vector3, push: Vector3) -> void:
+## `contact` (world), on the `part` body nearest to it.
+func ragdoll_hit(contact: Vector3, push: Vector3, part: Ragdoll.Part = Ragdoll.Part.ANY) -> void:
 	if is_ragdolling():
-		_ragdoll.hit(contact, push)
+		_ragdoll.hit(contact, push, part)
 
 
 ## The pose springs of a running ragdoll: Ragdoll.Phase.DOWN once it lies, LIMP for a KO.

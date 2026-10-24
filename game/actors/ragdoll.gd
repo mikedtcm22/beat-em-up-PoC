@@ -36,8 +36,19 @@ extends SkeletonModifier3D
 ## poses and moves the rig's bone followers (meshes and attachments) to them.
 
 enum Mode { NONE, PARTIAL, FULL }
+## The body part a hit's impulse lands on (the struck hurtbox's region, or the striking
+## arm of a parried attacker); ANY = the body nearest to the contact.
+enum Part { ANY, HEAD, TORSO, ARMS, LEGS }
 ## Which pose-spring strength a running ragdoll uses (see the Tuning "Ragdoll" group).
 enum Phase { STAGGER, FLIGHT, DOWN, LIMP }
+
+## The bodies of each Part (bone names without their Left/Right side).
+const PART_BONES: Dictionary[Part, Array] = {
+	Part.HEAD: [&"Head", &"Neck"],
+	Part.TORSO: [&"Hips", &"Spine", &"Chest", &"UpperChest"],
+	Part.ARMS: [&"Shoulder", &"UpperArm", &"LowerArm"],
+	Part.LEGS: [&"UpperLeg", &"LowerLeg", &"Foot"],
+}
 
 ## Bones that simulate in a PARTIAL ragdoll (the upper body); the rest stay kinematic.
 const PARTIAL_BONES: Array[StringName] = [
@@ -62,12 +73,17 @@ var visual_rig_transform: Transform3D = Transform3D.IDENTITY
 var _bodies: Array[PhysicalBone3D] = []
 var _bone_of: PackedInt32Array = PackedInt32Array()
 var _mass: PackedFloat32Array = PackedFloat32Array()
+## Each body's Part, and its shape's center in its bone's frame.
+var _part: Array[Part] = []
+var _center: PackedVector3Array = PackedVector3Array()
 var _joints: Array[RID] = []
 ## Bodies simulating now (indices into _bodies).
 var _sim: PackedInt32Array = PackedInt32Array()
 ## The scale the bodies' velocities are in now, and their sim velocities kept through a
 ## freeze (scale 0).
 var _applied_scale: float = 1.0
+## Asleep through a freeze (scale 0), not at rest.
+var _frozen: bool = false
 var _held_lin: Array[Vector3] = []
 var _held_ang: Array[Vector3] = []
 ## Impulses waiting for the next unfrozen step: [body index, sim velocity change, world
@@ -124,6 +140,13 @@ func setup(p_rig: HumanoidRig) -> void:
 		_bodies.append(body)
 		_bone_of.append(skeleton.find_bone(spec.bone))
 		_mass.append(body.mass)
+		_center.append(spec.offset * scale)
+		var part := Part.ANY
+		var side_free := String(spec.bone).trim_prefix("Left").trim_prefix("Right")
+		for key: Part in PART_BONES:
+			if PART_BONES[key].has(StringName(side_free)):
+				part = key
+		_part.append(part)
 	_held_lin.resize(_bodies.size())
 	_held_ang.resize(_bodies.size())
 	_prev_target.resize(_bodies.size())
@@ -166,13 +189,14 @@ func is_running() -> bool:
 
 
 ## Start (or switch to) `new_mode` from the pose on screen. `contact` and `push` (world, m/s)
-## place the hit's impulse (scaled by the mode's impulse tuning); every simulating body also
+## place the hit's impulse (scaled by the mode's impulse tuning) on the `part` body nearest
+## to the contact; every simulating body also
 ## gets `body_velocity` (the actor's new sim velocity, world m/s, times
 ## Tuning.ragdoll_inherit_velocity) on top of the velocity its bone already had in the
 ## animation (`bone_velocity`, sim m/s per skeleton bone; may be empty). `partial_length_s` caps a
 ## PARTIAL's hold and fade (the stagger's length).
 func start(new_mode: Mode, contact: Vector3, push: Vector3, body_velocity: Vector3,
-		bone_velocity: Array[Vector3], partial_length_s: float = INF) -> void:
+		bone_velocity: Array[Vector3], part: Part = Part.ANY, partial_length_s: float = INF) -> void:
 	if new_mode == Mode.NONE:
 		stop()
 		return
@@ -186,6 +210,11 @@ func start(new_mode: Mode, contact: Vector3, push: Vector3, body_velocity: Vecto
 	mode = new_mode
 	phase = Phase.STAGGER if new_mode == Mode.PARTIAL else Phase.FLIGHT
 	_wake()
+	# A freeze running on re-freezes every body (the new ones too) on the next step.
+	if _frozen:
+		_frozen = false
+		for i: int in _sim:
+			PhysicsServer3D.body_set_state(_bodies[i].get_rid(), PhysicsServer3D.BODY_STATE_SLEEPING, false)
 	if new_mode == Mode.PARTIAL:
 		simulator.influence = tuning.ragdoll_partial_influence
 		_partial_t = 0.0
@@ -198,7 +227,7 @@ func start(new_mode: Mode, contact: Vector3, push: Vector3, body_velocity: Vecto
 	_lying_s = 0.0
 	if was == Mode.FULL and new_mode == Mode.FULL:
 		# Already flying or lying: only the new hit's impulse.
-		_queue_impulse(contact, push * tuning.ragdoll_full_impulse)
+		_queue_impulse(contact, push * tuning.ragdoll_full_impulse, part)
 		return
 	var names: Array[StringName] = []
 	_sim.clear()
@@ -233,19 +262,19 @@ func start(new_mode: Mode, contact: Vector3, push: Vector3, body_velocity: Vecto
 			PhysicsServer3D.body_set_state(rid, PhysicsServer3D.BODY_STATE_ANGULAR_VELOCITY, Vector3.ZERO)
 	var impulse_scale := tuning.ragdoll_partial_impulse if new_mode == Mode.PARTIAL else tuning.ragdoll_full_impulse
 	_pending.clear()
-	_queue_impulse(contact, push * impulse_scale)
+	_queue_impulse(contact, push * impulse_scale, part)
 	_has_prev_target = false
 
 
 ## An extra hit on a running ragdoll (a stomp on a downed body): wakes it and adds an
-## impulse of `push` (world m/s) at `contact`.
-func hit(contact: Vector3, push: Vector3) -> void:
+## impulse of `push` (world m/s) at `contact`, on the `part` body nearest to it.
+func hit(contact: Vector3, push: Vector3, part: Part = Part.ANY) -> void:
 	if mode == Mode.NONE:
 		return
 	_wake()
 	_calm_s = 0.0
 	_lying_s = 0.0
-	_queue_impulse(contact, push)
+	_queue_impulse(contact, push, part)
 
 
 ## Switch a running ragdoll's pose springs (a FULL ragdoll lands: DOWN, or is KO'd: LIMP).
@@ -266,6 +295,7 @@ func stop() -> void:
 		return
 	mode = Mode.NONE
 	asleep = false
+	_frozen = false
 	_sim.clear()
 	_pending.clear()
 	simulator.physical_bones_stop_simulation()
@@ -336,13 +366,23 @@ func _step() -> void:
 			_applied_scale = scale
 			return
 		asleep = false
-	_rescale(states, scale)
 	if scale <= 0.0:
-		for state: PhysicsDirectBodyState3D in states:
-			state.linear_velocity = Vector3.ZERO
-			state.angular_velocity = Vector3.ZERO
+		# Frozen (the actor's hitstop): the velocities are kept and the bodies put to sleep,
+		# so the solver moves nothing at all (it would replay the last step's joint impulses).
+		if not _frozen:
+			_rescale(states, 0.0)
+			for state: PhysicsDirectBodyState3D in states:
+				state.sleeping = true
+			_frozen = true
 		_has_prev_target = false
 		return
+	if _frozen:
+		_frozen = false
+		for state: PhysicsDirectBodyState3D in states:
+			state.sleeping = false
+	_rescale(states, scale)
+	# The waiting kicks land first, so the speed caps below hold them too.
+	_apply_pending(states, scale)
 	var sim_dt := dt * scale
 	if mode == Mode.PARTIAL:
 		_partial_t += sim_dt
@@ -439,7 +479,6 @@ func _step() -> void:
 		_prev_target[_sim[k]] = targets[k]
 	_prev_hips_target = hips_target.origin
 	_has_prev_target = true
-	_apply_pending(states, scale)
 	if mode == Mode.FULL and (phase == Phase.DOWN or phase == Phase.LIMP):
 		_rest(states, scale, sim_dt)
 
@@ -480,20 +519,24 @@ func _apply_pending(states: Array[PhysicsDirectBodyState3D], scale: float) -> vo
 	_pending.clear()
 
 
-## Queue an impulse of `push` (sim m/s) at `contact` on the simulating body nearest to it.
-func _queue_impulse(contact: Vector3, push: Vector3) -> void:
+## Queue an impulse of `push` (sim m/s) at `contact` on the simulating `part` body (any
+## body if none of that part simulates) whose shape's center is nearest to it.
+func _queue_impulse(contact: Vector3, push: Vector3, part: Part) -> void:
 	if push.length_squared() < 1e-8 or _sim.is_empty():
 		return
-	var best := _sim[0]
+	var best := -1
 	var best_d := INF
-	for i: int in _sim:
-		var d := _world_visual(_bone_of[i]).origin.distance_squared_to(contact)
-		var child := _child_point(i)
-		d = minf(d, child.distance_squared_to(contact))
-		if d < best_d:
-			best_d = d
-			best = i
-	_pending.append([best, push, contact])
+	for pass_any: bool in [false, true]:
+		for i: int in _sim:
+			if not pass_any and part != Part.ANY and _part[i] != part:
+				continue
+			var d := (_world_visual(_bone_of[i]) * _center[i]).distance_squared_to(contact)
+			if d < best_d:
+				best_d = d
+				best = i
+		if best >= 0:
+			break
+	_pending.append([best, push.limit_length(Tuning.data.ragdoll_max_kick), contact])
 
 
 ## Rest detection for a lying ragdoll: asleep once every body has moved slower than
@@ -555,15 +598,6 @@ func _world_visual(bone: int) -> Transform3D:
 	if mode == Mode.NONE:
 		return to_world * rig.animation_pose(bone)
 	return to_world * _visual[bone]
-
-
-## World position of the far end of body `i` (its first child bone), for impulse placement.
-func _child_point(i: int) -> Vector3:
-	var skeleton := rig.skeleton
-	var children := skeleton.get_bone_children(_bone_of[i])
-	if children.is_empty():
-		return _world_visual(_bone_of[i]).origin
-	return _world_visual(children[0]).origin
 
 
 func _make_shape(spec: PlaceholderBody.RagdollSpec, scale: float) -> Shape3D:

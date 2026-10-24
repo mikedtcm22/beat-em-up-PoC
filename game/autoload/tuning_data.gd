@@ -264,21 +264,24 @@ extends Resource
 ## How much of the simulated upper body shows over the animation (Spec §6: 0.3-0.6), how
 ## long it holds, then how long it fades back to the animation (both cut to the stagger's
 ## length).
-@export_range(0.0, 1.0, 0.01) var ragdoll_partial_influence: float = 0.5
-@export_range(0.0, 1.0, 0.01) var ragdoll_partial_hold_s: float = 0.15
-@export_range(0.05, 1.5, 0.01) var ragdoll_partial_fade_s: float = 0.45
+@export_range(0.0, 1.0, 0.01) var ragdoll_partial_influence: float = 0.6
+@export_range(0.0, 1.0, 0.01) var ragdoll_partial_hold_s: float = 0.25
+@export_range(0.05, 1.5, 0.01) var ragdoll_partial_fade_s: float = 0.4
 ## The hit's push (its knockback speed) times this is the kick given to the struck body
-## part at the contact point.
-@export_range(0.0, 5.0, 0.05) var ragdoll_partial_impulse: float = 1.6
+## part at the contact point (up to ragdoll_max_kick).
+@export_range(0.0, 12.0, 0.1) var ragdoll_partial_impulse: float = 7.0
 ## How hard the staggering upper body is pulled back toward the animation, and the share of
 ## gravity on it (0: the stagger animation carries its weight, the ragdoll only gives way).
-@export_range(0.0, 6.0, 0.05) var ragdoll_partial_pose_hz: float = 2.0
+@export_range(0.0, 6.0, 0.05) var ragdoll_partial_pose_hz: float = 1.0
 @export_range(0.0, 1.0, 0.05) var ragdoll_partial_gravity: float = 0.0
-## A perfect block knocks the attacker's striking arm back at this speed.
-@export_range(0.0, 10.0, 0.1) var ragdoll_parry_push: float = 3.0
+## A perfect block knocks the attacker's striking arm back as a hit at this speed would
+## (times ragdoll_partial_impulse, like every stagger's push).
+@export_range(0.0, 5.0, 0.05) var ragdoll_parry_push: float = 0.8
 @export_subgroup("Knocked off the feet (full)")
-## The kick at the contact point, times the hit's knockback speed.
+## The kick at the contact point, times the hit's knockback speed (up to ragdoll_max_kick).
 @export_range(0.0, 5.0, 0.05) var ragdoll_full_impulse: float = 0.5
+## No kick at a contact point changes its body part's speed by more than this (m/s).
+@export_range(0.0, 30.0, 0.5) var ragdoll_max_kick: float = 14.0
 ## Share of the knocked body's new velocity every ragdoll body starts with (the rest comes
 ## from the hips spring).
 @export_range(0.0, 1.0, 0.05) var ragdoll_inherit_velocity: float = 1.0
@@ -308,16 +311,16 @@ extends Resource
 @export_range(0.0, 1.0, 0.05) var ragdoll_bounce: float = 0.0
 ## Ragdoll bodies collide with other ragdolls (a flying body tumbles over the one it knocks
 ## down); off, they pass through each other.
-@export var ragdoll_collide_ragdolls: bool = false
+@export var ragdoll_collide_ragdolls: bool = true
 ## Safety caps: no ragdoll body moves faster (m/s) or spins faster (rad/s) than this.
 @export_range(5.0, 60.0, 1.0) var ragdoll_max_speed: float = 25.0
 @export_range(5.0, 100.0, 1.0) var ragdoll_max_spin: float = 40.0
 @export_subgroup("Rest and get-up")
 ## A lying ragdoll sleeps once every body has moved slower than this (m/s) for
 ## ragdoll_rest_s, and at the latest ragdoll_settle_max_s after it started lying.
-@export_range(0.0, 1.0, 0.01) var ragdoll_rest_speed: float = 0.15
+@export_range(0.0, 1.0, 0.01) var ragdoll_rest_speed: float = 0.25
 @export_range(0.0, 2.0, 0.05) var ragdoll_rest_s: float = 0.3
-@export_range(0.2, 5.0, 0.1) var ragdoll_settle_max_s: float = 1.6
+@export_range(0.2, 5.0, 0.1) var ragdoll_settle_max_s: float = 1.0
 ## The get-up fades from the pose the ragdoll lies in over this long.
 @export_range(0.0, 0.5, 0.01) var ragdoll_getup_blend_s: float = 0.2
 ## A ragdoll cut short (a staggering body grabbed, a reset) fades back over this long.
