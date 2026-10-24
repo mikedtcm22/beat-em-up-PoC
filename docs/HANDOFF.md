@@ -4,6 +4,21 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-24 14:15 CDT: account E back at 74%; first task: verify grab-06 to -08, partition the survivors
+The account Game-boy switched to at 14:10 has account E's reset times. It was at 74% of its 5-hour window (resets 16:30 CDT) and 27% weekly (resets Tue 2026-10-27 17:00 CDT). That left 16 points below 90%, less than one reviewer (18). Per the usage rules, this session split off a first task that fits. Its watcher runs: "Beat-em-up: usage watcher", name `usage-watcher-h` (Haiku, low effort, self-paced).
+- **Running:** workflow `m2-phase3-c-verify-partition` (run `wf_338da5ae-007`), a copy in [reviews/M2-phase3/workflow-verify-partition.js](reviews/M2-phase3/workflow-verify-partition.js). It does two things, each usage-gated:
+  - three Sonnet skeptics each for grab-06, -07 and -08, merged into `verify-grab.json`;
+  - a partition agent that groups every survivor without a spec question into at most four fix packages with disjoint files, saved as `packages.json`.
+  - A Haiku scribe commits both to `m2/phase3-review`.
+- **New for the next window:** [reviews/M2-phase3/workflow-fix.js](reviews/M2-phase3/workflow-fix.js), the fix round. It needs no args. A Haiku loader reads `packages.json` and skips a package whose branch has its final "review fixes" commit; a `wip:`-only branch is reused. Each fixer reads its findings and verdicts from the review files by id, so the lead no longer pastes about 170 KB of JSON as args. Optional args: `only` (package keys) and `max_fixers`. `workflow.js` now has `COST.reviewer` 18 and `perFinding` 2.
+- **C's order from here** (the lead's call):
+  1. **Round 1, fix:** run `workflow-fix.js` inline (`scriptPath`). Two fixers at once at about 25% each, so a full window covers about three packages.
+  2. **Merge** the fix branches and `m2/phase3-review` into `m2/hit-feel`, regenerate the preset (`godot --headless --import --quit && godot --headless -s tools/gen_default_preset.gd`), run the tests, push.
+  3. **Round 2, review on the merged build,** so it doesn't re-find what round 1 fixed: the hit-feel and performance lenses, plus the critic's medium gaps (the flash on a ragdoll in side view, the player's KO while holding, bodies against a wall or the curb). `workflow.js` can run them. First make fresh detached reviewer worktrees at the merge commit, change `c27afaf` in its `COMMON` and `reviewRules`, and pass `reviews` code, ragdoll and grab as `{"lens": "<lens>", "skipped": true}`.
+  4. Round 2's fixes, then the final sheets for Game-boy, then D.
+- **If cut off:** on `m2/phase3-review`, an empty `pending` in `verify-grab.json` means grab-06 to -08 are verified, and `packages.json` means the partition is done. Rerun whatever is missing with `workflow-verify-partition.js`. Within this session, use `resumeFromRunId: "wf_338da5ae-007"`.
+- **Waiting on Game-boy:** grab-03 and grab-05 (13:55 entry), plus the 12:40 entry's items. Each has a default.
+
 ### 2026-10-24 13:55 CDT: handoff, account F's 5-hour window at 90%
 The watcher called the handoff at 90% of the 5-hour window (resets 17:39 CDT); weekly is at 28% (resets Wed 2026-10-28 10:59 CDT). **Game-boy switched to a fresh account at 14:10.** This session is renamed "Beat-em-up: account F session (handed off)", which frees the working-session title, and its watcher `usage-watcher-g` is told to end its loop. The new account starts its own watcher. The workflow `wf_f6697464-ea0` is stopped, and nothing else is running. Every branch is pushed. The reviewer worktrees have no tracked changes (only untracked `captures/`).
 - **Package C state.** Everything below is committed as JSON on `m2/phase3-review` (`a39ba62`), in `docs/reviews/M2-phase3/`.

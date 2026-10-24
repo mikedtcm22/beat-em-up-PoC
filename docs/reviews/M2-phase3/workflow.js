@@ -19,7 +19,7 @@ const PRIOR_REVIEWS = A.reviews || {}
 const PRIOR_VERDICTS = A.verdicts || {}
 const PRIOR_PACKAGES = A.packages || null
 const DONE_PACKAGES = new Set(A.done_packages || [])
-const COST = { reviewer: 13, perFinding: 2.5, critic: 4, partition: 4, fixer: 25 }
+const COST = { reviewer: 18, perFinding: 2, critic: 4, partition: 4, fixer: 25 }
 const TRAILER = 'Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>'
 
 // ---------- schemas ----------
