@@ -97,6 +97,7 @@ func _run() -> void:
 		{title = "Perfect block, then grab", cam = &"first_person", fn = _act_perfect_block},
 		{title = "Parry on reaction (B 0.2 s into the wind-up), then grab", cam = &"first_person", fn = _act_parry_on_reaction},
 		{title = "Grab anytime: an idle dummy, then a throw", cam = &"first_person", fn = _act_grab_idle},
+		{title = "Grab looking level: knee, knee, LB lets go", cam = &"first_person", fn = _act_grab_level},
 		{title = "Perfect block, then grab (side view)", cam = &"side_view", fn = _act_perfect_block},
 		{title = "Guard break", cam = &"first_person", fn = _act_guard_break},
 		{title = "Guard break (side view)", cam = &"side_view", fn = _act_guard_break},
@@ -400,6 +401,20 @@ func _act_grab_idle() -> void:
 	await _wait_idle()
 	await _ticks(6)
 	await _press(&"K", 2)
+
+
+## The hold view looking level (the other acts look 6 degrees down): LB on an idle dummy,
+## two knees, then LB again lets go and the view eases back up.
+func _act_grab_level() -> void:
+	await _stage([Vector3(0, 0, -1.1)])
+	await _look_to(0.0, 6)
+	await _ticks(10)
+	await _press(&"GRAB", 2, 20)
+	for i in 2:
+		await _press(&"P", 2)
+		await _wait_idle()
+		await _ticks(8)
+	await _press(&"GRAB", 2, 30)
 
 
 ## Jab after jab into the held guard, faster than it regenerates: the sparring dummy steps

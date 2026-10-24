@@ -219,6 +219,26 @@ func test_hold_view_eases_out_on_a_release_and_when_a_hit_breaks_the_hold() -> v
 		assert_almost_eq(_offsets(), Vector3.ZERO, Vector3.ONE * 1e-4, "%s: the view is level and back on the eye" % how)
 
 
+func test_walking_with_a_held_enemy_keeps_the_hold_view_on_the_bent_eye() -> void:
+	# Walking while holding shows the hold pose (no walk cycle), whose bent-over eye sits
+	# well under the standing eye: the camera's walking bob clamp (cam_bob_clamp_m around
+	# the standing height) would lift the view off it, so it is not applied while holding.
+	await _setup([Vector3(0, 0, -1.1)])
+	await _grab()
+	var cam := FirstPersonCamera.new()
+	add_child_autofree(cam)
+	cam.player = player
+	player.input.scripted_move = Vector2(0.0, 1.0)
+	for i in 30:
+		await _ticks(1)
+		cam.update_camera(FRAME)
+	assert_true(player.is_walking(), "walking with the held enemy")
+	var target := FirstPersonCamera.view_from_eye(player, player.get_eye_transform().origin)
+	assert_almost_eq(cam.view_transform().origin.y, target.origin.y, 0.01,
+			"the view rides the bent eye (standing eye %.2f m above the feet)" % player.standing_eye_height)
+	player.input.scripted_move = Vector2.ZERO
+
+
 # --- What the hold view shows -----------------------------------------------------------
 
 
