@@ -4,6 +4,9 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-24 11:05 CDT: Game-boy answered the ragdoll questions; phase 3 plan written
+Account D, already handed off, wrote [docs/milestones/M2-phase3-plan.md](milestones/M2-phase3-plan.md) from Game-boy's answers (see the Decisions log) and his new grab fix. The takeover prompt's "Next steps" now point to that plan. Nothing else changed: `m2/hit-feel` code is still at `33fcc98`, 437/437 tests pass, and nothing is running. Only the flash's side-view question and WP3's audio are still open with Game-boy.
+
 ### 2026-10-24 10:55 CDT: handoff to a fresh account for phase 3 (account D's weekly at 66%)
 Game-boy chose to hand phase 3 to a fresh account once the flash merged. Account D is at 59% of its 5-hour window (resets 13:40 CDT) and **66% weekly** (resets Tue 2026-10-27 12:00 CDT), past the 65% launch line. This session is renamed "Beat-em-up: account D session (handed off)", which frees the working-session title. Its watcher `usage-watcher-e` is told to end its loop. **No agents or workflows are running.** Every branch is pushed, and the worktrees are clean apart from untracked `captures/`.
 - **State:** `m2/hit-feel` @ `33fcc98` has phases 1 and 2 plus the localized flash. **437/437 tests pass with no SCRIPT ERROR or ERROR.** The preset has 278 values.
@@ -312,6 +315,13 @@ Every approved spec change so far is in README.md, "Where M1 departs from the sp
   - WP2: bruised still scuffs the clothes, and there's no separate "reduce flashing" toggle.
   - WP1: the 0.25x cheat also stretches hitstop and slow-mo, and cheats stay out of presets. Both are recorded in README, "Where M2 departs from the spec".
 - **White hit flash (2026-10-24 10:40 CDT): localized.** Full white at the contact point, fading out by a tunable radius (default about 0.25 m), with a tunable strength, both in "Hit feel". A large radius gives the old whole-body look. Recorded in README's M2 departures. It's implemented in phase 3, after WP4 merges: `combat_actor.gd` and `humanoid_rig.gd` overlap WP4. Also check that it really shows `hit_flash_frames` (2) frames, since the WP2 captures show one white frame per hit.
+- **WP4 ragdoll questions (2026-10-24 11:05 CDT):**
+  - the hit's push at the exact contact point is preferred, since comic contortions are fine; phase 3 builds it with spin caps and shows A/B captures first;
+  - KO bodies lie briefly, then blink off (a departure from SPEC §6's "stay until the arena clears");
+  - KO bodies take no hits;
+  - heavy-tier knockdowns get the full ragdoll (a departure);
+  - staggers may exceed SPEC §6's 0.6 influence (a departure).
+- **Grab view (2026-10-24 11:05 CDT):** while holding, the first-person view pans down so the knees show landing on the held enemy, and the player bends at the waist for the hold and the knees. The spec doesn't cover it, so it's not a departure. Details: [milestones/M2-phase3-plan.md](milestones/M2-phase3-plan.md).
 - **Process:** at each usage limit, hand off to Game-boy's second Claude account. Never assume the same session resumes.
 
 ## Usage watcher
@@ -380,21 +390,13 @@ USAGE RULES:
 
 Next steps (Milestone 2; details are in docs/HANDOFF.md):
 - Phases 1 and 2 are done and merged into m2/hit-feel: WP1 tuning panel, WP2 comic VFX, WP3 audio, WP4 partial and full ragdoll. The localized white hit flash, which I approved on 2026-10-24, is merged too. 437/437 tests pass with no SCRIPT ERROR, at 33fcc98. WP3's audio was judged by analysis only, so I'll listen to it.
-- Phase 3, for my playtest (docs/milestones/M2-plan.md "Phase 3"). Check get_usage before each agent launch; nothing new at 65% or more.
-  1. Record every act in first person and side view: tests/bot/combo_bot.tscn, vfx_bot.tscn and ragdoll_bot.tscn. Review them from the frames as I would:
-     - hit feel per tier, and readability;
-     - no screen-filling effects in first person;
-     - the localized flash together with the ragdoll;
-     - the items under "Known items for phase 3" in docs/HANDOFF.md's newest entry.
-     Show me the most telling sheets.
-  2. Run one adversarial review-then-fix agent over the integrated build (mechanics, plus feel from captures). Commit "M2 phase 3: review fixes (...)" and push.
-  3. Update README: M2 status, controls (F1 tuning panel, F4 cheats), the help overlay's F1 label. Update ARCHITECTURE: the title still says Milestone 1, and the VFX, audio, ragdoll and flash sections need checking.
-  4. Open the Milestone 2 PR from m2/hit-feel into main. Never merge it; I play it, tune each tier, save a preset and sign it off.
-- Open questions for me, all left as they are until I answer:
-  - the hit's push on the ragdoll: SPEC §6's "impulse at the contact point" versus the capped central kick on the struck body part (WP4 mech-F13);
-  - KO bodies sleep until the arena clears; KO bodies take no hits; heavy-tier knockdowns get the full ragdoll (WP4 builder);
-  - stagger influence above the spec's 0.6, so staggers read from the side;
-  - a minimum on-screen size for the localized flash, because in side view the 0.25 m flash hides under the comic burst.
+- Phase 3, for my playtest: follow docs/milestones/M2-phase3-plan.md. It holds my 2026-10-24 decisions:
+  - the ragdoll push at the exact contact point, shown to me as A/B captures first;
+  - KO bodies lie briefly, then blink off;
+  - stronger staggers;
+  - heavy-tier knockdowns get the full ragdoll, and KO bodies take no hits.
+  It also holds my new grab fix: the view pans down while holding so I see the knees land, and the player bends at the waist. Run packages A (ragdoll) and B (grab) as two agents at once, in their own worktrees. Then C: the lead integrates, records every act, and runs one review-then-fix agent. Then D: README departures, ARCHITECTURE, and the M2 PR, which is never merged without my sign-off. Check get_usage before each agent launch; nothing new at 65% or more.
+- Open for me: whether the localized flash gets a minimum on-screen size, since in side view the 0.25 m flash hides under the comic burst (default: leave it as it is). And I'll listen to WP3's audio.
 
 Ground rules:
 - Never merge a milestone PR into main until I've played it and signed it off.
