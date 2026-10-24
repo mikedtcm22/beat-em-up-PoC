@@ -18,6 +18,7 @@ A fresh account's working session took over at 1% of its 5-hour window (resets 1
   - three skeptics per finding, then fixers in their own worktrees with disjoint files;
   - a completeness critic at the end;
   - a Haiku usage gate before each launch: nothing new at 65%, and at most two heavy agents at once.
+- **B done (12:25):** `m2/grab-view` @ `329b67f`, 445/445 tests in its worktree (the lead re-ran them; no SCRIPT ERROR or ERROR). Tunables in "Grab and weapons" > "Hold view": `grab_view_pitch_deg` 16, `grab_view_back_m` 0.24, `grab_view_rise_m` 0.10, `grab_view_in_s` 0.2, `grab_view_out_s` 0.45; knee `camera_pitch_deg` -12, `camera_drop_m` 0.05. Departures from the plan: the lens moves back and up while holding (the bend put the eyes over the victim: a wall of shirt), the knee rises a little to the right (the victim's head hid it), the throw ends in the stance (a forearm came within 0.28 m of the lens), no walking-bob clamp while holding, the victim stands 6 cm closer. Sheets (local): `.worktrees/m2-grab/captures/grab/compare_*.png`. Open: the combat log (SPEC's debug overlay, always on) sits over the knee contact; the player's blue sleeves match the knee's blue; the head reads as a skin dome from behind.
 - **Done meanwhile on `m2/hit-feel`:** `ac58377` (speed lines seeded, F1 help label, flash test comment) and `dbf0dcc` (README F1/F4 controls, ARCHITECTURE title). 438/438 tests.
 
 ### 2026-10-24 11:05 CDT: Game-boy answered the ragdoll questions; phase 3 plan written
