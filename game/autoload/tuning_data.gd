@@ -338,6 +338,92 @@ extends Resource
 ## Test room: seconds before a KO'd player gets back up at full health.
 @export_range(0.5, 10.0, 0.1) var player_revive_s: float = 2.5
 
+@export_group("Audio")
+@export_subgroup("Mix")
+## Volume of every sound effect, in dB: the SFX bus limiter's pre-gain, so turning it down
+## also leaves the limiter headroom (below 0 by default: finishers barely touch it).
+@export_range(-40.0, 6.0, 0.5) var sfx_volume_db: float = -3.0
+## Each one-shot's pitch varies at random by up to plus or minus this share (Spec §6: 8%).
+@export_range(0.0, 0.3, 0.01) var sfx_pitch_variation: float = 0.08
+## ...and its volume (as amplitude) by up to plus or minus this share (Spec §6: 8%).
+@export_range(0.0, 0.3, 0.01) var sfx_volume_variation: float = 0.08
+@export_subgroup("Tiers")
+## Every one-shot of a hit (its layers, or a blocked hit's clack, ting or crash) is this many
+## dB louder per tier, so the tiers rank in loudness as well as in layers.
+@export_range(-20.0, 12.0, 0.5) var hit_light_db: float = 0.0
+@export_range(-20.0, 12.0, 0.5) var hit_heavy_db: float = 3.0
+@export_range(-20.0, 12.0, 0.5) var hit_finisher_db: float = 4.0
+## One swing hitting several bodies in a frame (a spinning heel's arc): the whoosh and the sub
+## thump play once, and every victim after the first is this many dB quieter.
+@export_range(-24.0, 0.0, 0.5) var extra_victim_db: float = -8.0
+@export_subgroup("Layers")
+## Layer volumes in dB (every sample is normalized to the same peak). Light hits play whoosh
+## + thud, heavy hits add the crack, finishers play whoosh + thud + crunch + body fall + sub
+## thump (Spec §6).
+@export_range(-40.0, 12.0, 0.5) var whoosh_db: float = -10.0
+@export_range(-40.0, 12.0, 0.5) var thud_db: float = -8.0
+@export_range(-40.0, 12.0, 0.5) var crack_db: float = -7.0
+@export_range(-40.0, 12.0, 0.5) var crunch_db: float = -10.0
+@export_range(-40.0, 12.0, 0.5) var body_fall_db: float = -12.0
+@export_range(-40.0, 12.0, 0.5) var sub_thump_db: float = -10.0
+## A missed swing's whoosh (attack_whiffed): no impact and no hitstop.
+@export_range(-40.0, 12.0, 0.5) var whiff_db: float = -6.0
+@export_subgroup("Voices")
+## An enemy hit cleanly grunts; the player grunts too, at the listener.
+@export_range(-40.0, 12.0, 0.5) var grunt_db: float = -9.0
+@export_range(-40.0, 12.0, 0.5) var player_grunt_db: float = -13.0
+## An actor grunts at most once per this many ms (a body-blow flurry lands every few frames).
+@export_range(0.0, 1000.0, 10.0) var grunt_min_interval_ms: float = 300.0
+## Each actor's voice is pitched up or down by up to this share, the same every time.
+@export_range(0.0, 0.3, 0.01) var voice_pitch_spread: float = 0.1
+## An enemy's wind-up: an effort grunt and a whoosh at the attacker (Spec §8's audio cue,
+## on while rear_warning_audio).
+@export_range(-40.0, 12.0, 0.5) var windup_db: float = -10.0
+@export_subgroup("Blocks")
+@export_range(-40.0, 12.0, 0.5) var block_clack_db: float = -2.5
+@export_range(-40.0, 12.0, 0.5) var parry_ting_db: float = -6.0
+@export_range(-40.0, 12.0, 0.5) var guard_break_db: float = -1.0
+@export_subgroup("Distance")
+## Sounds play at their layer's volume within this distance (m) of the listener (the
+## player's eyes), 6 dB quieter at twice it, and so on.
+@export_range(0.5, 20.0, 0.5) var sfx_unit_size_m: float = 3.0
+## Sounds further away than this (m) are not heard; 0 = no limit.
+@export_range(0.0, 100.0, 1.0) var sfx_max_distance_m: float = 40.0
+## Sounds from further than this many degrees off the look are muffled (low-passed at
+## rear_muffle_hz), so stereo can tell behind from in front.
+@export_range(60.0, 180.0, 5.0) var rear_muffle_angle_deg: float = 110.0
+## 20500 turns the muffle off.
+@export_range(500.0, 20500.0, 100.0) var rear_muffle_hz: float = 2500.0
+## Hits on the player sound this far (m) from its eyes toward the attacker: their contact
+## point sits around the listener itself, too close to tell a direction.
+@export_range(0.1, 2.0, 0.05) var self_hit_offset_m: float = 0.5
+@export_subgroup("Music")
+## Placeholder fight loop (Spec §13 leaves music open: off by default).
+@export var music_enabled: bool = false
+@export_range(-40.0, 6.0, 0.5) var music_volume_db: float = -14.0
+@export_subgroup("Rumble")
+## Controller rumble on hits the player lands or takes (Spec §6). Each pulse drives the
+## weak (high-frequency) and strong (low-frequency) motors, 0..1, times rumble_strength.
+@export var rumble_enabled: bool = true
+@export_range(0.0, 1.0, 0.05) var rumble_strength: float = 1.0
+## Light: short and low.
+@export_range(0.0, 1.0, 0.05) var rumble_light_weak: float = 0.35
+@export_range(0.0, 1.0, 0.05) var rumble_light_strong: float = 0.0
+@export_range(0.0, 500.0, 5.0) var rumble_light_ms: float = 70.0
+## Heavy (and a guard break): medium.
+@export_range(0.0, 1.0, 0.05) var rumble_heavy_weak: float = 0.5
+@export_range(0.0, 1.0, 0.05) var rumble_heavy_strong: float = 0.45
+@export_range(0.0, 500.0, 5.0) var rumble_heavy_ms: float = 140.0
+## Finisher: a strong double pulse, each pulse this long, rumble_finisher_gap_ms apart.
+@export_range(0.0, 1.0, 0.05) var rumble_finisher_weak: float = 0.8
+@export_range(0.0, 1.0, 0.05) var rumble_finisher_strong: float = 1.0
+@export_range(0.0, 500.0, 5.0) var rumble_finisher_ms: float = 120.0
+@export_range(0.0, 500.0, 5.0) var rumble_finisher_gap_ms: float = 80.0
+## A blocked or parried hit: a light tick.
+@export_range(0.0, 1.0, 0.05) var rumble_block_weak: float = 0.25
+@export_range(0.0, 1.0, 0.05) var rumble_block_strong: float = 0.0
+@export_range(0.0, 500.0, 5.0) var rumble_block_ms: float = 40.0
+
 @export_group("Debug")
 @export var god_mode: bool = false
 @export var one_hit_ko: bool = false
