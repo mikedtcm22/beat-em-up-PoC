@@ -179,8 +179,13 @@ func apply_tuning() -> void:
 	for body: PhysicalBone3D in _bodies:
 		body.friction = tuning.ragdoll_friction
 		body.bounce = tuning.ragdoll_bounce
+		# The node keeps the layers the simulator gives a body when it simulates; an idle body
+		# stays on none (setting them reaches the server at once).
 		body.collision_layer = CombatTypes.bit(CombatTypes.LAYER_RAGDOLL)
 		body.collision_mask = mask
+		if not is_running():
+			PhysicsServer3D.body_set_collision_layer(body.get_rid(), 0)
+			PhysicsServer3D.body_set_collision_mask(body.get_rid(), 0)
 
 
 func _on_tuning_changed(_property: StringName) -> void:

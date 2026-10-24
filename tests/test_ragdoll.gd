@@ -401,6 +401,8 @@ func test_bodies_are_built_once_and_cost_nothing_idle() -> void:
 	assert_eq(dummy.rig.skeleton.find_children("*", "PhysicalBone3D", true, false).size(),
 			PlaceholderBody.ragdoll_specs().size(), "one body per ragdoll bone, built once")
 	assert_false(ragdoll.simulator.active or ragdoll.active, "both modifiers inactive when idle")
+	# A tuning edit (the F1 panel) re-reads the body tuning: idle bodies stay off every layer.
+	Tuning.changed.emit(&"ragdoll_friction")
 	for body: Node in dummy.rig.skeleton.find_children("*", "PhysicalBone3D", true, false):
 		var rid := (body as PhysicalBone3D).get_rid()
 		assert_eq(PhysicsServer3D.body_get_mode(rid), PhysicsServer3D.BODY_MODE_STATIC, "%s static" % body.name)

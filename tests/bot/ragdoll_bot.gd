@@ -2,8 +2,8 @@ extends "res://tests/bot/combo_bot.gd"
 ## Ragdoll acts (Milestone 2 WP4, Spec §6 "Hit reactions") for review captures, built on
 ## the combo bot's harness: staggers that give way (partial ragdoll), bodies knocked off
 ## their feet flying and landing (full ragdoll), a flying body knocking a second one down,
-## the throw, a KO going limp and staying, and the get-ups, each in first person and side
-## view. Record it with Movie Maker:
+## the throw, a KO going limp and staying, the get-ups, a guard break, the finisher shove
+## and a parried jab, each in first person and side view. Record it with Movie Maker:
 ##   godot --path . --write-movie captures/ragdoll/ragdoll.avi --fixed-fps 60 \
 ##     --resolution 1280x720 res://tests/bot/ragdoll_bot.tscn [-- --act=<title text>]
 ## Every act waits for its bodies to get up (or, the KO, to lie still and revive).
@@ -46,6 +46,8 @@ func _run() -> void:
 		{title = "Ragdoll: KO on a low-health dummy (side view)", cam = &"side_view", fn = _act_ko},
 		{title = "Ragdoll: guard-break stagger", cam = &"first_person", fn = _act_guard_break_dummy},
 		{title = "Ragdoll: guard-break stagger (side view)", cam = &"side_view", fn = _act_guard_break_dummy},
+		{title = "Ragdoll: flurry, finisher shove", cam = &"first_person", fn = _act_shove},
+		{title = "Ragdoll: flurry, finisher shove (side view)", cam = &"side_view", fn = _act_shove},
 		{title = "Ragdoll: parried jab, the arm knocked back", cam = &"first_person", fn = _act_perfect_block},
 		{title = "Ragdoll: parried jab (side view)", cam = &"side_view", fn = _act_perfect_block},
 	]
@@ -156,6 +158,13 @@ func _act_guard_break_dummy() -> void:
 		await _ticks(2)
 	await _watch(1.0)
 	dummy.drop_guard(0)
+
+
+## P · P, then mash: the body-blow flurry ends in the finisher shove, a stagger that sends
+## the body stumbling back (partial ragdoll).
+func _act_shove() -> void:
+	await _act_flurry()
+	await _watch(1.2)
 
 
 ## Wait `seconds` (sim time at 60 Hz ticks).
