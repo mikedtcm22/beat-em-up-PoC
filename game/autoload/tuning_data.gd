@@ -62,7 +62,7 @@ extends Resource
 ## Seconds the hold view eases in over after a grab, and back out over after a throw or a
 ## release (any way the hold ends).
 @export_range(0.0, 1.0, 0.01) var grab_view_in_s: float = 0.2
-@export_range(0.0, 1.0, 0.01) var grab_view_out_s: float = 0.35
+@export_range(0.0, 1.0, 0.01) var grab_view_out_s: float = 0.45
 
 @export_group("Reactions")
 @export_range(10, 90, 1) var stagger_frames: int = 40

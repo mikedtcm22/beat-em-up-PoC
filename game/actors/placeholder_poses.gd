@@ -258,8 +258,13 @@ static func relaxed_weapon_guard() -> Dictionary[StringName, Vector3]:
 	})
 
 
-## Clinch: standing tall, both hands reaching forward and down onto the shoulders of a held
-## victim at HoldPoint.
+## Clinch (Game-boy, 2026-10-24): bent forward at the waist over a held victim at
+## HoldPoint, the hips back and the knees soft, the head over the victim's back looking down
+## at it, both fists on its shoulders from elbows held low and wide. Side on it reads as a
+## clinch. The bend leans the eyes about 0.12 m forward and 0.07 m down, out over the
+## victim; the first-person hold view (Tuning "Grab and weapons" > "Hold view") moves the
+## lens back and up from there and pitches it down onto the victim. Clinch moves (knee,
+## throw) start and end here.
 static func hold() -> Dictionary[StringName, Vector3]:
 	return merge(guard(), {
 		HIPS_NUDGE: Vector3(0.0, 0.0, 0.08),
@@ -284,9 +289,8 @@ static func hold() -> Dictionary[StringName, Vector3]:
 ## Being held: hips pulled back, bent over at the waist, arms hanging, head forced down.
 ## Authored for a victim whose origin is pinned at the holder's HoldPoint (on the floor
 ## below it), facing the holder: the head then sits about 0.35 m in front of the holder at
-## y 1.24, just under the holder's throat-height first-person view (only the victim's back
-## and the top of its head show at the bottom edge), and the holder's fists rest on the
-## victim's shoulders.
+## y 1.24, under the holder's throat-height first-person lens (the hold view pitches down
+## onto its back and head), and the holder's fists rest on the victim's shoulders.
 static func held() -> Dictionary[StringName, Vector3]:
 	return {
 		HIPS_NUDGE: Vector3(0.0, 0.0, 0.3),
@@ -1106,9 +1110,12 @@ static func generic_kick(stance: StringName = STANCE_BOXER) -> MovePoses:
 
 
 ## Turn a boxer-authored recipe for move `id` into its relaxed-stance version (see
-## move_poses()). Clinch moves (knee, throw) start and end in hold() in either stance.
+## move_poses()). Clinch moves (knee, throw) start in hold() in either stance; the knee ends
+## there too, the throw in the stance.
 static func _relax(m: MovePoses, id: StringName) -> void:
 	if _HOLD_MOVES.has(id):
+		if id == &"throw":
+			m.finish = relaxed()
 		return
 	var neutral := relaxed()
 	if _WEAPON_MOVES.has(id):
@@ -1175,7 +1182,7 @@ static func _recipe(id: StringName, g: Dictionary[StringName, Vector3],
 		&"knee":
 			return _knee()
 		&"throw":
-			return _throw()
+			return _throw(g)
 		&"stomp":
 			return _stomp(g)
 		&"pipe_swing_1":
@@ -1835,12 +1842,15 @@ static func _back_elbow(g: Dictionary[StringName, Vector3]) -> MovePoses:
 static func _knee() -> MovePoses:
 	var g := hold()
 	var windup := merge(g, {
-		&"Spine": Vector3(-20.0, 0.0, 0.0),
 		&"RightUpperLeg": Vector3(-24.0, 0.0, 5.0),
 		&"RightLowerLeg": Vector3(-50.0, 0.0, 0.0),
 		&"RightFoot": Vector3(10.0, 0.0, -5.0),
 	})
-	# The hips drive forward into the knee while the hands pull the victim's head down.
+	# The hips drive forward into the knee while the hands pull the victim down. The knee
+	# comes up a little out to the right, beside the victim's head into its shoulder and chest:
+	# from straight under, the head hid it from the first-person view (which tips further
+	# down for the knee, MoveData.camera_pitch_deg). The torso stays bent, so the eye moves
+	# only a few centimeters.
 	var strike := merge(g, {
 		HIPS_NUDGE: Vector3(0.0, 0.0, 0.02),
 		&"Spine": Vector3(-14.0, 0.0, 0.0),
@@ -1859,7 +1869,10 @@ static func _knee() -> MovePoses:
 	return _mp(g, windup, strike)
 
 
-static func _throw() -> MovePoses:
+## The throw heaves from the hold and, with nothing left to hold, lands in the stance `neutral`
+## (the relaxed stance gets its own in _relax()); back in the bent-over hold, the arms reached
+## for the thrown body across the first-person view as the hold view eased out.
+static func _throw(neutral: Dictionary[StringName, Vector3]) -> MovePoses:
 	var g := hold()
 	var windup := merge(g, {
 		&"Hips": Vector3(0.0, -20.0, 0.0),
@@ -1890,7 +1903,9 @@ static func _throw() -> MovePoses:
 		&"RightFoot": Vector3(36.0, 0.0, -5.0),
 		&"RightToes": Vector3(30.0, 0.0, 0.0),
 	})
-	return _mp(g, windup, strike)
+	var m := _mp(g, windup, strike)
+	m.finish = neutral
+	return m
 
 
 static func _stomp(g: Dictionary[StringName, Vector3]) -> MovePoses:

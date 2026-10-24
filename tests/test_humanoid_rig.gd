@@ -967,7 +967,10 @@ func test_play_move_length_and_strike_key_timing() -> void:
 				var t_bone := _track(anim, "Skeleton3D:%s" % bone)
 				var start := anim.rotation_track_interpolate(t_bone, 0.0)
 				var finish := anim.rotation_track_interpolate(t_bone, anim.length)
-				assert_lt(rad_to_deg(start.angle_to(finish)), 0.5, "%s returns %s to guard" % [_tag(rig, move.id), bone])
+				# The throw starts in the hold and lands in the stance (checked in
+				# test_player_moves_and_animations_start_and_end_in_the_relaxed_stance()).
+				if move.id != &"throw":
+					assert_lt(rad_to_deg(start.angle_to(finish)), 0.5, "%s returns %s to guard" % [_tag(rig, move.id), bone])
 				if not [&"spinning_heel", &"spin_kick", &"spinning_backfist"].has(move.id):
 					var a := anim.rotation_track_interpolate(t_bone, strike_t)
 					var b := anim.rotation_track_interpolate(t_bone, end_t)
@@ -977,8 +980,9 @@ func test_play_move_length_and_strike_key_timing() -> void:
 func test_player_moves_and_animations_start_and_end_in_the_relaxed_stance() -> void:
 	# The player's relaxed stance is where everything starts and lands: every move (from
 	# idle and, for the haymaker, released from its charge), the dodges, the landing, the
-	# pickup, the hit reactions and the get-ups. Clinch moves start and end in the hold,
-	# pipe moves in the relaxed weapon carry, and air moves in the air guard.
+	# pickup, the hit reactions and the get-ups. Clinch moves start in the hold (the knee
+	# ends there too, the throw, with nothing left to hold, in the stance), pipe moves start
+	# and end in the relaxed weapon carry, and air moves in the air guard.
 	var rig := _player_rig()
 	rig.play(&"idle", 0.0)
 	rig.advance(0.0)
@@ -989,7 +993,7 @@ func test_player_moves_and_animations_start_and_end_in_the_relaxed_stance() -> v
 	var check := func(what: String) -> void:
 		for i: int in points.size():
 			assert_almost_eq(_local(rig, points[i]), stance[i], Vector3.ONE * 0.01, "%s: %s in the stance" % [what, points[i]])
-	var other: Array[StringName] = [&"knee", &"throw", &"pipe_swing_1", &"pipe_swing_2", &"pipe_swing_3",
+	var other: Array[StringName] = [&"knee", &"pipe_swing_1", &"pipe_swing_2", &"pipe_swing_3",
 			&"weapon_throw", &"flying_kick", &"spin_kick"]
 	for row: Array in MOVES:
 		var move := _move(row)
@@ -1001,6 +1005,9 @@ func test_player_moves_and_animations_start_and_end_in_the_relaxed_stance() -> v
 		for point: StringName in points:
 			start.append(_local(rig, point))
 		rig.advance(move.total_frames() * FRAME)
+		if move.id == &"throw":
+			check.call("throw end")
+			continue
 		if other.has(move.id):
 			for i: int in points.size():
 				assert_almost_eq(_local(rig, points[i]), start[i], Vector3.ONE * 0.01, "%s ends where it started" % move.id)
