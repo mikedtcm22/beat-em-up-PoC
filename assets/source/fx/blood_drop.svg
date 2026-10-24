@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0.0 0.0 512.0 512.0">
+<!-- Blood droplet (comic red). Drawn by tools/gen_fx.gd (original art, Beat-em-up PoC). -->
+<defs>
+<linearGradient id="red" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff5a5f"/><stop offset="1" stop-color="#d0141f"/></linearGradient>
+</defs>
+<path d="M256.0 30.0 C285.5 195.0 374.0 223.8 374.0 330.0 A118.0 118.0 0 1 1 138.0 330.0 C138.0 223.8 226.5 195.0 256.0 30.0 Z" fill="url(#red)" stroke="#62070e" stroke-width="16.0" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M186.2 252.9 C207.4 286.0 230.0 281.9 239.9 307.0 A30.0 30.0 0 1 1 184.1 329.0 C174.2 303.9 193.4 291.5 186.2 252.9 Z" fill="#ffffff" opacity="0.85"/>
+</svg>
