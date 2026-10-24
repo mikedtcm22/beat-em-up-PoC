@@ -9,8 +9,8 @@ extends RefCounted
 ##              clothes, cap and shoes take dirt, scuffs and tears (damage_scuffed.png);
 ##   bloodied   the same with blood splats over both (damage_bloodied.png on the skin,
 ##              damage_blood.png on the clothes). Shades, belts and soles stay.
-## Materials only: no mesh, pose or hurtbox changes. The hit flash (emission) still covers
-## the marks.
+## Materials only: no mesh, pose or hurtbox changes. The hit flash (the contact flash's
+## overlay pass, the parry's emission) still covers the marks.
 
 enum Level { CLEAN, BRUISED, BLOODIED }
 

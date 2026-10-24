@@ -105,7 +105,7 @@ extends Resource
 ## so hitstop doesn't stretch it.
 @export_range(0, 10, 1) var hit_flash_frames: int = 2
 ## How far from the contact point the flash reaches (meters, on the struck body only). 0.25
-## is about a head's width; 3 or more covers the whole body, the flash before the change.
+## is about a head's width; about 4 whites the whole body, the flash before the change.
 @export_range(0.0, 4.0, 0.01, "or_greater") var hit_flash_radius_m: float = 0.25
 ## How white the flash gets at the contact point (1 = pure white).
 @export_range(0.0, 1.0, 0.05) var hit_flash_strength: float = 1.0

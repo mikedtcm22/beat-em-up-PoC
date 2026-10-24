@@ -113,9 +113,13 @@ const _FALL_HEAD_SLACK := 0.02
 ## straight fade would point the spine this much higher (y of its unit up axis) than it
 ## points at either end.
 const _ROLL_MIN_GAIN := 0.1
-## The contact flash's overlay shader (flash_at()). Loaded with the rig, so it is compiled
-## long before the first hit.
+## The contact flash's overlay shader (flash_at()).
 const _FLASH_SHADER := preload("res://game/fx/hit_flash.gdshader")
+
+## The contact flash has been warmed up this run, and the box warming it until the first
+## contact flash (_warm_flash()).
+static var _flash_warmed: bool = false
+static var _flash_warm_box: MeshInstance3D
 
 var _built: bool = false
 ## Rig lengths are PlaceholderBody lengths times this.
@@ -167,6 +171,7 @@ func build() -> void:
 	_scale = maxf(height, 0.1) / PlaceholderBody.REF_HEIGHT
 	_build_skeleton()
 	_build_materials()
+	_warm_flash()
 	_build_meshes()
 	_build_points()
 	if build_hurtboxes:
@@ -377,6 +382,9 @@ func flash_at(point: Vector3, strength: float, radius: float, core: float,
 	set_flash(0.0)
 	if not _built or strength <= 0.0 or radius <= 0.0:
 		return
+	if is_instance_valid(_flash_warm_box):
+		_flash_warm_box.queue_free()
+	_flash_warm_box = null
 	if _flash_overlay == null:
 		_flash_overlay = ShaderMaterial.new()
 		_flash_overlay.shader = _FLASH_SHADER
@@ -421,6 +429,25 @@ static func flash_falloff(dist: float, radius: float, core: float) -> float:
 	if span <= 0.0:
 		return 1.0 if dist <= radius else 0.0
 	return 1.0 - smoothstep(0.0, 1.0, clampf((dist - inner) / span, 0.0, 1.0))
+
+
+## Once per run, the first rig built in a window draws the overlay shader at zero strength
+## (every pixel discarded) on a box at its feet until the first contact flash, so the
+## renderer compiles its pipelines at load instead of on the first hit's frame (measured:
+## 4-12 ms more on it). A separate mesh, so the rig's own materials carry no pass while idle.
+func _warm_flash() -> void:
+	if _flash_warmed or not is_inside_tree() or DisplayServer.get_name() == "headless":
+		return
+	_flash_warmed = true
+	var warm := MeshInstance3D.new()
+	warm.name = "FlashWarmUp"
+	warm.mesh = BoxMesh.new()
+	warm.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var mat := ShaderMaterial.new()
+	mat.shader = _FLASH_SHADER
+	warm.material_override = mat
+	add_child(warm)
+	_flash_warm_box = warm
 
 
 func _show_flash_overlay(on: bool) -> void:
