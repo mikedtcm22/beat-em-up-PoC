@@ -4,6 +4,27 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-24 12:52 CDT: account F took over; package C workflow running
+A fresh account's working session took over at 2% of its 5-hour window (resets 17:39 CDT) and 13% weekly (resets Wed 2026-10-28 10:59 CDT). Its watcher runs: "Beat-em-up: usage watcher", name `usage-watcher-g` (Haiku, low effort, self-paced), asked to check every 10 minutes during the heavy run.
+- **Running:** workflow `m2-phase3-review-fix` (run `wf_f6697464-ea0`, started from this session). A copy of the script is in the repo: [docs/reviews/M2-phase3/workflow.js](reviews/M2-phase3/workflow.js).
+  - **Review:** five lenses (code, ragdoll feel, grab feel, hit feel, performance), two heavy agents at once. Each works in its own detached worktree at `c27afaf`, `.worktrees/m2-review-<lens>` (imported), and records into `captures/review_<lens>/` there.
+  - **Verify:** as each review ends, three Sonnet skeptics per finding (reproduce, spec, code). A finding survives with two confirmations. Survivors whose fix changes the spec, or that touch a question open with Game-boy, become spec questions.
+  - **Critic:** a completeness critic, then one gap reviewer if it names high-priority gaps.
+  - **Fix:** a partition agent groups the survivors into at most four packages with disjoint files. Fixers run two at once. Each makes `.worktrees/m2-fix-<key>` on branch `m2/phase3-fix-<key>` off `m2/hit-feel`, commits `wip:` and pushes, and ends with "M2 phase 3: review fixes (<key>: ...)".
+  - **Record:** a Haiku scribe commits each result as JSON to `docs/reviews/M2-phase3/` on branch `m2/phase3-review` (worktree `.worktrees/m2-review-notes`) and pushes it: `review-<lens>.json`, `verify-<lens>.json`, `critic.json`, `packages.json`, `fix-<key>.json`.
+  - **Usage gates:** a Haiku gate before every launch. A launch goes ahead only if its estimate fits 90% minus the usage minus what's still in flight: a reviewer 13%, 2.5% per verified finding, the critic and the partition 4% each, a fixer 25%. Skipped work is logged and left for the next account.
+- **Expect** the reviews and verification to fill most of this window; the fixers probably start on the next account.
+- **If cut off (another account):**
+  1. Read `docs/reviews/M2-phase3/*.json` on `m2/phase3-review`.
+  2. Run `docs/reviews/M2-phase3/workflow.js` inline as a Workflow with `args`:
+     - `reviews`: {lens: that lens's `review-<lens>.json` object};
+     - `verdicts`: {finding id: its verdict object from `verify-<lens>.json`};
+     - `packages`: `packages.json`'s `packages`;
+     - `done_packages`: the keys whose fix branch has its final "review fixes" commit.
+  3. Finished work is skipped, and only the rest runs. A fixer whose branch has only `wip:` commits reuses the worktree and goes on from there. The reviewer worktrees must stay, since skeptics read them.
+  - Within this session, resume with `resumeFromRunId: "wf_f6697464-ea0"`.
+- **Waiting on Game-boy:** unchanged from the 12:40 entry. Each item has a default, and none blocks C.
+
 ### 2026-10-24 12:40 CDT: new usage rule, work up to the 90% handoff
 Game-boy finds stopping launches at 65-70% too conservative. From now on, work runs up to the watcher's 90% handoff, and each launch is sized to the headroom left below 90%. When a new phase or milestone doesn't fit, split off a first task that does, run it, and hand off at 90%. The rules are under "Usage rules for the working session"; the takeover prompt, CLAUDE.md and the phase 3 plan match. Nothing else changed since the 12:40 handoff entry below.
 
@@ -457,7 +478,7 @@ USAGE RULES:
 
 Next steps (Milestone 2; details are in docs/HANDOFF.md):
 - Phases 1 and 2, the localized flash and phase 3's packages A (ragdoll: contact push, KO blink-off, staggers at 0.9) and B (grab view and waist bend) are merged into m2/hit-feel. 457/457 tests pass with no SCRIPT ERROR, at f98bb21. README has the three approved M2 ragdoll departures. WP3's audio was judged by analysis only, so I'll listen to it.
-- Next is phase 3's package C, run as a Workflow (I turned ultracode on): follow docs/milestones/M2-phase3-plan.md, "C", step 2. Reviewer worktrees at the m2/hit-feel head, five review lenses (phase 3 code, ragdoll feel, grab feel, hit feel per tier and view with the known items, performance), three skeptics per finding, fixers in their own worktrees with disjoint files, a completeness critic, and a Haiku usage gate before every launch (each launch sized to the headroom left below 90%; at most two heavy agents at once). Then D: check ARCHITECTURE against the code, README's Milestone 2 status, and the M2 PR, which is never merged without my sign-off.
+- Phase 3's package C runs as a Workflow (I turned ultracode on), per docs/milestones/M2-phase3-plan.md, "C", step 2. Account F started it at 12:52 on 2026-10-24: five review lenses in reviewer worktrees, three skeptics per finding, a completeness critic, then fixers in their own worktrees with disjoint files, every launch usage-gated. Its results are committed as JSON to docs/reviews/M2-phase3/ on branch m2/phase3-review, and the script is docs/reviews/M2-phase3/workflow.js. If it didn't finish, resume it as docs/HANDOFF.md's newest entry says (it skips finished work when given the earlier results as args). After it: merge the fix branches and m2/phase3-review into m2/hit-feel, regenerate the preset, run the tests, record the final sheets and show me. Then D: check ARCHITECTURE against the code, README's Milestone 2 status, and the M2 PR, which is never merged without my sign-off.
 - Open for me (each has a default; none blocks C): more contortion on the ragdoll contact push (default: as it is); the grab's lens pull-back and the bend's depth (default: as they are); the combat log over the knee contact (default: C proposes a fix); a minimum on-screen size for the side-view flash (default: leave it). And I'll listen to WP3's audio.
 
 Ground rules:
