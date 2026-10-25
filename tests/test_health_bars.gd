@@ -147,8 +147,8 @@ func _report(label: String, seen: Dictionary, standing_float: float) -> void:
 func test_a_standing_body_has_its_bar_over_its_head() -> void:
 	await _setup()
 	var dummy := dummies[0]
-	# Over the top of its head as before (across, over the middle of the head and the hips:
-	# a few centimeters off the head in the stance).
+	# Over the top of its head as before (across, over its hips: a few centimeters off the
+	# head in the stance).
 	var head := camera.unproject_position(dummy.get_head_top_position())
 	var anchor := bars.screen_anchor_of(dummy, camera)
 	assert_almost_eq(anchor.y, head.y, 0.5, "at the top of its head")
@@ -205,6 +205,20 @@ func test_a_held_body_keeps_the_bar_above_it() -> void:
 		await get_tree().physics_frame
 	assert_eq(dummy.holder, player, "held")
 	_report("held", await _watch(dummy, 40), standing)
+	# Its head at the holder's waist, the bar is over its far side, off the holder's head.
+	var head_mesh := player.rig.find_child("BoneHead", true, false)
+	var head := Rect2()
+	var first := true
+	for node: Node in head_mesh.find_children("*", "MeshInstance3D", true, false):
+		var mesh := node as MeshInstance3D
+		for v: Vector3 in mesh.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]:
+			var p := camera.unproject_position(mesh.global_transform * v)
+			head = Rect2(p, Vector2.ZERO) if first else head.expand(p)
+			first = false
+	var anchor := bars.screen_anchor_of(dummy, camera)
+	var bar := Rect2(anchor - Vector2(bars.bar_size.x * 0.5, bars.bar_size.y + bars.lift_px), bars.bar_size)
+	gut.p("held: the bar %s, the holder's head %s" % [bar, head])
+	assert_false(bar.intersects(head), "the bar is off the holder's head")
 
 
 func test_a_kod_enemys_bar_fades_once_its_last_chunk_has_drained() -> void:

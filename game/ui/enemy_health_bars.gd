@@ -4,8 +4,8 @@ extends Control
 ## `show_seconds` after it takes a hit (CombatEvents.hit_landed, or a health drop through
 ## CombatEvents.health_changed). Each bar sits just above the body as it is drawn, seen
 ## through the viewport's current Camera3D (screen_anchor_of(): over the head of a body on
-## its feet, over the middle of one lying, flying or held), and is hidden while the head is
-## behind the camera or the body is hidden (a KO's blink, a comeback's blink-in). A KO'd actor's bar fades out once the
+## its feet, over the middle of one lying, flying or held bent over), and is hidden while the
+## head is behind the camera or the body is hidden (a KO's blink, a comeback's blink-in). A KO'd actor's bar fades out once the
 ## killing hit's chunk has drained, and by the time the body starts blinking at the latest
 ## (an empty bar over a lying body adds nothing); it is dropped when the actor is freed or
 ## blinks off (CombatEvents.vanished). Full-rect, draws every bar itself.
@@ -119,9 +119,9 @@ func advance(delta: float) -> void:
 
 ## Where `actor`'s bar sits on `camera`'s screen (canvas pixels; the bar's bottom is
 ## `lift_px` above it): over the body as it is drawn, in any view.
-## - Across: over the middle of its head's top and its hips, so over the head while it
-##   stands, and over the middle of a body lying, flying or held bent over (held, its head is
-##   at the holder's waist: a bar over it would sit on the holder).
+## - Across: over its hips as drawn, the middle of the body: under the head while it stands,
+##   the middle of a body lying or flying, and the far side of one held bent over (its head
+##   is at the holder's waist, and a bar over it would sit on the holder).
 ## - Up: at the highest the drawn body shows on that screen, its head's top
 ##   (get_head_top_position(), which floats above the head) or any joint raised by
 ##   `body_margin_m`. A head bent toward the camera, arms flung up, a bent back or a body
@@ -134,9 +134,9 @@ func screen_anchor_of(actor: CombatActor, camera: Camera3D) -> Vector2:
 	var screen := camera.unproject_position(head)
 	if actor.rig == null:
 		return screen
-	var middle := (head + actor.rig.get_visual_point_transform(&"Hips").origin) * 0.5
-	if not camera.is_position_behind(middle):
-		screen.x = camera.unproject_position(middle).x
+	var hips := actor.rig.get_visual_point_transform(&"Hips").origin
+	if not camera.is_position_behind(hips):
+		screen.x = camera.unproject_position(hips).x
 	for point: StringName in _BODY_POINTS:
 		var p := actor.rig.get_visual_point_transform(point).origin + Vector3.UP * body_margin_m
 		if not camera.is_position_behind(p):
