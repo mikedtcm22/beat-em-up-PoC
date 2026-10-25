@@ -1,0 +1,310 @@
+{
+ "lens": "gap",
+ "verdicts": [
+  {
+   "id": "gap-01",
+   "lens": "gap",
+   "severity": "medium",
+   "title": "[gap-01, lens gap] Launched into a wall, the building fronts or the curb, a body can't fly: its head sinks up to 0.38 m into the wall, and in first person it falls back onto the attacker over two-thirds of the view",
+   "survives": true,
+   "confirmations": 3,
+   "spec_question": false,
+   "files": [
+    "game/actors/combat_actor.gd",
+    "game/actors/ragdoll.gd",
+    "game/actors/humanoid_rig.gd",
+    "game/player/player.gd",
+    "game/autoload/tuning_data.gd",
+    "tests/test_ragdoll.gd"
+   ],
+   "root_cause": "A launch or knockdown into world geometry is not detected. The ragdoll rises from the snap 'launched' pose, which arches beyond the capsule, instead of taking over at_once from the pose on screen. The hips spring also keeps pulling the body toward the stopped CharacterBody's hips. The animation-driven pose and the stopped capsule disagree, so the head sinks into the wall and a first-person body falls back onto the lens.",
+   "open_question": "Should a launch blocked by a wall or the curb get a wall-splat or bounce reaction, or deflect along the wall? That is the gap reviewer's step 4, which would be new design for Game-boy. Pushing the body out of the wall and keeping the first-person lens clear need no spec change.",
+   "votes": {
+    "reproduce": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "Reproduced the head sinking into the wall: one W1 run gave a max drawn-vertex depth of 0.384 m at the Cap and Hair, in the same state as the probe (LAUNCHED, hips held at the wall). The sheet shows a launched dummy against the wall that then slumps down. I did not re-run the first-person lens or curb acts.",
+     "evidence": "I re-ran `--act=W1` once (/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-gap/captures/verify/gap-01-reproduce/w1.log). The GEO lines report depth 0.384 at 'Cap wall+X' for f204-206, as the finding says (0.169 at the Hair, then 0.265 to 0.384 at the Cap while LAUNCHED). No SCRIPT ERROR in the log. The side-view sheet (s.png in the same folder) shows the dummy pinned against the wall face with its upper body clipped, then sliding down to the wall's base. The gap probe's measure is the drawn mesh's depth against the wall, so the number is not an artifact of how the probe measures it."
+    },
+    "spec": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "No document approves or requires a launched body sinking into a wall or the curb, or falling back over the lens. HANDOFF lists \"bodies against a wall or the curb\" as a medium gap for review. The approved list and the open-with-Game-boy list don't cover it.",
+     "evidence": "grep of SPEC.md, M2-phase3-plan.md, HANDOFF.md and README.md for wall, barrier, pinned, corner, curb and geometry found nothing on knockdowns against geometry. Only HANDOFF.md:221 and :238 mention it, as a critic gap to review (\"bodies against a wall or the curb\"). SPEC.md:276 says M3 arena locks close with barriers, so pinned bodies will become common. HANDOFF.md:96 covers only the respawn spot's check for walls (code-02), not launches."
+    },
+    "code": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The code path matches the finding. _launch() calls _ragdoll_full(..., at_once=from_hold), so at_once is true only when launched out of a hold. A wall-stopped launch therefore takes the rise path. The hips spring (ragdoll_hips_hz) pulls the whole FULL ragdoll toward the animation's hips, which ride the CharacterBody. The body's capsule is stopped at the wall. I found no wall check at launch.",
+     "evidence": "game/actors/combat_actor.gd:1005-1031 (_launch has no wall check; at_once = from_hold only). game/actors/combat_actor.gd:1155-1158 (_ragdoll_full forwards at_once). game/actors/ragdoll.gd:317-318 (_rise_from = 1.0 if at_once else 0.0, _rise_s = ragdoll_full_rise_s). game/actors/ragdoll.gd:640-650 (hips spring pulls the whole body to hips_target). combat_actor.gd:1289 comment: \"Knockback slides stop at walls\", so the launch velocity dies at the wall. The probe log has the 0.384 m depth with hips held at x 19.65 while LAUNCHED. I did not re-run the probe or check the first-person lens figures. Caveat: I did not verify that the world-colliding bodies fail to push the head out in the time shown; the log's 28 ticks of depth suggest they do."
+    }
+   }
+  },
+  {
+   "id": "gap-02",
+   "lens": "gap",
+   "severity": "medium",
+   "title": "[gap-02, lens gap] The player's own KO in first person: the lens lies 7 cm above the floor behind the player's own navy belly (41% of the view) for 2.5 s, then the get-up puts the torso over 77% of the view and a mesh 1.7 cm from the lens",
+   "survives": true,
+   "confirmations": 3,
+   "spec_question": false,
+   "files": [
+    "game/camera/first_person_camera.gd",
+    "game/actors/humanoid_rig.gd",
+    "game/player/player.gd",
+    "tests/test_grab_view.gd",
+    "game/actors/placeholder_body.gd",
+    "game/autoload/tuning_data.gd"
+   ],
+   "root_cause": "The player is animated in place through ko_back and get-up without ragdoll, and the first-person camera has no state-aware handling. It follows the sinking EyePoint at the unchanged look pitch. The lower-body meshes are visible to the first-person camera (not on VIS_FP_HIDDEN), so the belly and legs fill the view. During the get-up the eye rises through the torso and the 0.05 m near plane lets the lens sit within centimetres of the own mesh.",
+   "open_question": "What should the first-person view show while the player is KO'd and getting up? The proposed default is to hide the own torso, hips and legs, keep the lens clear of the body, and tilt it slightly up. The alternative is a short KO camera. Game-boy decides, because this is new behaviour.",
+   "votes": {
+    "reproduce": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The existing probe log and sheet show the finding's behaviour. During the player's KO in first person, the lens sits at y 0.07 m and a navy slab of the player's own body fills the view for about 2.5 s. The slab is a real visual oddity, not an intended view, so I call it a defect. It is presentation-only and not a spec change; what the KO view should show is a question for Game-boy.",
+     "evidence": "I did not re-record. I read the gap reviewer's existing outputs in the worktree. captures/review_gap/probe.log \"LENS KO1\" lines: ticks 258-390 show lens y 0.07-0.08 m, own=41-45% and own_near 0.24 m, pitch -0.0. At f402 own_near is 0.017 m (lens 1.7 cm from the own mesh) and own=2%. Sheet captures/review_gap/s_ko1_fp.png shows the lens-eye frames at about 12 fps. After the fall, about 25 consecutive tiles are a big navy slab over the right half of the view, and the HUD bar drains to 0. The last row shows the get-up, with a blue frame as the eye rises through the body. VIS_FP_HIDDEN is applied only to the head and arms (humanoid_rig.gd:1087, placeholder_body.gd:108), so the torso, hips and legs are not hidden, which matches the finding's cause."
+    },
+    "spec": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "No doc approves or specifies the first-person view during the player's own KO or get-up. The behaviour is not an approved departure.",
+     "evidence": "ARCHITECTURE.md lines 126, 234 and 313 say only that the player doesn't ragdoll (ragdoll_player is off), never blinks off, and gets up after player_revive_s (2.5 s) in the test room with auto_revive. They say nothing about what the camera shows. M2-phase3-plan.md line 78 lists \"the player's own KO\" as an edge case to review, so it is in scope. HANDOFF.md lines 221 and 238 list the player's KO as a critic gap to review. SPEC.md has nothing on a KO camera. The APPROVED list in the task doesn't cover it. The only related precedent is the grab-06 fix, which limits how much of the own body fills the view."
+    },
+    "code": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "The code does what the finding says. Nothing in the first-person camera or the player handles a KO, knockdown or get-up. The camera always rides the animated EyePoint, with the player's look basis and the lens offset, and the own-body hide list leaves the lower body visible.",
+     "evidence": "first_person_camera.gd: _follow() takes the eye from player.get_eye_transform(), which is rig EyePoint. It clamps only the bob and then calls _view_with(). _view_with() uses player.get_look_basis() plus get_camera_move_offset() and lens_offset(). The camera file has no KO or lying-state branch. combat_actor.gd:1071 plays ko_back or ko_front on the rig, and ragdoll_player is false (tuning_data.gd:297, combat_actor.gd:1116), so the player never ragdolls. placeholder_body.gd FP_HIDDEN_BONES is only Chest, UpperChest, Neck, Head, LeftShoulder and RightShoulder, plus the Delt and UpperArm parts. Hips, Spine and the legs are not hidden. The camera near plane is 0.05 m (_init), so a 1.7 cm own-mesh approach is clipped but the torso still fills the view. player.gd:625 auto_revive after player_revive_s matches the finding. The earlier probe.log shows LENS KO1 at f257-259 with lens y about 0.08 m, own_near 0.23 m and own body 45% of the view, consistent with the finding. I did not rerun the probe."
+    }
+   }
+  },
+  {
+   "id": "gap-03",
+   "lens": "gap",
+   "severity": "medium",
+   "title": "[gap-03, lens gap] The uppercut from behind snaps the body into the arched-back 'launched' pose, throwing its head into the attacker's lens: 0.098 m away, 67% of the view",
+   "survives": true,
+   "confirmations": 3,
+   "spec_question": false,
+   "files": [
+    "game/actors/combat_actor.gd",
+    "game/actors/placeholder_poses.gd",
+    "game/actors/ragdoll.gd",
+    "tests/test_ragdoll.gd",
+    "game/actors/placeholder_anims.gd",
+    "game/actors/humanoid_rig.gd"
+   ],
+   "root_cause": "_launch() chooses the snap pose by reaction only. Non-KNOCKDOWN launches (uppercut, thrown) always play the arch-back &\"launched\" pose, which was authored for a hit from the front. It is not chosen by hit.from_behind, unlike the KNOCKDOWN branch. For a hit from behind, that pose snaps the head and back toward the attacker within 0.03 s, and the full ragdoll then rises from that pose.",
+   "open_question": "None for the spec lens. Whether the near-lens head for about 5 frames is acceptable is Game-boy's call if he wants it. It resembles the open item on a hit on the player in first person.",
+   "votes": {
+    "reproduce": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "I reran the probe and the numbers match. A dummy hit from behind by the uppercut comes within 0.098 m of the first-person lens at f92 and fills 67% of the view, which is 86% with the player's arm. Several frames are inside 0.25 m: 0.214, 0.131, 0.098, 0.126 and 0.165 m at f90-f94. The code also plays the arch-back &\"launched\" pose with a 0.03 s blend for every non-knockdown launch, including one from behind. I did not record video or confirm the cause by changing the pose, so the 'arch swings the head back' mechanism is inferred and not isolated. The close-up is short, about 4 to 5 frames, so the severity is arguable.",
+     "evidence": "My probe run (gap_probe.tscn, --act=U1, headless at 60 fps) wrote /Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-gap/captures/verify/gap-03-reproduce/p.log. It is identical to the reviewer's captures/review_gap/u1.log for f88-f102. At f80 the uppercut hits and the hitstop runs to f89 (other_near about 0.28-0.31 m). After that, other_near is 0.214, 0.131, 0.098, 0.126, 0.165 and 0.217 m at f90-f95, and other=52, 58, 67, 57, 51 and 44%. In game/actors/combat_actor.gd, _launch() calls rig.play(&\"launched\", blend) for any non-KNOCKDOWN reaction, even when _face_up is false. For that case it only adds rig.ragdoll_aim_landing(&\"downed_front\")."
+    },
+    "spec": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "No document approves or requires the arched launched pose for hits from behind. The approved list covers heavy-tier knockdowns getting the full ragdoll and the contact push with spin caps, not this snap. The head landing in the attacker's lens is not an accepted departure. First-person rules say nothing may fill the view.",
+     "evidence": "grep of SPEC.md, README.md, HANDOFF.md, M2-phase3-plan.md and M2-plan.md for launched, from behind, uppercut, pose, snap, arch and face_up found nothing on this. SPEC.md:124 only says the uppercut \"launches the target into a knockdown\". HANDOFF.md:251 records grab-01, a launched body filling the view, as a defect. M2-phase3-plan.md:86 says the first-person rule is that nothing fills the view. Ragdoll package A's scope is the contact push, KO and staggers, and does not cover the launch snap pose."
+    },
+    "code": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The code does what the finding says. CombatActor._launch() sets _face_up = not hit.from_behind, but for any non-KNOCKDOWN reaction (uppercut, thrown, etc.) it plays the single &\"launched\" pose, whatever the facing. Only KNOCKDOWN picks a facing-aware pose (knockdown_back vs knockdown_forward). _launch() then starts the full ragdoll from that snapped pose. The launched pose is an arch-back pose authored for a hit from the front: launched_a() has Hips +30 deg pitch, Neck and Head +20, and the arms flung forward. Played on a body facing away, it swings back and head toward the attacker. The 0.03 s blend (non-hold) makes it a snap. For launches from behind, _launch() only calls rig.ragdoll_aim_landing(&\"downed_front\") afterwards, which changes nothing about the start pose. I did not re-measure the 0.098 m or 67% figures; I did not run the bot. The head-near-lens geometry follows from the arch direction, but the exact size is from the reporter's log.",
+     "evidence": "game/actors/combat_actor.gd lines 1011-1025: `_face_up = not hit.from_behind`; `if reaction == KNOCKDOWN: rig.play(knockdown_back if _face_up else knockdown_forward, blend) else: rig.play(&\"launched\", blend)`, with blend = 0.03 unless from_hold; then `_ragdoll_full(...)`, then for `not _face_up and reaction != KNOCKDOWN` only `rig.ragdoll_aim_landing(&\"downed_front\")`. game/actors/placeholder_poses.gd lines 903-920: launched_a() is the arch-back pose (\"arched back, limbs flung forward\"). game/actors/ragdoll.gd start() takes `at_once` (line 274); full-ragdoll rise is tuning.ragdoll_full_rise_s unless at_once."
+    }
+   }
+  },
+  {
+   "id": "gap-04",
+   "lens": "gap",
+   "severity": "low",
+   "title": "[gap-04, lens gap] ragdoll-02's fix is incomplete: the hook stagger's far arm still swings out dead straight, because that is the stagger animation's pose; the new arm influence changes nothing visible",
+   "survives": true,
+   "confirmations": 2,
+   "spec_question": false,
+   "files": [
+    "game/actors/placeholder_poses.gd",
+    "tests/test_ragdoll.gd"
+   ],
+   "root_cause": "The far arm's wide swing comes from the stagger animation's pose (PlaceholderPoses stagger_left_a, stagger_right_a and their b poses), not from the ragdoll. The ragdoll_partial_arm_influence share only blends from the animation toward the simulation, so it cannot reduce a swing that is already in the animation.",
+   "open_question": "None for the spec lens. Whether the arm really is straight in the stagger animation is for the other lenses to confirm, and whether it counts as a defect is for Game-boy.",
+   "votes": {
+    "reproduce": {
+     "refuted": true,
+     "confidence": "medium",
+     "reason": "The visual part reproduces, but it isn't a defect. The far arm is thrown out by the authored stagger pose, which is meant to flail. Nothing shows it is a rope-like ragdoll artifact. I couldn't tell otherwise, so I'm refuting.",
+     "evidence": "I re-recorded the first-person hook act once at the current defaults and tiled frames 60-100. The far arm goes out near-horizontal, with the fist at the right edge, for about 0.25 s, then returns to guard. The tile shows a rigid arm with a slight elbow bend. It is not a limp or stringy ragdoll limb, and the head stays on the trunk. In placeholder_poses.gd, stagger_right_a sets the far upper arm to Z -70 degrees and the lower arm to 30 degrees. The doc comments call the stagger family \"arms out\" or \"flung\". The finding's 45-degree limit is a subjective preference. I did not run --no-ragdoll, so I did not confirm that it looks identical to the default."
+    },
+    "spec": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The docs do not approve the straight far arm on the hook stagger. The approved list covers stronger staggers and the partial-influence tunables, not the stagger animation's arm pose. HANDOFF's ragdoll-02 entry only records that the new arm influence was added and that the hook now rocks back from the side. No document says the arm may swing out straight. Nothing in the docs requires it either.",
+     "evidence": "A grep of docs/milestones/M2-phase3-plan.md, README.md, docs/SPEC.md and docs/HANDOFF.md found no mention of the stagger animation's arm pose being intended. HANDOFF line 153 records ragdoll-02 as \"new tunables ragdoll_partial_head_influence 0.45, ragdoll_partial_arm_influence 0.45 ... The hook stagger now rocks back from the side.\" That entry says nothing about the arm's drawn pose. The finding's \"arm as drawn\" claim comes from the reviewer's capture, which I did not check because Godot was out of scope for this lens."
+    },
+    "code": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The code supports the finding. The partial ragdoll can only blend a joint between the animation pose and the simulated pose, so the animation's arm pose sets the floor. The sideways stagger animation itself throws one arm wide, which is why the arm influence changes nothing visible.",
+     "evidence": "In ragdoll.gd, _process_modification_with_delta slerps each arm and head joint between the animation rotation and the simulated one: anim.slerp(sim, share). At arm influence 0 the arm shows pure animation. It cannot show less swing than the animation does, so lowering ragdoll_partial_arm_influence cannot calm an arm the animation already flings out. In placeholder_poses.gd, stagger_right_a sets LeftUpperArm to (20, 0, -70) and LeftLowerArm to (30, 0, 0), and stagger_right_b only eases it to -40. The code shows about 70 degrees out from the trunk in a pose-A stagger, not dead straight, so the finding's description is somewhat overstated. I did not record video or run a probe. The test at tests/test_ragdoll.gd:1146 measures hand drift in the simulation, not the drawn pose."
+    }
+   }
+  },
+  {
+   "id": "gap-05",
+   "lens": "gap",
+   "severity": "low",
+   "title": "[gap-05, lens gap] A dummy that comes back beside its occupied post arrives touching the player, behind him, then walks in place against him while return_home tries to reach the post",
+   "survives": true,
+   "confirmations": 3,
+   "spec_question": false,
+   "files": [
+    "game/enemies/dummy/training_dummy.gd",
+    "game/autoload/tuning_data.gd",
+    "tuning/default.json",
+    "tests/test_ko_blink.gd"
+   ],
+   "root_cause": "Two causes. First, _respawn_spot ranks the ring spots by distance from the player only, so the ties when he stands on the post are broken by iteration order, and ring 1 is zero-clearance (2 radii = touching). Second, the idle return_home branch in _tick_control walks toward the post without checking that the post has room or that the walk is making progress, so the dummy strides in place against the player.",
+   "open_question": "When the player stands on the post, should the dummy come back in front of or beside him, rather than behind him, and should a dummy whose post has no room wait instead of walking in place against him?",
+   "votes": {
+    "reproduce": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The code and the probe log in this worktree agree with the finding. I did not re-record. A dummy that comes back while the player stands on its post arrives touching him and stays there, so it is a real low-severity defect.",
+     "evidence": "Code: `_respawn_spot()` (training_dummy.gd:290-294) tries rings [1, 2] at 2 body radii each. Its only tie-break is `d > best_d`, so with the player on the post all ring-1 spots are equidistant and the first one iterated wins. The ring-1 spot is exactly 2 radii from the post, so it touches the player's capsule. `return_home` (line 133: more than 60 idle frames and more than 0.3 m from home) then walks it toward the post. Nothing checks whether the post has room. captures/review_gap/probe.log, act K3: 'MARK respawned f6130 at (-2.89,-0.00,-0.49), post (-2.40,0.00,0.00)', with the player on the post at (-2.40,0,0). That is 0.69 m apart, against radii 0.35 + 0.35. The dummy turns solid (lay=4) by f6166. Its position is still (-2.89,-0.49) at f6300 and f6435, with the player idle at the post and the dummy FREE. It is still trying to reach home, so the walk-in-place follows from the code. I did not look at the frames."
+    },
+    "spec": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The docs approve only part of this. ARCHITECTURE.md line 132 and HANDOFF.md line 320 approve a dummy coming back at the nearest free spot \"one or two body widths\" from an occupied post, so ring 1 touching the player is within the written rule. The docs say nothing about which side of the player the spot is on. They also say nothing about the dummy then walking in place against the player while return_home tries to reach the post. The 'in view' preference in ARCHITECTURE.md line 368 belongs to the F-menu spawner, not to the KO respawn. No departure section, decisions-log entry or open-with-Game-boy item covers either point.",
+     "evidence": "ARCHITECTURE.md:132 says the dummy comes back \"at the nearest free spot one or two body widths around it; with none it waits\". ARCHITECTURE.md:133 describes the occupancy checks and does not mention direction or a clearance gap. ARCHITECTURE.md:368 puts the dummy \"in view rather than behind it\", but only for the spawner menu. HANDOFF.md:320 records \"comes back at the nearest free spot beside it\". M2-phase3-plan.md:77 lists \"a respawn into an occupied post\" as an edge case to review. No document mentions return_home or a dummy that walks while blocked. The open-with-Game-boy list does not include this behaviour."
+    },
+    "code": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "The code does what the finding says. Ring 1 is body_radius*2 from the post, so with the player on the post the capsules just touch. With the player on the post every ring-1 spot is equidistant from him, so the farthest-first rule picks by iteration order (strict > keeps the first, up to float noise), not by his view. After 60 idle frames, _tick_control walks the dummy toward the post with no check for room or blockage. _walk only sets velocity and plays the locomotion cycle, so it keeps striding against the player.",
+     "evidence": "training_dummy.gd:290-294 (rings [1,2], spot = _home + dir * body_radius*2*ring, best chosen by `d > best_d` from player distance); training_dummy.gd:132-136 (`return_home and _idle_frames > 60 and to_home.length() > 0.3` then _walk, with no room check); training_dummy.gd:239-244 (_walk sets sim_velocity and calls rig.play_locomotion, no blocked test). _GETUP_DIRECTIONS = 8 (combat_actor.gd:63). The 60 frames, 0.3 m and 6.0 turn rate are literals in script, not in TuningData."
+    }
+   }
+  },
+  {
+   "id": "gap-06",
+   "lens": "gap",
+   "severity": "low",
+   "title": "[gap-06, lens gap] Stomp: the foot now lands on top (ragdoll-05's fix holds), but the player's standing shins sink into the lying body's hips for the whole stand-over",
+   "survives": true,
+   "confirmations": 2,
+   "spec_question": false,
+   "files": [
+    "game/player/player.gd",
+    "game/autoload/tuning_data.gd",
+    "game/actors/placeholder_poses.gd",
+    "game/enemies/dummy/training_dummy.gd"
+   ],
+   "root_cause": "The stomp's approach uses one distance, stomp_stop_distance, from the target's chest position (player.gd _stop_distance, _update_lunge, _begin_magnet). It ignores the lying body's hips, legs and arms. A body lying feet-first toward the player has its pelvis and thighs closer than the chest, inside that radius.",
+   "open_question": "Whether Game-boy considers the shin overlap acceptable feel, given that the lying body is a placeholder ragdoll and stomp_stop_distance is a tuning value.",
+   "votes": {
+    "reproduce": {
+     "refuted": true,
+     "confidence": "medium",
+     "reason": "I re-recorded the act and could not confirm that the player's shins sink into the hips. The player stands over the body as designed, and the overlap in the side view looks like camera perspective and the health bar. The fixer already filed this as feel tuning, and it is low severity.",
+     "evidence": "I recorded once: ragdoll_bot \"Ragdoll: stomp a lying dummy, it gets up where it lies (side view)\". The result was 343 frames, saved as captures/verify/gap-06-reproduce/r.avi and tiled into s.png. In the stand-over frames (rows 2-3) the player's feet sit beside or over the lying body's torso and the foot lands on top. The camera looks down at an angle, so the legs overlap the body on screen, and the bar across the player's knees adds to that. No frame shows a limb clearly passing through the other body. The dummy gets up in rows 3-4 and ends up right next to the player. I did not run a geometry probe, so I cannot rule out a real intersection."
+    },
+    "spec": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "No approved item, decision, departure or spec text covers the player's shins overlapping the lying body's hips during a stomp. SPEC §6 only says \"K next to a downed enemy\", and the phase 3 plan lists a stomp edge case only for a body that vanishes. HANDOFF treated \"the stomping foot sinks into the lying body\" as a defect (ragdoll-05) and fixed only the foot's landing on the torso. The shin overlap is a leftover from that fix, not an approved behaviour.",
+     "evidence": "docs/SPEC.md line 142 (Stomp: K next to a downed enemy, 8, ground hit). docs/HANDOFF.md lines 161 and 250 (ragdoll-05 listed as a defect, fixed for the foot only). Grep of SPEC, README, plan, HANDOFF and ARCHITECTURE finds no approval of leg-through-body overlap. The approved and open lists do not include it. The bars item is separate."
+    },
+    "code": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The code does what the finding describes. The stomp's stop distance is measured only from the lying body's chest, so the player's standing legs can end up over the hips and thighs. I did not run a probe or check the side-view frames.",
+     "evidence": "player.gd _stop_distance() returns Tuning.data.stomp_stop_distance (0.45 m) for any move with hits_downed. Both _begin_magnet (lines ~640-650) and _update_lunge (~660) compute the lunge as clampf(flat distance to _magnet_target.get_chest_position() - stop distance, 0, budget). Only the chest point is used. Nothing in the player code looks at the dummy's other drawn segments. training_dummy.gd _DRAWN_LIMBS (Hips-HeadTopPoint, Hips-LeftFootPoint, Hips-RightFootPoint and the two arms) is used only for the dummy's own drawing and room checks (line ~345). A body lying feet-first toward the player therefore has its hips and legs on the player's side of the chest, inside the 0.45 m stop circle. The player stops at 0.45 m from the chest, so the legs end up over the pelvis and thighs. The shin-in-hips look in the side-view frames is plausible but unchecked."
+    }
+   }
+  },
+  {
+   "id": "gap-07",
+   "lens": "gap",
+   "severity": "low",
+   "title": "[gap-07, lens gap] The respawn check makes the simulation read the drawn ragdoll, and on a new ragdoll's first tick get_visual_point_transform() returns the previous ragdoll's pose",
+   "survives": true,
+   "confirmations": 3,
+   "spec_question": false,
+   "files": [
+    "game/actors/ragdoll.gd",
+    "game/actors/humanoid_rig.gd",
+    "game/enemies/dummy/training_dummy.gd",
+    "docs/ARCHITECTURE.md",
+    "tests/test_ragdoll.gd"
+   ],
+   "root_cause": "Ragdoll.start() flips mode to running without seeding the cached drawn pose (_visual, visual_rig_transform). Ragdoll.stop() doesn't clear it either. Until the modifier's next update, is_ragdolling() is true but get_visual_point_transform() returns the previous ragdoll's pose. code-02's fix then made the simulation (TrainingDummy._has_room, in _physics_process) a second reader of that presentation pose, which the ragdoll.gd header doesn't record.",
+   "open_question": "None for Game-boy. Whether to seed Ragdoll.start() with the animation pose or base _has_room on hurtboxes and ragdoll_hips_offset() is an implementation choice. The ragdoll.gd header and ARCHITECTURE.md line 137 should be updated either way.",
+   "votes": {
+    "reproduce": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The code path explains the stale read, and the reviewer's own probe log shows it. I did not re-run Godot. The stale read is a low-severity defect.",
+     "evidence": "Code: TrainingDummy._has_room() (training_dummy.gd ~337-350) reads rig.get_visual_point_transform() for bodies in the lying, flying or FULL ragdoll states, inside _physics_process. HumanoidRig.get_visual_point_transform() returns _ragdoll.visual_rig_transform * visual_pose(bone) whenever is_ragdolling(). Ragdoll.start() sets mode and active but seeds neither _visual nor visual_rig_transform. Both are written only in _process_modification_with_delta, which runs when the modifier is active (active=false in stop()). So until the first modifier update they hold the previous ragdoll's last pose. start() also reads that stale pose into `shown` and moves the bodies onto it when was==NONE. Probe log captures/review_gap/probe.log line 1927: 'GEO W1 f1552 Dummy1 ... hips=(-3.02,0.95,-0.03) v=1359.7 rd=1' for a dummy at x=19.65. Line 1929 (f1553) reads hips=(19.65,0.95,-0.03), the correct spot, with v=1360.2. The stale pose is held for exactly one tick."
+    },
+    "spec": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The docs approve the respawn check reading the drawn ragdoll, but not a stale read. The finding stands as a low-severity defect plus a documentation inconsistency.",
+     "evidence": "ARCHITECTURE.md line 133 describes TrainingDummy._respawn_spot() checking \"a body drawn lying across the spot (its ragdoll's trunk, legs and arms along the floor)\". That is an intended second read of the ragdoll by the simulation. ARCHITECTURE.md line 137 says the get-up is \"the one place the ragdoll feeds the simulation\", and ragdoll.gd's header (lines 3-6) says the same. Both are now out of date, so the docs contradict each other. No document mentions a stale pose on a new ragdoll's first tick, and nothing approves or requires one. The phase 3 plan (M2-phase3-plan.md lines 39, 48, 77) requires the respawn-into-occupied-post edge case to work. HANDOFF records code-02 as fixed by checking lying bodies, so a wrong answer on that tick runs against the intent."
+    },
+    "code": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "The code path matches the finding. _has_room() reads rig.get_visual_point_transform() for downed, KO, flying and FULL-ragdoll bodies, inside the simulation's tick. That function returns the ragdoll's cached pose whenever is_ragdolling() is true. is_running() is just mode != NONE, so it turns true inside Ragdoll.start(). start() sets mode but never touches _visual or visual_rig_transform. Only the modifier's later update (ragdoll.gd:541-543) rewrites them. Ragdoll.stop() doesn't clear them either, so a second ragdoll's first tick reads the previous ragdoll's final pose, wherever that body lay. A first-ever ragdoll reads default-initialised data instead. The ragdoll.gd header (lines 3-6) also still says the simulation reads the ragdoll only at the get-up.",
+     "evidence": "game/actors/ragdoll.gd:257-258 (is_running), 272-330 (start: no _visual or visual_rig_transform write), 422 (visual_pose returns _visual[bone]), 541-543 (the only writes, in the modifier's update); game/actors/humanoid_rig.gd:612-650 (is_ragdolling, get_visual_point_transform uses _ragdoll.visual_rig_transform * visual_pose); game/enemies/dummy/training_dummy.gd:337-350 (the read, in _has_room). I read the code only and did not run a probe. The reported probe lines are consistent with this path. Impact is low: a one-tick read that matters only if a respawn check runs on that exact tick."
+    }
+   }
+  },
+  {
+   "id": "gap-08",
+   "lens": "gap",
+   "severity": "low",
+   "title": "[gap-08, lens gap] Feel numbers left in scripts after the fixes (rulings on the code reviewer's leftover notes)",
+   "survives": true,
+   "confirmations": 3,
+   "spec_question": false,
+   "files": [
+    "game/actors/combat_actor.gd",
+    "game/enemies/dummy/training_dummy.gd",
+    "game/actors/humanoid_rig.gd",
+    "game/autoload/tuning_data.gd",
+    "tuning/default.json"
+   ],
+   "root_cause": "Feel numbers (blink duty, respawn ring spacing, return-home idle frames and slack, release and launch blend times) sit in scripts as literals or constants instead of TuningData @export_range values. The fixes added or extended some of them (launch-from-hold reusing _RELEASE_BLEND_S, the respawn rings). The humanoid_rig comment is stale against the tuning docs.",
+   "open_question": "None for Game-boy. The only judgement call is whether a fixer should treat (b), (c) and (d) as tunables or derive them from existing ones. (c) is a pre-existing number, but it is now reached after every comeback.",
+   "votes": {
+    "reproduce": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "Code read reproduces every cited line. The finding is a real but low-severity breach of the \"no feel numbers in scripts\" rule, plus a one-word doc inconsistency.",
+     "evidence": "In /Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-gap: combat_actor.gd:53 has `const _RELEASE_BLEND_S := 0.22`. Line 1015 has `var blend := _RELEASE_BLEND_S if from_hold else 0.03`. Line 260 has `fposmod(cycles, 1.0) >= 0.5`. training_dummy.gd:133 has `_idle_frames > 60 and to_home.length() > 0.3`. Lines 290 and 294 use `for ring: int in [1, 2]` and `body_radius * 2.0 * ring`. humanoid_rig.gd:405 says the radius that covers the body is \"3 m\", while tuning_data.gd:131 says \"about 4\". I ran no recordings because the finding is a code read. I did not check the claims that return_home and the respawn spot are now reached after every comeback, or that ring 1 touches the body on the post."
+    },
+    "spec": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "No approved doc covers these constants. CLAUDE.md's rule says feel numbers are never script constants, and the phase 3 plan makes \"no feel numbers in scripts\" an explicit review item. M2-phase3-plan.md also says the blink timing and rate are tunables (ko_linger_s, ko_blink_s, blink rate). So the hardcoded 50% duty, the respawn rings, the return_home values and the release/launch blends go against the rules. I found no README departure entry or HANDOFF decision that approves any of them. Item (e) is a real mismatch: humanoid_rig.gd says 3 m while tuning_data.gd says about 4.",
+     "evidence": "CLAUDE.md \"Code rules: no numbers in scripts... feel numbers are never script constants\". M2-phase3-plan.md line 74 (Code lens: \"no feel numbers in scripts\") and line 38 (blink rate listed among the tunables). The HANDOFF line 318 tunable list \"KO and blink-off\" has no duty, respawn-gap or return-home entries. tuning_data.gd:131 \"about 4 whites the whole body\" against humanoid_rig.gd:405 \"3 m\". I did not check the code or whether some of these constants were already in the code before this phase."
+    },
+    "code": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "The code matches the finding. All five items exist as described, and none is covered by an existing tunable.",
+     "evidence": "combat_actor.gd:53 `_RELEASE_BLEND_S := 0.22`, used at lines 501, 504 and 1015 (`var blend := _RELEASE_BLEND_S if from_hold else 0.03`). Line 260: `fposmod(cycles, 1.0) >= 0.5`. training_dummy.gd:133 `_idle_frames > 60 and to_home.length() > 0.3`. training_dummy.gd:290-294 `for ring in [1, 2]` with `body_radius * 2.0 * ring`. humanoid_rig.gd:405 says \"3 m\" while tuning_data.gd:131 says \"about 4\". tuning_data.gd has no duty, release-blend, return-home or respawn-gap tunable. The nearby 0.03 blends at lines 850, 963 and 980 are also literals, so item (d) is wider than the finding says. Lines 501 and 504 also use _RELEASE_BLEND_S, for the stagger and idle release."
+    }
+   }
+  }
+ ],
+ "pending": [
+  "gap-09"
+ ]
+}
