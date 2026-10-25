@@ -402,7 +402,7 @@ func set_flash(amount: float, color: Color = Color.WHITE) -> void:
 ## Contact flash (Spec §6, localized by Game-boy on 2026-10-24): the body mixes toward
 ## `color` around `point` (world space, the hit's contact point), at `strength` (0..1) out
 ## to `core` (0..1) of `radius` meters, fading smoothly to nothing at `radius`. A radius
-## that covers the body (3 m) whites it all, the flash before the departure. Drawn by this
+## that covers the body (about 4 m) whites it all, the flash before the departure. Drawn by this
 ## rig's overlay (game/fx/hit_flash.gdshader) as every material's next_pass, set only while
 ## the flash runs; the base materials (DamageLook's marks) stay as they are.
 ## The point goes on the struck part as it is drawn: `point` is clamped onto the nearest
@@ -519,7 +519,8 @@ func _show_flash_overlay(on: bool) -> void:
 
 
 ## Damage look (Spec §6, "Damage you can see"): DamageLook.Level CLEAN, BRUISED or BLOODIED
-## (game/fx/damage_look.gd). Materials only: bruises, then blood, on the skin and clothes.
+## (game/fx/damage_look.gd). Materials only: bruises, then blood, on the skin and clothes,
+## as a swap of the detail texture (never of the shader variant).
 ## Set by presentation (VfxDirector) from the health; re-applying a level re-reads its tuning.
 func set_damage_look(level: int) -> void:
 	damage_look = level

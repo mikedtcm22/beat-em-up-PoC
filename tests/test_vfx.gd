@@ -513,7 +513,7 @@ func test_speed_lines_do_not_flicker_with_the_photosensitivity_toggle_off() -> v
 	assert_eq(vfx.speed_lines.lines(), placed)
 
 
-## Captures repeat: the lines draw from the director's rng, which the bots seed.
+## Captures repeat: the lines draw from the director's rng, which vfx_bot seeds.
 func test_seeding_the_director_repeats_the_speed_lines() -> void:
 	_land(_hit(CombatTypes.HitTier.FINISHER))
 	var first := vfx.speed_lines.lines()
