@@ -17,6 +17,7 @@ export const meta = {
 //   no_fix: true          stop after the partition
 //   fix_note: "<text>"    passed to workflow-fix.js as its lead's note
 //   concurrency: <n>      passed to workflow-fix.js (default 2)
+//   fixer_cost: <n>       passed to workflow-fix.js (its default 25)
 // The lead makes .worktrees/m2-review-gap first: `git worktree add --detach .worktrees/m2-review-gap <base>`
 // (or `git -C .worktrees/m2-review-gap checkout --detach <base>`), then `godot --headless --import --quit` in it.
 
@@ -268,7 +269,7 @@ if (partition && partition.packages.length && !A.no_fix) {
   phase('Fix')
   await Promise.allSettled(scribeJobs)
   fix = await workflow({ scriptPath: `${ROOT}/docs/reviews/M2-phase3/workflow-fix.js` },
-    { packages_file: 'packages-r2.json', note: A.fix_note || '', concurrency: A.concurrency || 2 })
+    { packages_file: 'packages-r2.json', note: A.fix_note || '', concurrency: A.concurrency || 2, ...(A.fixer_cost ? { fixer_cost: A.fixer_cost } : {}) })
 }
 
 await Promise.allSettled(scribeJobs)
