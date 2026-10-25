@@ -7,6 +7,7 @@ extends GutTest
 ## extra pass; a large radius whites the whole body. The flash lands on the struck part as it
 ## is drawn: contacts off the body (a thrown pipe, a flying body) and bodies drawn away from
 ## their hurtboxes (a stagger's partial ragdoll, a full ragdoll) flash at full strength there.
+## A clean finisher's flash waits out the impact frame, then shows its hit_flash_frames.
 
 const ROOM := preload("res://game/level/test_room.tscn")
 const FPView := preload("res://tests/fp_view.gd")
