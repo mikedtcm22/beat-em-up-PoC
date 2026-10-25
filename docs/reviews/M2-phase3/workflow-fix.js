@@ -14,6 +14,8 @@ export const meta = {
 //   only: ["<key>", ...]   run just these packages (in this order)
 //   max_fixers: <n>        launch at most n fixers this run (default: as many as the headroom allows)
 //   note: "<text>"         a lead's note added to every fixer's brief (known failures, merge state)
+//   packages_file: "packages-r2.json"  read this file instead of packages.json (a later round)
+//   fixer_cost: <n>         the gate's estimate per fixer, in % of a 5-hour window (default 25; a narrow package costs less)
 //   concurrency: 1         run fixers one after another, each gated when its turn comes (default 2;
 //                          use 1 when the headroom fits one fixer, so the next waits instead of skipping)
 
@@ -22,7 +24,8 @@ const NOTES = `${ROOT}/.worktrees/m2-review-notes`
 const REVIEWS = `${NOTES}/docs/reviews/M2-phase3`
 const LIMIT = 90
 const A = args || {}
-const COST = { fixer: 25 }
+const COST = { fixer: A.fixer_cost || 25 }
+const PACKAGES_FILE = A.packages_file || 'packages.json'
 const TRAILER = 'Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>'
 
 const GATE_SCHEMA = {
@@ -166,12 +169,12 @@ The machine has 8 CPUs and 8 GB of RAM and another fixer records at the same tim
 phase('Load')
 const loaded = await agent(
   `Loader. Do exactly this and nothing else.
-1. \`cd ${NOTES} && git pull -q --rebase origin m2/phase3-review\`, then read ${REVIEWS}/packages.json. Its "packages" array has, per package: key, title, finding_ids, files, notes.
+1. \`cd ${NOTES} && git pull -q --rebase origin m2/phase3-review\`, then read ${REVIEWS}/${PACKAGES_FILE}. Its "packages" array has, per package: key, title, finding_ids, files, notes.
 2. For each package key K: \`cd ${ROOT} && git fetch -q origin && git log --format=%s origin/m2/phase3-fix-K 2>/dev/null | head -50\`. state is "done" if a subject starts with "M2 phase 3: review fixes (K", "wip" if the branch exists without one, "new" if there is no such branch.
 3. Return every package, in the file's order, with its fields copied exactly and its state.`,
   { label: 'load:packages', phase: 'Load', schema: LOAD_SCHEMA, model: 'haiku', effort: 'low' })
 if (!loaded || !loaded.packages.length) {
-  log('load: no packages found (is packages.json on m2/phase3-review?)')
+  log(`load: no packages found (is ${PACKAGES_FILE} on m2/phase3-review?)`)
   return { error: 'no packages', usage: usageLog }
 }
 let todo = loaded.packages.filter(p => p.state !== 'done')
