@@ -2,11 +2,21 @@ class_name EnemyHealthBars
 extends Control
 ## Small over-head health bars (Spec §5). An actor in group "enemy" gets one for
 ## `show_seconds` after it takes a hit (CombatEvents.hit_landed, or a health drop through
-## CombatEvents.health_changed). Each bar is anchored above actor.get_head_top_position(),
-## projected through the viewport's current Camera3D, hidden while that point is behind
-## the camera, and dropped when the actor is freed or blinks off after a KO
-## (CombatEvents.vanished). Full-rect, draws every bar itself.
-## Driven by GameHud.advance().
+## CombatEvents.health_changed). Each bar is anchored above the body (anchor_of(): over the
+## head as drawn, never lower than the top of the standing body), projected through the
+## viewport's current Camera3D, and hidden while that point is behind the camera or the body
+## is hidden (a KO's blink, a comeback's blink-in). A KO'd actor's bar fades out once the
+## killing hit's chunk has drained, and by the time the body starts blinking at the latest
+## (an empty bar over a lying body adds nothing); it is dropped when the actor is freed or
+## blinks off (CombatEvents.vanished). Full-rect, draws every bar itself.
+## Driven by GameHud.advance(). Presentation: it only reads the actors.
+
+## The drawn body's points a bar stays above on screen (screen_anchor_of()).
+const _BODY_POINTS: Array[StringName] = [
+	&"HeadTopPoint", &"EyePoint", &"ChestPoint", &"LeftFistPoint", &"RightFistPoint",
+	&"LeftElbowPoint", &"RightElbowPoint", &"LeftKneePoint", &"RightKneePoint",
+	&"LeftFootPoint", &"RightFootPoint",
+]
 
 ## Seconds a bar stays up after the latest hit.
 @export var show_seconds: float = 2.0
@@ -91,13 +101,44 @@ func advance(delta: float) -> void:
 		_remember_health(bar.actor, bar.actor.health)
 		bar.gauge.set_target(HealthGauge.ratio_of(bar.actor))
 		bar.gauge.advance(delta)
+		if bar.actor.is_ko():
+			_end_ko_bar(bar)
 		bar.on_screen = false
-		if camera != null and camera.is_inside_tree():
-			var anchor := bar.actor.get_head_top_position()
-			if not camera.is_position_behind(anchor):
-				bar.screen_position = camera.unproject_position(anchor)
+		var shown := bar.actor.rig == null or bar.actor.rig.visible
+		if shown and camera != null and camera.is_inside_tree():
+			var anchor := screen_anchor_of(bar.actor, camera)
+			if anchor.is_finite():
+				bar.screen_position = anchor
 				bar.on_screen = true
 	queue_redraw()
+
+
+## Where `actor`'s bar sits (the bar's bottom is `lift_px` above it on screen): over the top
+## of its head as drawn (get_head_top_position()), but never lower than the top of its
+## standing body (its origin plus body_height). A head bent by a stagger, a body flying,
+## held bent over or lying keeps its bar above the body instead of on its face or trunk;
+## a standing head is on top already.
+static func anchor_of(actor: CombatActor) -> Vector3:
+	var anchor := actor.get_head_top_position()
+	anchor.y = maxf(anchor.y, actor.global_position.y + actor.body_height)
+	return anchor
+
+
+## anchor_of() projected through `camera` (canvas pixels), raised to the highest the drawn
+## body shows on that screen: a part nearer the camera than the head (a fist flung toward
+## the side view) can show above a farther anchor. Vector2.INF while the anchor is behind
+## the camera.
+static func screen_anchor_of(actor: CombatActor, camera: Camera3D) -> Vector2:
+	var anchor := anchor_of(actor)
+	if camera.is_position_behind(anchor):
+		return Vector2.INF
+	var screen := camera.unproject_position(anchor)
+	if actor.rig != null:
+		for point: StringName in _BODY_POINTS:
+			var p := actor.rig.get_visual_point_transform(point).origin
+			if not camera.is_position_behind(p):
+				screen.y = minf(screen.y, camera.unproject_position(p).y)
+	return screen
 
 
 ## Remove every bar and the remembered health values.
@@ -139,6 +180,16 @@ func _draw() -> void:
 		var alpha := clampf(bar.time_left / fade_seconds, 0.0, 1.0) if fade_seconds > 0.0 else 1.0
 		var top_left := bar.screen_position - Vector2(bar_size.x * 0.5, bar_size.y + lift_px)
 		HudStyle.draw_gauge(self, Rect2(top_left, bar_size), slant, bar.gauge, HudStyle.HEALTH, 2.0, alpha)
+
+
+## A KO'd actor's bar: once the killing hit's chunk has drained (the ghost down to the
+## value), and by the time the body starts blinking (Tuning.ko_linger_s into the KO) at the
+## latest, it fades out over `fade_seconds`.
+func _end_ko_bar(bar: Bar) -> void:
+	var end := Tuning.data.ko_linger_s - bar.actor.state_frame / float(Engine.physics_ticks_per_second)
+	if bar.gauge.ghost <= bar.gauge.value + 0.0001:
+		end = minf(end, fade_seconds)
+	bar.time_left = minf(bar.time_left, maxf(end, 0.0))
 
 
 func _touch(actor: CombatActor) -> void:

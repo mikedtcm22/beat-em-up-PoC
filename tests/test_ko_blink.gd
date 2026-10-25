@@ -214,7 +214,9 @@ func test_a_dummy_comes_back_at_its_post_blinking_in() -> void:
 	assert_almost_eq(back_s, 4.0, 0.3, "about 4 s from the KO to back with the defaults")
 
 
-func test_a_vanished_dummys_health_bar_goes_with_it() -> void:
+func test_a_kod_dummys_health_bar_fades_out_before_it_blinks() -> void:
+	# The bar shows the killing hit's chunk drain away, then fades: an empty bar over a lying
+	# body adds nothing, and it would hang, steady, over a body blinking off (review ragdoll-04).
 	await _setup([Vector3(0, 0, -1.6)], true)
 	var hud: GameHud = room.find_children("*", "GameHud", false, false)[0]
 	hud.enemy_bars.show_seconds = 30.0
@@ -223,9 +225,25 @@ func test_a_vanished_dummys_health_bar_goes_with_it() -> void:
 	CombatEvents.hit_landed.emit(hit)
 	await _ticks(2)
 	assert_true(hud.enemy_bars.has_bar(dummy), "the KO hit shows its bar")
-	assert_true(await _wait_until(func() -> bool: return dummy.is_gone(), 400), "gone")
+	var drawn_hidden := 0
+	var bar_until := -1
+	var first_off := -1
+	for i in 400:
+		await get_tree().physics_frame
+		if hud.enemy_bars.has_bar(dummy):
+			bar_until = i
+			if not dummy.rig.visible and hud.enemy_bars.get_bar_screen_position(dummy) != Vector2(-1.0, -1.0):
+				drawn_hidden += 1
+		if first_off < 0 and dummy.is_ko() and not dummy.rig.visible:
+			first_off = i
+		if dummy.is_gone():
+			break
+	gut.p("bar until tick %d, the body's first blink-off at tick %d" % [bar_until, first_off])
+	assert_gt(first_off, 0, "the body blinks")
+	assert_lt(bar_until, first_off, "the bar is gone before the body blinks off")
+	assert_eq(drawn_hidden, 0, "and never drawn over a hidden body")
 	await _ticks(1)
-	assert_false(hud.enemy_bars.has_bar(dummy), "its bar goes with it")
+	assert_false(hud.enemy_bars.has_bar(dummy), "no bar once it is gone")
 
 
 func test_a_reset_during_the_blink_off_brings_the_body_back() -> void:
