@@ -2,8 +2,9 @@ class_name Ragdoll
 extends SkeletonModifier3D
 ## The visual ragdoll of a HumanoidRig (Spec §6 "Hit reactions"; docs/ARCHITECTURE.md
 ## "Ragdoll"). A presentation layer over the animation: the simulation (the CombatActor's
-## body, hurtboxes, rig points, get_point_transform()) never reads it, except where a body
-## gets up (HumanoidRig.ragdoll_hips_offset()).
+## body, hurtboxes, rig points, get_point_transform()) never reads it, except in two places:
+## where a body gets up (HumanoidRig.ragdoll_hips_offset()) and where a training dummy
+## respawns (TrainingDummy._has_room() asks where a body lies, get_visual_point_transform()).
 ##
 ## Built once per rig, on its first ragdoll (HumanoidRig.ragdoll_start()): a
 ## PhysicalBoneSimulator3D under the skeleton with one PhysicalBone3D per
@@ -20,12 +21,16 @@ extends SkeletonModifier3D
 ##     the animation and stops.
 ##   FULL (a body knocked off its feet, and a KO): every body simulates; its influence rises
 ##     from 0 to 1 over Tuning.ragdoll_full_rise_s (from a stagger too), so the animation's
-##     snap of the hit shows first and the bodies take over from it.
+##     snap of the hit shows first and the bodies take over from it. Where that snap would
+##     show a body the space has no room for (a launch into a wall, from behind, out of a
+##     hold) the ragdoll takes over at once from the pose on screen instead (start(),
+##     take_over()).
 ## Either way soft pose springs pull each simulated bone toward the animation's pose
 ## re-anchored on the hips as they are (per phase: a stagger, flight, lying down, and a
 ## nearly limp KO; the turns stronger while a FULL ragdoll's influence rises), with each
 ## turn target kept inside its joint's limits from its parent body. A FULL ragdoll as a whole is pulled toward the
-## animation's hips (Tuning.ragdoll_hips_hz) and turned as one toward their rotation (or,
+## animation's hips (Tuning.ragdoll_hips_hz; less while the actor's capsule is stopped by the
+## world in flight: set_blocked()) and turned as one toward their rotation (or,
 ## flying to a face-down landing, toward the lying pose's: aim_landing()), so the visible
 ## body never drifts from the sim body and a downed body lies where its hurtboxes are. A
 ## hit adds a kick on the struck part, landing at the contact point
@@ -135,6 +140,9 @@ var _rise_t: float = 0.0
 ## space) instead of the flying animation's (aim_landing()).
 var _landing: Quaternion = Quaternion.IDENTITY
 var _aims_landing: bool = false
+## The actor's capsule is stopped by the world while it flies (set_blocked()): the hips
+## spring is looser (Tuning.ragdoll_hips_blocked_hz) until it lands or a new ragdoll starts.
+var _blocked: bool = false
 ## Sim seconds calm and lying (rest detection).
 var _calm_s: float = 0.0
 var _lying_s: float = 0.0
@@ -268,7 +276,8 @@ func is_running() -> bool:
 ## and fade (the stagger's length). Bodies already simulating keep their pose and motion:
 ## the influence rises from what showed, so nothing jumps. A FULL ragdoll started `at_once`
 ## shows alone from the start, taking over from the pose on screen instead of rising in from
-## the animation's snap (a body launched out of a hold leaves from its held pose).
+## the animation's snap (a body launched out of a hold leaves from its held pose; one the
+## world stops at once or one launched from behind would show a snap pose with no room for it).
 func start(new_mode: Mode, contact: Vector3, push: Vector3, body_velocity: Vector3,
 		bone_velocity: Array[Vector3], part: Part = Part.ANY, partial_length_s: float = INF,
 		at_once: bool = false) -> void:
@@ -285,6 +294,8 @@ func start(new_mode: Mode, contact: Vector3, push: Vector3, body_velocity: Vecto
 		shown.append(_world_visual(_bone_of[i]))
 	mode = new_mode
 	phase = Phase.STAGGER if new_mode == Mode.PARTIAL else Phase.FLIGHT
+	if was == Mode.NONE:
+		_blocked = false
 	_wake()
 	# A freeze running on re-freezes every body (the new ones too) on the next step.
 	if _frozen:
@@ -364,6 +375,17 @@ func start(new_mode: Mode, contact: Vector3, push: Vector3, body_velocity: Vecto
 	_pending.clear()
 	_queue_impulse(contact, push * impulse_scale, part)
 	_has_prev = false
+	if was == Mode.NONE:
+		# The cache of the pose shown (visual_pose(), visual_rig_transform) still holds the last
+		# ragdoll's, wherever that body lay, until the first update: seed it with the pose on
+		# screen, so every read before then (a respawn's room check, a test) is right. After
+		# the kick's search for its body above, which has always run on that cache as it was:
+		# the bodies it picks (the head and upper chest, nearly always) are the feel the
+		# kick's tuning was approved on, where the body nearest to the contact would be the
+		# neck and the chest.
+		visual_rig_transform = rig.global_transform
+		for i: int in _visual.size():
+			_visual[i] = rig.animation_pose(i)
 
 
 ## An extra hit on a running ragdoll (a stomp on a downed body): wakes it and adds a kick
@@ -389,12 +411,40 @@ func aim_landing(hips_rotation: Quaternion) -> void:
 	_aims_landing = true
 
 
+## A FULL ragdoll still rising in from the animation's snap shows alone from now on (the
+## world stopped the actor's capsule, so the snap pose may sit inside it): every body moves
+## onto the pose on screen, keeping its velocity, and the influence goes to 1 at once.
+## Nothing while no rise runs.
+func take_over() -> void:
+	if mode != Mode.FULL or _rise_s <= 0.0 or _rise_t >= _rise_s:
+		return
+	for i: int in _sim:
+		PhysicsServer3D.body_set_state(_bodies[i].get_rid(), PhysicsServer3D.BODY_STATE_TRANSFORM,
+				_world_visual(_bone_of[i]))
+	_rise_from = 1.0
+	_rise_s = 0.0
+	simulator.influence = 1.0
+
+
+## The actor's capsule is stopped by the world (a wall, a crate, the curb) while a FULL
+## ragdoll flies: it takes over from the pose on screen now (take_over()), and its hips are
+## pulled toward the capsule's less (Tuning.ragdoll_hips_blocked_hz) until it lands
+## (set_phase()): the bodies, which collide with the world, keep the head out of the wall.
+func set_blocked(blocked: bool) -> void:
+	if mode != Mode.FULL or phase != Phase.FLIGHT:
+		return
+	if blocked and not _blocked:
+		take_over()
+	_blocked = blocked
+
+
 ## Switch a running ragdoll's pose springs (a FULL ragdoll lands: DOWN, or is KO'd: LIMP).
 func set_phase(new_phase: Phase) -> void:
 	if mode == Mode.NONE:
 		return
 	if new_phase != Phase.FLIGHT:
 		_aims_landing = false
+		_blocked = false
 	if new_phase != phase:
 		_calm_s = 0.0
 		if new_phase == Phase.LIMP:
@@ -410,6 +460,7 @@ func stop() -> void:
 	mode = Mode.NONE
 	asleep = false
 	_frozen = false
+	_blocked = false
 	_sim.clear()
 	_pending.clear()
 	simulator.physical_bones_stop_simulation()
@@ -451,6 +502,11 @@ func body_transforms() -> Array[Transform3D]:
 	for i: int in _sim:
 		out.append(PhysicsServer3D.body_get_state(_bodies[i].get_rid(), PhysicsServer3D.BODY_STATE_TRANSFORM))
 	return out
+
+
+## True while the actor's capsule is stopped by the world in flight (set_blocked(); for tests).
+func is_blocked() -> bool:
+	return _blocked
 
 
 ## Kicks waiting for a step to land in (for tests).
@@ -639,8 +695,9 @@ func _step() -> void:
 	# The hips spring moves the whole FULL ragdoll as one toward the animation's hips.
 	var shift := Vector3.ZERO
 	if mode == Mode.FULL:
-		var hips_k := _stiffness(tuning.ragdoll_hips_hz)
-		var hips_c := _damping(tuning.ragdoll_hips_hz, tuning.ragdoll_hips_damping)
+		var hips_hz := tuning.ragdoll_hips_blocked_hz if _blocked else tuning.ragdoll_hips_hz
+		var hips_k := _stiffness(hips_hz)
+		var hips_c := _damping(hips_hz, tuning.ragdoll_hips_damping)
 		var total := 0.0
 		var momentum := Vector3.ZERO
 		for k: int in _sim.size():

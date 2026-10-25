@@ -12,8 +12,12 @@ extends GutTest
 ## after many off-center hits) and the stronger staggers (above Spec §6's 0.6 influence); its
 ## review, each part's cap after many hits and the hook's stagger (the head and arms riding
 ## the trunk, the trunk leaning back). Launches out of a hold: tests/test_launch_from_hold.gd.
+## Round 2 of that review: launches into a wall, the building fronts and the curb, and from
+## behind (the ragdoll takes over from the pose on screen, the lens stays clear), and a new
+## ragdoll's first tick reading the body where it is.
 
 const ROOM := preload("res://game/level/test_room.tscn")
+const FPView := preload("res://tests/fp_view.gd")
 const FAR := Vector3(30.0, 0.0, -30.0)
 ## The visible bones whose gap to the animation's FK is measured during a full ragdoll.
 const GAP_BONES: Array[StringName] = [&"Head", &"Chest", &"LeftHand", &"RightHand", &"LeftFoot", &"RightFoot"]
@@ -25,6 +29,9 @@ const HANDS: Array[StringName] = [&"LeftHand", &"RightHand"]
 var room: Node3D
 var player: PlayerCharacter
 var dummies: Array[TrainingDummy] = []
+## Sampled vertices of each drawn mesh (mesh instance id -> its distinct vertices), for
+## _world_depth().
+var _vertices: Dictionary[int, PackedVector3Array] = {}
 
 
 func before_each() -> void:
@@ -1160,3 +1167,287 @@ func test_arms_kicked_by_a_stagger_keep_the_full_influence() -> void:
 			assert_lt(moved, 1e-4, "kicked on the arms, they show the same at any arm influence (%.5f m)" % moved)
 		else:
 			assert_gt(moved, 0.01, "kicked elsewhere, the arms show their own influence (%.3f m apart)" % moved)
+
+
+# --- M2 phase 3 round 2: launches into walls, from behind, a new ragdoll's first tick -------
+
+
+## The test room's solid boxes a body can be launched into: the street's end walls, the
+## building fronts (at least 5 m high) and the low curb on the near side (test_room.gd
+## _build_street()).
+func _world_boxes() -> Array[AABB]:
+	var half_l: float = room.get(&"street_length") * 0.5
+	var half_w: float = room.get(&"street_width") * 0.5
+	return [
+		AABB(Vector3(half_l, 0.0, -half_w - 1.0), Vector3(2.0, 5.0, half_w * 2.0 + 2.0)),
+		AABB(Vector3(-half_l - 2.0, 0.0, -half_w - 1.0), Vector3(2.0, 5.0, half_w * 2.0 + 2.0)),
+		AABB(Vector3(-half_l, 0.0, -half_w - 2.0), Vector3(half_l * 2.0, 5.0, 2.0)),
+		AABB(Vector3(-half_l, 0.0, half_w), Vector3(half_l * 2.0, 0.6, 0.5)),
+	]
+
+
+## How far the drawn body of `d` reaches into a wall or the curb: the deepest of its meshes'
+## vertices (0 when none is inside). The floor does not count, nor does the cap's brim: it
+## sticks 0.1 m out of the head's collision sphere, so a head resting against the wall (the
+## world-colliding bodies stop at the wall) shows its brim up to that far in.
+func _world_depth(d: CombatActor) -> float:
+	var boxes := _world_boxes()
+	var deepest := 0.0
+	for mesh: MeshInstance3D in FPView.meshes_under(d.rig):
+		if not mesh.is_visible_in_tree() or mesh.name == &"CapBrim":
+			continue
+		var id := mesh.get_instance_id()
+		if not _vertices.has(id):
+			var distinct := PackedVector3Array()
+			var seen: Dictionary[Vector3, bool] = {}
+			for v: Vector3 in mesh.mesh.get_faces():
+				var key := v.snappedf(0.01)
+				if not seen.has(key):
+					seen[key] = true
+					distinct.append(v)
+			_vertices[id] = distinct
+		var xf := mesh.global_transform
+		for v: Vector3 in _vertices[id]:
+			var p := xf * v
+			for box: AABB in boxes:
+				if box.has_point(p):
+					var e := box.end
+					deepest = maxf(deepest, minf(minf(minf(p.x - box.position.x, e.x - p.x),
+							minf(p.y - box.position.y, e.y - p.y)), minf(p.z - box.position.z, e.z - p.z)))
+	return deepest
+
+
+## What the real first-person view shows of `victim` this tick: its nearest drawn part to the
+## lens (m, x) and the share of the view it covers (y), in front of the player's own body
+## (as tests/test_launch_from_hold.gd).
+func _lens(victim: CombatActor) -> Vector2:
+	var cam := FirstPersonCamera.view_from_eye(player, player.get_eye_transform().origin)
+	var skip := FPView.meshes_under(room).filter(func(m: MeshInstance3D) -> bool:
+		return not (player.rig.is_ancestor_of(m) or victim.rig.is_ancestor_of(m)))
+	var cells := FPView.hits(room, cam, 32, skip)
+	var share := FPView.share(cells, func(m: MeshInstance3D) -> bool: return victim.rig.is_ancestor_of(m))
+	return Vector2(FPView.nearest_mesh(victim.rig, cam.origin), share)
+
+
+## The player at `at` facing `yaw_deg` (0 faces -Z, -90 faces +X) and the dummy 1.6 m ahead
+## of it, which is 0.45 m from the world where `at` is chosen so; then the finisher of
+## `finisher`: "uppercut" (P P P P) or "haymaker" (P held).
+func _launch_into_the_world(at: Vector3, yaw_deg: float, finisher: String) -> void:
+	await _setup([Vector3(0, 0, -1.6)], yaw_deg, at)
+	if finisher == "haymaker":
+		player.input.push_press(&"P", Tuning.data.hold_frames + 10)
+	else:
+		_queue(&"P", 4)
+
+
+## Launch into the world and watch it from the launch to the end of the lying: the deepest
+## the drawn body gets into the world (and how many ticks deeper than 5 cm), the nearest it
+## comes to the first-person lens and the most of the view it covers (from the launch's tick
+## to 90 ticks on), how far its drawn hips, chest and legs lie from the hurtboxes' once it
+## lies, and whether the ragdoll took over at once on the launch's tick.
+func _watch_launch(at: Vector3, yaw_deg: float, finisher: String) -> Dictionary:
+	await _launch_into_the_world(at, yaw_deg, finisher)
+	var dummy := dummies[0]
+	var out := {launched = false, at_once = false, deepest = 0.0, deep_ticks = 0, near = INF, share = 0.0,
+			hips_gap = 0.0, chest_gap = 0.0, leg_gap = 0.0}
+	var since := -1
+	var lying := 0
+	for i in 420:
+		await get_tree().physics_frame
+		if not out.launched and dummy.is_flying():
+			out.launched = true
+			since = 0
+			out.at_once = dummy.rig.get_ragdoll().simulator.influence >= 1.0
+		if not out.launched:
+			continue
+		if dummy.state == CombatTypes.ActorState.GETUP:
+			break
+		if dummy.rig.is_ragdolling():
+			var depth := _world_depth(dummy)
+			out.deepest = maxf(out.deepest, depth)
+			out.deep_ticks += 1 if depth > 0.05 else 0
+		if since < 90:
+			var seen := _lens(dummy)
+			out.near = minf(out.near, seen.x)
+			out.share = maxf(out.share, seen.y)
+		since += 1
+		if dummy.is_downed():
+			lying += 1
+			if lying > 20:
+				out.hips_gap = maxf(out.hips_gap, _gap(dummy, [&"Hips"]))
+				out.chest_gap = maxf(out.chest_gap, _gap(dummy, [&"Chest"]))
+				out.leg_gap = maxf(out.leg_gap, _gap(dummy, [&"LeftLowerLeg", &"RightLowerLeg", &"LeftFoot", &"RightFoot"]))
+	return out
+
+
+func test_launches_into_a_wall_the_building_fronts_and_the_curb_keep_the_body_out_of_them() -> void:
+	# An uppercut and a haymaker with the dummy's origin 0.45 m from the end wall (the player
+	# facing +X), the same from the building fronts, and toward the 0.6 m curb: the ragdoll
+	# takes over at once from the pose on screen, so the arched-back snap pose never shows
+	# inside the wall (the cap sank 0.38 m into it, for 28 ticks). What is left is the meshes
+	# that stick a few centimeters out of their collision shapes (a delt, a hand, the belly).
+	var cases := {
+		"wall uppercut": [Vector3(17.95, 0.0, 0.0), -90.0, "uppercut"],
+		"wall haymaker": [Vector3(17.95, 0.0, 0.0), -90.0, "haymaker"],
+		"building uppercut": [Vector3(0.0, 0.0, -4.95), 0.0, "uppercut"],
+		"building haymaker": [Vector3(0.0, 0.0, -4.95), 0.0, "haymaker"],
+		"curb uppercut": [Vector3(0.0, 0.0, 4.9), 180.0, "uppercut"],
+		"curb haymaker": [Vector3(0.0, 0.0, 4.7), 180.0, "haymaker"],
+	}
+	for title: String in cases:
+		var args: Array = cases[title]
+		var out := await _watch_launch(args[0], args[1], args[2])
+		gut.p("%s: deepest %.3f m (%d ticks deeper than 5 cm), at once %s, lying gap hips %.3f m, chest %.3f m, legs %.3f m"
+				% [title, out.deepest, out.deep_ticks, out.at_once, out.hips_gap, out.chest_gap, out.leg_gap])
+		assert_true(out.launched, "%s: launched" % title)
+		assert_true(out.at_once, "%s: the ragdoll takes over at once from the pose on screen" % title)
+		assert_lt(out.deepest, 0.1, "%s: no drawn vertex more than 10 cm inside the world (%.3f m)" % [title, out.deepest])
+		assert_lte(out.deep_ticks, 25, "%s: and 5 cm only for a few ticks (%d)" % [title, out.deep_ticks])
+		# The animation lies with its head (and, at the curb, its chest) inside the world, which
+		# no body can follow, and a folded leg can stay folded (as before this fix): the hips are
+		# what the body and the get-up hang on.
+		assert_lt(out.hips_gap, 0.15, "%s: the hips lie where their hurtbox is, the normal pull back (%.3f m)" % [title, out.hips_gap])
+		assert_lt(out.chest_gap, 0.3, "%s: the chest near its hurtbox (%.3f m)" % [title, out.chest_gap])
+		assert_lt(out.leg_gap, 0.8, "%s: the legs not far off (%.3f m)" % [title, out.leg_gap])
+
+
+func test_a_launch_in_open_space_still_shows_the_animations_snap_first() -> void:
+	# Away from every wall the ragdoll rises in from the snap as before: the world is only
+	# asked about the first stretch (Tuning.ragdoll_wall_reach_m past what it flies while the
+	# snap shows).
+	await _setup([Vector3(0, 0, -1.6)])
+	var dummy := dummies[0]
+	assert_true(dummy.receive_hit(_hit(dummy, CombatTypes.Reaction.LAUNCH, Vector3(0.0, 6.0, 3.0))))
+	assert_lt(dummy.rig.get_ragdoll().simulator.influence, 1.0, "rising in from the animation, not at once")
+	# A wall within the reach of the snap's pose, behind the body: at once. A little farther: not.
+	for gap: float in [0.3, 3.0]:
+		await _setup([Vector3(0, 0, -1.6)], -90.0, Vector3(19.55 - 1.6 - gap, 0.0, 0.0))
+		dummy = dummies[0]
+		assert_true(dummy.receive_hit(_hit(dummy, CombatTypes.Reaction.LAUNCH, Vector3(3.0, 6.0, 0.0))))
+		var at_once := dummy.rig.get_ragdoll().simulator.influence >= 1.0
+		assert_eq(at_once, gap < 1.0, "a wall %.1f m behind the dummy's capsule: at once %s" % [gap, at_once])
+
+
+func test_the_uppercut_in_a_corner_keeps_the_lens_clear() -> void:
+	# The jabs' step-ins stop at magnet_stop_distance, so against a wall the gap cannot open:
+	# before, the launched body pivoted on the wall and its hips and thighs swung at the lens
+	# (0.08 m, 69% of the view).
+	var out := await _watch_launch(Vector3(17.95, 0.0, 0.0), -90.0, "uppercut")
+	gut.p("uppercut in a corner: nearest %.3f m, most of the view %.0f%%" % [out.near, out.share * 100.0])
+	assert_gte(out.near, 0.25, "nothing comes within 0.25 m of the lens (%.3f m)" % out.near)
+	assert_lte(out.share, 0.5, "and it covers at most half the view (%.0f%%)" % [out.share * 100.0])
+
+
+func test_the_uppercut_from_behind_keeps_the_lens_clear_and_lands_face_down() -> void:
+	# The arched-back launch pose, snapped in on a body facing away, threw its head back at the
+	# attacker's lens (0.098 m, 67% of the view). The ragdoll takes over at once instead, and
+	# the kick carries the head away.
+	await _setup([Vector3(0, 0, -1.6)])
+	var dummy := dummies[0]
+	await _face_away(dummy)
+	_queue(&"P", 4)
+	var near := INF
+	var share := 0.0
+	var at_once := false
+	var since := -1
+	for i in 240:
+		await get_tree().physics_frame
+		if since < 0 and dummy.is_flying():
+			since = 0
+			at_once = dummy.rig.get_ragdoll().simulator.influence >= 1.0
+		if since >= 0 and since < 120:
+			var seen := _lens(dummy)
+			near = minf(near, seen.x)
+			share = maxf(share, seen.y)
+		if since >= 0:
+			since += 1
+		if dummy.is_downed():
+			break
+	gut.p("uppercut from behind: nearest %.3f m, most of the view %.0f%%" % [near, share * 100.0])
+	assert_true(at_once, "taken over at once from the pose on screen")
+	assert_gte(near, 0.25, "nothing comes within 0.25 m of the lens (%.3f m)" % near)
+	assert_lte(share, 0.5, "and it covers at most half the view (%.0f%%)" % [share * 100.0])
+	assert_eq(dummy.rig.current_anim(), &"downed_front", "and it lands face down")
+
+
+func test_a_flying_body_stopped_by_a_wall_pulls_less_toward_its_hips_until_it_lands() -> void:
+	# A haymaker from 2.5 m of floor: the capsule meets the end wall in flight (the launch's
+	# cast reaches 1.7 m), so from then on the hips spring is looser and the bodies, which
+	# collide with the world, keep the body out of the wall; the normal pull is back once it
+	# lands and a lying body is where its hurtboxes are.
+	await _setup([Vector3(0, 0, -1.6)], -90.0, Vector3(15.95, 0.0, 0.0))
+	var dummy := dummies[0]
+	player.input.push_press(&"P", Tuning.data.hold_frames + 10)
+	var ragdoll: Ragdoll = null
+	var blocked_in_flight := false
+	var hard := 0
+	var lying_gap := 0.0
+	var lying := 0
+	for i in 400:
+		await get_tree().physics_frame
+		ragdoll = dummy.rig.get_ragdoll()
+		if ragdoll == null:
+			continue
+		if dummy.is_flying():
+			blocked_in_flight = blocked_in_flight or ragdoll.is_blocked()
+			hard += 1 if _world_depth(dummy) > 0.12 else 0
+		if dummy.is_downed():
+			assert_false(ragdoll.is_blocked(), "the normal pull is back once it lands")
+			lying += 1
+			if lying > 20:
+				lying_gap = maxf(lying_gap, _gap(dummy, [&"Chest", &"Hips"]))
+		if dummy.state == CombatTypes.ActorState.GETUP:
+			break
+	gut.p("haymaker into the wall in flight: blocked %s, %d ticks deeper than 12 cm, lying gap %.3f m" % [blocked_in_flight, hard, lying_gap])
+	assert_true(blocked_in_flight, "the ragdoll knew its capsule was stopped")
+	# At 8 m/s the body's parts reach the wall a tick or two ahead of the capsule and show up
+	# to 0.2 m in for those (before and after this fix alike); then it slumps down the wall.
+	assert_lte(hard, 4, "and the body stays out of the wall past the impact (%d ticks)" % hard)
+	assert_lt(lying_gap, 0.2, "lying where its torso's hurtboxes are (%.3f m)" % lying_gap)
+
+
+func test_taking_over_shows_the_ragdoll_alone_from_the_pose_on_screen() -> void:
+	# A launch in open space rises in from the snap; taking over raises the influence to 1 at
+	# once without moving the body on screen (every body moves onto the pose that shows).
+	await _setup([Vector3(0, 0, -1.6)])
+	var dummy := dummies[0]
+	assert_true(dummy.receive_hit(_hit(dummy, CombatTypes.Reaction.LAUNCH, Vector3(0.0, 6.0, 3.0))))
+	var ragdoll := dummy.rig.get_ragdoll()
+	await _ticks(4)
+	assert_lt(ragdoll.simulator.influence, 1.0, "still rising in")
+	var head := dummy.rig.get_visual_point_transform(&"Head").origin
+	var hips := dummy.rig.get_visual_point_transform(&"Hips").origin
+	dummy.rig.ragdoll_take_over()
+	assert_eq(ragdoll.simulator.influence, 1.0, "shows alone from now on")
+	await get_tree().physics_frame
+	# Moving on at the flight's speed, not popping: within a few centimeters of one tick on.
+	var step := dummy.rig.get_visual_point_transform(&"Head").origin.distance_to(head)
+	var hips_step := dummy.rig.get_visual_point_transform(&"Hips").origin.distance_to(hips)
+	gut.p("take over: head moved %.3f m, hips %.3f m in the tick after" % [step, hips_step])
+	assert_lt(step, 0.25, "no pop of the head")
+	assert_lt(hips_step, 0.25, "or the hips")
+	# Nothing to take over once it shows alone.
+	ragdoll.take_over()
+	assert_eq(ragdoll.simulator.influence, 1.0)
+
+
+func test_a_new_ragdolls_first_tick_reads_the_body_where_it_is() -> void:
+	# The cache of the pose shown held the last ragdoll's (the identity before the first),
+	# wherever that body lay, until the first update: a read on the hit's tick (the respawn
+	# check of TrainingDummy._has_room(), a test) saw the hips metres away.
+	await _setup([Vector3(0, 0, -1.6)])
+	var dummy := dummies[0]
+	for round in 3:
+		if round > 0:
+			# Where the last one lay, far from here: a post moved, and ragdolled again.
+			dummy.reset_state()
+			dummy.set_post(dummy.global_position + Vector3(4.0, 0.0, 3.0) * (1.0 if round == 1 else -1.0), dummy.rotation.y, true)
+			await _ticks(3)
+		assert_true(dummy.receive_hit(_hit(dummy, CombatTypes.Reaction.LAUNCH, Vector3(0.0, 6.0, 3.0))))
+		var hips := dummy.rig.get_visual_point_transform(&"Hips").origin
+		var animated := dummy.rig.get_point_position(&"Hips")
+		assert_lt(hips.distance_to(animated), 1e-4, "round %d: on the hit's tick the hips show where the body is (%.3f m off)" % [round, hips.distance_to(animated)])
+		assert_lt(dummy.rig.get_ragdoll().visual_rig_transform.origin.distance_to(dummy.rig.global_position), 1e-4,
+				"round %d: and the rig's transform it was read in is the body's" % round)
+		assert_true(await _wait_until(func() -> bool: return dummy.is_downed(), 200), "round %d: lands" % round)
+		await _ticks(30)

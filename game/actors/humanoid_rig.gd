@@ -573,6 +573,21 @@ func ragdoll_aim_landing(lying_anim: StringName) -> void:
 		_ragdoll.aim_landing(animation.rotation_track_interpolate(track, 0.0))
 
 
+## A full ragdoll still rising in from the animation's snap shows alone from now on, taken
+## over from the pose on screen (Ragdoll.take_over()). Nothing without one.
+func ragdoll_take_over() -> void:
+	if is_ragdolling():
+		_ragdoll.take_over()
+
+
+## The owner's capsule is stopped by the world (a wall, a crate, the curb) while a full
+## ragdoll flies: it takes over from the pose on screen and its hips are pulled to the
+## capsule less until it lands (Ragdoll.set_blocked()). Nothing without a flying one.
+func ragdoll_set_blocked(blocked: bool) -> void:
+	if is_ragdolling():
+		_ragdoll.set_blocked(blocked)
+
+
 ## The pose springs of a running ragdoll: Ragdoll.Phase.DOWN once it lies, LIMP for a KO.
 func ragdoll_set_phase(phase: Ragdoll.Phase) -> void:
 	if is_ragdolling():
