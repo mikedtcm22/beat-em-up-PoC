@@ -147,6 +147,8 @@ var _materials: Dictionary[int, StandardMaterial3D] = {}
 ## while it runs, nobody's otherwise. Its point, in the frame of the bone node nearest it.
 var _flash_overlay: ShaderMaterial
 var _flash_on: bool = false
+## A contact flash is aimed (flash_at()), drawn or held back for show_flash().
+var _flash_aimed: bool = false
 var _flash_anchor: Node3D
 var _flash_local: Vector3 = Vector3.ZERO
 var _head_meshes: Array[MeshInstance3D] = []
@@ -390,6 +392,7 @@ func set_shown(shown: bool) -> void:
 ## block flashes the defender). Ends a contact flash (flash_at()); 0 clears both.
 func set_flash(amount: float, color: Color = Color.WHITE) -> void:
 	_show_flash_overlay(false)
+	_flash_aimed = false
 	var energy := clampf(amount, 0.0, 1.0)
 	for mat: StandardMaterial3D in _materials.values():
 		mat.emission = color
@@ -409,8 +412,10 @@ func set_flash(amount: float, color: Color = Color.WHITE) -> void:
 ## ragdolling is drawn in its animation pose, so a contact inside a hurtbox stays where it
 ## is; a ragdolling or staggering body (drawn away from its hurtboxes) flashes on the
 ## struck part where it is shown. Ends a whole-body flash; set_flash(0.0) clears it.
+## With `shown` false the flash is aimed on the struck part but drawn only from show_flash()
+## (a finisher's waits out the impact frame).
 func flash_at(point: Vector3, strength: float, radius: float, core: float,
-		color: Color = Color.WHITE) -> void:
+		color: Color = Color.WHITE, shown: bool = true) -> void:
 	set_flash(0.0)
 	if not _built or strength <= 0.0 or radius <= 0.0:
 		return
@@ -437,7 +442,17 @@ func flash_at(point: Vector3, strength: float, radius: float, core: float,
 	_flash_overlay.set_shader_parameter(&"flash_core", clampf(core, 0.0, 1.0))
 	_flash_overlay.set_shader_parameter(&"flash_strength", clampf(strength, 0.0, 1.0))
 	_flash_overlay.set_shader_parameter(&"flash_color", color)
-	_show_flash_overlay(true)
+	_flash_aimed = true
+	if shown:
+		_show_flash_overlay(true)
+
+
+## Draw the contact flash flash_at() aimed with `shown` false, on the struck part as it is
+## drawn now. Nothing once set_flash() has cleared it.
+func show_flash() -> void:
+	if _flash_aimed:
+		_show_flash_overlay(true)
+		follow_flash()
 
 
 ## Keep a running contact flash on the spot it struck after the body moved (its owner calls

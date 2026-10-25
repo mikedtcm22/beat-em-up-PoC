@@ -131,6 +131,9 @@ var _flying_hit_ids: Dictionary[int, bool] = {}
 ## Lying face up (hit from the front) or face down.
 var _face_up: bool = true
 var _flash_frames: int = 0
+## Ticks the contact flash still waits, aimed but hidden, before its _flash_frames count: a
+## clean finisher's waits out the impact frame (impact_frame_ticks()).
+var _flash_delay: int = 0
 ## Engine.get_physics_frames() when the flash started: that tick does not count down.
 var _flash_tick: int = -1
 ## Grab ease-in (see _GRAB_EASE_S): where the body stood relative to its pin spot when it
@@ -181,11 +184,17 @@ func _physics_process(delta: float) -> void:
 	rig.advance(delta * scale)
 	# The hit flash counts real ticks so it stays 2 frames even through hitstop. The tick it
 	# started in does not count, so it shows for exactly that many rendered frames whether
-	# the attacker ran before or after this actor in that tick.
+	# the attacker ran before or after this actor in that tick. A delayed one (a finisher's,
+	# under the impact frame) first counts its wait the same way, then shows.
 	if _flash_frames > 0 and Engine.get_physics_frames() != _flash_tick:
-		_flash_frames -= 1
-		if _flash_frames == 0:
-			rig.set_flash(0.0)
+		if _flash_delay > 0:
+			_flash_delay -= 1
+			if _flash_delay == 0:
+				rig.show_flash()
+		else:
+			_flash_frames -= 1
+			if _flash_frames == 0:
+				rig.set_flash(0.0)
 	if _flash_frames > 0:
 		rig.follow_flash()
 	if ticks > 0:
@@ -413,7 +422,7 @@ func receive_hit(hit: HitInfo) -> bool:
 	health = maxf(0.0, health - damage)
 	hit.killed = health <= 0.0
 	CombatEvents.health_changed.emit(self, health, max_health)
-	_flash_at(hit.contact_point, Tuning.data.hit_flash_frames, 1.0)
+	_flash_at(hit.contact_point, Tuning.data.hit_flash_frames, 1.0, impact_frame_ticks(hit))
 	if current_move:
 		_cancel_move()
 	_on_hit_received(hit)
@@ -908,6 +917,7 @@ func _set_guard(value: float) -> void:
 ## Whole-body flash for `frames` real ticks at `amount` in `color` (the cyan parry flash).
 func _flash(frames: int, amount: float, color: Color) -> void:
 	_flash_frames = frames
+	_flash_delay = 0
 	_flash_tick = Engine.get_physics_frames()
 	rig.set_flash(amount if frames > 0 else 0.0, color)
 
@@ -915,14 +925,29 @@ func _flash(frames: int, amount: float, color: Color) -> void:
 ## The white contact flash for `frames` real ticks around `point` (world space, the hit's
 ## contact point): `amount` (1 for a clean hit or a guard break, BLOCK_FLASH_AMOUNT for a
 ## blocked one) of Tuning's hit_flash_strength, over hit_flash_radius_m and hit_flash_core.
-func _flash_at(point: Vector3, frames: int, amount: float) -> void:
+## It is aimed on the struck part now and shown after `delay` ticks, hidden until then.
+func _flash_at(point: Vector3, frames: int, amount: float, delay: int = 0) -> void:
 	var tuning := Tuning.data
 	_flash_frames = frames
+	_flash_delay = maxi(delay, 0) if frames > 0 else 0
 	_flash_tick = Engine.get_physics_frames()
 	if frames > 0:
-		rig.flash_at(point, amount * tuning.hit_flash_strength, tuning.hit_flash_radius_m, tuning.hit_flash_core)
+		rig.flash_at(point, amount * tuning.hit_flash_strength, tuning.hit_flash_radius_m, tuning.hit_flash_core,
+				Color.WHITE, _flash_delay == 0)
 	else:
 		rig.set_flash(0.0)
+
+
+## Ticks the contact flash of `hit`, a clean hit, waits so it shows after the finisher impact
+## frame (Spec §6, §10): VfxDirector turns the whole screen to ink from a clean finisher's
+## tick for vfx_impact_frame_frames (60 Hz frames, one per tick) with impact_frame_enabled,
+## which would spend the flash under it. Decided from the tier and Tuning, as VfxDirector
+## decides it, never from its state. 0 for every other hit.
+static func impact_frame_ticks(hit: HitInfo) -> int:
+	var tuning := Tuning.data
+	if hit.blocked or hit.tier != CombatTypes.HitTier.FINISHER or not tuning.impact_frame_enabled:
+		return 0
+	return maxi(tuning.vfx_impact_frame_frames, 0)
 
 
 # --- Reactions ----------------------------------------------------------------------

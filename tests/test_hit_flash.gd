@@ -453,7 +453,9 @@ func test_a_hit_on_a_staggering_body_flashes_the_struck_part_as_drawn() -> void:
 func test_p_p_p_p_flashes_each_struck_part_as_drawn() -> void:
 	# Jab, jab, hook (a stagger: the partial ragdoll), then, once the hooked head swings
 	# away, the uppercut on the staggering body (a launch: the full ragdoll). The uppercut
-	# used to flash beside the drawn head it struck (0.26 m from it).
+	# used to flash beside the drawn head it struck (0.26 m from it). Its flash waits out the
+	# impact frame (impact_frame_ticks()), so it is measured on the first frame it shows,
+	# with the body already launched.
 	await _setup(1.4)
 	var dummy := dummies[0]
 	for i in 4:
@@ -464,12 +466,157 @@ func test_p_p_p_p_flashes_each_struck_part_as_drawn() -> void:
 	var ids: Array[StringName] = []
 	for hit in on_dummy:
 		ids.append(hit.move.id)
-		assert_lte(gaps_at_hit[hits.find(hit)], _core_m(),
+		var gap := gaps_at_hit[hits.find(hit)]
+		if CombatActor.impact_frame_ticks(hit) > 0:
+			assert_eq(gap, INF, "%s: no flash under the impact frame" % hit.move.id)
+			assert_true(await _wait_until(func() -> bool: return dummy.rig.flash_overlay() != null, 10), "then it flashes")
+			var overlay := dummy.rig.flash_overlay()
+			gap = _drawn_gap(dummy, overlay.get_shader_parameter(&"flash_point"), REGION_BONES[hit.region]) if overlay else INF
+		assert_lte(gap, _core_m(),
 				"%s: full strength on the drawn %s" % [hit.move.id, CombatTypes.Region.keys()[hit.region]])
 	assert_eq(ids.slice(0, 4), [&"jab_1", &"jab_2", &"hook", &"uppercut"] as Array[StringName])
 	if on_dummy.size() >= 4:
 		assert_eq(on_dummy[2].reaction, CombatTypes.Reaction.STAGGER, "the hook staggers, so the uppercut re-hits a staggering body")
 		assert_eq(on_dummy[3].region, CombatTypes.Region.HEAD, "on the head")
+		assert_gt(CombatActor.impact_frame_ticks(on_dummy[3]), 0, "the uppercut's flash waits")
+
+
+func test_a_finisher_flashes_right_after_its_impact_frame() -> void:
+	# The impact frame (VfxDirector, the whole screen in ink) starts on a clean finisher's tick
+	# for vfx_impact_frame_frames, and the contact flash used to start with it for as many
+	# frames: it was spent under the impact frame, so no finisher ever showed one (hit-04).
+	# [impact_frame_enabled, vfx_impact_frame_frames, hit_flash_frames]
+	for case: Array in [[true, 2, 2], [true, 1, 3], [true, 0, 2], [false, 2, 2]]:
+		await _setup(1.4)
+		var vfx := _add_vfx()
+		var on: bool = case[0]
+		var impact: int = case[1] if on else 0
+		var frames: int = case[2]
+		Tuning.data.impact_frame_enabled = on
+		Tuning.data.vfx_impact_frame_frames = case[1]
+		Tuning.data.hit_flash_frames = frames
+		var label := "impact frame %s, %d frame(s), flash %d" % ["on" if on else "off", case[1], frames]
+		var dummy := dummies[0]
+		for i in 4:
+			player.input.push_press(&"P", 2)
+			player.input.push_wait(24 if i == 2 else 8)
+		var recorded := await _record(dummy, vfx, 4, 10)
+		var on_dummy := _hits_on(dummy)
+		assert_eq(on_dummy.size(), 4, "%s: four hits land" % label)
+		if on_dummy.size() < 4:
+			continue
+		var tiers: Array[int] = [CombatTypes.HitTier.LIGHT, CombatTypes.HitTier.LIGHT, CombatTypes.HitTier.HEAVY,
+				CombatTypes.HitTier.FINISHER]
+		for n in 4:
+			assert_eq(on_dummy[n].tier, tiers[n], "%s: %s's tier" % [label, on_dummy[n].move.id])
+		# The jabs and the hook: no impact frame, the flash from the hit's frame as before.
+		for n in 3:
+			var seen := _window(recorded, n, 8)
+			assert_gt(seen.size(), frames, "%s: %s is recorded past its flash" % [label, on_dummy[n].move.id])
+			assert_eq(seen, _expected(seen.size(), 0, 0, frames), "%s: %s" % [label, on_dummy[n].move.id])
+		# The uppercut: its flash on exactly hit_flash_frames frames, right after the impact frame.
+		assert_eq(_window(recorded, 3, 8), _expected(8, impact, impact, frames), "%s: the uppercut" % label)
+
+
+func test_a_finisher_s_late_flash_lands_on_the_struck_part_and_a_ko_still_flashes() -> void:
+	await _setup(1.6)
+	var vfx := _add_vfx()
+	var dummy := dummies[0]
+	var head_bones: Array = REGION_BONES[CombatTypes.Region.HEAD]
+	# A finisher that KOs and launches: the body is in the full ragdoll by the time its flash
+	# shows, which must still be on the head it struck, as drawn.
+	await get_tree().physics_frame
+	var hit := _synthetic_hit(dummy, CombatTypes.Reaction.LAUNCH, CombatTypes.Region.HEAD)
+	hit.tier = CombatTypes.HitTier.FINISHER
+	hit.damage = dummy.health + 1.0
+	hit.knockback = hit.direction * 6.0 + Vector3.UP * 5.0
+	hit.contact_point = dummy.rig.get_point_position(&"Head") + dummy.get_forward() * 0.1
+	assert_true(dummy.receive_hit(hit), "the finisher lands")
+	CombatEvents.hit_landed.emit(hit)
+	assert_true(hit.killed, "and KOs")
+	assert_null(dummy.rig.flash_overlay(), "no flash under the impact frame")
+	var seen: Array[String] = []
+	var gaps: Array[float] = []
+	for i in 6:
+		await get_tree().physics_frame
+		seen.append(_shown(vfx, dummy))
+		var overlay := dummy.rig.flash_overlay()
+		if overlay:
+			gaps.append(_drawn_gap(dummy, overlay.get_shader_parameter(&"flash_point"), head_bones))
+	assert_eq(seen, _expected(6, 2, 2, 2), "the KO's flash right after its impact frame")
+	assert_true(dummy.rig.is_ragdolling(), "launched into the ragdoll")
+	assert_eq(gaps.size(), 2)
+	for gap in gaps:
+		assert_lte(gap, _core_m(), "full strength on the drawn head")
+	# A reset while the flash waits (a revive, the bots' resets) cancels it.
+	dummy.reset_state()
+	await _ticks(5)
+	await get_tree().physics_frame
+	var again := _synthetic_hit(dummy, CombatTypes.Reaction.KNOCKDOWN, CombatTypes.Region.TORSO)
+	again.tier = CombatTypes.HitTier.FINISHER
+	again.contact_point = dummy.rig.get_point_position(&"ChestPoint") + dummy.get_forward() * 0.15
+	assert_true(dummy.receive_hit(again))
+	dummy.reset_state()
+	for i in 5:
+		await get_tree().physics_frame
+		assert_false(_overlay_on(dummy.rig), "frame %d: a reset cancels the waiting flash" % i)
+
+
+## Add a VfxDirector (the impact frame), and a camera for its effects, to the test room.
+func _add_vfx() -> VfxDirector:
+	var camera := Camera3D.new()
+	room.add_child(camera)
+	camera.global_position = player.global_position + Vector3.UP * 1.6
+	camera.make_current()
+	var vfx := VfxDirector.new()
+	room.add_child(vfx)
+	return vfx
+
+
+## What the frame just drawn showed: the impact frame "I", `victim`'s contact flash "F",
+## both "IF", or neither "-". Read as a tick starts, before any actor runs.
+func _shown(vfx: VfxDirector, victim: CombatActor) -> String:
+	var shown := ("I" if vfx.impact_frame.is_flashing() else "") + ("F" if _overlay_on(victim.rig) else "")
+	return shown if shown != "" else "-"
+
+
+## Each rendered frame until `after` frames past the `hits_wanted`-th hit on `victim` (240 at
+## most): [the hits on `victim` landed by then, _shown()].
+func _record(victim: CombatActor, vfx: VfxDirector, hits_wanted: int, after: int) -> Array[Array]:
+	var out: Array[Array] = []
+	var past := 0
+	for i in 240:
+		await get_tree().physics_frame
+		var landed := _hits_on(victim).size()
+		out.append([landed, _shown(vfx, victim)])
+		if landed >= hits_wanted:
+			past += 1
+			if past >= after:
+				break
+	return out
+
+
+## The frames of `recorded` (_record()) from the one hit `nth` (from 0) landed in: `count`
+## of them at most, and none from the next hit's on.
+func _window(recorded: Array[Array], nth: int, count: int) -> Array[String]:
+	var out: Array[String] = []
+	for row: Array in recorded:
+		var landed: int = row[0]
+		if landed > nth + 1 or out.size() >= count:
+			break
+		if landed == nth + 1:
+			out.append(row[1])
+	return out
+
+
+## `count` frames from a hit's: the impact frame on the first `impact`, the contact flash on
+## `flash` frames from frame `delay`.
+func _expected(count: int, impact: int, delay: int, flash: int) -> Array[String]:
+	var out: Array[String] = []
+	for i in count:
+		var shown := ("I" if i < impact else "") + ("F" if i >= delay and i < delay + flash else "")
+		out.append(shown if shown != "" else "-")
+	return out
 
 
 ## A hit on `victim` from the player, pushing it straight back (contact point unset).
