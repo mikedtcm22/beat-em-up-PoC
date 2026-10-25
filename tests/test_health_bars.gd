@@ -1,24 +1,26 @@
 extends GutTest
 ## Over-head enemy health bars on bodies that are not standing up straight (M2 phase 3
-## review, ragdoll-03): EnemyHealthBars.anchor_of() keeps the bar above the body as it is
+## review, ragdoll-03): EnemyHealthBars.screen_anchor_of() keeps the bar above the body as it is
 ## drawn, in the side view too, whether its head bends toward the camera in a stagger, it
 ## flies, it is held bent over or it lies. Standing, the bar is over the top of its head as
 ## before. (A KO'd body's bar: tests/test_ko_blink.gd.)
 
 const ROOM := preload("res://game/level/test_room.tscn")
 const FAR := Vector3(30.0, 0.0, -30.0)
-## The drawn body's points the bar must stay above.
-const BODY_POINTS: Array[StringName] = [
-	&"HeadTopPoint", &"EyePoint", &"ChestPoint", &"Hips", &"LeftFistPoint", &"RightFistPoint",
-	&"LeftElbowPoint", &"RightElbowPoint", &"LeftKneePoint", &"RightKneePoint",
-	&"LeftFootPoint", &"RightFootPoint",
-]
+## How far the bar's bottom may reach into the drawn body on the side camera's screen
+## (rounding, and a part's vertices that stick out between two joints).
+const ON_BODY_PX := 3.0
+## How much higher above the drawn body than above a standing one the bar may float (pixels).
+const FLOAT_MORE_PX := 12.0
 
 var room: Node3D
 var player: PlayerCharacter
 var dummies: Array[TrainingDummy] = []
 ## A side-view camera: level with the dummy's chest, 4 m to its side.
 var camera: Camera3D
+var bars: EnemyHealthBars
+## Mesh -> its vertices (the parts' meshes are built once).
+var _vertices: Dictionary = {}
 
 
 func before_each() -> void:
@@ -59,6 +61,8 @@ func _setup(ahead: float = 1.6) -> void:
 	var at := dummies[0].global_position + Vector3.UP * 1.2
 	camera.look_at_from_position(at + side * 4.0, at)
 	camera.make_current()
+	bars = EnemyHealthBars.new()
+	add_child_autofree(bars)
 	await _ticks(3)
 
 
@@ -85,33 +89,56 @@ func _hit(victim: CombatActor, reaction: CombatTypes.Reaction, knockback: Vector
 	return hit
 
 
-## Watch `d` for `ticks` ticks: how far its drawn body ever reached above the bar's anchor,
-## in the world (meters, anchor_of()) and on the side camera's screen (pixels, positive = the
-## bar on the body; screen_anchor_of()), and how high the anchor floated above the drawn body
-## at most.
+## The drawn body on the camera's screen: the extremes of every visible body part's mesh
+## vertices, projected: {top, left, right} in canvas pixels.
+func _silhouette(d: CombatActor) -> Dictionary:
+	var top := INF
+	var left := INF
+	var right := -INF
+	for node: Node in d.rig.find_children("*", "MeshInstance3D", true, false):
+		var mesh := node as MeshInstance3D
+		if not mesh.is_visible_in_tree() or mesh.mesh == null:
+			continue
+		if not _vertices.has(mesh.mesh):
+			_vertices[mesh.mesh] = mesh.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+		var to_world := mesh.global_transform
+		for v: Vector3 in _vertices[mesh.mesh]:
+			var p := camera.unproject_position(to_world * v)
+			top = minf(top, p.y)
+			left = minf(left, p.x)
+			right = maxf(right, p.x)
+	return {"top": top, "left": left, "right": right}
+
+
+## Watch `d` for `ticks` ticks through the side camera: how far the bar's bottom ever reached
+## below the top of the drawn body (pixels, positive = on the body), how far above it it
+## floated at most, and whether it stayed over the body across.
 func _watch(d: CombatActor, ticks: int) -> Dictionary:
-	var above_m := -INF
-	var above_px := -INF
-	var float_m := -INF
+	var on_px := -INF
+	var float_px := -INF
+	var across := true
 	for i in ticks:
 		await get_tree().physics_frame
-		var anchor := EnemyHealthBars.anchor_of(d)
-		var anchor_px := EnemyHealthBars.screen_anchor_of(d, camera).y
-		var top := -INF
-		for point: StringName in BODY_POINTS:
-			var p := d.rig.get_visual_point_transform(point).origin
-			top = maxf(top, p.y)
-			above_px = maxf(above_px, anchor_px - camera.unproject_position(p).y)
-		above_m = maxf(above_m, top - anchor.y)
-		float_m = maxf(float_m, anchor.y - top)
-	return {"above_m": above_m, "above_px": above_px, "float_m": float_m}
+		var anchor := bars.screen_anchor_of(d, camera)
+		var bottom := anchor.y - bars.lift_px
+		var body := _silhouette(d)
+		on_px = maxf(on_px, bottom - body.top)
+		float_px = maxf(float_px, body.top - bottom)
+		across = across and anchor.x >= body.left and anchor.x <= body.right
+	return {"on_px": on_px, "float_px": float_px, "across": across}
 
 
-func _report(label: String, seen: Dictionary) -> void:
-	gut.p("%s: the drawn body reached %.2f m / %.0f px above the anchor at most; the anchor floated %.2f m above it at most" % [
-		label, seen.above_m, seen.above_px, seen.float_m])
-	assert_lte(seen.above_m, 0.0, "%s: the bar stays above the drawn body" % label)
-	assert_lte(seen.above_px, 0.0, "%s: and above it on the side view's screen" % label)
+## The bar over `d` standing, as a reference: how far it floats above the body (pixels).
+func _standing_float(d: CombatActor) -> float:
+	return (await _watch(d, 1)).float_px
+
+
+func _report(label: String, seen: Dictionary, standing_float: float) -> void:
+	gut.p("%s: the bar's bottom reached %.0f px into the drawn body at most, floated %.0f px above it at most (standing: %.0f px)" % [
+		label, seen.on_px, seen.float_px, standing_float])
+	assert_lte(seen.on_px, ON_BODY_PX, "%s: the bar stays above the drawn body" % label)
+	assert_lte(seen.float_px, standing_float + FLOAT_MORE_PX, "%s: and close above it, as over a standing body" % label)
+	assert_true(seen.across, "%s: over it across" % label)
 
 
 # --- Tests --------------------------------------------------------------------------
@@ -120,8 +147,14 @@ func _report(label: String, seen: Dictionary) -> void:
 func test_a_standing_body_has_its_bar_over_its_head() -> void:
 	await _setup()
 	var dummy := dummies[0]
-	assert_eq(EnemyHealthBars.anchor_of(dummy), dummy.get_head_top_position(), "over the top of its head, as before")
-	_report("standing", await _watch(dummy, 10))
+	# Over the top of its head as before (across, over the middle of the head and the hips:
+	# a few centimeters off the head in the stance).
+	var head := camera.unproject_position(dummy.get_head_top_position())
+	var anchor := bars.screen_anchor_of(dummy, camera)
+	assert_almost_eq(anchor.y, head.y, 0.5, "at the top of its head")
+	assert_almost_eq(anchor.x, head.x, 15.0, "over it")
+	var standing := await _standing_float(dummy)
+	_report("standing", await _watch(dummy, 10), standing)
 
 
 func test_a_head_bent_toward_the_camera_keeps_the_bar_above_it() -> void:
@@ -130,44 +163,48 @@ func test_a_head_bent_toward_the_camera_keeps_the_bar_above_it() -> void:
 	# A hook from the side the camera is on bends the head toward it.
 	var toward := camera.global_position - dummy.global_position
 	toward.y = 0.0
+	var standing := await _standing_float(dummy)
 	assert_true(dummy.receive_hit(_hit(dummy, CombatTypes.Reaction.STAGGER, toward.normalized() * 2.0)))
-	_report("stagger", await _watch(dummy, 40))
+	_report("stagger", await _watch(dummy, 40), standing)
 
 
 func test_a_flying_body_keeps_the_bar_above_it() -> void:
 	await _setup()
 	var dummy := dummies[0]
 	var away := player.get_forward()
+	var standing := await _standing_float(dummy)
 	assert_true(dummy.receive_hit(_hit(dummy, CombatTypes.Reaction.LAUNCH, away * 3.0 + Vector3.UP * 4.0)))
-	_report("uppercut launch", await _watch(dummy, 50))
+	_report("uppercut launch", await _watch(dummy, 50), standing)
 	await _setup()
 	dummy = dummies[0]
 	assert_true(dummy.receive_hit(_hit(dummy, CombatTypes.Reaction.KNOCKDOWN, away * 6.0 + Vector3.UP * 2.0, CombatTypes.Region.TORSO)))
-	_report("haymaker knockdown", await _watch(dummy, 50))
+	_report("haymaker knockdown", await _watch(dummy, 50), standing)
 
 
 func test_a_lying_body_keeps_the_bar_above_it() -> void:
 	await _setup()
 	var dummy := dummies[0]
+	var standing := await _standing_float(dummy)
 	assert_true(dummy.receive_hit(_hit(dummy, CombatTypes.Reaction.KNOCKDOWN, player.get_forward() * 2.0, CombatTypes.Region.TORSO)))
 	for i in 120:
 		if dummy.is_downed():
 			break
 		await get_tree().physics_frame
 	assert_true(dummy.is_downed(), "lying")
-	_report("lying", await _watch(dummy, 40))
+	_report("lying", await _watch(dummy, 40), standing)
 
 
 func test_a_held_body_keeps_the_bar_above_it() -> void:
 	await _setup(0.9)
 	var dummy := dummies[0]
+	var standing := await _standing_float(dummy)
 	player.input.push_press(&"GRAB", 2)
 	for i in 30:
 		if dummy.holder == player:
 			break
 		await get_tree().physics_frame
 	assert_eq(dummy.holder, player, "held")
-	_report("held", await _watch(dummy, 40))
+	_report("held", await _watch(dummy, 40), standing)
 
 
 func test_a_kod_enemys_bar_fades_once_its_last_chunk_has_drained() -> void:
@@ -175,9 +212,7 @@ func test_a_kod_enemys_bar_fades_once_its_last_chunk_has_drained() -> void:
 	# steady, over the body blinking off. (The latest it goes, the blink: test_ko_blink.gd.)
 	await _setup()
 	var dummy := dummies[0]
-	var bars := EnemyHealthBars.new()
 	bars.show_seconds = 30.0
-	add_child_autofree(bars)
 	dummy.health = 2.0
 	CombatEvents.health_changed.emit(dummy, dummy.health, dummy.max_health)
 	bars.on_health_changed(dummy, dummy.health, dummy.max_health)

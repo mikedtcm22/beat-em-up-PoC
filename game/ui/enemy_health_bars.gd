@@ -2,20 +2,21 @@ class_name EnemyHealthBars
 extends Control
 ## Small over-head health bars (Spec §5). An actor in group "enemy" gets one for
 ## `show_seconds` after it takes a hit (CombatEvents.hit_landed, or a health drop through
-## CombatEvents.health_changed). Each bar is anchored above the body (anchor_of(): over the
-## head as drawn, never lower than the top of the standing body), projected through the
-## viewport's current Camera3D, and hidden while that point is behind the camera or the body
-## is hidden (a KO's blink, a comeback's blink-in). A KO'd actor's bar fades out once the
+## CombatEvents.health_changed). Each bar sits just above the body as it is drawn, seen
+## through the viewport's current Camera3D (screen_anchor_of(): over the head of a body on
+## its feet, over the middle of one lying, flying or held), and is hidden while the head is
+## behind the camera or the body is hidden (a KO's blink, a comeback's blink-in). A KO'd actor's bar fades out once the
 ## killing hit's chunk has drained, and by the time the body starts blinking at the latest
 ## (an empty bar over a lying body adds nothing); it is dropped when the actor is freed or
 ## blinks off (CombatEvents.vanished). Full-rect, draws every bar itself.
 ## Driven by GameHud.advance(). Presentation: it only reads the actors.
 
-## The drawn body's points a bar stays above on screen (screen_anchor_of()).
+## The drawn body's joints a bar stays above on screen, each raised by body_margin_m
+## (screen_anchor_of()); the head's top counts as it is.
 const _BODY_POINTS: Array[StringName] = [
-	&"HeadTopPoint", &"EyePoint", &"ChestPoint", &"LeftFistPoint", &"RightFistPoint",
-	&"LeftElbowPoint", &"RightElbowPoint", &"LeftKneePoint", &"RightKneePoint",
-	&"LeftFootPoint", &"RightFootPoint",
+	&"Head", &"EyePoint", &"UpperChest", &"ChestPoint", &"Hips", &"LeftUpperArm", &"RightUpperArm",
+	&"LeftElbowPoint", &"RightElbowPoint", &"LeftFistPoint", &"RightFistPoint",
+	&"LeftKneePoint", &"RightKneePoint", &"LeftFootPoint", &"RightFootPoint",
 ]
 
 ## Seconds a bar stays up after the latest hit.
@@ -25,6 +26,9 @@ const _BODY_POINTS: Array[StringName] = [
 @export var bar_size: Vector2 = Vector2(92.0, 11.0)
 ## Gap between the projected anchor point and the bottom of the bar, in pixels.
 @export var lift_px: float = 6.0
+## How far the body reaches above its joints (the chest's half depth, a shoulder), in meters:
+## a bar over a lying, bent or held body clears its back (screen_anchor_of()).
+@export var body_margin_m: float = 0.15
 @export var slant: float = 0.35
 
 
@@ -113,31 +117,30 @@ func advance(delta: float) -> void:
 	queue_redraw()
 
 
-## Where `actor`'s bar sits (the bar's bottom is `lift_px` above it on screen): over the top
-## of its head as drawn (get_head_top_position()), but never lower than the top of its
-## standing body (its origin plus body_height). A head bent by a stagger, a body flying,
-## held bent over or lying keeps its bar above the body instead of on its face or trunk;
-## a standing head is on top already.
-static func anchor_of(actor: CombatActor) -> Vector3:
-	var anchor := actor.get_head_top_position()
-	anchor.y = maxf(anchor.y, actor.global_position.y + actor.body_height)
-	return anchor
-
-
-## anchor_of() projected through `camera` (canvas pixels), raised to the highest the drawn
-## body shows on that screen: a part nearer the camera than the head (a fist flung toward
-## the side view) can show above a farther anchor. Vector2.INF while the anchor is behind
-## the camera.
-static func screen_anchor_of(actor: CombatActor, camera: Camera3D) -> Vector2:
-	var anchor := anchor_of(actor)
-	if camera.is_position_behind(anchor):
+## Where `actor`'s bar sits on `camera`'s screen (canvas pixels; the bar's bottom is
+## `lift_px` above it): over the body as it is drawn, in any view.
+## - Across: over the middle of its head's top and its hips, so over the head while it
+##   stands, and over the middle of a body lying, flying or held bent over (held, its head is
+##   at the holder's waist: a bar over it would sit on the holder).
+## - Up: at the highest the drawn body shows on that screen, its head's top
+##   (get_head_top_position(), which floats above the head) or any joint raised by
+##   `body_margin_m`. A head bent toward the camera, arms flung up, a bent back or a body
+##   lying on the floor stay under the bar, and the bar stays close above them.
+## Vector2.INF while the head is behind the camera.
+func screen_anchor_of(actor: CombatActor, camera: Camera3D) -> Vector2:
+	var head := actor.get_head_top_position()
+	if camera.is_position_behind(head):
 		return Vector2.INF
-	var screen := camera.unproject_position(anchor)
-	if actor.rig != null:
-		for point: StringName in _BODY_POINTS:
-			var p := actor.rig.get_visual_point_transform(point).origin
-			if not camera.is_position_behind(p):
-				screen.y = minf(screen.y, camera.unproject_position(p).y)
+	var screen := camera.unproject_position(head)
+	if actor.rig == null:
+		return screen
+	var middle := (head + actor.rig.get_visual_point_transform(&"Hips").origin) * 0.5
+	if not camera.is_position_behind(middle):
+		screen.x = camera.unproject_position(middle).x
+	for point: StringName in _BODY_POINTS:
+		var p := actor.rig.get_visual_point_transform(point).origin + Vector3.UP * body_margin_m
+		if not camera.is_position_behind(p):
+			screen.y = minf(screen.y, camera.unproject_position(p).y)
 	return screen
 
 
