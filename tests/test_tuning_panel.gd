@@ -530,6 +530,33 @@ func test_presets_clamp_ranges_and_skip_unknown_enum_ids() -> void:
 	assert_eq(Tuning.enum_ids("Low:0,High:5,Max"), PackedInt32Array([0, 5, 6]))
 
 
+func test_an_older_presets_dummy_revive_s_still_brings_the_dummy_back_on_time() -> void:
+	# Before the KO blink-off (M2 phase 3) dummy_revive_s counted from the KO; it now counts
+	# from the blink-off. A preset saved before (format 1, no ko_linger_s) holds the old count.
+	var tuning := Tuning.data
+	assert_eq(Tuning.PRESET_FORMAT, 2)
+	assert_eq(Tuning.preset_dict(TEST_PRESET).format, Tuning.PRESET_FORMAT, "presets are saved in the new format")
+	var after_blink := 4.0 - tuning.ko_linger_s - tuning.ko_blink_s
+	assert_eq(Tuning.apply_preset({"format": 1, "tuning": {"dummy_revive_s": 4.0, "move_speed": 7.0}, "moves": {}}), OK)
+	assert_almost_eq(tuning.dummy_revive_s, after_blink, 0.0001, "the old count less the lie and the blink")
+	assert_almost_eq(tuning.move_speed, 7.0, 0.0001, "the rest loads as it is")
+	assert_eq(Tuning.last_warnings.size(), 1, "noted: %s" % [Tuning.last_warnings])
+	assert_string_contains(", ".join(Tuning.last_warnings), "dummy_revive_s")
+	# The old default (2.5 s from the KO) is used up by the lie and the blink: no wait after.
+	Tuning.apply_preset({"format": 1, "tuning": {"dummy_revive_s": 2.5}, "moves": {}})
+	assert_almost_eq(tuning.dummy_revive_s, 0.0, 0.0001, "never below 0")
+	# A format-1 preset saved since the blink-off (it holds ko_linger_s) already counts from it.
+	Tuning.apply_preset({"format": 1, "tuning": {"dummy_revive_s": 2.0, "ko_linger_s": 1.0}, "moves": {}})
+	assert_almost_eq(tuning.dummy_revive_s, 2.0, 0.0001, "a phase 3 preset loads as it is")
+	assert_eq(Tuning.last_warnings, PackedStringArray(), "with nothing to note")
+	# The current format, and a hand-written preset with no format, load as they are.
+	for preset: Dictionary in [{"format": Tuning.PRESET_FORMAT, "tuning": {"dummy_revive_s": 2.5}},
+			{"tuning": {"dummy_revive_s": 2.5}}]:
+		Tuning.apply_preset(preset)
+		assert_almost_eq(tuning.dummy_revive_s, 2.5, 0.0001, "%s loads as it is" % [preset])
+		assert_eq(Tuning.last_warnings, PackedStringArray())
+
+
 func test_preset_names_are_lower_case_and_default_is_reserved() -> void:
 	assert_eq(Tuning.sanitize_preset_name(" Heavy V2! "), "heavy_v2_", "lower case, file-safe")
 	for reserved: String in ["default", "Default", "_BACKUP"]:
