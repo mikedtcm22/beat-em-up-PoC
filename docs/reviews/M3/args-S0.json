@@ -1,0 +1,13 @@
+{
+  "base": "m3/enemy-ai",
+  "concurrency": 1,
+  "note": "Merge state: m3/enemy-ai at 447fc7f = main (M2, 537/537 tests pass in 73 s, no SCRIPT ERROR) plus the M3 plan and docs, the macOS export preset and project.godot's rendering/textures/vram_compression/import_etc2_astc. The lead already ran `git config merge.keep-ours.driver true`, pruned the M2 worktrees and fixed CLAUDE.md's test time.",
+  "packages": [
+    {
+      "key": "S0-scaffold",
+      "section": "Part C §4 \"S0-scaffold\" (with §2's contracts and §3's table), as amended by every Part A item that names S0 or §2/§4: A1.2, A2.1-A2.14, A3.5's fixtures, and the ARCHITECTURE stub headings (add \"### Instruments: readability probe, autopilot, warning oracle\" for P1-instruments)",
+      "est": 10,
+      "note": "S0 lands contracts only: no behaviour change to the M2 game, the training room plays exactly as before, and every shipped .tres except dummy_jab.tres (reach_m 1.05) is byte-identical after the generator runs. Declare every tunable the plan names (A2.11), in its owner's subgroup, with the plan's default and an @export_range wide enough for F1. Add `tuning/default.json merge=keep-ours` to .gitattributes. Create docs/milestones/M3-calls/ with your own S0-scaffold.md. tools/capture_bot.sh must work from any worktree (prove it once with the combo bot's 'Jab' act and look at one sheet). The lead reviews every hunk of combat_actor.gd, hit_detector.gd, player.gd and tuning_overlay.gd against Part A and §2.2, so keep those diffs minimal and documented."
+    }
+  ]
+}
