@@ -4,6 +4,23 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-25 18:55 CDT: S0 merged (587/587); phase 1 (five builders) running
+5-hour 40% (resets 21:50 CDT), weekly 27% (resets Mon 2026-10-26 05:00 CDT). S0, one Sonnet builder (690k tokens, 31 minutes), cost about 5 window points.
+- **S0 merged** into `m3/enemy-ai` at `4a5341d`. **587/587 tests pass with no SCRIPT ERROR or ERROR.** The preset regenerated unchanged at 419 values.
+  - The lead reviewed every hunk of `combat_actor.gd`, `hit_detector.gd`, `player.gd`, `tuning_overlay.gd` and `game_input.gd` against Part A and §2.2: they match.
+  - `d393a7b`: `test_m3_contracts.gd` no longer pins tunable defaults (owners retune their own), only their subgroups.
+  - S0's calls are in `docs/milestones/M3-calls/S0-scaffold.md`.
+- **S0's notes for later phases:**
+  - P3 must decide the parried boss: `_parry_staggers()` false plus recoil 0 means a parry only blocks.
+  - The pin order changed M2's player grabs slightly (a held victim now processes right after its holder): watch the grab acts at the slice gate.
+- **Running since 18:50 CDT:** workflow `wf_ed4bf1ae-4e9`, `workflow-build.js` with `docs/reviews/M3/args-P1.json`. Five Sonnet builders, four at a time, each in `.worktrees/m3-p1-<key>` on branch `m3/p1-<key>`: P1-ai, P1-director, P1-room, P1-hud, P1-instruments. The watcher checks every 15 minutes during the run.
+  - **If cut off:** rerun the same args (the loader reuses `wip` branches, skips done ones). Within this session, use `resumeFromRunId: "wf_ed4bf1ae-4e9"`.
+  - **Then:**
+    1. Merge P1-ai, P1-director, P1-room, P1-hud and P1-instruments, in that order. Regenerate the preset and the moves (only `punk_*.tres` may be new), run the full suite and push.
+    2. Set `run/main_scene` to `res://game/level/crowd_room.tscn`.
+    3. Run P1-int as a one-package `workflow-build.js` run (Part C §5 "P1-int", as amended by A3.6).
+    4. The slice gate: `docs/reviews/M3/workflow-review.js`, round "slice", lenses L1, L2 and L4.
+
 ### 2026-10-25 18:20 CDT: M3 plan written; S0 (the contract scaffold) building
 5-hour 34% (resets 21:49 CDT), weekly 26% (resets Mon 2026-10-26 05:00 CDT). The planning workflow (10 Opus agents, 3.4M tokens) cost 32 window points and 5 weekly points, which is the old costs divided by 5.
 - **The plan is [docs/milestones/M3-plan.md](milestones/M3-plan.md).**
