@@ -4,6 +4,28 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-25 18:20 CDT: M3 plan written; S0 (the contract scaffold) building
+5-hour 34% (resets 21:49 CDT), weekly 26% (resets Mon 2026-10-26 05:00 CDT). The planning workflow (10 Opus agents, 3.4M tokens) cost 32 window points and 5 weekly points, which is the old costs divided by 5.
+- **The plan is [docs/milestones/M3-plan.md](milestones/M3-plan.md).**
+  - It started as three independent plans (contracts-first, vertical-slice, readability-first) and a judge, all in `docs/milestones/M3-planning/`.
+  - The vertical-slice plan won (Part C, verbatim). The judge's grafts and fixes are binding amendments (Part A), and the done-when is made checkable in Part B: the warning's truth table, readability metrics R1-R15, the evidence pack and the review lenses.
+  - Codemaps of everything M3 builds on are in `docs/milestones/M3-codemap/`.
+- **Phases:**
+  - **S0**, the contract scaffold: hooks, look API and ViewGeometry, MoveData `reach_m`, signals, every tunable, skeletons for EnemyActor, EnemyDirector and EnemyCatalog, pose and generator dispatch, fixtures and `capture_bot.sh`.
+  - **Phase 1**, the Street Punk vertical slice, five builders in parallel: P1-ai, P1-director, P1-room, P1-hud and P1-instruments. Then P1-int, then **the slice gate**, a review in first person on hard metrics.
+  - **Phase 2:** P2-grab, P2-kicker and P2-thug.
+  - **Phase 3:** P3-bruiser and P3-boss.
+  - **Phase 4:** integration, the review round, docs, the export and release, the PR, and the Slack DM.
+- **Builds run through `docs/reviews/M3/workflow-build.js`** with args saved as `docs/reviews/M3/args-<phase>.json`. It is resumable: a package is done when its branch `m3/<key>` has a commit `M3 <key>: ...`, wip when the branch exists without one, and new otherwise.
+- **Running since 18:15 CDT:** workflow `wf_6f2443d3-3fd`, `workflow-build.js` with `args-S0.json` (one Sonnet builder, `.worktrees/m3-s0-scaffold`, branch `m3/s0-scaffold`).
+  - **If cut off:** rerun `Workflow({scriptPath: "<repo>/docs/reviews/M3/workflow-build.js", args: <args-S0.json>})`. Within this session, use `resumeFromRunId: "wf_6f2443d3-3fd"`.
+  - **Then:** the lead reviews every hunk of `combat_actor.gd`, `hit_detector.gd`, `player.gd` and `tuning_overlay.gd`, merges `m3/s0-scaffold` into `m3/enemy-ai`, regenerates the preset, runs the full suite and pushes, then launches phase 1 with `args-P1.json`.
+- **Done meanwhile:**
+  - M2 worktrees pruned (every branch kept);
+  - `git config merge.keep-ours.driver true`;
+  - CLAUDE.md's test time is now about 90 s (baseline 537/537 in 73 s);
+  - the export templates are installed and a test macOS export works (63 MB, universal, ad-hoc signed, runs headless clean).
+
 ### 2026-10-25 17:05 CDT: M2 merged; Milestone 3 started on `m3/enemy-ai`
 Account: premium seat (5 times the old limits). 5-hour 0% (resets 21:49 CDT), weekly 21% (resets Mon 2026-10-26 05:00 CDT).
 - **Game-boy signed off M2.** PR #2 is merged into `main` (`2847863`). The old `.worktrees/m2-*` can be pruned.
