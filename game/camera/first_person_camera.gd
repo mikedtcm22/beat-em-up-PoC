@@ -278,6 +278,12 @@ static func lens_offset(look_basis: Basis, back: float = 0.0) -> Vector3:
 func _ko_view_mix(delta: float, live: Transform3D) -> Transform3D:
 	var tuning := Tuning.data
 	var dying := player.health <= 0.0
+	if not dying and _ko_view <= 0.0:
+		# The usual case, every frame: in the eyes, the head layer hidden.
+		_ko_side = 0.0
+		if get_cull_mask_value(CombatTypes.VIS_FP_HIDDEN):
+			set_cull_mask_value(CombatTypes.VIS_FP_HIDDEN, false)
+		return live
 	var seconds := tuning.ko_view_out_s if dying else tuning.ko_view_in_s
 	var sim_delta := delta * TimeController.scale_for(player)
 	var step := 0.0
@@ -291,9 +297,10 @@ func _ko_view_mix(delta: float, live: Transform3D) -> Transform3D:
 		_ko_view = maxf(_ko_view - step, 0.0)
 	var weight := ko_view_weight()
 	if weight <= 0.0:
-		set_cull_mask_value(CombatTypes.VIS_FP_HIDDEN, false)
-		if not dying:
-			_ko_side = 0.0
+		# Back in the eyes (or the blow's hitstop, before the view has started): hide the head
+		# layer again.
+		if get_cull_mask_value(CombatTypes.VIS_FP_HIDDEN):
+			set_cull_mask_value(CombatTypes.VIS_FP_HIDDEN, false)
 		return live
 	var root := player.get_global_transform_interpolated().origin
 	var body := player.rig.global_basis
