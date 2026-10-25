@@ -8,6 +8,11 @@
 *.import text eol=lf
 *.svg text eol=lf
 
+# The shipped tuning preset is generated (godot --headless -s tools/gen_default_preset.gd):
+# a merge never hand-resolves it, the lead regenerates it afterwards (the "keep-ours" driver is
+# `git config merge.keep-ours.driver true`).
+tuning/default.json merge=keep-ours
+
 # Binary assets go through Git LFS (Spec §2).
 *.glb filter=lfs diff=lfs merge=lfs -text
 *.gltf.bin filter=lfs diff=lfs merge=lfs -text

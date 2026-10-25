@@ -50,10 +50,13 @@ func process(move: MoveData, move_frame: int) -> Array[HitInfo]:
 	ordered.assign(candidates.values())
 	ordered.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a.dist < b.dist)
 	# Clean hits freeze with the attacker for the tier's hitstop; blocked hits only for the
-	# short block hitstop (and never start the finisher slow-mo).
+	# short block hitstop (and never start the finisher slow-mo). An armored victim that
+	# absorbed the hit (hit.armor_absorbed) never freezes: the strike still feels solid to the
+	# attacker, but a jab would otherwise stretch a Bruiser's wind-up, and its rear warning.
 	var frozen: Array = [attacker]
 	var guarded: Array = [attacker]
 	var blocked: HitInfo
+	var clean := false
 	for c: Dictionary in ordered:
 		if move.max_targets > 0 and landed >= move.max_targets:
 			break
@@ -69,10 +72,12 @@ func process(move: MoveData, move_frame: int) -> Array[HitInfo]:
 				if blocked == null or (hit.perfect_block and not blocked.perfect_block) or blocked.guard_broken:
 					blocked = hit
 			else:
-				frozen.append(victim)
+				clean = true
+				if not hit.armor_absorbed or hit.killed:
+					frozen.append(victim)
 	if hits.is_empty():
 		return hits
-	if frozen.size() > 1:
+	if clean:
 		var stop := Tuning.data.hitstop_s(move.tier)
 		TimeController.hitstop(frozen, stop)
 		if move.tier == CombatTypes.HitTier.FINISHER and Tuning.data.slowmo_ms > 0.0:
@@ -82,7 +87,7 @@ func process(move: MoveData, move_frame: int) -> Array[HitInfo]:
 	for hit in hits:
 		CombatEvents.hit_landed.emit(hit)
 	# Every hit of this frame was blocked: the attack recoils (or staggers on a parry).
-	if blocked and frozen.size() == 1:
+	if blocked and not clean:
 		attacker.react_to_block(blocked)
 	return hits
 

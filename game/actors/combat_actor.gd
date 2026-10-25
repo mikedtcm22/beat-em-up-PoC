@@ -80,6 +80,11 @@ var holder: CombatActor
 ## regenerates after a pause and refills partly after a guard break.
 var guard: float = Tuning.data.guard_max
 
+## While GRABBED the body processes just after its holder (start_grabbed()): the priority it had
+## before, restored when the hold ends.
+var _priority_before_grab: int = 0
+var _priority_pinned: bool = false
+
 var _tick_accum: float = 0.0
 ## Sim frames since the guard started rising (start_block()); keeps counting through
 ## blockstun. The guard stops hits from Tuning.block_raise_frames on.
@@ -365,15 +370,16 @@ func drop_guard(frames: int) -> void:
 
 
 ## The attacker's side of a blocked hit (called by HitDetector once a move's hits this
-## frame were all blocked): staggered by a perfect block (grabbable), knocked into a
-## short recoil by an ordinary one (move.blocked_recoil_frames; 0 = none), unaffected
-## when the hit broke the guard. The new pose shows at once, through the block hitstop:
+## frame were all blocked): staggered by a perfect block (grabbable; unless
+## _parry_staggers() says otherwise: then the ordinary recoil), knocked into a short recoil
+## by an ordinary one (move.blocked_recoil_frames; 0 = none), unaffected when the hit broke
+## the guard. The new pose shows at once, through the block hitstop:
 ## the strike is never seen at full reach inside the guard (from the defender's lens the
 ## fist meets the guard and is knocked back).
 func react_to_block(hit: HitInfo) -> void:
 	if hit.guard_broken or is_ko():
 		return
-	if hit.perfect_block:
+	if hit.perfect_block and _parry_staggers():
 		if current_move:
 			_cancel_move()
 		sim_velocity = Vector3(0.0, sim_velocity.y, 0.0)
@@ -416,6 +422,11 @@ func receive_hit(hit: HitInfo) -> bool:
 	hit.killed = health <= 0.0
 	CombatEvents.health_changed.emit(self, health, max_health)
 	_flash_at(hit.contact_point, Tuning.data.hit_flash_frames, 1.0, impact_frame_ticks(hit))
+	_apply_armor(hit)
+	if hit.armor_absorbed and not hit.killed:
+		# Armor took the reaction: the damage landed, but the move (a wind-up above all) runs on.
+		_on_armor_absorbed(hit)
+		return true
 	if current_move:
 		_cancel_move()
 	_on_hit_received(hit)
@@ -468,16 +479,22 @@ func start_grabbed(by: CombatActor) -> void:
 	if current_move:
 		_cancel_move()
 	holder = by
+	# Pinned after its holder's rig advanced, so the pin never lags a tick behind.
+	if not _priority_pinned:
+		_priority_before_grab = process_physics_priority
+		_priority_pinned = true
+	process_physics_priority = by.process_physics_priority + 1
 	sim_velocity = Vector3.ZERO
 	_pin_from = by.global_basis.inverse() * (global_position - _pin_spot())
 	_pin_from.y = 0.0
 	_pin_ease_s = 0.0
 	_set_ghost(true)
 	_enter_state(CombatTypes.ActorState.GRABBED)
-	rig.play(&"held", Tuning.data.grab_hold_blend_s)
+	rig.play(_held_anim(), Tuning.data.grab_hold_blend_s)
 	# A staggering body is grabbed out of its partial ragdoll.
 	rig.ragdoll_stop(maxf(Tuning.data.grab_hold_blend_s, Tuning.data.ragdoll_stop_blend_s))
 	CombatEvents.grabbed.emit(by, self)
+	_on_grabbed(by)
 
 
 ## Leave a grab on your feet, optionally staggering with `push` velocity. The body stands
@@ -487,6 +504,7 @@ func start_grabbed(by: CombatActor) -> void:
 func release_from_grab(push: Vector3, stagger: bool) -> void:
 	var by := holder
 	holder = null
+	_restore_priority()
 	_set_ghost(false)
 	if stagger:
 		sim_velocity = Vector3(push.x, 0.0, push.z)
@@ -502,11 +520,39 @@ func release_from_grab(push: Vector3, stagger: bool) -> void:
 	CombatEvents.released.emit(by, self)
 
 
+## The victim side of a break-free (mashing out of a hold, Milestone 3): the holder is told
+## (_on_hold_broken(), which is what staggers it away), the body is released where it stands
+## on its feet, invulnerable for `invuln_frames` sim frames (default
+## Tuning.grab_break_invuln_frames), and CombatEvents.grab_escaped fires. Nothing happens
+## unless the body is GRABBED. The visible shove is the holder's: a victim's own velocity
+## would be overwritten by its control the next tick.
+func break_free(invuln_frames: int = -1) -> void:
+	if state != CombatTypes.ActorState.GRABBED:
+		return
+	var by := holder
+	if is_instance_valid(by):
+		by._on_hold_broken(self)
+	release_from_grab(Vector3.ZERO, false)
+	var frames := invuln_frames if invuln_frames >= 0 else Tuning.data.grab_break_invuln_frames
+	_invuln_frames = maxi(_invuln_frames, frames)
+	CombatEvents.grab_escaped.emit(self, by)
+
+
+## Stop the running move (a wind-up ends interrupted: CombatEvents.windup_ended) and return to
+## neutral: for a controller that must cut an attack short (a holder that lost its victim, a
+## frozen enemy). Not a reaction: no hit, no hitstun. It sets the state itself, so call it
+## only while the body runs a move or holds someone, never in the middle of a hit reaction.
+func abort_move() -> void:
+	_cancel_move()
+	_return_to_neutral()
+
+
 ## Snap back to a fresh standing state with full health (debug tools, bots, respawns).
 func reset_state() -> void:
 	if current_move:
 		_cancel_move()
 	holder = null
+	_restore_priority()
 	health = max_health
 	sim_velocity = Vector3.ZERO
 	_invuln_frames = 0
@@ -599,6 +645,49 @@ func _on_move_interrupted() -> void:
 ## Horizontal unit direction the guard faces (the body's facing; the player uses its look).
 func _guard_facing() -> Vector3:
 	return get_forward()
+
+
+## An armor rule (Milestone 3: the Bruiser and the boss), asked of every accepted hit after its
+## damage, the flash and `killed` were applied and before the running move is cancelled. It may
+## set `hit.armor_absorbed = true` (and must then also set `hit.reaction = NONE` and
+## `hit.knockback = Vector3.ZERO`): the move runs on, with no flinch (never on a killing hit),
+## or change `hit.reaction` or `hit.knockback` (a light hit absorbed, a heavy one staggers).
+func _apply_armor(_hit: HitInfo) -> void:
+	pass
+
+
+## `hit` was absorbed by armor (hit.armor_absorbed, and the body is not dead): its damage
+## landed and its move keeps running. A hook for a brace pose or a spark.
+func _on_armor_absorbed(_hit: HitInfo) -> void:
+	pass
+
+
+## This body was just grabbed by `by` (the end of start_grabbed()).
+func _on_grabbed(_by: CombatActor) -> void:
+	pass
+
+
+## The animation a held body plays (start_grabbed(), and the jolt of a hit while held).
+func _held_anim() -> StringName:
+	return &"held"
+
+
+## The holder side of a hold: this body still holds `victim` (the player's override: its
+## _held is the victim and valid).
+func is_holding(_victim: CombatActor) -> bool:
+	return false
+
+
+## The holder side of break_free(): `victim` mashed out of this body's hold.
+func _on_hold_broken(_victim: CombatActor) -> void:
+	pass
+
+
+## Whether a perfect block (a parry) staggers this body when it was the attacker (the
+## default). A boss that must not be parry-locked returns false: it takes the ordinary
+## blocked-attack recoil instead (react_to_block()).
+func _parry_staggers() -> bool:
+	return true
 
 
 ## Decide this move's lunge (magnetism) right after it starts.
@@ -953,7 +1042,7 @@ func _apply_reaction(hit: HitInfo) -> void:
 		# Knees on a held victim: jolt in the hunched held pose and stay held (unless this
 		# hit killed). A standing flinch here would raise the head into the holder's view.
 		if not hit.killed:
-			rig.play(&"held", Tuning.data.reaction_snap_blend_s)
+			rig.play(_held_anim(), Tuning.data.reaction_snap_blend_s)
 			return
 		holder = null
 	if hit.killed and state == CombatTypes.ActorState.DOWNED:
@@ -1002,6 +1091,7 @@ func _apply_reaction(hit: HitInfo) -> void:
 func _launch(hit: HitInfo, reaction: CombatTypes.Reaction, kb: Vector3) -> void:
 	var from_hold := state == CombatTypes.ActorState.GRABBED
 	holder = null
+	_restore_priority()
 	var v := kb
 	v.y = maxf(v.y, Tuning.data.min_launch_up)
 	sim_velocity = v
@@ -1089,6 +1179,7 @@ func _start_getup() -> void:
 
 func _enter_ko() -> void:
 	holder = null
+	_restore_priority()
 	_flying_reaction = CombatTypes.Reaction.NONE
 	_set_ghost(true)
 	_enter_state(CombatTypes.ActorState.KO)
@@ -1407,7 +1498,7 @@ func _pin_spot() -> Vector3:
 ## Tuning.grab_pin_ease_s of the grab (`dt` sim seconds this frame) it eases in from where it
 ## stood (ease-in).
 func _pin_to_holder(dt: float) -> void:
-	if not is_instance_valid(holder):
+	if not is_instance_valid(holder) or holder.is_gone():
 		release_from_grab(Vector3.ZERO, false)
 		return
 	global_position = _pin_spot()
@@ -1422,6 +1513,13 @@ func _pin_to_holder(dt: float) -> void:
 		rotation.y = atan2(-to_holder.x, -to_holder.z)
 	velocity = Vector3.ZERO
 	sim_velocity = Vector3.ZERO
+
+
+## Back to the physics priority the body had before its holder pinned it (start_grabbed()).
+func _restore_priority() -> void:
+	if _priority_pinned:
+		process_physics_priority = _priority_before_grab
+		_priority_pinned = false
 
 
 ## Leaving a hold, right after playing the animation that leaves it (with a blend): the

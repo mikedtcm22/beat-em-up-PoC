@@ -115,6 +115,7 @@ The rig origin is at the feet, the character faces −Z, and the default height 
 - Grab: `grab`, `hold` (holding someone), `held` (being held), `thrown`, `pickup`, `haymaker_charge`
 - Hit reacts: `flinch_head_front`, `flinch_head_left`, `flinch_head_right`, `flinch_gut`, `flinch_legs`, `stagger_back`, `stagger_left`, `stagger_right`, `stagger_forward`
 - Down: `launched`, `knockdown_back`, `knockdown_forward`, `downed_back`, `downed_front`, `getup_back`, `getup_front`, `ko_back`, `ko_front`
+- Milestone 3 enemies: `taunt` (a posture gesture, once), `brace` (a Bruiser shrugging a light hit), `run_forward` (the boss's charge run, looping), `hold_collar` (the holder of an enemy grab), `held_collar` and `held_lift` (the held player, and lifted for the slam; looping)
 - Every move id below, through `play_move()`, timed to its frame data
 
 **Playback notes:**
@@ -391,6 +392,89 @@ Blocking lives in `CombatActor`, so any actor can block (enemies may in Mileston
   - The dummy faces the player.
 - `reset_dummies()` puts every dummy back on the post recorded when the menu first saw it, standing, at full `dummy_health`. `remove_spawned_dummies()` removes the spawned ones.
 - "Skip to arena N" shows disabled until Milestone 5.
+
+## Enemy AI and the rear warning (Milestone 3)
+
+The contract of Milestone 3 ([docs/milestones/M3-plan.md](milestones/M3-plan.md) Part C section 2, with Part A's amendments applied). S0-scaffold landed every name below as a skeleton or hook, with no change to the M2 game; the packages fill them in. The headings after the contract are one per package, each filled by its owner and nobody else.
+
+### The contract
+
+**Player look** (`PlayerCharacter`; the maths is `ViewGeometry`, `game/combat/view_geometry.gd`, static and simulation-safe, no camera):
+- `get_look_forward() -> Vector3`: flat unit vector of the look (`look_yaw` only).
+- `look_bearing_deg(point) -> float`: signed flat degrees from the look to `point`, measured from `global_position`: 0 ahead, positive left, +-180 behind.
+- `is_outside_view(point, half_angle_deg) -> bool`. "Outside the player's view" means `is_outside_view(p, Tuning.data.rear_warning_angle_deg)` everywhere: the director's blind spot and the warning.
+- `is_holding(victim) -> bool`: the holder hook, true while `victim` is held (`_held == victim and _holding_valid()`).
+- `ViewGeometry`: `forward(look_yaw)`, `bearing_deg(look_yaw, from, point)`, `is_outside_view(look_yaw, from, point, half_angle_deg)` and `warning_corner(bearing, distance_m, reach_m, angle_deg, behind_deg, margin_m) -> StringName` (`&""`, `&"left"`, `&"right"`, `&"both"`: the rule of the warning, SPEC §8). The director, the HUD's `RearWarning` and the bots' oracle all call it. `tests/test_view_geometry.gd` holds its truth table, written by hand.
+
+**`CombatActor` hooks** (S0 only; nobody else edits `combat_actor.gd` in M3):
+- `_apply_armor(hit)` (virtual, no-op): called in `receive_hit()` after damage, `killed`, `health_changed` and the flash, before the move is cancelled. It may set `hit.armor_absorbed = true` (and must then set `hit.reaction = NONE` and `hit.knockback = ZERO`) or change `hit.reaction` or `hit.knockback`. If `hit.armor_absorbed and not hit.killed`, `_on_armor_absorbed(hit)` (virtual, no-op) is called and `receive_hit()` returns true, skipping the cancel, `_on_hit_received()` and `_apply_reaction()`: the move, a wind-up above all, runs on. A killing hit is never skipped.
+- `HitDetector`: an armored victim that absorbed a hit (`armor_absorbed`, not killed) never goes into hitstop; only the attacker does (the strike still feels solid, and a jab never stretches a Bruiser's wind-up or its warning). A blocked-only frame still recoils the attacker, as before.
+- `_on_grabbed(by)` (virtual): the end of `start_grabbed()`. `_held_anim() -> StringName` (virtual, `&"held"`): the clip `start_grabbed()` and the held jolt of `_apply_reaction()` play. `is_holding(victim)` (virtual, false): the holder side.
+- `break_free(invuln_frames := Tuning.grab_break_invuln_frames)`: the victim side of mashing out. The holder's `_on_hold_broken(victim)` (virtual, no-op: where the holder staggers away at `grab_break_push_mps`) is called, the victim is released on its feet where it stands and made invulnerable for `invuln_frames` sim frames, and `CombatEvents.grab_escaped(victim, holder)` fires. A no-op unless GRABBED.
+- `_parry_staggers() -> bool` (virtual, true): `react_to_block()` staggers a parried attacker only when it is true; otherwise the attacker takes the ordinary blocked-attack recoil (a move with `blocked_recoil_frames` 0 then does nothing).
+- `abort_move()` (public): `_cancel_move()` then `_return_to_neutral()`.
+- Pin order: `start_grabbed(by)` sets `process_physics_priority = by.process_physics_priority + 1` (the victim pins after its holder's rig advanced, so no tick of lag); it is restored on release, launch, KO and `reset_state()`. `_pin_to_holder()` also releases when the holder `is_gone()`.
+- There is no `_keeps_pose_after_strike()`: a hit applied by code never sets `_pull_strike`.
+
+**Events** (`CombatEvents`): `grab_escaped(victim, holder)`, `boss_phase_changed(boss, phase)` (phase 1 is implicit). No other signal in M3: presentation reads tokens, AI states and slots through the director's read API and `debug_state_text()`. `HitInfo.describe()` ends with " ARMOR" for an absorbed hit.
+
+**Move data**: `MoveData.reach_m` (0 to 10 m, group "Movement", so F1 edits it and presets save it): the flat distance from the attacker's origin to a standing 1.8 m target's origin at which the move's strike connects, **travel included** (`free_lunge`); 0 means "not an AI attack". The AI closes to it before winding up and the rear warning fires within `reach_m + rear_warning_range_margin_m`. `lunge` and `free_lunge` now go to 8 m. `dummy_jab.reach_m` is 1.05 (the only shipped move with a reach). Enemy move rules, enforced by `tests/test_move_data.gd` from each archetype's `tests/enemy_moves/<archetype>_table.gd`: its own animation id (`get_anim() == id`), no magnetism, no `branches` or `auto_next` (the AI starts each hit of a chain itself), startup at least the archetype's wind-up floor, a reach, **no FINISHER tier** (the finisher fires the global slow-mo and impact frame), `blocked_recoil_frames` 0 for the Bruiser, the boss and the grabs, grabs and the ground pound unblockable, and the 15% rule: a chain that one token buys (`ATTACKS`) with a knockdown, launch or throw in it costs the player at most 15 damage, unless it is the boss's (SPEC §4). One telegraph per attack: a chain link (the Punk's cross, the Thug's second and third swings) starts with no wind-up of its own, and only if the previous hit landed or was blocked; a whiffed opener ends the attack.
+
+**`EnemyActor`** (`game/enemies/enemy_actor.gd`, `class_name EnemyActor extends CombatActor`; `TrainingDummy` does not extend it): `enum AiState { ENTER, APPROACH, POSTURE, ENGAGE, WINDUP, ATTACK, RECOVER, REACT, KO }` (an overlay on `ActorState`, never written into it); exports `archetype`, `heavy`, `prefers_blind_side`, `voice_pitch_mult`; read-only state `ai_state`, `has_token`, `blind_priority_granted`, `posture_slot` (`Vector3.INF` = none); `ai_state_name()`, `wants_token()`, `grant_token(blind)` and `revoke_token()` and `set_slot(pos)` (director only), `attack_range_m()`, `force_attack(index := 0)` (bots and tests: skip the token and wind up now from FREE), `enter_from(spawn_pos, lane_point)`, and `static windup_move(move, heavy)` (the wind-up multiplier and floors, cached per move id). Groups: `"actor"`, `"enemy"`, `"ai_enemy"` (the boss also `"boss"`). A dead enemy is `health <= 0`, not `is_ko()`; once `is_gone()` it leaves every group, then `queue_free()`s. Behaviour runs only in FREE, plus turning during WINDUP. The S0 skeleton stands still.
+
+**`EnemyDirector`** (`game/enemies/enemy_director.gd`, `class_name EnemyDirector extends Node`, group `"enemy_director"`): `find(tree)`, `ensure(host)` (find, or add one under `host`: an enemy spawned by F4 in the training room), `release_token(enemy)`, `slot_for(enemy)`, `may_start_windup(enemy) -> bool` (an enemy with a token calls it right before winding up; true means go now and the director records the wind-up start; it enforces `director_min_windup_gap_s`, so no two wind-ups start together), and the read API for F3 and tests, which presentation reads and never writes: `debug_token_holders()`, `debug_slot_of(enemy)` (`Vector3.INF` = none), `debug_ring() -> Vector2`, `attacker_cap()` (0 = unlimited), `debug_waiting()`. It runs its own `_physics_process` on `delta * TimeController.sim_scale()` with a seeded RNG (`rng_seed`), and holds while `GameInput.menu_open`. The S0 skeleton answers "nobody holds anything" and always says go.
+
+**Menus hold the fight**: `GameInput.menu_open` is set by `TuningOverlay` while F1 or F4 is open. While it is true the director grants no tokens and takes back any token whose wind-up has not started, an enemy with no move running stands, faces the player and asks for nothing, and waves start no spawns; an attack already winding up finishes.
+
+**Other APIs**: `EncounterSpawner` (P1-room): `spawn_enemy(id, at, yaw, from_wave := false)`, `spawn_adds(id, count, near)`, `alive_count()`, `set_waves_enabled(on)`, `spawn_points`, `scene_override`; group `"encounter_spawner"`. `EnemyCatalog` (S0, `game/enemies/enemy_catalog.gd`): `ENTRIES` (`{id, label, scene}` for `dummy`, `punk`, `kicker`, `thug`, `bruiser`, `boss`), `available()` (only scenes that exist), `scene(id)`, `body_size(id) -> Vector2` (radius, height; cached): the cheat menu and the spawner read it and nothing else hard-codes an enemy path. `RearWarning` (P1-hud, `game/ui/rear_warning.gd`): `shown(side, count, heavy)`, `hidden(side)`, `corner_state(side) -> Dictionary`, `advance(delta)`.
+
+**Rooms and keys**: `test_room.gd`/`.tscn` is frozen for M3. F6 (`GameInput.switch_room()`) clears hitstop and slow-mo, unpauses and changes scene to the other of `GameInput.ROOM_SCENES` (the crowd street, the training room); it does nothing when the target scene does not exist, or when the running scene is neither room (a bot or test host). The crowd room's contract for bots and tests (direct-child HUD, directors and `TuningOverlay`; `player`, `player_start`, `player_yaw_deg`, `with_presentation`, `waves_enabled_on_start`, `rng_seed`, `spawner`, `director`; `enemies()`) is P1-room's.
+
+**Tuning layout**: group "Enemies" (`attacker_cap`, `blind_spot_priority`, `windup_mult`) then one `@export_subgroup` per owner, in this order: Wind-up, Posture, Navigation (P1-ai), Director (P1-director), Waves (P1-room), Street Punk (P1-ai), Kicker (P2-kicker), Pipe Thug (P2-thug), Enemy grabs (P2-grab), Bruiser (P3-bruiser), Boss (P3-boss). Group "Rear warning" is P1-hud's, group "Debug" gains `ai_frozen`. Every tunable the plan names is declared; a package appends only inside its own subgroup. `tuning/default.json` carries `merge=keep-ours` and is regenerated after every merge.
+
+**Placeholder poses and animation dispatch**: `MovePoses.windup_hold_at` (default -1) and `windup_hold` (a delta) key a second wind-up key at `windup_hold_at x startup` (the held telegraph; enemy moves use `windup_at` 0.4-0.6 and a hold near 0.8), mirrored by `mirrored()`; `PlaceholderAnims.windup_hold_time()` and `build_move_with(poses, move, scale)` are its seams. `PlaceholderPoses._recipe()` ends in `PlaceholderEnemyPoses.recipe(id, g, wg)` (`game/actors/poses/`), which tries `EnemyPosesPunk`, `EnemyPosesKicker`, `EnemyPosesThug`, `GrabPoses`, `EnemyPosesBruiser`, `EnemyPosesBoss`, each with `MOVE_IDS` and `recipe(id, g, wg)`; `HumanoidRig.has_anim()` asks `has_recipe()`. The shared helpers (`held()`, `tremble()`, `stance_named()`) live in the dispatcher. New named animations: `taunt` (`EnemyNamedPoses`), `brace` (`EnemyPosesBruiser`), `run_forward` (looping, `EnemyPosesBoss`), `hold_collar`, `held_collar` and `held_lift` (looping, `GrabPoses`), placeholders that hold the stance until their packages author them. `tools/gen_moves.gd` ends `_build_moves()` with `_build_enemy_moves()`, which calls one stub per archetype and a helper `_enemy(move, reach_m, recoil_frames, unblockable := false)`.
+
+**Tests and tools**: `tests/enemy_moves/<archetype>_table.gd` (design-fixed rows and attack chains; empty until each package fills its own), `tests/enemy_move_checks.gd` (clip timing, ragdoll joint limits, measured reach, first-person telegraph), `tests/fixtures/stub_enemy.gd`/`.tscn` (an `EnemyActor` that stands still: `want_token`, `attack`, `force_attack()`, optional `attack_on_token`) and `tests/fixtures/stub_director.gd` (an `EnemyDirector` whose holders, slots and waiting lists a test sets, recording `release_token()` and `may_start_windup()` calls), `tests/test_bot_scripts_compile.gd` (every script under `tests/bot` compiles), `tools/capture_bot.sh <bot scene> <out dir> ["<act filter>"] [stills fps]` (records with Movie Maker from whichever worktree it is run in, behind a machine-wide lock of two slots).
+
+### Enemy base and the Street Punk
+
+(Filled by P1-ai.)
+
+### Director
+
+(Filled by P1-director.)
+
+### Crowd room, navigation and waves
+
+(Filled by P1-room.)
+
+### Rear warning and the F3 AI overlay
+
+(Filled by P1-hud.)
+
+### Instruments: readability probe, autopilot, warning oracle
+
+(Filled by P1-instruments.)
+
+### Enemy grabs on the player
+
+(Filled by P2-grab.)
+
+### Kicker
+
+(Filled by P2-kicker.)
+
+### Pipe Thug and the dropped pipe
+
+(Filled by P2-thug.)
+
+### Bruiser
+
+(Filled by P3-bruiser.)
+
+### Boss
+
+(Filled by P3-boss.)
 
 ## Ownership (Milestone 1 build)
 

@@ -57,6 +57,13 @@ enabled=PackedStringArray("res://addons/gut/plugin.cfg")
 3d_render/layer_2="fp_hidden"
 3d_render/layer_3="debug"
 
+[navigation]
+
+3d/default_cell_height=0.1
+avoidance/thread_model/avoidance_use_multiple_threads=false
+world/map_use_async_iterations=false
+world/region_use_async_iterations=false
+
 [physics]
 
 3d/physics_engine="Jolt Physics"

@@ -387,7 +387,9 @@ func test_subgroups_are_parsed_and_shown_as_headings() -> void:
 	var panel := _panel()
 	Tuning._tuning_props = saved
 	assert_eq(panel.headings("Hit feel"), expected, "a heading per subgroup, in order")
-	assert_eq(panel.headings("Enemies"), PackedStringArray(), "none where there are no subgroups")
+	assert_eq(panel.headings("Enemies"), PackedStringArray([
+			"Wind-up", "Posture", "Navigation", "Director", "Waves", "Street Punk", "Kicker", "Pipe Thug",
+			"Enemy grabs", "Bruiser", "Boss"]), "Milestone 3's enemy subgroups, in order")
 	assert_eq(panel.headings("Camera"), PackedStringArray(["KO view"]), "TuningData's own Camera subgroup")
 	var page: Control = panel._pages["Hit feel"]
 	for i in expected.size():
