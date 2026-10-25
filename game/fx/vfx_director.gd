@@ -32,7 +32,10 @@ extends Node3D
 ## impact frame and the speed lines' flicker count real frames. advance() drives
 ## everything; _process() calls it, after the cameras have placed this frame's view
 ## (process_priority), and tests may call it directly. Every effect texture is loaded when
-## the director is created (VfxArt.preload_all()), never in a hit's frame.
+## the director is created (VfxArt.preload_all()), never in a hit's frame, and in a window
+## the director draws each effect material once at load too (begin_warm_up()): the first
+## comic sprite and the first finisher's impact frame otherwise build their materials and
+## compile their pipelines on the hit's frame (8-16 ms, a dropped frame).
 
 const GROUP := &"vfx_director"
 ## Canvas layers: the speed lines draw under the HUD (layer 10), the impact frame over it.
@@ -44,6 +47,12 @@ const PRIORITY_SPRAY := 0
 const PRIORITY_BURST := 1
 const PRIORITY_SPLASH := 2
 const PRIORITY_WORD := 3
+## The warm-up sprites (begin_warm_up()) sit this far ahead of the camera, this wide and
+## this opaque: in the view, so they are drawn, but under a pixel and faint enough that
+## nothing shows. Technical values, not feel.
+const WARM_DISTANCE_M := 1.0
+const WARM_SIZE_M := 0.001
+const WARM_ALPHA := 0.02
 
 ## Word pools per tier. Every word has a lettering PNG (VfxArt.word_texture()).
 @export var light_words: PackedStringArray = PackedStringArray(["POW", "BAM", "SMAK"])
@@ -58,6 +67,11 @@ var last_word: String = ""
 
 var _live: Array[ComicSprite] = []
 var _pool: Array[ComicSprite] = []
+## The warm-up (begin_warm_up()): the sprites still to be shown and the ones on screen for
+## their frame, and whether the impact frame's pixel is still to be drawn.
+var _warm_sprites_pending: bool = false
+var _warm_sprites: Array[ComicSprite] = []
+var _warm_impact_pending: bool = false
 ## The player attack being watched for a lunge (first person), where it started, and
 ## whether it already showed its lines.
 var _lunge_actor: CombatActor
@@ -91,6 +105,10 @@ func _init() -> void:
 	impact_frame.name = &"ImpactFrame"
 	flash_layer.add_child(impact_frame)
 	add_child(flash_layer)
+
+
+func _ready() -> void:
+	begin_warm_up()
 
 
 func _enter_tree() -> void:
@@ -130,6 +148,27 @@ func advance(real_dt: float) -> void:
 	speed_lines.keep_clear = _effect_rects(camera) if speed_lines.is_active() else ([] as Array[Rect2])
 	speed_lines.advance(dt, real_dt)
 	impact_frame.advance(real_dt)
+	_step_warm_up(camera)
+
+
+## Schedule the first-use warm-up, once the director has an active camera and `windowed`
+## (a window is open: not headless, which has no renderer to warm, so the tests' frames stay
+## as they are; the director calls this itself in _ready()). Godot builds a comic sprite's
+## material and compiles its pipeline the first time one is drawn, and so for the impact
+## frame's canvas material, which cost the first hit 8-16 ms and the first finisher 1-3 ms
+## more. So, once and for one rendered frame:
+##   - one ComicSprite of each material variant the effects use (a popping effect: no depth
+##     test; a thrown droplet: the plain one; a splat lying on a surface: shaded) is shown
+##     tiny and faint in front of the camera, then goes to the pool (a first hit also finds
+##     sprites built);
+##   - the impact frame draws its material on one pixel (ImpactFrame.warm()), only while the
+##     photosensitivity toggle (Tuning.impact_frame_enabled) is on: with it off no ink is
+##     ever drawn, and the pixel waits for the toggle to go on.
+## Nothing is visible at load. Returns `windowed`.
+func begin_warm_up(windowed: bool = DisplayServer.get_name() != "headless") -> bool:
+	_warm_sprites_pending = windowed
+	_warm_impact_pending = windowed
+	return windowed
 
 
 # --- Spawning (public for tests and bots) ------------------------------------------------
@@ -357,6 +396,38 @@ func _on_tuning_changed(property: StringName) -> void:
 # --- Internals -------------------------------------------------------------------------
 
 
+## The warm-up's per-frame step (begin_warm_up()): last frame's sprites go to the pool, then
+## the sprites and the impact frame's pixel go up once the camera and the toggle allow.
+func _step_warm_up(camera: Camera3D) -> void:
+	for sprite: ComicSprite in _warm_sprites:
+		sprite.visible = false
+		_pool.append(sprite)
+	_warm_sprites.clear()
+	if _warm_sprites_pending and camera != null:
+		_warm_sprites_pending = false
+		_show_warm_sprites(camera)
+	if _warm_impact_pending and Tuning.data.impact_frame_enabled:
+		_warm_impact_pending = false
+		impact_frame.warm()
+
+
+## One sprite per material variant, tiny and faint straight ahead of `camera` (in its view).
+func _show_warm_sprites(camera: Camera3D) -> void:
+	var cam := camera.global_transform.orthonormalized()
+	var placed := Transform3D(cam.basis * Basis.from_scale(Vector3.ONE * WARM_SIZE_M),
+			cam.origin - cam.basis.z * WARM_DISTANCE_M)
+	for motion: ComicSprite.Motion in [ComicSprite.Motion.POP, ComicSprite.Motion.THROWN, ComicSprite.Motion.LYING]:
+		var sprite := _make_sprite()
+		sprite.motion = motion
+		sprite.no_depth_test = motion == ComicSprite.Motion.POP
+		sprite.shaded = motion == ComicSprite.Motion.LYING
+		sprite.set_art(VfxArt.texture(&"burst_small"))
+		sprite.modulate = Color(1.0, 1.0, 1.0, WARM_ALPHA)
+		sprite.global_transform = placed
+		sprite.visible = true
+		_warm_sprites.append(sprite)
+
+
 ## Enemies only. `force` re-applies the look even when the level is unchanged.
 func _update_damage_look(actor: CombatActor, health: float, max_health: float, force: bool) -> void:
 	if not is_instance_valid(actor) or not actor.is_in_group(&"enemy") or actor.rig == null:
@@ -508,11 +579,16 @@ func _chance(p: float) -> bool:
 	return p >= 1.0 or (p > 0.0 and rng.randf() < p)
 
 
+func _make_sprite() -> ComicSprite:
+	var sprite := ComicSprite.new()
+	add_child(sprite)
+	return sprite
+
+
 func _acquire(kind: StringName, art: Texture2D, motion: ComicSprite.Motion) -> ComicSprite:
 	var sprite: ComicSprite = _pool.pop_back() if not _pool.is_empty() else null
 	if sprite == null:
-		sprite = ComicSprite.new()
-		add_child(sprite)
+		sprite = _make_sprite()
 	sprite.kind = kind
 	sprite.motion = motion
 	sprite.set_art(art)

@@ -513,7 +513,7 @@ func test_speed_lines_do_not_flicker_with_the_photosensitivity_toggle_off() -> v
 	assert_eq(vfx.speed_lines.lines(), placed)
 
 
-## Captures repeat: the lines draw from the director's rng, which the bots seed.
+## Captures repeat: the lines draw from the director's rng, which vfx_bot seeds.
 func test_seeding_the_director_repeats_the_speed_lines() -> void:
 	_land(_hit(CombatTypes.HitTier.FINISHER))
 	var first := vfx.speed_lines.lines()
@@ -708,10 +708,84 @@ func test_rig_damage_look_changes_materials_only() -> void:
 	assert_false(mats[PlaceholderBody.Paint.DARK].detail_enabled, "shades and soles stay")
 	rig.set_damage_look(DamageLook.Level.CLEAN)
 	for paint: int in mats:
-		assert_false(mats[paint].detail_enabled, "clean again: paint %d" % paint)
-		assert_false(mats[paint].uv1_triplanar, "original shader: paint %d" % paint)
+		if DamageLook.bruisable(paint):
+			assert_eq(mats[paint].detail_albedo, VfxArt.clear_detail(), "clean again: nothing shows on paint %d" % paint)
+		else:
+			assert_false(mats[paint].detail_enabled, "still no detail layer: paint %d" % paint)
 	assert_eq(rig.find_children("*", "MeshInstance3D", true, false).size(), meshes, "no meshes added")
 	assert_eq(rig.get_point_transform(&"RightFistPoint"), fist, "pose untouched")
+
+
+## Every stored property of `mat` but the two a damage look changes (the detail texture and
+## its tile size): together they pick the material's shader variant, so equal dictionaries
+## mean the same shader.
+func _variant_props(mat: StandardMaterial3D) -> Dictionary:
+	var out := {}
+	for info: Dictionary in mat.get_property_list():
+		var key: String = info.name
+		if (info.usage as int) & PROPERTY_USAGE_STORAGE != 0 and key != "detail_albedo" and key != "uv1_scale":
+			out[key] = mat.get(key)
+	return out
+
+
+## perf-02: the detail layer is on from the build (a transparent texture while clean), so a
+## look change swaps the texture only and never the shader variant (a switch recompiled it
+## on the first bruise of every clean cast: 3-5 ms and a pipeline compile).
+func test_damage_look_never_switches_the_shader_variant() -> void:
+	var rig := HumanoidRig.new()
+	rig.build_hurtboxes = false
+	add_child_autofree(rig)
+	rig.build()
+	var mats: Dictionary[int, StandardMaterial3D] = rig.get(&"_materials")
+	var variants := {}
+	for paint: int in mats:
+		variants[paint] = _variant_props(mats[paint])
+	for paint: int in [PlaceholderBody.Paint.SKIN, PlaceholderBody.Paint.BODY, PlaceholderBody.Paint.PANTS,
+			PlaceholderBody.Paint.ACCENT]:
+		var mat := mats[paint]
+		assert_true(mat.detail_enabled, "detail layer on from the build: paint %d" % paint)
+		assert_true(mat.uv1_triplanar, "triplanar from the build: paint %d" % paint)
+		assert_eq(mat.detail_blend_mode, BaseMaterial3D.BLEND_MODE_MIX)
+		assert_eq(mat.detail_uv_layer, BaseMaterial3D.DETAIL_UV_1)
+		assert_eq(mat.detail_albedo, VfxArt.clear_detail(), "clean shows nothing: paint %d" % paint)
+	assert_false(mats[PlaceholderBody.Paint.DARK].detail_enabled, "the dark paint takes no marks")
+	for level: int in [DamageLook.Level.BRUISED, DamageLook.Level.BLOODIED, DamageLook.Level.CLEAN,
+			DamageLook.Level.BRUISED, DamageLook.Level.CLEAN]:
+		rig.set_damage_look(level)
+		for paint: int in mats:
+			assert_eq(_variant_props(mats[paint]), variants[paint], "level %d keeps paint %d's variant" % [level, paint])
+	# The same textures as before (the look picks them by paint and level).
+	assert_null(DamageLook.texture_for(PlaceholderBody.Paint.SKIN, DamageLook.Level.CLEAN))
+	assert_eq(DamageLook.texture_for(PlaceholderBody.Paint.SKIN, DamageLook.Level.BRUISED), VfxArt.texture(&"damage_bruised"))
+	assert_eq(DamageLook.texture_for(PlaceholderBody.Paint.SKIN, DamageLook.Level.BLOODIED), VfxArt.texture(&"damage_bloodied"))
+	assert_eq(DamageLook.texture_for(PlaceholderBody.Paint.PANTS, DamageLook.Level.BRUISED), VfxArt.texture(&"damage_scuffed"))
+	assert_eq(DamageLook.texture_for(PlaceholderBody.Paint.ACCENT, DamageLook.Level.BLOODIED), VfxArt.texture(&"damage_blood"))
+	assert_null(DamageLook.texture_for(PlaceholderBody.Paint.DARK, DamageLook.Level.BLOODIED))
+
+
+## The "nothing" texture shows nothing: fully transparent, one pixel, held for the run.
+func test_clean_detail_texture_is_clear_and_held() -> void:
+	var tex := VfxArt.clear_detail()
+	assert_eq(tex, VfxArt.clear_detail(), "one texture for the run")
+	var image := tex.get_image()
+	assert_eq(image.get_size(), Vector2i(1, 1))
+	assert_eq(image.get_pixel(0, 0).a, 0.0, "mixes in nothing")
+
+
+## The tile size is the one thing besides the texture a look re-reads (Tuning.vfx_damage_tile_m).
+func test_damage_look_rereads_the_tile_size() -> void:
+	var rig := HumanoidRig.new()
+	rig.build_hurtboxes = false
+	add_child_autofree(rig)
+	rig.build()
+	var skin: StandardMaterial3D = (rig.get(&"_materials") as Dictionary[int, StandardMaterial3D])[PlaceholderBody.Paint.SKIN]
+	assert_eq(skin.uv1_scale, Vector3.ONE / Tuning.data.vfx_damage_tile_m, "from the build")
+	Tuning.data.vfx_damage_tile_m = 0.5
+	rig.set_damage_look(DamageLook.Level.BRUISED)
+	assert_eq(skin.uv1_scale, Vector3.ONE / 0.5)
+	rig.set_damage_look(DamageLook.Level.CLEAN)
+	assert_eq(skin.uv1_scale, Vector3.ONE / 0.5)
+	assert_eq(skin.detail_albedo, VfxArt.clear_detail())
 
 
 ## The whole-body flash (set_flash(), the parry's) is emission added over the lit, marked
@@ -826,6 +900,124 @@ func test_presentation_writes_no_game_state() -> void:
 	assert_eq([dummy.health, dummy.state, dummy.global_position, dummy.sim_velocity], before)
 	assert_false(TimeController.is_in_hitstop(dummy), "no time changes either")
 	assert_false(TimeController.is_slowmo())
+
+
+# --- First-use warm-up (perf-01) -----------------------------------------------------
+
+
+## The comic sprites on screen that are not live effects: the warm-up's.
+func _warm_sprites() -> Array[ComicSprite]:
+	var out: Array[ComicSprite] = []
+	for child: Node in vfx.get_children():
+		var sprite := child as ComicSprite
+		if sprite and sprite.visible and not vfx.live_effects().has(sprite):
+			out.append(sprite)
+	return out
+
+
+func _pooled() -> int:
+	return (vfx.get(&"_pool") as Array).size()
+
+
+## The first comic sprite and the impact frame's material were built and compiled on the
+## first hit's frame (8-16 ms). With a window the director draws each variant once at load;
+## headless has no renderer, so the warm-up is skipped and the tests' frames stay as they are.
+func test_warm_up_is_skipped_headless() -> void:
+	assert_eq(vfx.begin_warm_up(), DisplayServer.get_name() != "headless", "only with a window")
+	assert_false(vfx.begin_warm_up(false), "headless: nothing scheduled")
+	for i in 3:
+		vfx.advance(TICK)
+	assert_eq(_warm_sprites().size(), 0, "no sprite drawn")
+	assert_false(vfx.impact_frame.visible, "no impact frame pixel")
+	assert_eq(_pooled(), 0, "no sprite built ahead")
+
+
+## With a window: one tiny sprite per material variant, straight ahead in the view, for one
+## frame; then they are in the pool, where a first hit finds them built.
+func test_warm_up_shows_each_sprite_variant_once_then_pools_it() -> void:
+	assert_true(vfx.begin_warm_up(true))
+	assert_eq(_warm_sprites().size(), 0, "nothing until the director steps with a camera")
+	vfx.advance(TICK)
+	var shown := _warm_sprites()
+	assert_eq(shown.size(), 3, "one of each variant")
+	var variants := []
+	for sprite: ComicSprite in shown:
+		variants.append([sprite.shaded, sprite.no_depth_test])
+		assert_true(sprite.double_sided, "as every comic sprite")
+		assert_true(camera.is_position_in_frustum(sprite.global_position), "inside the view")
+		assert_lt(sprite.global_transform.basis.get_scale().x, 0.01, "under a centimeter wide")
+		assert_lt(sprite.modulate.a, 0.1, "faint")
+		assert_eq(sprite.global_position.z, -VfxDirector.WARM_DISTANCE_M, "ahead of the lens")
+	variants.sort()
+	var wanted := [[false, false], [false, true], [true, false]]
+	wanted.sort()
+	assert_eq(variants, wanted, "popping (no depth test), thrown (plain) and lying (shaded)")
+	assert_eq(vfx.live_effects().size(), 0, "no live effect")
+	vfx.advance(TICK)
+	assert_eq(_warm_sprites().size(), 0, "gone after their frame")
+	assert_eq(_pooled(), 3, "retired to the pool")
+	for i in 3:
+		vfx.advance(TICK)
+	assert_eq(_warm_sprites().size(), 0, "never shown again")
+	assert_eq(_pooled(), 3)
+	_land(_hit(CombatTypes.HitTier.LIGHT))
+	var burst := vfx.live_effects(&"burst_small")[0]
+	assert_true(shown.has(burst), "the first hit takes a sprite built at load")
+	assert_eq(_pooled(), 2)
+	assert_eq(burst.modulate, Color.WHITE, "with its own look")
+
+
+func test_warm_up_waits_for_a_camera() -> void:
+	camera.clear_current(false)
+	assert_null(get_viewport().get_camera_3d())
+	vfx.begin_warm_up(true)
+	vfx.advance(TICK)
+	assert_eq(_warm_sprites().size(), 0, "no camera to place them against")
+	camera.make_current()
+	vfx.advance(TICK)
+	assert_eq(_warm_sprites().size(), 3)
+
+
+## The impact frame's material is drawn on one pixel for a frame, no more: not a flash.
+func test_warm_up_draws_the_impact_frame_on_one_pixel() -> void:
+	vfx.begin_warm_up(true)
+	vfx.advance(TICK)
+	var frame := vfx.impact_frame
+	assert_true(frame.visible, "drawn")
+	assert_false(frame.is_flashing(), "but no flash")
+	assert_eq(frame.size, Vector2.ONE, "on a single pixel")
+	vfx.advance(TICK)
+	assert_false(frame.visible, "for one frame")
+	assert_eq([frame.anchor_right, frame.anchor_bottom], [1.0, 1.0], "the whole screen again")
+	assert_gt(frame.size.x, 1.0)
+	vfx.advance(TICK)
+	assert_false(frame.visible)
+	# A finisher flashes the whole screen as before, also straight after the warm-up.
+	frame.warm()
+	assert_true(frame.visible)
+	_land(_hit(CombatTypes.HitTier.FINISHER))
+	assert_true(frame.is_flashing(), "the flash starts")
+	assert_eq([frame.anchor_right, frame.anchor_bottom], [1.0, 1.0], "over the whole screen")
+	assert_gt(frame.size.x, 1.0)
+
+
+## The photosensitivity toggle: with it off no ink is ever drawn, not even the warm-up's
+## pixel, which waits for the toggle to go on.
+func test_warm_up_draws_no_ink_with_the_photosensitivity_toggle_off() -> void:
+	Tuning.data.impact_frame_enabled = false
+	vfx.begin_warm_up(true)
+	for i in 4:
+		vfx.advance(TICK)
+		assert_false(vfx.impact_frame.visible, "no ink at tick %d" % i)
+	assert_eq(_pooled(), 3, "the sprites still warmed")
+	_land(_hit(CombatTypes.HitTier.FINISHER))
+	assert_false(vfx.impact_frame.visible, "and no flash")
+	Tuning.data.impact_frame_enabled = true
+	vfx.advance(TICK)
+	assert_true(vfx.impact_frame.visible, "switched on: warmed then")
+	assert_false(vfx.impact_frame.is_flashing())
+	vfx.advance(TICK)
+	assert_false(vfx.impact_frame.visible)
 
 
 # --- Wiring, tuning and art ----------------------------------------------------------

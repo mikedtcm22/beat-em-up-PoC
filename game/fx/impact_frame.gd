@@ -13,6 +13,9 @@ var time_left: float = 0.0
 ## advance() calls since the flash started (each is one rendered frame).
 var frames_shown: int = 0
 
+## The one-pixel warm-up is on screen (warm()). It is no flash.
+var _warming: bool = false
+
 
 func _init() -> void:
 	var mat := ShaderMaterial.new()
@@ -26,8 +29,24 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
 
+## Draw the ink material once, on a single pixel in the screen's corner, for one rendered
+## frame (the next advance() ends it): the renderer builds the material's canvas pipeline and
+## its screen-texture copy at load, not on the first finisher's frame (measured: 1-3 ms
+## more on it). Not a flash: is_flashing() stays false, and the screen stays as it is but
+## for that pixel. VfxDirector calls it once, and only while the photosensitivity toggle
+## (Tuning.impact_frame_enabled) is on. Does nothing while a flash is showing.
+func warm() -> void:
+	if visible:
+		return
+	_warming = true
+	set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	size = Vector2.ONE
+	visible = true
+
+
 ## Flash for `seconds` of real time (at least one frame).
 func flash(seconds: float) -> void:
+	_end_warm()
 	time_left = maxf(seconds, 0.0)
 	frames_shown = 0
 	var mat := material as ShaderMaterial
@@ -38,12 +57,15 @@ func flash(seconds: float) -> void:
 
 
 func is_flashing() -> bool:
-	return visible
+	return visible and not _warming
 
 
 ## Step `real_dt` real seconds. The frame the flash starts in is always shown whole.
 func advance(real_dt: float) -> void:
 	if not visible:
+		return
+	if _warming:
+		_end_warm()
 		return
 	if frames_shown > 0:
 		time_left -= real_dt
@@ -51,3 +73,12 @@ func advance(real_dt: float) -> void:
 			visible = false
 			return
 	frames_shown += 1
+
+
+## Hide the warm-up's pixel and give the rect back its whole screen.
+func _end_warm() -> void:
+	if not _warming:
+		return
+	_warming = false
+	visible = false
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)

@@ -24,7 +24,7 @@ var keep_clear: Array[Rect2] = []
 ## Times the lines were placed since start() (1 = never redrawn in new places).
 var shuffles: int = 0
 ## Draws the lines' placement. VfxDirector hands over its own, so seeding the director's
-## rng (the bots do) repeats the lines too.
+## rng (vfx_bot does) repeats the lines too.
 var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
 var _tex: Texture2D = VfxArt.texture(&"speed_lines")
