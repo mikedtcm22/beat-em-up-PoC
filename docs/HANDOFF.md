@@ -32,6 +32,7 @@ Account E is at 91% of its 5-hour window (resets 12:30 CDT) and 78% weekly (rese
   | `r2-dummy-comeback` | gap-05, gap-04, part of gap-08 |
 
 - **Legs.** Each leg's owner writes "Leg N claimed by account X at HH:MM" here before starting and "Leg N done" when finished, so two accounts never work at once on the same files.
+  - **Leg 1 claimed by account F at 10:58 CDT** (5-hour 16%, resets 12:09 CDT; weekly 33%, resets Wed 2026-10-28 10:59 CDT). Its watcher is "Beat-em-up: usage watcher" (`usage-watcher`).
   - **Leg 1, the round 2 fixes** (the account starting now):
     1. Start-up as in the takeover prompt: the session title, a watcher, `get_usage`.
     2. `Workflow({scriptPath: "<repo>/docs/reviews/M2-phase3/workflow-fix.js", args: <the contents of docs/reviews/M2-phase3/args-r2-fix.json>})`. It runs four Sonnet fixers, two at once, each usage-gated. If a gate skips a package, rerun later with `only`.
