@@ -124,13 +124,18 @@ func advance(delta: float) -> void:
 ## - Across: over its hips as drawn, the middle of the body: under the head while it stands,
 ##   the middle of a body lying or flying, and the far side of one held bent over (its head
 ##   is at the holder's waist, and a bar over it would sit on the holder).
-## - Up: at the highest the drawn body shows on that screen, its head's top
-##   (get_head_top_position(), which floats above the head) or any joint raised by
-##   `body_margin_m`. A head bent toward the camera, arms flung up, a bent back or a body
-##   lying on the floor stay under the bar, and the bar stays close above them.
+## - Up: at the highest the drawn body shows on that screen, its head's top or any joint
+##   raised by `body_margin_m`. The head's top is get_head_top_position() (which floats a
+##   little above the head) brought over the head's joint at its height: the point itself
+##   floats beside a bent or lying head, over empty floor. A head bent toward the camera,
+##   arms flung up, a bent back or a body lying on the floor stay under the bar, and the bar
+##   stays about as close above them as over a standing head.
 ## Vector2.INF while the head is behind the camera.
 func screen_anchor_of(actor: CombatActor, camera: Camera3D) -> Vector2:
 	var head := actor.get_head_top_position()
+	if actor.rig != null:
+		var neck := actor.rig.get_visual_point_transform(&"Head").origin
+		head = Vector3(neck.x, maxf(head.y, neck.y), neck.z)
 	if camera.is_position_behind(head):
 		return Vector2.INF
 	var screen := camera.unproject_position(head)
