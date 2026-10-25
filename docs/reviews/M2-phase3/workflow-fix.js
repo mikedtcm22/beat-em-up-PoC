@@ -16,6 +16,7 @@ export const meta = {
 //   note: "<text>"         a lead's note added to every fixer's brief (known failures, merge state)
 //   packages_file: "packages-r2.json"  read this file instead of packages.json (a later round)
 //   fixer_cost: <n>         the gate's estimate per fixer, in % of a 5-hour window (default 25; a narrow package costs less)
+//   fixer_model: "sonnet"  the fixers' model (Game-boy, 2026-10-25: Opus plans and reviews, Sonnet codes)
 //   concurrency: 1         run fixers one after another, each gated when its turn comes (default 2;
 //                          use 1 when the headroom fits one fixer, so the next waits instead of skipping)
 
@@ -198,7 +199,7 @@ Return an outcome for EVERY finding id, the commit, push state, test counts, tun
 }
 
 const results = await parallel(todo.map(p => () => heavySlot(() => launch(`fix:${p.key}`, 'Fix', COST.fixer,
-  () => agent(fixerPrompt(p), { label: `fix:${p.key}`, phase: 'Fix', schema: FIX_SCHEMA })))
+  () => agent(fixerPrompt(p), { label: `fix:${p.key}`, phase: 'Fix', schema: FIX_SCHEMA, ...(A.fixer_model ? { model: A.fixer_model } : {}) })))
   .then(r => {
     if (r.result) scribe(`fix-${p.key}.json`, r.result, `M2 phase 3 C: fix results (${p.key})`)
     return { key: p.key, ...r }

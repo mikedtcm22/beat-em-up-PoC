@@ -4,6 +4,59 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-25 10:53 CDT: Game-boy's verdicts; today's plan in legs, across accounts
+Account E is at 91% of its 5-hour window (resets 12:30 CDT) and 78% weekly (resets Tue 2026-10-27 17:00 CDT). Game-boy played the build and gave his verdicts. **Another account starts leg 1 now.** Account E's session is renamed "Beat-em-up: account E session (paused)", and its watcher is stopped. After 12:30 it picks up the next leg nobody has claimed.
+- **Decisions (Game-boy, 2026-10-25; also in the Decisions log):**
+  - **Side view is a debug view**, not a player mode, so its looks don't matter now. Only first person counts; it may matter later for a 2-player mode. So:
+    - hit-05 (side-view burst sizes) and gap-06 (the stomp's shins) are **dropped**;
+    - the side-view flash's minimum size is answered: **leave it**;
+    - hit-03 (the log in side view) is moot; grab-03, the log over the knee in first person, stays open.
+  - **The player's KO: an "out of body" view.** The camera pans away from the body a bit and shows the player fully lying on the floor. It's the only time the camera leaves the player's eyes, and it needs a README departure in D.
+  - **Every other proposed fix is approved as is:**
+    - gap-01: the body hits the wall and crumples (full ragdoll from the pose on screen);
+    - gap-03: a launch from behind pitches forward, away from the attacker;
+    - gap-05: a dummy comes back in front of or beside the player, with room, and waits instead of walking into him;
+    - gap-04: the hook's far arm stays bent near the guard;
+    - gap-07: the ragdoll's first tick is seeded from the animation pose;
+    - gap-08: the leftover numbers become tunables;
+    - perf-01 and perf-02: warm-ups at load, and no shader-variant switch.
+  - **Models: Opus plans and reviews; Sonnet codes and executes.** `workflow-fix.js` and `workflow-r2-close.js` have a new `fixer_model` arg. Skeptics already run on Sonnet; gates and scribes on Haiku.
+  - **Passing between accounts today is fine**, to finish the fixes today.
+- **Packages** (`packages-r2.json` on `m2/phase3-review` @ `ac0cfe9`, rewritten per the above, with notes that tell each fixer what changed):
+
+  | Package | Findings |
+  | --- | --- |
+  | `r2-launch-into-walls` | gap-01, gap-03, gap-07, part of gap-08 |
+  | `r2-vfx-first-use` | perf-01, perf-02, part of gap-08 |
+  | `r2-player-ko-view` | gap-02, the out-of-body KO view |
+  | `r2-dummy-comeback` | gap-05, gap-04, part of gap-08 |
+
+- **Legs.** Each leg's owner writes "Leg N claimed by account X at HH:MM" here before starting and "Leg N done" when finished, so two accounts never work at once on the same files.
+  - **Leg 1, the round 2 fixes** (the account starting now):
+    1. Start-up as in the takeover prompt: the session title, a watcher, `get_usage`.
+    2. `Workflow({scriptPath: "<repo>/docs/reviews/M2-phase3/workflow-fix.js", args: <the contents of docs/reviews/M2-phase3/args-r2-fix.json>})`. It runs four Sonnet fixers, two at once, each usage-gated. If a gate skips a package, rerun later with `only`.
+    3. Merge the four `m2/phase3-fix-r2-*` branches and `m2/phase3-review` into `m2/hit-feel`, regenerate the preset (`godot --headless --import --quit && godot --headless -s tools/gen_default_preset.gd`), run `tools/run_tests.sh` (all pass, no SCRIPT ERROR or ERROR), and push.
+    4. Look at the KO-view sheets yourself (first person). It's new design, so show Game-boy one sheet.
+  - **Leg 2, a final Opus review of the fixes, in first person:**
+    - **Code review** of `c27afaf..m2/hit-feel`, the critic's high gap: the fixes were never code-reviewed. Check the layer rules, no feel numbers, static types and `##` docs, live `Tuning.changed` re-reads, and interactions between fixes built on separate branches (the from-hold launch against grab-02's release, the delayed flash against `_vanish`, `_turn_solid` against the respawn queries).
+    - **First-person look** at the merged build: ragdoll_bot's acts, the finishers after hit-04, the KO view, the respawn.
+    - **Tooling:** give `workflow-r2-close.js` a `review_brief` arg that skips the critic, and a `round` suffix for the file names (`review-r3.json`, `packages-r3.json`). Reviewers run on Opus, skeptics and fixers on Sonnet.
+  - **Leg 3, D and the PR:**
+    - Final first-person sheets for Game-boy.
+    - README: the Milestone 2 status; the hook figure (0.346 m at 0.9 against 0.217 m at 0.6); new departures for the out-of-body KO view and the delayed finisher flash if it counts as one; side view noted as debug-only.
+    - ARCHITECTURE's VFX, Audio, Ragdoll, Hit flash, hold-view and KO-view sections checked against the code.
+    - Open the M2 PR from `m2/hit-feel` into `main`. **Never merge it** without Game-boy's sign-off.
+  - gap-09 (bot harness: ragdoll_bot's `--act` ignores `a|b`, and parked dummies fall) is unverified and low. Fold it into leg 2 if cheap.
+- **Still open with Game-boy** (each keeps its default, as now):
+  - grab-03, the combat log over the knee in first person;
+  - grab-05 and hit-01, the flash's first-person size and the flurry strobe;
+  - hit-02, a hit on the player in first person;
+  - grab-06's dead band;
+  - the new look;
+  - `ragdoll_partial_head_influence`;
+  - more contortion on the contact push;
+  - WP3's audio.
+
 ### 2026-10-25 09:12 CDT: round 2 reviewed (gap review: 8 of 8 verified survive); four r2 packages wait; weekly at 76%
 The 5-hour window is at 83% (resets 12:30 CDT); **weekly is at 76%** (resets Tue 2026-10-27 17:00 CDT). Nothing is running. Every branch is pushed. `m2/hit-feel` @ `ed36d1b` has every C record (486/486 tests; no code changed since `8f5519f`).
 - **The round 2 close** (`wf_e4327a11-eae`, 40 agents) took the window from 22% to 83% and weekly from 66% to 76%. The gap reviewer and its skeptics alone cost about 44 points of the window.
@@ -739,6 +792,10 @@ Every approved spec change so far is in README.md, "Where M1 departs from the sp
 - **Ultracode (2026-10-24 11:38 CDT):** Game-boy turned ultracode on. Substantive work runs as Workflow scripts (multi-lens review, adversarial verification, completeness critic), with the usage rules still in force.
 - **Handoff for package C (2026-10-24 12:38 CDT):** switch accounts now rather than wait for account E's 16:30 reset.
 - **Usage thresholds (2026-10-24 12:40 CDT):** work up to the 90% handoff instead of stopping new launches at 65%. Size each launch to the headroom left below 90%. When a new phase or milestone doesn't fit, split off a first task that does, run it, and hand off at 90%. See "Usage rules for the working session".
+- **Side view is debug-only (2026-10-25):** only first-person looks and feel count; side view only checks mechanics (it may matter later for a 2-player mode). hit-05 and gap-06 are dropped, and the side-view flash's minimum size stays as it is.
+- **The player's KO, an "out of body" view (2026-10-25):** the camera pans away from the body and shows the player lying on the floor, the only time it leaves the player's eyes. It's a README departure.
+- **Round 2's proposed fixes are approved as written (2026-10-25)**, with the KO view as above.
+- **Models (2026-10-25):** Opus for planning and review, Sonnet for coding and execution. Fixers run with `fixer_model: "sonnet"`.
 - **Process:** at each usage limit, hand off to Game-boy's second Claude account. Never assume the same session resumes.
 
 ## Usage watcher
@@ -826,7 +883,7 @@ USAGE RULES:
 
 Next steps (Milestone 2; details are in docs/HANDOFF.md):
 - Phases 1 and 2, the localized flash and phase 3's packages A (ragdoll: contact push, KO blink-off, staggers at 0.9) and B (grab view and waist bend) are merged into m2/hit-feel. 457/457 tests pass with no SCRIPT ERROR, at f98bb21. README has the three approved M2 ragdoll departures. WP3's audio was judged by analysis only, so I'll listen to it.
-- Phase 3's package C runs as a Workflow (I turned ultracode on), per docs/milestones/M2-phase3-plan.md, "C", step 2. The code, ragdoll and grab reviews are done, and all 19 of their findings are verified: every one survives, and 2 are spec questions for me (grab-03, grab-05). The 17 others are split into four fix packages (docs/reviews/M2-phase3/packages.json on branch m2/phase3-review). All four packages are fixed and merged into m2/hit-feel with the review records (484/484 tests, no SCRIPT ERROR). Round 2 reviewed the merged build: the hit-feel, performance and gap lenses and a completeness critic. hit-04 is fixed and merged (486/486). The rest is in four packages in docs/reviews/M2-phase3/packages-r2.json, not started. Weekly usage is the limit now: follow my call in docs/HANDOFF.md's newest entry (D and the PR first, or the four fixers first), with workflow-fix.js and packages_file "packages-r2.json". Then record the final sheets and show me. Then D: check ARCHITECTURE against the code, README's Milestone 2 status, and the M2 PR, which is never merged without my sign-off.
+- Phase 3's package C runs as a Workflow (I turned ultracode on), per docs/milestones/M2-phase3-plan.md, "C", step 2. The code, ragdoll and grab reviews are done, and all 19 of their findings are verified: every one survives, and 2 are spec questions for me (grab-03, grab-05). The 17 others are split into four fix packages (docs/reviews/M2-phase3/packages.json on branch m2/phase3-review). All four packages are fixed and merged into m2/hit-feel with the review records (484/484 tests, no SCRIPT ERROR). Round 2 reviewed the merged build: the hit-feel, performance and gap lenses and a completeness critic. hit-04 is fixed and merged (486/486). I gave my verdicts on 2026-10-25: side view is debug-only, the KO gets an "out of body" view, and every other proposed fix is approved. The four round 2 packages are in docs/reviews/M2-phase3/packages-r2.json. Today runs in legs across accounts, as docs/HANDOFF.md's newest entry says: leg 1 the round 2 fixes (workflow-fix.js with docs/reviews/M2-phase3/args-r2-fix.json, Sonnet fixers), leg 2 a final Opus review of the fixes in first person, leg 3 the docs and the PR. Claim a leg in HANDOFF before starting it. Then record the final sheets and show me. Then D: check ARCHITECTURE against the code, README's Milestone 2 status, and the M2 PR, which is never merged without my sign-off.
 - Open for me (each has a default; none blocks C): more contortion on the ragdoll contact push (default: as it is); the grab's lens pull-back and the bend's depth (default: as they are); the combat log over the knee contact (default: C proposes a fix); a minimum on-screen size for the side-view flash (default: leave it). And I'll listen to WP3's audio.
 
 Ground rules:

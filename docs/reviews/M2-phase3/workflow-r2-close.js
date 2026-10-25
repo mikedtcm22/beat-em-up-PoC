@@ -269,7 +269,7 @@ if (partition && partition.packages.length && !A.no_fix) {
   phase('Fix')
   await Promise.allSettled(scribeJobs)
   fix = await workflow({ scriptPath: `${ROOT}/docs/reviews/M2-phase3/workflow-fix.js` },
-    { packages_file: 'packages-r2.json', note: A.fix_note || '', concurrency: A.concurrency || 2, ...(A.fixer_cost ? { fixer_cost: A.fixer_cost } : {}) })
+    { packages_file: 'packages-r2.json', note: A.fix_note || '', concurrency: A.concurrency || 2, ...(A.fixer_cost ? { fixer_cost: A.fixer_cost } : {}), ...(A.fixer_model ? { fixer_model: A.fixer_model } : {}) })
 }
 
 await Promise.allSettled(scribeJobs)
