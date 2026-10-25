@@ -52,6 +52,13 @@ extends Resource
 ## so its head rises while it moves away instead of up through the holder's view: released
 ## on its feet, or launched out of the hold (a throw, or a knee that KOs it).
 @export_range(0.0, 0.6, 0.01) var grab_release_blend_s: float = 0.22
+## Grabbed, the body bends over into the held pose over this blend (sim seconds) while its
+## origin eases in from where it stood to the holder's hold point over grab_pin_ease_s,
+## slowly at first: the head drops below the holder's first-person lens (at the throat)
+## before the body closes in, instead of sweeping through it. A staggering body leaves its
+## partial ragdoll over at least the blend.
+@export_range(0.0, 0.5, 0.01) var grab_hold_blend_s: float = 0.12
+@export_range(0.0, 1.0, 0.01) var grab_pin_ease_s: float = 0.23
 @export_subgroup("Hold view")
 ## While an enemy is held, the first-person view pitches down this many degrees (Game-boy,
 ## 2026-10-24), so the knees show landing on the held body; a knee's own camera_pitch_deg
@@ -79,8 +86,9 @@ extends Resource
 @export_range(10, 60, 1) var getup_frames: int = 30
 @export_range(0, 60, 1) var getup_invuln_frames: int = 30
 ## A hit's pose snaps in over this long (sim seconds): a launch's, a knee's jolt on a held
-## body, a flinch's and a guard break's.
+## body, a flinch's and a guard break's. A stagger's snaps in over stagger_snap_blend_s.
 @export_range(0.0, 0.2, 0.005) var reaction_snap_blend_s: float = 0.03
+@export_range(0.0, 0.2, 0.005) var stagger_snap_blend_s: float = 0.04
 ## Deceleration of knockback slides on the ground (m/s^2).
 @export_range(0.0, 60.0, 0.5) var ground_friction: float = 14.0
 ## A flying body must move at least this fast (m/s) to knock down whoever it hits.
@@ -94,15 +102,26 @@ extends Resource
 ## body width plus this much clearance (m) from it (two of each when that spot is taken), so
 ## it never arrives touching the body on the post.
 @export_range(0.0, 0.5, 0.01) var dummy_respawn_gap_m: float = 0.1
+## Of the equally far spots around the post (a player standing on it sees them all at the
+## same distance) the comeback takes the one whose angle off his facing is nearest to this
+## many degrees: off-centre but in view, not dead ahead filling more than half of it (the
+## eight spots are 45 degrees apart, so 50 takes one of the two 45 degrees off his facing;
+## 0 takes the one straight ahead, 90 one beside him).
+@export_range(0.0, 90.0, 1.0) var dummy_respawn_off_axis_deg: float = 50.0
 ## A training dummy left alone (standing, nobody to spar with) this long (s) walks back to
 ## its post, turning toward it at dummy_return_turn_rate (rad/s), until it is within
-## dummy_return_slack_m of it. It stays put while someone is on the post, and gives up a walk
-## that gets no nearer for dummy_return_stuck_s (a body in the way), trying again after the
-## idle time.
+## dummy_return_slack_m of it. It stays put while someone is on the post, and while a
+## standing body (the player, another dummy) is within dummy_return_look_ahead_m (m) ahead of
+## it on the way, standing facing the player until he steps aside instead of walking into
+## him. It gives up a walk that gets no nearer for dummy_return_stuck_s (a crate or wall in
+## the way) and tries no more until it is hit or moved dummy_return_retry_moved_m (m) from
+## where it gave up.
 @export_range(0.0, 10.0, 0.1) var dummy_return_idle_s: float = 1.0
 @export_range(0.0, 2.0, 0.05) var dummy_return_slack_m: float = 0.3
 @export_range(0.5, 20.0, 0.5) var dummy_return_turn_rate: float = 6.0
 @export_range(0.1, 3.0, 0.05) var dummy_return_stuck_s: float = 0.25
+@export_range(0.0, 2.0, 0.05) var dummy_return_look_ahead_m: float = 0.5
+@export_range(0.0, 2.0, 0.05) var dummy_return_retry_moved_m: float = 0.3
 ## How fast (rad/s) a dummy turns to face the player, standing or sparring.
 @export_range(0.5, 20.0, 0.5) var dummy_face_turn_rate: float = 4.0
 

@@ -1,8 +1,8 @@
 class_name TrainingDummy
 extends CombatActor
 ## A training target (Milestone 1). Full hit reactions, health from Tuning, faces the
-## player, and walks back to its post when left alone (not while someone stands on it, and
-## it gives up a walk that goes nowhere: _walk_home()). KO'd, it lies, blinks off like every
+## player, and walks back to its post when left alone (not while someone stands on it or in
+## its way, and it gives up a walk that goes nowhere: _walk_home()). KO'd, it lies, blinks off like every
 ## enemy (CombatActor), and Tuning.dummy_revive_s later blinks back in standing at its post
 ## (set_post()), or beside it when someone stands there (clear of him, in his view:
 ## _respawn_spot()), at full health, its damage look clean (_respawn()).
@@ -43,6 +43,9 @@ var _idle_frames: int = 0
 ## walk (INF between walks) and the sim frames since it last got nearer.
 var _home_walk_best: float = INF
 var _home_walk_stalled: int = 0
+## Where it gave up a walk home (something fixed in the way): it tries no more until it is hit
+## or moved Tuning.dummy_return_retry_moved_m from here. INF: no give-up to remember.
+var _home_gave_up_at: Vector3 = Vector3.INF
 var _jab: MoveData
 ## The jab with its startup scaled by Tuning.windup_mult, for the multiplier it was built for.
 var _scaled_jab: MoveData
@@ -56,12 +59,14 @@ var _rng := RandomNumberGenerator.new()
 ## inside it (_turn_solid()).
 var _solid_after_step: bool = false
 var _solid_when_clear: bool = false
-## Built once (_respawn_spot(), _turn_solid()): the body's capsule where it would stand, the
-## way along the floor from the post to a spot beside it, and the ray down to the floor under
-## that spot (the last two against the world only).
+## Built once (_respawn_spot(), _turn_solid(), _body_in_the_way()): the body's capsule where
+## it would stand, the way along the floor from the post to a spot beside it, the ray down to
+## the floor under that spot (those two against the world only), and the way a step toward
+## the post (against the standing bodies only).
 var _room_query: PhysicsShapeQueryParameters3D
 var _way_query: PhysicsShapeQueryParameters3D
 var _floor_query: PhysicsRayQueryParameters3D
+var _ahead_query: PhysicsShapeQueryParameters3D
 
 
 func _ready() -> void:
@@ -127,6 +132,7 @@ func _tick_control() -> void:
 	_tick_spar_clock(partner)
 	if state != CombatTypes.ActorState.FREE:
 		_idle_frames = 0
+		_home_gave_up_at = Vector3.INF
 		return
 	if partner:
 		_idle_frames = 0
@@ -148,9 +154,12 @@ func _tick_control() -> void:
 
 ## Left alone for Tuning.dummy_return_idle_s and further than Tuning.dummy_return_slack_m
 ## from its post: walk toward it. Stays where it is while the post has no room (someone is
-## standing on it: a walk would only push against him), and gives up a walk that gets no
-## nearer for Tuning.dummy_return_stuck_s (something is in the way), standing for the idle
-## time before it tries again. True when it walked this tick.
+## standing on it: a walk would only push against him) and while a standing body is in the
+## way (_body_in_the_way(): it waits, facing the player, until he steps aside, rather than
+## walk into him). A walk that gets no nearer for Tuning.dummy_return_stuck_s (something
+## fixed is in the way: a crate, a wall) is given up for good: it stands there until it is
+## hit or moved Tuning.dummy_return_retry_moved_m from where it gave up, so it bumps into
+## the thing once, not every idle time. True when it walked this tick.
 func _walk_home() -> bool:
 	var tuning := Tuning.data
 	var to_home := _home - global_position
@@ -158,6 +167,14 @@ func _walk_home() -> bool:
 	var dist := to_home.length()
 	if _idle_frames <= roundi(tuning.dummy_return_idle_s * Engine.physics_ticks_per_second) \
 			or dist <= tuning.dummy_return_slack_m or not _home_has_room():
+		return false
+	if _home_gave_up_at.is_finite():
+		if Vector2(global_position.x - _home_gave_up_at.x, global_position.z - _home_gave_up_at.z).length() \
+				< tuning.dummy_return_retry_moved_m:
+			return false
+		_home_gave_up_at = Vector3.INF
+	var dir := to_home / dist
+	if _body_in_the_way(dir, dist):
 		return false
 	# Any nearer than before counts, to a millimetre's float noise.
 	if dist < _home_walk_best - 0.001:
@@ -168,10 +185,25 @@ func _walk_home() -> bool:
 		if _home_walk_stalled > roundi(tuning.dummy_return_stuck_s * Engine.physics_ticks_per_second):
 			_home_walk_best = INF
 			_home_walk_stalled = 0
-			_idle_frames = 0
+			_home_gave_up_at = global_position
 			return false
-	_walk(to_home / dist, tuning.dummy_return_turn_rate)
+	_walk(dir, tuning.dummy_return_turn_rate)
 	return true
+
+
+## Whether a standing body (the player's, another dummy's) is in the way of the next
+## Tuning.dummy_return_look_ahead_m (at most `dist`) along the flat `dir`: the body's capsule
+## cast that far against the standing bodies. A body pressed against it in the way counts
+## (the cast stops at once); one touching it from behind does not.
+func _body_in_the_way(dir: Vector3, dist: float) -> bool:
+	var space := get_world_3d().direct_space_state if is_inside_tree() else null
+	if space == null:
+		return false
+	_build_room_queries()
+	var lift := Vector3.UP * (body_height * 0.5 + _GETUP_FLOOR_CLEARANCE)
+	_ahead_query.transform = Transform3D(Basis.IDENTITY, global_position + lift)
+	_ahead_query.motion = dir * minf(dist, Tuning.data.dummy_return_look_ahead_m)
+	return space.cast_motion(_ahead_query)[0] < 1.0
 
 
 ## Whether the post has room for the dummy to stand on (_has_room(): nobody standing, lying,
@@ -204,6 +236,7 @@ func set_post(pos: Vector3, yaw: float = rotation.y, fresh: bool = false) -> voi
 	_home_yaw = yaw
 	sim_velocity = Vector3.ZERO
 	_idle_frames = 0
+	_home_gave_up_at = Vector3.INF
 
 
 ## Throw the next sparring jab after `frames` sim frames of the player in reach (0 = as
@@ -321,8 +354,10 @@ func _tick_ko() -> void:
 ## out, so a body on the post is never touched. Of the spots of the one ring (or the two,
 ## when the first has none in the player's view) the one in front of the player or beside
 ## him wins over any behind him, the one farthest from him first, and with several as far
-## the one most in front of him (the player's facing, never a camera). Vector3.INF while
-## there is none; it waits.
+## (a player on the post sees every spot of a ring at the same distance) the one whose angle
+## off his facing is nearest Tuning.dummy_respawn_off_axis_deg: off-centre but in view, as dead
+## ahead at that distance filled over half of his first-person view (the player's facing from
+## the simulation, never a camera). Vector3.INF while there is none; it waits.
 func _respawn_spot() -> Vector3:
 	var space := get_world_3d().direct_space_state if is_inside_tree() else null
 	if space == null:
@@ -337,7 +372,7 @@ func _respawn_spot() -> Vector3:
 	var best_ring := 0
 	var best_in_view := false
 	var best_d := -INF
-	var best_ahead := -INF
+	var best_off_axis := INF
 	for ring: int in [1, 2]:
 		# A spot in the player's view is already taken: the next ring only offers more of the same.
 		if best.is_finite() and best_in_view:
@@ -360,27 +395,31 @@ func _respawn_spot() -> Vector3:
 			spot.y = (ground.position as Vector3).y
 			var d := 0.0
 			var ahead := 0.0
+			# How far its angle off his facing is from the one that is wanted.
+			var off_axis := 0.0
 			if player:
 				var to_spot := spot - player.global_position
 				to_spot.y = 0.0
 				d = to_spot.length()
 				ahead = to_spot.normalized().dot(facing) if d > 0.0001 else 1.0
+				if d > 0.0001:
+					off_axis = absf(rad_to_deg(facing.angle_to(to_spot)) - Tuning.data.dummy_respawn_off_axis_deg)
 			var in_view := ahead >= 0.0
 			# Spots within a millimetre are as far: a body standing on the post sees every
-			# spot of a ring at the same distance.
+			# spot of a ring at the same distance. The first of equal ones stays.
 			var better := false
 			if not best.is_finite():
 				better = true
 			elif in_view != best_in_view:
 				better = in_view
 			elif ring == best_ring:
-				better = d > best_d + 0.001 or (d > best_d - 0.001 and ahead > best_ahead)
+				better = d > best_d + 0.001 or (d > best_d - 0.001 and off_axis < best_off_axis - 0.01)
 			if better:
 				best = spot
 				best_ring = ring
 				best_in_view = in_view
 				best_d = d
-				best_ahead = ahead
+				best_off_axis = off_axis
 	return best
 
 
@@ -435,7 +474,7 @@ func _standing_body_inside() -> bool:
 	return not space.intersect_shape(_room_query, 1).is_empty()
 
 
-## The room, way and floor queries, built on first use and kept (see their declarations).
+## The room, way, floor and ahead queries, built on first use and kept (see their declarations).
 func _build_room_queries() -> void:
 	if _room_query != null:
 		return
@@ -454,6 +493,11 @@ func _build_room_queries() -> void:
 	_floor_query = PhysicsRayQueryParameters3D.new()
 	_floor_query.collision_mask = CombatTypes.bit(CombatTypes.LAYER_WORLD)
 	_floor_query.exclude = [get_rid()]
+	_ahead_query = PhysicsShapeQueryParameters3D.new()
+	_ahead_query.shape = shape
+	_ahead_query.collide_with_areas = false
+	_ahead_query.collision_mask = CombatTypes.bit(CombatTypes.LAYER_PLAYER_BODY) | CombatTypes.bit(CombatTypes.LAYER_ENEMY_BODY)
+	_ahead_query.exclude = [get_rid()]
 
 
 ## Back from a KO: standing at `spot` (its post, or beside it), facing as it was posted, at

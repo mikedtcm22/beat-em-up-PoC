@@ -197,6 +197,10 @@ func test_the_release_and_snap_blends_are_tunables_with_the_values_they_had() ->
 	var data := TuningData.new()
 	assert_eq(data.grab_release_blend_s, 0.22, "the unbend out of a hold, as it was")
 	assert_eq(data.reaction_snap_blend_s, 0.03, "the snap of a hit's pose, as it was")
+	# The three that were still script numbers (review r3code-04), at the values they had.
+	assert_eq(data.grab_hold_blend_s, 0.12, "the bend into the hold, as it was")
+	assert_eq(data.grab_pin_ease_s, 0.23, "the pin's ease into the hold, as it was")
+	assert_eq(data.stagger_snap_blend_s, 0.04, "the stagger's snap, as it was (not the 0.03 of the other hits)")
 
 
 func test_the_throws_unbend_takes_the_release_blend() -> void:
@@ -237,3 +241,52 @@ func test_a_hits_pose_snaps_in_over_the_reaction_blend() -> void:
 		heads.append(victim.rig.get_point_position(&"Head") - rest)
 	gut.p("flinch: the head is %.3f m off its rest two ticks on with no blend, %.3f m with 0.12 s" % [heads[0].length(), heads[1].length()])
 	assert_gt(heads[0].length(), heads[1].length() + 0.01, "a longer blend shows less of the pose at first")
+
+
+func test_a_staggers_pose_snaps_in_over_its_own_blend() -> void:
+	# Its own tunable (review r3code-04), not reaction_snap_blend_s: the stagger's snap stays
+	# 0.04 s when the other hits' is changed. Animated (no ragdoll), so the pose is the
+	# animation's: the head two ticks on is further off its rest with no blend than with a long one.
+	Tuning.data.ragdoll_enabled = false
+	var heads: Array[Vector3] = []
+	for blend: float in [0.0, 0.2]:
+		await _setup([Vector3(0, 0, -1.6)])
+		Tuning.data.stagger_snap_blend_s = blend
+		Tuning.data.reaction_snap_blend_s = 0.0
+		var victim := dummies[0]
+		var rest := victim.rig.get_point_position(&"Head")
+		var hit := HitInfo.new()
+		hit.attacker = player
+		hit.victim = victim
+		hit.damage = 1.0
+		hit.tier = CombatTypes.HitTier.HEAVY
+		hit.reaction = CombatTypes.Reaction.STAGGER
+		hit.region = CombatTypes.Region.HEAD
+		hit.direction = Vector3.FORWARD
+		hit.knockback = Vector3(-2.2, 0.0, -0.6)
+		hit.contact_point = rest
+		hit.physics_frame = Engine.get_physics_frames()
+		assert_true(victim.receive_hit(hit))
+		await _ticks(2)
+		heads.append(victim.rig.get_point_position(&"Head") - rest)
+	gut.p("stagger: the head is %.3f m off its rest two ticks on with no blend, %.3f m with 0.2 s" % [heads[0].length(), heads[1].length()])
+	assert_gt(heads[0].length(), heads[1].length() + 0.01, "a longer blend shows less of the pose at first")
+
+
+func test_the_pin_eases_in_over_the_grabs_pin_ease() -> void:
+	# The body closes in on the holder's hold point over grab_pin_ease_s (slowly at first): a
+	# few ticks into the grab it is still most of the way out with the default, and on the
+	# spot with no ease.
+	var apart := {}
+	for ease_s: float in [0.0, 0.23]:
+		await _setup([Vector3(0, 0, -1.1)])
+		Tuning.data.grab_pin_ease_s = ease_s
+		var victim := dummies[0]
+		player.input.push_press(&"GRAB", 2)
+		assert_true(await _wait_until(func() -> bool: return victim.state == CombatTypes.ActorState.GRABBED, 30), "grabbed")
+		await _ticks(3)
+		var spot: Vector3 = victim.call(&"_pin_spot")
+		apart[ease_s] = Vector2(victim.global_position.x - spot.x, victim.global_position.z - spot.z).length()
+	gut.p("three ticks into the grab the body is %.2f m from the hold point with no ease, %.2f m with 0.23 s" % [apart[0.0], apart[0.23]])
+	assert_lt(apart[0.0], 0.01, "no ease: on the spot at once")
+	assert_gt(apart[0.23], 0.2, "the default ease: still on its way in")
