@@ -4,6 +4,15 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-25 11:03 CDT: account F on leg 1; round 2 fixers running; gap-09 and leg 2's tooling done
+Account F (the account that ran package C's reviews on 10-24) took the working session at 10:56: 5-hour 16% (resets 12:09 CDT), weekly 33% (resets Wed 2026-10-28 10:59 CDT). Its watcher is "Beat-em-up: usage watcher" (`usage-watcher`, Haiku). Account F has most of a week's headroom left, so it plans to take leg 2 after leg 1 and will claim it here first.
+- **Running:** workflow `wf_a3f3d825-230`, `workflow-fix.js` with `args-r2-fix.json`, unchanged. Its first two fixers (Sonnet) work in `.worktrees/m2-fix-r2-launch-into-walls` and `.worktrees/m2-fix-r2-vfx-first-use`, branched at `f44f6b7`. `r2-player-ko-view` and `r2-dummy-comeback` follow as slots free, each gated.
+- **If cut off:** rerun the same args. The loader skips a package whose branch has its final "review fixes" commit and reuses a `wip:` branch. Within this session, use `resumeFromRunId: "wf_a3f3d825-230"`.
+- **Done by the lead while the fixers run** (on `m2/hit-feel`, pushed):
+  - **gap-09, fixed** (`7a089bf`), after the lead confirmed it in the code. ragdoll_bot and vfx_bot now use the inherited `_matches()`, so `--act=a|b` works in every bot. combo_bot parks unused dummies on the floor behind the east end wall (`PARK`, x 24+, z 0) instead of at z −30, where they fell forever. A headless `a|b` run played both acts, and 486/486 tests pass. The exit-time "resources still in use" message was already there before.
+  - **Leg 2's tooling** (`b6ac118`): `workflow-r2-close.js` takes `round` (files and keys carry `r<n>`), `review_brief` or `review_briefs` (`{lens: brief}`; lead-written briefs skip the critic; two reviewers at once, each in `.worktrees/m2-review-<lens>`; lens names have no `-`, e.g. `r3code`, `r3look`), `common_note`, `partition_lenses`, `partition_note`, `reviewer_model` (default opus) and `fixer_model` (default sonnet). Skeptics run on Sonnet. The shared context carries Game-boy's 2026-10-25 verdicts. It was dry-run with mocked agents (both paths).
+- **Next (leg 1):** when the four fixers end, merge the `m2/phase3-fix-r2-*` branches and `m2/phase3-review` into `m2/hit-feel`, regenerate the preset, run the tests, push, then judge the KO-view sheets and show Game-boy one.
+
 ### 2026-10-25 10:53 CDT: Game-boy's verdicts; today's plan in legs, across accounts
 Account E is at 91% of its 5-hour window (resets 12:30 CDT) and 78% weekly (resets Tue 2026-10-27 17:00 CDT). Game-boy played the build and gave his verdicts. **Another account starts leg 1 now.** Account E's session is renamed "Beat-em-up: account E session (paused)", and its watcher is stopped. After 12:30 it picks up the next leg nobody has claimed.
 - **Decisions (Game-boy, 2026-10-25; also in the Decisions log):**
