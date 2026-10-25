@@ -7,6 +7,10 @@ extends Node
 ## (tools/capture_combos.sh wraps this and extracts review stills.)
 
 const ROOM := preload("res://game/level/test_room.tscn")
+## Where an act parks the dummies it doesn't use (the n-th one PARK_STEP further on): on the
+## floor behind the street's east end wall, out of both views.
+const PARK := Vector3(24.0, 0.0, 0.0)
+const PARK_STEP := Vector3(1.5, 0.0, 0.0)
 
 ## Only run acts whose title contains this text (empty = all; `a|b` runs acts matching
 ## either). Set with `-- --act=<text>` after the scene path; `--tune=<property>=<number>`
@@ -258,7 +262,7 @@ func _act_pipe() -> void:
 	for i in 3:
 		await _press(&"P", 2, 10)
 	await _wait_idle()
-	dummies[0].set_post(Vector3(30, 0, -30))
+	dummies[0].set_post(PARK)
 	await _ticks(20)
 	await _press(&"GRAB", 2, 40)
 
@@ -593,7 +597,7 @@ func _stage(posts: Array[Vector3]) -> void:
 		var d := dummies[i]
 		d.sparring = false
 		# Posts are in the player's frame (x right, -z ahead).
-		var pos := player.global_position + player.global_basis * posts[i] if i < posts.size() else Vector3(30 + i * 3, 0, -30)
+		var pos := player.global_position + player.global_basis * posts[i] if i < posts.size() else PARK + PARK_STEP * i
 		var to_player := player.global_position - pos
 		d.max_health = 500.0
 		d.set_post(pos, atan2(-to_player.x, -to_player.z), true)

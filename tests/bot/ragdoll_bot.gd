@@ -72,7 +72,7 @@ func _run() -> void:
 	]
 	for act in acts:
 		var title: String = act.title
-		if act_filter != "" and not title.to_lower().contains(act_filter.to_lower()):
+		if act_filter != "" and not _matches(title):
 			continue
 		await _reset(act.cam)
 		caption.text = title
