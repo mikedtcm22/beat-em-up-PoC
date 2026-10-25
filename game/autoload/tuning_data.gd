@@ -448,6 +448,21 @@ extends Resource
 ## heading), 0 keeps the view on the look. Presentation only.
 @export_range(0.0, 1.0, 0.05) var cam_spin_follow_mult: float = 1.0
 @export var show_center_dot: bool = true
+@export_subgroup("KO view")
+## The player's KO (Game-boy, 2026-10-25): from the killing blow the first-person camera
+## leaves the eyes for an "out of body" view of the player lying on the floor, held while
+## KO'd, and eases back into the eyes through the get-up. The only time the camera leaves
+## the player's eyes. Presentation only. The lens sits beside the lying body (across its
+## length, on whichever side has room), this far from the body's middle along the floor,
+## this high above the floor, looking at the body across the floor and down by
+## ko_view_pitch_deg: with the defaults the whole body fills about half the view.
+@export_range(0.5, 6.0, 0.05) var ko_view_distance_m: float = 1.7
+@export_range(0.3, 5.0, 0.05) var ko_view_height_m: float = 1.6
+@export_range(0.0, 89.0, 1.0) var ko_view_pitch_deg: float = 40.0
+## Seconds the lens takes to ease out of the eyes from the killing blow, and to ease back in
+## from the get-up (the test room's get-up takes getup_frames, half a second).
+@export_range(0.0, 3.0, 0.05) var ko_view_out_s: float = 0.8
+@export_range(0.0, 3.0, 0.05) var ko_view_in_s: float = 0.5
 
 @export_group("Enemies")
 ## Max simultaneous attackers; 0 = unlimited (Milestone 3).

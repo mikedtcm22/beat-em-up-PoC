@@ -197,3 +197,25 @@ static func nearest_mesh(root: Node, point: Vector3, keep: Callable = Callable()
 			continue
 		nearest = minf(nearest, mesh_distance(mesh, point))
 	return nearest
+
+
+## The meshes under `root` (any render layer, visible ones only) with a corner of their
+## bounding box behind the lens or outside the 16:9 view of `cam` shrunk to `margin` (1 =
+## the view's edge): empty when all of `root` is in frame. The boxes overestimate a rotated
+## capsule or sphere a little, so a body that passes is whole in frame.
+static func outside_view(root: Node, cam: Transform3D, margin: float = 1.0) -> Array[MeshInstance3D]:
+	var tan_h := tan(deg_to_rad(HALF_H_DEG)) * margin
+	var tan_v := tan_h * 9.0 / 16.0
+	var inverse := cam.affine_inverse()
+	var out: Array[MeshInstance3D] = []
+	for mesh: MeshInstance3D in meshes_under(root):
+		if not mesh.is_visible_in_tree():
+			continue
+		var box := mesh.mesh.get_aabb()
+		for i: int in 8:
+			var corner := box.position + box.size * Vector3(float(i & 1), float((i >> 1) & 1), float((i >> 2) & 1))
+			var q := inverse * (mesh.global_transform * corner)
+			if q.z >= -NEAR or absf(q.x / -q.z) > tan_h or absf(q.y / -q.z) > tan_v:
+				out.append(mesh)
+				break
+	return out
