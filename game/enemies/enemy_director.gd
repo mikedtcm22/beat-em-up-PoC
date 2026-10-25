@@ -243,13 +243,14 @@ func _player_closed(player: PlayerCharacter) -> bool:
 			or player.state == CombatTypes.ActorState.GRABBED or _clock_s < _revive_until_s
 
 
-## True once the enemy's attack is running: its wind-up, strike or hold. A token is not taken
-## back from it (the token is what keeps the count of attackers honest).
+## True once the enemy's attack is running: its wind-up, strike or hold, or any move at all (a
+## jump kick may be flying under AIRBORNE). A token is not taken back from it (the token is what
+## keeps the count of attackers honest).
 func _committed(enemy: EnemyActor) -> bool:
 	match enemy.state:
 		CombatTypes.ActorState.WINDUP, CombatTypes.ActorState.ATTACK, CombatTypes.ActorState.GRABBING:
 			return true
-	return false
+	return enemy.current_move != null
 
 
 ## Holders that are dead, gone, freed, no longer holding or reacting to something lose the token.

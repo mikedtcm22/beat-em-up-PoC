@@ -398,6 +398,23 @@ func test_a_token_whose_windup_has_started_is_never_taken_back() -> void:
 	assert_eq(winding.state, CombatTypes.ActorState.WINDUP)
 
 
+func test_a_holder_flying_a_move_keeps_its_token_until_the_move_is_gone() -> void:
+	await _setup(1, 0.0)
+	var kicker := _stub(_at(AHEAD, 3.0), true)
+	kicker.releases_token = false
+	var next := _stub(_at(90.0, 3.0), true)
+	await _ticks(3)
+	assert_eq(_holders(), [kicker] as Array[EnemyActor])
+	kicker.set_physics_process(false)
+	kicker.state = CombatTypes.ActorState.AIRBORNE
+	kicker.current_move = kicker.attack
+	await _ticks(3)
+	assert_eq(_holders(), [kicker] as Array[EnemyActor], "a jump kick in flight is still an attack")
+	kicker.current_move = null
+	await _ticks(3)
+	assert_eq(_holders(), [next] as Array[EnemyActor], "airborne with no move is a reaction: the token goes")
+
+
 # --- F1 and F4 hold the fight ---------------------------------------------------------------------
 
 
