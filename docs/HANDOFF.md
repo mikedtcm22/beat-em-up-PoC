@@ -4,6 +4,50 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-25 14:05 CDT: handoff, account F's 5-hour window at 92%; round 3 reviewed (11 of 11 survive), 1 of 3 r3 packages fixed
+Account F: 5-hour **92%** (resets 17:09 CDT), weekly 58% (resets Wed 2026-10-28 10:59 CDT). The round 3 run (`wf_4ff561cb-f25`, 52 agents, 111 minutes) took the window from 0% to 92% and weekly from 43% to 58%. Nothing is running. Every branch is pushed. No worktree has uncommitted tracked changes. This session is renamed "Beat-em-up: account F session (paused)", and its watcher is told to stop. Whichever account picks up claims the rest of leg 2 here first.
+- **Round 3 review** (records on `m2/phase3-review` @ `6a0208e`: `review-r3code.json`, `verify-r3code.json`, `review-r3look.json`, `verify-r3look.json`, `packages-r3.json`, `fix-r3-ragdoll-kick-body.json`). Two Opus reviewers worked at `72a1066`, with three Sonnet skeptics per finding. **All 11 findings survive.** r3look-05 is a spec question.
+  - **r3code** (the first code review of the fix diffs since `c27afaf`):
+    - 01 (high): the kicked ragdoll body depended on a left-over pose cache. The hook's approved give swung from 0.22 m to 0.41 m with the dummy's history, and gap-07's seed silently moved the hook's lean kick. **The lead's 0.85 test threshold hid it.**
+    - 02 (medium): gap-05's "wait, don't walk in" covers only the post. A player standing between a displaced dummy and its post is walked into every 1.25 s, with the fists filling the view.
+    - 03 (low): an at-once take-over out of a running stagger jumps the head and arms in one frame.
+    - 04 (low): feel numbers left in scripts: `_HELD_BLEND_S`, `_GRAB_EASE_S` and the stagger's 0.04 s blend.
+    - 05 (low): stale code comments.
+    - 06 (low): ARCHITECTURE mismatches, for leg 3.
+  - **r3look** (the merged build in first person):
+    - 01 (high): the KO view's return follows the mouse look and keeps the head layer drawn. It dives through the player's own face and chest (up to 75% of the view), then pops at 66%.
+    - 02 (medium): a KO in a corner puts the lens 0.13 m inside the building front, with the shirt over 52-68% of the view. Between two fighters, the lens hovers 0.32 m over a dummy's head.
+    - 03 (low): the hook's re-posed far fist swings at the attacker's lens: 0.200 m on open floor, 0.145 m at a building front.
+    - 04 (low): the comeback beside an occupied post blinks in dead centre 0.8 m ahead, covering 56-58% of the view.
+    - 05 (low, **spec question**): in first person the haymaker's delayed flash changes only 0.06-0.2% of the screen, against 2.2-9.4% for the other finishers. Its contact is above the view and under the burst.
+  - The look reviewer's sheets for Game-boy (local) are in `.worktrees/m2-review-r3look/captures/review_r3look/`: `ko1_all.png`, `ko13_return.png`, `ko7_all.png`, `walls_fp.png`, `fin_flash_frames.png` and `k4_fp.png`. Its verdict on the KO view: it reads as a short out-of-body moment (about 3.3 s), and the distance looks right. The attacker is cut at the hips by the top edge, so you can't see who KO'd you.
+- **Packages** (`packages-r3.json`):
+
+  | Package | Findings | State |
+  | --- | --- | --- |
+  | `r3-ragdoll-kick-body` | r3code-01, -03, -05, r3look-03 | **fixed, not merged**: `m2/phase3-fix-r3-ragdoll-kick-body` @ `c2e1995`, 523/523 |
+  | `r3-ko-view-return` | r3look-01, -02 | **skipped by the gate** (needed 15, had 14), no branch |
+  | `r3-dummy-room` | r3code-02, r3look-04, r3code-04 | **skipped by the gate**, no branch |
+
+  The unassigned items: r3look-05 (spec question) and r3code-06 (docs, for leg 3; the list is in `r3-ragdoll-kick-body`'s notes and in `fix-r3-ragdoll-kick-body.json`'s `remaining`).
+  - **r3-ragdoll-kick-body's fix:**
+    - the kick's body no longer depends on the cache. The hook strikes Head or UpperChest every time, which gives 0.32-0.35 m on every hook;
+    - ARMS strikes the nearer shoulder, and LEGS the leg body nearest the contact;
+    - head and arms ease in on an at-once launch out of a stagger (1.8°, hands 0.08 m);
+    - the hook's far fist is raised beside the shoulder: nothing at the lens, and the corner lens test passes at 0.301 m (a thin margin);
+    - comments fixed.
+    - Sheets (local): `.worktrees/m2-fix-r3-ragdoll-kick-body/captures/fix/hook_after_sheet.png`, `uppercut_after.png`, `guardbreak_after.png` and `parry_after.png`.
+- **Resume (leg 2's rest, then leg 3):**
+  1. `get_usage`. Merge `m2/phase3-fix-r3-ragdoll-kick-body` and `m2/phase3-review` into `m2/hit-feel` first. The other two packages also list `player.gd` and `combat_actor.gd`, so they should branch from a base that already has it. Regenerate the preset (`godot --headless --import --quit && godot --headless -s tools/gen_default_preset.gd`), run `tools/run_tests.sh` (all pass, no SCRIPT ERROR or ERROR) and push.
+  2. `Workflow({scriptPath: "<repo>/docs/reviews/M2-phase3/workflow-fix.js", args: {packages_file: "packages-r3.json", only: ["r3-ko-view-return", "r3-dummy-room"], fixer_model: "sonnet", concurrency: 2, fixer_cost: 15, note: <fix_note from args-r3-review.json>}})`. Today's Sonnet fixers cost about 13 points of the 5-hour window each, so 30 points of headroom fit both.
+  3. Merge both branches and `m2/phase3-review`, regenerate the preset, run the tests and push. Look at the first-person after-sheets: the KO return with the look turned, the corner KO, the comeback off-centre.
+  4. Leg 3 (D): the README (the Milestone 2 status; the hook figure, now about 0.33 m at 0.9 against 0.22 m at 0.6, to re-measure after merging; the departure for the out-of-body KO view; side view debug-only), ARCHITECTURE (r3code-06's list plus the KO-view and VFX sections), then the M2 PR. **Never merge it.**
+  - `r3-ko-view-return` may decide to ignore mouse look while the player is KO'd and getting up (a control change in `player.gd`). The lead should check that call and tell Game-boy.
+- **New for Game-boy** (defaults as built):
+  - **The push's body, reframed** (replaces the 12:05 entry's question): today's code gave the milder 0.22 m on the first hook after a KO or a comeback, and 0.34-0.41 m otherwise. The fix makes the approved 0.32-0.35 m the give on every hook. Should the push land on the body nearest the contact instead (neck and chest, about 0.22 m on every hook)? Default: no.
+  - **r3look-05:** the haymaker's flash barely shows in first person. Options: flash the nearest visible part (the chest), or offset the finisher burst. Default: as is. It joins grab-05 and hit-01.
+  - Still open from 12:05: the non-KO knockdown view (the reviewer measured the belly slab at up to 74% of the view, over 50% for 63 frames); the HUD dot and HP bar in the KO view; the wall reaction.
+
 ### 2026-10-25 12:05 CDT: leg 1 done (round 2 merged, 518/518); leg 2 claimed by account F
 Account F: 5-hour 73% (resets 12:10 CDT), weekly 42% (resets Wed 2026-10-28 10:59 CDT). Leg 1's four fixers took the window from 18% to about 70% and weekly from 33% to 42% in 55 minutes.
 - **Leg 1 done.** Every r2 package is fixed and merged into `m2/hit-feel` with `m2/phase3-review` (the fix-r2-*.json records). **Head `72a1066`, 518/518 tests pass with no SCRIPT ERROR or ERROR.** The preset regenerated unchanged at 318 values (+18 tunables).
@@ -912,7 +956,7 @@ USAGE RULES:
 
 Next steps (Milestone 2; details are in docs/HANDOFF.md):
 - Phases 1 and 2, the localized flash and phase 3's packages A (ragdoll: contact push, KO blink-off, staggers at 0.9) and B (grab view and waist bend) are merged into m2/hit-feel. 457/457 tests pass with no SCRIPT ERROR, at f98bb21. README has the three approved M2 ragdoll departures. WP3's audio was judged by analysis only, so I'll listen to it.
-- Phase 3's package C runs as a Workflow (I turned ultracode on), per docs/milestones/M2-phase3-plan.md, "C", step 2. The code, ragdoll and grab reviews are done, and all 19 of their findings are verified: every one survives, and 2 are spec questions for me (grab-03, grab-05). The 17 others are split into four fix packages (docs/reviews/M2-phase3/packages.json on branch m2/phase3-review). All four packages are fixed and merged into m2/hit-feel with the review records (484/484 tests, no SCRIPT ERROR). Round 2 reviewed the merged build: the hit-feel, performance and gap lenses and a completeness critic. hit-04 is fixed and merged (486/486). I gave my verdicts on 2026-10-25: side view is debug-only, the KO gets an "out of body" view, and every other proposed fix is approved. The four round 2 packages are in docs/reviews/M2-phase3/packages-r2.json. Today runs in legs across accounts, as docs/HANDOFF.md's newest entry says: leg 1 the round 2 fixes (workflow-fix.js with docs/reviews/M2-phase3/args-r2-fix.json, Sonnet fixers), leg 2 a final Opus review of the fixes in first person, leg 3 the docs and the PR. Claim a leg in HANDOFF before starting it. Then record the final sheets and show me. Then D: check ARCHITECTURE against the code, README's Milestone 2 status, and the M2 PR, which is never merged without my sign-off.
+- Phase 3's package C runs as Workflows (I turned ultracode on): build, adversarial review with three skeptics per finding, then fix packages. Rounds 1 and 2 (code, ragdoll, grab, hit, perf and gap lenses) are fixed and merged into m2/hit-feel at 72a1066 (518/518 tests, no SCRIPT ERROR), including my 2026-10-25 verdicts: side view is debug-only, the player's KO gets an "out of body" view, and every other proposed fix is approved. Today runs in legs (docs/HANDOFF.md's newest entries): leg 1 (the round 2 fixes) is done; leg 2 (round 3: an Opus code review and first-person look, 11 findings, all survive) is half done: r3-ragdoll-kick-body is fixed on its branch but not merged, and r3-ko-view-return and r3-dummy-room still need their Sonnet fixers (docs/reviews/M2-phase3/packages-r3.json; the exact resume steps are in HANDOFF's 14:05 entry). Claim the leg in HANDOFF before starting. Then leg 3, D: check ARCHITECTURE against the code, README's Milestone 2 status and departures (the out-of-body KO view), the final first-person sheets for me, and the M2 PR, which is never merged without my sign-off.
 - Open for me (each has a default; none blocks C): more contortion on the ragdoll contact push (default: as it is); the grab's lens pull-back and the bend's depth (default: as they are); the combat log over the knee contact (default: C proposes a fix); a minimum on-screen size for the side-view flash (default: leave it). And I'll listen to WP3's audio.
 
 Ground rules:
