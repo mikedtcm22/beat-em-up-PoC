@@ -315,6 +315,32 @@ func test_hold_view_eases_out_on_a_release_and_when_a_hit_breaks_the_hold() -> v
 			_assert_lens_eases(followed.seen, held, followed.steps, _hold_step(Tuning.data.grab_view_out_s), "release")
 
 
+func test_a_hold_that_ends_while_the_view_eases_in_turns_back_without_a_jump() -> void:
+	# LB again a few ticks into the grab, while the view is still easing in: the pitch and the
+	# lens turn back from wherever they are, at the ease-out's pace, and the lens never goes
+	# past where it was or where it ends.
+	var out_ticks := ceili(Tuning.data.grab_view_out_s * Engine.physics_ticks_per_second)
+	for after: int in [3, 6, 9]:
+		await _setup([Vector3(0, 0, -1.1)])
+		var cam := _camera()
+		player.input.push_press(&"GRAB", 2)
+		assert_true(await _wait_until(func() -> bool:
+			cam.update_camera(FRAME)
+			return _holding(), 30), "grabbed")
+		await _follow_lens(cam, after)
+		var from := _lens(cam)
+		assert_lt(player.get_hold_view_weight(), 1.0, "%d ticks in, the hold view is still easing in" % after)
+		player.input.push_press(&"GRAB", 2)
+		var pitches := []
+		var followed := await _follow_lens(cam, out_ticks + 20, func() -> void: pitches.append(_offsets().x))
+		var what := "LB %d ticks into the grab" % after
+		assert_false(_holding(), "%s: let go" % what)
+		var bound := _hold_step(Tuning.data.grab_view_out_s)
+		for i in range(1, pitches.size()):
+			assert_lte(absf(pitches[i] - pitches[i - 1]), bound.x + 1e-4, "%s, tick %d: the pitch moves at most %.2f degrees a tick" % [what, i, bound.x])
+		_assert_lens_eases(followed.seen, from, followed.steps, bound, what)
+		assert_almost_eq(_offsets(), Vector3.ZERO, Vector3.ONE * 1e-4, "%s: the view is level and back on the eye" % what)
+
 
 func test_walking_with_a_held_enemy_keeps_the_hold_view_on_the_bent_eye() -> void:
 	# Walking while holding shows the hold pose (no walk cycle), whose bent-over eye sits
