@@ -16,6 +16,7 @@ The watcher called the handoff at 91% of the 5-hour window (resets 21:30 CDT); w
     - the ease-in is front-loaded;
     - the tests follow the lens (code-06's grab-view half).
   - **Unknown:** whether the full suite passes on it, whether the after-sheets were recorded and judged, and whether `ARCHITECTURE`'s "First-person hold view" and the preset are updated. There's no `fix-hold-view.json`.
+- **Decision (Game-boy, 19:21):** stay on this account. The working session waits for the 21:30 CDT reset, with the watcher still running, and then resumes here with the steps below.
 - **Resume (next account or after 21:30):**
   1. Run `workflow-fix.js` with `only: ["hold-view", "ko-respawn-bars"]` and a `note`. The loader sees hold-view as `wip`, and its fixer reuses the worktree and goes on from `06733a3`. The note should say:
      - the merge state (as in the 17:25 entry's run);
