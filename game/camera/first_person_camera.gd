@@ -19,6 +19,13 @@ extends Camera3D
 ## 60 Hz steps (as do the body and every other actor), which judders on faster displays.
 ## The camera does not smooth those steps on its own: the full body renders in first
 ## person (Spec §5) and would then jitter against the view instead.
+##
+## KO view (Game-boy, 2026-10-25): the one time the camera leaves the player's eyes. From
+## the killing blow (health 0) the lens eases out of the eyes to a point above and beside
+## the lying body, which then shows whole (the head, neck, chest and shoulders too, which
+## the lens is normally inside of), holds there while the player is KO'd, and eases back
+## into the eyes once the player is back up (Tuning "Camera" > "KO view"). The view is
+## mixed with the eye's by a weight of its own, so it leaves and returns without a pop.
 
 ## Seconds a camera punch takes to snap out and spring back to rest.
 @export_range(0.03, 0.5, 0.01) var punch_duration_s: float = 0.12
@@ -54,6 +61,16 @@ var _eye_offset: Vector3 = Vector3.ZERO
 ## the eye: they follow the same bend, so smoothed apart the lens bobbed past its ends.
 var _hold_shift: Vector2 = Vector2.ZERO
 var _has_eye: bool = false
+## The KO view's progress, 0 (in the eyes) to 1 (out of the body), linear in the player's
+## sim seconds (_ko_view_mix()); ko_view_weight() eases it.
+var _ko_view: float = 0.0
+## Which side of the body the KO view's lens sits on, +1 the player's right and -1 its left
+## (0 = in the eyes), chosen where the body has more room when the view starts to leave, and
+## how much of Tuning's distance and height the room allows (smoothed).
+var _ko_side: float = 0.0
+var _ko_reach: float = 1.0
+## The player's meshes on the head layer, found when the KO view first needs them.
+var _head_meshes: Array[MeshInstance3D] = []
 ## The view before punch and shake: where the player is looking.
 var _view: Transform3D = Transform3D.IDENTITY
 ## Live punches: x = pitch kick and y = yaw kick at the peak (radians), z = age (seconds).
@@ -97,6 +114,10 @@ func _process(delta: float) -> void:
 ## Ride `value` from now on, jumping straight to its eye on the next update.
 func set_player(value: PlayerCharacter) -> void:
 	player = value
+	_ko_view = 0.0
+	_ko_side = 0.0
+	_head_meshes.clear()
+	set_cull_mask_value(CombatTypes.VIS_FP_HIDDEN, false)
 	snap()
 
 
@@ -110,14 +131,22 @@ func snap() -> void:
 func update_camera(delta: float) -> void:
 	fov = Tuning.data.fov_deg
 	if _player_ok():
-		_view = _follow(delta)
+		_view = _ko_view_mix(delta, _follow(delta))
 	_advance_effects(delta)
 	global_transform = _view * _effects_transform()
 
 
-## The view without punch and shake: the player's eye and look direction.
+## The view without punch and shake: the player's eye and look direction (the KO view's
+## while it is out, or on its way).
 func view_transform() -> Transform3D:
 	return _view
+
+
+## How far the lens is out of the player's eyes in the KO view: 0 in the eyes (the head,
+## neck, chest and shoulders hidden from this camera as always), 1 out of the body. Eased,
+## so it moves smoothly both ways.
+func ko_view_weight() -> float:
+	return smoothstep(0.0, 1.0, _ko_view)
 
 
 ## Add screen-shake trauma (clamped to 0..1). Hits involving the player add
@@ -230,6 +259,140 @@ static func lens_offset(look_basis: Basis, back: float = 0.0) -> Vector3:
 	if ahead.length_squared() > 0.0001:
 		offset += ahead.normalized() * (Tuning.data.cam_forward_offset_m - back)
 	return offset
+
+
+## The KO view mixed into `live`, the view from the eyes: the player's progress toward the
+## KO view moves with its sim time (hitstop holds it, slow-mo stretches it, like the
+## get-up's own animation), out over Tuning.ko_view_out_s from the killing blow (health
+## 0; the player goes on to KO) and back over ko_view_in_s once it is back up. The lens
+## and look blend from the eyes' to the KO pose by the eased weight, so they leave and
+## return with the eye's own motion under them and no pop. The body shows whole from the
+## first frame the lens is clear of the head layer (_head_clear_of(): the head, neck, chest
+## and shoulders pass right by a lens still in the eyes, a cap's brim among them) to the
+## frame it is back in the eyes (the rig's own layers never change).
+func _ko_view_mix(delta: float, live: Transform3D) -> Transform3D:
+	var tuning := Tuning.data
+	var dying := player.health <= 0.0
+	if not dying and _ko_view <= 0.0:
+		# The usual case, every frame: in the eyes, the head layer hidden.
+		_ko_side = 0.0
+		if get_cull_mask_value(CombatTypes.VIS_FP_HIDDEN):
+			set_cull_mask_value(CombatTypes.VIS_FP_HIDDEN, false)
+		return live
+	var seconds := tuning.ko_view_out_s if dying else tuning.ko_view_in_s
+	var sim_delta := delta * TimeController.scale_for(player)
+	var step := 0.0
+	if sim_delta > 0.0:
+		step = 1.0 if seconds <= 0.0 else sim_delta / seconds
+	if dying:
+		if _ko_side == 0.0:
+			_choose_ko_side()
+		_ko_view = minf(_ko_view + step, 1.0)
+	else:
+		_ko_view = maxf(_ko_view - step, 0.0)
+	var weight := ko_view_weight()
+	if weight <= 0.0:
+		# Back in the eyes (or the blow's hitstop, before the view has started): hide the head
+		# layer again.
+		if get_cull_mask_value(CombatTypes.VIS_FP_HIDDEN):
+			set_cull_mask_value(CombatTypes.VIS_FP_HIDDEN, false)
+		return live
+	var root := player.get_global_transform_interpolated().origin
+	var body := player.rig.global_basis
+	var room := _ko_room(player.rig.get_point_position(&"Hips"), root, body, _ko_side)
+	_ko_reach = lerpf(_ko_reach, room, CameraMath.damp_weight(delta, tuning.cam_smoothing_s))
+	var out := ko_view_pose(root, body, _ko_side, _ko_reach)
+	var turn := live.basis.get_rotation_quaternion().slerp(out.basis.get_rotation_quaternion(), weight)
+	var mixed := Transform3D(Basis(turn), live.origin.lerp(out.origin, weight))
+	if not get_cull_mask_value(CombatTypes.VIS_FP_HIDDEN) and _head_clear_of(mixed.origin):
+		set_cull_mask_value(CombatTypes.VIS_FP_HIDDEN, true)
+	return mixed
+
+
+## True when no mesh of the player's head layer (the ones this camera hides, found once per
+## player) lies within Tuning.ko_view_clearance_m of `lens`, by its bounding box.
+func _head_clear_of(lens: Vector3) -> bool:
+	if _head_meshes.is_empty():
+		var hidden := CombatTypes.bit(CombatTypes.VIS_FP_HIDDEN)
+		for node: Node in player.rig.find_children("*", "MeshInstance3D", true, false):
+			var mesh := node as MeshInstance3D
+			if mesh.layers & hidden:
+				_head_meshes.append(mesh)
+	for mesh: MeshInstance3D in _head_meshes:
+		if (mesh.global_transform * mesh.get_aabb()).grow(Tuning.data.ko_view_clearance_m).has_point(lens):
+			return false
+	return true
+
+
+## The KO view's pose at full weight: the lens beside a body lying at `root` (the rig's
+## origin, which the lying pose puts the hips over) whose rig faces along `body`, on the
+## player's `side` of it (+1 right, -1 left), across the body's length, Tuning's
+## ko_view_distance_m out along the floor and ko_view_height_m up, scaled by `reach` (1 =
+## all of it; a nearer wall brings the lens in along the line to the body, which keeps the
+## body where it sits on screen), looking toward the body and down by ko_view_pitch_deg.
+static func ko_view_pose(root: Vector3, body: Basis, side: float, reach: float = 1.0) -> Transform3D:
+	var tuning := Tuning.data
+	var across := body.x
+	across.y = 0.0
+	if across.length_squared() > 0.0001:
+		across = across.normalized()
+	else:
+		across = Vector3.RIGHT
+	across *= signf(side)
+	var out := (across * tuning.ko_view_distance_m + Vector3.UP * tuning.ko_view_height_m) * reach
+	var look := Basis.from_euler(Vector3(-deg_to_rad(tuning.ko_view_pitch_deg), atan2(across.x, across.z), 0.0))
+	return Transform3D(look, root + out)
+
+
+## Pick the side of the body (_ko_side: its right unless the left clearly scores better)
+## whose KO view has the most room, and start its reach there. A side scores its reach
+## (_ko_room()) times how far the nearest other actor on its feet stands from the lens
+## there, up to the lens's own distance from the body (_ko_crowding()), so the lens does not
+## end up beside a second fighter filling the view.
+func _choose_ko_side() -> void:
+	var root := player.get_global_transform_interpolated().origin
+	var body := player.rig.global_basis
+	var hips := player.rig.get_point_position(&"Hips")
+	var right := _ko_room(hips, root, body, 1.0)
+	var left := _ko_room(hips, root, body, -1.0)
+	var right_score := right * _ko_crowding(ko_view_pose(root, body, 1.0).origin, root)
+	var left_score := left * _ko_crowding(ko_view_pose(root, body, -1.0).origin, root)
+	_ko_side = -1.0 if left_score > right_score + 0.01 else 1.0
+	_ko_reach = left if _ko_side < 0.0 else right
+
+
+## 0..1: how far from `lens` the nearest other actor on its feet stands (flat), as a share
+## of the lens's distance from the body at `root`; 1 when none is nearer than the body.
+func _ko_crowding(lens: Vector3, root: Vector3) -> float:
+	var length := maxf(lens.distance_to(root), 0.0001)
+	var nearest := length
+	for node: Node in get_tree().get_nodes_in_group(&"actor"):
+		var actor := node as CombatActor
+		if actor == null or actor == player or actor.is_ko() or actor.is_downed() or actor.is_gone():
+			continue
+		var flat := actor.global_position - lens
+		flat.y = 0.0
+		nearest = minf(nearest, flat.length())
+	return nearest / length
+
+
+## How much of the KO view's distance and height the world allows on `side` of a body at
+## `root`: 1 when the line from the body's middle (`middle`, its hips) to the lens is free,
+## less when a wall, crate, the curb or a standing actor is in the way (the lens keeps
+## Tuning.ko_view_clearance_m off it), at least Tuning.ko_view_min_reach.
+func _ko_room(middle: Vector3, root: Vector3, body: Basis, side: float) -> float:
+	if not is_inside_tree():
+		return 1.0
+	var to := ko_view_pose(root, body, side).origin
+	var length := middle.distance_to(to)
+	if length < 0.0001:
+		return 1.0
+	var mask := CombatTypes.bit(CombatTypes.LAYER_WORLD) | CombatTypes.bit(CombatTypes.LAYER_ENEMY_BODY)
+	var hit := get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(middle, to, mask))
+	if hit.is_empty():
+		return 1.0
+	var free := middle.distance_to(hit.position as Vector3) - Tuning.data.ko_view_clearance_m
+	return clampf(free / length, Tuning.data.ko_view_min_reach, 1.0)
 
 
 func _advance_effects(delta: float) -> void:
