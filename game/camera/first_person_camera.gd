@@ -382,8 +382,8 @@ static func _flat_axis(axis: Vector3, fallback: Vector3) -> Vector3:
 ## ko_view_height_m up, scaled by `reach` (1 = all of it; something nearer brings the lens in
 ## along the line to the body, which keeps the body where it sits on screen), looking toward
 ## the body and down by ko_view_pitch_deg. `steep`: the lens straight over the hips instead,
-## ko_view_height_m up and looking along `direction` down by ko_view_steep_pitch_deg, the
-## pose with room in a corner, among fighters or between a wall and a fighter.
+## ko_view_steep_height_m up and looking along `direction` down by ko_view_steep_pitch_deg,
+## the pose with room in a corner, among fighters or between a wall and a fighter.
 static func ko_view_pose(root: Vector3, direction: Vector3, reach: float = 1.0, steep: bool = false) -> Transform3D:
 	var tuning := Tuning.data
 	var out := Vector3.UP * (tuning.ko_view_steep_height_m if steep else tuning.ko_view_height_m)
