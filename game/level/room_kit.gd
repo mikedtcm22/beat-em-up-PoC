@@ -1,0 +1,162 @@
+class_name RoomKit
+extends RefCounted
+## Building blocks for the code-built rooms (Milestone 3): the crowd street uses them, and the
+## frozen training room keeps its own copies. Static helpers only, so a room reads as a list of
+## boxes: the sky and sun, solid boxes on the world layer (the physics bodies the navmesh bakes
+## from), visual-only boxes, flat materials, the player with its avoidance obstacle, and the
+## presentation layer (cameras, HUD, tuning overlay, VFX, audio, rumble) as direct children of
+## the room. Layout numbers live in the room's exports, never here.
+
+const PLAYER_SCENE := "res://game/player/player.tscn"
+const CAMERA_DIRECTOR_SCENE := "res://game/camera/camera_director.tscn"
+const CAMERA_DIRECTOR_SCRIPT := "res://game/camera/camera_director.gd"
+const HUD_SCENE := "res://game/ui/hud.tscn"
+const DEBUG_DRAW_SCENE := "res://game/ui/debug_draw.tscn"
+const TUNING_OVERLAY_SCENE := "res://game/ui/tuning_overlay.tscn"
+const GRID_SHADER := "res://game/level/grid.gdshader"
+
+
+## The player's avoidance obstacle (RVO): without it enemies walk straight through the player's
+## position (godot-navigation codemap section 6.3). A child of the player, so it follows him;
+## its radius is Tuning.data.player_avoid_radius_m, live.
+class PlayerObstacle:
+	extends NavigationObstacle3D
+
+	func _init() -> void:
+		name = "AvoidanceObstacle"
+
+	func _ready() -> void:
+		avoidance_enabled = true
+		_apply()
+		Tuning.changed.connect(_on_tuning_changed)
+
+	func _exit_tree() -> void:
+		if Tuning.changed.is_connected(_on_tuning_changed):
+			Tuning.changed.disconnect(_on_tuning_changed)
+
+	func _on_tuning_changed(property: StringName) -> void:
+		if property == &"" or property == &"player_avoid_radius_m":
+			_apply()
+
+	func _apply() -> void:
+		radius = Tuning.data.player_avoid_radius_m
+		var actor := get_parent() as CombatActor
+		if actor:
+			height = actor.body_height
+
+
+## The sky, a low sun with shadows and a light fog: the same look as the training room.
+static func build_environment(room: Node3D) -> void:
+	var env := Environment.new()
+	env.background_mode = Environment.BG_SKY
+	var sky := Sky.new()
+	var sky_mat := ProceduralSkyMaterial.new()
+	sky_mat.sky_top_color = Color(0.36, 0.42, 0.56)
+	sky_mat.sky_horizon_color = Color(0.72, 0.62, 0.55)
+	sky_mat.ground_horizon_color = Color(0.4, 0.37, 0.38)
+	sky_mat.ground_bottom_color = Color(0.2, 0.2, 0.22)
+	sky.sky_material = sky_mat
+	env.sky = sky
+	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
+	env.ambient_light_energy = 0.7
+	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	env.fog_enabled = true
+	env.fog_light_color = Color(0.6, 0.56, 0.55)
+	env.fog_density = 0.008
+	var world_env := WorldEnvironment.new()
+	world_env.name = "WorldEnvironment"
+	world_env.environment = env
+	room.add_child(world_env)
+
+	var sun := DirectionalLight3D.new()
+	sun.name = "Sun"
+	sun.rotation_degrees = Vector3(-52.0, 32.0, 0.0)
+	sun.light_energy = 1.2
+	sun.shadow_enabled = true
+	sun.directional_shadow_max_distance = 40.0
+	room.add_child(sun)
+
+
+## A solid box centred at `pos` (world layer, no mask), with a mesh when `material` is given,
+## added to `parent`. Parent it under the room's geometry node: that node is what the navmesh
+## bakes from.
+static func add_box(parent: Node, pos: Vector3, size: Vector3, material: Material = null) -> StaticBody3D:
+	var body := StaticBody3D.new()
+	body.position = pos
+	body.collision_layer = CombatTypes.bit(CombatTypes.LAYER_WORLD)
+	body.collision_mask = 0
+	var shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = size
+	shape.shape = box
+	body.add_child(shape)
+	if material:
+		body.add_child(box_mesh(size, material))
+	parent.add_child(body)
+	return body
+
+
+## A box that is only drawn (paint, the far skyline): no collision, and the navmesh ignores it.
+static func add_visual_box(parent: Node, pos: Vector3, size: Vector3, material: Material) -> MeshInstance3D:
+	var mesh := box_mesh(size, material)
+	mesh.position = pos
+	parent.add_child(mesh)
+	return mesh
+
+
+static func box_mesh(size: Vector3, material: Material) -> MeshInstance3D:
+	var mesh := MeshInstance3D.new()
+	var box := BoxMesh.new()
+	box.size = size
+	box.material = material
+	mesh.mesh = box
+	return mesh
+
+
+static func flat_material(color: Color) -> StandardMaterial3D:
+	var material := StandardMaterial3D.new()
+	material.albedo_color = color
+	material.roughness = 0.9
+	return material
+
+
+## The grey-box floor grid (the training room's), or a flat grey if the shader is missing.
+static func grid_material() -> Material:
+	if ResourceLoader.exists(GRID_SHADER):
+		var grid := ShaderMaterial.new()
+		grid.shader = load(GRID_SHADER)
+		return grid
+	return flat_material(Color(0.3, 0.3, 0.32))
+
+
+## The player at `pos` facing `yaw_deg`, added to `room`: it gets back up after a KO
+## (auto_revive) and carries a PlayerObstacle so enemies steer around him.
+static func spawn_player(room: Node3D, pos: Vector3, yaw_deg: float) -> PlayerCharacter:
+	var player := (load(PLAYER_SCENE) as PackedScene).instantiate() as PlayerCharacter
+	player.position = pos
+	player.rotation.y = deg_to_rad(yaw_deg)
+	player.auto_revive = true
+	player.add_child(PlayerObstacle.new())
+	room.add_child(player)
+	return player
+
+
+## Cameras, HUD, debug draw (if the HUD did not bring one), the F1/F4 TuningOverlay and the
+## VFX, audio and rumble directors, all direct children of `room` (bots and tests find them
+## there).
+static func build_presentation(room: Node3D) -> void:
+	if ResourceLoader.exists(CAMERA_DIRECTOR_SCENE):
+		room.add_child((load(CAMERA_DIRECTOR_SCENE) as PackedScene).instantiate())
+	elif ResourceLoader.exists(CAMERA_DIRECTOR_SCRIPT):
+		var director: Node3D = (load(CAMERA_DIRECTOR_SCRIPT) as GDScript).new()
+		director.name = "CameraDirector"
+		room.add_child(director)
+	if ResourceLoader.exists(HUD_SCENE):
+		room.add_child((load(HUD_SCENE) as PackedScene).instantiate())
+	if ResourceLoader.exists(DEBUG_DRAW_SCENE) and room.get_tree().get_first_node_in_group(&"debug_draw") == null:
+		room.add_child((load(DEBUG_DRAW_SCENE) as PackedScene).instantiate())
+	if ResourceLoader.exists(TUNING_OVERLAY_SCENE):
+		room.add_child((load(TUNING_OVERLAY_SCENE) as PackedScene).instantiate())
+	room.add_child(VfxDirector.new())
+	room.add_child(AudioDirector.new())
+	room.add_child(RumbleDirector.new())
