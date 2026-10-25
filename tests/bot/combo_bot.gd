@@ -35,11 +35,16 @@ func _ready() -> void:
 			if pair.size() == 2 and pair[0] in Tuning.data:
 				Tuning.data.set(pair[0], type_convert(float(pair[1]), typeof(Tuning.data.get(pair[0]))))
 	Tuning.data.dummy_health = 500.0
-	room = ROOM.instantiate()
+	room = _room_scene().instantiate()
 	add_child(room)
 	_build_caption()
 	CombatEvents.hit_landed.connect(_on_hit)
 	_run.call_deferred()
+
+
+## The room the bot plays in: the training room. Subclasses (the crowd bot) return theirs.
+func _room_scene() -> PackedScene:
+	return ROOM
 
 
 func _on_hit(hit: HitInfo) -> void:

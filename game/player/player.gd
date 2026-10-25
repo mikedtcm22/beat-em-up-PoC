@@ -184,6 +184,24 @@ func get_look_basis() -> Basis:
 	return Basis.from_euler(Vector3(look_pitch, look_yaw, 0.0))
 
 
+## Flat unit vector of the look (look_yaw only). Simulation-safe: never the camera's.
+func get_look_forward() -> Vector3:
+	return ViewGeometry.forward(look_yaw)
+
+
+## Signed flat angle in degrees from the look to `point`: 0 ahead, positive left, +-180
+## behind. Measured from global_position (the pose never moves it).
+func look_bearing_deg(point: Vector3) -> float:
+	return ViewGeometry.bearing_deg(look_yaw, global_position, point)
+
+
+## True when `point` is more than `half_angle_deg` (flat) off the look. "Outside the player's
+## view" is is_outside_view(p, Tuning.data.rear_warning_angle_deg) everywhere (the director's
+## blind spot and the rear warning).
+func is_outside_view(point: Vector3, half_angle_deg: float) -> bool:
+	return ViewGeometry.is_outside_view(look_yaw, global_position, point, half_angle_deg)
+
+
 ## The first-person view's extra pitch (x, degrees, negative looks down) and drop (y,
 ## meters, negative raises it): the running move's (MoveData.camera_pitch_deg and
 ## camera_drop_m) plus the hold view's (get_hold_view_pitch_deg() eased by
@@ -263,6 +281,11 @@ func weapon_durability_left() -> int:
 
 func holding_enemy() -> CombatActor:
 	return _held
+
+
+## The holder hook (CombatActor.is_holding()): `victim` is the body held right now.
+func is_holding(victim: CombatActor) -> bool:
+	return _held == victim and _holding_valid()
 
 
 func debug_state_text() -> String:

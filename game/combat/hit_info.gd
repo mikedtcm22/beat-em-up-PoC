@@ -42,11 +42,12 @@ var guard_broken: bool = false
 
 func describe() -> String:
 	var move_name: String = move.display_name if move else "body"
-	return "%s -> %s  %s  %.0f dmg  %s/%s" % [
+	return "%s -> %s  %s  %.0f dmg  %s/%s%s" % [
 		str(attacker.name) if attacker else "?",
 		str(victim.name) if victim else "?",
 		move_name,
 		damage,
 		CombatTypes.tier_name(tier),
 		CombatTypes.reaction_name(reaction),
+		" ARMOR" if armor_absorbed else "",
 	]

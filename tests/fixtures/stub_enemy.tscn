@@ -1,0 +1,7 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://tests/fixtures/stub_enemy.gd" id="1_stub"]
+
+[node name="StubEnemy" type="CharacterBody3D"]
+script = ExtResource("1_stub")
+display_name = "Stub"

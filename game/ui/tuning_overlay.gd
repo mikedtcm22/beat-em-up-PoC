@@ -98,6 +98,7 @@ func _exit_tree() -> void:
 		get_tree().root.size_changed.disconnect(_fit_window)
 	_unfreeze_player(true)
 	_restore_bindings()
+	GameInput.menu_open = false
 
 
 ## Add gamepad A to ui_accept and B to ui_cancel where they are missing (GAMEPAD_UI), so the
@@ -187,6 +188,7 @@ func is_player_frozen() -> bool:
 
 
 func _update(opened: Control) -> void:
+	GameInput.menu_open = is_open()
 	if not is_open():
 		window.hide()
 		_unfreeze_left = UNFREEZE_TICKS

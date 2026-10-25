@@ -543,16 +543,206 @@ extends Resource
 @export_range(0.5, 6.0, 0.05) var ko_view_steep_height_m: float = 2.6
 
 @export_group("Enemies")
-## Max simultaneous attackers; 0 = unlimited (Milestone 3).
+## Most enemies that may attack at once, a held grab included (Spec §7); 0 = unlimited. The
+## enemy director hands out the attack tokens.
 @export_range(0, 6, 1) var attacker_cap: int = 3
+## Chance (0..1) that a waiting enemy outside the player's view, in the blind spot, jumps the
+## token queue: 1 always goes first, 0 ignores the blind spot.
 @export_range(0.0, 1.0, 0.05) var blind_spot_priority: float = 1.0
+## Multiplies the length of every enemy wind-up (the telegraph before a strike), but never
+## below the wind-up floors (Wind-up). The F4 slow-mo cheat and Tuning edits apply live.
 @export_range(0.25, 3.0, 0.05) var windup_mult: float = 1.0
 
+@export_subgroup("Wind-up")
+## Fewest frames any grunt wind-up lasts, however small windup_mult is (Spec §7: 18 at 60 Hz).
+@export_range(1, 120, 1) var windup_min_frames_grunt: int = 18
+## Fewest frames a heavy's (Bruiser, boss) wind-up lasts (Spec §7: 30 at 60 Hz).
+@export_range(1, 120, 1) var windup_min_frames_heavy: int = 30
+## How fast (degrees per second) a wind-up turns the enemy toward the player while it tracks.
+@export_range(0.0, 720.0, 5.0) var windup_track_deg_per_s: float = 180.0
+## Share (0..1) of a wind-up, from its start, in which the enemy still turns toward the player;
+## after it the facing is locked, so a late sidestep or dodge makes the strike miss.
+@export_range(0.0, 1.0, 0.05) var windup_track_share: float = 0.5
+
+@export_subgroup("Posture")
+## Nearest and furthest (m) an enemy waiting for its turn keeps from the player: the posture
+## ring (Spec §7: 2.5-4 m).
+@export_range(1.0, 8.0, 0.1) var posture_ring_min_m: float = 2.5
+@export_range(1.0, 10.0, 0.1) var posture_ring_max_m: float = 4.0
+## Speed (m/s) of circling along the ring, how long (s) before it switches direction (plus or
+## minus a random share of posture_strafe_jitter_s), and the pause (s) between turns of the strafe.
+@export_range(0.0, 6.0, 0.05) var posture_circle_speed_mps: float = 1.1
+@export_range(0.2, 10.0, 0.1) var posture_strafe_switch_s: float = 1.6
+@export_range(0.0, 5.0, 0.05) var posture_strafe_jitter_s: float = 0.6
+@export_range(0.0, 5.0, 0.05) var posture_pause_s: float = 0.5
+## Chance (0..1) each pause that the enemy taunts (an open-handed gesture, never a wind-up).
+@export_range(0.0, 1.0, 0.01) var posture_taunt_chance: float = 0.12
+## Speeds (m/s) walking to its slot on the ring and stepping in to strike range with a token.
+@export_range(0.5, 10.0, 0.1) var approach_speed_mps: float = 2.6
+@export_range(0.5, 10.0, 0.1) var engage_speed_mps: float = 3.0
+## With a token the enemy squares up this many frames (a visible "I'm next"), then steps in
+## to its attack's reach minus engage_margin_m, and gives the token back after engage_timeout_s
+## without getting there.
+@export_range(0, 60, 1) var commit_pause_frames: int = 12
+@export_range(0.0, 1.0, 0.01) var engage_margin_m: float = 0.1
+@export_range(0.5, 10.0, 0.1) var engage_timeout_s: float = 2.0
+## Seconds an enemy holds still after its attack before it backs off to its slot.
+@export_range(0.0, 3.0, 0.05) var recover_hold_s: float = 0.35
+## How fast (rad/s) an enemy turns to face the player while posturing and engaging.
+@export_range(0.5, 20.0, 0.5) var enemy_turn_rate: float = 6.0
+
+@export_subgroup("Navigation")
+## NavigationAgent3D avoidance: the enemy's radius (m), how far ahead (s) it avoids and how far
+## (m) it sees neighbours.
+@export_range(0.1, 1.5, 0.05) var enemy_avoid_radius_m: float = 0.45
+@export_range(0.1, 3.0, 0.05) var enemy_avoid_horizon_s: float = 0.75
+@export_range(1.0, 15.0, 0.5) var enemy_avoid_neighbor_m: float = 6.0
+## Distances (m) at which a path waypoint and the posture slot count as reached.
+@export_range(0.1, 2.0, 0.05) var enemy_waypoint_reach_m: float = 0.5
+@export_range(0.05, 2.0, 0.05) var enemy_slot_reach_m: float = 0.3
+## Sim frames between path re-queries (staggered per enemy), and the top speed (m/s) the agent
+## may be asked for.
+@export_range(1, 60, 1) var enemy_retarget_ticks: int = 6
+@export_range(1.0, 15.0, 0.5) var enemy_max_speed_mps: float = 6.0
+## An enemy that makes no progress toward its slot this long (s) asks for another one.
+@export_range(0.2, 10.0, 0.1) var enemy_stuck_s: float = 1.0
+
+@export_subgroup("Director")
+## Least gap (s) between two wind-up starts of different enemies: the director holds an
+## enemy with a token back until it has passed, so no two telegraphs start together and the
+## player is never flinch-locked by a volley.
+@export_range(0.0, 3.0, 0.05) var director_min_windup_gap_s: float = 0.35
+## The posture slots are reassigned every director_reslot_s, or when the player moved more
+## than director_reslot_move_m (m) since the last assignment.
+@export_range(0.2, 10.0, 0.1) var director_reslot_s: float = 1.5
+@export_range(0.1, 5.0, 0.1) var director_reslot_move_m: float = 1.0
+## Random spread (degrees) added to each enemy's even share of the 360 degrees around the player.
+@export_range(0.0, 45.0, 1.0) var director_spread_jitter_deg: float = 12.0
+## A slot snapped onto the navmesh further than this (m) from where it was meant is rejected,
+## and the next angle step (degrees, both ways) is tried.
+@export_range(0.05, 3.0, 0.05) var director_slot_snap_tolerance_m: float = 0.5
+@export_range(1.0, 90.0, 1.0) var director_slot_retry_deg: float = 15.0
+## No token is granted for this long (s) after the player revives.
+@export_range(0.0, 10.0, 0.1) var director_revive_grace_s: float = 1.5
+## A token held longer than this (s) is taken back.
+@export_range(0.5, 20.0, 0.5) var director_token_timeout_s: float = 4.0
+
+@export_subgroup("Waves")
+## Waves spawn on their own in the crowd street (off: only F4 spawns).
+@export var waves_enabled: bool = true
+## Most AI enemies alive at once for a wave to add another (F4 spawns can exceed it).
+@export_range(1, 12, 1) var wave_max_alive: int = 6
+## Seconds after a wave is cleared before the next starts, and between spawns inside a wave.
+@export_range(0.0, 30.0, 0.5) var wave_gap_s: float = 3.0
+@export_range(0.05, 5.0, 0.05) var wave_spawn_interval_s: float = 0.6
+## Share (0..1) of each wave that spawns behind the player, outside his view.
+@export_range(0.0, 1.0, 0.05) var wave_behind_share: float = 0.35
+## A boss comes with every this-many-th wave.
+@export_range(1, 20, 1) var boss_wave_every: int = 4
+## No spawn point nearer than this (m) to the player is used.
+@export_range(0.0, 12.0, 0.5) var spawn_min_player_distance_m: float = 4.0
+## Radius (m) of the player's avoidance obstacle: enemies steer around him.
+@export_range(0.1, 1.5, 0.05) var player_avoid_radius_m: float = 0.5
+
+@export_subgroup("Street Punk")
+@export_range(5.0, 500.0, 1.0) var punk_health: float = 30.0
+## Chance (0..1) that its attack is the shove rather than the two-hit punch.
+@export_range(0.0, 1.0, 0.05) var punk_shove_chance: float = 0.3
+## Seconds after an attack before it wants another token; walking speed multiplier.
+@export_range(0.0, 10.0, 0.1) var punk_attack_cooldown_s: float = 1.4
+@export_range(0.25, 3.0, 0.05) var punk_speed_mult: float = 1.0
+
+@export_subgroup("Kicker")
+@export_range(5.0, 500.0, 1.0) var kicker_health: float = 25.0
+## Multiplier on the posture circling speed (it flanks fast) and on its walking speed.
+@export_range(0.25, 4.0, 0.05) var kicker_circle_mult: float = 1.6
+@export_range(0.25, 3.0, 0.05) var kicker_speed_mult: float = 1.3
+## Chance (0..1) that its attack is the low sweep rather than the jump kick.
+@export_range(0.0, 1.0, 0.05) var kicker_sweep_chance: float = 0.4
+@export_range(0.0, 10.0, 0.1) var kicker_attack_cooldown_s: float = 1.2
+
+@export_subgroup("Pipe Thug")
+@export_range(5.0, 500.0, 1.0) var thug_health: float = 35.0
+@export_range(0.0, 10.0, 0.1) var thug_attack_cooldown_s: float = 1.8
+@export_range(0.25, 3.0, 0.05) var thug_speed_mult: float = 0.95
+## Speed (m/s) the dropped pipe leaves the thug's hand at.
+@export_range(0.0, 8.0, 0.1) var thug_drop_speed_mps: float = 2.0
+
+@export_subgroup("Enemy grabs")
+## Presses of P or K that break an enemy's hold before its hit lands, and the sim frames of
+## invulnerability the victim keeps after breaking free (CombatActor.break_free()).
+@export_range(1, 30, 1) var grab_break_presses: int = 8
+@export_range(0, 120, 1) var grab_break_invuln_frames: int = 20
+## Mash progress lost per second (0 = none), and the speed (m/s) the holder is shoved away at
+## when broken free of.
+@export_range(0.0, 20.0, 0.1) var grab_break_decay_per_s: float = 0.0
+@export_range(0.0, 10.0, 0.1) var grab_break_push_mps: float = 3.0
+## Frames the held player's look takes to turn to the holder, the distance (m) the held body is
+## pinned from the holder's origin, and the upward pitch (degrees) of the held view.
+@export_range(1, 60, 1) var grabbed_turn_frames: int = 8
+@export_range(0.3, 2.0, 0.05) var grabbed_pin_distance_m: float = 0.75
+@export_range(-30.0, 30.0, 1.0) var grabbed_view_pitch_deg: float = 5.0
+## An enemy's grab connects within this range (m) and this many degrees of its facing.
+@export_range(0.5, 3.0, 0.05) var enemy_grab_range_m: float = 1.3
+@export_range(5.0, 90.0, 1.0) var enemy_grab_half_angle_deg: float = 50.0
+
+@export_subgroup("Bruiser")
+@export_range(5.0, 500.0, 1.0) var bruiser_health: float = 80.0
+## Seconds its armor stays off after a haymaker.
+@export_range(0.0, 10.0, 0.1) var bruiser_armor_break_s: float = 2.0
+## Chance (0..1) that its attack is the grab rather than the smash.
+@export_range(0.0, 1.0, 0.05) var bruiser_grab_chance: float = 0.4
+@export_range(0.0, 10.0, 0.1) var bruiser_attack_cooldown_s: float = 2.2
+@export_range(0.25, 3.0, 0.05) var bruiser_speed_mult: float = 0.8
+
+@export_subgroup("Boss")
+@export_range(50.0, 2000.0, 10.0) var boss_health: float = 300.0
+## Share (0..1) of its health at which it enters phase 2 (once), the turn rate (rad/s) it
+## has before that and the multiplier on it after, and the Street Punks it calls in at that
+## moment, placed this far (m) around it when no spawner is there.
+@export_range(0.05, 0.95, 0.05) var boss_phase2_at: float = 0.5
+@export_range(0.5, 20.0, 0.5) var boss_turn_rate: float = 2.5
+@export_range(1.0, 5.0, 0.1) var boss_phase2_turn_mult: float = 1.8
+@export_range(0, 6, 1) var boss_adds_count: int = 2
+@export_range(2.0, 12.0, 0.5) var boss_add_ring_m: float = 5.0
+## It charges when the player is further than this (m); the weights below pick between the
+## charge, the ground pound and the grab when more than one fits.
+@export_range(1.0, 12.0, 0.5) var boss_charge_min_m: float = 4.0
+@export_range(0.0, 1.0, 0.05) var boss_charge_chance: float = 0.4
+@export_range(0.0, 1.0, 0.05) var boss_pound_chance: float = 0.3
+@export_range(0.0, 1.0, 0.05) var boss_grab_chance: float = 0.3
+@export_range(0.0, 10.0, 0.1) var boss_attack_cooldown_s: float = 1.8
+@export_range(0.25, 3.0, 0.05) var boss_speed_mult: float = 0.85
+
 @export_group("Rear warning")
+## An attacker winding up more than this many degrees off the look, close enough, lights a
+## top corner (Spec §8). Also the edge of the player's view for the director's blind spot.
 @export_range(20.0, 120.0, 1.0) var rear_warning_angle_deg: float = 55.0
+## Size multiplier and opacity (0..1) of the corner burst.
 @export_range(0.25, 3.0, 0.05) var rear_warning_size: float = 1.0
 @export_range(0.0, 1.0, 0.05) var rear_warning_opacity: float = 0.9
+## The wind-up's own effort and whoosh sounds (positional) play: off silences every wind-up cue.
 @export var rear_warning_audio: bool = true
+## Both corners light when the attacker is within this many degrees of directly behind.
+@export_range(0.0, 60.0, 1.0) var rear_warning_behind_deg: float = 20.0
+## The warning fires within the attack's reach (MoveData.reach_m) plus this many metres.
+@export_range(0.0, 4.0, 0.1) var rear_warning_range_margin_m: float = 1.0
+## Burst size (pixels at 1920 x 1080) before rear_warning_size, how far in from the screen's
+## top corner its centre sits (pixels), and the multiplier on it for a heavy attacker.
+@export_range(40.0, 400.0, 5.0) var rear_warning_base_px: float = 170.0
+@export_range(0.0, 200.0, 1.0) var rear_warning_inset_px: float = 48.0
+@export_range(1.0, 3.0, 0.05) var rear_warning_heavy_scale: float = 1.4
+## Pulses when it appears, and the length (s) of each, then it holds steady.
+@export_range(0, 8, 1) var rear_warning_pulses: int = 2
+@export_range(0.02, 1.0, 0.01) var rear_warning_pulse_s: float = 0.12
+## Brightness (0..1 of rear_warning_opacity) of a single attacker's burst, and what each
+## further attacker on the same side adds.
+@export_range(0.0, 1.0, 0.05) var rear_warning_min_alpha: float = 0.65
+@export_range(0.0, 1.0, 0.05) var rear_warning_brightness_step: float = 0.2
+## The side is decided when the wind-up starts and kept (off); on, it follows the player's turning.
+@export var rear_warning_follow_turn: bool = false
+## The warning is hidden while the player is KO'd (the KO view).
+@export var rear_warning_hide_in_ko: bool = true
 
 @export_group("Block")
 ## B with the stick under this deflection blocks; above it, B dodges that way.
@@ -701,6 +891,9 @@ extends Resource
 @export_group("Debug")
 @export var god_mode: bool = false
 @export var one_hit_ko: bool = false
+## Enemy AI stands still, faces the player and asks for nothing (F4 "Freeze AI"): a scripted
+## act can then place and trigger each attacker by hand.
+@export var ai_frozen: bool = false
 
 
 func hitstop_s(tier: CombatTypes.HitTier) -> float:

@@ -506,9 +506,9 @@ func test_help_overlay_shows_controls_and_debug_keys() -> void:
 	for node: Node in _hud.help_overlay.find_children("*", "Label", true, false):
 		texts.append((node as Label).text)
 	for expected: String in ["GAMEPAD", "KEYBOARD + MOUSE", "Left stick", "W A S D", "Mouse", "Left mouse",
-			"Right mouse", "RB", "Q", "LB", "E", "F1", "F2", "F3", "F4", "F5", "H", "Esc", "R", "Menu", "View",
+			"Right mouse", "RB", "Q", "LB", "E", "F1", "F2", "F3", "F4", "F5", "F6", "H", "Esc", "R", "Menu", "View",
 			"Restart (while paused)", "Block (hold, no direction)", "Dodge (with a direction)",
-			"Sparring dummies on / off"]:
+			"Sparring dummies on / off", "Switch room: crowd street / training"]:
 		assert_has(texts, expected, "help lists %s" % expected)
 
 

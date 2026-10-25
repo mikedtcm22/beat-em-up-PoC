@@ -49,8 +49,14 @@ extends Resource
 @export var magnetism: bool = true
 ## Max lunge during startup in meters. 0 = use Tuning.magnet_lunge. When there is no
 ## target, the move lunges straight ahead by `free_lunge` instead.
-@export_range(0.0, 4.0, 0.05) var lunge: float = 0.0
-@export_range(0.0, 4.0, 0.05) var free_lunge: float = 0.0
+@export_range(0.0, 8.0, 0.05) var lunge: float = 0.0
+@export_range(0.0, 8.0, 0.05) var free_lunge: float = 0.0
+## Flat distance from the attacker's origin to a standing 1.8 m target's origin at which this
+## move's strike connects, travel included (its lunge or free_lunge): a boss charge or a jump
+## kick from 4-6 m away still reaches. 0 = not an AI attack. The AI closes to it before
+## winding up, and the rear warning fires within reach_m + rear_warning_range_margin_m. Set
+## per enemy move in tools/gen_moves.gd and checked against the measured strike.
+@export_range(0.0, 10.0, 0.01) var reach_m: float = 0.0
 
 @export_group("Camera")
 ## First-person camera offset at full weight: eased in over startup, held through active,

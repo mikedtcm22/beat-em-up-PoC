@@ -322,9 +322,10 @@ func current_anim() -> StringName:
 
 
 ## True for every id in docs/ARCHITECTURE.md "Animation ids" and every move id with a
-## recipe (move animations are built on demand by play_move()).
+## recipe (move animations are built on demand by play_move()), the enemy moves' included.
 func has_anim(anim: StringName) -> bool:
-	return PlaceholderAnims.ANIM_IDS.has(anim) or PlaceholderAnims.MOVE_IDS.has(anim)
+	return PlaceholderAnims.ANIM_IDS.has(anim) or PlaceholderAnims.MOVE_IDS.has(anim) \
+			or PlaceholderEnemyPoses.has_recipe(anim)
 
 
 ## World transform of a bone (by humanoid name) or rig point (e.g. &"RightFistPoint").

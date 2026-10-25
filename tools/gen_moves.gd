@@ -79,6 +79,9 @@ const KNEE_PITCH_DEG := -12.0
 const KNEE_DROP_M := 0.05
 ## Weapons hit a guard harder (the held block): pipe swings drain it 1.5 times as fast.
 const PIPE_GUARD_MULT := 1.5
+## The sparring dummy's jab reaches a standing target at about 1.05 m (ARCHITECTURE "Strike
+## reach"): its MoveData.reach_m, which the rear warning's range reads.
+const DUMMY_JAB_REACH_M := 1.05
 
 ## Fixed ext_resource ids for the contract scripts (keeps re-runs diff-free).
 const SCRIPT_IDS: Dictionary[String, String] = {
@@ -242,6 +245,68 @@ func _build_moves() -> void:
 			Vector3(0.0, 0.0, 1.5), [_sphere(&"RightFistPoint", 0.14)])
 	dummy_jab.magnetism = false
 	dummy_jab.blocked_recoil_frames = 20
+	# The rear warning's reach for it (M3-plan A2.8): the jab connects at the sparring step-in.
+	dummy_jab.reach_m = DUMMY_JAB_REACH_M
+
+	_build_enemy_moves()
+
+
+## The Milestone 3 enemy moves, one function per archetype so parallel builders each edit
+## only their own (the doc lines between them keep the hunks apart). Enemy rules (enforced by
+## tests/test_move_data.gd from each archetype's tests/enemy_moves/<archetype>_table.gd): the
+## move's id is its animation id, no magnetism, no branches or auto_next (the AI starts each
+## hit of a chain itself), startup at least the archetype's wind-up floor, reach_m set (travel
+## included), grabs and the ground pound unblockable, and no FINISHER tier (the finisher fires
+## the global slow-mo and impact frame). Build each with _enemy().
+func _build_enemy_moves() -> void:
+	_punk_moves()
+	_kicker_moves()
+	_thug_moves()
+	_grab_moves()
+	_bruiser_moves()
+	_boss_moves()
+
+
+## The Street Punk: punk_jab, punk_cross, punk_shove (P1-ai).
+func _punk_moves() -> void:
+	pass
+
+
+## The Kicker: kicker_jump_kick, kicker_sweep (P2-kicker).
+func _kicker_moves() -> void:
+	pass
+
+
+## The Pipe Thug: thug_pipe_1..3 (P2-thug).
+func _thug_moves() -> void:
+	pass
+
+
+## The enemy grabs on the player: bruiser_grab, bruiser_headbutt, boss_grab, boss_slam (P2-grab).
+func _grab_moves() -> void:
+	pass
+
+
+## The Bruiser: bruiser_smash (P3-bruiser).
+func _bruiser_moves() -> void:
+	pass
+
+
+## The boss: boss_charge, boss_pound (P3-boss).
+func _boss_moves() -> void:
+	pass
+
+
+## An enemy move's shared fields, set on a move made with _add(): no magnetism, the reach the
+## AI closes to and the warning fires within (MoveData.reach_m, travel included), the frames
+## its attacker recoils when it is blocked (0 for the Bruiser and the boss) and whether the guard
+## stops it. Returns `move`.
+func _enemy(move: MoveData, reach_m: float, recoil_frames: int, unblockable: bool = false) -> MoveData:
+	move.magnetism = false
+	move.reach_m = reach_m
+	move.blocked_recoil_frames = recoil_frames
+	move.unblockable = unblockable
+	return move
 
 
 ## Combo branches (docs/ARCHITECTURE.md "Branches").

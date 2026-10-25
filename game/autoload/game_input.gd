@@ -31,6 +31,7 @@ const BINDINGS := {
 	&"cheats": [KEY_F4],
 	&"help": [KEY_H],
 	&"sparring": [KEY_F5],  # toggle sparring on every training dummy
+	&"switch_room": [KEY_F6],  # the crowd street <-> the training room (Milestone 3)
 	# Free-fly debug camera (keeps WASD/mouse for the player).
 	&"fly_forward": [KEY_UP],
 	&"fly_back": [KEY_DOWN],
@@ -41,7 +42,19 @@ const BINDINGS := {
 	&"fly_look": ["mb:3"],  # hold middle mouse to steer the free-fly camera
 }
 
+## The rooms F6 switches between (switch_room()): the crowd street and the training room.
+const ROOM_SCENES: Array[String] = [
+	"res://game/level/crowd_room.tscn",
+	"res://game/level/test_room.tscn",
+]
+
 var paused: bool = false
+## F1 or F4 is open (TuningOverlay sets and clears it): the fight holds, so a crowd cannot beat
+## the player up while he tunes (Spec §11). An input-layer state like the player's scripted
+## input. While true the enemy director grants no tokens and takes back those whose wind-up has
+## not started, an enemy with no move running stands, faces the player and asks for nothing,
+## and waves start no spawns. An attack already winding up finishes.
+var menu_open: bool = false
 
 var _mouse_delta: Vector2 = Vector2.ZERO
 var _fly_mouse_delta: Vector2 = Vector2.ZERO
@@ -123,8 +136,38 @@ func _input(event: InputEvent) -> void:
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 
+## Switch to the other room of ROOM_SCENES (F6): clear hitstop and slow-mo, unpause and change
+## scene. Nothing happens when the target scene doesn't exist, or when the current scene is
+## neither room (a bot or test host).
+func switch_room() -> void:
+	var target := other_room()
+	if target == "" or not ResourceLoader.exists(target):
+		return
+	TimeController.clear()
+	menu_open = false
+	set_paused(false)
+	get_tree().change_scene_to_file(target)
+
+
+## The scene F6 would switch to: the other of ROOM_SCENES than the running scene, "" when the
+## running scene is neither.
+func other_room() -> String:
+	var current := get_tree().current_scene
+	return room_after(current.scene_file_path if current else "")
+
+
+## The room F6 goes to from the scene at `scene_path`: the other of ROOM_SCENES, "" when it is
+## neither of them (a bot or test host).
+static func room_after(scene_path: String) -> String:
+	var index := ROOM_SCENES.find(scene_path)
+	return "" if index < 0 else ROOM_SCENES[(index + 1) % ROOM_SCENES.size()]
+
+
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed(&"pause"):
+	if event.is_action_pressed(&"switch_room"):
+		switch_room()
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed(&"pause"):
 		set_paused(not paused)
 		get_viewport().set_input_as_handled()
 	elif paused and event.is_action_pressed(&"restart"):
