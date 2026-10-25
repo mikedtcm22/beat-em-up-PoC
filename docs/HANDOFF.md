@@ -22,6 +22,7 @@ Account: premium seat (5 times the old limits). 5-hour 0% (resets 21:49 CDT), we
   - the full director (tokens, blind-spot priority, spread), a navmesh with avoidance;
   - the rear warning per SPEC §8, with its tunables in F1;
   - enemy spawns in F4, and the AI state and tokens in F3.
+- **Blocked on Game-boy? DM him on Slack at once** (Game-boy, 17:35): anything only he can unblock (a permission or authorization prompt, a login, a decision) goes to a Slack DM to Michael (`U0AQMKKBL93`), with what is blocked and what you do meanwhile. His aim is to keep the work running without stalls, not to keep messages few.
 - **Usage watcher:** new cadence and the resume task for the premium seat (see "Usage watcher" and "Resume after a limit"). Started from this session.
 - **Next:** map the codebase for M3, write `docs/milestones/M3-plan.md`, then build in parallel worktrees.
 
@@ -926,6 +927,7 @@ Every approved spec change so far is in README.md, "Where M1 departs from the sp
 - **Models (2026-10-25):** Opus for planning and review, Sonnet for coding and execution. Fixers run with `fixer_model: "sonnet"`.
 - **Defaults for the rest of M2 (2026-10-25 14:15 CDT):** every open question takes its default for the rest of this milestone. Without the final art, Game-boy can't tell the grey-block feel issues apart. So don't put fine look or feel questions to him in M2. Record each default taken, and leave art-dependent feel polish for when the art is in.
 - **Milestone 3 setup (2026-10-25 16:50 CDT):** M2 signed off and merged. M3 runs without Game-boy's input until it's done to spec, then a Slack DM with a playable link and a digest of judgement calls (each with an alternative not taken). The playable link is a GitHub Release with a zipped macOS export (downloading the official export templates is approved). The boss is in M3 as graybox with a placeholder name. Enemy grabs on the player can be broken by mashing P/K. The account is now a premium seat (5 times the limits): the watcher checks less often, and at a limit a scheduled task resumes the work after the reset.
+- **Comms (2026-10-25 17:35 CDT):** whenever work is blocked on Game-boy (an authorization, a permission prompt, a login, a decision), DM him on Slack (Michael, `U0AQMKKBL93`) at once, then carry on with anything not blocked.
 - **Process:** at each usage limit, hand off to Game-boy's second Claude account. Never assume the same session resumes.
 
 ## Usage watcher
