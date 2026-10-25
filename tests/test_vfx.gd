@@ -902,6 +902,124 @@ func test_presentation_writes_no_game_state() -> void:
 	assert_false(TimeController.is_slowmo())
 
 
+# --- First-use warm-up (perf-01) -----------------------------------------------------
+
+
+## The comic sprites on screen that are not live effects: the warm-up's.
+func _warm_sprites() -> Array[ComicSprite]:
+	var out: Array[ComicSprite] = []
+	for child: Node in vfx.get_children():
+		var sprite := child as ComicSprite
+		if sprite and sprite.visible and not vfx.live_effects().has(sprite):
+			out.append(sprite)
+	return out
+
+
+func _pooled() -> int:
+	return (vfx.get(&"_pool") as Array).size()
+
+
+## The first comic sprite and the impact frame's material were built and compiled on the
+## first hit's frame (8-16 ms). With a window the director draws each variant once at load;
+## headless has no renderer, so the warm-up is skipped and the tests' frames stay as they are.
+func test_warm_up_is_skipped_headless() -> void:
+	assert_eq(vfx.begin_warm_up(), DisplayServer.get_name() != "headless", "only with a window")
+	assert_false(vfx.begin_warm_up(false), "headless: nothing scheduled")
+	for i in 3:
+		vfx.advance(TICK)
+	assert_eq(_warm_sprites().size(), 0, "no sprite drawn")
+	assert_false(vfx.impact_frame.visible, "no impact frame pixel")
+	assert_eq(_pooled(), 0, "no sprite built ahead")
+
+
+## With a window: one tiny sprite per material variant, straight ahead in the view, for one
+## frame; then they are in the pool, where a first hit finds them built.
+func test_warm_up_shows_each_sprite_variant_once_then_pools_it() -> void:
+	assert_true(vfx.begin_warm_up(true))
+	assert_eq(_warm_sprites().size(), 0, "nothing until the director steps with a camera")
+	vfx.advance(TICK)
+	var shown := _warm_sprites()
+	assert_eq(shown.size(), 3, "one of each variant")
+	var variants := []
+	for sprite: ComicSprite in shown:
+		variants.append([sprite.shaded, sprite.no_depth_test])
+		assert_true(sprite.double_sided, "as every comic sprite")
+		assert_true(camera.is_position_in_frustum(sprite.global_position), "inside the view")
+		assert_lt(sprite.global_transform.basis.get_scale().x, 0.01, "under a centimeter wide")
+		assert_lt(sprite.modulate.a, 0.1, "faint")
+		assert_eq(sprite.global_position.z, -VfxDirector.WARM_DISTANCE_M, "ahead of the lens")
+	variants.sort()
+	var wanted := [[false, false], [false, true], [true, false]]
+	wanted.sort()
+	assert_eq(variants, wanted, "popping (no depth test), thrown (plain) and lying (shaded)")
+	assert_eq(vfx.live_effects().size(), 0, "no live effect")
+	vfx.advance(TICK)
+	assert_eq(_warm_sprites().size(), 0, "gone after their frame")
+	assert_eq(_pooled(), 3, "retired to the pool")
+	for i in 3:
+		vfx.advance(TICK)
+	assert_eq(_warm_sprites().size(), 0, "never shown again")
+	assert_eq(_pooled(), 3)
+	_land(_hit(CombatTypes.HitTier.LIGHT))
+	var burst := vfx.live_effects(&"burst_small")[0]
+	assert_true(shown.has(burst), "the first hit takes a sprite built at load")
+	assert_eq(_pooled(), 2)
+	assert_eq(burst.modulate, Color.WHITE, "with its own look")
+
+
+func test_warm_up_waits_for_a_camera() -> void:
+	camera.clear_current(false)
+	assert_null(get_viewport().get_camera_3d())
+	vfx.begin_warm_up(true)
+	vfx.advance(TICK)
+	assert_eq(_warm_sprites().size(), 0, "no camera to place them against")
+	camera.make_current()
+	vfx.advance(TICK)
+	assert_eq(_warm_sprites().size(), 3)
+
+
+## The impact frame's material is drawn on one pixel for a frame, no more: not a flash.
+func test_warm_up_draws_the_impact_frame_on_one_pixel() -> void:
+	vfx.begin_warm_up(true)
+	vfx.advance(TICK)
+	var frame := vfx.impact_frame
+	assert_true(frame.visible, "drawn")
+	assert_false(frame.is_flashing(), "but no flash")
+	assert_eq(frame.size, Vector2.ONE, "on a single pixel")
+	vfx.advance(TICK)
+	assert_false(frame.visible, "for one frame")
+	assert_eq([frame.anchor_right, frame.anchor_bottom], [1.0, 1.0], "the whole screen again")
+	assert_gt(frame.size.x, 1.0)
+	vfx.advance(TICK)
+	assert_false(frame.visible)
+	# A finisher flashes the whole screen as before, also straight after the warm-up.
+	frame.warm()
+	assert_true(frame.visible)
+	_land(_hit(CombatTypes.HitTier.FINISHER))
+	assert_true(frame.is_flashing(), "the flash starts")
+	assert_eq([frame.anchor_right, frame.anchor_bottom], [1.0, 1.0], "over the whole screen")
+	assert_gt(frame.size.x, 1.0)
+
+
+## The photosensitivity toggle: with it off no ink is ever drawn, not even the warm-up's
+## pixel, which waits for the toggle to go on.
+func test_warm_up_draws_no_ink_with_the_photosensitivity_toggle_off() -> void:
+	Tuning.data.impact_frame_enabled = false
+	vfx.begin_warm_up(true)
+	for i in 4:
+		vfx.advance(TICK)
+		assert_false(vfx.impact_frame.visible, "no ink at tick %d" % i)
+	assert_eq(_pooled(), 3, "the sprites still warmed")
+	_land(_hit(CombatTypes.HitTier.FINISHER))
+	assert_false(vfx.impact_frame.visible, "and no flash")
+	Tuning.data.impact_frame_enabled = true
+	vfx.advance(TICK)
+	assert_true(vfx.impact_frame.visible, "switched on: warmed then")
+	assert_false(vfx.impact_frame.is_flashing())
+	vfx.advance(TICK)
+	assert_false(vfx.impact_frame.visible)
+
+
 # --- Wiring, tuning and art ----------------------------------------------------------
 
 
