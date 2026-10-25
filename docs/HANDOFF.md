@@ -4,6 +4,30 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-24 23:23 CDT: hit-04 fixed and merged (486/486); 7 points left, so the lead stops here
+The 5-hour window is at 83% (resets 02:30 CDT on 10-25); weekly is at 59% (resets Tue 2026-10-27 17:00 CDT). Nothing is running. Every branch is pushed. The worktrees have no uncommitted tracked changes.
+- **Merged into `m2/hit-feel`:**
+  - `m2/phase3-fix-r2-finisher-flash` (`9698617`). A finisher's contact flash now starts on the first rendered frame after the impact frame, and still lasts `hit_flash_frames`. With the toggle off it starts on the hit tick, as before. In first person: 2 frames of ink, then 2 frames of white on the struck chin. In side view the burst and its word still cover it (hit-05, and the open side-view flash question). Sheets (local): `.worktrees/m2-fix-r2-finisher-flash/captures/fix/s_*.png`.
+  - `m2/phase3-review` again (the hit records, `packages-r2a.json`, `fix-r2-finisher-flash.json`).
+  - **Head `8f5519f`. 486/486 tests pass with no SCRIPT ERROR or ERROR.** The preset regenerated unchanged (300 values).
+- **Ready for the next window:** `.worktrees/m2-review-perf` is detached at `8f5519f` and imported. [reviews/M2-phase3/args-r2-perf.json](reviews/M2-phase3/args-r2-perf.json) holds the perf run's exact args.
+- **Resume:**
+  1. `Workflow({scriptPath: "<repo>/docs/reviews/M2-phase3/workflow.js", args: <the contents of args-r2-perf.json>})`. This runs the perf review (about 18%) and its skeptics.
+  2. The round 2 critic. Run `workflow.js` with `lenses: []` (none to run), `suffix` "-r2" and a `common_note` that lists all the lenses run so far. Its critic prompt then gets an empty coverage list, so tell it in the note to read `review-*.json` and `verify-*.json`. Or do this step as lead work.
+  3. The partition of hit-05 and the perf survivors into `packages-r2.json` (keys prefixed `r2-`). Use `workflow-verify-partition.js`'s pattern, or a lead-written file as with `packages-r2a.json`.
+  4. `workflow-fix.js` with `packages_file` "packages-r2.json".
+  5. Merge, then the final sheets for Game-boy, then D.
+- **Waiting on Game-boy** (each has a default; none blocks the work):
+  - the combat log: grab-03 and hit-03;
+  - the flash's first-person size and the flurry strobe: grab-05 and hit-01;
+  - a hit on the player in first person: hit-02;
+  - the side-view flash: a minimum size alone won't show it;
+  - the hold's look dead band (grab-06);
+  - bars over the middle of a body that isn't upright;
+  - the new look: gray trousers and dark hair;
+  - the FYI on `ragdoll_partial_head_influence`;
+  - the 12:40 entry's items.
+
 ### 2026-10-24 23:09 CDT: round 2 hit review done (5 of 5 survive, 3 are spec questions); hit-04's fixer running
 The 5-hour window is at 74% (resets 02:30 CDT on 10-25); weekly is at 57%. The hit review and its 15 skeptics took the window from 46% to 66% in about 35 minutes.
 - **Hit-feel review** (`review-hit.json`, `verify-hit.json` on `m2/phase3-review`, `d38b199`). It used five recordings at `f1e2d0f`: every vfx_bot act, 36 combo_bot acts, and every side-view ragdoll_bot act with and without the effects. Each of the five findings has 3 of 3 confirmations.
@@ -710,7 +734,7 @@ USAGE RULES:
 
 Next steps (Milestone 2; details are in docs/HANDOFF.md):
 - Phases 1 and 2, the localized flash and phase 3's packages A (ragdoll: contact push, KO blink-off, staggers at 0.9) and B (grab view and waist bend) are merged into m2/hit-feel. 457/457 tests pass with no SCRIPT ERROR, at f98bb21. README has the three approved M2 ragdoll departures. WP3's audio was judged by analysis only, so I'll listen to it.
-- Phase 3's package C runs as a Workflow (I turned ultracode on), per docs/milestones/M2-phase3-plan.md, "C", step 2. The code, ragdoll and grab reviews are done, and all 19 of their findings are verified: every one survives, and 2 are spec questions for me (grab-03, grab-05). The 17 others are split into four fix packages (docs/reviews/M2-phase3/packages.json on branch m2/phase3-review). All four packages are fixed and merged into m2/hit-feel with the review records (484/484 tests, no SCRIPT ERROR). Round 2 reviews the merged build: the hit-feel lens first (workflow.js with lenses ["hit"] and round 2 options), then performance, the critic, the partition into packages-r2.json and the fixers, as docs/HANDOFF.md's newest entry says. Then record the final sheets and show me. Then D: check ARCHITECTURE against the code, README's Milestone 2 status, and the M2 PR, which is never merged without my sign-off.
+- Phase 3's package C runs as a Workflow (I turned ultracode on), per docs/milestones/M2-phase3-plan.md, "C", step 2. The code, ragdoll and grab reviews are done, and all 19 of their findings are verified: every one survives, and 2 are spec questions for me (grab-03, grab-05). The 17 others are split into four fix packages (docs/reviews/M2-phase3/packages.json on branch m2/phase3-review). All four packages are fixed and merged into m2/hit-feel with the review records (484/484 tests, no SCRIPT ERROR). Round 2 reviews the merged build. The hit-feel lens is done (hit-04 fixed and merged, at 486/486; hit-05 is left; 3 spec questions for me). Next: the performance lens (workflow.js with docs/reviews/M2-phase3/args-r2-perf.json), the critic, the partition into packages-r2.json and the fixers, as docs/HANDOFF.md's newest entry says. Then record the final sheets and show me. Then D: check ARCHITECTURE against the code, README's Milestone 2 status, and the M2 PR, which is never merged without my sign-off.
 - Open for me (each has a default; none blocks C): more contortion on the ragdoll contact push (default: as it is); the grab's lens pull-back and the bend's depth (default: as they are); the combat log over the knee contact (default: C proposes a fix); a minimum on-screen size for the side-view flash (default: leave it). And I'll listen to WP3's audio.
 
 Ground rules:
