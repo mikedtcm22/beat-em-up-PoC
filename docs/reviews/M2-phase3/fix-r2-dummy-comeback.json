@@ -1,0 +1,81 @@
+{
+ "package": "r2-dummy-comeback",
+ "branch": "m2/phase3-fix-r2-dummy-comeback",
+ "verdicts": [
+  {
+   "id": "gap-05",
+   "outcome": "fixed",
+   "what_changed": "Confirmed first: K3 before had the dummy 0.7 m from the player on the post (capsules touching), and the unfixed code walked it in place for 274 of 300 ticks. training_dummy.gd _respawn_spot(): rings are k * (2 body radii + dummy_respawn_gap_m), so ring 1 is 0.8 m out. Candidates rank by: in front of or beside the player (his get_forward(), not a camera) over behind him, even a ring further out; then the nearest ring; then the farthest from him (ties within 1 mm); then the most in front of him. A player standing exactly on the post gets the dummy 0.8 m straight ahead of him. A new _walk_home() (return_home branch of _tick_control) does not walk while _has_room(_home) is false, so the dummy stands and faces the player. It gives up a walk that gets no nearer to the post for dummy_return_stuck_s (0.25 s), then waits out the idle time before trying again. Idle frames, slack, return turn rate and the face turn rate (including the sparring walk's 4.0) are now TuningData values. ARCHITECTURE's 'KO and blink-off' bullet and its 'Someone on the post' sub-bullet are updated.",
+   "tests": "tests/test_ko_blink.gd, 5 new tests. test_a_dummy_comes_back_clear_of_the_player_on_its_post_and_in_his_view: >= 0.79 m from him, ahead > 0.9, 300 ticks with no walking and no push on him. test_a_dummy_comes_back_in_the_players_view_whichever_way_he_faces: six yaws, plus the front spot taken. test_a_dummy_walks_home_once_the_post_is_free. test_a_dummy_gives_up_a_walk_home_that_goes_nowhere (a wall in the way; the walk is capped at the approach plus the stuck window). The existing 'beside its post' limits now use two rings of body width plus the gap (_two_body_widths()), and the offset test also asserts not behind the player. 11 assertions in 6 of the new tests fail on the old training_dummy.gd; with the fix all 19 tests in the file pass."
+  },
+  {
+   "id": "gap-08",
+   "outcome": "partial",
+   "what_changed": "(a), (b) and (c) are done. (a) blink_shown() takes an optional duty and reads Tuning.ko_blink_duty (0.5), in 'KO and blink-off' after ko_blink_in_hz. (b) dummy_respawn_gap_m 0.1 and (c) dummy_return_idle_s 1.0 (the 60 frames at 60 Hz), dummy_return_slack_m 0.3 and dummy_return_turn_rate 6.0 are in 'Reactions' after dummy_revive_s, with dummy_return_stuck_s 0.25 and dummy_face_turn_rate 4.0. All keep today's values except the new gap and the stuck window. tuning/default.json is regenerated (307 values). NOT done: (d) _RELEASE_BLEND_S and the 0.03 launch blend, because combat_actor.gd is owned by r2-launch-into-walls apart from blink_shown(). (e) the '3 m' comment in humanoid_rig.gd, which isn't in my files (it should say about 4). Both go to the lead.",
+   "tests": "test_ko_blink.gd test_the_blink_duty_sets_how_long_the_body_is_shown: shares 0.25, 0.5 and 0.75, the optional argument against Tuning.ko_blink_duty, each cycle still starts off. The existing blink tests pass unchanged. test_tuning_panel's default.json check passes."
+  },
+  {
+   "id": "gap-04",
+   "outcome": "fixed",
+   "what_changed": "placeholder_poses.gd: stagger_right_a's far (left) arm was upper arm (20, 0, -70) with lower arm 30, a nearly straight arm 70 degrees out. It is now upper arm (28, 0, -40) with lower arm 100 (about 40 degrees out, folded near the guard). stagger_right_b's is (34, 0, -28) with lower arm 105 (it had no lower-arm entry and inherited the straight 30). stagger_left mirrors them. The trunk poses are untouched, so the rock-back stays (trunk lean 31 degrees as before). Measured on the drawn rig: far fist from the trunk axis at its widest 0.88 m before, 0.60 m after (boxer; guard 0.26-0.28 m), elbow inner angle 128 before, 68 after.",
+   "tests": "New tests/test_stagger_pose.gd measures the drawn rig (animation only) for stagger_right and stagger_left in both stances: the far fist is under 0.66 m from the trunk axis, over the guard distance + 0.15 m (still a fling), the elbow's inner angle is under 100 degrees, and the trunk leans over 8 degrees. Pre-fix it fails on the fist distance and the elbow angle for every case; post-fix it passes."
+  }
+ ],
+ "commit": "45c70b20c0a5f49b0d15b18b73f7f027ff84ccc3",
+ "pushed": true,
+ "tests_passed": 492,
+ "tests_total": 492,
+ "script_errors": false,
+ "tunables_added": [
+  "ko_blink_duty (Ragdoll > KO and blink-off, 0.5)",
+  "dummy_respawn_gap_m (Reactions, 0.1)",
+  "dummy_return_idle_s (Reactions, 1.0)",
+  "dummy_return_slack_m (Reactions, 0.3)",
+  "dummy_return_turn_rate (Reactions, 6.0)",
+  "dummy_return_stuck_s (Reactions, 0.25)",
+  "dummy_face_turn_rate (Reactions, 4.0)"
+ ],
+ "captures": [
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r2-dummy-comeback/captures/fix/after_hook_fp.png",
+   "description": "After: the hook stagger in first person (ragdoll on). The far arm is bent and raised near the head, with no straight arm to the right edge. Compare the reviewer's before sheet at /Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-gap/captures/review_gap/s_hook_fp.png."
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r2-dummy-comeback/captures/fix/after_hook_fp_noragdoll.png",
+   "description": "After: the same hook in first person with --no-ragdoll (animation only). The far arm is bent near the head, not a rope."
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r2-dummy-comeback/captures/fix/after_hook_side_crop.png",
+   "description": "After: the hook in side view (ragdoll on), cropped. The torso rocks back and both forearms fling up, bent; reads as a recoil, not worse than before."
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r2-dummy-comeback/captures/fix/after_hook_side_noragdoll.png",
+   "description": "After: the hook in side view with --no-ragdoll, cropped."
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r2-dummy-comeback/captures/fix/after_push_side_crop.png",
+   "description": "After: the push-kick finisher in side view. It is a launch (launched_a pose), not a sideways stagger, so it is unchanged."
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r2-dummy-comeback/captures/fix/after_release_jab_crop.png",
+   "description": "After: the hold broken by a jab (a release stagger), side view. It plays stagger_back, unchanged by the re-pose."
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r2-dummy-comeback/captures/fix/after_k3_side.png",
+   "description": "After: K3 (side view), the dummy comes back 0.8 m in front of the player on its post, clear of him, and stands still there. Movie /Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r2-dummy-comeback/captures/fix/k3_after.avi, log k3_after.log; before: k3_before.avi and k3_before.log in the same folder."
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r2-dummy-comeback/captures/fix/after_k4_fp.png",
+   "description": "After: K4, the comeback in first person (a copy of the gap probe with one extra act, K4). The dummy blinks in 0.8 m straight ahead of the player on the post, in view, and stays put."
+  }
+ ],
+ "feel_judgement": "First person: the comeback now reads right. The dummy blinks in straight ahead of the player on its post, 0.8 m away and in view, and then stands there. The K3/K4 logs show its position unchanged for 300 ticks, with no walk cycle and no pressing into him. Before, it came back touching him, out of view, and strode in place. The hook stagger in first person no longer throws the far arm straight out to the right edge. With the ragdoll on and with --no-ragdoll, the far arm folds up near the head and the torso still rocks over. It is a tighter, flinching fling, not a flail. Side view (debug only): the hook still rocks the torso back and both forearms fling up bent, so I kept the re-pose and have no report of it reading worse. The push-kick finisher and the jab-breaks-hold release stagger don't use the sideways staggers, so they are unchanged.",
+ "spec_questions": [],
+ "remaining": [
+  "gap-08 (d): _RELEASE_BLEND_S (0.22 s) and the 0.03 s launch blend are still script constants in combat_actor.gd. That file is owned by r2-launch-into-walls apart from blink_shown(). Suggest tunables such as grab_launch_unbend_s and a launch snap blend. The 0.03 blends at lines ~850, 963 and 980 are also literals.",
+  "gap-08 (e): the humanoid_rig.gd:405 comment says '3 m' where tuning_data.gd and ARCHITECTURE say about 4. A one-word documentation fix in a file I don't own.",
+  "A comeback ring 2 sits 1.6 m from the post (two rings of 0.7 m + 0.1 m), a little over two body widths. It is used only when ring 1 has no spot in the player's view, for example when he stands slightly past the post facing away from it. Lower dummy_respawn_gap_m to bring it closer.",
+  "While a dummy is displaced and idle with the player on its post, _has_room(_home) runs every tick (about 10-20 microseconds each). I didn't throttle it. The reviewer measured _respawn_spot() at 8-169 microseconds.",
+  "tuning/default.json is regenerated here (307 values); the lead regenerates it again after merging. The gap probe copy with the extra K4 act is in my untracked captures/review_gap/ (not committed)."
+ ]
+}
