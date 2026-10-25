@@ -4,6 +4,13 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-25 14:20 CDT: account E claims leg 2's rest and leg 3; r3-ragdoll-kick-body merged (523/523)
+Account E: 5-hour 0% (resets 19:09 CDT), **weekly 78%** (resets Tue 2026-10-27 17:00 CDT). Weekly is the limit: 12 points below 90% is about 70 points of a 5-hour window (one window point costs about 0.16 weekly points). Its watcher is "Beat-em-up: usage watcher" (`usage-watcher`, Haiku).
+- **Leg 2's rest and leg 3 claimed by account E at 14:20 CDT.**
+- **Merged:** `m2/phase3-fix-r3-ragdoll-kick-body` and `m2/phase3-review` into `m2/hit-feel` at `b01e35d`. **523/523 tests pass with no SCRIPT ERROR or ERROR.** The preset regenerated unchanged (318 values). Pushed.
+- **Game-boy (14:15 CDT):** for the rest of M2, every open question takes its default. He can't tell the grey-block feel differences apart until the art goes in. So no new questions for him this milestone: each default is recorded, and art-dependent feel polish waits for the art. (Also in the Decisions log.)
+- **Next:** the two remaining r3 fixers through `workflow-fix.js` (`only` r3-ko-view-return and r3-dummy-room; Sonnet; `fixer_cost` 5, because the gate compares one window point against weekly's 12 points of headroom), then the merge, then leg 3.
+
 ### 2026-10-25 14:05 CDT: handoff, account F's 5-hour window at 92%; round 3 reviewed (11 of 11 survive), 1 of 3 r3 packages fixed
 Account F: 5-hour **92%** (resets 17:09 CDT), weekly 58% (resets Wed 2026-10-28 10:59 CDT). The round 3 run (`wf_4ff561cb-f25`, 52 agents, 111 minutes) took the window from 0% to 92% and weekly from 43% to 58%. Nothing is running. Every branch is pushed. No worktree has uncommitted tracked changes. **Game-boy switched to another account at 14:13 CDT.** This session is renamed "Beat-em-up: account F session (handed off)", and its watcher has stopped its loop. The new account starts its own watcher and claims the rest of leg 2 here first.
 - **Round 3 review** (records on `m2/phase3-review` @ `6a0208e`: `review-r3code.json`, `verify-r3code.json`, `review-r3look.json`, `verify-r3look.json`, `packages-r3.json`, `fix-r3-ragdoll-kick-body.json`). Two Opus reviewers worked at `72a1066`, with three Sonnet skeptics per finding. **All 11 findings survive.** r3look-05 is a spec question.
@@ -869,6 +876,7 @@ Every approved spec change so far is in README.md, "Where M1 departs from the sp
 - **The player's KO, an "out of body" view (2026-10-25):** the camera pans away from the body and shows the player lying on the floor, the only time it leaves the player's eyes. It's a README departure.
 - **Round 2's proposed fixes are approved as written (2026-10-25)**, with the KO view as above.
 - **Models (2026-10-25):** Opus for planning and review, Sonnet for coding and execution. Fixers run with `fixer_model: "sonnet"`.
+- **Defaults for the rest of M2 (2026-10-25 14:15 CDT):** every open question takes its default for the rest of this milestone. Without the final art, Game-boy can't tell the grey-block feel issues apart. So don't put fine look or feel questions to him in M2. Record each default taken, and leave art-dependent feel polish for when the art is in.
 - **Process:** at each usage limit, hand off to Game-boy's second Claude account. Never assume the same session resumes.
 
 ## Usage watcher
