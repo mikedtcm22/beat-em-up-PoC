@@ -193,8 +193,8 @@ func _walk_home() -> bool:
 
 ## Whether a standing body (the player's, another dummy's) is in the way of the next
 ## Tuning.dummy_return_look_ahead_m (at most `dist`) along the flat `dir`: the body's capsule
-## cast that far against the standing bodies. A body it already touches does not count for
-## the cast, so one pressed against it is also looked for in the capsule's own place.
+## cast that far against the standing bodies. A body pressed against it in the way counts
+## (the cast stops at once); one touching it from behind does not.
 func _body_in_the_way(dir: Vector3, dist: float) -> bool:
 	var space := get_world_3d().direct_space_state if is_inside_tree() else null
 	if space == null:
