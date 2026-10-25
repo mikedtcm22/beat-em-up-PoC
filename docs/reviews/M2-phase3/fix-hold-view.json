@@ -1,0 +1,116 @@
+{
+ "package": "hold-view",
+ "branch": "m2/phase3-fix-hold-view",
+ "commit": "acea488",
+ "pushed": true,
+ "tests_passed": 471,
+ "tests_total": 471,
+ "script_errors": false,
+ "tunables_added": [
+  "grab_view_target_pitch_deg (Grab and weapons > Hold view, default 22.0, range 0-60): the hold pitch only brings the view down to this many degrees below level in all; tuning/default.json regenerated"
+ ],
+ "verdicts": [
+  {
+   "id": "code-03",
+   "outcome": "fixed",
+   "what_changed": "player.gd: the lens moves on its own eased path from where it sits standing to where it sits in the hold (the bend plus the full rise and pull-back). It eases in over grab_view_in_s, quick to start, and out over grab_view_out_s, smoothstepped, from wherever it is, with _hold_lens. A knee that lets go keeps the path until the knee ends. Each physics tick after the rig advances, _tick_hold_shift() works out how much of the rise and pull-back is needed to cover the gap between that path and the rig's actual eye (get_hold_view_shift()), each share between 0 and the ease. get_camera_move_offset() and get_camera_pull_back() return them. first_person_camera.gd: the shift is smoothed with the eye by the same weight (_view_with()), and the walking bob clamp is now lerp(clamped, raw, get_hold_view_weight()), so weight 1 means no clamp (B's rule is kept). The pitch keeps its own ease. Values are unchanged: 16 / 0.24 / 0.10 / 0.2 s / 0.45 s, and the knee's -12 / 0.05.",
+   "tests": "test_grab_view.gd follows view_transform() per tick through a real FirstPersonCamera. It checks the per-tick bound and that the lens never goes past either end on a grab, an LB release, a release 3/6/9 ticks into the grab (new this run), and a grab and a release while walking. On the base code these fail: 6.3 cm past the end on the grab, 4.4 cm on the release, a 3.3 cm one-tick step on the release while walking. Captures confirm it: a_walk_grab_fp30.png and a_walk_release_fp30.png show a steady view while walking with the body and a smooth ease on each side."
+  },
+  {
+   "id": "grab-07",
+   "outcome": "fixed",
+   "what_changed": "I took the pose route, so B's design is unchanged and the ramps still run in sim ticks, still through hitstop. PlaceholderPoses._throw() strike: RightUpperArm (84,10,28) became (70,-20,95), out wide, and RightLowerArm 24 became 90, so the fist heaves up in the top right corner and the elbow end sits off the right edge. The elbow is not hidden. The throw still ends in the stance.",
+   "tests": "test_hold_knees_and_throw_keep_the_lens_clear counts the elbow capsules ('*Elbow' meshes) in the middle two thirds of the view through the throw and asserts 0. On base it was 4.9%; now it is 0.0%. a_throw_fp.png: no blue ball mid-view, only a sleeve edge at the right border for a couple of frames. rt_base_fp.png shows the ball before the fix. a_throw_sidecrop.png: the side-on throw reads fine."
+  },
+  {
+   "id": "grab-06",
+   "outcome": "fixed",
+   "what_changed": "New PlayerCharacter.get_hold_view_pitch_deg() = clamp(grab_view_target_pitch_deg - look_down, 0, grab_view_pitch_deg), weighted by get_hold_view_weight() in get_camera_move_offset(). The new 'Hold view' tunable grab_view_target_pitch_deg defaults to 22: looking level or at the bots' -6 the view gets all 16 degrees, so the approved hold view is unchanged; looking 22 or more down it gets none.",
+   "tests": "test_looking_down_the_hold_view_does_not_stack_on_the_look checks the pitch at looks 0, -6 and -25, and the lens rules through the hold and two knees at -25: own body 29.9% (at most 33%), covered 72%. On base it errors because the tunable is missing; the reviewer measured 54-62% own body and 78-84% covered. a_lookdown_fp.png: the knee peaks still show the street above the held body."
+  },
+  {
+   "id": "grab-02",
+   "outcome": "fixed",
+   "what_changed": "player.gd _on_hit_received(): when holding, it calls TimeController.hitstop([_held], HitDetector.hitstop_for(hit)) and then _release_held(true). The held body freezes with the player in the hit's hitstop, then staggers away, pushed release_push ahead. It goes only through the public API: no change to combat_actor.gd, and release_from_grab() keeps its signature.",
+   "tests": "test_a_hit_that_breaks_the_hold_keeps_the_released_body_off_the_lens has a second dummy jab the holder. It asserts the victim staggers and is frozen together with the player, and checks the lens rules through the hitstop and the ease-out: the victim's nearest point is 0.264 m and it covers 42%. On base: 0.148 m and 54%. The release/hit easing test also asserts STAGGER and hitstop. a_hit_fp.png: no cap rising through the frozen view; the body staggers off and recovers about 0.6 m in front. a_hit_sidecrop.png reads as the clinch torn apart."
+  },
+  {
+   "id": "code-06",
+   "outcome": "fixed",
+   "what_changed": "This covers only the test_grab_view.gd half; the test_ragdoll.gd half belongs to launch-from-hold. The lens test now also watches 45 ticks after the third knee's release and 45 ticks after an LB release, and includes the elbow capsule in the throw. New cases: the lens path through grab, release, early release and walking grab and release; look -25; a hit while holding. combo_bot gets 'Hold view: ...' acts in both views (LB release side view, walking grab and back-off release, looking 25 degrees down, a jab breaking the hold), act start frames in the log, and --act=a|b alternatives.",
+   "tests": "LB release worst: victim 37.5% at 0.269 m. Third-knee release worst: victim 37.7% at 0.256 m. All 12 tests in test_grab_view.gd pass alone and in the full suite."
+  }
+ ],
+ "captures": [
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-hold-view/captures/fix/after_hold.avi",
+   "description": "Recording 1 (combo_bot, 1600x900): Grab and throw (side view), Grab anytime (FP throw), Grab looking level (FP LB release), and the first versions of the Hold view acts. Log: after_hold.log"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-hold-view/captures/fix/after_hold2.avi",
+   "description": "Recording 2: the final 'Hold view' acts in both views (side-view LB release, walk-in grab with a back-off release while walking, looking 25 degrees down, a jab breaking the hold). Log with act start frames: after_hold2.log"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-hold-view/captures/fix/a_throw_fp.png",
+   "description": "Throw in first person, 12 fps: no elbow ball mid-view (compare rt_base_fp.png in the same folder, the ball before the fix)"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-hold-view/captures/fix/a_throw_sidecrop.png",
+   "description": "Throw side on (cropped): the heave reads and ends in the stance"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-hold-view/captures/fix/a_release_fp.png",
+   "description": "Grab looking level, LB release in first person"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-hold-view/captures/fix/a_release_sidecrop.png",
+   "description": "LB release, side view (cropped)"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-hold-view/captures/fix/a_walk_grab_fp30.png",
+   "description": "Grab while walking, first person at 30 fps: the view pans and the lens moves back smoothly"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-hold-view/captures/fix/a_walk_release_fp30.png",
+   "description": "Release while walking (backing off), first person at 30 fps: steady while held, smooth ease-out, no pop"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-hold-view/captures/fix/a_walk_fp.png",
+   "description": "The whole walking act, first person at 6 fps"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-hold-view/captures/fix/a_walk_sidecrop.png",
+   "description": "Walking grab and release, side view (cropped)"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-hold-view/captures/fix/a_lookdown_fp.png",
+   "description": "Looking 25 degrees down: grab, two knees and the throw in first person; the street stays visible above the held body"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-hold-view/captures/fix/a_lookdown_sidecrop.png",
+   "description": "Looking-down act, side view (cropped)"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-hold-view/captures/fix/a_hit_fp.png",
+   "description": "A jab breaks the hold, first person at 12 fps: the hitstop freeze, then the body staggers off instead of rising through the view"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-hold-view/captures/fix/a_hit_sidecrop.png",
+   "description": "A jab breaks the hold, side view (cropped; jabber on the player's left so the side camera sees past it)"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-hold-view/captures/fix/t_full_end.log",
+   "description": "Full suite at acea488: 471/471, no SCRIPT ERROR or ERROR"
+  }
+ ],
+ "feel_judgement": "Judged from the after-sheets. The hold view keeps its approved look: it pans down, the lens moves back and up, and it eases in on the grab and out on release or throw. Walking into a grab and backing off into a release are now smooth at 30 fps. The view stays still while walking with the body, and the ease-out has no pop. On the throw, the right arm frames the heave from the top right corner, with only a sleeve edge at the right border; there is no blue ball mid-view. Side on, the strike briefly raises the right elbow high, which reads as a heave. Looking 25 degrees down, the hold and knees still show the street above the held body rather than the player's own belly. A jab that breaks the hold now reads as the clinch being torn apart: a short freeze, then the body staggers off with its arms flung out and recovers about 0.6 m in front in its guard. That is about as close as after an LB release, which was already like this before. One feel side effect of grab-06's specified formula: at full weight, the view stays at 22 degrees down while the look moves anywhere between 6 and 22 degrees down. A player who moves the mouse there while holding gets about 16 degrees of look travel with no response; the bots never show this.",
+ "spec_questions": [],
+ "remaining": [
+  "For the lead (grab-06): the formula in the brief, extra = clamp(target - look_down, 0, grab_view_pitch_deg), leaves a look dead band while holding. For looks between -6 and -22 the view stays at -22. I kept the specified formula. A softer mapping would keep the view responding (for example, fade the extra over a wider band so the view moves at least half as fast as the look), but it would change the bots' -6 framing or need a deeper target. Your call whether to raise it with Game-boy.",
+  "grab-07 went through the throw pose, not an earlier ease-out. The ramps still run in sim ticks and still hold through hitstop, so this is NOT a change to B's design, and ARCHITECTURE's 'still through hitstop' stays true.",
+  "Merged with launch-from-hold, the lens numbers may shift (already merged into m2/hit-feel at 0905690, which this branch is based on). test_launch_from_hold.gd passes here. The lead re-runs both packages' tests after merging, as planned.",
+  "The known order-dependent pile test (test_ragdoll.gd test_two_bodies_that_fell_on_each_other_get_up_beside_each_other) passed in this branch's full run: 'pile: top [true, false], get-ups moved 0.768 / 0.080 m', 471/471. I did not touch test_ragdoll.gd; ko-respawn-bars owns making it independent of order.",
+  "tuning/default.json now has grab_view_target_pitch_deg; the lead regenerates it again after merging.",
+  "Not done, by ownership: the code-06 test_ragdoll.gd half (per-part spin caps after many hits) belongs to launch-from-hold."
+ ]
+}
