@@ -4,6 +4,31 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-25 08:10 CDT: perf review done (2 of 2 survive); round 2 close running; weekly is now the limit
+The 5-hour window is at 22% (resets 12:30 CDT); **weekly is at 66%** (resets Tue 2026-10-27 17:00 CDT). Weekly's 90% stop leaves 24 points until Tuesday, about two windows of heavy work, so round 2 runs lean: fixers one at a time, at a 15-point estimate each.
+- **Perf review** (`review-perf.json`, `verify-perf.json`; both findings have 3 of 3 confirmations). Phase 3's code is cheap and doesn't leak:
+  - six full ragdolls cost 1.35-1.41 ms a tick with the contact push on or off (partial: 1.12-1.22 ms), and they sleep 1.73 s after the hit;
+  - 21 KO cycles of six dummies leave the node, object, resource, joint and body counts flat;
+  - `hurt_point()` costs 4.9 µs, `flash_at()` 13 µs, `screen_anchor_of()` 19 µs a bar, `_respawn_spot()` 8-169 µs;
+  - the hold view is negligible;
+  - the flash warm-up works in both views (the first flash costs 0.15-0.88 ms with it, 3.3-8.7 ms without);
+  - six rigs flashing cost about 0.24 ms of GPU;
+  - known item (c), the first finisher's dropped frame, no longer reproduces (6 real-time runs).
+  - **To fix:**
+    - **perf-01:** the first hit of every fresh run drops a frame. The first comic sprite builds its material on the hit frame: 7-20 ms of main-thread CPU, and 24-38 ms real-time frames.
+    - **perf-02:** a clean-to-bruised switch rebuilds the damage-look shader variant whenever no body shows a look: 3-5 ms, and 12-16 ms the first time.
+  - Both are pre-phase-3 VFX code; the fix is a load-time warm-up or a constant material variant. Perf note on hit-02's option (c), a HUD vignette: it would need the same warm-up.
+- **Running:** workflow `wf_e4327a11-eae`: `workflow-r2-close.js` with `base` `bba8633`, `concurrency` 1, `fixer_cost` 15 and a `fix_note`. It runs:
+  - the critic (`critic-r2.json`);
+  - a gap review only if the critic names high gaps (worktree `.worktrees/m2-review-gap` at `bba8633`, imported);
+  - the partition of hit-05, perf-01, perf-02 and any gap survivors into `packages-r2.json`;
+  - then the fixers through `workflow-fix.js`.
+- **If cut off:**
+  - with no `critic-r2.json`, rerun the same args;
+  - with `packages-r2.json` there, run `workflow-fix.js` with `packages_file` "packages-r2.json", `concurrency` 1 and `fixer_cost` 15;
+  - within this session, use `resumeFromRunId: "wf_e4327a11-eae"`.
+- **Then:** merge the fix branches and `m2/phase3-review`, regenerate the preset, run the tests, record the final sheets for Game-boy, then D (README's Milestone 2 status and hook figures, ARCHITECTURE checked against the code, the M2 PR, never merged without his sign-off).
+
 ### 2026-10-25 07:25 CDT: account E resumed (Game-boy's call); round 2's perf review running
 The 02:30 reset passed. At 07:15 the window was at 6% (it resets at 07:30 CDT); weekly was at 60% (resets Tue 2026-10-27 17:00 CDT).
 - **Running:** workflow `wf_bd40aeb8-b63`: `workflow.js` with [reviews/M2-phase3/args-r2-perf.json](reviews/M2-phase3/args-r2-perf.json). It runs the perf review in `.worktrees/m2-review-perf` at `8f5519f`, then three skeptics per finding. The scribe writes `review-perf.json` and `verify-perf.json`.
