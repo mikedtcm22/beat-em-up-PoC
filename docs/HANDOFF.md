@@ -1026,32 +1026,32 @@ If no watcher is running, for example after an account switch, start one with th
 Game-boy pastes this into a new account's session. Keep the "Next steps" list current at every handoff; the rest changes rarely.
 
 ```
-You're taking over an in-progress Godot 4.7.2 project: a first-person beat-em-up proof of concept at /Users/arachne/repos/beat-em-up-PoC (GitHub: mikedtcm22/beat-em-up-PoC). I'm Game-boy, the project owner. Other Claude accounts did the work so far and handed off at their usage limits. We switch accounts at every usage limit, so treat the repo as the only source of truth. Work happens on branch m2/hit-feel and the worktrees under .worktrees/.
+You're taking over an in-progress Godot 4.7.2 project: a first-person beat-em-up proof of concept at /Users/arachne/repos/beat-em-up-PoC (GitHub: mikedtcm22/beat-em-up-PoC). I'm Game-boy, the project owner. Other Claude accounts did the work so far and handed off at their usage limits. We switch accounts at every usage limit, so treat the repo as the only source of truth. Work happens on branch m3/enemy-ai and the worktrees under .worktrees/.
 
 Start by doing these, in order:
 1. Rename this session to "Beat-em-up: working session" (mcp__ccd_session_mgmt__set_session_title). The usage watcher finds you by that title.
-2. Read CLAUDE.md, then docs/HANDOFF.md (live status and exact resume steps; the newest entry is at the top). Then read the milestone docs and review files it points to: docs/milestones/M2-plan.md, docs/milestones/M2-WP4-brief.md, docs/reviews/M2-phase1-review-findings.json and docs/reviews/M2-phase1-fix-results.json. Read docs/ARCHITECTURE.md and docs/SPEC.md §6, §10 and §11 before touching code.
-3. Start a usage watcher exactly as docs/HANDOFF.md describes under "Usage watcher" (Haiku, low effort, self-paced /loop, shares this checkout, its prompt verbatim). Confirm it's running.
+2. Read CLAUDE.md, then docs/HANDOFF.md (live status and exact resume steps; the newest entry is at the top). Then read docs/milestones/M3-plan.md and docs/milestones/M3-judgement-calls.md. Read docs/ARCHITECTURE.md, the codemaps in docs/milestones/M3-codemap/ and docs/SPEC.md §5, §7, §8 and §11 before touching code.
+3. If no usage watcher is running (list your sessions), start one exactly as docs/HANDOFF.md describes under "Usage watcher" (Haiku, low effort, self-paced /loop, shares this checkout, its prompt verbatim).
 4. Check usage (mcp__ccd_session_mgmt__get_usage) before launching any workflow or agent.
 
 USAGE RULES:
-- A builder the size of a work package costs 30-50% of a 5-hour window; a heavy agent that both reviews and fixes about 25%; a review-only agent about 13%.
-- Run at most TWO heavy agents at once.
+- The account is a premium seat (5x the old limits): a heavy Opus agent costs about 3% of a 5-hour window; see docs/HANDOFF.md's cost table.
+- At most 4 Godot-bound builders at once (8 GB of RAM); up to about 6 heavy agents while the window is under 60%.
 - Work up to the 90% handoff; don't stop early. Check get_usage before each launch and size the launch to the headroom left below 90%. If the next phase or milestone doesn't fit (say at 70%), spend a little of the headroom splitting it into a first task that fits, run it with wip commits, and hand off at 90%. Details: docs/HANDOFF.md, "Usage rules for the working session".
 - Prefer one agent per work package doing review, then fix, over many reviewers per package.
-- The watcher checks every 20 minutes below 70%, every 10 minutes up to 85% and every 5 minutes above that. It tells you to halt and hand off at 90%.
+- The watcher checks every 30 minutes below 70%, every 15 up to 85% and every 5 above. It tells you to halt and hand off at 90%; the handoff's last step is the scheduled resume task (docs/HANDOFF.md, "Resume after a limit").
 
-Next steps (Milestone 2; details are in docs/HANDOFF.md):
-- Phases 1 and 2, the localized flash and phase 3's packages A (ragdoll: contact push, KO blink-off, staggers at 0.9) and B (grab view and waist bend) are merged into m2/hit-feel. README has the Milestone 2 status and every approved M2 departure. WP3's audio was judged by analysis only, so I'll listen to it.
-- Phase 3's package C ran as Workflows (I turned ultracode on): three rounds of adversarial review and fixes, all merged into m2/hit-feel (537/537 tests, no SCRIPT ERROR). Legs 1-3 are done, and the M2 PR is open: https://github.com/mikedtcm22/beat-em-up-PoC/pull/2. It waits on my play-through and sign-off. Never merge it without that. If I ask for changes, make them on m2/hit-feel and push.
-- Every open M2 question took its default (my call, 2026-10-25 14:15: I can't judge grey-block feel differences until the art is in). The PR lists them. Don't put fine look or feel questions to me before the art.
-- After sign-off: merge PR #2, then plan Milestone 3 (SPEC §12).
+Next steps (Milestone 3; details are in docs/HANDOFF.md, newest entry first):
+- M2 is signed off and merged (PR #2). M3 runs on branch m3/enemy-ai. Its plan is docs/milestones/M3-plan.md (Part A amendments bind; Part B is the checkable done-when; Part C the base plan). Builds run through docs/reviews/M3/workflow-build.js with args in docs/reviews/M3/args-<phase>.json, resumable from branch state: rerun the same args after a cut-off.
+- I asked (2026-10-25) for M3 to run to completion without my input. When it's done to spec, DM me on Slack (Arachne Finance, Michael, U0AQMKKBL93) with (1) a link to a playable build (a GitHub Release with a zipped macOS export; the export preset and templates are set up) and (2) a digest of key judgement calls, each with at least one alternative not taken and why (docs/milestones/M3-judgement-calls.md). If something blocks you on me (an authorization, a login, a decision), DM me on Slack at once and carry on with what isn't blocked.
+- I turned ultracode on (2026-10-24) and asked for multi-agent workflows: use Workflow scripts for substantive work (Opus plans and reviews, Sonnet codes).
+- Don't put fine grey-block look or feel questions to me; take the default and log it.
 
 Ground rules:
 - Never merge a milestone PR into main until I've played it and signed it off.
-- Any change to the spec needs my approval. Ask me with a short proposal and defaults.
+- Any change to the spec needs my approval. In M3, don't stop for it: build the reading that departs least, keep the spec's value reachable (a tunable) where you can, and list it in README as "decided by default, for Game-boy's ruling at sign-off".
 - Commit early on branches (prefix "wip:" for unfinished work), push often, and update docs/HANDOFF.md at every phase boundary.
-- When the watcher warns, do the handoff in CLAUDE.md immediately. Stop running workflows and agents, commit and push everything, save any unfinished agents' findings into the repo, and update HANDOFF.md, including this prompt's "Next steps". Then tell me.
+- When the watcher warns, do the handoff in CLAUDE.md immediately. Stop running workflows and agents, commit and push everything, save any unfinished agents' findings into the repo, and update HANDOFF.md, including this prompt's "Next steps". Then create the scheduled resume task ("Resume after a limit"). DM me only if the resume needs me.
 - Judge visual and feel work from recorded captures (Movie Maker via tools/capture_combos.sh or tests/bot/vfx_bot.tscn), not just tests, and show me what you saw.
 - Keep me posted briefly: what's done, what's running, what you need from me.
 ```
