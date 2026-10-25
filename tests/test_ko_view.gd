@@ -581,6 +581,28 @@ func test_the_return_goes_into_the_eyes_the_body_has_whatever_the_look_did_while
 		assert_lt(_turn_deg(cam.view_transform(), fresh.view_transform()), 0.1, "%s: looking where the body looks" % label)
 
 
+func test_a_revive_before_the_lens_is_out_comes_back_without_a_jump() -> void:
+	# Revived 0.5 s into the KO with a slow ease out (2 s), the lens is still near the eyes when
+	# the return starts: the look must not jump from where it is to the lead the return
+	# otherwise has (it jumped 13 degrees at weight 0.3).
+	Tuning.data.player_revive_s = 0.5
+	Tuning.data.ko_view_out_s = 2.0
+	await _setup([Vector3(0.0, 0.0, -0.95)])
+	var cam := _camera()
+	await _ticks(5)
+	_jab_to_kill(dummies[0])
+	var turn_back := {first_w = -1.0}
+	var extra := func(r: Dictionary) -> void:
+		if player.health > 0.0 and turn_back.first_w < 0.0 and r.w > 0.0:
+			turn_back.first_w = r.w
+	var stats := await _judge(cam, 400, extra)
+	assert_lt(turn_back.first_w, 0.5, "the lens was still near the eyes at the revive (%.2f)" % turn_back.first_w)
+	assert_eq(stats.records[stats.records.size() - 1].w, 0.0, "back in the eyes")
+	assert_lte(stats.step, MAX_STEP_M, "the lens moves at most %.2f m a tick (%.3f)" % [MAX_STEP_M, stats.step])
+	assert_lte(stats.turn, MAX_TURN_DEG, "the look turns at most %.0f degrees a tick (%.2f)" % [MAX_TURN_DEG, stats.turn])
+	assert_eq(stats.own_ticks, 0, "the own body never covers over a third of the view (%.0f%%)" % (stats.own_worst * 100.0))
+
+
 func test_mouse_look_is_dropped_from_the_killing_blow_through_the_get_up() -> void:
 	# PlayerCharacter._process(): from health 0 through the KO and the get-up after it the
 	# look does not turn (the body does not follow it, and the view comes back into the body's

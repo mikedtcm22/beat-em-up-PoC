@@ -82,6 +82,9 @@ var _ko_pose: int = KoPose.NONE
 var _ko_steep: bool = false
 var _ko_head_sign: float = 1.0
 var _ko_reach: float = 1.0
+## The lens got all the way out this time (a revive before that has the look turn back with the
+## lens, so it does not jump from where it is).
+var _ko_was_out: bool = false
 ## The ball _ko_room() tests the lens's place with.
 var _ko_ball: SphereShape3D = SphereShape3D.new()
 ## The player's meshes on the head layer, found when the KO view first needs them.
@@ -131,6 +134,7 @@ func set_player(value: PlayerCharacter) -> void:
 	player = value
 	_ko_view = 0.0
 	_ko_pose = KoPose.NONE
+	_ko_was_out = false
 	_head_meshes.clear()
 	set_cull_mask_value(CombatTypes.VIS_FP_HIDDEN, false)
 	snap()
@@ -294,6 +298,7 @@ func _ko_view_mix(delta: float, live: Transform3D) -> Transform3D:
 	if not dying and _ko_view <= 0.0:
 		# The usual case, every frame: in the eyes, the head layer hidden.
 		_ko_pose = KoPose.NONE
+		_ko_was_out = false
 		if get_cull_mask_value(CombatTypes.VIS_FP_HIDDEN):
 			set_cull_mask_value(CombatTypes.VIS_FP_HIDDEN, false)
 		return live
@@ -306,6 +311,7 @@ func _ko_view_mix(delta: float, live: Transform3D) -> Transform3D:
 		if _ko_pose == KoPose.NONE:
 			_choose_ko_pose()
 		_ko_view = minf(_ko_view + step, 1.0)
+		_ko_was_out = _ko_was_out or _ko_view >= 1.0
 	else:
 		_ko_view = maxf(_ko_view - step, 0.0)
 	var weight := ko_view_weight()
@@ -325,7 +331,7 @@ func _ko_view_mix(delta: float, live: Transform3D) -> Transform3D:
 	var out := ko_view_pose(root, direction, _ko_reach, _ko_steep)
 	# The look comes back to the eyes' ahead of the lens (ko_view_look_lead), so the body the
 	# lens flies in over has left the view before the head layer hides (and nothing pops).
-	var look_weight := weight if dying else pow(weight, tuning.ko_view_look_lead)
+	var look_weight := pow(weight, tuning.ko_view_look_lead) if _ko_was_out and not dying else weight
 	var turn := live.basis.get_rotation_quaternion().slerp(out.basis.get_rotation_quaternion(), look_weight)
 	var mixed := Transform3D(Basis(turn), live.origin.lerp(out.origin, weight))
 	var shown := get_cull_mask_value(CombatTypes.VIS_FP_HIDDEN)
