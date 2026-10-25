@@ -4,6 +4,27 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-25 17:05 CDT: M2 merged; Milestone 3 started on `m3/enemy-ai`
+Account: premium seat (5 times the old limits). 5-hour 0% (resets 21:49 CDT), weekly 21% (resets Mon 2026-10-26 05:00 CDT).
+- **Game-boy signed off M2.** PR #2 is merged into `main` (`2847863`). The old `.worktrees/m2-*` can be pruned.
+- **Milestone 3 (SPEC §12): enemy AI and the rear warning**, on branch `m3/enemy-ai` from `main`. Game-boy asked (2026-10-25 16:50) for the work to run without his input until M3 is done to spec. When it is, the lead DMs him on Slack (Arachne Finance, Michael, `U0AQMKKBL93`) with:
+  1. a link to a playable build;
+  2. a digest of the key judgement calls, each with at least one alternative not taken and why.
+- **Game-boy's answers (also in the Decisions log):**
+  - **Playable link:** a GitHub Release on the private repo with a zipped macOS export. Downloading Godot's official 4.7.2 export templates is approved.
+  - **Boss:** a graybox boss in M3, with a placeholder name. Its name and look wait for the art milestones.
+  - **Enemy grabs on the player** (the Bruiser's grab and headbutt, the boss's grab slam): mash P/K to break free. A dodge or a heavy hit gets out of the wind-up. Unbroken, the hit lands.
+- **Defaults the lead took** (Game-boy saw them and didn't object):
+  - a new 12 × 30 m street-lane crowd room becomes the main scene, with doorway and alley spawns (some behind the player) and repeating mixed waves of up to 6 enemies, with a key back to the M2 training room;
+  - a KO'd player auto-revives there, as in the test room;
+  - enemies don't block;
+  - the Pipe Thug drops a pipe the player can take;
+  - the full director (tokens, blind-spot priority, spread), a navmesh with avoidance;
+  - the rear warning per SPEC §8, with its tunables in F1;
+  - enemy spawns in F4, and the AI state and tokens in F3.
+- **Usage watcher:** new cadence and the resume task for the premium seat (see "Usage watcher" and "Resume after a limit"). Started from this session.
+- **Next:** map the codebase for M3, write `docs/milestones/M3-plan.md`, then build in parallel worktrees.
+
 ### 2026-10-25 15:20 CDT: leg 2 done (round 3 merged, 537/537); leg 3 done; the M2 PR is open for Game-boy
 Account E: 5-hour about 30% (resets 19:09 CDT), weekly 83% (resets Tue 2026-10-27 17:00 CDT). The two r3 fixers (`wf_27da4731-a29`, 46 minutes) took the window from 0% to 29% and weekly from 78% to 83%.
 - **Leg 2 done.** `m2/phase3-fix-r3-ko-view-return` (`846f3ae`) and `m2/phase3-fix-r3-dummy-room` (`d1a2073`) are merged into `m2/hit-feel` with `m2/phase3-review` (`fix-r3-*.json`). The merges were clean. **537/537 tests pass with no SCRIPT ERROR or ERROR.** The preset regenerated unchanged at 327 values.
@@ -904,67 +925,74 @@ Every approved spec change so far is in README.md, "Where M1 departs from the sp
 - **Round 2's proposed fixes are approved as written (2026-10-25)**, with the KO view as above.
 - **Models (2026-10-25):** Opus for planning and review, Sonnet for coding and execution. Fixers run with `fixer_model: "sonnet"`.
 - **Defaults for the rest of M2 (2026-10-25 14:15 CDT):** every open question takes its default for the rest of this milestone. Without the final art, Game-boy can't tell the grey-block feel issues apart. So don't put fine look or feel questions to him in M2. Record each default taken, and leave art-dependent feel polish for when the art is in.
+- **Milestone 3 setup (2026-10-25 16:50 CDT):** M2 signed off and merged. M3 runs without Game-boy's input until it's done to spec, then a Slack DM with a playable link and a digest of judgement calls (each with an alternative not taken). The playable link is a GitHub Release with a zipped macOS export (downloading the official export templates is approved). The boss is in M3 as graybox with a placeholder name. Enemy grabs on the player can be broken by mashing P/K. The account is now a premium seat (5 times the limits): the watcher checks less often, and at a limit a scheduled task resumes the work after the reset.
 - **Process:** at each usage limit, hand off to Game-boy's second Claude account. Never assume the same session resumes.
 
 ## Usage watcher
 A separate low-cost Claude Code session, "Beat-em-up: usage watcher". Start it from the working session with `start_session`: initiation `user_asked`, `model` claude-haiku-5-5, `effort` low, `use_worktree` false, and the prompt below verbatim.
 
-It paces itself (`/loop` with no interval), on Game-boy's cadence from 2026-10-23:
+**Since 2026-10-25 17:00 CDT the account is a premium seat, 5 times the old standard seat's limits** (Game-boy). The same work therefore costs about a fifth of the percentages measured in M1 and M2 (the cost table below is already divided). The watcher checks less often, but still at 90% of either window, and still early on a fast burn: a big workflow (up to 10 agents at once) can burn as fast as two heavy agents did before.
 
 | Usage (the higher of the 5-hour and weekly windows) | Next check |
 | --- | --- |
-| below 70% | in 20 minutes |
-| 70% up to 85% | in 10 minutes |
+| below 70% | in 30 minutes |
+| 70% up to 85% | in 15 minutes |
 | 85% and up | in 5 minutes |
 
-At 90% of either window it tells the working session to halt work and hand off. On a fast burn it checks sooner, and it warns early if it would cross 90% before its next check.
+At 90% of either window it tells the working session to halt and hand off, then makes sure a one-time scheduled task will resume the work after that window resets (see "Resume after a limit").
 
 Its prompt:
 
 ```
-/loop Usage watcher for the beat-em-up repo. You pace yourself. On each check:
-1. Call mcp__ccd_session_mgmt__get_usage (load it with ToolSearch the first time). Read plan.windows: the "5-hour limit" window and the window whose label starts with "Weekly". Let U be the higher of their percentUsed values.
-2. Handoff. If either window is at 90% or more, and you haven't already warned for that window's resetsAt, send a message to the session titled "Beat-em-up: working session" (find it with ListAgents). The message: "Usage at N% (window W, resets R). Halt work and do the handoff now per CLAUDE.md: stop new work, commit and push WIP on every branch and worktree, update and push docs/HANDOFF.md, then tell Game-boy." Remember that you warned for that resetsAt.
-3. Snapshot. If either window is at 95% or more, write HANDOFF-SNAPSHOT.md at the repo root (untracked; never commit it). It holds:
+/loop Usage watcher for the beat-em-up repo at /Users/arachne/repos/beat-em-up-PoC. You pace yourself. On each check:
+1. Call mcp__ccd_session_mgmt__get_usage (load it with ToolSearch the first time). Read plan.windows: the "5-hour limit" window and the window labelled "Weekly · all models". Let U be the higher of their two percentUsed values.
+2. Handoff. If either window is at 90% or more, and you haven't already warned for that window's resetsAt, send a message to the session titled "Beat-em-up: working session" (find it with ListAgents, or mcp__ccd_session_mgmt__list_sessions). The message: "Usage at N% (window W, resets R). Halt work and do the handoff now per CLAUDE.md: tell running agents and workflows to stop at a stopping point, commit and push WIP on every branch and worktree, update and push docs/HANDOFF.md, then create the resume task (docs/HANDOFF.md, 'Resume after a limit')." Remember that you warned for that resetsAt, and when.
+3. Resume task. On the first check 20 minutes or more after a warning, call mcp__scheduled-tasks__list_scheduled_tasks (load it with ToolSearch). If no enabled task whose taskId starts with "beat-em-up-resume" has a nextRunAt after now, create one with mcp__scheduled-tasks__create_scheduled_task: taskId "beat-em-up-resume-" plus the reset's local date and time as yyyymmdd-hhmm, fireAt the warned window's resetsAt plus 10 minutes (ISO 8601 with an offset), description "Resume beat-em-up work after the usage reset", title "Beat-em-up: resume after usage reset", and as the prompt the exact text between the lines "RESUME-PROMPT-START" and "RESUME-PROMPT-END" in docs/HANDOFF.md (read the file). Do this once per resetsAt.
+4. Snapshot. If either window is at 95% or more, write HANDOFF-SNAPSHOT.md at the repo root (untracked; never commit it). It holds:
    - the time and the usage numbers;
    - git status, git branch -vv and git worktree list;
    - for each worktree under .worktrees/, its git status --short and git log --oneline -3.
-4. Next check, from U:
-   - below 70: in 20 minutes (1200 s);
-   - 70 up to 85: in 10 minutes (600 s);
+5. Next check, from U:
+   - below 70: in 30 minutes (1800 s);
+   - 70 up to 85: in 15 minutes (900 s);
    - 85 or more: in 5 minutes (300 s).
-5. Fast burn. Estimate the rate from your previous check. If at that rate either window would reach 90% before that next check, check again in 5 minutes instead. If it would reach 90% within those 5 minutes, send the step 2 warning now (once per resetsAt).
-6. Schedule the next check with ScheduleWakeup, passing this same prompt back.
-Otherwise say nothing beyond one short line: the two percentages and the next check time. Never edit tracked files, run builds or start other work.
+6. Fast burn. Estimate the rate from your previous check. If at that rate either window would reach 90% before that next check, check again in 5 minutes instead. If it would reach 90% within those 5 minutes, send the step 2 warning now (once per resetsAt).
+7. Once a window you warned for has reset (its percentUsed is below 50 again), forget that warning.
+8. Schedule the next check with ScheduleWakeup, passing this same prompt back.
+Otherwise say nothing beyond one short line: the two percentages and the next check time. Never edit tracked files, run builds or start other work. If the working session tells you to end your loop, call ScheduleWakeup with stop: true.
 ```
 
-**Usage rules for the working session** (Game-boy, 2026-10-24 12:40 CDT; they replace the old "launch nothing new at 65%" line, which stopped work too early):
-- **Work up to the 90% handoff.** The watcher's 90% message is the only stop. Don't stop, idle or hand off at 65-70% because a big piece won't fit.
-- **Size each launch to the headroom.** Call `mcp__ccd_session_mgmt__get_usage` before every launch. The headroom is 90% minus the higher of the 5-hour and weekly `percentUsed`. Launch work whose estimated cost fits it. Measured costs, in % of a 5-hour window:
+**Resume after a limit.** The working session creates the resume task itself as the last step of a handoff (the watcher's step 3 is the fallback when it was cut off first): `mcp__scheduled-tasks__create_scheduled_task` with the fields in the watcher's step 3, firing 10 minutes after the window that stopped work resets. The task wakes the working session if it still exists, which keeps its context, or else starts a takeover. Its prompt, verbatim:
 
-  | Work | Cost |
+RESUME-PROMPT-START
+Resume the beat-em-up Milestone 3 work after a usage reset. The project is /Users/arachne/repos/beat-em-up-PoC (Godot 4.7.2, GitHub mikedtcm22/beat-em-up-PoC). Game-boy (the owner) asked on 2026-10-25 for the work to continue across usage limits without waiting for him, until Milestone 3 is done.
+1. Call mcp__ccd_session_mgmt__get_usage (load it with ToolSearch). If either the "5-hour limit" or the "Weekly · all models" window is still at 90% or more, create a copy of this task with mcp__scheduled-tasks__create_scheduled_task (a new taskId starting "beat-em-up-resume-", fireAt that window's resetsAt plus 10 minutes, the same prompt) and stop.
+2. Call mcp__ccd_session_mgmt__list_sessions (load it with ToolSearch). If a session titled exactly "Beat-em-up: working session" is listed and not archived, send it with mcp__ccd_session_mgmt__send_message: "Scheduled resume: the usage window has reset. Check get_usage, make sure a usage watcher is running (docs/HANDOFF.md, 'Usage watcher'), then resume Milestone 3 from the newest entry in docs/HANDOFF.md." If the result says "delivered" or "queued", you're done: say so in one line and stop.
+3. Otherwise you are the new working session: follow the takeover prompt in docs/HANDOFF.md (the "Takeover prompt" section) exactly, starting with renaming this session "Beat-em-up: working session".
+RESUME-PROMPT-END
+
+**Usage rules for the working session** (Game-boy, 2026-10-24 12:40 CDT; costs rescaled for the premium seat on 2026-10-25):
+- **Work up to the 90% handoff.** The watcher's 90% message is the only stop. Don't stop, idle or hand off early because a big piece won't fit.
+- **Size each launch to the headroom.** Call `mcp__ccd_session_mgmt__get_usage` before every launch. The headroom is 90% minus the higher of the 5-hour and weekly `percentUsed`. Launch work whose estimated cost fits it. Measured costs on the old standard seat, divided by 5 (re-measure and update this table during M3):
+
+  | Work | Cost (% of a 5-hour window) |
   | --- | --- |
-  | A builder the size of WP4, or phase 3's A or B | 30-50% |
-  | A heavy agent that both reviews and fixes | about 25% |
-  | A fixer | about 25% |
-  | A review-only agent | about 13% |
-  | Lead work (merging, judging sheets, docs) | a few % |
-  | Two heavy agents at once | about 1.2-1.6 points a minute |
+  | A builder the size of WP4, or phase 3's A or B | 6-10% |
+  | A heavy agent that both reviews and fixes | about 5% |
+  | A fixer | about 5% |
+  | A review-only agent | about 3% |
+  | Lead work (merging, judging sheets, docs) | under 1% |
+  | Two heavy agents at once | about 0.25-0.3 points a minute |
 
-- **When the next phase or milestone doesn't fit:** say it's 70% and a new phase is next. Spend a little of the headroom splitting that phase into a first task that fits the rest, and run that task. Examples:
-  - the setup: worktrees, imports, briefs, the workflow script;
-  - one reviewer instead of five;
-  - one fix package;
-  - one well-scoped build step.
-
-  Commit `wip:` as it goes, and hand off at 90%. Write the split into the milestone plan and HANDOFF, so the next account starts at the next task.
+  Weekly points: on the old seat one 5-hour point cost about 0.16 weekly points; re-measure.
+- **When the next phase or milestone doesn't fit:** spend a little of the headroom splitting it into a first task that fits the rest, and run that task. Commit `wip:` as it goes, and hand off at 90%. Write the split into the milestone plan and HANDOFF, so the next session starts at the next task.
 - **Keep the 90% cut cheap:** agents commit `wip:` and push every 15-20 minutes, so a halt loses little.
-- **At most two heavy agents at once.** Near the top of the window, prefer one: two burn about 1.2-1.6 points a minute, and the watcher's 20-minute checks below 70% can't catch a faster burn.
-- **Tighter checks during heavy runs:** while two heavy agents run, ask the watcher to check every 10 minutes even below 70%.
+- **Concurrency:** with the premium seat, a workflow may run up to about 6 heavy agents at once while the window is under 60%, and at most two above that.
+- **The handoff's last step** is the resume task (above), so the work restarts by itself after the reset.
 
 If no watcher is running, for example after an account switch, start one with that prompt. A new account's watcher reports that account's usage.
 
-**The working session must be titled "Beat-em-up: working session"** so the watcher can find it. A new account's working session renames itself to that first, with `mcp__ccd_session_mgmt__set_session_title`.
+**The working session must be titled "Beat-em-up: working session"** so the watcher and the resume task can find it. A new working session renames itself to that first, with `mcp__ccd_session_mgmt__set_session_title`.
 
 **At an account switch, the old working session:**
 - renames itself "Beat-em-up: account X session (handed off)", which frees the title;
