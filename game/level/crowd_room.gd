@@ -192,10 +192,12 @@ func _build_geometry() -> void:
 	add_child(geometry)
 	var wall := RoomKit.flat_material(Color(0.42, 0.4, 0.44))
 	var accent := RoomKit.flat_material(Color(0.5, 0.46, 0.4))
+	# Alleys and doorways are dark openings, so a spawn point reads from across the street.
+	var dark := RoomKit.flat_material(Color(0.12, 0.1, 0.13))
 	_build_lane()
-	_build_north(wall, accent)
-	_build_ends(wall)
-	_build_south(accent, wall)
+	_build_north(wall, accent, dark)
+	_build_ends(wall, dark)
+	_build_south(accent, dark)
 	_build_props()
 	_build_backdrop(wall, accent)
 
@@ -213,8 +215,7 @@ func _build_lane() -> void:
 
 ## The north fronts: a block between each pair of doorways (and at the ends), a dark back wall,
 ## floor and lintel for each doorway recess, and windows on the blocks.
-func _build_north(wall: Material, accent: Material) -> void:
-	var door := RoomKit.flat_material(Color(0.12, 0.1, 0.13))
+func _build_north(wall: Material, accent: Material, door: Material) -> void:
 	var window := RoomKit.flat_material(Color(0.16, 0.2, 0.28))
 	var edges: Array[float] = [-lane_half_length]
 	for x in door_xs:
@@ -261,8 +262,8 @@ func _add_windows(x0: float, x1: float, z_face: float, height: float, material: 
 		y += window_row_m
 
 
-## The end walls with an alley through each: floor, side walls and a blind end.
-func _build_ends(wall: Material) -> void:
+## The end walls with an alley through each: floor, dark side walls and a dark blind end.
+func _build_ends(wall: Material, dark: Material) -> void:
 	var half_gap := alley_width * 0.5
 	var z_north := -(lane_half_width + front_depth)
 	var z_south := lane_half_width + curb_thickness
@@ -284,14 +285,14 @@ func _build_ends(wall: Material) -> void:
 		for sign_z: float in [-1.0, 1.0]:
 			RoomKit.add_box(geometry,
 					Vector3((x_a + x_b) * 0.5, base + height * 0.5, sign_z * (half_gap + alley_wall_thickness * 0.5)),
-					Vector3(absf(x_b - x_a), height, alley_wall_thickness), wall)
+					Vector3(absf(x_b - x_a), height, alley_wall_thickness), dark)
 		RoomKit.add_box(geometry,
 				Vector3(sign_x * (lane_half_length + alley_length + alley_wall_thickness * 0.5), base + height * 0.5, 0.0),
-				Vector3(alley_wall_thickness, height, alley_width + alley_wall_thickness * 2.0), wall)
+				Vector3(alley_wall_thickness, height, alley_width + alley_wall_thickness * 2.0), dark)
 
 
 ## The low curb with the side alley, an invisible barrier above it (a jump would otherwise
-## clear it and fall out of the world) and the alley's fence.
+## clear it and fall out of the world) and the alley's dark fences.
 func _build_south(curb: Material, fence: Material) -> void:
 	var half_gap := side_alley_gap * 0.5
 	var z_curb := lane_half_width + curb_thickness * 0.5
