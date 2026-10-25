@@ -48,11 +48,6 @@ const PITCH_LIMIT_RAD := PI * 89.0 / 180.0
 ## A punch whose contact point is this close to screen center (radians) dips the view
 ## instead, since "toward the contact" has no direction there.
 const PUNCH_CENTER_RAD := PI / 180.0
-## The KO view keeps its lens this far (meters) from a wall, crate or standing actor between
-## it and the body, and never sits nearer the body than this share of Tuning's distance and
-## height (a body in a corner with no room on either side): geometry, not feel.
-const KO_CLEARANCE_M := 0.25
-const KO_MIN_REACH := 0.4
 
 ## The player this camera rides. Null (or freed) holds the last view.
 var player: PlayerCharacter:
@@ -315,7 +310,7 @@ func _ko_view_mix(delta: float, live: Transform3D) -> Transform3D:
 
 
 ## True when no mesh of the player's head layer (the ones this camera hides, found once per
-## player) lies within KO_CLEARANCE_M of `lens`, by its bounding box.
+## player) lies within Tuning.ko_view_clearance_m of `lens`, by its bounding box.
 func _head_clear_of(lens: Vector3) -> bool:
 	if _head_meshes.is_empty():
 		var hidden := CombatTypes.bit(CombatTypes.VIS_FP_HIDDEN)
@@ -324,7 +319,7 @@ func _head_clear_of(lens: Vector3) -> bool:
 			if mesh.layers & hidden:
 				_head_meshes.append(mesh)
 	for mesh: MeshInstance3D in _head_meshes:
-		if (mesh.global_transform * mesh.get_aabb()).grow(KO_CLEARANCE_M).has_point(lens):
+		if (mesh.global_transform * mesh.get_aabb()).grow(Tuning.data.ko_view_clearance_m).has_point(lens):
 			return false
 	return true
 
@@ -384,7 +379,7 @@ func _ko_crowding(lens: Vector3, root: Vector3) -> float:
 ## How much of the KO view's distance and height the world allows on `side` of a body at
 ## `root`: 1 when the line from the body's middle (`middle`, its hips) to the lens is free,
 ## less when a wall, crate, the curb or a standing actor is in the way (the lens keeps
-## KO_CLEARANCE_M off it), at least KO_MIN_REACH.
+## Tuning.ko_view_clearance_m off it), at least Tuning.ko_view_min_reach.
 func _ko_room(middle: Vector3, root: Vector3, body: Basis, side: float) -> float:
 	if not is_inside_tree():
 		return 1.0
@@ -396,7 +391,8 @@ func _ko_room(middle: Vector3, root: Vector3, body: Basis, side: float) -> float
 	var hit := get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(middle, to, mask))
 	if hit.is_empty():
 		return 1.0
-	return clampf((middle.distance_to(hit.position as Vector3) - KO_CLEARANCE_M) / length, KO_MIN_REACH, 1.0)
+	var free := middle.distance_to(hit.position as Vector3) - Tuning.data.ko_view_clearance_m
+	return clampf(free / length, Tuning.data.ko_view_min_reach, 1.0)
 
 
 func _advance_effects(delta: float) -> void:

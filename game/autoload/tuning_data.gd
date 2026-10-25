@@ -463,6 +463,14 @@ extends Resource
 ## from the get-up (the test room's get-up takes getup_frames, half a second).
 @export_range(0.0, 3.0, 0.05) var ko_view_out_s: float = 0.8
 @export_range(0.0, 3.0, 0.05) var ko_view_in_s: float = 0.5
+## The lens keeps this far (meters) from a wall, crate or standing fighter between it and the
+## body, and the head, neck, chest and shoulders (hidden from the first-person lens, which
+## sits in them) show once the lens is this far from all of them: lifted sooner, a cap's brim
+## covered a third of the view for a frame at the killing blow. A wall, crate or fighter in
+## the way brings the lens in toward the body, but never nearer than ko_view_min_reach of
+## ko_view_distance_m and ko_view_height_m (a body in a corner, with no room on either side).
+@export_range(0.05, 1.0, 0.05) var ko_view_clearance_m: float = 0.25
+@export_range(0.1, 1.0, 0.05) var ko_view_min_reach: float = 0.4
 
 @export_group("Enemies")
 ## Max simultaneous attackers; 0 = unlimited (Milestone 3).

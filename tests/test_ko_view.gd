@@ -347,6 +347,28 @@ func test_the_view_out_of_the_body_shows_the_whole_body_clear_of_everything() ->
 		assert_lte(_own_share(view, false), 1.0 / 3.0, "%s: the own body covers at most a third of the view" % scenario)
 
 
+func test_fighters_at_both_sides_bring_the_lens_in_without_touching_it() -> void:
+	# A fighter stands either side of the body (1.3 m out, 0.7 m behind where the player stood:
+	# the jab knocks him back to about there): wherever the lens goes it would be among them, so it comes in along the line to the body, stopping Tuning.ko_view_clearance_m
+	# short of whoever is in the way, and never nearer the body than ko_view_min_reach.
+	var data := Tuning.data
+	await _setup([Vector3(0.0, 0.0, -0.95), Vector3(1.3, 0.0, 0.7), Vector3(-1.3, 0.0, 0.7)])
+	var cam := _camera()
+	await _ticks(5)
+	_jab_to_kill(dummies[0])
+	assert_true(await _wait_until(func() -> bool: return player.is_ko(), 150), "KO'd")
+	assert_true(await _wait_out(cam), "the view gets all the way out")
+	for i in 30:
+		cam.update_camera(FRAME)
+	var view := cam.view_transform()
+	var flat := Vector3(view.origin.x - player.global_position.x, 0.0, view.origin.z - player.global_position.z)
+	assert_lt(flat.length(), data.ko_view_distance_m - 0.1, "the lens came in from ko_view_distance_m (%.2f m out)" % flat.length())
+	assert_gte(flat.length(), data.ko_view_distance_m * data.ko_view_min_reach - 0.02, "but not past ko_view_min_reach of it")
+	for dummy: TrainingDummy in dummies:
+		assert_gte(_nearest_any_layer(dummy.rig, view.origin), data.ko_view_clearance_m - 0.02, "%s stays clear of the lens" % dummy.name)
+	assert_gte(_nearest_any_layer(player.rig, view.origin), 0.25, "and so does the own body")
+
+
 func test_the_ko_view_is_held_still_through_the_killing_blows_hitstop() -> void:
 	# The view's progress runs in the player's sim time, like its get-up: the killing blow's
 	# hitstop holds the lens where it is.
