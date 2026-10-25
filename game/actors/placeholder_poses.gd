@@ -1891,11 +1891,15 @@ static func _throw(neutral: Dictionary[StringName, Vector3]) -> MovePoses:
 		&"Neck": Vector3(10.0, -24.0, 0.0),
 		&"Head": Vector3(4.0, -16.0, 0.0),
 		# Heaving forward and out to the sides, so the arms frame the throw in first person
-		# instead of sweeping up across the middle of the view.
+		# instead of sweeping up across the middle of the view. The twist brings the right
+		# shoulder in front of the lens, still pulled back by the hold view: the right upper
+		# arm swings out wide, its elbow end off the right edge (raised ahead, it showed end on
+		# as a round ball mid-view), and the forearm bends back in so the fist heaves up in the
+		# top right corner.
 		&"LeftUpperArm": Vector3(80.0, 10.0, -26.0),
 		&"LeftLowerArm": Vector3(24.0, 0.0, 0.0),
-		&"RightUpperArm": Vector3(84.0, 10.0, 28.0),
-		&"RightLowerArm": Vector3(24.0, 0.0, 0.0),
+		&"RightUpperArm": Vector3(70.0, -20.0, 95.0),
+		&"RightLowerArm": Vector3(90.0, 0.0, 0.0),
 		&"LeftUpperLeg": Vector3(30.0, -30.0, -4.0),
 		&"LeftLowerLeg": Vector3(-30.0, 0.0, 0.0),
 		&"RightUpperLeg": Vector3(-16.0, -30.0, 5.0),

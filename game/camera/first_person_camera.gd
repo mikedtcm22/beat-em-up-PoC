@@ -50,6 +50,9 @@ var trauma: float = 0.0
 
 ## Eye position relative to the player's origin, smoothed.
 var _eye_offset: Vector3 = Vector3.ZERO
+## The hold view's rise and pull-back (PlayerCharacter.get_hold_view_shift()), smoothed with
+## the eye: they follow the same bend, so smoothed apart the lens bobbed past its ends.
+var _hold_shift: Vector2 = Vector2.ZERO
 var _has_eye: bool = false
 ## The view before punch and shake: where the player is looking.
 var _view: Transform3D = Transform3D.IDENTITY
@@ -167,39 +170,50 @@ func _player_ok() -> bool:
 func _follow(delta: float) -> Transform3D:
 	var origin := player.global_position
 	var eye := player.get_eye_transform().origin - origin
-	if player.is_walking() and not is_instance_valid(player.holding_enemy()):
+	if player.is_walking():
 		# Steady view while walking: the eye may bob only this far from its idle height.
 		# Walking with a held enemy shows the hold pose (no walk cycle), whose bent-over eye
-		# sits well under the standing height, so it is left as it is.
+		# sits well under the standing height: the clamp lets go of it as the hold view comes
+		# in and takes it back as the view eases out, so a release while walking never pops.
 		var bob := Tuning.data.cam_bob_clamp_m
 		var idle := player.standing_eye_height
-		eye.y = clampf(eye.y, idle - bob, idle + bob)
+		eye.y = lerpf(clampf(eye.y, idle - bob, idle + bob), eye.y, player.get_hold_view_weight())
+	var shift := player.get_hold_view_shift()
 	if _has_eye:
 		var weight := CameraMath.damp_weight(delta, Tuning.data.cam_smoothing_s)
 		_eye_offset = _eye_offset.lerp(eye, weight)
+		_hold_shift = _hold_shift.lerp(shift, weight)
 	else:
 		_eye_offset = eye
+		_hold_shift = shift
 		_has_eye = true
 	var root := player.get_global_transform_interpolated().origin
-	return view_from_eye(player, root + _eye_offset, Engine.get_physics_interpolation_fraction())
+	return _view_with(player, root + _eye_offset, _hold_shift, Engine.get_physics_interpolation_fraction())
 
 
 ## The first-person view (before punch and shake) of `player` with its eye at world `eye`:
 ## the running move's and the hold view's drop and extra pitch
 ## (PlayerCharacter.get_camera_move_offset()), the view turn (interpolated by `fraction`
 ## between physics ticks), and the lens offset less the hold view's pull-back. _follow()
-## passes the smoothed eye; tests pass EyePoint itself to judge the real view.
+## passes the smoothed eye (with the hold view's rise and pull-back smoothed alike); tests
+## pass EyePoint itself to judge the real view.
 static func view_from_eye(player: PlayerCharacter, eye: Vector3, fraction: float = 1.0) -> Transform3D:
+	return _view_with(player, eye, player.get_hold_view_shift(), fraction)
+
+
+## view_from_eye() with the hold view's rise (x) and pull-back (y) given as `hold_shift`.
+static func _view_with(player: PlayerCharacter, eye: Vector3, hold_shift: Vector2, fraction: float) -> Transform3D:
 	# x = extra pitch in degrees, y = drop in meters along world -Y (negative rises). Already
-	# eased.
+	# eased. The hold view's own rise in it is swapped for hold_shift's.
 	var move_offset := player.get_camera_move_offset()
-	var eye_position := eye + Vector3.DOWN * move_offset.y
+	var drop := move_offset.y + player.get_hold_view_shift().x - hold_shift.x
+	var eye_position := eye + Vector3.DOWN * drop
 	# A spinning move's body turn and the back elbow's turn over the shoulder, interpolated
 	# between physics ticks so a spin turns smoothly at any frame rate.
 	var view_yaw := deg_to_rad(player.get_camera_view_yaw(fraction))
 	var look_basis := Basis(Vector3.UP, view_yaw) * player.get_look_basis()
-	# While an enemy is held the lens also moves back (the hold view, eased by the player).
-	eye_position += lens_offset(look_basis, player.get_camera_pull_back())
+	# While an enemy is held the lens also moves back (the hold view).
+	eye_position += lens_offset(look_basis, hold_shift.y)
 	var look := _add_pitch(look_basis, deg_to_rad(move_offset.x))
 	return Transform3D(look, eye_position)
 
