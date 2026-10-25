@@ -4,6 +4,33 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-24 22:33 CDT: package C round 1 done and merged (484/484); round 2's hit review running
+The 5-hour window is at about 47% (resets 02:30 CDT on 10-25); weekly is at 53% (resets Tue 2026-10-27 17:00 CDT). hold-view's finish and ko-respawn-bars ran one after another, at about 22% of the window together.
+- **Merged into `m2/hit-feel`** (pushed; head `b22e08e`): `m2/phase3-fix-hold-view` (`acea488`), `m2/phase3-fix-ko-respawn-bars` (`a4c9bee`) and `m2/phase3-review` (`f1e2d0f`, all of C's JSON records). All three merged cleanly, and the preset regenerated unchanged (300 values). **484/484 tests pass with no SCRIPT ERROR or ERROR.** All 17 round 1 findings are fixed.
+  - **hold-view** (471/471 in its worktree):
+    - code-03: the lens moves on an eased path, and the walking-bob clamp scales with the hold's weight;
+    - grab-06: a new tunable `grab_view_target_pitch_deg` 22, so the hold pitch reaches a target total;
+    - grab-07: the throw's right arm is out wide, so there's no elbow ball. The ramps still hold through hitstop, so B's design is unchanged;
+    - grab-02: a hit breaks the hold into a stagger;
+    - code-06: its grab-view half.
+    - Sheets (local): `.worktrees/m2-fix-hold-view/captures/fix/a_*.png`.
+  - **ko-respawn-bars** (480/480):
+    - code-02: the respawn spot checks lying bodies, walls and floor;
+    - code-04: a dummy stays a ghost through its blink-in, and magnetism skips it;
+    - code-05: `PRESET_FORMAT` 2 migrates an old preset's `dummy_revive_s`;
+    - ragdoll-03: bars sit just above the drawn body when it isn't upright;
+    - ragdoll-04: KO bars fade before the blink.
+    - The pile test now sets up its pile with scripted knockdowns and passes in any order.
+    - Sheets (local): `.worktrees/m2-fix-ko-respawn-bars/captures/fix/`.
+- **New notes for Game-boy** (each has a default):
+  - grab-06's formula leaves a look dead band while holding. Looking between 6° and 22° down, the view stays at 22°, so about 16° of mouse travel gets no response; the bots never show it. A softer mapping is possible. Default: as built.
+  - SPEC §5's bar "over its head": a body that isn't upright (lying, flying, held) now has its bar over the middle of its drawn body. Treated as within the spec. Default: as built.
+- **Round 2** (the 14:15 entry's step 3) uses `workflow.js`'s new options (`b22e08e`): `base`, `common_note`, `lenses`, `skip_critic`, `suffix`. The reviewer worktrees `m2-review-hit` and `m2-review-perf` are moved to `f1e2d0f` and imported.
+  - **Running:** workflow `wf_29d8de46-ea9`, with `lenses: ["hit"]`, `base` `f1e2d0f`, `skip_critic`, `skip_fix`, `suffix` "-r2" and a `common_note`. The note lists round 1's changes and the critic's gap (the flash on a ragdoll in side view). It runs the hit-feel review, then three skeptics per finding, gated. The scribe writes `review-hit.json` and `verify-hit.json` to `m2/phase3-review`.
+  - The window fits only one reviewer: the rule's headroom was 37, and a reviewer that's cut off saves nothing.
+  - **Next:** the perf lens the same way (`lenses: ["perf"]`). Then the critic, a gap lens for its medium gaps if needed, and the partition into `packages-r2.json` (keys prefixed `r2-`). Then the fixers: `workflow-fix.js` needs a `packages_file` arg first. Then merge, the final sheets, and D.
+- **If cut off:** check `m2/phase3-review` for `review-hit.json` and `verify-hit.json`. If the review is missing, rerun the same args. If it's there, pass it in `reviews.hit`, and the verdicts in `verdicts`.
+
 ### 2026-10-24 21:35 CDT: account E after its 21:30 reset; hold-view and ko-respawn-bars running, one after another
 The 5-hour window is at 0% (resets 02:30 CDT on 10-25); weekly is at 45%. The usage rule's headroom (90 minus the higher window, here weekly) is 45, which fits one fixer. So the run is sequential: `workflow-fix.js` gained `concurrency` (`80c39ea`), and the second fixer's gate runs when the first ends.
 - **Running:** workflow `wf_17408a9e-962`: `workflow-fix.js` with `only: ["hold-view", "ko-respawn-bars"]`, `concurrency` 1 and a lead's note:
