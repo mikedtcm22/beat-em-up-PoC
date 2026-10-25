@@ -525,15 +525,14 @@ func test_every_m3_tunable_is_declared_in_its_owners_subgroup_with_its_default()
 		assert_eq(info.subgroup, row[1], "%s: its subgroup" % info.name)
 		var value: Variant = Tuning.defaults().get(info.name)
 		if row[0] is float:
-			assert_almost_eq(float(value), float(row[0]), 0.00001, "%s: default" % info.name)
+			assert_almost_eq(float(value), float(row[0]), 0.00001, "%s: default (a deliberate retune: edit TUNABLES here)" % info.name)
 		else:
-			assert_eq(value, row[0], "%s: default" % info.name)
+			assert_eq(value, row[0], "%s: default (a deliberate retune: edit TUNABLES here)" % info.name)
+	# Every planned one is there. A package may add more inside its own subgroup (A2.11), so
+	# extra ones are not an error here.
 	for group: String in TUNABLES:
 		for name: StringName in TUNABLES[group]:
 			assert_true(found.get(group, {}).has(name), "%s is declared in group %s" % [name, group])
-		# Nothing else in those groups (a stray or renamed tunable shows here).
-		for name: StringName in found.get(group, {}):
-			assert_true((TUNABLES[group] as Dictionary).has(name), "%s in group %s is in the plan" % [name, group])
 	# Replaced by the amendments: they must not exist.
 	assert_false("director_min_attack_gap_s" in Tuning.data, "A2.10: replaced by director_min_windup_gap_s")
 	assert_false("rear_warning_fallback_reach_m" in Tuning.data, "A2.8: dummy_jab has a reach of its own")
@@ -570,9 +569,12 @@ func test_f6_switches_rooms_and_the_help_lists_it() -> void:
 		listed = listed or row[1] == &"switch_room"
 	assert_true(listed, "a help row for the room switch")
 	assert_eq(HelpOverlay.binding_text([&"switch_room"], false), "F6")
-	# The other of the two rooms from whichever is running; none from anywhere else.
+	# The other of the two rooms from whichever is running; none from anywhere else, and none
+	# while the target scene does not exist (the crowd room, until P1-room lands: F6 then does
+	# nothing in the training room).
 	assert_eq(GameInput.room_after(GameInput.ROOM_SCENES[0]), GameInput.ROOM_SCENES[1], "from the crowd room to the training room")
-	assert_eq(GameInput.room_after(GameInput.ROOM_SCENES[1]), GameInput.ROOM_SCENES[0], "and back")
+	var crowd_exists := ResourceLoader.exists(GameInput.ROOM_SCENES[0])
+	assert_eq(GameInput.room_after(GameInput.ROOM_SCENES[1]), GameInput.ROOM_SCENES[0] if crowd_exists else "", "and back, when the crowd room exists")
 	assert_eq(GameInput.room_after("res://tests/bot/combo_bot.tscn"), "", "a bot or test host is neither room")
 	assert_eq(GameInput.room_after(""), "")
 	# Run from here (a test host, not a room) F6 does nothing.
@@ -636,7 +638,8 @@ func test_the_catalog_reads_body_sizes_from_an_instance() -> void:
 	defaults.free()
 
 
-func test_the_enemy_skeleton_stands_in_its_groups() -> void:
+func test_the_enemy_base_joins_its_groups_and_keeps_the_directors_bookkeeping() -> void:
+	# What any EnemyActor (the S0 skeleton and every real archetype) promises.
 	var enemy := EnemyActor.new()
 	enemy.position = Vector3(0.0, 0.0, -4.0)
 	_scene.add_child(enemy)
@@ -645,23 +648,19 @@ func test_the_enemy_skeleton_stands_in_its_groups() -> void:
 	for group: StringName in [&"actor", &"enemy", &"ai_enemy"]:
 		assert_true(enemy.is_in_group(group), "in group %s" % group)
 	assert_false(enemy.is_in_group(&"boss"))
-	assert_eq(enemy.ai_state_name(), &"POSTURE")
-	assert_false(enemy.wants_token(), "the skeleton never asks for a token")
-	assert_eq(enemy.posture_slot, Vector3.INF)
-	assert_eq(enemy.state, CombatTypes.ActorState.FREE, "it stands")
-	assert_almost_eq(enemy.global_position, Vector3(0.0, 0.0, -4.0), Vector3.ONE * 0.05, "and does not move")
+	assert_true(EnemyActor.AiState.keys().has(String(enemy.ai_state_name())), "its state has a name")
+	assert_eq(enemy.posture_slot, Vector3.INF, "no slot until the director gives one")
+	assert_false(enemy.has_token)
 	enemy.grant_token(true)
-	assert_true(enemy.has_token and enemy.blind_priority_granted)
+	assert_true(enemy.has_token and enemy.blind_priority_granted, "the director's grant")
 	enemy.set_slot(Vector3(1.0, 0.0, 2.0))
 	assert_eq(enemy.posture_slot, Vector3(1.0, 0.0, 2.0))
 	enemy.revoke_token()
-	assert_false(enemy.has_token or enemy.blind_priority_granted)
-	assert_eq(enemy.attack_range_m(), 0.0)
-	var move := _punch()
-	assert_eq(EnemyActor.windup_move(move, false), move, "the skeleton leaves a wind-up as it is")
+	assert_false(enemy.has_token or enemy.blind_priority_granted, "the director's revoke")
+	assert_not_null(EnemyActor.windup_move(_punch(), false), "a wind-up move for any move")
 
 
-func test_the_director_skeleton_is_found_and_ensured_once() -> void:
+func test_the_director_is_found_and_ensured_once() -> void:
 	assert_null(EnemyDirector.find(get_tree()), "none yet")
 	var host := Node3D.new()
 	_scene.add_child(host)
@@ -671,11 +670,12 @@ func test_the_director_skeleton_is_found_and_ensured_once() -> void:
 	assert_eq(EnemyDirector.find(get_tree()), first)
 	assert_eq(EnemyDirector.ensure(host), first, "idempotent")
 	assert_eq(EnemyDirector.ensure(_scene), first, "from anywhere in the tree")
+	# The read API answers for an enemy it does not know.
 	var enemy := EnemyActor.new()
 	assert_eq(first.slot_for(enemy), Vector3.INF)
 	assert_eq(first.debug_slot_of(enemy), Vector3.INF)
-	assert_true(first.may_start_windup(enemy), "the skeleton always says go")
-	assert_true(first.debug_token_holders().is_empty() and first.debug_waiting().is_empty())
+	assert_false(first.debug_token_holders().has(enemy))
+	assert_false(first.debug_waiting().has(enemy))
 	assert_eq(first.attacker_cap(), Tuning.data.attacker_cap)
 	assert_eq(first.debug_ring(), Vector2(Tuning.data.posture_ring_min_m, Tuning.data.posture_ring_max_m))
 	first.release_token(enemy)

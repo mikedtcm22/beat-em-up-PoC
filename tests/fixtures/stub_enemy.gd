@@ -1,6 +1,8 @@
 extends EnemyActor
 ## A test-only EnemyActor that stands still (M3-plan A2.12): the packages' tests use it where
-## they need an enemy body without the real AI's steering. It never moves or attacks on its own.
+## they need an enemy body without the real AI's steering. It never moves or attacks on its own,
+## and it replaces every behaviour hook of the base (the control tick, the token bookkeeping,
+## the reaction hooks), so it stands still the same way whatever the base implements.
 ## `want_token` drives wants_token(); force_attack() winds up `attack` from FREE (started from
 ## _tick_control(), as a real controller must); with `attack_on_token` it also takes a granted
 ## token's turn as the real one does: asks the director's may_start_windup(), then winds up.
@@ -34,6 +36,20 @@ func wants_token() -> bool:
 	return want_token and not has_token and state == CombatTypes.ActorState.FREE and health > 0.0
 
 
+func grant_token(blind: bool) -> void:
+	has_token = true
+	blind_priority_granted = blind
+
+
+func revoke_token() -> void:
+	has_token = false
+	blind_priority_granted = false
+
+
+func set_slot(pos: Vector3) -> void:
+	posture_slot = pos
+
+
 func attack_range_m() -> float:
 	return attack.reach_m if attack else 0.0
 
@@ -44,18 +60,22 @@ func force_attack(_index: int = 0) -> void:
 
 func _tick_control() -> void:
 	_follow_state()
-	if state == CombatTypes.ActorState.FREE:
-		if _force_pending or (attack_on_token and has_token and _director_says_go()):
-			_force_pending = false
-			if attack:
-				start_move(windup_move(attack, heavy), 1, &"root", true)
-				_follow_state()
-				return
-		super._tick_control()
+	if state != CombatTypes.ActorState.FREE:
+		return
+	if (_force_pending or (attack_on_token and has_token and _director_says_go())) and attack:
+		_force_pending = false
+		sim_velocity.x = 0.0
+		sim_velocity.z = 0.0
+		start_move(windup_move(attack, heavy), 1, &"root", true)
+		_follow_state()
+		return
+	sim_velocity.x = 0.0
+	sim_velocity.z = 0.0
+	rig.play_locomotion(Vector2.ZERO, 0.0)
 
 
-func _on_move_finished(move: MoveData) -> void:
-	super._on_move_finished(move)
+func _on_move_finished(_move: MoveData) -> void:
+	_return_to_neutral()
 	_give_token_back()
 
 

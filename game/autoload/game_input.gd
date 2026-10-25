@@ -137,11 +137,11 @@ func _input(event: InputEvent) -> void:
 
 
 ## Switch to the other room of ROOM_SCENES (F6): clear hitstop and slow-mo, unpause and change
-## scene. Nothing happens when the target scene doesn't exist, or when the current scene is
-## neither room (a bot or test host).
+## scene. Nothing happens when the target scene doesn't exist (the crowd room, until it is
+## merged), or when the current scene is neither room (a bot or test host).
 func switch_room() -> void:
 	var target := other_room()
-	if target == "" or not ResourceLoader.exists(target):
+	if target == "":
 		return
 	TimeController.clear()
 	menu_open = false
@@ -157,10 +157,13 @@ func other_room() -> String:
 
 
 ## The room F6 goes to from the scene at `scene_path`: the other of ROOM_SCENES, "" when it is
-## neither of them (a bot or test host).
+## neither of them (a bot or test host) or when that other room's scene does not exist (yet).
 static func room_after(scene_path: String) -> String:
 	var index := ROOM_SCENES.find(scene_path)
-	return "" if index < 0 else ROOM_SCENES[(index + 1) % ROOM_SCENES.size()]
+	if index < 0:
+		return ""
+	var target := ROOM_SCENES[(index + 1) % ROOM_SCENES.size()]
+	return target if ResourceLoader.exists(target) else ""
 
 
 func _unhandled_input(event: InputEvent) -> void:

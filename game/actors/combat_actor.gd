@@ -540,7 +540,8 @@ func break_free(invuln_frames: int = -1) -> void:
 
 ## Stop the running move (a wind-up ends interrupted: CombatEvents.windup_ended) and return to
 ## neutral: for a controller that must cut an attack short (a holder that lost its victim, a
-## frozen enemy). Not a reaction: no hit, no hitstun.
+## frozen enemy). Not a reaction: no hit, no hitstun. It sets the state itself, so call it
+## only while the body runs a move or holds someone, never in the middle of a hit reaction.
 func abort_move() -> void:
 	_cancel_move()
 	_return_to_neutral()
