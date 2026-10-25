@@ -16,6 +16,8 @@ const SPEED_LINE_ROWS := 4
 
 ## Name -> texture, kept alive for the run (null for a name with no PNG).
 static var _held: Dictionary[StringName, Texture2D] = {}
+## The damage look's "nothing" (clear_detail()).
+static var _clear_detail: Texture2D
 
 
 ## The effect texture `name` (a file name in DIR without ".png"), or null if missing.
@@ -26,6 +28,16 @@ static func texture(name: StringName) -> Texture2D:
 	var tex: Texture2D = load(path) as Texture2D if ResourceLoader.exists(path) else null
 	_held[name] = tex
 	return tex
+
+
+## A 1x1 fully transparent texture, made once and held for the run: a detail layer showing
+## nothing, which stands for a clean look in DamageLook (the layer never switches off).
+static func clear_detail() -> Texture2D:
+	if _clear_detail == null:
+		var image := Image.create_empty(1, 1, false, Image.FORMAT_RGBA8)
+		image.fill(Color(0.0, 0.0, 0.0, 0.0))
+		_clear_detail = ImageTexture.create_from_image(image)
+	return _clear_detail
 
 
 ## The lettering texture for `word` ("KRAK" -> word_krak.png).

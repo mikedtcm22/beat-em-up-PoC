@@ -705,6 +705,9 @@ func _build_materials() -> void:
 		mat.emission_enabled = true
 		mat.emission = Color.WHITE
 		mat.emission_energy_multiplier = 0.0
+		# Likewise the damage look's detail layer (transparent while clean), on the paints that
+		# take marks, so a look change swaps a texture and never the shader variant.
+		DamageLook.prepare(mat, paint)
 		_materials[paint] = mat
 	_apply_colors()
 

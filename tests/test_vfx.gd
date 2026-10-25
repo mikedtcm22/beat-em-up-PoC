@@ -708,10 +708,84 @@ func test_rig_damage_look_changes_materials_only() -> void:
 	assert_false(mats[PlaceholderBody.Paint.DARK].detail_enabled, "shades and soles stay")
 	rig.set_damage_look(DamageLook.Level.CLEAN)
 	for paint: int in mats:
-		assert_false(mats[paint].detail_enabled, "clean again: paint %d" % paint)
-		assert_false(mats[paint].uv1_triplanar, "original shader: paint %d" % paint)
+		if DamageLook.bruisable(paint):
+			assert_eq(mats[paint].detail_albedo, VfxArt.clear_detail(), "clean again: nothing shows on paint %d" % paint)
+		else:
+			assert_false(mats[paint].detail_enabled, "still no detail layer: paint %d" % paint)
 	assert_eq(rig.find_children("*", "MeshInstance3D", true, false).size(), meshes, "no meshes added")
 	assert_eq(rig.get_point_transform(&"RightFistPoint"), fist, "pose untouched")
+
+
+## Every stored property of `mat` but the two a damage look changes (the detail texture and
+## its tile size): together they pick the material's shader variant, so equal dictionaries
+## mean the same shader.
+func _variant_props(mat: StandardMaterial3D) -> Dictionary:
+	var out := {}
+	for info: Dictionary in mat.get_property_list():
+		var key: String = info.name
+		if (info.usage as int) & PROPERTY_USAGE_STORAGE != 0 and key != "detail_albedo" and key != "uv1_scale":
+			out[key] = mat.get(key)
+	return out
+
+
+## perf-02: the detail layer is on from the build (a transparent texture while clean), so a
+## look change swaps the texture only and never the shader variant (a switch recompiled it
+## on the first bruise of every clean cast: 3-5 ms and a pipeline compile).
+func test_damage_look_never_switches_the_shader_variant() -> void:
+	var rig := HumanoidRig.new()
+	rig.build_hurtboxes = false
+	add_child_autofree(rig)
+	rig.build()
+	var mats: Dictionary[int, StandardMaterial3D] = rig.get(&"_materials")
+	var variants := {}
+	for paint: int in mats:
+		variants[paint] = _variant_props(mats[paint])
+	for paint: int in [PlaceholderBody.Paint.SKIN, PlaceholderBody.Paint.BODY, PlaceholderBody.Paint.PANTS,
+			PlaceholderBody.Paint.ACCENT]:
+		var mat := mats[paint]
+		assert_true(mat.detail_enabled, "detail layer on from the build: paint %d" % paint)
+		assert_true(mat.uv1_triplanar, "triplanar from the build: paint %d" % paint)
+		assert_eq(mat.detail_blend_mode, BaseMaterial3D.BLEND_MODE_MIX)
+		assert_eq(mat.detail_uv_layer, BaseMaterial3D.DETAIL_UV_1)
+		assert_eq(mat.detail_albedo, VfxArt.clear_detail(), "clean shows nothing: paint %d" % paint)
+	assert_false(mats[PlaceholderBody.Paint.DARK].detail_enabled, "the dark paint takes no marks")
+	for level: int in [DamageLook.Level.BRUISED, DamageLook.Level.BLOODIED, DamageLook.Level.CLEAN,
+			DamageLook.Level.BRUISED, DamageLook.Level.CLEAN]:
+		rig.set_damage_look(level)
+		for paint: int in mats:
+			assert_eq(_variant_props(mats[paint]), variants[paint], "level %d keeps paint %d's variant" % [level, paint])
+	# The same textures as before (the look picks them by paint and level).
+	assert_null(DamageLook.texture_for(PlaceholderBody.Paint.SKIN, DamageLook.Level.CLEAN))
+	assert_eq(DamageLook.texture_for(PlaceholderBody.Paint.SKIN, DamageLook.Level.BRUISED), VfxArt.texture(&"damage_bruised"))
+	assert_eq(DamageLook.texture_for(PlaceholderBody.Paint.SKIN, DamageLook.Level.BLOODIED), VfxArt.texture(&"damage_bloodied"))
+	assert_eq(DamageLook.texture_for(PlaceholderBody.Paint.PANTS, DamageLook.Level.BRUISED), VfxArt.texture(&"damage_scuffed"))
+	assert_eq(DamageLook.texture_for(PlaceholderBody.Paint.ACCENT, DamageLook.Level.BLOODIED), VfxArt.texture(&"damage_blood"))
+	assert_null(DamageLook.texture_for(PlaceholderBody.Paint.DARK, DamageLook.Level.BLOODIED))
+
+
+## The "nothing" texture shows nothing: fully transparent, one pixel, held for the run.
+func test_clean_detail_texture_is_clear_and_held() -> void:
+	var tex := VfxArt.clear_detail()
+	assert_eq(tex, VfxArt.clear_detail(), "one texture for the run")
+	var image := tex.get_image()
+	assert_eq(image.get_size(), Vector2i(1, 1))
+	assert_eq(image.get_pixel(0, 0).a, 0.0, "mixes in nothing")
+
+
+## The tile size is the one thing besides the texture a look re-reads (Tuning.vfx_damage_tile_m).
+func test_damage_look_rereads_the_tile_size() -> void:
+	var rig := HumanoidRig.new()
+	rig.build_hurtboxes = false
+	add_child_autofree(rig)
+	rig.build()
+	var skin: StandardMaterial3D = (rig.get(&"_materials") as Dictionary[int, StandardMaterial3D])[PlaceholderBody.Paint.SKIN]
+	assert_eq(skin.uv1_scale, Vector3.ONE / Tuning.data.vfx_damage_tile_m, "from the build")
+	Tuning.data.vfx_damage_tile_m = 0.5
+	rig.set_damage_look(DamageLook.Level.BRUISED)
+	assert_eq(skin.uv1_scale, Vector3.ONE / 0.5)
+	rig.set_damage_look(DamageLook.Level.CLEAN)
+	assert_eq(skin.uv1_scale, Vector3.ONE / 0.5)
+	assert_eq(skin.detail_albedo, VfxArt.clear_detail())
 
 
 ## The whole-body flash (set_flash(), the parry's) is emission added over the lit, marked
