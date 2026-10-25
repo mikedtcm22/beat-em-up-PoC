@@ -828,10 +828,12 @@ static func stagger_back_b(base: Dictionary[StringName, Vector3]) -> Dictionary[
 
 
 ## Stumbling toward the victim's own right; stagger_left mirrors it. The trunk rocks over and
-## both arms fling out, bent: the far (left) arm's upper arm no more than about 45 degrees
-## out and the elbow folded near the guard, so the fist stays within about 0.6 m of the
-## trunk (it was a straight arm thrown out about 70 degrees, a rope in the first-person
-## view; the partial ragdoll's arm influence cannot calm what the animation poses).
+## both arms fling out, bent: the far (left) arm's elbow out to the side and folded, the
+## forearm raised beside the shoulder, so the fist stays within about 0.6 m of the trunk and
+## goes no more than about 0.1 m in front of the hips (it was a straight arm thrown out
+## about 70 degrees, a rope in the first-person view, and then a forearm folded forward whose
+## fist swung at the attacker's lens; the partial ragdoll's arm influence cannot calm what
+## the animation poses).
 static func stagger_right_a(base: Dictionary[StringName, Vector3]) -> Dictionary[StringName, Vector3]:
 	return merge(base, {
 		&"Hips": Vector3(0.0, -10.0, 0.0),
@@ -839,8 +841,8 @@ static func stagger_right_a(base: Dictionary[StringName, Vector3]) -> Dictionary
 		&"Chest": Vector3(0.0, 0.0, -8.0),
 		&"Neck": Vector3(0.0, 0.0, -12.0),
 		&"Head": Vector3(0.0, 0.0, -10.0),
-		&"LeftUpperArm": Vector3(28.0, 0.0, -40.0),
-		&"LeftLowerArm": Vector3(100.0, 0.0, 0.0),
+		&"LeftUpperArm": Vector3(-10.0, 85.0, -25.0),
+		&"LeftLowerArm": Vector3(130.0, 0.0, 0.0),
 		&"RightUpperArm": Vector3(20.0, 0.0, 40.0),
 		&"RightLowerArm": Vector3(60.0, 0.0, 0.0),
 		&"LeftUpperLeg": Vector3(10.0, 0.0, 10.0),
@@ -858,8 +860,8 @@ static func stagger_right_b(base: Dictionary[StringName, Vector3]) -> Dictionary
 		&"Chest": Vector3(-2.0, 0.0, -2.0),
 		&"Neck": Vector3(0.0, 0.0, -4.0),
 		&"Head": Vector3(0.0, 0.0, -2.0),
-		&"LeftUpperArm": Vector3(34.0, 0.0, -28.0),
-		&"LeftLowerArm": Vector3(105.0, 0.0, 0.0),
+		&"LeftUpperArm": Vector3(-4.0, 85.0, -13.0),
+		&"LeftLowerArm": Vector3(135.0, 0.0, 0.0),
 		&"RightUpperArm": Vector3(30.0, 0.0, 30.0),
 		&"LeftUpperLeg": Vector3(10.0, 0.0, 16.0),
 		&"LeftLowerLeg": Vector3(-20.0, 0.0, 0.0),

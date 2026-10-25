@@ -1636,3 +1636,39 @@ func test_the_uppercut_out_of_the_hooks_stagger_into_a_wall_does_not_jump_the_he
 	assert_lt(head_deg, 15.0, "the head does not turn onto the full simulation (%.1f degrees)" % head_deg)
 	assert_lt(left, chest + 0.07, "nor the left hand (%.3f m, the chest %.3f m)" % [left, chest])
 	assert_lt(right, chest + 0.07, "nor the right hand (%.3f m)" % right)
+
+
+func test_the_hooks_stagger_keeps_the_lens_clear_on_open_floor_and_pinned() -> void:
+	# The hook's far fist (the folded far arm of stagger_right/left, flung by the partial
+	# ragdoll) swung at the attacker's lens: 0.20 m from it on open floor, 0.15 m with the
+	# dummy against the building front or the end wall (the step-in stops at
+	# magnet_stop_distance, so the gap cannot open), the fist and forearm covering over half
+	# the view. Now the arm goes up and out beside the shoulder. Nothing comes within 0.25 m
+	# of the lens through the stagger; the dummy covers at most half the view through its
+	# first half second, the fling (it stands again in its guard after that, as close as the
+	# step-in left it).
+	var cases := {
+		"open floor": [Vector3(-3.13, 0.0, 0.0), NAN],
+		"building front": [Vector3(0.0, 0.0, -4.95), 0.0],
+		"end wall": [Vector3(17.95, 0.0, 0.0), -90.0],
+	}
+	for title: String in cases:
+		var args: Array = cases[title]
+		await _setup([Vector3(0, 0, -1.6)], args[1], args[0])
+		var dummy := dummies[0]
+		_queue(&"P", 3)
+		assert_true(await _wait_until(func() -> bool: return dummy.state == CombatTypes.ActorState.STAGGER, 160), "%s: the hook staggers" % title)
+		var near := INF
+		var fling_share := 0.0
+		var ticks := 0
+		while dummy.state == CombatTypes.ActorState.STAGGER and ticks < 200:
+			await get_tree().physics_frame
+			var seen := _lens(dummy)
+			near = minf(near, seen.x)
+			if ticks < 30:
+				fling_share = maxf(fling_share, seen.y)
+			ticks += 1
+		gut.p("hook stagger, %s: nearest %.3f m, most of the view %.0f%% in its first half second" % [title, near, fling_share * 100.0])
+		assert_gt(ticks, 20, "%s: a stagger" % title)
+		assert_gte(near, 0.25, "%s: nothing comes within 0.25 m of the lens (%.3f m)" % [title, near])
+		assert_lte(fling_share, 0.5, "%s: and the dummy covers at most half the view (%.0f%%)" % [title, fling_share * 100.0])
