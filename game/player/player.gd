@@ -75,8 +75,8 @@ var _dodge_velocity: Vector3 = Vector3.ZERO
 var _air_attack: bool = false
 var _held: CombatActor
 var _hold_frames: int = 0
-## Hold view ramp (0..1, linear in sim ticks): toward 1 while an enemy is held, back to 0
-## after a throw or release (_tick_hold_view(); eased by get_hold_view_weight()).
+## Hold view pitch ramp (0..1, linear in sim ticks): toward 1 while an enemy is held, back
+## to 0 after a throw or release (_tick_hold_view(); eased by get_hold_view_weight()).
 var _hold_view: float = 0.0
 ## EyePoint relative to the origin in the idle pose (body frame: x right, y up, -z ahead),
 ## and how far the hold pose moves it from there (measured on the rig in _ready()).
