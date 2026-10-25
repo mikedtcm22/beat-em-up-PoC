@@ -1,0 +1,59 @@
+{
+ "package": "r2-vfx-first-use",
+ "branch": "m2/phase3-fix-r2-vfx-first-use",
+ "verdicts": [
+  {
+   "id": "perf-01",
+   "outcome": "fixed",
+   "what_changed": "Confirmed first (baseline 3 fresh fixed-fps runs: deferred flush on the first hit 13.0/5.3/4.9 ms, first finisher compiled one canvas pipeline, first heavy hit compiled one surface pipeline). VfxDirector.begin_warm_up() (called from _ready, windowed only) shows, once a camera is current, one ComicSprite of each material variant (POP no_depth_test, THROWN plain, LYING shaded) 1 m ahead of the camera, 1 mm wide and at 0.02 alpha for one frame, then retires them to the pool (so the first hit also finds sprites built). ImpactFrame.warm() draws the ink material on one 1 px rect in the top-left corner for one frame (is_flashing() stays false; flash() or advance() ends it and restores the full rect), only while impact_frame_enabled is on, otherwise it waits for the toggle. Measured, windowed: real-time vsync first hit 39.0/32.0 ms -> 23.5/19.9 ms; fixed-fps first-hit deferred flush 13.0/5.3/4.9 -> 8.9 (noisy, other process running)/3.4/2.5 ms; first finisher pc_canvas 1 -> 0 and its render CPU 1.3-2.4 -> 0.5-0.6 ms; the first heavy hit's next-frame surface compile 1 -> 0. A residual 2-3 ms remains on the first hit's deferred flush even with the light burst disabled (not the comic sprites; likely the contact flash overlay or HUD, outside this package). Load check: first rendered frame differs from a no-warm run in exactly one pixel (0,0, the impact-frame pixel), later frames identical. Damage-look and P P P P first-person captures show nothing stray.",
+   "tests": "tests/test_vfx.gd: test_warm_up_is_skipped_headless, test_warm_up_shows_each_sprite_variant_once_then_pools_it (3 variants, in frustum, tiny, faint, retired to the pool, a first hit takes a warm sprite), test_warm_up_waits_for_a_camera, test_warm_up_draws_the_impact_frame_on_one_pixel (also a finisher after the warm-up), test_warm_up_draws_no_ink_with_the_photosensitivity_toggle_off"
+  },
+  {
+   "id": "perf-02",
+   "outcome": "fixed",
+   "what_changed": "Confirmed with probe_look first (baseline: a bruise with no other body bruised 3.3-4.4 ms, 9.9 ms the first time, pipeline compile on the next frame every time). DamageLook.prepare() (called from HumanoidRig._build_materials()) turns detail_enabled, MIX blending, detail UV1 and uv1_triplanar on for the bruisable paints (skin, body, pants, accent; the dark paint stays plain) with VfxArt.clear_detail() (a held 1x1 fully transparent texture) standing for clean; DamageLook.apply() now swaps only detail_albedo and uv1_scale, never a variant flag (an unprepared material is prepared first). texture_for() is unchanged, so CLEAN, BRUISED and BLOODIED pick the same textures. Measured with probe_look: bruise 0.27-0.43 ms for 1, 3 or 6 rigs, pc_surface 0 on every switch (first one included). CLEAN looks as before: a windowed pixel compare of a rig, clean with the layer on vs the old clean, differs in 105 of 1.44 M pixels, all in a 31x6 patch of z-fighting coplanar faces at the sole edge (the old render shows the same speckle); the 'damage looks held at 1 m' act recorded before and after is bit-identical in 290 of 308 frames, the rest at 67-96 dB PSNR.",
+   "tests": "tests/test_vfx.gd: test_damage_look_never_switches_the_shader_variant (every stored material property but detail_albedo and uv1_scale is unchanged across BRUISED/BLOODIED/CLEAN, since Godot 4.7 exposes no shader RID to script; plus the always-on layer, the clear texture and the unchanged texture picks), test_clean_detail_texture_is_clear_and_held, test_damage_look_rereads_the_tile_size; test_rig_damage_look_changes_materials_only updated for the always-on layer"
+  },
+  {
+   "id": "hit-05",
+   "outcome": "not_fixed",
+   "what_changed": "Dropped by Game-boy's ruling (side view is a debug view): not implemented, the view-share floor, ComicSprite.size_factor() and every size are untouched, so no side-view re-recording was needed.",
+   "tests": "none (dropped)"
+  },
+  {
+   "id": "gap-08",
+   "outcome": "fixed",
+   "what_changed": "Part (e) only, as assigned: the flash_at() doc comment in humanoid_rig.gd now says 'about 4 m' (it said 3 m), matching tuning_data.gd and ARCHITECTURE. Also fixed the stale comment in speed_lines.gd ('the bots do' -> 'vfx_bot does') and the matching comment in tests/test_vfx.gd. Parts (a) to (d) belong to the other packages and are untouched.",
+   "tests": "documentation only; full suite passes"
+  }
+ ],
+ "commit": "e643e1c",
+ "pushed": true,
+ "tests_passed": 494,
+ "tests_total": 494,
+ "script_errors": false,
+ "tunables_added": [],
+ "captures": [
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r2-vfx-first-use/captures/fix/looks_after_sheet.png",
+   "description": "First person, 'VFX: damage looks held at 1 m' after the fix: clean, bruised, bloodied on the skin and clothes, all as before (video looks_after.avi; looks_before.avi is the baseline, 290 of 308 frames bit-identical, psnr.txt has the per-frame values)"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r2-vfx-first-use/captures/fix/pppp_after_sheet.png",
+   "description": "First person, 'VFX: P P P P, light to finisher' after the warm-up: bursts, THUD and KRAK words, blood, speed lines, no stray sprite (video pppp_after.avi)"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r2-vfx-first-use/captures/review_perf/finisher_after1.csv",
+   "description": "Probe data: after-fix finisher runs (finisher_after1-3.csv fixed-fps, finisher_cmp_before1-2.csv and finisher_cmp_after1-2.csv real-time vsync, look_after1.csv for the damage look); before runs are finisher_before1-3.csv and look_before1.csv in the same folder"
+  }
+ ],
+ "feel_judgement": "Judged from first-person captures: no change in how anything looks or reads. Bursts, words, blood, speed lines and the damage looks match the baseline (the damage-look act is bit-identical in 290 of 308 frames), and the warm-up leaves nothing visible at load except a one-pixel impact-frame dot in the screen corner for one frame (1 pixel of 1.44 M, measured). The feel gain is the first hit's frame: real-time vsync first hit 39/32 ms down to 23.5/19.9 ms, and no pipeline compile on the first heavy hit, first finisher or first bruise. A 2-3 ms residual on the first hit's deferred flush remains, from something other than the comic sprites.",
+ "spec_questions": [],
+ "remaining": [
+  "The first hit's deferred flush still costs 2-3 ms over later hits with the warm-ups in place (about 2 ms even with the light burst disabled), so it is not the comic sprites; likely the contact flash overlay's first next_pass assignment or HUD/combat-log first use. That is outside this package's files (contact flash code is off limits) and would need a separate look.",
+  "The one-pixel impact-frame warm-up is not faint: impact_frame.gdshader sets COLOR outright, so modulate has no effect. Fading it would need a small shader uniform, which I left alone (not in my owned files). It is one pixel for one frame, only with impact_frame_enabled on.",
+  "Godot 4.7 exposes no shader RID to script, so the 'shader RID unchanged' test compares every stored material property except detail_albedo and uv1_scale (which together pick the variant) instead. The probe_look measurement confirms no pipeline compile.",
+  "ARCHITECTURE's side-view sizing sentence was not changed because hit-05 was dropped; the paragraph still says the tiers keep their ratios, which stays true.",
+  "tuning/default.json needs no regeneration: no tunables were added."
+ ]
+}
