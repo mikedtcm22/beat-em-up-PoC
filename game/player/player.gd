@@ -30,6 +30,8 @@ var parser: ComboParser = ComboParser.new()
 ## Test room only: get back up at full health Tuning.player_revive_s after a KO (the real
 ## game over comes later). Off by default.
 var auto_revive: bool = false
+## The get-up now running follows a KO (_revive()): the look stays on the body through it.
+var _ko_getup: bool = false
 
 var _sets: Dictionary[StringName, MoveSet] = {}
 var _weapon_throw_move: MoveData
@@ -154,6 +156,14 @@ func _process(delta: float) -> void:
 	if input.scripted or GameInput.paused:
 		return
 	var mouse := GameInput.consume_mouse_delta() * Tuning.data.mouse_sensitivity
+	if state != CombatTypes.ActorState.GETUP:
+		_ko_getup = false
+	# From the killing blow through the get-up that follows the KO the player has no say in
+	# where the body faces, and the first-person view comes back into its eyes (the KO view,
+	# FirstPersonCamera): a look turned meanwhile would bring the lens back to eyes the body
+	# does not have, through its own head. The input is dropped, not kept for later.
+	if health <= 0.0 or state == CombatTypes.ActorState.KO or _ko_getup:
+		return
 	var stick := Input.get_vector(&"look_left", &"look_right", &"look_up", &"look_down", Tuning.data.stick_deadzone)
 	stick *= Tuning.data.stick_look_speed * delta
 	var dy := mouse.y + stick.y
@@ -629,6 +639,11 @@ func _tick_ko() -> void:
 ## Test room: back up from a KO with full health and guard.
 func _revive() -> void:
 	health = max_health
+	# The view returns to the eyes the body has: its facing is what it was at the killing
+	# blow (a KO'd body is not steered), whatever look was written meanwhile, and the get-up
+	# keeps it (_process()).
+	look_yaw = rotation.y
+	_ko_getup = true
 	rig.set_hurtboxes_enabled(true)
 	_set_guard(max_guard())
 	CombatEvents.health_changed.emit(self, health, max_health)

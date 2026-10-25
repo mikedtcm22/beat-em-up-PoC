@@ -493,7 +493,11 @@ extends Resource
 ## the player's eyes. Presentation only. The lens sits beside the lying body (across its
 ## length, on whichever side has room), this far from the body's middle along the floor,
 ## this high above the floor, looking at the body across the floor and down by
-## ko_view_pitch_deg: with the defaults the whole body fills about half the view.
+## ko_view_pitch_deg: with the defaults the whole body fills about half the view. With no
+## room on either side (a corner, a fighter each side) it sits along the body instead, past
+## its feet, at the same distance and height; and with no room there either,
+## straight over the body's middle ko_view_steep_height_m up (high enough for the whole
+## body, arms out, to fit the view), looking down by ko_view_steep_pitch_deg.
 @export_range(0.5, 6.0, 0.05) var ko_view_distance_m: float = 1.7
 @export_range(0.3, 5.0, 0.05) var ko_view_height_m: float = 1.6
 @export_range(0.0, 89.0, 1.0) var ko_view_pitch_deg: float = 40.0
@@ -501,14 +505,23 @@ extends Resource
 ## from the get-up (the test room's get-up takes getup_frames, half a second).
 @export_range(0.0, 3.0, 0.05) var ko_view_out_s: float = 0.8
 @export_range(0.0, 3.0, 0.05) var ko_view_in_s: float = 0.5
+## On the way back the look returns to the eyes' direction ahead of the lens: its share of the
+## way is the lens's share to this power. 1 turns it with the lens (the head, neck and chest
+## pass through the view as the lens comes in, 25 to 50% of it for a moment, and hide with a
+## pop); 2 has the body out of the view by the time the lens is near it.
+@export_range(1.0, 4.0, 0.1) var ko_view_look_lead: float = 1.5
 ## The lens keeps this far (meters) from a wall, crate or standing fighter between it and the
 ## body, and the head, neck, chest and shoulders (hidden from the first-person lens, which
 ## sits in them) show once the lens is this far from all of them: lifted sooner, a cap's brim
 ## covered a third of the view for a frame at the killing blow. A wall, crate or fighter in
-## the way brings the lens in toward the body, but never nearer than ko_view_min_reach of
-## ko_view_distance_m and ko_view_height_m (a body in a corner, with no room on either side).
+## the way brings the lens in toward the body, never into it: a pose with less than
+## ko_view_min_reach of ko_view_distance_m and ko_view_height_m (an arm or a foot would
+## leave the view, from 0.7 down) is passed over for the next one (across, along, over the
+## hips).
 @export_range(0.05, 1.0, 0.05) var ko_view_clearance_m: float = 0.25
-@export_range(0.1, 1.0, 0.05) var ko_view_min_reach: float = 0.4
+@export_range(0.1, 1.0, 0.05) var ko_view_min_reach: float = 0.8
+@export_range(45.0, 89.0, 1.0) var ko_view_steep_pitch_deg: float = 85.0
+@export_range(0.5, 6.0, 0.05) var ko_view_steep_height_m: float = 2.6
 
 @export_group("Enemies")
 ## Max simultaneous attackers; 0 = unlimited (Milestone 3).
