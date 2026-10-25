@@ -8,7 +8,7 @@ A first-person beat-em-up proof of concept in Godot 4.7.2 (GDScript with static 
 
 ## Run, test, look
 - **Play:** `godot --path .`. The main scene is the test room.
-- **Tests:** `tools/run_tests.sh` runs all GUT tests headless in about 6 s, using `--fixed-fps 60` so frame-timed tests are deterministic. `-gselect=<file>` runs one file. Read the full output for `SCRIPT ERROR` and `ERROR`.
+- **Tests:** `tools/run_tests.sh` runs all GUT tests headless in about 90 s, using `--fixed-fps 60` so frame-timed tests are deterministic. `-gselect=<file>` runs one file. Read the full output for `SCRIPT ERROR` and `ERROR`.
 - **Look at it:**
   - `tools/capture_combos.sh "<act title text>" 6` records combo-bot acts (`tests/bot/combo_bot.gd`) with Movie Maker into `captures/combos.avi`, plus `captures/bot.log` with the hits per act.
   - Tile stills with `ffmpeg -i captures/combos.avi -vf "fps=6,scale=480:-1,tile=5x4" -frames:v 1 sheet.png` and view them.
