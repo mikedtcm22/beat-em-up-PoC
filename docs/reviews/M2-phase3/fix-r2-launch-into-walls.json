@@ -1,0 +1,92 @@
+{
+ "package": "r2-launch-into-walls",
+ "branch": "m2/phase3-fix-r2-launch-into-walls",
+ "verdicts": [
+  {
+   "id": "gap-01",
+   "outcome": "fixed",
+   "what_changed": "A launch the world stops right away now starts the full ragdoll at once from the pose on screen. CombatActor._launch_blocked() casts the body's capsule against LAYER_WORLD along the launch's horizontal direction, as far as it flies while the snap shows (ragdoll_full_rise_s) plus ragdoll_wall_reach_m (0.5 m, new). The arched snap pose therefore never shows inside the wall, the building fronts or the curb. In flight, after move_and_slide, is_on_wall() tells the ragdoll (HumanoidRig.ragdoll_set_blocked -> Ragdoll.set_blocked). That takes over a still-rising ragdoll (new take_over(), HumanoidRig.ragdoll_take_over()) and loosens the hips pull (ragdoll_hips_blocked_hz, new, 1.5 against 3.0) until it lands. The knockback is untouched. Launches out of a hold are excluded from the in-flight handling. Measured with the gap probe, W1/W2/W3/W7 deepest drawn vertex into the wall went from 0.38 m for 28+ ticks to at most 0.06 m (0.105 m with the cap's brim, which sticks 0.1 m out of the head's collision sphere). At the curb it is 0.04-0.06 m. W2 first-person uppercut launch: nearest 0.076 m / 69% of the view before, 0.296 m / 41% after. A haymaker at the building front: 0.41 m / 31%. In tests/test_ragdoll.gd the test room corner gives 0.35 m / 37%. The hook stagger in the corner is NOT cleared (see remaining).",
+   "tests": "tests/test_ragdoll.gd: test_launches_into_a_wall_the_building_fronts_and_the_curb_keep_the_body_out_of_them (uppercut and haymaker at the end wall, the building front and the curb), test_a_launch_in_open_space_still_shows_the_animations_snap_first, test_the_uppercut_in_a_corner_keeps_the_lens_clear, test_a_flying_body_stopped_by_a_wall_pulls_less_toward_its_hips_until_it_lands, test_taking_over_shows_the_ragdoll_alone_from_the_pose_on_screen. Run against the old code the wall, lens, in-flight, take-over and open-space tests fail; the wall/building/curb depth, lens and at-once asserts fail with 0.38 m, 0.02 m / 78%, at once false."
+  },
+  {
+   "id": "gap-03",
+   "outcome": "fixed",
+   "what_changed": "A launch from behind (hit.from_behind, not a KNOCKDOWN) now takes over at once from the pose on screen, using the same mechanism, so the kick carries the head away instead of the arch-back snap swinging it at the lens. ragdoll_aim_landing(&'downed_front') and the face-down landing are kept; test_a_body_launched_from_behind_lands_face_down_where_its_hurtboxes_are still passes. U1 first-person uppercut from behind: nearest 0.094 m / 68% of the view before, 0.404 m / 37% after (the nearest is the step-in; after the launch the nearest is 0.585 m and at most 32%). The shoes that sweep up through the lower view afterwards are big black soles, never closer than about 0.6 m and at most about 30% of the view while they pass. Checked in captures/fix/after/behind.avi.",
+   "tests": "tests/test_ragdoll.gd: test_the_uppercut_from_behind_keeps_the_lens_clear_and_lands_face_down (at once, nothing within 0.25 m, at most half the view, lands in downed_front). Old code: 0.081 m / 69%, not at once."
+  },
+  {
+   "id": "gap-07",
+   "outcome": "fixed",
+   "what_changed": "Ragdoll.start() now seeds visual_rig_transform and _visual from rig.global_transform and rig.animation_pose() when the mode goes from NONE to running, so get_visual_point_transform() on the hit tick shows the body where it is (before: the last ragdoll's lying spot, or the origin for a first ragdoll, 2.6-5 m off in the test). The seeding runs AFTER the kick's search for its body (_queue_impulse), deliberately: that search has always read the stale cache, and seeding it first makes a hook's head kick land on the Neck and a chest hit on the Chest (the nearest body). That cut the hook's give from 0.32 to 0.22 m and failed four approved-feel tests, so I kept the old selection (see spec_questions). ragdoll.gd's header and ARCHITECTURE's Get-up bullet now name TrainingDummy._has_room() as the second place the simulation reads the ragdoll. _has_room() is unchanged. The probe's stale first-tick GEO lines (v=500..1500) are gone from the throw acts; those acts are otherwise tick-for-tick identical to before.",
+   "tests": "tests/test_ragdoll.gd: test_a_new_ragdolls_first_tick_reads_the_body_where_it_is (three rounds with set_post() moves in between: the hips on the hit tick are within 0.1 mm of the animation's, and so is the rig transform). Old code: 2.6 m, 5.06 m and 5.09 m off."
+  },
+  {
+   "id": "gap-08",
+   "outcome": "fixed",
+   "what_changed": "Part (d) only. _RELEASE_BLEND_S is now Tuning grab_release_blend_s (Grab and weapons, above the Hold view subgroup, 0.22), used by release_from_grab() and by _launch() out of a hold. The four 0.03 snap blends (the launch, guard_break, the knee jolt on a held body, the flinch) are now one Reactions tunable, reaction_snap_blend_s (right after getup_invuln_frames, 0.03). Values are unchanged, so nothing looks different: the throw acts are tick-for-tick identical to before apart from the stale-pose lines. _HELD_BLEND_S and _GRAB_EASE_S were left as constants (optional). Parts (a), (b) and (c) are r2-dummy-comeback's and (e) is r2-vfx-first-use's. tuning/default.json regenerated.",
+   "tests": "tests/test_launch_from_hold.gd: test_the_release_and_snap_blends_are_tunables_with_the_values_they_had, test_the_throws_unbend_takes_the_release_blend (no blend: head moves 0.88 m a tick, default 0.10 m), test_a_hits_pose_snaps_in_over_the_reaction_blend. The existing tests/test_tuning default.json check passes with the new keys."
+  }
+ ],
+ "commit": "2db5e4f40ef980b922b75bdb73b186a6a31a4669",
+ "pushed": true,
+ "tests_passed": 496,
+ "tests_total": 496,
+ "script_errors": false,
+ "tunables_added": [
+  "grab_release_blend_s (Grab and weapons, 0.22 s, replaces the _RELEASE_BLEND_S constant)",
+  "reaction_snap_blend_s (Reactions, after getup_invuln_frames, 0.03 s, replaces four 0.03 literals)",
+  "ragdoll_wall_reach_m (Ragdoll > Knocked off the feet (full), 0.5 m)",
+  "ragdoll_hips_blocked_hz (Ragdoll > Hips spring, 1.5 Hz against ragdoll_hips_hz 3.0)"
+ ],
+ "captures": [
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r2-launch-into-walls/captures/fix/after/w2_fp.png",
+   "description": "AFTER: first-person uppercut into the end wall (W2), tiled 12 fps from the launch. The torso and head pitch away; no wall of trousers over the view."
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r2-launch-into-walls/captures/fix/before/w2_fp.png",
+   "description": "BEFORE (old code, same act and window) for comparison: the trousers fill the view for several frames."
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r2-launch-into-walls/captures/fix/after/x8_fp.png",
+   "description": "AFTER: first-person uppercut onto the curb (X8): the body rises and tumbles, then drops in front of the curb. The curb still stops the capsule, so there is no over-the-curb travel."
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r2-launch-into-walls/captures/fix/before/x8_fp.png",
+   "description": "BEFORE: the same curb uppercut on the old code. The look is similar, a stiff Y-armed body rising against an invisible plane."
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r2-launch-into-walls/captures/fix/after/wall.avi",
+   "description": "AFTER: W2 first-person end wall recording (1280x720 Movie Maker)."
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r2-launch-into-walls/captures/fix/after/building.avi",
+   "description": "AFTER: W7 first-person building front: hook, then haymaker."
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r2-launch-into-walls/captures/fix/after/curb.avi",
+   "description": "AFTER: X8 and X9 first-person curb uppercut and haymaker."
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r2-launch-into-walls/captures/fix/after/behind.avi",
+   "description": "AFTER: U1 first-person uppercut from behind. The back stays in view, the body pitches away and lands face down; the shoes sweep past at 0.6 m or more."
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r2-launch-into-walls/captures/fix/gap_probe.gd",
+   "description": "The reviewer's probe with paths fixed, plus X8/X9 first-person curb acts. Run logs: captures/fix/before.log, after1.log and final.log; helper scripts summ.py, summ2.py and win.py."
+  }
+ ],
+ "feel_judgement": "From the first-person after-frames, the end-wall, building-front and curb uppercuts and the from-behind uppercut now read as a hit body leaving the player's view instead of folding into the lens. No part of the body is inside a wall for more than a few centimetres, and the lens rules hold: nearest at least 0.30 m, at most 41% of the view. From behind, the back and head stay up and the body pitches away and lands face down. The finisher's hitstop in those cases shows the pre-hit stance instead of the arched snap, which is how the snap stayed out of the wall. What does not read well: at the curb the body still rises and drops straight down in front of it, because the capsule is stopped and the knockback is kept (see spec_questions), and the stiff Y-armed pose in flight remains. I judged this from the first-person sheets only, since the side view is debug.",
+ "spec_questions": [
+  "Wall reaction for Game-boy (new design, not done): a launch blocked by a wall, a crate or the curb still loses its whole horizontal knockback on the first tick (move_and_slide zeroes it), so the body goes straight up and drops at the wall's foot, and nothing ever goes onto or over the curb. Options: (1) leave as is; (2) deflect the knockback along the wall so the body falls away from the attacker; (3) a wall-splat; (4) a bounce back toward the attacker. Default: leave as it is (1).",
+  "Kick body selection, which I did not change: Ragdoll._queue_impulse() picks the part body nearest the contact reading a stale cache of the shown pose. For a first ragdoll that nearly always picks the Head, the UpperChest and the Foot. Seeding the cache first makes it pick the Neck, the Chest and so on, which cuts the hook stagger's give from about 0.32 to 0.22 m and the head's contact twist from 4.3 to 1.3 rad/s. I seeded after the kick's search to keep the approved push. Choosing the body by the contact for real (and re-tuning the push) is Game-boy's call. Default: keep the current selection."
+ ],
+ "remaining": [
+  "The hook stagger's fists in the corner (W2 first-person, 0.14 m from the lens, about 61% of the view) are NOT cleared. With the ragdoll off (--tune=ragdoll_enabled=0) the same view is 0.163 m / 61%, so it comes from the animated guard fists plus the step-in against a pinned dummy, not mainly the partial ragdoll. The fix is a magnetism change in player.gd (stop the lunge earlier or back the lens off when the target is pinned against the world) or the stagger poses. Both are another package's files.",
+  "The lying gap against a wall is not within 0.15/0.2 m for every bone, as before this fix. The animation's lying pose puts the head (and at the curb the chest) inside the wall, which no body can follow (head about 0.5 m, chest at the curb 0.22-0.26 m). After an uppercut a leg can also stay folded (legs 0.26-0.55 m, 0.28-0.64 m on the old code); the rest detection can put it to sleep with the knee at its limit. The hips are within 0.08 m everywhere and the tests assert hips < 0.15 m, chest < 0.3 m, legs < 0.8 m. The hurtbox/drawn-body match for stomps at a wall is therefore only good for the hips and torso.",
+  "The 0.05 m depth criterion is met for the end wall and the building fronts except for the cap's brim and a few ticks (0.053-0.065 m for up to 17 ticks, and 0.19 m at an 8 m/s haymaker's impact, same as before). The brim sticks 0.1 m out of the head's collision sphere (up to 0.105 m), and the delts, hands and belly stick out of their shapes by a few cm. The tests allow under 0.1 m and at most 25 ticks beyond 5 cm, with the brim excluded; placeholder_body.gd's shapes would be the real fix.",
+  "ragdoll_hips_blocked_hz trade-off: at 3.0 (no loosening) the depth is best (at most 0.049 m at walls) but the corner uppercut brings the legs to 0.17 m of the lens over 50% of the view. At 1.0 the lens is cleanest (0.47 m) but the body sinks deeper and lies further off its hurtboxes. I set 1.5 (lens 0.35 m, at most 37%). Game-boy can move it.",
+  "_HELD_BLEND_S and _GRAB_EASE_S are still script constants (optional in the brief). The stagger's 0.04 s blend in _apply_reaction() is also still a literal (not in the brief's list).",
+  "Not recorded: before/after of the side view, because Game-boy ruled it debug-only. The curb in the first-person acts keeps its straight rise and drop (spec question above)."
+ ]
+}
