@@ -48,6 +48,10 @@ extends Resource
 @export_range(1, 20, 1) var weapon_durability: int = 8
 @export_range(5.0, 30.0, 0.5) var weapon_throw_speed: float = 16.0
 @export_range(0.5, 3.0, 0.1) var stomp_range: float = 1.5
+## Leaving a grab, the body unbends over this long (sim seconds) around its bent-over hips,
+## so its head rises while it moves away instead of up through the holder's view: released
+## on its feet, or launched out of the hold (a throw, or a knee that KOs it).
+@export_range(0.0, 0.6, 0.01) var grab_release_blend_s: float = 0.22
 @export_subgroup("Hold view")
 ## While an enemy is held, the first-person view pitches down this many degrees (Game-boy,
 ## 2026-10-24), so the knees show landing on the held body; a knee's own camera_pitch_deg
@@ -74,6 +78,9 @@ extends Resource
 @export_range(30, 150, 1) var downed_frames: int = 75
 @export_range(10, 60, 1) var getup_frames: int = 30
 @export_range(0, 60, 1) var getup_invuln_frames: int = 30
+## A hit's pose snaps in over this long (sim seconds): a launch's, a knee's jolt on a held
+## body, a flinch's and a guard break's.
+@export_range(0.0, 0.2, 0.005) var reaction_snap_blend_s: float = 0.03
 ## Deceleration of knockback slides on the ground (m/s^2).
 @export_range(0.0, 60.0, 0.5) var ground_friction: float = 14.0
 ## A flying body must move at least this fast (m/s) to knock down whoever it hits.
@@ -336,6 +343,12 @@ extends Resource
 ## this strong (Hz) at first, easing to the flight's.
 @export_range(0.0, 0.6, 0.01) var ragdoll_full_rise_s: float = 0.15
 @export_range(0.0, 10.0, 0.1) var ragdoll_full_rise_pose_hz: float = 6.0
+## A launch the world stops right away (a wall, a crate or the curb within the distance it
+## flies while the snap shows, plus this many meters: how far the arched-back pose reaches
+## past the body's capsule) skips the animation's snap: the ragdoll takes over at once from
+## the pose on screen, so no part of the body is drawn inside the wall. A launch from behind
+## takes over at once too (the arch would swing the head back at the attacker).
+@export_range(0.0, 1.5, 0.05) var ragdoll_wall_reach_m: float = 0.5
 ## No kick at a contact point changes its body part's speed by more than this (m/s).
 @export_range(0.0, 30.0, 0.5) var ragdoll_max_kick: float = 14.0
 ## Share of the knocked body's new velocity every ragdoll body starts with (the rest comes
@@ -379,6 +392,11 @@ extends Resource
 ## hips rotation while flying (it rolls over in the air as the animation does), lying (and
 ## a KO's, weaker).
 @export_range(0.5, 6.0, 0.05) var ragdoll_hips_hz: float = 3.0
+## While a flying body's capsule is stopped by the world (a wall or the curb), the pull
+## toward the animation's hips is this strong instead (Hz): the bodies, which collide with
+## the world, keep the head out of the wall and slump down or along it, rather than being
+## dragged to a capsule that went nowhere. Back to the full pull when it lands.
+@export_range(0.0, 6.0, 0.05) var ragdoll_hips_blocked_hz: float = 1.0
 @export_range(0.1, 2.0, 0.05) var ragdoll_hips_damping: float = 1.0
 @export_range(0.0, 8.0, 0.05) var ragdoll_flight_turn_hz: float = 2.5
 @export_range(0.0, 6.0, 0.05) var ragdoll_hips_turn_hz: float = 2.5

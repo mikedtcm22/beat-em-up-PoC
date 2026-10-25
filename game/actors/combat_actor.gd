@@ -46,11 +46,6 @@ const IMPACT_STAGGER_PATH := "res://game/combat/moves/impact_body_stagger.tres"
 ## body closes in, instead of sweeping through it.
 const _HELD_BLEND_S := 0.12
 const _GRAB_EASE_S := 0.23
-## Leaving a grab, the body unbends over this blend, around its bent-over hips
-## (_leave_hold_under_hips()): released on its feet (release_from_grab()), or launched out of
-## the hold (thrown, or KO'd by a knee: _launch()). The head rises while the body moves away,
-## not up through the holder's view at arm's length.
-const _RELEASE_BLEND_S := 0.22
 ## Hit-flash color of a perfect block on the defender's rig (the parry flash), and the
 ## strength of the contact flash on an ordinary blocked hit (a clean hit flashes at 1).
 const PARRY_FLASH_COLOR := Color(0.3, 0.9, 1.0)
@@ -498,10 +493,10 @@ func release_from_grab(push: Vector3, stagger: bool) -> void:
 	if stagger:
 		sim_velocity = Vector3(push.x, 0.0, push.z)
 		_enter_state(CombatTypes.ActorState.STAGGER, Tuning.data.stagger_frames)
-		rig.play(_directional_anim(&"stagger", push), _RELEASE_BLEND_S)
+		rig.play(_directional_anim(&"stagger", push), Tuning.data.grab_release_blend_s)
 	else:
 		_enter_state(CombatTypes.ActorState.FREE)
-		rig.play(&"idle", _RELEASE_BLEND_S)
+		rig.play(&"idle", Tuning.data.grab_release_blend_s)
 	_leave_hold_under_hips()
 	if stagger:
 		# Like every stagger, the upper body gives way to the push.
@@ -847,7 +842,7 @@ func _try_block(hit: HitInfo) -> bool:
 		sim_velocity = Vector3(dir.x * speed, sim_velocity.y, dir.z * speed)
 		_flash_at(hit.contact_point, tuning.hit_flash_frames, 1.0)
 		_enter_state(CombatTypes.ActorState.STAGGER, tuning.guard_break_frames)
-		rig.play(&"guard_break", 0.03)
+		rig.play(&"guard_break", Tuning.data.reaction_snap_blend_s)
 		_ragdoll_stagger(hit.contact_point, hit.knockback, Ragdoll.Part.ARMS)
 		CombatEvents.blocked.emit(self, hit)
 		CombatEvents.guard_broken.emit(self, hit)
@@ -960,7 +955,7 @@ func _apply_reaction(hit: HitInfo) -> void:
 		# Knees on a held victim: jolt in the hunched held pose and stay held (unless this
 		# hit killed). A standing flinch here would raise the head into the holder's view.
 		if not hit.killed:
-			rig.play(&"held", 0.03)
+			rig.play(&"held", Tuning.data.reaction_snap_blend_s)
 			return
 		holder = null
 	if hit.killed and state == CombatTypes.ActorState.DOWNED:
@@ -977,7 +972,7 @@ func _apply_reaction(hit: HitInfo) -> void:
 			sim_velocity = Vector3(kb.x, 0.0, kb.z)
 			var stun := hit.move.hitstun if hit.move else 12
 			_enter_state(CombatTypes.ActorState.HITSTUN, stun)
-			rig.play(_flinch_anim(hit), 0.03)
+			rig.play(_flinch_anim(hit), Tuning.data.reaction_snap_blend_s)
 		CombatTypes.Reaction.STAGGER:
 			sim_velocity = Vector3(kb.x, 0.0, kb.z)
 			_enter_state(CombatTypes.ActorState.STAGGER, Tuning.data.stagger_frames)
@@ -1000,8 +995,12 @@ func _apply_reaction(hit: HitInfo) -> void:
 ## pose snapping in, and the full ragdoll. Launched out of a hold (thrown, or a knee that KOs
 ## the held body; GRABBED until now, the holder already gone) the body leaves it as a
 ## release does: from where it is drawn, unbending around its bent-over hips over
-## _RELEASE_BLEND_S, and the full ragdoll takes over at once from the held pose, so it leaves
-## bent over and straightens in the air, never snapping upright inside the holder.
+## Tuning.grab_release_blend_s, and the full ragdoll takes over at once from the held pose, so
+## it leaves bent over and straightens in the air, never snapping upright inside the holder.
+## The ragdoll takes over at once from the pose on screen in two more cases, where the snap
+## would show a body the space around it has no room for: a launch the world stops right
+## away (_launch_blocked(): the arched-back pose sits inside the wall or the curb behind it),
+## and one from behind (the arch swings the head back at the attacker's lens).
 func _launch(hit: HitInfo, reaction: CombatTypes.Reaction, kb: Vector3) -> void:
 	var from_hold := state == CombatTypes.ActorState.GRABBED
 	holder = null
@@ -1012,20 +1011,46 @@ func _launch(hit: HitInfo, reaction: CombatTypes.Reaction, kb: Vector3) -> void:
 	_set_ghost(true)
 	var new_state := CombatTypes.ActorState.THROWN if reaction == CombatTypes.Reaction.THROWN else CombatTypes.ActorState.LAUNCHED
 	_enter_state(new_state)
-	var blend := _RELEASE_BLEND_S if from_hold else 0.03
+	var blend := Tuning.data.grab_release_blend_s if from_hold else Tuning.data.reaction_snap_blend_s
 	if reaction == CombatTypes.Reaction.KNOCKDOWN:
 		rig.play(&"knockdown_back" if _face_up else &"knockdown_forward", blend)
 	else:
 		rig.play(&"launched", blend)
 	if from_hold:
 		_leave_hold_under_hips()
-	_ragdoll_full(hit.contact_point, kb, _ragdoll_part(hit), from_hold)
+	var at_once := from_hold or _launch_blocked(v) \
+			or (not _face_up and reaction != CombatTypes.Reaction.KNOCKDOWN)
+	_ragdoll_full(hit.contact_point, kb, _ragdoll_part(hit), at_once)
 	if not _face_up and reaction != CombatTypes.Reaction.KNOCKDOWN:
 		# Launched from behind: the flying animation arches back and flips face down on
 		# landing; the ragdoll pitches over in the air instead.
 		rig.ragdoll_aim_landing(&"downed_front")
 	_begin_flying(CombatTypes.Reaction.KNOCKDOWN, hit.attacker)
 	CombatEvents.knocked_down.emit(self, hit)
+
+
+## Whether the world stops a body launched with `v` (sim m/s) right away: the body's capsule,
+## cast along the launch's horizontal direction as far as it flies while the animation's snap
+## still shows (Tuning.ragdoll_full_rise_s) plus Tuning.ragdoll_wall_reach_m (how far the
+## snap's pose reaches past the capsule), meets the world (a wall, a crate, the curb). Only
+## the world counts, never another body.
+func _launch_blocked(v: Vector3) -> bool:
+	var flat := Vector3(v.x, 0.0, v.z)
+	if flat.length_squared() < 1e-6 or not is_inside_tree():
+		return false
+	var tuning := Tuning.data
+	var shape := CapsuleShape3D.new()
+	shape.radius = body_radius
+	shape.height = body_height
+	var query := PhysicsShapeQueryParameters3D.new()
+	query.shape = shape
+	query.collision_mask = CombatTypes.bit(CombatTypes.LAYER_WORLD)
+	query.exclude = [get_rid()]
+	# Lifted clear of the floor it stands on (a flat cast along it would drag on the floor).
+	query.transform = Transform3D(Basis.IDENTITY,
+			global_position + Vector3.UP * (body_height * 0.5 + _GETUP_FLOOR_CLEARANCE))
+	query.motion = flat.normalized() * (flat.length() * tuning.ragdoll_full_rise_s + tuning.ragdoll_wall_reach_m)
+	return get_world_3d().direct_space_state.cast_motion(query)[0] < 1.0
 
 
 func _begin_flying(reaction: CombatTypes.Reaction, source: Node3D) -> void:
@@ -1289,6 +1314,10 @@ func _integrate(dt: float, scale: float) -> void:
 		# Knockback slides stop at walls; self-propelled states re-steer every frame.
 		sim_velocity.x = after.x
 		sim_velocity.z = after.z
+	if is_flying() and is_on_wall():
+		# The capsule is stopped by the world (a wall, a crate, the curb): its drawn body
+		# takes over from the pose on screen and its hips are pulled to the capsule less.
+		rig.ragdoll_set_blocked(true)
 	if is_flying() and is_on_floor() and state_frame > 2 and sim_velocity.y <= 0.0:
 		_land_from_flight()
 	if _flying_reaction != CombatTypes.Reaction.NONE:
