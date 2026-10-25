@@ -4,6 +4,21 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-25 07:25 CDT: account E resumed (Game-boy's call); round 2's perf review running
+The 02:30 reset passed. At 07:15 the window was at 6% (it resets at 07:30 CDT); weekly was at 60% (resets Tue 2026-10-27 17:00 CDT).
+- **Running:** workflow `wf_bd40aeb8-b63`: `workflow.js` with [reviews/M2-phase3/args-r2-perf.json](reviews/M2-phase3/args-r2-perf.json). It runs the perf review in `.worktrees/m2-review-perf` at `8f5519f`, then three skeptics per finding. The scribe writes `review-perf.json` and `verify-perf.json`.
+- **New:** [reviews/M2-phase3/workflow-r2-close.js](reviews/M2-phase3/workflow-r2-close.js) (`b0f045b`) closes round 2 in one launch. Every agent reads the review files itself. In order:
+  - the completeness critic over every review (`critic-r2.json`);
+  - one gap reviewer if the critic names high gaps, with three skeptics per finding (`review-gap.json`, `verify-gap.json`);
+  - the partition of hit-05 and the perf and gap survivors into `packages-r2.json` (keys `r2-`);
+  - then `workflow-fix.js` as a child workflow.
+  - Args: `base` (required), plus optional `no_gap_round`, `no_fix`, `fix_note` and `concurrency`.
+  - First: `git worktree add --detach .worktrees/m2-review-gap <base>` and import it.
+- **If cut off:**
+  - If `review-perf.json` is missing on `m2/phase3-review`, rerun the perf args.
+  - If it's there but `verify-perf.json` is missing, verify it the way the hit lens was verified.
+  - Then run `workflow-r2-close.js`.
+
 ### 2026-10-24 23:23 CDT: hit-04 fixed and merged (486/486); 7 points left, so the lead stops here
 The 5-hour window is at 83% (resets 02:30 CDT on 10-25); weekly is at 59% (resets Tue 2026-10-27 17:00 CDT). Nothing is running. Every branch is pushed. The worktrees have no uncommitted tracked changes.
 - **Merged into `m2/hit-feel`:**
