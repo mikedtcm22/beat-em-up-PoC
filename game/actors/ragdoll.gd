@@ -2,9 +2,11 @@ class_name Ragdoll
 extends SkeletonModifier3D
 ## The visual ragdoll of a HumanoidRig (Spec §6 "Hit reactions"; docs/ARCHITECTURE.md
 ## "Ragdoll"). A presentation layer over the animation: the simulation (the CombatActor's
-## body, hurtboxes, rig points, get_point_transform()) never reads it, except in two places:
-## where a body gets up (HumanoidRig.ragdoll_hips_offset()) and where a training dummy
-## respawns (TrainingDummy._has_room() asks where a body lies, get_visual_point_transform()).
+## body, hurtboxes, rig points, get_point_transform()) never reads it, except in three places:
+## where a body gets up (HumanoidRig.ragdoll_hips_offset()), where a training dummy respawns
+## and whether it can walk home (TrainingDummy._has_room() asks where a body lies,
+## get_visual_point_transform(): once at the respawn, and by _home_has_room() every tick of
+## the walk home).
 ##
 ## Built once per rig, on its first ragdoll (HumanoidRig.ragdoll_start()): a
 ## PhysicalBoneSimulator3D under the skeleton with one PhysicalBone3D per
@@ -69,6 +71,19 @@ const PART_BONES: Dictionary[Part, Array] = {
 	Part.LEGS: [&"UpperLeg", &"LowerLeg", &"Foot"],
 }
 
+## The bone (without its Left/Right side) the first kick of a new ragdoll lands on for each
+## Part that has one (start(), and a stagger's lean: hit()'s `strike`), wherever the contact
+## is: the head, the upper chest and a shoulder, which the kick's tuning was approved on. The
+## body nearest the contact would be the neck and the chest instead (a milder give; open with
+## Game-boy), and one picked from a stale pose cache made the give depend on where the body's
+## last ragdoll ended (0.22 or 0.34 m on the hook). Of two sides, the nearer to the contact.
+## The legs have none: a hit on them lands on the leg body nearest to it.
+const STRIKE_BONES: Dictionary[Part, StringName] = {
+	Part.HEAD: &"Head",
+	Part.TORSO: &"UpperChest",
+	Part.ARMS: &"Shoulder",
+}
+
 ## Bones that simulate in a PARTIAL ragdoll (the upper body); the rest stay kinematic.
 const PARTIAL_BONES: Array[StringName] = [
 	&"Spine", &"Chest", &"UpperChest", &"Neck", &"Head",
@@ -97,8 +112,10 @@ var _bodies: Array[PhysicalBone3D] = []
 var _bone_of: PackedInt32Array = PackedInt32Array()
 var _mass: PackedFloat32Array = PackedFloat32Array()
 var _parent_body: PackedInt32Array = PackedInt32Array()
-## Each body's Part, and its shape's center in its bone's frame.
+## Each body's Part, its bone's name without the Left/Right side, and its shape's center in
+## its bone's frame.
 var _part: Array[Part] = []
+var _base_bone: Array[StringName] = []
 var _center: PackedVector3Array = PackedVector3Array()
 ## Per skeleton bone: the Part of its body, or -1 for a bone without one.
 var _bone_part: PackedInt32Array = PackedInt32Array()
@@ -136,6 +153,12 @@ var _partial_fade: float = 0.0
 var _rise_from: float = 0.0
 var _rise_s: float = 0.0
 var _rise_t: float = 0.0
+## The head and arms' ease-in after an at-once launch out of a stagger (start()): the local
+## rotation each of their bones showed (per skeleton bone), over this many sim seconds
+## (0 = none), and the sim seconds eased so far.
+var _ease_from: Array[Quaternion] = []
+var _ease_s: float = 0.0
+var _ease_t: float = 0.0
 ## A flight that lands face down turns the whole body toward this hips rotation (rig
 ## space) instead of the flying animation's (aim_landing()).
 var _landing: Quaternion = Quaternion.IDENTITY
@@ -207,10 +230,12 @@ func setup(p_rig: HumanoidRig) -> void:
 			if PART_BONES[key].has(StringName(side_free)):
 				part = key
 		_part.append(part)
+		_base_bone.append(StringName(side_free))
 	_held_lin.resize(_bodies.size())
 	_held_ang.resize(_bodies.size())
 	_prev_anim.resize(_bodies.size())
 	_visual.resize(skeleton.get_bone_count())
+	_ease_from.resize(skeleton.get_bone_count())
 	_bone_part.resize(skeleton.get_bone_count())
 	_bone_part.fill(-1)
 	for i: int in _bodies.size():
@@ -267,17 +292,25 @@ func is_running() -> bool:
 
 
 ## Start (or switch to) `new_mode` from the pose on screen. `contact` and `push` (world, m/s)
-## place the hit's kick (scaled by the mode's impulse tuning) on the `part` body nearest to
-## the contact; every body that starts simulating also gets `body_velocity` (the actor's
-## new sim velocity, world m/s, times Tuning.ragdoll_inherit_velocity) on top of the
+## place the hit's kick (scaled by the mode's impulse tuning) on the `part` body it lands on:
+## in a new ragdoll the part's strike body (STRIKE_BONES: the head, the upper chest, a
+## shoulder), so the same hit gives the same give whatever the body's last ragdoll was; in
+## one already running (a stagger on a stagger, a launch out of one) and for the legs, the
+## body of the part nearest to the contact on the pose shown (any simulating body, if none
+## of the part simulates). Every body that starts simulating also gets `body_velocity` (the
+## actor's new sim velocity, world m/s, times Tuning.ragdoll_inherit_velocity) on top of the
 ## velocity its bone already had in the animation (`bone_velocity`, sim m/s per skeleton
 ## bone; may be empty; a PARTIAL drops the part of it running against the push, so a parried
 ## jab's arm does not carry on into the defender). `partial_length_s` caps a PARTIAL's hold
 ## and fade (the stagger's length). Bodies already simulating keep their pose and motion:
 ## the influence rises from what showed, so nothing jumps. A FULL ragdoll started `at_once`
 ## shows alone from the start, taking over from the pose on screen instead of rising in from
-## the animation's snap (a body launched out of a hold leaves from its held pose; one the
-## world stops at once or one launched from behind would show a snap pose with no room for it).
+## the animation's snap. Three launches do: out of a hold (it leaves from its held pose), one
+## the world stops at once (a wall, a crate or the curb right behind, where the snap pose
+## would sit inside it) and one from behind (the snap arches the head back at the attacker's
+## lens). Out of a running stagger the head and arms, which it draws at a share of the
+## simulation's turns, ease in to all of it over Tuning.ragdoll_partial_rise_s from the turns
+## on screen, instead of jumping to it in the launch's first frame.
 func start(new_mode: Mode, contact: Vector3, push: Vector3, body_velocity: Vector3,
 		bone_velocity: Array[Vector3], part: Part = Part.ANY, partial_length_s: float = INF,
 		at_once: bool = false) -> void:
@@ -288,6 +321,14 @@ func start(new_mode: Mode, contact: Vector3, push: Vector3, body_velocity: Vecto
 	var was := mode
 	var previous_sim := _sim.duplicate()
 	var shown_influence := simulator.influence if was != Mode.NONE else 0.0
+	if was == Mode.NONE:
+		# The cache of the pose shown (visual_pose(), visual_rig_transform) still holds the last
+		# ragdoll's, wherever that body lay, until the first update: seed it with the pose on
+		# screen, so every read before then (the kick's search below, a respawn's room check, a
+		# test) is right.
+		visual_rig_transform = rig.global_transform
+		for i: int in _visual.size():
+			_visual[i] = rig.animation_pose(i)
 	# The pose on screen, before the simulator takes over (world).
 	var shown: Array[Transform3D] = []
 	for i: int in _bodies.size():
@@ -323,6 +364,16 @@ func start(new_mode: Mode, contact: Vector3, push: Vector3, body_velocity: Vecto
 	# staggering alike (the hit's frame snaps into the hit's pose, as without a ragdoll),
 	# unless it takes over at once.
 	_rise_t = 0.0
+	_ease_s = 0.0
+	_ease_t = 0.0
+	if new_mode == Mode.FULL and at_once and was == Mode.PARTIAL:
+		# The stagger drew the head and arms at a share of the simulation, and a FULL ragdoll
+		# draws all of it: from the turns they show now, they ease in to it.
+		_ease_s = tuning.ragdoll_partial_rise_s
+		for bone: int in _visual.size():
+			var parent := rig.skeleton.get_bone_parent(bone)
+			if parent >= 0 and (_bone_part[bone] == Part.HEAD or _bone_part[bone] == Part.ARMS):
+				_ease_from[bone] = (_visual[parent].basis.inverse() * _visual[bone].basis).get_rotation_quaternion()
 	_rise_from = shown_influence
 	if new_mode == Mode.FULL:
 		_rise_from = 1.0 if at_once else 0.0
@@ -373,31 +424,21 @@ func start(new_mode: Mode, contact: Vector3, push: Vector3, body_velocity: Vecto
 	apply_tuning()
 	var impulse_scale := tuning.ragdoll_partial_impulse if new_mode == Mode.PARTIAL else tuning.ragdoll_full_impulse
 	_pending.clear()
-	_queue_impulse(contact, push * impulse_scale, part)
+	_queue_impulse(contact, push * impulse_scale, part, was == Mode.NONE)
 	_has_prev = false
-	if was == Mode.NONE:
-		# The cache of the pose shown (visual_pose(), visual_rig_transform) still holds the last
-		# ragdoll's, wherever that body lay, until the first update: seed it with the pose on
-		# screen, so every read before then (a respawn's room check, a test) is right. After
-		# the kick's search for its body above, which has always run on that cache as it was:
-		# the bodies it picks (the head and upper chest, nearly always) are the feel the
-		# kick's tuning was approved on, where the body nearest to the contact would be the
-		# neck and the chest.
-		visual_rig_transform = rig.global_transform
-		for i: int in _visual.size():
-			_visual[i] = rig.animation_pose(i)
 
 
 ## An extra hit on a running ragdoll (a stomp on a downed body): wakes it and adds a kick
-## of `push` (world m/s) on the `part` body nearest to `contact`.
-func hit(contact: Vector3, push: Vector3, part: Part = Part.ANY) -> void:
+## of `push` (world m/s) on the `part` body nearest to `contact`; with `strike`, on the
+## part's STRIKE_BONES body as start()'s kick does (a stagger's lean).
+func hit(contact: Vector3, push: Vector3, part: Part = Part.ANY, strike: bool = false) -> void:
 	if mode == Mode.NONE:
 		return
 	_wake()
 	_calm_s = 0.0
 	_lying_s = 0.0
 	_hold_frame = Engine.get_physics_frames()
-	_queue_impulse(contact, push, part)
+	_queue_impulse(contact, push, part, strike)
 
 
 ## A FULL ragdoll flying to a face-down landing: while it flies, the whole body turns toward
@@ -461,6 +502,7 @@ func stop() -> void:
 	asleep = false
 	_frozen = false
 	_blocked = false
+	_ease_s = 0.0
 	_sim.clear()
 	_pending.clear()
 	simulator.physical_bones_stop_simulation()
@@ -575,6 +617,9 @@ func _process_modification_with_delta(_delta: float) -> void:
 		return
 	var head_share := 1.0
 	var arm_share := 1.0
+	var ease_w := 1.0
+	if mode == Mode.FULL and _ease_t < _ease_s:
+		ease_w = smoothstep(0.0, 1.0, _ease_t / _ease_s)
 	if mode == Mode.PARTIAL:
 		var tuning := Tuning.data
 		head_share = _partial_share(tuning.ragdoll_partial_head_influence)
@@ -594,6 +639,9 @@ func _process_modification_with_delta(_delta: float) -> void:
 			# this joint shows `share` of that (the same arc, so share x influence of it).
 			var anim := (rig.animation_pose(parent).basis.inverse() * rig.animation_pose(i).basis).get_rotation_quaternion()
 			local = Transform3D(Basis(anim.slerp(local.basis.get_rotation_quaternion(), share)), local.origin)
+		elif ease_w < 1.0 and parent >= 0 and (_bone_part[i] == Part.HEAD or _bone_part[i] == Part.ARMS):
+			# Eased in from the turn shown when the launch took over (start()).
+			local = Transform3D(Basis(_ease_from[i].slerp(local.basis.get_rotation_quaternion(), ease_w)), local.origin)
 		_visual[i] = local if parent < 0 else _visual[parent] * local
 	visual_rig_transform = rig.global_transform
 	rig.show_visual_pose(_visual)
@@ -661,6 +709,7 @@ func _step() -> void:
 		var w := 1.0 - fade_t / _partial_fade if fade_t > 0.0 else 1.0
 		influence = tuning.ragdoll_partial_influence * w
 	_rise_t += sim_dt
+	_ease_t += sim_dt
 	var rise := clampf(_rise_t / _rise_s, 0.0, 1.0) if _rise_s > 0.0 else 1.0
 	rise = smoothstep(0.0, 1.0, rise)
 	simulator.influence = lerpf(_rise_from, influence, rise)
@@ -938,18 +987,23 @@ func _twist_at_contact(states: Array[PhysicsDirectBodyState3D], i: int, contact:
 		_top_twist[_part[i]] = maxf(_top_twist.get(_part[i], 0.0), rate)
 
 
-## Queue a kick of `push` (sim m/s) on the simulating `part` body (any body if none of that
-## part simulates) whose shape's center is nearest to `contact`. A kick on an arm moves the
-## whole arm, up to the shoulder, not just its light end; a PARTIAL's kick on the trunk, every
-## simulating trunk body.
-func _queue_impulse(contact: Vector3, push: Vector3, part: Part) -> void:
+## Queue a kick of `push` (sim m/s) on a simulating body of `part`: with `strike`, the one on
+## the part's STRIKE_BONES bone (the nearer side to `contact` of a pair), otherwise the one
+## whose shape's center is nearest to `contact`; any body, nearest to it, if none of that part
+## simulates (every search reads the pose shown now, which start() seeds with the animation's
+## when it starts a ragdoll). A kick on an arm moves the whole arm, up to the shoulder, not
+## just its light end; a PARTIAL's kick on the trunk, every simulating trunk body.
+func _queue_impulse(contact: Vector3, push: Vector3, part: Part, strike: bool = false) -> void:
 	if push.length_squared() < 1e-8 or _sim.is_empty():
 		return
+	var strike_bone: StringName = STRIKE_BONES.get(part, &"") if strike else &""
 	var best := -1
 	var best_d := INF
 	for pass_any: bool in [false, true]:
 		for i: int in _sim:
 			if not pass_any and part != Part.ANY and _part[i] != part:
+				continue
+			if not pass_any and strike_bone != &"" and _base_bone[i] != strike_bone:
 				continue
 			var d := (_world_visual(_bone_of[i]) * _center[i]).distance_squared_to(contact)
 			if d < best_d:

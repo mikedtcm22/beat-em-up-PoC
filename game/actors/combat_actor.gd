@@ -1174,14 +1174,15 @@ func _ragdoll_stagger(contact: Vector3, push: Vector3, part: Ragdoll.Part, away:
 	var length_s := _state_length / float(Engine.physics_ticks_per_second)
 	rig.ragdoll_start(false, contact, push, Vector3(sim_velocity.x, 0.0, sim_velocity.z), part, length_s)
 	if lean.length_squared() > 1e-6:
-		# The lean lands on the trunk (a stagger's trunk kick moves the whole trunk), scaled as
-		# the push's kick is.
-		rig.ragdoll_hit(get_chest_position(), lean * Tuning.data.ragdoll_partial_impulse, Ragdoll.Part.TORSO)
+		# The lean lands on the trunk's strike body, the upper chest (a stagger's trunk kick
+		# moves the whole trunk), scaled as the push's kick is.
+		rig.ragdoll_hit(get_chest_position(), lean * Tuning.data.ragdoll_partial_impulse, Ragdoll.Part.TORSO, true)
 
 
 ## Knocked off the feet (launch, knockdown, throw; sim_velocity already set): the full
 ## ragdoll, kicked by `push` (world m/s) at `contact` on `part`. `at_once`: it takes over
-## from the pose on screen at once (out of a hold) instead of rising in from the animation.
+## from the pose on screen at once instead of rising in from the animation's snap (_launch():
+## out of a hold, a launch the world stops right away, a launch from behind).
 func _ragdoll_full(contact: Vector3, push: Vector3, part: Ragdoll.Part, at_once: bool = false) -> void:
 	if not _ragdoll_allowed():
 		return

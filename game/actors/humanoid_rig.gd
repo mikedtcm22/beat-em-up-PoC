@@ -534,12 +534,15 @@ func set_damage_look(level: int) -> void:
 ## Start a ragdoll from the pose on screen: `full` for a body knocked off its feet (every
 ## bone), otherwise the stagger's partial ragdoll of the upper body, which fades back to the
 ## animation within `partial_length_s` sim seconds. The hit's kick is `push` (world m/s, the
-## knockback) at `contact` (world), on the `part` body (Ragdoll.Part) nearest to it; every
+## knockback) at `contact` (world), on the `part` body (Ragdoll.Part): its strike body,
+## whatever the ragdoll's history (Ragdoll.STRIKE_BONES); every
 ## simulated body starts with `body_velocity` (the actor's new sim velocity) on top of its
 ## bone's velocity in the animation. A full ragdoll already running only takes the new
-## kick. A full one started `at_once` shows alone from the start, from the pose on screen
-## (a body launched out of a hold), instead of rising in from the animation's snap
-## (Ragdoll.start()). Builds the ragdoll on first use.
+## kick. A full one started `at_once` shows alone from the start, from the pose on screen,
+## instead of rising in from the animation's snap: a body launched out of a hold, one the
+## world stops right away (a wall, a crate, the curb behind it) and one launched from behind
+## (Ragdoll.start()); out of a running stagger the head and arms do not jump either.
+## Builds the ragdoll on first use.
 func ragdoll_start(full: bool, contact: Vector3, push: Vector3, body_velocity: Vector3,
 		part: Ragdoll.Part = Ragdoll.Part.ANY, partial_length_s: float = INF, at_once: bool = false) -> void:
 	if not _built:
@@ -556,10 +559,12 @@ func ragdoll_start(full: bool, contact: Vector3, push: Vector3, body_velocity: V
 
 
 ## An extra hit on a running ragdoll (a stomp on a downed body): `push` (world m/s) at
-## `contact` (world), on the `part` body nearest to it.
-func ragdoll_hit(contact: Vector3, push: Vector3, part: Ragdoll.Part = Ragdoll.Part.ANY) -> void:
+## `contact` (world), on the `part` body nearest to it; with `strike`, on the part's strike
+## body (Ragdoll.STRIKE_BONES) as ragdoll_start()'s kick lands (a stagger's lean).
+func ragdoll_hit(contact: Vector3, push: Vector3, part: Ragdoll.Part = Ragdoll.Part.ANY,
+		strike: bool = false) -> void:
 	if is_ragdolling():
-		_ragdoll.hit(contact, push, part)
+		_ragdoll.hit(contact, push, part, strike)
 
 
 ## A running full ragdoll flies to a landing in `lying_anim` (a face-down one): it turns
