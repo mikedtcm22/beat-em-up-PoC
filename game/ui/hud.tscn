@@ -11,6 +11,7 @@
 [ext_resource type="Script" uid="uid://bic0kuq8cqf7e" path="res://game/ui/pause_overlay.gd" id="9_pause"]
 [ext_resource type="PackedScene" uid="uid://br8cmdba7oejl" path="res://game/ui/debug_draw.tscn" id="10_debug"]
 [ext_resource type="Script" uid="uid://cldj37t3p4a64" path="res://game/ui/block_callout.gd" id="11_callout"]
+[ext_resource type="Script" uid="uid://tv3uearc4ock" path="res://game/ui/rear_warning.gd" id="12_rear"]
 
 [node name="Hud" type="CanvasLayer"]
 process_mode = 3
@@ -135,6 +136,17 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("11_callout")
+
+[node name="RearWarning" type="Control" parent="."]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("12_rear")
 
 [node name="PauseOverlay" type="Control" parent="."]
 visible = false

@@ -732,12 +732,16 @@ extends Resource
 @export_range(40.0, 400.0, 5.0) var rear_warning_base_px: float = 170.0
 @export_range(0.0, 200.0, 1.0) var rear_warning_inset_px: float = 48.0
 @export_range(1.0, 3.0, 0.05) var rear_warning_heavy_scale: float = 1.4
-## Pulses when it appears, and the length (s) of each, then it holds steady.
+## Pulses when it appears (and again when another attacker joins that side), and the length
+## (s) of each, then it holds steady.
 @export_range(0, 8, 1) var rear_warning_pulses: int = 2
 @export_range(0.02, 1.0, 0.01) var rear_warning_pulse_s: float = 0.12
-## Brightness (0..1 of rear_warning_opacity) of a single attacker's burst, and what each
-## further attacker on the same side adds.
+## How the burst beats: it pops in this much larger (0..1 of its size, fading over the
+## pulses), and each pulse dips to this share of its steady alpha before coming back.
+@export_range(0.0, 1.0, 0.05) var rear_warning_pulse_grow: float = 0.25
 @export_range(0.0, 1.0, 0.05) var rear_warning_min_alpha: float = 0.65
+## Brightness of a burst is 1 plus this for each attacker on that side beyond the first (it
+## multiplies the burst's colour and its alpha, which rear_warning_opacity caps at 1).
 @export_range(0.0, 1.0, 0.05) var rear_warning_brightness_step: float = 0.2
 ## The side is decided when the wind-up starts and kept (off); on, it follows the player's turning.
 @export var rear_warning_follow_turn: bool = false

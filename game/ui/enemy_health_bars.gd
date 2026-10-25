@@ -1,6 +1,7 @@
 class_name EnemyHealthBars
 extends Control
-## Small over-head health bars (Spec §5). An actor in group "enemy" gets one for
+## Small over-head health bars (Spec §5). An actor in group "enemy" (but not one in group
+## "boss": the boss has the big bottom bar, BossHealthBar) gets one for
 ## `show_seconds` after it takes a hit (CombatEvents.hit_landed, or a health drop through
 ## CombatEvents.health_changed). Each bar sits just above the body as it is drawn, seen
 ## through the viewport's current Camera3D (screen_anchor_of(): over the head of a body on
@@ -59,7 +60,7 @@ func on_hit_landed(hit: HitInfo) -> void:
 	if hit == null or not is_instance_valid(hit.victim):
 		return
 	var victim := hit.victim as CombatActor
-	if victim != null and victim.is_in_group(&"enemy"):
+	if victim != null and _wants_bar(victim):
 		_touch(victim)
 
 
@@ -71,7 +72,7 @@ func on_health_changed(actor: Node3D, health: float, max_health: float) -> void:
 	if not is_instance_valid(actor):
 		return
 	var enemy := actor as CombatActor
-	if enemy == null or not enemy.is_in_group(&"enemy"):
+	if enemy == null or not _wants_bar(enemy):
 		return
 	var bar := _find(enemy)
 	if bar == null:
@@ -200,6 +201,11 @@ func _end_ko_bar(bar: Bar) -> void:
 	if bar.gauge.ghost <= bar.gauge.value + 0.0001:
 		end = minf(end, fade_seconds)
 	bar.time_left = minf(bar.time_left, maxf(end, 0.0))
+
+
+## An enemy gets an over-head bar; the boss (group "boss") does not, it has its own bar.
+func _wants_bar(actor: CombatActor) -> bool:
+	return actor.is_in_group(&"enemy") and not actor.is_in_group(&"boss")
 
 
 func _touch(actor: CombatActor) -> void:
