@@ -8,7 +8,7 @@ One playable level that tests whether a first-person beat-em-up feels good to pl
 godot --path .
 ```
 
-This opens the Milestone 1 graybox test room: the player, three training dummies and a pipe. The centre dummy spars: come within 1.7 m in front of it and it steps in and throws a telegraphed jab every couple of seconds, to block (or dodge, or hit it out of its wind-up). To open the editor instead, run `godot --path . -e`.
+This opens the graybox test room: the player, three training dummies and a pipe. The centre dummy spars: come within 1.7 m in front of it and it steps in and throws a telegraphed jab every couple of seconds, to block (or dodge, or hit it out of its wind-up). To open the editor instead, run `godot --path . -e`.
 
 | Action | Gamepad (Xbox) | Keyboard + mouse |
 | --- | --- | --- |
@@ -38,6 +38,19 @@ The tuning panel and the cheat menu take every key while open, and the player st
 
 **Blocking:** hold B (Shift) with no direction to put the guard up; it stops hits from the front (within 60° of where you look) for a little chip damage and drains the guard meter under your health bar. Raise it on reaction to an attacker's wind-up, up to about a quarter second before the hit, for a perfect block ("PARRY!"): no damage, and the attacker staggers, so you can let go of B and grab it. An empty guard meter breaks the guard. P or K out of the guard attacks at once; pressed while a blocked hit pushes you back, it attacks as soon as the push-back ends. Holding B keeps the block: after a hit, a guard break or an attack out of the guard, the guard comes back up while B is still held (a perfect block needs a fresh press of B). Jump and LB do nothing while the guard is up.
 
+## Milestone 2 status: hit feel
+
+The whole Spec §6 hit-feel stack runs on placeholder art and sound, with the Spec §11 tuning panel to tune it live. Milestone 2 is done when Game-boy tunes each tier live in the panel (F1) and saves a preset.
+- **Per-tier hit feel:** hitstop, the finisher's slow-mo, camera punch and shake, the white contact flash (localized, see the departures below), and the finisher's impact frame (a 1-2 frame inverted ink flash of the screen, with an off toggle).
+- **Comic VFX:** lettering, impact bursts in three sizes, speed lines, blood, spit and teeth, the parry spark and the guard-break burst. Enemies go from clean to bruised to bloodied at 66% and 33% health.
+- **Audio and rumble:** generated placeholder sounds, layered per tier, positional, never the same variant twice in a row; gamepad rumble per tier.
+- **Ragdoll:** staggers blend a partial ragdoll over the animation, and knockdowns, throws and KOs hand over to the full ragdoll, pushed at the contact point. A body launched into a wall crumples against it, gets up where it lies, and a KO'd body blinks off. The player keeps animated reactions (a toggle in the "Ragdoll" group).
+- **The grab:** while holding, the view pans down and the player bends at the waist, so the knees land in view.
+- **The player's KO:** the view leaves the eyes and shows the player's body lying on the floor, then comes back as the player gets up (see the departures below).
+- **Tuning panel, presets and cheats:** F1 and F4 (see the controls above). Every tunable and move shows in the panel with no UI code.
+
+Side view and free fly are debug views (Spec §11): looks and feel are judged in first person only. Fine look and feel questions that the placeholder art can't settle (the flash's size in first person, the haymaker's flash, the view during non-KO knockdowns) keep their defaults until the real art is in (Game-boy, 2026-10-25); docs/HANDOFF.md lists them.
+
 ## Milestone 1 status: graybox combat
 
 Every Spec §4 combo and move can be performed and lands on the training dummies, and the side-view debug camera works:
@@ -64,13 +77,15 @@ The characters are procedural placeholders. Real art, VFX and audio come in Mile
 - **Clinch:** a held enemy bends over further than before, so its head sits just under the throat-height view instead of filling it. A grab eases the victim in from where it stood while it bends over, head first, so its head and shoulders never sweep through the lens; released on its feet, it stands up around its hips, away from the holder.
 - **Flying kick:** it dives forward and down, and its camera pitches down 25° (like the stomp) instead of the 8–12° of the standing kicks. From the air, a foot at hip height passed over a standing enemy's head.
 
-**Where M2 departs from the spec (approved by Game-boy on 2026-10-23 and 2026-10-24):**
+**Where M2 departs from the spec (approved by Game-boy from 2026-10-23 to 2026-10-25):**
 - **The 0.25x cheat slows the hit feel too (Spec §11):** the F4 time scale stretches hitstop and the finisher slow-mo as well as the simulation, so a slowed-down hit keeps its feel, only slower. Camera punch and shake stay at full speed.
 - **Cheats stay out of presets (Spec §11):** god mode and one-hit KOs are session state. Saving, loading or resetting a preset skips the "Debug" group, so a preset never turns a cheat on, and loading one never turns a cheat off.
 - **The white hit flash is localized (Spec §6, approved 2026-10-24):** on contact, the victim flashes white only around the point the hit landed instead of over the whole body. It is full white at the contact point and fades out by a radius (default about 0.25 m, about a head's width), at a strength you can set. Both are in the "Hit feel" tuning group, and a large radius brings back the whole-body flash. At 1 m in first person, the whole-body flash turned 27-36% of the view white on a jab.
 - **Heavy hits that knock a body down get the full ragdoll (Spec §6 tier table, approved 2026-10-24):** the table gives heavy hits a directional stagger with a partial ragdoll. The reaction decides instead of the tier: any hit that takes a body off its feet (the back elbow, the flying kick, the spin kick, a thrown weapon, a body thrown into another) launches the full ragdoll, and heavy hits that leave it standing stagger it with the partial one.
-- **Stronger staggers (Spec §6, approved 2026-10-24):** the partial ragdoll blends in at 0.9 influence (`ragdoll_partial_influence`) instead of the spec's 0.3-0.6, so the upper body gives way further (on the hook, about 0.32 m against 0.22 m at 0.6). The push of a hit lands at its contact point, as the spec says, with each body part's spin capped.
-- **KO'd bodies blink off (Spec §6, approved 2026-10-24):** instead of staying until the arena clears, a KO'd body lies limp for 1.5 s (`ko_linger_s`), blinks faster and faster for 1.0 s (`ko_blink_s`), then is gone, with no hurtboxes or collision. KO'd bodies take no hits. In the test room a training dummy comes back standing at its post 1.0 s later (`dummy_revive_s`) with a short blink-in, 4 s after the KO.
+- **Stronger staggers (Spec §6, approved 2026-10-24):** the partial ragdoll blends in at 0.9 influence (`ragdoll_partial_influence`) instead of the spec's 0.3-0.6, so the upper body gives way further (on the hook, about 0.33 m against 0.22 m at 0.6, the same on every hook). The push of a hit lands at its contact point, as the spec says, with each body part's spin capped.
+- **KO'd bodies blink off (Spec §6, approved 2026-10-24):** instead of staying until the arena clears, a KO'd body lies limp for 1.5 s (`ko_linger_s`), blinks faster and faster for 1.0 s (`ko_blink_s`), then is gone, with no hurtboxes or collision. KO'd bodies take no hits. In the test room a training dummy comes back standing at its post 1.0 s later (`dummy_revive_s`) with a short blink-in, 4 s after the KO. When someone stands on its post, it comes back at the nearest free spot in front of or beside the player, and waits there instead of walking into him.
+- **A finisher's white flash waits out the impact frame (Spec §6, approved 2026-10-25):** the spec flashes the victim on contact. On a finisher, the impact frame's ink flash covers the whole screen on the contact frames, so the white flash starts on the frame right after it and still shows for its 2 frames. With the impact frame off, it starts on contact.
+- **The player's KO is seen from outside the body (Spec §5, approved 2026-10-25):** everywhere else the camera rides the player's head. From the killing blow, it eases out of the eyes (0.8 s) to beside the lying body, 1.7 m out and 1.6 m up, looking down 40°, and eases back in as the player gets up (0.5 s). In the eyes, the lens lay 7 cm above the floor behind the player's own belly. The numbers are in "Camera" > "KO view". Ordinary knockdowns keep the first-person view.
 
 **Automated checks:**
 - `tools/run_tests.sh` runs 297 tests headless in about 13 seconds, including an end-to-end suite where a scripted player performs every combo in the real test room.
