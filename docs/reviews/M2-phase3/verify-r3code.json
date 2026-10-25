@@ -1,0 +1,222 @@
+{
+ "lens": "r3code",
+ "verdicts": [
+  {
+   "id": "r3code-01",
+   "lens": "r3code",
+   "severity": "high",
+   "title": "The kicked ragdoll body depends on a left-over pose cache: the approved hook give swings from 0.22 to 0.41 m with the dummy's history, and gap-07's seed silently moved the hook's lean kick (the lead's 0.85 threshold hides it)",
+   "survives": true,
+   "confirmations": 3,
+   "spec_question": false,
+   "files": [
+    "game/actors/ragdoll.gd",
+    "game/actors/combat_actor.gd",
+    "tests/test_ragdoll.gd"
+   ],
+   "root_cause": "Ragdoll.start() queues the first kick (_queue_impulse) before it seeds the drawn-pose cache. The kick's nearest-body search therefore reads the previous ragdoll's stale cache, and the pick varies with the dummy's history. The lean kick searches after the seed, on the true pose, so its body changed from UpperChest to Chest when gap-07 added the seed. The lead's 0.85 arm-trail threshold hides this.",
+   "open_question": "Which body should a hook's kick strike (Head or Neck, UpperChest or Chest)? What give should the hook have, 0.22 m or 0.32 m? The existing open question is built on a premise the finding disputes: the 0.22 m case already happens on the first hook after a comeback. It should be reframed.",
+   "votes": {
+    "reproduce": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "I reran probe_kick_body once and it reproduced part (a). The struck body for the same hook depends on where the dummy's last ragdoll pose cache sits. I did not rerun probe_hook_seed, so part (b) rests on the reviewer's logs.",
+     "evidence": "My rerun, in captures/verify/r3code-01-reproduce/run.log, matches the reviewer's numbers.\n- A fresh dummy: 'HEAD kick on Head', give 0.341 m.\n- After a KO and comeback, with the cache 1.87 m away: 'HEAD kick on Neck (nearest on screen: Head)', give 0.216 m.\n- The same hook at four posts: cache 0.00 m gives Head, 0.396 m; 3.83 m gives Neck, 0.256 m; 6.94 m gives Head, 0.407 m; 5.89 m gives Neck, 0.256 m.\nThe probe's own output shows the stale cache picks Neck where the pose on screen has Head nearest. The same hook therefore gives way 0.22-0.26 m or 0.34-0.41 m depending on the dummy's history."
+    },
+    "spec": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The docs approve the push at its contact point and the 0.9 stagger. They also quote the hook give as \"about 0.32 m against 0.22 m\". Nothing approves picking the struck body from a stale pose cache, and nothing says the give may vary with the dummy's history. The finding, an inconsistent give that depends on the dummy's history, is not covered by any approval. The docs' own 0.32 m figure is the number the finding says is missed on the first hook after a comeback.",
+     "evidence": "README.md:72 (approved \"Stronger staggers\": hook \"about 0.32 m against 0.22 m at 0.6\"; push lands at its contact point with each part's spin capped). M2-phase3-plan.md:6 (push at the exact contact point, spin caps). HANDOFF.md:309 (the README number is stale; it measures 0.346 m at 0.9 and 0.217 m at 0.6). The lead's note lists \"the push's part-body choice by contact (it reads a stale cache today; choosing by contact would cut the hook's give from 0.32 to 0.22 m)\" as an open Game-boy question. No doc approves the stale-cache pick or the history-dependent give. I did not check the code or captures."
+    },
+    "code": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "The code does what the finding says. Ragdoll.start() calls _queue_impulse() before it seeds the pose cache (ragdoll.gd:~376-389). _queue_impulse() picks the struck body by _world_visual() * _center, which reads the left-over _visual and visual_rig_transform from the last ragdoll. The pick therefore depends on where the dummy's previous ragdoll ended. The lean kick in _ragdoll_stagger() (combat_actor.gd:~1179) runs after the seed, so it searches on the true pose. That is the cause of the UpperChest to Chest shift and of the arm-trail ratio moving from 0.795 to 0.834.",
+     "evidence": "Code: ragdoll.gd:376 queues the impulse and the seed follows at 378-389. _queue_impulse at ~945-962 uses _world_visual(). combat_actor.gd:1179 queues the lean kick as a second kick after ragdoll_start. I did not rerun any probe. The existing logs in captures/review_r3code/ agree. probe_kick_body.log: a fresh hook gives 'HEAD kick on Head', give 0.341 m; a second hook and a hook after set_post away and back also hit the Head, 0.345 m; the hook after a KO and comeback hits the Neck although the nearest on the true pose is Head, give 0.216 m. probe_hook_seed.log: merged build struck [Head, Chest], ratio 0.834; no-seed build struck [Head, UpperChest], ratio 0.795. One nuance: the log shows the Neck pick only after a KO and comeback, and after some set_post moves according to probe_kick_body2.log. A plain away-and-back set_post still picked the Head. The finding says 'after other set_post moves', which is correct but does not apply to every move."
+    }
+   }
+  },
+  {
+   "id": "r3code-02",
+   "lens": "r3code",
+   "severity": "medium",
+   "title": "gap-05's 'wait, don't walk in' covers only the post: a player standing between a displaced dummy and its post is walked into every 1.25 s and the dummy's fists fill the first-person view",
+   "survives": true,
+   "confirmations": 3,
+   "spec_question": false,
+   "files": [
+    "game/enemies/dummy/training_dummy.gd",
+    "game/autoload/tuning_data.gd",
+    "tuning/default.json",
+    "tests/test_ko_blink.gd"
+   ],
+   "root_cause": "The room check in _walk_home() covers only the destination spot (_has_room(_home)), not the path. The stuck-give-up path resets _idle_frames and retries forever. No body-aware look-ahead cast against LAYER_PLAYER_BODY or LAYER_ENEMY_BODY is made, because _way_query is masked to the world only.",
+   "open_question": "When a standing body blocks the path to a free post, should the dummy hold and face the player, or walk around? Should it stop retrying after a give-up?",
+   "votes": {
+    "reproduce": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "I reran the reviewer's probe and got the same result. _walk_home() only checks that the post has room, not that the path to it is clear. A dummy with the player between it and a free post walks into him in repeated bouts. It stalls against his capsule and retries after the idle time. This runs against the approved behaviour that a dummy \"waits instead of walking into him\".",
+     "evidence": "I copied captures/review_r3code/probe_walk_into.gd to tests/test_zz_walkinto.gd, ran tools/run_tests.sh -gselect=test_zz_walkinto, then deleted the copy (git status is clean). Output: \"player 0.85 m off the post toward the dummy: dummy walked 118 of 600 ticks in 8 bouts, touching the player 542 ticks, closest gap 0.000 m, ends 1.55 m from its post\". The 1.00 m case: \"walked 118 of 600 ticks in 8 bouts, touching the player 600 ticks, closest gap -0.000 m\". Code read in training_dummy.gd lines 154-176: the only blocker check is _home_has_room() at the post. The stuck handling zeroes _idle_frames and retries with no limit. I did not re-record the first-person capture, so the \"fists fill the view\" severity rests on the reviewer's png. The player is never pushed, so the contact is persistent."
+    },
+    "spec": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The docs approve only that a dummy comes back with room and \"waits instead of walking into him\" (HANDOFF.md:27, gap-05). I found no text covering a player or crate standing on the path between a displaced dummy and its free post. Walking into a player who blocks that path every 1.25 s contradicts the stated intent, even though the approved wording is post-focused.",
+     "evidence": "docs/HANDOFF.md:27 and :83 (gap-05 is described only as arriving beside an occupied post). HANDOFF.md:109 lists the spec question as whether the dummy returns in front of the player or beside him. M2-phase3-plan.md:39 and README.md:73 set the respawn at the post after dummy_revive_s and say nothing about path obstruction or the walk-home retry. SPEC.md has nothing on this. I grepped the docs for \"walk into\" and \"return_home\" and found nothing else."
+    },
+    "code": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "The code does what the finding says. _walk_home() refuses to walk only when _home_has_room() is false, which tests the post spot. Nothing looks at the path or at a body between the dummy and its post. Its stuck rule gives up after dummy_return_stuck_s, zeroes _idle_frames, and retries after dummy_return_idle_s with no cap. So with the player or a crate between the dummy and a free post, the dummy walks into the obstacle every cycle and the pattern repeats without end.",
+     "evidence": "game/enemies/dummy/training_dummy.gd lines 154-176: _walk_home() gates only on the idle time, dummy_return_slack_m and _home_has_room(). After that it calls _walk(to_home/dist, ...) straight at the post. The stall branch (lines 168-172) resets _home_walk_best, _home_walk_stalled and _idle_frames and returns false, with no retry limit and no obstacle memory. _home_has_room() (179-184) calls _has_room(space, _home), the post spot only. _way_query (449-453) is masked to LAYER_WORLD only and is used only in the comeback spot search (about line 350), not in _walk_home. In _tick_control, face_player turns the dummy toward the player while it stands between walks, which matches the 'pressed against him facing him' description. The default is sparring=false, so the sparring branch does not take over. I did not run the reviewer's probe."
+    }
+   }
+  },
+  {
+   "id": "r3code-03",
+   "lens": "r3code",
+   "severity": "low",
+   "title": "An at-once take-over out of a running stagger jumps the head and arms in one frame (ragdoll-02's head/arm influence against gap-01/gap-03's at_once)",
+   "survives": true,
+   "confirmations": 3,
+   "spec_question": false,
+   "files": [
+    "game/actors/ragdoll.gd",
+    "tests/test_ragdoll.gd"
+   ],
+   "root_cause": "The head and arm share is applied only at draw time, in a mode == PARTIAL branch, and is not carried by the simulation bodies. Switching mode to FULL with at_once drops the share to 1 immediately, and start() leaves the bodies where the simulation put them. The drawn pose therefore jumps from the shared pose to the full simulated pose.",
+   "open_question": "None. Easing or seeding the head and arm bodies from the drawn pose is a code fix that keeps the approved behaviour.",
+   "votes": {
+    "reproduce": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "I reran the probe and got the reported numbers. An at-once launch out of a PARTIAL stagger draws the head and hands from the full simulation on the first frame, and nothing eases them. Under the code's own comment (\"takes over at once ... from the pose on screen\") that counts as a defect, though a low-severity one. I did not record the act, so I did not check how it looks.",
+     "evidence": "I ran probe_atonce_partial.gd once, headless, through GUT with -gdir=res://captures/review_r3code and -gprefix=probe_. The log is at captures/verify/r3code-03-reproduce/run.log. With the head and arm influence at 0.45, tick 0 reads \"head 0.070 m 38.2 deg, left hand 0.165 m, right hand 0.246 m\". With 0.90 it reads \"head 0.085 m 7.8 deg, left hand 0.081 m, right hand 0.106 m\". Those match the finding. In ragdoll.gd, _process_modification_with_delta applies head_share and arm_share only when mode == PARTIAL. Once start(FULL, at_once) runs, the shares are 1.0, and start() sets simulator.influence to 1.0 through _rise_from. It does not re-seat bodies that were already simulating (previous_sim bodies are only rescaled). That is why the head and hands change in one frame."
+    },
+    "spec": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "No document approves or requires a head or arm jump on an at-once take-over. The approved items say the full ragdoll takes over 'from the pose on screen' (HANDOFF gap-01 and gap-03 entries), which a head and arm jump contradicts. HANDOFF documents ragdoll_partial_head_influence and ragdoll_partial_arm_influence at 0.45 only as a stagger look, and says nothing about the transition to a launch.",
+     "evidence": "grep of SPEC.md, README.md, M2-phase3-plan.md and HANDOFF.md. HANDOFF lines 25-26: 'gap-01: the body hits the wall and crumples (full ragdoll from the pose on screen)' and 'gap-03: a launch from behind pitches forward, away from the attacker'. HANDOFF lines 293 and 308 cover the 0.45 head and arm influences as stagger tunables (FYI, no spec change). No mention of an accepted pop on at-once take-over. Earlier fixes treated pops as defects (code-03, ragdoll-01, F1 get-up pop)."
+    },
+    "code": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The code does what the finding says. In PARTIAL, _process_modification_with_delta() draws the head at head_share and the arms at arm_share (both below 1.0), by slerping from the animation toward the simulated rotation. Ragdoll.start(FULL, at_once) from PARTIAL sets _rise_from = 1.0, _rise_s = 0 and simulator.influence = 1.0. Bodies in previous_sim keep their state and are only rescaled. Once mode is FULL, head_share and arm_share are 1.0. The head and arms therefore go from their 0.45 share of the simulated pose to all of it on the first frame, and the hitstop holds that frame.",
+     "evidence": "game/actors/ragdoll.gd lines 326-330 (at_once sets _rise_from 1.0 and _rise_s 0.0), 341-357 (previous_sim bodies keep their pose, only _rescale_body), 576-596 (shares apply only while mode == PARTIAL, otherwise 1.0). I only read the code. I did not run the probes or open the finding's probe logs, so the measured degrees and metres are not independently checked."
+    }
+   }
+  },
+  {
+   "id": "r3code-04",
+   "lens": "r3code",
+   "severity": "low",
+   "title": "Feel numbers still in scripts after gap-08: _HELD_BLEND_S, _GRAB_EASE_S and the stagger's 0.04 s blend (reaction_snap_blend_s's doc skips the stagger)",
+   "survives": true,
+   "confirmations": 2,
+   "spec_question": false,
+   "files": [
+    "game/actors/combat_actor.gd",
+    "game/autoload/tuning_data.gd",
+    "tuning/default.json",
+    "tests/ (tuning-panel test)"
+   ],
+   "root_cause": "The gap-08 pass moved only some blend numbers into Tuning. It left the grab hold blend, the grab pin ease and the stagger's snap blend as script literals, and the reaction_snap_blend_s doc never mentioned the stagger.",
+   "open_question": "None. This is low severity. The values stay as they are and only move into TuningData.",
+   "votes": {
+    "reproduce": {
+     "refuted": true,
+     "confidence": "medium",
+     "reason": "The three literals exist, but none is new in this diff, so this is not a regression from round 2. They are pre-existing literals that the lead's fix-r2-launch-into-walls.json 'remaining' list left on purpose. Converting them would be a separate tuning-cleanup task, not a defect of this phase.",
+     "evidence": "In the worktree, grep shows combat_actor.gd:47 _HELD_BLEND_S := 0.12, :48 _GRAB_EASE_S := 0.23 and :983 rig.play(..., 0.04). I then ran `git diff c27afaf..72a1066 -- game/actors/combat_actor.gd | grep \"^[+-].*\\(_HELD_BLEND_S\\|_GRAB_EASE_S\\|0.04)\\)\"`, which printed nothing, so none of the three lines was added or changed by the diff. The reaction_snap_blend_s doc at tuning_data.gd:81-83 does list launch, knee jolt, flinch and guard break and omits the stagger. That doc matches what the setting actually drives, so it is not wrong. I did not run a recording or test; this is a static reproduction."
+    },
+    "spec": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "No doc approves these literals. CLAUDE.md and the phase 3 plan's code lens say feel numbers never live in scripts. HANDOFF gap-08 (\"feel numbers left in scripts by the fixes\") was only partly fixed. The fixer recorded the three as left over: \"optional in the brief\" and \"not in the brief's list\". That is an omission, not an approval.",
+     "evidence": "CLAUDE.md \"No numbers in scripts ... feel numbers are never script constants\". docs/milestones/M2-phase3-plan.md:74 lists \"no feel numbers in scripts\" in the code lens. docs/HANDOFF.md:86 lists gap-08. fix-r2-launch-into-walls.json \"remaining\" says \"_HELD_BLEND_S and _GRAB_EASE_S are still script constants (optional in the brief). The stagger's 0.04 s blend in _apply_reaction() is also still a literal (not in the brief's list).\""
+    },
+    "code": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "The code matches the finding. combat_actor.gd still has _HELD_BLEND_S := 0.12 (line 47) and _GRAB_EASE_S := 0.23 (line 48) as script constants. The stagger's rig.play call at line 983 still uses a literal 0.04 blend. reaction_snap_blend_s (default 0.03) is documented as covering a launch, a knee jolt, a flinch and a guard break, so it leaves the stagger out. The CLAUDE.md rule that feel numbers are never script constants applies. The only caveat is severity: fix-r2-launch-into-walls.json reportedly left these three on purpose, which I did not open. The finding is a minor rule violation, not a bug.",
+     "evidence": "Grep of game/actors/combat_actor.gd shows line 47 (_HELD_BLEND_S := 0.12), line 48 (_GRAB_EASE_S := 0.23), lines 483 and 485 (_HELD_BLEND_S used for rig.play(&\"held\", ...) and as the ragdoll_stop floor), lines 1418 and 1420 (_GRAB_EASE_S used for the pin ease) and line 983 (rig.play(_directional_anim(&\"stagger\", kb), 0.04)). game/autoload/tuning_data.gd lines 81-83 document reaction_snap_blend_s (0.03) as covering a launch, a knee jolt, a flinch and a guard break, with no stagger. A grep of game/ for grab_hold_blend, grab_pin_ease and stagger_snap returned no matches."
+    }
+   }
+  },
+  {
+   "id": "r3code-05",
+   "lens": "r3code",
+   "severity": "low",
+   "title": "Stale code comments left by the merged fixes (ragdoll header, Ragdoll.start's kick doc and seed comment, at_once docs, TimeController header)",
+   "survives": true,
+   "confirmations": 3,
+   "spec_question": false,
+   "files": [
+    "game/actors/ragdoll.gd",
+    "game/actors/humanoid_rig.gd",
+    "game/actors/combat_actor.gd",
+    "game/autoload/time_controller.gd"
+   ],
+   "root_cause": "Doc comments were not updated when later fixes added the walk-home room check, the blocked-launch and from-behind at_once cases, and the seed-cache ordering.",
+   "open_question": "None for the comment edits. The TimeController line and ragdoll.gd's two-reads header mirror ARCHITECTURE.md. Should its \"only exception\" sentence also be qualified, since the drawn ragdoll now feeds the simulation (respawn, walk home, get-up)?",
+   "votes": {
+    "reproduce": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "Reproduced by reading the code. The cited comments contradict the code in each case, so this is a real but low-severity defect: stale comments only, with no behavior change.",
+     "evidence": "ragdoll.gd:5-7 says the simulation reads the ragdoll in \"two places\". training_dummy.gd:160 and :179-184 show _walk_home() calling _home_has_room(), which calls _has_room(). That is a third read, and it runs every tick. combat_actor.gd:1026-1028 sets at_once for from_hold, a blocked launch, or a launch from behind. humanoid_rig.gd:539-542 and combat_actor.gd:1184 describe at_once only as \"out of a hold\". ragdoll.gd:270 and :378-389 describe a kick on the body nearest the contact, while the seed comment itself says the search runs on the stale cache. time_controller.gd:2 says \"The only path for presentation to affect the simulation\", but the ragdoll also feeds the get-up, the respawn spot and the walk home. I did not run Godot, because this is a comment-only finding."
+    },
+    "spec": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "No document approves or requires stale code comments. ARCHITECTURE.md:28 says only \"The only exception is time, via TimeController\". The approved items (respawn, walk home, get-up) don't cover wrong comments. The finding is a doc-accuracy cleanup, not a behaviour.",
+     "evidence": "Grep of HANDOFF.md and M2-phase3-plan.md found no decision approving stale comments. Only prior stale-comment fixes appear (HANDOFF.md:501, plan line 68), so fixing them is the norm. ARCHITECTURE.md:28 matches the TimeController header claim, so that comment could be argued as spec-aligned. The ragdoll-reads-in-simulation point may itself be a spec question. I did not read the code."
+    },
+    "code": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "The cited comments are stale against the code. The ragdoll.gd header lists two simulation reads, but training_dummy.gd also reads the drawn ragdoll in _home_has_room(), which feeds the walk home. The at_once docs name only the hold case, but combat_actor.gd:1026 also sets at_once for blocked launches and launches from behind. The TimeController header says it is the only path for presentation to affect the simulation, but the ragdoll's drawn pose also feeds the get-up and the respawn.",
+     "evidence": "ragdoll.gd:5-7 names two reads (hips offset, _has_room's respawn). training_dummy.gd:160 and :179-184 call _home_has_room() -> _has_room(space, _home), and _has_room reads get_visual_point_transform at :416-417 (and is called at :331 and :348 as well). combat_actor.gd:1026 has `at_once := from_hold or (_ragdoll_allowed() and (_launch_blocked(v) or (not _face_up and reaction != KNOCKDOWN)))`. The docs at humanoid_rig.gd:539-542 and combat_actor.gd:1184 mention only a hold. combat_actor.gd:1090 and :1201 read ragdoll_hips_offset() for the get-up. I did not check ragdoll.gd:270 and :378-389 beyond reading the text, because the finding defers them to its finding 1 (the part-body choice reads a stale cache, which the lead's note confirms)."
+    }
+   }
+  },
+  {
+   "id": "r3code-06",
+   "lens": "r3code",
+   "severity": "low",
+   "title": "ARCHITECTURE mismatches with the merged code (docs only, for leg 3)",
+   "survives": true,
+   "confirmations": 3,
+   "spec_question": false,
+   "files": [
+    "docs/ARCHITECTURE.md"
+   ],
+   "root_cause": "The docs were not updated after round 2 changed the walk-home room check, the impact-frame conditions, the KO view's inputs, and the hold-view builder. They also lack the newer CombatActor accessors.",
+   "open_question": "None. Two of the sentences depend on the code behaviour that findings 1 and 3 decide (the stale part-body cache, and the head and arm jump out of a running stagger). Update those after that decision.",
+   "votes": {
+    "reproduce": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "I reproduced the docs-versus-code mismatches by grep and by reading the code. I did not check the finding's remaining claims (the stale cache, the head and arm jump, the walk home's per-tick _has_room calls). I did not record or run anything, because this is a docs-only finding.",
+     "evidence": "ARCHITECTURE.md line 279 says `FirstPersonCamera.view_from_eye(player, eye)` builds the hold view. In first_person_camera.gd, line 220 shows the camera building its own view with `_view_with(player, root + _eye_offset, _hold_shift, ...)`. `view_from_eye` at line 229 is a static helper that calls `_view_with` too. Line 281 says the KO view reads the player through `is_ko()`. The only `is_ko()` call in the camera, at line 371, is on other actors in the crowding check, not on the player. Line 137 calls the respawn room check the \"other\" place the ragdoll feeds the simulation. The finding says the walk home also calls `_has_room` every tick, which contradicts \"one of two places\". The grep for it in training_dummy.gd did not run because the glob matched nothing, so I did not confirm that. The `is_ko()` claim is the one I could directly confirm for the camera."
+    },
+    "spec": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "The docs do not approve the mismatches. HANDOFF and the phase 3 plan treat checking ARCHITECTURE against the code as an open task: leg 3 and package D must check the VFX, Audio, Ragdoll, Hit flash and hold-view sections. The finding is a docs-drift list for that task, not approved behaviour.",
+     "evidence": "docs/HANDOFF.md lines 54-57, 103 and 445 list \"ARCHITECTURE's VFX, Audio, Ragdoll, Hit flash, hold-view and KO-view sections checked against the code\" as pending leg 3 / D work. docs/milestones/M2-phase3-plan.md line 119 says to check the VFX, Audio, Ragdoll and Hit flash sections against the code. I read only the grep hits, not the code or the ARCHITECTURE lines, so I did not confirm each cited mismatch."
+    },
+    "code": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "The code matches the finding's claims. ARCHITECTURE.md is stale in the places it lists (docs only).",
+     "evidence": "- The walk home calls _home_has_room(), which calls _has_room(space, _home), at training_dummy.gd:160 and :179-184. So \"one of two places the ragdoll feeds the simulation\" understates it.\n- CombatActor.impact_frame_ticks() (combat_actor.gd:945-949) returns 0 for blocked hits and when impact_frame_enabled is false, and returns max(vfx_impact_frame_frames, 0). The doc's \"Frames\" bullet omits the blocked case and the frames > 0 condition.\n- first_person_camera.gd reads player.health (line 275), player.rig.global_basis (301, 354) and player.rig.get_point_position(&\"Hips\") (302, 355). Its only is_ko() call is on other actors (line 371). The player is never asked is_ko(), contrary to the doc.\n- view_from_eye() (229-230) is a static helper. The camera itself builds the view through _view_with() (line 220) with the smoothed hold shift.\n- is_flying() (combat_actor.gd:222) and is_blinking_in() (248) exist. The Interfaces list (ARCHITECTURE.md ~212) does not include them.\n- Not re-checked: the stale part-body cache and the running-stagger head and arm jump. I only read the doc lines, not the code.\n- The wording on the camera running its KO view while another camera is current comes from the finding. I did not trace it."
+    }
+   }
+  }
+ ],
+ "pending": []
+}
