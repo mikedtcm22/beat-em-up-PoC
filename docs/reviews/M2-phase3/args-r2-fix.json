@@ -1,0 +1,7 @@
+{
+ "packages_file": "packages-r2.json",
+ "fixer_model": "sonnet",
+ "concurrency": 2,
+ "fixer_cost": 15,
+ "note": "ROUND 2 FIXES (2026-10-25). Branch off m2/hit-feel (the newest commit): every round 1 package and hit-04's fix are merged there, and 486/486 tests pass with no SCRIPT ERROR. Your findings are in docs/reviews/M2-phase3/review-gap.json, review-perf.json and the matching verify-*.json. The reviewers' probes and sheets are under .worktrees/m2-review-gap/captures/review_gap/ (gap_probe.tscn has the W*, KO1, U1 and K3 acts) and .worktrees/m2-review-perf/captures/review_perf/. GAME-BOY (2026-10-25): side view is a debug view, so judge looks and feel in FIRST PERSON only. Every proposed fix in your package is approved as written in its notes; r2-player-ko-view follows his 'out of body' KO view. Keep the work focused: commit wip: and push every 15-20 minutes, and record only the acts you need. For perf fixes, measure before and after with the perf reviewer's probes in a windowed run, and report the numbers."
+}

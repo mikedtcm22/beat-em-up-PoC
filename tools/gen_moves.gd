@@ -72,6 +72,11 @@ const SPIN_FOLLOW := 1.0
 const BACK_ELBOW_VIEW_YAW_DEG := -150.0
 const BACK_ELBOW_VIEW_PITCH_DEG := -10.0
 const BACK_ELBOW_VIEW_HOLD := 6
+## The knee tips the view a little further down than the hold already has it
+## (Tuning.grab_view_pitch_deg) and drops it like a kick, so the knee shows rising into the
+## held body from the bottom of the view (Game-boy, 2026-10-24).
+const KNEE_PITCH_DEG := -12.0
+const KNEE_DROP_M := 0.05
 ## Weapons hit a guard harder (the held block): pipe swings drain it 1.5 times as fast.
 const PIPE_GUARD_MULT := 1.5
 
@@ -190,8 +195,13 @@ func _build_moves() -> void:
 	var knee := _add(&"knee", "Knee", Vector3i(5, 3, 12), 6.0, LIGHT, FLINCH, Vector3.ZERO,
 			[_sphere(&"RightKneePoint", 0.18)])
 	knee.magnetism = false
+	knee.camera_pitch_deg = KNEE_PITCH_DEG
+	knee.camera_drop_m = KNEE_DROP_M
+	# 0,3,9 (until the M2 phase 3 review) barely lifted the body (0.2 m, 0.27 s in the air:
+	# it skated off on its feet and tripped). Thrown higher and a little less far, it arcs
+	# (about 0.6 m up, 0.45 s in the air) and lands about as far off.
 	var throw := _add(&"throw", "Throw", Vector3i(8, 2, 20), 15.0, HEAVY, THROWN,
-			Vector3(0.0, 3.0, 9.0), [])
+			Vector3(0.0, 5.0, 6.5), [])
 	throw.magnetism = false
 
 	# Ground hit on a downed enemy.

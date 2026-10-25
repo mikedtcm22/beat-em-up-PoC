@@ -1,0 +1,153 @@
+{
+ "lens": "code",
+ "worktree": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-code",
+ "summary": "Code review of all of phase 3 at c27afaf: the localized flash, package A (contact push, KO blink-off and respawn), package B (hold view, bend and knee) and the lead's fixes. I ran the full suite first: 457/457 pass in 31.7 s, with no SCRIPT ERROR or ERROR (captures/review_code/tests_full.log). I then ran seven probe batches of GUT scripts in my folder and recorded three combo_bot acts with Movie Maker.\n\nThe layer rules hold. The vanish path stays in presentation: the HUD bars drop on CombatEvents.vanished, debug draw skips gone bodies, and VFX, audio and rumble have no new writes. No simulation code reads a camera, and the new public API has ## docs. Presets missing the new keys load them from the defaults, and default.json matches TuningData (a test checks it).\n\nThese edge cases behave correctly:\n- a body vanishing from under a pile (the top body drops to the floor within 15 ticks);\n- a hidden rig keeps its ragdoll stepping;\n- a knee KO while holding (the view eases out, the victim launches and is KO'd);\n- a hit that breaks the hold, a release, and hold_max_frames;\n- a reset during the blink-off;\n- the player never blinks off;\n- kicks with a zero-length lever or a contact inside the body, and the central kick with ragdoll_kick_at_contact off;\n- the flash's next_pass is set and cleared exactly, and the flash lasts exactly hit_flash_frames.\n\nMain defects:\n1. HumanoidRig.flash_at() places the localized flash at the raw world contact point. A thrown pipe shows no flash. A flying-body impact shows at most a faint edge. A hit on a body that is already staggering flashes the wrong part: the uppercut on the hook-staggered dummy flashes the left shoulder, 0.36 m from the head it struck.\n2. A dummy's respawn check ignores ghost bodies: lying, KO'd and held bodies, and a dummy that respawned the same tick. A dummy can blink back in standing inside a body lying on its post.\n3. The first-person lens bobs 5-7 cm up and down on every grab and release. A release while walking also pops the lens up 3.5 cm in one frame. The hold view's rise and pull-back ease on their own timers, and the walking bob clamp switches on at once. The tests only check the offsets, not the lens.\n\nSmaller findings: magnetism lunges at a dummy that is blinking in and can't be hit, and a thrown pipe bounces off it. dummy_revive_s changed meaning under the same key, so older presets now give 5.5 s from KO to back. Two tests have weak checks.",
+ "acts_checked": [
+  "Full GUT suite (tools/run_tests.sh): 457/457, no SCRIPT ERROR/ERROR",
+  "combo_bot 'P P P P (side view)' recorded: jab/jab/hook/uppercut flash vs comic spark and impact frame, combat log over the victim",
+  "combo_bot 'Grab looking level: knee, knee, LB lets go' (first person) recorded: knee flash, combat log over the knee contact, LB release and the victim's head rising through the view",
+  "combo_bot 'Pipe: pick up, 3 swings, throw' (first person) recorded: thrown pipe hit flash",
+  "Layer rules: CombatEvents.vanished -> EnemyHealthBars.on_vanished, debug_draw skip, VfxDirector damage look on respawn, audio/rumble (no new listeners), HumanoidRig.set_shown; no camera reads in player/combat_actor/training_dummy/ragdoll",
+  "Numbers in scripts and ## docs on all new public API (flash_at, follow_flash, flash_overlay, flash_falloff, set_shown, is_gone, blink_in, blink_shown, view_from_eye, get_camera_pull_back, get_hold_view_weight, max_body_spin, body_sim_spin, vanished, on_vanished, SpeedLines.rng)",
+  "Tuning.changed re-reads: nothing new cached (blink_in length only); presets: apply_preset fills missing keys from defaults; default.json vs TuningData (test_tuning_panel)",
+  "Vanish edge cases: pile (probe: top body drops 0.257->0.120 m within 15 ticks), held (KO clears holder), mid-flight (KO only on landing), stomp (KO excluded from stomp/magnet targets), flying-body impact query (layer 0)",
+  "Respawn: post occupied by the player (tested), by a lying body (probe: comes back inside it), by a held body (ghost, same mask gap), every spot occupied (waits gone, re-queries each tick), freed or reset mid-blink, two respawns in one tick",
+  "Blink-in: no hit, no grab (ok); magnetism target (probe: still picked); thrown pipe (bounces off, no hit); sparring timer reset to 2 s",
+  "Player KO never blinks (test_the_player_never_blinks_off)",
+  "Hold view: grab, knees, knee KO (probe), hit while holding, LB release, hold_max_frames path, throw, regrab during ease-out, walking release (probe), walking grab (probe), release lens coverage (probe4: 30-39%, nearest >= 0.30 m)",
+  "Contact push: _twist_at_contact pivot/inertia/caps, global ragdoll_max_spin clamp and _finite NaN guard after the twist, stagger-on-stagger chain (probe), central kick with ragdoll_kick_at_contact off",
+  "Flash: next_pass set/cleared, frames under hitstop (real ticks), parry vs contact, flash on a vanishing body (_vanish clears), warm-up box (first rig = player), contact points from HitDetector, throw, body impact, thrown weapon, and hits on ragdolling bodies (probes)",
+  "Tests reviewed for weak asserts: test_ko_blink.gd, test_grab_view.gd, test_hit_flash.gd, test_ragdoll.gd contact-push tests, test_vfx speed-lines seed test, test_humanoid_rig hold/throw changes"
+ ],
+ "captures_reviewed": [
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-code/captures/review_code/pppp_side.avi (frames 28-33, 39-44, 50-57, 60-99: jab and hook flashes under the spark, uppercut under the impact frame, combat log over the victim's torso)",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-code/captures/review_code/grab_level.avi (frames 64-79 knee flash and combat log; 112-216 LB release)",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-code/captures/review_code/pipe.avi (frames 172-183, thrown pipe hit at 176-177)",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-code/captures/review_code/pppp_overview.png",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-code/captures/review_code/pppp_crop.png",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-code/captures/review_code/pppp_jabs_zoom.png",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-code/captures/review_code/grab_knee_sheet.png",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-code/captures/review_code/grab_release_moment.png",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-code/captures/review_code/grab_release_sheet.png",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-code/captures/review_code/pipe_throw_sheet.png",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-code/captures/review_code/pipe_throw_zoom.png",
+  "Probe logs: /Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-code/captures/review_code/probe1.log ... probe7.log (scripts probe_review.gd ... probe_review7.gd in the same folder)"
+ ],
+ "sheets_for_game_boy": [
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-code/captures/review_code/pipe_throw_zoom.png",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-code/captures/review_code/grab_knee_sheet.png",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-code/captures/review_code/grab_release_moment.png",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-code/captures/review_code/pppp_jabs_zoom.png",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-code/captures/review_code/pppp_crop.png"
+ ],
+ "open_question_notes": "More contortion on the contact push (left as it is): the twist works within its caps. But the central kick alone already spins the head at 41-47 rad/s in a stagger: with the contact push on, the head peaks at 41.0 rad/s against its 14 rad/s cap, and with the central kick only it peaks at 47.1 (probe1.log, CHAIN). So the joint limits and pose springs, not the twist, decide how much the body contorts, as A reported.\n\nThe grab's lens pull-back and the bend's depth (left as they are):\n- The hold rise (0.10 m) is larger than the bend's eye drop (0.083 m: rig eye at 1.568 m held, 1.651 m standing). The pull-back (0.24 m, which puts the lens 0.20 m behind EyePoint) is larger than the bend's forward lean (about 0.12 m).\n- The eases run on their own timers (0.2 s in, 0.45 s out), while the pose blends finish in about 10 ticks. So the lens rises 4.7-6.4 cm above the standing view and sinks back on every grab and release (finding 3).\n- On an LB release the victim stands up 0.5 m in front of the lens. Its cap rises through the middle of the view while the view eases back up (grab_release_moment.png, frames about 134-138). It covers at most 30% of the view, with the nearest point 0.40 m away (probe4), which is within the first-person rules. The LB release is never checked by the lens test (finding 6).\n\nThe combat log over the knee contact (I'm to propose a fix, as a spec question):\n- What I see: in grab_knee_sheet.png (frames 69-70) the CombatLog panel covers the knee's contact star and the victim's right shoulder. Its node in hud.tscn:78-89 is anchored right-centre, offsets -800..-40 by -40..+204 px. In side view the same panel sits over the struck dummy's torso (pppp_jabs_zoom.png).\n- Proposal: move it to the top-right corner (anchor_top 0, offset_top about 110 px so it clears the camera toast, width about 560 px) and show 6 entries. Or keep it where it is but fade it to about 35% opacity while get_hold_view_weight() > 0 and in side view.\n- Either way it stays the SPEC §11 overlay (the last hits with timing), so only its placement changes. That is Game-boy's call.\n\nThe side-view flash minimum size (left as it is):\n- In side view the light spark is drawn exactly over the contact and covers the whole 0.25 m flash on the jabs (pppp_jabs_zoom.png, frames 29-32 and 40-43).\n- The hook's flash sits under WHAM, and the uppercut's 2 frames fall inside the finisher's impact frame (pppp_crop.png).\n- A minimum on-screen size would have to be larger than the spark's minimum view share for the flash to show at all.",
+ "also_noticed": [
+  "humanoid_rig.gd:396 (flash_at doc) says a 3 m radius whites the whole body; TuningData and ARCHITECTURE say about 4 m.",
+  "The flash warm-up box (_warm_flash) goes on the first rig built, which in the test room is the player's (spawned first). It sits at the player's feet, outside the first-person frustum. Whether the renderer still compiles its pipelines while it is culled was not verified.",
+  "Numbers in scripts: blink_shown() hard-codes a 50% on/off duty (combat_actor.gd:244), and _respawn_spot() hard-codes rings [1, 2] times 2 body radii (training_dummy.gd:274-278).",
+  "tests/test_combat_integration.gd:359-364: _victim_in_lens keeps its old doc comment above the new one (two 'Nearest distance' paragraphs).",
+  "Debug draw: a blinking-in dummy's hurtboxes are drawn as live (green) while it is invulnerable. A KO'd body's label and hurtboxes stay solid while the body blinks.",
+  "A dummy that came back beside its occupied post walks back onto the post after 60 idle frames (return_home), into whoever stands there (pre-existing behaviour, now reached more often).",
+  "An LB release (stagger=false) applies no push, so the released victim stands 0.5 m in front of the lens (pre-existing; more visible now that the victim stands 6 cm closer).",
+  "On a display faster than 60 Hz, the 2-tick flash shows for 33 ms (4-5 frames), since it counts physics ticks (fine at Spec's 60 Hz)."
+ ],
+ "findings": [
+  {
+   "severity": "high",
+   "title": "Contact flash misses the struck body: no flash from a thrown pipe, a faint one from body impacts, and the wrong part on a staggering body",
+   "detail": "HumanoidRig.flash_at() (game/actors/humanoid_rig.gd:400-430) puts the overlay at the raw world contact point. It anchors the point to whichever drawn bone follower has the nearest origin. The shader only whitens pixels within hit_flash_radius_m (0.25 m, full strength to 0.125 m) of that point. So any contact point that is not on the body as drawn loses the flash.\n(a) Off-body contact points: weapon.gd:118 uses the pipe's origin, which touches the 0.35 m CharacterBody capsule, not the meshes. CombatActor._impact (combat_actor.gd:1307) uses the midpoint between the two bodies at 1 m height. A thrown pipe's point lands 0.293 m from the nearest mesh (falloff 0, no flash). A flying-body knockdown's lands 0.178 m away (at most 61% white, on the edge).\n(b) Bodies already ragdolling: HitDetector's contacts sit on hurtboxes, which follow the animation. A staggering body (partial ragdoll at the approved 0.9 influence) or a lying ragdoll is drawn 0.2-0.35 m away from them. In P P P P, the uppercut lands on the hook-staggered dummy's head, but the flash anchors to BoneLeftUpperArm, 0.363 m from the drawn head. The head doesn't flash; the shoulder does.\nREADME's approved departure says the victim flashes white around the point the hit landed. Before the localization all these hits flashed (whole body). Flash plus ragdoll was a known untested pair (HANDOFF 10:55), and test_hit_flash.gd only uses HitDetector contacts on bodies that are not ragdolling.",
+   "evidence": "captures/review_code/probe7.log: 'PIPE: weapon_throw on Dummy1 (body impact true): flash point 0.293 m from the nearest drawn mesh; falloff there 0.00' and 'IMPACT: impact_body_knockdown on Dummy2: 0.178 m; falloff 0.61'. probe3.log: 'uppercut HEAD state=LAUNCHED ragdoll=FULL nearest=Head drawn-vs-hurtbox 0.233 m; flash anchor BoneLeftUpperArm, flash point 0.363 m from the drawn Head'. probe2.log: 'STAGGER FLASH: ... flash point 0.346 m from the drawn head (radius 0.25)'. Capture pipe.avi frames 176-177 (pipe_throw_zoom.png): no white on the struck dummy except a faint smear on the thigh under the burst. Code: humanoid_rig.gd:413-421, weapon.gd:118, combat_actor.gd:1307.",
+   "repro": "From the worktree: godot --headless --fixed-fps 60 -s addons/gut/gut_cmdln.gd -gdir=res://captures/review_code/ -gprefix=probe_review7 -gexit (and -gprefix=probe_review3). Or play combo_bot 'Pipe: pick up, 3 swings, throw' and step to frames 176-177, or 'P P K' into a second dummy.",
+   "suggested_fix": "In HumanoidRig.flash_at, map the point onto the struck part as drawn:\n1. Find the hurtbox nearest the point (distance to its capsule segment or sphere minus its radius).\n2. Clamp the point onto that hurtbox (closest point on its segment plus the offset, limited to its radius).\n3. Express the point in the animation frame of that hurtbox's bone_a (global_transform * _bone_globals[bone]).\n4. Place it on, and follow it with, the same bone's drawn follower (_bone_nodes[bone].to_global(local)).\nThat fixes both the off-body contacts and the ragdoll offset. Optionally also compute on-hurtbox contact points in weapon.gd and CombatActor._impact, which the comic effects would use too. Add tests: a thrown pipe and a body impact reach full strength on the struck body, and a re-hit on a staggering body flashes within the core of the drawn struck bone.",
+   "files": [
+    "game/actors/humanoid_rig.gd",
+    "game/weapons/weapon.gd",
+    "game/actors/combat_actor.gd",
+    "tests/test_hit_flash.gd"
+   ],
+   "spec_change": false,
+   "id": "code-01",
+   "lens": "code"
+  },
+  {
+   "severity": "medium",
+   "title": "A respawning dummy ignores ghost bodies and can blink back in inside a body lying on its post",
+   "detail": "TrainingDummy._respawn_spot() (training_dummy.gd:263-267) checks for room against LAYER_WORLD, LAYER_PLAYER_BODY and LAYER_ENEMY_BODY only. Bodies that are lying, KO'd (still blinking), getting up, held or flying are ghosts on LAYER_DOWNED_BODY, so a dummy comes back at its post right inside them. With another dummy knocked down onto its post, it came back 0.00 m from the post with a drawn bone of the lying body 0.08 m from its axis (its radius is 0.35 m). The same goes for an enemy the player holds over the post.\nTwo dummies that come back in the same tick can also pick the same spot. set_post(fresh) leaves the first one a ghost until the next physics step (training_dummy.gd:132-134), and the physics server hasn't moved it yet.\nUnlike _move_under_ragdoll(), the ring spots (0.7 m and 1.4 m out) have no check that the path from the post is clear, so a spot past the near-side curb or a crate can be picked. They also have no floor check. While it waits for room, it builds a new CapsuleShape3D and query every sim tick (training_dummy.gd:257-262).\nThe only test (test_a_dummy_comes_back_beside_its_post_when_someone_stands_on_it) uses a solid player on the post. The approved behaviour says a dummy whose post is occupied comes back at the nearest free spot.",
+   "evidence": "captures/review_code/probe1.log: 'RESPAWN: d1 lies with its drawn hips 0.08 m (flat) from d0's post' / 'd0 came back 0.00 m from its post; the nearest drawn bone of the body lying there is 0.08 m from its axis (body radius 0.35)'. Code: training_dummy.gd:263-267 (mask), 274-287 (no path or floor check), 257-262 (allocations), 132-134 (ghost until the next step).",
+   "repro": "Run probe_review.gd test_probe_respawn_into_lying_body: KO dummy 0. When it is gone, set dummy 1 on dummy 0's post and knock it down (downed_frames raised so it keeps lying). Wait for dummy 0 to come back.",
+   "suggested_fix": "Add CombatTypes.LAYER_DOWNED_BODY to the query mask. The gone dummy is on no layer, so it doesn't block itself. Check the way from the post to each ring spot against LAYER_WORLD with cast_motion, as _move_under_ragdoll does. Build the shape and query once and reuse them. Add tests with a body lying on the post and one held over it.",
+   "files": [
+    "game/enemies/dummy/training_dummy.gd",
+    "tests/test_ko_blink.gd"
+   ],
+   "spec_change": false,
+   "id": "code-02",
+   "lens": "code"
+  },
+  {
+   "severity": "medium",
+   "title": "Hold view: the first-person lens bobs 5-7 cm on every grab and release, and pops 3.5 cm in one frame on a release while walking",
+   "detail": "The hold view's rise (grab_view_rise_m 0.10) and pull-back (0.24) ease on their own sim-tick timers: in over grab_view_in_s 0.2 s, out over grab_view_out_s 0.45 s (player.gd:924-928). The bend they make up for comes and goes with the pose blends in about 10 ticks, and the rise is larger than the bend's eye drop (0.083 m). Measured through the real FirstPersonCamera:\n- standing release: the lens rises 4.7 cm above the normal view over 9 ticks, then sinks back over 10;\n- grab while walking: the lens rises 6.4 cm (up to 1.2 cm a tick, against 0.38 when walking), then sinks;\n- release while walking: first_person_camera.gd:170 turns the walking bob clamp on the instant holding_enemy() clears, so the lens jumps 3.5 cm in the first frame (0.79 cm worst when standing), climbs to 6.8 cm above, then sinks;\n- horizontally the lens dips 3.5 cm back before moving 15 cm forward.\nThe values themselves are B's approved departures and an open question, but these bumps are a timing side effect. test_grab_view.gd only checks get_camera_move_offset() and get_camera_pull_back() (_offsets at :85, _hold_step at :109), never the lens path, so it passes with the bumps.",
+   "evidence": "captures/review_code/probe1.log, RELEASE walking=true: 'worst view step 0.0350 m at tick 0', view y above the feet 1.466 then 1.501 1.518 1.525 ... 1.529 ... 1.461. RELEASE walking=false: 'worst 0.0079 m', 1.467 -> 1.514 -> 1.467; rig eye 1.568 held, 1.651 standing. probe6.log: 'GRAB WALKING: walking steps up to 0.0038 m/tick; around the grab up to 0.0120 m/tick: 1.467 ... 1.531 1.529 1.522 1.512' and 'RELEASE AHEAD: held 0.063; after 0.064 0.052 0.038 0.028 0.053 ... 0.175'. Code: first_person_camera.gd:170, player.gd:924-928.",
+   "repro": "Run probe_review.gd test_probe_walk_release_eye and probe_review6.gd: grab, walk, LB release, while calling FirstPersonCamera.update_camera every tick.",
+   "suggested_fix": "Scale the walking bob clamp by (1 - get_hold_view_weight()) instead of switching it on when holding_enemy() is valid. Tie the rise and pull-back to the pose: either weight them by how far the rig's eye is actually bent from standing (its drop and forward lean), or ease them with the hold and release pose blends. The pitch can keep its own ease. Add a test that follows the lens itself (view_transform) through a grab, a release and a release while walking, with the same per-tick bound the offsets have.",
+   "files": [
+    "game/camera/first_person_camera.gd",
+    "game/player/player.gd",
+    "tests/test_grab_view.gd"
+   ],
+   "spec_change": false,
+   "id": "code-03",
+   "lens": "code"
+  },
+  {
+   "severity": "low",
+   "title": "A dummy blinking in still attracts magnetism and blocks a thrown pipe, though no hit can land on it",
+   "detail": "During the blink-in, can_be_hit_by() and can_be_grabbed() are false (as approved). But _find_magnet_target() (player.gd:630) skips only KO'd, flying and downed bodies, so the player's strikes lunge and turn toward a body that can't be hit, then whiff. The magnetism cone in debug draw marks it too.\nOne physics step after it comes back, the dummy is solid on LAYER_ENEMY_BODY. A thrown pipe's mask includes that layer (weapon.gd:86), so the pipe collides, finds can_be_hit_by false, and still bounces off with linear_velocity *= -0.2 (weapon.gd:133), taking no durability. test_nothing_finds_a_body_that_blinked_off covers only the gone body.",
+   "evidence": "captures/review_code/probe2.log: 'BLINK-IN: invulnerable true, can_be_hit_by false, can_be_grabbed false, magnet target is it true'. Code: player.gd:630, weapon.gd:86, 103-133.",
+   "repro": "Call dummy.blink_in(), then player._find_magnet_target(jab) (probe_review2.gd test_probe_magnet_blink_in). Or KO a dummy and jab toward its post in the 0.5 s after it comes back.",
+   "suggested_fix": "Skip bodies that are blinking in (a CombatActor.is_blinking_in(), or is_invulnerable() if get-ups should be skipped too) in _find_magnet_target. Keep the dummy a ghost until its blink-in ends (in TrainingDummy._physics_process, make it solid only once _blink_in_left == 0), or let a thrown weapon pass through a body that is out of reach. Add both cases to test_ko_blink.gd.",
+   "files": [
+    "game/player/player.gd",
+    "game/actors/combat_actor.gd",
+    "game/enemies/dummy/training_dummy.gd",
+    "tests/test_ko_blink.gd"
+   ],
+   "spec_change": false,
+   "id": "code-04",
+   "lens": "code"
+  },
+  {
+   "severity": "low",
+   "title": "dummy_revive_s changed meaning under the same preset key, so older presets now give a 5.5 s comeback",
+   "detail": "Before phase 3, dummy_revive_s counted from the KO (default 2.5 s). It now counts from the blink-off (default 1.0 s, about 4 s from KO to back). Presets store every value (Tuning.preset_dict), so any preset saved before phase 3 holds dummy_revive_s 2.5. apply_preset() loads it as is, with no warning, giving 1.5 + 1.0 + 2.5 + 0.5 = 5.5 s from KO to back. Missing keys are fine: apply_preset starts from the defaults. The old presets also restore ragdoll_partial_influence 0.6, which is expected for a preset.",
+   "evidence": "tuning_data.gd dummy_revive_s doc and default (2.5 -> 1.0, 'counted from the blink-off', HANDOFF 12:25). training_dummy.gd:242 counts _gone_frames. tuning.gd:306-345 (apply_preset takes saved keys as is; no format migration).",
+   "repro": "Save a preset on f43ab9a (or write one with \"dummy_revive_s\": 2.5), load it at c27afaf, KO a dummy and time it until it is back (about 5.5 s instead of 4).",
+   "suggested_fix": "Rename the tunable (for example dummy_revive_after_blink_s) so old presets report it as an unknown key and take the new default. Or bump PRESET_FORMAT and migrate the old value (old - ko_linger_s - ko_blink_s, clamped at 0) with a last_warnings line. Regenerate tuning/default.json.",
+   "files": [
+    "game/autoload/tuning_data.gd",
+    "game/autoload/tuning.gd",
+    "game/enemies/dummy/training_dummy.gd",
+    "tuning/default.json"
+   ],
+   "spec_change": false,
+   "id": "code-05",
+   "lens": "code"
+  },
+  {
+   "severity": "low",
+   "title": "Two tests would still pass with what they guard broken: per-part spin caps, and the lens rules on an LB release",
+   "detail": "test_the_contact_push_stays_within_its_caps_after_many_hits_in_a_row (tests/test_ragdoll.gd:993-1027) asserts only the global safety cap: spin < ragdoll_max_spin * 1.25 = 50 rad/s. A single stagger's central kick already spins the head to 47 rad/s, so this test can't tell whether the per-part twist caps (head 14, trunk 8, limb 14 rad/s) hold after many hits. Only test_a_kick_off_center_twists_the_struck_part_within_its_cap checks a per-part cap, on one head kick.\nIn test_hold_knees_and_throw_keep_the_lens_clear (tests/test_grab_view.gd:318-320), the check skips every tick where the victim isn't GRABBED and no move runs. An LB release, where the victim stands up and its cap rises through the lowered view, is never checked against the 0.3 m, 25 cm and half-the-view rules. Today it passes them: 30% at most, nearest 0.40 m.",
+   "evidence": "tests/test_ragdoll.gd:1025. captures/review_code/probe1.log: 'CHAIN: central kick only, top head spin 47.1 rad/s'. tests/test_grab_view.gd:318-320. probe4.log: 'RELEASE VIEW LB release: ... most 30% at tick 28, nearest 0.40 m'.",
+   "repro": "Read the asserts. Set ragdoll_contact_spin_head, trunk and limb to 40 and run test_ragdoll.gd: the many-hits test still asserts only the 50 rad/s bound.",
+   "suggested_fix": "In the many-hits test, measure each kick's twist the way the single-kick test does: the step's spin with the contact push on minus the same kick's spin with it off, against the struck part's cap. Or record the per-part twist the ragdoll applied (a test accessor) and assert it is within the cap. In the lens test, also run the check for 45 ticks after an LB release and after the third knee's release.",
+   "files": [
+    "tests/test_ragdoll.gd",
+    "tests/test_grab_view.gd"
+   ],
+   "spec_change": false,
+   "id": "code-06",
+   "lens": "code"
+  }
+ ]
+}

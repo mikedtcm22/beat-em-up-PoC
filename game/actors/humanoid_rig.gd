@@ -16,8 +16,9 @@ extends Node3D
 ## itself (it does not wait for Skeleton3D's deferred update), then moves the bone
 ## followers, rig points and hurtboxes. When advance() returns, get_point_transform(),
 ## the attachment nodes and the hurtbox transforms (scene and physics server) all show
-## the same pose. play() and play_move() only choose the animation; the pose changes on
-## the next advance(), whose dt is the first slice of the new animation.
+## the same pose (the attachment nodes show a running ragdoll's instead, see "Ragdoll").
+## play() and play_move() only choose the animation; the pose changes on the next
+## advance(), whose dt is the first slice of the new animation.
 ## Hurtboxes are written straight to the physics server, so a shape query run right after
 ## advance() sees this tick's pose. If the owner moves its body after advance() in the same
 ## tick, call advance(0.0) again to re-sync (it re-applies the pose without moving time).
@@ -30,15 +31,17 @@ extends Node3D
 ## time. Each new animation fades from exactly what was shown, and nothing older survives
 ## its fade.
 ##
-## Skeleton modifiers (limitation): advance() computes the FK itself from the skeleton's
-## local (animation) poses and drives the bone followers, meshes, rig points and
-## hurtboxes from that. A SkeletonModifier3D under the Skeleton3D, such as the
-## PhysicalBoneSimulator3D partial ragdoll of Spec §6 (Milestone 2), would change only
-## Skeleton3D's own global poses and never reach the meshes. The intended Milestone 2 path:
-## after skeleton.advance() has run the modifiers, the visual followers (meshes and
-## attachments) read the post-modifier global poses (get_bone_global_pose()), while
-## hurtboxes and get_point_transform() keep this pure-animation FK so hits stay
-## deterministic and independent of the ragdoll.
+## Ragdoll (Spec §6; Milestone 2, game/actors/ragdoll.gd): advance() computes the FK itself
+## from the skeleton's local (animation) poses; hurtboxes, rig points and
+## get_point_transform() always use that pure-animation FK, so hits stay deterministic and
+## independent of the ragdoll. The ragdoll is a pair of SkeletonModifier3Ds under the
+## skeleton (a PhysicalBoneSimulator3D, then the Ragdoll), built on the first
+## ragdoll_start() and inactive otherwise. While one runs, the skeleton's update (deferred by
+## skeleton.advance() to the end of the physics frame) runs the modifiers and the Ragdoll
+## moves the visual followers (meshes and attachment nodes) to the post-modifier pose
+## (show_visual_pose(); get_visual_point_transform() reads it). With no ragdoll running the
+## followers take the animation FK in advance(), exactly as before. Stopping a ragdoll
+## (ragdoll_stop()) cross-fades from the last visual pose, like any animation start.
 ##
 ## Grabs: the held animation is authored for a victim whose origin stands on the floor
 ## directly below the holder's HoldPoint, facing the holder (&"hold" on the holder,
@@ -60,6 +63,12 @@ extends Node3D
 @export var skin_color: Color = Color(0.86, 0.66, 0.5):
 	set(value):
 		skin_color = value
+		_apply_colors()
+## The trousers' color. Fully transparent (the default) paints them body_color darkened, as
+## on the enemies and dummies; the player's are a color of their own (_configure_rig()).
+@export var pants_color: Color = Color.TRANSPARENT:
+	set(value):
+		pants_color = value
 		_apply_colors()
 ## How the body stands, walks, and starts and ends every move (PlaceholderPoses.STANCE_*):
 ## &"boxer" keeps the fists up at the chin (enemies, dummies); &"relaxed" lets the arms
@@ -88,12 +97,14 @@ var actor: Node3D:
 			hurtbox.actor = value
 var skeleton: Skeleton3D
 var anim_player: AnimationPlayer
+## The damage look shown (DamageLook.Level), set through set_damage_look().
+var damage_look: int = 0
 
 ## Library name for the move animations built by play_move().
 const _MOVE_LIBRARY := &"moves"
-## Shades, belt and soles.
+## Shades, belt, soles and hair.
 const _DARK_COLOR := Color(0.07, 0.07, 0.08)
-## Trousers are body_color darkened by this much.
+## Trousers without a pants_color of their own are body_color darkened by this much.
 const _PANTS_DARKEN := 0.45
 ## A KO that starts while the body is already lying skips to this many seconds before
 ## the end of the ko_* slump, so the body does not stand back up first.
@@ -111,6 +122,13 @@ const _FALL_HEAD_SLACK := 0.02
 ## straight fade would point the spine this much higher (y of its unit up axis) than it
 ## points at either end.
 const _ROLL_MIN_GAIN := 0.1
+## The contact flash's overlay shader (flash_at()).
+const _FLASH_SHADER := preload("res://game/fx/hit_flash.gdshader")
+
+## The contact flash has been warmed up this run, and the box warming it until the first
+## contact flash (_warm_flash()).
+static var _flash_warmed: bool = false
+static var _flash_warm_box: MeshInstance3D
 
 var _built: bool = false
 ## Rig lengths are PlaceholderBody lengths times this.
@@ -125,6 +143,14 @@ var _hurt_shapes: Array[CollisionShape3D] = []
 var _hurt_specs: Array[PlaceholderBody.HurtSpec] = []
 ## Paint (PlaceholderBody.Paint) -> material. One set per rig so flashes stay per actor.
 var _materials: Dictionary[int, StandardMaterial3D] = {}
+## The contact flash's overlay (flash_at()), made on first use: every material's next_pass
+## while it runs, nobody's otherwise. Its point, in the frame of the bone node nearest it.
+var _flash_overlay: ShaderMaterial
+var _flash_on: bool = false
+## A contact flash is aimed (flash_at()), drawn or held back for show_flash().
+var _flash_aimed: bool = false
+var _flash_anchor: Node3D
+var _flash_local: Vector3 = Vector3.ZERO
 var _head_meshes: Array[MeshInstance3D] = []
 var _body_meshes: Array[MeshInstance3D] = []
 var _current: StringName = &""
@@ -145,6 +171,13 @@ var _fade_rolls: bool = false
 var _fade_side: Vector3 = Vector3.RIGHT
 ## Animation name -> Head height (rig space) sampled every 1/60 s, for _fall_join_time().
 var _head_curves: Dictionary[StringName, PackedFloat32Array] = {}
+## The visual ragdoll, built on the first ragdoll_start().
+var _ragdoll: Ragdoll
+## Each bone's world position after the latest advance() that moved time, and its velocity
+## then (sim m/s), for a ragdoll's start velocities.
+var _last_world: PackedVector3Array = PackedVector3Array()
+var _bone_velocity: Array[Vector3] = []
+var _motion_valid: bool = false
 
 
 ## Create skeleton, meshes, hurtboxes, rig points and the animation library. Idempotent:
@@ -156,6 +189,7 @@ func build() -> void:
 	_scale = maxf(height, 0.1) / PlaceholderBody.REF_HEIGHT
 	_build_skeleton()
 	_build_materials()
+	_warm_flash()
 	_build_meshes()
 	_build_points()
 	if build_hurtboxes:
@@ -277,6 +311,9 @@ func advance(dt: float) -> void:
 	_apply_fade(step)
 	skeleton.advance(step)
 	_refresh_pose()
+	_track_motion(step)
+	if _ragdoll and _ragdoll.is_running():
+		_ragdoll.sim_scale = TimeController.scale_for(actor) if actor else TimeController.sim_scale()
 
 
 ## The animation id last started: a named animation, or the move's anim id for play_move().
@@ -344,13 +381,315 @@ func set_hurtboxes_enabled(enabled: bool) -> void:
 		_hurt_shapes[i].disabled = not enabled
 
 
-## Hit flash, 0..1 (Spec §6: white for 2 frames on contact). `color` tints it (a perfect
-## block flashes the defender cyan).
+## Show or hide the whole body: a KO's blink-off and a comeback's blink-in, both timed by
+## the owner (CombatActor). Nothing else changes: the pose, the hurtboxes and a running
+## ragdoll carry on as they were.
+func set_shown(shown: bool) -> void:
+	visible = shown
+
+
+## Whole-body flash, 0..1, as emission on every material: the cyan parry flash (a perfect
+## block flashes the defender). Ends a contact flash (flash_at()); 0 clears both.
 func set_flash(amount: float, color: Color = Color.WHITE) -> void:
+	_show_flash_overlay(false)
+	_flash_aimed = false
 	var energy := clampf(amount, 0.0, 1.0)
 	for mat: StandardMaterial3D in _materials.values():
 		mat.emission = color
 		mat.emission_energy_multiplier = energy
+
+
+## Contact flash (Spec §6, localized by Game-boy on 2026-10-24): the body mixes toward
+## `color` around `point` (world space, the hit's contact point), at `strength` (0..1) out
+## to `core` (0..1) of `radius` meters, fading smoothly to nothing at `radius`. A radius
+## that covers the body (about 4 m) whites it all, the flash before the departure. Drawn by this
+## rig's overlay (game/fx/hit_flash.gdshader) as every material's next_pass, set only while
+## the flash runs; the base materials (DamageLook's marks) stay as they are.
+## The point goes on the struck part as it is drawn: `point` is clamped onto the nearest
+## hurtbox (hurt_point(); a thrown weapon's or a flying body's contact lies off the body),
+## taken into the animation frame of the bone along that hurtbox nearest it, and placed on
+## that bone's drawn follower, which it then rides (follow_flash()). A body that is not
+## ragdolling is drawn in its animation pose, so a contact inside a hurtbox stays where it
+## is; a ragdolling or staggering body (drawn away from its hurtboxes) flashes on the
+## struck part where it is shown. Ends a whole-body flash; set_flash(0.0) clears it.
+## With `shown` false the flash is aimed on the struck part but drawn only from show_flash()
+## (a finisher's waits out the impact frame).
+func flash_at(point: Vector3, strength: float, radius: float, core: float,
+		color: Color = Color.WHITE, shown: bool = true) -> void:
+	set_flash(0.0)
+	if not _built or strength <= 0.0 or radius <= 0.0:
+		return
+	if is_instance_valid(_flash_warm_box):
+		_flash_warm_box.queue_free()
+	_flash_warm_box = null
+	if _flash_overlay == null:
+		_flash_overlay = ShaderMaterial.new()
+		_flash_overlay.shader = _FLASH_SHADER
+		# First among the transparent passes, so the comic effects draw over it.
+		_flash_overlay.render_priority = Material.RENDER_PRIORITY_MIN
+	_flash_anchor = self
+	_flash_local = point
+	if is_inside_tree():
+		var local := global_transform.affine_inverse() * point
+		var spec := _nearest_hurt(local)
+		local = _onto_hurt(spec, local)
+		var bone := _carrier_bone(spec, local)
+		_flash_anchor = _bone_nodes[bone]
+		_flash_local = _bone_globals[_bone_index[bone]].affine_inverse() * local
+		point = _flash_anchor.to_global(_flash_local)
+	_flash_overlay.set_shader_parameter(&"flash_point", point)
+	_flash_overlay.set_shader_parameter(&"flash_radius", radius)
+	_flash_overlay.set_shader_parameter(&"flash_core", clampf(core, 0.0, 1.0))
+	_flash_overlay.set_shader_parameter(&"flash_strength", clampf(strength, 0.0, 1.0))
+	_flash_overlay.set_shader_parameter(&"flash_color", color)
+	_flash_aimed = true
+	if shown:
+		_show_flash_overlay(true)
+
+
+## Draw the contact flash flash_at() aimed with `shown` false, on the struck part as it is
+## drawn now. Nothing once set_flash() has cleared it.
+func show_flash() -> void:
+	if _flash_aimed:
+		_show_flash_overlay(true)
+		follow_flash()
+
+
+## Keep a running contact flash on the spot it struck after the body moved (its owner calls
+## this each tick while the flash runs, after advance(); show_visual_pose() calls it as a
+## ragdoll moves the body).
+func follow_flash() -> void:
+	if _flash_on and _flash_anchor != null and _flash_anchor.is_inside_tree():
+		_flash_overlay.set_shader_parameter(&"flash_point", _flash_anchor.to_global(_flash_local))
+
+
+## The contact flash's overlay while one runs (shader parameters flash_point, flash_radius,
+## flash_core, flash_strength, flash_color), else null.
+func flash_overlay() -> ShaderMaterial:
+	return _flash_overlay if _flash_on else null
+
+
+## The point on the body nearest `point` (world space) as the hurtboxes see it, in the
+## animation pose like every hit: `point` itself inside a hurtbox, otherwise the nearest
+## point on the surface of the nearest hurtbox. For contacts that are not on the body, such
+## as a thrown weapon's (Weapon) or a flying body's.
+func hurt_point(point: Vector3) -> Vector3:
+	if not _built:
+		return point
+	var to_world := global_transform if is_inside_tree() else transform
+	var local := to_world.affine_inverse() * point
+	return to_world * _onto_hurt(_nearest_hurt(local), local)
+
+
+## The contact flash's strength share at `dist` meters from its point, as the overlay shader
+## computes it: 1 out to `core` of `radius`, then a smoothstep down to 0 at `radius`.
+static func flash_falloff(dist: float, radius: float, core: float) -> float:
+	var inner := radius * clampf(core, 0.0, 1.0)
+	var span := radius - inner
+	if span <= 0.0:
+		return 1.0 if dist <= radius else 0.0
+	return 1.0 - smoothstep(0.0, 1.0, clampf((dist - inner) / span, 0.0, 1.0))
+
+
+## Once per run, the first rig built in a window draws the overlay shader at zero strength
+## (every pixel discarded) on a box at its feet until the first contact flash, so the
+## renderer compiles its pipelines at load instead of on the first hit's frame (measured:
+## 4-12 ms more on it). A separate mesh, so the rig's own materials carry no pass while idle.
+func _warm_flash() -> void:
+	if _flash_warmed or not is_inside_tree() or DisplayServer.get_name() == "headless":
+		return
+	_flash_warmed = true
+	var warm := MeshInstance3D.new()
+	warm.name = "FlashWarmUp"
+	warm.mesh = BoxMesh.new()
+	warm.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var mat := ShaderMaterial.new()
+	mat.shader = _FLASH_SHADER
+	warm.material_override = mat
+	add_child(warm)
+	_flash_warm_box = warm
+
+
+func _show_flash_overlay(on: bool) -> void:
+	if on == _flash_on:
+		return
+	_flash_on = on
+	for mat: StandardMaterial3D in _materials.values():
+		mat.next_pass = _flash_overlay if on else null
+
+
+## Damage look (Spec §6, "Damage you can see"): DamageLook.Level CLEAN, BRUISED or BLOODIED
+## (game/fx/damage_look.gd). Materials only: bruises, then blood, on the skin and clothes,
+## as a swap of the detail texture (never of the shader variant).
+## Set by presentation (VfxDirector) from the health; re-applying a level re-reads its tuning.
+func set_damage_look(level: int) -> void:
+	damage_look = level
+	for paint: int in _materials:
+		DamageLook.apply(_materials[paint], paint, level)
+
+
+# --- Ragdoll (see the class docs and game/actors/ragdoll.gd) ---------------------------
+
+
+## Start a ragdoll from the pose on screen: `full` for a body knocked off its feet (every
+## bone), otherwise the stagger's partial ragdoll of the upper body, which fades back to the
+## animation within `partial_length_s` sim seconds. The hit's kick is `push` (world m/s, the
+## knockback) at `contact` (world), on the `part` body (Ragdoll.Part): its strike body,
+## whatever the ragdoll's history (Ragdoll.STRIKE_BONES); every
+## simulated body starts with `body_velocity` (the actor's new sim velocity) on top of its
+## bone's velocity in the animation. A full ragdoll already running only takes the new
+## kick. A full one started `at_once` shows alone from the start, from the pose on screen,
+## instead of rising in from the animation's snap: a body launched out of a hold, one the
+## world stops right away (a wall, a crate, the curb behind it) and one launched from behind
+## (Ragdoll.start()); out of a running stagger the head and arms do not jump either.
+## Builds the ragdoll on first use.
+func ragdoll_start(full: bool, contact: Vector3, push: Vector3, body_velocity: Vector3,
+		part: Ragdoll.Part = Ragdoll.Part.ANY, partial_length_s: float = INF, at_once: bool = false) -> void:
+	if not _built:
+		return
+	if _ragdoll == null:
+		_ragdoll = Ragdoll.new()
+		_ragdoll.setup(self)
+	_ragdoll.sim_scale = TimeController.scale_for(actor) if actor else TimeController.sim_scale()
+	var mode := Ragdoll.Mode.FULL if full else Ragdoll.Mode.PARTIAL
+	var bone_velocity: Array[Vector3] = []
+	if _motion_valid:
+		bone_velocity = _bone_velocity
+	_ragdoll.start(mode, contact, push, body_velocity, bone_velocity, part, partial_length_s, at_once)
+
+
+## An extra hit on a running ragdoll (a stomp on a downed body): `push` (world m/s) at
+## `contact` (world), on the `part` body nearest to it; with `strike`, on the part's strike
+## body (Ragdoll.STRIKE_BONES) as ragdoll_start()'s kick lands (a stagger's lean).
+func ragdoll_hit(contact: Vector3, push: Vector3, part: Ragdoll.Part = Ragdoll.Part.ANY,
+		strike: bool = false) -> void:
+	if is_ragdolling():
+		_ragdoll.hit(contact, push, part, strike)
+
+
+## A running full ragdoll flies to a landing in `lying_anim` (a face-down one): it turns
+## toward that animation's hips in the air (Ragdoll.aim_landing()).
+func ragdoll_aim_landing(lying_anim: StringName) -> void:
+	if not is_ragdolling() or not anim_player.has_animation(lying_anim):
+		return
+	var animation := anim_player.get_animation(lying_anim)
+	var track := animation.find_track(^"Skeleton3D:Hips", Animation.TYPE_ROTATION_3D)
+	if track >= 0:
+		# Root is never animated: the Hips' local rotation is their rig-space one.
+		_ragdoll.aim_landing(animation.rotation_track_interpolate(track, 0.0))
+
+
+## A full ragdoll still rising in from the animation's snap shows alone from now on, taken
+## over from the pose on screen (Ragdoll.take_over()). Nothing without one.
+func ragdoll_take_over() -> void:
+	if is_ragdolling():
+		_ragdoll.take_over()
+
+
+## The owner's capsule is stopped by the world (a wall, a crate, the curb) while a full
+## ragdoll flies: it takes over from the pose on screen and its hips are pulled to the
+## capsule less until it lands (Ragdoll.set_blocked()). Nothing without a flying one.
+func ragdoll_set_blocked(blocked: bool) -> void:
+	if is_ragdolling():
+		_ragdoll.set_blocked(blocked)
+
+
+## The pose springs of a running ragdoll: Ragdoll.Phase.DOWN once it lies, LIMP for a KO.
+func ragdoll_set_phase(phase: Ragdoll.Phase) -> void:
+	if is_ragdolling():
+		_ragdoll.set_phase(phase)
+
+
+## Stop a running ragdoll. The animation takes over again, fading from the pose the ragdoll
+## shows over `blend_s` sim seconds (0 = at once); call it after play() to fade into that
+## animation from the ragdoll's pose (the get-up) instead of from the animation's.
+func ragdoll_stop(blend_s: float = 0.0) -> void:
+	if not is_ragdolling():
+		return
+	if blend_s > 0.0:
+		# The pose on screen, in the rig's frame now (the owner may have moved it since, a
+		# get-up moving it under the ragdoll's hips).
+		var to_rig := (global_transform if is_inside_tree() else transform).affine_inverse() \
+				* _ragdoll.visual_rig_transform
+		var hips := _bone_index[&"Hips"]
+		for i: int in skeleton.get_bone_count():
+			var shown := to_rig * _ragdoll.visual_pose(i)
+			var parent := skeleton.get_bone_parent(i)
+			var local := shown if parent < 0 else (to_rig * _ragdoll.visual_pose(parent)).affine_inverse() * shown
+			_fade_rot[i] = local.basis.get_rotation_quaternion()
+			if i == hips:
+				# The fade places the Hips on its parent (Root, a root bone) as the fade starts
+				# it: Root's faded rotation at its animation position in the rig's frame now.
+				# Taken from the old frame instead, the body would jump by the owner's move.
+				var root_start := Transform3D(Basis(_fade_rot[parent]), skeleton.get_bone_pose_position(parent))
+				_fade_hips = (root_start.affine_inverse() * shown).origin
+		_fade_s = blend_s
+		_fade_t = 0.0
+		_fade_rolls = false
+	_ragdoll.stop()
+
+
+## True while a ragdoll (partial or full) runs on this rig.
+func is_ragdolling() -> bool:
+	return _ragdoll != null and _ragdoll.is_running()
+
+
+## Ragdoll.Mode.NONE, PARTIAL or FULL.
+func ragdoll_mode() -> Ragdoll.Mode:
+	return _ragdoll.mode if _ragdoll else Ragdoll.Mode.NONE
+
+
+## The ragdoll (null until the first ragdoll_start()).
+func get_ragdoll() -> Ragdoll:
+	return _ragdoll
+
+
+## Where a running ragdoll's hips lie relative to the animation's hips: the world offset
+## along the floor (y = 0). Zero without a ragdoll.
+func ragdoll_hips_offset() -> Vector3:
+	if not is_ragdolling():
+		return Vector3.ZERO
+	var hips := _bone_index[&"Hips"]
+	var to_world := global_transform if is_inside_tree() else transform
+	var shown := (_ragdoll.visual_rig_transform * _ragdoll.visual_pose(hips)).origin
+	var animated := (to_world * _bone_globals[hips]).origin
+	return Vector3(shown.x - animated.x, 0.0, shown.z - animated.z)
+
+
+## World transform of a bone or rig point as it is shown: the ragdoll's pose while one
+## runs, otherwise get_point_transform() (the animation).
+func get_visual_point_transform(point: StringName) -> Transform3D:
+	if not is_ragdolling():
+		return get_point_transform(point)
+	var bone := point
+	var offset := Vector3.ZERO
+	if PlaceholderBody.POINT_BONE.has(point):
+		bone = PlaceholderBody.POINT_BONE[point]
+		offset = PlaceholderBody.POINT_OFFSET[point] * _scale
+	if not _bone_index.has(bone):
+		return get_point_transform(point)
+	return _ragdoll.visual_rig_transform * _ragdoll.visual_pose(_bone_index[bone]) \
+			* Transform3D(Basis.IDENTITY, offset)
+
+
+## Rig lengths are PlaceholderBody lengths times this (height / REF_HEIGHT).
+func rig_scale() -> float:
+	return _scale
+
+
+## Skeleton-space pose of skeleton bone `bone` in the animation (the FK hurtboxes and
+## get_point_transform() use), after the latest advance().
+func animation_pose(bone: int) -> Transform3D:
+	return _bone_globals[bone]
+
+
+## Ragdoll only: move the bone followers (meshes, attachments) to `globals`, the
+## post-modifier skeleton-space pose of every bone. A running contact flash moves with them
+## (it would otherwise trail the drawn body by the tick until the owner's follow_flash()).
+func show_visual_pose(globals: Array[Transform3D]) -> void:
+	for bone: StringName in _bone_nodes:
+		_bone_nodes[bone].transform = globals[_bone_index[bone]]
+	follow_flash()
 
 
 # --- Building --------------------------------------------------------------------------
@@ -374,6 +713,8 @@ func _build_skeleton() -> void:
 	skeleton.reset_bone_poses()
 	_bone_globals.resize(skeleton.get_bone_count())
 	_fade_rot.resize(skeleton.get_bone_count())
+	_last_world.resize(skeleton.get_bone_count())
+	_bone_velocity.resize(skeleton.get_bone_count())
 
 
 func _build_materials() -> void:
@@ -385,6 +726,9 @@ func _build_materials() -> void:
 		mat.emission_enabled = true
 		mat.emission = Color.WHITE
 		mat.emission_energy_multiplier = 0.0
+		# Likewise the damage look's detail layer (transparent while clean), on the paints that
+		# take marks, so a look change swaps a texture and never the shader variant.
+		DamageLook.prepare(mat, paint)
 		_materials[paint] = mat
 	_apply_colors()
 
@@ -650,13 +994,29 @@ func _refresh_pose() -> void:
 		var local := skeleton.get_bone_pose(i)
 		var parent := skeleton.get_bone_parent(i)
 		_bone_globals[i] = local if parent < 0 else _bone_globals[parent] * local
-	for bone: StringName in _bone_nodes:
-		_bone_nodes[bone].transform = _bone_globals[_bone_index[bone]]
+	# A running ragdoll moves the followers itself (show_visual_pose()).
+	if not is_ragdolling():
+		for bone: StringName in _bone_nodes:
+			_bone_nodes[bone].transform = _bone_globals[_bone_index[bone]]
 	for i: int in _hurtboxes.size():
 		var hurtbox := _hurtboxes[i]
 		hurtbox.transform = _hurtbox_transform(_hurt_specs[i])
 		if hurtbox.is_inside_tree():
 			PhysicsServer3D.area_set_transform(hurtbox.get_rid(), hurtbox.global_transform)
+
+
+## After an advance() that moved time by `step` sim seconds: each bone's world velocity
+## (sim m/s) since the last such advance(), for a ragdoll's start (ragdoll_start()).
+func _track_motion(step: float) -> void:
+	if step <= 0.0:
+		return
+	var to_world := global_transform if is_inside_tree() else transform
+	for i: int in _bone_globals.size():
+		var p := (to_world * _bone_globals[i]).origin
+		if _motion_valid:
+			_bone_velocity[i] = (p - _last_world[i]) / step
+		_last_world[i] = p
+	_motion_valid = true
 
 
 func _hurtbox_transform(spec: PlaceholderBody.HurtSpec) -> Transform3D:
@@ -678,11 +1038,69 @@ func _hurtbox_transform(spec: PlaceholderBody.HurtSpec) -> Transform3D:
 	return Transform3D(Basis(side, axis, side.cross(axis)), (a + b) * 0.5)
 
 
+## The hurtbox layout the contact flash and hurt_point() map onto: the hurtboxes', or the
+## layout's when this rig builds none.
+func _hurt_layout() -> Array[PlaceholderBody.HurtSpec]:
+	return _hurt_specs if not _hurt_specs.is_empty() else PlaceholderBody.hurt_specs()
+
+
+## The ends of `spec`'s axis in rig space in the animation pose (both the center for a
+## sphere).
+func _hurt_ends(spec: PlaceholderBody.HurtSpec) -> PackedVector3Array:
+	var a := _bone_globals[_bone_index[spec.bone_a]] * (spec.offset_a * _scale)
+	var b := _bone_globals[_bone_index[spec.bone_b]] * (spec.offset_b * _scale) if spec.is_capsule() else a
+	return PackedVector3Array([a, b])
+
+
+## The hurtbox nearest `p` (rig space): the least distance to its surface (negative inside).
+func _nearest_hurt(p: Vector3) -> PlaceholderBody.HurtSpec:
+	var best: PlaceholderBody.HurtSpec = null
+	var best_gap := INF
+	for spec: PlaceholderBody.HurtSpec in _hurt_layout():
+		var ends := _hurt_ends(spec)
+		var gap := p.distance_to(Geometry3D.get_closest_point_to_segment(p, ends[0], ends[1])) \
+				- spec.radius * _scale
+		if gap < best_gap:
+			best_gap = gap
+			best = spec
+	return best
+
+
+## `p` (rig space) moved onto `spec`'s hurtbox: unchanged inside it, else onto its surface.
+func _onto_hurt(spec: PlaceholderBody.HurtSpec, p: Vector3) -> Vector3:
+	var ends := _hurt_ends(spec)
+	var axis := Geometry3D.get_closest_point_to_segment(p, ends[0], ends[1])
+	return axis + (p - axis).limit_length(spec.radius * _scale)
+
+
+## The bone along `spec`'s hurtbox (from bone_a down to bone_b) whose stretch of the axis
+## in the animation pose lies nearest `p` (rig space): the bone whose drawn follower carries
+## that part of the body (a chest hit rides the upper chest, a shin hit the lower leg).
+func _carrier_bone(spec: PlaceholderBody.HurtSpec, p: Vector3) -> StringName:
+	if not spec.is_capsule():
+		return spec.bone_a
+	var chain: Array[StringName] = [spec.bone_b]
+	while chain[0] != spec.bone_a and PlaceholderBody.BONE_PARENT.has(chain[0]):
+		chain.push_front(PlaceholderBody.BONE_PARENT[chain[0]])
+	var ends := _hurt_ends(spec)
+	var bone := spec.bone_a
+	var best := INF
+	for i: int in chain.size():
+		var from := ends[0] if i == 0 else _bone_globals[_bone_index[chain[i]]].origin
+		var to := ends[1] if i == chain.size() - 1 else _bone_globals[_bone_index[chain[i + 1]]].origin
+		var dist := p.distance_squared_to(Geometry3D.get_closest_point_to_segment(p, from, to))
+		if dist < best:
+			best = dist
+			bone = chain[i]
+	return bone
+
+
 func _apply_colors() -> void:
 	if _materials.is_empty():
 		return
 	_materials[PlaceholderBody.Paint.BODY].albedo_color = body_color
-	_materials[PlaceholderBody.Paint.PANTS].albedo_color = body_color.darkened(_PANTS_DARKEN)
+	_materials[PlaceholderBody.Paint.PANTS].albedo_color = \
+			body_color.darkened(_PANTS_DARKEN) if pants_color.a <= 0.0 else pants_color
 	_materials[PlaceholderBody.Paint.ACCENT].albedo_color = accent_color
 	_materials[PlaceholderBody.Paint.SKIN].albedo_color = skin_color
 	_materials[PlaceholderBody.Paint.DARK].albedo_color = _DARK_COLOR

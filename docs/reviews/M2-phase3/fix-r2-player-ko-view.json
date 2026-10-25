@@ -1,0 +1,83 @@
+{
+ "package": "r2-player-ko-view",
+ "branch": "m2/phase3-fix-r2-player-ko-view",
+ "verdicts": [
+  {
+   "id": "gap-02",
+   "outcome": "fixed",
+   "what_changed": "Built Game-boy's out-of-body KO view in presentation only, in FirstPersonCamera, with no edits to player.gd, humanoid_rig.gd or placeholder_body.gd. From the killing blow (player health 0, so the body is still flying) the lens eases out of the eyes (ko_view_out_s 0.8) to a pose beside and above the lying body. It holds while KO'd and eases back into the eyes once the player is revived, over ko_view_in_s (0.5 s, the same as getup_frames). The view is the eye view (hold view included) mixed with the KO pose by an eased weight, ko_view_weight(), which runs in the player's sim time (TimeController.scale_for), so the killing blow's hitstop holds it. The pose is ko_view_pose(): across the body's length, ko_view_distance_m 1.7 out along the floor, ko_view_height_m 1.6 up, ko_view_pitch_deg 40 down. The side is chosen once at the killing blow, by wall room and by distance from other standing actors. A sphere-free ray from the hips brings the lens in toward the body when a wall, crate, the curb or a standing actor is in the way, and the reach is smoothed. The camera's cull mask lifts VIS_FP_HIDDEN only once the lens is ko_view_clearance_m clear of every head-layer mesh (lifted at weight>0, a CapBrim covered 35% of the view for one frame at the killing blow) and hides it again the frame the weight is 0. The rig's layers never change, so the hide list is untouched. The KO-while-holding path is the same mix: the hold view eases out under it, and the released victim stays at least 0.28 m from the lens.",
+   "tests": "New tests/test_ko_view.gd, 8 tests, all passing; with the view stubbed out (_ko_view_mix returns the eye view) all 8 fail. They cover: the weight goes out once, holds and comes back once; the lens moves at most 0.15 m and turns at most 6 degrees per tick (measured 0.101 m and 4.83 degrees); no head pop at the lift or the re-hide (0%); the own body covers at most 23% of the view (limit one third); the layers and hide list are unchanged and the view is back on the eyes after the get-up; face up, face down and building-front scenarios have the whole body in frame at a 0.95 margin, no wall between lens and body, nothing within 0.25 m of the lens and the lens on the street side; fighters flanking both sides bring the lens in without touching it; the hitstop holds the view; tunables are read live and a 0 ease cuts; KO while holding (victim 0.28 m or more from the lens, own body at most 20%, lens on the side away from the second fighter); side view, free fly and F2 are unaffected. Added the helper FPView.outside_view() to tests/fp_view.gd (helpers only). test_tuning_panel.gd needed one change: it asserted the Camera group has no subgroups, so it now checks Enemies instead and expects Camera to show 'KO view'."
+  },
+  {
+   "id": "gap-06",
+   "outcome": "not_fixed",
+   "what_changed": "Dropped by Game-boy (2026-10-25): it shows only in side view, and side view is a debug view. Nothing changed.",
+   "tests": "none"
+  }
+ ],
+ "commit": "4f7f706",
+ "pushed": true,
+ "tests_passed": 494,
+ "tests_total": 494,
+ "script_errors": false,
+ "tunables_added": [
+  "ko_view_distance_m (Camera > KO view, 1.7 m)",
+  "ko_view_height_m (1.6 m)",
+  "ko_view_pitch_deg (40 degrees)",
+  "ko_view_out_s (0.8 s)",
+  "ko_view_in_s (0.5 s)",
+  "ko_view_clearance_m (0.25 m: lens keeps this far from walls and fighters, and shows the whole body once this far from the head layer)",
+  "ko_view_min_reach (0.4: how far a wall or fighter may bring the lens in, as a share of distance and height)"
+ ],
+ "captures": [
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r2-player-ko-view/captures/fix/ko1_out.png",
+   "description": "KO1 first person, standing KO from a sparring jab: the lens eases out of the eyes at the killing blow (sheet is 12 fps; the first two tiles show the jab and the dummy's fist), sweeps over the falling legs and holds on the whole lying body, with the dummy standing at the feet."
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r2-player-ko-view/captures/fix/ko1_in.png",
+   "description": "KO1 first person, the get-up: the lens eases back as the body sits up, then ends on the normal first-person view with the head layer hidden again."
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r2-player-ko-view/captures/fix/ko3_out.png",
+   "description": "KO3 first person, KO while holding: the hold view (victim's shoulders under the lens) ends into the KO view. The lens takes the side away from the second fighter (the jabber) and frames the lying body with both fighters standing beyond."
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r2-player-ko-view/captures/fix/ko3_in.png",
+   "description": "KO3 first person, the return after the KO while holding."
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r2-player-ko-view/captures/fix/ko5_out.png",
+   "description": "KO5 first person, KO facing the +X end wall (hit from behind, face down): the whole body in frame beside the wall."
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r2-player-ko-view/captures/fix/ko6_out.png",
+   "description": "KO6 first person, jabbed in the back (face down): the whole body in frame."
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r2-player-ko-view/captures/fix/ko2_side.png",
+   "description": "KO2 side view, same KO: the side view is unchanged, no KO view."
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r2-player-ko-view/captures/fix/kd1.png",
+   "description": "KD1 first person, a player knockdown WITHOUT a KO, left as it was on purpose: the navy belly slab covers the view for about 1.3 s. This is the spec question below."
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r2-player-ko-view/captures/fix/ko1.avi",
+   "description": "Full Movie Maker recording of KO1 (KO3, KO5, KO6, KO2 and KD1 sit beside it as KO3.avi etc.); the probe is captures/fix/ko_probe.tscn."
+  }
+ ],
+ "feel_judgement": "From the after-frames the out-of-body view reads well in first person. The lens leaves the eyes at the killing blow, swings out and over the legs as the body falls and settles beside the lying body, which sits a little over half the view's width with room around it, face up or face down. The old navy slab is gone: the own body peaks at 23% of the view during the transitions and is about 8% while holding. The return follows the body sitting up and ends on the normal view with no pop; the head layer lifts and hides with 0% of it in view. Judged weaker points: the first 0.1 to 0.2 s of the leave shows a moment of floor and falling legs before the body appears, and the 1.7 m, 1.6 m, 40 degree defaults are my guess at 'a bit away', so they are Game-boy's to tune. The crosshair dot stays over the body (not mine to change). Side view is unchanged.",
+ "spec_questions": [
+  "Should a non-KO knockdown (DOWNED then GETUP, health above 0) get the same out-of-body view? Game-boy said the KO is the only time the camera leaves the eyes, so I did not. But captures/fix/kd1.png shows the identical problem on every knockdown the player takes: the navy belly slab covers the view for about 1.3 s (downed_frames 75, then the get-up), and Milestone 3's enemies will knock the player down often. Proposal: trigger the same mix from DOWNED, GETUP and LAUNCHED too, with a shorter hold and possibly closer framing. Default: leave as is (KO only).",
+  "The HUD's centre dot (show_center_dot) and the player's own HP bar stay on screen during the KO view. Proposal: hide the dot while ko_view_weight() > 0; it is a game/ui change, outside this package. Default: leave."
+ ],
+ "remaining": [
+  "README departure for the out-of-body KO view is the lead's job (not touched).",
+  "tuning/default.json was regenerated on this branch (307 values, +7 KO view keys); the lead regenerates it again after merging.",
+  "Other fighters that walk into the lens during a long KO (Milestone 3 crowds) are only handled by the choice of side at the killing blow and by the ray's reach; there is no continuous avoidance.",
+  "tests/test_tuning_panel.gd was edited minimally (the Camera group now has the 'KO view' subgroup), which is outside the listed ownership but unavoidable.",
+  "The KO view is tested against the placeholder rig's lying pose (hips over the rig origin); a rig with different lying proportions would need ko_view_distance_m and ko_view_height_m retuned.",
+  "Not touched: player.gd, humanoid_rig.gd, placeholder_body.gd, camera_director.gd, combat_actor.gd, training_dummy.gd."
+ ]
+}

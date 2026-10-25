@@ -1,0 +1,67 @@
+{
+ "package": "r3-dummy-room",
+ "branch": "m2/phase3-fix-r3-dummy-room",
+ "verdicts": [
+  {
+   "id": "r3code-02",
+   "outcome": "fixed",
+   "what_changed": "Confirmed with the reviewer's probe (player 0.85 m / 1.0 m off the post toward the dummy: 118 of 600 ticks walked in 8 bouts, touching 542-600 ticks). training_dummy.gd: new _body_in_the_way() casts the body's capsule (new _ahead_query, built once in _build_room_queries(), against LAYER_PLAYER_BODY and LAYER_ENEMY_BODY) up to dummy_return_look_ahead_m toward the post. With a standing body in the way _walk_home() returns false, so the dummy stands and faces the player like the post rule; it walks up and stops about the look-ahead short of him and walks on when he steps aside. A body touching it from behind does not hold it. A walk given up after dummy_return_stuck_s (crate or wall) is remembered in _home_gave_up_at and not retried until the dummy is hit (non-FREE state), re-posted (set_post), or moved dummy_return_retry_moved_m from where it gave up. Sparring branch untouched. Physics bodies only: no new read of the drawn ragdoll, so ragdoll.gd's header and ARCHITECTURE's Get-up sentence need no change. ARCHITECTURE 'Someone on the post' sub-bullet updated.",
+   "tests": "tests/test_ko_blink.gd: test_a_dummy_waits_for_the_player_between_it_and_its_post (3 cases: close, touching, far off so it walks up and stops short; never closer than it started, no bouts, player not pushed, faces him, walks home once he steps aside), test_a_dummy_walking_home_stops_short_of_a_body_in_its_way (another dummy), test_a_dummy_walks_home_away_from_a_body_pressed_against_its_back, test_a_dummy_gives_up_a_walk_home_that_goes_nowhere (now walks once, then stands), test_a_dummy_that_gave_up_a_walk_home_tries_again_once_hit_or_moved. Checked failing without the fix (7 of the new and changed tests fail with training_dummy.gd stashed). Capture v1 (first person): the dummy walks from 3 m, stops at 1.17 m facing him, stands still 4+ s with no bumping, then walks home when he strafes aside."
+  },
+  {
+   "id": "r3look-04",
+   "outcome": "fixed",
+   "what_changed": "_respawn_spot()'s tie-break among equally far spots (within 1 mm) now takes the spot whose angle off the player's facing is nearest the new tunable dummy_respawn_off_axis_deg (default 50, so one of the two spots 45 degrees off his facing; first found wins a left/right tie) instead of maximising 'ahead'. Ring spacing (dummy_respawn_gap_m, not raised), 'in view first', farthest first, and ring 2 only when ring 1 has no spot in view are unchanged. Simulation uses player.get_forward() only. Measured with FPView from the real lens at the bots' 6 degrees down: dead ahead covered 55% of the first-person view (the reviewer's 56%), the new default 19%, beside him (90) 0%. ARCHITECTURE 'KO and blink-off' sub-bullet updated.",
+   "tests": "test_ko_blink.gd: the comeback test now asserts off-centre (angle within 22.6 degrees of the tunable, over 20 degrees off axis), in view (ahead above 0.5) and a first-person share of at most half and above zero; the whichever-way-he-faces test expects 45 degrees off at all six yaws; new test_the_comeback_angle_off_his_facing_is_a_tunable (0 gives 55% of the view, default 19% and at most half, 90 beside him). Fails without the fix. Capture k4 (first person): the comeback blinks in at the right edge of the view, orange chest and black guard fists partly in frame, no longer a wall in his face."
+  },
+  {
+   "id": "r3code-04",
+   "outcome": "fixed",
+   "what_changed": "Moved the three remaining feel literals out of combat_actor.gd at today's values: _HELD_BLEND_S to Tuning grab_hold_blend_s (0.12; both uses in start_grabbed()), _GRAB_EASE_S to grab_pin_ease_s (0.23; _pin_to_holder(), with a read-once local; the ease skips at 0 so no divide by zero), both in 'Grab and weapons' above the 'Hold view' subgroup; the stagger's 0.04 blend to stagger_snap_blend_s (0.04) in 'Reactions' beside reaction_snap_blend_s, whose doc now points to it (folding it in would have made the stagger 0.03). Only the constants block, the _GRAB_EASE_S comment, start_grabbed(), _pin_to_holder() and the stagger rig.play line were touched in combat_actor.gd. No new subgroups. tuning/default.json regenerated (324 values).",
+   "tests": "test_launch_from_hold.gd: the existing tunables-with-the-values-they-had test now also asserts the three defaults; new test_a_staggers_pose_snaps_in_over_its_own_blend (stagger blend 0 vs 0.2 s changes the head two ticks on, with reaction_snap_blend_s held at 0) and test_the_pin_eases_in_over_the_grabs_pin_ease (0.00 m from the hold point 3 ticks in with no ease, 0.49 m with 0.23 s)."
+  }
+ ],
+ "commit": "d1a20736c571a16aa65f340c5b666a6d7dd6db81",
+ "pushed": true,
+ "tests_passed": 530,
+ "tests_total": 530,
+ "script_errors": false,
+ "tunables_added": [
+  "Reactions: dummy_respawn_off_axis_deg (50)",
+  "Reactions: dummy_return_look_ahead_m (0.5)",
+  "Reactions: dummy_return_retry_moved_m (0.3)",
+  "Reactions: stagger_snap_blend_s (0.04)",
+  "Grab and weapons: grab_hold_blend_s (0.12)",
+  "Grab and weapons: grab_pin_ease_s (0.23)"
+ ],
+ "captures": [
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r3-dummy-room/captures/fix/k4_comeback.png",
+   "description": "First person: the KO'd dummy comes back beside the post the player stands on (5 fps from 4.4 s). It blinks in 0.8 m out, 45 degrees to the right of his facing, at the right edge of the view (19% of the view), guard fists and chest in frame, not dead centre."
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r3-dummy-room/captures/fix/v1_sheet.png",
+   "description": "First person: post behind the player, dummy 3 m ahead (2 fps from 0.5 s). It walks up, stops 1.17 m from him facing him, stands still 4+ s without bumping, then he strafes aside and the dummy walks home."
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r3-dummy-room/captures/fix/k4.avi",
+   "description": "Full recording of the comeback act (K4 of the reviewer's probe, copied to captures/fix/fix_probe.gd); log k4.log has the per-frame LENS and ST lines"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r3-dummy-room/captures/fix/v1.avi",
+   "description": "Full recording of the in-the-way act (V1, added to captures/fix/fix_probe.gd); log v1.log"
+  }
+ ],
+ "feel_judgement": "First person only, from the after-frames. The comeback no longer reads as a body blinking in dead centre in his face: it appears 45 degrees off to the right at the edge of the view (19% of the view against 55% before), chest and guard fists in frame. A dummy displaced behind the player now walks up, stops about 1.2 m from him facing him, and stays calmly with no repeated bumping or fists filling the view, then walks home once he steps aside. The stop distance (the 0.5 m look-ahead) is a normal talking range, a little farther than sparring's 0.95 m. All of these are grey-block judgements; the numbers (55% before, 19% after) are what to trust.",
+ "spec_questions": [
+  "decided by default: the walk home is given up for good after a stall against the world (until the dummy is hit, re-posted or moved 0.3 m), rather than retried with a back-off; this changes least for the player (a dummy stuck behind a crate just stands)",
+  "decided by default: the comeback off-centre target is 50 degrees off the player's facing as a tunable (dummy_respawn_off_axis_deg), not a larger dummy_respawn_gap_m; the eight ring spots mean one of the two 45-degree spots wins and the first found (the player's left) wins a left/right tie",
+  "decided by default: the look-ahead for a body in the way is 0.5 m (dummy_return_look_ahead_m), so a dummy walking home stops about 0.5 m of free floor short of the player (about 1.2 m between axes)",
+  "decided by default: the sparring branch is left alone, so a sparring dummy that gave up a walk home and never moves 0.3 m or gets hit does not retry it once sparring ends"
+ ],
+ "remaining": [
+  "tuning/default.json is regenerated here (324 values, with the 6 new ones); the lead regenerates it again after merging.",
+  "A dummy whose post is blocked by another standing dummy that never moves waits indefinitely (before: it bumped every 1.25 s); no deadlock in the test room's normal posts.",
+  "README departures were not touched (not owned); the comeback's new off-centre rule and the walk-home waiting may deserve a line in 'Where M2 departs from the spec' if the lead wants it recorded."
+ ]
+}

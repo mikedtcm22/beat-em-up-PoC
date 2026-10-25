@@ -7,9 +7,14 @@ extends Node
 ## (tools/capture_combos.sh wraps this and extracts review stills.)
 
 const ROOM := preload("res://game/level/test_room.tscn")
+## Where an act parks the dummies it doesn't use (the n-th one PARK_STEP further on): on the
+## floor behind the street's east end wall, out of both views.
+const PARK := Vector3(24.0, 0.0, 0.0)
+const PARK_STEP := Vector3(1.5, 0.0, 0.0)
 
-## Only run acts whose title contains this text (empty = all). Set with
-## `-- --act=<text>` after the scene path.
+## Only run acts whose title contains this text (empty = all; `a|b` runs acts matching
+## either). Set with `-- --act=<text>` after the scene path; `--tune=<property>=<number>`
+## (repeatable) sets a TuningData value for the run.
 var act_filter: String = ""
 
 var room: Node3D
@@ -24,6 +29,11 @@ func _ready() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--act="):
 			act_filter = arg.trim_prefix("--act=")
+		elif arg.begins_with("--tune="):
+			# `--tune=<TuningData property>=<number>`: record with a tunable changed (A/B sheets).
+			var pair := arg.trim_prefix("--tune=").split("=")
+			if pair.size() == 2 and pair[0] in Tuning.data:
+				Tuning.data.set(pair[0], type_convert(float(pair[1]), typeof(Tuning.data.get(pair[0]))))
 	Tuning.data.dummy_health = 500.0
 	room = ROOM.instantiate()
 	add_child(room)
@@ -91,19 +101,27 @@ func _run() -> void:
 		{title = "Perfect block, then grab", cam = &"first_person", fn = _act_perfect_block},
 		{title = "Parry on reaction (B 0.2 s into the wind-up), then grab", cam = &"first_person", fn = _act_parry_on_reaction},
 		{title = "Grab anytime: an idle dummy, then a throw", cam = &"first_person", fn = _act_grab_idle},
+		{title = "Grab looking level: knee, knee, LB lets go", cam = &"first_person", fn = _act_grab_level},
 		{title = "Perfect block, then grab (side view)", cam = &"side_view", fn = _act_perfect_block},
 		{title = "Guard break", cam = &"first_person", fn = _act_guard_break},
 		{title = "Guard break (side view)", cam = &"side_view", fn = _act_guard_break},
 		{title = "Flank hit lands", cam = &"first_person", fn = _act_flank_hit},
 		{title = "Flank hit lands (side view, debug draw)", cam = &"side_view", fn = _act_flank_hit_debug},
+		{title = "Hold view: grab, knee, knee, LB lets go (side view)", cam = &"side_view", fn = _act_grab_level},
+		{title = "Hold view: walk in, grab, walk on, back off, LB lets go walking", cam = &"first_person", fn = _act_hold_walk},
+		{title = "Hold view: walk in, grab, back off, LB lets go walking (side view)", cam = &"side_view", fn = _act_hold_walk},
+		{title = "Hold view: looking 25° down, grab, knee, knee, throw", cam = &"first_person", fn = _act_hold_look_down},
+		{title = "Hold view: looking 25° down (side view)", cam = &"side_view", fn = _act_hold_look_down},
+		{title = "Hold view: a jab from the side breaks the hold", cam = &"first_person", fn = _act_hold_hit},
+		{title = "Hold view: a jab breaks the hold (side view)", cam = &"side_view", fn = _act_hold_hit.bind(-1.0)},
 	]
 	for act in acts:
 		var title: String = act.title
-		if act_filter != "" and not title.to_lower().contains(act_filter.to_lower()):
+		if act_filter != "" and not _matches(title):
 			continue
 		await _reset(act.cam)
 		caption.text = title
-		print("=== ", title)
+		print("=== %s  (f%d)" % [title, Engine.get_physics_frames()])
 		var fn: Callable = act.fn
 		await fn.call()
 		await _wait_idle()
@@ -112,6 +130,14 @@ func _run() -> void:
 	await _ticks(10)
 	print("\n".join(log_lines))
 	get_tree().quit()
+
+
+## Whether act `title` matches act_filter (any of its `|`-separated parts, ignoring case).
+func _matches(title: String) -> bool:
+	for part: String in act_filter.to_lower().split("|", false):
+		if title.to_lower().contains(part):
+			return true
+	return false
 
 
 # --- Acts ---------------------------------------------------------------------------
@@ -236,7 +262,7 @@ func _act_pipe() -> void:
 	for i in 3:
 		await _press(&"P", 2, 10)
 	await _wait_idle()
-	dummies[0].set_post(Vector3(30, 0, -30))
+	dummies[0].set_post(PARK)
 	await _ticks(20)
 	await _press(&"GRAB", 2, 40)
 
@@ -396,6 +422,69 @@ func _act_grab_idle() -> void:
 	await _press(&"K", 2)
 
 
+## The hold view looking level (the other acts look 6 degrees down): LB on an idle dummy,
+## two knees, then LB again lets go and the view eases back up.
+func _act_grab_level() -> void:
+	await _stage([Vector3(0, 0, -1.1)])
+	await _look_to(0.0, 6)
+	await _ticks(10)
+	await _press(&"GRAB", 2, 20)
+	for i in 2:
+		await _press(&"P", 2)
+		await _wait_idle()
+		await _ticks(8)
+	await _press(&"GRAB", 2, 30)
+
+
+## The hold view on the move, looking level: walk up to an idle dummy and grab it without
+## stopping, walk on with it, then back off and let go with LB while still walking. The
+## lens eases into and out of the hold as standing (it bobbed and popped, M2 phase 3 review
+## code-03).
+func _act_hold_walk() -> void:
+	await _stage([Vector3(0, 0, -2.6)])
+	await _look_to(0.0, 6)
+	player.input.scripted_move = Vector2(0, 1)
+	await _wait_until(func() -> bool: return dummies[0].global_position.distance_to(player.global_position) < 1.15, 120)
+	await _press(&"GRAB", 2, 40)
+	player.input.scripted_move = Vector2(0, -1)
+	await _ticks(20)
+	await _press(&"GRAB", 2, 30)
+	player.input.scripted_move = Vector2.ZERO
+	await _ticks(20)
+
+
+## The hold view looking 25 degrees down at the held body: the hold's pitch only brings the
+## view down to grab_view_target_pitch_deg, so with the knees' own pitch the view still
+## shows the street ahead (it stacked into a view of the own belly, review grab-06).
+func _act_hold_look_down() -> void:
+	await _stage([Vector3(0, 0, -1.1)])
+	await _look_to(-25.0, 10)
+	await _ticks(10)
+	await _press(&"GRAB", 2, 20)
+	for i in 2:
+		await _press(&"P", 2)
+		await _wait_idle()
+		await _ticks(8)
+	await _press(&"K", 2)
+	await _wait_idle()
+	await _look_to(-6.0, 10)
+
+
+## A second dummy beside the player (on his right, or his left if `side` is -1, so the side
+## view sees past it) jabs him while he holds the first, looking level: the hit tears the
+## clinch apart, the body let go freezes with the hit's hitstop and staggers away instead
+## of standing up through the bent-over view (review grab-02).
+func _act_hold_hit(side: float = 1.0) -> void:
+	await _stage([Vector3(0, 0, -1.1), Vector3(0.85 * side, 0, -0.2)])
+	await _look_to(0.0, 6)
+	await _ticks(10)
+	await _press(&"GRAB", 2, 23)
+	var jabber := dummies[1]
+	jabber.start_jab()
+	await _wait_until(func() -> bool: return jabber.current_move == null, 90)
+	await _ticks(60)
+
+
 ## Jab after jab into the held guard, faster than it regenerates: the sparring dummy steps
 ## back in after each push-back and jabs as soon as it is out of its recoil. The meter
 ## empties on the fifth and the guard is knocked apart; B still held, the guard comes back
@@ -508,7 +597,7 @@ func _stage(posts: Array[Vector3]) -> void:
 		var d := dummies[i]
 		d.sparring = false
 		# Posts are in the player's frame (x right, -z ahead).
-		var pos := player.global_position + player.global_basis * posts[i] if i < posts.size() else Vector3(30 + i * 3, 0, -30)
+		var pos := player.global_position + player.global_basis * posts[i] if i < posts.size() else PARK + PARK_STEP * i
 		var to_player := player.global_position - pos
 		d.max_health = 500.0
 		d.set_post(pos, atan2(-to_player.x, -to_player.z), true)

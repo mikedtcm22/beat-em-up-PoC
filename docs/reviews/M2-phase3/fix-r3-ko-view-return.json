@@ -1,0 +1,77 @@
+{
+ "package": "r3-ko-view-return",
+ "branch": "m2/phase3-fix-r3-ko-view-return",
+ "verdicts": [
+  {
+   "id": "r3look-01",
+   "outcome": "fixed",
+   "what_changed": "Confirmed first (baseline KO13: own body up to 75% of the view, a 66% pop at the re-hide, body snap at FREE; KO1: lens within 0.000 m of drawn head-layer meshes). Three changes. (1) first_person_camera.gd _ko_view_mix(): on the way back the head layer (VIS_FP_HIDDEN) is hidden again from the first frame _head_clear_of(lens) turns false (the mirror of the lift; one-way on the return, so it never re-lifts). With the layer lifted the nearest own mesh is now 0.274 m or more in KO1/7/9/13/14 (was 0.000). (2) player.gd, control decision for the lead (the least change for the player: input the player cannot use anyway): _process() drops look input (the mouse delta is still consumed) from health 0 through the KO and through the get-up that follows a KO (new private flag _ko_getup, set by _revive(), cleared when the state leaves GETUP); _revive() sets look_yaw = rotation.y so a look written by a script or set before the blow cannot differ from the body's eyes. Pitch is left as it was at the blow (the lock keeps it). Ordinary non-KO knockdowns keep their free look. No camera is read. _tick_ko() unchanged. (3) New tunable ko_view_look_lead (1.5): on the way back the look turns to the eyes' direction ahead of the lens (look weight = lens weight ^ lead, only once the lens was all the way out, so an early revive does not jump the look). Without it the head layer still hid with 3.5% of the view popping out across the body (50% along it past the head); with it 0.0%. Peak own share in the KO1/KO13/KO14 return 21% (was 23-75%); body yaw before and after the get-up identical (KO13 body -90.0 / look -90.0 after, was look 30.0 and a snap).",
+   "tests": "tests/test_ko_view.gd (15 tests, was 8): test_the_return_goes_into_the_eyes_the_body_has_whatever_the_look_did_while_down (look written directly 40 ticks into the KO: no turn, +45, -45, +120, and -30 with 20 down: body facing unchanged through the get-up, look on the body, own body at most a third, nothing within 0.25 m with the layer lifted, hide pop at most 2%, lens inside nothing, step and turn limits, final view equals the eyes); test_mouse_look_is_dropped_from_the_killing_blow_through_the_get_up (calls _process with a mouse delta: free standing, free in a non-KO get-up, locked from health 0 / KO / post-KO get-up, motion consumed, free again at FREE); test_a_revive_before_the_lens_is_out_comes_back_without_a_jump; the main test now asserts the hide happens on the way back (0 < w < 0.5). Verified to fail without the fixes: with the old player.gd 14 asserts fail (snap, 30% hide pops, lock tests); with the old camera 7 of 14 tests fail (near_lifted 0.000 m, lens inside geometry); the early-revive test fails without the _ko_was_out guard (17 degree jump). MAX_TURN_DEG raised 6 to 8 (the look-lead and the over-the-hips return turn up to 7 degrees a tick, measured)."
+  },
+  {
+   "id": "r3look-02",
+   "outcome": "fixed",
+   "what_changed": "Confirmed first (baseline KO7: own body 68%, lens 0.13 m inside the building front, 166 frames over 50%). In first_person_camera.gd: _ko_room() no longer floors the reach at ko_view_min_reach (it is 0 when there is no room, never past the ray's hit less ko_view_clearance_m) and then ball-checks the lens (SphereShape3D of ko_view_clearance_m against the world and enemy-body layers) and brings it in along the line by halving (KO_ROOM_STEPS) until clear; the per-frame reach shrinks at once when something comes into the way and grows at the eye's pace. _choose_ko_side() became _choose_ko_pose() with a KoPose enum (RIGHT, LEFT, FEET) and a steep flag: across the body (right unless the left clearly scores better, scored room x crowding as before), else along the body past the feet, else straight over the hips; a pose needs ko_view_min_reach of its room, and that default rises 0.4 to 0.8 because the whole body (arms out) only fits the 0.95 margin from reach 0.8 (a hand leaves the view at 0.7). The over-the-hips pose is ko_view_steep_height_m (2.6) up looking down ko_view_steep_pitch_deg (85): from 1.6 m a hand left the view. ko_view_pose() now takes a flat direction, reach and steep flag; ko_view_direction() builds the direction from the rig. Results: KO7 corner own max 12% (was 68%), lens straight over the hips outside the walls; KO9 flanked own max 12% (was 51%), lens over the hips, no fighter within 0.25 m; KO5/6/8/10/12 stay across the body at 8% hold (own max 15-21%). Whole body in frame at the 0.95 margin in every held view. The lens is never inside the world or a fighter in any tick of the corner, flank and wall-and-fighter tests.",
+   "tests": "tests/test_ko_view.gd: test_in_the_corner_the_lens_takes_the_pose_over_the_body (KO7: CORNER (19.3,0,-6.3), jabber at the feet), test_with_a_fighter_each_side_the_lens_finds_room_over_the_body (KO9: fighters at (1.3,0,0.4) and (-1.3,0,-0.4) plus the jabber), test_with_a_wall_each_side_the_lens_comes_in_but_not_past_it (building front one side, a fighter the other), test_a_side_with_a_wall_too_near_is_passed_over_for_the_other, test_along_the_body_past_the_feet_when_both_sides_are_blocked_and_the_feet_are_free (health 0 with fighters 1.0 m off both sides). Each checks: whole body in frame at margin 0.95, lens clear of every wall and fighter by 0.25 m (ball query) and never inside any in any tick, no wall between lens and body, nothing within 0.25 m of the own body or a fighter, own body at most a third of the view all through the KO and return, hide pop at most 2%, step and turn limits. The replaced old flank test asserted the lens came in to min reach; it now asserts the lens did not take either side."
+  }
+ ],
+ "commit": "846f3aebb46d2fc0ba5f29b7263086456274e488",
+ "pushed": true,
+ "tests_passed": 530,
+ "tests_total": 530,
+ "script_errors": false,
+ "tunables_added": [
+  "ko_view_look_lead (Camera > KO view, 1.5, range 1 to 4: the look's share of the way back is the lens's share to this power; 1 = together)",
+  "ko_view_steep_pitch_deg (Camera > KO view, 85, range 45 to 89: pitch of the over-the-hips pose)",
+  "ko_view_steep_height_m (Camera > KO view, 2.6, range 0.5 to 6: height of the over-the-hips pose; from 1.6 m the arms leave the view)",
+  "ko_view_min_reach changed in meaning and default: 0.4 to 0.8 (the least share of distance and height a pose may have before the next pose is tried; no longer a floor that puts the lens past the hit). tuning/default.json regenerated (321 values); the lead regenerates it again after merging."
+ ],
+ "captures": [
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r3-ko-view-return/captures/fix/ko1_return.png",
+   "description": "KO1 first person after the fix, the return (every 2nd frame): the body sits up, the white cap crosses the left edge at about 21% of the view, the view turns ahead to the dummy and comes into the standing eyes view with no dive through the chest."
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r3-ko-view-return/captures/fix/ko13_after.png",
+   "description": "KO13 after: the look was turned 120 degrees while down; the return is the same as the no-turn KO1 (body sitting up, then the street ahead, then standing), body yaw unchanged."
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r3-ko-view-return/captures/fix/ko13_before_return.png",
+   "description": "KO13 before (baseline at 539dd8e): the lens dives through the own face and the navy chest box (50-75% of the view), then pops to the crates because the body snaps to the turned look."
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r3-ko-view-return/captures/fix/ko7_after.png",
+   "description": "KO7 corner after (chosen fallback: over the hips, 2.6 m up, 85 degrees down): hit, fall, the whole body lying seen from above (dark, the corner is in the building's shadow), then the return to the standing view. Own body 12% at most."
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r3-ko-view-return/captures/fix/ko7_before.png",
+   "description": "KO7 before: the lens inside the building front, a dark close-up of the own shirt and trousers for the whole KO (own body 52-68%)."
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r3-ko-view-return/captures/fix/ko9_after.png",
+   "description": "KO9 after (dummies on both sides, chosen fallback: over the hips): the whole body lying in the middle of the view, the jabber at the right edge and the other fighters' legs at the top, nothing near the lens; the return follows."
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r3-ko-view-return/captures/fix/final.avi",
+   "description": "Final-build Movie Maker recording of acts KO1, KO7, KO9, KO13 and KO14 (log: final.log in the same folder, per-frame LENS lines): with the head layer lifted the nearest own mesh is 0.274 m or more in all five (was 0.000); own max 21%, 12%, 12%, 21%, 21%. after1.avi/after2.avi (and logs) hold KO3, KO5, KO6, KO8, KO10, KO12, KO15 on the same build, all own max 15-27%."
+  }
+ ],
+ "feel_judgement": "From the first-person after-frames, the return now reads as the body sitting up and the eyes coming back into it: the white cap and shirt sweep across the left edge for a few frames (about 21% of the view at the worst), the view turns ahead to the world, and the lens settles into the normal eyes view. There is no dive through the chest or face and no pop at the head layer hiding, and the look turned while down makes no difference. Corner and flanked KOs now show the whole body lying from straight above (2.6 m up, 85 degrees down) with the walls and fighters out of the lens. Weaker points: the over-the-hips view is a tidy, readable but smaller and flatter picture than the usual beside-the-body view, and the corner is dark because it lies in the building's shadow; the look-lead makes the view whip forward earlier in the return (up to about 7 degrees a frame on the over-the-hips return, 5.6 across the body), which is quick; a face-down KO still shows a head edge appear (6% of the view) when the lens clears the head on the way out, an existing rule I left alone. Grey-block feel details like these are for Game-boy's eyes, and every number is a tunable.",
+ "spec_questions": [
+  "decided by default: the look is dropped from the killing blow through the KO and its get-up and put on the body at the revive (the least change for the player: input he cannot use anyway); pitch is left as it was at the blow; ordinary non-KO knockdowns keep a free look (their view is waiting on Game-boy)",
+  "decided by default: on the way back the look turns to the eyes' direction ahead of the lens (new tunable ko_view_look_lead 1.5); at 1.0 the hide pops 3.5% across the body and up to 50% along it past the head",
+  "decided by default: ko_view_min_reach raised 0.4 to 0.8 and now means the least room a pose needs before the next pose is tried, because the whole body only fits the view from reach 0.8; this passes over more near-wall KOs than before (in the probe only the corner and the flanked KO changed pose; KO5, 6, 8, 10 and 12 stay across the body)",
+  "decided by default: the fallback order is across the body, then along it past the feet, then over the hips; past the head is not tried, because its return dives over the chest (measured 31-39% of the view and a 44-50% hide pop, even with the look-lead) and over the hips is better (12% own, 0% pop); which end is the head is read from the blow's velocity",
+  "decided by default: over-the-hips pose at ko_view_steep_height_m 2.6 and ko_view_steep_pitch_deg 85 (from 1.6 m the arms left the view at the 0.95 margin)",
+  "decided by default: the hide test limit is 2% of the view at the head layer's re-hide; the lift on the way out is tested at 8% (measured 0% face up, 6.4% face down in a building-front KO, an existing rule I left alone)"
+ ],
+ "remaining": [
+  "The along-the-body pose past the feet is rarely free in a duel (the attacker stands at the feet), so in practice the choice is across, else over the hips. It is covered by a synthetic test (health 0, fighters 1.0 m off both sides), not by a real KO capture, so there is no first-person capture of it for Game-boy.",
+  "Lifting the head layer on the way out still pops up to 6.4% of the view into frame on a face-down KO (0% face up). Existing rule, outside the findings; a later pass could lift on a larger clearance.",
+  "The look-lead makes the over-the-hips return turn up to 7 degrees a frame (5.6 across the body). If Game-boy finds it too whippy, ko_view_look_lead 1.3 cuts it to 6.4 / 5.3 at the cost of a 0.2% hide pop across the body.",
+  "A second KO during the 0.5 s return keeps the previous pose (r3code also-noticed item); the get-up's invulnerability makes it rare. The pose is still chosen once at the killing blow, with the body mid-flight, so a body that lands in a worse place has its reach shrunk but not its pose changed (the ball check keeps the lens out of geometry; the whole body can then clip).",
+  "The real game's respawn (Milestone 3) must put the look on the body as _revive() now does, and keep the look locked through that get-up; _revive() is the test room's revive today.",
+  "r3code-06's two KO-view sentences in docs/ARCHITECTURE.md are fixed (the camera never calls is_ko(); the KO view keeps running behind side view and free fly). README, SPEC and HANDOFF were not touched: README's M2 departures could mention the ko_view_look_lead return and the over-the-hips fallback.",
+  "tuning/default.json was regenerated on this branch (321 values: +3 KO view keys, ko_view_min_reach 0.8); the lead regenerates it again after merging."
+ ]
+}

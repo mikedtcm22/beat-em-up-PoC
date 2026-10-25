@@ -1,0 +1,12 @@
+{
+ "packages": [
+  {
+   "key": "r2-finisher-flash",
+   "title": "A finisher's contact flash shows after its impact frame",
+   "finding_ids": ["hit-04"],
+   "files": ["game/actors/combat_actor.gd", "game/actors/humanoid_rig.gd", "tests/test_hit_flash.gd", "docs/ARCHITECTURE.md"],
+   "notes": "Written by the lead as a narrow first package of round 2 (the window had 16 points left). The other round 2 survivors (hit-05, the perf lens) are partitioned later into packages-r2.json.\nROOT: CombatActor._flash_at() starts the localized flash (hit_flash_frames, 2) on the finisher's hit tick, and VfxDirector starts the full-screen impact frame (vfx_impact_frame_frames, 2) on the same tick, so the flash is spent under the impact frame.\nFIX: when the impact frame will show for this hit (a finisher with impact_frame_enabled on), start the flash's rendered-frame count on the first frame after the impact frame ends, so it still shows for exactly hit_flash_frames rendered frames (the Decisions log asks for that check). Decide it from the hit's tier and the tunables, never by reading VfxDirector's state: the simulation and the rig must not read presentation. With the toggle off, the flash starts on the hit tick as now. Don't lengthen the flash: that would change the 2-frame count, a question for Game-boy.\nTESTS (tests/test_hit_flash.gd): a finisher's flash shows on exactly the hit_flash_frames rendered frames after the impact frame with the toggle on, and on the first frames with it off; light and heavy hits are unchanged.\nRECORD: a finisher in first person and in side view (combo_bot or vfx_bot), tiled at 60 stills per second around the impact frame. The flash must be visible on the struck part right after the impact frame. Note that the comic burst may cover it in side view: that is hit-05 and an open question with Game-boy (the side-view flash), so don't change burst sizes.\nDOCS: ARCHITECTURE's 'Hit flash' paragraph gets one sentence on the delay.\nRISKS: hitstop and slow-mo must not stretch or skip the delayed count (count rendered frames as the flash already does); a finisher that KOs, launches or vanishes the body must still flash or end cleanly; the player as the finisher's victim (no first-person flash) is unchanged."
+  }
+ ],
+ "unassigned": []
+}

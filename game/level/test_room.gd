@@ -12,6 +12,8 @@ const CAMERA_DIRECTOR_SCENE := "res://game/camera/camera_director.tscn"
 const CAMERA_DIRECTOR_SCRIPT := "res://game/camera/camera_director.gd"
 const HUD_SCENE := "res://game/ui/hud.tscn"
 const DEBUG_DRAW_SCENE := "res://game/ui/debug_draw.tscn"
+## Milestone 2: the F1 tuning panel and the F4 cheat menu.
+const TUNING_OVERLAY_SCENE := "res://game/ui/tuning_overlay.tscn"
 const GRID_SHADER := "res://game/level/grid.gdshader"
 
 @export var street_length: float = 40.0
@@ -45,11 +47,8 @@ func _ready() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed(&"cheats"):
-		# Milestone 1 stand-in for the F4 cheat menu: toggle 0.25x time.
-		TimeController.debug_scale = 0.25 if is_equal_approx(TimeController.debug_scale, 1.0) else 1.0
-		get_viewport().set_input_as_handled()
-	elif event.is_action_pressed(&"sparring"):
+	# F4 (cheats) and F1 (tuning panel) belong to the TuningOverlay (_build_presentation()).
+	if event.is_action_pressed(&"sparring"):
 		toggle_sparring()
 		get_viewport().set_input_as_handled()
 
@@ -161,6 +160,12 @@ func _build_presentation() -> void:
 		add_child((load(HUD_SCENE) as PackedScene).instantiate())
 	if ResourceLoader.exists(DEBUG_DRAW_SCENE) and get_tree().get_first_node_in_group(&"debug_draw") == null:
 		add_child((load(DEBUG_DRAW_SCENE) as PackedScene).instantiate())
+	# Milestone 2 (WP1): the F1 tuning panel and the F4 cheat menu (game/ui/tuning_overlay.gd).
+	if ResourceLoader.exists(TUNING_OVERLAY_SCENE):
+		add_child((load(TUNING_OVERLAY_SCENE) as PackedScene).instantiate())
+	add_child(VfxDirector.new())  # M2 WP2: comic VFX and damage looks (game/fx/vfx_director.gd)
+	add_child(AudioDirector.new())  # M2 WP3: hit-feel audio (game/audio/audio_director.gd)
+	add_child(RumbleDirector.new())  # M2 WP3: controller rumble (game/audio/rumble_director.gd)
 
 
 func _add_box(pos: Vector3, size: Vector3, material: Material) -> StaticBody3D:

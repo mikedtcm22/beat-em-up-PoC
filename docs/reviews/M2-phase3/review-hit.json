@@ -1,0 +1,167 @@
+{
+ "lens": "hit",
+ "worktree": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-hit",
+ "summary": "I reviewed hit feel at f1e2d0f from five Movie Maker recordings, all at 1600x900:\n- vfx1.avi: all 22 vfx_bot acts.\n- vfx2.avi: the vfx_bot P P P P acts again, to compare runs.\n- combo.avi: 36 combo_bot acts (every act except stance, dodge and block-only), with the combat log on.\n- ragside.avi: the 13 side-view ragdoll_bot acts.\n- ragside_novfx.avi: the same acts with vfx_scale=0 and the impact frame off, so the bare flash shows.\n\nVideo frame = physics frame − 1 in every capture, confirmed on the impact frames. Stills are tiled at 20-60 per second (every frame around each contact), white shares are measured per frame with ffmpeg, and every sheet was viewed.\n\nThe build has three tiers (LIGHT, HEAVY with the medium burst, FINISHER).\n- **First person:**\n  - Light: small white burst, about 10% of the view width at jab range, plus the localized flash on the contact for exactly 2 frames (+4-6% of the view white).\n  - Heavy: word, medium burst, blood and a visible flash rim (roundhouse, back elbow, pipe backswing).\n  - Finisher: 2-frame impact frame, then a large burst (about 17% width), word, speed lines, blood, spit and tooth. The tooth reads but is tiny.\n- **Side view:** every tier reads through the burst and word, but the view-share floor makes them so large that they hide the head or upper body through the start of the reaction.\n- **Round 1 fixes I can see:** the flash sits on the struck part (thrown pipe, flying body, re-hit on a staggering body), and staggers rock back.\n\nMain problems:\n1. The flurry strobes a white patch over 14-18% of the first-person view at 8.6 Hz (same root as open grab-05). The photosensitivity toggle doesn't cover it.\n2. A hit on the player in first person shows no flash, and its burst looks like the player's own jab landing.\n3. The always-on combat log hides where every side-view knockdown lands (ties to open grab-03).\n4. No finisher ever shows its flash: both flash frames are the two impact frames.\n5. In side view the view-share floor blows the heavy word, guard-break burst and finisher burst up to 2-2.5x, covering the reaction.\n\nVerdicts on HANDOFF 10:55's known items:\n- **(a) Hit on the player:** reads weakly. It shows a small white burst at screen centre over the attacker's face, the HP bar drop with its white ghost, about 3 px of shake, the guard dropping if it was up, and the attacker's forearm as a spike through the lens for 5 frames before it snaps back. No flash is visible.\n- **(b) Side-view flash under the burst:** confirmed. Light and heavy flashes are fully under the burst or word, and finishers under the impact frame. With effects off, the flash reads on the contact for every ragdoll case.\n- **(c) First finisher drops a frame:** not visible in captures. The first and later finishers have the same 2 impact frames and no repeated frame. Movie Maker steps on a fixed clock, so this is the perf lens's job.\n- **(d) Light burst size:** 10.3% of the view width at jab range.\n- **(e) Bruised look in side view:** still subtle. Only darker mottling on the clothes shows; bloodied reads clearly.\n- **(f) Combat log in side view:** confirmed, and it hides every side-view knockdown.\n- **(g) Speed lines:** vfx_bot repeats them exactly, within a run and between runs; combo_bot and play vary them.",
+ "acts_checked": [
+  "vfx_bot 'VFX: P P P P, light to finisher' (first person): every frame 26-105, white shares, run twice (vfx1, vfx2)",
+  "vfx_bot 'VFX: P P P P (side view)': every frame 184-263, zoom on jab and hook contacts",
+  "vfx_bot 'VFX: K K K, spinning heel finisher (side view)': 30/s 342-421",
+  "vfx_bot 'VFX: haymaker to the head: spit and tooth' (first person): 30/s 538-617, zoom on spit and tooth 546-561",
+  "vfx_bot 'VFX: haymaker (side view)': 30/s 702-781",
+  "vfx_bot 'VFX: damage looks, clean to bruised to bloodied' (first person): fourth jab 1016-1023",
+  "vfx_bot 'VFX: damage looks (side view)' and 'VFX: damage looks held (side view)': clean, bruised and bloodied stills 3810, 3870 and 3930 at 2x, jab 3948-3957",
+  "vfx_bot 'VFX: damage looks held at 1 m' (first person): jab on the bloodied look 3655-3662",
+  "vfx_bot 'VFX: block spark' (first person): 1645-1656 (the 0.45 blocked flash on the guard arms)",
+  "vfx_bot 'VFX: parry spark' (first person): 1952-1963 (cyan whole-body flash next to the white)",
+  "vfx_bot 'VFX: guard break burst' (first person): guard break 2364-2375, clean jab on the player 2456-2487 with HUD zoom",
+  "vfx_bot 'VFX: guard break burst (side view)': clean jab on the player 2952-2967",
+  "vfx_bot 'VFX: flying kick, lunge lines' (first person): 3084-3101",
+  "vfx_bot 'VFX: P P P P, impact frame off': finisher 3225-3231",
+  "vfx_bot 'VFX: tier sizes side by side' (first person 3 m and 1.4 m; side view): locate sheet plus side 4271-4278",
+  "vfx_bot 'VFX: knees under the view': knee 1 4456-4467, throw and flying body 4560-4607, white shares",
+  "vfx_bot 'VFX: stomp under the view': 4740-4811 and 4780-4791",
+  "vfx_bot 'VFX: back elbow, word stays behind': 4898-4921",
+  "vfx_bot 'VFX: spin kick, three dummies' (first person): 5012-5035",
+  "vfx_bot 'VFX: jab step-in, no lunge lines': seen in the run, not tiled",
+  "combo_bot 'P P P P' first person and side view: impact-frame luma, frame-difference sequence (first finisher vs later), side full frames 208-231",
+  "combo_bot 'P · P: jab, flurry (mash), shove' (first person): 370-441 at 20/s, white share every frame 376-436, native 383/385",
+  "combo_bot 'P P · P' (first person and side), 'K K K' (first person 898-945, side), 'K · K', 'P P K', haymaker in both views (1562-1633): speed-line and word comparison of 6 finishers",
+  "combo_bot 'Jump + K: flying kick' (side 1858-1893), 'Jump + K at apex: spin kick' (side 1972-2007; first person), 'RB: back elbow' (side 2198-2233; first person)",
+  "combo_bot 'Grab, knee x3, grab, throw' and 'Grab and throw (side view)': knee white share 2490-2495, side throw stills",
+  "combo_bot 'Stomp a downed enemy', 'Pipe: pick up, 3 swings, throw' (first person 3205-3252, throw 3318-3329)",
+  "combo_bot 'Perfect block, then grab' (both views), 'Parry on reaction', 'Grab anytime', 'Grab looking level': seen in the side-view log sheet and in the run",
+  "combo_bot 'Guard break' (first person, clean jab on the player 4729-4746) and 'Guard break (side view)'",
+  "combo_bot 'Flank hit lands' (first person 5410-5427, background shake crop 5412-5421) and side view with debug draw",
+  "combo_bot all 'Hold view' acts; 'a jab from the side breaks the hold' (first person 7024-7041, rise 7032-7039; side 7250-7270)",
+  "combo_bot side-view combat-log sheet: 24 stills after every side-view heavy or finisher hit (232 through 7270)",
+  "ragdoll_bot every side-view act (ragside.avi): hook stagger 50-67, guard-break stagger 2185-2196, push kick into a second dummy (flying body) 977-996, spinning heel two dummies 716-727; overview of 10 hit moments",
+  "ragdoll_bot side-view acts with vfx_scale=0 and the impact frame off (ragside_novfx.avi): hook 51-58, uppercut launch 224-231, flying body 979-986 (4x zoom), guard break 2186-2193",
+  "Code read: game/fx/vfx_director.gd (on-player framing, rng), game/fx/comic_sprite.gd:108-124 (at_lens), game/fx/impact_frame.gd, game/actors/combat_actor.gd:185-189, 416, 839, 850, 910-923 (flash start and count), game/autoload/tuning_data.gd 'Hit flash', 'VFX' and 'Block sparks', tests/bot/*.gd act tables"
+ ],
+ "captures_reviewed": [
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-hit/captures/review_hit/vfx1.avi (all 22 vfx_bot acts, 5094 frames; log vfx1.log)",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-hit/captures/review_hit/vfx2.avi (vfx_bot 'P P P P' acts again; log vfx2.log)",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-hit/captures/review_hit/combo.avi (36 combo_bot acts, 7383 frames; log combo.log)",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-hit/captures/review_hit/ragside.avi (13 ragdoll_bot side-view acts; log ragside.log)",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-hit/captures/review_hit/ragside_novfx.avi (the same acts with vfx_scale=0 and impact_frame_enabled=false; log ragside_novfx.log)",
+  "Sheets: /Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-hit/captures/review_hit/s_*.png and n_*.png (about 50 sheets); helper scripts sheet.sh, lum.sh, white.sh and fdiff.sh in the same folder"
+ ],
+ "sheets_for_game_boy": [
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-hit/captures/review_hit/s_combo_flurry_385_native.png",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-hit/captures/review_hit/s_vfx_player_hit_full.png",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-hit/captures/review_hit/s_side_jab_burst_vs_flash.png",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-hit/captures/review_hit/s_combo_side_log.png",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-hit/captures/review_hit/s_side_gb_fin_native.png",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-hit/captures/review_hit/s_rag_side_novfx_flash.png"
+ ],
+ "open_question_notes": "**Minimum on-screen size for the side-view flash (default: leave it).** At the side camera the flash is about 30 px across on a 1600x900 frame: a full-white core plus a fade over the face. The light burst is drawn at its vfx_min_view_share floor of 4%, about 64 px, centred on the same contact, at a higher draw priority. It covers the flash completely on both flash frames (s_side_jab_burst_vs_flash.png: vfx1.avi f187 vs ragside_novfx.avi f186-187).\n- Heavy hits: the word (about 85 px, roughly 0.75 m on the body) and the burst cover the whole head (ragside f53-54).\n- Finishers: both flash frames are the two impact frames.\n- Guard break: the 170 px guard-break burst hides both fighters' heads.\n\nWith the effects off, the flash reads well on the contact in side view for every ragdoll case (s_rag_side_novfx_flash.png):\n- hook: the face;\n- uppercut launch: chin and upper chest;\n- guard break: face and glove;\n- flying body: a sliver on the green dummy's front, partly behind the arms.\n\nAll of these happen inside the hitstop freeze, so \"following the moving body\" never shows within the 2 flash frames. Only body impacts move during the flash, and that is barely visible.\n\nSo a minimum size alone would not make the flash visible. It would need to be larger than the burst (over 64 px), or start once the burst has popped, or the side-view burst would need a smaller floor or an offset. Game-boy's default (leave it) means the flash is effectively never seen in side view; the burst, word, health-bar flash and the reaction carry the hit.\n\n**grab-03 (log over the knee).** The same panel covers the side view's right-centre, where every side-view knockdown lands (finding 3). The round 1 proposal to move the log upper-right under the rear-warning corner would clear both views.\n\n**grab-05 (knee flash size).** Measured +13.5% of the view white (pixel luma 200 or more) on each knee (vfx1 f4459-4460, f4487-4488) and +11% in combo (f2491-2492). The flurry is the same root cause and is worse: +14-18% at 8.6 Hz, 7 times in a row (finding 1).\n\n**Contact-push contortion and the grab view.** Outside this lens. From what I saw, the bursts and words stay at the world contact while launched bodies fly 3-6 m away. That reads as comic onomatopoeia and is not wrong.",
+ "also_noticed": [
+  "In side-view piles a lying body's health bar crosses the standing body in front of it. ragside.avi f983-990: the orange body's bar runs across the green dummy's face, then its chest. combo.avi f1985-2000 (spin kick): bars cross the purple and green bodies. This follows from the ragdoll-03 fix, which puts the bar just above the drawn body and ignores other bodies.",
+  "Hold broken by a jab, first person (combo.avi f7034-7039): the released victim's new black hair dome rises through the centre of the view at about 0.4 m, about 25% of the view width for 6 frames. It stays within grab-02's tested bounds (0.264 m, 42%) but reads as a black ball filling the view.",
+  "The blood splash is anchored in the world. On a launch it slides down the rising body: first-person uppercut, vfx1.avi f74-90, the splash ends on the belt.",
+  "First-person stomp (vfx1.avi f4782-4790): the foot and torso stay under the view. Only the top of the head flashes white at the bottom edge, and the light burst floats over bare floor.",
+  "First-person spin kick (vfx1.avi f5016-5035, combo.avi from f2085): at the apex the three dummies are below the view. The three flashes are not seen; the bursts sweep along the bottom edge as the view spins.",
+  "Hits on the player put the block spark, parry spark and guard-break burst at screen centre, over the attacker's face (vfx1.avi f1648, f1955, f2366). They are readable, but they sit where the player's own hits pop.",
+  "In combo captures the impact frame thresholds the combat-log panel into a white block. The side-view impact frame luma is 60 with the log against 43 in vfx (combo.avi f226-227 vs vfx1.avi).",
+  "The front kick's light burst in first person draws under the combat log and comes out gray (combo.avi f903-908). Same cause as grab-03.",
+  "Stale comments: tests/bot/vfx_bot.gd:100 says the jab on the bloodied look shows 'the hit flash covers it'. That now holds only within 0.25 m of the contact in first person and not at all in side view. game/fx/speed_lines.gd:26-27 says the bots seed the rng; only vfx_bot does (vfx_bot.gd:73).",
+  "(g) Because vfx_bot reseeds every act at 7, its three P P P P finishers (first person, impact frame off, side view) show the same lines, burst roll and blood, and vfx1/vfx2 are bit-identical over frames 60-100. Captures can't show the variety that combo_bot and play have: the left-edge difference between vfx1 and combo at f72-80 is 7.5-10.6, and the 6 combo finishers all differ.",
+  "(c) There is no frame drop in Movie Maker. First finisher (vfx1 f69-71): frame differences 134.8, 34.7, 154.9. Later finisher (f226-228): 119.2, 16.3, 122.8. combo.avi matches. Both show 2 impact frames and no repeated frame. This needs the perf lens's windowed run.",
+  "(e) Bruised in side view is still subtle (s_vfx_held_side_looks.png at 2x): darker mottling on the trousers and shirt and a bluish patch on the forearm. At native size it mostly reads as dirtier clothes. Bloodied reads clearly. This is the approved default (bruised scuffs the clothes).",
+  "(d) The light burst at jab range is 165 px of 1600, 10.3% of the view width and about 1.5% of the area (vfx1.avi f30). The flash on the same jab adds +4.2% of the view at pixel luma 235 or more.",
+  "The blocked hit's 0.45 flash on the player's guard fists never shows in first person: the contact is at the head (vfx1.avi f1648-1649, white share +0.6%). The block spark and guard meter carry the block, and the cyan parry flash reads strongly."
+ ],
+ "findings": [
+  {
+   "severity": "medium",
+   "title": "The flurry strobes a white patch over 14-18% of the first-person view at 8.6 Hz, and the photosensitivity toggle doesn't touch it (same root cause as grab-05)",
+   "detail": "**The strobe.** The body-blow flurry lands from about 0.4 m. Each of its 7 body blows draws the localized flash (0.25 m radius, full white core) over the dummy's chest. At that range the flash is about 840 px wide on a 1600 px frame, 52% of the width with soft edges. It shows for 2 frames every 7 frames, 8.6 flashes per second, 7 times in a row.\n\n**Measured share.**\n- Pixel luma 235 or more: from about 2% of the frame to 12.2-13.2% on every flash.\n- Pixel luma 200 or more: from about 3.6% to about 18%.\n\nThe shove's impact frame follows immediately (38.8%).\n\n**Same root cause as grab-05**, which Game-boy still has open: a fixed 0.25 m flash on a body close to the lens. Here the effect is worse, a sustained 8.6 Hz strobe, which is the pattern photosensitivity guidelines flag above 3 flashes per second.\n\n**The toggle gap.** Tuning.impact_frame_enabled is the build's photosensitivity toggle (tuning_data.gd:120-122; speed_lines.gd:12). It switches off the impact frame and the speed lines' flicker, but not the contact flash (combat_actor.gd:839, 923).",
+   "evidence": "combo.avi act 'P · P: jab, flurry (mash), shove'.\n- Body blows at f378, f385, f392, f399, f406, f413, f420 in combo.log.\n- White share (pixel luma 235 or more) per frame: 384/385 13.0/12.9%, 391/392 13.0/13.2%, 398/399 12.4/12.2%, 405/406 13.1/13.2%, 412/413 12.4/12.2%, 419/420 13.1/13.2%; about 2% between.\n- Pixel luma 200 or more: 384/385 18.1/17.9%, 391/392 17.9/18.0%.\n- Sheets: /Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-hit/captures/review_hit/s_combo_flurry_385_native.png (f383 vs f385) and s_combo_flurry_shove_fp.png.\n- For comparison, a jab at 1 m adds +4% (vfx1 f29-30) and a knee adds +13.5% (vfx1 f4459-4460).",
+   "repro": "Run `godot --path . --write-movie <dir>/c.avi --fixed-fps 60 --resolution 1280x720 res://tests/bot/combo_bot.tscn -- '--act=P · P: jab'` and look at frames 376-421. In play, mash P after P · P against a dummy in first person.",
+   "suggested_fix": "This is for Game-boy, together with grab-05. Options:\n- (a) Make the impact-frame toggle a general reduce-flashing switch that also drops the contact flash to a low strength, or to none.\n- (b) Cap the flash's on-screen share in first person, for example a radius scaled down when the contact is close to the active camera. Presentation would read the camera in HumanoidRig.flash_at, never the simulation.\n- (c) Skip or soften repeat flashes on the same victim within N frames, for the flurry's repeats.\n\nKeep 0.25 m for side view and normal range.",
+   "files": [
+    "game/actors/humanoid_rig.gd",
+    "game/actors/combat_actor.gd",
+    "game/autoload/tuning_data.gd",
+    "tuning/default.json",
+    "docs/ARCHITECTURE.md",
+    "README.md"
+   ],
+   "spec_change": true,
+   "id": "hit-01",
+   "lens": "hit"
+  },
+  {
+   "severity": "medium",
+   "title": "A hit on the player in first person shows no flash, and its only on-screen effect is the same small white burst the player's own jab makes",
+   "detail": "**Why the flash is gone.** The player is the victim, so the localized flash goes to its contact at the head. That is behind the lens and hidden in first person, and 0.25 m doesn't reach the visible arms or guard fists. Before phase 3 the arms flashed white.\n\n**What a clean hit on the player now shows:**\n- a light burst about 3-4% of the view wide, placed straight ahead at the lens (comic_sprite.gd:108-124), so at screen centre over the attacker's face;\n- the HP bar drop with its white ghost (HUD);\n- about 3 px of shake;\n- the guard dropping, if it was raised;\n- on close sparring jabs, the attacker's forearm as a long brown spike from the bottom-left to the view centre for 5 frames, then a one-frame snap when _pull_strike pulls it back after hitstop.\n\n**The confusion.** The burst is the same white light star, in the same place, as a jab the player lands on that face. With the guard down, nothing on screen tells taking a hit from giving one, except the HUD bar.\n\n**Known item (a) verdict:** reads weakly. Same picture in combo's 'Flank hit lands' (with the guard up, the fists drop) and in the hold-break jab.",
+   "evidence": "- vfx1.avi 'VFX: guard break burst', clean jab f2467 (video 2466-2470): HP 96 to 90 with a white ghost; burst over the attacker's face; forearm spike 2463-2469; snap at 2470. Sheets: /Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-hit/captures/review_hit/s_vfx_player_hit_full.png and s_vfx_player_hit_fp.png.\n- combo.avi 'Guard break' clean jab f4735 (video 4733-4738): s_combo_gb_cleanjab_fp.png.\n- combo.avi 'Flank hit lands' f5416 (video 5415-5424): the raised fists don't whiten; background shift about 3 px (s_combo_flank_fp.png, s_combo_flank_shake.png).\n- combo.avi 'Hold view: a jab from the side breaks the hold' f7030: s_combo_holdhit_fp.png.\n- Code: combat_actor.gd:839 flashes at hit.contact_point; vfx_director.gd:477-485 and comic_sprite.gd:108-112 put the effect at the lens.",
+   "repro": "Record combo_bot `--act=Flank hit lands|Guard break` and look at f4729-4746 and f5410-5427 (video frames). In play, let the sparring dummy (B held, then released) jab you in first person.",
+   "suggested_fix": "This is for Game-boy: new first-person-only feedback, presentation only. Options:\n- (a) On a hit received in first person, flash the player's visible first-person rig (arms, hands) at a reduced strength, either whole-body or with a large radius, as before phase 3.\n- (b) Use a distinct 'taken' look for at-lens bursts, such as red-rimmed art or a slight offset toward the hit's direction.\n- (c) Add a short HUD edge vignette from the hit's side.\n\nAll can subscribe to CombatEvents.hit_landed with victim == player. Reconsider _pull_strike's 5-frame forearm spike through the lens as part of the same pass.",
+   "files": [
+    "game/fx/vfx_director.gd",
+    "game/fx/comic_sprite.gd",
+    "game/actors/humanoid_rig.gd",
+    "game/player/player.gd",
+    "game/ui/hud.gd",
+    "game/autoload/tuning_data.gd",
+    "README.md"
+   ],
+   "spec_change": true,
+   "id": "hit-02",
+   "lens": "hit"
+  },
+  {
+   "severity": "medium",
+   "title": "The always-on combat log hides where every side-view knockdown lands (known item f; same panel and proposal as grab-03)",
+   "detail": "In combo_bot side-view captures, the log panel covers about x 0.58-0.98 and y 0.46-0.68 of the frame, right beside the player. The struck body flies or falls into exactly that area in every side-view act, and the panel's translucency leaves only a dim shape:\n- the P P P P launch (legs under it);\n- the spinning backfist and the K K K spinning heel (body fully under it);\n- the haymaker;\n- the flying kick (lying body under it);\n- the spin kick (the right-hand dummy under it for the whole act);\n- the throw and the flying body (both dummies under it);\n- every hold-view side act (the held body's back).\n\nIn first person the same panel covers right-side contacts: the front kick's light burst draws gray under it (combo.avi f903-908), and so does part of the pipe smash's burst. The side-view impact frame also turns the panel white.\n\nNo input toggles the log in play (grab-03).",
+   "evidence": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-hit/captures/review_hit/s_combo_side_log.png: 24 stills after every side-view heavy or finisher hit (combo.avi f232, 256, 792, 816, 1103, 1127, 1737, 1761, 1869, 1893, 1983, 2007, 2209, 2233, 2871, 2895, 4229, 5229, 5704, 5959, 6865, 6890, 7250, 7270). Also s_combo_pppp_side_fin.png (f224-231), s_combo_spinkick_side.png and s_combo_kkk_fp.png.",
+   "repro": "Run combo_bot with any '(side view)' act, or play in side view (F2) and land a finisher.",
+   "suggested_fix": "Fold into grab-03's spec question. Its option (b), re-anchoring the log upper-right under the rear-warning corner, also clears the side view's action band (y 0.4-0.7). Option (a), a toggle key, lets Game-boy hide it for side-view play.",
+   "files": [
+    "game/ui/hud.tscn",
+    "game/ui/hud.gd",
+    "game/ui/combat_log_overlay.gd",
+    "game/ui/help_overlay.gd",
+    "project.godot"
+   ],
+   "spec_change": true,
+   "id": "hit-03",
+   "lens": "hit"
+  },
+  {
+   "severity": "medium",
+   "title": "No finisher ever shows its white flash: the flash's 2 frames are exactly the impact frame's 2 frames, in both views",
+   "detail": "On a finisher, combat_actor starts the contact flash on the hit tick for hit_flash_frames (2). VfxDirector starts the impact frame on the same tick for vfx_impact_frame_frames (2). The full-screen ink frame thresholds the whole image, so the victim's flash can't be told apart, and the frame after shows no white.\n\nThis holds for every finisher in every capture (uppercut, haymaker, spinning heel, backfist, shove, pipe smash, stomp kick, push kick) with the impact frame on, which is the default. SPEC §6's 'victim flashes white for 2 frames' is never seen on the tier that matters most.\n\nWith the impact frame off ('VFX: P P P P, impact frame off'), the finisher's flash shows at the neck around the large burst. In side view it also explains why no launch (uppercut, haymaker, heel) shows a flash.",
+   "evidence": "- vfx1.avi first-person uppercut: impact frame at video 69-70 (luma 141), flash also at 69-70; frame 71 has no white on the body (s_vfx_pppp_fp_b.png).\n- Side-view uppercut: impact 226-227 (luma 43), frame 228 has no flash (s_vfx_pppp_side_b.png).\n- With the impact frame off, vfx1.avi f3227-3228: white at the neck, white share 4.2% to 7.1% (s_vfx_impactoff_fin.png).\n- With effects off in side view (ragside_novfx.avi f226-227), the flash is clearly on the chin and chest (s_rag_side_novfx_flash.png, row 2).\n- Code: combat_actor.gd:839 and 910-923; vfx_director.gd:323-326.",
+   "repro": "Record vfx_bot `--act=P P P P` and step through video frames 66-72 and 223-229.",
+   "suggested_fix": "When the impact frame will show, start the finisher's contact flash once it ends: delay _flash_at's count by vfx_impact_frame_frames, or start counting on the first frame after ImpactFrame stops. The flash still shows for hit_flash_frames, which keeps the Decisions-log check that it really shows 2 frames. Alternatively, extend the finisher's flash by the impact frame's length. That changes the 2-frame count, so it would be a question for Game-boy.",
+   "files": [
+    "game/actors/combat_actor.gd",
+    "game/fx/vfx_director.gd",
+    "tests/test_hit_flash.gd"
+   ],
+   "spec_change": false,
+   "id": "hit-04",
+   "lens": "hit"
+  },
+  {
+   "severity": "low",
+   "title": "In side view the view-share floor blows the heavy word, the guard-break burst and the finisher burst up to 2-2.5x their size, covering the struck body through the start of its reaction",
+   "detail": "ComicSprite sizes each kind so that its smallest member meets vfx_min_view_share (4%) and the rest keep their ratio. At the side camera's distance the floor applies to every hit, so everything grows together:\n\n| Effect | Size in world | Drawn in side view |\n|---|---|---|\n| Light burst | 0.24 m | about 64 px |\n| Finisher burst | | about 130-165 px |\n| Small block spark (sets the block floor) | 0.2 m | |\n| Guard-break burst | 0.5 m | about 170 px, about 1.25 m on the body |\n| Heavy word | | about 85 px, about 0.75 m |\n\nA fighter's head and torso are about 110 px tall.\n\nWhat this hides:\n- the guard-break burst covers the dummy above the waist and half the player's head for about 13 frames, so the guard being knocked apart (the 0.9 stagger) is hidden;\n- the heavy word plus the medium burst sit over the head through the first 18+ frames of the hook stagger, the head rock-back that ragdoll-02's fix was built to show from the side;\n- the finisher burst covers the launched upper body for about 10 frames.\n\nThe same floor is why the 0.25 m flash can never show through the burst (known item b; see the open question notes).",
+   "evidence": "- /Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-hit/captures/review_hit/s_side_gb_fin_native.png: native crops of ragside.avi f2184/f2190 (guard break) and vfx1.avi f225/f230 (THUD, KRAK).\n- s_rag_side_gb.png (ragside f2185-2196): the burst covers both fighters.\n- s_rag_side_hook.png (ragside f50-67): BAM plus the burst over the head.\n- s_vfx_pppp_side_b.png (vfx1 f224-263) and s_vfx_tiers_side.png (vfx1 f4271-4278: light, heavy and finisher bursts covering each dummy's chest, head and whole upper body).\n- Values: tuning_data.gd:151 (vfx_min_view_share 0.04) and 272-274 (block sparks 0.2, 0.42, 0.5).",
+   "repro": "Record ragdoll_bot `--act=guard-break stagger (side view)` and vfx_bot `--act=P P P P (side view)`, then step through the hit frames.",
+   "suggested_fix": "Limit the floor's growth in side view: apply vfx_min_view_share to the light burst only and don't scale the larger tiers up with it, or add a separate, lower floor or growth cap for the orthographic or side camera as a new 'VFX' tunable. Another option: offset the heavy word further from the contact in screen space so the head stays visible. Check the first-person sizes stay as they are.",
+   "files": [
+    "game/fx/comic_sprite.gd",
+    "game/fx/vfx_director.gd",
+    "game/autoload/tuning_data.gd",
+    "tuning/default.json",
+    "tests/test_vfx.gd"
+   ],
+   "spec_change": false,
+   "id": "hit-05",
+   "lens": "hit"
+  }
+ ]
+}

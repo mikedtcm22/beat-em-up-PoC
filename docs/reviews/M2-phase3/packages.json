@@ -1,0 +1,114 @@
+{
+ "packages": [
+  {
+   "key": "launch-from-hold",
+   "title": "Launch out of the hold, the throw's flight and the hook stagger (ragdoll)",
+   "finding_ids": [
+    "grab-01",
+    "ragdoll-01",
+    "ragdoll-02",
+    "code-06"
+   ],
+   "files": [
+    "game/actors/combat_actor.gd",
+    "game/actors/ragdoll.gd",
+    "tools/gen_moves.gd",
+    "game/combat/moves/throw.tres",
+    "game/combat/moves/hook.tres",
+    "game/actors/humanoid_rig.gd",
+    "game/autoload/tuning_data.gd",
+    "tuning/default.json",
+    "docs/ARCHITECTURE.md",
+    "tests/test_ragdoll.gd",
+    "tests/test_combat_integration.gd",
+    "tests/test_launch_from_hold.gd",
+    "tests/bot/ragdoll_bot.gd"
+   ],
+   "notes": "HUB: this package owns game/actors/combat_actor.gd. Other packages may make only these edits there: flash-and-looks may change the hit.contact_point line of _impact(), and ko-respawn-bars may add read-only queries in the Public API block (is_blinking_in() after blink_in(), optionally a bar-anchor query after get_head_top_position()). Leave those spots alone. In humanoid_rig.gd this package may touch ONLY ragdoll_start() and carry_fade(); flash-and-looks owns the rest. Only this package runs tools/gen_moves.gd; after regenerating, only throw.tres and hook.tres should change.\n\nMERGED: grab-01 and ragdoll-01 share one root cause. CombatActor._launch() plays the launch or knockdown pose with a 0.03 s blend straight from 'held', with the origin still at the pin spot. It never moves the origin under the drawn hips or calls rig.carry_fade() as release_from_grab() does, and the full ragdoll's animation-first rise then shows the snap. So the victim pops upright inside the holder.\n\nORDER:\n1) grab-01 and ragdoll-01. On a launch out of GRABBED, first move the origin under the drawn hips and call carry_fade. This covers the throw (_apply_reaction then _launch) and the killing-knee branch of _apply_reaction, which nulls holder before falling through, so detect it by state == GRABBED on entry. Share a helper with release_from_grab(), but keep that function's signature and behaviour: hold-view's grab-02 fix relies on it. Then blend out of 'held' for longer, or start the full ragdoll from the held pose (Ragdoll.start, _rise_from). Then give the throw a visible arc via its knockback in gen_moves.gd (now 0,3,9), and update its row in ARCHITECTURE's move table. Lowering foot friction in flight is optional. Add a new tests/test_launch_from_hold.gd: copy the setup helpers from test_grab_view.gd (don't edit it) and use tests/fp_view.gd read-only. Judge a knee that KOs the held victim, and the throw, through their hitstop: the victim at least 0.25 m from the lens and at most half the view, plus side-on clearance between the victim's chest and the holder's. Assert these bounds, not exact lens positions, because hold-view may start the ease-out during the throw's hitstop (grab-07). Keep test_combat_integration's test_grab_knees_release_then_throw_knocks_down_another and test_grabbed_victim_stays_out_of_the_holders_lens passing. Record: ragdoll_bot 'throw' in both views, combo_bot 'Grab and throw (side view)', and P P P, LB, P, P (the second knee KOs) in first person.\n2) ragdoll-02. Give Neck and Head (and the far arm) their own lower partial influence or a stiffer partial pose spring, as new tunables in Ragdoll > 'Stagger (partial)'. Add a backward component to lateral staggers, preferably on the ragdoll kick in _ragdoll_stagger() (visual only) rather than in hook.tres's knockback: that is gameplay, and ARCHITECTURE's move table says the hook 'snaps the head sideways'. Record ragdoll_bot 'hook stagger' in both views, and check that the guard break, shove and parry staggers don't regress.\n3) code-06, only its test_ragdoll.gd half: assert each part's twist cap after many hits. The test_grab_view.gd half belongs to hold-view.\n\nRISKS:\n- Keep ragdoll_partial_influence at the approved 0.9 and the trunk's give-way. README's approved departure quotes the hook at about 0.32 m against 0.22 m: re-measure it, and report any change to the lead rather than editing README.\n- Per-part head and neck stiffness sits next to the open 'more contortion on the contact push' question. Leave the contact push and the spin caps (head 14, trunk 8, limb 14) as they are, and report what you see.\n- Keep the full ragdoll on the throw and on a knee KO (approved heavy-tier rule), the 6 cm closer pin spot, and the throw ending in the stance.\n- The throw's white flash disc shrinks once the victim is farther off. Don't touch hit_flash_radius_m: grab-05 is open with Game-boy.\n- tuning_data.gd: only the Ragdoll subgroups other than 'KO and blink-off'.\n- ARCHITECTURE: the Ragdoll bullets other than the KO bullet, and the hook and throw rows of the move table."
+  },
+  {
+   "key": "flash-and-looks",
+   "title": "Contact flash on the drawn body, the player's pants, the held head, the stomp foot",
+   "finding_ids": [
+    "code-01",
+    "grab-04",
+    "grab-08",
+    "ragdoll-05"
+   ],
+   "files": [
+    "game/actors/humanoid_rig.gd",
+    "game/weapons/weapon.gd",
+    "game/actors/placeholder_body.gd",
+    "game/actors/placeholder_poses.gd",
+    "game/player/player.gd",
+    "game/actors/combat_actor.gd",
+    "game/autoload/tuning_data.gd",
+    "tuning/default.json",
+    "docs/ARCHITECTURE.md",
+    "tests/test_hit_flash.gd",
+    "tests/test_humanoid_rig.gd"
+   ],
+   "notes": "OWNERSHIP: this package owns humanoid_rig.gd except ragdoll_start() and carry_fade() (launch-from-hold), and placeholder_poses.gd except _throw() (hold-view). In player.gd it may touch ONLY _configure_rig(); hold-view owns the file. In combat_actor.gd it may touch ONLY the hit.contact_point line of _impact(); launch-from-hold owns the file. Prefer to leave that line alone, because the rig-side clamp fixes the body impact too. Never run gen_moves.gd.\n\nORDER:\n1) code-01 (high). In HumanoidRig.flash_at(), map the point onto the struck part as it is drawn: find the nearest hurtbox, clamp the point onto it, express it in the animation frame of that hurtbox's bone_a, then place it on (and let follow_flash() keep it on) the same bone's drawn follower. Optionally put the pipe's contact point on the struck hurtbox in weapon.gd. Tests in test_hit_flash.gd: a thrown pipe and a body impact reach full strength on the struck body, and a re-hit on a body staggering at 0.9 flashes within the core of the drawn struck bone (the P P P P uppercut case). Record combo_bot 'Pipe: pick up, 3 swings, throw' around frames 176-177, and P P P P in both views.\n2) grab-04. Add a pants colour export on HumanoidRig (enemies keep body_color darkened), and give the player's legs a clearly different value or hue in _configure_rig(): charcoal or near-black, or a light knee band. Stay within 4-6 flat colours (test_meshes_cast_shadows_and_use_few_flat_colors). Re-record vfx_bot 'knees under the view'.\n3) grab-08. In placeholder_body.gd, add a dark hair dome over the back of the head, or extend the cap, in an existing paint (DARK or ACCENT) so the colour count holds. First person must still hide every head part (test_first_person_body_hides_only_head_neck_chest_and_shoulder_ends, ENEMY_HEAD).\n4) ragdoll-05. Raise the strike foot in _stomp() so it lands on top of a lying torso; it is a fixed pose that doesn't track the body, so aiming at the chest doesn't fit. Tuning stomp_stop_distance is another option (only that line of 'Feel details'). The foot must stay inside the stomp's reach envelope (z <= -0.5, y 0.0-0.3: ARCHITECTURE's move table and the Reach row in test_humanoid_rig.gd), and test_combat_integration's test_stomp_hits_a_downed_dummy (launch-from-hold's file) must keep passing unchanged. Don't change stomp.tres. Record ragdoll_bot 'stomp' in side view.\n\nRISKS:\n- Keep the approved localized flash and its defaults (hit_flash_radius_m 0.25, core, strength). A minimum on-screen size for the side-view flash and the knee flash's first-person size (grab-05) are both OPEN with Game-boy: add no minimum and no distance cap.\n- set_flash() stays whole-body for the cyan parry.\n- The new pants colour changes how the player looks in side view, so report it.\n- grab-08 is placeholder art; Milestone 4 replaces it.\n- tuning_data.gd: only 'Hit feel' > 'Hit flash' and stomp_stop_distance.\n- ARCHITECTURE: 'Hit flash', the rig's colour and hand paragraphs, and the stomp row only if its reach changes."
+  },
+  {
+   "key": "hold-view",
+   "title": "Hold view: lens timing, pitch limit, throw elbow, a hit that breaks the hold",
+   "finding_ids": [
+    "code-03",
+    "grab-07",
+    "grab-06",
+    "grab-02",
+    "code-06"
+   ],
+   "files": [
+    "game/player/player.gd",
+    "game/camera/first_person_camera.gd",
+    "game/actors/placeholder_poses.gd",
+    "game/autoload/tuning_data.gd",
+    "tuning/default.json",
+    "docs/ARCHITECTURE.md",
+    "tests/test_grab_view.gd",
+    "tests/test_cameras.gd",
+    "tests/fp_view.gd",
+    "tests/bot/combo_bot.gd"
+   ],
+   "notes": "OWNERSHIP: this package owns game/player/player.gd except _configure_rig() (flash-and-looks, grab-04) and _find_magnet_target() (ko-respawn-bars, code-04). In placeholder_poses.gd it may touch ONLY _throw(); flash-and-looks owns the file. Make no edits to combat_actor.gd: fix grab-02 from player.gd through the existing public API. In tests/fp_view.gd, add helpers only; test_humanoid_rig.gd and test_combat_integration.gd use the existing ones. Never run gen_moves.gd.\n\nSHARED ROOT: code-03, grab-07 and grab-06 all come from the hold view's offsets being a separate sim-tick ramp (_tick_hold_view(), get_camera_move_offset(), get_camera_pull_back()) that knows nothing of the pose, the hitstop or the look pitch. Fix them together.\n\nORDER:\n1) code-03. In FirstPersonCamera._follow(), scale the walking bob clamp by (1 - get_hold_view_weight()) instead of switching it on when holding_enemy() clears. Tie the rise and pull-back to the rig's actual bend (the eye's drop and lean from standing) or to the hold and release pose blends; the pitch keeps its own ease.\n2) grab-07. Either start easing the pull-back and rise out on the throw's first frame, through its hitstop, or keep the right upper arm lower or wider in _throw()'s windup and strike. Don't hide the elbow end: README's 'Upper body in first person' departure shows it.\n3) grab-06. Make the hold pitch reach a target total, extra = clamp(target - look_pitch, 0, grab_view_pitch_deg), with the target as a new 'Hold view' tunable.\n4) grab-02. Keep the released victim out of the frozen view: add it to the hit's hitstop (TimeController.hitstop from _on_hit_received()), or release it as a stagger with a push (_release_held(true)).\n5) code-06, its test_grab_view.gd half, plus the new cases: follow the lens itself (view_transform) per tick through a grab, a release and a release while walking; look -25; a hit while holding; the elbow capsule in the throw's check; and 45 ticks after an LB release and after the third knee's release. A probe for the hit-while-holding case may be added as a combo_bot act.\n\nRISKS:\n- Keep the approved hold view: it pans down, the lens moves back and up while holding, and it eases in on the grab and out on a throw or release. Keep B's 'no walking-bob clamp while holding' (weight 1 means no clamp).\n- The lens pull-back and the bend's depth are OPEN with Game-boy. Keep grab_view_pitch_deg 16, grab_view_back_m 0.24, grab_view_rise_m 0.10, the 0.2 s ease in and 0.45 s ease out, and the knee's -12 / 0.05. Change only timing and weighting.\n- ARCHITECTURE's 'First-person hold view' says the ramp runs in sim ticks, 'still through hitstop'. An ease-out during the throw's hitstop (grab-07) changes that: update the paragraph and flag it to the lead as a change to B's design.\n- Keep the throw ending in the stance and the knee rising a little to the right.\n- Don't touch the combat log (grab-03 is a spec question).\n- launch-from-hold changes how a launched victim leaves the hold (grab-01), so the merged lens numbers will shift. The lead re-runs both packages' tests after merging.\n- tuning_data.gd: only 'Grab and weapons' > 'Hold view', plus Camera's cam_bob_clamp_m if needed.\n- ARCHITECTURE: 'First-person hold view', the PlayerCharacter camera API lines and 'First-person camera smoothing'."
+  },
+  {
+   "key": "ko-respawn-bars",
+   "title": "Dummy respawn and blink-in, old presets, enemy health bars",
+   "finding_ids": [
+    "code-02",
+    "ragdoll-03",
+    "code-04",
+    "ragdoll-04",
+    "code-05"
+   ],
+   "files": [
+    "game/enemies/dummy/training_dummy.gd",
+    "game/ui/enemy_health_bars.gd",
+    "game/autoload/tuning.gd",
+    "game/player/player.gd",
+    "game/actors/combat_actor.gd",
+    "game/autoload/tuning_data.gd",
+    "tuning/default.json",
+    "docs/ARCHITECTURE.md",
+    "tests/test_ko_blink.gd",
+    "tests/test_ui.gd",
+    "tests/test_tuning_panel.gd",
+    "tests/test_health_bars.gd"
+   ],
+   "notes": "OWNERSHIP: in combat_actor.gd this package may ONLY add read-only queries in the Public API block: is_blinking_in() right after blink_in(), and optionally a bar-anchor query right after get_head_top_position(). launch-from-hold owns the rest of the file. In player.gd it may touch ONLY _find_magnet_target(); hold-view owns the file. Don't edit weapon.gd (flash-and-looks) or test_ragdoll.gd / test_combat_integration.gd (launch-from-hold).\n\nORDER:\n1) code-02 and code-04, in the same file and closely related (what counts as present during a respawn and a blink-in).\n- In TrainingDummy._respawn_spot(): add LAYER_DOWNED_BODY to the query mask; check the way from the post to each ring spot against LAYER_WORLD with cast_motion, as _move_under_ragdoll() does, and check there is floor; build the shape and query once.\n- Keep a respawned dummy a ghost until its blink-in ends, instead of one physics step after. ARCHITECTURE already says 'out of reach ... then solid'. A thrown pipe then passes through it with no change to weapon.gd, and a dummy blinking in becomes visible to another dummy's respawn query (the same-tick double pick).\n- Skip is_blinking_in() bodies in _find_magnet_target(). Don't use is_invulnerable(), which would also skip get-ups.\n- Tests in test_ko_blink.gd: a body lying on the post, one held over it, two dummies coming back on the same tick, and magnetism and a thrown pipe during the blink-in.\n2) code-05. Bump Tuning.PRESET_FORMAT and migrate an older preset's dummy_revive_s (old - ko_linger_s - ko_blink_s, clamped at 0) with a last_warnings line; test it in test_tuning_panel.gd. Prefer this to renaming the key: README's approved departure and ARCHITECTURE name dummy_revive_s, and a rename would also touch test_combat_integration.gd and ragdoll_bot.gd, which other packages own. The lead regenerates tuning/default.json.\n3) ragdoll-03 and ragdoll-04, in the same file.\n- Anchor the bar above the body, reading state only: the higher of the head top and the standing capsule top (global_position + body_height), or the standing height while the actor is staggered, flying, held or down.\n- Drop or hide the bar once its actor is KO'd, or while its rig is hidden, instead of waiting for vanished.\n- Leave get_head_top_position() and test_ragdoll.gd's anchor test as they are.\n- If the bar now goes earlier, update test_ko_blink.gd's 'the KO hit shows its bar ... its bar goes with it'. Put new bar tests in test_ui.gd or a new tests/test_health_bars.gd.\n- Record ragdoll_bot's side-view acts: hook stagger, haymaker, the hold, KO and from behind.\n\nRISKS:\n- Keep the approved KO lie, blink and vanish, dummies blinking back in at their post, and no hit or grab during the blink-in. The post rule stays 'nearest free spot, else wait'.\n- SPEC's bar 'over its head for 2 s after a hit' stays the maximum.\n- Nothing here touches a question open with Game-boy.\n- tuning_data.gd: only dummy_revive_s in 'Reactions' and the Ragdoll > 'KO and blink-off' subgroup.\n- ARCHITECTURE: the KO and blink-off bullet, the TrainingDummy line, the presets paragraph and the enemy health bar description."
+  }
+ ],
+ "unassigned": [
+  {
+   "id": "grab-03",
+   "reason": "Spec question for Game-boy (open: the combat log over the knee contact). The log is SPEC's always-on debug overlay. Hiding or moving it during a first-person hold changes the spec, so it keeps its default until Game-boy decides."
+  },
+  {
+   "id": "grab-05",
+   "reason": "Spec question for Game-boy (open: the knee flash's first-person size). A cap by distance or by hold on hit_flash_radius_m would change the approved localized flash, so it keeps its default (0.25 m) until Game-boy decides."
+  }
+ ]
+}

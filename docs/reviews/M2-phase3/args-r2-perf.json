@@ -1,0 +1,8 @@
+{
+ "base": "8f5519f",
+ "lenses": ["perf"],
+ "skip_critic": true,
+ "skip_fix": true,
+ "suffix": "-r2",
+ "common_note": "ROUND 2 (2026-10-25). You review m2/hit-feel at 8f5519f, which adds package C's fixes to the phase 3 state above; 486/486 tests pass there. Round 1 ran the code, ragdoll and grab lenses (19 findings, 17 fixed in four packages); round 2 ran the hit lens (5 findings: hit-04 fixed, hit-05 to fix, 3 spec questions). The records are docs/reviews/M2-phase3/review-*.json, verify-*.json, packages*.json and fix-*.json; read the titles first, so you don't re-report a finding. Changes since c27afaf that touch performance: the contact flash clamps its point onto the nearest hurtbox and follow_flash() runs from show_visual_pose() every frame while a flash is up (HumanoidRig.hurt_point(), flash_at()); a finisher's flash starts after the impact frame (hit-04); staggers have per-part partial influences; a launch out of the hold starts from the drawn pose with carry_fade; enemy health bars compute a screen anchor from the drawn joints every frame (EnemyHealthBars.screen_anchor_of()); respawning dummies query their spot once (TrainingDummy._has_room()) and stay ghosts through the blink-in; the hold view moves on an eased path. Measure those too, besides the brief's list. Still OPEN with Game-boy (report, don't change): grab-03 and hit-03 (the combat log), grab-05 and hit-01 (the flash's first-person size and the flurry strobe), hit-02 (a hit on the player in first person), the side-view flash's minimum size."
+}

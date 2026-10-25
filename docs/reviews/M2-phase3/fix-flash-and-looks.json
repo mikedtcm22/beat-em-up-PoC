@@ -1,0 +1,112 @@
+{
+ "package": "flash-and-looks",
+ "branch": "m2/phase3-fix-flash-and-looks",
+ "verdicts": [
+  {
+   "id": "code-01",
+   "outcome": "fixed",
+   "what_changed": "HumanoidRig.flash_at() no longer anchors the raw contact point to the nearest bone origin. It now clamps the point onto the nearest hurtbox (the new public hurt_point()), takes it into the animation frame of the bone along that hurtbox nearest the point, and places it on that bone's drawn follower. The chain bone is used rather than always bone_a, so a chest hit rides UpperChest and a shin hit rides LowerLeg. Contacts inside a hurtbox on a non-ragdolling body stay exactly where they were. show_visual_pose() now calls follow_flash(), so a running flash moves with the ragdoll's drawn pose instead of trailing it by one tick. weapon.gd puts the thrown pipe's contact on the nearest hurtbox (victim.rig.hurt_point(global_position)), so the comic burst and the sound land on the body as well. combat_actor.gd is untouched: the rig-side clamp fixes body impacts. The localized flash defaults (radius 0.25, core, strength), set_flash() for the cyan parry, and the absence of any minimum size or distance cap are all unchanged. ARCHITECTURE 'Hit flash' describes the mapping.",
+   "tests": "tests/test_hit_flash.gd adds three tests. test_a_thrown_pipe_and_a_flying_body_flash_the_struck_body_at_full_strength measures the gap at hit time between the flash point and the drawn body: 0.293 m and 0.178 m before the fix, now within the core of 0.125 m. The pipe's contact itself is also on the body. test_a_hit_on_a_staggering_body_flashes_the_struck_part_as_drawn re-hits a body in a 0.9-influence stagger once the head-hurtbox contact lies more than 0.25 m from the drawn head: the gap was 0.254 m before and is now within the core, and it stays there for the flash frames. test_p_p_p_p_flashes_each_struck_part_as_drawn plays a real jab, jab, hook (stagger), uppercut to the head; the uppercut's gap was 0.157 m before and is 0.010 m now. All three fail on the old code and pass now."
+  },
+  {
+   "id": "grab-04",
+   "outcome": "fixed",
+   "what_changed": "New export HumanoidRig.pants_color, default Color.TRANSPARENT, which keeps body_color darkened by _PANTS_DARKEN, so enemies and dummies are unchanged. PlayerCharacter._configure_rig() sets the player's trousers to neutral gray Color(0.3, 0.3, 0.32). Charcoal (0.16) was tried first; in the capture the knee then sat almost as dark as the held head's new black hair, so a mid gray was chosen. The player still has 5 flat colors. PlaceholderBody.Paint docs and an ARCHITECTURE 'Colors' paragraph are updated. Side-view change: the player now wears gray trousers with the navy shirt, white cap and shoes; the enemies look the same.",
+   "tests": "test_humanoid_rig.gd: new test_the_players_trousers_stand_apart_from_its_shirt. It checks the player's trousers are the player's own color, neutral (saturation at most 0.3 of the shirt's) and well above the dark paint in luminance. It checks the enemy's trousers keep the shirt hue darkened and can be repainted after build(), and that both rigs use 4-6 flat colors. _player_rig() now dresses the test rig through the real PlayerCharacter._configure_rig()."
+  },
+  {
+   "id": "grab-08",
+   "outcome": "fixed",
+   "what_changed": "PlaceholderBody adds a 'Hair' part on the Head bone: a SPHERE of radius 0.127, offset (0, 0.125, 0.015) back and up from the head ball, painted DARK (an existing paint, so the color count holds). The back of the head from the nape up is now dark hair, and the face, shades and brim are unchanged from the front. First person still hides it, since it sits on the Head bone. ENEMY_HEAD and the hold-view head test count Hair. This is placeholder art that Milestone 4 replaces.",
+   "tests": "test_humanoid_rig.gd: new test_the_held_head_shows_hair_not_a_bare_dome, run in the hold view looking level and at the knee's -12 degree pitch and 0.05 m drop. Hair must be more than 60% of the held head's share of the view and bare skin less than 25%. Before the change: hair 0%, skin about 99% (level) and 33% (knee pitch). After: skin 22% and 4%. test_first_person_body_hides_only_head_neck_chest_and_shoulder_ends and the ENEMY_HEAD view-share tests pass."
+  },
+  {
+   "id": "ragdoll-05",
+   "outcome": "fixed",
+   "what_changed": "PlaceholderPoses._stomp() now raises the knee higher in the windup (thigh 100, knee -110) and changes the strike leg to thigh 80, knee -66, foot -14. The knee is high, the shin near upright and the foot flat, with the sole about 0.26 m up, on top of a lying torso; it was 0.05 m before, which drove the foot through the body. RightFootPoint is at local (0.14, 0.29, -0.67), inside the reach envelope (z <= -0.5, y 0.0-0.3), so the ARCHITECTURE stomp row is unchanged. A follow pose brings the knee back up off the body before the leg returns to the stance. stomp.tres, gen_moves.gd and stomp_stop_distance are unchanged. In game the heel rests on the Chest mesh, the ball on UpperChest (0.01 m in), and the toe tip touches the cap brim of a body lying head-away. The old pose sank 0.31 m.",
+   "tests": "test_humanoid_rig.gd: new test_the_stomp_lands_on_top_of_a_lying_body, run for both stances against the downed reach target. On every active frame the sole must sit between 0.05 m above and 0.03 m into the body; it was 0.203 m into it before and is -0.003 m now. The foot must then lift more than 0.08 m above its strike height within the first half of the recovery. The Reach row test and test_combat_integration's test_stomp_hits_a_downed_dummy pass without changes."
+  }
+ ],
+ "commit": "50af435",
+ "pushed": true,
+ "tests_passed": 463,
+ "tests_total": 463,
+ "script_errors": false,
+ "tunables_added": [],
+ "captures": [
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-flash-and-looks/captures/fix/pipe.avi",
+   "description": "combo_bot 'Pipe: pick up, 3 swings, throw' after the fix (throw hit at f177)"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-flash-and-looks/captures/fix/pipe_before_after.png",
+   "description": "Thrown-pipe contact frames 175-178, reviewer's capture (top) and after the fix (bottom). The flash now whitens the struck belly around the burst, which is centered on the body instead of beside it."
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-flash-and-looks/captures/fix/pipe_throw_zoom.png",
+   "description": "Zoom on the struck dummy, frames 174-181 after the fix"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-flash-and-looks/captures/fix/pppp.avi",
+   "description": "combo_bot P P P P in first person and side view after the code-01 fix, recorded before the trouser and hair changes"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-flash-and-looks/captures/fix/pppp_side_before_after.png",
+   "description": "Side-view hook and uppercut, before (top) and after (bottom); the bursts cover most of the flash"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-flash-and-looks/captures/fix/pppp_fp_jab_hook.png",
+   "description": "First-person jab and hook contact frames: the flash is on the struck head, unchanged for hits on bodies that are not ragdolling"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-flash-and-looks/captures/fix/knees3.avi",
+   "description": "vfx_bot 'VFX: knees under the view' with the final gray trousers and dark hair"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-flash-and-looks/captures/fix/knees_f97_full.png",
+   "description": "Full knee frame f97: gray knee clearly apart from the blue sleeve and from the held head, which reads as dark hair from behind"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-flash-and-looks/captures/fix/knees_contact_before_after.png",
+   "description": "Knee contact f94-98: reviewer's (top, navy knee and skin dome) vs the hair plus the first charcoal try (bottom)"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-flash-and-looks/captures/fix/knees_charcoal_vs_gray.png",
+   "description": "Knee contact with charcoal trousers (top) vs the chosen gray (bottom)"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-flash-and-looks/captures/fix/knees_grab_in_sheet.png",
+   "description": "Grab-in and hold frames 76-98: the held head reads as a head with dark hair (taken with the charcoal trousers)"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-flash-and-looks/captures/fix/stomp.avi",
+   "description": "ragdoll_bot 'stomp a lying dummy' in first person, then side view (side act starts 5.57 s; stomp near movie frame 480)"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-flash-and-looks/captures/fix/stomp_side_before_after.png",
+   "description": "Side-view stomp, verifier's before (top: shin and shoe sink into the torso) vs after (bottom: knee up, white shoe flat on top of the chest, then it lifts off)"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-flash-and-looks/captures/fix/stomp_side_f486_full.png",
+   "description": "Full side-view stomp frame after the fix"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-flash-and-looks/captures/fix/vfx_stomp_sheet.png",
+   "description": "vfx_bot 'stomp under the view' in first person: the body stays below the frame as before; the lying head's dark hair shows at the bottom edge at the deepest pitch"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-flash-and-looks/captures/fix/side_looks.png",
+   "description": "Side-view crops of the player (navy shirt, gray trousers, white cap with dark hair behind) and an orange dummy (dark cap and hair)"
+  }
+ ],
+ "feel_judgement": "The thrown pipe now whitens the struck belly around the WHAM burst. Before, it left only a faint smear on the thigh. The comic burst still covers most of the flash core, which is the approved layering, so only the fringe of the flash shows. In first person, jab and hook flashes look the same as before. In the bot's P P P P the uppercut lands on the torso before the stagger develops and the bursts cover the flash, so the staggering-body case shows up in the numbers, not the frames: the uppercut's flash sits 0.010 m from the drawn head, down from 0.157-0.258 m. In the hold view the knee now rises as a gray shape clearly apart from the blue sleeve and the held head. The held head reads as the back of a head with dark hair rather than a bald skin dome. It is still the biggest shape in the hold view, which is a matter of lens pull-back and bend depth and is open with Game-boy. In the side view the stomp now reads as a stomp: the knee comes up, the white shoe lands flat on the chest and is visible there, then lifts off. The player's gray trousers look natural from the side and set the player apart from the enemies.",
+ "spec_questions": [],
+ "remaining": [
+  "The player's side-view look changed: gray trousers, and every character, the player included, now has dark hair at the back of the head. On dummies with a dark accent color, the cap and hair read as one dark helmet. Game-boy should see this.",
+  "Not part of ragdoll-05: with stomp_stop_distance 0.45 m and a body lying feet toward the player (as after K K K), the player's standing feet are inside the lying body's pelvis and thighs. The stomp foot's return to the stance also passes down through them. The strike itself now lands on top of the body. A fix would mean a different stop rule, such as stopping beside the body; I left it alone because it is feel tuning.",
+  "The knee flash still whitens most of the held head in first person (grab-05, open with Game-boy; untouched). The pipe and impact flashes are now on the body, but the comic bursts cover most of the core (approved layering).",
+  "The probe scripts in captures/probe/ are untracked and ignored. No Godot process is left running.",
+  "No tunables were added, so tuning/default.json was not regenerated.",
+  "README is not edited: no spec departure was needed."
+ ]
+}

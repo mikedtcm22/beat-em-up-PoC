@@ -359,8 +359,10 @@ func test_grab_knees_release_then_throw_knocks_down_another() -> void:
 ## Nearest distance from the player's first-person lens to `victim`'s meshes, and the share
 ## of the player's view `victim` covers (the camera at EyePoint + lens offset, looking along
 ## the player's look).
+## Nearest distance (x) from the player's first-person lens to `victim`'s meshes, and the
+## share of the view (y) they cover, seen through the real view (the hold view included).
 func _victim_in_lens(victim: CombatActor) -> Vector2:
-	var cam := FPView.camera(player.get_eye_transform().origin, player.get_look_basis())
+	var cam := FirstPersonCamera.view_from_eye(player, player.get_eye_transform().origin)
 	return Vector2(FPView.nearest_mesh(victim.rig, cam.origin), FPView.covered(FPView.hits(victim.rig, cam, 32)))
 
 
@@ -575,7 +577,9 @@ func test_finisher_ko_launches_and_dummy_revives() -> void:
 	assert_false(landed.is_empty(), "hits landed")
 	if not landed.is_empty():
 		assert_true(landed.back().killed, "the uppercut killed")
-	assert_true(await _wait_until(func() -> bool: return not dummies[0].is_ko(), int(Tuning.data.dummy_revive_s * 60) + 120), "revives")
+	# It lies, blinks off and comes back (Tuning "KO and blink-off").
+	var back_s := Tuning.data.ko_linger_s + Tuning.data.ko_blink_s + Tuning.data.dummy_revive_s
+	assert_true(await _wait_until(func() -> bool: return not dummies[0].is_ko(), int(back_s * 60) + 120), "revives")
 
 
 # --- Presentation smoke -------------------------------------------------------------

@@ -258,29 +258,39 @@ static func relaxed_weapon_guard() -> Dictionary[StringName, Vector3]:
 	})
 
 
-## Clinch: standing tall, both hands reaching forward and down onto the shoulders of a held
-## victim at HoldPoint.
+## Clinch (Game-boy, 2026-10-24): bent forward at the waist over a held victim at
+## HoldPoint, the hips back and the knees soft, the head over the victim's back looking down
+## at it, both fists on its shoulders from elbows held low and wide. Side on it reads as a
+## clinch. The bend leans the eyes about 0.12 m forward and 0.07 m down, out over the
+## victim; the first-person hold view (Tuning "Grab and weapons" > "Hold view") moves the
+## lens back and up from there and pitches it down onto the victim. Clinch moves (knee,
+## throw) start here; the knee ends here, the throw in the stance.
 static func hold() -> Dictionary[StringName, Vector3]:
 	return merge(guard(), {
-		&"Spine": Vector3(2.0, 0.0, 0.0),
-		&"Chest": Vector3(0.0, 0.0, 0.0),
-		&"Neck": Vector3(0.0, 0.0, 0.0),
-		&"Head": Vector3(0.0, 0.0, 0.0),
-		&"LeftUpperArm": Vector3(54.0, -24.0, -26.0),
-		&"LeftLowerArm": Vector3(30.0, 0.0, 0.0),
+		HIPS_NUDGE: Vector3(0.0, 0.0, 0.08),
+		&"Spine": Vector3(-18.0, 0.0, 0.0),
+		&"Chest": Vector3(-10.0, 0.0, 0.0),
+		&"UpperChest": Vector3(-6.0, 0.0, 0.0),
+		&"Neck": Vector3(16.0, 0.0, 0.0),
+		&"Head": Vector3(8.0, 0.0, 0.0),
+		&"LeftUpperArm": Vector3(60.0, -24.0, -33.5),
+		&"LeftLowerArm": Vector3(82.0, 0.0, 0.0),
 		&"LeftHand": Vector3(10.0, 0.0, 0.0),
-		&"RightUpperArm": Vector3(54.0, 24.0, 26.0),
-		&"RightLowerArm": Vector3(30.0, 0.0, 0.0),
+		&"RightUpperArm": Vector3(60.0, 24.0, 33.5),
+		&"RightLowerArm": Vector3(82.0, 0.0, 0.0),
 		&"RightHand": Vector3(10.0, 0.0, 0.0),
+		&"LeftUpperLeg": Vector3(24.0, 0.0, -4.0),
+		&"LeftLowerLeg": Vector3(-32.0, 0.0, 0.0),
+		&"RightUpperLeg": Vector3(2.0, 0.0, 5.0),
+		&"RightLowerLeg": Vector3(-24.0, 0.0, 0.0),
 	})
 
 
 ## Being held: hips pulled back, bent over at the waist, arms hanging, head forced down.
 ## Authored for a victim whose origin is pinned at the holder's HoldPoint (on the floor
 ## below it), facing the holder: the head then sits about 0.35 m in front of the holder at
-## y 1.24, just under the holder's throat-height first-person view (only the victim's back
-## and the top of its head show at the bottom edge), and the holder's fists rest on the
-## victim's shoulders.
+## y 1.24, under the holder's throat-height first-person lens (the hold view pitches down
+## onto its back and head), and the holder's fists rest on the victim's shoulders.
 static func held() -> Dictionary[StringName, Vector3]:
 	return {
 		HIPS_NUDGE: Vector3(0.0, 0.0, 0.3),
@@ -817,7 +827,13 @@ static func stagger_back_b(base: Dictionary[StringName, Vector3]) -> Dictionary[
 	})
 
 
-## Stumbling toward the victim's own right; stagger_left mirrors it.
+## Stumbling toward the victim's own right; stagger_left mirrors it. The trunk rocks over and
+## both arms fling out, bent: the far (left) arm's elbow out to the side and folded, the
+## forearm raised beside the shoulder, so the fist stays within about 0.6 m of the trunk and
+## goes no more than about 0.1 m in front of the hips (it was a straight arm thrown out
+## about 70 degrees, a rope in the first-person view, and then a forearm folded forward whose
+## fist swung at the attacker's lens; the partial ragdoll's arm influence cannot calm what
+## the animation poses).
 static func stagger_right_a(base: Dictionary[StringName, Vector3]) -> Dictionary[StringName, Vector3]:
 	return merge(base, {
 		&"Hips": Vector3(0.0, -10.0, 0.0),
@@ -825,8 +841,8 @@ static func stagger_right_a(base: Dictionary[StringName, Vector3]) -> Dictionary
 		&"Chest": Vector3(0.0, 0.0, -8.0),
 		&"Neck": Vector3(0.0, 0.0, -12.0),
 		&"Head": Vector3(0.0, 0.0, -10.0),
-		&"LeftUpperArm": Vector3(20.0, 0.0, -70.0),
-		&"LeftLowerArm": Vector3(30.0, 0.0, 0.0),
+		&"LeftUpperArm": Vector3(-10.0, 85.0, -25.0),
+		&"LeftLowerArm": Vector3(130.0, 0.0, 0.0),
 		&"RightUpperArm": Vector3(20.0, 0.0, 40.0),
 		&"RightLowerArm": Vector3(60.0, 0.0, 0.0),
 		&"LeftUpperLeg": Vector3(10.0, 0.0, 10.0),
@@ -844,7 +860,8 @@ static func stagger_right_b(base: Dictionary[StringName, Vector3]) -> Dictionary
 		&"Chest": Vector3(-2.0, 0.0, -2.0),
 		&"Neck": Vector3(0.0, 0.0, -4.0),
 		&"Head": Vector3(0.0, 0.0, -2.0),
-		&"LeftUpperArm": Vector3(30.0, 0.0, -40.0),
+		&"LeftUpperArm": Vector3(-4.0, 85.0, -13.0),
+		&"LeftLowerArm": Vector3(135.0, 0.0, 0.0),
 		&"RightUpperArm": Vector3(30.0, 0.0, 30.0),
 		&"LeftUpperLeg": Vector3(10.0, 0.0, 16.0),
 		&"LeftLowerLeg": Vector3(-20.0, 0.0, 0.0),
@@ -1100,9 +1117,12 @@ static func generic_kick(stance: StringName = STANCE_BOXER) -> MovePoses:
 
 
 ## Turn a boxer-authored recipe for move `id` into its relaxed-stance version (see
-## move_poses()). Clinch moves (knee, throw) start and end in hold() in either stance.
+## move_poses()). Clinch moves (knee, throw) start in hold() in either stance; the knee ends
+## there too, the throw in the stance.
 static func _relax(m: MovePoses, id: StringName) -> void:
 	if _HOLD_MOVES.has(id):
+		if id == &"throw":
+			m.finish = relaxed()
 		return
 	var neutral := relaxed()
 	if _WEAPON_MOVES.has(id):
@@ -1169,7 +1189,7 @@ static func _recipe(id: StringName, g: Dictionary[StringName, Vector3],
 		&"knee":
 			return _knee()
 		&"throw":
-			return _throw()
+			return _throw(g)
 		&"stomp":
 			return _stomp(g)
 		&"pipe_swing_1":
@@ -1829,32 +1849,37 @@ static func _back_elbow(g: Dictionary[StringName, Vector3]) -> MovePoses:
 static func _knee() -> MovePoses:
 	var g := hold()
 	var windup := merge(g, {
-		&"Spine": Vector3(-2.0, 0.0, 0.0),
 		&"RightUpperLeg": Vector3(-24.0, 0.0, 5.0),
 		&"RightLowerLeg": Vector3(-50.0, 0.0, 0.0),
 		&"RightFoot": Vector3(10.0, 0.0, -5.0),
 	})
-	# The hips drive forward into the knee while the hands pull the victim's head down.
+	# The hips drive forward into the knee while the hands pull the victim down. The knee
+	# comes up a little out to the right, beside the victim's head into its shoulder and chest:
+	# from straight under, the head hid it from the first-person view (which tips further
+	# down for the knee, MoveData.camera_pitch_deg). The torso stays bent, so the eye moves
+	# only a few centimeters.
 	var strike := merge(g, {
-		HIPS_NUDGE: Vector3(0.0, 0.0, -0.08),
-		&"Spine": Vector3(6.0, 0.0, 0.0),
-		&"Chest": Vector3(-6.0, 0.0, 0.0),
-		&"Neck": Vector3(6.0, 0.0, 0.0),
-		&"LeftUpperArm": Vector3(42.0, -24.0, -26.0),
-		&"LeftLowerArm": Vector3(36.0, 0.0, 0.0),
-		&"RightUpperArm": Vector3(42.0, 24.0, 26.0),
-		&"RightLowerArm": Vector3(36.0, 0.0, 0.0),
-		&"RightUpperLeg": Vector3(113.5, 0.0, 2.0),
-		&"RightLowerLeg": Vector3(-108.0, 0.0, 0.0),
+		HIPS_NUDGE: Vector3(0.0, 0.0, 0.02),
+		&"Spine": Vector3(-14.0, 0.0, 0.0),
+		&"Chest": Vector3(-10.0, 0.0, 0.0),
+		&"LeftUpperArm": Vector3(55.5, -31.5, -42.0),
+		&"LeftLowerArm": Vector3(72.0, 0.0, 0.0),
+		&"RightUpperArm": Vector3(55.5, 31.5, 42.0),
+		&"RightLowerArm": Vector3(72.0, 0.0, 0.0),
+		&"RightUpperLeg": Vector3(128.0, 0.0, 12.0),
+		&"RightLowerLeg": Vector3(-112.0, 0.0, 0.0),
 		&"RightFoot": Vector3(-30.0, 0.0, 0.0),
-		&"LeftUpperLeg": Vector3(6.0, 0.0, -3.0),
-		&"LeftLowerLeg": Vector3(-14.0, 0.0, 0.0),
+		&"LeftUpperLeg": Vector3(20.0, 0.0, -3.0),
+		&"LeftLowerLeg": Vector3(-28.0, 0.0, 0.0),
 		&"LeftFoot": Vector3(8.0, 0.0, 3.0),
 	})
 	return _mp(g, windup, strike)
 
 
-static func _throw() -> MovePoses:
+## The throw heaves from the hold and, with nothing left to hold, lands in the stance `neutral`
+## (the relaxed stance gets its own in _relax()); back in the bent-over hold, the arms reached
+## for the thrown body across the first-person view as the hold view eased out.
+static func _throw(neutral: Dictionary[StringName, Vector3]) -> MovePoses:
 	var g := hold()
 	var windup := merge(g, {
 		&"Hips": Vector3(0.0, -20.0, 0.0),
@@ -1873,11 +1898,15 @@ static func _throw() -> MovePoses:
 		&"Neck": Vector3(10.0, -24.0, 0.0),
 		&"Head": Vector3(4.0, -16.0, 0.0),
 		# Heaving forward and out to the sides, so the arms frame the throw in first person
-		# instead of sweeping up across the middle of the view.
+		# instead of sweeping up across the middle of the view. The twist brings the right
+		# shoulder in front of the lens, still pulled back by the hold view: the right upper
+		# arm swings out wide, its elbow end off the right edge (raised ahead, it showed end on
+		# as a round ball mid-view), and the forearm bends back in so the fist heaves up in the
+		# top right corner.
 		&"LeftUpperArm": Vector3(80.0, 10.0, -26.0),
 		&"LeftLowerArm": Vector3(24.0, 0.0, 0.0),
-		&"RightUpperArm": Vector3(84.0, 10.0, 28.0),
-		&"RightLowerArm": Vector3(24.0, 0.0, 0.0),
+		&"RightUpperArm": Vector3(70.0, -20.0, 95.0),
+		&"RightLowerArm": Vector3(90.0, 0.0, 0.0),
 		&"LeftUpperLeg": Vector3(30.0, -30.0, -4.0),
 		&"LeftLowerLeg": Vector3(-30.0, 0.0, 0.0),
 		&"RightUpperLeg": Vector3(-16.0, -30.0, 5.0),
@@ -1885,17 +1914,25 @@ static func _throw() -> MovePoses:
 		&"RightFoot": Vector3(36.0, 0.0, -5.0),
 		&"RightToes": Vector3(30.0, 0.0, 0.0),
 	})
-	return _mp(g, windup, strike)
+	var m := _mp(g, windup, strike)
+	m.finish = neutral
+	return m
 
 
+## Stomp on a body lying in front: the knee pulled up high, then the foot driven down flat
+## onto the top of the body (its sole about 0.26 m up, where a lying torso's top is, and
+## RightFootPoint inside the stomp's reach, y 0.0-0.3) instead of through it to the floor.
+## The pose is fixed and does not track the body; the player stops stomp_stop_distance
+## from the body's chest, so the foot comes down on the chest or just past it. The foot
+## lifts off the body again before it steps back (follow).
 static func _stomp(g: Dictionary[StringName, Vector3]) -> MovePoses:
 	var windup := merge(g, {
 		&"Spine": Vector3(-12.0, 0.0, 0.0),
 		&"Chest": Vector3(-6.0, 0.0, 0.0),
 		&"Neck": Vector3(-6.0, 0.0, 0.0),
 		&"Head": Vector3(-8.0, 0.0, 0.0),
-		&"RightUpperLeg": Vector3(84.0, 0.0, 2.0),
-		&"RightLowerLeg": Vector3(-96.0, 0.0, 0.0),
+		&"RightUpperLeg": Vector3(100.0, 0.0, 2.0),
+		&"RightLowerLeg": Vector3(-110.0, 0.0, 0.0),
 		&"RightFoot": Vector3(10.0, 0.0, 0.0),
 		&"LeftUpperLeg": Vector3(10.0, 0.0, -3.0),
 		&"LeftLowerLeg": Vector3(-20.0, 0.0, 0.0),
@@ -1908,9 +1945,10 @@ static func _stomp(g: Dictionary[StringName, Vector3]) -> MovePoses:
 		&"Chest": Vector3(-8.0, 0.0, 0.0),
 		&"Neck": Vector3(-4.0, 0.0, 0.0),
 		&"Head": Vector3(-10.0, 0.0, 0.0),
-		&"RightUpperLeg": Vector3(38.0, 0.0, 2.0),
-		&"RightLowerLeg": Vector3(-6.0, 0.0, 0.0),
-		&"RightFoot": Vector3(-32.0, 0.0, 0.0),
+		# The knee high, the shin near upright and the foot flat (thigh + knee + foot = 0).
+		&"RightUpperLeg": Vector3(80.0, 0.0, 2.0),
+		&"RightLowerLeg": Vector3(-66.0, 0.0, 0.0),
+		&"RightFoot": Vector3(-14.0, 0.0, 0.0),
 		&"LeftUpperLeg": Vector3(30.0, 0.0, -4.0),
 		&"LeftLowerLeg": Vector3(-56.0, 0.0, 0.0),
 		&"LeftFoot": Vector3(26.0, 0.0, 4.0),
@@ -1918,7 +1956,14 @@ static func _stomp(g: Dictionary[StringName, Vector3]) -> MovePoses:
 		&"RightUpperArm": Vector3(10.0, 0.0, 36.0),
 		&"RightLowerArm": Vector3(90.0, 0.0, 0.0),
 	})
-	return _mp(g, windup, strike)
+	var m := _mp(g, windup, strike)
+	# Off the body first: the knee comes back up, still leaning over it.
+	m.follow = merge(strike, {
+		&"RightUpperLeg": windup[&"RightUpperLeg"],
+		&"RightLowerLeg": windup[&"RightLowerLeg"],
+		&"RightFoot": windup[&"RightFoot"],
+	})
+	return m
 
 
 ## Forehand pipe swing, right to left: the arm sweeps across the front, the weapon level.

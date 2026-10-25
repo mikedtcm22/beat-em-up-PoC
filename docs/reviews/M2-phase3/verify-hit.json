@@ -1,0 +1,197 @@
+{
+ "lens": "hit",
+ "verdicts": [
+  {
+   "id": "hit-01",
+   "lens": "hit",
+   "severity": "medium",
+   "title": "The flurry strobes a white patch over 14-18% of the first-person view at 8.6 Hz, and the photosensitivity toggle doesn't touch it (same root cause as grab-05)",
+   "survives": true,
+   "confirmations": 3,
+   "spec_question": true,
+   "files": [
+    "game/actors/humanoid_rig.gd",
+    "game/actors/combat_actor.gd",
+    "game/autoload/tuning_data.gd",
+    "tuning/default.json",
+    "docs/ARCHITECTURE.md",
+    "README.md"
+   ],
+   "root_cause": "The contact flash has a fixed world-space radius (hit_flash_radius_m 0.25) and a fixed 2-frame length. It ignores the distance to the lens and is not gated by the impact_frame_enabled photosensitivity toggle. A flurry hit from about 0.4 m therefore covers a large share of the first-person view, repeating about every 7 frames.",
+   "open_question": "grab-05: the localized flash's on-screen size in first person at close range. Related: whether the photosensitivity toggle should cover the contact flash.",
+   "votes": {
+    "reproduce": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "I reproduced the strobe with my own recording. The flurry's body blows land every 7 frames. Each draws a large soft white patch over the dummy's chest for 2 frames, which is about 8.6 flashes per second, 7 in a row. The patch is clearly visible on the tiled sheet. The photosensitivity toggle doesn't cover it. Whether it counts as a defect is a judgment call, and it is the same open question as grab-05. My measured white share is a little below the reviewer's (12-13% against 13%), and the reviewer's luma-200 figure of about 18% I did not re-measure. The finding is also correct that this is a spec decision for Game-boy.",
+     "evidence": "I ran one recording (cwd .worktrees/m2-review-hit): `godot --path . --write-movie captures/verify/hit-01-reproduce/c.avi --fixed-fps 60 --resolution 1280x720 res://tests/bot/combo_bot.tscn -- '--act=P · P: jab, flurry'`. The log is captures/verify/hit-01-reproduce/c.log. It shows Body Blow at f65, 72, 79, 86, 93, 100 and 107 (every 7 frames), then Shove at f124. The sheet of frames 62-77 is captures/verify/hit-01-reproduce/sheet.png. It shows a big white blob over the torso on the flash frames, with two frames on and five off. I counted pixels with luma 235 or more per frame using ffmpeg geq and signalstats. Baseline is about 2%. Flash frames are 64-65 at 9.7-10.2% (the first blow, still partly eased in), then 71-72 at 12.2%, 78-79 at 13.1-13.2%, 85-86 at 12.2-12.4%, 92-93 at 13.1-13.2%, and 99-100 at 12.2-12.4%. The toggle gap is confirmed by grep. `Tuning.impact_frame_enabled` is read only in game/fx/vfx_director.gd:325 and game/fx/speed_lines.gd:87. combat_actor.gd:839 and :923 call rig.flash_at() with no check of it, and tuning_data.gd:120-122 documents it as covering only the impact frame and the speed lines' flicker."
+    },
+    "spec": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The docs approve the localized flash and its 0.25 m radius. They don't approve or rule out a repeated flash at close range, and nothing says the photosensitivity toggle covers it. SPEC §208 ties the toggle only to the impact frame. The flurry strobe is a new case of the open grab-05 question (the flash's first-person size), so the finding stands as a spec question for Game-boy and isn't refuted.",
+     "evidence": "grep of docs/SPEC.md, README.md, docs/milestones/M2-phase3-plan.md and docs/HANDOFF.md.\n- SPEC.md:196: the victim flashes white for 2 frames on contact. SPEC.md:208: the impact frame has an off toggle for photosensitive players. Neither mentions the contact flash or a rate limit.\n- README.md:70: the flash is localized, with a radius of about 0.25 m, and the radius is tunable. It also records that the old whole-body flash turned 27-36% of the view white at 1 m. The strength and radius are tunable, but no photosensitivity coverage is promised.\n- HANDOFF.md:151: grab-05 (the knee's flash whitening about 16% of the first-person view). Proposal: scale the radius with distance from the camera. Default: leave it. HANDOFF.md:254: a minimum on-screen size for the flash in side view is open (default: leave it).\n- Nothing in the docs approves a repeated close-range flash or covers it with the toggle."
+    },
+    "code": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The code matches the finding. Each hit calls _flash_at with a fixed world-space radius, and nothing in that path reads the camera, the distance to the lens, or impact_frame_enabled. The flurry repeats P up to 6 times, with a 7th body blow from auto_next, and its timing agrees with a roughly 7-frame cadence. I did not re-measure the pixel share, which came from the reviewer's recordings and which I took as given.",
+     "evidence": "Read game/actors/combat_actor.gd lines 416, 839, 850 and 905-925: _flash_at passes tuning.hit_flash_radius_m, hit_flash_core and hit_flash_strength straight to rig.flash_at, with no camera or distance input. Read game/actors/humanoid_rig.gd flash_at (412-440): the shader radius is the passed-in value. game/autoload/tuning_data.gd:129-136: hit_flash_frames is 2, radius 0.25 m, strength 1.0. grep of impact_frame_enabled finds only game/fx/vfx_director.gd:325, game/fx/speed_lines.gd:87 and tuning_data.gd:122, none in the flash path. tools/gen_moves.gd:140-142, 251-262: body_flurry has repeat_input P, repeat_max 6 and auto_next shove."
+    }
+   }
+  },
+  {
+   "id": "hit-02",
+   "lens": "hit",
+   "severity": "medium",
+   "title": "A hit on the player in first person shows no flash, and its only on-screen effect is the same small white burst the player's own jab makes",
+   "survives": true,
+   "confirmations": 3,
+   "spec_question": true,
+   "files": [
+    "game/fx/vfx_director.gd",
+    "game/fx/comic_sprite.gd",
+    "game/actors/humanoid_rig.gd",
+    "game/player/player.gd",
+    "game/ui/hud.gd",
+    "game/autoload/tuning_data.gd",
+    "README.md"
+   ],
+   "root_cause": "The flash is anchored to the victim's contact_point, which for the player is its own hidden head or body, while the burst effect is deliberately pulled to the lens with the same art and placement as the player's own hits. No first-person-only 'taken' feedback exists, so the confusion is a design gap, not a bug.",
+   "open_question": "None listed exactly. It is the 10:55 known item \"a hit on the player shows no flash in first person; does it still read?\", which the plan sends to the hit lens and has no recorded verdict from Game-boy. Any fix would add new first-person feedback (a flash on the arms, a distinct burst or a vignette), which needs his approval.",
+   "votes": {
+    "reproduce": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "I reproduced the finding from the reviewer's sheets and the code, without re-recording. A hit on the first-person player shows only a small white star at the lens, over the attacker's face. The arms and fists do not flash. The star is drawn the same way for hits the player gives, since the same pop code runs and only the at_lens flag differs. Whether this counts as a defect or an intended look is a feel call for Game-boy, as the finding says.",
+     "evidence": "I read captures/review_hit/s_combo_gb_cleanjab_fp.png and s_vfx_player_hit_fp.png. In both, the HP bar drops 96 to 90 and a white star appears at the lens over the attacker's head. The forearm spike crosses the view for about 5 frames, and the player's raised fists do not whiten. I checked game/fx/vfx_director.gd (_on_hit_landed line 290, _on_player at 477, _frame at 482 sets sprite.at_lens), game/fx/comic_sprite.gd (lines 108-112, at_lens moves the sprite to the min lens distance straight ahead) and game/actors/combat_actor.gd (line 839, the flash goes to hit.contact_point). I did not re-record, and I did not compare the star against one from a jab the player lands."
+    },
+    "spec": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The docs know about the missing flash but don't approve it. HANDOFF line 255 and the phase 3 plan (line 85) list \"a hit on the player shows no flash in first person\" as a known item to judge (\"does it still read?\"). That is an open review question, not an approval. Nothing in SPEC, README departures or the Decisions log lists it as approved. The approved list covers the localized flash but not the loss of first-person feedback. The finding is therefore a legitimate verdict on that known item. The suggested fix is first-person-only feedback, which would be new behaviour.",
+     "evidence": "Read docs/milestones/M2-phase3-plan.md lines 80-90 and grepped docs/HANDOFF.md and README.md. HANDOFF.md:255 says the flash no longer shows when the player is hit, and that the arms flashed white before. Plan line 85 asks whether it still reads. No entry in README departures, the Decisions log or SPEC approves or rules out a flash or taken-hit cue for the player. SPEC line 157 only allows a first-person pose layer, which is unrelated. I ran no Godot and did not check the code."
+    },
+    "code": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The code path matches the finding. On a player hit, CombatActor._flash_at() puts the localized flash at hit.contact_point, and HumanoidRig.flash_at() clamps it onto the nearest hurtbox and rides the nearest bone. The finding's claim that this lands at the head, behind the lens, was not checked in the player's rig; the 0.25 m radius against the arm and fist positions is also unverified. VfxDirector marks every effect of a hit on the player with at_lens = true (_on_player and _frame), and ComicSprite then pulls it to the lens straight ahead. So the burst is the same sprite at the same place as one from the player's own jab on that face. Nothing in the code gives a distinct 'taken' look. I did not run anything, so the forearm-spike and shake details were not checked.",
+     "evidence": "Read in /Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-hit: game/actors/combat_actor.gd lines 405-420 (the unblocked path calls _flash_at(hit.contact_point, ..., 1.0)) and 839-850 (guard break and block); game/actors/combat_actor.gd 918-925; game/actors/humanoid_rig.gd 412-440 (flash_at snaps to the nearest hurtbox and bone); game/fx/vfx_director.gd 477-485 (_on_player, _frame sets at_lens) and call sites at 205 and 296; game/fx/comic_sprite.gd 95-130 (at_lens pulls the effect out to the minimum distance straight ahead). grep of game/player/player.gd for 'flash' returned no matches, so the player has no first-person flash path of its own."
+    }
+   }
+  },
+  {
+   "id": "hit-03",
+   "lens": "hit",
+   "severity": "medium",
+   "title": "The always-on combat log hides where every side-view knockdown lands (known item f; same panel and proposal as grab-03)",
+   "survives": true,
+   "confirmations": 2,
+   "spec_question": true,
+   "files": [
+    "game/ui/hud.tscn",
+    "game/ui/hud.gd",
+    "game/ui/combat_log_overlay.gd",
+    "game/ui/help_overlay.gd",
+    "project.godot"
+   ],
+   "root_cause": "The CombatLog Control is permanently shown, anchored mid-right (offsets -800..-40 by -40..204 from the right edge and vertical center). Its API setter is unreachable from input, so the panel sits over the side-view landing zone with no way to hide or move it in play.",
+   "open_question": "grab-03: the combat log over the knee contact. Default: propose a fix as a spec question, either a toggle key or moving the log to the upper right.",
+   "votes": {
+    "reproduce": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "Reproduced from the reviewer's side-view sheet and the code. The combat log panel sits right beside the player and covers the struck body's landing area in most side-view acts. No in-game input hides it. Only test bots call set_combat_log_visible(false). It is a real presentation defect and a spec question, as grab-03 is.",
+     "evidence": "I did not re-record; the existing sheet and the code were enough. I viewed captures/review_hit/s_combo_side_log.png (24 side-view stills). In it the translucent log panel covers about x 0.58-0.98 and y 0.46-0.68, right of the player. It overlaps the knocked-down or flying dummy in the P P P P launch, the K K K and backfist finishers, the haymaker, the flying kick (lying body under it), the spin kick (right dummy), the throw, back elbow, and the hold-view side acts. game/ui/hud.tscn lines 78-91 anchor the CombatLog to the right edge, vertically centered (offset_left -800, top -40, right -40, bottom 204). grep over game/ and project.godot shows set_combat_log_visible (hud.gd:98) is called only from tests/test_ui.gd and the vfx_bot and ragdoll_bot scripts, so no play input toggles it. I did not verify the first-person gray burst claim."
+    },
+    "spec": {
+     "refuted": true,
+     "confidence": "medium",
+     "reason": "SPEC.md line 356 requires an always-on combat log overlay (last 10 hits with frame timing) for Game-boy's timing reports. It sits over the side view in captures. The docs already list this as a known item and as the open question grab-03, with the default \"propose a fix as a spec question\". Moving or toggling the log would change spec'd behaviour, so hit-03 duplicates grab-03 and is not a separate defect.",
+     "evidence": "grep of docs: SPEC.md:356 (Combat log overlay); docs/milestones/M2-phase3-plan.md:83,90 (log covers the side view in combo_bot captures, listed as known); docs/HANDOFF.md:150,205,220,266,648 (grab-03 open question; proposal is a toggle key plus moving the log to the upper right)."
+    },
+    "code": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "The code confirms the mechanism. The CombatLog Control is always visible and anchored mid-right: anchor_left/right 1.0, anchor_top/bottom 0.5, offsets -800..-40 horizontally and -40..204 vertically. That is the right side of the frame just below and above the vertical center, where side-view bodies land. Nothing in the game toggles it. hud.gd has set_combat_log_visible()/is_combat_log_visible(), but they are called only from tests/test_ui.gd and the vfx_bot and ragdoll_bot scripts. _unhandled_input in hud.gd handles only the help toggle. I did not check the exact pixel extents or the screenshots; the placement is read from the anchors.",
+     "evidence": "Read game/ui/hud.tscn lines 78-93 (CombatLog node anchors and offsets). Grepped for set_combat_log_visible across the worktree: callers are only tests/test_ui.gd:333/337, tests/bot/ragdoll_bot.gd:43 and tests/bot/vfx_bot.gd:26. Read game/ui/hud.gd lines 45-66 and 98-124: the log is wired to CombatEvents, and _unhandled_input handles only the help toggle."
+    }
+   }
+  },
+  {
+   "id": "hit-04",
+   "lens": "hit",
+   "severity": "medium",
+   "title": "No finisher ever shows its white flash: the flash's 2 frames are exactly the impact frame's 2 frames, in both views",
+   "survives": true,
+   "confirmations": 3,
+   "spec_question": false,
+   "files": [
+    "game/actors/combat_actor.gd",
+    "game/fx/vfx_director.gd",
+    "tests/test_hit_flash.gd"
+   ],
+   "root_cause": "The finisher's contact flash (combat_actor._flash_at, hit_flash_frames = 2) and the full-screen ink impact frame (vfx_director line 326, vfx_impact_frame_frames = 2) start on the same tick with the same length. The flash is spent while the impact frame covers it, and it is gone when the impact frame ends.",
+   "open_question": "None directly. If the flash's frame count were extended instead of delayed, that would touch SPEC §6's 2 frames and the Decisions-log check that the flash shows 2 frames. The suggested delay does not.",
+   "votes": {
+    "reproduce": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "Reproduced. The finisher's flash window is entirely covered by the full-screen impact frame, and the frame after shows no white on the victim. SPEC §6's 2-frame white flash is never visible on a finisher while the impact frame is on, and it is on by default.",
+     "evidence": "I read the code in the m2-review-hit worktree. combat_actor.gd _flash_at (about line 917) starts the flash on the hit tick for hit_flash_frames, which is 2 (tuning_data.gd:129). vfx_director.gd:325-326 calls impact_frame.flash(vfx_impact_frame_frames / 60.0) on a finisher in the same tick, and that value is 2 (tuning_data.gd:230). ImpactFrame time_left counts down in real_dt, so it is visible for the same 2 frames. I recorded one run: vfx_bot with --act=\"P P P P, light to finisher\" (the plain \"P P P P\" title matched nothing). The log shows f70 Uppercut FINISHER. I tiled video frames 66-73 into captures/verify/hit-04-reproduce/s.png. Frames 66-68 are pre-hit. Frames 69-70 are the black-and-cream ink impact frame, with KRAK and a burst. Frames 71-73 are the normal render with the burst, KRAK and the orange torso and no white flash on the body. The whole-image threshold hides the victim's flash, and nothing follows it. This matches the reviewer's evidence (impact at video 69-70, nothing at 71). I did not re-record the impact-frame-off or side-view cases."
+    },
+    "spec": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "Nothing in the docs approves or requires the flash being hidden on finishers. SPEC §6 line 196 says that on contact the victim flashes white for 2 frames, and the phase 3 decisions localize the flash without exempting finishers. SPEC §10 line 208 makes the impact frame a 1-2 frame full-screen flash on finishers, on by default. The two specs collide on the same tick, and no document ranks them or says the flash may be covered. The plan's \"side-view flash hides under the burst\" note concerns the burst, not the impact frame. The finding asks only for a timing offset, which no document rules out.",
+     "evidence": "Read docs/SPEC.md lines 186-208. grep of docs/milestones/M2-phase3-plan.md (lines 63, 85, 86), README.md line 70 and docs/HANDOFF.md found no approval of, or ruling on, the flash and impact frame overlapping. I did not run Godot or check the capture evidence."
+    },
+    "code": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The code does what the finding says. Both the flash and the impact frame start on the finisher's hit tick, and both last 2 frames. The impact frame covers the whole screen, so the flash expires while it is still up. I did not run any test or recording, so the visual claim (luma 141, no white on the next frame) rests on the reviewer's captures. One caveat is that the impact shader has a local_mix parameter that might let some local detail through, so how invisible the flash is during the impact frame is not proven from code.",
+     "evidence": "Read game/actors/combat_actor.gd: _flash_at (lines 918-925) sets _flash_frames = hit_flash_frames and _flash_tick = the current physics frame. It is called on the hit at line 416. The countdown at lines 185-189 decrements once per physics tick after the starting tick. Read game/fx/vfx_director.gd lines 323-326: for tier FINISHER with impact_frame_enabled and vfx_impact_frame_frames > 0, it calls impact_frame.flash(frames/60.0) in the same hit handler. Read game/fx/impact_frame.gd: a full-rect ColorRect that is visible for the start frame plus about vfx_impact_frame_frames, driven by advance(real_dt) from VfxDirector line 132. Nothing delays or offsets either timer, so the two windows coincide."
+    }
+   }
+  },
+  {
+   "id": "hit-05",
+   "lens": "hit",
+   "severity": "low",
+   "title": "In side view the view-share floor blows the heavy word, the guard-break burst and the finisher burst up to 2-2.5x their size, covering the struck body through the start of its reaction",
+   "survives": true,
+   "confirmations": 3,
+   "spec_question": false,
+   "files": [
+    "game/fx/comic_sprite.gd",
+    "game/fx/vfx_director.gd",
+    "game/autoload/tuning_data.gd",
+    "tuning/default.json",
+    "tests/test_vfx.gd"
+   ],
+   "root_cause": "size_factor() floors the whole kind at vfx_min_view_share times view_w divided by the kind's smallest member. At the side camera's depth the floor binds on every hit, so the large tiers scale up by the same factor as the smallest one. There is no separate cap or floor for the side camera, and the heavy word's screen-space offset from the contact is not enlarged to match.",
+   "open_question": "A minimum on-screen size for the side-view flash (default: leave it). It touches the same side-view burst-versus-flash conflict.",
+   "votes": {
+    "reproduce": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The mechanism is confirmed in code. The reviewer's guard-break sheet shows the burst covering both fighters' upper bodies. It is low severity: oversized bursts are partly a comic-style choice, and I did not measure the 2-2.5x figures.",
+     "evidence": "I did not re-record. I read the reviewer's sheet captures/review_hit/s_rag_side_gb.png (ragdoll_bot guard-break, side view). In its 12 tiles the guard-break burst appears at tile 4 and hides the dummy above the waist and the player's face area through tile 12, about 9 of 12 tiles. The sheet is taken at 1/2 the 12 fps tiling over f2185-2196. I also read game/autoload/tuning_data.gd:138-151, which gives vfx_min_view_share = 0.04, and game/fx/comic_sprite.gd:144, which has `factor = maxf(factor, Tuning.data.vfx_min_view_share * view_w / smallest)`. This is the per-kind floor the finding describes: the smallest member of a kind sets it and the larger members scale up with it."
+    },
+    "spec": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The docs do not approve the side-view burst sizes. The view-share floor (vfx_min_view_share 0.04) is a WP2 tuning decision, not a spec-approved behaviour. M2-plan.md and the phase 3 plan list the burst's side-view effect on the flash only as a \"known item\" to judge from captures, and \"light bursts are about 10% of the view at jab range\" is also listed as a known item. The documents do not rule out limiting the growth, so the finding is not refuted. The finding's side-view-only change (a cap or a separate floor) would alter WP2's tier-size and clamp rules. Its report that bursts cover the struck body in side view overlaps the open item on the flash's minimum on-screen size in side view.",
+     "evidence": "Read the grep results from docs/milestones/M2-phase3-plan.md (lines 84-92, known items: \"the side-view flash hides under the burst\", \"light bursts are about 10% of the view at jab range\"), docs/HANDOFF.md (lines 252-256, 206, 445, 479, 648) and README.md. docs/SPEC.md and README.md have no match for view share. HANDOFF line 445 records that WP2 set vfx_min_view_share to 0.04. Line 479 records a WP2 per-sprite clamp that makes the bursts the same size. I did not read the code or run Godot."
+    },
+    "code": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The code does what the finding says. ComicSprite.size_factor() (game/fx/comic_sprite.gd:138-145) applies a single factor to every member of a kind, and the factor is at least vfx_min_view_share (0.04) times view_w divided by the kind's smallest size. The block kind's smallest is the 0.2 m spark, so the 0.5 m guard-break burst scales by the same factor as the spark. The bursts' smallest is the 0.24 m light burst, so the 0.62 m large burst scales the same way. The tuning comments at tuning_data.gd:146-149 say this is intended (\"bigger tiers grow with it\"). In a far or orthographic side view, view_w is large and the floor is active on every hit, so the tiers grow together. I did not run a test or measure pixels. I computed the ratios from the tuning values only: the guard-break burst reaches about 2.5x the floor width and the finisher burst about 2.6x. The finding's pixel figures (170 px, 130-165 px) could be somewhat off, but the direction and mechanism are right. The finding is real but low severity. It is a consequence of a documented design choice, not a bug in the clamping logic.",
+     "evidence": "Read game/fx/comic_sprite.gd lines 100-146 (update and size_factor). Grepped vfx_min_view_share in game/, tests/ and tuning/default.json. Read tuning_data.gd:140-170 and 271-274. I ran no probe or test file."
+    }
+   }
+  }
+ ],
+ "pending": []
+}

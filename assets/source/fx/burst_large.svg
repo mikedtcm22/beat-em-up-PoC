@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0.0 0.0 512.0 512.0">
+<!-- Impact burst, large (finishers), red finisher accent. Drawn by tools/gen_fx.gd (original art, Beat-em-up PoC). -->
+<defs>
+<radialGradient id="core" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#ffffff" stop-opacity="1.0"/><stop offset="1" stop-color="#fff6b8" stop-opacity="1.0"/></radialGradient>
+<radialGradient id="mid" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#ffd21f" stop-opacity="1.0"/><stop offset="1" stop-color="#ff9a1f" stop-opacity="1.0"/></radialGradient>
+</defs>
+<path d="M494.2 333.4 L459.5 330.2 L464.3 315.6 Z" fill="#e8302a" stroke="#120f17" stroke-width="6.0" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M349.2 487.2 L327.2 459.4 L345.8 451.9 Z" fill="#e8302a" stroke="#120f17" stroke-width="6.0" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M109.7 435.6 L125.3 404.4 L137.0 414.0 Z" fill="#e8302a" stroke="#120f17" stroke-width="6.0" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M11.1 263.2 L44.9 254.9 L45.3 269.5 Z" fill="#e8302a" stroke="#120f17" stroke-width="6.0" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M108.8 55.7 L137.2 77.1 L120.6 89.2 Z" fill="#e8302a" stroke="#120f17" stroke-width="6.0" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M266.3 3.6 L275.1 38.0 L254.7 37.1 Z" fill="#e8302a" stroke="#120f17" stroke-width="6.0" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M451.8 130.4 L428.8 157.5 L417.5 139.9 Z" fill="#e8302a" stroke="#120f17" stroke-width="6.0" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M433.0 262.7 L382.5 277.0 L420.9 302.9 L369.6 315.5 L386.6 378.7 L344.3 356.2 L340.9 413.5 L299.0 387.2 L301.7 442.9 L249.5 391.0 L210.3 455.7 L210.5 365.4 L167.9 437.5 L181.7 348.3 L106.9 367.8 L144.6 326.5 L58.6 317.4 L124.9 282.1 L82.7 274.0 L119.9 235.6 L65.2 163.0 L132.1 191.9 L127.0 124.3 L179.4 158.9 L159.8 81.8 L203.7 127.4 L211.5 70.0 L250.2 119.9 L293.5 88.7 L300.5 146.1 L346.3 69.8 L334.9 165.3 L411.4 136.2 L368.5 192.4 L419.9 191.2 L381.7 227.2 Z" fill="#e8302a" stroke="#120f17" stroke-width="14.0" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M382.7 268.8 L334.5 290.1 L346.7 345.8 L305.6 327.9 L319.5 390.6 L269.6 346.0 L248.4 404.3 L222.5 343.2 L172.1 381.5 L195.5 318.8 L141.3 308.6 L166.4 286.7 L110.1 259.9 L178.6 239.0 L133.2 199.3 L196.0 205.5 L187.1 141.0 L225.1 174.7 L233.4 108.1 L259.6 176.1 L305.8 120.2 L300.6 191.6 L344.0 165.2 L326.9 212.1 L374.0 207.7 L347.3 256.4 Z" fill="url(#mid)" stroke="#120f17" stroke-width="11.0" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M323.9 286.0 L284.3 290.1 L289.2 323.0 L254.3 301.0 L223.8 332.7 L226.7 290.8 L197.4 304.5 L216.1 264.7 L172.8 232.1 L215.8 231.8 L212.8 188.3 L240.5 220.1 L252.2 178.2 L271.5 217.2 L311.6 195.2 L292.1 230.5 L324.5 231.7 L299.2 263.5 Z" fill="url(#core)" stroke="#120f17" stroke-width="8.0" stroke-linejoin="round" stroke-linecap="round"/>
+</svg>
