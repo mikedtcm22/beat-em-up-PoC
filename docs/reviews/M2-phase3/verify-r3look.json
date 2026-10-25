@@ -1,0 +1,191 @@
+{
+ "lens": "r3look",
+ "verdicts": [
+  {
+   "id": "r3look-01",
+   "lens": "r3look",
+   "severity": "high",
+   "title": "KO view: the return into the eyes follows the mouse look and keeps the head layer drawn, so it dives through the player's own face and chest (up to 75% of the view, then a 66% pop)",
+   "survives": true,
+   "confirmations": 3,
+   "spec_question": false,
+   "files": [
+    "game/camera/first_person_camera.gd",
+    "game/player/player.gd",
+    "tests/test_ko_view.gd",
+    "docs/ARCHITECTURE.md"
+   ],
+   "root_cause": "The return's target `live` is built from the free mouse look (PlayerCharacter._process ignores state). The body does not follow the look until FREE (_can_steer_body), so the look and the body disagree during the return. The head layer is re-hidden only at weight == 0, so the lens crosses the drawn head and chest. Even with no look turn, the layer stays drawn near the lens for the whole return.",
+   "open_question": "Should mouse look be ignored (or eased toward the rig's facing) while the player is KO'd and getting up? The docs are silent on it, though the fix needs no spec change because it only enforces the documented limits.",
+   "votes": {
+    "reproduce": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "Reproduced with my own KO13 recording. The return lens follows the free mouse look while the body is still turned the old way, and it dives through the drawn head layer: own body 50-75% of the view, then a 66% pop to 0% when the layer re-hides. First-person view, a plain player-visible defect.",
+     "evidence": "I ran `--act=KO13` once (a.log, a.avi in captures/verify/r3look-01-reproduce/). The LENS lines match the finding. m248-m262: cov (own body) 22, 27, 35, 40, 50, 75, 73, 54, 58, 60, 60, 64, 67, 67, 66%. own_near fell 0.535, 0.433, 0.335, 0.242, 0.155, 0.074, 0.010, then 0.000-0.006 m with lift=true. At m263 lift=false and own is 0%. The log shows 'MARK turned body yaw -90.0 look yaw 30.0' while down, and 'after body yaw 30.0' once free, so the body snaps. Sheet s.png (frames from about 4.05 s) shows the white cap and face growing, the blue shirt and then a dark navy chest box filling the view, then a sudden clear street view. Code agrees: player.gd _process() (lines 153-163) changes look_yaw with no state check. first_person_camera.gd re-hides VIS_FP_HIDDEN only when weight <= 0 (line 294), and the return blends toward the live eye view built from look_yaw. I did not run KO1 or KO14, but KO13 is the worst case and the mechanism is the same."
+    },
+    "spec": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "The docs approve the KO view itself, but they set requirements that the reported return breaks. Nothing approves or tolerates a return through the player's own face and chest. ARCHITECTURE \"KO view\" says the camera \"leaves and returns from the eye's own motion with no pop\". Its stated tests require the own body to cover at most a third of the view all the way, and nothing within 0.25 m of the lens. They also require that hiding the head layer pops nothing into view. ARCHITECTURE even records that lifting the layer early caused a cap brim to cover a third of the view for a frame, and the design avoids that. The docs don't mention mouse look while the player is KO'd, and no decision lets the look turn during the KO. The finding reports 50-75% own-body coverage, 0.000 m clearance and a 66% pop, which breaks the documented limits.",
+     "evidence": "docs/ARCHITECTURE.md lines 281-286, \"KO view\". Line 282: \"leaves and returns from the eye's own motion with no pop\". Line 284: the head layer is hidden \"the frame the weight reaches 0\". Line 286, tests: own body \"at most a third of the view all the way\", \"nothing is within 0.25 m of the lens\", \"lifting and hiding the head layer pop nothing into view\". docs/HANDOFF.md lines 806-807 approve the out-of-body view and round 2's fixes only as written. No doc covers the look turning during a KO. The finding's no-turn case (KO1) also shows near-contact, 0.000 m at 11 frames, and 23-24% own body."
+    },
+    "code": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "The code does what the finding says. The root cause is right: the return's target is the free mouse look, and the head layer stays drawn until the weight reaches 0.",
+     "evidence": "In game/camera/first_person_camera.gd, _ko_view_mix() blends `live` (from _follow(), which uses player.get_look_basis() through _view_with) toward the KO pose. The head layer (VIS_FP_HIDDEN) is hidden again only in the `weight <= 0.0` branch, so the lens passes through the drawn head, neck and chest on the way in. The only in-return hide path is the `_head_clear_of(mixed.origin)` check at line 307, and it applies only while the layer is not yet hidden. In game/player/player.gd, _process() (153-163) updates look_yaw and look_pitch with no state check. Line 291 sets `rotation.y = look_yaw` only when _can_steer_body() is true (FREE and similar, not KO or getup), so the body snaps to the look at FREE. _revive() (630) does not touch look_yaw. The only writes to look_yaw are the constructor (106), _process (162) and the turn code (899, 904). Nothing re-aligns the look to the rig's facing during KO or the get-up. I did not run a probe."
+    }
+   }
+  },
+  {
+   "id": "r3look-02",
+   "lens": "r3look",
+   "severity": "medium",
+   "title": "KO view in a corner puts the lens 0.13 m inside the building front, with the own shirt over 52-68% of the view for the whole KO; between two fighters it hovers 0.32 m over a dummy's head with the body clipped",
+   "survives": true,
+   "confirmations": 3,
+   "spec_question": false,
+   "files": [
+    "game/camera/first_person_camera.gd",
+    "game/autoload/tuning_data.gd",
+    "tuning/default.json",
+    "tests/test_ko_view.gd",
+    "docs/ARCHITECTURE.md"
+   ],
+   "root_cause": "_ko_room() floors the reach at ko_view_min_reach even when the ray hit is nearer than that, so the lens can sit inside geometry. _choose_ko_side() offers only the two across-the-body poses and never tries another pose when both are blocked. Nothing checks the final lens position with a sphere query against the world and enemy bodies.",
+   "open_question": "None needed for the fix, which only has to meet the documented guarantees. Optionally ask Game-boy whether the corner fallback should be a pose along the body or a steeper overhead view.",
+   "votes": {
+    "reproduce": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "Reproduced KO7 with my own recording: in the corner the KO view is a dark close-up of the player's blue shirt and gray trousers for the whole hold, with no whole body in frame. The approved out-of-body view is meant to show the player lying on the floor, so this is a defect and not a spec question.",
+     "evidence": "I re-recorded KO7 once (captures/verify/r3look-02-reproduce/ko7.avi, ko7.log) and tiled the sheet (s.png). In rows 2-4 the whole KO hold is the dark shirt and trousers close-up. The log line is: SUM KO7 own_near_min=0.000 own_max=68% cov_max=74% own<0.25:172 cov>50:166 frames=321. That matches the finding's 68% and 166 frames. The code confirms the cause in _ko_room() (first_person_camera.gd:394-395), which clamps reach up to ko_view_min_reach after the ray hit, and _choose_ko_side() only weighs the two across-the-body sides. I did not re-run KO9 (the flanked case), so that half of the finding is unconfirmed by me. The corner case alone is enough."
+    },
+    "spec": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The docs approve the out-of-body KO view in general, but nothing approves a lens inside a wall or a body half out of frame. ARCHITECTURE.md's KO-view section requires the whole body in frame with room around it. It also requires that no wall lies between the lens and the body, nothing within 0.25 m of the lens, and the own body at most a third of the view. The min-reach clamp of 0.4 and the two-side choice are documented design. The corner and flanked cases fall outside what the docs describe, so they are an unhandled edge case and not an approved behaviour.",
+     "evidence": "docs/ARCHITECTURE.md lines 281-286 (KO view). The pose section says the whole body fills about half the view width with room around it. The side is chosen by reach times crowding, and the reach is clamped to at least ko_view_min_reach (0.4). The tests section lists the building front at one side only and says no wall lies between the lens and the body and nothing is within 0.25 m of the lens. docs/HANDOFF.md lines 23 and 806 record Game-boy's approval of the camera showing the player fully lying on the floor. No doc mentions corners, both sides blocked, or a fallback pose. The approved list in the task covers the view itself, not clipping into geometry."
+    },
+    "code": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "The code does what the finding says. _ko_room() casts a single ray from the hips to the lens pose on one side. It then returns clampf(free/length, ko_view_min_reach, 1.0), so the reach can end up past the ray's hit. _choose_ko_side() compares only the right and left sides, so there is no fallback pose (along the body, steeper, overhead). _ko_crowding() only scores the distance to other standing actors, and nothing sphere-checks the final lens against the world.",
+     "evidence": "game/camera/first_person_camera.gd lines 383-395: free = hit distance minus ko_view_clearance_m. When free is zero or negative, or the hit is nearer than the 0.4 floor, the clamp holds the reach at ko_view_min_reach. The lens is then beyond the hit, inside the wall. Lines 352-362: _choose_ko_side() calls _ko_room() for sides +1 and -1 only. In a corner both sides clamp to the floor, and the tie goes to the right (the left needs a score more than 0.01 higher). The flanked case follows from the same code: the ray ends at the enemy-body capsule and the reach clamps to the floor. In _ko_crowding(), actor.is_ko(), is_downed() and is_gone() actors are skipped and everything else counts, so it scores both sides low; it only picks the less bad side and does not add room. I did not run the probe. The code path accounts for the reported geometry (lens inside the building front, hovering over Dummy2)."
+    }
+   }
+  },
+  {
+   "id": "r3look-03",
+   "lens": "r3look",
+   "severity": "low",
+   "title": "Hook stagger: the re-posed far fist now swings at the attacker's lens, 0.200 m on open floor and 0.145 m against a building front (gap-01's corner case still open)",
+   "survives": true,
+   "confirmations": 2,
+   "spec_question": false,
+   "files": [
+    "game/actors/placeholder_poses.gd",
+    "game/player/player.gd",
+    "tests/test_stagger_pose.gd",
+    "tests/test_ragdoll.gd"
+   ],
+   "root_cause": "gap-04's re-pose folds the far arm so the forearm points forward (positive X pitch on the upper arm plus a roughly 100 degree elbow). With the arm bent and flung, the fist is the dummy's closest part to the attacker's lens. When the dummy is pinned against a wall or building, the player's magnetism lunge still steps in to stop distance, which brings the lens even closer. The tests judge the fist against the trunk axis, not through the camera.",
+   "open_question": "Does the first-person lens clearance rule (0.3 m, nothing filling the view) apply to staggers, or only to the hold and knees? If it applies, should the far fist's fling aim up and away from the lens while staying bent near the guard?",
+   "votes": {
+    "reproduce": {
+     "refuted": true,
+     "confidence": "medium",
+     "reason": "The numbers reproduce, but I found no rule that this behaviour breaks. The 0.25 m victim clearance and the 0.3 m hand clearance in the docs cover the player's hold, knee and block poses. The finding cites no rule for an enemy's stagger fist. A fist coming within 0.2 m of the lens for 12 frames on open floor, with at most 48% of the view, looks like an ordinary hit reaction. It is also the approved far-arm re-pose doing its job.",
+     "evidence": "I re-ran the probe once (ragdoll_bot-style r3_probe, \"--act=W7 |R01\") and got the same figures as the finding. The log lines are in captures/verify/r3look-03-reproduce/h.log.\n- W7 (building front): other_near_min 0.145 m at m84, other_max 58%, 16 frames under 0.25 m.\n- R01 (open floor): other_near_min 0.200 m at m486, other_max 48%, 12 frames under 0.25 m.\nIn W7 the nearest part is the hook-stagger dummy's LeftFingers, as the finding says. My ffmpeg sheet failed because the frame indices were wrong, so I did not look at the stills myself.\nI grepped docs/milestones/M2-phase3-plan.md, docs/ARCHITECTURE.md and docs/SPEC.md for a lens rule on an enemy's stagger limbs and found none. The 0.3 m hand clearance and the 0.25 m victim clearance (ARCHITECTURE lines 90-93, 269, 279) apply to the player's guard, hold and knee. The finding itself says 'tests miss it' because no rule exists to test."
+    },
+    "spec": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The docs approve only that the hook's far arm stays bent near the guard (HANDOFF gap-04). They do not approve the fling pointing at the attacker's lens, and nothing sets a lens rule for the stagger. The only lens rules I found are in the grab and knee plan (no forearm or hand within 0.3 m of the lens, nothing filling the view). Nothing in SPEC, README or the Decisions log excuses a fist at 0.145 to 0.2 m. The lens rule appears to be a first-person look rule rather than an explicit written stagger requirement.",
+     "evidence": "docs/HANDOFF.md:28 (\"gap-04: the hook's far arm stays bent near the guard\") and line 82 (the old straight-arm complaint). docs/milestones/M2-phase3-plan.md:62 (the first-person rules for hold and knee only). README.md and SPEC.md have no stagger lens rule (greps for far arm, lens and bent near turned up nothing relevant). The README flash entry notes that large first-person view shares were treated as a defect. I did not run Godot."
+    },
+    "code": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The code matches the finding's mechanism. stagger_right_a/b pose the far (left) arm with upper arm pitched forward (28/34 deg on X) and lower arm bent 100-105 deg, so the folded fist swings forward, toward an attacker standing in front. The tests only check that fist's distance from the trunk axis (MAX_FAR_FIST_M 0.66), never its distance from the lens. The step-in is pinned by the generic magnetism lunge, which has no world-contact check. I could not confirm the exact 0.145/0.200 m figures without recording, which this lens does not allow.",
+     "evidence": "game/actors/placeholder_poses.gd lines 835-870 (stagger_right_a: LeftUpperArm (28,0,-40), LeftLowerArm (100,0,0); stagger_right_b: LeftUpperArm (34,0,-28), LeftLowerArm (105,0,0)). tests/test_stagger_pose.gd measures _fist_from_trunk against the trunk axis only (MAX_FAR_FIST_M 0.66), with no lens or camera distance. game/player/player.gd _plan_lunge and _update_lunge (about lines 639-668) close to magnet_stop_distance from the target's chest, re-aiming every frame, with no check for the target being against LAYER_WORLD."
+    }
+   }
+  },
+  {
+   "id": "r3look-04",
+   "lens": "r3look",
+   "severity": "low",
+   "title": "A dummy that comes back beside the occupied post blinks in dead centre 0.8 m ahead: its chest and guard fill 56-58% of the first-person view for as long as the player stands there",
+   "survives": true,
+   "confirmations": 3,
+   "spec_question": false,
+   "files": [
+    "game/enemies/dummy/training_dummy.gd",
+    "game/autoload/tuning_data.gd",
+    "tuning/default.json",
+    "tests/test_ko_blink.gd"
+   ],
+   "root_cause": "The tie-break in _respawn_spot() is `ahead > best_ahead`, so it maximises how centred the spot is. The ring-1 radius (2*body_radius + dummy_respawn_gap_m = 0.8 m) is the only distance bound, and it is far below the 0.95 m and 1.6 m the bots use. A body on the post sees all eight ring-1 spots at the same distance, so the dead-centre spot always wins.",
+   "open_question": "Should a comeback beside the occupied post stand off-centre or farther out so it covers at most about half the first-person view? Today it blinks in dead ahead at 0.8 m. This is a tie-break or tunable choice that does not contradict the approved \"in front of or beside\".",
+   "votes": {
+    "reproduce": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The code and the existing capture agree with the finding. I did not re-record, which the lens allows. _respawn_spot() breaks the tie among equally far ring-1 spots toward the largest `ahead`, so with the player on the post it picks the spot straight ahead. The first-person sheet shows the dummy's chest and black guard fists filling most of the view with the head cut off at the top. The cost is a dummy blinking in dead centre in his face, which only mildly stretches the approved \"in front of or beside with room\".",
+     "evidence": "Code: game/enemies/dummy/training_dummy.gd _respawn_spot() has `better = d > best_d + 0.001 or (d > best_d - 0.001 and ahead > best_ahead)`. The spot distance is body_radius*2 + dummy_respawn_gap_m (default 0.1, tuning_data.gd:96), which gives the 0.8 m ring-1 radius. Log: captures/review_r3look/rag.log, ST K4 f2323: Dummy1 at (-1.60,0,0), player near (-2.40,0,-0.35), dist 0.87, ahead 0.92, and \"LENS K4\" rows show other=55% cov=55% with other_near=0.341 m. 289 LENS K4 rows read other=50-59%. Sheet captures/review_r3look/k4_fp.png: rows 2-4 show the guard fists and orange chest filling the frame, head clipped."
+    },
+    "spec": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The docs approve where the dummy comes back, not how close it is. Game-boy approved \"a dummy comes back in front of or beside the player, with room, and waits instead of walking into him\". So a spot straight ahead is allowed. No doc gives a minimum distance or a cap on its share of the first-person view. The finding is about the comeback being 0.8 m away and covering 56-58% of the view, which the docs never set. The look is open to judgement and not approved.",
+     "evidence": "The wording comes from the lead's APPROVED list and docs/HANDOFF.md line 27 (gap-05). docs/milestones/M2-phase3-plan.md line 39 says only that a dummy respawns at its home spot with a blink-in. line 77 lists \"a respawn into an occupied post\" as an edge case with no distance rule. ARCHITECTURE.md lines 133-134 describe the occupied-post check and the ghost phase with no first-person share rule. A grep of SPEC.md, README.md and the Decisions log found nothing on the respawn distance or its size on screen."
+    },
+    "code": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "The code does what the finding says. With the player on the post, every ring-1 spot is the same distance away, so the \"most in front of him\" tie-break always picks the spot straight ahead at 2*body_radius + dummy_respawn_gap_m. Nothing keeps that spot from being close.",
+     "evidence": "I only read the code and ran nothing, so the 56-58% view share comes from the reviewer's recording and I did not check it. In game/enemies/dummy/training_dummy.gd, _respawn_spot() builds ring-1 spots at _home + FORWARD rotated by TAU*k/8, times (body_radius*2 + Tuning.data.dummy_respawn_gap_m) * ring. The default gap is 0.1 (tuning_data.gd:96), so 0.8 m implies body_radius 0.35, which I did not check. in_view is ahead >= 0.0. With d equal within 0.001, `better` becomes `d > best_d - 0.001 and ahead > best_ahead`, so the spot with ahead = 1.0 wins. The loop breaks before ring 2 as soon as the best spot is in view. The only minimum distance is the ring radius itself, and neither a view-share check nor an off-centre preference exists. A player standing on the post therefore gets the dummy at 0.8 m dead ahead. The finding's second suggestion (raising the default gap) would also work, but the gap's doc comment ties it to \"never arrives touching the body on the post\"."
+    }
+   }
+  },
+  {
+   "id": "r3look-05",
+   "lens": "r3look",
+   "severity": "low",
+   "title": "hit-04 is incomplete for the first-person haymaker: its delayed flash changes only 0.06-0.2% of the screen, against 2.2-9.4% for the other five first-person finishers",
+   "survives": true,
+   "confirmations": 3,
+   "spec_question": true,
+   "files": [
+    "game/actors/humanoid_rig.gd",
+    "game/fx/vfx_director.gd",
+    "tests/test_hit_flash.gd"
+   ],
+   "root_cause": "The flash is a world-space overlay anchored at the struck hurtbox. At the haymaker's contact in first person that spot is outside the view, and the large finisher burst and word cover the part of the body that remains visible. The timing code is correct. This is a first-person framing and overlap problem, not a code bug.",
+   "open_question": "In first person, when the haymaker's contact point is above the view and under the large finisher burst, should the flash fall back to the nearest visible part (the chest), or should the burst be offset from the contact? This sits with the open flash-size question (grab-05, hit-01).",
+   "votes": {
+    "reproduce": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The first-person haymaker's delayed flash is almost invisible. I re-diffed the existing flash-on and flash-off recordings and the same thing shows. The finding is also tied to Game-boy's open flash-size question, so it is a feel call and not a clear bug.",
+     "evidence": "I did not re-record. I re-read captures/review_r3look/fin_hay_s.png, a first-person view with hands, combat log and HP bar. On frames 940-941 only the burst and WHUMP sit over the chest, and the head is out of frame. I then diffed fin_s.avi against fin_s_nf.avi (flash strength 0) for frames 938-943 with ffmpeg blend=difference, saved as captures/verify/r3look-05-reproduce/diff.png. Only frames 940 and 941 differ, and each shows a tiny sliver near the top-centre of the screen. No large white bloom appears, unlike the other five finishers' 2-9% changed area."
+    },
+    "spec": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The docs do not approve a near-invisible haymaker flash. HANDOFF line 165 says the delayed flash shows '2 frames of white on the struck chin' in first person, and hit-04 aimed at every finisher showing its flash. The flash's first-person size is on the 'open with Game-boy' list (grab-05, hit-01), and that open question keeps the default. The docs say nothing specific that approves a haymaker flash that is hidden.",
+     "evidence": "docs/HANDOFF.md:165 and :190 (hit-04 and its fix); docs/SPEC.md:129 and :179 (the haymaker is a finisher); docs/SPEC.md:208 (impact frame on finishers); docs/milestones/M2-phase3-plan.md:34 (haymaker A/B in first person). No approved-departure entry covers a hidden haymaker flash. I searched with grep only, and did not read every section in full."
+    },
+    "code": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The code gives the haymaker the same delayed flash as every other finisher, so the delayed-flash timing is not the problem. The small change in first person comes from where the flash is aimed. I did not run a probe or a recording, so the pixel counts are not re-checked.",
+     "evidence": "In combat_actor.gd, line 424 calls _flash_at(hit.contact_point, hit_flash_frames, 1.0, impact_frame_ticks(hit)) for every clean hit, with the delay set by the finisher's impact frame. HumanoidRig.flash_at() (humanoid_rig.gd, lines 417-440) snaps the point to the nearest hurtbox and anchors it on that bone. The haymaker goes through the same path as the shove, backfist and kicks. VfxDirector draws the finisher burst and word at the same contact point, on the large-tier finisher size. This matches the reviewer's account that the head is above the top edge of the first-person view at contact and the burst covers the rest. test_hit_flash.gd's finisher test (test_a_finisher_flashes_right_after_its_impact_frame) covers only the dummy-side uppercut. It does not go through the first-person view or the haymaker."
+    }
+   }
+  }
+ ],
+ "pending": []
+}
