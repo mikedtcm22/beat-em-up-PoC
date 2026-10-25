@@ -14,11 +14,12 @@ extends Node
 ##   (EXPORT_DIR, writable when the game runs from the project folder). A preset holds every
 ##   TuningData value outside PRESET_SKIPPED_GROUPS (the F4 cheats are session state) plus
 ##   the move fields that differ from the shipped .tres:
-##   `{"preset": name, "format": 1, "tuning": {property: value}, "moves": {id: {field: value}}}`,
+##   `{"preset": name, "format": 2, "tuning": {property: value}, "moves": {id: {field: value}}}`,
 ##   vectors and colors as arrays. Loading starts from the shipped defaults, so values a
 ##   preset lacks (tunables added later) keep their defaults; values outside their range hint
-##   are clamped and unknown enum ids skipped. EXPORT_DIR/default.json is the shipped
-##   defaults; `godot --headless -s tools/gen_default_preset.gd` regenerates it.
+##   are clamped, unknown enum ids skipped, and values whose meaning changed since an older
+##   format migrated (_migrate()). EXPORT_DIR/default.json is the shipped defaults;
+##   `godot --headless -s tools/gen_default_preset.gd` regenerates it.
 
 ## Emitted after every edit. `property` is the TuningData property; &"" after a preset load,
 ## a reset or apply() (anything may have changed); "moves/<move id>/<field>" for a move edit.
@@ -35,8 +36,9 @@ const BACKUP_PRESET := "_backup"
 ## TuningData groups presets leave out: the F4 cheats are session state, so a preset never
 ## turns one on and loading or resetting never turns one off.
 const PRESET_SKIPPED_GROUPS: PackedStringArray = ["Debug"]
-## Preset file layout version.
-const PRESET_FORMAT := 1
+## Preset file layout version. 2 (M2 phase 3): dummy_revive_s counts from the KO's
+## blink-off, not from the KO (_migrate()).
+const PRESET_FORMAT := 2
 ## The MoveData groups the panel edits and presets override: frame data, damage, knockback,
 ## hitstun, reaction, blocking, movement and the camera offsets. Hitboxes and combo branches
 ## are the move's structure, not tuning.
@@ -300,9 +302,10 @@ func default_preset_dict() -> Dictionary:
 
 ## Load a preset dictionary: every value starts from the shipped defaults (TuningData and
 ## moves), then takes the preset's. Unknown names, unreadable values and enum ids the hint
-## lacks are skipped, and numbers outside their range hint clamped (_checked()), each listed
-## in `last_warnings`. PRESET_SKIPPED_GROUPS (the cheats) are left as they are, even if the
-## preset holds them. Emits `changed` (&"") once.
+## lacks are skipped, numbers outside their range hint clamped (_checked()) and values from
+## an older format migrated (_migrate()), each listed in `last_warnings`.
+## PRESET_SKIPPED_GROUPS (the cheats) are left as they are, even if the preset holds them.
+## Emits `changed` (&"") once.
 func apply_preset(preset: Dictionary) -> Error:
 	last_warnings.clear()
 	var tuning: Variant = preset.get("tuning", {})
@@ -323,6 +326,7 @@ func apply_preset(preset: Dictionary) -> Error:
 			last_warnings.append("unreadable value for %s" % key)
 			continue
 		values.set(info.name, value)
+	_migrate(preset, tuning, values)
 	for info: Dictionary in preset_properties():
 		data.set(info.name, values.get(info.name))
 	for id: StringName in move_ids():
@@ -344,6 +348,24 @@ func apply_preset(preset: Dictionary) -> Error:
 	_unsaved = false
 	changed.emit(&"")
 	return OK
+
+
+## Bring `values`, loaded from `preset`'s `tuning`, up to PRESET_FORMAT, noting each change
+## in `last_warnings`. A preset without a format is taken as the current one (only the game
+## writes the format; a hand-written preset means today's values).
+## - Format 1 to 2: dummy_revive_s counted from the KO (2.5 s by default) and now counts
+##   from the blink-off (1.0 s). A format-1 preset without ko_linger_s was saved before the
+##   blink-off existed: its count becomes the old one less the lie and the blink
+##   (ko_linger_s + ko_blink_s, at least 0), so the dummy is back as long after the KO as
+##   it was. One with ko_linger_s was saved since and already counts from the blink-off.
+func _migrate(preset: Dictionary, tuning: Dictionary, values: TuningData) -> void:
+	var format_raw: Variant = preset.get("format", PRESET_FORMAT)
+	var format := int(format_raw) if format_raw is int or format_raw is float else PRESET_FORMAT
+	if format < 2 and tuning.has("dummy_revive_s") and not tuning.has("ko_linger_s"):
+		var from_ko := values.dummy_revive_s
+		values.dummy_revive_s = maxf(from_ko - values.ko_linger_s - values.ko_blink_s, 0.0)
+		last_warnings.append("dummy_revive_s %.2f s from the KO (a preset from before the blink-off) is %.2f s from the blink-off" % [
+			from_ko, values.dummy_revive_s])
 
 
 ## Every preset value and every move back to the shipped defaults (the cheats stay as they

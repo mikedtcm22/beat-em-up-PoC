@@ -1,6 +1,6 @@
 {
 	"preset": "default",
-	"format": 1,
+	"format": 2,
 	"tuning": {
 		"move_speed": 6.0,
 		"move_accel": 60.0,

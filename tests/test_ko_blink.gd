@@ -4,7 +4,9 @@ extends GutTest
 ## ko_blink_s (faster toward the end) and is gone: hidden, its ragdoll stopped, no
 ## hurtboxes, no collision, and nothing that looks for bodies finds it. A training dummy
 ## then comes back at its post after dummy_revive_s, blinking in, at full health with a clean
-## damage look. The player never blinks off.
+## damage look, or beside it when someone is there (standing, lying, held, or another dummy
+## coming back on the same tick), never past a wall or off the floor; a ghost that nothing
+## aims at until its blink-in is over. The player never blinks off.
 
 const ROOM := preload("res://game/level/test_room.tscn")
 const FAR := Vector3(30.0, 0.0, -30.0)
@@ -214,7 +216,9 @@ func test_a_dummy_comes_back_at_its_post_blinking_in() -> void:
 	assert_almost_eq(back_s, 4.0, 0.3, "about 4 s from the KO to back with the defaults")
 
 
-func test_a_vanished_dummys_health_bar_goes_with_it() -> void:
+func test_a_kod_dummys_health_bar_fades_out_before_it_blinks() -> void:
+	# The bar shows the killing hit's chunk drain away, then fades: an empty bar over a lying
+	# body adds nothing, and it would hang, steady, over a body blinking off (review ragdoll-04).
 	await _setup([Vector3(0, 0, -1.6)], true)
 	var hud: GameHud = room.find_children("*", "GameHud", false, false)[0]
 	hud.enemy_bars.show_seconds = 30.0
@@ -223,9 +227,25 @@ func test_a_vanished_dummys_health_bar_goes_with_it() -> void:
 	CombatEvents.hit_landed.emit(hit)
 	await _ticks(2)
 	assert_true(hud.enemy_bars.has_bar(dummy), "the KO hit shows its bar")
-	assert_true(await _wait_until(func() -> bool: return dummy.is_gone(), 400), "gone")
+	var drawn_hidden := 0
+	var bar_until := -1
+	var first_off := -1
+	for i in 400:
+		await get_tree().physics_frame
+		if hud.enemy_bars.has_bar(dummy):
+			bar_until = i
+			if not dummy.rig.visible and hud.enemy_bars.get_bar_screen_position(dummy) != Vector2(-1.0, -1.0):
+				drawn_hidden += 1
+		if first_off < 0 and dummy.is_ko() and not dummy.rig.visible:
+			first_off = i
+		if dummy.is_gone():
+			break
+	gut.p("bar until tick %d, the body's first blink-off at tick %d" % [bar_until, first_off])
+	assert_gt(first_off, 0, "the body blinks")
+	assert_lt(bar_until, first_off, "the bar is gone before the body blinks off")
+	assert_eq(drawn_hidden, 0, "and never drawn over a hidden body")
 	await _ticks(1)
-	assert_false(hud.enemy_bars.has_bar(dummy), "its bar goes with it")
+	assert_false(hud.enemy_bars.has_bar(dummy), "no bar once it is gone")
 
 
 func test_a_reset_during_the_blink_off_brings_the_body_back() -> void:
@@ -291,3 +311,198 @@ func test_a_dummy_comes_back_beside_its_post_when_someone_stands_on_it() -> void
 	assert_gte(gap, dummy.body_radius + player.body_radius, "not inside the player")
 	assert_lt(dummy.global_position.distance_to(home), dummy.body_radius * 4.0 + 0.01, "beside its post")
 	assert_almost_eq(dummy.get(&"_home"), home, Vector3.ONE * 1e-4, "which stays its post")
+
+
+# --- Who is on the post, and the blink-in (review code-02, code-04) -----------------------
+
+
+## A knockdown from the player on `victim` with a short push along `push` (flat m/s): it
+## falls about where it stands and lies there.
+func _knock_down(victim: CombatActor, push: Vector3 = Vector3.ZERO) -> void:
+	var hit := HitInfo.new()
+	hit.attacker = player
+	hit.victim = victim
+	hit.damage = 1.0
+	hit.tier = CombatTypes.HitTier.HEAVY
+	hit.reaction = CombatTypes.Reaction.KNOCKDOWN
+	hit.region = CombatTypes.Region.TORSO
+	hit.direction = push.normalized() if push.length_squared() > 1e-6 else (victim.global_position - player.global_position).normalized()
+	hit.knockback = push
+	hit.contact_point = victim.get_chest_position() - hit.direction * 0.15
+	hit.physics_frame = Engine.get_physics_frames()
+	assert_true(victim.receive_hit(hit), "the knockdown lands")
+
+
+## The nearest bone `other` is drawn with to `d`'s upright axis, along the floor:
+## {gap, bone}.
+func _drawn_gap(d: CombatActor, other: CombatActor) -> Dictionary:
+	var nearest := {"gap": INF, "bone": &""}
+	for bone: StringName in [&"Head", &"Chest", &"Hips", &"LeftUpperLeg", &"RightUpperLeg",
+			&"LeftLowerLeg", &"RightLowerLeg", &"LeftFoot", &"RightFoot", &"LeftUpperArm",
+			&"RightUpperArm", &"LeftLowerArm", &"RightLowerArm", &"LeftHand", &"RightHand"]:
+		var p := other.rig.get_visual_point_transform(bone).origin
+		var gap := Vector2(p.x - d.global_position.x, p.z - d.global_position.z).length()
+		if gap < nearest.gap:
+			nearest = {"gap": gap, "bone": bone}
+	return nearest
+
+
+## KO `dummy` and wait until it has blinked off.
+func _ko_until_gone(dummy: TrainingDummy) -> void:
+	_kill(dummy)
+	assert_true(await _wait_until(func() -> bool: return dummy.is_gone(), 400), "gone")
+
+
+func _comes_back(dummy: TrainingDummy) -> bool:
+	return await _wait_until(func() -> bool: return not dummy.is_ko(), _ticks_of(Tuning.data.dummy_revive_s) + 30)
+
+
+func test_a_dummy_comes_back_beside_a_body_lying_on_its_post() -> void:
+	await _setup([Vector3(0, 0, -1.6), Vector3(1.6, 0, -1.6)])
+	var dummy := dummies[0]
+	var other := dummies[1]
+	var home := dummy.global_position
+	Tuning.data.downed_frames = 900  # it keeps lying
+	await _ko_until_gone(dummy)
+	other.set_post(home, other.rotation.y, true)
+	await _ticks(3)
+	_knock_down(other, Vector3(0.0, 0.0, 0.3))
+	assert_true(await _wait_until(func() -> bool: return other.is_downed(), 120), "the other lies on the post")
+	assert_true(await _comes_back(dummy), "comes back on time")
+	assert_true(other.is_downed(), "the other still lies there")
+	var nearest := _drawn_gap(dummy, other)
+	gut.p("came back %.2f m from its post; the nearest drawn bone of the body lying there (%s) is %.2f m from its axis" % [
+		Vector2(dummy.global_position.x - home.x, dummy.global_position.z - home.z).length(), nearest.bone, nearest.gap])
+	assert_gt(nearest.gap, dummy.body_radius, "not inside the body lying on its post")
+	assert_lt(dummy.global_position.distance_to(home), dummy.body_radius * 4.0 + 0.01, "beside its post")
+
+
+func test_a_dummy_comes_back_beside_a_body_held_over_its_post() -> void:
+	await _setup([Vector3(0, 0, -1.6), Vector3(0, 0, -0.9)])
+	var dummy := dummies[0]
+	var other := dummies[1]
+	var home := dummy.global_position
+	await _ko_until_gone(dummy)
+	player.input.push_press(&"GRAB", 2)
+	assert_true(await _wait_until(func() -> bool: return other.holder == player, 30), "the player holds the other")
+	await _ticks(20)
+	# Step in so the held body is over the post, a little short of it: the holder stands clear
+	# of the post, the held body (a ghost) is on it.
+	var away := other.global_position - player.global_position
+	away.y = 0.0
+	var reach := away.length()
+	player.global_position += home - away.normalized() * (dummy.body_radius + player.body_radius + 0.03 - reach) - other.global_position
+	await _ticks(2)
+	assert_lt(Vector2(other.global_position.x - home.x, other.global_position.z - home.z).length(), 0.3, "held over the post")
+	assert_gt(Vector2(player.global_position.x - home.x, player.global_position.z - home.z).length(),
+			dummy.body_radius + player.body_radius, "the holder clear of it")
+	assert_true(await _comes_back(dummy), "comes back on time")
+	assert_eq(other.holder, player, "still held")
+	for body: CombatActor in [other, player]:
+		var gap := Vector2(dummy.global_position.x - body.global_position.x, dummy.global_position.z - body.global_position.z).length()
+		assert_gte(gap, dummy.body_radius + body.body_radius - 0.01, "not inside %s (%.2f m)" % [body.name, gap])
+
+
+func test_two_dummies_that_come_back_on_the_same_tick_take_different_spots() -> void:
+	await _setup([Vector3(0, 0, -1.6), Vector3(1.6, 0, -1.6)])
+	var home := dummies[0].global_position
+	_kill(dummies[0])
+	_kill(dummies[1])
+	assert_true(await _wait_until(func() -> bool: return dummies[0].is_gone() and dummies[1].is_gone(), 400), "both gone")
+	# Both posted at the same spot and due back on the same tick.
+	dummies[1].set(&"_home", home)
+	dummies[1].set(&"_gone_frames", dummies[0].get(&"_gone_frames"))
+	assert_true(await _comes_back(dummies[0]), "the first comes back")
+	assert_false(dummies[1].is_ko(), "the second on the same tick")
+	var apart := Vector2(dummies[0].global_position.x - dummies[1].global_position.x,
+			dummies[0].global_position.z - dummies[1].global_position.z).length()
+	gut.p("came back %.2f m apart" % apart)
+	assert_gte(apart, dummies[0].body_radius + dummies[1].body_radius - 0.01, "not inside each other")
+
+
+func test_a_comeback_spot_has_floor_and_no_wall_on_the_way() -> void:
+	await _setup([Vector3(0, 0, -1.6)])
+	var dummy := dummies[0]
+	await _ko_until_gone(dummy)
+	# A closet with thin walls just around the post, the player standing in it: every spot one
+	# body width out is in a wall, and those two out are behind one.
+	var post := Vector3(0.0, 0.0, 12.0)
+	dummy.set(&"_home", post)
+	player.global_position = post
+	for side: Vector3 in [Vector3.RIGHT, Vector3.LEFT, Vector3.FORWARD, Vector3.BACK]:
+		var wall := StaticBody3D.new()
+		wall.collision_layer = CombatTypes.bit(CombatTypes.LAYER_WORLD)
+		var shape := CollisionShape3D.new()
+		var box := BoxShape3D.new()
+		box.size = Vector3(1.2, 2.0, 0.1) if side.x == 0.0 else Vector3(0.1, 2.0, 1.2)
+		shape.shape = box
+		wall.add_child(shape)
+		room.add_child(wall)
+		wall.global_position = post + side * 0.45 + Vector3.UP
+	await _ticks(2)
+	assert_eq(dummy.call(&"_respawn_spot"), Vector3.INF, "no spot past a wall: it waits")
+	# Past the end of the floor (the street's slab ends at x = 30), with the player on the post.
+	post = Vector3(29.6, 0.0, 0.0)
+	dummy.set(&"_home", post)
+	player.global_position = post + Vector3(-0.1, 0.0, 0.0)
+	await _ticks(2)
+	var spot: Vector3 = dummy.call(&"_respawn_spot")
+	gut.p("at the floor's edge it picks %s" % spot)
+	assert_true(spot.is_finite(), "a spot")
+	assert_lt(spot.x, 30.0 - dummy.body_radius * 0.5, "with floor under it")
+	assert_almost_eq(spot.y, 0.0, 0.01, "on the floor")
+
+
+func test_a_dummy_blinking_in_draws_no_magnetism_and_lets_a_thrown_pipe_through() -> void:
+	Tuning.data.ko_blink_in_s = 1.5  # time for the throw
+	await _setup([Vector3(0, 0, -2.2)])
+	var dummy := dummies[0]
+	var jab := load(JAB_PATH) as MoveData
+	assert_eq(player._find_magnet_target(jab), dummy, "magnetism finds it standing")
+	await _ko_until_gone(dummy)
+	assert_true(await _comes_back(dummy), "comes back")
+	await _ticks(2)
+	assert_true(dummy.is_blinking_in(), "blinking in")
+	assert_null(player._find_magnet_target(jab), "magnetism passes it over")
+	assert_eq(dummy.collision_layer, CombatTypes.bit(CombatTypes.LAYER_DOWNED_BODY), "a ghost")
+	# Throw the pipe at it from the player's chest.
+	var pipe: Weapon = room.find_children("*", "Weapon", true, false)[0]
+	var throw := load(PlayerCharacter.WEAPON_THROW_PATH) as MoveData
+	var from := player.get_chest_position()
+	var aim := (dummy.get_chest_position() - from).normalized()
+	pipe.global_position = from + aim * 0.5
+	pipe.throw_from(player, aim * Tuning.data.weapon_throw_speed, throw)
+	var health := dummy.health
+	var passed := false
+	for i in 30:
+		await get_tree().physics_frame
+		if (pipe.global_position - dummy.global_position).dot(aim) > dummy.body_radius + 0.3:
+			passed = true
+			break
+	assert_true(dummy.is_blinking_in(), "still blinking in")
+	assert_true(passed, "the pipe flies on through it")
+	assert_eq(dummy.health, health, "untouched")
+	assert_eq(pipe.durability, Tuning.data.weapon_durability, "and the pipe is not worn")
+	# Out of the blink-in: solid, and magnetism finds it again.
+	assert_true(await _wait_until(func() -> bool: return not dummy.is_blinking_in(), 120))
+	await _ticks(2)
+	assert_eq(dummy.collision_layer, CombatTypes.bit(CombatTypes.LAYER_ENEMY_BODY), "then solid")
+	assert_eq(player._find_magnet_target(jab), dummy, "and aimed at")
+
+
+func test_a_dummy_blinking_in_stays_a_ghost_while_the_player_stands_in_it() -> void:
+	await _setup([Vector3(0, 0, -1.6)])
+	var dummy := dummies[0]
+	var home := dummy.global_position
+	await _ko_until_gone(dummy)
+	assert_true(await _comes_back(dummy), "comes back")
+	assert_almost_eq(dummy.global_position, home, Vector3.ONE * 0.05, "at its post")
+	# The player walks into it during its blink-in (a ghost can be walked through).
+	player.global_position = home + Vector3(0.1, 0.0, 0.0)
+	assert_true(await _wait_until(func() -> bool: return not dummy.is_blinking_in(), 60))
+	await _ticks(3)
+	assert_eq(dummy.collision_layer, CombatTypes.bit(CombatTypes.LAYER_DOWNED_BODY), "still a ghost, not shoving the player out")
+	assert_almost_eq(dummy.global_position, home, Vector3.ONE * 0.05, "and it stays put")
+	player.global_position = home + Vector3(2.0, 0.0, 0.0)
+	await _ticks(3)
+	assert_eq(dummy.collision_layer, CombatTypes.bit(CombatTypes.LAYER_ENEMY_BODY), "solid once the player stepped out")

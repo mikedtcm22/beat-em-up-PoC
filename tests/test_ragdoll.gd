@@ -578,12 +578,25 @@ func test_a_stomped_ragdoll_gets_up_where_it_lies_with_the_player_over_it() -> v
 
 
 func test_two_bodies_that_fell_on_each_other_get_up_beside_each_other() -> void:
-	# The push kick throws the first dummy onto the second (the flying-body knockdown): the
-	# one lying on top gets up beside the other, clear of it, without a pop; the other gets
-	# up about where it lies.
-	await _setup([Vector3(0, 0, -1.5), Vector3(0.15, 0, -3.6)])
-	_queue(&"P", 2)
-	_queue(&"K", 1)
+	# One dummy falls on top of another lying on the floor: the one on top gets up beside the
+	# other, clear of it, without a pop; the other gets up about where it lies. Scripted, not
+	# a flight from a combo (a chaotic one, which lands elsewhere once other tests have made
+	# and freed bodies): the second dummy is knocked down first, the first stood over its
+	# drawn hips and knocked down onto it with a short push. The one underneath stays down a
+	# little longer, as when both fell together, so the one on top gets up first.
+	await _setup([Vector3(0, 0, -1.5), Vector3(0, 0, -3.0)])
+	var top := dummies[0]
+	var under := dummies[1]
+	var away := player.get_forward()
+	assert_true(under.receive_hit(_hit(under, CombatTypes.Reaction.KNOCKDOWN, away * 1.5, CombatTypes.Region.TORSO, player)))
+	assert_true(await _wait_until(func() -> bool: return under.is_downed(), 120), "the second lies")
+	await _ticks(30)
+	var hips := under.rig.get_attachment(&"Hips").global_position
+	top.set_post(Vector3(hips.x, under.global_position.y, hips.z), top.rotation.y, true)
+	await _ticks(3)
+	assert_true(top.receive_hit(_hit(top, CombatTypes.Reaction.KNOCKDOWN, away * 0.5, CombatTypes.Region.TORSO, player)))
+	assert_true(await _wait_until(func() -> bool: return top.is_downed(), 120), "the first falls on it")
+	under.state_frame = mini(under.state_frame, top.state_frame - 10)
 	var moved: Array[float] = [-1.0, -1.0]
 	var jump: Array[float] = [0.0, 0.0]
 	var clear: Array[bool] = [false, false]
@@ -609,7 +622,7 @@ func test_two_bodies_that_fell_on_each_other_get_up_beside_each_other() -> void:
 				jump[k] = d.rig.get_attachment(&"Head").global_position.distance_to(head[k])
 				clear[k] = _room_for(d)
 	gut.p("pile: top %s, get-ups moved %.3f / %.3f m, drawn head jumped %.3f / %.3f m" % [on_top, moved[0], moved[1], jump[0], jump[1]])
-	assert_true(on_top[0], "the kicked body lies on the other")
+	assert_true(on_top[0], "the body on top lies on the other")
 	assert_gt(moved[0], 0.4, "and gets up beside it")
 	assert_lt(moved[0], Tuning.data.ragdoll_getup_aside_m + 0.3, "not far off")
 	assert_true(clear[0], "clear of the body still lying there")

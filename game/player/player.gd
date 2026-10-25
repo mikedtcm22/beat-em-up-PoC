@@ -686,6 +686,10 @@ func _find_magnet_target(move: MoveData) -> CombatActor:
 		var enemy := node as CombatActor
 		if enemy == null or enemy.is_ko() or enemy.is_flying() or enemy.is_downed() != wants_downed:
 			continue
+		# A body blinking back in is out of reach (no hit lands on it): the strike would only
+		# lunge and turn toward it to whiff.
+		if enemy.is_blinking_in():
+			continue
 		var to := enemy.get_chest_position() - origin
 		var flat := Vector3(to.x, 0.0, to.z)
 		var dist := flat.length()

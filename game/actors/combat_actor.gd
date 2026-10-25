@@ -236,6 +236,12 @@ func blink_in() -> void:
 			Tuning.data.ko_blink_in_hz, Tuning.data.ko_blink_in_hz))
 
 
+## True during a blink-in (blink_in()): the body is out of reach, so nothing aims at it
+## (magnetism) and a training dummy stays a ghost until it ends.
+func is_blinking_in() -> bool:
+	return _blink_in_left > 0
+
+
 ## Whether a blink shows the body `t` sim seconds into a blink `length` seconds long whose
 ## rate goes evenly from `from_hz` to `to_hz` (on-off cycles per second): each cycle off
 ## first, then on.
