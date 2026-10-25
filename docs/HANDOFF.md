@@ -4,6 +4,29 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-25 15:20 CDT: leg 2 done (round 3 merged, 537/537); leg 3 done; the M2 PR is open for Game-boy
+Account E: 5-hour about 30% (resets 19:09 CDT), weekly 83% (resets Tue 2026-10-27 17:00 CDT). The two r3 fixers (`wf_27da4731-a29`, 46 minutes) took the window from 0% to 29% and weekly from 78% to 83%.
+- **Leg 2 done.** `m2/phase3-fix-r3-ko-view-return` (`846f3ae`) and `m2/phase3-fix-r3-dummy-room` (`d1a2073`) are merged into `m2/hit-feel` with `m2/phase3-review` (`fix-r3-*.json`). The merges were clean. **537/537 tests pass with no SCRIPT ERROR or ERROR.** The preset regenerated unchanged at 327 values.
+  - **r3look-01 and -02, fixed:**
+    - The head layer hides again on the way back as soon as the lens is near the head.
+    - The look is dropped from the killing blow until the revive and put on the body there (`player.gd` `_process()`, `_revive()`, `_tick_ko()`). Non-KO knockdowns keep a free look.
+    - The look turns ahead of the lens on the return (`ko_view_look_lead` 1.5).
+    - The fallbacks: across the body, then along it past the feet, then over the hips (2.6 m up, 85°).
+    - `ko_view_min_reach` went from 0.4 to 0.8, and now means the least room a pose needs.
+    - The lens is sphere-checked.
+    - In first person: the own body covers at most 21%, and nothing comes nearer the lens than 0.274 m.
+  - **r3code-02, r3look-04 and r3code-04, fixed:**
+    - The walk home casts the capsule ahead against actor bodies and stops short of anyone in the way. A walk given up against the world isn't retried until the dummy is hit, re-posted or moved.
+    - The comeback's tie-break picks the spot nearest 50° off the player's facing (`dummy_respawn_off_axis_deg`): 19% of the view against 55%.
+    - `grab_hold_blend_s`, `grab_pin_ease_s` and `stagger_snap_blend_s` are now tunables.
+  - The lead looked at `ko13_after.png`, `ko7_after.png` and `k4_comeback.png` (local, in the two fix worktrees' `captures/fix/`). They read right. A merged-build recording (`captures/lead_final/merged_fp.png`, local: the hook, the uppercut and the knee KO in first person) shows nothing broken by the merges.
+- **Leg 3 done:**
+  - README: Milestone 2 status; the departures for the out-of-body KO view (with its over-the-hips fallback and locked look) and the finisher's flash after the impact frame; the comeback to one side; the hook's 0.33 m; the test count.
+  - ARCHITECTURE: all of r3code-06's items; the fixers updated the KO-view and comeback sections.
+  - **The M2 PR is open:** https://github.com/mikedtcm22/beat-em-up-PoC/pull/2 (`m2/hit-feel` into `main`). It lists every default taken. **Never merge it** without Game-boy's sign-off.
+- **Waiting on Game-boy:** play the PR build, tune each tier live in F1 and save a preset (M2's done-when), listen to WP3's audio, and sign off. The open questions all took their defaults (14:15 decision) and are listed in the PR, for when the art is in.
+- **Next (after sign-off):** merge PR #2, then plan Milestone 3. No M2 work is left on any branch. The old `.worktrees/` can be pruned once the PR merges.
+
 ### 2026-10-25 14:20 CDT: account E claims leg 2's rest and leg 3; r3-ragdoll-kick-body merged (523/523)
 Account E: 5-hour 0% (resets 19:09 CDT), **weekly 78%** (resets Tue 2026-10-27 17:00 CDT). Weekly is the limit: 12 points below 90% is about 70 points of a 5-hour window (one window point costs about 0.16 weekly points). Its watcher is "Beat-em-up: usage watcher" (`usage-watcher`, Haiku).
 - **Leg 2's rest and leg 3 claimed by account E at 14:20 CDT.**
@@ -967,9 +990,10 @@ USAGE RULES:
 - The watcher checks every 20 minutes below 70%, every 10 minutes up to 85% and every 5 minutes above that. It tells you to halt and hand off at 90%.
 
 Next steps (Milestone 2; details are in docs/HANDOFF.md):
-- Phases 1 and 2, the localized flash and phase 3's packages A (ragdoll: contact push, KO blink-off, staggers at 0.9) and B (grab view and waist bend) are merged into m2/hit-feel. 457/457 tests pass with no SCRIPT ERROR, at f98bb21. README has the three approved M2 ragdoll departures. WP3's audio was judged by analysis only, so I'll listen to it.
-- Phase 3's package C runs as Workflows (I turned ultracode on): build, adversarial review with three skeptics per finding, then fix packages. Rounds 1 and 2 (code, ragdoll, grab, hit, perf and gap lenses) are fixed and merged into m2/hit-feel at 72a1066 (518/518 tests, no SCRIPT ERROR), including my 2026-10-25 verdicts: side view is debug-only, the player's KO gets an "out of body" view, and every other proposed fix is approved. Today runs in legs (docs/HANDOFF.md's newest entries): leg 1 (the round 2 fixes) is done; leg 2 (round 3: an Opus code review and first-person look, 11 findings, all survive) is half done: r3-ragdoll-kick-body is fixed on its branch but not merged, and r3-ko-view-return and r3-dummy-room still need their Sonnet fixers (docs/reviews/M2-phase3/packages-r3.json; the exact resume steps are in HANDOFF's 14:05 entry). Claim the leg in HANDOFF before starting. Then leg 3, D: check ARCHITECTURE against the code, README's Milestone 2 status and departures (the out-of-body KO view), the final first-person sheets for me, and the M2 PR, which is never merged without my sign-off.
-- Open for me (each has a default; none blocks C): more contortion on the ragdoll contact push (default: as it is); the grab's lens pull-back and the bend's depth (default: as they are); the combat log over the knee contact (default: C proposes a fix); a minimum on-screen size for the side-view flash (default: leave it). And I'll listen to WP3's audio.
+- Phases 1 and 2, the localized flash and phase 3's packages A (ragdoll: contact push, KO blink-off, staggers at 0.9) and B (grab view and waist bend) are merged into m2/hit-feel. README has the Milestone 2 status and every approved M2 departure. WP3's audio was judged by analysis only, so I'll listen to it.
+- Phase 3's package C ran as Workflows (I turned ultracode on): three rounds of adversarial review and fixes, all merged into m2/hit-feel (537/537 tests, no SCRIPT ERROR). Legs 1-3 are done, and the M2 PR is open: https://github.com/mikedtcm22/beat-em-up-PoC/pull/2. It waits on my play-through and sign-off. Never merge it without that. If I ask for changes, make them on m2/hit-feel and push.
+- Every open M2 question took its default (my call, 2026-10-25 14:15: I can't judge grey-block feel differences until the art is in). The PR lists them. Don't put fine look or feel questions to me before the art.
+- After sign-off: merge PR #2, then plan Milestone 3 (SPEC §12).
 
 Ground rules:
 - Never merge a milestone PR into main until I've played it and signed it off.
