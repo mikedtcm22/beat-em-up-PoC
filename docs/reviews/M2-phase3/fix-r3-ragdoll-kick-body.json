@@ -1,0 +1,64 @@
+{
+ "package": "r3-ragdoll-kick-body",
+ "branch": "m2/phase3-fix-r3-ragdoll-kick-body",
+ "verdicts": [
+  {
+   "id": "r3code-01",
+   "outcome": "fixed",
+   "what_changed": "Ragdoll.start() now seeds the drawn-pose cache BEFORE the kick search, and a new ragdoll's first kick (was == NONE) lands on a fixed strike body per part (new const Ragdoll.STRIKE_BONES: HEAD -> Head, TORSO -> UpperChest, ARMS -> Shoulder; the nearer side of a pair is chosen on the true pose). Kicks on a running ragdoll, LEGS, ANY and stomps stay nearest-body, now always on the true pose. Ragdoll.hit() and HumanoidRig.ragdoll_hit() gained a `strike` flag; _ragdoll_stagger()'s lean kick passes it, so it lands on UpperChest again. test_ragdoll.gd's hook check is back at 0.8 with its old comment. Measured: the hook now strikes [Head, UpperChest] and gives way 0.329-0.333 m on a fresh dummy, after four set_post moves and after a KO and comeback (unfixed code: [Head, Chest] or [Neck, Chest], 0.216-0.341 m). Arm-trail ratio is 0.537 (0.151/0.281 m), far under 0.8 (0.782 before the arm re-pose of r3look-03). I did NOT switch to nearest-on-the-true-pose for the hook (the open push question): the approved 0.32-0.35 m give is now on every hook. Note: the strike body applies only when a new ragdoll starts. A stagger on a stagger or a launch out of one (the uppercut after the hook) keeps the nearest body on the live pose as before, because forcing the fixed body there broke the corner-uppercut lens test (the feet then swung at the lens, 0.19 m).",
+   "tests": "new test_the_hooks_kick_lands_on_the_same_bodies_whatever_the_dummys_history (fresh, 4 set_post moves, KO and comeback: struck bodies [Head, UpperChest] and give within 0.04 m of fresh) and test_a_new_ragdolls_first_kick_lands_on_its_parts_strike_body_wherever_the_last_one_ended (HEAD, TORSO, both ARMS, both LEGS, fresh and after a ragdoll elsewhere). Both fail on the unfixed code, as does the restored 0.8 threshold (0.233/0.280 = 0.83)."
+  },
+  {
+   "id": "r3code-03",
+   "outcome": "fixed",
+   "what_changed": "An at-once FULL launch out of a running PARTIAL (launch from behind out of a stagger; P P P P into a wall) now eases the head and arm bones from the local turns they showed on screen to the simulation's over Tuning.ragdoll_partial_rise_s (0.08 s, sim time, so a hitstop holds the old look): new _ease_from/_ease_s/_ease_t in ragdoll.gd, applied in _process_modification_with_delta(), no new tunable. The lead's suggestion (seat the already-simulating head and arm bodies on shown[i]) does NOT work: the drawn pose of the first frames comes from the simulator's cache, which is stale until the bodies step (and during a hitstop), so seating did nothing visible (head still 38 degrees) and caused a second jump when the hitstop ended. ragdoll_full_rise_s (0.15 s) for the ease pushed a vertex 10.5 cm into the wall in the wall-uppercut test, so 0.08 s is used (deepest 0.061 m, as before). ragdoll_partial_head_influence and ragdoll_partial_arm_influence are untouched.",
+   "tests": "new test_a_launch_from_behind_out_of_a_stagger_does_not_jump_the_head_and_arms (head 1.8 degrees against 38.2, hands 0.084/0.078 m against 0.165/0.246 m, chest 0.088 m) and test_the_uppercut_out_of_the_hooks_stagger_into_a_wall_does_not_jump_the_head_and_arms (head 5.4 against 37.9-42.5 degrees; right hand 0.116 m against 0.208 m). Both fail on the unfixed code. Existing wall/building/curb launch tests and the corner-uppercut lens test (0.301 m) pass."
+  },
+  {
+   "id": "r3look-03",
+   "outcome": "fixed",
+   "what_changed": "Re-measured after r3code-01 (the far fist had not moved: LeftFingers 0.203 m open floor, 0.151 m pinned, 47-55% of the view). Re-posed the far (left) arm in stagger_right_a/b in placeholder_poses.gd (stagger_left mirrors): LeftUpperArm (-10,85,-25) and LeftLowerArm 130 in a, (-4,85,-13) and 135 in b, found by an analytic search over the whole animation path in both stances so that the elbow goes out to the side and the forearm goes up beside the shoulder. Still folded near the guard (elbow 43-67 degrees, fist 0.56-0.59 m off the trunk, at most 0.12 m forward of the hips while it flings; was 0.44 m). Twist is 85 degrees, inside the shoulder's 90 degree joint limit. After: nearest 0.369 m open floor, 0.325 m pinned (building front, end wall; curb 0.335 m), 0 ticks under 0.25 m, dummy 41-45% of the view in the first half second. The optional magnetism change in player.gd was NOT needed and was not made (player.gd, tuning_data.gd and the Magnetism group are untouched). One caveat: at the very end of the stagger (about 0.5 to 0.7 s), when the dummy is back in its guard, it covers 47% (open floor) to 51% (pinned) of the view. That is the step-in distance, not the fling, so the share test covers the first 30 ticks and the nearest-distance test the whole stagger.",
+   "tests": "new test_the_hooks_stagger_keeps_the_lens_clear_on_open_floor_and_pinned in test_ragdoll.gd (open floor, building front, end wall: nearest >= 0.25 m through the stagger, at most half the view in the first 30 ticks; fails on the old pose with 0.203/0.151/0.151 m and 55%) and a new MAX_FAR_FIST_FORWARD_M 0.2 check in test_stagger_pose.gd (0.12 m now, 0.44 m before), for both stances and both directions."
+  },
+  {
+   "id": "r3code-05",
+   "outcome": "fixed",
+   "what_changed": "ragdoll.gd header lists three simulation reads (get-up hips offset; respawn room check; _home_has_room() every tick of the walk home). Ragdoll.start()'s doc and the seed comment describe the strike bodies, the seed ahead of the search and the three at_once launches plus the head and arm ease. _queue_impulse's doc is rewritten. HumanoidRig.ragdoll_start() and CombatActor._ragdoll_full() name all three at_once cases (out of a hold, a blocked launch, a launch from behind); ragdoll_hit() documents `strike`. time_controller.gd header says it is the only path for presentation to WRITE to the simulation, and that the ragdoll's drawn pose is read back for the get-up, respawn and walk home. ARCHITECTURE.md: the 'Partial ... Full' bullet (the ease out of a running stagger) and the 'Following the sim' bullet (which body the kick lands on, the 0.32 versus 0.22 m open question).",
+   "tests": "comment-only; the full suite passes."
+  }
+ ],
+ "commit": "c2e19952e3050831aff6bb9169caa9c0b6c95340",
+ "pushed": true,
+ "tests_passed": 523,
+ "tests_total": 523,
+ "script_errors": false,
+ "tunables_added": [],
+ "captures": [
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r3-ragdoll-kick-body/captures/fix/hook_after_sheet.png",
+   "description": "First-person hook stagger after the fix (tiled from hook_after.avi, which also holds the side view; log hook_after.log): the far fist stays up beside the shoulder, nothing at the lens. The before sheet is the reviewer's r01_hook.png under .worktrees/m2-review-r3look/captures/review_r3look/."
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r3-ragdoll-kick-body/captures/fix/uppercut_after.png",
+   "description": "First-person uppercut launch (J J H U) after the fix, tiled from acts_after.avi (which holds uppercut launch, guard-break stagger and parried jab in both views; log acts_after.log): the dummy flies, lands and lies as before."
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r3-ragdoll-kick-body/captures/fix/guardbreak_after.png",
+   "description": "First-person guard-break stagger after the fix: the arms fly open as before (shoulder strike body of the nearer side)."
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r3-ragdoll-kick-body/captures/fix/parry_after.png",
+   "description": "First-person parried jab after the fix: the striking arm is knocked out and back, never into the lens."
+  }
+ ],
+ "feel_judgement": "First person only. The hook now reads as a stagger with the far arm thrown up beside the shoulder and the gloved fist up in the upper-right corner. The big brown block at the lens in the before frames is gone, and the dummy's torso still rocks over and gives way about 0.33 m. The folded elbow is tight (43 to 67 degrees), a little chicken-wing, but it keeps the approved bent-near-the-guard look. The uppercut, guard break and parry acts look the same as before, with the arms thrown open and back and nothing at the lens. I did not record the at-once launch out of a stagger because no bot act covers it. Its no-jump test measures head 1.8 degrees and hands 0.08 m against the trunk's 0.09 m. The lens test passes in the wall corner (0.301 m) and in all five positions of a probe of it (0.26 to 0.33 m), although the margin there stays thin.",
+ "spec_questions": [
+  "Open push question, reframed (proposal and default: keep the fixed Head/UpperChest strike bodies): today's code already gave the milder 0.22 m on the first hook after every KO and comeback and after some set_post moves, and 0.34-0.41 m otherwise. The fix makes the approved 0.32-0.35 m the give on every hook. Asking Game-boy again would be: should the push land on the body nearest the contact (neck and chest, about 0.22 m on every hook)? Default: no.",
+  "ARMS and LEGS kicks: on a fresh dummy the old search picked a shoulder (left or right by the contact's world x, so often the wrong arm) for ARMS, and the left foot or lower leg for LEGS in a FULL ragdoll. A PARTIAL leg hit picked a shoulder. These were accidents of the identity pose cache. No history-independent rule can reproduce them. I kept ARMS as the shoulder of the NEARER arm (strike table), so the parried or guard-broken arm is now the one that is kicked. LEGS use the leg body nearest the contact, because a fixed Foot pick broke test_the_contact_push_stays_within_its_caps_after_many_hits_in_a_row (joint stretch 0.163 m against the 0.12 m limit). A leg-region hit that only staggers now kicks the trunk body nearest the contact (and so the whole trunk) rather than one shoulder. Rare in play. Default: as implemented."
+ ],
+ "remaining": [
+  "The lead's leg-3 docs (r3code-06) are not touched: the 'Get-up' bullet's 'one of two places' (now three), Hit flash 'Frames' (impact_frame_ticks() skips blocked hits and needs vfx_impact_frame_frames > 0), the hold view built by _view_with(), and the Interfaces list (is_blinking_in(), is_flying(), impact_frame_ticks()).",
+  "tuning/default.json needs no regeneration: no tunables were added.",
+  "Thin margins that remain: the end-wall corner uppercut lens test (0.301 m now, 0.26-0.33 m across a five-position probe against the 0.25 m rule; it is the pinned-body wall reaction, which is waiting on Game-boy), and the pinned dummy covering 51% of the view once it stands in its guard at the end of the hook's stagger (the player's step-in distance)."
+ ]
+}

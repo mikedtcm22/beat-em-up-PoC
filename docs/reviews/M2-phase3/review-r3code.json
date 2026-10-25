@@ -1,0 +1,140 @@
+{
+ "lens": "r3code",
+ "round": 3,
+ "worktree": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-r3code",
+ "summary": "Code review of c27afaf..72a1066 (game, tools, tests): round 1's four fixer branches, round 2's five, gap-09 and the lead's test change. The full suite passes (518/518, 28671 asserts, no SCRIPT ERROR or ERROR; log at captures/review_r3code/tests_full.log). These checks came out clean:\n- Layer rules: no simulation code reads a camera. The KO view only changes its own cull mask and smoothing, and reads the player's health, rig, interpolated origin and TimeController.scale_for. The VFX warm-up emits no CombatEvents and changes no game state. The wall take-over is detected in CombatActor._integrate() (is_on_wall()) and _launch_blocked() (a capsule cast against LAYER_WORLD). The comeback ranks spots by player.get_forward(). impact_frame_ticks() matches VfxDirector's rule today.\n- Tunables: all 22 new ones are @export_range values in sensible groups, are in tuning/default.json (format 2, 318 values) and are read where they are used. None is cached.\n- Typing and docs: static types and tabs throughout, ## docs on the new public API.\n- Interactions that hold: a point-blank throw or knee KO into a wall reads as before round 2 (from_hold skips _launch_blocked and set_blocked). A pending finisher flash is cleared by _vanish and reset_state, and the parry resets its delay. The warm-up skips headless, draws no ink while the toggle is off, and _acquire resets pooled sprites (modulate, flags). The KO view keeps updating behind side view and free fly, puts VIS_FP_HIDDEN back at weight 0, and shows no head pop on the way back in (probe_ko_view_lift.log).\n\nSix findings:\n1. HIGH. Ragdoll._queue_impulse() picks the kicked body from whatever pose cache is left. The hook's give is 0.341 m on a fresh dummy, 0.216 m on the first hook after a KO and comeback (Neck kicked instead of Head), and 0.256 or 0.407 m after set_post moves. gap-07's seed also moved the hook's lean kick from UpperChest to Chest, which raised the arm-trail ratio from 0.795 to 0.834. That, not the re-posed arm, is what the lead's 0.8 -> 0.85 test change hides.\n2. MEDIUM. gap-05's fix is incomplete: return_home only checks the post. A player standing between a displaced dummy and its post is walked into every 1.25 s, and the dummy stays pressed against him with its fists filling the first-person view.\n3. LOW. An at-once take-over out of a running stagger (the partial ragdoll) jumps the head about 30 degrees and the hands up to about 0.1 m in one frame, and the hitstop holds that frame.\n4. LOW. Feel numbers are still in scripts: _HELD_BLEND_S, _GRAB_EASE_S and the stagger's 0.04 blend.\n5. LOW. Code comments the fixes left stale.\n6. LOW. ARCHITECTURE mismatches (docs only).",
+ "acts_checked": [
+  "R3: hook, fresh dummy (captures/review_r3code/review_bot.gd, first person; movie 0.08 s)",
+  "R3: KO and comeback, then the same hook from the same spot (first person; movie 3.20 s and 9.72 s)",
+  "R3: player between the dummy and its post (first person; movie 12.83 s)",
+  "probe_kick_body.gd: which body each kick lands on (fresh dummy, second hook, after set_post moves, after a KO and comeback, uppercut out of the stagger)",
+  "probe_hook_seed.gd / probe_hook_seedfirst.gd: test_ragdoll.gd's hook arm-trail measurement on the merged code, without gap-07's seed (ragdoll_noseed.gd) and with the seed run before the kick's search (ragdoll_seedfirst.gd)",
+  "probe_atonce_partial.gd and probe_wall_pppp.gd: at-once take-over out of a running stagger (from behind, and P P P P into the end wall), head/arm influence 0.45 against 0.9",
+  "probe_walk_into.gd: return_home with the player standing between the dummy and its post",
+  "probe_ko_view_lift.gd: head-layer share on every tick the layer is lifted near the eyes (on the way out and back in)",
+  "tools/run_tests.sh: full suite 518/518"
+ ],
+ "captures_reviewed": [
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-r3code/captures/review_r3code/r3.avi",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-r3code/captures/review_r3code/hook_fresh_fp.png",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-r3code/captures/review_r3code/hook_after_comeback_fp.png",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-r3code/captures/review_r3code/walk_into_player_fp.png"
+ ],
+ "sheets_for_game_boy": [
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-r3code/captures/review_r3code/hook_fresh_fp.png",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-r3code/captures/review_r3code/hook_after_comeback_fp.png",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-r3code/captures/review_r3code/walk_into_player_fp.png"
+ ],
+ "open_question_notes": "The question waiting on Game-boy, \"the push's part-body choice by contact (it reads a stale cache today; choosing by contact would cut the hook's give from 0.32 to 0.22 m)\", rests on a wrong premise. Today's default does not give 0.32 m reliably.\n- It gives 0.34-0.41 m only when the left-over cache happens to pick the Head (a dummy's first ragdoll, some posts).\n- It already gives 0.216 m (the Neck) on the first hook after every KO and comeback, and 0.256 m after some set_post moves, the way bots stage their acts. So the approved README \"stronger staggers\" give is missing on the first hook after a comeback and in some bot-staged captures.\nThe real choice is between a fixed pick (Head for a head hit, UpperChest for the trunk: about 0.34 m every time, the README's number, no spec change) and the body nearest the contact on the true pose (Neck: about 0.22 m every time, the spec question). Either one makes it consistent.\n\nNothing here touches the other open items:\n- grab-03, grab-05/hit-01, hit-02;\n- the hold's look dead band;\n- ragdoll_partial_head_influence (finding 3 only concerns how it carries into an at-once take-over);\n- contortion on the push, the lens pull-back and bend, the wall reaction;\n- bars over bodies that aren't upright;\n- WP3's audio;\n- the non-KO knockdown view and the HUD during the KO view.",
+ "also_noticed": [
+  "impact_frame_ticks() (combat_actor.gd:945-950) copies VfxDirector's rule (vfx_director.gd:360-365). Both skip blocked hits, need the finisher tier and the toggle, and need more than 0 frames, so they agree today. But the ink lasts vfx_impact_frame_frames/60 s of real time counted per rendered frame, while the flash delay counts physics ticks. At 144 Hz the ink's 5th frame (about 34.7 ms) can overlap the flash's first frame (33.3 ms). Only test_a_finisher_flashes_right_after_its_impact_frame (P P P P at 60 fps) would catch an edit to one side.",
+  "reaction_snap_blend_s is exercised only for the flinch (test_a_hits_pose_snaps_in_over_the_reaction_blend). Its launch, guard-break and knee-jolt uses are untested, and test_the_release_and_snap_blends_are_tunables_with_the_values_they_had only checks the defaults.",
+  "dummy_return_slack_m, dummy_return_turn_rate, dummy_return_stuck_s, ko_view_height_m, ko_view_pitch_deg, ko_view_in_s and ko_view_min_reach have no ## doc of their own; they share the previous property's block (the existing ko_blink_in_hz pattern).",
+  "Dummy tunables are now split over three groups: dummy_return_* and dummy_face_turn_rate in 'Reactions', dummy_walk_speed in 'Feel details', and the sparring values in 'Sparring'.",
+  "EnemyHealthBars.body_margin_m (0.15) is a node @export like lift_px, so it is not on the tuning panel.",
+  "KO view: _ko_side is chosen once at the killing blow and kept while the view eases back (first_person_camera.gd:287-289). A second KO during the ease-in reuses the old side, and the side is never switched after the body lands; a wall only pulls the lens in along the ray, down to ko_view_min_reach.",
+  "Ragdoll._top_twist, a test-only accessor, is written on every contact twist in production (ragdoll.gd _twist_at_contact). Negligible cost.",
+  "CombatActor._launch_blocked() allocates a new CapsuleShape3D and query on every launch; TrainingDummy builds its queries once.",
+  "VfxDirector.clear() hides the impact frame without calling ImpactFrame._end_warm(). It is harmless (flash() ends the warm-up first) but can leave _warming set.",
+  "DamageLook.prepare() also runs on the player's materials, so the first-person body always pays for the triplanar detail layer although the player never shows a look.",
+  "The 'ERROR: 2 resources still in use at exit' in captures/review_r3code/r3_headless.log comes from my scratch bot's coroutines, not from game code.",
+  "Not defects, verified: the KO view lifts and hides the head layer with no pop (head share 0% on every lifted tick near the eyes on the way back in, 2.4% at w=0.305); a throw or knee KO into a wall takes the pre-round-2 path; the warm-up never draws ink with impact_frame_enabled off; warm sprites come back from the pool with modulate WHITE and their flags reset."
+ ],
+ "findings": [
+  {
+   "severity": "high",
+   "title": "The kicked ragdoll body depends on a left-over pose cache: the approved hook give swings from 0.22 to 0.41 m with the dummy's history, and gap-07's seed silently moved the hook's lean kick (the lead's 0.85 threshold hides it)",
+   "detail": "Ragdoll.start() runs _queue_impulse() after mode changes, so _world_visual() reads visual_rig_transform * _visual, the cache of the last ragdoll's drawn pose (identity before the first ragdoll). The kicked body within the part is therefore whichever is nearest the contact in that stale pose, wherever the dummy's last ragdoll ended. gap-07 deliberately seeds the cache after this search 'to keep the approved push', and its comment (ragdoll.gd:378-389) claims the search picks 'the head and upper chest, nearly always'. Two problems:\n(a) The pick is not stable. On the same hook from the same distance, the HEAD kick lands on the Head (give 0.341-0.407 m) for a fresh dummy or after some post moves, but on the Neck (give 0.216-0.256 m) on the first hook after every KO and comeback and after other set_post moves. So the README's approved 'stronger staggers' give (about 0.32 m against 0.22 m at 0.6) is missing on the first hook after a comeback, and it varies across bot-staged captures depending on act order. Seeding before the search gives the Neck consistently (give 0.216 m), so the open Game-boy question's premise ('choosing by contact would cut 0.32 to 0.22') is wrong: today already gives 0.22 m on the first hook after every comeback.\n(b) _ragdoll_stagger() queues the hook's lean as a second kick (rig.ragdoll_hit, combat_actor.gd:1179) right after ragdoll_start(). That kick's search runs after the seed, so the merge moved it from UpperChest to Chest. Its contact twist now lands on another body, and the arm-trail ratio went from 0.795 to 0.834. That is why the merged build failed test_ragdoll.gd's 0.8 check. The lead attributed the failure to the re-posed far arm sagging and relaxed the check to 0.85 (2% headroom, test_ragdoll.gd:1148). The arm is not at fault: without the seed the same merged pose passes at 0.795.",
+   "evidence": "captures/review_r3code/probe_kick_body.log:\n- fresh: 'HEAD kick on Head', give 0.341 m;\n- after a KO and comeback (cache 1.87 m away): 'HEAD kick on Neck', give 0.216 m.\nprobe_kick_body2.log, the same hook at four posts: cache 0.00 m -> Head 0.396; 3.83 m -> Neck 0.256; 6.94 m -> Head 0.407; 5.89 m -> Neck 0.256.\nprobe_hook_seed.log (test_ragdoll.gd's _hook_stagger measurement):\n- MERGED: now struck [Head, Chest], hand 0.280 -> 0.233 (ratio 0.834);\n- NO SEED (ragdoll_noseed.gd restores the cache after start()): struck [Head, UpperChest], ratio 0.795.\nprobe_hook_seedfirst.log: seed before the search gives [Neck, Chest], gap 0.216 m.\nThe bot run (r3_headless.log): 'HOOK fresh: struck [Head, Chest], gave way 0.341 m'; 'HOOK after comeback: struck [Neck, Chest], gave way 0.216 m'. The same run is in r3.avi (hooks at about 0.6 s and 10.3 s).\nCode: ragdoll.gd:281-389 (search at 376, seed at 378), 945-962; combat_actor.gd:1166-1179.",
+   "repro": "cd /Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-r3code && godot --headless --fixed-fps 60 -s addons/gut/gut_cmdln.gd -gconfig=res://.gutconfig.json -gdir=res://captures/review_r3code/ -gprefix=probe_ -gselect=probe_kick_body (and -gselect=probe_hook_seed). In play: KO a dummy, let it come back on its post, P P P: the first hook kicks the Neck and gives way about 0.22 m against 0.34 m on a fresh dummy.",
+   "suggested_fix": "Make the pick independent of the cache:\n- seed the cache before the search (or search on rig.global_transform * rig.animation_pose(), as _world_visual() does for mode NONE);\n- choose the struck body by the hit's part with a fixed preference that reproduces the approved feel: the Head for a HEAD hit, UpperChest for the trunk, as round 1's lean was measured. Alternatively keep 'nearest on the true pose' and re-tune, but that is the open spec question.\nThen:\n- give the lean kick an explicit body;\n- restore the 0.8 arm-trail threshold;\n- add a test that the hook's struck body and give are the same on a fresh dummy, after a set_post move and after a KO and comeback;\n- fix the seed comment and Ragdoll.start's doc;\n- reframe the Game-boy question.",
+   "files": [
+    "game/actors/ragdoll.gd",
+    "game/actors/combat_actor.gd",
+    "tests/test_ragdoll.gd"
+   ],
+   "spec_change": false,
+   "id": "r3code-01",
+   "lens": "r3code"
+  },
+  {
+   "severity": "medium",
+   "title": "gap-05's 'wait, don't walk in' covers only the post: a player standing between a displaced dummy and its post is walked into every 1.25 s and the dummy's fists fill the first-person view",
+   "detail": "_walk_home() (training_dummy.gd:154-176) refuses to walk only while _has_room(_home) is false. Its stuck rule ends a walk that gets no nearer for dummy_return_stuck_s, zeroes _idle_frames and retries after dummy_return_idle_s, with no limit. Neither looks at the path. So a player standing between the dummy and its post, with the post free (more than about 0.7 m from him), gets walked into: the dummy walks straight at him, stalls against his capsule, stands pressed against him facing him, and walks again every 1.25 s. This is the usual follow-up after a knockdown: the dummy lands 2-3 m back, the player closes to magnet_stop_distance (0.85 m) and stops, and the post is behind him. A crate or wall between the dummy and its post gives the same endless bump every 1.25 s. The approved behaviour is that the dummy 'waits instead of walking into him'; this is the incomplete part of gap-05's fix.",
+   "evidence": "captures/review_r3code/probe_walk_into.log: 'player 0.85 m off the post toward the dummy: dummy walked 118 of 600 ticks in 8 bouts, touching the player 542 ticks, closest gap 0.000 m' (the player is never pushed). walk_into_player_fp.png (r3.avi from 12.9 s, 4 fps): from the 4th tile on, the dummy's guard fists and forearms cover most of the first-person view for the remaining 4+ s. Code: training_dummy.gd:159-176 (no path check), 168-172 (retry without limit).",
+   "repro": "Run probe_walk_into.gd (as above), or in play: knock a dummy down 2-3 m off its post, step up to it so its post is behind you, and wait.",
+   "suggested_fix": "In _walk_home(), cast the capsule a short way toward the post against LAYER_PLAYER_BODY and LAYER_ENEMY_BODY (reuse _way_query with that mask, or a new look-ahead tunable). When a standing body is in the way, don't walk: stand and face the player, as the post rule does. After a give-up against the world, stop retrying until the dummy is hit or moved, or back off. Add tests for a player and a crate in the way.",
+   "files": [
+    "game/enemies/dummy/training_dummy.gd",
+    "game/autoload/tuning_data.gd",
+    "tuning/default.json",
+    "tests/test_ko_blink.gd"
+   ],
+   "spec_change": false,
+   "id": "r3code-02",
+   "lens": "r3code"
+  },
+  {
+   "severity": "low",
+   "title": "An at-once take-over out of a running stagger jumps the head and arms in one frame (ragdoll-02's head/arm influence against gap-01/gap-03's at_once)",
+   "detail": "In a PARTIAL, _process_modification_with_delta() draws the neck, head and arms at ragdoll_partial_head_influence and ragdoll_partial_arm_influence (0.45 against the trunk's 0.9). Ragdoll.start(FULL, at_once) from a running PARTIAL leaves the bodies already simulating where they are and sets the influence to 1. The head and arms then jump from their 0.45 share of the simulation to all of it on the launch's first frame, and the hitstop holds that frame. That contradicts 'takes over at once from the pose on screen'. It happens on P P P P with the dummy's back to a wall (the uppercut out of the hook's stagger is blocked) and on a launch from behind out of a stagger. With the impact frame on, the finisher's ink hides the frame of the jump but not the jumped pose the hitstop then holds. Heavy knockdowns into walls and players with the toggle off see the jump itself. take_over() itself is fine: a FULL ragdoll already draws everything at share 1.",
+   "evidence": "probe_wall_pppp.log (P P P P, end wall 0.4 m behind the dummy, at once): with share 0.45, 't+0 hitstop true infl 1.00: head 42.5 deg 0.076 m, hands 0.108/0.203 m, chest 0.098 m', then frozen. With share 0.9: 'head 13.5 deg 0.083 m, hands 0.094/0.121 m'. probe_atonce_partial.log (launch from behind out of a stagger): head 38.2 against 7.8 degrees, hands 0.165/0.246 against 0.081/0.106 m. Code: ragdoll.gd:326-330 (at_once), 341-357 (previous_sim bodies keep their pose), 576-596 (share).",
+   "repro": "Run probe_wall_pppp.gd or probe_atonce_partial.gd under captures/review_r3code/ (same command as above).",
+   "suggested_fix": "In start(), when at_once and was == PARTIAL, move the already-simulating head and arm bodies onto their drawn pose (shown[i], which includes the shares) and keep their velocity, as take_over() does. Alternatively ease the head and arm shares up to 1 over ragdoll_full_rise_s. Add a no-jump test for an at-once launch out of a stagger.",
+   "files": [
+    "game/actors/ragdoll.gd",
+    "tests/test_ragdoll.gd"
+   ],
+   "spec_change": false,
+   "id": "r3code-03",
+   "lens": "r3code"
+  },
+  {
+   "severity": "low",
+   "title": "Feel numbers still in scripts after gap-08: _HELD_BLEND_S, _GRAB_EASE_S and the stagger's 0.04 s blend (reaction_snap_blend_s's doc skips the stagger)",
+   "detail": "Remaining feel numbers in the diff's files:\n- combat_actor.gd:47 _HELD_BLEND_S := 0.12 (the grab's blend into 'held', also the ragdoll_stop floor at 485);\n- combat_actor.gd:48 _GRAB_EASE_S := 0.23 (the pin ease);\n- combat_actor.gd:983 rig.play(_directional_anim(&\"stagger\", kb), 0.04).\nreaction_snap_blend_s's doc (tuning_data.gd:81-83) lists the launch, knee jolt, flinch and guard break, so tuning the snap leaves the stagger's snap behind at 0.04.\nThe rest of the new literals are technical or art: tie margins (0.001, 0.0001, the 0.01 side bias), VfxDirector.WARM_* (documented as technical), pose angles, Hair dimensions, the player's pants_color (an art color, like body_color). Pre-existing: _PANTS_DARKEN, the `else 12` hitstun fallback.",
+   "evidence": "grep of the added lines of game/ in git diff c27afaf..72a1066. fix-r2-launch-into-walls.json 'remaining' lists the same three as left on purpose.",
+   "repro": "cd /Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-r3code && grep -n \"_HELD_BLEND_S\\|_GRAB_EASE_S\\|0.04)\" game/actors/combat_actor.gd",
+   "suggested_fix": "Add grab_hold_blend_s and grab_pin_ease_s to 'Grab and weapons' and a stagger snap blend to 'Reactions' (or fold the stagger into reaction_snap_blend_s), keeping today's values. Regenerate tuning/default.json and update the tuning-panel test.",
+   "files": [
+    "game/actors/combat_actor.gd",
+    "game/autoload/tuning_data.gd",
+    "tuning/default.json"
+   ],
+   "spec_change": false,
+   "id": "r3code-04",
+   "lens": "r3code"
+  },
+  {
+   "severity": "low",
+   "title": "Stale code comments left by the merged fixes (ragdoll header, Ragdoll.start's kick doc and seed comment, at_once docs, TimeController header)",
+   "detail": "- ragdoll.gd:5-7: 'never reads it, except in two places: ... where a training dummy respawns'. TrainingDummy._has_room() also gates the walk home on every tick (_walk_home() -> _home_has_room(), training_dummy.gd:160/179). That is a third read, a simulation decision taken every tick from the drawn ragdoll, and it changes with ragdoll_enabled.\n- ragdoll.gd:270: 'place the hit's kick ... on the `part` body nearest to the contact', and ragdoll.gd:378-389: 'the bodies it picks (the head and upper chest, nearly always)'. Both are false (finding 1).\n- humanoid_rig.gd:539-542 (ragdoll_start: at_once '(a body launched out of a hold)') and combat_actor.gd:1184 (_ragdoll_full: 'at once (out of a hold)'). at_once is also used for blocked launches and launches from behind (combat_actor.gd:1026-1028).\n- time_controller.gd:2: 'The only path for presentation to affect the simulation'. The ragdoll feeds the get-up, the respawn spot and the walk home.",
+   "evidence": "File:line references in the detail; the code paths are training_dummy.gd:154-187 and combat_actor.gd:1017-1029.",
+   "repro": "Read the cited lines against the code paths named.",
+   "suggested_fix": "Update the ragdoll.gd header to the three reads; rewrite Ragdoll.start's doc and the seed comment once finding 1 is settled; list all three at_once cases in the humanoid_rig and combat_actor docs; qualify the TimeController header.",
+   "files": [
+    "game/actors/ragdoll.gd",
+    "game/actors/humanoid_rig.gd",
+    "game/actors/combat_actor.gd",
+    "game/autoload/time_controller.gd"
+   ],
+   "spec_change": false,
+   "id": "r3code-05",
+   "lens": "r3code"
+  },
+  {
+   "severity": "low",
+   "title": "ARCHITECTURE mismatches with the merged code (docs only, for leg 3)",
+   "detail": "- Ragdoll 'Get-up' bullet: 'This is one of two places the ragdoll feeds the simulation; the other is the respawn's room check (`TrainingDummy._has_room()` ...)'. The walk home calls _has_room(_home) every tick (training_dummy.gd:160, 179-185); the KO bullet's sub-bullet already says so.\n- Ragdoll 'Following the sim': 'the hit's kick lands as a velocity change on the struck part (its hurtbox region)'. The body within the part comes from the stale cache (ragdoll.gd:376, 945-962; finding 1).\n- Ragdoll 'Full': 'The ragdoll takes over at once from the pose on screen ...'. Out of a running stagger the head and arms jump (finding 3).\n- Hit flash 'Frames': '`CombatActor.impact_frame_ticks()` (the finisher tier with `impact_frame_enabled`, ...)'. It also skips blocked hits and needs vfx_impact_frame_frames > 0 (combat_actor.gd:947-950).\n- KO view: 'It reads the player through its public API (`health`, `is_ko()`, the rig's hips and facing)'. It never calls is_ko(). It reads player.health, player.rig.global_basis, rig.get_point_position(&\"Hips\"), get_global_transform_interpolated(), TimeController.scale_for(player), and every 'actor' for _ko_crowding() (first_person_camera.gd:271-397).\n- KO view 'Other cameras': 'side view and free fly ... read none of it'. True, but the first-person camera keeps running its KO view while another camera is current (its own _process -> update_camera, first_person_camera.gd:111), so cycling back mid-KO shows the view already out.\n- Hold view: '`FirstPersonCamera.view_from_eye(player, eye)` builds the view from them'. The camera builds it with _view_with(player, eye, smoothed shift); view_from_eye() is what the tests use.\n- 'Interfaces between modules': the CombatActor list lacks is_blinking_in(), is_flying() and impact_frame_ticks().",
+   "evidence": "docs/ARCHITECTURE.md lines 108, 128, 129, 137, 281, 285, 276 and 206-222 against the code lines cited.",
+   "repro": "grep -n \"one of two places\\|is_ko()\\|impact_frame_ticks\\|view_from_eye\" docs/ARCHITECTURE.md",
+   "suggested_fix": "Leg 3: update the sentences as listed, after findings 1 and 3 are settled.",
+   "files": [
+    "docs/ARCHITECTURE.md"
+   ],
+   "spec_change": false,
+   "id": "r3code-06",
+   "lens": "r3code"
+  }
+ ]
+}
