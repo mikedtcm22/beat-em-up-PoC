@@ -1,10 +1,11 @@
 class_name TrainingDummy
 extends CombatActor
 ## A training target (Milestone 1). Full hit reactions, health from Tuning, faces the
-## player, and walks back to its post when left alone. KO'd, it lies, blinks off like every
+## player, and walks back to its post when left alone (not while someone stands on it, and
+## it gives up a walk that goes nowhere: _walk_home()). KO'd, it lies, blinks off like every
 ## enemy (CombatActor), and Tuning.dummy_revive_s later blinks back in standing at its post
-## (set_post()), or beside it when someone stands there, at full health, its damage look
-## clean (_respawn()).
+## (set_post()), or beside it when someone stands there (clear of him, in his view:
+## _respawn_spot()), at full health, its damage look clean (_respawn()).
 ##
 ## Sparring (`sparring`, F5 in the test room): with the player within Tuning.sparring_range
 ## in front of it, the dummy walks in (facing the player, at Tuning.dummy_walk_speed) until
