@@ -38,6 +38,10 @@ var _home: Vector3
 ## The yaw it comes back at after a KO (set_post()).
 var _home_yaw: float = 0.0
 var _idle_frames: int = 0
+## The walk back to the post (_walk_home()): the nearest it has got to the post on this
+## walk (INF between walks) and the sim frames since it last got nearer.
+var _home_walk_best: float = INF
+var _home_walk_stalled: int = 0
 var _jab: MoveData
 ## The jab with its startup scaled by Tuning.windup_mult, for the multiplier it was built for.
 var _scaled_jab: MoveData
@@ -128,19 +132,55 @@ func _tick_control() -> void:
 		_spar(partner)
 		return
 	_idle_frames += 1
-	var to_home := _home - global_position
-	to_home.y = 0.0
-	if return_home and _idle_frames > 60 and to_home.length() > 0.3:
-		_walk(to_home.normalized(), 6.0)
+	if return_home and _walk_home():
 		return
+	_home_walk_best = INF
 	sim_velocity.x = 0.0
 	sim_velocity.z = 0.0
 	if face_player and player:
 		var to_player := player.global_position - global_position
 		to_player.y = 0.0
 		if to_player.length_squared() > 0.01:
-			_turn_toward(to_player.normalized(), 4.0)
+			_turn_toward(to_player.normalized(), Tuning.data.dummy_face_turn_rate)
 	rig.play_locomotion(Vector2.ZERO, 0.0)
+
+
+## Left alone for Tuning.dummy_return_idle_s and further than Tuning.dummy_return_slack_m
+## from its post: walk toward it. Stays where it is while the post has no room (someone is
+## standing on it: a walk would only push against him), and gives up a walk that gets no
+## nearer for Tuning.dummy_return_stuck_s (something is in the way), standing for the idle
+## time before it tries again. True when it walked this tick.
+func _walk_home() -> bool:
+	var tuning := Tuning.data
+	var to_home := _home - global_position
+	to_home.y = 0.0
+	var dist := to_home.length()
+	if _idle_frames <= roundi(tuning.dummy_return_idle_s * Engine.physics_ticks_per_second) \
+			or dist <= tuning.dummy_return_slack_m or not _home_has_room():
+		return false
+	# Any nearer than before counts, to a millimetre's float noise.
+	if dist < _home_walk_best - 0.001:
+		_home_walk_best = dist
+		_home_walk_stalled = 0
+	else:
+		_home_walk_stalled += 1
+		if _home_walk_stalled > roundi(tuning.dummy_return_stuck_s * Engine.physics_ticks_per_second):
+			_home_walk_best = INF
+			_home_walk_stalled = 0
+			_idle_frames = 0
+			return false
+	_walk(to_home / dist, tuning.dummy_return_turn_rate)
+	return true
+
+
+## Whether the post has room for the dummy to stand on (_has_room(): nobody standing, lying,
+## held or flying there, no wall).
+func _home_has_room() -> bool:
+	var space := get_world_3d().direct_space_state if is_inside_tree() else null
+	if space == null:
+		return true
+	_build_room_queries()
+	return _has_room(space, _home)
 
 
 ## Move the dummy and make `pos` (facing `yaw`) the post it walks back to and comes back
@@ -222,12 +262,12 @@ func _spar(partner: CombatActor) -> void:
 	to_player.y = 0.0
 	var dir := to_player.normalized()
 	if to_player.length() > Tuning.data.sparring_step_in_m:
-		_walk(dir, 4.0 if face_player else 0.0)
+		_walk(dir, Tuning.data.dummy_face_turn_rate if face_player else 0.0)
 		return
 	sim_velocity.x = 0.0
 	sim_velocity.z = 0.0
 	if face_player:
-		_turn_toward(dir, 4.0)
+		_turn_toward(dir, Tuning.data.dummy_face_turn_rate)
 	if _spar_wait <= 0:
 		start_jab()
 		return
@@ -276,8 +316,12 @@ func _tick_ko() -> void:
 ## Where the dummy comes back: its post, or, when someone is there (standing, lying, held,
 ## flying, or another dummy blinking back in; the player who knocked it out often stands on
 ## it), the nearest spot around it with room for its body, floor under it and no wall or
-## curb on the way from the post (one, then two body widths out, the one farthest from the
-## player first). Vector3.INF while there is none; it waits.
+## curb on the way from the post: one, then two body widths plus Tuning.dummy_respawn_gap_m
+## out, so a body on the post is never touched. Of the spots of the one ring (or the two,
+## when the first has none in the player's view) the one in front of the player or beside
+## him wins over any behind him, the one farthest from him first, and with several as far
+## the one most in front of him (the player's facing, never a camera). Vector3.INF while
+## there is none; it waits.
 func _respawn_spot() -> Vector3:
 	var space := get_world_3d().direct_space_state if is_inside_tree() else null
 	if space == null:
@@ -285,13 +329,21 @@ func _respawn_spot() -> Vector3:
 	_build_room_queries()
 	if _has_room(space, _home):
 		return _home
-	var player := get_tree().get_first_node_in_group(&"player") as Node3D
+	var player := get_tree().get_first_node_in_group(&"player") as CombatActor
+	var facing := player.get_forward() if player else Vector3.ZERO
 	var lift := Vector3.UP * (body_height * 0.5 + _GETUP_FLOOR_CLEARANCE)
+	var best := Vector3.INF
+	var best_ring := 0
+	var best_in_view := false
+	var best_d := -INF
+	var best_ahead := -INF
 	for ring: int in [1, 2]:
-		var best := Vector3.INF
-		var best_d := -INF
+		# A spot in the player's view is already taken: the next ring only offers more of the same.
+		if best.is_finite() and best_in_view:
+			break
 		for k: int in _GETUP_DIRECTIONS:
-			var spot := _home + Vector3.FORWARD.rotated(Vector3.UP, TAU * k / _GETUP_DIRECTIONS) * body_radius * 2.0 * ring
+			var spot := _home + Vector3.FORWARD.rotated(Vector3.UP, TAU * k / _GETUP_DIRECTIONS) \
+					* (body_radius * 2.0 + Tuning.data.dummy_respawn_gap_m) * ring
 			if not _has_room(space, spot):
 				continue
 			_way_query.transform = Transform3D(Basis.IDENTITY, _home + lift)
@@ -305,13 +357,30 @@ func _respawn_spot() -> Vector3:
 			if ground.is_empty():
 				continue
 			spot.y = (ground.position as Vector3).y
-			var d := spot.distance_to(player.global_position) if player else 0.0
-			if d > best_d:
-				best_d = d
+			var d := 0.0
+			var ahead := 0.0
+			if player:
+				var to_spot := spot - player.global_position
+				to_spot.y = 0.0
+				d = to_spot.length()
+				ahead = to_spot.normalized().dot(facing) if d > 0.0001 else 1.0
+			var in_view := ahead >= 0.0
+			# Spots within a millimetre are as far: a body standing on the post sees every
+			# spot of a ring at the same distance.
+			var better := false
+			if not best.is_finite():
+				better = true
+			elif in_view != best_in_view:
+				better = in_view
+			elif ring == best_ring:
+				better = d > best_d + 0.001 or (d > best_d - 0.001 and ahead > best_ahead)
+			if better:
 				best = spot
-		if best.is_finite():
-			return best
-	return Vector3.INF
+				best_ring = ring
+				best_in_view = in_view
+				best_d = d
+				best_ahead = ahead
+	return best
 
 
 ## Whether the body has room standing at `spot`: no world, no body (standing, or a ghost:
