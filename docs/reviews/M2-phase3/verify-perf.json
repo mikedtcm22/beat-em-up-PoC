@@ -1,0 +1,79 @@
+{
+ "lens": "perf",
+ "verdicts": [
+  {
+   "id": "perf-01",
+   "lens": "perf",
+   "severity": "medium",
+   "title": "The first hit of every fresh run drops a frame: the first comic sprite builds its material on the hit frame (only the contact flash is warmed up; the first finisher no longer drops one)",
+   "survives": true,
+   "confirmations": 3,
+   "spec_question": false,
+   "files": [
+    "game/fx/vfx_director.gd",
+    "game/fx/impact_frame.gd",
+    "game/fx/comic_sprite.gd",
+    "tests/test_vfx.gd"
+   ],
+   "root_cause": "VfxDirector pools ComicSprites lazily. The first sprite's creation, its material and shader setup, and its first pipeline compile all land on the first hit's frame. Only the contact-flash overlay is warmed at load, and the impact frame's canvas material is first drawn on the first finisher.",
+   "open_question": "",
+   "votes": {
+    "reproduce": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "I reproduced it in one fresh vsync run. The first hit's frame took 34.8 ms against a 16.7 ms median beforehand, and the later frames of that window were 4.6, 10.6 and 16.6 ms. It is a real one-time hitch on the first hit of a run, and the code matches the report. I did not re-run the --warm variants or the fixed-fps CPU breakdown. That run was noisy, because other agents were using the machine. Act 2 and act 3 also had 31 and 38 ms frames at later finishers, so I cannot confirm the report's claim that nothing else goes over 25 ms. Severity medium looks right for a single dropped frame.",
+     "evidence": "I ran `godot --path . res://captures/review_perf/probe_finisher.tscn -- --tag=v1` once in the worktree (vsync on). I read the output with `python3 -I captures/review_perf/vs.py`. Results: pre-play median 16.7 ms with 0 of 172 frames over 20 ms; act1 first hit wall times [34.8, 4.6, 10.6, 16.6] ms. I also read game/fx/vfx_director.gd _acquire (around line 511). It does `ComicSprite.new()` and `add_child` on the hit when the pool is empty, so nothing warms the sprite materials at load. I moved the CSV to captures/verify/perf-01-reproduce/finisher_v1.csv and left the run log there as run1.log. Tracked files are untouched."
+    },
+    "spec": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "No doc approves or requires a first-hit frame drop, and none rules out the suggested fix. The phase 3 plan and the HANDOFF known item (c) both name first-use shader and texture warm-up as perf-lens work. ARCHITECTURE already describes a load-time warm-up (the flash overlay) as the pattern. The fix is code-only, adds no tunable and changes no approved behaviour.",
+     "evidence": "grep of docs/SPEC.md, README.md, docs/HANDOFF.md, docs/milestones/M2-phase3-plan.md and docs/ARCHITECTURE.md in the worktree. M2-phase3-plan.md:92 lists \"the first finisher's dropped frame (shader or texture warm-up?)\" under the perf checks. HANDOFF.md:27 has known item (c), the first finisher's dropped frame. HANDOFF.md:313 says the hit flash shader is warmed up at load. ARCHITECTURE.md:106 describes the first rig drawing the flash shader at zero strength so its pipelines compile at load. The docs say nothing on first-hit hitches or on warming comic sprites or the impact frame. The grep found no approval of a hitch."
+    },
+    "code": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The code matches the finding. The pool starts empty, so the first hit that spawns a comic effect creates a ComicSprite on the hit frame. The only load-time warm-up is HumanoidRig._warm_flash(), and nothing in game/fx warms sprites or the impact frame. I did not run a timing probe, so the 7-16 ms figure is untested here.",
+     "evidence": "In game/fx/vfx_director.gd, _pool is declared empty (line 60). _acquire() (line 512) calls ComicSprite.new() and add_child() when the pool is empty, and spawn_pop sets no_depth_test = true (line 150). game/fx/impact_frame.gd builds a ShaderMaterial in _init and stays hidden until flash(). A grep for \"warm\" in game/fx and tests/*.gd finds nothing outside game/actors/humanoid_rig.gd (_warm_flash, lines 498-510, skipped headless). No tests cover a warm-up. I read these files in /Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-perf and ran nothing else."
+    }
+   }
+  },
+  {
+   "id": "perf-02",
+   "lens": "perf",
+   "severity": "medium",
+   "title": "Every clean-to-bruised switch rebuilds the damage-look shader variant whenever no body shows a look: 3-5 ms on the main thread, 12-16 ms the first time in a run, a missed vblank on the first bruise",
+   "survives": true,
+   "confirmations": 3,
+   "spec_question": false,
+   "files": [
+    "game/fx/damage_look.gd",
+    "game/actors/humanoid_rig.gd",
+    "tests/test_vfx.gd"
+   ],
+   "root_cause": "DamageLook.apply() toggles detail_enabled and uv1_triplanar, which changes the StandardMaterial3D shader variant. When every body is clean the variant has no users and is freed, so the next bruise recreates and compiles it on the main thread. A fix keeps the variant fixed by leaving the detail layer always on, with a transparent texture standing for CLEAN, and swapping only detail_albedo.",
+   "open_question": "",
+   "votes": {
+    "reproduce": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "I reran the reviewer's probe and got the same pattern. A clean-to-bruised switch with no other bruised body costs 3.3-4.1 ms in the step window and triggers a surface pipeline compile on the next frame. It costs the same for 1, 3 or 6 rigs. The first switch in the process took 10.1 ms. The always-on detail layer with a texture swap costs 0.15-0.44 ms with no compile. The cost is real on the main thread and avoidable; it is a medium hitch, not a bug that breaks anything.",
+     "evidence": "I ran `godot --path . --fixed-fps 60 --disable-vsync res://captures/review_perf/probe_look.tscn -- --tag=v1` once, windowed, in the m2-review-perf worktree. The log and CSV are in captures/verify/perf-02-reproduce/ (look_v1.log, look_v1.csv). The probe writes its CSV to captures/review_perf/, so I moved look_v1.csv into the verify folder afterwards.\n\nstep_us on the LOOK rows, over 3 rounds:\n- Variant bruise, 1 rig: 10.07, 3.29 and 4.14 ms. The next row's pc_surface is 1 every time.\n- Variant bruise, 3 rigs: 3.83, 3.98 and 4.09 ms.\n- Variant bruise, 6 rigs: 3.48, 3.49 and 4.07 ms.\n- Variant clean: 0.24-0.63 ms, pc_surface 0.\n- Swap bruise (detail layer always on): 0.17-0.44 ms, pc_surface 0 in all 9 rows.\n- Swap clean: 0.14-0.30 ms.\n\nCode read: game/fx/damage_look.gd apply() toggles detail_enabled and uv1_triplanar, which changes the BaseMaterial3D shader variant. humanoid_rig.gd set_damage_look() (around line 524) calls it for every paint material. I did not run the --hold probe or the real-time vsync hitch measurements."
+    },
+    "spec": {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "No doc approves or requires a shader-variant rebuild or a hitch on the first bruise. SPEC §6 only asks for clean, bruised and bloodied steps at 66% and 33% health. The phase 3 plan lists perf measurement, including the first finisher's dropped frame and whether a shader or texture warm-up fixes it, as in scope. ARCHITECTURE shows the same approach already in use for the flash: pipelines are compiled at load and set_flash() never switches variants. Nothing rules out the suggested fix.",
+     "evidence": "grep of docs/SPEC.md, README.md, docs/HANDOFF.md, docs/milestones/M2-phase3-plan.md and docs/ARCHITECTURE.md in the perf worktree for damage look, bruise, variant, pipeline, hitch and warm-up. SPEC.md:200 sets the look steps. M2-phase3-plan.md:92 puts perf in scope. ARCHITECTURE.md:106 describes the load-time flash warm-up. ARCHITECTURE.md:244 says the damage look changes rig materials only. HANDOFF.md mentions the damage look only for how visible it is, not for cost. I did not run Godot."
+    },
+    "code": {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The code does what the finding says. Materials are built with no detail layer (humanoid_rig.gd _build_materials), and DamageLook.apply() turns detail_enabled and uv1_triplanar on for any non-clean level and off again for clean. That changes the BaseMaterial3D variant key. Godot drops a variant's shader when no material uses it, so the first bruise with no other bruised body recreates it. The code also confirms that emission is kept on so set_flash() never switches variants, and that bruised-to-bloodied only swaps textures, as the finding states. I did not re-run the timings, which depend on engine internals the code can't show.",
+     "evidence": "Read game/fx/damage_look.gd (apply: lines ~45-57), game/actors/humanoid_rig.gd (set_damage_look ~524-527, _build_materials ~699-709) and the only caller, game/fx/vfx_director.gd:366. tests/test_vfx.gd only exercises set_damage_look levels, with no shader RID check. No probes or tests run."
+    }
+   }
+  }
+ ],
+ "pending": []
+}

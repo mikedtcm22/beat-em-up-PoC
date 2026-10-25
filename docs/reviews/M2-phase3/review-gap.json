@@ -1,0 +1,220 @@
+{
+ "lens": "gap",
+ "round": 2,
+ "worktree": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-gap",
+ "summary": "Gap review (round 2) of m2/hit-feel at bba8633, whose game code matches 8f5519f. I worked in /Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-gap and wrote files only under captures/review_gap/. Git status is clean, and no Godot process is left running. Note: running tools/run_tests.sh triggered its own `--import` step. It changed no tracked file and only added .import files for my sheets under captures/.\n\nFull GUT suite: 486/486 pass, with no SCRIPT ERROR or ERROR (tests_full.log). No probe or bot log has a SCRIPT ERROR or ERROR either.\n\nWhat I ran:\n- every ragdoll_bot act (26), in one run (rag_all.avi);\n- the A2 combo_bot finisher acts (combo_fin.avi);\n- a probe bot, captures/review_gap/gap_probe.gd, that logs per tick:\n  - lens metrics through the real FirstPersonCamera;\n  - how deep any drawn mesh vertex goes into the walls, crates, curb or floor;\n  - actor states.\n  It ran the player's KO, the wall, crate, building-front and curb cases, the simultaneous KOs, the occupied-post respawn, the pipe in side view, a grab beside a second dummy, the throw and the uppercut from behind;\n- Part D: the block acts and the contact-push vs central-kick A/B for 5 acts in both views;\n- an arm-influence A/B and a --no-ragdoll run of the hook.\n\nThe biggest new problems:\n1. Against a wall or the curb, a launch can't fly. The drawn head goes up to 0.38 m into the wall. In first person, the body falls back onto the attacker, 0.077 m from the lens over 68% of the view.\n2. The player's own KO in first person: the lens lies 7 cm above the floor with the player's own navy belly over 41% of the view for 2.5 s, then 77% and 1.7 cm from the lens on the get-up.\n3. The uppercut from behind snaps the arched-back head into the lens: 0.098 m, 67% of the view.\n\nVERDICTS\n- A1 Hook:\n  - First person: ragdoll-02's head fix holds; the head no longer lolls.\n  - The far arm still swings out dead straight. It is the stagger animation's pose: the same with --no-ragdoll, and the same at arm influence 0.45 and 0.9 (gap-04).\n  - Side view: the upper body visibly rocks back (s_hook_side_crop.png).\n  - The guard break, shove and parry staggers look the same as before the fixes in both views (ab_staggers.png, ab_gb_fp.png). The only differences are the delayed finisher flash and the new hair.\n- A1 Throw:\n  - No pop and no skate. Side view: the victim unbends on planted feet for about 5 frames, then makes a low, upright Y-pose arc and lands on its back.\n  - First person: the nearest the victim gets is 0.274 m, with at most 35% of the view (39% covered); nothing breaks the 0.25 m or half-view rules (t1.log).\n- A1 Knee KOs the held dummy:\n  - First person: the flash disc on the hair dome reaches 11.1% of the view at pixel luma 235 or more and 20.1% at 200 or more (grab-05's territory). The head rises at about 0.3 m and the body falls away upright.\n  - Side view: it tips back stiffly, like a plank, and lies with its feet at the player's feet. No pop.\n- A1 KO cycle, both views:\n  - The bar drains, then fades. It is gone by video frame 3476 in first person, before the first blink-off at 3484, and by 3879 in side view, just before the blink starts.\n  - Then the blink-off, the vanish, and the blink-in at the post; everything is correct.\n- A1 Stomp:\n  - The foot now lands on top of the chest (ragdoll-05's fix holds).\n  - The player's standing shins sink into the lying body's hips for the whole stand-over (gap-06).\n  - The bar crosses the player's knees and shins (open bars item).\n- A1 Push-kick pile: yes, the lying orange body's bar crosses the green body's chest (video 2144-2148) and its head during the get-up (2228-2252). This is the open bars item.\n- A2 hit-04 at close range, first person: every finisher now shows its flash on the 2 frames after its 2 impact frames (which are 39-53% white). Values below are pixel luma 235 or more / 200 or more:\n\n  | Finisher | Flash frames | 2 frames before the hit | 2 frames after the flash |\n  |---|---|---|---|\n  | shove | 4.9-5.4 / 9.0-9.4% | 1.8-1.9 / 2.9% | 2.6 / 4.4-4.5% |\n  | spinning backfist | 4.5-4.6 / 8.2-8.3% | 2.0 / 2.9% | 3.0-3.1 / 5.0% |\n  | stomp kick | 4.7-4.8 / 7.2-7.4% | 2.1 / 2.9% | 3.1-3.2 / 5.0% |\n  | push kick | 3.4-3.7 / 7.1-7.3% | 2.1 / 2.9% | 3.0 / 5.5-5.8% |\n  | haymaker | 2.8-3.0 / 5.1-5.6% | 1.8-1.9 / 2.9% | 2.7-2.9 / 5.0-5.2% |\n  | pipe smash | 4.3-5.0 / 8.5-9.0% | 1.7 / 3.8-4.1% | 2.5 / 4.6% |\n  | haymaker, side view | 1.8-1.9 / 3.7-3.8% | 2.6 / 3.6% | 1.8 / 2.8% |\n\n  - The haymaker's flash sits under its burst and is barely visible.\n  - In side view the haymaker's flash is invisible: the burst covers it (hit-05).\n  - The shove after the flurry (about 0.4 m, ragdoll_bot with no combat log): impact frames 41.0-42.6%; flash 6.8-7.6 / 11.9-12.7%; 2 frames before the hit 1.8-1.9 / 2.9-3.1%; 2 frames after the flash 2.9 / 5.0-5.1%.\n  - The same run's flurry body blows are 10.5-14.2% / 14.6-19.9% (combo: 9.7-13.2 / 13.4-18.0%). That matches hit-01's 12-13% and about 18%: the flurry strobe is unchanged. The shove's delayed flash is about half a body blow's, because the large burst covers its core (s_a2_ragshove.png, s_a2_finishers.png).\n- B1 Player's own KO:\n  - Standing: the player never blinks off (visible throughout, never gone). auto_revive brings it back 150 ticks after the KO (2.5 s, player_revive_s). The logs are clean.\n  - Holding: the held body freezes for the jab's hitstop (in hitstop on ticks 890-891; both bodies frozen through 892), then staggers away 0.27-0.77 m from the lens (grab-02's fix holds). The hold view eases out with no pop: pitch -16 to -13.3 degrees and the lens 0.29 m back over 11 ticks while the player falls.\n  - First-person lens on the KO: fails the rules (gap-02).\n  - The attacker's jab arm comes within 0.06-0.09 m of the lens on the hit; that is hit-02's known forearm spike.\n- B2 Bodies against geometry:\n  - Wall, building front and curb: defects (gap-01).\n  - Crate: fine. The body slumps against it; the hair goes up to 0.21 m in for 5 ticks.\n  - Pinned grab and knees: fine.\n  - Point-blank throw into the wall: fine, pressing at most 0.028 m into it.\n  - No NaN, no explosion, and no body is left stuck: every end-check capsule is clear of the world.\n- B3 Thrown pipe, side view:\n  - The swing, backswing and smash read clearly. The smash's KAPOW burst covers the head for about 10 frames (hit-05).\n  - The thrown pipe's burst lands on the green dummy's belly (code-01's fix holds), and the heavy full-ragdoll knockdown falls back cleanly.\n  - The flash is not visible under the burst (s_p1_swings_side.png, s_p1_throw_side2.png).\n- B4 Simultaneous KOs: the spin kick KOs three dummies at 10 HP in both views. All three lie, blink, vanish and blink back in at their posts in lockstep, ghost during the blink-in and solid after (s_k1_side.png). The respawn beside the occupied post comes back touching the player, behind him, then walks in place against him for 4.5 s or more (gap-05).\n- C1 Layer rules:\n  - Hold, with two notes:\n    - training_dummy._has_room() makes the simulation read the drawn ragdoll, a second read beyond ragdoll.gd's header (gap-07).\n    - CombatActor.impact_frame_ticks() duplicates VfxDirector's rule (also_noticed).\n  - Statics: all four calls the brief named are fine (EnemyHealthBars.screen_anchor_of(), player._on_hit_received()'s TimeController.hitstop([_held]), CombatActor.impact_frame_ticks(), and the rig readers).\n  - Docs: every public API the brief listed has its ## docs.\n  - Numbers: see gap-08.\n- C2 Tunables: all four new ones are read live from Tuning.data on every use, so they need no Tuning.changed hook. default.json is at format 2 and has them.\n- C3 Interactions between fixes:\n  - The delayed finisher flash is safe against follow_flash and show_visual_pose (both gated on _flash_on), a KO launch, _vanish and reset_state (both zero _flash_frames and clear _flash_aimed), and the parry's _flash() (which resets the delay).\n  - _launch's from_hold and grab-02 are order-safe: the player ticks first, so a knee KO turns the victim LAUNCHED before a jab, and _holding_valid() then skips the release. A holder's KO releases the victim as a stagger.\n  - _turn_solid and the blink-in: magnetism skips bodies blinking in, the pipe passes through the ghost, and respawn queries see ghosts and bodies blinking in.\n  - Old presets: missing keys keep their defaults, and format-1 presets migrate correctly.\n- C4 Leftover notes: see gap-05 and gap-08. The stale comments at humanoid_rig.gd:405 (\"3 m\" against \"about 4\" in tuning_data.gd:131 and ARCHITECTURE.md:106), vfx_bot.gd:100 and speed_lines.gd:26-27 are still stale.\n\nNOT DONE\n- Lens metrics for ragdoll_bot's knee KO; I judged it from frames only.\n- The crate and curb cases in first person (only the curb throw was recorded in first person).\n- A K2 first-person sheet: metrics only, which show no lens breach.\n- A grab with the second dummy beside the victim; I only did it behind.\n- Any real-time or windowed performance check.\n- Loading a preset in game or through the tuning panel (code read only).\n- A capture of the get-up foot that sinks below the floor (measured only).",
+ "acts_checked": [
+  "ragdoll_bot, all 26 acts in one run (rag_all.avi), both views. Judged from sheets: hook stagger (first person and side), throw (first person and side, frame by frame), knee KOs the held dummy (both), KO on a low-health dummy (both, plus a bar zoom), guard break / shove / parry (both, A/B against the pre-fix capture), push kick into a second dummy (first person and side), stomp (both), uppercut from behind (first person, frame by frame); uppercut, haymaker and spinning heel through the A/B sheets (both views)",
+  "ragdoll_bot 'hook stagger' with --set=ragdoll_partial_arm_influence=0.9 --set=ragdoll_partial_head_influence=0.9 (both views; first person judged)",
+  "ragdoll_bot 'Ragdoll: hook stagger' with --no-ragdoll (first person)",
+  "ragdoll_bot with --central-kick: hook stagger, uppercut launch, haymaker, spinning heel, guard-break stagger (each in both views) against rag_all",
+  "combo_bot: 'P · P: jab, flurry (mash), shove', 'P P · P: jab, jab, spinning backfist', 'K · K', 'P P K', 'Hold P, release: haymaker' (first person and side), 'Pipe: pick up, 3 swings, throw' (first person): A2 white shares",
+  "combo_bot: 'Block: sparring jab from the front' (first person) and 'Block: sparring jab (side view)'",
+  "probe T1 throw lens metrics (first person)",
+  "probe KO1/KO2 player KO standing (first person / side)",
+  "probe KO3/KO4 player KO while holding, second dummy jabs (first person / side)",
+  "probe W1/W2 +X end wall: hook, then uppercut (side / first person)",
+  "probe W3 end wall haymaker (side)",
+  "probe W4/W5 end wall: grab pinned, knee, knee, throw into the wall (side / first person)",
+  "probe W6 crate: P P P P (side)",
+  "probe W7 building front: hook, haymaker (first person)",
+  "probe W8/W9 curb: uppercut / haymaker toward the curb (side)",
+  "probe W10 curb: throw over the curb (first person)",
+  "probe K1/K2 spin kick KOs three dummies at 10 HP (side / first person)",
+  "probe K3 respawn beside the occupied post, return_home (side)",
+  "probe P1 pipe: pick up, 3 swings, throw (side)",
+  "probe G1/G2 grab with a second dummy behind the victim, knees, point-blank throw into it (first person / side)",
+  "probe U1 uppercut from behind, lens metrics (first person, no movie)",
+  "Full GUT suite (tools/run_tests.sh): 486/486"
+ ],
+ "captures_reviewed": [
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-gap/captures/review_gap/rag_all.avi (+ rag_all.log): all 26 ragdoll_bot acts",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-gap/captures/review_gap/combo_fin.avi (+ .log): A2 finishers",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-gap/captures/review_gap/t1.avi (+ t1.log): throw lens metrics",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-gap/captures/review_gap/probe.avi (+ probe.log): KO1-KO4, W1-W10, K1-K3",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-gap/captures/review_gap/probe2.avi (+ probe2.log): P1, G1, G2",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-gap/captures/review_gap/u1.log: uppercut from behind lens metrics",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-gap/captures/review_gap/hook_arm09.avi, hook_noragdoll.avi: arm A/B",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-gap/captures/review_gap/central_*.avi: central-kick A/B",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-gap/captures/review_gap/block.avi: block acts",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-ragdoll/captures/review_ragdoll/all.avi: the pre-fix capture, for the stagger A/B",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-gap/captures/review_gap/tests_full.log",
+  "Sheets viewed (all under /Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-gap/captures/review_gap/): s_hook_fp, s_hook_fp_PREFIX, s_hook_side, s_hook_side_crop, s_hook_fp_arm09, s_hook_fp_noragdoll, s_throw_fp, s_throw_fp_f1, s_throw_side, s_throw_side_f1, s_kneeko_fp, s_kneeko_side, s_ko_fp, s_ko_fp_bar, s_ko_side, s_stomp_side, s_stomp_fp, s_pile_side, s_pile_side2, s_pushkick_fp, s_behind_fp, s_behind_fp_f1, ab_gb_fp, ab_staggers, s_a2_finishers, s_a2_haymaker_zoom, s_a2_ragshove, s_w1_wall_side, s_w2_wall_fp, s_w2_hook_fp, s_w6_getup_side, s_w8_getup_side, s_w9_curb_side, s_ko1_fp, s_ko1_fp_fall, s_ko1_fp_getup, s_ko2_side, s_ko3_fp, s_ko4_side, s_k1_side, s_k3_side, s_p1_swings_side, s_p1_throw_side, s_p1_throw_side2, s_g2_side, s_block_fp, s_block_side, ab_central_fp, ab_central_side (.png)"
+ ],
+ "sheets_for_game_boy": [
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-gap/captures/review_gap/s_w2_wall_fp.png",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-gap/captures/review_gap/s_w1_wall_side.png",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-gap/captures/review_gap/s_ko1_fp.png",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-gap/captures/review_gap/s_behind_fp_f1.png",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-gap/captures/review_gap/s_a2_finishers.png",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-gap/captures/review_gap/s_k3_side.png"
+ ],
+ "open_question_notes": "These are data only for the open items. I propose no default changes.\n\n- **More contortion on the contact push:** the A/B against --central-kick for the hook, uppercut, haymaker, spinning heel and guard break looks the same at 15 stills a second in both views (ab_central_fp.png, ab_central_side.png; the odd rows are the contact push). In practice the push changes almost nothing visible.\n- **The flash's first-person size and the flurry strobe (grab-05, hit-01):** the flurry body blows still whiten 9.7-14.2% of the view (pixel luma 235 or more) and 13.4-19.9% (200 or more), 7 times at 8.6 Hz. Since hit-04, the sequence now ends with the shove's 2 impact frames (41-53%) followed by 2 flash frames (6.8-7.6% / 11.9-12.7%), so 4 bright frames in a row close the strobe. The knee-KO flash is 11.1% / 20.1%.\n- **A hit on the player in first person (hit-02):** the sparring jab's forearm comes within 0.058-0.091 m of the lens and covers up to 55% of the view on the hit tick (KO1 tick 222, KO3 ticks 888-892).\n- **Minimum size for the side-view flash:** the haymaker's delayed flash adds nothing visible in side view (1.8-1.9% against 1.8% afterwards); the burst covers it. In first person, the haymaker's flash also sits mostly under its burst.\n- **Bars over the middle of a body that isn't upright:**\n  - In the push-kick pile, the lying body's bar crosses the standing body's chest (video 2144-2148) and its head during the get-up (2228-2252).\n  - At the stomp, the bar crosses the player's knees for about 1.5 s.\n  - At the curb haymaker, the bar crosses the player's legs.\n  - After the point-blank throw into a second dummy, the bars cross both bodies.\n- **The hold's look dead band and the lens pull-back:** nothing new from this lens.\n- **The combat log (grab-03, hit-03):** in the side-view block act it covers the right of the fighters.\n- **Spec questions for the lead, kept out of the fixes:**\n  - gap-01: whether a body launched into a wall should get a wall-splat or bounce reaction (SPEC §6 has none; Milestone 3 arenas add barriers).\n  - gap-02: what the first-person view should show while the player is KO'd and getting up (the SPEC says nothing; the real game over comes later).",
+ "also_noticed": [
+  "CombatActor.impact_frame_ticks() (combat_actor.gd:945-950) copies VfxDirector's impact-frame rule (vfx_director.gd:321-326: clean FINISHER, impact_frame_enabled, frames > 0) instead of sharing it. The two can drift apart. A shared static helper, for example on Tuning or CombatTypes, would keep the flash delay and the ink frame in step. They agree today.",
+  "Throw, side view: the victim unbends on planted feet for about 5 frames (rag_all video 2625-2629), then makes a low, upright Y-pose arc with its legs dangling, and lands on its back about 2.5 m out. It reads as a heave, not a tumbling throw. No pop.",
+  "Uppercut from behind, first person: after the head snap (gap-03), the shoes swing up into the lower view for about 0.3 s (s_behind_fp.png rows 2-3). The ragdoll reviewer noted this as a side note. It is still there.",
+  "Measured from mesh vertices, every get-up animation sinks the far sole up to 0.295 m below the floor (W6 ticks 3518-3536, W8 4242). It never showed in my captures, where the near leg or the curb hides it.",
+  "The three simultaneous KOs blink off and back in in exact lockstep. It is correct, but it looks mechanical.",
+  "Side-view block: the block spark sits at its view-share floor over the player's face for about 10 frames. The 0.45 guard flash can't be told apart from the white cap (block.avi 430-431). In first person the spark pops over the attacker's face and the guard flash doesn't show. I measured no white-share change in side view.",
+  "_has_room() and _standing_body_inside() run a shape query every tick while a dummy waits as a ghost. The cost is small (the perf review measured 2-8 µs).",
+  "The --act text in the brief ('--act takes a|b alternatives') holds only for combo_bot (see gap-09).",
+  "The stale comments are unchanged: humanoid_rig.gd:405 says '3 m', where tuning_data.gd:131 and ARCHITECTURE.md:106 say 'about 4'. vfx_bot.gd:100 says 'the hit flash covers it'. speed_lines.gd:26-27 says 'the bots do', but only vfx_bot reseeds.",
+  "On a get-up next to a curb, the left hand passes 0.23 m into the curb (W8 tick 4230, W9 4545). That's part of gap-01's family. The curb itself hides it in side view.",
+  "The test run regenerated .import files for my PNG sheets under captures/review_gap/, which is ignored. No tracked file changed."
+ ],
+ "findings": [
+  {
+   "severity": "medium",
+   "title": "[gap-01, lens gap] Launched into a wall, the building fronts or the curb, a body can't fly: its head sinks up to 0.38 m into the wall, and in first person it falls back onto the attacker over two-thirds of the view",
+   "detail": "A full ragdoll is pulled toward the animation's hips, which ride the CharacterBody (ragdoll.gd header). When the capsule is stopped by world geometry, the launch dies on the spot.\n\nThe drawn body:\n- On the hit frame it snaps into the 'launched' pose, which arches back beyond the capsule.\n- The influence then rises from that pose over ragdoll_full_rise_s (0.15 s).\n- So the drawn cap and hair sit inside the wall until the world-colliding bodies push them out.\n- In side view the upper body looks cut off by the wall face. Afterwards the body slides down to the wall's base.\n\nIn first person:\n- The jabs' step-ins stop at magnet_stop_distance (0.85 m). The push-backs can't open the gap against a wall.\n- The uppercut leaves the body there, and it pivots on the wall: its hips and thighs swing at the lens.\n- The hook stagger in the same corner brings the guard fists within 0.14 m of the lens over 50-59% of the view.\n\nAt the 0.6 m curb, an uppercut or haymaker toward it stops at the capsule's contact (z 6.65). The body rises in a Y pose against an invisible plane and drops straight down. No body ever goes onto or over the curb.\n\nThe crate case reads fine: the body slumps against the crate.\n\nMilestone 3 arenas close with barriers, so pinned bodies will be common.",
+   "evidence": "Probe log /Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-gap/captures/review_gap/probe.log:\n- Head in the wall: W1 GEO ticks 1684-1712 ('depth=0.384 at Cap wall+X', 0.13-0.38 m for 28 ticks, hips held at x 19.65 while LAUNCHED). W3 haymaker 0.382 (ticks 2407-2420). W7 building front 0.382 (ticks 3813-3826).\n- First person, W2 uppercut: LENS ticks 2128-2141, other_near 0.077-0.22 m, Dummy1 46-68% of the view (60-68% at ticks 2132-2138).\n- First person, hook in the corner: W2 ticks 1996-2009, 0.138-0.258 m, 50-59%. W7 ticks 3708-3716, 0.22 m, 47-50%.\n- Curb: W8/W9 ST bodies stop at z 6.65; GEO W8 tick 4230 'LeftFingers curb 0.226'.\n\nSheets (same folder): s_w1_wall_side.png (video 1676-1747, the upper body cut off by the wall), s_w2_wall_fp.png (video 2096-2167, rows 3-4 a wall of trousers), s_w2_hook_fp.png, s_w9_curb_side.png. Crate for comparison: s_w6_getup_side.png.",
+   "repro": "godot --path . --write-movie captures/review_gap/probe.avi --fixed-fps 60 --resolution 1280x720 res://captures/review_gap/gap_probe.tscn -- \"--act=W1|W2|W3|W7|W8|W9\".\n\nIn play: stand a dummy with its back 0.45 m from the +X street end (x 19.55), the player at x 17.95 facing +X. Then P P P (hook), and P P P P (uppercut).",
+   "suggested_fix": "1. When a launched or knocked-down body's capsule is blocked by LAYER_WORLD on the launch tick, or meets it in flight, start or switch the full ragdoll at_once: the from-hold path already does this with Ragdoll.start(at_once). The world-colliding bodies then take over from the pose on screen, never the snap pose behind the wall. Also loosen the hips pull toward a capsule that is stopped, so the body slumps down or along the wall.\n2. Deflect the blocked knockback along the wall rather than cancelling it, so the body falls away from the attacker.\n3. Add tests: a launch 0.45 m from a wall leaves no drawn vertex more than 0.05 m inside the world, and the first-person lens rules (at least 0.25 m, at most half the view) hold for P P P P in a corner.\n4. Spec question for the lead, not part of the fix: a wall-splat or bounce reaction.",
+   "files": [
+    "game/actors/combat_actor.gd",
+    "game/actors/ragdoll.gd",
+    "game/actors/humanoid_rig.gd",
+    "game/player/player.gd",
+    "game/autoload/tuning_data.gd",
+    "tests/test_ragdoll.gd"
+   ],
+   "spec_change": false,
+   "id": "gap-01",
+   "lens": "gap"
+  },
+  {
+   "severity": "medium",
+   "title": "[gap-02, lens gap] The player's own KO in first person: the lens lies 7 cm above the floor behind the player's own navy belly (41% of the view) for 2.5 s, then the get-up puts the torso over 77% of the view and a mesh 1.7 cm from the lens",
+   "detail": "The player doesn't ragdoll (ragdoll_player off). The first-person camera rides the animated EyePoint through the knockdown, the ko_back pose and the get-up, still looking level along the old look, so it stares along the floor over the player's own body. The Spine, Hips and legs aren't on VIS_FP_HIDDEN, so the belly and belt draw as a big navy slab, and as the player falls the gray legs rise into view first.\n\nDuring the get-up the eye rises from behind the torso, and the lens passes 1.7 cm from the player's own mesh. While the player is down, nothing but the HUD bar says what happened.\n\nThe test-room sparring dummy can KO Game-boy (17 clean jabs), so he will see this. Everything else on this path is correct:\n- the player never blinks off;\n- auto_revive brings it back after exactly player_revive_s;\n- the logs are clean;\n- KO'd while holding, the victim freezes for the hitstop and staggers away 0.27-0.77 m from the lens, and the hold view eases out with no pop.",
+   "evidence": "probe.log LENS KO1:\n- ticks 246-390: lens at y 0.07-0.08 m, own body 41-46% of the view, own_near 0.21-0.24 m;\n- ticks 393-397: own body 58-77% (79% covered);\n- ticks 399-404: own_near 0.073 down to 0.017 m.\n\nST KO1: LAUNCHED to KO at tick 241, GETUP at tick 391 (150 ticks), visible=true and gone=false throughout.\n\nKO3 (KO'd while holding) shows the same view after the release (ticks 908 on).\n\nSheets: s_ko1_fp.png (video 216-425), s_ko1_fp_fall.png (236-259), s_ko1_fp_getup.png (390-413).",
+   "repro": "godot --path . --write-movie captures/review_gap/ko.avi --fixed-fps 60 --resolution 1280x720 res://captures/review_gap/gap_probe.tscn -- --act=KO1. The player is at 3 HP and a sparring jab lands from 0.95 m.",
+   "suggested_fix": "Presentation only. While the player is KO'd or getting up in first person, either:\n- put the own torso, hips and legs on VIS_FP_HIDDEN, and keep the lens on an eased path that doesn't sink into the body, looking slightly up; or\n- hand the view to a short KO camera.\n\nAdd a test that judges the lens through a player KO and get-up: own body at most a third of the view, nothing within 0.25 m.\n\nWhat the KO view should show is new behaviour: a question for the lead and Game-boy. The proposed default is to hide the own body and tilt the view up.",
+   "files": [
+    "game/camera/first_person_camera.gd",
+    "game/actors/humanoid_rig.gd",
+    "game/player/player.gd",
+    "tests/test_grab_view.gd"
+   ],
+   "spec_change": false,
+   "id": "gap-02",
+   "lens": "gap"
+  },
+  {
+   "severity": "medium",
+   "title": "[gap-03, lens gap] The uppercut from behind snaps the body into the arched-back 'launched' pose, throwing its head into the attacker's lens: 0.098 m away, 67% of the view",
+   "detail": "CombatActor._launch() plays &\"launched\" (an arch-back pose authored for a hit from the front) with a 0.03 s blend for every launch, including one from behind (_face_up false). The full ragdoll then rises from that snap.\n\nOn a dummy facing away at the step-in's 0.85 m, the arch swings its back and head back toward the attacker right after the finisher's hitstop. The dark hair dome fills the left half of the first-person view for about 5 frames, before the body pitches over and flies.\n\nAfterwards its shoes sweep up through the lower view. The ragdoll reviewer noted that part as a side note, unmeasured.",
+   "evidence": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-gap/captures/review_gap/u1.log LENS U1:\n- ticks 90-94: other_near 0.214, 0.131, 0.098, 0.126, 0.165 m;\n- Dummy1 52-67% of the view (73-86% covered with the player's arm);\n- the uppercut hits at tick 80, and the hitstop holds ticks 81-89.\n\nFrames: rag_all.avi video 5396-5403 (s_behind_fp_f1.png): the hair dome covers the left half on 5399-5401. s_behind_fp.png shows the shoes afterwards.",
+   "repro": "ragdoll_bot 'Ragdoll: uppercut from behind, lands face down' in first person, or gap_probe.tscn -- --act=U1 for the metrics.",
+   "suggested_fix": "Choose the snap for a launch from behind by the facing: a forward-pitching pose, or the launched pose mirrored, so the body leaves away from the attacker. Or start the full ragdoll at_once for launches from behind, so the kick away from the attacker moves the head away from the start.\n\nAdd the from-behind uppercut to a first-person lens test (nothing within 0.25 m, at most half the view).",
+   "files": [
+    "game/actors/combat_actor.gd",
+    "game/actors/placeholder_poses.gd",
+    "game/actors/ragdoll.gd",
+    "tests/test_ragdoll.gd"
+   ],
+   "spec_change": false,
+   "id": "gap-03",
+   "lens": "gap"
+  },
+  {
+   "severity": "low",
+   "title": "[gap-04, lens gap] ragdoll-02's fix is incomplete: the hook stagger's far arm still swings out dead straight, because that is the stagger animation's pose; the new arm influence changes nothing visible",
+   "detail": "ragdoll-02 asked for the head to stop lolling and the far arm to stop stringing out like a rope.\n- The head part is fixed: ragdoll_partial_head_influence 0.45 keeps the head on the trunk.\n- The straight arm is not. It comes from the directional stagger animation itself: --no-ragdoll shows the same arm thrown straight out for about 0.25 s.\n- So lowering ragdoll_partial_arm_influence can't remove it. The A/B at 0.45 (the default) against 0.9 is visually identical.\n\nThe fixer's test measures hand drift in the simulation, not the arm as drawn, so it passes while the look is unchanged.\n\nSide view is fine: the upper body visibly rocks back.",
+   "evidence": "Hook, first person, video 66-92, the far arm horizontal with the fist at the right edge in all three runs: s_hook_fp.png (default 0.45), s_hook_fp_arm09.png (head and arm 0.9), s_hook_fp_noragdoll.png (--no-ragdoll). For comparison: s_hook_fp_PREFIX.png (pre-fix, head lolled), s_hook_side_crop.png (side view, the body rocks back).",
+   "repro": "Run godot --path . --write-movie <out>.avi --fixed-fps 60 --resolution 1280x720 res://tests/bot/ragdoll_bot.tscn -- \"--act=Ragdoll: hook stagger\" twice: once as is, once with --no-ragdoll. Compare video 66-92 of the two.",
+   "suggested_fix": "Re-pose the sideways stagger animations in PlaceholderPoses: keep the far arm bent near the guard, swinging no further than about 45 degrees out from the trunk. Re-record the hook in first person.\n\nOptionally, add a check on the drawn arm, so the rig test judges the drawn pose, not only the simulation drift.",
+   "files": [
+    "game/actors/placeholder_poses.gd",
+    "tests/test_ragdoll.gd"
+   ],
+   "spec_change": false,
+   "id": "gap-04",
+   "lens": "gap"
+  },
+  {
+   "severity": "low",
+   "title": "[gap-05, lens gap] A dummy that comes back beside its occupied post arrives touching the player, behind him, then walks in place against him while return_home tries to reach the post",
+   "detail": "_respawn_spot() tries rings [1, 2] times 2 body radii (training_dummy.gd:290-294). Ring 1 is exactly the two bodies' radii from a player standing on the post, so the capsules touch.\n\n'The farthest spot from the player first' can't tell the ring-1 spots apart when the player stands on the post: they are all equidistant. Iteration order decides, and here the dummy came back right behind the player, out of his first-person view.\n\nAfter its blink-in it turns solid (nothing is inside its capsule). After 60 idle frames, return_home (training_dummy.gd:133: 60 frames and 0.3 m) walks it toward the post into the player. It plays its walk cycle on the spot, pressed against the player's back, until he moves. This confirms the code reviewer's side note, on video.",
+   "evidence": "probe.log K3:\n- 'MARK respawned f6130 at (-2.89,-0.00,-0.49), post (-2.40,0.00,0.00)', with the player on the post: 0.693 m centre to centre, against radii 0.35 + 0.35;\n- it turns solid (layer 4) at tick 6165;\n- its position stays (-2.89,-0.49) through tick 6435 while it walks.\n\ns_k3_side.png (video 6120-6407 every 12): rows 2-4 show the stride changing while it stays pressed to the player's back.",
+   "repro": "godot --path . --write-movie <out>.avi --fixed-fps 60 --resolution 1280x720 res://captures/review_gap/gap_probe.tscn -- --act=K3",
+   "suggested_fix": "1. Space the rings with a clearance (2 body radii plus a gap tunable).\n2. Break ties by the player's view, so the dummy comes back in front of or beside the player; ARCHITECTURE's spawner rule already prefers 'in view'.\n3. In _tick_control, don't walk home while the post has no room (_has_room(_home) is false), and stop walking when blocked.\n4. Move return_home's 60 frames and 0.3 m, and the ring spacing, into TuningData.\n5. Add a case to test_ko_blink.gd: the player on the post, the dummy comes back clear of him and doesn't push into him.",
+   "files": [
+    "game/enemies/dummy/training_dummy.gd",
+    "game/autoload/tuning_data.gd",
+    "tuning/default.json",
+    "tests/test_ko_blink.gd"
+   ],
+   "spec_change": false,
+   "id": "gap-05",
+   "lens": "gap"
+  },
+  {
+   "severity": "low",
+   "title": "[gap-06, lens gap] Stomp: the foot now lands on top (ragdoll-05's fix holds), but the player's standing shins sink into the lying body's hips for the whole stand-over",
+   "detail": "stomp_stop_distance (0.45 m) is measured from the lying body's chest. A body knocked down feet-first toward the player (as after K K K) lies with its pelvis and thighs under that spot.\n\nIn side view, the player's lower legs disappear into the dummy's hips for the whole stand-over, about 1.5 s. Then the dummy gets up through the player's legs. The return of the stomping foot to the stance also passes down through the thighs.\n\nThe fixer listed this in fix-flash-and-looks.json 'remaining' and left it as feel tuning. The bar across the player's knees on the same frames is the open bars question.",
+   "evidence": "s_stomp_side.png (rag_all.avi video 6290-6361 every 2): rows 3-6, the player's shins inside the orange hips, with the foot landing on the chest in row 3.",
+   "repro": "ragdoll_bot 'Ragdoll: stomp a lying dummy, it gets up where it lies (side view)', video 6290-6360.",
+   "suggested_fix": "Stop the stomp's approach clear of every drawn limb of the target (the trunk, legs and arms segments training_dummy._DRAWN_LIMBS already uses), not only the chest. Or step beside the body and stomp across it.\n\nKeep the strike landing on top. Re-record the stomp in side view.",
+   "files": [
+    "game/player/player.gd",
+    "game/autoload/tuning_data.gd",
+    "game/actors/placeholder_poses.gd"
+   ],
+   "spec_change": false,
+   "id": "gap-06",
+   "lens": "gap"
+  },
+  {
+   "severity": "low",
+   "title": "[gap-07, lens gap] The respawn check makes the simulation read the drawn ragdoll, and on a new ragdoll's first tick get_visual_point_transform() returns the previous ragdoll's pose",
+   "detail": "code-02's fix put rig.get_visual_point_transform() of lying, flying and ragdolling bodies into TrainingDummy._has_room(), inside _physics_process (training_dummy.gd:337-350). That is a second place the simulation reads the presentation ragdoll. ragdoll.gd's header (lines 3-6) still says the simulation reads it only at the get-up.\n\nThe read is also stale for a tick. From HumanoidRig.ragdoll_start() until the modifier's next deferred update, is_ragdolling() is true, but Ragdoll._visual and visual_rig_transform still hold the last ragdoll's pose, wherever that body lay last time. So a check during that tick sees the body at its old spot, metres away. A respawn can wrongly see room at its post (or no room) for one tick. Any test that reads visual points right after a hit sees the same stale pose.",
+   "evidence": "probe.log GEO lines at each ragdoll's first tick, my probe reading at physics priority 1000 after the actors:\n- 'W1 f1552 ... hips=(-3.02,0.95,-0.03) rd=1' for a dummy standing at x 19.65 (next tick 19.65);\n- 'W6 f3375 hips=(19.67,0.12,-0.64)', W5's lying spot, for a body at (7.1, 4.5);\n- 'W8 f4085 hips=(-0.02,0.10,-6.66)', W7's spot, for a body at z 6.5;\n- the same at W3 f2406, W4 f2746, W5 f3094, W9 f4427 and W10 f4717.",
+   "repro": "Ragdoll a dummy in one place, move it (set_post) and ragdoll it again. Read rig.get_visual_point_transform(&\"Hips\") in _physics_process on the hit tick, after the actor ran.",
+   "suggested_fix": "1. In Ragdoll.start(), when the mode goes from NONE to running, seed _visual and visual_rig_transform from the current animation pose (rig.animation_pose() and rig.global_transform), so reads before the first modification are right.\n2. Update ragdoll.gd's header and ARCHITECTURE to list the respawn room check as the second place the simulation reads the ragdoll. Or base _has_room on the hurtboxes and ragdoll_hips_offset() instead.\n3. Add a unit test that reads the visual hips on the hit tick of a second ragdoll.",
+   "files": [
+    "game/actors/ragdoll.gd",
+    "game/actors/humanoid_rig.gd",
+    "game/enemies/dummy/training_dummy.gd",
+    "docs/ARCHITECTURE.md",
+    "tests/test_ragdoll.gd"
+   ],
+   "spec_change": false,
+   "id": "gap-07",
+   "lens": "gap"
+  },
+  {
+   "severity": "low",
+   "title": "[gap-08, lens gap] Feel numbers left in scripts after the fixes (rulings on the code reviewer's leftover notes)",
+   "detail": "Rulings under CLAUDE.md's 'feel numbers are never script constants':\n\n(a) blink_shown()'s 50% on/off duty (combat_actor.gd:260): a feel number (how long a blinking body shows). Move it to TuningData's 'KO and blink-off' group as a duty tunable with default 0.5.\n\n(b) _respawn_spot()'s rings [1, 2] times 2 body radii (training_dummy.gd:290-294): spacing feel, and ring 1 touches the body on the post (gap-05). Make it a tunable gap.\n\n(c) return_home's 60 idle frames and 0.3 m (training_dummy.gd:133): pre-existing feel numbers, now reached after every comeback beside the post. Move them to TuningData.\n\n(d) _RELEASE_BLEND_S (0.22 s, combat_actor.gd:53): launch-from-hold now also uses it for the unbend of the throw and of a knee KO (combat_actor.gd:1015). So the throw's feel is now a script constant, next to the 0.03 s launch blend. Move both to TuningData, or derive them from existing grab tunables.\n\n(e) humanoid_rig.gd:405 says '3 m', where tuning_data.gd:131 and ARCHITECTURE say 'about 4'. A documentation fix only.\n\nThe rest of the fix diff passes:\n- every public API the brief named has ## docs;\n- new code has static types;\n- the 4 new tunables are @export_range values, read live and in default.json (format 2).",
+   "evidence": "git diff c27afaf 8f5519f -- game: combat_actor.gd:53, 1015 ('var blend := _RELEASE_BLEND_S if from_hold else 0.03'), 260 ('fposmod(cycles, 1.0) >= 0.5'); training_dummy.gd:133, 290, 294; humanoid_rig.gd:405 against tuning_data.gd:131.",
+   "repro": "Code read.",
+   "suggested_fix": "Add the tunables (ko_blink_duty, dummy_respawn_gap_m, dummy_return_home_after_s, dummy_return_home_slack_m, grab_launch_unbend_s, and a launch snap blend) under the existing groups. Regenerate tuning/default.json and fix the '3 m' comment.",
+   "files": [
+    "game/actors/combat_actor.gd",
+    "game/enemies/dummy/training_dummy.gd",
+    "game/actors/humanoid_rig.gd",
+    "game/autoload/tuning_data.gd",
+    "tuning/default.json"
+   ],
+   "spec_change": false,
+   "id": "gap-08",
+   "lens": "gap"
+  },
+  {
+   "severity": "low",
+   "title": "[gap-09, lens gap] Bot harness: ragdoll_bot's --act takes no a|b alternatives (a filter with '|' runs no act), and the bots park unused dummies off the floor, where they fall forever",
+   "detail": "(a) ragdoll_bot.gd:75 filters with title.contains(act_filter). combo_bot uses _matches(), which splits on '|'. A ragdoll_bot run with '--act=a|b' records an empty 14-frame movie and quits without a word. The review brief and plan say --act takes alternatives.\n\n(b) combo_bot._stage() parks every unused dummy at (30 + 3i, 0, -30), and _act_pipe() parks Dummy1 at (30, 0, -30) (combo_bot.gd:596, 261). The ground box only spans z -17..17 (test_room.gd:97), so these dummies fall through the void through every act. After the pipe act, Dummy1 was at y -165. A stray health bar showed at the edge of a side-view frame, probably that dummy's. This wastes physics on bodies falling forever, and every act's room queries and the perf numbers include them.",
+   "evidence": "First central-kick run: the log shows a 14-frame movie and no act (re-run per act in captures/review_gap/central_*.log). probe2.log: 'END P1 Dummy1 pos=(10.97,-165.17,-9.32)'. s_p1_throw_side.png row 1: a stray bar at the top-right edge.",
+   "repro": "godot --path . --write-movie x.avi --fixed-fps 60 res://tests/bot/ragdoll_bot.tscn -- \"--act=hook stagger|haymaker\" records nothing. Any combo_bot act staging one dummy leaves the others falling.",
+   "suggested_fix": "Use the inherited _matches() in ragdoll_bot._run (and in vfx_bot, if it filters the same way). Park unused dummies on the floor, out of view (for example x 25..28, z 12, behind the near curb), or hide them and turn off their processing.",
+   "files": [
+    "tests/bot/ragdoll_bot.gd",
+    "tests/bot/combo_bot.gd"
+   ],
+   "spec_change": false,
+   "id": "gap-09",
+   "lens": "gap"
+  }
+ ]
+}
