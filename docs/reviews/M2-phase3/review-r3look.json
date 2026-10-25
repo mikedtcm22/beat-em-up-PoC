@@ -1,0 +1,160 @@
+{
+ "lens": "r3look",
+ "round": 3,
+ "worktree": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-r3look",
+ "summary": "I reviewed the merged build at 72a1066 in first person, using side view only to check mechanics. I recorded 61 probe and bot acts with Movie Maker, one Godot process at a time. The probe r3_probe.gd (built from gap_probe and ko_probe) measures each rendered frame after the camera has moved: nearest own and other mesh to the lens, share of the view, and lens to world boxes.\n\nWhat holds:\n- **Launches into walls.** Bodies crumple at the end wall and the building front (deepest non-brim vertex 0.098 m for 5 ticks). The lens stays clear: 0.275 m or more, at most 47% of the view.\n- **Uppercut from behind.** The body pitches away from the lens (0.399 m, 37%).\n- **Point-blank throw into a wall.** 0.256 m.\n- **Comeback.** A simultaneous KO of three dummies comes back together; a dummy beside an occupied post comes back 0.8 m ahead and waits 300 ticks without walking.\n- **Finisher flashes after hit-04.** Each shows on exactly the 2 frames after the ink frame for the shove, backfist, stomp kick, push kick and pipe smash.\n- **Warm-up.** Only pixel (0,0) of frame 0 is inked.\n- **Damage looks.** 290 of 308 frames are bit-identical to the pre-perf-02 baseline, the rest at 67.6 dB or better.\n- **Ragdoll acts.** All 13 first-person ragdoll_bot acts match the gap reviewer's rag_all, apart from the intended changes (the folded far arm, the from-behind pitch).\n- **KO view in the plain cases.** Standing, holding, facing a wall, from behind, a heavy launch, near the curb, near a crate, and F2 mid-KO all read as a short out-of-body moment.\n\nWhat fails:\n1. The KO view's return goes wherever the mouse points. With the look turned 120 degrees while down, the lens dives through the player's own face and chest: own body 50-75% of the view for 11 frames, then a 66% pop. Even without a turn, the own cap and face sweep across 25-35% of the view on the way back.\n2. In a corner the KO view sits 0.13 m inside the building front, and the own shirt fills 52-68% of the view for the whole KO. With dummies on both sides it hovers 0.32 m over a dummy's head and the body is clipped at the edge of the view.\n3. Smaller items:\n   - The hook's re-posed far fist comes 0.200 m from the lens on open floor and 0.145 m against a building front.\n   - A comeback dead ahead at 0.8 m fills 56% of the view.\n   - The first-person haymaker's delayed flash can't be seen (0.06-0.2% of the screen).\n\nI edited no tracked files; git status is clean apart from captures/.",
+ "acts_checked": [
+  "r3_probe W1 end wall hook+uppercut (side, mechanics)",
+  "r3_probe W2 end wall hook+uppercut (first person)",
+  "r3_probe W3 end wall haymaker (first person) and W3s (side)",
+  "r3_probe W4 grab pinned, knees, throw into the end wall (side) and W5 (first person)",
+  "r3_probe W6 crate hook+uppercut (first person)",
+  "r3_probe W7 building front hook+haymaker (first person), rerun with nearest-mesh names (hook.log)",
+  "r3_probe W8 curb uppercut (first person) and W8s (side)",
+  "r3_probe W9 curb haymaker (first person)",
+  "r3_probe W10 curb throw (first person)",
+  "r3_probe U1 uppercut from behind (first person) and U2 (side)",
+  "r3_probe KO1 player KO standing",
+  "r3_probe KO3 KO while holding, second dummy jabs (first person) and KO4 (side)",
+  "r3_probe KO5 KO facing the end wall",
+  "r3_probe KO6 KO from behind",
+  "r3_probe KO7 KO in the end wall / building front corner (new)",
+  "r3_probe KO8 KO by a heavy launching blow (new)",
+  "r3_probe KO9 KO with dummies on both sides (new)",
+  "r3_probe KO10 KO toward the curb (new)",
+  "r3_probe KO11 KO in side view, F2 to first person while down (new)",
+  "r3_probe KO12 KO against a crate (new)",
+  "r3_probe KO13/KO14/KO15 KO with the look turned 120, 45, -30/-20 degrees while down (new)",
+  "r3_probe KD1 player knockdown, no KO",
+  "r3_probe K1 (side) and K2 (first person) spin kick KOs three dummies",
+  "r3_probe K3 (side) and K4 (first person) respawn beside the occupied post, then step off",
+  "r3_probe K5 player just past the post facing away",
+  "r3_probe R01-R13 every first-person ragdoll_bot act with lens metrics, R14 hook (side)",
+  "combo_bot 'P · P', 'P P · P' (both views), 'K · K', 'P P K', 'Hold P, release: haymaker' (both views), 'Pipe: pick up, 3 swings, throw' (fresh run, load check)",
+  "fin_probe (combo_bot with the effects RNG seeded) same acts, hit flash on vs --tune=hit_flash_strength=0, per-frame diff",
+  "vfx_bot 'VFX: damage looks, clean to bruised to bloodied' and 'VFX: damage looks held at 1 m' (PSNR against the perf fixer's looks_before.avi)"
+ ],
+ "captures_reviewed": [
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-r3look/captures/review_r3look/ko.avi + ko.log (KO1-KO9, KD1)",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-r3look/captures/review_r3look/ko2.avi + ko2.log (KO10-KO12)",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-r3look/captures/review_r3look/ko3.avi + ko3.log (KO13), ko4.avi + ko4.log (KO14, KO15)",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-r3look/captures/review_r3look/walls.avi + walls.log (W1-W10, U1, U2)",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-r3look/captures/review_r3look/rag.avi + rag.log (K1-K5, R01-R14)",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-r3look/captures/review_r3look/hook.avi + hook.log (W7, R01 with nearest mesh names)",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-r3look/captures/review_r3look/fin.avi, fin_noflash.avi, fin_s.avi, fin_s_nf.avi + logs, fin_s_diff.txt, load_diff.txt",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-r3look/captures/review_r3look/looks.avi, looks_held.avi, looks_psnr.txt",
+  "sheets in the same folder: ko1_all.png, ko1_return.png, ko1_return_f243.png, ko3_all.png, ko5_all.png, ko6_all.png, ko7_all.png, ko8_all.png, ko9_all.png, ko13_return.png, kd1_all.png, walls_fp.png, w2_hook.png, w7_hook.png, r01_hook.png, r13_getup.png, r14_hook_side.png, k4_fp.png, ab_R01..ab_R13.png (top row gap reviewer, bottom row mine), fin_load.png, fin_shove_ab.png, fin_flash_frames.png, fin_hay_s.png, looks_sheet.png, looks_held_sheet.png",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-gap/captures/review_gap/rag_all.avi, s_hook_fp.png, probe.log/probe2.log (GEO and LENS baselines at 8f5519f)",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r2-vfx-first-use/captures/fix/looks_before.avi (baseline for the PSNR)",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-hit/captures/review_hit/s_vfx_looks_fp_jab4.png",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-r2-player-ko-view/captures/fix/ko_probe.gd (source of the KO acts)"
+ ],
+ "sheets_for_game_boy": [
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-r3look/captures/review_r3look/ko1_all.png",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-r3look/captures/review_r3look/ko13_return.png",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-r3look/captures/review_r3look/ko7_all.png",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-r3look/captures/review_r3look/walls_fp.png",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-r3look/captures/review_r3look/fin_flash_frames.png",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-r3look/captures/review_r3look/k4_fp.png"
+ ],
+ "open_question_notes": "**KO view as a player (defaults 1.7 m out, 1.6 m up, 40 degrees down; 0.8 s out, 0.5 s back).**\n- It reads as a short out-of-body moment.\n  - KO1 timing: the lens starts leaving when the blow's hitstop ends (movie m67) and is fully out at m112. The body lands at m84. It holds through the KO and starts back at the revive (m234). It is in the eyes at m263, one frame before FREE.\n  - About 3.3 s out of the body in all.\n  - The body fills about half the view's width but only 8% of the grid cells. The attacker is cut at the hips by the top edge, so you can't see who KO'd you (ko1_all.png). The distance looks right to me.\n  - The first 0.25 s of the leave (m67-82) shows floor and falling legs.\n- The return is the weak part (finding 1).\n\n**Non-KO knockdown (KD1, kd1_all.png).**\n- The navy belly slab covers up to 74% of the view.\n- Over 50% covered for 63 frames, own mesh 0.059 m from the lens.\n- About 1.3 s in all, from the hit to free.\n\n**HUD during the KO view.**\n- The HP bar stays: empty while KO'd, yellow again at the revive. The centre dot stays over the body (ko1_all.png).\n\n**Wall reaction (default: stop and drop).**\n- End wall uppercut: the body crumples down the wall, with blood on it (walls_fp.png row 1).\n- Building-front haymaker: same, the splats stay on the wall (row 5).\n- Curb uppercut: still a stiff Y-armed rise and straight drop in front of the curb (row 2).\n\n**Part-body choice of the push (stale cache).** Nothing visible changed against the gap reviewer's rag_all.\n\n**Flash size and flurry strobe (hit-01, grab-05), numbers after hit-04.**\n- Method: share of the 1600x900 screen that the flash changes by more than 20 luma. Flash on against --tune=hit_flash_strength=0, effects RNG seeded (fin_probe), so only flash pixels differ.\n\n| Hit | Frames | Share of screen |\n| --- | --- | --- |\n| Jab | 29-30 | 8.0% |\n| Each flurry body blow (7 at 8.6 Hz) | | 24-25% |\n| Finisher shove (impact frame 123-124) | 125-126 | 7.9 / 9.4% |\n| Spinning backfist | 300-301 | 6.1 / 7.1% |\n| Stomp kick | 640-641 | 2.5 / 3.1% |\n| Push kick | 782-783 | 2.2 / 3.1% |\n| Pipe smash | 1287-1288 | 6.5 / 8.3% |\n| First-person haymaker | 940-941 | 0.06 / 0.20% (finding 5) |\n\n- Every flash lasts exactly 2 frames, and nothing else differs.\n\n**Combat log over the knee (grab-03).** Not re-checked.\n\n**Movie size.** Movies come out 1600x900 even with --resolution 1280x720 (fin.log, 'recording movie in 1600×900'), as the ragdoll reviewer noted.",
+ "also_noticed": [
+  "getup_back (pure animation, rd=0) puts the right sole 0.29 m below the floor for about 6 ticks on every back get-up: walls.log GEO W1 f331 'RightSole floor 0.289'. The same 0.294-0.295 is in the gap reviewer's GEOMAX at 8f5519f, so it predates this round. In first person the shin briefly sinks into the street.",
+  "Get-ups beside a wall or the curb still put a hand, forearm or the strap 0.10-0.22 m into the geometry, from the animation (W5 f2011 LeftStrap 0.194; W8 f3030 RightFingers 0.196; W9 f3668 0.222). This is the launch fixer's known remaining item.",
+  "Crate: an uppercut into crate 3 puts the hair 0.236 m into the crate for 4 ticks while LAUNCHED (walls.log GEO W6 f2239-2243). It was 0.213 m at 8f5519f, unchanged. The brim then rests 0.05-0.08 m inside the crate while lying.",
+  "The sparring jab that lands on the player puts the dummy's fist 0.059 m from the lens over 55% of the view for 4 frames, held in the hitstop (ko.log LENS KO1 m64-67; KO3 0.092 m). This predates the round and belongs to hit-02's area.",
+  "Flurry, first person: every body blow brings the dummy to 0.115 m from the lens at 70-74% of the view (covered 78-82%), every 7 ticks (rag.log LENS R10 m5476-5511). This is the flurry's close range by design; it adds to the hit-01 strobe question.",
+  "Return home: once the player steps off the post, the dummy walks back and stops 0.26 m short of it, at (-2.14,0,0) against the post (-2.40,0,0) (rag.log MARK end, K3/K4). That is inside dummy_return_slack_m (0.3), but it stays off its post.",
+  "Ring 2 works: with the player 0.3 m past the post facing away, the dummy comes back 1.40 m from him, 54 degrees off his facing (rag.log ST K5).",
+  "Mouse look keeps changing look_yaw while the player is KO'd or getting up (player.gd _process). The body snaps to the look the tick it is FREE again: the yaw went from -90 to 30 in KO13 (ko3.log 'MARK after'). The snap itself can't be seen in first person, but it causes finding 1.",
+  "KO11: the first-person camera keeps its KO weight while side view is current, so F2 during a KO shows the out-of-body view at once (weight 1.00, ko2.log m447). That is correct.",
+  "Stomp get-up under the player: the dummy's head passes through the lens (0.000 m at m6275) without being seen (0% coverage); then its shoulder fills the right edge. This predates the round and is documented."
+ ],
+ "findings": [
+  {
+   "severity": "high",
+   "title": "KO view: the return into the eyes follows the mouse look and keeps the head layer drawn, so it dives through the player's own face and chest (up to 75% of the view, then a 66% pop)",
+   "detail": "**How the return works.** It blends the KO pose back into `live`, the eye view from _follow(). That view uses player.get_look_basis(), which mouse look keeps changing while the player lies KO'd (player.gd _process() does not check the state). The body only turns to the look on the tick it is FREE again (_tick_control() sets rotation.y = look_yaw only when _can_steer_body()). Meanwhile the head layer (head, neck, chest, shoulders) is re-hidden only once the weight reaches exactly 0 (first_person_camera.gd:294).\n\n**What the player sees.** Suppose Game-boy moves the mouse during the 2.5 s KO, which is likely since the view gives him nothing else to do. The lens then returns to a look that doesn't match the body getting up. It flies through his own face, neck and chest box with all of them drawn, then pops clear when the layer hides.\n\n**Without a turn.** The path still sweeps the own cap and face across the left of the view at 0.6-0.9 m. Then the lens passes within 0.25 m of drawn head-layer meshes for 11 frames, 0.000 m at the closest (it ends up inside them, so they are back-face culled). The lead saw this as 'the own head large for a frame or two'.\n\n**Untested.** tests/test_ko_view.gd never turns the look while the player is down.",
+   "evidence": "**KO13, look turned +120 degrees while down** (ko3.log LENS KO13):\n- m252-m262: own body 50, 75, 73, 54, 58, 60, 60, 64, 67, 67, 66% of the view;\n- own_near 0.155, 0.074, 0.010, then 0.000-0.006 m;\n- top meshes UpperChest, RightTrap, Chest, BellyTop;\n- m263: head layer hidden, own 0% (a 66% pop in one frame).\n\nSheet /Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-r3look/captures/review_r3look/ko13_return.png (video 244-270, every 2 frames): the own face, the neck from inside, the navy chest box over the view, then the street.\n\n**KO14, +45 degrees** (ko4.log): own 30, 35, 37, 37, 31% at m249-253, over test_ko_view's one-third limit.\n\n**KO1, no turn** (ko.log):\n- own 23-24% at m245-246 (top UpperChest, RightDelt);\n- own_near 0.183, 0.111, 0.045, 0.000, 0.016-0.064 m for m252-m262 with lift=true;\n- re-hidden at m263.\n\nSheet ko1_return_f243.png (frames 243-250): the white cap and black eye band grow from the left to about 30% of the view; the brim slab crosses the top-left corner on frames 248-250.\n\n**Body snap**: 'MARK after body yaw 30.0 look yaw 30.0', against -90 while down.",
+   "repro": "godot --path . --write-movie captures/review_r3look/ko3.avi --fixed-fps 60 --resolution 1280x720 res://captures/review_r3look/r3_probe.tscn -- --act=KO13 (or KO14, or KO1 for the plain return).\n\nKO13: player at 3 HP, a sparring jab KOs him. 40 ticks into the KO, look_yaw turns 120 degrees over 60 ticks, as a mouse would. Then the revive and the return.\n\nIn play: get KO'd by the sparring dummy and move the mouse sideways while lying.",
+   "suggested_fix": "Presentation first:\n1. In _ko_view_mix(), while easing back in, hide VIS_FP_HIDDEN again as soon as _head_clear_of(lens) turns false: the mirror of the lift, with the layer still out of view at that point. Or fade the KO pose's look so the head leaves the frame before the lens reaches it.\n2. Build the return's target from the body's facing, not the free look. Either:\n   - have PlayerCharacter ignore mouse yaw and pitch while KO'd and getting up (or set look_yaw to rotation.y at _revive());\n   - or let the camera ease the look toward the rig's facing during the return.\n   Either way the lens comes back to the eyes the body actually has, and the body doesn't snap at FREE.\n3. Add test_ko_view cases with the look turned ±45 and 120 degrees while down: own body at most a third of the view, nothing within 0.25 m, no pop at the re-hide.",
+   "files": [
+    "game/camera/first_person_camera.gd",
+    "game/player/player.gd",
+    "tests/test_ko_view.gd",
+    "docs/ARCHITECTURE.md"
+   ],
+   "spec_change": false,
+   "id": "r3look-01",
+   "lens": "r3look"
+  },
+  {
+   "severity": "medium",
+   "title": "KO view in a corner puts the lens 0.13 m inside the building front, with the own shirt over 52-68% of the view for the whole KO; between two fighters it hovers 0.32 m over a dummy's head with the body clipped",
+   "detail": "**How the lens gets its room.** _ko_room() casts one ray from the hips toward the pose on the chosen side, across the body. It shortens the reach to the hit minus ko_view_clearance_m, but then clamps it to ko_view_min_reach (0.4) (first_person_camera.gd:395). At reach 0.4 the lens sits 0.68 m out and 0.64 m up along the blocked line. When the wall is nearer than that, the lens ends up inside it.\n\n**No fallback.** _choose_ko_side() only weighs the two across-the-body sides. In a corner, or lying diagonally against a wall, both sides are blocked. There is no other pose: along the body, higher and steeper, or overhead.\n\n**Corner result.** The lens ends inside the building box, whose faces are back-face culled. The view becomes a dark, shadowed close-up of the player's own blue shirt and gray trousers for the whole 2.5 s. The body is never shown lying whole, which is what Game-boy approved.\n\n**Flanked result.** Same root: the ray stops at Dummy2's capsule, so the lens hangs low right above that dummy's head (drawn as a dark blob at the bottom of the view). The player's body crosses the view and is clipped at the right edge.\n\n**Untested.** test_ko_view covers a building front at one side, not a corner or a fighter on each side.",
+   "evidence": "**KO7** (ko.log; the player lies at (19.65,0,-6.65), 0.35 m from the end wall and the building front):\n- LENS m1810-m1944: lens (19.17,0.64,-7.13), 0.13 m inside the building front (face at z=-7; the probe prints wall=-0.01);\n- own 52-55% throughout the hold, 60-68% on the return (m1947-1955);\n- covered over 50% for 166 frames; SUM KO7 own_max 68%.\n\nSheet /Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-r3look/captures/review_r3look/ko7_all.png: rows 2-4 are the dark close-up of shirt and trousers.\n\n**KO9**, dummies 1.3 m off both sides:\n- LENS m2458-m2578: lens (-4.69,0.86,0.91), reach about 0.54;\n- other_near 0.317 m (Dummy2, under the lens); own 30% while held, 43-51% on the out and the return (SUM own_max 51%, covered over 50% for 20 frames).\n\nSheet ko9_all.png: the head at the left edge, the legs running off the right edge, Dummy2's head at the bottom centre.\n\nFor comparison, KO1, KO5, KO10 and KO12 (open floor, one wall, curb, crate) hold at own 8% and other 6%.",
+   "repro": "godot --path . --write-movie captures/review_r3look/ko.avi --fixed-fps 60 --resolution 1280x720 res://captures/review_r3look/r3_probe.tscn -- \"--act=KO7|KO9\".\n\nKO7: player at (19.3,0,-6.3) facing out of the corner, 3 HP, a sparring jab from 0.95 m knocks him back into the corner.\n\nKO9: dummies at (1.3,0,0.4) and (-1.3,0,-0.4) in the player's frame, one jabbing from ahead.",
+   "suggested_fix": "1. Never place the lens beyond the ray's hit: if the clamped reach would pass the hit, don't keep the line.\n2. Try fallbacks in turn, scoring each by room and crowding like the two sides:\n   - along the body (beyond the feet, then beyond the head);\n   - straight up over the hips at a steeper pitch.\n3. Check the final lens with a sphere query of ko_view_clearance_m against the world and enemy bodies, not just the one ray.\n4. Add a corner case and a fighters-on-both-sides case to test_ko_view.gd: whole body in frame, lens outside all geometry, nothing within 0.25 m, own body at most a third.",
+   "files": [
+    "game/camera/first_person_camera.gd",
+    "game/autoload/tuning_data.gd",
+    "tuning/default.json",
+    "tests/test_ko_view.gd",
+    "docs/ARCHITECTURE.md"
+   ],
+   "spec_change": false,
+   "id": "r3look-02",
+   "lens": "r3look"
+  },
+  {
+   "severity": "low",
+   "title": "Hook stagger: the re-posed far fist now swings at the attacker's lens, 0.200 m on open floor and 0.145 m against a building front (gap-01's corner case still open)",
+   "detail": "gap-04's re-pose folds the far (left) arm near the guard. When the stagger flings it, that fist is now the dummy's nearest part to the player's lens, and it comes inside 0.25 m even on open floor.\n\n**Against the world.** With the dummy against the building front (the step-in against a pinned body, part of gap-01's evidence), it comes to 0.145 m over 58% of the view. The gap reviewer measured that case at 0.22 m and 47-50% at 8f5519f, before the re-pose. In the end-wall corner it is 0.166 m and 55%, against 0.14 m and 61% on the launch fixer's branch.\n\n**Why the tests miss it.** tests/test_stagger_pose.gd measures the fist against the trunk axis, not the lens. The launch fixer left the corner hook to another package.\n\nThe far arm staying bent near the guard is approved. The defect is only where the fling points, toward the attacker's lens, and the lens rule it breaks.",
+   "evidence": "hook.log, which names the nearest mesh:\n- R01, open floor: Dummy1/LeftFingers 0.238 to 0.200 m and back over m482-493, 44-48% of the view; 12 frames under 0.25 m.\n- W7, building front: Dummy1/LeftFingers 0.235 to 0.145 m and back over m78-93, 46-58%; 16 frames under 0.25 m.\n\nwalls.log W2 (end-wall corner): 0.166 m, 55% at m500-501; 16 frames under 0.25 m.\n\nSheets in /Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-r3look/captures/review_r3look/:\n- w7_hook.png: the black-gloved fist and forearm fill the upper middle of the view;\n- w2_hook.png;\n- r01_hook.png (frames 3204-3216);\n- ab_R01.png: before, a straight arm out to the right edge; after, a folded fist near the centre.",
+   "repro": "godot --path . --write-movie captures/review_r3look/hook.avi --fixed-fps 60 --resolution 1280x720 res://captures/review_r3look/r3_probe.tscn -- \"--act=W7 |R01\".\n\nThat is ragdoll_bot's 'Ragdoll: hook stagger' (P P P on a dummy 1.6 m ahead), and the same against the building front at z -6.55.",
+   "suggested_fix": "1. Aim the folded far arm's fling up and away from the attacker in stagger_right_a/b and stagger_left. For example, the forearm rises beside the dummy's own head, not forward. That keeps the approved 'bent near the guard'.\n2. Extend test_stagger_pose.gd, or a test_ragdoll lens test, to judge the hook through the attacker's real lens: nothing within 0.25 m, at most half the view, on open floor and with the dummy pinned.\n3. For the pinned case, stop the magnetism step-in earlier when the target is against LAYER_WORLD (player.gd), as the launch fixer suggested.",
+   "files": [
+    "game/actors/placeholder_poses.gd",
+    "game/player/player.gd",
+    "tests/test_stagger_pose.gd",
+    "tests/test_ragdoll.gd"
+   ],
+   "spec_change": false,
+   "id": "r3look-03",
+   "lens": "r3look"
+  },
+  {
+   "severity": "low",
+   "title": "A dummy that comes back beside the occupied post blinks in dead centre 0.8 m ahead: its chest and guard fill 56-58% of the first-person view for as long as the player stands there",
+   "detail": "_respawn_spot() ranks the ring-1 spots like this:\n- in view first;\n- then farthest from the player;\n- then 'most in front of him'.\n\nWith the player on the post, every ring-1 spot is the same distance away. So the tie-break always picks the spot straight ahead, 2 body radii + dummy_respawn_gap_m = 0.8 m from him. That is nearer than any staging distance the bots use (sparring 0.95 m, combos 1.6 m).\n\nIn first person the dummy's chest and black guard fists cover more than half the view, and its head is cut off by the top edge. It reads as a body blinking in in his face rather than 'in front of or beside the player, with room'. The waiting itself works: no walk, no push.",
+   "evidence": "rag.log ST K4: Dummy1 at (-1.60,0,0) with the player on the post at (-2.40,0,0); dist 0.80, ahead 1.00 for all 300 ticks.\n\nrag.log LENS K4 m2017-m2316: Dummy1 up to 56% of the view, over 50% on 285 of 300 frames; nearest part 0.333 m (the guard fists).\n\nSheet /Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-r3look/captures/review_r3look/k4_fp.png, rows 2-4.",
+   "repro": "godot --path . --write-movie captures/review_r3look/rag.avi --fixed-fps 60 --resolution 1280x720 res://captures/review_r3look/r3_probe.tscn -- \"--act=K4 \": KO a 10 HP dummy, stand on its post while it is gone, watch it come back.",
+   "suggested_fix": "1. Change the tie-break among equally far spots so the dummy stands off-centre but in view, for example the spot nearest 45-60 degrees off the player's facing. Or score in-front spots by a minimum flat distance from the player, such as the sparring distance.\n2. Or raise dummy_respawn_gap_m's default, so ring 1 sits about 1.2 m out.\n3. Extend test_ko_blink's comeback test with a first-person share check: at most half the view.",
+   "files": [
+    "game/enemies/dummy/training_dummy.gd",
+    "game/autoload/tuning_data.gd",
+    "tuning/default.json",
+    "tests/test_ko_blink.gd"
+   ],
+   "spec_change": false,
+   "id": "r3look-04",
+   "lens": "r3look"
+  },
+  {
+   "severity": "low",
+   "title": "hit-04 is incomplete for the first-person haymaker: its delayed flash changes only 0.06-0.2% of the screen, against 2.2-9.4% for the other five first-person finishers",
+   "detail": "With a seeded effects RNG, flash on against flash off, the delayed flash shows on exactly the 2 frames after the ink frame for the shove, backfist, stomp kick, push kick and pipe smash.\n\nThe first-person haymaker is the exception, so the hit-04 promise ('every finisher shows its flash') does not hold for it in the view Game-boy plays:\n- At contact the step-in leaves the struck head above the top edge of the view.\n- The large finisher burst and its word sit over the contact point and cover what is left.\n- Its 2 flash frames change almost nothing.\n\nThe side-view haymaker's flash is hidden too (hit-05's area, dropped).",
+   "evidence": "fin_s_diff.txt, from fin_s.avi against fin_s_nf.avi (--tune=hit_flash_strength=0), share of the 1600x900 screen changed by more than 20 luma:\n- haymaker (hit f939): frames 940 / 941 = 0.064% / 0.202%;\n- shove: 125 / 126 = 7.9 / 9.4%;\n- backfist: 300 / 301 = 6.1 / 7.1%;\n- stomp kick: 640 / 641 = 2.5 / 3.1%;\n- push kick: 782 / 783 = 2.2 / 3.1%;\n- pipe smash: 1287 / 1288 = 6.5 / 8.3%.\n\nSheets in /Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-r3look/captures/review_r3look/:\n- fin_hay_s.png: frames 936-943; ink on 938-939; 940-941 show only the burst and WHUMP over the chest, with the head out of frame;\n- fin_flash_frames.png: the other five, white bloom on the 2 frames after the ink frame.",
+   "repro": "godot --path . --write-movie captures/review_r3look/fin_s.avi --fixed-fps 60 --resolution 1280x720 res://captures/review_r3look/fin_probe.tscn -- \"--act=Hold P, release: haymaker\", then the same with --tune=hit_flash_strength=0, and diff per frame (blend=difference).",
+   "suggested_fix": "This is for Game-boy, with the open flash-size question (grab-05, hit-01). Options:\n- in first person, when the contact is outside the view, flash the struck body's nearest visible part (for example the chest);\n- offset the finisher burst from the contact so the flash core stays visible.\n\nAlso add the haymaker to test_hit_flash's per-frame finisher check through the real first-person view.",
+   "files": [
+    "game/actors/humanoid_rig.gd",
+    "game/fx/vfx_director.gd",
+    "tests/test_hit_flash.gd"
+   ],
+   "spec_change": true,
+   "id": "r3look-05",
+   "lens": "r3look"
+  }
+ ]
+}
