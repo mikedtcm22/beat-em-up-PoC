@@ -14,6 +14,8 @@ export const meta = {
 //   only: ["<key>", ...]   run just these packages (in this order)
 //   max_fixers: <n>        launch at most n fixers this run (default: as many as the headroom allows)
 //   note: "<text>"         a lead's note added to every fixer's brief (known failures, merge state)
+//   concurrency: 1         run fixers one after another, each gated when its turn comes (default 2;
+//                          use 1 when the headroom fits one fixer, so the next waits instead of skipping)
 
 const ROOT = '/Users/arachne/repos/beat-em-up-PoC'
 const NOTES = `${ROOT}/.worktrees/m2-review-notes`
@@ -95,7 +97,7 @@ function semaphore(n) {
     }
   }
 }
-const heavySlot = semaphore(2)
+const heavySlot = semaphore(A.concurrency || 2)
 
 let reserved = 0
 let launched = 0
