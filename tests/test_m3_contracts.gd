@@ -509,7 +509,7 @@ const ENEMY_SUBGROUPS: PackedStringArray = [
 ]
 
 
-func test_every_m3_tunable_is_declared_in_its_owners_subgroup_with_its_default() -> void:
+func test_every_m3_tunable_is_declared_in_its_owners_subgroup() -> void:
 	var found: Dictionary = {}
 	for info: Dictionary in Tuning.tuning_properties():
 		var group: String = info.group
@@ -523,11 +523,8 @@ func test_every_m3_tunable_is_declared_in_its_owners_subgroup_with_its_default()
 			continue
 		var row: Array = wanted[info.name]
 		assert_eq(info.subgroup, row[1], "%s: its subgroup" % info.name)
-		var value: Variant = Tuning.defaults().get(info.name)
-		if row[0] is float:
-			assert_almost_eq(float(value), float(row[0]), 0.00001, "%s: default (a deliberate retune: edit TUNABLES here)" % info.name)
-		else:
-			assert_eq(value, row[0], "%s: default (a deliberate retune: edit TUNABLES here)" % info.name)
+		# Defaults are not pinned here (row[0] is the plan's starting value): each owner retunes
+		# its own from captures, and a pinned copy would make this shared file a merge hot spot.
 	# Every planned one is there. A package may add more inside its own subgroup (A2.11), so
 	# extra ones are not an error here.
 	for group: String in TUNABLES:
