@@ -1,0 +1,107 @@
+{
+ "package": "ko-respawn-bars",
+ "branch": "m2/phase3-fix-ko-respawn-bars",
+ "verdicts": [
+  {
+   "id": "code-02",
+   "outcome": "fixed",
+   "what_changed": "Confirmed first: the dummy came back 0.00 m from its post, with a drawn bone of the body lying there 0.05 m from its axis. Two dummies coming back on the same tick landed 0.00 m apart. At the floor's edge the dummy picked (30.3, 0, 0), off the slab. In a thin-walled closet it picked a spot behind the wall. TrainingDummy._respawn_spot() now uses _has_room(). Its query mask adds LAYER_DOWNED_BODY, so lying, held, flying and getting-up bodies count. It also counts a body drawn lying across the spot: the ragdoll's trunk, legs and arms along the floor must stay the two bodies' radii away, because a ragdoll lies beside its upright capsule. It counts another actor blinking in within reach, read from the node position, which catches the same-tick double pick before the physics step moves that body. A ring spot also needs a clear way from the post (capsule cast_motion against LAYER_WORLD) and floor under it (a ray down to floor_snap_length; the spot takes the floor's height). The shape and the three queries are built once and kept. The post rule is still 'nearest free spot, else wait'.",
+   "tests": "tests/test_ko_blink.gd: test_a_dummy_comes_back_beside_a_body_lying_on_its_post (now 1.40 m out, nearest drawn bone 0.90 m away), test_a_dummy_comes_back_beside_a_body_held_over_its_post, test_two_dummies_that_come_back_on_the_same_tick_take_different_spots (0.70 m apart), test_a_comeback_spot_has_floor_and_no_wall_on_the_way (the closet gives INF, so it waits; the floor edge gives (29.6, 0, -0.7)). All four failed before the fix."
+  },
+  {
+   "id": "code-04",
+   "outcome": "fixed",
+   "what_changed": "Added CombatActor.is_blinking_in(), a read-only query placed right after blink_in(). player._find_magnet_target() skips bodies that are blinking in (not is_invulnerable(), so get-ups are still aimed at). TrainingDummy._respawn() keeps the comeback a ghost through the blink-in. A new _turn_solid() makes it solid once the blink-in is over and no standing body is inside it. Without that last check, the old code shoved the dummy 0.52 m out of a player who had walked into it. A thrown pipe now passes through the blinking-in dummy on LAYER_DOWNED_BODY with no change to weapon.gd, and that dummy is visible to other dummies' respawn queries.",
+   "tests": "tests/test_ko_blink.gd: test_a_dummy_blinking_in_draws_no_magnetism_and_lets_a_thrown_pipe_through (magnetism finds nothing; it is a ghost; the pipe flies on with no damage and no durability loss; afterwards it is solid and magnetism finds it again) and test_a_dummy_blinking_in_stays_a_ghost_while_the_player_stands_in_it. Both failed before the fix."
+  },
+  {
+   "id": "code-05",
+   "outcome": "fixed",
+   "what_changed": "Tuning.PRESET_FORMAT went from 1 to 2. A new Tuning._migrate() runs in apply_preset(). A format-1 preset that has dummy_revive_s but no ko_linger_s (saved before the blink-off existed) loads dummy_revive_s as the old value minus ko_linger_s and ko_blink_s, clamped at 0, and adds a last_warnings line. A format-1 preset that has ko_linger_s was saved during phase 3, already uses the new meaning, and loads unchanged. A preset with no format is treated as the current one. The key is not renamed. tuning/default.json is regenerated (format 2, 299 values). ARCHITECTURE's presets paragraph is updated.",
+   "tests": "tests/test_tuning_panel.gd: test_an_older_presets_dummy_revive_s_still_brings_the_dummy_back_on_time (4.0 becomes 1.5 with a warning; 2.5 clamps to 0; a phase 3 format-1 preset, current-format presets and presets with no format load unchanged). It failed before the fix. test_the_default_preset_equals_the_shipped_defaults passes with the regenerated file."
+  },
+  {
+   "id": "ragdoll-03",
+   "outcome": "fixed",
+   "what_changed": "Added EnemyHealthBars.screen_anchor_of(actor, camera). It reads only state. Vertically, the anchor is the highest point the drawn body reaches on the current camera's screen: either get_head_top_position(), moved over the head joint at its own height (otherwise it floats beside a lying head, over empty floor), or any drawn joint raised by a new @export body_margin_m (0.15 m). Horizontally, the bar sits over the drawn hips, so it is under the head when the body stands and over the middle of a body that lies or flies. For a body held bent over, the hips are on the far side, so the bar stays off the holder's head. I tried the lead's first option (the higher of the head top and origin + body_height) and recorded it, then dropped it. In the side view it left the bar floating about 1.4 m above a lying KO'd body, and it put the held victim's bar right over the player's cap. get_head_top_position() and test_ragdoll.gd's anchor test are unchanged. A standing body's bar is where it was before, and Spec's 2 s is unchanged.",
+   "tests": "New tests/test_health_bars.gd checks the bar against the projected vertices of the actual meshes on a side camera, for standing, a stagger bending the head toward the camera, an uppercut launch, a haymaker knockdown, lying and held. It also checks that a held body's bar stays off the holder's head. With the old anchor these reached 25, 203, 71, 83 and 163 px into the drawn body; now each stays at most 1 px in, and no more than 1 px higher above the body than over a standing head (12 px allowed)."
+  },
+  {
+   "id": "ragdoll-04",
+   "outcome": "fixed",
+   "what_changed": "Once its actor is KO'd, a bar fades out over fade_seconds as soon as the killing hit's chunk has drained. At the latest it is gone when the body starts blinking (ko_linger_s into the KO). It is never drawn while the actor's rig is hidden (the KO blink and the blink-in). CombatEvents.vanished still drops any bar that is left.",
+   "tests": "tests/test_ko_blink.gd: test_a_kod_dummys_health_bar_fades_out_before_it_blinks replaces 'the KO hit shows its bar ... its bar goes with it'. With show_seconds 30, the bar is gone at tick 101, the first blink-off is at tick 103, and the bar is never drawn over a hidden body. tests/test_health_bars.gd: test_a_kod_enemys_bar_fades_once_its_last_chunk_has_drained (gone at tick 38, KO at tick 12, which is the drain plus the fade). Both failed with the old behaviour."
+  }
+ ],
+ "commit": "a4c9bee5c480eca3457acb8bf9c2252f7ded103f",
+ "pushed": true,
+ "tests_passed": 480,
+ "tests_total": 480,
+ "script_errors": false,
+ "tunables_added": [
+  "No TuningData tunables were added.",
+  "EnemyHealthBars.body_margin_m (@export on the HUD node, default 0.15 m) is a presentation layout value like lift_px and bar_size.",
+  "Tuning.PRESET_FORMAT went from 1 to 2, and tuning/default.json is regenerated: only its format field changed, still 299 values. Regenerate it again after merging."
+ ],
+ "captures": [
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-ko-respawn-bars/captures/fix/all.avi",
+   "description": "Every ragdoll_bot act in both views after the fix, without the final head-top refinement (log: all.log, with each act's start time)"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-ko-respawn-bars/captures/fix/a_hook_side.png",
+   "description": "Hook stagger, side view: the bar stays above the bent head and raised fist"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-ko-respawn-bars/captures/fix/a_hay_side.png",
+   "description": "Haymaker, side view: the bar stays above the flung arms in flight, then just above the middle of the lying body"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-ko-respawn-bars/captures/fix/a_hold_side.png",
+   "description": "Parried jab into the hold, side view: the bar is above the held victim's back, off the player's head"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-ko-respawn-bars/captures/fix/a_ko_side.png",
+   "description": "KO, side view: the bar sits over the fall and the lying body, drains, and fades out before the first blink-off; no bar while the body blinks"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-ko-respawn-bars/captures/fix/a_behind_side.png",
+   "description": "Uppercut from behind, side view: the bar follows just above the flying and face-down body"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-ko-respawn-bars/captures/fix/a_ko_fp.png",
+   "description": "KO, first person: the bar is a short dash above the lying head, gone before the blink"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-ko-respawn-bars/captures/fix/a_hold_fp.png",
+   "description": "The hold in first person: the bar is just above the held victim's back, centered"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-ko-respawn-bars/captures/fix/a_upper_fp.png",
+   "description": "Uppercut launch, first person: the bar stays just above the flying, then lying, body"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-ko-respawn-bars/captures/fix/b_stomp_fp.png",
+   "description": "Stomp, first person, with the final anchor: no bar floating over empty floor when the body is below the view"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-ko-respawn-bars/captures/fix/b_stomp_side.png",
+   "description": "Stomp, side view, with the final anchor: the bar is just above the lying body, and crosses the player's shins while the player stands over it"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-ko-respawn-bars/captures/fix/stomp.avi",
+   "description": "Stomp acts re-recorded with the final head-top refinement"
+  }
+ ],
+ "feel_judgement": "The side-view bars now read as attached to the body they belong to. They no longer cross a bent face, flung arms, a held victim's waist or a lying head. They sit just above the drawn body, at about the same height above it as over a standing head, and follow it through flight and landing without floating off. The held victim's bar sits over its back on the far side of the player's head, so it no longer looks like the player's bar. KO bars show the last chunk draining, then fade before the body blinks, so nothing hangs steady over a blinking or hidden body. First person reads the same: a short dash over a lying body, a bar over the held victim's back, and no bar over empty floor during the stomp. Two minor things remain. In the side view, while the player stands over a lying body for a stomp, the low bar crosses the player's shins. During launches the bar bobs a little with the flailing limbs. Neither reads as wrong at a glance.",
+ "spec_questions": [
+  "Not a blocker; flagging so the lead can confirm. SPEC §5 says the bar sits 'over its head'. A standing body's bar is still over its head. For a body that is not upright (lying, flying, held bent over), it now sits over the middle of the body, just above its top. The other options (the head top, or standing height) put it on the face or body, floated it 1.4 m above lying bodies, or put it over the holder's head. I treated this as within the spec rather than a departure. Default: as implemented."
+ ],
+ "remaining": [
+  "The lead should regenerate tuning/default.json after merging (preset format 2). This package adds no new tunables.",
+  "Merge notes: player.gd changes only _find_magnet_target() (4 lines; hold-view owns the rest of the file). combat_actor.gd gets only is_blinking_in(), right after blink_in(). test_ragdoll.gd changes only the pile test's setup and one message.",
+  "The pile test (test_two_bodies_that_fell_on_each_other_get_up_beside_each_other) now uses scripted knockdowns: the lower dummy goes down first, the upper one is stood over its drawn hips and knocked down with a short push, and the lower one is held down 10 ticks longer. It passes alone (moved 0.751 / 0.016 m), after test_grab_view.gd (0.744 / 0.022), after test_humanoid_rig.gd (0.745 / 0.027) using a GUT config with no dirs, and in the full suite (0.751 / 0.026). Its assertions are unchanged.",
+  "all.avi was recorded before the last refinement (the head top moved over the head joint). The final anchor's effect is re-recorded in stomp.avi, and test_health_bars.gd covers the rest.",
+  "captures/ is git-ignored and was not committed. A local captures/.gdignore keeps Godot from importing the sheets."
+ ]
+}

@@ -1,0 +1,179 @@
+{
+ "lens": "grab",
+ "worktree": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-grab",
+ "summary": "Grab-feel review of m2/hit-feel at c27afaf, judged from recorded frames plus a probe bot that records and measures each tick. The probe bot runs the same ray-cast view helpers as tests/test_grab_view.gd and adds act-by-act lens metrics. The steady hold view works. At the bots' -6 degree look it eases in over 12 ticks (at most 2 degrees per tick), the knees dip it 12 degrees in 4 ticks, and it eases out over 27 ticks with no pop. Forearms and hands never come closer than 0.34 m to the lens in any grab act or probe. From the side the waist bend reads as a clinch, and the knees land on the victim's head and chest. The defects are in how the hold ends and in readability. (1) High: a body launched out of the hold (a knee that KOs it, or the throw) pops 0.3 m toward the holder and stands upright in 2 frames. From the side it sits inside the holder through the hitstop. In first person the knee KO puts the victim's cap 0.12 m from the lens, filling the top half of the view for 4 frames. In the default test room (dummies at 30 HP) this happens on the second knee after P P P. (2) A hit that breaks the hold lets the victim stand up through the holder's hitstop: its head rises through the middle of the view to 0.145 m. (3) The combat log, which is always on and has no toggle, sits over the knee contact; this is a spec question with a proposal. (4) The knee is the same navy as the shaded right sleeve, so it reads as a blue lump. Lower items: the knee's localized flash whitens about 16% of the view; the hold pitch stacks on top of the player's own look-down pitch; the throw shows a blue elbow ball mid-view; the held head reads as a bald dome. The existing lens test checks only a level look and skips every tick after a release with no move running, which is why (1), (2) and the look-down case passed. No tracked files changed; everything I wrote is under /Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-grab/captures/review_grab/, with probe_bot.gd/.tscn and logs probe.log, probe2.log to probe5.log.",
+ "acts_checked": [
+  "combo_bot 'Grab, knee x3, grab, throw' (first person): the grab of a hook-staggered body, three knees, the release on the third knee, the regrab and the throw, frame by frame",
+  "combo_bot 'Grab and throw (side view)': the clinch, the knees, the release, the throw's pop and overlap, the flight",
+  "combo_bot 'Perfect block, then grab' (first person) and '(side view)': parry, grab, knee",
+  "combo_bot 'Parry on reaction (B 0.2 s into the wind-up), then grab' (first person): a throw straight out of the grab, flash size",
+  "combo_bot 'Grab anytime: an idle dummy, then a throw' (first person): skimmed; same knee and throw paths",
+  "combo_bot 'Grab looking level: knee, knee, LB lets go' (first person): the level hold, the LB release, the head rising",
+  "ragdoll_bot 'Ragdoll: throw' (first person, look level) and '(side view)': the flight, the face-up landing at about 2.7-3.05 m, the stance after",
+  "vfx_bot 'VFX: knees under the view' (no combat log): the burst at the contact, the flash share, knee vs sleeve colors",
+  "probe P1/P2: the staggered grab, the knees, the regrab and the throw at look -6 and -25, measured each tick (arm, own, victim, covered, elbow)",
+  "probe P3: LB release (look -6); P4: hold until hold_max_frames; P5/P10: hit while holding (a second dummy jabs), first person and side view; P6/P9: knee KOs the held dummy, first person and side view; P7: walking and strafing while holding",
+  "code: player.gd hold view (_tick_hold_view, get_camera_move_offset, _on_hit_received, _throw_held), first_person_camera.gd view_from_eye/lens_offset, combat_actor.gd start_grabbed/release_from_grab/_launch/_apply_reaction, placeholder_poses.gd hold/_knee/_throw, hud.tscn CombatLog layout, tests/test_grab_view.gd coverage"
+ ],
+ "captures_reviewed": [
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-grab/captures/review_grab/combo_grab.avi (7 grab acts, log combo_grab.log; movie frame is about the physics frame minus 1)",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-grab/captures/review_grab/vfx_knees.avi (VFX: knees under the view)",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-grab/captures/review_grab/ragdoll_throw.avi (Ragdoll: throw, both views)",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-grab/captures/review_grab/probe.avi + probe.log (probe acts P1-P10)",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-grab/captures/review_grab/probe2.avi + probe2.log (P1/P2 measured from the real Camera3D)",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-grab/captures/review_grab/probe3.avi + probe3.log (elbow share through the throw)",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-grab/captures/review_grab/probe4.log, probe5.log (eye/head trace on a hit break; face-up landing)",
+  "Sheets: a1_overview, a1_grab_in_15fps_t0.8, a1_grab_f76-87, a1_knee1_f88-99, a1_f97_full, a1_knee3_regrab_throw_f140-216_every4, a1_throw_f194-213, a2_side_f336-488_every8, a2_side_crop_f340-416_every4, a2_side_knee1_f354-365, a2_side_release_throw_f418-510_every4, a2_side_throw_f458-475, a3_perfect_block_grab_f608-683_every4, a3_grab_in_f622-633, a4_parry_grab_throw_f818-875_every3, a6_level_grab_knee_f1130-1168, a6_level_release_f1206-1263_every3, a7_side_pb_grab_knee_f1376-1420, vfx_knees_contact, vfx_f98_full, rthrow_fp_f20-112_every4, rthrow_side_f290-396_every6, rthrow_side_flight_f300-333_every3, p1_grab_in_f80-91, p1_knee_throw_check, p1_f128_knee2_peak, p2_look-25_grab_knee_f358-396, p2_look-25_knee_peak_f386, p5_hit_while_holding_fp, p6_knee_ko_fp_f1340-1359, p7_walk_holding_every5, p9_knee_ko_side_f2068-2085, p10_hit_while_holding_side (all .png in captures/review_grab/)"
+ ],
+ "sheets_for_game_boy": [
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-grab/captures/review_grab/p6_knee_ko_fp_f1340-1359.png",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-grab/captures/review_grab/a2_side_throw_f458-475.png",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-grab/captures/review_grab/p5_hit_while_holding_fp.png",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-grab/captures/review_grab/a1_f97_full.png",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-grab/captures/review_grab/a2_side_crop_f340-416_every4.png",
+  "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-review-grab/captures/review_grab/p2_look-25_knee_peak_f386.png"
+ ],
+ "open_question_notes": "The lens pull-back while holding (grab_view_back_m 0.24, rise 0.10): at the bots' -6 degree look it works. The victim's back and head sit in the lower ~45% of the view with the street ahead above. Probe P1 f119-123: victim 32-33%, own body 11%, covered 43-44%. The victim's nearest mesh stays at 0.28 m or more, and the forearms at 0.42 m or more; they read as two skin bars reaching to its shoulders. At the knee peak coverage rises to 66-69% (own 29-30%, victim 38-40%), within the documented third and half. The pull-back never shows as a separate camera move, because it eases with the pitch over 0.2 s. Side effects: (a) through the throw the lens stays 0.24 m back until the hitstop ends, which likely puts the right elbow's blue end in the center-right for about 20 frames (6-9% of the view); (b) the pulled-back, frozen lens is where the victim's head comes up when a hit breaks the hold. Looking level it is cleaner still (a6 sheet). My view: keep the default. The bend's depth: from the side the torso leans about 20-25 degrees (the test asserts at least 20), hips a little back, head upright over the victim's back, fists on its shoulders. With the victim bent about 90 degrees it reads as a clinch or front headlock, not a deep plum. Every knee lands on the victim's head and upper chest under the bend (a2_side_crop and a2_side_knee1 sheets). It reads well enough; a deeper bend would push the eye further over the victim and need more pull-back. Keep the default. Other open items. The combat log over the knee contact is confirmed; finding 3 has the proposal. The side-view flash: on the knee in side view the white burst covers the contact, and the localized flash isn't visible under it (a2_side_knee1 f363-365). That matches the open minimum-size question; I haven't changed anything for it. The contact-push contortion is outside this lens.",
+ "also_noticed": [
+  "Grabbing a body in a 0.9-influence stagger: the 0.12 s held blend plus the ragdoll stop sweep its head from the top-left corner through the view center in about 3 frames (combo_grab.avi f79-82). After a parry it jumps from upright to bent in about one frame (a3_grab_in_f622-633 f628->f629). Distances stay at 0.46 m or more (probe P1 f83-88), so this is a feel note, not a clearance problem.",
+  "Test gap behind findings 1, 2 and 6: test_hold_knees_and_throw_keep_the_lens_clear (tests/test_grab_view.gd:308) returns early once the victim isn't GRABBED and no move runs, so LB releases, hit breaks and hold_max_frames are never judged. No test grabs a staggered body or KOs the held victim with a knee. _setup() looks only level (look_pitch 0.0).",
+  "Side view: the held victim's over-head health bar sits across the holder's waist and forearms through the whole hold and the knees (a2_side_crop_f340-416_every4, a7 sheet). Same root as A's known item about the bar following a bent head.",
+  "The PARRY! callout stays over the held victim's back for about 15 frames after a parry-grab (a3_perfect_block_grab_f608-683_every4, tiles 5-8).",
+  "The throw's localized flash sits on the bent victim's chest, right under the lens (player.gd _throw_held: contact_point = victim.get_chest_position()): about 6-7% of the view white for 2 frames on top of the THUD word (vfx_knees.avi f199-200).",
+  "Thrown body: low, heave-like flight (feet near the floor for about 12 frames in side view, rthrow_side_flight f318-327). It lands face up (probe5.log faceup=+0.53, anim downed_back) about 2.7 m out and slides to 3.05 m. It reads as a throw; acceptable.",
+  "The held head covers the view's center-bottom (about 20% of the view, directly under the aim dot). While walking with a held enemy (probe P7) the view is steady but the floor ahead is hidden; acceptable for a clinch walk.",
+  "hold_max_frames (probe P4) releases into a stagger like the third knee: the victim stays 0.42 m or more away and the view eases out cleanly.",
+  "In side view the combat log panel cuts off the clinch's right half (the victim's back and legs, and dummy 2), on every side-view grab act (known item from HANDOFF 10:55).",
+  "Not shown by any bot and not probed: the player KO'd while holding, a throw into a wall or a body at point-blank, a held body pinned against a wall, grabbing with another dummy touching the victim."
+ ],
+ "findings": [
+  {
+   "severity": "high",
+   "title": "A body launched out of the hold (a knee that KOs it, or the throw) pops into the holder and fills the view",
+   "detail": "When a held victim is launched, CombatActor._launch() plays the launch or knockdown pose with a 0.03 s blend straight from the 'held' pose. That pose's HIPS_NUDGE (0, 0, 0.3) holds the hips 0.3 m back from the pin spot, so in about 2 frames the body slides 0.3 m toward the holder and stands upright, inside the bent-over holder. The hitstop then freezes it there. release_from_grab() avoids exactly this: it moves the origin under the hips and calls rig.carry_fade() ('the head rises away from the holder instead of up through its first-person view'). The launch path doesn't. First person: a knee that KOs the held dummy puts its cap 0.12 m from the lens, covering 48% of the view (73% covered in total, the top half a wall of black cap with the flash on it) for 4 frames. The throw stands the victim up 0.27-0.31 m from the lens, covering 39-40% of the view for the 6-frame hitstop, under the THUD word and a large flash. Side view: on the throw and the knee KO the victim's torso and head overlap the holder's torso and face for 6-7 frames. The code path predates phase 3, but the hold view now frames it, and in the test room it fires all the time. With the default dummy_health 30, P P P (20) plus two knees (12) KOs on the second knee, so Game-boy will see the wall of cap on the first grab combo he plays.",
+   "evidence": "probe.log P6 f1345-1349: vst=LAUNCHED, vic_near 0.120 m, vic 48%, cov 73% (sheet p6_knee_ko_fp_f1340-1359.png, movie f1344-1348). p9_knee_ko_side_f2068-2085.png f2074-2079: the victim's head inside the player's face. probe3.log P1 f206-212: vst=THROWN, vic 39-40%, vic_near 0.27-0.31 m. combo_grab.avi f467->f468 one-frame pop to upright, overlapping through f473 (a2_side_throw_f458-475.png). a1_throw_f194-213.png f199-209. ragdoll_throw.avi side f302-309 (rthrow_side_flight_f300-333_every3.png). Code: game/actors/combat_actor.gd _launch() (holder = null; rig.play(..., 0.03)) vs release_from_grab() (under_hips + rig.carry_fade); placeholder_poses.gd held() HIPS_NUDGE 0.3.",
+   "repro": "Test room with default dummy health: P P P on a dummy, LB, P, P (the second knee KOs it). Or any grab then K. Record: godot --path . --write-movie <dir>/p.avi --fixed-fps 60 --resolution 1280x720 res://captures/review_grab/probe_bot.tscn -- --act=P6 (first person) or --act=P9 (side view). Combo bot: 'Grab and throw (side view)', frames 466-473.",
+   "suggested_fix": "When a GRABBED actor is launched (the throw, or a hit from the holder that kills), first do what release_from_grab() does: move the origin under the drawn hips (under_hips = rig.get_point_position(&\"Hips\") - global_position, y zeroed; global_position += under_hips; rig.carry_fade(under_hips)). Then start the launch pose or ragdoll from there, so the body leaves from where it is drawn and away from the holder. Consider a longer blend out of 'held' than 0.03 s. In tests/test_grab_view.gd, add a knee KO of the held victim and keep judging the lens through the throw's and the KO's hitstop: victim at least 0.25 m from the lens and at most half the view, plus a side-on check that the victim's chest stays clear of the holder's.",
+   "files": [
+    "game/actors/combat_actor.gd",
+    "game/actors/humanoid_rig.gd",
+    "tests/test_grab_view.gd"
+   ],
+   "spec_change": false,
+   "id": "grab-01",
+   "lens": "grab"
+  },
+  {
+   "severity": "medium",
+   "title": "A hit that breaks the hold lets the victim stand up through the holder's frozen view",
+   "detail": "PlayerCharacter._on_hit_received() releases the held enemy (_release_held(false)) on the frame the player is hit. The hitstop covers the attacker and the player but not the released victim. For the hitstop's frames the player stays frozen bent over it, with the hold view still pulled back and pitched down. Meanwhile the victim stands up at full speed around its hips, starting 0.34 m in front of the holder's origin, right under the bent eye. Its head comes straight up through the middle of the first-person view: a wall of cap, 0.26 -> 0.145 m from the lens in 3 frames. It then stays FREE 0.33 m from the lens, covering 58% of the view. The LB release in the bot ('Grab looking level') takes the same path but straightens the holder at once, so it stays at 0.35 m or more. No bot shows a hit-break, and test_grab_view's lens test skips this case. In Milestone 3 crowds it will happen whenever the player grabs one enemy and another hits him.",
+   "evidence": "probe.log P5 f1157-1160: pst=HITSTUN, vst=FREE, hold weight 1.00 (frozen), vic_near 0.261/0.219/0.177/0.145; f1180-1195 vic 50-58% at 0.33 m. p5_hit_while_holding_fp.png (movie f1154-1163: the cap rising through the view center). probe4.log P5 f84-87: the player's eye frozen at (y 1.56, z -0.27) while the victim's head rises from y 1.09 to 1.21 at z -0.34..-0.37. For contrast, probe.log P3 (LB release): vic_near stays at 0.353 m or more. Code: game/player/player.gd _on_hit_received() -> _release_held(false); TimeController.hitstop([attacker, player]) excludes the held body.",
+   "repro": "Hold a dummy while a second dummy beside you throws its jab: godot --path . --write-movie <dir>/p.avi --fixed-fps 60 --resolution 1280x720 res://captures/review_grab/probe_bot.tscn -- \"--act=P5 hit\" (staging: dummy 1 at 1.1 m ahead, dummy 2 at (0.85, 0, -0.2), start_jab() 23 ticks after the grab).",
+   "suggested_fix": "Keep the released body out of the holder's face while the holder is frozen. Options: add it to the same hitstop, or delay its stand-up until the holder's hitstop ends; or release it as a stagger with a push away (_release_held(true), as the third knee and hold_max_frames do), which also reads as the hit tearing the clinch apart. Add a hit-while-holding case to tests/test_grab_view.gd that judges the lens (victim at least 0.25 m away, at most half the view) through the hitstop and the ease-out.",
+   "files": [
+    "game/player/player.gd",
+    "game/actors/combat_actor.gd",
+    "tests/test_grab_view.gd"
+   ],
+   "spec_change": false,
+   "id": "grab-02",
+   "lens": "grab"
+  },
+  {
+   "severity": "medium",
+   "title": "The combat log sits over the knee contact in every first-person hold (spec question, proposal)",
+   "detail": "The combat log is anchored right-middle (hud.tscn CombatLog: right anchor, y 50% -40..+204 px, 760 px wide; about x 1120-1880, y 500-744 on the 1920x1080 canvas). In the hold view that is exactly where the knee rises beside the held head. The light burst draws under the translucent panel and comes out as a gray star behind the log text, and the top of the knee is behind the panel too, so the contact the hold view was built to show is hidden on every knee. It is always on in play, not only in combo_bot: nothing but the bots calls set_combat_log_visible(), and no input toggles it. In side view the same panel covers the clinch's right half (the victim's back and the second dummy). Proposal for Game-boy, since SPEC §11 sets only the log's content: (a) a toggle key (for example L, listed in the help overlay), default on; (b) move it to the upper right, just under the rear-warning corner (about y 150-390 on the 1080 canvas, 6 lines, about 600 px wide), where the hold view shows only the street ahead; (c) optionally fade it to about 30% while holding in first person.",
+   "evidence": "combo_grab.avi f94-99 (a1_knee1_f88-99.png), f97 at full resolution (a1_f97_full.png): the panel at x 935-1565, y 418-618 of 1600x900 covers the burst (drawn gray) and the knee's top. Compare vfx_knees.avi f98 without the log (vfx_f98_full.png): a white star at the knee/head junction. Side view: a2_side_crop_f340-416_every4.png, a7_side_pb_grab_knee_f1376-1420.png. Code: game/ui/hud.tscn [node name=\"CombatLog\"] offsets -800/-40/-40/204; game/ui/hud.gd set_combat_log_visible() has no callers in game/.",
+   "repro": "Play the test room in first person (the log is on by default), grab a dummy, press P. Or combo_bot --act=\"Grab, knee x3\" frames 94-99.",
+   "suggested_fix": "Spec question for Game-boy (HANDOFF default: propose a fix). Implement (a) plus (b): an input action that toggles CombatLogOverlay visibility, shown in the help overlay, and the CombatLog node re-anchored upper-right below the rear-warning zone with fewer lines or a narrower panel. Optionally (c), fade it while PlayerCharacter.holding_enemy() is set in first person (presentation reads state only).",
+   "files": [
+    "game/ui/hud.tscn",
+    "game/ui/hud.gd",
+    "game/ui/combat_log_overlay.gd",
+    "game/ui/help_overlay.gd",
+    "project.godot"
+   ],
+   "spec_change": true,
+   "id": "grab-03",
+   "lens": "grab"
+  },
+  {
+   "severity": "medium",
+   "title": "In first person the knee is the same navy as the shaded right sleeve, so it reads as a blue lump",
+   "detail": "The pants are body_color darkened by 0.45 (humanoid_rig.gd _PANTS_DARKEN, line 977). In the hold view the knee rises at the bottom right, right next to the right sleeve, which is shaded to almost the same value. Knee about (28-35, 50-59, 97-109) against the right sleeve (19, 38-40, 92-95); the lit left sleeve is (73, 130, 209). The two navy shapes merge into one rounded mass in the bottom-right corner. Neither the thigh's line nor the kneecap shows, so the knee 'landing' reads as 'something blue rose', and only the burst says it was a knee. This is B's open item, confirmed from frames in every first-person grab act.",
+   "evidence": "vfx_f98_full.png (vfx_knees.avi f98, no log), pixel means (9x9): knee (1150,700)=(35,59,109), (1200,820)=(28,50,97); right sleeve (1480,700)=(19,40,95), (1560,820)=(19,38,92); left sleeve (80,700)=(73,130,209). Same in a1_f97_full.png and vfx_knees_contact.png. Code: game/actors/humanoid_rig.gd:102 _PANTS_DARKEN, :977; game/player/player.gd _configure_rig() body_color.",
+   "repro": "vfx_bot --act=\"knees under\" (or any grab) in first person; look at the bottom-right quarter on the knee's active frames (movie f94-100).",
+   "suggested_fix": "Give the player's legs a value or hue clearly apart from the shirt, within SPEC §10's 4-6 flat colors: for example charcoal or near-black pants, or a lighter denim, or a light knee wrap band like the hand wraps. That way the knee's silhouette separates from the sleeve whatever the lighting. Re-record 'VFX: knees under the view'.",
+   "files": [
+    "game/actors/humanoid_rig.gd",
+    "game/player/player.gd",
+    "game/actors/placeholder_body.gd"
+   ],
+   "spec_change": false,
+   "id": "grab-04",
+   "lens": "grab"
+  },
+  {
+   "severity": "low",
+   "title": "The knee's localized flash whitens about 16% of the first-person view, three times per hold (spec question)",
+   "detail": "The hold puts the victim's head about 0.3-0.4 m from the lens. The 0.25 m flash radius at the knee's contact then whites out the whole held head and the right shoulder: about 16% of the view near-white (10% pure white) for 2 frames, on every knee. That is roughly 4 times README's 3.8% for a jab at 1 m, and half the old whole-body flash's 27-36% that the localized flash replaced. It doesn't cover the player's knee (it is on the victim only), but for those frames it is the biggest thing in view. The throw adds about 7% at the bent victim's chest. This mirrors the open side-view question: a maximum on-screen size at close range would be new design.",
+   "evidence": "captures/review_grab/tools/white.py on vfx_knees.avi: f94 and f95 newly white (all channels >= 200 vs 2 frames earlier) 15.7%, >= 235 10.0%; throw f199-200 6.2-7.3%. combo_grab.avi f94 13.4% (partly under the log). Sheets vfx_knees_contact.png (tiles 4-5, 14-15) and p1_f128_knee2_peak.png.",
+   "repro": "vfx_bot --act=\"knees under\"; frames 94-95, 122-123, 150-151 (each knee).",
+   "suggested_fix": "Ask Game-boy: cap the flash's on-screen size in first person (for example scale hit_flash_radius_m by the contact's distance from the first-person camera, or use a smaller radius on a held victim). The tunable already exists; adding a cap is new behaviour.",
+   "files": [
+    "game/actors/humanoid_rig.gd",
+    "game/fx/hit_flash.gdshader",
+    "game/autoload/tuning_data.gd"
+   ],
+   "spec_change": true,
+   "id": "grab-05",
+   "lens": "grab"
+  },
+  {
+   "severity": "low",
+   "title": "The hold view's pitch adds to the player's own look pitch with no limit",
+   "detail": "get_camera_move_offset() always adds -grab_view_pitch_deg (16) and the knee's -12 on top of look_pitch. A player who looks down at the held enemy, as is natural when grabbing a bent-over body, stacks them. At look -25 the knee peaks at -53 degrees: the player's own body covers 54-62% of the view, with a flat blue belly slab across the bottom 0.12 m from the lens and both sleeves huge, and 78-84% is covered in all. No street shows. That breaks the 'own body at most a third' and 'never fills' bounds the test checks, but the test only looks level (_setup sets look_pitch 0.0). At the bots' -6 the peak stays at own 29-30% and covered 66-69%.",
+   "evidence": "probe2.log P2 (look -25) f383-389: own 54-62%, cov 78-84%, nearest own mesh BellyTop 0.121 m. p2_look-25_knee_peak_f386.png; p2_look-25_grab_knee_f358-396.png. For contrast, probe2.log P1 (look -6): own at most 30%, cov at most 69%. Code: game/player/player.gd get_camera_move_offset(); tests/test_grab_view.gd _setup() look_pitch = 0.0.",
+   "repro": "Hold a dummy, look about 25 degrees down, press P. Probe: probe_bot.tscn -- \"--act=grab staggered\" (P2).",
+   "suggested_fix": "Make the hold pitch reach a target total rather than adding a fixed amount, for example extra = clamp(target_total - look_pitch, 0, grab_view_pitch_deg), with the target as a 'Hold view' tunable. Or clamp the total pitch while holding. Add a lens-clearance case at look -25 to tests/test_grab_view.gd.",
+   "files": [
+    "game/player/player.gd",
+    "game/autoload/tuning_data.gd",
+    "tests/test_grab_view.gd"
+   ],
+   "spec_change": false,
+   "id": "grab-06",
+   "lens": "grab"
+  },
+  {
+   "severity": "low",
+   "title": "The throw shows the player's right elbow end as a blue ball in the middle of the view",
+   "detail": "Through the throw's startup, the hitstop and about 10 frames after, the elbow end of the right upper arm (the blue 'Elbow' capsule, visible in first person) sits in the center-right of the view as a round blue ball: 0.25-0.33 m from the lens and 6-9% of the view for about 20 frames. M1 rejected exactly this look ('its rounded elbow end inside the frame'). The hold view keeps the lens 0.24 m back and 0.1 m up until the throw's hitstop ends (it eases out only from then), which likely puts the lens behind the elbows; the rule's 0.3 m clearance covers only forearms and hands, so the tests don't flag it.",
+   "evidence": "probe3.log P1 f199-221: elbow 1-9% of the view, elbow_near 0.254-0.333 m. a1_throw_f194-213.png (tiles 3-19, the blue ball center-right), a4_parry_grab_throw_f818-875_every3.png, rthrow_fp_f20-112_every4.png tiles 11-14.",
+   "repro": "Any grab then K in first person (combo_bot 'Grab, knee x3, grab, throw' frames 197-221; ragdoll_bot 'Ragdoll: throw' frames 62-75).",
+   "suggested_fix": "Start easing the pull-back and rise out on the throw's first frame rather than after its hitstop; or keep the right upper arm lower or wider in _throw()'s windup and strike. Add the elbow capsule to the throw's lens check.",
+   "files": [
+    "game/player/player.gd",
+    "game/actors/placeholder_poses.gd",
+    "tests/test_grab_view.gd"
+   ],
+   "spec_change": false,
+   "id": "grab-07",
+   "lens": "grab"
+  },
+  {
+   "severity": "low",
+   "title": "From the hold view the held enemy's head reads as a big bald skin dome",
+   "detail": "In the hold view the back of the held head is a bare skin hemisphere about 29% of the view's width (15-20% of the view), centered right under the aim dot. A brown band across it reads at a glance like a brow on a face. The Cap DOME (placeholder_body.gd:211) covers only the crown, so from behind and above the head looks bald, and it is the single biggest shape in every hold frame. B's open item, confirmed.",
+   "evidence": "a1_f97_full.png and vfx_f98_full.png (dome at x 590-1060 of 1600); p7_walk_holding_every5.png (every frame of a hold); a6_level_grab_knee_f1130-1168.png rows 2-3.",
+   "repro": "Grab any dummy in first person and hold.",
+   "suggested_fix": "Placeholder art: extend the cap or add a dark hair dome over the back of the head (accent or a hair color), so a held head reads as a head from behind. Real art replaces it in Milestone 4.",
+   "files": [
+    "game/actors/placeholder_body.gd"
+   ],
+   "spec_change": false,
+   "id": "grab-08",
+   "lens": "grab"
+  }
+ ]
+}

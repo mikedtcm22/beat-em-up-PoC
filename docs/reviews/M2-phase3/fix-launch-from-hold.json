@@ -1,0 +1,114 @@
+{
+ "package": "launch-from-hold",
+ "branch": "m2/phase3-fix-launch-from-hold",
+ "verdicts": [
+  {
+   "id": "grab-01",
+   "outcome": "fixed",
+   "what_changed": "Confirmed first: the knee KO put the victim 0.12 m from the lens at 47% of the view (75% of the view covered in total), and the throw snapped upright in one tick. CombatActor._launch() now records `from_hold := state == GRABBED` on entry, which covers both the throw and the killing-knee branch that clears holder. For a launch from the hold it plays the launch or knockdown pose with _RELEASE_BLEND_S (0.22 s) instead of 0.03 s. It then calls the new _leave_hold_under_hips(), which moves the origin under the drawn hips and calls rig.carry_fade() and advance(0). That helper is now shared with release_from_grab(), whose signature and behaviour are unchanged. Finally it starts the full ragdoll with at_once, a new parameter on Ragdoll.start, HumanoidRig.ragdoll_start (the only humanoid_rig.gd change) and _ragdoll_full: the ragdoll's influence starts at 1 from the held pose instead of rising from the animation's snap. Probe P6 (knee KO, first person) after the fix: nearest 0.299 m, victim at most 39% of the view, 68% covered. The heavy-tier full ragdoll, the 6 cm closer pin spot and the throw ending in the stance are untouched.",
+   "tests": "New tests/test_launch_from_hold.gd. It uses the test_grab_view harness, copied, and fp_view read-only. It runs a knee KO of the held body and the throw, each with the ragdoll on and off. From the launch through the hitstop and 24 ticks after, it asserts: the victim stays at least 0.25 m from the lens and covers at most half the view; side on, its chest is never closer to the holder's than in the hold (minus 3 cm); and while flying its head moves at most 0.15 m per tick around its hips (no snap). Without the fix the knee KO fails on lens distance (0.120 m), view share (52%), chest gap (0.562 vs 0.627 m held) and head step (0.26 m), and the throw fails on head step (0.55 m). With the fix: knee KO 0.30 m, 36%, head step 0.12 m; throw 0.37 m, 31%, head step 0.12 m. test_grab_knees_release_then_throw_knocks_down_another and test_grabbed_victim_stays_out_of_the_holders_lens still pass."
+  },
+  {
+   "id": "ragdoll-01",
+   "outcome": "fixed",
+   "what_changed": "Same root fix as grab-01: from the hold there is no 'launched' snap, a 0.22 s blend instead, and the full ragdoll takes over at once from the held pose. In the captures the victim now leaves bent over through the hitstop and straightens in the air. The throw's knockback in tools/gen_moves.gd went from 0,3,9 to 0,5,6.5 (about 0.6 m up and 0.45 s in the air, landing about as far off as before). After regenerating, only throw.tres changed. The throw row in ARCHITECTURE's move table and the Full ragdoll bullet are updated. Foot friction was not changed: in the after-captures the feet leave the floor and the body lands on its back without tripping. A thrown body still knocks down the dummy behind it, as the integration test and the combo-bot capture show.",
+   "tests": "The throw cases in tests/test_launch_from_hold.gd (ragdoll on and off) cover it. test_grab_knees_release_then_throw_knocks_down_another still passes. The existing test_a_launch_shows_the_animations_snap_first (launches from standing or from a stagger) is unchanged and passes."
+  },
+  {
+   "id": "ragdoll-02",
+   "outcome": "fixed",
+   "what_changed": "Three new tunables in Ragdoll > 'Stagger (partial)': ragdoll_partial_head_influence 0.45 and ragdoll_partial_arm_influence 0.45, and ragdoll_stagger_back_share 0.5. In a partial ragdoll, Ragdoll._process_modification_with_delta shows the neck and head joints at a reduced influence, and the arms too unless the kick landed on them. This applies to the visible pose only: each joint's turn is slerped back toward the animation's by the part's share of ragdoll_partial_influence, which stays at the approved 0.9 for the trunk. The guard break and the parry kick the arms, so their arms keep the full influence. _ragdoll_stagger() gains an `away` parameter, passed only by _apply_reaction's STAGGER as hit.direction. A sideways push now also kicks the trunk backward (rig.ragdoll_hit on TORSO, sized at the share of the sideways speed times ragdoll_partial_impulse). This is visual only: hook.tres is unchanged and the body slides exactly as before. Hook measurements, old behaviour then new: head turn on the upper chest beyond the animation's 63 then 30 degrees; hand drift off the chest's frame 0.29 then 0.16 m; chest lean back 0.018 then 0.087 m; head back 0.09 then about 0.2 m. A/B sheets (old behaviour reproduced through the tunables) show no change to the guard break, shove or parry staggers. The 'Partial' ARCHITECTURE bullet and the hook row of the move table are updated.",
+   "tests": "In tests/test_ragdoll.gd, test_the_hook_staggers_head_and_arms_ride_the_trunk_and_it_leans_back runs the same hook with the old behaviour and the new defaults. It asserts the head turns less than 45 degrees and less than 0.7 times the old value, the hands drift less than 0.8 times the old value, the chest leans back at least 0.04 m further, the upper body still gives way more than 0.25 m, and the body ends at the same spot (visual only). Without the change it fails. test_arms_kicked_by_a_stagger_keep_the_full_influence checks that a kick on the arms ignores the arm influence, while a kick on the head does not."
+  },
+  {
+   "id": "code-06",
+   "outcome": "fixed",
+   "what_changed": "This covers only the test_ragdoll.gd half; the test_grab_view.gd half is left to hold-view. Ragdoll gains a test accessor, top_contact_twist(part): the largest spin change the contact push gave a struck body of each part. _twist_at_contact() measures it on the struck body's angular velocity before and after the twist is applied. test_the_contact_push_stays_within_its_caps_after_many_hits_in_a_row now asserts each part's twist stays within its own cap (head 14, trunk 8, limbs 14 rad/s), and that the head and trunk actually reach at least 90% of their caps. Measured: head 14.0, trunk 8.0, legs 14.0 (the arms are never struck in that test). The caps and the contact push are unchanged.",
+   "tests": "Mutation check: with the cap's minf removed from _twist_at_contact, the test fails on head 41.9, trunk 47.1 and legs 20.4 rad/s. With the cap in place it passes."
+  }
+ ],
+ "commit": "999d56539ad1252b15fe2ae145c83265766d2f50",
+ "pushed": true,
+ "tests_passed": 461,
+ "tests_total": 461,
+ "script_errors": false,
+ "tunables_added": [
+  "ragdoll_partial_head_influence = 0.45 (Ragdoll > Stagger (partial))",
+  "ragdoll_partial_arm_influence = 0.45 (Ragdoll > Stagger (partial))",
+  "ragdoll_stagger_back_share = 0.5 (Ragdoll > Stagger (partial))"
+ ],
+ "captures": [
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-launch-from-hold/captures/fix/after/throw.avi",
+   "description": "ragdoll_bot 'throw', first person and side view, final code (log: throw.log)"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-launch-from-hold/captures/fix/after/throw_side30.png",
+   "description": "Side view throw at 30 fps: the victim leaves bent over through the hitstop, straightens and arcs with its feet off the floor, lands on its back"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-launch-from-hold/captures/fix/after/throw_fp30.png",
+   "description": "First-person throw at 30 fps"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-launch-from-hold/captures/fix/wip1/throw3_side_hit60.png",
+   "description": "Side view throw at 60 fps around the hit and hitstop (same code as final for the throw)"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-launch-from-hold/captures/fix/after/kneeko.avi",
+   "description": "New ragdoll_bot act 'knee KOs the held dummy' (P P P, LB, P, P at dummy health 30; the second knee KOs), first person and side view"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-launch-from-hold/captures/fix/after/kneeko_fp60.png",
+   "description": "First-person knee KO at 60 fps"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-launch-from-hold/captures/fix/after/kneeko_side60.png",
+   "description": "Side view knee KO at 60 fps: no overlap with the holder; the body falls back and lies"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-launch-from-hold/captures/fix/after/probe_kneeko.log",
+   "description": "Reviewer probe P6 rerun after the fix: knee KO nearest 0.299 m, victim at most 39% of the view (before: captures/fix/before/kneeko.log, 0.123 m and 47%)"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-launch-from-hold/captures/fix/after/combo_grab_side_hit60.png",
+   "description": "combo_bot 'Grab and throw (side view)' at 60 fps: no pop into the holder; the thrown body arcs into the second dummy (video: combo_grab_side.avi)"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-launch-from-hold/captures/fix/after/hook.avi",
+   "description": "ragdoll_bot 'hook stagger', first person and side view, final tuning"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-launch-from-hold/captures/fix/after/hook_fp60.png",
+   "description": "First-person hook stagger after the change (before: captures/fix/before/hook_fp60.png)"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-launch-from-hold/captures/fix/after/hook_side60.png",
+   "description": "Side view hook stagger after the change: the upper body visibly rocks back (before: captures/fix/before/hook_side60.png, nearly upright)"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-launch-from-hold/captures/fix/after/hook_noragdoll_fp60.png",
+   "description": "The same hook with --no-ragdoll: the far arm's straight fling comes from the stagger animation itself"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-launch-from-hold/captures/fix/ab_gb_fp.png",
+   "description": "Guard break, first person: old behaviour (top) against new (bottom); unchanged. Also ab_gb_side.png, ab_shove_fp.png, ab_shove_side.png, ab_parry_fp.png and ab_parry_side.png in the same folder, all unchanged"
+  },
+  {
+   "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m2-fix-launch-from-hold/captures/fix/before/throw_side60.png",
+   "description": "Before: the throw pops upright inside the holder in one frame"
+  }
+ ],
+ "feel_judgement": "Throw: the pop is gone. In the side view the victim stays bent over through the hitstop and leaves in that shape. It straightens in the air, arcs visibly with its feet off the floor (about 0.6 m up), flings its arms and lands on its back roughly 3 m away. It reads as a throw rather than a shove and a skate. In first person, the held back and cap stay where the hold showed them through the hitstop, then the body flies off up and away. Nearest 0.37 m, at most 31% of the view (was 0.27-0.31 m and 39-40%).\n\nKnee KO: the wall of cap is gone. Through the hitstop the head stays where the hold had it, then the body drops back away from the player and lies. Nearest 0.30 m, at most 39% (was 0.12 m and 47%). Side on it never overlaps the holder.\n\nWhat still reads a little stiff: the body passes briefly through the upright 'launched' pose with its arms up, and the knee-KO body stands nearly upright for a few frames as it falls back. Both are acceptable.\n\nHook: the head no longer lolls onto the shoulder (about 30 degrees beyond the animation, was 63), and from the side the dummy now visibly rocks back instead of only bowing its head toward the camera. In first person the hook still snaps the head out toward the top-left edge for about 0.2 s; that is the designed sideways snap. The far arm's straight fling is the stagger animation's own: it looks the same with --no-ragdoll, and the ragdoll now adds 0.16 m to it instead of 0.29 m.\n\nGuard break, shove and parry are indistinguishable from before in the A/B sheets.",
+ "spec_questions": [
+  "Next to the open 'more contortion on the contact push' question (FYI for Game-boy, not a spec change): ragdoll_partial_head_influence 0.45 halves how much of the simulated neck and head turn shows in a stagger, and that includes the contact twist on a struck head. The contact push and the spin caps (head 14, trunk 8, limb 14) are unchanged and the twist still reaches its cap, as the tests show. Proposal: keep 0.45 (default as implemented). If Game-boy wants more contortion, raising ragdoll_partial_head_influence toward 0.9 restores the old head look without touching the caps."
+ ],
+ "remaining": [
+  "For the lead (README not edited): README's approved departure quotes the hook stagger at about 0.32 m against 0.22 m. Re-measured with this package (test_staggers_give_way_more_at_the_new_influence): 0.346 m at 0.9 against 0.217 m at 0.6. The rise comes mostly from the trunk's backward lean; the head and arms now drift less. The chest alone gives about 0.09 m instead of 0.06 m.",
+  "code-06's test_grab_view.gd half (the lens check after an LB release) belongs to hold-view and is not done here.",
+  "The lead should regenerate tuning/default.json after merging. It was regenerated here and adds the 3 new values.",
+  "combo_bot's --tune cannot set dummy_health, because _ready() overwrites it with 500 after parsing the switches. So the 'P P P, LB, P, P (second knee KOs)' recording is a new ragdoll_bot act, 'Ragdoll: knee KOs the held dummy', in both views.",
+  "Unchanged and still open with Game-boy (grab-05): the first-person white flash disc on the knee is large in the knee-KO frames. hit_flash_radius_m was not touched.",
+  "Not in this package's files: in the side view the health bar still sits over the hook-staggered head for part of the stagger."
+ ]
+}
