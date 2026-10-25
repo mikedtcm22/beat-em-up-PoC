@@ -2,9 +2,11 @@ class_name Ragdoll
 extends SkeletonModifier3D
 ## The visual ragdoll of a HumanoidRig (Spec §6 "Hit reactions"; docs/ARCHITECTURE.md
 ## "Ragdoll"). A presentation layer over the animation: the simulation (the CombatActor's
-## body, hurtboxes, rig points, get_point_transform()) never reads it, except in two places:
-## where a body gets up (HumanoidRig.ragdoll_hips_offset()) and where a training dummy
-## respawns (TrainingDummy._has_room() asks where a body lies, get_visual_point_transform()).
+## body, hurtboxes, rig points, get_point_transform()) never reads it, except in three places:
+## where a body gets up (HumanoidRig.ragdoll_hips_offset()), where a training dummy respawns
+## and whether it can walk home (TrainingDummy._has_room() asks where a body lies,
+## get_visual_point_transform(): once at the respawn, and by _home_has_room() every tick of
+## the walk home).
 ##
 ## Built once per rig, on its first ragdoll (HumanoidRig.ragdoll_start()): a
 ## PhysicalBoneSimulator3D under the skeleton with one PhysicalBone3D per
@@ -307,8 +309,8 @@ func is_running() -> bool:
 ## the world stops at once (a wall, a crate or the curb right behind, where the snap pose
 ## would sit inside it) and one from behind (the snap arches the head back at the attacker's
 ## lens). Out of a running stagger the head and arms, which it draws at a share of the
-## simulation's turns, ease in to all of it over Tuning.ragdoll_partial_rise_s from the turns on
-## screen (the rest of a launch's first frames show the simulation alone), instead of jumping.
+## simulation's turns, ease in to all of it over Tuning.ragdoll_partial_rise_s from the turns
+## on screen, instead of jumping to it in the launch's first frame.
 func start(new_mode: Mode, contact: Vector3, push: Vector3, body_velocity: Vector3,
 		bone_velocity: Array[Vector3], part: Part = Part.ANY, partial_length_s: float = INF,
 		at_once: bool = false) -> void:
