@@ -4,6 +4,15 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-24 21:35 CDT: account E after its 21:30 reset; hold-view and ko-respawn-bars running, one after another
+The 5-hour window is at 0% (resets 02:30 CDT on 10-25); weekly is at 45%. The usage rule's headroom (90 minus the higher window, here weekly) is 45, which fits one fixer. So the run is sequential: `workflow-fix.js` gained `concurrency` (`80c39ea`), and the second fixer's gate runs when the first ends.
+- **Running:** workflow `wf_17408a9e-962`: `workflow-fix.js` with `only: ["hold-view", "ko-respawn-bars"]`, `concurrency` 1 and a lead's note:
+  - hold-view continues from `06733a3`;
+  - ko-respawn-bars also takes over `test_ragdoll.gd`'s pile test and sets up its pile without the chaotic flight.
+  - The watcher checks every 10 minutes.
+- **If cut off:** rerun the same way (the loader skips a package whose branch has its final commit). Within this session, use `resumeFromRunId: "wf_17408a9e-962"`.
+- **Then:** merge both into `m2/hit-feel`, regenerate the preset, run the tests (all 467+ pass, no SCRIPT ERROR), push; then round 2 (the 14:15 entry's step 3).
+
 ### 2026-10-24 18:10 CDT: handoff, account E's 5-hour window at 91%
 The watcher called the handoff at 91% of the 5-hour window (resets 21:30 CDT); weekly is at about 45% (resets Tue 2026-10-27 17:00 CDT). The hold-view fixer alone took the window from about 62% to 91% in about 40 minutes, more than the 25% estimate. The workflow `wf_5656a5ef-18c` is stopped, and nothing else is running. Every branch is pushed. The worktrees have no uncommitted tracked changes.
 - **`hold-view`: cut off with two `wip:` commits**, pushed on `m2/phase3-fix-hold-view` (worktree `.worktrees/m2-fix-hold-view`, off `m2/hit-feel` at `0905690`, which has the two merged packages).
