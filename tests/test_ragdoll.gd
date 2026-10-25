@@ -14,7 +14,9 @@ extends GutTest
 ## the trunk, the trunk leaning back). Launches out of a hold: tests/test_launch_from_hold.gd.
 ## Round 2 of that review: launches into a wall, the building fronts and the curb, and from
 ## behind (the ragdoll takes over from the pose on screen, the lens stays clear), and a new
-## ragdoll's first tick reading the body where it is.
+## ragdoll's first tick reading the body where it is. Round 3: the hook's kick landing on the
+## same bodies whatever the dummy's last ragdoll was, and no jump of the head and arms when a
+## launch takes over from a stagger at once.
 
 const ROOM := preload("res://game/level/test_room.tscn")
 const FPView := preload("res://tests/fp_view.gd")
@@ -1142,10 +1144,7 @@ func test_the_hook_staggers_head_and_arms_ride_the_trunk_and_it_leans_back() -> 
 			% [before.tilt, now.tilt, before.hand, now.hand, before.lean, now.lean, before.gap, now.gap])
 	assert_lt(now.tilt, 45.0, "the head stays on the neck, not lolled onto a shoulder (%.0f degrees)" % now.tilt)
 	assert_lt(now.tilt, before.tilt * 0.7, "the head lolls less than at the trunk's influence")
-	# The far arm's stagger pose holds it bent up near the guard (gap-04), and the arm sags
-	# a little under that raised pose at either influence, so the margin is smaller than it
-	# was against the old straight fling (about 0.83 of the trunk's trail).
-	assert_lt(now.hand, before.hand * 0.85, "the arms trail the trunk less (%.3f m, %.3f m)" % [now.hand, before.hand])
+	assert_lt(now.hand, before.hand * 0.8, "the arms trail the trunk less (%.3f m, %.3f m)" % [now.hand, before.hand])
 	assert_gt(now.lean, before.lean + 0.04, "the chest leans back away from the player (%.3f m, %.3f m)" % [now.lean, before.lean])
 	assert_gt(now.gap, 0.25, "the upper body still gives way (%.3f m)" % now.gap)
 	assert_almost_eq(now.end, before.end, Vector3.ONE * 1e-4, "the body slides the same: the lean is visual only")
@@ -1454,3 +1453,186 @@ func test_a_new_ragdolls_first_tick_reads_the_body_where_it_is() -> void:
 				"round %d: and the rig's transform it was read in is the body's" % round)
 		assert_true(await _wait_until(func() -> bool: return dummy.is_downed(), 200), "round %d: lands" % round)
 		await _ticks(30)
+
+
+# --- M2 phase 3 round 3: the kick's body, the at-once take-over out of a stagger -------------
+
+
+## The hook (P P P) up to its stagger's first tick: the bodies the kicks are waiting on (the
+## struck ones, with a contact: the hit's, then the lean's), then watched to the stagger's
+## end: how far the head, chest and hands are drawn off the animation at most (the give).
+func _hook_kicks(dummy: TrainingDummy) -> Dictionary:
+	_queue(&"P", 3)
+	assert_true(await _wait_until(func() -> bool: return dummy.state == CombatTypes.ActorState.STAGGER, 160), "staggered")
+	var ragdoll := dummy.rig.get_ragdoll()
+	var struck: Array[String] = []
+	for entry: Array in ragdoll._pending:
+		if entry[2] != null:
+			struck.append(String(ragdoll.rig.skeleton.get_bone_name(ragdoll._bone_of[entry[0]])))
+	var give := 0.0
+	while dummy.state == CombatTypes.ActorState.STAGGER:
+		await get_tree().physics_frame
+		give = maxf(give, _gap(dummy, [&"Head", &"Chest", &"LeftHand", &"RightHand"]))
+	return {struck = struck, give = give}
+
+
+func test_the_hooks_kick_lands_on_the_same_bodies_whatever_the_dummys_history() -> void:
+	# The first kick's body was the one nearest the contact in the pose cache of the dummy's
+	# last ragdoll (stale: wherever that body ended), so the same hook gave way 0.22 or 0.34 m
+	# by where the dummy had been: the head and the upper chest on a fresh dummy, the neck on
+	# the first hook after a KO's comeback or after some post moves. Now the head's and the
+	# trunk's strike bodies (Ragdoll.STRIKE_BONES) every time: the hook of a fresh dummy, after
+	# the post moved to four places, and after a KO and its comeback.
+	var player_at := Vector3(-3.13, 0.0, 0.0)
+	var hooks: Dictionary[String, Dictionary] = {}
+	await _setup([Vector3(0, 0, -1.6)], 0.0, player_at)
+	var dummy := dummies[0]
+	hooks["fresh"] = await _hook_kicks(dummy)
+	var offsets: Array[Vector3] = [Vector3(0, 0, -4), Vector3(3, 0, 2), Vector3(-3, 0, 1), Vector3(0, 0, 3)]
+	for k in offsets.size():
+		assert_true(await _wait_until(func() -> bool: return not dummy.rig.is_ragdolling(), 300), "post move %d: the last stagger is over" % k)
+		# Where the last ragdoll ended is now far from the next post: a set_post() as bots and
+		# tests do it, the player beside it.
+		player.global_position = player_at + offsets[k]
+		dummy.set_post(player.global_position + Vector3(0, 0, -1.6), PI, true)
+		await _ticks(30)
+		hooks["post move %d" % k] = await _hook_kicks(dummy)
+	assert_true(await _wait_until(func() -> bool: return not dummy.rig.is_ragdolling(), 300))
+	# A KO and its comeback on the post: the cache sits where the body lay.
+	player.global_position = player_at
+	dummy.set_post(player_at + Vector3(0, 0, -1.6), PI, true)
+	await _ticks(30)
+	dummy.health = 1.0
+	var kill := _hit(dummy, CombatTypes.Reaction.STAGGER, Vector3(0, 0, -2.0), CombatTypes.Region.HEAD, player)
+	kill.damage = 10.0
+	assert_true(dummy.receive_hit(kill))
+	assert_true(await _wait_until(func() -> bool: return dummy.is_ko(), 300), "KO'd")
+	assert_true(await _wait_until(func() -> bool: return not dummy.is_ko() and not dummy.is_blinking_in(), 900), "and back")
+	dummy.health = Tuning.data.dummy_health
+	await _ticks(60)
+	hooks["comeback"] = await _hook_kicks(dummy)
+	var fresh: Dictionary = hooks["fresh"]
+	for title: String in hooks:
+		var hook: Dictionary = hooks[title]
+		gut.p("hook, %s: struck %s, gave way %.3f m" % [title, hook.struck, hook.give])
+		assert_eq(hook.struck, ["Head", "UpperChest"] as Array[String], "%s: the head takes the hit's kick and the upper chest the lean's" % title)
+		assert_almost_eq(float(hook.give), float(fresh.give), 0.04, "%s: and gives way as the fresh dummy does" % title)
+	assert_gt(float(fresh.give), 0.3, "the approved stronger stagger (README: about 0.32 m)")
+
+
+func test_a_new_ragdolls_first_kick_lands_on_its_parts_strike_body_wherever_the_last_one_ended() -> void:
+	# The head's kick on the head, the trunk's on the upper chest, an arm's on the shoulder of
+	# the arm nearer to the contact, a leg's on a leg body of the nearer side: on a fresh dummy
+	# and after a ragdoll that ended elsewhere (its pose cache was where the search looked).
+	await _setup([Vector3(0, 0, -1.6)])
+	var dummy := dummies[0]
+	var push := dummy.get_forward().cross(Vector3.UP) * 3.0
+	for history: String in ["fresh", "after a ragdoll elsewhere"]:
+		if history != "fresh":
+			dummy.rig.ragdoll_start(true, dummy.rig.get_point_position(&"Head"), push, Vector3.ZERO)
+			await _ticks(20)
+			dummy.rig.ragdoll_stop(0.0)
+			dummy.set_post(dummy.global_position + Vector3(4.0, 0.0, 3.0), dummy.rotation.y, true)
+			await _ticks(10)
+		var cases := {
+			"Head": [Ragdoll.Part.HEAD, &"Head", true], "UpperChest": [Ragdoll.Part.TORSO, &"Hips", true],
+			"RightShoulder": [Ragdoll.Part.ARMS, &"RightHand", false], "LeftShoulder": [Ragdoll.Part.ARMS, &"LeftHand", false],
+			"RightLeg": [Ragdoll.Part.LEGS, &"RightLowerLeg", true], "LeftLeg": [Ragdoll.Part.LEGS, &"LeftLowerLeg", true],
+		}
+		for expected: String in cases:
+			var args: Array = cases[expected]
+			# A launch kicks a full ragdoll, a stagger the upper body (the arms' kinds).
+			dummy.rig.ragdoll_start(args[2], dummy.rig.get_point_position(args[1]), push, Vector3.ZERO, args[0], 1.0)
+			var ragdoll := dummy.rig.get_ragdoll()
+			var struck := String(ragdoll.rig.skeleton.get_bone_name(ragdoll._bone_of[ragdoll._pending[0][0]]))
+			if expected.ends_with("Leg"):
+				assert_true(struck.begins_with(expected.trim_suffix("Leg")) and ragdoll._part[ragdoll._pending[0][0]] == Ragdoll.Part.LEGS,
+						"%s, a hit on the %s lands on a leg body of its side (%s)" % [history, expected, struck])
+			else:
+				assert_eq(struck, expected, "%s: a %s hit lands on the %s" % [history, Ragdoll.Part.keys()[args[0]], expected])
+			dummy.rig.ragdoll_stop(0.0)
+			await _ticks(2)
+
+
+## Launch `d` with `hit` while it staggers: the head, hands and upper chest drawn on the
+## launch's tick against the tick before (the head's turn in degrees, the metres each moved),
+## and whether the ragdoll took over at once.
+func _launch_out_of_a_stagger(d: TrainingDummy, hit: HitInfo) -> Dictionary:
+	var rig := d.rig
+	var before := _drawn_pose(d)
+	assert_true(d.receive_hit(hit), "the launch lands")
+	await get_tree().physics_frame
+	var after := _drawn_pose(d)
+	var head_before: Transform3D = before.head
+	var head_after: Transform3D = after.head
+	return {
+		at_once = rig.get_ragdoll().mode == Ragdoll.Mode.FULL and rig.get_ragdoll().simulator.influence >= 1.0,
+		head_deg = rad_to_deg(head_before.basis.get_rotation_quaternion().angle_to(head_after.basis.get_rotation_quaternion())),
+		left = (before.left as Vector3).distance_to(after.left),
+		right = (before.right as Vector3).distance_to(after.right),
+		chest = (before.chest as Vector3).distance_to(after.chest),
+	}
+
+
+func _drawn_pose(d: CombatActor) -> Dictionary:
+	return {
+		head = d.rig.get_visual_point_transform(&"Head"),
+		left = d.rig.get_visual_point_transform(&"LeftHand").origin,
+		right = d.rig.get_visual_point_transform(&"RightHand").origin,
+		chest = d.rig.get_visual_point_transform(&"UpperChest").origin,
+	}
+
+
+func test_a_launch_from_behind_out_of_a_stagger_does_not_jump_the_head_and_arms() -> void:
+	# A stagger draws the head and arms at a share of the simulation (0.45 of the trunk's
+	# influence); the launch from behind takes over at once from the pose on screen, and
+	# showing all of the simulation from that tick moved the head by 38 degrees and the hands
+	# by 0.17 and 0.25 m against the trunk's 0.09 m. Now they move as the trunk does.
+	await _setup([Vector3(0, 0, -1.6)])
+	var dummy := dummies[0]
+	var side := dummy.get_forward().cross(Vector3.UP)
+	assert_true(dummy.receive_hit(_hit(dummy, CombatTypes.Reaction.STAGGER, side * 4.0)))
+	await _ticks(16)
+	assert_eq(dummy.rig.ragdoll_mode(), Ragdoll.Mode.PARTIAL, "mid-stagger")
+	var launch := _hit(dummy, CombatTypes.Reaction.LAUNCH, dummy.get_forward() * 3.0 + Vector3.UP * 5.0)
+	launch.from_behind = true
+	var out := await _launch_out_of_a_stagger(dummy, launch)
+	gut.p("launch from behind out of a stagger: at once %s; head %.1f deg, hands %.3f / %.3f m, chest %.3f m" % [out.at_once, out.head_deg, out.left, out.right, out.chest])
+	assert_true(out.at_once, "takes over at once")
+	assert_lt(out.head_deg, 15.0, "the head does not turn onto the full simulation (%.1f degrees)" % out.head_deg)
+	assert_lt(out.left, out.chest + 0.07, "nor the left hand (%.3f m, the chest %.3f m)" % [out.left, out.chest])
+	assert_lt(out.right, out.chest + 0.07, "nor the right hand (%.3f m)" % out.right)
+
+
+func test_the_uppercut_out_of_the_hooks_stagger_into_a_wall_does_not_jump_the_head_and_arms() -> void:
+	# P P P P with the dummy's back 0.4 m from the end wall: the uppercut out of the hook's
+	# stagger is stopped by the wall at once, so the ragdoll takes over from the pose on
+	# screen (42 degrees of head and 0.2 m of hand in one tick, held by the hitstop).
+	await _setup([Vector3(0, 0, -1.6)], -90.0, Vector3(19.55 - 1.6 - 0.4, 0.0, 0.0))
+	var dummy := dummies[0]
+	_queue(&"P", 4)
+	assert_true(await _wait_until(func() -> bool: return dummy.state == CombatTypes.ActorState.STAGGER, 160), "the hook staggers")
+	# The launch's tick: the pose drawn then against the tick before.
+	var before := _drawn_pose(dummy)
+	var after := before
+	var launched := false
+	for i in 160:
+		await get_tree().physics_frame
+		before = after
+		after = _drawn_pose(dummy)
+		if dummy.is_flying():
+			launched = true
+			break
+	assert_true(launched, "and the uppercut launches")
+	var ragdoll := dummy.rig.get_ragdoll()
+	var head_before: Transform3D = before.head
+	var head_after: Transform3D = after.head
+	var head_deg := rad_to_deg(head_before.basis.get_rotation_quaternion().angle_to(head_after.basis.get_rotation_quaternion()))
+	var chest := (before.chest as Vector3).distance_to(after.chest)
+	var left := (before.left as Vector3).distance_to(after.left)
+	var right := (before.right as Vector3).distance_to(after.right)
+	gut.p("uppercut into the wall out of the stagger: influence %.2f; head %.1f deg, hands %.3f / %.3f m, chest %.3f m" % [ragdoll.simulator.influence, head_deg, left, right, chest])
+	assert_eq(ragdoll.simulator.influence, 1.0, "taken over at once")
+	assert_lt(head_deg, 15.0, "the head does not turn onto the full simulation (%.1f degrees)" % head_deg)
+	assert_lt(left, chest + 0.07, "nor the left hand (%.3f m, the chest %.3f m)" % [left, chest])
+	assert_lt(right, chest + 0.07, "nor the right hand (%.3f m)" % right)

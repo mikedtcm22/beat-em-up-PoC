@@ -1,5 +1,7 @@
 extends Node
-## The only path for presentation to affect the simulation (autoload "TimeController").
+## The only path for presentation to affect the simulation (autoload "TimeController"), bar
+## the visual ragdoll's drawn pose, which also feeds the get-up, a dummy's respawn spot and
+## its walk home (game/actors/ragdoll.gd).
 ## Hitstop freezes specific actors; slow-mo and the debug time scale scale everyone.
 ## Engine.time_scale stays 1.0: actors scale their own sim step via scale_for().
 
