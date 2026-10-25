@@ -4,6 +4,58 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-25 09:12 CDT: round 2 reviewed (gap review: 8 of 8 verified survive); four r2 packages wait; weekly at 76%
+The 5-hour window is at 83% (resets 12:30 CDT); **weekly is at 76%** (resets Tue 2026-10-27 17:00 CDT). Nothing is running. Every branch is pushed. `m2/hit-feel` @ `ed36d1b` has every C record (486/486 tests; no code changed since `8f5519f`).
+- **The round 2 close** (`wf_e4327a11-eae`, 40 agents) took the window from 22% to 83% and weekly from 66% to 76%. The gap reviewer and its skeptics alone cost about 44 points of the window.
+  - **The critic** (`critic-r2.json`): 16 gaps, 4 high:
+    - hit-04's delayed flash judged only on the uppercut;
+    - the merged build's first-person ragdoll acts never judged independently;
+    - the player's own KO never probed;
+    - the fix diffs never code-reviewed.
+  - **The gap review** (`review-gap.json`, `verify-gap.json`): 9 findings. 8 are verified and survive, with no spec question; gap-09 is unverified.
+    - gap-01 (medium): a body launched into a wall or the curb sinks its head up to 0.38 m into it.
+    - gap-02 (medium): on the player's own KO, the first-person lens lies 7 cm above the floor behind the player's navy belly (41% of the view).
+    - gap-03 (medium): an uppercut from behind snaps the body into the "launched" pose and throws its head into the attacker's lens (0.098 m).
+    - gap-04 (low): the hook stagger's far arm still swings out dead straight (the stagger animation itself).
+    - gap-05 (low): a dummy that comes back beside its occupied post arrives touching the player and walks in place against him.
+    - gap-06 (low): on the stomp, the player's shins sink into the lying body's hips.
+    - gap-07 (low): the respawn check reads the drawn ragdoll, which is wrong on a new ragdoll's first tick.
+    - gap-08 (low): feel numbers left in scripts by the fixes.
+- **Round 2's packages** (`packages-r2.json`, ordered by the partition):
+
+  | Package | Findings |
+  | --- | --- |
+  | `r2-launch-into-walls` | gap-01, gap-03, gap-07, part of gap-08 |
+  | `r2-vfx-first-use` | perf-01, perf-02, hit-05, part of gap-08 |
+  | `r2-player-ko-view` | gap-02, gap-06 |
+  | `r2-dummy-comeback` | gap-05, gap-04, part of gap-08 |
+
+  All four fixers were skipped by the gate (7 points of headroom). None has a branch yet.
+- **Weekly budget:** a 5-hour point costs about 0.16 weekly points here, so a fixer at 15-25 window points costs about 3-4 weekly points. The four fixers plus D (README, ARCHITECTURE, the PR) and the final sheets come to about 14-18 weekly points, against 14 left below 90% before Tuesday 17:00. **Game-boy's call:**
+  - (a) D and the M2 PR first, so he can play, then the r2 fixers in priority order as the weekly allows;
+  - (b) all four fixers first, then D and the PR, likely after the weekly reset.
+- **Resume:**
+  - the fixers: `workflow-fix.js` with `packages_file` "packages-r2.json", `concurrency` 1, `fixer_cost` 15 (or 20), and `only` for the order Game-boy picks. Use a `note` like the round 2 close's `fix_note` (merge head `ed36d1b`).
+  - Then merge, regenerate the preset, run the tests.
+  - D: README's Milestone 2 status, and the hook figure (0.346 m at 0.9 against 0.217 m at 0.6); ARCHITECTURE's VFX, Audio, Ragdoll, Hit flash and hold-view sections checked against the code; the PR, never merged without his sign-off.
+  - gap-09 still needs its three skeptics.
+- **Questions from the gap findings** (no spec change; the defaults are the fixers' proposals):
+  - gap-01: wall-splat or bounce, or deflect along the wall?
+  - gap-02: what the first-person view should show while the player is KO'd and getting up;
+  - gap-03: whether the near-lens head for about 5 frames is acceptable;
+  - gap-05: whether the dummy should come back in front of the player or beside him;
+  - gap-06: whether the shin overlap is acceptable on a placeholder body.
+- **Also open with Game-boy:**
+  - grab-03 and hit-03, the combat log;
+  - grab-05 and hit-01, the flash size and the flurry strobe;
+  - hit-02, a hit on the player in first person;
+  - the side-view flash;
+  - grab-06's dead band;
+  - bars on bodies that aren't upright;
+  - the new look;
+  - `ragdoll_partial_head_influence`;
+  - the 12:40 entry's items.
+
 ### 2026-10-25 08:10 CDT: perf review done (2 of 2 survive); round 2 close running; weekly is now the limit
 The 5-hour window is at 22% (resets 12:30 CDT); **weekly is at 66%** (resets Tue 2026-10-27 17:00 CDT). Weekly's 90% stop leaves 24 points until Tuesday, about two windows of heavy work, so round 2 runs lean: fixers one at a time, at a 15-point estimate each.
 - **Perf review** (`review-perf.json`, `verify-perf.json`; both findings have 3 of 3 confirmations). Phase 3's code is cheap and doesn't leak:
@@ -774,7 +826,7 @@ USAGE RULES:
 
 Next steps (Milestone 2; details are in docs/HANDOFF.md):
 - Phases 1 and 2, the localized flash and phase 3's packages A (ragdoll: contact push, KO blink-off, staggers at 0.9) and B (grab view and waist bend) are merged into m2/hit-feel. 457/457 tests pass with no SCRIPT ERROR, at f98bb21. README has the three approved M2 ragdoll departures. WP3's audio was judged by analysis only, so I'll listen to it.
-- Phase 3's package C runs as a Workflow (I turned ultracode on), per docs/milestones/M2-phase3-plan.md, "C", step 2. The code, ragdoll and grab reviews are done, and all 19 of their findings are verified: every one survives, and 2 are spec questions for me (grab-03, grab-05). The 17 others are split into four fix packages (docs/reviews/M2-phase3/packages.json on branch m2/phase3-review). All four packages are fixed and merged into m2/hit-feel with the review records (484/484 tests, no SCRIPT ERROR). Round 2 reviews the merged build. The hit-feel lens is done (hit-04 fixed and merged, at 486/486; hit-05 is left; 3 spec questions for me). Next: the performance lens (workflow.js with docs/reviews/M2-phase3/args-r2-perf.json), the critic, the partition into packages-r2.json and the fixers, as docs/HANDOFF.md's newest entry says. Then record the final sheets and show me. Then D: check ARCHITECTURE against the code, README's Milestone 2 status, and the M2 PR, which is never merged without my sign-off.
+- Phase 3's package C runs as a Workflow (I turned ultracode on), per docs/milestones/M2-phase3-plan.md, "C", step 2. The code, ragdoll and grab reviews are done, and all 19 of their findings are verified: every one survives, and 2 are spec questions for me (grab-03, grab-05). The 17 others are split into four fix packages (docs/reviews/M2-phase3/packages.json on branch m2/phase3-review). All four packages are fixed and merged into m2/hit-feel with the review records (484/484 tests, no SCRIPT ERROR). Round 2 reviewed the merged build: the hit-feel, performance and gap lenses and a completeness critic. hit-04 is fixed and merged (486/486). The rest is in four packages in docs/reviews/M2-phase3/packages-r2.json, not started. Weekly usage is the limit now: follow my call in docs/HANDOFF.md's newest entry (D and the PR first, or the four fixers first), with workflow-fix.js and packages_file "packages-r2.json". Then record the final sheets and show me. Then D: check ARCHITECTURE against the code, README's Milestone 2 status, and the M2 PR, which is never merged without my sign-off.
 - Open for me (each has a default; none blocks C): more contortion on the ragdoll contact push (default: as it is); the grab's lens pull-back and the bend's depth (default: as they are); the combat log over the knee contact (default: C proposes a fix); a minimum on-screen size for the side-view flash (default: leave it). And I'll listen to WP3's audio.
 
 Ground rules:
