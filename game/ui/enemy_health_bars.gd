@@ -4,19 +4,21 @@ extends Control
 ## `show_seconds` after it takes a hit (CombatEvents.hit_landed, or a health drop through
 ## CombatEvents.health_changed). Each bar sits just above the body as it is drawn, seen
 ## through the viewport's current Camera3D (screen_anchor_of(): over the head of a body on
-## its feet, over the middle of one lying, flying or held bent over), and is hidden while the
-## head is behind the camera or the body is hidden (a KO's blink, a comeback's blink-in). A KO'd actor's bar fades out once the
-## killing hit's chunk has drained, and by the time the body starts blinking at the latest
-## (an empty bar over a lying body adds nothing); it is dropped when the actor is freed or
-## blinks off (CombatEvents.vanished). Full-rect, draws every bar itself.
-## Driven by GameHud.advance(). Presentation: it only reads the actors.
+## its feet, over the middle of one lying, flying or held bent over), and is hidden while
+## the head is behind the camera or the body is hidden (a KO's blink, a comeback's
+## blink-in). A KO'd actor's bar fades out once the killing hit's chunk has drained, and by
+## the time the body starts blinking at the latest (an empty bar over a lying body adds
+## nothing); it is dropped when the actor is freed or blinks off (CombatEvents.vanished).
+## Full-rect, draws every bar itself. Driven by GameHud.advance(). Presentation: it only
+## reads the actors.
 
 ## The drawn body's joints a bar stays above on screen, each raised by body_margin_m
 ## (screen_anchor_of()); the head's top counts as it is.
 const _BODY_POINTS: Array[StringName] = [
-	&"Head", &"EyePoint", &"UpperChest", &"ChestPoint", &"Hips", &"LeftUpperArm", &"RightUpperArm",
-	&"LeftElbowPoint", &"RightElbowPoint", &"LeftFistPoint", &"RightFistPoint",
-	&"LeftKneePoint", &"RightKneePoint", &"LeftFootPoint", &"RightFootPoint",
+	&"Head", &"EyePoint", &"UpperChest", &"ChestPoint", &"Hips",
+	&"LeftUpperArm", &"RightUpperArm", &"LeftElbowPoint", &"RightElbowPoint",
+	&"LeftFistPoint", &"RightFistPoint", &"LeftKneePoint", &"RightKneePoint",
+	&"LeftFootPoint", &"RightFootPoint",
 ]
 
 ## Seconds a bar stays up after the latest hit.

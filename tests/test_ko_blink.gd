@@ -4,7 +4,9 @@ extends GutTest
 ## ko_blink_s (faster toward the end) and is gone: hidden, its ragdoll stopped, no
 ## hurtboxes, no collision, and nothing that looks for bodies finds it. A training dummy
 ## then comes back at its post after dummy_revive_s, blinking in, at full health with a clean
-## damage look. The player never blinks off.
+## damage look, or beside it when someone is there (standing, lying, held, or another dummy
+## coming back on the same tick), never past a wall or off the floor; a ghost that nothing
+## aims at until its blink-in is over. The player never blinks off.
 
 const ROOM := preload("res://game/level/test_room.tscn")
 const FAR := Vector3(30.0, 0.0, -30.0)
