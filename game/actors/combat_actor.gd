@@ -40,12 +40,6 @@ signal state_changed(old_state: int, new_state: int)
 const IMPACT_KNOCKDOWN_PATH := "res://game/combat/moves/impact_body_knockdown.tres"
 const IMPACT_STAGGER_PATH := "res://game/combat/moves/impact_body_stagger.tres"
 
-## Grabbed, the body bends over into &"held" over this blend (sim seconds) while its origin
-## eases in from where it stood to the holder's HoldPoint over _GRAB_EASE_S, slowly at
-## first: the head drops below the holder's first-person lens (at the throat) before the
-## body closes in, instead of sweeping through it.
-const _HELD_BLEND_S := 0.12
-const _GRAB_EASE_S := 0.23
 ## Hit-flash color of a perfect block on the defender's rig (the parry flash), and the
 ## strength of the contact flash on an ordinary blocked hit (a clean hit flashes at 1).
 const PARRY_FLASH_COLOR := Color(0.3, 0.9, 1.0)
@@ -134,7 +128,7 @@ var _flash_frames: int = 0
 var _flash_delay: int = 0
 ## Engine.get_physics_frames() when the flash started: that tick does not count down.
 var _flash_tick: int = -1
-## Grab ease-in (see _GRAB_EASE_S): where the body stood relative to its pin spot when it
+## Grab ease-in (Tuning.grab_pin_ease_s): where the body stood relative to its pin spot when it
 ## was grabbed (in the holder's frame), and the sim time eased so far.
 var _pin_from: Vector3 = Vector3.ZERO
 var _pin_ease_s: float = 0.0
@@ -480,9 +474,9 @@ func start_grabbed(by: CombatActor) -> void:
 	_pin_ease_s = 0.0
 	_set_ghost(true)
 	_enter_state(CombatTypes.ActorState.GRABBED)
-	rig.play(&"held", _HELD_BLEND_S)
+	rig.play(&"held", Tuning.data.grab_hold_blend_s)
 	# A staggering body is grabbed out of its partial ragdoll.
-	rig.ragdoll_stop(maxf(_HELD_BLEND_S, Tuning.data.ragdoll_stop_blend_s))
+	rig.ragdoll_stop(maxf(Tuning.data.grab_hold_blend_s, Tuning.data.ragdoll_stop_blend_s))
 	CombatEvents.grabbed.emit(by, self)
 
 
@@ -980,7 +974,7 @@ func _apply_reaction(hit: HitInfo) -> void:
 		CombatTypes.Reaction.STAGGER:
 			sim_velocity = Vector3(kb.x, 0.0, kb.z)
 			_enter_state(CombatTypes.ActorState.STAGGER, Tuning.data.stagger_frames)
-			rig.play(_directional_anim(&"stagger", kb), 0.04)
+			rig.play(_directional_anim(&"stagger", kb), Tuning.data.stagger_snap_blend_s)
 			_ragdoll_stagger(hit.contact_point, kb, _ragdoll_part(hit), hit.direction)
 			if Vector2(kb.x, kb.z).length() >= Tuning.data.body_impact_min_speed:
 				_begin_flying(CombatTypes.Reaction.STAGGER, hit.attacker)
@@ -1409,16 +1403,18 @@ func _pin_spot() -> Vector3:
 	return Vector3(p.x, holder.global_position.y, p.z)
 
 
-## Pin the held body below the holder's HoldPoint, facing it. Over the first _GRAB_EASE_S
-## of the grab (`dt` sim seconds this frame) it eases in from where it stood (ease-in).
+## Pin the held body below the holder's HoldPoint, facing it. Over the first
+## Tuning.grab_pin_ease_s of the grab (`dt` sim seconds this frame) it eases in from where it
+## stood (ease-in).
 func _pin_to_holder(dt: float) -> void:
 	if not is_instance_valid(holder):
 		release_from_grab(Vector3.ZERO, false)
 		return
 	global_position = _pin_spot()
-	if _pin_ease_s < _GRAB_EASE_S:
+	var ease_s := Tuning.data.grab_pin_ease_s
+	if _pin_ease_s < ease_s:
 		_pin_ease_s += dt
-		var u := clampf(_pin_ease_s / _GRAB_EASE_S, 0.0, 1.0)
+		var u := clampf(_pin_ease_s / ease_s, 0.0, 1.0)
 		global_position += holder.global_basis * _pin_from * (1.0 - u * u)
 	var to_holder := holder.global_position - global_position
 	to_holder.y = 0.0

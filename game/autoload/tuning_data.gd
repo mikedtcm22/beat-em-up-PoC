@@ -52,6 +52,13 @@ extends Resource
 ## so its head rises while it moves away instead of up through the holder's view: released
 ## on its feet, or launched out of the hold (a throw, or a knee that KOs it).
 @export_range(0.0, 0.6, 0.01) var grab_release_blend_s: float = 0.22
+## Grabbed, the body bends over into the held pose over this blend (sim seconds) while its
+## origin eases in from where it stood to the holder's hold point over grab_pin_ease_s,
+## slowly at first: the head drops below the holder's first-person lens (at the throat)
+## before the body closes in, instead of sweeping through it. A staggering body leaves its
+## partial ragdoll over at least the blend.
+@export_range(0.0, 0.5, 0.01) var grab_hold_blend_s: float = 0.12
+@export_range(0.0, 1.0, 0.01) var grab_pin_ease_s: float = 0.23
 @export_subgroup("Hold view")
 ## While an enemy is held, the first-person view pitches down this many degrees (Game-boy,
 ## 2026-10-24), so the knees show landing on the held body; a knee's own camera_pitch_deg
@@ -79,8 +86,9 @@ extends Resource
 @export_range(10, 60, 1) var getup_frames: int = 30
 @export_range(0, 60, 1) var getup_invuln_frames: int = 30
 ## A hit's pose snaps in over this long (sim seconds): a launch's, a knee's jolt on a held
-## body, a flinch's and a guard break's.
+## body, a flinch's and a guard break's. A stagger's snaps in over stagger_snap_blend_s.
 @export_range(0.0, 0.2, 0.005) var reaction_snap_blend_s: float = 0.03
+@export_range(0.0, 0.2, 0.005) var stagger_snap_blend_s: float = 0.04
 ## Deceleration of knockback slides on the ground (m/s^2).
 @export_range(0.0, 60.0, 0.5) var ground_friction: float = 14.0
 ## A flying body must move at least this fast (m/s) to knock down whoever it hits.
