@@ -188,3 +188,52 @@ func test_the_throw_leaves_the_lens_and_the_holder_clear() -> void:
 		assert_eq(out.launched, CombatTypes.ActorState.THROWN, "thrown")
 		if ragdoll:
 			assert_eq(dummies[0].rig.ragdoll_mode(), Ragdoll.Mode.FULL, "the full ragdoll")
+
+
+# --- The blends are tunables (M2 phase 3 round 2, gap-08) -----------------------------------
+
+
+func test_the_release_and_snap_blends_are_tunables_with_the_values_they_had() -> void:
+	var data := TuningData.new()
+	assert_eq(data.grab_release_blend_s, 0.22, "the unbend out of a hold, as it was")
+	assert_eq(data.reaction_snap_blend_s, 0.03, "the snap of a hit's pose, as it was")
+
+
+func test_the_throws_unbend_takes_the_release_blend() -> void:
+	# Without the ragdoll (the animated throw), the head rises out of the bend over the
+	# release blend: at no blend it snaps upright in one tick, far more than the 0.15 m a tick
+	# the default allows.
+	Tuning.data.ragdoll_enabled = false
+	Tuning.data.grab_release_blend_s = 0.0
+	var snapped := await _launch_out_of_the_hold(&"K", false)
+	Tuning.data.grab_release_blend_s = TuningData.new().grab_release_blend_s
+	var unbent := await _launch_out_of_the_hold(&"K", false)
+	gut.p("throw: head moves at most %.3f m a tick around the hips with no release blend, %.3f m with it" % [snapped.head_step, unbent.head_step])
+	assert_gt(snapped.head_step, 0.15, "no blend: it snaps upright")
+	assert_lt(unbent.head_step, 0.15, "the default blend: it unbends")
+
+
+func test_a_hits_pose_snaps_in_over_the_reaction_blend() -> void:
+	# A head flinch: the first tick after it shows the flinch pose at once with no blend, and
+	# only a little of it with a long one.
+	var heads: Array[Vector3] = []
+	for blend: float in [0.0, 0.12]:
+		await _setup([Vector3(0, 0, -1.6)])
+		Tuning.data.reaction_snap_blend_s = blend
+		var victim := dummies[0]
+		var rest := victim.rig.get_point_position(&"Head")
+		var hit := HitInfo.new()
+		hit.attacker = player
+		hit.victim = victim
+		hit.damage = 1.0
+		hit.reaction = CombatTypes.Reaction.FLINCH
+		hit.region = CombatTypes.Region.HEAD
+		hit.direction = Vector3.FORWARD
+		hit.knockback = Vector3(0.0, 0.0, -1.5)
+		hit.contact_point = rest
+		hit.physics_frame = Engine.get_physics_frames()
+		assert_true(victim.receive_hit(hit))
+		await _ticks(2)
+		heads.append(victim.rig.get_point_position(&"Head") - rest)
+	gut.p("flinch: the head is %.3f m off its rest two ticks on with no blend, %.3f m with 0.12 s" % [heads[0].length(), heads[1].length()])
+	assert_gt(heads[0].length(), heads[1].length() + 0.01, "a longer blend shows less of the pose at first")

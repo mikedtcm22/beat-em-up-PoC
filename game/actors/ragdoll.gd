@@ -504,6 +504,11 @@ func body_transforms() -> Array[Transform3D]:
 	return out
 
 
+## True while the actor's capsule is stopped by the world in flight (set_blocked(); for tests).
+func is_blocked() -> bool:
+	return _blocked
+
+
 ## Kicks waiting for a step to land in (for tests).
 func pending_kicks() -> int:
 	return _pending.size()

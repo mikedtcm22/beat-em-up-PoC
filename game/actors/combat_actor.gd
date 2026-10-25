@@ -119,6 +119,9 @@ var _lunge_left: float = 0.0
 var _lunge_budget: float = 0.0
 var _lunge_frames_left: int = 0
 var _lunge_velocity: Vector3 = Vector3.ZERO
+## The flight in progress began out of a hold (a throw, a knee's KO): it keeps the ragdoll as
+## it is whatever the world does to the capsule (_launch()).
+var _flight_from_hold: bool = false
 ## Reaction a flying (or shoved) body inflicts on actors it runs into; NONE when not flying.
 var _flying_reaction: CombatTypes.Reaction = CombatTypes.Reaction.NONE
 var _flying_source: CombatActor
@@ -1018,8 +1021,9 @@ func _launch(hit: HitInfo, reaction: CombatTypes.Reaction, kb: Vector3) -> void:
 		rig.play(&"launched", blend)
 	if from_hold:
 		_leave_hold_under_hips()
-	var at_once := from_hold or _launch_blocked(v) \
-			or (not _face_up and reaction != CombatTypes.Reaction.KNOCKDOWN)
+	_flight_from_hold = from_hold
+	var at_once := from_hold or (_ragdoll_allowed() and (_launch_blocked(v) \
+			or (not _face_up and reaction != CombatTypes.Reaction.KNOCKDOWN)))
 	_ragdoll_full(hit.contact_point, kb, _ragdoll_part(hit), at_once)
 	if not _face_up and reaction != CombatTypes.Reaction.KNOCKDOWN:
 		# Launched from behind: the flying animation arches back and flips face down on
@@ -1314,7 +1318,7 @@ func _integrate(dt: float, scale: float) -> void:
 		# Knockback slides stop at walls; self-propelled states re-steer every frame.
 		sim_velocity.x = after.x
 		sim_velocity.z = after.z
-	if is_flying() and is_on_wall():
+	if is_flying() and is_on_wall() and not _flight_from_hold:
 		# The capsule is stopped by the world (a wall, a crate, the curb): its drawn body
 		# takes over from the pose on screen and its hips are pulled to the capsule less.
 		rig.ragdoll_set_blocked(true)

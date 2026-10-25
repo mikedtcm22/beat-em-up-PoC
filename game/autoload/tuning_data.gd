@@ -393,10 +393,12 @@ extends Resource
 ## a KO's, weaker).
 @export_range(0.5, 6.0, 0.05) var ragdoll_hips_hz: float = 3.0
 ## While a flying body's capsule is stopped by the world (a wall or the curb), the pull
-## toward the animation's hips is this strong instead (Hz): the bodies, which collide with
-## the world, keep the head out of the wall and slump down or along it, rather than being
-## dragged to a capsule that went nowhere. Back to the full pull when it lands.
-@export_range(0.0, 6.0, 0.05) var ragdoll_hips_blocked_hz: float = 1.0
+## toward the animation's hips is this strong instead (Hz): the body, which collides with the
+## world, slides on from the capsule a little, away from the lens it pivoted at (3 = no
+## difference: the legs swung at the lens of a player against a wall). Lower slides it
+## further, deeper into the wall and (lying) further from its hurtboxes. Back to the full
+## pull when it lands.
+@export_range(0.0, 6.0, 0.05) var ragdoll_hips_blocked_hz: float = 1.5
 @export_range(0.1, 2.0, 0.05) var ragdoll_hips_damping: float = 1.0
 @export_range(0.0, 8.0, 0.05) var ragdoll_flight_turn_hz: float = 2.5
 @export_range(0.0, 6.0, 0.05) var ragdoll_hips_turn_hz: float = 2.5

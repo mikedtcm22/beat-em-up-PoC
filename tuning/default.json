@@ -191,7 +191,7 @@
 		"ragdoll_contact_spin_trunk": 8.0,
 		"ragdoll_contact_spin_limb": 14.0,
 		"ragdoll_hips_hz": 3.0,
-		"ragdoll_hips_blocked_hz": 1.0,
+		"ragdoll_hips_blocked_hz": 1.5,
 		"ragdoll_hips_damping": 1.0,
 		"ragdoll_flight_turn_hz": 2.5,
 		"ragdoll_hips_turn_hz": 2.5,
