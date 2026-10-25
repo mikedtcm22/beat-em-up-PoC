@@ -7,10 +7,13 @@ extends GutTest
 ## damage look, or beside it when someone is there (standing, lying, held, or another dummy
 ## coming back on the same tick), never past a wall or off the floor; a ghost that nothing
 ## aims at until its blink-in is over. When the player stands on its post it comes back
-## clear of him and in his view, and stays there (no walking in place against him) until
-## the post is free. The player never blinks off.
+## clear of him and in his view but off-centre (not dead ahead, filling the view), and stays
+## there (no walking in place against him) until the post is free. Walking home, it waits
+## for a standing body in its way (no bumping into him) and gives up for good on a crate or
+## wall until it is hit or moved. The player never blinks off.
 
 const ROOM := preload("res://game/level/test_room.tscn")
+const FPView := preload("res://tests/fp_view.gd")
 const FAR := Vector3(30.0, 0.0, -30.0)
 const JAB_PATH := "res://game/combat/moves/jab_1.tres"
 
@@ -108,10 +111,25 @@ func _ahead_of_player(spot: Vector3) -> float:
 	return to_spot.normalized().dot(player.get_forward())
 
 
+## The angle (degrees) between the player's facing and `spot`.
+func _off_axis_deg(spot: Vector3) -> float:
+	var to_spot := spot - player.global_position
+	to_spot.y = 0.0
+	return rad_to_deg(player.get_forward().angle_to(to_spot))
+
+
+## The share (0..1) of the player's first-person view that `dummy`'s drawn body covers, seen
+## from the real lens (tests/fp_view.gd).
+func _view_share(dummy: CombatActor) -> float:
+	var cam := FPView.camera(player.get_eye_transform().origin, player.get_look_basis())
+	return FPView.covered(FPView.hits(dummy.rig, cam, 32))
+
+
 ## Put the player on `at`, facing `yaw_deg` (0 faces -Z, -90 faces +X).
 func _stand_on(at: Vector3, yaw_deg: float) -> void:
 	player.global_position = at
 	player.look_yaw = deg_to_rad(yaw_deg)
+	player.look_pitch = deg_to_rad(-6.0)  # the bots' view
 	player.rotation.y = player.look_yaw
 	player.sim_velocity = Vector3.ZERO
 
@@ -568,13 +586,22 @@ func test_a_dummy_comes_back_clear_of_the_player_on_its_post_and_in_his_view() -
 	assert_true(await _comes_back(dummy), "comes back on time")
 	var gap := _flat_gap(dummy, player)
 	var ahead := _ahead_of_player(dummy.global_position)
-	gut.p("came back %.2f m from the player on its post, %.2f of the way ahead of him" % [gap, ahead])
+	var off_axis := _off_axis_deg(dummy.global_position)
+	gut.p("came back %.2f m from the player on its post, %.2f of the way ahead of him (%.0f degrees off his facing)" % [gap, ahead, off_axis])
 	assert_gte(gap, dummy.body_radius + player.body_radius + Tuning.data.dummy_respawn_gap_m - 0.01, "clear of him, the gap tunable between the bodies")
-	assert_gt(ahead, 0.9, "in front of him (round to the nearest of eight spots)")
+	assert_gt(ahead, 0.5, "in front of him, in view")
+	# Off-centre (review r3look-04): every spot of the ring is as far from him, and the one
+	# straight ahead filled over half of his first-person view.
+	assert_almost_eq(off_axis, Tuning.data.dummy_respawn_off_axis_deg, 22.6, "off-centre: the spot nearest the wanted angle off his facing (eight spots, 45 degrees apart)")
+	assert_gt(off_axis, 20.0, "not dead ahead")
 	assert_almost_eq(dummy.get(&"_home"), home, Vector3.ONE * 1e-4, "its post stays")
 	# Solid, and it neither pushes into him nor walks in place against him.
 	assert_true(await _wait_until(func() -> bool: return not dummy.is_blinking_in(), 60))
 	await _ticks(3)
+	var share := _view_share(dummy)
+	gut.p("its body covers %.0f%% of his first-person view" % [share * 100.0])
+	assert_lte(share, 0.5, "covers at most half of his first-person view")
+	assert_gt(share, 0.0, "and is in it")
 	assert_eq(dummy.collision_layer, CombatTypes.bit(CombatTypes.LAYER_ENEMY_BODY), "solid")
 	var stood := dummy.global_position
 	var walked := 0
@@ -599,7 +626,8 @@ func test_a_dummy_comes_back_in_the_players_view_whichever_way_he_faces() -> voi
 		var spot: Vector3 = dummy.call(&"_respawn_spot")
 		assert_true(spot.is_finite(), "a spot at yaw %.0f" % yaw)
 		gut.p("facing %.0f: %.2f m from the post, %.2f ahead, %.2f m from him" % [yaw, spot.distance_to(home), _ahead_of_player(spot), Vector2(spot.x - player.global_position.x, spot.z - player.global_position.z).length()])
-		assert_gt(_ahead_of_player(spot), 0.9, "in front of him at yaw %.0f" % yaw)
+		assert_gt(_ahead_of_player(spot), 0.5, "in front of him at yaw %.0f" % yaw)
+		assert_almost_eq(_off_axis_deg(spot), 45.0, 1.0, "off-centre at yaw %.0f (45 degrees, the spot nearest the default %.0f)" % [yaw, Tuning.data.dummy_respawn_off_axis_deg])
 		assert_almost_eq(spot.distance_to(home), gap, 0.01, "one body width and the clearance out")
 	# Something in front of him: the spot next to it, beside him, not behind him.
 	_stand_on(home, 0.0)
@@ -611,6 +639,29 @@ func test_a_dummy_comes_back_in_the_players_view_whichever_way_he_faces() -> voi
 		assert_true(spot.is_finite(), "another spot")
 		assert_gte(_ahead_of_player(spot), 0.0, "in front of him or beside him with the front one taken (%.2f)" % _ahead_of_player(spot))
 		assert_gt(Vector2(spot.x - other.global_position.x, spot.z - other.global_position.z).length(), 2.0 * dummy.body_radius - 0.01, "clear of the other")
+
+
+func test_the_comeback_angle_off_his_facing_is_a_tunable() -> void:
+	# The one straight ahead (0 degrees: where it used to blink in) fills over half the
+	# first-person view at that distance; 90 puts it beside him.
+	var shares := {}
+	for deg: float in [0.0, 90.0, 50.0]:
+		await _setup([Vector3(0, 0, -1.6)])
+		Tuning.data.dummy_respawn_off_axis_deg = deg
+		var dummy := dummies[0]
+		var home := dummy.global_position
+		await _ko_until_gone(dummy)
+		_stand_on(home, 0.0)
+		assert_true(await _comes_back(dummy), "comes back on time at %.0f" % deg)
+		assert_almost_eq(_off_axis_deg(dummy.global_position), 45.0 if deg == 50.0 else deg, 1.0, "the spot nearest %.0f degrees off his facing" % deg)
+		assert_true(await _wait_until(func() -> bool: return not dummy.is_blinking_in(), 60))
+		await _ticks(3)
+		shares[deg] = _view_share(dummy)
+	gut.p("first-person view covered: straight ahead %.0f%%, default %.0f%%, beside him %.0f%%" % [shares[0.0] * 100.0, shares[50.0] * 100.0, shares[90.0] * 100.0])
+	assert_gt(shares[0.0], 0.5, "straight ahead fills over half the view")
+	assert_lte(shares[50.0], 0.5, "the default covers at most half")
+	assert_lt(shares[50.0], shares[0.0], "less than straight ahead")
+	assert_lt(shares[90.0], shares[50.0], "beside him, less still")
 
 
 func test_a_dummy_walks_home_once_the_post_is_free() -> void:
@@ -631,13 +682,9 @@ func test_a_dummy_walks_home_once_the_post_is_free() -> void:
 	gut.p("home, %.2f m from its post" % Vector2(dummy.global_position.x - home.x, dummy.global_position.z - home.z).length())
 
 
-func test_a_dummy_gives_up_a_walk_home_that_goes_nowhere() -> void:
-	# Something in the way (the post itself is free): it strides for the stuck window, no
-	# longer, and tries again after the idle time.
-	await _setup([Vector3(0, 0, -1.6)])
-	var dummy := dummies[0]
-	var home := dummy.global_position
-	var away := player.get_forward()
+## A box in the world layer across the way (1.5 m before `home`, along `away`), as a crate or
+## a wall.
+func _wall_across(home: Vector3, away: Vector3) -> StaticBody3D:
 	var wall := StaticBody3D.new()
 	wall.collision_layer = CombatTypes.bit(CombatTypes.LAYER_WORLD)
 	var shape := CollisionShape3D.new()
@@ -647,33 +694,163 @@ func test_a_dummy_gives_up_a_walk_home_that_goes_nowhere() -> void:
 	wall.add_child(shape)
 	room.add_child(wall)
 	wall.global_position = home + away * 1.5 + Vector3.UP
-	dummy.global_position = home + away * 3.0
-	_stand_on(home - away * 6.0, 0.0)
-	await _ticks(2)
-	var idle := _ticks_of(Tuning.data.dummy_return_idle_s)
-	var stuck := _ticks_of(Tuning.data.dummy_return_stuck_s)
-	var longest_walk := 0
-	var longest_stand := 0
+	return wall
+
+
+## Run `ticks` physics ticks, counting the bouts (runs of ticks) the dummy walks in, the
+## longest walk and the longest stand (in ticks), and the nearest it came to `other`'s body
+## (flat distance between the capsule walls) when it was given one.
+func _watch_walks(dummy: TrainingDummy, ticks: int, other: Node3D = null) -> Dictionary:
+	var out := {"walks": 0, "walked": 0, "longest_walk": 0, "longest_stand": 0, "closest": INF, "stand_at_end": 0}
 	var walk := 0
 	var stand := 0
-	var walks := 0
-	for i in 600:
+	for i in ticks:
 		await get_tree().physics_frame
 		if Vector2(dummy.sim_velocity.x, dummy.sim_velocity.z).length() > 0.01:
 			if walk == 0:
-				walks += 1
+				out.walks += 1
 			walk += 1
 			stand = 0
+			out.walked += 1
 		else:
 			walk = 0
 			stand += 1
-		longest_walk = maxi(longest_walk, walk)
-		longest_stand = maxi(longest_stand, stand)
-	gut.p("walks %d, the longest %d frames (stuck window %d), the longest stand %d (idle %d)" % [walks, longest_walk, stuck, longest_stand, idle])
-	assert_gt(walks, 1, "tries again")
+		out.longest_walk = maxi(out.longest_walk, walk)
+		out.longest_stand = maxi(out.longest_stand, stand)
+		if other:
+			out.closest = minf(out.closest, _flat_gap(dummy, other) - dummy.body_radius - (other as CombatActor).body_radius)
+	out.stand_at_end = stand
+	return out
+
+
+func test_a_dummy_gives_up_a_walk_home_that_goes_nowhere() -> void:
+	# Something fixed in the way (the post itself is free): it strides for the stuck window,
+	# no longer, and then stands there for good (review r3code-02: it used to try again after
+	# every idle time, bumping into it every 1.25 s).
+	await _setup([Vector3(0, 0, -1.6)])
+	var dummy := dummies[0]
+	var home := dummy.global_position
+	var away := player.get_forward()
+	_wall_across(home, away)
+	dummy.global_position = home + away * 3.0
+	_stand_on(home - away * 6.0, 0.0)
+	await _ticks(2)
+	var stuck := _ticks_of(Tuning.data.dummy_return_stuck_s)
+	var seen := await _watch_walks(dummy, 600)
+	gut.p("walks %d, the longest %d frames (stuck window %d), standing at the end for %d" % [seen.walks, seen.longest_walk, stuck, seen.stand_at_end])
+	assert_eq(seen.walks, 1, "walks once and gives it up")
 	# It walks up to the wall first (progress), then strides on for the stuck window.
 	var to_wall := (away * 1.5).length() - dummy.body_radius - 0.1
 	var approach := roundi(to_wall / Tuning.data.dummy_walk_speed * Engine.physics_ticks_per_second)
-	assert_lte(longest_walk, approach + stuck + 4, "gives up the stuck window after the wall, not striding on")
-	assert_gte(longest_stand, idle - 2, "and stands for the idle time")
+	assert_lte(seen.longest_walk, approach + stuck + 4, "gives up the stuck window after the wall, not striding on")
+	assert_gte(seen.stand_at_end, 600 - _ticks_of(Tuning.data.dummy_return_idle_s) - seen.longest_walk - 5, "and stands the rest of the time")
 	assert_lt(Vector2(dummy.global_position.x - home.x, dummy.global_position.z - home.z).length(), 3.0, "(and never got through)")
+
+
+func test_a_dummy_that_gave_up_a_walk_home_tries_again_once_hit_or_moved() -> void:
+	await _setup([Vector3(0, 0, -1.6)])
+	var dummy := dummies[0]
+	var home := dummy.global_position
+	var away := player.get_forward()
+	_wall_across(home, away)
+	dummy.global_position = home + away * 3.0
+	_stand_on(home - away * 6.0, 0.0)
+	await _ticks(2)
+	var seen := await _watch_walks(dummy, 300)
+	assert_eq(seen.walks, 1, "gave it up")
+	# A flinch from a hit starts over: it walks again after its idle time, and gives up again.
+	var hit := HitInfo.new()
+	hit.attacker = player
+	hit.victim = dummy
+	hit.damage = 1.0
+	hit.tier = CombatTypes.HitTier.LIGHT
+	hit.reaction = CombatTypes.Reaction.FLINCH
+	hit.region = CombatTypes.Region.TORSO
+	hit.direction = -away
+	hit.contact_point = dummy.get_chest_position()
+	hit.physics_frame = Engine.get_physics_frames()
+	assert_true(dummy.receive_hit(hit), "the hit lands")
+	seen = await _watch_walks(dummy, 300)
+	assert_eq(seen.walks, 1, "walks again after a hit, and gives it up again")
+	# Moved (a push, a throw, a bot) well away from where it gave up: another go.
+	dummy.global_position += away * 0.6
+	seen = await _watch_walks(dummy, 300)
+	assert_eq(seen.walks, 1, "walks again after it was moved, and gives it up again")
+	seen = await _watch_walks(dummy, 300)
+	assert_eq(seen.walks, 0, "and then stands")
+
+
+func test_a_dummy_waits_for_the_player_between_it_and_its_post() -> void:
+	# The usual follow-up to a knockdown: the player closes in on the dummy, stops at the
+	# magnetism's distance, and its post (free, but behind him) is on the far side of him.
+	# It used to walk into him, stall, and do so again every 1.25 s, fists in his face.
+	# {player: m from the post toward the dummy, dummy: m from the post}: close to him (0.15 m
+	# between the bodies), touching him, and far off (it walks up and stops short).
+	for case: Vector2 in [Vector2(0.85, 1.7), Vector2(1.0, 1.7), Vector2(0.85, 3.5)]:
+		var label := "player %.2f m, dummy %.2f m out" % [case.x, case.y]
+		await _setup([Vector3(0, 0, -3.0)])
+		var dummy := dummies[0]
+		var home := dummy.global_position
+		var away := player.get_forward()
+		_stand_on(home + away * case.x, 0.0)
+		player.rotation.y = atan2(-away.x, -away.z) + PI
+		player.look_yaw = player.rotation.y
+		dummy.global_position = home + away * case.y
+		await _ticks(2)
+		var from := player.global_position
+		var started := _flat_gap(dummy, player) - dummy.body_radius - player.body_radius
+		var seen := await _watch_walks(dummy, 600, player)
+		gut.p("%s: walked %d ticks in %d bouts, the gap %.3f m at the start, closest %.3f m" % [label, seen.walked, seen.walks, started, seen.closest])
+		assert_gte(seen.closest, minf(started, 0.05) - 0.005, "never closer to him than it started, and clear of him (%s)" % label)
+		assert_lte(seen.walks, 1, "no bouts of walking into him (%s)" % label)
+		assert_almost_eq(player.global_position, from, Vector3.ONE * 1e-3, "and does not push him (%s)" % label)
+		var to_player := player.global_position - dummy.global_position
+		to_player.y = 0.0
+		assert_lt(rad_to_deg(dummy.get_forward().angle_to(to_player)), 10.0, "stands facing him (%s)" % label)
+		assert_gt(seen.stand_at_end, 300, "and stands (%s)" % label)
+		# He steps aside: it walks home.
+		_stand_on(home + away * 4.0 + Vector3(4.0, 0.0, 0.0), 0.0)
+		assert_true(await _wait_until(func() -> bool:
+			return Vector2(dummy.global_position.x - home.x, dummy.global_position.z - home.z).length() <= Tuning.data.dummy_return_slack_m,
+			_ticks_of(Tuning.data.dummy_return_idle_s) + 300), "walks home once he is out of the way (%s)" % label)
+
+
+func test_a_dummy_walks_home_away_from_a_body_pressed_against_its_back() -> void:
+	# A body it touches does not hold it: the player right behind it, the post ahead.
+	await _setup([Vector3(0, 0, -3.0)])
+	var dummy := dummies[0]
+	var home := dummy.global_position
+	var away := player.get_forward()
+	dummy.global_position = home + away * 2.0
+	# The player touching it from the far side, the post on its other side.
+	_stand_on(dummy.global_position + away * (dummy.body_radius + player.body_radius + 0.001), 0.0)
+	await _ticks(2)
+	var seen := await _watch_walks(dummy, 300, player)
+	gut.p("a body at its back: walked %d ticks, %.2f m from its post at the end" % [seen.walked, Vector2(dummy.global_position.x - home.x, dummy.global_position.z - home.z).length()])
+	assert_gt(seen.walked, 20, "walks")
+	assert_lte(Vector2(dummy.global_position.x - home.x, dummy.global_position.z - home.z).length(), Tuning.data.dummy_return_slack_m + 0.01, "and gets home")
+
+
+func test_a_dummy_walking_home_stops_short_of_a_body_in_its_way() -> void:
+	# Far off, it walks up to the player and stops with room to spare (the look-ahead)
+	# instead of walking into him, and so does another dummy standing in its way.
+	await _setup([Vector3(0, 0, -3.0), Vector3(0, 0, -1.5)])
+	var dummy := dummies[0]
+	var blocker := dummies[1]
+	var home := dummy.global_position
+	var away := player.get_forward()
+	_stand_on(home - away * 8.0, 0.0)
+	dummy.global_position = home + away * 3.5
+	# Another dummy between it and its post, with its own post right there.
+	blocker.set_post(home + away * 1.5, 0.0, true)
+	await _ticks(3)
+	var seen := await _watch_walks(dummy, 400, blocker)
+	gut.p("another dummy in the way: walked %d ticks, stopped %.2f m from it" % [seen.walked, seen.closest])
+	assert_gt(seen.walked, 10, "walks toward its post first")
+	assert_gt(seen.closest, 0.05, "never touches the other dummy")
+	assert_gte(seen.closest, minf(Tuning.data.dummy_return_look_ahead_m, 1.0) - 0.1, "stops about the look-ahead short of it")
+	assert_gt(seen.stand_at_end, 100, "and stands")
+	# The other one steps off its post, away: it walks on home.
+	blocker.set_post(home + away * 1.5 + Vector3(4.0, 0.0, 0.0), 0.0, true)
+	assert_true(await _wait_until(func() -> bool:
+		return Vector2(dummy.global_position.x - home.x, dummy.global_position.z - home.z).length() <= Tuning.data.dummy_return_slack_m, 400), "walks home once it is clear")
