@@ -4,6 +4,45 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-24 23:09 CDT: round 2 hit review done (5 of 5 survive, 3 are spec questions); hit-04's fixer running
+The 5-hour window is at 74% (resets 02:30 CDT on 10-25); weekly is at 57%. The hit review and its 15 skeptics took the window from 46% to 66% in about 35 minutes.
+- **Hit-feel review** (`review-hit.json`, `verify-hit.json` on `m2/phase3-review`, `d38b199`). It used five recordings at `f1e2d0f`: every vfx_bot act, 36 combo_bot acts, and every side-view ragdoll_bot act with and without the effects. Each of the five findings has 3 of 3 confirmations.
+  - **To fix:**
+    - **hit-04** (medium): no finisher ever shows its white flash. The flash's 2 frames are exactly the impact frame's 2 frames.
+    - **hit-05** (low): in side view, the view-share floor grows the heavy word, the guard-break burst and the finisher burst to 2-2.5 times their size. They cover the struck body through the start of its reaction.
+  - **Spec questions for Game-boy** (defaults: as now):
+    - **hit-01**, which joins grab-05: the flurry strobes a white patch over 14-18% of the first-person view at 8.6 Hz, 7 times in a row, and the photosensitivity toggle doesn't cover it. Options:
+      - (a) the impact-frame toggle becomes a general "reduce flashing" switch that also softens the contact flash;
+      - (b) cap the flash's on-screen share in first person;
+      - (c) soften repeat flashes on the same victim within N frames.
+    - **hit-02**: a hit on the player in first person shows no flash. The only on-screen effect is a small white burst at screen centre, like the player's own jab, plus about 3 px of shake and the HP bar. Options:
+      - (a) flash the player's first-person arms at a reduced strength;
+      - (b) a distinct "taken" burst;
+      - (c) a short HUD edge vignette from the hit's side.
+    - **hit-03**, which joins grab-03: the always-on combat log hides where every side-view knockdown lands. Round 1's proposal, the log moved to the upper right under the rear-warning corner (with a toggle key), clears both views.
+  - **The side-view flash** (the open question): about 30 px across, always under the light burst (64 px at the 4% floor) or the word. A minimum size alone wouldn't show it; it would have to be larger than the burst or start after it pops. With the effects off, it reads on the contact for every ragdoll case.
+  - **Verdicts on the 10:55 known items:**
+    - (a) a hit on the player reads weakly (hit-02);
+    - (b) the side-view flash is under the burst: confirmed;
+    - (c) the first finisher's dropped frame doesn't show in Movie Maker captures (a perf-lens job);
+    - (d) the light burst is 10.3% of the view width;
+    - (e) the bruised look is still subtle in side view;
+    - (f) the log covers the side view: confirmed (hit-03);
+    - (g) the speed lines repeat exactly in vfx_bot, and vary in combo_bot and in play.
+  - **Also noticed** (minor):
+    - in side-view piles, a lying body's bar crosses the standing body in front of it (after ragdoll-03);
+    - when a jab breaks the hold, the released victim's dark hair rises through the first-person view at about 0.4 m, about 25% of the width for 6 frames (within grab-02's tested bounds);
+    - the blood splash slides down a launched body;
+    - hits on the player put sparks at screen centre over the attacker's face.
+- **Running:** workflow `wf_9d7bfb9c-048`: `workflow-fix.js` with `packages_file: "packages-r2a.json"` (one package, `r2-finisher-flash`: hit-04, written by the lead) and `fixer_cost` 12. The fixer works in `.worktrees/m2-fix-r2-finisher-flash` on branch `m2/phase3-fix-r2-finisher-flash`. Only it fit the 16 points of headroom.
+- **Next, in the next window:**
+  1. The perf lens: `workflow.js` with `lenses: ["perf"]`, `base` at the merge head, `skip_critic`, `skip_fix`, `suffix` "-r2", and a `common_note` like the hit run's (see the run args in this session, or rewrite them from the 22:33 entry).
+  2. The critic (round 2).
+  3. The partition of hit-05 plus the perf survivors into `packages-r2.json`, with keys prefixed `r2-`.
+  4. `workflow-fix.js` with `packages_file` "packages-r2.json".
+  5. Merge, then the final sheets for Game-boy, then D.
+- **If cut off:** rerun `workflow-fix.js` with the same args. The loader reuses a `wip:`-only branch.
+
 ### 2026-10-24 22:33 CDT: package C round 1 done and merged (484/484); round 2's hit review running
 The 5-hour window is at about 47% (resets 02:30 CDT on 10-25); weekly is at 53% (resets Tue 2026-10-27 17:00 CDT). hold-view's finish and ko-respawn-bars ran one after another, at about 22% of the window together.
 - **Merged into `m2/hit-feel`** (pushed; head `b22e08e`): `m2/phase3-fix-hold-view` (`acea488`), `m2/phase3-fix-ko-respawn-bars` (`a4c9bee`) and `m2/phase3-review` (`f1e2d0f`, all of C's JSON records). All three merged cleanly, and the preset regenerated unchanged (300 values). **484/484 tests pass with no SCRIPT ERROR or ERROR.** All 17 round 1 findings are fixed.
