@@ -90,6 +90,21 @@ extends Resource
 ## long, then blinks back in standing at its post at full health: about 4 s from the KO to
 ## back with the KO defaults.
 @export_range(0.0, 10.0, 0.1) var dummy_revive_s: float = 1.0
+## When someone stands on a dummy's post as it comes back, it blinks in beside the post, one
+## body width plus this much clearance (m) from it (two of each when that spot is taken), so
+## it never arrives touching the body on the post.
+@export_range(0.0, 0.5, 0.01) var dummy_respawn_gap_m: float = 0.1
+## A training dummy left alone (standing, nobody to spar with) this long (s) walks back to
+## its post, turning toward it at dummy_return_turn_rate (rad/s), until it is within
+## dummy_return_slack_m of it. It stays put while someone is on the post, and gives up a walk
+## that gets no nearer for dummy_return_stuck_s (a body in the way), trying again after the
+## idle time.
+@export_range(0.0, 10.0, 0.1) var dummy_return_idle_s: float = 1.0
+@export_range(0.0, 2.0, 0.05) var dummy_return_slack_m: float = 0.3
+@export_range(0.5, 20.0, 0.5) var dummy_return_turn_rate: float = 6.0
+@export_range(0.1, 3.0, 0.05) var dummy_return_stuck_s: float = 0.25
+## How fast (rad/s) a dummy turns to face the player, standing or sparring.
+@export_range(0.5, 20.0, 0.5) var dummy_face_turn_rate: float = 4.0
 
 @export_group("Feel details")
 ## Fraction of move speed while holding a grabbed enemy, and while airborne.
@@ -446,6 +461,9 @@ extends Resource
 ## over this long at this rate, out of reach until it is solid.
 @export_range(0.0, 2.0, 0.05) var ko_blink_in_s: float = 0.5
 @export_range(0.5, 30.0, 0.5) var ko_blink_in_hz: float = 8.0
+## The share of each blink cycle (KO blink-off and blink-in) the body is shown for; the rest
+## of the cycle it is off. 0.5 is even on and off.
+@export_range(0.05, 0.95, 0.05) var ko_blink_duty: float = 0.5
 
 @export_group("Camera")
 @export_range(75.0, 110.0, 1.0) var fov_deg: float = 90.0

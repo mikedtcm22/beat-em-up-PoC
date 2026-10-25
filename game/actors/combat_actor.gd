@@ -251,11 +251,12 @@ func is_blinking_in() -> bool:
 
 ## Whether a blink shows the body `t` sim seconds into a blink `length` seconds long whose
 ## rate goes evenly from `from_hz` to `to_hz` (on-off cycles per second): each cycle off
-## first, then on.
-static func blink_shown(t: float, length: float, from_hz: float, to_hz: float) -> bool:
+## first, then on, shown for the last Tuning.ko_blink_duty of it (`duty`, when given).
+static func blink_shown(t: float, length: float, from_hz: float, to_hz: float, duty: float = -1.0) -> bool:
 	var u := clampf(t, 0.0, length)
 	var cycles := from_hz * u + (to_hz - from_hz) * u * u / (2.0 * maxf(length, 1e-6))
-	return fposmod(cycles, 1.0) >= 0.5
+	var shown_share := Tuning.data.ko_blink_duty if duty < 0.0 else duty
+	return fposmod(cycles, 1.0) >= 1.0 - shown_share
 
 
 ## Grab anytime (Game-boy's second playtest, a Spec §4 change): a standing actor can be
