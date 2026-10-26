@@ -169,6 +169,7 @@ func test_the_kicker_is_the_fast_flanker_of_the_catalog() -> void:
 	assert_eq(kicker._attacks[1].moves[0].id, &"kicker_sweep")
 	assert_eq(EnemyCatalog.scene(&"kicker").resource_path, KICKER_SCENE.resource_path, "the catalog finds it")
 	assert_gt(kicker.voice_pitch_mult, 1.0, "a higher voice than the grunt's, for the ear to tell it from behind")
+	assert_false(kicker._wakes_in_place(), "it goes back to its seat after a reaction, as the Punk does")
 
 
 func test_the_kickers_colours_are_not_red_and_not_the_punks() -> void:
@@ -246,6 +247,29 @@ func test_a_kicker_that_is_in_view_strafes_toward_the_edge_of_the_view() -> void
 		var later := absf(_bearing(kicker.global_position + tangent * 0.5))
 		assert_gt(later, now, "%.0f degrees: the strafe takes it toward the edge (%.1f then %.1f)" % [bearing, now, later])
 		kicker.queue_free()
+
+
+func test_the_edge_ward_strafe_wins_over_the_way_to_the_slot_in_view() -> void:
+	# The base strafes back toward its slot once it is off it by more than the slot reach; the Kicker in
+	# view heads for the nearer edge of the view instead, even where that is away from the slot. (The
+	# test above has no slot, so the base's own answer was the same coin and nothing held the override.)
+	_make_player()
+	var kicker := _kicker(_ahead(3.0, 20.0), "KickerEdge")
+	var punk := _punk(_ahead(3.0, 20.0), "PunkSlot")
+	await _ticks(2)
+	Tuning.data.ai_frozen = true
+	# The slot is straight ahead: toward it is toward the middle of the view, away from the edge.
+	var slot := _ahead(3.0, 0.0)
+	kicker.set_slot(slot)
+	punk.set_slot(slot)
+	var toward_slot := punk._pick_strafe_dir()
+	var edge_ward := kicker._pick_strafe_dir()
+	assert_ne(edge_ward, toward_slot, "the Kicker does not take the slot-ward way a Punk does")
+	var away := Vector3(kicker.global_position.x, 0.0, kicker.global_position.z).normalized()
+	var tangent := Vector3(-away.z, 0.0, away.x)
+	var now := absf(_bearing(kicker.global_position))
+	assert_gt(absf(_bearing(kicker.global_position + tangent * edge_ward * 0.5)), now, "its way takes it toward the edge")
+	assert_lt(absf(_bearing(punk.global_position + tangent * toward_slot * 0.5)), now, "the Punk's takes it toward the slot, into the middle")
 
 
 func test_the_waypoints_on_the_way_round_are_on_the_ring_and_ahead_of_it() -> void:

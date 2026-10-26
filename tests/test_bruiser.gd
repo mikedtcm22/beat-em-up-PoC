@@ -375,6 +375,23 @@ func test_the_brace_plays_when_a_light_hit_bounces_off_a_bruiser_with_no_move_ru
 	assert_eq(anim, &"bruiser_smash")
 
 
+func test_a_braced_bruiser_that_is_walking_keeps_its_brace_clip_while_the_ai_runs() -> void:
+	# _animate_legs() is the other half of the brace (the first test stands the Bruiser still, which
+	# only exercises _stop()): a body that is walking calls the locomotion every tick through
+	# _apply_velocity(), and without the override the clip was gone on the next one.
+	Tuning.data.ai_frozen = false
+	var bruiser := _bruiser(7.0)
+	await _until(func() -> bool: return Vector2(bruiser.sim_velocity.x, bruiser.sim_velocity.z).length() > 0.5 and bruiser.ai_state == EnemyActor.AiState.APPROACH, 120)
+	assert_eq(bruiser.ai_state, EnemyActor.AiState.APPROACH, "walking to the ring")
+	bruiser.receive_hit(_hit(bruiser))
+	assert_eq(bruiser.rig.current_anim(), &"brace", "the chest pushes out")
+	await _ticks(2)
+	assert_eq(bruiser.rig.current_anim(), &"brace", "and the walk's legs leave the clip be while it plays")
+	assert_gt(Vector2(bruiser.sim_velocity.x, bruiser.sim_velocity.z).length(), 0.3, "though the body is still walking")
+	await _ticks(70)
+	assert_ne(bruiser.rig.current_anim(), &"brace", "then the walk cycle is back")
+
+
 # --- Grabbing it -------------------------------------------------------------------------------
 
 
@@ -632,3 +649,52 @@ func test_the_knee_and_the_throw_still_reach_a_held_bruiser_pushed_out_to_stand_
 	_player.input.push_press(&"K", 2)
 	await _ticks(60)
 	assert_true(_hits.any(func(h: HitInfo) -> bool: return h.victim == bruiser and h.move != null and h.move.id == &"throw"), "and so does the throw")
+
+
+## The player holds a staggered Bruiser (LB after the hook), ready for a knee or the throw.
+func _held_bruiser() -> Bruiser:
+	var bruiser := _bruiser(1.0)
+	await _ticks(3)
+	bruiser.receive_hit(_hit(bruiser, 8.0, CombatTypes.HitTier.HEAVY, CombatTypes.Reaction.STAGGER, _move(&"hook")))
+	bruiser.sim_velocity = Vector3.ZERO
+	_player.input.push_press(&"GRAB", 2)
+	assert_true(await _until(func() -> bool: return _player.state == CombatTypes.ActorState.GRABBING, 20), "the player holds it")
+	await _ticks(14)
+	return bruiser
+
+
+func test_a_knee_on_a_held_bruiser_jolts_it_and_is_not_absorbed_as_armor() -> void:
+	# The held victim's knees are the payoff of the stagger-then-grab counter. The armor rule ran on
+	# them like on any light hit: a grey spark, ARMOR in the log, and no jolt of the held body.
+	var bruiser := await _held_bruiser()
+	var before := bruiser.health
+	_player.input.push_press(&"P", 2)
+	await _ticks(30)
+	var knees := _hits.filter(func(h: HitInfo) -> bool: return h.victim == bruiser and h.move != null and h.move.id == &"knee")
+	assert_false(knees.is_empty(), "the knee lands on it")
+	var knee: HitInfo = knees[0]
+	assert_false(knee.armor_absorbed, "no armor on a body the player holds: no grey spark, no clank")
+	assert_lt(bruiser.health, before, "and the damage landed")
+	assert_eq(bruiser.state, CombatTypes.ActorState.GRABBED, "it stays held")
+	assert_eq(bruiser.ai_state, EnemyActor.AiState.REACT, "it reacted (the hit was not absorbed)")
+	assert_eq(bruiser.rig.current_anim(), bruiser._held_anim(), "the jolt is in the hunched held pose")
+
+
+func test_the_throw_throws_a_held_bruiser_and_does_not_leave_it_pinned_to_a_free_player() -> void:
+	# armor_heavy_to_stagger turned the throw's THROWN into a STAGGER: the Bruiser stayed GRABBED with
+	# the player as its holder after he had let go, taking 15 damage and going nowhere.
+	var bruiser := await _held_bruiser()
+	_player.input.push_press(&"P", 2)
+	await _ticks(20)
+	await _until(func() -> bool: return _player.current_move == null, 60)
+	await _ticks(4)
+	_player.input.push_press(&"K", 2)
+	assert_true(await _until(func() -> bool: return _hits.any(func(h: HitInfo) -> bool: return h.victim == bruiser and h.move != null and h.move.id == &"throw"), 80), "the throw lands")
+	var throws := _hits.filter(func(h: HitInfo) -> bool: return h.victim == bruiser and h.move != null and h.move.id == &"throw")
+	var thrown: HitInfo = throws[0]
+	assert_false(thrown.armor_absorbed)
+	assert_eq(thrown.reaction, CombatTypes.Reaction.THROWN, "it is thrown, not staggered")
+	assert_true(await _until(func() -> bool: return bruiser.state in [CombatTypes.ActorState.THROWN, CombatTypes.ActorState.LAUNCHED, CombatTypes.ActorState.DOWNED], 30), "it flies (%s)" % CombatTypes.ActorState.keys()[bruiser.state])
+	assert_null(bruiser.holder, "and nobody holds it any more")
+	await _until(func() -> bool: return _player.state == CombatTypes.ActorState.FREE, 90)
+	assert_ne(bruiser.state, CombatTypes.ActorState.GRABBED, "it is not left hanging on a player who has moved on")

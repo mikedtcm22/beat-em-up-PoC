@@ -181,6 +181,16 @@ func test_the_boss_is_the_plans_body_groups_and_attacks() -> void:
 	assert_eq(boss.rig.scale, Vector3.ONE)
 
 
+func test_the_deep_voice_is_the_scenes_data_as_the_bruisers_is_and_not_a_number_in_the_script() -> void:
+	# CLAUDE.md: feel numbers are never script constants. The pitch lives in boss.tscn.
+	var bare := Boss.new()
+	assert_almost_eq(bare.voice_pitch_mult, 1.0, 0.0001, "the script sets none")
+	bare.free()
+	var boss := BOSS_SCENE.instantiate() as Boss
+	assert_almost_eq(boss.voice_pitch_mult, 0.7, 0.0001, "the scene's 0.7")
+	boss.free()
+
+
 func test_the_boss_is_charcoal_with_orange_accents_and_not_red() -> void:
 	var boss := _boss()
 	assert_lt(boss.color.v, 0.25, "charcoal")
@@ -723,6 +733,146 @@ func test_the_spawner_falls_short_and_the_ring_makes_up_the_rest() -> void:
 	assert_true(boss.adds.any(func(a: EnemyActor) -> bool: return _flat_dist(a.global_position, only) < 0.2), "one at the spawn point")
 	assert_true(boss.adds.any(func(a: EnemyActor) -> bool:
 		return absf(_flat_dist(a.global_position, boss.global_position) - Tuning.data.boss_add_ring_m) < 0.2), "one on the ring")
+
+
+# --- Phase 2 and the wake-up under a live director (final M3 fix) ------------------------------
+
+
+## The real director in place of before_each()'s stub, and the AI on.
+func _live_ai() -> EnemyDirector:
+	_director.queue_free()
+	await _ticks(1)
+	var director := EnemyDirector.new()
+	_scene.add_child(director)
+	_director = director
+	Tuning.data.ai_frozen = false
+	return director
+
+
+func test_the_call_in_waits_while_a_menu_is_open_and_the_ai_freeze_does_not_hold_it() -> void:
+	# A2.2: while F1 or F4 is open the fight holds and waves start no spawns. The boss's call-in is a
+	# spawn too; its countdown waited for nothing. (ai_frozen is the Debug panel's own switch and the
+	# scripted acts' way of placing an attacker, so it does not hold the call-in.)
+	var boss := _boss(3.0)
+	await _ticks(2)
+	GameInput.menu_open = true
+	boss.health = 150.0
+	await _ticks(200)
+	assert_eq(boss.phase, 2, "the phase itself changes")
+	assert_eq(boss.adds.size(), 0, "but nothing is called in while a menu is open")
+	GameInput.menu_open = false
+	await _ticks(3)
+	assert_eq(boss.adds.size(), 1, "the first walks in as the menu closes")
+	var interval := EnemyActor._frames(Tuning.data.wave_spawn_interval_s)
+	await _ticks(interval + 6)
+	assert_eq(boss.adds.size(), 2, "and the second after the interval, as ever")
+	# Frozen AI (the Debug checkbox): the countdown runs.
+	var other := _boss(8.0)
+	other.name = "Boss2"
+	Tuning.data.ai_frozen = true
+	await _ticks(2)
+	other.health = 100.0
+	assert_true(await _until(func() -> bool: return other.adds.size() >= 1, 20), "ai_frozen does not hold the call-in")
+
+
+## Phase 2 from POSTURE with the real director, a spawner whose nearest doorway is at `doorway_x`
+## (the sign decides which of the two mirrored two-enemy arrangements the old tie-break picked), the
+## beckon played in full and the walk after it kept off the player.
+func _phase_two_beckon(doorway_x: float) -> void:
+	await _live_ai()
+	var spawner := EncounterSpawner.new()
+	spawner.host = _scene
+	var spot := Vector3(doorway_x, 0.0, -9.0)
+	spawner.spawn_points.append({position = spot, yaw = 0.0, tag = &"doorway", lane_point = spot + Vector3(0.0, 0.0, 2.0)})
+	_scene.add_child(spawner)
+	var boss := _boss(4.0)
+	boss._cooldown_frames = 100000  # it postures and asks for nothing: the call-in's moment is the test
+	assert_true(await _until(func() -> bool: return boss.ai_state == EnemyActor.AiState.POSTURE and _flat_dist(boss.global_position, boss.posture_slot) < 0.6, 600), "it is posturing on its slot")
+	await _ticks(30)
+	var seat := boss.posture_slot
+	boss.health = 140.0
+	await _ticks(1)
+	assert_eq(boss.phase, 2)
+	var beckon := boss._taunt_frames
+	assert_gt(beckon, 30, "the beckon is under way (%d frames)" % beckon)
+	var nearest := INF
+	for i in beckon - 3:
+		await get_tree().physics_frame
+		nearest = minf(nearest, _flat_dist(boss.global_position, _player.global_position))
+		assert_eq(boss.ai_state, EnemyActor.AiState.POSTURE, "frame %d of the beckon: still posturing" % i)
+		if boss.ai_state != EnemyActor.AiState.POSTURE:
+			break
+	assert_gt(boss._taunt_frames, 0, "the beckon is still playing a few frames before its end")
+	assert_eq(boss.rig.current_anim(), &"taunt")
+	assert_gte(boss.adds.size(), 1, "the Punks walk in meanwhile")
+	# Two more enemies spread the ring thirds (the boss may shift a step, 60 degrees: 3.9 m at 3.9 m out),
+	# never to the seat across the player (7.8 m).
+	assert_lt(_flat_dist(boss.posture_slot, seat), 5.0, "the call-in did not hand the boss the seat across the player (%s from %s)" % [str(boss.posture_slot), str(seat)])
+	for i in 420:
+		await get_tree().physics_frame
+		nearest = minf(nearest, _flat_dist(boss.global_position, _player.global_position))
+	assert_gte(nearest, Tuning.data.posture_ring_min_m - 0.5, "it never came within the ring's near edge of the player, in the beckon or the walk after it (%.2f m)" % nearest)
+
+
+func test_phase_two_from_posture_plays_the_whole_beckon_and_the_boss_does_not_walk_through_the_player_left() -> void:
+	# The call-in's first Punk changes the director's set of enemies; a newcomer that spawns on the
+	# boss's side used to hand the lone boss the seat across the player (a 7.6 m walk through him), and
+	# _tick_posture() sent it to APPROACH, which zeroes the taunt, one frame after the beckon began.
+	await _phase_two_beckon(-2.0)
+
+
+func test_phase_two_from_posture_plays_the_whole_beckon_and_the_boss_does_not_walk_through_the_player_right() -> void:
+	await _phase_two_beckon(2.5)
+
+
+func test_a_boss_that_gets_up_beside_the_player_postures_there_is_served_first_and_winds_up() -> void:
+	# After every stagger or knockdown it walked back to a slot 2.5-4 m away in APPROACH, which never asks
+	# for a token, while the next chain landed: the autopilot killed it in 40 s having thrown one attack.
+	var director := await _live_ai()
+	var boss := _boss(1.4)
+	await _ticks(6)
+	boss.receive_hit(_hit(_player, boss, 8.0, CombatTypes.HitTier.HEAVY, CombatTypes.Reaction.STAGGER))
+	assert_eq(boss.ai_state, EnemyActor.AiState.REACT)
+	assert_true(await _until(func() -> bool: return boss.state == CombatTypes.ActorState.FREE, 200), "it is on its feet")
+	assert_true(await _until(func() -> bool: return boss.ai_state != EnemyActor.AiState.REACT, 10), "its first free tick")
+	assert_true(boss.ai_state in [EnemyActor.AiState.POSTURE, EnemyActor.AiState.ENGAGE], "beside the player it takes up POSTURE where it stands (the director may have served it already), it does not walk back to a slot (%s)" % boss.ai_state_name())
+	assert_lt(_flat_dist(boss.global_position, _player.global_position), 3.0, "within the ring's far edge")
+	assert_true(await _until(func() -> bool: return director.debug_token_holders().has(boss), 20), "it is given the token at once")
+	assert_true(await _until(func() -> bool: return boss.state == CombatTypes.ActorState.WINDUP, 60), "and winds an attack up within a second (%s)" % boss.ai_state_name())
+	assert_false(boss.has_token_priority(), "the priority is spent with the token")
+
+
+func test_a_boss_knocked_far_away_walks_back_to_its_slot_as_anyone_does() -> void:
+	var director := await _live_ai()
+	var boss := _boss(9.0)
+	await _ticks(6)
+	boss.receive_hit(_hit(_player, boss, 8.0, CombatTypes.HitTier.HEAVY, CombatTypes.Reaction.STAGGER))
+	await _until(func() -> bool: return boss.state == CombatTypes.ActorState.FREE, 200)
+	await _ticks(1)
+	assert_eq(boss.ai_state, EnemyActor.AiState.APPROACH, "more than the ring's far edge away: it walks in")
+	assert_false(boss.has_token_priority())
+	assert_not_null(director)
+
+
+func test_the_wake_up_hold_is_over_after_posture_resume_s_and_the_slot_calls_the_boss_back() -> void:
+	# It has no business with the slot it left while it waits for a token it may not have (the attack
+	# cooldown is running): after posture_resume_s the leash applies again.
+	Tuning.data.ai_frozen = false
+	Tuning.data.posture_taunt_chance = 0.0
+	var boss := _boss(1.4)
+	_director.put_slot(boss, Vector3(0.0, 0.0, 6.5))  # across the player and beyond reach
+	await _ticks(6)
+	boss._cooldown_frames = 100000
+	boss.receive_hit(_hit(_player, boss, 8.0, CombatTypes.HitTier.HEAVY, CombatTypes.Reaction.STAGGER))
+	await _until(func() -> bool: return boss.state == CombatTypes.ActorState.FREE, 200)
+	await _ticks(1)
+	assert_eq(boss.ai_state, EnemyActor.AiState.POSTURE, "resumed")
+	var hold := EnemyActor._frames(Tuning.data.posture_resume_s)
+	await _ticks(hold - 20)
+	assert_eq(boss.ai_state, EnemyActor.AiState.POSTURE, "still on the ring before the hold is over, whatever the slot says")
+	assert_gte(_flat_dist(boss.global_position, _player.global_position), 1.4 - 0.05, "and not walking in at him")
+	await _ticks(40)
+	assert_eq(boss.ai_state, EnemyActor.AiState.APPROACH, "then the slot it left calls it back")
 
 
 # --- The HUD, the view, the lens --------------------------------------------------------------
