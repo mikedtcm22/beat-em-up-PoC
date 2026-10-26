@@ -5,7 +5,8 @@ extends Control
 ##   f<physics frame> +<frames since the previous entry>  attacker > victim  move #<chain step>
 ##   <input timing>  <damage> dmg <tier> <reaction> <region>  mf<move frame> [flags]
 ## so combo-timing problems can be reported precisely. A hit the guard stopped shows its chip
-## ("<chip> chip" instead of "<damage> dmg") and the flag BLOCKED, PERFECT or GUARD BREAK.
+## ("<chip> chip" instead of "<damage> dmg") and the flag BLOCKED, PERFECT or GUARD BREAK. A hit
+## armor absorbed (the Bruiser's, the boss's) carries the flag ARMOR and is drawn grey.
 ## Fed by GameHud from CombatEvents.hit_landed, attack_started and attack_whiffed.
 
 @export var max_entries: int = 10
@@ -132,6 +133,8 @@ func _hit_color(hit: HitInfo) -> Color:
 		return HudStyle.FINISHER_ACCENT
 	if hit.blocked:
 		return HudStyle.GUARD
+	if hit.armor_absorbed:
+		return HudStyle.MUTED
 	return _tier_color(hit.tier)
 
 

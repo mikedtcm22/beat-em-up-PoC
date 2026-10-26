@@ -25,6 +25,9 @@ extends Node
 ## - **Blocks** (a hit_landed with `hit.blocked`): whoosh + block clack; a perfect block
 ##   plays the parry ting instead of the clack; a guard break adds the guard-break crash.
 ##   No grunt.
+## - **Armor** (a hit_landed with `hit.armor_absorbed`: a light hit on the Bruiser or the boss): the
+##   swing's whoosh and the block clack pitched down by `armor_clank_pitch` (a clank, `armor_clank_db`
+##   on top of the clack's own). No thud, no grunt: the hit registered and did nothing.
 ## - **Whiffs** (`attack_whiffed`): a whoosh at the striking limb, no impact.
 ## - **Wind-ups** (`windup_started`, while `Tuning.rear_warning_audio`): an effort grunt
 ##   and a whoosh at the attacker, so the player hears where an attack is coming from. A
@@ -247,6 +250,11 @@ func _on_hit_landed(hit: HitInfo) -> void:
 			play(&"block_clack", at, tuning.block_clack_db + gain)
 		if hit.guard_broken:
 			play(&"guard_break", at, tuning.guard_break_db + gain)
+		return
+	if hit.armor_absorbed:
+		if swung:
+			play(&"whoosh", at, tuning.whoosh_db + gain)
+		play(&"block_clack", at, tuning.block_clack_db + tuning.armor_clank_db + gain, tuning.armor_clank_pitch)
 		return
 	for pool: StringName in TIER_LAYERS.get(hit.tier, []):
 		if pool == &"whoosh" and not swung:

@@ -754,6 +754,13 @@ extends Resource
 @export_range(0.0, 1.0, 0.05) var bruiser_grab_chance: float = 0.4
 @export_range(0.0, 10.0, 0.1) var bruiser_attack_cooldown_s: float = 2.2
 @export_range(0.25, 3.0, 0.05) var bruiser_speed_mult: float = 0.8
+## Armor shrugging a light hit off (the Bruiser's, and the boss's): the grey spark's width (m; the
+## block spark's art, tinted), how grey it is (0 black to 1 white), and the clank (the block clack
+## pitched down: its pitch scale and its volume in dB on top of the clack's own).
+@export_range(0.0, 2.0, 0.01) var armor_spark_m: float = 0.24
+@export_range(0.0, 1.0, 0.01) var armor_spark_grey: float = 0.55
+@export_range(0.25, 2.0, 0.05) var armor_clank_pitch: float = 0.6
+@export_range(-20.0, 12.0, 0.5) var armor_clank_db: float = 0.0
 
 @export_subgroup("Boss")
 @export_range(50.0, 2000.0, 10.0) var boss_health: float = 300.0

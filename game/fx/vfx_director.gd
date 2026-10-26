@@ -13,7 +13,9 @@ extends Node3D
 ##   finisher  a large burst, a large word, blood, radial speed lines, the impact frame,
 ##             and on the head spit and (by chance) a tooth.
 ## A blocked hit gets a block spark, a parry spark (perfect block) or a guard-break burst
-## instead. Words are picked at random from their tier's pool, never the same word twice
+## instead. A hit that armor absorbed (hit.armor_absorbed: a light hit on the Bruiser or the boss)
+## gets a grey spark (the block spark's art, tinted) instead of the tier's burst, with no word and
+## no blood: it registered and did nothing. Words are picked at random from their tier's pool, never the same word twice
 ## in a row. The player's real lunges (a move with its own lunge, such as the flying kick,
 ## carrying the player Tuning.vfx_lunge_lines_min_m; not the magnetism step-in of jabs and
 ## chain hits) get light speed lines (first person only).
@@ -192,6 +194,20 @@ func spawn_pop(kind: StringName, point: Vector3, size_m: float, seconds: float, 
 	return sprite
 
 
+## The grey spark of a hit that armor absorbed, at its contact: the block spark's art, tinted
+## armor_spark_grey, armor_spark_m wide, living as long as a block's effects. Returns it.
+func spawn_armor_spark(hit: HitInfo) -> ComicSprite:
+	var t := Tuning.data
+	var pop := spawn_pop(&"block_spark", hit.contact_point, t.armor_spark_m * t.vfx_scale, t.vfx_block_fx_s, PRIORITY_SPLASH)
+	if pop == null:
+		return null
+	var grey := t.armor_spark_grey
+	pop.modulate = Color(grey, grey, grey, 1.0)
+	_set_kind_sizes(pop, [t.armor_spark_m])
+	_frame(pop, _on_player(hit))
+	return pop
+
+
 ## A comic word for `tier` at `point`: lifted above the contact and to a side on screen,
 ## tilted, drifting up as it fades. `on_player`: the hit landed on the first-person player.
 func spawn_word(tier: CombatTypes.HitTier, point: Vector3, on_player: bool = false) -> ComicSprite:
@@ -345,6 +361,9 @@ func _on_hit_landed(hit: HitInfo) -> void:
 		if pop:
 			_set_kind_sizes(pop, sparks)
 			_frame(pop, on_player)
+		return
+	if hit.armor_absorbed:
+		spawn_armor_spark(hit)
 		return
 	var tier := hit.tier
 	var bursts: Array[float] = [t.vfx_burst_small_m, t.vfx_burst_medium_m, t.vfx_burst_large_m]
