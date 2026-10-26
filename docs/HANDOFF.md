@@ -4,6 +4,35 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-26 06:15 CDT: the final review's fixes merged (1177/1177); verification, docs and the release next
+5-hour 73% (resets 07:50 CDT); **weekly reset to 3%** (resets Mon 2026-11-02 05:00 CDT). The final review (177 agents, 18M tokens, about 3 h) cost about 70 window points across the 02:50 reset.
+- **The final review** (`wf_488b3250-97f`; records in `docs/reviews/M3/final-*.json`) ran six Opus lenses. 26 findings, 20 survived the skeptics, in four fix packages, all merged (`f12e607`). **1177/1177 tests pass in 134 s with no SCRIPT ERROR or ERROR.** The preset has 450 values.
+  - The warning lens found **no high or medium defect**: every archetype lights the right corners behind-left, behind-right and directly behind.
+  - **Fixed:**
+    - a face-down knockdown put the lens under the street (floor clearance);
+    - the boss pound's cap went through the lens (a squat pose);
+    - the dropped pipe rolled out of reach (rest damping);
+    - approaching enemies walked through the player and walled the lens (every archetype orbits the ring now);
+    - Kickers kept the whole ring turning (they take their own seats behind);
+    - the slam read as the headbutt (a heave);
+    - the phase 2 beckon was cut;
+    - an armored Bruiser jammed at the nose;
+    - the knees on a held Bruiser read as armor;
+    - the boss's adds spawned while F1 was open;
+    - a heavy burst wasn't larger above size 1.35;
+    - the instruments' flake and drift.
+  - **Partial:** the boss is no longer stun-locked to death (it wakes in place and attacks), but a scripted player still beats it in about 41-43 s. The open call for Game-boy: the proposal not taken is wake-up armor; `boss_health` is the knob.
+- **Running:**
+  - a Sonnet agent folding the fixers' doc wording into ARCHITECTURE, README and the calls log;
+  - an Opus verifier re-checking the high fixes in first person in `.worktrees/m3-verify-final`;
+  - the lead's recordings of "Mixed waves" and "Boss wave, held back" in `captures/m3_evidence/`.
+- **Then:**
+  1. Commit the docs.
+  2. The export (`godot --headless --export-release "macOS" "builds/macos/Beat-em-Up PoC.zip"`): smoke it headless with `--quit-after 900`, then run it windowed once.
+  3. `gh release create m3-playtest-1 "builds/macos/Beat-em-Up PoC.zip" --prerelease --target m3/enemy-ai`.
+  4. The M3 PR (never merge it).
+  5. The Slack DM to Michael (`U0AQMKKBL93`): the release link and the digest from `M3-judgement-calls.md`.
+
 ### 2026-10-26 03:15 CDT: P4-int merged (1130/1130): the done-when proved; the final review running
 5-hour 2% (resets 07:50 CDT), weekly 44% (resets Mon 2026-10-26 05:00 CDT).
 - **P4-int merged** (`7a015cc`). **1130/1130 tests pass in 108 s with no SCRIPT ERROR or ERROR.** The preset has 443 values.
