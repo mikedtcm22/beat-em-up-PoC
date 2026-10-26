@@ -271,11 +271,11 @@ func _build_enemy_moves() -> void:
 ## measured by tests/test_enemy_moves_punk.gd (within 0.15 m). The cross is a chain link: it
 ## starts with no wind-up of its own, only if the jab landed or was blocked (M3-plan A2.14).
 const PUNK_JAB_REACH_M := 1.05
-const PUNK_CROSS_REACH_M := 1.36
+const PUNK_CROSS_REACH_M := 1.21
 const PUNK_SHOVE_REACH_M := 0.97
 ## The cross steps in this far (m) over its active frames: the jab's flinch pushes the player a
 ## hand's breadth away, and the second link must still reach him. Its reach_m includes the step.
-const PUNK_CROSS_STEP_M := 0.3
+const PUNK_CROSS_STEP_M := 0.15
 ## The shove's push (m/s along the radial): a stagger that carries the player a body length.
 const PUNK_SHOVE_PUSH_MPS := 3.5
 
