@@ -1,0 +1,13 @@
+{
+  "base": "m3/enemy-ai",
+  "concurrency": 1,
+  "note": "Merge state: m3/enemy-ai at 17d3fb9 has S0 and all five phase 1 packages merged (P1-ai, P1-director, P1-room, P1-hud, P1-instruments); 858/858 tests pass in 93 s with no SCRIPT ERROR or ERROR; the crowd room is the main scene. Read every package's ARCHITECTURE heading and docs/milestones/M3-calls/*.md before starting: they hold the as-built APIs (RearWarning signals are shown(side, count, heavy) and cleared(side), not hidden; EnemyDirector.report_stalled(enemy) exists; AudioDirector.windup_voices_stolen exists).",
+  "packages": [
+    {
+      "key": "P1-int",
+      "section": "Part C §5 \"P1-int: slice integration (after the four merge)\", as amended by Part A §A3.6 and §A4 (the hard metrics R1, R2, R3, R10, R11 asserted; the probe on in the slice acts), with Part B §B2-§B3",
+      "est": 7,
+      "note": "You are alone on your branch and may make integration fixes in any file (list each with a one-line reason). Wire P1-instruments' probe, autopilot and oracle into the crowd bot's slice acts exactly as its ARCHITECTURE heading describes (probe.attach, start_act/end_act with tags, pilot.enabled, finish()). Known items to settle, each measured and logged in docs/milestones/M3-calls/P1-int.md: (1) bot runs with real enemies end with 'ERROR: N resources still in use at exit' (P1-room saw it in a scratch merge): find the cause (likely a static cache such as EnemyActor.windup_move's) and fix it, since 0 ERROR lines is the bar; (2) determinism inside one process: the first run starts avoidance a tick early (P1-ai), so test_slice_crowd.gd's hash check needs a discarded warm-up run or must compare like with like; (3) flinch-lock: the director paces wind-up STARTS (0.35 s) but grants three tokens at once; measure in the six-Punk fight whether the god-mode player is hit-locked for more than about 1.5 s, and if so add the smallest fix in may_start_windup() (for example no new wind-up start while the player is in hitstun, or a short grace after a hit on the player), as a tunable in the Director subgroup; (4) lens coverage at strike range: P1-ai reports the Punk at about 0.95 m covering half the lens; measure R8 in the six-Punk acts and, if p95 is over 50%, try the plan's levers (engage_margin_m, recover_hold_s, a back-step right after the chain) and log the result; (5) the autopilot was tuned on stubs: retune its skill exports if it can't fight real Punks (R13). Record every slice act in first person with the probe on, write readability.json per act into captures/p1-int/, LOOK at the sheets (12 fps around wind-ups; 6 fps for whole acts; corner crops for the warning act), and report every R-metric per act in your final message."
+    }
+  ]
+}
