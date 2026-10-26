@@ -267,9 +267,34 @@ func _build_enemy_moves() -> void:
 	_boss_moves()
 
 
-## The Street Punk: punk_jab, punk_cross, punk_shove (P1-ai).
+## The Street Punk's reaches (MoveData.reach_m): where each strike meets a standing 1.8 m body,
+## measured by tests/test_enemy_moves_punk.gd (within 0.15 m). The cross is a chain link: it
+## starts with no wind-up of its own, only if the jab landed or was blocked (M3-plan A2.14).
+const PUNK_JAB_REACH_M := 1.05
+const PUNK_CROSS_REACH_M := 1.21
+const PUNK_SHOVE_REACH_M := 0.97
+## The cross steps in this far (m) over its active frames: the jab's flinch pushes the player a
+## hand's breadth away, and the second link must still reach him. Its reach_m includes the step.
+const PUNK_CROSS_STEP_M := 0.15
+## The shove's push (m/s along the radial): a stagger that carries the player a body length.
+const PUNK_SHOVE_PUSH_MPS := 3.5
+
+
+## The Street Punk: punk_jab, punk_cross, punk_shove (P1-ai). Two attacks: the two-hit punch
+## (jab, then the cross) and the shove. The jab and the shove are telegraphed (startup is the
+## held wind-up, never below the grunt floor of 18 frames); the cross follows the jab with no
+## wind-up. Light tier, 6 damage each (SPEC §7), no lunge: the Punk walks into reach first.
 func _punk_moves() -> void:
-	pass
+	var jab := _add(&"punk_jab", "Punk Jab", Vector3i(22, 3, 14), 6.0, LIGHT, FLINCH,
+			Vector3(0.0, 0.0, 1.5), [_sphere(&"RightFistPoint", 0.14)])
+	_enemy(jab, PUNK_JAB_REACH_M, 20)
+	var cross := _add(&"punk_cross", "Punk Cross", Vector3i(8, 3, 16), 6.0, LIGHT, FLINCH,
+			Vector3(0.0, 0.0, 1.5), [_sphere(&"LeftFistPoint", 0.14)])
+	_enemy(cross, PUNK_CROSS_REACH_M, 14)
+	cross.free_lunge = PUNK_CROSS_STEP_M
+	var shove := _add(&"punk_shove", "Punk Shove", Vector3i(20, 3, 18), 6.0, LIGHT, STAGGER,
+			Vector3(0.0, 0.0, PUNK_SHOVE_PUSH_MPS), [_sphere(&"LeftFistPoint", 0.16), _sphere(&"RightFistPoint", 0.16)])
+	_enemy(shove, PUNK_SHOVE_REACH_M, 14)
 
 
 ## The Kicker: kicker_jump_kick, kicker_sweep (P2-kicker).
