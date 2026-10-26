@@ -4,11 +4,12 @@ extends EnemyActor
 ## light hit knocks it out of its wind-up. Two attacks: the two-hit punch (a jab with a held
 ## wind-up, then a cross that follows with no wind-up, only if the jab landed or was blocked) and
 ## the shove (hands drawn to the chest, then a two-handed push that staggers). Both 6 damage,
-## LIGHT. A saturated red jacket with a yellow cap and shoes: told from the orange dummy at a
-## glance. All behaviour is EnemyActor's; this file is the Punk's data.
+## LIGHT. A saturated deep teal jacket with a yellow cap and shoes: told from the orange dummy at
+## a glance, and not red, which SPEC §10 keeps for blood, the rear warning and the finisher's
+## accents. All behaviour is EnemyActor's; this file is the Punk's data.
 
 ## The jacket and the accents (cap, glove straps, shoes), distinct from the training dummy's.
-@export var color: Color = Color(0.82, 0.12, 0.2)
+@export var color: Color = Color(0.02, 0.5, 0.56)
 @export var accent: Color = Color(0.96, 0.82, 0.14)
 
 

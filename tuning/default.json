@@ -267,6 +267,8 @@
 		"commit_pause_frames": 12,
 		"engage_margin_m": 0.05,
 		"engage_timeout_s": 2.0,
+		"engage_go_lead_s": 0.1,
+		"engage_aim_offset_m": 0.1,
 		"recover_hold_s": 0.35,
 		"enemy_turn_rate": 6.0,
 		"posture_wander_m": 1.5,

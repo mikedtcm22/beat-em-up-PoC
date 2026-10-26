@@ -30,6 +30,20 @@ class PickyDirector:
 		return enemy == only
 
 
+## A stub director whose go is due in `eta` seconds (what windup_eta_s() answers; a test counts it
+## down) and that says go once it is zero.
+class EtaDirector:
+	extends StubDirector
+	var eta: float = 0.0
+
+	func windup_eta_s(_enemy: EnemyActor) -> float:
+		return eta
+
+	func may_start_windup(enemy: EnemyActor) -> bool:
+		windup_asks.append(enemy)
+		return eta <= 0.0
+
+
 var _scene: Node3D
 var _player: PlayerCharacter
 var _director: Object
@@ -395,6 +409,167 @@ func test_the_commit_pause_holds_it_still_before_it_steps_in() -> void:
 	assert_lt(_flat_dist(punk.global_position, at), 0.05, "squared up: no steps yet")
 	await _ticks(30)
 	assert_gt(_flat_dist(punk.global_position, at), 0.3, "then it steps in")
+
+
+## A Punk 3 m from the player with a token from an EtaDirector whose go is due in `eta` s. Returns
+## the Punk; the director is `_director`.
+func _waiting_punk(eta: float) -> StreetPunk:
+	_make_player()
+	var director := EtaDirector.new()
+	_director = director
+	_scene.add_child(director)
+	var punk := _punk(Vector3(0.0, 0.0, -3.0))
+	await _ticks(4)
+	director.eta = eta
+	director.give_token(punk)
+	return punk
+
+
+func test_a_holder_whose_go_is_far_off_stays_squared_up_where_it_is_and_the_wait_is_not_a_failed_chase() -> void:
+	# The go is 4 s away: longer than engage_timeout_s. It stands on the ring, facing the player,
+	# and keeps its token: waiting is not walking in and not getting there.
+	var punk := await _waiting_punk(4.0)
+	var at := punk.global_position
+	await _ticks(150)
+	assert_eq(punk.ai_state, EnemyActor.AiState.ENGAGE, "ENGAGE")
+	assert_lt(_flat_dist(punk.global_position, at), 0.05, "it did not step in")
+	assert_true(punk.has_token, "and it still holds its token after %.1f s" % (150.0 / 60.0))
+	assert_true(_director.released.is_empty(), "nothing gave it back")
+	assert_eq(punk.get(&"_engage_frames"), 0, "no frame of it counted as a chase that failed")
+	assert_true(_started.is_empty(), "and no wind-up")
+	var facing := -punk.get_forward()
+	assert_gt(facing.dot(Vector3(at.x, 0.0, at.z).normalized()), 0.95, "squared up: facing the player")
+
+
+func test_a_holder_steps_in_when_its_go_is_due_within_the_walk_and_arrives_as_it_comes() -> void:
+	var walk_s := 0.0
+	var punk := await _waiting_punk(2.0)
+	var want := punk.attack_range_m() - Tuning.data.engage_margin_m
+	walk_s = (3.0 - want) / Tuning.data.engage_speed_mps
+	var due: float = walk_s + Tuning.data.engage_go_lead_s
+	var started_eta := -1.0
+	var wound := -1
+	var in_zone := 0
+	var still_in_zone := 0
+	for i in 300:
+		_director.eta = maxf(_director.eta - 1.0 / 60.0, 0.0)
+		await get_tree().physics_frame
+		if started_eta < 0.0 and int(punk.get(&"_engage_frames")) > 0:
+			started_eta = _director.eta
+		if wound < 0 and punk.state == CombatTypes.ActorState.WINDUP:
+			wound = i
+		if wound < 0 and _flat_dist(punk.global_position, _player.global_position) <= 1.3:
+			in_zone += 1
+			if Vector2(punk.sim_velocity.x, punk.sim_velocity.z).length() < 0.3:
+				still_in_zone += 1
+	assert_almost_eq(started_eta, due, 0.08, "it started walking when the go was due within the walk (%.2f s) and the lead" % due)
+	assert_gte(wound, 0, "it wound up")
+	assert_lte(still_in_zone, 8, "it did not stand at the player's nose waiting for its go (%d ticks)" % still_in_zone)
+	assert_lte(in_zone, 20, "inside 1.3 m for the last stretch of the walk only (%d ticks)" % in_zone)
+
+
+func test_a_go_that_slips_away_mid_walk_stops_it_where_it_is() -> void:
+	# A hit lands on the player while it walks in: the go is a second away again. It stops short of
+	# the nose and waits there, instead of walking on to wait at his face.
+	var punk := await _waiting_punk(0.0)
+	assert_true(await _until(func() -> bool:
+			return _flat_dist(punk.global_position, _player.global_position) < 2.0, 120), "it walks in")
+	_director.eta = 1.5
+	await _ticks(2)
+	var at := punk.global_position
+	await _ticks(40)
+	assert_lt(_flat_dist(punk.global_position, at), 0.1, "stopped where it was")
+	assert_gt(_flat_dist(punk.global_position, _player.global_position), 1.3, "short of the nose")
+	assert_true(punk.has_token)
+	assert_true(_started.is_empty())
+	_director.eta = 0.0
+	assert_true(await _until(func() -> bool: return punk.state == CombatTypes.ActorState.WINDUP, 120), "the go is open again: it finishes the walk and winds up")
+
+
+func test_a_lone_punk_exactly_on_the_players_axis_gets_to_strike_range_and_attacks() -> void:
+	# The player's avoidance obstacle slows a body whose wish points exactly at its centre to a crawl
+	# (a head-on tie: the speed it may keep is the gap over the avoidance horizon, 0.4 m/s at about
+	# 1.05 m); it never reached 0.9 m and gave up after engage_timeout_s. A step-in aims a hand's width
+	# to one side (engage_aim_offset_m), which breaks the tie.
+	Tuning.data.god_mode = true
+	await _bake_navmesh()
+	_make_player()
+	_player.add_child(RoomKit.PlayerObstacle.new())
+	_make_director()
+	var punk := _punk(Vector3(0.0, 0.0, -4.5))
+	_director.put_slot(punk, Vector3(0.0, 0.0, -3.4))
+	await _ticks(3)
+	_director.give_token(punk)
+	assert_true(await _until(func() -> bool: return punk.state == CombatTypes.ActorState.WINDUP, 240), "it reaches its range and winds up")
+	assert_true(punk.has_token, "it did not give up the token")
+	assert_lte(_flat_dist(punk.global_position, _player.global_position), punk.attack_range_m() + 0.01, "within its reach")
+
+
+func test_a_step_in_aims_to_one_side_of_the_player_and_each_enemy_keeps_its_side() -> void:
+	_make_player()
+	_make_director()
+	var sides := {}
+	for n in 12:
+		var punk := PUNK_SCENE.instantiate() as StreetPunk
+		punk.name = "Punk%d" % (n + 20)  # named before it enters the tree, as the spawner does
+		punk.position = Vector3(0.0, 0.0, -3.0)
+		_scene.add_child(punk)
+		await _ticks(2)
+		var aim: Vector3 = punk.call(&"_engage_aim", _player)
+		var off := aim - _player.global_position
+		var to_player := _player.global_position - punk.global_position
+		assert_almost_eq(Vector2(off.x, off.z).length(), Tuning.data.engage_aim_offset_m, 0.001, "the offset is the tunable")
+		assert_almost_eq(off.dot(to_player.normalized()), 0.0, 0.001, "sideways: not nearer or further")
+		sides[signf(off.cross(to_player).y)] = true
+		assert_eq(punk.call(&"_engage_aim", _player), aim, "the same side every time")
+		punk.queue_free()
+	assert_eq(sides.size(), 2, "both sides are used, by name")
+	Tuning.data.engage_aim_offset_m = 0.0
+	var plain := _punk(Vector3(0.0, 0.0, -3.0))
+	await _ticks(2)
+	assert_eq(plain.call(&"_engage_aim", _player), _player.global_position, "no offset: the player's origin")
+
+
+func test_the_last_strike_of_an_attack_in_flight_is_counted_through_its_chain() -> void:
+	# The two-hit punch's last strike is the cross: the jab's whole length plus the cross's startup
+	# from the first frame; the shove has one strike. Idle: none. A whiffed jab ends the chain.
+	_make_player(Vector3(0.0, 0.0, 30.0))
+	_make_director()
+	var punk := _punk(Vector3(0.0, 0.0, 0.0), Vector3(0.0, 0.0, 30.0))
+	await _ticks(4)
+	assert_eq(punk.last_strike_eta_s(), 0.0, "nothing under way")
+	var jab := _move(&"punk_jab")
+	var cross := _move(&"punk_cross")
+	punk.force_attack(0)
+	await _ticks(2)
+	assert_eq(punk.state, CombatTypes.ActorState.WINDUP)
+	var chain_frames := jab.total_frames() + cross.startup
+	var expected := float(chain_frames - punk.move_frame) / 60.0
+	assert_almost_eq(punk.last_strike_eta_s(), expected, 0.02, "the jab's length plus the cross's startup, from here")
+	await _ticks(10)
+	assert_almost_eq(punk.last_strike_eta_s(), expected - 10.0 / 60.0, 0.02, "and counting down")
+	# Nobody there: the jab whiffs and the chain ends with it.
+	await _ticks(jab.startup + jab.active)
+	assert_eq(punk.last_strike_eta_s(), 0.0, "a whiffed jab has no cross after it")
+	assert_true(await _until(func() -> bool: return punk.current_move == null, 90))
+	punk.force_attack(1)
+	await _ticks(3)
+	var shove := _move(&"punk_shove")
+	assert_eq(punk.state, CombatTypes.ActorState.WINDUP)
+	assert_almost_eq(punk.last_strike_eta_s(), float(shove.startup - punk.move_frame) / 60.0, 0.02, "one strike: the shove's startup")
+
+
+func test_the_punks_jacket_is_not_red() -> void:
+	# SPEC §10 keeps red for blood, the rear warning and the finisher's accents: an enemy is a
+	# saturated colour that is not that, so it pops against the muted street and never reads as a
+	# warning or a wound.
+	var punk := PUNK_SCENE.instantiate() as StreetPunk
+	var hue := punk.color.h
+	assert_gt(punk.color.s, 0.6, "saturated")
+	assert_true(hue > 0.08 and hue < 0.92, "not red or orange-red (hue %.2f)" % hue)
+	assert_gt(absf(hue - Color(0.86, 0.5, 0.16).h), 0.15, "and not the training dummy's orange")
+	assert_gt(punk.accent.s, 0.6, "the accents are saturated too")
+	punk.free()
 
 
 func test_force_attack_winds_up_for_exactly_the_scaled_floored_startup() -> void:

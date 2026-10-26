@@ -624,6 +624,209 @@ func test_slow_motion_stretches_the_gap_with_it() -> void:
 	assert_true(_director.may_start_windup(stubs[1]))
 
 
+# --- When the go comes: windup_eta_s() (P1-engage) ---------------------------------------------------
+
+
+## A holder uses windup_eta_s() to wait squared up on the ring and step in only when its go is
+## near, so the query must say exactly what may_start_windup() will say, and change nothing.
+
+
+func test_the_eta_is_zero_for_the_head_of_the_line_and_infinite_for_the_rest() -> void:
+	await _setup(3, 0.0)
+	var stubs := _crowd(3)
+	await _ticks(3)
+	assert_eq(_holders().size(), 3)
+	assert_eq(_director.windup_eta_s(stubs[0]), 0.0, "the first granted: its go is open")
+	assert_eq(_director.windup_eta_s(stubs[1]), INF, "the next one waits for its turn")
+	assert_eq(_director.windup_eta_s(stubs[2]), INF)
+	var outsider := _stub(_at(AHEAD, 3.5), false)
+	assert_eq(_director.windup_eta_s(outsider), INF, "an enemy with no token has no go to wait for")
+
+
+func test_the_eta_counts_down_the_gap_and_reaches_zero_when_the_go_does() -> void:
+	await _setup(3, 0.0)
+	var stubs := _crowd(2)
+	await _ticks(3)
+	assert_true(_director.may_start_windup(stubs[0]), "a wind-up started")
+	var gap_s: float = Tuning.data.director_min_windup_gap_s
+	assert_almost_eq(_director.windup_eta_s(stubs[0]), gap_s, 0.01, "right after it, the whole gap")
+	await _ticks(10)
+	assert_almost_eq(_director.windup_eta_s(stubs[0]), gap_s - 10.0 / 60.0, 0.02, "and counting down")
+	# The query and the gate agree on every tick: no go while the eta is above zero, a go at zero.
+	var ticks := 0
+	while ticks < 60:
+		var eta := _director.windup_eta_s(stubs[0])
+		if eta == 0.0:
+			assert_true(_director.may_start_windup(stubs[0]), "eta zero is a go")
+			break
+		assert_false(_director.may_start_windup(stubs[0]), "eta %.3f s is not yet" % eta)
+		await _ticks(1)
+		ticks += 1
+	assert_lt(ticks, 60, "the eta reached zero")
+	assert_lte(absi(ticks + 10 - _gap_ticks()), 1, "at the gap's end (%d ticks)" % (ticks + 10))
+
+
+func test_the_eta_counts_the_hit_grace_and_a_blocked_hit_has_none() -> void:
+	await _setup(3, 0.0)
+	Tuning.data.director_hit_grace_s = 1.0
+	var stubs := _crowd(2)
+	await _ticks(3)
+	_freeze_player()
+	_land_a_hit_on_the_player(true)
+	assert_eq(_director.windup_eta_s(stubs[0]), 0.0, "a guarded hit leaves no grace")
+	_land_a_hit_on_the_player()
+	assert_almost_eq(_director.windup_eta_s(stubs[0]), 1.0, 0.02, "an unblocked one starts it")
+	await _ticks(30)
+	assert_almost_eq(_director.windup_eta_s(stubs[0]), 0.5, 0.03, "and it runs down")
+	await _ticks(31)
+	assert_eq(_director.windup_eta_s(stubs[0]), 0.0)
+
+
+func test_the_eta_counts_the_players_hitstun_stagger_and_invulnerability() -> void:
+	await _setup(3, 0.0)
+	Tuning.data.director_hit_grace_s = 0.0
+	var stubs := _crowd(1)
+	await _ticks(3)
+	_freeze_player()
+	for reeling: CombatTypes.ActorState in [CombatTypes.ActorState.HITSTUN, CombatTypes.ActorState.STAGGER]:
+		_player.state = reeling
+		_player._state_length = 30
+		_player.state_frame = 10
+		assert_almost_eq(_director.windup_eta_s(stubs[0]), 20.0 / 60.0, 0.01, "the rest of the %s" % CombatTypes.ActorState.keys()[reeling])
+	_player.state = CombatTypes.ActorState.FREE
+	assert_eq(_director.windup_eta_s(stubs[0]), 0.0)
+	_player._invuln_frames = 30
+	assert_almost_eq(_director.windup_eta_s(stubs[0]), 0.5, 0.01, "a dodge or a get-up is waited out too")
+
+
+func test_the_eta_is_infinite_while_the_fight_is_held_or_the_player_cannot_be_hit() -> void:
+	await _setup(3, 0.0)
+	var stubs := _crowd(1)
+	await _ticks(3)
+	assert_eq(_holders().size(), 1)
+	_freeze_player()
+	assert_eq(_director.windup_eta_s(stubs[0]), 0.0)
+	GameInput.menu_open = true
+	assert_eq(_director.windup_eta_s(stubs[0]), INF, "a menu is open")
+	GameInput.menu_open = false
+	Tuning.data.ai_frozen = true
+	assert_eq(_director.windup_eta_s(stubs[0]), INF, "the AI is frozen")
+	Tuning.data.ai_frozen = false
+	_player.health = 0.0
+	assert_eq(_director.windup_eta_s(stubs[0]), INF, "the player is down")
+	_player.health = _player.max_health
+	assert_eq(_director.windup_eta_s(stubs[0]), 0.0)
+
+
+func test_asking_for_the_eta_records_nothing() -> void:
+	await _setup(3, 0.0)
+	var stubs := _crowd(2)
+	await _ticks(3)
+	for i in 50:
+		_director.windup_eta_s(stubs[0])
+		_director.windup_eta_s(stubs[1])
+	assert_true(_director.may_start_windup(stubs[0]), "fifty questions later the go is still the first one's")
+	assert_false(_director.may_start_windup(stubs[1]), "and the gap is only started by the real go")
+
+
+func test_a_strike_on_its_way_holds_the_next_go_until_the_grace_after_it() -> void:
+	# Another enemy's wind-up will land on the player and start the grace: the go is not before it.
+	await _setup(3, 0.0)
+	Tuning.data.director_hit_grace_s = 0.5
+	var forced := _stub(_at(AHEAD, 1.0), false)
+	var holder := _stub(_at(90.0, 3.0), true)
+	await _ticks(3)
+	assert_eq(_holders(), [holder] as Array[EnemyActor])
+	assert_eq(_director.windup_eta_s(holder), 0.0, "nobody is attacking: its go is open")
+	forced.force_attack()
+	await _ticks(4)
+	assert_eq(forced.state, CombatTypes.ActorState.WINDUP)
+	var strike_s := forced.last_strike_eta_s()
+	assert_gt(strike_s, 0.1, "the strike is still ahead of it (%.2f s)" % strike_s)
+	assert_almost_eq(_director.windup_eta_s(holder), strike_s + 0.5, 0.02, "the holder's go: the strike, then the grace")
+	assert_eq(_director.windup_eta_s(forced), INF, "the attacker itself holds no token")
+	# Its strike passes (nobody is there to hit): the go is open again.
+	await _ticks(int(strike_s * 60.0) + 8)
+	assert_eq(forced.last_strike_eta_s(), 0.0, "the strike has begun")
+	assert_eq(_director.windup_eta_s(holder), 0.0, "and a strike that did not land leaves no grace")
+
+
+func test_when_the_head_attacks_the_next_in_line_is_up_next() -> void:
+	await _setup(3, 0.0)
+	Tuning.data.director_hit_grace_s = 0.5
+	var stubs := _crowd(3)
+	await _ticks(3)
+	assert_eq(_director.windup_eta_s(stubs[1]), INF, "behind the head")
+	stubs[0].attack_on_token = true
+	await _ticks(2)
+	assert_eq(stubs[0].state, CombatTypes.ActorState.WINDUP, "the head winds up")
+	var strike_s := stubs[0].last_strike_eta_s()
+	assert_almost_eq(_director.windup_eta_s(stubs[1]), strike_s + 0.5, 0.05, "the next is the head now: after the strike and the grace")
+	assert_eq(_director.windup_eta_s(stubs[2]), INF, "the third still waits its turn")
+
+
+func test_the_line_keeps_the_order_the_tokens_were_granted_in() -> void:
+	await _setup(3, 0.0)
+	var stubs := _crowd(3)
+	await _ticks(3)
+	var order := _holders()
+	assert_eq(order.size(), 3)
+	for round_index in 3:
+		# Exactly one head at a time, the first granted among the ones still holding: not whoever's tick comes first.
+		var heads: Array[EnemyActor] = []
+		for stub in stubs:
+			if _director.windup_eta_s(stub) == 0.0:
+				heads.append(stub)
+		assert_eq(heads, [order[0]] as Array[EnemyActor], "round %d: one head, the first granted" % round_index)
+		_director.release_token(order[0])
+		order.remove_at(0)
+		stubs.erase(heads[0])
+		heads[0].want_token = false
+		await _ticks(1)
+
+
+func test_a_stub_director_has_no_estimate_and_says_zero() -> void:
+	await _setup(3, 0.0)
+	var stub_director := StubDirector.new()
+	_scene.add_child(stub_director)
+	var stubs := _crowd(1)
+	assert_eq(stub_director.windup_eta_s(stubs[0]), 0.0, "a test double that decides nothing: go")
+
+
+func test_waiting_for_the_go_does_not_run_down_the_token_timeout() -> void:
+	# The grace after a hit holds the go for a second: a holder that waits through it keeps its
+	# token (the timeout is for holders that could go and do not), and loses it 0.5 s after the
+	# go opens if it still does not start.
+	await _setup(1, 0.0)
+	Tuning.data.director_token_timeout_s = 0.5
+	Tuning.data.director_hit_grace_s = 1.0
+	var holder := _stub(_at(AHEAD, 3.0), true)
+	var next := _stub(_at(90.0, 3.0), true)
+	await _ticks(3)
+	_freeze_player()
+	_land_a_hit_on_the_player()
+	await _ticks(50)
+	assert_eq(_holders(), [holder] as Array[EnemyActor], "0.8 s into a 1 s hold on the go: still its token")
+	await _ticks(10)
+	assert_eq(_director.windup_eta_s(holder), 0.0, "the go is open")
+	await _ticks(20)
+	assert_eq(_holders(), [holder] as Array[EnemyActor], "and it has not been 0.5 s since")
+	await _ticks(15)
+	assert_eq(_holders(), [next] as Array[EnemyActor], "it did not go: the token is taken back, the next one's turn")
+
+
+func test_a_holder_behind_the_head_is_not_timed_out_while_it_waits_its_turn() -> void:
+	await _setup(2, 0.0)
+	Tuning.data.director_token_timeout_s = 0.5
+	var stubs := _crowd(3)
+	await _ticks(3)
+	assert_eq(_holders(), [stubs[0], stubs[1]] as Array[EnemyActor])
+	await _ticks(20)
+	assert_eq(_holders(), [stubs[0], stubs[1]] as Array[EnemyActor], "0.3 s: both hold")
+	await _ticks(20)
+	assert_eq(_holders(), [stubs[1], stubs[2]] as Array[EnemyActor], "0.7 s: the head sat on its token and lost it; the one behind it waited its turn and kept it")
+
+
 # --- Timeout and pruning ---------------------------------------------------------------------------
 
 

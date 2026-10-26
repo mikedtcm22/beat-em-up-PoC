@@ -21,7 +21,8 @@ extends Node
 ##   dead, downed, flying, held, revive grace), while F1 or F4 is open (GameInput.menu_open) or
 ##   while the AI is frozen, and after director_token_timeout_s;
 ## - answers may_start_windup() with the pacing rule (director_min_windup_gap_s between two
-##   wind-up starts, readability metric R2);
+##   wind-up starts, readability metric R2), and windup_eta_s() with how soon it would say yes, so
+##   a holder waits squared up on the ring and steps in only when its go is near;
 ## - gives every live enemy a posture slot: evenly spaced angles around the
 ##   player, the arrangement turned as little as possible from where the enemies stand, each on
 ##   its own radius of the ring, snapped onto the navmesh when there is one.
@@ -175,6 +176,47 @@ func _player_recovering() -> bool:
 	return _clock_s - _last_player_hit_s < Tuning.data.director_hit_grace_s - _CLOCK_SLACK_S
 
 
+## How long (sim seconds) until may_start_windup(`enemy`) would say yes if nothing else happened:
+## 0 = now, INF = not while the fight is held or the player cannot be hit, or `enemy` holds no
+## token. Read-only: it records no wind-up and changes nothing, so asking every tick is free. A
+## holder uses it to wait squared up on the ring and step in only when its go is about to come
+## (EnemyActor._tick_engage()) instead of standing at the player's nose through the pacing gap, a
+## flinch and the hit grace; may_start_windup() stays the one gate at the wind-up itself (R2).
+## It counts what that gate counts, the gap since the last wind-up start, the player's hitstun or
+## stagger and the hit grace, and the player's invulnerability (a dodge or a get-up), which an
+## enemy also waits out. A director that decides nothing (a test double with its own script) has
+## no estimate: 0.
+func windup_eta_s(enemy: EnemyActor) -> float:
+	if not _runs:
+		return 0.0
+	var player := _player if _player and is_instance_valid(_player) else _find_player()
+	if not _holders.has(enemy) or GameInput.menu_open or Tuning.data.ai_frozen or _player_closed(player):
+		return INF
+	var tuning := Tuning.data
+	var ticks_per_s := float(Engine.physics_ticks_per_second)
+	var wait := tuning.director_min_windup_gap_s - _CLOCK_SLACK_S - (_clock_s - _last_windup_s)
+	wait = maxf(wait, tuning.director_hit_grace_s - _CLOCK_SLACK_S - (_clock_s - _last_player_hit_s))
+	if player.state == CombatTypes.ActorState.HITSTUN or player.state == CombatTypes.ActorState.STAGGER:
+		wait = maxf(wait, float(player._state_length - player.state_frame) / ticks_per_s)
+	wait = maxf(wait, float(player._invuln_frames) / ticks_per_s)
+	# A strike already on its way (another enemy's wind-up or attack) will start the grace when it
+	# lands: the go is not before it and the grace after it.
+	for node: Node in get_tree().get_nodes_in_group(&"ai_enemy"):
+		var other := node as EnemyActor
+		if other == null or other == enemy or other.health <= 0.0 or other.is_queued_for_deletion():
+			continue
+		var strike_s := other.last_strike_eta_s()
+		if strike_s > 0.0:
+			wait = maxf(wait, strike_s + tuning.director_hit_grace_s)
+	# One holder at a time walks in: the head of the line, the first holder that has not started
+	# its attack. The others wait on the ring, and their turn comes with its wind-up (the strike
+	# above). Ordered by arrival, not by whose tick is first: a holder that waited longest must not
+	# lose the race to one granted later.
+	if _line_head() != enemy:
+		return INF
+	return maxf(wait, 0.0)
+
+
 ## An enemy that made no progress toward its slot for Tuning.data.enemy_stuck_s (a pocket
 ## behind a crate, a car) asks for another one: its angle is nudged by
 ## Tuning.data.director_slot_retry_deg (alternating sides, growing) and the slots are
@@ -223,6 +265,7 @@ func _step(dt: float) -> void:
 	_player = player
 	_prune_holders()
 	_track_waiting(members)
+	_stretch_waits(dt)
 	var held := GameInput.menu_open or Tuning.data.ai_frozen
 	var closed := _player_closed(player)
 	_take_back(not (held or closed))
@@ -291,6 +334,32 @@ func _prune_holders() -> void:
 		if enemy == null or enemy.is_queued_for_deletion() or enemy.health <= 0.0 or enemy.is_gone() \
 				or not enemy.has_token or reacting:
 			_drop(holder)
+
+
+## The holder whose turn it is to come near: the first in the line of holders that have not
+## started their attack, in the order the tokens were granted (blind-spot priority acts at the
+## grant, so a blind waiter that is granted with others is ahead of them). Null when there is none.
+func _line_head() -> EnemyActor:
+	for holder: Variant in _holders:
+		var enemy := holder as EnemyActor
+		if enemy != null and not _committed(enemy):
+			return enemy
+	return null
+
+
+## A holder whose go the director itself is holding back (the wind-up gap, a flinch, the hit
+## grace, another holder's turn: windup_eta_s() above zero) is waiting for a reason, not hanging
+## on to its token, so that time does not run down director_token_timeout_s. Without this a holder
+## standing squared up on the ring through a long volley would lose its token and re-queue for
+## nothing. (A fight that is held or a player who cannot be hit answers INF and takes the tokens
+## back anyway, in _take_back().)
+func _stretch_waits(dt: float) -> void:
+	for holder: Variant in _holders:
+		var enemy := holder as EnemyActor
+		if enemy == null or _committed(enemy) or not _granted_s.has(holder):
+			continue
+		if windup_eta_s(enemy) > 0.0:
+			_granted_s[holder] = float(_granted_s[holder]) + dt
 
 
 ## Take tokens back. With `timed_out_only`, only from holders whose wind-up has not started and
