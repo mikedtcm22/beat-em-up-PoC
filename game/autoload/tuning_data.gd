@@ -819,7 +819,12 @@ extends Resource
 ## An attacker winding up more than this many degrees off the look, close enough, lights a
 ## top corner (Spec §8). Also the edge of the player's view for the director's blind spot.
 @export_range(20.0, 120.0, 1.0) var rear_warning_angle_deg: float = 55.0
-## Size multiplier and opacity (0..1) of the corner burst.
+## Size multiplier and opacity (0..1) of the corner burst. Every burst lies inside the reserved
+## corner (20% x 20% of the screen: 216 px at 1080p) and a heavy one is rear_warning_heavy_scale
+## times the normal one, so the normal burst stops growing at the corner over that scale
+## (166 px at 1080p and the default scale: a size of 1.04 at the default base) and a larger
+## setting does nothing: the plan's corner is the limit, and it moves with the base and the
+## scale, so the range stays as it is.
 @export_range(0.25, 3.0, 0.05) var rear_warning_size: float = 1.0
 @export_range(0.0, 1.0, 0.05) var rear_warning_opacity: float = 0.9
 ## The wind-up's own effort and whoosh sounds (positional) play: off silences every wind-up cue.
@@ -831,7 +836,7 @@ extends Resource
 ## Burst size (pixels at 1920 x 1080) before rear_warning_size, how far in from the screen's
 ## top corner its centre sits (pixels; a big burst is pushed further in so it stays on screen,
 ## and every burst stays inside the reserved 20% x 20% corner), and the multiplier on it for a
-## heavy attacker.
+## heavy attacker (SPEC §8: larger for the Bruiser and boss, at every size setting).
 @export_range(40.0, 400.0, 5.0) var rear_warning_base_px: float = 160.0
 @export_range(0.0, 200.0, 1.0) var rear_warning_inset_px: float = 96.0
 @export_range(1.0, 3.0, 0.05) var rear_warning_heavy_scale: float = 1.3

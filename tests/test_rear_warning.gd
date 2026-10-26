@@ -404,6 +404,56 @@ func test_a_heavy_attacker_gets_a_larger_burst() -> void:
 	assert_gt(_warning.corner_state(&"left").size_px, small.size_px)
 
 
+## Every setting of the rear_warning_size slider, from its minimum to its maximum in its steps.
+func _size_settings() -> Array[float]:
+	var settings: Array[float] = []
+	for info: Dictionary in Tuning.data.get_property_list():
+		if info.name == "rear_warning_size":
+			var range_text := String(info.hint_string).split(",")
+			var low := float(range_text[0])
+			var step := float(range_text[2])
+			for i in roundi((float(range_text[1]) - low) / step) + 1:
+				settings.append(low + step * float(i))
+	return settings
+
+
+func test_a_heavy_burst_stays_larger_than_a_normal_one_at_every_size_on_the_shipped_canvas() -> void:
+	# final-warn-01: the heavy burst was clamped to the corner on its own, so above a size of
+	# about 1.04 it stopped growing and at 1.35 the normal one caught it up. Lit, on a 1920 x 1080
+	# canvas (the headless viewport is square and never reaches the corner's 216 px).
+	await _build()
+	_warning.size = Vector2(1920.0, 1080.0)
+	var corner := _warning.size * RearWarning.CORNER_SHARE
+	var home := {
+		&"left": Rect2(Vector2.ZERO, corner),
+		&"right": Rect2(Vector2(_warning.size.x - corner.x, 0.0), corner),
+	}
+	_wind_up(_enemy_at(135.0))
+	var heavy := _enemy_at(-135.0)
+	heavy.heavy = true
+	_wind_up(heavy)
+	var settings := _size_settings()
+	assert_gt(settings.size(), 40, "the whole slider (%d settings)" % settings.size())
+	for phase: String in ["at the pop", "steady"]:
+		if phase == "steady":
+			_hud.advance(1.0)
+		for size_setting: float in settings:
+			Tuning.data.rear_warning_size = size_setting
+			var normal: Dictionary = _warning.corner_state(&"left")
+			var big: Dictionary = _warning.corner_state(&"right")
+			var label := "%s, size %.2f: heavy %.1f px (drawn %.1f), normal %.1f px (drawn %.1f)" % [phase, size_setting,
+					big.size_px, big.rect.size.x, normal.size_px, normal.rect.size.x]
+			assert_true(big.heavy and not normal.heavy)
+			assert_gt(big.size_px, normal.size_px, "heavy larger at rest: %s" % label)
+			assert_gt(big.rect.size.x, normal.rect.size.x, "heavy drawn larger: %s" % label)
+			# (A rect's corners are 32-bit floats: a burst flush with the corner is a millionth out.)
+			assert_true((home[&"left"] as Rect2).grow(0.001).encloses(normal.rect), "normal inside its corner: %s" % label)
+			assert_true((home[&"right"] as Rect2).grow(0.001).encloses(big.rect), "heavy inside its corner: %s" % label)
+	Tuning.data.rear_warning_size = 1.0
+	assert_almost_eq(float(_warning.corner_state(&"left").size_px), 160.0, 0.001, "the default normal burst: 160 px")
+	assert_almost_eq(float(_warning.corner_state(&"right").size_px), 208.0, 0.001, "the default heavy burst: 208 px")
+
+
 # --- Tunables, time, KO view ----------------------------------------------------------------
 
 

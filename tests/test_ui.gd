@@ -775,7 +775,8 @@ func test_the_rear_warning_lies_inside_the_reserved_corners_at_every_size() -> v
 						var rect: Rect2 = warning.burst_rect(side, heavy, pulse_scale)
 						var label := "%s %s size %.2f heavy %s x%.2f on %s" % [side, rect, size_setting,
 								heavy, pulse_scale, canvas]
-						var home: Rect2 = corners[side]
+						# (A rect's corners are 32-bit floats: a burst flush with the corner is a millionth out.)
+						var home: Rect2 = (corners[side] as Rect2).grow(0.001)
 						assert_true(home.encloses(rect), "inside the reserved corner: %s" % label)
 						assert_gt(rect.size.x, 0.0, "and still a burst: %s" % label)
 	warning.size = original
@@ -794,6 +795,67 @@ func test_the_rear_warning_lies_inside_the_reserved_corners_at_every_size() -> v
 	var right_corner := Rect2(Vector2(screen.x * 0.8, 0.0), screen * 0.2)
 	assert_true(right_corner.encloses(state.rect), "the lit burst %s is in the corner %s" % [state.rect, right_corner])
 	assert_not_null(player)
+
+
+## Every setting of the rear_warning_size slider, from its minimum to its maximum in its steps.
+func _warning_size_settings() -> Array[float]:
+	var settings: Array[float] = []
+	for info: Dictionary in Tuning.data.get_property_list():
+		if info.name == "rear_warning_size":
+			var range_text := String(info.hint_string).split(",")
+			var low := float(range_text[0])
+			var step := float(range_text[2])
+			for i in roundi((float(range_text[1]) - low) / step) + 1:
+				settings.append(low + step * float(i))
+	return settings
+
+
+func test_a_heavy_burst_is_larger_than_a_normal_one_at_every_size_and_both_fit_the_corner() -> void:
+	await wait_process_frames(2)
+	var warning := _hud.rear_warning
+	var original := warning.size
+	# The shipped canvas, 16:9 at 1080p: the reserved corner is 384 x 216 px.
+	warning.size = Vector2(1920.0, 1080.0)
+	var corner := warning.size * RearWarning.CORNER_SHARE
+	var corners := {
+		&"left": Rect2(Vector2.ZERO, corner),
+		&"right": Rect2(Vector2(warning.size.x - corner.x, 0.0), corner),
+	}
+	var settings := _warning_size_settings()
+	assert_gt(settings.size(), 40, "the slider has its whole range to sweep (%d settings)" % settings.size())
+	# The default scale, a larger one (the ratio holds wherever it fits) and none (equal is fine).
+	for heavy_scale: float in [Tuning.data.rear_warning_heavy_scale, 2.0, 1.0]:
+		Tuning.data.rear_warning_heavy_scale = heavy_scale
+		for size_setting: float in settings:
+			Tuning.data.rear_warning_size = size_setting
+			# At rest and at the pop's peak.
+			for pulse_scale: float in [1.0, 1.0 + Tuning.data.rear_warning_pulse_grow]:
+				for side: StringName in corners:
+					var normal: Rect2 = warning.burst_rect(side, false, pulse_scale)
+					var heavy: Rect2 = warning.burst_rect(side, true, pulse_scale)
+					var label := "%s, size %.2f, heavy scale %.2f, pulse x%.2f: heavy %.1f px, normal %.1f px" % [side,
+							size_setting, heavy_scale, pulse_scale, heavy.size.x, normal.size.x]
+					# (A rect's corners are 32-bit floats: a burst flush with the corner is a millionth out.)
+					var home: Rect2 = (corners[side] as Rect2).grow(0.001)
+					assert_true(home.encloses(normal), "normal inside the corner: %s" % label)
+					assert_true(home.encloses(heavy), "heavy inside the corner: %s" % label)
+					if heavy_scale > 1.0:
+						assert_gt(heavy.size.x, normal.size.x, "heavy larger: %s" % label)
+					else:
+						assert_almost_eq(heavy.size.x, normal.size.x, 0.001, "no scale, the same: %s" % label)
+			# At rest the heavy one is the heavy scale times the normal one, to the corner's limit.
+			var steady: float = warning.burst_rect(&"left", false).size.x
+			assert_almost_eq(warning.burst_rect(&"left", true).size.x, steady * heavy_scale, 0.001,
+					"heavy x%.2f at size %.2f" % [heavy_scale, size_setting])
+	# The defaults at 1080p: the normal burst 160 px, the heavy one 208 px, and the pop's first
+	# frame clipped to the corner (216 px) as it was, still larger than the normal pop's 200.
+	Tuning.data.rear_warning_heavy_scale = 1.3
+	Tuning.data.rear_warning_size = 1.0
+	assert_almost_eq(warning.burst_rect(&"left", false).size.x, 160.0, 0.001, "normal 160 px")
+	assert_almost_eq(warning.burst_rect(&"left", true).size.x, 208.0, 0.001, "heavy 208 px")
+	assert_almost_eq(warning.burst_rect(&"left", false, 1.25).size.x, 200.0, 0.001, "normal pop 200 px")
+	assert_almost_eq(warning.burst_rect(&"left", true, 1.25).size.x, 216.0, 0.001, "heavy pop clipped to the corner")
+	warning.size = original
 
 
 func test_the_boss_bar_follows_the_live_actor_in_group_boss() -> void:
