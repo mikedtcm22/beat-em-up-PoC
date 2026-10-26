@@ -728,10 +728,12 @@ extends Resource
 ## The warning fires within the attack's reach (MoveData.reach_m) plus this many metres.
 @export_range(0.0, 4.0, 0.1) var rear_warning_range_margin_m: float = 1.0
 ## Burst size (pixels at 1920 x 1080) before rear_warning_size, how far in from the screen's
-## top corner its centre sits (pixels), and the multiplier on it for a heavy attacker.
-@export_range(40.0, 400.0, 5.0) var rear_warning_base_px: float = 170.0
-@export_range(0.0, 200.0, 1.0) var rear_warning_inset_px: float = 48.0
-@export_range(1.0, 3.0, 0.05) var rear_warning_heavy_scale: float = 1.4
+## top corner its centre sits (pixels; a big burst is pushed further in so it stays on screen,
+## and every burst stays inside the reserved 20% x 20% corner), and the multiplier on it for a
+## heavy attacker.
+@export_range(40.0, 400.0, 5.0) var rear_warning_base_px: float = 160.0
+@export_range(0.0, 200.0, 1.0) var rear_warning_inset_px: float = 96.0
+@export_range(1.0, 3.0, 0.05) var rear_warning_heavy_scale: float = 1.3
 ## Pulses when it appears (and again when another attacker joins that side), and the length
 ## (s) of each, then it holds steady.
 @export_range(0, 8, 1) var rear_warning_pulses: int = 2

@@ -552,6 +552,24 @@ func test_the_side_follows_the_players_turn_only_when_asked() -> void:
 	assert_eq(_lit(), &"left", "and on the left again")
 
 
+func test_following_the_turn_also_warns_of_a_windup_that_started_in_view() -> void:
+	await _build()
+	var enemy := _enemy_at(30.0)
+	_wind_up(enemy)
+	_player.look_yaw = deg_to_rad(-120.0)  # turned away: it is now 150 degrees to the left
+	_hud.advance(0.016)
+	assert_eq(_lit(), &"", "off: it was in view when it started, so it never warns")
+	_reset_warning()
+	Tuning.data.rear_warning_follow_turn = true
+	_player.look_yaw = 0.0
+	_wind_up(enemy)
+	assert_eq(_lit(), &"", "in view at the start")
+	_player.look_yaw = deg_to_rad(-120.0)
+	_hud.advance(0.016)
+	assert_eq(_lit(), &"left", "on: the player turned away, so it warns")
+	assert_eq(_shown, ["left 1 false"])
+
+
 func test_it_writes_no_game_state() -> void:
 	await _build()
 	var enemy := _enemy_at(135.0)

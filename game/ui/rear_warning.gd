@@ -13,7 +13,8 @@ extends Control
 ## tunables: more than rear_warning_angle_deg off the look and within reach plus
 ## rear_warning_range_margin_m. Behind-left lights the top-left corner, behind-right the
 ## top-right, and within rear_warning_behind_deg of directly behind both. The side is fixed
-## when the wind-up starts (rear_warning_follow_turn re-runs the rule every frame instead).
+## when the wind-up starts (rear_warning_follow_turn re-runs the rule every frame instead, so
+## the warning goes while the player faces the attacker and returns if they turn away).
 ##
 ## **End**, on the first of: hit_landed with that attacker (blocked hits included),
 ## attack_whiffed, windup_ended(attacker, true), grabbed (the attacker holding), ko, vanished;
@@ -178,9 +179,11 @@ func _on_windup_started(attacker: Node3D, move: MoveData) -> void:
 		return
 	var reach := _reach_of(actor, move)
 	var side := _corner_of(actor, reach)
-	if side == &"":
+	if side == &"" and not Tuning.data.rear_warning_follow_turn:
 		_forget(id)
 		return
+	# (Following the player's turn, a wind-up the rule does not warn about yet is still tracked:
+	# the player may turn away from it.)
 	var entry := Entry.new()
 	entry.attacker = actor
 	entry.move_id = move.id
@@ -298,8 +301,10 @@ func _refresh() -> void:
 			shown.emit(side, count, heavy)
 		elif count == 0 and before > 0:
 			cleared.emit(side)
+	var was_visible := visible
 	visible = _counts[&"left"] > 0 or _counts[&"right"] > 0
-	queue_redraw()
+	if visible or was_visible:
+		queue_redraw()
 
 
 # --- Look -------------------------------------------------------------------------------

@@ -16,8 +16,8 @@ extends Node3D
 ##     "ai_enemy") are in the scene, read from the director's debug API and never written:
 ##     a magenta ring at the feet of each attack-token holder and a line from its chest to the
 ##     player's, a small orange circle at each posturing enemy's slot with a dim line to it,
-##     the posture ring around the player (grey-blue, at the ankles), the player's view
-##     boundary (pale blue floor lines at rear_warning_angle_deg off the look) and the "both
+##     the posture ring around the player (lavender, at the ankles), the player's view
+##     boundary (blue floor lines at rear_warning_angle_deg off the look) and the "both
 ##     corners" sector directly behind (pink lines at rear_warning_behind_deg), so blind-spot
 ##     priority and the rear warning can be judged from the side view and free fly, and each
 ##     enemy's current navigation path (violet).
@@ -46,8 +46,8 @@ const HALF_CIRCLE_SEGMENTS := 12
 ## The enemy AI layer (see above). Each color is its own, since the tests count lines by color.
 @export var token_color: Color = Color(1.0, 0.2, 0.9)
 @export var slot_color: Color = Color(1.0, 0.6, 0.15)
-@export var ring_color: Color = Color(0.55, 0.62, 0.78)
-@export var view_color: Color = Color(0.7, 0.8, 1.0)
+@export var ring_color: Color = Color(0.5, 0.58, 0.95)
+@export var view_color: Color = Color(0.2, 0.42, 1.0)
 @export var behind_color: Color = Color(1.0, 0.5, 0.65)
 @export var path_color: Color = Color(0.72, 0.5, 1.0)
 ## Alpha of the line from a posturing enemy to its slot.
