@@ -19,7 +19,7 @@ extends RefCounted
 ## arm's length of the grab's own reach the holder's chest is half a metre off and its face
 ## (looked up to: PlayerCharacter.get_grabbed_view_pitch_deg()) a metre away, its forearms come in
 ## from the lower corners of the view. The arm angles were solved numerically against the rig (fists
-## on the lapel points at the Bruiser's 2.05 m and the boss's 2.3 m); the numbers are art data.
+## on the player's upper-arm points at the Bruiser's 2.05 m and the boss's 2.3 m); the numbers are art data.
 ## Every key pose stays inside the ragdoll's joint limits (a stagger starts a partial ragdoll from
 ## the pose on screen): the upper arms raise at most about 115 degrees.
 
@@ -27,7 +27,7 @@ extends RefCounted
 const MOVE_IDS: Array[StringName] = [&"bruiser_grab", &"bruiser_headbutt", &"boss_grab", &"boss_slam"]
 
 ## How far (m at the reference height) the slam's wind-up lifts the victim's hips, and the same
-## height of the holder's fists above the hold's lapels.
+## height of the holder's fists above the hold's.
 const LIFT_M := 0.35
 ## The grab's strike leans the whole upper body this far forward over the planted feet (m at the
 ## reference height: HIPS_NUDGE), the reach that makes up the arm's length; the holds lean over by
@@ -125,8 +125,8 @@ static func _with(base: Dictionary[StringName, Vector3], parts: Array[Dictionary
 	return out
 
 
-## The Bruiser's grip on the player's lapels: leaning over its feet with both arms out, the fists a
-## hand below the player's lens and 0.26 m out either side.
+## The Bruiser's grip on the player's upper arms: leaning over its feet with both arms out, the fists a
+## hand below the player's lens and 0.32 m out either side.
 static func bruiser_hold(g: Dictionary[StringName, Vector3]) -> Dictionary[StringName, Vector3]:
 	return _with(g, [_torso(-12.0, -7.0, -4.0, 12.0, 6.0), _hold_legs(), _lean(HOLD_LEAN_M),
 			_arms(Vector3(83.5, -14.0, -19.5), 5.0)])
@@ -176,7 +176,7 @@ static func _grab(g: Dictionary[StringName, Vector3], boss: bool) -> Placeholder
 
 
 ## The headbutt: it starts in the grip (the held player is where this move's startup, the mash
-## window, plays), the head and shoulders draw back and up while the fists stay on the lapels
+## window, plays), the head and shoulders draw back and up while the fists stay on his arms
 ## (held, trembling: the telegraph), then the whole body drops forward and the forehead goes
 ## through where the player's face is. The recovery lets go and stands up.
 static func _headbutt(g: Dictionary[StringName, Vector3]) -> PlaceholderPoses.MovePoses:

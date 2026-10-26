@@ -15,6 +15,9 @@ extends EnemyActor
 func _ready() -> void:
 	archetype = &"grabber"
 	heavy = true
+	# The boss is in group "boss": the HUD's bar follows it and the 15% rule's exemption (R11) is its.
+	if boss:
+		add_to_group(&"boss")
 	super._ready()
 
 
