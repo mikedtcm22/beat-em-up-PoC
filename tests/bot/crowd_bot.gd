@@ -70,12 +70,13 @@ var probe: Probe
 var pilot: Pilot
 ## The autopilot's skill knobs as it was built, put back at every act's reset (an act may change them).
 var _pilot_defaults: Dictionary = {}
-## `-- --seed=<n>`: starts the enemies' numbering at 7n, which reseeds each one's own random
+## `-- --seed=<n>`: starts every archetype's numbering at 7n, which reseeds each one's own random
 ## choices (they are seeded by name), so a measurement can be repeated over several fights.
 var _name_offset: int = 0
-## keep_alive(): how many AI enemies to keep alive (0 = off), the frame of the last top-up
-## spawn and how many spawns it has made.
+## keep_alive(): how many AI enemies to keep alive (0 = off), of which archetype, the frame of the
+## last top-up spawn and how many spawns it has made.
 var _keep_alive: int = 0
+var _keep_alive_id: StringName = &"punk"
 var _keep_alive_frame: int = -1000000
 var _keep_alive_spawns: int = 0
 ## Tunables an act changed (property -> the value before), put back at the next act's reset.
@@ -212,12 +213,14 @@ func _reset(cam: StringName) -> void:
 	set_waves(false)
 	freeze_ai(false)
 	_keep_alive = 0
+	_keep_alive_id = &"punk"
 	for property: StringName in _tuned:
 		Tuning.set_value(property, _tuned[property])
 	_tuned.clear()
 	Tuning.set_value(&"god_mode", false)
+	_clear_floor_pipes()
 	# Every act starts from the same names, seeds and slots, whichever acts ran before it.
-	spawner.set(&"_serials", {"Punk": _name_offset})
+	spawner.set(&"_serials", _fresh_serials())
 	_keep_alive_spawns = 0
 	var crowd := room as CrowdRoom
 	crowd.director.rng_seed = crowd.rng_seed
@@ -278,10 +281,11 @@ func surround(count: int, gap: int = 24, id: StringName = &"punk") -> void:
 			await _ticks(gap)
 
 
-## Keep `count` AI enemies alive for the rest of the act: a new Punk walks in from the next
+## Keep `count` AI enemies alive for the rest of the act: a new enemy `id` walks in from the next
 ## surround point every KEEP_ALIVE_GAP_FRAMES while fewer are alive (0 stops it).
-func keep_alive(count: int) -> void:
+func keep_alive(count: int, id: StringName = &"punk") -> void:
 	_keep_alive = count
+	_keep_alive_id = id
 
 
 ## The autopilot fights for `ticks` physics ticks. `held_back`: a slower, defensive player (one
@@ -307,8 +311,30 @@ func _top_up() -> void:
 	if frame - _keep_alive_frame < KEEP_ALIVE_GAP_FRAMES or spawner.alive_count() >= _keep_alive:
 		return
 	_keep_alive_frame = frame
-	spawn_at_point(&"punk", SURROUND_POINTS[_keep_alive_spawns % SURROUND_POINTS.size()])
+	spawn_at_point(_keep_alive_id, SURROUND_POINTS[_keep_alive_spawns % SURROUND_POINTS.size()])
 	_keep_alive_spawns += 1
+
+
+## The spawner's name counters at the start of an act: every AI archetype's numbering begins at
+## the bot's `--seed` offset (the enemies' own random choices are seeded by name, so a repeated
+## measurement is repeatable whichever archetypes the act spawns).
+func _fresh_serials() -> Dictionary:
+	var serials := {}
+	for entry in EnemyCatalog.ENTRIES:
+		if entry.id != &"dummy":
+			serials[String(entry.id).capitalize()] = _name_offset
+	return serials
+
+
+## Free the pipes that lie on the floor (the Thug's drops, group `thug_pipe`) so one act's
+## leftovers are not in the next one's street. A pipe the player holds is never touched.
+func _clear_floor_pipes() -> void:
+	for node: Node in get_tree().get_nodes_in_group(PipeThug.DROPPED_GROUP):
+		var weapon := node as Weapon
+		if weapon != null and weapon.is_available():
+			weapon.remove_from_group(PipeThug.DROPPED_GROUP)
+			weapon.remove_from_group(&"weapon")
+			weapon.queue_free()
 
 
 ## Take every AI enemy out of the room now (groups first, then queue_free).

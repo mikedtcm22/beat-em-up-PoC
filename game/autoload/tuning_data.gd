@@ -79,6 +79,17 @@ extends Resource
 ## release (any way the hold ends).
 @export_range(0.0, 1.0, 0.01) var grab_view_in_s: float = 0.2
 @export_range(0.0, 1.0, 0.01) var grab_view_out_s: float = 0.45
+@export_subgroup("Pick-up cue")
+## The HUD's "LB" cue (a small panel low in the view) shows while LB would pick a weapon up: one
+## lies within pickup_range, the player stands free with nothing in his hands, and no enemy is
+## within his grab's reach (LB grabs it first). The Pipe Thug's dropped pipe lies below the
+## forward lens, so a player who does not look down never sees it. Presentation only.
+@export var pickup_cue_enabled: bool = true
+## Size multiplier and opacity (0..1) of the cue.
+@export_range(0.5, 2.0, 0.05) var pickup_cue_size: float = 1.0
+@export_range(0.0, 1.0, 0.05) var pickup_cue_opacity: float = 0.95
+## Seconds one breath of the cue takes (it swells and settles so the eye catches it; 0 = steady).
+@export_range(0.0, 3.0, 0.05) var pickup_cue_pulse_s: float = 0.9
 
 @export_group("Reactions")
 @export_range(10, 90, 1) var stagger_frames: int = 40
