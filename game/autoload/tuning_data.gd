@@ -773,6 +773,13 @@ extends Resource
 @export_range(0.0, 1.0, 0.05) var boss_grab_chance: float = 0.3
 @export_range(0.0, 10.0, 0.1) var boss_attack_cooldown_s: float = 1.8
 @export_range(0.25, 3.0, 0.05) var boss_speed_mult: float = 0.85
+## A crowd round the player (boss_crowd_count or more other enemies within boss_crowd_m of him)
+## makes the boss pound rather than grab.
+@export_range(1.0, 8.0, 0.5) var boss_crowd_m: float = 3.0
+@export_range(1, 6, 1) var boss_crowd_count: int = 2
+## Frames a perfect block (a parry) knocks the boss into a recoil: a small window to hit it in.
+## A plain block does nothing to it (no blocked recoil on its moves).
+@export_range(0, 120, 1) var boss_parry_recoil_frames: int = 36
 
 @export_group("Rear warning")
 ## An attacker winding up more than this many degrees off the look, close enough, lights a

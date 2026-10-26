@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="MoveData" format=3 uid="uid://dpgwicnee8net"]
+
+[ext_resource type="Script" uid="uid://c7u6g52wmmok0" path="res://game/combat/combo_branch.gd" id="combo_branch_gd"]
+[ext_resource type="Script" uid="uid://cgv6sg6uflq2j" path="res://game/combat/hitbox_spec.gd" id="hitbox_spec_gd"]
+[ext_resource type="Script" uid="uid://difuwhwjj1vue" path="res://game/combat/move_data.gd" id="move_data_gd"]
+
+[sub_resource type="Resource" id="hitbox_0"]
+script = ExtResource("hitbox_spec_gd")
+kind = 1
+arc_radius = 1.1
+arc_half_angle_deg = 35.0
+arc_height = Vector2(0.5, 1.9)
+
+[resource]
+script = ExtResource("move_data_gd")
+id = &"boss_charge"
+display_name = "Boss Charge"
+startup = 32
+active = 24
+recovery = 30
+damage = 20.0
+knockback = Vector3(0, 3, 6)
+reaction = 3
+tier = 1
+blocked_recoil_frames = 0
+hitboxes = Array[ExtResource("hitbox_spec_gd")]([SubResource("hitbox_0")])
+magnetism = false
+free_lunge = 4.0
+reach_m = 5.3

@@ -489,6 +489,7 @@ const TUNABLES := {
 		&"boss_charge_min_m": [4.0, "Boss"], &"boss_charge_chance": [0.4, "Boss"],
 		&"boss_pound_chance": [0.3, "Boss"], &"boss_grab_chance": [0.3, "Boss"],
 		&"boss_attack_cooldown_s": [1.8, "Boss"], &"boss_speed_mult": [0.85, "Boss"],
+		&"boss_crowd_m": [3.0, "Boss"], &"boss_crowd_count": [2, "Boss"], &"boss_parry_recoil_frames": [36, "Boss"],
 	},
 	"Rear warning": {
 		&"rear_warning_angle_deg": [55.0, ""], &"rear_warning_size": [1.0, ""], &"rear_warning_opacity": [0.9, ""],

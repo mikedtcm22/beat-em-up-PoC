@@ -415,9 +415,44 @@ func _bruiser_moves() -> void:
 	pass
 
 
-## The boss: boss_charge, boss_pound (P3-boss).
+## The boss's reaches (MoveData.reach_m), measured on a 2.3 m rig against a standing 1.8 m body by
+## tests/test_enemy_moves_boss.gd (within 0.15 m). The charge's includes its travel (A6.2): the arc
+## in front of the shoulder meets a standing body about BOSS_CHARGE_ARC_M plus its hurtbox from where
+## the charge starts, and the dash carries it BOSS_CHARGE_TRAVEL_M further over the active frames, so
+## a charge from behind still warns at its real range. The pound is a ring around the boss.
+const BOSS_CHARGE_REACH_M := 5.3
+const BOSS_POUND_REACH_M := 2.6
+## The charge's dash (m) over its active frames (the base applies free_lunge from the last startup
+## frame, so the wind-up never slides), and the arc's reach in front of the shoulder (m), its half
+## angle (degrees) and its height band (m above the boss's feet): the shoulder and the chest.
+const BOSS_CHARGE_TRAVEL_M := 4.0
+const BOSS_CHARGE_ARC_M := 1.1
+const BOSS_CHARGE_HALF_ANGLE_DEG := 35.0
+const BOSS_CHARGE_BAND_M := Vector2(0.5, 1.9)
+## The ground pound's ring (m) and its height band: the feet and the shins, so a jump clears it.
+const BOSS_POUND_RING_M := 2.5
+const BOSS_POUND_BAND_M := Vector2(0.0, 0.6)
+## What the charge bowls a standing player over with, and what the pound's shockwave does (m/s along
+## the radial, lift): the boss is exempt from the 15% rule (SPEC §4), but these stay a knockdown.
+const BOSS_CHARGE_KNOCKBACK := Vector3(0.0, 3.0, 6.0)
+const BOSS_POUND_KNOCKBACK := Vector3(0.0, 3.5, 4.5)
+
+
+## The boss: boss_charge, boss_pound (P3-boss); its grab and slam are _grab_moves()'s. Both are HEAVY
+## knockdowns (SPEC §7) with a held wind-up of at least the heavy floor of 30 frames, never recoil
+## when blocked (the table's rule for the boss) and have no FINISHER tier (A2.13). The charge is a
+## blockable shoulder: an arc 35 degrees either side of its facing and 0.5 to 1.9 m high, 20 damage,
+## with a dash of BOSS_CHARGE_TRAVEL_M over its 24 active frames (it stops at a wall); the pound is a
+## full ring of BOSS_POUND_RING_M, 0 to 0.6 m high, 15 damage, unblockable: a jump or a dodge gets out
+## of it.
 func _boss_moves() -> void:
-	pass
+	var charge := _add(&"boss_charge", "Boss Charge", Vector3i(32, 24, 30), 20.0, HEAVY, KNOCKDOWN,
+			BOSS_CHARGE_KNOCKBACK, [_arc(BOSS_CHARGE_ARC_M, BOSS_CHARGE_HALF_ANGLE_DEG, 0.0, BOSS_CHARGE_BAND_M)])
+	_enemy(charge, BOSS_CHARGE_REACH_M, 0)
+	charge.free_lunge = BOSS_CHARGE_TRAVEL_M
+	var pound := _add(&"boss_pound", "Boss Ground Pound", Vector3i(36, 4, 30), 15.0, HEAVY, KNOCKDOWN,
+			BOSS_POUND_KNOCKBACK, [_arc(BOSS_POUND_RING_M, 180.0, 0.0, BOSS_POUND_BAND_M)])
+	_enemy(pound, BOSS_POUND_REACH_M, 0, true)
 
 
 ## An enemy move's shared fields, set on a move made with _add(): no magnetism, the reach the
