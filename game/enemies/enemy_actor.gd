@@ -616,6 +616,28 @@ func _enter_engage() -> void:
 	_stop()
 
 
+## True when the director's go is due before the walk to strike range (`distance_m` more) is over,
+## give or take engage_go_lead_s: it should start walking now so as to arrive when the go does,
+## not stand at the player's nose waiting for it. With no director there is nothing to wait for.
+func _go_is_near(distance_m: float) -> bool:
+	var director := EnemyDirector.find(get_tree())
+	if director == null:
+		return true
+	var walk_s := distance_m / maxf(Tuning.data.engage_speed_mps * _speed_mult(), 0.01)
+	return director.windup_eta_s(self) <= walk_s + Tuning.data.engage_go_lead_s
+
+
+## Where a step-in aims: the player's origin moved engage_aim_offset_m to this enemy's side of the
+## line between them. The avoidance sees the player as a circle, and a body whose wish points
+## exactly at its centre is slowed to a crawl (the head-on tie) before it gets there.
+func _engage_aim(player: CombatActor) -> Vector3:
+	var to_player := _flat(player.global_position - global_position)
+	if to_player.length_squared() < 0.0001:
+		return player.global_position
+	var side := Vector3(-to_player.z, 0.0, to_player.x).normalized() * (_engage_side * Tuning.data.engage_aim_offset_m)
+	return player.global_position + side
+
+
 func _tick_engage(player: CombatActor) -> void:
 	if not has_token:
 		_enter_approach()
@@ -660,28 +682,6 @@ func _give_up_engage() -> void:
 func _director_says_go() -> bool:
 	var director := EnemyDirector.find(get_tree())
 	return director == null or director.may_start_windup(self)
-
-
-## True when the director's go is due before the walk to strike range (`distance_m` more) is over,
-## give or take engage_go_lead_s: it should start walking now so as to arrive when the go does,
-## not stand at the player's nose waiting for it. With no director there is nothing to wait for.
-func _go_is_near(distance_m: float) -> bool:
-	var director := EnemyDirector.find(get_tree())
-	if director == null:
-		return true
-	var walk_s := distance_m / maxf(Tuning.data.engage_speed_mps * _speed_mult(), 0.01)
-	return director.windup_eta_s(self) <= walk_s + Tuning.data.engage_go_lead_s
-
-
-## Where a step-in aims: the player's origin moved engage_aim_offset_m to this enemy's side of the
-## line between them. The avoidance sees the player as a circle, and a body whose wish points
-## exactly at its centre is slowed to a crawl (the head-on tie) before it gets there.
-func _engage_aim(player: CombatActor) -> Vector3:
-	var to_player := _flat(player.global_position - global_position)
-	if to_player.length_squared() < 0.0001:
-		return player.global_position
-	var side := Vector3(-to_player.z, 0.0, to_player.x).normalized() * (_engage_side * Tuning.data.engage_aim_offset_m)
-	return player.global_position + side
 
 
 ## Wind up `attack` now: the opening move scaled and floored, started from the control tick. The
