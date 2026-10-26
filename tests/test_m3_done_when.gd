@@ -353,6 +353,7 @@ func test_a_mixed_six_soak_keeps_the_hard_metrics() -> void:
 	assert_lte(int(metrics.get("warning_end_lag_frames", 0) if metrics.get("warning_end_lag_frames") != null else 0), 1,
 			"R10: out within a frame of its end")
 	assert_true(bool(metrics.warning_widget_found), "the HUD's RearWarning was found")
+	assert_gt(int(metrics.knockdowns_on_player), 0, "R11 had a knockdown to judge (%d)" % int(metrics.knockdowns_on_player))
 	assert_lte(float(metrics.max_knockdown_hit_damage_non_boss), 15.0, "R11: no non-boss hit that knocked the player down hit harder than 15")
 	assert_gt(int(metrics.windups), 8, "the crowd attacks all the same (%d wind-ups)" % int(metrics.windups))
 	assert_gt(int(metrics.hits_on_player), 5, "and the hits land (%d)" % int(metrics.hits_on_player))

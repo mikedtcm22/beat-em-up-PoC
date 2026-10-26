@@ -96,6 +96,19 @@ def check_log(path, cap):
     holders = set()
     most_holders = 0
     most_at = ""
+    token_frame = None
+    token_line = 0
+
+    def settle_tokens():
+        """Count the holders at the end of the frame the last TOK line was in. Returns a problem or ''."""
+        nonlocal most_holders, most_at
+        if len(holders) > most_holders:
+            most_holders = len(holders)
+            most_at = "%s, f%s, holders %s" % (act or "?", token_frame, ", ".join(sorted(holders)))
+        if cap > 0 and len(holders) > cap:
+            return ("line %d: %d token holders (%s) over the cap of %d, in %s at f%s"
+                    % (token_line, len(holders), ", ".join(sorted(holders)), cap, act or "?", token_frame))
+        return ""
     checks = []
     outside = 0  # WARN-CHECK lines of wind-ups that began while no act was being measured
     measuring = True
@@ -108,6 +121,11 @@ def check_log(path, cap):
     for number, line in enumerate(lines, 1):
         header = ACT_HEADER.match(line)
         if header:
+            if token_frame is not None:
+                over = settle_tokens()
+                if over:
+                    problems.append(over)
+                token_frame = None
             act = header.group("act")
             holders = set()
             measuring = True
@@ -136,18 +154,21 @@ def check_log(path, cap):
             continue
         match = TOKEN.match(line)
         if match:
+            frame = int(match.group("frame"))
+            # A hand-over (one holder loses its token as another is granted, in one physics frame)
+            # prints its two lines in tree order, not time order: the holders are counted when the
+            # frame is over, after all of its lines.
+            if token_frame is not None and frame != token_frame:
+                over = settle_tokens()
+                if over:
+                    problems.append(over)
+            token_frame = frame
+            token_line = number
             key = match.group("who")
             if match.group("sign") == "+":
                 holders.add(key)
             else:
                 holders.discard(key)
-            if len(holders) > most_holders:
-                most_holders = len(holders)
-                most_at = "%s, f%s, holders %s" % (act or "?", match.group("frame"), ", ".join(sorted(holders)))
-            if cap > 0 and len(holders) > cap:
-                problems.append(
-                    "line %d: %d token holders (%s) over the cap of %d, in %s at f%s"
-                    % (number, len(holders), ", ".join(sorted(holders)), cap, act or "?", match.group("frame")))
             continue
         match = HARD_FAIL.match(line)
         if match:
@@ -155,6 +176,11 @@ def check_log(path, cap):
             continue
         if ERROR_LINE.search(line):
             errors.append("line %d: %s" % (number, line.strip()))
+
+    if token_frame is not None:
+        over = settle_tokens()
+        if over:
+            problems.append(over)
 
     # 1. and 2. The warning.
     warned = 0

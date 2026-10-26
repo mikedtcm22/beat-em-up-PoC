@@ -90,6 +90,17 @@ func test_more_token_holders_than_the_cap_fails_and_an_act_header_forgets_them()
 	assert_eq(wider.code, 0, "four holders fit a cap of 4: " + wider.text)
 
 
+func test_a_hand_over_in_one_frame_is_not_a_fourth_holder() -> void:
+	# The bot prints a frame's token lines in tree order: a grant can come before the loss it follows.
+	var text := "=== A  (f1)\nTOK+ f2 Punk1\nTOK+ f3 Punk2\nTOK+ f4 Punk3\nTOK+ f9 Punk4\nTOK- f9 Punk1\n"
+	var result := _check(text)
+	if _python_missing(result):
+		return
+	assert_eq(result.code, 0, result.text)
+	var four := _check(text.replace("TOK- f9 Punk1\n", "TOK- f10 Punk1\n"))
+	assert_eq(four.code, 1, "but a fourth holder that lives a frame is over the cap: " + four.text)
+
+
 func test_a_hard_metric_failure_or_an_engine_error_fails_the_log() -> void:
 	var hard := _check(GOOD + "READABILITY Act one\n  R1  attackers at once        max 4      FAIL (hard) <= 3\n")
 	if _python_missing(hard):
