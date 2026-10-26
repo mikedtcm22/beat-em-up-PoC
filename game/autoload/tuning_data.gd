@@ -665,8 +665,14 @@ extends Resource
 @export_range(5.0, 500.0, 1.0) var punk_health: float = 30.0
 ## Chance (0..1) that its attack is the shove rather than the two-hit punch.
 @export_range(0.0, 1.0, 0.05) var punk_shove_chance: float = 0.3
-## Seconds after an attack before it wants another token; walking speed multiplier.
-@export_range(0.0, 10.0, 0.1) var punk_attack_cooldown_s: float = 1.4
+## Seconds after its attack ends (or after a hit or a block ended the attempt) before it wants
+## another token. It runs during the recover hold and the walk back to the ring, so below about
+## 4 s it is spent before the Punk is back in POSTURE and never binds (the cadence is then the
+## director's gap, hit grace and cap, and a Punk is almost always at the player's nose). 5 s is
+## the feel default locked at the M3 slice gate: about a third of six Punks posture (SPEC 7),
+## the lens is walled less, and a passive player lasts about 15 s instead of 13.
+@export_range(0.0, 10.0, 0.1) var punk_attack_cooldown_s: float = 5.0
+## Walking speed multiplier.
 @export_range(0.25, 3.0, 0.05) var punk_speed_mult: float = 1.0
 
 @export_subgroup("Kicker")

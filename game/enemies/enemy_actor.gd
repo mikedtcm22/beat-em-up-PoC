@@ -43,6 +43,9 @@ extends CombatActor
 ## CombatActor put it in, KO is dead.
 enum AiState { ENTER, APPROACH, POSTURE, ENGAGE, WINDUP, ATTACK, RECOVER, REACT, KO }
 
+## Two velocities closer than this (m/s, squared) count as the same (_reset_avoidance()).
+const RESET_EPSILON_SQ := 0.0025
+
 ## &"punk", &"kicker", &"thug", &"bruiser" or &"boss".
 @export var archetype: StringName = &""
 ## Bruiser and boss: the rear warning's burst is larger, the wind-up floor is the heavy one.
@@ -442,6 +445,9 @@ func _tick_enter(player: CombatActor) -> void:
 
 
 func _enter_approach() -> void:
+	# From ENGAGE (a step-in toward the player) or a reaction the agent's velocity points the other
+	# way from the walk to the slot: start from rest.
+	_reset_avoidance()
 	ai_state = AiState.APPROACH
 	_progress_best = INF
 	_progress_frames = 0
@@ -690,6 +696,7 @@ func _enter_recover() -> void:
 	_next_attack = _choose_attack()
 	_progress_best = INF
 	_progress_frames = 0
+	_reset_avoidance()
 
 
 func _tick_recover(player: CombatActor) -> void:
@@ -845,8 +852,18 @@ func _apply_velocity(desired: Vector3, aim_agent: bool = true) -> void:
 			_nav.target_position = global_position + Vector3(desired.x, 0.0, desired.z)
 			_nav.get_next_path_position()
 		_nav.velocity = Vector3(desired.x, 0.0, desired.z)
-		sim_velocity.x = _safe_velocity.x
-		sim_velocity.z = _safe_velocity.z
+		var safe := Vector3(_safe_velocity.x, 0.0, _safe_velocity.z)
+		if desired.length_squared() > 0.0001:
+			# The answer is for last tick's wish. A net for a stale or squeezed one: never against this
+			# tick's wish (only its sideways part, which slides a body out of a squeeze where a zero
+			# would hold it there), and never faster than the wish asks.
+			var wish := desired.normalized()
+			var along := safe.dot(wish)
+			if along < 0.0:
+				safe -= wish * along
+			safe = safe.limit_length(desired.length())
+		sim_velocity.x = safe.x
+		sim_velocity.z = safe.z
 	else:
 		sim_velocity.x = desired.x
 		sim_velocity.z = desired.z
@@ -856,8 +873,7 @@ func _apply_velocity(desired: Vector3, aim_agent: bool = true) -> void:
 func _stop() -> void:
 	sim_velocity.x = 0.0
 	sim_velocity.z = 0.0
-	if _nav and _nav.avoidance_enabled:
-		_nav.velocity = Vector3.ZERO
+	_reset_avoidance()
 	if _taunt_frames <= 0:
 		rig.play_locomotion(Vector2.ZERO, 0.0)
 
@@ -868,12 +884,28 @@ func _report_velocity() -> void:
 		var actual := Vector3(sim_velocity.x, 0.0, sim_velocity.z)
 		if _running_move():
 			actual += Vector3(_lunge_velocity.x, 0.0, _lunge_velocity.z)
-		_nav.velocity = actual
+		_reset_avoidance(actual)
 
 
 func _stop_reporting() -> void:
-	if _nav and _nav.avoidance_enabled:
-		_nav.velocity = Vector3.ZERO
+	_reset_avoidance()
+
+
+## Put the avoidance agent's memory of this body at `velocity` (at rest by default): what it will
+## be told the neighbours see, and what its own answers are built around. The agent keeps its own
+## velocity from the last walk: setting the wish (_nav.velocity) does not touch it, so after a
+## stop or a reaction it went on answering with the old course (a Punk that had just attacked
+## walked back past the player's shoulder at 4-6 m/s). The latched answer goes with it. Called only
+## while there is something to clear (the forced reset every tick can leave an agent stuck).
+func _reset_avoidance(velocity: Vector3 = Vector3.ZERO) -> void:
+	if _nav == null or not _nav.avoidance_enabled:
+		return
+	var stale := Vector3(_safe_velocity.x, 0.0, _safe_velocity.z).distance_squared_to(velocity) > RESET_EPSILON_SQ \
+			or Vector3(_nav.velocity.x, 0.0, _nav.velocity.z).distance_squared_to(velocity) > RESET_EPSILON_SQ
+	_nav.velocity = velocity
+	if stale:
+		_safe_velocity = velocity
+		_nav.set_velocity_forced(velocity)
 
 
 ## The walk cycle that matches the velocity in the body's own frame: strafing reads as the

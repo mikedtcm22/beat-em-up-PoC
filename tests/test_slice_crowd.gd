@@ -1,12 +1,13 @@
 extends GutTest
 ## The slice, headless (M3-plan P1-int, Part C section 5 and Part A A3.6): six real Street Punks
 ## in the real crowd room with the real HUD, the player in god mode and standing still, 900
-## physics frames, seeded, waves off. It checks what the plan lists (never more than the cap
-## attacking, nobody inside 0.7 m of another, nobody stuck walking in, the posture ring spread
-## all the way round, a blind-spot grant, a deterministic run) and asserts the hard readability
-## metrics through the probe (tests/bot/readability_probe.gd): R1 the cap, R2 the wind-up gap, R3
-## no hit without its wind-up, R10 the rear warning against the rule, R11 no big knockdown. Then
-## the autopilot fights three real Punks (the bots' scripted player must be able to).
+## physics frames (1350 for the rules run), seeded, waves off. It checks what the plan lists
+## (never more than the cap attacking, nobody inside 0.7 m of another, nobody stuck walking in,
+## the posture ring spread all the way round, a blind-spot grant, a deterministic run) and
+## asserts the hard readability metrics through the probe (tests/bot/readability_probe.gd): R1 the
+## cap, R2 the wind-up gap, R3 no hit without its wind-up, R10 the rear warning against the rule,
+## R11 no big knockdown. Then the autopilot fights three real Punks (the bots' scripted player
+## must be able to).
 
 const ROOM_PATH := "res://game/level/crowd_room.tscn"
 const Probe := preload("res://tests/bot/readability_probe.gd")
@@ -15,6 +16,12 @@ const CrowdBot := preload("res://tests/bot/crowd_bot.gd")
 
 ## The frames of the long run, and the gap between two of the six spawns.
 const RUN_FRAMES := 900
+## The rules run (_six_punk_run) lasts as long as the "Six Punks, observed" act (1344 frames). With
+## the Punk's locked attack cooldown (punk_attack_cooldown_s 5) two Punks first overlap in
+## WINDUP or ATTACK between frame 350 and 911 over seeds 0-3, so 900 frames could end just before the
+## first overlap of a seed (it did, by 11 frames, at seed 0): the crowd still attacks together, a
+## little less often.
+const PRESSURE_FRAMES := 1350
 const SPAWN_GAP_FRAMES := 24
 ## The spread is judged from this frame on.
 const RING_FRAME := 300
@@ -87,7 +94,7 @@ func _assert_hard_rows(rows: Array[Dictionary], must_measure: Array[String]) -> 
 # --- Six Punks round a player who stands still -----------------------------------------------
 
 
-## Spawn six, run RUN_FRAMES, sample the rules each frame. Returns what was seen.
+## Spawn six, run PRESSURE_FRAMES, sample the rules each frame. Returns what was seen.
 func _six_punk_run() -> Dictionary:
 	Tuning.set_value(&"god_mode", true)
 	var room := await _room(true)
@@ -102,7 +109,7 @@ func _six_punk_run() -> Dictionary:
 	var walk: Dictionary = {}  # enemy id -> {frame, pos} of the APPROACH window in progress
 	var cap: int = Tuning.data.attacker_cap
 	var enemies: Array[EnemyActor] = []
-	for frame in RUN_FRAMES:
+	for frame in PRESSURE_FRAMES:
 		if frame % SPAWN_GAP_FRAMES == 0 and enemies.size() < CrowdBot.SURROUND_POINTS.size():
 			enemies.append(_spawn(room, CrowdBot.SURROUND_POINTS[enemies.size()]))
 		await get_tree().physics_frame
