@@ -221,10 +221,11 @@ func _reset(cam: StringName) -> void:
 	_clear_floor_pipes()
 	# Every act starts from the same names, seeds and slots, whichever acts ran before it. The waves
 	# start over too (wave 1 after the gap), so an act that turns them on does not carry on a
-	# wave an earlier act left half played; an act that wants a later one calls
-	# spawner.start_at_wave(n).
+	# wave an earlier act left half played (and picks the same spawn points); an act that wants a
+	# later one calls spawner.start_at_wave(n).
 	spawner.set(&"_serials", _fresh_serials())
 	spawner.start_at_wave(1)
+	(spawner.get(&"_rng") as RandomNumberGenerator).seed = spawner.rng_seed
 	_keep_alive_spawns = 0
 	var crowd := room as CrowdRoom
 	crowd.director.rng_seed = crowd.rng_seed
