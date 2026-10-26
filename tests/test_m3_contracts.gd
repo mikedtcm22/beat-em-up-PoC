@@ -292,6 +292,34 @@ func test_an_armored_hit_puts_only_the_attacker_in_hitstop() -> void:
 		await _ticks(2)
 
 
+func test_an_absorbed_finisher_starts_no_slow_mo() -> void:
+	# A finisher that armor absorbs (a poised boss) shows only a grey spark: its slow-mo would
+	# slow down nothing. A plain victim's finisher slows the world as ever.
+	for armored: bool in [true, false]:
+		TimeController.clear()
+		_landed.clear()
+		var attacker := _armored(Vector3(0.0, 0.0, 0.0), 0)
+		attacker.absorbs = false
+		var victim := _armored(Vector3(0.0, 0.0, -0.9))
+		victim.absorbs = armored
+		victim.rotation.y = PI
+		await _ticks(3)
+		var finisher := _punch(2, 3, 6)
+		finisher.tier = CombatTypes.HitTier.FINISHER
+		attacker.starts_move = finisher
+		var tries := 0
+		while _landed.is_empty() and tries < 30:
+			tries += 1
+			await _ticks(1)
+		assert_false(_landed.is_empty(), "the finisher landed (armored %s)" % armored)
+		var slowed := TimeController.is_slowmo() or TimeController._slowmo_delay > 0.0
+		assert_eq(slowed, not armored, "slow-mo only for a finisher the victim felt (armored %s)" % armored)
+		attacker.queue_free()
+		victim.queue_free()
+		await _ticks(2)
+	TimeController.clear()
+
+
 func test_break_free_releases_the_victim_and_tells_the_holder() -> void:
 	var holder := _armored(Vector3(0.0, 0.0, 0.0))
 	var victim := _armored(Vector3(0.0, 0.0, -1.0))

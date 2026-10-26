@@ -421,8 +421,9 @@ func receive_hit(hit: HitInfo) -> bool:
 	health = maxf(0.0, health - damage)
 	hit.killed = health <= 0.0
 	CombatEvents.health_changed.emit(self, health, max_health)
-	_flash_at(hit.contact_point, Tuning.data.hit_flash_frames, 1.0, impact_frame_ticks(hit))
+	# Armor first, so the flash knows an absorbed finisher shows no impact frame to wait out.
 	_apply_armor(hit)
+	_flash_at(hit.contact_point, Tuning.data.hit_flash_frames, 1.0, impact_frame_ticks(hit))
 	if hit.armor_absorbed and not hit.killed:
 		# Armor took the reaction: the damage landed, but the move (a wind-up above all) runs on.
 		_on_armor_absorbed(hit)
@@ -1026,10 +1027,13 @@ func _flash_at(point: Vector3, frames: int, amount: float, delay: int = 0) -> vo
 ## frame (Spec §6, §10): VfxDirector turns the whole screen to ink from a clean finisher's
 ## tick for vfx_impact_frame_frames (60 Hz frames, one per tick) with impact_frame_enabled,
 ## which would spend the flash under it. Decided from the tier and Tuning, as VfxDirector
-## decides it, never from its state. 0 for every other hit.
+## decides it, never from its state. 0 for every other hit, and for a finisher armor absorbed
+## (VfxDirector shows it no impact frame, only the grey spark).
 static func impact_frame_ticks(hit: HitInfo) -> int:
 	var tuning := Tuning.data
 	if hit.blocked or hit.tier != CombatTypes.HitTier.FINISHER or not tuning.impact_frame_enabled:
+		return 0
+	if hit.armor_absorbed and not hit.killed:
 		return 0
 	return maxi(tuning.vfx_impact_frame_frames, 0)
 

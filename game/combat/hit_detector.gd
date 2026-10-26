@@ -57,6 +57,9 @@ func process(move: MoveData, move_frame: int) -> Array[HitInfo]:
 	var guarded: Array = [attacker]
 	var blocked: HitInfo
 	var clean := false
+	# A clean hit the victim felt (not absorbed by armor, or killing): only those start the
+	# finisher's slow-mo, which would otherwise slow down a grey spark and nothing else.
+	var felt := false
 	for c: Dictionary in ordered:
 		if move.max_targets > 0 and landed >= move.max_targets:
 			break
@@ -75,12 +78,13 @@ func process(move: MoveData, move_frame: int) -> Array[HitInfo]:
 				clean = true
 				if not hit.armor_absorbed or hit.killed:
 					frozen.append(victim)
+					felt = true
 	if hits.is_empty():
 		return hits
 	if clean:
 		var stop := Tuning.data.hitstop_s(move.tier)
 		TimeController.hitstop(frozen, stop)
-		if move.tier == CombatTypes.HitTier.FINISHER and Tuning.data.slowmo_ms > 0.0:
+		if felt and move.tier == CombatTypes.HitTier.FINISHER and Tuning.data.slowmo_ms > 0.0:
 			TimeController.slowmo(Tuning.data.slowmo_scale, Tuning.data.slowmo_ms / 1000.0, stop)
 	if guarded.size() > 1:
 		TimeController.hitstop(guarded, Tuning.data.block_hitstop_ms / 1000.0)
