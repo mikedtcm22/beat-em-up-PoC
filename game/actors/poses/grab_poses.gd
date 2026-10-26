@@ -210,10 +210,16 @@ static func _slam(g: Dictionary[StringName, Vector3]) -> PlaceholderPoses.MovePo
 	}
 	var windup := _with(g, [_torso(-6.0, -3.0, 0.0, -2.0, -14.0), up_legs, _lean(0.04),
 			_arms(Vector3(83.0, -15.0, -17.5), 5.0)])
-	var strike := _with(g, [_torso(-34.0, -20.0, -10.0, 14.0, 8.0), _boss_legs(), _lean(0.14), {
-		&"LeftUpperLeg": Vector3(58.0, 0.0, -6.0),
-		&"LeftLowerLeg": Vector3(-84.0, 0.0, 0.0),
-	}, _arms(Vector3(114.0, -10.0, -7.5), 5.0)])
+	var heave_legs := {
+		&"LeftUpperLeg": Vector3(10.0, 0.0, -6.0),
+		&"LeftLowerLeg": Vector3(-14.0, 0.0, 0.0),
+		&"LeftFoot": Vector3(4.0, 0.0, 4.0),
+		&"RightUpperLeg": Vector3(-2.0, 0.0, 6.0),
+		&"RightLowerLeg": Vector3(-10.0, 0.0, 0.0),
+		&"RightFoot": Vector3(14.0, 0.0, -5.0),
+	}
+	var strike := _with(g, [_torso(10.0, 8.0, 4.0, 10.0, 6.0), heave_legs, _lean(-0.06),
+			_arms(Vector3(112.0, -6.0, -34.0), 14.0)])
 	var follow := _with(g, [_torso(-18.0, -10.0, -4.0, 12.0, 6.0), _arms(Vector3(50.0, -14.0, -14.0), 50.0)])
 	var m := PlaceholderPoses._mp(grip, windup, strike)
 	m.follow = follow

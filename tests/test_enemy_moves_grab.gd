@@ -20,6 +20,10 @@ const BOSS_RADIUS := 0.5
 const CHEST_FRONT_M := 0.12
 ## The grab's reach_m against the strike pose's fists and against the connect range.
 const REACH_TOLERANCE_M := 0.15
+## The head's travel (m) from the held wind-up key to the strike: the slam's at most this much (it
+## rears back), the headbutt's at least this much (it dives).
+const SLAM_HEAD_TRAVEL_MAX_M := 0.05
+const HEADBUTT_HEAD_TRAVEL_MIN_M := 0.25
 const GRAB_IDS: Array[StringName] = [&"bruiser_grab", &"boss_grab"]
 const FOLLOW_UP_IDS: Array[StringName] = [&"bruiser_headbutt", &"boss_slam"]
 
@@ -154,6 +158,38 @@ func test_the_grab_winds_up_in_view_at_the_ring_and_close_in() -> void:
 	for entry: Array in cases:
 		var problems := Checks.fp_telegraph_problems(_move(entry[0]), _height_of(entry[0]), entry[1], self)
 		assert_true(problems.is_empty(), "%s from %.1f m: %s" % [entry[0], entry[1], "; ".join(problems)])
+
+
+## How far ahead of the rig's origin (m, along its facing) the head is `frame` frames into `id`.
+func _head_ahead_at(id: StringName, frame: int) -> float:
+	var rig := _rig(_height_of(id))
+	var move := _move(id)
+	rig.play_move(move, 0.0)
+	for f: int in frame:
+		rig.advance(Checks.FRAME)
+	# The rig faces -Z.
+	return -(rig.get_point_position(&"Head").z - rig.global_position.z)
+
+
+func test_the_slam_heaves_him_with_its_head_back_and_the_headbutt_dives() -> void:
+	# Final review, tells-04: the slam's strike was a forward fold over its bent body, the same
+	# picture from the lens as the headbutt (the cap into his face) with nothing on screen to throw
+	# him. Its strike rears back and heaves: the head goes no further ahead than it was held, the
+	# torso is not folded forward, the arms go up; the headbutt's head goes in by a head's width.
+	var slam := _move(&"boss_slam")
+	var slam_held := _head_ahead_at(&"boss_slam", roundi(slam.startup * PlaceholderEnemyPoses.WINDUP_HOLD_AT))
+	var slam_strike := _head_ahead_at(&"boss_slam", slam.startup)
+	var butt := _move(&"bruiser_headbutt")
+	var butt_held := _head_ahead_at(&"bruiser_headbutt", roundi(butt.startup * PlaceholderEnemyPoses.WINDUP_HOLD_AT))
+	var butt_strike := _head_ahead_at(&"bruiser_headbutt", butt.startup)
+	gut.p("slam: the head goes %.2f m ahead (held %.2f, strike %.2f); headbutt %.2f m (held %.2f, strike %.2f)" % [
+			slam_strike - slam_held, slam_held, slam_strike, butt_strike - butt_held, butt_held, butt_strike])
+	assert_lte(slam_strike - slam_held, SLAM_HEAD_TRAVEL_MAX_M, "the slam's head does not go in over the last of the wind-up")
+	assert_gte(butt_strike - butt_held, HEADBUTT_HEAD_TRAVEL_MIN_M, "the headbutt's does: that is its read")
+	var poses := PlaceholderPoses.move_poses(slam.get_anim())
+	assert_gte(poses.strike[&"Spine"].x, 0.0, "the slam's torso is not folded forward at the strike")
+	var held := PlaceholderPoses.add(poses.windup, poses.windup_hold)
+	assert_gt(poses.strike[&"LeftUpperArm"].x, held[&"LeftUpperArm"].x, "the arms go up from the lift")
 
 
 func test_the_named_holds_exist_loop_and_agree_with_the_moves() -> void:
