@@ -19,6 +19,17 @@ const SLIDE_TOLERANCE_M := 0.01
 ## A long wait for slower things (a walk in, a back-off, a recovery).
 const LONG_TICKS := 900
 
+
+## A stub director that gives the go to one enemy only (the others wait at strike range).
+class PickyDirector:
+	extends StubDirector
+	var only: EnemyActor
+
+	func may_start_windup(enemy: EnemyActor) -> bool:
+		windup_asks.append(enemy)
+		return enemy == only
+
+
 var _scene: Node3D
 var _player: PlayerCharacter
 var _director: Object
@@ -541,6 +552,66 @@ func test_recover_gives_the_token_back_and_it_backs_off_to_its_slot() -> void:
 	var back := await _until(func() -> bool: return punk.ai_state == EnemyActor.AiState.POSTURE)
 	assert_true(back, "it backs off to its slot and postures")
 	assert_lt(_flat_dist(punk.global_position, slot), 0.8, "out on the ring again (%.2f m from the slot)" % _flat_dist(punk.global_position, slot))
+
+
+func test_a_punk_that_walked_in_and_attacked_backs_off_the_right_way_at_its_walking_speed() -> void:
+	# The avoidance agent keeps its own velocity, and setting the wish does not touch it: a Punk
+	# that stepped in at 3 m/s and then stood through the attack and the recover hold started its
+	# back-off on that stale velocity and, with neighbours waiting at strike range, went on at up
+	# to 6 m/s (the walk is 2.6), toward the player or past his shoulder, instead of stepping back.
+	Tuning.data.god_mode = true
+	Tuning.data.punk_shove_chance = 0.0
+	await _bake_navmesh()
+	_make_player()
+	_player.add_child(RoomKit.PlayerObstacle.new())
+	var director := PickyDirector.new()
+	_director = director
+	_scene.add_child(director)
+	var punk := _punk(Vector3(0.1, 0.0, -4.5))
+	director.only = punk
+	var slot := Vector3(0.0, 0.0, -3.4)
+	director.put_slot(punk, slot)
+	var waiting: Array[StreetPunk] = []
+	var n := 2
+	for degrees: float in [30.0, -30.0, 80.0]:
+		var at := Vector3(sin(deg_to_rad(degrees)) * 3.0, 0.0, -cos(deg_to_rad(degrees)) * 3.0)
+		var other := _punk(at)
+		other.name = "Punk%d" % n
+		n += 1
+		director.put_slot(other, at)
+		waiting.append(other)
+	await _ticks(3)
+	director.give_token(punk)
+	assert_true(await _until(func() -> bool: return punk.ai_state == EnemyActor.AiState.WINDUP), "it walked in and winds up")
+	# The others take their tokens now and stand at strike range for a go they never get.
+	for other in waiting:
+		director.give_token(other)
+	assert_true(await _until(func() -> bool: return punk.ai_state == EnemyActor.AiState.RECOVER), "the attack ends in RECOVER")
+	assert_true(await _until(func() -> bool: return punk.get(&"_recover_frames") <= 0), "the hold is over")
+	var walk_speed: float = Tuning.data.approach_speed_mps
+	var toward := -INF
+	var fastest := 0.0
+	var sweep := 0.0
+	var last_angle := atan2(punk.global_position.z, punk.global_position.x)
+	var settled := -1
+	for i in 240:
+		await get_tree().physics_frame
+		var velocity := Vector2(punk.sim_velocity.x, punk.sim_velocity.z)
+		var to_player := Vector2(-punk.global_position.x, -punk.global_position.z)
+		if i < 12:
+			toward = maxf(toward, velocity.dot(to_player.normalized()))
+		fastest = maxf(fastest, velocity.length())
+		var angle := atan2(punk.global_position.z, punk.global_position.x)
+		if to_player.length() < 1.2:
+			sweep += absf(wrapf(angle - last_angle, -PI, PI))
+		last_angle = angle
+		if settled < 0 and punk.ai_state == EnemyActor.AiState.POSTURE:
+			settled = i
+	gut.p("back-off: toward %.2f m/s in the first 12 ticks, fastest %.2f m/s, %.0f deg around the player inside 1.2 m, at its slot after %d ticks" % [toward, fastest, rad_to_deg(sweep), settled])
+	assert_lte(toward, 0.1, "its first walking ticks never move toward the player")
+	assert_lte(fastest, walk_speed + 0.05, "never faster than its walking speed (a stale avoidance velocity gave 4-6 m/s)")
+	assert_lt(rad_to_deg(sweep), 30.0, "it steps back, it does not orbit the player inside 1.2 m")
+	assert_gte(settled, 0, "it reaches its slot and postures")
 
 
 func test_the_cooldown_keeps_it_from_asking_for_a_token_until_it_is_over() -> void:
