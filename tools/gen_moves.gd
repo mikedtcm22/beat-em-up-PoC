@@ -410,9 +410,26 @@ func _grab_moves() -> void:
 	_enemy(slam, SLAM_REACH_M, 0, true)
 
 
-## The Bruiser: bruiser_smash (P3-bruiser).
+## The Bruiser's smash reach (MoveData.reach_m): where both fists, brought down in front of the chest
+## of a 2.05 m body, meet a standing 1.8 m body, measured by tests/test_enemy_moves_bruiser.gd (within
+## 0.15 m). The smash does not lunge: the Bruiser walks into reach first.
+const BRUISER_SMASH_REACH_M := 1.3
+## The smash's knockdown (m/s along the radial, up): a heavy hit that carries the player a body length
+## and lifts him off his feet, the 15% rule's 15 damage in one blow.
+const BRUISER_SMASH_KNOCKBACK := Vector3(0.0, 3.0, 4.0)
+
+
+## The Bruiser: bruiser_smash (P3-bruiser). Its other attack, the grab and headbutt, is P2-grab's
+## (_grab_moves()). One move with its own held wind-up (startup 34, never below the heavy floor of 30
+## frames): both fists raised over the head, then driven down together in front of the chest. 15
+## damage, HEAVY, a knockdown (SPEC §7: 15 is the 15% rule's limit), both fists as 0.2 m spheres (a
+## big body's fists; hitbox radii are absolute metres). Blockable, but a block costs the guard 60 of
+## 100 (4 per damage) and the Bruiser never recoils from it (blocked_recoil_frames 0): there is no
+## punish window, as SPEC §7 says of the heavies.
 func _bruiser_moves() -> void:
-	pass
+	var smash := _add(&"bruiser_smash", "Bruiser Smash", Vector3i(34, 4, 26), 15.0, HEAVY, KNOCKDOWN,
+			BRUISER_SMASH_KNOCKBACK, [_sphere(&"LeftFistPoint", 0.2), _sphere(&"RightFistPoint", 0.2)])
+	_enemy(smash, BRUISER_SMASH_REACH_M, 0)
 
 
 ## The boss: boss_charge, boss_pound (P3-boss).

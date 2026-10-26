@@ -752,8 +752,21 @@ extends Resource
 @export_range(0.0, 10.0, 0.1) var bruiser_armor_break_s: float = 2.0
 ## Chance (0..1) that its attack is the grab rather than the smash.
 @export_range(0.0, 1.0, 0.05) var bruiser_grab_chance: float = 0.4
-@export_range(0.0, 10.0, 0.1) var bruiser_attack_cooldown_s: float = 2.2
+## Seconds after an attack ends before it asks for another token. It counts through the recover hold
+## and the walk back, so below about 4 it hardly binds (measured: 7 attacks in 40 s at 2.2, 5 at 3.5
+## and 4.0, 4-5 at 5.0 against a player who does nothing).
+@export_range(0.0, 10.0, 0.1) var bruiser_attack_cooldown_s: float = 4.0
 @export_range(0.25, 3.0, 0.05) var bruiser_speed_mult: float = 0.8
+## Armor shrugging a light hit off (the Bruiser's, and the boss's): the grey spark's width (m; the
+## block spark's art, tinted), how grey it is (0 black to 1 white), and the clank (the block clack
+## pitched down: its pitch scale and its volume in dB on top of the clack's own).
+## How much farther out than any held body it stands (m) while the player holds a Bruiser: its head
+## and shoulders are bigger and nearer the lens than a 1.8 m body's, a wall of purple at the same pin.
+@export_range(0.0, 1.0, 0.01) var bruiser_held_pin_extra_m: float = 0.3
+@export_range(0.0, 2.0, 0.01) var armor_spark_m: float = 0.24
+@export_range(0.0, 1.0, 0.01) var armor_spark_grey: float = 0.55
+@export_range(0.25, 2.0, 0.05) var armor_clank_pitch: float = 0.6
+@export_range(-20.0, 12.0, 0.5) var armor_clank_db: float = 0.0
 
 @export_subgroup("Boss")
 @export_range(50.0, 2000.0, 10.0) var boss_health: float = 300.0
