@@ -18,7 +18,7 @@ extends Node
 ## | key | what it counts |
 ## | --- | --- |
 ## | R1 max_concurrent_attackers | enemies in WINDUP, ATTACK or holding the player at once |
-## | R2 min_windup_start_gap_frames | least gap between wind-up starts of two different enemies |
+## | R2 min_windup_start_gap_frames | least gap between wind-up starts of two different enemies (a hold's follow-up is no start) |
 ## | R3 unwarned_hits | hits on the player whose attack had no wind-up of at least the floor |
 ## | R4 occluded_windup_share | in-view wind-ups whose chest another enemy hid for over half of it |
 ## | R5 front_wedge_crowding | share of frames with over 3 posturing enemies within 45 degrees of the look |
@@ -607,18 +607,31 @@ func _on_windup_started(attacker: Node3D, _move: MoveData) -> void:
 	var frame := Engine.get_physics_frames()
 	var id := attacker.get_instance_id()
 	_acc.windups += 1
-	# R2: the gap to the wind-up that started just before, if another enemy's.
-	if _last_start_frame >= 0 and _last_start_id != id:
-		var gap := frame - _last_start_frame
-		if _acc.min_gap < 0 or gap < _acc.min_gap:
-			_acc.min_gap = gap
-	_last_start_frame = frame
-	_last_start_id = id
+	# R2: the gap to the wind-up that started just before, if another enemy's. A hold's follow-up
+	# (the headbutt, the slam) is not counted: it starts the moment the grab connects, with the
+	# player already in the holder's hands, and is the second half of the attack whose wind-up (the
+	# grab's, gated by the director and warned like any) began 30 frames earlier. R1 counts the
+	# hold as one attacker and R3 treats its last hit as warned by the hold in the same way. Without
+	# this, any enemy whose go came while a grab was winding up read as an R2 failure the frame the
+	# grab connected (11 frames, M3-calls/P4-int.md, call 21).
+	if not _holds_player(attacker):
+		if _last_start_frame >= 0 and _last_start_id != id:
+			var gap := frame - _last_start_frame
+			if _acc.min_gap < 0 or gap < _acc.min_gap:
+				_acc.min_gap = gap
+		_last_start_frame = frame
+		_last_start_id = id
 	if not _attacks.has(id):
 		_attacks[id] = {"windup_start": -1, "windup_ok": false, "damage": 0.0, "held": false}
 	_attacks[id].windup_start = frame
 	_attacks[id].windup_ok = false
 	_wu[id] = {"attacker": attacker, "total": 0, "in_view": 0, "occluded": 0}
+
+
+## True while `attacker` holds the player in its hands (the player is GRABBED by it).
+func _holds_player(attacker: Node3D) -> bool:
+	return player != null and player.get(&"state") == CombatTypes.ActorState.GRABBED \
+			and player.get(&"holder") == attacker
 
 
 func _on_windup_ended(attacker: Node3D, interrupted: bool) -> void:

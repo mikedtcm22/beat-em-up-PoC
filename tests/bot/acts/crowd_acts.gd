@@ -34,12 +34,13 @@ const BOSS_EVERY := 2
 const BOSS_MAX_TICKS := 7200
 const ADDS_WATCH_TICKS := 360
 ## Each archetype's attack for the warning act, as [id, force_attack index, distance m]: the
-## distance is where the archetype stands when it winds up for real (its attack's reach less the
-## engage margin), so every wind-up ends in a hit and the warning is judged to the contact.
+## distance is where the archetype stands when it winds up for real (about its attack's reach
+## less the engage margin; the Thug's forehand is at 1.0 m, it missed the left and behind spots at
+## 1.15), so every wind-up ends in a hit and the warning is judged to the contact.
 const WARN_ATTACKS: Array = [
 	[&"punk", 0, 1.0],
 	[&"kicker", 0, 2.6],
-	[&"thug", 0, 1.15],
+	[&"thug", 0, 1.0],
 	[&"bruiser", 0, 1.25],
 	[&"boss", 1, 2.55],
 ]

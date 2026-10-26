@@ -281,6 +281,31 @@ func test_r2_passes_when_the_starts_are_far_enough_apart_and_ignores_one_enemy_t
 	assert_eq(_status(summary.verdict, "R2"), "ok")
 
 
+func test_r2_does_not_count_a_holds_follow_up_as_a_wind_up_start() -> void:
+	# A grab's wind-up starts at frame 0, another enemy's go comes 21 frames later, the grab connects 11
+	# frames after that and the headbutt's own wind-up starts then (the player is already held): the
+	# headbutt is the grab's second half, not a start 11 frames after the other's.
+	var holder := _stub(0.0, 3.0)
+	var other := _stub(120.0, 3.0)
+	var grab := _move(&"fab_grab", 32)
+	var headbutt := _move(&"fab_headbutt", 60)
+	CombatEvents.attack_started.emit(holder, grab, 1, &"root")
+	CombatEvents.windup_started.emit(holder, grab)
+	await _ticks(21)
+	CombatEvents.attack_started.emit(other, grab, 1, &"root")
+	CombatEvents.windup_started.emit(other, grab)
+	await _ticks(11)
+	CombatEvents.windup_ended.emit(holder, false)
+	_player.start_grabbed(holder)  # the grab connects: the player is in the holder's hands
+	CombatEvents.attack_started.emit(holder, headbutt, 1, &"root")
+	CombatEvents.windup_started.emit(holder, headbutt)
+	await _ticks(3)
+	var summary := _probe.end_act()
+	assert_eq(summary.metrics.windups, 3, "all three starts are wind-ups")
+	assert_eq(summary.metrics.min_windup_start_gap_frames, 21, "the follow-up is not a pair with the other's start")
+	assert_eq(_status(summary.verdict, "R2"), "ok")
+
+
 func test_r2_is_not_applicable_with_a_single_windup() -> void:
 	var a := _stub(0.0, 3.0)
 	await _ticks(3)
