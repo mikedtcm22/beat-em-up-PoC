@@ -27,6 +27,12 @@ const CHARGE_SINK_M := 0.3
 const POUND_FISTS_ABOVE_EYE_M := 0.25
 ## The charge's dash covers this share of its reach at least (the rest is the arc).
 const DASH_SHARE := 0.6
+## The pound's strike is a squat, not a fold over the knees (final review, tells-01: a torso folded
+## 72 degrees put the cap at the defender's lens from a metre): the hips drop at least this far (m)
+## below the standing guard, the head stays within this far (m) ahead of the hips, and both fists
+## end below them. tests/test_boss_close_lens.gd judges it through the real lens.
+const POUND_SQUAT_DROP_M := 0.3
+const POUND_HEAD_AHEAD_OF_HIPS_M := 0.25
 
 
 func before_all() -> void:
@@ -151,6 +157,33 @@ func test_the_pounds_fists_are_overhead_at_the_held_wind_up() -> void:
 	var eye := rig.get_point_position(&"EyePoint").y
 	gut.p("pound: fists %.2f / %.2f m, eye %.2f m" % [left, right, eye])
 	assert_gte(minf(left, right), eye + POUND_FISTS_ABOVE_EYE_M, "both fists are well above the face at the held wind-up: a rearing slam")
+
+
+func test_the_pounds_strike_is_a_deep_squat_with_the_head_over_the_hips_and_the_fists_down() -> void:
+	var rig := _rig()
+	var pound := _move(&"boss_pound")
+	rig.play(&"idle", 0.0)
+	rig.advance(0.5)
+	var standing_hips := rig.get_point_position(&"Hips").y
+	rig.play_move(pound, 0.0)
+	for f: int in pound.startup:
+		rig.advance(Checks.FRAME)
+	# The strike key, then its end (the fists held down through the active frames).
+	for step: String in ["strike", "strike end"]:
+		if step == "strike end":
+			for f: int in pound.active:
+				rig.advance(Checks.FRAME)
+		var hips := rig.get_point_position(&"Hips")
+		var head := rig.get_point_position(&"Head")
+		var left := rig.get_point_position(&"LeftFistPoint")
+		var right := rig.get_point_position(&"RightFistPoint")
+		# The rig faces -Z.
+		var ahead := -(head.z - hips.z)
+		gut.p("pound %s: hips down %.2f m, head %.2f m ahead of the hips, fists %.2f / %.2f m (hips %.2f m)" % [
+				step, standing_hips - hips.y, ahead, left.y, right.y, hips.y])
+		assert_gte(standing_hips - hips.y, POUND_SQUAT_DROP_M, "%s: the hips drop at least %.2f m: a deep squat" % [step, POUND_SQUAT_DROP_M])
+		assert_lte(ahead, POUND_HEAD_AHEAD_OF_HIPS_M, "%s: the head stays within %.2f m ahead of the hips, not folded over the knees (%.2f)" % [step, POUND_HEAD_AHEAD_OF_HIPS_M, ahead])
+		assert_lt(maxf(left.y, right.y), hips.y, "%s: both fists are driven down below the hips" % step)
 
 
 func test_the_charge_strikes_in_a_stride_and_the_pound_is_a_ring_near_the_floor() -> void:

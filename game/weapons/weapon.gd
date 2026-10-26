@@ -84,6 +84,7 @@ func throw_from(actor: CombatActor, velocity: Vector3, move: MoveData) -> void:
 	reparent(world, false)
 	global_transform = start
 	freeze = false
+	_set_air_damping()
 	_flying = true
 	collision_layer = CombatTypes.bit(CombatTypes.LAYER_PROJECTILE)
 	collision_mask = CombatTypes.bit(CombatTypes.LAYER_WORLD) | CombatTypes.bit(CombatTypes.LAYER_ENEMY_BODY)
@@ -108,6 +109,7 @@ func drop(velocity: Vector3 = Vector3.ZERO, spin_rps: float = 0.0) -> void:
 	reparent(world, false)
 	global_transform = start
 	freeze = false
+	_set_air_damping()
 	linear_velocity = velocity
 	angular_velocity = Vector3(0.0, signf(velocity.x + velocity.z + 0.001) * spin_rps, 0.0)
 	_set_ground_physics()
@@ -123,6 +125,27 @@ func _set_ground_physics() -> void:
 	freeze = false
 	collision_layer = CombatTypes.bit(CombatTypes.LAYER_PICKUP)
 	collision_mask = CombatTypes.bit(CombatTypes.LAYER_WORLD)
+
+
+## Once a loose weapon touches the world it rests (Tuning weapon_rest_*_damp): damped, it stops
+## sliding and rolling where it fell and Jolt puts it to sleep. In the air, and while it flies as a
+## projectile, it keeps the engine's damping, so the fall and the throw are unchanged. Set every
+## step it touches something, so the values are live.
+func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
+	if _flying or holder != null or freeze or state.get_contact_count() == 0:
+		return
+	linear_damp_mode = RigidBody3D.DAMP_MODE_REPLACE
+	angular_damp_mode = RigidBody3D.DAMP_MODE_REPLACE
+	linear_damp = Tuning.data.weapon_rest_linear_damp
+	angular_damp = Tuning.data.weapon_rest_angular_damp
+
+
+## Back to the engine's damping (the weapon leaves a hand, to fall or to fly).
+func _set_air_damping() -> void:
+	linear_damp_mode = RigidBody3D.DAMP_MODE_COMBINE
+	angular_damp_mode = RigidBody3D.DAMP_MODE_COMBINE
+	linear_damp = 0.0
+	angular_damp = 0.0
 
 
 func _on_body_entered(body: Node) -> void:

@@ -47,6 +47,13 @@ extends Resource
 @export_range(0.5, 3.0, 0.1) var pickup_range: float = 1.5
 @export_range(1, 20, 1) var weapon_durability: int = 8
 @export_range(5.0, 30.0, 0.5) var weapon_throw_speed: float = 16.0
+## A weapon lying on the floor (dropped, or thrown and landed) comes to rest: from its first touch of
+## the world its linear and angular damping (per second, replacing the engine's 0.1) are these, which
+## take the slide and the roll out of it within a second or two so it lies where it fell and Jolt then
+## lets it sleep. Without them a capsule rolls on for many seconds (a dropped pipe left pickup_range
+## 2.8 s after it landed) since nothing resists a roll.
+@export_range(0.0, 30.0, 0.5) var weapon_rest_linear_damp: float = 6.0
+@export_range(0.0, 30.0, 0.5) var weapon_rest_angular_damp: float = 8.0
 @export_range(0.5, 3.0, 0.1) var stomp_range: float = 1.5
 ## Leaving a grab, the body unbends over this long (sim seconds) around its bent-over hips,
 ## so its head rises while it moves away instead of up through the holder's view: released

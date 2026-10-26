@@ -224,10 +224,15 @@ func _check_the_held_view(boss: bool) -> void:
 	var cam := _camera()
 	grabber.force_attack()
 	assert_true(await _held(grabber))
-	# The hold from the connect to the held key of the follow-up's wind-up (80% of it): after that
-	# the strike drives in, the head or the body going through where his face is.
+	# The hold from the connect to the follow-up's strike frame, where he is let go and hit. The
+	# Bruiser's headbutt drives its head in over the last fifth of the wind-up, through where his
+	# face is: that dive is deliberate and the check stops at its held key (80% of the startup). The
+	# boss's slam does not dive (final review, tells-04: a forward fold put its cap 0.115 m from the
+	# lens one frame before the strike, the headbutt's picture): its strike rears back and heaves
+	# him, so every frame of it, up to the strike's, is held to the arm's length.
 	var follow: MoveData = load("res://game/combat/moves/%s.tres" % ("boss_slam" if boss else "bruiser_headbutt"))
-	var stats := await _judge_hold(grabber, cam, roundi(follow.startup * PlaceholderEnemyPoses.WINDUP_HOLD_AT))
+	var window := follow.startup if boss else roundi(follow.startup * PlaceholderEnemyPoses.WINDUP_HOLD_AT)
+	var stats := await _judge_hold(grabber, cam, window)
 	gut.p("nearest: %s at tick %d" % [stats.nearest_name, stats.nearest_at])
 	gut.p("%s held view: nearest %.2f m, own body %.0f%%, holder's head %.0f-%.0f%%, all meshes %.0f%%" % [
 			"boss" if boss else "bruiser", stats.nearest, stats.own * 100.0, stats.head_least * 100.0,
