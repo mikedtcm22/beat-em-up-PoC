@@ -102,12 +102,12 @@ func _choose_attack() -> EnemyAttack:
 	var run_up := _flat_dist(global_position, player.global_position) >= tuning.boss_charge_min_m
 	var crowded := _crowded_round(player)
 	var weights: Array[float] = [
-		tuning.boss_charge_chance if run_up and not crowded else 0.0,
+		tuning.boss_charge_chance if run_up else 0.0,
 		tuning.boss_pound_chance,
-		0.0 if crowded else tuning.boss_grab_chance,
+		tuning.boss_grab_chance,
 	]
 	if crowded:
-		weights[1] = maxf(tuning.boss_pound_chance, 0.01)
+		weights = [0.0, 1.0, 0.0]  # only the pound, whatever the chances say
 	var total := weights[0] + weights[1] + weights[2]
 	if total <= 0.0:
 		return super._choose_attack()
