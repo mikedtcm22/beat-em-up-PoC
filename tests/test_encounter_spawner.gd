@@ -205,6 +205,63 @@ func test_a_wave_waits_for_its_clear_and_the_table_repeats() -> void:
 	assert_eq(cleared, [1, 2] as Array[int])
 
 
+func test_start_at_wave_begins_the_sequence_at_a_later_wave() -> void:
+	var spawner := _spawner([["punk"], ["punk", "punk"], ["punk", "punk", "punk"], ["punk", "punk", "punk", "punk"]])
+	var started: Array[int] = []
+	var ids: Array[PackedStringArray] = []
+	spawner.wave_started.connect(func(number: int, wave: PackedStringArray) -> void:
+		started.append(number)
+		ids.append(wave))
+	spawner.start_at_wave(3)
+	assert_eq(spawner.waves_started(), 2, "wave 3 is the next: two have started")
+	spawner.set_waves_enabled(true)
+	await _ticks(2)
+	assert_eq(_enemies().size(), 0, "the gap runs first")
+	await _ticks(40)
+	assert_eq(started, [3] as Array[int], "wave 3 started, as number 3")
+	assert_eq(ids[0].size(), 3, "it is the table's third wave")
+	assert_eq(spawner.waves_started(), 3)
+	assert_eq(_enemies().size(), 3)
+	EncounterSpawner.remove_enemies(get_tree(), true)
+	await _ticks(60)
+	assert_eq(started, [3, 4] as Array[int], "and the sequence goes on from there")
+	assert_eq(ids[1].size(), 4)
+
+
+func test_start_at_wave_counts_boss_waves_as_waves() -> void:
+	Tuning.set_value(&"boss_wave_every", 2)
+	var spawner := _spawner([["punk"], ["punk", "punk"], ["punk", "punk", "punk"]])
+	spawner.scene_override[&"boss"] = PROBE  # the probe stands in for the boss, as for the Punk
+	var ids: Array[PackedStringArray] = []
+	spawner.wave_started.connect(func(_number: int, wave: PackedStringArray) -> void: ids.append(wave))
+	spawner.start_at_wave(3)
+	spawner.set_waves_enabled(true)
+	await _ticks(40)
+	assert_eq(ids, [PackedStringArray(["boss"])] as Array[PackedStringArray], "two waves, then the boss: the third is the boss's")
+	assert_eq(spawner.waves_started(), 3)
+	assert_eq(_enemies().size(), 1, "the boss wave is the one boss")
+
+
+func test_start_at_wave_drops_the_wave_in_progress_and_waits_the_gap_again() -> void:
+	var spawner := _spawner([["punk", "punk"], ["punk", "punk", "punk"]])
+	spawner.set_waves_enabled(true)
+	await _ticks(40)
+	assert_true(spawner.wave_running(), "wave 1 is on")
+	assert_eq(_enemies().size(), 2)
+	spawner.start_at_wave(2)
+	assert_false(spawner.wave_running(), "the running wave is dropped")
+	EncounterSpawner.remove_enemies(get_tree(), true)
+	await _ticks(2)
+	assert_eq(_enemies().size(), 0, "nothing of the dropped wave is left to spawn, and the gap has begun")
+	await _ticks(40)
+	assert_eq(spawner.waves_started(), 2, "wave 2 next")
+	assert_eq(_enemies().size(), 3)
+	spawner.start_at_wave(1)
+	assert_eq(spawner.waves_started(), 0, "1 starts the sequence over")
+	spawner.start_at_wave(-4)
+	assert_eq(spawner.waves_started(), 0, "a number under 1 is 1")
+
+
 func test_a_dead_wave_is_cleared_at_health_zero() -> void:
 	var spawner := _spawner([["punk", "punk"]])
 	spawner.set_waves_enabled(true)

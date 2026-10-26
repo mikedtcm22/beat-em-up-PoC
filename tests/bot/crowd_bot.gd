@@ -219,8 +219,12 @@ func _reset(cam: StringName) -> void:
 	_tuned.clear()
 	Tuning.set_value(&"god_mode", false)
 	_clear_floor_pipes()
-	# Every act starts from the same names, seeds and slots, whichever acts ran before it.
+	# Every act starts from the same names, seeds and slots, whichever acts ran before it. The waves
+	# start over too (wave 1 after the gap), so an act that turns them on does not carry on a
+	# wave an earlier act left half played; an act that wants a later one calls
+	# spawner.start_at_wave(n).
 	spawner.set(&"_serials", _fresh_serials())
+	spawner.start_at_wave(1)
 	_keep_alive_spawns = 0
 	var crowd := room as CrowdRoom
 	crowd.director.rng_seed = crowd.rng_seed
@@ -441,7 +445,7 @@ func _sample_lock() -> void:
 		if enemy == null or enemy.health <= 0.0:
 			continue
 		_crowd_alive += 1
-		if frame % 10 == 0 and enemy.state in [CombatTypes.ActorState.FREE, CombatTypes.ActorState.WINDUP, CombatTypes.ActorState.ATTACK]:
+		if _lock_frames % 10 == 0 and enemy.state in [CombatTypes.ActorState.FREE, CombatTypes.ActorState.WINDUP, CombatTypes.ActorState.ATTACK]:
 			bearings.append(player.look_bearing_deg(enemy.global_position))
 		match enemy.ai_state:
 			EnemyActor.AiState.POSTURE:

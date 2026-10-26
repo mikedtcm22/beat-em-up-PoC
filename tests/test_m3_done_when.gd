@@ -16,7 +16,9 @@ extends GutTest
 ##    the rule) and R11 (no big knockdown), nobody stuck. The player takes the damage the enemies
 ##    deal but his health is refilled each frame: god mode would zero every hit and R11 would be
 ##    vacuous.
-## 3. The waves: with the waves on and the autopilot fighting, never more than six alive from waves.
+## 3. The waves: with the waves on and the autopilot fighting, never more than six alive from waves,
+##    from the opening Punk waves (1 and 2) and from the mixed ones (3 and 4: Punk, Kicker, Thug and
+##    Bruiser together), with R1 and R3 held in both.
 
 const ROOM_PATH := "res://game/level/crowd_room.tscn"
 const Probe := preload("res://tests/bot/readability_probe.gd")
@@ -51,6 +53,12 @@ const SOAK_FRAMES := 1500
 const SPAWN_GAP_FRAMES := 24
 ## The waves run: its length.
 const WAVES_FRAMES := 1500
+## The mixed waves run: the wave it starts at (the table's third, six enemies of three archetypes),
+## its length (45 s: wave 3 held back is cleared in about 36 s and wave 4's Bruiser walks in) and
+## the archetypes a mixed wave must bring.
+const MIXED_WAVE_FROM := 3
+const MIXED_WAVES_FRAMES := 2700
+const MIXED_WAVE_ARCHETYPES := 3
 const MIXED_SIX: Array[StringName] = [&"punk", &"kicker", &"thug", &"bruiser", &"punk", &"kicker"]
 
 
@@ -392,4 +400,58 @@ func test_the_waves_never_put_more_than_six_alive_and_the_fight_stays_readable()
 	assert_gt(most_alive, 1, "and the waves did put a crowd on the street (%d)" % most_alive)
 	assert_gte(_room.spawner.waves_started(), 2, "the waves went on to the next")
 	_assert_hard_rows(summary.verdict, ["R1", "R3"])
+	assert_eq(int(metrics.stuck_events), 0, "R13: nobody stuck")
+
+
+## The mixed waves of the table (3 and 4), which the Punk waves above never reach: the spawner
+## starts at wave 3, no boss wave, the autopilot held back (as CrowdBot.hold_back(): a crowd that
+## gets to attack instead of falling to the first combo), god mode, the probe on.
+func test_the_mixed_waves_never_put_more_than_six_alive_and_the_fight_stays_readable() -> void:
+	Tuning.set_value(&"god_mode", true)
+	Tuning.set_value(&"boss_wave_every", 0)
+	_room = await _room_up(true)
+	var probe := Probe.new()
+	probe.print_summary = false
+	probe.print_oracle_lines = false
+	probe.attach(_room, _player)
+	var pilot := Pilot.new()
+	pilot.enemy_group = &"ai_enemy"
+	pilot.attach(_room, _player)
+	pilot.approach = false
+	pilot.use_kicks = false
+	pilot.punches_per_chain = 2
+	pilot.chain_rest_frames = 60
+	_room.spawner.start_at_wave(MIXED_WAVE_FROM)
+	assert_eq(_room.spawner.waves_started(), MIXED_WAVE_FROM - 1, "wave 3 is the next to start")
+	var started: Array[int] = []
+	_room.spawner.wave_started.connect(func(number: int, _ids: PackedStringArray) -> void: started.append(number))
+	probe.start_act("mixed waves")
+	_room.spawner.set_waves_enabled(true)
+	var most_alive := 0
+	var archetypes: Dictionary = {}
+	var cap: int = Tuning.data.wave_max_alive
+	for frame in MIXED_WAVES_FRAMES:
+		await get_tree().physics_frame
+		var alive := _room.spawner.alive_count()
+		most_alive = maxi(most_alive, alive)
+		assert_lte(alive, cap, "alive from waves never over wave_max_alive (frame %d)" % frame)
+		for node: Node in get_tree().get_nodes_in_group(&"ai_enemy"):
+			var enemy := node as EnemyActor
+			if enemy != null:
+				archetypes[enemy.archetype] = true
+	pilot.stop()
+	var summary := probe.end_act()
+	var metrics: Dictionary = summary.metrics
+	gut.p("mixed waves: peak alive %d, archetypes %s, waves started %s, %d wind-ups, %d hits, R1 %d, R3 %d unwarned, R10 %s of %d" % [
+			most_alive, str(archetypes.keys()), str(started), int(metrics.windups), int(metrics.hits_on_player),
+			int(metrics.max_concurrent_attackers), int(metrics.unwarned_hits), str(metrics.warning_oracle_agreement),
+			int(metrics.warning_windups)])
+	assert_eq(started.slice(0, 1), [MIXED_WAVE_FROM] as Array[int], "the first wave to start was wave 3")
+	assert_lte(most_alive, 6, "never more than six alive from a mixed wave")
+	assert_gte(most_alive, 5, "and wave 3 did put a crowd on the street (%d)" % most_alive)
+	assert_gte(archetypes.size(), MIXED_WAVE_ARCHETYPES, "a mixed wave: at least three archetypes (%s)" % str(archetypes.keys()))
+	assert_gt(int(metrics.windups), 5, "the crowd attacks all the same (%d wind-ups)" % int(metrics.windups))
+	_assert_hard_rows(summary.verdict, ["R1", "R3", "R10"])
+	assert_lte(int(metrics.max_concurrent_attackers), int(Tuning.data.attacker_cap), "R1: never more than attacker_cap at once")
+	assert_eq(int(metrics.unwarned_hits), 0, "R3: every hit had its wind-up (%s)" % str(metrics.unwarned_detail))
 	assert_eq(int(metrics.stuck_events), 0, "R13: nobody stuck")
