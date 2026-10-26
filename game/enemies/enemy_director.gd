@@ -44,6 +44,8 @@ const _COST_SLACK_DEG := 0.000001
 const _HASH_BUCKETS := 4096
 
 var _rng := RandomNumberGenerator.new()
+## The player as of this tick (for _committed()).
+var _player: PlayerCharacter
 ## Only this script's own instances run the loop (see the class docs).
 var _runs: bool = false
 ## Sim seconds since the director entered the tree (slowed by slow-mo, not by hitstop).
@@ -74,13 +76,19 @@ var _slot_origin: Vector3 = Vector3.INF
 var _slot_ids: PackedInt64Array = PackedInt64Array()
 
 
+func _enter_tree() -> void:
+	_runs = get_script() == EnemyDirector
+	if not _runs:
+		return
+	if not CombatEvents.windup_started.is_connected(_on_windup_started):
+		CombatEvents.windup_started.connect(_on_windup_started)
+	if not CombatEvents.revived.is_connected(_on_revived):
+		CombatEvents.revived.connect(_on_revived)
+
+
 func _ready() -> void:
 	add_to_group(&"enemy_director")
-	_runs = get_script() == EnemyDirector
 	set_physics_process(_runs)
-	if _runs:
-		CombatEvents.windup_started.connect(_on_windup_started)
-		CombatEvents.revived.connect(_on_revived)
 
 
 func _exit_tree() -> void:
@@ -191,6 +199,7 @@ func _step(dt: float) -> void:
 	_scrub()
 	var members := _members()
 	var player := _find_player()
+	_player = player
 	_prune_holders()
 	_track_waiting(members)
 	var held := GameInput.menu_open or Tuning.data.ai_frozen
@@ -243,14 +252,14 @@ func _player_closed(player: PlayerCharacter) -> bool:
 			or player.state == CombatTypes.ActorState.GRABBED or _clock_s < _revive_until_s
 
 
-## True once the enemy's attack is running: its wind-up, strike or hold, or any move at all (a
-## jump kick may be flying under AIRBORNE). A token is not taken back from it (the token is what
-## keeps the count of attackers honest).
+## True once the enemy's attack is running: its wind-up, strike or hold, any move at all (a jump
+## kick may be flying under AIRBORNE), or the player in its grip. A token is not taken back from
+## it (the token is what keeps the count of attackers honest).
 func _committed(enemy: EnemyActor) -> bool:
 	match enemy.state:
 		CombatTypes.ActorState.WINDUP, CombatTypes.ActorState.ATTACK, CombatTypes.ActorState.GRABBING:
 			return true
-	return enemy.current_move != null
+	return enemy.current_move != null or (_player != null and _player.holder == enemy)
 
 
 ## Holders that are dead, gone, freed, no longer holding or reacting to something lose the token.

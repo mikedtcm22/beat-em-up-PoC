@@ -415,6 +415,25 @@ func test_a_holder_flying_a_move_keeps_its_token_until_the_move_is_gone() -> voi
 	assert_eq(_holders(), [next] as Array[EnemyActor], "airborne with no move is a reaction: the token goes")
 
 
+func test_a_holder_with_the_player_in_its_grip_keeps_its_token() -> void:
+	await _setup(1, 0.0)
+	_freeze_player()
+	var grabber := _stub(_at(AHEAD, 1.0), true)
+	grabber.releases_token = false
+	var next := _stub(_at(90.0, 3.0), true)
+	await _ticks(3)
+	assert_eq(_holders(), [grabber] as Array[EnemyActor])
+	_player.state = CombatTypes.ActorState.GRABBED
+	_player.holder = grabber
+	await _ticks(4)
+	assert_eq(_holders(), [grabber] as Array[EnemyActor], "the player is closed to everyone else, not to its holder")
+	_player.holder = null
+	_player.state = CombatTypes.ActorState.FREE
+	await _ticks(3)
+	assert_true(_holders().has(grabber))
+	assert_false(_holders().has(next), "and the cap still holds")
+
+
 # --- F1 and F4 hold the fight ---------------------------------------------------------------------
 
 
