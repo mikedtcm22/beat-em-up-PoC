@@ -319,8 +319,6 @@ func _release_steps(cam: FirstPersonCamera, do_release: Callable, ticks_before: 
 		if released_at < 0 and _player.state != CombatTypes.ActorState.GRABBED and i >= ticks_before:
 			released_at = i
 		var now := cam.view_transform()
-		if OS.get_environment("GRAB_DEBUG") != "":
-			gut.p("tick %d state %s lens %s pitch %.2f step_m %.4f step_deg %.2f weight %.2f gp %.1f" % [i, CombatTypes.state_name(_player.state), now.origin, rad_to_deg(asin((-now.basis.z).y)), now.origin.distance_to(last.origin), rad_to_deg((-now.basis.z).angle_to(-last.basis.z)), _player.get_grabbed_view_weight(), _player.get_grabbed_view_pitch_deg()])
 		step_m = maxf(step_m, now.origin.distance_to(last.origin))
 		step_deg = maxf(step_deg, rad_to_deg((-now.basis.z).angle_to(-last.basis.z)))
 		last = now

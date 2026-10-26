@@ -499,3 +499,186 @@ func test_an_armored_holder_keeps_holding_through_a_light_hit() -> void:
 	await _ticks(3)
 	assert_eq(_player.state, CombatTypes.ActorState.GRABBED, "armor absorbed it: still held")
 	assert_true(grabber.is_holding(_player))
+
+
+# --- The rear warning ----------------------------------------------------------------------------
+
+
+const HUD_SCENE := preload("res://game/ui/hud.tscn")
+const StubEnemyScene := preload("res://tests/fixtures/stub_enemy.tscn")
+
+
+## The rear warning's corner `side` is lit now.
+func _lit(hud: GameHud, side: StringName) -> bool:
+	return hud.rear_warning.corner_state(side).active
+
+
+## `rel` (x right, y ahead of the player, who looks along -Z) at `bearing_deg` (positive to the
+## left, +-180 behind) and `distance_m`.
+func _rel_at(bearing_deg: float, distance_m: float) -> Vector3:
+	var b := deg_to_rad(bearing_deg)
+	return Vector3(-sin(b) * distance_m, 0.0, -cos(b) * distance_m)
+
+
+func _grabber_at(bearing_deg: float, distance_m: float) -> EnemyActor:
+	var grabber := GRABBER_SCENE.instantiate() as EnemyActor
+	grabber.name = "Grabber1"
+	grabber.position = _rel_at(bearing_deg, distance_m)
+	var to_player := _player.global_position - grabber.position
+	grabber.rotation.y = atan2(-to_player.x, -to_player.z)
+	_scene.add_child(grabber)
+	return grabber
+
+
+func test_the_warning_lights_for_the_grab_from_behind_and_ends_on_the_grab() -> void:
+	var hud := HUD_SCENE.instantiate() as GameHud
+	_scene.add_child(hud)
+	var grabber := _grabber_at(135.0, 1.1)
+	await _ticks(4)
+	grabber.force_attack()
+	await _ticks(3)
+	assert_true(_lit(hud, &"left"), "behind-left: the top-left corner burns for the grab's wind-up")
+	assert_false(_lit(hud, &"right"))
+	assert_true(await _until_held(), "the grab connects (the grabber faces him)")
+	await _ticks(2)
+	assert_false(_lit(hud, &"left"), "it ends on the grab (grabbed)")
+	# The follow-up winds up on a player already in its hands: no warning for it.
+	for i in 30:
+		await _ticks(1)
+		assert_false(_lit(hud, &"left") or _lit(hud, &"right"), "no warning through the hold (tick %d)" % i)
+	assert_true(grabber.state == CombatTypes.ActorState.WINDUP, "the headbutt is still winding up")
+	assert_lt(grabber.warning_reach_m(grabber.current_move), 0.0, "its warning reach is one nothing is within")
+
+
+func test_the_warning_ends_on_a_whiffed_grab() -> void:
+	var hud := HUD_SCENE.instantiate() as GameHud
+	_scene.add_child(hud)
+	var grabber := _grabber_at(-135.0, 1.1)
+	await _ticks(4)
+	grabber.force_attack()
+	await _ticks(3)
+	assert_true(_lit(hud, &"right"), "behind-right: the top-right corner")
+	assert_false(_lit(hud, &"left"))
+	# He steps out of it: the grab whiffs and the warning goes with it.
+	assert_true(await _until_grab_frame(grabber, 27))
+	_player.input.scripted_move = Vector2(0.0, 1.0)
+	_player.input.push_press(&"DODGE", 2)
+	assert_true(await _until(func() -> bool: return not _whiffs.is_empty(), 40), "the grab whiffed")
+	await _ticks(2)
+	assert_false(_lit(hud, &"right"), "the warning ended with the whiff")
+
+
+func test_the_warning_for_the_grab_carries_the_heavy_burst() -> void:
+	var hud := HUD_SCENE.instantiate() as GameHud
+	_scene.add_child(hud)
+	var grabber := _grabber_at(100.0, 1.0)
+	await _ticks(4)
+	grabber.force_attack()
+	await _ticks(3)
+	assert_true(hud.rear_warning.corner_state(&"left").heavy, "a grabber is heavy: the larger burst")
+
+
+# --- The director ----------------------------------------------------------------------------------
+
+
+func test_the_director_gives_nobody_a_token_while_the_player_is_held() -> void:
+	_director.queue_free()
+	var director := EnemyDirector.new()
+	director.rng_seed = 5
+	_scene.add_child(director)
+	Tuning.data.ai_frozen = false
+	var grabber := _grabber(1.05)
+	grabber.force_attack()
+	var others: Array[EnemyActor] = []
+	for i in 2:
+		var other := StubEnemyScene.instantiate() as EnemyActor
+		other.name = "Waiter%d" % i
+		other.position = Vector3(-4.0 + 8.0 * i, 0.0, -4.0)
+		_scene.add_child(other)
+		others.append(other)
+	await _ticks(2)
+	assert_true(await _until_held(), "held")
+	for other: EnemyActor in others:
+		other.set(&"want_token", true)
+	await _ticks(40)
+	assert_eq(_player.state, CombatTypes.ActorState.GRABBED, "still held")
+	for other: EnemyActor in others:
+		assert_false(other.has_token, "%s got no token while he is held" % other.name)
+	assert_false(director.debug_token_holders().any(func(e: EnemyActor) -> bool: return e != grabber), "only the holder holds one (or none)")
+	# Free again: the director gives out tokens once its grace is over.
+	for i in Tuning.data.grab_break_presses:
+		_player.input.push_press(&"P", 1)
+	assert_true(await _until(func() -> bool: return _player.state == CombatTypes.ActorState.FREE, 60))
+	assert_true(await _until(func() -> bool: return others.any(func(e: EnemyActor) -> bool: return e.has_token), 300), "and then it gives tokens again")
+
+
+# --- In the rooms ---------------------------------------------------------------------------------
+
+
+const CROWD_ROOM := preload("res://game/level/crowd_room.tscn")
+const TRAINING_ROOM := preload("res://game/level/test_room.tscn")
+
+
+## The room has its own player: the harness's goes.
+func _drop_harness_player() -> void:
+	_player.remove_from_group(&"player")
+	_player.remove_from_group(&"actor")
+	_player.queue_free()
+	await _ticks(2)
+
+
+func test_the_real_ai_walks_up_and_grabs_the_player_in_the_crowd_room() -> void:
+	await _drop_harness_player()
+	var room := CROWD_ROOM.instantiate()
+	room.set(&"with_presentation", false)
+	room.set(&"waves_enabled_on_start", false)
+	add_child_autofree(room)
+	Tuning.data.ai_frozen = false
+	await _ticks(8)
+	var player: PlayerCharacter = room.get(&"player")
+	player.input.scripted = true
+	var spawner: EncounterSpawner = room.get(&"spawner")
+	spawner.scene_override[&"grab_test"] = GRABBER_SCENE
+	var at := player.global_position + player.global_basis * Vector3(0.0, 0.0, -5.0)
+	var enemy := spawner.spawn_enemy(&"grab_test", at, player.rotation.y + PI)
+	assert_not_null(enemy, "spawned through the spawner")
+	var held := func() -> bool: return player.state == CombatTypes.ActorState.GRABBED
+	var got := false
+	for i in 1500:
+		await get_tree().physics_frame
+		if held.call():
+			got = true
+			break
+	assert_true(got, "the director gave it a token, it closed in, wound up and grabbed him")
+	assert_eq(player.holder, enemy)
+	for i in Tuning.data.grab_break_presses:
+		player.input.push_press(&"P", 1)
+	assert_true(await _until(func() -> bool: return player.state == CombatTypes.ActorState.FREE, 60), "mashed free in the crowd room")
+	assert_eq(player.health, 100.0)
+
+
+func test_the_grabber_grabs_and_is_mashed_out_of_in_the_training_room() -> void:
+	await _drop_harness_player()
+	var room := TRAINING_ROOM.instantiate()
+	room.set(&"with_presentation", false)
+	Tuning.data.ai_frozen = true
+	add_child_autofree(room)
+	await _ticks(4)
+	var player: PlayerCharacter = room.get(&"player")
+	player.input.scripted = true
+	for dummy: TrainingDummy in room.get(&"dummies"):
+		dummy.sparring = false
+		dummy.global_position = Vector3(40.0, 0.0, 40.0)
+	var grabber := GRABBER_SCENE.instantiate() as EnemyActor
+	grabber.name = "Grabber1"
+	grabber.position = player.global_position + player.global_basis * Vector3(0.0, 0.0, -1.1)
+	grabber.rotation.y = player.rotation.y + PI
+	room.add_child(grabber)
+	await _ticks(4)
+	grabber.force_attack()
+	var got := await _until(func() -> bool: return player.state == CombatTypes.ActorState.GRABBED, 120)
+	assert_true(got, "grabbed in the training room (no navmesh)")
+	for i in Tuning.data.grab_break_presses:
+		player.input.push_press(&"K", 1)
+	assert_true(await _until(func() -> bool: return player.state == CombatTypes.ActorState.FREE, 60), "mashed free")
+	assert_eq(player.health, 100.0)

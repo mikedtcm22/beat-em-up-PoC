@@ -137,7 +137,9 @@ func test_the_reach_is_inside_the_connect_range_the_hold_uses() -> void:
 
 
 func test_a_follow_ups_reach_is_where_the_player_is_pinned() -> void:
-	var default_radius := CombatActor.new().body_radius
+	var probe := CombatActor.new()
+	var default_radius := probe.body_radius
+	probe.free()
 	for pair: Array in [[&"bruiser_headbutt", BRUISER_RADIUS], [&"boss_slam", BOSS_RADIUS]]:
 		var pinned := Tuning.data.grabbed_pin_distance_m + maxf(float(pair[1]) - default_radius, 0.0)
 		assert_almost_eq(_move(pair[0]).reach_m, pinned, 0.0001, "%s: reach_m is the pin distance %.2f" % [pair[0], pinned])
