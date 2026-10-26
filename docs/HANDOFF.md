@@ -4,6 +4,27 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-26 00:00 CDT: the slice gate passed (869/869); phase 2 running
+5-hour 20% (resets 02:50 CDT), weekly 37% (resets Mon 2026-10-26 05:00 CDT). The slice review (64 agents, 6.7M tokens, about 2.4 h) cost about 25 window points across the 21:50 reset, and 5 weekly points.
+- **The slice gate passed.** Its verdicts, evidence and the **feel defaults it locked** are in [M3-slice-gate.md](milestones/M3-slice-gate.md); the records are in `docs/reviews/M3/slice-*.json`.
+  - The hard metrics pass everywhere.
+  - **The rear warning passes clause by clause** (the done-when's second half) with dummies and real Punks.
+  - Three crowd findings survived and were fixed (`m3/fix-slice-punk-crowd-pressure`, merged):
+    - backing-off Punks running the wrong way;
+    - too little posturing (`punk_attack_cooldown_s` 1.4 → 5.0);
+    - the lens wall, mostly fixed.
+  - **869/869 tests.**
+  - **Call:** the off-screen band at 46-55° keeps the spec's 55°, for the digest.
+- **Running since 23:59 CDT:** workflow `wf_de359dcf-2ee`, `workflow-build.js` with `docs/reviews/M3/args-P2.json`. Four Sonnet builders at once:
+  - **P1-engage:** token holders wait on the ring for their go instead of at the player's nose; the lone on-axis Punk; the Punk's red jacket recoloured (SPEC §10 reserves red);
+  - **P2-grab:** enemy grabs on the player, the mash, the held view, magnetism in a crowd;
+  - **P2-kicker;**
+  - **P2-thug.**
+
+  P1-engage and P2-grab both edit `enemy_actor.gd`, in separate functions; the lead merges them.
+  - **If cut off:** rerun the same args. Within this session, use `resumeFromRunId: "wf_de359dcf-2ee"`.
+  - **Then:** merge P1-engage, P2-grab, P2-kicker and P2-thug, regenerate the preset and moves, run the suite, and look at the grab, kicker and thug sheets. Then phase 3 (P3-bruiser, P3-boss; `args-P3.json`).
+
 ### 2026-10-25 21:30 CDT: P1-int merged (866/866); the slice gate's review running
 5-hour 71% (resets 21:50 CDT), weekly 32% (resets Mon 2026-10-26 05:00 CDT). P1-int (one Sonnet builder, 760k tokens, 92 minutes) cost about 9 window points.
 - **P1-int merged** (`4470830`, with `356fccf` for CLAUDE.md's main scene and cadence). **866/866 tests pass in 99 s with no SCRIPT ERROR or ERROR.** The preset has 424 values.
