@@ -4,6 +4,33 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-26 02:15 CDT: phase 3 merged (1110/1110): every archetype is in; P4-int running
+5-hour about 60% (resets 02:50 CDT), weekly about 44% (resets Mon 2026-10-26 05:00 CDT). Phase 3 (two Sonnet builders, 1.35M tokens, 51 minutes) cost about 10 window points.
+- **Merged:** P3-bruiser and P3-boss, with no conflicts. The lead fixed the boss bar to read "BOSS" (`encounter_spawner.gd`). The preset was regenerated (439 values) and the moves too (41). **1110/1110 tests pass in 125 s with no SCRIPT ERROR or ERROR** (`89b5509`).
+  - **The Bruiser:** purple, 2.05 m, 80 HP.
+    - Armor: jabs are absorbed with a grey spark, a low clank and ARMOR in the log. A hook or uppercut staggers it. The haymaker knocks it down and opens its armor for 2 s from its get-up.
+    - It's grabbable only while staggered or open, and held 0.3 m further out. A parry still staggers it.
+    - The overhead smash (15), plus the grab and headbutt. Cooldown 4.0.
+  - **The boss:** charcoal and orange, 2.3 m, 300 HP, never grabbable.
+    - Armor: light hits are absorbed; heavy hits stagger except during its charge and pound wind-ups (only the grab's wind-up is cut). Finishers knock it down.
+    - The charge (4 m, reach 5.3 so it warns from behind), the pound (unblockable, jumpable) and the grab slam.
+    - Phase 2 at 50%: it turns 1.8x faster and calls 2 Punks one at a time. A parry gives a 36-frame recoil.
+    - The autopilot kills it in about 38 s (the L5 lens should judge).
+- **The lead's look** (`.worktrees/m3-p3-boss/captures/final_charge/charge_windup.png`, local): the charge's crouch, the run-in and the hit read, and the boss bar shows at bottom centre.
+- **Running since 02:13 CDT:** workflow `wf_1aa8a3fc-8e7`, `workflow-build.js` with `docs/reviews/M3/args-P4-int.json`:
+  - `test_m3_done_when.gd` and `check_m3_log.py`;
+  - the mixed-six, waves-to-the-boss, every-archetype warning and perf acts;
+  - crowd-bot housekeeping and an LB pick-up cue;
+  - a perf fix if R15 fails.
+
+  **If cut off:** rerun the same args. Within this session, use `resumeFromRunId: "wf_1aa8a3fc-8e7"`.
+- **Also running:** a Sonnet subagent folding every `M3-calls/*.md` into `docs/milestones/M3-judgement-calls.md` (that file only; the lead commits it).
+- **Then:**
+  1. Merge P4-int.
+  2. The final review round: `workflow-review.js` with round "final", base the merge commit, and lenses L1 warning, L2 crowd readability, L3 archetype tells and identity, L4 code and layers, L5 fairness and pacing (the boss's difficulty, R12 with Thugs), L6 performance (Part B §B4). It needs about 40-50 window points, so launch it after a reset.
+  3. Merge the fixes.
+  4. The docs (README M3 status and departures, ARCHITECTURE title and ownership), the export, `gh release create m3-playtest-1 --prerelease`, the PR, and the Slack DM.
+
 ### 2026-10-26 01:20 CDT: phase 2 merged (1007/1007); phase 3 running
 5-hour 45% (resets 02:50 CDT), weekly 41% (resets Mon 2026-10-26 05:00 CDT). Phase 2 (four Sonnet builders, 2.5M tokens, 79 minutes) cost about 24 window points.
 - **Merged into `m3/enemy-ai`**, with no conflicts (`enemy_actor.gd` auto-merged). The preset was regenerated (431 values) and the moves too (38). **1007/1007 tests pass in 113 s with no SCRIPT ERROR or ERROR** (`9e3b9e9`).
