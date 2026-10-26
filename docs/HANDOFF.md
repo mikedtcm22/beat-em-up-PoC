@@ -4,6 +4,31 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-26 03:15 CDT: P4-int merged (1130/1130): the done-when proved; the final review running
+5-hour 2% (resets 07:50 CDT), weekly 44% (resets Mon 2026-10-26 05:00 CDT).
+- **P4-int merged** (`7a015cc`). **1130/1130 tests pass in 108 s with no SCRIPT ERROR or ERROR.** The preset has 443 values.
+  - **`tests/test_m3_done_when.gd`:** a real Punk, Kicker, Bruiser, Thug and boss at 135° left, 135° right and 180° light left only, right only and both, from the wind-up's first frame to the contact. There are negative controls, and a 1500-frame mixed-six soak asserts the hard metrics.
+  - **`tools/check_m3_log.py`:** ok on all 17 runs.
+  - **The five evidence acts** are in `tests/bot/acts/crowd_acts.gd`, with sheets (local) in `.worktrees/m3-p4-int/captures/m3_p4/`.
+  - **The LB pick-up cue** (`game/ui/pickup_cue.gd`).
+  - **A static named-AnimationLibrary cache** in HumanoidRig: the spawn hitch's median went from 28.8 ms to 25 ms (limit 33), and the frame p95 is 13.1 ms.
+  - **Measured:** R10 100% over 112 checks, and the L2 rubric is yes except Q6. R8 p95 is 53-65% while the autopilot punches what's in front of it (a soft miss).
+- **Flagged for the final review:**
+  - the non-KO knockdown view ("belly slab", M2's default) is frequent in a mixed crowd;
+  - the boss is too easy for the autopilot, since P P P P keeps it staggered or down;
+  - the LB cue is small.
+- **The curated judgement-call log** is `docs/milestones/M3-judgement-calls.md` (`51e38cb`): 63 entries, 18 of them possible spec departures for Game-boy's ruling. The Slack digest comes from it.
+- **Running since 03:13 CDT:** workflow `wf_488b3250-97f`, `docs/reviews/M3/workflow-review.js` with `args-review-final.json` (round "final", base `7a015cc`, six Opus lenses: warn, crowd, tells, code, fair, perf), then Sonnet skeptics, the partition and Sonnet fixers on `m3/fix-final-<pkg>`.
+  - **If cut off:** within this session, use `resumeFromRunId: "wf_488b3250-97f"`. In a new session, rerun the same args, and pass `packages` from the journal if `m3/fix-final-*` branches exist.
+- **Also running:** a Sonnet agent drafting README's M3 status, controls and departures, and ARCHITECTURE's title and Ownership (lead reviews, then commits).
+- **Then:**
+  1. Merge the fixes, regenerate, run the tests.
+  2. Save `docs/reviews/M3/final-*.json`.
+  3. The export: `godot --headless --export-release "macOS" "builds/macos/Beat-em-Up PoC.zip"`. Smoke it headless and windowed.
+  4. `gh release create m3-playtest-1 --prerelease --target m3/enemy-ai`.
+  5. The M3 PR (never merge it).
+  6. The Slack DM to Michael (`U0AQMKKBL93`) with the release link and the digest.
+
 ### 2026-10-26 02:15 CDT: phase 3 merged (1110/1110): every archetype is in; P4-int running
 5-hour about 60% (resets 02:50 CDT), weekly about 44% (resets Mon 2026-10-26 05:00 CDT). Phase 3 (two Sonnet builders, 1.35M tokens, 51 minutes) cost about 10 window points.
 - **Merged:** P3-bruiser and P3-boss, with no conflicts. The lead fixed the boss bar to read "BOSS" (`encounter_spawner.gd`). The preset was regenerated (439 values) and the moves too (41). **1110/1110 tests pass in 125 s with no SCRIPT ERROR or ERROR** (`89b5509`).
