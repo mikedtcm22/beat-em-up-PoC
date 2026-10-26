@@ -632,6 +632,11 @@ extends Resource
 @export_range(0.0, 10.0, 0.1) var director_revive_grace_s: float = 1.5
 ## A token held longer than this (s) is taken back.
 @export_range(0.5, 20.0, 0.5) var director_token_timeout_s: float = 4.0
+## No wind-up starts for this long (s) after a hit lands on the player (a blocked one does not
+## count), and none while he is in hitstun or staggering. director_min_windup_gap_s spaces the
+## starts, but a flinch lasts about as long as that gap, so a stack of hits could flinch-lock him;
+## this leaves him time to act between two bursts (a hit already winding up still lands).
+@export_range(0.0, 3.0, 0.05) var director_hit_grace_s: float = 0.5
 
 @export_subgroup("Waves")
 ## Waves spawn on their own in the crowd street (off: only F4 spawns).
