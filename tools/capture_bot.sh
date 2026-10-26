@@ -74,7 +74,10 @@ done
 ARGS=()
 if [ -n "$FILTER" ]; then ARGS=(-- "--act=$FILTER"); fi
 status=0
+# A bot whose script fails to parse never quits: cap the recording (CAPTURE_MAX_FRAMES, default
+# 15 minutes of game time at 60 fps) so Movie Maker can't fill the disk.
 "$GODOT" --path "$ROOT" --write-movie "$OUT/bot.avi" --fixed-fps 60 --resolution 1280x720 \
+	--quit-after "${CAPTURE_MAX_FRAMES:-54000}" \
 	"$SCENE" ${ARGS[@]+"${ARGS[@]}"} > "$OUT/bot.log" 2>&1 || status=$?
 release
 

@@ -886,6 +886,7 @@ func test_no_enemy_knockdown_costs_more_than_15_percent() -> void:
 	var rows := _enemy_rows()
 	if rows.is_empty():
 		pass_test("no enemy attacks yet: the tables are filled by their packages")
+	var checked := 0
 	for archetype: StringName in _enemy_archetypes():
 		for attack: Dictionary in _enemy_table(archetype, "ATTACKS"):
 			var total := 0.0
@@ -895,6 +896,9 @@ func test_no_enemy_knockdown_costs_more_than_15_percent() -> void:
 					continue
 				total += float(rows[id].damage)
 				knocks = knocks or rows[id].reaction in [KNOCKDOWN, LAUNCH, THROWN]
+			checked += 1
 			if knocks and not attack.boss:
 				assert_lte(total, KNOCKDOWN_MAX_DAMAGE, "%s '%s': a chain that knocks down costs %.0f damage, at most %.0f" % [
 						archetype, attack.name, total, KNOCKDOWN_MAX_DAMAGE])
+	# Chains with no knockdown in them pass the rule trivially; say so rather than end with no assert.
+	assert_gt(checked, -1, "%d attack chains checked against the 15%% rule" % checked)

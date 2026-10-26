@@ -232,6 +232,8 @@ func test_the_punks_health_follows_its_tunable_keeping_the_share_left() -> void:
 
 func test_it_walks_in_postures_and_keeps_to_the_ring_on_a_flat_floor() -> void:
 	_make_player()
+	# The stub director grants nothing unless told (the real one would hand out tokens).
+	_make_director()
 	var punk := _punk(Vector3(0.0, 0.0, -14.0))
 	punk.enter_from(punk.position, Vector3(0.0, 0.0, -10.0))
 	var seen: Array[int] = []
@@ -303,6 +305,8 @@ func test_a_posturing_punk_taunts_open_handed_and_is_never_a_threat() -> void:
 func test_strafing_plays_the_side_step_and_facing_stays_on_the_player() -> void:
 	Tuning.data.posture_taunt_chance = 0.0
 	_make_player()
+	# The stub director grants nothing unless told (the real one would hand out tokens).
+	_make_director()
 	var punk := _punk(Vector3(0.0, 0.0, -3.2))
 	var saw_side_step := false
 	var worst_facing := 0.0
@@ -514,6 +518,8 @@ func test_recover_gives_the_token_back_and_it_backs_off_to_its_slot() -> void:
 func test_the_cooldown_keeps_it_from_asking_for_a_token_until_it_is_over() -> void:
 	Tuning.data.punk_attack_cooldown_s = 1.0
 	_make_player()
+	# The stub director grants nothing unless told (the real one would hand out tokens).
+	_make_director()
 	var punk := _punk(Vector3(0.0, 0.0, -3.0))
 	await _ticks(3)
 	punk.force_attack(0)
