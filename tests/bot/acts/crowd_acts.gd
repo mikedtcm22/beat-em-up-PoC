@@ -156,54 +156,86 @@ static func _warn_every_archetype(bot: Node) -> void:
 
 
 ## Six enemies and a player who knocks them down (the autopilot, not held back; a Punk walks in
-## whenever one falls), god mode. Frame times (wall clock between two `process_frame`s) are logged
-## in windows of PERF_WINDOW_FRAMES:
+## whenever one falls), god mode. From before the first spawn to the end, wall-clock frame times
+## (between two `process_frame`s) are logged:
 ##   PERF f<frame> window <n>: <frames> frames, mean <ms>, p95 <ms>, worst <ms>, process <ms>, physics <ms>, <n> bodies, <n> alive
-## then the whole run, and the worst frame within PERF_AFTER_S of an enemy going down (a ragdoll
-## build). The probe's R15 (frame p95, the worst frame after a spawn) is the same run's. Wall-clock
-## times, so it needs a window that is not recording:
+## in windows of PERF_WINDOW_FRAMES, the whole run, one line per enemy that appeared
+## (`PERF spawn <name>: ...`: its own frame and the worst frame within PERF_AFTER_S of it) and the
+## worst frame within PERF_AFTER_S of a body going down (a ragdoll build). The probe's R15 is the same
+## run's (frame p95 with its own cost taken out, the worst frame after a spawn). Wall-clock times, so
+## it needs a window that is not recording:
 ##   godot --path . res://tests/bot/crowd_bot.tscn -- --act="Perf, six with ragdolls"
+## "process" and "physics" are the engine's own monitors for the last frame and include the probe's
+## and the bot's work (the lens sampling takes 7 ms every tenth tick); the frame lines are the
+## measure.
 static func _perf(bot: Node) -> void:
 	bot.god()
+	var run := {running = true, ms = PackedFloat32Array(), stamp = PackedFloat64Array(), spawns = [], downs = PackedFloat64Array()}
+	_sample_frames(bot, run)  # a coroutine of its own: it runs beside the act until `running` is cleared
 	await _mixed_six(bot)
 	bot.keep_alive(6)
 	bot.pilot.enabled = true
+	await bot._ticks(PERF_TICKS)
+	run.running = false
+	await bot.get_tree().process_frame
+	await bot.get_tree().process_frame
+	_report_perf(bot, run)
+
+
+## Collect the frame times and the moments enemies appear and go down into `run`, one entry per
+## process frame, until `run.running` is false.
+static func _sample_frames(bot: Node, run: Dictionary) -> void:
 	var tree: SceneTree = bot.get_tree()
-	var all_ms := PackedFloat32Array()
-	var all_stamp := PackedFloat64Array()
-	var marks := PackedFloat64Array()
+	var known: Dictionary = {}
 	var was_down: Dictionary = {}
 	var last := Time.get_ticks_usec()
-	for frame in PERF_TICKS:
+	while run.running:
 		await tree.process_frame
 		var now := Time.get_ticks_usec()
-		all_ms.append(float(now - last) / 1000.0)
-		all_stamp.append(float(now) / 1000000.0)
+		run.ms.append(float(now - last) / 1000.0)
+		run.stamp.append(float(now) / 1000000.0)
 		last = now
 		for node: Node in tree.get_nodes_in_group(&"ai_enemy"):
 			var enemy := node as EnemyActor
 			if enemy == null:
 				continue
 			var id := enemy.get_instance_id()
+			if not known.has(id):
+				known[id] = true
+				run.spawns.append([float(now) / 1000000.0, String(enemy.name)])
 			var down := enemy.state in DOWN_STATES or enemy.health <= 0.0
 			if down and not was_down.get(id, false):
-				marks.append(float(now) / 1000000.0)
+				run.downs.append(float(now) / 1000000.0)
 			was_down[id] = down
-		if all_ms.size() % PERF_WINDOW_FRAMES == 0:
-			_log_window(bot, "window %d" % (all_ms.size() / PERF_WINDOW_FRAMES), all_ms.slice(all_ms.size() - PERF_WINDOW_FRAMES))
-	_log_window(bot, "whole run", all_ms)
+		if run.ms.size() % PERF_WINDOW_FRAMES == 0:
+			_log_window(bot, "window %d" % (run.ms.size() / PERF_WINDOW_FRAMES), run.ms.slice(run.ms.size() - PERF_WINDOW_FRAMES))
+
+
+## The worst frame (ms) of `run` within PERF_AFTER_S after `stamp` (s).
+static func _worst_after(run: Dictionary, stamp: float) -> float:
 	var worst := 0.0
-	var first := -1.0
-	for mark in marks:
-		var here := 0.0
-		for i in all_stamp.size():
-			if all_stamp[i] >= mark and all_stamp[i] <= mark + PERF_AFTER_S:
-				here = maxf(here, all_ms[i])
-		worst = maxf(worst, here)
-		if first < 0.0:
-			first = here
-	bot.log_line("PERF %d bodies went down: worst frame within %.1f s of one %.1f ms, of the first %.1f ms" % [
-			marks.size(), PERF_AFTER_S, worst, maxf(first, 0.0)])
+	for i in run.stamp.size():
+		if run.stamp[i] >= stamp and run.stamp[i] <= stamp + PERF_AFTER_S:
+			worst = maxf(worst, run.ms[i])
+	return worst
+
+
+static func _report_perf(bot: Node, run: Dictionary) -> void:
+	_log_window(bot, "whole run", run.ms)
+	var worst_spawn := 0.0
+	for entry: Array in run.spawns:
+		var worst := _worst_after(run, entry[0])
+		worst_spawn = maxf(worst_spawn, worst)
+		bot.log_line("PERF spawn %s: worst frame within %.1f s %.1f ms" % [entry[1], PERF_AFTER_S, worst])
+	var worst_down := 0.0
+	var first_down := -1.0
+	for stamp in run.downs:
+		var worst := _worst_after(run, stamp)
+		worst_down = maxf(worst_down, worst)
+		if first_down < 0.0:
+			first_down = worst
+	bot.log_line("PERF %d spawns, worst frame after one %.1f ms; %d bodies went down, worst frame within %.1f s of one %.1f ms, of the first %.1f ms" % [
+			run.spawns.size(), worst_spawn, run.downs.size(), PERF_AFTER_S, worst_down, maxf(first_down, 0.0)])
 
 
 ## Log the frame times `ms` of one window (or the run): mean, p95 and worst, with the engine's own

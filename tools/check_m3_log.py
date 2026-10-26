@@ -7,7 +7,9 @@ Reads the log `tools/capture_bot.sh` writes beside a recording (or the output of
 `godot --path . res://tests/bot/crowd_bot.tscn -- --act=...` run) and checks:
 
   1. every `WARN-CHECK` line says `ok` (the warning oracle's verdict on each wind-up: the HUD's
-     corners against the rule of SPEC section 8);
+     corners against the rule of SPEC section 8). A wind-up that starts after its act's
+     `READABILITY` block (the bot runs on a moment before the next act) is nobody's to judge: the
+     probe is not measuring, and its line is skipped;
   2. every wind-up from beyond the view's 55 degrees and within range was warned within 1 frame:
      each `WARN-CHECK` line whose corner is left, right or both has `lat=0` or `lat=1`, and the
      HUD's own `W+` line for that side (both sides for "both") is in the log at the wind-up's
@@ -40,6 +42,8 @@ WARN_CHECK = re.compile(
 )
 WIDGET_ON = re.compile(r"^W\+ f(?P<frame>\d+) side=(?P<side>left|right)\b")
 WINDUP_START = re.compile(r"^WU\+ f(?P<frame>\d+) (?P<who>\S+) (?P<move>\S+)")
+WINDUP_END = re.compile(r"^WU- f(?P<frame>\d+) (?P<who>\S+) interrupted=(?P<interrupted>\S+)")
+READABILITY = re.compile(r"^READABILITY ")
 TOKEN = re.compile(r"^TOK(?P<sign>[+-]) f(?P<frame>\d+) (?P<who>\S+)")
 ACT_HEADER = re.compile(r"^=== (?P<act>.*?)\s+\(f(?P<frame>\d+)\)\s*$")
 HARD_FAIL = re.compile(r"^\s+(R\d+)\b.*FAIL \(hard\)")
@@ -75,6 +79,14 @@ def read_lines(path):
     return out
 
 
+def lived_one_tick(windups, windup_ends, frame):
+    """True when the wind-up that began at `frame` was over within one frame (its WU- line)."""
+    for _, start, who, _ in windups:
+        if start == frame:
+            return any(0 <= end - start <= 1 for end in windup_ends.get(who, []))
+    return False
+
+
 def check_log(path, cap):
     """Run every check on one log. Returns (problems, notes, summary dict)."""
     lines = read_lines(path)
@@ -85,8 +97,11 @@ def check_log(path, cap):
     most_holders = 0
     most_at = ""
     checks = []
+    outside = 0  # WARN-CHECK lines of wind-ups that began while no act was being measured
+    measuring = True
     widget_on = defaultdict(set)  # frame -> sides lit by a W+ line at that frame
     windups = []
+    windup_ends = defaultdict(list)  # attacker -> frames of its WU- lines
     hard_fails = []
     errors = []
 
@@ -95,10 +110,17 @@ def check_log(path, cap):
         if header:
             act = header.group("act")
             holders = set()
+            measuring = True
+            continue
+        if READABILITY.match(line):
+            measuring = False
             continue
         match = WARN_CHECK.match(line)
         if match:
-            checks.append((number, match))
+            if measuring:
+                checks.append((number, match))
+            else:
+                outside += 1
             continue
         match = WIDGET_ON.match(line)
         if match:
@@ -107,6 +129,10 @@ def check_log(path, cap):
         match = WINDUP_START.match(line)
         if match:
             windups.append((number, int(match.group("frame")), match.group("who"), match.group("move")))
+            continue
+        match = WINDUP_END.match(line)
+        if match:
+            windup_ends[match.group("who")].append(int(match.group("frame")))
             continue
         match = TOKEN.match(line)
         if match:
@@ -146,7 +172,9 @@ def check_log(path, cap):
         warned += 1
         latency = match.group("lat")
         if latency in (None, "-"):
-            if latency == "-":
+            # The oracle does not demand a corner of a wind-up that lived one tick or less (a hit
+            # cut it off at once); any longer one that never lit is a failure.
+            if latency == "-" and not lived_one_tick(windups, windup_ends, frame):
                 problems.append("%s: the corner never lit (lat=-)" % where)
         elif int(latency) > 1:
             problems.append("%s: lit %s frames after the wind-up (over 1)" % (where, latency))
@@ -156,6 +184,9 @@ def check_log(path, cap):
         end = match.group("end")
         if end not in (None, "-") and int(end) > 1:
             problems.append("%s: dropped %s frames after the rule ended it (over 1)" % (where, end))
+
+    if outside:
+        notes.append("%d WARN-CHECK line(s) of wind-ups that began after their act's READABILITY block were skipped" % outside)
 
     # A wind-up the oracle never judged (not a failure by itself: the oracle skips one that lived
     # a single tick, and an act's last wind-up can be cut by the act's end).
