@@ -150,15 +150,15 @@ static func _pound(g: Dictionary[StringName, Vector3]) -> PlaceholderPoses.MoveP
 		&"RightFoot": Vector3(-24.0, 0.0, -8.0),
 	})
 	var strike := PlaceholderPoses.merge(g, {
-		&"Spine": Vector3(-32.0, 0.0, 0.0),
-		&"Chest": Vector3(-26.0, 0.0, 0.0),
-		&"UpperChest": Vector3(-14.0, 0.0, 0.0),
-		&"Neck": Vector3(28.0, 0.0, 0.0),
-		&"Head": Vector3(18.0, 0.0, 0.0),
-		&"LeftUpperArm": Vector3(34.0, -8.0, -14.0),
-		&"LeftLowerArm": Vector3(14.0, 0.0, 0.0),
-		&"RightUpperArm": Vector3(34.0, 8.0, 14.0),
-		&"RightLowerArm": Vector3(14.0, 0.0, 0.0),
+		&"Spine": Vector3(-5.0, 0.0, 0.0),
+		&"Chest": Vector3(-4.0, 0.0, 0.0),
+		&"UpperChest": Vector3(-3.0, 0.0, 0.0),
+		&"Neck": Vector3(6.0, 0.0, 0.0),
+		&"Head": Vector3(4.0, 0.0, 0.0),
+		&"LeftUpperArm": Vector3(18.0, -8.0, -12.0),
+		&"LeftLowerArm": Vector3(16.0, 0.0, 0.0),
+		&"RightUpperArm": Vector3(18.0, 8.0, 12.0),
+		&"RightLowerArm": Vector3(16.0, 0.0, 0.0),
 		&"LeftUpperLeg": Vector3(74.0, 0.0, -12.0),
 		&"LeftLowerLeg": Vector3(-104.0, 0.0, 0.0),
 		&"LeftFoot": Vector3(30.0, 0.0, 6.0),
@@ -167,16 +167,24 @@ static func _pound(g: Dictionary[StringName, Vector3]) -> PlaceholderPoses.MoveP
 		&"RightFoot": Vector3(34.0, 0.0, -6.0),
 	})
 	var strike_end := PlaceholderPoses.merge(strike, {
-		&"Spine": Vector3(-34.0, 0.0, 0.0),
-		&"Chest": Vector3(-30.0, 0.0, 0.0),
-		&"Neck": Vector3(30.0, 0.0, 0.0),
+		&"Spine": Vector3(-7.0, 0.0, 0.0),
+		&"Chest": Vector3(-5.0, 0.0, 0.0),
+		&"Neck": Vector3(8.0, 0.0, 0.0),
+		&"LeftUpperArm": Vector3(24.0, -8.0, -12.0),
+		&"LeftLowerArm": Vector3(8.0, 0.0, 0.0),
+		&"RightUpperArm": Vector3(24.0, 8.0, 12.0),
+		&"RightLowerArm": Vector3(8.0, 0.0, 0.0),
 	})
 	var m := PlaceholderPoses._mp(g, windup, strike)
 	m.strike_end = strike_end
 	m.follow = PlaceholderPoses.merge(PlaceholderPoses.crouch(g), {
-		&"Spine": Vector3(-30.0, 0.0, 0.0),
-		&"Chest": Vector3(-14.0, 0.0, 0.0),
-		&"Neck": Vector3(24.0, 0.0, 0.0),
+		&"Spine": Vector3(-12.0, 0.0, 0.0),
+		&"Chest": Vector3(-6.0, 0.0, 0.0),
+		&"Neck": Vector3(10.0, 0.0, 0.0),
+		&"LeftUpperArm": Vector3(10.0, -8.0, -64.0),
+		&"LeftLowerArm": Vector3(30.0, 0.0, 0.0),
+		&"RightUpperArm": Vector3(10.0, 8.0, 64.0),
+		&"RightLowerArm": Vector3(30.0, 0.0, 0.0),
 	})
 	m.follow_at = 0.3
 	return PlaceholderEnemyPoses.held(m, PlaceholderEnemyPoses.WINDUP_AT, PlaceholderEnemyPoses.WINDUP_HOLD_AT,
