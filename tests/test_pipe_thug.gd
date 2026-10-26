@@ -317,6 +317,84 @@ func test_a_knockdown_drops_the_pipe_to_the_floor_as_a_pickup() -> void:
 	assert_eq(pipe.durability, Tuning.data.weapon_durability, "with its own full durability")
 
 
+## How far (m) a lying pipe may creep between two looks a few seconds apart, and how fast (m/s and
+## rad/s) it may still move when it is at rest.
+const REST_CREEP_M := 0.03
+const REST_SPEED_MPS := 0.02
+const REST_SPIN_RPS := 0.05
+## How long (ticks) the pipe is given to come to rest after a drop or a throw: five seconds.
+const REST_TICKS := 300
+
+
+## The pipe lies where it is and does not move: it is within `radius_m` of `from`, at rest, and the
+## same spot a few seconds on.
+func _assert_at_rest(pipe: Weapon, from: Vector3, radius_m: float, label: String) -> void:
+	await _ticks(REST_TICKS)
+	var spot := pipe.global_position
+	var reach := pipe.global_position.distance_to(from)
+	gut.p("%s: the pipe lies %.2f m from the player after 5 s (speed %.3f m/s, spin %.3f rad/s)" % [
+			label, reach, pipe.linear_velocity.length(), pipe.angular_velocity.length()])
+	assert_lte(reach, radius_m, "%s: within %.1f m of the player 5 s on (%.2f)" % [label, radius_m, reach])
+	assert_lt(pipe.linear_velocity.length(), REST_SPEED_MPS, "%s: it is not sliding" % label)
+	assert_lt(pipe.angular_velocity.length(), REST_SPIN_RPS, "%s: it is not rolling" % label)
+	assert_lt(pipe.global_position.y, REST_HEIGHT_M, "%s: it lies on the floor" % label)
+	assert_true(pipe.sleeping, "%s: and the physics has put it to sleep" % label)
+	await _ticks(REST_TICKS)
+	assert_lt(pipe.global_position.distance_to(spot), REST_CREEP_M, "%s: and it stays where it lies" % label)
+
+
+## Final review, tells-02: the dropped pipe rolled on (no rolling resistance, the default damping
+## of 0.1) and left LB's reach 2.8 s after it landed, with the player standing still; 18 s on it
+## was still rolling 4.5 m away. P2-thug call 1's measure, 0.64-1.03 m, was taken at 90 ticks.
+func test_a_dropped_pipe_comes_to_rest_within_pickup_range_and_stays() -> void:
+	# The player knocks a Thug down from the distances his punches reach (P2-thug call 1: 1.0-1.4 m).
+	for ahead_m: float in [1.0, 1.2, 1.4]:
+		var player := _make_player()
+		var thug := _thug(Vector3(0.0, 0.0, -ahead_m))
+		await _ticks(3)
+		var pipe := thug._pipe
+		thug.receive_hit(_hit(player, thug))
+		await _assert_at_rest(pipe, player.global_position + Vector3.UP * 0.3, Tuning.data.pickup_range, "dropped from %.1f m" % ahead_m)
+		assert_true(pipe.is_available(), "and it is still a pick-up")
+		pipe.free()
+		thug.free()
+		player.free()
+		await _ticks(2)
+
+
+func test_a_pipe_dropped_from_other_hits_comes_to_rest_too() -> void:
+	# Hit from the side and from behind the Thug, so the pipe is pushed and spun other ways.
+	for direction: Vector3 in [Vector3.RIGHT, Vector3.BACK, Vector3(1.0, 0.0, 1.0).normalized()]:
+		var player := _make_player()
+		var thug := _thug(Vector3(0.0, 0.0, -1.2))
+		await _ticks(3)
+		var pipe := thug._pipe
+		var hit := _hit(player, thug)
+		hit.direction = direction
+		thug.receive_hit(hit)
+		await _assert_at_rest(pipe, player.global_position + Vector3.UP * 0.3, 3.0, "dropped along %s" % direction)
+		pipe.free()
+		thug.free()
+		player.free()
+		await _ticks(2)
+
+
+func test_a_thrown_pipe_comes_to_rest_too() -> void:
+	# The throw_from() path ends in the same _set_ground_physics(): the pipe spun at 14 rad/s as it
+	# flew and rolled on after it landed.
+	_make_player()
+	_player.look_yaw = 0.0
+	var thug := _thug(Vector3(8.0, 0.0, -8.0), true, Vector3(8.0, 0.0, 0.0))
+	await _ticks(3)
+	var pipe := thug._pipe
+	var throw: MoveData = load("res://game/combat/moves/weapon_throw.tres")
+	pipe.throw_from(_player, (Vector3.FORWARD + Vector3.UP * 0.08).normalized() * Tuning.data.weapon_throw_speed, throw)
+	thug._pipe = null
+	assert_false(pipe.is_available(), "it flies")
+	await _assert_at_rest(pipe, Vector3.ZERO, 30.0, "thrown")
+	assert_true(pipe.is_available(), "and lies there, a pick-up")
+
+
 func test_a_flinch_or_a_stagger_does_not_drop_it() -> void:
 	_make_player()
 	var thug := _thug(Vector3(0.0, 0.0, -1.2))
