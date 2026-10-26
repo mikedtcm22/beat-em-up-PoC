@@ -362,9 +362,13 @@ func _ensure_director_once() -> void:
 	if _director_checked:
 		return
 	_director_checked = true
-	var host := get_parent()
-	if host and EnemyDirector.find(get_tree()) == null:
-		Callable(EnemyDirector, &"ensure").call_deferred(host)
+	if EnemyDirector.find(get_tree()) == null:
+		_add_director.call_deferred()
+
+
+func _add_director() -> void:
+	if is_inside_tree() and get_parent() and EnemyDirector.find(get_tree()) == null:
+		EnemyDirector.ensure(get_parent())
 
 
 func _tick_dead() -> void:

@@ -49,7 +49,7 @@ func test_the_three_moves_exist_and_have_recipes() -> void:
 	assert_eq(_ids().size(), 3, "jab, cross and shove")
 	for id: StringName in _ids():
 		assert_not_null(_move(id), "%s loads" % id)
-		assert_true(HumanoidRig.new().has_anim(id), "%s has a recipe" % id)
+		assert_true(PlaceholderEnemyPoses.has_recipe(id), "%s has a recipe" % id)
 		assert_true(EnemyPosesPunk.MOVE_IDS.has(id), "%s is the Punk's pose file's" % id)
 
 

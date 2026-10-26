@@ -317,6 +317,29 @@ func test_strafing_plays_the_side_step_and_facing_stays_on_the_player() -> void:
 	assert_lt(worst_facing, 25.0, "it keeps facing the player while it circles (worst %.0f deg)" % worst_facing)
 
 
+## A director that takes the stall report (the real one may add the same method; the enemy
+## calls it duck-typed).
+class ReportingDirector:
+	extends "res://tests/fixtures/stub_director.gd"
+	var stalled: Array[Node] = []
+
+	func report_stalled(enemy: Node) -> void:
+		stalled.append(enemy)
+
+
+func test_a_stalled_punk_reports_it_and_tries_a_detour() -> void:
+	# A wall across its way to the ring (no navmesh: it steers straight into it).
+	_box(Vector3(0.0, 1.5, -4.0), Vector3(30.0, 3.0, 1.0))
+	_make_player()
+	_director = ReportingDirector.new()
+	_scene.add_child(_director)
+	var punk := _punk(Vector3(0.0, 0.0, -8.0))
+	var detoured := await _until(func() -> bool: return punk._detour_frames > 0, 400)
+	assert_true(detoured, "after enemy_stuck_s without progress it tries another spot")
+	assert_eq(_director.stalled.size() >= 1, true, "and tells the director")
+	assert_lt(punk.global_position.z, -4.0, "it is held on its side of the wall")
+
+
 # --- The attack: commit, step in, wind-up, strike, recover -------------------------------------
 
 
