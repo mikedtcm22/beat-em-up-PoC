@@ -854,9 +854,14 @@ func _apply_velocity(desired: Vector3, aim_agent: bool = true) -> void:
 		_nav.velocity = Vector3(desired.x, 0.0, desired.z)
 		var safe := Vector3(_safe_velocity.x, 0.0, _safe_velocity.z)
 		if desired.length_squared() > 0.0001:
-			# The answer is for last tick's wish. Net for a stale one: never walk against this tick's
-			# wish (stand for the tick) and never faster than it asks.
-			safe = Vector3.ZERO if safe.dot(desired) < 0.0 else safe.limit_length(desired.length())
+			# The answer is for last tick's wish. A net for a stale or squeezed one: never against this
+			# tick's wish (only its sideways part, which slides a body out of a squeeze where a zero
+			# would hold it there), and never faster than the wish asks.
+			var wish := desired.normalized()
+			var along := safe.dot(wish)
+			if along < 0.0:
+				safe -= wish * along
+			safe = safe.limit_length(desired.length())
 		sim_velocity.x = safe.x
 		sim_velocity.z = safe.z
 	else:

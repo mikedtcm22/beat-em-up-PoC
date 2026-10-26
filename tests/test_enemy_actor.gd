@@ -614,6 +614,42 @@ func test_a_punk_that_walked_in_and_attacked_backs_off_the_right_way_at_its_walk
 	assert_gte(settled, 0, "it reaches its slot and postures")
 
 
+func test_a_latched_answer_against_the_wish_keeps_only_its_sideways_part_and_never_outruns_the_wish() -> void:
+	# The avoidance's answer is last tick's: after a squeeze or a stale course it can point the
+	# other way, or at 6 m/s. The body takes its sideways part (a zero would freeze a squeezed
+	# body at the player's nose) and nothing faster than the wish.
+	_make_player()
+	_make_director()
+	var punk := _punk(Vector3(0.0, 0.0, -4.0))
+	await _ticks(3)
+	var wish := Vector3(0.0, 0.0, -2.6)
+	punk.set(&"_safe_velocity", Vector3(3.0, 0.0, 4.0))
+	punk.call(&"_apply_velocity", wish)
+	assert_lte(punk.sim_velocity.z, 0.001, "never against the wish")
+	assert_almost_eq(Vector2(punk.sim_velocity.x, punk.sim_velocity.z).length(), 2.6, 0.01, "its sideways part, no faster than the wish")
+	assert_gt(punk.sim_velocity.x, 0.0, "the sideways part is kept")
+	punk.set(&"_safe_velocity", Vector3(0.0, 0.0, -6.0))
+	punk.call(&"_apply_velocity", wish)
+	assert_almost_eq(punk.sim_velocity.z, -2.6, 0.01, "an answer along the wish is cut to the wish's speed")
+	punk.set(&"_safe_velocity", Vector3(1.0, 0.0, -1.0))
+	punk.call(&"_apply_velocity", wish)
+	assert_almost_eq(punk.sim_velocity.z, -1.0, 0.01, "a slower answer along the wish stands (avoidance slowing it)")
+
+
+func test_a_stop_clears_the_avoidance_memory_of_the_walk() -> void:
+	_make_player()
+	_make_director()
+	var punk := _punk(Vector3(0.0, 0.0, -4.0))
+	await _ticks(3)
+	punk.set(&"_safe_velocity", Vector3(2.0, 0.0, 3.0))
+	var nav := punk.get(&"_nav") as NavigationAgent3D
+	nav.velocity = Vector3(2.0, 0.0, 3.0)
+	punk.call(&"_stop")
+	assert_eq(punk.get(&"_safe_velocity"), Vector3.ZERO, "the latched answer goes with the stop")
+	assert_eq(punk.sim_velocity.x, 0.0)
+	assert_eq(nav.velocity, Vector3.ZERO, "and the wish")
+
+
 func test_the_cooldown_keeps_it_from_asking_for_a_token_until_it_is_over() -> void:
 	Tuning.data.punk_attack_cooldown_s = 1.0
 	_make_player()
