@@ -8,10 +8,10 @@ extends EnemyActor
 ## be grabbed. Three attacks, picked by range (_choose_attack()):
 ##   the shoulder charge (boss_charge): a held crouch, then a 4 m dash over the move's active frames
 ##     (stopping at a wall) with an arc in front of the shoulder, 20, a knockdown; blockable. Thrown
-##     from beyond boss_charge_min_m.
+##     when the player is at least boss_charge_min_m away.
 ##   the ground pound (boss_pound): a rearing wind-up, then a ring round the boss at the feet, 15, a
-##     knockdown; unblockable, but a jump or a dodge gets out of it. Thrown when the player is
-##     close, and when others crowd him.
+##     knockdown; unblockable, but a jump or a dodge gets out of it. Thrown at any range, and always
+##     when others crowd the player.
 ##   the grab slam (boss_grab, then boss_slam; P2-grab's EnemyHold): a grab that connects by code,
 ##     then a slam that lifts the held player and throws him, 25; the player mashes free first.
 ## Every move's wind-up is the heavy floor of 30 frames or more, so the rear warning's larger burst
@@ -19,9 +19,10 @@ extends EnemyActor
 ##
 ## Phase 2: at health <= boss_phase2_at of its maximum, once, it emits
 ## CombatEvents.boss_phase_changed(self, 2), turns faster (its turn rate times boss_phase2_turn_mult)
-## and calls in boss_adds_count Street Punks, through the room's EncounterSpawner when there is one
-## (the nearest free spawn points, so they walk in from the doorways and alleys) and otherwise on
-## the navmesh boss_add_ring_m round it. A beckoning gesture marks it when it is free to make one.
+## and calls in boss_adds_count Street Punks, one every wave_spawn_interval_s (the first at once),
+## through the room's EncounterSpawner when there is one (the nearest free spawn points, so they
+## walk in from the doorways and alleys) and otherwise on the navmesh boss_add_ring_m round it. A
+## beckoning gesture marks it when it is free to make one.
 ##
 ## A parry (a perfect block) does not stagger it (_parry_staggers() is false: it would be parry-locked
 ## by a perfect block every time); it takes a short recoil instead, boss_parry_recoil_frames, so a
@@ -36,8 +37,13 @@ extends EnemyActor
 
 ## 1 until it enters phase 2.
 var phase: int = 1
-## The Street Punks it has called in (read by tests and the bots).
+## The Street Punks it has called in so far (read by tests and the bots).
 var adds: Array[EnemyActor] = []
+## The phase 2 call-in: how many Punks are still due, how many were called, and the sim frames until
+## the next one (_tick_adds()).
+var _adds_due: int = 0
+var _adds_called: int = 0
+var _adds_frames: int = 0
 
 
 func _init() -> void:
@@ -82,21 +88,24 @@ func _cooldown_tunable() -> StringName:
 # --- What it throws ---------------------------------------------------------------------------
 
 
-## By range, with the chances as weights: beyond boss_charge_min_m only the charge reaches; closer,
-## the pound or the grab, and with boss_crowd_count or more other enemies within boss_crowd_m of the
-## player (a crowd to catch in the ring, no room for a grab) only the pound.
+## By range, with the chances as weights: the charge only while the player is at least
+## boss_charge_min_m away (an enemy up in its face gets the pound or the grab; there is no run-up),
+## the pound and the grab at any range (it walks in for them), and with boss_crowd_count or more
+## other enemies within boss_crowd_m of the player (a crowd to catch in the ring, no room for a
+## grab) only the pound. With nothing weighted the base picks.
 func _choose_attack() -> EnemyAttack:
 	var player := _find_player()
 	if player == null or _attacks.size() < 3:
 		return super._choose_attack()
 	var tuning := Tuning.data
-	var far := _flat_dist(global_position, player.global_position) >= tuning.boss_charge_min_m
+	var run_up := _flat_dist(global_position, player.global_position) >= tuning.boss_charge_min_m
+	var crowded := _crowded_round(player)
 	var weights: Array[float] = [
-		tuning.boss_charge_chance if far else 0.0,
-		0.0 if far else tuning.boss_pound_chance,
-		0.0 if far or _crowded_round(player) else tuning.boss_grab_chance,
+		tuning.boss_charge_chance if run_up and not crowded else 0.0,
+		tuning.boss_pound_chance,
+		0.0 if crowded else tuning.boss_grab_chance,
 	]
-	if _crowded_round(player) and not far:
+	if crowded:
 		weights[1] = maxf(tuning.boss_pound_chance, 0.01)
 	var total := weights[0] + weights[1] + weights[2]
 	if total <= 0.0:
@@ -177,11 +186,13 @@ func react_to_block(hit: HitInfo) -> void:
 
 
 ## Polled every sim tick, so every way health can fall (a hit, an absorbed hit, a block's chip, a
-## cheat) is seen: at health <= boss_phase2_at of its maximum, once, while it is alive.
+## cheat) is seen: at health <= boss_phase2_at of its maximum, once, while it is alive. The Punks it
+## calls in come one at a time (_tick_adds()).
 func _tick_control() -> void:
 	super._tick_control()
 	if phase == 1 and health > 0.0 and health <= max_health * Tuning.data.boss_phase2_at:
 		_enter_phase2()
+	_tick_adds()
 
 
 func _enter_phase2() -> void:
@@ -190,57 +201,76 @@ func _enter_phase2() -> void:
 	# The beckoning gesture, when it is free and standing on the ring: "come on".
 	if state == CombatTypes.ActorState.FREE and ai_state == AiState.POSTURE and not has_token:
 		_start_taunt()
-	_call_in_adds()
+	_adds_due = maxi(Tuning.data.boss_adds_count, 0)
+	_adds_called = _adds_due
+	_adds_frames = 0
 
 
-## boss_adds_count Street Punks: the spawner's free spawn points nearest the boss, so they walk in
-## from the doorways and alleys and join the running wave; any it cannot place that way (no
-## spawner, or no free point) are put on the navmesh boss_add_ring_m round the boss.
-func _call_in_adds() -> void:
-	var count := Tuning.data.boss_adds_count
-	if count <= 0:
+## The Punks it called in arrive one every wave_spawn_interval_s, the first at once: a rig takes
+## about 10 ms to build, and two in one frame was a 40 ms hitch where the spawn limit is 33.
+func _tick_adds() -> void:
+	if _adds_due <= 0:
 		return
+	if health <= 0.0 or is_gone():
+		_adds_due = 0
+		return
+	if _adds_frames > 0:
+		_adds_frames -= 1
+		return
+	var made := _spawn_one_add(_adds_called - _adds_due)
+	if made != null:
+		adds.append(made)
+	_adds_due -= 1
+	_adds_frames = _frames(Tuning.data.wave_spawn_interval_s)
+
+
+## One Street Punk: the spawner's free spawn point nearest the boss (so it walks in from a doorway
+## or an alley and joins the running wave), or, with no spawner or no free point, on the navmesh
+## boss_add_ring_m round the boss. `index` is which of the call-in it is (it picks the direction on
+## the ring). Null when there is nowhere to put it.
+func _spawn_one_add(index: int) -> EnemyActor:
 	var spawner := get_tree().get_first_node_in_group(&"encounter_spawner") as EncounterSpawner
 	if spawner != null:
-		adds.append_array(spawner.spawn_adds(&"punk", count, global_position))
-	if adds.size() < count:
-		_spawn_adds_round(count - adds.size())
+		var made := spawner.spawn_adds(&"punk", 1, global_position)
+		if not made.is_empty():
+			return made[0]
+	return _spawn_add_on_ring(index)
 
 
-## `count` Punks on the ring round the boss, at the nearest navmesh points (the flat spot itself
-## with no navmesh) that have room, spread evenly round it and starting toward the player.
-func _spawn_adds_round(count: int) -> void:
+## A Punk on the ring round the boss, at the nearest navmesh point (the flat spot itself with no
+## navmesh) that has room: `index` of `_adds_called` directions spread evenly round it, the first
+## toward the player, and the next free one round from there when a wall or a crate is in the way.
+func _spawn_add_on_ring(index: int) -> EnemyActor:
 	var scene := EnemyCatalog.scene(&"punk")
 	var parent := get_parent() as Node3D
 	if scene == null or parent == null:
-		return
+		return null
 	var player := _find_player()
 	var start := _flat(player.global_position - global_position) if player else -get_forward()
 	if start.length_squared() < 0.0001:
 		start = -get_forward()
 	var space := get_world_3d().direct_space_state
 	var body := EnemyCatalog.body_size(&"punk")
-	var serials := {"Punk": _highest_serial("Punk")}
-	var placed := 0
-	# A few more directions than punks, so a blocked one (a wall, a crate) is skipped.
-	var steps := maxi(count * 3, 6)
+	var turns := maxi(_adds_called, 1)
+	# A few more directions than the call-in has punks, so a blocked one is skipped.
+	var steps := maxi(turns * 3, 6)
+	var first := float(index) * float(steps) / float(turns)
 	for i in steps:
-		if placed >= count:
-			break
-		var dir := start.normalized().rotated(Vector3.UP, TAU * float(i) / float(steps))
+		var dir := start.normalized().rotated(Vector3.UP, TAU * (first + float(i)) / float(steps))
 		var spot := _nav_snap(global_position + dir * Tuning.data.boss_add_ring_m)
 		if not SpawnRoomCheck.has_room(space, body.x, body.y, spot):
 			continue
+		var serials := {"Punk": _highest_serial("Punk")}
 		var punk := EncounterSpawner.make_enemy(scene, &"punk", serials)
 		if punk == null:
-			return
+			return null
 		punk.position = parent.to_local(spot)
 		var to_boss := global_position - spot
 		punk.rotation.y = atan2(-to_boss.x, -to_boss.z) - parent.global_rotation.y
 		parent.add_child(punk)
 		punk.enter_from(spot, spot)
-		adds.append(punk)
-		placed += 1
+		return punk
+	return null
 
 
 ## The nearest point on the navmesh to `spot` when there is one (and it has synced), else `spot` itself

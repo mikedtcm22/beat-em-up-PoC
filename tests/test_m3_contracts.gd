@@ -486,9 +486,9 @@ const TUNABLES := {
 		&"bruiser_speed_mult": [0.8, "Bruiser"],
 		&"boss_health": [300.0, "Boss"], &"boss_phase2_at": [0.5, "Boss"], &"boss_turn_rate": [2.5, "Boss"],
 		&"boss_phase2_turn_mult": [1.8, "Boss"], &"boss_adds_count": [2, "Boss"], &"boss_add_ring_m": [5.0, "Boss"],
-		&"boss_charge_min_m": [4.0, "Boss"], &"boss_charge_chance": [0.4, "Boss"],
+		&"boss_charge_min_m": [2.5, "Boss"], &"boss_charge_chance": [0.4, "Boss"],
 		&"boss_pound_chance": [0.3, "Boss"], &"boss_grab_chance": [0.3, "Boss"],
-		&"boss_attack_cooldown_s": [1.8, "Boss"], &"boss_speed_mult": [0.85, "Boss"],
+		&"boss_attack_cooldown_s": [4.0, "Boss"], &"boss_speed_mult": [0.85, "Boss"],
 		&"boss_crowd_m": [3.0, "Boss"], &"boss_crowd_count": [2, "Boss"], &"boss_parry_recoil_frames": [36, "Boss"],
 	},
 	"Rear warning": {

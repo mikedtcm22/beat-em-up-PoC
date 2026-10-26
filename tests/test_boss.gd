@@ -468,17 +468,20 @@ func test_a_real_parry_of_the_charge_opens_a_window() -> void:
 # --- The choice of attack, the warning --------------------------------------------------------
 
 
-func test_it_picks_by_range_the_charge_only_from_afar() -> void:
+func test_it_picks_by_range_the_charge_only_while_he_is_far_enough() -> void:
 	var boss := _boss(Tuning.data.boss_charge_min_m + 0.5)
 	await _ticks(2)
-	for i in 30:
-		assert_eq(boss._choose_attack().label, &"shoulder charge", "far: only the charge reaches")
+	var far: Dictionary = {}
+	for i in 90:
+		far[boss._choose_attack().label] = true
+	assert_true(far.has(&"shoulder charge") and far.has(&"ground pound") and far.has(&"grab and slam"),
+			"far enough: the three by their chances")
 	boss.global_position.z = -(Tuning.data.boss_charge_min_m - 0.5)
-	var seen: Dictionary = {}
-	for i in 60:
-		seen[boss._choose_attack().label] = true
-	assert_false(seen.has(&"shoulder charge"), "close: never the charge")
-	assert_true(seen.has(&"ground pound") and seen.has(&"grab and slam"), "close: the pound and the grab by their chances")
+	var near: Dictionary = {}
+	for i in 90:
+		near[boss._choose_attack().label] = true
+	assert_false(near.has(&"shoulder charge"), "up close: no run-up, never the charge")
+	assert_true(near.has(&"ground pound") and near.has(&"grab and slam"), "up close: the pound and the grab by their chances")
 
 
 func test_a_crowd_round_the_player_makes_it_pound() -> void:
@@ -495,13 +498,19 @@ func test_a_crowd_round_the_player_makes_it_pound() -> void:
 
 
 func test_the_chances_are_the_weights_and_zero_everywhere_falls_back() -> void:
-	var boss := _boss(2.5)
+	var boss := _boss(Tuning.data.boss_charge_min_m - 0.5)
 	await _ticks(2)
 	Tuning.data.boss_pound_chance = 0.0
 	for i in 40:
-		assert_eq(boss._choose_attack().label, &"grab and slam", "pound at 0: the grab")
+		assert_eq(boss._choose_attack().label, &"grab and slam", "pound at 0, no run-up: the grab")
 	Tuning.data.boss_grab_chance = 0.0
 	assert_not_null(boss._choose_attack(), "nothing weighted: the base's pick")
+	Tuning.data.boss_pound_chance = 0.3
+	Tuning.data.boss_grab_chance = 0.3
+	Tuning.data.boss_charge_chance = 0.0
+	boss.global_position.z = -(Tuning.data.boss_charge_min_m + 0.5)
+	for i in 40:
+		assert_ne(boss._choose_attack().label, &"shoulder charge", "charge at 0: never")
 
 
 func test_the_charges_warning_reaches_as_far_as_the_dash() -> void:
@@ -540,7 +549,8 @@ func test_phase_two_comes_at_half_health_exactly_once() -> void:
 	boss.health = 100.0
 	await _ticks(10)
 	boss.health = 40.0
-	await _ticks(10)
+	await _until(func() -> bool: return boss.adds.size() >= 2, 200)
+	await _ticks(90)
 	assert_signal_emit_count(CombatEvents, "boss_phase_changed", 1, "once")
 	assert_eq(boss.adds.size(), 2, "and called in only once")
 
@@ -582,7 +592,7 @@ func test_phase_two_puts_two_punks_on_the_ring_when_there_is_no_spawner() -> voi
 	var boss := _boss(3.0)
 	await _ticks(2)
 	boss.health = 150.0
-	await _ticks(3)
+	assert_true(await _until(func() -> bool: return boss.adds.size() >= Tuning.data.boss_adds_count, 200))
 	assert_eq(boss.adds.size(), Tuning.data.boss_adds_count, "boss_adds_count Punks")
 	var names := PackedStringArray()
 	for add: EnemyActor in boss.adds:
@@ -596,19 +606,45 @@ func test_phase_two_puts_two_punks_on_the_ring_when_there_is_no_spawner() -> voi
 	assert_eq(get_tree().get_nodes_in_group(&"ai_enemy").size(), 3, "the boss and its two")
 
 
+func test_the_punks_come_one_at_a_time_the_first_at_once() -> void:
+	# A rig takes about 10 ms to build: two in one frame was a 40 ms spawn hitch (the limit is 33).
+	var boss := _boss(3.0)
+	await _ticks(2)
+	boss.health = 150.0
+	await _ticks(2)
+	assert_eq(boss.adds.size(), 1, "the first at once")
+	var interval := EnemyActor._frames(Tuning.data.wave_spawn_interval_s)
+	await _ticks(interval - 6)
+	assert_eq(boss.adds.size(), 1, "the second waits wave_spawn_interval_s")
+	await _ticks(10)
+	assert_eq(boss.adds.size(), 2, "and comes")
+
+
+func test_a_boss_that_dies_calls_no_more_punks() -> void:
+	var boss := _boss(3.0)
+	await _ticks(2)
+	boss.health = 150.0
+	await _ticks(2)
+	assert_eq(boss.adds.size(), 1)
+	boss.health = 0.0
+	await _ticks(120)
+	assert_eq(boss.adds.size(), 1, "the call-in stops with the boss")
+
+
 func test_boss_adds_count_is_the_number_of_punks() -> void:
 	Tuning.data.boss_adds_count = 4
 	var boss := _boss(3.0)
 	await _ticks(2)
 	boss.health = 100.0
-	await _ticks(3)
+	assert_true(await _until(func() -> bool: return boss.adds.size() >= 4, 400))
+	await _ticks(60)
 	assert_eq(boss.adds.size(), 4)
 	var other := _boss(8.0)
 	other.name = "Boss2"
 	Tuning.data.boss_adds_count = 0
 	await _ticks(2)
 	other.health = 100.0
-	await _ticks(3)
+	await _ticks(60)
 	assert_eq(other.adds.size(), 0, "none at 0")
 	assert_eq(other.phase, 2, "the phase still changes")
 
@@ -626,7 +662,7 @@ func test_phase_two_calls_the_spawner_when_there_is_one() -> void:
 	boss.position = Vector3(-6.0, 0.0, -6.0)
 	await _ticks(2)
 	boss.health = 150.0
-	await _ticks(3)
+	assert_true(await _until(func() -> bool: return boss.adds.size() >= 2, 200))
 	assert_eq(boss.adds.size(), 2)
 	var spots: Array[Vector3] = []
 	for add: EnemyActor in boss.adds:
@@ -648,7 +684,7 @@ func test_the_spawner_falls_short_and_the_ring_makes_up_the_rest() -> void:
 	boss.position = Vector3(-6.0, 0.0, -6.0)
 	await _ticks(2)
 	boss.health = 150.0
-	await _ticks(3)
+	assert_true(await _until(func() -> bool: return boss.adds.size() >= 2, 200))
 	assert_eq(boss.adds.size(), 2, "two, one way or the other")
 	assert_true(boss.adds.any(func(a: EnemyActor) -> bool: return _flat_dist(a.global_position, only) < 0.2), "one at the spawn point")
 	assert_true(boss.adds.any(func(a: EnemyActor) -> bool:
@@ -766,6 +802,7 @@ func test_the_boss_wave_brings_the_boss_in_the_crowd_room_with_its_bar() -> void
 	boss.health = boss.max_health * 0.5
 	await _ticks(4)
 	assert_eq(boss.phase, 2)
+	assert_true(await _until(func() -> bool: return boss.adds.size() >= 2, 200))
 	assert_eq(boss.adds.size(), 2)
 	for add: EnemyActor in boss.adds:
 		assert_eq(add.ai_state, EnemyActor.AiState.ENTER, "walking in from a spawn point")

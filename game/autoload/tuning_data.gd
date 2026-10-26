@@ -765,13 +765,15 @@ extends Resource
 @export_range(1.0, 5.0, 0.1) var boss_phase2_turn_mult: float = 1.8
 @export_range(0, 6, 1) var boss_adds_count: int = 2
 @export_range(2.0, 12.0, 0.5) var boss_add_ring_m: float = 5.0
-## It charges when the player is further than this (m); the weights below pick between the
-## charge, the ground pound and the grab when more than one fits.
-@export_range(1.0, 12.0, 0.5) var boss_charge_min_m: float = 4.0
+## It charges only when the player is at least this far (m): up close it has no run-up and pounds
+## or grabs. The weights below pick between the charge, the ground pound and the grab when more
+## than one fits. (2.5 is the posture ring's near edge: the plan's 4.0 is the ring's far edge, where
+## nothing posturing stands, so the charge never came.)
+@export_range(1.0, 12.0, 0.5) var boss_charge_min_m: float = 2.5
 @export_range(0.0, 1.0, 0.05) var boss_charge_chance: float = 0.4
 @export_range(0.0, 1.0, 0.05) var boss_pound_chance: float = 0.3
 @export_range(0.0, 1.0, 0.05) var boss_grab_chance: float = 0.3
-@export_range(0.0, 10.0, 0.1) var boss_attack_cooldown_s: float = 1.8
+@export_range(0.0, 10.0, 0.1) var boss_attack_cooldown_s: float = 4.0
 @export_range(0.25, 3.0, 0.05) var boss_speed_mult: float = 0.85
 ## A crowd round the player (boss_crowd_count or more other enemies within boss_crowd_m of him)
 ## makes the boss pound rather than grab.
