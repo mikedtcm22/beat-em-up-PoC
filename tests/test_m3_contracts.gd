@@ -455,7 +455,7 @@ const TUNABLES := {
 		&"posture_strafe_jitter_s": [0.6, "Posture"], &"posture_pause_s": [0.5, "Posture"],
 		&"posture_taunt_chance": [0.12, "Posture"], &"approach_speed_mps": [2.6, "Posture"],
 		&"engage_speed_mps": [3.0, "Posture"], &"commit_pause_frames": [12, "Posture"],
-		&"engage_margin_m": [0.1, "Posture"], &"engage_timeout_s": [2.0, "Posture"],
+		&"engage_margin_m": [0.05, "Posture"], &"engage_timeout_s": [2.0, "Posture"],
 		&"recover_hold_s": [0.35, "Posture"], &"enemy_turn_rate": [6.0, "Posture"],
 		&"enemy_avoid_radius_m": [0.45, "Navigation"], &"enemy_avoid_horizon_s": [0.75, "Navigation"],
 		&"enemy_avoid_neighbor_m": [6.0, "Navigation"], &"enemy_waypoint_reach_m": [0.5, "Navigation"],

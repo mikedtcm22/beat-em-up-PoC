@@ -49,6 +49,13 @@ const LOCKED_STATES: Array[int] = [
 	CombatTypes.ActorState.HITSTUN, CombatTypes.ActorState.STAGGER, CombatTypes.ActorState.LAUNCHED,
 	CombatTypes.ActorState.DOWNED, CombatTypes.ActorState.GETUP,
 ]
+## An enemy in ENGAGE this close (m) is standing at strike range waiting for its go.
+const WAITING_RANGE_M := 1.3
+## The autopilot knobs an act may change (see autopilot.gd).
+const PILOT_KNOBS: Array[StringName] = [
+	&"defend", &"attack", &"approach", &"turn_deg_per_s", &"reaction_frames", &"punches_per_chain", &"kicks_per_chain",
+	&"use_kicks", &"punch_gap_frames", &"chain_rest_frames", &"engage_range_m", &"approach_stop_m", &"approach_max_m",
+]
 ## Two reactions with a free gap this short between them (frames) are one chain: the gap is not
 ## time enough to do anything.
 const LOCK_GAP_FRAMES := 12
@@ -61,7 +68,11 @@ var _warning: Node
 ## The readability probe and the autopilot (see above).
 var probe: Probe
 var pilot: Pilot
-var _pilot_turn_rate: float = 540.0
+## The autopilot's skill knobs as it was built, put back at every act's reset (an act may change them).
+var _pilot_defaults: Dictionary = {}
+## `-- --seed=<n>`: starts the enemies' numbering at 7n, which reseeds each one's own random
+## choices (they are seeded by name), so a measurement can be repeated over several fights.
+var _name_offset: int = 0
 ## keep_alive(): how many AI enemies to keep alive (0 = off), the frame of the last top-up
 ## spawn and how many spawns it has made.
 var _keep_alive: int = 0
@@ -79,6 +90,14 @@ var _lock_run_longest: int = 0
 var _lock_chain_start: int = -1
 var _lock_last_locked: int = -1
 var _lock_chain_longest: int = 0
+## The crowd's make-up, summed over the frames of a probed act (see _sample_lock()): enemies
+## alive, posturing, committed to an attack (ENGAGE, WINDUP, ATTACK) and backing off (RECOVER).
+var _crowd_alive: int = 0
+var _crowd_posture: int = 0
+var _crowd_attack: int = 0
+var _crowd_recover: int = 0
+var _crowd_waiting: int = 0
+var _crowd_lingering: int = 0
 
 
 func _room_scene() -> PackedScene:
@@ -111,6 +130,9 @@ func _physics_process(_delta: float) -> void:
 
 func _run() -> void:
 	await _ticks(8)  # the navigation map syncs 2 or 3 physics frames after the room's _ready()
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--seed="):
+			_name_offset = 7 * int(arg.trim_prefix("--seed="))
 	player = room.get(&"player")
 	player.input.scripted = true
 	spawner = room.get(&"spawner")
@@ -133,7 +155,8 @@ func _run() -> void:
 	pilot.enabled = false
 	pilot.enemy_group = &"ai_enemy"
 	pilot.attach(self, player)
-	_pilot_turn_rate = pilot.turn_deg_per_s
+	for knob: StringName in PILOT_KNOBS:
+		_pilot_defaults[knob] = pilot.get(knob)
 	for act in _collect_acts():
 		var title: String = act.title
 		if act_filter != "" and not _matches(title):
@@ -179,10 +202,8 @@ func _reset(cam: StringName) -> void:
 	clear_enemies()
 	pilot.enabled = false
 	pilot.stop()
-	pilot.defend = true
-	pilot.attack = true
-	pilot.approach = true
-	pilot.turn_deg_per_s = _pilot_turn_rate
+	for knob: StringName in _pilot_defaults:
+		pilot.set(knob, _pilot_defaults[knob])
 	set_waves(false)
 	freeze_ai(false)
 	_keep_alive = 0
@@ -191,7 +212,7 @@ func _reset(cam: StringName) -> void:
 	_tuned.clear()
 	Tuning.set_value(&"god_mode", false)
 	# Every act starts from the same names, seeds and slots, whichever acts ran before it.
-	spawner.set(&"_serials", {})
+	spawner.set(&"_serials", {"Punk": _name_offset})
 	_keep_alive_spawns = 0
 	var crowd := room as CrowdRoom
 	crowd.director.rng_seed = crowd.rng_seed
@@ -258,10 +279,22 @@ func keep_alive(count: int) -> void:
 	_keep_alive = count
 
 
-## The autopilot fights for `ticks` physics ticks.
-func fight(ticks: int) -> void:
+## The autopilot fights for `ticks` physics ticks. `held_back`: a slower, defensive player (one
+## jab-jab at a time, no kicks, a long rest, no walking up to anyone), so a crowd gets to
+## attack instead of falling to the first combo.
+func fight(ticks: int, held_back: bool = true) -> void:
+	if held_back:
+		hold_back()
 	pilot.enabled = true
 	await _ticks(ticks)
+
+
+## Set the autopilot to the held-back style (see fight()); it is not switched on.
+func hold_back() -> void:
+	pilot.approach = false
+	pilot.use_kicks = false
+	pilot.punches_per_chain = 2
+	pilot.chain_rest_frames = 60
 
 
 func _top_up() -> void:
@@ -326,6 +359,12 @@ func _start_measuring(title: String, tags: Dictionary) -> void:
 	_lock_chain_start = -1
 	_lock_last_locked = -1
 	_lock_chain_longest = 0
+	_crowd_alive = 0
+	_crowd_posture = 0
+	_crowd_attack = 0
+	_crowd_recover = 0
+	_crowd_waiting = 0
+	_crowd_lingering = 0
 	_lock_on = true
 
 
@@ -341,6 +380,10 @@ func _stop_measuring(title: String) -> void:
 			title, float(_lock_chain_longest) / Engine.physics_ticks_per_second,
 			float(_lock_run_longest) / Engine.physics_ticks_per_second,
 			100.0 * float(_lock_locked) / maxf(float(_lock_frames), 1.0), seconds])
+	var frames := maxf(float(_lock_frames), 1.0)
+	log_line("CROWD %s: on average %.1f alive, %.1f posturing, %.1f attacking (ENGAGE, WINDUP, ATTACK), %.1f backing off, %.2f waiting at strike range, %.2f still within it in RECOVER" % [
+			title, _crowd_alive / frames, _crowd_posture / frames, _crowd_attack / frames, _crowd_recover / frames,
+			_crowd_waiting / frames, _crowd_lingering / frames])
 	log_line("PILOT %s: %s" % [title, JSON.stringify(pilot.result())])
 
 
@@ -358,6 +401,24 @@ func _sample_lock() -> void:
 		_lock_chain_longest = maxi(_lock_chain_longest, frame - _lock_chain_start + 1)
 	else:
 		_lock_run = 0
+	for node: Node in get_tree().get_nodes_in_group(&"ai_enemy"):
+		var enemy := node as EnemyActor
+		if enemy == null or enemy.health <= 0.0:
+			continue
+		_crowd_alive += 1
+		match enemy.ai_state:
+			EnemyActor.AiState.POSTURE:
+				_crowd_posture += 1
+			EnemyActor.AiState.ENGAGE, EnemyActor.AiState.WINDUP, EnemyActor.AiState.ATTACK:
+				_crowd_attack += 1
+				if enemy.ai_state == EnemyActor.AiState.ENGAGE and Vector2(enemy.global_position.x - player.global_position.x,
+						enemy.global_position.z - player.global_position.z).length() <= WAITING_RANGE_M:
+					_crowd_waiting += 1
+			EnemyActor.AiState.RECOVER:
+				_crowd_recover += 1
+				if Vector2(enemy.global_position.x - player.global_position.x,
+						enemy.global_position.z - player.global_position.z).length() <= WAITING_RANGE_M:
+					_crowd_lingering += 1
 
 
 func _connect_logs() -> void:

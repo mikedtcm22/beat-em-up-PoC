@@ -181,6 +181,7 @@ static func _director(bot: Node, fly: bool) -> void:
 		hud.call(&"set_debug_draw_enabled", true)
 	await bot.surround(6)
 	bot.keep_alive(6)
+	bot.hold_back()
 	bot.pilot.enabled = true
 	if fly:
 		await RoomActs._fly_path(bot, Vector3(-10.0, 9.0, 12.0), Vector3(10.0, 9.0, 12.0), Vector3(0.0, 0.0, -1.0), 900)

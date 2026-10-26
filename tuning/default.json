@@ -265,7 +265,7 @@
 		"approach_speed_mps": 2.6,
 		"engage_speed_mps": 3.0,
 		"commit_pause_frames": 12,
-		"engage_margin_m": 0.1,
+		"engage_margin_m": 0.05,
 		"engage_timeout_s": 2.0,
 		"recover_hold_s": 0.35,
 		"enemy_turn_rate": 6.0,
