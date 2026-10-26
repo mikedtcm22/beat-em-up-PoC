@@ -79,7 +79,7 @@ static func _smash(g: Dictionary[StringName, Vector3]) -> PlaceholderPoses.MoveP
 		&"RightFoot": Vector3(22.0, 0.0, -5.0),
 	}
 	var shrug := {&"LeftShoulder": Vector3(0.0, 0.0, -28.0), &"RightShoulder": Vector3(0.0, 0.0, 28.0)}
-	var windup := _with(g, [_torso(10.0, 8.0, 4.0, -6.0, -8.0), set_legs, shrug, _arms(Vector3(140.0, -10.0, -22.0), 8.0)])
+	var windup := _with(g, [_torso(10.0, 8.0, 4.0, -6.0, -8.0), set_legs, shrug, _arms(Vector3(140.0, 32.0, -22.0), 8.0)])
 	var lunge := {
 		PlaceholderPoses.HIPS_NUDGE: Vector3(0.0, 0.0, -0.18),
 		&"LeftUpperLeg": Vector3(40.0, 0.0, -6.0),
