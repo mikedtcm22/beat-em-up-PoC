@@ -4,6 +4,23 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-26 08:30 CDT: Milestone 3 done; the release, the PR and Game-boy's DM are out
+- **M3 is complete to SPEC §12, and waiting on Game-boy's play-through and sign-off.** Never merge PR #3 without that.
+  - **Playable build:** https://github.com/mikedtcm22/beat-em-up-PoC/releases/tag/m3-playtest-1 (pre-release, `Beat-em-Up.PoC.zip`, universal macOS, ad-hoc signed, from `fd36854`). It was smoke-tested headless and windowed.
+  - **The PR:** https://github.com/mikedtcm22/beat-em-up-PoC/pull/3 (`m3/enemy-ai` into `main`).
+  - **1198/1198 tests pass in 143 s with no SCRIPT ERROR or ERROR.**
+- **Since the last entry:**
+  - An independent verifier confirmed the final review's high fixes hold (`docs/reviews/M3/final-verify.md`); the boss stun-lock was only partial.
+  - **F-boss-poise** fixed it: after it gets up (or after two reactions in 8 s), heavy hits and non-haymaker finishers are absorbed for 4 s or until its next attack. Time in reactions went from 48% to 21%, and it lands 4.6 hits a fight; the autopilot still wins 12 of 12. It steps back before a too-close charge or pound. Its cooldown is 1.5 s.
+  - **The lead:** an absorbed finisher starts no slow-mo and waits out no impact frame (with a test).
+  - README, the calls log and ARCHITECTURE were updated.
+- **Game-boy was DMed on Slack** with the link and the digest (from `docs/milestones/M3-judgement-calls.md`).
+- **Waiting on Game-boy:**
+  - play the release and sign off, then merge PR #3;
+  - rule on README's 19 "Where M3 departs from the spec" bullets;
+  - judge the boss's difficulty (`boss_health` 300 by the spec), the attacks in turns, the 55° warning angle, and the frequent non-KO knockdown view.
+- **Next after sign-off:** merge PR #3, then plan Milestone 4 (SPEC §12: the art pipeline proof). The `.worktrees/m3-*` worktrees can be pruned once the PR merges; every branch is pushed.
+
 ### 2026-10-26 06:15 CDT: the final review's fixes merged (1177/1177); verification, docs and the release next
 5-hour 73% (resets 07:50 CDT); **weekly reset to 3%** (resets Mon 2026-11-02 05:00 CDT). The final review (177 agents, 18M tokens, about 3 h) cost about 70 window points across the 02:50 reset.
 - **The final review** (`wf_488b3250-97f`; records in `docs/reviews/M3/final-*.json`) ran six Opus lenses. 26 findings, 20 survived the skeptics, in four fix packages, all merged (`f12e607`). **1177/1177 tests pass in 134 s with no SCRIPT ERROR or ERROR.** The preset has 450 values.
@@ -1241,7 +1258,7 @@ USAGE RULES:
 - The watcher checks every 30 minutes below 70%, every 15 up to 85% and every 5 above. It tells you to halt and hand off at 90%; the handoff's last step is the scheduled resume task (docs/HANDOFF.md, "Resume after a limit").
 
 Next steps (Milestone 3; details are in docs/HANDOFF.md, newest entry first):
-- M2 is signed off and merged (PR #2). M3 runs on branch m3/enemy-ai. Its plan is docs/milestones/M3-plan.md (Part A amendments bind; Part B is the checkable done-when; Part C the base plan). Builds run through docs/reviews/M3/workflow-build.js with args in docs/reviews/M3/args-<phase>.json, resumable from branch state: rerun the same args after a cut-off.
+- M3 is done and waiting on my play-through: PR https://github.com/mikedtcm22/beat-em-up-PoC/pull/3, build https://github.com/mikedtcm22/beat-em-up-PoC/releases/tag/m3-playtest-1. Never merge it without my sign-off; if I ask for changes, make them on m3/enemy-ai, re-export and update the release. M2 is signed off and merged (PR #2). M3 ran on branch m3/enemy-ai. Its plan is docs/milestones/M3-plan.md (Part A amendments bind; Part B is the checkable done-when; Part C the base plan). Builds run through docs/reviews/M3/workflow-build.js with args in docs/reviews/M3/args-<phase>.json, resumable from branch state: rerun the same args after a cut-off.
 - I asked (2026-10-25) for M3 to run to completion without my input. When it's done to spec, DM me on Slack (Arachne Finance, Michael, U0AQMKKBL93) with (1) a link to a playable build (a GitHub Release with a zipped macOS export; the export preset and templates are set up) and (2) a digest of key judgement calls, each with at least one alternative not taken and why (docs/milestones/M3-judgement-calls.md). If something blocks you on me (an authorization, a login, a decision), DM me on Slack at once and carry on with what isn't blocked.
 - I turned ultracode on (2026-10-24) and asked for multi-agent workflows: use Workflow scripts for substantive work (Opus plans and reviews, Sonnet codes).
 - Don't put fine grey-block look or feel questions to me; take the default and log it.
