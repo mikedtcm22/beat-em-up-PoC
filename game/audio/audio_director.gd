@@ -30,6 +30,9 @@ extends Node
 ##   and a whoosh at the attacker, so the player hears where an attack is coming from. A
 ##   wind-up knocked out of (`windup_ended` interrupted) cuts both: the effort would talk
 ##   over the pain grunt that follows.
+## - **Breaking free of a grab** (`grab_escaped`): a whoosh and a block clack at the holder's chest
+##   (the grip knocked off and the holder shoved away) and the holder's grunt, `grab_break_db`
+##   louder: the player's reward for the mash.
 ## - **Music:** a placeholder loop while `Tuning.music_enabled` (off by default).
 ##
 ## Every one-shot takes a random variant of its pool, never the pool's last one, with its
@@ -154,6 +157,7 @@ func _ready() -> void:
 	CombatEvents.attack_whiffed.connect(_on_attack_whiffed)
 	CombatEvents.windup_started.connect(_on_windup_started)
 	CombatEvents.windup_ended.connect(_on_windup_ended)
+	CombatEvents.grab_escaped.connect(_on_grab_escaped)
 	_follow_player()
 	_apply_mix()
 
@@ -286,6 +290,20 @@ func _on_windup_ended(attacker: Node3D, interrupted: bool) -> void:
 			_windup_of[i] = 0
 			if interrupted and _voices[i].playing:
 				_voices[i].stop()
+
+
+## A held player mashed free of an enemy's grab: the grip tears off with a whoosh and a clack at
+## the holder's chest, and the holder grunts as it is shoved away (existing pools, played
+## `grab_break_db` louder).
+func _on_grab_escaped(_victim: Node3D, holder: Node3D) -> void:
+	if holder == null or not is_instance_valid(holder):
+		return
+	var tuning := Tuning.data
+	var actor := holder as CombatActor
+	var at := actor.get_chest_position() if actor and actor.rig else holder.global_position
+	play(&"whoosh", at, tuning.whoosh_db + tuning.grab_break_db)
+	play(&"block_clack", at, tuning.block_clack_db + tuning.grab_break_db)
+	_grunt(holder)
 
 
 # --- Helpers -----------------------------------------------------------------------------

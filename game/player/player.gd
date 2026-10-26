@@ -606,8 +606,8 @@ func _control_holding() -> void:
 ## no press waits for the release. A holder that stopped holding (hit, knocked down, killed or
 ## gone) lets go of him: CombatActor's pin releases a gone one, this checks the rest.
 func _control_grabbed() -> void:
-	parser.clear_buffer()
 	if not _holder_holds():
+		parser.clear_buffer()
 		release_from_grab(Vector3.ZERO, false)
 		return
 	_match_lift_pose()

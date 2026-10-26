@@ -131,6 +131,22 @@ func _mash(n: int, gap_ticks: int = 2) -> void:
 		await _ticks(gap_ticks)
 
 
+## A hit on `victim` from `attacker`.
+func _hit(attacker: CombatActor, victim: CombatActor, damage: float = 6.0,
+		tier: CombatTypes.HitTier = CombatTypes.HitTier.LIGHT,
+		reaction: CombatTypes.Reaction = CombatTypes.Reaction.FLINCH) -> HitInfo:
+	var hit := HitInfo.new()
+	hit.attacker = attacker
+	hit.victim = victim
+	hit.damage = damage
+	hit.tier = tier
+	hit.reaction = reaction
+	hit.knockback = Vector3(0.0, 0.0, 1.5)
+	hit.direction = Vector3.FORWARD
+	hit.contact_point = victim.global_position + Vector3.UP
+	return hit
+
+
 # --- The connect ------------------------------------------------------------------------------
 
 
@@ -165,3 +181,321 @@ func test_unbroken_the_headbutt_lands_for_15_and_knocks_him_down() -> void:
 	await _ticks(2)
 	assert_true(_player.state in [CombatTypes.ActorState.LAUNCHED, CombatTypes.ActorState.DOWNED], "knocked down")
 	assert_null(_player.holder, "let go first")
+
+
+func test_a_whiffed_grab_is_announced_and_recovers() -> void:
+	# Out of range: it reaches and finds nothing. No hitbox to whiff, so it says so by hand.
+	var grabber := _grabber(2.2)
+	await _ticks(4)
+	grabber.force_attack()
+	await _until(func() -> bool: return not _whiffs.is_empty(), 80)
+	assert_eq(_whiffs.size(), 1, "attack_whiffed was emitted once")
+	assert_eq(_whiffs[0].id, &"bruiser_grab")
+	assert_ne(_player.state, CombatTypes.ActorState.GRABBED, "nobody held")
+	assert_true(await _until(func() -> bool: return grabber.current_move == null, 120), "the move runs out")
+	assert_null(grabber._hold.victim)
+
+
+func test_a_grab_out_of_its_facing_whiffs() -> void:
+	var grabber := _grabber(1.05, false, func(e: EnemyActor) -> void: e.rotation.y = PI * 0.5)
+	await _ticks(4)
+	Tuning.data.windup_track_deg_per_s = 0.0
+	grabber.force_attack()
+	await _until(func() -> bool: return not _whiffs.is_empty(), 80)
+	assert_eq(_whiffs.size(), 1, "it faces away from him: the grab whiffs")
+	assert_ne(_player.state, CombatTypes.ActorState.GRABBED)
+
+
+func test_the_connect_range_is_the_tunable_scaled_by_the_holders_height() -> void:
+	var bruiser := _grabber()
+	var boss := _grabber(1.05, true)
+	await _ticks(3)
+	assert_almost_eq(EnemyHold.new(bruiser).connect_range_m(), Tuning.data.enemy_grab_range_m * 2.05 / 1.8, 0.001)
+	assert_almost_eq(EnemyHold.new(boss).connect_range_m(), Tuning.data.enemy_grab_range_m * 2.3 / 1.8, 0.001)
+
+
+# --- Getting out of the wind-up ----------------------------------------------------------------
+
+
+## Wait until the grabber's grab is `frame` frames into its wind-up.
+func _until_grab_frame(grabber: EnemyActor, frame: int) -> bool:
+	return await _until(func() -> bool:
+		return grabber.current_move != null and grabber.move_frame >= frame, 120)
+
+
+func test_a_dodge_through_the_wind_up_is_never_grabbed() -> void:
+	var grabber := _grabber()
+	await _ticks(4)
+	grabber.force_attack()
+	assert_true(await _until_grab_frame(grabber, 27))
+	_player.input.scripted_move = Vector2(0.0, -1.0)
+	_player.input.push_press(&"DODGE", 2)
+	await _ticks(2)
+	assert_eq(_player.state, CombatTypes.ActorState.DODGE, "dodging")
+	_player.input.scripted_move = Vector2.ZERO
+	assert_false(_player.can_be_grabbed(), "a dodge cannot be grabbed")
+	await _until(func() -> bool: return not _whiffs.is_empty(), 40)
+	assert_eq(_whiffs.size(), 1, "the grab whiffed")
+	await _ticks(40)
+	assert_ne(_player.state, CombatTypes.ActorState.GRABBED, "never held")
+	assert_eq(_player.health, 100.0, "and never hit")
+
+
+func test_a_jump_through_the_wind_up_is_never_grabbed() -> void:
+	var grabber := _grabber()
+	await _ticks(4)
+	grabber.force_attack()
+	assert_true(await _until_grab_frame(grabber, 18))
+	_player.input.push_press(&"JUMP", 2)
+	await _ticks(4)
+	assert_eq(_player.state, CombatTypes.ActorState.AIRBORNE, "in the air")
+	await _until(func() -> bool: return not _whiffs.is_empty(), 40)
+	assert_eq(_whiffs.size(), 1, "the grab whiffed under him")
+	assert_ne(_player.state, CombatTypes.ActorState.GRABBED)
+
+
+func test_a_grunt_grabber_loses_its_wind_up_to_any_hit() -> void:
+	var grabber := _grabber()
+	await _ticks(4)
+	grabber.force_attack()
+	assert_true(await _until_grab_frame(grabber, 10))
+	grabber.receive_hit(_hit(_player, grabber, 6.0, CombatTypes.HitTier.LIGHT, CombatTypes.Reaction.FLINCH))
+	assert_null(grabber.current_move, "the light hit cancelled the grab")
+	assert_true(_ended.any(func(e: Dictionary) -> bool: return e.attacker == grabber and e.interrupted), "windup_ended(interrupted)")
+	await _ticks(60)
+	assert_ne(_player.state, CombatTypes.ActorState.GRABBED, "the grab never connected")
+
+
+func test_an_armored_grabber_shrugs_off_a_light_hit_but_not_a_heavy_one() -> void:
+	var armor := func(e: EnemyActor) -> void:
+		e.armor_light = true
+		e.armor_heavy_to_stagger = true
+	var light := _grabber(1.05, false, armor)
+	await _ticks(4)
+	light.force_attack()
+	assert_true(await _until_grab_frame(light, 10))
+	var hp := light.health
+	light.receive_hit(_hit(_player, light, 6.0, CombatTypes.HitTier.LIGHT, CombatTypes.Reaction.FLINCH))
+	assert_lt(light.health, hp, "the damage landed")
+	assert_not_null(light.current_move, "the wind-up goes on")
+	assert_eq(light.state, CombatTypes.ActorState.WINDUP)
+	assert_true(await _until_held(), "and the grab connects")
+	# The heavy hit on a second one staggers it out of the wind-up.
+	_player.reset_state()
+	var heavy := _grabber(1.05, false, armor)
+	heavy.name = "Grabber2"
+	heavy.position = Vector3(5.0, 0.0, -1.05)
+	_player.global_position = Vector3(5.0, 0.0, 0.0)
+	await _ticks(4)
+	heavy.force_attack()
+	assert_true(await _until_grab_frame(heavy, 10))
+	heavy.receive_hit(_hit(_player, heavy, 8.0, CombatTypes.HitTier.HEAVY, CombatTypes.Reaction.STAGGER))
+	assert_null(heavy.current_move, "the heavy hit cancelled the grab")
+	assert_eq(heavy.state, CombatTypes.ActorState.STAGGER)
+
+
+# --- Mashing free ------------------------------------------------------------------------------
+
+
+func _headbutt_startup() -> int:
+	return _move(&"bruiser_headbutt").startup
+
+
+func test_mashing_exactly_the_presses_breaks_free_before_the_strike_frame() -> void:
+	var grabber := _grabber()
+	await _ticks(4)
+	grabber.force_attack()
+	assert_true(await _until_held())
+	watch_signals(CombatEvents)
+	var presses: int = Tuning.data.grab_break_presses
+	for i in presses:
+		_player.input.push_press(&"P", 1)
+	assert_true(await _until(func() -> bool: return _player.state != CombatTypes.ActorState.GRABBED, 60), "breaks free")
+	assert_lt(grabber.move_frame, _headbutt_startup(), "before the headbutt's strike frame")
+	assert_signal_emitted_with_parameters(CombatEvents, "grab_escaped", [_player, grabber])
+	assert_eq(_player.state, CombatTypes.ActorState.FREE, "on his feet")
+	assert_true(_player.is_invulnerable(), "invulnerable for a moment")
+	await _ticks(_headbutt_startup() + 10)
+	assert_eq(_player.health, 100.0, "the headbutt never lands")
+	assert_true(_hits.is_empty())
+
+
+func test_one_press_short_of_breaking_free_is_not_enough() -> void:
+	var grabber := _grabber()
+	await _ticks(4)
+	grabber.force_attack()
+	assert_true(await _until_held())
+	for i in Tuning.data.grab_break_presses - 1:
+		_player.input.push_press(&"K", 1)
+	await _ticks(20)
+	assert_eq(_player.state, CombatTypes.ActorState.GRABBED, "still held")
+	assert_almost_eq(_player.grab_break_progress(), 7.0 / 8.0, 0.001, "7 of 8")
+	assert_true(await _until(func() -> bool: return not _hits.is_empty(), 120), "the headbutt lands")
+	assert_eq(_player.health, 85.0)
+
+
+func test_a_press_of_p_and_one_of_k_both_count() -> void:
+	var grabber := _grabber()
+	await _ticks(4)
+	grabber.force_attack()
+	assert_true(await _until_held())
+	for i in Tuning.data.grab_break_presses:
+		_player.input.push_press(&"P" if i % 2 == 0 else &"K", 1)
+	assert_true(await _until(func() -> bool: return _player.state != CombatTypes.ActorState.GRABBED, 60), "P and K alternating break free")
+
+
+func test_a_held_button_is_one_press() -> void:
+	var grabber := _grabber()
+	await _ticks(4)
+	grabber.force_attack()
+	assert_true(await _until_held())
+	_player.input.push_press(&"P", 40)
+	await _ticks(45)
+	assert_almost_eq(_player.grab_break_progress(), 1.0 / 8.0, 0.001, "holding P down is one press")
+
+
+func test_other_buttons_do_not_start_anything_while_held_and_nothing_waits_for_the_release() -> void:
+	var grabber := _grabber()
+	await _ticks(4)
+	grabber.force_attack()
+	assert_true(await _until_held())
+	for i in 4:
+		_player.input.push_press(&"JUMP", 2)
+		_player.input.push_press(&"DODGE", 2)
+		_player.input.push_press(&"GRAB", 2)
+	await _ticks(30)
+	assert_eq(_player.state, CombatTypes.ActorState.GRABBED, "still held: those buttons do nothing")
+	for i in Tuning.data.grab_break_presses:
+		_player.input.push_press(&"P", 1)
+	assert_true(await _until(func() -> bool: return _player.state == CombatTypes.ActorState.FREE, 60))
+	await _ticks(10)
+	assert_eq(_player.state, CombatTypes.ActorState.FREE, "no buffered press started a move after the release")
+	assert_null(_player.current_move)
+
+
+func test_the_mash_decays_when_the_tunable_asks() -> void:
+	Tuning.data.grab_break_decay_per_s = 6.0
+	var grabber := _grabber()
+	await _ticks(4)
+	grabber.force_attack()
+	assert_true(await _until_held())
+	for i in 4:
+		_player.input.push_press(&"P", 1)
+	await _ticks(10)
+	var after := _player.grab_break_progress()
+	await _ticks(20)
+	assert_lt(_player.grab_break_progress(), after, "it drains while he is not pressing")
+
+
+func test_the_holder_staggers_away_when_broken_free_of_and_gives_its_token_back() -> void:
+	var grabber := _grabber()
+	await _ticks(4)
+	_director.give_token(grabber)
+	grabber.force_attack()
+	assert_true(await _until_held())
+	await _ticks(20)
+	var held_at := _player.global_position
+	for i in Tuning.data.grab_break_presses:
+		_player.input.push_press(&"P", 1)
+	assert_true(await _until(func() -> bool: return _player.state == CombatTypes.ActorState.FREE, 60))
+	assert_eq(grabber.state, CombatTypes.ActorState.STAGGER, "the holder staggers")
+	assert_null(grabber.current_move, "its follow-up is cancelled")
+	assert_false(grabber.has_token, "token released")
+	assert_true(_director.released.has(grabber), "to the director")
+	assert_true(_ended.any(func(e: Dictionary) -> bool: return e.attacker == grabber and e.interrupted), "its wind-up ended interrupted")
+	var away := (grabber.global_position - _player.global_position)
+	away.y = 0.0
+	assert_gte(Vector3(grabber.sim_velocity.x, 0.0, grabber.sim_velocity.z).dot(away.normalized()), Tuning.data.grab_break_push_mps * 0.9, "shoved away at grab_break_push_mps")
+	assert_lt(_player.global_position.distance_to(held_at), 0.05, "the victim stays where it stands")
+	await _ticks(Tuning.data.stagger_frames + 5)
+	assert_true(grabber.ai_state in [EnemyActor.AiState.APPROACH, EnemyActor.AiState.POSTURE], "the AI goes on from there")
+
+
+# --- The hit ------------------------------------------------------------------------------------
+
+
+func test_the_slam_throws_him_for_25() -> void:
+	var grabber := _grabber(1.2, true)
+	await _ticks(4)
+	grabber.force_attack()
+	assert_true(await _until_held())
+	assert_true(await _until(func() -> bool: return not _hits.is_empty(), 200), "the slam lands")
+	var hit := _hits[0]
+	assert_eq(hit.move.id, &"boss_slam")
+	assert_eq(hit.damage, 25.0)
+	assert_eq(hit.reaction, CombatTypes.Reaction.THROWN)
+	assert_eq(hit.tier, CombatTypes.HitTier.HEAVY, "HEAVY, never FINISHER")
+	assert_eq(_player.health, 75.0)
+	await _ticks(2)
+	assert_true(_player.state in [CombatTypes.ActorState.THROWN, CombatTypes.ActorState.LAUNCHED], "thrown")
+	assert_null(_player.holder)
+
+
+func test_a_killing_headbutt_knocks_him_out_and_he_gets_up() -> void:
+	_player.auto_revive = true
+	_player.health = 10.0
+	var grabber := _grabber()
+	await _ticks(4)
+	watch_signals(CombatEvents)
+	grabber.force_attack()
+	assert_true(await _until_held())
+	assert_true(await _until(func() -> bool: return _player.health <= 0.0, 200), "15 damage kills 10 health")
+	assert_true(await _until(func() -> bool: return _player.is_ko(), 120), "KO")
+	assert_signal_emitted(CombatEvents, "ko")
+	assert_true(await _until(func() -> bool: return _player.health > 0.0, 400), "the room revives him")
+	assert_signal_emitted(CombatEvents, "revived")
+
+
+func test_a_holder_knocked_down_lets_go_with_no_hit() -> void:
+	var grabber := _grabber()
+	await _ticks(4)
+	grabber.force_attack()
+	assert_true(await _until_held())
+	await _ticks(10)
+	var other := _grabber(4.0)
+	other.name = "Other"
+	var flyer := _hit(other, grabber, 5.0, CombatTypes.HitTier.HEAVY, CombatTypes.Reaction.KNOCKDOWN)
+	flyer.knockback = Vector3(0.0, 3.0, 2.0)
+	grabber.receive_hit(flyer)
+	await _ticks(3)
+	assert_ne(_player.state, CombatTypes.ActorState.GRABBED, "he is let go")
+	assert_null(_player.holder)
+	assert_false(grabber.is_holding(_player))
+	assert_eq(_player.health, 100.0, "and not hit")
+	assert_false(_hits.any(func(h: HitInfo) -> bool: return h.victim == _player), "no hit on him at all")
+	await _ticks(100)
+	assert_eq(_player.health, 100.0)
+
+
+func test_a_holder_killed_lets_go() -> void:
+	var grabber := _grabber()
+	await _ticks(4)
+	grabber.force_attack()
+	assert_true(await _until_held())
+	grabber.receive_hit(_hit(_player, grabber, 9999.0, CombatTypes.HitTier.HEAVY, CombatTypes.Reaction.KNOCKDOWN))
+	await _ticks(3)
+	assert_ne(_player.state, CombatTypes.ActorState.GRABBED, "he is let go")
+	assert_eq(_player.health, 100.0)
+
+
+func test_a_holder_that_is_removed_lets_go() -> void:
+	var grabber := _grabber()
+	await _ticks(4)
+	grabber.force_attack()
+	assert_true(await _until_held())
+	grabber.remove_from_group(&"actor")
+	grabber.queue_free()
+	await _ticks(4)
+	assert_ne(_player.state, CombatTypes.ActorState.GRABBED, "he is let go")
+	assert_eq(_player.health, 100.0)
+
+
+func test_an_armored_holder_keeps_holding_through_a_light_hit() -> void:
+	var grabber := _grabber(1.05, false, func(e: EnemyActor) -> void: e.armor_light = true)
+	await _ticks(4)
+	grabber.force_attack()
+	assert_true(await _until_held())
+	grabber.receive_hit(_hit(_player, grabber, 2.0, CombatTypes.HitTier.LIGHT, CombatTypes.Reaction.FLINCH))
+	await _ticks(3)
+	assert_eq(_player.state, CombatTypes.ActorState.GRABBED, "armor absorbed it: still held")
+	assert_true(grabber.is_holding(_player))
