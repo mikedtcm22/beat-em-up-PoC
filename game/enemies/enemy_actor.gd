@@ -9,16 +9,19 @@ extends CombatActor
 ## wind-up (start_move(..., windup = true): the rear warning and the interrupt rules hang off it).
 ##
 ## The life of an enemy: ENTER (walk in from its spawn point) -> APPROACH (path to its posture
-## slot) -> POSTURE (circle, strafe, pause, now and then taunt on the ring around the player,
-## facing him) -> with a token ENGAGE (stop strafing and square up for commit_pause_frames, then
+## slot: round the ring, never across the player, and backing out when it is inside the ring's near
+## edge, _orbit_toward()) -> POSTURE (circle, strafe, pause, now and then taunt on the ring around
+## the player, facing him) -> with a token ENGAGE (stop strafing and square up for commit_pause_frames, then
 ## step in to its attack's reach minus engage_margin_m) -> WINDUP (the attack's startup, scaled
 ## by windup_mult and floored: it turns toward the player for the first windup_track_share, then
 ## the facing is locked, so a late sidestep makes it miss) -> ATTACK (a chain link follows with no
 ## wind-up of its own, only if the last hit landed or was blocked) -> RECOVER (the token goes
 ## back and the attack cooldown starts, it holds recover_hold_s, then backs off to its slot) ->
 ## POSTURE. REACT is any reaction state CombatActor put it in (the token is released at once);
-## KO is dead. A light hit interrupts a grunt's wind-up (CombatActor's default); armor
-## (armor_light and the flags below, used by the heavies) keeps it going.
+## KO is dead. After a reaction an enemy goes back to APPROACH, except one that wakes in place
+## (_wakes_in_place(): the boss), which postures where it stands, served first by the director. A
+## light hit interrupts a grunt's wind-up (CombatActor's default); armor (armor_light and the flags
+## below, used by the heavies) keeps it going.
 ##
 ## Moving: a NavigationAgent3D with avoidance, driven the "latched" way (docs/milestones/
 ## M3-codemap/godot-navigation.md): every sim tick the desired velocity goes to the agent and
@@ -33,8 +36,15 @@ extends CombatActor
 ## (groups Wind-up, Posture, Navigation) or a move's.
 ##
 ## An archetype extends this and overrides the hooks (_build_attacks(), _health_tunable(),
-## _speed_tunable(), _cooldown_tunable(), _circle_mult(), _choose_attack(), _configure_rig()),
-## never the control tick. The fixture tests/fixtures/stub_enemy.gd replaces every behaviour hook
+## _speed_tunable(), _cooldown_tunable(), _circle_mult(), _choose_attack(), _wakes_in_place(),
+## _configure_rig()) and never replaces the control tick. A few archetypes go further, each one
+## logged in docs/milestones/M3-calls/ and held by a test of its own: the Bruiser and the boss wrap
+## _tick_control() (calling super: the boss's phase 2 and call-in, the Bruiser's armor break), the
+## boss also turns by _face() and answers a parry in react_to_block(), the Bruiser keeps a brace
+## pose through _stop() and _animate_legs() and moves its hold spot in _pin_spot(), the Kicker picks
+## its strafe side in _pick_strafe_dir(), and the Pipe Thug rewrites its attacks. Every override of
+## a private member calls super() unless its doc says otherwise, and promoting these to hooks is
+## left for a later refactor. The fixture tests/fixtures/stub_enemy.gd replaces every behaviour hook
 ## with a standing-still enemy for the other packages' tests.
 
 ## What the controller is doing. ENTER walks in from the spawn point, APPROACH walks to the
@@ -104,9 +114,29 @@ var _strafe_dir: float = 1.0
 ## nearer by enemy_slot_reach_m (a stall asks for another slot).
 var _progress_best: float = INF
 var _progress_frames: int = 0
-## A stall's detour spot and the frames it still holds.
+## Where the body was when it last moved _wedge_reach() and the frames since (a body wedged against
+## the crates or the car does not move however the target flips or the director reslots).
+var _wedge_anchor: Vector3 = Vector3.INF
+var _wedge_frames: int = 0
+## A stall's detour spot and the frames it still holds, which way round the player the last one
+## went (+1 or -1, 0 before the first) and the tick of the last stall (a stall again soon after
+## goes the other way).
 var _detour: Vector3 = Vector3.INF
 var _detour_frames: int = 0
+var _detour_side: float = 0.0
+var _last_stall_tick: int = -1000000
+## The way round the ring (_orbit_toward()): a point on the ring it is walking to, kept as an angle
+## and radius about the player (so it goes with him when he walks), and the physics frame in which
+## _posture_target() last handed the walk such a point rather than the goal itself (an arrival is
+## only an arrival at a point on the way round in that same frame, whoever calls _enter_posture()
+## from another frame takes up the posture).
+var _orbit_active: bool = false
+var _orbit_angle: float = 0.0
+var _orbit_radius: float = 0.0
+var _orbit_frame: int = -1
+## Sim frames left of the wake-up hold (_resume_posture()): POSTURE does not send it back to a slot
+## it left, and the director serves it first.
+var _resume_frames: int = 0
 var _retarget_offset: int = 0
 ## Which side of the player's origin a step-in aims at, once per enemy (+1 or -1; see _engage_aim()).
 var _engage_side: float = 1.0
@@ -164,6 +194,15 @@ func _circle_mult() -> float:
 	return 1.0
 
 
+## True for an enemy that, once a reaction is over (a hit, a stagger, a knockdown and the get-up) with
+## the player within the posture ring's far edge, takes up POSTURE where it stands, eligible for a
+## token and served first by the director (has_token_priority()), instead of walking back to a slot
+## 2.5-4 m away where it asks for nothing (the boss: a chain that floors it every few seconds could
+## otherwise never be answered). Everything else goes back to its slot (APPROACH).
+func _wakes_in_place() -> bool:
+	return false
+
+
 ## Picks the attack to throw next: by default one at random by each attack's chance
 ## (EnemyAttack.weight_property), the unweighted ones sharing the rest. The boss picks by range.
 func _choose_attack() -> EnemyAttack:
@@ -202,11 +241,19 @@ func wants_token() -> bool:
 	)
 
 
+## True while it is waking in place (_resume_posture()): it has just got up beside the player and
+## the director serves it before the others (and before the blind-spot priority), so a heavy that
+## was knocked down gets its turn instead of being left behind the queue.
+func has_token_priority() -> bool:
+	return _resume_frames > 0 and ai_state == AiState.POSTURE and not has_token
+
+
 ## The director grants it the token. `blind` = it came from blind-spot priority. It stops
 ## strafing and squares up on its next tick.
 func grant_token(blind: bool) -> void:
 	has_token = true
 	blind_priority_granted = blind
+	_resume_frames = 0
 
 
 ## The director takes the token back (the player became unhittable, or it timed out). An enemy
@@ -270,6 +317,7 @@ func enter_from(_spawn_pos: Vector3, lane_point: Vector3) -> void:
 	ai_state = AiState.ENTER
 	_progress_best = INF
 	_progress_frames = 0
+	_wedge_anchor = Vector3.INF
 
 
 ## `move` with its startup scaled by Tuning.data.windup_mult and floored at
@@ -407,6 +455,7 @@ func _tick_dead() -> void:
 	ai_state = AiState.KO
 	_release_token()
 	_taunt_frames = 0
+	_resume_frames = 0
 	if _nav and _nav.avoidance_enabled:
 		_nav.avoidance_enabled = false
 	_stop_reporting()
@@ -417,6 +466,8 @@ func _tick_dead() -> void:
 func _tick_reaction() -> void:
 	ai_state = AiState.KO if state == CombatTypes.ActorState.KO else AiState.REACT
 	_taunt_frames = 0
+	_resume_frames = 0
+	_wedge_anchor = Vector3.INF
 	if has_token:
 		_release_token()
 	_report_velocity()
@@ -446,8 +497,17 @@ func _tick_free(player: CombatActor) -> void:
 		AiState.RECOVER:
 			_tick_recover(player)
 		_:
-			# REACT, WINDUP, ATTACK or KO left over from before: it is free again, so go back to its slot.
-			_enter_approach()
+			# REACT, WINDUP, ATTACK or KO left over from before: it is free again.
+			_after_reaction(player)
+
+
+## Free again after a reaction: back to its slot (APPROACH), or, for an archetype that wakes in
+## place and stands within the posture ring's far edge, POSTURE where it stands.
+func _after_reaction(player: CombatActor) -> void:
+	if _wakes_in_place() and _flat_dist(global_position, player.global_position) <= Tuning.data.posture_ring_max_m:
+		_resume_posture()
+	else:
+		_enter_approach()
 
 
 ## Frozen (Debug), a menu open or nobody to fight: stand, facing the player, asking for nothing.
@@ -482,6 +542,9 @@ func _enter_approach() -> void:
 	_progress_frames = 0
 	_commit_frames = 0
 	_taunt_frames = 0
+	_resume_frames = 0
+	_orbit_active = false
+	_wedge_anchor = Vector3.INF
 
 
 func _tick_approach(player: CombatActor) -> void:
@@ -495,9 +558,23 @@ func _tick_approach(player: CombatActor) -> void:
 		_start_detour(player)
 
 
+## Where to walk to take up the ring: the slot (or whatever _goal_spot() picked: a detour, the
+## nearest spot of the ring) when the straight way there is clear of the player, otherwise a point on
+## the ring posture_orbit_lead_deg ahead of it round the short way (_orbit_toward()), so it circles
+## the player at the ring's radius instead of crossing his front on the chord to a slot behind him.
+## APPROACH and RECOVER ask it every tick, for every archetype.
+func _posture_target(player: CombatActor) -> Vector3:
+	var goal := _goal_spot(player)
+	var round_the_ring := _orbit_toward(player, goal)
+	if round_the_ring.is_finite():
+		_orbit_frame = Engine.get_physics_frames()
+		return round_the_ring
+	return goal
+
+
 ## Where posturing happens: a detour after a stall, the director's slot, or the nearest spot of
 ## the ring on the line from the player (where it stands, once it is on the ring).
-func _posture_target(player: CombatActor) -> Vector3:
+func _goal_spot(player: CombatActor) -> Vector3:
 	if _detour_frames > 0 and _detour.is_finite():
 		return _detour
 	if posture_slot.is_finite():
@@ -513,12 +590,119 @@ func _posture_target(player: CombatActor) -> Vector3:
 	return spot
 
 
+## The point to walk to on the ring toward `goal`, or Vector3.INF when the straight way to it is the
+## way to go. Inside the ring's near edge it is always a point (the back-out: on the ring, round
+## toward the goal by at most the lead, so a body at the player's nose leaves sideways, facing him,
+## and never walks through him), and beyond it only when `goal` is more than posture_orbit_gap_deg
+## round the ring and the line to it cuts the near edge. A point once chosen is kept, as an angle
+## and radius about the player, until it is reached or the goal turns out to lie the other way.
+## Every point is checked against the navmesh (a point inside the parked car or a wall is skipped for
+## a nearer leg or another radius); with none that is on it the straight way is all there is.
+func _orbit_toward(player: CombatActor, goal: Vector3) -> Vector3:
+	var tuning := Tuning.data
+	var centre := player.global_position
+	var mine := _flat(global_position - centre)
+	var wanted := _flat(goal - centre)
+	var inside := mine.length() < tuning.posture_ring_min_m
+	var gap := _signed_angle(mine, wanted) if mine.length() > 0.01 and wanted.length() > 0.01 else 0.0
+	if not inside and (absf(gap) <= deg_to_rad(tuning.posture_orbit_gap_deg) or _passes_clear_of(centre, global_position, goal)):
+		_orbit_active = false
+		return Vector3.INF
+	if mine.length() <= 0.01:
+		mine = -_flat(player.get_forward())
+	var way := signf(gap)
+	if _orbit_active:
+		var kept := _orbit_position(centre)
+		var ahead := _signed_angle(mine, _flat(kept - centre))
+		var holds := signf(ahead) == way and (_flat_dist(global_position, kept) > tuning.enemy_slot_reach_m if inside \
+				else absf(ahead) < absf(gap))
+		if holds and _on_navmesh(kept):
+			return kept
+	var leg := minf(deg_to_rad(tuning.posture_orbit_lead_deg), absf(gap))
+	# The back-out aims a slot reach beyond the near edge, so arriving at it is being on the ring.
+	var radius := minf(tuning.posture_ring_min_m + tuning.enemy_slot_reach_m, maxf(tuning.posture_ring_max_m, tuning.posture_ring_min_m)) if inside \
+			else clampf(mine.length(), tuning.posture_ring_min_m, tuning.posture_ring_max_m)
+	var radii: Array[float] = [radius]
+	for other: float in [tuning.posture_ring_max_m, tuning.posture_ring_min_m]:
+		if not radii.has(other):
+			radii.append(other)
+	for factor: float in [1.0, 0.5]:
+		var direction := mine.normalized().rotated(Vector3.UP, leg * factor * way)
+		for candidate: float in radii:
+			var spot := centre + direction * candidate
+			spot.y = global_position.y
+			if _on_navmesh(spot):
+				_orbit_angle = _signed_angle(Vector3.RIGHT, direction)
+				_orbit_radius = candidate
+				_orbit_active = true
+				return spot
+	_orbit_active = false
+	return Vector3.INF
+
+
+func _orbit_position(centre: Vector3) -> Vector3:
+	var spot := centre + Vector3.RIGHT.rotated(Vector3.UP, _orbit_angle) * _orbit_radius
+	spot.y = global_position.y
+	return spot
+
+
+## True when the straight line from `from` to `to` stays at least the posture ring's near edge
+## from `centre` (flat).
+static func _passes_clear_of(centre: Vector3, from: Vector3, to: Vector3) -> bool:
+	var closest := Geometry3D.get_closest_point_to_segment(_flat(centre), _flat(from), _flat(to))
+	return _flat_dist(closest, centre) >= Tuning.data.posture_ring_min_m
+
+
+## The signed flat angle (radians) from `a` to `b` about +Y, wrapped to -PI..PI.
+static func _signed_angle(a: Vector3, b: Vector3) -> float:
+	return a.signed_angle_to(b, Vector3.UP)
+
+
+## True when `point` is on the navmesh (within director_slot_snap_tolerance_m of it, flat), or there
+## is no navmesh to ask (the training room, a flat test floor).
+func _on_navmesh(point: Vector3) -> bool:
+	if not _navmesh_ready:
+		return true
+	var closest := NavigationServer3D.map_get_closest_point(get_world_3d().navigation_map, point)
+	return _flat_dist(closest, point) <= Tuning.data.director_slot_snap_tolerance_m
+
+
+## Arriving at the target takes up the posture, but reaching a point on the way round the ring is not
+## reaching the slot: the walk goes on (the next tick picks the next point, or the slot when that is
+## near) instead of taking up the posture, which would send it straight back to APPROACH, a stutter
+## at every leg. Only an arrival in the same physics frame as the _posture_target() call that
+## returned such a point is swallowed: any other caller gets the posture.
 func _enter_posture() -> void:
+	if _orbit_frame == Engine.get_physics_frames():
+		_orbit_frame = -1
+		_orbit_active = false
+		_progress_best = INF
+		_progress_frames = 0
+		return
 	ai_state = AiState.POSTURE
 	_progress_best = INF
 	_progress_frames = 0
 	_detour_frames = 0
+	_orbit_active = false
 	_begin_pause()
+
+
+## Free after a reaction beside the player (_wakes_in_place()): POSTURE where it stands, for
+## posture_resume_s ignoring the slot it left (it strafes toward it, as POSTURE does, and backs out
+## to the ring's near edge when it is inside), eligible for a token and served first (has_token_priority()).
+## No taunt: it just got up.
+func _resume_posture() -> void:
+	_reset_avoidance()
+	ai_state = AiState.POSTURE
+	_progress_best = INF
+	_progress_frames = 0
+	_detour_frames = 0
+	_orbit_active = false
+	_commit_frames = 0
+	_taunt_frames = 0
+	_pause_frames = 0
+	_resume_frames = maxi(_frames(Tuning.data.posture_resume_s), 1)
+	_begin_strafe()
 
 
 func _tick_posture(player: CombatActor) -> void:
@@ -527,20 +711,26 @@ func _tick_posture(player: CombatActor) -> void:
 	var dist := to_player.length()
 	if dist > 0.01:
 		_face(to_player, tuning.enemy_turn_rate)
-	# Out of place (the slot moved, it was shoved, the player walked off): back to APPROACH.
-	var strayed := false
-	if posture_slot.is_finite():
-		strayed = _flat_dist(global_position, posture_slot) > tuning.posture_wander_m + tuning.enemy_slot_reach_m
-	else:
-		strayed = dist > tuning.posture_ring_max_m + tuning.posture_wander_m
-	if strayed:
-		_enter_approach()
-		return
+	var waking := _resume_frames > 0
+	if waking:
+		_resume_frames -= 1
+	# A taunt in progress plays out first: a reslot that moved the slot must not cut a gesture that
+	# the director's own call-in started (the boss's beckon).
 	if _taunt_frames > 0:
 		_taunt_frames -= 1
 		_stop()
 		if _taunt_frames == 0:
 			rig.play_locomotion(Vector2.ZERO, 0.0)
+		return
+	# Out of place (the slot moved, it was shoved, the player walked off): back to APPROACH. An
+	# enemy waking in place has no business with the slot it left until the hold is over.
+	var strayed := false
+	if posture_slot.is_finite():
+		strayed = not waking and _flat_dist(global_position, posture_slot) > tuning.posture_wander_m + tuning.enemy_slot_reach_m
+	else:
+		strayed = dist > tuning.posture_ring_max_m + tuning.posture_wander_m
+	if strayed:
+		_enter_approach()
 		return
 	var outward := -to_player.normalized() if dist > 0.01 else Vector3.ZERO
 	# Never closer than the ring: back out at walking speed (a pause does not stop it).
@@ -555,7 +745,7 @@ func _tick_posture(player: CombatActor) -> void:
 			_begin_strafe()
 		return
 	_strafe_frames -= 1
-	if _strafe_frames <= 0 or (posture_slot.is_finite() and _flat_dist(global_position, posture_slot) > tuning.posture_wander_m):
+	if _strafe_frames <= 0 or (not waking and posture_slot.is_finite() and _flat_dist(global_position, posture_slot) > tuning.posture_wander_m):
 		# The segment is over, or it has strayed its leash: stand a moment, then go the other way.
 		_begin_pause()
 		return
@@ -571,7 +761,7 @@ func _tick_posture(player: CombatActor) -> void:
 func _begin_pause() -> void:
 	_strafe_frames = 0
 	_pause_frames = _frames(Tuning.data.posture_pause_s)
-	if _rng.randf() < Tuning.data.posture_taunt_chance:
+	if _resume_frames <= 0 and _rng.randf() < Tuning.data.posture_taunt_chance:
 		_start_taunt()
 	if _pause_frames <= 0:
 		_begin_strafe()
@@ -758,6 +948,8 @@ func _enter_recover() -> void:
 	_next_attack = _choose_attack()
 	_progress_best = INF
 	_progress_frames = 0
+	_orbit_active = false
+	_wedge_anchor = Vector3.INF
 	_reset_avoidance()
 
 
@@ -815,6 +1007,8 @@ func _on_grabbed(_by: CombatActor) -> void:
 func _apply_armor(hit: HitInfo) -> void:
 	if hit.killed or not (armor_light or armor_heavy_to_stagger or armor_finisher_to_stagger):
 		return
+	if state == CombatTypes.ActorState.GRABBED and hit.attacker == holder:
+		return  # the hold's own knees and its throw: a held body takes them as any held body does
 	if hit.move != null and hit.move.breaks_armor:
 		return
 	match hit.tier:
@@ -992,23 +1186,39 @@ func _face(dir: Vector3, rate: float) -> void:
 	rotation.y = wrapf(rotation.y + clampf(diff, -step, step), -PI, PI)
 
 
-## True when it has not got nearer to `target` by enemy_slot_reach_m for enemy_stuck_s: a stall.
+## True when it has not got nearer to `target` by enemy_slot_reach_m for enemy_stuck_s, or has not
+## moved enemy_slot_reach_m at all for that long: a stall. The second is the wedge: a body pinned
+## between the player and a crate keeps getting new targets (the way round the ring, a reslot), and
+## the first rule starts over at every one.
 func _stalled(target: Vector3) -> bool:
+	var tuning := Tuning.data
+	if not _wedge_anchor.is_finite() or _flat_dist(global_position, _wedge_anchor) >= tuning.enemy_slot_reach_m:
+		_wedge_anchor = global_position
+		_wedge_frames = 0
+	else:
+		_wedge_frames += 1
+	var wedged := _wedge_frames >= _frames(tuning.enemy_stuck_s)
 	var dist := _flat_dist(global_position, target)
-	if dist < _progress_best - Tuning.data.enemy_slot_reach_m:
+	if dist < _progress_best - tuning.enemy_slot_reach_m:
 		_progress_best = dist
 		_progress_frames = 0
-		return false
-	_progress_frames += 1
-	if _progress_frames < _frames(Tuning.data.enemy_stuck_s):
+		if not wedged:
+			return false
+	else:
+		_progress_frames += 1
+	if not wedged and _progress_frames < _frames(tuning.enemy_stuck_s):
 		return false
 	_progress_best = dist
 	_progress_frames = 0
+	_wedge_anchor = Vector3.INF
+	_wedge_frames = 0
 	return true
 
 
-## A stall: tell the director (if it takes the report) and try a spot enemy_detour_deg around
-## the player for a while, then the slot again.
+## A stall: tell the director (if it takes the report) and try a spot enemy_detour_deg around the
+## player for a while, then the slot again. The side is random the first time and, for a stall soon
+## after the last one (the detour did not free it), the other one; a side whose spot is not on the
+## navmesh (inside the parked car) gives way to the other.
 func _start_detour(player: CombatActor) -> void:
 	var director := EnemyDirector.find(get_tree())
 	if director and director.has_method(&"report_stalled"):
@@ -1016,11 +1226,30 @@ func _start_detour(player: CombatActor) -> void:
 	var away := _flat(global_position - player.global_position)
 	if away.length_squared() < 0.0001:
 		return
-	var side := 1.0 if _rng.randf() < 0.5 else -1.0
-	var radius := clampf(away.length(), Tuning.data.posture_ring_min_m, Tuning.data.posture_ring_max_m)
-	_detour = player.global_position + away.normalized().rotated(Vector3.UP, deg_to_rad(Tuning.data.enemy_detour_deg) * side) * radius
-	_detour.y = global_position.y
-	_detour_frames = _frames(Tuning.data.enemy_detour_s)
+	var tuning := Tuning.data
+	var repeat := _ticks - _last_stall_tick <= _frames(tuning.enemy_detour_s + 2.0 * tuning.enemy_stuck_s)
+	_last_stall_tick = _ticks
+	var side := _detour_side
+	if side == 0.0 or not repeat:
+		side = 1.0 if _rng.randf() < 0.5 else -1.0
+	else:
+		side = -side
+	var radius := clampf(away.length(), tuning.posture_ring_min_m, tuning.posture_ring_max_m)
+	var spot := _detour_spot(player, away, radius, side)
+	if not _on_navmesh(spot):
+		var other := _detour_spot(player, away, radius, -side)
+		if _on_navmesh(other):
+			side = -side
+			spot = other
+	_detour_side = side
+	_detour = spot
+	_detour_frames = _frames(tuning.enemy_detour_s)
+
+
+func _detour_spot(player: CombatActor, away: Vector3, radius: float, side: float) -> Vector3:
+	var spot := player.global_position + away.normalized().rotated(Vector3.UP, deg_to_rad(Tuning.data.enemy_detour_deg) * side) * radius
+	spot.y = global_position.y
+	return spot
 
 
 ## Whether a navmesh is on the map (the training room has none), and it has synced.

@@ -34,6 +34,25 @@ const MIN_SPACING_M := 0.68
 ## A walk-in with no progress for this long is stuck: it moved less than STUCK_MOVE_M.
 const STUCK_FRAMES := 120
 const STUCK_MOVE_M := 0.3
+## The fought mixed six (final M3 fix, finding crowd-03): the plan's make-up in the order the crowd
+## bot's "Mixed six, fight" act spawns it, the held-back autopilot for 30 s in god mode, a Punk
+## walking in whenever one falls, three seeds (the bot's --seed: every archetype's numbering starts
+## at 7 times it, which reseeds each one's own random choices).
+const MIXED_SIX: Array[StringName] = [&"punk", &"kicker", &"thug", &"bruiser", &"punk", &"kicker"]
+const FOUGHT_FRAMES := 1800
+const FOUGHT_SEEDS: Array[int] = [0, 1, 2]
+const TOP_UP_GAP_FRAMES := 45
+## Gates over the fought mixed six, set between what this harness measures with the fix and without
+## it (seeds 0-2): about a quarter of the six posture (1.45 to 1.8 now, the six-Punk fight's is 1.4 to
+## 1.8 of 5.8, and the Kickers' old blind-side ring cut the mixed crowd's to 0.7-1.3 here and 0.4-0.8
+## in the bot's act), the Kickers stand outside the view the larger part of the time they are in the
+## fight (60-66% here, 50-68% before; the bot's act measures 71-75% against 65-71%), and the lens is
+## over half covered by an enemy that is walking (APPROACH) in no more than a handful of the 360
+## samples (the six Punks' fight: 0 to 5; 0-3 now, 15-27 before).
+const MIN_POSTURING := 1.4
+const KICKER_BLIND_MIN := 0.55
+const KICKER_BLIND_MAX := 0.9
+const MAX_APPROACH_LENS_SAMPLES := 5
 
 
 func after_all() -> void:
@@ -292,6 +311,81 @@ func test_two_identical_runs_end_with_everyone_in_the_same_place() -> void:
 
 
 # --- The autopilot against real Punks ---------------------------------------------------------
+
+
+## One fought mixed six (see MIXED_SIX): the average number of enemies posturing per frame, the share
+## of the Kickers' active frames spent outside the view, and the lens samples over half covered by
+## an enemy that was walking (APPROACH).
+func _fought_mixed_six(seed_value: int) -> Dictionary:
+	Tuning.set_value(&"god_mode", true)
+	var room := await _room(false)
+	var player: PlayerCharacter = room.player
+	var serials := {}
+	for entry in EnemyCatalog.ENTRIES:
+		if entry.id != &"dummy":
+			serials[String(entry.id).capitalize()] = 7 * seed_value
+	room.spawner.set(&"_serials", serials)
+	var pilot := Pilot.new()
+	pilot.enemy_group = &"ai_enemy"
+	pilot.attach(room, player)
+	pilot.approach = false  # the bot's held-back style (CrowdBot.hold_back())
+	pilot.use_kicks = false
+	pilot.punches_per_chain = 2
+	pilot.chain_rest_frames = 60
+	var meter := EngageMeter.new()
+	meter.attach(room, player)
+	var angle: float = Tuning.data.rear_warning_angle_deg
+	var seen := {"posturing": 0, "frames": 0, "kicker": 0, "kicker_out": 0}
+	var spawned := 0
+	var last_top_up := -TOP_UP_GAP_FRAMES
+	for frame in FOUGHT_FRAMES:
+		if frame < MIXED_SIX.size() * SPAWN_GAP_FRAMES:
+			if frame % SPAWN_GAP_FRAMES == 0:
+				var i := frame / SPAWN_GAP_FRAMES
+				var point: Dictionary = room.spawner.spawn_points[CrowdBot.SURROUND_POINTS[i]]
+				room.spawner.spawn_enemy(MIXED_SIX[i], point.position, point.yaw, false, point.lane_point)
+		elif frame - last_top_up >= TOP_UP_GAP_FRAMES and room.spawner.alive_count() < MIXED_SIX.size():
+			last_top_up = frame
+			_spawn(room, CrowdBot.SURROUND_POINTS[spawned % CrowdBot.SURROUND_POINTS.size()])
+			spawned += 1
+		await get_tree().physics_frame
+		seen.frames += 1
+		for node: Node in get_tree().get_nodes_in_group(&"ai_enemy"):
+			var enemy := node as EnemyActor
+			if enemy == null or enemy.health <= 0.0:
+				continue
+			if enemy.ai_state == EnemyActor.AiState.POSTURE:
+				seen.posturing += 1
+			if enemy.archetype == &"kicker" and not enemy.ai_state in [EnemyActor.AiState.ENTER, EnemyActor.AiState.REACT, EnemyActor.AiState.KO]:
+				seen.kicker += 1
+				if player.is_outside_view(enemy.global_position, angle):
+					seen.kicker_out += 1
+	pilot.stop()
+	seen["posturing_avg"] = float(seen.posturing) / float(seen.frames)
+	seen["kicker_blind"] = float(seen.kicker_out) / maxf(float(seen.kicker), 1.0)
+	seen["approach_lens"] = int(meter._over_by_cause.get("APPROACH", 0))
+	seen["engage"] = meter.result()
+	room.free()
+	await _ticks(2)
+	return seen
+
+
+func test_a_fought_mixed_six_keeps_posturing_and_the_kickers_behind_without_walling_the_lens() -> void:
+	# The Kickers' blind-side seats used to turn the whole ring and bump the others' seats at every
+	# reslot: the other five were sent across the player and walked at his nose (a mixed fight posed
+	# 0.4-0.8 of 5.8 against the six Punks' 1.4-1.8, and an enemy in APPROACH covered over half the
+	# lens in 12 to 34 of 388 samples against 0 to 5). A Kicker now has a seat of its own behind the
+	# look and the others keep a stable ring, so the mixed crowd postures as the Punks' does, the
+	# Kickers still work the blind side, and APPROACH is back to the six-Punk level.
+	for seed_value in FOUGHT_SEEDS:
+		var seen := await _fought_mixed_six(seed_value)
+		gut.p("seed %d: %.2f posturing, Kickers outside the view %.0f%% of %d frames, %d APPROACH lens samples over half of %d" % [
+				seed_value, seen.posturing_avg, 100.0 * seen.kicker_blind, seen.kicker, seen.approach_lens, int(seen.engage.lens_samples)])
+		assert_gte(float(seen.posturing_avg), MIN_POSTURING, "seed %d: at least %.1f of the six posture (%.2f)" % [seed_value, MIN_POSTURING, seen.posturing_avg])
+		assert_gt(int(seen.kicker), 600, "seed %d: the Kickers were in the fight (%d frames)" % [seed_value, seen.kicker])
+		assert_gte(float(seen.kicker_blind), KICKER_BLIND_MIN, "seed %d: the Kickers work the blind side (%.0f%%)" % [seed_value, 100.0 * seen.kicker_blind])
+		assert_lte(float(seen.kicker_blind), KICKER_BLIND_MAX, "seed %d: and are not always out of sight (%.0f%%)" % [seed_value, 100.0 * seen.kicker_blind])
+		assert_lte(int(seen.approach_lens), MAX_APPROACH_LENS_SAMPLES, "seed %d: a walking enemy over half the lens in %d samples at most (%d)" % [seed_value, MAX_APPROACH_LENS_SAMPLES, seen.approach_lens])
 
 
 func test_the_autopilot_fights_real_punks_and_the_hard_metrics_hold() -> void:

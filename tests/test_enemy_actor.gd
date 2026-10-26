@@ -369,6 +369,194 @@ func test_a_stalled_punk_reports_it_and_tries_a_detour() -> void:
 	assert_lt(punk.global_position.z, -4.0, "it is held on its side of the wall")
 
 
+# --- The way round the ring (final M3 fix, findings crowd-02, fair-04 and tells-05) -----------------
+
+
+## The yaw error (degrees) between where `enemy` faces and the player.
+func _facing_error_deg(enemy: EnemyActor) -> float:
+	var to_player := _player.global_position - enemy.global_position
+	to_player.y = 0.0
+	return rad_to_deg(enemy.get_forward().angle_to(to_player.normalized()))
+
+
+func test_an_enemy_at_the_players_nose_backs_out_facing_him_instead_of_crossing_him_to_a_slot_behind() -> void:
+	# After a reaction beside the player the director's slot is often across him; the straight way
+	# there runs through him (the navmesh does not know him), and avoidance only slid the body round
+	# his nose at contact distance with the guard up, covering half the lens. Now it backs out to the
+	# ring first (an enemy inside the near edge always does), then goes round.
+	_make_player()
+	_make_director()
+	var punk := _punk(Vector3(0.0, 0.0, -1.0))
+	_director.put_slot(punk, Vector3(0.0, 0.0, 3.2))
+	var start := _flat_dist(punk.global_position, _player.global_position)
+	var seen := {nearest = INF, worst_facing = 0.0, ticks = 0}
+	var came := await _until(func() -> bool:
+		seen.ticks += 1
+		seen.nearest = minf(seen.nearest, _flat_dist(punk.global_position, _player.global_position))
+		if seen.ticks > 20:
+			seen.worst_facing = maxf(seen.worst_facing, _facing_error_deg(punk))
+		return punk.ai_state == EnemyActor.AiState.POSTURE and _flat_dist(punk.global_position, punk.posture_slot) < 0.6)
+	assert_true(came, "it gets to the slot behind the player (%s)" % punk.ai_state_name())
+	assert_gte(seen.nearest, start - 0.1, "it never came nearer to him than where it started (%.2f of %.2f m)" % [seen.nearest, start])
+	assert_lt(seen.worst_facing, 40.0, "and it faced him all the way (worst %.0f degrees off)" % seen.worst_facing)
+
+
+func test_a_slot_across_the_ring_is_reached_round_it_and_not_along_the_chord() -> void:
+	_make_player()
+	_make_director()
+	var punk := _punk(Vector3(0.0, 0.0, -3.0))
+	Tuning.data.posture_taunt_chance = 0.0
+	_director.put_slot(punk, Vector3(0.0, 0.0, 3.0))
+	var seen := {nearest = INF}
+	var came := await _until(func() -> bool:
+		seen.nearest = minf(seen.nearest, _flat_dist(punk.global_position, _player.global_position))
+		return punk.ai_state == EnemyActor.AiState.POSTURE, 900)
+	assert_true(came, "it gets there")
+	assert_gte(seen.nearest, Tuning.data.posture_ring_min_m - 0.35, "never nearer than the ring's near edge on the way (%.2f m: the chord passes through the player)" % seen.nearest)
+
+
+func test_the_way_round_is_a_point_on_the_ring_for_a_far_slot_and_a_back_out_for_a_near_one() -> void:
+	_make_player()
+	var punk := _punk(Vector3(0.0, 0.0, -3.0))
+	await _ticks(2)
+	Tuning.data.ai_frozen = true
+	var lead := Tuning.data.posture_orbit_lead_deg
+	var far := punk._orbit_toward(_player, Vector3(0.0, 0.0, 3.0))
+	assert_true(far.is_finite(), "a slot across the player is reached by a point on the way")
+	assert_almost_eq(_flat_dist(far, _player.global_position), 3.0, 0.05, "on the ring at the radius it walks at")
+	assert_almost_eq(absf(rad_to_deg(Vector3(0.0, 0.0, -1.0).signed_angle_to(far - _player.global_position, Vector3.UP))), lead, 0.5, "a lead round")
+	var near := punk._orbit_toward(_player, Vector3(3.0 * sin(deg_to_rad(50.0)), 0.0, -3.0 * cos(deg_to_rad(50.0))))
+	assert_false(near.is_finite(), "a slot within posture_orbit_gap_deg round is walked to straight")
+	punk.global_position = Vector3(0.0, 0.0, -1.0)
+	var out := punk._orbit_toward(_player, Vector3(0.0, 0.0, -3.5))
+	assert_true(out.is_finite(), "inside the ring's near edge the walk is a back-out even when the slot is straight out")
+	assert_gte(_flat_dist(out, _player.global_position), Tuning.data.posture_ring_min_m, "to the ring")
+	assert_lt(absf(rad_to_deg(Vector3(0.0, 0.0, -1.0).signed_angle_to(out - _player.global_position, Vector3.UP))), 1.0, "straight out, not through him")
+	var side := punk._orbit_toward(_player, Vector3(3.0, 0.0, 0.0))
+	assert_true(side.is_finite())
+	assert_gte(_flat_dist(side, _player.global_position), Tuning.data.posture_ring_min_m, "a back-out toward a slot at his side leaves on a diagonal, never nearer to him")
+
+
+func test_a_way_round_point_inside_the_car_is_skipped() -> void:
+	# The orbit points are checked against the navmesh: one inside a parked car (a bollard here: a box
+	# wider than the agent leaves a walkable top the mesh counts) would walk the enemy into its side. A
+	# leg whose point is off the mesh gives way to another radius or a shorter leg. Bollards on both
+	# legs, because which way round a slot exactly across the player is reached is a coin.
+	_make_player()
+	var lead := deg_to_rad(Tuning.data.posture_orbit_lead_deg)
+	var blocked: Array[Vector3] = [Vector3(0.0, 0.0, -3.0).rotated(Vector3.UP, lead), Vector3(0.0, 0.0, -3.0).rotated(Vector3.UP, -lead)]
+	for spot in blocked:
+		_box(Vector3(spot.x, 1.0, spot.z), Vector3(0.8, 2.0, 0.8))
+	await _bake_navmesh()
+	var punk := _punk(Vector3(0.0, 0.0, -3.0))
+	await _ticks(4)
+	Tuning.data.ai_frozen = true
+	await _ticks(2)
+	assert_true(punk._navmesh_ready, "the navmesh has synced")
+	for spot in blocked:
+		assert_false(punk._on_navmesh(spot), "the bollard's spot is off the mesh")
+	var step := punk._orbit_toward(_player, Vector3(0.0, 0.0, 3.0))
+	assert_true(step.is_finite(), "there is still a way round")
+	for spot in blocked:
+		assert_gte(_flat_dist(step, spot), 0.9, "but not through a bollard (%s)" % str(step))
+	assert_true(punk._on_navmesh(step), "the point is on the mesh")
+
+
+func test_a_repeated_stall_goes_round_the_player_the_other_way() -> void:
+	# The detour's side was a coin toss every time, so a body wedged on one side (the car, a crate) took
+	# the same blocked way again and again (an armored Bruiser stood at the nose for 5 s).
+	_make_player()
+	var punk := _punk(Vector3(0.0, 0.0, -3.0))
+	await _ticks(2)
+	Tuning.data.ai_frozen = true
+	var sides: Array[float] = []
+	for i in 4:
+		punk._start_detour(_player)
+		sides.append(signf(punk._detour.x))
+		punk._detour_frames = 0
+		await _ticks(5)
+	assert_ne(sides[0], 0.0)
+	for i in range(1, sides.size()):
+		assert_eq(sides[i], -sides[i - 1], "stall %d went the other way from the last" % i)
+
+
+func test_a_body_that_does_not_move_is_stalled_whatever_its_target_and_the_director_do() -> void:
+	# A Bruiser wedged between the crates and the player for 3 s never stalled: the way round the ring
+	# and the reslots (set_slot() starts the count over) kept changing its target, so "no nearer to the
+	# target" never ran out. A body that has not moved a slot reach in enemy_stuck_s is stalled.
+	_make_player()
+	var punk := _punk(Vector3(0.0, 0.0, -3.0))
+	await _ticks(2)
+	Tuning.data.ai_frozen = true
+	var frames := EnemyActor._frames(Tuning.data.enemy_stuck_s)
+	var stalled_at := -1
+	for i in frames + 10:
+		var target := Vector3(4.0 if i % 2 == 0 else 0.5, 0.0, -3.0)
+		if i % 20 == 19:
+			punk.set_slot(Vector3(0.0, 0.0, 3.0 + float(i)))
+		if punk._stalled(target):
+			stalled_at = i
+			break
+	assert_between(stalled_at, frames - 2, frames + 1, "it stalls after enemy_stuck_s (%d frames), not never (%d)" % [frames, stalled_at])
+	# And a body that is walking is not wedged: it moves a slot reach every few ticks toward its target.
+	punk._wedge_anchor = Vector3.INF
+	punk._progress_best = INF
+	var stalls := 0
+	for i in frames * 3:
+		punk.global_position.x += 0.05
+		if punk._stalled(Vector3(100.0, 0.0, punk.global_position.z)):
+			stalls += 1
+	assert_eq(stalls, 0, "a body that is walking toward its target never stalls")
+
+
+func test_a_detour_never_takes_the_side_with_no_navmesh_under_it() -> void:
+	# A bollard on one side of the player: the detour spot there is off the mesh, so whatever the
+	# enemy's own coin says the detour goes the other way.
+	_make_player()
+	_box(Vector3(3.0, 1.0, 0.0), Vector3(0.8, 2.0, 0.8))
+	await _bake_navmesh()
+	Tuning.data.ai_frozen = true
+	for label in ["PunkA", "PunkB", "PunkC", "PunkD", "PunkE", "PunkF"]:
+		var punk := _punk(Vector3(0.0, 0.0, -3.0))
+		punk.name = label
+		await _ticks(4)
+		assert_true(punk._navmesh_ready)
+		punk._start_detour(_player)
+		assert_lt(punk._detour.x, 0.0, "%s's detour is on the open side (%s)" % [label, str(punk._detour)])
+		punk.queue_free()
+		await _ticks(2)
+
+
+func test_a_taunt_in_progress_finishes_before_a_moved_slot_calls_the_enemy_back() -> void:
+	# The boss's beckon was cut one frame after it began: the call-in's first Punk changed the set of
+	# enemies, the reslot gave the boss a seat across the player, and _tick_posture() sent it to APPROACH
+	# (which zeroes the taunt) before it counted the taunt down.
+	Tuning.data.posture_taunt_chance = 0.0
+	_make_player()
+	_make_director()
+	var punk := _punk(Vector3(0.0, 0.0, -3.2))
+	_director.put_slot(punk, punk.global_position)
+	await _until(func() -> bool: return punk.ai_state == EnemyActor.AiState.POSTURE)
+	punk._start_taunt()
+	var frames := punk._taunt_frames
+	assert_gt(frames, 30, "a taunt of some length")
+	_director.put_slot(punk, Vector3(0.0, 0.0, 6.0))
+	await _ticks(frames - 3)
+	assert_eq(punk.ai_state, EnemyActor.AiState.POSTURE, "still gesturing, not walking, a few frames before it ends")
+	assert_eq(punk.rig.current_anim(), &"taunt")
+	await _ticks(8)
+	assert_eq(punk.ai_state, EnemyActor.AiState.APPROACH, "and then the moved slot calls it back")
+
+
+func test_only_an_archetype_that_wakes_in_place_resumes_posture_after_a_reaction() -> void:
+	# The Punk goes back to its slot (the slice gate settled it); the hook is the boss's.
+	_make_player()
+	var punk := _punk(Vector3(0.0, 0.0, -1.5))
+	await _ticks(4)
+	assert_false(punk._wakes_in_place(), "the base and the Punk go back to the slot")
+	assert_false(punk.has_token_priority())
+
+
 # --- The attack: commit, step in, wind-up, strike, recover -------------------------------------
 
 

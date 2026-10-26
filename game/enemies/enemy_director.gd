@@ -23,9 +23,11 @@ extends Node
 ## - answers may_start_windup() with the pacing rule (director_min_windup_gap_s between two
 ##   wind-up starts, readability metric R2), and windup_eta_s() with how soon it would say yes, so
 ##   a holder waits squared up on the ring and steps in only when its go is near;
-## - gives every live enemy a posture slot: evenly spaced angles around the
-##   player, the arrangement turned as little as possible from where the enemies stand, each on
-##   its own radius of the ring, snapped onto the navmesh when there is one.
+## - gives every live enemy a posture slot: the enemies that are not Kickers evenly spaced around the
+##   player, the arrangement turned as little as possible from where they stand (a newcomer
+##   weighs little against one already seated), each on its own radius of the ring, snapped onto
+##   the navmesh when there is one; each Kicker has a seat of its own as near directly behind the
+##   look as it can be, and the others never move for it.
 ##
 ## A subclass that defines its own script (the test fixture tests/fixtures/stub_director.gd)
 ## decides nothing on its own: the loop only runs for this script itself.
@@ -43,6 +45,8 @@ const _CLOCK_SLACK_S := 0.001
 const _COST_SLACK_DEG := 0.000001
 ## Resolution of the per-enemy name hash that picks its jitter and radius.
 const _HASH_BUCKETS := 4096
+## The step (degrees) of the search for a Kicker's seat outward from directly behind the look.
+const _FLANK_SEARCH_DEG := 5.0
 
 var _rng := RandomNumberGenerator.new()
 ## The player as of this tick (for _committed()).
@@ -419,10 +423,17 @@ func _grant(player: PlayerCharacter, members: Array[EnemyActor]) -> void:
 		var pick: EnemyActor = _waiting[0]
 		var blind := false
 		var blind_ones: Array = []
+		var waking: EnemyActor = null
 		for waiter: EnemyActor in _waiting:
+			if waking == null and waiter.has_token_priority():
+				waking = waiter
 			if player.is_outside_view(waiter.global_position, angle):
 				blind_ones.append(waiter)
-		if not blind_ones.is_empty() and _rng.randf() < Tuning.data.blind_spot_priority:
+		if waking != null:
+			# An enemy that just got up beside the player (the boss) is served before the queue and
+			# before the blind-spot roll, which is not drawn for it.
+			pick = waking
+		elif not blind_ones.is_empty() and _rng.randf() < Tuning.data.blind_spot_priority:
 			pick = blind_ones[0]
 			blind = true
 		_waiting.erase(pick)
@@ -461,25 +472,29 @@ func _update_slots(player: PlayerCharacter, members: Array[EnemyActor]) -> void:
 	_assign_slots(player, members)
 
 
-## Spread `set` evenly over 360 degrees around the player. The arrangement is turned the least
-## it can be from where the enemies sit (an enemy that has a seat from last time sits there,
-## wherever it stands now: a crowd that walks past each other, or an attacker at the player's
-## nose, does not reshuffle the ring; a new one sits where it stands), so a settled crowd does
-## not churn, unless a Kicker is among them: then it is turned until a slot is directly behind
-## the look, and the Kickers take the slots nearest behind first.
+## Spread `set` around the player. The enemies that are not Kickers share the 360 degrees evenly, the
+## arrangement turned the least it can be from where they sit (an enemy that has a seat from last
+## time sits there, wherever it stands now: a crowd that walks past each other, or an attacker at
+## the player's nose, does not reshuffle the ring; a new one sits where it stands but weighs only
+## director_newcomer_weight against a seated one, so a call-in never turns the ring or hands an
+## enemy already on it the seat across the player). A Kicker is no part of that arrangement: it
+## takes a seat of its own as near directly behind the look as it can be (_flank_angles()), so the
+## look turning moves the Kickers and nobody else.
 func _assign_slots(player: PlayerCharacter, set: Array[EnemyActor]) -> void:
 	var n := set.size()
 	if n == 0:
 		return
 	var origin := player.global_position
-	var step := 360.0 / float(n)
 	var angles := PackedFloat64Array()
 	var offsets := PackedFloat64Array()
 	var radii := PackedFloat64Array()
 	var jitter := Tuning.data.director_spread_jitter_deg
 	var ring_min := Tuning.data.posture_ring_min_m
 	var ring_max := maxf(Tuning.data.posture_ring_max_m, ring_min)
-	for enemy in set:
+	var ring: Array[int] = []
+	var flank: Array[int] = []
+	for i in n:
+		var enemy := set[i]
 		var name_text := String(enemy.name)
 		var offset := jitter * (_unit_hash(name_text + "/jitter") * 2.0 - 1.0) + _stall_nudge(enemy)
 		offsets.append(offset)
@@ -488,30 +503,91 @@ func _assign_slots(player: PlayerCharacter, set: Array[EnemyActor]) -> void:
 			angles.append(float(_claims[enemy]) + offset)
 		else:
 			angles.append(ViewGeometry.bearing_deg(0.0, origin, enemy.global_position))
-	var behind := rad_to_deg(player.look_yaw) + 180.0
-	var base := _best_base(angles, offsets, step)
-	var has_blind_side := false
-	for enemy in set:
-		has_blind_side = has_blind_side or enemy.prefers_blind_side
-	if has_blind_side:
-		base += fposmod(behind - base + step * 0.5, step) - step * 0.5
-	var slot_angles := PackedFloat64Array()
-	for k in n:
-		slot_angles.append(base + float(k) * step)
-	var slot_of := _match_slots(set, angles, slot_angles, behind)
+		(flank if enemy.prefers_blind_side else ring).append(i)
+	var seat := PackedFloat64Array()  # the seat (degrees, before the enemy's own offset) of each enemy
+	seat.resize(n)
+	var taken := PackedFloat64Array()  # where the seats taken so far are, offsets included
+	if not ring.is_empty():
+		var ring_angles := PackedFloat64Array()
+		var ring_offsets := PackedFloat64Array()
+		var ring_weight := PackedFloat64Array()
+		var seated := PackedByteArray()
+		for i in ring:
+			ring_angles.append(angles[i])
+			ring_offsets.append(offsets[i])
+			var has_seat := _claims.has(set[i])
+			seated.append(1 if has_seat else 0)
+			ring_weight.append(1.0 if has_seat else Tuning.data.director_newcomer_weight)
+		var step := 360.0 / float(ring.size())
+		var base := _best_base(ring_angles, ring_offsets, step, ring_weight)
+		var slot_angles := PackedFloat64Array()
+		for k in ring.size():
+			slot_angles.append(base + float(k) * step)
+		var slot_of := _match_slots(ring_angles, slot_angles, seated)
+		for r in ring.size():
+			seat[ring[r]] = slot_angles[slot_of[r]]
+			taken.append(slot_angles[slot_of[r]] + ring_offsets[r])
+	if not flank.is_empty():
+		var behind := rad_to_deg(player.look_yaw) + 180.0
+		var order := _flank_order(set, flank, behind, origin)
+		for i in order:
+			var side := signf(wrapf(float(_claims[set[i]]) - behind, -180.0, 180.0)) if _claims.has(set[i]) else 1.0
+			if side == 0.0:
+				side = 1.0
+			var found := _flank_angle(behind, offsets[i], taken, side)
+			seat[i] = found
+			taken.append(found + offsets[i])
 	for i in n:
-		var angle := slot_angles[slot_of[i]] + offsets[i]
-		var slot := _snap_slot(player, angle, radii[i])
-		_claims[set[i]] = slot_angles[slot_of[i]]
+		var slot := _snap_slot(player, seat[i] + offsets[i], radii[i])
+		_claims[set[i]] = seat[i]
 		_slots[set[i]] = slot
 		set[i].set_slot(slot)
 
 
-## The rotation (degrees) of the evenly spaced slots that moves the enemies least: the L1
+## The Kickers of `set` (indices `flank`), the one nearest directly behind first.
+func _flank_order(set: Array[EnemyActor], flank: Array[int], behind: float, origin: Vector3) -> Array[int]:
+	var order := flank.duplicate()
+	var distance := func(i: int) -> float:
+		var angle := float(_claims[set[i]]) if _claims.has(set[i]) else ViewGeometry.bearing_deg(0.0, origin, set[i].global_position)
+		return absf(wrapf(angle - behind, -180.0, 180.0))
+	order.sort_custom(func(a: int, b: int) -> bool:
+		var da: float = distance.call(a)
+		var db: float = distance.call(b)
+		return da < db or (da == db and a < b))
+	var out: Array[int] = []
+	for i: int in order:
+		out.append(i)
+	return out
+
+
+## A seat (degrees) for a Kicker whose own offset is `offset`: as near `behind` as it can be and, offset
+## included, at least director_flank_gap_deg from every angle in `taken` (the other seats). The
+## search goes outward from `behind` in _FLANK_SEARCH_DEG steps, on `side` (+1 or -1: the side it sat
+## on last time) first. With no room at all it sits directly behind.
+func _flank_angle(behind: float, offset: float, taken: PackedFloat64Array, side: float) -> float:
+	var gap := Tuning.data.director_flank_gap_deg
+	var steps := int(180.0 / _FLANK_SEARCH_DEG)
+	for k in steps + 1:
+		for way: float in [side, -side]:
+			if k == 0 and way < 0.0:
+				continue
+			var candidate := behind + way * float(k) * _FLANK_SEARCH_DEG
+			var clear := true
+			for other in taken:
+				if absf(wrapf(candidate + offset - other, -180.0, 180.0)) < gap:
+					clear = false
+					break
+			if clear:
+				return candidate
+	return behind
+
+
+## The rotation (degrees) of the evenly spaced slots that moves the enemies least: the weighted L1
 ## optimum over the cyclic assignments (enemies in angular order, slot k = base + k * step plus
-## the enemy's own offset). Some enemy sits exactly on its slot at the optimum, so it is enough
-## to try each enemy as that anchor under each cyclic shift.
-func _best_base(angles: PackedFloat64Array, offsets: PackedFloat64Array, step: float) -> float:
+## the enemy's own offset, an enemy's distance counting `weights` times). Some enemy sits exactly
+## on its slot at the optimum, so it is enough to try each enemy as that anchor under each cyclic
+## shift.
+func _best_base(angles: PackedFloat64Array, offsets: PackedFloat64Array, step: float, weights: PackedFloat64Array) -> float:
 	var n := angles.size()
 	var order: Array = range(n)
 	order.sort_custom(func(a: int, b: int) -> bool:
@@ -526,56 +602,37 @@ func _best_base(angles: PackedFloat64Array, offsets: PackedFloat64Array, step: f
 			for pos in n:
 				var idx: int = order[pos]
 				var slot := base + offsets[idx] + float((pos + shift) % n) * step
-				cost += absf(wrapf(angles[idx] - slot, -180.0, 180.0))
+				cost += weights[idx] * absf(wrapf(angles[idx] - slot, -180.0, 180.0))
 			if cost < best_cost - _COST_SLACK_DEG:
 				best_cost = cost
 				best_base = base
 	return best_base
 
 
-## Which slot each enemy takes (an index into `slot_angles`): the Kickers the slots nearest
-## `behind` first, then the rest by the smallest angular change, greedy.
-func _match_slots(set: Array[EnemyActor], angles: PackedFloat64Array, slot_angles: PackedFloat64Array,
-		behind: float) -> PackedInt32Array:
-	var n := set.size()
+## Which slot each enemy takes (an index into `slot_angles`): the seated ones first, by the smallest
+## angular change, greedy, then the newcomers take what is left the same way.
+func _match_slots(angles: PackedFloat64Array, slot_angles: PackedFloat64Array, seated: PackedByteArray) -> PackedInt32Array:
+	var n := angles.size()
 	var slot_of := PackedInt32Array()
 	slot_of.resize(n)
 	slot_of.fill(-1)
 	var slot_free := PackedByteArray()
 	slot_free.resize(n)
 	slot_free.fill(1)
-	var kickers: Array = []
-	for i in n:
-		if set[i].prefers_blind_side:
-			kickers.append(i)
-	if not kickers.is_empty():
-		var rear: Array = range(n)
-		rear.sort_custom(func(a: int, b: int) -> bool:
-			var da := absf(wrapf(slot_angles[a] - behind, -180.0, 180.0))
-			var db := absf(wrapf(slot_angles[b] - behind, -180.0, 180.0))
-			return da < db or (da == db and a < b))
-		kickers.sort_custom(func(a: int, b: int) -> bool:
-			var da := absf(wrapf(angles[a] - behind, -180.0, 180.0))
-			var db := absf(wrapf(angles[b] - behind, -180.0, 180.0))
-			return da < db or (da == db and a < b))
-		for k in kickers.size():
-			slot_of[kickers[k]] = rear[k]
-			slot_free[rear[k]] = 0
 	var pairs: Array = []
 	for i in n:
-		if slot_of[i] >= 0:
-			continue
 		for k in n:
-			if slot_free[k] == 1:
-				pairs.append([absf(wrapf(angles[i] - slot_angles[k], -180.0, 180.0)), i, k])
+			pairs.append([0 if seated[i] == 1 else 1, absf(wrapf(angles[i] - slot_angles[k], -180.0, 180.0)), i, k])
 	pairs.sort_custom(func(a: Array, b: Array) -> bool:
 		if a[0] != b[0]:
 			return a[0] < b[0]
-		return a[1] < b[1] or (a[1] == b[1] and a[2] < b[2]))
+		if a[1] != b[1]:
+			return a[1] < b[1]
+		return a[2] < b[2] or (a[2] == b[2] and a[3] < b[3]))
 	for pair: Array in pairs:
-		if slot_of[pair[1]] < 0 and slot_free[pair[2]] == 1:
-			slot_of[pair[1]] = pair[2]
-			slot_free[pair[2]] = 0
+		if slot_of[pair[2]] < 0 and slot_free[pair[3]] == 1:
+			slot_of[pair[2]] = pair[3]
+			slot_free[pair[3]] = 0
 	return slot_of
 
 
