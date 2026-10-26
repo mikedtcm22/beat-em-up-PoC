@@ -299,7 +299,7 @@
 		"player_avoid_radius_m": 0.3,
 		"punk_health": 30.0,
 		"punk_shove_chance": 0.3,
-		"punk_attack_cooldown_s": 1.4,
+		"punk_attack_cooldown_s": 5.0,
 		"punk_speed_mult": 1.0,
 		"kicker_health": 25.0,
 		"kicker_circle_mult": 1.6,
