@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="MoveData" format=3 uid="uid://bnr11jiqfjqi2"]
+
+[ext_resource type="Script" uid="uid://c7u6g52wmmok0" path="res://game/combat/combo_branch.gd" id="combo_branch_gd"]
+[ext_resource type="Script" uid="uid://cgv6sg6uflq2j" path="res://game/combat/hitbox_spec.gd" id="hitbox_spec_gd"]
+[ext_resource type="Script" uid="uid://difuwhwjj1vue" path="res://game/combat/move_data.gd" id="move_data_gd"]
+
+[sub_resource type="Resource" id="hitbox_0"]
+script = ExtResource("hitbox_spec_gd")
+kind = 1
+arc_radius = 2.5
+arc_half_angle_deg = 180.0
+arc_height = Vector2(0, 0.6)
+
+[resource]
+script = ExtResource("move_data_gd")
+id = &"boss_pound"
+display_name = "Boss Ground Pound"
+startup = 36
+active = 4
+recovery = 30
+damage = 15.0
+knockback = Vector3(0, 3.5, 4.5)
+reaction = 3
+tier = 1
+unblockable = true
+blocked_recoil_frames = 0
+hitboxes = Array[ExtResource("hitbox_spec_gd")]([SubResource("hitbox_0")])
+magnetism = false
+reach_m = 2.6
