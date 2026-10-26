@@ -102,7 +102,7 @@ static func _charge_behind(bot: Node) -> void:
 ## The pound from 2.3 m, ahead. `jumped`: the player jumps in its wind-up and the ring passes under him.
 static func _pound(bot: Node, jumped: bool) -> void:
 	bot.god()
-	var boss := await _boss(bot, Vector2(0.0, 2.3))
+	var boss := await _boss(bot, Vector2(0.0, 2.55))
 	await _wind_up(bot, boss, 1)
 	if jumped:
 		await bot._wait_until(func() -> bool: return boss.move_frame >= JUMP_AT_FRAME, 40)

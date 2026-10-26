@@ -228,26 +228,60 @@ func test_light_hits_land_their_damage_and_never_interrupt_a_wind_up() -> void:
 	assert_true(_ended.is_empty(), "no windup_ended: the rear warning keeps going")
 
 
-func test_a_heavy_hit_staggers_it_out_of_every_wind_up_the_grab_among_them() -> void:
-	# Game-boy's rule: a heavy hit gets the player out of the grab's wind-up. The charge's and the
-	# pound's are cut the same way.
-	for index: int in 3:
+func test_a_heavy_hit_staggers_it_out_of_the_grab_wind_up() -> void:
+	# Game-boy's rule: a heavy hit gets the player out of the grab's wind-up.
+	var boss := _boss(1.3)
+	assert_true(await _wind_up(boss, 2), "the grab winds up")
+	await _ticks(6)
+	var hit := _hit(_player, boss, 10.0, CombatTypes.HitTier.HEAVY, CombatTypes.Reaction.KNOCKDOWN)
+	assert_true(boss.receive_hit(hit))
+	assert_eq(hit.reaction, CombatTypes.Reaction.STAGGER, "a heavy hit staggers, it does not knock down")
+	assert_false(hit.armor_absorbed)
+	assert_eq(boss.state, CombatTypes.ActorState.STAGGER)
+	assert_null(boss.current_move, "the move is cut")
+	assert_eq(_ended.size(), 1, "windup_ended once")
+	assert_true(_ended[0].interrupted, "interrupted: the warning ends")
+	await _ticks(Tuning.data.stagger_frames + 4)
+	assert_ne(_player.state, CombatTypes.ActorState.GRABBED, "nobody is held after the cut")
+
+
+func test_a_heavy_hit_does_not_cut_the_charge_or_the_pound_short() -> void:
+	# The charge and the pound are answered by a dodge, a jump, a block or a finisher: a heavy hit
+	# (the hook of the third punch) is absorbed like a light one, in the wind-up and in the strike.
+	for index: int in 2:
 		_ended.clear()
-		var boss := _boss(2.5)
+		var boss := _boss(5.0)
 		assert_true(await _wind_up(boss, index), "attack %d winds up" % index)
 		await _ticks(6)
-		var hit := _hit(_player, boss, 10.0, CombatTypes.HitTier.HEAVY, CombatTypes.Reaction.KNOCKDOWN)
+		var health := boss.health
+		var hit := _hit(_player, boss, 8.0, CombatTypes.HitTier.HEAVY, CombatTypes.Reaction.KNOCKDOWN)
 		assert_true(boss.receive_hit(hit))
-		assert_eq(hit.reaction, CombatTypes.Reaction.STAGGER, "a heavy hit staggers, it does not knock down")
-		assert_false(hit.armor_absorbed)
-		assert_eq(boss.state, CombatTypes.ActorState.STAGGER)
-		assert_null(boss.current_move, "the move is cut")
-		assert_eq(_ended.size(), 1, "windup_ended once")
-		assert_true(_ended[0].interrupted, "interrupted: the warning ends")
-		await _ticks(Tuning.data.stagger_frames + 4)
-		assert_ne(_player.state, CombatTypes.ActorState.GRABBED, "nobody is held after the cut")
+		assert_true(hit.armor_absorbed, "absorbed")
+		assert_eq(hit.reaction, CombatTypes.Reaction.NONE)
+		assert_eq(boss.health, health - 8.0, "the damage lands")
+		assert_eq(boss.state, CombatTypes.ActorState.WINDUP, "the wind-up goes on")
+		assert_true(_ended.is_empty(), "no windup_ended")
+		assert_true(await _until(func() -> bool: return boss.state == CombatTypes.ActorState.ATTACK, 60))
+		var again := _hit(_player, boss, 8.0, CombatTypes.HitTier.HEAVY, CombatTypes.Reaction.KNOCKDOWN)
+		assert_true(boss.receive_hit(again))
+		assert_true(again.armor_absorbed, "and in the strike")
+		assert_eq(boss.state, CombatTypes.ActorState.ATTACK)
+		assert_not_null(boss.current_move)
 		boss.free()
 		await _ticks(2)
+
+
+func test_a_finisher_cuts_the_charge_short_and_knocks_it_down() -> void:
+	var boss := _boss(5.0)
+	assert_true(await _wind_up(boss, 0))
+	await _ticks(6)
+	var hit := _hit(_player, boss, 14.0, CombatTypes.HitTier.FINISHER, CombatTypes.Reaction.LAUNCH)
+	assert_true(boss.receive_hit(hit))
+	assert_false(hit.armor_absorbed, "the finisher is the answer")
+	assert_eq(hit.reaction, CombatTypes.Reaction.LAUNCH)
+	assert_null(boss.current_move, "the charge is cut")
+	assert_eq(_ended.size(), 1)
+	assert_true(_ended[0].interrupted)
 
 
 func test_a_finisher_knocks_it_down() -> void:

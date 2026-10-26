@@ -4,8 +4,9 @@ extends EnemyActor
 ## art). 300 HP over two phases, 2.3 m tall and 0.5 m wide, group "boss" (the HUD's bottom bar
 ## follows it and skips its over-head bar). Armored: a light hit lands its damage and is absorbed
 ## (no flinch, the move runs on), a heavy hit staggers it (which also gets the player out of its
-## grab wind-up: Game-boy's rule), and a finisher knocks it down (the punish window). It can never
-## be grabbed. Three attacks, picked by range (_choose_attack()):
+## grab wind-up: Game-boy's rule) unless it is committed to a charge or a pound, which a heavy hit
+## cannot cut short either (_apply_armor()), and a finisher knocks it down (the punish window). It
+## can never be grabbed. Three attacks, picked by range (_choose_attack()):
 ##   the shoulder charge (boss_charge): a held crouch, then a 4 m dash over the move's active frames
 ##     (stopping at a wall) with an arc in front of the shoulder, 20, a knockdown; blockable. Thrown
 ##     when the player is at least boss_charge_min_m away.
@@ -135,6 +136,31 @@ func can_be_grabbed() -> bool:
 	return false
 
 
+# --- Armor ------------------------------------------------------------------------------------
+
+
+## The base's armor (light absorbed, heavy staggers, a finisher knocks it down), except that once the
+## charge or the pound is winding up (or running) a heavy hit is absorbed too, as a light one is:
+## the damage lands and the move goes on. Only the grab's wind-up is cut short by a heavy hit (Game-
+## boy's rule); the charge and the pound are answered by a dodge, a jump, a block or a finisher.
+## Without this an aggressive player's third punch (a heavy hook) cancelled every wind-up there
+## was, and the autopilot beat the boss in 38 s without taking a hit.
+func _apply_armor(hit: HitInfo) -> void:
+	if not hit.killed and hit.tier == CombatTypes.HitTier.HEAVY and _commits_to_its_move() \
+			and not (hit.move != null and hit.move.breaks_armor):
+		hit.armor_absorbed = true
+		hit.reaction = CombatTypes.Reaction.NONE
+		hit.knockback = Vector3.ZERO
+		return
+	super._apply_armor(hit)
+
+
+## True while it is winding up or running a charge or a pound: any attack but the grab (EnemyHold's
+## hold is cut by a heavy hit, and a hit that lands on it releases the player).
+func _commits_to_its_move() -> bool:
+	return _running_move() and current_move != null and _attack != null and _attack.kind != &"grab"
+
+
 # --- Turning ----------------------------------------------------------------------------------
 
 
@@ -209,6 +235,10 @@ func _enter_phase2() -> void:
 ## The Punks it called in arrive one every wave_spawn_interval_s, the first at once: a rig takes
 ## about 10 ms to build, and two in one frame was a 40 ms hitch where the spawn limit is 33.
 func _tick_adds() -> void:
+	# Punks that were freed (a KO that blinked off, F4's remove-all) drop out of the list.
+	for i in range(adds.size() - 1, -1, -1):
+		if not is_instance_valid(adds[i]):
+			adds.remove_at(i)
 	if _adds_due <= 0:
 		return
 	if health <= 0.0 or is_gone():
