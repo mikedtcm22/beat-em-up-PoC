@@ -25,9 +25,11 @@ extends Control
 ## **Several attackers**: one burst per corner, brightness 1 + rear_warning_brightness_step x
 ## (n - 1) for the n live wind-ups on that side (a "both" one counts on both), and it pulses
 ## again when n rises. A heavy attacker (its `heavy` property, read duck-typed) makes that
-## corner's burst rear_warning_heavy_scale times larger. The burst pops in, beats
-## rear_warning_pulses times, then holds; it always lies inside the reserved top corner (Spec §5,
-## 20% of the width and of the height), whatever rear_warning_size says.
+## corner's burst rear_warning_heavy_scale times larger (SPEC §8's "larger for the Bruiser and
+## boss", at every size setting: the normal burst is held to the corner over that scale, so the
+## heavy one fits it). The burst pops in, beats rear_warning_pulses times, then holds; it always
+## lies inside the reserved top corner (Spec §5, 20% of the width and of the height), whatever
+## rear_warning_size says.
 ## Hidden while the player's health is 0 (the KO view) with rear_warning_hide_in_ko.
 
 ## A corner lit, or one more attacker joined it: its side (&"left" or &"right"), how many
@@ -113,9 +115,10 @@ func advance(delta: float) -> void:
 
 ## How `side` (&"left" or &"right") looks now: {active, count, heavy, alpha, brightness,
 ## size_px, scale, rect}. `alpha` and `scale` are what is drawn this frame (the pulse
-## included), `size_px` the steady size (heavy and the size tunable applied, clamped into the
-## corner) and `rect` the drawn rectangle in this control's coordinates, always inside the
-## reserved corner. An unlit side is {active = false, count = 0, ...} with zero alpha.
+## included), `size_px` the steady size (the size tunable and, for a heavy burst, the heavy
+## scale applied, inside the corner: _steady_size()) and `rect` the drawn rectangle in this
+## control's coordinates, always inside the reserved corner. An unlit side is
+## {active = false, count = 0, ...} with zero alpha.
 func corner_state(side: StringName) -> Dictionary:
 	var count: int = _counts.get(side, 0)
 	if count <= 0:
@@ -142,9 +145,11 @@ func corner_state(side: StringName) -> Dictionary:
 
 
 ## The rectangle (this control's coordinates) a burst on `side` is drawn in: centred
-## rear_warning_inset_px in from the top corner of the screen, `rear_warning_base_px x
-## rear_warning_size` wide (x heavy scale, x `pulse_scale`), and pushed in and shrunk as far as
-## it takes to lie inside the reserved corner (20% of the width, 20% of the height).
+## rear_warning_inset_px in from the top corner of the screen, _steady_size() wide
+## (rear_warning_base_px x rear_warning_size, x the heavy scale for a heavy one) x `pulse_scale`,
+## and pushed in and shrunk as far as it takes to lie inside the reserved corner (20% of the
+## width, 20% of the height). The pop is clipped there like the rest, so a heavy burst is never
+## smaller than a normal one's, at rest or at the pop's peak.
 func burst_rect(side: StringName, heavy: bool = false, pulse_scale: float = 1.0) -> Rect2:
 	var corner := _corner_size()
 	var edge := minf(corner.x, corner.y)
@@ -310,14 +315,18 @@ func _refresh() -> void:
 # --- Look -------------------------------------------------------------------------------
 
 
-## The steady size (pixels) of a burst: base x size x the heavy scale, never over the corner.
+## The steady size (pixels) of a burst: base x size, held to the corner's short side over the
+## heavy scale, then x the heavy scale for a heavy attacker. So a heavy burst is always the
+## heavy scale times the normal one and never over the corner (clamping the two apart made them
+## meet at the corner's edge: a size above about 1.04 left a heavy burst no bigger than a normal
+## one). Past the size where the normal burst reaches that hold, the size setting does nothing:
+## the reserved corner (Spec §5) is the limit.
 func _steady_size(heavy: bool) -> float:
 	var tuning := Tuning.data
-	var px := tuning.rear_warning_base_px * tuning.rear_warning_size
-	if heavy:
-		px *= tuning.rear_warning_heavy_scale
 	var corner := _corner_size()
-	return minf(px, minf(corner.x, corner.y))
+	var heavy_scale := maxf(tuning.rear_warning_heavy_scale, 1.0)
+	var px := minf(tuning.rear_warning_base_px * tuning.rear_warning_size, minf(corner.x, corner.y) / heavy_scale)
+	return px * heavy_scale if heavy else px
 
 
 func _corner_size() -> Vector2:
