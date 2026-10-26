@@ -8,6 +8,7 @@ static func acts(bot: Node) -> Array[Dictionary]:
 		{title = "Room tour", cam = &"first_person", fn = func() -> void: await _tour(bot)},
 		{title = "Room tour, free fly, F3", cam = &"free_fly", fn = func() -> void: await _fly(bot)},
 		{title = "Spawn points", cam = &"free_fly", fn = func() -> void: await _spawn_points(bot)},
+		{title = "F4 menu", cam = &"first_person", fn = func() -> void: await _cheats(bot)},
 	]
 
 
@@ -69,3 +70,18 @@ static func _fly_path(bot: Node, from: Vector3, to: Vector3, target: Vector3, ti
 		await bot.get_tree().physics_frame
 		var at := from.lerp(to, float(i + 1) / float(ticks))
 		camera.global_transform = Transform3D(Basis.IDENTITY, at).looking_at(target, Vector3.UP)
+
+
+## The F4 menu open over the street (its enemy list, remove all, waves and freeze), an enemy
+## spawned from it at the crosshair, then closed.
+static func _cheats(bot: Node) -> void:
+	var overlay := bot.room.find_children("*", "TuningOverlay", false, false)[0] as TuningOverlay
+	await bot._look_to(0.0, 6)
+	overlay.set_cheats_open(true)
+	await bot._ticks(60)
+	overlay.cheats.spawn_selected()
+	bot.set_waves(true)
+	await bot._ticks(90)
+	overlay.close_all()
+	bot.set_waves(false)
+	await bot._ticks(30)
