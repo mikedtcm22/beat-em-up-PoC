@@ -6,6 +6,7 @@ extends GutTest
 ## is unchanged (a clean one still bursts, a block still sparks white).
 
 const BRUISER_SCENE := preload("res://game/enemies/bruiser/bruiser.tscn")
+const StubDirector := preload("res://tests/fixtures/stub_director.gd")
 const TICK := 1.0 / 60.0
 const CONTACT := Vector3(0.0, 1.4, -1.2)
 
@@ -42,6 +43,11 @@ func after_each() -> void:
 		(voice as AudioStreamPlayer3D).stop()
 	TimeController.clear()
 	Tuning.apply(TuningData.new())
+
+
+func after_all() -> void:
+	# The audio mixer drops a stopped stream on its own thread: give it a moment before the run exits.
+	OS.delay_msec(150)
 
 
 func _on_played(pool: StringName, voice: AudioStreamPlayer3D) -> void:
@@ -193,6 +199,8 @@ func test_a_real_jab_on_a_real_bruiser_shows_the_spark_and_the_clank_and_the_log
 	var player := PlayerCharacter.new()
 	add_child_autofree(player)
 	player.input.scripted = true
+	# An enemy with no director in the tree adds one beside itself: give it this one to find.
+	add_child_autofree(StubDirector.new())
 	var bruiser := BRUISER_SCENE.instantiate() as Bruiser
 	bruiser.position = Vector3(0.0, 0.0, -1.2)
 	bruiser.rotation.y = PI

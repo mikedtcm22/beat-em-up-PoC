@@ -585,3 +585,39 @@ func test_the_headbutt_landing_on_the_player_keeps_the_bruiser_off_the_lens() ->
 	assert_true(_hits.any(func(h: HitInfo) -> bool: return h.victim == _player), "the headbutt landed")
 	gut.p("headbutt on the player: nearest Bruiser mesh %.2f m from the lens, up to %.0f%% of the view" % [stats.nearest, stats.covered * 100.0])
 	assert_gte(stats.nearest, LENS_CLEARANCE_M, "nothing within %.2f m of the lens (%.3f)" % [LENS_CLEARANCE_M, stats.nearest])
+
+
+func test_a_bruiser_the_player_holds_is_not_a_wall_in_the_lens() -> void:
+	# The held pose bends a body over at the waist in front of the lens. A 2.05 m Bruiser is bigger and
+	# its head nearer than a 1.8 m body's (0.08 m from the lens and 83% of the view at the same pin), so
+	# it stands bruiser_held_pin_extra_m further out: nearer than 0.24 m and beyond a third of the view
+	# is what a held 1.8 m dummy does.
+	var bruiser := _bruiser(1.0)
+	await _ticks(3)
+	var cam := _camera()
+	bruiser.receive_hit(_hit(bruiser, 8.0, CombatTypes.HitTier.HEAVY, CombatTypes.Reaction.STAGGER, _move(&"hook")))
+	bruiser.sim_velocity = Vector3.ZERO
+	_player.input.push_press(&"GRAB", 2)
+	assert_true(await _until(func() -> bool: return _player.state == CombatTypes.ActorState.GRABBING, 20), "the player holds it")
+	var stats := await _watch_lens(bruiser, cam, 60)
+	gut.p("held Bruiser: nearest mesh %.2f m from the lens, up to %.0f%% of the view" % [stats.nearest, stats.covered * 100.0])
+	assert_gte(stats.nearest, 0.24, "nothing nearer the lens than a held 1.8 m body's (%.3f)" % stats.nearest)
+	assert_lte(stats.covered, 0.5, "it covers no more than half the view (%.0f%%)" % (stats.covered * 100.0))
+
+
+func test_the_knee_and_the_throw_still_reach_a_held_bruiser_pushed_out_to_stand_further_off() -> void:
+	var bruiser := _bruiser(1.0)
+	await _ticks(3)
+	bruiser.receive_hit(_hit(bruiser, 8.0, CombatTypes.HitTier.HEAVY, CombatTypes.Reaction.STAGGER, _move(&"hook")))
+	bruiser.sim_velocity = Vector3.ZERO
+	_player.input.push_press(&"GRAB", 2)
+	assert_true(await _until(func() -> bool: return _player.state == CombatTypes.ActorState.GRABBING, 20))
+	await _ticks(14)
+	_player.input.push_press(&"P", 2)
+	await _ticks(30)
+	assert_true(_hits.any(func(h: HitInfo) -> bool: return h.victim == bruiser and h.move != null and h.move.id == &"knee"), "the knee lands on it")
+	await _until(func() -> bool: return _player.current_move == null, 60)
+	await _ticks(4)
+	_player.input.push_press(&"K", 2)
+	await _ticks(60)
+	assert_true(_hits.any(func(h: HitInfo) -> bool: return h.victim == bruiser and h.move != null and h.move.id == &"throw"), "and so does the throw")

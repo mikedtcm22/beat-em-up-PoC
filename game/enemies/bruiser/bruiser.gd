@@ -118,6 +118,20 @@ func _on_armor_absorbed(_hit: HitInfo) -> void:
 		rig.play(&"brace", Tuning.data.reaction_snap_blend_s)
 
 
+# --- Held by the player ----------------------------------------------------------------------------
+
+
+## Where it stands while the player holds it: the base's spot (below his HoldPoint) pushed
+## bruiser_held_pin_extra_m further out. Bent over in the held pose, a 2.05 m body's head and
+## shoulders fill the lens at the 1.8 m body's distance (0.08 m from it, over 80% of the view).
+func _pin_spot() -> Vector3:
+	var spot := super._pin_spot()
+	var away := _flat(spot - holder.global_position)
+	if away.length_squared() < 0.0001:
+		return spot
+	return spot + away.normalized() * Tuning.data.bruiser_held_pin_extra_m
+
+
 # --- The sim tick ----------------------------------------------------------------------------------
 
 

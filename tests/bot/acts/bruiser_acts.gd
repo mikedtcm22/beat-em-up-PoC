@@ -12,8 +12,10 @@ extends RefCounted
 const SliceActs := preload("res://tests/bot/acts/slice_acts.gd")
 ## The Bruiser's health in the acts that hit it: enough to survive what the act does.
 const SURVIVING_HEALTH := 600.0
-## Where it stands to be hit and to hit: within its smash and its grab, ahead of the player.
+## Where it stands to be hit and to hit: within its smash, ahead of the player, and within its grab's
+## connect range (1.05 m at a 1.8 m rig, times its height over 1.8: 1.2 m, so a little nearer).
 const CLOSE := Vector2(0.0, 1.2)
+const GRAB_CLOSE := Vector2(0.0, 1.1)
 ## Frames between two punches that must not chain (a second P inside the combo window is the
 ## jab's next link).
 const SEPARATE_GAP := 70
@@ -38,6 +40,7 @@ static func acts(bot: Node) -> Array[Dictionary]:
 		{title = "Bruiser 1v1", cam = &"first_person", probe = true, fn = func() -> void: await _one_v_one(bot)},
 		{title = "Bruiser cadence", cam = &"first_person", probe = true, tags = {passive = true},
 				fn = func() -> void: await _cadence(bot)},
+		{title = "Six Bruisers, observed", cam = &"first_person", probe = true, fn = func() -> void: await _six(bot)},
 		{title = "Bruiser among Punks, passive", cam = &"first_person", probe = true, tags = {passive = true},
 				fn = func() -> void: await _among_punks(bot)},
 		{title = "Bruiser among Punks, fight", cam = &"first_person", probe = true, fn = func() -> void: await _fight(bot)},
@@ -53,6 +56,17 @@ static func _stand(bot: Node, rel: Vector2 = CLOSE) -> Bruiser:
 	bruiser.health = SURVIVING_HEALTH
 	await bot._ticks(30)
 	return bruiser
+
+
+## Walk the player straight at `bruiser` until he is `distance_m` from it (or 60 ticks have passed).
+static func _walk_to(bot: Node, bruiser: Bruiser, distance_m: float) -> void:
+	bot.player.look_yaw = atan2(-(bruiser.global_position.x - bot.player.global_position.x),
+			-(bruiser.global_position.z - bot.player.global_position.z))
+	bot.player.input.scripted_move = Vector2(0.0, 1.0)
+	await bot._wait_until(func() -> bool:
+			var to: Vector3 = bruiser.global_position - bot.player.global_position
+			return Vector2(to.x, to.z).length() <= distance_m, 90)
+	bot.player.input.scripted_move = Vector2.ZERO
 
 
 ## Wait for the Bruiser's wind-up to have run `frames` frames.
@@ -99,10 +113,12 @@ static func _haymaker(bot: Node) -> void:
 	await bot._press(&"P", Tuning.data.hold_frames + 10)
 	await bot._wait_until(func() -> bool: return bruiser.is_downed(), 120)
 	await bot._wait_until(func() -> bool: return bruiser.state == CombatTypes.ActorState.FREE, 300)
-	await bot._ticks(10)
-	await bot._press(&"P", 2, 26)
+	# It lies a few metres off: walk up to it, and jab twice (the armor is off: it flinches).
+	await _walk_to(bot, bruiser, 1.1)
+	await bot._ticks(24)
+	await bot._press(&"P", 2, SEPARATE_GAP)
 	await bot._press(&"P", 2, 30)
-	await bot._ticks(200)
+	await bot._ticks(120)
 
 
 ## A hook staggers it, and a staggered Bruiser can be grabbed: LB, a knee, the throw.
@@ -112,11 +128,13 @@ static func _grab_it(bot: Node) -> void:
 	for i in 3:
 		await bot._press(&"P", 2, 6)
 	await bot._wait_until(func() -> bool: return bruiser.state == CombatTypes.ActorState.STAGGER, 40)
-	await bot._ticks(4)
+	await _walk_to(bot, bruiser, 0.9)
+	await bot._wait_idle()
 	await bot._press(&"GRAB", 2, 14)
-	await bot._press(&"P", 2, 30)
-	await bot._press(&"GRAB", 2, 10)
-	await bot._press(&"K", 2, 10)
+	await bot._press(&"P", 2)
+	await bot._wait_idle()
+	await bot._ticks(4)
+	await bot._press(&"K", 2)
 	await bot._wait_idle()
 	await bot._ticks(120)
 
@@ -153,7 +171,7 @@ static func _smash_blocked(bot: Node) -> void:
 
 ## Grabbed, pulled in, a moment of the MASH prompt, then eight presses break free.
 static func _mash_free(bot: Node) -> void:
-	var bruiser := await _stand(bot)
+	var bruiser := await _stand(bot, GRAB_CLOSE)
 	bruiser.force_attack(1)
 	await bot._wait_until(func() -> bool: return bot.player.state == CombatTypes.ActorState.GRABBED, 120)
 	await bot._ticks(14)
@@ -165,7 +183,7 @@ static func _mash_free(bot: Node) -> void:
 ## Grabbed and not mashing: the headbutt lands and knocks him down.
 static func _headbutt(bot: Node) -> void:
 	bot.god()
-	var bruiser := await _stand(bot)
+	var bruiser := await _stand(bot, GRAB_CLOSE)
 	bruiser.force_attack(1)
 	await bot._wait_until(func() -> bool: return bot.player.state == CombatTypes.ActorState.GRABBED, 120)
 	await bot._wait_until(func() -> bool: return bot.player.state != CombatTypes.ActorState.GRABBED, 180)
@@ -215,6 +233,17 @@ static func _cadence(bot: Node) -> void:
 	_reseed(bot)
 	await bot.surround(1, 0, &"bruiser")
 	await bot._ticks(2400)
+
+
+## Six Bruisers, god mode, walking in one after another while the bot turns once through 360 degrees
+## slowly, then stands still: the crowd of the biggest bodies as the player sees it, and the spawn
+## frames of six Bruiser rigs (record it windowed, not recording, for the probe's R15).
+static func _six(bot: Node) -> void:
+	bot.god()
+	_reseed(bot)
+	await bot.surround(6, 24, &"bruiser")
+	await bot._turn_by(360.0, 600)
+	await bot._ticks(300)
 
 
 ## One Bruiser among five Punks against a player who does nothing and takes the damage (R12).
