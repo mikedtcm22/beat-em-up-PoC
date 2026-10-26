@@ -641,8 +641,12 @@ extends Resource
 @export_range(1, 20, 1) var boss_wave_every: int = 4
 ## No spawn point nearer than this (m) to the player is used.
 @export_range(0.0, 12.0, 0.5) var spawn_min_player_distance_m: float = 4.0
-## Radius (m) of the player's avoidance obstacle: enemies steer around him.
-@export_range(0.1, 1.5, 0.05) var player_avoid_radius_m: float = 0.5
+## Radius (m) of the player's avoidance obstacle: enemies steer around him. Avoidance keeps an
+## enemy this far plus enemy_avoid_radius_m from the player's origin, so the sum must stay below
+## the shortest strike an enemy closes to (reach_m minus engage_margin_m, a Punk's shove 0.87 m):
+## above it the enemy stalls just short of its range, times out of ENGAGE and never attacks.
+## 0.3 keeps them 0.75 m off, about where the bodies touch (0.7 m).
+@export_range(0.1, 1.5, 0.05) var player_avoid_radius_m: float = 0.3
 
 @export_subgroup("Street Punk")
 @export_range(5.0, 500.0, 1.0) var punk_health: float = 30.0

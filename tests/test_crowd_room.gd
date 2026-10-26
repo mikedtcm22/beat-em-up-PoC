@@ -145,6 +145,16 @@ func test_the_player_has_an_obstacle_and_auto_revive() -> void:
 	assert_almost_eq(player.rotation.y, deg_to_rad(room.player_yaw_deg), 0.001, "facing +X")
 
 
+func test_the_obstacle_leaves_room_to_close_to_a_strike() -> void:
+	# Avoidance keeps an enemy player_avoid_radius_m + enemy_avoid_radius_m off the player. A
+	# Punk's shove connects at 0.97 m and ENGAGE stops engage_margin_m inside that; with the
+	# sum above it (the plan's 0.5 + 0.45) a real Punk stalls just short of its range, times out
+	# and never attacks (found in the first recording of real enemies in this room).
+	var closest := 0.97 - Tuning.data.engage_margin_m
+	assert_lt(Tuning.data.player_avoid_radius_m + Tuning.data.enemy_avoid_radius_m, closest,
+			"the avoidance floor is under the shortest strike an enemy closes to (%.2f m)" % closest)
+
+
 func test_the_room_contract_for_bots_and_tests() -> void:
 	var room := await _room()
 	for property: StringName in [&"player", &"player_start", &"player_yaw_deg", &"with_presentation",

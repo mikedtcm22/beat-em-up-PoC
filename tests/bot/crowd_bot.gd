@@ -11,12 +11,12 @@ extends "res://tests/bot/combo_bot.gd"
 ## the combo bot's _press(), _ticks(), _wait_until(), _turn_by(), _look_to(), _hud(). The bot
 ## prints these log lines, one per event, each with its physics frame:
 ##   W+ f<frame> side=<left|right> count=<n> heavy=<bool>   the rear warning lit a corner
-##   W-  f<frame> side=<left|right>                           ... and it went out
+##   W- f<frame> side=<left|right>                            ... and it went out
 ##   AI f<frame> <enemy> <old>-><new>                        an enemy's AiState changed
 ##   TOK+ / TOK- f<frame> <enemy>                            an enemy took / gave back a token
 ##   WU+ f<frame> <attacker> <move>                          a wind-up started
 ##   WU- f<frame> <attacker> interrupted=<bool>              ... and ended
-## (W+ and W- come from a RearWarning in the HUD, found by its signals, so the bot needs no
+## (W+ and W- come from the RearWarning in the HUD, found by its signals, so the bot needs no
 ## class of it.) Without `--tune`, the waves are off in every act: an act that wants them calls
 ## set_waves(true).
 
@@ -165,12 +165,16 @@ func _connect_logs() -> void:
 	_warning = _find_warning(room)
 	if _warning:
 		_warning.connect(&"shown", _on_warning_shown)
-		_warning.connect(&"hidden", _on_warning_hidden)
+		# A Control already has a `hidden` signal of its own (no arguments), so the widget's
+		# "a corner went out" signal may be called `cleared`; either takes the side.
+		_warning.connect(&"cleared" if _warning.has_signal(&"cleared") else &"hidden", _on_warning_hidden)
 
 
-## The RearWarning in the HUD (a node with its `shown` and `hidden` signals and corner_state()).
+## The RearWarning in the HUD (a node with its `shown` signal, a corner_state() and a signal
+## for a corner going out, `cleared` or `hidden`).
 func _find_warning(node: Node) -> Node:
-	if node.has_signal(&"shown") and node.has_signal(&"hidden") and node.has_method(&"corner_state"):
+	if node.has_signal(&"shown") and node.has_method(&"corner_state") \
+			and (node.has_signal(&"cleared") or node.has_signal(&"hidden")):
 		return node
 	for child in node.get_children():
 		var found := _find_warning(child)
@@ -191,7 +195,7 @@ func _on_warning_shown(side: StringName, count: int, heavy: bool) -> void:
 	log_line("W+ f%d side=%s count=%d heavy=%s" % [Engine.get_physics_frames(), side, count, heavy])
 
 
-func _on_warning_hidden(side: StringName) -> void:
+func _on_warning_hidden(side: StringName = &"") -> void:
 	log_line("W- f%d side=%s" % [Engine.get_physics_frames(), side])
 
 

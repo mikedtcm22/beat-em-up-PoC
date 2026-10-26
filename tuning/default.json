@@ -292,7 +292,7 @@
 		"wave_behind_share": 0.35,
 		"boss_wave_every": 4,
 		"spawn_min_player_distance_m": 4.0,
-		"player_avoid_radius_m": 0.5,
+		"player_avoid_radius_m": 0.3,
 		"punk_health": 30.0,
 		"punk_shove_chance": 0.3,
 		"punk_attack_cooldown_s": 1.4,
