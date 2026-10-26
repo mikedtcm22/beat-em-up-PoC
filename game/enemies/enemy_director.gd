@@ -22,7 +22,7 @@ extends Node
 ##   while the AI is frozen, and after director_token_timeout_s;
 ## - answers may_start_windup() with the pacing rule (director_min_windup_gap_s between two
 ##   wind-up starts, readability metric R2);
-## - gives every enemy that holds no token a posture slot: evenly spaced angles around the
+## - gives every live enemy a posture slot: evenly spaced angles around the
 ##   player, the arrangement turned as little as possible from where the enemies stand, each on
 ##   its own radius of the ring, snapped onto the navmesh when there is one.
 ##
@@ -58,8 +58,11 @@ var _granted_s: Dictionary = {}
 var _wait_since: Dictionary = {}
 ## The waiting enemies, longest first (rebuilt each tick, minus the ones just granted).
 var _waiting: Array = []
-## Enemy -> its posture slot (world position). A token holder keeps the slot it left.
+## Enemy -> its posture slot (world position). A token holder keeps its slot.
 var _slots: Dictionary = {}
+## Enemy -> the angle (degrees around the player) of the evenly spaced arrangement its slot came
+## from last time: the seat it holds, wherever it stands right now.
+var _claims: Dictionary = {}
 ## Enemy -> how many times it reported stalling since its last token: each nudges its angle.
 var _stalls: Dictionary = {}
 ## Clock of the last wind-up start (any enemy); -INF before the first.
@@ -133,7 +136,7 @@ func release_token(enemy: EnemyActor) -> void:
 
 
 ## The posture slot (world position) assigned to `enemy`; Vector3.INF = none. A token holder
-## answers with the slot it left (where it backs off to when its attack ends).
+## keeps its slot (where it backs off to when its attack ends).
 func slot_for(enemy: EnemyActor) -> Vector3:
 	return _slots.get(enemy, Vector3.INF)
 
@@ -219,7 +222,7 @@ func _scrub() -> void:
 		if not is_instance_valid(_holders[i]):
 			_holders.remove_at(i)
 		i -= 1
-	for book: Dictionary in [_granted_s, _wait_since, _slots, _stalls]:
+	for book: Dictionary in [_granted_s, _wait_since, _slots, _claims, _stalls]:
 		for key: Variant in book.keys():
 			if not is_instance_valid(key):
 				book.erase(key)
@@ -293,7 +296,6 @@ func _drop(enemy: Variant) -> void:
 	_granted_s.erase(enemy)
 	if is_instance_valid(enemy) and (enemy as EnemyActor).has_token:
 		(enemy as EnemyActor).revoke_token()
-	_reslot_pending = true
 
 
 ## Who wants a token and since when; fills _waiting, longest first (ties in tree order).
@@ -343,24 +345,22 @@ func _grant(player: PlayerCharacter, members: Array[EnemyActor]) -> void:
 		_granted_s[pick] = _clock_s
 		pick.grant_token(blind)
 		active += 1
-		_reslot_pending = true
 
 
 # --- Posture slots (spread) ---
 
 
 ## Reassign the slots when due: on the timer, when the player moved, when the set of enemies
-## holding slots changed, or when something asked.
+## changed (a spawn, a death) or when something asked. Every live enemy has a seat, token holders
+## included, so an attack neither moves the others nor loses its enemy its place.
 func _update_slots(player: PlayerCharacter, members: Array[EnemyActor]) -> void:
-	for key: Variant in _slots.keys():
-		if not members.has(key) and not _holders.has(key):
-			_slots.erase(key)
-	var holders_slots: Array[EnemyActor] = []
+	for book: Dictionary in [_slots, _claims]:
+		for key: Variant in book.keys():
+			if not members.has(key):
+				book.erase(key)
 	var ids := PackedInt64Array()
 	for enemy in members:
-		if not _holders.has(enemy):
-			holders_slots.append(enemy)
-			ids.append(enemy.get_instance_id())
+		ids.append(enemy.get_instance_id())
 	ids.sort()
 	var origin := player.global_position
 	var moved := _slot_origin == Vector3.INF \
@@ -371,13 +371,15 @@ func _update_slots(player: PlayerCharacter, members: Array[EnemyActor]) -> void:
 	_slot_origin = origin
 	_reslot_at_s = _clock_s + Tuning.data.director_reslot_s
 	_reslot_pending = false
-	_assign_slots(player, holders_slots)
+	_assign_slots(player, members)
 
 
 ## Spread `set` evenly over 360 degrees around the player. The arrangement is turned the least
-## it can be from where the enemies stand (so nobody crosses the ring for nothing and a settled
-## crowd does not churn), unless a Kicker is among them: then it is turned until a slot is
-## directly behind the look, and the Kickers take the slots nearest behind first.
+## it can be from where the enemies sit (an enemy that has a seat from last time sits there,
+## wherever it stands now: a crowd that walks past each other, or an attacker at the player's
+## nose, does not reshuffle the ring; a new one sits where it stands), so a settled crowd does
+## not churn, unless a Kicker is among them: then it is turned until a slot is directly behind
+## the look, and the Kickers take the slots nearest behind first.
 func _assign_slots(player: PlayerCharacter, set: Array[EnemyActor]) -> void:
 	var n := set.size()
 	if n == 0:
@@ -392,9 +394,13 @@ func _assign_slots(player: PlayerCharacter, set: Array[EnemyActor]) -> void:
 	var ring_max := maxf(Tuning.data.posture_ring_max_m, ring_min)
 	for enemy in set:
 		var name_text := String(enemy.name)
-		angles.append(ViewGeometry.bearing_deg(0.0, origin, enemy.global_position))
-		offsets.append(jitter * (_unit_hash(name_text + "/jitter") * 2.0 - 1.0) + _stall_nudge(enemy))
+		var offset := jitter * (_unit_hash(name_text + "/jitter") * 2.0 - 1.0) + _stall_nudge(enemy)
+		offsets.append(offset)
 		radii.append(lerpf(ring_min, ring_max, _unit_hash(name_text + "/radius")))
+		if _claims.has(enemy):
+			angles.append(float(_claims[enemy]) + offset)
+		else:
+			angles.append(ViewGeometry.bearing_deg(0.0, origin, enemy.global_position))
 	var behind := rad_to_deg(player.look_yaw) + 180.0
 	var base := _best_base(angles, offsets, step)
 	var has_blind_side := false
@@ -409,6 +415,7 @@ func _assign_slots(player: PlayerCharacter, set: Array[EnemyActor]) -> void:
 	for i in n:
 		var angle := slot_angles[slot_of[i]] + offsets[i]
 		var slot := _snap_slot(player, angle, radii[i])
+		_claims[set[i]] = slot_angles[slot_of[i]]
 		_slots[set[i]] = slot
 		set[i].set_slot(slot)
 

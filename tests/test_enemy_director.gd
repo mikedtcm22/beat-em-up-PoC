@@ -763,23 +763,56 @@ func test_a_new_enemy_gets_a_slot_at_once_and_the_crowd_makes_room() -> void:
 	assert_lte(_max_gap(angles), 120.0 + 2.0 * Tuning.data.director_spread_jitter_deg + 0.01, "three evenly spread")
 
 
-func test_a_token_holder_keeps_its_slot_and_leaves_the_spread() -> void:
+func test_a_token_holder_keeps_its_slot_and_its_place_in_the_spread() -> void:
 	await _setup(1, 0.0)
 	var stubs := _crowd(3)
 	await _ticks(4)
 	var holder: EnemyActor = _holders()[0]
 	var kept := _director.slot_for(holder)
-	assert_ne(kept, Vector3.INF)
+	assert_ne(kept, Vector3.INF, "it has a seat while it holds the token")
 	var angles: Array = []
 	for stub in stubs:
-		if stub != holder:
-			angles.append(_bearing_of(_director.slot_for(stub)))
-	assert_lte(_max_gap(angles), 180.0 + 2.0 * Tuning.data.director_spread_jitter_deg + 0.01, "the two others share the circle")
+		angles.append(_bearing_of(_director.slot_for(stub)))
+	assert_lte(_max_gap(angles), 120.0 + 2.0 * Tuning.data.director_spread_jitter_deg + 0.01, "all three share the circle")
 	await _ticks(30)
-	assert_eq(_director.slot_for(holder), kept, "the slot it left stays where it backs off to")
+	assert_eq(_director.slot_for(holder), kept, "the seat stays where it is while it attacks")
 	_director.release_token(holder)
 	await _ticks(3)
-	assert_ne(_director.slot_for(holder), Vector3.INF)
+	assert_eq(_director.slot_for(holder), kept, "and is the one it backs off to")
+
+
+func test_tokens_coming_and_going_do_not_move_anybody_s_slot() -> void:
+	await _setup(1, 0.0)
+	Tuning.data.director_reslot_s = 0.2
+	var stubs := _crowd(5)
+	await _ticks(4)
+	var before: Array[Vector3] = []
+	for stub in stubs:
+		before.append(_director.slot_for(stub))
+	for round in 20:
+		await _ticks(5)
+		for holder in _holders():
+			_director.release_token(holder)
+	for i in stubs.size():
+		assert_lt(_flat_distance(_director.slot_for(stubs[i]), before[i]), 0.01, "enemy %d kept its slot through 20 attacks" % i)
+
+
+func test_an_enemy_that_walks_across_the_player_keeps_its_seat() -> void:
+	await _setup(0, 1.0)
+	Tuning.data.director_reslot_s = 0.2
+	var stubs: Array[StubEnemy] = []
+	for angle in [-80.0, 20.0, 100.0, 170.0]:
+		stubs.append(_stub(_at(angle, 3.0), false))
+	await _ticks(4)
+	var before: Array[Vector3] = []
+	for stub in stubs:
+		before.append(_director.slot_for(stub))
+	# One of them runs right past the player's nose and out the other side, as a walk-in does.
+	for step in 12:
+		stubs[0].global_position = _at(-80.0 + 30.0 * float(step), 0.8 + 0.2 * float(step % 3))
+		await _ticks(5)
+	for i in stubs.size():
+		assert_lt(_flat_distance(_director.slot_for(stubs[i]), before[i]), 0.01, "enemy %d did not change seats" % i)
 
 
 func test_a_dead_enemy_has_no_slot_and_the_rest_close_ranks() -> void:
