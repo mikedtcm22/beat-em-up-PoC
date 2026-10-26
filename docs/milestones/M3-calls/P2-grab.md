@@ -36,3 +36,10 @@ Each call: the decision, an alternative not taken, and why. Game-boy was not ask
 
 19. **The test boss joins group `"boss"`.** *Alternative:* leave it out. *Why not:* the readability probe's R11 (knockdown damage at most 15) exempts the boss by that group, and the first slam act failed it with 25; the HUD bar follows the group too, as for the real boss.
 20. **The grab acts run with the probe on.** The three hard metrics that can apply (R1, R3, R10, R11) pass in all five acts: R10 agrees 2 of 2 in "from behind" (the grab warns top-left, the follow-up does not), R3 0 unwarned hits, R11 max 15 (25 for the boss).
+
+## What was measured at the end
+
+- Full suite 931 of 931 (62 new tests: `test_enemy_moves_grab` 12, `test_enemy_grab` 28, `test_player_grabbed` 15, `test_magnetism_crowd` 7), no SCRIPT ERROR or ERROR. `tests/test_autopilot.gd`'s one mash test was rewritten (call 11).
+- First-person sheets of the five grab acts (`captures/final`, local, not committed): the wind-up reads as arms spread wide at the edges of the lens at 1.1 m; the pull-in, the held view (the grabber's cap, shades and face over its chest, both arms coming in from the lower corners, the MASH bar filling), the release (the grabber's arms fly out and it staggers back, no lens pop), the headbutt (the cap drives into the lens, SMAK, knocked down), the slam (lifted to the boss's eye level, thrown for 25) and the grab from behind-left (the top-left burst for the wind-up, gone on the connect, the view swinging round to the grabber).
+- Readability probe on the five acts: R1 max 1, R3 0 unwarned hits, R10 100% agreement (2 of 2 in "from behind": the grab warns, its follow-up does not), R11 max 15 (the boss's 25 exempt by group). R8 (soft): the held lens is 63% (Bruiser) to 71% (boss) enemy, by design: it is a hold.
+- Held view through the real camera: the nearest holder mesh 0.26 m from the lens, his own body under 1% of the view; a break-free moves the lens at most 1.2 cm a tick (1.9 cm from the boss's lift), the view at most 1.2 degrees a tick.
