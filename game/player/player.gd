@@ -98,6 +98,13 @@ var _hold_from: Vector2 = Vector2.ZERO
 var _knees: int = 0
 var _weapon: Weapon
 var _action_lock: int = 0
+## Held by an enemy (Milestone 3): the presses of P and K made so far toward breaking free
+## (_control_grabbed()), and the grabbed view's pitch ramp (0..1, linear in sim ticks: toward 1
+## while GRABBED, back to 0 after the release; eased by get_grabbed_view_weight()).
+var _mash: float = 0.0
+var _grabbed_view: float = 0.0
+## The pitch (degrees up) the grabbed view tips to, the last toward the holder's eyes (_tick_hold_view()).
+var _grabbed_pitch: float = 0.0
 
 
 func _ready() -> void:
@@ -164,6 +171,9 @@ func _process(delta: float) -> void:
 	# does not have, through its own head. The input is dropped, not kept for later.
 	if health <= 0.0 or state == CombatTypes.ActorState.KO or _ko_getup:
 		return
+	# Held by an enemy the look turns to the holder by itself (_on_grabbed()): the input is dropped.
+	if state == CombatTypes.ActorState.GRABBED:
+		return
 	var stick := Input.get_vector(&"look_left", &"look_right", &"look_up", &"look_down", Tuning.data.stick_deadzone)
 	stick *= Tuning.data.stick_look_speed * delta
 	var dy := mouse.y + stick.y
@@ -209,7 +219,7 @@ func is_outside_view(point: Vector3, half_angle_deg: float) -> bool:
 ## the hold's without a jump.
 func get_camera_move_offset() -> Vector2:
 	var hold := Vector2(-get_hold_view_pitch_deg() * get_hold_view_weight(), -get_hold_view_shift().x)
-	return _cam_offset + hold
+	return _cam_offset + hold + Vector2(get_grabbed_view_pitch_deg() * get_grabbed_view_weight(), 0.0)
 
 
 ## Meters the first-person lens moves back along the flat look: the hold view's
@@ -243,6 +253,41 @@ func get_hold_view_pitch_deg() -> float:
 ## The camera smooths them with the eye.
 func get_hold_view_shift() -> Vector2:
 	return Vector2(Tuning.data.grab_view_rise_m * _hold_shift.x, Tuning.data.grab_view_back_m * _hold_shift.y)
+
+
+## Weight (0..1, smoothstepped) of the grabbed view's pitch (held by an enemy): it eases in over
+## Tuning.grab_view_in_s once grabbed and back out over grab_view_out_s after the release or the
+## hit, in sim ticks like the hold view.
+func get_grabbed_view_weight() -> float:
+	return smoothstep(0.0, 1.0, _grabbed_view)
+
+
+## Degrees the grabbed view tips up at full weight (positive looks up): toward the holder's eyes,
+## at most Tuning.grabbed_view_pitch_deg, so a tall grabber's face stays in view over the
+## player's throat-height lens. Kept while the weight eases out after the release (the holder is
+## gone by then), so the view settles back instead of dropping; 0 once it has.
+func get_grabbed_view_pitch_deg() -> float:
+	return _grabbed_pitch
+
+
+## The pitch (degrees) that looks at the holder's eyes, within Tuning.grabbed_view_pitch_deg.
+func _pitch_toward_holder() -> float:
+	if not is_instance_valid(holder) or holder.rig == null:
+		return _grabbed_pitch
+	var eyes := holder.rig.get_point_position(&"EyePoint")
+	# The lens sits Tuning.cam_height_offset_m (negative: lower) from the eye, the throat.
+	var lens := get_eye_transform().origin + Vector3.UP * Tuning.data.cam_height_offset_m
+	var flat := Vector2(eyes.x - lens.x, eyes.z - lens.z).length()
+	var up := rad_to_deg(atan2(eyes.y - lens.y, maxf(flat, 0.05)))
+	return clampf(up, 0.0, Tuning.data.grabbed_view_pitch_deg)
+
+
+## Mash progress toward breaking free of an enemy's hold, 0..1 (the HUD's MASH prompt reads it):
+## the presses of P and K so far over Tuning.grab_break_presses. 0 unless GRABBED.
+func grab_break_progress() -> float:
+	if state != CombatTypes.ActorState.GRABBED:
+		return 0.0
+	return clampf(_mash / float(maxi(Tuning.data.grab_break_presses, 1)), 0.0, 1.0)
 
 
 ## The first-person view's turn away from the look in degrees (positive turns left): a
@@ -310,6 +355,9 @@ func reset_state() -> void:
 	_hold_shift = Vector2.ZERO
 	_hold_kept = false
 	_hold_from = Vector2.ZERO
+	_mash = 0.0
+	_grabbed_view = 0.0
+	_grabbed_pitch = 0.0
 
 
 # --- Control ------------------------------------------------------------------------
@@ -341,6 +389,8 @@ func _tick_control() -> void:
 				_control_free()
 		CombatTypes.ActorState.BLOCKSTUN:
 			_control_blockstun()
+		CombatTypes.ActorState.GRABBED:
+			_control_grabbed()
 		_:
 			parser.clear_buffer()
 	_magnet_preview = _find_magnet_target(null)
@@ -560,6 +610,52 @@ func _control_holding() -> void:
 		rig.play(&"hold", 0.1)
 
 
+## Held by an enemy (Milestone 3: the Bruiser's and the boss's grabs): every press of P or K is a
+## mash, Tuning.grab_break_presses of them (less Tuning.grab_break_decay_per_s a second) break free
+## before the holder's strike frame, and nothing else is read: the buffer is emptied every tick, so
+## no press waits for the release. A holder that stopped holding (hit, knocked down, killed or
+## gone) lets go of him: CombatActor's pin releases a gone one, this checks the rest.
+func _control_grabbed() -> void:
+	if not _holder_holds():
+		parser.clear_buffer()
+		var lifted := _held_anim() == &"held_lift"
+		release_from_grab(Vector3.ZERO, false)
+		_settle_after_lift(lifted)
+		return
+	_match_lift_pose()
+	for input: StringName in [CombatTypes.IN_PUNCH, CombatTypes.IN_KICK]:
+		while parser.consume(input):
+			_mash += 1.0
+	parser.clear_buffer()
+	if Tuning.data.grab_break_decay_per_s > 0.0:
+		_mash = maxf(_mash - Tuning.data.grab_break_decay_per_s / Engine.physics_ticks_per_second, 0.0)
+	if _mash >= float(Tuning.data.grab_break_presses):
+		var lifted := _held_anim() == &"held_lift"
+		break_free()
+		_settle_after_lift(lifted)
+
+
+## Let down from the slam's lift (released while hanging in held_lift): he drops to his feet over
+## Tuning.grabbed_lift_s, the time he took to be lifted, instead of over the ordinary release's
+## blend, so the lens falls a few centimetres a tick, not a pop.
+func _settle_after_lift(was_lifted: bool) -> void:
+	if was_lifted and state != CombatTypes.ActorState.GRABBED and rig.current_anim() == &"idle":
+		rig.play(&"idle", Tuning.data.grabbed_lift_s)
+
+
+## The holder is alive, there and still holding him (CombatActor.is_holding()).
+func _holder_holds() -> bool:
+	return is_instance_valid(holder) and holder.health > 0.0 and not holder.is_gone() and holder.is_holding(self)
+
+
+## Hangs in the slam's lifted pose while the holder lifts him (EnemyActor.lifts_victim()), and in
+## the ordinary one otherwise.
+func _match_lift_pose() -> void:
+	var anim := _held_anim()
+	if rig.current_anim() != anim:
+		rig.play(anim, Tuning.data.grabbed_lift_s)
+
+
 # --- Moves --------------------------------------------------------------------------
 
 
@@ -639,6 +735,47 @@ func _on_move_interrupted() -> void:
 	_cam_offset = Vector2.ZERO
 
 
+## Grabbed by an enemy (the end of start_grabbed()): whatever he was doing is dropped and the
+## look turns to face the holder over Tuning.grabbed_turn_frames (the pin, _pin_spot(), puts him
+## in front of it, facing it): the player sees the grabber, not the room he was looking at.
+func _on_grabbed(by: CombatActor) -> void:
+	parser.reset_chain()
+	parser.clear_buffer()
+	_held_attack = &""
+	_air_attack = false
+	_cam_offset = Vector2.ZERO
+	_block_press_held = false
+	_late_dodge_open = false
+	_quick_turn_left = 0.0
+	_quick_turn_frames = 0
+	_magnet_target = null
+	_mash = 0.0
+	# He ends up pinned on the holder's forward axis, facing it: the look to there.
+	var holder_forward := by.get_forward()
+	var target_yaw := atan2(holder_forward.x, holder_forward.z)
+	_turn_left = wrapf(target_yaw - look_yaw, -PI, PI)
+	_turn_frames = maxi(Tuning.data.grabbed_turn_frames, 1)
+
+
+## What he hangs as while an enemy holds him: upright with his hands on its wrists, or lifted off
+## the floor for the boss's slam.
+func _held_anim() -> StringName:
+	if is_instance_valid(holder) and holder.has_method(&"lifts_victim") and holder.call(&"lifts_victim", self):
+		return &"held_lift"
+	return &"held_collar"
+
+
+## Where he stands while an enemy holds him: on the holder's forward axis, Tuning.
+## grabbed_pin_distance_m from its origin (further for a body wider than his own), at its floor
+## level. The enemy's hold is face to face and upright: his lens at throat height stays out of the
+## holder's head and hands. (The held enemy of his own grab is CombatActor's pin.)
+func _pin_spot() -> Vector3:
+	var origin := holder.global_position
+	var pin := Tuning.data.grabbed_pin_distance_m + maxf(holder.body_radius - body_radius, 0.0)
+	var ahead := holder.get_forward()
+	return Vector3(origin.x + ahead.x * pin, origin.y, origin.z + ahead.z * pin)
+
+
 ## A guard break staggers the player: what was pressed in the guard is dropped (a held B
 ## raises the guard again after the stagger).
 func _on_hit_blocked(hit: HitInfo) -> void:
@@ -680,7 +817,7 @@ func _plan_lunge(move: MoveData) -> void:
 		var to := _magnet_target.get_chest_position() - global_position
 		to.y = 0.0
 		var max_lunge := move.lunge if move.lunge > 0.0 else Tuning.data.magnet_lunge
-		var distance := clampf(to.length() - _stop_distance(move), 0.0, max_lunge)
+		var distance := clampf(to.length() - _stop_distance(move, _magnet_target), 0.0, max_lunge)
 		set_lunge(to, distance, _lunge_frames(move), max_lunge)
 		var target_yaw := atan2(-to.x, -to.z)
 		var max_turn := deg_to_rad(Tuning.data.magnet_turn_deg)
@@ -697,12 +834,16 @@ func _update_lunge() -> void:
 	to.y = 0.0
 	_lunge_dir = to.normalized() if to.length_squared() > 0.0001 else _lunge_dir
 	# Re-aim every frame: close in on a target that is reeling away, within the budget.
-	_lunge_left = clampf(to.length() - _stop_distance(current_move), 0.0, _lunge_budget)
+	_lunge_left = clampf(to.length() - _stop_distance(current_move, _magnet_target), 0.0, _lunge_budget)
 
 
-func _stop_distance(move: MoveData) -> float:
+## How far from `target` the lunge stops (m, origin to origin): the stomp's or the strike's
+## distance, and more for a body wider than his own, so the surface gap stays the same and the
+## lunge does not drive into a Bruiser's or the boss's capsule (Milestone 3: crowds).
+func _stop_distance(move: MoveData, target: CombatActor) -> float:
 	# Stomps stand over the body; everything else stops at striking distance.
-	return Tuning.data.stomp_stop_distance if move.hits_downed else Tuning.data.magnet_stop_distance
+	var stop := Tuning.data.stomp_stop_distance if move.hits_downed else Tuning.data.magnet_stop_distance
+	return stop + maxf(target.body_radius - body_radius, 0.0)
 
 
 func _lunge_frames(move: MoveData) -> int:
@@ -710,10 +851,14 @@ func _lunge_frames(move: MoveData) -> int:
 
 
 ## The enemy nearest screen center inside the magnetism cone (Spec §5). With `move` null
-## this previews the target a ground attack would pick, for debug draw.
+## this previews the target a ground attack would pick, for debug draw. The cone is flat (the
+## heading alone: pitch and height do not count), so a tall body, a Bruiser, is found at the
+## same angle as anyone, and a downed one (judged from the chest too) as well. A body that is
+## out of reach, a KO, in the air, in the get-up's or a blink-in's invulnerability (no hit
+## lands on it, the strike would only lunge and turn toward it to whiff) is passed over.
 func _find_magnet_target(move: MoveData) -> CombatActor:
 	var wants_downed := move != null and move.hits_downed
-	var aim := get_look_basis() * Vector3.FORWARD
+	var aim := get_look_forward()
 	# Measured from chest height, so an enemy in your face isn't "below center" and
 	# losing to one farther away (the eye sits ~0.4 m above enemy chests).
 	var origin := get_chest_position()
@@ -724,17 +869,14 @@ func _find_magnet_target(move: MoveData) -> CombatActor:
 		var enemy := node as CombatActor
 		if enemy == null or enemy.is_ko() or enemy.is_flying() or enemy.is_downed() != wants_downed:
 			continue
-		# A body blinking back in is out of reach (no hit lands on it): the strike would only
-		# lunge and turn toward it to whiff.
-		if enemy.is_blinking_in():
+		if enemy.is_invulnerable():
 			continue
 		var to := enemy.get_chest_position() - origin
 		var flat := Vector3(to.x, 0.0, to.z)
 		var dist := flat.length()
 		if dist > Tuning.data.magnet_range:
 			continue
-		# Downed bodies are below the view; judge them by heading alone.
-		var angle := aim.angle_to(to) if not wants_downed else Vector3(aim.x, 0.0, aim.z).angle_to(flat)
+		var angle := aim.angle_to(flat) if dist > 0.0001 else 0.0
 		if angle > cone:
 			continue
 		# Closest to screen center wins; a few degrees per meter break near-ties toward the nearer enemy.
@@ -752,6 +894,8 @@ func _conditions() -> Dictionary:
 	}
 
 
+## A downed enemy within the stomp's reach and arc, and no standing one in the magnetism cone:
+## in a crowd a K at a body on the ground with a Punk in front of it is a kick at the Punk.
 func _downed_target_near() -> bool:
 	var fwd := get_forward()
 	for node in get_tree().get_nodes_in_group(&"enemy"):
@@ -761,7 +905,7 @@ func _downed_target_near() -> bool:
 		var to := enemy.get_chest_position() - global_position
 		to.y = 0.0
 		if to.length() <= Tuning.data.stomp_range and fwd.angle_to(to) <= deg_to_rad(Tuning.data.stomp_half_angle_deg):
-			return true
+			return _find_magnet_target(null) == null
 	return false
 
 
@@ -1023,6 +1167,14 @@ func _start_grab(victim: CombatActor) -> void:
 ## (_keeps_hold_bend()). From wherever they are, so a hold that ends while the view is
 ## still easing in turns back without a jump.
 func _tick_hold_view() -> void:
+	if state == CombatTypes.ActorState.GRABBED:
+		# Toward the holder's eyes, damped over the time the view eases out in (its head moves fast
+		# in the strike): the view follows it, never snaps to it.
+		var weight := CameraMath.damp_weight(1.0 / Engine.physics_ticks_per_second, Tuning.data.grab_view_out_s)
+		_grabbed_pitch = minf(lerpf(_grabbed_pitch, _pitch_toward_holder(), weight), Tuning.data.grabbed_view_pitch_deg)
+	elif _grabbed_view <= 0.0:
+		_grabbed_pitch = 0.0
+	_grabbed_view = _ramp(_grabbed_view, state == CombatTypes.ActorState.GRABBED)
 	var holding := _holding_valid()
 	_hold_view = _ramp(_hold_view, holding)
 	var kept := _keeps_hold_bend()

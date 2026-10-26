@@ -712,13 +712,19 @@ extends Resource
 @export_range(0.0, 20.0, 0.1) var grab_break_decay_per_s: float = 0.0
 @export_range(0.0, 10.0, 0.1) var grab_break_push_mps: float = 3.0
 ## Frames the held player's look takes to turn to the holder, the distance (m) the held body is
-## pinned from the holder's origin, and the upward pitch (degrees) of the held view.
+## pinned from the holder's origin (more for a holder wider than he is), and the most the held
+## view tips up (degrees) toward the holder's eyes.
 @export_range(1, 60, 1) var grabbed_turn_frames: int = 8
-@export_range(0.3, 2.0, 0.05) var grabbed_pin_distance_m: float = 0.75
-@export_range(-30.0, 30.0, 1.0) var grabbed_view_pitch_deg: float = 5.0
-## An enemy's grab connects within this range (m) and this many degrees of its facing.
-@export_range(0.5, 3.0, 0.05) var enemy_grab_range_m: float = 1.3
+@export_range(0.3, 2.0, 0.05) var grabbed_pin_distance_m: float = 0.9
+@export_range(0.0, 45.0, 1.0) var grabbed_view_pitch_deg: float = 30.0
+## Seconds the held player takes to be lifted off the floor (the boss's slam wind-up).
+@export_range(0.0, 1.0, 0.05) var grabbed_lift_s: float = 0.4
+## An enemy's grab connects within this range (m, at a 1.8 m rig: a taller grabber reaches
+## further) and this many degrees of its facing.
+@export_range(0.5, 3.0, 0.05) var enemy_grab_range_m: float = 1.05
 @export_range(5.0, 90.0, 1.0) var enemy_grab_half_angle_deg: float = 50.0
+## The break-free sound's volume (dB, on top of its layers' own), played at the holder.
+@export_range(-20.0, 12.0, 0.5) var grab_break_db: float = 0.0
 
 @export_subgroup("Bruiser")
 @export_range(5.0, 500.0, 1.0) var bruiser_health: float = 80.0

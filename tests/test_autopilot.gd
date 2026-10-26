@@ -7,6 +7,7 @@ extends GutTest
 
 const Autopilot := preload("res://tests/bot/autopilot.gd")
 const STUB_ENEMY := preload("res://tests/fixtures/stub_enemy.tscn")
+const GRAB_TEST := preload("res://tests/fixtures/grab_test_enemy.tscn")
 
 var _scene: Node3D
 var _player: PlayerCharacter
@@ -252,14 +253,26 @@ func test_it_reacts_after_its_reaction_time_not_before() -> void:
 
 
 func test_it_mashes_while_held() -> void:
-	var holder := _stub(0.0, 1.0)
-	_engage()
-	await _ticks(2)
-	_player.start_grabbed(holder)
+	# Held for real (the player's _control_grabbed() lets go of a holder that is not holding, so a
+	# stub cannot hold him): the test grabber's grab, the pilot doing nothing else.
+	Tuning.data.ai_frozen = true
+	var holder := GRAB_TEST.instantiate() as EnemyActor
+	holder.position = _player.global_position + Vector3(0.0, 0.0, -1.05)
+	holder.rotation.y = PI
+	_scene.add_child(holder)
+	_engage(false, false, false)
+	await _ticks(4)
+	holder.force_attack()
+	for i in 120:
+		if _player.state == CombatTypes.ActorState.GRABBED:
+			break
+		await _ticks(1)
 	assert_eq(_player.state, CombatTypes.ActorState.GRABBED)
+	await _ticks(16)
+	assert_gte(_pilot.result().mashes, 5, "P and K, over and over")
+	assert_true(_decisions.has(&"mash"))
 	await _ticks(30)
-	assert_gt(_pilot.result().mashes, 5, "P and K, over and over")
-	assert_eq(_decisions.back(), &"mash")
+	assert_ne(_player.state, CombatTypes.ActorState.GRABBED, "and it mashed free")
 
 
 func test_a_ko_player_is_left_alone() -> void:
