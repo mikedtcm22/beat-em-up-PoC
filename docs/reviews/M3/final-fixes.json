@@ -1,0 +1,337 @@
+[
+ {
+  "key": "enemy-ai-ring-and-tokens",
+  "package": "enemy-ai-ring-and-tokens",
+  "branch": "m3/fix-final-enemy-ai-ring-and-tokens",
+  "commit": "2270e4aeec11880161333d07cfe1e12a334b1253",
+  "pushed": true,
+  "verdicts": [
+   {
+    "id": "final-fair-01",
+    "outcome": "partial",
+    "what_changed": "The boss now wakes in place. A new hook EnemyActor._wakes_in_place() (true for the boss only) makes it take up POSTURE where it stands after a reaction within 4 m of the player, for posture_resume_s (3 s). It ignores the slot it left, and the director serves it before the queue and the blind-spot roll (has_token_priority()). The Punk, Kicker, Thug and Bruiser keep going back to their slots, so test_enemy_actor.gd:877 is unchanged. Measured with the full autopilot, boss alone, seeds 0-2: wind-ups 2/4/4 to 6/5/6, attacks landed 1/1/1-2 to 2/2/2, kill 43.4/41.3/41.3 s to 43.1/41.2/43.3 s. The boss attacks every time it wakes, but the kill is not longer, because the autopilot's DPS against 300 HP sets the length and its chain still interrupts every wind-up except the armored charge and pound. boss_attack_cooldown_s and boss_health now reach it. Cooldown 2.0 gives 7 wind-ups, 4 hits and a 45-46 s kill. Cooldown 0.5 with health 600 gives 16-20 wind-ups, 6-11 hits and 80+ s. Health 500 gives a 60-70 s kill. No poise or get-up armor was added (it needs Game-boy). The poise proposal is in final-enemy-ai.md. P3-boss.md line 51 and P1-ai call 20 are corrected. Wording for README line 85, M3-judgement-calls line 71, P4-int call 12 and ARCHITECTURE is in final-enemy-ai.md.",
+    "tests": "test_boss: wake in place and served first (token within a tick, wind-up within a second); a boss knocked beyond 4 m still walks back; the wake hold ends after posture_resume_s. test_enemy_director: a waking enemy is served before the queue and the blind spot. Mutation-checked: making the hook false fails the wake tests."
+   },
+   {
+    "id": "final-crowd-02",
+    "outcome": "fixed",
+    "what_changed": "The Kicker's ring-orbit carrot (_posture_target, _enter_posture, _orbit_toward and its helpers) moved into EnemyActor for every archetype in APPROACH and RECOVER. Inside posture_ring_min_m an enemy backs out to the ring on a leg toward its goal, facing the player. Beyond it, a goal more than posture_orbit_gap_deg (60) round the ring with the chord cutting the near edge is reached in legs of posture_orbit_lead_deg (40). Every way-round point is navmesh-checked, so one inside the car gives way to a half leg or another radius. _start_detour now alternates sides on a repeat stall and skips a side with no navmesh under it. Drop of kicker.gd's overrides: only _pick_strafe_dir remains. Mixed fight seeds 0-2: APPROACH-caused over-half lens samples 34/22/12 to 0/0/2 of 388, all over-half samples 56/42/37 to 31/18/23, R8 p95 65/57/57% to 53/49/52% (the soft miss stays: attackers at 1.2 m). The six-Punk fight stays at 1.4-1.6 posturing and 3-7 over-half samples.",
+    "tests": "test_enemy_actor: an enemy at the player's nose backs out and never crosses him; a slot across the ring is reached round it; _orbit_toward returns a back-out or a way-round point or none; a way-round point inside bollards is skipped; a repeated stall goes the other way; a detour never takes the side with no navmesh. test_kicker's 16 flank and waypoint tests pass unchanged on the base. Mutation-checked: disabling the orbit fails 2 actor and 3 kicker tests."
+   },
+   {
+    "id": "final-crowd-03",
+    "outcome": "fixed",
+    "what_changed": "A Kicker is no longer part of the director's ring. The non-Kickers keep a stable minimum-movement ring: no whole-ring turn for Kickers, no rear-first bumping. Each Kicker takes its own seat as near directly behind the look as it can, found by a 5-degree outward search and kept at least director_flank_gap_deg (20) from every other seat. The ring's cost also weighs a seatless newcomer at director_newcomer_weight (0.1), and seated enemies pick their slots first. Fought mixed six, bot act, seeds 0-2: posturing 0.8/0.4/0.7 to 2.0/1.6/1.6 of 5.8, Kickers outside the view 71/66/65% to 71/72/75%, APPROACH-caused lens samples 34/22/12 to 0/0/2. Swapping with the occupant alone, or dropping only the turn, was measured and does not pass.",
+    "tests": "test_slice_crowd: test_a_fought_mixed_six_keeps_posturing_and_the_kickers_behind_without_walling_the_lens (seeds 0-2: posturing at least 1.4, Kickers outside the view 55-90%, at most 5 APPROACH lens samples). Against the unfixed code it fails with 0.66-1.27 posturing and 15-27 lens samples. test_enemy_director: a Kicker moves nobody else when the look turns; two Kickers take seats of their own at least the flank gap apart. The old Kicker-slot tests were rewritten deliberately: their bound was 'within the jitter of behind', which held only while the Kicker was one of the evenly spaced seats."
+   },
+   {
+    "id": "final-tells-05",
+    "outcome": "fixed",
+    "what_changed": "_tick_posture now counts a taunt in progress down before it acts on 'strayed', so a moved slot cannot cut the beckon. In _assign_slots a newcomer weighs director_newcomer_weight against a seated enemy and seated enemies match first, so the call-in cannot hand the boss the seat across the player. Recorded: the beckon plays in full from POSTURE, the boss then strafes the ring to the player's right with its nearest approach above the ring edge, and the Punks walk in.",
+    "tests": "test_boss: phase 2 from POSTURE plays the beckon through frame beckon-3, and the boss's flat distance stays at least posture_ring_min_m - 0.5 during the walk after (4.12 m start, 3.7 m minimum), for both doorway sides. The seat moves at most 3.9 m (one third-ring step) against 7.8 m for a flip. test_enemy_actor: a taunt in progress finishes before a moved slot calls the enemy back. test_enemy_director: a newcomer never takes the seat of an enemy already on the ring (fails with the weight at 1)."
+   },
+   {
+    "id": "final-fair-04",
+    "outcome": "fixed",
+    "what_changed": "The ring back-out takes a Bruiser at the nose out sideways, and _start_detour alternates sides and checks the navmesh (see crowd-02). Reproducing the finding turned up a further cause, so I added a movement-based stall. The progress-based stall count restarted at every director reslot (set_slot) and at every change of the way-round target, so a Bruiser wedged against the crate pair and the player for 3 s never stalled (detour 0 all along). _stalled() now also stalls when the body has not moved enemy_slot_reach_m in enemy_stuck_s. 'RV rec seed1 slow held' went from 3 stuck to 0, 'RV full mixed' seed 0 from 1 stuck to 0, and no stuck enemy appeared in 20 other acts and seeds run.",
+    "tests": "test_enemy_actor: a body that does not move is stalled whatever its target and the director do (fails with set_slot every 20 frames on the old rule), and a walking body never stalls."
+   },
+   {
+    "id": "final-code-01",
+    "outcome": "fixed",
+    "what_changed": "EnemyActor._apply_armor returns early while the victim is GRABBED and the attacker is its holder. The knee on a held, staggered Bruiser now jolts with no armor spark, and the throw throws instead of leaving the Bruiser pinned to a free player.",
+    "tests": "test_bruiser: knee on a held Bruiser is not absorbed, stays held in the held pose, took damage; the throw lands THROWN, the Bruiser flies, holder null, not left GRABBED. Mutation-checked: removing the early return fails both."
+   },
+   {
+    "id": "final-code-02",
+    "outcome": "fixed",
+    "what_changed": "Boss._tick_adds returns after its health check and before the countdown while GameInput.menu_open. It is not gated on ai_frozen.",
+    "tests": "test_boss: with a menu open the phase changes but no Punk is called in; the first comes as the menu closes and the second after the interval; ai_frozen does not hold the call-in."
+   },
+   {
+    "id": "final-code-06",
+    "outcome": "fixed",
+    "what_changed": "voice_pitch_mult 0.7 moved from Boss._init to boss.tscn, as in bruiser.tscn.",
+    "tests": "test_boss: Boss.new() has 1.0 and the scene has 0.7."
+   },
+   {
+    "id": "final-code-03",
+    "outcome": "fixed",
+    "what_changed": "Tests and comments only, no hook promotion. The contract comment in enemy_actor.gd now names the real overrides (the Bruiser and boss _tick_control wraps, the boss's _face and react_to_block, the Bruiser's _stop, _animate_legs and _pin_spot, the Kicker's _pick_strafe_dir, the Pipe Thug's attacks) and the new _wakes_in_place hook. The ARCHITECTURE line 455 wording is in final-enemy-ai.md. P3-bruiser call 6 now says the brace test covers _stop only and the new test holds _animate_legs.",
+    "tests": "test_kicker: a Kicker and a Punk at the same spot with a slot straight ahead strafe opposite ways (the Kicker toward the edge). test_bruiser: a walking, braced Bruiser with the AI on keeps its brace clip while walking. Mutation-checked: removing Kicker._pick_strafe_dir or Bruiser._animate_legs fails its new test (before this pass neither removal failed any test)."
+   }
+  ],
+  "tests_passed": 1154,
+  "tests_total": 1154,
+  "script_errors": false,
+  "tunables_added": [
+   "posture_orbit_lead_deg (Posture, 40; replaces kicker_orbit_lead_deg, which is removed from the Kicker subgroup)",
+   "posture_orbit_gap_deg (Posture, 60)",
+   "posture_resume_s (Posture, 3.0)",
+   "director_newcomer_weight (Director, 0.1)",
+   "director_flank_gap_deg (Director, 20)"
+  ],
+  "captures": [
+   {
+    "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-fix-final-enemy-ai-ring-and-tokens/captures/fix/boss_rec/sheet_wake1.png",
+    "description": "First person, boss alone vs the full autopilot, t=12.9-14.6 s: the boss walks to the player, jabs are absorbed (grey sparks), the hook staggers it. It postures and attacks within the chain rather than walking away between chains."
+   },
+   {
+    "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-fix-final-enemy-ai-ring-and-tokens/captures/fix/boss_rec/sheet_wake2.png",
+    "description": "The next cycle, t=19.9-21.6 s: jabs absorbed, then the boss's pound lands (BOFF, HP 85 to 70) and the player is knocked down. The boss lands attacks now."
+   },
+   {
+    "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-fix-final-enemy-ai-ring-and-tokens/captures/fix/p2/sheet_beckon.png",
+    "description": "Phase 2 from POSTURE: the bar halves, the open-handed beckon plays in full, then the boss goes back to its guard (before the fix the beckon was cut one frame after it began)."
+   },
+   {
+    "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-fix-final-enemy-ai-ring-and-tokens/captures/fix/p2/sheet_after.png",
+    "description": "After the beckon: the boss strafes the ring to the player's right in guard (it never marches past him) while the Punk adds walk in and engage."
+   },
+   {
+    "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-fix-final-enemy-ai-ring-and-tokens/captures/fix/met/sheet_14s.png",
+    "description": "Mixed six fought, seed 0, t=14.6-18.6 s (the span where the Bruiser walled the lens before): enemies hold the ring in view, a parry, no enemy standing at the nose covering the lens while not attacking."
+   }
+  ],
+  "feel_judgement": "The ring walk reads right in the recordings. Enemies at the nose back out and leave sideways facing the player, and the Kickers still circle the ring to the back at 2.6 m and more. The boss attacks out of the chain now and its beckon plays in full. Mixed fights look like the six-Punk fights. The boss fight is still short: the kill stays at about 41-43 s with default numbers, because it is DPS-limited. That is a question for Game-boy, not an AI defect. Residual soft misses: R8 p95 is 49-53% in the mixed fight (the limit is 50%), from a Bruiser or Thug attacking at 1.2 m, accepted by P4-int. The six-Punk posturing fell about 0.2 (1.8/1.7/1.6 to 1.6/1.6/1.4 of 5.8) because RECOVER now starts with the back-out leg.",
+  "judgement_calls": [
+   "The boss wake-in-place is a base hook (_wakes_in_place, false by default) overridden by the boss, not a base change for every archetype. The slice gate settled the Punk's go-back-to-the-slot, and test_enemy_actor.gd:877 stays as it was.",
+   "The back-out is a diagonal leg (ring_min + slot reach out, at most the lead round toward the goal) rather than a pure radial back-out followed by the arc: it is the radial one when the slot is straight out, and one leg instead of an L when it is round the ring.",
+   "The Kicker's seat search is a 5-degree step outward from directly behind, with a flank gap of 20 degrees to every other seat. A Kicker can sit up to about 40 degrees off directly behind when another seat is near, still well outside the 55-degree view. A hysteresis on the Kicker's seat is the next thing to try and is not needed for the gate.",
+   "A movement-based wedge stall in _stalled() was added beyond the finding: the progress rule restarted at every reslot and at every change of target, so the Bruiser stuck at the crates never stalled.",
+   "kicker_orbit_lead_deg was removed and replaced by posture_orbit_lead_deg (same 40), and the base's threshold for walking round is posture_orbit_gap_deg (60; the Kicker's own was its lead, 40).",
+   "The fought-mixed-six gate in test_slice_crowd.gd uses a harness copy of the bot's act, with floors set between its fixed and unfixed numbers: posturing 1.4, Kickers outside the view 55-90%, at most 5 APPROACH lens samples. It costs about 20 s of the suite, now about 140 s.",
+   "The priority serve for a waking boss takes a grant ahead of blind-spot waiters, which costs the soft R9 a grant whenever it wakes while blind waiters queue.",
+   "Existing director Kicker tests were rewritten deliberately, because a Kicker is no longer one of the evenly spaced seats. 'Within the jitter of behind' became 'within the jitter and two flank gaps'."
+  ],
+  "remaining": [
+   "Poise or get-up armor for the boss (spec_question): with the AI fix the boss attacks every wake-up, but the full-autopilot kill is still about 41-43 s. Default taken: nothing more. The proposal (heavy hits absorbed for boss_wake_armor_frames after it stands, or a wake-up attack with no commit pause) is in final-enemy-ai.md for Game-boy.",
+   "CombatActor.release_from_grab() (game/actors/combat_actor.gd:520, the instruments package's file) emits CombatEvents.released with a possibly freed holder when the player is held as an enemy is removed (F4 remove-all, the bot's end-of-act clear_enemies). The engine prints 'Cannot convert argument 1 from Object to Object', and tools/check_m3_log.py fails the log. Seen at the end of 'FX metered fight' seed 0. Harmless in play, but it needs an is_instance_valid guard there.",
+   "The lead applies the wording in final-enemy-ai.md to README line 85, M3-judgement-calls line 71, P4-int call 12 and ARCHITECTURE (hooks paragraph at line 455, life of an enemy, the director's slots, the flank at lines 631 and 642, tunables). tuning/default.json was regenerated and committed here; the lead may regenerate it again after merging the other fixers.",
+   "The hook-promotion refactor and a CombatActor._recoil() helper for the boss's react_to_block stay out of scope.",
+   "Further Kicker seat hysteresis (re-seat only after the look has turned some degrees from the seat) would raise posturing further if wanted.",
+   "The fixer-only measurement acts (zz_fix_acts.gd, a copy of the fair review's zz_review_acts.gd) were not committed and have been deleted from the worktree. A copy is at /private/tmp/claude-501/-Users-arachne-repos-beat-em-up-PoC/d761797e-9cb1-4f02-bcab-6d8ac443a839/scratchpad/zz_fix_acts.gd.txt."
+  ]
+ },
+ {
+  "key": "boss-poses-and-pipe-rest",
+  "package": "boss-poses-and-pipe-rest",
+  "branch": "m3/fix-final-boss-poses-and-pipe-rest",
+  "commit": "b0ff537",
+  "pushed": true,
+  "verdicts": [
+   {
+    "id": "final-tells-01",
+    "outcome": "fixed",
+    "what_changed": "EnemyPosesBoss._pound strike and strike_end keys are now a deep squat with the spine near vertical, the head over the hips (0.09-0.12 m ahead of them, was 0.50 m) and the fists driven down in front of the knees (0.70 m up). The follow-through key carries the arms wide and low, so a pound that does not land does not bring the fists up through the lens. The held overhead wind-up key, joint limits, reach_m (arc-based, measured 2.62 vs 2.60) and move timing are unchanged, so gen_moves.gd and the .tres files are untouched. Nearest boss mesh to the lens, from the held key through hitstop: 0.9 m 0.000 -> 0.406 m, 1.1 m 0.105 -> 0.469 m, 1.3 m 0.298 -> 0.548 m (0.8 m: 0.404 m). The 0.9 m case clears, so the Boss._choose_attack exclusion fallback is not needed. Correction to P3-boss.md call 11 is in docs/milestones/M3-calls/final-poses.md. First-person sheets at 0.9 and 1.1 m show the torso, the arms swinging out and down, the hit, then the boss squatting head-up with fists down: no cap in the lens, no orange fill.",
+    "tests": "New tests/test_boss_close_lens.gd (2 tests: player at 0.9/1.1/1.3 m takes the pound, and an invulnerable player through the follow-through key); it fails on the old pose (0.000/0.105/0.298 m). New pose-shape test in tests/test_enemy_moves_boss.gd (hips drop >= 0.30 m, head <= 0.25 m ahead of hips, fists below hips at strike and strike end). Existing test_boss.gd 2.2 m test and rig tests still pass."
+   },
+   {
+    "id": "final-tells-04",
+    "outcome": "fixed",
+    "what_changed": "GrabPoses._slam strike is now a heave instead of a forward fold: torso arches back (spine +10, chest +8, upper chest +4), hips lean back 0.06 m, legs straighten, arms go up and out (raise 112, roll -34) as he is let go. The boss's head goes 0.46 m back from the held key to the strike, where the headbutt's goes 0.31 m ahead. EnemyHold._strike, the THROWN knockback, held_lift and the 0.4 s settle are unchanged (enemy_hold.gd and gen_moves.gd untouched). I chose the rear-back heave rather than a sideways swing because the victim's lens is the player's own held_lift loop and cannot follow the boss's arms without touching player.gd. First-person sheet 'Boss grab slam' shows the lift, the arms flying up and out on both sides of the view, BAM, then him thrown up and away; no cap in the lens. The held-view clearance rose from 0.12 m to 0.26 m (that 0.26 m is the unchanged held wind-up's own fingers). Correction note appended to P2-grab.md.",
+    "tests": "tests/test_player_grabbed.gd: _check_the_held_view(boss) now samples to the slam's strike frame (headbutt still stops at its held key, its dive exempt); the old slam fails it at 0.12 m. New test_the_slam_heaves_him_with_its_head_back_and_the_headbutt_dives in tests/test_enemy_moves_grab.gd (slam head travel <= 0.05 m, headbutt >= 0.25 m, slam torso not folded forward, arms above the held key's)."
+   },
+   {
+    "id": "final-tells-02",
+    "outcome": "fixed",
+    "what_changed": "Weapon now has a resting state: Weapon._integrate_forces() sets linear/angular damping to the new tunables weapon_rest_linear_damp (6.0) and weapon_rest_angular_damp (8.0) every step a loose, non-flying, non-frozen weapon touches the world, and _set_air_damping() restores the engine damping on drop() and throw_from(), so the fall and the throw are unchanged. Jolt then puts the pipe to sleep. Both tunables are @export_range in the 'Grab and weapons' group; the drop-push values (thug_drop_speed_mps 0.5, spin 3.0) are unchanged. I used damping rather than a rotation lock or freeze because a lock would freeze a tilted-landing pipe standing on its end. Measured 5 s after a knockdown from 1.0/1.2/1.4 m the pipe lies 0.87/1.10/1.29 m from the player, asleep, and unmoved 10 s later. In the real crowd room ('Final pipe rest' act) it lies 0.63 m away for the full 8 s watched with the LB cue on throughout. A thrown pipe is also asleep 5 s after the throw. P2-thug call 1's 0.64-1.03 m rest was measured while the pipe was still rolling; correction appended to P2-thug.md.",
+    "tests": "tests/test_pipe_thug.gd: test_a_dropped_pipe_comes_to_rest_within_pickup_range_and_stays (three hit distances: within pickup_range, speed < 0.02 m/s, spin < 0.05 rad/s, sleeping, within 0.03 m of the same spot 5 s later), test_a_pipe_dropped_from_other_hits_comes_to_rest_too, test_a_thrown_pipe_comes_to_rest_too. The old code failed them (spin 3.3 and 8.7 rad/s, 0.32 and 0.85 m of creep)."
+   }
+  ],
+  "tests_passed": 1137,
+  "tests_total": 1137,
+  "script_errors": false,
+  "tunables_added": [
+   "weapon_rest_linear_damp (Grab and weapons, 6.0)",
+   "weapon_rest_angular_damp (Grab and weapons, 8.0)"
+  ],
+  "captures": [
+   {
+    "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-fix-final-boss-poses-and-pipe-rest/captures/fix/pound/sheet_09.png",
+    "description": "First-person tile sheet, 'Final pound at 0.9 m': boss torso fills the view as it does in its guard, arms swing out and down to the sides, THUD, then the boss squatting with head up and fists down. No cap in the lens, no orange fill."
+   },
+   {
+    "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-fix-final-boss-poses-and-pipe-rest/captures/fix/pound/sheet_11.png",
+    "description": "First-person tile sheet, 'Final pound at 1.1 m': the same, with the arms wide at the strike and BOFF; the boss squats head-up afterwards."
+   },
+   {
+    "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-fix-final-boss-poses-and-pipe-rest/captures/fix/slam/sheet.png",
+    "description": "First-person tile sheet, 'Boss grab slam': held with MASH prompt, lifted, cap and head stay up and back, arms fly up and out on both sides of the view, BAM, thrown. Reads as a heave, not the Bruiser's headbutt dive."
+   },
+   {
+    "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-fix-final-boss-poses-and-pipe-rest/captures/fix/slam_side/sheet.png",
+    "description": "Side-view tile sheet of the slam: lift, then both arms up with the boss rearing back as the player is thrown up and away."
+   },
+   {
+    "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-fix-final-boss-poses-and-pipe-rest/captures/fix/pipe/sheet.png",
+    "description": "First-person tile sheet, 'Final pipe rest' (knockdown, then looking down for 8 s): the yellow pipe lies in the same spot at the lower left for the whole watch with the LB PICK UP cue on. bot.log has PIPE lines: 0.63 m from the player, speed 0, asleep, every second."
+   }
+  ],
+  "feel_judgement": "All three read correctly from the first-person captures. The pound's strike from close is the boss's torso and swinging arms, then a head-up squat, never the cap in the lens. The slam reads as a heave: the head goes up and back and the arms fly up and out as he is released. It is distinct from the headbutt's cap-into-face dive. The dropped pipe stays put in the same spot at the lower left of the view while the LB cue stays on. One limit: the slam's victim lens still does not move with the boss's arms, because the victim pose is the player's own held_lift loop, so the throw is carried by the boss's body and the release rather than by a lurch of his view.",
+  "judgement_calls": [
+   "Re-posed the pound instead of excluding it under 1.4 m in Boss._choose_attack or making the boss step back; the 0.9 m case clears at 0.41 m, so the exclusion fallback is not needed.",
+   "Left the pound's legs, timing, held wind-up key and reach alone, so gen_moves.gd and the .tres files are untouched; only the torso, head and arm keys changed.",
+   "Fists stop at 0.70 m above the floor rather than on it: with the spine near vertical the arms reach the knees. The hitbox is the ring at the feet, so the pose only has to read as down.",
+   "Changed the pound's follow-through key arms to wide and low so a missed pound does not sweep fists up through the lens (0.12 m to 0.24 m at 0.9 m). Held to the rule only through the follow-through key; the later return to the guard at 0.9 m (0.24 m) is recorded, not asserted.",
+   "Slam: chose the rear-back heave (arms up and out, head back) over a torso turn swinging him to one side, because the victim's pose is the player's own held_lift loop and cannot follow the boss's arms without editing player.gd and placeholder_anims.gd. The release, THUD knockback and held_lift are unchanged.",
+   "Held-view test runs to the slam's strike frame; the headbutt's check still stops at its held key (its dive is exempt, as briefed). A rig test pins that the slam's head goes back and the headbutt's goes in.",
+   "Pipe: damping from first world contact rather than a yaw-only rotation lock or a freeze (a lock freezes a tilted-landing pipe standing on its end; a freeze places a body by script). Any world contact starts the rest, not only a floor contact, to avoid a contact-normal threshold in a script.",
+   "Left thug_drop_speed_mps and thug_drop_spin_rps unchanged: the pipe lands 0.9 to 1.3 m from the player, inside LB's 1.5 m, and a weaker push would put it nearer the Thug.",
+   "Added a new bot acts file tests/bot/acts/final_boss_poses_acts.gd (the crowd bot collects any *_acts.gd) rather than editing boss_acts.gd or thug_acts.gd, which other packages own.",
+   "Did not commit tuning/default.json, as the lead said it regenerates it; I ran the generator locally only to run the full suite."
+  ],
+  "remaining": [
+   "Regenerate tuning/default.json: godot --headless -s tools/gen_default_preset.gd. It must include weapon_rest_linear_damp and weapon_rest_angular_damp. Until then tests/test_tuning_panel.gd fails two assertions ('default.json has weapon_rest_...'). With it regenerated in my working tree the suite was 1137 of 1137 with no SCRIPT ERROR or ERROR.",
+   "docs/ARCHITECTURE.md line about the boss: 'nearest boss mesh to the lens ... 1.2 m for the pound' was measured only from 2.2 m. It should read 0.41 m at 0.9 m and 1.55 m at 2.2 m. ARCHITECTURE.md is the lead's.",
+   "docs/milestones/M3-calls/P3-boss.md call 11 ('the only attack it throws from that close is the grab') is wrong. The correction is in docs/milestones/M3-calls/final-poses.md, because the enemy-AI package owns P3-boss.md; fold it into that file if wanted.",
+   "The pound's follow-through rise back to the guard passes 0.24 m from the lens at 0.9 m (0.35 m at 1.1 m) when the pound does not land. This is below the 0.25 rule only for a few frames of the return to the guard, a rare case, and it is not asserted.",
+   "The slam's 0.26 m held-view clearance is the unchanged held wind-up's own fingers (thin margin over 0.25). Widening it means moving the fists off his arms for the whole hold, which I did not do."
+  ]
+ },
+ {
+  "key": "lens-floor-and-warning-size",
+  "package": "lens-floor-and-warning-size",
+  "branch": "m3/fix-final-lens-floor-and-warning-size",
+  "commit": "b15baba94fbd92d75e0c6ef3009efe16ec8c4585",
+  "pushed": true,
+  "verdicts": [
+   {
+    "id": "final-crowd-01",
+    "outcome": "fixed",
+    "what_changed": "FirstPersonCamera._view_with() now takes max(lens.y, floor + cam_floor_clearance_m) before the KO mix, so view_from_eye() and update_camera() both get it. New static lens_floor_y(): the player's interpolated origin y when is_on_floor(), else a world-layer ray straight down from EyePoint (4 m, never from the lens), else -INF (no clamp; null/not-in-tree guarded). New tunable cam_floor_clearance_m (Camera group, 0..0.5, default 0.13). A max against a constant floor is 1-Lipschitz, so it adds no pop of its own. Measured on the real player: face-down knockdowns (Kicker sweep 90/180, Bruiser smash +/-135) went from lens -0.045/-0.046 m for 121-126 frames to a 0.130 m floor; face-up (front) is lifted 1.3-1.4 cm. A first-person recording of a face-down knockdown shows the street grid, road paint and curb filling the lower half of the view with a clean horizon (min lens 0.131 m with shake, 0 frames under the floor).",
+    "tests": "tests/test_ko_view.gd: test_a_knockdown_from_the_side_or_behind_keeps_the_lens_above_the_floor (4 real-hit cases; lens y >= 0.05 on every LAUNCHED/DOWNED/GETUP frame through update_camera(); no per-tick step larger than the free lens's; asserts the free lens was under 0 so the scenario is real), test_a_knockdown_from_the_front_moves_the_lens_a_centimeter_or_so (lift < 2 cm), test_the_floor_under_a_flying_player_is_found_from_the_eye_and_standing_it_is_the_origin. Verified the first fails without the clamp (-0.045 m)."
+   },
+   {
+    "id": "final-warn-01",
+    "outcome": "fixed",
+    "what_changed": "RearWarning._steady_size() is now min(base x size, edge / heavy_scale), times heavy_scale for a heavy attacker, so a heavy burst is always heavy_scale times the normal one and fits the 20% corner; burst_rect() clips steady x pulse to the corner as before, so a heavy pop is never smaller than a normal pop. Steady defaults unchanged (160 / 208 px at 1080p) and the default pop clip unchanged (heavy 216 vs normal 200). rear_warning_size / heavy_scale doc comments updated; @export_range not narrowed. Logged in P1-hud.md items 20-21 (the new rule; the slider's upper range saturates at about 1.04, inherent to the plan's binding corner, M3-plan.md:166). Recording at size 1.5 shows the heavy burst clearly larger than the normal one (the review's sheet showed them equal).",
+    "tests": "tests/test_ui.gd: test_a_heavy_burst_is_larger_than_a_normal_one_at_every_size_and_both_fit_the_corner (1920x1080, slider min..max from the property hint, steady and pulse peak, heavy scales 1.3/2.0/1.0, plus the default 160/208/200/216 px). tests/test_rear_warning.gd: test_a_heavy_burst_stays_larger_than_a_normal_one_at_every_size_on_the_shipped_canvas (real wind-ups through the HUD, corner_state size_px and rect, at the pop and steady). Verified both fail on the old _steady_size. Existing test_the_rear_warning_lies_inside_the_reserved_corners_at_every_size got a 0.001 px tolerance (a fractional-size burst flush with the corner is a millionth of a pixel out in 32-bit Rect2)."
+   }
+  ],
+  "tests_passed": 1135,
+  "tests_total": 1135,
+  "script_errors": false,
+  "tunables_added": [
+   "cam_floor_clearance_m (Camera group, @export_range(0.0, 0.5, 0.01), default 0.13) in game/autoload/tuning_data.gd. tuning/default.json NOT regenerated or committed (the lead's job per the brief): until it is regenerated, tests/test_tuning_panel.gd::test_the_default_preset_equals_the_shipped_defaults fails in the committed branch. I ran `godot --headless -s tools/gen_default_preset.gd` locally (adds only \"cam_floor_clearance_m\": 0.13 after cam_forward_offset_m, 444 values) for the 1135/1135 full-suite run, then reverted the file before committing."
+  ],
+  "captures": [
+   {
+    "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-fix-final-lens-floor-and-warning-size/captures/fix/kd/sheet_b.png",
+    "description": "First-person tile sheet (6 fps) of a Kicker's sweep from behind: the descent, the face-down hold and the get-up, with the street visible and no pop at the clamp's edges"
+   },
+   {
+    "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-fix-final-lens-floor-and-warning-size/captures/fix/kd/down_face_down.png",
+    "description": "Single first-person still mid-DOWNED, face-down: the floor grid, road paint and curb fill the lower half; lens 0.13 m up (the review's sheets show background colour there)"
+   },
+   {
+    "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-fix-final-lens-floor-and-warning-size/captures/fix/kd/bot.log",
+    "description": "KDLENS lines for kicker b180, bruiser b135, kicker b0: cam min y 0.131 m, 0 frames below the floor top, 121-126 frames down"
+   },
+   {
+    "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-fix-final-lens-floor-and-warning-size/captures/fix/warn_compare.png",
+    "description": "Top-strip crops of 'Warn: heavy': rows 1-3 at the default size 1.0 (pop, second beat, after the end), rows 4-6 at --tune=rear_warning_size=1.5; the heavy burst (right) is larger than the normal one (left) in both"
+   }
+  ],
+  "feel_judgement": "Face-down knockdown view: reads right. The lens now rides about 13 cm above the street, so the player sees the pavement at a grazing angle with a flat horizon, the road paint and curb, and the building fronts above, instead of the background colour with curb undersides. The descent into it and the get-up out of it are continuous in the sheet; the clamp can only slow the lens, never jump it. Face-up falls are visually unchanged (1.4 cm higher). The heavy rear-warning burst: reads right at the default and at size 1.5, where the Bruiser's burst is clearly the bigger one; above about 1.04 the normal burst stays at 166 px while the heavy one sits at 216 px.",
+  "judgement_calls": [
+   "Hard max on the lens y rather than a smooth knee: a max against a constant floor cannot add a pop (per-tick step never exceeds the free lens's, asserted), and a soft knee would lift the face-up lens by more than the allowed 2 cm and need a second tunable.",
+   "The clamp lives in the static _view_with(), not _follow(), so view_from_eye() (used by test_ragdoll, test_combat_integration, test_grab_view, test_launch_from_hold) judges the real lens; all of those pass unchanged.",
+   "Floor source: the player's interpolated origin y when is_on_floor(); in the air a world-layer ray straight down from EyePoint (4 m); else -INF (no clamp). Rejected always-ray (per-frame query, floor jumps at crate lips). The floor reference is not damped.",
+   "Test measures the free lens with a twin camera updated with the clearance set to -10 (same smoothing, differs only by the floor), not against view_from_eye(), which would include the camera's smoothing lag.",
+   "Warning: steady size is min(base x size, edge / heavy_scale) x heavy_scale for a heavy burst, pop handled by the existing clip in burst_rect(). Pop's pre-heavy size is NOT capped separately: that would remove the default normal pop (160 x 1.25 = 200 > 166), a default change ruled out. Consequence: with heavy_scale below the pulse growth (under 1.25) and the normal burst at its cap, both pops clip equal; strictness tested at 1.3 and 2.0, >= at 1.0.",
+   "@export_range of rear_warning_size not narrowed (its ceiling depends on base_px and heavy_scale); the saturation is documented in the tunable's comment and P1-hud.md.",
+   "Existing corner-containment test in test_ui.gd given a 0.001 px tolerance: fractional burst sizes (corner / 1.3) land a millionth of a pixel outside in 32-bit Rect2.",
+   "A throwaway bot act (zz_fixlens_acts.gd) was used for the capture and kept out of the commit; captures/ is not committed."
+  ],
+  "remaining": [
+   "Lead: regenerate tuning/default.json (`godot --headless -s tools/gen_default_preset.gd`; adds only \"cam_floor_clearance_m\": 0.13) and update tests/test_tuning_panel.gd if its counts or tunable lists change; until then test_the_default_preset_equals_the_shipped_defaults fails on this branch.",
+   "Lead: fold the wording in docs/milestones/M3-calls/final-presentation.md into docs/ARCHITECTURE.md (First-person lens paragraph, Rear warning Look bullet, the corner_state size_px note, and the cam_floor_clearance_m tunable).",
+   "Open for Game-boy, unchanged: the face-up belly-slab view (how much of the view the player's own body covers in a face-up non-KO knockdown). The slider-range saturation above a size of about 1.04 is inherent to the plan's 20% x 20% corner; he can raise rear_warning_base_px or lower rear_warning_heavy_scale in F1 if he prefers a bigger normal burst to the ratio."
+  ]
+ },
+ {
+  "key": "instruments-and-evidence",
+  "package": "instruments-and-evidence",
+  "branch": "m3/fix-final-instruments-and-evidence",
+  "commit": "c6d73916f013c7973648156deb2b2747e4b04961",
+  "pushed": true,
+  "verdicts": [
+   {
+    "id": "final-fair-05",
+    "outcome": "fixed",
+    "what_changed": "tools/check_m3_log.py keeps each act header's frame (act_frame) and skips a WARN-CHECK whose frame is earlier, besides the measuring flag; its unjudged-wind-ups note no longer counts gap wind-ups. warning_oracle.gd ignores windup_started while no act is open and start_act() clears _live and _settling. The reviewers' passive_s1.log and passive_s2.log, which failed before, are now ok.",
+    "tests": "test_check_m3_log.gd: a gap wind-up whose line follows the next header is skipped, an own-act one that never lit still fails, a line after READABILITY still skipped. test_warning_oracle.gd: a wind-up started between acts is not judged in the next act. Both fail on the old code with the reported 'corner never lit' and a 'WARN-CHECK ok next act' line."
+   },
+   {
+    "id": "final-code-04",
+    "outcome": "fixed",
+    "what_changed": "test_check_m3_log.gd and test_readability_probe.gd write to per-PID user:// paths (check_m3_log_test_<pid>.log, probe_test_<pid>/) and clean them up in after_all. The probe has an out_dir property that write_json(), finish() and _exit_tree() use after an explicit dir and before --probe-out, the movie folder and user://. test_write_on_exit writes into the per-PID folder. ARCHITECTURE lines 560, 578 (and 567, 569, 732, 734, 527) wording is in docs/milestones/M3-calls/final-instruments.md; one existing line had the probe-out and movie-folder order reversed.",
+    "tests": "test_write_on_exit uses out_dir; new test_out_dir_is_where_write_json_goes_unless_it_is_given_a_folder. No per-PID file is left in user:// after a full run."
+   },
+   {
+    "id": "final-code-05",
+    "outcome": "fixed",
+    "what_changed": "readability_probe.gd samples the lens and occlusion at (frame - _start_frame) % N. The crowd bot's CROWD arc sample (every tenth frame) is now relative to the act too.",
+    "tests": "test_the_lens_cadence_counts_from_the_acts_start_not_the_engines_frame_counter starts the same act at ten phases of the frame counter and asserts equal sample counts; on the old code it gives 2,3,2,2,2,2,2,2,3,2."
+   },
+   {
+    "id": "final-perf-01",
+    "outcome": "fixed",
+    "what_changed": "CombatActor.release_from_grab() emits released(by if is_instance_valid(by) else null, self), and break_free() does the same for grab_escaped (same defect, one line). The probe's _on_released and _on_grab_escaped take Variant and check is_instance_valid.",
+    "tests": "test_m3_contracts.gd: a holder freed mid-hold under an armored victim and under the real player, with a typed listener on the bus, which fires once with null (the old code prints 'Cannot convert argument 1 from Object to Object' and never reaches the listener); a live holder is still named; break_free with a freed holder. test_readability_probe.gd: null and freed holders are taken in stride."
+   },
+   {
+    "id": "final-perf-02",
+    "outcome": "fixed",
+    "what_changed": "The perf act counts simulating ragdoll bodies directly (running, not-asleep ragdolls via Ragdoll.body_transforms(), plus awake non-frozen RigidBody3D pipes) at each window's end; it reads 0 to 72 bodies where it read 0 throughout. 'process' and 'physics' are relabelled as the engine's maximum over the last second, and the act's doc says the frame lines and R15 are the measure. 'bodies went down' became 'falls'. P4-int calls 14 and 20 (and 12) are corrected in place.",
+    "tests": "No unit test (a bot act's log columns). Ran 'Perf, six with ragdolls' headless once: columns read as described, no SCRIPT ERROR or ERROR."
+   },
+   {
+    "id": "final-crowd-04",
+    "outcome": "fixed",
+    "what_changed": "EncounterSpawner.start_at_wave(number) added: drops the wave in progress, re-arms wave_gap_s, makes wave `number` next. New acts 'Mixed waves' (from wave 3, boss waves off, held back, 90 s) and 'Boss wave, held back' (the boss wave at boss_wave_every+1, held back, phase 2 forced after 45 s if not reached, logged, then 30 s with the adds). The crowd bot's _reset now starts the waves over and reseeds the spawner rng. A second done-when waves test reaches wave 3 and 4. P4-int call 12 and the measured-table paragraph carry the corrected scope note.",
+    "tests": "test_encounter_spawner.gd: 3 tests (later wave, boss wave counted, drop and re-arm and clamp). test_m3_done_when.gd: test_the_mixed_waves_never_put_more_than_six_alive_and_the_fight_stays_readable (peak alive 6, four archetypes, waves 3 and 4, R1 1, R3 0 unwarned, R10 100% of 16). Both acts run headless, one process at a time; check_m3_log.py ok on both and on a three-act run."
+   }
+  ],
+  "tests_passed": 1141,
+  "tests_total": 1141,
+  "script_errors": false,
+  "tunables_added": [],
+  "captures": [
+   {
+    "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-fix-final-instruments-and-evidence/captures/fix/mixed_waves/bot.log",
+    "description": "Headless smoke run of 'Mixed waves' (seed 0, no recording): R1 1, R2 21 f, R3 0 of 18, R10 100% of 37, R13 0 stuck and 2 waves, R8 p95 51% (soft miss by a point), R9 50% of 4 (soft); waves 3, 4 and 5 start. check_m3_log ok. Not the evidence pack."
+   },
+   {
+    "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-fix-final-instruments-and-evidence/captures/fix/boss_wave/bot.log",
+    "description": "Headless smoke run of 'Boss wave, held back': boss health 300 to 216 in 45 s, forced to 150 (logged), adds enter, 16 boss wind-ups (pound, charge, grab, slam) and 2 Punk shoves; R1 1, R2 55 f, R3 0 of 9, R10 100% of 18, R8 p95 46%. check_m3_log ok. Not the evidence pack."
+   },
+   {
+    "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-fix-final-instruments-and-evidence/captures/fix/perf/bot.log",
+    "description": "Headless run of 'Perf, six with ragdolls' showing the relabelled engine columns and the direct body counts (0 to 72 ragdoll bodies simulating)."
+   },
+   {
+    "path": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-fix-final-instruments-and-evidence/captures/fix/multi/bot.log",
+    "description": "Three wave acts in one process ('Waves to the boss', 'Mixed waves', 'Boss wave, held back'): the per-act wave reset works and check_m3_log.py is ok on a multi-act log."
+   }
+  ],
+  "feel_judgement": "No feel or visual change: nothing here touches enemy AI, the boss, poses, the camera or the rear warning, so no captures were re-recorded or tiled. The evidence pack is left for the lead, as instructed, since the AI and pose packages change the numbers.",
+  "judgement_calls": [
+   "Fixed fair-05 at both ends (checker skips by frame and oracle ignores gap wind-ups) so old logs and new behaviour are both right; the checker's unjudged-wind-ups note also skips gap wind-ups.",
+   "start_at_wave(number) also drops the wave in progress and re-arms the gap (not a bare setter), so the crowd bot's _reset can call start_at_wave(1); the bot also reseeds the spawner rng. Multi-act runs are still not bit-identical to single-act runs (autopilot and director state), so evidence stays one act per process.",
+   "'Mixed waves' uses boss_wave_every 0 (waves 3 to 5 only); the boss wave has its own act, so the 90 s window measures mixed waves.",
+   "'Boss wave, held back' forces phase 2 only after 45 s without it (the autopilot got the boss to 216 of 300) and logs it, rather than forcing at a fixed moment or never.",
+   "Perf columns: relabelled the engine monitors as one-second maxima instead of dropping them, and counted bodies directly at the window's end (not every frame, to keep the sampler's cost out of the frame times).",
+   "break_free()'s grab_escaped emit got the same freed-holder guard as release_from_grab (same defect, same file, one line); the finding named released only.",
+   "out_dir precedence: explicit dir, then out_dir, then --probe-out, then the movie folder, then user://. ARCHITECTURE wording is in final-instruments.md, not edited (not an owned file); one existing line had the --probe-out and movie-folder order backwards.",
+   "The CROWD-arc sample in the crowd bot was made act-relative as well (same drift class as code-05).",
+   "The mixed-wave test is a second test with loose assertions (peak alive at least 5, at least 3 archetypes) so it holds across suite frame offsets; it adds about 6 s to a 127 s suite."
+  ],
+  "remaining": [
+   "The lead records the evidence pack after the merge: tools/capture_bot.sh res://tests/bot/crowd_bot.tscn <dir> \"Mixed waves\" 6 and \"Boss wave, held back\" 6, then check_m3_log.py on both bot.logs and quote their readability.json in the gate and PR.",
+   "Paste the ARCHITECTURE.md wording from docs/milestones/M3-calls/final-instruments.md (lines 560, 578, 567/569, 732, 734, 527 and the released/grab_escaped note) when merging; this fixer does not own that file.",
+   "R8 p95 in 'Mixed waves' is 51% (a soft miss by a point) and R9 is too few grants to judge; both are the known soft items of the held-back fight, unchanged by these fixes."
+  ]
+ }
+]
