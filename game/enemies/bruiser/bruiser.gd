@@ -176,6 +176,14 @@ func _on_hit_received(hit: HitInfo) -> void:
 	super._on_hit_received(hit)
 
 
+## A fresh standing state (bots, debug tools): the armor is on and no brace is playing.
+func reset_state() -> void:
+	_armor_broken = false
+	_armor_frames = 0
+	_brace_frames = 0
+	super.reset_state()
+
+
 ## F3: the base text plus a mark while its armor is off.
 func debug_state_text() -> String:
 	var text := super.debug_state_text()

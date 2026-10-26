@@ -336,6 +336,17 @@ func test_a_second_haymaker_restarts_the_window() -> void:
 	assert_almost_eq(bruiser.armor_break_left_s(), Tuning.data.bruiser_armor_break_s, 0.05, "full again")
 
 
+func test_reset_state_puts_the_armor_back_on() -> void:
+	var bruiser := _bruiser()
+	await _ticks(3)
+	bruiser._break_armor()
+	assert_true(bruiser.armor_is_broken())
+	bruiser.reset_state()
+	assert_false(bruiser.armor_is_broken(), "a fresh Bruiser has its armor")
+	assert_eq(bruiser.armor_break_left_s(), 0.0)
+	assert_true(bruiser.debug_state_text().find("ARMOR OFF") < 0)
+
+
 func test_a_killing_light_hit_is_never_absorbed() -> void:
 	var bruiser := _bruiser(1.2, 500.0)
 	await _ticks(3)

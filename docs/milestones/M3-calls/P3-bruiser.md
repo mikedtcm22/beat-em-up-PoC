@@ -53,5 +53,5 @@ Calls the P3-bruiser builder made where the plan left a gap or two readings. Eac
 
 ## Measured at the end
 
-- Full suite 1055 of 1055 (48 new: `test_bruiser` 26, `test_enemy_moves_bruiser` 14, `test_armor_presentation` 8), no SCRIPT ERROR or ERROR.
+- Full suite 1056 of 1056 (49 new: `test_bruiser` 27, `test_enemy_moves_bruiser` 14, `test_armor_presentation` 8), no SCRIPT ERROR or ERROR.
 - Acts' readability probe: R1 at most 1 attacker (with one Bruiser), R3 0 unwarned hits, R10 100% agreement with 0 false positives, R11 max 15 in the mixed passive act (0 in the god-mode acts: no damage lands). Every hard metric passes in every Bruiser act; the mixed passive act: 14 hits, 12 wind-ups, R10 100% with 0 false, player KO at 22.6 s.
