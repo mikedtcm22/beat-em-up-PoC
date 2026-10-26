@@ -683,6 +683,9 @@ extends Resource
 ## Chance (0..1) that its attack is the low sweep rather than the jump kick.
 @export_range(0.0, 1.0, 0.05) var kicker_sweep_chance: float = 0.4
 @export_range(0.0, 10.0, 0.1) var kicker_attack_cooldown_s: float = 1.2
+## How far round the ring (degrees) the point it walks to is, on the way round to a slot behind the
+## player: it circles in legs of this size rather than crossing his front on the straight line.
+@export_range(10.0, 90.0, 5.0) var kicker_orbit_lead_deg: float = 40.0
 
 @export_subgroup("Pipe Thug")
 @export_range(5.0, 500.0, 1.0) var thug_health: float = 35.0

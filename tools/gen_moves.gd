@@ -297,9 +297,35 @@ func _punk_moves() -> void:
 	_enemy(shove, PUNK_SHOVE_REACH_M, 14)
 
 
-## The Kicker: kicker_jump_kick, kicker_sweep (P2-kicker).
+## The Kicker's reaches (MoveData.reach_m), measured by tests/test_enemy_moves_kicker.gd (within
+## 0.15 m). The jump kick's includes its leap: the strike touches a standing body about 1.1 m
+## from where the strike pose stands, and the leap carries the body KICKER_LEAP_M further over
+## the active frames (A5.2), so the rear warning still fires from 4 m behind.
+const KICKER_JUMP_KICK_REACH_M := 2.75
+const KICKER_SWEEP_REACH_M := 1.45
+## The jump kick's leap (m), over its active frames (the base applies free_lunge from the last
+## startup frame; the wind-up never slides).
+const KICKER_LEAP_M := 1.6
+## What the sweep takes a standing player's legs out with: a knockdown that carries him a body
+## length (m/s along the radial) and lifts him a little (m/s).
+const KICKER_SWEEP_PUSH_MPS := 3.0
+const KICKER_SWEEP_LIFT_MPS := 1.5
+
+
+## The Kicker: kicker_jump_kick, kicker_sweep (P2-kicker). Two attacks, each one move with its
+## own held wind-up (never below the grunt floor of 18 frames): a jump kick (a crouch that coils,
+## then a leap of KICKER_LEAP_M with the right foot out, 8, a flinch) and a low sweep (a deep
+## crouch, the torso turned away, then a low spin with the right leg along the floor: an arc over
+## the LEGS only, 8, a knockdown; a jumping player passes over it). Light tier, 8 damage each
+## (SPEC §7): the 15% rule is met by the sweep alone (8).
 func _kicker_moves() -> void:
-	pass
+	var kick := _add(&"kicker_jump_kick", "Kicker Jump Kick", Vector3i(22, 6, 18), 8.0, LIGHT, FLINCH,
+			Vector3(0.0, 0.0, 2.0), [_sphere(&"RightFootPoint", 0.2)])
+	_enemy(kick, KICKER_JUMP_KICK_REACH_M, 20)
+	kick.free_lunge = KICKER_LEAP_M
+	var sweep := _add(&"kicker_sweep", "Kicker Sweep", Vector3i(20, 5, 22), 8.0, LIGHT, KNOCKDOWN,
+			Vector3(0.0, KICKER_SWEEP_LIFT_MPS, KICKER_SWEEP_PUSH_MPS), [_arc(1.3, 80.0, 0.0, Vector2(0.0, 0.5))])
+	_enemy(sweep, KICKER_SWEEP_REACH_M, 14)
 
 
 ## The Pipe Thug: thug_pipe_1..3 (P2-thug).
