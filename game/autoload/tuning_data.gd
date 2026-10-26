@@ -510,6 +510,14 @@ extends Resource
 ## hit detection never use it.
 @export_range(-0.5, 0.1, 0.01) var cam_height_offset_m: float = -0.2
 @export_range(0.0, 0.3, 0.01) var cam_forward_offset_m: float = 0.04
+## The lowest the first-person lens may sit above the floor under the player (meters): the near
+## plane (0.05 m) plus a margin for the shake. The lens rides EyePoint less cam_height_offset_m,
+## and a player lying face-down (struck from the side or behind) has EyePoint only 0.15 m up, so
+## the lowered lens ended up 4 cm inside the street, whose top face is drawn from above only:
+## the floor vanished for the whole 1.1 s the body lay there. The lens stops at this height
+## instead (a face-up fall, EyePoint 0.3 m up, moves it about 1.4 cm). It is a floor on the lens
+## and never touches the KO view. Presentation only.
+@export_range(0.0, 0.5, 0.01) var cam_floor_clearance_m: float = 0.13
 @export_range(0.0, 1.0, 0.05) var screen_shake_intensity: float = 1.0
 ## Scales every move's camera_spin_follow: 1 turns the first-person view with a spinning
 ## move's body (the spin kick, spinning heel kick and spinning backfist land back on the
