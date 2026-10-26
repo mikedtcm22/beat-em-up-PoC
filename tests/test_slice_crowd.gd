@@ -13,6 +13,7 @@ const ROOM_PATH := "res://game/level/crowd_room.tscn"
 const Probe := preload("res://tests/bot/readability_probe.gd")
 const Pilot := preload("res://tests/bot/autopilot.gd")
 const CrowdBot := preload("res://tests/bot/crowd_bot.gd")
+const EngageMeter := preload("res://tests/bot/engage_meter.gd")
 
 ## The frames of the long run, and the gap between two of the six spawns.
 const RUN_FRAMES := 900
@@ -102,6 +103,9 @@ func _six_punk_run() -> Dictionary:
 	var probe := Probe.new()
 	probe.attach(room, player)
 	probe.start_act("six punks, still player")
+	var meter := EngageMeter.new()
+	meter.lens_enabled = false
+	meter.attach(room, player)
 	var seen := {
 		"most_attacking": 0, "min_spacing": INF, "stuck": [], "blind_grants": 0, "grants": 0,
 	}
@@ -133,6 +137,7 @@ func _six_punk_run() -> Dictionary:
 	var summary := probe.end_act()
 	seen["verdict"] = summary.verdict
 	seen["metrics"] = summary.metrics
+	seen["engage"] = meter.result()
 	return seen
 
 
@@ -173,7 +178,11 @@ func _closest_pair(enemies: Array[EnemyActor]) -> float:
 func test_six_punks_round_a_standing_player_keep_the_rules_and_the_hard_metrics() -> void:
 	var seen := await _six_punk_run()
 	assert_lte(seen.most_attacking, Tuning.data.attacker_cap, "never more than attacker_cap in WINDUP or ATTACK")
-	assert_gt(seen.most_attacking, 1, "and the crowd does attack together (%d at once)" % seen.most_attacking)
+	# The crowd attacks in turns (P1-engage): a holder waits squared up on the ring while the one in
+	# front attacks and the player reels from it, and steps in so as to arrive as its go comes, so
+	# two attacks overlap only when one of them does not land (a block, a whiff), and a player who
+	# takes every hit (this one is in god mode and stands still) sees them one after the other.
+	assert_gte(int(seen.metrics.windups), 8, "the crowd attacks all the same: %d wind-ups in %d frames" % [int(seen.metrics.windups), PRESSURE_FRAMES])
 	assert_gte(seen.min_spacing, MIN_SPACING_M, "nobody inside 0.7 m of another after frame 240, give or take a hair of avoidance (%.3f m)" % seen.min_spacing)
 	assert_eq(seen.stuck, [], "nobody stuck walking in for over 2 s")
 	assert_gt(seen.grants, 4, "several attacks were granted (%d)" % seen.grants)
@@ -182,6 +191,14 @@ func test_six_punks_round_a_standing_player_keep_the_rules_and_the_hard_metrics(
 	_assert_hard_rows(seen.verdict, ["R1", "R2", "R3", "R10", "R11"])
 	var metrics: Dictionary = seen.metrics
 	assert_gt(int(metrics.hits_on_player), 5, "the player was hit (%d times)" % int(metrics.hits_on_player))
+	# A token holder never waits at the player's nose (the slice gate's follow-up): from its token to
+	# its wind-up it is within 1.3 m only for the last stretch of the walk in. Before P1-engage a holder
+	# stood there for 0.8-2.6 s (and 2-5 s of the act in all, with a holder at the nose a third of it).
+	var engage: Dictionary = seen.engage
+	assert_gt(int(engage.wound_up), 5, "holders wound up (%d)" % int(engage.wound_up))
+	assert_lte(float(engage.still_nose_max_s), 0.3, "no holder stood still at the nose for its go (%.2f s at most)" % float(engage.still_nose_max_s))
+	assert_lte(float(engage.nose_p95_s), 0.5, "and the walk in's last stretch is all of its time there (p95 %.2f s)" % float(engage.nose_p95_s))
+	assert_lte(float(engage.nose_any_share), 0.2, "a holder is at the nose a fifth of the time at most (%.0f%%)" % (100.0 * float(engage.nose_any_share)))
 	assert_eq(int(metrics.unwarned_hits), 0, "R3: every hit had its wind-up")
 	assert_gt(int(metrics.warning_windups), 3, "R10 checked the warning on %d wind-ups" % int(metrics.warning_windups))
 	assert_eq(float(metrics.warning_oracle_agreement), 1.0, "R10: the widget agreed with the rule every time")

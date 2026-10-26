@@ -588,6 +588,17 @@ extends Resource
 ## the player's view a third as often, and still lands 95% of its openers on a standing player.)
 @export_range(0.0, 1.0, 0.01) var engage_margin_m: float = 0.05
 @export_range(0.5, 10.0, 0.1) var engage_timeout_s: float = 2.0
+## A holder steps in only when the director's go is near (EnemyDirector.windup_eta_s()): until
+## then it stands squared up where it is (the ring), so it never waits at the player's nose for
+## the wind-up gap, a flinch or the hit grace. It starts walking when the go is due within the
+## time its step-in takes plus this many seconds, so it arrives that much early at most (0 = it
+## arrives just as the go comes, and a hair late when the walk is slowed).
+@export_range(0.0, 1.0, 0.01) var engage_go_lead_s: float = 0.1
+## A step-in aims this far (m) to one side of the player's origin (a side picked once per enemy),
+## not at it: the avoidance treats the player as a circle, and a body walking straight at its
+## centre is slowed to a crawl before it gets there (the head-on tie), then times out of ENGAGE;
+## a hair to one side the avoidance lets it slide in at full speed.
+@export_range(0.0, 0.5, 0.01) var engage_aim_offset_m: float = 0.1
 ## Seconds an enemy holds still after its attack before it backs off to its slot.
 @export_range(0.0, 3.0, 0.05) var recover_hold_s: float = 0.35
 ## How fast (rad/s) an enemy turns to face the player while posturing and engaging.

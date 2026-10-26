@@ -108,6 +108,8 @@ var _progress_frames: int = 0
 var _detour: Vector3 = Vector3.INF
 var _detour_frames: int = 0
 var _retarget_offset: int = 0
+## Which side of the player's origin a step-in aims at, once per enemy (+1 or -1; see _engage_aim()).
+var _engage_side: float = 1.0
 var _cleaned_up: bool = false
 
 
@@ -119,6 +121,7 @@ func _ready() -> void:
 	super._ready()
 	_rng.seed = hash(String(name))
 	_retarget_offset = absi(hash(String(name)))
+	_engage_side = 1.0 if hash(String(name)) & 1 == 0 else -1.0  # from the name: no draw from _rng
 	_attacks = _build_attacks()
 	_next_attack = _choose_attack()
 	_setup_navigation()
@@ -226,6 +229,32 @@ func set_slot(pos: Vector3) -> void:
 ## The reach_m of the attack it will throw next (0 = it has none).
 func attack_range_m() -> float:
 	return _next_attack.reach_m() if _next_attack else 0.0
+
+
+## Seconds until the last strike of the attack it is throwing begins (the player is hit then, if
+## it lands), assuming a chain goes on to its last link: 0 when none is under way, or its last
+## strike has begun or whiffed. The director adds the hit grace to it (windup_eta_s()), so a holder
+## waits on the ring for a strike that is about to land instead of standing at the nose through it.
+func last_strike_eta_s() -> float:
+	if current_move == null or not _running_move():
+		return 0.0
+	var move := current_move
+	if move_frame >= move.startup + move.active and not _move_landed_hit:
+		return 0.0  # it whiffed: the chain ends here
+	var links: Array[MoveData] = []
+	if _attack:
+		links = _attack.moves
+	var index := -1
+	for i in links.size():
+		if links[i].id == move.id:
+			index = i
+	var frames := move.startup - move_frame
+	if index >= 0 and index < links.size() - 1:
+		frames = move.total_frames() - move_frame
+		for i in range(index + 1, links.size() - 1):
+			frames += links[i].total_frames()
+		frames += links[links.size() - 1].startup
+	return maxf(float(frames), 0.0) / float(Engine.physics_ticks_per_second)
 
 
 ## Bots and tests: skip the token and wind up now, from FREE (started from the next control
@@ -604,11 +633,17 @@ func _tick_engage(player: CombatActor) -> void:
 		return
 	var want := attack_range_m() - Tuning.data.engage_margin_m
 	if to_player.length() > want:
+		if not _go_is_near(to_player.length() - want):
+			# Its go is not due yet (the wind-up gap, a flinch, the hit grace, another holder's turn):
+			# stay squared up where it stands, on the ring at first, and step in when the go is near.
+			# The wait is not a failed chase: engage_timeout_s counts only the frames it spends walking.
+			_stop()
+			return
 		_engage_frames += 1
 		if _engage_frames > _frames(Tuning.data.engage_timeout_s):
 			_give_up_engage()
 			return
-		_travel(player.global_position, Tuning.data.engage_speed_mps * _speed_mult(), true, player)
+		_travel(_engage_aim(player), Tuning.data.engage_speed_mps * _speed_mult(), true, player)
 		return
 	_stop()
 	if player.is_invulnerable() or not _director_says_go():
@@ -625,6 +660,28 @@ func _give_up_engage() -> void:
 func _director_says_go() -> bool:
 	var director := EnemyDirector.find(get_tree())
 	return director == null or director.may_start_windup(self)
+
+
+## True when the director's go is due before the walk to strike range (`distance_m` more) is over,
+## give or take engage_go_lead_s: it should start walking now so as to arrive when the go does,
+## not stand at the player's nose waiting for it. With no director there is nothing to wait for.
+func _go_is_near(distance_m: float) -> bool:
+	var director := EnemyDirector.find(get_tree())
+	if director == null:
+		return true
+	var walk_s := distance_m / maxf(Tuning.data.engage_speed_mps * _speed_mult(), 0.01)
+	return director.windup_eta_s(self) <= walk_s + Tuning.data.engage_go_lead_s
+
+
+## Where a step-in aims: the player's origin moved engage_aim_offset_m to this enemy's side of the
+## line between them. The avoidance sees the player as a circle, and a body whose wish points
+## exactly at its centre is slowed to a crawl (the head-on tie) before it gets there.
+func _engage_aim(player: CombatActor) -> Vector3:
+	var to_player := _flat(player.global_position - global_position)
+	if to_player.length_squared() < 0.0001:
+		return player.global_position
+	var side := Vector3(-to_player.z, 0.0, to_player.x).normalized() * (_engage_side * Tuning.data.engage_aim_offset_m)
+	return player.global_position + side
 
 
 ## Wind up `attack` now: the opening move scaled and floored, started from the control tick. The
