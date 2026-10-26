@@ -9,7 +9,7 @@ extends GutTest
 
 const Probe := preload("res://tests/bot/readability_probe.gd")
 const STUB_ENEMY := preload("res://tests/fixtures/stub_enemy.tscn")
-const STUB_SCRIPT := "res://tests/fixtures/stub_enemy.gd"
+const StubDirector := preload("res://tests/fixtures/stub_director.gd")
 
 
 ## A stub that reports itself heading for a slot and goes nowhere (or walks at `walk` m a frame).
@@ -215,6 +215,24 @@ func test_r1_holds_at_the_cap() -> void:
 	assert_eq(summary.metrics.max_concurrent_attackers, 3)
 	assert_eq(summary.metrics.attacker_cap_violation_frames, 0)
 	assert_eq(_status(summary.verdict, "R1"), "ok")
+
+
+func test_r1_the_cap_is_the_directors_when_there_is_one() -> void:
+	Tuning.data.attacker_cap = 6
+	var director := StubDirector.new()
+	director.cap = 2
+	_scene.add_child(director)
+	var stubs: Array[EnemyActor] = []
+	for bearing in [0.0, 90.0, -90.0]:
+		stubs.append(_stub(bearing, 3.0))
+	await _ticks(3)
+	for stub in stubs:
+		stub.force_attack()
+	await _ticks(40)
+	var summary := _probe.end_act()
+	assert_eq(summary.metrics.attacker_cap, 2, "the director's, not the tunable's")
+	assert_gt(summary.metrics.attacker_cap_violation_frames, 0)
+	assert_eq(_status(summary.verdict, "R1"), "FAIL")
 
 
 func test_r1_cap_zero_is_unlimited() -> void:
