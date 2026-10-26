@@ -4,6 +4,29 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-26 01:20 CDT: phase 2 merged (1007/1007); phase 3 running
+5-hour 45% (resets 02:50 CDT), weekly 41% (resets Mon 2026-10-26 05:00 CDT). Phase 2 (four Sonnet builders, 2.5M tokens, 79 minutes) cost about 24 window points.
+- **Merged into `m3/enemy-ai`**, with no conflicts (`enemy_actor.gd` auto-merged). The preset was regenerated (431 values) and the moves too (38). **1007/1007 tests pass in 113 s with no SCRIPT ERROR or ERROR** (`9e3b9e9`).
+  - **P1-engage:** token holders wait squared up on the ring until the go is near (`EnemyDirector.windup_eta_s()`), so nothing waits at the nose. A lone Punk on the player's axis aims 0.1 m off-centre. The Punk's jacket is deep teal, since SPEC §10 reserves red.
+    - Side effect: with a player who takes every hit, the crowd attacks strictly in turns (R1 1, was 2), because the hit grace holds the next wind-up. It goes in the digest.
+  - **P2-grab:** enemy grabs on the player end to end.
+    - `EnemyHold`: the grab moves `bruiser_grab`, `bruiser_headbutt`, `boss_grab` and `boss_slam`.
+    - The upright held view, look locked toward the grabber, a MASH P/K prompt with a gauge, and break-free that staggers the holder.
+    - Magnetism in a crowd.
+    - The holder covers about 63-71% of the lens while it holds.
+  - **P2-kicker:** lime, a 3.0 s cooldown. It orbits the ring to the blind side and strafes toward the view edge; a jump kick (reach 2.75 m including the leap) and a low sweep (knockdown, jumpable).
+  - **P2-thug:** olive with a yellow pipe, three 10-damage swings (the third staggers), and an 8.0 s cooldown. It drops the pipe toward the attacker, within LB reach, and fights with the Punk's moves after.
+    - R12 (worst 2 s of damage at most 30) can't hold with a Thug, since its combo is 30 by the spec.
+    - The dropped pipe lies below the forward lens, so a pick-up cue would help (phase 4 candidate).
+- **The lead's look** (`.worktrees/m3-p2-grab/captures/final/s_mash.png`, `.worktrees/m3-p2-kicker/captures/p2-kicker/flanks/flank_fp.png`, `.worktrees/m3-p2-thug/captures/onev1/sheet.png`, local): the grab, the held view and the break-free read; the Kicker slides out of view to the flank; the Thug's cocked pipe reads.
+  - **Palette watch:** the Kicker's lime and the Thug's olive are both green. Their caps (black, white) and the pipe tell them apart. The Bruiser gets purple and the boss charcoal with orange.
+- **Running since 01:20 CDT:** workflow `wf_29001c6b-9d9`, `workflow-build.js` with `docs/reviews/M3/args-P3.json`: P3-bruiser and P3-boss, two Sonnet builders.
+  - **If cut off:** rerun the same args. Within this session, use `resumeFromRunId: "wf_29001c6b-9d9"`.
+  - **Then:**
+    1. Merge both, regenerate, run the tests, look at the sheets.
+    2. Phase 4: P4-int (Part C §8 as amended by A7: `test_m3_done_when.gd`, `tools/check_m3_log.py`, mixed-six acts, perf), then the final review round (`workflow-review.js`, round "final", lenses L1-L6 per Part B §B4).
+    3. Then the docs (README M3 status and departures, ARCHITECTURE, judgement calls folded), the export and GitHub release, the PR, and the Slack DM.
+
 ### 2026-10-26 00:00 CDT: the slice gate passed (869/869); phase 2 running
 5-hour 20% (resets 02:50 CDT), weekly 37% (resets Mon 2026-10-26 05:00 CDT). The slice review (64 agents, 6.7M tokens, about 2.4 h) cost about 25 window points across the 21:50 reset, and 5 weekly points.
 - **The slice gate passed.** Its verdicts, evidence and the **feel defaults it locked** are in [M3-slice-gate.md](milestones/M3-slice-gate.md); the records are in `docs/reviews/M3/slice-*.json`.
