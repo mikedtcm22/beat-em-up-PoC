@@ -616,6 +616,16 @@ extends Resource
 @export_range(0.5, 20.0, 0.5) var enemy_turn_rate: float = 6.0
 ## How far (m) a posturing enemy may stray from its slot while strafing before it turns back.
 @export_range(0.0, 6.0, 0.1) var posture_wander_m: float = 1.5
+## The way round the ring (every archetype, APPROACH and RECOVER): an enemy inside the ring's near
+## edge backs out, and one whose slot is more than posture_orbit_gap_deg round the ring from it
+## (with the straight line cutting the near edge) walks round the ring in legs of
+## posture_orbit_lead_deg, always facing the player, instead of crossing his front on the chord.
+@export_range(10.0, 90.0, 5.0) var posture_orbit_lead_deg: float = 40.0
+@export_range(10.0, 180.0, 5.0) var posture_orbit_gap_deg: float = 60.0
+## An enemy that gets up (or is let go, or is shoved) inside the ring and wakes in place (the boss)
+## stays on the ring where it stands, eligible for a token, this long (s) before the slot it left
+## calls it back.
+@export_range(0.0, 10.0, 0.1) var posture_resume_s: float = 3.0
 
 @export_subgroup("Navigation")
 ## NavigationAgent3D avoidance: the enemy's radius (m), how far ahead (s) it avoids and how far
@@ -661,6 +671,13 @@ extends Resource
 ## starts, but a flinch lasts about as long as that gap, so a stack of hits could flinch-lock him;
 ## this leaves him time to act between two bursts (a hit already winding up still lands).
 @export_range(0.0, 3.0, 0.05) var director_hit_grace_s: float = 0.5
+## An enemy with no seat yet (a spawn, a call-in) weighs this much (0..1) against one that has a
+## seat when the ring is turned to fit the enemies, so a newcomer never turns the ring or swaps the
+## seat of one already on it.
+@export_range(0.0, 1.0, 0.05) var director_newcomer_weight: float = 0.1
+## A Kicker takes a seat of its own as near directly behind the look as it can, kept at least this
+## many degrees from every other seat (the others never move for it).
+@export_range(0.0, 90.0, 5.0) var director_flank_gap_deg: float = 20.0
 
 @export_subgroup("Waves")
 ## Waves spawn on their own in the crowd street (off: only F4 spawns).
@@ -712,9 +729,6 @@ extends Resource
 ## again as many wind-ups, from behind. It is a plateau from 2.5 s to 3.5 s (the director's pacing
 ## sets the cadence there: 17 and 16 attacks); 1.2 s (the S0 seed) gave 21, 5 s gave 12.
 @export_range(0.0, 10.0, 0.1) var kicker_attack_cooldown_s: float = 3.0
-## How far round the ring (degrees) the point it walks to is, on the way round to a slot behind the
-## player: it circles in legs of this size rather than crossing his front on the straight line.
-@export_range(10.0, 90.0, 5.0) var kicker_orbit_lead_deg: float = 40.0
 
 @export_subgroup("Pipe Thug")
 @export_range(5.0, 500.0, 1.0) var thug_health: float = 35.0

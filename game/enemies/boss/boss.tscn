@@ -7,3 +7,4 @@ script = ExtResource("1_boss")
 display_name = "Boss"
 body_radius = 0.5
 body_height = 2.3
+voice_pitch_mult = 0.7

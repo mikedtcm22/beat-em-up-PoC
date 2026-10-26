@@ -1084,9 +1084,18 @@ func test_a_dead_enemy_has_no_slot_and_the_rest_close_ranks() -> void:
 	assert_lte(_max_gap(angles), 120.0 + 2.0 * Tuning.data.director_spread_jitter_deg + 0.01)
 
 
-func test_a_kicker_takes_the_slot_directly_behind_the_look() -> void:
+## The slots of `stubs` as vectors, in order.
+func _slots_of(stubs: Array) -> Array[Vector3]:
+	var out: Array[Vector3] = []
+	for stub: EnemyActor in stubs:
+		out.append(_director.slot_for(stub))
+	return out
+
+
+func test_a_kicker_takes_a_seat_of_its_own_as_near_directly_behind_the_look_as_it_can() -> void:
 	await _setup(0, 1.0)
 	var jitter := Tuning.data.director_spread_jitter_deg
+	var gap := Tuning.data.director_flank_gap_deg
 	for others in [0, 1, 2, 4]:
 		var kicker := _stub(_at(60.0, 3.5), false)
 		kicker.prefers_blind_side = true
@@ -1095,40 +1104,122 @@ func test_a_kicker_takes_the_slot_directly_behind_the_look() -> void:
 			stubs.append(_stub(_at(-100.0 + 50.0 * float(i), 3.0), false))
 		await _ticks(4)
 		var b := _bearing_of(_director.slot_for(kicker))
-		assert_gte(absf(b), 180.0 - jitter - 0.5, "with %d others: the Kicker's slot is behind (%.1f deg)" % [others, b])
+		# Directly behind, give or take its own jitter, unless another seat is within the flank gap of
+		# it: then it steps that far to one side (never into the others' seats, which stay put).
+		var room_to_spare := jitter if others == 0 else jitter + 2.0 * gap
+		assert_gte(absf(b), 180.0 - room_to_spare - 0.5, "with %d others: the Kicker's seat is behind (%.1f deg)" % [others, b])
+		assert_gt(absf(b), 90.0, "and well outside the view (%.1f deg)" % b)
 		for stub in stubs:
 			stub.queue_free()
 		await _ticks(3)
-	# The look turns: the Kicker's slot swings round behind the new look.
+	# The look turns: the Kicker's seat swings round behind the new look.
 	var turning := _stub(_at(60.0, 3.5), false)
 	turning.prefers_blind_side = true
 	var mate := _stub(_at(-100.0, 3.0), false)
 	Tuning.data.director_reslot_s = 0.2
 	_player.look_yaw = PI * 0.5
 	await _ticks(20)
-	assert_gte(absf(_bearing_of(_director.slot_for(turning))), 180.0 - jitter - 0.5, "behind the look as it is now")
+	assert_gte(absf(_bearing_of(_director.slot_for(turning))), 180.0 - jitter - 2.0 * gap - 0.5, "behind the look as it is now")
 	assert_not_null(mate)
 
 
-func test_two_kickers_take_the_two_rearmost_slots() -> void:
+func test_two_kickers_take_seats_of_their_own_behind_the_look_and_the_others_keep_their_ring() -> void:
 	await _setup(0, 1.0)
 	var jitter := Tuning.data.director_spread_jitter_deg
-	var kickers: Array[StubEnemy] = [_stub(_at(60.0, 3.5), false), _stub(_at(-60.0, 3.5), false)]
+	var gap := Tuning.data.director_flank_gap_deg
 	var others: Array[StubEnemy] = [_stub(_at(AHEAD, 3.0), false), _stub(_at(90.0, 3.0), false)]
+	await _ticks(4)
+	var ring_alone := _slots_of(others)
+	var kickers: Array[StubEnemy] = [_stub(_at(60.0, 3.5), false), _stub(_at(-60.0, 3.5), false)]
 	for kicker in kickers:
 		kicker.prefers_blind_side = true
 	await _ticks(4)
-	var rearmost := 0.0
+	var bearings: Array[float] = []
 	for kicker in kickers:
-		var b := absf(_bearing_of(_director.slot_for(kicker)))
-		assert_gte(b, 90.0 - jitter - 0.5, "a Kicker is at the side or behind (%.1f deg)" % b)
-		rearmost = maxf(rearmost, b)
-	assert_gte(rearmost, 180.0 - jitter - 0.5, "one of them directly behind")
-	var in_front := 0
-	for other in others:
-		if absf(_bearing_of(_director.slot_for(other))) <= jitter + 0.5:
-			in_front += 1
-	assert_eq(in_front, 1, "the others keep the front and the other flank")
+		var b := _bearing_of(_director.slot_for(kicker))
+		bearings.append(b)
+		assert_gte(absf(b), 180.0 - jitter - 2.0 * gap - 0.5, "a Kicker has its seat behind the look (%.1f deg)" % b)
+	assert_gte(absf(wrapf(bearings[0] - bearings[1], -180.0, 180.0)), gap - 0.5, "and the two are at least the flank gap apart (%.1f, %.1f)" % [bearings[0], bearings[1]])
+	var ring_now := _slots_of(others)
+	for i in others.size():
+		assert_lt(_flat_distance(ring_now[i], ring_alone[i]), 0.01, "the other %d keeps the seat it had before the Kickers came" % i)
+
+
+func test_a_kicker_moves_nobody_else_when_the_look_turns() -> void:
+	# The Kickers' seats used to turn the whole ring to put one behind the look and take the rearmost
+	# seats first, so every reslot moved the other enemies too (the fought mixed crowd walked instead of
+	# posturing). Now only the Kicker moves.
+	await _setup(0, 1.0)
+	Tuning.data.director_reslot_s = 0.2
+	var ring := _crowd(4)
+	for stub in ring:
+		stub.want_token = false
+	await _ticks(4)
+	var before := _slots_of(ring)
+	var kicker := _stub(_at(30.0, 3.5), false)
+	kicker.prefers_blind_side = true
+	await _ticks(6)
+	var seats: Array[Vector3] = [_director.slot_for(kicker)]
+	for yaw: float in [PI * 0.5, PI, -PI * 0.5, 0.0]:
+		_player.look_yaw = yaw
+		await _ticks(14)
+		var now := _slots_of(ring)
+		for i in ring.size():
+			assert_lt(_flat_distance(now[i], before[i]), 0.01, "look %.0f deg: enemy %d did not move for the Kicker" % [rad_to_deg(yaw), i])
+		assert_gte(absf(_bearing_of(_director.slot_for(kicker))), 180.0 - Tuning.data.director_spread_jitter_deg - 2.0 * Tuning.data.director_flank_gap_deg - 0.5,
+				"look %.0f deg: the Kicker is behind it" % rad_to_deg(yaw))
+		seats.append(_director.slot_for(kicker))
+	assert_gt(_flat_distance(seats[1], seats[0]), 1.0, "the Kicker's own seat did follow the look a quarter turn")
+	assert_gt(_flat_distance(seats[2], seats[0]), 4.0, "and a half turn")
+
+
+func test_a_newcomer_never_takes_the_seat_of_an_enemy_already_on_the_ring() -> void:
+	# The boss's phase 2 call-in: the first Punk spawns on the boss's side of the player, and with two
+	# enemies the two mirrored arrangements cost the same, so the boss could be handed the seat across
+	# the player (it walked 7.6 m through him, cutting its beckon). A newcomer weighs
+	# director_newcomer_weight against a seated enemy.
+	await _setup(0, 1.0)
+	var incumbent := _stub(_at(10.0, 3.5), false)
+	await _ticks(6)
+	var seat := _director.slot_for(incumbent)
+	for bearing: float in [15.0, 5.0, -20.0, 40.0]:
+		var newcomer := _stub(_at(bearing, 7.0), false)
+		await _ticks(6)
+		assert_lt(_flat_distance(_director.slot_for(incumbent), seat), 0.01, "a newcomer at %.0f deg leaves the first one's seat alone" % bearing)
+		assert_gt(absf(wrapf(_bearing_of(_director.slot_for(newcomer)) - _bearing_of(seat), -180.0, 180.0)), 120.0, "and takes the seat on the other side")
+		newcomer.queue_free()
+		await _ticks(6)
+		seat = _director.slot_for(incumbent)
+	assert_not_null(seat)
+
+
+func test_an_enemy_waking_in_place_is_served_before_the_queue_and_the_blind_spot() -> void:
+	await _setup(1, 1.0)
+	var blind := _stub(_at(BEHIND, 3.0), true)
+	var queued := _stub(_at(AHEAD, 3.0), true)
+	var waking := _stub(_at(45.0, 3.0), false)
+	await _ticks(2)
+	_director.release_token(_holders()[0])  # whichever got the first token gives it back
+	blind.want_token = false
+	queued.want_token = false
+	await _ticks(2)
+	assert_true(_holders().is_empty(), "nobody holds one now")
+	blind.want_token = true
+	queued.want_token = true
+	await _ticks(4)
+	assert_eq(_holders(), [blind] as Array[EnemyActor], "the blind waiter jumps the queue as it does")
+	_director.release_token(blind)
+	blind.want_token = false
+	queued.want_token = false
+	await _ticks(2)
+	blind.want_token = true
+	queued.want_token = true
+	waking.want_token = true
+	waking._resume_frames = 600  # got up beside the player (EnemyActor._resume_posture())
+	assert_true(waking.has_token_priority(), "a stub in POSTURE with its wake-up hold running has priority")
+	await _ticks(3)
+	assert_eq(_holders(), [waking] as Array[EnemyActor], "the one that just got up is served first, blind spot or not")
+	assert_false(waking.blind_priority_granted, "and it is not a blind-spot grant")
 
 
 func test_a_stalled_enemy_is_given_another_angle() -> void:

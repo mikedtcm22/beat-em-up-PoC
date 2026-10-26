@@ -53,7 +53,6 @@ func _init() -> void:
 	armor_light = true
 	armor_heavy_to_stagger = true
 	armor_finisher_to_stagger = false
-	voice_pitch_mult = 0.7
 
 
 func _ready() -> void:
@@ -134,6 +133,15 @@ func _crowded_round(player: CombatActor) -> bool:
 ## Never grabbable (the player's grab cannot take a boss: SPEC §7).
 func can_be_grabbed() -> bool:
 	return false
+
+
+## It wakes in place: free again beside the player after a stagger, a knockdown or a parry recoil, it
+## postures where it stands and the director serves it first (EnemyActor._resume_posture()), instead of
+## walking 2.5-4 m back to a slot while the next chain lands. Without this a continuous chain (its
+## armor absorbs the first jabs, the hook staggers it, the uppercut floors it) kept it in REACT and
+## APPROACH, never in POSTURE, the only state that asks for a token: it threw one attack in 40 s.
+func _wakes_in_place() -> bool:
+	return true
 
 
 # --- Armor ------------------------------------------------------------------------------------
@@ -244,6 +252,8 @@ func _tick_adds() -> void:
 	if health <= 0.0 or is_gone():
 		_adds_due = 0
 		return
+	if GameInput.menu_open:
+		return  # the fight holds while F1 or F4 is open (A2.2): the call-in waits with the waves
 	if _adds_frames > 0:
 		_adds_frames -= 1
 		return
