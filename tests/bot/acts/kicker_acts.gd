@@ -23,8 +23,11 @@ static func acts(bot: Node) -> Array[Dictionary]:
 		{title = "Kicker sweep jumped over", cam = &"first_person", fn = func() -> void: await _jumped_over(bot)},
 		{title = "Kicker jump kick (side view)", cam = &"side_view", fn = func() -> void: await _front(bot, 0, 2.6)},
 		{title = "Kicker sweep (side view)", cam = &"side_view", fn = func() -> void: await _front(bot, 1, 1.4)},
+		{title = "Kicker flanks at the curb", cam = &"first_person", probe = true, fn = func() -> void: await _flanks_at_curb(bot)},
 		{title = "Kicker behind warns", cam = &"first_person", probe = true, fn = func() -> void: await _behind(bot)},
 		{title = "Kicker and Punks", cam = &"first_person", probe = true, fn = func() -> void: await _mixed(bot)},
+		{title = "Kicker cadence", cam = &"first_person", probe = true, fn = func() -> void: await _cadence(bot, &"kicker", 2)},
+		{title = "Punk cadence (reference)", cam = &"first_person", probe = true, fn = func() -> void: await _cadence(bot, &"punk", 2)},
 	]
 
 
@@ -32,6 +35,7 @@ static func acts(bot: Node) -> Array[Dictionary]:
 ## takes its slot round at his back, and from there winds up; the oracle checks the warning at
 ## every wind-up.
 static func _flanks(bot: Node) -> void:
+	_seed_names(bot)
 	bot.god()
 	var kicker: EnemyActor = bot.spawn_at_point(&"kicker", 4)
 	for i in 60:
@@ -43,9 +47,29 @@ static func _flanks(bot: Node) -> void:
 							kicker.global_position.z - bot.player.global_position.z).length(), kicker.ai_state_name()])
 
 
+## The player stands at the south curb facing north, the wall of the street at his back, so the
+## ring behind him is mostly off the navmesh: the Kicker comes in from the doorway ahead and has
+## to find its way to the back along the wall (R13: no stuck enemy).
+static func _flanks_at_curb(bot: Node) -> void:
+	_seed_names(bot)
+	bot.god()
+	bot.player.global_position = Vector3(0.0, 0.0, 4.6)
+	bot.player.look_yaw = 0.0
+	bot.player.rotation.y = 0.0
+	var kicker: EnemyActor = bot.spawn_at_point(&"kicker", 1)
+	for i in 40:
+		await bot._ticks(15)
+		if is_instance_valid(kicker):
+			bot.log_line("KICKER f%d bearing %d dist %.1f %s" % [Engine.get_physics_frames(),
+					roundi(bot.player.look_bearing_deg(kicker.global_position)),
+					Vector2(kicker.global_position.x - bot.player.global_position.x,
+							kicker.global_position.z - bot.player.global_position.z).length(), kicker.ai_state_name()])
+
+
 ## `bot.spawn()` a Kicker `distance` metres ahead on a frozen AI and have it throw attack `index`
 ## (0 the jump kick, 1 the sweep); the player stands still and takes it (god mode).
 static func _front(bot: Node, index: int, distance: float) -> void:
+	_seed_names(bot)
 	bot.god()
 	bot.freeze_ai(true)
 	var kicker: EnemyActor = bot.spawn(&"kicker", Vector2(0.0, distance))
@@ -59,6 +83,7 @@ static func _front(bot: Node, index: int, distance: float) -> void:
 ## The sweep at 1.4 m; the player jumps in its wind-up, so it passes under (no damage, no
 ## knockdown: the legs are above the arc).
 static func _jumped_over(bot: Node) -> void:
+	_seed_names(bot)
 	bot.freeze_ai(true)
 	var kicker: EnemyActor = bot.spawn(&"kicker", Vector2(0.0, 1.4))
 	await bot._ticks(30)
@@ -73,6 +98,7 @@ static func _jumped_over(bot: Node) -> void:
 ## Kickers placed at the player's back (the warning's both-corners case at the jump kick's long
 ## reach, then the sweep's short one behind-left), the AI frozen, god mode, WARN-CHECK per wind-up.
 static func _behind(bot: Node) -> void:
+	_seed_names(bot)
 	bot.god()
 	bot.freeze_ai(true)
 	await bot._look_to(0.0, 6)
@@ -90,11 +116,32 @@ static func _behind(bot: Node) -> void:
 ## Two Kickers among four Punks, the player held back (the autopilot's defensive style), god mode:
 ## the crowd as the waves will make it.
 static func _mixed(bot: Node) -> void:
+	_seed_names(bot)
 	bot.god()
 	for i in 6:
 		bot.spawn_at_point(&"kicker" if i % 3 == 1 else &"punk", bot.SURROUND_POINTS[i])
 		await bot._ticks(24)
 	await bot.fight(1500)
+
+
+## Two of one archetype round a player who stands still (god mode), 40 s: how often each attacks
+## (count the WU+ lines per name) is what the archetype's attack cooldown sets, the figure the
+## Kicker's cooldown was chosen from (M3-calls/P2-kicker.md). The Punk's is the reference.
+static func _cadence(bot: Node, id: StringName, count: int) -> void:
+	_seed_names(bot)
+	bot.god()
+	for i in count:
+		bot.spawn_at_point(id, bot.SURROUND_POINTS[i])
+		await bot._ticks(24)
+	await bot._ticks(2400)
+
+
+## Start the Kicker's numbering where `-- --seed=<n>` puts the Punk's (the crowd bot seeds only the
+## Punk's), so a measurement can be repeated over several fights: each enemy's random choices
+## are seeded by its name.
+static func _seed_names(bot: Node) -> void:
+	var serials: Dictionary = bot.spawner.get(&"_serials")
+	serials["Kicker"] = bot._name_offset
 
 
 ## The `rel` (x right, y ahead of the player, metres) of a point `distance_m` away at `bearing_deg`

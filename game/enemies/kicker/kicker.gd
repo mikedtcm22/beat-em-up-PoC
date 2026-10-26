@@ -21,12 +21,14 @@ extends EnemyActor
 @export var accent: Color = Color(0.1, 0.12, 0.1)
 
 ## The way round to its slot (see _orbit_toward()): a point on the ring it is walking to, kept as
-## an angle and radius about the player (so it goes with him when he walks), and whether the
-## last _posture_target() handed the walk such a point rather than the goal itself.
+## an angle and radius about the player (so it goes with him when he walks), and the physics frame
+## in which _posture_target() last handed the walk such a point rather than the goal itself (an
+## arrival is only an arrival at a point on the way round in that same frame, whoever calls
+## _enter_posture() from another frame goes to the posture).
 var _orbit_active: bool = false
 var _orbit_angle: float = 0.0
 var _orbit_radius: float = 0.0
-var _walking_orbit: bool = false
+var _orbit_frame: int = -1
 
 
 func _ready() -> void:
@@ -73,16 +75,18 @@ func _circle_mult() -> float:
 func _posture_target(player: CombatActor) -> Vector3:
 	var goal := super._posture_target(player)
 	var round_the_ring := _orbit_toward(player, goal)
-	_walking_orbit = round_the_ring.is_finite()
-	return round_the_ring if _walking_orbit else goal
+	if round_the_ring.is_finite():
+		_orbit_frame = Engine.get_physics_frames()
+		return round_the_ring
+	return goal
 
 
 ## Reaching a point on the way round is not reaching the slot: it goes on (the next tick picks the
 ## next point, or the slot when that is near) instead of taking up the posture, which would send
 ## it straight back to APPROACH, a stutter at every point.
 func _enter_posture() -> void:
-	if _walking_orbit:
-		_walking_orbit = false
+	if _orbit_frame == Engine.get_physics_frames():
+		_orbit_frame = -1
 		_orbit_active = false
 		_progress_best = INF
 		_progress_frames = 0

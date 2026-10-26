@@ -42,6 +42,10 @@ static func _jump_kick(g: Dictionary[StringName, Vector3]) -> PlaceholderPoses.M
 		&"Chest": Vector3(-8.0, 0.0, 0.0),
 		&"Neck": Vector3(22.0, 0.0, 0.0),
 		&"Head": Vector3(6.0, 0.0, 0.0),
+		&"LeftUpperLeg": Vector3(78.0, 0.0, -6.0),
+		&"LeftLowerLeg": Vector3(-124.0, 0.0, 0.0),
+		&"RightUpperLeg": Vector3(66.0, 0.0, 6.0),
+		&"RightLowerLeg": Vector3(-116.0, 0.0, 0.0),
 		&"LeftUpperArm": Vector3(-34.0, 0.0, -16.0),
 		&"LeftLowerArm": Vector3(36.0, 0.0, 0.0),
 		&"RightUpperArm": Vector3(-34.0, 0.0, 16.0),
@@ -83,48 +87,50 @@ static func _coil_hold() -> Dictionary[StringName, Vector3]:
 	return {
 		&"Spine": Vector3(-4.0, 1.5, 0.0),
 		&"Chest": Vector3(-2.0, 2.0, 0.0),
-		&"LeftUpperLeg": Vector3(6.0, 0.0, 0.0),
-		&"LeftLowerLeg": Vector3(-8.0, 0.0, 0.0),
-		&"RightUpperLeg": Vector3(6.0, 0.0, 0.0),
-		&"RightLowerLeg": Vector3(-8.0, 0.0, 0.0),
+		&"LeftUpperLeg": Vector3(5.0, 0.0, 0.0),
+		&"LeftLowerLeg": Vector3(-5.0, 0.0, 0.0),
+		&"RightUpperLeg": Vector3(5.0, 0.0, 0.0),
+		&"RightLowerLeg": Vector3(-5.0, 0.0, 0.0),
 	}
 
 
 ## A low sweep: drop to the floor on the left leg, the body turned away to the right, the head on
 ## the target (held); then spin low with the right leg out along the floor.
 static func _sweep(g: Dictionary[StringName, Vector3]) -> PlaceholderPoses.MovePoses:
+	# Both soles on the floor in every crouched key (PlaceholderAnims plants the lowest one): the
+	# support leg folded deep, the right leg straight out to the side down to the floor, the
+	# angles worked out so the two feet are level (a side lunge); no explicit HIPS_POS, which
+	# would sink or float a foot (codemap G9). HIPS_NUDGE leans the hips into the strike.
 	var windup := PlaceholderPoses.merge(g, {
-		PlaceholderPoses.HIPS_POS: Vector3(0.0, -0.42, 0.0),
 		&"Hips": Vector3(0.0, -70.0, 0.0),
 		&"Spine": Vector3(-14.0, 0.0, 0.0),
 		&"Chest": Vector3(-6.0, 0.0, 0.0),
 		&"Neck": Vector3(12.0, 58.0, 0.0),
 		&"Head": Vector3(4.0, 28.0, 0.0),
-		&"LeftUpperLeg": Vector3(72.0, 0.0, -8.0),
-		&"LeftLowerLeg": Vector3(-120.0, 0.0, 0.0),
+		&"LeftUpperLeg": Vector3(75.0, 0.0, -8.0),
+		&"LeftLowerLeg": Vector3(-125.0, 0.0, 0.0),
 		&"LeftFoot": Vector3(40.0, 0.0, 6.0),
-		&"RightUpperLeg": Vector3(40.0, 0.0, 40.0),
-		&"RightLowerLeg": Vector3(-40.0, 0.0, 0.0),
-		&"RightFoot": Vector3(20.0, 0.0, -5.0),
+		&"RightUpperLeg": Vector3(8.0, 0.0, 62.0),
+		&"RightLowerLeg": Vector3(-6.0, 0.0, 0.0),
+		&"RightFoot": Vector3(14.0, 0.0, 0.0),
 		&"LeftUpperArm": Vector3(40.0, 0.0, -30.0),
 		&"LeftLowerArm": Vector3(60.0, 0.0, 0.0),
 		&"RightUpperArm": Vector3(-30.0, 0.0, 40.0),
 		&"RightLowerArm": Vector3(40.0, 0.0, 0.0),
 	})
-	var strike := PlaceholderPoses.merge(g, {
-		PlaceholderPoses.HIPS_POS: Vector3(0.0, -0.46, -0.1),
+	var strike := PlaceholderPoses.merge(windup, {
+		PlaceholderPoses.HIPS_NUDGE: Vector3(0.0, 0.0, -0.1),
 		&"Hips": Vector3(0.0, -270.0, 0.0),
 		&"Spine": Vector3(-12.0, -14.0, 6.0),
 		&"Chest": Vector3(-4.0, -14.0, 2.0),
 		&"UpperChest": Vector3(0.0, -10.0, 0.0),
 		&"Neck": Vector3(0.0, -20.0, -4.0),
 		&"Head": Vector3(2.0, -18.0, 0.0),
-		&"RightUpperLeg": Vector3(4.0, 0.0, 68.0),
+		&"RightUpperLeg": Vector3(4.0, 0.0, 64.0),
 		&"RightLowerLeg": Vector3(-4.0, 0.0, 0.0),
 		&"RightFoot": Vector3(10.0, 0.0, 0.0),
-		&"LeftUpperLeg": Vector3(80.0, 0.0, -8.0),
+		&"LeftUpperLeg": Vector3(78.0, 0.0, -8.0),
 		&"LeftLowerLeg": Vector3(-125.0, 0.0, 0.0),
-		&"LeftFoot": Vector3(40.0, 0.0, 6.0),
 		&"LeftUpperArm": Vector3(30.0, 0.0, -34.0),
 		&"LeftLowerArm": Vector3(50.0, 0.0, 0.0),
 		&"RightUpperArm": Vector3(-26.0, 0.0, 32.0),
@@ -138,7 +144,6 @@ static func _sweep(g: Dictionary[StringName, Vector3]) -> PlaceholderPoses.MoveP
 		&"Head": Vector3(2.0, -12.0, 0.0),
 	})
 	var follow := PlaceholderPoses.merge(PlaceholderPoses.crouch(g), {
-		PlaceholderPoses.HIPS_POS: Vector3(0.0, -0.34, 0.0),
 		&"Hips": Vector3(0.0, -345.0, 0.0),
 	})
 	var m := PlaceholderPoses._mp(g, windup, strike)
