@@ -608,9 +608,10 @@ extends Resource
 @export_range(1.0, 15.0, 0.5) var enemy_max_speed_mps: float = 6.0
 ## An enemy that makes no progress toward its slot this long (s) asks for another one.
 @export_range(0.2, 10.0, 0.1) var enemy_stuck_s: float = 1.0
-## A stalled enemy tries a spot this many degrees around the player from where it stands for
-## the next enemy_stuck_s x 2, then its slot again.
+## A stalled enemy tries a spot this many degrees around the player from where it stands, for
+## this many seconds, then its slot again.
 @export_range(10.0, 180.0, 5.0) var enemy_detour_deg: float = 90.0
+@export_range(0.2, 10.0, 0.1) var enemy_detour_s: float = 2.0
 
 @export_subgroup("Director")
 ## Least gap (s) between two wind-up starts of different enemies: the director holds an

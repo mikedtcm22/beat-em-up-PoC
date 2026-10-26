@@ -279,6 +279,7 @@
 		"enemy_max_speed_mps": 6.0,
 		"enemy_stuck_s": 1.0,
 		"enemy_detour_deg": 90.0,
+		"enemy_detour_s": 2.0,
 		"director_min_windup_gap_s": 0.35,
 		"director_reslot_s": 1.5,
 		"director_reslot_move_m": 1.0,

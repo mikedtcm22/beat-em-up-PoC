@@ -549,14 +549,15 @@ func _begin_strafe() -> void:
 	_strafe_dir = _pick_strafe_dir()
 
 
-## Strafes either way at random, but back toward the slot once it has strayed half its leash.
+## Strafes either way at random, but back toward the slot once it is off it by more than the
+## slot reach (a segment also ends at the leash, posture_wander_m).
 func _pick_strafe_dir() -> float:
 	var player := _find_player()
 	if player and posture_slot.is_finite():
 		var outward := _flat(global_position - player.global_position).normalized()
 		var tangent := Vector3(-outward.z, 0.0, outward.x)
 		var offset := _flat(posture_slot - global_position).dot(tangent)
-		if absf(offset) > Tuning.data.posture_wander_m * 0.5:
+		if absf(offset) > Tuning.data.enemy_slot_reach_m:
 			return signf(offset)
 	return 1.0 if _rng.randf() < 0.5 else -1.0
 
@@ -921,7 +922,7 @@ func _start_detour(player: CombatActor) -> void:
 	var radius := clampf(away.length(), Tuning.data.posture_ring_min_m, Tuning.data.posture_ring_max_m)
 	_detour = player.global_position + away.normalized().rotated(Vector3.UP, deg_to_rad(Tuning.data.enemy_detour_deg) * side) * radius
 	_detour.y = global_position.y
-	_detour_frames = _frames(Tuning.data.enemy_stuck_s * 2.0)
+	_detour_frames = _frames(Tuning.data.enemy_detour_s)
 
 
 ## Whether a navmesh is on the map (the training room has none), and it has synced.

@@ -8,6 +8,8 @@ extends "res://tests/bot/combo_bot.gd"
 ## `WU+`/`WU-` for each wind-up start and end (`interrupted` or `strike`), with frames.
 
 const PUNK_SCENE := preload("res://game/enemies/punk/street_punk.tscn")
+## The token path needs a director that hands a token out on command (the real one is P1-director's).
+const StubDirector := preload("res://tests/fixtures/stub_director.gd")
 
 var punks: Array[StreetPunk] = []
 var _last_state: Dictionary[int, int] = {}
@@ -62,6 +64,7 @@ func _run() -> void:
 		{title = "Punk shove wind-up at 2.5 m", cam = &"first_person", fn = _act_windup.bind(2.5, 1)},
 		{title = "Punk two-hit punch lands", cam = &"first_person", fn = _act_two_hit},
 		{title = "Punk shove lands", cam = &"first_person", fn = _act_shove},
+		{title = "Punk commits, steps in, attacks", cam = &"first_person", fn = _act_token},
 		{title = "Punk jab hit out of the wind-up", cam = &"first_person", fn = _act_interrupt},
 		{title = "Punk knocked down, gets up, KO", cam = &"first_person", fn = _act_ko},
 		{title = "Three Punks posture", cam = &"first_person", fn = _act_three},
@@ -132,6 +135,21 @@ func _act_shove() -> void:
 	punk.force_attack(1)
 	await _wait_until(func() -> bool: return punk.ai_state == EnemyActor.AiState.RECOVER, 240)
 	await _ticks(80)
+
+
+## The token path: a Punk posturing 3.2 m away is granted a token; it squares up (the commit
+## pause), steps in to its reach, winds up, strikes, gives the token back and backs off.
+func _act_token() -> void:
+	await _stage([])
+	var stub := StubDirector.new()
+	room.add_child(stub)
+	Tuning.data.punk_shove_chance = 0.0
+	var punk := _spawn_punk(Vector2(0.0, 3.2))
+	await _ticks(90)
+	stub.give_token(punk)
+	await _wait_until(func() -> bool: return punk.ai_state == EnemyActor.AiState.RECOVER, 400)
+	await _ticks(150)
+	stub.queue_free()
 
 
 ## The player's jab lands a few frames into the wind-up: it is cut short, the Punk flinches.
