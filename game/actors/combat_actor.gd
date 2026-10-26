@@ -517,7 +517,9 @@ func release_from_grab(push: Vector3, stagger: bool) -> void:
 	if stagger:
 		# Like every stagger, the upper body gives way to the push.
 		_ragdoll_stagger(get_chest_position(), sim_velocity, Ragdoll.Part.TORSO)
-	CombatEvents.released.emit(by, self)
+	# A holder freed mid-hold (F4's "Remove every enemy", a room switch) is the very reason the body
+	# is let go here: the event names no one then, as a freed object cannot go to a typed listener.
+	CombatEvents.released.emit(by if is_instance_valid(by) else null, self)
 
 
 ## The victim side of a break-free (mashing out of a hold, Milestone 3): the holder is told
@@ -535,7 +537,7 @@ func break_free(invuln_frames: int = -1) -> void:
 	release_from_grab(Vector3.ZERO, false)
 	var frames := invuln_frames if invuln_frames >= 0 else Tuning.data.grab_break_invuln_frames
 	_invuln_frames = maxi(_invuln_frames, frames)
-	CombatEvents.grab_escaped.emit(self, by)
+	CombatEvents.grab_escaped.emit(self, by if is_instance_valid(by) else null)
 
 
 ## Stop the running move (a wind-up ends interrupted: CombatEvents.windup_ended) and return to

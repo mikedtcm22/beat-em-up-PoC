@@ -431,6 +431,28 @@ func test_total_result_merges_the_acts() -> void:
 	assert_true(Oracle.passes(total))
 
 
+func test_a_windup_that_starts_between_acts_is_not_judged_in_the_next_act() -> void:
+	_with_widget()
+	_oracle.end_act()
+	# The bot's gap: the act is over, a wind-up starts, then the reset frees the enemy.
+	var stub := _stub(135.0)
+	await _ticks(3)
+	stub.force_attack()
+	await _ticks(6)
+	assert_eq(stub.state, CombatTypes.ActorState.WINDUP, "winding up while no act is open")
+	assert_eq(_oracle.live_count(), 0, "nothing is modelled between acts")
+	stub.queue_free()
+	await _ticks(3)
+	_oracle.start_act("next act")
+	await _ticks(10)
+	assert_eq(_oracle.live_count(), 0, "the gap's wind-up did not carry into the next act")
+	var r := _oracle.end_act()
+	assert_eq(r.warning_windups, 0, "no wind-up of the next act's own: none is judged")
+	assert_eq(_oracle.lines.size(), 0, "no WARN-CHECK line under the next act's title (%s)" % [_oracle.lines])
+	assert_eq(r.warning_false_positives, 0)
+	assert_eq(_oracle.total_result().warning_windups, 0, "or in the total")
+
+
 func test_a_run_with_no_windups_is_not_a_pass() -> void:
 	var r := _oracle.end_act()
 	assert_eq(r.warning_windups, 0)

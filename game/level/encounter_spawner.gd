@@ -175,6 +175,25 @@ func waves_started() -> int:
 	return _started
 
 
+## Make wave `number` (1 = the first; boss waves count, as in wave_started) the next to start,
+## after a full wave_gap_s: a bot or a test reaches a later wave without playing the earlier ones.
+## The wave in progress is dropped (what is still queued never spawns; what already spawned stays
+## in the room as ordinary enemies and no longer holds the next wave), and waves_started() reads
+## number - 1 until the new wave begins. start_at_wave(1) starts the sequence over. A number
+## under 1 is 1.
+func start_at_wave(number: int) -> void:
+	_started = maxi(number, 1) - 1
+	_phase = _Phase.GAP
+	_timer = Tuning.data.wave_gap_s
+	_queue.clear()
+	_members.clear()
+	_wave_size = 0
+	_wave_spawned = 0
+	_wave_behind = 0
+	_wave_behind_quota = 0
+	_last_point = -1
+
+
 ## True from a wave's first spawn until its last enemy is down.
 func wave_running() -> bool:
 	return _phase != _Phase.GAP

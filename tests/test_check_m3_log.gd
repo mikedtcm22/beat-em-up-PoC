@@ -4,6 +4,25 @@ extends GutTest
 
 const SCRIPT := "res://tools/check_m3_log.py"
 
+## Act one, then a wind-up that began in the gap before act two (the bot runs on 45 frames after an
+## act and then resets the room; the reset cuts the wind-up short, so it has no WU- line and its
+## line can come out after the next act's header), then act two with one wind-up of its own.
+const GAP := """=== Act one  (f10)
+W+ f41 side=left count=1 heavy=false
+WU+ f41 Punk1 punk_jab
+W- f63 side=left
+WARN-CHECK ok Act one left f41 lat=0 end=0
+READABILITY Act one
+W+ f2591 side=right count=1 heavy=false
+WU+ f2591 Kicker9 kicker_jump_kick
+W- f2600 side=right
+=== Act two  (f2602)
+WARN-CHECK ok Act two right f2591 lat=- end=-
+W+ f2700 side=left count=1 heavy=false
+WU+ f2700 Punk2 punk_jab
+WARN-CHECK ok Act two left f2700 lat=0 end=0
+"""
+
 ## An act with three wind-ups: behind-left, in view (dark) and directly behind; one token holder.
 const GOOD := """=== Act one  (f10)
 TOK+ f20 Punk1
@@ -22,8 +41,19 @@ TOK- f130 Punk1
 """
 
 
+## Where this run writes its log: every worktree is the same project and shares one user://, so
+## the name carries the process id (as test_tuning_panel.gd's scratch folder does) and a suite
+## running beside this one cannot overwrite it between the write and the read.
+func _log_path() -> String:
+	return "user://check_m3_log_test_%d.log" % OS.get_process_id()
+
+
+func after_all() -> void:
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(_log_path()))
+
+
 func _check(text: String, extra: Array[String] = []) -> Dictionary:
-	var path := "user://check_m3_log_test.log"
+	var path := _log_path()
 	var file := FileAccess.open(path, FileAccess.WRITE)
 	file.store_string(text)
 	file.close()
@@ -48,6 +78,24 @@ func test_a_good_log_passes_and_a_repeated_event_line_is_read_once() -> void:
 		return
 	assert_eq(result.code, 0, result.text)
 	assert_string_contains(result.text, "3 WARN-CHECK (2 warned)")
+
+
+func test_a_windup_from_the_gap_before_an_act_is_skipped_even_when_its_line_follows_the_header() -> void:
+	var result := _check(GAP)
+	if _python_missing(result):
+		return
+	assert_eq(result.code, 0, "the gap's wind-up is not act two's: " + result.text)
+	assert_string_contains(result.text, "2 WARN-CHECK (2 warned)")
+	assert_string_contains(result.text, "skipped")
+	# The same line with a frame inside the act is the act's own wind-up, and a corner that never
+	# lit is still a failure there.
+	var own := _check(GAP.replace("f2591 lat=- end=-", "f2610 lat=- end=-").replace("WU+ f2591", "WU+ f2610").replace("W+ f2591", "W+ f2610").replace("W- f2600", "W- f2620"))
+	assert_eq(own.code, 1, "a wind-up of the act's own that never lit fails: " + own.text)
+	assert_string_contains(own.text, "never lit")
+	# And a line that follows its act's READABILITY block (no header since) is skipped as before.
+	var after := _check(GAP.replace("=== Act two  (f2602)\nWARN-CHECK ok Act two right f2591 lat=- end=-\n", "WARN-CHECK ok Act one right f2591 lat=- end=-\n=== Act two  (f2602)\n"))
+	assert_eq(after.code, 0, "a line after the READABILITY block: " + after.text)
+	assert_string_contains(after.text, "1 WARN-CHECK")
 
 
 func test_a_failing_warn_check_fails_the_log() -> void:

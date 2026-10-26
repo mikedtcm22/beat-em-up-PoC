@@ -4,8 +4,8 @@ extends Node
 ## owns: attach() once, then start_act(title) ... end_act() per act, then write_json(). Every
 ## physics frame it samples the cheap metrics from the simulation; every few frames the first-person
 ## ones (the lens, through tests/fp_view.gd). It prints a one-screen summary at the end of each act
-## and writes readability.json (per act and total) next to the capture (the --write-movie path, or
-## --probe-out=<dir>), else under user://.
+## and writes readability.json (per act and total) into `out_dir` when a test sets it, else next
+## to the capture (the --write-movie path, or --probe-out=<dir>), else under user://.
 ##
 ## It reads state and CombatEvents and writes nothing in the game. Enemies are the nodes of group
 ## `attacker_group` (the AI enemies, "ai_enemy"); the player is the first node in group "player".
@@ -76,6 +76,10 @@ const SPAWN_WINDOW_S := 0.5
 ## Close the open act and write readability.json when this node leaves the tree (a bot that
 ## just calls get_tree().quit() still leaves its report).
 @export var write_on_exit: bool = false
+## Where write_json() writes when it is not given a folder (finish() with none, and the write on
+## exit), ahead of the recording's folder, `--probe-out` and the user:// fallback. A test sets it
+## to a folder of its own (user:// is shared by every worktree running a suite).
+var out_dir: String = ""
 ## Sample in this node's own _physics_process. Off: the owner calls tick() once per physics frame.
 @export var auto_tick: bool = true
 ## Runs after the actors (a larger number is later), so a tick sees the whole frame's simulation.
@@ -186,7 +190,7 @@ func _exit_tree() -> void:
 	if not _attached:
 		return
 	if write_on_exit:
-		finish()
+		finish(out_dir)
 	_attached = false
 	CombatEvents.attack_started.disconnect(_on_attack_started)
 	CombatEvents.windup_started.disconnect(_on_windup_started)
@@ -259,7 +263,7 @@ func end_act() -> Dictionary:
 
 
 ## Close the open act, if any, and write readability.json. Returns the path written ("" when it
-## could not be). `dir` overrides the capture directory.
+## could not be). `dir` overrides `out_dir` and the capture directory.
 func finish(dir: String = "") -> String:
 	end_act()
 	return write_json(dir)
@@ -304,8 +308,14 @@ func report() -> Dictionary:
 	}
 
 
+## Write the report (see report()) to `dir`, else `out_dir`, else the capture's folder (the
+## --write-movie path's, or --probe-out=<dir>), else user://. Returns the file's path, or "".
 func write_json(dir: String = "") -> String:
-	var folder := dir if not dir.is_empty() else _capture_dir()
+	var folder := dir
+	if folder.is_empty():
+		folder = out_dir
+	if folder.is_empty():
+		folder = _capture_dir()
 	if folder.is_empty():
 		folder = ProjectSettings.globalize_path("user://")
 	DirAccess.make_dir_recursive_absolute(folder)
@@ -350,9 +360,12 @@ func tick() -> void:
 	_tick_spawns(live)
 	_tick_voices()
 	_poll_windups()
-	if occlusion_every > 0 and frame % occlusion_every == 0 and not _wu.is_empty():
+	# The cadence counts from the act's first frame, not from the engine's frame counter, so the
+	# same act samples the same frames whatever ran before it (R8's p95 would drift otherwise).
+	var since := frame - _start_frame
+	if occlusion_every > 0 and since % occlusion_every == 0 and not _wu.is_empty():
 		_sample_occlusion(live)
-	if lens_every > 0 and frame % lens_every == 0 and not live.is_empty():
+	if lens_every > 0 and since % lens_every == 0 and not live.is_empty():
 		_sample_lens()
 	_own_usec += Time.get_ticks_usec() - began
 
@@ -700,14 +713,19 @@ func _on_grabbed(holder: Node3D, victim: Node3D) -> void:
 		_attacks[holder.get_instance_id()].held = true
 
 
-func _on_released(holder: Node3D, _victim: Node3D) -> void:
-	if _active and holder and _attacks.has(holder.get_instance_id()):
-		_attacks[holder.get_instance_id()].held = false
+## The holder may be null or an object that was freed mid-hold (the room was cleared under a
+## hold): the parameters are untyped, since a typed one cannot take a freed object.
+func _on_released(holder: Variant, _victim: Variant) -> void:
+	_hold_over(holder)
 
 
-func _on_grab_escaped(_victim: Node3D, holder: Node3D) -> void:
-	if _active and holder and _attacks.has(holder.get_instance_id()):
-		_attacks[holder.get_instance_id()].held = false
+func _on_grab_escaped(_victim: Variant, holder: Variant) -> void:
+	_hold_over(holder)
+
+
+func _hold_over(holder: Variant) -> void:
+	if _active and is_instance_valid(holder) and _attacks.has((holder as Object).get_instance_id()):
+		_attacks[(holder as Object).get_instance_id()].held = false
 
 
 # --- R4 and R8: the lens ------------------------------------------------------------------------

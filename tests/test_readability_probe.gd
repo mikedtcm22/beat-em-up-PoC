@@ -69,6 +69,20 @@ var _player: PlayerCharacter
 var _probe: Probe
 
 
+## Where this run writes readability.json. Every worktree is the same project and shares one
+## user://, so a fixed folder (or the user:// root the probe falls back to) could be overwritten or
+## deleted by a suite running beside this one between the write and the read: the folder carries
+## the process id, as test_tuning_panel.gd's scratch folder does.
+func _scratch_dir() -> String:
+	return ProjectSettings.globalize_path("user://probe_test_%d" % OS.get_process_id())
+
+
+func after_all() -> void:
+	var dir := _scratch_dir()
+	DirAccess.remove_absolute(dir.path_join("readability.json"))
+	DirAccess.remove_absolute(dir)
+
+
 func before_each() -> void:
 	Tuning.reset_to_default()
 	TimeController.clear()
@@ -645,6 +659,30 @@ func test_r8_the_lens_coverage_of_a_lone_enemy_ahead_is_a_small_share() -> void:
 	assert_eq(_status(summary.verdict, "R8"), "ok")
 
 
+func test_the_lens_cadence_counts_from_the_acts_start_not_the_engines_frame_counter() -> void:
+	# The same act, begun at every phase of the engine's frame counter, samples the same number of
+	# frames: keyed to the absolute counter, a start a few frames off would take one sample more or
+	# less, and R8's percentiles would drift between identical runs.
+	_probe.lens_every = 10
+	_probe.occlusion_every = 3
+	_stub(0.0, 2.0)
+	await _ticks(2)  # every act below then starts at the same point of a physics frame
+	var counts: Array[int] = []
+	var cadence: Array[int] = []
+	for offset in 10:
+		await _ticks(offset)
+		_probe.start_act("phase %d" % offset)
+		await _ticks(25)
+		var summary := _probe.end_act()
+		counts.append(int(summary.metrics.fp_enemy_coverage.samples))
+		cadence.append(int(_probe.acts()[_probe.acts().size() - 1].frames))
+	assert_gt(counts[0], 1, "the lens was sampled (%s)" % [counts])
+	for i in counts.size():
+		assert_eq(counts[i], counts[0], "phase %d took as many samples as phase 0 (%s)" % [i, counts])
+	for i in cadence.size():
+		assert_eq(cadence[i], cadence[0], "and measured as many frames (%s)" % [cadence])
+
+
 func test_r8_a_wall_in_front_of_the_lens_is_too_much() -> void:
 	_probe.lens_every = 2
 	var blocker := _stub(0.0, 1.0)
@@ -913,7 +951,7 @@ func test_it_writes_readability_json_per_act_and_total() -> void:
 	await _ticks(5)
 	_probe.start_act("second", {"passive": true})
 	await _ticks(5)
-	var dir := ProjectSettings.globalize_path("user://probe_test")
+	var dir := _scratch_dir()
 	var path := _probe.finish(dir)
 	assert_eq(path, dir.path_join("readability.json"))
 	assert_true(FileAccess.file_exists(path))
@@ -935,16 +973,56 @@ func test_it_writes_readability_json_per_act_and_total() -> void:
 
 
 func test_write_on_exit_leaves_a_report_when_the_bot_just_quits() -> void:
-	var path := ProjectSettings.globalize_path("user://readability.json")
+	var dir := _scratch_dir()
+	var path := dir.path_join("readability.json")
 	DirAccess.remove_absolute(path)
+	_probe.out_dir = dir
 	_probe.write_on_exit = true
 	_probe.start_act("quit")
 	await _ticks(3)
 	_probe.free()
-	assert_true(FileAccess.file_exists(path), "written as the node left the tree")
+	assert_true(FileAccess.file_exists(path), "written, to the folder out_dir names, as the node left the tree")
 	var data: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
 	assert_eq(data.acts[data.acts.size() - 1].title, "quit")
 	DirAccess.remove_absolute(path)
+
+
+func test_out_dir_is_where_write_json_goes_unless_it_is_given_a_folder() -> void:
+	var dir := _scratch_dir()
+	var other := dir.path_join("explicit")
+	_probe.out_dir = dir
+	var path := _probe.write_json()
+	assert_eq(path, dir.path_join("readability.json"), "out_dir ahead of the capture folder and user://")
+	assert_true(FileAccess.file_exists(path))
+	var explicit := _probe.write_json(other)
+	assert_eq(explicit, other.path_join("readability.json"), "a folder passed in wins")
+	for file: String in [path, explicit]:
+		DirAccess.remove_absolute(file)
+	DirAccess.remove_absolute(other)
+
+
+func test_a_hold_ending_with_no_holder_or_a_freed_one_is_taken_in_stride() -> void:
+	# A holder freed mid-hold (F4 "Remove every enemy", a room switch) makes the safety net release
+	# the player with no holder to name (CombatActor.release_from_grab()): the handlers take it.
+	var stub := _stub(0.0, 3.0)
+	var move := _move(&"fab_grab", 24)
+	CombatEvents.attack_started.emit(stub, move, 1, &"root")
+	CombatEvents.windup_started.emit(stub, move)
+	CombatEvents.grabbed.emit(stub, _player)
+	var id := stub.get_instance_id()
+	assert_true(_probe._attacks[id].held, "a hold begun")
+	CombatEvents.released.emit(null, _player)
+	assert_true(_probe._attacks[id].held, "a release that names nobody ends nobody's hold")
+	var gone := Node3D.new()
+	gone.free()
+	_probe._on_released(gone, _player)
+	_probe._on_grab_escaped(_player, gone)
+	assert_true(_probe._attacks[id].held, "a freed holder is no one either, and nothing is raised")
+	CombatEvents.released.emit(stub, _player)
+	assert_false(_probe._attacks[id].held, "released by a live holder: the hold is over")
+	_probe._attacks[id].held = true
+	CombatEvents.grab_escaped.emit(_player, stub)
+	assert_false(_probe._attacks[id].held, "and so is a break-free")
 
 
 func test_it_changes_nothing_in_the_game() -> void:

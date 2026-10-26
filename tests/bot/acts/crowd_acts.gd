@@ -10,7 +10,12 @@ extends RefCounted
 ## in, god mode, the player turns slowly through 360 degrees and then stands still: the crowd as
 ## the player sees it. "Mixed six, fight": the same six, the autopilot fights for 30 s. "Waves to
 ## the boss": the waves on, `boss_wave_every` 2 for the act, the autopilot fights until the boss
-## has taken half its health and called in its Punks. "Rear warning, every archetype": the AI
+## has taken half its health and called in its Punks (those first waves are two and four Punks:
+## it is the boss's arrival, not the table). "Mixed waves": the table's mixed waves from wave 3
+## (Punk, Kicker, Thug and Bruiser together), no boss, the held-back autopilot for 90 s. "Boss wave,
+## held back": the boss wave the waves bring in (wave `boss_wave_every` + 1), the held-back
+## autopilot, until the boss is in phase 2 with its Punks in and then for 30 s more, so the boss's
+## attacks and its adds are seen in a crowd. "Rear warning, every archetype": the AI
 ## frozen, each archetype winds up behind-left, behind-right and directly behind, at its own strike
 ## range, so the corner is judged for a Punk's jab and a boss's pound alike (the heavies' bursts
 ## are larger). "Perf, six with ragdolls": six enemies fight a player who knocks them down, and
@@ -33,6 +38,17 @@ const FIGHT_TICKS := 1800
 const BOSS_EVERY := 2
 const BOSS_MAX_TICKS := 7200
 const ADDS_WATCH_TICKS := 360
+## "Mixed waves": the wave the act starts at (the table's third: Punk, Kicker, Punk, Thug, Punk,
+## Punk) and its length (ticks, 90 s: R13's window, enough for two or three waves held back).
+const MIXED_WAVES_FROM := 3
+const MIXED_WAVES_TICKS := 5400
+## "Boss wave, held back": how long the autopilot gets to take the boss to half health by itself
+## (ticks, 45 s from the boss's first frame in the street) before its health is set to the phase 2
+## line (logged as forced), the longest the adds may take to come in after that (ticks) and how
+## long the fight goes on with them in (ticks, 30 s).
+const BOSS_HELD_NATURAL_TICKS := 2700
+const BOSS_HELD_ADDS_TICKS := 600
+const BOSS_HELD_WATCH_TICKS := 1800
 ## Each archetype's attack for the warning act, as [id, force_attack index, distance m]: the
 ## distance is where the archetype stands when it winds up for real (about its attack's reach
 ## less the engage margin; the Thug's forehand is at 1.0 m, it missed the left and behind spots at
@@ -63,6 +79,8 @@ static func acts(bot: Node) -> Array[Dictionary]:
 		{title = "Mixed six, observed", cam = &"first_person", probe = true, fn = func() -> void: await _observed(bot)},
 		{title = "Mixed six, fight", cam = &"first_person", probe = true, fn = func() -> void: await _fight(bot)},
 		{title = "Waves to the boss", cam = &"first_person", probe = true, fn = func() -> void: await _waves_to_boss(bot)},
+		{title = "Mixed waves", cam = &"first_person", probe = true, fn = func() -> void: await _mixed_waves(bot)},
+		{title = "Boss wave, held back", cam = &"first_person", probe = true, fn = func() -> void: await _boss_wave_held_back(bot)},
 		{title = "Rear warning, every archetype", cam = &"first_person", probe = true,
 				fn = func() -> void: await _warn_every_archetype(bot)},
 		{title = "Perf, six with ragdolls", cam = &"first_person", probe = true, fn = func() -> void: await _perf(bot)},
@@ -113,6 +131,66 @@ static func _waves_to_boss(bot: Node) -> void:
 	await bot._ticks(ADDS_WATCH_TICKS)
 
 
+## The table's mixed waves, played as a player meets them after the opening two: the spawner starts
+## at wave MIXED_WAVES_FROM, the boss waves are off, god mode, and the autopilot fights held back
+## (the slice's `fight()`: a crowd that gets to attack) for MIXED_WAVES_TICKS. WAVE lines say when
+## each wave starts and is cleared.
+static func _mixed_waves(bot: Node) -> void:
+	bot.god()
+	bot.tune(&"boss_wave_every", 0)
+	bot.spawner.start_at_wave(MIXED_WAVES_FROM)
+	bot.set_waves(true)
+	var watch := _watch_waves(bot)
+	await bot.fight(MIXED_WAVES_TICKS)
+	_unwatch_waves(bot, watch)
+
+
+## The boss wave as the waves bring it: after `boss_wave_every` waves (the default's four: the
+## spawner starts at the wave before the boss's, the opening ones not played), god mode, the
+## held-back autopilot. The boss walks in and fights; after BOSS_HELD_NATURAL_TICKS without a
+## phase 2 its health is set to the phase 2 line by hand (a BOSS line says so), then its Punks walk
+## in (BOSS_HELD_ADDS_TICKS at most) and the fight goes on for BOSS_HELD_WATCH_TICKS with them.
+static func _boss_wave_held_back(bot: Node) -> void:
+	bot.god()
+	bot.spawner.start_at_wave(int(Tuning.data.boss_wave_every) + 1)
+	bot.set_waves(true)
+	var watch := _watch_waves(bot)
+	bot.hold_back()
+	bot.pilot.enabled = true
+	await bot._wait_until(func() -> bool: return _boss(bot) != null, BOSS_MAX_TICKS)
+	await bot._wait_until(func() -> bool: return _boss(bot) == null or _boss(bot).phase >= 2, BOSS_HELD_NATURAL_TICKS)
+	var boss := _boss(bot)
+	if boss != null and boss.phase < 2:
+		var before := boss.health
+		boss.health = boss.max_health * Tuning.data.boss_phase2_at
+		bot.log_line("BOSS f%d forced to phase 2: health %.0f set to %.0f of %.0f" % [Engine.get_physics_frames(), before, boss.health, boss.max_health])
+	await bot._wait_until(func() -> bool: return _boss(bot) == null or _adds_called(bot), BOSS_HELD_ADDS_TICKS)
+	boss = _boss(bot)
+	bot.log_line("BOSS f%d %s, %d AI enemies alive" % [Engine.get_physics_frames(),
+			("phase %d, %d adds, health %.0f of %.0f" % [boss.phase, boss.adds.size(), boss.health, boss.max_health]) if boss else "beaten",
+			bot.spawner.alive_count()])
+	await bot._ticks(BOSS_HELD_WATCH_TICKS)
+	_unwatch_waves(bot, watch)
+
+
+## Log each wave's start and clear (WAVE lines). Returns the two connections, for _unwatch_waves().
+static func _watch_waves(bot: Node) -> Array[Callable]:
+	var started := func(number: int, ids: PackedStringArray) -> void:
+		bot.log_line("WAVE f%d start %d %s" % [Engine.get_physics_frames(), number, ",".join(ids)])
+	var cleared := func(number: int) -> void:
+		bot.log_line("WAVE f%d cleared %d" % [Engine.get_physics_frames(), number])
+	bot.spawner.wave_started.connect(started)
+	bot.spawner.wave_cleared.connect(cleared)
+	return [started, cleared]
+
+
+static func _unwatch_waves(bot: Node, watch: Array[Callable]) -> void:
+	if bot.spawner.wave_started.is_connected(watch[0]):
+		bot.spawner.wave_started.disconnect(watch[0])
+	if bot.spawner.wave_cleared.is_connected(watch[1]):
+		bot.spawner.wave_cleared.disconnect(watch[1])
+
+
 ## The live boss, or null.
 static func _boss(bot: Node) -> Boss:
 	for node: Node in bot.get_tree().get_nodes_in_group(&"boss"):
@@ -159,16 +237,21 @@ static func _warn_every_archetype(bot: Node) -> void:
 ## Six enemies and a player who knocks them down (the autopilot, not held back; a Punk walks in
 ## whenever one falls), god mode. From before the first spawn to the end, wall-clock frame times
 ## (between two `process_frame`s) are logged:
-##   PERF f<frame> window <n>: <frames> frames, mean <ms>, p95 <ms>, worst <ms>, process <ms>, physics <ms>, <n> bodies, <n> alive
+##   PERF f<frame> window <n>: <frames> frames, mean <ms>, p95 <ms>, worst <ms>, engine max in the last second: process <ms>, physics <ms>, then at the window's end <n> ragdoll bodies simulating, <n> pipes awake, <n> alive
 ## in windows of PERF_WINDOW_FRAMES, the whole run, one line per enemy that appeared
 ## (`PERF spawn <name>: ...`: its own frame and the worst frame within PERF_AFTER_S of it) and the
-## worst frame within PERF_AFTER_S of a body going down (a ragdoll build). The probe's R15 is the same
+## worst frame within PERF_AFTER_S of an enemy going down (a ragdoll build). The probe's R15 is the same
 ## run's (frame p95 with its own cost taken out, the worst frame after a spawn). Wall-clock times, so
 ## it needs a window that is not recording:
 ##   godot --path . res://tests/bot/crowd_bot.tscn -- --act="Perf, six with ragdolls"
-## "process" and "physics" are the engine's own monitors for the last frame and include the probe's
-## and the bot's work (the lens sampling takes 7 ms every tenth tick); the frame lines are the
-## measure.
+## The frame lines (mean, p95, worst, the spawn and fall lines) and the probe's R15 are the measure.
+## "process" and "physics" are the engine's own monitors (Performance.TIME_PROCESS and
+## TIME_PHYSICS_PROCESS), which hold the MAXIMUM single process frame or physics tick of the last
+## second, not the last frame's or this window's: they include a startup spike, the probe's lens
+## sampling (7 ms every tenth tick) and the bot's own work, and the first windows read very high.
+## The bodies are counted directly, at the window's end (Jolt does not report
+## PHYSICS_3D_ACTIVE_OBJECTS: it reads 0): the simulating bodies of every ragdoll that is running
+## and not asleep, and the dropped pipes (RigidBody3D) that are awake.
 static func _perf(bot: Node) -> void:
 	bot.god()
 	var run := {running = true, ms = PackedFloat32Array(), stamp = PackedFloat64Array(), spawns = [], downs = PackedFloat64Array()}
@@ -235,12 +318,33 @@ static func _report_perf(bot: Node, run: Dictionary) -> void:
 		worst_down = maxf(worst_down, worst)
 		if first_down < 0.0:
 			first_down = worst
-	bot.log_line("PERF %d spawns, worst frame after one %.1f ms; %d bodies went down, worst frame within %.1f s of one %.1f ms, of the first %.1f ms" % [
+	bot.log_line("PERF %d spawns, worst frame after one %.1f ms; %d falls (an enemy going down), worst frame within %.1f s of one %.1f ms, of the first %.1f ms" % [
 			run.spawns.size(), worst_spawn, run.downs.size(), PERF_AFTER_S, worst_down, maxf(first_down, 0.0)])
 
 
-## Log the frame times `ms` of one window (or the run): mean, p95 and worst, with the engine's own
-## process and physics times and the active physics bodies (the ragdolls' bodies count).
+## The simulating ragdoll bodies and the awake pipes in the room now (see _perf()): {ragdoll, pipes}.
+## A ragdoll counts while it runs (a stagger's partial one or a full one) and is not asleep, by
+## the bodies it simulates (Ragdoll.body_transforms()); a pipe is a RigidBody3D that is not held
+## (frozen) and not sleeping.
+static func _bodies_awake(tree: SceneTree) -> Dictionary:
+	var ragdoll := 0
+	for node: Node in tree.get_nodes_in_group(&"actor"):
+		var actor := node as CombatActor
+		if actor == null or actor.rig == null or not actor.rig.is_ragdolling():
+			continue
+		var running := actor.rig.get_ragdoll()
+		if running != null and not running.asleep:
+			ragdoll += running.body_transforms().size()
+	var pipes := 0
+	for node: Node in tree.get_nodes_in_group(&"weapon"):
+		var pipe := node as RigidBody3D
+		if pipe != null and not pipe.freeze and not pipe.sleeping:
+			pipes += 1
+	return {ragdoll = ragdoll, pipes = pipes}
+
+
+## Log the frame times `ms` of one window (or the run): mean, p95 and worst, then the engine's
+## own process and physics maxima of the last second and the bodies now (see _perf()).
 static func _log_window(bot: Node, label: String, ms: PackedFloat32Array) -> void:
 	var sorted := ms.duplicate()
 	sorted.sort()
@@ -248,8 +352,9 @@ static func _log_window(bot: Node, label: String, ms: PackedFloat32Array) -> voi
 	for value in ms:
 		sum += value
 	var p95 := sorted[mini(int(floor(0.95 * (sorted.size() - 1))), sorted.size() - 1)]
-	bot.log_line("PERF f%d %s: %d frames, mean %.1f, p95 %.1f, worst %.1f, process %.1f, physics %.1f, %d bodies, %d alive" % [
+	var bodies := _bodies_awake(bot.get_tree())
+	bot.log_line("PERF f%d %s: %d frames, mean %.1f, p95 %.1f, worst %.1f, engine max in the last second: process %.1f, physics %.1f; now %d ragdoll bodies simulating, %d pipes awake, %d alive" % [
 			Engine.get_physics_frames(), label, ms.size(), sum / maxf(float(ms.size()), 1.0), p95,
 			sorted[sorted.size() - 1], 1000.0 * Performance.get_monitor(Performance.TIME_PROCESS),
 			1000.0 * Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS),
-			int(Performance.get_monitor(Performance.PHYSICS_3D_ACTIVE_OBJECTS)), bot.spawner.alive_count()])
+			bodies.ragdoll, bodies.pipes, bot.spawner.alive_count()])
