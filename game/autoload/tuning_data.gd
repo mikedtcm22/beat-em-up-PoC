@@ -693,7 +693,17 @@ extends Resource
 @export_range(0.25, 3.0, 0.05) var kicker_speed_mult: float = 1.3
 ## Chance (0..1) that its attack is the low sweep rather than the jump kick.
 @export_range(0.0, 1.0, 0.05) var kicker_sweep_chance: float = 0.4
-@export_range(0.0, 10.0, 0.1) var kicker_attack_cooldown_s: float = 1.2
+## Seconds after its attack ends (or after a hit or a block ended the attempt) before it wants
+## another token; it runs through the recover hold and the walk back to the ring (the Kicker walks
+## that in about a second and a half). 3 s is the feel default chosen from measurement (two Kickers
+## round a player who stands still, 40 s, 4 seeds): 15-17 attacks, against 10-11 for two Punks at
+## their locked 5 s, about the same damage a second (a kick is 8, a two-hit punch 12) but half
+## again as many wind-ups, from behind. It is a plateau from 2.5 s to 3.5 s (the director's pacing
+## sets the cadence there: 17 and 16 attacks); 1.2 s (the S0 seed) gave 21, 5 s gave 12.
+@export_range(0.0, 10.0, 0.1) var kicker_attack_cooldown_s: float = 3.0
+## How far round the ring (degrees) the point it walks to is, on the way round to a slot behind the
+## player: it circles in legs of this size rather than crossing his front on the straight line.
+@export_range(10.0, 90.0, 5.0) var kicker_orbit_lead_deg: float = 40.0
 
 @export_subgroup("Pipe Thug")
 @export_range(5.0, 500.0, 1.0) var thug_health: float = 35.0
