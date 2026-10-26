@@ -34,7 +34,8 @@ extends Node
 ##
 ## Every one-shot takes a random variant of its pool, never the pool's last one, with its
 ## pitch and volume varied by up to `sfx_pitch_variation` / `sfx_volume_variation` (±8%).
-## With every voice busy, the sound started longest ago gives way. The listener rides the
+## With every voice busy, the sound started longest ago gives way, a wind-up cue still
+## sounding for its attacker's wind-up last (it may be the only warning). The listener rides the
 ## player's eyes and look, in every camera mode. A sound plays at its layer's volume within
 ## `sfx_unit_size_m` of it, 6 dB quieter each time the distance doubles beyond that
 ## (updated every frame), and not at all beyond `sfx_max_distance_m`. Sounds more than
@@ -81,7 +82,8 @@ const LAYER_DB: Dictionary = {
 
 ## Pooled one-shot voices; with all of them busy, a new sound takes the one started longest
 ## ago. A voice budget, not a feel number: a synthetic six-enemy brawl (three attackers on
-## the player, the player's chains, a three-body finisher every 2 s) peaks at about 30.
+## the player, the player's chains, a three-body finisher every 2 s) peaks at about 30, and
+## tests/test_audio_crowd.gd measures it with six wind-ups sounding on top.
 @export var voice_count: int = 32
 ## The listener rides the player's eyes and look, so every camera (the debug views too)
 ## hears what the player would. Off, or with no player, the active camera hears.
@@ -99,6 +101,9 @@ var _base_db: Array[float] = []
 var _started: Array[int] = []
 ## Instance id of the actor whose wind-up each voice is sounding (0: none).
 var _windup_of: Array[int] = []
+## Wind-up cues taken over by another sound while their wind-up was still running (only when
+## every voice held one): the probe's R14, 0 in a healthy crowd fight.
+var windup_voices_stolen: int = 0
 var _plays: int = 0
 var _next: int = 0
 ## The swing the last hit came from (attacker instance id, physics frame), and the victims
@@ -259,23 +264,27 @@ func _on_windup_started(attacker: Node3D, move: MoveData) -> void:
 	if attacker == null or not tuning.rear_warning_audio:
 		return
 	var id := attacker.get_instance_id()
-	for voice: AudioStreamPlayer3D in [
-		play(&"effort", _voice_position(attacker), tuning.windup_db, voice_pitch(attacker)),
-		play(&"whoosh", _strike_position(attacker, move), tuning.windup_db),
-	]:
-		if voice:
-			_windup_of[_voices.find(voice)] = id
+	# Each cue is tagged as the attacker's wind-up the moment it starts, so the next one cannot
+	# take it over.
+	var effort := play(&"effort", _voice_position(attacker), tuning.windup_db, voice_pitch(attacker))
+	if effort:
+		_windup_of[_voices.find(effort)] = id
+	var whoosh := play(&"whoosh", _strike_position(attacker, move), tuning.windup_db)
+	if whoosh:
+		_windup_of[_voices.find(whoosh)] = id
 
 
-## A wind-up knocked out of (a hit, a grab) cuts its effort and whoosh at once.
+## A wind-up knocked out of (a hit, a grab) cuts its effort and whoosh at once. One that ends
+## in its strike lets them ring out, and they stop being protected from voice stealing: the
+## warning they were is over.
 func _on_windup_ended(attacker: Node3D, interrupted: bool) -> void:
-	if not interrupted or attacker == null:
+	if attacker == null:
 		return
 	var id := attacker.get_instance_id()
 	for i in _voices.size():
 		if _windup_of[i] == id:
 			_windup_of[i] = 0
-			if _voices[i].playing:
+			if interrupted and _voices[i].playing:
 				_voices[i].stop()
 
 
@@ -311,12 +320,17 @@ static func layer_db(pool: StringName) -> float:
 	return float(Tuning.data.get(LAYER_DB[pool]))
 
 
-## `actor`'s voice pitch: 1 plus a fixed share (from its name) of ±voice_pitch_spread.
+## `actor`'s voice pitch: 1 plus a fixed share (from its name) of ±voice_pitch_spread, times
+## its `voice_pitch_mult` when it has one (a Bruiser's or the boss's deeper voice).
 static func voice_pitch(actor: Node) -> float:
 	var spread := Tuning.data.voice_pitch_spread
 	var voice := RandomNumberGenerator.new()
 	voice.seed = hash(str(actor.name))
-	return 1.0 + voice.randf_range(-spread, spread)
+	var pitch := 1.0 + voice.randf_range(-spread, spread)
+	var mult: Variant = actor.get(&"voice_pitch_mult")
+	if mult is float and mult > 0.0:
+		pitch *= mult
+	return pitch
 
 
 func _grunt(actor: Node3D) -> void:
@@ -377,8 +391,9 @@ func _first_victim_of_swing(hit: HitInfo) -> bool:
 	return false
 
 
-## The index of a free voice, else of the busy one started longest ago (stopped). Searching
-## from the last one taken keeps a voice's tail free as long as possible.
+## The index of a free voice, else of the busy one started longest ago (stopped), a wind-up
+## cue whose wind-up is still running last: in a crowd it may be the only warning of an attack
+## from behind. Searching from the last one taken keeps a voice's tail free as long as possible.
 func _take_voice() -> int:
 	var n := _voices.size()
 	for k in n:
@@ -386,10 +401,17 @@ func _take_voice() -> int:
 		if not _voices[index].playing:
 			_next = (index + 1) % n
 			return index
-	var oldest := 0
+	var oldest := -1
 	for i in n:
-		if _started[i] < _started[oldest]:
+		if _windup_of[i] == 0 and (oldest < 0 or _started[i] < _started[oldest]):
 			oldest = i
+	if oldest < 0:
+		# Every voice is a live wind-up cue: the oldest of them gives way.
+		windup_voices_stolen += 1
+		oldest = 0
+		for i in n:
+			if _started[i] < _started[oldest]:
+				oldest = i
 	_voices[oldest].stop()
 	return oldest
 

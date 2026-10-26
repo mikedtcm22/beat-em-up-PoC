@@ -744,3 +744,103 @@ func _make_hurtbox(rig: Node3D, shape: Shape3D, local_position: Vector3) -> Hurt
 	hurtbox.position = local_position
 	rig.add_child(hurtbox)
 	return hurtbox
+
+
+# --- Rear warning host and the boss bar (Milestone 3, P1-hud) ----------------------------------
+
+
+func test_the_rear_warning_lies_inside_the_reserved_corners_at_every_size() -> void:
+	await wait_process_frames(2)
+	var warning := _hud.rear_warning
+	assert_not_null(warning, "the HUD has the rear warning")
+	assert_eq(warning.mouse_filter, Control.MOUSE_FILTER_IGNORE)
+	assert_eq(warning.get_parent(), _hud)
+	var screen := _hud.get_viewport().get_visible_rect().size
+	assert_eq(warning.size, screen, "full rect")
+	var original := warning.size
+	# The standard canvas, a wider one and a squarer one; every size setting, heavy or not, at
+	# the pop's scale and at rest.
+	for canvas: Vector2 in [original, Vector2(2560.0, 1080.0), Vector2(1440.0, 1080.0)]:
+		warning.size = canvas
+		var corner := canvas * RearWarning.CORNER_SHARE
+		var corners := {
+			&"left": Rect2(Vector2.ZERO, corner),
+			&"right": Rect2(Vector2(canvas.x - corner.x, 0.0), corner),
+		}
+		for size_setting: float in [0.25, 0.5, 1.0, 2.0, 3.0]:
+			Tuning.data.rear_warning_size = size_setting
+			for heavy: bool in [false, true]:
+				for pulse_scale: float in [1.0, 1.25, 2.0]:
+					for side: StringName in corners:
+						var rect: Rect2 = warning.burst_rect(side, heavy, pulse_scale)
+						var label := "%s %s size %.2f heavy %s x%.2f on %s" % [side, rect, size_setting,
+								heavy, pulse_scale, canvas]
+						var home: Rect2 = corners[side]
+						assert_true(home.encloses(rect), "inside the reserved corner: %s" % label)
+						assert_gt(rect.size.x, 0.0, "and still a burst: %s" % label)
+	warning.size = original
+	Tuning.data.rear_warning_size = 1.0
+	# The same for a burst that is lit, in the corner state the bots read.
+	var player := _spawn_player()
+	var enemy := _spawn_enemy()
+	enemy.global_position = Vector3(1.06, 0.0, 1.06)
+	var move := _make_move(&"fake_jab", "Fake Jab")
+	move.reach_m = 1.0
+	enemy.state = CombatTypes.ActorState.WINDUP
+	enemy.current_move = move
+	CombatEvents.windup_started.emit(enemy, move)
+	var state: Dictionary = warning.corner_state(&"right")
+	assert_true(state.active)
+	var right_corner := Rect2(Vector2(screen.x * 0.8, 0.0), screen * 0.2)
+	assert_true(right_corner.encloses(state.rect), "the lit burst %s is in the corner %s" % [state.rect, right_corner])
+	assert_not_null(player)
+
+
+func test_the_boss_bar_follows_the_live_actor_in_group_boss() -> void:
+	assert_false(_hud.boss_bar.visible)
+	var boss := _spawn_enemy()
+	boss.display_name = "Fake Boss"
+	boss.add_to_group(&"boss")
+	_hud.advance(0.016)
+	assert_true(_hud.boss_bar.visible, "shown for the boss, nobody called the HUD")
+	assert_eq(_hud.boss_bar.boss, boss)
+	boss.health = 0.0
+	_hud.advance(0.016)
+	assert_true(_hud.boss_bar.visible, "a dead boss keeps its (empty) bar until it vanishes")
+	CombatEvents.vanished.emit(boss)
+	assert_false(_hud.boss_bar.visible, "hidden on vanished")
+	_hud.advance(0.016)
+	assert_false(_hud.boss_bar.visible, "and not shown again for a dead boss")
+	var next_boss := _spawn_enemy()
+	next_boss.add_to_group(&"boss")
+	_hud.advance(0.016)
+	assert_eq(_hud.boss_bar.boss, next_boss, "a new boss gets the bar")
+	next_boss.free()
+	_hud.advance(0.016)
+	assert_false(_hud.boss_bar.visible, "a freed boss's bar goes")
+
+
+func test_a_bar_shown_by_hand_stays_while_no_boss_is_in_the_group() -> void:
+	var actor := _spawn_enemy()
+	_hud.show_boss(actor)
+	_hud.advance(0.016)
+	_hud.advance(0.016)
+	assert_true(_hud.boss_bar.visible, "show_boss() still works for any actor")
+	CombatEvents.vanished.emit(_spawn_enemy())
+	assert_true(_hud.boss_bar.visible, "another actor vanishing does not hide it")
+
+
+func test_the_boss_has_no_over_head_bar() -> void:
+	var player := _spawn_player()
+	var boss := _spawn_enemy()
+	boss.add_to_group(&"boss")
+	var other := _spawn_enemy(Vector3(2.0, 2.0, -4.0))
+	var move := _make_move(&"jab_1", "Jab 1")
+	boss.health = 20.0
+	other.health = 20.0
+	CombatEvents.hit_landed.emit(_make_hit(player, boss, move, 10))
+	CombatEvents.health_changed.emit(boss, 20.0, 30.0)
+	CombatEvents.hit_landed.emit(_make_hit(player, other, move, 11))
+	_hud.advance(0.016)
+	assert_false(_hud.enemy_bars.has_bar(boss), "the boss has its own bar")
+	assert_true(_hud.enemy_bars.has_bar(other), "any other enemy still gets one")
