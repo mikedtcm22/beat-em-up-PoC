@@ -32,8 +32,10 @@ extends EnemyActor
 ## on). The haymaker (breaks_armor) still knocks it down, a killing hit is never softened, and a heavy
 ## hit still cuts the grab (Game-boy's rule). Without it the basic chain (jab, jab, hook, uppercut)
 ## staggered and floored it every 3 s, it spent over half its life reacting and threw its wind-ups at
-## a player already hitting it. Waking within boss_read_m of the player it steps back for up to
-## boss_back_off_s before it asks for a token, so its wind-up is in view.
+## a player already hitting it. The wake-up hold (it postures where it stands) lasts as long as the
+## poise does. A charge or a pound with the player closer than boss_read_m (1 m is where a chain leaves
+## him: the pound's raised arms are over the lens) is preceded by a step back, for up to
+## boss_back_off_s, so its wind-up is in view; the phase 2 beckon waits for a free moment.
 ##
 ## A parry (a perfect block) does not stagger it (_parry_staggers() is false: it would be parry-locked
 ## by a perfect block every time); it takes a short recoil instead, boss_parry_recoil_frames, so a

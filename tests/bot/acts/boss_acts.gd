@@ -11,7 +11,13 @@ extends RefCounted
 ## of its wind-up). "Boss phase 2 adds" has the real AI: the boss walks in, postures, takes half
 ## its health and two Punks walk in from the doorways; "Boss bar" drains the bar at the bottom
 ## centre. "Boss cadence" (the measurement behind boss_attack_cooldown_s and the attack mix, a
-## player who stands still, god mode) and "Boss fight" (the autopilot) are for numbers, not looks.
+## player who stands still, god mode) is for numbers, not looks, and so are the three that print a
+## BOSSMETER line (_meter(): the poise's measurements, F-boss-poise): "Boss fight" (the full autopilot,
+## real damage, ends when the boss falls), "Boss held back fight" (the careful autopilot) and "Boss
+## passive" (a player who does nothing). Run them headless, `-- --act="Boss fight" --seed=<n>`, once
+## with the shipped tunables and once with `--tune=boss_poise_s=0 --tune=boss_poise_after_reactions=0
+## --tune=boss_read_m=0 --tune=boss_attack_cooldown_s=4` (the boss before the poise); each takes
+## seconds. Record "Boss fight" for the sheets.
 ## Acts with `probe = true` print the readability summary and the warning oracle's WARN-CHECK lines.
 
 const SliceActs := preload("res://tests/bot/acts/slice_acts.gd")
