@@ -161,8 +161,9 @@ static func _boss_wave_held_back(bot: Node) -> void:
 	await bot._wait_until(func() -> bool: return _boss(bot) == null or _boss(bot).phase >= 2, BOSS_HELD_NATURAL_TICKS)
 	var boss := _boss(bot)
 	if boss != null and boss.phase < 2:
+		var before := boss.health
 		boss.health = boss.max_health * Tuning.data.boss_phase2_at
-		bot.log_line("BOSS f%d forced to phase 2: health set to %.0f of %.0f" % [Engine.get_physics_frames(), boss.health, boss.max_health])
+		bot.log_line("BOSS f%d forced to phase 2: health %.0f set to %.0f of %.0f" % [Engine.get_physics_frames(), before, boss.health, boss.max_health])
 	await bot._wait_until(func() -> bool: return _boss(bot) == null or _adds_called(bot), BOSS_HELD_ADDS_TICKS)
 	boss = _boss(bot)
 	bot.log_line("BOSS f%d %s, %d AI enemies alive" % [Engine.get_physics_frames(),
