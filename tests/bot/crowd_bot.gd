@@ -100,8 +100,7 @@ func _reset(cam: StringName) -> void:
 ## `face_player`. A stand-in that only stands still when the archetype's scene does not exist
 ## yet. Returns it, or null.
 func spawn(id: StringName, rel: Vector2, face_player: bool = true) -> EnemyActor:
-	if EnemyCatalog.scene(id) == null and not spawner.scene_override.has(id):
-		spawner.scene_override[id] = STAND_IN
+	ensure_scene(id)
 	var at := player.global_position + player.global_basis * Vector3(rel.x, 0.0, -rel.y)
 	at.y = player.global_position.y
 	var yaw := player.rotation.y + PI
@@ -109,6 +108,13 @@ func spawn(id: StringName, rel: Vector2, face_player: bool = true) -> EnemyActor
 		var to_player := player.global_position - at
 		yaw = atan2(-to_player.x, -to_player.z)
 	return spawner.spawn_enemy(id, at, yaw)
+
+
+## Make sure enemy `id` can be spawned: when its scene does not exist yet (an archetype that is
+## not merged), the stand-in that only stands still is used for it.
+func ensure_scene(id: StringName) -> void:
+	if EnemyCatalog.scene(id) == null and not spawner.scene_override.has(id):
+		spawner.scene_override[id] = STAND_IN
 
 
 ## Take every AI enemy out of the room now (groups first, then queue_free).
@@ -190,4 +196,4 @@ func _on_warning_hidden(side: StringName) -> void:
 
 
 func _state_name(state: int) -> String:
-	return String(EnemyActor.AiState.keys()[state]) if state >= 0 else "-"
+	return String(EnemyActor.AiState.keys()[state]) if state >= 0 else "new"

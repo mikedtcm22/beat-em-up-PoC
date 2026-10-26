@@ -52,6 +52,7 @@ static func _fly(bot: Node) -> void:
 ## One enemy at every spawn point, seen from high above the lane, so each point's place (a
 ## doorway's back, an alley's far end, the strip behind the car) reads at once.
 static func _spawn_points(bot: Node) -> void:
+	bot.ensure_scene(&"punk")
 	for point: Dictionary in bot.spawner.spawn_points:
 		bot.spawner.spawn_enemy(&"punk", point.position, point.yaw, false, point.lane_point)
 	await _fly_path(bot, Vector3(0.0, 24.0, 16.0), Vector3(0.0, 24.0, 16.0), Vector3(0.0, 0.0, 0.0), 30)
