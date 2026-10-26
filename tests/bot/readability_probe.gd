@@ -73,6 +73,9 @@ const SPAWN_WINDOW_S := 0.5
 @export var print_summary: bool = true
 ## Print the oracle's WARN-CHECK lines (a bot wants them in its log).
 @export var print_oracle_lines: bool = true
+## Close the open act and write readability.json when this node leaves the tree (a bot that
+## just calls get_tree().quit() still leaves its report).
+@export var write_on_exit: bool = false
 ## Sample in this node's own _physics_process. Off: the owner calls tick() once per physics frame.
 @export var auto_tick: bool = true
 ## Runs after the actors (a larger number is later), so a tick sees the whole frame's simulation.
@@ -182,6 +185,8 @@ func attach(host: Node = null, the_player: Node3D = null) -> void:
 func _exit_tree() -> void:
 	if not _attached:
 		return
+	if write_on_exit:
+		finish()
 	_attached = false
 	CombatEvents.attack_started.disconnect(_on_attack_started)
 	CombatEvents.windup_started.disconnect(_on_windup_started)
@@ -546,24 +551,30 @@ func _voice_counter() -> int:
 	return -1
 
 
-## Without that counter: the attacker (instance id) each voice is sounding, as the director keeps
-## it (_windup_of), or [] when it does not.
+## Without that counter: for each voice, the attacker (instance id) whose wind-up it is sounding, as
+## the director keeps it (_windup_of), and whether it was playing; [] when the director does not.
 func _voice_snapshot() -> Array:
 	var audio := _audio()
-	if audio and "_windup_of" in audio:
-		return (audio.get(&"_windup_of") as Array).duplicate()
-	return []
+	if audio == null or not ("_windup_of" in audio) or not ("_voices" in audio):
+		return []
+	var owners: Array = audio.get(&"_windup_of")
+	var voices: Array = audio.get(&"_voices")
+	var out: Array = []
+	for i in mini(owners.size(), voices.size()):
+		out.append([int(owners[i]), bool(voices[i].get(&"playing"))])
+	return out
 
 
-## A voice that was sounding an attacker's wind-up and now sounds something else while that
-## attacker is still in WINDUP was stolen by the pool (an interrupted wind-up cuts its own voices).
+## A voice that was sounding an attacker's wind-up, still playing, and now sounds something else
+## while that attacker is still in WINDUP was stolen by the pool (an interrupted wind-up cuts its own
+## voices, and one that finished playing is simply a free voice: neither is a steal).
 func _tick_voices() -> void:
 	if _voice_counter_start >= 0:
 		return
 	var now := _voice_snapshot()
 	for i in mini(_voice_prev.size(), now.size()):
-		var was := int(_voice_prev[i])
-		if was != 0 and was != int(now[i]):
+		var was: int = _voice_prev[i][0]
+		if was != 0 and bool(_voice_prev[i][1]) and was != int(now[i][0]):
 			var attacker := instance_from_id(was) as CombatActor
 			if attacker and is_instance_valid(attacker) and attacker.state == CombatTypes.ActorState.WINDUP:
 				_acc.voices_stolen += 1
@@ -997,9 +1008,9 @@ func verdict(m: Dictionary, summary: Dictionary = {}) -> Array[Dictionary]:
 			and int(m.warning_end_lag_frames) <= Oracle.MAX_END_LAG_FRAMES
 		)
 		out.append(_row("R10", "warning vs the rule", true, r10_ok,
-				"%.0f%% of %d, %d false, lat %d f, end %d f" % [
-					float(m.warning_oracle_agreement) * 100.0, m.warning_windups,
-					m.warning_false_positives, m.warning_latency_frames, m.warning_end_lag_frames],
+				"%.0f%% of %d, %d false, lat %s, end %s" % [
+					float(m.warning_oracle_agreement) * 100.0, m.warning_windups, m.warning_false_positives,
+					_frames_or_dash(m.warning_latency_frames), _frames_or_dash(m.warning_end_lag_frames)],
 				"100%%, 0, lat <= %d f, end <= %d f" % [Oracle.MAX_LATENCY_FRAMES, Oracle.MAX_END_LAG_FRAMES]))
 	# R11 (hard)
 	out.append(_row("R11", "knockdown hit damage", true,
@@ -1036,6 +1047,11 @@ func verdict(m: Dictionary, summary: Dictionary = {}) -> Array[Dictionary]:
 				"p95 %.1f ms, spawn %s" % [float(m.frame_ms_p95), "-" if m.spawn_hitch_ms == null else "%.1f ms" % float(m.spawn_hitch_ms)],
 				"p95 <= %.1f, spawn <= %.0f" % [LIMITS.frame_ms_p95_max, LIMITS.spawn_hitch_ms_max]))
 	return out
+
+
+## "<n> f", or "-" when nothing was measured (the oracle's -1).
+func _frames_or_dash(frames: Variant) -> String:
+	return "-" if frames == null or int(frames) < 0 else "%d f" % int(frames)
 
 
 func _row(id: String, label: String, hard: bool, ok: bool, value: String, limit: String) -> Dictionary:

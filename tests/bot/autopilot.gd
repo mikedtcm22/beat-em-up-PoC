@@ -142,9 +142,7 @@ func reset_counters() -> void:
 func stop() -> void:
 	if player == null or not is_instance_valid(player):
 		return
-	if _block_held:
-		player.input.push_up(&"DODGE")
-		_block_held = false
+	_release_guard()
 	player.input.scripted_move = Vector2.ZERO
 	_chain_left = 0
 
@@ -291,7 +289,14 @@ func _decide(what: StringName) -> void:
 func _idle_down() -> void:
 	player.input.scripted_move = Vector2.ZERO
 	_chain_left = 0
+	_release_guard()
+
+
+## Let go of B if it is held. A hit through the guard drops the guard, but the parser still has B
+## down and would raise it again whenever the player is free, so the release is always pushed.
+func _release_guard() -> void:
 	if _block_held:
+		player.input.push_up(&"DODGE")
 		_block_held = false
 
 
@@ -310,6 +315,7 @@ func _face(focus: Node3D, frame: int) -> void:
 func _mash(frame: int) -> void:
 	player.input.scripted_move = Vector2.ZERO
 	_chain_left = 0
+	_release_guard()
 	if frame >= _next_mash and player.input.queued() == 0:
 		_next_mash = frame + mash_gap_frames
 		player.input.push_press(&"P" if _mash_p else &"K", 1)

@@ -274,6 +274,19 @@ func test_a_ko_player_is_left_alone() -> void:
 	assert_eq(_decisions.back(), &"down")
 
 
+func test_a_player_knocked_out_behind_a_raised_guard_lets_it_go() -> void:
+	var stub := _stub(0.0, 1.0)
+	_engage(true, false, false)
+	await _ticks(2)
+	stub.force_attack()
+	await _ticks(20)
+	assert_true(_player.state in [CombatTypes.ActorState.BLOCK, CombatTypes.ActorState.BLOCKSTUN], "guard up")
+	stub.abort_move()
+	_player.health = 0.0
+	await _ticks(60)
+	assert_eq(_player.state, CombatTypes.ActorState.FREE, "B was released, so the guard came down and stays down")
+
+
 func test_disabled_it_does_nothing_and_stop_lets_go_of_the_guard() -> void:
 	var stub := _stub(0.0, 1.0)
 	_engage(true, false, false)
@@ -319,6 +332,7 @@ func _run_dodge_scenario() -> Dictionary:
 		stub.force_attack()
 	await _ticks(60)
 	var out := pilot.result()
+	out.erase("ticks")
 	out["x"] = snappedf(player.global_position.x - 10.0, 0.01)
 	pilot.queue_free()
 	player.queue_free()

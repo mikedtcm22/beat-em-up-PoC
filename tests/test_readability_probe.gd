@@ -43,10 +43,25 @@ class LeftWidget:
 class FakeAudio:
 	extends Node
 	var _windup_of: Array[int] = [0, 0, 0, 0]
+	var _voices: Array[FakeVoice] = []
 	var windup_voices_stolen: int = -1
+
+	func _init() -> void:
+		for i in 4:
+			_voices.append(FakeVoice.new())
 
 	func _ready() -> void:
 		add_to_group(&"audio_director")
+
+	## Voice `i` now sounds the wind-up of `owner_id` (0: something else) and is `playing` or not.
+	func sound(i: int, owner_id: int, playing: bool) -> void:
+		_windup_of[i] = owner_id
+		_voices[i].playing = playing
+
+
+class FakeVoice:
+	extends RefCounted
+	var playing: bool = false
 
 
 var _scene: Node3D
@@ -515,7 +530,6 @@ func test_r14_is_not_measurable_without_an_audio_director() -> void:
 
 func test_r14_counts_a_voice_taken_from_a_windup_that_was_still_running() -> void:
 	var audio := FakeAudio.new()
-	audio.windup_voices_stolen = -1
 	_scene.add_child(audio)
 	var stub := _stub(0.0, 3.0)
 	await _ticks(3)
@@ -523,16 +537,22 @@ func test_r14_counts_a_voice_taken_from_a_windup_that_was_still_running() -> voi
 	stub.force_attack()
 	await _ticks(4)
 	assert_eq(stub.state, CombatTypes.ActorState.WINDUP)
-	audio._windup_of[1] = stub.get_instance_id()
+	var id := stub.get_instance_id()
+	audio.sound(1, id, true)
+	audio.sound(2, id, true)
 	await _ticks(2)
-	# The pool gave that voice to another sound: the wind-up's cue is gone while it still runs.
-	audio._windup_of[1] = 0
+	# The pool gave voice 1 to another sound while it was still playing: the cue is cut, the wind-up runs on.
+	audio.sound(1, 0, true)
 	await _ticks(2)
-	# And one whose wind-up has ended (the strike is out) is simply reused.
-	audio._windup_of[2] = stub.get_instance_id()
+	# Voice 2 had finished by itself: reusing it is not a steal.
+	audio.sound(2, id, false)
+	await _ticks(2)
+	audio.sound(2, 0, true)
+	# And a voice whose wind-up has ended (the strike is out) is simply reused.
+	audio.sound(3, id, true)
 	await _ticks(30)
 	assert_ne(stub.state, CombatTypes.ActorState.WINDUP)
-	audio._windup_of[2] = 0
+	audio.sound(3, 0, true)
 	await _ticks(2)
 	var summary := _probe.end_act()
 	assert_eq(summary.metrics.windup_voices_stolen, 1)
@@ -869,6 +889,19 @@ func test_it_writes_readability_json_per_act_and_total() -> void:
 	assert_true(report.total.has("verdict"))
 	DirAccess.remove_absolute(path)
 	DirAccess.remove_absolute(dir)
+
+
+func test_write_on_exit_leaves_a_report_when_the_bot_just_quits() -> void:
+	var path := ProjectSettings.globalize_path("user://readability.json")
+	DirAccess.remove_absolute(path)
+	_probe.write_on_exit = true
+	_probe.start_act("quit")
+	await _ticks(3)
+	_probe.free()
+	assert_true(FileAccess.file_exists(path), "written as the node left the tree")
+	var data: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+	assert_eq(data.acts[data.acts.size() - 1].title, "quit")
+	DirAccess.remove_absolute(path)
 
 
 func test_it_changes_nothing_in_the_game() -> void:
