@@ -32,7 +32,7 @@ signal decided(decision: StringName)
 ## Frames between a wind-up's start and the autopilot reacting to it (a human's reaction time).
 @export_range(0, 60) var reaction_frames: int = 10
 ## How fast it turns (degrees per second).
-@export_range(30.0, 1440.0) var turn_deg_per_s: float = 270.0
+@export_range(30.0, 1440.0) var turn_deg_per_s: float = 540.0
 ## It raises the guard when the strike is this many frames away.
 @export_range(0, 40) var block_lead_frames: int = 6
 ## It dodges when the strike is this many frames away (the dodge's invulnerability must cover it).
@@ -331,7 +331,8 @@ func _try_dodge(ready: Array[Dictionary], frame: int) -> bool:
 	var lateral := 0.0
 	for threat in imminent:
 		lateral += sin(deg_to_rad(float(threat.bearing)))
-	var side := -1.0 if lateral > 0.0 else 1.0
+	# Threats on the left (positive bearings): step right (the stick's +x), and the other way round.
+	var side := 1.0 if lateral > 0.0 else -1.0
 	if absf(lateral) < 0.05:
 		side = 1.0 if _rng.randf() < 0.5 else -1.0
 	if _block_held:

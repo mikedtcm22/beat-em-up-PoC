@@ -1000,7 +1000,7 @@ func verdict(m: Dictionary, summary: Dictionary = {}) -> Array[Dictionary]:
 				"%.0f%% of %d, %d false, lat %d f, end %d f" % [
 					float(m.warning_oracle_agreement) * 100.0, m.warning_windups,
 					m.warning_false_positives, m.warning_latency_frames, m.warning_end_lag_frames],
-				"100%, 0, lat <= %d f, end <= %d f" % [Oracle.MAX_LATENCY_FRAMES, Oracle.MAX_END_LAG_FRAMES]))
+				"100%%, 0, lat <= %d f, end <= %d f" % [Oracle.MAX_LATENCY_FRAMES, Oracle.MAX_END_LAG_FRAMES]))
 	# R11 (hard)
 	out.append(_row("R11", "knockdown hit damage", true,
 			float(m.max_knockdown_hit_damage_non_boss) <= LIMITS.max_knockdown_hit_damage,
