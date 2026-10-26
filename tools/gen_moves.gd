@@ -306,9 +306,15 @@ func _kicker_moves() -> void:
 ## body, measured by tests/test_enemy_moves_thug.gd (within 0.15 m). The second and third swings
 ## are chain links: no wind-up of their own, only if the swing before landed or was blocked
 ## (M3-plan A2.14).
-const THUG_PIPE_1_REACH_M := 1.3
-const THUG_PIPE_2_REACH_M := 1.3
-const THUG_PIPE_3_REACH_M := 1.3
+const THUG_PIPE_1_REACH_M := 1.23
+const THUG_PIPE_2_REACH_M := 1.38
+const THUG_PIPE_3_REACH_M := 1.43
+## The smash steps in this far (m) over its active frames: two flinches have pushed the player two
+## hands' breadths away from where the Thug stopped, and the third swing, which reaches no
+## further than the first, must still land. Its reach_m includes the step.
+const THUG_PIPE_3_STEP_M := 0.2
+## The flinching swings' push (m/s along the radial), the Punk's.
+const THUG_PIPE_FLINCH_MPS := 1.5
 ## The third swing's push (m/s along the radial): a stagger that carries the player a body
 ## length clear of the chain (the 15% rule: three swings of 10 may not end in a knockdown).
 const THUG_PIPE_3_PUSH_MPS := 3.5
@@ -324,14 +330,15 @@ const THUG_PIPE_3_PUSH_MPS := 3.5
 ## it drops its pipe, throws the Punk's moves.
 func _thug_moves() -> void:
 	var swing_1 := _add(&"thug_pipe_1", "Thug Pipe Swing", Vector3i(22, 3, 14), 10.0, LIGHT, FLINCH,
-			Vector3(0.0, 0.0, 2.0), [_sphere(&"WeaponTip", 0.19)])
+			Vector3(0.0, 0.0, THUG_PIPE_FLINCH_MPS), [_sphere(&"WeaponTip", 0.19)])
 	_enemy(swing_1, THUG_PIPE_1_REACH_M, 20)
 	var swing_2 := _add(&"thug_pipe_2", "Thug Pipe Backswing", Vector3i(12, 3, 14), 10.0, LIGHT, FLINCH,
-			Vector3(0.0, 0.0, 2.0), [_sphere(&"WeaponTip", 0.19)])
+			Vector3(0.0, 0.0, THUG_PIPE_FLINCH_MPS), [_sphere(&"WeaponTip", 0.19)])
 	_enemy(swing_2, THUG_PIPE_2_REACH_M, 14)
 	var swing_3 := _add(&"thug_pipe_3", "Thug Pipe Smash", Vector3i(14, 4, 20), 10.0, LIGHT, STAGGER,
 			Vector3(0.0, 0.0, THUG_PIPE_3_PUSH_MPS), [_sphere(&"WeaponTip", 0.19)])
 	_enemy(swing_3, THUG_PIPE_3_REACH_M, 14)
+	swing_3.free_lunge = THUG_PIPE_3_STEP_M
 	for pipe: MoveData in [swing_1, swing_2, swing_3]:
 		pipe.guard_damage_mult = PIPE_GUARD_MULT
 

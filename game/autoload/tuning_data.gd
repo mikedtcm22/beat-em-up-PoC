@@ -688,8 +688,12 @@ extends Resource
 @export_range(5.0, 500.0, 1.0) var thug_health: float = 35.0
 @export_range(0.0, 10.0, 0.1) var thug_attack_cooldown_s: float = 1.8
 @export_range(0.25, 3.0, 0.05) var thug_speed_mult: float = 0.95
-## Speed (m/s) the dropped pipe leaves the thug's hand at.
-@export_range(0.0, 8.0, 0.1) var thug_drop_speed_mps: float = 2.0
+## Speed (m/s) the dropped pipe leaves the thug's hand at, toward whoever hit it (it slides on the
+## floor: 0.5 lands it a metre or so from the player, inside LB's reach; the first plan's 2.0 away
+## from the hit landed it out of reach), and how fast it spins about the vertical (radians a
+## second) as it falls.
+@export_range(0.0, 8.0, 0.1) var thug_drop_speed_mps: float = 0.5
+@export_range(0.0, 20.0, 0.5) var thug_drop_spin_rps: float = 3.0
 
 @export_subgroup("Enemy grabs")
 ## Presses of P or K that break an enemy's hold before its hit lands, and the sim frames of

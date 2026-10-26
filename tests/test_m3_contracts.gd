@@ -475,7 +475,7 @@ const TUNABLES := {
 		&"kicker_speed_mult": [1.3, "Kicker"], &"kicker_sweep_chance": [0.4, "Kicker"],
 		&"kicker_attack_cooldown_s": [1.2, "Kicker"],
 		&"thug_health": [35.0, "Pipe Thug"], &"thug_attack_cooldown_s": [1.8, "Pipe Thug"],
-		&"thug_speed_mult": [0.95, "Pipe Thug"], &"thug_drop_speed_mps": [2.0, "Pipe Thug"],
+		&"thug_speed_mult": [0.95, "Pipe Thug"], &"thug_drop_speed_mps": [0.5, "Pipe Thug"],
 		&"grab_break_presses": [8, "Enemy grabs"], &"grab_break_invuln_frames": [20, "Enemy grabs"],
 		&"grab_break_decay_per_s": [0.0, "Enemy grabs"], &"grab_break_push_mps": [3.0, "Enemy grabs"],
 		&"grabbed_turn_frames": [8, "Enemy grabs"], &"grabbed_pin_distance_m": [0.75, "Enemy grabs"],

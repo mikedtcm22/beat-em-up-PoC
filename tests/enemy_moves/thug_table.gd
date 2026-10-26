@@ -28,11 +28,11 @@ const LIGHT := CombatTypes.HitTier.LIGHT
 
 const MOVES := {
 	&"thug_pipe_1": {damage = 10.0, tier = LIGHT, reaction = FLINCH, hitbox = &"sphere:WeaponTip",
-			guard_mult = 1.5, recoil = 20, reach_m = 1.3, min_startup = 18},
+			guard_mult = 1.5, recoil = 20, reach_m = 1.23, min_startup = 18},
 	&"thug_pipe_2": {damage = 10.0, tier = LIGHT, reaction = FLINCH, hitbox = &"sphere:WeaponTip",
-			guard_mult = 1.5, recoil = 14, reach_m = 1.3, min_startup = 12},
+			guard_mult = 1.5, recoil = 14, reach_m = 1.38, min_startup = 12},
 	&"thug_pipe_3": {damage = 10.0, tier = LIGHT, reaction = STAGGER, hitbox = &"sphere:WeaponTip",
-			guard_mult = 1.5, recoil = 14, reach_m = 1.3, min_startup = 14},
+			guard_mult = 1.5, recoil = 14, reach_m = 1.43, min_startup = 14},
 }
 
 ## The pipe combo, and (after the pipe is dropped) the Punk's two attacks, by move id.
