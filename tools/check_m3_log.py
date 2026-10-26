@@ -7,9 +7,12 @@ Reads the log `tools/capture_bot.sh` writes beside a recording (or the output of
 `godot --path . res://tests/bot/crowd_bot.tscn -- --act=...` run) and checks:
 
   1. every `WARN-CHECK` line says `ok` (the warning oracle's verdict on each wind-up: the HUD's
-     corners against the rule of SPEC section 8). A wind-up that starts after its act's
-     `READABILITY` block (the bot runs on a moment before the next act) is nobody's to judge: the
-     probe is not measuring, and its line is skipped;
+     corners against the rule of SPEC section 8). A wind-up that starts outside its act (after the
+     act's `READABILITY` block: the bot runs on a moment before the next act; or before the next
+     act's header: the line may come out after it) is nobody's to judge: the probe is not
+     measuring, and its line is skipped. A line is outside when it follows a `READABILITY` block
+     with no header since, or when the frame it names is earlier than the frame of the header of
+     the act it is printed under;
   2. every wind-up from beyond the view's 55 degrees and within range was warned within 1 frame:
      each `WARN-CHECK` line whose corner is left, right or both has `lat=0` or `lat=1`, and the
      HUD's own `W+` line for that side (both sides for "both") is in the log at the wind-up's
@@ -81,7 +84,7 @@ def read_lines(path):
 
 def lived_one_tick(windups, windup_ends, frame):
     """True when the wind-up that began at `frame` was over within one frame (its WU- line)."""
-    for _, start, who, _ in windups:
+    for _, start, who, _, _ in windups:
         if start == frame:
             return any(0 <= end - start <= 1 for end in windup_ends.get(who, []))
     return False
@@ -112,6 +115,7 @@ def check_log(path, cap):
     checks = []
     outside = 0  # WARN-CHECK lines of wind-ups that began while no act was being measured
     measuring = True
+    act_frame = 0  # the frame of the current act's header: nothing that began earlier is its own
     widget_on = defaultdict(set)  # frame -> sides lit by a W+ line at that frame
     windups = []
     windup_ends = defaultdict(list)  # attacker -> frames of its WU- lines
@@ -127,6 +131,7 @@ def check_log(path, cap):
                     problems.append(over)
                 token_frame = None
             act = header.group("act")
+            act_frame = int(header.group("frame"))
             holders = set()
             measuring = True
             continue
@@ -135,7 +140,10 @@ def check_log(path, cap):
             continue
         match = WARN_CHECK.match(line)
         if match:
-            if measuring:
+            # A wind-up that began in the gap before this act (its frame is earlier than the
+            # header's) is cut short by the room's reset and may be judged after the header: it
+            # is not this act's, whatever the oracle says of it.
+            if measuring and int(match.group("frame")) >= act_frame:
                 checks.append((number, match))
             else:
                 outside += 1
@@ -146,7 +154,9 @@ def check_log(path, cap):
             continue
         match = WINDUP_START.match(line)
         if match:
-            windups.append((number, int(match.group("frame")), match.group("who"), match.group("move")))
+            frame = int(match.group("frame"))
+            # The last item: the wind-up began in a measured act (not in a gap between two).
+            windups.append((number, frame, match.group("who"), match.group("move"), measuring and frame >= act_frame))
             continue
         match = WINDUP_END.match(line)
         if match:
@@ -212,12 +222,12 @@ def check_log(path, cap):
             problems.append("%s: dropped %s frames after the rule ended it (over 1)" % (where, end))
 
     if outside:
-        notes.append("%d WARN-CHECK line(s) of wind-ups that began after their act's READABILITY block were skipped" % outside)
+        notes.append("%d WARN-CHECK line(s) of wind-ups that began outside their act (after its READABILITY block, or before its header) were skipped" % outside)
 
     # A wind-up the oracle never judged (not a failure by itself: the oracle skips one that lived
     # a single tick, and an act's last wind-up can be cut by the act's end).
     judged = {int(match.group("frame")) for _, match in checks}
-    unjudged = [w for w in windups if w[1] not in judged]
+    unjudged = [w for w in windups if w[1] not in judged and w[4]]
     if unjudged:
         notes.append("%d of %d wind-ups have no WARN-CHECK line (the first: %s f%d)"
                      % (len(unjudged), len(windups), unjudged[0][2], unjudged[0][1]))

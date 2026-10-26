@@ -133,13 +133,17 @@ func _exit_tree() -> void:
 	detach()
 
 
-## Begin a fresh act: judge the previous one's leftovers, then clear the counters.
+## Begin a fresh act: judge the previous one's leftovers, then clear the counters. Nothing carries
+## over from the gap before it: a wind-up that began while no act was open is nobody's to judge
+## (_on_windup_started() ignores it), and the model is emptied here as well.
 func start_act(title: String) -> void:
 	if _open:
 		end_act()
 	_open = true
 	act = title
 	lines = PackedStringArray()
+	_live.clear()
+	_settling.clear()
 	_finished.clear()
 	_false_positives = 0
 	_heavy_mismatch_frames = 0
@@ -346,7 +350,10 @@ func tick() -> void:
 
 
 func _on_windup_started(attacker: Node3D, move: MoveData) -> void:
-	if attacker == null or move == null:
+	# Between acts the bot runs on for a moment and then resets the room: a wind-up that starts in
+	# that gap is cut off by the reset, and would be judged in the next act's first tick, under
+	# that act's title and after its header, as a corner that "never lit".
+	if not _open or attacker == null or move == null:
 		return
 	var team: Variant = attacker.get(&"team")
 	if team != null and int(team) == 0:
