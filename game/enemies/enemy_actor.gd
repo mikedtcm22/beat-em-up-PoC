@@ -9,16 +9,19 @@ extends CombatActor
 ## wind-up (start_move(..., windup = true): the rear warning and the interrupt rules hang off it).
 ##
 ## The life of an enemy: ENTER (walk in from its spawn point) -> APPROACH (path to its posture
-## slot) -> POSTURE (circle, strafe, pause, now and then taunt on the ring around the player,
-## facing him) -> with a token ENGAGE (stop strafing and square up for commit_pause_frames, then
+## slot: round the ring, never across the player, and backing out when it is inside the ring's near
+## edge, _orbit_toward()) -> POSTURE (circle, strafe, pause, now and then taunt on the ring around
+## the player, facing him) -> with a token ENGAGE (stop strafing and square up for commit_pause_frames, then
 ## step in to its attack's reach minus engage_margin_m) -> WINDUP (the attack's startup, scaled
 ## by windup_mult and floored: it turns toward the player for the first windup_track_share, then
 ## the facing is locked, so a late sidestep makes it miss) -> ATTACK (a chain link follows with no
 ## wind-up of its own, only if the last hit landed or was blocked) -> RECOVER (the token goes
 ## back and the attack cooldown starts, it holds recover_hold_s, then backs off to its slot) ->
 ## POSTURE. REACT is any reaction state CombatActor put it in (the token is released at once);
-## KO is dead. A light hit interrupts a grunt's wind-up (CombatActor's default); armor
-## (armor_light and the flags below, used by the heavies) keeps it going.
+## KO is dead. After a reaction an enemy goes back to APPROACH, except one that wakes in place
+## (_wakes_in_place(): the boss), which postures where it stands, served first by the director. A
+## light hit interrupts a grunt's wind-up (CombatActor's default); armor (armor_light and the flags
+## below, used by the heavies) keeps it going.
 ##
 ## Moving: a NavigationAgent3D with avoidance, driven the "latched" way (docs/milestones/
 ## M3-codemap/godot-navigation.md): every sim tick the desired velocity goes to the agent and
@@ -111,6 +114,10 @@ var _strafe_dir: float = 1.0
 ## nearer by enemy_slot_reach_m (a stall asks for another slot).
 var _progress_best: float = INF
 var _progress_frames: int = 0
+## Where the body was when it last moved _wedge_reach() and the frames since (a body wedged against
+## the crates or the car does not move however the target flips or the director reslots).
+var _wedge_anchor: Vector3 = Vector3.INF
+var _wedge_frames: int = 0
 ## A stall's detour spot and the frames it still holds, which way round the player the last one
 ## went (+1 or -1, 0 before the first) and the tick of the last stall (a stall again soon after
 ## goes the other way).
@@ -310,6 +317,7 @@ func enter_from(_spawn_pos: Vector3, lane_point: Vector3) -> void:
 	ai_state = AiState.ENTER
 	_progress_best = INF
 	_progress_frames = 0
+	_wedge_anchor = Vector3.INF
 
 
 ## `move` with its startup scaled by Tuning.data.windup_mult and floored at
@@ -459,6 +467,7 @@ func _tick_reaction() -> void:
 	ai_state = AiState.KO if state == CombatTypes.ActorState.KO else AiState.REACT
 	_taunt_frames = 0
 	_resume_frames = 0
+	_wedge_anchor = Vector3.INF
 	if has_token:
 		_release_token()
 	_report_velocity()
@@ -535,6 +544,7 @@ func _enter_approach() -> void:
 	_taunt_frames = 0
 	_resume_frames = 0
 	_orbit_active = false
+	_wedge_anchor = Vector3.INF
 
 
 func _tick_approach(player: CombatActor) -> void:
@@ -939,6 +949,7 @@ func _enter_recover() -> void:
 	_progress_best = INF
 	_progress_frames = 0
 	_orbit_active = false
+	_wedge_anchor = Vector3.INF
 	_reset_avoidance()
 
 
@@ -1175,18 +1186,32 @@ func _face(dir: Vector3, rate: float) -> void:
 	rotation.y = wrapf(rotation.y + clampf(diff, -step, step), -PI, PI)
 
 
-## True when it has not got nearer to `target` by enemy_slot_reach_m for enemy_stuck_s: a stall.
+## True when it has not got nearer to `target` by enemy_slot_reach_m for enemy_stuck_s, or has not
+## moved enemy_slot_reach_m at all for that long: a stall. The second is the wedge: a body pinned
+## between the player and a crate keeps getting new targets (the way round the ring, a reslot), and
+## the first rule starts over at every one.
 func _stalled(target: Vector3) -> bool:
+	var tuning := Tuning.data
+	if not _wedge_anchor.is_finite() or _flat_dist(global_position, _wedge_anchor) >= tuning.enemy_slot_reach_m:
+		_wedge_anchor = global_position
+		_wedge_frames = 0
+	else:
+		_wedge_frames += 1
+	var wedged := _wedge_frames >= _frames(tuning.enemy_stuck_s)
 	var dist := _flat_dist(global_position, target)
-	if dist < _progress_best - Tuning.data.enemy_slot_reach_m:
+	if dist < _progress_best - tuning.enemy_slot_reach_m:
 		_progress_best = dist
 		_progress_frames = 0
-		return false
-	_progress_frames += 1
-	if _progress_frames < _frames(Tuning.data.enemy_stuck_s):
+		if not wedged:
+			return false
+	else:
+		_progress_frames += 1
+	if not wedged and _progress_frames < _frames(tuning.enemy_stuck_s):
 		return false
 	_progress_best = dist
 	_progress_frames = 0
+	_wedge_anchor = Vector3.INF
+	_wedge_frames = 0
 	return true
 
 

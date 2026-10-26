@@ -480,6 +480,35 @@ func test_a_repeated_stall_goes_round_the_player_the_other_way() -> void:
 		assert_eq(sides[i], -sides[i - 1], "stall %d went the other way from the last" % i)
 
 
+func test_a_body_that_does_not_move_is_stalled_whatever_its_target_and_the_director_do() -> void:
+	# A Bruiser wedged between the crates and the player for 3 s never stalled: the way round the ring
+	# and the reslots (set_slot() starts the count over) kept changing its target, so "no nearer to the
+	# target" never ran out. A body that has not moved a slot reach in enemy_stuck_s is stalled.
+	_make_player()
+	var punk := _punk(Vector3(0.0, 0.0, -3.0))
+	await _ticks(2)
+	Tuning.data.ai_frozen = true
+	var frames := EnemyActor._frames(Tuning.data.enemy_stuck_s)
+	var stalled_at := -1
+	for i in frames + 10:
+		var target := Vector3(4.0 if i % 2 == 0 else 0.5, 0.0, -3.0)
+		if i % 20 == 19:
+			punk.set_slot(Vector3(0.0, 0.0, 3.0 + float(i)))
+		if punk._stalled(target):
+			stalled_at = i
+			break
+	assert_between(stalled_at, frames - 2, frames + 1, "it stalls after enemy_stuck_s (%d frames), not never (%d)" % [frames, stalled_at])
+	# And a body that is walking is not wedged: it moves a slot reach every few ticks toward its target.
+	punk._wedge_anchor = Vector3.INF
+	punk._progress_best = INF
+	var stalls := 0
+	for i in frames * 3:
+		punk.global_position.x += 0.05
+		if punk._stalled(Vector3(100.0, 0.0, punk.global_position.z)):
+			stalls += 1
+	assert_eq(stalls, 0, "a body that is walking toward its target never stalls")
+
+
 func test_a_detour_never_takes_the_side_with_no_navmesh_under_it() -> void:
 	# A bollard on one side of the player: the detour spot there is off the mesh, so whatever the
 	# enemy's own coin says the detour goes the other way.

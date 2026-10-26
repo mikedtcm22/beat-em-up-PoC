@@ -622,9 +622,9 @@ extends Resource
 ## posture_orbit_lead_deg, always facing the player, instead of crossing his front on the chord.
 @export_range(10.0, 90.0, 5.0) var posture_orbit_lead_deg: float = 40.0
 @export_range(10.0, 180.0, 5.0) var posture_orbit_gap_deg: float = 60.0
-## An enemy that gets up (or is let go, or is shoved) inside the ring and wakes in place (the boss)
-## stays on the ring where it stands, eligible for a token, this long (s) before the slot it left
-## calls it back.
+## An enemy that wakes in place (the boss: free again after a reaction within the ring's far edge) takes
+## up POSTURE where it stands, eligible for a token and served first, and the slot it left does not call
+## it back for this long (s).
 @export_range(0.0, 10.0, 0.1) var posture_resume_s: float = 3.0
 
 @export_subgroup("Navigation")
