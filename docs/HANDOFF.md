@@ -4,6 +4,34 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-25 21:30 CDT: P1-int merged (866/866); the slice gate's review running
+5-hour 71% (resets 21:50 CDT), weekly 32% (resets Mon 2026-10-26 05:00 CDT). P1-int (one Sonnet builder, 760k tokens, 92 minutes) cost about 9 window points.
+- **P1-int merged** (`4470830`, with `356fccf` for CLAUDE.md's main scene and cadence). **866/866 tests pass in 99 s with no SCRIPT ERROR or ERROR.** The preset has 424 values.
+  - The slice plays end to end in the crowd room, with the probe, autopilot and oracle wired into ten crowd-bot acts (`tests/bot/acts/slice_acts.gd`).
+  - **The hard metrics R1, R2, R3, R10 and R11 pass in every act**, and the headless run of all acts has 192 `WARN-CHECK ok` and 0 FAIL.
+  - **Flinch-lock fixed:** no wind-up starts while the player is in hitstun or stagger, or within `director_hit_grace_s` (0.5) of an unblocked hit. The longest chain of hits went from 4.8 s to 1.15 s, and a passive player's KO from 11 s to 12-15 s.
+  - `engage_margin_m` 0.05.
+  - The exit "resources still in use" was the audio mixer; the bot now stops voices before quitting.
+  - **Soft misses:** R8 (lens coverage) p95 is 52-58% in the six-Punk acts, against at most 50%; the step-in jab is the lever left untried. R9 in the waves act is a sample of 1.
+  - All measurements are in `docs/milestones/M3-calls/P1-int.md`. Its sheets (local) are in `.worktrees/m3-p1-int/captures/p1-int/`.
+- **The lead's look** (`fight/sheets/overview_3_13.png`, `warn/sheets/corners.png`, `observed/sheets/turn360.png`):
+  - the corner bursts sit inside their corners, left, right and both;
+  - Punks spread around on the ring;
+  - at strike range a Punk fills much of the lens, its head sometimes cut by the top edge.
+- **Running since 21:30 CDT:** workflow `wf_10d57668-722`, `docs/reviews/M3/workflow-review.js` with `args-review-slice.json` (round "slice", base `356fccf`).
+  - It runs three Opus reviewers, one per lens (warn, crowd, code), in `.worktrees/m3-review-slice-<lens>`, then three Sonnet skeptics per finding, a partition and Sonnet fixers in `.worktrees/m3-fix-slice-<pkg>` on branches `m3/fix-slice-<pkg>`.
+  - **If cut off:** within this session, resume with `resumeFromRunId: "wf_10d57668-722"`.
+  - In a new session:
+    - reviewers that finished saved nothing to the repo, so rerun the same args;
+    - if `m3/fix-slice-*` branches exist, pass the partition (from the journal) as `packages`;
+    - the fixers reuse `wip` branches.
+- **Then:**
+  1. Merge the fix branches, regenerate, run the tests and push.
+  2. Save the review records as `docs/reviews/M3/slice-*.json`.
+  3. Write `docs/milestones/M3-slice-gate.md` (evidence, verdicts, the feel defaults locked).
+  4. Fold the calls into `M3-judgement-calls.md`.
+  5. Phase 2 (`args-P2.json`: P2-grab, P2-kicker, P2-thug).
+
 ### 2026-10-25 20:00 CDT: phase 1 merged (858/858); P1-int running
 5-hour 61% (resets 21:50 CDT), weekly 31% (resets Mon 2026-10-26 05:00 CDT). Phase 1's five Sonnet builders (2.6M tokens, 63 minutes) cost 21 window points, about 4 each.
 - **Merged into `m3/enemy-ai`,** in order, with no conflicts: P1-ai (EnemyActor and the Street Punk), P1-director (tokens, blind-spot priority, spread, `may_start_windup`, `report_stalled`), P1-room (the crowd room, navmesh, waves, F4 spawns, the crowd bot), P1-hud (the rear warning, the F3 AI overlay, the boss bar hookup, wind-up voices) and P1-instruments (the readability probe R1-R15, autopilot and warning oracle).
