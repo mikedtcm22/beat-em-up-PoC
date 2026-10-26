@@ -704,8 +704,8 @@ extends Resource
 ## pinned from the holder's origin (more for a holder wider than he is), and the most the held
 ## view tips up (degrees) toward the holder's eyes.
 @export_range(1, 60, 1) var grabbed_turn_frames: int = 8
-@export_range(0.3, 2.0, 0.05) var grabbed_pin_distance_m: float = 0.75
-@export_range(0.0, 45.0, 1.0) var grabbed_view_pitch_deg: float = 25.0
+@export_range(0.3, 2.0, 0.05) var grabbed_pin_distance_m: float = 0.9
+@export_range(0.0, 45.0, 1.0) var grabbed_view_pitch_deg: float = 30.0
 ## Seconds the held player takes to be lifted off the floor (the boss's slam wind-up).
 @export_range(0.0, 1.0, 0.05) var grabbed_lift_s: float = 0.4
 ## An enemy's grab connects within this range (m, at a 1.8 m rig: a taller grabber reaches

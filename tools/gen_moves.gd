@@ -315,8 +315,11 @@ func _thug_moves() -> void:
 ## tests/test_enemy_moves_grab.gd measures the pose and holds both to the tunable.
 const BRUISER_GRAB_REACH_M := 1.15
 const BOSS_GRAB_REACH_M := 1.3
-## The follow-ups strike a victim pinned Tuning.grabbed_pin_distance_m (0.75 m) from the holder.
-const HOLD_FOLLOW_UP_REACH_M := 0.75
+## The follow-ups strike a victim pinned Tuning.grabbed_pin_distance_m (0.9 m) from the holder, plus
+## the holder's radius over the player's (PlayerCharacter._pin_spot()): 1.0 m for the Bruiser, 1.05 m
+## for the boss.
+const HEADBUTT_REACH_M := 1.0
+const SLAM_REACH_M := 1.05
 ## The headbutt's knockdown (a head-first shove, the victim lifted a little) and the slam's throw
 ## (radial frame: z along the holder's push, y up): the player's own throw is (0, 5, 6.5).
 const HEADBUTT_KNOCKBACK := Vector3(0.0, 2.0, 4.0)
@@ -337,12 +340,12 @@ func _grab_moves() -> void:
 	_enemy(grab, BRUISER_GRAB_REACH_M, 0, true)
 	var headbutt := _add(&"bruiser_headbutt", "Headbutt", Vector3i(60, 3, 24), 15.0, HEAVY, KNOCKDOWN,
 			HEADBUTT_KNOCKBACK, [])
-	_enemy(headbutt, HOLD_FOLLOW_UP_REACH_M, 0, true)
+	_enemy(headbutt, HEADBUTT_REACH_M, 0, true)
 	var boss_grab := _add(&"boss_grab", "Boss Grab", Vector3i(32, 6, 24), 0.0, LIGHT,
 			CombatTypes.Reaction.NONE, Vector3.ZERO, [])
 	_enemy(boss_grab, BOSS_GRAB_REACH_M, 0, true)
 	var slam := _add(&"boss_slam", "Slam", Vector3i(54, 4, 30), 25.0, HEAVY, THROWN, SLAM_KNOCKBACK, [])
-	_enemy(slam, HOLD_FOLLOW_UP_REACH_M, 0, true)
+	_enemy(slam, SLAM_REACH_M, 0, true)
 
 
 ## The Bruiser: bruiser_smash (P3-bruiser).

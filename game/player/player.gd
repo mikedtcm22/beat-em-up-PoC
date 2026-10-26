@@ -103,6 +103,8 @@ var _action_lock: int = 0
 ## while GRABBED, back to 0 after the release; eased by get_grabbed_view_weight()).
 var _mash: float = 0.0
 var _grabbed_view: float = 0.0
+## The pitch (degrees up) the grabbed view tips to, the last toward the holder's eyes (_tick_hold_view()).
+var _grabbed_pitch: float = 0.0
 
 
 func _ready() -> void:
@@ -262,12 +264,19 @@ func get_grabbed_view_weight() -> float:
 
 ## Degrees the grabbed view tips up at full weight (positive looks up): toward the holder's eyes,
 ## at most Tuning.grabbed_view_pitch_deg, so a tall grabber's face stays in view over the
-## player's throat-height lens. 0 with nobody holding him.
+## player's throat-height lens. Kept while the weight eases out after the release (the holder is
+## gone by then), so the view settles back instead of dropping; 0 once it has.
 func get_grabbed_view_pitch_deg() -> float:
-	if not is_instance_valid(holder) or holder.rig == null or Tuning.data.grabbed_view_pitch_deg <= 0.0:
-		return 0.0
+	return _grabbed_pitch
+
+
+## The pitch (degrees) that looks at the holder's eyes, within Tuning.grabbed_view_pitch_deg.
+func _pitch_toward_holder() -> float:
+	if not is_instance_valid(holder) or holder.rig == null:
+		return _grabbed_pitch
 	var eyes := holder.rig.get_point_position(&"EyePoint")
-	var lens := get_eye_transform().origin
+	# The lens sits Tuning.cam_height_offset_m (negative: lower) from the eye, the throat.
+	var lens := get_eye_transform().origin + Vector3.UP * Tuning.data.cam_height_offset_m
 	var flat := Vector2(eyes.x - lens.x, eyes.z - lens.z).length()
 	var up := rad_to_deg(atan2(eyes.y - lens.y, maxf(flat, 0.05)))
 	return clampf(up, 0.0, Tuning.data.grabbed_view_pitch_deg)
@@ -348,6 +357,7 @@ func reset_state() -> void:
 	_hold_from = Vector2.ZERO
 	_mash = 0.0
 	_grabbed_view = 0.0
+	_grabbed_pitch = 0.0
 
 
 # --- Control ------------------------------------------------------------------------
@@ -608,7 +618,9 @@ func _control_holding() -> void:
 func _control_grabbed() -> void:
 	if not _holder_holds():
 		parser.clear_buffer()
+		var lifted := _held_anim() == &"held_lift"
 		release_from_grab(Vector3.ZERO, false)
+		_settle_after_lift(lifted)
 		return
 	_match_lift_pose()
 	for input: StringName in [CombatTypes.IN_PUNCH, CombatTypes.IN_KICK]:
@@ -618,7 +630,17 @@ func _control_grabbed() -> void:
 	if Tuning.data.grab_break_decay_per_s > 0.0:
 		_mash = maxf(_mash - Tuning.data.grab_break_decay_per_s / Engine.physics_ticks_per_second, 0.0)
 	if _mash >= float(Tuning.data.grab_break_presses):
+		var lifted := _held_anim() == &"held_lift"
 		break_free()
+		_settle_after_lift(lifted)
+
+
+## Let down from the slam's lift (released while hanging in held_lift): he drops to his feet over
+## Tuning.grabbed_lift_s, the time he took to be lifted, instead of over the ordinary release's
+## blend, so the lens falls a few centimetres a tick, not a pop.
+func _settle_after_lift(was_lifted: bool) -> void:
+	if was_lifted and state != CombatTypes.ActorState.GRABBED and rig.current_anim() == &"idle":
+		rig.play(&"idle", Tuning.data.grabbed_lift_s)
 
 
 ## The holder is alive, there and still holding him (CombatActor.is_holding()).
@@ -1138,6 +1160,13 @@ func _start_grab(victim: CombatActor) -> void:
 ## (_keeps_hold_bend()). From wherever they are, so a hold that ends while the view is
 ## still easing in turns back without a jump.
 func _tick_hold_view() -> void:
+	if state == CombatTypes.ActorState.GRABBED:
+		# Toward the holder's eyes, damped over the time the view eases out in (its head moves fast
+		# in the strike): the view follows it, never snaps to it.
+		var weight := CameraMath.damp_weight(1.0 / Engine.physics_ticks_per_second, Tuning.data.grab_view_out_s)
+		_grabbed_pitch = minf(lerpf(_grabbed_pitch, _pitch_toward_holder(), weight), Tuning.data.grabbed_view_pitch_deg)
+	elif _grabbed_view <= 0.0:
+		_grabbed_pitch = 0.0
 	_grabbed_view = _ramp(_grabbed_view, state == CombatTypes.ActorState.GRABBED)
 	var holding := _holding_valid()
 	_hold_view = _ramp(_hold_view, holding)

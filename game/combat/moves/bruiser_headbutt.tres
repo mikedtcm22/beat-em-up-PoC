@@ -17,4 +17,4 @@ tier = 1
 unblockable = true
 blocked_recoil_frames = 0
 magnetism = false
-reach_m = 0.75
+reach_m = 1.0

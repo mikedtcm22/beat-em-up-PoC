@@ -19,7 +19,7 @@ extends RefCounted
 ## its strike frame, or whiffs) and the follow-up, whose startup runs while the player is held (the
 ## mash window) and whose hit is applied by code at its strike frame. So all four have no hitbox, are
 ## unblockable and never recoil. The follow-ups' reach_m is the pin distance (Tuning.
-## grabbed_pin_distance_m); the grabs' is where they connect (Tuning.enemy_grab_range_m scaled by
+## grabbed_pin_distance_m plus the holder's extra radius); the grabs' is where they connect (Tuning.enemy_grab_range_m scaled by
 ## the holder's height over 1.8 m).
 ##
 ## The 15% rule: the Bruiser's chain is 0 + 15 = 15, a knockdown at the limit. The boss's is exempt
@@ -35,11 +35,11 @@ const MOVES := {
 	&"bruiser_grab": {damage = 0.0, tier = LIGHT, reaction = NONE, hitbox = &"none", unblockable = true,
 			recoil = 0, reach_m = 1.15, min_startup = 30},
 	&"bruiser_headbutt": {damage = 15.0, tier = HEAVY, reaction = KNOCKDOWN, hitbox = &"none", unblockable = true,
-			recoil = 0, reach_m = 0.75, min_startup = 30},
+			recoil = 0, reach_m = 1.0, min_startup = 30},
 	&"boss_grab": {damage = 0.0, tier = LIGHT, reaction = NONE, hitbox = &"none", unblockable = true,
 			recoil = 0, reach_m = 1.3, min_startup = 30},
 	&"boss_slam": {damage = 25.0, tier = HEAVY, reaction = THROWN, hitbox = &"none", unblockable = true,
-			recoil = 0, reach_m = 0.75, min_startup = 30},
+			recoil = 0, reach_m = 1.05, min_startup = 30},
 }
 
 const ATTACKS := [
