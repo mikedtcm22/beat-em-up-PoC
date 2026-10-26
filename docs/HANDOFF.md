@@ -4,6 +4,35 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-25 20:00 CDT: phase 1 merged (858/858); P1-int running
+5-hour 61% (resets 21:50 CDT), weekly 31% (resets Mon 2026-10-26 05:00 CDT). Phase 1's five Sonnet builders (2.6M tokens, 63 minutes) cost 21 window points, about 4 each.
+- **Merged into `m3/enemy-ai`,** in order, with no conflicts: P1-ai (EnemyActor and the Street Punk), P1-director (tokens, blind-spot priority, spread, `may_start_windup`, `report_stalled`), P1-room (the crowd room, navmesh, waves, F4 spawns, the crowd bot), P1-hud (the rear warning, the F3 AI overlay, the boss bar hookup, wind-up voices) and P1-instruments (the readability probe R1-R15, autopilot and warning oracle).
+- **The lead's fixes** (`17d3fb9`):
+  - three of P1-ai's tests now use the stub director, since the real one grants tokens;
+  - the 15% test reports how many chains it checked;
+  - the contract says RearWarning's `cleared(side)` (a Control can't redefine `hidden`);
+  - **the crowd room is the main scene**;
+  - `capture_bot.sh` caps a recording at `CAPTURE_MAX_FRAMES` (54000);
+  - the preset was regenerated (423 values).
+
+  **858/858 tests pass in 93 s with no SCRIPT ERROR or ERROR.**
+- **The builders' notes for the gate:**
+  - **Lens coverage:** at strike range (about 0.95 m) the Punk covers about half the lens.
+  - **Flinch-lock:** the director paces wind-up starts (0.35 s) but grants three tokens at once.
+  - **Warning time:** a 0.4 s wind-up behind the player is short.
+  - **Resource leak at exit:** bot runs with real enemies end with "resources still in use at exit".
+  - **Autopilot:** it was tuned on stubs.
+  - **Player avoidance:** P1-room cut `player_avoid_radius_m` to 0.3; at 0.5, Punks hovered and never attacked.
+  - **Rear-warning defaults:** P1-hud retuned them (base 160 px, inset 96 px, heavy ×1.3) so every burst stays inside its corner.
+- **Running since 20:00 CDT:** workflow `wf_a5124e9b-25f`, `workflow-build.js` with `docs/reviews/M3/args-P1-int.json` (P1-int, `.worktrees/m3-p1-int`, branch `m3/p1-int`). It is settling the five items above and recording every slice act with the probe.
+  - **If cut off:** rerun the same args. Within this session, use `resumeFromRunId: "wf_a5124e9b-25f"`.
+  - **Then:**
+    1. Merge P1-int, regenerate, run the tests and push.
+    2. The lead looks at the slice sheets and the `readability.json` files.
+    3. **The slice gate:** `docs/reviews/M3/workflow-review.js` with round "slice", `base` the merge commit, lenses L1 (warning), L2 (crowd readability) and L4 (code and layers), with briefs written from Part B §B4. Save the args as `args-review-slice.json`.
+    4. Merge the fixes, then write `docs/milestones/M3-slice-gate.md` (evidence, verdicts, the feel defaults locked).
+    5. Phase 2.
+
 ### 2026-10-25 18:55 CDT: S0 merged (587/587); phase 1 (five builders) running
 5-hour 40% (resets 21:50 CDT), weekly 27% (resets Mon 2026-10-26 05:00 CDT). S0, one Sonnet builder (690k tokens, 31 minutes), cost about 5 window points.
 - **S0 merged** into `m3/enemy-ai` at `4a5341d`. **587/587 tests pass with no SCRIPT ERROR or ERROR.** The preset regenerated unchanged at 419 values.
