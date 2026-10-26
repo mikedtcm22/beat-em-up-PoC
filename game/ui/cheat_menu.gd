@@ -1,11 +1,12 @@
 class_name CheatMenu
 extends PanelContainer
-## The F4 cheat menu (Spec §11): god mode, one-hit KOs, a training dummy spawned at the
-## crosshair, time scale 0.25x or 1x, and reset dummies (plus removing the spawned ones).
-## "Skip to arena N" waits for the arenas (Milestone 5) and shows disabled. TuningOverlay
-## hosts it. A debug tool: unlike the HUD it writes game state (Tuning's "Debug" group,
-## TimeController.debug_scale, the dummies). Each action is a public method, so tests and
-## bots can use them without the buttons.
+## The F4 cheat menu (Spec §11): god mode, one-hit KOs, any enemy of the EnemyCatalog (the
+## training dummy, the Punk, the Kicker...) spawned at the crosshair, time scale 0.25x or 1x, and
+## reset dummies (plus removing the spawned ones or every enemy), waves on or off (in a room with
+## an EncounterSpawner) and a frozen AI. "Skip to arena N" waits for the arenas (Milestone 5) and
+## shows disabled. TuningOverlay hosts it. A debug tool: unlike the HUD it writes game state
+## (Tuning's "Debug" group, TimeController.debug_scale, the enemies, the waves). Each action is a
+## public method, so tests and bots can use them without the buttons.
 
 const DUMMY_SCENE := "res://game/enemies/dummy/training_dummy.tscn"
 
@@ -40,20 +41,28 @@ const DUMMY_SCENE := "res://game/enemies/dummy/training_dummy.tscn"
 @export var font_size: int = 16
 @export var title_size: int = 22
 
-## The node spawned dummies are added to (the test room). Defaults to the current scene.
+## The node spawned enemies are added to (the room). Defaults to the current scene.
 var world: Node3D
 var god_mode_toggle: CheckButton
 var one_hit_toggle: CheckButton
 var time_scale_buttons: Array[Button] = []
 var skip_arena_button: Button
-## Dummies this menu spawned, oldest first.
-var spawned: Array[TrainingDummy] = []
+## The enemy picked in the list (EnemyCatalog.available(): item metadata = the id) and the buttons
+## and toggles of the enemy cheats.
+var enemy_option: OptionButton
+var waves_button: Button
+var freeze_toggle: CheckButton
+## Enemies (dummies and AI enemies) this menu spawned, oldest first.
+var spawned: Array[CombatActor] = []
+## Tests: enemy id -> the PackedScene to spawn instead of the catalog's, in a room with no
+## EncounterSpawner (a room with one spawns through it, and its own scene_override).
+var scene_override: Dictionary = {}
 
 ## Instance id -> Vector4(post x, y, z, yaw) of each dummy seen (record_posts()).
 var _posts: Dictionary[int, Vector4] = {}
 var _status: Label
-## The training dummy's Vector2(radius, height) (_dummy_body()).
-var _body_size: Vector2 = Vector2.ZERO
+## AI enemies spawned by this menu without a spawner: archetype label -> count (names).
+var _serials: Dictionary = {}
 
 
 func _ready() -> void:
@@ -80,6 +89,14 @@ func refresh() -> void:
 			toggle.add_theme_color_override(slot, color)
 	for i in time_scale_buttons.size():
 		time_scale_buttons[i].set_pressed_no_signal(is_equal_approx(TimeController.debug_scale, time_scales[i]))
+	if freeze_toggle:
+		freeze_toggle.set_pressed_no_signal(Tuning.data.ai_frozen)
+		freeze_toggle.text = "Freeze AI (enemies stand still): %s" % ("ON" if Tuning.data.ai_frozen else "off")
+	if waves_button:
+		var has_spawner := _spawner() != null
+		waves_button.disabled = not has_spawner
+		waves_button.text = "Waves: %s (click to toggle)" % ("ON" if Tuning.data.waves_enabled else "off") if has_spawner \
+				else "Waves: this room has none"
 
 
 ## Gamepad focus on the first cheat.
@@ -123,8 +140,9 @@ func record_posts() -> void:
 ## the dummy's size would overlap the world there, another actor stands within
 ## spawn_actor_clearance_m, or the player can't see the spot, the nearest clear spot within
 ## spawn_search_radius_m is used (beside the spot before toward the player, before behind
-## it). The dummy faces the player.
-func spawn_point() -> Dictionary:
+## it). The enemy faces the player. `id` is the EnemyCatalog id of what will spawn (its body's
+## size decides what "clear" means); the training dummy by default.
+func spawn_point(id: StringName = &"dummy") -> Dictionary:
 	var player := get_tree().get_first_node_in_group(&"player") as PlayerCharacter
 	var camera := get_tree().root.get_camera_3d()
 	var origin: Vector3
@@ -140,6 +158,7 @@ func spawn_point() -> Dictionary:
 	var space := _space()
 	if space == null:
 		return {}
+	var body_size := EnemyCatalog.body_size(id)
 	var world_mask := CombatTypes.bit(CombatTypes.LAYER_WORLD)
 	var body_mask := CombatTypes.bit(CombatTypes.LAYER_PLAYER_BODY) | CombatTypes.bit(CombatTypes.LAYER_ENEMY_BODY) \
 			| CombatTypes.bit(CombatTypes.LAYER_DOWNED_BODY)
@@ -159,7 +178,7 @@ func spawn_point() -> Dictionary:
 			var side := flat.cross(Vector3.UP).normalized()
 			spot = _on_floor(space, body.global_position + side * spawn_beside_m, player)
 			var left := _on_floor(space, body.global_position - side * spawn_beside_m, player)
-			if not _spot_clear(space, spot, player) and _spot_clear(space, left, player):
+			if not _spot_clear(space, spot, player, body_size) and _spot_clear(space, left, player, body_size):
 				spot = left
 		elif normal.y < 0.7:  # a wall, not the floor
 			spot = hit.position + _flat(normal, back) * spawn_wall_clearance_m
@@ -174,7 +193,7 @@ func spawn_point() -> Dictionary:
 		var to_player := player.global_position - spot
 		if Vector2(to_player.x, to_player.z).length() > 0.001:
 			back = _flat(to_player, back)
-	var clear := _clear_spot_near(space, spot, back, player)
+	var clear := _clear_spot_near(space, spot, back, player, body_size)
 	if clear.is_empty():
 		return {}
 	spot = clear.position
@@ -185,9 +204,51 @@ func spawn_point() -> Dictionary:
 	return {position = spot, yaw = yaw}
 
 
+## Spawn enemy `id` (an EnemyCatalog id) at the crosshair (spawn_point(id)) and return it, or null.
+## The training dummy is as spawn_dummy() makes it. An AI enemy is named and counted per
+## archetype ("Punk3"), starts in ENTER from where it stands and is added through the room's
+## EncounterSpawner when it has one (else straight to the room).
+func spawn_enemy(id: StringName) -> CombatActor:
+	if id == &"dummy":
+		return spawn_dummy()
+	var point := spawn_point(id)
+	var host := _world()
+	if point.is_empty() or host == null:
+		_say("No room to spawn there.")
+		return null
+	var enemy: EnemyActor
+	var spawner := _spawner()
+	if spawner:
+		enemy = spawner.spawn_enemy(id, point.position, point.yaw)
+	else:
+		var scene := scene_override.get(id) as PackedScene
+		if scene == null:
+			scene = EnemyCatalog.scene(id)
+		if scene:
+			enemy = EncounterSpawner.make_enemy(scene, id, _serials)
+		if enemy:
+			enemy.position = host.to_local(point.position)
+			enemy.rotation.y = float(point.yaw) - host.global_rotation.y
+			host.add_child(enemy)
+			enemy.enter_from(point.position, point.position)
+	if enemy == null:
+		_say("Could not spawn %s." % id)
+		return null
+	spawned.append(enemy)
+	_say("Spawned %s." % enemy.display_name)
+	return enemy
+
+
+## Spawn the enemy picked in the list at the crosshair.
+func spawn_selected() -> CombatActor:
+	if enemy_option == null or enemy_option.selected < 0:
+		return null
+	return spawn_enemy(StringName(enemy_option.get_item_metadata(enemy_option.selected)))
+
+
 ## Spawn a training dummy at the crosshair (spawn_point()). Returns it, or null.
 func spawn_dummy() -> TrainingDummy:
-	var point := spawn_point()
+	var point := spawn_point(&"dummy")
 	var host := _world()
 	if point.is_empty() or host == null or not ResourceLoader.exists(DUMMY_SCENE):
 		_say("No room to spawn a dummy there.")
@@ -222,19 +283,44 @@ func reset_dummies() -> int:
 	return count
 
 
-## Remove the dummies this menu spawned. Returns how many.
+## Remove the enemies this menu spawned (dummies and AI enemies). Returns how many.
 func remove_spawned_dummies() -> int:
 	var count := 0
-	for dummy: TrainingDummy in spawned:
-		if is_instance_valid(dummy):
-			_posts.erase(dummy.get_instance_id())
-			dummy.remove_from_group(&"enemy")
-			dummy.remove_from_group(&"actor")
-			dummy.queue_free()
+	for actor in spawned:
+		if is_instance_valid(actor):
+			_posts.erase(actor.get_instance_id())
+			for group: StringName in [&"enemy", &"ai_enemy", &"actor", &"boss"]:
+				if actor.is_in_group(group):
+					actor.remove_from_group(group)
+			actor.queue_free()
 			count += 1
 	spawned.clear()
-	_say("Removed %d spawned dummies." % count)
+	_say("Removed %d spawned enemies." % count)
 	return count
+
+
+## Remove every enemy in the room, the training dummies and the AI enemies (they leave their
+## groups first, so the same frame no longer finds them). Returns how many.
+func remove_all_enemies() -> int:
+	var count := EncounterSpawner.remove_enemies(get_tree(), false)
+	spawned.clear()
+	_posts.clear()
+	_say("Removed %d enemies." % count)
+	return count
+
+
+## Waves on or off in a room with an EncounterSpawner (the tunable waves_enabled); does
+## nothing without one.
+func set_waves(on: bool) -> void:
+	var spawner := _spawner()
+	if spawner:
+		spawner.set_waves_enabled(on)
+	refresh()
+
+
+## Freeze the AI: enemies stand still and ask for nothing (the Debug tunable ai_frozen).
+func set_ai_frozen(on: bool) -> void:
+	Tuning.set_value(&"ai_frozen", on)
 
 
 # --- Building ---------------------------------------------------------------------------
@@ -291,9 +377,24 @@ func _build() -> void:
 		time_row.add_child(button)
 		time_scale_buttons.append(button)
 
-	box.add_child(_button("Spawn training dummy at crosshair", func() -> void: spawn_dummy()))
+	var spawn_row := HBoxContainer.new()
+	spawn_row.add_theme_constant_override(&"separation", 8)
+	box.add_child(spawn_row)
+	enemy_option = OptionButton.new()
+	enemy_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	for entry: Dictionary in EnemyCatalog.available():
+		enemy_option.add_item(String(entry.label))
+		enemy_option.set_item_metadata(enemy_option.item_count - 1, entry.id)
+	spawn_row.add_child(enemy_option)
+	spawn_row.add_child(_button("Spawn at crosshair", func() -> void: spawn_selected()))
 	box.add_child(_button("Reset dummies (posts, full health)", func() -> void: reset_dummies()))
-	box.add_child(_button("Remove spawned dummies", func() -> void: remove_spawned_dummies()))
+	box.add_child(_button("Remove spawned enemies", func() -> void: remove_spawned_dummies()))
+	box.add_child(_button("Remove all enemies", func() -> void: remove_all_enemies()))
+	waves_button = _button("Waves", func() -> void: set_waves(not Tuning.data.waves_enabled))
+	box.add_child(waves_button)
+	freeze_toggle = CheckButton.new()
+	freeze_toggle.toggled.connect(set_ai_frozen)
+	box.add_child(freeze_toggle)
 
 	var arena_row := HBoxContainer.new()
 	arena_row.add_theme_constant_override(&"separation", 8)
@@ -325,7 +426,7 @@ func _button(text: String, action: Callable) -> Button:
 
 
 func _on_tuning_changed(property: StringName) -> void:
-	if property in [&"", &"god_mode", &"one_hit_ko"]:
+	if property in [&"", &"god_mode", &"one_hit_ko", &"ai_frozen", &"waves_enabled"]:
 		refresh()
 
 
@@ -345,8 +446,9 @@ func _clear_of_actors(spot: Vector3) -> bool:
 ## The first clear spot (_spot_clear()) on the floor around `spot`: the spot itself, then
 ## rings spawn_search_step_m apart out to spawn_search_radius_m, each trying beside the spot
 ## first, then toward `back` (the player), then away. {position} or {} when none is clear.
-func _clear_spot_near(space: PhysicsDirectSpaceState3D, spot: Vector3, back: Vector3, player: Node3D) -> Dictionary:
-	if _spot_clear(space, spot, player):
+func _clear_spot_near(space: PhysicsDirectSpaceState3D, spot: Vector3, back: Vector3, player: Node3D,
+		body: Vector2) -> Dictionary:
+	if _spot_clear(space, spot, player, body):
 		return {position = spot}
 	var side := back.cross(Vector3.UP).normalized()
 	var directions: Array[Vector3] = [
@@ -357,16 +459,16 @@ func _clear_spot_near(space: PhysicsDirectSpaceState3D, spot: Vector3, back: Vec
 	for ring in range(1, rings + 1):
 		for direction: Vector3 in directions:
 			var candidate := _on_floor(space, spot + direction * spawn_search_step_m * ring, player)
-			if _spot_clear(space, candidate, player):
+			if _spot_clear(space, candidate, player, body):
 				return {position = candidate}
 	return {}
 
 
-## A dummy can stand at `spot` (on the floor): spawn_min_distance_m from the player and
-## within spawn_max_rise_m of their floor, no other actor within spawn_actor_clearance_m, a
-## capsule its size overlapping no world geometry, and the player able to see it (no wall
-## between their chests).
-func _spot_clear(space: PhysicsDirectSpaceState3D, spot: Vector3, player: Node3D) -> bool:
+## An enemy with a `body` (Vector2: radius, height) can stand at `spot` (on the floor):
+## spawn_min_distance_m from the player and within spawn_max_rise_m of their floor, no other
+## actor within spawn_actor_clearance_m, a capsule its size overlapping no world geometry, and
+## the player able to see it (no wall between their chests).
+func _spot_clear(space: PhysicsDirectSpaceState3D, spot: Vector3, player: Node3D, body: Vector2) -> bool:
 	if player:
 		var away := spot - player.global_position
 		if absf(away.y) > spawn_max_rise_m:
@@ -376,7 +478,6 @@ func _spot_clear(space: PhysicsDirectSpaceState3D, spot: Vector3, player: Node3D
 			return false
 	if not _clear_of_actors(spot):
 		return false
-	var body := _dummy_body()
 	var capsule := CapsuleShape3D.new()
 	capsule.radius = body.x
 	capsule.height = maxf(body.y - spawn_floor_gap_m, body.x * 2.0)
@@ -406,13 +507,11 @@ func _on_floor(space: PhysicsDirectSpaceState3D, spot: Vector3, player: Node3D) 
 	return spot
 
 
-## The training dummy's body: Vector2(radius, height), read once from its scene.
-func _dummy_body() -> Vector2:
-	if _body_size == Vector2.ZERO:
-		var dummy := (load(DUMMY_SCENE) as PackedScene).instantiate() as CombatActor
-		_body_size = Vector2(dummy.body_radius, dummy.body_height)
-		dummy.free()
-	return _body_size
+## The room's EncounterSpawner, or null (the training room has none).
+func _spawner() -> EncounterSpawner:
+	if not is_inside_tree():
+		return null
+	return get_tree().get_first_node_in_group(EncounterSpawner.GROUP) as EncounterSpawner
 
 
 ## `v` flattened onto the ground plane and normalized; `fallback` when it is (nearly) vertical.
