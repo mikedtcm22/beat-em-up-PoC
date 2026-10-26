@@ -562,7 +562,7 @@ Three plain helpers a bot or a test owns, in `tests/bot/` (test tooling: nothing
 | Row | Sampled |
 | --- | --- |
 | R1 `max_concurrent_attackers` | per frame: enemies (group `attacker_group`, default `"ai_enemy"`) in WINDUP, ATTACK or holding the player; frames over `attacker_cap()` counted too |
-| R2 `min_windup_start_gap_frames` | gap between consecutive wind-up starts of different enemies; passes at `ceil(director_min_windup_gap_s x 60)` frames |
+| R2 `min_windup_start_gap_frames` | gap between consecutive wind-up starts of different enemies; passes at `ceil(director_min_windup_gap_s x 60)` frames. A hold's follow-up (the headbutt or the slam, which starts as the grab connects with the player already held) is the second half of the grab's attack, not a start: it is skipped (P4-int; counted in `windups`, R1 and R3) |
 | R3 `unwarned_hits` | a hit on the player whose attack (from `attack_started` step 1 to the next) had no wind-up of at least `windup_min_frames_grunt` / `_heavy`; exempt: a body impact, and any hit while its attacker holds the player |
 | R4 `occluded_windup_share` | every `occlusion_every` (3) frames, for each wind-up, is its chest in the lens and hidden by another enemy's mesh (`FPView.ray_hit`); by majority of the wind-up's samples |
 | R5 `front_wedge_crowding`, R6 `ring_adherence`, R7 `capsule_overlap_frames` | per frame, over enemies in `AiState.POSTURE` (R5, R6) and standing ones (R7, capsule radius `body_radius`) |
