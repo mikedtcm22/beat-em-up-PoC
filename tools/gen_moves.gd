@@ -328,9 +328,45 @@ func _kicker_moves() -> void:
 	_enemy(sweep, KICKER_SWEEP_REACH_M, 14)
 
 
-## The Pipe Thug: thug_pipe_1..3 (P2-thug).
+## The Pipe Thug's reaches (MoveData.reach_m): where each pipe swing's tip meets a standing 1.8 m
+## body, measured by tests/test_enemy_moves_thug.gd (within 0.15 m). The second and third swings
+## are chain links: no wind-up of their own, only if the swing before landed or was blocked
+## (M3-plan A2.14).
+const THUG_PIPE_1_REACH_M := 1.23
+const THUG_PIPE_2_REACH_M := 1.38
+const THUG_PIPE_3_REACH_M := 1.43
+## The smash steps in this far (m) over its active frames: two flinches have pushed the player two
+## hands' breadths away from where the Thug stopped, and the third swing, which reaches no
+## further than the first, must still land. Its reach_m includes the step.
+const THUG_PIPE_3_STEP_M := 0.2
+## The flinching swings' push (m/s along the radial), the Punk's.
+const THUG_PIPE_FLINCH_MPS := 1.5
+## The third swing's push (m/s along the radial): a stagger that carries the player a body
+## length clear of the chain (the 15% rule: three swings of 10 may not end in a knockdown).
+const THUG_PIPE_3_PUSH_MPS := 3.5
+
+
+## The Pipe Thug: thug_pipe_1..3 (P2-thug). One attack, a three-swing pipe combo of 10 damage a
+## swing (SPEC §7). The first swing is the telegraph (startup is the held wind-up, never below the
+## grunt floor of 18 frames); the second and third follow with no wind-up of their own. The first
+## two flinch, the third staggers: a chain that ends in a knockdown would cost 30 damage, and no
+## knockdown may take more than 15 (M3-plan 2.10). Light tier, the pipe's guard drain
+## (PIPE_GUARD_MULT, as the player's own pipe swings). The strikes are the player's pipe swings'
+## (EnemyPosesThug reuses them), so the WeaponTip reaches the same spots. The unarmed Thug, after
+## it drops its pipe, throws the Punk's moves.
 func _thug_moves() -> void:
-	pass
+	var swing_1 := _add(&"thug_pipe_1", "Thug Pipe Swing", Vector3i(22, 3, 14), 10.0, LIGHT, FLINCH,
+			Vector3(0.0, 0.0, THUG_PIPE_FLINCH_MPS), [_sphere(&"WeaponTip", 0.19)])
+	_enemy(swing_1, THUG_PIPE_1_REACH_M, 20)
+	var swing_2 := _add(&"thug_pipe_2", "Thug Pipe Backswing", Vector3i(12, 3, 14), 10.0, LIGHT, FLINCH,
+			Vector3(0.0, 0.0, THUG_PIPE_FLINCH_MPS), [_sphere(&"WeaponTip", 0.19)])
+	_enemy(swing_2, THUG_PIPE_2_REACH_M, 14)
+	var swing_3 := _add(&"thug_pipe_3", "Thug Pipe Smash", Vector3i(14, 4, 20), 10.0, LIGHT, STAGGER,
+			Vector3(0.0, 0.0, THUG_PIPE_3_PUSH_MPS), [_sphere(&"WeaponTip", 0.19)])
+	_enemy(swing_3, THUG_PIPE_3_REACH_M, 14)
+	swing_3.free_lunge = THUG_PIPE_3_STEP_M
+	for pipe: MoveData in [swing_1, swing_2, swing_3]:
+		pipe.guard_damage_mult = PIPE_GUARD_MULT
 
 
 ## Where a grab connects (m from the holder's origin to the player's), the Bruiser's (2.05 m) and

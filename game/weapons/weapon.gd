@@ -7,6 +7,9 @@ extends RigidBody3D
 @export var display_name: String = "Pipe"
 @export var length: float = 0.85
 @export var color: Color = Color(0.55, 0.58, 0.62)
+## The drawn pipe's radius (m); the collision capsule stays as it is, so a thicker pipe (the Pipe
+## Thug's, which has to read on the floor from across the street) never changes a hit or a fall.
+@export var radius: float = 0.028
 
 ## Hits left before the weapon breaks (Spec §4: 8).
 var durability: int = 8
@@ -33,8 +36,8 @@ func _ready() -> void:
 	add_child(shape)
 	_mesh = MeshInstance3D.new()
 	var cylinder := CylinderMesh.new()
-	cylinder.top_radius = 0.028
-	cylinder.bottom_radius = 0.028
+	cylinder.top_radius = radius
+	cylinder.bottom_radius = radius
 	cylinder.height = length
 	var material := StandardMaterial3D.new()
 	material.albedo_color = color
@@ -86,6 +89,28 @@ func throw_from(actor: CombatActor, velocity: Vector3, move: MoveData) -> void:
 	collision_mask = CombatTypes.bit(CombatTypes.LAYER_WORLD) | CombatTypes.bit(CombatTypes.LAYER_ENEMY_BODY)
 	linear_velocity = velocity
 	angular_velocity = actor.get_forward().cross(Vector3.UP) * -14.0
+
+
+## Leave the holder's hand and fall to the ground at `velocity` (the Pipe Thug, knocked down or
+## killed): back in the world as a rigid body in group "weapon", a pick-up again (is_available()),
+## with the durability it has left. A no-op unless it is held. It keeps the pose it had in the hand
+## and spins about the vertical at `spin_rps` radians a second as it falls (the sign follows the
+## push), so the drop shows. The world is the holder's parent (the room), or the current scene
+## when the holder is already gone.
+func drop(velocity: Vector3 = Vector3.ZERO, spin_rps: float = 0.0) -> void:
+	if holder == null or not is_inside_tree():
+		return
+	var start := global_transform
+	var world: Node = holder.get_parent() if is_instance_valid(holder) and holder.get_parent() else get_tree().current_scene
+	holder = null
+	_flying = false
+	_thrower = null
+	reparent(world, false)
+	global_transform = start
+	freeze = false
+	linear_velocity = velocity
+	angular_velocity = Vector3(0.0, signf(velocity.x + velocity.z + 0.001) * spin_rps, 0.0)
+	_set_ground_physics()
 
 
 func break_apart() -> void:

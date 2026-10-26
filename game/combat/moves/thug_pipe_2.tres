@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="MoveData" format=3 uid="uid://dcigedxtsu3v0"]
+
+[ext_resource type="Script" uid="uid://c7u6g52wmmok0" path="res://game/combat/combo_branch.gd" id="combo_branch_gd"]
+[ext_resource type="Script" uid="uid://cgv6sg6uflq2j" path="res://game/combat/hitbox_spec.gd" id="hitbox_spec_gd"]
+[ext_resource type="Script" uid="uid://difuwhwjj1vue" path="res://game/combat/move_data.gd" id="move_data_gd"]
+
+[sub_resource type="Resource" id="hitbox_0"]
+script = ExtResource("hitbox_spec_gd")
+point = &"WeaponTip"
+radius = 0.19
+
+[resource]
+script = ExtResource("move_data_gd")
+id = &"thug_pipe_2"
+display_name = "Thug Pipe Backswing"
+startup = 12
+recovery = 14
+damage = 10.0
+guard_damage_mult = 1.5
+hitboxes = Array[ExtResource("hitbox_spec_gd")]([SubResource("hitbox_0")])
+magnetism = false
+reach_m = 1.38
