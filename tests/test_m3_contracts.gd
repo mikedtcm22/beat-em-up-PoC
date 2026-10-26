@@ -470,7 +470,7 @@ const TUNABLES := {
 		&"boss_wave_every": [4, "Waves"], &"spawn_min_player_distance_m": [4.0, "Waves"],
 		&"player_avoid_radius_m": [0.5, "Waves"],
 		&"punk_health": [30.0, "Street Punk"], &"punk_shove_chance": [0.3, "Street Punk"],
-		&"punk_attack_cooldown_s": [1.4, "Street Punk"], &"punk_speed_mult": [1.0, "Street Punk"],
+		&"punk_attack_cooldown_s": [5.0, "Street Punk"], &"punk_speed_mult": [1.0, "Street Punk"],
 		&"kicker_health": [25.0, "Kicker"], &"kicker_circle_mult": [1.6, "Kicker"],
 		&"kicker_speed_mult": [1.3, "Kicker"], &"kicker_sweep_chance": [0.4, "Kicker"],
 		&"kicker_attack_cooldown_s": [1.2, "Kicker"],
