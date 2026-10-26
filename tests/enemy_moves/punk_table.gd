@@ -27,7 +27,7 @@ const MOVES := {
 	&"punk_jab": {damage = 6.0, tier = LIGHT, reaction = FLINCH, hitbox = &"sphere:RightFistPoint",
 			recoil = 20, reach_m = 1.05, min_startup = 18},
 	&"punk_cross": {damage = 6.0, tier = LIGHT, reaction = FLINCH, hitbox = &"sphere:LeftFistPoint",
-			recoil = 14, reach_m = 1.05, min_startup = 8},
+			recoil = 14, reach_m = 1.36, min_startup = 8},
 	&"punk_shove": {damage = 6.0, tier = LIGHT, reaction = STAGGER, hitbox = &"sphere:LeftFistPoint,RightFistPoint",
 			recoil = 14, reach_m = 0.97, min_startup = 18},
 }
