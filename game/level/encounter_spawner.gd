@@ -88,7 +88,8 @@ static func make_enemy(scene: PackedScene, id: StringName, serials: Dictionary) 
 	var number := int(serials.get(label, 0)) + 1
 	serials[label] = number
 	enemy.name = "%s%d" % [label, number]
-	enemy.display_name = "%s %d" % [label, number]
+	# The boss is one of a kind: its HUD bar reads "BOSS", not "BOSS 1".
+	enemy.display_name = label if enemy.archetype == &"boss" else "%s %d" % [label, number]
 	return enemy
 
 
