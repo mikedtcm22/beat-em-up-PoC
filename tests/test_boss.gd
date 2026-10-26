@@ -5,7 +5,9 @@ extends GutTest
 ## and misses a jumping one; the charge dashes only in its active frames, knocks a standing player
 ## down for 20 and stops at a wall; the grab slam is the grab table's, proved in test_enemy_grab.gd
 ## with the same moves), the attack chosen by range, the rear warning's reach for a charge from
-## behind, the parry's recoil, phase 2 (once, at half health: the event, the turn rate, two Punks
+## behind, the parry's recoil, its poise (a heavy hit and a finisher absorbed for a while after it gets
+## up, never the haymaker, never the grab's cut) and the step back before a wind-up that cannot be read
+## up close, phase 2 (once, at half health: the event, the turn rate, two Punks
 ## through a spawner and without one), the HUD's boss bar, the view at its posture distance and the
 ## first-person lens when its strikes land. Flat-floor tests have no navmesh (it steers straight, as
 ## in the training room); every tick is one physics frame.
@@ -14,6 +16,7 @@ const BOSS_SCENE := preload("res://game/enemies/boss/boss.tscn")
 const HUD_SCENE := preload("res://game/ui/hud.tscn")
 const StubDirector := preload("res://tests/fixtures/stub_director.gd")
 const FPView := preload("res://tests/fp_view.gd")
+const Checks := preload("res://tests/enemy_move_checks.gd")
 const ROOM_PATH := "res://game/level/crowd_room.tscn"
 const MOVES_DIR := "res://game/combat/moves/"
 const FRAME := 1.0 / 60.0
@@ -318,6 +321,336 @@ func test_a_killing_hit_is_never_softened() -> void:
 	assert_eq(boss.phase, 1, "a boss killed from above half health never enters phase 2")
 	await _ticks(2)
 	assert_eq(boss.phase, 1)
+
+
+# --- Poise ------------------------------------------------------------------------------------
+
+
+## Only the poise after getting up: no reaction cap.
+func _poise_only(seconds: float = 4.0) -> void:
+	Tuning.data.boss_poise_s = seconds
+	Tuning.data.boss_poise_after_reactions = 0
+
+
+## Only the reaction cap: no poise after getting up.
+func _cap_only(reactions: int = 2, window_s: float = 8.0) -> void:
+	Tuning.data.boss_poise_s = 0.0
+	Tuning.data.boss_poise_after_reactions = reactions
+	Tuning.data.boss_poise_window_s = window_s
+
+
+## A heavy hit as the hook is (HEAVY, STAGGER) and a finisher as the uppercut is (FINISHER, LAUNCH), from
+## the player, with their damage.
+func _hook(boss: Boss) -> HitInfo:
+	return _hit(_player, boss, 8.0, CombatTypes.HitTier.HEAVY, CombatTypes.Reaction.STAGGER)
+
+
+func _uppercut(boss: Boss) -> HitInfo:
+	var hit := _hit(_player, boss, 12.0, CombatTypes.HitTier.FINISHER, CombatTypes.Reaction.LAUNCH)
+	hit.knockback = Vector3(0.0, 6.0, 3.0)
+	return hit
+
+
+## Stagger `boss` (it has no poise yet) and wait until it is on its feet again, one tick on.
+func _staggered_and_up(boss: Boss) -> void:
+	assert_true(boss.receive_hit(_hook(boss)))
+	assert_eq(boss.state, CombatTypes.ActorState.STAGGER, "the first hook staggers it: it has no poise yet")
+	assert_true(await _until(func() -> bool: return boss.state == CombatTypes.ActorState.FREE, 200), "on its feet")
+	await _ticks(1)
+
+
+func test_a_fresh_boss_is_not_poised_and_the_armor_alone_applies() -> void:
+	_poise_only()
+	var boss := _boss()
+	await _ticks(2)
+	assert_false(boss.is_poised())
+	var hook := _hook(boss)
+	assert_true(boss.receive_hit(hook))
+	assert_false(hook.armor_absorbed, "a heavy hit staggers it, as the armor says")
+	assert_eq(boss.state, CombatTypes.ActorState.STAGGER)
+
+
+func test_after_a_stagger_it_is_poised_and_a_hook_and_an_uppercut_do_only_their_damage() -> void:
+	_poise_only()
+	var boss := _boss()
+	await _ticks(2)
+	assert_true(boss.receive_hit(_hook(boss)))
+	assert_false(boss.is_poised(), "not while it is still reeling")
+	assert_true(await _until(func() -> bool: return boss.state == CombatTypes.ActorState.FREE, 200))
+	await _ticks(1)
+	assert_true(boss.is_poised(), "on its feet after a stagger")
+	assert_almost_eq(boss.poise_left_s(), Tuning.data.boss_poise_s, 0.1)
+	var health := boss.health
+	var hook := _hook(boss)
+	assert_true(boss.receive_hit(hook))
+	assert_true(hook.armor_absorbed, "the hook is absorbed like a light hit")
+	assert_eq(hook.reaction, CombatTypes.Reaction.NONE)
+	assert_eq(hook.knockback, Vector3.ZERO)
+	var uppercut := _uppercut(boss)
+	assert_true(boss.receive_hit(uppercut))
+	assert_true(uppercut.armor_absorbed, "and so is the finisher")
+	assert_eq(boss.health, health - 20.0, "the damage of both lands")
+	await _ticks(3)
+	assert_eq(boss.state, CombatTypes.ActorState.FREE, "no reaction: it stands")
+	assert_true(boss.is_poised(), "and the hits did not spend the poise")
+
+
+func test_after_a_knockdown_it_is_poised_once_it_has_got_up() -> void:
+	_poise_only()
+	var boss := _boss()
+	await _ticks(2)
+	assert_true(boss.receive_hit(_uppercut(boss)))
+	await _ticks(3)
+	assert_true(boss.is_flying() or boss.is_downed(), "the first finisher floors it: no poise yet")
+	assert_false(boss.is_poised())
+	assert_true(await _until(func() -> bool: return boss.state == CombatTypes.ActorState.FREE, 600), "it gets up")
+	await _ticks(1)
+	assert_true(boss.is_poised(), "poised from the first free tick")
+	var hook := _hook(boss)
+	assert_true(boss.receive_hit(hook))
+	assert_true(hook.armor_absorbed)
+
+
+func test_the_poise_runs_out_after_boss_poise_s() -> void:
+	_poise_only(1.0)
+	var boss := _boss()
+	await _ticks(2)
+	await _staggered_and_up(boss)
+	assert_true(boss.is_poised())
+	await _ticks(EnemyActor._frames(1.0) + 2)
+	assert_false(boss.is_poised(), "a second later it is not")
+	var hook := _hook(boss)
+	assert_true(boss.receive_hit(hook))
+	assert_eq(boss.state, CombatTypes.ActorState.STAGGER, "the hook staggers it again")
+
+
+func test_the_poise_ends_when_its_next_attack_is_over() -> void:
+	_poise_only(10.0)
+	var boss := _boss(3.0)
+	await _ticks(2)
+	await _staggered_and_up(boss)
+	assert_true(await _wind_up(boss, 1), "the pound winds up")
+	assert_true(boss.is_poised(), "poised through the wind-up")
+	var hook := _hook(boss)
+	assert_true(boss.receive_hit(hook))
+	assert_true(hook.armor_absorbed, "the hook does not cut it")
+	assert_true(await _until(func() -> bool: return boss.ai_state == EnemyActor.AiState.RECOVER, 200), "the attack is over")
+	assert_false(boss.is_poised(), "and so is the poise, with seconds to spare")
+	assert_true(boss.receive_hit(_hook(boss)))
+	assert_eq(boss.state, CombatTypes.ActorState.STAGGER)
+
+
+func test_boss_poise_attacks_zero_leaves_the_time_alone_to_end_it() -> void:
+	_poise_only(10.0)
+	Tuning.data.boss_poise_attacks = 0
+	var boss := _boss(3.0)
+	await _ticks(2)
+	await _staggered_and_up(boss)
+	assert_true(await _wind_up(boss, 1))
+	assert_true(await _until(func() -> bool: return boss.ai_state == EnemyActor.AiState.RECOVER, 200))
+	assert_true(boss.is_poised(), "no attack count: it is poised until the time is up")
+
+
+func test_the_haymaker_still_knocks_a_poised_boss_down() -> void:
+	_poise_only()
+	var boss := _boss()
+	await _ticks(2)
+	await _staggered_and_up(boss)
+	assert_true(boss.is_poised())
+	var haymaker := _hit(_player, boss, 18.0, CombatTypes.HitTier.FINISHER, CombatTypes.Reaction.LAUNCH)
+	haymaker.move = _move(&"haymaker")
+	haymaker.knockback = Vector3(0.0, 4.0, 8.0)
+	assert_true(boss.receive_hit(haymaker))
+	assert_false(haymaker.armor_absorbed, "the haymaker breaks armor, poise included")
+	assert_eq(haymaker.reaction, CombatTypes.Reaction.LAUNCH)
+	await _ticks(3)
+	assert_true(boss.is_flying() or boss.is_downed(), "knocked down: the deliberate punish")
+
+
+func test_a_heavy_hit_still_cuts_a_poised_boss_out_of_the_grab_and_the_poise_goes_on() -> void:
+	_poise_only(10.0)
+	var boss := _boss(1.3)
+	await _ticks(2)
+	await _staggered_and_up(boss)
+	assert_true(boss.is_poised())
+	assert_true(await _wind_up(boss, 2), "the grab winds up")
+	await _ticks(6)
+	var hook := _hook(boss)
+	assert_true(boss.receive_hit(hook))
+	assert_false(hook.armor_absorbed, "Game-boy's rule: a heavy hit gets the player out of the grab")
+	assert_eq(boss.state, CombatTypes.ActorState.STAGGER)
+	assert_null(boss.current_move, "the grab is cut")
+	assert_true(_ended[_ended.size() - 1].interrupted)
+	# The uppercut that follows the hook finds it staggering and still poised: absorbed, so no knockdown.
+	assert_true(boss.is_poised(), "the cut does not spend the poise")
+	var uppercut := _uppercut(boss)
+	assert_true(boss.receive_hit(uppercut))
+	assert_true(uppercut.armor_absorbed, "the chain's finisher does not floor it")
+	assert_eq(boss.state, CombatTypes.ActorState.STAGGER)
+
+
+func test_a_killing_hit_goes_through_the_poise() -> void:
+	_poise_only()
+	var boss := _boss()
+	await _ticks(2)
+	await _staggered_and_up(boss)
+	boss.health = 5.0
+	var hit := _hook(boss)
+	assert_true(boss.receive_hit(hit))
+	assert_true(hit.killed)
+	assert_false(hit.armor_absorbed, "a killing hit is never softened")
+	assert_eq(boss.health, 0.0)
+
+
+func test_two_reactions_inside_the_window_make_it_poised_without_getting_up() -> void:
+	_cap_only(2, 8.0)
+	var boss := _boss()
+	await _ticks(2)
+	assert_true(boss.receive_hit(_hook(boss)), "the first reaction")
+	assert_false(boss.is_poised(), "one is not a cap")
+	var uppercut := _uppercut(boss)
+	assert_true(boss.receive_hit(uppercut), "the second, on the staggering boss")
+	assert_false(uppercut.armor_absorbed)
+	assert_true(boss.is_poised(), "two inside the window: the cap")
+	assert_true(await _until(func() -> bool: return boss.state == CombatTypes.ActorState.FREE, 600), "it gets up")
+	assert_true(boss.is_poised(), "still capped on its feet")
+	var hook := _hook(boss)
+	assert_true(boss.receive_hit(hook))
+	assert_true(hook.armor_absorbed, "the next chain cannot floor it")
+	assert_eq(boss.state, CombatTypes.ActorState.FREE)
+
+
+func test_the_cap_lets_go_when_the_oldest_reaction_leaves_the_window() -> void:
+	_cap_only(2, 3.0)
+	var boss := _boss()
+	await _ticks(2)
+	boss.receive_hit(_hook(boss))
+	boss.receive_hit(_uppercut(boss))
+	assert_true(boss.is_poised())
+	assert_true(await _until(func() -> bool: return boss.state == CombatTypes.ActorState.FREE, 600))
+	await _ticks(EnemyActor._frames(3.0) + 2)
+	assert_false(boss.is_poised(), "three seconds after the first reaction")
+	assert_true(boss.receive_hit(_hook(boss)))
+	assert_eq(boss.state, CombatTypes.ActorState.STAGGER, "a hook staggers it again")
+
+
+func test_a_parry_recoil_does_not_give_it_poise() -> void:
+	_poise_only()
+	var boss := _boss()
+	assert_true(await _wind_up(boss, 0))
+	var hit := HitInfo.new()
+	hit.move = _move(&"boss_charge")
+	hit.attacker = boss
+	hit.victim = _player
+	hit.blocked = true
+	hit.perfect_block = true
+	boss.react_to_block(hit)
+	assert_eq(boss.state, CombatTypes.ActorState.HITSTUN)
+	assert_true(await _until(func() -> bool: return boss.state == CombatTypes.ActorState.FREE, 200))
+	await _ticks(1)
+	assert_false(boss.is_poised(), "the parry's window is the player's reward: a recoil is not a stagger")
+
+
+func test_with_both_tunables_at_zero_it_is_the_armor_alone_as_before() -> void:
+	Tuning.data.boss_poise_s = 0.0
+	Tuning.data.boss_poise_after_reactions = 0
+	var boss := _boss()
+	await _ticks(2)
+	await _staggered_and_up(boss)
+	assert_false(boss.is_poised())
+	assert_true(boss.receive_hit(_hook(boss)))
+	assert_eq(boss.state, CombatTypes.ActorState.STAGGER, "heavy hits stagger as ever")
+	assert_true(boss.receive_hit(_uppercut(boss)))
+	await _ticks(3)
+	assert_true(boss.is_flying() or boss.is_downed(), "and the finisher floors it")
+
+
+func test_the_wake_up_hold_lasts_as_long_as_the_poise_so_it_does_not_walk_back_to_its_slot() -> void:
+	Tuning.data.ai_frozen = false
+	Tuning.data.posture_taunt_chance = 0.0
+	_poise_only(4.0)
+	var boss := _boss(1.4)
+	_director.put_slot(boss, Vector3(0.0, 0.0, 6.5))
+	await _ticks(6)
+	boss._cooldown_frames = 100000
+	boss.receive_hit(_hook(boss))
+	await _until(func() -> bool: return boss.state == CombatTypes.ActorState.FREE, 200)
+	await _ticks(1)
+	assert_eq(boss.ai_state, EnemyActor.AiState.POSTURE, "resumed")
+	await _ticks(EnemyActor._frames(Tuning.data.posture_resume_s) + 20)
+	assert_eq(boss.ai_state, EnemyActor.AiState.POSTURE, "past the base's hold, still holding its ground while poised")
+	await _ticks(EnemyActor._frames(Tuning.data.boss_poise_s) - EnemyActor._frames(Tuning.data.posture_resume_s) + 20)
+	assert_eq(boss.ai_state, EnemyActor.AiState.APPROACH, "the poise is over: the slot calls it back")
+
+
+# --- Stepping back before a wind-up that cannot be read ----------------------------------------
+
+
+func test_the_pound_and_the_charge_read_from_boss_read_m_and_not_from_the_nose() -> void:
+	# The measured data behind boss_read_m (the shared first-person telegraph check, a 2.3 m body): the
+	# pound reads from 1.4 m and the charge from 1.2 m, and neither at 1.0 m, where the raised arms are over
+	# the lens and the head is out of the view.
+	for id: StringName in [&"boss_pound", &"boss_charge"]:
+		var at_read := Checks.fp_telegraph_problems(_move(id), 2.3, Tuning.data.boss_read_m, self)
+		assert_true(at_read.is_empty(), "%s reads from boss_read_m (%.1f m)%s" % [id, Tuning.data.boss_read_m, Checks._list(at_read)])
+		var at_nose := Checks.fp_telegraph_problems(_move(id), 2.3, 1.0, self)
+		assert_false(at_nose.is_empty(), "%s does not read from 1.0 m: the step back is for that" % id)
+
+
+## The boss with a token and squared up at `ahead_m` from the player, its next attack the pound, the
+## director's go always yes (the stub's): it commits, may step back, then winds up. Returns the boss.
+func _engaged(ahead_m: float) -> Boss:
+	Tuning.data.ai_frozen = false
+	Tuning.data.boss_charge_chance = 0.0
+	Tuning.data.boss_grab_chance = 0.0
+	Tuning.data.boss_pound_chance = 1.0
+	var boss := _boss(ahead_m)
+	await _ticks(2)
+	_director.give_token(boss)
+	return boss
+
+
+func test_close_up_it_steps_back_to_boss_read_m_before_the_pound_winds_up() -> void:
+	var boss := await _engaged(1.0)
+	assert_true(await _until(func() -> bool: return boss.state == CombatTypes.ActorState.WINDUP, 120), "it winds up")
+	var distance := _flat_dist(boss.global_position, _player.global_position)
+	assert_gte(distance, Tuning.data.boss_read_m - 0.1, "from a distance the wind-up reads at (%.2f m)" % distance)
+	assert_eq(boss.current_move.id, &"boss_pound")
+
+
+func test_the_step_back_is_bounded_so_a_player_who_follows_it_is_still_attacked() -> void:
+	var boss := await _engaged(1.0)
+	var started := -1
+	for tick in 200:
+		# The player keeps to a metre of it, as a chain's magnetism does.
+		_player.global_position.z = boss.global_position.z + 1.0
+		await _ticks(1)
+		if boss.state == CombatTypes.ActorState.WINDUP:
+			started = tick
+			break
+	assert_gte(started, 0, "it winds up although the player follows")
+	var limit := Tuning.data.commit_pause_frames + EnemyActor._frames(Tuning.data.boss_back_off_s) + 30
+	assert_lte(started, limit, "after the commit pause and at most boss_back_off_s of stepping back (tick %d)" % started)
+
+
+func test_boss_read_m_zero_winds_up_where_it_stands() -> void:
+	Tuning.data.boss_read_m = 0.0
+	var boss := await _engaged(1.0)
+	assert_true(await _until(func() -> bool: return boss.state == CombatTypes.ActorState.WINDUP, 120))
+	assert_almost_eq(_flat_dist(boss.global_position, _player.global_position), 1.0, 0.1, "no step back")
+
+
+func test_the_grab_is_thrown_from_where_it_stands_not_after_a_step_back() -> void:
+	Tuning.data.ai_frozen = false
+	Tuning.data.boss_charge_chance = 0.0
+	Tuning.data.boss_pound_chance = 0.0
+	Tuning.data.boss_grab_chance = 1.0
+	var boss := _boss(1.2)
+	await _ticks(2)
+	_director.give_token(boss)
+	assert_true(await _until(func() -> bool: return boss.state == CombatTypes.ActorState.WINDUP, 120))
+	assert_eq(boss.current_move.id, &"boss_grab")
+	assert_lt(_flat_dist(boss.global_position, _player.global_position), Tuning.data.boss_read_m, "its own range is 1.3 m")
 
 
 # --- The attacks in play ----------------------------------------------------------------------
@@ -859,6 +1192,7 @@ func test_the_wake_up_hold_is_over_after_posture_resume_s_and_the_slot_calls_the
 	# cooldown is running): after posture_resume_s the leash applies again.
 	Tuning.data.ai_frozen = false
 	Tuning.data.posture_taunt_chance = 0.0
+	Tuning.data.boss_poise_s = 0.0  # the poise lengthens the hold (below): this is the base's
 	var boss := _boss(1.4)
 	_director.put_slot(boss, Vector3(0.0, 0.0, 6.5))  # across the player and beyond reach
 	await _ticks(6)
