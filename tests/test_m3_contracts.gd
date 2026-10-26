@@ -56,6 +56,7 @@ class ArmoredActor:
 var _scene: Node3D
 var _windups_ended: Array[bool] = []
 var _landed: Array[HitInfo] = []
+var _released_events: Array = []
 
 
 func before_each() -> void:
@@ -64,6 +65,7 @@ func before_each() -> void:
 	TimeController.debug_scale = 1.0
 	_windups_ended.clear()
 	_landed.clear()
+	_released_events.clear()
 	PlaceholderAnims.warn_on_fallback = false
 	CombatEvents.windup_ended.connect(_on_windup_ended)
 	CombatEvents.hit_landed.connect(_on_hit_landed)
@@ -77,6 +79,10 @@ func after_each() -> void:
 		CombatEvents.windup_ended.disconnect(_on_windup_ended)
 	if CombatEvents.hit_landed.is_connected(_on_hit_landed):
 		CombatEvents.hit_landed.disconnect(_on_hit_landed)
+	if CombatEvents.released.is_connected(_on_released_typed):
+		CombatEvents.released.disconnect(_on_released_typed)
+	if CombatEvents.grab_escaped.is_connected(_on_escaped_typed):
+		CombatEvents.grab_escaped.disconnect(_on_escaped_typed)
 	PlaceholderAnims.warn_on_fallback = true
 	Tuning.reset_to_default()
 	TimeController.clear()
@@ -364,6 +370,78 @@ func test_a_held_body_is_released_when_its_holder_is_gone() -> void:
 	await _ticks(2)
 	assert_eq(victim.state, CombatTypes.ActorState.FREE, "the pin let go of a holder that blinked off")
 	assert_null(victim.holder)
+
+
+## What a presentation listener would write: typed, so a freed holder cannot be passed to it.
+func _on_released_typed(holder: Node3D, victim: Node3D) -> void:
+	_released_events.append([holder, victim])
+
+
+func test_a_holder_freed_mid_hold_releases_the_victim_and_the_event_names_no_one() -> void:
+	# F4's "Remove every enemy", a room switch or a bot's clear_enemies() frees a holder under a
+	# hold; the victim's safety net lets go and CombatEvents.released fires with the holder gone.
+	# A typed listener cannot be given a freed object (it would print an ERROR and never run), so
+	# the event carries null.
+	CombatEvents.released.connect(_on_released_typed)
+	var holder := _armored()
+	var victim := _armored(Vector3(0.0, 0.0, -1.0))
+	await _ticks(3)
+	victim.start_grabbed(holder)
+	await _ticks(2)
+	assert_eq(victim.state, CombatTypes.ActorState.GRABBED)
+	holder.free()
+	await _ticks(2)
+	assert_eq(victim.state, CombatTypes.ActorState.FREE, "the pin let go of a holder that is gone")
+	assert_eq(_released_events.size(), 1, "released fired once, and the typed listener was reached")
+	if _released_events.size() == 1:
+		assert_null(_released_events[0][0], "with no holder")
+		assert_eq(_released_events[0][1], victim, "naming the victim")
+	# The player's side: _control_grabbed() sees a holder that holds nobody and lets go.
+	_released_events.clear()
+	var player := _player(Vector3(6.0, 0.0, 0.0))
+	var second := _armored(Vector3(6.0, 0.0, 2.0))
+	second.holds_victim = player
+	await _ticks(3)
+	player.start_grabbed(second)
+	await _ticks(2)
+	assert_eq(player.state, CombatTypes.ActorState.GRABBED)
+	second.free()
+	await _ticks(3)
+	assert_ne(player.state, CombatTypes.ActorState.GRABBED, "the player is let go too")
+	assert_eq(_released_events.size(), 1, "released fired for the player")
+	if _released_events.size() == 1:
+		assert_null(_released_events[0][0])
+		assert_eq(_released_events[0][1], player)
+	# A live holder is still named.
+	_released_events.clear()
+	var keeper := _armored(Vector3(-6.0, 0.0, 0.0))
+	var held := _armored(Vector3(-6.0, 0.0, -1.0))
+	await _ticks(3)
+	held.start_grabbed(keeper)
+	held.release_from_grab(Vector3.ZERO, false)
+	assert_eq(_released_events.size(), 1)
+	if _released_events.size() == 1:
+		assert_eq(_released_events[0][0], keeper, "a holder that is still there is the event's")
+
+
+func _on_escaped_typed(victim: Node3D, holder: Node3D) -> void:
+	_released_events.append([holder, victim])
+
+
+func test_breaking_free_when_the_holder_is_already_gone_names_no_one() -> void:
+	CombatEvents.grab_escaped.connect(_on_escaped_typed)
+	var holder := _armored()
+	var victim := _armored(Vector3(0.0, 0.0, -1.0))
+	await _ticks(3)
+	victim.start_grabbed(holder)
+	holder.free()
+	victim.break_free(5)  # the same frame: the pin has not noticed yet
+	CombatEvents.grab_escaped.disconnect(_on_escaped_typed)
+	assert_eq(victim.state, CombatTypes.ActorState.FREE, "let go")
+	assert_eq(_released_events.size(), 1, "grab_escaped fired and reached a typed listener")
+	if _released_events.size() == 1:
+		assert_null(_released_events[0][0], "with no holder")
+		assert_eq(_released_events[0][1], victim)
 
 
 func test_the_held_animation_is_the_hooks() -> void:
