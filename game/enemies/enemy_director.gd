@@ -67,6 +67,8 @@ var _claims: Dictionary = {}
 var _stalls: Dictionary = {}
 ## Clock of the last wind-up start (any enemy); -INF before the first.
 var _last_windup_s: float = -INF
+## Clock of the last hit that landed on the player (a blocked one does not count); -INF before.
+var _last_player_hit_s: float = -INF
 ## No grants until this clock (the player's revive grace).
 var _revive_until_s: float = -INF
 ## Reassign the slots when the clock passes this, ...
@@ -87,6 +89,8 @@ func _enter_tree() -> void:
 		CombatEvents.windup_started.connect(_on_windup_started)
 	if not CombatEvents.revived.is_connected(_on_revived):
 		CombatEvents.revived.connect(_on_revived)
+	if not CombatEvents.hit_landed.is_connected(_on_hit_landed):
+		CombatEvents.hit_landed.connect(_on_hit_landed)
 
 
 func _ready() -> void:
@@ -101,6 +105,8 @@ func _exit_tree() -> void:
 		CombatEvents.windup_started.disconnect(_on_windup_started)
 	if CombatEvents.revived.is_connected(_on_revived):
 		CombatEvents.revived.disconnect(_on_revived)
+	if CombatEvents.hit_landed.is_connected(_on_hit_landed):
+		CombatEvents.hit_landed.disconnect(_on_hit_landed)
 	# An enemy must not keep a token nobody will ever take back (the room is leaving).
 	for holder: Variant in _holders:
 		if is_instance_valid(holder) and (holder as EnemyActor).has_token:
@@ -153,8 +159,20 @@ func may_start_windup(enemy: EnemyActor) -> bool:
 		return false
 	if _clock_s - _last_windup_s < Tuning.data.director_min_windup_gap_s - _CLOCK_SLACK_S:
 		return false
+	if _player_recovering():
+		return false
 	_last_windup_s = _clock_s
 	return true
+
+
+## True while the player is still reeling from a hit: in hitstun or a stagger, or within
+## director_hit_grace_s of the last hit that landed on him. No new wind-up starts then (a flinch-lock
+## guard: the starts are spaced by director_min_windup_gap_s, about a flinch long).
+func _player_recovering() -> bool:
+	var player := _player if _player and is_instance_valid(_player) else _find_player()
+	if player and (player.state == CombatTypes.ActorState.HITSTUN or player.state == CombatTypes.ActorState.STAGGER):
+		return true
+	return _clock_s - _last_player_hit_s < Tuning.data.director_hit_grace_s - _CLOCK_SLACK_S
 
 
 ## An enemy that made no progress toward its slot for Tuning.data.enemy_stuck_s (a pocket
@@ -544,6 +562,14 @@ func _on_windup_started(attacker: Node3D, _move: MoveData) -> void:
 func _on_revived(actor: Node3D) -> void:
 	if actor and actor.is_in_group(&"player"):
 		_revive_until_s = _clock_s + Tuning.data.director_revive_grace_s
+
+
+## A hit landed somewhere: the ones on the player (not blocked) start the grace of
+## director_hit_grace_s (see _player_recovering()).
+func _on_hit_landed(hit: HitInfo) -> void:
+	if hit.blocked or hit.victim == null or not hit.victim.is_in_group(&"player"):
+		return
+	_last_player_hit_s = _clock_s
 
 
 ## `book`'s live enemies as a typed array.

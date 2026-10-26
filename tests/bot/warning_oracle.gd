@@ -276,6 +276,11 @@ func expected_corner_of(attacker: Node) -> Variant:
 ## Compare the widget with the model for this physics frame. Call once per frame, after the
 ## simulation (the node's own _physics_process does, at `late_priority`).
 func tick() -> void:
+	if not _open:
+		# Between acts (the bot is settling, or clearing the room for the next one) the model has
+		# been judged and emptied; a burst still showing for a wind-up cut off by the act's end is
+		# not a false positive of any act.
+		return
 	var frame := Engine.get_physics_frames()
 	_poll_ends(frame)
 	var counts := _widget_counts()

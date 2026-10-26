@@ -321,13 +321,13 @@ func write_json(dir: String = "") -> String:
 
 ## The folder of the capture being recorded: the --write-movie path's folder, or --probe-out=<dir>.
 func _capture_dir() -> String:
-	var args := OS.get_cmdline_args()
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--probe-out="):
 			return arg.trim_prefix("--probe-out=")
-	var i := args.find("--write-movie")
-	if i >= 0 and i + 1 < args.size():
-		return args[i + 1].get_base_dir()
+	# OS.get_cmdline_args() leaves out the arguments the engine takes itself, --write-movie among them.
+	var movie := Engine.get_write_movie_path()
+	if not movie.is_empty():
+		return movie.get_base_dir()
 	return ""
 
 
@@ -887,6 +887,8 @@ func _metrics(acc: Dictionary, warning: Dictionary) -> Dictionary:
 			"p50": _percentile(cover, 0.5) if not cover.is_empty() else null,
 			"p95": _percentile(cover, 0.95) if not cover.is_empty() else null,
 			"samples": cover.size(),
+			"share_over_50": _share_over(cover, 0.5) if not cover.is_empty() else null,
+			"max": _max_of(cover) if not cover.is_empty() else null,
 		},
 		"blind_grant_share": (float(acc.blind_mixed_grants) / acc.mixed_grants) if acc.mixed_grants > 0 else null,
 		"grants": acc.grants,
@@ -912,6 +914,23 @@ func _metrics(acc: Dictionary, warning: Dictionary) -> Dictionary:
 		"spawns": acc.spawns,
 		"peak_alive": acc.peak_alive,
 	}
+
+
+## The largest of `values` (0 when empty).
+static func _max_of(values: PackedFloat32Array) -> float:
+	var out := 0.0
+	for value in values:
+		out = maxf(out, value)
+	return out
+
+
+## The share of `values` above `limit`.
+static func _share_over(values: PackedFloat32Array, limit: float) -> float:
+	var count := 0
+	for value in values:
+		if value > limit:
+			count += 1
+	return float(count) / float(maxi(values.size(), 1))
 
 
 ## The `q` quantile (0 to 1) of `values`, the nearest rank.

@@ -561,6 +561,57 @@ func test_wind_ups_start_at_least_the_gap_apart_and_never_more_than_the_cap_atta
 	assert_eq(most, 2, "R1: the cap is reached and never exceeded")
 
 
+func _land_a_hit_on_the_player(blocked: bool = false) -> void:
+	var hit := HitInfo.new()
+	hit.attacker = null
+	hit.victim = _player
+	hit.blocked = blocked
+	CombatEvents.hit_landed.emit(hit)
+
+
+func test_no_wind_up_starts_in_the_grace_after_a_hit_on_the_player() -> void:
+	await _setup(3, 0.0)
+	Tuning.data.director_hit_grace_s = 1.0
+	var stubs := _crowd(2)
+	await _ticks(3)
+	assert_eq(_holders().size(), 2)
+	_freeze_player()
+	_land_a_hit_on_the_player()
+	await _ticks(_gap_ticks() + 3)
+	assert_false(_director.may_start_windup(stubs[0]), "inside the grace: the gap has passed, the hit is recent")
+	await _ticks(20)
+	assert_false(_director.may_start_windup(stubs[0]), "still inside it, 0.7 s after the hit")
+	await _ticks(25)
+	assert_true(_director.may_start_windup(stubs[0]), "after it (1.1 s), it goes")
+	assert_false(_director.may_start_windup(stubs[1]), "and the gap holds the next one back as before")
+
+
+func test_a_blocked_hit_starts_no_grace_and_a_hit_on_an_enemy_none() -> void:
+	await _setup(3, 0.0)
+	Tuning.data.director_hit_grace_s = 1.0
+	var stubs := _crowd(2)
+	await _ticks(3)
+	_freeze_player()
+	_land_a_hit_on_the_player(true)
+	var hit := HitInfo.new()
+	hit.victim = stubs[1]
+	CombatEvents.hit_landed.emit(hit)
+	assert_true(_director.may_start_windup(stubs[0]), "a guarded hit leaves the player free to act, and an enemy's hurt is none of this")
+
+
+func test_no_wind_up_starts_while_the_player_is_in_hitstun_or_a_stagger() -> void:
+	await _setup(3, 0.0)
+	Tuning.data.director_hit_grace_s = 0.0
+	var stubs := _crowd(2)
+	await _ticks(3)
+	_freeze_player()
+	for reeling: CombatTypes.ActorState in [CombatTypes.ActorState.HITSTUN, CombatTypes.ActorState.STAGGER]:
+		_player.state = reeling
+		assert_false(_director.may_start_windup(stubs[0]), "no go while the player is in %s" % CombatTypes.ActorState.keys()[reeling])
+	_player.state = CombatTypes.ActorState.FREE
+	assert_true(_director.may_start_windup(stubs[0]), "free again, it goes")
+
+
 func test_slow_motion_stretches_the_gap_with_it() -> void:
 	await _setup(2, 0.0)
 	var stubs := _crowd(2)
