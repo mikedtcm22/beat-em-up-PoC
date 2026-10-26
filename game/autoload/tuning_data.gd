@@ -826,7 +826,7 @@ extends Resource
 @export_range(0.0, 1.0, 0.05) var boss_charge_chance: float = 0.4
 @export_range(0.0, 1.0, 0.05) var boss_pound_chance: float = 0.3
 @export_range(0.0, 1.0, 0.05) var boss_grab_chance: float = 0.3
-@export_range(0.0, 10.0, 0.1) var boss_attack_cooldown_s: float = 4.0
+@export_range(0.0, 10.0, 0.1) var boss_attack_cooldown_s: float = 1.5
 @export_range(0.25, 3.0, 0.05) var boss_speed_mult: float = 0.85
 ## A crowd round the player (boss_crowd_count or more other enemies within boss_crowd_m of him)
 ## makes the boss pound rather than grab.
@@ -835,6 +835,23 @@ extends Resource
 ## Frames a perfect block (a parry) knocks the boss into a recoil: a small window to hit it in.
 ## A plain block does nothing to it (no blocked recoil on its moves).
 @export_range(0, 120, 1) var boss_parry_recoil_frames: int = 36
+## Poise (the boss cannot be stun-locked by the basic chain): for this many seconds after it is back
+## on its feet from a stagger or a knockdown, or until its next attack is over, a heavy hit and a
+## finisher (not the haymaker) are absorbed like a light one: the damage lands, a grey spark, no
+## reaction. 0 = no poise (the armor alone). A heavy hit still cuts its grab.
+@export_range(0.0, 10.0, 0.1) var boss_poise_s: float = 4.0
+## How many of its own attacks (a wind-up that was not cut, through its recovery) end a poise early:
+## 1 = its next attack, 0 = none (the time alone).
+@export_range(0, 4, 1) var boss_poise_attacks: int = 1
+## A second guard: this many reactions (a hit that staggered or floored it) within boss_poise_window_s
+## make it poised until the oldest leaves the window. 0 = no cap.
+@export_range(0, 6, 1) var boss_poise_after_reactions: int = 2
+@export_range(1.0, 30.0, 0.5) var boss_poise_window_s: float = 8.0
+## A charge or a pound with the player within boss_read_m (its wind-up is over the lens at that range:
+## 1.4 m for the pound, 1.2 for the charge) is preceded by a step back, for up to boss_back_off_s.
+## Either at 0 = it winds up where it stands.
+@export_range(0.0, 4.0, 0.1) var boss_read_m: float = 1.5
+@export_range(0.0, 3.0, 0.1) var boss_back_off_s: float = 0.8
 
 @export_group("Rear warning")
 ## An attacker winding up more than this many degrees off the look, close enough, lights a

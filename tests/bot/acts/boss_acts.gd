@@ -11,7 +11,13 @@ extends RefCounted
 ## of its wind-up). "Boss phase 2 adds" has the real AI: the boss walks in, postures, takes half
 ## its health and two Punks walk in from the doorways; "Boss bar" drains the bar at the bottom
 ## centre. "Boss cadence" (the measurement behind boss_attack_cooldown_s and the attack mix, a
-## player who stands still, god mode) and "Boss fight" (the autopilot) are for numbers, not looks.
+## player who stands still, god mode) is for numbers, not looks, and so are the three that print a
+## BOSSMETER line (_meter(): the poise's measurements, F-boss-poise): "Boss fight" (the full autopilot,
+## real damage, ends when the boss falls), "Boss held back fight" (the careful autopilot) and "Boss
+## passive" (a player who does nothing). Run them headless, `-- --act="Boss fight" --seed=<n>`, once
+## with the shipped tunables and once with `--tune=boss_poise_s=0 --tune=boss_poise_after_reactions=0
+## --tune=boss_read_m=0 --tune=boss_attack_cooldown_s=4` (the boss before the poise); each takes
+## seconds. Record "Boss fight" for the sheets.
 ## Acts with `probe = true` print the readability summary and the warning oracle's WARN-CHECK lines.
 
 const SliceActs := preload("res://tests/bot/acts/slice_acts.gd")
@@ -22,6 +28,10 @@ const JUMP_AT_FRAME := 14
 const DODGE_AT_SHARE := 0.55
 ## Measuring acts' length (ticks): a minute of the boss against a player who stands still.
 const CADENCE_TICKS := 3600
+## The full fight's length (ticks): the autopilot has ninety seconds to kill the boss.
+const FIGHT_TICKS := 5400
+## The held-back autopilot (one jab-jab at a time, no kicks, a long rest) is slow: five minutes.
+const HELD_TICKS := 18000
 
 
 static func acts(bot: Node) -> Array[Dictionary]:
@@ -38,7 +48,10 @@ static func acts(bot: Node) -> Array[Dictionary]:
 		{title = "Boss charge (side view)", cam = &"side_view", fn = func() -> void: await _charge_front(bot)},
 		{title = "Boss pound (side view)", cam = &"side_view", fn = func() -> void: await _pound(bot, false)},
 		{title = "Boss cadence", cam = &"first_person", probe = true, fn = func() -> void: await _cadence(bot)},
-		{title = "Boss fight", cam = &"first_person", probe = true, fn = func() -> void: await _fight(bot)},
+		{title = "Boss fight", cam = &"first_person", probe = true, fn = func() -> void: await _fight(bot, false)},
+		{title = "Boss held back fight", cam = &"first_person", probe = true, fn = func() -> void: await _fight(bot, true)},
+		{title = "Boss passive", cam = &"first_person", probe = true, tags = {passive = true},
+				fn = func() -> void: await _passive(bot)},
 	]
 
 
@@ -178,11 +191,24 @@ static func _cadence(bot: Node) -> void:
 
 
 ## The autopilot against the boss (not god mode, the room revives him): can he win? PILOT and
-## LOCK lines say how long it took and what it cost.
-static func _fight(bot: Node) -> void:
+## LOCK lines say how long it took and what it cost, and one BOSSMETER line says how the boss spent
+## its life (`_meter()`). The act ends when the boss falls. `--seed=<n> --tune=boss_poise_s=0` is the
+## measurement behind the poise (M3-calls/F-boss-poise.md).
+static func _fight(bot: Node, held_back: bool) -> void:
 	_seed_names(bot)
-	bot.spawn_at_point(&"boss", 4)
-	await bot.fight(5400, false)
+	var boss: EnemyActor = bot.spawn_at_point(&"boss", 4)
+	if held_back:
+		bot.hold_back()
+	bot.pilot.enabled = true
+	await _meter(bot, boss, HELD_TICKS if held_back else FIGHT_TICKS)
+
+
+## The boss alone against a player who does nothing and takes real damage (the room revives him): how
+## often it hits and how long he lasts. The meter's PILOT line is empty.
+static func _passive(bot: Node) -> void:
+	_seed_names(bot)
+	var boss: EnemyActor = bot.spawn_at_point(&"boss", 4)
+	await _meter(bot, boss, CADENCE_TICKS)
 
 
 ## Start the boss's numbering where `-- --seed=<n>` puts the Punk's (the crowd bot seeds only the
@@ -191,3 +217,106 @@ static func _fight(bot: Node) -> void:
 static func _seed_names(bot: Node) -> void:
 	var serials: Dictionary = bot.spawner.get(&"_serials")
 	serials["Boss"] = bot._name_offset
+
+
+## Watch `boss` for up to `ticks` physics ticks (or until it falls) and print one BOSSMETER line: how
+## long it lived (a kill time in seconds, or "alive"), the share of that life it spent in REACT (any
+## reaction: hitstun, stagger, down, getting up) and since it first took up POSTURE, its reactions
+## (staggers and knockdowns), what it wound up and how many of those the player cut, what it landed on
+## the player (hits, blocked, damage, by move), the grabs that connected, the player's KOs, and what
+## the player's hits did to it (absorbed or not, by move) and its poise frames when it has any. The
+## numbers the poise was judged on, so the act file carries them.
+static func _meter(bot: Node, boss: EnemyActor, ticks: int) -> void:
+	var m := {
+		wu = {}, cut = 0, hit = {}, hit_n = 0, blocked = 0, dmg = 0.0, grabs = 0, p_ko = 0,
+		took = {}, absorbed = 0, reactions = 0, staggers = 0, downs = 0, react = 0, life = 0,
+		since_posture = -1, react_since = 0, poised = 0, poise_hits = 0, states = {}, dist = [],
+	}
+	var on_hit := func(hit: HitInfo) -> void:
+		if hit.victim == bot.player and hit.attacker == boss:
+			var id: String = String(hit.move.id) if hit.move else "body"
+			if hit.blocked:
+				m.blocked += 1
+			else:
+				m.hit_n += 1
+				m.dmg += hit.damage
+				m.hit[id] = int(m.hit.get(id, 0)) + 1
+		elif hit.victim == boss and hit.attacker == bot.player:
+			var id: String = String(hit.move.id) if hit.move else "body"
+			var key := "%s%s" % [id, "*" if hit.armor_absorbed else ""]
+			m.took[key] = int(m.took.get(key, 0)) + 1
+			if hit.armor_absorbed:
+				m.absorbed += 1
+	var on_wu := func(attacker: Node3D, move: MoveData) -> void:
+		if attacker == boss:
+			m.wu[String(move.id)] = int(m.wu.get(String(move.id), 0)) + 1
+			m.dist.append("%s@%.1f" % [String(move.id).trim_prefix("boss_"), Vector2(boss.global_position.x - bot.player.global_position.x,
+					boss.global_position.z - bot.player.global_position.z).length()])
+	var on_wu_end := func(attacker: Node3D, interrupted: bool) -> void:
+		if attacker == boss and interrupted:
+			m.cut += 1
+	var on_grab := func(holder: Node3D, victim: Node3D) -> void:
+		if holder == boss and victim == bot.player:
+			m.grabs += 1
+	var on_ko := func(victim: Node3D, _hit: HitInfo) -> void:
+		if victim == bot.player:
+			m.p_ko += 1
+	CombatEvents.hit_landed.connect(on_hit)
+	CombatEvents.windup_started.connect(on_wu)
+	CombatEvents.windup_ended.connect(on_wu_end)
+	CombatEvents.grabbed.connect(on_grab)
+	CombatEvents.ko.connect(on_ko)
+	var last_ai := -1
+	var last_state := -1
+	var killed := -1
+	var health := 0.0
+	var phase := 1
+	for tick in ticks:
+		await bot._ticks(1)
+		if not is_instance_valid(boss):
+			break
+		m.life += 1
+		health = boss.health
+		phase = int(boss.get(&"phase"))
+		var ai := int(boss.ai_state)
+		var state := int(boss.state)
+		var ai_name: String = EnemyActor.AiState.keys()[ai]
+		m.states[ai_name] = int(m.states.get(ai_name, 0)) + 1
+		if ai == EnemyActor.AiState.REACT:
+			m.react += 1
+			if m.since_posture >= 0:
+				m.react_since += 1
+		if m.since_posture < 0 and ai == EnemyActor.AiState.POSTURE:
+			m.since_posture = 0
+		if m.since_posture >= 0:
+			m.since_posture += 1
+		if ai == EnemyActor.AiState.REACT and last_ai != EnemyActor.AiState.REACT:
+			m.reactions += 1
+		if state != last_state:
+			if state == CombatTypes.ActorState.STAGGER:
+				m.staggers += 1
+			elif state in [CombatTypes.ActorState.LAUNCHED, CombatTypes.ActorState.THROWN]:
+				m.downs += 1
+		if boss.has_method(&"is_poised") and boss.call(&"is_poised"):
+			m.poised += 1
+		last_ai = ai
+		last_state = state
+		if boss.health <= 0.0 and killed < 0:
+			killed = m.life
+		if killed >= 0 and m.life - killed > 30:
+			break
+	CombatEvents.hit_landed.disconnect(on_hit)
+	CombatEvents.windup_started.disconnect(on_wu)
+	CombatEvents.windup_ended.disconnect(on_wu_end)
+	CombatEvents.grabbed.disconnect(on_grab)
+	CombatEvents.ko.disconnect(on_ko)
+	var life := maxf(float(m.life), 1.0)
+	var since := maxf(float(m.since_posture), 1.0)
+	var winds := 0
+	for id: String in m.wu:
+		winds += int(m.wu[id])
+	bot.log_line("BOSSMETER seed=%d: %s, life %.1f s, REACT %.0f%% of its life and %.0f%% since it first postured, %d reactions (%d staggers, %d knockdowns), wind-ups %d %s (%d cut), it landed %d hits for %.0f (%s), %d blocked, %d grabs connected, player KOs %d, poised %.1f s, wind-up distances %s, the player's hits on it %s, states %s, phase %d" % [
+			roundi(float(bot._name_offset) / 7.0), ("killed at %.1f s" % (float(killed) / 60.0)) if killed >= 0 else ("ALIVE with %.0f hp" % health),
+			life / 60.0, 100.0 * float(m.react) / life, 100.0 * float(m.react_since) / since, m.reactions, m.staggers, m.downs,
+			winds, JSON.stringify(m.wu), m.cut, m.hit_n, m.dmg, JSON.stringify(m.hit), m.blocked, m.grabs, m.p_ko,
+			float(m.poised) / 60.0, JSON.stringify(m.dist), JSON.stringify(m.took), JSON.stringify(m.states), phase])

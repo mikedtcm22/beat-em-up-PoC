@@ -25,6 +25,18 @@ extends EnemyActor
 ## walk in from the doorways and alleys) and otherwise on the navmesh boss_add_ring_m round it. A
 ## beckoning gesture marks it when it is free to make one.
 ##
+## Poise (the final review's stun-lock fix): once it is back on its feet after a stagger or a
+## knockdown, it is poised for boss_poise_s, or until its next attack is over, or while it has had
+## boss_poise_after_reactions reactions inside boss_poise_window_s (is_poised()): a heavy hit and a
+## finisher are absorbed like a light one (the damage lands, a grey spark, no reaction, the move goes
+## on). The haymaker (breaks_armor) still knocks it down, a killing hit is never softened, and a heavy
+## hit still cuts the grab (Game-boy's rule). Without it the basic chain (jab, jab, hook, uppercut)
+## staggered and floored it every 3 s, it spent over half its life reacting and threw its wind-ups at
+## a player already hitting it. The wake-up hold (it postures where it stands) lasts as long as the
+## poise does. A charge or a pound with the player closer than boss_read_m (1 m is where a chain leaves
+## him: the pound's raised arms are over the lens) is preceded by a step back, for up to
+## boss_back_off_s, so its wind-up is in view; the phase 2 beckon waits for a free moment.
+##
 ## A parry (a perfect block) does not stagger it (_parry_staggers() is false: it would be parry-locked
 ## by a perfect block every time); it takes a short recoil instead, boss_parry_recoil_frames, so a
 ## parried boss attack opens a small window. A plain block does nothing to it (its moves never
@@ -45,6 +57,17 @@ var adds: Array[EnemyActor] = []
 var _adds_due: int = 0
 var _adds_called: int = 0
 var _adds_frames: int = 0
+## The beckoning gesture of phase 2 is due but it was busy (attacking, reacting, with a token): it is
+## made the next time it stands posturing with no token.
+var _beckon_due: bool = false
+## Poise (see is_poised()): the sim frames of it left, whether a stagger or a knockdown is under way
+## (the poise starts when it is over), and the control ticks at which its last reactions began.
+var _poise_frames: int = 0
+var _poise_owed: bool = false
+var _poise_attacks_left: int = 0
+var _reaction_ticks: Array[int] = []
+## The sim frames of stepping back it has left in this ENGAGE (_tick_engage()).
+var _back_frames: int = 0
 
 
 func _init() -> void:
@@ -144,6 +167,37 @@ func _wakes_in_place() -> bool:
 	return true
 
 
+# --- Stepping back ----------------------------------------------------------------------------
+
+
+## With a token and squared up (the commit pause is over), a charge or a pound that its wind-up cannot
+## be read at (the player closer than boss_read_m: at 1 m the pound's raised arms are over the top of
+## the lens and the head is out of the view) is preceded by a step back, for up to boss_back_off_s.
+## The bound lets a player who follows it back, as a chain does, still be attacked.
+func _tick_engage(player: CombatActor) -> void:
+	if has_token and _commit_frames <= 0 and _back_frames > 0 and _too_close_to_read(player):
+		_back_frames -= 1
+		var away := _flat(global_position - player.global_position)
+		_face(-away, Tuning.data.enemy_turn_rate)
+		_apply_velocity(away.normalized() * _walk_speed())
+		return
+	super._tick_engage(player)
+
+
+func _enter_engage() -> void:
+	super._enter_engage()
+	_back_frames = _frames(Tuning.data.boss_back_off_s)
+
+
+func _too_close_to_read(player: CombatActor) -> bool:
+	var tuning := Tuning.data
+	if tuning.boss_read_m <= 0.0 or _next_attack == null or _next_attack.kind == &"grab":
+		return false  # the grab's own range is 1.3 m: it is thrown from where it stands
+	if player.is_ko() or player.is_downed() or player.is_flying() or player.state == CombatTypes.ActorState.GRABBED:
+		return false
+	return _flat_dist(global_position, player.global_position) < tuning.boss_read_m
+
+
 # --- Armor ------------------------------------------------------------------------------------
 
 
@@ -154,8 +208,8 @@ func _wakes_in_place() -> bool:
 ## Without this an aggressive player's third punch (a heavy hook) cancelled every wind-up there
 ## was, and the autopilot beat the boss in 38 s without taking a hit.
 func _apply_armor(hit: HitInfo) -> void:
-	if not hit.killed and hit.tier == CombatTypes.HitTier.HEAVY and _commits_to_its_move() \
-			and not (hit.move != null and hit.move.breaks_armor):
+	if not hit.killed and not (hit.move != null and hit.move.breaks_armor) and (
+			(hit.tier == CombatTypes.HitTier.HEAVY and _commits_to_its_move()) or _poised_against(hit)):
 		hit.armor_absorbed = true
 		hit.reaction = CombatTypes.Reaction.NONE
 		hit.knockback = Vector3.ZERO
@@ -167,6 +221,88 @@ func _apply_armor(hit: HitInfo) -> void:
 ## hold is cut by a heavy hit, and a hit that lands on it releases the player).
 func _commits_to_its_move() -> bool:
 	return _running_move() and current_move != null and _attack != null and _attack.kind != &"grab"
+
+
+# --- Poise ------------------------------------------------------------------------------------
+
+
+## Whether it is poised: a heavy hit or a finisher (never the haymaker) is absorbed as a light one is.
+## True for boss_poise_s after it is back on its feet from a stagger or a knockdown, until its next
+## attack is over (RECOVER), and while boss_poise_after_reactions reactions of the last
+## boss_poise_window_s are on its books. Read by the bots and the tests; never writes game state.
+func is_poised() -> bool:
+	return health > 0.0 and (_poise_frames > 0 or _reaction_capped())
+
+
+## Sim seconds of the after-getting-up poise left (0 when it has none; the cap is not counted).
+func poise_left_s() -> float:
+	return float(_poise_frames) / float(Engine.physics_ticks_per_second)
+
+
+## A heavy hit or a finisher it is poised against. The grab (any phase of it, the hold included) is
+## the one thing poise never absorbs: a heavy hit cuts it and lets the player go (Game-boy's rule).
+func _poised_against(hit: HitInfo) -> bool:
+	if hit.tier == CombatTypes.HitTier.LIGHT or not is_poised():
+		return false
+	return not (_running_move() and current_move != null and _attack != null and _attack.kind == &"grab")
+
+
+## boss_poise_after_reactions or more reactions (a hit that staggered or floored it) inside the last
+## boss_poise_window_s: a rate cap, so a chain that keeps landing cannot floor it again and again.
+func _reaction_capped() -> bool:
+	var cap := Tuning.data.boss_poise_after_reactions
+	if cap <= 0:
+		return false
+	var window := _frames(Tuning.data.boss_poise_window_s)
+	var recent := 0
+	for tick: int in _reaction_ticks:
+		if _ticks - tick <= window:
+			recent += 1
+	return recent >= cap
+
+
+## Counts the reactions for the cap (a hit that was not absorbed and staggered or floored it).
+func _on_hit_received(hit: HitInfo) -> void:
+	if not hit.killed and hit.reaction in [CombatTypes.Reaction.STAGGER, CombatTypes.Reaction.KNOCKDOWN,
+			CombatTypes.Reaction.LAUNCH, CombatTypes.Reaction.THROWN]:
+		_reaction_ticks.append(_ticks)
+		var window := _frames(Tuning.data.boss_poise_window_s)
+		while not _reaction_ticks.is_empty() and _ticks - _reaction_ticks[0] > window:
+			_reaction_ticks.remove_at(0)
+	super._on_hit_received(hit)
+
+
+## The wake-up hold (the base's: POSTURE where it stands, ignoring the slot it left, served first)
+## lasts as long as the poise does: a boss that stands its ground while nothing can floor it does not
+## walk back to its slot with the player at its nose, where it could ask for no token.
+func _resume_posture() -> void:
+	super._resume_posture()
+	_resume_frames = maxi(_resume_frames, _poise_frames)
+
+
+## An attack of its own is over: with boss_poise_attacks of them to a poise, the last one ends it.
+func _enter_recover() -> void:
+	super._enter_recover()
+	if _poise_frames > 0 and _poise_attacks_left > 0:
+		_poise_attacks_left -= 1
+		if _poise_attacks_left == 0:
+			_poise_frames = 0
+
+
+## The poise's clock, before the AI's tick: it starts the first tick it is on its feet after a stagger
+## or a knockdown (not a parry's recoil), runs down, and ends with its next attack (RECOVER).
+func _tick_poise() -> void:
+	if _poise_frames > 0:
+		_poise_frames -= 1
+	match state:
+		CombatTypes.ActorState.STAGGER, CombatTypes.ActorState.LAUNCHED, CombatTypes.ActorState.THROWN, \
+		CombatTypes.ActorState.DOWNED, CombatTypes.ActorState.GETUP:
+			_poise_owed = true
+		CombatTypes.ActorState.FREE:
+			if _poise_owed:
+				_poise_owed = false
+				_poise_frames = _frames(Tuning.data.boss_poise_s)
+				_poise_attacks_left = Tuning.data.boss_poise_attacks
 
 
 # --- Turning ----------------------------------------------------------------------------------
@@ -223,21 +359,32 @@ func react_to_block(hit: HitInfo) -> void:
 ## cheat) is seen: at health <= boss_phase2_at of its maximum, once, while it is alive. The Punks it
 ## calls in come one at a time (_tick_adds()).
 func _tick_control() -> void:
+	_tick_poise()
 	super._tick_control()
 	if phase == 1 and health > 0.0 and health <= max_health * Tuning.data.boss_phase2_at:
 		_enter_phase2()
+	_tick_beckon()
 	_tick_adds()
 
 
 func _enter_phase2() -> void:
 	phase = 2
 	CombatEvents.boss_phase_changed.emit(self, 2)
-	# The beckoning gesture, when it is free and standing on the ring: "come on".
-	if state == CombatTypes.ActorState.FREE and ai_state == AiState.POSTURE and not has_token:
-		_start_taunt()
+	# The beckoning gesture, when it is free and standing on the ring: "come on". Busy (it attacks a good
+	# deal more often than it stands there), it makes it at its next free moment (_tick_beckon()).
+	_beckon_due = true
+	_tick_beckon()
 	_adds_due = maxi(Tuning.data.boss_adds_count, 0)
 	_adds_called = _adds_due
 	_adds_frames = 0
+
+
+## The phase 2 beckon, once, the first tick it is free and posturing with no token and no gesture under way.
+func _tick_beckon() -> void:
+	if _beckon_due and health > 0.0 and state == CombatTypes.ActorState.FREE and ai_state == AiState.POSTURE \
+			and not has_token and _taunt_frames <= 0:
+		_beckon_due = false
+		_start_taunt()
 
 
 ## The Punks it called in arrive one every wave_spawn_interval_s, the first at once: a rig takes

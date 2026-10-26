@@ -566,8 +566,10 @@ const TUNABLES := {
 		&"boss_phase2_turn_mult": [1.8, "Boss"], &"boss_adds_count": [2, "Boss"], &"boss_add_ring_m": [5.0, "Boss"],
 		&"boss_charge_min_m": [2.5, "Boss"], &"boss_charge_chance": [0.4, "Boss"],
 		&"boss_pound_chance": [0.3, "Boss"], &"boss_grab_chance": [0.3, "Boss"],
-		&"boss_attack_cooldown_s": [4.0, "Boss"], &"boss_speed_mult": [0.85, "Boss"],
+		&"boss_attack_cooldown_s": [1.5, "Boss"], &"boss_speed_mult": [0.85, "Boss"],
 		&"boss_crowd_m": [3.0, "Boss"], &"boss_crowd_count": [2, "Boss"], &"boss_parry_recoil_frames": [36, "Boss"],
+		&"boss_poise_s": [4.0, "Boss"], &"boss_poise_attacks": [1, "Boss"], &"boss_poise_after_reactions": [2, "Boss"],
+		&"boss_poise_window_s": [8.0, "Boss"], &"boss_read_m": [1.5, "Boss"], &"boss_back_off_s": [0.8, "Boss"],
 	},
 	"Rear warning": {
 		&"rear_warning_angle_deg": [55.0, ""], &"rear_warning_size": [1.0, ""], &"rear_warning_opacity": [0.9, ""],
