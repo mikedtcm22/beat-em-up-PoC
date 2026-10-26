@@ -307,9 +307,42 @@ func _thug_moves() -> void:
 	pass
 
 
+## Where a grab connects (m from the holder's origin to the player's), the Bruiser's (2.05 m) and
+## the boss's (2.3 m): EnemyHold's range, Tuning.enemy_grab_range_m (1.05, at the rig's 1.8 m
+## reference height) times the holder's height over 1.8, to the nearest 5 cm, which is where the
+## grab's strike pose (GrabPoses: both fists out at the chest, the body leaning over the planted
+## feet) meets the player's chest. The AI closes to reach_m less engage_margin_m, inside the range.
+## tests/test_enemy_moves_grab.gd measures the pose and holds both to the tunable.
+const BRUISER_GRAB_REACH_M := 1.15
+const BOSS_GRAB_REACH_M := 1.3
+## The follow-ups strike a victim pinned Tuning.grabbed_pin_distance_m (0.75 m) from the holder.
+const HOLD_FOLLOW_UP_REACH_M := 0.75
+## The headbutt's knockdown (a head-first shove, the victim lifted a little) and the slam's throw
+## (radial frame: z along the holder's push, y up): the player's own throw is (0, 5, 6.5).
+const HEADBUTT_KNOCKBACK := Vector3(0.0, 2.0, 4.0)
+const SLAM_KNOCKBACK := Vector3(0.0, 4.5, 6.0)
+
+
 ## The enemy grabs on the player: bruiser_grab, bruiser_headbutt, boss_grab, boss_slam (P2-grab).
+## A grab is two moves, one attack (M3-plan §6): the grab is a hitbox-less, unblockable telegraph
+## whose strike frame connects by code (EnemyHold) or whiffs; on a connect the follow-up's startup
+## runs while the player is held (it is the mash window: the victim breaks free by mashing P and K
+## before its strike frame, Tuning.grab_break_presses) and at its strike frame the victim is let
+## go and a code-built hit from the move lands (the headbutt knocks down for 15; the slam throws for
+## 25, the boss's, HEAVY and THROWN: no FINISHER-tier enemy move, A2.13). None has a hitbox, so no
+## hit VFX for the grab itself; none recoils when blocked (a grab goes through a guard).
 func _grab_moves() -> void:
-	pass
+	var grab := _add(&"bruiser_grab", "Bruiser Grab", Vector3i(32, 6, 24), 0.0, LIGHT,
+			CombatTypes.Reaction.NONE, Vector3.ZERO, [])
+	_enemy(grab, BRUISER_GRAB_REACH_M, 0, true)
+	var headbutt := _add(&"bruiser_headbutt", "Headbutt", Vector3i(60, 3, 24), 15.0, HEAVY, KNOCKDOWN,
+			HEADBUTT_KNOCKBACK, [])
+	_enemy(headbutt, HOLD_FOLLOW_UP_REACH_M, 0, true)
+	var boss_grab := _add(&"boss_grab", "Boss Grab", Vector3i(32, 6, 24), 0.0, LIGHT,
+			CombatTypes.Reaction.NONE, Vector3.ZERO, [])
+	_enemy(boss_grab, BOSS_GRAB_REACH_M, 0, true)
+	var slam := _add(&"boss_slam", "Slam", Vector3i(54, 4, 30), 25.0, HEAVY, THROWN, SLAM_KNOCKBACK, [])
+	_enemy(slam, HOLD_FOLLOW_UP_REACH_M, 0, true)
 
 
 ## The Bruiser: bruiser_smash (P3-bruiser).

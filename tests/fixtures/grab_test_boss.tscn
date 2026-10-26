@@ -1,0 +1,11 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://tests/fixtures/grab_test_enemy.gd" id="1_grab"]
+
+[node name="GrabTestBoss" type="CharacterBody3D"]
+script = ExtResource("1_grab")
+boss = true
+body_radius = 0.5
+body_height = 2.3
+voice_pitch_mult = 0.7
+display_name = "Grab Boss"

@@ -628,12 +628,15 @@ func _director_says_go() -> bool:
 
 
 ## Wind up `attack` now: the opening move scaled and floored, started from the control tick. The
-## grab kind (an enemy holding the player) is P2-grab's: it hooks in here.
+## grab kind (an enemy holding the player) winds up the same way: its EnemyHold connects or whiffs
+## at the strike frame (_on_move_frame()).
 func _start_attack(attack: EnemyAttack) -> void:
 	var move := attack.first() if attack else null
 	if move == null:
 		return
 	_attack = attack
+	if attack.kind == &"grab":
+		_hold_arm(attack)
 	_taunt_frames = 0
 	sim_velocity.x = 0.0
 	sim_velocity.z = 0.0
@@ -655,6 +658,8 @@ func _tick_windup(player: CombatActor) -> void:
 
 
 func _on_move_frame(move: MoveData, frame: int) -> void:
+	if _hold != null:
+		_hold.on_move_frame(move, frame)
 	# A step-in during the strike (a jump kick, a charge), never a slide through the telegraph. It
 	# is set on the last startup frame: the lunge starts moving the body on the next one, the first
 	# active frame, so the whole of free_lunge (which reach_m includes) is covered while the strike
@@ -723,6 +728,7 @@ func _tick_recover(player: CombatActor) -> void:
 ## back, a killing blow ends the AI.
 func _on_hit_received(hit: HitInfo) -> void:
 	var was_attacking := has_token or ai_state == AiState.WINDUP or ai_state == AiState.ATTACK or ai_state == AiState.ENGAGE
+	_hold_release()
 	_release_token()
 	if was_attacking:
 		_cooldown_frames = _frames(_cooldown_seconds())
@@ -1005,3 +1011,71 @@ func _slot_text() -> String:
 	if not posture_slot.is_finite() or player == null or not player.has_method(&"look_bearing_deg"):
 		return "-"
 	return "%d" % roundi(player.call(&"look_bearing_deg", posture_slot))
+
+
+# --- Grabs (P2-grab) --------------------------------------------------------------------------
+
+## The hold of a grab attack in progress (EnemyHold); null until the first grab attack starts.
+var _hold: EnemyHold
+
+
+## A grab attack starts (the seam of _start_attack()): the EnemyHold that will connect it.
+func _hold_arm(attack: EnemyAttack) -> void:
+	if _hold == null:
+		_hold = EnemyHold.new(self)
+	_hold.arm(attack)
+
+
+## Let a held victim go with no hit: this body was hit, killed or removed mid-hold.
+func _hold_release() -> void:
+	if _hold != null:
+		_hold.release()
+
+
+## CombatActor's holder hook: true while `victim` is held by this body's grab and the follow-up
+## runs. The player's own check each tick lets go of a holder that stopped (hit, killed, gone).
+func is_holding(victim: CombatActor) -> bool:
+	return _hold != null and _hold.holds(victim)
+
+
+## True while this body's slam holds `victim` off the floor (PlayerCharacter reads it, duck-typed,
+## to hang him in the lifted pose).
+func lifts_victim(victim: CombatActor) -> bool:
+	return _hold != null and _hold.lifts(victim)
+
+
+## The victim mashed free (CombatActor.break_free() calls this first): the hold is over, the
+## attempt is spent, and this body staggers away from it at Tuning.grab_break_push_mps, the token
+## given back, the cooldown started. The victim stays where it stands, invulnerable for a moment.
+func _on_hold_broken(victim: CombatActor) -> void:
+	if _hold != null:
+		_hold.broken()
+	_release_token()
+	_cooldown_frames = _frames(_cooldown_seconds())
+	_attack = null
+	_taunt_frames = 0
+	var away := _flat(global_position - victim.global_position)
+	away = away.normalized() if away.length_squared() > 0.0001 else -get_forward()
+	_stagger_away(away * Tuning.data.grab_break_push_mps)
+	ai_state = AiState.REACT
+
+
+## Cut the running move and stagger with `push` (m/s, flat): what a mashed-out holder does. The
+## stagger is CombatActor's (a body that is staggering is hit-reacting: REACT, grabbable).
+func _stagger_away(push: Vector3) -> void:
+	if current_move:
+		_cancel_move()
+	sim_velocity = Vector3(push.x, 0.0, push.z)
+	_enter_state(CombatTypes.ActorState.STAGGER, Tuning.data.stagger_frames)
+	rig.play(_directional_anim(&"stagger", push), Tuning.data.stagger_snap_blend_s)
+	_ragdoll_stagger(get_chest_position(), push, Ragdoll.Part.TORSO)
+
+
+## The reach (m) the rear warning measures this attack's range from (RearWarning and the warning
+## oracle ask it, duck-typed, before move.reach_m). A grab's follow-up winds up on a player
+## already in this body's hands, face to face: the warning is for what comes from out of view,
+## so it gets a reach nothing is within (its margin cannot make up for it).
+func warning_reach_m(move: MoveData) -> float:
+	if _hold != null and _hold.is_follow_up(move) and _hold.victim != null:
+		return -Tuning.data.rear_warning_range_margin_m - 1.0
+	return move.reach_m
