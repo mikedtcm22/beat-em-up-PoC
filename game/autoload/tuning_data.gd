@@ -686,7 +686,10 @@ extends Resource
 
 @export_subgroup("Pipe Thug")
 @export_range(5.0, 500.0, 1.0) var thug_health: float = 35.0
-@export_range(0.0, 10.0, 0.1) var thug_attack_cooldown_s: float = 1.8
+## Seconds before it wants another attack token, counted from the end of its combo through the recover
+## hold and the walk back (below about 4 s it never binds). Locked at 8.0 from measurement: its combo
+## costs 30 against the Punk's 12, so it comes at 8 s to the Punk's 5.
+@export_range(0.0, 10.0, 0.1) var thug_attack_cooldown_s: float = 8.0
 @export_range(0.25, 3.0, 0.05) var thug_speed_mult: float = 0.95
 ## Speed (m/s) the dropped pipe leaves the thug's hand at, toward whoever hit it (it slides on the
 ## floor: 0.5 lands it a metre or so from the player, inside LB's reach; the first plan's 2.0 away
@@ -694,6 +697,9 @@ extends Resource
 ## second) as it falls.
 @export_range(0.0, 8.0, 0.1) var thug_drop_speed_mps: float = 0.5
 @export_range(0.0, 20.0, 0.5) var thug_drop_spin_rps: float = 3.0
+## Pipes dropped by Thugs that may lie on the floor at once (the oldest are cleared past it; 0 = no
+## limit): waves repeat and every Thug drops one.
+@export_range(0, 30, 1) var thug_pipes_on_floor_max: int = 4
 
 @export_subgroup("Enemy grabs")
 ## Presses of P or K that break an enemy's hold before its hit lands, and the sim frames of

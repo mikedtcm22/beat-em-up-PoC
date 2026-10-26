@@ -13,6 +13,11 @@ extends EnemyActor
 
 ## The pipe the Thug carries (the same scene as the pipe on the training room's floor).
 const PIPE_SCENE := preload("res://game/weapons/pipe.tscn")
+## The pipes Thugs have dropped are in this group (the "weapon" group also holds the training room's
+## pipe and the one the player holds), and carry the physics frame they fell on in this meta, so the
+## oldest can be cleared when too many lie in the street (cull_dropped_pipes()).
+const DROPPED_GROUP := &"thug_pipe"
+const DROPPED_AT_META := &"dropped_at"
 
 ## The work jacket and the accents (cap, wraps, shoes): an olive green with cream, told from the
 ## dummy's orange, the Punk and the Kicker at a glance. SPEC §10: no red.
@@ -98,6 +103,29 @@ func _drop_pipe(hit: HitInfo) -> void:
 	if toward.length_squared() < 0.0001:
 		toward = get_forward()
 	pipe.drop(toward.normalized() * Tuning.data.thug_drop_speed_mps, Tuning.data.thug_drop_spin_rps)
+	pipe.add_to_group(DROPPED_GROUP)
+	pipe.set_meta(DROPPED_AT_META, Engine.get_physics_frames())
+	cull_dropped_pipes(get_tree())
 	armed = false
 	_attacks = _build_attacks()
 	_next_attack = _choose_attack()
+
+
+## Waves repeat, and every Thug drops a pipe: when more than Tuning.thug_pipes_on_floor_max dropped
+## pipes lie free in the scene (not held, not flying), the oldest are cleared, so the street does
+## not fill up with them (0 = no limit). A pipe the player holds is never touched.
+static func cull_dropped_pipes(tree: SceneTree) -> void:
+	var limit: int = Tuning.data.thug_pipes_on_floor_max
+	if limit <= 0:
+		return
+	var lying: Array[Weapon] = []
+	for node: Node in tree.get_nodes_in_group(DROPPED_GROUP):
+		var weapon := node as Weapon
+		if weapon and weapon.is_available() and not weapon.is_queued_for_deletion():
+			lying.append(weapon)
+	lying.sort_custom(func(a: Weapon, b: Weapon) -> bool:
+			return int(a.get_meta(DROPPED_AT_META, 0)) < int(b.get_meta(DROPPED_AT_META, 0)))
+	while lying.size() > limit:
+		var oldest: Weapon = lying.pop_front()
+		oldest.remove_from_group(DROPPED_GROUP)
+		oldest.break_apart()

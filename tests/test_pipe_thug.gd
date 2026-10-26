@@ -374,6 +374,46 @@ func test_after_the_drop_it_attacks_with_the_punks_moves_and_never_re_arms() -> 
 	assert_eq(_free_pipes().size(), 1, "the pipe still lies where it fell")
 
 
+func test_only_so_many_dropped_pipes_lie_in_the_street_the_oldest_go_first() -> void:
+	Tuning.data.thug_pipes_on_floor_max = 2
+	_make_player()
+	var pipes: Array[Weapon] = []
+	for i in 3:
+		var thug := _thug(Vector3(2.0 * i - 2.0, 0.0, -3.0))
+		thug.name = "Thug%d" % (i + 1)
+		await _ticks(3)
+		pipes.append(thug._pipe)
+		thug.receive_hit(_hit(_player, thug))
+		await _ticks(5)
+	await _ticks(2)
+	assert_false(is_instance_valid(pipes[0]), "the oldest pipe was cleared")
+	assert_true(is_instance_valid(pipes[1]), "the next two stay")
+	assert_true(is_instance_valid(pipes[2]))
+	assert_eq(get_tree().get_nodes_in_group(PipeThug.DROPPED_GROUP).filter(
+			func(n: Node) -> bool: return not n.is_queued_for_deletion()).size(), 2, "two lie in the street")
+
+
+func test_a_pipe_the_player_holds_is_never_cleared() -> void:
+	Tuning.data.thug_pipes_on_floor_max = 1
+	_make_player()
+	var first := _thug(Vector3(0.0, 0.0, -1.2))
+	await _ticks(3)
+	var held_pipe := first._pipe
+	first.receive_hit(_hit(_player, first))
+	await _ticks(SETTLE_TICKS)
+	_player.input.push_press(&"GRAB", 2)
+	await _until(func() -> bool: return _player.holding_weapon(), 60)
+	assert_true(_player.holding_weapon(), "the player holds the first pipe")
+	for i in 2:
+		var thug := _thug(Vector3(3.0 + 2.0 * i, 0.0, -3.0))
+		thug.name = "Thug%d" % (i + 2)
+		await _ticks(3)
+		thug.receive_hit(_hit(_player, thug))
+		await _ticks(5)
+	assert_true(is_instance_valid(held_pipe), "the pipe in the player's hand stays")
+	assert_true(_player.holding_weapon())
+
+
 # --- The player takes it -----------------------------------------------------------------------
 
 
