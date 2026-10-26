@@ -1,4 +1,4 @@
-# Architecture (module contracts, Milestones 1 and 2)
+# Architecture (module contracts, Milestones 1-3)
 
 This is the working contract between modules. [SPEC.md](SPEC.md) §3 decides the shape. This file pins down names, units and interfaces so modules can be built in parallel.
 
@@ -737,7 +737,7 @@ Both Debug toggles (`ai_frozen`, `god_mode`) are outside the preset: a test that
 
 **Rig build cost** (`HumanoidRig._named_library()`): the named `AnimationLibrary` of a (scale, stance) is built once and shared by every rig of that size and stance (it was 8 of the 9 to 15 ms each enemy cost to build; nothing alters the clips after the build). Windowed spawn hitch of "Perf, six with ragdolls": median 28.8 ms before, 25 ms after (limit 33); frame p95 13.1 ms (limit 16.7).
 
-## Ownership (Milestone 1 build)
+## Ownership (Milestones 1-3)
 
 | Area | Files |
 | --- | --- |
@@ -748,3 +748,9 @@ Both Debug toggles (`ai_frozen`, `god_mode`) are outside the preset: a test that
 | Cameras | `game/camera/*`, `tests/test_cameras.gd` |
 | HUD and debug UI | `game/ui/*`, `tests/test_ui.gd` |
 | Actor core, player, dummies, hit detection, test room | `game/actors/combat_actor.gd`, `game/combat/hit_detector.gd`, `game/player/*`, `game/enemies/*`, `game/level/*`, `game/weapons/*`, integration tests |
+| Enemy base, archetypes and grabs (M3) | `game/enemies/{enemy_actor,enemy_attack,enemy_catalog,enemy_hold}.gd`, `game/enemies/{punk,kicker,thug,bruiser,boss}/*`, `game/actors/poses/*`, `tests/enemy_moves/*`, `tests/enemy_move_checks.gd`, `tests/fixtures/*`, `tests/test_{enemy_actor,enemy_grab,enemy_move_checks,enemy_moves_*,kicker,pipe_thug,bruiser,boss,armor_presentation,player_grabbed,magnetism_crowd}.gd` |
+| Director (M3) | `game/enemies/enemy_director.gd`, `tests/test_enemy_director.gd`, `tests/fixtures/stub_director.gd` |
+| Crowd room, spawner and nav baker (M3) | `game/level/{crowd_room,room_kit,nav_baker,spawn_room_check,encounter_spawner,encounter_table}.gd`, `game/level/crowd_room.tscn`, `game/level/encounters/*`, `game/ui/cheat_menu.gd` (spawn any enemy, waves, freeze AI), `tests/test_{crowd_room,encounter_spawner,cheat_spawns}.gd` |
+| Rear warning, pick-up cue and grab prompt (M3) | `game/ui/{rear_warning,pickup_cue,grab_prompt,boss_health_bar}.gd`, the AI layer of `game/ui/debug_draw.gd`, `tests/test_{rear_warning,pickup_cue,debug_draw_ai,audio_crowd}.gd` |
+| View geometry (M3) | `game/combat/view_geometry.gd`, `tests/test_view_geometry.gd` |
+| Instruments and whole-fight tests (M3) | `tests/bot/{readability_probe,warning_oracle,autopilot,engage_meter,crowd_bot,warning_bot,punk_bot}.gd`, `tests/bot/acts/*`, `tools/{capture_bot.sh,check_m3_log.py}`, `tests/test_{readability_probe,warning_oracle,autopilot,check_m3_log,slice_crowd,m3_contracts,m3_done_when,bot_scripts_compile}.gd` |
