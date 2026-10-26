@@ -1147,6 +1147,28 @@ func _phase_two_beckon(doorway_x: float) -> void:
 	assert_gte(nearest, Tuning.data.posture_ring_min_m - 0.5, "it never came within the ring's near edge of the player, in the beckon or the walk after it (%.2f m)" % nearest)
 
 
+func test_a_busy_boss_beckons_at_its_next_free_moment_after_phase_two() -> void:
+	# It attacks far more often than it stands on the ring doing nothing: a phase change that came in the
+	# middle of an attack used to lose the gesture.
+	await _live_ai()
+	Tuning.data.posture_taunt_chance = 0.0  # its own taunts are not the gesture
+	var boss := _boss(3.0)
+	boss._cooldown_frames = 100000  # no token afterwards: it postures, which is the gesture's moment
+	await _ticks(2)
+	boss.force_attack(1)
+	assert_true(await _until(func() -> bool: return boss.state == CombatTypes.ActorState.WINDUP, 20))
+	boss.health = 140.0
+	await _ticks(1)
+	assert_eq(boss.phase, 2)
+	assert_eq(boss._taunt_frames, 0, "winding up: no gesture now")
+	assert_true(await _until(func() -> bool: return boss._taunt_frames > 0, 600), "it beckons once it stands posturing")
+	assert_eq(boss.ai_state, EnemyActor.AiState.POSTURE)
+	assert_eq(boss.rig.current_anim(), &"taunt")
+	await _ticks(boss._taunt_frames + 5)
+	await _ticks(300)
+	assert_eq(boss._taunt_frames, 0, "and only once")
+
+
 func test_phase_two_from_posture_plays_the_whole_beckon_and_the_boss_does_not_walk_through_the_player_left() -> void:
 	# The call-in's first Punk changes the director's set of enemies; a newcomer that spawns on the
 	# boss's side used to hand the lone boss the seat across the player (a 7.6 m walk through him), and

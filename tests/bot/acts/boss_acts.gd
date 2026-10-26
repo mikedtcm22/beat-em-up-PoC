@@ -244,8 +244,8 @@ static func _meter(bot: Node, boss: EnemyActor, ticks: int) -> void:
 	var on_wu := func(attacker: Node3D, move: MoveData) -> void:
 		if attacker == boss:
 			m.wu[String(move.id)] = int(m.wu.get(String(move.id), 0)) + 1
-			m.dist.append(snappedf(Vector2(boss.global_position.x - bot.player.global_position.x,
-					boss.global_position.z - bot.player.global_position.z).length(), 0.1))
+			m.dist.append("%s@%.1f" % [String(move.id).trim_prefix("boss_"), Vector2(boss.global_position.x - bot.player.global_position.x,
+					boss.global_position.z - bot.player.global_position.z).length()])
 	var on_wu_end := func(attacker: Node3D, interrupted: bool) -> void:
 		if attacker == boss and interrupted:
 			m.cut += 1

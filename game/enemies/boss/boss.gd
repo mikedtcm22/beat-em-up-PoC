@@ -55,6 +55,9 @@ var adds: Array[EnemyActor] = []
 var _adds_due: int = 0
 var _adds_called: int = 0
 var _adds_frames: int = 0
+## The beckoning gesture of phase 2 is due but it was busy (attacking, reacting, with a token): it is
+## made the next time it stands posturing with no token.
+var _beckon_due: bool = false
 ## Poise (see is_poised()): the sim frames of it left, whether a stagger or a knockdown is under way
 ## (the poise starts when it is over), and the control ticks at which its last reactions began.
 var _poise_frames: int = 0
@@ -358,18 +361,28 @@ func _tick_control() -> void:
 	super._tick_control()
 	if phase == 1 and health > 0.0 and health <= max_health * Tuning.data.boss_phase2_at:
 		_enter_phase2()
+	_tick_beckon()
 	_tick_adds()
 
 
 func _enter_phase2() -> void:
 	phase = 2
 	CombatEvents.boss_phase_changed.emit(self, 2)
-	# The beckoning gesture, when it is free and standing on the ring: "come on".
-	if state == CombatTypes.ActorState.FREE and ai_state == AiState.POSTURE and not has_token:
-		_start_taunt()
+	# The beckoning gesture, when it is free and standing on the ring: "come on". Busy (it attacks a good
+	# deal more often than it stands there), it makes it at its next free moment (_tick_beckon()).
+	_beckon_due = true
+	_tick_beckon()
 	_adds_due = maxi(Tuning.data.boss_adds_count, 0)
 	_adds_called = _adds_due
 	_adds_frames = 0
+
+
+## The phase 2 beckon, once, the first tick it is free and posturing with no token and no gesture under way.
+func _tick_beckon() -> void:
+	if _beckon_due and health > 0.0 and state == CombatTypes.ActorState.FREE and ai_state == AiState.POSTURE \
+			and not has_token and _taunt_frames <= 0:
+		_beckon_due = false
+		_start_taunt()
 
 
 ## The Punks it called in arrive one every wave_spawn_interval_s, the first at once: a rig takes
