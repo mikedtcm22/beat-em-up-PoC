@@ -817,7 +817,7 @@ func _plan_lunge(move: MoveData) -> void:
 		var to := _magnet_target.get_chest_position() - global_position
 		to.y = 0.0
 		var max_lunge := move.lunge if move.lunge > 0.0 else Tuning.data.magnet_lunge
-		var distance := clampf(to.length() - _stop_distance(move), 0.0, max_lunge)
+		var distance := clampf(to.length() - _stop_distance(move, _magnet_target), 0.0, max_lunge)
 		set_lunge(to, distance, _lunge_frames(move), max_lunge)
 		var target_yaw := atan2(-to.x, -to.z)
 		var max_turn := deg_to_rad(Tuning.data.magnet_turn_deg)
@@ -834,12 +834,16 @@ func _update_lunge() -> void:
 	to.y = 0.0
 	_lunge_dir = to.normalized() if to.length_squared() > 0.0001 else _lunge_dir
 	# Re-aim every frame: close in on a target that is reeling away, within the budget.
-	_lunge_left = clampf(to.length() - _stop_distance(current_move), 0.0, _lunge_budget)
+	_lunge_left = clampf(to.length() - _stop_distance(current_move, _magnet_target), 0.0, _lunge_budget)
 
 
-func _stop_distance(move: MoveData) -> float:
+## How far from `target` the lunge stops (m, origin to origin): the stomp's or the strike's
+## distance, and more for a body wider than his own, so the surface gap stays the same and the
+## lunge does not drive into a Bruiser's or the boss's capsule (Milestone 3: crowds).
+func _stop_distance(move: MoveData, target: CombatActor) -> float:
 	# Stomps stand over the body; everything else stops at striking distance.
-	return Tuning.data.stomp_stop_distance if move.hits_downed else Tuning.data.magnet_stop_distance
+	var stop := Tuning.data.stomp_stop_distance if move.hits_downed else Tuning.data.magnet_stop_distance
+	return stop + maxf(target.body_radius - body_radius, 0.0)
 
 
 func _lunge_frames(move: MoveData) -> int:
@@ -847,10 +851,14 @@ func _lunge_frames(move: MoveData) -> int:
 
 
 ## The enemy nearest screen center inside the magnetism cone (Spec §5). With `move` null
-## this previews the target a ground attack would pick, for debug draw.
+## this previews the target a ground attack would pick, for debug draw. The cone is flat (the
+## heading alone: pitch and height do not count), so a tall body, a Bruiser, is found at the
+## same angle as anyone, and a downed one (judged from the chest too) as well. A body that is
+## out of reach, a KO, in the air, in the get-up's or a blink-in's invulnerability (no hit
+## lands on it, the strike would only lunge and turn toward it to whiff) is passed over.
 func _find_magnet_target(move: MoveData) -> CombatActor:
 	var wants_downed := move != null and move.hits_downed
-	var aim := get_look_basis() * Vector3.FORWARD
+	var aim := get_look_forward()
 	# Measured from chest height, so an enemy in your face isn't "below center" and
 	# losing to one farther away (the eye sits ~0.4 m above enemy chests).
 	var origin := get_chest_position()
@@ -861,17 +869,14 @@ func _find_magnet_target(move: MoveData) -> CombatActor:
 		var enemy := node as CombatActor
 		if enemy == null or enemy.is_ko() or enemy.is_flying() or enemy.is_downed() != wants_downed:
 			continue
-		# A body blinking back in is out of reach (no hit lands on it): the strike would only
-		# lunge and turn toward it to whiff.
-		if enemy.is_blinking_in():
+		if enemy.is_invulnerable():
 			continue
 		var to := enemy.get_chest_position() - origin
 		var flat := Vector3(to.x, 0.0, to.z)
 		var dist := flat.length()
 		if dist > Tuning.data.magnet_range:
 			continue
-		# Downed bodies are below the view; judge them by heading alone.
-		var angle := aim.angle_to(to) if not wants_downed else Vector3(aim.x, 0.0, aim.z).angle_to(flat)
+		var angle := aim.angle_to(flat) if dist > 0.0001 else 0.0
 		if angle > cone:
 			continue
 		# Closest to screen center wins; a few degrees per meter break near-ties toward the nearer enemy.
@@ -889,6 +894,8 @@ func _conditions() -> Dictionary:
 	}
 
 
+## A downed enemy within the stomp's reach and arc, and no standing one in the magnetism cone:
+## in a crowd a K at a body on the ground with a Punk in front of it is a kick at the Punk.
 func _downed_target_near() -> bool:
 	var fwd := get_forward()
 	for node in get_tree().get_nodes_in_group(&"enemy"):
@@ -898,7 +905,7 @@ func _downed_target_near() -> bool:
 		var to := enemy.get_chest_position() - global_position
 		to.y = 0.0
 		if to.length() <= Tuning.data.stomp_range and fwd.angle_to(to) <= deg_to_rad(Tuning.data.stomp_half_angle_deg):
-			return true
+			return _find_magnet_target(null) == null
 	return false
 
 
