@@ -451,6 +451,34 @@ func test_the_windup_does_not_slide_and_the_facing_locks_after_tracking() -> voi
 	assert_lte(absf(wrapf(locked - turned, -PI, PI)), budget, "it turns no faster than windup_track_deg_per_s")
 
 
+func test_a_step_in_move_travels_over_its_active_frames_and_not_before() -> void:
+	# reach_m "includes the move's travel" (free_lunge), so the travel must run while the strike is
+	# active: a lunge set on the first active frame moved the body from the second, and a 3 frame
+	# strike got two thirds of it (a 0.3 m step-in jab from 1.3 m then landed 0 of 738 wind-ups in
+	# the crowd room). Nor may it move anything through the startup.
+	_make_player(Vector3(0.0, 0.0, 8.0))
+	Tuning.data.ai_frozen = true
+	var punk := _punk(Vector3(0.0, 0.0, 0.0), Vector3(0.0, 0.0, -5.0))
+	await _ticks(4)
+	var move := _move(&"punk_cross").duplicate() as MoveData
+	move.startup = 14
+	move.free_lunge = 0.3
+	var start := punk.global_position
+	punk.start_move(move, 1, &"chain", false)
+	var before_strike := 0.0
+	var by_the_end := 0.0
+	for i in 40:
+		await get_tree().physics_frame
+		if punk.current_move == null:
+			break
+		if punk.move_frame == move.startup - 1:
+			before_strike = _flat_dist(punk.global_position, start)
+		if punk.move_frame == move.startup + move.active - 1:
+			by_the_end = _flat_dist(punk.global_position, start)
+	assert_lt(before_strike, SLIDE_TOLERANCE_M, "nothing moves through the startup")
+	assert_almost_eq(by_the_end, move.free_lunge, 0.03, "the whole step is covered by the last active frame")
+
+
 func test_the_two_hit_punch_lands_a_jab_then_a_cross_without_a_second_telegraph() -> void:
 	Tuning.data.punk_shove_chance = 0.0
 	_make_player(Vector3(0.0, 0.0, 0.0))

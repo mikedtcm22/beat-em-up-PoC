@@ -12,7 +12,7 @@ extends RefCounted
 const RoomActs := preload("res://tests/bot/acts/room_acts.gd")
 ## The guard goes up this many frames before the strike: early enough for an ordinary block (a
 ## guard raised in the last few frames is a perfect block, which staggers the attacker).
-const BLOCK_LEAD_FRAMES := 14
+const BLOCK_LEAD_FRAMES := 26
 
 
 static func acts(bot: Node) -> Array[Dictionary]:

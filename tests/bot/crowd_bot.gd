@@ -98,6 +98,11 @@ var _crowd_attack: int = 0
 var _crowd_recover: int = 0
 var _crowd_waiting: int = 0
 var _crowd_lingering: int = 0
+## The widest empty arc (degrees) between the standing enemies seen from the player, over the
+## samples with four or more: the largest, and the sum and count for the mean.
+var _crowd_arc_max: float = 0.0
+var _crowd_arc_sum: float = 0.0
+var _crowd_arc_n: int = 0
 
 
 func _room_scene() -> PackedScene:
@@ -365,6 +370,9 @@ func _start_measuring(title: String, tags: Dictionary) -> void:
 	_crowd_recover = 0
 	_crowd_waiting = 0
 	_crowd_lingering = 0
+	_crowd_arc_max = 0.0
+	_crowd_arc_sum = 0.0
+	_crowd_arc_n = 0
 	_lock_on = true
 
 
@@ -381,9 +389,9 @@ func _stop_measuring(title: String) -> void:
 			float(_lock_run_longest) / Engine.physics_ticks_per_second,
 			100.0 * float(_lock_locked) / maxf(float(_lock_frames), 1.0), seconds])
 	var frames := maxf(float(_lock_frames), 1.0)
-	log_line("CROWD %s: on average %.1f alive, %.1f posturing, %.1f attacking (ENGAGE, WINDUP, ATTACK), %.1f backing off, %.2f waiting at strike range, %.2f still within it in RECOVER" % [
+	log_line("CROWD %s: on average %.1f alive, %.1f posturing, %.1f attacking (ENGAGE, WINDUP, ATTACK), %.1f backing off, %.2f waiting at strike range, %.2f still within it in RECOVER, widest empty arc %.0f deg (mean %.0f)" % [
 			title, _crowd_alive / frames, _crowd_posture / frames, _crowd_attack / frames, _crowd_recover / frames,
-			_crowd_waiting / frames, _crowd_lingering / frames])
+			_crowd_waiting / frames, _crowd_lingering / frames, _crowd_arc_max, _crowd_arc_sum / maxf(float(_crowd_arc_n), 1.0)])
 	log_line("PILOT %s: %s" % [title, JSON.stringify(pilot.result())])
 
 
@@ -401,11 +409,14 @@ func _sample_lock() -> void:
 		_lock_chain_longest = maxi(_lock_chain_longest, frame - _lock_chain_start + 1)
 	else:
 		_lock_run = 0
+	var bearings: Array[float] = []
 	for node: Node in get_tree().get_nodes_in_group(&"ai_enemy"):
 		var enemy := node as EnemyActor
 		if enemy == null or enemy.health <= 0.0:
 			continue
 		_crowd_alive += 1
+		if frame % 10 == 0 and enemy.state in [CombatTypes.ActorState.FREE, CombatTypes.ActorState.WINDUP, CombatTypes.ActorState.ATTACK]:
+			bearings.append(player.look_bearing_deg(enemy.global_position))
 		match enemy.ai_state:
 			EnemyActor.AiState.POSTURE:
 				_crowd_posture += 1
@@ -419,6 +430,14 @@ func _sample_lock() -> void:
 				if Vector2(enemy.global_position.x - player.global_position.x,
 						enemy.global_position.z - player.global_position.z).length() <= WAITING_RANGE_M:
 					_crowd_lingering += 1
+	if bearings.size() >= 4:
+		bearings.sort()
+		var arc := bearings[0] + 360.0 - bearings[bearings.size() - 1]
+		for i in range(1, bearings.size()):
+			arc = maxf(arc, bearings[i] - bearings[i - 1])
+		_crowd_arc_max = maxf(_crowd_arc_max, arc)
+		_crowd_arc_sum += arc
+		_crowd_arc_n += 1
 
 
 func _connect_logs() -> void:

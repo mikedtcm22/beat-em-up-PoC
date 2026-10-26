@@ -321,13 +321,13 @@ func write_json(dir: String = "") -> String:
 
 ## The folder of the capture being recorded: the --write-movie path's folder, or --probe-out=<dir>.
 func _capture_dir() -> String:
-	var args := OS.get_cmdline_args()
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--probe-out="):
 			return arg.trim_prefix("--probe-out=")
-	var i := args.find("--write-movie")
-	if i >= 0 and i + 1 < args.size():
-		return args[i + 1].get_base_dir()
+	# OS.get_cmdline_args() leaves out the arguments the engine takes itself, --write-movie among them.
+	var movie := Engine.get_write_movie_path()
+	if not movie.is_empty():
+		return movie.get_base_dir()
 	return ""
 
 

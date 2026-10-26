@@ -649,8 +649,11 @@ func _tick_windup(player: CombatActor) -> void:
 
 
 func _on_move_frame(move: MoveData, frame: int) -> void:
-	# A step-in during the strike (a jump kick, a charge), never a slide through the telegraph.
-	if frame == move.startup and move.free_lunge > 0.0:
+	# A step-in during the strike (a jump kick, a charge), never a slide through the telegraph. It
+	# is set on the last startup frame: the lunge starts moving the body on the next one, the first
+	# active frame, so the whole of free_lunge (which reach_m includes) is covered while the strike
+	# is active.
+	if frame == move.startup - 1 and move.free_lunge > 0.0:
 		set_lunge(get_forward(), move.free_lunge, maxi(move.active, 1))
 
 
