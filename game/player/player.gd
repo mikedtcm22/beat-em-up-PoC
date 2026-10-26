@@ -324,6 +324,18 @@ func weapon_durability_left() -> int:
 	return _weapon.durability if _weapon else 0
 
 
+## The weapon LB would pick up this very frame, or null: the nearest available weapon within
+## `pickup_range`, while LB is free to pick one up (the player on his feet and alive, nothing in
+## his hands, and no enemy in the grab's reach, which LB grabs first). A read for the HUD's
+## pick-up cue (a dropped pipe lies below the forward lens); it changes nothing.
+func pickup_target() -> Weapon:
+	if _weapon != null or state != CombatTypes.ActorState.FREE or health <= 0.0:
+		return null
+	if _find_grab_target() != null:
+		return null
+	return _find_weapon()
+
+
 func holding_enemy() -> CombatActor:
 	return _held
 

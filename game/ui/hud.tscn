@@ -13,6 +13,7 @@
 [ext_resource type="Script" uid="uid://cldj37t3p4a64" path="res://game/ui/block_callout.gd" id="11_callout"]
 [ext_resource type="Script" uid="uid://tv3uearc4ock" path="res://game/ui/rear_warning.gd" id="12_rear"]
 [ext_resource type="Script" path="res://game/ui/grab_prompt.gd" id="13_grab"]
+[ext_resource type="Script" path="res://game/ui/pickup_cue.gd" id="14_pickup"]
 
 [node name="Hud" type="CanvasLayer"]
 process_mode = 3
@@ -165,6 +166,23 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("13_grab")
+
+[node name="PickupCue" type="Control" parent="."]
+visible = false
+layout_mode = 3
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -170.0
+offset_top = 250.0
+offset_right = 170.0
+offset_bottom = 340.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("14_pickup")
 
 [node name="PauseOverlay" type="Control" parent="."]
 visible = false

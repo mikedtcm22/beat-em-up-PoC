@@ -8,8 +8,9 @@ extends CanvasLayer
 ## bottom-center, combat log right-middle, camera toast and pause caption top-center, help
 ## left-middle, the PARRY / GUARD BREAK callout just below the center (drawn over the log
 ## and the help, which "GUARD BREAK!" reaches into), over-head enemy bars and the center dot
-## in the 3D view, and the MASH P / K! prompt (GrabPrompt) below the center while an enemy holds
-## the player. The top-left and top-right corners stay
+## in the 3D view, the MASH P / K! prompt (GrabPrompt) below the center while an enemy holds
+## the player, and the "LB" pick-up cue (PickupCue) low in the view while a weapon is within
+## LB's reach (a dropped pipe lies below the forward lens). The top-left and top-right corners stay
 ## clear for the rear-attack warning (Spec §8), which RearWarning draws there. The DebugDraw
 ## child (CombatDebugDraw, F3) draws in 3D, in group "debug_draw". The boss bar follows the
 ## live actor in group "boss" by itself (no room or boss calls into the HUD).
@@ -30,6 +31,7 @@ extends CanvasLayer
 @onready var block_callout: BlockCallout = $BlockCallout
 @onready var rear_warning: RearWarning = $RearWarning
 @onready var grab_prompt: GrabPrompt = $GrabPrompt
+@onready var pickup_cue: PickupCue = $PickupCue
 @onready var camera_toast: CameraModeToast = $CameraToast
 @onready var help_overlay: HelpOverlay = $HelpOverlay
 @onready var pause_overlay: PauseOverlay = $PauseOverlay
@@ -91,6 +93,8 @@ func advance(delta: float) -> void:
 	rear_warning.advance(game_delta * TimeController.sim_scale())
 	# The MASH prompt follows the held player's presses in real time.
 	grab_prompt.advance(game_delta)
+	# The "LB" cue breathes in game time, like the lettering.
+	pickup_cue.advance(game_delta)
 
 
 ## Show the bottom-center boss bar for `actor` (the HUD shows it by itself for the live
