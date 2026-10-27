@@ -1,0 +1,621 @@
+extends RefCounted
+## The look acts of Milestone 4 (L0-bench) for the crowd bot (tests/bot/crowd_bot.gd): the Street Punk
+## and the player's own limbs as the lens sees them, so a change of look is judged from the same
+## frames before and after. Every title starts with "Look:". Record them with
+##   tools/capture_bot.sh res://tests/bot/crowd_bot.tscn captures/<key> "Look:" 6
+## (or one act: "Look: Punk face") and cut the stills and crops with
+##   tools/look_sheets.sh captures/<key>/bot.avi captures/<key>/sheets
+##
+## Every act hides the bot's caption (it comes back when the act ends), freezes the AI, turns on god
+## mode and seeds the comic effects' random generator (the same bursts every run). All motion is
+## scripted: the player's own presses, the Punk's force_attack(), and for the strafe and the turntable
+## the Punk's own rig played by hand (an actor on the AI's tick plays its idle every tick, so
+## play_locomotion() on a frozen one is overwritten at once). The acts print, through look_rect.gd,
+##   LOOK-MARK <slug> f<frame> <label>      a frame worth a still; `start` and `end` delimit the act
+##   LOOK-RECT <slug> f<frame> <head|hands|body> x y w h   where the subject is, in 1600x900 pixels
+## The slug is the act's number: c1 ... c13 (C12, the extremes, is F-motion's).
+##
+## | Act | Title | Shows |
+## | C1 | Look: Punk face at 1 m | the Punk 1 m ahead, the view 8 degrees up, 3 s idle |
+## | C2 | Look: Punk body at 1 m | the same at the default 6 degrees down, 3 s idle |
+## | C3 | Look: Punk strafes at 1 m | a half circle at 1.0-1.3 m (the view follows), then a step in and out |
+## | C4 | Look: Punk attacks at 1 m | its two-hit punch (jab, cross), then its shove, landing on the player |
+## | C5 | Look: Punk reacts at 1 m | a jab (flinch and flash), P P P P (hook stagger, uppercut launch), the get-up, health 100/65/30%, then a jab finishes it (KO slump, blink-off) |
+## | C6 | Look: distances | the Punk at 1, 2.5, 5 and 10 m |
+## | C7 | Look: lineup | Punk, Kicker, Thug and Bruiser at 2.2 m, the street behind |
+## | C8 | Look: own limbs | looking 45 degrees down: jab, cross, hook, front kick, block, walking; then 20 down (strikes, guard) and 65 down (walking) |
+## | C9 | Look: street tour | the room's tour with a cast of the four archetypes standing in the street |
+## | C10 | Look: turntable | free fly camera round the Punk at rest, in the guard and lying (mesh QA) |
+## | C11 | Look: hold the Punk | grab, three knees, throw |
+## | C13 | Look: Punk, impact frame off | C5 with the impact frame off |
+##
+## Later packages add acts to this file (SL-int the perf act, F-motion C12, P3-int): a new act is one
+## entry of acts() and one function; use _begin(), _end(), LookRect.mark() and _watch() as these do.
+
+const LookRect := preload("res://tests/bot/look_rect.gd")
+const RoomActs := preload("res://tests/bot/acts/room_acts.gd")
+
+## The 1 m recipe: where the Punk stands (x right, y ahead, metres), and where it stands for its
+## punches to land (the reach of its two-hit punch, as the Punk bot's "two-hit punch lands").
+const CLOSE_M := 1.0
+const HIT_M := 0.95
+## The held Punk's distance (the combo bot's hold acts), the lineup's and the turntable's.
+const HOLD_M := 1.1
+const LINEUP_M := 2.2
+## The view: pitch of the face shot (degrees, negative looks down), the default look of every act
+## (combo_bot._reset), a level look and the look down at the player's own limbs.
+const FACE_PITCH_DEG := 8.0
+const DEFAULT_PITCH_DEG := -6.0
+const LEVEL_PITCH_DEG := 0.0
+const LIMBS_PITCH_DEG := -45.0
+## C8's other two looks: where the guard and the strikes are in the view, and where the lead leg and
+## the feet come in (the combo bot's stance act looks 65 degrees down for them).
+const ARMS_PITCH_DEG := -20.0
+const FEET_PITCH_DEG := -65.0
+## Ticks to turn the view, to let a spawned body settle, and how long the idle is held (3 s).
+const PITCH_TICKS := 10
+const TURN_TICKS := 30
+const SETTLE_TICKS := 30
+const IDLE_TICKS := 180
+## A held pose gets a mark this often (1 s).
+const MARK_GAP_TICKS := 60
+## The strafe: the arc (degrees), the nearest and farthest the Punk comes (m), how fast the view
+## follows it (degrees a second), and the pause before the step in.
+const STRAFE_ARC_DEG := 150.0
+const STRAFE_NEAR_M := 1.0
+const STRAFE_FAR_M := 1.3
+const FOLLOW_DEG_PER_S := 90.0
+const STEP_PAUSE_TICKS := 30
+## The attacks: how long each may take (ticks) and how long it is watched after it.
+const ATTACK_START_TICKS := 30
+const ATTACK_MAX_TICKS := 240
+const AFTER_ATTACK_TICKS := 40
+## The reacts: a pause between the jab and the chain (the chain starts over after a wait), the frames
+## between the chain's presses (the Punk bot's), how long a body may take to go down and get up,
+## and how long each health look is held (1 s).
+const REST_TICKS := 60
+const CHAIN_GAP_TICKS := 8
+const DOWN_MAX_TICKS := 120
+const GETUP_MAX_TICKS := 300
+const HEALTH_HOLD_TICKS := 60
+const HEALTH_MARK_TICKS := 30
+## The Punk's health for the reacts: enough to live through the jab and the chain (38 damage against
+## its own 30), the little that one jab finishes at the end (the KO slump and blink-off), and how long
+## the blink-off may take (ticks).
+const SURVIVOR_HEALTH := 100.0
+const FINISH_HEALTH := 5.0
+const BLINK_MAX_TICKS := 600
+const HEALTH_SHARES: Array[float] = [1.0, 0.65, 0.3]
+## The distances act: the Punk's distances (m) and how long each is held (1.5 s).
+const DISTANCES_M: Array[float] = [1.0, 2.5, 5.0, 10.0]
+const DISTANCE_HOLD_TICKS := 90
+## The lineup: the enemies left to right (bearing from the look in degrees, positive to the left) on
+## an arc of LINEUP_M. The Bruiser is the widest, so it has the outer place.
+const LINEUP: Array[Dictionary] = [
+	{id = &"punk", bearing_deg = 33.0},
+	{id = &"kicker", bearing_deg = 11.0},
+	{id = &"thug", bearing_deg = -11.0},
+	{id = &"bruiser", bearing_deg = -33.0},
+]
+const LINEUP_HOLD_TICKS := 180
+## The own-limbs act: how long a held guard and the walk last, and the walk's marks.
+const GUARD_TICKS := 40
+const WALK_TICKS := 60
+const WALK_MARK_TICKS := 20
+## The street tour's cast: archetype and where it stands (x right, y ahead of the player's start, m).
+## The first four ring the start for the tour's turn on the spot; the last two flank the lane the tour
+## then walks.
+const TOUR_CAST: Array[Dictionary] = [
+	{id = &"punk", rel = Vector2(0.0, 3.5)},
+	{id = &"kicker", rel = Vector2(-3.5, 0.0)},
+	{id = &"thug", rel = Vector2(3.5, 0.0)},
+	{id = &"bruiser", rel = Vector2(0.0, -3.5)},
+	{id = &"punk", rel = Vector2(-2.2, 6.0)},
+	{id = &"thug", rel = Vector2(2.4, 9.0)},
+]
+const TOUR_MARK_TICKS := 150
+## The turntable: each stance's name and animation, the orbit's radius, the eye's and the aim's
+## height above the Punk's feet (m), the orbit's length and the settle before it.
+const TURNTABLE: Array[Dictionary] = [
+	{name = &"rest", anim = &"idle", radius = 2.2, eye = 1.4, aim = 1.0},
+	{name = &"guard", anim = &"block", radius = 2.2, eye = 1.4, aim = 1.0},
+	{name = &"lying", anim = &"downed_back", radius = 1.8, eye = 1.3, aim = 0.25},
+]
+const ORBIT_QUARTER_TICKS := 120
+const ORBIT_TICKS := ORBIT_QUARTER_TICKS * 4
+const ORBIT_SETTLE_TICKS := 40
+## Where the actors of the manually posed acts stand, in the acts' own frame (m ahead).
+const POSED_M := 1.0
+## The comic effects' random seed (the VFX bot's).
+const VFX_SEED := 7
+
+
+static func acts(bot: Node) -> Array[Dictionary]:
+	return [
+		{title = "Look: Punk face at 1 m", cam = &"first_person", slug = &"c1", fn = func() -> void: await _face(bot)},
+		{title = "Look: Punk body at 1 m", cam = &"first_person", slug = &"c2", fn = func() -> void: await _body(bot)},
+		{title = "Look: Punk strafes at 1 m", cam = &"first_person", slug = &"c3", fn = func() -> void: await _strafe(bot)},
+		{title = "Look: Punk attacks at 1 m", cam = &"first_person", slug = &"c4", fn = func() -> void: await _attacks(bot)},
+		{title = "Look: Punk reacts at 1 m", cam = &"first_person", slug = &"c5",
+				fn = func() -> void: await _reacts(bot, "c5")},
+		{title = "Look: distances", cam = &"first_person", slug = &"c6", fn = func() -> void: await _distances(bot)},
+		{title = "Look: lineup", cam = &"first_person", slug = &"c7", fn = func() -> void: await _lineup(bot)},
+		{title = "Look: own limbs", cam = &"first_person", slug = &"c8", fn = func() -> void: await _own_limbs(bot)},
+		{title = "Look: street tour", cam = &"first_person", slug = &"c9", fn = func() -> void: await _tour(bot)},
+		{title = "Look: turntable", cam = &"free_fly", slug = &"c10", fn = func() -> void: await _turntable(bot)},
+		{title = "Look: hold the Punk", cam = &"first_person", slug = &"c11", fn = func() -> void: await _hold(bot)},
+		{title = "Look: Punk, impact frame off", cam = &"first_person", slug = &"c13",
+				fn = func() -> void: await _reacts(bot, "c13", false)},
+	]
+
+
+# --- The shared steps -------------------------------------------------------------------------
+
+
+## The start of every act: the caption off (the bot sets its text before the act runs, so it is up
+## for a frame or two of the act's slate), god mode, the AI frozen, the comic effects cleared and
+## seeded.
+static func _begin(bot: Node) -> void:
+	bot.caption.visible = false
+	bot.god()
+	bot.freeze_ai(true)
+	var vfx := bot.get_tree().get_first_node_in_group(VfxDirector.GROUP) as VfxDirector
+	if vfx:
+		vfx.clear()
+		vfx.rng.seed = VFX_SEED
+
+
+## The end of every act: the `end` mark and the caption back (the bot's own idle tail shows it).
+static func _end(bot: Node, slug: String) -> void:
+	LookRect.mark(bot, slug, "end")
+	bot.caption.visible = true
+
+
+## `ticks` of an idle held (`_idle_marks`), a mark with `subject`'s rectangles at its start and every
+## MARK_GAP_TICKS, named <label>_t<tick>.
+static func _idle_marks(bot: Node, slug: String, subject: CombatActor, ticks: int, label: String) -> void:
+	var done := 0
+	while true:
+		LookRect.mark(bot, slug, "%s_t%03d" % [label, done], subject)
+		if done >= ticks:
+			return
+		var step := mini(MARK_GAP_TICKS, ticks - done)
+		await bot._ticks(step)
+		done += step
+
+
+## A coroutine that runs beside an act, until `run.running` is cleared, and marks what happens to
+## `actor` (with its rectangles): every change of its state (`state_<name>`), each move it starts
+## (`<move>_windup`) and gets to its first active frame (`<move>_strike`), and every hit it lands or
+## takes (`<move>_hit` and `<move>_took`, and the frame after, `..._next`: the contact flash shows
+## for a couple of frames). Start it without await.
+static func _watch(bot: Node, slug: String, actor: CombatActor, run: Dictionary) -> void:
+	var tree: SceneTree = bot.get_tree()
+	var hits: Array[HitInfo] = []
+	var on_hit := func(hit: HitInfo) -> void:
+		if hit.attacker == actor or hit.victim == actor:
+			hits.append(hit)
+	CombatEvents.hit_landed.connect(on_hit)
+	var state := actor.state
+	var move: MoveData = null
+	var struck := false
+	var next_marks: Array[String] = []
+	while run.running and is_instance_valid(actor):
+		await tree.physics_frame
+		if not run.running or not is_instance_valid(actor):
+			break
+		for label: String in next_marks:
+			LookRect.mark(bot, slug, label, actor)
+		next_marks.clear()
+		if actor.state != state:
+			state = actor.state
+			LookRect.mark(bot, slug, "state_%s" % CombatTypes.state_name(state).to_lower(), actor)
+		if actor.current_move != move:
+			move = actor.current_move
+			struck = false
+			if move != null:
+				LookRect.mark(bot, slug, "%s_windup" % move.id, actor)
+		if move != null and not struck and actor.move_frame >= move.startup:
+			struck = true
+			LookRect.mark(bot, slug, "%s_strike" % move.id, actor)
+		for hit: HitInfo in hits:
+			var id: StringName = hit.move.id if hit.move != null else &"body"
+			var label := "%s_%s" % [id, "hit" if hit.attacker == actor else "took"]
+			LookRect.mark(bot, slug, label, actor)
+			next_marks.append("%s_next" % label)
+		hits.clear()
+	CombatEvents.hit_landed.disconnect(on_hit)
+
+
+## The Punk `rel` ahead of the player, standing in its idle, the AI frozen.
+static func _punk(bot: Node, rel: Vector2) -> EnemyActor:
+	return bot.spawn(&"punk", rel)
+
+
+## Health for a Punk that is to live through what an act does to it (see SURVIVOR_HEALTH).
+static func _survivor(punk: EnemyActor) -> void:
+	punk.max_health = SURVIVOR_HEALTH
+	punk.health = SURVIVOR_HEALTH
+
+
+## Stand `punk` `rel` ahead of the player (x right, y ahead), facing him: the Punk bot's way of
+## putting a body that has been knocked about back in front of the lens.
+static func _place(bot: Node, punk: EnemyActor, rel: Vector2) -> void:
+	var player: Node3D = bot.player
+	var at := player.global_position + player.global_basis * Vector3(rel.x, 0.0, -rel.y)
+	at.y = player.global_position.y
+	var to := player.global_position - at
+	punk.global_position = at
+	punk.rotation.y = atan2(-to.x, -to.z)
+	punk.sim_velocity = Vector3.ZERO
+
+
+## Take `actor` off the physics tick, so an act can place it and play its rig by hand (_pose()).
+static func _unplug(actor: CombatActor) -> void:
+	actor.set_physics_process(false)
+
+
+## Place the unplugged `actor` at `at`, facing `toward`, and advance its rig one tick: it walks the
+## way it moved, as an enemy's own legs do (EnemyActor._animate_legs()).
+static func _pose(actor: CombatActor, at: Vector3, toward: Vector3) -> void:
+	var dt := 1.0 / Engine.physics_ticks_per_second
+	var velocity := (at - actor.global_position) / dt
+	actor.global_position = at
+	var to := toward - at
+	actor.rotation.y = atan2(-to.x, -to.z)
+	var forward := actor.get_forward()
+	var right := forward.cross(Vector3.UP)
+	actor.rig.play_locomotion(Vector2(velocity.dot(right), velocity.dot(forward)),
+			velocity.length() / Tuning.data.move_speed)
+	actor.rig.advance(dt)
+
+
+## Turn the player's look toward `at`, by at most `deg_per_s` a second (the view that follows a
+## circling enemy, as a player's does).
+static func _follow(bot: Node, at: Vector3, deg_per_s: float) -> void:
+	var step := deg_per_s / float(Engine.physics_ticks_per_second)
+	var turn := clampf(bot.player.look_bearing_deg(at), -step, step)
+	bot.player.look_yaw = wrapf(bot.player.look_yaw + deg_to_rad(turn), -PI, PI)
+
+
+## The world position `radius` m from the player at `bearing` radians from `heading` (a yaw), 0
+## ahead and positive to the left, at the player's height.
+static func _ring(bot: Node, heading: float, bearing: float, radius: float) -> Vector3:
+	var local := Vector3(-sin(bearing) * radius, 0.0, -cos(bearing) * radius)
+	var at: Vector3 = bot.player.global_position + Basis(Vector3.UP, heading) * local
+	at.y = bot.player.global_position.y
+	return at
+
+
+# --- C1, C2: standing --------------------------------------------------------------------------
+
+
+static func _face(bot: Node) -> void:
+	_begin(bot)
+	var punk := _punk(bot, Vector2(0.0, CLOSE_M))
+	await bot._look_to(FACE_PITCH_DEG, PITCH_TICKS)
+	await bot._ticks(SETTLE_TICKS)
+	LookRect.mark(bot, "c1", "start")
+	await _idle_marks(bot, "c1", punk, IDLE_TICKS, "idle")
+	_end(bot, "c1")
+
+
+static func _body(bot: Node) -> void:
+	_begin(bot)
+	var punk := _punk(bot, Vector2(0.0, CLOSE_M))
+	await bot._look_to(DEFAULT_PITCH_DEG, PITCH_TICKS)
+	await bot._ticks(SETTLE_TICKS)
+	LookRect.mark(bot, "c2", "start")
+	await _idle_marks(bot, "c2", punk, IDLE_TICKS, "idle")
+	_end(bot, "c2")
+
+
+# --- C3: the strafe ----------------------------------------------------------------------------
+
+
+## A half circle round the player, nearest in the middle (the Punk's own circle speed), the view
+## following it; then a stop, a step in to the nearest and a step back (at the same walking pace: its
+## own step-in speed is 0.1 s for this distance, too quick to see a stride).
+static func _strafe(bot: Node) -> void:
+	_begin(bot)
+	var heading: float = bot.player.look_yaw
+	var punk := _punk(bot, Vector2(0.0, STRAFE_FAR_M))
+	await bot._ticks(SETTLE_TICKS)
+	LookRect.mark(bot, "c3", "start")
+	_unplug(punk)
+	var arc := deg_to_rad(STRAFE_ARC_DEG)
+	var length := arc * (STRAFE_NEAR_M + STRAFE_FAR_M) * 0.5
+	var circle_ticks := ceili(length / Tuning.data.posture_circle_speed_mps * Engine.physics_ticks_per_second)
+	var quarter := floori(circle_ticks / 4.0)
+	for i in circle_ticks + 1:
+		if i % quarter == 0:
+			LookRect.mark(bot, "c3", "circle_%d_of_4" % floori(float(i) / quarter), punk)
+		var t := float(i) / circle_ticks
+		var radius := lerpf(STRAFE_FAR_M, STRAFE_NEAR_M, sin(PI * t))
+		var at := _ring(bot, heading, -arc * t, radius)
+		_pose(punk, at, bot.player.global_position)
+		_follow(bot, at, FOLLOW_DEG_PER_S)
+		await bot._ticks(1)
+	# Stopped, then in and back along the line to the player.
+	var from := punk.global_position
+	var line_in: Vector3 = bot.player.global_position - from
+	line_in.y = 0.0
+	line_in = line_in.normalized()
+	var step_ticks := ceili((STRAFE_FAR_M - STRAFE_NEAR_M) / Tuning.data.posture_circle_speed_mps * Engine.physics_ticks_per_second)
+	for i in STEP_PAUSE_TICKS:
+		_pose(punk, from, bot.player.global_position)
+		await bot._ticks(1)
+	LookRect.mark(bot, "c3", "step_in_start", punk)
+	for i in step_ticks + 1:
+		_pose(punk, from + line_in * (STRAFE_FAR_M - STRAFE_NEAR_M) * float(i) / step_ticks, bot.player.global_position)
+		await bot._ticks(1)
+	LookRect.mark(bot, "c3", "step_in_end", punk)
+	for i in STEP_PAUSE_TICKS:
+		_pose(punk, from + line_in * (STRAFE_FAR_M - STRAFE_NEAR_M), bot.player.global_position)
+		await bot._ticks(1)
+	for i in step_ticks + 1:
+		_pose(punk, from + line_in * (STRAFE_FAR_M - STRAFE_NEAR_M) * (1.0 - float(i) / step_ticks), bot.player.global_position)
+		await bot._ticks(1)
+	LookRect.mark(bot, "c3", "step_back_end", punk)
+	for i in STEP_PAUSE_TICKS:
+		_pose(punk, from, bot.player.global_position)
+		await bot._ticks(1)
+	_end(bot, "c3")
+
+
+# --- C4: attacks -------------------------------------------------------------------------------
+
+
+## The Punk's two-hit punch (attack 0) and then its shove (attack 1), each landing on the player (god
+## mode: the reaction plays, no damage). The watcher marks every wind-up, strike and landed hit.
+static func _attacks(bot: Node) -> void:
+	_begin(bot)
+	var punk := _punk(bot, Vector2(0.0, HIT_M))
+	await bot._ticks(SETTLE_TICKS)
+	LookRect.mark(bot, "c4", "start")
+	var run := {running = true}
+	_watch(bot, "c4", punk, run)
+	LookRect.mark(bot, "c4", "idle", punk)
+	for index in 2:
+		punk.force_attack(index)
+		# It starts on the next control tick; the second attack begins from RECOVER, so wait for the
+		# wind-up before waiting for the end.
+		await bot._wait_until(func() -> bool: return punk.ai_state == EnemyActor.AiState.WINDUP, ATTACK_START_TICKS)
+		await bot._wait_until(func() -> bool: return punk.ai_state == EnemyActor.AiState.RECOVER, ATTACK_MAX_TICKS)
+		await bot._ticks(AFTER_ATTACK_TICKS)
+	run.running = false
+	_end(bot, "c4")
+
+
+# --- C5, C13: reactions ------------------------------------------------------------------------
+
+
+## The player's jab on the Punk (a flinch, the contact flash), a pause, then P P P P (the jab again,
+## the hook's stagger, the uppercut's launch), the Punk down and getting up; then its health looks
+## at 100, 65 and 30% held a second each, and a jab on what is left of it: the KO slump and the
+## blink-off (J10). `impact_frame` false is C13: the finisher's ink print off, so what the Punk does
+## at the hit is not covered.
+static func _reacts(bot: Node, slug: String, impact_frame: bool = true) -> void:
+	_begin(bot)
+	if not impact_frame:
+		bot.tune(&"impact_frame_enabled", false)
+	var punk := _punk(bot, Vector2(0.0, CLOSE_M))
+	_survivor(punk)
+	await bot._ticks(SETTLE_TICKS)
+	LookRect.mark(bot, slug, "start")
+	var run := {running = true}
+	_watch(bot, slug, punk, run)
+	LookRect.mark(bot, slug, "idle", punk)
+	await bot._press(&"P", 2)
+	await bot._wait_idle()
+	await bot._ticks(REST_TICKS)
+	for i in 4:
+		await bot._press(&"P", 2, CHAIN_GAP_TICKS)
+	await bot._wait_until(func() -> bool: return punk.is_downed(), DOWN_MAX_TICKS)
+	await bot._wait_until(func() -> bool:
+			return punk.state == CombatTypes.ActorState.FREE and punk.current_move == null, GETUP_MAX_TICKS)
+	await bot._ticks(SETTLE_TICKS)
+	# The launch left it a few metres off: back in front of the lens for the health looks and the jab.
+	_place(bot, punk, Vector2(0.0, CLOSE_M))
+	await bot._ticks(SETTLE_TICKS)
+	for share: float in HEALTH_SHARES:
+		punk.health = punk.max_health * share
+		CombatEvents.health_changed.emit(punk, punk.health, punk.max_health)
+		await bot._ticks(HEALTH_MARK_TICKS)
+		LookRect.mark(bot, slug, "health_%d" % roundi(share * 100.0), punk)
+		await bot._ticks(HEALTH_HOLD_TICKS - HEALTH_MARK_TICKS)
+	# A jab finishes it. The Punk is freed once it has blinked off, so the wait holds a WeakRef.
+	punk.health = FINISH_HEALTH
+	CombatEvents.health_changed.emit(punk, punk.health, punk.max_health)
+	var ref: WeakRef = weakref(punk)
+	await bot._press(&"P", 2)
+	await bot._wait_until(func() -> bool: return ref.get_ref() == null, BLINK_MAX_TICKS)
+	run.running = false
+	_end(bot, slug)
+
+
+# --- C6, C7: distance and company --------------------------------------------------------------
+
+
+## The Punk at each of DISTANCES_M in turn, the view level, standing.
+static func _distances(bot: Node) -> void:
+	_begin(bot)
+	await bot._look_to(LEVEL_PITCH_DEG, PITCH_TICKS)
+	LookRect.mark(bot, "c6", "start")
+	for distance: float in DISTANCES_M:
+		bot.clear_enemies()
+		var punk := _punk(bot, Vector2(0.0, distance))
+		await bot._ticks(SETTLE_TICKS)
+		await bot._ticks(DISTANCE_HOLD_TICKS - SETTLE_TICKS)
+		LookRect.mark(bot, "c6", "d%s_m" % str(distance).replace(".", "_"), punk)
+	_end(bot, "c6")
+
+
+## The four archetypes on an arc of LINEUP_M, facing the player, the view level.
+static func _lineup(bot: Node) -> void:
+	_begin(bot)
+	var punk: EnemyActor = null
+	for entry: Dictionary in LINEUP:
+		var bearing := deg_to_rad(entry.bearing_deg)
+		var enemy: EnemyActor = bot.spawn(entry.id, Vector2(-sin(bearing), cos(bearing)) * LINEUP_M)
+		if entry.id == &"punk":
+			punk = enemy
+	await bot._look_to(LEVEL_PITCH_DEG, PITCH_TICKS)
+	await bot._ticks(SETTLE_TICKS)
+	LookRect.mark(bot, "c7", "start")
+	await _idle_marks(bot, "c7", punk, LINEUP_HOLD_TICKS, "lineup")
+	_end(bot, "c7")
+
+
+# --- C8: the player's own limbs ----------------------------------------------------------------
+
+
+## The player's own arms and legs, nothing in front of him, in three looks. LIMBS_PITCH_DEG (the plan's
+## 45 degrees down): a jab, cross and hook (one chain), a front kick, the guard held, then walking. At
+## 45 degrees the guard and the strikes are mostly above the view and only the kick's leg is in it, so
+## ARMS_PITCH_DEG (20 down) repeats the chain and the guard where the arms are in the view, and
+## FEET_PITCH_DEG (65 down) idles and walks where the lead leg and the feet come in. The marks follow
+## the player's own moves; the rectangles are his fists and the legs and feet his lens sees.
+static func _own_limbs(bot: Node) -> void:
+	_begin(bot)
+	await bot._look_to(LIMBS_PITCH_DEG, PITCH_TICKS + 5)
+	await bot._ticks(SETTLE_TICKS)
+	LookRect.mark(bot, "c8", "start")
+	var run := {running = true}
+	_watch(bot, "c8", bot.player, run)
+	LookRect.mark(bot, "c8", "idle", bot.player)
+	await bot._ticks(MARK_GAP_TICKS)
+	await _limbs_strikes(bot)
+	await bot._press(&"K", 2)
+	await bot._wait_idle()
+	await bot._ticks(CHAIN_GAP_TICKS)
+	await _limbs_guard(bot, "guard")
+	await _limbs_walk(bot, "walk")
+	# The walk went most of the way to the end of the lane: turn round, so the last walk has room.
+	await bot._turn_by(180.0, TURN_TICKS)
+	await bot._look_to(ARMS_PITCH_DEG, PITCH_TICKS + 5)
+	await bot._ticks(SETTLE_TICKS)
+	LookRect.mark(bot, "c8", "arms_idle", bot.player)
+	await _limbs_strikes(bot)
+	await _limbs_guard(bot, "arms_guard")
+	await bot._look_to(FEET_PITCH_DEG, PITCH_TICKS + 5)
+	await bot._ticks(SETTLE_TICKS)
+	LookRect.mark(bot, "c8", "feet_idle", bot.player)
+	await _limbs_walk(bot, "feet_walk")
+	run.running = false
+	_end(bot, "c8")
+
+
+## A jab, a cross and a hook (one chain), then idle again.
+static func _limbs_strikes(bot: Node) -> void:
+	for i in 3:
+		await bot._press(&"P", 2, CHAIN_GAP_TICKS)
+	await bot._wait_idle()
+	await bot._ticks(CHAIN_GAP_TICKS)
+
+
+## The guard held GUARD_TICKS (marked at its end as `label`), then let go.
+static func _limbs_guard(bot: Node, label: String) -> void:
+	await bot._hold_block()
+	await bot._ticks(GUARD_TICKS)
+	LookRect.mark(bot, "c8", label, bot.player)
+	await bot._release_block()
+	await bot._ticks(CHAIN_GAP_TICKS)
+
+
+## Walking forward WALK_TICKS, marked every WALK_MARK_TICKS as <label>_t<tick>.
+static func _limbs_walk(bot: Node, label: String) -> void:
+	bot.player.input.scripted_move = Vector2(0.0, 1.0)
+	for i in WALK_TICKS:
+		if i % WALK_MARK_TICKS == 0:
+			LookRect.mark(bot, "c8", "%s_t%03d" % [label, i], bot.player)
+		await bot._ticks(1)
+	bot.player.input.scripted_move = Vector2.ZERO
+	await bot._ticks(WALK_MARK_TICKS)
+
+
+# --- C9: the street ----------------------------------------------------------------------------
+
+
+## The room's tour (a turn on the spot, along the lane, looks into the doorways and the alleys) with
+## TOUR_CAST standing in the street, a mark every TOUR_MARK_TICKS.
+static func _tour(bot: Node) -> void:
+	_begin(bot)
+	for entry: Dictionary in TOUR_CAST:
+		bot.spawn(entry.id, entry.rel)
+	await bot._ticks(SETTLE_TICKS)
+	LookRect.mark(bot, "c9", "start")
+	var run := {running = true}
+	_ticker(bot, "c9", run)
+	await RoomActs._tour(bot)
+	run.running = false
+	_end(bot, "c9")
+
+
+## A coroutine that marks every TOUR_MARK_TICKS until `run.running` is cleared (no subject: the
+## street has no single one).
+static func _ticker(bot: Node, slug: String, run: Dictionary) -> void:
+	var ticks := 0
+	while run.running:
+		await bot._ticks(1)
+		ticks += 1
+		if run.running and ticks % TOUR_MARK_TICKS == 0:
+			LookRect.mark(bot, slug, "tour_t%04d" % ticks)
+
+
+# --- C10: the turntable ------------------------------------------------------------------------
+
+
+## The free fly camera once round the Punk (a full turn, a mark every quarter), at rest, in the
+## guard and lying. For the mesh: nothing here is first person.
+static func _turntable(bot: Node) -> void:
+	_begin(bot)
+	var punk := _punk(bot, Vector2(0.0, POSED_M))
+	_unplug(punk)
+	var camera := bot.director.free_fly_camera as Camera3D
+	await bot._ticks(1)
+	LookRect.mark(bot, "c10", "start")
+	for stance: Dictionary in TURNTABLE:
+		punk.rig.play(stance.anim, 0.0)
+		for i in ORBIT_SETTLE_TICKS:
+			punk.rig.advance(1.0 / Engine.physics_ticks_per_second)
+			await bot._ticks(1)
+		var yaw: float = punk.rotation.y
+		var feet := punk.global_position
+		for i in ORBIT_TICKS + 1:
+			if i % ORBIT_QUARTER_TICKS == 0:
+				LookRect.mark(bot, "c10", "%s_q%d" % [stance.name, 90 * floori(float(i) / ORBIT_QUARTER_TICKS)], punk)
+			var angle := TAU * float(i) / ORBIT_TICKS
+			var eye := feet + Basis(Vector3.UP, yaw) * Vector3(sin(angle) * stance.radius, stance.eye, -cos(angle) * stance.radius)
+			camera.global_transform = Transform3D(Basis.IDENTITY, eye).looking_at(feet + Vector3(0.0, stance.aim, 0.0), Vector3.UP)
+			punk.rig.advance(1.0 / Engine.physics_ticks_per_second)
+			await bot._ticks(1)
+	_end(bot, "c10")
+
+
+# --- C11: hold ---------------------------------------------------------------------------------
+
+
+## The player grabs the Punk 1.1 m ahead and knees it three times (the third lets go: Tuning's
+## max_knees), grabs it again and throws it; the act waits for the Punk to be down.
+static func _hold(bot: Node) -> void:
+	_begin(bot)
+	var punk := _punk(bot, Vector2(0.0, HOLD_M))
+	_survivor(punk)
+	await bot._ticks(SETTLE_TICKS)
+	LookRect.mark(bot, "c11", "start")
+	var run := {running = true}
+	_watch(bot, "c11", punk, run)
+	LookRect.mark(bot, "c11", "idle", punk)
+	await bot._press(&"GRAB", 2, 20)
+	for i in 3:
+		await bot._press(&"P", 2)
+		await bot._wait_idle()
+		await bot._ticks(CHAIN_GAP_TICKS)
+	await bot._wait_until(func() -> bool: return punk.state == CombatTypes.ActorState.FREE, GETUP_MAX_TICKS)
+	await bot._press(&"GRAB", 2, 20)
+	await bot._press(&"K", 2)
+	await bot._wait_until(func() -> bool: return punk.is_downed(), DOWN_MAX_TICKS)
+	await bot._ticks(MARK_GAP_TICKS)
+	run.running = false
+	_end(bot, "c11")

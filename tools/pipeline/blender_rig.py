@@ -1,0 +1,84 @@
+"""Step 3 of the chain: the project armature and the weights (M4-plan Part C section 5 step 4, Part A A3).
+
+	blender --background --factory-startup --python-exit-code 1 --python tools/pipeline/blender_rig.py -- <pipeline.json>
+
+Reads work/02_fit.blend, writes work/03_rig.blend. The armature is named Armature and has exactly the 23 bones of the
+table, every joint where blender_fit put it: the table chained through the measured arm swing (the A-pose; pipe_common.
+chain_joints). Weights, config rig.weights:
+	"tripo": the source rig's own groups ("tw_<Bone>", already folded onto the 23 names by blender_inspect) renamed to the
+	         bone names; vertices the source left unweighted are filled from the nearest weighted vertex;
+	"auto":  Blender's heat-map weights (ARMATURE_AUTO) from the project armature, Root excluded; the vertices the heat
+	         solve leaves empty (interior and overlapping geometry) are filled the same way.
+Either way: at most rig.max_influences (4) per vertex, normalised, none on Root, every vertex weighted. The result is a
+joined Body with an Armature modifier and one vertex group per bone in table order.
+"""
+import os
+import sys
+
+import bpy
+import numpy as np
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import pipe_blender as pb  # noqa: E402
+import pipe_common as pc  # noqa: E402
+
+NAMES = pc.bone_names()
+
+
+def run(cfg, extra):
+	rigc = cfg.get("rig", {})
+	mode = rigc.get("weights", "auto")
+	limit = int(rigc.get("max_influences", 4))
+	pb.open_blend(pc.work_path(cfg, "02_fit.blend"))
+	body = bpy.data.objects[pb.BODY]
+	me = body.data
+	co = pb.verts(me)
+	targets = pb.scene_prop("pipe_targets")
+	segs = {k: (tuple(v["head"]), tuple(v["tail"])) for k, v in targets.items()}
+	segs["Root"] = ((0.0, 0.0, 0.0), segs["Hips"][0])
+	arm = pb.make_armature(pb.ARMATURE, segs, NAMES, pc.bone_parent())
+	meta = pb.scene_prop("pipe_source", {})
+	notes = []
+
+	if mode == "tripo" and meta.get("has_tw"):
+		tw = pb.weights_matrix(body, ["tw_" + n for n in NAMES])
+		w = tw.copy()
+		w[:, NAMES.index("Hips")] += w[:, NAMES.index("Root")]
+		w[:, NAMES.index("Root")] = 0.0
+		used = "tripo"
+	else:
+		if mode == "tripo":
+			notes.append("weights tripo requested but the source has no rig weights: used auto")
+		pb.attach_armature(body, arm)
+		pb.auto_weights(body, arm, skip=("Root",))
+		w = pb.weights_matrix(body, NAMES)
+		used = "auto"
+	empty_before = int((w.sum(axis=1) < 1e-4).sum())
+	w, filled = pb.fill_unweighted(co, w)
+	w = pb.limit_and_normalize(w, limit)
+	w[:, NAMES.index("Root")] = 0.0
+	w = pb.limit_and_normalize(w, limit)
+	pb.write_weights(body, NAMES, w, remove_others=True)
+	pb.attach_armature(body, arm)
+	for p in me.polygons:
+		p.use_smooth = True
+	pb.save_blend(pc.work_path(cfg, "03_rig.blend"))
+
+	hist = np.bincount((w > 1e-4).sum(axis=1), minlength=limit + 1).tolist()
+	return {
+		"weights": used,
+		"weights_requested": mode,
+		"bones": len(arm.data.bones),
+		"vertices": len(co),
+		"unweighted_before_fill": empty_before,
+		"filled_from_nearest": filled,
+		"influence_histogram": hist,
+		"max_influences": int((w > 1e-4).sum(axis=1).max()),
+		"weight_on_root": float(w[:, NAMES.index("Root")].max()),
+		"vertices_per_bone": {n: int((w[:, i] > 0.5).sum()) for i, n in enumerate(NAMES)},
+		"notes": notes,
+	}
+
+
+if __name__ == "__main__":
+	pb.run_step("rig", run)

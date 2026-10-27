@@ -1,0 +1,66 @@
+{
+	"_about": "Parameters of tools/pipeline/blender_mannequin.py (M4-plan.md Part C section 5 step 2, as amended by A2 step 3): the joint table as a chunky grey mannequin in a 45 degree A-pose, rendered orthographic from the front, the left and the back at 3:4, 2K. The numbers live here, not in the script. Rerun: blender --background --factory-startup --python-exit-code 1 --python tools/pipeline/blender_mannequin.py -- assets/source/mannequin/mannequin.json assets/source/mannequin",
+	"format": 1,
+	"joints": "tools/pipeline/joints.json",
+	"parts_set": "parts_enemy",
+	"skip_parts": ["BellyTop", "Cap", "Hair", "CapBrim", "Shades", "ShadesFront", "LeftFist", "RightFist", "LeftFingers", "RightFingers", "LeftStrap", "RightStrap"],
+	"pose": {
+		"name": "a_pose",
+		"upper_arm_down_from_horizontal_deg": 45,
+		"note": "Each upper arm swings out about the rig's Z axis so it points this many degrees below horizontal; the forearm and hand continue straight along it. The legs stay parallel at the table's x = +-0.11."
+	},
+	"hand": {
+		"note": "An open mitten in place of the fist box (A13: views keep open hands). Palm to the body, thumb forward (-Z). Axes are the Hand bone's: the hand hangs along -Y from the wrist.",
+		"length_m": 0.19,
+		"width_m": 0.1,
+		"thickness_m": 0.06,
+		"thumb_radius_m": 0.022,
+		"thumb_length_m": 0.075,
+		"thumb_below_wrist_m": 0.05
+	},
+	"nose": {
+		"note": "A small wedge so the front of the head reads in the left view.",
+		"bone": "Head",
+		"size_m": [0.034, 0.05, 0.05],
+		"offset_m": [0.0, 0.1, -0.125]
+	},
+	"loft": {
+		"note": "The boxes that make the torso, pelvis to upper chest, become one smooth superellipse loft (exponent 2 is an ellipse, higher is boxier). BellyTop, the cylinder that rounds the belly's top, is in skip_parts.",
+		"parts": ["Pelvis", "Belt", "Belly", "Chest", "UpperChest"],
+		"rings": 64,
+		"around": 56,
+		"exponent": 2.6,
+		"end_round_m": 0.06,
+		"end_floor": 0.45
+	},
+	"mesh": {
+		"segments": 32,
+		"rings": 15,
+		"bevel_m": 0.05,
+		"bevel_segments": 3,
+		"sharp_angle_deg": 50,
+		"blend": {
+			"note": "The overlapping parts are melted into one shell (a voxel remesh) and smoothed, so the torso reads as a body and not as stacked slabs; voxel_m 0 keeps the separate parts.",
+			"voxel_m": 0.008,
+			"smooth_iterations": 16,
+			"smooth_factor": 0.5
+		}
+	},
+	"colors": {
+		"mannequin_srgb": "#b0b0b0",
+		"background_srgb": "#d9d9d9"
+	},
+	"render": {
+		"width_px": 1536,
+		"height_px": 2048,
+		"ortho_scale_m": 2.15,
+		"look_at_height_m": 0.93,
+		"camera_distance_m": 8.0,
+		"antialiasing_samples": "32"
+	},
+	"views": [
+		{"name": "front", "camera_dir_rig": [0, 0, -1], "note": "the camera stands in front of the character (it faces -Z); the character's own right is on the image's left"},
+		{"name": "left", "camera_dir_rig": [-1, 0, 0], "note": "the character's own left side; it faces the image's left"},
+		{"name": "back", "camera_dir_rig": [0, 0, 1], "note": "from behind; the character's own right is on the image's right"}
+	]
+}

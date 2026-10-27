@@ -4,6 +4,66 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-26 23:45 CDT: L0-bench merged; P1-post running
+5-hour 58% (resets 00:50 CDT), weekly 15%.
+- **L0-bench merged** (`f49e30c`). On its own base it passed 1210/1210; the suite on the merge is running.
+  - **Look acts:** C1-C11 and C13 are in `tests/bot/acts/look_acts.gd` (slugs c1..c13).
+  - **Tools:** `look_rect.gd` prints the LOOK-MARK and LOOK-RECT lines, and `tools/look_sheets.sh` turns them into stills and 2× crops. `tools/perf_compare.sh` runs `tests/bot/perf_bot.tscn` in temporary worktrees per ref. `CAPTURE_ARGS` now reaches the bot through `capture_bot.sh`.
+  - **The before pack:** `captures/m4_before/<slug>/` (778 MB, local, never committed). It was recorded one act per process, so re-record the same way to pair before and after stills by label.
+- **Perf note for the lead's real run (A16):** unattended windowed runs with vsync off stall for 1.0 s every few seconds on this M1 (about 15 frames in 1700). Vsync-on runs don't stall. Read the report's stalls row first. If it warns, run with the window in front, or use `--vsync on` and rule on the p95 bar.
+- **Running since 23:45:** P1-post, `wf_89f245d9-23a` (task `why16ktxx`), with [args-P1-post.json](reviews/M4/args-P1-post.json). Its steps:
+  - A8's probe first;
+  - then the edge quad, the LUT and the training room through RoomKit;
+  - the car recoloured;
+  - `look_probe.gd`;
+  - NOISY perf numbers only.
+- **Still running:** P1-skin, P1-toon and P1-chain. P1-fx takes the next free Godot slot.
+
+### 2026-10-26 23:40 CDT: P1-tools done and merged; the smoke Punk is through Tripo (55 credits)
+- **Merged:** `50b42d4`.
+  - The `--spend` guard on every paid Tripo call.
+  - The mannequin: `assets/source/mannequin/`, made by `blender_mannequin.py` from `joints.json`.
+  - `blender_views.py`: four-side textured stills of any GLB.
+  - The smoke sources in `assets/source/characters/punk/smoke/`: a Gemini flat front view of Punk A; the T1 generation `cb4af11c_gen.glb` (19,510 triangles, faithful to the concept); the T3 rig `0366578f_rig.glb`; their dumps; and `source.json`.
+- **Ledger:** T1 30.00 (texture v3.5 costs the same as standard), T2 0, T3 25.00. M4 has spent **55** credits; the balance is **1445**.
+- **What the smoke taught us** (for P1-chain, all in `source.json`):
+  - Tripo's model faces +X (`facing_yaw_deg` 89.33), and `Left_*` means the character's own left.
+  - The model is 1.000 m tall, so it scales by 1.8.
+  - Tripo's rig has 67 bones and roots at Hips with no Root. Its names map by dropping the underscore (`Left_UpperArm` becomes `LeftUpperArm`).
+  - Its arms sit 38-42° from vertical and its legs splay about 10°.
+  - It is broader and more muscular than the rig table: the shoulders sit 6-9 cm low.
+  - Gemini's flat view didn't follow the mannequin's stance. For F-punk, tighten that with the mannequin's numbers or an edit round.
+- **Left as is:** P1-tools asked to drop the price table's two settled "unverified" entries. Its own self-test pins that flag, so the table stays unchanged; it only prints a warning.
+- **Still running:** P1-skin, P1-toon, P1-chain (which will find the smoke on its check) and L0-bench. A background watch merges P1-chain's `probe_body.glb` commit once it is pushed.
+- **Game-boy's pick:** none yet (read 23:38).
+
+### 2026-10-26 23:15 CDT: S0 and P1-tools part 1 merged (1216/1216); phase 1 running
+5-hour 43% (resets 00:50 CDT), weekly 12%. Phase 0 cost about 9%, much less than its estimate.
+- **Merged into `m4/art-pipeline`:**
+  - P1-tools part 1 (`584c6b0`): `tripo.py`, `tripo_prices.json`, `blender_dump_rig.py`, the empty ledger and the Concepts rows. No credits; the balance is 1500.
+  - S0-contract (`4d8c391`): 1216/1216 headless, with 0 SCRIPT, SHADER or ERROR lines. The preset regenerates unchanged (462 values). A seeded combo_bot recording is bit-identical to M3 on all 1815 frames. The lead reviewed the hunks in humanoid_rig, combat_actor, weapon and room_kit.
+- **Lead fixes:**
+  - `tools/gemini_image.py` finds the key from a worktree (the environment, then the repo's `.env`, then the main checkout's).
+  - The Tripo ledger merges by union.
+- **A near miss in P1-tools part 1:** a command without `--dry-run` would have started a real 30-credit T1, and the permission check blocked it. Part 2's first step makes paid calls also require `--spend <expected>`.
+- **S0's calls worth knowing:**
+  - C1: `test_audio`'s group-order test now expects Look, then Debug.
+  - C3: `look_outline_px` seeds at 3.75.
+  - C4: the primitives are hidden only when `SkinnedArt.attach()` returns meshes.
+  - C5: `art_material()` is a plain StandardMaterial3D stub.
+- **Running since 23:10** ([args-P1.json](reviews/M4/args-P1.json)):
+  - P1-skin: `wf_9bd1db5f-395` (task `wkq826175`);
+  - P1-toon: `wf_fad395f7-7df` (task `wgv9cp8g1`);
+  - P1-chain: `wf_b2b8f7d8-4aa` (task `wxc5qcvcb`). It proves the chain on `probe_body.glb` (pushed early for P1-skin). Then it waits for the smoke, or returns `wip` and gets relaunched.
+  - P1-tools part 2: `wf_09fa509f-1ab` (task `wk0fwaqxa`). Steps: the `--spend` guard, the mannequin renders, a Gemini flat view of Punk A, then T1-T3 (55 credits expected, 85 ceiling).
+  - L0-bench is still `wf_cc211798-6b5`.
+- **Lead, as each lands:**
+  1. Merge P1-chain's `probe_body.glb` wip as soon as it is pushed (P1-skin uses it).
+  2. Merge P1-tools on its final commit, then relaunch P1-chain if it returned `wip`.
+  3. When L0-bench is done, merge it, then launch P1-post (A8's probe first), then P1-fx.
+  4. Run the full suite after every merge.
+- **Game-boy's pick:** none yet (read 22:35).
+
 ### 2026-10-26 22:40 CDT: M4 plan written; phase 0 (S0-contract, L0-bench, P1-tools) launching
 5-hour 34% (resets 2026-10-27 00:50 CDT), weekly 11%. The plan workflow cost about 29% of the window (8 agents, 3.0M tokens).
 - **The plan:** [M4-plan.md](milestones/M4-plan.md).
