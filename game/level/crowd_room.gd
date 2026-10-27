@@ -323,7 +323,10 @@ func _build_props() -> void:
 	var crate := RoomKit.flat_material(Color(0.55, 0.46, 0.3))
 	for p in crate_positions:
 		RoomKit.add_box(geometry, Vector3(p.x, crate_size * 0.5, p.z), Vector3(crate_size, crate_size, crate_size), crate)
-	RoomKit.add_box(geometry, car_position + Vector3.UP * car_size.y * 0.5, car_size, RoomKit.flat_material(Color(0.55, 0.2, 0.2)))
+	# A muted blue-grey: red is only for blood, the warning and finisher accents (M4-plan A13), and the
+	# street's own colors stay under the look bible's saturation of 0.30.
+	RoomKit.add_box(geometry, car_position + Vector3.UP * car_size.y * 0.5, car_size,
+			RoomKit.flat_material(Color(0.34, 0.38, 0.45)))
 	RoomKit.add_box(geometry, dumpster_position + Vector3.UP * dumpster_size.y * 0.5, dumpster_size,
 			RoomKit.flat_material(Color(0.2, 0.42, 0.3)))
 

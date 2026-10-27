@@ -1,11 +1,11 @@
 class_name RoomKit
 extends RefCounted
-## Building blocks for the code-built rooms (Milestone 3): the crowd street uses them, and the
-## frozen training room keeps its own copies. Static helpers only, so a room reads as a list of
-## boxes: the sky and sun, solid boxes on the world layer (the physics bodies the navmesh bakes
+## Building blocks for the code-built rooms: the crowd street (Milestone 3) and, from Milestone 4,
+## the training room too, so one look serves both. Static helpers only, so a room reads as a list
+## of boxes: the sky and sun, solid boxes on the world layer (the physics bodies the navmesh bakes
 ## from), visual-only boxes, flat materials, the player with its avoidance obstacle, and the
-## presentation layer (cameras, HUD, tuning overlay, VFX, audio, rumble) as direct children of
-## the room. Layout numbers live in the room's exports, never here.
+## presentation layer (cameras, HUD, tuning overlay, VFX, audio, rumble, the look's post pass) as
+## direct children of the room. Layout numbers live in the room's exports, never here.
 
 const PLAYER_SCENE := "res://game/player/player.tscn"
 const CAMERA_DIRECTOR_SCENE := "res://game/camera/camera_director.tscn"
@@ -44,7 +44,7 @@ class PlayerObstacle:
 			height = actor.body_height
 
 
-## The sky, a low sun with shadows and a light fog: the same look as the training room.
+## The sky, a low sun with shadows and a light fog (the training room builds it here too).
 static func build_environment(room: Node3D) -> void:
 	var env := Environment.new()
 	env.background_mode = Environment.BG_SKY
@@ -78,8 +78,9 @@ static func build_environment(room: Node3D) -> void:
 
 ## A solid box centred at `pos` (world layer, no mask), with a mesh when `material` is given,
 ## added to `parent`. Parent it under the room's geometry node: that node is what the navmesh
-## bakes from.
-static func add_box(parent: Node, pos: Vector3, size: Vector3, material: Material = null) -> StaticBody3D:
+## bakes from. `overlay` goes on the mesh's `material_overlay` (a prop's hull).
+static func add_box(parent: Node, pos: Vector3, size: Vector3, material: Material = null,
+		overlay: Material = null) -> StaticBody3D:
 	var body := StaticBody3D.new()
 	body.position = pos
 	body.collision_layer = CombatTypes.bit(CombatTypes.LAYER_WORLD)
@@ -90,25 +91,27 @@ static func add_box(parent: Node, pos: Vector3, size: Vector3, material: Materia
 	shape.shape = box
 	body.add_child(shape)
 	if material:
-		body.add_child(box_mesh(size, material))
+		body.add_child(box_mesh(size, material, overlay))
 	parent.add_child(body)
 	return body
 
 
 ## A box that is only drawn (paint, the far skyline): no collision, and the navmesh ignores it.
-static func add_visual_box(parent: Node, pos: Vector3, size: Vector3, material: Material) -> MeshInstance3D:
-	var mesh := box_mesh(size, material)
+static func add_visual_box(parent: Node, pos: Vector3, size: Vector3, material: Material,
+		overlay: Material = null) -> MeshInstance3D:
+	var mesh := box_mesh(size, material, overlay)
 	mesh.position = pos
 	parent.add_child(mesh)
 	return mesh
 
 
-static func box_mesh(size: Vector3, material: Material) -> MeshInstance3D:
+static func box_mesh(size: Vector3, material: Material, overlay: Material = null) -> MeshInstance3D:
 	var mesh := MeshInstance3D.new()
 	var box := BoxMesh.new()
 	box.size = size
 	box.material = material
 	mesh.mesh = box
+	mesh.material_overlay = overlay
 	return mesh
 
 
@@ -135,9 +138,10 @@ static func spawn_player(room: Node3D, pos: Vector3, yaw_deg: float) -> PlayerCh
 	return player
 
 
-## Cameras, HUD, debug draw (if the HUD did not bring one), the F1/F4 TuningOverlay and the
-## VFX, audio and rumble directors, all direct children of `room` (bots and tests find them
-## there).
+## Cameras, HUD, debug draw (if the HUD did not bring one), the F1/F4 TuningOverlay, the VFX,
+## audio and rumble directors and the LookPost (the edge pass, the grade, the AA mode), all
+## direct children of `room` (bots and tests find them there). Build the room's environment
+## first: the grade goes on its WorldEnvironment.
 static func build_presentation(room: Node3D) -> void:
 	if ResourceLoader.exists(CAMERA_DIRECTOR_SCENE):
 		room.add_child((load(CAMERA_DIRECTOR_SCENE) as PackedScene).instantiate())
@@ -154,3 +158,4 @@ static func build_presentation(room: Node3D) -> void:
 	room.add_child(VfxDirector.new())
 	room.add_child(AudioDirector.new())
 	room.add_child(RumbleDirector.new())
+	room.add_child(LookPost.new())
