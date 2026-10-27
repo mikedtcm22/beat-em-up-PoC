@@ -4,7 +4,8 @@ Usage: python3 -I tools/gemini_image.py <jobs.json> [job-name ...]
 A jobs file is a JSON list of
 	{"out": "name.png", "prompt": "...", "model": "gemini-3-pro-image",
 	 "aspect": "3:4", "size": "2K", "refs": ["ref.png", ...]}
-"out" and "refs" are relative to the jobs file's folder. Naming jobs (by their "out" stem)
+"out" and "refs" are relative to the jobs file's folder; the written file's extension follows
+the image type the model returns. Naming jobs (by their "out" stem)
 runs only those. The key is read from GEMINI_API_KEY in the repo's .env and sent in the
 x-goog-api-key header; it is never printed. The key's project needs billing (Tier 1): the
 free tier allows no image generations.
@@ -53,9 +54,12 @@ def run(job: dict, base: str, key: str) -> str:
 	for candidate in data.get("candidates", []):
 		for part in candidate.get("content", {}).get("parts", []):
 			if "inlineData" in part:
+				# The extension follows the returned type (the models answer in JPEG or PNG).
+				ext = mimetypes.guess_extension(part["inlineData"].get("mimeType", "image/png")) or ".png"
+				out = os.path.splitext(out)[0] + (".jpg" if ext in (".jpe", ".jpeg") else ext)
 				with open(out, "wb") as f:
 					f.write(base64.b64decode(part["inlineData"]["data"]))
-				return f"{job['out']}: ok {' '.join(texts)[:200]}"
+				return f"{os.path.relpath(out, base)}: ok {' '.join(texts)[:200]}"
 			if "text" in part:
 				texts.append(part["text"])
 	return f"{job['out']}: no image; {json.dumps(data)[:400]}"
