@@ -4,6 +4,44 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-27 13:05 CDT: the fix round merged (1561 tests, all passing); F-cuff and the final review (V2-V6) running
+- **Merged:** `m4/f-punk-fix` (`891b7b1`), `m4/f-player-fix` (`7faf7ce`) and `m4/p3-int` (`60d35c1`), with no conflicts. Then the A22 routine: the preset, the palette atlas (23 swatches, `--check` passes) and the import. The full suite was 1560/1561 with 0 SCRIPT, SHADER or ERROR lines. The one failure was `test_m4_done_when`'s A1 mesh list, which P3-int wrote before F-player-fix added `Body__fp_torso`. It's fixed in `3eea29a`, and the done-when file passes 18/18. Also in `3eea29a`: two stray `.uid` files F-punk-fix committed in `tests/` are removed, and the F-player-int paragraph "The hull" is updated, since P3-int moved that code.
+  - **F-punk-fix:**
+    - a clean dark glove collar (no yellow, no slivers);
+    - a cream lens (#e6dcc4) in a dark frame;
+    - smoothed shading normals (`pipe_normals.py`; the blotches);
+    - the face's own ink thresholds (the speckle);
+    - 14,299 triangles.
+  - **F-player-fix:**
+    - The legs and shoes were inside out: `player_parts` recalculated every normal at the split. That, not the swatch, made the front kick's shoe black.
+    - convex 4 cm domes at the arm cut and the belly top;
+    - 4,000-triangle fists with clean label borders;
+    - `Body__fp_torso` (the knockdown slab is 43% of the view off and 19% on);
+    - the hero's A9 as a ratchet;
+    - 29,320 triangles; no Tripo retry.
+  - **P3-int:**
+    - `ToonMaterials.outline(first_person)` (T8 byte-identical);
+    - A19 on both shipped GLBs (Punk p99.9 4.12, hero 8.67, printed as GATE lines);
+    - `tests/test_m4_done_when.gd`: PASS on A1, A2, A3, A5, A8, A10, A12, A13 and A14; GATE with a ratchet on A4 (the hero's walks), A6 (the hero's legs, 89.4%), A7, A9 and A11;
+    - the act 'Look: final probe' (L1 and L2 missed, L3 and L5 met, on the pre-merge art).
+  - **Tripo:** still 295 credits; the fix round spent none.
+- **The lead's look** (full-resolution before and after stills beside the concepts):
+  - The hero's fixes all read: a convex arm end with no ink fan, a lit charcoal shoe with a cream sole in the front kick, clean fingers in the look-down.
+  - The Punk's head now reads as a cap, a pale visor and a face, and the yellow and slivers are gone.
+  - Two Punk items are left:
+    - The collar is a wide flat flange under each fist (a "plunger base"). A9's 4-point lens-share bar forced it, because the art is slimmer than the proxies' fist box.
+    - The lens is cream, where the concept's is gold.
+  - Judgement call 22: the cuff follows the concept, and a pose that misses the share bar becomes a ratchet. Call 23: the review runs beside F-cuff, with V1 held.
+- **Running since 13:00 CDT:**
+  - **F-cuff:** workflow `wf_990bebea-f76`, `workflow-build.js` with `docs/reviews/M4/args-F-cuff.json`; worktree `.worktrees/m4-f-cuff`, branch `m4/f-cuff`. It reshapes the cuff into the concept's wrist band and A/Bs the lens (the cap's yellow inside the dark frame, against the cream). **If cut off:** rerun it with the same args; it resumes from the branch.
+  - **The final review, V2-V6:** workflow `wf_f116f808-22a`, `workflow-review.js` with `docs/reviews/M4/args-review-final.json` (round `final`, base `3eea29a`, `no_fix` true, one skeptic per finding). The worktrees are `.worktrees/m4-review-final-<lens>`. **If cut off:** rerun it with the same args, plus `reviews` and `verdicts` from the journal (`subagents/workflows/wf_f116f808-22a/journal.jsonl`) for the agents that finished.
+- **Next:**
+  1. Merge F-cuff (A22) and look at its stills.
+  2. Run V1 (the Punk standing at 1 m, J1-J7) as round `final` with base = the merged head.
+  3. Run the fixers: rerun `workflow-review.js` with all six lenses, `reviews` and `verdicts` from both runs, and `no_fix` false.
+  4. Then README's M4 sections, the evidence pack index, the PR (not merged) and the final DM.
+- **The review's scores:** `workflow-review.js` gained a required `scores` field (J1-J14, each 0, 1 or 2 with evidence) for Part B's pass rule. The rule: no 0s, every critical item at least 1, and a mean of at least 1.5.
+
 ### 2026-10-27 11:30 CDT: F-punk and F-player-art merged (1533/1534, the hero's A9 the one red test); the fix round running
 - **Merged:** F-punk (`08ddacf`) and F-player-art (`159eefb`), then the A22 routine on the combined head: the preset regenerated (516 values), the palette atlas regenerated (23 swatches, `--check` passes), the ARCHITECTURE add/add resolved by keeping both headings, and the full suite 1533/1534 with 0 SCRIPT, SHADER or ERROR lines. The one failure is `test_art_player`'s hero A9 against FPView's proxies (10 poses), which F-player-fix turns into a ratchet (call 20).
   - **F-punk:** Street Punk A from T4 (front, left and back views), T8 rig and T9 glove fist; 14,984 triangles, 7 slots and 6 colours, with A18's 1k detail mask wired in `punk_art.tres`. A6 is asserted at 95% (torso 100, legs 95.3, head 99.9). Still missed and ratcheted: visible stretch 8.4 cm (the waist hem in the cross's twist), A9's cells 6.6%, and A11's torso anchor 6.0 cm. 135 credits.
