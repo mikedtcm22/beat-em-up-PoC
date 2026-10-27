@@ -268,7 +268,9 @@ func test_a1_the_glb_contract_holds_on_the_shipped_art() -> void:
 		for part: SkinnedArt.ArtMesh in entry.meshes:
 			names.append(String(part.node_name))
 		names.sort()
-		var want := PackedStringArray(["Body"]) if not row.player else PackedStringArray(["Body", "Body__fp_hidden"])
+		# The hero is three meshes since F-player-fix (test_art_contract: the belly and belt are their own
+		# Body__fp_torso, so fp_knockdown_hide_torso hides only them).
+		var want := PackedStringArray(["Body"]) if not row.player else PackedStringArray(["Body", "Body__fp_hidden", "Body__fp_torso"])
 		assert_eq(names, want, "%s: the meshes the pipeline contract names" % row.name)
 		var rig := _rig(row)
 		assert_true(rig.has_art(), "%s: the rig wears it (check() passed)" % row.name)

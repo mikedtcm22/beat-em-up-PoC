@@ -47,6 +47,19 @@ const FINDINGS_SCHEMA = {
     checked: { type: 'array', items: { type: 'string' }, description: 'every act (title, view) you recorded and judged, every metric or log you read, every code area and edge case you checked' },
     sheets: { type: 'array', items: { type: 'string' }, description: 'absolute paths of the most telling sheets' },
     passes: { type: 'array', items: { type: 'string' }, description: 'gate or rubric items that passed, each with its evidence' },
+    scores: {
+      type: 'array',
+      description: 'the final review only: every rubric item your brief names (J1-J14), scored 0 (fails), 1 (acceptable) or 2 (production); empty if your brief names none',
+      items: {
+        type: 'object',
+        properties: {
+          item: { type: 'string', description: 'J1 ... J14' },
+          score: { type: 'number', enum: [0, 1, 2] },
+          evidence: { type: 'string', description: 'the frame, still or crop that decides it, and what it shows' },
+        },
+        required: ['item', 'score', 'evidence'],
+      },
+    },
     also_noticed: { type: 'array', items: { type: 'string' } },
     findings: {
       type: 'array',
@@ -105,7 +118,7 @@ const FINDINGS_SCHEMA = {
       required: ['choice', 'contingency', 'why'],
     },
   },
-  required: ['summary', 'checked', 'sheets', 'passes', 'also_noticed', 'findings'],
+  required: ['summary', 'checked', 'sheets', 'passes', 'scores', 'also_noticed', 'findings'],
 }
 const VOTE_SCHEMA = {
   type: 'object',
