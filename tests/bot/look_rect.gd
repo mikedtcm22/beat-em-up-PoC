@@ -15,10 +15,14 @@ extends RefCounted
 ## grown by PAD_PX and clipped to the frame; a region that is wholly outside the frame, or behind
 ## the lens, prints no line. A region sphere that reaches the lens fills the frame.
 ##
-## Frames are Engine.get_physics_frames() read as a bot resumes from a `physics_frame` await: before
-## any node ticks, so the poses and the camera are what the frame before it drew. Movie Maker writes
-## one video frame per physics tick (--fixed-fps 60 at 60 Hz), so the video frame of a line is its
-## `f<frame>` plus look_sheets.sh's FRAME_OFFSET (calibrated there).
+## Frames: `f<frame>` is the video frame of the state the line describes, counting from 0 in a Movie
+## Maker recording: video_frame(). A bot resumes from a `physics_frame` await before any node ticks,
+## so what it reads (poses, the camera) is what the last rendered frame drew, and that frame's index
+## is Engine.get_process_frames() - 1 (calibrated against a recording that lights one frame: the
+## frame drawn after a tick is numbered by the process frames counted when the bot resumed in it).
+## Counting process frames rather than physics ticks keeps the number right when a frame ran two
+## physics ticks (a hitch) and so the two counts drifted. The bot's own `f<n>` lines (hits, AI states)
+## are physics ticks and run about one to two ahead.
 
 ## The size every rectangle is reported in: the recording's (project.godot's window override).
 const FRAME_SIZE := Vector2(1600.0, 900.0)
@@ -42,8 +46,7 @@ const NEAR_M := 0.05
 ## its rig at the same frame. Logged through the bot's log_line(), so it also lands in its summary.
 static func mark(bot: Node, slug: String, label: String, subject: CombatActor = null,
 		regions: Array[StringName] = ALL_REGIONS) -> void:
-	var frame := Engine.get_physics_frames()
-	bot.log_line("LOOK-MARK %s f%d %s" % [slug, frame, label])
+	bot.log_line("LOOK-MARK %s f%d %s" % [slug, video_frame(), label])
 	if subject != null:
 		rects(bot, slug, subject, regions)
 
@@ -52,7 +55,7 @@ static func mark(bot: Node, slug: String, label: String, subject: CombatActor = 
 ## sees them. A first-person body (the player's own) leaves out the bones hidden from its own lens.
 static func rects(bot: Node, slug: String, subject: CombatActor,
 		regions: Array[StringName] = ALL_REGIONS) -> void:
-	var frame := Engine.get_physics_frames()
+	var frame := video_frame()
 	var camera: Camera3D = bot.get_viewport().get_camera_3d()
 	if camera == null or subject == null or not is_instance_valid(subject) or subject.rig == null:
 		return
@@ -61,6 +64,11 @@ static func rects(bot: Node, slug: String, subject: CombatActor,
 		var rect := region_rect(camera, subject.rig, region, fp)
 		if rect.has_area():
 			bot.log_line(line(slug, frame, region, rect))
+
+
+## The video frame the state a bot reads now was drawn in (see the header).
+static func video_frame() -> int:
+	return maxi(Engine.get_process_frames() - 1, 0)
 
 
 ## One LOOK-RECT line.
