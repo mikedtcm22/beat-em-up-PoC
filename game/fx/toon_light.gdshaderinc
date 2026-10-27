@@ -75,9 +75,10 @@ void light() {
 		float in_shadow = 1.0 - smoothstep(band_1 - edge, band_1 + edge, lit);
 		shade *= 1.0 - halftone_strength * dots * in_shadow;
 	}
-	// The rim lifts the silhouette where the light reaches the surface.
+	// The rim lifts the silhouette where the light reaches the surface: the sun's, or the fill's
+	// (a character that faces away from the sun is rimmed on the fill's side).
 	float rim = smoothstep(rim_cut - 0.02, rim_cut + 0.02, pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), rim_power));
-	rim *= smoothstep(0.0, 0.3, ATTENUATION) * smoothstep(-0.35, 0.1, ndl);
+	rim *= smoothstep(0.0, 0.3, lit);
 	shade += rim_strength * rim;
 	// The lit band shows the albedo as it is, whatever the light's energy: the light's color is
 	// kept (a warm sun tints), its brightness is capped at 1 (a 1.2 sun does not wash a palette).

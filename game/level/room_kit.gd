@@ -82,6 +82,7 @@ static func build_environment(room: Node3D) -> void:
 static func apply_sun(sun: DirectionalLight3D) -> void:
 	sun.rotation_degrees = Vector3(-Tuning.data.look_sun_elevation_deg, Tuning.data.look_sun_yaw_deg, 0.0)
 	sun.light_energy = Tuning.data.look_sun_energy
+	sun.shadow_blur = Tuning.data.look_sun_shadow_blur
 
 
 ## A solid box centred at `pos` (world layer, no mask), with a mesh when `material` is given,

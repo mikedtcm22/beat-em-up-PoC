@@ -1092,6 +1092,10 @@ extends Resource
 ## The sun's energy. The toon bands take the light's color and cap its brightness, so this
 ## only moves what the cast shadows and the specular read against.
 @export_range(0.2, 3.0, 0.05) var look_sun_energy: float = 1.2
+## How soft the sun's shadow edges are (Light3D.shadow_blur: 0 is a hard edge, 1 Godot's default).
+## A blurred edge is dithered by the renderer's shadow filter, and a toon band edge laid over that
+## dither reads as a stippled strip 10 to 20 px wide (slice gate, gap 11): keep it small.
+@export_range(0.0, 3.0, 0.05) var look_sun_shadow_blur: float = 1.0
 ## The characters' fill light, as a share of a full light: a light fixed to the camera (in its
 ## view space, so it never turns away from a character that faces the lens) that gives a
 ## character that faces away from the sun two or three bands instead of one flat shadow. 0 is

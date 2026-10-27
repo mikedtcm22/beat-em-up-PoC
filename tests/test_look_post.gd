@@ -490,6 +490,34 @@ func test_no_environment_or_prop_color_is_red_and_the_car_is_muted() -> void:
 	assert_between(car.v, 0.25, 0.6, "and its value")
 
 
+## Whether `node` is part of the street (a wall, a crate, the ground, paint) and not a character or a
+## held thing.
+func _is_street(node: Node) -> bool:
+	var at := node.get_parent()
+	while at != null:
+		if at is CombatActor or at is Weapon:
+			return false
+		at = at.get_parent()
+	return true
+
+
+func test_every_street_surface_is_inside_the_bibles_saturation_and_value() -> void:
+	var crowd := await _crowd(false)
+	var training := await _training(false)
+	var checked := 0
+	for room: Node in [crowd, training]:
+		for node: Node in room.find_children("*", "MeshInstance3D", true, false):
+			if not _is_street(node):
+				continue
+			var color: Variant = _albedo((node as MeshInstance3D).mesh.material if (node as MeshInstance3D).mesh is PrimitiveMesh else null)
+			if color is Color:
+				var c: Color = color
+				checked += 1
+				assert_lte(c.s, STREET_SATURATION_MAX + 0.005, "%s %s: saturation at most 0.30 (the dumpster was 0.52, the crates 0.45)" % [node.get_path(), c])
+				assert_between(c.v, 0.25 - 0.005, 0.6 + 0.005, "%s %s: value 0.25 to 0.6" % [node.get_path(), c])
+	assert_gt(checked, 20, "the walls, crates, paint, windows and the ground were read")
+
+
 func test_no_paint_of_an_enemy_the_dummies_or_the_player_is_red() -> void:
 	var scenes: Array[String] = [RoomKit.PLAYER_SCENE]
 	for entry: Dictionary in EnemyCatalog.available():

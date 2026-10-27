@@ -134,9 +134,12 @@ static func _shot(bot: Node) -> Image:
 	return LookProbe.grab(bot.get_viewport())
 
 
-## The frame with `actor` in it, and the same frame with it hidden: {on, off}.
-static func _pair(bot: Node, actor: Node3D) -> Dictionary:
+## The frame with `actor` in it, marked `label` (a still and its rectangles), and then the same frame
+## with it hidden: {on, off}. The mark is made before the actor is hidden: a mark names the frame
+## last drawn.
+static func _pair(bot: Node, slug: String, label: String, actor: CombatActor) -> Dictionary:
 	var on := await _shot(bot)
+	LookRect.mark(bot, slug, label, actor)
 	actor.visible = false
 	var off := await _shot(bot)
 	actor.visible = true
@@ -169,12 +172,12 @@ static func _round(value: float, step: float = 0.01) -> float:
 	return snappedf(value, step)
 
 
-## The bands of a swatch's family as `luma/hue/share` triples, for a metric line.
+## The bands of a swatch's family as `luma/hue/share/saturation`, for a metric line.
 static func _band_text(bands: Array[Dictionary]) -> String:
 	var parts := PackedStringArray()
 	for band: Dictionary in bands:
 		var color: Color = band.color
-		parts.append("%.3f/%.0f/%.2f" % [band.luma, color.h * 360.0, band.share])
+		parts.append("%.3f/%.0f/%.2f/%.2f" % [band.luma, color.h * 360.0, band.share, color.s])
 	return ",".join(parts)
 
 
@@ -277,8 +280,7 @@ static func _bands(bot: Node) -> void:
 	for front: bool in [true, false]:
 		await _light(bot, front, base_yaw)
 		var label := "front_lit" if front else "back_lit"
-		var pair := await _pair(bot, punk)
-		LookRect.mark(bot, "t1", label, punk)
+		var pair := await _pair(bot, "t1", label, punk)
 		_band_metrics(bot, "t1", label, pair, punk)
 	_end(bot, "t1")
 
@@ -296,8 +298,7 @@ static func _distances(bot: Node) -> void:
 		for front: bool in [true, false]:
 			await _light(bot, front, base_yaw)
 			var label := "d%s_%s" % [str(distance).replace(".", "_"), "front_lit" if front else "back_lit"]
-			var pair := await _pair(bot, punk)
-			LookRect.mark(bot, "t2", label, punk)
+			var pair := await _pair(bot, "t2", label, punk)
 			_band_metrics(bot, "t2", label, pair, punk)
 	_end(bot, "t2")
 
@@ -353,8 +354,7 @@ static func _damage(bot: Node) -> void:
 		CombatEvents.health_changed.emit(punk, punk.health, punk.max_health)
 		await bot._ticks(HEALTH_HOLD_TICKS)
 		var label := "health_%d" % roundi(share * 100.0)
-		var pair := await _pair(bot, punk)
-		LookRect.mark(bot, "t4", label, punk)
+		var pair := await _pair(bot, "t4", label, punk)
 		_band_metrics(bot, "t4", label, pair, punk)
 	_end(bot, "t4")
 
