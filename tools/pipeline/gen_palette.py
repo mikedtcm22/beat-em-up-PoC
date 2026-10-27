@@ -5,12 +5,14 @@
 	python3 -I tools/pipeline/gen_palette.py --list     print the slots
 
 The atlas is 256x16 RGBA8, 8 px swatches, slot s at column s % 32, row s // 32 (64 slots: 0-15 shared, 16-31 punk,
-32-47 player, 48-63 reserved). rgb = the sRGB colour; alpha 255 = the swatch takes damage marks, 128 = it does not
-(today's DARK). Unused slots are magenta at alpha 128, so a stray lookup is loud. Nearest filter, no mipmaps (the
+32-47 player, 48-63 reserved). rgb = the sRGB colour; alpha is the swatch's damage class, read by game/fx/toon.gdshader:
+255 (1.0) takes the clothes' marks (scuffs, then blood), 204 (0.8) takes the skin's marks (bruises, then blood), 128 (0.5)
+takes none (today's DARK). Unused slots are magenta at alpha 128, so a stray lookup is loud. Nearest filter, no mipmaps (the
 material and the .import say so). The PNG is written with the standard library (zlib), byte for byte reproducible.
 
-Each palette file: {"id", "slot_range": [lo, hi], "swatches": [{"slot", "name", "srgb": "#rrggbb", "marks": bool}]}.
-Slots must lie in the file's range and no slot may be defined twice across files.
+Each palette file: {"id", "slot_range": [lo, hi], "swatches": [{"slot", "name", "srgb": "#rrggbb", "marks": bool, "skin": bool}]}.
+marks defaults to true, skin to false; a skin swatch must take marks. Slots must lie in the file's range and no slot may be
+defined twice across files.
 """
 import glob
 import os
@@ -29,6 +31,7 @@ WIDTH = COLUMNS * SWATCH_PX
 HEIGHT = ROWS * SWATCH_PX
 UNUSED = (255, 0, 255, 128)
 MARKS_ALPHA = 255
+SKIN_MARKS_ALPHA = 204
 NO_MARKS_ALPHA = 128
 
 
@@ -46,7 +49,7 @@ def load_palettes(palette_dir=None):
 
 
 def swatches(palette_dir=None):
-	"""{slot: {"rgba": (r, g, b, a), "name", "palette", "marks"}} over every palette file; raises ValueError on a bad file."""
+	"""{slot: {"rgba": (r, g, b, a), "name", "palette", "marks", "skin"}} over every palette file; raises ValueError on a bad file."""
 	out = {}
 	for path, pal in load_palettes(palette_dir):
 		lo, hi = pal["slot_range"]
@@ -60,7 +63,11 @@ def swatches(palette_dir=None):
 				raise ValueError("%s: slot %d is already defined by %s" % (os.path.basename(path), slot, out[slot]["palette"]))
 			r, g, b = parse_hex(sw["srgb"])
 			marks = bool(sw.get("marks", True))
-			out[slot] = {"rgba": (r, g, b, MARKS_ALPHA if marks else NO_MARKS_ALPHA), "name": sw["name"], "palette": pal["id"], "marks": marks}
+			skin = bool(sw.get("skin", False))
+			if skin and not marks:
+				raise ValueError("%s: slot %d is skin but takes no marks" % (os.path.basename(path), slot))
+			alpha = NO_MARKS_ALPHA if not marks else SKIN_MARKS_ALPHA if skin else MARKS_ALPHA
+			out[slot] = {"rgba": (r, g, b, alpha), "name": sw["name"], "palette": pal["id"], "marks": marks, "skin": skin}
 	return out
 
 

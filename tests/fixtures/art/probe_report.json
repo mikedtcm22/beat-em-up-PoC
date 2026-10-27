@@ -523,6 +523,8 @@
 					"triangles": 9986,
 					"height_m": 1.820496,
 					"feet_y": 0.00018,
+					"folded_triangles": 39,
+					"folded_share": 0.003905,
 					"facing": {
 						"axis": "-Z",
 						"yaw": -0.18266,
@@ -575,7 +577,7 @@
 						]
 					},
 					"file": "probe_body.glb",
-					"sha256": "3bc5db67554ea53a89e478a188b413a7b4ebf14af800476b2ca40838eab82457",
+					"sha256": "583f251d06f5a904e95ac160b1a1013659f0096f13d0eb9995866f23552330b3",
 					"bytes": 614596
 				},
 				"rest": {
@@ -588,6 +590,8 @@
 					"triangles": 9986,
 					"height_m": 1.820496,
 					"feet_y": 0.00018,
+					"folded_triangles": 35,
+					"folded_share": 0.003505,
 					"facing": {
 						"axis": "-Z",
 						"yaw": -0.18266,
@@ -640,17 +644,17 @@
 						]
 					},
 					"file": "probe_body_rest.glb",
-					"sha256": "67755fea71280214ab3d3317e8669490c5c9bc27ef7d41219ff0f43d3fe6dfc1",
+					"sha256": "2c110cb72af27a5d7465f7ca69da10b03466db0847ea71bf041daccdcbcd78b2",
 					"bytes": 614328
 				}
 			}
 		}
 	},
 	"outputs": {
-		"probe_body.glb": "3bc5db67554ea53a89e478a188b413a7b4ebf14af800476b2ca40838eab82457",
-		"probe_body_rest.glb": "67755fea71280214ab3d3317e8669490c5c9bc27ef7d41219ff0f43d3fe6dfc1"
+		"probe_body.glb": "583f251d06f5a904e95ac160b1a1013659f0096f13d0eb9995866f23552330b3",
+		"probe_body_rest.glb": "2c110cb72af27a5d7465f7ca69da10b03466db0847ea71bf041daccdcbcd78b2"
 	},
-	"hash": "3185bfc1e67c7a843a16a69ccc9af80a2bac77239e338f69e62c783ad1ff01e2",
+	"hash": "7ae6ca3339b443cc04d478d6b0384aa4e995b26cddf6fac5c316a6858b439330",
 	"stills": {
 		"variants": {
 			"apose": {

@@ -10,15 +10,16 @@ extends RefCounted
 ##              clothes, cap and shoes take dirt, scuffs and tears (damage_scuffed.png);
 ##   bloodied   the same with blood splats over both (damage_bloodied.png on the skin,
 ##              damage_blood.png on the clothes). Shades, belts and soles stay.
-## The art is one material with one damage texture, so it shows the clothes' tiles at both
-## levels (scuffs, then blood): there is no skin mask in the palette to tell it where the skin is.
+## The art is one material, but its palette atlas says where the skin is (the alpha class of the
+## skin swatches, tools/pipeline/gen_palette.py): the clothes take `damage_tex` (scuffs, then
+## blood), the skin takes `damage_skin_tex` (the bruises, then the blood), the primitives' tiles.
 ## Materials only: no mesh, pose or hurtbox changes. The hit flash (the contact flash's
 ## overlay pass, the parry's emission) still covers the marks.
-## A look is a swap of the `damage_tex` uniform and `damage_scale` only: the shader, and every
-## other uniform, stays. (On the StandardMaterial3Ds this replaced, switching the detail layer
-## on changed the shader variant and cost 3-12 ms on the first bruise; that is why the texture
-## slot is filled from the start, with a fully transparent texture (VfxArt.clear_detail())
-## standing for clean, which mixes in nothing.)
+## A look is a swap of the `damage_tex` uniform (and the art's `damage_skin_tex`) and `damage_scale`
+## only: the shader, and every other uniform, stays. (On the StandardMaterial3Ds this replaced,
+## switching the detail layer on changed the shader variant and cost 3-12 ms on the first bruise;
+## that is why the texture slot is filled from the start, with a fully transparent texture
+## (VfxArt.clear_detail()) standing for clean, which mixes in nothing.)
 
 enum Level { CLEAN, BRUISED, BLOODIED }
 
@@ -62,6 +63,7 @@ static func prepare(material: ShaderMaterial, paint: int) -> void:
 		return
 	material.set_shader_parameter(&"marks", 1.0)
 	material.set_shader_parameter(&"damage_tex", VfxArt.clear_detail())
+	material.set_shader_parameter(&"damage_skin_tex", VfxArt.clear_detail())
 	material.set_shader_parameter(&"damage_scale", _scale())
 
 
@@ -75,10 +77,14 @@ static func apply(material: ShaderMaterial, paint: int, level: int) -> void:
 	material.set_shader_parameter(&"damage_scale", _scale())
 
 
-## Show `level` on the skinned art's `material` (one texture for the whole body: the clothes').
+## Show `level` on the skinned art's `material`: the clothes' tiles in `damage_tex` and the skin's
+## in `damage_skin_tex`; the shader picks one by the swatch's alpha class (toon.gdshader). Clean
+## is the transparent texture in both.
 static func apply_art(material: ShaderMaterial, level: int) -> void:
-	var tex := texture_for(PlaceholderBody.Paint.BODY, level)
-	material.set_shader_parameter(&"damage_tex", tex if tex else VfxArt.clear_detail())
+	var clothes := texture_for(PlaceholderBody.Paint.BODY, level)
+	var skin := texture_for(PlaceholderBody.Paint.SKIN, level)
+	material.set_shader_parameter(&"damage_tex", clothes if clothes else VfxArt.clear_detail())
+	material.set_shader_parameter(&"damage_skin_tex", skin if skin else VfxArt.clear_detail())
 	material.set_shader_parameter(&"damage_scale", _scale())
 
 

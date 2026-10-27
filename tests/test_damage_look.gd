@@ -110,6 +110,37 @@ func test_damage_look_never_switches_the_shader_variant() -> void:
 	assert_null(DamageLook.texture_for(PlaceholderBody.Paint.DARK, DamageLook.Level.BLOODIED))
 
 
+## The art is one material, but the skin shows the primitives' skin tiles (the bruises, then the blood) and the
+## clothes show the scuffs, then the blood: the clothes' sequence stays in `damage_tex` (test_art_punk A10 reads it),
+## the skin's is `damage_skin_tex`, which the shader picks by the swatch's alpha class (slice-g2-07).
+func test_the_art_shows_the_skin_tiles_on_the_skin_and_the_clothes_tiles_on_the_clothes() -> void:
+	var art := ToonMaterials.art(load("res://assets/export/palette/palette_atlas.png") as Texture2D)
+	assert_null(art.get_shader_parameter(&"damage_skin_tex"), "unset: the shader's own default, transparent (hint_default_transparent)")
+	var clear := VfxArt.clear_detail()
+	DamageLook.apply_art(art, DamageLook.Level.CLEAN)
+	assert_eq(art.get_shader_parameter(&"damage_tex"), clear, "clean clothes")
+	assert_eq(art.get_shader_parameter(&"damage_skin_tex"), clear, "clean skin")
+	DamageLook.apply_art(art, DamageLook.Level.BRUISED)
+	assert_eq(art.get_shader_parameter(&"damage_tex"), VfxArt.texture(&"damage_scuffed"), "bruised: the clothes scuff")
+	assert_eq(art.get_shader_parameter(&"damage_skin_tex"), VfxArt.texture(&"damage_bruised"), "bruised: the skin takes the bruises M3's skin paint wore")
+	DamageLook.apply_art(art, DamageLook.Level.BLOODIED)
+	assert_eq(art.get_shader_parameter(&"damage_tex"), VfxArt.texture(&"damage_blood"), "bloodied: the clothes' blood")
+	assert_eq(art.get_shader_parameter(&"damage_skin_tex"), VfxArt.texture(&"damage_bloodied"), "bloodied: the skin's blood")
+	for level: int in [DamageLook.Level.BRUISED, DamageLook.Level.BLOODIED]:
+		DamageLook.apply_art(art, level)
+		assert_eq(art.get_shader_parameter(&"damage_skin_tex"), DamageLook.texture_for(PlaceholderBody.Paint.SKIN, level), "the skin tile is the skin paint's at level %d" % level)
+		assert_eq(art.get_shader_parameter(&"damage_tex"), DamageLook.texture_for(PlaceholderBody.Paint.BODY, level), "the clothes tile is the body paint's at level %d" % level)
+	DamageLook.apply_art(art, DamageLook.Level.CLEAN)
+	assert_eq(art.get_shader_parameter(&"damage_skin_tex"), clear, "clean again")
+	assert_eq(art.shader, ToonMaterials.TOON_SHADER, "a look swaps textures only")
+	# the primitives are prepared with both slots clear, so no material ever shows the shader's default by accident
+	for paint: int in [PlaceholderBody.Paint.SKIN, PlaceholderBody.Paint.BODY, PlaceholderBody.Paint.PANTS, PlaceholderBody.Paint.ACCENT]:
+		var mat := ToonMaterials.character(Color.WHITE, true)
+		DamageLook.prepare(mat, paint)
+		assert_eq(mat.get_shader_parameter(&"damage_tex"), clear, "prepared clear: paint %d" % paint)
+		assert_eq(mat.get_shader_parameter(&"damage_skin_tex"), clear, "prepared clear, skin slot: paint %d" % paint)
+
+
 ## The "nothing" texture shows nothing: fully transparent, one pixel, held for the run.
 func test_clean_detail_texture_is_clear_and_held() -> void:
 	var tex := VfxArt.clear_detail()

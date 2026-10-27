@@ -14,8 +14,8 @@ const GRID_PATH := "res://game/level/grid.gdshader"
 const PINNED_UNIFORMS: Array[String] = [
 	"albedo", "albedo_tex", "use_albedo_tex", "detail_tex", "use_detail_tex", "ink", "band_1", "band_2",
 	"band_soft", "mid_level", "shadow_tint", "spec_cut", "spec_strength", "rim_cut", "rim_power", "rim_strength",
-	"flash_color", "flash_amount", "damage_tex", "damage_scale", "marks", "use_rest_custom", "halftone_strength",
-	"halftone_cell_px", "edge_tag",
+	"flash_color", "flash_amount", "damage_tex", "damage_skin_tex", "damage_scale", "marks", "use_rest_custom",
+	"halftone_strength", "halftone_cell_px", "edge_tag",
 ]
 ## The first-person camera's horizontal field of view (Tuning.fov_deg's default).
 const FOV_DEG := 90.0
@@ -519,18 +519,22 @@ func test_the_art_material_flashes_and_takes_the_damage_look_by_texture_swaps_al
 	declared.merge(_uniforms(LIGHT_PATH))
 	var before := {}
 	for name: String in declared:
-		if name != "damage_tex" and name != "damage_scale":
+		if name != "damage_tex" and name != "damage_skin_tex" and name != "damage_scale":
 			before[name] = art.get_shader_parameter(name)
 	for level: int in [DamageLook.Level.BRUISED, DamageLook.Level.BLOODIED, DamageLook.Level.CLEAN, DamageLook.Level.BRUISED]:
 		rig.set_damage_look(level)
 		var tex: Variant = art.get_shader_parameter(&"damage_tex")
+		var skin_tex: Variant = art.get_shader_parameter(&"damage_skin_tex")
 		match level:
 			DamageLook.Level.CLEAN:
 				assert_eq(tex, VfxArt.clear_detail())
+				assert_eq(skin_tex, VfxArt.clear_detail())
 			DamageLook.Level.BRUISED:
-				assert_eq(tex, VfxArt.texture(&"damage_scuffed"), "the clothes' tile (the art is one material)")
+				assert_eq(tex, VfxArt.texture(&"damage_scuffed"), "the clothes' tile (the swatches' alpha class picks it)")
+				assert_eq(skin_tex, VfxArt.texture(&"damage_bruised"), "the skin's tile, the primitives' bruises")
 			DamageLook.Level.BLOODIED:
 				assert_eq(tex, VfxArt.texture(&"damage_blood"))
+				assert_eq(skin_tex, VfxArt.texture(&"damage_bloodied"))
 		assert_eq(art.shader, ToonMaterials.TOON_SHADER, "a look swaps textures only: the same shader")
 		for name: String in before:
 			assert_eq(art.get_shader_parameter(name), before[name], "level %d leaves %s alone" % [level, name])
@@ -684,8 +688,13 @@ func test_the_art_fixture_draws_with_the_art_material_and_its_mask_headless() ->
 	assert_eq((instance.material_overlay as ShaderMaterial).get_shader_parameter(&"mode"), ToonMaterials.Hull.ART)
 	assert_eq(skeleton.get_bone_count(), 2)
 	assert_eq(instance.skin.get_bind_count(), 2)
-	# The marks: swatches with alpha 1 take them, the dark swatch (alpha 0.5) does not.
+	# The marks: swatches with alpha 1 take the clothes' (a skin swatch, alpha 0.8, the skin's), the dark swatch (alpha 0.5) none.
 	var image := atlas.get_image()
 	assert_eq(image.get_pixelv(Vector2i(Probe.swatch_uv(Probe.SLOT_SKIN) * Vector2(Probe.ATLAS_SIZE))).a, 1.0)
 	assert_almost_eq(image.get_pixelv(Vector2i(Probe.swatch_uv(Probe.SLOT_DARK) * Vector2(Probe.ATLAS_SIZE))).a, 0.5, 0.01)
 	assert_string_contains(_source(TOON_PATH), "takes_marks *= step(0.75, swatch.a)")
+	# The skin class (slice-g2-07): the alpha under 0.9 picks damage_skin_tex over damage_tex in the triplanar, and the
+	# unset skin texture is transparent, so a material nobody filled shows a clean skin.
+	assert_string_contains(_source(TOON_PATH), "skin_marks = 1.0 - step(0.9, swatch.a)")
+	assert_string_contains(_source(TOON_PATH), "d = mix(d, d_skin, skin_marks)")
+	assert_string_contains(_uniforms(TOON_PATH)["damage_skin_tex"], "hint_default_transparent")
