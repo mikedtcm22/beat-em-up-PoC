@@ -162,43 +162,80 @@
 				"ring_clamp_m": 0.004,
 				"bisect_strap": false,
 				"collar": {
-					"margin_m": 0.009,
-					"ridge_m": 0.003,
-					"rim_round_m": 0.0015,
-					"inner_inset_m": 0.003,
-					"rim_below_m": 0.004,
-					"outline_bins": 24,
-					"outline_percentile": 90,
-					"outline_window_m": 0.015,
-					"outline_floor_m": 0.01,
+					"margin_m": 0.004,
+					"outline_bins": 48,
 					"rings": [
 						[
-							0.006,
-							0.35,
+							0.008,
+							0.1,
 							0.0
 						],
 						[
-							0.012,
-							0.7,
+							0.019,
+							0.27,
 							0.0
 						],
 						[
-							0.0185,
-							1.0,
-							0.8
+							0.031,
+							0.5,
+							0.0
 						],
 						[
-							0.026,
-							1.0,
-							1.0
+							0.043,
+							0.76,
+							0.0
 						],
 						[
-							0.032,
+							0.052,
+							0.95,
+							0.0
+						],
+						[
+							0.057,
 							1.0,
 							0.0
 						]
 					],
-					"arm_trim_below_cut_m": 0.004
+					"rim": [
+						[
+							-0.011,
+							0.0
+						],
+						[
+							-0.008,
+							0.0012
+						],
+						[
+							-0.005,
+							0.003
+						],
+						[
+							-0.0015,
+							0.0015
+						],
+						[
+							0.0,
+							-0.002
+						]
+					],
+					"arm_trim_above_block_m": 0.0615,
+					"length_m": 0.071,
+					"outline_harmonics": 4,
+					"outline_above_m": 0.0005,
+					"ring_step_m": 0.004,
+					"clearance_top_m": 0.006,
+					"clearance_step_m": 0.002,
+					"min_clearance_m": 0.001,
+					"lip": [
+						[
+							-0.0015,
+							-0.0015
+						],
+						[
+							-0.005,
+							-0.003
+						]
+					]
 				}
 			},
 			"wrist_radius_m": 0.062,

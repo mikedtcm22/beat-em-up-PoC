@@ -21,10 +21,19 @@ image and the detail mask (A18) is baked from both. Every number is in pipeline.
 of the generation (the fraction of the model's height where the strap's lower and upper edges sit) are config, not code.
 
 F-punk-fix: with `parts.fists.generated.collar` the generated cuff and strap (everything above the strap's lower plane, torn
-flaps and a ragged rim) are thrown away and a clean COLLAR is built in their place (`build_collar`): a surface of revolution
-that starts at the block's top loop, funnels out to the arm's own outline plus a margin, carries a low ridge where the strap
-was, runs up to a rolled rim `cuff_over_m` above the arm's cut and closes inward, inside the arm. The collar is one colour (the
-glove's: the palette step labels its faces from the `pipe_collar` attribute) and takes no ink; the strap is no longer a colour.
+flaps and a ragged rim) are thrown away and a clean COLLAR is built in their place (`build_collar`). The collar is one colour
+(the glove's: the palette step labels its faces from the `pipe_collar` attribute) and takes no ink; the strap is no longer a colour.
+
+F-cuff: the collar is a WRIST CUFF, the concept's dark band about as wide as the back of the glove, not a flange. It is a surface
+of revolution lofted from the block's top loop (the glove's neck) up the forearm: a long gentle funnel (`rings`, each a height
+above the block's top and how far it has blended from the loop's shape to the forearm's outline) that reaches the outline
+`margin_m` over the forearm at `full_z_m`, a band that follows the forearm's own cross-section there (`arm_section`: the arm's
+surface sliced at the ring's height, smoothed to a few Fourier harmonics and never inside the slice), a slight flare (`rim`), and
+a rolled lip that closes inward inside the arm (`lip`). The collar's size comes from its LENGTH (`length_m`, the same on both
+sides) and the forearm's own outline, never from a flange. The arm's lower end (the Tripo glove's torn, flared cuff remains) is
+trimmed away above `arm_trim_above_block_m` (blender_parts), so the cuff hugs the forearm proper and not the remains. The
+collar's skin clearance (the gap between its radius and the arm's slice along the band) is reported and must stay above
+`min_clearance_m`, or the run fails.
 """
 import math
 import os
@@ -174,8 +183,9 @@ def make_side(src, side, box, cut, p_hand, d, gen, pf):
 	need = z_cut + over
 	stretch = 1.0
 	if collar:
-		# the generated cuff is thrown away by add_object: only the levels matter
-		top = need
+		# the generated cuff is thrown away by add_object: only the levels matter; the rim stands `length_m` above the block's top
+		# (the same on both sides: the arm's cut is a ragged loop and its highest point differs from one hand to the other)
+		top = z_block_top + float(collar["length_m"])
 	elif need > top:
 		stretch = (need - z_strap_top) / max(top - z_strap_top, 1e-6)
 		above = out[:, 2] > z_strap_top
@@ -236,8 +246,8 @@ def make_side(src, side, box, cut, p_hand, d, gen, pf):
 	wparams.update({"p_hand": p_hand, "d": np.asarray(d, dtype=np.float64)})
 	collar_info = None
 	if collar:
-		collar_info = {"cfg": collar, "R": R, "p_hand": np.asarray(p_hand, dtype=np.float64), "z_block_top": z_block_top, "top": top, "z_cut": z_cut,
-			"arm_local": None if cut is None else cut.get("arm_local")}
+		collar_info = {"cfg": collar, "R": R, "p_hand": np.asarray(p_hand, dtype=np.float64), "z_block_top": z_block_top, "top": top,
+			"arm_tris": None if cut is None else cut.get("arm_tris")}
 	return {"co": world, "tris": tris, "uv": uv, "wparams": wparams, "report": report, "bisect": planes if gen.get("bisect_strap", True) else None,
 		"collar": collar_info}
 
@@ -261,44 +271,62 @@ def fist_weights(co_world, wp):
 	return w
 
 
-def arm_outline(arm_local, z_lo, z_hi, bins, percentile):
-	"""The arm's outer outline about the hanging frame's axis between two heights: `bins` angular bins of the `percentile`-th
-	radius of the arm's vertices (empty bins interpolated around the circle, then a three-bin moving average). Returns
-	(theta bin centres, radius (bins,)). arm_local is (n, 3) in the hanging frame (z up the arm)."""
-	z = arm_local[:, 2]
-	theta = (np.arange(bins) + 0.5) * (2.0 * math.pi / bins) - math.pi
-	# a window with fewer vertices than bins grows up the arm (the weights decide how much of the forearm there is near the cut)
-	for _grow in range(12):
-		pts = arm_local[(z >= z_lo) & (z <= z_hi)]
-		if len(pts) >= bins:
-			break
-		z_hi += 0.01
-	if len(pts) < bins:
-		pc.fail("collar: only %d arm vertices between z %.3f and %.3f" % (len(pts), z_lo, z_hi))
+def arm_section(tris, z, bins, harmonics=0):
+	"""The arm's cross-section at height `z` (the hanging frame, z up the arm) as an outline about the frame's axis: the arm's
+	triangles `tris` (m, 3, 3) are sliced by the plane, the slice's points binned by angle (`bins` bins, the largest radius in each,
+	empty bins interpolated around the circle). With `harmonics` above 0 the outline is smoothed to that many Fourier harmonics
+	and then lifted by the largest shortfall, so it is a smooth oval that is nowhere inside the slice (the cuff follows the
+	forearm's own outline and the skin never shows through it, F-cuff). Returns (theta bin centres, radius (bins,))."""
+	segs = _chords(tris, z)
+	if not len(segs):
+		pc.fail("collar: the arm has no surface at z %.4f" % z)
+	# sample each chord so a long facet fills its bins, not only its two ends
+	frac = np.linspace(0.0, 1.0, 8)
+	pts = (segs[:, 0:1, :] * (1.0 - frac)[None, :, None] + segs[:, 1:2, :] * frac[None, :, None]).reshape(-1, 2)
 	ang = np.arctan2(pts[:, 1], pts[:, 0])
 	rad = np.hypot(pts[:, 0], pts[:, 1])
 	idx = np.clip(((ang + math.pi) / (2.0 * math.pi) * bins).astype(np.int64), 0, bins - 1)
-	r = np.full(bins, np.nan)
-	for b in range(bins):
-		m = idx == b
-		if m.any():
-			r[b] = float(np.percentile(rad[m], percentile))
-	have = np.nonzero(~np.isnan(r))[0]
+	r = np.zeros(bins)
+	np.maximum.at(r, idx, rad)
+	have = np.nonzero(r > 0.0)[0]
 	r = np.interp(np.arange(bins), have, r[have], period=bins)
-	return theta, (np.roll(r, 1) + r + np.roll(r, -1)) / 3.0
+	theta = (np.arange(bins) + 0.5) * (2.0 * math.pi / bins) - math.pi
+	if harmonics > 0:
+		r = np.maximum(r, np.maximum(np.roll(r, 1), np.roll(r, -1)))  # one bin of dilation: the smooth oval then needs a small lift
+		spec = np.fft.rfft(r)
+		spec[harmonics + 1:] = 0.0
+		smooth = np.fft.irfft(spec, n=bins)
+		r = smooth + max(0.0, float((r - smooth).max()))
+	return theta, r
+
+
+def _chords(t, z):
+	"""The two points where each triangle of `t` (m, 3, 3) crosses the plane z (m, 2, 2), the xy of its slice."""
+	out = np.zeros((len(t), 2, 2))
+	count = np.zeros(len(t), dtype=np.int64)
+	for i, j in ((0, 1), (1, 2), (2, 0)):
+		za, zb = t[:, i, 2], t[:, j, 2]
+		hit = ((za <= z) & (zb > z)) | ((zb <= z) & (za > z))
+		u = np.where(hit, (z - za) / np.where(zb != za, zb - za, 1.0), 0.0)
+		p = t[:, i, :2] + (t[:, j, :2] - t[:, i, :2]) * u[:, None]
+		for slot in (0, 1):
+			take = hit & (count == slot)
+			out[take, slot] = p[take]
+		count += hit.astype(np.int64)
+	return out[count == 2]
 
 
 def build_collar(me, part, uv_name):
-	"""Replace the generated cuff and strap by the clean collar (module doc). `me` is the fist's mesh in the WORLD, already cut
+	"""Replace the generated cuff and strap by the wrist cuff (module doc). `me` is the fist's mesh in the WORLD, already cut
 	along the strap's lower plane; returns a report dict. The faces above the plane are deleted, the loop the cut leaves on the
-	block is the collar's first ring, and rings of the same vertex count are lofted from it to the rim."""
+	block is the collar's first ring, and rings of the same vertex count are lofted from it to the rim and back inside the arm."""
 	info = part["collar"]
 	cfg = info["cfg"]
 	R, p = info["R"], info["p_hand"]
-	z_bt, top, z_cut = info["z_block_top"], info["top"], info["z_cut"]
-	arm = info["arm_local"]
+	z_bt, top = info["z_block_top"], info["top"]
+	arm = info["arm_tris"]
 	if arm is None:
-		pc.fail("collar: no arm vertices to take the outline from")
+		pc.fail("collar: no arm surface to take the outline from")
 	bm = bmesh.new()
 	bm.from_mesh(me)
 	uv_layer = bm.loops.layers.uv.get(uv_name) or bm.loops.layers.uv.active
@@ -346,38 +374,72 @@ def build_collar(me, part, uv_name):
 	rel = local[:, :2] - c_loop
 	theta = np.arctan2(rel[:, 1], rel[:, 0])
 	rho0 = np.hypot(rel[:, 0], rel[:, 1])
-	# the arm's outline above the cut (the wrist's section, `z_cut`, up the rim)
-	bins = int(cfg.get("outline_bins", 24))
-	pct = float(cfg.get("outline_percentile", 90.0))
-	margin = float(cfg.get("margin_m", 0.0045))
-	ridge = float(cfg.get("ridge_m", 0.003))
-	rim_round = float(cfg.get("rim_round_m", 0.0015))
-	inner_in = float(cfg.get("inner_inset_m", 0.003))
-	rows = []  # (z, blend, extra margin) from the block's top up the rim
+	# the arm's outline: the slice of its surface at each ring's height (a ring below the trimmed end reads the outline at the end)
+	bins = int(cfg.get("outline_bins", 48))
+	harmonics = int(cfg.get("outline_harmonics", 4))
+	margin = float(cfg.get("margin_m", 0.004))
+	rows = []  # (z, blend, extra radius over the margin in m) from the block's top up the crest of the rim
 	for dz, blend, extra in cfg["rings"]:
-		rows.append((z_bt + float(dz), float(blend), float(extra) * ridge))
-	rows.append((top - float(cfg.get("rim_below_m", 0.004)), 1.0, 0.0))
-	rows.append((top, 1.0, -rim_round))
-	rows.append((top, 1.0, None))  # the inner lip, inside the arm
-	z_floor = z_cut + float(cfg.get("outline_floor_m", 0.01))
+		rows.append((z_bt + float(dz), float(blend), float(extra)))
+	for dz, extra in cfg.get("rim", []):  # the flare and the roll's outer half: heights below the top, each wider than the band by `extra`
+		rows.append((top + float(dz), 1.0, float(extra)))
+	for a, b in zip(rows[:-1], rows[1:]):
+		if b[0] <= a[0]:
+			pc.fail("collar: the rings must climb (z %.4f then %.4f); the rim's heights are below the top %.4f" % (a[0], b[0], top))
+	# no gap between two rings above `ring_step_m`: the forearm's own bumps would show through a long straight run between them
+	step = float(cfg.get("ring_step_m", 0.006))
+	filled = [rows[0]]
+	for a, b in zip(rows[:-1], rows[1:]):
+		parts = int(math.ceil((b[0] - a[0]) / step - 1e-9))
+		for q in range(1, parts):
+			f = q / parts
+			filled.append((a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f))
+		filled.append(b)
+	rows = filled
+	n_up = len(rows)  # the rings that climb; the lip's rings follow, coming back down inside the roll
+	for dz, offset in cfg.get("lip", []):  # the roll's inner half: heights below the top, `offset` from the arm's outline (negative: inside it)
+		rows.append((top + float(dz), 1.0, float(offset) - margin))
+	full = [r[0] for r in rows[:n_up] if r[1] >= 1.0]
+	z_full = min(full) if full else top
+	z_floor = z_bt + float(cfg["arm_trim_above_block_m"])  # the arm's trimmed end: the lowest level its surface is read at
 	ring_vertices = [cycle]
 	ring_z = []
+	ring_centre = []
+	ring_rho = []
 	for z, blend, extra in rows:
 		zs = max(z, z_floor)
-		th_o, r_o = arm_outline(arm, zs - float(cfg.get("outline_window_m", 0.015)), zs + float(cfg.get("outline_window_m", 0.015)), bins, pct)
+		th_o, r_o = arm_section(arm, zs + float(cfg.get("outline_above_m", 0.0005)), bins, harmonics)
 		a_theta = np.interp(theta, th_o, r_o, period=2.0 * math.pi)
 		centre = c_loop * (1.0 - blend) if blend < 1.0 else np.zeros(2)  # the arm's axis is the hanging frame's origin
 		bl = float(smoothstep(blend))
-		if extra is None:
-			target = a_theta - inner_in
-		else:
-			target = a_theta + margin + extra
-		rho = rho0 * (1.0 - bl) + target * bl
+		rho = rho0 * (1.0 - bl) + (a_theta + margin + extra) * bl
 		pos = np.stack([centre[0] + rho * np.cos(theta), centre[1] + rho * np.sin(theta), np.full(n, z)], axis=1)
 		world = pos @ R.T + p
 		ring = [bm.verts.new(tuple(w)) for w in world]
 		ring_vertices.append(ring)
 		ring_z.append(z)
+		ring_centre.append(centre.copy())
+		ring_rho.append(rho)
+	# the arm's skin must stay inside the collar from the level where the funnel reaches the outline up to the rim: the smallest gap
+	# (the collar's radius minus the arm's slice, at heights between the rings) in metres, and where it is
+	zr = np.array(ring_z)
+	clearance = None
+	clearance_at = None
+	order = np.argsort(theta)
+	for zq in np.arange(max(z_full, z_floor), top - float(cfg.get("clearance_top_m", 0.006)), float(cfg.get("clearance_step_m", 0.002))):
+		k = int(np.clip(np.searchsorted(zr, zq, side="right") - 1, 0, len(zr) - 2))
+		t = float(np.clip((zq - zr[k]) / max(zr[k + 1] - zr[k], 1e-9), 0.0, 1.0))
+		th_q, r_q = arm_section(arm, float(zq), bins, 0)
+		rho_k = np.interp(th_q, theta[order], ring_rho[k][order], period=2.0 * math.pi)
+		rho_k1 = np.interp(th_q, theta[order], ring_rho[k + 1][order], period=2.0 * math.pi)
+		gap = rho_k * (1.0 - t) + rho_k1 * t - r_q
+		worst = int(np.argmin(gap))
+		if clearance is None or float(gap[worst]) < clearance:
+			clearance = float(gap[worst])
+			clearance_at = [round(float(zq), 4), round(math.degrees(float(th_q[worst])), 1), round(float(r_q[worst]), 4)]
+	if clearance is not None and clearance < float(cfg.get("min_clearance_m", 0.0)):
+		pc.fail("collar: the arm stands only %.2f mm inside the collar at z %.4f (angle %.1f, arm radius %.4f): the skin would show through; the bar is %.2f mm" % (
+			clearance * 1000.0, clearance_at[0], clearance_at[1], clearance_at[2], float(cfg["min_clearance_m"]) * 1000.0))
 	faces_made = 0
 	collar_new = []
 	for j in range(len(ring_vertices) - 1):
@@ -399,7 +461,8 @@ def build_collar(me, part, uv_name):
 	bm.to_mesh(me)
 	bm.free()
 	me.update()
-	return {"loop_vertices": n, "loop_rho_m": [round(float(v), 4) for v in (rho0.min(), np.median(rho0), rho0.max())], "rings": len(rows), "arm_vertices": int(len(arm)), "collar_quads": faces_made, "ring_z_m": [round(float(z), 5) for z in ring_z]}
+	return {"loop_vertices": n, "loop_rho_m": [round(float(v), 4) for v in (rho0.min(), np.median(rho0), rho0.max())], "rings": len(rows), "arm_triangles": int(len(arm)), "collar_quads": faces_made, "ring_z_m": [round(float(z), 5) for z in ring_z],
+		"full_z_m": round(float(z_full), 5), "top_z_m": round(float(top), 5), "min_clearance_m": None if clearance is None else round(clearance, 5), "min_clearance_at": clearance_at}
 
 
 def add_object(name, part, image_name_uv_layer):
