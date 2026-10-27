@@ -1,0 +1,192 @@
+{
+  "source": "the A19 strain prints of tests/test_skinned_art.gd (the shipped GLBs against the skinned rest, every PlaceholderAnims.ANIM_IDS id and each Punk move at five phases) inside the FULL tools/run_tests.sh on m4/p3-evidence (6e2a2e1); log captures/m4/evidence/full_suite.log (local)",
+  "reading": "'strain xN' is the worst single edge of that sample against its rest length: below 1 is an edge squashed to that fraction (the Punk's worst ten are all squashes, to 2-5% of rest length), above 1 a stretch (the hero's worst ten are stretches of 30-37x). The row's bar is on the 99.9th percentile of the strain (p99.9 in [0.6, 1.6]) and on the share of triangles a peak flex folds or squashes, not on one edge. A7 is GATE (ratchet held), not met, on both GLBs: see art_metrics.json.",
+  "shipped_glbs": {
+    "punk": {
+      "glb": "assets/export/characters/punk/punk.glb",
+      "header": "A19 strain of res://assets/export/characters/punk/punk.glb: 251 samples, 503 with a problem, by kind { \"strain range\": 500, \"flipped or squashed triangles\": 3 }; worst 10 (animation, phase, bone):",
+      "worst_ten": [
+        {
+          "clip": "thrown",
+          "phase": "75%",
+          "strain": 0.02,
+          "bone": "LeftUpperArm",
+          "raw": "thrown 75%  strain x0.02  bone LeftUpperArm"
+        },
+        {
+          "clip": "jump",
+          "phase": "75%",
+          "strain": 0.02,
+          "bone": "Spine",
+          "raw": "jump 75%  strain x0.02  bone Spine"
+        },
+        {
+          "clip": "getup_front",
+          "phase": "peak",
+          "strain": 0.02,
+          "bone": "Hips",
+          "raw": "getup_front peak  strain x0.02  bone Hips"
+        },
+        {
+          "clip": "recoil",
+          "phase": "start",
+          "strain": 0.03,
+          "bone": "RightUpperArm",
+          "raw": "recoil start  strain x0.03  bone RightUpperArm"
+        },
+        {
+          "clip": "recoil",
+          "phase": "25%",
+          "strain": 0.03,
+          "bone": "RightUpperArm",
+          "raw": "recoil 25%  strain x0.03  bone RightUpperArm"
+        },
+        {
+          "clip": "recoil",
+          "phase": "peak",
+          "strain": 0.04,
+          "bone": "RightUpperArm",
+          "raw": "recoil peak  strain x0.04  bone RightUpperArm"
+        },
+        {
+          "clip": "pickup",
+          "phase": "75%",
+          "strain": 0.04,
+          "bone": "LeftUpperLeg",
+          "raw": "pickup 75%  strain x0.04  bone LeftUpperLeg"
+        },
+        {
+          "clip": "stagger_left",
+          "phase": "peak",
+          "strain": 0.04,
+          "bone": "LeftUpperArm",
+          "raw": "stagger_left peak  strain x0.04  bone LeftUpperArm"
+        },
+        {
+          "clip": "pickup",
+          "phase": "25%",
+          "strain": 0.04,
+          "bone": "LeftUpperLeg",
+          "raw": "pickup 25%  strain x0.04  bone LeftUpperLeg"
+        },
+        {
+          "clip": "fall",
+          "phase": "start",
+          "strain": 0.05,
+          "bone": "LeftUpperLeg",
+          "raw": "fall start  strain x0.05  bone LeftUpperLeg"
+        }
+      ],
+      "inside_every_bar": "1 of 251 samples inside every bar; worst p99.9 4.03; the five highest: thrown end p99.9 4.03; launched end p99.9 4.03; thrown 75% p99.9 3.97; launched 75% p99.9 3.88; thrown peak p99.9 3.88",
+      "peak_flexes": [
+        "flex guard: p99.9 1.89 p0.1 0.39 worst edge x0.15 (LeftLowerArm); 14 under 15% of their rest area + 101 turned over = 115 of 14300 triangles, bar 72  GATE",
+        "flex elbow 150: p99.9 1.46 p0.1 0.45 worst edge x0.17 (RightUpperArm); 13 under 15% of their rest area + 50 turned over = 63 of 14300 triangles, bar 72  (meets A7)",
+        "flex arm raise 140: p99.9 3.63 p0.1 0.25 worst edge x0.08 (LeftUpperArm); 36 under 15% of their rest area + 200 turned over = 236 of 14300 triangles, bar 72  GATE",
+        "flex knee -130: p99.9 2.06 p0.1 0.47 worst edge x0.17 (LeftUpperLeg); 9 under 15% of their rest area + 68 turned over = 77 of 14300 triangles, bar 72  GATE",
+        "flex spine twist: p99.9 1.90 p0.1 0.58 worst edge x8.83 (Neck); 2 under 15% of their rest area + 49 turned over = 51 of 14300 triangles, bar 72  (meets A7)",
+        "flex lying: p99.9 1.00 p0.1 1.00 worst edge x1.01 (Neck); 0 under 15% of their rest area + 0 turned over = 0 of 14300 triangles, bar 72  (meets A7)"
+      ],
+      "verdict": "GATE: 503 samples miss it  (the plan's bar: no problem sample, p99.9 in [0.6, 1.6])",
+      "ratchets": "ratchets (today, held, margin): in-bar samples 1 >= 1; worst p99.9 4.03 <= 4.23 (+5.0%); worst p0.1 0.16 >= 0.15 (+5.1%); longest stretch x12.2 <= x12.8 (+5.0%); deepest compression x0.0152 >= x0.0144 (+5.6%); peak flex share 1.65% <= 1.73% (+0.08 points); every clip +10%",
+      "samples": 251,
+      "problem_lines": 503,
+      "problems_by_kind": {
+        "strain range": 500,
+        "flipped or squashed triangles": 3
+      }
+    },
+    "player": {
+      "glb": "assets/export/characters/player/player.glb",
+      "header": "A19 strain of res://assets/export/characters/player/player.glb: 236 samples, 472 with a problem, by kind { \"strain range\": 470, \"flipped or squashed triangles\": 2 }; worst 10 (animation, phase, bone):",
+      "worst_ten": [
+        {
+          "clip": "getup_front",
+          "phase": "peak",
+          "strain": 37.23,
+          "bone": "LeftUpperLeg",
+          "raw": "getup_front peak  strain x37.23  bone LeftUpperLeg"
+        },
+        {
+          "clip": "getup_front",
+          "phase": "75%",
+          "strain": 35.94,
+          "bone": "Hips",
+          "raw": "getup_front 75%  strain x35.94  bone Hips"
+        },
+        {
+          "clip": "getup_back",
+          "phase": "peak",
+          "strain": 35.1,
+          "bone": "Hips",
+          "raw": "getup_back peak  strain x35.10  bone Hips"
+        },
+        {
+          "clip": "run_forward",
+          "phase": "25%",
+          "strain": 33.61,
+          "bone": "Hips",
+          "raw": "run_forward 25%  strain x33.61  bone Hips"
+        },
+        {
+          "clip": "getup_back",
+          "phase": "75%",
+          "strain": 33.37,
+          "bone": "Hips",
+          "raw": "getup_back 75%  strain x33.37  bone Hips"
+        },
+        {
+          "clip": "flinch_head_left",
+          "phase": "25%",
+          "strain": 33.31,
+          "bone": "Neck",
+          "raw": "flinch_head_left 25%  strain x33.31  bone Neck"
+        },
+        {
+          "clip": "getup_front",
+          "phase": "25%",
+          "strain": 32.65,
+          "bone": "LeftUpperLeg",
+          "raw": "getup_front 25%  strain x32.65  bone LeftUpperLeg"
+        },
+        {
+          "clip": "flinch_head_left",
+          "phase": "peak",
+          "strain": 31.18,
+          "bone": "Neck",
+          "raw": "flinch_head_left peak  strain x31.18  bone Neck"
+        },
+        {
+          "clip": "getup_back",
+          "phase": "25%",
+          "strain": 30.97,
+          "bone": "LeftUpperLeg",
+          "raw": "getup_back 25%  strain x30.97  bone LeftUpperLeg"
+        },
+        {
+          "clip": "haymaker_charge",
+          "phase": "end",
+          "strain": 30.42,
+          "bone": "Neck",
+          "raw": "haymaker_charge end  strain x30.42  bone Neck"
+        }
+      ],
+      "inside_every_bar": "1 of 236 samples inside every bar; worst p99.9 8.67; the five highest: getup_front peak p99.9 8.67; getup_back peak p99.9 8.23; getup_back 25% p99.9 7.57; getup_front 25% p99.9 7.02; getup_front 75% p99.9 6.99",
+      "peak_flexes": [
+        "flex guard: p99.9 2.58 p0.1 0.41 worst edge x0.12 (RightUpperArm); 15 under 15% of their rest area + 101 turned over = 116 of 29320 triangles, bar 147  (meets A7)",
+        "flex elbow 150: p99.9 1.71 p0.1 0.47 worst edge x0.16 (RightUpperArm); 16 under 15% of their rest area + 71 turned over = 87 of 29320 triangles, bar 147  (meets A7)",
+        "flex arm raise 140: p99.9 4.79 p0.1 0.17 worst edge x19.48 (RightUpperArm); 32 under 15% of their rest area + 153 turned over = 185 of 29320 triangles, bar 147  GATE",
+        "flex knee -130: p99.9 2.87 p0.1 0.41 worst edge x16.15 (LeftUpperLeg); 15 under 15% of their rest area + 158 turned over = 173 of 29320 triangles, bar 147  GATE",
+        "flex spine twist: p99.9 4.00 p0.1 0.32 worst edge x27.07 (Neck); 11 under 15% of their rest area + 120 turned over = 131 of 29320 triangles, bar 147  (meets A7)",
+        "flex lying: p99.9 1.01 p0.1 0.98 worst edge x0.86 (Spine); 0 under 15% of their rest area + 1 turned over = 1 of 29320 triangles, bar 147  (meets A7)"
+      ],
+      "verdict": "GATE: 472 samples miss it  (the plan's bar: no problem sample, p99.9 in [0.6, 1.6])",
+      "ratchets": "ratchets (today, held, margin): in-bar samples 1 >= 1; worst p99.9 8.67 <= 9.10 (+5.0%); worst p0.1 0.15 >= 0.14 (+5.1%); longest stretch x37.2 <= x39.1 (+5.0%); deepest compression x0.0297 >= x0.0282 (+5.3%); peak flex share 0.63% <= 0.66% (+0.03 points); every clip +10%",
+      "samples": 236,
+      "problem_lines": 472,
+      "problems_by_kind": {
+        "strain range": 470,
+        "flipped or squashed triangles": 2
+      }
+    }
+  }
+}

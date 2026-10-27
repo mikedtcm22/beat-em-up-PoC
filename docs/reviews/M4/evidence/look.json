@@ -1,0 +1,405 @@
+{
+  "source": "the final probe ('Look: final probe', tests/bot/acts/look_final_acts.gd) recorded windowed on m4/p3-evidence (the merged head of m4/art-pipeline, 6e2a2e1): one process, 0 SCRIPT/SHADER/ERROR lines; captures/m4/evidence/fp/ (local)",
+  "punk_art_variant": 0,
+  "outline_px": 3.75,
+  "outline_fp_scale": 0.8,
+  "soft_rows_note": "Part B: L1-L3 and L5 are soft rows, reported with their numbers; L4 is the lead's perf run",
+  "summary": {
+    "L1": "missed",
+    "L2": "met",
+    "L3": "met",
+    "L4": "measured earlier, not re-run on the final head",
+    "L5": "met"
+  },
+  "LOOK-FINAL_lines": [
+    "LOOK-FINAL L1 MISSED hull width at 1080p, target 3.75 px +-1 and at most 4.5 (own body 3.00): {\"1.0 m\":{\"crown\":3.48,\"left\":4.5,\"right\":3.25},\"10.0 m\":{\"crown\":3.25,\"left\":2.61,\"right\":2.04},\"2.5 m\":{\"crown\":3.54,\"left\":3.24,\"right\":3.24},\"5.0 m\":{\"crown\":3.54,\"left\":3.19,\"right\":3.24}}; own {\"left\":3.85,\"right\":3.74,\"top\":4.05}; outside the bar: 10.0 m left 2.61, 10.0 m right 2.04, own top 4.05",
+    "LOOK-FINAL L2 MET jacket bands at 1 m (bar: 2-3 bands, shadow/lit at least 0.4, hue toward the tint; the front-lit view decides): front_lit 3 bands, shadow/lit 0.66, shadow hue toward the tint: met; back_lit 2 bands, shadow/lit 0.76, shadow hue toward the tint: met",
+    "LOOK-FINAL L3 MET white share of the view on a jab at 1 m 3.6%, bar M2's 4.3% + 2 points = 6.3%",
+    "LOOK-FINAL L5 MET R8 and R4 with the art drawn beside the proxies (bar: R8 within 3 points at the median and 5 at the 95th, no wind-up hidden that the proxies did not see hidden): Six Punks, fight: R8 p50 proxies 28.5% art 26.4% (-2.1 points), p95 43.8% / 42.7% (-1.0); R4 hidden wind-ups proxies 0 art 0 of 15: met; Mixed six, fight: R8 p50 proxies 26.7% art 26.0% (-0.7 points), p95 49.5% / 48.4% (-1.0); R4 hidden wind-ups proxies 0 art 0 of 14: met"
+  ],
+  "rows": {
+    "L1": {
+      "measured": 15,
+      "misses": [
+        "10.0 m left 2.61",
+        "10.0 m right 2.04",
+        "own top 4.05"
+      ],
+      "own": {
+        "left": 3.85,
+        "right": 3.74,
+        "top": 4.05
+      },
+      "own_target_px": 3.0,
+      "state": "missed",
+      "target_px": 3.75,
+      "text": "hull width at 1080p, target 3.75 px +-1 and at most 4.5 (own body 3.00): {\"1.0 m\":{\"crown\":3.48,\"left\":4.5,\"right\":3.25},\"10.0 m\":{\"crown\":3.25,\"left\":2.61,\"right\":2.04},\"2.5 m\":{\"crown\":3.54,\"left\":3.24,\"right\":3.24},\"5.0 m\":{\"crown\":3.54,\"left\":3.19,\"right\":3.24}}; own {\"left\":3.85,\"right\":3.74,\"top\":4.05}; outside the bar: 10.0 m left 2.61, 10.0 m right 2.04, own top 4.05",
+      "widths": {
+        "1.0 m": {
+          "crown": 3.48,
+          "left": 4.5,
+          "right": 3.25
+        },
+        "10.0 m": {
+          "crown": 3.25,
+          "left": 2.61,
+          "right": 2.04
+        },
+        "2.5 m": {
+          "crown": 3.54,
+          "left": 3.24,
+          "right": 3.24
+        },
+        "5.0 m": {
+          "crown": 3.54,
+          "left": 3.19,
+          "right": 3.24
+        }
+      }
+    },
+    "L2": {
+      "lights": {
+        "back_lit": {
+          "bands": 2,
+          "met": true,
+          "shadow_hue_toward_tint": true,
+          "shadow_over_lit": 0.76
+        },
+        "front_lit": {
+          "bands": 3,
+          "met": true,
+          "shadow_hue_toward_tint": true,
+          "shadow_over_lit": 0.66
+        }
+      },
+      "state": "met",
+      "text": "jacket bands at 1 m (bar: 2-3 bands, shadow/lit at least 0.4, hue toward the tint; the front-lit view decides): front_lit 3 bands, shadow/lit 0.66, shadow hue toward the tint: met; back_lit 2 bands, shadow/lit 0.76, shadow hue toward the tint: met"
+    },
+    "L3": {
+      "bar": 0.063,
+      "hit_landed": true,
+      "m2_share": 0.043,
+      "state": "met",
+      "text": "white share of the view on a jab at 1 m 3.6%, bar M2's 4.3% + 2 points = 6.3%",
+      "white_share": 0.0357
+    },
+    "L4": {
+      "state": "measured earlier, not re-run on the final head",
+      "machine": "LOADED, NOT QUIET: the lead's runs had load averages 2.4-4.6 from other apps, vsync on, 3 runs per ref, refs interleaved. A16 asks for a quiet machine with vsync off; neither was possible, so these are the deltas to read, not the absolute figures.",
+      "refs": "M3 main afdb39e against the M4 branch as it stood at the slice gate (59a0adf: the smoke Punk, before F-punk, F-player, the fixes and the final art), and again at bf7b0ab (after P3-int). The final head (6e2a2e1) has not been measured (the lead runs tools/perf_compare.sh; it was not run here).",
+      "bars_A16_soft": "p95 <= 16.7 ms, spawn hitch <= 33 ms, first hit and first spawn <= main + 2 ms",
+      "slice_gate_run": {
+        "source": "docs/milestones/M4-slice-gate.md pass item 5; logs in the lead's captures/perf_compare/a16/ (local)",
+        "Perf, six with ragdolls": {
+          "main afdb39e": {
+            "mean_ms": 12.1,
+            "p95_ms": 26.05,
+            "spawn_hitch_ms": 37.1,
+            "first_spawn_ms": 31.3,
+            "first_hit_ms": 33.5
+          },
+          "M4 59a0adf": {
+            "mean_ms": 14.53,
+            "p95_ms": 29.43,
+            "spawn_hitch_ms": 40.0,
+            "first_spawn_ms": 32.3,
+            "first_hit_ms": 35.0
+          },
+          "delta": {
+            "mean_ms": 2.42,
+            "p95_ms": 3.38,
+            "spawn_hitch_ms": 2.9,
+            "first_spawn_ms": 1.0,
+            "first_hit_ms": 1.4
+          },
+          "bars": {
+            "p95": "MISS (M3 itself 26.05)",
+            "spawn_hitch": "MISS (M3 itself 37.1)",
+            "first_spawn": "ok",
+            "first_hit": "ok"
+          }
+        },
+        "Look: Perf, six art Punks": {
+          "M4 59a0adf": {
+            "mean_ms": 14.43,
+            "p95_ms": 28.94,
+            "spawn_hitch_ms": 39.6,
+            "first_spawn_ms": 34.1,
+            "first_hit_ms": 29.7
+          }
+        },
+        "fallbacks": "FXAA saves 2.3 ms mean and 3.0 ms p95; depth-only edges save 1.0 ms; edges off save 3.5 ms; the placeholder hulls cost nothing measurable"
+      },
+      "after_p3_int_run": {
+        "source": "docs/HANDOFF.md (the 07:20 entry); logs in the lead's captures/perf_compare/a16-int/ (local)",
+        "Perf, six with ragdolls": {
+          "main afdb39e": {
+            "mean_ms": 12.17,
+            "p95_ms": 25.69,
+            "spawn_hitch_ms": 37.5,
+            "first_spawn_ms": 32.2,
+            "first_hit_ms": 33.5
+          },
+          "M4 bf7b0ab": {
+            "mean_ms": 14.73,
+            "p95_ms": 29.85,
+            "spawn_hitch_ms": 40.7,
+            "first_spawn_ms": 31.6,
+            "first_hit_ms": 36.7
+          },
+          "delta": {
+            "mean_ms": 2.56,
+            "p95_ms": 4.16,
+            "spawn_hitch_ms": 3.3,
+            "first_spawn_ms": -0.6,
+            "first_hit_ms": 3.2
+          },
+          "bars": {
+            "p95": "MISS (M3 itself 25.69)",
+            "spawn_hitch": "MISS (M3 itself 37.5)",
+            "first_spawn": "ok",
+            "first_hit": "MISS (+3.2 against +2; within this load's noise, the gate run had +1.4)"
+          }
+        },
+        "Look: Perf, six art Punks": {
+          "M4 bf7b0ab": {
+            "mean_ms": 14.89,
+            "p95_ms": 29.83,
+            "spawn_hitch_ms": 41.5
+          },
+          "with FXAA, mean_ms": 11.85
+        }
+      },
+      "unmeasured": "the RTX 3060 target; a quiet M1 with vsync off; the final head"
+    },
+    "L5": {
+      "fights": {
+        "Mixed six, fight": {
+          "cells_mean": 0.014,
+          "cells_worst": 0.097,
+          "diff_p50": -0.7,
+          "diff_p95": -1.0,
+          "r4_art": 0,
+          "r4_proxies": 0,
+          "r8_art_p50": 0.26,
+          "r8_art_p95": 0.484,
+          "r8_proxies_p50": 0.267,
+          "r8_proxies_p95": 0.495,
+          "samples": 194,
+          "ticks": 1944,
+          "windups": 23,
+          "windups_in_view": 14,
+          "worst_ms": 214.6
+        },
+        "Six Punks, fight": {
+          "cells_mean": 0.032,
+          "cells_worst": 0.095,
+          "diff_p50": -2.1,
+          "diff_p95": -1.0,
+          "r4_art": 0,
+          "r4_proxies": 0,
+          "r8_art_p50": 0.264,
+          "r8_art_p95": 0.427,
+          "r8_proxies_p50": 0.285,
+          "r8_proxies_p95": 0.438,
+          "samples": 164,
+          "ticks": 1644,
+          "windups": 16,
+          "windups_in_view": 15,
+          "worst_ms": 1283.4
+        }
+      },
+      "state": "met",
+      "text": "R8 and R4 with the art drawn beside the proxies (bar: R8 within 3 points at the median and 5 at the 95th, no wind-up hidden that the proxies did not see hidden): Six Punks, fight: R8 p50 proxies 28.5% art 26.4% (-2.1 points), p95 43.8% / 42.7% (-1.0); R4 hidden wind-ups proxies 0 art 0 of 15: met; Mixed six, fight: R8 p50 proxies 26.7% art 26.0% (-0.7 points), p95 49.5% / 48.4% (-1.0); R4 hidden wind-ups proxies 0 art 0 of 14: met"
+    }
+  },
+  "act_slugs": {
+    "t1": {
+      "back_lit_jacket_bands": 2.0,
+      "back_lit_jacket_bands_with_rim": 2.0,
+      "back_lit_jacket_lit_hue_gap_to_teal": 1.0,
+      "back_lit_jacket_luma_hue": "0.320/207/0.43/0.69,0.420/186/0.50/0.59",
+      "back_lit_jacket_luma_hue_with_rim": "0.323/206/0.42/0.69,0.420/186/0.48/0.59",
+      "back_lit_jacket_shadow_hue_gap_to_teal": 22.0,
+      "back_lit_jacket_shadow_over_lit": 0.76,
+      "back_lit_skin_band0_hue_gap_to_skin": 51.0,
+      "back_lit_skin_band1_hue_gap_to_skin": 5.0,
+      "back_lit_skin_bands": 2.0,
+      "back_lit_skin_luma_hue": "0.526/337/0.91/0.17,0.677/23/0.02/0.26",
+      "back_lit_white_share_of_punk": 0.0003,
+      "front_lit_jacket_bands": 3.0,
+      "front_lit_jacket_bands_with_rim": 3.0,
+      "front_lit_jacket_lit_hue_gap_to_teal": 0.0,
+      "front_lit_jacket_luma_hue": "0.320/207/0.18/0.69,0.420/186/0.44/0.59,0.489/185/0.31/0.58",
+      "front_lit_jacket_luma_hue_with_rim": "0.325/206/0.17/0.68,0.420/186/0.44/0.59,0.490/185/0.31/0.58",
+      "front_lit_jacket_shadow_hue_gap_to_teal": 22.0,
+      "front_lit_jacket_shadow_over_lit": 0.66,
+      "front_lit_skin_band0_hue_gap_to_skin": 50.0,
+      "front_lit_skin_band1_hue_gap_to_skin": 1.0,
+      "front_lit_skin_band2_hue_gap_to_skin": 1.0,
+      "front_lit_skin_band3_hue_gap_to_skin": 7.0,
+      "front_lit_skin_bands": 4.0,
+      "front_lit_skin_luma_hue": "0.526/337/0.35/0.17,0.682/27/0.41/0.30,0.797/28/0.11/0.32,0.879/35/0.03/0.27",
+      "front_lit_white_share_of_punk": 0.0001
+    },
+    "t3": {
+      "d10_0_m_all_px1080": 3.07,
+      "d10_0_m_all_runs": 564.0,
+      "d10_0_m_crown_px1080": 3.25,
+      "d10_0_m_crown_runs": 15.0,
+      "d10_0_m_ink_rgb": "16,14,22",
+      "d10_0_m_left_px1080": 2.61,
+      "d10_0_m_left_runs": 17.0,
+      "d10_0_m_right_px1080": 2.04,
+      "d10_0_m_right_runs": 22.0,
+      "d1_0_m_all_px1080": 1.83,
+      "d1_0_m_all_runs": 8175.0,
+      "d1_0_m_crown_px1080": 3.48,
+      "d1_0_m_crown_runs": 163.0,
+      "d1_0_m_ink_rgb": "17,15,22",
+      "d1_0_m_left_px1080": 4.5,
+      "d1_0_m_left_runs": 176.0,
+      "d1_0_m_right_px1080": 3.25,
+      "d1_0_m_right_runs": 194.0,
+      "d2_5_m_all_px1080": 2.26,
+      "d2_5_m_all_runs": 3408.0,
+      "d2_5_m_crown_px1080": 3.54,
+      "d2_5_m_crown_runs": 60.0,
+      "d2_5_m_ink_rgb": "16,14,22",
+      "d2_5_m_left_px1080": 3.24,
+      "d2_5_m_left_runs": 146.0,
+      "d2_5_m_right_px1080": 3.24,
+      "d2_5_m_right_runs": 148.0,
+      "d5_0_m_all_px1080": 2.89,
+      "d5_0_m_all_runs": 1444.0,
+      "d5_0_m_crown_px1080": 3.54,
+      "d5_0_m_crown_runs": 29.0,
+      "d5_0_m_ink_rgb": "16,14,22",
+      "d5_0_m_left_px1080": 3.19,
+      "d5_0_m_left_runs": 96.0,
+      "d5_0_m_right_px1080": 3.24,
+      "d5_0_m_right_runs": 99.0
+    },
+    "t5": {
+      "jab_flash_hit_landed": true,
+      "jab_flash_white_share_of_view": 0.0357
+    },
+    "t8": {
+      "guard_all_px1080": 4.42,
+      "guard_left_px1080": 3.85,
+      "guard_right_px1080": 3.74,
+      "guard_top_px1080": 4.05
+    }
+  },
+  "final": {
+    "L1": {
+      "measured": 15,
+      "misses": [
+        "10.0 m left 2.61",
+        "10.0 m right 2.04",
+        "own top 4.05"
+      ],
+      "own": {
+        "left": 3.85,
+        "right": 3.74,
+        "top": 4.05
+      },
+      "own_target_px": 3.0,
+      "state": "missed",
+      "target_px": 3.75,
+      "text": "hull width at 1080p, target 3.75 px +-1 and at most 4.5 (own body 3.00): {\"1.0 m\":{\"crown\":3.48,\"left\":4.5,\"right\":3.25},\"10.0 m\":{\"crown\":3.25,\"left\":2.61,\"right\":2.04},\"2.5 m\":{\"crown\":3.54,\"left\":3.24,\"right\":3.24},\"5.0 m\":{\"crown\":3.54,\"left\":3.19,\"right\":3.24}}; own {\"left\":3.85,\"right\":3.74,\"top\":4.05}; outside the bar: 10.0 m left 2.61, 10.0 m right 2.04, own top 4.05",
+      "widths": {
+        "1.0 m": {
+          "crown": 3.48,
+          "left": 4.5,
+          "right": 3.25
+        },
+        "10.0 m": {
+          "crown": 3.25,
+          "left": 2.61,
+          "right": 2.04
+        },
+        "2.5 m": {
+          "crown": 3.54,
+          "left": 3.24,
+          "right": 3.24
+        },
+        "5.0 m": {
+          "crown": 3.54,
+          "left": 3.19,
+          "right": 3.24
+        }
+      }
+    },
+    "L2": {
+      "lights": {
+        "back_lit": {
+          "bands": 2,
+          "met": true,
+          "shadow_hue_toward_tint": true,
+          "shadow_over_lit": 0.76
+        },
+        "front_lit": {
+          "bands": 3,
+          "met": true,
+          "shadow_hue_toward_tint": true,
+          "shadow_over_lit": 0.66
+        }
+      },
+      "state": "met",
+      "text": "jacket bands at 1 m (bar: 2-3 bands, shadow/lit at least 0.4, hue toward the tint; the front-lit view decides): front_lit 3 bands, shadow/lit 0.66, shadow hue toward the tint: met; back_lit 2 bands, shadow/lit 0.76, shadow hue toward the tint: met"
+    },
+    "L3": {
+      "bar": 0.063,
+      "hit_landed": true,
+      "m2_share": 0.043,
+      "state": "met",
+      "text": "white share of the view on a jab at 1 m 3.6%, bar M2's 4.3% + 2 points = 6.3%",
+      "white_share": 0.0357
+    },
+    "L5": {
+      "fights": {
+        "Mixed six, fight": {
+          "cells_mean": 0.014,
+          "cells_worst": 0.097,
+          "diff_p50": -0.7,
+          "diff_p95": -1.0,
+          "r4_art": 0,
+          "r4_proxies": 0,
+          "r8_art_p50": 0.26,
+          "r8_art_p95": 0.484,
+          "r8_proxies_p50": 0.267,
+          "r8_proxies_p95": 0.495,
+          "samples": 194,
+          "ticks": 1944,
+          "windups": 23,
+          "windups_in_view": 14,
+          "worst_ms": 214.6
+        },
+        "Six Punks, fight": {
+          "cells_mean": 0.032,
+          "cells_worst": 0.095,
+          "diff_p50": -2.1,
+          "diff_p95": -1.0,
+          "r4_art": 0,
+          "r4_proxies": 0,
+          "r8_art_p50": 0.264,
+          "r8_art_p95": 0.427,
+          "r8_proxies_p50": 0.285,
+          "r8_proxies_p95": 0.438,
+          "samples": 164,
+          "ticks": 1644,
+          "windups": 16,
+          "windups_in_view": 15,
+          "worst_ms": 1283.4
+        }
+      },
+      "state": "met",
+      "text": "R8 and R4 with the art drawn beside the proxies (bar: R8 within 3 points at the median and 5 at the 95th, no wind-up hidden that the proxies did not see hidden): Six Punks, fight: R8 p50 proxies 28.5% art 26.4% (-2.1 points), p95 43.8% / 42.7% (-1.0); R4 hidden wind-ups proxies 0 art 0 of 15: met; Mixed six, fight: R8 p50 proxies 26.7% art 26.0% (-0.7 points), p95 49.5% / 48.4% (-1.0); R4 hidden wind-ups proxies 0 art 0 of 14: met"
+    },
+    "acts_played": 5,
+    "outline_fp_scale": 0.8,
+    "outline_px": 3.75,
+    "punk_art_variant": 0
+  }
+}
