@@ -75,3 +75,12 @@ Judgement calls of the P1-chain package (A2 steps 1-3: the Blender chain, the pr
 
 ### C16. Reproducibility
 - `run.py --check` rebuilds into `assets/source/_cache/check_<id>/` (never the committed folders) and compares the report hash: the config minus its paths, every step's report and the sha256 of each exported file. Nothing in it varies between runs. The Workbench stills are outside the hash.
+
+## Requests and open risks (for the lead and the next packages)
+
+- **Strain reference (P1-skin's A19 test).** Measure edge strain against the SKINNED REST POSE, not the GLB's own mesh: for the A-pose route the latter is already 1.7 (p99.9) at idle (C13). The pipeline's `report.json` `stills` block has both references and the worst edges.
+- **A3's 1 cm landmark residual** is 2.35 cm on the smoke Punk (1.4 mm on the probe): the slice gate decides what the bar means for a generated torso (C6).
+- **A7 on the Punk's current weights** misses its p99.9 bar at the guard, the arm raise and the spine twist (see the numbers above). The contingencies the gate has: heat-map weights (a little better), edge loops at the armpit and the vest collar, a different torso warp. Naive weight smoothing made it worse (C7).
+- **`.gitignore`:** the per-run Workbench stills (`assets/source/characters/*/report*/stills/*_*_*.png`, 38 files a run) and the dump copy `report/bones.json` are not committed; only the two sheets and the A/B sheet are. A line for them would keep worktrees clean.
+- **Shading seam at the first-person cut** (C15) and the **Punk's wide glove cuff** (0.083 m radius at the wrist, from the concept's gloves) are for the look review at 1 m.
+- **Tripo licence** is unchanged (ASSETS rows carry the note).
