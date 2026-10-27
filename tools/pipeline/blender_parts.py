@@ -209,6 +209,7 @@ def replace_hands(cfg, extra):
 	cuts = {}
 	fists = []
 	generated = pf.get("source", "procedural") == "generated"
+	fist_planes = {}
 	w_now = pb.weights_matrix(body, NAMES)  # the weights of the mesh after the hands' faces are gone
 	gsrc = pipe_fist.load_source(pf["generated"]) if generated else None
 	uv_name = me.uv_layers[0].name if len(me.uv_layers) else "UVMap"
@@ -237,6 +238,7 @@ def replace_hands(cfg, extra):
 			cut = {"a_min": a0, "radius_m": r_med} if len(near) >= 6 else None
 			part = pipe_fist.make_side(gsrc, side, table_boxes[side], cut, p_hand, d, pf["generated"], pf)
 			obj = pipe_fist.add_object("Fist" + side, part, uv_name)
+			fist_planes[side] = [[list(map(float, c)), list(map(float, n))] for c, n in part["bisect"]] if part.get("bisect") else None
 			made[side] = obj
 			fists.append(obj)
 			cuts[side].update({"fist": part["report"], "faces_deleted": deleted[side], "fist_triangles": part["report"]["triangles"]})
@@ -282,6 +284,7 @@ def replace_hands(cfg, extra):
 		p.use_smooth = True
 	packed = None
 	if generated:
+		pb.set_scene_prop("pipe_fist_planes", fist_planes)
 		packed = pipe_fist.pack_textures(body, gsrc.image, pf["generated"])
 		pipe_fist.discard(gsrc)
 		for mat in list(bpy.data.materials):

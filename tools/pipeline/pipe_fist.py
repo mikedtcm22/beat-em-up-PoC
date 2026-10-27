@@ -34,6 +34,7 @@ import pipe_blender as pb  # noqa: E402
 import pipe_common as pc  # noqa: E402
 
 FIST_ATTR = "pipe_fist"
+BAND_ATTR = "pipe_band"  # 1 on the fist faces between the strap's two planes
 
 
 def smoothstep(t):
@@ -243,6 +244,16 @@ def add_object(name, part, image_name_uv_layer):
 		uv_after = len(me.uv_layers)
 	a = me.attributes.new(FIST_ATTR, "INT", "FACE")
 	a.data.foreach_set("value", np.ones(len(me.polygons), dtype=np.int32))
+	if part.get("bisect"):
+		# which faces lie between the strap's two planes (the palette step makes exactly those the strap's slot, so the strap is a
+		# clean ring and no stray yellow face survives above or below it)
+		(c0, n0), (c1, n1) = part["bisect"]
+		centres = pb.face_centers(me)
+		h0 = (centres - np.asarray(c0)) @ np.asarray(n0)
+		h1 = (centres - np.asarray(c1)) @ np.asarray(n1)
+		band = ((h0 >= -1e-6) & (h1 <= 1e-6)).astype(np.int32)
+		b = me.attributes.new(BAND_ATTR, "INT", "FACE")
+		b.data.foreach_set("value", band)
 	pb.write_weights(obj, names, fist_weights(pb.verts(me), part["wparams"]))
 	for p in me.polygons:
 		p.use_smooth = True

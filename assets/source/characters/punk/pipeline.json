@@ -142,7 +142,7 @@
 			"glove_slot": 2,
 			"strap_slot": 17,
 			"strap_height_m": 0.03,
-			"cuff_margin_m": 0.008,
+			"cuff_margin_m": 0.014,
 			"cuff_over_m": 0.035,
 			"cuff_below_wrist_m": 0.012,
 			"bevel_m": 0.022,
@@ -157,9 +157,10 @@
 				"rim_band_m": 0.012,
 				"flare_min": 0.8,
 				"flare_max": 2.0,
-				"weld_m": 1e-05
+				"weld_m": 1e-05,
+				"ramp_m": 0.004
 			},
-			"wrist_radius_m": 0.056,
+			"wrist_radius_m": 0.058,
 			"wrist_taper_m": 0.14
 		},
 		"split_fp": {
@@ -183,7 +184,7 @@
 		"border_relax_factor": 0.5,
 		"budget_tris": 15000,
 		"detail_uv": true,
-		"fist_budget_tris": 1500,
+		"fist_budget_tris": 1350,
 		"unfold": {
 			"iterations": 12,
 			"factor": 0.5,
@@ -195,7 +196,6 @@
 			"ink_low": 0.02,
 			"ink_high": 0.07,
 			"grow_px": 0,
-			"out": "assets/export/characters/punk/punk_detail.png",
 			"no_ink_slots": [
 				19
 			]
@@ -222,7 +222,11 @@
 				],
 				"bisect_z": true
 			}
-		]
+		],
+		"strap_slot": 17,
+		"glove_slot": 2,
+		"fist_border_cell_m": 0.012,
+		"reserve_tris": 700
 	},
 	"export": {
 		"hull_normal_digits": 5
