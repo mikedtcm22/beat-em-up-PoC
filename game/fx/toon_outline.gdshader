@@ -12,7 +12,9 @@ shader_type spatial;
 // sphere's own radius from its centre (a hemisphere's open rim); 4 a skinned art mesh's smooth
 // normal baked in COLOR (n * 0.5 + 0.5, in the rest pose), carried through the skin from the
 // rest normal in CUSTOM1 so it follows the bent body.
-render_mode unshaded, cull_front;
+// No fog: the ink is one colour at any distance (a fogged hull was 10-16 levels lighter than the
+// HUD's ink at 2.5-10 m, and a hull that fades into the haze while the body does not is no outline).
+render_mode unshaded, cull_front, fog_disabled;
 
 uniform vec3 ink : source_color = vec3(0.07, 0.06, 0.09);
 uniform float width_px : hint_range(0.0, 16.0) = 3.75;

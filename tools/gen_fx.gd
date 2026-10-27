@@ -42,13 +42,14 @@ const WARNING_RED := "#ff4a2e"
 const SPIT := "#dff6ff"
 const BRUISE := "#4a2466"
 const BRUISE_BLUE := "#2e3a78"
-const BRUISE_OLD := "#8c8f2e"
-## A bruise's dark middle and outline, and the purple-gray wash over bruised skin.
+const BRUISE_OLD := "#a8803a"
+## A bruise's dark middle and outline.
 const BRUISE_DARK := "#1e0f2e"
-const BRUISE_WASH := "#5c3d6e"
-## Dirt on scuffed clothes: the wash and the smudges.
-const DIRT := "#2a2018"
-const DIRT_DARK := "#16110d"
+## Wear on scuffed clothes: the pale dust that rubs into cloth and the dark grease beside it. No
+## wash over the whole tile: a wash tints every swatch it lands on (the skin went lilac and glassy,
+## the denim grey), where a mark should leave the colour under it as it is.
+const DUST := "#cfc4ab"
+const GREASE := "#1d1812"
 ## Ben-Day dot colors: a shade darker than the color they sit on (none of them red, except the
 ## finisher burst's, which sits on the finisher accent red).
 const DOT_YELLOW := "#ffb81f"
@@ -751,15 +752,16 @@ func _rear_warning() -> String:
 
 ## A seamless 512 px tile for the enemies' damage looks (triplanar detail texture), drawn
 ## to read from 1 m in first person and from the side view, with no red until the blood:
-##   skin     a purple-gray wash and big comic bruises (an olive rim, a purple or blue body
-##            with a dark middle and an ink edge) and ink scrapes;
-##   clothes  a dirt wash, dark scuffs and ink tears;
+##   skin     big comic bruises (an olive rim, a purple or blue body with a dark middle and an
+##            ink edge) and ink scrapes, on the skin as it is;
+##   clothes  pale dust smears, dark grease smears and ink tears, on the cloth as it is;
 ## with `blood`, comic blood splats over either (the bloodied look keeps the bruises).
 func _damage_tile(skin: bool, blood: bool) -> String:
 	var shapes := ""
 	if skin:
 		_rng.seed = 4100
-		shapes += '<rect x="0" y="0" width="512" height="512" fill="%s" opacity="0.3"/>\n' % BRUISE_WASH
+		# No wash over the skin: the skin keeps its colour and the bruises sit on it, each an olive rim,
+		# a purple or blue body with a dark middle and an ink edge.
 		for i in 6:
 			var c := _cell_point([0, 2, 3, 5, 6, 7][i], 3, 3)
 			var r := _rng.randf_range(40, 86)
@@ -771,22 +773,32 @@ func _damage_tile(skin: bool, blood: bool) -> String:
 			# The rim reaches 1.3 x (1 + jitter) of the radius.
 			for o in _wraps(c, r * 1.75):
 				shapes += '<g transform="translate(%s %s) %s">' % [_n(o.x), _n(o.y), shape]
-				shapes += _path(rim, BRUISE_OLD, "", 0.0, ' opacity="0.5"').trim_suffix("\n")
+				shapes += _path(rim, BRUISE_OLD, "", 0.0, ' opacity="0.35"').trim_suffix("\n")
 				shapes += _path(body, fill, BRUISE_DARK, 5.0, ' opacity="0.9"').trim_suffix("\n")
 				shapes += _path(core, BRUISE_DARK, "", 0.0, ' opacity="0.6"').trim_suffix("\n") + "</g>\n"
 		shapes += _scratches(4, INK, 6.0, 0.75)
 	else:
 		_rng.seed = 4300
-		shapes += '<rect x="0" y="0" width="512" height="512" fill="%s" opacity="0.28"/>\n' % DIRT
-		for i in 9:
+		# Worn cloth: long pale dust smears and short dark grease smears along one grain (not round blobs,
+		# which read as camouflage on a teal vest), ink tears and scratches. Nothing washes the whole tile.
+		for i in 7:
 			var c := _cell_point(i, 3, 3)
-			var r := _rng.randf_range(50, 84)
-			var d := _blob(Vector2.ZERO, r, 11, 0.35)
-			var shape := 'rotate(%s) scale(1 %s)' % [_n(_rng.randf_range(0.0, 180.0)), String.num(_rng.randf_range(0.35, 0.6), 2)]
-			for o in _wraps(c, r * 1.4):
+			var r := _rng.randf_range(46, 78)
+			var d := _blob(Vector2.ZERO, r, 11, 0.3)
+			var grain := _rng.randf_range(-0.35, 0.35)
+			var shape := 'rotate(%s) scale(1 %s)' % [_n(rad_to_deg(grain)), String.num(_rng.randf_range(0.18, 0.3), 2)]
+			for o in _wraps(c, r * 1.2):
 				shapes += '<g transform="translate(%s %s) %s">' % [_n(o.x), _n(o.y), shape]
-				shapes += _path(d, DIRT_DARK, "", 0.0, ' opacity="0.7"').trim_suffix("\n") + "</g>\n"
-		for i in 6:
+				shapes += _path(d, DUST, "", 0.0, ' opacity="0.42"').trim_suffix("\n") + "</g>\n"
+		for i in 4:
+			var c := Vector2(_rng.randf_range(0, 512), _rng.randf_range(0, 512))
+			var r := _rng.randf_range(22, 36)
+			var d := _blob(Vector2.ZERO, r, 9, 0.35)
+			var shape := 'rotate(%s) scale(1 %s)' % [_n(_rng.randf_range(-20.0, 20.0)), String.num(_rng.randf_range(0.25, 0.4), 2)]
+			for o in _wraps(c, r * 1.2):
+				shapes += '<g transform="translate(%s %s) %s">' % [_n(o.x), _n(o.y), shape]
+				shapes += _path(d, GREASE, "", 0.0, ' opacity="0.5"').trim_suffix("\n") + "</g>\n"
+		for i in 5:
 			var c := Vector2(_rng.randf_range(0, 512), _rng.randf_range(0, 512))
 			var tear := _tear(_rng.randf_range(70, 120), _rng.randf_range(12, 20), _rng.randf_range(0.0, PI))
 			for o in _wraps(c, 70.0):
