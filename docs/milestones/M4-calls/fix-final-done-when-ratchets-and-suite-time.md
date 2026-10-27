@@ -71,17 +71,17 @@ The hero's A9 reads `test_art_player.gd`'s constants (public constants of that s
 
 ## 7. C6: suite time (final-v6-06)
 
-**Per-file times before and after** (GUT's JUnit export, load average 3 to 5 before, 7 to 8 after, so the saving is a little understated; 73 files and 1580 tests before, 74 files and 1588 after):
+**Per-file times before and after** (GUT's JUnit export; load average 3 to 5 before and 4 to 5 for the last run; 73 files and 1580 tests before, 74 files and 1588 after):
 
 | File | Before | After |
 | --- | --- | --- |
 | `test_motion_m4.gd` | 54.2 s | 15.5 s |
-| `test_art_punk.gd` | 25.5 s | 12.4 s |
-| `test_m4_done_when.gd` | 23.1 s | 13.5 s |
-| `test_skinned_art.gd` | 12.9 s | 12.5 s |
-| the whole suite | 335.0 s (338 s wall) | 286.0 s (289 s wall) |
+| `test_art_punk.gd` | 25.5 s | 11.8 s |
+| `test_m4_done_when.gd` | 23.1 s | 13.4 s |
+| `test_skinned_art.gd` | 12.9 s | 11.6 s |
+| the whole suite | 335.0 s (338 s wall) | 264.5 s (267 s wall; the first run after the changes was 286.0 s at a load of 7 to 8) |
 
-Per test (JUnit, before -> after): the idle soles 20.5 s -> 0.5 s, the Punk's walks 6.8 s -> 0.2 s, the rig-playback walks 4.1 s -> 0.1 s, the deformation comparison 18.1 s -> 9.3 s, the Punk's strain test in `test_art_punk` 18.1 s -> 4.7 s (it makes the Punk's kept run once), the done-when's A7 12.8 s -> 7.5 s (it reads the Punk's kept run and makes the hero's) and A4 4.5 s -> 0.5 s. `test_skinned_art` reads both runs from the cache. The files above 1 s that got slower (`test_m3_done_when` +3.7 s, `test_ko_view` +1.7 s, `test_ragdoll` and `test_combat_integration` +1.3 s) are untouched by this package: the machine was busier for the second run. CLAUDE.md says 'about 5 minutes (286 s ...)' where it said 'about 90 s' (an M3 figure).
+Per test (JUnit, before -> after): the idle soles 20.5 s -> 0.5 s, the Punk's walks 6.8 s -> 0.2 s, the rig-playback walks 4.1 s -> 0.1 s, the deformation comparison 18.1 s -> 9.3 s, the Punk's strain test in `test_art_punk` 18.1 s -> 4.7 s (it makes the Punk's kept run once), the done-when's A7 12.8 s -> 7.5 s (it reads the Punk's kept run and makes the hero's) and A4 4.5 s -> 0.5 s. `test_skinned_art` reads both runs from the cache. The files above 1 s that got slower (`test_m3_done_when` +3.7 s, `test_ko_view` +1.7 s, `test_ragdoll` and `test_combat_integration` +1.3 s) are untouched by this package: the machine was busier for the second run. CLAUDE.md says 'about 4.5 minutes (267 s ...)' where it said 'about 90 s' (an M3 figure).
 
 **Decisions.**
 1. **Subset skinning.** `SkinnedView.skin_subset(mi, rig, indices, globals)` skins only the given vertices with the same matrices and weights (`MeshData.entry_start` gives each vertex's entries); `MotionProbe.walk_slide` skins only the sole vertices, and `test_a_punk_walking_through_the_rigs_own_playback_plants_its_feet` does too. `test_the_subset_skin_is_the_whole_skin_at_those_vertices` holds it to `skin_vertices()` at 1e-6 m on three poses.
@@ -112,7 +112,7 @@ Measured by FK (`PlaceholderBody.pose_globals`, on the drawn trunk, which leans 
 
 ## 9. What is handed back
 
-- **Full suite:** 1588 tests, run to the end on this branch before the last commit; see the commit message and the lead's merge run. At the previous run (before the strain table moved directories) it was 1587 of 1588, the one failure being `test_art_contract::test_every_exported_file_has_an_assets_row` naming the three files then in `tests/fixtures/art/`; they moved to `tests/fixtures/strain/` and that file passes (27 of 27).
+- **Full suite: 1588 of 1588** (1580 before, plus the 8 this package added), 112,132 asserts, 0 `SCRIPT ERROR`, 0 `SHADER ERROR`, and the only lines with `ERROR` in them are the done-when A12 note's own text; 267 s. The run before it (before the strain table moved directories) was 1587 of 1588, the one failure being `test_art_contract::test_every_exported_file_has_an_assets_row` naming the three files then in `tests/fixtures/art/`; they moved to `tests/fixtures/strain/`.
 - **For `M4-calls/P3-int.md` C4 (toon-light-and-ink owns the file):** "C4's ratchets were re-set on the final art by fix-final-done-when-ratchets-and-suite-time (M4-calls/fix-final-done-when-ratchets-and-suite-time.md C1 to C4): today's figure plus a small margin, A7's `problems_max` dropped because it saturated, the per-clip strain table in tests/fixtures/strain/strain_ratchet.json."
 - **For ARCHITECTURE's P3-int heading:** "A7's ratchet is `tests/art_strain.gd`'s SHIPPED rows (per art) plus `tests/fixtures/strain/strain_ratchet.json` (per clip, made by `gen_strain_ratchet.tscn`); the A9 hero ratchets are `test_art_player.gd`'s `HERO_*`; `PlaceholderAnims.Life.new()` is the defaults of a fresh `TuningData`."
 - **README's departures (the lead's):** A20's frozen-clip list is departed from once, for `stagger_back` (the lead's call 24).
