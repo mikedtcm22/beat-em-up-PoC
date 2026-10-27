@@ -4,6 +4,28 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-27 14:40 CDT: wave 1's two fixers merged (1575/1575); art-chain-records running; then wave 2, then the ratchets
+- **Merged:** both branches went in with no conflicts, then A22: the preset (517 values) and the palette. The suite on `3aa6f9a` is 1575/1575 with 0 SCRIPT, SHADER or ERROR lines.
+  - **`m4/fix-final-toon-light-and-ink`** (`30f88f3`):
+    - `look_fill_strength` 0.8 to 0.4: front-lit characters keep the sun's bands, and L2 is now MET.
+    - The hero's mask ink is cut sharp: `look_detail_cut` 0.15, through `player_art.tres` `metadata/detail_sharp`, so the Punk's art is still the soft mix until wave 2 turns it on. The hero's mask was also cleaned of blots.
+    - The own-body hull now measures 3.85/3.74/4.05 px (top is 0.05 over its bar, a soft row).
+    - `player_parts.py`'s literals moved into `pipeline.json`.
+    - Call 14's reason is corrected.
+  - **`m4/fix-final-punk-spawn-cache-and-evidence-acts`** (`8e211dc`):
+    - `RoomKit.warm_art()` holds `punk_art.tres` in a static, so a wave's first Punk no longer re-reads its GLB (about 19 ms down to 1-4 ms, headless).
+    - C5 and C13 tip the view to -35 degrees for the KO.
+    - C9's cast stands off the tour's path.
+    - The M3 before side was re-cut for those three acts into `captures/m4_before_recut/` (use these as the A23 before pairs). Its worktree `.worktrees/m4-fix-final-punk-spawn-cache-before-recut` can be removed.
+- **The lead's look:** fill 0.4 gives the Punk's vest and face real violet shadow shapes (comic cel), and the hero's wraps are solid black strands where they were grey smears.
+- **Running since 14:40 CDT:** art-chain-records, alone (`wf_de024c6a-d0d`, base `3aa6f9a`): the probe report's `--check`, a contract test for the hero's mask, the ASSETS rows and the orphan `.uid`. **If cut off:** rerun it with the same args (in the run's args; its worktree is `.worktrees/m4-fix-final-art-chain-records`).
+- **Next, in this order** (the files overlap):
+  1. Merge art-chain-records.
+  2. Wave 2 (`packages_wave2` in `final-findings.json`), two fixers at once: toon-gloss-and-turntable (per-swatch gloss; turn the sharp ink on for the Punk and check his lines; the C10 front) and punk-detail-zones-and-strap.
+  3. done-when-ratchets-and-suite-time last, so the ratchets are set on the final art (plus the stagger_back re-pose, call 24).
+  4. Then one Opus re-score of J1-J14.
+- **Usage:** 82% of the 5-hour window at 14:35 (reset at 15:50 CDT). Expect the watcher's 90% message. Wave 2 waits for the reset.
+
 ### 2026-10-27 14:10 CDT: V1 reviewed; every J item scored, mean 1.29 (bar 1.5); wave 1 fixing, wave 2 planned
 - **V1's scores:** J1 1, J2 1, J3 1, J4 1, J5 1, J6 2, J7 1.
   - **All 14 items:** J1 1, J2 1, J3 1, J4 1, J5 1, J6 2, J7 1, J8 2, J9 1, J10 2, J11 1, J12 2, J13 1, J14 1.
