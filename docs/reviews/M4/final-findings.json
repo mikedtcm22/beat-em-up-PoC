@@ -1209,10 +1209,9 @@
   "packages": [
    {
     "key": "toon-gloss-and-turntable",
-    "title": "Per-swatch gloss (the lens glints, matte cloth doesn't), the Punk's ink lines under wave 1's mask threshold, and C10's turntable front",
+    "title": "Per-swatch gloss (the lens glints, matte cloth doesn't) and C10's turntable front",
     "finding_ids": [
      "final-v1-04",
-     "final-v1-01",
      "final-v1-07"
     ],
     "files": [
@@ -1228,12 +1227,13 @@
      "docs/ARCHITECTURE.md (the toon headings)",
      "docs/milestones/M4-calls/F-final-toon.md (new)"
     ],
-    "notes": "Runs after wave 1 is merged (its toon-light-and-ink changed these same shader files: read its calls file R-look.md first). (1) final-v1-04: per-swatch gloss. (2) final-v1-01: wave 1 thresholded the detail mask for the hero (final-v3-01); check the Punk's tape, mouth, nose, cap and laces at 1 m (C1, C2 and C6 5 m crops) and finish the threshold if they still feather. (3) final-v1-07: the turntable films the Punk's front (hide or move the hero for the act; place the camera before the first mark). Re-record C1, C2, C4 and C10; full-resolution crops beside the concept and beside V1's stills in /Users/arachne/repos/beat-em-up-PoC/.worktrees/m4-review-final-v1/captures/review/."
+    "notes": "Runs after wave 1 and art-chain-records are merged (wave 1's toon-light-and-ink changed these shader files: read docs/milestones/M4-calls/fix-final-toon-light-and-ink.md first; the fill is now 0.4 and the hero's mask ink is cut sharp by look_detail_cut). (1) final-v1-04: per-swatch gloss, keeping J5's one small hard highlight; the lens takes the glint, matte cloth and skin don't. (2) final-v1-07: the turntable films the Punk's front (hide or move the hero for the act; place the camera before the first mark). Re-record C1, C2, C4 and C10; full-resolution crops beside the concept and beside V1's stills in /Users/arachne/repos/beat-em-up-PoC/.worktrees/m4-review-final-v1/captures/review/."
    },
    {
     "key": "punk-detail-zones-and-strap",
-    "title": "The Punk's cap strap slot, the laces' black speckle and the face-ink share",
+    "title": "The Punk's ink: the sharp mask cut turned on for him, the cap strap slot, the laces' speckle and the face-ink share",
     "finding_ids": [
+     "final-v1-01",
      "final-v1-03",
      "final-v1-05",
      "final-v1-06"
@@ -1246,13 +1246,13 @@
      "assets/source/characters/punk/report/report.json",
      "assets/source/characters/punk/report_auto/report.json",
      "assets/source/characters/punk/work/punk.blend",
-     "game/actors/art/punk_art.tres (only if the rebuild changes it)",
      "tests/test_art_contract.gd (the Punk rows)",
      "tests/test_art_punk.gd and tests/test_m4_done_when.gd (only a ratchet the rebuild moves, old -> new)",
      "ASSETS.md (the Punk rows)",
-     "docs/milestones/M4-calls/F-punk.md"
+     "docs/milestones/M4-calls/F-punk.md",
+     "game/actors/art/punk_art.tres (metadata/detail_sharp, and anything the rebuild changes)"
     ],
-    "notes": "Runs after wave 1 is merged, beside toon-gloss-and-turntable (headless Blender only). (1) final-v1-03: author the strap slot as a region like the lens (straight edges on edge loops, dark grey) and give the cap an ink zone. (2) final-v1-05: a laces/boots zone so the yellow laces are clean (the skeptic's caveat: thresholds alone only halve it). (3) final-v1-06: the face ink back to about 1.5% with margin under the 2.0% ceiling, and the docs' figures updated to the shipped number. Rebuild punk.glb and its three variants, run.py --check for both builds, the full suite, and re-record C1 (the cap) and C5 (the uppercut landing: the boots)."
+    "notes": "Runs after wave 1 and art-chain-records are merged, beside toon-gloss-and-turntable (headless Blender only). (0) final-v1-01: wave 1 added the sharp mask cut to toon.gdshader (look_detail_cut, switched per art by metadata/detail_sharp, now on for the hero only; read docs/milestones/M4-calls/fix-final-toon-light-and-ink.md). Turn it on for the Punk in punk_art.tres and tune the Punk's mask for it (the tape, mouth, nose, cap and laces must read as crisp lines at 1 m, with no blots; the hero's mask needed hardened strokes and a 2-texel opening). Do all the zone work below with the cut on. (1) final-v1-03: author the strap slot as a region like the lens (straight edges on edge loops, dark grey) and give the cap an ink zone. (2) final-v1-05: a laces/boots zone so the yellow laces are clean (the skeptic's caveat: thresholds alone only halve it). (3) final-v1-06: the face ink back to about 1.5% with margin under the 2.0% ceiling, and the docs' figures updated to the shipped number. Rebuild punk.glb and its three variants, run.py --check for both builds, the full suite, and re-record C1 (the face and cap), C2 (the tape) and C5 (the uppercut landing: the boots); full-resolution crops beside the concept and beside V1's stills."
    }
   ],
   "unassigned": []
