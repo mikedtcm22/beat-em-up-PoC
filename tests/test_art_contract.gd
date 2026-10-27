@@ -28,6 +28,10 @@ const SOLE_TOLERANCE := 0.005
 ## The mean dot of a mesh's decoded hull normal (COLOR) with its NORMAL: the right axes measure 0.92-0.96 on the smoke Punk
 ## and the probe bodies (a normal baked in Blender's Z-up axes measured 0.31-0.34).
 const HULL_AGREE_MIN := 0.85
+## The atlas alpha classes (tools/pipeline/gen_palette.py; game/fx/toon.gdshader decodes them with step(0.75) and step(0.9)).
+const ALPHA_CLOTHES := 1.0
+const ALPHA_SKIN := 0.8
+const ALPHA_NONE := 0.5
 const SWATCH_MIN := 4
 const SWATCH_MAX := 6
 const SWATCH_COLUMNS := 32
@@ -493,7 +497,8 @@ func _open_edges(mesh: Dictionary) -> int:
 	return open
 
 
-## The palette atlas is the shared palette JSON made real: 256x16, every swatch at its slot's centre, alpha 1.0 (marks) or 0.5.
+## The palette atlas is the shared palette JSON made real: 256x16, every swatch at its slot's centre, alpha the damage class:
+## 1.0 clothes marks, 0.8 skin marks (`"skin": true`, slots 6-9), 0.5 none (slice-g2-07).
 func test_the_palette_atlas_is_the_palette_json_made_real() -> void:
 	var atlas := _atlas_image()
 	assert_not_null(atlas, "the atlas imports")
@@ -519,7 +524,15 @@ func test_the_palette_atlas_is_the_palette_json_made_real() -> void:
 			assert_almost_eq(got.r, want.r, 0.005, "%s slot %d red" % [file, slot])
 			assert_almost_eq(got.g, want.g, 0.005, "%s slot %d green" % [file, slot])
 			assert_almost_eq(got.b, want.b, 0.005, "%s slot %d blue" % [file, slot])
-			assert_almost_eq(_swatch_alpha(atlas, slot), 1.0 if bool(sw.get("marks", true)) else 0.5, 0.01, "%s slot %d: alpha 1.0 takes damage marks, 0.5 does not" % [file, slot])
+			var skin := bool(sw.get("skin", false))
+			var takes := bool(sw.get("marks", true))
+			assert_false(skin and not takes, "%s slot %d: a skin swatch takes marks" % [file, slot])
+			var want_alpha := ALPHA_NONE if not takes else ALPHA_SKIN if skin else ALPHA_CLOTHES
+			var alpha := _swatch_alpha(atlas, slot)
+			assert_almost_eq(alpha, want_alpha, 0.01, "%s slot %d: alpha 1.0 takes the clothes' marks, 0.8 the skin's, 0.5 none" % [file, slot])
+			# the shader's own decode (toon.gdshader: takes_marks *= step(0.75, a); skin_marks = 1 - step(0.9, a)) gives the same classes
+			assert_eq(alpha >= 0.75, takes, "%s slot %d: the shader reads 'takes marks' from the alpha" % [file, slot])
+			assert_eq(alpha >= 0.75 and alpha < 0.9, skin, "%s slot %d: the shader reads 'skin' from the alpha" % [file, slot])
 			assert_false(_in_red_band(want), "%s slot %d (%s) is in the red band" % [file, slot, sw.srgb])
 	assert_gt(seen.size(), 10, "the shared palette is there")
 
