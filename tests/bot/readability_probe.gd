@@ -764,6 +764,9 @@ func _poll_windups() -> void:
 
 
 ## R4: for each wind-up in progress, is its chest in the lens, and is another enemy's body in front?
+## An enemy's body is the meshes FPView.is_drawn() counts, as R8's are: a rig wearing art has its
+## primitives hidden while the art shows, and its view proxies (which follow the same bones and
+## stand in for the art, M4-plan A4) are what hide a wind-up here.
 func _sample_occlusion(live: Array[CombatActor]) -> void:
 	var lens := _lens()
 	if lens.is_empty():
@@ -798,7 +801,7 @@ func _sample_occlusion(live: Array[CombatActor]) -> void:
 			if not meshes.has(oid):
 				meshes[oid] = FPView.meshes_under(other)
 			for mesh: MeshInstance3D in meshes[oid]:
-				if mesh.layers & CombatTypes.bit(CombatTypes.VIS_FP_HIDDEN) or not mesh.is_visible_in_tree():
+				if mesh.layers & CombatTypes.bit(CombatTypes.VIS_FP_HIDDEN) or not FPView.is_drawn(mesh):
 					continue
 				if FPView.ray_hit(mesh, cam.origin, dir) < dist - occlusion_margin_m:
 					hidden = true
