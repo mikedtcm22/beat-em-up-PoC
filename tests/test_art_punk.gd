@@ -83,6 +83,16 @@ func _rig(art: CharacterArt, hurtboxes: bool = false) -> HumanoidRig:
 	return rig
 
 
+## A Street Punk of the scene on a stage of its own (an enemy adds an EnemyDirector beside itself,
+## and the stage frees it with the Punk).
+func _punk() -> StreetPunk:
+	var stage := Node3D.new()
+	add_child_autofree(stage)
+	var punk := (load(PUNK_SCENE) as PackedScene).instantiate() as StreetPunk
+	stage.add_child(punk)
+	return punk
+
+
 func _pose(rig: HumanoidRig, animation: StringName, at: float) -> void:
 	rig.play(animation, 0.0)
 	rig.advance(0.0)
@@ -124,10 +134,9 @@ func _lines(title: String, lines: PackedStringArray) -> void:
 
 
 func test_a_street_punk_wears_the_art_through_combat_actor_art() -> void:
-	var punk := (load(PUNK_SCENE) as PackedScene).instantiate() as StreetPunk
+	var punk := _punk()
 	assert_not_null(punk.art, "the scene carries punk_art.tres")
 	assert_eq(punk.art.resource_path, VARIANTS[0].art)
-	add_child_autofree(punk)
 	await get_tree().physics_frame
 	assert_true(punk.rig.has_art(), "the Punk's rig has attached the art (check() passed)")
 	assert_eq(punk.rig.art_meshes().size(), 1, "one mesh, Body")
@@ -149,8 +158,7 @@ func test_a_street_punk_wears_the_art_through_combat_actor_art() -> void:
 
 func test_the_primitives_come_back_when_the_art_is_switched_off() -> void:
 	Tuning.data.look_show_art = false
-	var punk := (load(PUNK_SCENE) as PackedScene).instantiate() as StreetPunk
-	add_child_autofree(punk)
+	var punk := _punk()
 	await get_tree().physics_frame
 	assert_true(punk.rig.has_art())
 	assert_false(punk.rig.art_meshes()[0].visible, "the art is hidden by the A/B switch")
@@ -162,15 +170,13 @@ func test_the_primitives_come_back_when_the_art_is_switched_off() -> void:
 func test_look_punk_art_variant_picks_each_glb_and_a_punk_wears_it() -> void:
 	for row: Dictionary in VARIANTS:
 		Tuning.data.look_punk_art_variant = row.variant
-		var punk := (load(PUNK_SCENE) as PackedScene).instantiate() as StreetPunk
-		add_child_autofree(punk)
+		var punk := _punk()
 		await get_tree().physics_frame
 		assert_true(punk.rig.has_art(), "%s attaches" % row.name)
 		var scene_path := punk.rig.art.scene.resource_path
 		assert_true(scene_path.ends_with("/" + String(row.glb)), "variant %d wears %s (%s)" % [row.variant, row.glb, scene_path])
 	Tuning.data.look_punk_art_variant = 99
-	var clamped := (load(PUNK_SCENE) as PackedScene).instantiate() as StreetPunk
-	add_child_autofree(clamped)
+	var clamped := _punk()
 	await get_tree().physics_frame
 	assert_true(clamped.rig.has_art(), "a value past the last clamps to it")
 
