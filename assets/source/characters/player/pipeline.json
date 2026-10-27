@@ -403,7 +403,13 @@
 			"radius_px": 3,
 			"lo": 0.04,
 			"hi": 0.1,
-			"gain": 1.0
+			"gain": 1.0,
+			"skip_slots": [
+				6,
+				7,
+				8,
+				9
+			]
 		},
 		"layout": {
 			"angle_deg": 66.0,

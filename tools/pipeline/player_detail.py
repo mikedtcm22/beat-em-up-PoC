@@ -12,7 +12,7 @@ The ink, per texel of the final surface:
 	        shoe's sole. Analytic: a texel is ink when it lies within detail.border_px of a triangle edge whose neighbour wears
 	        another swatch (so an island's own edge in UV space is never a line);
 	stroke  the thin dark lines of the generated texture (the diagonal strands of the wraps, the glove's stitching, the folds of
-	        the trousers and the top, the creases of the fingers): a ridge detector on the dense source's texture, at the
+	        the trousers and the top, the creases of the fingers; not on the body's bare skin, detail.stroke.skip_slots): a ridge detector on the dense source's texture, at the
 	        point of the dense surface nearest to the texel. A ridge is darker than both sides along one of four directions
 	        (detail.stroke.radius_px apart), so a step between two colours is not a ridge and the borders are not drawn twice.
 The mask is then grown by detail.dilate_px into the empty space round the UV islands, so a filtered lookup at an island's edge
@@ -408,6 +408,10 @@ def run(cfg, extra):
 	# on the fist piece do, and the cloth, wraps and glove everywhere
 	skin_slots = [int(x) for x in cc.get("skip_slots", [])]
 	crease = np.where(use_fist, crease * float(cc.get("fist_gain", 1.0)), np.where(np.isin(slot[tri], skin_slots), 0.0, crease))
+	# a dark speck of the generated texture on bare skin (a mole, a pore) is not a line either: the bare body's skin takes no stroke ink
+	# (detail.stroke.skip_slots), the fingers on the fist piece keep theirs
+	stroke_skip = [int(x) for x in dc["stroke"].get("skip_slots", [])]
+	stroke = np.where(use_fist, stroke, np.where(np.isin(slot[tri], stroke_skip), 0.0, stroke))
 	stroke = np.maximum(stroke, crease)
 
 	ink = np.clip(np.maximum(border, stroke), 0.0, 1.0)

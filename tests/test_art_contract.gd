@@ -539,7 +539,7 @@ func test_the_first_person_split_is_closed_and_above_the_waist() -> void:
 
 
 ## The limbs are the right way out: a triangle of a leg or a foot faces away from its bone. The first split of the hero
-## recalculated the body's normals as a whole and turned the legs, the feet and part of the hips inside out: 65-98% of their triangles
+## recalculated the body's normals as a whole and turned the legs, the feet and part of the hips inside out: 49-96% of their triangles
 ## faced the bone, the base pass culled them and the hull drew the near wall as a black fill (the front kick, the look-down). A leg
 ## that is right measures 0-7% (the creases and the crotch face the other way); the bar is 15%. (A forearm is not measured: the Punk's
 ## gauntlet cuff flares, so a good forearm faces its bone in 17-26%.)
