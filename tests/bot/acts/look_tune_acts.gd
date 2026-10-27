@@ -160,10 +160,18 @@ static func _pair(bot: Node, slug: String, label: String, actor: CombatActor) ->
 	return {on = on, off = off, norim = norim}
 
 
+## Every value an act has measured so far, by slug: look.json keeps one entry per slug, so each
+## measurement is merged into what the act has already written.
+static var _measured: Dictionary = {}
+
+
 static func _metric(bot: Node, slug: String, values: Dictionary) -> void:
 	for key: String in values:
 		bot.log_line("LOOK-METRIC %s %s %s" % [slug, key, values[key]])
-	LookProbe.record(slug, values)
+	var merged: Dictionary = _measured.get(slug, {})
+	merged.merge(values, true)
+	_measured[slug] = merged
+	LookProbe.record(slug, merged)
 
 
 static func _survivor(punk: EnemyActor) -> void:
