@@ -20,6 +20,7 @@ export const meta = {
 //   verdicts: { <finding id>: { survives, votes } }   skip these skeptics
 //   packages: <PARTITION object>   skip the partition
 //   no_fix: true              stop after the partition
+//   findings_path: "<file>"  with packages and no lenses: run only the fixers, which read their findings from the file
 //   skeptics: 1 | 3           skeptics per finding (default 3; with 1 a finding survives on its one confirm)
 //   max_packages: 4           the partition's cap on fix packages
 //   fix_concurrency: 3, review_concurrency: 3
@@ -285,6 +286,9 @@ if (packages && !A.no_fix) {
     const wt = `${ROOT}/.worktrees/m4-fix-${s}`
     const branch = `m4/fix-${s}`
     const fs = pk.finding_ids.map(id => survivors.find(f => f.id === id)).filter(Boolean)
+    const findingsText = A.findings_path
+      ? `Your findings are ${pk.finding_ids.join(', ')} in ${A.findings_path} (read the file's "findings" entries with those ids: the reviewer's detail, evidence, repro and suggested fix, and the skeptic's verdict with its root cause and files; "lead_overrides" holds the lead's rulings, which win).`
+      : JSON.stringify(fs.map(f => ({ id: f.id, severity: f.severity, title: f.title, detail: f.detail, evidence: f.evidence, repro: f.repro, suggested_fix: f.suggested_fix, skeptics: f.votes.map(v => ({ refuted: v.refuted, reason: v.reason, root_cause: v.root_cause, files: v.files_to_change })) })), null, 1)
     return agent(`${COMMON}
 
 YOU ARE A FIXER for package "${pk.key}" (${pk.title}). Partition notes: ${pk.notes}
@@ -293,7 +297,7 @@ SETUP: \`cd ${ROOT} && git fetch -q origin && git worktree add .worktrees/m4-fix
 For each finding: confirm it, fix the root cause, add a test that fails without the fix where it's testable, and for visual or feel fixes re-record the affected acts into ${wt}/captures/fix/, tile sheets and LOOK at them. A fix that needs a spec change: don't implement it; report it (outcome spec_question) with a proposal and a default. Moves go through tools/gen_moves.gd; new tunables need \`godot --headless -s tools/gen_default_preset.gd\`. Run the full suite at the end (all pass, no SCRIPT ERROR, SHADER ERROR or ERROR). Log each judgement call (decision, an alternative not taken, why) in docs/milestones/M4-calls/fix-${s}.md.
 Commit "wip: ..." and push every 15-20 minutes. Finish with a commit whose subject is "M4 fix-${s}: <short list>", then push. Every commit message ends with the line "${TRAILER}". Never merge; never edit docs/HANDOFF.md, README.md or docs/SPEC.md; never commit captures/.
 FINDINGS:
-${JSON.stringify(fs.map(f => ({ id: f.id, severity: f.severity, title: f.title, detail: f.detail, evidence: f.evidence, repro: f.repro, suggested_fix: f.suggested_fix, skeptics: f.votes.map(v => ({ refuted: v.refuted, reason: v.reason, root_cause: v.root_cause, files: v.files_to_change })) })), null, 1)}`,
+${findingsText}`,
       { label: `fix:${pk.key}`, phase: 'Fix', schema: FIX_SCHEMA, model: 'sonnet' })
   })).then(r => ({ key: pk.key, ...r }))))
 }

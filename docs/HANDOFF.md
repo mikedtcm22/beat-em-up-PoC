@@ -4,14 +4,14 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
-### 2026-10-27 14:05 CDT: F-cuff merged (`44b1a7e`); V1 running beside V2-V6
+### 2026-10-27 13:35 CDT: F-cuff merged (`44b1a7e`); V1 running beside V2-V6
 - **Merged:** `m4/f-cuff` (`682ebbc`, 1561/1561 on its branch). It merged cleanly onto its own base plus two doc files, so the tested tree is the merged tree. The preset and palette were regenerated (`--check` passes).
   - **The cuff:** each glove's cuff is now a band that follows the forearm, 7.1 cm long and at most 5.8 cm from the arm's axis (8.6 before). The flange is gone.
   - **A9:** the lens-share bar now misses in the jab and the cross at +8 degrees (4.7-5.1 points against 4). Those poses are ratcheted per pose and print the plan's bar (call 22).
   - **The lens:** back to the cap's yellow (#e8bd2e) in the dark frame. The A/B showed the cream reading as a khaki visor. The shades test now asserts the frame instead of a colour distance.
   - **Probe fixture:** F-cuff found that its `--check` reports NO (hash `b61973f6` against `c8a83e6a`) on the merged base, before F-cuff's changes. That's for V5 or the fixers.
 - **The lead's look:** the guard at 1 m reads as fingerless gloves on wrist cuffs, and the yellow shades in their frame read as the concept's goggles.
-- **Running since 14:00 CDT:** V1 (the Punk standing at 1 m, J1-J7): workflow `wf_febf38e3-d3b`, round `final`, base `44b1a7e`, worktree `.worktrees/m4-review-final-v1`. V2-V6 (`wf_f116f808-22a`) are still running on `3eea29a`.
+- **Running since 13:35 CDT:** V1 (the Punk standing at 1 m, J1-J7): workflow `wf_febf38e3-d3b`, round `final`, base `44b1a7e`, worktree `.worktrees/m4-review-final-v1`. V2-V6 (`wf_f116f808-22a`) are still running on `3eea29a`.
 - **Next:** when both are done, rerun `workflow-review.js` with all six lenses, `reviews` and `verdicts` from both journals, `no_fix` false and base `44b1a7e`, so the fixers run.
 
 ### 2026-10-27 13:05 CDT: the fix round merged (1561 tests, all passing); F-cuff and the final review (V2-V6) running
