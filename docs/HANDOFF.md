@@ -32,6 +32,11 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
   - **S0-contract:** the seams, RigPaint, the call-site stubs, `joints.json`, the test move, and the Look group.
   - **L0-bench:** the look acts, `look_sheets.sh`, `perf_compare.sh`, and the before pack into `captures/m4_before/`.
   - **P1-tools, steps 1-2 only:** `tripo.py`, `blender_dump_rig.py` and the Concepts ASSETS rows. No credits. It ends on a `wip:` commit, and a second launch after S0's merge does the mannequin and the smoke Punk T1-T3.
+- **Running since 22:45:**
+  - S0-contract: `wf_24684a15-5d9` (task `wsy3wzufe`);
+  - L0-bench: `wf_cc211798-6b5` (task `wnphun6a9`);
+  - P1-tools: `wf_c1309863-fd9` (task `wbqn4zcx7`).
+  - Worktrees: `.worktrees/m4-<key>`. Branches: `m4/<key>`.
 - **Game-boy's pick:** none yet. The DM thread was read at 22:35.
 - **Next:**
   1. Merge S0.
