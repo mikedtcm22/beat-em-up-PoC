@@ -238,10 +238,12 @@ def replace_hands(cfg, extra):
 				cuts[side]["radius_median_m_after"] = r_med
 			cut = {"a_min": a0, "radius_m": r_med} if len(near) >= 6 else None
 			if cut is not None and pf["generated"].get("collar"):
-				# the forearm's own vertices in the hanging frame (after the taper): the collar takes its outline from them
+				# the forearm's own triangles in the hanging frame (after the taper): the collar takes its outline from their slices
 				arm_cols = [NAMES.index(side + "LowerArm"), NAMES.index(side + "Hand")]
 				arm_sel = (w_now[:, arm_cols].sum(axis=1) > 0.5) & (np.linalg.norm(co - p_hand, axis=1) < 0.3)
-				cut["arm_local"] = (co[arm_sel] - p_hand) @ rotation_between(np.array(pc.HANGING), d)
+				arm_local = (co - p_hand) @ rotation_between(np.array(pc.HANGING), d)
+				tv, _tp = pb.tri_arrays(me)
+				cut["arm_tris"] = arm_local[tv[arm_sel[tv].all(axis=1)]]  # (m, 3, 3): the forearm's own surface, the collar's outline
 			part = pipe_fist.make_side(gsrc, side, table_boxes[side], cut, p_hand, d, pf["generated"], pf)
 			obj = pipe_fist.add_object("Fist" + side, part, uv_name)
 			fist_planes[side] = [[list(map(float, c)), list(map(float, n))] for c, n in part["bisect"]] if part.get("bisect") else None
@@ -250,8 +252,11 @@ def replace_hands(cfg, extra):
 			cuts[side].update({"fist": part["report"], "faces_deleted": deleted[side], "fist_triangles": part["report"]["triangles"]})
 			if part.get("collar_report"):
 				cuts[side]["collar"] = part["collar_report"]
-				if pf["generated"]["collar"].get("arm_trim_below_cut_m") is not None:
-					trims[side] = (np.asarray(p_hand, dtype=np.float64), np.asarray(d, dtype=np.float64), float(part["collar"]["z_cut"]) - float(pf["generated"]["collar"]["arm_trim_below_cut_m"]))
+				if pf["generated"]["collar"].get("arm_trim_above_block_m") is not None:
+					z_trim = float(part["collar"]["z_block_top"]) + float(pf["generated"]["collar"]["arm_trim_above_block_m"])
+					if z_trim < float(part["collar_report"]["full_z_m"]) - 1e-6:
+						pc.fail("collar: the arm is trimmed at z %.4f, below the level %.4f where the collar first reaches the arm's outline: the arm would stand out of it" % (z_trim, part["collar_report"]["full_z_m"]))
+					trims[side] = (np.asarray(p_hand, dtype=np.float64), np.asarray(d, dtype=np.float64), z_trim)
 			continue
 		cuff_r = max(r_cut, 0.05) + pf.get("cuff_margin_m", 0.008)
 		z_top = -(min(a0, 0.0) - pf.get("cuff_over_m", 0.035))
@@ -280,7 +285,8 @@ def replace_hands(cfg, extra):
 		fists.append(obj)
 		cuts[side].update({"cuff_radius_m": cuff_r, "cuff_z_top": zt, "cuff_z_bottom": zb, "fist_triangles": len(acc.faces), "faces_deleted": deleted[side]})
 	# F-punk-fix: the arm's ragged open end (the faces the hands' deletion left torn, in the Tripo glove's dark) is trimmed back
-	# along a plane `arm_trim_below_cut_m` below the cut's top, so no flap can show under the collar, which covers it
+	# along a plane `arm_trim_above_block_m` above the block's top (F-cuff: at or above the level where the collar's funnel reaches
+	# the arm's outline, so the arm's new end lies inside the collar), so no flap can show under the collar, which covers it
 	if trims:
 		bm_t = bmesh.new()
 		bm_t.from_mesh(me)
