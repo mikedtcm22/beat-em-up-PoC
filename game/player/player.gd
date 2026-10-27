@@ -19,6 +19,16 @@ const CHARGE_ANIM := &"haymaker_charge"
 ## back toward the look per physics tick.
 const _VIEW_SETTLE := 0.25
 
+## The probe body the player wears behind Tuning's look_player_art_probe (M4-plan A14): a
+## CharacterArt of tests/fixtures/art/probe_body.glb, a mannequin through the real chain.
+const PROBE_ART_PATH := "res://game/actors/art/player_probe_art.tres"
+## The metadata keys of the scene's art (player_art.tres) naming the hero's files. The GLB and
+## its detail mask are F-player-art's, in place later: until then the files are missing and the
+## player keeps his primitives, with no warning and no resource error (the art is only loaded
+## once the file exists).
+const ART_SCENE_META := &"scene_path"
+const ART_DETAIL_META := &"detail_mask_path"
+
 ## Radians. Yaw 0 faces -Z; positive pitch looks up.
 var look_yaw: float = 0.0
 var look_pitch: float = 0.0
@@ -32,6 +42,9 @@ var parser: ComboParser = ComboParser.new()
 var auto_revive: bool = false
 ## The get-up now running follows a KO (_revive()): the look stays on the body through it.
 var _ko_getup: bool = false
+
+## The hero's CharacterArt made ready to wear (worn_art()), by the scene's art it came from.
+static var _hero_art: Dictionary[CharacterArt, CharacterArt] = {}
 
 var _sets: Dictionary[StringName, MoveSet] = {}
 var _weapon_throw_move: MoveData
@@ -128,6 +141,7 @@ func _ready() -> void:
 	_hold_bend = _eye_in_body() - _standing_eye
 	rig.play(&"idle", 0.0)
 	rig.advance(0.0)
+	_wear_first_person_hull()
 
 
 func _configure_rig(r: HumanoidRig) -> void:
@@ -144,6 +158,50 @@ func _configure_rig(r: HumanoidRig) -> void:
 	r.pants_color = Color(0.3, 0.3, 0.32)
 	r.accent_color = Color(0.93, 0.9, 0.82)
 	r.skin_color = Color(0.82, 0.6, 0.45)
+
+
+## The art the player wears (CombatActor._configure_art(); null keeps his primitives): the probe
+## body when Tuning's Debug value look_player_art_probe is on, else the hero's (the scene's
+## player_art.tres once its GLB exists), else nothing. Read when the body is built.
+func _configure_art(r: HumanoidRig) -> void:
+	r.art = worn_art(art, Tuning.data.look_player_art_probe)
+
+
+## `scene_art` (the scene's CharacterArt, which names the hero's GLB by its metadata) made
+## ready to wear: `probe` picks the probe body; else `scene_art` as it is when it carries a
+## scene, or a copy of it holding the GLB and its detail mask when the files named in its
+## metadata exist; else null (no art, no warning). One copy per art, so the art's cache holds.
+static func worn_art(scene_art: CharacterArt, probe: bool = false) -> CharacterArt:
+	if probe:
+		return load(PROBE_ART_PATH) as CharacterArt
+	if scene_art == null or scene_art.scene != null:
+		return scene_art
+	var scene_path: String = scene_art.get_meta(ART_SCENE_META, "")
+	if scene_path.is_empty() or not ResourceLoader.exists(scene_path):
+		return null
+	if _hero_art.has(scene_art):
+		return _hero_art[scene_art]
+	var worn := scene_art.duplicate() as CharacterArt
+	worn.scene = load(scene_path) as PackedScene
+	var detail_path: String = scene_art.get_meta(ART_DETAIL_META, "")
+	if not detail_path.is_empty() and ResourceLoader.exists(detail_path):
+		worn.detail_mask = load(detail_path) as Texture2D
+	_hero_art[scene_art] = worn
+	return worn
+
+
+## The art meshes' hull for the player's own body: the character hull drawn at
+## look_outline_fp_scale (the width of his arms and legs 0.3-0.6 m from the lens, the bible's
+## x0.8), the lens fade built in. RigPaint.outline_material() makes the full-width one for every
+## art (it has no first-person variant), and SkinnedArt.attach() put that on the meshes.
+## ToonMaterials makes the first-person variant of its art hull for the primitives only; this
+## asks it for that one by its own key (a request in M4-calls/F-player-int.md: ToonMaterials.outline()
+## taking the flag, RigPaint passing the rig's first_person_body, which makes this redundant).
+func _wear_first_person_hull() -> void:
+	if rig == null:
+		return
+	for mesh: MeshInstance3D in rig.art_meshes():
+		mesh.material_overlay = ToonMaterials._hull(ToonMaterials.Hull.ART, true)
 
 
 func _physics_process(delta: float) -> void:
