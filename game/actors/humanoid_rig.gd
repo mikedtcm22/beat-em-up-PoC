@@ -50,26 +50,31 @@ extends Node3D
 ##
 ## Layout and art data live in PlaceholderBody (bones, rig points, meshes, hurtboxes),
 ## PlaceholderPoses (pose library) and PlaceholderAnims (animation builders).
+##
+## Art (Milestone 4): with `art` set, the primitives above are still built (names, followers,
+## layers, materials) but hidden, as the view proxies the first-person tests and camera keep
+## measuring, and SkinnedArt draws the character's skinned meshes on the skeleton instead.
+## Everything that paints the body (materials, flash, damage look) is RigPaint's.
 
 @export var height: float = 1.8
 @export var body_color: Color = Color(0.22, 0.42, 0.78):
 	set(value):
 		body_color = value
-		_apply_colors()
+		paint.apply_colors()
 @export var accent_color: Color = Color(0.92, 0.9, 0.85):
 	set(value):
 		accent_color = value
-		_apply_colors()
+		paint.apply_colors()
 @export var skin_color: Color = Color(0.86, 0.66, 0.5):
 	set(value):
 		skin_color = value
-		_apply_colors()
+		paint.apply_colors()
 ## The trousers' color. Fully transparent (the default) paints them body_color darkened, as
 ## on the enemies and dummies; the player's are a color of their own (_configure_rig()).
 @export var pants_color: Color = Color.TRANSPARENT:
 	set(value):
 		pants_color = value
-		_apply_colors()
+		paint.apply_colors()
 ## How the body stands, walks, and starts and ends every move (PlaceholderPoses.STANCE_*):
 ## &"boxer" keeps the fists up at the chin (enemies, dummies); &"relaxed" lets the arms
 ## hang loose until a strike (the player, so the first-person view stays clear). Strike
@@ -78,6 +83,9 @@ extends Node3D
 ## Player only (Spec §10): skin-colored hands with light wraps and a dark fingerless-glove
 ## plate instead of the enemies' dark fingerless gloves (the same size). Set before build().
 @export var wrapped_hands: bool = false
+## The skinned art this rig wears, or null for the placeholder primitives alone (exactly the
+## 41 meshes, 45 with wrapped_hands). Set before build(), by CombatActor._configure_art().
+@export var art: CharacterArt
 ## Player only: put the meshes PlaceholderBody.is_fp_hidden() names (head, neck, chest,
 ## shoulder balls and the shoulder end of each upper arm) on CombatTypes.VIS_FP_HIDDEN.
 @export var first_person_body: bool = false:
@@ -99,13 +107,16 @@ var skeleton: Skeleton3D
 var anim_player: AnimationPlayer
 ## The damage look shown (DamageLook.Level), set through set_damage_look().
 var damage_look: int = 0
+## Everything that paints this body: materials, flashes, the damage look and the outline.
+var paint: RigPaint
 
+## Group of the primitive meshes of a rig with art (every one of them, hidden while the art
+## shows): the view proxies, which the first-person tests and camera keep measuring.
+const VIEW_PROXY_GROUP := &"view_proxy"
+## Group of the skinned art's meshes (SkinnedArt.attach()).
+const ART_GROUP := &"rig_art"
 ## Library name for the move animations built by play_move().
 const _MOVE_LIBRARY := &"moves"
-## Shades, belt, soles and hair.
-const _DARK_COLOR := Color(0.07, 0.07, 0.08)
-## Trousers without a pants_color of their own are body_color darkened by this much.
-const _PANTS_DARKEN := 0.45
 ## A KO that starts while the body is already lying skips to this many seconds before
 ## the end of the ko_* slump, so the body does not stand back up first.
 const _KO_FROM_LYING_S := 0.28
@@ -125,10 +136,6 @@ const _ROLL_MIN_GAIN := 0.1
 ## The contact flash's overlay shader (flash_at()).
 const _FLASH_SHADER := preload("res://game/fx/hit_flash.gdshader")
 
-## The contact flash has been warmed up this run, and the box warming it until the first
-## contact flash (_warm_flash()).
-static var _flash_warmed: bool = false
-static var _flash_warm_box: MeshInstance3D
 ## The named animation libraries built so far, per stance and scale (see _named_library()).
 static var _named_libraries: Dictionary[String, AnimationLibrary] = {}
 
@@ -143,7 +150,8 @@ var _point_nodes: Dictionary[StringName, Marker3D] = {}
 var _hurtboxes: Array[Hurtbox] = []
 var _hurt_shapes: Array[CollisionShape3D] = []
 var _hurt_specs: Array[PlaceholderBody.HurtSpec] = []
-## Paint (PlaceholderBody.Paint) -> material. One set per rig so flashes stay per actor.
+## Paint (PlaceholderBody.Paint) -> material. One set per rig so flashes stay per actor. The
+## dictionary RigPaint fills (paint.materials).
 var _materials: Dictionary[int, StandardMaterial3D] = {}
 ## The contact flash's overlay (flash_at()), made on first use: every material's next_pass
 ## while it runs, nobody's otherwise. Its point, in the frame of the bone node nearest it.
@@ -155,6 +163,8 @@ var _flash_anchor: Node3D
 var _flash_local: Vector3 = Vector3.ZERO
 var _head_meshes: Array[MeshInstance3D] = []
 var _body_meshes: Array[MeshInstance3D] = []
+## The skinned art's meshes, once SkinnedArt.attach() has added them.
+var _art_meshes: Array[MeshInstance3D] = []
 var _current: StringName = &""
 ## The body flurry alternates its leading fist on consecutive plays.
 var _flurry_mirrored: bool = false
@@ -182,6 +192,11 @@ var _bone_velocity: Array[Vector3] = []
 var _motion_valid: bool = false
 
 
+func _init() -> void:
+	paint = RigPaint.new(self)
+	_materials = paint.materials
+
+
 ## Create skeleton, meshes, hurtboxes, rig points and the animation library. Idempotent:
 ## a second call does nothing. Starts in idle, already posed.
 func build() -> void:
@@ -190,8 +205,8 @@ func build() -> void:
 	_built = true
 	_scale = maxf(height, 0.1) / PlaceholderBody.REF_HEIGHT
 	_build_skeleton()
-	_build_materials()
-	_warm_flash()
+	paint.build()
+	paint.warm_up(self)
 	_build_meshes()
 	_build_points()
 	if build_hurtboxes:
@@ -391,15 +406,37 @@ func set_shown(shown: bool) -> void:
 	visible = shown
 
 
+## True when skinned art is on this rig (SkinnedArt.attach() added meshes). A rig whose art
+## failed to attach keeps drawing its primitives and counts as having none.
+func has_art() -> bool:
+	return not _art_meshes.is_empty()
+
+
+## The skinned art's meshes (read only); empty on a rig without art.
+func art_meshes() -> Array[MeshInstance3D]:
+	return _art_meshes
+
+
+## Show the skinned art (`shown` true) or the primitives it stands in for (false), live: the
+## A/B behind Tuning's look_show_art. The hidden set stays built either way, as the view
+## proxies. A rig without art meshes keeps its primitives visible.
+func set_art_shown(shown: bool) -> void:
+	if _art_meshes.is_empty():
+		return
+	for mesh_instance: MeshInstance3D in _art_meshes:
+		mesh_instance.visible = shown
+	for mesh_instance: MeshInstance3D in _head_meshes:
+		mesh_instance.visible = not shown
+	for mesh_instance: MeshInstance3D in _body_meshes:
+		mesh_instance.visible = not shown
+
+
 ## Whole-body flash, 0..1, as emission on every material: the cyan parry flash (a perfect
 ## block flashes the defender). Ends a contact flash (flash_at()); 0 clears both.
 func set_flash(amount: float, color: Color = Color.WHITE) -> void:
 	_show_flash_overlay(false)
 	_flash_aimed = false
-	var energy := clampf(amount, 0.0, 1.0)
-	for mat: StandardMaterial3D in _materials.values():
-		mat.emission = color
-		mat.emission_energy_multiplier = energy
+	paint.set_flash(amount, color)
 
 
 ## Contact flash (Spec §6, localized by Game-boy on 2026-10-24): the body mixes toward
@@ -422,9 +459,7 @@ func flash_at(point: Vector3, strength: float, radius: float, core: float,
 	set_flash(0.0)
 	if not _built or strength <= 0.0 or radius <= 0.0:
 		return
-	if is_instance_valid(_flash_warm_box):
-		_flash_warm_box.queue_free()
-	_flash_warm_box = null
+	RigPaint.end_warm_up()
 	if _flash_overlay == null:
 		_flash_overlay = ShaderMaterial.new()
 		_flash_overlay.shader = _FLASH_SHADER
@@ -494,31 +529,11 @@ static func flash_falloff(dist: float, radius: float, core: float) -> float:
 	return 1.0 - smoothstep(0.0, 1.0, clampf((dist - inner) / span, 0.0, 1.0))
 
 
-## Once per run, the first rig built in a window draws the overlay shader at zero strength
-## (every pixel discarded) on a box at its feet until the first contact flash, so the
-## renderer compiles its pipelines at load instead of on the first hit's frame (measured:
-## 4-12 ms more on it). A separate mesh, so the rig's own materials carry no pass while idle.
-func _warm_flash() -> void:
-	if _flash_warmed or not is_inside_tree() or DisplayServer.get_name() == "headless":
-		return
-	_flash_warmed = true
-	var warm := MeshInstance3D.new()
-	warm.name = "FlashWarmUp"
-	warm.mesh = BoxMesh.new()
-	warm.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	var mat := ShaderMaterial.new()
-	mat.shader = _FLASH_SHADER
-	warm.material_override = mat
-	add_child(warm)
-	_flash_warm_box = warm
-
-
 func _show_flash_overlay(on: bool) -> void:
 	if on == _flash_on:
 		return
 	_flash_on = on
-	for mat: StandardMaterial3D in _materials.values():
-		mat.next_pass = _flash_overlay if on else null
+	paint.show_flash_overlay(on, _flash_overlay)
 
 
 ## Damage look (Spec §6, "Damage you can see"): DamageLook.Level CLEAN, BRUISED or BLOODIED
@@ -527,8 +542,7 @@ func _show_flash_overlay(on: bool) -> void:
 ## Set by presentation (VfxDirector) from the health; re-applying a level re-reads its tuning.
 func set_damage_look(level: int) -> void:
 	damage_look = level
-	for paint: int in _materials:
-		DamageLook.apply(_materials[paint], paint, level)
+	paint.set_damage_look(level)
 
 
 # --- Ragdoll (see the class docs and game/actors/ragdoll.gd) ---------------------------
@@ -720,37 +734,27 @@ func _build_skeleton() -> void:
 	_bone_velocity.resize(skeleton.get_bone_count())
 
 
-func _build_materials() -> void:
-	for paint: int in PlaceholderBody.Paint.values():
-		var mat := StandardMaterial3D.new()
-		mat.roughness = 1.0
-		mat.metallic_specular = 0.2
-		# Emission stays enabled (black-energy) so set_flash() never switches shader variants.
-		mat.emission_enabled = true
-		mat.emission = Color.WHITE
-		mat.emission_energy_multiplier = 0.0
-		# Likewise the damage look's detail layer (transparent while clean), on the paints that
-		# take marks, so a look change swaps a texture and never the shader variant.
-		DamageLook.prepare(mat, paint)
-		_materials[paint] = mat
-	_apply_colors()
-
-
 func _build_meshes() -> void:
 	for part: PlaceholderBody.Part in PlaceholderBody.parts(wrapped_hands):
 		var mesh_instance := MeshInstance3D.new()
 		mesh_instance.name = part.name
 		mesh_instance.mesh = _make_mesh(part)
 		mesh_instance.material_override = _materials[part.paint]
+		mesh_instance.material_overlay = paint.outline_material_for(part)
 		mesh_instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 		mesh_instance.position = part.offset * _scale
 		mesh_instance.rotation_degrees = part.rot_deg
 		_bone_nodes[part.bone].add_child(mesh_instance)
+		if art != null:
+			mesh_instance.add_to_group(VIEW_PROXY_GROUP)
 		if PlaceholderBody.is_fp_hidden(part):
 			_head_meshes.append(mesh_instance)
 		else:
 			_body_meshes.append(mesh_instance)
 	_apply_layers()
+	if art != null:
+		_art_meshes = SkinnedArt.attach(self, art)
+		set_art_shown(true)
 
 
 func _make_mesh(part: PlaceholderBody.Part) -> Mesh:
@@ -1109,17 +1113,6 @@ func _carrier_bone(spec: PlaceholderBody.HurtSpec, p: Vector3) -> StringName:
 			best = dist
 			bone = chain[i]
 	return bone
-
-
-func _apply_colors() -> void:
-	if _materials.is_empty():
-		return
-	_materials[PlaceholderBody.Paint.BODY].albedo_color = body_color
-	_materials[PlaceholderBody.Paint.PANTS].albedo_color = \
-			body_color.darkened(_PANTS_DARKEN) if pants_color.a <= 0.0 else pants_color
-	_materials[PlaceholderBody.Paint.ACCENT].albedo_color = accent_color
-	_materials[PlaceholderBody.Paint.SKIN].albedo_color = skin_color
-	_materials[PlaceholderBody.Paint.DARK].albedo_color = _DARK_COLOR
 
 
 func _apply_layers() -> void:

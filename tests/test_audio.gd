@@ -172,7 +172,9 @@ func test_the_audio_tuning_group_sits_before_debug() -> void:
 				assert_eq(prop.hint, PROPERTY_HINT_RANGE, "%s is a slider" % prop.name)
 	var at := groups.find("Audio")
 	assert_gt(at, -1)
-	assert_eq(groups[at + 1] if at + 1 < groups.size() else "", "Debug")
+	# Milestone 4 puts its Look group between Audio and Debug (M4-plan A9): still before Debug.
+	assert_eq(groups[at + 1] if at + 1 < groups.size() else "", "Look")
+	assert_eq(groups[at + 2] if at + 2 < groups.size() else "", "Debug")
 	for prop_name: String in [
 		"sfx_pitch_variation", "sfx_volume_variation", "whoosh_db", "rumble_strength", "music_enabled",
 		"hit_light_db", "hit_heavy_db", "hit_finisher_db", "extra_victim_db",

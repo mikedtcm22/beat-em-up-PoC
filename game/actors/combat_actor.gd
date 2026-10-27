@@ -58,6 +58,9 @@ const _GETUP_FLOOR_CLEARANCE := 0.03
 @export var display_name: String = "Actor"
 @export var body_radius: float = 0.35
 @export var body_height: float = 1.8
+## The skinned art this actor wears (Milestone 4), set in its scene. Null keeps the
+## placeholder primitives (the default for everything until its art lands).
+@export var art: CharacterArt
 
 var health: float = 100.0
 var state: CombatTypes.ActorState = CombatTypes.ActorState.FREE
@@ -606,6 +609,12 @@ func debug_state_text() -> String:
 ## Configure the rig's exported look before it builds.
 func _configure_rig(_r: HumanoidRig) -> void:
 	pass
+
+
+## Give the rig its art before it builds, after _configure_rig(): `art` by default. Overridden
+## where the art depends on more than the scene. Called once per _ensure_body().
+func _configure_art(r: HumanoidRig) -> void:
+	r.art = art
 
 
 ## Per sim frame, after timers and the running move have advanced: input or AI.
@@ -1580,5 +1589,6 @@ func _ensure_body() -> void:
 	rig.actor = self
 	rig.height = body_height
 	_configure_rig(rig)
+	_configure_art(rig)
 	rig.build()
 	rig.set_hurtboxes_enabled(true)

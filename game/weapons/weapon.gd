@@ -39,12 +39,9 @@ func _ready() -> void:
 	cylinder.top_radius = radius
 	cylinder.bottom_radius = radius
 	cylinder.height = length
-	var material := StandardMaterial3D.new()
-	material.albedo_color = color
-	material.roughness = 0.5
-	material.metallic = 0.4
-	cylinder.material = material
+	cylinder.material = ToonMaterials.prop(color)
 	_mesh.mesh = cylinder
+	_mesh.material_overlay = ToonMaterials.outline_for_prop()
 	add_child(_mesh)
 	_set_ground_physics()
 

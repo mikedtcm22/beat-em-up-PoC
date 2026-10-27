@@ -13,7 +13,6 @@ const CAMERA_DIRECTOR_SCRIPT := "res://game/camera/camera_director.gd"
 const HUD_SCENE := "res://game/ui/hud.tscn"
 const DEBUG_DRAW_SCENE := "res://game/ui/debug_draw.tscn"
 const TUNING_OVERLAY_SCENE := "res://game/ui/tuning_overlay.tscn"
-const GRID_SHADER := "res://game/level/grid.gdshader"
 
 
 ## The player's avoidance obstacle (RVO): without it enemies walk straight through the player's
@@ -113,20 +112,15 @@ static func box_mesh(size: Vector3, material: Material) -> MeshInstance3D:
 	return mesh
 
 
-static func flat_material(color: Color) -> StandardMaterial3D:
-	var material := StandardMaterial3D.new()
-	material.albedo_color = color
-	material.roughness = 0.9
-	return material
+## A flat-colored surface (ToonMaterials.environment()).
+static func flat_material(color: Color) -> Material:
+	return ToonMaterials.environment(color)
 
 
-## The grey-box floor grid (the training room's), or a flat grey if the shader is missing.
+## The grey-box floor grid (the training room's), or a flat grey if the shader is missing
+## (ToonMaterials.grid()).
 static func grid_material() -> Material:
-	if ResourceLoader.exists(GRID_SHADER):
-		var grid := ShaderMaterial.new()
-		grid.shader = load(GRID_SHADER)
-		return grid
-	return flat_material(Color(0.3, 0.3, 0.32))
+	return ToonMaterials.grid()
 
 
 ## The player at `pos` facing `yaw_deg`, added to `room`: it gets back up after a KO

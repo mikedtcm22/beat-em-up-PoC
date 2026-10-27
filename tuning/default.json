@@ -457,7 +457,13 @@
 		"rumble_finisher_gap_ms": 80.0,
 		"rumble_block_weak": 0.25,
 		"rumble_block_strong": 0.0,
-		"rumble_block_ms": 40.0
+		"rumble_block_ms": 40.0,
+		"look_mid_level": 0.72,
+		"look_outline_px": 3.75,
+		"look_hull_on_placeholders": true,
+		"look_edges_enabled": true,
+		"look_grade_enabled": true,
+		"fp_knockdown_hide_torso": false
 	},
 	"moves": {}
 }

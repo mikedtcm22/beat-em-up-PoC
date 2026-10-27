@@ -1038,12 +1038,47 @@ extends Resource
 @export_range(0.0, 1.0, 0.05) var rumble_block_strong: float = 0.0
 @export_range(0.0, 500.0, 5.0) var rumble_block_ms: float = 40.0
 
+# The look (Milestone 4; docs/milestones/M4-look-bible.md has the targets). One subgroup per
+# owning package, each declared here by the contract scaffold with a seed tunable, so a
+# package only adds lines inside its own subgroup. There is no Art subgroup: its one planned
+# name, look_show_art, lives in Debug below, since presets skip that group by name and the
+# art switch is an A/B, not a look setting.
+@export_group("Look")
+@export_subgroup("Toon")
+## The middle band's brightness as a share of the lit band's (the look bible: 72%). The
+## shadow band sits below it, tinted, never black.
+@export_range(0.3, 1.0, 0.01) var look_mid_level: float = 0.72
+
+@export_subgroup("Outline")
+## The inverted-hull outline's width in pixels at 1080p (the look bible: 3.5 to 4 px at 1 to
+## 3 m, never above 4.5).
+@export_range(0.5, 8.0, 0.05) var look_outline_px: float = 3.75
+## Primitive characters, dummies, props and the room's boxes get the hull too, so the
+## placeholders sit beside the art in one style (Spec §10 asks for it on characters and props).
+@export var look_hull_on_placeholders: bool = true
+
+@export_subgroup("Edges")
+## The post-process edge lines on the environment (creases, silhouettes, floor edges).
+@export var look_edges_enabled: bool = true
+
+@export_subgroup("Grade")
+## The color grade (a LUT: cool shadows, warm highlights).
+@export var look_grade_enabled: bool = true
+
+@export_subgroup("FP feel")
+## First-person feel alternative: the non-KO knockdown hides the torso slab that fills the
+## view while the body lies on the camera. Off = the M3 behavior.
+@export var fp_knockdown_hide_torso: bool = false
+
 @export_group("Debug")
 @export var god_mode: bool = false
 @export var one_hit_ko: bool = false
 ## Enemy AI stands still, faces the player and asks for nothing (F4 "Freeze AI"): a scripted
 ## act can then place and trigger each attacker by hand.
 @export var ai_frozen: bool = false
+## Draw the skinned art (on) or the placeholder primitives it stands in for (off): the live
+## A/B of Milestone 4. Presets never hold it.
+@export var look_show_art: bool = true
 
 
 func hitstop_s(tier: CombatTypes.HitTier) -> float:
