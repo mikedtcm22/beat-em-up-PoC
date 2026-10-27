@@ -33,6 +33,7 @@ split: reads work/05_palette.blend, writes work/06_split.blend. The first-person
 import math
 import os
 import sys
+from collections import deque
 
 import bmesh
 import bpy
@@ -49,6 +50,8 @@ from blender_fit import rotation_between  # noqa: E402
 NAMES = pc.bone_names()
 SLOT_ATTR = "pipe_slot"
 CAP_ATTR = "pipe_cap"
+# face attribute: 1 on a face of the generated mesh (its winding is the source's), 0 on a face made here (see orient_untrusted)
+TRUST_ATTR = "pipe_trusted"
 FIST_BONES = ("Hand", "LowerArm")
 
 
@@ -560,6 +563,51 @@ def boundary_loops(bm):
 	return loops
 
 
+def mark_trusted(bm):
+	"""Mark every face of the mesh as a face of the generated body (TRUST_ATTR 1): the winding it has is the source's, and what
+	the later cuts make is oriented against it, never by a global recalculation (see orient_untrusted)."""
+	layer = bm.faces.layers.int.get(TRUST_ATTR) or bm.faces.layers.int.new(TRUST_ATTR)
+	for f in bm.faces:
+		f[layer] = 1
+
+
+def orient_untrusted(bm):
+	"""Give each face made here (TRUST_ATTR 0: a hole patch, a cap) the winding of the faces it grew from and mark it trusted, by
+	a flood fill over manifold edges from the trusted faces next to it; returns how many were flipped. Blender's
+	recalc_face_normals over the whole body (what the first version of the split did) turned the legs, feet and part of the hips
+	of the hero inside out (88% of the shin's triangles faced their bone: the base pass culls them, the hull pass draws the near wall
+	as a black fill): one shell of a layered, partly non-manifold generated mesh gets its inside picked, and nothing local says it is
+	wrong. The winding of the source is right, so nothing global is recalculated."""
+	layer = bm.faces.layers.int.get(TRUST_ATTR)
+	if layer is None:
+		return 0
+	queue = deque()
+	for f in bm.faces:
+		if f[layer] != 1:
+			continue
+		for e in f.edges:
+			if len(e.link_faces) == 2 and any(g[layer] == 0 for g in e.link_faces):
+				queue.append(f)
+				break
+	flipped = 0
+	while queue:
+		f = queue.popleft()
+		for l in f.loops:
+			if len(l.edge.link_faces) != 2:
+				continue
+			o = l.link_loop_radial_next
+			nf = o.face
+			if nf[layer] == 1:
+				continue
+			if o.vert == l.vert:  # the two faces run the shared edge the same way: the new one is the wrong way round
+				nf.normal_flip()
+				flipped += 1
+			nf[layer] = 1
+			queue.append(nf)
+	bm.normal_update()
+	return flipped
+
+
 def heal_slits(bm, max_len, rounds):
 	"""Collapse the short open edges that a generated mesh leaves where two surfaces nearly touch (a sliver of one triangle, an
 	edge shared by three): each merges its two vertices, then the faces that collapse to nothing go. Only edges shorter than
@@ -638,7 +686,7 @@ def fill_holes_edges(bm, edges, sides):
 				lp[uv_p].uv = src.loops[0][uv_p].uv.copy()
 				if uv_d is not None:
 					lp[uv_d].uv = src.loops[0][uv_d].uv.copy()
-	bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+	orient_untrusted(bm)
 	return made
 
 
@@ -667,12 +715,29 @@ def fill_holes(bm, sides):
 				lp[uv_p].uv = src.loops[0][uv_p].uv.copy()
 				if uv_d is not None:
 					lp[uv_d].uv = src.loops[0][uv_d].uv.copy()
-	bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+	orient_untrusted(bm)
 	return len(made)
 
 
-def add_caps(me, depth, rings, heal_max=0.0):
-	"""Close every open loop of a mesh with an inward rounded cap (rings rings, depth deep); returns the cap report."""
+def cap_spec(sc, bone):
+	"""The cap settings of a loop whose vertices belong to `bone` mostly: parts.split_fp.caps[<bone>] over caps.default, over the
+	older flat keys (cap_depth_m, cap_rings, inward)."""
+	caps = sc.get("caps", {})
+	spec = {"dir": "in", "depth_m": float(sc.get("cap_depth_m", 0.03)), "rings": int(sc.get("cap_rings", 4))}
+	spec.update(caps.get("default", {}))
+	spec.update(caps.get(bone, {}))
+	return spec
+
+
+def add_caps(obj, sc, heal_max=0.0):
+	"""Close every open loop of a mesh with a rounded cap and return the cap report. A loop's cap is built from the settings
+	cap_spec() finds for the bone that owns most of its vertices: `dir` "in" puts the dome inside the mesh (the waist, the leg tops:
+	nothing the lens meets), "out" puts it on the cut's outer side (the upper arm's end, so it reads as M3's Elbow capsule: a
+	convex dome, tangent to the arm at the ring, with smooth normals); `depth_m` is its height and `rings` its steps. The whole cap
+	takes the loop's commonest palette swatch (the skin's, on an arm), so no border of two colours crosses it; its UV2 is (0, 0), which
+	is empty (no ink); its faces carry CAP_ATTR so the hull's smooth normal ignores them."""
+	me = obj.data
+	names_by_group = {vg.index: vg.name for vg in obj.vertex_groups}
 	bm = bmesh.new()
 	bm.from_mesh(me)
 	bm.faces.ensure_lookup_table()
@@ -696,22 +761,32 @@ def add_caps(me, depth, rings, heal_max=0.0):
 		flipped = float((adj - c) @ n_in) < 0.0
 		if flipped:
 			n_in = -n_in
+		acc = {}
+		for v in verts:
+			for gi, wt in v[dl].items():
+				acc[gi] = acc.get(gi, 0.0) + wt / len(verts)
+		owner = names_by_group.get(max(acc, key=acc.get), "") if acc else ""
+		spec = cap_spec(sc, owner)
+		depth, rings = float(spec["depth_m"]), int(spec["rings"])
+		n_cap = n_in if spec["dir"] == "in" else -n_in
+		# the loop's commonest swatch (the faces next to the cut): the cap wears it whole
+		votes = {}
+		for l in order:
+			key = tuple(np.round(np.array(tuple(l.face.loops[0][uv_p].uv)), 4))
+			votes[key] = votes.get(key, 0) + 1
+		swatch_uv = max(votes, key=votes.get)
 		ring_verts = [verts]
 		for k in range(1, rings):
 			phi = math.pi / 2 * k / rings
 			ring = []
 			for v in verts:
 				p = np.array(tuple(v.co))
-				q = bm.verts.new(tuple(c + n_in * depth * math.sin(phi) + (p - c) * math.cos(phi)))
+				q = bm.verts.new(tuple(c + n_cap * depth * math.sin(phi) + (p - c) * math.cos(phi)))
 				for gi, wt in v[dl].items():
 					q[dl][gi] = wt
 				ring.append(q)
 			ring_verts.append(ring)
-		apex = bm.verts.new(tuple(c + n_in * depth))
-		acc = {}
-		for v in verts:
-			for gi, wt in v[dl].items():
-				acc[gi] = acc.get(gi, 0.0) + wt / len(verts)
+		apex = bm.verts.new(tuple(c + n_cap * depth))
 		for gi, wt in acc.items():
 			apex[dl][gi] = wt
 		n = len(verts)
@@ -720,23 +795,25 @@ def add_caps(me, depth, rings, heal_max=0.0):
 			for i in range(n):
 				a0, b0 = ring_verts[k - 1][i], ring_verts[k - 1][(i + 1) % n]
 				a1, b1 = ring_verts[k][i], ring_verts[k][(i + 1) % n]
-				made.append((bm.faces.new((b0, a0, a1, b1)), order[i]))
+				made.append(bm.faces.new((b0, a0, a1, b1)))
 		for i in range(n):
 			a, b = ring_verts[rings - 1][i], ring_verts[rings - 1][(i + 1) % n]
-			made.append((bm.faces.new((b, a, apex)), order[i]))
-		for f, src in made:
+			made.append(bm.faces.new((b, a, apex)))
+		for f in made:
 			f.smooth = True
 			f[cap_attr] = 1
-			src_uv = src.face.loops[0][uv_p].uv.copy()
 			for lp in f.loops:
-				lp[uv_p].uv = src_uv
+				lp[uv_p].uv = swatch_uv
 				if uv_d is not None:
 					lp[uv_d].uv = (0.0, 0.0)
-		report.append({"vertices": n, "centre": c.tolist(), "dir_in": n_in.tolist(), "orientation_flipped": flipped, "tris": 2 * n * (rings - 1) + n})
+		report.append({"bone": owner, "dir": spec["dir"], "depth_m": depth, "vertices": n, "centre": c.tolist(), "dir_in": n_in.tolist(), "orientation_flipped": flipped,
+			"tris": 2 * n * (rings - 1) + n})
+	# the caps take the winding of the faces they close (never a global recalculation: see orient_untrusted)
+	flipped_caps = orient_untrusted(bm)
 	# a slit the cap walk stepped over (a vertex shared by three faces on a cut loop) is a short open edge now: collapse it
 	left = heal_slits(bm, heal_max, 3)
 	cut_out, patched = repair_defects(bm, 10 ** 9, 12, rounds=6) if heal_max > 0.0 else (0, 0)
-	report.append({"slit_edges_collapsed_after_caps": left, "defect_faces_cut_out": cut_out, "defect_faces_patched": patched,
+	report.append({"cap_faces_flipped_to_their_neighbours": flipped_caps, "slit_edges_collapsed_after_caps": left, "defect_faces_cut_out": cut_out, "defect_faces_patched": patched,
 		"open_edges_left": sum(1 for e in bm.edges if e.is_boundary)})
 	bmesh.ops.triangulate(bm, faces=bm.faces[:])  # the hole patches are n-gons and the caps quads: every later step reads triangles
 	bm.to_mesh(me)
@@ -787,6 +864,7 @@ def split_fp(cfg, extra):
 	# ----- weld the hairline cracks the generator leaves (open edges a millimetre apart): boundary vertices within weld_boundary_m merge
 	bm = bmesh.new()
 	bm.from_mesh(me)
+	mark_trusted(bm)
 	open_before = sum(1 for e in bm.edges if e.is_boundary)
 	bvs = list({v for e in bm.edges if e.is_boundary for v in e.verts})
 	if bvs and float(sc.get("weld_boundary_m", 0.0)) > 0.0:
@@ -829,6 +907,14 @@ def split_fp(cfg, extra):
 		bisect(faces_of([col[side + "UpperArm"]]), tuple(ua + axis * cut_t), tuple(axis / length))
 	# the horizontal cut goes through every face that can be hidden, the arms' and shoulders' too, so no hidden face hangs below it
 	bisect(faces_of(torso_cols + shoulder_cols + arm_cols), (0.0, 0.0, z_cut), (0.0, 0.0, 1.0))
+	# the torso's lower plane (parts.split_fp.torso.low_bone's joint): every face that is not an arm's is cut there, so the belly and
+	# belt are one mesh with a straight lower edge and the legs another
+	tc = sc.get("torso", {})
+	arm_chain = [col[s2 + b] for s2 in pc.SIDES for b in ("Shoulder", "UpperArm", "LowerArm", "Hand")]
+	non_arm_cols = [i for i in range(len(NAMES)) if i not in arm_chain]
+	z_low = targets[tc["low_bone"]]["head"][2] if tc.get("enabled", False) else None
+	if z_low is not None:
+		bisect(faces_of(non_arm_cols), (0.0, 0.0, z_low), (0.0, 0.0, 1.0))
 	bm.to_mesh(me)
 	bm.free()
 	me.update()
@@ -847,6 +933,15 @@ def split_fp(cfg, extra):
 		hidden |= zone & (t < cut_t) & (centers[:, 2] > z_cut - 1e-6)
 	hid = separate_faces(body, hidden, pb.BODY_HIDDEN)
 	body = bpy.data.objects[pb.BODY]
+	# the torso (Spine and Hips: the belly and the belt) from what is left: not an arm's face, between the two planes
+	torso = None
+	if z_low is not None:
+		w2 = pb.weights_matrix(body, NAMES)
+		dom2 = dominant_per_face(body.data, w2)
+		centers2 = pb.face_centers(body.data)
+		in_torso = np.isin(dom2, non_arm_cols) & (centers2[:, 2] > z_low - 1e-6) & (centers2[:, 2] < z_cut + 1e-6)
+		torso = separate_faces(body, in_torso, pb.BODY_TORSO)
+		body = bpy.data.objects[pb.BODY]
 
 	# ----- the hidden part's own pinholes (the generated mesh's defects, not its cuts): patch the short open loops
 	bm = bmesh.new()
@@ -858,10 +953,12 @@ def split_fp(cfg, extra):
 	hid.data.update()
 
 	# ----- inward rounded caps on every open loop of the visible parts
-	depth, rings = float(sc.get("cap_depth_m", 0.03)), int(sc.get("cap_rings", 4))
 	heal = float(sc.get("heal_edge_max_m", 0.0))
-	cap_report = {"Body": add_caps(body.data, depth, rings, heal)}
+	cap_report = {"Body": add_caps(body, sc, heal)}
 	parts = [body, hid]
+	if torso is not None:
+		cap_report[pb.BODY_TORSO] = add_caps(torso, sc, heal)
+		parts.append(torso)
 	over_four = 0
 	for o in parts:
 		pb.attach_armature(o, bpy.data.objects[pb.ARMATURE])
@@ -872,7 +969,11 @@ def split_fp(cfg, extra):
 			p.use_smooth = True
 	pb.save_blend(pc.work_path(cfg, "06_split.blend"))
 	hc = pb.verts(hid.data)
-	return {"enabled": True, "open_edges_before_weld": open_before, "open_edges_after_weld": open_after, "hole_faces_filled": filled, "slit_edges_collapsed": healed, "defect_faces_cut_out": cut_out, "defect_faces_patched": patched, "open_edges_after_fill": open_after_fill, "z_cut_m": z_cut, "upper_arm_cut": cut_t, "hidden_faces": int(hidden.sum()), "visible_triangles": pb.triangle_count(body.data),
+	torso_report = {"enabled": torso is not None}
+	if torso is not None:
+		tc_ = pb.verts(torso.data)
+		torso_report.update({"z_low_m": z_low, "triangles": pb.triangle_count(torso.data), "bbox": {"min": tc_.min(axis=0).tolist(), "max": tc_.max(axis=0).tolist()}})
+	return {"enabled": True, "torso": torso_report, "open_edges_before_weld": open_before, "open_edges_after_weld": open_after, "hole_faces_filled": filled, "slit_edges_collapsed": healed, "defect_faces_cut_out": cut_out, "defect_faces_patched": patched, "open_edges_after_fill": open_after_fill, "z_cut_m": z_cut, "upper_arm_cut": cut_t, "hidden_faces": int(hidden.sum()), "visible_triangles": pb.triangle_count(body.data),
 		"hidden_triangles": pb.triangle_count(hid.data), "hidden_defect_faces_cut_out": hid_cut, "hidden_defect_faces_patched": hid_patched,
 		"vertices_over_four_influences_before_limit": over_four, "caps": cap_report,
 		"hidden_bbox": {"min": hc.min(axis=0).tolist(), "max": hc.max(axis=0).tolist()}}

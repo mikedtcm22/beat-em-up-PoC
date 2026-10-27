@@ -19,6 +19,7 @@ import pipe_common as pc  # noqa: E402
 
 BODY = "Body"
 BODY_HIDDEN = "Body__fp_hidden"
+BODY_TORSO = "Body__fp_torso"
 ARMATURE = "Armature"
 PREVIEW_COLLECTION = "Preview"
 
@@ -67,8 +68,9 @@ def set_scene_prop(name, value):
 
 
 def body_objects():
-	"""The character's mesh objects, Body first."""
-	out = [bpy.data.objects[n] for n in (BODY, BODY_HIDDEN) if n in bpy.data.objects]
+	"""The character's mesh objects, Body first, then the first-person hidden upper body and the torso (the belly and belt, which
+	fp_knockdown_hide_torso hides) when they exist."""
+	out = [bpy.data.objects[n] for n in (BODY, BODY_HIDDEN, BODY_TORSO) if n in bpy.data.objects]
 	return out
 
 

@@ -123,11 +123,45 @@
 			"enabled": true,
 			"torso_cut_bone": "Chest",
 			"upper_arm_cut": 0.5,
-			"cap_depth_m": 0.03,
-			"cap_rings": 4,
 			"weld_boundary_m": 0.002,
 			"hole_sides_max": 12,
-			"heal_edge_max_m": 0.012
+			"heal_edge_max_m": 0.012,
+			"caps": {
+				"default": {
+					"dir": "in",
+					"depth_m": 0.03,
+					"rings": 4
+				},
+				"LeftUpperArm": {
+					"dir": "out",
+					"depth_m": 0.04,
+					"rings": 4
+				},
+				"RightUpperArm": {
+					"dir": "out",
+					"depth_m": 0.04,
+					"rings": 4
+				},
+				"Hips": {
+					"dir": "in",
+					"depth_m": 0.02,
+					"rings": 1
+				},
+				"LeftUpperLeg": {
+					"dir": "in",
+					"depth_m": 0.02,
+					"rings": 1
+				},
+				"RightUpperLeg": {
+					"dir": "in",
+					"depth_m": 0.02,
+					"rings": 1
+				}
+			},
+			"torso": {
+				"enabled": true,
+				"low_bone": "LeftUpperLeg"
+			}
 		}
 	},
 	"palette": {
@@ -325,7 +359,8 @@
 				"LeftLowerLeg": 1.5,
 				"RightLowerLeg": 1.5,
 				"LeftUpperLeg": 1.2,
-				"RightUpperLeg": 1.2
+				"RightUpperLeg": 1.2,
+				"part:Body__fp_torso": 1.0
 			}
 		},
 		"crease": {
