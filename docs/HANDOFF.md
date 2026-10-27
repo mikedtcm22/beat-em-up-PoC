@@ -4,6 +4,24 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-27 17:20 CDT: the re-score passes at the bar (mean 1.50); its two fix packages running beside P3-evidence
+- **The re-score on `f4064a4`:** J1 2, J2 1, J3 1, J4 1, J5 2, J6 2, J7 2, J8 2, J9 1, J10 2, J11 1, J12 2, J13 1, J14 1.
+  - That is a mean of 1.50, with no 0 and every critical item at 1 or more, so Part B's rule passes with zero margin. J1, J5 and J7 moved up from 1.
+  - **Findings:** five, all confirmed. They're in `docs/reviews/M4/rescore-findings.json` with the lead's order (call 26).
+    - The lens glint whites out the shades whenever the head tips back (a regression from the gloss fix).
+    - The striking glove's back is a featureless dome.
+    - The 1k ink strokes are sawtooth and dotted.
+    - The face's bands are faceted (normal smoothing stopped at 6 rounds).
+    - The placeholders keep a hard highlight beside the matte Punk.
+  - **Per-item suggestions:** the re-scorer's "one change per item still at 1" is in its summary in that file.
+- **Running since 17:15 CDT:** `wf_c36f16ac-f73`, round `rescore`, base `de24472`, two fixers: punk-art-chain (rs-01, -04, -03, -02 in that order) and placeholder-matte (rs-05). The worktrees are `.worktrees/m4-fix-rescore-<key>`. P3-evidence (`wf_7aae052c-809`) is still recording on `f4064a4`. **If cut off:** rerun with the same args.
+- **Next:**
+  1. Merge the two fixers with A22, including the chain checks.
+  2. Check the lens, glove, strokes and face from stills.
+  3. Merge P3-evidence.
+  4. Re-record only the DM's clips, pairs and concept stills on the fixed art: a small builder, or the lead.
+  5. README's scores line, the PR (not merged) and the final DM.
+
 ### 2026-10-27 16:35 CDT: both fix waves merged (1593/1593, 0 errors); the re-score and the evidence pack running
 - **Merged:**
   - **`m4/fix-final-toon-gloss-and-turntable`** (`405d223`):
