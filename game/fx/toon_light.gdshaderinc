@@ -45,6 +45,21 @@ uniform float rim_strength : hint_range(0.0, 1.0) = 0.35;
 uniform float halftone_strength : hint_range(0.0, 1.0) = 0.0;
 uniform float halftone_cell_px : hint_range(2.0, 24.0) = 6.0;
 
+// Per-swatch gloss (the skinned art's palette atlas; a shader that defines TOON_SWATCH_SPEC before
+// including this, toon.gdshader, sets both in its fragment()): swatch_spec is the share of the hard
+// highlight a surface takes (1 for a flat-painted material, whose own spec_gloss decides; on the art
+// 1 on a glossy swatch and 0 on a matte one, so denim, cotton and skin never show a highlight) and
+// swatch_glint is 1 on a glossy swatch of the art. The glint is a second hard highlight on those
+// swatches from the camera-fixed fill direction: a flat visor never meets the sun's half vector
+// from the front, so without it the lens would never glint. Its cut (1 = a point) and its share of
+// the glossy highlight (0 = off, the lens then glints only where it faces the sun's half vector).
+#ifdef TOON_SWATCH_SPEC
+varying float swatch_spec;
+varying float swatch_glint;
+uniform float glint_cut : hint_range(0.5, 1.0) = 0.88;
+uniform float glint_strength : hint_range(0.0, 1.0) = 1.0;
+#endif
+
 // Luminance weights (Rec. 709), so a tinted shadow keeps its brightness.
 const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
 
@@ -88,5 +103,18 @@ void light() {
 	float aligned = dot(NORMAL, normalize(LIGHT + VIEW));
 	float spec_edge = max(0.5 * band_soft * to_pixels * fwidth(aligned), 0.00001);
 	float spec = smoothstep(spec_cut - spec_edge, spec_cut + spec_edge, aligned);
-	SPECULAR_LIGHT += spec * spec_strength * spec_gloss * step(0.0, ndl) * ATTENUATION * light_color;
+#ifdef TOON_SWATCH_SPEC
+	float taken = swatch_spec;
+#else
+	float taken = 1.0;
+#endif
+	SPECULAR_LIGHT += spec * spec_strength * spec_gloss * taken * step(0.0, ndl) * ATTENUATION * light_color;
+#ifdef TOON_SWATCH_SPEC
+	if (LIGHT_IS_DIRECTIONAL && swatch_glint > 0.5 && glint_strength > 0.0) {
+		float glint_aligned = dot(NORMAL, normalize(fill_dir + VIEW));
+		float glint_edge = max(0.5 * band_soft * to_pixels * fwidth(glint_aligned), 0.00001);
+		float glint = smoothstep(glint_cut - glint_edge, glint_cut + glint_edge, glint_aligned);
+		SPECULAR_LIGHT += glint * spec_strength * spec_gloss * glint_strength * light_color;
+	}
+#endif
 }

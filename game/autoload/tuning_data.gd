@@ -1076,6 +1076,15 @@ extends Resource
 @export_range(0.0, 2.0, 0.05) var look_spec_strength: float = 0.5
 ## The factor on the highlight of glossy materials (shades, belts, soles, the pipe).
 @export_range(1.0, 8.0, 0.1) var look_spec_gloss: float = 3.0
+## The glint on a glossy swatch of the skinned art (the Punk's lens; the palette JSON's `gloss`):
+## a second hard highlight from the fill light's camera-fixed direction, shown where the surface
+## faces that light's half vector this closely (1 is a point, 0.88 is within 28 degrees; lower
+## makes a bigger glint). A visor facing the lens never meets the sun's half vector, so without it
+## the lens would never glint; every matte swatch (denim, cotton, cap, skin) takes no highlight.
+@export_range(0.5, 1.0, 0.001) var look_glint_cut: float = 0.88
+## The glint's strength as a share of the glossy highlight (0 is off: a glossy swatch then
+## highlights only where it faces the sun's half vector, look_spec_cut).
+@export_range(0.0, 1.0, 0.05) var look_glint_strength: float = 1.0
 ## The stepped rim on characters shows past this share of a grazing view (0 to 1, higher is
 ## thinner; the look bible: about 25% of the silhouette band).
 @export_range(0.0, 1.0, 0.01) var look_rim_cut: float = 0.4

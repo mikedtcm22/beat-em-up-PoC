@@ -7,11 +7,14 @@
 The atlas is 256x16 RGBA8, 8 px swatches, slot s at column s % 32, row s // 32 (64 slots: 0-15 shared, 16-31 punk,
 32-47 player, 48-63 reserved). rgb = the sRGB colour; alpha is the swatch's damage class, read by game/fx/toon.gdshader:
 255 (1.0) takes the clothes' marks (scuffs, then blood), 204 (0.8) takes the skin's marks (bruises, then blood), 128 (0.5)
-takes none (today's DARK). Unused slots are magenta at alpha 128, so a stray lookup is loud. Nearest filter, no mipmaps (the
+takes none (today's DARK). A glossy swatch (`"gloss": true`, the shades' lens) is one step lower in the same class: 254, 203
+or 127, so the classes' thresholds (0.9, 0.75) read it as before and toon.gdshader reads the glint from the step. A swatch
+without the flag is matte: the art's hard highlight lands on glossy swatches only (the look bible: shades, leather, studs;
+the final review's gloss finding: a highlight on denim and cotton was a pale blob). Unused slots are magenta at alpha 128, so a stray lookup is loud. Nearest filter, no mipmaps (the
 material and the .import say so). The PNG is written with the standard library (zlib), byte for byte reproducible.
 
-Each palette file: {"id", "slot_range": [lo, hi], "swatches": [{"slot", "name", "srgb": "#rrggbb", "marks": bool, "skin": bool}]}.
-marks defaults to true, skin to false; a skin swatch must take marks. Slots must lie in the file's range and no slot may be
+Each palette file: {"id", "slot_range": [lo, hi], "swatches": [{"slot", "name", "srgb": "#rrggbb", "marks": bool, "skin": bool, "gloss": bool}]}.
+marks defaults to true, skin to false, gloss to false; a skin swatch must take marks and a skin swatch is never glossy. Slots must lie in the file's range and no slot may be
 defined twice across files.
 """
 import glob
@@ -33,6 +36,8 @@ UNUSED = (255, 0, 255, 128)
 MARKS_ALPHA = 255
 SKIN_MARKS_ALPHA = 204
 NO_MARKS_ALPHA = 128
+## A glossy swatch's alpha is its class's minus this (one 8-bit step: inside the 0.01 the class tests allow).
+GLOSS_ALPHA_STEP = 1
 
 
 def parse_hex(s):
@@ -49,7 +54,7 @@ def load_palettes(palette_dir=None):
 
 
 def swatches(palette_dir=None):
-	"""{slot: {"rgba": (r, g, b, a), "name", "palette", "marks", "skin"}} over every palette file; raises ValueError on a bad file."""
+	"""{slot: {"rgba": (r, g, b, a), "name", "palette", "marks", "skin", "gloss"}} over every palette file; raises ValueError on a bad file."""
 	out = {}
 	for path, pal in load_palettes(palette_dir):
 		lo, hi = pal["slot_range"]
@@ -66,8 +71,13 @@ def swatches(palette_dir=None):
 			skin = bool(sw.get("skin", False))
 			if skin and not marks:
 				raise ValueError("%s: slot %d is skin but takes no marks" % (os.path.basename(path), slot))
+			gloss = bool(sw.get("gloss", False))
+			if skin and gloss:
+				raise ValueError("%s: slot %d is skin and glossy (skin takes no hard highlight)" % (os.path.basename(path), slot))
 			alpha = NO_MARKS_ALPHA if not marks else SKIN_MARKS_ALPHA if skin else MARKS_ALPHA
-			out[slot] = {"rgba": (r, g, b, alpha), "name": sw["name"], "palette": pal["id"], "marks": marks, "skin": skin}
+			if gloss:
+				alpha -= GLOSS_ALPHA_STEP
+			out[slot] = {"rgba": (r, g, b, alpha), "name": sw["name"], "palette": pal["id"], "marks": marks, "skin": skin, "gloss": gloss}
 	return out
 
 
@@ -113,7 +123,7 @@ def main(argv):
 	data = build()
 	if "--list" in argv:
 		for slot, s in sorted(swatches().items()):
-			print("%2d  %-12s  #%02x%02x%02x  alpha %d  (%s)" % (slot, s["name"], s["rgba"][0], s["rgba"][1], s["rgba"][2], s["rgba"][3], s["palette"]))
+			print("%2d  %-12s  #%02x%02x%02x  alpha %d%s  (%s)" % (slot, s["name"], s["rgba"][0], s["rgba"][1], s["rgba"][2], s["rgba"][3], "  glossy" if s["gloss"] else "", s["palette"]))
 		return 0
 	if "--check" in argv:
 		have = open(pc.ATLAS_PATH, "rb").read() if os.path.exists(pc.ATLAS_PATH) else b""
