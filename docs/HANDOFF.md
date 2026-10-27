@@ -15,7 +15,7 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
   - The hero's look-down, guard and haymaker read as wrapped, gloved fists.
   - The hero's faults: his jab, cross and hook show the bare elbow half of the upper arm as a stump ending in the flat cut cap (the probe frames the same way; it is M3's rule), lumpy fingers, and a near-black shin and shoe in the front kick.
   - Judgement calls 18-21 record these choices.
-- **Next:** `docs/reviews/M4/args-F-fix.json`, three builders at once:
+- **Running since 11:45 CDT:** workflow `wf_c5861a1d-df2`, `workflow-build.js` with `docs/reviews/M4/args-F-fix.json`; the worktrees are `.worktrees/m4-f-punk-fix`, `m4-f-player-fix` and `m4-p3-int`, on branches `m4/<key lower-case>`. **If cut off:** rerun it with the same args (`resumeFromRunId` in this session); the runner resumes each package from its branch. The three builders run at once:
   - F-punk-fix (Blender): the cuffs, the shades, the speckle and the blotches.
   - F-player-fix (Blender): a rounded cap at the cut, the fists, the shoe value, Body__fp_torso, and the hero's A9 as a ratchet (call 20).
   - P3-int (Godot): `ToonMaterials.outline(first_person)`, the real GLBs in A19, `test_m4_done_when.gd` and `look_probe` final.
