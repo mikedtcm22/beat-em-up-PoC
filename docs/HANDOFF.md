@@ -4,6 +4,26 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-27 07:00 CDT: P3-flash merged (1530/1530); all pick-independent work is done; waiting on the pick
+- **Merged:** P3-flash (`bf7b0ab`, suite 1530/1530, 0 SCRIPT, SHADER or ERROR lines; the ARCHITECTURE add/add resolved by keeping both headings). The preset is at 516 values.
+  - Feel question 1: `hit_flash_fp_max_share` (0 = off) stretches the flash's on-screen disc to a cap. Suggested 0.12: the hold's knee goes from 20.8% to about 5% of the view, but an ordinary jab's flash shrinks by about 40%.
+  - Feel question 2: `hit_flash_finisher_radius_mult` (1.0 = off). Suggested 2.0: the haymaker goes from 0.3% to 7.3%.
+  - `RoomKit.warm_up_libraries()` warms the Bruiser and boss libraries: a first spawn is 3-4 ms, against about 30 ms cold.
+  - The VFX need no change under the linear tonemapper.
+  - The left-over list's warm-up and VFX items are done.
+- **The judgement calls log** has 17 entries, including the four feel toggles with their measured suggestions.
+- **Pick watch:** the usage watcher was asked (06:55) to read the DM on each check and message this session "Game-boy replied in the DM at <time>" when he replies. The one reminder went at 04:37, and no other DM goes to him.
+- **Running:** the lead's perf A/B, M3 `afdb39e` against `bf7b0ab` (both perf acts, 3 runs, vsync on, plus FXAA). Logs go to `captures/perf_compare/a16-int/`.
+- **Left for after the pick:**
+  1. F-punk: views, T4-T10, about 145 credits. Its brief carries gate gaps 3, 4, 5, 7, 9 and 13, the lens and cap swatch marks, a glove swatch value of 0.3 or more, a cuff radius from the wrist, and A18's detail mask, which goes to README for Game-boy's ruling.
+  2. F-player-art: views, T11-T14, about 185 credits. The GLB goes to `assets/export/characters/player/player.glb`, optionally with `Body__fp_torso`.
+  3. P3-int proper:
+     - `test_m4_done_when`, `look_probe` final, and re-recording c14, c15, l5, ff1-3, pa1-2 and C1-C13 on the real art;
+     - `ToonMaterials.outline(first_person)`, so player.gd stops calling `_hull`;
+     - the real GLBs added to the A19 strain run;
+     - the final perf A/B.
+  4. Then the final review round (six lenses), fixes, the README M4 section, the PR (not merged) and the final DM.
+
 ### 2026-10-27 06:40 CDT: F-player-int merged (1507/1507); P3-flash running; then only pick work is left
 - **Merged:** F-player-int (`f2f987c`, suite 1507/1507, 0 SCRIPT, SHADER or ERROR lines).
   - The player wears CharacterArt through CombatActor.art. `player_art.tres` names `assets/export/characters/player/player.glb` in metadata, and a missing file means M3's primitives with no warning.
