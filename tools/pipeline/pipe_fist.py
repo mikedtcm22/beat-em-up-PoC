@@ -187,16 +187,36 @@ def make_side(src, side, box, cut, p_hand, d, gen, pf):
 	out[:, :2] = axis_xy + (out[:, :2] - axis_xy) * k[:, None]
 	rim_after = float(np.linalg.norm(out[at_cut, :2] - axis_xy, axis=1).mean())
 
+	# no spikes on the cuff: above the block each ring of the mesh (vertices within one bin of the same height) may stand at most
+	# ring_clamp_m beyond that ring's median radius, so the strap's buckle and the cuff's torn rim cannot become slivers
+	clamp = float(gen.get("ring_clamp_m", 0.0))
+	clamped = 0
+	if clamp > 0.0:
+		bin_m = float(gen.get("ring_bin_m", 0.003))
+		upper = out[:, 2] > z_block_top
+		rel = out[:, :2] - axis_xy
+		radius = np.linalg.norm(rel, axis=1)
+		bins = np.floor((out[:, 2] - z_block_top) / bin_m).astype(np.int64)
+		for b in np.unique(bins[upper]):
+			sel = upper & (bins == b)
+			if sel.sum() < 6:
+				continue
+			limit = float(np.median(radius[sel])) + clamp
+			over = sel & (radius > limit)
+			if over.any():
+				out[over, :2] = axis_xy + rel[over] / radius[over][:, None] * limit
+				clamped += int(over.sum())
+
 	# weights are computed from the final positions (add_object, after the strap planes cut the mesh): Hand below the wrist band,
 	# ramping to LowerArm up the cuff
 	zb = -float(pf.get("cuff_below_wrist_m", 0.012))
-	wparams = {"side": side, "top": top, "zb": zb}
+	wparams = {"side": side, "top": top, "zb": zb, "block_top": z_block_top, "cuff_hand": float(gen.get("cuff_hand_weight", 0.85))}
 
 	R = _rotation_between(np.array(pc.HANGING), d)
 	world = (out @ R.T) + p_hand
 	report = {"scale": s, "scale_x": sx, "scale_y": sy, "block_extent_m": [float((bx1 - bx0) * sx), float((by1 - by0) * sy), float(box_z)],
 		"cuff_top_m": top, "cuff_stretch": stretch, "cuff_flare": flare, "rim_radius_m": rim_after, "wrist_radius_m": r_wrist,
-		"z_cut_m": z_cut, "strap_top_m": z_strap_top, "block_top_m": z_block_top, "triangles": int(len(tris))}
+		"z_cut_m": z_cut, "strap_top_m": z_strap_top, "block_top_m": z_block_top, "triangles": int(len(tris)), "ring_clamped_vertices": clamped}
 	# the strap's two planes (the block's top and the strap's top) in the world, normal along the arm
 	axis = -np.asarray(d, dtype=np.float64)  # the hanging frame's +z in the world
 	planes = [(p_hand + axis * z_block_top, axis), (p_hand + axis * z_strap_top, axis)]
@@ -213,7 +233,10 @@ def fist_weights(co_world, wp):
 	"""(n, 23) weights of the fist's vertices: the hanging-frame height of each decides (smoothstep from the wrist band up)."""
 	names = pc.bone_names()
 	z = -((co_world - wp["p_hand"]) @ wp["d"])  # the hanging frame's +z, up the arm
-	t = smoothstep((wp["top"] - z) / max(wp["top"] - wp["zb"], 1e-6))
+	# the block (below the strap) is all Hand; the cuff above it ramps from `cuff_hand` (under the 0.9 the contract's fist
+	# extents count) down to the LowerArm's at the cuff's top
+	t = np.where(z <= wp["block_top"], 1.0,
+			wp["cuff_hand"] * (1.0 - smoothstep((z - wp["block_top"]) / max(wp["top"] - wp["block_top"], 1e-6))))
 	w = np.zeros((len(co_world), len(names)))
 	w[:, names.index(wp["side"] + "Hand")] = t
 	w[:, names.index(wp["side"] + "LowerArm")] = 1.0 - t

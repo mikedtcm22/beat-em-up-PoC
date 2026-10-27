@@ -158,9 +158,10 @@
 				"flare_min": 0.8,
 				"flare_max": 2.0,
 				"weld_m": 1e-05,
-				"ramp_m": 0.004
+				"ramp_m": 0.004,
+				"ring_clamp_m": 0.004
 			},
-			"wrist_radius_m": 0.058,
+			"wrist_radius_m": 0.062,
 			"wrist_taper_m": 0.14
 		},
 		"split_fp": {
