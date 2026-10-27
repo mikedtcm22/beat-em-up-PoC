@@ -4,7 +4,7 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
-### 2026-10-27 18:40 CDT: the re-score's fixes merged (1599/1599); PR #4 open; the DM media re-recording
+### 2026-10-27 18:25 CDT: the re-score's fixes merged (1599/1599); PR #4 open; the DM media re-recording
 - **Merged:** `m4/fix-rescore-punk-art-chain` (`16f96e2`) and `m4/fix-rescore-placeholder-matte` (`a04bfb0`).
   - The lens glint is gated by two authored streaks per eye (the mask's G channel), so a tipped-back head no longer whites out the shades. `look_glint_cut` is now 0.81.
   - Normal smoothing is now 12 rounds, so the face falls into two clean bands.
