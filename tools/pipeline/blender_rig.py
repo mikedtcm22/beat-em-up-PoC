@@ -9,6 +9,8 @@ chain_joints). Weights, config rig.weights:
 	         bone names; vertices the source left unweighted are filled from the nearest weighted vertex;
 	"auto":  Blender's heat-map weights (ARMATURE_AUTO) from the project armature, Root excluded; the vertices the heat
 	         solve leaves empty (interior and overlapping geometry) are filled the same way.
+Optional rig.smooth_iterations / rig.smooth_factor: Laplacian smoothing of the weights over the mesh's edges before the limit
+(the slice gate's contingency against candy-wrap at the shoulder, off by default).
 Either way: at most rig.max_influences (4) per vertex, normalised, none on Root, every vertex weighted. The result is a
 joined Body with an Armature modifier and one vertex group per bone in table order.
 """
@@ -55,6 +57,9 @@ def run(cfg, extra):
 		used = "auto"
 	empty_before = int((w.sum(axis=1) < 1e-4).sum())
 	w, filled = pb.fill_unweighted(co, w)
+	smooth_n = int(rigc.get("smooth_iterations", 0))
+	if smooth_n > 0:
+		w = pb.smooth_weights(me, w, smooth_n, float(rigc.get("smooth_factor", 0.5)))
 	w = pb.limit_and_normalize(w, limit)
 	w[:, NAMES.index("Root")] = 0.0
 	w = pb.limit_and_normalize(w, limit)
@@ -68,6 +73,7 @@ def run(cfg, extra):
 	return {
 		"weights": used,
 		"weights_requested": mode,
+		"smooth_iterations": smooth_n,
 		"bones": len(arm.data.bones),
 		"vertices": len(co),
 		"unweighted_before_fill": empty_before,

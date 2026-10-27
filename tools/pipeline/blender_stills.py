@@ -97,11 +97,12 @@ def run(cfg, extra):
 			m.hide_viewport = True
 		for pose_name, pose in poses.items():
 			blank = {"edge_p999": 0.0, "edge_max": 0.0, "edge_min": 9.0, "area_under_15pct": 0.0}
-			per = {"nan": False, "vs_glb_rest": dict(blank), "vs_rig_rest": dict(blank)}
+			per = {"nan": False, "vs_glb_rest": dict(blank), "vs_rig_rest": dict(blank), "worst_edges": []}
 			objs = []
 			for d in data:
 				posed_g = pose_lib.skin(d["co_g"], d["w"], joints_g, {k: tuple(v) for k, v in pose.items()})
 				rig_rest_g = pose_lib.skin(d["co_g"], d["w"], joints_g, {})
+				per["worst_edges"] += pose_lib.worst_edges(rig_rest_g, posed_g, d["tris"], d["w"], 5)
 				for key, ref in (("vs_glb_rest", d["co_g"]), ("vs_rig_rest", rig_rest_g)):
 					st = pose_lib.strain(ref, posed_g, d["tris"])
 					per[key]["edge_p999"] = max(per[key]["edge_p999"], st["edge_p999"])
@@ -120,6 +121,7 @@ def run(cfg, extra):
 				ob = bpy.data.objects.new("pv_" + d["name"], me2)
 				pb.link(ob)
 				objs.append(ob)
+			per["worst_edges"] = sorted(per["worst_edges"], key=lambda e: -abs(np.log(max(e["ratio"], 1e-3))))[:5]
 			stats[pose_name] = per
 			for view in views:
 				eye, target = pb.STANDARD_VIEWS[view]

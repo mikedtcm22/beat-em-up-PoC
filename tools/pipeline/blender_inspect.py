@@ -53,8 +53,12 @@ def map_bones(arm_objs, bone_map):
 			parent[b.name] = b.parent.name if b.parent else None
 	direct = {}
 	for name in parent:
-		target = bone_map.get(name, name if name in NAMES else None)
-		if target in NAMES:
+		# the explicit map first, then the project's own name, then Tripo's Left_UpperArm style with the underscores removed
+		target = bone_map.get(name)
+		if target is None:
+			plain = name.replace("_", "")
+			target = name if name in NAMES else (plain if plain in NAMES else None)
+		if target in NAMES and target not in direct.values():
 			direct[name] = target
 	folded = {}
 	for name in parent:

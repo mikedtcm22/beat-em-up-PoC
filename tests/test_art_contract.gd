@@ -349,7 +349,9 @@ func test_hull_normals_and_the_detail_uv_are_there() -> void:
 			assert_eq(colors.size(), verts.size(), "%s %s: COLOR (hull_normal) on every vertex" % [path, n])
 			if colors.size() != verts.size():
 				continue
-			var uv2: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV2]
+			var uv2 := PackedVector2Array()
+			if arrays[Mesh.ARRAY_TEX_UV2] != null:
+				uv2 = arrays[Mesh.ARRAY_TEX_UV2]
 			if _id_of(path) == "probe_body":
 				assert_eq(uv2.size(), verts.size(), "%s %s: UV2 (detail) is present" % [path, n])
 			for i: int in verts.size():
@@ -545,6 +547,33 @@ func test_the_probe_fixtures_match_their_report() -> void:
 	assert_eq(int(exported.unweighted), 0)
 	assert_lt(float(exported.worst_joint_error_mm), 1.0, "joints within 1 mm of the chained table, as Blender read the file back")
 	assert_eq(String((exported.facing as Dictionary).axis), "-Z")
+
+
+## Each shipped character's committed chain report(s) (assets/source/characters/<id>/report*/report.json) hash the GLBs that
+## are in assets/export/characters/<id>/: a GLB edited by hand, or rebuilt without its report, fails here. The landmark
+## residual (A3's 1 cm) is printed for the record: a generated torso with tilted bones does not meet it (M4-calls/P1-chain.md C6).
+func test_each_character_report_names_the_glbs_it_exported() -> void:
+	var dir := DirAccess.open("res://assets/source/characters")
+	if dir == null:
+		return
+	for id: String in dir.get_directories():
+		var sub := DirAccess.open("res://assets/source/characters/%s" % id)
+		if sub == null:
+			continue
+		for rd: String in sub.get_directories():
+			var report_path := "res://assets/source/characters/%s/%s/report.json" % [id, rd]
+			if not rd.begins_with("report") or not FileAccess.file_exists(report_path):
+				continue
+			var report: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(report_path))
+			var outputs: Dictionary = report.outputs
+			assert_gt(outputs.size(), 0, "%s names its outputs" % report_path)
+			for glb: String in outputs:
+				var path := "%s/%s/%s" % [CHARACTERS_DIR, id, glb]
+				assert_true(FileAccess.file_exists(path), "%s: %s is exported" % [report_path, glb])
+				if FileAccess.file_exists(path):
+					assert_eq(FileAccess.get_sha256(path), outputs[glb], "%s is the file %s hashed" % [glb, report_path])
+			var fit: Dictionary = report.steps.fit
+			gut.p("%s: landmark residual %.1f mm at %s (limit %.0f mm)" % [report_path, float(fit.worst_joint_residual.m) * 1000.0, fit.worst_joint_residual.bone, float(fit.residual_limit_m) * 1000.0])
 
 
 # --------------------------------------------------------------------------- the atlas

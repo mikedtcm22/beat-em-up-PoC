@@ -206,6 +206,24 @@ def fill_unweighted(co, w, min_sum=1e-4):
 	return out, int((~have).sum())
 
 
+def smooth_weights(me, w, iterations, factor):
+	"""Laplacian smoothing of a weight matrix over the mesh's edges: w <- (1 - f) w + f * mean(neighbour w), `iterations` times."""
+	ev = np.empty(len(me.edges) * 2, dtype=np.int32)
+	me.edges.foreach_get("vertices", ev)
+	a, b = ev[0::2], ev[1::2]
+	deg = np.zeros(len(w))
+	np.add.at(deg, a, 1.0)
+	np.add.at(deg, b, 1.0)
+	out = np.array(w, dtype=np.float64)
+	for _ in range(iterations):
+		acc = np.zeros_like(out)
+		np.add.at(acc, a, out[b])
+		np.add.at(acc, b, out[a])
+		mean = acc / np.maximum(deg, 1.0)[:, None]
+		out = np.where(deg[:, None] > 0, (1.0 - factor) * out + factor * mean, out)
+	return out
+
+
 # --------------------------------------------------------------------------- armature
 
 def make_armature(name, segs, order, parents, deform=True, collection=None):

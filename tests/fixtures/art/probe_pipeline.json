@@ -20,12 +20,13 @@
 	},
 	"fit": {
 		"landmarks": "rig",
+		"regularize": ["Spine", "Chest", "UpperChest"],
 		"bone_map": {},
 		"swing": "measure",
 		"default_swing_deg": 45.0,
 		"warp_weights": "tripo",
 		"residual_limit_m": 0.01,
-		"sole_percentile": 0.5
+		"sole_percentile": 0.0
 	},
 	"rig": {
 		"weights": "auto",

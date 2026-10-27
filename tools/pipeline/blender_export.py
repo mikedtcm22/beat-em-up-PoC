@@ -14,7 +14,7 @@ crack at a hard edge or at the cut between the two parts; it is computed after t
 except the first-person caps, across both meshes. UV1 "palette", UV2 "detail" (when present) are written by the earlier steps.
 Export options are Part C 2.6's: GLB, Y up, skins, 4 influences, no animations, deform bones only, no materials or images, the
 active vertex colour, no compression. Afterwards each file is read back with blender_dump_rig and checked: 23 bones, joints
-against the chained table, unweighted vertices, influences, triangles, facing, soles. work/<name>.blend keeps the A-pose file.
+against the chained table, unweighted vertices, influences, triangles, facing, soles. <paths.blend_dir (default work)>/<name>.blend keeps the A-pose file.
 """
 import os
 import sys
@@ -159,7 +159,8 @@ def run(cfg, extra):
 		suffix = "" if variant == "apose" else "_" + variant
 		path = os.path.join(export_dir, name + suffix + ".glb")
 		if variant == "apose":
-			pb.save_blend(pc.work_path(cfg, name + ".blend"))
+			blend_dir = pc.repo_path(cfg["paths"].get("blend_dir", cfg["paths"]["work"]))
+			pb.save_blend(os.path.join(blend_dir, name + ".blend"))
 		export_glb(path, meshes, arm)
 		written[variant] = (path, out_dirs)
 	report = {"variants": {}}

@@ -91,7 +91,7 @@ def tube(center_xy, radius, z_top, z_bottom, segs=16, rings=6, radius_bottom=Non
 	co = [(center_xy[0], center_xy[1], z_top)]
 	for j in range(rings + 1):
 		z = z_top + (z_bottom - z_top) * j / rings
-		r = radius + (radius_bottom - radius) * max(0.0, (j / rings - 0.5) * 2.0)
+		r = radius + (radius_bottom - radius) * min(1.0, max(0.0, (j / rings - 0.3) / 0.4))
 		for i in range(segs):
 			ph = 2 * math.pi * i / segs
 			co.append((center_xy[0] + r * math.cos(ph), center_xy[1] + r * math.sin(ph), z))
@@ -142,8 +142,12 @@ def fist_geometry(cfg_f, table_box, cuff_radius, cuff_top_z, cuff_bottom_z):
 		acc.add(co, faces, cfg_f["glove_slot"], "knuckle")
 	co, faces = ellipsoid((center[0] - 0.004, center[1] + block_half[1] - bump * 0.3, center[2] + 0.018), (0.022, bump * 1.6, 0.034))
 	acc.add(co, faces, cfg_f["glove_slot"], "thumb")
-	co, faces = tube((0.0, center[1] - 0.004), cuff_radius, cuff_top_z, cuff_bottom_z, radius_bottom=min(cuff_radius, block_half[0] + 0.004))
-	acc.add(co, faces, cfg_f["strap_slot"], "cuff")
+	r_bottom = min(cuff_radius, block_half[0] + 0.004)
+	co, faces = tube((0.0, center[1] - 0.004), cuff_radius, cuff_top_z, cuff_bottom_z, radius_bottom=r_bottom)
+	acc.add(co, faces, cfg_f["glove_slot"], "cuff")
+	strap_top = center[2] + block_half[2] - 0.003 + 0.0
+	co, faces = tube((0.0, center[1] - 0.004), r_bottom + 0.003, strap_top, strap_top - cfg_f.get("strap_height_m", 0.03) * 0.8, rings=2)
+	acc.add(co, faces, cfg_f["strap_slot"], "strap")
 	return acc, (cuff_top_z, cuff_bottom_z)
 
 
