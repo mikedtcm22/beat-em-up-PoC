@@ -320,6 +320,7 @@ func test_c5_keeps_the_default_view_for_the_finishing_jab_and_pitches_down_when_
 		assert_true(rects.has("head") and rects.has("body"), "%s: the head and the body are on the screen" % label)
 		if not rects.has("head"):
 			continue
+		print("LOOK-ACTS C5 %s: the head's rectangle %s" % [label, rects.head])
 		assert_lt((rects.head as Rect2).get_center().y, ROOM_FRAME.y * 0.6, "%s: the head is in the upper 60%% of the frame (%s)" % [label, rects.head])
 
 
@@ -348,6 +349,7 @@ func test_c9s_cast_stands_beside_the_tours_walk_not_on_it() -> void:
 	# Two bodies touch at 0.8 m, the Punk and the player (0.4 m radii; the Bruiser's is wider). On the walk lines the
 	# player stood at 0.8 m or so from them for hundreds of ticks; flanking at 2 m, the nearest any body comes is
 	# well over a metre.
+	print("LOOK-ACTS C9: the nearest the tour comes to anyone: %.2f m" % nearest)
 	assert_gt(nearest, 1.2, "the tour never comes within 1.2 m of anyone (%.2f)" % nearest)
 
 

@@ -114,17 +114,35 @@ func test_the_first_punk_of_a_later_wave_reads_no_art_either() -> void:
 	print("ART-WARM first Punk of the next wave: %.1f ms" % next.ms)
 
 
-func test_without_the_hold_the_cache_still_drops_an_art_nothing_wears() -> void:
-	# The weak cache is SkinnedArt's design and stays (ARCHITECTURE "Skinned art on the rig"): what the room kit
-	# adds is a holder, not a stronger cache. With the hold let go, the old failure comes back (the control).
+func test_the_hold_is_one_reference_on_the_art_that_outlives_the_rig() -> void:
+	# The same fact by counting, which holds whatever else in a whole-suite run keeps the resource alive (a test script
+	# that preloads the Punk's scene holds its art too, and then the tests above would pass without the room kit's hold):
+	# the warm-up's rig comes and goes with its references, and the one the room kit adds stays.
 	var host := _host()
-	var warmed := await _warm_up(host)
+	var art := load(PUNK_ART) as CharacterArt
+	var base := art.get_reference_count()
+	await _warm_up(host)
+	assert_eq(art.get_reference_count(), base + 1, "the rig is gone and one more reference is held: the room kit's")
+	assert_same(RoomKit.warm_art(), art)
 	RoomKit.release_warm_art()
-	assert_false(RoomKit.warm_art_held())
-	assert_false(is_instance_id_valid(warmed.art_id), "nothing else holds the art: it is freed with the hold")
-	var first := _spawn(host)
-	assert_not_same(SkinnedArt.entry_of(first.punk.rig.art), warmed.entry, "a Punk's own load reads afresh: a new entry")
-	print("ART-WARM first Punk with no hold (the old behaviour): %.1f ms" % first.ms)
+	assert_eq(art.get_reference_count(), base, "letting go of it leaves the art as it was")
+
+
+func test_the_cache_stays_weak_an_art_nothing_holds_drops_out_of_it() -> void:
+	# SkinnedArt's design, which the room kit's hold leaves alone (ARCHITECTURE "Skinned art on the rig"): an Entry
+	# holds its art only by WeakRef, so the room kit holds the art itself instead of making the cache strong.
+	var art := (load(PUNK_ART) as CharacterArt).duplicate() as CharacterArt
+	var entry := SkinnedArt.entry_of(art)
+	assert_same(entry.art_ref.get_ref(), art, "the entry knows its art")
+	art = null
+	assert_null(entry.art_ref.get_ref(), "freed with the art: the cache did not keep it")
+	var other := (load(PUNK_ART) as CharacterArt).duplicate() as CharacterArt
+	var started := Time.get_ticks_usec()
+	var again := SkinnedArt.entry_of(other)
+	# What a Punk's spawn paid when the warm-up's art had died with its rig (about 17 to 19 ms headless, a spawn that
+	# found the entry 1 to 3 ms): the read of punk.glb.
+	print("ART-WARM a read of punk.glb, the cost the hold saves a Punk's spawn: %.1f ms" % ((Time.get_ticks_usec() - started) / 1000.0))
+	assert_not_same(again, entry, "a new art reads and gets an entry of its own")
 
 
 func test_warm_art_loads_once_and_is_the_same_object_every_time() -> void:

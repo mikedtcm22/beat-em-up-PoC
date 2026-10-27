@@ -64,7 +64,7 @@ Package SL-int (phase 1c, M4-plan Part C section 6 with Part A A4, A12, A15, A16
 One, forced by the perf act the plan asks this package to add to `look_acts.gd`:
 - `tests/test_look_acts.gd::test_the_act_file_holds_the_plans_acts_with_their_slugs`: `assert_eq(slugs, SLUGS, ...)` (the 12 slugs C1-C11 and C13) to `assert_eq(slugs.slice(0, SLUGS.size()), SLUGS, ...)` plus `assert_eq(slugs.slice(SLUGS.size()), [&"p1"], ...)`: the plan's acts stay first and in order, and the perf act is the one after them. Twin on the visible path: the new `test_the_perf_act_runs_six_art_punks_with_the_probe_on` (the title, the camera, the probe, the callable, no other title holding it or held by it), and `test_every_title_picks_only_its_own_act`, which already walks every title, passes with the new one.
 
-C11 adds `tests/test_art_warm_cache.gd` (7 tests), and `RoomKit.warm_up_art()` still does nothing headless (`test_art_punk` and `test_flash_fp` hold that).
+C11 adds `tests/test_art_warm_cache.gd` (8 tests), and `RoomKit.warm_up_art()` still does nothing headless (`test_art_punk` and `test_flash_fp` hold that).
 
 Nothing else: the full suite passes with the Punk in art and no other existing test edited (every test that builds a `StreetPunk` measures its proxies, A4: `FPView` counts the hidden primitives, never the art; the hurtboxes, rig points and reaches are the rig's). The count rose by `tests/test_art_punk.gd` (14) and the new `test_look_acts` test (1).
 

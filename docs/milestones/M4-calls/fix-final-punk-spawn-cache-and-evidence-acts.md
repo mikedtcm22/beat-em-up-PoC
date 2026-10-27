@@ -16,10 +16,11 @@ The final review's package for final-v6-01 (the Punk's art cache dies with the w
 
 ## 3. final-v6-01: "no read" is the Entry's identity
 
-- **Decision.** The test asserts that `SkinnedArt.entry_of(art)` after the rig is freed and after a Street Punk has spawned is the very `Entry` the warm-up's rig made (`assert_same`); `_read()` runs only for a new `Entry`. The spawn timings are printed as `ART-WARM ...` lines and not asserted. A control test lets go of the hold and shows the old behaviour (the art freed, a new `Entry`, 19.3 ms), so the weak cache's design is tested too.
+- **Decision.** The test asserts that `SkinnedArt.entry_of(art)` after the rig is freed and after a Street Punk has spawned is the very `Entry` the warm-up's rig made (`assert_same`); `_read()` runs only for a new `Entry`. The spawn timings are printed as `ART-WARM ...` lines and not asserted. A test that an art nothing holds still drops out of the cache (a duplicate of the art, freed) keeps the weak design honest and prints what a read costs (`ART-WARM a read of punk.glb ...`, 16 to 19 ms).
 - **Alternative.** A read counter in `SkinnedArt`, or an assertion on a millisecond figure.
 - **Why not.** A counter needs a change in `skinned_art.gd`, which the weak route does not otherwise touch; a clock on this shared machine is noise (3 to 4 ms against 17 to 19 ms is clear, but not a thing to fail a suite on).
-- **Checked.** With `warm_art()` not storing its art, three of the seven tests fail (the art dead, the entry new, the first Punk's 19.2 ms and the next wave's 17.6 ms); with it, all pass (3.1 and 2.1 ms).
+- **Checked.** With `warm_art()` not storing its art, four of the eight tests fail (the art dead, the entry new, the reference count); with it, all pass. The first Punk after the warm-up spawns in 1.3 to 4.5 ms and the first Punk of the next wave in 1.1 to 2.1 ms with the hold, against 17.6 to 19.3 ms (V6: 18.7 to 19.2 ms) without it.
+- **Found by the first full run.** Other test scripts preload the Punk's scene (`test_enemy_actor`, `test_kicker`, `test_bruiser` and others), which holds `punk_art.tres` too, so in a whole-suite run the art is not freed when the room kit lets go: my first control test ("let go of the hold and the old failure comes back") failed there, and the entry-identity tests would be masked (pass without the fix) in such a run. The game has no such holder (`look_acts.gd` is kept free of `StreetPunk` for the same reason, SL-int C10). So the control test is gone, and a test counts references instead (`get_reference_count()` goes up by exactly one with the hold and back with its release), which holds whatever else in the run keeps the resource alive. The entry-identity tests still fail without the fix when the file runs alone (`-gselect=test_art_warm_cache`).
 
 ## 4. final-v2-03: the KO view is -35 degrees, set once the KO state starts
 
@@ -27,7 +28,7 @@ The final review's package for final-v6-01 (the Punk's art cache dies with the w
 - **Alternative.** -30 degrees (the reviewer's probe): the head, arms and legs read but the shoes are cut off; -45: the horizon and the street go out of the frame, and the act looks like the C8 limbs look.
 - **Why not.** -35 is the least pitch that has the whole body in. Both are one constant.
 - **The pair.** The M3 side was re-cut from the commit the before pack is on (`aa6b5cd`, L0-bench) in a worktree of its own (`.worktrees/m4-fix-final-punk-spawn-cache-before-recut`, detached, nothing committed) with only the act edits (this one and the tour's) and no `look_show_art`, into `captures/m4_before_recut/c5`, `c13` and `c9`; `captures/m4_before/` is untouched. The mark frames of the two sides are identical.
-- **Tests.** `tests/test_look_acts.gd`: C5 runs headless; the view is the default on the KO's first frame and -35 at the end, the five marks come in order, and the head's rectangle at the slump and at the lying is in the upper 60% of the frame (it was centred at 670 of 900 px at the default view; 440 now). The body's rectangle is not asserted: a foot sphere near the lens clips it at 900.
+- **Tests.** `tests/test_look_acts.gd`: C5 runs headless; the view is the default on the KO's first frame and -35 at the end, the five marks come in order, and the head's rectangle at the slump and at the lying is in the upper 60% of the frame (it was centred at 670 of 900 px at the default view; 427 now). The body's rectangle is not asserted: a foot sphere near the lens clips it at 900.
 
 ## 5. final-v4-04: C9's Punk and Bruiser move off the walk lines
 
