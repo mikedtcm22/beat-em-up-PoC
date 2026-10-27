@@ -174,7 +174,9 @@ static func build_presentation(room: Node3D) -> void:
 ## Windowed only: draw the skinned art's toon variant (the art's vertex format, the skin, the
 ## hull) once at the room's load, so the first Punk of a wave does not compile it on its
 ## frame. A throwaway rig wears the Punk's art; ToonMaterials.warm_up() draws a copy of its
-## skeleton for two frames and the rig is freed at once. Headless: nothing.
+## skeleton for two frames, in the lens once the room's camera has been placed (the second frame
+## of the room, not the first: the camera has not updated before that), and the rig is freed at
+## once. Headless: nothing.
 static func warm_up_art(room: Node3D) -> void:
 	if DisplayServer.get_name() == "headless" or not ResourceLoader.exists(WARM_ART):
 		return

@@ -104,12 +104,7 @@ func _worst_gap(a: PackedVector3Array, b: PackedVector3Array) -> float:
 
 ## The rig's pose at the table's rest (no rotations, hips at rest), rig space at its scale.
 func _rest_globals(rig: HumanoidRig) -> Array[Transform3D]:
-	var empty: Dictionary[StringName, Vector3] = {}
-	var table := PlaceholderBody.pose_globals(empty, Vector3.ZERO, rig.rig_scale())
-	var out: Array[Transform3D] = []
-	for i: int in rig.skeleton.get_bone_count():
-		out.append(table[rig.skeleton.get_bone_name(i)])
-	return out
+	return SkinnedView.rest_pose(rig)
 
 
 ## `animation` (a named one) played on `rig` and held `at` seconds in.
@@ -824,6 +819,102 @@ func _visual_globals(rig: HumanoidRig) -> Array[Transform3D]:
 	return out
 
 
+## The depth (m along the view axis) of each cell of the hits() grid at which `faces` (world
+## triangles, the mesh's winding) first show a front face to `cam`, INF where none: an
+## independent cast of the same grid, to set beside SkinnedView.hits().
+func _grid_depths(faces: PackedVector3Array, cam: Transform3D) -> PackedFloat32Array:
+	var soup := SkinnedView.Soup.new()
+	soup.faces = faces
+	soup.triangles = TriangleMesh.new()
+	soup.triangles.create_from_faces(faces)
+	var rows := FPView.rows()
+	var tan_h := tan(deg_to_rad(FPView.HALF_H_DEG))
+	var tan_v := tan_h * 9.0 / 16.0
+	var out := PackedFloat32Array()
+	for row: int in rows:
+		for col: int in FPView.COLS:
+			var ray := Vector3(((col + 0.5) / FPView.COLS * 2.0 - 1.0) * tan_h, (1.0 - (row + 0.5) / rows * 2.0) * tan_v, -1.0)
+			var hit := SkinnedView._ray(soup, cam.origin, (cam.basis * ray).normalized(), -cam.basis.z)
+			out.append(float(hit.depth) if not hit.is_empty() else INF)
+	return out
+
+
+## The cells of `a` and `b` (depths) that differ: one sees the art and the other does not, or
+## they see it more than a millimeter apart.
+func _differing_cells(a: PackedFloat32Array, b: PackedFloat32Array) -> int:
+	var count := 0
+	for i: int in mini(a.size(), b.size()):
+		if is_inf(a[i]) != is_inf(b[i]) or (not is_inf(a[i]) and absf(a[i] - b[i]) > 0.001):
+			count += 1
+	return count
+
+
+func test_the_grid_ray_path_skins_the_ragdolls_pose_while_one_runs_and_the_fk_pose_otherwise() -> void:
+	# slice-g1-06: hits(), the soup, the compare_* wrappers and skin_vertices() with no pose given draw
+	# the pose the render server draws, which is the ragdoll's (Ragdoll._visual, written back into an
+	# art rig's skeleton) while one runs on the rig and can be far from the animation's FK pose.
+	var rig := _rig(_art(Fixture.Authored.A_POSE, false, true))
+	rig.global_position = Vector3(0.0, 0.0, -1.0)
+	rig.rotation.y = PI
+	var mi := rig.art_meshes()[0]
+	var cam := Transform3D(Basis.IDENTITY, Vector3(0.0, 1.5, 0.0))
+	# Standing: the drawn pose is the FK pose, bone for bone.
+	_pose(rig, &"idle", 0.2)
+	assert_false(rig.is_ragdolling())
+	var standing := SkinnedView.drawn_pose(rig)
+	var fk := SkinnedView.fk_pose(rig)
+	assert_eq(standing.size(), rig.skeleton.get_bone_count())
+	for i: int in standing.size():
+		assert_eq(standing[i], fk[i], "bone %d: no ragdoll, the drawn pose is the animation's" % i)
+	# A stagger: the head and the arms show a share of the simulator's turn, away from FK.
+	rig.ragdoll_start(false, rig.get_point_position(&"Head"), Vector3(0.0, 1.0, 4.0), Vector3.ZERO, Ragdoll.Part.ANY, 0.6)
+	for i: int in 20:
+		rig.advance(FRAME)
+		await get_tree().physics_frame
+	assert_true(rig.is_ragdolling())
+	var visual := _visual_globals(rig)
+	fk = SkinnedView.fk_pose(rig)
+	var drawn := SkinnedView.drawn_pose(rig)
+	for i: int in drawn.size():
+		assert_eq(drawn[i], visual[i], "bone %d: while a ragdoll runs the drawn pose is its visual pose" % i)
+	var pose_gap := 0.0
+	for i: int in drawn.size():
+		pose_gap = maxf(pose_gap, drawn[i].origin.distance_to(fk[i].origin))
+	assert_gt(pose_gap, 0.05, "the stagger is %.3f m from FK at its farthest bone, so the test has teeth" % pose_gap)
+	# The vertices: the default is the visual pose exactly, and not FK's.
+	var by_default := SkinnedView.skin_vertices(mi, rig)
+	assert_lt(_worst_gap(by_default, SkinnedView.skin_vertices(mi, rig, visual)), 0.00001, "skin_vertices() with no pose is the ragdoll's")
+	assert_gt(_worst_gap(by_default, SkinnedView.skin_vertices(mi, rig, fk)), 0.02, "and not the animation's")
+	# The grid rays: hits() agrees with an independent cast of the visual pose's triangles, and
+	# differs from the cast of FK's.
+	var cells := SkinnedView.hits(rig, cam)
+	var seen := PackedFloat32Array()
+	for cell: Dictionary in cells:
+		seen.append(float(cell.depth) if not cell.is_empty() else INF)
+	var by_visual := _grid_depths(SkinnedView.faces(mi, rig, visual), cam)
+	var by_fk := _grid_depths(SkinnedView.faces(mi, rig, fk), cam)
+	assert_gt(by_visual.size(), 500)
+	var covered := 0
+	for depth: float in by_visual:
+		covered += 0 if is_inf(depth) else 1
+	assert_gt(covered, 100, "the staggering Punk fills the view 1 m ahead")
+	assert_eq(_differing_cells(seen, by_visual), 0, "hits() sees the ragdoll's pose, cell for cell")
+	assert_gt(_differing_cells(seen, by_fk), 3, "and not the animation's: %d cells differ from FK's" % _differing_cells(seen, by_fk))
+	# The compare_* wrappers measure it too: the proxies' bone followers show the same pose, so the
+	# art and its proxies still frame alike through the stagger.
+	var cmp := SkinnedView.compare_with_exact_proxies(rig, cam)
+	assert_lt(cmp.differ_share, 0.1, "the art and its proxies agree in a stagger (%.1f%% of the cells differ)" % [cmp.differ_share * 100.0])
+	# The ragdoll over, the pose goes back to the animation's.
+	rig.get_ragdoll().stop()
+	rig.advance(FRAME)
+	await get_tree().physics_frame
+	assert_false(rig.is_ragdolling())
+	var after := SkinnedView.drawn_pose(rig)
+	var after_fk := SkinnedView.fk_pose(rig)
+	for i: int in after.size():
+		assert_eq(after[i], after_fk[i], "bone %d: the ragdoll stopped, the animation's pose again" % i)
+
+
 # --- The art against its proxies in first person (row A9) ---------------------------------------
 
 
@@ -1182,6 +1273,50 @@ func test_a_triangle_that_collapses_or_turns_over_is_counted() -> void:
 		var report := _strain_at(wide, _globals_of(wide, row.pose, row.hips), true)
 		worst = maxi(worst, report.flipped + report.squashed)
 	assert_gt(worst, 0, "a wide 50% blend collapses or flips triangles at a peak flex")
+
+
+func test_a_triangle_folded_in_the_mesh_itself_is_not_charged_to_the_pose_as_a_flip() -> void:
+	# slice-g2-05: a flip is a triangle folded against its vertex normals (its winding against them) in
+	# a pose and not at the skinned rest. Winding some blended triangles against their normals
+	# (the mesh's own folds, as the chain's decimation leaves) puts them in the baseline: they are
+	# folded at the rest and in every pose, and only a pose that turns another over is a flip.
+	var plain := _rig(_art(Fixture.Authored.A_POSE, false, true))
+	var plain_mesh := plain.art_meshes()[0]
+	var data := SkinnedView._mesh_data(plain_mesh.mesh as ArrayMesh)
+	SkinnedView._prepare_strain(data)
+	var chosen := data.mixed_triangles.slice(0, 40)
+	assert_eq(chosen.size(), 40, "the probe has blended triangles to fold")
+	var plain_folds := SkinnedView.folded_triangles(plain_mesh)
+	var folded_art := _mutated(_art(Fixture.Authored.A_POSE, false, true), func(root: Node) -> void:
+		_edit_arrays(root, func(arrays: Array) -> void:
+			var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+			for t: int in chosen:
+				var swap := indices[t * 3 + 1]
+				indices[t * 3 + 1] = indices[t * 3 + 2]
+				indices[t * 3 + 2] = swap
+			arrays[Mesh.ARRAY_INDEX] = indices))
+	var rig := _rig(folded_art)
+	var mi := rig.art_meshes()[0]
+	var folds := SkinnedView.folded_triangles(mi)
+	assert_eq(folds.all, plain_folds.all + chosen.size(), "the authored mesh holds the %d folded triangles" % chosen.size())
+	assert_eq(folds.mixed, plain_folds.mixed + chosen.size(), "all of them blended")
+	var at_rest := SkinnedView.folded_triangles(mi, rig, _rest_globals(rig))
+	assert_eq(at_rest.mixed, folds.mixed, "and they are folded at the skinned rest too")
+	# At the rest and in the gentle peak flexes the probe has no flips, folded baseline or not.
+	var report := SkinnedView.strain(mi, rig, _rest_globals(rig), 0.15, true)
+	assert_eq(report.rest_folded, folds.mixed, "the baseline is reported on its own")
+	assert_eq(report.flipped, 0, "posed at its own rest, nothing has flipped")
+	for row: Dictionary in _peak_poses():
+		var posed := SkinnedView.strain(mi, rig, _globals_of(rig, row.pose, row.hips), 0.15, true)
+		assert_eq(posed.flipped, 0, "%s: the %d folded triangles of the mesh are not flips" % [row.label, chosen.size()])
+		assert_eq(posed.rest_folded, folds.mixed)
+	# A pose that really turns triangles over still counts them.
+	var wide := _rig(Fixture.make(Fixture.Authored.A_POSE, false, true, 0, 1, 0.06, 0.5))
+	var turned := 0
+	for row: Dictionary in _peak_poses():
+		var wide_report := SkinnedView.strain(wide.art_meshes()[0], wide, _globals_of(wide, row.pose, row.hips), 0.15, true)
+		turned += wide_report.flipped
+	assert_gt(turned, 50, "a wide 50%% blend still turns triangles over at the peak flexes (%d)" % turned)
 
 
 # --- Cost --------------------------------------------------------------------------------------

@@ -232,8 +232,13 @@ static func hull_direction(mode: int, vertex: Vector3, normal: Vector3) -> Vecto
 ## the skinned meshes) drawn with the art's toon material and hull. Windowed only. The boxes
 ## run once per run and the skinned variant once per run too, whichever call brings it (the
 ## first rig of a room has no art, so the room's load asks for it separately). The holder
-## stands in front of the viewport's camera from the next frame on (WARM_DISTANCE_M), where it
-## is in view, and frees itself after two frames there.
+## stands in front of the viewport's camera (WARM_DISTANCE_M ahead, WARM_DROP_M below), where
+## it is in view, for two frames, and frees itself after them. It is placed on the second
+## frame, not the first: process_frame fires before any node's _process, so on the first frame
+## the camera has not been placed yet (the FirstPersonCamera is at the world origin with no
+## turn until its own first update) and a holder put by it would stand under the floor behind
+## the view, where the renderer culls it and builds nothing. It stays hidden until then, and is
+## scaled down to the camera's near distance when it shows: only the draw is wanted.
 static func warm_up(parent: Node, skinned: Node3D = null) -> void:
 	if parent == null or not parent.is_inside_tree() or DisplayServer.get_name() == "headless":
 		return
@@ -245,6 +250,7 @@ static func warm_up(parent: Node, skinned: Node3D = null) -> void:
 	_art_warmed = _art_warmed or skinned != null
 	var holder := Node3D.new()
 	holder.name = _WARM_NAME
+	holder.visible = false
 	parent.add_child(holder)
 	if boxes:
 		var color := character(Color.WHITE, true)
@@ -263,10 +269,17 @@ static func warm_up(parent: Node, skinned: Node3D = null) -> void:
 			var mesh := node as MeshInstance3D
 			mesh.material_override = atlas
 			mesh.material_overlay = outline()
+	# Two frames for the camera to be placed (see above), then it is read and the holder stands
+	# in its view, shown, for two more.
+	await parent.get_tree().process_frame
 	await parent.get_tree().process_frame
 	var camera := parent.get_viewport().get_camera_3d() if is_instance_valid(holder) else null
 	if camera != null and is_instance_valid(holder):
 		holder.global_position = camera.global_position - camera.global_basis.z * WARM_DISTANCE_M + Vector3.DOWN * WARM_DROP_M
+		# In the lens, so the renderer draws it, but a speck: a pipeline is built by the draw, not by
+		# the picture, and a whole body and its metre boxes would flash for two frames at every load.
+		holder.scale = Vector3.ONE * camera.near
+		holder.visible = true
 	await parent.get_tree().process_frame
 	await parent.get_tree().process_frame
 	if is_instance_valid(holder):
