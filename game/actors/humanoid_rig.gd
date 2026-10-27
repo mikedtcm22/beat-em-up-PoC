@@ -171,6 +171,10 @@ var _flash_on: bool = false
 var _flash_aimed: bool = false
 var _flash_anchor: Node3D
 var _flash_local: Vector3 = Vector3.ZERO
+## The aimed flash's radius was widened for a finisher (hit_flash_finisher_radius_mult): once per flash.
+var _flash_widened: bool = false
+## Whether the one static listener for finishers' hits (_watch_finishers()) is connected.
+static var _finishers_watched: bool = false
 var _head_meshes: Array[MeshInstance3D] = []
 var _body_meshes: Array[MeshInstance3D] = []
 ## The skinned art's meshes, once SkinnedArt.attach() has added them.
@@ -467,6 +471,11 @@ func set_flash(amount: float, color: Color = Color.WHITE) -> void:
 ## struck part where it is shown. Ends a whole-body flash; set_flash(0.0) clears it.
 ## With `shown` false the flash is aimed on the struck part but drawn only from show_flash()
 ## (a finisher's waits out the impact frame).
+## First-person feel (Look > FP feel, both off by default): the overlay is told Tuning's
+## hit_flash_fp_max_share, the cap the shader puts on the flash's on-screen share of the view, and a
+## clean finisher's radius is widened by hit_flash_finisher_radius_mult when its hit lands
+## (CombatEvents.hit_landed, _on_hit_landed_widen()). The radius, core, strength and the point that
+## the struck actor passes in are used as they come.
 func flash_at(point: Vector3, strength: float, radius: float, core: float,
 		color: Color = Color.WHITE, shown: bool = true) -> void:
 	set_flash(0.0)
@@ -493,6 +502,11 @@ func flash_at(point: Vector3, strength: float, radius: float, core: float,
 	_flash_overlay.set_shader_parameter(&"flash_core", clampf(core, 0.0, 1.0))
 	_flash_overlay.set_shader_parameter(&"flash_strength", clampf(strength, 0.0, 1.0))
 	_flash_overlay.set_shader_parameter(&"flash_color", color)
+	# First-person feel (M4, P3-flash): the cap on the flash's on-screen share (0 = off), and the
+	# finisher's widening (the hit's tier arrives with CombatEvents.hit_landed, _widen_finisher_flash()).
+	_flash_overlay.set_shader_parameter(&"flash_max_share", Tuning.data.hit_flash_fp_max_share)
+	_flash_widened = false
+	_watch_finishers()
 	_flash_aimed = true
 	if shown:
 		_show_flash_overlay(true)
@@ -515,7 +529,7 @@ func follow_flash() -> void:
 
 
 ## The contact flash's overlay while one runs (shader parameters flash_point, flash_radius,
-## flash_core, flash_strength, flash_color), else null.
+## flash_core, flash_strength, flash_color, flash_max_share), else null.
 func flash_overlay() -> ShaderMaterial:
 	return _flash_overlay if _flash_on else null
 
@@ -540,6 +554,54 @@ static func flash_falloff(dist: float, radius: float, core: float) -> float:
 	if span <= 0.0:
 		return 1.0 if dist <= radius else 0.0
 	return 1.0 - smoothstep(0.0, 1.0, clampf((dist - inner) / span, 0.0, 1.0))
+
+
+## The reach (m) of a contact flash of `radius` on a surface `depth` m in front of the lens, with
+## the first-person cap (Tuning hit_flash_fp_max_share = `max_share`, 0 = no cap), as the overlay
+## shader's capped_radius() computes it: the radius whose disc covers `max_share` of the view at
+## that depth (`proj11` is the camera's projection[1][1], 1 / tan(fov / 2); `aspect` the
+## viewport's width over its height), or `radius` when that is smaller. The core shrinks with it.
+static func flash_capped_radius(radius: float, depth: float, proj11: float, aspect: float,
+		max_share: float) -> float:
+	if max_share <= 0.0:
+		return radius
+	var half_heights := sqrt(4.0 * aspect * max_share / PI)
+	return minf(radius, half_heights * maxf(depth, 0.0) / maxf(proj11, 0.0001))
+
+
+## The share (0..1) of the view a flash disc of `radius` covers on a surface `depth` m in front
+## of the lens: the inverse of flash_capped_radius()'s cap.
+static func flash_view_share(radius: float, depth: float, proj11: float, aspect: float) -> float:
+	var half_heights := radius * proj11 / maxf(depth, 0.0001)
+	return minf(PI * half_heights * half_heights / (4.0 * aspect), 1.0)
+
+
+## Listen, once, for the hits that land: a clean finisher's flash is widened (r3look-05). The flash
+## itself is aimed by the struck actor inside receive_hit(), which knows nothing of a hit's tier
+## here, and CombatEvents.hit_landed follows it in the same tick, so the radius is scaled then.
+static func _watch_finishers() -> void:
+	if not _finishers_watched:
+		_finishers_watched = true
+		CombatEvents.hit_landed.connect(_on_hit_landed_widen)
+
+
+## CombatEvents.hit_landed: the struck rig's flash of a clean finisher, wider by Tuning's
+## hit_flash_finisher_radius_mult. A blocked finisher (and a guard break) keeps the ordinary size.
+static func _on_hit_landed_widen(hit: HitInfo) -> void:
+	if hit.tier != CombatTypes.HitTier.FINISHER or hit.blocked or not is_instance_valid(hit.victim):
+		return
+	var struck := hit.victim.get(&"rig") as HumanoidRig
+	if struck != null:
+		struck._widen_flash(Tuning.data.hit_flash_finisher_radius_mult)
+
+
+## Scale the aimed contact flash's radius by `mult`, once per flash (a hit that lands twice in a
+## tick, or the finisher's second target, widens it once). The flash's point and core stay.
+func _widen_flash(mult: float) -> void:
+	if not _flash_aimed or _flash_widened or _flash_overlay == null or mult <= 1.0:
+		return
+	_flash_widened = true
+	_flash_overlay.set_shader_parameter(&"flash_radius", float(_flash_overlay.get_shader_parameter(&"flash_radius")) * mult)
 
 
 func _show_flash_overlay(on: bool) -> void:

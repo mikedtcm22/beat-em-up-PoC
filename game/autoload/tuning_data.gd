@@ -1179,6 +1179,17 @@ extends Resource
 ## over the knee in a hold, so it hides for as long as the player holds an enemy and comes back
 ## when the hold ends. Off = the M3 behavior (the L key puts the log away at any time).
 @export var combat_log_hide_while_holding: bool = false
+## First-person feel alternative (grab-05, hit-01): the most of the view the contact flash's disc may
+## cover on screen (0.05 = 5%), whatever the camera distance. The flash shader (hit_flash.gdshader)
+## shrinks the flash's radius, its core with it, where a flash a few centimeters from the lens would
+## fill more: a knee in a hold or a flurry's jabs at close range. A flash farther away is as it was.
+## 0 = off, the M3 / M2 behavior (hit_flash_radius_m at any distance, up to 16% of the view in a hold).
+@export_range(0.0, 0.5, 0.005) var hit_flash_fp_max_share: float = 0.0
+## First-person feel alternative (r3look-05): a finisher's contact flash is this many times
+## hit_flash_radius_m, so the haymaker's, which barely shows in the first-person view, reads. Only
+## a clean finisher's flash (a blocked finisher's is the ordinary size); hit_flash_fp_max_share still caps
+## it on screen. 1 = off, the M3 behavior.
+@export_range(1.0, 4.0, 0.05) var hit_flash_finisher_radius_mult: float = 1.0
 
 # Motion (F-motion): the life in the placeholder clips, read when a rig's named-clip library is
 # built (the first rig of a size and stance), so a change reaches the rigs built after it. The

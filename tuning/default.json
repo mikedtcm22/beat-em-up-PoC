@@ -508,6 +508,8 @@
 		"look_grade_strength": 1.0,
 		"fp_knockdown_hide_torso": false,
 		"combat_log_hide_while_holding": false,
+		"hit_flash_fp_max_share": 0.0,
+		"hit_flash_finisher_radius_mult": 1.0,
 		"look_motion_breath_deg": 1.5,
 		"look_motion_breath_hz": 0.25,
 		"look_motion_bounce_m": 0.005,
