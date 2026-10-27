@@ -781,6 +781,42 @@ The contract scaffold (package S0-contract, phase 0). It lands every seam the ar
 
 ### Look acts and the bench (L0-bench)
 
+Tooling only: no game file. The Punk and the player's limbs are recorded from the same scripted acts before and after each look change, and the machine's frame time is compared across commits.
+
+**The acts** (`tests/bot/acts/look_acts.gd`, run by the crowd bot, titles start "Look:"; one entry of `acts()` and one function each). Every act hides the bot's caption (it comes back at the act's end), freezes the AI, sets god mode and seeds the VFX generator (`VfxDirector.rng.seed = 7`). All motion is scripted: the player's own presses, `force_attack()`, or the Punk's rig played by hand (`_unplug()` takes an actor off the physics tick, `_pose()` places it and advances its rig, because on the AI's tick `_hold_still()` plays the idle over any `play_locomotion()` every tick).
+
+| Slug | Title | Shows |
+| --- | --- | --- |
+| c1 | `Look: Punk face at 1 m` | Punk 1 m ahead, view +8 degrees, 3 s idle |
+| c2 | `Look: Punk body at 1 m` | the same at the default -6 degrees |
+| c3 | `Look: Punk strafes at 1 m` | a 150 degree arc at 1.3-1.0-1.3 m, the view following, then a step in and out |
+| c4 | `Look: Punk attacks at 1 m` | its two-hit punch, then its shove, landing on the player (0.95 m) |
+| c5 | `Look: Punk reacts at 1 m` | the player's jab, P P P P (hook stagger, uppercut launch), the get-up, health 100/65/30% held 1 s each, a jab that finishes it (KO, blink-off) |
+| c6 | `Look: distances` | the Punk at 1, 2.5, 5 and 10 m, view level |
+| c7 | `Look: lineup` | Punk, Kicker, Thug, Bruiser on a 2.2 m arc |
+| c8 | `Look: own limbs` | view -45 degrees: jab, cross, hook, front kick, guard, walking; then -20 (the chain and the guard, where his arms are in the view) and -65 (walking, where the lead leg and the feet come in). Subject: the player; rectangles of his hands and legs |
+| c9 | `Look: street tour` | `room_acts`' tour with six frozen enemies in the street |
+| c10 | `Look: turntable` | free-fly camera once round the Punk at rest, in the guard, lying (mesh QA, not first person) |
+| c11 | `Look: hold the Punk` | grab, three knees (the third lets go), grab, throw |
+| c13 | `Look: Punk, impact frame off` | c5 with `impact_frame_enabled` off |
+
+C12 (extremes) is F-motion's; SL-int adds `Look: Perf, six art Punks`. A title must not be inside another title (the capture filter is a substring match; `test_look_acts` checks it).
+
+**The log lines** (`tests/bot/look_rect.gd`, through the bot's `log_line()`):
+- `LOOK-MARK <slug> f<frame> <label>`: a frame worth a still. `start` and `end` delimit the act and get none.
+- `LOOK-RECT <slug> f<frame> <head|hands|body> x y w h`: 1600x900 pixels, the bounds of spheres round the rig's drawn points (`get_visual_point_transform()`: the ragdoll's pose while one runs) through the current camera, grown 12 px and clipped to the frame; nothing is printed for a region that is off the screen. The player's own body (c8) has no head and leaves out the bones hidden from his lens.
+- `f<frame>` is the video frame (from 0) of the state the line describes: `Engine.get_process_frames() - 1`, read as a bot resumes from a `physics_frame` await (before any node ticks, so it is what the last rendered frame drew). It is not the physics tick of the bot's other `f<n>` lines. `LookRect.mark(bot, slug, label, subject)` also prints the subject's rectangles; call it right after a bot await, never after a further `await`.
+
+**`tools/capture_bot.sh`** forwards `CAPTURE_ARGS` (split on spaces) to the bot after `--act=`: `CAPTURE_ARGS="--tune=impact_frame_enabled=0" tools/capture_bot.sh res://tests/bot/crowd_bot.tscn captures/x "Look: Punk reacts" 6`. Movie Maker records 1600x900 whatever `--resolution` says (project.godot's window override).
+
+**`tools/look_sheets.sh <avi> <out dir> [--log f] [--offset n] [--slug s]...`** reads `bot.log` beside the video and writes, per act, `<slug>/overview_NN.png` (6 fps, 5x4 tiles of 480 px a page), `<slug>/stills/<slug>_f<frame>_<label>.png` (full resolution at every mark) and `<slug>/crops/<slug>_f<frame>_<region>.png` (every `LOOK-RECT` cut out and doubled), plus `index.txt`. The bot's doubled log lines are read once. Frames are cut exactly (`-ss` a quarter frame early; `ffmpeg -nostdin`). Record one act per process (`capture_bot.sh ... "<title>"`): acts of one run are not bit-identical to the same act alone.
+
+**`tools/perf_compare.sh [--act "<title>"]... [--runs N] [--vsync on|off] [--force] [--keep] [--out DIR] <ref> [<ref>...]`** refuses above a 1-minute load average of `PERF_MAX_LOAD` (2.0) unless `--force`; checks each ref out to `.worktrees/perf-<sha>` in the main checkout (removed on exit), copies in `tests/bot/perf_bot.gd` and `.tscn`, imports, and runs each act windowed with vsync off (`--disable-vsync`; `--vsync on` leaves it on), N times per ref (default 3), the refs in turn (a, b, a, b, ...). `perf_bot.gd` (the crowd bot with a recorder over each act it runs) prints `PERF-BENCH {json}`: frames, mean, p95, worst, spawn hitch (worst frame within 0.5 s of any enemy appearing), first spawn, first hit, first finisher (-1 when it did not happen), spawns, hits, stalls (frames of 0.5 s or more), vsync. The report gives each metric as the mean over the runs with min..max, a delta column (last ref minus first) and the A16 soft bars for the last ref (p95 <= 16.7, spawn hitch <= 33, first hit and first spawn <= the first ref + 2 ms). Logs, `results.tsv` and `report.txt` land in `captures/perf_compare/<time>/` (never committed). **Vsync caveat (measured on this M1 in an unattended session):** with vsync off the window stalls for 1.0 s every few seconds (about 15 of 1700 frames; a Metal drawable that is not released), with or without a 120 fps cap; with vsync on there are none (one frame of 1.0 s at the start of a process). The report counts stalls and warns when a run has more than two: then use `--vsync on` (frame times follow the display's refresh) or put the window in front. Needs the machine to itself.
+
+**Tests** (`tests/test_look_acts.gd`): the act list and unique titles, the crowd bot loads the acts by name, `look_rect.gd`'s projection, c1 run headless in the real crowd room (marks, rectangles inside 1600x900, at least 120 ticks, caption hidden during and back after, AI frozen, god mode), the head and hands inside the body rectangle, one `PERF-BENCH` line from the perf bot, and `look_sheets.sh` on a synthetic video whose brightness is its frame number (the still of frame 50 is frame 50).
+
+**The "before" pack:** every act recorded once per process on the M3 look (the game's code of `afdb39e`; this package changes none) into `captures/m4_before/<slug>/` of the main checkout (`bot.avi`, `bot.log`, `sheets/`), never committed; 0 `SCRIPT ERROR`/`ERROR` lines in every log. Frames, stills and crops: c1 290/4/12, c2 290/4/12, c3 392/8/24, c4 298/19/36, c5 795/26/63, c6 440/4/12, c7 290/4/12, c8 696/35/53, c9 1966/12/0, c10 1634/15/45, c11 358/15/39, c13 795/26/63. Later packages re-record the same acts (`capture_bot.sh` and `look_sheets.sh` with the same titles) and compare frame by frame: the marks and labels are the same.
+
 ### Tripo and the asset tools (P1-tools)
 
 All four steps of M4-plan.md A2 are in: `tripo.py`, `blender_dump_rig.py`, the mannequin renders and the smoke Punk (sources, T1-T3 and their dumps, 55 credits). None of it touches the game.
