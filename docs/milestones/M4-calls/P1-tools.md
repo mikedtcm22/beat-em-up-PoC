@@ -62,3 +62,23 @@ Judgement calls of the P1-tools package, first launch (A2 steps 1-2: `tripo.py` 
 ## Process notes
 
 19. **A command that would have created a paid task was blocked, and nothing ran.** While testing the CLI's refusal paths I typed a batch whose first line was `image-to-model --label T1 ...` without `--dry-run` (I meant to check the label refusal and passed a label). The permission classifier denied the whole batch before it ran. No task was created: `tripo.py ledger --live` afterwards reads "ledger spend 0.00; account spend 0.00 (balance 1500.00): reconciled". After that, only `--dry-run` task commands and the mock self-test were run. The refusal paths (no label, a non-empty `--out-dir`, the floor, the stop) are covered by `--self-test` on the mock service.
+
+# Second launch (steps 3-4)
+
+## tripo.py: the second key
+
+20. **A paid run needs `--spend <credits>` equal to the price table's expected cost for that exact request, and rig-check needs `--spend 0`.** The check (`check_spend`) runs in `cmd_task` before anything is uploaded and again at the top of `Tripo.run`, so a label alone never spends, a stale number never spends (a different `--spend` is refused, `nan` included), and neither the CLI nor a script calling `run()` can skip it.
+    - *Alternative:* require it only for calls with a cost above 0 (the lead's wording: "a paid call"). *Why not:* the table could be wrong about the free call too, and one rule for every task-creating command is simpler to remember and to test; `--dry-run` prints the exact flag to add.
+    - *Alternative:* a `--yes` flag. *Why not:* a flag with no value can be typed from habit; a number has to be read off the dry run and compared with the brief's budget row.
+    - The self-test now covers: no `--spend`, below, above, zero on a paid task, `nan`, the CLI path with a real-looking image (no network call, no upload, no task), and the dry-run hint.
+
+## The mannequin (step 3)
+
+21. **Built from the placeholder's own enemy parts, with the torso as one loft.**
+    - *First try:* every box, capsule, sphere and cylinder of `parts_enemy` at its bone offset, posed. *Seen:* the torso read as stacked slabs with creases a look-alike drawing would copy as belts and folds, and the open-hand ellipsoids as spikes.
+    - *Landed:* the arms, legs, head, neck, shoulders, traps, shoes from the table; pelvis to upper chest as one superellipse loft through each box's width and depth at its centre height (so the waist and the shoulders are the table's, smoothly blended); the two hands as flattened capsules with a thumb (A13: open hands); a small nose so the left view shows which way it faces; everything melted by a voxel remesh and smoothed. *Alternative:* a hand-sculpted generic mannequin. *Why not:* the art must fill the rig's volumes, and these are the rig's volumes.
+22. **The mannequin is mid-grey (#b0b0b0 before Workbench shading) on a flat #d9d9d9 background.** Part C writes "flat #d9d9d9" once for the mannequin and once for the Gemini re-render's background; reading it as the background of both keeps the reference and the output on the same ground, and a grey figure on it shows its form. *Alternative:* a #d9d9d9 mannequin. *Why not:* the figure and the ground would merge.
+23. **The background is exactly #d9d9d9 (217,217,217).** Blender writes 216 for the linear value of 217 (it truncates the encoded byte), so the world colour is aimed half a level high, and `mannequin_report.json` checks the four borders of every PNG against the configured grey. Dither is off (it speckled the background).
+24. **The A-pose swing is 45 degrees from hanging, which is 45 below horizontal** (the concepts asked for about 40; Part C asks for 45). Only the two upper arms rotate about Z; the forearm and hand continue straight; the legs stay parallel. The report carries every bone head in rig space and in pixels per view, so A3's chained-joint rule (each exported joint is the table joint chained through the swing) can be checked against the same numbers.
+25. **Views: front, left, back, 1536x2048, orthographic, 952.56 pixels per metre.** The left view shows the character's own left side and it faces the image's left; the front view puts the character's own right on the image's left. Which side Tripo calls "left" is the unknown the smoke measures, not something the mannequin can settle. 2048 is the 3:4 "2K" at its long side (Gemini answered 1792x2400 to the same request for the concepts; the aspect is what matters).
+26. **Pixel hashes, not file hashes, identify the renders.** The PNG container's bytes differ between runs of the same scene; the decoded pixels do not (two runs, identical report).
