@@ -793,8 +793,7 @@ C12 (extremes) is F-motion's; SL-int adds `Look: Perf, six art Punks`. A title m
 
 **Tests** (`tests/test_look_acts.gd`): the act list and unique titles, the crowd bot loads the acts by name, `look_rect.gd`'s projection, c1 run headless in the real crowd room (marks, rectangles inside 1600x900, at least 120 ticks, caption hidden during and back after, AI frozen, god mode), the head and hands inside the body rectangle, one `PERF-BENCH` line from the perf bot, and `look_sheets.sh` on a synthetic video whose brightness is its frame number (the still of frame 50 is frame 50).
 
-**The "before" pack:** every act recorded on the M3 look into `captures/m4_before/<slug>/` of the main checkout (`bot.avi`, `bot.log`, `sheets/`), never committed. Later packages re-record the same acts (`capture_bot.sh` and `look_sheets.sh` with the same titles) and compare frame by frame: the marks and labels are the same.
-
+**The "before" pack:** every act recorded once per process on the M3 look (the game's code of `afdb39e`; this package changes none) into `captures/m4_before/<slug>/` of the main checkout (`bot.avi`, `bot.log`, `sheets/`), never committed; 0 `SCRIPT ERROR`/`ERROR` lines in every log. Frames, stills and crops: c1 290/4/12, c2 290/4/12, c3 392/8/24, c4 298/19/36, c5 795/26/63, c6 440/4/12, c7 290/4/12, c8 696/35/53, c9 1966/12/0, c10 1634/15/45, c11 358/15/39, c13 795/26/63. Later packages re-record the same acts (`capture_bot.sh` and `look_sheets.sh` with the same titles) and compare frame by frame: the marks and labels are the same.
 
 ### Tripo and the asset tools (P1-tools)
 
