@@ -364,6 +364,7 @@ C12 (extremes) belongs to F-motion.
 - **Phase 2:** F-motion, F-look, F-punk (GLB replaced in place), F-player-art, then F-player-int.
 - **Phase 3:** P3-int, then the fixers.
 - **After every merge,** the lead regenerates `tuning/default.json` and the palette atlas (`gen_palette.py`), runs `godot --headless --import --quit` and the full `tools/run_tests.sh`, reads the output for `SCRIPT ERROR`, `SHADER ERROR` and `ERROR`, and pushes.
+- **The chain checks (added in the final review's fix round)**, after any merge that touches `tools/pipeline/**`, a `pipeline.json` or an exported GLB: `python3 -I tools/pipeline/run.py --asset punk --check`, `python3 -I tools/pipeline/player_run.py --asset player --check`, `python3 -I tools/pipeline/run.py --config tests/fixtures/art/probe_pipeline.json --check`, and the heat-map build's `--check` with its `--set` list (docs/milestones/M4-calls/fix-final-art-chain-records.md, part 3). Each must print "reproducible: YES".
 - **If a merge conflicts on a file the ownership table gives to one package,** the ownership table is wrong. The lead fixes the table in HANDOFF before resolving the conflict.
 
 *Overrides:* Part C §5 and §7 phase ends (no merge order given). *Source:* rig-risk §5 P1-int; look-first §5; judge.

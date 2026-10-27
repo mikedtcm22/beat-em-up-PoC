@@ -4,6 +4,21 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-27 14:55 CDT: art-chain-records merged (1578/1578); wave 2's punk-detail running; a resume task at 16:00
+- **Merged:** `m4/fix-final-art-chain-records` (`3d2e00d`).
+  - The probe report is regenerated (`--check` YES), with a Blender-free guard on the step report keys.
+  - The hero's mask has two contract tests.
+  - The ASSETS ledger, provenance and date rows are fixed, and the orphan `tests/scratch_measure.gd.uid` is removed.
+  - The merged tree is its tested tree plus two doc files. The A22 chain checks are now in the plan's A22.
+- **Running since 14:50 CDT:** wave 2's **punk-detail-zones-and-strap**, alone in the last headroom (`wf_a7ddd5a8-aff`, base `d82b195`, worktree `.worktrees/m4-fix-final-punk-detail-zones-and-strap`). It turns the sharp mask cut on for the Punk and tunes his mask, then the cap strap slot, the laces and the face ink. **If cut off:** rerun it with the same args (in the run's args); it continues from its newest `wip:` commit.
+- **After the 15:50 reset:**
+  1. Launch **toon-gloss-and-turntable**: `workflow-review.js`, `lenses` [], `packages` = the `packages_wave2` entry with that key (notes pointing at `final-findings.json`, `packages_wave2`), `findings_path` the same file, base = the head, and a `common_note` stating the merged state.
+  2. Merge both wave-2 branches with A22, including the chain checks. ASSETS's Punk rows may conflict with art-chain-records' dates: refresh the dates.
+  3. Run **done-when-ratchets-and-suite-time** (in `packages.packages`; includes the stagger_back re-pose, call 24).
+  4. Then one Opus re-score of J1-J14 on fresh recordings.
+  5. Then README, the evidence index, the PR and the final DM.
+- **Resume task:** `beat-em-up-resume-20261027-1550` fires at 16:00 CDT, so the work continues even if nothing else wakes the session.
+
 ### 2026-10-27 14:40 CDT: wave 1's two fixers merged (1575/1575); art-chain-records running; then wave 2, then the ratchets
 - **Merged:** both branches went in with no conflicts, then A22: the preset (517 values) and the palette. The suite on `3aa6f9a` is 1575/1575 with 0 SCRIPT, SHADER or ERROR lines.
   - **`m4/fix-final-toon-light-and-ink`** (`30f88f3`):
