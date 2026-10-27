@@ -4,6 +4,30 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-27 16:45 CDT: both fix waves merged (1593/1593, 0 errors); the re-score and the evidence pack running
+- **Merged:**
+  - **`m4/fix-final-toon-gloss-and-turntable`** (`405d223`):
+    - Per-swatch gloss: a glossy swatch is one step below its damage-class alpha. Only the Punk's lens is glossy, and it gets a camera glint (`look_glint_cut` 0.88, `look_glint_strength` 1.0). The matte vest, arms and cap lost their highlight blobs (about 3,840 pixels down to 8).
+    - The C10 turntable hides the hero and films the Punk's front.
+  - **`m4/fix-final-done-when-ratchets-and-suite-time`** (`c86a279`):
+    - A7's ratchet can fail now: per art, plus a per-clip table in `tests/fixtures/strain/strain_ratchet.json`.
+    - The done-when ratchets are set on the final art.
+    - `PlaceholderAnims.Life` reads TuningData.
+    - The suite takes 267 s of test time, down from 335 s.
+    - stagger_back is re-posed with bent elbows (call 24; the four clip hashes regenerated with a reason note).
+  - A22: the preset (519 values) and the atlas matched what's committed. The suite on `f4064a4` is 1593/1593 with 0 SCRIPT, SHADER or ERROR lines.
+- **The lead's look:** the stagger reads as a body knocked back with a broken guard. The Punk's cloth is clean and matte, with one white glint on the lens.
+- **Running since 16:45 CDT:**
+  - **The re-score:** one Opus reviewer scores J1-J14 on `f4064a4` (`wf_b65f3d05-528`, round `rescore`, args in `docs/reviews/M4/args-review-rescore.json`, worktree `.worktrees/m4-review-rescore-rs`).
+  - **P3-evidence:** a Sonnet builder records the evidence pack, the clips, the DM pair, the feel A/B stills and `docs/reviews/M4/evidence/` (`wf_7aae052c-809`, `workflow-build.js` with `docs/reviews/M4/args-P3-evidence.json`, worktree `.worktrees/m4-p3-evidence`, branch `m4/p3-evidence`).
+  - **If cut off:** rerun each with the same args.
+- **Next:**
+  1. Merge P3-evidence.
+  2. Put the re-score's figures in README (the scores line) and the PR.
+  3. If the re-score's mean is under 1.5, say so honestly in the DM, with the re-scorer's "one change per item".
+  4. Open the PR (never merged).
+  5. The final DM per A23 and §9.2.
+
 ### 2026-10-27 15:25 CDT: punk-detail merged (1580/1580 on its branch); toon-gloss launches after the 15:50 reset
 - **Merged:** `m4/fix-final-punk-detail-zones-and-strap` (`bb3f1f4`). The merged tree is its tested tree plus the lead's docs; the preset and palette are unchanged.
   - The Punk wears the sharp mask cut (`punk_art.tres` `metadata/detail_sharp`).
