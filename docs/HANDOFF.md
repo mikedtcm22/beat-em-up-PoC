@@ -4,6 +4,32 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-27 05:00 CDT: F-motion merged (1414/1414); P3-early launching beside F-look
+- **Merged:** F-motion (`9ae7166`). The merge was clean, the preset is at 505 values, and the suite is 1414/1414 with 0 SCRIPT, SHADER or ERROR lines.
+  - No move clip changed: 41 move files were hashed key for key first, and `test_motion_m4` holds them.
+  - The 17 `POLISHED_IDS` breathe, bounce and shift weight. MotionLegs IK plants the soles, and idle hurtboxes move under 1 cm.
+  - Boxer walks are stride-matched, so the soles slide at most 1.5 cm a step (M3: 0.9 m).
+  - Flinches have head lag and overshoot, and get-ups are eased.
+  - New: Look > Motion tunables and the Debug switch `look_motion_polish`.
+- **The lead's look:** the walk-in sheet has the feet planted and no pops.
+- **Feel calls for the final DM:**
+  - The enemies' stride-matched step rate is brisk ("a scurry at the approach pace"; `look_motion_stride_m`).
+  - The idle life is subtle at 1 m (bounded by A20's 1 cm hurtbox limit; the guard sway and head drift are the dials).
+- **Open risks from F-motion:**
+  - Three tests sit with no margin on ragdoll start poses (test_ragdoll face down, uppercut in a corner, test_ko_view revive).
+  - The first Bruiser or boss spawn pays about 17 ms more for its library build. Its request to `RoomKit.warm_up_art` is F-look's file, and P3-int takes it later.
+  - The player's relaxed walks still slide (F-player or P3-int).
+- **Launching:** P3-early (args `docs/reviews/M4/args-P3-early.json` plus `"only": ["P3-early"]`; worktree `.worktrees/m4-p3-early`, branch `m4/p3-early`). This is the part of P3-int that needs neither the pick nor F-look's files:
+  - the long take and the F4 showcase;
+  - the combat-log toggle (feel question 4);
+  - F-motion's two HumanoidRig requests (libraries rebuilt on Tuning.changed; a per-rig idle phase);
+  - gate gaps 10 and 12, and G1's gap 1 (the L5 act).
+- **P3-int proper keeps:**
+  - the flash toggles (1 and 2), which wait for F-look's rig_paint and toon files;
+  - `fp_knockdown_hide_torso` (3), which waits for the player art;
+  - `test_m4_done_when`, `look_probe` final, re-recording on the picked Punk, and the quiet-machine perf A/B.
+- **Concept pick:** none (DM read at 04:50).
+
 ### 2026-10-27 04:40 CDT: the gate's fixes merged (1385/1385); F-look and F-motion running; the one pick reminder sent
 - **Merged:**
   - `m4/fix-slice-chain-contract` (`85a24dd`): the hull normals in glTF axes, re-export proven to change only COLOR_0; the skin damage class; run.py step checks.
