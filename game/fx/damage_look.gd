@@ -2,22 +2,23 @@ class_name DamageLook
 extends RefCounted
 ## Damage you can see (Spec §6): an enemy's materials step from clean to bruised to
 ## bloodied as its health falls (Tuning.vfx_bruised_at, vfx_bloodied_at: 66% and 33%).
-## Applied by HumanoidRig.set_damage_look() to the rig's per-paint materials, as a detail
-## texture mixed over the flat albedo and mapped triplanar in each part's own space, so the
+## Applied by HumanoidRig.set_damage_look() (through RigPaint) to the rig's toon materials, as a
+## damage texture (the toon shader's `damage_tex`) mixed over the flat color and mapped triplanar
+## in each part's own space (the art's: its rest-pose position and normal, in CUSTOM0/1), so the
 ## marks ride the body. No red before the blood (Spec §10 keeps red for blood):
 ##   bruised    the skin darkens and takes big comic bruises (damage_bruised.png); the
 ##              clothes, cap and shoes take dirt, scuffs and tears (damage_scuffed.png);
 ##   bloodied   the same with blood splats over both (damage_bloodied.png on the skin,
 ##              damage_blood.png on the clothes). Shades, belts and soles stay.
+## The art is one material with one damage texture, so it shows the clothes' tiles at both
+## levels (scuffs, then blood): there is no skin mask in the palette to tell it where the skin is.
 ## Materials only: no mesh, pose or hurtbox changes. The hit flash (the contact flash's
 ## overlay pass, the parry's emission) still covers the marks.
-## The detail layer never switches off: switching it changes the material's shader variant,
-## and Godot drops a variant's shader once no material uses it, so the next bruise on a
-## clean cast built it again (3-5 ms on the main thread plus a pipeline compile, 12 ms the
-## first time in a run). prepare() turns it on when the rig's materials are built, with a
-## fully transparent texture (VfxArt.clear_detail()) standing for clean, which mixes in
-## nothing; apply() then swaps only that texture and the tile size, as set_flash() keeps
-## emission on.
+## A look is a swap of the `damage_tex` uniform and `damage_scale` only: the shader, and every
+## other uniform, stays. (On the StandardMaterial3Ds this replaced, switching the detail layer
+## on changed the shader variant and cost 3-12 ms on the first bruise; that is why the texture
+## slot is filled from the start, with a fully transparent texture (VfxArt.clear_detail())
+## standing for clean, which mixes in nothing.)
 
 enum Level { CLEAN, BRUISED, BLOODIED }
 
@@ -54,29 +55,33 @@ static func bruisable(paint: int) -> bool:
 			or paint == PlaceholderBody.Paint.PANTS or paint == PlaceholderBody.Paint.ACCENT
 
 
-## Turn the always-on detail layer on for `material`, a part painted `paint` (see the top
-## of this file), showing nothing: a clean look. Called once when a rig builds its
-## materials, so the shader variant exists, and stays, from the start. Paints that take no
-## marks keep the plain shader.
-static func prepare(material: StandardMaterial3D, paint: int) -> void:
+## Set up `material` (a toon material), a part painted `paint`, to show nothing: a clean look.
+## Called once when a rig builds its materials. Paints that take no marks keep `marks` at 0.
+static func prepare(material: ShaderMaterial, paint: int) -> void:
 	if not bruisable(paint):
 		return
-	material.detail_enabled = true
-	material.detail_blend_mode = BaseMaterial3D.BLEND_MODE_MIX
-	material.detail_uv_layer = BaseMaterial3D.DETAIL_UV_1
-	material.uv1_triplanar = true
-	material.detail_albedo = VfxArt.clear_detail()
-	material.uv1_scale = Vector3.ONE / maxf(Tuning.data.vfx_damage_tile_m, 0.01)
+	material.set_shader_parameter(&"marks", 1.0)
+	material.set_shader_parameter(&"damage_tex", VfxArt.clear_detail())
+	material.set_shader_parameter(&"damage_scale", _scale())
 
 
-## Show `level` on `material`, a part painted `paint`. Swaps the detail texture and the
-## tile size only, never a flag that picks the shader variant; clean is the transparent
-## texture. A material not prepared() yet is prepared first (once, switching its variant).
-static func apply(material: StandardMaterial3D, paint: int, level: int) -> void:
+## Show `level` on `material`, a part painted `paint`. Swaps the damage texture and the tile
+## scale only; clean is the transparent texture.
+static func apply(material: ShaderMaterial, paint: int, level: int) -> void:
 	if not bruisable(paint):
 		return
-	if not material.detail_enabled:
-		prepare(material, paint)
 	var tex := texture_for(paint, level)
-	material.detail_albedo = tex if tex else VfxArt.clear_detail()
-	material.uv1_scale = Vector3.ONE / maxf(Tuning.data.vfx_damage_tile_m, 0.01)
+	material.set_shader_parameter(&"damage_tex", tex if tex else VfxArt.clear_detail())
+	material.set_shader_parameter(&"damage_scale", _scale())
+
+
+## Show `level` on the skinned art's `material` (one texture for the whole body: the clothes').
+static func apply_art(material: ShaderMaterial, level: int) -> void:
+	var tex := texture_for(PlaceholderBody.Paint.BODY, level)
+	material.set_shader_parameter(&"damage_tex", tex if tex else VfxArt.clear_detail())
+	material.set_shader_parameter(&"damage_scale", _scale())
+
+
+## The shader's `damage_scale`: tiles per metre.
+static func _scale() -> float:
+	return 1.0 / maxf(Tuning.data.vfx_damage_tile_m, 0.01)

@@ -1,10 +1,28 @@
 extends GutTest
 ## The damage looks' material tests (game/fx/damage_look.gd, Milestone 2 WP2; Spec §6 "Damage
-## you can see"): a look changes the detail texture and the tile size and never the shader
+## you can see"): a look changes the damage texture and the tile size and never the shader
 ## variant, the whole-body flash covers it, and the bruises hold no red. Moved here from
 ## tests/test_vfx.gd by Milestone 4's contract scaffold, verbatim, so the toon work
 ## (P1-toon) owns the file that pins the materials; the VFX tests (P1-fx) stay in test_vfx.gd.
 ## The director's health-driven looks (VfxDirector) are tested there too.
+##
+## P1-toon retyped the materials: the rig's are ShaderMaterials of the one toon shader, a look is
+## its `damage_tex` and `damage_scale` uniforms, `marks` says which paints take it, and the
+## flash is `flash_color` times `flash_amount`. Where an assertion read a StandardMaterial3D
+## property it reads the uniform that replaced it, noted at each (docs/milestones/M4-calls/
+## P1-toon.md has the old -> new list).
+
+const TOON_PATHS: Array[String] = ["res://game/fx/toon.gdshader", "res://game/fx/toon_light.gdshaderinc"]
+
+
+## The material's `damage_tex` uniform (was detail_albedo).
+func _damage_tex(mat: ShaderMaterial) -> Variant:
+	return mat.get_shader_parameter(&"damage_tex")
+
+
+## True if the paint's material takes marks (was detail_enabled, which the dark paint left off).
+func _takes_marks(mat: ShaderMaterial) -> bool:
+	return float(mat.get_shader_parameter(&"marks")) > 0.5
 
 
 func test_rig_damage_look_changes_materials_only() -> void:
@@ -14,63 +32,70 @@ func test_rig_damage_look_changes_materials_only() -> void:
 	rig.build()
 	var meshes := rig.find_children("*", "MeshInstance3D", true, false).size()
 	var fist := rig.get_point_transform(&"RightFistPoint")
-	var mats: Dictionary[int, StandardMaterial3D] = rig.get(&"_materials")
+	var mats: Dictionary[int, ShaderMaterial] = rig.get(&"_materials")
 	rig.set_damage_look(DamageLook.Level.BRUISED)
 	assert_eq(rig.damage_look, DamageLook.Level.BRUISED)
-	assert_true(mats[PlaceholderBody.Paint.SKIN].detail_enabled, "bruised skin")
-	assert_eq(mats[PlaceholderBody.Paint.SKIN].detail_albedo, VfxArt.texture(&"damage_bruised"))
-	assert_true(mats[PlaceholderBody.Paint.SKIN].uv1_triplanar, "mapped triplanar")
+	assert_true(_takes_marks(mats[PlaceholderBody.Paint.SKIN]), "bruised skin")
+	assert_eq(_damage_tex(mats[PlaceholderBody.Paint.SKIN]), VfxArt.texture(&"damage_bruised"))
+	# Was uv1_triplanar: the shader maps the texture triplanar (three taps blended by the normal).
+	assert_string_contains(FileAccess.get_file_as_string(TOON_PATHS[0]), "texture(damage_tex, p.zy) * w.x + texture(damage_tex, p.xz) * w.y + texture(damage_tex, p.xy) * w.z")
 	for paint: int in [PlaceholderBody.Paint.BODY, PlaceholderBody.Paint.PANTS, PlaceholderBody.Paint.ACCENT]:
-		assert_eq(mats[paint].detail_albedo, VfxArt.texture(&"damage_scuffed"), "scuffed clothes: paint %d" % paint)
-	assert_false(mats[PlaceholderBody.Paint.DARK].detail_enabled, "shades and soles stay")
+		assert_eq(_damage_tex(mats[paint]), VfxArt.texture(&"damage_scuffed"), "scuffed clothes: paint %d" % paint)
+	assert_false(_takes_marks(mats[PlaceholderBody.Paint.DARK]), "shades and soles stay")
+	assert_eq(_damage_tex(mats[PlaceholderBody.Paint.DARK]), VfxArt.clear_detail(), "and show nothing")
 	rig.set_damage_look(DamageLook.Level.BLOODIED)
-	assert_eq(mats[PlaceholderBody.Paint.SKIN].detail_albedo, VfxArt.texture(&"damage_bloodied"))
+	assert_eq(_damage_tex(mats[PlaceholderBody.Paint.SKIN]), VfxArt.texture(&"damage_bloodied"))
 	for paint: int in [PlaceholderBody.Paint.BODY, PlaceholderBody.Paint.PANTS, PlaceholderBody.Paint.ACCENT]:
-		assert_eq(mats[paint].detail_albedo, VfxArt.texture(&"damage_blood"), "blood on paint %d" % paint)
-	assert_false(mats[PlaceholderBody.Paint.DARK].detail_enabled, "shades and soles stay")
+		assert_eq(_damage_tex(mats[paint]), VfxArt.texture(&"damage_blood"), "blood on paint %d" % paint)
+	assert_false(_takes_marks(mats[PlaceholderBody.Paint.DARK]), "shades and soles stay")
 	rig.set_damage_look(DamageLook.Level.CLEAN)
 	for paint: int in mats:
 		if DamageLook.bruisable(paint):
-			assert_eq(mats[paint].detail_albedo, VfxArt.clear_detail(), "clean again: nothing shows on paint %d" % paint)
+			assert_eq(_damage_tex(mats[paint]), VfxArt.clear_detail(), "clean again: nothing shows on paint %d" % paint)
 		else:
-			assert_false(mats[paint].detail_enabled, "still no detail layer: paint %d" % paint)
+			assert_false(_takes_marks(mats[paint]), "still no marks: paint %d" % paint)
 	assert_eq(rig.find_children("*", "MeshInstance3D", true, false).size(), meshes, "no meshes added")
 	assert_eq(rig.get_point_transform(&"RightFistPoint"), fist, "pose untouched")
 
 
-## Every stored property of `mat` but the two a damage look changes (the detail texture and
-## its tile size): together they pick the material's shader variant, so equal dictionaries
-## mean the same shader.
-func _variant_props(mat: StandardMaterial3D) -> Dictionary:
-	var out := {}
-	for info: Dictionary in mat.get_property_list():
-		var key: String = info.name
-		if (info.usage as int) & PROPERTY_USAGE_STORAGE != 0 and key != "detail_albedo" and key != "uv1_scale":
-			out[key] = mat.get(key)
+## The uniforms the toon shader declares (its own file and the lighting include): name -> value
+## on `mat`, but the two a damage look changes (the damage texture and its tile scale). Equal
+## dictionaries mean the same shader and the same everything else. (A ShaderMaterial headless
+## lists no parameters, so the names come from the shader source.)
+func _variant_props(mat: ShaderMaterial) -> Dictionary:
+	var out := {"shader": mat.shader}
+	var declared := RegEx.create_from_string("(?m)^uniform\\s+\\w+\\s+(\\w+)")
+	for path: String in TOON_PATHS:
+		for found in declared.search_all(FileAccess.get_file_as_string(path)):
+			var key := found.get_string(1)
+			if key != "damage_tex" and key != "damage_scale":
+				out[key] = mat.get_shader_parameter(key)
 	return out
 
 
-## perf-02: the detail layer is on from the build (a transparent texture while clean), so a
-## look change swaps the texture only and never the shader variant (a switch recompiled it
-## on the first bruise of every clean cast: 3-5 ms and a pipeline compile).
+## perf-02: the damage texture slot is filled from the build (a transparent texture while clean),
+## so a look change swaps the texture only and never the shader variant (on the StandardMaterial3D
+## this replaced, switching the detail layer on recompiled it on the first bruise of every clean
+## cast: 3-5 ms and a pipeline compile). Now: the shader and every uniform but `damage_tex` and
+## `damage_scale` are unchanged by a look. (Was: every stored property but detail_albedo and
+## uv1_scale.)
 func test_damage_look_never_switches_the_shader_variant() -> void:
 	var rig := HumanoidRig.new()
 	rig.build_hurtboxes = false
 	add_child_autofree(rig)
 	rig.build()
-	var mats: Dictionary[int, StandardMaterial3D] = rig.get(&"_materials")
+	var mats: Dictionary[int, ShaderMaterial] = rig.get(&"_materials")
 	var variants := {}
 	for paint: int in mats:
 		variants[paint] = _variant_props(mats[paint])
+		assert_eq(mats[paint].shader, ToonMaterials.TOON_SHADER, "the one toon shader: paint %d" % paint)
 	for paint: int in [PlaceholderBody.Paint.SKIN, PlaceholderBody.Paint.BODY, PlaceholderBody.Paint.PANTS,
 			PlaceholderBody.Paint.ACCENT]:
 		var mat := mats[paint]
-		assert_true(mat.detail_enabled, "detail layer on from the build: paint %d" % paint)
-		assert_true(mat.uv1_triplanar, "triplanar from the build: paint %d" % paint)
-		assert_eq(mat.detail_blend_mode, BaseMaterial3D.BLEND_MODE_MIX)
-		assert_eq(mat.detail_uv_layer, BaseMaterial3D.DETAIL_UV_1)
-		assert_eq(mat.detail_albedo, VfxArt.clear_detail(), "clean shows nothing: paint %d" % paint)
-	assert_false(mats[PlaceholderBody.Paint.DARK].detail_enabled, "the dark paint takes no marks")
+		assert_true(_takes_marks(mat), "marks on from the build: paint %d" % paint)
+		assert_eq(_damage_tex(mat), VfxArt.clear_detail(), "clean shows nothing: paint %d" % paint)
+		assert_false(bool(mat.get_shader_parameter(&"use_rest_custom")), "a primitive maps in its own space")
+	assert_false(_takes_marks(mats[PlaceholderBody.Paint.DARK]), "the dark paint takes no marks")
 	for level: int in [DamageLook.Level.BRUISED, DamageLook.Level.BLOODIED, DamageLook.Level.CLEAN,
 			DamageLook.Level.BRUISED, DamageLook.Level.CLEAN]:
 		rig.set_damage_look(level)
@@ -100,19 +125,21 @@ func test_damage_look_rereads_the_tile_size() -> void:
 	rig.build_hurtboxes = false
 	add_child_autofree(rig)
 	rig.build()
-	var skin: StandardMaterial3D = (rig.get(&"_materials") as Dictionary[int, StandardMaterial3D])[PlaceholderBody.Paint.SKIN]
-	assert_eq(skin.uv1_scale, Vector3.ONE / Tuning.data.vfx_damage_tile_m, "from the build")
+	var skin: ShaderMaterial = (rig.get(&"_materials") as Dictionary[int, ShaderMaterial])[PlaceholderBody.Paint.SKIN]
+	# Was uv1_scale = Vector3.ONE / tile: the shader's damage_scale is the tiles per metre.
+	assert_almost_eq(float(skin.get_shader_parameter(&"damage_scale")), 1.0 / Tuning.data.vfx_damage_tile_m, 1e-5, "from the build")
 	Tuning.data.vfx_damage_tile_m = 0.5
 	rig.set_damage_look(DamageLook.Level.BRUISED)
-	assert_eq(skin.uv1_scale, Vector3.ONE / 0.5)
+	assert_almost_eq(float(skin.get_shader_parameter(&"damage_scale")), 1.0 / 0.5, 1e-5)
 	rig.set_damage_look(DamageLook.Level.CLEAN)
-	assert_eq(skin.uv1_scale, Vector3.ONE / 0.5)
-	assert_eq(skin.detail_albedo, VfxArt.clear_detail())
+	assert_almost_eq(float(skin.get_shader_parameter(&"damage_scale")), 1.0 / 0.5, 1e-5)
+	assert_eq(_damage_tex(skin), VfxArt.clear_detail())
 
 
-## The whole-body flash (set_flash(), the parry's) is emission added over the lit, marked
-## albedo; the hit flash is the contact overlay instead (test_hit_flash.gd checks it keeps
-## the marks). Here: every marked material flashes whole-body, and keeps its marks.
+## The whole-body flash (set_flash(), the parry's) is the flash color times share added over the
+## lit, marked albedo (the toon shader's EMISSION; it was the material's emission); the hit flash
+## is the contact overlay instead (test_hit_flash.gd checks it keeps the marks). Here: every
+## marked material flashes whole-body, and keeps its marks.
 func test_whole_body_flash_still_covers_the_damage_look() -> void:
 	var rig := HumanoidRig.new()
 	rig.build_hurtboxes = false
@@ -120,15 +147,15 @@ func test_whole_body_flash_still_covers_the_damage_look() -> void:
 	rig.build()
 	rig.set_damage_look(DamageLook.Level.BLOODIED)
 	rig.set_flash(1.0)
-	var mats: Dictionary[int, StandardMaterial3D] = rig.get(&"_materials")
+	var mats: Dictionary[int, ShaderMaterial] = rig.get(&"_materials")
 	for paint: int in mats:
-		assert_true(mats[paint].emission_enabled, "paint %d can flash" % paint)
-		assert_eq(mats[paint].emission, Color.WHITE)
-		assert_eq(mats[paint].emission_energy_multiplier, 1.0, "paint %d flashes" % paint)
-	assert_true(mats[PlaceholderBody.Paint.SKIN].detail_enabled, "the marks stay under the flash")
+		assert_eq(mats[paint].get_shader_parameter(&"flash_color"), Color.WHITE)
+		assert_eq(mats[paint].get_shader_parameter(&"flash_amount"), 1.0, "paint %d flashes" % paint)
+	assert_true(_takes_marks(mats[PlaceholderBody.Paint.SKIN]), "the marks stay under the flash")
+	assert_eq(_damage_tex(mats[PlaceholderBody.Paint.SKIN]), VfxArt.texture(&"damage_bloodied"), "still the bloodied tile")
 	rig.set_flash(0.0)
-	assert_eq(mats[PlaceholderBody.Paint.SKIN].emission_energy_multiplier, 0.0)
-	assert_eq(mats[PlaceholderBody.Paint.SKIN].detail_albedo, VfxArt.texture(&"damage_bloodied"), "and show again")
+	assert_eq(mats[PlaceholderBody.Paint.SKIN].get_shader_parameter(&"flash_amount"), 0.0)
+	assert_eq(_damage_tex(mats[PlaceholderBody.Paint.SKIN]), VfxArt.texture(&"damage_bloodied"), "and show again")
 
 
 func test_bruises_are_not_red_paint() -> void:
