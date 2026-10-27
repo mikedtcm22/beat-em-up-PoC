@@ -4,6 +4,10 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-26 21:45 CDT: concepts sent; waiting on Game-boy's pick
+- Game-boy enabled billing on the Gemini project (21:40). Concept round 1 is in `assets/source/concepts/` (`concept_jobs.json`, `tools/gemini_image.py`, model `gemini-3-pro-image`, 2K): Street Punks A-D and hero sheets A-C. Both sheets were DMed at 21:42 CDT, asking for one Punk and one hero, mix-and-match allowed.
+- **Next, on his pick:** generate the orthographic front, side and back views of the picks (Gemini, with the picked image as a reference) for Tripo. The plan workflow is still running.
+
 ### 2026-10-26 21:30 CDT: M4 working session started; the plan workflow running; Gemini images blocked on Game-boy
 5-hour 5% (resets 2026-10-27 00:50 CDT), weekly 6%.
 - **Sessions:** the M3 session is renamed "Beat-em-up: M3 session (done)". This session is "Beat-em-up: working session". The old watcher session (`local_618146a1`, Haiku) was told to restart its `/loop` with the "Usage watcher" prompt; a session started from another session can't start a new one.
