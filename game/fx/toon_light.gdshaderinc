@@ -65,7 +65,9 @@ void light() {
 	float rim = smoothstep(rim_cut - 0.02, rim_cut + 0.02, pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), rim_power));
 	rim *= smoothstep(0.0, 0.3, ATTENUATION) * smoothstep(-0.35, 0.1, ndl);
 	shade += rim_strength * rim;
-	vec3 light_color = LIGHT_COLOR / PI;
+	// The lit band shows the albedo as it is, whatever the light's energy: the light's color is
+	// kept (a warm sun tints), its brightness is capped at 1 (a 1.2 sun does not wash a palette).
+	vec3 light_color = min(LIGHT_COLOR / PI, vec3(1.0));
 	DIFFUSE_LIGHT += shade * light_color;
 	// One hard highlight, lit side only.
 	float aligned = dot(NORMAL, normalize(LIGHT + VIEW));

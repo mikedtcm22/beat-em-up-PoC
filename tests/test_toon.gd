@@ -636,3 +636,52 @@ func test_warming_up_is_a_headless_no_op() -> void:
 	ToonMaterials.warm_up(self)
 	assert_eq(get_child_count(), children)
 	assert_null(find_child("ToonWarmUp", false, false))
+
+
+# --- The art fixture (the stand-in for the probe body until its GLB lands) ----------------------
+
+
+func test_the_art_fixture_has_every_channel_a_real_art_brings() -> void:
+	var Probe := preload("res://tests/fixtures/toon_art_probe.gd")
+	var mesh := Probe.mesh()
+	var format := mesh.surface_get_format(0)
+	for flag: int in [Mesh.ARRAY_FORMAT_VERTEX, Mesh.ARRAY_FORMAT_NORMAL, Mesh.ARRAY_FORMAT_COLOR, Mesh.ARRAY_FORMAT_TEX_UV,
+			Mesh.ARRAY_FORMAT_TEX_UV2, Mesh.ARRAY_FORMAT_CUSTOM0, Mesh.ARRAY_FORMAT_CUSTOM1, Mesh.ARRAY_FORMAT_BONES,
+			Mesh.ARRAY_FORMAT_WEIGHTS]:
+		assert_ne(format & flag, 0, "the fixture has format flag %d" % flag)
+	var arrays := mesh.surface_get_arrays(0)
+	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var colors: PackedColorArray = arrays[Mesh.ARRAY_COLOR]
+	var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+	var uv2: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV2]
+	var rest_position: PackedFloat32Array = arrays[Mesh.ARRAY_CUSTOM0]
+	var rest_normal: PackedFloat32Array = arrays[Mesh.ARRAY_CUSTOM1]
+	assert_eq(rest_position.size(), vertices.size() * 3, "CUSTOM0 is the rest position (RGB float)")
+	assert_eq(rest_normal.size(), vertices.size() * 3, "CUSTOM1 is the rest normal (RGB float)")
+	for i in vertices.size():
+		assert_almost_eq(Vector3(rest_position[i * 3], rest_position[i * 3 + 1], rest_position[i * 3 + 2]), vertices[i], Vector3.ONE * 1e-5)
+		var baked := Vector3(colors[i].r, colors[i].g, colors[i].b) * 2.0 - Vector3.ONE
+		assert_almost_eq(baked, normals[i], Vector3.ONE * 0.01, "COLOR is the smooth normal as n * 0.5 + 0.5")
+		assert_between(uv2[i].x, 0.0, 1.0)
+		assert_between(uv2[i].y, 0.0, 1.0)
+		assert_between(vertices[i].y, -0.001, Probe.HEIGHT + 0.001, "stands on y = 0")
+	assert_almost_eq(mesh.get_aabb().size.y, Probe.HEIGHT, 0.01)
+
+
+func test_the_art_fixture_draws_with_the_art_material_and_its_mask_headless() -> void:
+	var Probe := preload("res://tests/fixtures/toon_art_probe.gd")
+	var atlas := Probe.atlas()
+	var material := ToonMaterials.art(atlas, Probe.mask())
+	var holder := Node3D.new()
+	add_child_autofree(holder)
+	var skeleton := Probe.build(holder, material, ToonMaterials.outline(), 45.0)
+	var instance := skeleton.get_node("ArtFixture") as MeshInstance3D
+	assert_eq(instance.material_override, material)
+	assert_eq((instance.material_overlay as ShaderMaterial).get_shader_parameter(&"mode"), ToonMaterials.Hull.ART)
+	assert_eq(skeleton.get_bone_count(), 2)
+	assert_eq(instance.skin.get_bind_count(), 2)
+	# The marks: swatches with alpha 1 take them, the dark swatch (alpha 0.5) does not.
+	var image := atlas.get_image()
+	assert_eq(image.get_pixelv(Vector2i(Probe.swatch_uv(Probe.SLOT_SKIN) * Vector2(Probe.ATLAS_SIZE))).a, 1.0)
+	assert_almost_eq(image.get_pixelv(Vector2i(Probe.swatch_uv(Probe.SLOT_DARK) * Vector2(Probe.ATLAS_SIZE))).a, 0.5, 0.01)
+	assert_string_contains(_source(TOON_PATH), "takes_marks *= step(0.75, swatch.a)")
