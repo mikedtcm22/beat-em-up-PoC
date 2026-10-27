@@ -225,7 +225,8 @@ func test_the_sun_tonemap_and_fill_tunables_sit_in_look_and_save_in_presets() ->
 	for info: Dictionary in Tuning.tuning_properties():
 		group_of[StringName(info.name)] = str(info.group)
 	for property: StringName in [&"look_sun_elevation_deg", &"look_sun_yaw_deg", &"look_sun_energy",
-			&"look_sun_shadow_blur", &"look_fill_strength", &"look_fill_yaw_deg", &"look_fill_pitch_deg", &"look_tonemap"]:
+			&"look_sun_shadow_blur", &"look_fill_strength", &"look_fill_yaw_deg", &"look_fill_pitch_deg", &"look_tonemap",
+			&"look_detail_cut"]:
 		assert_eq(group_of.get(property), "Look", "%s is in Look" % property)
 		assert_true(Tuning.is_preset_property(property), "%s is saved in presets" % property)
 

@@ -233,6 +233,17 @@ static func band_shade(lit: float, edge: float, band_1: float, band_2: float, mi
 	return out
 
 
+## The share of ink a surface takes from its detail mask, as toon.gdshader computes it: `mask` is the
+## filtered mask value at the pixel, `gradient` how much it changes across one pixel (fwidth) and
+## `cut` the sharp ink's cut (`look_detail_cut`). `sharp` false is the linear mix (the mask as it is:
+## the Punk's); true cuts it with an edge one pixel wide, so a line is as hard as the hull's.
+static func detail_ink(mask: float, gradient: float, cut: float, sharp: bool) -> float:
+	if not sharp:
+		return mask
+	var edge := maxf(0.5 * gradient, 0.0001)
+	return smoothstep(cut - edge, cut + edge, mask)
+
+
 ## The hull's push direction for a vertex of a mesh, as toon_outline.gdshader computes it (unit
 ## per axis for boxes and cylinders): `mode` a Hull, `vertex` and `normal` the mesh's own.
 static func hull_direction(mode: int, vertex: Vector3, normal: Vector3) -> Vector3:
