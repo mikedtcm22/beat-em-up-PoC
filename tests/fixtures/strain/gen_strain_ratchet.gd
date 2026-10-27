@@ -1,10 +1,10 @@
 extends Node
-## Writes tests/fixtures/art/strain_ratchet.json: the per-clip figures of the shipped art's A19 strain run (tests/art_strain.gd),
+## Writes tests/fixtures/strain/strain_ratchet.json: the per-clip figures of the shipped art's A19 strain run (tests/art_strain.gd),
 ## what the final art does today, which test_skinned_art and test_m4_done_when hold every clip to, plus CLIP_MARGIN. Each art's
 ## entry is `{"<clip>": {high, low, max, min, bad}}` (the worst p99.9, the lowest p0.1, the longest stretch and the deepest
 ## compression over the clip's five phases; `bad` is a peak flex's squashed or turned-over triangles), rounded to 4 places.
 ##
-## A scene (the rigs read autoloads): `godot --headless res://tests/fixtures/art/gen_strain_ratchet.tscn --quit-after 5`
+## A scene (the rigs read autoloads): `godot --headless res://tests/fixtures/strain/gen_strain_ratchet.tscn --quit-after 5`
 ## (about 15 s). It also prints the whole-run figures SHIPPED's rows are set from (today's figure plus a margin). Run it when a
 ## ratchet is meant to move, after a GLB rebuild that improved the strain, and commit the file with the new SHIPPED figures: a
 ## ratchet only ever moves down.

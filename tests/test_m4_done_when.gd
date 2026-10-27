@@ -577,7 +577,7 @@ func test_a7_the_strain_of_every_animation_and_move_is_held_at_its_ratchet() -> 
 		# peak flexes' share and every clip's own figures held to today's plus a margin. A count of problem lines is not held: it
 		# saturates at two a sample, so no regression could raise it.
 		var table := ArtStrain.load_table(row.name)
-		assert_false(table.is_empty(), "%s: the per-clip strain figures are shipped (tests/fixtures/art/strain_ratchet.json)" % row.name)
+		assert_false(table.is_empty(), "%s: the per-clip strain figures are shipped (tests/fixtures/strain/strain_ratchet.json)" % row.name)
 		var broken := ArtStrain.ratchet_problems(run, shipped, table)
 		assert_eq(broken.size(), 0, "%s: every strain ratchet holds: %s" % [row.name, broken.slice(0, 6)])
 		_note("A7", run.problems.is_empty() and over.is_empty(), "%s: %d samples, %d with every number inside the bars, worst p99.9 %.2f, %d problem lines %s; peak flexes over the %d-triangle bar: %s (worst %.2f%% of the triangles; the plan's bar is 0.5%%); %s" % [

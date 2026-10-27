@@ -1584,7 +1584,7 @@ func test_the_strain_of_the_shipped_glbs_is_reported_for_the_gate() -> void:
 		assert_gt(run.samples, 200, "%s: every clip at five phases and the peak flexes" % row.path)
 		print("A19 strain of %s: %s" % [row.path, ArtStrain.margin_text(run, row)])
 		var table := ArtStrain.load_table(row.name)
-		assert_false(table.is_empty(), "%s: the per-clip strain figures are shipped (tests/fixtures/art/strain_ratchet.json)" % row.path)
+		assert_false(table.is_empty(), "%s: the per-clip strain figures are shipped (tests/fixtures/strain/strain_ratchet.json)" % row.path)
 		var broken := ArtStrain.ratchet_problems(run, row, table)
 		assert_eq(broken.size(), 0, "%s: every strain ratchet holds (the whole run's and each clip's): %s" % [row.path, broken.slice(0, 6)])
 

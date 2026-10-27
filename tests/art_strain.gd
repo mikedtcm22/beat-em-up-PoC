@@ -39,7 +39,7 @@ const PUNK_MOVES: Array[String] = ["punk_jab", "punk_cross", "punk_shove"]
 ## - `high_max`, `low_min`, `max_max`, `min_min`: the worst p99.9, the worst p0.1 and the extreme edge's stretch and compression
 ##   over the whole run (about 5% over today; the compression floor is the number that a mis-weighted vertex would take to zero);
 ## - `flex_share_max`: the peak flexes' triangles under 15% of their rest area or turned over, as a share of the art's triangles;
-## - the per-clip table (RATCHET_TABLE_PATH, made by tests/fixtures/art/gen_strain_ratchet.tscn from today's run): every clip's own
+## - the per-clip table (RATCHET_TABLE_PATH, made by tests/fixtures/strain/gen_strain_ratchet.tscn from today's run): every clip's own
 ##   p99.9, p0.1, max and min over its five phases, and every peak flex's bad triangles, held to CLIP_MARGIN over today's, so a
 ##   regression in a clip that is not the art's worst shows too.
 ## The old SHIPPED rows read "problems_max 560 / 480"; ratchet_problems() is what test_skinned_art and test_m4_done_when assert.
@@ -52,7 +52,7 @@ const SHIPPED: Array[Dictionary] = [
 ## The per-clip ratchet's margin over today's figure (a ratio on p99.9 and the stretch; its inverse on p0.1 and the compression),
 ## and the flex triangle count's (a ratio, and two triangles).
 const CLIP_MARGIN := 0.10
-const RATCHET_TABLE_PATH := "res://tests/fixtures/art/strain_ratchet.json"
+const RATCHET_TABLE_PATH := "res://tests/fixtures/strain/strain_ratchet.json"
 
 static var _runs: Dictionary[String, Dictionary] = {}
 
@@ -370,7 +370,7 @@ static func ratchet_problems(run_result: Dictionary, shipped: Dictionary, table:
 	for clip: String in rows:
 		var row: Dictionary = rows[clip]
 		if not table.has(clip):
-			out.append("%s: no per-clip ratchet figure (regenerate tests/fixtures/art/strain_ratchet.json)" % clip)
+			out.append("%s: no per-clip ratchet figure (regenerate tests/fixtures/strain/strain_ratchet.json)" % clip)
 			continue
 		var held: Dictionary = table[clip]
 		if row.high > float(held.high) * grow + 0.005:
