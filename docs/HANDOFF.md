@@ -4,8 +4,8 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
-### 2026-10-27 19:05 CDT: Milestone 4 delivered; PR #4 open; the final DM sent; waiting on Game-boy (pause 2)
-- **The DM to Game-boy** (Slack D0AQUKX5DB6, from 18:59 CDT), in order:
+### 2026-10-27 18:35 CDT: Milestone 4 delivered; PR #4 open; the final DM sent; waiting on Game-boy (pause 2)
+- **The DM to Game-boy** (Slack D0AQUKX5DB6, from 18:30 CDT), in order:
   1. The main message: the run command as a bash block, the A23 question word for word, the 14 numbered rubric items with the re-score (mean 1.50), and the post-re-score fixes.
   2. The M3/M4 pair at 1 m and three concept stills (Punk at 1 m, Punk full figure, hero C against his first-person limbs).
   3. Three clips: the long take (5.4 MB), the six-Punk fight (8.0 MB), his arms and legs (1.6 MB).
