@@ -1048,13 +1048,65 @@ extends Resource
 ## The middle band's brightness as a share of the lit band's (the look bible: 72%). The
 ## shadow band sits below it, tinted, never black.
 @export_range(0.3, 1.0, 0.01) var look_mid_level: float = 0.72
+## Where the bands break, on the light a surface gets (its angle to the sun, times the shadow
+## map): below the first it is in shadow, below the second in the mid band, above it lit.
+@export_range(0.0, 1.0, 0.01) var look_band_1: float = 0.25
+## The second break: above it a surface is lit (see look_band_1).
+@export_range(0.0, 1.0, 0.01) var look_band_2: float = 0.62
+## How wide a band edge is, in pixels at 1080p (the look bible: at most 2 at 1 m). 0 is a hard step.
+@export_range(0.0, 8.0, 0.1) var look_band_soft: float = 1.2
+## The shadow band's brightness as a share of the lit band's (the look bible: at least 40%,
+## never black).
+@export_range(0.2, 1.0, 0.01) var look_shadow_level: float = 0.42
+## The color the shadow band's hue is shifted toward (a violet), by look_shadow_tint_amount.
+@export var look_shadow_tint: Color = Color(0.36, 0.32, 0.55)
+## How far the shadow's hue is shifted toward look_shadow_tint, brightness kept (the look
+## bible: 45%).
+@export_range(0.0, 1.0, 0.01) var look_shadow_tint_amount: float = 0.45
+## The one hard highlight shows where a surface faces the half vector this closely (1 is a
+## point; the look bible keeps it under 3% of the visible surface).
+@export_range(0.5, 1.0, 0.001) var look_spec_cut: float = 0.99
+## How bright the highlight is.
+@export_range(0.0, 2.0, 0.05) var look_spec_strength: float = 0.5
+## The factor on the highlight of glossy materials (shades, belts, soles, the pipe).
+@export_range(1.0, 8.0, 0.1) var look_spec_gloss: float = 3.0
+## The stepped rim on characters shows past this share of a grazing view (0 to 1, higher is
+## thinner; the look bible: about 25% of the silhouette band).
+@export_range(0.0, 1.0, 0.01) var look_rim_cut: float = 0.7
+## The rim's falloff toward the middle of the body.
+@export_range(0.5, 8.0, 0.1) var look_rim_power: float = 3.0
+## How much the rim lifts the value (the look bible: +35%).
+@export_range(0.0, 1.0, 0.01) var look_rim_strength: float = 0.35
+## Halftone dots in the shadow band of the room's surfaces, in screen space (off, as the look
+## bible says).
+@export var look_halftone_env: bool = false
+## The same on the characters (off).
+@export var look_halftone_chars: bool = false
+## A halftone cell's size in pixels at 1080p.
+@export_range(2.0, 24.0, 0.5) var look_halftone_cell_px: float = 6.0
+## How dark the dots are.
+@export_range(0.0, 1.0, 0.01) var look_halftone_strength: float = 0.5
 
 @export_subgroup("Outline")
 ## The inverted-hull outline's width in pixels at 1080p (the look bible: 3.5 to 4 px at 1 to
 ## 3 m, never above 4.5).
 @export_range(0.5, 8.0, 0.05) var look_outline_px: float = 3.75
+## The line holds its pixel width from this distance from the lens (m) out to look_outline_far_m;
+## nearer it is as wide in the world as here (so wider on screen: the player's own arms are
+## seen at 0.3 to 0.6 m).
+@export_range(0.1, 5.0, 0.05) var look_outline_near_m: float = 0.3
+## Beyond this distance (m) the line is as wide in the world as here, so thinner on screen
+## (the look bible keeps it at 2 px or more out to 10 m).
+@export_range(2.0, 60.0, 0.5) var look_outline_far_m: float = 12.0
+## The player's own body in first person is drawn this much of the line's width (the look
+## bible: x0.8).
+@export_range(0.0, 1.5, 0.05) var look_outline_fp_scale: float = 0.8
+## The line fades out from this distance from the lens (m) to twice it, so a lens never sits
+## inside a hull.
+@export_range(0.0, 0.5, 0.01) var look_outline_lens_fade_m: float = 0.1
 ## Primitive characters, dummies, props and the room's boxes get the hull too, so the
 ## placeholders sit beside the art in one style (Spec §10 asks for it on characters and props).
+## Read when a body, a prop or a room's box is built: a change shows on the next one.
 @export var look_hull_on_placeholders: bool = true
 
 @export_subgroup("Edges")

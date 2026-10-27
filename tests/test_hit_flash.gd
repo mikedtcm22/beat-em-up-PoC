@@ -138,13 +138,20 @@ func _hits_on(victim: CombatActor) -> Array[HitInfo]:
 	return out
 
 
-## Every material of `rig` (one per paint).
-func _materials(rig: HumanoidRig) -> Array[StandardMaterial3D]:
-	var out: Array[StandardMaterial3D] = []
-	var mats: Dictionary[int, StandardMaterial3D] = rig.get(&"_materials")
+## Every material of `rig` (one per paint). (M4, P1-toon: the toon ShaderMaterials; the
+## whole-body flash is their `flash_color` times `flash_amount`, was `emission` times
+## `emission_energy_multiplier`.)
+func _materials(rig: HumanoidRig) -> Array[ShaderMaterial]:
+	var out: Array[ShaderMaterial] = []
+	var mats: Dictionary[int, ShaderMaterial] = rig.get(&"_materials")
 	for paint: int in mats:
 		out.append(mats[paint])
 	return out
+
+
+## The whole-body flash share on `mat` (was emission_energy_multiplier).
+func _flash_amount(mat: ShaderMaterial) -> float:
+	return float(mat.get_shader_parameter(&"flash_amount"))
 
 
 ## Whether `rig` draws its contact-flash overlay: on every material, and only then.
@@ -200,9 +207,10 @@ func test_a_clean_hit_flashes_around_its_contact_point() -> void:
 	assert_eq(Color(overlay.get_shader_parameter(&"flash_color")), Color.WHITE, "white")
 	assert_eq(overlay.render_priority, Material.RENDER_PRIORITY_MIN, "under the comic effects")
 	for mat in _materials(dummy.rig):
-		assert_eq(mat.emission_energy_multiplier, 0.0, "no whole-body emission")
-	var mats: Dictionary[int, StandardMaterial3D] = dummy.rig.get(&"_materials")
-	assert_true(mats[PlaceholderBody.Paint.SKIN].detail_enabled, "the damage look stays under it")
+		assert_eq(_flash_amount(mat), 0.0, "no whole-body flash")
+	var mats: Dictionary[int, ShaderMaterial] = dummy.rig.get(&"_materials")
+	# Was detail_enabled: the skin still takes marks (and a flash adds none of its own).
+	assert_gt(float(mats[PlaceholderBody.Paint.SKIN].get_shader_parameter(&"marks")), 0.5, "the damage look stays under it")
 	assert_false(_overlay_on(player.rig), "only the victim flashes")
 	assert_false(_overlay_on(dummies[1].rig))
 
@@ -274,11 +282,11 @@ func test_the_parry_flash_stays_whole_body() -> void:
 	assert_true(hit.perfect_block, "a fresh guard parries the jab")
 	assert_false(_overlay_on(dummy.rig), "no contact overlay")
 	for mat in _materials(dummy.rig):
-		assert_eq(mat.emission, CombatActor.PARRY_FLASH_COLOR, "cyan")
-		assert_almost_eq(mat.emission_energy_multiplier, 1.0, 1e-6, "over the whole body")
+		assert_eq(mat.get_shader_parameter(&"flash_color"), CombatActor.PARRY_FLASH_COLOR, "cyan")
+		assert_almost_eq(_flash_amount(mat), 1.0, 1e-6, "over the whole body")
 	await _ticks(Tuning.data.parry_flash_frames + 1)
 	for mat in _materials(dummy.rig):
-		assert_eq(mat.emission_energy_multiplier, 0.0, "cleared after parry_flash_frames")
+		assert_eq(_flash_amount(mat), 0.0, "cleared after parry_flash_frames")
 
 
 func test_idle_rigs_draw_no_overlay_pass() -> void:
@@ -295,7 +303,7 @@ func test_idle_rigs_draw_no_overlay_pass() -> void:
 	assert_false(_overlay_on(dummy.rig), "the overlay comes off once the flash ends")
 	for mat in _materials(dummy.rig):
 		assert_null(mat.next_pass)
-		assert_eq(mat.emission_energy_multiplier, 0.0)
+		assert_eq(_flash_amount(mat), 0.0)
 	# A reset mid-flash clears it too.
 	_clear_hits()
 	await _ticks(30)
@@ -366,7 +374,7 @@ func test_the_flash_rides_the_body_it_struck() -> void:
 	assert_null(rig.flash_overlay())
 	rig.flash_at(point, 0.0, 0.25, 0.5)
 	assert_null(rig.flash_overlay(), "zero strength: no overlay")
-	assert_eq(_materials(rig)[0].emission_energy_multiplier, 0.0, "and the whole-body flash ended")
+	assert_eq(_flash_amount(_materials(rig)[0]), 0.0, "and the whole-body flash ended")
 	rig.flash_at(point, 1.0, 0.25, 0.5)
 	rig.set_flash(0.0)
 	assert_null(rig.flash_overlay())
