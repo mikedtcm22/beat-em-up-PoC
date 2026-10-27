@@ -4,6 +4,21 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-27 06:40 CDT: F-player-int merged (1507/1507); P3-flash running; then only pick work is left
+- **Merged:** F-player-int (`f2f987c`, suite 1507/1507, 0 SCRIPT, SHADER or ERROR lines).
+  - The player wears CharacterArt through CombatActor.art. `player_art.tres` names `assets/export/characters/player/player.glb` in metadata, and a missing file means M3's primitives with no warning.
+  - The probe body is worn behind the Debug switch `look_player_art_probe`. `Body__fp_hidden` is on layer 2.
+  - `test_art_player`: the lens rules on the skinned probe. A hold's nearest forearm or hand is 0.320 m, the own body at most 25.1% of the view, and the KO view's nearest vertex 0.344 m.
+  - Feel question 3 (`fp_knockdown_hide_torso`) is wired, default off: 74% to 15% on primitives, 37% to 0% on the probe. On art it hides the whole visible body unless the hero GLB adds a `Body__fp_torso` mesh.
+  - New acts: 'Look: my arms and legs' (pa1) and 'Look: my knockdown' (pa2). Record them with `CAPTURE_ARGS=--tune=look_player_art_probe=1`.
+- **Requests carried:**
+  - `ToonMaterials.outline(first_person)` plus RigPaint, so player.gd stops calling `ToonMaterials._hull` (P3-int).
+  - F-player-art: put the hero GLB at the path above; it is worn with no edit. Optionally add `Body__fp_torso`.
+  - The lead adds the hero and the real Punk to `test_skinned_art`'s A19 strain run.
+- **Running:** P3-flash (`wf_d718820d-4e0`).
+- **Concept pick:** none (DM read at 06:35).
+- **Usage:** 5-hour 9%, weekly 29%.
+
 ### 2026-10-27 05:55 CDT: P3-early and F-look merged (1491/1491); F-player-int running on the probe body; still no pick
 - **Merged:**
   - P3-early (`c5878fa`, suite 1472/1472):
