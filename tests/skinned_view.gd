@@ -60,6 +60,8 @@ class MeshData:
 	var group_corners: Array[PackedVector3Array] = []
 	var group_triangles: Array[PackedInt32Array] = []
 	var soup_mixed: PackedInt32Array = PackedInt32Array()
+	## The three vertex indices of each mixed triangle, flat.
+	var mixed_corner: PackedInt32Array = PackedInt32Array()
 	var mixed_vertex_entry: PackedInt32Array = PackedInt32Array()
 	var bind_aabb: Array[AABB] = []
 
@@ -77,6 +79,9 @@ class Soup:
 	var face_triangle: PackedInt32Array
 	## The camera the soup was made for (groups wholly outside its view are left out).
 	var camera_key: int = 0
+	## The triangles, 3 vertices each in the winding of the mesh. TriangleMesh.intersect_ray()
+	## reports a normal that always faces the ray, so front and back faces are told from these.
+	var faces: PackedVector3Array
 
 static var _data: Dictionary[int, MeshData] = {}
 static var _soups: Dictionary[int, Soup] = {}
@@ -211,10 +216,87 @@ static func surface_gap(mi: MeshInstance3D, rig: HumanoidRig, point: Vector3, gl
 	return best
 
 
+## How the art fills the hurtboxes at the rig's current pose (row A6): for each of
+## PlaceholderBody.hurt_specs(), the axis points (the sphere's centre; five along a capsule's
+## axis) that lie outside the art, and the share of the vertices on the region's bones that lie
+## within the hurtbox's radius plus `slack_m` of its axis (the head: `head_slack_m`): the
+## torso's are the Hips to UpperChest bones', the legs' the UpperLeg and LowerLeg's (the shoes
+## run past the hurtbox's foot end), the head's the Head's. Vertices on one bind only count.
+## Returns `{outside: Array[String], torso, legs, head: shares}`. A point is inside when a ray
+## from it along an axis leaves through a back face first (the first surface it meets seen from
+## inside; a point outside a closed mesh never has one).
+static func hurtbox_fit(rig: HumanoidRig, slack_m: float = 0.06, head_slack_m: float = 0.05) -> Dictionary:
+	var soups: Array[Soup] = []
+	var meshes: Array[MeshInstance3D] = []
+	for mi: MeshInstance3D in rig.art_meshes():
+		soups.append(_soup(mi, rig))
+		meshes.append(mi)
+	var world := rig.global_transform
+	var outside: Array[String] = []
+	var share := {torso = [0, 0], legs = [0, 0], head = [0, 0]}
+	var regions := {
+		&"Hips": &"torso", &"Spine": &"torso", &"Chest": &"torso", &"UpperChest": &"torso",
+		&"LeftUpperLeg": &"legs", &"LeftLowerLeg": &"legs", &"RightUpperLeg": &"legs", &"RightLowerLeg": &"legs",
+		&"Head": &"head",
+	}
+	for spec: PlaceholderBody.HurtSpec in PlaceholderBody.hurt_specs():
+		var from := world * (rig.animation_pose(rig.skeleton.find_bone(spec.bone_a)) * (spec.offset_a * rig.rig_scale()))
+		var to := from
+		if spec.is_capsule():
+			to = world * (rig.animation_pose(rig.skeleton.find_bone(spec.bone_b)) * (spec.offset_b * rig.rig_scale()))
+		for i: int in 5 if spec.is_capsule() else 1:
+			var point := from.lerp(to, i / 4.0)
+			var inside := false
+			for soup: Soup in soups:
+				inside = inside or _inside(soup, point)
+			if not inside:
+				outside.append("%s axis point %d" % [spec.name, i])
+		# The vertices of the bones this hurtbox covers, against its axis.
+		for mi: MeshInstance3D in meshes:
+			var posed := mi.global_transform * skin_vertices(mi, rig)
+			var data := _mesh_data(mi.mesh as ArrayMesh)
+			for v: int in posed.size():
+				if data.rigid_bind[v] < 0:
+					continue
+				var bone := StringName(mi.skin.get_bind_name(data.rigid_bind[v]))
+				var region: StringName = regions.get(bone, &"")
+				var covers := (region == &"torso" and spec.region == CombatTypes.Region.TORSO) \
+						or (region == &"legs" and spec.region == CombatTypes.Region.LEGS \
+								and String(bone).begins_with("Left") == String(spec.bone_a).begins_with("Left")) \
+						or (region == &"head" and spec.region == CombatTypes.Region.HEAD)
+				if not covers:
+					continue
+				var gap := posed[v].distance_to(Geometry3D.get_closest_point_to_segment(posed[v], from, to))
+				var limit := spec.radius * rig.rig_scale() + (head_slack_m if region == &"head" else slack_m)
+				share[region][1] += 1
+				if gap <= limit:
+					share[region][0] += 1
+	return {
+		outside = outside,
+		torso = float(share.torso[0]) / maxi(share.torso[1], 1),
+		legs = float(share.legs[0]) / maxi(share.legs[1], 1),
+		head = float(share.head[0]) / maxi(share.head[1], 1),
+	}
+
+
+## True when `point` lies inside the posed mesh of `soup`: an axis ray from it meets a back face
+## first, which is only so from inside a closed shell (overlapping shells block some rays: one
+## is enough).
+static func _inside(soup: Soup, point: Vector3) -> bool:
+	if soup.triangles == null:
+		return false
+	for dir: Vector3 in [Vector3.RIGHT, Vector3.LEFT, Vector3.UP, Vector3.DOWN, Vector3.FORWARD, Vector3.BACK]:
+		var hit := soup.triangles.intersect_ray(point, dir)
+		if not hit.is_empty() and not _is_front(soup, int(hit.face_index), dir):
+			return true
+	return false
+
+
 ## Art against its view proxies at camera `cam`: the same grid cast both ways. Returns
 ## `{cells, differ (cells one covers and the other does not), art_share, proxy_share (the
-## shares of the view each covers), nearest (the most meters the art is nearer the lens than
-## the proxies where both are hit; 0 when never), both}`. The proxies are the rig's own
+## shares of the view each covers), nearest (the meters the art is nearer the lens than the
+## proxies where both are hit: the second largest gap over the cells, so one cell on a
+## silhouette's edge is no bulge; 0 when never), both}`. The proxies are the rig's own
 ## primitives, found by FPView.hits() (they are hidden while the art shows, but count: A4).
 static func compare_with_proxies(rig: HumanoidRig, cam: Transform3D, cols: int = FPView.COLS) -> Dictionary:
 	var proxy_cells := FPView.hits(rig, cam, cols)
@@ -238,6 +320,7 @@ static func compare_with_exact_proxies(rig: HumanoidRig, cam: Transform3D, cols:
 		if mesh.layers & CombatTypes.bit(CombatTypes.VIS_FP_HIDDEN):
 			continue
 		faces.append_array(mesh.global_transform * mesh.mesh.get_faces())
+	soup.faces = faces
 	soup.triangles = TriangleMesh.new()
 	soup.triangles.create_from_faces(faces)
 	var rows := FPView.rows(cols)
@@ -276,6 +359,7 @@ static func _compare(art_cells: Array[Dictionary], proxy_covered: Array[bool], p
 	var art_count := 0
 	var proxy_count := 0
 	var nearest := 0.0
+	var runner_up := 0.0
 	var both := 0
 	for i: int in art_cells.size():
 		var art_hit := not art_cells[i].is_empty()
@@ -285,7 +369,14 @@ static func _compare(art_cells: Array[Dictionary], proxy_covered: Array[bool], p
 		differ += int(art_hit != proxy_hit)
 		if art_hit and proxy_hit:
 			both += 1
-			nearest = maxf(nearest, proxy_depths[i] - float(art_cells[i].depth))
+			# The two largest gaps: one cell grazing a silhouette edge is not a bulge.
+			var gap := proxy_depths[i] - float(art_cells[i].depth)
+			if gap > nearest:
+				runner_up = nearest
+				nearest = gap
+			elif gap > runner_up:
+				runner_up = gap
+	nearest = runner_up
 	var cells := art_cells.size()
 	return {
 		cells = cells, differ = differ, differ_share = float(differ) / cells,
@@ -575,16 +666,13 @@ static func _soup(mi: MeshInstance3D, rig: HumanoidRig, cam: Variant = null) -> 
 			posed[v] += (matrices[data.mixed_vertex_entry[e + 1]] * data.vertices[v]) * (data.mixed_vertex_entry[e + 2] / 65536.0)
 		posed = world * posed
 		var mixed := PackedVector3Array()
-		mixed.resize(data.soup_mixed.size() * 3)
-		var at := 0
-		for tri: int in data.soup_mixed:
-			mixed[at] = posed[data.indices[tri * 3]]
-			mixed[at + 1] = posed[data.indices[tri * 3 + 1]]
-			mixed[at + 2] = posed[data.indices[tri * 3 + 2]]
-			at += 3
+		mixed.resize(data.mixed_corner.size())
+		for c: int in data.mixed_corner.size():
+			mixed[c] = posed[data.mixed_corner[c]]
 		faces.append_array(mixed)
 		face_triangle.append_array(data.soup_mixed)
 	soup.face_triangle = face_triangle
+	soup.faces = faces
 	# Nothing of it in view: no triangle mesh (create_from_faces() errors on an empty soup).
 	soup.triangles = null
 	if not faces.is_empty():
@@ -648,6 +736,10 @@ static func _prepare_soup(data: MeshData) -> void:
 			data.group_triangles[k].append(t)
 		else:
 			data.soup_mixed.append(t)
+	for t: int in data.soup_mixed:
+		data.mixed_corner.append(data.indices[t * 3])
+		data.mixed_corner.append(data.indices[t * 3 + 1])
+		data.mixed_corner.append(data.indices[t * 3 + 2])
 	# Each vertex of a mixed triangle, once, with its influences (weights as 16.16 fixed point
 	# so the three fields share one integer array).
 	var used := PackedByteArray()
@@ -682,6 +774,13 @@ static func _prepare_soup(data: MeshData) -> void:
 		data.bind_aabb.append(AABB(low[k], high[k] - low[k]) if seen[k] else AABB())
 
 
+## True when face `face` of `soup` faces a ray travelling along `dir` (Godot's front faces wind
+## clockwise: Plane(a, b, c) then points at the viewer).
+static func _is_front(soup: Soup, face: int, dir: Vector3) -> bool:
+	var normal := Plane(soup.faces[face * 3], soup.faces[face * 3 + 1], soup.faces[face * 3 + 2]).normal
+	return normal.dot(dir) < 0.0
+
+
 ## The nearest front-face hit of the ray from `origin` along unit `dir`: `{depth, face}` or {}.
 static func _ray(soup: Soup, origin: Vector3, dir: Vector3, forward: Vector3) -> Dictionary:
 	if soup.triangles == null:
@@ -692,7 +791,7 @@ static func _ray(soup: Soup, origin: Vector3, dir: Vector3, forward: Vector3) ->
 		if hit.is_empty():
 			return {}
 		var position: Vector3 = hit.position
-		if (hit.normal as Vector3).dot(dir) > 0.0:
+		if not _is_front(soup, int(hit.face_index), dir):
 			from = position + dir * BACK_FACE_STEP
 			continue
 		var depth := (position - origin).dot(forward)
