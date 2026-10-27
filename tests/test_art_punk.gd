@@ -101,12 +101,7 @@ func _pose(rig: HumanoidRig, animation: StringName, at: float) -> void:
 
 ## The rig's pose at the table's rest (rig space, its scale): the strain's reference.
 func _rest_globals(rig: HumanoidRig) -> Array[Transform3D]:
-	var empty: Dictionary[StringName, Vector3] = {}
-	var table := PlaceholderBody.pose_globals(empty, Vector3.ZERO, rig.rig_scale())
-	var out: Array[Transform3D] = []
-	for i: int in rig.skeleton.get_bone_count():
-		out.append(table[rig.skeleton.get_bone_name(i)])
-	return out
+	return SkinnedView.rest_pose(rig)
 
 
 func _globals_of(rig: HumanoidRig, pose: Dictionary[StringName, Vector3], hips: Vector3) -> Array[Transform3D]:
@@ -452,13 +447,26 @@ func _peak_poses() -> Array[Dictionary]:
 	return poses
 
 
+## The folded triangles of `mi` skinned at the rig's rest pose, per blended triangle
+## (SkinnedView.folded_mask()): the flip count's reference, `rest` being the vertices there.
+func _rest_mask(mi: MeshInstance3D, rig: HumanoidRig, rest: PackedVector3Array) -> PackedByteArray:
+	var data := SkinnedView._mesh_data(mi.mesh as ArrayMesh)
+	SkinnedView._prepare_strain(data)
+	return SkinnedView.folded_mask(data, rest, SkinnedView.skin_normals(mi, rig, _rest_globals(rig)))
+
+
 ## The strain of `mi` posed at `globals` (empty: the rig's current pose) against the same mesh
 ## skinned at the rig's rest pose `rest`: every deforming edge's posed length over its rest
 ## length, p0.1 and p99.9 over all edges (edges on one bind are exactly 1), the extremes, NaN, the
-## lowest vertex, and with `triangles` the triangles under 15% of their rest area or flipped.
-## SkinnedView.strain() measures against the authored mesh; this is the same with the skinned
-## rest as the reference (A19, M4-calls/P1-chain.md C13).
-func _strain(mi: MeshInstance3D, rig: HumanoidRig, rest: PackedVector3Array, globals: Array[Transform3D], triangles: bool) -> Dictionary:
+## lowest vertex, and with `triangles` the triangles under 15% of their rest area (`squashed`) or
+## turned over (`flipped`: folded against their vertex normals in the pose and not at the skinned
+## rest; `flipped_healed` is the reverse, folded at the rest and right in the pose, no defect;
+## `rest_folded` is the mesh's own baseline, never charged to a pose). `rest_mask` is _rest_mask()
+## when the caller has it. SkinnedView.strain() measures the squash against the authored mesh; this
+## is the same with the skinned rest as the reference (A19, M4-calls/P1-chain.md C13,
+## M4-calls/SG-instruments.md).
+func _strain(mi: MeshInstance3D, rig: HumanoidRig, rest: PackedVector3Array, globals: Array[Transform3D], triangles: bool,
+		rest_mask: PackedByteArray = PackedByteArray()) -> Dictionary:
 	var data := SkinnedView._mesh_data(mi.mesh as ArrayMesh)
 	SkinnedView._prepare_strain(data)
 	var posed := SkinnedView.skin_vertices(mi, rig, globals)
@@ -490,12 +498,12 @@ func _strain(mi: MeshInstance3D, rig: HumanoidRig, rest: PackedVector3Array, glo
 		min = minf(1.0, sorted[0] if not sorted.is_empty() else 1.0),
 		max = maxf(1.0, sorted[sorted.size() - 1] if not sorted.is_empty() else 1.0),
 		worst = worst, worst_bone = &"", has_nan = has_nan, lowest_y = lowest,
-		triangles = data.indices.size() / 3, squashed = 0, flipped = 0, unmeasured = unmeasured,
+		triangles = data.indices.size() / 3, squashed = 0, flipped = 0, flipped_healed = 0,
+		rest_folded = 0, unmeasured = unmeasured,
 	}
 	if worst_edge >= 0:
 		report.worst_bone = SkinnedView._dominant_bone(data, mi.skin, [data.edge_a[worst_edge], data.edge_b[worst_edge]])
 	if triangles:
-		var normals := SkinnedView.skin_normals(mi, rig, globals)
 		for t: int in data.mixed_triangles.size():
 			var tri := data.mixed_triangles[t]
 			var a := data.indices[tri * 3]
@@ -505,8 +513,11 @@ func _strain(mi: MeshInstance3D, rig: HumanoidRig, rest: PackedVector3Array, glo
 			var cross := (posed[b] - posed[a]).cross(posed[c] - posed[a])
 			if rest_area > 1e-10 and cross.length() * 0.5 < rest_area * 0.15:
 				report.squashed += 1
-			if -cross.dot(normals[a] + normals[b] + normals[c]) < 0.0:
-				report.flipped += 1
+		var reference := rest_mask if not rest_mask.is_empty() else _rest_mask(mi, rig, rest)
+		var flips := SkinnedView.flip_counts(reference, SkinnedView.folded_mask(data, posed, SkinnedView.skin_normals(mi, rig, globals)))
+		report.flipped = flips.turned
+		report.flipped_healed = flips.healed
+		report.rest_folded = flips.rest_folded
 	return report
 
 
@@ -536,6 +547,7 @@ func _problems(report: Dictionary, planted: bool) -> PackedStringArray:
 func _strain_run(rig: HumanoidRig) -> Dictionary:
 	var mi := rig.art_meshes()[0]
 	var rest := SkinnedView.skin_vertices(mi, rig, _rest_globals(rig))
+	var rest_mask := _rest_mask(mi, rig, rest)
 	var problems := PackedStringArray()
 	var reports: Array[Dictionary] = []
 	var clips: Array[Dictionary] = []
@@ -567,13 +579,13 @@ func _strain_run(rig: HumanoidRig) -> Dictionary:
 				problems.append("%s: %s" % [label, text])
 	var flexes: Array[Dictionary] = []
 	for row: Dictionary in _peak_poses():
-		var report := _strain(mi, rig, rest, _globals_of(rig, row.pose, row.hips), true)
+		var report := _strain(mi, rig, rest, _globals_of(rig, row.pose, row.hips), true, rest_mask)
 		reports.append({label = "flex: %s" % row.label, report = report})
 		flexes.append({label = String(row.label), report = report})
 		for text: String in _problems(report, false):
 			problems.append("flex: %s: %s" % [row.label, text])
 		if report.triangles > 0 and float(report.squashed + report.flipped) / report.triangles > BAD_TRIANGLES:
-			problems.append("flex: %s: %d of %d triangles under 15%% of their rest area or flipped" % [row.label, report.squashed + report.flipped, report.triangles])
+			problems.append("flex: %s: %d of %d triangles under 15%% of their rest area or turned over" % [row.label, report.squashed + report.flipped, report.triangles])
 	return {problems = problems, worst = SkinnedView.worst_lines(reports), samples = reports.size(), reports = reports, flexes = flexes}
 
 
@@ -598,10 +610,22 @@ func test_the_strain_of_every_glb_against_the_skinned_rest_is_printed_for_the_ga
 		_pose(rig, &"idle", 0.2)
 		var idle := _strain(rig.art_meshes()[0], rig, SkinnedView.skin_vertices(rig.art_meshes()[0], rig, _rest_globals(rig)), [], false)
 		print("ART-PUNK A19 %s idle: p99.9 %.2f p0.1 %.2f max %.2f min %.2f" % [row.name, idle.p_high, idle.p_low, idle.max, idle.min])
+		var mi := rig.art_meshes()[0]
+		var authored := SkinnedView.folded_triangles(mi)
+		var at_rest := SkinnedView.folded_triangles(mi, rig, _rest_globals(rig))
+		print("ART-PUNK A7 %s folded triangles (the mesh's own baseline: a flip is a change from the skinned rest, so these are not charged to a pose): authored mesh %d of %d (%.2f%%); skinned at the rest %d, %d of them blended" % [
+				row.name, authored.all, authored.triangles, 100.0 * authored.all / authored.triangles, at_rest.all, at_rest.mixed])
+		var bar := roundi(BAD_TRIANGLES * authored.triangles)
+		var over := PackedStringArray()
 		for flex: Dictionary in run.flexes:
 			var r: Dictionary = flex.report
-			print("ART-PUNK A19 %s flex %s: p99.9 %.2f p0.1 %.2f worst edge x%.2f (%s), %d of %d triangles under 15%% of their rest area or flipped" % [
-					row.name, flex.label, r.p_high, r.p_low, r.worst, r.worst_bone, r.squashed + r.flipped, r.triangles])
+			var bad: int = r.squashed + r.flipped
+			if bad > bar:
+				over.append("%s %d" % [flex.label, bad])
+			print("ART-PUNK A19 %s flex %s: p99.9 %.2f p0.1 %.2f worst edge x%.2f (%s); triangles: %d under 15%% of their rest area + %d turned over from the skinned rest's turn = %d of %d (%.2f%%), bar %d%s; %d more set right (folded at the rest, right in the pose: not counted)" % [
+					row.name, flex.label, r.p_high, r.p_low, r.worst, r.worst_bone, r.squashed, r.flipped, bad, r.triangles,
+					100.0 * bad / r.triangles, bar, "  GATE" if bad > bar else "  (meets A7)", r.flipped_healed])
+		print("ART-PUNK A7 %s: peak flexes over the %d-triangle bar: %s" % [row.name, bar, ", ".join(over) if not over.is_empty() else "none"])
 		var in_bar := 0
 		var worst_high := 0.0
 		for entry: Dictionary in run.reports:
@@ -620,6 +644,27 @@ func test_the_strain_of_every_glb_against_the_skinned_rest_is_printed_for_the_ga
 		assert_gt(run.samples, 200, "%s: every clip at five phases and the peak flexes" % row.name)
 	var elapsed := (Time.get_ticks_msec() - started) / 1000.0
 	print("ART-PUNK A19: four GLBs in %.1f s" % elapsed)
+
+
+func test_the_flip_count_does_not_charge_the_meshs_own_folds_to_a_pose() -> void:
+	# slice-g2-05: a triangle counts as flipped only when it is folded against its vertex normals
+	# in the pose and was not at the skinned rest, so a mesh posed at its own rest has no flips
+	# however many triangles it carries folded (the chain's decimation leaves some: P1-chain's
+	# report, about 1% of punk.glb). Counted against the normals alone, every one was a flex failure.
+	for row: Dictionary in VARIANTS:
+		var rig := _rig(_art(row))
+		var mi := rig.art_meshes()[0]
+		var rest_globals := _rest_globals(rig)
+		var rest := SkinnedView.skin_vertices(mi, rig, rest_globals)
+		var report := _strain(mi, rig, rest, rest_globals, true)
+		var at_rest := SkinnedView.folded_triangles(mi, rig, rest_globals)
+		assert_eq(report.flipped, 0, "%s: posed at its own rest nothing has flipped" % row.name)
+		assert_eq(report.squashed, 0, "%s: or squashed" % row.name)
+		assert_eq(report.rest_folded, at_rest.mixed, "%s: the folded baseline is %d blended triangles" % [row.name, at_rest.mixed])
+		# SkinnedView.strain() (F-punk's tool) agrees with the test's own count.
+		var tool := SkinnedView.strain(mi, rig, rest_globals, 0.15, true)
+		assert_eq(tool.flipped, 0, "%s: SkinnedView.strain() reads the rest as no flips too" % row.name)
+		assert_eq(tool.rest_folded, at_rest.mixed)
 
 
 # --- The rooms: the props' hulls and the load-time warm-up ------------------------------------------

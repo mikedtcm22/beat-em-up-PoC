@@ -7,9 +7,14 @@ extends RefCounted
 ##
 ## Everything works in rig space (the Skeleton3D's space) unless it says world: a skinned mesh
 ## is a child of the skeleton with an identity transform, so world = mesh.global_transform *
-## rig space. The pose is the rig's animation pose (FK) after the latest advance(); pass
-## `globals` (one Transform3D per skeleton bone, rig space) to skin another one: a ragdoll's
-## visual pose, a pose made of PlaceholderBody.pose_globals(), a rest pose.
+## rig space. The pose is the one the render server draws (drawn_pose()): the rig's animation
+## pose (FK) after the latest advance(), or, while a ragdoll runs on the rig, the ragdoll's
+## visual pose per bone (an art rig writes it back into its skeleton, A5), which can be tens of
+## centimeters from FK in a stagger. Pass `globals` (one Transform3D per skeleton bone, rig
+## space) to skin another one: fk_pose() to see the animation under a ragdoll, a pose made of
+## PlaceholderBody.pose_globals(), a rest pose. The grid-ray path (hits(), the compare_*
+## wrappers, hurtbox_fit()'s soups) skins the drawn pose too, so an act that measures the art
+## through a stagger or a launch measures the body that is on screen.
 
 const FPView := preload("res://tests/fp_view.gd")
 
@@ -93,6 +98,27 @@ static func clear_cache() -> void:
 	_soups.clear()
 
 
+## The pose the render server draws for `rig` now: one Transform3D per skeleton bone, rig
+## space. The ragdoll's visual pose (Ragdoll.visual_pose(): what the followers show and an art
+## rig's skeleton is written back to) while one runs on the rig (HumanoidRig.is_ragdolling()),
+## otherwise the animation's FK pose (HumanoidRig.animation_pose()).
+static func drawn_pose(rig: HumanoidRig) -> Array[Transform3D]:
+	var ragdoll := rig.get_ragdoll() if rig.is_ragdolling() else null
+	var out: Array[Transform3D] = []
+	for i: int in rig.skeleton.get_bone_count():
+		out.append(ragdoll.visual_pose(i) if ragdoll != null else rig.animation_pose(i))
+	return out
+
+
+## The animation's FK pose of `rig`, whatever a ragdoll shows: the pose the hurtboxes follow, and
+## the one to pass as `globals` to see what the animation alone would draw.
+static func fk_pose(rig: HumanoidRig) -> Array[Transform3D]:
+	var out: Array[Transform3D] = []
+	for i: int in rig.skeleton.get_bone_count():
+		out.append(rig.animation_pose(i))
+	return out
+
+
 ## The skinned vertices of `mi` (an art mesh of `rig`), rig space: CPU linear-blend skinning
 ## with the rig's Skin, bind by bind with one native Transform3D * PackedVector3Array each and
 ## the weights accumulated per influence. `globals` is the pose (see the file's docs).
@@ -142,8 +168,9 @@ static func faces(mi: MeshInstance3D, rig: HumanoidRig, globals: Array[Transform
 ## depth}` of the nearest art surface along the cell's ray (the mesh, the bone holding most
 ## of the hit face's weight, the depth along the view axis), or `{}`. Only the art the camera
 ## draws counts (visible, not on CombatTypes.VIS_FP_HIDDEN); a surface nearer than
-## FPView.NEAR, or a back face, does not. Each mesh's TriangleMesh is made once per physics
-## frame and pose.
+## FPView.NEAR, or a back face, does not. Each rig's art is skinned in the pose the render
+## server draws (drawn_pose(): the ragdoll's while one runs), and each mesh's TriangleMesh is
+## made once per physics frame and pose.
 static func hits(root: Node, cam: Transform3D, cols: int = FPView.COLS) -> Array[Dictionary]:
 	var meshes: Array[MeshInstance3D] = []
 	var soups: Array[Soup] = []
@@ -228,8 +255,11 @@ static func surface_gap(mi: MeshInstance3D, rig: HumanoidRig, point: Vector3, gl
 static func hurtbox_fit(rig: HumanoidRig, slack_m: float = 0.06, head_slack_m: float = 0.05) -> Dictionary:
 	var soups: Array[Soup] = []
 	var meshes: Array[MeshInstance3D] = []
+	# The hurtboxes follow the animation's FK pose, so the art they are fitted to is skinned in it
+	# too, whatever a ragdoll on the rig is showing.
+	var fk := fk_pose(rig)
 	for mi: MeshInstance3D in rig.art_meshes():
-		soups.append(_soup(mi, rig))
+		soups.append(_soup(mi, rig, null, fk))
 		meshes.append(mi)
 	var world := rig.global_transform
 	var outside: Array[String] = []
@@ -253,7 +283,7 @@ static func hurtbox_fit(rig: HumanoidRig, slack_m: float = 0.06, head_slack_m: f
 				outside.append("%s axis point %d" % [spec.name, i])
 		# The vertices of the bones this hurtbox covers, against its axis.
 		for mi: MeshInstance3D in meshes:
-			var posed := mi.global_transform * skin_vertices(mi, rig)
+			var posed := mi.global_transform * skin_vertices(mi, rig, fk)
 			var data := _mesh_data(mi.mesh as ArrayMesh)
 			for v: int in posed.size():
 				if data.rigid_bind[v] < 0:
@@ -297,7 +327,9 @@ static func _inside(soup: Soup, point: Vector3) -> bool:
 ## shares of the view each covers), nearest (the meters the art is nearer the lens than the
 ## proxies where both are hit: the second largest gap over the cells, so one cell on a
 ## silhouette's edge is no bulge; 0 when never), both}`. The proxies are the rig's own
-## primitives, found by FPView.hits() (they are hidden while the art shows, but count: A4).
+## primitives, found by FPView.hits() (they are hidden while the art shows, but count: A4). The
+## art is the drawn pose's (hits()), and the proxies follow the same pose (the bone followers
+## show the ragdoll's), so the comparison holds through a stagger or a launch.
 static func compare_with_proxies(rig: HumanoidRig, cam: Transform3D, cols: int = FPView.COLS) -> Dictionary:
 	var proxy_cells := FPView.hits(rig, cam, cols)
 	var proxy_depths := FPView.depths(rig, cam, cols)
@@ -390,11 +422,15 @@ static func _compare(art_cells: Array[Dictionary], proxy_covered: Array[bool], p
 ## and triangles whose vertices all sit on one bind are exactly 1 and are not measured, only
 ## counted. Returns `{edges, mixed_edges, p_low, p_high (the strain percentiles), min, max,
 ## worst (the edge farthest from 1 in ratio: its strain), worst_bone, has_nan, triangles,
-## mixed_triangles, squashed (posed area under `squash_below` of the rest's), flipped (face
-## normal against the skinned vertex normals), lowest_y (of the posed vertices, rig space)}`.
-## `with_triangles` false skips the triangle numbers.
+## mixed_triangles, squashed (posed area under `squash_below` of the rest's), flipped (turned
+## over: its turn against the skinned vertex normals is right at the skinned rest and folded in
+## the pose, see folded_mask()), flipped_healed (the other way round: folded at the rest, right
+## in the pose; no defect, so not in `flipped`), rest_folded (folded at the rest: the mesh's own
+## baseline, not deformation), lowest_y (of the posed vertices, rig space)}`.
+## `with_triangles` false skips the triangle numbers. `rest` is the pose the flips are measured
+## against (default rest_pose(rig): the pose every art is bound to).
 static func strain(mi: MeshInstance3D, rig: HumanoidRig, globals: Array[Transform3D] = [],
-		squash_below: float = 0.15, with_triangles: bool = false) -> Dictionary:
+		squash_below: float = 0.15, with_triangles: bool = false, rest: Array[Transform3D] = []) -> Dictionary:
 	var data := _mesh_data(mi.mesh as ArrayMesh)
 	_prepare_strain(data)
 	var posed := skin_vertices(mi, rig, globals)
@@ -425,26 +461,97 @@ static func strain(mi: MeshInstance3D, rig: HumanoidRig, globals: Array[Transfor
 		max = maxf(1.0, sorted[sorted.size() - 1] if not sorted.is_empty() else 1.0),
 		worst = worst, worst_bone = &"", has_nan = has_nan, lowest_y = lowest,
 		triangles = data.indices.size() / 3, mixed_triangles = data.mixed_triangles.size(),
-		squashed = 0, flipped = 0,
+		squashed = 0, flipped = 0, flipped_healed = 0, rest_folded = 0,
 	}
 	if worst_edge >= 0:
 		report.worst_bone = _dominant_bone(data, mi.skin, [data.edge_a[worst_edge], data.edge_b[worst_edge]])
 	if with_triangles:
-		var normals := skin_normals(mi, rig, globals)
 		for t: int in data.mixed_triangles.size():
 			var tri := data.mixed_triangles[t]
 			var a := data.indices[tri * 3]
 			var b := data.indices[tri * 3 + 1]
 			var c := data.indices[tri * 3 + 2]
-			var cross := (posed[b] - posed[a]).cross(posed[c] - posed[a])
-			var area := cross.length() * 0.5
+			var area := (posed[b] - posed[a]).cross(posed[c] - posed[a]).length() * 0.5
 			if area < data.mixed_rest_area[t] * s * s * squash_below:
 				report.squashed += 1
-			# Godot's front faces wind clockwise: the geometric normal of (a, b, c) points
-			# against the cross product of the edges.
-			if -cross.dot(normals[a] + normals[b] + normals[c]) < 0.0:
-				report.flipped += 1
+		var rest_pose_globals := rest_pose(rig) if rest.is_empty() else rest
+		var flips := flip_counts(
+				folded_mask(data, skin_vertices(mi, rig, rest_pose_globals), skin_normals(mi, rig, rest_pose_globals)),
+				folded_mask(data, posed, skin_normals(mi, rig, globals)))
+		report.flipped = flips.turned
+		report.flipped_healed = flips.healed
+		report.rest_folded = flips.rest_folded
 	return report
+
+
+## The rig's rest pose: PlaceholderBody's table with no rotations and the hips at rest, rig space
+## at the rig's scale. Every art is bound to it, so it is the reference of strain()'s flips (A7,
+## A19: M4-calls/P1-chain.md C13, measure against the skinned rest).
+static func rest_pose(rig: HumanoidRig) -> Array[Transform3D]:
+	var empty: Dictionary[StringName, Vector3] = {}
+	var table := PlaceholderBody.pose_globals(empty, Vector3.ZERO, rig.rig_scale())
+	var out: Array[Transform3D] = []
+	for i: int in rig.skeleton.get_bone_count():
+		out.append(table[rig.skeleton.get_bone_name(i)])
+	return out
+
+
+## For each blended triangle of `data` (in data.mixed_triangles order), 1 when it is folded at
+## the skinned vertices `posed` with skinned vertex `normals`, else 0: its winding's geometric
+## normal opposes the mean of its three corners' normals. Godot's front faces wind clockwise, so
+## the geometric normal of (a, b, c) points against the cross product of the edges. A triangle
+## that is folded in the mesh as authored is folded at the rest too: counting it as a flip in a
+## pose would charge the mesh's own baseline to the deformation.
+static func folded_mask(data: MeshData, posed: PackedVector3Array, normals: PackedVector3Array) -> PackedByteArray:
+	var out := PackedByteArray()
+	out.resize(data.mixed_triangles.size())
+	for t: int in data.mixed_triangles.size():
+		var tri := data.mixed_triangles[t]
+		var a := data.indices[tri * 3]
+		var b := data.indices[tri * 3 + 1]
+		var c := data.indices[tri * 3 + 2]
+		var cross := (posed[b] - posed[a]).cross(posed[c] - posed[a])
+		out[t] = 1 if -cross.dot(normals[a] + normals[b] + normals[c]) < 0.0 else 0
+	return out
+
+
+## What changed between two folded_mask()s (the skinned rest's and a pose's): `{turned (right at
+## the rest, folded in the pose: the flips, the deformation's fault), healed (folded at the rest,
+## right in the pose: the mesh's baseline got better, no defect), rest_folded (folded at the rest)}`.
+static func flip_counts(rest_mask: PackedByteArray, mask: PackedByteArray) -> Dictionary:
+	var turned := 0
+	var healed := 0
+	var at_rest := 0
+	for t: int in mini(rest_mask.size(), mask.size()):
+		at_rest += rest_mask[t]
+		if mask[t] != rest_mask[t]:
+			if mask[t] == 1:
+				turned += 1
+			else:
+				healed += 1
+	return {turned = turned, healed = healed, rest_folded = at_rest}
+
+
+## How many triangles of `mi` are folded (see folded_mask()): `{all, mixed, triangles}`, over every
+## triangle and over the blended ones (the only ones a pose can turn over). The mesh as authored
+## when `rig` is null (its own vertices and normals); else skinned at `globals` (the drawn pose
+## when empty).
+static func folded_triangles(mi: MeshInstance3D, rig: HumanoidRig = null, globals: Array[Transform3D] = []) -> Dictionary:
+	var data := _mesh_data(mi.mesh as ArrayMesh)
+	_prepare_strain(data)
+	var posed := data.vertices if rig == null else skin_vertices(mi, rig, globals)
+	var normals := data.normals if rig == null else skin_normals(mi, rig, globals)
+	var all := 0
+	for t: int in data.indices.size() / 3:
+		var a := data.indices[t * 3]
+		var b := data.indices[t * 3 + 1]
+		var c := data.indices[t * 3 + 2]
+		if -(posed[b] - posed[a]).cross(posed[c] - posed[a]).dot(normals[a] + normals[b] + normals[c]) < 0.0:
+			all += 1
+	var mixed := 0
+	for flag: int in folded_mask(data, posed, normals):
+		mixed += flag
+	return {all = all, mixed = mixed, triangles = data.indices.size() / 3}
 
 
 ## The (animation, phase, bone) triples to print for the worst strain of a run, worst first:
@@ -501,13 +608,13 @@ static func _rig_of(mi: MeshInstance3D) -> HumanoidRig:
 	return skeleton.get_parent() as HumanoidRig if skeleton != null else null
 
 
-## Skin matrix of every bind of `skin`: the bone's pose times the bind pose.
+## Skin matrix of every bind of `skin`: the bone's pose times the bind pose, in `globals` or,
+## when it is empty, the drawn pose (drawn_pose()).
 static func _skin_matrices(skin: Skin, rig: HumanoidRig, globals: Array[Transform3D]) -> Array[Transform3D]:
+	var poses := drawn_pose(rig) if globals.is_empty() else globals
 	var out: Array[Transform3D] = []
 	for k: int in skin.get_bind_count():
-		var bone := rig.skeleton.find_bone(skin.get_bind_name(k))
-		var pose := rig.animation_pose(bone) if globals.is_empty() else globals[bone]
-		out.append(pose * skin.get_bind_pose(k))
+		out.append(poses[rig.skeleton.find_bone(skin.get_bind_name(k))] * skin.get_bind_pose(k))
 	return out
 
 
@@ -618,19 +725,20 @@ static func _face_bone(soup: Soup, face: int) -> StringName:
 	return _dominant_bone(data, soup.skin, [data.indices[tri * 3], data.indices[tri * 3 + 1], data.indices[tri * 3 + 2]])
 
 
-## A hash of what skins `mi`: the bone transforms, the rig's place, the skin and the mesh.
-static func _pose_key(mi: MeshInstance3D, rig: HumanoidRig) -> int:
-	var poses: Array[Transform3D] = []
-	for i: int in rig.skeleton.get_bone_count():
-		poses.append(rig.animation_pose(i))
+## A hash of what skins `mi`: the bone transforms of the pose (`globals`, or the drawn pose when
+## empty), the rig's place, the skin and the mesh.
+static func _pose_key(mi: MeshInstance3D, rig: HumanoidRig, globals: Array[Transform3D] = []) -> int:
+	var poses := drawn_pose(rig) if globals.is_empty() else globals
 	return hash([poses, rig.global_transform, mi.skin.get_instance_id(), mi.mesh.get_instance_id()])
 
 
-## The triangle mesh of `mi` at its rig's pose, made once per physics frame and pose.
-static func _soup(mi: MeshInstance3D, rig: HumanoidRig, cam: Variant = null) -> Soup:
+## The triangle mesh of `mi` at its rig's pose (`globals`, or the drawn pose when empty), made
+## once per physics frame and pose.
+static func _soup(mi: MeshInstance3D, rig: HumanoidRig, cam: Variant = null, globals: Array[Transform3D] = []) -> Soup:
 	var id := mi.get_instance_id()
 	var frame := Engine.get_physics_frames()
-	var key := _pose_key(mi, rig)
+	var poses := drawn_pose(rig) if globals.is_empty() else globals
+	var key := _pose_key(mi, rig, poses)
 	var camera_key := hash(cam)
 	var soup: Soup = _soups.get(id)
 	if soup != null and soup.frame == frame and soup.pose_key == key and soup.camera_key == camera_key:
@@ -645,7 +753,7 @@ static func _soup(mi: MeshInstance3D, rig: HumanoidRig, cam: Variant = null) -> 
 	_prepare_soup(data)
 	soup.data = data
 	soup.skin = mi.skin
-	var matrices := _skin_matrices(mi.skin, rig, [])
+	var matrices := _skin_matrices(mi.skin, rig, poses)
 	var world := mi.global_transform
 	var faces := PackedVector3Array()
 	var face_triangle := PackedInt32Array()
