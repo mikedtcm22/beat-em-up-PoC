@@ -48,7 +48,7 @@
 				7,
 				14
 			],
-			"target_tris": 3000,
+			"target_tris": 4000,
 			"cut_a_m": -0.06,
 			"radius_max_m": 0.14,
 			"reach_max_m": 0.35,
@@ -117,7 +117,23 @@
 					"radius_m": 0.16,
 					"soft": 0.2
 				}
-			}
+			},
+			"label_smooth": {
+				"passes": 80,
+				"lam": 0.5
+			},
+			"label_smooth_decimated": {
+				"passes": 2,
+				"lam": 0.5
+			},
+			"fine_slots": [
+				7
+			],
+			"fine_weight": 0.3,
+			"relabel_reach": 0.6,
+			"border_cell_m": 0.004,
+			"border_zone_m": 0.006,
+			"border_zone_weight": 0.5
 		},
 		"split_fp": {
 			"enabled": true,
@@ -135,27 +151,32 @@
 				"LeftUpperArm": {
 					"dir": "out",
 					"depth_m": 0.04,
-					"rings": 4
+					"rings": 8,
+					"ring_verts": 32
 				},
 				"RightUpperArm": {
 					"dir": "out",
 					"depth_m": 0.04,
-					"rings": 4
+					"rings": 8,
+					"ring_verts": 32
 				},
 				"Hips": {
 					"dir": "in",
 					"depth_m": 0.02,
-					"rings": 1
+					"rings": 1,
+					"wall_normals": true
 				},
 				"LeftUpperLeg": {
 					"dir": "in",
 					"depth_m": 0.02,
-					"rings": 1
+					"rings": 1,
+					"wall_normals": true
 				},
 				"RightUpperLeg": {
 					"dir": "in",
 					"depth_m": 0.02,
-					"rings": 1
+					"rings": 1,
+					"wall_normals": true
 				}
 			},
 			"torso": {
@@ -374,6 +395,17 @@
 				8,
 				9
 			]
+		}
+	},
+	"normals": {
+		"smooth": {
+			"bones": [
+				"LeftUpperArm",
+				"RightUpperArm"
+			],
+			"passes": 24,
+			"lam": 0.5,
+			"max_turn_deg": 45.0
 		}
 	}
 }

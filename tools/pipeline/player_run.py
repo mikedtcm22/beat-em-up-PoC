@@ -6,7 +6,8 @@
 
 It takes run.py's options, steps and report as they are (the shared driver is F-punk's and is not edited) and swaps in
 tools/pipeline/player_parts.py for blender_parts.py (the generated fists, the first-person split with an optional belly mesh),
-then adds the step `detail` (player_detail.py: the 1k ink mask on UV2) after parts_split. Everything hero-specific lives in
+then adds the steps `detail` (player_detail.py: the 1k ink mask on UV2) and `normals` (player_normals.py: smoothed shading normals
+for the limbs the lens meets closest) after parts_split. Everything hero-specific lives in
 assets/source/characters/<id>/pipeline.json, so a second hero is another folder and this same command.
 """
 import os
@@ -23,6 +24,7 @@ def player_steps():
 		out.append((name, "player_parts.py" if script == "blender_parts.py" else script, extra))
 		if name == "parts_split":
 			out.append(("detail", "player_detail.py", []))
+			out.append(("normals", "player_normals.py", []))
 	return out
 
 
