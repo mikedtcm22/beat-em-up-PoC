@@ -122,3 +122,34 @@ func test_the_long_take_hides_the_caption_freezes_the_ai_and_clears_up() -> void
 	assert_true(at_start.get("frozen", false), "the AI is frozen")
 	assert_true(at_start.get("god", false), "god mode is on")
 	assert_eq(get_tree().get_nodes_in_group(&"ai_enemy").size(), 0, "the Punk is cleared with the act's end")
+
+
+func test_the_f4_showcase_act_switches_the_cheat_on_walks_round_the_punk_and_puts_the_game_back() -> void:
+	var bot := QuietBot.new()
+	bot.act_filter = "Look: F4 Showcase Punk"
+	add_child_autofree(bot)
+	for i in MAX_TICKS:
+		await get_tree().physics_frame
+		if bot.finished:
+			break
+	assert_true(bot.finished, "the act finished")
+	var states := {}
+	for line: String in bot.log_lines:
+		if line.begins_with("LOOK-SHOWCASE ") and not line.contains("skipped"):
+			var when := line.trim_prefix("LOOK-SHOWCASE ").split(":")[0]
+			states[when] = line
+	assert_eq(states.keys().size(), 3, "before, on and off are logged: %s" % [states.keys()])
+	assert_true(String(states.before).contains("on false"), states.before)
+	assert_true(String(states.on).contains("on true"), states.on)
+	assert_true(String(states.on).contains("Freeze AI true"), "Freeze AI while it shows")
+	assert_true(String(states.off).contains("on false"), states.off)
+	# Freeze AI and the enemy counts after are the ones before.
+	var before: String = String(states.before).split(", Freeze AI")[1]
+	var after: String = String(states.off).split(", Freeze AI")[1]
+	assert_eq(after.replace("Freeze AI ", ""), before.replace("Freeze AI ", ""), "the game is as it was: %s / %s" % [before, after])
+	var marks := {}
+	for line: String in bot.log_lines:
+		if line.begins_with("LOOK-MARK c15"):
+			marks[line.split(" ")[3]] = true
+	for label in ["start", "f4_open", "showcase_on", "round_t000", "showcase_off", "end"]:
+		assert_has(marks, label, "a mark at %s" % label)

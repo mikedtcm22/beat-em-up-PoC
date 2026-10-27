@@ -31,6 +31,7 @@ extends RefCounted
 ## | P1 | Look: Perf, six art Punks | six art Punks and the autopilot for 30 s, frame times logged (A16); no marks, no rectangles |
 ## | W1 | Look: warm-up in the lens | a room's load run again, cold, in a viewport of its own (the crowd room, then the training room): the art warm-up's holder is in the camera's frustum on both frames it is drawn (LOOK-WARM lines); no marks, no rectangles |
 ## | C14 | Look: Punk at 1 m, the long take | one 40 s first-person take of one Punk at 1 m, scripted (game/debug/showcase_script.gd, the same script the F4 "Showcase Punk at 1 m" loops): idle, a turntable, backs off and walks in, taunt, jab and cross, takes a jab, stagger, knockdown, get-up, a face-down fall and get-up, KO |
+## | C15 | Look: F4 Showcase Punk | the F4 cheat menu opened, "Showcase Punk at 1 m" switched on, the menu closed, the player walking once round the frozen Punk as it loops the take, the menu opened again and the showcase switched off (the Punk freed, Freeze AI as it was) |
 ## | L5 | Look: readability with the art drawn | M4's L5: the fights of "Six Punks, fight" and "Mixed six, fight" run in turn with R4 and R8 measured with the art drawn (tests/bot/look_l5.gd: the triangles the lens draws, ragdolling rigs skinned in their drawn pose) beside the proxies' figures; LOOK-L5 lines, no marks or rectangles |
 ##
 ## The Punk in every act wears the art (game/actors/art/punk_art.tres). The A/B between the four smoke
@@ -164,6 +165,18 @@ const TAKE_MARK_TICKS := 3
 const MID_MARK_MIN_S := 1.0
 const TAKE_PITCH_DEG_PER_S := 45.0
 const TAKE_TAIL_TICKS := 30
+## The F4 showcase act: how long the menu is looked at before and after a switch (ticks), the walk
+## once round the Punk (the player circles at the Punk's own circling pace, 1 m out, looking at it, in
+## SHOWCASE_ORBIT_TICKS), and how hard he corrects his distance (share of the walk per metre off).
+const SHOWCASE_LOOK_TICKS := 60
+const SHOWCASE_ORBIT_TICKS := 420
+const SHOWCASE_SETTLE_TICKS := 90
+const SHOWCASE_FOLLOW_DEG_PER_S := 120.0
+const SHOWCASE_DISTANCE_GAIN := 2.0
+const SHOWCASE_DISTANCE_MAX := 0.25
+## The spawn points (the crowd bot's, as its surround uses them) of the two Punks that stand in the street
+## while the showcase is on: the east alley (ahead) and the side alley.
+const SHOWCASE_CROWD_POINTS: Array[int] = [4, 5]
 ## L5: the labels of the two fights it measures (the acts "Six Punks, fight" and "Mixed six, fight"
 ## play them), and the ticks the street rests between them.
 const L5_FIGHTS: Array[String] = ["Six Punks, fight", "Mixed six, fight"]
@@ -191,6 +204,7 @@ static func acts(bot: Node) -> Array[Dictionary]:
 		{title = "Look: warm-up in the lens", cam = &"first_person", slug = &"w1", fn = func() -> void: await _warm_up(bot)},
 		{title = "Look: Punk at 1 m, the long take", cam = &"first_person", slug = &"c14",
 				fn = func() -> void: await _long_take(bot)},
+		{title = "Look: F4 Showcase Punk", cam = &"first_person", slug = &"c15", fn = func() -> void: await _showcase(bot)},
 		{title = "Look: readability with the art drawn", cam = &"first_person", slug = &"l5",
 				fn = func() -> void: await _readability(bot)},
 	]
@@ -883,6 +897,9 @@ static func _long_take(bot: Node) -> void:
 		var step := runner.current_step()
 		if step.is_empty():
 			continue
+		if step_ticks == 1 and step.has("hit_point"):
+			# The contact flash shows for the step's first two frames: a still of it.
+			LookRect.mark(bot, "c14", "%s_flash" % step.name, punk)
 		if step_ticks == TAKE_MARK_TICKS:
 			LookRect.mark(bot, "c14", String(step.name), punk)
 		elif not mid_done and runner.seconds_of_step(seen) >= MID_MARK_MIN_S and runner.elapsed >= runner.seconds_of_step(seen) * 0.5:
@@ -959,3 +976,83 @@ static func _l5_sample(bot: Node, sampler: RefCounted, run: Dictionary) -> void:
 		await bot._ticks(1)
 		if run.running:
 			sampler.tick()
+
+
+# --- C15: the F4 showcase ----------------------------------------------------------------------------
+
+
+## The F4 cheat in the running game: the menu opened (as F4 opens it), "Showcase Punk at 1 m" switched on
+## (the toggle's own call), the menu closed again, the player walking once round the Punk at 1 m, looking
+## at it, while it loops the long take, then the menu opened and the switch turned off. Logs
+##   LOOK-SHOWCASE <what> ...   the state at each step (the Punk's place and step, Freeze AI, the enemy
+##                              groups), so a recording says the game was put back.
+## Two real Punks walk in first; the room's own AI runs until the switch (the showcase freezes it, and puts
+## it back), and the enemy counts after are the counts before.
+static func _showcase(bot: Node) -> void:
+	bot.caption.visible = false
+	_log_art(bot)
+	var vfx := bot.get_tree().get_first_node_in_group(VfxDirector.GROUP) as VfxDirector
+	if vfx:
+		vfx.clear()
+		vfx.rng.seed = VFX_SEED
+	var overlay: TuningOverlay = null
+	for node: Node in bot.room.find_children("*", "TuningOverlay", true, false):
+		overlay = node as TuningOverlay
+	if overlay == null:
+		bot.log_line("LOOK-SHOWCASE skipped: the room has no F4 overlay")
+		_end(bot, "c15")
+		return
+	var menu := overlay.cheats
+	# Two real Punks walk in from the alleys, so the street has a crowd the switch must leave alone.
+	bot.god()
+	for point: int in SHOWCASE_CROWD_POINTS:
+		bot.spawn_at_point(&"punk", point)
+	await bot._look_to(DEFAULT_PITCH_DEG, PITCH_TICKS)
+	await bot._ticks(SETTLE_TICKS)
+	var frozen_before := Tuning.data.ai_frozen
+	LookRect.mark(bot, "c15", "start")
+	_showcase_state(bot, "before", menu, frozen_before)
+	overlay.set_cheats_open(true)
+	await bot._ticks(SHOWCASE_LOOK_TICKS)
+	LookRect.mark(bot, "c15", "f4_open")
+	menu.set_showcase(true)
+	await bot._ticks(SHOWCASE_LOOK_TICKS)
+	LookRect.mark(bot, "c15", "showcase_on")
+	_showcase_state(bot, "on", menu, frozen_before)
+	overlay.set_cheats_open(false)
+	await bot._ticks(SHOWCASE_SETTLE_TICKS)
+	var punk := menu.showcase.actor if menu.is_showcase_on() else null
+	if punk != null:
+		var orbit_pace := Tuning.data.posture_circle_speed_mps / Tuning.data.move_speed
+		for i: int in SHOWCASE_ORBIT_TICKS:
+			if i % MARK_GAP_TICKS == 0:
+				LookRect.mark(bot, "c15", "round_t%03d" % i, punk)
+			_follow(bot, punk.global_position, SHOWCASE_FOLLOW_DEG_PER_S)
+			var gap: float = bot.player.global_position.distance_to(punk.global_position) - CLOSE_M
+			bot.player.input.scripted_move = Vector2(orbit_pace, clampf(gap * SHOWCASE_DISTANCE_GAIN, -SHOWCASE_DISTANCE_MAX, SHOWCASE_DISTANCE_MAX))
+			await bot._ticks(1)
+		bot.player.input.scripted_move = Vector2.ZERO
+		await bot._ticks(SHOWCASE_LOOK_TICKS)
+	overlay.set_cheats_open(true)
+	await bot._ticks(SHOWCASE_LOOK_TICKS)
+	menu.set_showcase(false)
+	await bot._ticks(SHOWCASE_LOOK_TICKS)
+	LookRect.mark(bot, "c15", "showcase_off")
+	_showcase_state(bot, "off", menu, frozen_before)
+	overlay.set_cheats_open(false)
+	await bot._ticks(SHOWCASE_LOOK_TICKS)
+	_end(bot, "c15")
+
+
+## One LOOK-SHOWCASE line: whether the showcase is on, where its Punk is and which step it plays,
+## Freeze AI (and what it was before), and how many enemies stand in the room's groups.
+static func _showcase_state(bot: Node, when: String, menu: CheatMenu, frozen_before: bool) -> void:
+	var where := "none"
+	var step := "-"
+	if menu.is_showcase_on():
+		var punk := menu.showcase.actor
+		where = _v(punk.global_position)
+		step = String(menu.showcase.current_step().get("name", "-"))
+	bot.log_line("LOOK-SHOWCASE %s: on %s, Punk %s, step %s, Freeze AI %s (before %s), %d enemies, %d AI enemies" % [
+			when, menu.is_showcase_on(), where, step, Tuning.data.ai_frozen, frozen_before,
+			bot.get_tree().get_nodes_in_group(&"enemy").size(), bot.get_tree().get_nodes_in_group(&"ai_enemy").size()])
