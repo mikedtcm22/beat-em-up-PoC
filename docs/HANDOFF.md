@@ -4,6 +4,21 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-26 23:45 CDT: L0-bench merged; P1-post running
+5-hour 58% (resets 00:50 CDT), weekly 15%.
+- **L0-bench merged** (`f49e30c`). On its own base it passed 1210/1210; the suite on the merge is running.
+  - **Look acts:** C1-C11 and C13 are in `tests/bot/acts/look_acts.gd` (slugs c1..c13).
+  - **Tools:** `look_rect.gd` prints the LOOK-MARK and LOOK-RECT lines, and `tools/look_sheets.sh` turns them into stills and 2× crops. `tools/perf_compare.sh` runs `tests/bot/perf_bot.tscn` in temporary worktrees per ref. `CAPTURE_ARGS` now reaches the bot through `capture_bot.sh`.
+  - **The before pack:** `captures/m4_before/<slug>/` (778 MB, local, never committed). It was recorded one act per process, so re-record the same way to pair before and after stills by label.
+- **Perf note for the lead's real run (A16):** unattended windowed runs with vsync off stall for 1.0 s every few seconds on this M1 (about 15 frames in 1700). Vsync-on runs don't stall. Read the report's stalls row first. If it warns, run with the window in front, or use `--vsync on` and rule on the p95 bar.
+- **Running since 23:45:** P1-post, `wf_89f245d9-23a` (task `why16ktxx`), with [args-P1-post.json](reviews/M4/args-P1-post.json). Its steps:
+  - A8's probe first;
+  - then the edge quad, the LUT and the training room through RoomKit;
+  - the car recoloured;
+  - `look_probe.gd`;
+  - NOISY perf numbers only.
+- **Still running:** P1-skin, P1-toon and P1-chain. P1-fx takes the next free Godot slot.
+
 ### 2026-10-26 23:40 CDT: P1-tools done and merged; the smoke Punk is through Tripo (55 credits)
 - **Merged:** `50b42d4`.
   - The `--spend` guard on every paid Tripo call.
