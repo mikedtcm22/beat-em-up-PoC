@@ -4,6 +4,24 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-26 23:40 CDT: P1-tools done and merged; the smoke Punk is through Tripo (55 credits)
+- **Merged:** `50b42d4`.
+  - The `--spend` guard on every paid Tripo call.
+  - The mannequin: `assets/source/mannequin/`, made by `blender_mannequin.py` from `joints.json`.
+  - `blender_views.py`: four-side textured stills of any GLB.
+  - The smoke sources in `assets/source/characters/punk/smoke/`: a Gemini flat front view of Punk A; the T1 generation `cb4af11c_gen.glb` (19,510 triangles, faithful to the concept); the T3 rig `0366578f_rig.glb`; their dumps; and `source.json`.
+- **Ledger:** T1 30.00 (texture v3.5 costs the same as standard), T2 0, T3 25.00. M4 has spent **55** credits; the balance is **1445**.
+- **What the smoke taught us** (for P1-chain, all in `source.json`):
+  - Tripo's model faces +X (`facing_yaw_deg` 89.33), and `Left_*` means the character's own left.
+  - The model is 1.000 m tall, so it scales by 1.8.
+  - Tripo's rig has 67 bones and roots at Hips with no Root. Its names map by dropping the underscore (`Left_UpperArm` becomes `LeftUpperArm`).
+  - Its arms sit 38-42° from vertical and its legs splay about 10°.
+  - It is broader and more muscular than the rig table: the shoulders sit 6-9 cm low.
+  - Gemini's flat view didn't follow the mannequin's stance. For F-punk, tighten that with the mannequin's numbers or an edit round.
+- **Left as is:** P1-tools asked to drop the price table's two settled "unverified" entries. Its own self-test pins that flag, so the table stays unchanged; it only prints a warning.
+- **Still running:** P1-skin, P1-toon, P1-chain (which will find the smoke on its check) and L0-bench. A background watch merges P1-chain's `probe_body.glb` commit once it is pushed.
+- **Game-boy's pick:** none yet (read 23:38).
+
 ### 2026-10-26 23:15 CDT: S0 and P1-tools part 1 merged (1216/1216); phase 1 running
 5-hour 43% (resets 00:50 CDT), weekly 12%. Phase 0 cost about 9%, much less than its estimate.
 - **Merged into `m4/art-pipeline`:**
