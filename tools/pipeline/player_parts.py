@@ -273,6 +273,34 @@ def place_piece(g, side, P, centre, flare, ring_offset_h, R, p_hand, box_y_b):
 	return hang @ R.T + p_hand, a
 
 
+def girth_clamp(co, w, targets, spec):
+	"""Pull the surface of a limb in toward its bone's axis where it is fatter than the proxy's radius allows (the player's own arms
+	and legs are what first person measures against the primitives, A9): past radius_m the excess keeps only `soft` of itself, fading in over
+	the segment's ends and weighted by the bone's own weight, so a shoulder or a knee never creases. Returns (new vertices, report)."""
+	out = co.copy()
+	report = {}
+	for bone, sp in spec.items():
+		head, tail = np.array(targets[bone]["head"]), np.array(targets[bone]["tail"])
+		ax = tail - head
+		length = float(np.linalg.norm(ax))
+		ax = ax / length
+		rel = co - head
+		t = rel @ ax
+		perp = rel - np.outer(t, ax)
+		r = np.linalg.norm(perp, axis=1)
+		radius, soft = float(sp["radius_m"]), float(sp.get("soft", 0.25))
+		target = np.where(r > radius, radius + (r - radius) * soft, r)
+		scale = target / np.maximum(r, 1e-9)
+		u = t / length
+		fade = smoothstep(u, -0.05, 0.12) * (1.0 - smoothstep(u, 0.88, 1.05))
+		k = w[:, NAMES.index(bone)] * fade
+		out += perp * ((scale - 1.0) * k)[:, None]
+		moved = np.linalg.norm(out - co, axis=1)
+		report[bone] = {"radius_m": radius, "vertices_moved": int((moved > 1e-5).sum()), "worst_move_m": float(moved.max())}
+		co = out
+	return out, report
+
+
 def replace_hands(cfg, extra):
 	pf = cfg["parts"]["fists"]
 	if pf.get("source", "tripo") != "tripo":
@@ -288,6 +316,10 @@ def replace_hands(cfg, extra):
 	boxes = {b["side"]: b for b in pc.table()["fist_boxes"]}
 	co = pb.verts(me)
 	w = pb.weights_matrix(body, NAMES)
+	girth_report = {}
+	if pf.get("girth"):
+		co, girth_report = girth_clamp(co, w, targets, pf["girth"])
+		pb.set_verts(me, co)
 	start, total, lv = pb.poly_arrays(me)
 	centers = pb.face_centers(me)
 	cut = np.zeros(len(start), dtype=bool)
@@ -479,7 +511,7 @@ def replace_hands(cfg, extra):
 		fist_check[side] = {"vertices": int(sel.sum()), "centroid_offset_m": float(np.linalg.norm(rest.mean(axis=0) - bc)),
 			"bbox_centre_offset_m": float(np.linalg.norm((rest.max(axis=0) + rest.min(axis=0)) / 2 - bc)), "extent_ratio": (ext / want).tolist()}
 	pb.save_blend(pc.work_path(cfg, "04_parts.blend"))
-	return {"enabled": True, "source": "tripo", "mesh": pf["mesh"], "stray_faces_removed": len(stray), "sides": report_sides, "fist_check": fist_check, "triangles_after": pb.triangle_count(body.data)}
+	return {"enabled": True, "source": "tripo", "mesh": pf["mesh"], "stray_faces_removed": len(stray), "girth": girth_report, "sides": report_sides, "fist_check": fist_check, "triangles_after": pb.triangle_count(body.data)}
 
 
 # --------------------------------------------------------------------------- the first-person split
@@ -702,6 +734,7 @@ def add_caps(me, depth, rings, heal_max=0.0):
 	cut_out, patched = repair_defects(bm, 10 ** 9, 12, rounds=6) if heal_max > 0.0 else (0, 0)
 	report.append({"slit_edges_collapsed_after_caps": left, "defect_faces_cut_out": cut_out, "defect_faces_patched": patched,
 		"open_edges_left": sum(1 for e in bm.edges if e.is_boundary)})
+	bmesh.ops.triangulate(bm, faces=bm.faces[:])  # the hole patches are n-gons and the caps quads: every later step reads triangles
 	bm.to_mesh(me)
 	bm.free()
 	me.update()
@@ -830,6 +863,15 @@ def split_fp(cfg, extra):
 		tor = separate_faces(body, belly, "Body__fp_torso")
 		body = bpy.data.objects[pb.BODY]
 
+	# ----- the hidden part's own pinholes (the generated mesh's defects, not its cuts): patch the short open loops
+	bm = bmesh.new()
+	bm.from_mesh(hid.data)
+	hid_cut, hid_patched = repair_defects(bm, int(sc.get("ring_min_edges", 14)), int(sc.get("hole_sides_max", 12)))
+	bmesh.ops.triangulate(bm, faces=bm.faces[:])
+	bm.to_mesh(hid.data)
+	bm.free()
+	hid.data.update()
+
 	# ----- inward rounded caps on every open loop of the visible parts
 	depth, rings = float(sc.get("cap_depth_m", 0.03)), int(sc.get("cap_rings", 4))
 	heal = float(sc.get("heal_edge_max_m", 0.0))
@@ -848,7 +890,7 @@ def split_fp(cfg, extra):
 	pb.save_blend(pc.work_path(cfg, "06_split.blend"))
 	hc = pb.verts(hid.data)
 	return {"enabled": True, "open_edges_before_weld": open_before, "open_edges_after_weld": open_after, "hole_faces_filled": filled, "slit_edges_collapsed": healed, "defect_faces_cut_out": cut_out, "defect_faces_patched": patched, "open_edges_after_fill": open_after_fill, "z_cut_m": z_cut, "upper_arm_cut": cut_t, "hidden_faces": int(hidden.sum()), "visible_triangles": pb.triangle_count(body.data),
-		"hidden_triangles": pb.triangle_count(hid.data), "torso_triangles": pb.triangle_count(tor.data) if tor is not None else 0,
+		"hidden_triangles": pb.triangle_count(hid.data), "hidden_defect_faces_cut_out": hid_cut, "hidden_defect_faces_patched": hid_patched, "torso_triangles": pb.triangle_count(tor.data) if tor is not None else 0,
 		"vertices_over_four_influences_before_limit": over_four, "caps": cap_report,
 		"hidden_bbox": {"min": hc.min(axis=0).tolist(), "max": hc.max(axis=0).tolist()}}
 

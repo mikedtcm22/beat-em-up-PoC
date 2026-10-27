@@ -26,7 +26,27 @@ def player_steps():
 	return out
 
 
+MASK_PARAMS = {"compress/mode": "0", "mipmaps/generate": "true", "process/fix_alpha_border": "false", "process/premult_alpha": "false",
+	"detect_3d/compress_to": "0"}
+
+
+def ensure_mask_import(asset):
+	"""The detail mask is read as data (R = ink), never VRAM-compressed: set its .import after Godot has written it."""
+	cfg = shared.pc.load_config(os.path.join(shared.pc.REPO, "assets", "source", "characters", asset, "pipeline.json"))
+	mask = os.path.join(shared.pc.cfg_dir(cfg, "export_dir"), cfg.get("detail", {}).get("name", "player_detail.png"))
+	if not os.path.exists(mask):
+		return
+	if not os.path.exists(mask + ".import"):
+		shared.godot_import()
+	if os.path.exists(mask + ".import") and shared.patch_import(mask + ".import", MASK_PARAMS):
+		shared.godot_import()
+
+
 if __name__ == "__main__":
 	shared.STEPS = player_steps()
 	shared.STEP_NAMES = [s[0] for s in shared.STEPS]
-	sys.exit(shared.main(sys.argv[1:]))
+	argv = sys.argv[1:]
+	code = shared.main(argv)
+	if code == 0 and "--check" not in argv and "--no-import" not in argv and "--asset" in argv:
+		ensure_mask_import(argv[argv.index("--asset") + 1])
+	sys.exit(code)

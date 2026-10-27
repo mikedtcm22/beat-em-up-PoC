@@ -61,10 +61,10 @@
 				"a_m": [
 					-0.075,
 					0.0,
-					0.124
+					0.121
 				]
 			},
-			"xz_scale_m": 0.257,
+			"xz_scale_m": 0.235,
 			"strap_taper_y_g": [
 				-0.4,
 				-0.25
@@ -75,7 +75,41 @@
 			"ramp_a_m": [
 				-0.045,
 				0.0
-			]
+			],
+			"girth": {
+				"LeftUpperArm": {
+					"radius_m": 0.076,
+					"soft": 0.1
+				},
+				"LeftLowerArm": {
+					"radius_m": 0.059,
+					"soft": 0.15
+				},
+				"LeftUpperLeg": {
+					"radius_m": 0.115,
+					"soft": 0.2
+				},
+				"LeftLowerLeg": {
+					"radius_m": 0.1,
+					"soft": 0.2
+				},
+				"RightUpperArm": {
+					"radius_m": 0.076,
+					"soft": 0.1
+				},
+				"RightLowerArm": {
+					"radius_m": 0.059,
+					"soft": 0.15
+				},
+				"RightUpperLeg": {
+					"radius_m": 0.115,
+					"soft": 0.2
+				},
+				"RightLowerLeg": {
+					"radius_m": 0.1,
+					"soft": 0.2
+				}
+			}
 		},
 		"split_fp": {
 			"enabled": true,
@@ -253,6 +287,45 @@
 					0.0
 				]
 			}
+		}
+	},
+	"detail": {
+		"name": "player_detail.png",
+		"size": 1024,
+		"border_px": 1.0,
+		"border_soft_px": 0.5,
+		"dilate_px": 2,
+		"stroke": {
+			"radius_px": 3,
+			"lo": 0.04,
+			"hi": 0.1,
+			"gain": 1.0
+		},
+		"layout": {
+			"angle_deg": 66.0,
+			"margin": 0.002,
+			"weights": {
+				"default": 1.0,
+				"part:Body__fp_hidden": 0.3,
+				"LeftLowerArm": 1.8,
+				"RightLowerArm": 1.8,
+				"LeftHand": 1.8,
+				"RightHand": 1.8,
+				"LeftFoot": 1.5,
+				"RightFoot": 1.5,
+				"LeftToes": 1.5,
+				"RightToes": 1.5,
+				"LeftLowerLeg": 1.5,
+				"RightLowerLeg": 1.5,
+				"LeftUpperLeg": 1.2,
+				"RightUpperLeg": 1.2
+			}
+		},
+		"crease": {
+			"lo": 0.12,
+			"hi": 0.28,
+			"gain": 1.0,
+			"fist_gain": 1.0
 		}
 	}
 }
