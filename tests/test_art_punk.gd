@@ -614,3 +614,80 @@ func test_the_strain_of_every_glb_against_the_skinned_rest_is_printed_for_the_ga
 		assert_gt(run.samples, 200, "%s: every clip at five phases and the peak flexes" % row.name)
 	var elapsed := (Time.get_ticks_msec() - started) / 1000.0
 	print("ART-PUNK A19: four GLBs in %.1f s" % elapsed)
+
+
+# --- The rooms: the props' hulls and the load-time warm-up ------------------------------------------
+
+
+const CROWD_ROOM := "res://game/level/crowd_room.tscn"
+const TRAINING_ROOM := "res://game/level/test_room.tscn"
+
+
+## The ShaderMaterial a room mesh draws with (a BoxMesh's own surface material), or null.
+func _surface(mi: MeshInstance3D) -> ShaderMaterial:
+	return (mi.mesh as BoxMesh).material as ShaderMaterial if mi.mesh is BoxMesh else null
+
+
+## Count the room's box meshes that wear the prop hull (the material's next_pass is a toon hull)
+## and those that do not; the hulled ones also carry the edge tag 0 (the edge pass skips them).
+func _hulls_of(root: Node) -> Dictionary:
+	var hulled := 0
+	var bare := 0
+	var tags_ok := true
+	for node: Node in root.find_children("*", "MeshInstance3D", true, false):
+		var material := _surface(node as MeshInstance3D)
+		if material == null:
+			continue
+		if material.next_pass is ShaderMaterial and (material.next_pass as ShaderMaterial).shader == ToonMaterials.OUTLINE_SHADER:
+			hulled += 1
+			tags_ok = tags_ok and is_equal_approx(float(material.get_shader_parameter(&"edge_tag")), 0.0)
+		else:
+			bare += 1
+			if material.shader == ToonMaterials.TOON_SHADER:
+				tags_ok = tags_ok and is_equal_approx(float(material.get_shader_parameter(&"edge_tag")), 1.0)
+	return {hulled = hulled, bare = bare, tags_ok = tags_ok}
+
+
+func test_the_crowd_rooms_crates_dumpster_and_car_wear_the_hull_and_the_walls_do_not() -> void:
+	var room := (load(CROWD_ROOM) as PackedScene).instantiate() as CrowdRoom
+	room.with_presentation = false
+	room.waves_enabled_on_start = false
+	add_child_autofree(room)
+	await get_tree().physics_frame
+	var count := _hulls_of(room.geometry)
+	assert_eq(count.hulled, room.crate_positions.size() + 2, "the crates, the dumpster and the car")
+	assert_gt(count.bare, 20, "the street's walls, windows, paint and backdrop have none")
+	assert_true(count.tags_ok, "a hulled prop is tagged 0 for the edge pass and the rest 1")
+
+
+func test_the_training_rooms_crates_wear_the_hull() -> void:
+	var room := (load(TRAINING_ROOM) as PackedScene).instantiate() as Node3D
+	room.set(&"with_presentation", false)
+	add_child_autofree(room)
+	await get_tree().physics_frame
+	var count := _hulls_of(room)
+	assert_eq(count.hulled, 3, "the three crates")
+	assert_gt(count.bare, 5)
+	assert_true(count.tags_ok)
+
+
+func test_the_props_wear_no_hull_when_placeholders_get_none() -> void:
+	Tuning.data.look_hull_on_placeholders = false
+	var room := (load(CROWD_ROOM) as PackedScene).instantiate() as CrowdRoom
+	room.with_presentation = false
+	room.waves_enabled_on_start = false
+	add_child_autofree(room)
+	await get_tree().physics_frame
+	var count := _hulls_of(room.geometry)
+	assert_eq(count.hulled, 0, "the fallback: no hull on a prop")
+	assert_true(count.tags_ok, "and every surface is tagged 1, so the edge pass inks them")
+
+
+func test_the_load_time_warm_up_adds_nothing_headless() -> void:
+	var holder := Node3D.new()
+	add_child_autofree(holder)
+	var before := holder.get_child_count()
+	RoomKit.warm_up_art(holder)
+	assert_eq(holder.get_child_count(), before, "headless: no throwaway rig, no holder")
+	assert_true(ResourceLoader.exists(RoomKit.WARM_ART), "the warm-up's art exists")
+	assert_eq((load(RoomKit.WARM_ART) as CharacterArt).resource_path, VARIANTS[0].art)

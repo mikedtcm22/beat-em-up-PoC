@@ -136,6 +136,8 @@ const ORBIT_SETTLE_TICKS := 40
 const POSED_M := 1.0
 ## The comic effects' random seed (the VFX bot's).
 const VFX_SEED := 7
+## The four smoke GLBs by Tuning's look_punk_art_variant (StreetPunk's art, then its ART_VARIANTS).
+const PUNK_ARTS: Array[String] = ["punk", "punk_rest", "punk_auto", "punk_auto_rest"]
 ## The perf act's length (30 s of the autopilot's fight; the mixed six's is 30 s too).
 const PERF_SIX_TICKS := 1800
 
@@ -181,9 +183,8 @@ static func _begin(bot: Node) -> void:
 ## `LOOK-ART variant <n> <glb>`: which of the four smoke GLBs the Punks of this run wear (Tuning's
 ## look_punk_art_variant; 0 is the scene's punk.glb), so a recording says what it recorded.
 static func _log_art(bot: Node) -> void:
-	var variant := clampi(Tuning.data.look_punk_art_variant, 0, StreetPunk.ART_VARIANTS.size())
-	var path: String = "res://game/actors/art/punk_art.tres" if variant == 0 else StreetPunk.ART_VARIANTS[variant - 1]
-	bot.log_line("LOOK-ART variant %d %s" % [variant, path.get_file().get_basename()])
+	var variant := clampi(Tuning.data.look_punk_art_variant, 0, PUNK_ARTS.size() - 1)
+	bot.log_line("LOOK-ART variant %d %s" % [variant, PUNK_ARTS[variant]])
 
 
 ## The end of every act: the `end` mark and the caption back (the bot's own idle tail shows it).
