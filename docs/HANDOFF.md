@@ -4,6 +4,34 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-27 05:55 CDT: P3-early and F-look merged (1491/1491); F-player-int running on the probe body; still no pick
+- **Merged:**
+  - P3-early (`c5878fa`, suite 1472/1472):
+    - the long take c14 and the F4 showcase on one script;
+    - the L key log toggle and `combat_log_hide_while_holding` (feel question 4);
+    - Motion libraries rebuilt live, and a per-rig idle phase for the crowd;
+    - the ragdoll write-back test on a real StreetPunk;
+    - the face-down evidence, and the L5 act. With the art drawn, R8 is within 0.3-2.8 pp of the proxies, and R4 matches.
+  - F-look (`1cffe88`, suite 1491/1491; an ARCHITECTURE add/add conflict at the end of the M4 section, resolved by keeping all three headings in order):
+    - the sun as tunables, a camera-fixed character fill (`look_fill_*`) and the linear tonemapper (`look_tonemap`; 1 = filmic);
+    - bands 0.22/0.52 and an unfogged hull, so the ink matches the HUD's;
+    - the street within 0.30 saturation, 12 cm window boxes, and redrawn damage tiles;
+    - L1, L2 and L3 in range. The preset is at 514 values.
+- **The lead's look:** in the F-look pairs, the C2 Punk at 1 m has 3 crisp bands, warm skin, teal that reads teal and an even ink line. The C7 lineup shares the ink and bands. The lime Kicker is very bright.
+- **Left over from these packages:**
+  - re-record the vfx_bot sheets under the linear tonemapper (P3-int);
+  - ARCHITECTURE's P1-toon and P1-post headings still quote the old defaults (F-look's heading lists what moved);
+  - the Bruiser and boss library warm-up in `RoomKit.warm_up_art` (P3-int);
+  - the player box-hull corners at 4.2-4.7 px (F-player-art).
+- **Running:** F-player-int, launched 05:50 as `wf_bf4c7d7f-773` (args `docs/reviews/M4/args-F-player-int.json` plus `"only": ["F-player-int"]`; worktree `.worktrees/m4-f-player-int`, branch `m4/f-player-int`). It wires the player's art on the probe body, merge-safe: the game keeps M3's primitives until `player.glb` exists, and the probe is worn behind the Debug switch `look_player_art_probe`. It also does test_art_player, the lens rules on the skinned art, 'Look: my arms and legs', and feel question 3 (`fp_knockdown_hide_torso`).
+- **The judgement calls log** (`docs/milestones/M4-judgement-calls.md`) has 15 entries.
+- **Concept pick:** none (DM read at 05:50; the one reminder went at 04:37).
+- **Usage:** the 5-hour window reset at 05:50 (60% before it); weekly 27%.
+- **Next:**
+  1. Merge F-player-int.
+  2. On the pick: F-punk and F-player-art (Tripo spend: about 145 + 185 credits expected, inside the 750 stop), then F-player-int's switch to the real GLB.
+  3. Without the pick, everything else is done except P3-int proper: the flash toggles 1-2, `test_m4_done_when`, the quiet perf A/B, and re-recording on the real art. It waits on the art.
+
 ### 2026-10-27 05:00 CDT: F-motion merged (1414/1414); P3-early launching beside F-look
 - **Merged:** F-motion (`9ae7166`). The merge was clean, the preset is at 505 values, and the suite is 1414/1414 with 0 SCRIPT, SHADER or ERROR lines.
   - No move clip changed: 41 move files were hashed key for key first, and `test_motion_m4` holds them.
