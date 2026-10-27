@@ -50,8 +50,11 @@ var _seconds: PackedFloat32Array = PackedFloat32Array()
 var _from: Vector3 = Vector3.ZERO
 var _turned: float = 0.0
 var _turn_from: float = 0.0
-## Ticks of the contact flash still to run (counted in ticks the simulation moves).
+## Ticks of the contact flash still to run (counted in ticks the simulation moves), and whether the
+## tick it began in is still to be played: that one does not count, so the flash shows for exactly
+## hit_flash_frames rendered frames, as an actor's does.
 var _flash_left: int = 0
+var _flash_fresh: bool = false
 var _next_mark: int = 1
 var _finished: bool = false
 
@@ -160,6 +163,11 @@ func _reset_body() -> void:
 	rig.advance(0.0)
 
 
+## The way the Punk faces now (flat, world space).
+func _facing() -> Vector3:
+	return anchor.basis * Basis(Vector3.UP, _turned) * Vector3.FORWARD
+
+
 ## Place the Punk at world `at`, turned `_turned` from the anchor's facing.
 func _place(at: Vector3) -> void:
 	actor.global_transform = Transform3D(anchor.basis * Basis(Vector3.UP, _turned), at)
@@ -217,6 +225,7 @@ func _flash(point: StringName) -> void:
 	var tuning := Tuning.data
 	var rig := actor.rig
 	_flash_left = tuning.hit_flash_frames
+	_flash_fresh = true
 	rig.flash_at(rig.get_point_position(point), tuning.hit_flash_strength, tuning.hit_flash_radius_m, tuning.hit_flash_core)
 
 
@@ -226,17 +235,23 @@ func _play(dt: float) -> void:
 	var rig := actor.rig
 	elapsed += dt
 	var share := clampf(elapsed / maxf(_seconds[index], 0.001), 0.0, 1.0)
+	var along := 0.0
 	match step.kind:
 		&"stand":
 			_turned = _turn_from + deg_to_rad(float(step.get("turn_deg", 0.0))) * share
-			_place(_from)
 		&"walk":
 			_walk_anim(step)
-			var along := signf(float(step.move_m)) * minf(ShowcaseScript.pace_of(step) * elapsed, absf(float(step.move_m)))
-			_place(_from + anchor.basis * Vector3.FORWARD * along)
+			along = signf(float(step.move_m)) * minf(ShowcaseScript.pace_of(step) * elapsed, absf(float(step.move_m)))
+		_:
+			# A body a hit sends somewhere slows as it goes: fast at first, still at the end.
+			along = float(step.get("slide_m", 0.0)) * (1.0 - (1.0 - share) * (1.0 - share))
+	_place(_from + _facing() * along)
 	rig.advance(dt)
 	if dt > 0.0 and _flash_left > 0:
-		_flash_left -= 1
+		if _flash_fresh:
+			_flash_fresh = false
+		else:
+			_flash_left -= 1
 		if _flash_left == 0:
 			rig.set_flash(0.0)
 		else:

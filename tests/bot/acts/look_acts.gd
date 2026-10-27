@@ -30,6 +30,8 @@ extends RefCounted
 ## | C13 | Look: Punk, impact frame off | C5 with the impact frame off |
 ## | P1 | Look: Perf, six art Punks | six art Punks and the autopilot for 30 s, frame times logged (A16); no marks, no rectangles |
 ## | W1 | Look: warm-up in the lens | a room's load run again, cold, in a viewport of its own (the crowd room, then the training room): the art warm-up's holder is in the camera's frustum on both frames it is drawn (LOOK-WARM lines); no marks, no rectangles |
+## | C14 | Look: Punk at 1 m, the long take | one 40 s first-person take of one Punk at 1 m, scripted (game/debug/showcase_script.gd, the same script the F4 "Showcase Punk at 1 m" loops): idle, a turntable, backs off and walks in, taunt, jab and cross, takes a jab, stagger, knockdown, get-up, a face-down fall and get-up, KO |
+## | L5 | Look: readability with the art drawn | M4's L5: the fights of "Six Punks, fight" and "Mixed six, fight" run in turn with R4 and R8 measured with the art drawn (tests/bot/look_l5.gd: the triangles the lens draws, ragdolling rigs skinned in their drawn pose) beside the proxies' figures; LOOK-L5 lines, no marks or rectangles |
 ##
 ## The Punk in every act wears the art (game/actors/art/punk_art.tres). The A/B between the four smoke
 ## GLBs is Tuning's Debug value look_punk_art_variant (0 punk.glb, 1 punk_rest, 2 punk_auto,
@@ -43,6 +45,8 @@ extends RefCounted
 const LookRect := preload("res://tests/bot/look_rect.gd")
 const RoomActs := preload("res://tests/bot/acts/room_acts.gd")
 const CrowdActs := preload("res://tests/bot/acts/crowd_acts.gd")
+const SliceActs := preload("res://tests/bot/acts/slice_acts.gd")
+const L5 := preload("res://tests/bot/look_l5.gd")
 
 ## The 1 m recipe: where the Punk stands (x right, y ahead, metres), and where it stands for its
 ## punches to land (the reach of its two-hit punch, as the Punk bot's "two-hit punch lands").
@@ -151,6 +155,19 @@ const WARM_ROOMS: Array[Dictionary] = [
 const WARM_VIEW_SIZE := Vector2i(320, 180)
 const WARM_FRAMES := 2
 const WARM_WAIT_FRAMES := 12
+## The long take: the Punk's spot is CLOSE_M, a still is taken this many ticks into each step (the
+## first frames of a step show its pose arriving: the contact flash of a hit lasts two) and, for a
+## step of MID_MARK_MIN_S seconds or more, at its middle too; the view turns to a step's pitch at this
+## rate (degrees a second); and the take is given this many ticks after its own length for the last
+## step's hold to be seen.
+const TAKE_MARK_TICKS := 3
+const MID_MARK_MIN_S := 1.0
+const TAKE_PITCH_DEG_PER_S := 45.0
+const TAKE_TAIL_TICKS := 30
+## L5: the labels of the two fights it measures (the acts "Six Punks, fight" and "Mixed six, fight"
+## play them), and the ticks the street rests between them.
+const L5_FIGHTS: Array[String] = ["Six Punks, fight", "Mixed six, fight"]
+const L5_BETWEEN_TICKS := 60
 
 
 static func acts(bot: Node) -> Array[Dictionary]:
@@ -172,6 +189,10 @@ static func acts(bot: Node) -> Array[Dictionary]:
 		{title = "Look: Perf, six art Punks", cam = &"first_person", slug = &"p1", probe = true,
 				fn = func() -> void: await _perf_six(bot)},
 		{title = "Look: warm-up in the lens", cam = &"first_person", slug = &"w1", fn = func() -> void: await _warm_up(bot)},
+		{title = "Look: Punk at 1 m, the long take", cam = &"first_person", slug = &"c14",
+				fn = func() -> void: await _long_take(bot)},
+		{title = "Look: readability with the art drawn", cam = &"first_person", slug = &"l5",
+				fn = func() -> void: await _readability(bot)},
 	]
 
 
@@ -812,3 +833,129 @@ static func _frustum_sane(camera: Camera3D) -> bool:
 
 static func _v(v: Vector3) -> String:
 	return "(%.2f %.2f %.2f)" % [v.x, v.y, v.z]
+
+
+# --- C14: the long take ----------------------------------------------------------------------------
+
+
+## M4's long take: one Punk 1 m ahead, the view first person, the script of game/debug/showcase_script.gd
+## played on its rig by ShowcaseRunner (the F4 "Showcase Punk at 1 m" loops the same script): idle, a
+## turntable, backs off and walks in, taunt, jab and cross, takes a jab (with the contact flash), stagger,
+## knockdown, get-up, a face-down fall and get-up, KO. 40 s. The Punk is taken off its own tick (the runner
+## places and advances it, one tick at a time, so every recording is the same frames) and stays an enemy of
+## the street, so the next act's reset clears it. A still is marked TAKE_MARK_TICKS into each step and at the
+## middle of a long one, and the turntable's quarters; the view turns to a step's `view_pitch_deg` (the lying
+## bodies are below the lens) at TAKE_PITCH_DEG_PER_S.
+static func _long_take(bot: Node) -> void:
+	_begin(bot)
+	var punk := _punk(bot, Vector2(0.0, CLOSE_M))
+	await bot._look_to(DEFAULT_PITCH_DEG, PITCH_TICKS)
+	await bot._ticks(SETTLE_TICKS)
+	_unplug(punk)
+	var runner := ShowcaseRunner.new()
+	runner.auto_advance = false
+	punk.add_child(runner)
+	runner.setup(punk, Transform3D(Basis(Vector3.UP, punk.global_rotation.y), punk.global_position), false)
+	var dt := 1.0 / Engine.physics_ticks_per_second
+	var pitch := {target = deg_to_rad(DEFAULT_PITCH_DEG)}
+	var marks := {names = [] as Array[String]}
+	runner.step_started.connect(func(i: int, _name: StringName) -> void:
+		var step: Dictionary = ShowcaseScript.STEPS[i]
+		if step.has("view_pitch_deg"):
+			pitch.target = deg_to_rad(float(step.view_pitch_deg)))
+	runner.step_marked.connect(func(_name: StringName, label: String) -> void: marks.names.append(label))
+	LookRect.mark(bot, "c14", "start")
+	var step_ticks := 0
+	var seen := -1
+	var mid_done := false
+	var limit := ceili(runner.take_seconds() / dt) + TAKE_TAIL_TICKS
+	for tick in limit:
+		runner.advance(dt)
+		bot.player.look_pitch = move_toward(bot.player.look_pitch, pitch.target, deg_to_rad(TAKE_PITCH_DEG_PER_S) * dt)
+		await bot._ticks(1)
+		if runner.is_finished():
+			break
+		if runner.index != seen:
+			seen = runner.index
+			step_ticks = 0
+			mid_done = false
+		step_ticks += 1
+		var step := runner.current_step()
+		if step.is_empty():
+			continue
+		if step_ticks == TAKE_MARK_TICKS:
+			LookRect.mark(bot, "c14", String(step.name), punk)
+		elif not mid_done and runner.seconds_of_step(seen) >= MID_MARK_MIN_S and runner.elapsed >= runner.seconds_of_step(seen) * 0.5:
+			mid_done = true
+			LookRect.mark(bot, "c14", "%s_mid" % step.name, punk)
+		for label: String in marks.names:
+			LookRect.mark(bot, "c14", label, punk)
+		marks.names.clear()
+	bot.log_line("LOOK-TAKE c14 %.1f s in %d steps, the Punk is %s" % [runner.take_seconds(), runner.step_count(),
+			"finished" if runner.is_finished() else "still playing"])
+	# The view back to the default for the next act's slate.
+	await bot._look_to(DEFAULT_PITCH_DEG, PITCH_TICKS)
+	_end(bot, "c14")
+
+
+# --- L5: readability with the art drawn ------------------------------------------------------------
+
+
+## M4's row L5 (slice-gate gap 1): the fights of "Six Punks, fight" and "Mixed six, fight" played in turn,
+## the readability metrics R4 and R8 measured twice on the same frames, as the probe measures them (the
+## proxies that stand in for the art) and with the art drawn (tests/bot/look_l5.gd: the skinned triangles
+## the lens draws, a ragdolling rig in the pose the ragdoll shows, SkinnedView.drawn_pose()), and printed
+##   LOOK-L5 <fight> R8 ...   LOOK-L5 <fight> R4 ...
+## It is windowed work (a drawn-art sample costs 10 to 15 ms and a fight is 27 to 32 s): never in the
+## headless suite's long acts (A4); `tools/capture_bot.sh ... "Look: readability with the art drawn"`
+## runs it, recorded or not. The two fights are the acts' own (god mode, the autopilot held back, a Punk
+## walking in whenever one falls), each from the look the act began with.
+static func _readability(bot: Node) -> void:
+	bot.caption.visible = false
+	_log_art(bot)
+	var vfx := bot.get_tree().get_first_node_in_group(VfxDirector.GROUP) as VfxDirector
+	if vfx:
+		vfx.clear()
+		vfx.rng.seed = VFX_SEED
+	var yaw: float = bot.player.look_yaw
+	var pitch: float = bot.player.look_pitch
+	var fights: Array[Callable] = [
+		func() -> void: await SliceActs._fight_six(bot),
+		func() -> void: await CrowdActs._fight(bot),
+	]
+	LookRect.mark(bot, "l5", "start")
+	for i: int in fights.size():
+		bot.clear_enemies()
+		bot.keep_alive(0)
+		bot.pilot.enabled = false
+		bot.pilot.stop()
+		bot.player.look_yaw = yaw
+		bot.player.look_pitch = pitch
+		await bot._ticks(L5_BETWEEN_TICKS)
+		var sampler: RefCounted = L5.new(bot, bot.player, L5_FIGHTS[i])
+		var run := {running = true}
+		_l5_sample(bot, sampler, run)
+		var fight: Callable = fights[i]
+		await fight.call()
+		run.running = false
+		sampler.finish()
+		for line: String in sampler.lines():
+			bot.log_line(line)
+	bot.keep_alive(0)
+	bot.pilot.enabled = false
+	bot.pilot.stop()
+	bot.clear_enemies()
+	_end(bot, "l5")
+
+
+## A coroutine that runs beside a fight until `run.running` is cleared: the sampler ticks once per
+## physics tick, as the probe does (it takes its cadences from the probe's own).
+static func _l5_sample(bot: Node, sampler: RefCounted, run: Dictionary) -> void:
+	sampler.cols = bot.probe.lens_cols
+	sampler.lens_every = bot.probe.lens_every
+	sampler.occlusion_every = bot.probe.occlusion_every
+	sampler.margin_m = bot.probe.occlusion_margin_m
+	while run.running:
+		await bot._ticks(1)
+		if run.running:
+			sampler.tick()

@@ -26,11 +26,14 @@ extends RefCounted
 ##               (`anim`, a named animation, for its own length plus `hold`, or `seconds`), `move`
 ##               (`move`, the id of a move in game/combat/moves, for its own length; `windup` says the
 ##               move is the opener of an attack, which the AI winds up: EnemyActor.windup_move())
+## - `slide_m`   a clip or a move that carries the body: meters along the Punk's facing over the step,
+##               negative backwards (a stagger, a knockdown: the body goes where a hit sends it, and
+##               a lying body is a metre long each way of where it falls, so it lies where the lens sees it)
 ## - `hit_point` a clip that is a reaction to a hit: the rig point the contact flash is aimed at
 ## - `damage`    the DamageLook.Level the Punk wears from this step on
 ## - `marks`     how many extra marks the act takes inside the step (a turntable's quarters)
-## - `view_pitch_deg` the act only: the pitch the view turns to as the step starts (the lying body
-##               is below the lens); the F4 showcase leaves the view to the player
+## - `view_pitch_deg` the act only: the pitch the view turns to as the step starts (a lying body is
+##               below the lens); the F4 showcase leaves the view to the player
 
 ## The take's length (s), and how far from it the sum of the steps may be.
 const TAKE_SECONDS := 40.0
@@ -39,27 +42,28 @@ const TAKE_TOLERANCE_S := 1.5
 const PACE := &"posture_circle_speed_mps"
 
 const STEPS: Array[Dictionary] = [
-	{name = &"idle", kind = &"stand", seconds = 4.0},
-	{name = &"turntable", kind = &"stand", seconds = 8.0, turn_deg = 360.0, marks = 3},
+	{name = &"idle", kind = &"stand", seconds = 5.0},
+	{name = &"turntable", kind = &"stand", seconds = 10.0, turn_deg = 360.0, marks = 3},
 	{name = &"back_off", kind = &"walk", move_m = -1.2, pace = PACE},
 	{name = &"walk_in", kind = &"walk", move_m = 1.2, pace = PACE},
-	{name = &"guard", kind = &"stand", seconds = 1.0},
-	{name = &"taunt", kind = &"clip", anim = &"taunt"},
+	{name = &"guard", kind = &"stand", seconds = 1.5},
+	{name = &"taunt", kind = &"clip", anim = &"taunt", hold = 0.4},
 	{name = &"jab", kind = &"move", move = &"punk_jab", windup = true},
 	{name = &"cross", kind = &"move", move = &"punk_cross"},
-	{name = &"guard_again", kind = &"stand", seconds = 1.0},
+	{name = &"guard_again", kind = &"stand", seconds = 1.5},
 	{name = &"takes_jab", kind = &"clip", anim = &"flinch_head_front", hit_point = &"EyePoint", damage = 1, hold = 0.4},
-	{name = &"stagger", kind = &"clip", anim = &"stagger_back", hold = 0.2},
-	{name = &"knockdown", kind = &"clip", anim = &"knockdown_back", view_pitch_deg = -30.0},
-	{name = &"lying", kind = &"clip", anim = &"downed_back", seconds = 1.5, damage = 2},
-	{name = &"get_up", kind = &"clip", anim = &"getup_back", view_pitch_deg = -6.0},
-	{name = &"guard_third", kind = &"stand", seconds = 0.5},
-	{name = &"turn_away", kind = &"stand", seconds = 0.8, turn_deg = 180.0},
-	{name = &"falls_forward", kind = &"clip", anim = &"knockdown_forward", view_pitch_deg = -30.0},
-	{name = &"lying_face_down", kind = &"clip", anim = &"downed_front", seconds = 1.5},
-	{name = &"get_up_face_down", kind = &"clip", anim = &"getup_front", view_pitch_deg = -6.0},
-	{name = &"turn_back", kind = &"stand", seconds = 0.8, turn_deg = -180.0},
-	{name = &"ko", kind = &"clip", anim = &"ko_back", hold = 1.5, view_pitch_deg = -30.0},
+	{name = &"stagger", kind = &"clip", anim = &"stagger_back", slide_m = -0.5, hold = 0.2},
+	{name = &"knockdown", kind = &"clip", anim = &"knockdown_back", slide_m = -1.0, view_pitch_deg = -20.0},
+	{name = &"lying", kind = &"clip", anim = &"downed_back", seconds = 2.5, damage = 2},
+	{name = &"get_up", kind = &"clip", anim = &"getup_back", hold = 0.3},
+	{name = &"walk_in_again", kind = &"walk", move_m = 1.5, pace = PACE, view_pitch_deg = -6.0},
+	{name = &"guard_third", kind = &"stand", seconds = 1.0},
+	{name = &"turn_away", kind = &"stand", seconds = 1.0, turn_deg = 180.0},
+	{name = &"falls_forward", kind = &"clip", anim = &"knockdown_forward", slide_m = 1.0, view_pitch_deg = -25.0},
+	{name = &"lying_face_down", kind = &"clip", anim = &"downed_front", seconds = 2.5},
+	{name = &"get_up_face_down", kind = &"clip", anim = &"getup_front", hold = 0.3},
+	{name = &"turn_back", kind = &"stand", seconds = 1.0, turn_deg = -180.0, view_pitch_deg = -6.0},
+	{name = &"ko", kind = &"clip", anim = &"ko_back", hold = 3.0, slide_m = -0.3, view_pitch_deg = -25.0},
 ]
 
 
