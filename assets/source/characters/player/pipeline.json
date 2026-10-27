@@ -41,22 +41,52 @@
 	},
 	"parts": {
 		"fists": {
-			"enabled": true,
-			"glove_slot": 35,
-			"strap_slot": 14,
-			"strap_height_m": 0.03,
-			"cuff_margin_m": 0.008,
-			"cuff_over_m": 0.035,
-			"cuff_below_wrist_m": 0.012,
-			"bevel_m": 0.022,
-			"bump_m": 0.006
+			"source": "tripo",
+			"mesh": "assets/source/characters/player/fist/tripo/e0b15d52_gen.glb",
+			"slots": [
+				35,
+				7,
+				14
+			],
+			"target_tris": 3000,
+			"cut_a_m": -0.06,
+			"radius_max_m": 0.14,
+			"reach_max_m": 0.35,
+			"map": {
+				"y_g": [
+					-0.49,
+					-0.05,
+					0.49
+				],
+				"a_m": [
+					-0.075,
+					0.0,
+					0.124
+				]
+			},
+			"xz_scale_m": 0.257,
+			"strap_taper_y_g": [
+				-0.4,
+				-0.25
+			],
+			"strap_margin_m": 0.006,
+			"flare_max": 1.5,
+			"ring_blend_m": 0.07,
+			"ramp_a_m": [
+				-0.045,
+				0.0
+			]
 		},
 		"split_fp": {
 			"enabled": true,
 			"torso_cut_bone": "Chest",
 			"upper_arm_cut": 0.5,
 			"cap_depth_m": 0.03,
-			"cap_rings": 4
+			"cap_rings": 4,
+			"torso_mesh": false,
+			"weld_boundary_m": 0.002,
+			"hole_sides_max": 12,
+			"heal_edge_max_m": 0.012
 		}
 	},
 	"palette": {
