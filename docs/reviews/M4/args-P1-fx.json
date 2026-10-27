@@ -1,0 +1,13 @@
+{
+  "base": "m4/art-pipeline",
+  "concurrency": 4,
+  "note": "Merge state: m4/art-pipeline at 60a9d64 has S0-contract, both P1-tools launches, L0-bench, P1-chain's probe-body wip and P1-toon merged (P1-toon's own branch: 1245/1245; the suite on the merge is running). P1-toon landed the toon look: ToonMaterials.INK (= HudStyle.INK, about #120f17) is the one ink colour for hulls, edges, VFX strokes and HUD borders; characters have 3 bands, a violet-tinted shadow side and an ink hull of look_outline_px (3.75 at 1080p) on material_overlay; read docs/ARCHITECTURE.md's 'Art pipeline and look (Milestone 4)' section (S0's, P1-toon's and L0-bench's headings) and docs/milestones/M4-calls/P1-toon.md first. L0-bench's look acts are in tests/bot/acts/look_acts.gd (C5 reacts at 1 m, C13 the same with the impact frame off; each act seeds the VFX generator). The M3 'before' pack is in /Users/arachne/repos/beat-em-up-PoC/captures/m4_before/<slug>/: read it, never write it. Re-record an act one per process (`tools/capture_bot.sh res://tests/bot/crowd_bot.tscn <dir> \"<exact title>\"`, then `tools/look_sheets.sh <dir>/bot.avi <dir>/sheets`) so before and after stills pair by label. Running in parallel on disjoint files: P1-skin, P1-chain, P1-post (the edge pass, grade and rooms) and you. Fill only your own heading in ARCHITECTURE's M4 section.",
+  "packages": [
+    {
+      "key": "P1-fx",
+      "section": "Part C §5 \"P1-fx\" (with the §3 fx rows), as amended by Part A §A6 (you own tests/test_vfx.gd), §A9 (every vfx_* tunable in the \"VFX\" group, an @export_range on every non-bool, or test_vfx's group test fails) and §A11 (the look bible: VFX strokes about 2x the character line at 1-2.5 m, one ink colour, red only in blood, the warning and finisher accents)",
+      "est": 6,
+      "note": "You own game/fx/vfx_director.gd, game/fx/vfx_art.gd, game/fx/comic_sprite.gd, tools/gen_fx.gd, assets/source/fx/ and assets/export/fx/, tests/test_vfx.gd (P1-toon already changed its material assertions there, logged in M4-calls/P1-toon.md: keep them), a new tests/test_fx_m4.gd, and the ASSETS.md 'Effects (VFX)' rows. Keep SPEC §10's pipeline (SVG drawn by tools/gen_fx.gd, rasterized to 512 px PNGs) and the 8-10 lettering words; test_vfx.gd's 512 px and word-count tests stay as they are. The look bible says today's strokes are about 12 px, about 3x the character line: bring them to about 2x the hull at 1-2.5 m. Seeded and byte-stable output: a rerun of gen_fx.gd must leave every PNG unchanged. Captures: vfx_bot's tiers side by side, and C5 and C13 re-recorded (one act per process) beside captures/m4_before/c5 and c13 at the same labels. Look at them: the effects must read as the same ink style as the toon characters, not heavier."
+    }
+  ]
+}

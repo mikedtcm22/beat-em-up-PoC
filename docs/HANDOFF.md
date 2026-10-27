@@ -4,6 +4,27 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-27 00:00 CDT: P1-toon and P1-chain's probe body merged; P1-fx running
+5-hour 65% (resets 00:50 CDT), weekly 16%.
+- **Merged:**
+  - P1-chain's `probe_body.glb` wip (`d0b07d3`, 1228/1228). It brings the Blender chain scripts, the probe body in both variants (A-pose and rest) and the palette atlas.
+  - P1-toon (`60a9d64`; its own branch passed 1245/1245). The preset regenerates at 482 values. The lead updated S0's ARCHITECTURE text to follow the retype. The suite on the merge is running.
+- **What P1-toon built:**
+  - One toon shader for every lit surface (`game/fx/toon.gdshader` plus `toon_light.gdshaderinc`, and the grid) and ink hulls on `material_overlay` (`toon_outline.gdshader`, modes 0-4). The flash keeps `next_pass`.
+  - Width is in pixels between near and far, faded at the lens; the player's own body draws at ×0.8.
+  - A shadow-map guard: without it the hull fattened shadows by 50%.
+  - RigPaint and DamageLook now use ShaderMaterial, and a UV2 detail mask was tested on a fixture.
+  - The lead looked at its first-person stills. The forearm and wraps read cel-shaded with an even line. The street is strongly violet, which is for P1-post and F-look to mute.
+- **P1-toon's requests still open** (P1-post was already running without them; SL-int or a P1-post fix picks them up):
+  1. Crates, the dumpster and the car should use `ToonMaterials.environment(color, true)`, which gives them a hull.
+  2. The edge pass reads `edge_tag`: 0 on every hulled surface (the art and, by default, the primitive characters, dummies, the pipe and hulled boxes), 1 on walls, floor and grid.
+  3. P1-skin's `attach()` must keep COLOR and add CUSTOM0 and CUSTOM1 (rest position and rest normal), and should use `paint.art_material()` and `paint.outline_material()`.
+  4. SL-int calls `ToonMaterials.warm_up(room, <art Punk>)`.
+  5. F-look: the sun sits behind the enemies, so their fronts fall in the mid and shadow bands. The violet is strong, and skin reads pinkish.
+- **Running:**
+  - P1-fx: `wf_461db2b0-0b9` (task `w5qjeow6a`, [args-P1-fx.json](reviews/M4/args-P1-fx.json));
+  - P1-skin, P1-chain and P1-post, as above.
+
 ### 2026-10-26 23:45 CDT: L0-bench merged; P1-post running
 5-hour 58% (resets 00:50 CDT), weekly 15%.
 - **L0-bench merged** (`f49e30c`). On its own base it passed 1210/1210; the suite on the merge is running.
