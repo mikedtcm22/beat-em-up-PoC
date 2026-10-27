@@ -4,6 +4,18 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-26: Game-boy signed off Milestone 3; PR #3 merged
+- **Game-boy (2026-10-26):** "happy with the enemy AI", M3 is complete as-is, and every judgement call and spec departure made in M3 is approved. README's "Where M3 departs from the spec" and `docs/milestones/M3-judgement-calls.md` now say so. The boss keeps the spec's 300 HP.
+- **PR #3 merged into `main`.** The `.worktrees/m3-*` worktrees can be pruned; every branch is pushed.
+- **Next: Milestone 4 (SPEC §12), the art pipeline proof:**
+  - the toon shader and outlines;
+  - the final player arms and legs;
+  - one Street Punk taken through the full pipeline (concept, 3D generation, Blender cleanup, rig, animation, export);
+  - the comic VFX set.
+
+  Done when the Punk looks production-quality at 1 m, standing and in motion (Game-boy judges).
+  - It needs Game-boy's toolchain first (SPEC §2): Blender and its MCP, a 3D generation service and its key, an image API key, and Mixamo access. The lead sent him the list on 2026-10-26.
+
 ### 2026-10-26 08:30 CDT: Milestone 3 done; the release, the PR and Game-boy's DM are out
 - **M3 is complete to SPEC §12, and waiting on Game-boy's play-through and sign-off.** Never merge PR #3 without that.
   - **Playable build:** https://github.com/mikedtcm22/beat-em-up-PoC/releases/tag/m3-playtest-1 (pre-release, `Beat-em-Up.PoC.zip`, universal macOS, ad-hoc signed, from `fd36854`). It was smoke-tested headless and windowed.
@@ -1166,6 +1178,7 @@ Every approved spec change so far is in README.md, "Where M1 departs from the sp
 - **Defaults for the rest of M2 (2026-10-25 14:15 CDT):** every open question takes its default for the rest of this milestone. Without the final art, Game-boy can't tell the grey-block feel issues apart. So don't put fine look or feel questions to him in M2. Record each default taken, and leave art-dependent feel polish for when the art is in.
 - **Milestone 3 setup (2026-10-25 16:50 CDT):** M2 signed off and merged. M3 runs without Game-boy's input until it's done to spec, then a Slack DM with a playable link and a digest of judgement calls (each with an alternative not taken). The playable link is a GitHub Release with a zipped macOS export (downloading the official export templates is approved). The boss is in M3 as graybox with a placeholder name. Enemy grabs on the player can be broken by mashing P/K. The account is now a premium seat (5 times the limits): the watcher checks less often, and at a limit a scheduled task resumes the work after the reset.
 - **Comms (2026-10-25 17:35 CDT):** whenever work is blocked on Game-boy (an authorization, a permission prompt, a login, a decision), DM him on Slack (Michael, `U0AQMKKBL93`) at once, then carry on with anything not blocked.
+- **Milestone 3 signed off (2026-10-26):** Game-boy played the build, called M3 complete as-is and approved every M3 judgement call and spec departure (README, `docs/milestones/M3-judgement-calls.md`). The boss keeps 300 HP.
 - **Process:** at each usage limit, hand off to Game-boy's second Claude account. Never assume the same session resumes.
 
 ## Usage watcher
@@ -1258,7 +1271,7 @@ USAGE RULES:
 - The watcher checks every 30 minutes below 70%, every 15 up to 85% and every 5 above. It tells you to halt and hand off at 90%; the handoff's last step is the scheduled resume task (docs/HANDOFF.md, "Resume after a limit").
 
 Next steps (Milestone 3; details are in docs/HANDOFF.md, newest entry first):
-- M3 is done and waiting on my play-through: PR https://github.com/mikedtcm22/beat-em-up-PoC/pull/3, build https://github.com/mikedtcm22/beat-em-up-PoC/releases/tag/m3-playtest-1. Never merge it without my sign-off; if I ask for changes, make them on m3/enemy-ai, re-export and update the release. M2 is signed off and merged (PR #2). M3 ran on branch m3/enemy-ai. Its plan is docs/milestones/M3-plan.md (Part A amendments bind; Part B is the checkable done-when; Part C the base plan). Builds run through docs/reviews/M3/workflow-build.js with args in docs/reviews/M3/args-<phase>.json, resumable from branch state: rerun the same args after a cut-off.
+- M3 is signed off and merged (PR #3, 2026-10-26); M2 too (PR #2). Next is Milestone 4, the art pipeline proof (SPEC §12): plan it once my toolchain items are in (docs/HANDOFF.md, newest entry). Its plan is docs/milestones/M3-plan.md (Part A amendments bind; Part B is the checkable done-when; Part C the base plan). Builds run through docs/reviews/M3/workflow-build.js with args in docs/reviews/M3/args-<phase>.json, resumable from branch state: rerun the same args after a cut-off.
 - I asked (2026-10-25) for M3 to run to completion without my input. When it's done to spec, DM me on Slack (Arachne Finance, Michael, U0AQMKKBL93) with (1) a link to a playable build (a GitHub Release with a zipped macOS export; the export preset and templates are set up) and (2) a digest of key judgement calls, each with at least one alternative not taken and why (docs/milestones/M3-judgement-calls.md). If something blocks you on me (an authorization, a login, a decision), DM me on Slack at once and carry on with what isn't blocked.
 - I turned ultracode on (2026-10-24) and asked for multi-agent workflows: use Workflow scripts for substantive work (Opus plans and reviews, Sonnet codes).
 - Don't put fine grey-block look or feel questions to me; take the default and log it.
