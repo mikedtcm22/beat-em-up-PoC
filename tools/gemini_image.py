@@ -6,9 +6,10 @@ A jobs file is a JSON list of
 	 "aspect": "3:4", "size": "2K", "refs": ["ref.png", ...]}
 "out" and "refs" are relative to the jobs file's folder; the written file's extension follows
 the image type the model returns. Naming jobs (by their "out" stem)
-runs only those. The key is read from GEMINI_API_KEY in the repo's .env and sent in the
-x-goog-api-key header; it is never printed. The key's project needs billing (Tier 1): the
-free tier allows no image generations.
+runs only those. The key is GEMINI_API_KEY from the environment, else from the repo's .env,
+else (in a linked worktree) from the main checkout's .env. It is sent in the x-goog-api-key
+header and never printed. The key's project needs billing (Tier 1): the free tier allows no
+image generations.
 """
 import base64
 import concurrent.futures
@@ -23,12 +24,31 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent"
 
 
+def env_files() -> list:
+	"""`.env` candidates: this checkout's, then (in a linked worktree) the main checkout's."""
+	out = [os.path.join(REPO, ".env")]
+	dot_git = os.path.join(REPO, ".git")
+	if os.path.isfile(dot_git):
+		with open(dot_git) as f:
+			first = f.readline().strip()
+		if first.startswith("gitdir:"):
+			# gitdir: <main>/.git/worktrees/<name>
+			gitdir = first.split(":", 1)[1].strip()
+			out.append(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(gitdir))), ".env"))
+	return out
+
+
 def read_key() -> str:
-	with open(os.path.join(REPO, ".env")) as f:
-		for line in f:
-			if line.startswith("GEMINI_API_KEY="):
-				return line.split("=", 1)[1].strip()
-	sys.exit("GEMINI_API_KEY is missing from .env")
+	if os.environ.get("GEMINI_API_KEY"):
+		return os.environ["GEMINI_API_KEY"].strip()
+	for path in env_files():
+		if not os.path.isfile(path):
+			continue
+		with open(path) as f:
+			for line in f:
+				if line.startswith("GEMINI_API_KEY="):
+					return line.split("=", 1)[1].strip()
+	sys.exit("GEMINI_API_KEY is missing from the environment and .env")
 
 
 def run(job: dict, base: str, key: str) -> str:

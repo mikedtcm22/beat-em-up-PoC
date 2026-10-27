@@ -36,3 +36,6 @@ tuning/default.json merge=keep-ours
 
 # The palette atlas is generated (tools/pipeline/gen_palette.py): the lead regenerates it after merges.
 assets/export/palette/palette_atlas.png filter=lfs diff=lfs merge=keep-ours -text
+
+# The Tripo ledger is append-only and written from several worktrees: a merge keeps both sides' lines.
+assets/source/tripo_ledger.jsonl merge=union
