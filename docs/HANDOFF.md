@@ -4,6 +4,17 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-27 09:05 CDT: Game-boy picked Street Punk A and Hero C; F-punk and F-player-art running
+- **The pick** (09:00 CDT, in the working session's chat, not the DM): Street Punk A (`punk_a_denim_vest.jpg`, the concept the smoke stand-in was built from) and Hero C (`hero_c_martial.jpg`, whole, no mix and match). His words are in the decisions log and in each brief. He also wants a menu of hero options later; that is not M4, but F-player-art keeps the hero in files so a second hero needs no code change.
+- **Running since 09:04 CDT:** workflow `wf_63ca3032-218`, `workflow-build.js` with `docs/reviews/M4/args-F-art.json` (both packages, two Sonnet builders, one Blender slot each):
+  - F-punk: `.worktrees/m4-f-punk`, branch `m4/f-punk`. Views, T4-T10, about 145 credits; replaces `punk.glb` in place.
+  - F-player-art: `.worktrees/m4-f-player-art`, branch `m4/f-player-art`. Views, T11-T14, about 185 credits; writes `assets/export/characters/player/player.glb`.
+  - They share the 750-credit stop (the ledger stands at 55) and each reads the ledger before a paid call.
+  - **If cut off:** `Workflow({scriptPath: "/Users/arachne/repos/beat-em-up-PoC/docs/reviews/M4/workflow-build.js", resumeFromRunId: "wf_63ca3032-218", args: <args-F-art.json>})` in this session, or relaunch it fresh with the same args; the runner resumes each package from its branch.
+- **The watcher** was told the pick arrived and no longer reads the DM for it.
+- **Next:** merge each with the A22 routine as it lands, then P3-int proper, the final six-lens review, fixes, README's M4 section, the PR (not merged) and the final DM.
+- **Usage at launch:** 5-hour 12% (resets 15:50Z), weekly 29%.
+
 ### 2026-10-27 07:00 CDT: P3-flash merged (1530/1530); all pick-independent work is done; waiting on the pick
 - **Merged:** P3-flash (`bf7b0ab`, suite 1530/1530, 0 SCRIPT, SHADER or ERROR lines; the ARCHITECTURE add/add resolved by keeping both headings). The preset is at 516 values.
   - Feel question 1: `hit_flash_fp_max_share` (0 = off) stretches the flash's on-screen disc to a cap. Suggested 0.12: the hold's knee goes from 20.8% to about 5% of the view, but an ordinary jab's flash shrinks by about 40%.
@@ -1603,6 +1614,7 @@ Every approved spec change so far is in README.md, "Where M1 departs from the sp
 - **Comms (2026-10-25 17:35 CDT):** whenever work is blocked on Game-boy (an authorization, a permission prompt, a login, a decision), DM him on Slack (Michael, `U0AQMKKBL93`) at once, then carry on with anything not blocked.
 - **Milestone 3 signed off (2026-10-26):** Game-boy played the build, called M3 complete as-is and approved every M3 judgement call and spec departure (README, `docs/milestones/M3-judgement-calls.md`). The boss keeps 300 HP.
 - **Milestone 4 toolchain (2026-10-26):** skip Mixamo for now and assess later (Tripo auto-rig first); Tripo for 3D generation; Google Gemini for images; Blender installed from the command line (5.2.2 LTS).
+- **M4 concept pick (2026-10-27 09:00 CDT, in the session chat):** Street Punk A and Hero C. His words: "Eventually, I'll want to allow for selecting from a menu of hero options, but for this demo, let's go with Hero C. I like Street Punk A, as well." The hero menu is a later milestone's feature; M4 builds Hero C only, with everything hero-specific in files.
 - **Process:** at each usage limit, hand off to Game-boy's second Claude account. Never assume the same session resumes.
 
 ## Usage watcher
