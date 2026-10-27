@@ -5,7 +5,9 @@ extends GutTest
 ## binds (their inverse origins are the exported joints), each mesh's arrays. Rows: A1 (23 named binds, no neutral_bone, the
 ## joints within 1 mm of the table chained through the arms' swing, faces -Z, soles at y 0, at most 4 normalised influences,
 ## every vertex weighted, none on Root), A2 (triangle budgets), A3 (4-6 swatches from the shared atlas, none in the red band),
-## A5 (the fists fill the fist box), A13 (every exported file has an ASSETS.md row, a fixture matches its report).
+## A5 (the fists fill the fist box), A13 (every exported file has an ASSETS.md row, a fixture matches its report and shows the
+## step reports' keys the characters' reports show), and the hero's 1k detail mask (R-only ink on a UV2 every vertex has, worn
+## by player_art.tres).
 
 const JOINTS_PATH := "res://tools/pipeline/joints.json"
 const PALETTE_DIR := "res://assets/source/palette"
@@ -19,6 +21,16 @@ const FIXTURES: Array[String] = [
 	"res://tests/fixtures/art/probe_body_rest.glb",
 ]
 const PROBE_REPORT := "res://tests/fixtures/art/probe_report.json"
+## The Punk's committed chain report: the probe's step reports are measured against it (one script writes both).
+const PUNK_REPORT := "res://assets/source/characters/punk/report/report.json"
+## The steps whose report keys do not depend on the character: every key a shared step writes unconditionally is in both
+## reports. (parts_replace, parts_split and export are not here: their keys follow the character's config, as the Punk's
+## `generated`, the probe's `caps` and the Punk's `smooth_normals`.)
+const UNCONDITIONAL_REPORT_STEPS: Array[String] = ["inspect", "fit", "rig", "palette"]
+const HERO_GLB := "res://assets/export/characters/player/player.glb"
+const HERO_MASK := "res://assets/export/characters/player/player_detail.png"
+const HERO_ART := "res://game/actors/art/player_art.tres"
+const HERO_MESHES: Array[String] = ["Body", "Body__fp_hidden", "Body__fp_torso"]
 ## Budgets per character id (SPEC §10: 15,000 enemy, 30,000 player); the probe bodies stand in for the player.
 const BUDGETS: Dictionary[String, int] = {"punk": 15000, "player": 30000, "probe_body": 30000}
 const TOLERANCE_JOINT := 0.001
@@ -1073,6 +1085,115 @@ func test_each_character_report_names_the_glbs_it_exported() -> void:
 					assert_eq(FileAccess.get_sha256(path), outputs[glb], "%s is the file %s hashed" % [glb, report_path])
 			var fit: Dictionary = report.steps.fit
 			gut.p("%s: landmark residual %.1f mm at %s (limit %.0f mm)" % [report_path, float(fit.worst_joint_residual.m) * 1000.0, fit.worst_joint_residual.bone, float(fit.residual_limit_m) * 1000.0])
+
+
+## The probe report's step reports have the keys a character's report has. The report hash covers every key of every step's
+## report, so a shared step that writes a new unconditional key moves the hash of a rebuild while the GLBs stay byte for byte
+## the same (F-punk's `rig.torso_blend`, 691fcfd: the probe's report went stale and its `--check` said NO for hours with this
+## suite green). The Punk's chain report is the reference: it is the one a shared-step change regenerates first. Only the key
+## sets of the steps that do not depend on the character are compared, and only their first level: the nested keys follow the
+## data (a swatch per slot, a snap per bone).
+func test_the_probe_report_has_the_step_report_keys_the_punks_report_has() -> void:
+	assert_true(FileAccess.file_exists(PUNK_REPORT), "the Punk's chain report is committed")
+	var probe: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(PROBE_REPORT))
+	var punk: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(PUNK_REPORT))
+	for step: String in UNCONDITIONAL_REPORT_STEPS:
+		assert_true((probe.steps as Dictionary).has(step), "the probe report has the %s step" % step)
+		assert_true((punk.steps as Dictionary).has(step), "the Punk's report has the %s step" % step)
+		if not (probe.steps as Dictionary).has(step) or not (punk.steps as Dictionary).has(step):
+			continue
+		var probe_keys: Array = (probe.steps[step] as Dictionary).keys()
+		var punk_keys: Array = (punk.steps[step] as Dictionary).keys()
+		probe_keys.sort()
+		punk_keys.sort()
+		var missing: Array = punk_keys.filter(func(k: Variant) -> bool: return not probe_keys.has(k))
+		var extra: Array = probe_keys.filter(func(k: Variant) -> bool: return not punk_keys.has(k))
+		assert_eq(missing, [], "steps.%s: keys the Punk's report has and the probe's lacks (rerun python3 -I tools/pipeline/make_probe_body.py: the GLBs come out unchanged, the report and its hash move)" % step)
+		assert_eq(extra, [], "steps.%s: keys the probe's report has and the Punk's lacks (the Punk's report is the stale one: run.py --asset punk)" % step)
+
+
+## M4-plan A18 for the hero (Spec §10: "palette atlas + 1k detail mask"; the most-seen asset of the milestone): his mask is a
+## 1k PNG with ink and no shading, and player.glb carries the UV2 it is baked on, on every vertex of all three meshes. His
+## mask repeats the ink in R, G and B (the Punk's is R only), and its bars are the Punk's: lines and not a wash (the mean),
+## and some (the count). Which lines is the hero's own affair: his mean is about 0.04 today and the bar is not drawn to it.
+func test_the_hero_detail_mask_is_a_1k_ink_only_grey_png_on_the_heros_uv2() -> void:
+	var mask := load(HERO_MASK) as Texture2D
+	assert_not_null(mask, "player_detail.png loads")
+	if mask == null:
+		return
+	var image := mask.get_image()
+	assert_eq(image.get_size(), Vector2i(1024, 1024), "1k")
+	assert_false(image.is_compressed(), "the mask is read as data, never VRAM-compressed")
+	var import := FileAccess.get_file_as_string(HERO_MASK + ".import")
+	assert_true(import.contains("compress/mode=0") and import.contains("mipmaps/generate=true"), "it imports lossless with mipmaps (player_run.py patches the .import after Godot writes it)")
+	var ink := 0
+	var not_grey := 0.0
+	var sum := 0.0
+	for y: int in range(0, 1024, 2):
+		for x: int in range(0, 1024, 2):
+			var c := image.get_pixel(x, y)
+			sum += c.r
+			not_grey = maxf(not_grey, maxf(absf(c.r - c.g), absf(c.r - c.b)))
+			if c.r > 0.5:
+				ink += 1
+	var mean := sum / (512.0 * 512.0)
+	print("ART-CONTRACT player_detail.png: mean ink %.4f, %d of 262144 sampled texels over 0.5" % [mean, ink])
+	assert_lt(not_grey, 0.01, "R, G and B are one grey: the ink repeated, never a colour")
+	assert_gt(ink, 500, "there are lines")
+	assert_lt(mean, 0.08, "and they are lines, not a wash (shading would raise the mean)")
+	var f := _facts(HERO_GLB)
+	assert_true(f.ok, "player.glb loads")
+	if not f.ok:
+		return
+	for n: String in HERO_MESHES:
+		assert_true((f.meshes as Dictionary).has(n), "player.glb has the mesh %s" % n)
+		if not (f.meshes as Dictionary).has(n):
+			continue
+		var arrays: Array = (f.meshes[n] as Dictionary).arrays
+		var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var uv2: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV2] if arrays[Mesh.ARRAY_TEX_UV2] != null else PackedVector2Array()
+		assert_gt(verts.size(), 0, "%s has vertices" % n)
+		assert_eq(uv2.size(), verts.size(), "%s: UV2 (detail) on every vertex" % n)
+		var outside := 0
+		for uv: Vector2 in uv2:
+			if uv.x < -0.001 or uv.x > 1.001 or uv.y < -0.001 or uv.y > 1.001:
+				outside += 1
+		assert_eq(outside, 0, "%s: UV2 inside the unit square" % n)
+
+
+## The hero wears his mask: player_art.tres names it by metadata, and PlayerCharacter.worn_art() drops it WITHOUT a warning when
+## the path does not resolve (a typo, a renamed file), so the wraps, the stitching and the seams would vanish from the first-
+## person view with the suite green. What is read here: the metadata names the file, the worn copy holds that texture and the
+## sharp-ink flag, and a rig built on it hands its art material the mask with `use_detail_tex` on (that the material then cuts
+## its ink at look_detail_cut is test_toon's).
+func test_the_hero_wears_his_detail_mask_with_sharp_ink() -> void:
+	var scene_art := load(HERO_ART) as CharacterArt
+	assert_not_null(scene_art, "player_art.tres loads")
+	if scene_art == null:
+		return
+	assert_eq(String(scene_art.get_meta(PlayerCharacter.ART_DETAIL_META, "")), HERO_MASK, "player_art.tres names the mask")
+	assert_true(ResourceLoader.exists(HERO_MASK), "and the file is there")
+	assert_true(bool(scene_art.get_meta(&"detail_sharp", false)), "player_art.tres asks for sharp ink: the hero's lines are magnified to several pixels")
+	var worn := PlayerCharacter.worn_art(scene_art)
+	assert_not_null(worn, "the hero's art is worn")
+	if worn == null:
+		return
+	assert_not_null(worn.detail_mask, "the worn art holds a detail mask")
+	if worn.detail_mask == null:
+		return
+	assert_eq(worn.detail_mask.resource_path, HERO_MASK, "it is player_detail.png")
+	assert_true(bool(worn.get_meta(&"detail_sharp", false)), "the worn copy keeps the sharp-ink flag")
+	var rig := HumanoidRig.new()
+	rig.build_hurtboxes = false
+	rig.art = worn
+	add_child_autofree(rig)
+	rig.build()
+	var material := rig.paint.art_material() as ShaderMaterial
+	assert_not_null(material, "the built rig has an art material")
+	if material == null:
+		return
+	assert_true(bool(material.get_shader_parameter(&"use_detail_tex")), "its toon material reads the detail mask")
+	assert_eq(material.get_shader_parameter(&"detail_tex"), worn.detail_mask, "the mask on UV2 is player_detail.png")
 
 
 # --------------------------------------------------------------------------- the atlas
