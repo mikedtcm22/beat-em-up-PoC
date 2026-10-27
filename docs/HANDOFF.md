@@ -4,6 +4,29 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-27 18:40 CDT: the re-score's fixes merged (1599/1599); PR #4 open; the DM media re-recording
+- **Merged:** `m4/fix-rescore-punk-art-chain` (`16f96e2`) and `m4/fix-rescore-placeholder-matte` (`a04bfb0`).
+  - The lens glint is gated by two authored streaks per eye (the mask's G channel), so a tipped-back head no longer whites out the shades. `look_glint_cut` is now 0.81.
+  - Normal smoothing is now 12 rounds, so the face falls into two clean bands.
+  - Strokes are cleaned at 1k (dots joined and dropped).
+  - The glove and cuff carry authored ink lines.
+  - Placeholder matte paints take no highlight.
+  - The suite on `e78c156` is 1599/1599 with 0 error lines. The Punk, probe, hero and heat-map `--check` all print YES (Punk `c4a510ff`, heat-map `6709a408`). README carries the scores.
+- **PR [#4](https://github.com/mikedtcm22/beat-em-up-PoC/pull/4)** is open into `main`. Never merge it before Game-boy signs off.
+- **Running:** the lead's re-record of the DM media on the final head, in `captures/m4/dm/` (c1, c2, c10, c14, pa1, six), one act per process. Then the pairs (M3 left from `captures/m4_before/`), the concept pairs, and clips 1-3 (1280x720 H.264, AAC 96k, at most 10 MB). The feel A/B stills from P3-evidence stay valid: the switches didn't change.
+- **Next:** the final DM to Game-boy (D0AQUKX5DB6), per A23 and the task:
+  - the run command as a code block;
+  - the ask, word for word;
+  - the numbered rubric with the scores;
+  - the pair, the concept stills and the three clips;
+  - the five-line metrics;
+  - the four feel questions with their A/B stills;
+  - the departures;
+  - the digest of judgement calls;
+  - credits;
+  - the Tripo licence question;
+  - the hero-menu note.
+
 ### 2026-10-27 17:30 CDT: P3-evidence merged (the index and JSON files); the re-score's fixers still running
 - **Merged:** `m4/p3-evidence` (`47251d3`): `docs/reviews/M4/evidence/index.md` and five JSON files, all docs.
   - **Recordings:** 26, every bot.log with 0 error lines. The media is local in `.worktrees/m4-p3-evidence/captures/m4/evidence/` (keep that worktree until the DM is sent).
