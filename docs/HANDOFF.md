@@ -4,6 +4,16 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-27 14:05 CDT: F-cuff merged (`44b1a7e`); V1 running beside V2-V6
+- **Merged:** `m4/f-cuff` (`682ebbc`, 1561/1561 on its branch). It merged cleanly onto its own base plus two doc files, so the tested tree is the merged tree. The preset and palette were regenerated (`--check` passes).
+  - **The cuff:** each glove's cuff is now a band that follows the forearm, 7.1 cm long and at most 5.8 cm from the arm's axis (8.6 before). The flange is gone.
+  - **A9:** the lens-share bar now misses in the jab and the cross at +8 degrees (4.7-5.1 points against 4). Those poses are ratcheted per pose and print the plan's bar (call 22).
+  - **The lens:** back to the cap's yellow (#e8bd2e) in the dark frame. The A/B showed the cream reading as a khaki visor. The shades test now asserts the frame instead of a colour distance.
+  - **Probe fixture:** F-cuff found that its `--check` reports NO (hash `b61973f6` against `c8a83e6a`) on the merged base, before F-cuff's changes. That's for V5 or the fixers.
+- **The lead's look:** the guard at 1 m reads as fingerless gloves on wrist cuffs, and the yellow shades in their frame read as the concept's goggles.
+- **Running since 14:00 CDT:** V1 (the Punk standing at 1 m, J1-J7): workflow `wf_febf38e3-d3b`, round `final`, base `44b1a7e`, worktree `.worktrees/m4-review-final-v1`. V2-V6 (`wf_f116f808-22a`) are still running on `3eea29a`.
+- **Next:** when both are done, rerun `workflow-review.js` with all six lenses, `reviews` and `verdicts` from both journals, `no_fix` false and base `44b1a7e`, so the fixers run.
+
 ### 2026-10-27 13:05 CDT: the fix round merged (1561 tests, all passing); F-cuff and the final review (V2-V6) running
 - **Merged:** `m4/f-punk-fix` (`891b7b1`), `m4/f-player-fix` (`7faf7ce`) and `m4/p3-int` (`60d35c1`), with no conflicts. Then the A22 routine: the preset, the palette atlas (23 swatches, `--check` passes) and the import. The full suite was 1560/1561 with 0 SCRIPT, SHADER or ERROR lines. The one failure was `test_m4_done_when`'s A1 mesh list, which P3-int wrote before F-player-fix added `Body__fp_torso`. It's fixed in `3eea29a`, and the done-when file passes 18/18. Also in `3eea29a`: two stray `.uid` files F-punk-fix committed in `tests/` are removed, and the F-player-int paragraph "The hull" is updated, since P3-int moved that code.
   - **F-punk-fix:**
