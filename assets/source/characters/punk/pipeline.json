@@ -441,7 +441,72 @@
 				"min_texels": 4,
 				"smooth_sigma": 0.5,
 				"smooth_gain": 1.05
-			}
+			},
+			"glove_lines": {
+				"slots": [
+					2
+				],
+				"bones": {
+					"left": "LeftHand",
+					"right": "RightHand"
+				},
+				"min_abs_x_m": 0.4,
+				"width_m": 0.0045,
+				"ramp_m": 0.003,
+				"fill_px": 2,
+				"features": [
+					{
+						"type": "ring",
+						"s_m": -0.058,
+						"min_h_m": -1.0
+					},
+					{
+						"type": "ring",
+						"s_m": -0.035,
+						"min_h_m": -1.0
+					},
+					{
+						"type": "ring",
+						"s_m": -0.012,
+						"min_h_m": -1.0
+					},
+					{
+						"type": "ring",
+						"s_m": 0.054,
+						"min_h_m": -1.0
+					},
+					{
+						"type": "outline",
+						"s_min_m": 0.012,
+						"s_max_m": 0.054,
+						"half_width_m": 0.03,
+						"corner_m": 0.008,
+						"min_h_m": 0.0
+					},
+					{
+						"type": "segment",
+						"s_min_m": 0.054,
+						"s_max_m": 0.082,
+						"t_m": -0.015,
+						"min_h_m": 0.0
+					},
+					{
+						"type": "segment",
+						"s_min_m": 0.054,
+						"s_max_m": 0.082,
+						"t_m": 0.0,
+						"min_h_m": 0.0
+					},
+					{
+						"type": "segment",
+						"s_min_m": 0.054,
+						"s_max_m": 0.082,
+						"t_m": 0.015,
+						"min_h_m": 0.0
+					}
+				]
+			},
+			"collar_in_unwrap": true
 		},
 		"regions": [
 			{

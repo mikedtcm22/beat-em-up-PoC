@@ -20,6 +20,11 @@ and the shader's cut drew each as a dot, with a texel staircase for an edge. Bef
 `bridge_px` texels) are bridged, every piece shorter than `min_extent_texels` (its bounding box's long side) or smaller than
 `min_texels` is dropped, so a strand is one continuous line whose end thins out and a speck is gone, and the cleaned
 mask may be blurred a little (`smooth_sigma`, `smooth_gain`) so the shader's cut draws a smooth contour, not a staircase. See clean_strokes().
+The glove's line (rescore-rs-02, config `detail_bake.glove_lines`): the generated glove is a smooth dark dome whose texture has no line
+to extract, and at a strike's contact it fills a fifth of the view as two flat tones. Its back gets AUTHORED lines in the hand's own
+frame (the hand bone's axis, the outward side the back of the hand faces): a ring round the glove where the cuff meets it (the strap's
+edge) and an outline of the dorsal plate with its knuckle edge, written as a distance ramp (the 0.15 contour of the shader's cut lies
+`width_m` / 2 from the line, so the edge is smooth from a 1k texel) and merged over the cleaned strokes. See glove_lines_field().
 The glint gate (rescore-rs-01, config `detail_bake.glint`): the shades' lens is the one glossy swatch, and its glint is a cap on an angle,
 which whites the whole lens out when the head tips back. G holds the AUTHORED streaks of concept A, two diagonal bands per eye, as a
 signed-distance ramp (0.5 on a band's edge, so the shader's cut at 0.5 draws the edge sharp from a 1k texel) on the lens's texels only;
@@ -307,6 +312,34 @@ def clean_strokes(mask, covered, cc):
 		"texels_dropped": int(dropped.sum())}
 
 
+def glove_lines_field(s, t, h, cfg):
+	"""The ink of the glove's authored lines at points given in a hand's frame: s metres along the hand bone from the wrist toward the
+	knuckles, t across the hand, h out of the back of the hand (all (n,)). `cfg`: width_m (a line's width, where the shader's cut lies),
+	ramp_m (the distance over which the ink goes 0.15 to 1, about a texel), features: {"type": "ring", "s_m", "min_h_m"} (a line all
+	round the glove at s_m, only where h is over min_h_m: -1 for all round, 0 for the back half) and {"type": "outline", "s_min_m",
+	"s_max_m", "half_width_m", "corner_m", "min_h_m"} (the outline of a rounded rectangle in (s, t), on the back) and {"type": "segment",
+	"s_min_m", "s_max_m", "t_m", "min_h_m"} (a line along the hand at t_m: a knuckle's edge). Returns 0..1 per
+	point: 0.15 on a line's edge, 1 within ramp_m of its middle, 0 away from it."""
+	width, ramp = float(cfg.get("width_m", 0.0035)), float(cfg.get("ramp_m", 0.0022))
+	best = np.full(len(s), 1e9)
+	for f in cfg.get("features", []):
+		if f["type"] == "ring":
+			d = np.abs(s - float(f["s_m"]))
+		elif f["type"] == "outline":
+			centre = 0.5 * (float(f["s_min_m"]) + float(f["s_max_m"]))
+			half_s, half_t, r = 0.5 * (float(f["s_max_m"]) - float(f["s_min_m"])), float(f["half_width_m"]), float(f["corner_m"])
+			qs, qt = np.abs(s - centre) - (half_s - r), np.abs(t) - (half_t - r)
+			d = np.abs(np.hypot(np.maximum(qs, 0.0), np.maximum(qt, 0.0)) + np.minimum(np.maximum(qs, qt), 0.0) - r)
+		elif f["type"] == "segment":
+			centre, half_s = 0.5 * (float(f["s_min_m"]) + float(f["s_max_m"])), 0.5 * (float(f["s_max_m"]) - float(f["s_min_m"]))
+			d = np.hypot(np.maximum(np.abs(s - centre) - half_s, 0.0), t - float(f["t_m"]))
+		else:
+			raise ValueError("unknown glove line feature %r" % f["type"])
+		d = np.where(h >= float(f.get("min_h_m", -1.0)), d, 1e9)
+		best = np.minimum(best, d)
+	return np.clip(0.15 + (0.5 * width - best) / ramp, 0.0, 1.0)
+
+
 def glint_field(pos, cfg):
 	"""The streak gate at surface points pos (n, 3) of a Blender Z-up character facing +Y: 0..1, 0.5 on a band's edge. `cfg`:
 	slant_deg (a band leans to the viewer's right going up, as concept A's streaks do), z_mid_m (the lens's mid height, where a band's
@@ -342,14 +375,16 @@ def fill_border(values, covered, px):
 
 
 def bake(me, layer_name, image, dense_bvh, dense_verts, dense_tris, dense_uv, cfg, out_png, source_png=None, face_gain=None,
-		face_low=None, face_high=None, face_zone=None, zone_names=(), glint=None, face_glint=None):
+		face_low=None, face_high=None, face_zone=None, zone_names=(), glint=None, face_glint=None, glove=None, hand_frames=None, face_slot=None):
 	"""Bake the mask of `me` (UV layer `layer_name`) from `image` (the dense mesh's texture) into out_png. dense_verts
 	(n, 3), dense_tris (m, 3) vertex indices, dense_uv (m, 3, 2) per-corner UVs; face_gain (one float per face of `me`, 1 = full ink, 0 = none: the lens
 	takes none) is optional. face_low / face_high (one float per face) override the smoothstep that turns the raw top-hat into ink
 	(`ink_low`, `ink_high` of the config by default): the face's skin takes a higher pair so the texture's speckle drops out and
 	the mouth and the nose line stay (config `zones`, built by blender_palette). face_zone (an int per face, 0 = none, k = zone_names[k-1])
 	only labels the report's percentiles of the raw top-hat per zone, the numbers the pairs are calibrated on. glint (the config's `glint`
-	dict) and face_glint (one bool per face of `me`: the lens's) write the glint gate into G, see the module doc. Returns a report dict."""
+	dict) and face_glint (one bool per face of `me`: the lens's) write the glint gate into G, see the module doc. glove (the config's
+	`glove_lines`), hand_frames ({side: {sign, head, a, b, c}} in the mesh's frame) and face_slot (the palette slot per face) add the glove's
+	authored lines into R. Returns a report dict."""
 	size = int(cfg.get("size", 1024))
 	w, h = image.size
 	pix = np.empty(w * h * 4, dtype=np.float32)
@@ -413,6 +448,20 @@ def bake(me, layer_name, image, dense_bvh, dense_verts, dense_tris, dense_uv, cf
 		on_surface = np.zeros((size, size), dtype=bool)
 		on_surface[texel[:, 0], texel[:, 1]] = True
 		mask, clean_report = clean_strokes(mask, on_surface, cfg["clean"])
+	glove_report = None
+	if glove and hand_frames and face_slot is not None:
+		on_glove = np.isin(np.asarray(face_slot)[texel_face], glove.get("slots", []))
+		field = np.zeros(len(pos))
+		for side, fr in hand_frames.items():
+			sel = on_glove & (np.sign(pos[:, 0]) == fr["sign"]) & (np.abs(pos[:, 0]) >= float(glove.get("min_abs_x_m", 0.4)))
+			rel = pos[sel] - np.asarray(fr["head"])
+			field[sel] = glove_lines_field(rel @ np.asarray(fr["a"]), rel @ np.asarray(fr["c"]), rel @ np.asarray(fr["b"]), glove)
+		lines = np.zeros((size, size), dtype=np.float32)
+		lines[texel[:, 0], texel[:, 1]] = field
+		covered = np.zeros((size, size), dtype=bool)
+		covered[texel[on_glove, 0], texel[on_glove, 1]] = True
+		mask = np.maximum(mask, fill_border(lines, covered, int(glove.get("fill_px", 2))))
+		glove_report = {"texels": int(on_glove.sum()), "line_texels_over_cut": int((field > float(cfg.get("clean", {}).get("cut", 0.15))).sum())}
 	grow = int(cfg.get("grow_px", 0))
 	if grow > 0:
 		mask = dilate(mask, grow)
@@ -430,7 +479,7 @@ def bake(me, layer_name, image, dense_bvh, dense_verts, dense_tris, dense_uv, cf
 		glint_report = {"texels": int(lens.sum()), "gate_share": round(float((field[lens] > 0.5).mean()), 4) if lens.any() else 0.0}
 	_write_gray(mask, out_png, "punk_detail", gate)
 	return {"size": size, "texels": int(len(pos)), "ink_texels_share": float((value > 0.5).mean()), "mean_ink": float(value.mean()),
-		"png": out_png, "zones": zone_report, "glint": glint_report, "clean": clean_report}
+		"png": out_png, "zones": zone_report, "glint": glint_report, "clean": clean_report, "glove_lines": glove_report}
 
 
 def _write_gray(a, path, name, g=None):

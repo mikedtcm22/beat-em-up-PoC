@@ -1,7 +1,7 @@
 {
 	"asset": "punk",
 	"version": 2,
-	"config_sha256": "091d0a4ab89d823dc5a5b490de53f7e78b9f128c65a29572308d05e23e3f1a67",
+	"config_sha256": "270f5471019c41be20c74e7fda71de0dfafcd8aa190a81b991fe9e28cad323be",
 	"steps": {
 		"inspect": {
 			"source": {
@@ -10592,136 +10592,140 @@
 			"detail_uv": true,
 			"detail_bake": {
 				"size": 1024,
-				"texels": 424209,
-				"ink_texels_share": 0.008937,
-				"mean_ink": 0.010512,
+				"texels": 365953,
+				"ink_texels_share": 0.00872,
+				"mean_ink": 0.010294,
 				"png": "punk_detail.png",
 				"zones": {
 					"face_skin": {
-						"texels": 7436,
+						"texels": 6363,
 						"raw_percentiles": {
 							"50": 0.0039,
-							"80": 0.0091,
-							"90": 0.0153,
-							"95": 0.0231,
-							"97": 0.0351,
-							"98": 0.0509,
-							"99": 0.0787,
-							"99.5": 0.1133
+							"80": 0.009,
+							"90": 0.0148,
+							"95": 0.0232,
+							"97": 0.0335,
+							"98": 0.0435,
+							"99": 0.0798,
+							"99.5": 0.117
 						},
-						"ink_texels_share": 0.013448
+						"ink_texels_share": 0.013044
 					},
 					"nose": {
-						"texels": 442,
+						"texels": 467,
 						"raw_percentiles": {
 							"50": 0.0,
-							"80": 0.0071,
-							"90": 0.0111,
-							"95": 0.0151,
-							"97": 0.0237,
-							"98": 0.0368,
-							"99": 0.0597,
-							"99.5": 0.08
+							"80": 0.007,
+							"90": 0.0106,
+							"95": 0.0144,
+							"97": 0.019,
+							"98": 0.0397,
+							"99": 0.0649,
+							"99.5": 0.0832
 						},
-						"ink_texels_share": 0.013575
+						"ink_texels_share": 0.019272
 					},
 					"strap": {
-						"texels": 440,
+						"texels": 386,
 						"raw_percentiles": {
 							"50": 0.0157,
-							"80": 0.0291,
-							"90": 0.0397,
-							"95": 0.0553,
-							"97": 0.0764,
-							"98": 0.1268,
-							"99": 0.2967,
-							"99.5": 0.4084
+							"80": 0.0281,
+							"90": 0.0383,
+							"95": 0.0488,
+							"97": 0.0604,
+							"98": 0.0711,
+							"99": 0.1526,
+							"99.5": 0.3094
 						},
 						"ink_texels_share": 0.0
 					},
 					"cap": {
-						"texels": 21634,
+						"texels": 18957,
 						"raw_percentiles": {
 							"50": 0.0027,
-							"80": 0.0058,
-							"90": 0.0081,
-							"95": 0.0144,
+							"80": 0.0057,
+							"90": 0.0083,
+							"95": 0.0146,
 							"97": 0.0196,
-							"98": 0.0248,
-							"99": 0.0325,
+							"98": 0.0239,
+							"99": 0.0324,
 							"99.5": 0.0426
 						},
-						"ink_texels_share": 0.000693
+						"ink_texels_share": 0.00058
 					},
 					"boots": {
-						"texels": 26915,
+						"texels": 22274,
 						"raw_percentiles": {
 							"50": 0.0021,
-							"80": 0.0068,
-							"90": 0.0086,
-							"95": 0.0118,
-							"97": 0.0164,
-							"98": 0.0333,
-							"99": 0.0907,
-							"99.5": 0.1239
+							"80": 0.0067,
+							"90": 0.0085,
+							"95": 0.0119,
+							"97": 0.0177,
+							"98": 0.0352,
+							"99": 0.0897,
+							"99.5": 0.1298
 						},
-						"ink_texels_share": 0.008471
+						"ink_texels_share": 0.008485
 					},
 					"laces": {
-						"texels": 32448,
+						"texels": 27721,
 						"raw_percentiles": {
 							"50": 0.0039,
-							"80": 0.0113,
-							"90": 0.0281,
-							"95": 0.0668,
-							"97": 0.0961,
-							"98": 0.1133,
-							"99": 0.1427,
-							"99.5": 0.1838
+							"80": 0.0116,
+							"90": 0.0282,
+							"95": 0.0683,
+							"97": 0.0967,
+							"98": 0.1151,
+							"99": 0.1466,
+							"99.5": 0.1868
 						},
 						"ink_texels_share": 0.0
 					},
 					"shades_frame": {
-						"texels": 4401,
+						"texels": 3905,
 						"raw_percentiles": {
-							"50": 0.0046,
-							"80": 0.0157,
-							"90": 0.0375,
-							"95": 0.1234,
-							"97": 0.1924,
-							"98": 0.2601,
-							"99": 0.287,
-							"99.5": 0.3051
+							"50": 0.0045,
+							"80": 0.0152,
+							"90": 0.0393,
+							"95": 0.1256,
+							"97": 0.1977,
+							"98": 0.2515,
+							"99": 0.2853,
+							"99.5": 0.3037
 						},
 						"ink_texels_share": 0.0
 					}
 				},
 				"glint": {
-					"texels": 2318,
-					"gate_share": 0.3326
+					"texels": 1872,
+					"gate_share": 0.3296
 				},
 				"clean": {
 					"before": {
-						"pieces": 1137,
-						"texels": 7319,
-						"pieces_le6": 879,
-						"texels_in_le6_share": 0.251,
+						"pieces": 1079,
+						"texels": 6190,
+						"pieces_le6": 866,
+						"texels_in_le6_share": 0.2948,
 						"median": 2.0,
-						"pieces_over20": 69
+						"pieces_over20": 68
 					},
 					"after": {
-						"pieces": 383,
-						"texels": 7196,
-						"pieces_le6": 117,
-						"texels_in_le6_share": 0.0705,
-						"median": 10.0,
-						"pieces_over20": 89
+						"pieces": 337,
+						"texels": 5936,
+						"pieces_le6": 119,
+						"texels_in_le6_share": 0.0834,
+						"median": 9.0,
+						"pieces_over20": 86
 					},
-					"bridged_texels": 254,
-					"pieces_dropped": 652,
-					"texels_dropped": 1081
+					"bridged_texels": 235,
+					"pieces_dropped": 653,
+					"texels_dropped": 1109
 				},
-				"sha256": "097200bed74f0bae71e797e3d2162f9c0f892caf2dccc8c36d66dc8360d571e4"
+				"glove_lines": {
+					"texels": 30712,
+					"line_texels_over_cut": 1779
+				},
+				"sha256": "b5217cd961b59e334d85aeeed0ed5aacd15a32b727f7295df5b467a97ea98f44"
 			},
 			"regions": [
 				{
@@ -10910,7 +10914,7 @@
 					"folded_share": 0.006154,
 					"facing": {
 						"axis": "-Z",
-						"yaw": 0.764663,
+						"yaw": 1.433985,
 						"confidence": "conflict"
 					},
 					"sides_consistent": true,
@@ -10920,7 +10924,7 @@
 						{
 							"name": "Body",
 							"triangles": 14300,
-							"vertices": 13995,
+							"vertices": 14415,
 							"uv_layers": [
 								"UVMap",
 								"UVMap.001"
@@ -10948,8 +10952,8 @@
 						]
 					},
 					"file": "punk.glb",
-					"sha256": "696429ed95ae609e386efccd997eb6f6435eb6d2402e50f0cf7504e8e0a7c862",
-					"bytes": 1044772
+					"sha256": "6e5ea12171edb7357b48d8293547fcfbda824f64d3f27c3d3406b415bbf020df",
+					"bytes": 1073332
 				},
 				"rest": {
 					"bones": 23,
@@ -10965,8 +10969,8 @@
 					"folded_share": 0.008881,
 					"facing": {
 						"axis": "-Z",
-						"yaw": 0.764663,
-						"confidence": "weak"
+						"yaw": 1.433985,
+						"confidence": "conflict"
 					},
 					"sides_consistent": true,
 					"worst_joint_error_mm": 0.0,
@@ -10975,7 +10979,7 @@
 						{
 							"name": "Body",
 							"triangles": 14300,
-							"vertices": 13992,
+							"vertices": 14412,
 							"uv_layers": [
 								"UVMap",
 								"UVMap.001"
@@ -11003,8 +11007,8 @@
 						]
 					},
 					"file": "punk_rest.glb",
-					"sha256": "2c9a9405519be134ed2571e1ae1fe9b88467ae48a890a8f9eb4b7eebbd5c8977",
-					"bytes": 1044344
+					"sha256": "6f0f1e0e1b5a1b30c3b705810b6a7b89557044b59a811907ee4dd89132713b48",
+					"bytes": 1072904
 				}
 			},
 			"smooth_normals": {
@@ -11026,10 +11030,10 @@
 		}
 	},
 	"outputs": {
-		"punk.glb": "696429ed95ae609e386efccd997eb6f6435eb6d2402e50f0cf7504e8e0a7c862",
-		"punk_rest.glb": "2c9a9405519be134ed2571e1ae1fe9b88467ae48a890a8f9eb4b7eebbd5c8977"
+		"punk.glb": "6e5ea12171edb7357b48d8293547fcfbda824f64d3f27c3d3406b415bbf020df",
+		"punk_rest.glb": "6f0f1e0e1b5a1b30c3b705810b6a7b89557044b59a811907ee4dd89132713b48"
 	},
-	"hash": "6c91a10d33a4a4e3ea56e0807a3d0d642e5c0bd822aa858f729d95255d83928c",
+	"hash": "c4a510fffb3f60285021e9d070b9284e2bad45ac0f645a80d725042f68086c13",
 	"stills": {
 		"variants": {
 			"apose": {

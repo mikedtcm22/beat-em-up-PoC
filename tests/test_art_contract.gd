@@ -621,6 +621,69 @@ func test_the_punks_gloves_have_no_yellow_and_the_cuff_has_no_slivers() -> void:
 		assert_lt(over_forearm_max, CUFF_OVER_FOREARM_MAX_M, "%s: the cuff is a band on the wrist, not a flange: no wider than the forearm above it by a centimetre" % path)
 
 
+## Re-score rs-02: the striking glove was a featureless dome (J3). Its back and cuff carry authored lines now (`detail_bake.glove_lines`: a
+## ring where the glove's knuckles begin, the outline of the dorsal plate with its knuckle ticks, three rings round the wrist cuff, which
+## the bake now unwraps so it has texels), baked into R beside the texture's strokes. The share of the glove block's and the cuff's surface
+## (four by four barycentric samples a triangle of the faces on a hand, the cuff counted by its height above the wrist) with ink over one
+## half: the strokes alone measured 0.1 to 0.6% on the block and 0 on the cuff (the cuff had no texels).
+const GLOVE_INK_BLOCK_MIN := 0.012
+const GLOVE_INK_CUFF_MIN := 0.025
+
+
+func test_the_punks_glove_and_cuff_carry_the_authored_lines() -> void:
+	var art := load("res://game/actors/art/punk_art.tres") as CharacterArt
+	if art == null or art.detail_mask == null:
+		return
+	var mask := art.detail_mask.get_image()
+	var size := mask.get_width()
+	var path := "res://assets/export/characters/punk/punk.glb"
+	if not _facts(path).ok:
+		return
+	var body := _body(path)
+	var arrays: Array = body.arrays
+	var binds: Array[String] = body.bind_names
+	var joints := _joints(path)
+	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var uv2: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV2]
+	var index: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+	var block := Vector2.ZERO
+	var cuff := Vector2.ZERO
+	for side: String in ["Left", "Right"]:
+		var hand: Vector3 = joints[side + "Hand"]
+		var dir: Vector3 = (hand - joints[side + "LowerArm"]).normalized()
+		var hand_w := PackedFloat32Array()
+		hand_w.resize(verts.size())
+		for v: int in verts.size():
+			hand_w[v] = _weight_on(arrays, binds, v, side + "Hand")
+		for t: int in index.size() / 3:
+			var corner: Array[int] = [index[t * 3], index[t * 3 + 1], index[t * 3 + 2]]
+			if (verts[corner[0]] - hand).length() > 0.15:
+				continue
+			var along := maxf((verts[corner[0]] - hand).dot(dir), maxf((verts[corner[1]] - hand).dot(dir), (verts[corner[2]] - hand).dot(dir)))
+			var lowest := minf((verts[corner[0]] - hand).dot(dir), minf((verts[corner[1]] - hand).dot(dir), (verts[corner[2]] - hand).dot(dir)))
+			var on_block := hand_w[corner[0]] >= 0.5 and hand_w[corner[1]] >= 0.5 and hand_w[corner[2]] >= 0.5
+			var on_cuff := maxf(hand_w[corner[0]], maxf(hand_w[corner[1]], hand_w[corner[2]])) > 0.05 and along < 0.01 and lowest > -0.08
+			if not (on_block or on_cuff):
+				continue
+			for i: int in 4:
+				for j: int in 4 - i:
+					var wa := (float(i) + 0.5) / 4.0
+					var wb := (float(j) + 0.5) / 4.0
+					var p := uv2[corner[0]] * wa + uv2[corner[1]] * wb + uv2[corner[2]] * (1.0 - wa - wb)
+					var inked := 1.0 if mask.get_pixel(clampi(int(p.x * float(size)), 0, size - 1), clampi(int(p.y * float(size)), 0, size - 1)).r > 0.5 else 0.0
+					if on_cuff and not on_block:
+						cuff += Vector2(inked, 1.0)
+					elif on_block:
+						block += Vector2(inked, 1.0)
+	var block_share := block.x / maxf(block.y, 1.0)
+	var cuff_share := cuff.x / maxf(cuff.y, 1.0)
+	gut.p("ART-CONTRACT glove ink: the glove block %.2f%% of %d samples, the cuff %.2f%% of %d" % [block_share * 100.0, block.y, cuff_share * 100.0, cuff.y])
+	assert_gt(block.y, 1000.0, "the glove block was sampled")
+	assert_gt(cuff.y, 500.0, "and the cuff")
+	assert_gt(block_share, GLOVE_INK_BLOCK_MIN, "the glove's block has lines (the knuckle seam, the plate's outline)")
+	assert_gt(cuff_share, GLOVE_INK_CUFF_MIN, "and the cuff has its rings (the strap's edge a strike's contact shows)")
+
+
 ## F-punk-fix, the shades: the lens and the cap were both #e8bd2e, so the head read as one yellow mass from the crown to the cheek.
 ## The lens is its own slot (marks off) with a dark frame of faces above and below it. F-cuff (the lead's A/B at 1, 2.5, 5 and 10 m):
 ## the lens is the cap's yellow again, as the concept's gold lenses, so it is no longer set apart by a colour distance (the old
