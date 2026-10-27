@@ -1,7 +1,7 @@
 {
 	"asset": "punk",
 	"version": 2,
-	"config_sha256": "ccff1d3cee5b98cd2497d06587542c51c3cd5c21c19c292a228f5540c6467a98",
+	"config_sha256": "31b168cefd4754ea0a1a0543fa7921bdb18f62af3e90a99ad3e62728b154e3cd",
 	"steps": {
 		"inspect": {
 			"source": {
@@ -10774,11 +10774,11 @@
 					"triangles": 14300,
 					"height_m": 1.819881,
 					"feet_y": -0.004053,
-					"folded_triangles": 64,
-					"folded_share": 0.004476,
+					"folded_triangles": 88,
+					"folded_share": 0.006154,
 					"facing": {
 						"axis": "-Z",
-						"yaw": 0.785425,
+						"yaw": 0.764663,
 						"confidence": "conflict"
 					},
 					"sides_consistent": true,
@@ -10788,7 +10788,7 @@
 						{
 							"name": "Body",
 							"triangles": 14300,
-							"vertices": 13998,
+							"vertices": 13995,
 							"uv_layers": [
 								"UVMap",
 								"UVMap.001"
@@ -10816,8 +10816,8 @@
 						]
 					},
 					"file": "punk_auto.glb",
-					"sha256": "ce7d9c93296d9b866a65e1783575995d3a3824e526354ec20d6202e693a1611f",
-					"bytes": 1044976
+					"sha256": "846c7429e12e2d4a8b66b2078774d9720ec3acb566c9bea772223409c968c8c4",
+					"bytes": 1044772
 				},
 				"rest": {
 					"bones": 23,
@@ -10829,11 +10829,11 @@
 					"triangles": 14300,
 					"height_m": 1.819881,
 					"feet_y": -0.004053,
-					"folded_triangles": 94,
-					"folded_share": 0.006573,
+					"folded_triangles": 110,
+					"folded_share": 0.007692,
 					"facing": {
 						"axis": "-Z",
-						"yaw": 0.785425,
+						"yaw": 0.764663,
 						"confidence": "weak"
 					},
 					"sides_consistent": true,
@@ -10843,7 +10843,7 @@
 						{
 							"name": "Body",
 							"triangles": 14300,
-							"vertices": 13998,
+							"vertices": 13990,
 							"uv_layers": [
 								"UVMap",
 								"UVMap.001"
@@ -10871,33 +10871,33 @@
 						]
 					},
 					"file": "punk_auto_rest.glb",
-					"sha256": "398669f16175eb41811a5b9f6a8e62af9b2a1b349321e652b032bdc5c335a6d1",
-					"bytes": 1044748
+					"sha256": "18aec983208ddc2e3b72dd5dbe3f9377562734455b2bbe05f9a69c6735d00a2a",
+					"bytes": 1044204
 				}
 			},
 			"smooth_normals": {
 				"apose": {
 					"Body": {
-						"mean_deg": 11.7158,
-						"p99_deg": 42.3856,
-						"over_15_deg_share": 0.2613
+						"mean_deg": 14.8042,
+						"p99_deg": 51.0341,
+						"over_15_deg_share": 0.3783
 					}
 				},
 				"rest": {
 					"Body": {
-						"mean_deg": 11.8701,
-						"p99_deg": 42.5099,
-						"over_15_deg_share": 0.2679
+						"mean_deg": 15.0494,
+						"p99_deg": 51.1289,
+						"over_15_deg_share": 0.3911
 					}
 				}
 			}
 		}
 	},
 	"outputs": {
-		"punk_auto.glb": "ce7d9c93296d9b866a65e1783575995d3a3824e526354ec20d6202e693a1611f",
-		"punk_auto_rest.glb": "398669f16175eb41811a5b9f6a8e62af9b2a1b349321e652b032bdc5c335a6d1"
+		"punk_auto.glb": "846c7429e12e2d4a8b66b2078774d9720ec3acb566c9bea772223409c968c8c4",
+		"punk_auto_rest.glb": "18aec983208ddc2e3b72dd5dbe3f9377562734455b2bbe05f9a69c6735d00a2a"
 	},
-	"hash": "49b980a0f5442221f6ef3cd4f9b9b5c22603b6cf0a50fc683c42de17e594ac94",
+	"hash": "6709a4082d539e48b020c2b4be98de81494703f8b62841c0bf022d4873ae2aa7",
 	"stills": {
 		"variants": {
 			"apose": {

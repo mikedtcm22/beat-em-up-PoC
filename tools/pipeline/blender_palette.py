@@ -28,7 +28,8 @@ F-punk's additions (all opt-in by config, so the probe and the player run as bef
 	faces with the pipe_fist attribute (generated fists, blender_parts) are decimated on their own to
 	  palette.fist_budget_tris each, the rest of the body to the budget less both fists (their borders still protected);
 	palette.unfold: relax the folded triangles of the decimated mesh away (pipe_cleanup.unfold) and report the counts;
-	palette.detail_bake: the 1k ink-only detail mask on UV2 baked from the dense texture (pipe_detail.bake, plan A18); its
+	palette.detail_bake: the 1k ink-only detail mask on UV2 baked from the dense texture (pipe_detail.bake, plan A18; G holds the lens's
+	  glint-gate streaks when `glint` is set, and the glove's authored lines when `glove_lines` is); its
 	  no_ink_slots (the lens) get no ink, and so does a zone with "no_ink": true (the Punk's laces and cap: the generated
 	  texture's noise there is not a line, and the colour border already gives the shape).
 """
@@ -531,15 +532,18 @@ def run(cfg, extra):
 		uv[start2[f]:start2[f] + total2[f]] = (u, 1.0 - v)
 	layer.data.foreach_set("uv", uv.ravel())
 	detail = bool(pc_cfg.get("detail_uv", False))
+	db_cfg = pc_cfg.get("detail_bake") or {}
 	if detail:
 		d_layer = me.uv_layers.new(name="detail")
 		me.uv_layers.active = d_layer
 		pb.activate(body)
 		bpy.ops.object.mode_set(mode="EDIT")
 		bpy.ops.mesh.select_all(action="SELECT")
-		if new_collar.any():
-			# the clean collar takes no ink: it is left out of the unwrap (its islands would only take atlas area from the faces that
-			# carry lines) and sent to a texel nothing covers below
+		collar_apart = bool(new_collar.any() and not db_cfg.get("collar_in_unwrap", False))
+		if collar_apart:
+			# the clean collar takes no texture ink: it is left out of the unwrap (its islands would only take atlas area from the faces that
+			# carry lines) and sent to a texel nothing covers below, unless detail_bake.collar_in_unwrap (rescore-rs-02: the cuff is what a
+			# strike's contact shows, and the glove's authored lines need texels there)
 			bm_u = bmesh.from_edit_mesh(me)
 			bm_u.faces.ensure_lookup_table()
 			for f in bm_u.faces:
@@ -549,7 +553,7 @@ def run(cfg, extra):
 		bpy.ops.uv.smart_project(angle_limit=math.radians(66), island_margin=0.004, correct_aspect=True, scale_to_bounds=False)
 		bpy.ops.uv.pack_islands(margin=0.004)
 		bpy.ops.object.mode_set(mode="OBJECT")
-		if new_collar.any():
+		if collar_apart:
 			grid = 256
 			d_layer = me.uv_layers["detail"]  # the edit-mode round trip invalidated the reference
 			uv_d = np.empty(len(me.loops) * 2, dtype=np.float32)
@@ -590,8 +594,23 @@ def run(cfg, extra):
 				gain[zsel] = 0.0
 			zone_id[zsel] = zi
 			zone_names.append(zone.get("name", "zone%d" % zi))
+		# the glint gate (rescore-rs-01): the faces of the glossy slots (the lens) get the authored streaks in G
+		glint_cfg = db.get("glint")
+		face_glint = np.isin(new_label, glint_cfg.get("slots", [])) if glint_cfg else None
+		# the glove's authored lines (rescore-rs-02): each hand's frame from its bone (the axis wrist to knuckles, the back of the hand outward)
+		glove_cfg = db.get("glove_lines")
+		frames = {}
+		if glove_cfg:
+			armature = bpy.data.objects[pb.ARMATURE]
+			for side, bone in glove_cfg["bones"].items():
+				head, tail = np.array(armature.data.bones[bone].head_local), np.array(armature.data.bones[bone].tail_local)
+				axis = (tail - head) / np.linalg.norm(tail - head)
+				sign = 1.0 if head[0] > 0 else -1.0
+				out_dir = np.array([sign, 0.0, 0.0]) - axis * sign * axis[0]
+				out_dir /= np.linalg.norm(out_dir)
+				frames[side] = {"sign": sign, "head": head, "a": axis, "b": out_dir, "c": np.cross(axis, out_dir)}
 		bake_report = pipe_detail.bake(me, "detail", image, bvh, dense_verts_np, tri_idx, corner_uv, db, out_png, pc.work_path(cfg, "detail_source.png"), gain,
-			zone_low, zone_high, zone_id, zone_names)
+			zone_low, zone_high, zone_id, zone_names, glint_cfg, face_glint, glove_cfg, frames, new_label)
 		bake_report["png"] = os.path.basename(out_png)  # the folder differs in a --check rebuild; the content must not
 		bake_report["sha256"] = pc.sha256_file(out_png)
 	me.materials.clear()

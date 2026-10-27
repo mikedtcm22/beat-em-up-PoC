@@ -8,8 +8,9 @@ shader_type spatial;
 render_mode ambient_light_disabled;
 
 // The art's palette atlas decides, per swatch, whether the hard highlight shows (swatch_spec and
-// swatch_glint below): the lighting include declares and reads those varyings, and the glint's
-// uniforms, only for a shader that asks for them with this define (the floor's grid does not).
+// swatch_glint below), and its detail mask's G where on that swatch the glint may show (glint_gate):
+// the lighting include declares and reads those varyings, and the glint's uniforms, only for a shader
+// that asks for them with this define (the floor's grid does not).
 #define TOON_SWATCH_SPEC
 #include "res://game/fx/toon_light.gdshaderinc"
 
@@ -20,7 +21,8 @@ uniform vec4 albedo : source_color = vec4(1.0);
 // a glossy swatch (the shades' lens) is one 8-bit step lower in its class: 254, 203, 127).
 uniform sampler2D albedo_tex : source_color, filter_nearest, repeat_disable;
 uniform bool use_albedo_tex = false;
-// The art's optional detail mask on UV2: R = ink lines (seams, wraps, stitching), never shading.
+// The art's optional detail mask on UV2: R = ink lines (seams, wraps, stitching), never shading; G = the
+// glint gate, the authored streaks on a glossy swatch (the Punk's lens, 0.5 on a streak's edge); B unused.
 uniform sampler2D detail_tex : filter_linear_mipmap, repeat_disable;
 uniform bool use_detail_tex = false;
 uniform float detail_strength : hint_range(0.0, 1.0) = 1.0;
@@ -84,6 +86,7 @@ void fragment() {
 	// where the atlas says glossy, so the vest, denim, cap and skin stay matte and the lens glints.
 	swatch_spec = 1.0;
 	swatch_glint = 0.0;
+	glint_gate = 1.0;
 	if (use_albedo_tex) {
 		vec4 swatch = texture(albedo_tex, UV);
 		color *= swatch.rgb;
@@ -99,6 +102,12 @@ void fragment() {
 			ink_mask = smoothstep(detail_cut - edge, detail_cut + edge, ink_mask);
 		}
 		color = mix(color, ink, ink_mask * detail_strength);
+		// The glint gate: an art with a mask lets its glossy swatch glint only on the streaks the mask's G
+		// authors, cut at 0.5 with the same one-pixel edge (the field is a distance ramp, so the cut is sharp).
+		// Without a mask the glint is the whole glossy swatch's.
+		float streak = texture(detail_tex, UV2).g;
+		float streak_edge = max(0.5 * fwidth(streak), 0.0001);
+		glint_gate = smoothstep(0.5 - streak_edge, 0.5 + streak_edge, streak);
 	}
 	if (takes_marks > 0.0) {
 		vec3 w = abs(normalize(mark_normal));

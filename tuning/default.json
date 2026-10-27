@@ -475,7 +475,7 @@
 		"look_spec_cut": 0.99,
 		"look_spec_strength": 0.5,
 		"look_spec_gloss": 3.0,
-		"look_glint_cut": 0.88,
+		"look_glint_cut": 0.81,
 		"look_glint_strength": 1.0,
 		"look_rim_cut": 0.4,
 		"look_rim_power": 2.0,

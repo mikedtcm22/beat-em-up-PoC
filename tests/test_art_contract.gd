@@ -86,10 +86,11 @@ const CUFF_OVER_FOREARM_MAX_M := 0.01
 const FOREARM_ALONG_NEAR_M := 0.08
 const FOREARM_ALONG_FAR_M := 0.10
 ## Shading normals: the share of edges whose end normals disagree by more than 25 degrees and the mean disagreement (the lumpy
-## generated normals measured 38.5% and 25.4 degrees, the smoothed ones 11.3% and 15.1).
+## generated normals measured 38.5% and 25.4 degrees, 6 rounds of smoothing 11.3% and 15.1, the shipped 12 rounds (re-score rs-04: the
+## face's bands were faceted patches at 6) 8.8% and 13.3; the bars were 18% and 19 degrees and are tightened to the 12 rounds).
 const NORMAL_EDGE_ANGLE_DEG := 25.0
-const NORMAL_EDGE_SHARE_MAX := 0.18
-const NORMAL_MEAN_DEG_MAX := 19.0
+const NORMAL_EDGE_SHARE_MAX := 0.12
+const NORMAL_MEAN_DEG_MAX := 16.0
 ## The face's skin carries the mouth and the nose line and no speckle: the share of its surface with ink over one half (the speckled
 ## mask measured 2.6%, the lines alone 1.6%; F-cuff's re-bake 1.98%, the final-v1-06 retune 1.62%: face_skin 0.04 / 0.10).
 const FACE_INK_MIN := 0.004
@@ -482,7 +483,8 @@ func test_hull_normals_and_the_detail_uv_are_there() -> void:
 		assert_lt(worst_split, 0.03, "%s: vertices at one position share one hull normal, across both parts too (no cracks)" % path)
 
 
-## F-punk (M4-plan A18): the Punk's detail mask is a 1k PNG with ink in R only (lines, never shading), and punk.glb and punk_rest.glb
+## F-punk (M4-plan A18): the Punk's detail mask is a 1k PNG with ink in R only (lines, never shading), G the glint gate (the lens's two
+## authored streaks per eye, on the lens's texels only: tests/test_toon_glint.gd reads where) and B nothing, and punk.glb and punk_rest.glb
 ## carry the UV2 it is baked on, every vertex of it inside the unit square.
 func test_the_punk_detail_mask_is_a_1k_ink_only_png_on_the_punks_uv2() -> void:
 	var art := load("res://game/actors/art/punk_art.tres") as CharacterArt
@@ -490,18 +492,23 @@ func test_the_punk_detail_mask_is_a_1k_ink_only_png_on_the_punks_uv2() -> void:
 	var image := art.detail_mask.get_image()
 	assert_eq(image.get_size(), Vector2i(1024, 1024), "1k")
 	var ink := 0
-	var other := 0.0
+	var blue := 0.0
+	var gate := 0
 	var sum := 0.0
 	for y: int in range(0, 1024, 2):
 		for x: int in range(0, 1024, 2):
 			var c := image.get_pixel(x, y)
 			sum += c.r
-			other = maxf(other, maxf(c.g, c.b))
+			blue = maxf(blue, c.b)
+			if c.g > 0.5:
+				gate += 1
 			if c.r > 0.5:
 				ink += 1
 	var mean := sum / (512.0 * 512.0)
 	print("ART-CONTRACT punk_detail.png: mean ink %.4f, %d of 262144 sampled texels over 0.5" % [mean, ink])
-	assert_lt(other, 0.01, "G and B hold nothing (R is the ink)")
+	assert_lt(blue, 0.01, "B holds nothing (R is the ink, G the lens's glint gate)")
+	assert_gt(gate, 50, "G holds the lens's streaks (the glint gate)")
+	assert_lt(gate, 3000, "and only the lens's (a few thousand texels at full resolution, a few hundred sampled here)")
 	assert_gt(ink, 500, "there are lines")
 	assert_lt(mean, 0.08, "and they are lines, not a wash (shading would raise the mean)")
 	for name: String in ["punk.glb", "punk_rest.glb"]:
@@ -612,6 +619,69 @@ func test_the_punks_gloves_have_no_yellow_and_the_cuff_has_no_slivers() -> void:
 		assert_lt(edge_max, CUFF_EDGE_MAX_M, "%s: no long edge on the cuffs" % path)
 		assert_lt(radius_max, CUFF_RADIUS_MAX_M, "%s: nothing on a cuff stands more than 7 cm from the arm's axis" % path)
 		assert_lt(over_forearm_max, CUFF_OVER_FOREARM_MAX_M, "%s: the cuff is a band on the wrist, not a flange: no wider than the forearm above it by a centimetre" % path)
+
+
+## Re-score rs-02: the striking glove was a featureless dome (J3). Its back and cuff carry authored lines now (`detail_bake.glove_lines`: a
+## ring where the glove's knuckles begin, the outline of the dorsal plate with its knuckle ticks, three rings round the wrist cuff, which
+## the bake now unwraps so it has texels), baked into R beside the texture's strokes. The share of the glove block's and the cuff's surface
+## (four by four barycentric samples a triangle of the faces on a hand, the cuff counted by its height above the wrist) with ink over one
+## half: the strokes alone measured 0.1 to 0.6% on the block and 0 on the cuff (the cuff had no texels).
+const GLOVE_INK_BLOCK_MIN := 0.012
+const GLOVE_INK_CUFF_MIN := 0.025
+
+
+func test_the_punks_glove_and_cuff_carry_the_authored_lines() -> void:
+	var art := load("res://game/actors/art/punk_art.tres") as CharacterArt
+	if art == null or art.detail_mask == null:
+		return
+	var mask := art.detail_mask.get_image()
+	var size := mask.get_width()
+	var path := "res://assets/export/characters/punk/punk.glb"
+	if not _facts(path).ok:
+		return
+	var body := _body(path)
+	var arrays: Array = body.arrays
+	var binds: Array[String] = body.bind_names
+	var joints := _joints(path)
+	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var uv2: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV2]
+	var index: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+	var block := Vector2.ZERO
+	var cuff := Vector2.ZERO
+	for side: String in ["Left", "Right"]:
+		var hand: Vector3 = joints[side + "Hand"]
+		var dir: Vector3 = (hand - joints[side + "LowerArm"]).normalized()
+		var hand_w := PackedFloat32Array()
+		hand_w.resize(verts.size())
+		for v: int in verts.size():
+			hand_w[v] = _weight_on(arrays, binds, v, side + "Hand")
+		for t: int in index.size() / 3:
+			var corner: Array[int] = [index[t * 3], index[t * 3 + 1], index[t * 3 + 2]]
+			if (verts[corner[0]] - hand).length() > 0.15:
+				continue
+			var along := maxf((verts[corner[0]] - hand).dot(dir), maxf((verts[corner[1]] - hand).dot(dir), (verts[corner[2]] - hand).dot(dir)))
+			var lowest := minf((verts[corner[0]] - hand).dot(dir), minf((verts[corner[1]] - hand).dot(dir), (verts[corner[2]] - hand).dot(dir)))
+			var on_block := hand_w[corner[0]] >= 0.5 and hand_w[corner[1]] >= 0.5 and hand_w[corner[2]] >= 0.5
+			var on_cuff := maxf(hand_w[corner[0]], maxf(hand_w[corner[1]], hand_w[corner[2]])) > 0.05 and along < 0.01 and lowest > -0.08
+			if not (on_block or on_cuff):
+				continue
+			for i: int in 4:
+				for j: int in 4 - i:
+					var wa := (float(i) + 0.5) / 4.0
+					var wb := (float(j) + 0.5) / 4.0
+					var p := uv2[corner[0]] * wa + uv2[corner[1]] * wb + uv2[corner[2]] * (1.0 - wa - wb)
+					var inked := 1.0 if mask.get_pixel(clampi(int(p.x * float(size)), 0, size - 1), clampi(int(p.y * float(size)), 0, size - 1)).r > 0.5 else 0.0
+					if on_cuff and not on_block:
+						cuff += Vector2(inked, 1.0)
+					elif on_block:
+						block += Vector2(inked, 1.0)
+	var block_share := block.x / maxf(block.y, 1.0)
+	var cuff_share := cuff.x / maxf(cuff.y, 1.0)
+	gut.p("ART-CONTRACT glove ink: the glove block %.2f%% of %d samples, the cuff %.2f%% of %d" % [block_share * 100.0, block.y, cuff_share * 100.0, cuff.y])
+	assert_gt(block.y, 1000.0, "the glove block was sampled")
+	assert_gt(cuff.y, 500.0, "and the cuff")
+	assert_gt(block_share, GLOVE_INK_BLOCK_MIN, "the glove's block has lines (the knuckle seam, the plate's outline)")
+	assert_gt(cuff_share, GLOVE_INK_CUFF_MIN, "and the cuff has its rings (the strap's edge a strike's contact shows)")
 
 
 ## F-punk-fix, the shades: the lens and the cap were both #e8bd2e, so the head read as one yellow mass from the crown to the cheek.
@@ -728,6 +798,72 @@ func test_the_punks_shading_normals_are_smoothed_not_lumpy() -> void:
 		gut.p("ART-CONTRACT normals %s: %.1f%% of %d edges differ by over %.0f degrees, mean %.1f degrees" % [path.get_file(), share * 100.0, edges, NORMAL_EDGE_ANGLE_DEG, mean])
 		assert_lt(share, NORMAL_EDGE_SHARE_MAX, "%s: few edges have end normals more than 25 degrees apart" % path)
 		assert_lt(mean, NORMAL_MEAN_DEG_MAX, "%s: and the mean disagreement is small" % path)
+
+
+## Re-score rs-03: the Punk's strokes are lines, not dots. The bake takes one bilinear tap per 2.6 mm texel from lines about 1 to 3 mm wide, so
+## a strand came out as dots and dashes: of 1,144 pieces over the shader's cut (look_detail_cut 0.15 of 255 = 38) 886 were 6 texels or fewer,
+## a quarter of the ink texels, with a median of 2. pipe_detail.clean_strokes bridges the gaps along a stroke and drops the short pieces
+## (`detail_bake.clean`): the pieces of 6 texels or fewer are now a few percent of the ink and the median is a line's length.
+const STROKE_CUT_8BIT := 38
+const STROKE_SMALL_TEXELS := 6
+const STROKE_SMALL_SHARE_MAX := 0.12
+const STROKE_MEDIAN_MIN := 6
+const STROKE_PIECES_MAX := 600
+
+
+func test_the_punks_strokes_are_lines_not_dots() -> void:
+	var art := load("res://game/actors/art/punk_art.tres") as CharacterArt
+	if art == null or art.detail_mask == null:
+		return
+	var image := art.detail_mask.get_image()
+	if image.is_compressed():
+		image.decompress()
+	var size := image.get_width()
+	var channels := 4 if image.get_format() == Image.FORMAT_RGBA8 else 3
+	assert_true(image.get_format() == Image.FORMAT_RGBA8 or image.get_format() == Image.FORMAT_RGB8, "an 8-bit mask")
+	var bytes := image.get_data()
+	var ink := PackedByteArray()
+	ink.resize(size * size)
+	for i: int in size * size:
+		ink[i] = 1 if bytes[i * channels] > STROKE_CUT_8BIT else 0
+	var sizes: Array[int] = []
+	for start: int in size * size:
+		if ink[start] != 1:
+			continue
+		ink[start] = 2
+		var stack := PackedInt32Array([start])
+		var count := 0
+		while not stack.is_empty():
+			var at := stack[stack.size() - 1]
+			stack.resize(stack.size() - 1)
+			count += 1
+			var x := at % size
+			var y := at / size
+			for dy: int in [-1, 0, 1]:
+				for dx: int in [-1, 0, 1]:
+					var nx := x + dx
+					var ny := y + dy
+					if nx < 0 or ny < 0 or nx >= size or ny >= size:
+						continue
+					var n := ny * size + nx
+					if ink[n] == 1:
+						ink[n] = 2
+						stack.append(n)
+		sizes.append(count)
+	sizes.sort()
+	var total := 0
+	var small := 0
+	for n: int in sizes:
+		total += n
+		if n <= STROKE_SMALL_TEXELS:
+			small += n
+	var share := float(small) / float(maxi(total, 1))
+	var median := sizes[sizes.size() / 2] if not sizes.is_empty() else 0
+	gut.p("ART-CONTRACT strokes: %d pieces over the cut, median %d texels, %.1f%% of the ink texels in pieces of %d or fewer" % [sizes.size(), median, share * 100.0, STROKE_SMALL_TEXELS])
+	assert_gt(total, 3000, "there are strokes")
+	assert_lt(share, STROKE_SMALL_SHARE_MAX, "few of the ink texels are in dots (the bake measured a quarter before the cleanup)")
+	assert_gte(median, STROKE_MEDIAN_MIN, "the median piece is a line, not a dot (it was 2 texels)")
+	assert_lt(sizes.size(), STROKE_PIECES_MAX, "and the strokes are hundreds of pieces, not over a thousand (1,144 before the cleanup)")
 
 
 ## F-punk-fix, the face: the mask's ink on the face's skin is the mouth mark and the nose line, not the texture's speckle. The share
