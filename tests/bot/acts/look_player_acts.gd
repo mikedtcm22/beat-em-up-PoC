@@ -17,6 +17,7 @@ extends RefCounted
 ##   tools/look_sheets.sh captures/pa/bot.avi captures/pa/sheets
 ##
 ## | Act | Title | Shows |
+## | PA2 | Look: my knockdown | feel question 3 (M4-plan section 8): the Kicker behind him sweeps his legs and he falls face down and gets up, the first-person view of the lying body (the "belly slab"); record it with Tuning's fp_knockdown_hide_torso off (today) and on (`--tune=fp_knockdown_hide_torso=1`), on the primitives and with the probe body |
 ## | PA1 | Look: my arms and legs | idle level, looking 45 and 65 degrees down; at 20 down the chain jab, cross, hook, uppercut, the front kick, the block's guard, the spin kick, the haymaker's charge and its swing; a Punk held 1.1 m ahead and kneed; then his own KO: the lens leaves his eyes and shows the whole body |
 ##
 ## Every act of this file prints the marks and rectangles of look_rect.gd for the player (`hands` and
@@ -26,8 +27,9 @@ extends RefCounted
 const LookRect := preload("res://tests/bot/look_rect.gd")
 const LookActs := preload("res://tests/bot/acts/look_acts.gd")
 
-## The act's slug in the marks.
+## The acts' slugs in the marks.
 const SLUG := "pa1"
+const KNOCKDOWN_SLUG := "pa2"
 ## The views (degrees, negative looks down): level, the plan's 45 and 65, and 20 where his arms and
 ## the strikes are in the picture (look_acts.gd's C8 finds the same).
 const LEVEL_PITCH_DEG := 0.0
@@ -51,11 +53,20 @@ const KO_HEALTH := 3.0
 const KO_WATCH_TICKS := 150
 const KO_OUT_MAX_TICKS := 240
 const KO_BACK_MAX_TICKS := 600
+## The knockdown: how far behind the player the Kicker stands (its sweep reaches 1.2 m in the tests), which
+## of its attacks is the sweep, how long a body may take to go down and to get up (ticks), and the
+## stills' places in the lying (ticks after he is down).
+const KICKER_BEHIND_M := 1.2
+const KICKER_SWEEP := 1
+const DOWN_MAX_TICKS := 120
+const GETUP_MAX_TICKS := 300
+const DOWN_MARK_TICKS: Array[int] = [20, 45, 70]
 
 
 static func acts(bot: Node) -> Array[Dictionary]:
 	return [
 		{title = "Look: my arms and legs", cam = &"first_person", slug = &"pa1", fn = func() -> void: await _arms_and_legs(bot)},
+		{title = "Look: my knockdown", cam = &"first_person", slug = &"pa2", fn = func() -> void: await _knockdown(bot)},
 	]
 
 
@@ -78,6 +89,7 @@ static func _begin(bot: Node) -> void:
 	bot.god()
 	bot.freeze_ai(true)
 	bot.log_line("LOOK-PLAYER art %s" % _art_name(bot))
+	bot.log_line("LOOK-PLAYER fp_knockdown_hide_torso %s" % Tuning.data.fp_knockdown_hide_torso)
 	var vfx := bot.get_tree().get_first_node_in_group(VfxDirector.GROUP) as VfxDirector
 	if vfx:
 		vfx.clear()
@@ -85,8 +97,8 @@ static func _begin(bot: Node) -> void:
 
 
 ## The end of the act: the `end` mark and the caption back (the bot's own idle tail shows it).
-static func _end(bot: Node) -> void:
-	LookRect.mark(bot, SLUG, "end")
+static func _end(bot: Node, slug: String = SLUG) -> void:
+	LookRect.mark(bot, slug, "end")
 	bot.caption.visible = true
 
 
@@ -187,3 +199,31 @@ static func _ko(bot: Node) -> void:
 	await bot._wait_until(func() -> bool: return camera.ko_view_weight() <= 0.0 and not bot.player.is_ko() and bot.player.health > 0.0, KO_BACK_MAX_TICKS)
 	await bot._ticks(AFTER_MOVE_TICKS)
 	LookRect.mark(bot, SLUG, "ko_back_in_the_eyes", bot.player)
+
+
+## Feel question 3: the Kicker KICKER_BEHIND_M behind him sweeps his legs (god mode off, full health: a
+## knockdown, not a KO), he falls, lies and gets up. Marked as he goes down, three times while he lies
+## (the lens in his own belly: the slab when it is not hidden) and when he is up. The view is the
+## default, tipped a little down.
+static func _knockdown(bot: Node) -> void:
+	_begin(bot)
+	LookRect.mark(bot, KNOCKDOWN_SLUG, "start")
+	await bot._look_to(LookActs.DEFAULT_PITCH_DEG, PITCH_TICKS)
+	var kicker: EnemyActor = bot.spawn(&"kicker", Vector2(0.0, -KICKER_BEHIND_M))
+	await bot._ticks(SETTLE_TICKS)
+	LookRect.mark(bot, KNOCKDOWN_SLUG, "standing", bot.player)
+	var run := {running = true}
+	LookActs._watch(bot, KNOCKDOWN_SLUG, bot.player, run)
+	bot.god(false)
+	kicker.force_attack(KICKER_SWEEP)
+	await bot._wait_until(func() -> bool: return bot.player.state == CombatTypes.ActorState.DOWNED, DOWN_MAX_TICKS)
+	var lying := 0
+	for tick: int in DOWN_MARK_TICKS:
+		await bot._ticks(tick - lying)
+		lying = tick
+		LookRect.mark(bot, KNOCKDOWN_SLUG, "down_t%03d" % tick, bot.player)
+	await bot._wait_until(func() -> bool: return bot.player.state == CombatTypes.ActorState.FREE, GETUP_MAX_TICKS)
+	await bot._ticks(AFTER_MOVE_TICKS)
+	run.running = false
+	bot.god(true)
+	_end(bot, KNOCKDOWN_SLUG)

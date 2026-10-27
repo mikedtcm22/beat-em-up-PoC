@@ -37,6 +37,8 @@ const OWN_SHARE_MAX := 1.0 / 3.0
 ## The KO view's distance from the body (test_ko_view): nothing of the drawn body nearer the lens than
 ## this while the head layer is lifted.
 const KO_BODY_CLEAR_M := 0.25
+## Real time the mixer is given to let go of the sounds at the end of the run (test_look_acts does the same).
+const AUDIO_DRAIN_MS := 250
 ## What the probe body does today (a mannequin, not the hero): the most of its cells that differ
 ## from its proxies and its share of the view's gap (points) over the poses, how much nearer than
 ## FPView's loose proxies it stands (P1-skin C6's 7 cm), the share of the proxies' cells it covers
@@ -67,6 +69,12 @@ func after_each() -> void:
 	TimeController.clear()
 	TimeController.debug_scale = 1.0
 	Tuning.apply(TuningData.new())
+
+
+func after_all() -> void:
+	# A headless run is far ahead of the audio clock: give the mixer a moment to drop the sounds the
+	# fights above made, or the exit reports their streams as resources still in use.
+	OS.delay_msec(AUDIO_DRAIN_MS)
 
 
 # --- Harness ------------------------------------------------------------------------------
@@ -806,29 +814,34 @@ class QuietBot extends "res://tests/bot/crowd_bot.gd":
 		finished = true
 
 
-func test_the_act_lists_its_title_and_no_other_act_holds_it() -> void:
+func test_the_acts_list_their_titles_and_no_other_act_holds_one() -> void:
 	var node := Node.new()
 	autofree(node)
 	var acts := LookPlayerActs.acts(node)
-	assert_eq(acts.size(), 1)
+	var mine: Array[String] = []
+	assert_eq(acts.size(), 2)
 	assert_eq(acts[0].title, "Look: my arms and legs")
-	assert_true(String(acts[0].title).begins_with("Look: "))
-	assert_eq(acts[0].cam, &"first_person")
+	assert_eq(acts[1].title, "Look: my knockdown")
+	for act in acts:
+		assert_true(String(act.title).begins_with("Look: "))
+		assert_eq(act.cam, &"first_person")
+		assert_true((act.fn as Callable).is_valid())
+		mine.append(String(act.title).to_lower())
 	var bot := QuietBot.new()
 	autofree(bot)
 	var titles: Array[String] = []
 	for act in bot._collect_acts():
 		titles.append(act.title)
-	assert_has(titles, "Look: my arms and legs", "the crowd bot loads the file by name")
-	var mine := String(acts[0].title).to_lower()
-	var holders := 0
-	for title: String in titles:
-		var other := title.to_lower()
-		if other.contains(mine):
-			holders += 1
-		else:
-			assert_false(mine.contains(other), "'%s' does not hold '%s'" % [mine, other])
-	assert_eq(holders, 1, "a capture filter with the title picks one act")
+	for title: String in mine:
+		assert_has(titles.map(func(t: String) -> String: return t.to_lower()), title, "the crowd bot loads the file by name")
+		var holders := 0
+		for other_title: String in titles:
+			var other := other_title.to_lower()
+			if other.contains(title):
+				holders += 1
+			else:
+				assert_false(title.contains(other), "'%s' does not hold '%s'" % [title, other])
+		assert_eq(holders, 1, "a capture filter with '%s' picks one act" % title)
 
 
 func test_the_act_runs_headless_on_the_probe_body_with_its_marks_rectangles_and_the_ko_view() -> void:
@@ -873,3 +886,33 @@ func test_the_act_runs_headless_on_the_probe_body_with_its_marks_rectangles_and_
 		assert_true(labels.has(move), "the act marks %s" % move)
 	assert_gt(rects, 20, "and prints the rectangles of his hands and body")
 	assert_true(Tuning.data.god_mode, "god mode is back on after the KO")
+
+
+func test_the_knockdown_act_runs_headless_and_the_torso_switch_is_in_its_log() -> void:
+	for hide: bool in [false, true]:
+		Tuning.reset_to_default()
+		Tuning.set_value(&"waves_enabled", false)
+		Tuning.data.look_player_art_probe = true
+		Tuning.data.fp_knockdown_hide_torso = hide
+		GameInput.menu_open = false
+		var bot := QuietBot.new()
+		bot.act_filter = "Look: my knockdown"
+		add_child_autofree(bot)
+		for i in ACT_MAX_TICKS:
+			await get_tree().physics_frame
+			if bot.finished:
+				break
+		assert_true(bot.finished, "the act finished")
+		var labels := {}
+		var switch_line := ""
+		for line: String in bot.log_lines:
+			if line.begins_with("LOOK-MARK pa2 "):
+				labels[line.split(" ")[3]] = true
+			elif line.begins_with("LOOK-PLAYER fp_knockdown_hide_torso"):
+				switch_line = line
+		assert_eq(switch_line, "LOOK-PLAYER fp_knockdown_hide_torso %s" % hide, "the log says which way the switch was")
+		for label: String in ["start", "standing", "state_downed", "down_t020", "down_t045", "down_t070", "state_getup", "end"]:
+			assert_true(labels.has(label), "hide %s: the act marks %s" % [hide, label])
+		assert_true(Tuning.data.god_mode)
+		bot.queue_free()
+		await get_tree().physics_frame
