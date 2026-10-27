@@ -742,3 +742,188 @@ func test_the_load_time_warm_up_adds_nothing_headless() -> void:
 	assert_eq(holder.get_child_count(), before, "headless: no throwaway rig, no holder")
 	assert_true(ResourceLoader.exists(RoomKit.WARM_ART), "the warm-up's art exists")
 	assert_eq((load(RoomKit.WARM_ART) as CharacterArt).resource_path, VARIANTS[0].art)
+
+
+# --- The ragdoll's write-back on the real GLB (slice-gate gap 10) ----------------------------------
+
+
+## The figures a WriteBackProbe keeps: the largest origin (m) and rotation (rad) gap of any bone, the
+## updates counted, and those a ragdoll ran in.
+class WriteBackStats:
+	extends RefCounted
+	var worst_origin: float = 0.0
+	var worst_angle: float = 0.0
+	var updates: int = 0
+	## Updates in which a ragdoll was running.
+	var running: int = 0
+
+
+## A modifier that reads the skeleton the way the render server will draw it, and the rig's bone
+## followers beside it, on every update of the skeleton: the gap of any of the 23 bones, in rig space.
+## Placed after the Ragdoll (a child of the skeleton added once the Ragdoll exists) it sees what the Ragdoll
+## left; placed first it sees the animation's pose.
+class WriteBackProbe:
+	extends SkeletonModifier3D
+	var rig: HumanoidRig
+	## The figures live outside the node: a KO'd Punk is freed with the probe on its skeleton.
+	var stats := WriteBackStats.new()
+	## Count the updates a ragdoll runs in, and those it does not.
+	var count_ragdolling: bool = true
+	var count_animated: bool = true
+
+	func _process_modification_with_delta(_delta: float) -> void:
+		var skeleton := get_skeleton()
+		if skeleton == null or rig == null or not is_instance_valid(rig):
+			return
+		var ragdolling := rig.is_ragdolling()
+		stats.running += int(ragdolling)
+		if ragdolling and not count_ragdolling or not ragdolling and not count_animated:
+			return
+		var globals: Array[Transform3D] = []
+		for i: int in skeleton.get_bone_count():
+			var local := skeleton.get_bone_pose(i)
+			var parent := skeleton.get_bone_parent(i)
+			globals.append(local if parent < 0 else globals[parent] * local)
+		var to_rig := rig.global_transform.affine_inverse()
+		for i: int in globals.size():
+			var follower := to_rig * rig.get_attachment(skeleton.get_bone_name(i)).global_transform
+			stats.worst_origin = maxf(stats.worst_origin, globals[i].origin.distance_to(follower.origin))
+			# The exact angle: Quaternion.angle_to() is only good to 4e-4 near zero.
+			var turn := globals[i].basis.get_rotation_quaternion().inverse() * follower.basis.get_rotation_quaternion()
+			stats.worst_angle = maxf(stats.worst_angle, 2.0 * atan2(Vector3(turn.x, turn.y, turn.z).length(), absf(turn.w)))
+		stats.updates += 1
+
+
+## A stage with a floor and a bare player to hit the Punk with (the AI is frozen: only what the test
+## does moves it).
+func _arena() -> Dictionary:
+	Tuning.set_value(&"ai_frozen", true)
+	Tuning.set_value(&"god_mode", true)
+	var stage := Node3D.new()
+	add_child_autofree(stage)
+	var floor_body := StaticBody3D.new()
+	floor_body.collision_layer = CombatTypes.bit(CombatTypes.LAYER_WORLD)
+	floor_body.collision_mask = 0
+	var shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = Vector3(60.0, 1.0, 60.0)
+	shape.shape = box
+	shape.position = Vector3(0.0, -0.5, 0.0)
+	floor_body.add_child(shape)
+	stage.add_child(floor_body)
+	var player := PlayerCharacter.new()
+	stage.add_child(player)
+	player.input.scripted = true
+	var punk := (load(PUNK_SCENE) as PackedScene).instantiate() as StreetPunk
+	punk.position = Vector3(0.0, 0.0, -1.0)
+	punk.rotation.y = 0.0
+	stage.add_child(punk)
+	return {stage = stage, player = player, punk = punk}
+
+
+func _hit_on(player: PlayerCharacter, punk: StreetPunk, reaction: CombatTypes.Reaction, knockback: Vector3, damage: float = 1.0) -> HitInfo:
+	var hit := HitInfo.new()
+	hit.attacker = player
+	hit.victim = punk
+	hit.damage = damage
+	hit.tier = CombatTypes.HitTier.HEAVY
+	hit.reaction = reaction
+	hit.region = CombatTypes.Region.TORSO
+	hit.direction = Vector3(knockback.x, 0.0, knockback.z).normalized()
+	hit.knockback = knockback
+	hit.contact_point = punk.rig.get_point_position(&"ChestPoint") - hit.direction * 0.15
+	hit.physics_frame = Engine.get_physics_frames()
+	return hit
+
+
+func _wait_physics(condition: Callable, max_ticks: int) -> bool:
+	for i: int in max_ticks:
+		if condition.call():
+			return true
+		await get_tree().physics_frame
+	return condition.call()
+
+
+func test_a_modifier_after_the_ragdoll_sees_the_skeleton_equal_the_followers_through_a_real_punks_fight() -> void:
+	# Gap 10 of the slice gate: the write-back (A5) was proved on the fixtures; here it is held on a real
+	# StreetPunk wearing punk.glb, through its own jab, a stagger (partial ragdoll), a launch (full, out of
+	# the stagger), the get-up and a KO. On every update of the skeleton, in rig space, every bone the
+	# skeleton holds is within 1 mm of the bone follower the primitives and the flash anchors ride.
+	var arena := _arena()
+	var player := arena.player as PlayerCharacter
+	var punk := arena.punk as StreetPunk
+	await _wait_physics(func() -> bool: return punk.is_inside_tree() and punk.rig != null, 5)
+	await get_tree().physics_frame
+	assert_true(punk.rig.has_art(), "the Punk wears the art")
+	assert_eq(punk.rig.art.scene.resource_path.get_file(), "punk.glb", "punk.glb, the A-pose route")
+	var skeleton := punk.rig.skeleton
+	# Before any ragdoll exists: the animation's updates (the jab).
+	var idle_probe := WriteBackProbe.new()
+	idle_probe.rig = punk.rig
+	idle_probe.count_ragdolling = false
+	skeleton.add_child(idle_probe)
+	var idle_stats := idle_probe.stats
+	# 1. The Punk's own jab (force_attack, the AI's own telegraph and strike), whiffing at 1 m.
+	punk.force_attack(0)
+	assert_true(await _wait_physics(func() -> bool: return punk.current_move != null, 90), "the jab starts")
+	assert_true(await _wait_physics(func() -> bool: return punk.current_move == null, 240), "and ends")
+	await _ticks_physics(10)
+	assert_gt(idle_stats.updates, 40, "the jab's updates were watched (%d)" % idle_stats.updates)
+	# 2. A stagger: the partial ragdoll. The Ragdoll exists from now on: the probe goes after it.
+	assert_true(punk.receive_hit(_hit_on(player, punk, CombatTypes.Reaction.STAGGER, Vector3(0.0, 0.5, -2.0))))
+	var ragdoll := punk.rig.get_ragdoll()
+	assert_not_null(ragdoll, "the stagger built the ragdoll")
+	var probe := WriteBackProbe.new()
+	probe.rig = punk.rig
+	skeleton.add_child(probe)
+	var stats := probe.stats
+	probe.count_animated = true
+	assert_gt(probe.get_index(), ragdoll.get_index(), "the probe runs after the Ragdoll")
+	assert_true(await _wait_physics(func() -> bool: return punk.rig.is_ragdolling(), 10) or stats.running > 0)
+	await _ticks_physics(14)
+	# 3. A launch out of the stagger: the full ragdoll at once, and the flight.
+	assert_true(punk.receive_hit(_hit_on(player, punk, CombatTypes.Reaction.LAUNCH, Vector3(0.0, 4.0, -5.0))))
+	assert_true(await _wait_physics(func() -> bool: return punk.is_downed(), 240), "it lands")
+	# 4. The get-up: the ragdoll hands the body back to the animation.
+	assert_true(await _wait_physics(func() -> bool:
+			return punk.state == CombatTypes.ActorState.FREE and punk.current_move == null, 600), "it gets up")
+	await _ticks_physics(20)
+	# 5. A KO: the last health, a launch.
+	punk.health = 1.0
+	assert_true(punk.receive_hit(_hit_on(player, punk, CombatTypes.Reaction.LAUNCH, Vector3(0.0, 3.0, -4.0), 50.0)))
+	var ref: WeakRef = weakref(punk)
+	await _wait_physics(func() -> bool: return ref.get_ref() == null or (ref.get_ref() as CombatActor).is_gone(), 900)
+	await _ticks_physics(5)
+	print("ART-PUNK write-back (the real punk.glb): jab %d updates, worst %.5f m / %.5f rad; stagger to KO %d updates (%d with a ragdoll running), worst %.5f m / %.5f rad" % [
+			idle_stats.updates, idle_stats.worst_origin, idle_stats.worst_angle, stats.updates, stats.running, stats.worst_origin, stats.worst_angle])
+	assert_lt(idle_stats.worst_origin, 0.001, "the jab: every bone within 1 mm of its follower (worst %.5f m)" % idle_stats.worst_origin)
+	assert_lt(idle_stats.worst_angle, 0.001, "and its turn (%.5f rad)" % idle_stats.worst_angle)
+	assert_gt(stats.updates, 100, "stagger, launch, get-up and KO were watched (%d updates)" % stats.updates)
+	assert_gt(stats.running, 60, "with a ragdoll running in many of them (%d)" % stats.running)
+	assert_gt(stats.updates - stats.running, 30, "and none running in the rest: the get-up and the standing (%d)" % (stats.updates - stats.running))
+	assert_lt(stats.worst_origin, 0.001, "after the Ragdoll: every bone within 1 mm of its follower on every update (worst %.5f m)" % stats.worst_origin)
+	assert_lt(stats.worst_angle, 0.001, "and its turn (worst %.5f rad)" % stats.worst_angle)
+
+
+func test_the_probe_has_teeth_a_modifier_before_the_ragdoll_sees_the_raw_simulator() -> void:
+	# The control: a probe placed BEFORE the Ragdoll reads the simulator's raw output, which is a long way
+	# from the followers in a stagger, so a write-back that did not happen would fail the test above.
+	var arena := _arena()
+	var player := arena.player as PlayerCharacter
+	var punk := arena.punk as StreetPunk
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	assert_true(punk.receive_hit(_hit_on(player, punk, CombatTypes.Reaction.STAGGER, Vector3(0.0, 0.5, -2.0))))
+	var ragdoll := punk.rig.get_ragdoll()
+	var raw := WriteBackProbe.new()
+	raw.rig = punk.rig
+	punk.rig.skeleton.add_child(raw)
+	punk.rig.skeleton.move_child(raw, ragdoll.get_index())
+	await _ticks_physics(30)
+	assert_gt(raw.stats.updates, 10)
+	assert_gt(raw.stats.worst_origin, 0.01, "the raw simulator output is %.3f m from the followers in a stagger" % raw.stats.worst_origin)
+
+
+func _ticks_physics(n: int) -> void:
+	for i: int in n:
+		await get_tree().physics_frame
