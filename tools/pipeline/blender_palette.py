@@ -19,6 +19,15 @@ low-poly body whose every face sits on one swatch:
 	   centre as UV1 "palette" (u, v from gen_palette.uv_of_slot); with palette.detail_uv a second layer "detail" (UV2,
 	   smart-projected: the player's 1k ink mask is painted on it).
 The source texture and materials are dropped: the game draws the atlas.
+
+F-punk's additions (all opt-in by config, so the probe and the player run as before):
+	palette.regions: faces of a slot inside a box take another slot (the Punk's lens: the cap's yellow in front of the eyes,
+	  on its own swatch that takes no damage marks);
+	faces with the pipe_fist attribute (generated fists, blender_parts) are decimated on their own to
+	  palette.fist_budget_tris each, the rest of the body to the budget less both fists (their borders still protected);
+	palette.unfold: relax the folded triangles of the decimated mesh away (pipe_cleanup.unfold) and report the counts;
+	palette.detail_bake: the 1k ink-only detail mask on UV2 baked from the dense texture (pipe_detail.bake, plan A18); its
+	  no_ink_slots (the lens) get no ink.
 """
 import math
 import os
@@ -34,8 +43,12 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import pipe_blender as pb  # noqa: E402
 import pipe_common as pc  # noqa: E402
 import gen_palette as gp  # noqa: E402
+import pipe_cleanup  # noqa: E402
+import pipe_detail  # noqa: E402
 
 SLOT_ATTR = "pipe_slot"
+FIST_ATTR = "pipe_fist"
+BAND_ATTR = "pipe_band"
 
 
 def srgb_to_lab(rgb):
@@ -118,6 +131,22 @@ def run(cfg, extra):
 	me = body.data
 	bm = bmesh.new()
 	bm.from_mesh(me)
+	# regions with "bisect_z": the mesh is cut along the box's two horizontal planes (inside its x/y span) first, so the colour
+	# border runs along an edge loop and survives the decimation straight
+	cuts_made = []
+	for reg in pc_cfg.get("regions", []):
+		if not reg.get("bisect_z"):
+			continue
+		for plane_z in (reg["min"][2], reg["max"][2]):
+			geom_faces = []
+			for f in bm.faces:
+				c = f.calc_center_median()
+				if reg["min"][0] <= c.x <= reg["max"][0] and reg["min"][1] <= c.y <= reg["max"][1] and abs(c.z - plane_z) < 0.03:
+					geom_faces.append(f)
+			geom = list(geom_faces) + sorted({e for f in geom_faces for e in f.edges}, key=lambda e: e.index) + sorted({v for f in geom_faces for v in f.verts}, key=lambda v: v.index)
+			before = len(bm.faces)
+			bmesh.ops.bisect_plane(bm, geom=geom, dist=1e-6, plane_co=(0.0, 0.0, plane_z), plane_no=(0.0, 0.0, 1.0))
+			cuts_made.append({"region": reg.get("name", ""), "z": plane_z, "faces_before": before, "faces_after": len(bm.faces)})
 	bmesh.ops.triangulate(bm, faces=bm.faces[:])
 	bm.to_mesh(me)
 	bm.free()
@@ -198,6 +227,34 @@ def run(cfg, extra):
 				flipped += 1
 		label_slot = new
 
+	# ----- 3a. the generated fists' strap: exactly the faces between its two planes (pipe_band) are the strap's slot, and a fist
+	# face outside them that the texture called strap-coloured is the glove's (no stray spikes of yellow above or below the ring)
+	band_report = None
+	if BAND_ATTR in me.attributes and FIST_ATTR in me.attributes and pc_cfg.get("strap_slot") is not None:
+		band = np.zeros(n_faces, dtype=np.int32)
+		me.attributes[BAND_ATTR].data.foreach_get("value", band)
+		fist_f = np.zeros(n_faces, dtype=np.int32)
+		me.attributes[FIST_ATTR].data.foreach_get("value", fist_f)
+		strap, glove = int(pc_cfg["strap_slot"]), int(pc_cfg["glove_slot"])
+		in_band = (fist_f > 0) & (band > 0)
+		stray = (fist_f > 0) & (band == 0) & (label_slot == strap)
+		label_slot[in_band] = strap
+		label_slot[stray] = glove
+		band_report = {"strap_faces": int(in_band.sum()), "stray_strap_faces_made_glove": int(stray.sum())}
+
+	# ----- 3b. regions: faces of one slot inside a box take another slot
+	region_report = []
+	if pc_cfg.get("regions"):
+		centers_dense = pb.face_centers(me)
+		for reg in pc_cfg["regions"]:
+			lo, hi = np.array(reg["min"]), np.array(reg["max"])
+			inside = np.all((centers_dense >= lo) & (centers_dense <= hi), axis=1)
+			if reg.get("only_from"):
+				inside &= np.isin(label_slot, reg["only_from"])
+			sel = inside & need
+			label_slot[sel] = int(reg["slot"])
+			region_report.append({"name": reg.get("name", ""), "slot": int(reg["slot"]), "faces": int(sel.sum())})
+
 	# ----- 4. relax the border loops
 	vert_faces = [[] for _ in range(len(co))]
 	for f in range(n_faces):
@@ -218,7 +275,14 @@ def run(cfg, extra):
 	fixed_verts = set()
 	for f in np.nonzero(fixed)[0]:
 		fixed_verts.update(int(v) for v in lv[start[f]:start[f] + total[f]])
-	movable = [v for v in border_nb if v not in fixed_verts]
+	fist_mask = np.zeros(n_faces, dtype=np.int32)
+	if FIST_ATTR in me.attributes:
+		me.attributes[FIST_ATTR].data.foreach_get("value", fist_mask)
+	fist_mask = fist_mask > 0
+	still_verts = set(fixed_verts)  # the generated fists keep their shape: border relaxation leaves them be
+	for f in np.nonzero(fist_mask)[0]:
+		still_verts.update(int(v) for v in lv[start[f]:start[f] + total[f]])
+	movable = [v for v in border_nb if v not in still_verts]
 	for _ in range(int(pc_cfg.get("border_relax_iterations", 3))):
 		new_co = co.copy()
 		for v in movable:
@@ -229,18 +293,35 @@ def run(cfg, extra):
 
 	# ----- 5. decimate with the borders and the replaced parts protected
 	protected = set(border_nb) | fixed_verts
+	cell = float(pc_cfg.get("fist_border_cell_m", 0.0))
+	thinned = 0
+	if cell > 0.0 and fist_mask.any():
+		# a colour border of a generated fist is thinned to one protected vertex per `cell` metres (a ring at the dense
+		# mesh's 1.5 mm would hold most of the fists' budget); the decimator closes the gaps with straight edges
+		fist_verts = set()
+		for f in np.nonzero(fist_mask)[0]:
+			fist_verts.update(int(v) for v in lv[start[f]:start[f] + total[f]])
+		seen = set()
+		for v in sorted(border_nb):
+			if v in fist_verts and v not in fixed_verts:
+				key = tuple(np.floor(co[v] / cell).astype(int))
+				if key in seen:
+					protected.discard(v)
+					thinned += 1
+				else:
+					seen.add(key)
 	protected_mask = np.zeros(len(co), dtype=bool)
 	protected_mask[list(protected)] = True
 	pb.write_weights(body, ["pipe_keep"], protected_mask.astype(np.float64)[:, None], eps=0.5)
 	dense_tris = pb.triangle_count(me)
 	budget = int(pc_cfg["budget_tris"])
-	protected_co = co[protected_mask]
 	dense_label = label_slot.copy()
 	dense_verts = [tuple(v) for v in co]
 	dense_polys = [tuple(int(i) for i in lv[start[f]:start[f] + total[f]]) for f in range(n_faces)]
 	bvh = BVHTree.FromPolygons(dense_verts, dense_polys)
+	dense_uv_loops = uv_loops.copy()
 
-	def survival(obj):
+	def survival(obj, protected_co):
 		kd_co = pb.verts(obj.data)
 		from mathutils import kdtree
 		kd = kdtree.KDTree(len(kd_co))
@@ -254,37 +335,92 @@ def run(cfg, extra):
 			worst = max(worst, d)
 		return worst
 
-	invert = False
-	trial, tris = decimate_trial(body, 0.8, "pipe_keep", invert)
-	worst = survival(trial)
-	bpy.data.objects.remove(trial)
-	if worst > 1e-3:
-		invert = True
-	trials = []
-	lo, hi = 0.01, 1.0
-	ratio = min(1.0, budget / max(dense_tris, 1))
-	best = None
-	for it in range(7):
-		trial, tris = decimate_trial(body, ratio, "pipe_keep", invert)
-		trials.append({"ratio": round(ratio, 4), "tris": tris})
-		ok = tris <= budget
-		if ok and (best is None or tris > best[1]):
-			if best is not None:
-				bpy.data.objects.remove(best[0])
-			best = (trial, tris, ratio)
-		else:
-			bpy.data.objects.remove(trial)
-		if ok and tris >= budget * 0.97:
-			break
-		if ok:
-			lo = max(lo, ratio)
-		else:
-			hi = min(hi, ratio)
-		ratio = (lo + hi) / 2.0 if hi < 1.0 and lo > 0.01 else (ratio * budget / max(tris, 1) * (0.99 if not ok else 1.0))
-	if best is None:
-		pc.fail("could not decimate to %d triangles with %d protected vertices (%s)" % (budget, int(protected_mask.sum()), trials))
-	deci, tris, ratio = best
-	worst = survival(deci)
+	def decimate_part(target, part_budget, label):
+		"""Collapse `target` (an object carrying the pipe_keep group) to at most part_budget triangles, within 3% under it,
+		with the group's vertices protected. Returns (decimated object, report)."""
+		t_co = pb.verts(target.data)
+		keep = pb.weights_matrix(target, ["pipe_keep"])[:, 0] > 0.5
+		protected_co = t_co[keep]
+		t_dense = pb.triangle_count(target.data)
+		invert = False
+		trial, tris = decimate_trial(target, 0.8, "pipe_keep", invert)
+		worst = survival(trial, protected_co)
+		bpy.data.objects.remove(trial)
+		if worst > 1e-3:
+			invert = True
+		trials = []
+		lo, hi = 0.01, 1.0
+		ratio = min(1.0, part_budget / max(t_dense, 1))
+		best = None
+		for it in range(7):
+			trial, tris = decimate_trial(target, ratio, "pipe_keep", invert)
+			trials.append({"ratio": round(ratio, 4), "tris": tris})
+			ok = tris <= part_budget
+			if ok and (best is None or tris > best[1]):
+				if best is not None:
+					bpy.data.objects.remove(best[0])
+				best = (trial, tris, ratio)
+			else:
+				bpy.data.objects.remove(trial)
+			if ok and tris >= part_budget * 0.97:
+				break
+			if ok:
+				lo = max(lo, ratio)
+			else:
+				hi = min(hi, ratio)
+			ratio = (lo + hi) / 2.0 if hi < 1.0 and lo > 0.01 else (ratio * part_budget / max(tris, 1) * (0.99 if not ok else 1.0))
+		if best is None:
+			pc.fail("could not decimate %s to %d triangles with %d protected vertices (%s)" % (label, part_budget, int(keep.sum()), trials))
+		deci_part, tris, ratio = best
+		return deci_part, {"part": label, "invert_group": invert, "trials": trials, "triangles": tris, "budget": part_budget,
+			"budget_ok": tris <= part_budget, "protected_vertices": int(keep.sum()), "protected_position_worst_m": survival(deci_part, protected_co)}
+
+	def part_object(source_obj, keep_faces, name):
+		"""A copy of source_obj holding only the faces in keep_faces (weights, UVs and attributes ride along)."""
+		new_me = source_obj.data.copy()
+		new_obj = source_obj.copy()
+		new_obj.data = new_me
+		new_obj.name = name
+		pb.link(new_obj)
+		for m in list(new_obj.modifiers):
+			new_obj.modifiers.remove(m)
+		bm2 = bmesh.new()
+		bm2.from_mesh(new_me)
+		bm2.faces.ensure_lookup_table()
+		drop = [bm2.faces[i] for i in np.nonzero(~keep_faces)[0]]
+		bmesh.ops.delete(bm2, geom=drop, context="FACES")
+		loose2 = [v for v in bm2.verts if not v.link_faces]
+		if loose2:
+			bmesh.ops.delete(bm2, geom=loose2, context="VERTS")
+		bm2.to_mesh(new_me)
+		bm2.free()
+		new_me.update()
+		return new_obj
+
+	decimate_reports = []
+	if fist_mask.any():
+		fist_budget = int(pc_cfg.get("fist_budget_tris", 1500))
+		n_fists = 2
+		body_part = part_object(body, ~fist_mask, "BodyPart")
+		fist_part = part_object(body, fist_mask, "FistPart")
+		reserve = int(pc_cfg.get("reserve_tris", 0))  # what the strap planes' cuts add after the decimation
+		deci_body, rep_b = decimate_part(body_part, budget - n_fists * fist_budget - reserve, "body")
+		deci_fist, rep_f = decimate_part(fist_part, n_fists * fist_budget, "fists")
+		decimate_reports = [rep_b, rep_f]
+		bpy.data.objects.remove(body_part)
+		bpy.data.objects.remove(fist_part)
+		pb.activate(deci_body)
+		deci_fist.select_set(True)
+		bpy.ops.object.join()
+		deci = bpy.context.view_layer.objects.active
+		tris = pb.triangle_count(deci.data)
+		worst = max(r["protected_position_worst_m"] for r in decimate_reports)
+		trials = rep_b["trials"] + rep_f["trials"]
+		invert = rep_b["invert_group"]
+	else:
+		deci, rep = decimate_part(body, budget, "body")
+		decimate_reports = [rep]
+		tris, worst, trials, invert = rep["triangles"], rep["protected_position_worst_m"], rep["trials"], rep["invert_group"]
 	# swap the decimated mesh into Body
 	old_mesh = body.data
 	body.data = deci.data
@@ -298,6 +434,42 @@ def run(cfg, extra):
 		body.vertex_groups.remove(vg)
 	if SLOT_ATTR in me.attributes:
 		me.attributes.remove(me.attributes[SLOT_ATTR])
+	if BAND_ATTR in me.attributes:
+		me.attributes.remove(me.attributes[BAND_ATTR])
+
+	# ----- 5a. the generated fists' strap, again on the DECIMATED mesh: cut the fists along the strap's two planes (straight edge
+	# loops, a few dozen faces each) and make the faces between them the strap's slot below (the dense mesh's band, held by a thinned
+	# border, came out of the decimation a ragged zigzag)
+	fist_planes = pb.scene_prop("pipe_fist_planes", {}) if FIST_ATTR in me.attributes else {}
+	strap_cuts = []
+	if fist_planes and pc_cfg.get("strap_slot") is not None:
+		bm3 = bmesh.new()
+		bm3.from_mesh(me)
+		fist_layer = bm3.faces.layers.int.get(FIST_ATTR)
+		for side, planes in fist_planes.items():
+			if not planes:
+				continue
+			for plane_co, plane_no in planes:
+				geom_faces = [f for f in bm3.faces if f[fist_layer] > 0 and abs((f.calc_center_median() - Vector(plane_co)).dot(Vector(plane_no))) < 0.03
+					and (f.calc_center_median() - Vector(plane_co)).length < 0.25]
+				geom = list(geom_faces) + sorted({e for f in geom_faces for e in f.edges}, key=lambda e: e.index) + sorted({v for f in geom_faces for v in f.verts}, key=lambda v: v.index)
+				before = len(bm3.faces)
+				bmesh.ops.bisect_plane(bm3, geom=geom, dist=1e-6, plane_co=tuple(plane_co), plane_no=tuple(plane_no))
+				strap_cuts.append({"side": side, "faces_added": len(bm3.faces) - before})
+		bmesh.ops.triangulate(bm3, faces=bm3.faces[:])
+		bm3.to_mesh(me)
+		bm3.free()
+		me.update()
+
+	# ----- 5b. unfold: the decimated mesh's folded triangles relaxed away (opt-in)
+	unfold_report = None
+	if pc_cfg.get("unfold"):
+		uf = pc_cfg["unfold"]
+		start_u, total_u, lv_u = pb.poly_arrays(me)
+		tri_v = lv_u[start_u[:, None] + np.arange(3)[None, :]] if len(start_u) and int(total_u.max()) == 3 else pb.tri_arrays(me)[0]
+		co_u = pb.verts(me)
+		new_co_u, unfold_report = pipe_cleanup.unfold(co_u, tri_v, None, int(uf.get("iterations", 12)), float(uf.get("factor", 0.5)), int(uf.get("ring", 1)))
+		pb.set_verts(me, new_co_u)
 
 	# ----- 6. relabel from the dense mesh, palette UVs, optional detail UV
 	centers = pb.face_centers(me)
@@ -305,6 +477,20 @@ def run(cfg, extra):
 	for i, c in enumerate(centers):
 		loc, nrm, idx, d = bvh.find_nearest(Vector(c))
 		new_label[i] = dense_label[idx]
+	if fist_planes and pc_cfg.get("strap_slot") is not None and FIST_ATTR in me.attributes:
+		fist_final = np.zeros(len(me.polygons), dtype=np.int32)
+		me.attributes[FIST_ATTR].data.foreach_get("value", fist_final)
+		for side, planes in fist_planes.items():
+			if not planes:
+				continue
+			(c0, n0), (c1, n1) = planes
+			h0 = (centers - np.asarray(c0)) @ np.asarray(n0)
+			h1 = (centers - np.asarray(c1)) @ np.asarray(n1)
+			near = (fist_final > 0) & (np.linalg.norm(centers - np.asarray(c0), axis=1) < 0.25)
+			new_label[near & (h0 >= -1e-6) & (h1 <= 1e-6)] = int(pc_cfg["strap_slot"])
+			new_label[near & ~((h0 >= -1e-6) & (h1 <= 1e-6)) & (new_label == int(pc_cfg["strap_slot"]))] = int(pc_cfg["glove_slot"])
+	if FIST_ATTR in me.attributes:
+		me.attributes.remove(me.attributes[FIST_ATTR])
 	start2, total2, lv2 = pb.poly_arrays(me)
 	layer = me.uv_layers[0] if me.uv_layers else me.uv_layers.new(name="palette")
 	for extra_layer in [l for l in me.uv_layers if l.name != layer.name]:
@@ -326,6 +512,17 @@ def run(cfg, extra):
 		bpy.ops.uv.pack_islands(margin=0.004)
 		bpy.ops.object.mode_set(mode="OBJECT")
 		me.uv_layers.active = me.uv_layers["palette"]
+	bake_report = None
+	if detail and pc_cfg.get("detail_bake") and image is not None:
+		db = pc_cfg["detail_bake"]
+		dense_verts_np = np.array(dense_verts, dtype=np.float64)
+		tri_idx = lv[start[:, None] + np.arange(3)[None, :]]
+		corner_uv = dense_uv_loops[start[:, None] + np.arange(3)[None, :]].astype(np.float64)
+		out_png = pc.repo_path(db["out"]) if "out" in db else os.path.join(pc.cfg_dir(cfg, "export_dir"), cfg["paths"]["export_name"] + "_detail.png")
+		gain = np.where(np.isin(new_label, db.get("no_ink_slots", [])), 0.0, 1.0)
+		bake_report = pipe_detail.bake(me, "detail", image, bvh, dense_verts_np, tri_idx, corner_uv, db, out_png, pc.work_path(cfg, "detail_source.png"), gain)
+		bake_report["png"] = os.path.basename(out_png)  # the folder differs in a --check rebuild; the content must not
+		bake_report["sha256"] = pc.sha256_file(out_png)
 	me.materials.clear()
 	if image is not None:
 		bpy.data.images.remove(image)
@@ -359,6 +556,14 @@ def run(cfg, extra):
 		"swatches_used": used,
 		"swatch_count": len(used),
 		"detail_uv": detail,
+		"detail_bake": bake_report,
+		"regions": region_report,
+		"region_cuts": cuts_made,
+		"fist_band": band_report,
+		"fist_border_thinned": thinned,
+		"fist_strap_cuts": strap_cuts,
+		"decimate_parts": decimate_reports,
+		"unfold": unfold_report,
 		"triangles": pb.triangle_count(me),
 		"vertices": len(me.vertices),
 	}

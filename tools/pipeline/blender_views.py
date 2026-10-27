@@ -1,12 +1,12 @@
 """Render a textured model from the four sides, as one contact sheet (headless Blender; M4 plan P1-tools).
 
-	blender --background --factory-startup --python-exit-code 1 --python tools/pipeline/blender_views.py -- <in.glb|.gltf|.blend> <out.png> [tile_px]
+	blender --background --factory-startup --python-exit-code 1 --python tools/pipeline/blender_views.py -- <in.glb|.gltf|.blend> <out.png> [tile_px [zoom [focus]]]
 
 Never the Blender MCP. The input is untrusted and is only opened as data; the only file written is <out.png>. It shows
 which way a generated model faces and how it is posed, with the texture, before any step is run on it. Orthographic,
 Workbench, flat lighting, the file's own texture (or its base colour) on a flat #d9d9d9 ground; one tile per side, left to
 right, named by where the CAMERA stands in glTF space (x right, y up, a standard model faces +Z): +Z, +X, -Z, -X. The
-sheet is [tile_px * 4] wide (default tile 512). Also prints the model's bounding box in glTF space.
+sheet is [tile_px * 4] wide (default tile 512); zoom > 1 looks closer and focus (0 soles ... 1 top) centres the view, so a head or a hand can be read. Also prints the model's bounding box in glTF space.
 """
 import os
 import sys
@@ -55,16 +55,19 @@ def mesh_bounds():
 
 def main():
 	argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
-	if len(argv) not in (2, 3):
-		raise SystemExit("usage: ... -- <in.glb> <out.png> [tile_px]")
+	if len(argv) not in (2, 3, 4, 5):
+		raise SystemExit("usage: ... -- <in.glb> <out.png> [tile_px [zoom [focus]]]")
 	src, out = argv[0], argv[1]
-	tile = int(argv[2]) if len(argv) == 3 else 512
+	tile = int(argv[2]) if len(argv) >= 3 else 512
+	zoom = float(argv[3]) if len(argv) >= 4 else 1.0  # > 1 looks closer
+	focus = float(argv[4]) if len(argv) >= 5 else 0.5  # the view's centre, as a fraction of the model's height from the soles
 	bpy.ops.wm.read_factory_settings(use_empty=True)
 	load(os.path.abspath(src))
 	scene = bpy.context.scene
 	lo, hi = mesh_bounds()
 	centre = (lo + hi) * 0.5
-	extent = max(hi - lo) * MARGIN
+	extent = max(hi - lo) * MARGIN / zoom
+	centre.z = lo.z + (hi.z - lo.z) * focus
 	to_gltf = GLTF_TO_BLENDER.inverted()
 	glo, ghi = to_gltf @ lo, to_gltf @ hi
 	print("bbox glTF space min %s max %s" % (tuple(round(min(a, b), 4) for a, b in zip(glo, ghi)), tuple(round(max(a, b), 4) for a, b in zip(glo, ghi))))

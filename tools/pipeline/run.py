@@ -51,6 +51,8 @@ STEPS = [
 STEP_NAMES = [s[0] for s in STEPS]
 
 GLB_PARAMS = {"meshes/generate_lods": "false", "meshes/create_shadow_meshes": "true", "skins/use_named_skins": "true", "animation/import": "false"}
+# a detail mask (F-punk, A18) is sampled by a mipmapped sampler and holds ink lines only: keep the lossless mode and make mipmaps
+DETAIL_PARAMS = {"compress/mode": "0", "mipmaps/generate": "true", "process/fix_alpha_border": "false", "process/premult_alpha": "false", "detect_3d/compress_to": "0"}
 ATLAS_PARAMS = {"compress/mode": "0", "mipmaps/generate": "false", "process/fix_alpha_border": "false", "process/premult_alpha": "false", "detect_3d/compress_to": "0"}
 
 
@@ -88,9 +90,9 @@ def godot_import():
 				print("   " + line)
 
 
-def ensure_imports(glbs):
-	"""Make Godot write the .import files, then set the contract's params (and the atlas's), reimporting on a change."""
-	files = [(g, GLB_PARAMS) for g in glbs] + [(pc.ATLAS_PATH, ATLAS_PARAMS)]
+def ensure_imports(glbs, details=()):
+	"""Make Godot write the .import files, then set the contract's params (and the atlas's and any detail mask's), reimporting on a change."""
+	files = [(g, GLB_PARAMS) for g in glbs] + [(pc.ATLAS_PATH, ATLAS_PARAMS)] + [(d, DETAIL_PARAMS) for d in details]
 	if any(not os.path.exists(f + ".import") for f, _ in files):
 		godot_import()
 	changed = False
@@ -234,7 +236,9 @@ def main(argv):
 	print("report hash " + report["hash"])
 	if opts["import"]:
 		glbs = [os.path.join(pc.cfg_dir(cfg, "export_dir"), n) for n in report["outputs"]]
-		ensure_imports(glbs)
+		export_dir = pc.cfg_dir(cfg, "export_dir")
+		details = [os.path.join(export_dir, n) for n in sorted(os.listdir(export_dir)) if n.endswith("_detail.png")] if os.path.isdir(export_dir) else []
+		ensure_imports(glbs, details)
 	if committed is not None:
 		same = committed == report["hash"]
 		print("reproducible: %s (committed %s)" % ("YES, the same report hash" if same else "NO, the hash differs", committed[:12]))

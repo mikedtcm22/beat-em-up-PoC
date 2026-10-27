@@ -11,6 +11,14 @@ chain_joints). Weights, config rig.weights:
 	         solve leaves empty (interior and overlapping geometry) are filled the same way.
 Optional rig.smooth_iterations / rig.smooth_factor: Laplacian smoothing of the weights over the mesh's edges before the limit
 (the slice gate's contingency against candy-wrap at the shoulder, off by default).
+Optional rig.clamps (F-punk, the slice gate's named weight clamps: shoulder, collar, waist): a list of
+{name, bones, above_z_m, ramp_m, to}: the listed bones' weights above a height (Blender z, metres in the rig's 1.8 m space)
+move onto bone `to`, smoothstep over ramp_m (0 at above_z_m, all of it beyond), so a waistband that Tripo's rig hangs on the
+thigh bone follows the hips instead (the waist of a jeans mesh stretched 40x when a leg lifted, and the hurtbox fit missed it).
+Optional rig.torso_blend (F-punk, the same contingency): the vertices a generated rig puts wholly on the trunk bones
+(Hips, Spine, Chest, UpperChest: weight 0.95 or more between them) get their weights from their HEIGHT instead, a piecewise
+linear blend between the neighbouring bones' joint heights, so a twist of the spine is spread over the whole trunk and not over
+the 4 cm where Tripo's weights jump from one bone to the next (a vest hem edge grew 5 cm in the Punk's cross).
 Either way: at most rig.max_influences (4) per vertex, normalised, none on Root, every vertex weighted. The result is a
 joined Body with an Armature modifier and one vertex group per bone in table order.
 """
@@ -57,6 +65,35 @@ def run(cfg, extra):
 		used = "auto"
 	empty_before = int((w.sum(axis=1) < 1e-4).sum())
 	w, filled = pb.fill_unweighted(co, w)
+	blend_report = None
+	tb = rigc.get("torso_blend")
+	if tb:
+		trunk = [NAMES.index(b) for b in tb["bones"]]
+		heights = [float(segs[b][0][2]) for b in tb["bones"]]  # the joint heights, in the same order
+		owned = w[:, trunk].sum(axis=1) >= float(tb.get("owned", 0.95))
+		z = co[:, 2]
+		ramp = np.zeros((len(co), len(trunk)))
+		for i in range(len(trunk)):
+			lo = heights[i - 1] if i > 0 else None
+			hi = heights[i + 1] if i + 1 < len(trunk) else None
+			rise = np.ones(len(co)) if lo is None else np.clip((z - lo) / max(heights[i] - lo, 1e-6), 0.0, 1.0)
+			fall = np.ones(len(co)) if hi is None else np.clip((hi - z) / max(hi - heights[i], 1e-6), 0.0, 1.0)
+			ramp[:, i] = np.minimum(rise, fall)
+		total = ramp.sum(axis=1, keepdims=True)
+		ramp = np.where(total > 1e-9, ramp / np.maximum(total, 1e-9), 0.0)
+		keep = w[:, trunk].sum(axis=1)
+		for i, col in enumerate(trunk):
+			w[owned, col] = ramp[owned, i] * keep[owned]
+		blend_report = {"vertices": int(owned.sum()), "bones": tb["bones"], "joint_heights_m": heights}
+	clamp_report = []
+	for c in rigc.get("clamps", []):
+		cols = [NAMES.index(b) for b in c["bones"]]
+		t = np.clip((co[:, 2] - float(c["above_z_m"])) / max(float(c.get("ramp_m", 0.05)), 1e-6), 0.0, 1.0)
+		t = t * t * (3.0 - 2.0 * t)
+		moved = w[:, cols].sum(axis=1) * t
+		w[:, cols] *= (1.0 - t)[:, None]
+		w[:, NAMES.index(c["to"])] += moved
+		clamp_report.append({"name": c.get("name", ""), "vertices": int((moved > 1e-4).sum()), "weight_moved": float(moved.sum())})
 	smooth_n = int(rigc.get("smooth_iterations", 0))
 	if smooth_n > 0:
 		w = pb.smooth_weights(me, w, smooth_n, float(rigc.get("smooth_factor", 0.5)))
@@ -74,6 +111,8 @@ def run(cfg, extra):
 		"weights": used,
 		"weights_requested": mode,
 		"smooth_iterations": smooth_n,
+		"clamps": clamp_report,
+		"torso_blend": blend_report,
 		"bones": len(arm.data.bones),
 		"vertices": len(co),
 		"unweighted_before_fill": empty_before,

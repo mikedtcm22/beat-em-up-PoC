@@ -16,7 +16,9 @@ round (hurtboxes, rig points, reaches and first-person framing all derive from t
 	4b. config fit.regularize (e.g. ["Spine", "Chest", "UpperChest"]) puts those landmarks at the table's proportional places
 	   between Hips and Neck, so a generated rig whose torso joints are spaced differently does not make neighbouring bones
 	   stretch 1.3x and squash 0.6x;
-	5. the landmark residual is reported: a joint's source point, warped with the weights of its nearest vertex, against
+	5b. fit.snap (opt-in): a smooth displacement field carries each joint's warped point onto its target (the residual
+	   falls under the plan's 1 cm; see the block in run());
+5. the landmark residual is reported: a joint's source point, warped with the weights of its nearest vertex, against
 	   its target.
 Missing landmarks (no rig, or a bone the rig lacks) fall back to the table scaled to the mesh, so a bare mesh drawn on
 the mannequin goes through as a near-identity fit.
@@ -250,6 +252,7 @@ def run(cfg, extra):
 
 	# ----- warp, residual, distortion
 	new_co = warp_points(co, w, transforms, order)
+	girth_report = []
 	kd = kdtree.KDTree(n)
 	for i in range(n):
 		kd.insert(Vector(co[i]), i)
@@ -259,7 +262,94 @@ def run(cfg, extra):
 		_, i, _ = kd.find(Vector(src_segs[k][0]))
 		p = warp_points(src_segs[k][0][None, :], w[i:i + 1], transforms, order)[0]
 		residual[k] = float(np.linalg.norm(p - dst_segs[k][0]))
+	# ----- 5b. landmark snap (opt-in, fit.snap): a smooth displacement field that carries every joint's warped point onto its
+	# target. The linear blend of the bone maps is exact at each bone's own head, but the blend at the nearest vertex mixes the
+	# neighbours' maps (a generated torso's bones tilt 8-17 degrees against the table's), which leaves 1-2 cm at the chest and
+	# shoulders. The field is a sum of compactly supported radial functions (Wendland C2, radius fit.snap.radius_m) centred on the
+	# source joints, solved so each joint lands on its target; it moves the surface smoothly and never changes girth by more
+	# than the residual itself (a few cm over a few decimetres).
+	snap_report = None
+	snap_cfg = fit.get("snap", {})
+	residual_blend = dict(residual)
+	if snap_cfg.get("enabled"):
+		radius = float(snap_cfg.get("radius_m", 0.3))
+		pts = np.array([src_segs[k][0] for k in WARP_BONES])
+		nearest = []
+		for k in WARP_BONES:
+			_, i, _ = kd.find(Vector(src_segs[k][0]))
+			nearest.append(i)
+		mapped = np.array([warp_points(src_segs[k][0][None, :], w[i:i + 1], transforms, order)[0] for k, i in zip(WARP_BONES, nearest)])
+		targ = np.array([dst_segs[k][0] for k in WARP_BONES])
+		need = targ - mapped
+
+		def wendland(q):
+			q = np.clip(q, 0.0, 1.0)
+			return (1.0 - q) ** 4 * (4.0 * q + 1.0)
+
+		phi = wendland(np.linalg.norm(pts[:, None, :] - pts[None, :, :], axis=2) / radius)
+		lam = np.linalg.solve(phi + 1e-9 * np.eye(len(pts)), need)
+		disp = wendland(np.linalg.norm(co[:, None, :] - pts[None, :, :], axis=2) / radius) @ lam
+		new_co = new_co + disp
+		# the residual afterwards, by the chain's definition (the joint's source point through its nearest vertex's blend of the
+		# bone maps, plus the field's displacement at the joint: zero by construction up to the solver), and, as a diagnostic that is
+		# not the contract's, how far the nearest SURFACE vertex's own displacement carries the joint (the surface is 4-10 cm from
+		# a joint inside the body, so this is larger and says how uniform the correction is over that distance)
+		field_at_joint = wendland(np.linalg.norm(pts[:, None, :] - pts[None, :, :], axis=2) / radius) @ lam
+		carried = {}
+		for j, k in enumerate(WARP_BONES):
+			residual[k] = float(np.linalg.norm(mapped[j] + field_at_joint[j] - dst_segs[k][0]))
+			i = nearest[j]
+			carried[k] = float(np.linalg.norm(src_segs[k][0] + (new_co[i] - co[i]) - dst_segs[k][0]))
+		snap_report = {"radius_m": radius, "max_displacement_m": float(np.linalg.norm(disp, axis=1).max()),
+			"mean_displacement_m": float(np.linalg.norm(disp, axis=1).mean()),
+			"residual_before_m": max(residual_blend.values()), "residual_after_m": max(residual.values()),
+			"carried_by_nearest_vertex_m": carried, "carried_worst_m": max(carried.values())}
 	worst_joint = max(residual, key=residual.get)
+
+	# ----- 5c. girth clamps (opt-in, fit.girth_clamp; the slice gate's contingency 3, only where A6 misses): the vertices owned by
+	# some bones that lie farther than `limit_m` from a segment between two table joints (a capsule: the leg's hurtbox axis) or from
+	# a point (a sphere: the head) are pulled toward the axis radially, softly: d' = limit + soft * (1 - exp(-(d - limit) / soft)),
+	# so no vertex lands beyond limit + soft and the surface stays smooth. Radial only: nothing moves along the bone.
+	for gc in fit.get("girth_clamp", []):
+		cols = [NAMES.index(b) for b in gc["bones"] if b in NAMES]
+		owned = (w[:, [order.index(b) for b in gc["bones"] if b in order]].sum(axis=1) > 0.5) if cols else np.zeros(n, dtype=bool)
+		a = np.array(gc["from"]) if isinstance(gc["from"], list) else T0[gc["from"]] + np.array(gc.get("from_offset", [0.0, 0.0, 0.0]))
+		if gc.get("shape", "capsule") == "capsule":
+			b2 = np.array(gc["to"]) if isinstance(gc["to"], list) else T0[gc["to"]] + np.array(gc.get("to_offset", [0.0, 0.0, 0.0]))
+			ab = b2 - a
+			t = np.clip(((new_co - a) @ ab) / max(ab @ ab, 1e-12), 0.0, 1.0)
+			closest = a + np.outer(t, ab)
+		else:
+			closest = np.tile(a, (n, 1))
+		vec = new_co - closest
+		dist = np.linalg.norm(vec, axis=1)
+		limit, soft = float(gc["limit_m"]), float(gc.get("soft_m", 0.02))
+		over = owned & (dist > limit)
+		if over.any():
+			target = limit + soft * (1.0 - np.exp(-(dist[over] - limit) / soft))
+			new_co[over] = closest[over] + vec[over] / dist[over][:, None] * target[:, None]
+		girth_report.append({"name": gc.get("name", ""), "owned": int(owned.sum()), "clamped": int(over.sum()),
+			"max_pulled_m": float((dist[over] - target).max()) if over.any() else 0.0})
+	# ----- 5d. bulges (opt-in, fit.bulge): a radial swell (or, with direction "back", a push of the rear half farther back) of the vertices a bone owns around a joint's height, smooth in height
+	# (the hurtbox rule A6 needs the straight hip-to-ankle axis inside the art when the stance bends the knee 7 cm off it, which a
+	# slim leg does not cover; a knee that is a little puffier, as in the concept's ripped jeans, does)
+	bulge_report = []
+	for bg in fit.get("bulge", []):
+		cols = [order.index(b) for b in bg["bones"] if b in order]
+		owned = w[:, cols].sum(axis=1) > 0.5
+		joint = T0[bg["joint"]]
+		half = float(bg["half_height_m"])
+		t = np.clip(np.abs(new_co[:, 2] - joint[2]) / half, 0.0, 1.0)
+		weight = owned * (1.0 - t * t * (3.0 - 2.0 * t))
+		if bg.get("direction") == "back":
+			# only the rear half moves, farther back (-y in the Blender frame): the hurtbox axis of a bent knee runs behind the leg
+			rear = np.clip((joint[1] - new_co[:, 1]) / max(float(bg.get("rear_ramp_m", 0.05)), 1e-6), 0.0, 1.0)
+			new_co[:, 1] -= weight * rear * float(bg["amount_m"])
+		else:
+			radial = new_co[:, :2] - joint[:2]
+			ln = np.maximum(np.linalg.norm(radial, axis=1, keepdims=True), 1e-6)
+			new_co[:, :2] += radial / ln * (weight * float(bg["amount_m"]))[:, None]
+		bulge_report.append({"name": bg.get("name", ""), "vertices": int((weight > 0.01).sum()), "amount_m": float(bg["amount_m"])})
 	pb.set_verts(me, new_co)
 	for p in me.polygons:
 		p.use_smooth = True
@@ -282,6 +372,10 @@ def run(cfg, extra):
 		"rotation_deg": {k: transforms[k][4] for k in order},
 		"worst_stretch": max(((k, transforms[k][3]) for k in order), key=lambda kv: abs(math.log(kv[1])))[0],
 		"landmark_residual_m": residual,
+		"landmark_residual_blend_m": residual_blend,
+		"snap": snap_report,
+		"girth_clamp": girth_report,
+		"bulge": bulge_report,
 		"worst_joint_residual": {"bone": worst_joint, "m": residual[worst_joint]},
 		"residual_limit_m": limit,
 		"residual_ok": residual[worst_joint] <= limit,
