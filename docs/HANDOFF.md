@@ -19,7 +19,7 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
   - Three tests sit with no margin on ragdoll start poses (test_ragdoll face down, uppercut in a corner, test_ko_view revive).
   - The first Bruiser or boss spawn pays about 17 ms more for its library build. Its request to `RoomKit.warm_up_art` is F-look's file, and P3-int takes it later.
   - The player's relaxed walks still slide (F-player or P3-int).
-- **Launching:** P3-early (args `docs/reviews/M4/args-P3-early.json` plus `"only": ["P3-early"]`; worktree `.worktrees/m4-p3-early`, branch `m4/p3-early`). This is the part of P3-int that needs neither the pick nor F-look's files:
+- **Running:** P3-early, launched 05:00 as `wf_e158b574-662` (args `docs/reviews/M4/args-P3-early.json` plus `"only": ["P3-early"]`; worktree `.worktrees/m4-p3-early`, branch `m4/p3-early`). This is the part of P3-int that needs neither the pick nor F-look's files:
   - the long take and the F4 showcase;
   - the combat-log toggle (feel question 4);
   - F-motion's two HumanoidRig requests (libraries rebuilt on Tuning.changed; a per-rig idle phase);
