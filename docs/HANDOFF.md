@@ -4,6 +4,26 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-27 00:10 CDT: P1-skin merged; P1-post and P1-fx still running
+5-hour 69% (resets 00:50 CDT), weekly 17%.
+- **Merged:**
+  - P1-chain's merge was green at 1272/1272.
+  - P1-skin (`4f4c650`; its own branch with P1-toon passed 1298/1298). The lead dropped a stray `tests/test_zz_scratch.gd.uid`. The preset is unchanged at 482 values. The suite on the merge is running.
+- **What P1-skin built:**
+  - `SkinnedArt.attach()` and `check()`: the A3 chained bind route, in the GLB's bind order, by name. Each surface is rebuilt with CUSTOM0/1. FP-hidden GLB meshes go on the head layer.
+  - The ragdoll write-back on art rigs only (A5). `look_show_art` works live. `_head_clear_of` skips the art.
+  - `FPView.is_drawn()` and `depths()`.
+  - `tests/skinned_view.gd`: CPU skinning, TriangleMesh rays, strain, hurtbox fit and surface gap.
+  - `tests/test_skinned_art.gd` (41 tests) and `skin_acts.gd`.
+  - A/B check: the art and the primitives draw pixel-identical silhouettes through stagger, launch and lying. The lead saw the toon sheet: the probe Punk follows every pose and the KO blink-off.
+- **For SL-int and the gate:**
+  - The A19 strain reference: P1-skin measures against the skinned rest (`strain(mi, rig, globals)`). Check that this is the reference P1-chain asked for (C13).
+  - P1-chain's `probe_body` GLBs fail A19: p99.9 2.08, with shoulder candy-wrap from the auto weights. They are reported only, not asserted.
+  - FPView's analytic proxies are looser than the drawn primitives, so real art can read up to 7 cm nearer. The GLB tests use 2 cm and may need a ruling.
+  - `check()` is strict. A GLB that fails it attaches nothing, the rig keeps its primitives, and it warns once.
+  - The 15 ms cost test is wall-clock and could flap under heavy load.
+- **Next:** when P1-post lands, merge it and launch SL-int, which wires `punk_art.tres` into StreetPunk, runs the 1 m acts on the art, and records the perf act. Then the slice gate. P1-fx merges whenever it is done.
+
 ### 2026-10-27 00:20 CDT: P1-chain merged; the smoke Punk is a GLB
 - **Merged** (`c69214f`; its own branch passed 1243/1243). The suite on the merge is running.
   - The Blender chain: `tools/pipeline/run.py` with the `blender_*` steps, `gen_palette.py` and `ab_sheet.sh`.
