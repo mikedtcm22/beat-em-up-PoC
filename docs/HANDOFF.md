@@ -4,6 +4,26 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-26 21:10 CDT: the M4 toolchain is ready; M4 starts in a fresh session
+5-hour 5% (resets 2026-10-27 00:50 CDT), weekly 6% (resets Mon 2026-11-02 05:00 CDT). No watcher is running; the M4 session starts one.
+- **Ready, verified by the lead:**
+  - **Blender 5.2.2 LTS** on PATH.
+  - **The Blender MCP** (`mcp-for-blender`, user scope in Claude Code) is connected to Game-boy's open Blender: add-on 1.8, up to date, telemetry off. Its Tripo generator is Premium-only, so call Tripo's own API with our key instead.
+  - **`.env`:**
+    - `TRIPO_API_KEY` works: `GET https://api.tripo3d.ai/v2/openapi/user/balance` returns 1500, with 0 frozen.
+    - `GEMINI_API_KEY` works (send it in the `x-goog-api-key` header, never in a URL). The image models are `gemini-3-pro-image`, `gemini-3.1-flash-image` and `gemini-2.5-flash-image`.
+    - Never print either key.
+  - Mixamo is skipped (try Tripo's auto-rig first).
+- **How M4 runs** (the lead's defaults, for Game-boy to change):
+  - **Like M3:** a plan workflow, parallel builders in worktrees, adversarial review in first person, fixes, and no pauses for grey-block feel questions.
+  - **Pauses on purpose:**
+    1. **The concept pick** (SPEC §10: 2-4 concepts, Game-boy picks one) for the Street Punk and for the player's arms and legs. DM him the images on Slack (Michael, `U0AQMKKBL93`; upload them to the DM) and carry on with the toolchain-free work meanwhile.
+    2. **The done-when:** the Punk at 1 m, standing and in motion, judged by him.
+  - **Tripo credits:** spend at most 800 of the 1500 without asking; log each generation's cost.
+  - **The playable link:** the GitHub release page 404'd for Game-boy (private repo; his browser isn't signed in as `mikedtcm22`). He asked for a link that opens the game in Godot, so give him the run command (`godot --path /Users/arachne/repos/beat-em-up-PoC`) as a Run-button code block, and a release only as a second option.
+  - The deferred "until the art is in" feel questions come due once the Punk is in: the flash's first-person size, the haymaker's flash, the knockdown view, and grab-03's combat log.
+- **Branch:** `m4/art-pipeline` (from `main` at `afdb39e`).
+
 ### 2026-10-26 20:50 CDT: Milestone 4 toolchain set-up started (branch `m4/art-pipeline`)
 - **Game-boy's toolchain calls (2026-10-26):**
   - **Mixamo:** skipped for now; whether it's needed is assessed later. Tripo's auto-rigging is tried first.
@@ -1292,11 +1312,11 @@ USAGE RULES:
 - Prefer one agent per work package doing review, then fix, over many reviewers per package.
 - The watcher checks every 30 minutes below 70%, every 15 up to 85% and every 5 above. It tells you to halt and hand off at 90%; the handoff's last step is the scheduled resume task (docs/HANDOFF.md, "Resume after a limit").
 
-Next steps (Milestone 3; details are in docs/HANDOFF.md, newest entry first):
-- M3 is signed off and merged (PR #3, 2026-10-26); M2 too (PR #2). Next is Milestone 4, the art pipeline proof (SPEC §12): plan it once my toolchain items are in (docs/HANDOFF.md, newest entry). Its plan is docs/milestones/M3-plan.md (Part A amendments bind; Part B is the checkable done-when; Part C the base plan). Builds run through docs/reviews/M3/workflow-build.js with args in docs/reviews/M3/args-<phase>.json, resumable from branch state: rerun the same args after a cut-off.
-- I asked (2026-10-25) for M3 to run to completion without my input. When it's done to spec, DM me on Slack (Arachne Finance, Michael, U0AQMKKBL93) with (1) a link to a playable build (a GitHub Release with a zipped macOS export; the export preset and templates are set up) and (2) a digest of key judgement calls, each with at least one alternative not taken and why (docs/milestones/M3-judgement-calls.md). If something blocks you on me (an authorization, a login, a decision), DM me on Slack at once and carry on with what isn't blocked.
-- I turned ultracode on (2026-10-24) and asked for multi-agent workflows: use Workflow scripts for substantive work (Opus plans and reviews, Sonnet codes).
-- Don't put fine grey-block look or feel questions to me; take the default and log it.
+Next steps (Milestone 4; details are in docs/HANDOFF.md, newest entry first):
+- M1-M3 are signed off and merged. M4 (SPEC §12: the art pipeline proof) runs on branch m4/art-pipeline. Its toolchain is ready: Blender 5.2.2 LTS, the Blender MCP connected to my open Blender, and working TRIPO_API_KEY and GEMINI_API_KEY in .env. Mixamo is skipped for now.
+- Plan M4 first (docs/milestones/M4-plan.md), with a plan workflow as in M3 (docs/milestones/M3-plan.md and docs/reviews/M3/*.js are the templates), then build, review in first person, fix, and deliver.
+- Run it without pausing, except for the concept pick (2-4 concepts each for the Street Punk and for the player's arms and legs: DM me the images on Slack, Michael, U0AQMKKBL93) and the final judgement of the Punk at 1 m. At the end, DM me a run command that opens the game in Godot, plus a digest of the key judgement calls with alternatives. If something blocks you on me, DM me at once.
+- I turned ultracode on (2026-10-24) and asked for multi-agent workflows: use Workflow scripts for substantive work (Opus plans and reviews, Sonnet codes). Don't put fine grey-block feel questions to me.
 
 Ground rules:
 - Never merge a milestone PR into main until I've played it and signed it off.
