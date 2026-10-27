@@ -87,9 +87,11 @@ static func art(atlas: Texture2D, detail: Texture2D = null) -> ShaderMaterial:
 
 
 ## The hull of the skinned art, for its `material_overlay`: the baked smooth normal, carried
-## through the skin. One shared material.
-static func outline() -> ShaderMaterial:
-	return _hull(Hull.ART, false)
+## through the skin. `first_person`: the player's own body, drawn at look_outline_fp_scale (the
+## bible's x0.8 of a character's line) and faded out near the lens, like the primitives' hull
+## outline_for_part() gives it. One shared material per flag.
+static func outline(first_person: bool = false) -> ShaderMaterial:
+	return _hull(Hull.ART, first_person)
 
 
 ## The hull of a primitive of `shape` (PlaceholderBody.Shape) for its `material_overlay`, or

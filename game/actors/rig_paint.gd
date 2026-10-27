@@ -64,9 +64,10 @@ func art_material() -> Material:
 
 
 ## The inverted-hull outline for the skinned art's `material_overlay` (ToonMaterials.outline():
-## shared, always on).
+## shared, always on): the thinner variant when the rig is the player's own body
+## (`first_person_body`, read when the art is attached, like the primitives' hulls).
 func outline_material() -> Material:
-	return ToonMaterials.outline()
+	return ToonMaterials.outline(_rig.first_person_body)
 
 
 ## The outline for the primitive `part`'s `material_overlay`: the hull of its shape, thinner on

@@ -141,7 +141,6 @@ func _ready() -> void:
 	_hold_bend = _eye_in_body() - _standing_eye
 	rig.play(&"idle", 0.0)
 	rig.advance(0.0)
-	_wear_first_person_hull()
 
 
 func _configure_rig(r: HumanoidRig) -> void:
@@ -188,20 +187,6 @@ static func worn_art(scene_art: CharacterArt, probe: bool = false) -> CharacterA
 		worn.detail_mask = load(detail_path) as Texture2D
 	_hero_art[scene_art] = worn
 	return worn
-
-
-## The art meshes' hull for the player's own body: the character hull drawn at
-## look_outline_fp_scale (the width of his arms and legs 0.3-0.6 m from the lens, the bible's
-## x0.8), the lens fade built in. RigPaint.outline_material() makes the full-width one for every
-## art (it has no first-person variant), and SkinnedArt.attach() put that on the meshes.
-## ToonMaterials makes the first-person variant of its art hull for the primitives only; this
-## asks it for that one by its own key (a request in M4-calls/F-player-int.md: ToonMaterials.outline()
-## taking the flag, RigPaint passing the rig's first_person_body, which makes this redundant).
-func _wear_first_person_hull() -> void:
-	if rig == null:
-		return
-	for mesh: MeshInstance3D in rig.art_meshes():
-		mesh.material_overlay = ToonMaterials._hull(ToonMaterials.Hull.ART, true)
 
 
 func _physics_process(delta: float) -> void:
