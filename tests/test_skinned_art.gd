@@ -10,6 +10,7 @@ extends GutTest
 const Fixture := preload("res://tests/fixtures/skinned_probe_art.gd")
 const FPView := preload("res://tests/fp_view.gd")
 const SkinnedView := preload("res://tests/skinned_view.gd")
+const ArtStrain := preload("res://tests/art_strain.gd")
 const FRAME := 1.0 / 60.0
 ## The probe's vertices land where the primitives' do, to float precision.
 const EXACT_M := 0.0002
@@ -1549,6 +1550,41 @@ func test_the_probe_body_deformation_is_reported_for_the_gate() -> void:
 		assert_eq(kinds.get("NaN", 0), 0, "%s: no NaN" % path)
 		assert_eq(kinds.get("the floor", 0), 0, "%s: no sole under the floor in a planted pose" % path)
 		assert_gt(run.samples, 200)
+
+
+func test_the_strain_of_the_shipped_glbs_is_reported_for_the_gate() -> void:
+	# A19 on the Punk's and the hero's real GLBs, against the skinned rest (tests/art_strain.gd): every animation and the
+	# Punk's moves at five phases, then the peak flexes. Printed like the probe's, for the gate and the final review; the
+	# run is kept, so row A7 of test_m4_done_when reads the same numbers.
+	for row: Dictionary in ArtStrain.SHIPPED:
+		assert_true(ResourceLoader.exists(row.path), "%s is shipped" % row.path)
+		var rig := _glb_rig(row.path, 1.8, row.player)
+		assert_eq(SkinnedArt.check(_glb_art(row.path, row.budget)), PackedStringArray(), "%s keeps the contract" % row.path)
+		var run := ArtStrain.cached(row.path)
+		if run.is_empty():
+			var moves: Array[MoveData] = []
+			if not row.player:
+				moves = ArtStrain.punk_moves()
+			run = ArtStrain.keep(row.path, ArtStrain.run(rig, moves))
+		print("A19 strain of %s: %d samples, %d with a problem, by kind %s; worst 10 (animation, phase, bone):" % [row.path, run.samples, run.problems.size(), run.kinds])
+		for line: String in run.worst:
+			print("  ", line)
+		print("A19 strain of %s: %d of %d samples inside every bar; worst p99.9 %.2f; the five highest: %s" % [
+				row.path, run.in_bar, run.samples, run.worst_high, "; ".join(ArtStrain.highest(run))])
+		for flex: Dictionary in run.flexes:
+			var r: Dictionary = flex.report
+			var bad: int = r.squashed + r.flipped
+			print("A19 strain of %s, flex %s: p99.9 %.2f p0.1 %.2f worst edge x%.2f (%s); %d under 15%% of their rest area + %d turned over = %d of %d triangles, bar %d%s" % [
+					row.path, flex.label, r.p_high, r.p_low, r.worst, r.worst_bone, r.squashed, r.flipped, bad, r.triangles, run.bad_bar,
+					"  GATE" if bad > run.bad_bar else "  (meets A7)"])
+		print("A19 strain of %s: %s  (the plan's bar: no problem sample, p99.9 in [%.1f, %.1f])" % [
+				row.path, "GATE: %d samples miss it" % run.problems.size() if not run.problems.is_empty() else "meets A19", ArtStrain.P_LOW, ArtStrain.P_HIGH])
+		assert_eq(run.kinds.get("NaN", 0), 0, "%s: no NaN" % row.path)
+		assert_eq(run.kinds.get("the floor", 0), 0, "%s: no vertex under the floor in a planted pose" % row.path)
+		assert_gt(run.samples, 200, "%s: every clip at five phases and the peak flexes" % row.path)
+		assert_lte(run.problems.size(), row.problems_max, "%s: no more problem lines than today (%d)" % [row.path, run.problems.size()])
+		assert_lte(run.worst_high, row.high_max, "%s: no worse a p99.9 than today (%.2f)" % [row.path, run.worst_high])
+		assert_lte(ArtStrain.worst_flex_share(run), ArtStrain.FLEX_RATCHET_SHARE, "%s: no peak flex with more folded or squashed triangles than today (%.2f%% of them)" % [row.path, 100.0 * ArtStrain.worst_flex_share(run)])
 
 
 # --- The hurtboxes inside the art (row A6) ----------------------------------------------------------
