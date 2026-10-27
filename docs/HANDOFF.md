@@ -23,7 +23,10 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
   - J3: the gloves read as canisters. J13: the placeholders look like another game.
 - **Runner changes:** `workflow-review.js` takes `skeptics` (1 or 3) and `max_packages`, and its findings schema has `locks`, `gaps` and `verdict` for the gate.
 - **Gate args:** `docs/reviews/M4/args-review-slice.json` has G1 (mechanics and contract) and G2 (deformation and look at 1 m), with `no_fix` true. The lead reads the findings before choosing at most 2 fix packages.
-- **Next:**
+- **The lead's A16 perf run (03:05, vsync on, load 2.4-4.6 from other apps; logs in `captures/perf_compare/a16/`):** on "Perf, six with ragdolls", M3 mean 12.10 ms against M4 14.53 (+2.4), p95 +3.4, spawn hitch +2.9. First spawn and first hit are within +2 ms (ok). M3 itself misses the p95 bar on this machine. On "Look: Perf, six art Punks": FXAA saves 2.3 ms, depth-only edges save 1.0, edges off save 3.5, and the placeholder hulls cost nothing measurable (A7 stays on).
+- **Running:** the slice gate, Workflow run `wf_36e8400a-165` (script `docs/reviews/M4/workflow-review.js`, args `docs/reviews/M4/args-review-slice.json`; reviewer worktrees `.worktrees/m4-review-slice-g1` and `-g2`, detached at `59a0adf`). It stops after the partition (`no_fix`). To resume after a stop: `Workflow({scriptPath, resumeFromRunId: "wf_36e8400a-165", args: <the file>})`.
+- **Then:** read the locks, gaps and verdicts, write `docs/milestones/M4-slice-gate.md`, and resume the run with the chosen packages (at most 2) and `no_fix` false.
+- **Done before the gate:**
   1. The lead's A16 perf baseline, on a quiet machine with vsync on. The script is in the scratchpad; to rerun it: `tools/perf_compare.sh --vsync on --runs 3 --act "Perf, six with ragdolls" --act "Look: Perf, six art Punks" afdb39e 59a0adf`, then FXAA, depth-only, hulls off and edges off on the head through a `GODOT=` wrapper that appends `--tune=...` after `--`.
   2. Paste the numbers into the gate args' `PERF_PLACEHOLDER`.
   3. Launch the gate, then write `docs/milestones/M4-slice-gate.md`.
