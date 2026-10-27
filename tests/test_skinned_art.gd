@@ -1029,3 +1029,270 @@ func _strain_problems(report: Dictionary, planted: bool) -> PackedStringArray:
 	if planted and report.lowest_y < -0.015:
 		out.append("a vertex %.1f cm under the floor in a planted pose" % [-report.lowest_y * 100.0])
 	return out
+
+
+## The peak flexes of row A7: [label, pose (bone -> Euler degrees), hips offset].
+func _peak_poses() -> Array[Dictionary]:
+	var poses: Array[Dictionary] = []
+	poses.append({label = "guard", pose = PlaceholderPoses.guard(), hips = Vector3.ZERO})
+	poses.append({label = "elbow 150", pose = {&"LeftLowerArm": Vector3(150.0, 0.0, 0.0), &"RightLowerArm": Vector3(150.0, 0.0, 0.0)} as Dictionary[StringName, Vector3], hips = Vector3.ZERO})
+	poses.append({label = "arm raise 140", pose = {&"LeftUpperArm": Vector3(140.0, 0.0, 0.0), &"RightUpperArm": Vector3(140.0, 0.0, 0.0)} as Dictionary[StringName, Vector3], hips = Vector3.ZERO})
+	poses.append({label = "knee -130", pose = {&"LeftLowerLeg": Vector3(-130.0, 0.0, 0.0), &"LeftUpperLeg": Vector3(40.0, 0.0, 0.0)} as Dictionary[StringName, Vector3], hips = Vector3.ZERO})
+	poses.append({label = "spine twist", pose = {&"Spine": Vector3(0.0, 25.0, 0.0), &"Chest": Vector3(0.0, 25.0, 0.0), &"UpperChest": Vector3(0.0, 20.0, 0.0), &"Neck": Vector3(0.0, 20.0, 0.0), &"Head": Vector3(0.0, 30.0, 0.0)} as Dictionary[StringName, Vector3], hips = Vector3.ZERO})
+	poses.append({label = "lying", pose = {&"Hips": Vector3(-90.0, 0.0, 0.0)} as Dictionary[StringName, Vector3], hips = Vector3(0.0, -0.8, 0.0)})
+	return poses
+
+
+func _globals_of(rig: HumanoidRig, pose: Dictionary[StringName, Vector3], hips: Vector3) -> Array[Transform3D]:
+	var table := PlaceholderBody.pose_globals(pose, hips, rig.rig_scale())
+	var out: Array[Transform3D] = []
+	for i: int in rig.skeleton.get_bone_count():
+		out.append(table[rig.skeleton.get_bone_name(i)])
+	return out
+
+
+## The merged strain of every art mesh of `rig` at `globals`.
+func _strain_at(rig: HumanoidRig, globals: Array[Transform3D], triangles: bool) -> Dictionary:
+	var merged := {}
+	for mi: MeshInstance3D in rig.art_meshes():
+		var report := SkinnedView.strain(mi, rig, globals, 0.15, triangles)
+		if merged.is_empty():
+			merged = report
+			continue
+		merged.p_high = maxf(merged.p_high, report.p_high)
+		merged.p_low = minf(merged.p_low, report.p_low)
+		merged.max = maxf(merged.max, report.max)
+		merged.min = minf(merged.min, report.min)
+		merged.lowest_y = minf(merged.lowest_y, report.lowest_y)
+		merged.has_nan = merged.has_nan or report.has_nan
+		merged.squashed += report.squashed
+		merged.flipped += report.flipped
+		merged.triangles += report.triangles
+		if absf(log(report.worst)) > absf(log(merged.worst)):
+			merged.worst = report.worst
+			merged.worst_bone = report.worst_bone
+	return merged
+
+
+## Run row A7 on `rig`'s art: every PlaceholderAnims.ANIM_IDS id and each of `moves` at five
+## phases (start, 25%, the peak or active frames, 75%, end), then the peak flexes. Returns
+## `{problems, worst (the worst-10 lines), samples}`.
+func _strain_run(rig: HumanoidRig, moves: Array[MoveData]) -> Dictionary:
+	var problems := PackedStringArray()
+	var reports: Array[Dictionary] = []
+	var samples := 0
+	var clips: Array[Dictionary] = []
+	for id: StringName in PlaceholderAnims.ANIM_IDS:
+		clips.append({label = String(id), id = id, move = null})
+	for move: MoveData in moves:
+		clips.append({label = String(move.id), id = move.id, move = move})
+	for clip: Dictionary in clips:
+		_pose(rig, &"idle", 0.2)
+		var length: float
+		var peak: float
+		if clip.move != null:
+			var move := clip.move as MoveData
+			rig.play_move(move, 0.0)
+			length = float(move.total_frames()) * FRAME
+			peak = (float(move.startup) + float(move.active) * 0.5) * FRAME
+		else:
+			rig.play(clip.id, 0.0)
+			length = rig.anim_player.current_animation_length
+			peak = length * 0.5
+		rig.advance(0.0)
+		for phase: Array in [["start", 0.0], ["25%", length * 0.25], ["peak", peak], ["75%", length * 0.75], ["end", length - FRAME]]:
+			rig.anim_player.seek(phase[1], true)
+			rig.advance(0.0)
+			var report := _strain_at(rig, [], false)
+			var label := "%s %s" % [clip.label, phase[0]]
+			samples += 1
+			reports.append({label = label, report = report})
+			for text: String in _strain_problems(report, _planted(rig)):
+				problems.append("%s: %s" % [label, text])
+	for row: Dictionary in _peak_poses():
+		var report := _strain_at(rig, _globals_of(rig, row.pose, row.hips), true)
+		samples += 1
+		reports.append({label = "flex: %s" % row.label, report = report})
+		for text: String in _strain_problems(report, false):
+			problems.append("flex: %s: %s" % [row.label, text])
+		if report.triangles > 0 and float(report.squashed + report.flipped) / report.triangles > 0.005:
+			problems.append("flex: %s: %d of %d triangles under 15%% of their rest area or flipped" % [row.label, report.squashed + report.flipped, report.triangles])
+	return {problems = problems, worst = SkinnedView.worst_lines(reports), samples = samples}
+
+
+func _punk_moves() -> Array[MoveData]:
+	var out: Array[MoveData] = []
+	for id: String in ["punk_jab", "punk_cross", "punk_shove"]:
+		out.append(load("res://game/combat/moves/%s.tres" % id) as MoveData)
+	return out
+
+
+func test_strain_every_animation_and_punk_move_on_the_probe_stays_in_range() -> void:
+	var started := Time.get_ticks_msec()
+	for row: Array in [["smooth, authored in the A-pose", Fixture.Authored.A_POSE, false, true], ["rigid, authored at the table", Fixture.Authored.REST, false, false], ["smooth player, A-pose", Fixture.Authored.A_POSE, true, true]]:
+		var rig := _rig(_art(row[1], row[2], row[3]), 1.8, row[2])
+		var moves: Array[MoveData] = []
+		if not row[2]:
+			moves = _punk_moves()
+		var run := _strain_run(rig, moves)
+		assert_gt(run.samples, 200, "%s: every clip at five phases and the peak flexes" % row[0])
+		assert_eq(run.problems.size(), 0, "%s: %s" % [row[0], "; ".join(run.problems.slice(0, 6))])
+		print("A19 strain, %s: %d samples; worst 10:" % [row[0], run.samples])
+		for line: String in run.worst:
+			print("  ", line)
+	var elapsed := (Time.get_ticks_msec() - started) / 1000.0
+	assert_lt(elapsed, 25.0, "the strain run takes %.1f s" % elapsed)
+
+
+func test_the_strain_test_has_teeth_a_wide_blend_and_a_sunken_body_fail_it() -> void:
+	# A blend half the weight wide over 6 cm stretches centimeter-long edges well past the range.
+	var wide := _rig(Fixture.make(Fixture.Authored.A_POSE, false, true, 0, 1, 0.06, 0.5))
+	var run := _strain_run(wide, [])
+	assert_gt(run.problems.size(), 10, "a candy-wrapped body fails many samples (%d)" % run.problems.size())
+	assert_true("; ".join(run.problems).contains("outside [0.6, 1.6]") or "; ".join(run.problems).contains("outside [0.4, 2.2]"))
+	# A body 5 cm too low: its soles are under the floor in every planted pose.
+	var sunk_art := _mutated(_art(), func(root: Node) -> void:
+		_edit_arrays(root, func(arrays: Array) -> void:
+			var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+			for v: int in vertices.size():
+				vertices[v].y -= 0.05
+			arrays[Mesh.ARRAY_VERTEX] = vertices))
+	assert_eq(SkinnedArt.check(sunk_art), PackedStringArray(), "the contract's checks do not look at the soles")
+	var sunk := _rig(sunk_art)
+	_pose(sunk, &"idle", 0.2)
+	var report := _strain_at(sunk, [], false)
+	assert_true(_planted(sunk))
+	assert_true("; ".join(_strain_problems(report, true)).contains("under the floor"))
+	var honest := _rig(_art())
+	_pose(honest, &"idle", 0.2)
+	assert_gt(_strain_at(honest, [], false).lowest_y, -0.005, "the probe's soles are on the floor (row A4)")
+
+
+func test_a_triangle_that_collapses_or_turns_over_is_counted() -> void:
+	# The flip and squash counts: a vertex dragged through its triangle (a candy-wrap in one
+	# triangle) is a flipped or collapsed one, a rigid body has none.
+	var rig := _rig(_art(Fixture.Authored.A_POSE, false, true))
+	for row: Dictionary in _peak_poses():
+		var report := _strain_at(rig, _globals_of(rig, row.pose, row.hips), true)
+		assert_eq(report.flipped, 0, "%s: no triangle turned over on the gentle probe" % row.label)
+		assert_gt(report.mixed_triangles, 100, "%s: the blended triangles were measured" % row.label)
+	var wide := _rig(Fixture.make(Fixture.Authored.A_POSE, false, true, 0, 1, 0.06, 0.5))
+	var worst := 0
+	for row: Dictionary in _peak_poses():
+		var report := _strain_at(wide, _globals_of(wide, row.pose, row.hips), true)
+		worst = maxi(worst, report.flipped + report.squashed)
+	assert_gt(worst, 0, "a wide 50% blend collapses or flips triangles at a peak flex")
+
+
+# --- Cost --------------------------------------------------------------------------------------
+
+
+func test_the_grouped_triangle_soup_is_the_plain_one_in_another_order() -> void:
+	# SkinnedView builds the soup of a pose by bind group (one native transform per bind) and the
+	# blended triangles by hand; it must hold the same triangles as the plain index walk.
+	for authored: int in [Fixture.Authored.REST, Fixture.Authored.A_POSE]:
+		var rig := _rig(_art(authored, false, true))
+		_pose(rig, &"guard_break", 0.2)
+		var mi := rig.art_meshes()[0]
+		var plain := SkinnedView.faces(mi, rig)
+		var soup := SkinnedView._soup(mi, rig)
+		var data := SkinnedView._mesh_data(mi.mesh as ArrayMesh)
+		assert_eq(soup.face_triangle.size(), plain.size() / 3, "every triangle is in the soup once")
+		var seen := {}
+		for t: int in soup.face_triangle:
+			seen[t] = true
+		assert_eq(seen.size(), plain.size() / 3)
+		assert_gt(data.soup_mixed.size(), 100, "authored %d: there are blended triangles" % authored)
+		assert_gt(data.soup_mixed.size(), 0)
+		# The grouped soup, read back through the triangle mesh's own faces.
+		var faces := soup.triangles.get_faces()
+		assert_eq(faces.size(), plain.size())
+		var worst := 0.0
+		for f: int in soup.face_triangle.size():
+			var t := soup.face_triangle[f]
+			for corner: int in 3:
+				worst = maxf(worst, faces[f * 3 + corner].distance_to(plain[t * 3 + corner]))
+		assert_lt(worst, 0.0002, "authored %d: the grouped soup is the plain one (worst %.6f m)" % [authored, worst])
+		# The bounds hold every vertex.
+		var posed := mi.global_transform * SkinnedView.skin_vertices(mi, rig)
+		for v: Vector3 in posed:
+			assert_true(soup.bounds.has_point(v), "the bounds hold %s" % v)
+
+
+func test_an_exact_sample_of_a_15k_triangle_art_is_cheap() -> void:
+	# CPU skinning, the triangle soup, the native BVH and the 48x27 rays of one first-person
+	# sample, headless: at most 15 ms (A4), the median of several runs so a busy machine's one
+	# slow frame does not decide it.
+	var art := Fixture.make(Fixture.Authored.A_POSE, false, true, 0, 2)
+	var rig := _rig(art)
+	var triangles := 0
+	for mi: MeshInstance3D in rig.art_meshes():
+		triangles += (mi.mesh as ArrayMesh).surface_get_arrays(0)[Mesh.ARRAY_INDEX].size() / 3
+	assert_gt(triangles, 14000, "the weight is a 15k-triangle mesh (%d)" % triangles)
+	rig.global_position = Vector3(0.0, 0.0, -1.0)
+	rig.rotation.y = PI
+	var cam := Transform3D(Basis.IDENTITY, Vector3(0.0, 1.456, 0.0))
+	SkinnedView.hits(rig, cam)
+	var times: Array[float] = []
+	for i: int in 9:
+		rig.advance(FRAME)
+		var start := Time.get_ticks_usec()
+		SkinnedView.hits(rig, cam)
+		times.append((Time.get_ticks_usec() - start) / 1000.0)
+	times.sort()
+	print("A4 cost: %.1f ms for one exact sample of %d triangles (median of 9; slowest %.1f ms)" % [times[4], triangles, times[8]])
+	assert_lt(times[4], 15.0, "one exact sample takes %.1f ms" % times[4])
+	# Cached per physics frame and pose: the same pose again is free.
+	var again := Time.get_ticks_usec()
+	SkinnedView.hits(rig, cam)
+	assert_lt((Time.get_ticks_usec() - again) / 1000.0, times[4], "a repeat at the same pose reuses the triangle mesh")
+
+
+# --- The flash anchor and the KO view ---------------------------------------------------------------
+
+
+func test_the_contact_flash_anchors_on_the_art_as_it_does_on_the_primitives() -> void:
+	# The flash point is clamped onto the nearest hurtbox and drawn as a radial blob; the art must
+	# put a surface where the primitives had one. Row A11's 2 cm is for the fitted GLBs; the probe
+	# is the primitives, so its anchor gap is theirs.
+	var rig := _rig(_art(Fixture.Authored.A_POSE), 1.8, false, true)
+	var points := {
+		"head": Vector3(0.0, 1.68, -0.4), "torso": Vector3(0.0, 1.25, -0.4), "leg": Vector3(0.11, 0.6, -0.4),
+	}
+	for label: String in points:
+		rig.flash_at(points[label], 1.0, 0.5, 0.5)
+		var anchor: Vector3 = rig.flash_overlay().get_shader_parameter(&"flash_point")
+		var art_gap := INF
+		for mi: MeshInstance3D in rig.art_meshes():
+			art_gap = minf(art_gap, SkinnedView.surface_gap(mi, rig, anchor))
+		var proxy_gap := FPView.nearest_mesh(rig, anchor)
+		if proxy_gap > 0.0:
+			assert_almost_eq(art_gap, proxy_gap, 0.03, "%s: the art's surface is %.3f m from the anchor, the primitives' %.3f m" % [label, art_gap, proxy_gap])
+		assert_lt(art_gap, 0.08, "%s: the anchor sits on the body (%.3f m)" % [label, art_gap])
+		rig.set_flash(0.0)
+
+
+func test_the_ko_view_never_reads_the_art_mesh_for_the_head_layer() -> void:
+	var player := preload("res://game/player/player.tscn").instantiate() as PlayerCharacter
+	player.art = _art(Fixture.Authored.REST, true)
+	add_child_autofree(player)
+	await get_tree().physics_frame
+	assert_true(player.rig.has_art(), "the player wears the art")
+	var camera := FirstPersonCamera.new()
+	add_child_autofree(camera)
+	camera.player = player
+	var lens := player.rig.get_point_position(&"EyePoint") + Vector3(0.0, 0.8, 0.0)
+	# The head proxies are read: a lens inside the head's box is not clear.
+	assert_false(camera._head_clear_of(player.rig.get_point_position(&"Head")), "the hidden primitives follow the body: the lens in the head is not clear")
+	assert_true(camera._head_clear_of(player.rig.get_point_position(&"Head") + Vector3(0.0, 3.0, 0.0)), "far above it is")
+	var head_meshes: Array[MeshInstance3D] = []
+	head_meshes.assign(camera.get("_head_meshes"))
+	assert_gt(head_meshes.size(), 5)
+	for mesh: MeshInstance3D in head_meshes:
+		assert_false(mesh.is_in_group(HumanoidRig.ART_GROUP), "%s: the art's bind-pose bounding box is never used" % mesh.name)
+	# Lying: the body's head moves with the pose, the art's rest bounding box does not.
+	player.rig.play(&"downed_back", 0.0)
+	player.rig.advance(0.5)
+	var head_now := player.rig.get_point_position(&"Head")
+	assert_false(camera._head_clear_of(head_now), "lying, the lens at the head is still not clear")
+	assert_eq(lens.y > 0.0, true)

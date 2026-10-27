@@ -21,6 +21,9 @@ const BACK_FACE_STEP := 0.0001
 ## Strain percentiles (the plan's p99.9, and its mirror for the compressed end).
 const STRAIN_HIGH_Q := 0.999
 const STRAIN_LOW_Q := 0.001
+## An edge shorter than this at rest (a pole of a sphere, a degenerate triangle) has no strain
+## to speak of: it is not measured, and counts as 1.
+const MIN_EDGE_M := 0.0001
 ## A vertex with one influence this strong is rigid on that bind.
 const RIGID_WEIGHT := 0.9999
 
@@ -49,6 +52,16 @@ class MeshData:
 	var mixed_triangles: PackedInt32Array = PackedInt32Array()
 	var mixed_rest_area: PackedFloat32Array = PackedFloat32Array()
 	var strain_ready: bool = false
+	## The triangle soup's layout (built on first use): the triangles all three of whose corners
+	## are rigid on one bind go in that bind's group, in rest pose, so a pose is one native
+	## transform per group; the others (`soup_mixed`) are skinned vertex by vertex. `bind_aabb` is the rest box of every vertex with weight
+	## on a bind (the bounds of a posed mesh: the union of these, each at its bind's matrix).
+	var soup_ready: bool = false
+	var group_corners: Array[PackedVector3Array] = []
+	var group_triangles: Array[PackedInt32Array] = []
+	var soup_mixed: PackedInt32Array = PackedInt32Array()
+	var mixed_vertex_entry: PackedInt32Array = PackedInt32Array()
+	var bind_aabb: Array[AABB] = []
 
 ## The native triangle mesh of one art mesh at one pose, and what built it.
 class Soup:
@@ -58,6 +71,12 @@ class Soup:
 	var triangles: TriangleMesh
 	var data: MeshData
 	var skin: Skin
+	## A box round the posed mesh (world), for skipping rays that cannot hit it.
+	var bounds: AABB
+	## Face of `triangles` -> triangle of the mesh.
+	var face_triangle: PackedInt32Array
+	## The camera the soup was made for (groups wholly outside its view are left out).
+	var camera_key: int = 0
 
 static var _data: Dictionary[int, MeshData] = {}
 static var _soups: Dictionary[int, Soup] = {}
@@ -133,7 +152,7 @@ static func hits(root: Node, cam: Transform3D, cols: int = FPView.COLS) -> Array
 		if rig == null:
 			continue
 		meshes.append(mesh)
-		soups.append(_soup(mesh, rig))
+		soups.append(_soup(mesh, rig, cam))
 		rigs.append(rig)
 	var rows := FPView.rows(cols)
 	var tan_h := tan(deg_to_rad(FPView.HALF_H_DEG))
@@ -147,6 +166,8 @@ static func hits(root: Node, cam: Transform3D, cols: int = FPView.COLS) -> Array
 			var best: Dictionary = {}
 			var best_depth := INF
 			for i: int in meshes.size():
+				if soups[i].bounds.intersects_ray(cam.origin, dir) == null:
+					continue
 				var hit := _ray(soups[i], cam.origin, dir, forward)
 				if hit.is_empty() or hit.depth >= best_depth:
 					continue
@@ -184,6 +205,8 @@ static func surface_gap(mi: MeshInstance3D, rig: HumanoidRig, point: Vector3, gl
 		var a := world[data.indices[t * 3]]
 		var b := world[data.indices[t * 3 + 1]]
 		var c := world[data.indices[t * 3 + 2]]
+		if (b - a).cross(c - a).length_squared() < 1e-14:
+			continue
 		best = minf(best, point.distance_to(_closest_on_triangle(point, a, b, c)))
 	return best
 
@@ -348,7 +371,8 @@ static func worst_lines(reports: Array[Dictionary], count: int = 10) -> PackedSt
 # --- Internals ---------------------------------------------------------------------------
 
 
-## The point of triangle abc nearest p (Ericson, Real-Time Collision Detection 5.1.5).
+## The point of triangle abc nearest p (Ericson, Real-Time Collision Detection 5.1.5); the
+## triangle must not be degenerate.
 static func _closest_on_triangle(p: Vector3, a: Vector3, b: Vector3, c: Vector3) -> Vector3:
 	var ab := b - a
 	var ac := c - a
@@ -445,16 +469,17 @@ static func _prepare_strain(data: MeshData) -> void:
 			var hi := maxi(a, b)
 			var key := lo * count + hi
 			var same := data.rigid_bind[a] >= 0 and data.rigid_bind[a] == data.rigid_bind[b]
-			rigid_triangle = rigid_triangle and same
+			var rest := data.vertices[lo].distance_to(data.vertices[hi])
+			rigid_triangle = rigid_triangle and (same or rest < MIN_EDGE_M)
 			if seen.has(key):
 				continue
 			seen[key] = true
 			data.edge_count += 1
-			if same:
+			if same or rest < MIN_EDGE_M:
 				continue
 			data.edge_a.append(lo)
 			data.edge_b.append(hi)
-			data.edge_rest.append(data.vertices[lo].distance_to(data.vertices[hi]))
+			data.edge_rest.append(rest)
 		if not rigid_triangle:
 			data.mixed_triangles.append(t)
 			data.mixed_rest_area.append((data.vertices[corners[1]] - data.vertices[corners[0]]).cross(
@@ -498,7 +523,8 @@ static func _dominant_bone(data: MeshData, skin: Skin, vertices: Array) -> Strin
 
 static func _face_bone(soup: Soup, face: int) -> StringName:
 	var data := soup.data
-	return _dominant_bone(data, soup.skin, [data.indices[face * 3], data.indices[face * 3 + 1], data.indices[face * 3 + 2]])
+	var tri := soup.face_triangle[face]
+	return _dominant_bone(data, soup.skin, [data.indices[tri * 3], data.indices[tri * 3 + 1], data.indices[tri * 3 + 2]])
 
 
 ## A hash of what skins `mi`: the bone transforms, the rig's place, the skin and the mesh.
@@ -510,27 +536,156 @@ static func _pose_key(mi: MeshInstance3D, rig: HumanoidRig) -> int:
 
 
 ## The triangle mesh of `mi` at its rig's pose, made once per physics frame and pose.
-static func _soup(mi: MeshInstance3D, rig: HumanoidRig) -> Soup:
+static func _soup(mi: MeshInstance3D, rig: HumanoidRig, cam: Variant = null) -> Soup:
 	var id := mi.get_instance_id()
 	var frame := Engine.get_physics_frames()
 	var key := _pose_key(mi, rig)
+	var camera_key := hash(cam)
 	var soup: Soup = _soups.get(id)
-	if soup != null and soup.frame == frame and soup.pose_key == key:
+	if soup != null and soup.frame == frame and soup.pose_key == key and soup.camera_key == camera_key:
 		return soup
 	if soup == null:
 		soup = Soup.new()
 		_soups[id] = soup
 	soup.frame = frame
 	soup.pose_key = key
-	soup.data = _mesh_data(mi.mesh as ArrayMesh)
+	soup.camera_key = camera_key
+	var data := _mesh_data(mi.mesh as ArrayMesh)
+	_prepare_soup(data)
+	soup.data = data
 	soup.skin = mi.skin
-	soup.triangles = TriangleMesh.new()
-	soup.triangles.create_from_faces(faces(mi, rig))
+	var matrices := _skin_matrices(mi.skin, rig, [])
+	var world := mi.global_transform
+	var faces := PackedVector3Array()
+	var face_triangle := PackedInt32Array()
+	for k: int in data.group_corners.size():
+		if data.group_corners[k].is_empty():
+			continue
+		var group := world * matrices[k]
+		if cam != null and _outside_view(group * data.bind_aabb[k], cam as Transform3D):
+			continue
+		faces.append_array(group * data.group_corners[k])
+		face_triangle.append_array(data.group_triangles[k])
+	# The mixed triangles: each used vertex skinned once, then looked up per corner.
+	if not data.soup_mixed.is_empty():
+		var posed := PackedVector3Array()
+		posed.resize(data.vertices.size())
+		for e: int in range(0, data.mixed_vertex_entry.size(), 3):
+			var v := data.mixed_vertex_entry[e]
+			posed[v] += (matrices[data.mixed_vertex_entry[e + 1]] * data.vertices[v]) * (data.mixed_vertex_entry[e + 2] / 65536.0)
+		posed = world * posed
+		var mixed := PackedVector3Array()
+		mixed.resize(data.soup_mixed.size() * 3)
+		var at := 0
+		for tri: int in data.soup_mixed:
+			mixed[at] = posed[data.indices[tri * 3]]
+			mixed[at + 1] = posed[data.indices[tri * 3 + 1]]
+			mixed[at + 2] = posed[data.indices[tri * 3 + 2]]
+			at += 3
+		faces.append_array(mixed)
+		face_triangle.append_array(data.soup_mixed)
+	soup.face_triangle = face_triangle
+	# Nothing of it in view: no triangle mesh (create_from_faces() errors on an empty soup).
+	soup.triangles = null
+	if not faces.is_empty():
+		soup.triangles = TriangleMesh.new()
+		soup.triangles.create_from_faces(faces)
+	# The bounds: every bind's rest box at its matrix, united.
+	var bounds := AABB()
+	var first := true
+	for k: int in data.bind_aabb.size():
+		if data.bind_aabb[k].size == Vector3.ZERO and data.bind_aabb[k].position == Vector3.ZERO:
+			continue
+		var box := (world * matrices[k]) * data.bind_aabb[k]
+		bounds = box if first else bounds.merge(box)
+		first = false
+	soup.bounds = bounds.grow(0.01)
 	return soup
+
+
+## True when the world box `box` lies wholly outside the first-person view of `cam`: behind its
+## lens, or past one of its four sides (the box's corners in camera space, all on the outer side
+## of the same plane).
+static func _outside_view(box: AABB, cam: Transform3D) -> bool:
+	var tan_h := tan(deg_to_rad(FPView.HALF_H_DEG))
+	var tan_v := tan_h * 9.0 / 16.0
+	var inverse := cam.affine_inverse()
+	var behind := true
+	var right := true
+	var left := true
+	var above := true
+	var below := true
+	for i: int in 8:
+		var q := inverse * (box.position + box.size * Vector3(float(i & 1), float((i >> 1) & 1), float((i >> 2) & 1)))
+		var depth := -q.z
+		behind = behind and depth < FPView.NEAR
+		right = right and q.x > tan_h * depth
+		left = left and q.x < -tan_h * depth
+		above = above and q.y > tan_v * depth
+		below = below and q.y < -tan_v * depth
+	return behind or right or left or above or below
+
+
+## The soup layout of `data` (see MeshData.soup_ready).
+static func _prepare_soup(data: MeshData) -> void:
+	if data.soup_ready:
+		return
+	data.soup_ready = true
+	var binds := 0
+	for b: int in data.bones:
+		binds = maxi(binds, b + 1)
+	data.group_corners.resize(binds)
+	data.group_triangles.resize(binds)
+	for t: int in data.indices.size() / 3:
+		var a := data.indices[t * 3]
+		var b := data.indices[t * 3 + 1]
+		var c := data.indices[t * 3 + 2]
+		var k := data.rigid_bind[a]
+		if k >= 0 and data.rigid_bind[b] == k and data.rigid_bind[c] == k:
+			data.group_corners[k].append(data.vertices[a])
+			data.group_corners[k].append(data.vertices[b])
+			data.group_corners[k].append(data.vertices[c])
+			data.group_triangles[k].append(t)
+		else:
+			data.soup_mixed.append(t)
+	# Each vertex of a mixed triangle, once, with its influences (weights as 16.16 fixed point
+	# so the three fields share one integer array).
+	var used := PackedByteArray()
+	used.resize(data.vertices.size())
+	for t: int in data.soup_mixed:
+		for corner: int in 3:
+			used[data.indices[t * 3 + corner]] = 1
+	for e: int in data.entry_vertex.size():
+		if used[data.entry_vertex[e]] == 1:
+			data.mixed_vertex_entry.append(data.entry_vertex[e])
+			data.mixed_vertex_entry.append(data.entry_bind[e])
+			data.mixed_vertex_entry.append(roundi(data.entry_weight[e] * 65536.0))
+	# The boxes of the binds' vertices at rest.
+	var low: Array[Vector3] = []
+	var high: Array[Vector3] = []
+	var seen: Array[bool] = []
+	low.resize(binds)
+	high.resize(binds)
+	seen.resize(binds)
+	seen.fill(false)
+	for e: int in data.entry_vertex.size():
+		var k := data.entry_bind[e]
+		var v := data.vertices[data.entry_vertex[e]]
+		if not seen[k]:
+			seen[k] = true
+			low[k] = v
+			high[k] = v
+		else:
+			low[k] = Vector3(minf(low[k].x, v.x), minf(low[k].y, v.y), minf(low[k].z, v.z))
+			high[k] = Vector3(maxf(high[k].x, v.x), maxf(high[k].y, v.y), maxf(high[k].z, v.z))
+	for k: int in binds:
+		data.bind_aabb.append(AABB(low[k], high[k] - low[k]) if seen[k] else AABB())
 
 
 ## The nearest front-face hit of the ray from `origin` along unit `dir`: `{depth, face}` or {}.
 static func _ray(soup: Soup, origin: Vector3, dir: Vector3, forward: Vector3) -> Dictionary:
+	if soup.triangles == null:
+		return {}
 	var from := origin
 	for step: int in MAX_BACK_FACES:
 		var hit := soup.triangles.intersect_ray(from, dir)

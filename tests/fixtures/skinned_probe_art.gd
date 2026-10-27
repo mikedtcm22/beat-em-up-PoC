@@ -18,15 +18,20 @@ extends RefCounted
 ##          the identity and the bind route of M4-plan A3 is proven without any GLB.
 ## And weighted one of two ways:
 ##   rigid   every vertex is 100% on its part's bone (exact skinning).
-##   smooth  a vertex within BLEND_M of its joint, on the parent's side of it, blends with the
-##           parent bone (linear, 50/50 at the joint), so there are blended weights.
+##   smooth  a vertex within BLEND_M of its joint, measured along the bone, blends with the
+##           parent bone (linear: PARENT_SHARE of the parent's weight at the joint, twice that
+##           BLEND_M behind it, none BLEND_M past it), so there are blended weights. The
+##           primitives' edges are centimeters long, so the blend stays gentle: a wide one
+##           stretches them past the strain test's range (the control of the A19 test).
 
 enum Authored { REST, A_POSE }
 
 ## The arm swing of the A-pose (degrees about the forward axis).
 const A_POSE_SWING_DEG := 45.0
-## How far (m) on either side of a joint a smooth vertex blends with the parent.
-const BLEND_M := 0.06
+## How far (m) along the bone, either side of its joint, a smooth vertex blends with the parent.
+const BLEND_M := 0.04
+## The parent's share of the weight at the joint, in a smooth probe.
+const PARENT_SHARE := 0.1
 ## The swatch width in the palette atlas (px) and the atlas size.
 const SWATCH_PX := 8
 const ATLAS_SIZE := Vector2i(40, 8)
@@ -40,10 +45,10 @@ const SWATCHES: Array[Color] = [
 
 ## A CharacterArt of the probe body: `authored` pose (Authored), `player` (wrapped hands and the
 ## FP-hidden part in its own mesh, Body__fp_hidden), `smooth` weights (see the file's docs).
-## `budget_slack` is the triangle budget above the mesh's own count. `copies` bakes the parts
+## `blend_m` is how far either side of a joint the smooth weights blend and `parent_share` the parent's weight at the joint. `budget_slack` is the triangle budget above the mesh's own count. `copies` bakes the parts
 ## that many times over (the same body again: a heavier mesh for the timing test).
 static func make(authored: int = Authored.REST, player: bool = false, smooth: bool = false,
-		budget_slack: int = 0, copies: int = 1) -> CharacterArt:
+		budget_slack: int = 0, copies: int = 1, blend_m: float = BLEND_M, parent_share: float = PARENT_SHARE) -> CharacterArt:
 	var pose := a_pose() if authored == Authored.A_POSE else empty_pose()
 	var joints := PlaceholderBody.pose_globals(pose, Vector3.ZERO, 1.0)
 	var order := bind_order()
@@ -53,7 +58,7 @@ static func make(authored: int = Authored.REST, player: bool = false, smooth: bo
 	for copy: int in copies:
 		for part: PlaceholderBody.Part in PlaceholderBody.parts(player):
 			var target := hidden_arrays if player and PlaceholderBody.is_fp_hidden(part) else visible_arrays
-			_add_part(target, helper._make_mesh(part), part, joints, order, smooth)
+			_add_part(target, helper._make_mesh(part), part, joints, order, smooth, blend_m, parent_share)
 	helper.free()
 	var triangles := 0
 	var root := Node3D.new()
@@ -149,7 +154,7 @@ static func _empty_arrays() -> Array:
 ## Bake `part`'s primitive into `arrays`: its vertices on the bone at the part's offset and
 ## rotation, the bone in the authoring pose (`joints`), weighted to the bone.
 static func _add_part(arrays: Array, primitive: Mesh, part: PlaceholderBody.Part,
-		joints: Dictionary[StringName, Transform3D], order: Array[StringName], smooth: bool) -> void:
+		joints: Dictionary[StringName, Transform3D], order: Array[StringName], smooth: bool, blend_m: float, share: float) -> void:
 	var source := primitive.surface_get_arrays(0)
 	var local := Transform3D(PlaceholderBody.euler_basis(part.rot_deg), part.offset)
 	var to_rig: Transform3D = joints[part.bone] * local
@@ -164,9 +169,13 @@ static func _add_part(arrays: Array, primitive: Mesh, part: PlaceholderBody.Part
 	var parent_bone: StringName = PlaceholderBody.BONE_PARENT.get(part.bone, &"")
 	var parent := order.find(parent_bone) if smooth and parent_bone != &"" and parent_bone != &"Root" else -1
 	var rest := PlaceholderBody.pose_globals(empty_pose(), Vector3.ZERO, 1.0)
+	# The bone's own long axis, pointing away from the parent: toward its first child, or from
+	# its parent for a leaf (a hand, the head, the toes).
 	var axis := Vector3.ZERO
 	if parent >= 0:
-		axis = (rest[part.bone].origin - rest[parent_bone].origin).normalized()
+		var child := SkinnedArt._first_child(part.bone)
+		axis = ((rest[child].origin - rest[part.bone].origin) if child != &"" \
+				else (rest[part.bone].origin - rest[parent_bone].origin)).normalized()
 	var uv := Vector2((part.paint * SWATCH_PX + SWATCH_PX * 0.5) / ATLAS_SIZE.x, 0.5)
 	var local_vertices: PackedVector3Array = source[Mesh.ARRAY_VERTEX]
 	var local_normals: PackedVector3Array = source[Mesh.ARRAY_NORMAL]
@@ -177,12 +186,12 @@ static func _add_part(arrays: Array, primitive: Mesh, part: PlaceholderBody.Part
 		uvs.append(uv)
 		# Rigid: all on the bone. Smooth: blended with the parent about the joint (measured
 		# in the bone's own rest frame, where the part was authored).
-		var parent_share := 0.0
+		var to_parent := 0.0
 		if parent >= 0:
 			var along := (local * local_vertices[i]).dot(axis)
-			parent_share = clampf(0.5 - 0.5 * along / BLEND_M, 0.0, 1.0)
+			to_parent = clampf(share - share * along / blend_m, 0.0, 2.0 * share)
 		bones.append_array(PackedInt32Array([own, maxi(parent, 0), 0, 0]))
-		weights.append_array(PackedFloat32Array([1.0 - parent_share, parent_share, 0.0, 0.0]))
+		weights.append_array(PackedFloat32Array([1.0 - to_parent, to_parent, 0.0, 0.0]))
 	var source_indices: PackedInt32Array = source[Mesh.ARRAY_INDEX]
 	for index: int in source_indices:
 		indices.append(base + index)
