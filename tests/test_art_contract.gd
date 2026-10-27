@@ -34,9 +34,39 @@ const ALPHA_SKIN := 0.8
 const ALPHA_NONE := 0.5
 const SWATCH_MIN := 4
 const SWATCH_MAX := 6
-## F-punk: a character may spend one more SLOT than it has flat colours (the Punk's lens is the cap's yellow on its own slot, so it
-## takes no damage marks); the number of flat COLOURS stays 4-6 (Part B A3, J6).
+## F-punk: a character may spend one more SLOT than it has flat colours (the Punk's lens is the shared cream on its own slot, so it
+## takes no damage marks; it was the cap's yellow until F-punk-fix); the number of flat COLOURS stays 4-6 (Part B A3, J6).
 const SWATCH_SLOTS_MAX := 7
+## F-punk-fix (the lead's look at the Punk at 1 m beside the concept). The palette slots the checks name (assets/source/palette):
+## the shared dark grey (the gloves, the tank top, the shades' frame), the Punk's yellow (cap, laces) and the Punk's lens.
+const SLOT_DARK_GREY := 2
+const SLOT_SKIN := 6
+const SLOT_YELLOW := 17
+const SLOT_LENS := 19
+## The lens is not the cap's colour: at least this far apart in RGB (the cream against the yellow measures 0.55; the same colour 0).
+const LENS_APART_MIN := 0.25
+## The shades' frame: dark faces above and below the lens (the lens box is y 1.592-1.652 m, the frame's boxes a little beyond it).
+const LENS_BOTTOM_Y := 1.592
+const LENS_TOP_Y := 1.652
+const FRAME_MIN_FACES := 20
+## The cuff of a glove (hand-weighted vertices up the forearm from the wrist): no triangle thinner than this ratio (longest edge squared
+## over twice the area; the old torn cuff measured 2463 and 84 faces over 20, the collar 26-55 and at most 4), no edge longer than 6.5 cm, no vertex farther than 9 cm
+## from the arm's axis (the old strap stood 9.2 cm out; the A9 lens-share bar of 4 pp keeps the rest, M4-calls/F-punk.md "Fix round").
+const CUFF_NEEDLE_MAX := 60.0
+const CUFF_NEEDLE_LIMIT := 20.0
+const CUFF_NEEDLE_FACES_MAX := 8
+const CUFF_EDGE_MAX_M := 0.065
+const CUFF_RADIUS_MAX_M := 0.09
+## Shading normals: the share of edges whose end normals disagree by more than 25 degrees and the mean disagreement (the lumpy
+## generated normals measured 38.5% and 25.4 degrees, the smoothed ones 11.3% and 15.1).
+const NORMAL_EDGE_ANGLE_DEG := 25.0
+const NORMAL_EDGE_SHARE_MAX := 0.18
+const NORMAL_MEAN_DEG_MAX := 19.0
+## The face's skin carries the mouth and the nose line and no speckle: the share of its surface with ink over one half (the speckled
+## mask measured 2.6%, the lines alone 1.6%).
+const FACE_INK_MIN := 0.004
+const FACE_INK_MAX := 0.02
+const FACE_MIN_Y := 1.5
 const SWATCH_COLUMNS := 32
 const SWATCH_ROWS := 2
 const SWATCH_PX := 8
@@ -436,6 +466,210 @@ func test_the_punk_detail_mask_is_a_1k_ink_only_png_on_the_punks_uv2() -> void:
 				if uv.x < -0.001 or uv.x > 1.001 or uv.y < -0.001 or uv.y > 1.001:
 					outside += 1
 			assert_eq(outside, 0, "%s %s: UV2 inside the unit square" % [path, n])
+
+
+## The weight of vertex `v` of a mesh on the bone named `bone` (a skin bind), over its four influences.
+func _weight_on(arrays: Array, binds: Array[String], v: int, bone: String) -> float:
+	var bones: PackedInt32Array = arrays[Mesh.ARRAY_BONES]
+	var weights: PackedFloat32Array = arrays[Mesh.ARRAY_WEIGHTS]
+	var w := 0.0
+	for k: int in 4:
+		if binds[bones[v * 4 + k]] == bone:
+			w += weights[v * 4 + k]
+	return w
+
+
+## The palette slot a vertex of a mesh sits on: UV1 is the swatch's centre ((col + 0.5) / 32, (row + 0.5) / 2).
+func _slot_of(uv: Vector2) -> int:
+	return int(floorf(uv.x * float(SWATCH_COLUMNS))) + SWATCH_COLUMNS * int(floorf(uv.y * float(SWATCH_ROWS)))
+
+
+## F-punk-fix, the gloves: the lead saw a yellow strap ring with black slivers at its edge, not the concept's dark fingerless gloves
+## with a dark wrist cuff. Every face on a hand (all three vertices at least half Hand) is off the Punk's yellow and the lens, the
+## cuff above the block (the hand-weighted ramp up the forearm) has no needle triangle, no long edge and no spike beyond 9 cm of the
+## arm's axis. The twin of the old strap: the same faces, counted on the shipped GLBs.
+func test_the_punks_gloves_have_no_yellow_and_the_cuff_has_no_slivers() -> void:
+	for path: String in _glbs():
+		if _id_of(path) != "punk":
+			continue
+		var f := _facts(path)
+		if not f.ok:
+			continue
+		var body := _body(path)
+		var arrays: Array = body.arrays
+		var binds: Array[String] = body.bind_names
+		var joints := _joints(path)
+		var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var uv: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV]
+		var index: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+		var yellow := 0
+		var needles := 0
+		var needle_max := 0.0
+		var edge_max := 0.0
+		var radius_max := 0.0
+		for side: String in ["Left", "Right"]:
+			var hand: Vector3 = joints[side + "Hand"]
+			var dir: Vector3 = (hand - joints[side + "LowerArm"]).normalized()
+			var hand_w := PackedFloat32Array()
+			hand_w.resize(verts.size())
+			var along := PackedFloat32Array()
+			along.resize(verts.size())
+			for v: int in verts.size():
+				hand_w[v] = _weight_on(arrays, binds, v, side + "Hand")
+				var rel := verts[v] - hand
+				along[v] = rel.dot(dir)
+				# up the arm is negative along: the cuff ramp is hand-weighted between 0.02 and 0.95, within 7.5 cm of the wrist
+				if hand_w[v] > 0.02 and hand_w[v] < 0.95 and along[v] < 0.0 and along[v] > -0.075:
+					radius_max = maxf(radius_max, (rel - dir * along[v]).length())
+			for t: int in index.size() / 3:
+				var a := index[t * 3]
+				var b := index[t * 3 + 1]
+				var c := index[t * 3 + 2]
+				if (verts[a] - hand).length() > 0.15 or (verts[b] - hand).length() > 0.15 or (verts[c] - hand).length() > 0.15:
+					continue
+				if hand_w[a] >= 0.5 and hand_w[b] >= 0.5 and hand_w[c] >= 0.5:
+					var slot := _slot_of(uv[a])
+					if slot == SLOT_YELLOW or slot == SLOT_LENS:
+						yellow += 1
+				# a cuff face: some Hand weight on it (the cuff ramps from the hand to the forearm), up to 8 cm above the wrist
+				if maxf(hand_w[a], maxf(hand_w[b], hand_w[c])) > 0.05 and maxf(along[a], maxf(along[b], along[c])) < 0.01 and minf(along[a], minf(along[b], along[c])) > -0.08:
+					var e0 := (verts[b] - verts[a]).length()
+					var e1 := (verts[c] - verts[b]).length()
+					var e2 := (verts[a] - verts[c]).length()
+					var longest := maxf(e0, maxf(e1, e2))
+					var area := 0.5 * (verts[b] - verts[a]).cross(verts[c] - verts[a]).length()
+					var needle := longest * longest / maxf(2.0 * area, 1e-9)
+					edge_max = maxf(edge_max, longest)
+					needle_max = maxf(needle_max, needle)
+					if needle > CUFF_NEEDLE_LIMIT:
+						needles += 1
+		gut.p("ART-CONTRACT gloves %s: %d yellow or lens faces on the hands; cuff needle max %.1f (%d over %.0f), longest edge %.1f cm, widest %.1f cm from the arm's axis" % [
+				path.get_file(), yellow, needle_max, needles, CUFF_NEEDLE_LIMIT, edge_max * 100.0, radius_max * 100.0])
+		assert_eq(yellow, 0, "%s: no face of a glove is the Punk's yellow or the lens (the concept's gloves are dark, with a dark cuff)" % path)
+		assert_lt(needle_max, CUFF_NEEDLE_MAX, "%s: no needle triangle on the cuffs" % path)
+		assert_lte(needles, CUFF_NEEDLE_FACES_MAX, "%s: at most a few thin triangles on the cuffs" % path)
+		assert_lt(edge_max, CUFF_EDGE_MAX_M, "%s: no long edge on the cuffs" % path)
+		assert_lt(radius_max, CUFF_RADIUS_MAX_M, "%s: nothing on a cuff stands more than 9 cm from the arm's axis" % path)
+
+
+## F-punk-fix, the shades: the lens and the cap were both #e8bd2e, so the head read as one yellow mass from the crown to the cheek.
+## The lens is its own slot (marks off) in a colour apart from the cap's, with a dark frame of faces above and below it.
+func test_the_punks_shades_are_a_marks_off_lens_in_a_dark_frame_apart_from_the_cap() -> void:
+	var atlas := _atlas_image()
+	if atlas == null:
+		return
+	var cap := _swatch_color(atlas, SLOT_YELLOW)
+	var lens := _swatch_color(atlas, SLOT_LENS)
+	var apart := Vector3(cap.r - lens.r, cap.g - lens.g, cap.b - lens.b).length()
+	gut.p("ART-CONTRACT shades: the lens %s against the cap %s, %.2f apart in RGB" % [lens.to_html(false), cap.to_html(false), apart])
+	assert_gt(apart, LENS_APART_MIN, "the lens is not the cap's colour")
+	assert_almost_eq(_swatch_alpha(atlas, SLOT_LENS), ALPHA_NONE, 0.01, "the lens takes no damage marks")
+	assert_false(_in_red_band(lens), "the lens is not red (A13)")
+	for path: String in _glbs():
+		if _id_of(path) != "punk":
+			continue
+		var f := _facts(path)
+		if not f.ok:
+			continue
+		var arrays: Array = _body(path).arrays
+		var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var uv: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV]
+		var index: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+		var above := 0
+		var below := 0
+		var lens_faces := 0
+		for t: int in index.size() / 3:
+			var a := index[t * 3]
+			var centre := (verts[a] + verts[index[t * 3 + 1]] + verts[index[t * 3 + 2]]) / 3.0
+			if absf(centre.x) > 0.14 or centre.y < LENS_BOTTOM_Y - 0.02 or centre.y > LENS_TOP_Y + 0.03:
+				continue
+			var slot := _slot_of(uv[a])
+			if slot == SLOT_LENS:
+				lens_faces += 1
+			elif slot == SLOT_DARK_GREY:
+				if centre.y > LENS_TOP_Y - 0.004:
+					above += 1
+				elif centre.y < LENS_BOTTOM_Y + 0.004:
+					below += 1
+		gut.p("ART-CONTRACT shades %s: %d lens faces, %d dark frame faces above and %d below" % [path.get_file(), lens_faces, above, below])
+		assert_gt(lens_faces, 50, "%s: the lens is there" % path)
+		assert_gte(above, FRAME_MIN_FACES, "%s: a dark frame above the lens" % path)
+		assert_gte(below, FRAME_MIN_FACES, "%s: and below it" % path)
+
+
+## F-punk-fix, the blotches: the toon bands are cut on the normal alone, and the generated mesh's normals were lumpy, so the bands
+## broke into dark patches on the vest and the forearms. The shipped NORMAL is smoothed (pipe_normals.py): the neighbouring
+## vertices' normals agree.
+func test_the_punks_shading_normals_are_smoothed_not_lumpy() -> void:
+	for path: String in _glbs():
+		if _id_of(path) != "punk":
+			continue
+		var f := _facts(path)
+		if not f.ok:
+			continue
+		var arrays: Array = _body(path).arrays
+		var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+		var index: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+		var over := 0
+		var edges := 0
+		var sum := 0.0
+		for t: int in index.size() / 3:
+			for k: int in 3:
+				var angle := rad_to_deg(normals[index[t * 3 + k]].angle_to(normals[index[t * 3 + (k + 1) % 3]]))
+				sum += angle
+				edges += 1
+				if angle > NORMAL_EDGE_ANGLE_DEG:
+					over += 1
+		var share := float(over) / float(maxi(edges, 1))
+		var mean := sum / float(maxi(edges, 1))
+		gut.p("ART-CONTRACT normals %s: %.1f%% of %d edges differ by over %.0f degrees, mean %.1f degrees" % [path.get_file(), share * 100.0, edges, NORMAL_EDGE_ANGLE_DEG, mean])
+		assert_lt(share, NORMAL_EDGE_SHARE_MAX, "%s: few edges have end normals more than 25 degrees apart" % path)
+		assert_lt(mean, NORMAL_MEAN_DEG_MAX, "%s: and the mean disagreement is small" % path)
+
+
+## F-punk-fix, the face: the mask's ink on the face's skin is the mouth mark and the nose line, not the texture's speckle. The share
+## of the head's skin surface (sampled at barycentric points of every skin face above the collar) whose ink is over one half stays
+## between a floor (the lines are there) and a ceiling (the speckled mask measured 2.6%).
+func test_the_punks_face_skin_keeps_its_lines_and_loses_the_speckle() -> void:
+	var art := load("res://game/actors/art/punk_art.tres") as CharacterArt
+	if art == null or art.detail_mask == null:
+		return
+	var mask := art.detail_mask.get_image()
+	var size := mask.get_width()
+	var path := "res://assets/export/characters/punk/punk.glb"
+	var f := _facts(path)
+	if not f.ok:
+		return
+	var arrays: Array = _body(path).arrays
+	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var uv: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV]
+	var uv2: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV2]
+	var index: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+	var samples := 0
+	var inked := 0
+	for t: int in index.size() / 3:
+		var a := index[t * 3]
+		var b := index[t * 3 + 1]
+		var c := index[t * 3 + 2]
+		if _slot_of(uv[a]) != SLOT_SKIN or (verts[a] + verts[b] + verts[c]).y / 3.0 < FACE_MIN_Y:
+			continue
+		for i: int in 4:
+			for j: int in 4 - i:
+				var wa := (float(i) + 0.5) / 4.0
+				var wb := (float(j) + 0.5) / 4.0
+				var wc := 1.0 - wa - wb
+				if wc < 0.0:
+					continue
+				var p := uv2[a] * wa + uv2[b] * wb + uv2[c] * wc
+				var px := mask.get_pixel(clampi(int(p.x * float(size)), 0, size - 1), clampi(int(p.y * float(size)), 0, size - 1))
+				samples += 1
+				if px.r > 0.5:
+					inked += 1
+	var share := float(inked) / float(maxi(samples, 1))
+	gut.p("ART-CONTRACT face ink: %.2f%% of %d samples of the head's skin have ink over one half" % [share * 100.0, samples])
+	assert_gt(samples, 1000, "the head's skin was sampled")
+	assert_gt(share, FACE_INK_MIN, "the mouth mark and the nose line are in the mask")
+	assert_lt(share, FACE_INK_MAX, "and the skin's speckle is not")
 
 
 ## A5: the fist fills the fist box. Vertices with weight >= 0.9 on a Hand bone, un-swung to the table's frame (the hand's
