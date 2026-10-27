@@ -70,11 +70,13 @@ static func character(color: Color, takes_marks: bool = false, glossy: bool = fa
 ## The skinned art's material: the palette `atlas` (and the player's `detail` mask on UV2 when
 ## given). Damage marks come from the rest pose (CUSTOM0/1) and the atlas's alpha; the hull's
 ## edge tag is 0 (the art always has its hull). `sharp_detail`: the mask's ink is cut at
-## `look_detail_cut` with an antialiased edge instead of mixed in by its filtered value (the
-## hero's: his lines are magnified to several pixels at 0.2 to 0.4 m); the Punk's mask stays the
-## soft mix its face ink is tuned for.
+## `look_detail_cut` with an antialiased edge instead of mixed in by its filtered value (both
+## characters' art ask for it: the hero's lines are magnified to several pixels at 0.2 to 0.4 m,
+## the Punk's to two at 1 m); false is the soft linear mix. The hard highlight is per swatch: it
+## takes `look_spec_gloss` on a glossy swatch of the atlas (the Punk's lens) and nothing on a
+## matte one, so the material is the glossy kind and toon.gdshader's `swatch_spec` does the rest.
 static func art(atlas: Texture2D, detail: Texture2D = null, sharp_detail: bool = false) -> ShaderMaterial:
-	var material := _make(Kind.ART, false)
+	var material := _make(Kind.ART, true)
 	material.set_meta(_SHARP_META, sharp_detail)
 	material.set_shader_parameter(&"albedo", Color.WHITE)
 	material.set_shader_parameter(&"albedo_tex", atlas)
@@ -187,8 +189,11 @@ static func apply_look(material: ShaderMaterial) -> void:
 	var dots := data.look_halftone_env if room_surface else data.look_halftone_chars
 	material.set_shader_parameter(&"halftone_strength", data.look_halftone_strength if dots else 0.0)
 	material.set_shader_parameter(&"halftone_cell_px", data.look_halftone_cell_px)
-	# The hero's sharp ink: his art material only, and only while the cut is above 0 (0 is the A/B).
+	# The art's own: the glint on its glossy swatches, and the sharp ink of an art that asks for it
+	# (only while the cut is above 0: 0 is the A/B).
 	if kind == Kind.ART:
+		material.set_shader_parameter(&"glint_cut", data.look_glint_cut)
+		material.set_shader_parameter(&"glint_strength", data.look_glint_strength)
 		material.set_shader_parameter(&"detail_sharp", bool(material.get_meta(_SHARP_META, false)) and data.look_detail_cut > 0.0)
 		material.set_shader_parameter(&"detail_cut", data.look_detail_cut)
 
@@ -231,6 +236,16 @@ static func band_shade(lit: float, edge: float, band_1: float, band_2: float, mi
 	var out := shadow.lerp(Color(mid, mid, mid), b1).lerp(Color.WHITE, b2)
 	out.a = 1.0
 	return out
+
+
+## Whether the atlas alpha `alpha` (0 to 1) marks a glossy swatch, as toon.gdshader's swatch_gloss()
+## decodes it: a damage class's alpha (1.0 clothes, 0.8 skin, 0.5 none, as 255, 204, 128 of 255)
+## minus exactly one 8-bit step (any other alpha is matte). gen_palette.py writes it from a swatch's
+## `"gloss": true`.
+static func swatch_glossy(alpha: float) -> bool:
+	var a8 := floorf(alpha * 255.0 + 0.5)
+	var class_a8 := 255.0 if alpha > 0.9 else (204.0 if alpha > 0.75 else 128.0)
+	return absf(class_a8 - a8 - 1.0) < 0.5
 
 
 ## The share of ink a surface takes from its detail mask, as toon.gdshader computes it: `mask` is the

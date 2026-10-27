@@ -7,22 +7,28 @@ shader_type spatial;
 // the mesh's material_overlay); the contact flash is hit_flash.gdshader's (next_pass).
 render_mode ambient_light_disabled;
 
+// The art's palette atlas decides, per swatch, whether the hard highlight shows (swatch_spec and
+// swatch_glint below): the lighting include declares and reads those varyings, and the glint's
+// uniforms, only for a shader that asks for them with this define (the floor's grid does not).
+#define TOON_SWATCH_SPEC
 #include "res://game/fx/toon_light.gdshaderinc"
 
 // The flat color (a placeholder paint, a prop, a wall), tinting the atlas when one is used.
 uniform vec4 albedo : source_color = vec4(1.0);
 // The art's palette atlas (256x16, each face's UV on its swatch's centre; the alpha is the
-// swatch's damage class: 1.0 takes the clothes' marks, 0.8 the skin's (damage_skin_tex), 0.5 none).
+// swatch's damage class: 1.0 takes the clothes' marks, 0.8 the skin's (damage_skin_tex), 0.5 none;
+// a glossy swatch (the shades' lens) is one 8-bit step lower in its class: 254, 203, 127).
 uniform sampler2D albedo_tex : source_color, filter_nearest, repeat_disable;
 uniform bool use_albedo_tex = false;
 // The art's optional detail mask on UV2: R = ink lines (seams, wraps, stitching), never shading.
 uniform sampler2D detail_tex : filter_linear_mipmap, repeat_disable;
 uniform bool use_detail_tex = false;
 uniform float detail_strength : hint_range(0.0, 1.0) = 1.0;
-// Sharp ink (the hero's mask; ToonMaterials sets it per material, off for the Punk, whose face ink
-// is tuned for the soft mix): the mask is cut at detail_cut with an edge one pixel wide (its own
-// screen-space gradient), so a line one texel wide stays a crisp line when it is magnified, where
-// the linear mix (the default) makes it a grey smear 3 to 9 pixels wide beside the hull's hard line.
+// Sharp ink (both characters' masks; ToonMaterials sets it per material from the art's
+// metadata/detail_sharp, off for an art that does not ask): the mask is cut at detail_cut with an
+// edge one pixel wide (its own screen-space gradient), so a line one texel wide stays a crisp line
+// when it is magnified, where the linear mix (the default) makes it a grey smear 3 to 9 pixels wide
+// beside the hull's hard line.
 uniform bool detail_sharp = false;
 uniform float detail_cut : hint_range(0.0, 1.0) = 0.15;
 // The ink (HudStyle.INK): the hull's, the detail lines'.
@@ -49,6 +55,15 @@ uniform float edge_tag : hint_range(0.0, 1.0) = 1.0;
 varying vec3 mark_pos;
 varying vec3 mark_normal;
 
+// The one swatch-gloss decode (ToonMaterials.swatch_glossy() mirrors it): the atlas alpha's class
+// (255 clothes, 204 skin, 128 none: read by the 0.9 and 0.75 thresholds) minus exactly one step is
+// glossy (any other alpha, a transparent texel, say, is matte).
+float swatch_gloss(float alpha) {
+	float a8 = floor(alpha * 255.0 + 0.5);
+	float class_a8 = alpha > 0.9 ? 255.0 : (alpha > 0.75 ? 204.0 : 128.0);
+	return 1.0 - step(0.5, abs(class_a8 - a8 - 1.0));
+}
+
 void vertex() {
 	if (use_rest_custom) {
 		mark_pos = CUSTOM0.xyz;
@@ -63,11 +78,19 @@ void fragment() {
 	vec3 color = albedo.rgb;
 	float takes_marks = marks;
 	float skin_marks = 0.0;
+	// The share of the hard highlight this surface takes (toon_light.gdshaderinc multiplies it in) and
+	// whether it also takes the camera-fixed glint: a flat-painted surface takes the material's own
+	// highlight (spec_gloss: 1 matte, more glossy) and no glint; the art's swatches take both only
+	// where the atlas says glossy, so the vest, denim, cap and skin stay matte and the lens glints.
+	swatch_spec = 1.0;
+	swatch_glint = 0.0;
 	if (use_albedo_tex) {
 		vec4 swatch = texture(albedo_tex, UV);
 		color *= swatch.rgb;
 		takes_marks *= step(0.75, swatch.a);
 		skin_marks = 1.0 - step(0.9, swatch.a);
+		swatch_spec = swatch_gloss(swatch.a);
+		swatch_glint = swatch_spec;
 	}
 	if (use_detail_tex) {
 		float ink_mask = texture(detail_tex, UV2).r;

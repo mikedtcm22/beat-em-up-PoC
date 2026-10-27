@@ -689,30 +689,51 @@ static func _ticker(bot: Node, slug: String, run: Dictionary) -> void:
 
 
 ## The free fly camera once round the Punk (a full turn, a mark every quarter), at rest, in the
-## guard and lying. For the mesh: nothing here is first person.
+## guard and lying. For the mesh: nothing here is first person. The hero's own body is hidden for the
+## act: the Punk stands POSED_M ahead of him and faces him, and the orbit's first and last quarters
+## start on the Punk's front, 2.2 m out, which is behind the hero, whose back then filled the lens (the
+## final review's C10 finding). The camera is placed before the settle and before each mark, and a
+## mark is read after the tick that draws the pose it names (LookRect.video_frame() is the frame the
+## state read now was drawn in), so the first stance's q0 is the Punk's front, not the free fly
+## camera's default view, and no quarter lags the orbit by a tick. The camera-mode toast the act's
+## switch to the free fly view raised (1.5 s over the Punk's cap) is cleared too.
 static func _turntable(bot: Node) -> void:
 	_begin(bot)
+	var hud: Node = bot._hud()
+	if hud != null and hud.get(&"camera_toast") != null:
+		hud.camera_toast.time_left = 0.0
+		hud.camera_toast.visible = false
 	var punk := _punk(bot, Vector2(0.0, POSED_M))
 	_unplug(punk)
 	var camera := bot.director.free_fly_camera as Camera3D
+	var hero := (bot.player as CombatActor).rig
+	hero.set_shown(false)
+	_orbit_camera(camera, punk, TURNTABLE[0], 0.0)
 	await bot._ticks(1)
 	LookRect.mark(bot, "c10", "start")
 	for stance: Dictionary in TURNTABLE:
 		punk.rig.play(stance.anim, 0.0)
+		_orbit_camera(camera, punk, stance, 0.0)
 		for i in ORBIT_SETTLE_TICKS:
 			punk.rig.advance(1.0 / Engine.physics_ticks_per_second)
 			await bot._ticks(1)
-		var yaw: float = punk.rotation.y
-		var feet := punk.global_position
 		for i in ORBIT_TICKS + 1:
-			if i % ORBIT_QUARTER_TICKS == 0:
-				LookRect.mark(bot, "c10", "%s_q%d" % [stance.name, 90 * floori(float(i) / ORBIT_QUARTER_TICKS)], punk)
-			var angle := TAU * float(i) / ORBIT_TICKS
-			var eye := feet + Basis(Vector3.UP, yaw) * Vector3(sin(angle) * stance.radius, stance.eye, -cos(angle) * stance.radius)
-			camera.global_transform = Transform3D(Basis.IDENTITY, eye).looking_at(feet + Vector3(0.0, stance.aim, 0.0), Vector3.UP)
+			_orbit_camera(camera, punk, stance, TAU * float(i) / ORBIT_TICKS)
 			punk.rig.advance(1.0 / Engine.physics_ticks_per_second)
 			await bot._ticks(1)
+			if i % ORBIT_QUARTER_TICKS == 0:
+				LookRect.mark(bot, "c10", "%s_q%d" % [stance.name, 90 * floori(float(i) / ORBIT_QUARTER_TICKS)], punk)
+	hero.set_shown(true)
 	_end(bot, "c10")
+
+
+## Put `camera` on the turntable's orbit round `punk` for `stance` at `angle` (radians; 0 is the
+## Punk's front, 2.2 m out), looking at the Punk's aim height.
+static func _orbit_camera(camera: Camera3D, punk: Node3D, stance: Dictionary, angle: float) -> void:
+	var feet := punk.global_position
+	var yaw: float = punk.rotation.y
+	var eye := feet + Basis(Vector3.UP, yaw) * Vector3(sin(angle) * stance.radius, stance.eye, -cos(angle) * stance.radius)
+	camera.global_transform = Transform3D(Basis.IDENTITY, eye).looking_at(feet + Vector3(0.0, stance.aim, 0.0), Vector3.UP)
 
 
 # --- C11: hold ---------------------------------------------------------------------------------

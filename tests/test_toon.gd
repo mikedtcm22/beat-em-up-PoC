@@ -9,6 +9,8 @@ extends GutTest
 const TOON_PATH := "res://game/fx/toon.gdshader"
 const LIGHT_PATH := "res://game/fx/toon_light.gdshaderinc"
 const OUTLINE_PATH := "res://game/fx/toon_outline.gdshader"
+const ATLAS_PATH := "res://assets/export/palette/palette_atlas.png"
+const PALETTE_DIR := "res://assets/source/palette"
 const GRID_PATH := "res://game/level/grid.gdshader"
 ## The uniforms M4-plan §2.7 pins for toon.gdshader (the lighting include's, too).
 const PINNED_UNIFORMS: Array[String] = [
@@ -819,6 +821,151 @@ func test_a_one_texel_line_stays_a_hard_line_when_it_is_magnified_with_sharp_ink
 	# A cut of 0.35 to 0.5 would lose the strand's flanks (the ramp's 0.4 values) and fragment a faint one.
 	assert_eq(ToonMaterials.detail_ink(0.3, gradient, 0.5, true), 0.0, "a faint value under a high cut is no ink")
 	assert_eq(ToonMaterials.detail_ink(0.3, gradient, cut, true), 1.0, "and under the low cut it is")
+
+
+# --- Per-swatch gloss: the lens glints, matte cloth and skin take no highlight (final-v1-04) ------
+
+
+## The atlas, with its alpha, as the shader samples it.
+func _atlas_image() -> Image:
+	var image := (load(ATLAS_PATH) as Texture2D).get_image()
+	if image.is_compressed():
+		image.decompress()
+	return image
+
+
+func _swatch_alpha(image: Image, slot: int) -> float:
+	return image.get_pixel((slot % 32) * 8 + 4, (slot / 32) * 8 + 4).a
+
+
+## A palette JSON's swatches, [{file, slot, name, gloss, marks, skin}].
+func _palette_swatches() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var dir := DirAccess.open(PALETTE_DIR)
+	for file: String in dir.get_files():
+		if not file.ends_with(".json"):
+			continue
+		var pal: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("%s/%s" % [PALETTE_DIR, file]))
+		for sw: Dictionary in pal.swatches:
+			out.append({file = file, slot = int(sw.slot), name = String(sw.name), gloss = bool(sw.get("gloss", false)),
+					marks = bool(sw.get("marks", true)), skin = bool(sw.get("skin", false))})
+	return out
+
+
+func test_a_glossy_swatch_is_one_8_bit_step_below_its_damage_class() -> void:
+	# 255 clothes, 204 skin, 128 none; the glossy ones 254, 203, 127: the class thresholds (0.9, 0.75) read all six as before.
+	for pair: Array in [[255, false], [254, true], [204, false], [203, true], [128, false], [127, true], [0, false], [64, false]]:
+		var alpha := float(pair[0]) / 255.0
+		assert_eq(ToonMaterials.swatch_glossy(alpha), pair[1], "alpha %d" % pair[0])
+	for a8: int in [255, 254]:
+		assert_gte(float(a8) / 255.0, 0.9, "a glossy clothes swatch is still the clothes' class")
+	for a8: int in [204, 203]:
+		assert_between(float(a8) / 255.0, 0.75, 0.9, "and a glossy skin swatch the skin's")
+	for a8: int in [128, 127]:
+		assert_lt(float(a8) / 255.0, 0.75, "and a glossy none swatch takes no marks")
+	var shader := _source(TOON_PATH)
+	assert_string_contains(shader, "float a8 = floor(alpha * 255.0 + 0.5);", "the shader's decode is the mirror's")
+	assert_string_contains(shader, "float class_a8 = alpha > 0.9 ? 255.0 : (alpha > 0.75 ? 204.0 : 128.0);")
+	assert_string_contains(shader, "return 1.0 - step(0.5, abs(class_a8 - a8 - 1.0));")
+
+
+func test_the_atlas_marks_the_lens_glossy_and_every_other_swatch_matte() -> void:
+	var image := _atlas_image()
+	var glossy: Array[String] = []
+	for sw: Dictionary in _palette_swatches():
+		var alpha := _swatch_alpha(image, sw.slot)
+		assert_eq(ToonMaterials.swatch_glossy(alpha), sw.gloss, "%s slot %d (%s): the atlas says what the JSON's gloss says" % [sw.file, sw.slot, sw.name])
+		assert_false(sw.gloss and sw.skin, "%s: skin takes no hard highlight" % sw.name)
+		if sw.gloss:
+			glossy.append(sw.name)
+		# The damage class survives the step (test_art_contract pins the classes themselves).
+		assert_eq(alpha >= 0.75, sw.marks, "%s: the shader still reads 'takes marks' from the alpha" % sw.name)
+		assert_eq(alpha >= 0.75 and alpha < 0.9, sw.skin, "%s: and 'skin'" % sw.name)
+	assert_eq(glossy, ["punk_lens"] as Array[String], "the shades' lens is the only glossy swatch: the vest, jeans, cap, laces, tank, gloves, skin, wraps and boots are matte")
+
+
+## A glossy swatch's texels in a skinned GLB, as the vertices of faces whose UV is a glossy slot, in model space.
+func _glossy_vertices(glb: String) -> PackedVector3Array:
+	var image := _atlas_image()
+	var glossy_slots: Array[int] = []
+	for slot in 64:
+		if ToonMaterials.swatch_glossy(_swatch_alpha(image, slot)):
+			glossy_slots.append(slot)
+	var root := (load(glb) as PackedScene).instantiate() as Node3D
+	add_child_autofree(root)
+	var out := PackedVector3Array()
+	for node: Node in root.find_children("*", "MeshInstance3D", true, false):
+		var mesh_instance := node as MeshInstance3D
+		for surface in mesh_instance.mesh.get_surface_count():
+			var arrays := mesh_instance.mesh.surface_get_arrays(surface)
+			var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+			var uvs: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV]
+			for i in vertices.size():
+				if glossy_slots.has(int(uvs[i].y * 2.0) * 32 + int(uvs[i].x * 32.0)):
+					out.append(mesh_instance.global_transform * vertices[i])
+	return out
+
+
+func test_the_punks_glossy_texels_are_the_lens_and_nothing_else() -> void:
+	# The lens box (punk pipeline.json "lens": x +-0.095, y 0.06 to 0.2 ahead, z 1.592 to 1.652 up, in the pipeline's Z-up axes; the
+	# GLB is Y-up with the front on -Z), with the bake's 1 cm margin.
+	for glb: String in ["punk", "punk_rest", "punk_auto", "punk_auto_rest"]:
+		var inside := 0
+		for vertex: Vector3 in _glossy_vertices("res://assets/export/characters/punk/%s.glb" % glb):
+			assert_between(vertex.x, -0.105, 0.105, "%s: a glossy vertex is within the lens's width" % glb)
+			assert_between(vertex.y, 1.582, 1.662, "%s: and its height" % glb)
+			assert_lt(vertex.z, -0.04, "%s: and in front of the face" % glb)
+			inside += 1
+		assert_gt(inside, 20, "%s: the lens has glossy faces" % glb)
+	assert_eq(_glossy_vertices("res://assets/export/characters/player/player.glb").size(), 0, "the hero has no glossy swatch: his arms, gloves and wraps are matte")
+
+
+func test_the_art_highlights_only_where_the_atlas_says_glossy() -> void:
+	var shader := _source(TOON_PATH)
+	var light := _source(LIGHT_PATH)
+	# toon.gdshader asks for the per-swatch path before the include, and sets both varyings from the swatch's alpha.
+	assert_true(shader.find("#define TOON_SWATCH_SPEC") < shader.find("#include"), "the define precedes the include")
+	assert_string_contains(shader, "swatch_spec = 1.0;")
+	assert_string_contains(shader, "swatch_glint = 0.0;", "a flat-painted surface takes no glint")
+	assert_string_contains(shader, "swatch_spec = swatch_gloss(swatch.a);")
+	assert_string_contains(shader, "swatch_glint = swatch_spec;")
+	# The sun's highlight is multiplied by it, so a matte swatch (0) shows none whatever faces the half vector.
+	assert_string_contains(light, "varying float swatch_spec;")
+	assert_string_contains(light, "float taken = swatch_spec;")
+	assert_string_contains(light, "spec * spec_strength * spec_gloss * taken * step(0.0, ndl) * ATTENUATION * light_color")
+	# The glint comes from the camera-fixed fill direction, on glossy swatches of the directional light.
+	assert_string_contains(light, "swatch_glint > 0.5")
+	assert_string_contains(light, "normalize(fill_dir + VIEW)")
+	assert_string_contains(light, "LIGHT_IS_DIRECTIONAL && swatch_glint")
+	# The floor's grid includes the same lighting and does not ask for the per-swatch path: its own light() is the one before.
+	assert_false(_source(GRID_PATH).contains("TOON_SWATCH_SPEC"))
+	assert_string_contains(light, "float taken = 1.0;")
+	for name: String in ["glint_cut", "glint_strength"]:
+		assert_has(_uniforms(LIGHT_PATH), name, "the include declares %s (for the shaders that ask)" % name)
+
+
+func test_the_art_material_is_the_glossy_kind_and_follows_the_glint_tunables() -> void:
+	var art := ToonMaterials.art(VfxArt.clear_detail())
+	var character := ToonMaterials.character(Color.RED, true)
+	var d := Tuning.data
+	assert_eq(art.get_shader_parameter(&"spec_gloss"), d.look_spec_gloss, "a glossy swatch of the art takes the x3 factor (the look bible)")
+	assert_eq(character.get_shader_parameter(&"spec_gloss"), 1.0, "the placeholders' own gloss is unchanged")
+	assert_eq(art.get_shader_parameter(&"glint_cut"), d.look_glint_cut)
+	assert_eq(art.get_shader_parameter(&"glint_strength"), d.look_glint_strength)
+	assert_null(character.get_shader_parameter(&"glint_cut"), "the glint is the art's alone")
+	Tuning.set_value(&"look_glint_cut", 0.93)
+	Tuning.set_value(&"look_glint_strength", 0.5)
+	assert_eq(art.get_shader_parameter(&"glint_cut"), 0.93, "the F1 panel's slider moves it live")
+	assert_eq(art.get_shader_parameter(&"glint_strength"), 0.5)
+	for property: StringName in [&"look_glint_cut", &"look_glint_strength"]:
+		var found := false
+		for info: Dictionary in Tuning.data.get_property_list():
+			if info.name == property:
+				found = true
+				assert_true(info.usage & PROPERTY_USAGE_EDITOR != 0, "%s is an exported tunable" % property)
+		assert_true(found, "%s is a TuningData value" % property)
+	assert_between(d.look_glint_cut, 0.8, 0.95, "a small glint: wide enough that the lens glints in a front view, tight enough to stay small")
+	assert_gt(d.look_glint_strength, 0.0, "and on by default")
 
 
 func test_warming_up_is_a_headless_no_op() -> void:
