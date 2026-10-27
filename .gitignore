@@ -42,4 +42,6 @@ assets/source/characters/*/report*/stills/*_front.png
 assets/source/characters/*/report*/stills/*_side.png
 assets/source/characters/*/report*/stills/*_three_quarter.png
 assets/source/characters/*/report*/stills/*_sheet.png
+# ... except the hero's pose sheet, which is committed (an ASSETS.md row names it)
+!assets/source/characters/player/report/stills/apose_sheet.png
 assets/source/characters/*/report*/bones.json

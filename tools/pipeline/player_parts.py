@@ -27,8 +27,10 @@ split: reads work/05_palette.blend, writes work/06_split.blend. The first-person
 	that can be hidden (the shoulder zone too), so the hidden part never reaches below the Chest joint (a shoulder-zone face
 	hung below it in the first run); the generated mesh's pinholes, slits and non-manifold edges are cut out and patched (the contract
 	wants no open edge on the visible body); and the faces are triangulated (every later step reads triangles).
-	A third mesh Body__fp_torso (the belly and the belt, for fp_knockdown_hide_torso) is NOT built: the shared exporter writes only
-	Body and Body__fp_hidden, and test_art_contract names only those two (M4-calls/F-player-art.md C14).
+	A third mesh Body__fp_torso (the belly and the belt, for fp_knockdown_hide_torso) IS built when parts.split_fp.torso.enabled: the
+	faces that are not an arm's, between the Chest joint's plane and the plane of parts.split_fp.torso.low_bone's joint, are separated
+	into it after the hidden part (split_fp; the shipped player.glb has Body, Body__fp_hidden and Body__fp_torso, and test_art_contract
+	asserts the three). The step before this one wrote the first two only (M4-calls/F-player-art.md C14); F-player-fix added the third.
 """
 import math
 import os
@@ -403,9 +405,12 @@ def replace_hands(cfg, extra):
 
 	# the ring each cut leaves, and the radius of the body where the piece's strap begins
 	made, dense_objs, report_sides = [], [], {}
-	band = (g[:, 1] > -0.2) & (g[:, 1] < -0.05)
+	# the slice of the piece's normalised height that is centred on the arm: from centre_band_height_g under the wrist plane up to it
+	# (parts.fists.map.y_g[1]); the strap's own radius is measured on what lies under the strap's bottom plane plus strap_margin_g
+	wrist_g = pf["map"]["y_g"][1]
+	band = (g[:, 1] > wrist_g - float(pf.get("centre_band_height_g", 0.15))) & (g[:, 1] < wrist_g)
 	centre = ((g[band, 0].min() + g[band, 0].max()) / 2.0, (g[band, 2].min() + g[band, 2].max()) / 2.0)
-	strap = g[:, 1] < pf["map"]["y_g"][0] + 0.05
+	strap = g[:, 1] < pf["map"]["y_g"][0] + float(pf.get("strap_margin_g", 0.05))
 	sc = ((g[strap, 0].min() + g[strap, 0].max()) / 2.0, (g[strap, 2].min() + g[strap, 2].max()) / 2.0)
 	r_strap = float(np.percentile(np.linalg.norm(g[strap][:, [0, 2]] - np.array(sc), axis=1), 90)) * pf["xz_scale_m"]
 	offsets = np.concatenate([[0], np.cumsum([len(f) for f in faces])[:-1]]).astype(int)
@@ -415,7 +420,7 @@ def replace_hands(cfg, extra):
 		rel = co[bnd] - ph
 		a = rel @ d
 		rad = np.linalg.norm(rel - np.outer(a, d), axis=1)
-		near = bnd[(np.abs(a - pf["cut_a_m"]) < 0.02) & (rad < pf["radius_max_m"])]
+		near = bnd[(np.abs(a - pf["cut_a_m"]) < float(pf.get("ring_window_m", 0.02))) & (rad < pf["radius_max_m"])]
 		if len(near) < 6:
 			pc.fail("%s: no open ring near the cut (%d boundary vertices)" % (side, len(near)))
 		rel = co[near] - ph
@@ -427,7 +432,7 @@ def replace_hands(cfg, extra):
 		rel_all = co - ph
 		a_all = rel_all @ d
 		rad_all = np.linalg.norm(rel_all - np.outer(a_all, d), axis=1)
-		at = (np.abs(a_all - pf["map"]["a_m"][0]) < 0.012) & (rad_all < pf["radius_max_m"])
+		at = (np.abs(a_all - pf["map"]["a_m"][0]) < float(pf.get("ledge_window_m", 0.012))) & (rad_all < pf["radius_max_m"])
 		r_body = float(np.percentile(rad_all[at], 90)) if at.any() else r_ring
 		flare = float(np.clip((max(r_body, r_ring) + pf["strap_margin_m"]) / r_strap, 1.0, pf["flare_max"]))
 		off_h = R.T @ c_perp

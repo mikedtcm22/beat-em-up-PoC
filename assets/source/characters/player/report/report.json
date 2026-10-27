@@ -1,7 +1,7 @@
 {
 	"asset": "player",
 	"version": 1,
-	"config_sha256": "b0be1f7595acf8782f2a5804122a3d72e26a910b19346ab4378927dfdb78af01",
+	"config_sha256": "1cbde532dfbc4da55f4017731dd8f7b820f5ef7e7ccc3d31eaff5b63928846a6",
 	"steps": {
 		"inspect": {
 			"source": {
@@ -1004,7 +1004,7 @@
 	"outputs": {
 		"player.glb": "57e2cb0b99412b3c00716cb02f1fd22b53ef6cf9d653bf1580fa46886fad26b7"
 	},
-	"hash": "44b03a7fe000b2389ef575e9603fce7f439802e7565ad191b710617dc8f427e2",
+	"hash": "2a2abb30c52fb402ce74cfa31bb88f975bf56e698d263044e5513778382a81f5",
 	"stills": {
 		"variants": {
 			"apose": {
