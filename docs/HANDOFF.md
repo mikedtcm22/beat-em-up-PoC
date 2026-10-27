@@ -4,6 +4,33 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-26 23:15 CDT: S0 and P1-tools part 1 merged (1216/1216); phase 1 running
+5-hour 43% (resets 00:50 CDT), weekly 12%. Phase 0 cost about 9%, much less than its estimate.
+- **Merged into `m4/art-pipeline`:**
+  - P1-tools part 1 (`584c6b0`): `tripo.py`, `tripo_prices.json`, `blender_dump_rig.py`, the empty ledger and the Concepts rows. No credits; the balance is 1500.
+  - S0-contract (`4d8c391`): 1216/1216 headless, with 0 SCRIPT, SHADER or ERROR lines. The preset regenerates unchanged (462 values). A seeded combo_bot recording is bit-identical to M3 on all 1815 frames. The lead reviewed the hunks in humanoid_rig, combat_actor, weapon and room_kit.
+- **Lead fixes:**
+  - `tools/gemini_image.py` finds the key from a worktree (the environment, then the repo's `.env`, then the main checkout's).
+  - The Tripo ledger merges by union.
+- **A near miss in P1-tools part 1:** a command without `--dry-run` would have started a real 30-credit T1, and the permission check blocked it. Part 2's first step makes paid calls also require `--spend <expected>`.
+- **S0's calls worth knowing:**
+  - C1: `test_audio`'s group-order test now expects Look, then Debug.
+  - C3: `look_outline_px` seeds at 3.75.
+  - C4: the primitives are hidden only when `SkinnedArt.attach()` returns meshes.
+  - C5: `art_material()` is a plain StandardMaterial3D stub.
+- **Running since 23:10** ([args-P1.json](reviews/M4/args-P1.json)):
+  - P1-skin: `wf_9bd1db5f-395` (task `wkq826175`);
+  - P1-toon: `wf_fad395f7-7df` (task `wgv9cp8g1`);
+  - P1-chain: `wf_b2b8f7d8-4aa` (task `wxc5qcvcb`). It proves the chain on `probe_body.glb` (pushed early for P1-skin). Then it waits for the smoke, or returns `wip` and gets relaunched.
+  - P1-tools part 2: `wf_09fa509f-1ab` (task `wk0fwaqxa`). Steps: the `--spend` guard, the mannequin renders, a Gemini flat view of Punk A, then T1-T3 (55 credits expected, 85 ceiling).
+  - L0-bench is still `wf_cc211798-6b5`.
+- **Lead, as each lands:**
+  1. Merge P1-chain's `probe_body.glb` wip as soon as it is pushed (P1-skin uses it).
+  2. Merge P1-tools on its final commit, then relaunch P1-chain if it returned `wip`.
+  3. When L0-bench is done, merge it, then launch P1-post (A8's probe first), then P1-fx.
+  4. Run the full suite after every merge.
+- **Game-boy's pick:** none yet (read 22:35).
+
 ### 2026-10-26 22:40 CDT: M4 plan written; phase 0 (S0-contract, L0-bench, P1-tools) launching
 5-hour 34% (resets 2026-10-27 00:50 CDT), weekly 11%. The plan workflow cost about 29% of the window (8 agents, 3.0M tokens).
 - **The plan:** [M4-plan.md](milestones/M4-plan.md).
