@@ -362,7 +362,9 @@ func test_materials_take_the_look_values_now_and_on_every_change() -> void:
 	# What differs by what a thing is.
 	for material: ShaderMaterial in [character, glossy, art, prop]:
 		assert_eq(material.get_shader_parameter(&"mid_level"), d.look_mid_level, "three bands on a character or a prop")
-		assert_eq(material.get_shader_parameter(&"spec_strength"), d.look_spec_strength)
+	for material: ShaderMaterial in [glossy, art, prop]:
+		assert_eq(material.get_shader_parameter(&"spec_strength"), d.look_spec_strength, "the glossy materials take the hard highlight")
+	assert_eq(character.get_shader_parameter(&"spec_strength"), 0.0, "a placeholder paint that is not glossy is matte, like the art's matte swatches")
 	for material: ShaderMaterial in [env, grid]:
 		assert_eq(material.get_shader_parameter(&"mid_level"), 1.0, "two bands on the room")
 		assert_eq(material.get_shader_parameter(&"spec_strength"), 0.0, "the room is matte")
@@ -387,6 +389,11 @@ func test_materials_take_the_look_values_now_and_on_every_change() -> void:
 		assert_eq(material.get_shader_parameter(&"shadow_tint"), Color(0.5, 0.4, 0.8))
 	assert_eq(character.get_shader_parameter(&"mid_level"), 0.6)
 	assert_eq(env.get_shader_parameter(&"mid_level"), 1.0, "the room keeps two bands")
+	Tuning.set_value(&"look_spec_strength", 0.8)
+	for material: ShaderMaterial in [glossy, art, prop]:
+		assert_eq(material.get_shader_parameter(&"spec_strength"), 0.8, "the F1 panel's highlight slider moves the glossy materials")
+	assert_eq(character.get_shader_parameter(&"spec_strength"), 0.0, "and never a matte paint")
+	assert_eq(env.get_shader_parameter(&"spec_strength"), 0.0, "nor the room")
 	assert_eq(character.get_shader_parameter(&"rim_strength"), 0.5)
 	assert_eq(env.get_shader_parameter(&"halftone_strength"), 0.7, "halftone on the room only")
 	assert_eq(grid.get_shader_parameter(&"halftone_strength"), 0.7)
@@ -554,6 +561,35 @@ func test_a_prop_box_takes_its_hull_as_its_next_pass() -> void:
 
 
 # --- The rig's materials: flash, damage, sets ---------------------------------------------------
+
+
+func test_only_the_glossy_paints_of_a_rig_take_the_hard_highlight() -> void:
+	# The placeholders follow the art's rule (M4 re-score, rescore-rs-05): a matte swatch of the art takes no
+	# hard highlight, so a flat-painted helmet, knee or forearm takes none either; the rig's dark paint
+	# (shades, belt, soles, hair, gloves) is the one glossy paint and keeps the highlight at the glossy factor.
+	var rig := _rig()
+	var mats: Dictionary[int, ShaderMaterial] = rig.get(&"_materials")
+	var d := Tuning.data
+	assert_gt(d.look_spec_strength, 0.0, "the highlight is on, so a matte paint's 0 is the rule and not the default")
+	for paint: int in mats:
+		var glossy := paint == PlaceholderBody.Paint.DARK
+		assert_eq(mats[paint].get_shader_parameter(&"spec_strength"), d.look_spec_strength if glossy else 0.0,
+				"paint %d: the highlight is the glossy paints' alone" % paint)
+		var shown: float = float(mats[paint].get_shader_parameter(&"spec_strength")) * float(mats[paint].get_shader_parameter(&"spec_gloss"))
+		assert_eq(shown > 0.0, glossy, "paint %d: what the light() term multiplies is 0 on a matte paint" % paint)
+	# The highlight a primitive can show is the product light() takes, so a slider move or a preset load
+	# leaves a matte paint at 0 and keeps the glossy one on the slider.
+	Tuning.set_value(&"look_spec_strength", 1.5)
+	for paint: int in mats:
+		assert_eq(mats[paint].get_shader_parameter(&"spec_strength"),
+				1.5 if paint == PlaceholderBody.Paint.DARK else 0.0, "paint %d after a slider move" % paint)
+	Tuning.apply(TuningData.new())
+	for paint: int in mats:
+		assert_eq(mats[paint].get_shader_parameter(&"spec_strength"),
+				TuningData.new().look_spec_strength if paint == PlaceholderBody.Paint.DARK else 0.0, "paint %d after a preset load" % paint)
+	# The pipe stays a glossy prop and the art keeps its per-swatch rule.
+	assert_eq(ToonMaterials.prop(Color.GRAY).get_shader_parameter(&"spec_strength"), TuningData.new().look_spec_strength, "the pipe keeps its highlight")
+	assert_eq(ToonMaterials.art(null).get_shader_parameter(&"spec_strength"), TuningData.new().look_spec_strength, "the art's swatches decide")
 
 
 func test_a_rig_has_one_toon_material_per_paint_and_the_dark_one_is_glossy_and_takes_no_marks() -> void:
@@ -949,7 +985,7 @@ func test_the_art_material_is_the_glossy_kind_and_follows_the_glint_tunables() -
 	var character := ToonMaterials.character(Color.RED, true)
 	var d := Tuning.data
 	assert_eq(art.get_shader_parameter(&"spec_gloss"), d.look_spec_gloss, "a glossy swatch of the art takes the x3 factor (the look bible)")
-	assert_eq(character.get_shader_parameter(&"spec_gloss"), 1.0, "the placeholders' own gloss is unchanged")
+	assert_eq(character.get_shader_parameter(&"spec_gloss"), 1.0, "a matte placeholder's gloss factor is 1 (and its strength 0)")
 	assert_eq(art.get_shader_parameter(&"glint_cut"), d.look_glint_cut)
 	assert_eq(art.get_shader_parameter(&"glint_strength"), d.look_glint_strength)
 	assert_null(character.get_shader_parameter(&"glint_cut"), "the glint is the art's alone")
