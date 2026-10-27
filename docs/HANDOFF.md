@@ -4,6 +4,19 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-27 13:50 CDT: V2-V6 reviewed (16 of 24 findings survive); four fixers running; V1 still reviewing
+- **Scores:** V2: J8 2, J9 1, J10 2, J11 1, J12 2. V3: J14 1. V4: J13 1, plus second opinions J4 1 and J5 1. No item scores 0. V1 (J1-J7) is still running.
+  - The findings, the verdicts, the partition and the lead's overrides are in `docs/reviews/M4/final-findings.json`.
+  - **Overrides:** final-v2-01 (stagger_back's straight arms) is IN as call 24. final-v2-02 (whole-body damage marks) and final-v3-03 (the hero's arm knob, call 19) go to Game-boy (call 25).
+- **Running since 13:45 CDT:** the fixers only. Workflow `wf_e45d9467-fd5`, `workflow-review.js` with `docs/reviews/M4/args-review-final-fix.json` (its `common_note` is in the run's args). It runs two at a time, each gated on usage. The worktrees are `.worktrees/m4-fix-final-<key>` and the branches `m4/fix-final-<key>`.
+  - **toon-light-and-ink:** the camera fill flattens front-lit bands (L2/J5); the hero's mask ink is soft; the own-body hull's L1 figures; the hero chain's literals.
+  - **punk-spawn-cache-and-evidence-acts:** the warm-up's art cache dies, so each wave's first Punk re-reads its GLB (about 19 ms); C5's KO framing; the C9 tour walks into its cast.
+  - **done-when-ratchets-and-suite-time:** ratchets that can't fail; Life's copied defaults; the suite's skinning cost; the stagger_back re-pose.
+  - **art-chain-records:** the probe report's `--check` NO; a contract test for the hero's mask; stale ASSETS rows; an orphan `.uid`.
+  - **If cut off:** rerun with the same args. A package whose branch has a `wip:` commit continues from it, and a skipped package runs once there's room.
+- **Usage:** the 5-hour window was at 67% at 13:40 and resets at 15:50 CDT. The gate skips any fixer that doesn't fit; rerun the same args after the reset.
+- **Next:** when V1 finishes, partition and fix its findings as a second wave (lenses [], its packages, the findings file extended). Then merge every fix branch with A22.
+
 ### 2026-10-27 13:35 CDT: F-cuff merged (`44b1a7e`); V1 running beside V2-V6
 - **Merged:** `m4/f-cuff` (`682ebbc`, 1561/1561 on its branch). It merged cleanly onto its own base plus two doc files, so the tested tree is the merged tree. The preset and palette were regenerated (`--check` passes).
   - **The cuff:** each glove's cuff is now a band that follows the forearm, 7.1 cm long and at most 5.8 cm from the arm's axis (8.6 before). The flange is gone.
@@ -14,7 +27,7 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 - **Running since 13:35 CDT:** V1 (the Punk standing at 1 m, J1-J7): workflow `wf_febf38e3-d3b`, round `final`, base `44b1a7e`, worktree `.worktrees/m4-review-final-v1`. V2-V6 (`wf_f116f808-22a`) are still running on `3eea29a`.
 - **Next:** when both are done, rerun `workflow-review.js` with all six lenses, `reviews` and `verdicts` from both journals, `no_fix` false and base `44b1a7e`, so the fixers run.
 
-### 2026-10-27 13:05 CDT: the fix round merged (1561 tests, all passing); F-cuff and the final review (V2-V6) running
+### 2026-10-27 12:38 CDT: the fix round merged (1561 tests, all passing); F-cuff and the final review (V2-V6) running
 - **Merged:** `m4/f-punk-fix` (`891b7b1`), `m4/f-player-fix` (`7faf7ce`) and `m4/p3-int` (`60d35c1`), with no conflicts. Then the A22 routine: the preset, the palette atlas (23 swatches, `--check` passes) and the import. The full suite was 1560/1561 with 0 SCRIPT, SHADER or ERROR lines. The one failure was `test_m4_done_when`'s A1 mesh list, which P3-int wrote before F-player-fix added `Body__fp_torso`. It's fixed in `3eea29a`, and the done-when file passes 18/18. Also in `3eea29a`: two stray `.uid` files F-punk-fix committed in `tests/` are removed, and the F-player-int paragraph "The hull" is updated, since P3-int moved that code.
   - **F-punk-fix:**
     - a clean dark glove collar (no yellow, no slivers);
@@ -42,7 +55,7 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
     - The collar is a wide flat flange under each fist (a "plunger base"). A9's 4-point lens-share bar forced it, because the art is slimmer than the proxies' fist box.
     - The lens is cream, where the concept's is gold.
   - Judgement call 22: the cuff follows the concept, and a pose that misses the share bar becomes a ratchet. Call 23: the review runs beside F-cuff, with V1 held.
-- **Running since 13:00 CDT:**
+- **Running since 12:40 CDT:**
   - **F-cuff:** workflow `wf_990bebea-f76`, `workflow-build.js` with `docs/reviews/M4/args-F-cuff.json`; worktree `.worktrees/m4-f-cuff`, branch `m4/f-cuff`. It reshapes the cuff into the concept's wrist band and A/Bs the lens (the cap's yellow inside the dark frame, against the cream). **If cut off:** rerun it with the same args; it resumes from the branch.
   - **The final review, V2-V6:** workflow `wf_f116f808-22a`, `workflow-review.js` with `docs/reviews/M4/args-review-final.json` (round `final`, base `3eea29a`, `no_fix` true, one skeptic per finding). The worktrees are `.worktrees/m4-review-final-<lens>`. **If cut off:** rerun it with the same args, plus `reviews` and `verdicts` from the journal (`subagents/workflows/wf_f116f808-22a/journal.jsonl`) for the agents that finished.
 - **Next:**

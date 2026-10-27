@@ -1,0 +1,121 @@
+{
+ "round": "final",
+ "base": "6b22926",
+ "base_branch": "m4/art-pipeline",
+ "lenses": [],
+ "no_fix": false,
+ "fix_concurrency": 2,
+ "findings_path": "/Users/arachne/repos/beat-em-up-PoC/docs/reviews/M4/final-findings.json",
+ "costs": {
+  "reviewer": 6,
+  "skeptic": 1,
+  "partition": 1,
+  "fixer": 6
+ },
+ "packages": {
+  "packages": [
+   {
+    "key": "toon-light-and-ink",
+    "title": "The toon light and ink: the camera fill that flattens front-lit bands (J5), the hero's soft detail-mask ink, the own-body hull L1 figures, the hero chain's literals",
+    "finding_ids": [
+     "final-v4-01",
+     "final-v3-01",
+     "final-v3-02",
+     "final-v4-02",
+     "final-v5-02"
+    ],
+    "files": [
+     "game/fx/toon_light.gdshaderinc",
+     "game/fx/toon.gdshader",
+     "game/fx/toon_materials.gd",
+     "game/autoload/tuning_data.gd (Look > Toon and Look > Outline subgroups only)",
+     "game/actors/art/player_art.tres (only if the sharp-ink switch lives on the art)",
+     "tests/test_toon.gd",
+     "tests/test_look_post.gd",
+     "tools/pipeline/player_detail.py",
+     "tools/pipeline/player_parts.py",
+     "assets/source/characters/player/pipeline.json",
+     "assets/source/characters/player/report/report.json",
+     "assets/source/characters/player/report/stills/apose_sheet.png (new, committed)",
+     "assets/export/characters/player/player_detail.png",
+     "assets/export/characters/player/player_detail.png.import",
+     ".gitignore",
+     "docs/ARCHITECTURE.md",
+     "docs/milestones/M4-calls/P3-int.md",
+     "docs/milestones/M4-calls/F-look.md",
+     "docs/milestones/M4-calls/F-player-art.md",
+     "docs/milestones/M4-calls/R-look.md (new: this package's calls)"
+    ],
+    "notes": "Read this package's full partition notes in /Users/arachne/repos/beat-em-up-PoC/docs/reviews/M4/final-findings.json under packages.packages (the entry whose key is toon-light-and-ink) before anything else."
+   },
+   {
+    "key": "punk-spawn-cache-and-evidence-acts",
+    "title": "The Punk's art cache dies with the warm-up rig (each wave's first Punk re-reads punk.glb), and the C5/C13 KO framing and the C9 tour cast",
+    "finding_ids": [
+     "final-v6-01",
+     "final-v2-03",
+     "final-v4-04"
+    ],
+    "files": [
+     "game/level/room_kit.gd",
+     "game/actors/skinned_art.gd (only if the strong-hold route is chosen)",
+     "tests/test_art_warm_cache.gd (new)",
+     "tests/bot/acts/look_acts.gd",
+     "tests/test_look_acts.gd",
+     "docs/milestones/M4-calls/SL-int.md",
+     "docs/milestones/M4-calls/L0-bench.md"
+    ],
+    "notes": "Read this package's full partition notes in /Users/arachne/repos/beat-em-up-PoC/docs/reviews/M4/final-findings.json under packages.packages (the entry whose key is punk-spawn-cache-and-evidence-acts) before anything else."
+   },
+   {
+    "key": "done-when-ratchets-and-suite-time",
+    "title": "Ratchets that can't fail (A7's problems_max and the loose A4/A6/A9/A11 ratchets), Life's copied Motion defaults, and the suite's whole-mesh skinning cost; the stagger_back re-pose (the lead's call 24)",
+    "finding_ids": [
+     "final-v6-02",
+     "final-v6-03",
+     "final-v6-05",
+     "final-v6-06",
+     "final-v2-01"
+    ],
+    "files": [
+     "tests/art_strain.gd",
+     "tests/test_m4_done_when.gd",
+     "tests/test_skinned_art.gd",
+     "tests/test_art_player.gd",
+     "tests/test_art_punk.gd",
+     "tests/test_motion_m4.gd",
+     "tests/skinned_view.gd",
+     "tests/fixtures/motion/motion_probe.gd",
+     "tests/fixtures/motion/ (new M3 deformation fixture)",
+     "game/actors/placeholder_anims.gd",
+     "CLAUDE.md",
+     "docs/milestones/M4-calls/R-tests.md (new: this package's calls)",
+     "game/actors/placeholder_poses.gd (stagger_back_a and stagger_back_b only)",
+     "tests/fixtures/motion/move_clip_hashes.json (the stagger_back hashes, regenerated with tests/fixtures/motion/gen_clip_hashes.tscn)",
+     "tests/test_humanoid_rig.gd and tests/test_ragdoll.gd (only if the stagger re-pose moves a pinned figure, logged old -> new with a twin)"
+    ],
+    "notes": "Read this package's full partition notes in /Users/arachne/repos/beat-em-up-PoC/docs/reviews/M4/final-findings.json under packages.packages (the entry whose key is done-when-ratchets-and-suite-time) before anything else."
+   },
+   {
+    "key": "art-chain-records",
+    "title": "The art chain's records: the stale probe report, the hero mask's missing contract test, the stale ASSETS.md rows, an orphan .uid",
+    "finding_ids": [
+     "final-v5-01",
+     "final-v5-07",
+     "final-v5-03",
+     "final-v5-06"
+    ],
+    "files": [
+     "tests/fixtures/art/probe_report.json",
+     "tests/test_art_contract.gd",
+     "ASSETS.md",
+     "tests/scratch_measure.gd.uid (delete)",
+     "docs/milestones/M4-calls/R-chain.md (new: this package's calls)"
+    ],
+    "notes": "Read this package's full partition notes in /Users/arachne/repos/beat-em-up-PoC/docs/reviews/M4/final-findings.json under packages.packages (the entry whose key is art-chain-records) before anything else."
+   }
+  ],
+  "unassigned": []
+ },
+ "common_note": "(as launched in wf_e45d9467-fd5; see that run's args)"
+}
