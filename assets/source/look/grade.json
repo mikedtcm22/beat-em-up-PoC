@@ -1,0 +1,17 @@
+{
+	"name": "street_dusk",
+	"comment": "The color grade of Milestone 4 (docs/milestones/M4-look-bible.md, Colour): cool shadows, warm highlights, low-chroma colors (the street) tinted and slightly desaturated, the enemies' and the blood's saturated colors kept, and pure white stays white above `white_keep_luma`, so the hit flash does (a saturated color takes only `saturated_tint_share` of the tint and none of the desaturation). Every value is read by tools/gen_lut.gd; colors are sRGB 0-1, since the LUT is applied to the picture after tonemapping. The LUT is N slices of N x N pixels: slice = blue, x = red, y = green.",
+	"size": 32,
+	"shadow_tint": [0.74, 0.84, 1.0],
+	"shadow_amount": 0.6,
+	"shadow_end_luma": 0.75,
+	"highlight_tint": [1.0, 0.9, 0.74],
+	"highlight_amount": 0.5,
+	"highlight_start_luma": 0.3,
+	"white_keep_luma": 0.88,
+	"saturated_tint_share": 0.35,
+	"low_chroma_saturation": 0.78,
+	"chroma_low": 0.15,
+	"chroma_high": 0.5,
+	"keep_delta_e": 6.0
+}

@@ -1060,10 +1060,30 @@ extends Resource
 @export_subgroup("Edges")
 ## The post-process edge lines on the environment (creases, silhouettes, floor edges).
 @export var look_edges_enabled: bool = true
+## The edge lines' width in pixels at 1080p (the look bible: 1 to 1.5 px; the pass draws whole
+## pixels, so 1.5 and 1.0 differ only at a 1440p or taller screen).
+@export_range(0.5, 4.0, 0.05) var look_edge_px: float = 1.25
+## How big a depth step draws a silhouette line: the share of the one-over-distance the next
+## pixels lose (0.5 = half). A plane never draws, however steep.
+@export_range(0.02, 1.0, 0.01) var look_edge_depth_threshold: float = 0.08
+## How sharp a corner draws a crease line: one minus the dot product of the two neighbouring
+## surface normals (0 = flat, 1 = a right angle).
+@export_range(0.05, 1.0, 0.01) var look_edge_normal_threshold: float = 0.35
+## The lines fade out between these two distances (m): the look bible's 25 m to 60 m.
+@export_range(1.0, 200.0, 1.0) var look_edge_fade_start_m: float = 25.0
+@export_range(2.0, 300.0, 1.0) var look_edge_fade_end_m: float = 60.0
+## The character mask's reach in pixels at 1080p: no edge line is drawn this close to a drawn
+## character, whose hull is the line there (the hull's width bound is 4.5 px).
+@export_range(0.0, 16.0, 0.5) var look_edge_mask_px: float = 6.0
+## The anti-aliasing: 0 = 4x MSAA (the project's), 1 = FXAA (the cheap one for the Mac), 2 = off.
+## Applied to the room's viewport; project.godot is untouched.
+@export_range(0, 2, 1) var look_aa_mode: int = 0
 
 @export_subgroup("Grade")
 ## The color grade (a LUT: cool shadows, warm highlights).
 @export var look_grade_enabled: bool = true
+## How much of the grade shows: 0 = the picture as it is, 1 = the whole LUT.
+@export_range(0.0, 1.0, 0.05) var look_grade_strength: float = 1.0
 
 @export_subgroup("FP feel")
 ## First-person feel alternative: the non-KO knockdown hides the torso slab that fills the
@@ -1079,6 +1099,16 @@ extends Resource
 ## Draw the skinned art (on) or the placeholder primitives it stands in for (off): the live
 ## A/B of Milestone 4. Presets never hold it.
 @export var look_show_art: bool = true
+## The edge pass's debug view: 0 = the picture, 1 = the roughness buffer (white = the world, black =
+## a character or the sky), 2 = the normals, 3 = the distance, 4 = the character mask (red),
+## 5 = only the depth lines, 6 = only the crease lines.
+@export_range(0, 6, 1) var look_edge_debug_view: int = 0
+## A8's switch: the edge pass skips pixels near a drawn character (on), or draws its depth lines
+## there too (off: the fallback for a thinner hull, the lines may double).
+@export var look_edge_character_mask: bool = true
+## The cheap fallback: depth lines only, so the renderer makes no normal-roughness buffer (no
+## creases, no character mask).
+@export var look_edge_depth_only: bool = false
 
 
 func hitstop_s(tier: CombatTypes.HitTier) -> float:

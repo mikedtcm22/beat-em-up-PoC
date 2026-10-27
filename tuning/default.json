@@ -462,7 +462,15 @@
 		"look_outline_px": 3.75,
 		"look_hull_on_placeholders": true,
 		"look_edges_enabled": true,
+		"look_edge_px": 1.25,
+		"look_edge_depth_threshold": 0.08,
+		"look_edge_normal_threshold": 0.35,
+		"look_edge_fade_start_m": 25.0,
+		"look_edge_fade_end_m": 60.0,
+		"look_edge_mask_px": 6.0,
+		"look_aa_mode": 0,
 		"look_grade_enabled": true,
+		"look_grade_strength": 1.0,
 		"fp_knockdown_hide_torso": false
 	},
 	"moves": {}
