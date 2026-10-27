@@ -1,0 +1,7 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://tests/fixtures/skin_punk.gd" id="1_skin"]
+
+[node name="SkinPunk" type="CharacterBody3D"]
+script = ExtResource("1_skin")
+display_name = "Punk"
