@@ -6,7 +6,8 @@ extends Sprite3D
 ##           full size, back), holds and fades, always facing the active camera;
 ##   THROWN  a blood droplet, a spit drop or a tooth: flies under gravity from the contact,
 ##           facing the camera, a droplet's tail trailing its flight on screen;
-##   LYING   a blood splat on the ground (or a wall), flat along the surface, lit.
+##   LYING   a blood splat on the ground (or a wall), flat along the surface, unshaded and a little
+##           dark (the same material as a thrown droplet).
 ## Sizes are widths in meters. Facing effects are capped to Tuning.vfx_max_view_share of
 ## the view's width at their depth and kept Tuning.vfx_min_camera_dist_m off the lens, so
 ## a hit a meter from the first-person lens never fills the screen; popping effects are at
