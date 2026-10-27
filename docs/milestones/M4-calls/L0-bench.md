@@ -73,3 +73,9 @@ Package L0-bench (M4-plan Part A A12): the look acts, `look_rect.gd`, `look_shee
 ## 12. Numbers in the act files
 
 - The acts' distances, pitches, tick counts and cast are `const`s at the top of `look_acts.gd`, as the other bot act files keep theirs (`crowd_acts.gd`, `slice_acts.gd`). They are test tooling, not game feel. Everything the game decides (the Punk's circle speed, its step speed, the move's frames, the flash's frames) is read from `Tuning` and the moves.
+
+## 13. Unvsynced windows stall here: a --vsync option and a stall count
+
+- **Finding.** The proof run of `perf_compare.sh` (vsync off, as the plan says) printed a 1.0 s frame every few seconds (mean 59 ms, spawn hitch 1043 ms). It is not the load (the same stalls at load 3 and 8) and not the checkout (the same in the main worktree), and a 120 fps cap does not remove it. With vsync on the same act has none (one 1.0 s frame in the first second of the process). A 1.0 s stall is the length of a Metal drawable that is not released, so it looks like an unvsynced window that is not being presented (this was an unattended session). I did not find a way to verify that.
+- **Decision.** Vsync off stays the default (the plan); `--vsync on` is the fallback, `perf_bot.gd` counts `stalls` (frames of 0.5 s or more), and the report warns when a run has more than two. A real comparison must read the stall row first.
+- **Alternative.** Make vsync on the default. Not done: with vsync on, frame times are quantised to the display's refresh, so a p95 near 16.7 ms says little, and the plan's soft bars (A16) are written for unvsynced times. Left for the lead to rule on after a quiet run of both.
