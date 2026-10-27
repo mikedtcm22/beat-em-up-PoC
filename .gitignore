@@ -36,3 +36,10 @@ HANDOFF-SNAPSHOT.md
 
 # Rejected raw outputs and intermediates of the art pipeline (M4)
 assets/source/_cache/
+
+# Per-run pipeline stills and dump copies (only the A/B and pose sheets are committed)
+assets/source/characters/*/report*/stills/*_front.png
+assets/source/characters/*/report*/stills/*_side.png
+assets/source/characters/*/report*/stills/*_three_quarter.png
+assets/source/characters/*/report*/stills/*_sheet.png
+assets/source/characters/*/report*/bones.json
