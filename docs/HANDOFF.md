@@ -4,6 +4,25 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-27 04:40 CDT: the gate's fixes merged (1385/1385); F-look and F-motion running; the one pick reminder sent
+- **Merged:**
+  - `m4/fix-slice-chain-contract` (`85a24dd`): the hull normals in glTF axes, re-export proven to change only COLOR_0; the skin damage class; run.py step checks.
+  - `m4/fix-slice-drawn-art-instruments` (`ef38dba`): R4 on art, SkinnedView's drawn pose, A7's flips against the skinned rest, the warm-up in the lens (act W1).
+  - The atlas check passes, the preset is at 492 values, and the suite is 1385/1385 with 0 SCRIPT, SHADER or ERROR lines.
+  - SG-instruments' ARCHITECTURE sentences are pasted, and the gate doc's "Fixes made" is filled.
+- **The lead's look:** C1 at 1 m now has the ink line over the cap crown and forearms. At C5 30% health, the skin takes bruises and blood, but still reads lilac and glassy, and the cap and lenses wear too much blood. Those are brief lines for F-look (in its brief) and F-punk.
+- **Running:**
+  - F-look, launched 04:35 as `wf_a9c179b1-77a` (args `docs/reviews/M4/args-F-look.json` plus `"only": ["F-look"]`; worktree `.worktrees/m4-f-look`, branch `m4/f-look`). It has the gate's gaps 2, 6 and 11 and the phase-1 look requests.
+  - F-motion (`wf_d130ab18-851`), still running.
+- **Not re-measured:** first spawn and first hit after the warm-up fix, because two builders share the machine. That moves to P3-int's quiet-machine perf A/B.
+- **Pick reminder (A21's one reminder)** sent at 04:37 in the DM (ts `1793093835.705379`): only pick-dependent work is left (F-punk, F-player-art, F-player-int). Never send another and never pick for him.
+- **Usage:** 5-hour 44% at 04:35 (resets 05:50); weekly 25%.
+- **Next:**
+  1. Merge F-motion and F-look as they land (A22 order: F-motion first), with the suite after each.
+  2. Read the DM at each boundary.
+  3. On the pick: F-punk (views, T4-T10) and F-player-art (views, T11-T14), then F-player-int. Their briefs carry the gate's F-punk gap lines (3, 4, 5, 7, 9, 13, plus the lens and cap swatch marks).
+  4. Without a pick: P3-int's parts that don't need the real Punk.
+
 ### 2026-10-27 04:10 CDT: the slice gate's verdict is (b), proven with a contingency; its two fixers and F-motion running
 - **The gate** (`wf_36e8400a-165`): two Opus lenses, 16 findings, 10 survive one Sonnet skeptic each. Both lenses gave verdict **(b)**. The lead wrote `docs/milestones/M4-slice-gate.md`: the pass items with evidence, the locks, 13 ranked gaps with owners, and the refuted findings. The full output is in `docs/reviews/M4/slice-result.json`.
 - **Locked:**
