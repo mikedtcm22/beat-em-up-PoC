@@ -1,7 +1,7 @@
 {
 	"asset": "punk",
 	"version": 2,
-	"config_sha256": "d9bc71aeedbded14f3e171bbb83fff48042e69f9c9cae347c57ba96f8f52aad4",
+	"config_sha256": "091d0a4ab89d823dc5a5b490de53f7e78b9f128c65a29572308d05e23e3f1a67",
 	"steps": {
 		"inspect": {
 			"source": {
@@ -10700,7 +10700,28 @@
 					"texels": 2318,
 					"gate_share": 0.3326
 				},
-				"sha256": "87fee43d82e925b7694b36561ad6c0f3b8b8d698ff1ebac8926d2f17038fce8c"
+				"clean": {
+					"before": {
+						"pieces": 1137,
+						"texels": 7319,
+						"pieces_le6": 879,
+						"texels_in_le6_share": 0.251,
+						"median": 2.0,
+						"pieces_over20": 69
+					},
+					"after": {
+						"pieces": 383,
+						"texels": 7196,
+						"pieces_le6": 117,
+						"texels_in_le6_share": 0.0705,
+						"median": 10.0,
+						"pieces_over20": 89
+					},
+					"bridged_texels": 254,
+					"pieces_dropped": 652,
+					"texels_dropped": 1081
+				},
+				"sha256": "097200bed74f0bae71e797e3d2162f9c0f892caf2dccc8c36d66dc8360d571e4"
 			},
 			"regions": [
 				{
@@ -11008,7 +11029,7 @@
 		"punk.glb": "696429ed95ae609e386efccd997eb6f6435eb6d2402e50f0cf7504e8e0a7c862",
 		"punk_rest.glb": "2c9a9405519be134ed2571e1ae1fe9b88467ae48a890a8f9eb4b7eebbd5c8977"
 	},
-	"hash": "389eb532dd5c861576412919058d325c6623dbc891cdd0835ca0e6ae9f5623a1",
+	"hash": "6c91a10d33a4a4e3ea56e0807a3d0d642e5c0bd822aa858f729d95255d83928c",
 	"stills": {
 		"variants": {
 			"apose": {

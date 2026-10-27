@@ -14,6 +14,12 @@ because every face is one flat swatch. The mask is the thin dark lines of the so
 	   texture-space ink (bilinear). So the mask holds the lines of the generated texture and no shading, whatever the
 	   decimation did to the mesh;
 	3. written as an 8-bit PNG, R = ink (the toon shader mixes toward ink by `.r`), G = the glint gate (below), B 0.
+The stroke cleanup (rescore-rs-03, config `detail_bake.clean`): the bake takes one bilinear tap per 2.6 mm texel from a source whose
+lines are about 1 to 3 mm wide, so a strand came out as dots and short dashes (886 of 1,144 pieces were 6 texels or fewer, the median 2)
+and the shader's cut drew each as a dot, with a texel staircase for an edge. Before the file is written the gaps inside a stroke (up to
+`bridge_px` texels) are bridged, every piece shorter than `min_extent_texels` (its bounding box's long side) or smaller than
+`min_texels` is dropped, so a strand is one continuous line whose end thins out and a speck is gone, and the cleaned
+mask may be blurred a little (`smooth_sigma`, `smooth_gain`) so the shader's cut draws a smooth contour, not a staircase. See clean_strokes().
 The glint gate (rescore-rs-01, config `detail_bake.glint`): the shades' lens is the one glossy swatch, and its glint is a cap on an angle,
 which whites the whole lens out when the head tips back. G holds the AUTHORED streaks of concept A, two diagonal bands per eye, as a
 signed-distance ramp (0.5 on a band's edge, so the shader's cut at 0.5 draws the edge sharp from a 1k texel) on the lens's texels only;
@@ -158,6 +164,149 @@ def rasterize(me, layer_name, size):
 	return np.stack([rows, cols], axis=1), pos, face_of_texel
 
 
+def pieces_of(ink):
+	"""The 8-connected pieces of a boolean image (h, w): a list of (rows, cols) index arrays."""
+	h, w = ink.shape
+	seen = np.zeros_like(ink)
+	out = []
+	for y0, x0 in zip(*np.nonzero(ink)):
+		if seen[y0, x0]:
+			continue
+		seen[y0, x0] = True
+		stack, rows, cols = [(y0, x0)], [], []
+		while stack:
+			y, x = stack.pop()
+			rows.append(y)
+			cols.append(x)
+			for dy in (-1, 0, 1):
+				for dx in (-1, 0, 1):
+					yy, xx = y + dy, x + dx
+					if 0 <= yy < h and 0 <= xx < w and ink[yy, xx] and not seen[yy, xx]:
+						seen[yy, xx] = True
+						stack.append((yy, xx))
+		out.append((np.array(rows), np.array(cols)))
+	return out
+
+
+def piece_stats(pieces):
+	"""How fragmented a stroke layer is: the number of pieces, of 6 texels or fewer (and their share of the ink texels), the median
+	piece and the pieces over 20 texels."""
+	sizes = np.array([len(p[0]) for p in pieces]) if pieces else np.zeros(0, dtype=np.int64)
+	total = max(int(sizes.sum()), 1)
+	return {"pieces": int(len(sizes)), "texels": int(sizes.sum()), "pieces_le6": int((sizes <= 6).sum()),
+		"texels_in_le6_share": round(float(sizes[sizes <= 6].sum()) / total, 4), "median": float(np.median(sizes)) if len(sizes) else 0.0,
+		"pieces_over20": int((sizes > 20).sum())}
+
+
+def shifted(a, dy, dx):
+	"""`a` (h, w) moved by (dy, dx) texels (out[y, x] = a[y - dy, x - dx]); what comes from outside the image is the array's zero."""
+	h, w = a.shape
+	out = np.zeros_like(a)
+	ys, yd = (slice(0, h - dy), slice(dy, h)) if dy >= 0 else (slice(-dy, h), slice(0, h + dy))
+	xs, xd = (slice(0, w - dx), slice(dx, w)) if dx >= 0 else (slice(-dx, w), slice(0, w + dx))
+	out[yd, xd] = a[ys, xs]
+	return out
+
+
+def orientation_at(ink, ys, xs, radius):
+	"""The direction a stroke runs at each ink texel (ys, xs): the principal axis of the ink texels within `radius` of it, as a unit
+	vector (dy, dx) and the share of the variance on it (1 = a straight line, 0.5 = a blob). Nothing is assumed of a texel alone: a
+	single texel takes the direction of whatever ink is near it."""
+	h, w = ink.shape
+	out = np.zeros((len(ys), 2))
+	straight = np.zeros(len(ys))
+	for i, (y, x) in enumerate(zip(ys, xs)):
+		win = ink[max(y - radius, 0):min(y + radius + 1, h), max(x - radius, 0):min(x + radius + 1, w)]
+		wy, wx = np.nonzero(win)
+		if len(wy) < 2:
+			continue
+		pts = np.stack([wy, wx], axis=1).astype(np.float64)
+		pts -= pts.mean(axis=0)
+		vals, vecs = np.linalg.eigh(pts.T @ pts)
+		out[i] = vecs[:, 1]
+		straight[i] = vals[1] / max(vals.sum(), 1e-9)
+	return out, straight
+
+
+def bridge_gaps(ink, covered, gap, radius=3, align_deg=35.0, min_straight=0.0):
+	"""Fill the gaps along a stroke: for two ink texels with up to `gap` empty texels between them in a straight run (a row, a column or
+	a diagonal), the gap is filled when that direction is within `align_deg` of the way the stroke runs at BOTH ends (orientation_at over
+	`radius`) and the ink round both ends is straight enough (`min_straight`, the share of its variance on the axis). So a strand that broke into dots or dashes is one line again, while two parallel strands a texel or two apart (the pair
+	runs across them) are not joined, which a closing would do, and a blot is not made. Only texels a triangle covers are filled."""
+	out = ink.copy()
+	ys, xs = np.nonzero(ink)
+	index = -np.ones(ink.shape, dtype=np.int64)
+	index[ys, xs] = np.arange(len(ys))
+	direction, straight = orientation_at(ink, ys, xs, radius)
+	cos_min = np.cos(np.radians(align_deg))
+	h, w = ink.shape
+	for i, (y, x) in enumerate(zip(ys, xs)):
+		for dy, dx in ((0, 1), (1, 0), (1, 1), (1, -1), (0, -1), (-1, 0), (-1, -1), (-1, 1)):
+			unit = np.array([dy, dx], dtype=np.float64)
+			unit /= np.linalg.norm(unit)
+			if straight[i] < min_straight or abs(float(direction[i] @ unit)) < cos_min:
+				continue
+			for k in range(2, gap + 2):
+				yy, xx = y + dy * k, x + dx * k
+				if not (0 <= yy < h and 0 <= xx < w):
+					break
+				if not ink[yy, xx]:
+					continue
+				j = index[yy, xx]
+				if straight[j] >= min_straight and abs(float(direction[j] @ unit)) >= cos_min and all(not ink[y + dy * m, x + dx * m] for m in range(1, k)):
+					for m in range(1, k):
+						if covered[y + dy * m, x + dx * m]:
+							out[y + dy * m, x + dx * m] = True
+				break
+	return out
+
+
+def blur(a, sigma):
+	"""A separable Gaussian blur (sigma in texels) of a float image, zero outside it."""
+	r = max(int(np.ceil(3.0 * sigma)), 1)
+	k = np.exp(-0.5 * (np.arange(-r, r + 1) / sigma) ** 2)
+	k /= k.sum()
+	out = np.zeros_like(a)
+	for i, wgt in enumerate(k):
+		out += wgt * shifted(a, i - r, 0)
+	res = np.zeros_like(a)
+	for i, wgt in enumerate(k):
+		res += wgt * shifted(out, 0, i - r)
+	return res
+
+
+def clean_strokes(mask, covered, cc):
+	"""`mask` (h, w) 0..1 with the strokes in it, `covered` (h, w) bool: the texels a triangle of the mesh covers. The strokes are
+	the texels over `cut` (the shader's cut); gaps of up to `bridge_px` texels along a stroke are bridged (bridge_gaps), every piece whose bounding
+	box's long side is under `min_extent_texels` or that has fewer than `min_texels` texels is dropped (a speck, a dot of a faded strand's
+	end), and with `smooth_sigma` > 0 the cleaned mask is blurred (`smooth_gain` times a Gaussian of that sigma in texels), so the shader's
+	cut draws a smooth contour, not the texel staircase of a diagonal strand. The kept strokes keep their values and a bridged
+	texel takes `close_value`. Returns (the cleaned mask, a report with the pieces before and after)."""
+	cut = float(cc.get("cut", 0.15))
+	ink = mask > cut
+	before = piece_stats(pieces_of(ink))
+	joined = bridge_gaps(ink, covered, int(cc.get("bridge_px", 1)), int(cc.get("orient_radius_px", 3)), float(cc.get("align_deg", 35.0)), float(cc.get("min_straight", 0.0))) \
+		if int(cc.get("bridge_px", 1)) > 0 else ink
+	keep = np.zeros_like(ink)
+	for rows, cols in pieces_of(joined):
+		extent = max(int(rows.max() - rows.min()), int(cols.max() - cols.min())) + 1
+		if extent >= int(cc.get("min_extent_texels", 4)) and len(rows) >= int(cc.get("min_texels", 5)):
+			keep[rows, cols] = True
+	dropped = joined & ~keep
+	out = mask.copy()
+	fill = keep & ~ink
+	out[fill] = np.maximum(out[fill], float(cc.get("close_value", 0.6)))
+	# the dropped pieces and their faint flanks (values under the cut that are not a kept stroke's own) go
+	zone = (dilate(dropped.astype(np.float32), 1) > 0.5) & ~(dilate(keep.astype(np.float32), 1) > 0.5)
+	out[dropped | zone] = 0.0
+	sigma = float(cc.get("smooth_sigma", 0.0))
+	if sigma > 0.0:
+		out = np.clip(float(cc.get("smooth_gain", 1.0)) * blur(out, sigma), 0.0, 1.0)
+	after = piece_stats(pieces_of(out > cut))
+	return out, {"before": before, "after": after, "bridged_texels": int((joined & ~ink).sum()), "pieces_dropped": int(len(pieces_of(dropped))),
+		"texels_dropped": int(dropped.sum())}
+
+
 def glint_field(pos, cfg):
 	"""The streak gate at surface points pos (n, 3) of a Blender Z-up character facing +Y: 0..1, 0.5 on a band's edge. `cfg`:
 	slant_deg (a band leans to the viewer's right going up, as concept A's streaks do), z_mid_m (the lens's mid height, where a band's
@@ -259,6 +408,11 @@ def bake(me, layer_name, image, dense_bvh, dense_verts, dense_tris, dense_uv, cf
 					"ink_texels_share": float((value[m] > 0.5).mean())}
 	mask = np.zeros((size, size), dtype=np.float32)
 	mask[texel[:, 0], texel[:, 1]] = value
+	clean_report = None
+	if cfg.get("clean"):
+		on_surface = np.zeros((size, size), dtype=bool)
+		on_surface[texel[:, 0], texel[:, 1]] = True
+		mask, clean_report = clean_strokes(mask, on_surface, cfg["clean"])
 	grow = int(cfg.get("grow_px", 0))
 	if grow > 0:
 		mask = dilate(mask, grow)
@@ -276,7 +430,7 @@ def bake(me, layer_name, image, dense_bvh, dense_verts, dense_tris, dense_uv, cf
 		glint_report = {"texels": int(lens.sum()), "gate_share": round(float((field[lens] > 0.5).mean()), 4) if lens.any() else 0.0}
 	_write_gray(mask, out_png, "punk_detail", gate)
 	return {"size": size, "texels": int(len(pos)), "ink_texels_share": float((value > 0.5).mean()), "mean_ink": float(value.mean()),
-		"png": out_png, "zones": zone_report, "glint": glint_report}
+		"png": out_png, "zones": zone_report, "glint": glint_report, "clean": clean_report}
 
 
 def _write_gray(a, path, name, g=None):

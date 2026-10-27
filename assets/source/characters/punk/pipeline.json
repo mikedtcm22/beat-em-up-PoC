@@ -430,6 +430,17 @@
 						"width_m": 0.007
 					}
 				]
+			},
+			"clean": {
+				"cut": 0.15,
+				"bridge_px": 1,
+				"orient_radius_px": 3,
+				"align_deg": 35.0,
+				"min_straight": 0.0,
+				"min_extent_texels": 4,
+				"min_texels": 4,
+				"smooth_sigma": 0.5,
+				"smooth_gain": 1.05
 			}
 		},
 		"regions": [

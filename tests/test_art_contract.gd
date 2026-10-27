@@ -737,6 +737,72 @@ func test_the_punks_shading_normals_are_smoothed_not_lumpy() -> void:
 		assert_lt(mean, NORMAL_MEAN_DEG_MAX, "%s: and the mean disagreement is small" % path)
 
 
+## Re-score rs-03: the Punk's strokes are lines, not dots. The bake takes one bilinear tap per 2.6 mm texel from lines about 1 to 3 mm wide, so
+## a strand came out as dots and dashes: of 1,144 pieces over the shader's cut (look_detail_cut 0.15 of 255 = 38) 886 were 6 texels or fewer,
+## a quarter of the ink texels, with a median of 2. pipe_detail.clean_strokes bridges the gaps along a stroke and drops the short pieces
+## (`detail_bake.clean`): the pieces of 6 texels or fewer are now a few percent of the ink and the median is a line's length.
+const STROKE_CUT_8BIT := 38
+const STROKE_SMALL_TEXELS := 6
+const STROKE_SMALL_SHARE_MAX := 0.12
+const STROKE_MEDIAN_MIN := 6
+const STROKE_PIECES_MAX := 600
+
+
+func test_the_punks_strokes_are_lines_not_dots() -> void:
+	var art := load("res://game/actors/art/punk_art.tres") as CharacterArt
+	if art == null or art.detail_mask == null:
+		return
+	var image := art.detail_mask.get_image()
+	if image.is_compressed():
+		image.decompress()
+	var size := image.get_width()
+	var channels := 4 if image.get_format() == Image.FORMAT_RGBA8 else 3
+	assert_true(image.get_format() == Image.FORMAT_RGBA8 or image.get_format() == Image.FORMAT_RGB8, "an 8-bit mask")
+	var bytes := image.get_data()
+	var ink := PackedByteArray()
+	ink.resize(size * size)
+	for i: int in size * size:
+		ink[i] = 1 if bytes[i * channels] > STROKE_CUT_8BIT else 0
+	var sizes: Array[int] = []
+	for start: int in size * size:
+		if ink[start] != 1:
+			continue
+		ink[start] = 2
+		var stack := PackedInt32Array([start])
+		var count := 0
+		while not stack.is_empty():
+			var at := stack[stack.size() - 1]
+			stack.resize(stack.size() - 1)
+			count += 1
+			var x := at % size
+			var y := at / size
+			for dy: int in [-1, 0, 1]:
+				for dx: int in [-1, 0, 1]:
+					var nx := x + dx
+					var ny := y + dy
+					if nx < 0 or ny < 0 or nx >= size or ny >= size:
+						continue
+					var n := ny * size + nx
+					if ink[n] == 1:
+						ink[n] = 2
+						stack.append(n)
+		sizes.append(count)
+	sizes.sort()
+	var total := 0
+	var small := 0
+	for n: int in sizes:
+		total += n
+		if n <= STROKE_SMALL_TEXELS:
+			small += n
+	var share := float(small) / float(maxi(total, 1))
+	var median := sizes[sizes.size() / 2] if not sizes.is_empty() else 0
+	gut.p("ART-CONTRACT strokes: %d pieces over the cut, median %d texels, %.1f%% of the ink texels in pieces of %d or fewer" % [sizes.size(), median, share * 100.0, STROKE_SMALL_TEXELS])
+	assert_gt(total, 3000, "there are strokes")
+	assert_lt(share, STROKE_SMALL_SHARE_MAX, "few of the ink texels are in dots (the bake measured a quarter before the cleanup)")
+	assert_gte(median, STROKE_MEDIAN_MIN, "the median piece is a line, not a dot (it was 2 texels)")
+	assert_lt(sizes.size(), STROKE_PIECES_MAX, "and the strokes are hundreds of pieces, not over a thousand (1,144 before the cleanup)")
+
+
 ## F-punk-fix, the face: the mask's ink on the face's skin is the mouth mark and the nose line, not the texture's speckle. The share
 ## of the head's skin surface (sampled at barycentric points of every skin face above the collar) whose ink is over one half stays
 ## between a floor (the lines are there) and a ceiling (the speckled mask measured 2.6%).
