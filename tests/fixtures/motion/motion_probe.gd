@@ -67,12 +67,10 @@ static func sole_vertices(mi: MeshInstance3D, rig: HumanoidRig) -> PackedInt32Ar
 ## vertices (sole_vertices()).
 static func walk_slide(mi: MeshInstance3D, rig: HumanoidRig, anim: Animation, sole: PackedInt32Array,
 		travel: Vector3, world_speed: float, step_s: float = 1.0 / 120.0) -> Dictionary:
+	# Only the sole vertices are skinned (SkinnedView.skin_subset): the whole mesh at every sample was most of the suite's
+	# time, for points the walk never reads.
 	var sampler := func(globals: Array[Transform3D]) -> PackedVector3Array:
-		var posed := SkinnedView.skin_vertices(mi, rig, globals)
-		var out := PackedVector3Array()
-		for v: int in sole:
-			out.append(posed[v])
-		return out
+		return SkinnedView.skin_subset(mi, rig, sole, globals)
 	return walk_slide_with(sampler, rig, anim, travel, world_speed, step_s)
 
 
@@ -200,3 +198,33 @@ static func strain(mi: MeshInstance3D, rig: HumanoidRig, rest: PackedVector3Arra
 	if worst_edge >= 0:
 		out.worst_bone = SkinnedView._dominant_bone(data, mi.skin, [data.edge_a[worst_edge], data.edge_b[worst_edge]])
 	return out
+
+
+## The deformation of `anim` on the art, at `samples` evenly spaced phases (the last just inside the end of a clip): the worst
+## p99.9 and p0.1 of the edges' strain against `rest` (the art skinned at the table's rest), and the largest and smallest edge,
+## `{high, low, max, min}`. The figures of the M3 clips are frozen (tests/fixtures/motion/m3_deformation.json).
+static func clip_strain(mi: MeshInstance3D, rig: HumanoidRig, rest: PackedVector3Array, anim: Animation,
+		samples: int = 17) -> Dictionary:
+	var high := 0.0
+	var low := 9.0
+	var biggest := 1.0
+	var smallest := 1.0
+	for i: int in samples:
+		var t := anim.length * float(i) / float(samples - 1) - (1e-4 if i == samples - 1 else 0.0)
+		var report := strain(mi, rig, rest, clip_globals(rig, anim, t))
+		high = maxf(high, report.p_high)
+		low = minf(low, report.p_low)
+		biggest = maxf(biggest, report.max)
+		smallest = minf(smallest, report.min)
+	return {high = high, low = low, max = biggest, min = smallest}
+
+
+## SHA-256 (hex) of the art mesh's vertices, bones and weights: what a deformation figure depends on in the GLB.
+static func art_hash(mi: MeshInstance3D) -> String:
+	var arrays := (mi.mesh as ArrayMesh).surface_get_arrays(0)
+	var context := HashingContext.new()
+	context.start(HashingContext.HASH_SHA256)
+	context.update((arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array).to_byte_array())
+	context.update((arrays[Mesh.ARRAY_BONES] as PackedInt32Array).to_byte_array())
+	context.update((arrays[Mesh.ARRAY_WEIGHTS] as PackedFloat32Array).to_byte_array())
+	return context.finish().hex_encode()

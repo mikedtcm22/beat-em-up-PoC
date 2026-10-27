@@ -45,6 +45,9 @@ class MeshData:
 	var entry_vertex: PackedInt32Array = PackedInt32Array()
 	var entry_bind: PackedInt32Array = PackedInt32Array()
 	var entry_weight: PackedFloat32Array = PackedFloat32Array()
+	## The first entry of each vertex (the entries are in vertex order), and one past the last at the end: the vertex `v`'s
+	## entries are `entry_start[v]` up to `entry_start[v + 1]`.
+	var entry_start: PackedInt32Array = PackedInt32Array()
 	## The bind that holds a vertex alone (weight >= RIGID_WEIGHT), or -1 for a blended one.
 	var rigid_bind: PackedInt32Array = PackedInt32Array()
 	## Strain data, built on first use: the edges whose two vertices are not rigid on the same
@@ -133,6 +136,25 @@ static func skin_vertices(mi: MeshInstance3D, rig: HumanoidRig, globals: Array[T
 	for e: int in data.entry_vertex.size():
 		var v := data.entry_vertex[e]
 		out[v] += transformed[data.entry_bind[e]][v] * data.entry_weight[e]
+	return out
+
+
+## The skinned positions of only the vertices `indices` of `mi` (rig space), one per index in the same order: the same skin
+## matrices and the same weights as skin_vertices(), so each point is the one skin_vertices() gives, but only the requested
+## vertices are transformed (a suite that follows a few hundred sole vertices through thousands of poses does not skin the
+## whole mesh each time: tests/fixtures/motion/motion_probe.gd).
+static func skin_subset(mi: MeshInstance3D, rig: HumanoidRig, indices: PackedInt32Array, globals: Array[Transform3D] = []) -> PackedVector3Array:
+	var data := _mesh_data(mi.mesh as ArrayMesh)
+	var matrices := _skin_matrices(mi.skin, rig, globals)
+	var out := PackedVector3Array()
+	out.resize(indices.size())
+	for k: int in indices.size():
+		var v := indices[k]
+		var at := data.vertices[v]
+		var point := Vector3.ZERO
+		for e: int in range(data.entry_start[v], data.entry_start[v + 1]):
+			point += (matrices[data.entry_bind[e]] * at) * data.entry_weight[e]
+		out[k] = point
 	return out
 
 
@@ -636,6 +658,7 @@ static func _mesh_data(mesh: ArrayMesh) -> MeshData:
 	data.rigid_bind.resize(data.vertices.size())
 	data.rigid_bind.fill(-1)
 	for v: int in data.vertices.size():
+		data.entry_start.append(data.entry_vertex.size())
 		for j: int in SkinnedArt.INFLUENCES:
 			var w := data.weights[v * SkinnedArt.INFLUENCES + j]
 			if w <= 0.0:
@@ -645,6 +668,7 @@ static func _mesh_data(mesh: ArrayMesh) -> MeshData:
 			data.entry_weight.append(w)
 			if w >= RIGID_WEIGHT:
 				data.rigid_bind[v] = data.bones[v * SkinnedArt.INFLUENCES + j]
+	data.entry_start.append(data.entry_vertex.size())
 	_data[id] = data
 	return data
 

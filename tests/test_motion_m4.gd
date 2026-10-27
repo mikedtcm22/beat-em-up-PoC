@@ -23,6 +23,7 @@ const PUNK_MOVES: Array[String] = ["punk_jab", "punk_cross", "punk_shove"]
 const ENEMY_MOVES: Array[String] = ["kicker_jump_kick", "kicker_sweep", "thug_pipe_1", "thug_pipe_2", "thug_pipe_3",
 		"bruiser_smash", "bruiser_grab", "bruiser_headbutt", "boss_slam", "boss_charge", "boss_pound", "boss_grab"]
 const PUNK_ART := "res://game/actors/art/punk_art.tres"
+const M3_DEFORMATION_PATH := "res://tests/fixtures/motion/m3_deformation.json"
 const FRAME := 1.0 / 60.0
 ## The rig sizes of the roster (the Punk, the Bruiser, the boss), as height / 1.8.
 const SCALES: Array[float] = [1.0, 1.139, 1.278]
@@ -396,6 +397,73 @@ func test_the_motion_tunables_drive_the_clips() -> void:
 	assert_lt(short.length, PlaceholderAnims.build_named(&"walk_forward", 1.0).length, "a shorter stride is a shorter cycle")
 
 
+func test_a_default_life_is_the_default_tunables_and_there_is_no_second_copy_of_them() -> void:
+	# The tests build their clips from Life.new() and the game from Life.from_tuning(): the two must be one set of numbers
+	# (CLAUDE.md: feel numbers are never script constants), or a re-tuned default leaves the tests measuring a walk nobody sees.
+	var fresh := PlaceholderAnims.Life.new()
+	var live := PlaceholderAnims.Life.from_tuning()
+	var names := PackedStringArray()
+	for info: Dictionary in fresh.get_property_list():
+		if int(info.usage) & PROPERTY_USAGE_SCRIPT_VARIABLE:
+			names.append(String(info.name))
+			assert_eq(fresh.get(info.name), live.get(info.name), "Life.new() and Life.from_tuning() on a fresh TuningData agree on %s" % info.name)
+	assert_eq(names.size(), 15, "the 14 Motion tunables and move_speed are all in Life (%s)" % [names])
+	# The twin: Life.new() reads TuningData's own defaults, not numbers of its own...
+	var shipped := TuningData.new()
+	assert_eq(fresh.stride_m, shipped.look_motion_stride_m, "the stride is the tunable's default")
+	assert_eq(fresh.move_speed, shipped.move_speed, "the speed is the tunable's default")
+	assert_eq(fresh.enabled, shipped.look_motion_polish, "the polish is the Debug switch's default")
+	# ...and a Life made from another set of tunables has that set's values, so a re-tuned default is followed.
+	shipped.look_motion_stride_m = 0.7
+	shipped.look_motion_hip_roll_deg = 8.0
+	shipped.move_speed = 4.0
+	var tuned := PlaceholderAnims.Life.new(shipped)
+	assert_eq(tuned.stride_m, 0.7, "a Life takes the stride of the tunables it is given")
+	assert_eq(tuned.hip_roll_deg, 8.0, "and the hip roll")
+	assert_eq(tuned.move_speed, 4.0, "and the speed")
+	Tuning.data.look_motion_stride_m = 0.7
+	assert_ne(PlaceholderAnims.Life.from_tuning().stride_m, PlaceholderAnims.Life.new().stride_m, "the live tunables are not the fresh ones once re-tuned")
+	# Structurally: class Life declares no number of its own.
+	var source := FileAccess.get_file_as_string("res://game/actors/placeholder_anims.gd")
+	var block := source.substr(source.find("class Life:"), source.find("## One key: a pose") - source.find("class Life:"))
+	var literals := PackedStringArray()
+	for line: String in block.split("\n"):
+		if line.begins_with("\tvar ") and line.contains(": float = "):
+			literals.append(line.strip_edges())
+	assert_eq(literals, PackedStringArray(), "class Life holds no float default (it reads TuningData)")
+
+
+func test_a_clip_built_from_a_default_life_is_the_clip_the_game_plays() -> void:
+	# The walks of A4 and of the slide tests are built from Life.new(): they are the clips HumanoidRig builds from the live
+	# tunables, key for key, in both stances, for every polished id.
+	for stance: StringName in STANCES:
+		for id: StringName in PlaceholderAnims.POLISHED_IDS:
+			var by_test := ClipHash.sha(ClipHash.clip_text(PlaceholderAnims.build_named(id, 1.0, stance, PlaceholderAnims.Life.new())))
+			var by_game := ClipHash.sha(ClipHash.clip_text(PlaceholderAnims.build_named(id, 1.0, stance)))
+			assert_eq(by_test, by_game, "%s (%s): Life.new() builds the clip the game plays" % [id, stance])
+
+
+func test_the_subset_skin_is_the_whole_skin_at_those_vertices() -> void:
+	# SkinnedView.skin_subset() skins only the vertices it is given (the walks' sole points), with the same matrices and
+	# weights: each point is the one skin_vertices() gives, in a pose with every bone turned.
+	var rig := _rig(PlaceholderPoses.STANCE_BOXER, 1.0, true)
+	var mi := rig.art_meshes()[0]
+	var sole := MotionProbe.sole_vertices(mi, rig)
+	var picks := PackedInt32Array()
+	for v: int in range(0, mi.mesh.surface_get_array_len(0), 37):
+		picks.append(v)
+	picks.append_array(sole)
+	for case: Array in [[&"walk_forward", 0.13], [&"idle", 0.9], [&"stagger_back", 0.3]]:
+		var globals := MotionProbe.clip_globals(rig, _clip(case[0]), case[1])
+		var whole := SkinnedView.skin_vertices(mi, rig, globals)
+		var part := SkinnedView.skin_subset(mi, rig, picks, globals)
+		assert_eq(part.size(), picks.size(), "one point per index")
+		var worst := 0.0
+		for k: int in picks.size():
+			worst = maxf(worst, part[k].distance_to(whole[picks[k]]))
+		assert_lt(worst, 1e-6, "%s: the subset is the whole skin at those vertices (%.8f m)" % [case[0], worst])
+
+
 func test_the_motion_tunables_are_in_the_look_group_and_the_switch_is_a_debug_value() -> void:
 	var motion: Array[StringName] = []
 	for info: Dictionary in Tuning.tuning_properties():
@@ -519,8 +587,8 @@ func test_a_punk_walking_through_the_rigs_own_playback_plants_its_feet() -> void
 			var globals: Array[Transform3D] = []
 			for b: int in rig.skeleton.get_bone_count():
 				globals.append(rig.animation_pose(b))
-			var posed := SkinnedView.skin_vertices(mi, rig, globals)
-			for v: int in sole:
+			var posed := SkinnedView.skin_subset(mi, rig, sole, globals)
+			for v: int in sole.size():
 				var p := posed[v]
 				var world := Vector3(p.x + origin.x, 0.0, p.z + origin.z)
 				if p.y < MotionProbe.PLANT_M:
@@ -713,36 +781,40 @@ func test_the_polished_flinches_start_and_end_like_the_old_ones_and_ease_out_of_
 # --- Deformation ------------------------------------------------------------------------------------
 
 
+## The frozen deformation of the M3 clips on the Punk's art (tests/fixtures/motion/m3_deformation.json, made by
+## gen_m3_deformation.tscn): `{"<stance>|<id>": {high, low, max, min}}`, or an empty Dictionary when the file is missing or was
+## made for other vertices or weights than `mi`'s (the caller then measures the M3 clips live: slower, never wrong).
+func _frozen_m3(mi: MeshInstance3D) -> Dictionary:
+	var file := FileAccess.open(M3_DEFORMATION_PATH, FileAccess.READ)
+	if file == null:
+		return {}
+	var table: Dictionary = JSON.parse_string(file.get_as_text())
+	if table.get("art", "") != MotionProbe.art_hash(mi):
+		return {}
+	return table.figures
+
+
 func test_the_deformation_of_the_changed_clips_is_printed_beside_the_m3_figures_and_does_not_get_worse() -> void:
 	# A19's measure (the strain of the art against the skinned rest pose, p99.9, p0.1, and the extreme edges) at 17
 	# phases of each clip the polish changed, the M3 clip beside it. The clips whose poses are the M3 poses (everything
 	# but the boxer's walks, which plant their feet and so move the legs further) are no worse (the bar is one tenth of a
 	# strain unit on p99.9 and p0.1, ten per cent on the worst edge); the walks are within what a planted stride costs
 	# (0.6 on p99.9, twice the worst edge: the worst edge is the foot's seam in both, and the strafes' M3 steps were
-	# nearly still).
+	# nearly still). The M3 side is frozen (the M3 clips never change, A20; the file is read for this art, see _frozen_m3),
+	# so only the polished clips are skinned here.
 	var rig := _rig(PlaceholderPoses.STANCE_BOXER, 1.0, true)
 	var mi := rig.art_meshes()[0]
 	var rest := SkinnedView.skin_vertices(mi, rig, MotionProbe.rest_globals(rig))
+	var frozen := _frozen_m3(mi)
+	if frozen.is_empty():
+		print("MOTION the M3 deformation fixture is missing or stale for this art: the M3 clips are measured live (regenerate it: tests/fixtures/motion/gen_m3_deformation.tscn)")
 	var worse := PackedStringArray()
 	for stance: StringName in STANCES:
 		for id: StringName in PlaceholderAnims.POLISHED_IDS:
-			var figures: Array[Dictionary] = []
-			for polished: bool in [false, true]:
-				var anim := _clip(id, stance, 1.0, polished)
-				var high := 0.0
-				var low := 9.0
-				var biggest := 1.0
-				var smallest := 1.0
-				for i: int in 17:
-					var t := anim.length * float(i) / 16.0 - (1e-4 if i == 16 else 0.0)
-					var report := MotionProbe.strain(mi, rig, rest, MotionProbe.clip_globals(rig, anim, t))
-					high = maxf(high, report.p_high)
-					low = minf(low, report.p_low)
-					biggest = maxf(biggest, report.max)
-					smallest = minf(smallest, report.min)
-				figures.append({high = high, low = low, max = biggest, min = smallest})
-			var m3 := figures[0]
-			var now := figures[1]
+			var m3: Dictionary = frozen.get("%s|%s" % [stance, id], {})
+			if m3.is_empty():
+				m3 = MotionProbe.clip_strain(mi, rig, rest, _clip(id, stance, 1.0, false))
+			var now := MotionProbe.clip_strain(mi, rig, rest, _clip(id, stance))
 			print("MOTION A19 %s %-18s M3: p99.9 %.2f p0.1 %.2f max %.1f min %.2f | now: p99.9 %.2f p0.1 %.2f max %.1f min %.2f" % [
 					stance, id, m3.high, m3.low, m3.max, m3.min, now.high, now.low, now.max, now.min])
 			var walk := String(id).begins_with("walk") and stance == PlaceholderPoses.STANCE_BOXER
@@ -754,6 +826,27 @@ func test_the_deformation_of_the_changed_clips_is_printed_beside_the_m3_figures_
 			if now.max > m3.max * (2.0 if walk else 1.1) + 0.5:
 				worse.append("%s %s max %.1f against %.1f" % [stance, id, now.max, m3.max])
 	assert_true(worse.is_empty(), "no clip's deformation got worse: %s" % [worse])
+
+
+func test_the_frozen_m3_deformation_is_the_m3_clips_on_this_art() -> void:
+	# The fixture is a frozen measurement, so it is checked: it covers every polished clip in both stances, it was made for
+	# this art's vertices and weights (else regenerate it: tests/fixtures/motion/gen_m3_deformation.tscn), and two of its
+	# clips, measured live now, are the figures it holds (a change of the rig or of the measure shows here).
+	var rig := _rig(PlaceholderPoses.STANCE_BOXER, 1.0, true)
+	var mi := rig.art_meshes()[0]
+	var table: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(M3_DEFORMATION_PATH))
+	assert_eq(table.art, MotionProbe.art_hash(mi), "the fixture was made for punk.glb's vertices and weights as they are (regenerate: gen_m3_deformation.tscn)")
+	for stance: StringName in STANCES:
+		for id: StringName in PlaceholderAnims.POLISHED_IDS:
+			assert_true(table.figures.has("%s|%s" % [stance, id]), "%s %s is frozen" % [stance, id])
+	assert_eq(table.figures.size(), STANCES.size() * PlaceholderAnims.POLISHED_IDS.size(), "and nothing else")
+	var rest := SkinnedView.skin_vertices(mi, rig, MotionProbe.rest_globals(rig))
+	for key: String in ["boxer|walk_forward", "relaxed|downed_front"]:
+		var parts := key.split("|")
+		var live := MotionProbe.clip_strain(mi, rig, rest, _clip(StringName(parts[1]), StringName(parts[0]), 1.0, false))
+		var frozen: Dictionary = table.figures[key]
+		for field: String in ["high", "low", "max", "min"]:
+			assert_almost_eq(float(live[field]), float(frozen[field]), 1e-4, "%s %s: live %.4f, frozen %.4f" % [key, field, live[field], frozen[field]])
 
 
 func test_the_idle_stays_off_the_shoulders_worst_range() -> void:

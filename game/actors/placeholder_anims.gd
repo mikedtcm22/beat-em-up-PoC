@@ -81,44 +81,50 @@ const POLISHED_IDS: Array[StringName] = [
 
 
 ## The motion tunables (Tuning "Look" > "Motion") as one value, so a clip can be built from
-## numbers a test picks. `from_tuning()` reads the live ones, `off()` is the Milestone 3 clips.
+## numbers a test picks. `from_tuning()` reads the live ones, `off()` is the Milestone 3 clips,
+## and `Life.new()` is the defaults of a fresh TuningData (there is no second copy of them here:
+## a re-tuned default reaches every test that builds a clip from `Life.new()`, and
+## tests/test_motion_m4.gd holds `Life.new()` equal to `from_tuning()` on a fresh TuningData).
 class Life:
 	var enabled: bool = true
-	var breath_deg: float = 1.5
-	var breath_hz: float = 0.25
-	var bounce_m: float = 0.005
-	var bounce_hz: float = 1.5
-	var shift_deg: float = 1.0
-	var guard_sway_deg: float = 3.0
-	var head_deg: float = 1.4
-	var player_calm: float = 0.35
-	var stride_m: float = 0.62
-	var hip_roll_deg: float = 4.0
-	var counter_swing_deg: float = 5.0
-	var overlap_s: float = 0.025
-	var overshoot: float = 0.15
+	var breath_deg: float
+	var breath_hz: float
+	var bounce_m: float
+	var bounce_hz: float
+	var shift_deg: float
+	var guard_sway_deg: float
+	var head_deg: float
+	var player_calm: float
+	var stride_m: float
+	var hip_roll_deg: float
+	var counter_swing_deg: float
+	var overlap_s: float
+	var overshoot: float
 	## Tuning's move_speed: the walks' clip is as long as their stride takes at this speed.
-	var move_speed: float = 6.0
+	var move_speed: float
 
+	## The values of `source`, or of a fresh TuningData (the shipped defaults) when it is null.
+	func _init(source: TuningData = null) -> void:
+		var data: TuningData = source if source != null else TuningData.new()
+		enabled = data.look_motion_polish
+		breath_deg = data.look_motion_breath_deg
+		breath_hz = data.look_motion_breath_hz
+		bounce_m = data.look_motion_bounce_m
+		bounce_hz = data.look_motion_bounce_hz
+		shift_deg = data.look_motion_shift_deg
+		guard_sway_deg = data.look_motion_guard_sway_deg
+		head_deg = data.look_motion_head_deg
+		player_calm = data.look_motion_player_calm
+		stride_m = data.look_motion_stride_m
+		hip_roll_deg = data.look_motion_hip_roll_deg
+		counter_swing_deg = data.look_motion_counter_swing_deg
+		overlap_s = data.look_motion_overlap_s
+		overshoot = data.look_motion_overshoot
+		move_speed = data.move_speed
+
+	## The live tunables (Tuning.data): the values the game builds its clips from.
 	static func from_tuning() -> Life:
-		var life := Life.new()
-		var data: TuningData = Tuning.data
-		life.enabled = data.look_motion_polish
-		life.breath_deg = data.look_motion_breath_deg
-		life.breath_hz = data.look_motion_breath_hz
-		life.bounce_m = data.look_motion_bounce_m
-		life.bounce_hz = data.look_motion_bounce_hz
-		life.shift_deg = data.look_motion_shift_deg
-		life.guard_sway_deg = data.look_motion_guard_sway_deg
-		life.head_deg = data.look_motion_head_deg
-		life.player_calm = data.look_motion_player_calm
-		life.stride_m = data.look_motion_stride_m
-		life.hip_roll_deg = data.look_motion_hip_roll_deg
-		life.counter_swing_deg = data.look_motion_counter_swing_deg
-		life.overlap_s = data.look_motion_overlap_s
-		life.overshoot = data.look_motion_overshoot
-		life.move_speed = data.move_speed
-		return life
+		return Life.new(Tuning.data)
 
 	## The Milestone 3 clips: linear keys, no life.
 	static func off() -> Life:
