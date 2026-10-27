@@ -1,0 +1,657 @@
+{
+	"version": 1,
+	"blender": "5.2.2 LTS",
+	"config": {
+		"_about": "Parameters of tools/pipeline/blender_mannequin.py (M4-plan.md Part C section 5 step 2, as amended by A2 step 3): the joint table as a chunky grey mannequin in a 45 degree A-pose, rendered orthographic from the front, the left and the back at 3:4, 2K. The numbers live here, not in the script. Rerun: blender --background --factory-startup --python-exit-code 1 --python tools/pipeline/blender_mannequin.py -- assets/source/mannequin/mannequin.json assets/source/mannequin",
+		"format": 1,
+		"joints": "tools/pipeline/joints.json",
+		"parts_set": "parts_enemy",
+		"skip_parts": [
+			"BellyTop",
+			"Cap",
+			"Hair",
+			"CapBrim",
+			"Shades",
+			"ShadesFront",
+			"LeftFist",
+			"RightFist",
+			"LeftFingers",
+			"RightFingers",
+			"LeftStrap",
+			"RightStrap"
+		],
+		"pose": {
+			"name": "a_pose",
+			"upper_arm_down_from_horizontal_deg": 45,
+			"note": "Each upper arm swings out about the rig's Z axis so it points this many degrees below horizontal; the forearm and hand continue straight along it. The legs stay parallel at the table's x = +-0.11."
+		},
+		"hand": {
+			"note": "An open mitten in place of the fist box (A13: views keep open hands). Palm to the body, thumb forward (-Z). Axes are the Hand bone's: the hand hangs along -Y from the wrist.",
+			"length_m": 0.19,
+			"width_m": 0.1,
+			"thickness_m": 0.06,
+			"thumb_radius_m": 0.022,
+			"thumb_length_m": 0.075,
+			"thumb_below_wrist_m": 0.05
+		},
+		"nose": {
+			"note": "A small wedge so the front of the head reads in the left view.",
+			"bone": "Head",
+			"size_m": [
+				0.034,
+				0.05,
+				0.05
+			],
+			"offset_m": [
+				0.0,
+				0.1,
+				-0.125
+			]
+		},
+		"loft": {
+			"note": "The boxes that make the torso, pelvis to upper chest, become one smooth superellipse loft (exponent 2 is an ellipse, higher is boxier). BellyTop, the cylinder that rounds the belly's top, is in skip_parts.",
+			"parts": [
+				"Pelvis",
+				"Belt",
+				"Belly",
+				"Chest",
+				"UpperChest"
+			],
+			"rings": 64,
+			"around": 56,
+			"exponent": 2.6,
+			"end_round_m": 0.06,
+			"end_floor": 0.45
+		},
+		"mesh": {
+			"segments": 32,
+			"rings": 15,
+			"bevel_m": 0.05,
+			"bevel_segments": 3,
+			"sharp_angle_deg": 50,
+			"blend": {
+				"note": "The overlapping parts are melted into one shell (a voxel remesh) and smoothed, so the torso reads as a body and not as stacked slabs; voxel_m 0 keeps the separate parts.",
+				"voxel_m": 0.008,
+				"smooth_iterations": 16,
+				"smooth_factor": 0.5
+			}
+		},
+		"colors": {
+			"mannequin_srgb": "#b0b0b0",
+			"background_srgb": "#d9d9d9"
+		},
+		"render": {
+			"width_px": 1536,
+			"height_px": 2048,
+			"ortho_scale_m": 2.15,
+			"look_at_height_m": 0.93,
+			"camera_distance_m": 8.0,
+			"antialiasing_samples": "32"
+		},
+		"views": [
+			{
+				"name": "front",
+				"camera_dir_rig": [
+					0,
+					0,
+					-1
+				],
+				"note": "the camera stands in front of the character (it faces -Z); the character's own right is on the image's left"
+			},
+			{
+				"name": "left",
+				"camera_dir_rig": [
+					-1,
+					0,
+					0
+				],
+				"note": "the character's own left side; it faces the image's left"
+			},
+			{
+				"name": "back",
+				"camera_dir_rig": [
+					0,
+					0,
+					1
+				],
+				"note": "from behind; the character's own right is on the image's right"
+			}
+		]
+	},
+	"joints": {
+		"file": "tools/pipeline/joints.json",
+		"sha256": "7c8fbf7185ad09ba971c7e78b22b918c18be9b2a31b513c0df0591ec6305f3d1"
+	},
+	"a_pose": {
+		"swing_from_hanging_deg": 45.0,
+		"bones_rig": {
+			"Root": [
+				0.0,
+				0.0,
+				0.0
+			],
+			"Hips": [
+				0.0,
+				0.975,
+				0.0
+			],
+			"Spine": [
+				0.0,
+				1.075,
+				0.0
+			],
+			"Chest": [
+				0.0,
+				1.205,
+				0.0
+			],
+			"UpperChest": [
+				0.0,
+				1.335,
+				0.0
+			],
+			"Neck": [
+				0.0,
+				1.485,
+				0.0
+			],
+			"Head": [
+				0.0,
+				1.575,
+				0.0
+			],
+			"LeftShoulder": [
+				-0.05,
+				1.435,
+				0.0
+			],
+			"LeftUpperArm": [
+				-0.22,
+				1.425,
+				0.0
+			],
+			"LeftLowerArm": [
+				-0.42506,
+				1.21994,
+				0.0
+			],
+			"LeftHand": [
+				-0.61598,
+				1.02902,
+				0.0
+			],
+			"RightShoulder": [
+				0.05,
+				1.435,
+				0.0
+			],
+			"RightUpperArm": [
+				0.22,
+				1.425,
+				0.0
+			],
+			"RightLowerArm": [
+				0.42506,
+				1.21994,
+				0.0
+			],
+			"RightHand": [
+				0.61598,
+				1.02902,
+				0.0
+			],
+			"LeftUpperLeg": [
+				-0.11,
+				0.925,
+				0.0
+			],
+			"LeftLowerLeg": [
+				-0.11,
+				0.505,
+				0.0
+			],
+			"LeftFoot": [
+				-0.11,
+				0.085,
+				0.0
+			],
+			"LeftToes": [
+				-0.11,
+				0.035,
+				-0.13
+			],
+			"RightUpperLeg": [
+				0.11,
+				0.925,
+				0.0
+			],
+			"RightLowerLeg": [
+				0.11,
+				0.505,
+				0.0
+			],
+			"RightFoot": [
+				0.11,
+				0.085,
+				0.0
+			],
+			"RightToes": [
+				0.11,
+				0.035,
+				-0.13
+			]
+		}
+	},
+	"parts": [
+		"Neck",
+		"Head",
+		"LeftDelt",
+		"LeftUpperArm",
+		"LeftElbow",
+		"LeftThigh",
+		"LeftShin",
+		"LeftShoe",
+		"LeftSole",
+		"LeftToeCap",
+		"LeftToeSole",
+		"LeftForearm",
+		"LeftTrap",
+		"RightDelt",
+		"RightUpperArm",
+		"RightElbow",
+		"RightThigh",
+		"RightShin",
+		"RightShoe",
+		"RightSole",
+		"RightToeCap",
+		"RightToeSole",
+		"RightForearm",
+		"RightTrap",
+		"TorsoLoft",
+		"LeftMitten",
+		"LeftThumb",
+		"RightMitten",
+		"RightThumb",
+		"Nose"
+	],
+	"views": {
+		"front": {
+			"file": "mannequin_front.png",
+			"pixels_sha256": "b107103eafa684cd9b7ea9ca8fc78da874e0e9ecd80aa42fa0bcaae111742b6d",
+			"size_px": [
+				1536,
+				2048
+			],
+			"pixels_per_metre": 952.55814,
+			"camera": {
+				"toward_camera_rig": [
+					0,
+					0,
+					-1
+				],
+				"ortho_scale_m": 2.15,
+				"look_at_height_m": 0.93
+			},
+			"background_rgb": [
+				217,
+				217,
+				217
+			],
+			"background_is_flat": true,
+			"silhouette_bbox_px": [
+				45,
+				177,
+				1490,
+				1912
+			],
+			"silhouette_share": 0.22906,
+			"joints_px": {
+				"Root": [
+					767.99899,
+					1909.88028
+				],
+				"Hips": [
+					767.99886,
+					981.13611
+				],
+				"Spine": [
+					767.99881,
+					885.88025
+				],
+				"Chest": [
+					767.99881,
+					762.04773
+				],
+				"UpperChest": [
+					767.99881,
+					638.21521
+				],
+				"Neck": [
+					767.99876,
+					495.33154
+				],
+				"Head": [
+					767.99876,
+					409.6012
+				],
+				"LeftShoulder": [
+					815.62665,
+					542.95935
+				],
+				"LeftUpperArm": [
+					977.56155,
+					552.48486
+				],
+				"LeftLowerArm": [
+					1172.89407,
+					747.81738
+				],
+				"LeftHand": [
+					1354.75543,
+					929.67859
+				],
+				"RightShoulder": [
+					720.37088,
+					542.95935
+				],
+				"RightUpperArm": [
+					558.43602,
+					552.48499
+				],
+				"RightLowerArm": [
+					363.10352,
+					747.8175
+				],
+				"RightHand": [
+					181.24221,
+					929.67871
+				],
+				"LeftUpperLeg": [
+					872.78027,
+					1028.76404
+				],
+				"LeftLowerLeg": [
+					872.78027,
+					1428.83844
+				],
+				"LeftFoot": [
+					872.78036,
+					1828.91281
+				],
+				"LeftToes": [
+					872.78036,
+					1876.54073
+				],
+				"RightUpperLeg": [
+					663.21744,
+					1028.76404
+				],
+				"RightLowerLeg": [
+					663.21753,
+					1428.8385
+				],
+				"RightFoot": [
+					663.21758,
+					1828.91287
+				],
+				"RightToes": [
+					663.21762,
+					1876.54073
+				]
+			},
+			"note": "the camera stands in front of the character (it faces -Z); the character's own right is on the image's left"
+		},
+		"left": {
+			"file": "mannequin_left.png",
+			"pixels_sha256": "519b170f3cf7af886d902d88a3884923d132ace5d880564776572862fe63bac4",
+			"size_px": [
+				1536,
+				2048
+			],
+			"pixels_per_metre": 952.55814,
+			"camera": {
+				"toward_camera_rig": [
+					-1,
+					0,
+					0
+				],
+				"ortho_scale_m": 2.15,
+				"look_at_height_m": 0.93
+			},
+			"background_rgb": [
+				217,
+				217,
+				217
+			],
+			"background_is_flat": true,
+			"silhouette_bbox_px": [
+				525,
+				177,
+				901,
+				1912
+			],
+			"silhouette_share": 0.11336,
+			"joints_px": {
+				"Root": [
+					767.99968,
+					1909.87938
+				],
+				"Hips": [
+					767.99968,
+					981.13525
+				],
+				"Spine": [
+					767.99968,
+					885.87939
+				],
+				"Chest": [
+					767.99968,
+					762.04688
+				],
+				"UpperChest": [
+					767.99968,
+					638.21423
+				],
+				"Neck": [
+					767.99968,
+					495.33057
+				],
+				"Head": [
+					767.99968,
+					409.60034
+				],
+				"LeftShoulder": [
+					767.99968,
+					542.9585
+				],
+				"LeftUpperArm": [
+					767.99968,
+					552.48401
+				],
+				"LeftLowerArm": [
+					767.99968,
+					747.81653
+				],
+				"LeftHand": [
+					767.99968,
+					929.67773
+				],
+				"RightShoulder": [
+					767.99968,
+					542.9585
+				],
+				"RightUpperArm": [
+					767.99968,
+					552.48401
+				],
+				"RightLowerArm": [
+					767.99963,
+					747.81653
+				],
+				"RightHand": [
+					767.99963,
+					929.67773
+				],
+				"LeftUpperLeg": [
+					767.99968,
+					1028.76312
+				],
+				"LeftLowerLeg": [
+					767.99968,
+					1428.83752
+				],
+				"LeftFoot": [
+					767.99968,
+					1828.9119
+				],
+				"LeftToes": [
+					644.16714,
+					1876.53983
+				],
+				"RightUpperLeg": [
+					767.99968,
+					1028.76312
+				],
+				"RightLowerLeg": [
+					767.99968,
+					1428.83752
+				],
+				"RightFoot": [
+					767.99968,
+					1828.91196
+				],
+				"RightToes": [
+					644.1671,
+					1876.53983
+				]
+			},
+			"note": "the character's own left side; it faces the image's left"
+		},
+		"back": {
+			"file": "mannequin_back.png",
+			"pixels_sha256": "785deb8122ab712416f8e51f4285750bf65bd14bb43f19768518383c3bb06c65",
+			"size_px": [
+				1536,
+				2048
+			],
+			"pixels_per_metre": 952.55814,
+			"camera": {
+				"toward_camera_rig": [
+					0,
+					0,
+					1
+				],
+				"ortho_scale_m": 2.15,
+				"look_at_height_m": 0.93
+			},
+			"background_rgb": [
+				217,
+				217,
+				217
+			],
+			"background_is_flat": true,
+			"silhouette_bbox_px": [
+				45,
+				177,
+				1490,
+				1912
+			],
+			"silhouette_share": 0.22906,
+			"joints_px": {
+				"Root": [
+					768.0,
+					1909.88028
+				],
+				"Hips": [
+					768.0,
+					981.13611
+				],
+				"Spine": [
+					768.0,
+					885.88025
+				],
+				"Chest": [
+					768.0,
+					762.04773
+				],
+				"UpperChest": [
+					768.0,
+					638.21521
+				],
+				"Neck": [
+					768.0,
+					495.33154
+				],
+				"Head": [
+					768.0,
+					409.6012
+				],
+				"LeftShoulder": [
+					720.37212,
+					542.95935
+				],
+				"LeftUpperArm": [
+					558.43721,
+					552.48499
+				],
+				"LeftLowerArm": [
+					363.10471,
+					747.81738
+				],
+				"LeftHand": [
+					181.2434,
+					929.67871
+				],
+				"RightShoulder": [
+					815.62793,
+					542.95935
+				],
+				"RightUpperArm": [
+					977.56274,
+					552.48499
+				],
+				"RightLowerArm": [
+					1172.89526,
+					747.81738
+				],
+				"RightHand": [
+					1354.75662,
+					929.67871
+				],
+				"LeftUpperLeg": [
+					663.21863,
+					1028.76404
+				],
+				"LeftLowerLeg": [
+					663.21863,
+					1428.83844
+				],
+				"LeftFoot": [
+					663.21863,
+					1828.91287
+				],
+				"LeftToes": [
+					663.21863,
+					1876.54079
+				],
+				"RightUpperLeg": [
+					872.78137,
+					1028.76404
+				],
+				"RightLowerLeg": [
+					872.78137,
+					1428.83844
+				],
+				"RightFoot": [
+					872.78137,
+					1828.91287
+				],
+				"RightToes": [
+					872.78137,
+					1876.54079
+				]
+			},
+			"note": "from behind; the character's own right is on the image's right"
+		}
+	}
+}
