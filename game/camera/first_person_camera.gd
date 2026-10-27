@@ -36,6 +36,15 @@ extends Camera3D
 ## lens takes the pose with the most room around the body (_choose_ko_pose()): across it on
 ## either side, else along it past its feet, else steeper over its hips, and it never sits
 ## in a wall, crate or fighter.
+##
+## Knockdown view (feel question 3, Tuning "Look" > "FP feel" > fp_knockdown_hide_torso, off =
+## today): a player knocked down without being killed lies on the camera for a second or two, and
+## the lens, riding his eyes, sees the inside of his own belly as one slab (up to 74% of the view in
+## M3, over half of it for 45 frames face down). With the switch on, the torso (the belly, belt and
+## pelvis primitives, or the skinned art's visible body) goes on the head layer this lens never
+## draws from the first frame of the knockdown to the get-up's end, and comes back to the layers it
+## had. Only while this camera is the one drawing (a side view or free fly shows the whole body),
+## and never in the KO view, which shows it whole.
 
 ## Seconds a camera punch takes to snap out and spring back to rest.
 @export_range(0.03, 0.5, 0.01) var punch_duration_s: float = 0.12
@@ -56,6 +65,8 @@ extends Camera3D
 ## (ko_view_direction()): across the body's length on its right or its left, or along it past
 ## its feet. NONE until chosen.
 enum KoPose { NONE = -1, RIGHT, LEFT, FEET }
+## The bones whose primitives are the torso the knockdown view hides (_find_torso_meshes()).
+const TORSO_BONES: Array[StringName] = [&"Hips", &"Spine"]
 ## How many times _ko_room() halves the reach to find the lens's place clear of everything.
 const KO_ROOM_STEPS := 6
 ## How far below EyePoint lens_floor_y() looks for the floor of a player off the ground: the lens
@@ -99,6 +110,10 @@ var _ko_was_out: bool = false
 var _ko_ball: SphereShape3D = SphereShape3D.new()
 ## The player's meshes on the head layer, found when the KO view first needs them.
 var _head_meshes: Array[MeshInstance3D] = []
+## The player's torso meshes (found when a knockdown first needs them) and the layers each had
+## while it is hidden from this lens (_update_torso(); empty when none is).
+var _torso_meshes: Array[MeshInstance3D] = []
+var _torso_layers: Dictionary[MeshInstance3D, int] = {}
 ## The view before punch and shake: where the player is looking.
 var _view: Transform3D = Transform3D.IDENTITY
 ## Live punches: x = pitch kick and y = yaw kick at the peak (radians), z = age (seconds).
@@ -127,6 +142,7 @@ func _enter_tree() -> void:
 
 
 func _exit_tree() -> void:
+	_restore_torso()
 	if CombatEvents.hit_landed.is_connected(_on_hit_landed):
 		CombatEvents.hit_landed.disconnect(_on_hit_landed)
 
@@ -141,11 +157,13 @@ func _process(delta: float) -> void:
 
 ## Ride `value` from now on, jumping straight to its eye on the next update.
 func set_player(value: PlayerCharacter) -> void:
+	_restore_torso()
 	player = value
 	_ko_view = 0.0
 	_ko_pose = KoPose.NONE
 	_ko_was_out = false
 	_head_meshes.clear()
+	_torso_meshes.clear()
 	set_cull_mask_value(CombatTypes.VIS_FP_HIDDEN, false)
 	snap()
 
@@ -161,6 +179,7 @@ func update_camera(delta: float) -> void:
 	fov = Tuning.data.fov_deg
 	if _player_ok():
 		_view = _ko_view_mix(delta, _follow(delta))
+		_update_torso()
 	_advance_effects(delta)
 	global_transform = _view * _effects_transform()
 
@@ -377,6 +396,63 @@ func _ko_view_mix(delta: float, live: Transform3D) -> Transform3D:
 		# lift), not at the eyes: the head, neck and chest the lens dives into were all drawn.
 		set_cull_mask_value(CombatTypes.VIS_FP_HIDDEN, false)
 	return mixed
+
+
+## The non-KO knockdown view is on: the player is flying, lying or getting up, alive, with the lens
+## in his eyes (the KO view, which shows the body whole, is not on its way out or in).
+func _knockdown_view() -> bool:
+	if player.health <= 0.0 or _ko_view > 0.0:
+		return false
+	var state := player.state
+	return state == CombatTypes.ActorState.LAUNCHED or state == CombatTypes.ActorState.DOWNED \
+			or state == CombatTypes.ActorState.GETUP
+
+
+## Hide the torso from this lens for the knockdown view (fp_knockdown_hide_torso), or put its
+## layers back. The meshes move to the head layer, which the first-person lens never draws (they
+## still cast shadows, and every other camera, being on the default mask, still draws them); it is
+## done while this camera is current, so the side view and free fly keep the whole body. Checked
+## every update while hidden, so a rig that resets its layers meanwhile is hidden again.
+func _update_torso() -> void:
+	if not (current and Tuning.data.fp_knockdown_hide_torso and _knockdown_view()):
+		_restore_torso()
+		return
+	if _torso_meshes.is_empty():
+		_torso_meshes = _find_torso_meshes()
+	var hidden := CombatTypes.bit(CombatTypes.VIS_FP_HIDDEN)
+	for mesh: MeshInstance3D in _torso_meshes:
+		if not is_instance_valid(mesh):
+			continue
+		if not _torso_layers.has(mesh):
+			_torso_layers[mesh] = mesh.layers
+		mesh.layers = hidden
+
+
+## Give every torso mesh the layers it had before _update_torso() hid it.
+func _restore_torso() -> void:
+	for mesh: MeshInstance3D in _torso_layers:
+		if is_instance_valid(mesh):
+			mesh.layers = _torso_layers[mesh]
+	_torso_layers.clear()
+
+
+## The player's torso meshes: the primitives on the Hips and Spine bones (the pelvis, belt, belly and
+## belly top; the chest and above are on the head layer already), and the skinned art's visible
+## body, which has no part of its own for them (the hidden upper body is on the head layer). A mesh
+## on the head layer is left out.
+func _find_torso_meshes() -> Array[MeshInstance3D]:
+	var out: Array[MeshInstance3D] = []
+	var default_layer := CombatTypes.bit(CombatTypes.VIS_DEFAULT)
+	for node: Node in player.rig.find_children("*", "MeshInstance3D", true, false):
+		var mesh := node as MeshInstance3D
+		if mesh.layers != default_layer:
+			continue
+		var is_art := mesh.is_in_group(HumanoidRig.ART_GROUP)
+		var parent := mesh.get_parent()
+		var on_torso_bone := parent != null and TORSO_BONES.any(func(bone: StringName) -> bool: return parent.name == StringName("Bone%s" % bone))
+		if on_torso_bone or (is_art and not mesh.get_meta(SkinnedArt.FP_HIDDEN_META, false)):
+			out.append(mesh)
+	return out
 
 
 ## True when no mesh of the player's head layer (the ones this camera hides, found once per
