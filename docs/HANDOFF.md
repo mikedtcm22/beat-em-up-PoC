@@ -4,6 +4,15 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-27 17:30 CDT: P3-evidence merged (the index and JSON files); the re-score's fixers still running
+- **Merged:** `m4/p3-evidence` (`47251d3`): `docs/reviews/M4/evidence/index.md` and five JSON files, all docs.
+  - **Recordings:** 26, every bot.log with 0 error lines. The media is local in `.worktrees/m4-p3-evidence/captures/m4/evidence/` (keep that worktree until the DM is sent).
+  - **The DM pair:** `pairs/c2/stills/c2_f109_idle_t060_m3_left_m4_right.png`.
+  - **The concept pairs:** in `concept_pairs/`.
+  - **The clips:** `clips/long_take_1m_c14.mp4` (5.2 MB), `six_punk_fight_2_to_10m.mp4` (7.7 MB) and `own_limbs_pa1.mp4` (1.6 MB).
+  - **The four feel A/B pairs:** in `feel_ab/`. Exact commands and calls are in `docs/milestones/M4-calls/P3-evidence.md`.
+  - **Caveat:** it was recorded on `6e2a2e1`, before the re-score's fixes. After those merge, re-record the DM pair, the concept pairs and clips 1 and 3 (the long take shows the lens whiteout the fix removes), using the commands in that calls file.
+
 ### 2026-10-27 17:20 CDT: the re-score passes at the bar (mean 1.50); its two fix packages running beside P3-evidence
 - **The re-score on `f4064a4`:** J1 2, J2 1, J3 1, J4 1, J5 2, J6 2, J7 2, J8 2, J9 1, J10 2, J11 1, J12 2, J13 1, J14 1.
   - That is a mean of 1.50, with no 0 and every critical item at 1 or more, so Part B's rule passes with zero margin. J1, J5 and J7 moved up from 1.
