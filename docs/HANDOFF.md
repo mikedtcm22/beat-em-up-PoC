@@ -4,6 +4,30 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-27 02:55 CDT: SL-int merged (1378/1378); the A16 perf baseline, then the slice gate
+- **Merged:** SL-int (`59a0adf`). The merge was clean, the preset is unchanged at 492 values, and the merge is green at 1378/1378 with 0 SCRIPT, SHADER or ERROR lines.
+- **What SL-int built:**
+  - Every Street Punk wears the smoke Punk: `game/actors/art/punk_art.tres` on `punk.glb`. `check()` passes for all four GLBs.
+  - The A/B variants (`punk_rest`, `punk_auto`, `punk_auto_rest`) sit behind the Debug tunable `look_punk_art_variant`, or `CAPTURE_ARGS="--tune=look_punk_art_variant=N"`.
+  - Prop hulls on the crates, dumpster and car (`RoomKit.prop_material`), and the art warm-up at room load.
+  - `tests/test_art_punk.gd` prints A6, A9, A10, A11 and A19 for all four GLBs.
+  - The act "Look: Perf, six art Punks" (slug p1).
+  - Re-recorded C1-C11, C13, E1, E2, the A/B and the autopilot crowd acts. `check_m3_log` is ok, and R1-R3, R10 and R11 are met.
+  - Its captures are in `.worktrees/m4-sl-int/captures/sl-int/`. Keep that worktree until the gate is done.
+- **The lead's look:** C2 at 1 m reads as a cartoon character: cap, shades, vest, crisp bands, violet shadows and an even hull. At the jab, the four GLBs are indistinguishable and the glove fills half the view.
+- **For the gate (SL-int's numbers, in `M4-calls/SL-int.md` §3):**
+  - A19: no GLB passes; the shoulder is worst, then the foot seam face down. The bind routes and weight sources differ by under 15%.
+  - A9: the art's arms are bulkier than the proxies (6.1% of cells differ at the jab, against a 3% bar).
+  - A11: the flash anchor sits 4-5 cm off the skin.
+  - A6: the legs are at 89-91%.
+  - J3: the gloves read as canisters. J13: the placeholders look like another game.
+- **Runner changes:** `workflow-review.js` takes `skeptics` (1 or 3) and `max_packages`, and its findings schema has `locks`, `gaps` and `verdict` for the gate.
+- **Gate args:** `docs/reviews/M4/args-review-slice.json` has G1 (mechanics and contract) and G2 (deformation and look at 1 m), with `no_fix` true. The lead reads the findings before choosing at most 2 fix packages.
+- **Next:**
+  1. The lead's A16 perf baseline, on a quiet machine with vsync on. The script is in the scratchpad; to rerun it: `tools/perf_compare.sh --vsync on --runs 3 --act "Perf, six with ragdolls" --act "Look: Perf, six art Punks" afdb39e 59a0adf`, then FXAA, depth-only, hulls off and edges off on the head through a `GODOT=` wrapper that appends `--tune=...` after `--`.
+  2. Paste the numbers into the gate args' `PERF_PLACEHOLDER`.
+  3. Launch the gate, then write `docs/milestones/M4-slice-gate.md`.
+
 ### 2026-10-27 01:35 CDT: P1-post merged; phase 1 is complete; SL-int next
 - **Merged:**
   - The P1-fx merge was green at 1325/1325.
