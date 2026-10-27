@@ -1,0 +1,63 @@
+{
+	"_about": "Price table and spending policy for tools/pipeline/tripo.py. Prices are credits (1 credit = USD 0.01) from the official pricing table read on 2026-10-26 (docs/milestones/M4-codemap/toolchain-tripo-gemini.md section 2.5). tripo.py reads every number it charges from here, never from a literal; a call that has no price here is refused. The policy block is the plan's A10: before every task the script refuses if (live balance - frozen - expected) < balance_floor, or if max(ledger sum, start_balance - live balance) + expected > ledger_stop. There is deliberately no flag to override either; past ledger_stop the lead asks Game-boy and edits this file.",
+	"checked": "2026-10-26",
+	"policy": {
+		"milestone": "M4",
+		"start_balance": 1500,
+		"balance_floor": 700,
+		"ledger_stop": 750
+	},
+	"generation": {
+		"_about": "image-to-model and multiview-to-model share one table. no_texture is texture=false; standard/detailed/extreme is texture_quality with texture on (pbr=true forces texture on). 'fast' is priced as 'standard' (quality_alias).",
+		"quality_alias": {"fast": "standard"},
+		"h": {
+			"models": ["v3.1-20260211", "v3.0-20250812", "v2.5-20250123"],
+			"default_model": "v3.1-20260211",
+			"no_texture": 20,
+			"standard": 30,
+			"detailed": 40,
+			"extreme": 50,
+			"add": {
+				"geometry_quality_detailed": 20,
+				"quad": 5,
+				"smart_low_poly": 10,
+				"generate_parts": 20
+			}
+		},
+		"p": {
+			"models": ["P1-20260311", "P2-20260801"],
+			"no_texture": 100,
+			"standard": 110,
+			"detailed": 120,
+			"extreme": 130,
+			"add": {}
+		}
+	},
+	"texture": {
+		"_about": "POST /models/texture, by texture_quality; 'detailed' is the HD tier and 'extreme' the 8K tier.",
+		"quality_alias": {"fast": "standard"},
+		"standard": 10,
+		"detailed": 20,
+		"extreme": 30
+	},
+	"rig_check": 0,
+	"rig": 25,
+	"upload": 0,
+	"unverified": [
+		{
+			"call": "generation",
+			"when": {"texture_version": "v3.5-20260815"},
+			"note": "The docs do not price texture v3.5 on generation; it is assumed equal to the standard tier. The first real task's credits_consumed settles it (plan section 10, T1: above 30 means fall back to v3.0-20250812)."
+		},
+		{
+			"call": "texture",
+			"when": {"model": "v3.5-20260815"},
+			"note": "The docs do not price texture v3.5 on /models/texture; it is assumed equal to its quality tier (fast and standard 10)."
+		},
+		{
+			"call": "upload",
+			"when": {},
+			"note": "POST /files is not in the price table; assumed free. The ledger's balance before and after the first task would show otherwise."
+		}
+	]
+}
