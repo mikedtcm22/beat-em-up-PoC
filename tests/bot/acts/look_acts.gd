@@ -23,7 +23,7 @@ extends RefCounted
 ## | C5 | Look: Punk reacts at 1 m | a jab (flinch and flash), P P P P (hook stagger, uppercut launch), the get-up, health 100/65/30%, then a jab finishes it (KO slump, blink-off) |
 ## | C6 | Look: distances | the Punk at 1, 2.5, 5 and 10 m |
 ## | C7 | Look: lineup | Punk, Kicker, Thug and Bruiser at 2.2 m, the street behind |
-## | C8 | Look: own limbs | looking 45 degrees down: jab, cross, hook, front kick, block, walking |
+## | C8 | Look: own limbs | looking 45 degrees down: jab, cross, hook, front kick, block, walking; then 20 down (strikes, guard) and 65 down (walking) |
 ## | C9 | Look: street tour | the room's tour with a cast of the four archetypes standing in the street |
 ## | C10 | Look: turntable | free fly camera round the Punk at rest, in the guard and lying (mesh QA) |
 ## | C11 | Look: hold the Punk | grab, three knees, throw |
@@ -48,8 +48,13 @@ const FACE_PITCH_DEG := 8.0
 const DEFAULT_PITCH_DEG := -6.0
 const LEVEL_PITCH_DEG := 0.0
 const LIMBS_PITCH_DEG := -45.0
+## C8's other two looks: where the guard and the strikes are in the view, and where the lead leg and
+## the feet come in (the combo bot's stance act looks 65 degrees down for them).
+const ARMS_PITCH_DEG := -20.0
+const FEET_PITCH_DEG := -65.0
 ## Ticks to turn the view, to let a spawned body settle, and how long the idle is held (3 s).
 const PITCH_TICKS := 10
+const TURN_TICKS := 30
 const SETTLE_TICKS := 30
 const IDLE_TICKS := 180
 ## A held pose gets a mark this often (1 s).
@@ -465,9 +470,12 @@ static func _lineup(bot: Node) -> void:
 # --- C8: the player's own limbs ----------------------------------------------------------------
 
 
-## Looking LIMBS_PITCH_DEG down, nothing in front: a jab, cross and hook (one chain), a front kick, the
-## guard held, then walking. The marks follow the player's own moves; the rectangles are his fists and
-## the legs and feet his lens sees.
+## The player's own arms and legs, nothing in front of him, in three looks. LIMBS_PITCH_DEG (the plan's
+## 45 degrees down): a jab, cross and hook (one chain), a front kick, the guard held, then walking. At
+## 45 degrees the guard and the strikes are mostly above the view and only the kick's leg is in it, so
+## ARMS_PITCH_DEG (20 down) repeats the chain and the guard where the arms are in the view, and
+## FEET_PITCH_DEG (65 down) idles and walks where the lead leg and the feet come in. The marks follow
+## the player's own moves; the rectangles are his fists and the legs and feet his lens sees.
 static func _own_limbs(bot: Node) -> void:
 	_begin(bot)
 	await bot._look_to(LIMBS_PITCH_DEG, PITCH_TICKS + 5)
@@ -477,27 +485,53 @@ static func _own_limbs(bot: Node) -> void:
 	_watch(bot, "c8", bot.player, run)
 	LookRect.mark(bot, "c8", "idle", bot.player)
 	await bot._ticks(MARK_GAP_TICKS)
+	await _limbs_strikes(bot)
+	await bot._press(&"K", 2)
+	await bot._wait_idle()
+	await bot._ticks(CHAIN_GAP_TICKS)
+	await _limbs_guard(bot, "guard")
+	await _limbs_walk(bot, "walk")
+	# The walk went most of the way to the end of the lane: turn round, so the last walk has room.
+	await bot._turn_by(180.0, TURN_TICKS)
+	await bot._look_to(ARMS_PITCH_DEG, PITCH_TICKS + 5)
+	await bot._ticks(SETTLE_TICKS)
+	LookRect.mark(bot, "c8", "arms_idle", bot.player)
+	await _limbs_strikes(bot)
+	await _limbs_guard(bot, "arms_guard")
+	await bot._look_to(FEET_PITCH_DEG, PITCH_TICKS + 5)
+	await bot._ticks(SETTLE_TICKS)
+	LookRect.mark(bot, "c8", "feet_idle", bot.player)
+	await _limbs_walk(bot, "feet_walk")
+	run.running = false
+	_end(bot, "c8")
+
+
+## A jab, a cross and a hook (one chain), then idle again.
+static func _limbs_strikes(bot: Node) -> void:
 	for i in 3:
 		await bot._press(&"P", 2, CHAIN_GAP_TICKS)
 	await bot._wait_idle()
 	await bot._ticks(CHAIN_GAP_TICKS)
-	await bot._press(&"K", 2)
-	await bot._wait_idle()
-	await bot._ticks(CHAIN_GAP_TICKS)
+
+
+## The guard held GUARD_TICKS (marked at its end as `label`), then let go.
+static func _limbs_guard(bot: Node, label: String) -> void:
 	await bot._hold_block()
 	await bot._ticks(GUARD_TICKS)
-	LookRect.mark(bot, "c8", "guard", bot.player)
+	LookRect.mark(bot, "c8", label, bot.player)
 	await bot._release_block()
 	await bot._ticks(CHAIN_GAP_TICKS)
+
+
+## Walking forward WALK_TICKS, marked every WALK_MARK_TICKS as <label>_t<tick>.
+static func _limbs_walk(bot: Node, label: String) -> void:
 	bot.player.input.scripted_move = Vector2(0.0, 1.0)
 	for i in WALK_TICKS:
 		if i % WALK_MARK_TICKS == 0:
-			LookRect.mark(bot, "c8", "walk_t%03d" % i, bot.player)
+			LookRect.mark(bot, "c8", "%s_t%03d" % [label, i], bot.player)
 		await bot._ticks(1)
 	bot.player.input.scripted_move = Vector2.ZERO
 	await bot._ticks(WALK_MARK_TICKS)
-	run.running = false
-	_end(bot, "c8")
 
 
 # --- C9: the street ----------------------------------------------------------------------------
