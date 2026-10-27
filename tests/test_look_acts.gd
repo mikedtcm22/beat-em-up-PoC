@@ -262,7 +262,7 @@ func test_the_perf_bot_prints_one_bench_line_for_an_act() -> void:
 	var result: Dictionary = JSON.parse_string(lines[0])
 	assert_not_null(result, "it is JSON")
 	for key in ["act", "frames", "mean_ms", "p95_ms", "worst_ms", "spawn_hitch_ms", "first_spawn_ms",
-			"first_hit_ms", "first_finisher_ms", "spawns", "hits", "vsync"]:
+			"first_hit_ms", "first_finisher_ms", "spawns", "hits", "stalls", "vsync"]:
 		assert_true(result.has(key), "has %s" % key)
 	assert_eq(result.get("act"), "Look: Punk face at 1 m", "the act's own title")
 	assert_gt(int(result.get("frames", 0)), 200, "a frame per process frame of the act")

@@ -13,11 +13,17 @@ extends "res://tests/bot/crowd_bot.gd"
 ##   worst_ms, and the hitches: the worst frame within HITCH_WINDOW_S after an event, for
 ##   spawn_hitch_ms (the worst over every enemy that appeared), first_spawn_ms (the first enemy),
 ##   first_hit_ms (the first hit of anyone) and first_finisher_ms (the first finisher-tier hit);
-##   -1 when the event did not happen. Plus the act's title, the spawn and hit counts and the vsync mode.
+##   -1 when the event did not happen. Plus the act's title, the spawn and hit counts, `stalls` (frames of
+##   STALL_MS or more) and the vsync mode.
+## Options after `--`: `--vsync=on` (default off), `--max-fps=<n>` (default 0, no cap). On this Mac an
+## unvsynced window that is not being presented stalls for 1.0 s every few seconds (stalls > 2 says so);
+## with vsync on it does not, and the frame times then follow the display's refresh.
 ## Wall-clock times: a recording (Movie Maker) or a busy machine says nothing.
 
 ## The window after an event in which its worst frame is looked for (s): crowd_acts.gd's PERF_AFTER_S.
 const HITCH_WINDOW_S := 0.5
+## A frame this long (ms) is a stall, not a slow frame (the 1 s of a drawable that was not released).
+const STALL_MS := 500.0
 ## DisplayServer.VSyncMode by value, for the result's `vsync`. (A headless run has a dummy display
 ## server that reports "enabled".)
 const VSYNC_NAMES: Array[String] = ["disabled", "enabled", "adaptive", "mailbox"]
@@ -36,8 +42,15 @@ var _known: Dictionary = {}
 
 
 func _ready() -> void:
-	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
-	Engine.max_fps = 0
+	var vsync_on := false
+	var max_fps := 0
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--vsync="):
+			vsync_on = arg.trim_prefix("--vsync=") == "on"
+		elif arg.begins_with("--max-fps="):
+			max_fps = int(arg.trim_prefix("--max-fps="))
+	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if vsync_on else DisplayServer.VSYNC_DISABLED)
+	Engine.max_fps = max_fps
 	CombatEvents.hit_landed.connect(_on_hit_for_bench)
 	super._ready()
 
@@ -123,6 +136,10 @@ func _close_window() -> void:
 	var sum := 0.0
 	for value in _ms:
 		sum += value
+	var stalls := 0
+	for value in _ms:
+		if value >= STALL_MS:
+			stalls += 1
 	var spawn_hitch := -1.0
 	for stamp in _spawn_stamps:
 		spawn_hitch = maxf(spawn_hitch, _worst_after(stamp))
@@ -138,6 +155,7 @@ func _close_window() -> void:
 		first_finisher_ms = snappedf(_worst_after(_first_finisher), 0.001),
 		spawns = _spawn_stamps.size(),
 		hits = _hits,
+		stalls = stalls,
 		vsync = VSYNC_NAMES[DisplayServer.window_get_vsync_mode()],
 	}
 	log_line("PERF-BENCH " + JSON.stringify(result))

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Compare frame times of a perf act across git refs, windowed with vsync off, on a quiet machine.
-# Usage: tools/perf_compare.sh [--act "<title text>"]... [--runs N] [--force] [--keep] [--out DIR] <ref> [<ref>...]
+# Usage: tools/perf_compare.sh [--act "<title text>"]... [--runs N] [--vsync on|off] [--force] [--keep] [--out DIR] <ref> [<ref>...]
 #   tools/perf_compare.sh afdb39e m4/art-pipeline
 #   tools/perf_compare.sh --act "Perf, six with ragdolls" --act "Look: Perf, six art Punks" --runs 3 afdb39e HEAD
 #   tools/perf_compare.sh --force --runs 1 HEAD        # one ref: a smoke run of the tool, no delta
@@ -10,7 +10,8 @@
 #   2. Checks each ref out into a temporary worktree of its own, .worktrees/perf-<sha> in the main
 #      checkout (removed on exit; --keep leaves them), puts the bench's bot (tests/bot/perf_bot.gd and
 #      .tscn, from this checkout) in it, and imports the project there (`godot --headless --import`).
-#   3. Runs each --act (default "Perf, six with ragdolls") windowed, `--disable-vsync`, RUNS times per
+#   3. Runs each --act (default "Perf, six with ragdolls") windowed, vsync off (`--vsync on` leaves it on;
+#      see below), RUNS times per
 #      ref (default 3), the refs back to back in turn (ref a, ref b, ref a, ref b, ...), so the machine's
 #      drift falls on both. The bot is tests/bot/perf_bot.gd: it records the wall time between process
 #      frames over the act and prints one PERF-BENCH line (see its header). An act a ref does not
@@ -20,6 +21,12 @@
 #      (the same window), each as the mean over the runs with its min..max; with two or more refs a
 #      delta column (the last ref minus the first). The M4 soft bars (plan Part A A16) are checked on the
 #      last ref: p95 <= 16.7 ms, spawn hitch <= 33 ms, first hit and first spawn <= the first ref + 2 ms.
+# Vsync: the plan asks for it off. On this Mac an unvsynced window that is not being presented (an
+# unattended session, the window behind others) stalls for 1.0 s every few seconds (a Metal drawable
+# that is not released), which makes every number meaningless; with vsync on it does not. The report
+# counts frames of 0.5 s or more per run ("stalls") and says so when a run has more than two (the one
+# or two are the first frames of a process): then run again with `--vsync on` (the frame times follow
+# the display's refresh) or with the window in front.
 # The logs of every run, the import logs and results.tsv are in --out (default captures/perf_compare/
 # <time> of this checkout; never committed). GODOT picks another binary; PERF_MAX_FRAMES caps a run
 # (default 60000 frames) so a stuck bot cannot go on for ever.
@@ -37,6 +44,7 @@ FIRST_DELTA_MS=2
 DEFAULT_ACT="Perf, six with ragdolls"
 
 RUNS=3
+VSYNC=off
 FORCE=0
 KEEP=0
 OUT=""
@@ -46,6 +54,7 @@ while [ $# -gt 0 ]; do
 	case "$1" in
 		--act) ACTS+=("$2"); shift 2 ;;
 		--runs) RUNS="$2"; shift 2 ;;
+		--vsync) VSYNC="$2"; shift 2 ;;
 		--force) FORCE=1; shift ;;
 		--keep) KEEP=1; shift ;;
 		--out) OUT="$2"; shift 2 ;;
@@ -54,8 +63,9 @@ while [ $# -gt 0 ]; do
 		*) REFS+=("$1"); shift ;;
 	esac
 done
-[ ${#REFS[@]} -ge 1 ] || { echo "usage: tools/perf_compare.sh [--act \"<title text>\"]... [--runs N] [--force] [--keep] [--out DIR] <ref> [<ref>...]" >&2; exit 2; }
+[ ${#REFS[@]} -ge 1 ] || { echo "usage: tools/perf_compare.sh [--act \"<title text>\"]... [--runs N] [--vsync on|off] [--force] [--keep] [--out DIR] <ref> [<ref>...]" >&2; exit 2; }
 [ ${#ACTS[@]} -ge 1 ] || ACTS=("$DEFAULT_ACT")
+case "$VSYNC" in on|off) ;; *) echo "perf_compare: --vsync wants on or off" >&2; exit 2 ;; esac
 case "$RUNS" in ''|*[!0-9]*|0) echo "perf_compare: --runs wants a positive number" >&2; exit 2 ;; esac
 
 load1() {
@@ -121,12 +131,14 @@ for act in "${ACTS[@]}"; do
 			log="$OUT/act${act_index}-${short}-run${round}.log"
 			echo "perf_compare: act $act_index \"$act\", run $round of $RUNS, ${REFS[$i]} ($short), load $(load1)"
 			status=0
-			"$GODOT" --path "${DIRS[$i]}" --disable-vsync --quit-after "$MAX_FRAMES" res://tests/bot/perf_bot.tscn -- "--act=$act" >"$log" 2>&1 || status=$?
+			vsync_args=(--disable-vsync)
+			[ "$VSYNC" = on ] && vsync_args=()
+			"$GODOT" --path "${DIRS[$i]}" ${vsync_args[@]+"${vsync_args[@]}"} --quit-after "$MAX_FRAMES" res://tests/bot/perf_bot.tscn -- "--act=$act" "--vsync=$VSYNC" >"$log" 2>&1 || status=$?
 			problems="$(grep -c -E 'SCRIPT ERROR|SHADER ERROR|^ERROR' "$log" || true)"
 			line="$(grep '^PERF-BENCH ' "$log" | tail -1 | sed 's/^PERF-BENCH //' || true)"
 			if [ -n "$line" ]; then
 				printf '%s\t%s\t%s\t%s\n' "$act" "${REFS[$i]} ($short)" "$round" "$line" >> "$OUT/results.tsv"
-				echo "$line" | python3 -I -c 'import json,sys; r=json.load(sys.stdin); print("    %d frames, mean %.2f, p95 %.2f, worst %.2f, spawn hitch %.1f, first hit %.1f, first finisher %.1f ms" % (r["frames"], r["mean_ms"], r["p95_ms"], r["worst_ms"], r["spawn_hitch_ms"], r["first_hit_ms"], r["first_finisher_ms"]))'
+				echo "$line" | python3 -I -c 'import json,sys; r=json.load(sys.stdin); print("    %d frames, mean %.2f, p95 %.2f, worst %.2f, spawn hitch %.1f, first hit %.1f, first finisher %.1f ms, %d stalls" % (r["frames"], r["mean_ms"], r["p95_ms"], r["worst_ms"], r["spawn_hitch_ms"], r["first_hit_ms"], r["first_finisher_ms"], r.get("stalls", 0)))'
 			else
 				echo "    no PERF-BENCH line (godot exit $status: the act is not in this ref, or the run failed)"
 			fi
@@ -136,10 +148,10 @@ for act in "${ACTS[@]}"; do
 done
 
 # --- The report ---
-python3 -I - "$OUT/results.tsv" "$RUNS" "$P95_MAX_MS" "$SPAWN_MAX_MS" "$FIRST_DELTA_MS" "$LOAD" "${REFS[@]}" <<'PY' | tee "$OUT/report.txt"
+python3 -I - "$OUT/results.tsv" "$RUNS" "$P95_MAX_MS" "$SPAWN_MAX_MS" "$FIRST_DELTA_MS" "$LOAD" "$VSYNC" "${REFS[@]}" <<'PY' | tee "$OUT/report.txt"
 import json, sys
-path, runs, p95_max, spawn_max, first_delta, load0 = sys.argv[1:7]
-refs = sys.argv[7:]
+path, runs, p95_max, spawn_max, first_delta, load0, vsync = sys.argv[1:8]
+refs = sys.argv[8:]
 runs = int(runs)
 p95_max, spawn_max, first_delta = float(p95_max), float(spawn_max), float(first_delta)
 rows = {}
@@ -156,13 +168,14 @@ METRICS = [
     ("frames", "frames", 0), ("mean_ms", "mean ms", 2), ("p95_ms", "p95 ms", 2), ("worst_ms", "worst ms", 1),
     ("spawn_hitch_ms", "spawn hitch ms", 1), ("first_spawn_ms", "first spawn ms", 1),
     ("first_hit_ms", "first hit ms", 1), ("first_finisher_ms", "first finisher ms", 1),
+    ("stalls", "stalls (>= 0.5 s)", 0),
 ]
 def mean(values):
     return sum(values) / len(values)
 def fmt(value, digits):
     return ("%." + str(digits) + "f") % value
 print()
-print("perf_compare: windowed, vsync off, %d run(s) per ref, load average %s when it started" % (runs, load0))
+print("perf_compare: windowed, vsync %s, %d run(s) per ref, load average %s when it started" % (vsync, runs, load0))
 for act in order:
     print()
     print('== "%s" ==' % act)
@@ -199,6 +212,9 @@ for act in order:
         n = len(rows[(act, r)])
         if n < runs:
             print("  note: %s has %d of %d runs" % (r, n, runs))
+    stalled = [r for r in cols if any(x.get("stalls", 0) > 2 for x in rows[(act, r)])]
+    if stalled:
+        print("  WARNING: %s had runs with more than two frames of 0.5 s or more. Those are stalls of the window (a Metal drawable that is not released, about 1.0 s each), not the game: the numbers above mean nothing. Run again with --vsync on, or with the window in front." % ", ".join(stalled))
     last = cols[-1]
     def bar(value, limit):
         return "n/a" if value is None else ("ok" if value <= limit else "MISS")
