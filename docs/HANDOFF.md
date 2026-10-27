@@ -4,6 +4,17 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-27 15:25 CDT: punk-detail merged (1580/1580 on its branch); toon-gloss launches after the 15:50 reset
+- **Merged:** `m4/fix-final-punk-detail-zones-and-strap` (`bb3f1f4`). The merged tree is its tested tree plus the lead's docs; the preset and palette are unchanged.
+  - The Punk wears the sharp mask cut (`punk_art.tres` `metadata/detail_sharp`).
+  - The cap's strap slot is an authored dark arch on edge loops, with no ink on the cap.
+  - The laces and ankles carry no ink (laces 33.7% to 0%).
+  - The face ink is 1.62% (a 1.75% margin test, 2.0% ceiling), with a nose zone.
+  - **The lead's look:** a crisp mouth bar, a hooked nose stroke and a clean cap. The cap's highlight still washes over the arch: that's per-swatch gloss, toon-gloss's job.
+  - **Left open:** black dashes on the jeans in the C5 landing (not mask ink); the arch is two stepped boxes.
+- **Chain checks:** running now (the Punk, the probe, the hero and the heat-map build).
+- **Next:** the 16:00 resume task wakes this session. Then launch toon-gloss-and-turntable (`packages_wave2` in `final-findings.json`), merge it, run the ratchets fixer, the re-score, the docs, the PR and the DM.
+
 ### 2026-10-27 14:55 CDT: art-chain-records merged (1578/1578); wave 2's punk-detail running; a resume task at 16:00
 - **Merged:** `m4/fix-final-art-chain-records` (`3d2e00d`).
   - The probe report is regenerated (`--check` YES), with a Blender-free guard on the step report keys.
