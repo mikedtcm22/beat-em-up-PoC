@@ -99,9 +99,10 @@ func test_the_act_file_holds_the_plans_acts_with_their_slugs() -> void:
 		assert_true(String(act.title).begins_with("Look: "), "%s starts with Look:" % act.title)
 		assert_true(act.cam in [&"first_person", &"free_fly"], "%s has a camera mode" % act.title)
 		assert_true((act.fn as Callable).is_valid(), "%s has an act" % act.title)
-	# SL-int adds the perf act after them (A16): C1-C11 and C13 stay first, in the plan's order.
+	# SL-int adds the perf act after them (A16), the slice gate's fixer the warm-up act (W1): C1-C11
+	# and C13 stay first, in the plan's order.
 	assert_eq(slugs.slice(0, SLUGS.size()), SLUGS, "the acts are C1-C11 and C13, in the plan's order")
-	assert_eq(slugs.slice(SLUGS.size()), [&"p1"] as Array[StringName], "then SL-int's perf act")
+	assert_eq(slugs.slice(SLUGS.size()), [&"p1", &"w1"] as Array[StringName], "then SL-int's perf act and the warm-up act")
 
 
 func test_the_perf_act_runs_six_art_punks_with_the_probe_on() -> void:
@@ -242,6 +243,26 @@ func test_c1_runs_headless_and_prints_its_marks_and_rectangles() -> void:
 		regions[rect[3]] = true
 	for region: StringName in LookRect.ALL_REGIONS:
 		assert_true(regions.has(String(region)), "a %s rectangle was printed" % region)
+
+
+func test_the_warm_up_act_runs_and_says_so_when_there_is_no_window() -> void:
+	# W1 watches the art warm-up's holder in the camera's frustum (slice-g1-03), which only a window
+	# draws: headless the act marks its start and end and prints one LOOK-WARM line saying it skipped,
+	# so a log never reads as a pass it did not make. The windowed result is recorded by the lead.
+	var bot := QuietBot.new()
+	bot.act_filter = "Look: warm-up in the lens"
+	add_child_autofree(bot)
+	await _run_bot(bot)
+	var warm := _look_lines(bot, "LOOK-WARM")
+	assert_eq(warm.size(), 1, "one line headless")
+	assert_eq(warm[0][1], "skipped:")
+	var labels: Array[String] = []
+	for mark in _look_lines(bot, "LOOK-MARK"):
+		assert_eq(mark[1], "w1", "the slug")
+		labels.append(mark[3])
+	assert_eq(labels, ["start", "end"] as Array[String], "no stills: only the act's own limits")
+	assert_true(_look_lines(bot, "LOOK-RECT").is_empty(), "no rectangles")
+	assert_true(bot.caption.visible, "the caption is back when the act is over")
 
 
 func test_the_head_is_inside_the_body_rectangle() -> void:

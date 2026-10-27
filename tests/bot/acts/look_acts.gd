@@ -29,6 +29,7 @@ extends RefCounted
 ## | C11 | Look: hold the Punk | grab, three knees, throw |
 ## | C13 | Look: Punk, impact frame off | C5 with the impact frame off |
 ## | P1 | Look: Perf, six art Punks | six art Punks and the autopilot for 30 s, frame times logged (A16); no marks, no rectangles |
+## | W1 | Look: warm-up in the lens | a room's load run again, cold, in a viewport of its own (the crowd room, then the training room): the art warm-up's holder is in the camera's frustum on both frames it is drawn (LOOK-WARM lines); no marks, no rectangles |
 ##
 ## The Punk in every act wears the art (game/actors/art/punk_art.tres). The A/B between the four smoke
 ## GLBs is Tuning's Debug value look_punk_art_variant (0 punk.glb, 1 punk_rest, 2 punk_auto,
@@ -140,6 +141,16 @@ const VFX_SEED := 7
 const PUNK_ARTS: Array[String] = ["punk", "punk_rest", "punk_auto", "punk_auto_rest"]
 ## The perf act's length (30 s of the autopilot's fight; the mixed six's is 30 s too).
 const PERF_SIX_TICKS := 1800
+## The warm-up act (W1): the rooms whose load it runs again, the size of the viewport each loads
+## into (16:9, so its camera frames as the game's), the frames the warm-up's holder is drawn for
+## (ToonMaterials.warm_up(): two) and the most frames the act waits for it to show and go.
+const WARM_ROOMS: Array[Dictionary] = [
+	{name = "crowd", scene = "res://game/level/crowd_room.tscn"},
+	{name = "training", scene = "res://game/level/test_room.tscn"},
+]
+const WARM_VIEW_SIZE := Vector2i(320, 180)
+const WARM_FRAMES := 2
+const WARM_WAIT_FRAMES := 12
 
 
 static func acts(bot: Node) -> Array[Dictionary]:
@@ -160,6 +171,7 @@ static func acts(bot: Node) -> Array[Dictionary]:
 				fn = func() -> void: await _reacts(bot, "c13", false)},
 		{title = "Look: Perf, six art Punks", cam = &"first_person", slug = &"p1", probe = true,
 				fn = func() -> void: await _perf_six(bot)},
+		{title = "Look: warm-up in the lens", cam = &"first_person", slug = &"w1", fn = func() -> void: await _warm_up(bot)},
 	]
 
 
@@ -667,3 +679,122 @@ static func _perf_six(bot: Node) -> void:
 	await bot.get_tree().process_frame
 	await bot.get_tree().process_frame
 	CrowdActs._report_perf(bot, run)
+
+
+# --- W1: the load-time warm-up in the lens ------------------------------------------------------
+
+
+## slice-g1-03: the art warm-up (RoomKit.warm_up_art(), ToonMaterials.warm_up()) draws the skinned
+## toon variant and every hull once at a room's load, which does nothing unless what it draws is in
+## the camera's frustum on those frames. It was placed from the camera before the camera's first
+## update, 1.2 m under the floor and behind the view, and so never drawn. A room's load is cold only
+## once per run, so the act runs it again: the warm-up's two once-per-run flags are cleared and each
+## of WARM_ROOMS loads afresh into a SubViewport of its own (its own world, so nothing of the bot's
+## room is touched and the recording's view is the bot's camera still), its camera as new as at the
+## game's start. Every frame the holder is drawn (the frame_pre_draw before it), the skinned ArtBody's
+## box and the five hull boxes are tested against that camera's frustum. Prints per room
+##   LOOK-WARM <room> f<frame> holder (x y z) camera (x y z): skinned <in>/<n> hulls <in>/<n>
+## for each frame, then the line to quote
+##   LOOK-WARM <room>: <OK|FAIL> ...
+## and nothing at all headless (the warm-up draws nothing there).
+static func _warm_up(bot: Node) -> void:
+	_begin(bot)
+	LookRect.mark(bot, "w1", "start")
+	if DisplayServer.get_name() == "headless":
+		bot.log_line("LOOK-WARM skipped: headless, the warm-up draws nothing without a window")
+	else:
+		for room: Dictionary in WARM_ROOMS:
+			await _warm_up_room(bot, room.name, room.scene)
+	_end(bot, "w1")
+
+
+## One room's cold load, watched (see _warm_up()).
+static func _warm_up_room(bot: Node, label: String, scene: String) -> void:
+	var tree: SceneTree = bot.get_tree()
+	var view := SubViewport.new()
+	view.size = WARM_VIEW_SIZE
+	view.own_world_3d = true
+	view.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	bot.add_child(view)
+	ToonMaterials._warmed = false
+	ToonMaterials._art_warmed = false
+	var room := (load(scene) as PackedScene).instantiate() as Node3D
+	view.add_child(room)
+	var drawn: Array[Dictionary] = []
+	var hidden := 0
+	var sane := false
+	for i: int in WARM_WAIT_FRAMES:
+		await RenderingServer.frame_pre_draw
+		var holder := room.get_node_or_null(NodePath(ToonMaterials._WARM_NAME)) as Node3D
+		var camera := view.get_camera_3d()
+		if holder == null or holder.is_queued_for_deletion() or camera == null:
+			if not drawn.is_empty():
+				break
+			continue
+		sane = sane or _frustum_sane(camera)
+		if not holder.is_visible_in_tree():
+			hidden += 1
+			continue
+		var frame := _warm_frame(holder, camera)
+		drawn.append(frame)
+		bot.log_line("LOOK-WARM %s f%d holder %s camera %s: skinned %d/%d hulls %d/%d" % [
+				label, Engine.get_process_frames(), _v(holder.global_position), _v(camera.global_position),
+				frame.skinned_in, frame.skinned, frame.hulls_in, frame.hulls])
+	var skinned_in := 0
+	var skinned := 0
+	var hulls_in := 0
+	var hulls := 0
+	for frame: Dictionary in drawn:
+		skinned_in += frame.skinned_in
+		skinned += frame.skinned
+		hulls_in += frame.hulls_in
+		hulls += frame.hulls
+	var ok := sane and drawn.size() >= WARM_FRAMES and skinned > 0 and hulls > 0 and skinned_in == skinned and hulls_in == hulls
+	bot.log_line("LOOK-WARM %s: %s the holder's skinned ArtBody AABB (%d of %d) and hull boxes (%d of %d) are in the camera frustum on %d frames it is drawn (%d expected; %d hidden before it was placed; frustum test sane: %s)" % [
+			label, "OK" if ok else "FAIL", skinned_in, skinned, hulls_in, hulls, drawn.size(), WARM_FRAMES, hidden, sane])
+	view.queue_free()
+	await tree.process_frame
+	await tree.process_frame
+
+
+## What of the holder's meshes (the skinned art's, the hull boxes') are in `camera`'s frustum now:
+## `{skinned_in, skinned, hulls_in, hulls}`.
+static func _warm_frame(holder: Node3D, camera: Camera3D) -> Dictionary:
+	var planes := camera.get_frustum()
+	var out := {skinned_in = 0, skinned = 0, hulls_in = 0, hulls = 0}
+	for node: Node in holder.find_children("*", "MeshInstance3D", true, false):
+		var mesh := node as MeshInstance3D
+		var inside := _in_frustum(mesh.global_transform * mesh.get_aabb(), planes)
+		if mesh.mesh is BoxMesh:
+			out.hulls += 1
+			out.hulls_in += int(inside)
+		else:
+			out.skinned += 1
+			out.skinned_in += int(inside)
+	return out
+
+
+## True unless every corner of `box` lies outside one plane of a camera's frustum (the planes face
+## out), so a box that is wholly in view, or only partly, or just near it, is in.
+static func _in_frustum(box: AABB, planes: Array[Plane]) -> bool:
+	for plane: Plane in planes:
+		var outside := true
+		for i: int in 8:
+			if not plane.is_point_over(box.position + box.size * Vector3(float(i & 1), float((i >> 1) & 1), float((i >> 2) & 1))):
+				outside = false
+				break
+		if outside:
+			return false
+	return true
+
+
+## The frustum test's own check: a speck 2 m dead ahead of `camera` is in, one 2 m behind it is not.
+static func _frustum_sane(camera: Camera3D) -> bool:
+	var planes := camera.get_frustum()
+	var ahead := camera.global_position - camera.global_basis.z * 2.0
+	var behind := camera.global_position + camera.global_basis.z * 2.0
+	return _in_frustum(AABB(ahead, Vector3.ZERO), planes) and not _in_frustum(AABB(behind, Vector3.ZERO), planes)
+
+
+static func _v(v: Vector3) -> String:
+	return "(%.2f %.2f %.2f)" % [v.x, v.y, v.z]
