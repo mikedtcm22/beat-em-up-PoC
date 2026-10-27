@@ -86,10 +86,11 @@ const CUFF_OVER_FOREARM_MAX_M := 0.01
 const FOREARM_ALONG_NEAR_M := 0.08
 const FOREARM_ALONG_FAR_M := 0.10
 ## Shading normals: the share of edges whose end normals disagree by more than 25 degrees and the mean disagreement (the lumpy
-## generated normals measured 38.5% and 25.4 degrees, the smoothed ones 11.3% and 15.1).
+## generated normals measured 38.5% and 25.4 degrees, 6 rounds of smoothing 11.3% and 15.1, the shipped 12 rounds (re-score rs-04: the
+## face's bands were faceted patches at 6) 8.8% and 13.3; the bars were 18% and 19 degrees and are tightened to the 12 rounds).
 const NORMAL_EDGE_ANGLE_DEG := 25.0
-const NORMAL_EDGE_SHARE_MAX := 0.18
-const NORMAL_MEAN_DEG_MAX := 19.0
+const NORMAL_EDGE_SHARE_MAX := 0.12
+const NORMAL_MEAN_DEG_MAX := 16.0
 ## The face's skin carries the mouth and the nose line and no speckle: the share of its surface with ink over one half (the speckled
 ## mask measured 2.6%, the lines alone 1.6%; F-cuff's re-bake 1.98%, the final-v1-06 retune 1.62%: face_skin 0.04 / 0.10).
 const FACE_INK_MIN := 0.004

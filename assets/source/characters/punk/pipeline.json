@@ -586,7 +586,7 @@
 	"export": {
 		"hull_normal_digits": 5,
 		"smooth_normals": {
-			"iterations": 6,
+			"iterations": 12,
 			"crease_deg": 50,
 			"falloff": 2.0,
 			"self_weight": 1.0
