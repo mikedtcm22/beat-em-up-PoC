@@ -1,6 +1,6 @@
 {
  "round": "final",
- "reviewed": "3eea29a (V2-V6); V1 reviews 44b1a7e separately",
+ "reviewed": "3eea29a (V2-V6), 44b1a7e (V1)",
  "scores": {
   "v2": [
    {
@@ -54,7 +54,44 @@
    }
   ],
   "v5": [],
-  "v6": []
+  "v6": [],
+  "v1": [
+   {
+    "item": "J1",
+    "score": 1,
+    "evidence": "sheets/v1_J1_concept_c2_before_25m_10m.png and C6 f199/f289/f379. Reads as Punk A at a glance and holds at 2.5, 5 and 10 m; chunky, with big cream high-tops. But the hands read SMALL. C2 f109: glove 153 px wide at y 420 against the forearm's 208 px at y 650. C6 2.5 m (probe/c6_25_hands_4x.png): about 42 against 57 px, the same 1.35 ratio, so this is not perspective. The concept's gloves are wider than the wrist. To raise it to 2: scale the glove block 12-15% so the hand is wider than its 11.6 cm cuff (finding 2)."
+   },
+   {
+    "item": "J2",
+    "score": 1,
+    "evidence": "C1 f109/f229 head crops, probe/c1_cap_4x.png, probe/c1_mouth_4x.png, probe/c4_f85_cap_3x.png. Simplified and readable: cap, forehead strip, framed yellow lens, plain face. Not crisp: the mouth is a fuzzy dotted dash and the nose a faint broken scratch. The cap's strap slot is a ragged dark polygon ringed by grey specks, which a white splotch covers in the cross's turn. The face's mid band is a blocky patchwork. The lens never shows a glint. To raise it to 2: threshold the mask (finding 1), give the strap slot an authored straight-edged region and the cap an ink zone (finding 3), gloss on the lens only (finding 4), and smoother head shading normals so the face falls into two clean shapes."
+   },
+   {
+    "item": "J3",
+    "score": 1,
+    "evidence": "sheets/v1_J3_c4_f40_f62_f85_f90_f163_f173.png. At the chin (C1/C2 f109, C4 f40 hands crop) they are fists: knuckle bumps, a thumb, skin fingertips. The striking glove, however:\n- jab f60-f63 and cross f89-f93: a featureless navy dome, the back of the glove, covering about 16% of the view at f62\n- shove wind-up f163: from the knuckle side the gloves read as dark mittens with no bare fingers\n- cuff: no distinct band; glove and cuff are one dark shape\n- shove hit f173: the hands are out of view.\nThe contact dome is already logged (F-punk \u00a75; the slice gate's gap 3 asked for the knuckle face toward the lens). To raise it to 2: turn the knuckle face to the lens at contact (a hand-bone roll in the art's bind, not the move clip), give the knuckle face bare-skin fingers, and a bigger glove (finding 2)."
+   },
+   {
+    "item": "J4",
+    "score": 1,
+    "evidence": "Hull: even and continuous, 3-4 px at 900p on the C2 forearm (scans), ink (19,18,23), not heavy, no doubled lines (C1 head crop, C6). Interior lines are not crisp. probe/c2_tape_4x.png shows the wraps as dotted, feathered pencil strokes; the mouth and nose are soft; the cap and laces carry grey smudges (faint mask values 0.1-0.5 make up 1-3.3% of every region, 13.8% on the laces). Cause: toon.gdshader:67 mixes a bilinear 1k mask linearly. To raise it to 2: threshold the mask in the shader with fwidth (finding 1), optionally a 2k bake."
+   },
+   {
+    "item": "J5",
+    "score": 1,
+    "evidence": "Bands, tint and rim pass:\n- 3 crisp bands on the face, forearms and vest\n- tinted shadows, never black: glove shadow (42,42,66), lilac skin, blue teal\n- a 7-10 px rim on the forearm and the cap.\nThe highlights do not:\n- big pale blobs on the matte cloth: C2 f109 vest, 4,036 px pale mint; C4 f163, two vest panels and the tank top at once\n- a white splotch over the cap's dark mark in C4 f85\n- a white slash on the forehead\n- none on the shades in any frame viewed (the art material is never glossy: toon_materials.gd:73).\nThe vest's hem cast shadows have ragged edges (probe/c2_hem_2x.png, probe/c4_shove_hem_2x.png). The face's mid band is blocky. To raise it to 2: per-swatch gloss (finding 4), and smoother head normals or a spherical head-normal blend."
+   },
+   {
+    "item": "J6",
+    "score": 2,
+    "evidence": "6 flat colours on 7 slots, no red (A3 ok); the vivid Punk against the muted street in every C6 still. The lens, frame, cap, vest, tank, jeans, boots and tape borders are clean in C1/C2 f109 and C6 f199. The flaws on palette regions are the cap's strap slot (finding 3) and the laces' black speckle (finding 5), and they are scored under J2 and J7. With those fixed, every border would be clean."
+   },
+   {
+    "item": "J7",
+    "score": 1,
+    "evidence": "Geometry is clean: no holes, spikes, floaters or z-fighting in C10 rest q90/q180/q270, guard q90/q180/q270, lying q90/q180/q270, nor in C1/C2. Texture smears: the laces are leopard-spotted with black (probe/c10_lying_boots_3x.png; 23% inked), there is a sawtooth dark-grey border at the nape (C10 f290 head crop), and the cap's ragged strap slot. The front quarter is unchecked: C10's q0/q360 frames film the hero's back (f530, f571, f1051, f1092) and rest_q0 (f50) is the free-fly start view (finding 7). To raise it to 2: clean the laces and cap regions, and fix the turntable so the front at rest, guard and lying is filmed."
+   }
+  ]
  },
  "findings": [
   {
@@ -817,12 +854,251 @@
      "fix_needs_spec_change": false
     }
    ]
+  },
+  {
+   "id": "final-v1-01",
+   "lens": "v1",
+   "severity": "medium",
+   "title": "Interior ink lines are soft, dotted grey smears at 1 m: the 1k detail mask is blended linearly with no threshold",
+   "detail": "toon.gdshader mixes the albedo toward the ink by the raw bilinear-filtered mask value. At 1 m one mask texel covers about 1.5-2 px, so every line gets a feathered grey edge. The mask's faint values (0.1-0.5) draw as grey smudges: 1-3.3% of every region's samples, 13.8% on the laces.\n\nWhat Game-boy sees in first person:\n- the tape's wraps read as dotted, hairy pencil strokes;\n- the mouth is a fuzzy dotted dash and the nose a faint broken scratch;\n- the cap's strap slot is ringed by grey specks;\n- the vest seams are dashed.\n\nThis is J4's 'crisp interior lines' (critical) and J2's 'crisp' face. It is not in any call: F-punk logs speckle counts, not line softness.",
+   "evidence": "game/fx/toon.gdshader:19 (sampler filter_linear_mipmap) and :66-67 `color = mix(color, ink, texture(detail_tex, UV2).r * detail_strength);`\n\nCrops: captures/review/probe/c2_tape_4x.png (C2 f109, the wraps), probe/c1_mouth_4x.png and probe/c1_cap_4x.png (C1 f109), sheets/v1_J2J4_cap_mouth_tape_laces.png.\n\nTemporary ink probe on punk.glb (ink over 0.5 / faint 0.1-0.5):\n- tape 6.97% / 3.33%\n- cap 1.17% / 2.57%\n- face 1.98% / 1.07%\n- teal 1.95% / 2.98%\n- laces 23.16% / 13.83%",
+   "repro": "In the worktree: tools/capture_bot.sh res://tests/bot/crowd_bot.tscn captures/review/c2 'Look: Punk body at 1 m', then tools/look_sheets.sh captures/review/c2/bot.avi captures/review/c2/sheets. Crop the f109 still at 940,520 (200x150) and at 700,420 (C1 f109, 200x120), scaled 4x nearest-neighbour.",
+   "suggested_fix": "Threshold the mask in toon.gdshader so lines are hard at any magnification and the faint values drop out:\n`float r = texture(detail_tex, UV2).r; float w = max(fwidth(r), 1e-4); float a = smoothstep(0.5 - w, 0.5 + w, r); color = mix(color, ink, a * detail_strength);`\nThis applies to the player's mask too: re-check F-player's lines at 0.3-0.6 m. Then re-check test_art_contract's face-ink and tape tests and C1/C2/C8 crops. Optionally bake the Punk's mask at 2048 (punk.json detail_bake.size) for thinner lines.",
+   "files": [
+    "game/fx/toon.gdshader",
+    "assets/export/characters/punk/punk_detail.png",
+    "tools/pipeline/pipe_detail.py"
+   ],
+   "spec_change": false,
+   "survives": true,
+   "skeptic": [
+    {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "Reproduced at 44b1a7e and confirmed. The Punk's interior ink lines (tape wraps, mouth, nose) render as feathered, dotted grey strokes at 1 m, because the shader blends the bilinear-filtered 1k mask into the albedo with no threshold. This is a real defect against J4 (critical, \"crisp interior lines\") and J2 (face \"crisp\"). No call, spec line or approved departure covers it. Patching the shader as the finding suggests fixes it in the first-person captures with no regression in the player's limbs.",
+     "evidence": "Baseline: captures/review/c2 f109, crop 940,520 200x150 at 4x nearest. The three tape wraps are blurred, grey, hairy dashes. captures/review/c1 f109, crop 700,420 at 4x shows the mouth as a fuzzy grey dash and the nose as a faint broken scratch.\n\nMask: punk_detail.png has 22,612 non-zero texels, and 43% of them are below 0.1 and 54% below 0.2 (the smoothstep tail of 1-texel lines). The bilinear blend turns every such texel into a grey wisp.\n\nPatch test (the finding's smoothstep(0.5-w, 0.5+w, r) in game/fx/toon.gdshader, never committed, since reverted). I re-recorded 'Look: Punk body at 1 m' and 'Look: Punk face at 1 m', each with 0 SCRIPT ERROR, ERROR or SHADER ERROR lines.\n- C2 f109 tape wraps: solid, crisp ink strokes, no feathering or grey specks.\n- C1 f109 mouth: a crisp dark bar. The nose scratch is now one clean short stroke, and the faint smudges around it are gone.\n- Player: I recorded 'Look: own limbs' before and after (f115 fist at 0.3-0.6 m). The player's lines stay and are slightly crisper, with no loss of readability.\n- tools/run_tests.sh -gselect=test_toon.gd: 34/34 pass with the patch. Its string asserts ('texture(detail_tex, UV2).r', 'color = mix(color, ink,') still match. test_art_contract's face-ink test reads the mask PNG, not the render, so the shader change cannot affect it.\n\nSide effects of the threshold, which are not reasons to refute:\n- Lines get bolder and blacker, for example the mouth.\n- Where the mask itself is broken, a gap shows more plainly, for example one tape-wrap gap near the centre.\n- Faint 0.1-0.5 segments drop out. The player's mask is 33% faint texels, so some faint hairlines there vanish. I judged that crisper rather than worse.\n- I did not reproduce the claimed grey specks ringing the cap strap slot. My cap crop at C1 f109 (650,330 300x110) shows no obvious difference.\n\nThe finding's numbers (3.33% and 13.83% faint) were not re-measured, but the mask histogram agrees in kind.\n\nScope check: the finding is not in any call. toon.gdshader and ARCHITECTURE line 1100 only say the shader \"mixes toward the ink by .r\". The plan's line-323 condition (add the mask if interior lines are missing at 1 m) was met, and the mask now ships soft.",
+     "root_cause": "game/fx/toon.gdshader line 67 does color = mix(color, ink, texture(detail_tex, UV2).r * detail_strength). The sampler is filter_linear_mipmap and the value is used raw, with no cut-off. The mask is baked by tools/pipeline/pipe_detail.py as soft, 1-texel-wide lines: a smoothstep of ink_low..ink_high on the black top-hat, resampled bilinearly onto a 1024 UV2 atlas. At 1 m one mask texel covers about 1.5-2 screen px. Bilinear magnification then feathers every line into a grey gradient, and the faint tail (0.1-0.5) draws as grey speckle. Hard lines at any magnification need a threshold at sample time, with an fwidth-based smoothstep for anti-aliasing.",
+     "files_to_change": [
+      "game/fx/toon.gdshader",
+      "docs/ARCHITECTURE.md",
+      "docs/milestones/M4-calls/F-punk.md",
+      "tools/pipeline/pipeline.json"
+     ],
+     "fix_needs_spec_change": false
+    }
+   ]
+  },
+  {
+   "id": "final-v1-02",
+   "lens": "v1",
+   "severity": "medium",
+   "title": "The Punk's hands read undersized: the glove is narrower than its own cuff and about 1.35 times narrower than the forearm (SPEC \u00a710: slightly oversized hands)",
+   "detail": "The generated glove block is fitted to M3's fist box: 0.099 x 0.115 x 0.118 m (F-punk C8, A5). The Tripo forearm under it is 4.8-5.4 cm in radius at the wrist, and F-cuff's wrist band 5.8 cm. So the glove (10 cm wide) is narrower than the cuff it sits in (11.6 cm) and much narrower than the forearm toward the elbow.\n\nOn screen the forearm is about 1.35 times the glove's width:\n- at 1 m (C2 f109): 208 px against 153 px;\n- at 2.5 m (C6 f199): about 57 px against 42 px. The same ratio, so this is not perspective.\n\nAt 2.5-10 m the gloves are small dark nubs on big forearms. In the concept the gloves are wider than the wrist. This fails J1's critical 'slightly oversized hands' (SPEC \u00a710), and is why F-cuff found the glove reads as a long gauntlet rather than a glove with a cuff (J3). It is not logged as a proportion issue: G2 tried x1.06 only for A9 and did not ship it 'because nobody asked'.",
+   "evidence": "sheets/v1_J1_concept_c2_before_25m_10m.png (concept | C2 f109 | M3 before | 2.5 m 4x | 10 m); captures/review/c2/sheets/c2/stills/c2_f109_idle_t060.png; probe/c6_25_hands_4x.png. test_art_contract: 'cuff ... widest 5.8 cm from the arm's axis'. DONE-WHEN A5: punk extents x1.00/1.00/0.98. F-punk.md G2: a 6% bigger block gave jab 4.5 and cross 4.4 pp (from 4.7 and 4.9).",
+   "repro": "Record C2 and C6 as above. On the C2 f109 still, compare the glove's width at y 420 (x 487-640) with the forearm's at y 650 (x 447-655). On C6 f199, crop 680,390 (240x180) at 4x.",
+   "suggested_fix": "Scale the fitted glove block 12-15% in x and y in pipe_fist.py's block fit (a config key beside the 90% width fit). A5 allows \u00b120% of the fist box, and the hurtboxes and FistPoint are unchanged. Keep the cuff's outline so the hand is wider than its 11.6 cm band. This also closes A9's lens-share gap toward the bulkier proxies (F-cuff measured 0.2-0.5 pp at 6%), so the jab and cross ratchets may fall under the 4 pp bar. Re-run A5, A9, the strike lens rule (0.230 m) and the C2/C4 crops.",
+   "files": [
+    "tools/pipeline/pipe_fist.py",
+    "assets/source/characters/punk/pipeline.json",
+    "assets/export/characters/punk/punk.glb"
+   ],
+   "spec_change": false,
+   "survives": false,
+   "skeptic": [
+    {
+     "refuted": true,
+     "confidence": "medium",
+     "reason": "The measurements reproduce, but they do not show a defect. Against the picked concept the Punk's gloves have the same proportions, and the glove size is the Game-boy-calibrated M3 fist box that A5 binds. In the concept the hand is also no wider than the cuff and sits well below the forearm's bulk. The leftover problem, the glove reading as a long gauntlet, is already logged as J3 (F-punk.md G-section \"What it does not do\"). The suggested fix would also work against a recorded playtest decision and would not reliably close A9.",
+     "evidence": "I reproduced the C2 f109 numbers: glove about 153 px wide, forearm about 208 px near the elbow end. What those numbers mean is different.\n\n1. Hand size against the head matches the concept. I measured the original JPEG on a 50 px grid: cap body about 245 px, glove palm about 140 px, ratio 0.57. In the game at 2.5 m (c6_f199 body crop and probe/c6_25_hands_4x.png), cap body is about 78-80 px and glove about 44-47 px, ratio 0.56-0.58. The 1 m frame (C2) reads larger, about 0.65, because in the guard the fists sit 15-20 cm in front of the face and the lens is at 1 m. So the finding's \"undersized\" does not hold against the concept. By absolute height the glove is about 15% narrower than the concept's palm. The Punk's head is scaled down by the rig table in the same proportion, and that is not what this finding is about.\n\n2. The 1.35 forearm-to-glove ratio is mostly the concept's own bulk and the hand's size relative to it, not a deviation. The finding compares the glove's widest point with the forearm's widest point near the elbow (y 650). In the concept the forearm is about 150-175 px perpendicular at mid-forearm against a palm of about 140 px, a ratio of about 1.1-1.25, and it swells further toward the elbow. The Tripo forearm is 4.8-5.4 cm in radius at the wrist and 5.7-6.2 cm at 9.8 cm above it (F-punk.md G1), so it follows the pick. The same ratio at 1 m and 2.5 m only shows it is the arm's shape, as the finding says. It does not show the shape differs from the concept's.\n\n3. \"The glove is narrower than its cuff\" is also in the concept. The cuff rim there is about 150-160 px against a palm of 140, a ratio of about 1.1. The game has 11.6 cm against 9.9 cm, a ratio of about 1.17. The concept's wrist is about 9.7 cm, which the game's 9.6-10.8 cm matches.\n\n4. The glove size is the approved departure. README (M3 enemy hands) states the enemy gloves are \"the size of the player's hands, still slightly oversized (Spec \u00a710)\". They were shrunk after Game-boy's first-person playtest: gloves cover 7% of the view at the step-in, 20% before. A5 fixes the fist at the 0.100 x 0.116 x 0.118 m box (plan row A5, \u00b120%, shipped x1.00/1.00/0.98). Enlarging by 12-15% re-grows the lens cover that playtest removed. The glove-to-forearm ratio is also unchanged in the strikes, where the lens sees the fist end-on.\n\n5. The suggested fix would not reliably close A9. F-punk.md G2 measured a 6% block scale at only 0.2-0.5 pp (jab 4.71 to 4.5, cross 5.02 to 4.4, bar 4). Even a linear extrapolation to 12-15% (about 0.4-1.0 pp) leaves the cross at about 4.0-4.2 and the jab at about 3.7-3.9. It would also push the art past the proxies' drawn Fingers box (0.106 x 0.122) and raise the other-direction cell mismatches (cells already 6.6% against 3%).\n\n6. The gauntlet reading is already logged. G-section \"What it does not do\" in F-punk.md says the cuff and glove read as one continuous dark shape, \"a long glove or a gauntlet more than a glove with a wristband\", and that the concept's skin window on the back of the hand is missing. That is a J3 issue about the cuff's separation and length, not hand width. Visually, c6_f199_body.png and c6_f289_body.png show readable dark gloves at the chin at 2.5 m and 5 m, as the concept's gloves read.",
+     "root_cause": "The glove block is fitted to the table's fist box in tools/pipeline/pipe_fist.py (step 2, lines 11-12 and 159-166). The scale is uniform from the block's height, then `extent_fit` 0.9 of the way to the box's widths, set in assets/source/characters/punk/pipeline.json at `parts.fists.generated.extent_fit`. The box is M3's fist (0.100 x 0.116 x 0.118 m), already approved as \"slightly oversized\". The forearm is Tripo's, which follows the picked concept's bulky forearms. So the forearm-to-glove ratio comes from the pick, and the glove-to-head ratio matches the concept (0.57). No pipeline fault was found. The only real residual is the cuff reading as a gauntlet (J3). That one is already logged as known and does not come from hand width.",
+     "files_to_change": [],
+     "fix_needs_spec_change": false
+    }
+   ]
+  },
+  {
+   "id": "final-v1-03",
+   "lens": "v1",
+   "severity": "medium",
+   "title": "The cap's strap slot is a ragged dark patch ringed by ink specks, and the cap's highlight washes over it as a white splotch",
+   "detail": "In the face shot the cap's front (the cap is worn backwards) is the most central detail of the head. The strap opening is a dark-grey palette patch with sawtooth triangle borders. It is surrounded by soft black and grey specks: the cap has no detail_bake zone, so it takes the body's 0.02/0.07 thresholds, leaving 1.17% inked and 2.57% faint. A faceted cream highlight polygon sits beside it (C1 f109).\n\nWhen the Punk turns into the cross (C4 f85) the hard highlight covers the patch as a pale splotch about 67x60 px at 900p, washing the dark patch to light grey: it reads as a dirty smear. The concept has a clean dark arch with a strap. J2 names the cap. Neither the speckle nor the splotch is in the calls: F-punk-fix gave only the face skin a zone, and its optional spec request was not taken up for the real Punk.",
+   "evidence": "probe/c1_cap_4x.png (C1 f109), probe/c4_f85_cap_3x.png (C4 frame 85), c1/sheets/c1/crops/c1_f109_head.png and c1_f229_head.png. The ink probe, region 'cap (17, y>1.6)': 1.17% ink, 2.57% faint over 5,990 samples. pipeline.json detail_bake.zones has only face_skin (slot 6).",
+   "repro": "Record C1 and C4. Crop C1 f109 at 700,200 (200x140) at 4x. Extract C4 frame 85 (ffmpeg select eq(n,85)) and crop 760,0 (260x180).",
+   "suggested_fix": "Give the strap slot an authored region like the lens's: a palette.regions box, or two for an arch, with bisect_z so its edges run on edge loops, in the dark grey. Add a cap zone to detail_bake.zones (slot 17, y > 1.6) with the face's thresholds 0.035/0.09, or no ink. Keep the specular off the dark-grey slot (see the per-swatch gloss finding), so a highlight never paints the mark grey. Check at C1 f109 and C4 f85.",
+   "files": [
+    "assets/source/characters/punk/pipeline.json",
+    "tools/pipeline/blender_palette.py",
+    "assets/export/characters/punk/punk.glb",
+    "assets/export/characters/punk/punk_detail.png"
+   ],
+   "spec_change": false,
+   "survives": true,
+   "skeptic": [
+    {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "Confirmed. The defect reproduces in the reviewer's own recordings of the reviewed commit. I re-extracted C1 f109 and C4 f85 from captures/review/{c1,c4}/bot.avi and cropped them as specified. C1 f109 shows a small dark-grey blob with a triangular spike on its left edge, black and grey specks around it, and a faceted cream highlight polygon beside it. C4 f85 shows a cream polygon of about 68x60 px over the patch, with grey patch fragments showing through. The concept (assets/source/concepts/punk_a_denim_vest.jpg) has a clean dark arch with a strap in that place, so the cap's most central detail reads as a stain. It is not an approved departure or a logged default, and nothing makes it out of M4 scope. F-punk.md line 91 even lists \"its vent and strap slot inked\" among the things that read well. C13 is about damage marks, not ink. F-punk-fix gave only face_skin a detail zone. The highlight is logged only in part. F-look C7 and the bible want one small hard highlight on the cap. F-punk request (3) says the smoothed normals made it bigger and `look_spec_cut` is the knob, but nobody took that up. Two caveats. (a) The finding's percentages do not reproduce as stated: over the whole cap (slot 17, z>1.6) I measure 0.27% hard ink and 2.16% faint. The speckle is local to the patch. Within 6 cm of it, 11.5% of samples carry ink (1.5% hard, 9.9% faint), against 2.4% for the cap overall. (b) Severity is modest. The patch is 7.8 cm2 and about 100x60 px at 1 m in a 1600x900 frame. The highlight washing over it is the same mechanism as the pale splotches on the vest, so it is partly a coincidence of position. Medium is defensible because it sits on the head in the face shot (J2). Low-to-medium would also be fair.",
+     "evidence": "Frames and crops: /private/tmp/claude-501/-Users-arachne-repos-beat-em-up-PoC/097d610a-a8fb-4633-bbe9-6486aed195e7/scratchpad/v1_03/ (c1_f109.png, c4_f85.png, c1_cap.png, c4_cap.png). The recordings (13:36) predate the uncommitted edit to game/fx/toon.gdshader in the reviewer worktree (13:56), which smooths the detail-mask edge with fwidth, so the frames reflect the reviewed commit.\n\nProbe: headless Blender on assets/export/characters/punk/punk.glb and punk_detail.png, with UV1 slot decoding (gen_palette.slot_of_uv) and area-weighted sampling of the UV2 ink mask (script: scratchpad/v1_03/cap_probe2.py).\n- The patch is 20 triangles of slot 2 (shared charcoal). It spans x -1.8..+2.1 cm and z 1.716..1.733 m, which is about 4x1.8 cm and 7.8 cm2. Triangle areas run 0.06 to 1.18 cm2 with a median of 0.30. At that coarseness the label border is ragged and has sawtooth spikes. The cap faces around it are 63 triangles of slot 17 and nothing else.\n- Ink in the patch's own faces: 1.17% hard, 11.2% faint.\n- Ink in slot-17 cap faces within 6 cm of the patch: 11.45% above 0.1, against 2.43% over the whole cap.\n- For comparison, the face_skin zone (thresholds 0.035/0.09) sits at 2.4%.\n\nConfig: assets/source/characters/punk/pipeline.json has `palette.detail_bake.zones` with only face_skin (slot 6, z 1.5..1.8). The cap therefore takes the global 0.02/0.07 pair. The `regions` list has lens, frame, frame_low and boots, and nothing for the strap. In blender_palette.py (lines 558-580) a face outside every zone gets the global pair, so the cap's faces get it. The patch's slot-2 label comes from nearest-swatch labelling of the Tripo texture's dark area (label, majority filter, decimation with protected borders), so its shape is whatever the texture's noise gives.\n\nHighlight: game/fx/toon_light.gdshaderinc lines 89-91 add `spec * spec_strength * spec_gloss` to SPECULAR_LIGHT. `spec_gloss` is a per-material uniform (the Punk's material uses 3.0), not a per-swatch value. The highlight therefore paints any slot it lands on, here the dark-grey patch, to light grey or cream. `look_spec_cut` (tuning_data.gd:1074, 0.99) sets its size.",
+     "root_cause": "Three things combine. (1) The strap opening is only a nearest-colour label of a few Tripo texels. It decimates to 20 coarse slot-2 triangles with a jagged border, because no `palette.regions` entry authors it the way the lens and frame are authored. (2) The cap has no `detail_bake.zones` entry, so the thin dark outline of that patch and the texture noise around it pass the body's loose 0.02/0.07 smoothstep and become ink specks (11% of samples near the patch, against about 2% elsewhere on the cap). (3) The toon spec is one per-material gloss. The cap's hard highlight, made bigger by the smoothed normals (F-punk F4 and request 3), sweeps across the dome and washes whatever swatch is under it, including the dark patch. (3) is the same mechanism as the separate per-swatch gloss finding, so it should be fixed or dismissed once, not twice.",
+     "files_to_change": [
+      "/Users/arachne/repos/beat-em-up-PoC/assets/source/characters/punk/pipeline.json",
+      "/Users/arachne/repos/beat-em-up-PoC/assets/export/characters/punk/punk.glb",
+      "/Users/arachne/repos/beat-em-up-PoC/assets/export/characters/punk/punk_rest.glb",
+      "/Users/arachne/repos/beat-em-up-PoC/assets/export/characters/punk/punk_detail.png",
+      "/Users/arachne/repos/beat-em-up-PoC/assets/source/characters/punk/report/report.json",
+      "/Users/arachne/repos/beat-em-up-PoC/tests/test_art_contract.gd",
+      "/Users/arachne/repos/beat-em-up-PoC/ASSETS.md",
+      "/Users/arachne/repos/beat-em-up-PoC/game/fx/toon_light.gdshaderinc (only if the per-swatch gloss is fixed here rather than in its own finding)"
+     ],
+     "fix_needs_spec_change": false
+    }
+   ]
+  },
+  {
+   "id": "final-v1-04",
+   "lens": "v1",
+   "severity": "medium",
+   "title": "The hard highlight lands as big pale blobs on the matte denim and cotton, never on the glossy shades",
+   "detail": "ToonMaterials.art() builds the art material non-glossy (`_make(Kind.ART, false)`), and spec_gloss comes from that one per-material flag. So the whole Punk shares one spec_cut of 0.99 on F-punk-fix's smoothed normals. The highlight falls wherever a broad smooth patch faces the half vector:\n- the vest's chest: 4,036 px at C2 f109, a 125x103 px pale-mint shape (198,215,205) on teal (61,141,148);\n- both vest panels and the tank top at once in the shove wind-up (C4 f163);\n- the cap (C4 f85);\n- a white slash on the forehead.\n\nThe lens shows none in any C1, C2, C4, C6 or C10 frame I viewed. The look bible: 'Glossy regions (shades, leather, studs) get x3'. The concept's only highlights are the gold lens's white streaks. The area stays under the bible's 3%, so this is placement and shape, not size. It decides part of J5 (one small hard highlight; the cap's highlight) and J2 (the shades read as a flat yellow band). P1-toon.md:129 lists per-region gloss as open, but the vest blobs come from F-punk-fix's smoothing (its F4 noted the cap only).",
+   "evidence": "game/fx/toon_materials.gd:73 and :173; game/fx/toon_light.gdshaderinc:87-91. Crops: probe/c2_vest_spec_4x.png, c4/probe/shove_f163_hands.png, probe/c4_f85_cap_3x.png. Probe output: 'c2 pale vest highlight px: 4036 bbox 850 346 974 449 share of frame 0.28%'.",
+   "repro": "Record C2 and C4. View the C2 f109 still at 860,330 (200x150, 4x). Extract C4 frames 163 and 85.",
+   "suggested_fix": "Per-swatch specular. The shader already derives the slot from UV (floor(UV.x*32) + 32*floor(UV.y*2)). Add a `uniform float swatch_spec[64]` that ToonMaterials fills from a 'spec' field in the palette JSONs: 0 for teal, jeans, dark grey and skin; 1 for the cap; look_spec_gloss for the lens. Multiply the spec term by it. Alternatively, a gloss bit in the atlas's alpha classes. Then the lens takes the glint and the denim stays matte. Check C1, C2 and C4 f85/f163.",
+   "files": [
+    "game/fx/toon.gdshader",
+    "game/fx/toon_light.gdshaderinc",
+    "game/fx/toon_materials.gd",
+    "assets/source/palette/punk.json",
+    "tools/pipeline/gen_palette.py"
+   ],
+   "spec_change": false,
+   "survives": true,
+   "skeptic": [
+    {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The pale blobs and the code path are as described, and nothing in the spec, plan or logged calls approves them. I confirmed the behaviour from the reviewer's recordings, not a fresh recording (the machine is shared, one Godot at a time). Severity is medium at most: it is a look defect, not a mechanical one. The size is within the bible's 3% target, so it is a placement and shape defect against J5 and the concept, and I would score J5 at 1.",
+     "evidence": "Frames from the reviewer's recordings at 44b1a7e (captures/review/c2/bot.avi and c4/bot.avi), extracted with ffmpeg:\n- C2 f109: a pale mint blob about 80x95 px on the Punk's right vest chest at full 1600x900, with a white slash on the forehead above the lens. The lens is a flat yellow band with no glint.\n- C4 f163 (shove wind-up): one pale blob on each vest panel and a pale blob on the cap emblem region.\n- C4 f85: three or more vest and cap patches, plus a white streak on the arm skin.\n- C10 side and back views show no vest blob, so it follows the half vector. It shows on the front-facing views, which are the ones the player sees in first person.\n- The concept (punk_a_denim_vest.jpg) has no highlight on the vest, only the white streaks on the lens. The bible lists shades, leather and studs as the glossy regions.\n\nCode path:\n- ToonMaterials.art() calls _make(Kind.ART, false) (toon_materials.gd:73, :303-307).\n- apply_look() sets spec_gloss to 1.0 for any non-glossy material and spec_strength to 0.5 for every non-room surface (toon_materials.gd:172-173).\n- toon_light.gdshaderinc:87-91 adds spec * spec_strength * spec_gloss with spec_cut 0.99 to SPECULAR_LIGHT. It is not multiplied by albedo, so the pale mint on teal is additive white.\n- toon.gdshader's fragment() reads only the swatch's rgb and alpha (marks, skin); there is no per-swatch gloss.\n- The lens is its own slot, 19 punk_lens (punk.json, marks false), separate from the cap's slot 17, so a per-slot gloss can single it out.\n\nNot an approved departure or logged call:\n- P1-toon.md:129 lists per-region gloss under \"Not done, or for someone else\", with no owner.\n- F-punk.md:130 and :154 note that smoothing enlarged the cap and forehead highlight and leave `look_spec_*` to F-look as optional. Nothing mentions the vest.\n- F-look C7 measured 0.14% on cap, lenses and glove knobs before the smoothing. M4-judgement-calls.md has no entry on highlights.\n\nNot verified:\n- Whether the lens would show a glint after the fix. The patch size does not change (spec_cut stays 0.99); gloss only multiplies strength, so the lens glints only where its normals meet the half vector. The reviewer saw none in any frame at the current geometry.\n- A test of the fix at C1, C2 and C4 f85/f163.",
+     "root_cause": "The art material has exactly one gloss factor and one spec strength for every swatch. ToonMaterials.art() builds it non-glossy, and the toon_light.gdshaderinc light() adds the same hard highlight wherever a surface faces the half vector. F-punk-fix's smoothing turned the vest, tank and cap into broad smooth patches, so the highlight lands as large pale blobs on matte denim and cotton. The lens, the one region the bible and concept name as glossy, gets no special treatment. toon.gdshader's fragment() has the swatch slot (UV) and atlas alpha but passes no gloss to light(), and the palette JSONs and gen_palette.py have no gloss field (only marks and skin classes).",
+     "files_to_change": [
+      "game/fx/toon.gdshader",
+      "game/fx/toon_light.gdshaderinc",
+      "game/fx/toon_materials.gd",
+      "assets/source/palette/punk.json",
+      "assets/source/palette/shared.json",
+      "assets/source/palette/player.json",
+      "tools/pipeline/gen_palette.py",
+      "assets/export/palette/palette_atlas.png",
+      "tests/test_toon.gd",
+      "tests/test_art_contract.gd",
+      "docs/ARCHITECTURE.md"
+     ],
+     "fix_needs_spec_change": false
+    }
+   ]
+  },
+  {
+   "id": "final-v1-05",
+   "lens": "v1",
+   "severity": "low",
+   "title": "The boots' yellow laces are a third black speckle (leopard spots at 5 m and when lying)",
+   "detail": "The detail mask inks 23.2% of the lace faces (slot 17 below 0.2 m) over one half and 13.8% more faintly. The body's thresholds pick up the generated texture's noisy laces. The cream boots themselves are 7.2% inked. At 5 m in first person the laces read as yellow smudges (C6 f289). Lying, which every knockdown shows, they are black-blotched yellow patches (C10 f1212 lying q90, q270). The concept's laces are clean yellow strokes. The fix rounds cleaned the boots' pink cells but not the ink.",
+   "evidence": "probe/c10_lying_boots_3x.png (C10 f1212), probe/c6_5m_boots_5x.png (C6 f289), c10_lying_tile.png. Ink probe: 'laces (17, y<0.2) samples 3160 ink>0.5 23.16% faint 13.83%'; 'boots (14, y<0.2) 7.20% / 3.32%'.",
+   "repro": "Record C10 ('Look: turntable') and C6. Crop the C10 f1212 still at 1220,380 (300x200) at 3x, and C6 f289 at 730,640 (140x80) at 5x.",
+   "suggested_fix": "Add a boots/laces zone to detail_bake.zones (slots 14 and 17, z < 0.2 m) with high thresholds (0.06/0.14) or no ink. The laces' colour border already gives the shape. The shader threshold of the first finding removes the faint part. Check at C6 5 m and C10 lying.",
+   "files": [
+    "assets/source/characters/punk/pipeline.json",
+    "assets/export/characters/punk/punk_detail.png"
+   ],
+   "spec_change": false,
+   "survives": true,
+   "skeptic": [
+    {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "Confirmed as a real, low-severity defect, not logged anywhere as a default call and not covered by the spec. The Punk's yellow laces ship black-blotched against the concept's clean yellow strokes. What Game-boy sees: C10 (free fly, a debug view) is only the mesh-QA view. The first-person proof is the existing C5 recording of the uppercut launch, where the Punk lands with its feet toward the player. At frame 200 both boots fill the lower third of the screen and both lace patches are covered in black leopard blotches. At 5 m (C6 f289) the laces only read as slightly grubby yellow smudges, and standing at 1 m the boots are out of frame. That keeps it low severity, but it is visible in every knockdown, so it is a fair J4 (crisp interior lines) and J6 (clean borders) miss. One caveat on the suggested fix: raising the thresholds alone, to 0.06 and 0.14, would only about halve the lace ink and leave a fifth of the lace texels inked. The fix has to give the laces no ink.",
+     "evidence": "1) The ink numbers reproduce. A pure-Python probe (python3 /private/tmp/claude-501/-Users-arachne-repos-beat-em-up-PoC/097d610a-a8fb-4633-bbe9-6486aed195e7/scratchpad/skeptic05/probe.py) parses punk.glb, takes each face's slot from TEXCOORD_0, rasterises UV2 and reads punk_detail.png R. For slot 17 below 0.2 m (the laces) it gives 3266 samples, ink>0.5 on 23.7% and faint (0.15-0.5) on 11.5%, mean 0.256. The same slot above 0.2 m (the cap) is 0.64% inked (mean 0.009). The cream boots (slot 14, below 0.2 m) are 3.3% inked. So the laces are about 10 to 40 times noisier than anything else on the Punk (finding: 23.2% / 13.8% / 7.2%).\n2) The frames show it. The C10 f1212 crop (captures/review/c10/bot.avi) shows the yellow lace patches blotched black. The C6 f289 crop (captures/review/c6/bot.avi) shows yellow smudges with a few dark marks. In the first-person C5 recording (/Users/arachne/repos/beat-em-up-PoC/.worktrees/m4-f-cuff/captures/c5/bot.avi) frame 200 (state_launched to downed, 'WHUMP!' frame), a 2x crop at 380,690 (640x200) shows black blotches over both lace patches. The same punk_detail.png (cmp identical) and the same slot map apply at 44b1a7e. The concept (punk_a_denim_vest.jpg) has clean yellow lace strokes.\n3) Root cause in the data. Pure-Python top-hat on the Tripo texture (assets/source/characters/punk/tripo/9d477476_gen.glb, converted with sips), using pipe_detail.ink_raw's definition (radius 5, largest channel): 400 sampled lace-yellow texels at the feet gave raw >= 0.07 on 27.8%, >= 0.14 on 16.5% and >= 0.30 on 3.2%. The blue channel dominates in 277 of 400. Cream boot texels give >= 0.07 on only 4.2% and >= 0.14 on 0.8%. So the ink is structural. ink_raw is the black top-hat (closing minus channel, 11 px window) of the largest channel. A yellow stroke narrower than 11 px on cream has blue 0.18 against 0.77 on both sides, so it counts as a dark line and is inked wherever the stroke is narrow, on top of the texture's own noise.\n4) Nothing covers it. grep of docs/milestones, M4-calls and docs/reviews finds no logged call accepting lace ink. F-punk C13 is about the atlas marks class and F5 about pink boot cells, which is the cleanup the finding says was done without touching ink. M4-plan A18 names laces as intended lines, but the shipped result is blotches, not strokes. No test asserts anything about lace ink (the face-ink twin test only covers skin).",
+     "root_cause": "The detail bake (tools/pipeline/pipe_detail.py bake(), called from tools/pipeline/blender_palette.py around lines 552-577) uses the global thresholds from assets/source/characters/punk/pipeline.json, palette.detail_bake ink_low 0.02 and ink_high 0.07. Its only zone is face_skin. Slot 17 (punk_yellow) is the cap, the shades' frame and the laces, so it cannot go into no_ink_slots, which is [19] for the lens. Nothing in the config treats the laces (slot 17 below 0.2 m) differently. ink_raw (the black top-hat per channel, radius 5, largest channel) flags any yellow stroke narrower than 11 px on cream through the blue channel, and the generated texture's own noise adds to it. That inks 23% of the lace samples fully and another 12% faintly, in leopard-spot patches. The toon shader mixes toward ink by detail_tex.r with no cut (game/fx/toon.gdshader line 66), so it draws as black blotches. Higher thresholds alone do not fix it: about 17% of lace texels have raw >= 0.14, so a 0.06/0.14 zone would leave roughly 20% inked. The laces need no ink, and their shape already comes from the yellow-on-cream colour border.",
+     "files_to_change": [
+      "assets/source/characters/punk/pipeline.json",
+      "tools/pipeline/blender_palette.py",
+      "assets/export/characters/punk/punk_detail.png",
+      "assets/source/characters/punk/report/report.json",
+      "assets/source/characters/punk/work/punk.blend",
+      "tests/test_art_contract.gd",
+      "docs/milestones/M4-calls/F-punk.md"
+     ],
+     "fix_needs_spec_change": false
+    }
+   ]
+  },
+  {
+   "id": "final-v1-06",
+   "lens": "v1",
+   "severity": "low",
+   "title": "The face-ink share drifted from the documented 1.56% to 1.98%, 0.02 points under the contract's 2.0% ceiling",
+   "detail": "F-punk-fix set the face zone and documented 1.56% of the head's skin inked (ARCHITECTURE.md:1100, F-punk.md:122). At 44b1a7e, test_art_contract prints 1.98%. F-cuff's re-bake (the collar's UV2 change, commit d9a6a08) moved it without a note. The face carries about 27% more ink than the logged fix, and FACE_INK_MAX is 0.02 (test_art_contract.gd:83): any later re-bake that adds a few texels turns the suite red.",
+   "evidence": "tools/run_tests.sh -gselect=test_art_contract.gd: 'ART-CONTRACT face ink: 1.98% of 4490 samples of the head's skin have ink over one half' (22/22 pass). docs/ARCHITECTURE.md:1100 says 1.56%. tests/test_art_contract.gd:82-84.",
+   "repro": "cd .worktrees/m4-review-final-v1 && tools/run_tests.sh -gselect=test_art_contract.gd, then grep 'face ink'.",
+   "suggested_fix": "Re-tune the face_skin zone (for example ink_low 0.04, ink_high 0.10) back to about 1.5%, or let the first finding's shader threshold carry it. Update ARCHITECTURE's and F-punk's figures to the shipped number.",
+   "files": [
+    "assets/source/characters/punk/pipeline.json",
+    "docs/ARCHITECTURE.md",
+    "docs/milestones/M4-calls/F-punk.md"
+   ],
+   "spec_change": false,
+   "survives": true,
+   "skeptic": [
+    {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "The numbers reproduce and the logged figure is stale, so the finding stands, but only as low-severity documentation drift plus a test with a one-sample margin. It is not a visible defect. Two parts of it are overstated: the \"27% more ink\" and the suggested zone re-tune.\n\n- Reproduced at 44b1a7e: test_art_contract prints 1.98% of 4490 samples (89 inked), 22/22 pass. At the pre-cuff merge c9f9326, in a temporary worktree I have since removed, the same test prints 1.56% of 4360 samples (68 inked). The documented 1.56% was therefore right when written, and F-cuff moved it.\n- The headroom is one sample: 90 of 4490 is 2.004% and would fail the 0.02 ceiling.\n- F-cuff's docs do not mention the face ink. ARCHITECTURE.md:1100 and F-punk.md:122 still say 1.56%.\n- The \"about 27% more ink\" is the sampled metric only. The pipeline's own face_skin texel share in the Punk's report.json went from 0.013818 to 0.015412, which is +11.5%.\n- The ceiling is a builder-set guard from F-punk-fix (F-punk.md:122, \"asserts 0.4%-2.0%\"), not a plan row A1-A14 or L1-L5. No measured row or rubric item fails because of this.\n- The face reads clean in first person. I compared C1 face crops at frames 109 and 229, F-punk-fix before and the reviewed commit after. Neither has speckle on the cheeks or forehead. The only visible difference is the nose line, which was a few flecks and is now a thin continuous stroke. That is the content the contract's floor asks for, and the lens colour is the only other difference between the two crops.\n- Re-tuning the face_skin zone, as suggested, would re-bake four GLBs and could thin the nose line, for no visible gain.",
+     "evidence": "Contract test logs, with a probe that dumps every face-skin triangle's centroid, ink samples and UV2 edge length at both commits:\n- Test logs: scratchpad/v1_06_contract.log (1.98% of 4490) and v1_06_contract_precuff.log (1.56% of 4360).\n- Probe: scratchpad/v1_06/probe.gd; output pre.json and post.json in the same folder.\n- Common triangles: 370 of the 436 pre and 449 post triangles match by centroid. Over those, ink samples went 64 to 81 (23 triangles gained ink, 11 lost).\n- Non-matching triangles: 66 pre-only (4 ink samples) and 79 post-only (8 ink samples).\n- UV2 edge length ratio post/pre on the common triangles: median 0.97, p10 0.71, p90 1.38.\n- pipeline.json: the d9a6a08 diff has no change to the detail_bake zones or the ink thresholds.\n- report.json (ink_texels_share on both the whole mask and the face_skin zone):\n  - 1bebcce through 017ecb0: 0.01643 whole mask, 0.013818 face_skin.\n  - d9a6a08: 0.015929 and 0.015412.\n- Crops: scratchpad/v1_06/face_pre_post_f109.png and face_pre_post_f229.png.\n- The temporary worktree .worktrees/v1-06-precuff is removed and the review worktree is unchanged.",
+     "root_cause": "F-cuff's d9a6a08 (\"four GLBs rebuilt\") re-ran the Blender pipeline after the arm trim and wrist-cuff change. The zone thresholds were not touched; they are still ink_low 0.035 and ink_high 0.09. The re-bake did two things to the head:\n- It re-decimated it: 66 of the 436 face-skin triangles were replaced by 79.\n- It re-packed the UV2 atlas: head island scales moved by 0.71 to 1.38 times.\nThe contract test's sampler (4 sampled points per triangle edge, 10 per triangle, mask R > 0.5) is sensitive to both, so it moved from 1.56% to 1.98% while the pipeline's own texel share moved from 1.38% to 1.54%. F-cuff did not re-measure or note it. The test's ceiling of 0.02 was set for 1.56%, so the margin was never a design margin.",
+     "files_to_change": [
+      "/Users/arachne/repos/beat-em-up-PoC/docs/ARCHITECTURE.md (line 1100: 1.56% becomes the shipped 1.98%, and note the pipeline's own texel share of 1.54%)",
+      "/Users/arachne/repos/beat-em-up-PoC/docs/milestones/M4-calls/F-punk.md (line 122, and a one-line note in the F-cuff 'Second fix round' section: the re-bake moved the face share from 1.56% to 1.98%, same zone thresholds, the nose line is now continuous)",
+      "/Users/arachne/repos/beat-em-up-PoC/tests/test_art_contract.gd (optional: lines 82-84 and the comment on 'the lines alone 1.6%'; either state the shipped figure in the comment or move FACE_INK_MAX to about 0.025 so a re-bake cannot turn the suite red on one sample; do not re-tune the zone)"
+     ],
+     "fix_needs_spec_change": false
+    }
+   ]
+  },
+  {
+   "id": "final-v1-07",
+   "lens": "v1",
+   "severity": "low",
+   "title": "C10's turntable never films the Punk's front: the q0 and q360 quarters show the hero's back, and rest_q0 shows the free-fly start view",
+   "detail": "The orbit's q0 eye is feet + Basis(yaw) * (0, eye, -radius) with radius 2.2 m (1.8 lying). That is on the hero's side of the Punk, which is posted POSED_M = 1 m ahead of him, and the hero's body is drawn in free fly. So guard_q0, rest_q360, guard_q360 and lying_q0 film his back (f571, f530, f1051, f1092). The first mark of the act is printed before the camera is placed, so rest_q0 (f50) is the free-fly default view with the 'CAMERA: FREE FLY' banner. The M3 before pack has the same framing. The result is that J7's mesh QA at the front, at rest, in the block guard and lying, has no turntable frame. Lying front-on is never checked.",
+   "evidence": "tests/bot/acts/look_acts.gd:133-142 (TURNTABLE radii, POSED_M 1.0), :654-659 (mark at i % ORBIT_QUARTER_TICKS == 0, before camera.global_transform is set). Stills: captures/review/c10/sheets/c10/stills/c10_f50_rest_q0.png, c10_f530_rest_q360.png, c10_f571_guard_q0.png, c10_f1092_lying_q0.png. Tile: captures/review/c10_guard_tile.png. Before pack: captures/m4_before/c10/sheets/c10/stills/ (the same frames).",
+   "repro": "tools/capture_bot.sh res://tests/bot/crowd_bot.tscn captures/review/c10 'Look: turntable', then look_sheets.sh. Open the q0 and q360 stills.",
+   "suggested_fix": "In _turntable, teleport the player 3 m to the side, or hide his body for the act (his rig's art and proxies), so the orbit sees the Punk all round. Place the camera before the first LookRect.mark, or mark after the tick. Re-record C10 and check the front at rest, guard and lying.",
+   "files": [
+    "tests/bot/acts/look_acts.gd"
+   ],
+   "spec_change": false,
+   "survives": true,
+   "skeptic": [
+    {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "The mechanics reproduce and the code path is as stated, but the finding overstates what is lost. It is a low-severity framing defect in an evidence-only act (C10 is \"mesh QA only\" in the plan). It is not a product defect and not a rubric 0, and J7's front coverage exists elsewhere. Keep it at low, and narrow the claim: the exact front quarters (q0 and q360) are blocked, and the first-stance q0 frame is the free-fly default view. \"No turntable frame of the front\" and \"lying front-on is never checked\" are not true.",
+     "evidence": "Reproduced from the recording captures/review/c10/ (bot.avi made 13:38, after the 13:33 commit 44b1a7e) and from the code.\n\nCONFIRMED\n- Stills c10_f571_guard_q0.png and c10_f1092_lying_q0.png, and the six-tile captures/review/c10_guard_tile.png (tiles 1 and 6 are q0 and q360), show the hero's navy gi back filling the view. The Punk is not visible. The hero's body is drawn in free fly.\n- c10_f50_rest_q0.png shows the free-fly default side view with the \"CAMERA: FREE FLY\" banner.\n- Geometry: `_place` and spawn face the Punk toward the player, so the Punk's local -Z is toward the hero. The orbit eye is Basis(yaw) * (0, eye, -radius). At q0 and q360 it sits 2.2 m (1.8 lying) in front of the Punk, which is 1.2 m (0.8 lying) behind the hero, who is POSED_M = 1.0 m ahead. The hero's back fills the lens.\n- Mark order: tests/bot/acts/look_acts.gd:654-659 calls LookRect.mark at i % 120 == 0 before camera.global_transform is assigned (line ~659). For the first stance the camera has not yet been moved from the free-fly default. For later stances it still holds the previous stance's final pose, which equals q0 (angle TAU), so only rest_q0 is wrong, plus a one-tick, 0.75 degree lag at the other marks.\n- The M3 before pack uses the same framing. The log shows LOOK-MARK c10 f50 rest_q0 immediately after the settle.\n\nWHAT THE FINDING OVERSTATES (refuting the consequence, not the mechanics)\n- The recording does contain unobstructed near-front views. I extracted frames at 45 degrees off front: f110 (rest, i=60), f470 (rest, i=420), f991 (guard, i=420) and f1512 (lying, i=420). The Punk's front is clear in each, with the hero off to one side. They are not marked stills, but they are in the 6 fps overview tile and the avi. At 45 degrees the hero is 0.7 m off the sight line.\n- Plan Part B2 scores J7 over \"C1 face at +8, C2 body at -6, C10 turntable quarters\", so the dead-on front at rest is already judged in first person in C1 and C2.\n- The long take (C14, game/debug/showcase_script.gd) has a first-person turntable step (Punk turns 360 degrees at 1 m, marks 3, so the quarters), guard, guard_again and guard_third steps, and the lying (downed_back) and lying_face_down steps with the view pitched down. So the front at rest, in guard and lying is checked in first person at 1 m, which is the only look that counts.\n- No shipped behaviour is affected. It is an evidence-act framing flaw.",
+     "root_cause": "`_turntable` in tests/bot/acts/look_acts.gd orbits at radius 2.2 m (1.8 lying), measured from the Punk's feet toward the Punk's own -Z front. The Punk is posted POSED_M = 1.0 m ahead of the player and faces him, and the player's rig is still drawn in free fly. So the eye at q0 and q360 sits behind the hero, and the hero's back fills the lens. Separately, LookRect.mark runs at the top of each loop iteration before `camera.global_transform` is set, and no camera is placed before the first mark. So the first stance's q0 still is the free-fly default view, and every other quarter lags the camera by one tick.",
+     "files_to_change": [
+      "/Users/arachne/repos/beat-em-up-PoC/tests/bot/acts/look_acts.gd"
+     ],
+     "fix_needs_spec_change": false
+    }
+   ]
   }
  ],
  "lead_overrides": {
   "final-v2-01": "IN (the lead's call 24, a departure from A20's frozen-clip list, not from the SPEC): re-pose stagger_back_a and stagger_back_b the way M3 re-posed stagger_right (elbows bent about 70-90 degrees, upper arms out about 35-45 degrees, forearms raised, a broken guard), so the skinned Punk never shows straight horizontal arms that read as the rig's bind pose. Update the clip hash in move_clip_hashes.json with the reason, and re-run the ragdoll, KO-view and readability tests (F-motion C10's knife-edge cases). Leave the taunt as it is (its elbows bend 70 degrees).",
   "final-v2-02": "OUT: J11 polish (whole-body marks, the cap's orange disc); it goes to Game-boy's DM as a known item with F-punk's per-swatch mark-strength request.",
-  "final-v3-03": "OUT: call 19 stands (M3's approved framing); the DM offers Game-boy the whole-upper-arm A/B as an option."
+  "final-v3-03": "OUT: call 19 stands (M3's approved framing); the DM offers Game-boy the whole-upper-arm A/B as an option.",
+  "final-v1-01": "IN, wave 2: the same root cause as final-v3-01 (toon.gdshader mixes the bilinear mask raw). Wave 1's toon-light-and-ink fixes it for the hero; wave 2 checks the Punk's lines under that fix (tape, mouth, nose, cap, laces at 1 m) and finishes the threshold if the Punk still shows soft or dotted lines.",
+  "final-v1-02": "OUT (refuted, and the lead agrees): the glove's proportions match concept A and M3's fist box, which A5 binds.",
+  "final-v1-04": "IN, wave 2: per-swatch gloss (the lens glints, matte cloth and skin take no hard highlight), as the finding suggests; keep J5's one small hard highlight."
  },
  "packages": {
   "packages": [
@@ -925,6 +1201,58 @@
      "docs/milestones/M4-calls/R-chain.md (new: this package's calls)"
     ],
     "notes": "Base: the merged head with F-cuff in. F-cuff changed shared chain scripts (the collar keys of blender_parts.py), so regenerate after its merge. Work in your own worktree.\n\n(1) final-v5-01. Regenerate tests/fixtures/art/probe_report.json with python3 -I tools/pipeline/make_probe_body.py, in headless Blender only, never the Blender MCP. The probe GLBs must come out byte-identical: only the report moves, from the rig step's torso_blend key added in 691fcfd.\n- Rerun the probe's run.py --config tests/fixtures/art/probe_pipeline.json --check and confirm YES. Run the Punk's --check too, for the record.\n- Once the check is YES again, the three docs' YES claims (ARCHITECTURE:1090, F-punk.md C22, ASSETS.md:105) are true; just verify them.\n- Add a Blender-free guard to test_art_contract.gd: the probe report's steps.inspect, fit, rig and palette must have the same key sets as the Punk report's. Do not compare parts_replace, parts_split or export, whose keys legitimately differ.\n- Hand the lead the three --check commands (punk, player, probe) for A22's after-merge routine. M4-plan.md Part A is the lead's; don't edit it.\n\n(2) final-v5-07. Add the hero's twin of the Punk's mask test to test_art_contract.gd, outside the Punk rows:\n- player_detail.png is 1024x1024, R=G=B, mean ink under 0.08 with over 500 ink texels;\n- UV2 is on every vertex of all three meshes (Body, Body__fp_hidden, Body__fp_torso), inside the unit square;\n- PlayerCharacter.worn_art(player_art.tres).detail_mask is player_detail.png;\n- the built rig's art material has use_detail_tex on.\nPackage toon-light-and-ink regenerates the mask in parallel to exactly these bars, so don't tighten them to today's mean of 4.3%.\n\n(3) final-v5-03, ASSETS.md:\n- (a) the ledger row: 12 tasks, 295.00 credits, balance 1500 to 1205, T5 rejected at 30. Verify against the ledger file.\n- (b) the punk.blend and stills rows' provenance: T4/T8/T9. Re-read these rows after F-cuff's merge first: F-cuff owned the Punk rows and rebuilt those files again.\n- (c) the hero report row's apose_sheet.png: toon-light-and-ink commits it at assets/source/characters/player/report/stills/apose_sheet.png with a .gitignore exception. Keep the row naming that path; if it does not land, the lead drops it.\n- (d) player_detail.png gets the same Tripo-terms licence caveat as punk_detail.png.\n- (e) build dates on the export rows, from each file's last commit. player_detail.png's date moves when toon-light-and-ink regenerates it, and the lead updates it at merge.\n\n(4) final-v5-06: git rm tests/scratch_measure.gd.uid.\n\nAlso: don't touch tools/pipeline/*, the player's or the Punk's assets, or ARCHITECTURE.md (hand the lead any sentence). One Godot process at a time. Done: the full suite is green with 0 SCRIPT ERROR, SHADER ERROR or ERROR lines, and the three --check results quoted."
+   }
+  ],
+  "unassigned": []
+ },
+ "packages_wave2": {
+  "packages": [
+   {
+    "key": "toon-gloss-and-turntable",
+    "title": "Per-swatch gloss (the lens glints, matte cloth doesn't), the Punk's ink lines under wave 1's mask threshold, and C10's turntable front",
+    "finding_ids": [
+     "final-v1-04",
+     "final-v1-01",
+     "final-v1-07"
+    ],
+    "files": [
+     "game/fx/toon.gdshader",
+     "game/fx/toon_light.gdshaderinc",
+     "game/fx/toon_materials.gd",
+     "game/autoload/tuning_data.gd (Look > Toon subgroup only)",
+     "assets/source/palette/punk.json, shared.json and player.json (a gloss field only)",
+     "tools/pipeline/gen_palette.py",
+     "assets/export/palette/palette_atlas.png (only if it must change)",
+     "tests/test_toon.gd",
+     "tests/bot/acts/look_acts.gd (_turntable only)",
+     "docs/ARCHITECTURE.md (the toon headings)",
+     "docs/milestones/M4-calls/F-final-toon.md (new)"
+    ],
+    "notes": "Runs after wave 1 is merged (its toon-light-and-ink changed these same shader files: read its calls file R-look.md first). (1) final-v1-04: per-swatch gloss. (2) final-v1-01: wave 1 thresholded the detail mask for the hero (final-v3-01); check the Punk's tape, mouth, nose, cap and laces at 1 m (C1, C2 and C6 5 m crops) and finish the threshold if they still feather. (3) final-v1-07: the turntable films the Punk's front (hide or move the hero for the act; place the camera before the first mark). Re-record C1, C2, C4 and C10; full-resolution crops beside the concept and beside V1's stills in /Users/arachne/repos/beat-em-up-PoC/.worktrees/m4-review-final-v1/captures/review/."
+   },
+   {
+    "key": "punk-detail-zones-and-strap",
+    "title": "The Punk's cap strap slot, the laces' black speckle and the face-ink share",
+    "finding_ids": [
+     "final-v1-03",
+     "final-v1-05",
+     "final-v1-06"
+    ],
+    "files": [
+     "assets/source/characters/punk/pipeline.json",
+     "tools/pipeline/blender_palette.py",
+     "tools/pipeline/pipe_detail.py",
+     "assets/export/characters/punk/*",
+     "assets/source/characters/punk/report/report.json",
+     "assets/source/characters/punk/report_auto/report.json",
+     "assets/source/characters/punk/work/punk.blend",
+     "game/actors/art/punk_art.tres (only if the rebuild changes it)",
+     "tests/test_art_contract.gd (the Punk rows)",
+     "tests/test_art_punk.gd and tests/test_m4_done_when.gd (only a ratchet the rebuild moves, old -> new)",
+     "ASSETS.md (the Punk rows)",
+     "docs/milestones/M4-calls/F-punk.md"
+    ],
+    "notes": "Runs after wave 1 is merged, beside toon-gloss-and-turntable (headless Blender only). (1) final-v1-03: author the strap slot as a region like the lens (straight edges on edge loops, dark grey) and give the cap an ink zone. (2) final-v1-05: a laces/boots zone so the yellow laces are clean (the skeptic's caveat: thresholds alone only halve it). (3) final-v1-06: the face ink back to about 1.5% with margin under the 2.0% ceiling, and the docs' figures updated to the shipped number. Rebuild punk.glb and its three variants, run.py --check for both builds, the full suite, and re-record C1 (the cap) and C5 (the uppercut landing: the boots)."
    }
   ],
   "unassigned": []

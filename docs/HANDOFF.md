@@ -4,6 +4,24 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-27 14:10 CDT: V1 reviewed; every J item scored, mean 1.29 (bar 1.5); wave 1 fixing, wave 2 planned
+- **V1's scores:** J1 1, J2 1, J3 1, J4 1, J5 1, J6 2, J7 1.
+  - **All 14 items:** J1 1, J2 1, J3 1, J4 1, J5 1, J6 2, J7 1, J8 2, J9 1, J10 2, J11 1, J12 2, J13 1, J14 1.
+  - That is a mean of 1.29 against Part B's 1.5. There are no 0s, and every critical item is at least 1.
+  - The fixes aim at the 1s. After both waves merge, one Opus re-score of J1-J14 from fresh recordings decides the pass, and it is reported honestly to Game-boy either way.
+- **V1's findings:** 7, of which 6 survive. All of them, with the lead's rulings, are in `docs/reviews/M4/final-findings.json` (V1's entries plus `packages_wave2`).
+  - **The biggest:** the 1k detail mask is mixed raw and bilinear, so every interior ink line is a soft, dotted smear (final-v1-01). It's the same root cause as the hero's final-v3-01, which wave 1's toon-light-and-ink is fixing.
+  - Per-swatch gloss: the highlight lands on matte cloth and never on the shades (v1-04).
+  - The cap's strap slot is ragged (v1-03), the laces carry black speckle (v1-05), and the face ink sits one sample under its ceiling (v1-06).
+  - The C10 turntable never films the Punk's front (v1-07).
+  - The small-hands finding (v1-02) is refuted, and the lead agrees: it matches the concept and A5's box.
+- **Wave 1** (`wf_e45d9467-fd5`, running since 13:45 CDT, two at a time): toon-light-and-ink and punk-spawn-cache-and-evidence-acts are running. done-when-ratchets-and-suite-time and art-chain-records come next if the gate has room. Otherwise rerun the same args (`docs/reviews/M4/args-review-final-fix.json` plus the run's `common_note`) after the 15:50 CDT reset. The finished packages replay from their branches.
+- **Wave 2 waits for wave 1's merge:** both its packages share files with wave 1.
+  - **toon-gloss-and-turntable:** v1-04, v1-01 checked on the Punk, and v1-07.
+  - **punk-detail-zones-and-strap:** v1-03, v1-05, v1-06.
+  - **Launch:** `workflow-review.js` with `lenses` [], `packages` = `packages_wave2` (compact notes pointing at the file, as in `args-review-final-fix.json`), `findings_path` the same file, base = the merged head, and a `common_note` stating the merged state.
+- **Usage:** 78% of the 5-hour window at 14:03 (reset at 15:50 CDT), 45% weekly. The watcher (`local_618146a1`) is alive. Expect its 90% message during wave 1.
+
 ### 2026-10-27 13:50 CDT: V2-V6 reviewed (16 of 24 findings survive); four fixers running; V1 still reviewing
 - **Scores:** V2: J8 2, J9 1, J10 2, J11 1, J12 2. V3: J14 1. V4: J13 1, plus second opinions J4 1 and J5 1. No item scores 0. V1 (J1-J7) is still running.
   - The findings, the verdicts, the partition and the lead's overrides are in `docs/reviews/M4/final-findings.json`.
