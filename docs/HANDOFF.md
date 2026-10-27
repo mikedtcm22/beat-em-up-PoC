@@ -4,6 +4,31 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-27 04:10 CDT: the slice gate's verdict is (b), proven with a contingency; its two fixers and F-motion running
+- **The gate** (`wf_36e8400a-165`): two Opus lenses, 16 findings, 10 survive one Sonnet skeptic each. Both lenses gave verdict **(b)**. The lead wrote `docs/milestones/M4-slice-gate.md`: the pass items with evidence, the locks, 13 ranked gaps with owners, and the refuted findings. The full output is in `docs/reviews/M4/slice-result.json`.
+- **Locked:**
+  - the A-pose bind route (`punk.glb`) and Tripo weights;
+  - the landmark-warp fit, keeping the bulk, and border-protected decimation;
+  - `look_outline_px` 3.75 (after the axis fix);
+  - placeholder hulls on, and the dilated edge mask;
+  - 4x MSAA, with FXAA as the switch offered in the final DM;
+  - proxies accepted for crowd readability, plus art-drawn guards for the close-range lens rules.
+- **Contingencies** for phase 2: the hull-normal axis fix before any F-punk or F-player-art export; A18's detail mask (a README departure for Game-boy's ruling); a girth clamp only if A6 misses on the real Punk; weight smoothing only if F-punk's visible-stretch test fails.
+- **The worst gap:** the hull normals are baked in Blender's Z-up axes, so no ink shows on top and bottom silhouettes. SL-int's "even 3 px hull" claim was wrong.
+- **Running:** the gate's fixers, resumed into the same run `wf_36e8400a-165` (args `docs/reviews/M4/args-review-slice-fix.json`):
+  - `chain-contract`: hull normals, the skin damage class, run.py step validation. Worktree `.worktrees/m4-fix-slice-chain-contract`, branch `m4/fix-slice-chain-contract`.
+  - `drawn-art-instruments`: R4 on art, the SkinnedView pose source, the strain flip rule, warm-up placement. Worktree `.worktrees/m4-fix-slice-drawn-art-instruments`, branch `m4/fix-slice-drawn-art-instruments`.
+  - F-motion (`wf_d130ab18-851`) is still running.
+- **To resume after a stop:** `Workflow({scriptPath: "docs/reviews/M4/workflow-review.js", resumeFromRunId: "wf_36e8400a-165", args: <args-review-slice-fix.json>})`. The reviewers and skeptics replay from cache, and the fixers continue from their `wip:` commits.
+- **Usage:** 5-hour 37% at 03:05 (the gate cost about 25%, double its estimate); weekly 24%.
+- **Concept pick:** none (DM read at 03:05).
+- **Next:**
+  1. Merge the two fixers and F-motion, then the suite.
+  2. Re-measure first spawn and first hit.
+  3. Paste SG-instruments' replacement sentences into ARCHITECTURE, and fill the gate doc's "Fixes made".
+  4. Launch F-look with gate gaps 2, 6 and 11 in its brief.
+  5. Once only pick work is left, send A21's one reminder.
+
 ### 2026-10-27 02:55 CDT: SL-int merged (1378/1378); the A16 perf baseline, then the slice gate
 - **Merged:** SL-int (`59a0adf`). The merge was clean, the preset is unchanged at 492 values, and the merge is green at 1378/1378 with 0 SCRIPT, SHADER or ERROR lines.
 - **What SL-int built:**
