@@ -74,17 +74,32 @@ Why not (a): two defects that the real Punk and the player would both inherit sh
 
 ## Fixes made by the gate
 
-The two packages run with disjoint files, beside F-motion. Filled in at merge.
+Both merged into `m4/art-pipeline` on 2026-10-27 (merges `85a24dd` and `ef38dba`). Their calls and numbers are in `M4-calls/SG-chain.md` and `M4-calls/SG-instruments.md`.
 
-- **`chain-contract`** (slice-g2-01, slice-g2-07, slice-g1-05):
-  - hull normals in glTF axes, with the re-export proven to change only COLOR_0 and a contract assertion;
-  - a skin class for damage marks;
-  - `run.py` rejects unknown steps, and the plan cites `--check`.
-- **`drawn-art-instruments`** (slice-g1-03, slice-g2-05, slice-g1-01, slice-g1-06):
-  - the warm-up holder placed after the camera's first update;
-  - A7's flip rule against the skinned rest;
-  - R4 counts art Punks through `FPView.is_drawn()`;
-  - SkinnedView reads the ragdoll's visual pose.
+**`chain-contract`** (`cbbd755`, 1379/1379):
+- **slice-g2-01, fixed.** `blender_export.write_hull_normals` encodes the smooth normal as (x, z, -y) before packing it into COLOR_0.
+  - All six GLBs were re-exported from the cached steps, after the old code first reproduced the committed GLBs byte for byte.
+  - A byte comparison shows the re-export changed only COLOR_0.
+  - `test_art_contract` now asserts, per mesh, that the mean dot(decoded COLOR, NORMAL) is above 0.85 (it measures 0.922-0.964) and beats the permuted reads. It fails on the old GLBs.
+  - `run.py --asset punk --check` passes for both weight sources.
+  - The lead's look: at 1 m in C1 the cap crown, brim and forearms now carry a continuous ink line.
+  - L1 hull width at 1080p: 2.9-3.6 px on the sides and crown at 1 m, and 2.5-3.4 px at 2.5-5 m. The cap crown reads 0.1-0.3 px under the 2.75 px floor at 2.5-10 m; that is F-look's.
+- **slice-g2-07, partial.** The palette has a third alpha class: shared slots 6-9 carry `skin: true` at alpha 0.8. `toon.gdshader` gains `damage_skin_tex`, and `DamageLook.apply_art()` puts the bruised and bloodied skin tiles on skin and the scuffs on clothes. The skin no longer goes grey.
+  - Still open: the bloodied wash reads a little lilac and glassy, and the cap and lenses wear clothes-density blood (they share `punk_yellow`). These become brief lines for F-punk (a lens swatch with marks off, thinner marks on the cap) and F-look (the scuffed tile's own art in `gen_fx.gd`, and the bloodied wash).
+- **slice-g1-05, fixed.** `run.py` checks `--from` and `--only` against the step names before any side effect, and returns 2 with a usage line. The plan now cites `--check`.
+
+**`drawn-art-instruments`** (`55159db`, 1384/1384):
+- **slice-g1-03, fixed.** `ToonMaterials.warm_up()` reads the camera on the second frame, keeps the holder hidden until it is placed, and scales it to the camera's near distance. At full size, a boot capture showed a 1 m white box for two frames; now it is a speck. A new act, W1 "Look: warm-up in the lens", logs `LOOK-WARM crowd: OK` and `training: OK` (the unfixed code fails in the crowd room). The lead re-measures first spawn and first hit.
+- **slice-g2-05, fixed.** A triangle counts as flipped only when it is folded in the pose and was not at the skinned rest. The authored mesh's own folded triangles are a printed baseline (159 on `punk.glb`). The corrected A7 counts, against a bar of 75:
+  - elbow 41-45, knee 60-63, spine twist 48-59 and lying 0-1 pass on every GLB;
+  - the guard fails on all four (97-128);
+  - the arm raise fails by 3-4x (228-264).
+  
+  The four GLBs differ by less than the old baseline did. The shoulder at the guard and arm raise is what fails, not the choice of GLB. This is a brief line for F-punk under contingency 4 (the shoulder weights), and the visible-stretch test decides.
+- **slice-g1-01, fixed.** R4 skips a mesh unless `FPView.is_drawn()` counts it, so an art Punk occludes through its proxies. A new test puts two art Punks in line (share 1.0; it fails on the old filter). On "Six Punks, fight", R4 reads 0% of 13 and R8 p50 30%, both identical to SL-int's.
+- **slice-g1-06, fixed.** `SkinnedView.drawn_pose(rig)` is the default pose everywhere: the ragdoll's visual pose while ragdolling, FK otherwise. `hurtbox_fit()` stays on FK. A new test checks that hits, skin vertices and the comparisons follow the ragdoll in a stagger.
+
+The lead pasted SG-instruments' replacement sentences into ARCHITECTURE: R4's row, the pose bullet, the strain bullet, the warm-up paragraph, `RoomKit.warm_up_art` and the W1 act.
 
 ## Refuted (kept for the record)
 
