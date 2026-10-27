@@ -15,6 +15,10 @@ const DEBUG_DRAW_SCENE := "res://game/ui/debug_draw.tscn"
 const TUNING_OVERLAY_SCENE := "res://game/ui/tuning_overlay.tscn"
 ## The art the load-time warm-up draws (warm_up_art()): the Street Punk's, the room's commonest actor.
 const WARM_ART := "res://game/actors/art/punk_art.tres"
+## The enemies whose named animation library (HumanoidRig._named_library()) the warm-up builds besides
+## the Punk's, which the throwaway rig builds: the Bruiser's and the boss's bodies are other sizes, so
+## their first spawn would build one (26 to 31 ms with the Motion polish, about 17 ms more than M3).
+const WARM_LIBRARY_ENEMIES: Array[StringName] = [&"bruiser", &"boss"]
 
 
 ## The player's avoidance obstacle (RVO): without it enemies walk straight through the player's
@@ -183,9 +187,13 @@ static func build_presentation(room: Node3D) -> void:
 ## frame. A throwaway rig wears the Punk's art; ToonMaterials.warm_up() draws a copy of its
 ## skeleton for two frames, in the lens once the room's camera has been placed (the second frame
 ## of the room, not the first: the camera has not updated before that), and the rig is freed at
-## once. Headless: nothing.
+## once. It also builds the Bruiser's and the boss's named libraries (warm_up_libraries()), whose
+## sizes the Punk's rig does not cover. Headless: nothing.
 static func warm_up_art(room: Node3D) -> void:
-	if DisplayServer.get_name() == "headless" or not ResourceLoader.exists(WARM_ART):
+	if DisplayServer.get_name() == "headless":
+		return
+	warm_up_libraries()
+	if not ResourceLoader.exists(WARM_ART):
 		return
 	var rig := HumanoidRig.new()
 	rig.name = "WarmUpRig"
@@ -195,3 +203,15 @@ static func warm_up_art(room: Node3D) -> void:
 	rig.build()
 	ToonMaterials.warm_up(room, rig.skeleton)
 	rig.queue_free()
+
+
+## Build the boxer named animation library of each WARM_LIBRARY_ENEMIES body's size now
+## (HumanoidRig._named_library(), cached per size and stance: a rig of that size takes it from the
+## cache), so the first Bruiser or boss of a run does not build it on its spawn frame (F-motion's
+## request, M4-calls/F-motion.md). The size is the enemy's own body height over the rig's reference
+## height, as its rig takes it (CombatActor._ensure_body() sets rig.height = body_height). Called
+## by warm_up_art() in a window; callable headless, where it is the same build without a draw.
+static func warm_up_libraries() -> void:
+	for id: StringName in WARM_LIBRARY_ENEMIES:
+		var body_height := EnemyCatalog.body_size(id).y
+		HumanoidRig._named_library(body_height / PlaceholderBody.REF_HEIGHT, PlaceholderPoses.STANCE_BOXER)
