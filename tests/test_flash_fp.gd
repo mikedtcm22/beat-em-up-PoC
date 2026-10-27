@@ -4,10 +4,10 @@ extends GutTest
 ## today's behavior.
 ##
 ## Question 1 (grab-05, hit-01): Tuning's hit_flash_fp_max_share (Look > FP feel, 0 = off) caps how much
-## of the view the flash's disc may cover on screen. The overlay shader computes it from the camera that
-## draws it (game/fx/hit_flash.gdshader, capped_radius()); HumanoidRig.flash_capped_radius() mirrors it
-## for these tests, as ToonMaterials.outline_width_m() mirrors the hull's width, and the rig hands the
-## share to the shader as the uniform flash_max_share. Question 2 (r3look-05): hit_flash_finisher_radius_mult
+## of the view the flash may cover on screen. The overlay shader computes it from the camera that draws
+## it (game/fx/hit_flash.gdshader, cap_scale() and cap_distance()); HumanoidRig.flash_cap_scale() and
+## flash_cap_distance() mirror it for these tests, as ToonMaterials.outline_width_m() mirrors the hull's
+## width, and the rig hands the share to the shader as the uniform flash_max_share. Question 2 (r3look-05): hit_flash_finisher_radius_mult
 ## (1 = off) widens a clean finisher's flash, and only that. The warm-up: RoomKit.warm_up_libraries()
 ## builds the Bruiser's and the boss's named animation libraries before their first spawn.
 ## The shader itself cannot run headless: tests/bot/acts/flash_fp_acts.gd measures it in a window
@@ -105,6 +105,10 @@ func _radius_of(rig: HumanoidRig) -> float:
 	return float(_overlay_of(rig).get_shader_parameter(&"flash_radius"))
 
 
+func _share_of(rig: HumanoidRig) -> float:
+	return float(_overlay_of(rig).get_shader_parameter(&"flash_max_share"))
+
+
 ## A rig on its own in the tree, built: the flash needs nothing but its body.
 func _rig() -> HumanoidRig:
 	var rig := HumanoidRig.new()
@@ -150,8 +154,10 @@ func test_the_shader_takes_the_cap_as_a_uniform_that_is_off_by_default() -> void
 	assert_not_null(declaration, "flash_max_share is declared with a default")
 	if declaration != null:
 		assert_eq(float(declaration.get_string(1)), 0.0, "flash_max_share is 0 (no cap) until the rig sets it")
-	assert_true(SHADER.code.contains("capped_radius(-VERTEX.z"), "the radius is capped at the fragment's own depth")
-	assert_true(SHADER.code.contains("PROJECTION_MATRIX[1][1]"), "from the camera that draws it")
+	assert_true(SHADER.code.contains("cap_distance(VERTEX, point"), "the cap measures the fragment's view-space distance")
+	assert_true(SHADER.code.contains("abs(PROJECTION_MATRIX[1][1])"),
+			"from the camera that draws it (its Y scale is negative in a flipped target: the abs)")
+	assert_true(SHADER.code.contains("if (flash_max_share > 0.0)"), "and only with the cap on: off, the distance is today's")
 
 
 func test_the_defaults_leave_todays_flash_as_it_was() -> void:
@@ -164,9 +170,13 @@ func test_the_defaults_leave_todays_flash_as_it_was() -> void:
 	assert_almost_eq(float(overlay.get_shader_parameter(&"flash_core")), 0.5, EPS, "the core as it is")
 	assert_almost_eq(float(overlay.get_shader_parameter(&"flash_strength")), 1.0, EPS, "the strength as it is")
 	assert_eq(float(overlay.get_shader_parameter(&"flash_max_share")), 0.0, "no cap")
-	# And the mirror: with no cap the radius is the radius at any distance.
+	# And the mirror: with no cap the distance is the plain distance, at any depth.
 	for depth: float in [0.0, 0.05, 0.3, 1.0, 10.0]:
-		assert_eq(HumanoidRig.flash_capped_radius(0.25, depth, 1.3, ASPECT, 0.0), 0.25, "no cap at %.2f m" % depth)
+		assert_eq(HumanoidRig.flash_cap_scale(0.25, depth, 1.3, ASPECT, 0.0), 1.0, "no cap at %.2f m" % depth)
+		var fragment := Vector3(0.1, 0.05, -depth - 0.1)
+		var point := Vector3(0.0, 0.0, -depth)
+		assert_eq(HumanoidRig.flash_cap_distance(fragment, point, 0.25, 1.3, ASPECT, 0.0), (fragment - point).length(),
+				"the plain distance at %.2f m" % depth)
 	# A finisher with the multiple at 1: the same radius.
 	rig.flash_at(Vector3(0.1, 1.2, 0.0), 1.0, 0.25, 0.5)
 	rig._widen_flash(Tuning.data.hit_flash_finisher_radius_mult)
@@ -176,43 +186,139 @@ func test_the_defaults_leave_todays_flash_as_it_was() -> void:
 # --- Question 1: the cap on the flash's share of the view ---------------------------------------
 
 
-func test_the_cap_mirror_gives_the_disc_that_covers_exactly_the_share() -> void:
+func test_the_cap_scale_is_the_shrink_that_fits_the_disc_to_the_share() -> void:
 	var proj11 := 1.3
 	for share: float in [0.02, 0.06, 0.1, 0.25]:
 		for depth: float in [0.2, 0.5, 1.0, 3.0]:
-			var capped := HumanoidRig.flash_capped_radius(100.0, depth, proj11, ASPECT, share)
-			assert_almost_eq(HumanoidRig.flash_view_share(capped, depth, proj11, ASPECT), share, EPS,
-					"a disc of the capped radius covers %.2f of the view at %.1f m" % [share, depth])
+			var scale := HumanoidRig.flash_cap_scale(0.25, depth, proj11, ASPECT, share)
+			assert_between(scale, 0.0, 1.0, "a shrink, never a growth")
+			if scale < 1.0:
+				assert_almost_eq(HumanoidRig.flash_view_share(0.25 * scale, depth, proj11, ASPECT), share, EPS,
+						"the shrunk disc covers exactly %.2f of the view at %.1f m" % [share, depth])
+			else:
+				assert_lte(HumanoidRig.flash_view_share(0.25, depth, proj11, ASPECT), share + EPS,
+						"a flash that is not shrunk already fits (%.2f at %.1f m)" % [share, depth])
 
 
-func test_the_cap_only_ever_shrinks_the_flash_and_grows_with_the_distance() -> void:
+func test_the_cap_scale_grows_with_the_distance_and_is_one_far_away() -> void:
 	var proj11 := 1.3
 	var last := 0.0
 	for depth: float in [0.05, 0.1, 0.2, 0.4, 0.8, 1.6, 3.2]:
-		var capped := HumanoidRig.flash_capped_radius(0.25, depth, proj11, ASPECT, 0.06)
-		assert_lte(capped, 0.25, "never wider than the flash's own radius at %.2f m" % depth)
-		assert_gte(capped, last, "farther away, the cap lets the flash be as wide or wider")
-		last = capped
-	assert_eq(HumanoidRig.flash_capped_radius(0.25, 3.2, proj11, ASPECT, 0.06), 0.25, "far away the flash is as it was")
-	assert_lt(HumanoidRig.flash_capped_radius(0.25, 0.3, proj11, ASPECT, 0.06), 0.25, "a few centimeters from the lens it shrinks")
-	assert_eq(HumanoidRig.flash_capped_radius(0.25, 0.0, proj11, ASPECT, 0.06), 0.0, "at the lens there is no room for a flash")
-	# A wider view (the same share of more pixels) lets the same flash be wider; a longer lens narrower.
-	assert_gt(HumanoidRig.flash_capped_radius(0.25, 0.3, proj11, 2.4, 0.06), HumanoidRig.flash_capped_radius(0.25, 0.3, proj11, 1.0, 0.06))
-	assert_gt(HumanoidRig.flash_capped_radius(0.25, 0.3, 0.9, ASPECT, 0.06), HumanoidRig.flash_capped_radius(0.25, 0.3, 2.0, ASPECT, 0.06))
+		var scale := HumanoidRig.flash_cap_scale(0.25, depth, proj11, ASPECT, 0.06)
+		assert_gte(scale, last, "farther away the flash is shrunk less (%.2f m)" % depth)
+		last = scale
+	assert_eq(HumanoidRig.flash_cap_scale(0.25, 3.2, proj11, ASPECT, 0.06), 1.0, "far away the flash is as it was")
+	assert_lt(HumanoidRig.flash_cap_scale(0.25, 0.3, proj11, ASPECT, 0.06), 1.0, "a few centimeters from the lens it shrinks")
+	assert_eq(HumanoidRig.flash_cap_scale(0.25, 0.0, proj11, ASPECT, 0.06), 0.0, "at the lens there is no room for a flash")
+	# A wider view (the same share of more pixels) shrinks the same flash less; a longer lens more.
+	assert_gt(HumanoidRig.flash_cap_scale(0.25, 0.3, proj11, 2.4, 0.06), HumanoidRig.flash_cap_scale(0.25, 0.3, proj11, 1.0, 0.06))
+	assert_gt(HumanoidRig.flash_cap_scale(0.25, 0.3, 0.9, ASPECT, 0.06), HumanoidRig.flash_cap_scale(0.25, 0.3, 2.0, ASPECT, 0.06))
+
+
+## The grid the footprint tests walk: the fragments' spacing on the surface (m).
+const GRID_M := 0.005
+const GRID_N := 240
+
+
+## The flash's footprint on a flat surface `depth` m in front of the lens, perpendicular to the view axis
+## (view space, z negative ahead), around a point at `point`: the fragments of a grid it reaches
+## (cap_distance inside `radius`), as screen positions in half-heights of the view.
+func _footprint(point: Vector3, depth: float, radius: float, proj11: float, share: float) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	for ix in range(-GRID_N, GRID_N + 1):
+		for iy in range(-GRID_N, GRID_N + 1):
+			var fragment := Vector3(ix * GRID_M, iy * GRID_M, -depth)
+			if HumanoidRig.flash_cap_distance(fragment, point, radius, proj11, ASPECT, share) < radius:
+				out.append(Vector2(fragment.x, fragment.y) * proj11 / depth)
+	return out
+
+
+func test_the_flash_stays_inside_a_disc_of_the_share_around_its_screen_position() -> void:
+	# The stretch is across the line of sight to the point, so the disc is exact on the view axis and
+	# at most 1 / cos(angle of the point off the axis) wider off it (the line of sight is not square to
+	# the surface): the bound is that, plus the grid's own step.
+	var proj11 := 1.0 / tan(deg_to_rad(Tuning.data.fov_deg) * 0.5) * ASPECT
+	for share: float in [0.03, 0.06, 0.12]:
+		var limit := sqrt(4.0 * ASPECT * share / PI)
+		# The surface at 0.4 m; the point on it, in front of it (nearer the lens), and behind it.
+		for point_depth: float in [0.4, 0.3, 0.55]:
+			var point := Vector3(0.12, -0.05, -point_depth)
+			var anchor := Vector2(point.x, point.y) * proj11 / point_depth
+			var reached := _footprint(point, 0.4, 0.25, proj11, share)
+			var farthest := 0.0
+			for spot: Vector2 in reached:
+				farthest = maxf(farthest, spot.distance_to(anchor))
+			var secant := point.length() / point_depth
+			var bound := limit * secant + GRID_M * proj11 / 0.4 * 2.0
+			assert_lte(farthest, bound, "share %.2f, point at %.2f m: the flash reaches %.3f half-heights from its place (limit %.3f x %.2f)" % [share, point_depth, farthest, limit, secant])
+			var area := float(reached.size()) * pow(GRID_M * proj11 / 0.4, 2.0)
+			assert_lte(area / (4.0 * ASPECT), share * secant * secant * 1.1, "share %.2f, point at %.2f m: the footprint is %.3f of the view" % [share, point_depth, area / (4.0 * ASPECT)])
+		# On the view axis the disc is the share: the footprint is at the share, within the grid's step.
+		var centred := _footprint(Vector3(0.0, 0.0, -0.4), 0.4, 0.25, proj11, share)
+		assert_almost_eq(float(centred.size()) * pow(GRID_M * proj11 / 0.4, 2.0) / (4.0 * ASPECT), share, share * 0.1,
+				"share %.2f: on the axis the flash covers the share" % share)
+
+
+func test_the_capped_flash_is_inside_the_uncapped_one_and_keeps_its_place() -> void:
+	var proj11 := 1.0 / tan(deg_to_rad(Tuning.data.fov_deg) * 0.5) * ASPECT
+	var point := Vector3(0.0, 0.0, -0.4)
+	for share: float in [0.0, 0.03, 0.12]:
+		var count := _footprint(point, 0.4, 0.25, proj11, share).size()
+		if share == 0.0:
+			assert_gt(count, 0, "the uncapped flash covers the surface")
+			continue
+		var plain := _footprint(point, 0.4, 0.25, proj11, 0.0).size()
+		assert_lt(count, plain, "share %.2f shrinks the footprint" % share)
+		assert_gt(count, 0, "share %.2f leaves a flash" % share)
+		# Every fragment the cap reaches, the plain distance reaches: a stretch never reaches farther.
+		for ix in range(-12, 13):
+			var fragment := Vector3(ix * 0.02, 0.01, -0.4)
+			assert_gte(HumanoidRig.flash_cap_distance(fragment, point, 0.25, proj11, ASPECT, share) + EPS,
+					(fragment - point).length(), "the capped distance is never less than the plain one")
+
+
+func test_a_flash_that_fits_the_share_is_not_touched_even_where_its_disc_does_not() -> void:
+	# A point 0.24 m behind the surface the lens sees: the flash (0.25 m) reaches only 0.07 m across the
+	# surface, a patch of 0.31 half-heights at 0.4 m, inside the 6% limit (0.369) though the whole disc
+	# of 0.25 m there would be 54% of the view. The cap leaves it alone, fragment for fragment.
+	var proj11 := 1.0 / tan(deg_to_rad(Tuning.data.fov_deg) * 0.5) * ASPECT
+	var point := Vector3(0.0, 0.0, -0.64)
+	for ix in range(-12, 13):
+		for iy in range(-12, 13):
+			var fragment := Vector3(ix * 0.01, iy * 0.01, -0.4)
+			assert_eq(HumanoidRig.flash_cap_distance(fragment, point, 0.25, proj11, ASPECT, 0.06),
+					(fragment - point).length(), "the plain distance at (%d, %d)" % [ix, iy])
+	# The same flash 0.1 m behind the surface reaches 0.23 m across: past the limit, so it is shrunk.
+	var near := Vector3(0.0, 0.0, -0.5)
+	var fragment := Vector3(0.1, 0.0, -0.4)
+	assert_gt(HumanoidRig.flash_cap_distance(fragment, near, 0.25, proj11, ASPECT, 0.06), (fragment - near).length())
+
+
+func test_a_point_behind_the_near_surface_still_flashes_what_is_in_front_of_it() -> void:
+	# The knee's contact lies under a cap's brim: the point is 0.15 m behind the surface the lens sees.
+	var proj11 := 1.0 / tan(deg_to_rad(Tuning.data.fov_deg) * 0.5) * ASPECT
+	var point := Vector3(0.0, 0.0, -0.55)
+	var on_the_sight_line := Vector3(0.0, 0.0, -0.4)
+	var capped := HumanoidRig.flash_cap_distance(on_the_sight_line, point, 0.25, proj11, ASPECT, 0.06)
+	assert_almost_eq(capped, 0.15, EPS, "straight in front of the point the distance is the depth between them")
+	assert_lt(capped, 0.25, "so the surface there is flashed, whatever the cap")
+	# A fragment off the sight line by what would be a screen radius over the limit is not.
+	var limit := sqrt(4.0 * ASPECT * 0.06 / PI)
+	var lateral := limit * 0.4 / proj11 * 1.5
+	var off := Vector3(lateral, 0.0, -0.4)
+	assert_gt(HumanoidRig.flash_cap_distance(off, point, 0.25, proj11, ASPECT, 0.06), 0.25, "but one 1.5 limits off the sight line is not")
+	assert_lt(HumanoidRig.flash_cap_distance(off, point, 0.25, proj11, ASPECT, 0.0), 0.25, "though today's flash would have reached it")
 
 
 func test_a_knee_at_the_lens_is_capped_where_a_jab_at_one_meter_is_not() -> void:
 	# The disc of Tuning's radius (0.25 m): a jab's contact 0.9 m from the lens and a knee's 0.4 m.
-	var proj11 := 1.0 / tan(deg_to_rad(Tuning.data.fov_deg) * 0.5)
+	var proj11 := 1.0 / tan(deg_to_rad(Tuning.data.fov_deg) * 0.5) * ASPECT
 	var jab := HumanoidRig.flash_view_share(0.25, 0.9, proj11, ASPECT)
 	var knee := HumanoidRig.flash_view_share(0.25, 0.4, proj11, ASPECT)
-	assert_lt(jab, 0.15, "a jab's flash at 0.9 m is a modest disc (%.3f)" % jab)
-	assert_gt(knee, 2.0 * jab, "a knee's is several times that (%.3f against %.3f)" % [knee, jab])
-	var share := 0.12
-	assert_lt(jab, share, "a cap of %.2f leaves the jab as it was" % share)
-	assert_gt(knee, share, "and shrinks the knee")
-	assert_eq(HumanoidRig.flash_capped_radius(0.25, 0.9, proj11, ASPECT, share), 0.25, "the jab's radius is untouched")
-	assert_lt(HumanoidRig.flash_capped_radius(0.25, 0.4, proj11, ASPECT, share), 0.25, "the knee's radius is smaller")
+	assert_gt(knee, 2.0 * jab, "a knee's flash disc is several times a jab's (%.3f against %.3f)" % [knee, jab])
+	var share := (jab + knee) * 0.5
+	assert_eq(HumanoidRig.flash_cap_scale(0.25, 0.9, proj11, ASPECT, share), 1.0, "a cap between them leaves the jab as it was")
+	assert_lt(HumanoidRig.flash_cap_scale(0.25, 0.4, proj11, ASPECT, share), 1.0, "and shrinks the knee")
 
 
 func test_the_rig_hands_the_overlay_the_cap_on_every_flash() -> void:
@@ -258,6 +364,7 @@ func test_a_clean_finisher_s_flash_is_widened_and_no_other_tier_is() -> void:
 	await _setup(1.4)
 	var dummy := dummies[0]
 	Tuning.data.hit_flash_finisher_radius_mult = 2.0
+	Tuning.data.hit_flash_fp_max_share = 0.05
 	var base := Tuning.data.hit_flash_radius_m
 	for case: Array in [
 			[CombatTypes.HitTier.FINISHER, false, 2.0], [CombatTypes.HitTier.HEAVY, false, 1.0],
@@ -267,6 +374,8 @@ func test_a_clean_finisher_s_flash_is_widened_and_no_other_tier_is() -> void:
 		await _ticks(1)
 		var label := "%s%s" % [CombatTypes.tier_name(case[0]), " blocked" if case[1] else ""]
 		assert_almost_eq(_radius_of(dummy.rig), base * float(case[2]), EPS, "%s: radius x%.1f" % [label, case[2]])
+		assert_almost_eq(_share_of(dummy.rig), minf(0.05 * float(case[2]) * float(case[2]), 1.0), EPS,
+				"%s: the cap's share of the view grows with the radius (x%.1f squared)" % [label, case[2]])
 
 
 func test_a_finisher_widens_its_flash_once_and_the_next_flash_starts_from_the_tunable() -> void:
@@ -279,6 +388,7 @@ func test_a_finisher_widens_its_flash_once_and_the_next_flash_starts_from_the_tu
 		CombatEvents.hit_landed.emit(_hit_on(dummy, CombatTypes.HitTier.FINISHER))
 	await _ticks(1)
 	assert_almost_eq(_radius_of(dummy.rig), base * 2.0, EPS, "three events for one flash widen it once, not x8")
+	assert_eq(_share_of(dummy.rig), 0.0, "the cap, off, stays off: nothing to grow")
 	dummy.rig.flash_at(dummy.global_position + Vector3.UP, 1.0, base, 0.5)
 	assert_almost_eq(_radius_of(dummy.rig), base, EPS, "a later flash is aimed at the radius it is given")
 	CombatEvents.hit_landed.emit(_hit_on(dummy, CombatTypes.HitTier.LIGHT))
@@ -357,15 +467,19 @@ func test_the_widened_flash_still_shows_for_exactly_hit_flash_frames() -> void:
 # --- Both together ------------------------------------------------------------------------------
 
 
-func test_the_cap_applies_after_the_widening_not_before() -> void:
-	# The shader caps the radius it is given: a widened finisher radius reaches it (and is capped
-	# where the lens is near), so the two alternatives compose. In meters at 0.4 m from the lens.
-	var proj11 := 1.0 / tan(deg_to_rad(Tuning.data.fov_deg) * 0.5)
-	var widened := Tuning.data.hit_flash_radius_m * 3.0
-	var capped := HumanoidRig.flash_capped_radius(widened, 0.4, proj11, ASPECT, 0.06)
-	assert_lt(capped, widened, "at 0.4 m the widened flash is capped")
-	assert_almost_eq(HumanoidRig.flash_view_share(capped, 0.4, proj11, ASPECT), 0.06, EPS, "to the share")
-	assert_eq(HumanoidRig.flash_capped_radius(widened, 3.0, proj11, ASPECT, 0.06), widened, "at 3 m it is not")
+func test_a_finisher_under_the_cap_is_mult_times_an_ordinary_flash_on_screen() -> void:
+	# The widened radius grows the cap's share with it (_widen_flash()), so at the same distance from the
+	# lens a finisher's flash is `mult` times an ordinary one's across, not shrunk back to its size.
+	var proj11 := 1.0 / tan(deg_to_rad(Tuning.data.fov_deg) * 0.5) * ASPECT
+	var ordinary := Tuning.data.hit_flash_radius_m
+	var mult := 2.0
+	var share := 0.04
+	for depth: float in [0.3, 0.5, 0.8]:
+		var plain := ordinary * HumanoidRig.flash_cap_scale(ordinary, depth, proj11, ASPECT, share)
+		var finisher := ordinary * mult * HumanoidRig.flash_cap_scale(ordinary * mult, depth, proj11, ASPECT, share * mult * mult)
+		assert_almost_eq(finisher, plain * mult, EPS, "at %.1f m the finisher's capped reach is x%.1f an ordinary one's" % [depth, mult])
+	# Far enough that neither is shrunk, the finisher is the widened radius.
+	assert_eq(HumanoidRig.flash_cap_scale(ordinary * mult, 8.0, proj11, ASPECT, share * mult * mult), 1.0)
 
 
 # --- The warm-up --------------------------------------------------------------------------------

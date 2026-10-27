@@ -5,13 +5,17 @@ extends RefCounted
 ## hit_flash_finisher_radius_mult), the first pass always "today" (0 and 1.0), and prints for every
 ## contact flash the share of the frame it whitens:
 ##   FLASH-FP <slug> <scenario> <setting> n<k> <move> <tier> depth=<m> radius=<m> cap=<share>
-##            disc=<share> disc_capped=<share> white=<share> base=<share> flash=<share>
-## `white` is the share of the frame's pixels that are white (look_probe's WHITE_LEVEL) in a frame the
-## flash is drawn in; `base` the same in the frame after the flash ended (the HUD, the Punk's highlight,
-## the comic burst: what is white without the flash); `flash` = white - base. `disc` is what the flash's
-## outer disc covers on a surface at the flash point's depth by the shader's own math
-## (HumanoidRig.flash_view_share()), `disc_capped` after the cap. Each pass ends with a
-## `FLASH-FP-SUM` line (hits, the largest and the mean `flash`, how many flashes were over 5% and 10%).
+##            disc=<share> scale=<k> white=<share> pure=<share> any=<share>
+## The frame the flash is drawn in is grabbed, then the same frame is drawn again with the flash's
+## strength at 0 (RenderingServer.force_draw(): no tick runs between, and a Movie Maker recording takes
+## no extra frame), so the two differ by the flash alone. `white` is the share of the first frame's pixels
+## that are white (look_probe's WHITE_LEVEL, T5's figure, L3's measure), `pure` the share that the flash
+## made white (white with it, not without), `any` the share it changed at all (its whole visible patch,
+## the fade included). `disc` is what the flash's outer disc covers on a surface at the flash point's
+## depth by the shader's own math (HumanoidRig.flash_view_share()), `scale` how much the cap shrinks it there
+## (HumanoidRig.flash_cap_scale(): 1 = not at all). Each pass
+## ends with a `FLASH-FP-SUM` line (hits, the largest and the mean `pure` and `any`, how many flashes
+## changed over 5% and 10% of the view).
 ## Every title starts with "Look: flash share"; the crowd bot loads this file by name. Record one act per
 ## process, as for the other look acts:
 ##   tools/capture_bot.sh res://tests/bot/crowd_bot.tscn captures/p3flash/hold "Look: flash share, hold knees" 6
@@ -44,7 +48,7 @@ const AFTER_TICKS := 40
 const PENDING_MAX_TICKS := 90
 ## Every Nth pixel of a row and a column is counted.
 const SAMPLE_STEP := 2
-## The shares past which a flash is counted as big, in the sum line.
+## The shares of the view a flash's whole patch may pass to be counted as big, in the sum line.
 const BIG_SHARES: Array[float] = [0.05, 0.10]
 ## The frames of a flurry's second hit on: the combo bot's flurry waits for the first move to have
 ## recovered this long.
@@ -59,25 +63,32 @@ const CHAIN_FINISHER_GAP_TICKS := 24
 ## multiple. The first is always today's.
 const JAB_SETTINGS: Array[Dictionary] = [
 	{label = "today", share = 0.0, mult = 1.0},
+	{label = "cap04", share = 0.04, mult = 1.0},
 	{label = "cap06", share = 0.06, mult = 1.0},
+	{label = "cap08", share = 0.08, mult = 1.0},
+	{label = "cap12", share = 0.12, mult = 1.0},
 ]
 const FLURRY_SETTINGS: Array[Dictionary] = [
 	{label = "today", share = 0.0, mult = 1.0},
-	{label = "cap03", share = 0.03, mult = 1.0},
+	{label = "cap04", share = 0.04, mult = 1.0},
 	{label = "cap06", share = 0.06, mult = 1.0},
-	{label = "cap10", share = 0.10, mult = 1.0},
+	{label = "cap08", share = 0.08, mult = 1.0},
+	{label = "cap12", share = 0.12, mult = 1.0},
 ]
 const HOLD_SETTINGS: Array[Dictionary] = [
 	{label = "today", share = 0.0, mult = 1.0},
-	{label = "cap03", share = 0.03, mult = 1.0},
+	{label = "cap04", share = 0.04, mult = 1.0},
 	{label = "cap06", share = 0.06, mult = 1.0},
-	{label = "cap10", share = 0.10, mult = 1.0},
+	{label = "cap08", share = 0.08, mult = 1.0},
+	{label = "cap12", share = 0.12, mult = 1.0},
 ]
 const FINISHER_SETTINGS: Array[Dictionary] = [
 	{label = "today", share = 0.0, mult = 1.0},
 	{label = "mult15", share = 0.0, mult = 1.5},
 	{label = "mult20", share = 0.0, mult = 2.0},
 	{label = "mult30", share = 0.0, mult = 3.0},
+	{label = "mult20cap06", share = 0.06, mult = 2.0},
+	{label = "mult30cap06", share = 0.06, mult = 3.0},
 ]
 
 
@@ -238,40 +249,63 @@ static func _sample(bot: Node, slug: String, tag: String, n: int, victim: Combat
 	var proj11 := camera.get_camera_projection().y.y
 	await RenderingServer.frame_post_draw
 	LookRect.mark(bot, slug, "%s_n%d_flash" % [tag.replace(" ", "_"), n], victim)
-	var drawn := LookProbe.grab(bot.get_viewport())
-	await RenderingServer.frame_post_draw
-	var after := LookProbe.grab(bot.get_viewport())
-	if drawn == null or after == null:
+	var viewport: Viewport = bot.get_viewport()
+	var drawn := LookProbe.grab(viewport)
+	var strength: Variant = overlay.get_shader_parameter(&"flash_strength")
+	overlay.set_shader_parameter(&"flash_strength", 0.0)
+	RenderingServer.force_draw(false)
+	var clear := LookProbe.grab(viewport)
+	overlay.set_shader_parameter(&"flash_strength", strength)
+	if drawn == null or clear == null:
 		return
-	var white := LookProbe.white_share(drawn, Rect2i(), SAMPLE_STEP)
-	var base := LookProbe.white_share(after, Rect2i(), SAMPLE_STEP)
 	var move_id: StringName = hit.move.id if hit.move != null else &"body"
 	var row := {
 		move = move_id, tier = CombatTypes.tier_name(hit.tier), depth = depth, radius = radius, cap = cap,
 		disc = HumanoidRig.flash_view_share(radius, depth, proj11, aspect),
-		disc_capped = HumanoidRig.flash_view_share(HumanoidRig.flash_capped_radius(radius, depth, proj11, aspect, cap),
-				depth, proj11, aspect),
-		white = white, base = base, flash = maxf(white - base, 0.0),
+		scale = HumanoidRig.flash_cap_scale(radius, depth, proj11, aspect, cap),
+		white = LookProbe.white_share(drawn, Rect2i(), SAMPLE_STEP),
+		pure = _made_white_share(drawn, clear),
+		any = LookProbe.changed_share(drawn, clear, Rect2i(), SAMPLE_STEP),
 	}
 	rows.append(row)
-	bot.log_line("FLASH-FP %s %s n%d %s %s depth=%.3f radius=%.3f cap=%.3f disc=%.4f disc_capped=%.4f white=%.4f base=%.4f flash=%.4f" % [
-			slug, tag, n, row.move, row.tier, row.depth, row.radius, row.cap, row.disc, row.disc_capped, row.white,
-			row.base, row.flash])
+	bot.log_line("FLASH-FP %s %s n%d %s %s depth=%.3f radius=%.3f cap=%.3f disc=%.4f scale=%.3f white=%.4f pure=%.4f any=%.4f" % [
+			slug, tag, n, row.move, row.tier, row.depth, row.radius, row.cap, row.disc, row.scale, row.white,
+			row.pure, row.any])
+
+
+## The share of pixels that are white in `with_flash` and not in `without`: what the flash made white.
+static func _made_white_share(with_flash: Image, without: Image) -> float:
+	var size := with_flash.get_size()
+	var made := 0
+	var total := 0
+	for y in range(0, size.y, SAMPLE_STEP):
+		for x in range(0, size.x, SAMPLE_STEP):
+			var a := with_flash.get_pixel(x, y)
+			var b := without.get_pixel(x, y)
+			if minf(a.r, minf(a.g, a.b)) >= LookProbe.WHITE_LEVEL and minf(b.r, minf(b.g, b.b)) < LookProbe.WHITE_LEVEL:
+				made += 1
+			total += 1
+	return float(made) / float(maxi(total, 1))
 
 
 static func _sum(bot: Node, slug: String, name: String, label: String, rows: Array[Dictionary]) -> void:
-	var largest := 0.0
-	var total := 0.0
+	var pure_max := 0.0
+	var pure_sum := 0.0
+	var any_max := 0.0
+	var any_sum := 0.0
 	var big: Array[int] = []
 	big.resize(BIG_SHARES.size())
 	for row: Dictionary in rows:
-		largest = maxf(largest, row.flash)
-		total += row.flash
+		pure_max = maxf(pure_max, row.pure)
+		pure_sum += row.pure
+		any_max = maxf(any_max, row.any)
+		any_sum += row.any
 		for i in BIG_SHARES.size():
-			if row.flash > BIG_SHARES[i]:
+			if row.any > BIG_SHARES[i]:
 				big[i] += 1
 	var parts: Array[String] = []
 	for i in BIG_SHARES.size():
-		parts.append("over%d=%d" % [roundi(BIG_SHARES[i] * 100.0), big[i]])
-	bot.log_line("FLASH-FP-SUM %s %s %s hits=%d flash_max=%.4f flash_mean=%.4f %s" % [
-			slug, name, label, rows.size(), largest, total / maxf(rows.size(), 1.0), " ".join(parts)])
+		parts.append("any_over%d=%d" % [roundi(BIG_SHARES[i] * 100.0), big[i]])
+	var count := maxf(rows.size(), 1.0)
+	bot.log_line("FLASH-FP-SUM %s %s %s hits=%d pure_max=%.4f pure_mean=%.4f any_max=%.4f any_mean=%.4f %s" % [
+			slug, name, label, rows.size(), pure_max, pure_sum / count, any_max, any_sum / count, " ".join(parts)])

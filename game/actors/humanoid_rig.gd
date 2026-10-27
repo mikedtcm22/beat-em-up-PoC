@@ -474,8 +474,8 @@ func set_flash(amount: float, color: Color = Color.WHITE) -> void:
 ## First-person feel (Look > FP feel, both off by default): the overlay is told Tuning's
 ## hit_flash_fp_max_share, the cap the shader puts on the flash's on-screen share of the view, and a
 ## clean finisher's radius is widened by hit_flash_finisher_radius_mult when its hit lands
-## (CombatEvents.hit_landed, _on_hit_landed_widen()). The radius, core, strength and the point that
-## the struck actor passes in are used as they come.
+## (CombatEvents.hit_landed, _on_hit_landed_widen(); the cap's share grows with it). The radius, core,
+## strength and the point that the struck actor passes in are used as they come.
 func flash_at(point: Vector3, strength: float, radius: float, core: float,
 		color: Color = Color.WHITE, shown: bool = true) -> void:
 	set_flash(0.0)
@@ -556,21 +556,42 @@ static func flash_falloff(dist: float, radius: float, core: float) -> float:
 	return 1.0 - smoothstep(0.0, 1.0, clampf((dist - inner) / span, 0.0, 1.0))
 
 
-## The reach (m) of a contact flash of `radius` on a surface `depth` m in front of the lens, with
-## the first-person cap (Tuning hit_flash_fp_max_share = `max_share`, 0 = no cap), as the overlay
-## shader's capped_radius() computes it: the radius whose disc covers `max_share` of the view at
-## that depth (`proj11` is the camera's projection[1][1], 1 / tan(fov / 2); `aspect` the
-## viewport's width over its height), or `radius` when that is smaller. The core shrinks with it.
-static func flash_capped_radius(radius: float, depth: float, proj11: float, aspect: float,
-		max_share: float) -> float:
-	if max_share <= 0.0:
-		return radius
-	var half_heights := sqrt(4.0 * aspect * max_share / PI)
-	return minf(radius, half_heights * maxf(depth, 0.0) / maxf(proj11, 0.0001))
+## How much a contact flash whose reach across the line of sight is `reach` m has to shrink on screen
+## to cover at most `max_share` of the view (Tuning hit_flash_fp_max_share, 0 = no cap), for a surface
+## `depth` m in front of the lens, as the overlay shader's cap_scale() computes it: 1 when the flash
+## already fits (or the cap is off), else the ratio of the radius whose disc covers the share to its own.
+## `proj11` is the camera's projection[1][1], 1 / tan(fov / 2); `aspect` the viewport's width over
+## its height.
+static func flash_cap_scale(reach: float, depth: float, proj11: float, aspect: float, max_share: float) -> float:
+	if max_share <= 0.0 or reach <= 0.0:
+		return 1.0
+	var limit := sqrt(4.0 * aspect * max_share / PI)
+	return minf(1.0, limit * maxf(depth, 0.0) / (reach * maxf(proj11, 0.0001)))
+
+
+## The distance (m) the flash's falloff reads for a fragment at `fragment` from the flash's point at
+## `point` (both in the camera's view space, z negative ahead), as the overlay shader's cap_distance()
+## computes it: the offset across the line of sight to the point stretched by 1 / flash_cap_scale() for
+## the flash's reach across that line at the fragment's offset along it (sqrt(radius^2 - along^2)),
+## the offset along it as it is. With no cap, or where the flash already fits, it is the plain
+## distance. What is inside `radius` of it is flashed, so on a surface the flash covers at most `max_share`
+## of the view (the disc around the point's screen position), a flash that fits is as it was, and a point
+## behind the near surface still flashes what lies in front of it.
+static func flash_cap_distance(fragment: Vector3, point: Vector3, radius: float, proj11: float,
+		aspect: float, max_share: float) -> float:
+	var offset := fragment - point
+	var sight := point.normalized() if point.length() > 0.0001 else Vector3(0.0, 0.0, -1.0)
+	var along := offset.dot(sight)
+	var reach := sqrt(maxf(radius * radius - along * along, 0.0))
+	var scale := flash_cap_scale(reach, -fragment.z, proj11, aspect, max_share)
+	if scale >= 1.0:
+		return offset.length()
+	var across := (offset - sight * along).length()
+	return Vector2(across / maxf(scale, 0.0001), along).length()
 
 
 ## The share (0..1) of the view a flash disc of `radius` covers on a surface `depth` m in front
-## of the lens: the inverse of flash_capped_radius()'s cap.
+## of the lens, as flash_cap_scale() reads it: the share the cap is compared with.
 static func flash_view_share(radius: float, depth: float, proj11: float, aspect: float) -> float:
 	var half_heights := radius * proj11 / maxf(depth, 0.0001)
 	return minf(PI * half_heights * half_heights / (4.0 * aspect), 1.0)
@@ -596,12 +617,17 @@ static func _on_hit_landed_widen(hit: HitInfo) -> void:
 
 
 ## Scale the aimed contact flash's radius by `mult`, once per flash (a hit that lands twice in a
-## tick, or the finisher's second target, widens it once). The flash's point and core stay.
+## tick, or the finisher's second target, widens it once). The flash's point and core stay. With
+## the share cap on, the flash's share of the view grows by the same factor in radius (mult squared,
+## at most the whole view), so the two alternatives compose: a finisher's flash is `mult` times an
+## ordinary one's wherever the cap bites, instead of the cap undoing the widening.
 func _widen_flash(mult: float) -> void:
 	if not _flash_aimed or _flash_widened or _flash_overlay == null or mult <= 1.0:
 		return
 	_flash_widened = true
 	_flash_overlay.set_shader_parameter(&"flash_radius", float(_flash_overlay.get_shader_parameter(&"flash_radius")) * mult)
+	var share := float(_flash_overlay.get_shader_parameter(&"flash_max_share"))
+	_flash_overlay.set_shader_parameter(&"flash_max_share", minf(share * mult * mult, 1.0))
 
 
 func _show_flash_overlay(on: bool) -> void:
