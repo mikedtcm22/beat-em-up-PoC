@@ -4,6 +4,22 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-27 00:20 CDT: P1-chain merged; the smoke Punk is a GLB
+- **Merged** (`c69214f`; its own branch passed 1243/1243). The suite on the merge is running.
+  - The Blender chain: `tools/pipeline/run.py` with the `blender_*` steps, `gen_palette.py` and `ab_sheet.sh`.
+  - Four Punk GLBs in `assets/export/characters/punk/`: `punk.glb` (Tripo weights, A-pose, the default), `punk_rest.glb` (arms-down bake), `punk_auto.glb` and `punk_auto_rest.glb` (heat-map weights).
+  - The palette atlas plus `shared.json` and `punk.json`; `pipeline.json`, `report/`, `report_auto/` and `work/punk.blend`.
+  - `tests/test_art_contract.gd`: 15 tests, 1655 assertions.
+  - The lead ignored the per-run stills. `gen_palette.py --check` says the atlas is current.
+- **The Punk:** 14,999 triangles, 6 swatches, 23 named binds and no `neutral_bone`. Its joints are within 0.001 mm of the table chained through the swing, and the fist is in the fist box. It reads as concept A (the lead looked at `punk_apose_poses.png`): the guard, elbow 150 and knee −130 hold their volume, the arm raise 140 pinches at the armpit, and the face is soft.
+- **For the slice gate** (nothing is fixed yet):
+  1. **A3's 1 cm landmark residual is 2.35 cm on the Punk** (1.4 mm on the probe). Tripo's torso bones tilt 8-17°. Rule on the bar (calls C6).
+  2. **A7 strain misses:** p99.9 is about 2.0 at the guard, 2.9-4.3 at the arm raise and about 1.9 at the spine twist. The worst edges are the armpit, the vest collar (Neck to RightShoulder) and the jeans hem. Heat-map weights score lower than Tripo's everywhere. Naive weight smoothing made it worse. The A-pose route is no worse than the bake.
+  3. **The strain reference:** P1-chain asks that A19 measure against the *skinned rest pose*. For the A-pose route the GLB's own mesh already reads 1.7 at idle (C13). P1-skin was already running when this came in, so SL-int or the gate checks which reference P1-skin used.
+  4. Pick the weights source and the bind route from `report/stills/ab_weights_x_route.png` and the numbers.
+  5. Smaller points: the wide glove cuff can read as a bracelet; the soles sit at −4.3 mm (inside 5 mm); palette ΔE averages 9.4, so thin seams may be lost.
+- **Running:** P1-skin, P1-post and P1-fx. After them: SL-int (the smoke Punk in the crowd room), then the slice gate.
+
 ### 2026-10-27 00:00 CDT: P1-toon and P1-chain's probe body merged; P1-fx running
 5-hour 65% (resets 00:50 CDT), weekly 16%.
 - **Merged:**
