@@ -1,0 +1,13 @@
+[
+	{
+		"out": "punk_smoke_front.png",
+		"prompt": "You are given two reference images. The FIRST is the character design: a Street Punk, a late-1980s street-gang grunt, from a stylized comic-book brawler video game. The SECOND is a plain grey 3D mannequin in an A-pose, seen from the front on a flat light-grey ground. Draw the character of the first image, with exactly the same outfit, colours, accessories and covered or simplified face, standing in the mannequin's exact pose and body proportions: the same overall height in the frame with the same margins above the head and below the soles, the same shoulder width, the same head size, torso length and leg length, the same stance with the feet shoulder-width apart and the toes forward, and the same arms, straight and angled 45 degrees below horizontal, so that the shoulders, elbows, wrists, hips, knees and ankles land where the mannequin's do. The mannequin's proportions win over the design's: keep the clothes and colours of the design, not its body shape or its pose. Orthographic FRONT VIEW, like a 3D modelling reference, facing the viewer squarely, perfectly symmetrical and centered, the whole body from the top of the head to the soles in frame. This image is the input of a 3D reconstruction, so it must be FLAT: flat unshaded albedo colours only, as if the colours were painted straight onto the surfaces under perfectly even light. No ink outlines, no black outlines, no cel shading, no shading, no gradients, no highlights, no reflections, no texture noise, no cast shadow, no ground shadow, no ambient occlusion. Plain flat solid #d9d9d9 background, exactly the mannequin image's background. Hands open and relaxed with the fingers visible and slightly apart, palms toward the thighs, thumbs forward; not fists, nothing held in them. No logos or brand marks, no text, no letters, no numbers, no watermark. Colour palette strictly limited to the design's flat colours: teal main, yellow accent, dark charcoal, off-white and skin. Absolutely no red or pink anywhere (red is reserved for blood in this game).",
+		"model": "gemini-3-pro-image",
+		"aspect": "3:4",
+		"size": "2K",
+		"refs": [
+			"../../../concepts/punk_a_denim_vest.jpg",
+			"../../../mannequin/mannequin_front.png"
+		]
+	}
+]

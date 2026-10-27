@@ -1,0 +1,600 @@
+{
+	"format": 1,
+	"about": "The smoke Punk's sources (M4 plan A2 step 4; P1-tools second launch): a Gemini flat front view of concept A on the mannequin, Tripo T1 image-to-model, T2 rig-check, T3 auto-rig v3.0 unity, and the dumps of both GLBs. The lead replaced no concept: Game-boy had not picked, so Punk A is used (A21). Everything measured here is from the dumps in this folder; the facts the chain must know are under 'findings'.",
+	"concept": {
+		"file": "assets/source/concepts/punk_a_denim_vest.jpg",
+		"sha256": "6bf3bb8461ce845e655f9c378aa7892d7a2066a8163d778667811f930dcbba21",
+		"picked_by_game_boy": false
+	},
+	"gemini": {
+		"job_file": "assets/source/characters/punk/smoke/smoke_jobs.json",
+		"job": "punk_smoke_front",
+		"model": "gemini-3-pro-image",
+		"aspect": "3:4",
+		"size": "2K",
+		"images_generated": 1,
+		"refs": [
+			"assets/source/concepts/punk_a_denim_vest.jpg",
+			"assets/source/mannequin/mannequin_front.png"
+		],
+		"output": "assets/source/characters/punk/smoke/punk_smoke_front.jpg",
+		"output_px": [
+			1792,
+			2400
+		],
+		"output_sha256": "7e92ee164d46977d89f75f9a616baedaeaa49209fcffbce8218603fdd1599c38",
+		"seen": "Flat colours, no hard shadow, open hands, no logos, no red; a few thin dark seam lines (pockets, jeans folds). It did not copy the mannequin exactly: the legs stand visibly wider (the mesh's feet end up 0.22 m from the midline against the mannequin's 0.11), the arms hang steeper (about 30 degrees from vertical in the drawing against the mannequin's 45) and the shoulders and torso are broader. Used as it is: the smoke exists to show what the chain must absorb, and Tripo reconstructed the arms at 38 to 42 degrees.",
+		"rerun": "python3 -I tools/gemini_image.py assets/source/characters/punk/smoke/smoke_jobs.json punk_smoke_front"
+	},
+	"tripo": {
+		"T1": {
+			"call": "image-to-model",
+			"task_id": "cb4af11c-3a03-435b-9ea3-29c08cfc11da",
+			"options": {
+				"model": "v3.1-20260211",
+				"texture": true,
+				"pbr": false,
+				"texture_quality": "standard",
+				"texture_version": "v3.5-20260815",
+				"delight": true,
+				"orientation": "align_image",
+				"face_limit": 20000,
+				"model_seed": 4001
+			},
+			"credits_consumed": 30.0,
+			"expected": 30.0,
+			"credits_source": "task",
+			"duration_s": 102.2,
+			"balance": [
+				1500.0,
+				1470.0
+			],
+			"file": "assets/source/characters/punk/smoke/cb4af11c_gen.glb",
+			"sha256": "14a550e3999a14a34483b6886de262b8f0c7a835d6eb56fdb220b5b49c1d92f5",
+			"preview": "assets/source/characters/punk/smoke/cb4af11c_preview.webp",
+			"note": "Texture v3.5 on generation costs 30.00, the standard tier, so Part C section 10's fallback to v3.0-20250812 is not needed."
+		},
+		"T2": {
+			"call": "rig-check",
+			"task_id": "529a4cb0-5cbe-4f15-bf1d-9da49c626fd1",
+			"credits_consumed": 0.0,
+			"result": {
+				"riggable": true,
+				"rig_type": "biped"
+			}
+		},
+		"T3": {
+			"call": "rig",
+			"task_id": "0366578f-11ec-4e54-8392-79b91ec6fa5e",
+			"options": {
+				"model": "v3.0-20260909",
+				"rig_type": "biped",
+				"spec": "unity",
+				"out_format": "glb"
+			},
+			"credits_consumed": 25.0,
+			"credits_source": "task",
+			"duration_s": 7.2,
+			"balance": [
+				1470.0,
+				1445.0
+			],
+			"file": "assets/source/characters/punk/smoke/0366578f_rig.glb",
+			"sha256": "55da1218f45cc267853d3a904d021038cbf9bba90fb9f9a71ac1f096ee82ab02"
+		}
+	},
+	"credits_total": 55.0,
+	"dumps": {
+		"rig": "assets/source/characters/punk/smoke/bones.json",
+		"generation": "assets/source/characters/punk/smoke/bones_gen.json",
+		"command": "blender --background --factory-startup --python-exit-code 1 --python tools/pipeline/blender_dump_rig.py -- <glb> <json>"
+	},
+	"stills": {
+		"gen_views": "assets/source/characters/punk/smoke/views_gen.png",
+		"rig_views": "assets/source/characters/punk/smoke/views_rig.png",
+		"how": "blender_views.py: orthographic, textured; tiles left to right with the camera at glTF +Z, +X, -Z, -X"
+	},
+	"findings": {
+		"side_label": "Tripo's Left_* bones are the character's OWN left: the Left_* heads sit on the character's left in the dump (sides.consistent is true). With the model facing +X, own left is -Z. No swap is needed.",
+		"facing": "+X in glTF space (the model's front looks along +X, its lateral axis is Z), NOT the glTF-standard +Z and not the rig's -Z. The dump's yaw_deg_to_minus_z is 89.33 (rotate about +Y by that to face -Z), confidence 'weak' only because the head cross-check read -X: the Punk wears the cap backwards, and the brim reaches behind the face. Confirmed by eye in the four-side stills and by the Left_Eye and Right_Eye bones, which sit 0.064 m in front (+X) of the neck line, and by the toes (Left_Toes and Left_ToesEnd step +X from the foot). A fixed facing_yaw_deg override of 89.33 is right for this model; it is a property of the model, so the chain must not assume it for the next generation (the dump's heuristic is the check).",
+		"scale": "Height 1.000 m, not real-world: the generation GLB's bbox is y -0.5 to +0.5 (centred), the rig GLB's is y 0.0 to 1.0 (feet on the floor, the armature carries a near-zero translation of 0.0002 m). Width (arm span, Z) 0.784 m, depth (X) 0.222 m. The scale to the rig's 1.8 m is 1.8, applied uniformly (auto_size was not used).",
+		"bone_names": "67 bones, Hips as the root (no Root bone), names Left_UpperArm style (an underscore after Left and Right). The project's 22 non-Root names are the Tripo names with that underscore removed: Hips, Spine, Chest, UpperChest, Neck, Head, Left_Shoulder, Left_UpperArm, Left_LowerArm, Left_Hand, Left_UpperLeg, Left_LowerLeg, Left_Foot, Left_Toes and the Right_ twins. Extras with weights: Neck_Twist_A, four finger bones times five fingers per hand (Proximal, Intermediate, Distal, DistalEnd; the thumb has no Metacarpal), Left_ToesEnd and Right_ToesEnd. Extras with no weight: Left_Eye, Right_Eye. The project needs a Root bone added.",
+		"extras_not_in_the_rig_table": [
+			"Left_Eye",
+			"Left_IndexDistal",
+			"Left_IndexDistalEnd",
+			"Left_IndexIntermediate",
+			"Left_IndexProximal",
+			"Left_MiddleDistal",
+			"Left_MiddleDistalEnd",
+			"Left_MiddleIntermediate",
+			"Left_MiddleProximal",
+			"Left_PinkyDistal",
+			"Left_PinkyDistalEnd",
+			"Left_PinkyIntermediate",
+			"Left_PinkyProximal",
+			"Left_RingDistal",
+			"Left_RingDistalEnd",
+			"Left_RingIntermediate",
+			"Left_RingProximal",
+			"Left_ThumbDistal",
+			"Left_ThumbDistalEnd",
+			"Left_ThumbIntermediate",
+			"Left_ThumbProximal",
+			"Left_ToesEnd",
+			"Neck_Twist_A",
+			"Right_Eye",
+			"Right_IndexDistal",
+			"Right_IndexDistalEnd",
+			"Right_IndexIntermediate",
+			"Right_IndexProximal",
+			"Right_MiddleDistal",
+			"Right_MiddleDistalEnd",
+			"Right_MiddleIntermediate",
+			"Right_MiddleProximal",
+			"Right_PinkyDistal",
+			"Right_PinkyDistalEnd",
+			"Right_PinkyIntermediate",
+			"Right_PinkyProximal",
+			"Right_RingDistal",
+			"Right_RingDistalEnd",
+			"Right_RingIntermediate",
+			"Right_RingProximal",
+			"Right_ThumbDistal",
+			"Right_ThumbDistalEnd",
+			"Right_ThumbIntermediate",
+			"Right_ThumbProximal",
+			"Right_ToesEnd"
+		],
+		"mesh": {
+			"triangles": 19510,
+			"vertices": 11870,
+			"texture_px": [
+				2048,
+				2048
+			],
+			"one_mesh": true,
+			"unweighted_after_rig": 0,
+			"max_influences": 4,
+			"neutral_bone": false,
+			"face_limit_option": 20000
+		},
+		"pose": {
+			"upper_arm_from_vertical_deg": {
+				"Left": 37.9,
+				"Right": 37.9
+			},
+			"forearm_from_vertical_deg": {
+				"Left": 41.8,
+				"Right": 40.6
+			},
+			"thigh_from_vertical_deg": {
+				"Left": 9.7,
+				"Right": 9.7
+			},
+			"note": "The arms are at about 38 to 42 degrees from vertical (the mannequin asks 45, the table 0) and the legs splay about 10 degrees, so the fit has real work to do at the knees and the feet. The rest pose in the GLB is this A-pose."
+		},
+		"joint_grid": "Tripo's joint heads are multiples of 1/512 m at its 1.0 m scale (about 3.5 mm at 1.8 m); the chain should rebuild the armature from the table and use these heads only as landmarks.",
+		"landmarks_vs_table": {
+			"Hips": {
+				"tripo_name": "Hips",
+				"head_in_rig_space_at_1p8m": [
+					-0.0035,
+					0.9246,
+					-0.0105
+				],
+				"table_rest": [
+					0.0,
+					0.975,
+					0.0
+				],
+				"delta": [
+					-0.0035,
+					-0.0504,
+					-0.0105
+				],
+				"distance_m": 0.0516
+			},
+			"Spine": {
+				"tripo_name": "Spine",
+				"head_in_rig_space_at_1p8m": [
+					-0.0035,
+					1.0512,
+					-0.0035
+				],
+				"table_rest": [
+					0.0,
+					1.075,
+					0.0
+				],
+				"delta": [
+					-0.0035,
+					-0.0238,
+					-0.0035
+				],
+				"distance_m": 0.0243
+			},
+			"Chest": {
+				"tripo_name": "Chest",
+				"head_in_rig_space_at_1p8m": [
+					-0.0035,
+					1.1496,
+					0.0105
+				],
+				"table_rest": [
+					0.0,
+					1.205,
+					0.0
+				],
+				"delta": [
+					-0.0035,
+					-0.0554,
+					0.0105
+				],
+				"distance_m": 0.0565
+			},
+			"UpperChest": {
+				"tripo_name": "UpperChest",
+				"head_in_rig_space_at_1p8m": [
+					-0.0035,
+					1.248,
+					0.0246
+				],
+				"table_rest": [
+					0.0,
+					1.335,
+					0.0
+				],
+				"delta": [
+					-0.0035,
+					-0.087,
+					0.0246
+				],
+				"distance_m": 0.0905
+			},
+			"Neck": {
+				"tripo_name": "Neck",
+				"head_in_rig_space_at_1p8m": [
+					-0.0035,
+					1.4801,
+					0.0246
+				],
+				"table_rest": [
+					0.0,
+					1.485,
+					0.0
+				],
+				"delta": [
+					-0.0035,
+					-0.0049,
+					0.0246
+				],
+				"distance_m": 0.0253
+			},
+			"Head": {
+				"tripo_name": "Head",
+				"head_in_rig_space_at_1p8m": [
+					-0.0035,
+					1.5715,
+					-0.0035
+				],
+				"table_rest": [
+					0.0,
+					1.575,
+					0.0
+				],
+				"delta": [
+					-0.0035,
+					-0.0035,
+					-0.0035
+				],
+				"distance_m": 0.0061
+			},
+			"LeftShoulder": {
+				"tripo_name": "Left_Shoulder",
+				"head_in_rig_space_at_1p8m": [
+					-0.0598,
+					1.3746,
+					0.0105
+				],
+				"table_rest": [
+					-0.05,
+					1.435,
+					0.0
+				],
+				"delta": [
+					-0.0098,
+					-0.0604,
+					0.0105
+				],
+				"distance_m": 0.0621
+			},
+			"LeftUpperArm": {
+				"tripo_name": "Left_UpperArm",
+				"head_in_rig_space_at_1p8m": [
+					-0.2637,
+					1.3465,
+					0.0387
+				],
+				"table_rest": [
+					-0.22,
+					1.425,
+					0.0
+				],
+				"delta": [
+					-0.0437,
+					-0.0785,
+					0.0387
+				],
+				"distance_m": 0.0978
+			},
+			"LeftLowerArm": {
+				"tripo_name": "Left_LowerArm",
+				"head_in_rig_space_at_1p8m": [
+					-0.4254,
+					1.1355,
+					0.0668
+				],
+				"table_rest": [
+					-0.22,
+					1.135,
+					0.0
+				],
+				"delta": [
+					-0.2054,
+					0.0005,
+					0.0668
+				],
+				"distance_m": 0.216
+			},
+			"LeftHand": {
+				"tripo_name": "Left_Hand",
+				"head_in_rig_space_at_1p8m": [
+					-0.5896,
+					0.9397,
+					0.0065
+				],
+				"table_rest": [
+					-0.22,
+					0.865,
+					0.0
+				],
+				"delta": [
+					-0.3696,
+					0.0747,
+					0.0065
+				],
+				"distance_m": 0.3771
+			},
+			"RightShoulder": {
+				"tripo_name": "Right_Shoulder",
+				"head_in_rig_space_at_1p8m": [
+					0.0527,
+					1.3746,
+					0.0105
+				],
+				"table_rest": [
+					0.05,
+					1.435,
+					0.0
+				],
+				"delta": [
+					0.0027,
+					-0.0604,
+					0.0105
+				],
+				"distance_m": 0.0614
+			},
+			"RightUpperArm": {
+				"tripo_name": "Right_UpperArm",
+				"head_in_rig_space_at_1p8m": [
+					0.2566,
+					1.3465,
+					0.0387
+				],
+				"table_rest": [
+					0.22,
+					1.425,
+					0.0
+				],
+				"delta": [
+					0.0366,
+					-0.0785,
+					0.0387
+				],
+				"distance_m": 0.0949
+			},
+			"RightLowerArm": {
+				"tripo_name": "Right_LowerArm",
+				"head_in_rig_space_at_1p8m": [
+					0.4184,
+					1.1355,
+					0.0668
+				],
+				"table_rest": [
+					0.22,
+					1.135,
+					0.0
+				],
+				"delta": [
+					0.1984,
+					0.0005,
+					0.0668
+				],
+				"distance_m": 0.2093
+			},
+			"RightHand": {
+				"tripo_name": "Right_Hand",
+				"head_in_rig_space_at_1p8m": [
+					0.5761,
+					0.9397,
+					0.0091
+				],
+				"table_rest": [
+					0.22,
+					0.865,
+					0.0
+				],
+				"delta": [
+					0.3561,
+					0.0747,
+					0.0091
+				],
+				"distance_m": 0.364
+			},
+			"LeftUpperLeg": {
+				"tripo_name": "Left_UpperLeg",
+				"head_in_rig_space_at_1p8m": [
+					-0.123,
+					0.8824,
+					-0.0105
+				],
+				"table_rest": [
+					-0.11,
+					0.925,
+					0.0
+				],
+				"delta": [
+					-0.013,
+					-0.0426,
+					-0.0105
+				],
+				"distance_m": 0.0458
+			},
+			"LeftLowerLeg": {
+				"tripo_name": "Left_LowerLeg",
+				"head_in_rig_space_at_1p8m": [
+					-0.1793,
+					0.5309,
+					0.0105
+				],
+				"table_rest": [
+					-0.11,
+					0.505,
+					0.0
+				],
+				"delta": [
+					-0.0693,
+					0.0259,
+					0.0105
+				],
+				"distance_m": 0.0747
+			},
+			"LeftFoot": {
+				"tripo_name": "Left_Foot",
+				"head_in_rig_space_at_1p8m": [
+					-0.2215,
+					0.123,
+					0.0598
+				],
+				"table_rest": [
+					-0.11,
+					0.085,
+					0.0
+				],
+				"delta": [
+					-0.1115,
+					0.038,
+					0.0598
+				],
+				"distance_m": 0.1321
+			},
+			"LeftToes": {
+				"tripo_name": "Left_Toes",
+				"head_in_rig_space_at_1p8m": [
+					-0.2777,
+					0.0316,
+					-0.0809
+				],
+				"table_rest": [
+					-0.11,
+					0.035,
+					-0.13
+				],
+				"delta": [
+					-0.1677,
+					-0.0034,
+					0.0491
+				],
+				"distance_m": 0.1748
+			},
+			"RightUpperLeg": {
+				"tripo_name": "Right_UpperLeg",
+				"head_in_rig_space_at_1p8m": [
+					0.116,
+					0.8824,
+					-0.0105
+				],
+				"table_rest": [
+					0.11,
+					0.925,
+					0.0
+				],
+				"delta": [
+					0.006,
+					-0.0426,
+					-0.0105
+				],
+				"distance_m": 0.0443
+			},
+			"RightLowerLeg": {
+				"tripo_name": "Right_LowerLeg",
+				"head_in_rig_space_at_1p8m": [
+					0.1723,
+					0.5309,
+					0.0105
+				],
+				"table_rest": [
+					0.11,
+					0.505,
+					0.0
+				],
+				"delta": [
+					0.0623,
+					0.0259,
+					0.0105
+				],
+				"distance_m": 0.0683
+			},
+			"RightFoot": {
+				"tripo_name": "Right_Foot",
+				"head_in_rig_space_at_1p8m": [
+					0.2145,
+					0.123,
+					0.0598
+				],
+				"table_rest": [
+					0.11,
+					0.085,
+					0.0
+				],
+				"delta": [
+					0.1045,
+					0.038,
+					0.0598
+				],
+				"distance_m": 0.1263
+			},
+			"RightToes": {
+				"tripo_name": "Right_Toes",
+				"head_in_rig_space_at_1p8m": [
+					0.2707,
+					0.0316,
+					-0.0809
+				],
+				"table_rest": [
+					0.11,
+					0.035,
+					-0.13
+				],
+				"delta": [
+					0.1607,
+					-0.0034,
+					0.0491
+				],
+				"distance_m": 0.1681
+			}
+		},
+		"landmarks_note": "Each Tripo joint head turned to the rig's frame (own right to +X, forward to -Z) and scaled by 1.8, beside the table's rest joint. The trunk and head land within 0.5 to 9 cm (the shoulders and upper chest sit 6 to 9 cm low), the thighs and shins are 6 and 0 cm short, and the arms and feet differ mostly by the A-pose and the leg splay."
+	}
+}
