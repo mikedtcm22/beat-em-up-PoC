@@ -1149,6 +1149,45 @@ extends Resource
 ## view while the body lies on the camera. Off = the M3 behavior.
 @export var fp_knockdown_hide_torso: bool = false
 
+# Motion (F-motion): the life in the placeholder clips, read when a rig's named-clip library is
+# built (the first rig of a size and stance), so a change reaches the rigs built after it. The
+# idle breathes and bounces without moving a hurtbox 1 cm, and the walks plant their feet; no move
+# clip uses any of it (M4-plan A20).
+@export_subgroup("Motion")
+## Breathing: how far the chest rocks at the top of a breath (degrees; the upper chest and the
+## shoulders follow in proportion). The torso hurtbox moves less than a centimeter.
+@export_range(0.0, 4.0, 0.1) var look_motion_breath_deg: float = 1.5
+## Breaths per second. The idle loop is one breath long, so this sets its length (about 4 s).
+@export_range(0.1, 1.0, 0.05) var look_motion_breath_hz: float = 0.25
+## The boxer bounce: how far the hips dip at the bottom of a bounce (meters at 1.8 m; the knees
+## compensate, so the soles stay planted). A hurtbox moves at most this far.
+@export_range(0.0, 0.03, 0.001) var look_motion_bounce_m: float = 0.005
+## Bounces per second (snapped to a whole number per breath).
+@export_range(0.5, 3.0, 0.1) var look_motion_bounce_hz: float = 1.5
+## The weight shift: how far the pelvis rolls over each foot in turn (degrees), once per breath.
+@export_range(0.0, 5.0, 0.1) var look_motion_shift_deg: float = 1.0
+## How far the guard's arms and shoulders sway with the bounce and the breath (degrees). They
+## have no hurtbox, so this is the most the idle shows of the Punk's hands and shoulders.
+@export_range(0.0, 8.0, 0.1) var look_motion_guard_sway_deg: float = 3.0
+## Head micro-motion: a slow drift and tilt of the head (degrees), which keeps the hurtbox's
+## center within a few millimeters.
+@export_range(0.0, 4.0, 0.1) var look_motion_head_deg: float = 1.4
+## The player's relaxed idle gets this share of the above (first person: the view rides his
+## head, so a quiet body keeps the lens steady).
+@export_range(0.0, 1.0, 0.05) var look_motion_player_calm: float = 0.35
+## How far a Punk's feet sweep while planted in a walk (meters). The clip is as long as the
+## sweep takes at move_speed, so the planted foot moves as fast as the body does and does not
+## slide; the step is a little longer than this. Applies to enemies (the boxer stance).
+@export_range(0.3, 0.9, 0.01) var look_motion_stride_m: float = 0.62
+## The pelvis' turn with each step (degrees); the chest turns against it by the counter-swing.
+@export_range(0.0, 10.0, 0.1) var look_motion_hip_roll_deg: float = 4.0
+## How far the chest and shoulders turn against the pelvis in a walk (degrees).
+@export_range(0.0, 15.0, 0.1) var look_motion_counter_swing_deg: float = 5.0
+## Overlap in a flinch: how long (s) the head lags the body's snap and the shoulders lead it.
+@export_range(0.0, 0.1, 0.005) var look_motion_overlap_s: float = 0.025
+## Overlap: how far the head overshoots the hit pose before it settles (share of the snap).
+@export_range(0.0, 0.5, 0.01) var look_motion_overshoot: float = 0.15
+
 @export_group("Debug")
 @export var god_mode: bool = false
 @export var one_hit_ko: bool = false
@@ -1173,6 +1212,9 @@ extends Resource
 ## The cheap fallback: depth lines only, so the renderer makes no normal-roughness buffer (no
 ## creases, no character mask).
 @export var look_edge_depth_only: bool = false
+## Motion's A/B (read when a named-clip library is built): off builds the M3 clips, with linear
+## keys and no life, so a capture can pair an M3 and an M4 recording of one act.
+@export var look_motion_polish: bool = true
 
 
 func hitstop_s(tier: CombatTypes.HitTier) -> float:

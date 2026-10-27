@@ -41,7 +41,7 @@ static func compute() -> Dictionary:
 
 ## The named clip as M3 built it (the polish off).
 static func named_clip(id: StringName, scale: float, stance: StringName) -> Animation:
-	return PlaceholderAnims.build_named(id, scale, stance)
+	return PlaceholderAnims.build_named(id, scale, stance, PlaceholderAnims.Life.off())
 
 
 ## Every move resource in MOVES_DIR (sorted).

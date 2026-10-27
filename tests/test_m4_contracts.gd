@@ -369,6 +369,7 @@ func test_every_look_subgroup_has_a_documented_seed() -> void:
 		"Edges": [&"look_edges_enabled"],
 		"Grade": [&"look_grade_enabled"],
 		"FP feel": [&"fp_knockdown_hide_torso"],
+		"Motion": [&"look_motion_breath_deg"],
 	}
 	var docs := TuningPanel.doc_comments(TuningData)
 	var found: Dictionary = {}
@@ -384,7 +385,7 @@ func test_every_look_subgroup_has_a_documented_seed() -> void:
 		assert_ne(docs.get(StringName(info.name), ""), "", "%s is documented" % info.name)
 		if int(info.type) == TYPE_FLOAT or int(info.type) == TYPE_INT:
 			assert_eq(int(info.hint), PROPERTY_HINT_RANGE, "%s is a slider" % info.name)
-	assert_eq(order, PackedStringArray(["Toon", "Outline", "Edges", "Grade", "FP feel"]), "the owners' subgroups, in order")
+	assert_eq(order, PackedStringArray(["Toon", "Outline", "Edges", "Grade", "FP feel", "Motion"]), "the owners' subgroups, in order")
 	for sub: String in seeds:
 		for name: StringName in seeds[sub]:
 			assert_has(found.get(sub, []), name)
