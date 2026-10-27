@@ -140,6 +140,12 @@ def build_report(cfg, steps_done):
 	return report
 
 
+def usage():
+	"""The one-line usage printed on a bad step name or a missing value."""
+	return ("usage: run.py (--asset <id> | --config <pipeline.json>) [--from STEP | --only STEP] [--no-stills] [--no-import] "
+		"[--set a.b=JSON] [--check] [--list]\nsteps: " + ", ".join(STEP_NAMES) + "\n(the reproducibility command is --check, not a step)")
+
+
 def main(argv):
 	if "--list" in argv:
 		for name, script, extra in STEPS:
@@ -150,6 +156,9 @@ def main(argv):
 	while i < len(argv):
 		a = argv[i]
 		if a in ("--from", "--only", "--config", "--asset", "--set"):
+			if i + 1 >= len(argv):
+				print("%s needs a value\n%s" % (a, usage()))
+				return 2
 			val = argv[i + 1]
 			i += 1
 			if a == "--set":
@@ -166,6 +175,11 @@ def main(argv):
 			print("unknown argument " + a)
 			return 2
 		i += 1
+	# a step name is checked before anything is written (the atlas, the effective config, a check's scratch folder)
+	for key in ("from", "only"):
+		if opts[key] is not None and opts[key] not in STEP_NAMES:
+			print("unknown step %r for --%s\n%s" % (opts[key], key, usage()))
+			return 2
 	if opts["asset"]:
 		cfg_path = os.path.join(pc.REPO, "assets", "source", "characters", opts["asset"], "pipeline.json")
 	elif opts["config"]:
