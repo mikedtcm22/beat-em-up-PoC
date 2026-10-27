@@ -4,6 +4,26 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-27 19:05 CDT: Milestone 4 delivered; PR #4 open; the final DM sent; waiting on Game-boy (pause 2)
+- **The DM to Game-boy** (Slack D0AQUKX5DB6, from 18:59 CDT), in order:
+  1. The main message: the run command as a bash block, the A23 question word for word, the 14 numbered rubric items with the re-score (mean 1.50), and the post-re-score fixes.
+  2. The M3/M4 pair at 1 m and three concept stills (Punk at 1 m, Punk full figure, hero C against his first-person limbs).
+  3. Three clips: the long take (5.4 MB), the six-Punk fight (8.0 MB), his arms and legs (1.6 MB).
+  4. The five-line metrics and the unmet plan bars.
+  5. The four feel questions with their A/B stills.
+  6. The departures, his two look calls (the damage marks; the arm knob), the Tripo licence question and the hero-menu note.
+  7. The judgement-call digest.
+- **The DM media:** `captures/m4/dm/out/`, re-recorded on `e78c156`; the hero concept pair and the feel stills come from `.worktrees/m4-p3-evidence/captures/m4/evidence/`. Keep both until sign-off.
+- **PR [#4](https://github.com/mikedtcm22/beat-em-up-PoC/pull/4)** into `main` is open, with no CI. **Never merge it until Game-boy signs off.**
+- **Waiting on Game-boy:**
+  - his yes, or which numbered items fail;
+  - the four feel switches;
+  - the departures;
+  - the damage-mark and arm-knob calls;
+  - the Tripo account type.
+- **When he answers:** turn each failed item or change into a fix package with the same runners (`workflow-build.js` for builds, `workflow-review.js` with `findings_path` for fix-only runs). Merge with A22 and the chain checks, re-record what changed, and reply in the DM thread. When he signs off, merge PR #4 (only on his word), record his approved departures in README, and start M5 per the spec.
+- **Worktrees** from this round can be removed after sign-off: `.worktrees/m4-*`. Keep `m4-p3-evidence` until the DM's media are no longer needed.
+
 ### 2026-10-27 18:25 CDT: the re-score's fixes merged (1599/1599); PR #4 open; the DM media re-recording
 - **Merged:** `m4/fix-rescore-punk-art-chain` (`16f96e2`) and `m4/fix-rescore-placeholder-matte` (`a04bfb0`).
   - The lens glint is gated by two authored streaks per eye (the mask's G channel), so a tipped-back head no longer whites out the shades. `look_glint_cut` is now 0.81.
