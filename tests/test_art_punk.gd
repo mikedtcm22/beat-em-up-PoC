@@ -34,6 +34,14 @@ const FIT_HEAD := 0.95
 const FRAMING_DIFFER := 0.03
 const FRAMING_SHARE_PP := 0.04
 const FRAMING_NEAREST_M := 0.02
+## F-cuff (the lead's call): the Punk's wrist cuff follows the concept, a dark band about as wide as the glove's back, not M3's
+## primitive fist-and-forearm boxes, so the strikes at +8 degrees miss the plan's 4 pp lens-share bar. Each missing pose's share gap
+## is a ratchet at its worst figure over the four GLBs (jab 4.78, cross 5.09 pp) plus 0.3 pp; the plan's bar is still printed as GATE.
+## Every other pose is held at 4 pp. (Before F-cuff the flange held all of them: worst 3.8 pp.)
+const FRAMING_SHARE_RATCHET_PP := {
+	"punk_jab pitch +8": 0.051,
+	"punk_cross pitch +8": 0.054,
+}
 const ANCHOR_M := 0.02
 ## F-punk's rules: no edge of the art in view grows more than this over its skinned rest length in the 1 m acts' poses (the
 ## visible-stretch test), a held victim stays this far from the lens, no in-view vertex of a striking Punk is nearer than FPView.NEAR.
@@ -304,6 +312,7 @@ func test_the_framing_of_every_glb_against_its_proxies_at_the_one_metre_poses_is
 		var worst_share := 0.0
 		var worst_nearest := 0.0
 		var gate := PackedStringArray()
+		var share_gate := PackedStringArray()
 		for pitch: float in [FACE_PITCH_DEG, DEFAULT_PITCH_DEG]:
 			var cam := _view(pitch)
 			var poses: Array[Dictionary] = [{label = "idle", move = null}]
@@ -318,6 +327,7 @@ func test_the_framing_of_every_glb_against_its_proxies_at_the_one_metre_poses_is
 						rig.advance(FRAME)
 				var cmp := SkinnedView.compare_with_proxies(rig, cam)
 				var label := "%s %s pitch %+.0f" % [row.name, pose.label, pitch]
+				var share_bar: float = FRAMING_SHARE_RATCHET_PP.get("%s pitch %+.0f" % [pose.label, pitch], FRAMING_SHARE_PP)
 				worst_differ = maxf(worst_differ, cmp.differ_share)
 				worst_share = maxf(worst_share, absf(cmp.art_share - cmp.proxy_share))
 				worst_nearest = maxf(worst_nearest, cmp.nearest)
@@ -325,17 +335,20 @@ func test_the_framing_of_every_glb_against_its_proxies_at_the_one_metre_poses_is
 						label, cmp.differ, cmp.cells, cmp.differ_share * 100.0, cmp.art_share * 100.0, cmp.proxy_share * 100.0, cmp.nearest * 100.0])
 				assert_gt(cmp.art_share, 0.03, "%s: the art fills the view at 1 m" % label)
 				assert_gt(cmp.proxy_share, 0.03, "%s: so do the proxies" % label)
-				# What passes today (the art is bulkier than the proxies in a strike's arms, so the
-				# cell count and the nearest figure at the jab, cross and shove are the gate's):
-				assert_lte(absf(cmp.art_share - cmp.proxy_share), FRAMING_SHARE_PP, "%s: the lens share differs by at most 4 pp" % label)
+				# What passes today (the art is narrower than the proxies' fist boxes in the jab and the cross at +8 degrees, so the
+				# cell count and the nearest figure at the jab, cross and shove are the gate's, and those two poses' shares are
+				# ratcheted, FRAMING_SHARE_RATCHET_PP):
+				assert_lte(absf(cmp.art_share - cmp.proxy_share), share_bar, "%s: the lens share differs by at most %.1f pp" % [label, share_bar * 100.0])
 				if pose.move == null:
 					assert_lte(cmp.differ_share, FRAMING_DIFFER, "%s: at most 3%% of the cells differ at idle" % label)
 				if cmp.differ_share > FRAMING_DIFFER:
 					gate.append("%s differs %.1f%%" % [label, cmp.differ_share * 100.0])
 				if absf(cmp.art_share - cmp.proxy_share) > FRAMING_SHARE_PP:
 					gate.append("%s lens share differs %.1f pp" % [label, absf(cmp.art_share - cmp.proxy_share) * 100.0])
+					share_gate.append("%s %.2f pp (ratchet %.1f)" % [label, absf(cmp.art_share - cmp.proxy_share) * 100.0, share_bar * 100.0])
 				if cmp.nearest > FRAMING_NEAREST_M:
 					gate.append("%s art %.1f cm nearer" % [label, cmp.nearest * 100.0])
+		print("ART-PUNK A9 %s lens share: %s" % [row.name, ("GATE (the plan's bar is 4 pp, F-cuff ratchets): " + "; ".join(share_gate)) if not share_gate.is_empty() else "(meets the 4 pp bar)"])
 		print("ART-PUNK A9 %s: worst differ %.1f%%, worst lens share %.1f pp, nearest %.1f cm%s" % [
 				row.name, worst_differ * 100.0, worst_share * 100.0, worst_nearest * 100.0,
 				("  GATE: %d poses miss: %s" % [gate.size(), "; ".join(gate.slice(0, 4))]) if not gate.is_empty() else "  (meets A9)"])

@@ -96,6 +96,12 @@ const FIT_RATCHET_PLAYER := 0.75
 const AXIS_OUTSIDE_RATCHET_PLAYER := 2
 ## A9: the Punk at the 1 m acts' poses: cells that differ (today 6.7% at the cross); the lens share is held at the bar.
 const FRAMING_RATCHET_PUNK_DIFFER := 0.09
+## A9: the Punk's wrist cuff follows the concept (F-cuff, the lead's call), so the jab and the cross at +8 degrees miss the 4 pp bar:
+## their share gaps are ratcheted (worst today over the four GLBs 4.78 and 5.09 pp, plus 0.3; test_art_punk's FRAMING_SHARE_RATCHET_PP).
+const FRAMING_RATCHET_PUNK_SHARE := {
+	"punk_jab pitch +8": 0.051,
+	"punk_cross pitch +8": 0.054,
+}
 ## A9: the hero over the 15 first-person poses: cells that differ (today 6.9%, the block), the lens share's gap (6.9 points, the
 ## block), the nearest the art stands to the lens against its proxies (7.6 cm, the front kick).
 const FRAMING_RATCHET_PLAYER_DIFFER := 0.10
@@ -822,13 +828,14 @@ func test_a9_the_art_frames_like_its_proxies_at_the_one_metre_poses_and_in_the_p
 					rig.advance(FRAME)
 			var cmp := SkinnedView.compare_with_proxies(rig, cam)
 			var label := "punk %s pitch %+.0f" % [move.id if move != null else &"idle", pitch]
+			var share_bar: float = FRAMING_RATCHET_PUNK_SHARE.get("%s pitch %+.0f" % [move.id if move != null else &"idle", pitch], FRAMING_SHARE)
 			worst_differ = maxf(worst_differ, cmp.differ_share)
 			worst_share = maxf(worst_share, absf(cmp.art_share - cmp.proxy_share))
 			poses += 1
 			assert_gt(cmp.art_share, 0.03, "%s: the art fills the view at 1 m" % label)
-			assert_lte(absf(cmp.art_share - cmp.proxy_share), FRAMING_SHARE, "%s: the lens share is within 4 points of the proxies'" % label)
+			assert_lte(absf(cmp.art_share - cmp.proxy_share), share_bar, "%s: the lens share is within %.1f points of the proxies'" % [label, share_bar * 100.0])
 			assert_lte(cmp.differ_share, FRAMING_RATCHET_PUNK_DIFFER, "%s: cells that differ stay under the ratchet (%.1f%%)" % [label, cmp.differ_share * 100.0])
-	_note("A9", worst_differ <= FRAMING_DIFFER, "punk, %d poses at 1 m: worst cells differ %.1f%% (bar 3%%, ratchet %.0f%%), worst lens share gap %.1f points (bar 4)" % [
+	_note("A9", worst_differ <= FRAMING_DIFFER and worst_share <= FRAMING_SHARE, "punk, %d poses at 1 m: worst cells differ %.1f%% (bar 3%%, ratchet %.0f%%), worst lens share gap %.1f points (bar 4; the jab and the cross at +8 degrees are ratcheted, F-cuff)" % [
 			poses, worst_differ * 100.0, FRAMING_RATCHET_PUNK_DIFFER * 100.0, worst_share * 100.0])
 	var hero := _arts()[1]
 	var hero_rig := _rig(hero)

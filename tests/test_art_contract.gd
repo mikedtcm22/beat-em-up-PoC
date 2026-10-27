@@ -34,8 +34,9 @@ const ALPHA_SKIN := 0.8
 const ALPHA_NONE := 0.5
 const SWATCH_MIN := 4
 const SWATCH_MAX := 6
-## F-punk: a character may spend one more SLOT than it has flat colours (the Punk's lens is the shared cream on its own slot, so it
-## takes no damage marks; it was the cap's yellow until F-punk-fix); the number of flat COLOURS stays 4-6 (Part B A3, J6).
+## F-punk: a character may spend one more SLOT than it has flat colours (the Punk's lens is the cap's yellow on its own slot, so it
+## takes no damage marks; F-punk-fix made it the shared cream and F-cuff's A/B put the yellow back); the number of flat COLOURS
+## stays 4-6 (Part B A3, J6).
 const SWATCH_SLOTS_MAX := 7
 ## F-punk-fix (the lead's look at the Punk at 1 m beside the concept). The palette slots the checks name (assets/source/palette):
 ## the shared dark grey (the gloves, the tank top, the shades' frame), the Punk's yellow (cap, laces) and the Punk's lens.
@@ -43,20 +44,34 @@ const SLOT_DARK_GREY := 2
 const SLOT_SKIN := 6
 const SLOT_YELLOW := 17
 const SLOT_LENS := 19
-## The lens is not the cap's colour: at least this far apart in RGB (the cream against the yellow measures 0.55; the same colour 0).
-const LENS_APART_MIN := 0.25
 ## The shades' frame: dark faces above and below the lens (the lens box is y 1.592-1.652 m, the frame's boxes a little beyond it).
+## The lens is the cap's yellow (the concept's gold lenses), so what sets it apart from the cap is the frame: in every column of the
+## lens (a strip of LENS_COLUMN_M across, over the face's middle) the first face above the lens and the first below it are the dark
+## frame, within FRAME_REACH_M of the lens, and the lens spans at least LENS_COLUMNS_MIN columns.
 const LENS_BOTTOM_Y := 1.592
 const LENS_TOP_Y := 1.652
 const FRAME_MIN_FACES := 20
+const LENS_COLUMN_M := 0.02
+const LENS_COLUMNS_MIN := 8
+## The columns are taken across the lens's middle (this far each side of the nose): the lens's last centimetre at each temple meets
+## the face's own skin beside the frame's end.
+const LENS_COLUMNS_HALF_WIDTH_M := 0.08
+const FRAME_REACH_M := 0.025
+const FACE_FRONT_Z := -0.05
 ## The cuff of a glove (hand-weighted vertices up the forearm from the wrist): no triangle thinner than this ratio (longest edge squared
-## over twice the area; the old torn cuff measured 2463 and 84 faces over 20, the collar 26-55 and at most 4), no edge longer than 6.5 cm, no vertex farther than 9 cm
-## from the arm's axis (the old strap stood 9.2 cm out; the A9 lens-share bar of 4 pp keeps the rest, M4-calls/F-punk.md "Fix round").
+## over twice the area; the old torn cuff measured 2463 and 84 faces over 20, the F-punk-fix collar 26-55 and at most 4, the wrist cuff
+## 22.6 and 1), no edge longer than 6.5 cm, no vertex farther than 7 cm from the arm's axis (old: 9 cm; the F-punk-fix flange stood 8.6 cm
+## out, the wrist cuff 5.8 cm), and a WRIST CUFF, not a flange: nothing on the cuff stands more than a centimetre farther from the axis
+## than the bare forearm just above it (the flange stood 2.6 cm beyond the forearm, the cuff 0.1 cm inside it; F-cuff, M4-calls/F-punk.md).
 const CUFF_NEEDLE_MAX := 60.0
 const CUFF_NEEDLE_LIMIT := 20.0
 const CUFF_NEEDLE_FACES_MAX := 8
 const CUFF_EDGE_MAX_M := 0.065
-const CUFF_RADIUS_MAX_M := 0.09
+const CUFF_RADIUS_MAX_M := 0.07
+const CUFF_OVER_FOREARM_MAX_M := 0.01
+## The bare forearm the cuff is measured against: its vertices (all LowerArm) this far above the wrist.
+const FOREARM_ALONG_NEAR_M := 0.08
+const FOREARM_ALONG_FAR_M := 0.10
 ## Shading normals: the share of edges whose end normals disagree by more than 25 degrees and the mean disagreement (the lumpy
 ## generated normals measured 38.5% and 25.4 degrees, the smoothed ones 11.3% and 15.1).
 const NORMAL_EDGE_ANGLE_DEG := 25.0
@@ -494,8 +509,9 @@ func _slot_of(uv: Vector2) -> int:
 
 ## F-punk-fix, the gloves: the lead saw a yellow strap ring with black slivers at its edge, not the concept's dark fingerless gloves
 ## with a dark wrist cuff. Every face on a hand (all three vertices at least half Hand) is off the Punk's yellow and the lens, the
-## cuff above the block (the hand-weighted ramp up the forearm) has no needle triangle, no long edge and no spike beyond 9 cm of the
-## arm's axis. The twin of the old strap: the same faces, counted on the shipped GLBs.
+## cuff above the block (the hand-weighted ramp up the forearm) has no needle triangle, no long edge and no spike beyond 7 cm of the
+## arm's axis (F-cuff: 9 cm before), and is a wrist cuff, no wider than the bare forearm above it by a centimetre. The twin of the old
+## strap: the same faces, counted on the shipped GLBs.
 func test_the_punks_gloves_have_no_yellow_and_the_cuff_has_no_slivers() -> void:
 	for path: String in _glbs():
 		if _id_of(path) != "punk":
@@ -515,6 +531,7 @@ func test_the_punks_gloves_have_no_yellow_and_the_cuff_has_no_slivers() -> void:
 		var needle_max := 0.0
 		var edge_max := 0.0
 		var radius_max := 0.0
+		var over_forearm_max := -INF
 		for side: String in ["Left", "Right"]:
 			var hand: Vector3 = joints[side + "Hand"]
 			var dir: Vector3 = (hand - joints[side + "LowerArm"]).normalized()
@@ -522,13 +539,19 @@ func test_the_punks_gloves_have_no_yellow_and_the_cuff_has_no_slivers() -> void:
 			hand_w.resize(verts.size())
 			var along := PackedFloat32Array()
 			along.resize(verts.size())
+			var side_radius_max := 0.0
+			var forearm_radius := 0.0
 			for v: int in verts.size():
 				hand_w[v] = _weight_on(arrays, binds, v, side + "Hand")
 				var rel := verts[v] - hand
 				along[v] = rel.dot(dir)
 				# up the arm is negative along: the cuff ramp is hand-weighted between 0.02 and 0.95, within 7.5 cm of the wrist
 				if hand_w[v] > 0.02 and hand_w[v] < 0.95 and along[v] < 0.0 and along[v] > -0.075:
-					radius_max = maxf(radius_max, (rel - dir * along[v]).length())
+					side_radius_max = maxf(side_radius_max, (rel - dir * along[v]).length())
+				if hand_w[v] < 0.02 and along[v] < -FOREARM_ALONG_NEAR_M and along[v] > -FOREARM_ALONG_FAR_M and rel.length() < 0.25 and _weight_on(arrays, binds, v, side + "LowerArm") > 0.95:
+					forearm_radius = maxf(forearm_radius, (rel - dir * along[v]).length())
+			radius_max = maxf(radius_max, side_radius_max)
+			over_forearm_max = maxf(over_forearm_max, side_radius_max - forearm_radius)
 			for t: int in index.size() / 3:
 				var a := index[t * 3]
 				var b := index[t * 3 + 1]
@@ -551,26 +574,28 @@ func test_the_punks_gloves_have_no_yellow_and_the_cuff_has_no_slivers() -> void:
 					needle_max = maxf(needle_max, needle)
 					if needle > CUFF_NEEDLE_LIMIT:
 						needles += 1
-		gut.p("ART-CONTRACT gloves %s: %d yellow or lens faces on the hands; cuff needle max %.1f (%d over %.0f), longest edge %.1f cm, widest %.1f cm from the arm's axis" % [
-				path.get_file(), yellow, needle_max, needles, CUFF_NEEDLE_LIMIT, edge_max * 100.0, radius_max * 100.0])
+		gut.p("ART-CONTRACT gloves %s: %d yellow or lens faces on the hands; cuff needle max %.1f (%d over %.0f), longest edge %.1f cm, widest %.1f cm from the arm's axis, %.1f cm beyond the forearm above it" % [
+				path.get_file(), yellow, needle_max, needles, CUFF_NEEDLE_LIMIT, edge_max * 100.0, radius_max * 100.0, over_forearm_max * 100.0])
 		assert_eq(yellow, 0, "%s: no face of a glove is the Punk's yellow or the lens (the concept's gloves are dark, with a dark cuff)" % path)
 		assert_lt(needle_max, CUFF_NEEDLE_MAX, "%s: no needle triangle on the cuffs" % path)
 		assert_lte(needles, CUFF_NEEDLE_FACES_MAX, "%s: at most a few thin triangles on the cuffs" % path)
 		assert_lt(edge_max, CUFF_EDGE_MAX_M, "%s: no long edge on the cuffs" % path)
-		assert_lt(radius_max, CUFF_RADIUS_MAX_M, "%s: nothing on a cuff stands more than 9 cm from the arm's axis" % path)
+		assert_lt(radius_max, CUFF_RADIUS_MAX_M, "%s: nothing on a cuff stands more than 7 cm from the arm's axis" % path)
+		assert_lt(over_forearm_max, CUFF_OVER_FOREARM_MAX_M, "%s: the cuff is a band on the wrist, not a flange: no wider than the forearm above it by a centimetre" % path)
 
 
 ## F-punk-fix, the shades: the lens and the cap were both #e8bd2e, so the head read as one yellow mass from the crown to the cheek.
-## The lens is its own slot (marks off) in a colour apart from the cap's, with a dark frame of faces above and below it.
+## The lens is its own slot (marks off) with a dark frame of faces above and below it. F-cuff (the lead's A/B at 1, 2.5, 5 and 10 m):
+## the lens is the cap's yellow again, as the concept's gold lenses, so it is no longer set apart by a colour distance (the old
+## assertion: the lens at least 0.25 from the cap in RGB; the twin on the visible path is the frame): in every column of the lens
+## the first face above it and the first below it are the dark frame, so the cap's yellow never touches the lens.
 func test_the_punks_shades_are_a_marks_off_lens_in_a_dark_frame_apart_from_the_cap() -> void:
 	var atlas := _atlas_image()
 	if atlas == null:
 		return
 	var cap := _swatch_color(atlas, SLOT_YELLOW)
 	var lens := _swatch_color(atlas, SLOT_LENS)
-	var apart := Vector3(cap.r - lens.r, cap.g - lens.g, cap.b - lens.b).length()
-	gut.p("ART-CONTRACT shades: the lens %s against the cap %s, %.2f apart in RGB" % [lens.to_html(false), cap.to_html(false), apart])
-	assert_gt(apart, LENS_APART_MIN, "the lens is not the cap's colour")
+	gut.p("ART-CONTRACT shades: the lens %s, the cap %s" % [lens.to_html(false), cap.to_html(false)])
 	assert_almost_eq(_swatch_alpha(atlas, SLOT_LENS), ALPHA_NONE, 0.01, "the lens takes no damage marks")
 	assert_false(_in_red_band(lens), "the lens is not red (A13)")
 	for path: String in _glbs():
@@ -586,6 +611,8 @@ func test_the_punks_shades_are_a_marks_off_lens_in_a_dark_frame_apart_from_the_c
 		var above := 0
 		var below := 0
 		var lens_faces := 0
+		# the centres (height, slot) of the faces in front of the face, by column across it
+		var columns: Dictionary = {}
 		for t: int in index.size() / 3:
 			var a := index[t * 3]
 			var centre := (verts[a] + verts[index[t * 3 + 1]] + verts[index[t * 3 + 2]]) / 3.0
@@ -599,10 +626,48 @@ func test_the_punks_shades_are_a_marks_off_lens_in_a_dark_frame_apart_from_the_c
 					above += 1
 				elif centre.y < LENS_BOTTOM_Y + 0.004:
 					below += 1
-		gut.p("ART-CONTRACT shades %s: %d lens faces, %d dark frame faces above and %d below" % [path.get_file(), lens_faces, above, below])
+			if centre.z < FACE_FRONT_Z and absf(centre.x) < LENS_COLUMNS_HALF_WIDTH_M:
+				var column := int(floorf(centre.x / LENS_COLUMN_M))
+				var list: Array = columns.get(column, [])
+				list.append([centre.y, slot])
+				columns[column] = list
+		var lens_columns := 0
+		var unframed := PackedStringArray()
+		for column: int in columns:
+			var list: Array = columns[column]
+			var top := -INF
+			var bottom := INF
+			for e: Array in list:
+				if e[1] == SLOT_LENS:
+					top = maxf(top, e[0])
+					bottom = minf(bottom, e[0])
+			if top == -INF:
+				continue
+			lens_columns += 1
+			var up_y := INF
+			var up_slot := -1
+			var down_y := -INF
+			var down_slot := -1
+			for e: Array in list:
+				if e[1] == SLOT_LENS:
+					continue
+				if e[0] > top and e[0] < up_y:
+					up_y = e[0]
+					up_slot = e[1]
+				if e[0] < bottom and e[0] > down_y:
+					down_y = e[0]
+					down_slot = e[1]
+			if up_slot != SLOT_DARK_GREY or up_y - top > FRAME_REACH_M:
+				unframed.append("column %d above: slot %d at +%.1f cm" % [column, up_slot, (up_y - top) * 100.0])
+			if down_slot != SLOT_DARK_GREY or bottom - down_y > FRAME_REACH_M:
+				unframed.append("column %d below: slot %d at -%.1f cm" % [column, down_slot, (bottom - down_y) * 100.0])
+		gut.p("ART-CONTRACT shades %s: %d lens faces in %d columns, %d dark frame faces above and %d below; %d columns without a frame next to the lens" % [
+				path.get_file(), lens_faces, lens_columns, above, below, unframed.size()])
 		assert_gt(lens_faces, 50, "%s: the lens is there" % path)
 		assert_gte(above, FRAME_MIN_FACES, "%s: a dark frame above the lens" % path)
 		assert_gte(below, FRAME_MIN_FACES, "%s: and below it" % path)
+		assert_gte(lens_columns, LENS_COLUMNS_MIN, "%s: the lens spans the face" % path)
+		assert_eq(unframed.size(), 0, "%s: in every column the first face above the lens and the first below it are the dark frame: %s" % [path, "; ".join(unframed)])
 
 
 ## F-punk-fix, the blotches: the toon bands are cut on the normal alone, and the generated mesh's normals were lumpy, so the bands
