@@ -787,3 +787,89 @@ func test_the_torso_switch_leaves_other_views_and_the_ko_view_alone() -> void:
 	assert_eq(belly.layers, before[belly], "off: nothing")
 	assert_false(TuningData.new().fp_knockdown_hide_torso, "the default is today's")
 	player.state = CombatTypes.ActorState.FREE
+
+
+# --- The act (tests/bot/acts/look_player_acts.gd) -------------------------------------------------
+
+
+const LookPlayerActs := preload("res://tests/bot/acts/look_player_acts.gd")
+## The longest the act may take in the tests (physics ticks): about 2500 played.
+const ACT_MAX_TICKS := 5000
+
+
+## The crowd bot that stops instead of quitting the test run's tree when its acts are done.
+class QuietBot extends "res://tests/bot/crowd_bot.gd":
+	var finished: bool = false
+
+	func _quit() -> void:
+		clear_enemies()
+		finished = true
+
+
+func test_the_act_lists_its_title_and_no_other_act_holds_it() -> void:
+	var node := Node.new()
+	autofree(node)
+	var acts := LookPlayerActs.acts(node)
+	assert_eq(acts.size(), 1)
+	assert_eq(acts[0].title, "Look: my arms and legs")
+	assert_true(String(acts[0].title).begins_with("Look: "))
+	assert_eq(acts[0].cam, &"first_person")
+	var bot := QuietBot.new()
+	autofree(bot)
+	var titles: Array[String] = []
+	for act in bot._collect_acts():
+		titles.append(act.title)
+	assert_has(titles, "Look: my arms and legs", "the crowd bot loads the file by name")
+	var mine := String(acts[0].title).to_lower()
+	var holders := 0
+	for title: String in titles:
+		var other := title.to_lower()
+		if other.contains(mine):
+			holders += 1
+		else:
+			assert_false(mine.contains(other), "'%s' does not hold '%s'" % [mine, other])
+	assert_eq(holders, 1, "a capture filter with the title picks one act")
+
+
+func test_the_act_runs_headless_on_the_probe_body_with_its_marks_rectangles_and_the_ko_view() -> void:
+	Tuning.reset_to_default()
+	Tuning.set_value(&"waves_enabled", false)
+	Tuning.data.look_player_art_probe = true
+	GameInput.menu_open = false
+	var bot := QuietBot.new()
+	bot.act_filter = "Look: my arms and legs"
+	add_child_autofree(bot)
+	var at_start := {}
+	for i in ACT_MAX_TICKS:
+		await get_tree().physics_frame
+		if at_start.is_empty() and bot.log_lines.size() > 0:
+			for line: String in bot.log_lines:
+				if line.contains(" start"):
+					at_start = {caption_visible = bot.caption.visible, ai_frozen = Tuning.data.ai_frozen, god_mode = Tuning.data.god_mode}
+					break
+		if bot.finished:
+			break
+	assert_true(bot.finished, "the act finished within %d ticks" % ACT_MAX_TICKS)
+	assert_false(at_start.get("caption_visible", true), "the caption is hidden during the act")
+	assert_true(at_start.get("ai_frozen", false), "the AI is frozen")
+	assert_true(at_start.get("god_mode", false), "god mode is on")
+	assert_true(bot.caption.visible, "the caption is back when the act is over")
+	var labels := {}
+	var rects := 0
+	var art_line := ""
+	for line: String in bot.log_lines:
+		if line.begins_with("LOOK-MARK pa1 "):
+			labels[line.split(" ")[3]] = true
+		elif line.begins_with("LOOK-RECT pa1 "):
+			rects += 1
+		elif line.begins_with("LOOK-PLAYER art "):
+			art_line = line
+	print("ART-PLAYER act: ", art_line, "; marks ", labels.keys(), "; rectangles ", rects)
+	assert_true(art_line.begins_with("LOOK-PLAYER art probe "), "the log says which body it recorded: %s" % art_line)
+	for label: String in ["start", "idle_level", "idle_down45", "idle_down65", "idle_arms", "guard", "haymaker_charge", "hold",
+			"ko_before", "ko_view_out", "ko_view_held", "ko_back_in_the_eyes", "end"]:
+		assert_true(labels.has(label), "the act marks %s" % label)
+	for move: String in ["jab_1_strike", "jab_2_strike", "hook_strike", "uppercut_strike", "front_kick_strike", "spin_kick_strike", "knee_strike"]:
+		assert_true(labels.has(move), "the act marks %s" % move)
+	assert_gt(rects, 20, "and prints the rectangles of his hands and body")
+	assert_true(Tuning.data.god_mode, "god mode is back on after the KO")
