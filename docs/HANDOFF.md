@@ -4,6 +4,278 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-26: Game-boy signed off Milestone 3; PR #3 merged
+- **Game-boy (2026-10-26):** "happy with the enemy AI", M3 is complete as-is, and every judgement call and spec departure made in M3 is approved. README's "Where M3 departs from the spec" and `docs/milestones/M3-judgement-calls.md` now say so. The boss keeps the spec's 300 HP.
+- **PR #3 merged into `main`.** The `.worktrees/m3-*` worktrees can be pruned; every branch is pushed.
+- **Next: Milestone 4 (SPEC §12), the art pipeline proof:**
+  - the toon shader and outlines;
+  - the final player arms and legs;
+  - one Street Punk taken through the full pipeline (concept, 3D generation, Blender cleanup, rig, animation, export);
+  - the comic VFX set.
+
+  Done when the Punk looks production-quality at 1 m, standing and in motion (Game-boy judges).
+  - It needs Game-boy's toolchain first (SPEC §2): Blender and its MCP, a 3D generation service and its key, an image API key, and Mixamo access. The lead sent him the list on 2026-10-26.
+
+### 2026-10-26 08:30 CDT: Milestone 3 done; the release, the PR and Game-boy's DM are out
+- **M3 is complete to SPEC §12, and waiting on Game-boy's play-through and sign-off.** Never merge PR #3 without that.
+  - **Playable build:** https://github.com/mikedtcm22/beat-em-up-PoC/releases/tag/m3-playtest-1 (pre-release, `Beat-em-Up.PoC.zip`, universal macOS, ad-hoc signed, from `fd36854`). It was smoke-tested headless and windowed.
+  - **The PR:** https://github.com/mikedtcm22/beat-em-up-PoC/pull/3 (`m3/enemy-ai` into `main`).
+  - **1198/1198 tests pass in 143 s with no SCRIPT ERROR or ERROR.**
+- **Since the last entry:**
+  - An independent verifier confirmed the final review's high fixes hold (`docs/reviews/M3/final-verify.md`); the boss stun-lock was only partial.
+  - **F-boss-poise** fixed it: after it gets up (or after two reactions in 8 s), heavy hits and non-haymaker finishers are absorbed for 4 s or until its next attack. Time in reactions went from 48% to 21%, and it lands 4.6 hits a fight; the autopilot still wins 12 of 12. It steps back before a too-close charge or pound. Its cooldown is 1.5 s.
+  - **The lead:** an absorbed finisher starts no slow-mo and waits out no impact frame (with a test).
+  - README, the calls log and ARCHITECTURE were updated.
+- **Game-boy was DMed on Slack** with the link and the digest (from `docs/milestones/M3-judgement-calls.md`).
+- **Waiting on Game-boy:**
+  - play the release and sign off, then merge PR #3;
+  - rule on README's 19 "Where M3 departs from the spec" bullets;
+  - judge the boss's difficulty (`boss_health` 300 by the spec), the attacks in turns, the 55° warning angle, and the frequent non-KO knockdown view.
+- **Next after sign-off:** merge PR #3, then plan Milestone 4 (SPEC §12: the art pipeline proof). The `.worktrees/m3-*` worktrees can be pruned once the PR merges; every branch is pushed.
+
+### 2026-10-26 06:15 CDT: the final review's fixes merged (1177/1177); verification, docs and the release next
+5-hour 73% (resets 07:50 CDT); **weekly reset to 3%** (resets Mon 2026-11-02 05:00 CDT). The final review (177 agents, 18M tokens, about 3 h) cost about 70 window points across the 02:50 reset.
+- **The final review** (`wf_488b3250-97f`; records in `docs/reviews/M3/final-*.json`) ran six Opus lenses. 26 findings, 20 survived the skeptics, in four fix packages, all merged (`f12e607`). **1177/1177 tests pass in 134 s with no SCRIPT ERROR or ERROR.** The preset has 450 values.
+  - The warning lens found **no high or medium defect**: every archetype lights the right corners behind-left, behind-right and directly behind.
+  - **Fixed:**
+    - a face-down knockdown put the lens under the street (floor clearance);
+    - the boss pound's cap went through the lens (a squat pose);
+    - the dropped pipe rolled out of reach (rest damping);
+    - approaching enemies walked through the player and walled the lens (every archetype orbits the ring now);
+    - Kickers kept the whole ring turning (they take their own seats behind);
+    - the slam read as the headbutt (a heave);
+    - the phase 2 beckon was cut;
+    - an armored Bruiser jammed at the nose;
+    - the knees on a held Bruiser read as armor;
+    - the boss's adds spawned while F1 was open;
+    - a heavy burst wasn't larger above size 1.35;
+    - the instruments' flake and drift.
+  - **Partial:** the boss is no longer stun-locked to death (it wakes in place and attacks), but a scripted player still beats it in about 41-43 s. The open call for Game-boy: the proposal not taken is wake-up armor; `boss_health` is the knob.
+- **Running:**
+  - a Sonnet agent folding the fixers' doc wording into ARCHITECTURE, README and the calls log;
+  - an Opus verifier re-checking the high fixes in first person in `.worktrees/m3-verify-final`;
+  - the lead's recordings of "Mixed waves" and "Boss wave, held back" in `captures/m3_evidence/`.
+- **Then:**
+  1. Commit the docs.
+  2. The export (`godot --headless --export-release "macOS" "builds/macos/Beat-em-Up PoC.zip"`): smoke it headless with `--quit-after 900`, then run it windowed once.
+  3. `gh release create m3-playtest-1 "builds/macos/Beat-em-Up PoC.zip" --prerelease --target m3/enemy-ai`.
+  4. The M3 PR (never merge it).
+  5. The Slack DM to Michael (`U0AQMKKBL93`): the release link and the digest from `M3-judgement-calls.md`.
+
+### 2026-10-26 03:15 CDT: P4-int merged (1130/1130): the done-when proved; the final review running
+5-hour 2% (resets 07:50 CDT), weekly 44% (resets Mon 2026-10-26 05:00 CDT).
+- **P4-int merged** (`7a015cc`). **1130/1130 tests pass in 108 s with no SCRIPT ERROR or ERROR.** The preset has 443 values.
+  - **`tests/test_m3_done_when.gd`:** a real Punk, Kicker, Bruiser, Thug and boss at 135° left, 135° right and 180° light left only, right only and both, from the wind-up's first frame to the contact. There are negative controls, and a 1500-frame mixed-six soak asserts the hard metrics.
+  - **`tools/check_m3_log.py`:** ok on all 17 runs.
+  - **The five evidence acts** are in `tests/bot/acts/crowd_acts.gd`, with sheets (local) in `.worktrees/m3-p4-int/captures/m3_p4/`.
+  - **The LB pick-up cue** (`game/ui/pickup_cue.gd`).
+  - **A static named-AnimationLibrary cache** in HumanoidRig: the spawn hitch's median went from 28.8 ms to 25 ms (limit 33), and the frame p95 is 13.1 ms.
+  - **Measured:** R10 100% over 112 checks, and the L2 rubric is yes except Q6. R8 p95 is 53-65% while the autopilot punches what's in front of it (a soft miss).
+- **Flagged for the final review:**
+  - the non-KO knockdown view ("belly slab", M2's default) is frequent in a mixed crowd;
+  - the boss is too easy for the autopilot, since P P P P keeps it staggered or down;
+  - the LB cue is small.
+- **The curated judgement-call log** is `docs/milestones/M3-judgement-calls.md` (`51e38cb`): 63 entries, 18 of them possible spec departures for Game-boy's ruling. The Slack digest comes from it.
+- **Running since 03:13 CDT:** workflow `wf_488b3250-97f`, `docs/reviews/M3/workflow-review.js` with `args-review-final.json` (round "final", base `7a015cc`, six Opus lenses: warn, crowd, tells, code, fair, perf), then Sonnet skeptics, the partition and Sonnet fixers on `m3/fix-final-<pkg>`.
+  - **If cut off:** within this session, use `resumeFromRunId: "wf_488b3250-97f"`. In a new session, rerun the same args, and pass `packages` from the journal if `m3/fix-final-*` branches exist.
+- **Also running:** a Sonnet agent drafting README's M3 status, controls and departures, and ARCHITECTURE's title and Ownership (lead reviews, then commits).
+- **Then:**
+  1. Merge the fixes, regenerate, run the tests.
+  2. Save `docs/reviews/M3/final-*.json`.
+  3. The export: `godot --headless --export-release "macOS" "builds/macos/Beat-em-Up PoC.zip"`. Smoke it headless and windowed.
+  4. `gh release create m3-playtest-1 --prerelease --target m3/enemy-ai`.
+  5. The M3 PR (never merge it).
+  6. The Slack DM to Michael (`U0AQMKKBL93`) with the release link and the digest.
+
+### 2026-10-26 02:15 CDT: phase 3 merged (1110/1110): every archetype is in; P4-int running
+5-hour about 60% (resets 02:50 CDT), weekly about 44% (resets Mon 2026-10-26 05:00 CDT). Phase 3 (two Sonnet builders, 1.35M tokens, 51 minutes) cost about 10 window points.
+- **Merged:** P3-bruiser and P3-boss, with no conflicts. The lead fixed the boss bar to read "BOSS" (`encounter_spawner.gd`). The preset was regenerated (439 values) and the moves too (41). **1110/1110 tests pass in 125 s with no SCRIPT ERROR or ERROR** (`89b5509`).
+  - **The Bruiser:** purple, 2.05 m, 80 HP.
+    - Armor: jabs are absorbed with a grey spark, a low clank and ARMOR in the log. A hook or uppercut staggers it. The haymaker knocks it down and opens its armor for 2 s from its get-up.
+    - It's grabbable only while staggered or open, and held 0.3 m further out. A parry still staggers it.
+    - The overhead smash (15), plus the grab and headbutt. Cooldown 4.0.
+  - **The boss:** charcoal and orange, 2.3 m, 300 HP, never grabbable.
+    - Armor: light hits are absorbed; heavy hits stagger except during its charge and pound wind-ups (only the grab's wind-up is cut). Finishers knock it down.
+    - The charge (4 m, reach 5.3 so it warns from behind), the pound (unblockable, jumpable) and the grab slam.
+    - Phase 2 at 50%: it turns 1.8x faster and calls 2 Punks one at a time. A parry gives a 36-frame recoil.
+    - The autopilot kills it in about 38 s (the L5 lens should judge).
+- **The lead's look** (`.worktrees/m3-p3-boss/captures/final_charge/charge_windup.png`, local): the charge's crouch, the run-in and the hit read, and the boss bar shows at bottom centre.
+- **Running since 02:13 CDT:** workflow `wf_1aa8a3fc-8e7`, `workflow-build.js` with `docs/reviews/M3/args-P4-int.json`:
+  - `test_m3_done_when.gd` and `check_m3_log.py`;
+  - the mixed-six, waves-to-the-boss, every-archetype warning and perf acts;
+  - crowd-bot housekeeping and an LB pick-up cue;
+  - a perf fix if R15 fails.
+
+  **If cut off:** rerun the same args. Within this session, use `resumeFromRunId: "wf_1aa8a3fc-8e7"`.
+- **Also running:** a Sonnet subagent folding every `M3-calls/*.md` into `docs/milestones/M3-judgement-calls.md` (that file only; the lead commits it).
+- **Then:**
+  1. Merge P4-int.
+  2. The final review round: `workflow-review.js` with round "final", base the merge commit, and lenses L1 warning, L2 crowd readability, L3 archetype tells and identity, L4 code and layers, L5 fairness and pacing (the boss's difficulty, R12 with Thugs), L6 performance (Part B §B4). It needs about 40-50 window points, so launch it after a reset.
+  3. Merge the fixes.
+  4. The docs (README M3 status and departures, ARCHITECTURE title and ownership), the export, `gh release create m3-playtest-1 --prerelease`, the PR, and the Slack DM.
+
+### 2026-10-26 01:20 CDT: phase 2 merged (1007/1007); phase 3 running
+5-hour 45% (resets 02:50 CDT), weekly 41% (resets Mon 2026-10-26 05:00 CDT). Phase 2 (four Sonnet builders, 2.5M tokens, 79 minutes) cost about 24 window points.
+- **Merged into `m3/enemy-ai`**, with no conflicts (`enemy_actor.gd` auto-merged). The preset was regenerated (431 values) and the moves too (38). **1007/1007 tests pass in 113 s with no SCRIPT ERROR or ERROR** (`9e3b9e9`).
+  - **P1-engage:** token holders wait squared up on the ring until the go is near (`EnemyDirector.windup_eta_s()`), so nothing waits at the nose. A lone Punk on the player's axis aims 0.1 m off-centre. The Punk's jacket is deep teal, since SPEC §10 reserves red.
+    - Side effect: with a player who takes every hit, the crowd attacks strictly in turns (R1 1, was 2), because the hit grace holds the next wind-up. It goes in the digest.
+  - **P2-grab:** enemy grabs on the player end to end.
+    - `EnemyHold`: the grab moves `bruiser_grab`, `bruiser_headbutt`, `boss_grab` and `boss_slam`.
+    - The upright held view, look locked toward the grabber, a MASH P/K prompt with a gauge, and break-free that staggers the holder.
+    - Magnetism in a crowd.
+    - The holder covers about 63-71% of the lens while it holds.
+  - **P2-kicker:** lime, a 3.0 s cooldown. It orbits the ring to the blind side and strafes toward the view edge; a jump kick (reach 2.75 m including the leap) and a low sweep (knockdown, jumpable).
+  - **P2-thug:** olive with a yellow pipe, three 10-damage swings (the third staggers), and an 8.0 s cooldown. It drops the pipe toward the attacker, within LB reach, and fights with the Punk's moves after.
+    - R12 (worst 2 s of damage at most 30) can't hold with a Thug, since its combo is 30 by the spec.
+    - The dropped pipe lies below the forward lens, so a pick-up cue would help (phase 4 candidate).
+- **The lead's look** (`.worktrees/m3-p2-grab/captures/final/s_mash.png`, `.worktrees/m3-p2-kicker/captures/p2-kicker/flanks/flank_fp.png`, `.worktrees/m3-p2-thug/captures/onev1/sheet.png`, local): the grab, the held view and the break-free read; the Kicker slides out of view to the flank; the Thug's cocked pipe reads.
+  - **Palette watch:** the Kicker's lime and the Thug's olive are both green. Their caps (black, white) and the pipe tell them apart. The Bruiser gets purple and the boss charcoal with orange.
+- **Running since 01:20 CDT:** workflow `wf_29001c6b-9d9`, `workflow-build.js` with `docs/reviews/M3/args-P3.json`: P3-bruiser and P3-boss, two Sonnet builders.
+  - **If cut off:** rerun the same args. Within this session, use `resumeFromRunId: "wf_29001c6b-9d9"`.
+  - **Then:**
+    1. Merge both, regenerate, run the tests, look at the sheets.
+    2. Phase 4: P4-int (Part C §8 as amended by A7: `test_m3_done_when.gd`, `tools/check_m3_log.py`, mixed-six acts, perf), then the final review round (`workflow-review.js`, round "final", lenses L1-L6 per Part B §B4).
+    3. Then the docs (README M3 status and departures, ARCHITECTURE, judgement calls folded), the export and GitHub release, the PR, and the Slack DM.
+
+### 2026-10-26 00:00 CDT: the slice gate passed (869/869); phase 2 running
+5-hour 20% (resets 02:50 CDT), weekly 37% (resets Mon 2026-10-26 05:00 CDT). The slice review (64 agents, 6.7M tokens, about 2.4 h) cost about 25 window points across the 21:50 reset, and 5 weekly points.
+- **The slice gate passed.** Its verdicts, evidence and the **feel defaults it locked** are in [M3-slice-gate.md](milestones/M3-slice-gate.md); the records are in `docs/reviews/M3/slice-*.json`.
+  - The hard metrics pass everywhere.
+  - **The rear warning passes clause by clause** (the done-when's second half) with dummies and real Punks.
+  - Three crowd findings survived and were fixed (`m3/fix-slice-punk-crowd-pressure`, merged):
+    - backing-off Punks running the wrong way;
+    - too little posturing (`punk_attack_cooldown_s` 1.4 → 5.0);
+    - the lens wall, mostly fixed.
+  - **869/869 tests.**
+  - **Call:** the off-screen band at 46-55° keeps the spec's 55°, for the digest.
+- **Running since 23:59 CDT:** workflow `wf_de359dcf-2ee`, `workflow-build.js` with `docs/reviews/M3/args-P2.json`. Four Sonnet builders at once:
+  - **P1-engage:** token holders wait on the ring for their go instead of at the player's nose; the lone on-axis Punk; the Punk's red jacket recoloured (SPEC §10 reserves red);
+  - **P2-grab:** enemy grabs on the player, the mash, the held view, magnetism in a crowd;
+  - **P2-kicker;**
+  - **P2-thug.**
+
+  P1-engage and P2-grab both edit `enemy_actor.gd`, in separate functions; the lead merges them.
+  - **If cut off:** rerun the same args. Within this session, use `resumeFromRunId: "wf_de359dcf-2ee"`.
+  - **Then:** merge P1-engage, P2-grab, P2-kicker and P2-thug, regenerate the preset and moves, run the suite, and look at the grab, kicker and thug sheets. Then phase 3 (P3-bruiser, P3-boss; `args-P3.json`).
+
+### 2026-10-25 21:30 CDT: P1-int merged (866/866); the slice gate's review running
+5-hour 71% (resets 21:50 CDT), weekly 32% (resets Mon 2026-10-26 05:00 CDT). P1-int (one Sonnet builder, 760k tokens, 92 minutes) cost about 9 window points.
+- **P1-int merged** (`4470830`, with `356fccf` for CLAUDE.md's main scene and cadence). **866/866 tests pass in 99 s with no SCRIPT ERROR or ERROR.** The preset has 424 values.
+  - The slice plays end to end in the crowd room, with the probe, autopilot and oracle wired into ten crowd-bot acts (`tests/bot/acts/slice_acts.gd`).
+  - **The hard metrics R1, R2, R3, R10 and R11 pass in every act**, and the headless run of all acts has 192 `WARN-CHECK ok` and 0 FAIL.
+  - **Flinch-lock fixed:** no wind-up starts while the player is in hitstun or stagger, or within `director_hit_grace_s` (0.5) of an unblocked hit. The longest chain of hits went from 4.8 s to 1.15 s, and a passive player's KO from 11 s to 12-15 s.
+  - `engage_margin_m` 0.05.
+  - The exit "resources still in use" was the audio mixer; the bot now stops voices before quitting.
+  - **Soft misses:** R8 (lens coverage) p95 is 52-58% in the six-Punk acts, against at most 50%; the step-in jab is the lever left untried. R9 in the waves act is a sample of 1.
+  - All measurements are in `docs/milestones/M3-calls/P1-int.md`. Its sheets (local) are in `.worktrees/m3-p1-int/captures/p1-int/`.
+- **The lead's look** (`fight/sheets/overview_3_13.png`, `warn/sheets/corners.png`, `observed/sheets/turn360.png`):
+  - the corner bursts sit inside their corners, left, right and both;
+  - Punks spread around on the ring;
+  - at strike range a Punk fills much of the lens, its head sometimes cut by the top edge.
+- **Running since 21:30 CDT:** workflow `wf_10d57668-722`, `docs/reviews/M3/workflow-review.js` with `args-review-slice.json` (round "slice", base `356fccf`).
+  - It runs three Opus reviewers, one per lens (warn, crowd, code), in `.worktrees/m3-review-slice-<lens>`, then three Sonnet skeptics per finding, a partition and Sonnet fixers in `.worktrees/m3-fix-slice-<pkg>` on branches `m3/fix-slice-<pkg>`.
+  - **If cut off:** within this session, resume with `resumeFromRunId: "wf_10d57668-722"`.
+  - In a new session:
+    - reviewers that finished saved nothing to the repo, so rerun the same args;
+    - if `m3/fix-slice-*` branches exist, pass the partition (from the journal) as `packages`;
+    - the fixers reuse `wip` branches.
+- **Then:**
+  1. Merge the fix branches, regenerate, run the tests and push.
+  2. Save the review records as `docs/reviews/M3/slice-*.json`.
+  3. Write `docs/milestones/M3-slice-gate.md` (evidence, verdicts, the feel defaults locked).
+  4. Fold the calls into `M3-judgement-calls.md`.
+  5. Phase 2 (`args-P2.json`: P2-grab, P2-kicker, P2-thug).
+
+### 2026-10-25 20:00 CDT: phase 1 merged (858/858); P1-int running
+5-hour 61% (resets 21:50 CDT), weekly 31% (resets Mon 2026-10-26 05:00 CDT). Phase 1's five Sonnet builders (2.6M tokens, 63 minutes) cost 21 window points, about 4 each.
+- **Merged into `m3/enemy-ai`,** in order, with no conflicts: P1-ai (EnemyActor and the Street Punk), P1-director (tokens, blind-spot priority, spread, `may_start_windup`, `report_stalled`), P1-room (the crowd room, navmesh, waves, F4 spawns, the crowd bot), P1-hud (the rear warning, the F3 AI overlay, the boss bar hookup, wind-up voices) and P1-instruments (the readability probe R1-R15, autopilot and warning oracle).
+- **The lead's fixes** (`17d3fb9`):
+  - three of P1-ai's tests now use the stub director, since the real one grants tokens;
+  - the 15% test reports how many chains it checked;
+  - the contract says RearWarning's `cleared(side)` (a Control can't redefine `hidden`);
+  - **the crowd room is the main scene**;
+  - `capture_bot.sh` caps a recording at `CAPTURE_MAX_FRAMES` (54000);
+  - the preset was regenerated (423 values).
+
+  **858/858 tests pass in 93 s with no SCRIPT ERROR or ERROR.**
+- **The builders' notes for the gate:**
+  - **Lens coverage:** at strike range (about 0.95 m) the Punk covers about half the lens.
+  - **Flinch-lock:** the director paces wind-up starts (0.35 s) but grants three tokens at once.
+  - **Warning time:** a 0.4 s wind-up behind the player is short.
+  - **Resource leak at exit:** bot runs with real enemies end with "resources still in use at exit".
+  - **Autopilot:** it was tuned on stubs.
+  - **Player avoidance:** P1-room cut `player_avoid_radius_m` to 0.3; at 0.5, Punks hovered and never attacked.
+  - **Rear-warning defaults:** P1-hud retuned them (base 160 px, inset 96 px, heavy ×1.3) so every burst stays inside its corner.
+- **Running since 20:00 CDT:** workflow `wf_a5124e9b-25f`, `workflow-build.js` with `docs/reviews/M3/args-P1-int.json` (P1-int, `.worktrees/m3-p1-int`, branch `m3/p1-int`). It is settling the five items above and recording every slice act with the probe.
+  - **If cut off:** rerun the same args. Within this session, use `resumeFromRunId: "wf_a5124e9b-25f"`.
+  - **Then:**
+    1. Merge P1-int, regenerate, run the tests and push.
+    2. The lead looks at the slice sheets and the `readability.json` files.
+    3. **The slice gate:** `docs/reviews/M3/workflow-review.js` with round "slice", `base` the merge commit, lenses L1 (warning), L2 (crowd readability) and L4 (code and layers), with briefs written from Part B §B4. Save the args as `args-review-slice.json`.
+    4. Merge the fixes, then write `docs/milestones/M3-slice-gate.md` (evidence, verdicts, the feel defaults locked).
+    5. Phase 2.
+
+### 2026-10-25 18:55 CDT: S0 merged (587/587); phase 1 (five builders) running
+5-hour 40% (resets 21:50 CDT), weekly 27% (resets Mon 2026-10-26 05:00 CDT). S0, one Sonnet builder (690k tokens, 31 minutes), cost about 5 window points.
+- **S0 merged** into `m3/enemy-ai` at `4a5341d`. **587/587 tests pass with no SCRIPT ERROR or ERROR.** The preset regenerated unchanged at 419 values.
+  - The lead reviewed every hunk of `combat_actor.gd`, `hit_detector.gd`, `player.gd`, `tuning_overlay.gd` and `game_input.gd` against Part A and §2.2: they match.
+  - `d393a7b`: `test_m3_contracts.gd` no longer pins tunable defaults (owners retune their own), only their subgroups.
+  - S0's calls are in `docs/milestones/M3-calls/S0-scaffold.md`.
+- **S0's notes for later phases:**
+  - P3 must decide the parried boss: `_parry_staggers()` false plus recoil 0 means a parry only blocks.
+  - The pin order changed M2's player grabs slightly (a held victim now processes right after its holder): watch the grab acts at the slice gate.
+- **Running since 18:50 CDT:** workflow `wf_ed4bf1ae-4e9`, `workflow-build.js` with `docs/reviews/M3/args-P1.json`. Five Sonnet builders, four at a time, each in `.worktrees/m3-p1-<key>` on branch `m3/p1-<key>`: P1-ai, P1-director, P1-room, P1-hud, P1-instruments. The watcher checks every 15 minutes during the run.
+  - **If cut off:** rerun the same args (the loader reuses `wip` branches, skips done ones). Within this session, use `resumeFromRunId: "wf_ed4bf1ae-4e9"`.
+  - **Then:**
+    1. Merge P1-ai, P1-director, P1-room, P1-hud and P1-instruments, in that order. Regenerate the preset and the moves (only `punk_*.tres` may be new), run the full suite and push.
+    2. Set `run/main_scene` to `res://game/level/crowd_room.tscn`.
+    3. Run P1-int as a one-package `workflow-build.js` run (Part C §5 "P1-int", as amended by A3.6).
+    4. The slice gate: `docs/reviews/M3/workflow-review.js`, round "slice", lenses L1, L2 and L4.
+
+### 2026-10-25 18:20 CDT: M3 plan written; S0 (the contract scaffold) building
+5-hour 34% (resets 21:49 CDT), weekly 26% (resets Mon 2026-10-26 05:00 CDT). The planning workflow (10 Opus agents, 3.4M tokens) cost 32 window points and 5 weekly points, which is the old costs divided by 5.
+- **The plan is [docs/milestones/M3-plan.md](milestones/M3-plan.md).**
+  - It started as three independent plans (contracts-first, vertical-slice, readability-first) and a judge, all in `docs/milestones/M3-planning/`.
+  - The vertical-slice plan won (Part C, verbatim). The judge's grafts and fixes are binding amendments (Part A), and the done-when is made checkable in Part B: the warning's truth table, readability metrics R1-R15, the evidence pack and the review lenses.
+  - Codemaps of everything M3 builds on are in `docs/milestones/M3-codemap/`.
+- **Phases:**
+  - **S0**, the contract scaffold: hooks, look API and ViewGeometry, MoveData `reach_m`, signals, every tunable, skeletons for EnemyActor, EnemyDirector and EnemyCatalog, pose and generator dispatch, fixtures and `capture_bot.sh`.
+  - **Phase 1**, the Street Punk vertical slice, five builders in parallel: P1-ai, P1-director, P1-room, P1-hud and P1-instruments. Then P1-int, then **the slice gate**, a review in first person on hard metrics.
+  - **Phase 2:** P2-grab, P2-kicker and P2-thug.
+  - **Phase 3:** P3-bruiser and P3-boss.
+  - **Phase 4:** integration, the review round, docs, the export and release, the PR, and the Slack DM.
+- **Builds run through `docs/reviews/M3/workflow-build.js`** with args saved as `docs/reviews/M3/args-<phase>.json`. It is resumable: a package is done when its branch `m3/<key>` has a commit `M3 <key>: ...`, wip when the branch exists without one, and new otherwise.
+- **Running since 18:15 CDT:** workflow `wf_6f2443d3-3fd`, `workflow-build.js` with `args-S0.json` (one Sonnet builder, `.worktrees/m3-s0-scaffold`, branch `m3/s0-scaffold`).
+  - **If cut off:** rerun `Workflow({scriptPath: "<repo>/docs/reviews/M3/workflow-build.js", args: <args-S0.json>})`. Within this session, use `resumeFromRunId: "wf_6f2443d3-3fd"`.
+  - **Then:** the lead reviews every hunk of `combat_actor.gd`, `hit_detector.gd`, `player.gd` and `tuning_overlay.gd`, merges `m3/s0-scaffold` into `m3/enemy-ai`, regenerates the preset, runs the full suite and pushes, then launches phase 1 with `args-P1.json`.
+- **Done meanwhile:**
+  - M2 worktrees pruned (every branch kept);
+  - `git config merge.keep-ours.driver true`;
+  - CLAUDE.md's test time is now about 90 s (baseline 537/537 in 73 s);
+  - the export templates are installed and a test macOS export works (63 MB, universal, ad-hoc signed, runs headless clean).
+
+### 2026-10-25 17:05 CDT: M2 merged; Milestone 3 started on `m3/enemy-ai`
+Account: premium seat (5 times the old limits). 5-hour 0% (resets 21:49 CDT), weekly 21% (resets Mon 2026-10-26 05:00 CDT).
+- **Game-boy signed off M2.** PR #2 is merged into `main` (`2847863`). The old `.worktrees/m2-*` can be pruned.
+- **Milestone 3 (SPEC §12): enemy AI and the rear warning**, on branch `m3/enemy-ai` from `main`. Game-boy asked (2026-10-25 16:50) for the work to run without his input until M3 is done to spec. When it is, the lead DMs him on Slack (Arachne Finance, Michael, `U0AQMKKBL93`) with:
+  1. a link to a playable build;
+  2. a digest of the key judgement calls, each with at least one alternative not taken and why.
+- **Game-boy's answers (also in the Decisions log):**
+  - **Playable link:** a GitHub Release on the private repo with a zipped macOS export. Downloading Godot's official 4.7.2 export templates is approved.
+  - **Boss:** a graybox boss in M3, with a placeholder name. Its name and look wait for the art milestones.
+  - **Enemy grabs on the player** (the Bruiser's grab and headbutt, the boss's grab slam): mash P/K to break free. A dodge or a heavy hit gets out of the wind-up. Unbroken, the hit lands.
+- **Defaults the lead took** (Game-boy saw them and didn't object):
+  - a new 12 × 30 m street-lane crowd room becomes the main scene, with doorway and alley spawns (some behind the player) and repeating mixed waves of up to 6 enemies, with a key back to the M2 training room;
+  - a KO'd player auto-revives there, as in the test room;
+  - enemies don't block;
+  - the Pipe Thug drops a pipe the player can take;
+  - the full director (tokens, blind-spot priority, spread), a navmesh with avoidance;
+  - the rear warning per SPEC §8, with its tunables in F1;
+  - enemy spawns in F4, and the AI state and tokens in F3.
+- **Blocked on Game-boy? DM him on Slack at once** (Game-boy, 17:35): anything only he can unblock (a permission or authorization prompt, a login, a decision) goes to a Slack DM to Michael (`U0AQMKKBL93`), with what is blocked and what you do meanwhile. His aim is to keep the work running without stalls, not to keep messages few.
+- **Usage watcher:** new cadence and the resume task for the premium seat (see "Usage watcher" and "Resume after a limit"). Started from this session.
+- **Next:** map the codebase for M3, write `docs/milestones/M3-plan.md`, then build in parallel worktrees.
+
 ### 2026-10-25 15:20 CDT: leg 2 done (round 3 merged, 537/537); leg 3 done; the M2 PR is open for Game-boy
 Account E: 5-hour about 30% (resets 19:09 CDT), weekly 83% (resets Tue 2026-10-27 17:00 CDT). The two r3 fixers (`wf_27da4731-a29`, 46 minutes) took the window from 0% to 29% and weekly from 78% to 83%.
 - **Leg 2 done.** `m2/phase3-fix-r3-ko-view-return` (`846f3ae`) and `m2/phase3-fix-r3-dummy-room` (`d1a2073`) are merged into `m2/hit-feel` with `m2/phase3-review` (`fix-r3-*.json`). The merges were clean. **537/537 tests pass with no SCRIPT ERROR or ERROR.** The preset regenerated unchanged at 327 values.
@@ -904,67 +1176,76 @@ Every approved spec change so far is in README.md, "Where M1 departs from the sp
 - **Round 2's proposed fixes are approved as written (2026-10-25)**, with the KO view as above.
 - **Models (2026-10-25):** Opus for planning and review, Sonnet for coding and execution. Fixers run with `fixer_model: "sonnet"`.
 - **Defaults for the rest of M2 (2026-10-25 14:15 CDT):** every open question takes its default for the rest of this milestone. Without the final art, Game-boy can't tell the grey-block feel issues apart. So don't put fine look or feel questions to him in M2. Record each default taken, and leave art-dependent feel polish for when the art is in.
+- **Milestone 3 setup (2026-10-25 16:50 CDT):** M2 signed off and merged. M3 runs without Game-boy's input until it's done to spec, then a Slack DM with a playable link and a digest of judgement calls (each with an alternative not taken). The playable link is a GitHub Release with a zipped macOS export (downloading the official export templates is approved). The boss is in M3 as graybox with a placeholder name. Enemy grabs on the player can be broken by mashing P/K. The account is now a premium seat (5 times the limits): the watcher checks less often, and at a limit a scheduled task resumes the work after the reset.
+- **Comms (2026-10-25 17:35 CDT):** whenever work is blocked on Game-boy (an authorization, a permission prompt, a login, a decision), DM him on Slack (Michael, `U0AQMKKBL93`) at once, then carry on with anything not blocked.
+- **Milestone 3 signed off (2026-10-26):** Game-boy played the build, called M3 complete as-is and approved every M3 judgement call and spec departure (README, `docs/milestones/M3-judgement-calls.md`). The boss keeps 300 HP.
 - **Process:** at each usage limit, hand off to Game-boy's second Claude account. Never assume the same session resumes.
 
 ## Usage watcher
 A separate low-cost Claude Code session, "Beat-em-up: usage watcher". Start it from the working session with `start_session`: initiation `user_asked`, `model` claude-haiku-5-5, `effort` low, `use_worktree` false, and the prompt below verbatim.
 
-It paces itself (`/loop` with no interval), on Game-boy's cadence from 2026-10-23:
+**Since 2026-10-25 17:00 CDT the account is a premium seat, 5 times the old standard seat's limits** (Game-boy). The same work therefore costs about a fifth of the percentages measured in M1 and M2 (the cost table below is already divided). The watcher checks less often, but still at 90% of either window, and still early on a fast burn: a big workflow (up to 10 agents at once) can burn as fast as two heavy agents did before.
 
 | Usage (the higher of the 5-hour and weekly windows) | Next check |
 | --- | --- |
-| below 70% | in 20 minutes |
-| 70% up to 85% | in 10 minutes |
+| below 70% | in 30 minutes |
+| 70% up to 85% | in 15 minutes |
 | 85% and up | in 5 minutes |
 
-At 90% of either window it tells the working session to halt work and hand off. On a fast burn it checks sooner, and it warns early if it would cross 90% before its next check.
+At 90% of either window it tells the working session to halt and hand off, then makes sure a one-time scheduled task will resume the work after that window resets (see "Resume after a limit").
 
 Its prompt:
 
 ```
-/loop Usage watcher for the beat-em-up repo. You pace yourself. On each check:
-1. Call mcp__ccd_session_mgmt__get_usage (load it with ToolSearch the first time). Read plan.windows: the "5-hour limit" window and the window whose label starts with "Weekly". Let U be the higher of their percentUsed values.
-2. Handoff. If either window is at 90% or more, and you haven't already warned for that window's resetsAt, send a message to the session titled "Beat-em-up: working session" (find it with ListAgents). The message: "Usage at N% (window W, resets R). Halt work and do the handoff now per CLAUDE.md: stop new work, commit and push WIP on every branch and worktree, update and push docs/HANDOFF.md, then tell Game-boy." Remember that you warned for that resetsAt.
-3. Snapshot. If either window is at 95% or more, write HANDOFF-SNAPSHOT.md at the repo root (untracked; never commit it). It holds:
+/loop Usage watcher for the beat-em-up repo at /Users/arachne/repos/beat-em-up-PoC. You pace yourself. On each check:
+1. Call mcp__ccd_session_mgmt__get_usage (load it with ToolSearch the first time). Read plan.windows: the "5-hour limit" window and the window labelled "Weekly · all models". Let U be the higher of their two percentUsed values.
+2. Handoff. If either window is at 90% or more, and you haven't already warned for that window's resetsAt, send a message to the session titled "Beat-em-up: working session" (find it with ListAgents, or mcp__ccd_session_mgmt__list_sessions). The message: "Usage at N% (window W, resets R). Halt work and do the handoff now per CLAUDE.md: tell running agents and workflows to stop at a stopping point, commit and push WIP on every branch and worktree, update and push docs/HANDOFF.md, then create the resume task (docs/HANDOFF.md, 'Resume after a limit')." Remember that you warned for that resetsAt, and when.
+3. Resume task. On the first check 20 minutes or more after a warning, call mcp__scheduled-tasks__list_scheduled_tasks (load it with ToolSearch). If no enabled task whose taskId starts with "beat-em-up-resume" has a nextRunAt after now, create one with mcp__scheduled-tasks__create_scheduled_task: taskId "beat-em-up-resume-" plus the reset's local date and time as yyyymmdd-hhmm, fireAt the warned window's resetsAt plus 10 minutes (ISO 8601 with an offset), description "Resume beat-em-up work after the usage reset", title "Beat-em-up: resume after usage reset", and as the prompt the exact text between the lines "RESUME-PROMPT-START" and "RESUME-PROMPT-END" in docs/HANDOFF.md (read the file). Do this once per resetsAt.
+4. Snapshot. If either window is at 95% or more, write HANDOFF-SNAPSHOT.md at the repo root (untracked; never commit it). It holds:
    - the time and the usage numbers;
    - git status, git branch -vv and git worktree list;
    - for each worktree under .worktrees/, its git status --short and git log --oneline -3.
-4. Next check, from U:
-   - below 70: in 20 minutes (1200 s);
-   - 70 up to 85: in 10 minutes (600 s);
+5. Next check, from U:
+   - below 70: in 30 minutes (1800 s);
+   - 70 up to 85: in 15 minutes (900 s);
    - 85 or more: in 5 minutes (300 s).
-5. Fast burn. Estimate the rate from your previous check. If at that rate either window would reach 90% before that next check, check again in 5 minutes instead. If it would reach 90% within those 5 minutes, send the step 2 warning now (once per resetsAt).
-6. Schedule the next check with ScheduleWakeup, passing this same prompt back.
-Otherwise say nothing beyond one short line: the two percentages and the next check time. Never edit tracked files, run builds or start other work.
+6. Fast burn. Estimate the rate from your previous check. If at that rate either window would reach 90% before that next check, check again in 5 minutes instead. If it would reach 90% within those 5 minutes, send the step 2 warning now (once per resetsAt).
+7. Once a window you warned for has reset (its percentUsed is below 50 again), forget that warning.
+8. Schedule the next check with ScheduleWakeup, passing this same prompt back.
+Otherwise say nothing beyond one short line: the two percentages and the next check time. Never edit tracked files, run builds or start other work. If the working session tells you to end your loop, call ScheduleWakeup with stop: true.
 ```
 
-**Usage rules for the working session** (Game-boy, 2026-10-24 12:40 CDT; they replace the old "launch nothing new at 65%" line, which stopped work too early):
-- **Work up to the 90% handoff.** The watcher's 90% message is the only stop. Don't stop, idle or hand off at 65-70% because a big piece won't fit.
-- **Size each launch to the headroom.** Call `mcp__ccd_session_mgmt__get_usage` before every launch. The headroom is 90% minus the higher of the 5-hour and weekly `percentUsed`. Launch work whose estimated cost fits it. Measured costs, in % of a 5-hour window:
+**Resume after a limit.** The working session creates the resume task itself as the last step of a handoff (the watcher's step 3 is the fallback when it was cut off first): `mcp__scheduled-tasks__create_scheduled_task` with the fields in the watcher's step 3, firing 10 minutes after the window that stopped work resets. The task wakes the working session if it still exists, which keeps its context, or else starts a takeover. Its prompt, verbatim:
 
-  | Work | Cost |
+RESUME-PROMPT-START
+Resume the beat-em-up Milestone 3 work after a usage reset. The project is /Users/arachne/repos/beat-em-up-PoC (Godot 4.7.2, GitHub mikedtcm22/beat-em-up-PoC). Game-boy (the owner) asked on 2026-10-25 for the work to continue across usage limits without waiting for him, until Milestone 3 is done.
+1. Call mcp__ccd_session_mgmt__get_usage (load it with ToolSearch). If either the "5-hour limit" or the "Weekly · all models" window is still at 90% or more, create a copy of this task with mcp__scheduled-tasks__create_scheduled_task (a new taskId starting "beat-em-up-resume-", fireAt that window's resetsAt plus 10 minutes, the same prompt) and stop.
+2. Call mcp__ccd_session_mgmt__list_sessions (load it with ToolSearch). If a session titled exactly "Beat-em-up: working session" is listed and not archived, send it with mcp__ccd_session_mgmt__send_message: "Scheduled resume: the usage window has reset. Check get_usage, make sure a usage watcher is running (docs/HANDOFF.md, 'Usage watcher'), then resume Milestone 3 from the newest entry in docs/HANDOFF.md." If the result says "delivered" or "queued", you're done: say so in one line and stop.
+3. Otherwise you are the new working session: follow the takeover prompt in docs/HANDOFF.md (the "Takeover prompt" section) exactly, starting with renaming this session "Beat-em-up: working session".
+RESUME-PROMPT-END
+
+**Usage rules for the working session** (Game-boy, 2026-10-24 12:40 CDT; costs rescaled for the premium seat on 2026-10-25):
+- **Work up to the 90% handoff.** The watcher's 90% message is the only stop. Don't stop, idle or hand off early because a big piece won't fit.
+- **Size each launch to the headroom.** Call `mcp__ccd_session_mgmt__get_usage` before every launch. The headroom is 90% minus the higher of the 5-hour and weekly `percentUsed`. Launch work whose estimated cost fits it. Measured costs on the old standard seat, divided by 5 (re-measure and update this table during M3):
+
+  | Work | Cost (% of a 5-hour window) |
   | --- | --- |
-  | A builder the size of WP4, or phase 3's A or B | 30-50% |
-  | A heavy agent that both reviews and fixes | about 25% |
-  | A fixer | about 25% |
-  | A review-only agent | about 13% |
-  | Lead work (merging, judging sheets, docs) | a few % |
-  | Two heavy agents at once | about 1.2-1.6 points a minute |
+  | A builder the size of WP4, or phase 3's A or B | 6-10% |
+  | A heavy agent that both reviews and fixes | about 5% |
+  | A fixer | about 5% |
+  | A review-only agent | about 3% |
+  | Lead work (merging, judging sheets, docs) | under 1% |
+  | Two heavy agents at once | about 0.25-0.3 points a minute |
 
-- **When the next phase or milestone doesn't fit:** say it's 70% and a new phase is next. Spend a little of the headroom splitting that phase into a first task that fits the rest, and run that task. Examples:
-  - the setup: worktrees, imports, briefs, the workflow script;
-  - one reviewer instead of five;
-  - one fix package;
-  - one well-scoped build step.
-
-  Commit `wip:` as it goes, and hand off at 90%. Write the split into the milestone plan and HANDOFF, so the next account starts at the next task.
+  Weekly points: on the old seat one 5-hour point cost about 0.16 weekly points; re-measure.
+- **When the next phase or milestone doesn't fit:** spend a little of the headroom splitting it into a first task that fits the rest, and run that task. Commit `wip:` as it goes, and hand off at 90%. Write the split into the milestone plan and HANDOFF, so the next session starts at the next task.
 - **Keep the 90% cut cheap:** agents commit `wip:` and push every 15-20 minutes, so a halt loses little.
-- **At most two heavy agents at once.** Near the top of the window, prefer one: two burn about 1.2-1.6 points a minute, and the watcher's 20-minute checks below 70% can't catch a faster burn.
-- **Tighter checks during heavy runs:** while two heavy agents run, ask the watcher to check every 10 minutes even below 70%.
+- **Concurrency:** with the premium seat, a workflow may run up to about 6 heavy agents at once while the window is under 60%, and at most two above that.
+- **The handoff's last step** is the resume task (above), so the work restarts by itself after the reset.
 
 If no watcher is running, for example after an account switch, start one with that prompt. A new account's watcher reports that account's usage.
 
-**The working session must be titled "Beat-em-up: working session"** so the watcher can find it. A new account's working session renames itself to that first, with `mcp__ccd_session_mgmt__set_session_title`.
+**The working session must be titled "Beat-em-up: working session"** so the watcher and the resume task can find it. A new working session renames itself to that first, with `mcp__ccd_session_mgmt__set_session_title`.
 
 **At an account switch, the old working session:**
 - renames itself "Beat-em-up: account X session (handed off)", which frees the title;
@@ -974,32 +1255,32 @@ If no watcher is running, for example after an account switch, start one with th
 Game-boy pastes this into a new account's session. Keep the "Next steps" list current at every handoff; the rest changes rarely.
 
 ```
-You're taking over an in-progress Godot 4.7.2 project: a first-person beat-em-up proof of concept at /Users/arachne/repos/beat-em-up-PoC (GitHub: mikedtcm22/beat-em-up-PoC). I'm Game-boy, the project owner. Other Claude accounts did the work so far and handed off at their usage limits. We switch accounts at every usage limit, so treat the repo as the only source of truth. Work happens on branch m2/hit-feel and the worktrees under .worktrees/.
+You're taking over an in-progress Godot 4.7.2 project: a first-person beat-em-up proof of concept at /Users/arachne/repos/beat-em-up-PoC (GitHub: mikedtcm22/beat-em-up-PoC). I'm Game-boy, the project owner. Other Claude accounts did the work so far and handed off at their usage limits. We switch accounts at every usage limit, so treat the repo as the only source of truth. Work happens on branch m3/enemy-ai and the worktrees under .worktrees/.
 
 Start by doing these, in order:
 1. Rename this session to "Beat-em-up: working session" (mcp__ccd_session_mgmt__set_session_title). The usage watcher finds you by that title.
-2. Read CLAUDE.md, then docs/HANDOFF.md (live status and exact resume steps; the newest entry is at the top). Then read the milestone docs and review files it points to: docs/milestones/M2-plan.md, docs/milestones/M2-WP4-brief.md, docs/reviews/M2-phase1-review-findings.json and docs/reviews/M2-phase1-fix-results.json. Read docs/ARCHITECTURE.md and docs/SPEC.md §6, §10 and §11 before touching code.
-3. Start a usage watcher exactly as docs/HANDOFF.md describes under "Usage watcher" (Haiku, low effort, self-paced /loop, shares this checkout, its prompt verbatim). Confirm it's running.
+2. Read CLAUDE.md, then docs/HANDOFF.md (live status and exact resume steps; the newest entry is at the top). Then read docs/milestones/M3-plan.md and docs/milestones/M3-judgement-calls.md. Read docs/ARCHITECTURE.md, the codemaps in docs/milestones/M3-codemap/ and docs/SPEC.md §5, §7, §8 and §11 before touching code.
+3. If no usage watcher is running (list your sessions), start one exactly as docs/HANDOFF.md describes under "Usage watcher" (Haiku, low effort, self-paced /loop, shares this checkout, its prompt verbatim).
 4. Check usage (mcp__ccd_session_mgmt__get_usage) before launching any workflow or agent.
 
 USAGE RULES:
-- A builder the size of a work package costs 30-50% of a 5-hour window; a heavy agent that both reviews and fixes about 25%; a review-only agent about 13%.
-- Run at most TWO heavy agents at once.
+- The account is a premium seat (5x the old limits): a heavy Opus agent costs about 3% of a 5-hour window; see docs/HANDOFF.md's cost table.
+- At most 4 Godot-bound builders at once (8 GB of RAM); up to about 6 heavy agents while the window is under 60%.
 - Work up to the 90% handoff; don't stop early. Check get_usage before each launch and size the launch to the headroom left below 90%. If the next phase or milestone doesn't fit (say at 70%), spend a little of the headroom splitting it into a first task that fits, run it with wip commits, and hand off at 90%. Details: docs/HANDOFF.md, "Usage rules for the working session".
 - Prefer one agent per work package doing review, then fix, over many reviewers per package.
-- The watcher checks every 20 minutes below 70%, every 10 minutes up to 85% and every 5 minutes above that. It tells you to halt and hand off at 90%.
+- The watcher checks every 30 minutes below 70%, every 15 up to 85% and every 5 above. It tells you to halt and hand off at 90%; the handoff's last step is the scheduled resume task (docs/HANDOFF.md, "Resume after a limit").
 
-Next steps (Milestone 2; details are in docs/HANDOFF.md):
-- Phases 1 and 2, the localized flash and phase 3's packages A (ragdoll: contact push, KO blink-off, staggers at 0.9) and B (grab view and waist bend) are merged into m2/hit-feel. README has the Milestone 2 status and every approved M2 departure. WP3's audio was judged by analysis only, so I'll listen to it.
-- Phase 3's package C ran as Workflows (I turned ultracode on): three rounds of adversarial review and fixes, all merged into m2/hit-feel (537/537 tests, no SCRIPT ERROR). Legs 1-3 are done, and the M2 PR is open: https://github.com/mikedtcm22/beat-em-up-PoC/pull/2. It waits on my play-through and sign-off. Never merge it without that. If I ask for changes, make them on m2/hit-feel and push.
-- Every open M2 question took its default (my call, 2026-10-25 14:15: I can't judge grey-block feel differences until the art is in). The PR lists them. Don't put fine look or feel questions to me before the art.
-- After sign-off: merge PR #2, then plan Milestone 3 (SPEC §12).
+Next steps (Milestone 3; details are in docs/HANDOFF.md, newest entry first):
+- M3 is signed off and merged (PR #3, 2026-10-26); M2 too (PR #2). Next is Milestone 4, the art pipeline proof (SPEC §12): plan it once my toolchain items are in (docs/HANDOFF.md, newest entry). Its plan is docs/milestones/M3-plan.md (Part A amendments bind; Part B is the checkable done-when; Part C the base plan). Builds run through docs/reviews/M3/workflow-build.js with args in docs/reviews/M3/args-<phase>.json, resumable from branch state: rerun the same args after a cut-off.
+- I asked (2026-10-25) for M3 to run to completion without my input. When it's done to spec, DM me on Slack (Arachne Finance, Michael, U0AQMKKBL93) with (1) a link to a playable build (a GitHub Release with a zipped macOS export; the export preset and templates are set up) and (2) a digest of key judgement calls, each with at least one alternative not taken and why (docs/milestones/M3-judgement-calls.md). If something blocks you on me (an authorization, a login, a decision), DM me on Slack at once and carry on with what isn't blocked.
+- I turned ultracode on (2026-10-24) and asked for multi-agent workflows: use Workflow scripts for substantive work (Opus plans and reviews, Sonnet codes).
+- Don't put fine grey-block look or feel questions to me; take the default and log it.
 
 Ground rules:
 - Never merge a milestone PR into main until I've played it and signed it off.
-- Any change to the spec needs my approval. Ask me with a short proposal and defaults.
+- Any change to the spec needs my approval. In M3, don't stop for it: build the reading that departs least, keep the spec's value reachable (a tunable) where you can, and list it in README as "decided by default, for Game-boy's ruling at sign-off".
 - Commit early on branches (prefix "wip:" for unfinished work), push often, and update docs/HANDOFF.md at every phase boundary.
-- When the watcher warns, do the handoff in CLAUDE.md immediately. Stop running workflows and agents, commit and push everything, save any unfinished agents' findings into the repo, and update HANDOFF.md, including this prompt's "Next steps". Then tell me.
+- When the watcher warns, do the handoff in CLAUDE.md immediately. Stop running workflows and agents, commit and push everything, save any unfinished agents' findings into the repo, and update HANDOFF.md, including this prompt's "Next steps". Then create the scheduled resume task ("Resume after a limit"). DM me only if the resume needs me.
 - Judge visual and feel work from recorded captures (Movie Maker via tools/capture_combos.sh or tests/bot/vfx_bot.tscn), not just tests, and show me what you saw.
 - Keep me posted briefly: what's done, what's running, what you need from me.
 ```

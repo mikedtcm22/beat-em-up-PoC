@@ -20,6 +20,13 @@ extends Camera3D
 ## The camera does not smooth those steps on its own: the full body renders in first
 ## person (Spec §5) and would then jitter against the view instead.
 ##
+## Floor under the lens: the lens rides EyePoint less a fixed drop, which is right for an
+## upright body and puts it inside the street for one lying face-down (EyePoint 0.15 m up, the
+## lens at -0.04 m, the floor culled from below). So the lens y is never lower than the floor
+## under the player plus Tuning "Camera" > cam_floor_clearance_m (_view_with(), before the KO
+## view's mix): a max against a floor that moves only with the player's own height, so it adds
+## no jump of its own, and a body lying face-up (the lens 0.12 m up) moves a centimeter or so.
+##
 ## KO view (Game-boy, 2026-10-25): the one time the camera leaves the player's eyes. From
 ## the killing blow (health 0) the lens eases out of the eyes to a point above and beside
 ## the lying body, which then shows whole (the head, neck, chest and shoulders too, which
@@ -51,6 +58,9 @@ extends Camera3D
 enum KoPose { NONE = -1, RIGHT, LEFT, FEET }
 ## How many times _ko_room() halves the reach to find the lens's place clear of everything.
 const KO_ROOM_STEPS := 6
+## How far below EyePoint lens_floor_y() looks for the floor of a player off the ground: the lens
+## is only ever within a few centimeters of it when it matters, so this is just a ray long enough.
+const FLOOR_RAY_M := 4.0
 ## Total pitch is clamped to this, so a downward move offset on top of looking straight
 ## down never flips the view over.
 const PITCH_LIMIT_RAD := PI * 89.0 / 180.0
@@ -242,9 +252,10 @@ func _follow(delta: float) -> Transform3D:
 ## The first-person view (before punch and shake) of `player` with its eye at world `eye`:
 ## the running move's and the hold view's drop and extra pitch
 ## (PlayerCharacter.get_camera_move_offset()), the view turn (interpolated by `fraction`
-## between physics ticks), and the lens offset less the hold view's pull-back. _follow()
-## passes the smoothed eye (with the hold view's rise and pull-back smoothed alike); tests
-## pass EyePoint itself to judge the real view.
+## between physics ticks), and the lens offset less the hold view's pull-back, the lens then
+## kept cam_floor_clearance_m above the floor (lens_floor_y()). _follow() passes the smoothed
+## eye (with the hold view's rise and pull-back smoothed alike); tests pass EyePoint itself to
+## judge the real view.
 static func view_from_eye(player: PlayerCharacter, eye: Vector3, fraction: float = 1.0) -> Transform3D:
 	return _view_with(player, eye, player.get_hold_view_shift(), fraction)
 
@@ -262,8 +273,29 @@ static func _view_with(player: PlayerCharacter, eye: Vector3, hold_shift: Vector
 	var look_basis := Basis(Vector3.UP, view_yaw) * player.get_look_basis()
 	# While an enemy is held the lens also moves back (the hold view).
 	eye_position += lens_offset(look_basis, hold_shift.y)
+	# Never into the floor: a body lying face-down has its eye a hand above the street.
+	eye_position.y = maxf(eye_position.y, lens_floor_y(player, eye) + Tuning.data.cam_floor_clearance_m)
 	var look := _add_pitch(look_basis, deg_to_rad(move_offset.x))
 	return Transform3D(look, eye_position)
+
+
+## The y of the floor under `player` that the lens keeps clear of, or -INF when there is none to
+## find (the player is out of the tree, or in the air with nothing below its eye). On the floor
+## it is the player's own height (interpolated, as the view's origin is): a plain read, and the
+## floor the capsule is standing on whatever the pose does to the eye. In the air (a launch, a
+## throw) it is the world's first surface straight down from `eye` (EyePoint: never from the
+## lens, which may already be inside the floor and would then see nothing).
+static func lens_floor_y(player: PlayerCharacter, eye: Vector3) -> float:
+	if not player.is_inside_tree():
+		return -INF
+	if player.is_on_floor():
+		return player.get_global_transform_interpolated().origin.y
+	var world := player.get_world_3d()
+	if world == null:
+		return -INF
+	var query := PhysicsRayQueryParameters3D.create(eye, eye + Vector3.DOWN * FLOOR_RAY_M, CombatTypes.bit(CombatTypes.LAYER_WORLD))
+	var hit := world.direct_space_state.intersect_ray(query)
+	return (hit.position as Vector3).y if not hit.is_empty() else -INF
 
 
 ## Where the first-person lens sits relative to EyePoint, for a look basis: lowered by

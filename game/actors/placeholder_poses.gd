@@ -37,6 +37,13 @@ class MovePoses:
 	var strike: Dictionary[StringName, Vector3] = {}
 	## Optional pose at the end of the active frames (spins keep turning); empty = strike.
 	var strike_end: Dictionary[StringName, Vector3] = {}
+	## Optional second wind-up key at windup_hold_at x startup (a held telegraph, the enemy
+	## attacks of Milestone 3): the wind-up pose, plus `windup_hold` (a delta added to it, empty
+	## = none), held until the strike drives in over the rest of the startup. Negative (the
+	## default) = no hold: the body creeps from the wind-up into the strike. Enemy moves use
+	## windup_at 0.4-0.6 and windup_hold_at about 0.8. Must lie after windup_at.
+	var windup_hold_at: float = -1.0
+	var windup_hold: Dictionary[StringName, Vector3] = {}
 	## Optional follow-through keyed at follow_at x recovery; empty = none.
 	var follow: Dictionary[StringName, Vector3] = {}
 	var follow_at: float = 0.35
@@ -50,6 +57,8 @@ class MovePoses:
 		m.guard = _mirror_pose(guard, keep_legs)
 		m.windup = _mirror_pose(windup, keep_legs)
 		m.windup_at = windup_at
+		m.windup_hold_at = windup_hold_at
+		m.windup_hold = _mirror_pose(windup_hold, keep_legs)
 		m.strike = _mirror_pose(strike, keep_legs)
 		m.strike_end = _mirror_pose(strike_end, keep_legs)
 		m.follow = _mirror_pose(follow, keep_legs)
@@ -1204,7 +1213,7 @@ static func _recipe(id: StringName, g: Dictionary[StringName, Vector3],
 			return _mp(g, g, g)
 		&"dummy_jab":
 			return _dummy_jab(g)
-	return null
+	return PlaceholderEnemyPoses.recipe(id, g, wg)
 
 
 # Strike poses are tuned so the strike point lands in the "Strike reach" envelope of

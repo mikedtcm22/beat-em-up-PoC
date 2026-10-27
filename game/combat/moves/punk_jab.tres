@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="MoveData" format=3 uid="uid://drsq37a7t0j2s"]
+
+[ext_resource type="Script" uid="uid://c7u6g52wmmok0" path="res://game/combat/combo_branch.gd" id="combo_branch_gd"]
+[ext_resource type="Script" uid="uid://cgv6sg6uflq2j" path="res://game/combat/hitbox_spec.gd" id="hitbox_spec_gd"]
+[ext_resource type="Script" uid="uid://difuwhwjj1vue" path="res://game/combat/move_data.gd" id="move_data_gd"]
+
+[sub_resource type="Resource" id="hitbox_0"]
+script = ExtResource("hitbox_spec_gd")
+radius = 0.14
+
+[resource]
+script = ExtResource("move_data_gd")
+id = &"punk_jab"
+display_name = "Punk Jab"
+startup = 22
+recovery = 14
+blocked_recoil_frames = 20
+hitboxes = Array[ExtResource("hitbox_spec_gd")]([SubResource("hitbox_0")])
+magnetism = false
+reach_m = 1.05

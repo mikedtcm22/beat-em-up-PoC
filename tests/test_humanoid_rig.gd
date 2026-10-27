@@ -42,12 +42,15 @@ const ANIM_IDS: Array[StringName] = [
 	&"flinch_legs", &"stagger_back", &"stagger_left", &"stagger_right", &"stagger_forward",
 	&"launched", &"knockdown_back", &"knockdown_forward", &"downed_back", &"downed_front",
 	&"getup_back", &"getup_front", &"ko_back", &"ko_front",
+	# Milestone 3 enemies (placeholder clips until their packages author them).
+	&"taunt", &"brace", &"run_forward", &"hold_collar", &"held_collar", &"held_lift",
 ]
 
 ## Looping or holding animations (everything else plays once and holds its last pose).
 const LOOPING: Array[StringName] = [
 	&"idle", &"walk_forward", &"walk_back", &"walk_left", &"walk_right",
 	&"block", &"hold", &"held", &"downed_back", &"downed_front",
+	&"run_forward", &"hold_collar", &"held_collar", &"held_lift",
 ]
 
 ## docs/ARCHITECTURE.md moves table: [id, startup, active, recovery].

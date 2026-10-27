@@ -27,12 +27,17 @@ const ANIM_IDS: Array[StringName] = [
 	&"flinch_legs", &"stagger_back", &"stagger_left", &"stagger_right", &"stagger_forward",
 	&"launched", &"knockdown_back", &"knockdown_forward", &"downed_back", &"downed_front",
 	&"getup_back", &"getup_front", &"ko_back", &"ko_front",
+	# Milestone 3 enemies (placeholder poses in game/actors/poses/): a posture taunt, a
+	# Bruiser's brace against a light hit, the boss's charge run, and the upright holds of an
+	# enemy grab on the player (holder, victim, victim lifted for the slam).
+	&"taunt", &"brace", &"run_forward", &"hold_collar", &"held_collar", &"held_lift",
 ]
 
 ## Animations that loop. Every other animation plays once and then holds its last pose.
 const LOOPING: Array[StringName] = [
 	&"idle", &"walk_forward", &"walk_back", &"walk_left", &"walk_right",
 	&"block", &"hold", &"held", &"downed_back", &"downed_front",
+	&"run_forward", &"hold_collar", &"held_collar", &"held_lift",
 ]
 
 ## Move id -> the animation that holds its charge (it ends on the move's wind-up pose).
@@ -285,6 +290,20 @@ static func build_named(id: StringName, scale: float,
 			keys = [_k(0.0, PlaceholderPoses.buckle(g)), _k(FALL_JOIN_S[id], PlaceholderPoses.falling_front()),
 				_k(0.52, PlaceholderPoses.add(ko_f, {&"Spine": Vector3(8.0, 0.0, 0.0)})),
 				_k(0.8, ko_f)]
+		&"taunt", &"brace", &"run_forward", &"hold_collar", &"held_collar", &"held_lift":
+			# Milestone 3: authored in the enemy pose files; each returns {length, keys}.
+			var named: Dictionary
+			match id:
+				&"taunt":
+					named = EnemyNamedPoses.named(id, g)
+				&"brace":
+					named = EnemyPosesBruiser.named(id, g)
+				&"run_forward":
+					named = EnemyPosesBoss.named(id, g)
+				_:
+					named = GrabPoses.named(id, g)
+			length = named["length"]
+			keys.assign(named["keys"])
 		_:
 			push_warning("PlaceholderAnims: unknown animation id '%s'" % id)
 			keys = [_k(0.0, g), _k(length, g)]
@@ -293,7 +312,8 @@ static func build_named(id: StringName, scale: float,
 
 ## Animation for `move` in `stance`: length move.total_frames() / 60 s; the move's start
 ## pose (the stance, the clinch or a weapon carry, PlaceholderPoses.move_poses()) at 0, the
-## wind-up at windup_at x startup, the strike pose exactly at startup / 60 s held until
+## wind-up at windup_at x startup (and, for a held telegraph, the same pose plus a small
+## delta again at windup_hold_at x startup), the strike pose exactly at startup / 60 s held until
 ## (startup + active) / 60 s, an optional follow-through, and back to the start pose at the
 ## end. `mirrored` swaps the upper body left for right, keeping the legs (the body flurry
 ## alternates fists this way). `from_charge` starts from the wind-up pose instead
@@ -302,7 +322,12 @@ static func build_named(id: StringName, scale: float,
 ## without a recipe fall back to a generic punch or kick picked from the first hitbox.
 static func build_move(move: MoveData, scale: float, mirrored: bool = false,
 		from_charge: bool = false, stance: StringName = PlaceholderPoses.STANCE_BOXER) -> Animation:
-	var poses := _poses_for(move, stance)
+	return build_move_with(_poses_for(move, stance), move, scale, mirrored, from_charge)
+
+
+## build_move() from explicit key `poses` instead of the move's recipe (tests, previews).
+static func build_move_with(poses: PlaceholderPoses.MovePoses, move: MoveData, scale: float,
+		mirrored: bool = false, from_charge: bool = false) -> Animation:
 	if mirrored:
 		poses = poses.mirrored(true)
 	var startup := move.startup * FRAME_S
@@ -313,6 +338,9 @@ static func build_move(move: MoveData, scale: float, mirrored: bool = false,
 	if move.startup > 0:
 		keys.append(_k(0.0, poses.windup if from_charge else poses.guard))
 		keys.append(_k(windup_time(move, poses), poses.windup))
+		var hold_time := windup_hold_time(move, poses)
+		if hold_time >= 0.0:
+			keys.append(_k(hold_time, PlaceholderPoses.add(poses.windup, poses.windup_hold)))
 	keys.append(_k(startup, poses.strike))
 	var strike_end := poses.strike if poses.strike_end.is_empty() else poses.strike_end
 	if move.active > 0:
@@ -330,6 +358,18 @@ static func windup_time(move: MoveData, poses: PlaceholderPoses.MovePoses = null
 	if poses == null:
 		poses = _poses_for(move)
 	return move.startup * FRAME_S * clampf(poses.windup_at, 0.05, 0.95)
+
+
+## Seconds into `move`'s animation where its held wind-up key is (MovePoses.windup_hold_at,
+## clamped to 0.05-0.95 of the startup), or -1 when the recipe has none or the hold would not
+## lie after the wind-up key. `poses` defaults to the move's recipe (or its fallback).
+static func windup_hold_time(move: MoveData, poses: PlaceholderPoses.MovePoses = null) -> float:
+	if poses == null:
+		poses = _poses_for(move)
+	if poses.windup_hold_at < 0.0:
+		return -1.0
+	var hold := move.startup * FRAME_S * clampf(poses.windup_hold_at, 0.05, 0.95)
+	return hold if hold > windup_time(move, poses) + 1e-6 else -1.0
 
 
 static func _poses_for(move: MoveData,

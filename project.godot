@@ -12,7 +12,7 @@ config_version=5
 
 config/name="Beat-em-Up PoC"
 config/description="First-person beat-em-up proof of concept."
-run/main_scene="res://game/level/test_room.tscn"
+run/main_scene="res://game/level/crowd_room.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 
 [autoload]
@@ -57,6 +57,13 @@ enabled=PackedStringArray("res://addons/gut/plugin.cfg")
 3d_render/layer_2="fp_hidden"
 3d_render/layer_3="debug"
 
+[navigation]
+
+3d/default_cell_height=0.1
+avoidance/thread_model/avoidance_use_multiple_threads=false
+world/map_use_async_iterations=false
+world/region_use_async_iterations=false
+
 [physics]
 
 3d/physics_engine="Jolt Physics"
@@ -64,6 +71,8 @@ common/physics_ticks_per_second=60
 common/max_physics_steps_per_frame=8
 
 [rendering]
+
+textures/vram_compression/import_etc2_astc=true
 
 renderer/rendering_method="forward_plus"
 anti_aliasing/quality/msaa_3d=2

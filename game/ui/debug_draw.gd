@@ -11,7 +11,16 @@ extends Node3D
 ##   - the block arc in cyan while an actor guards (CombatActor.get_block_arc()): the
 ##     covered angle at chest height, dimmed while the guard is rising or dropping,
 ##   - each actor's debug_state_text() as a billboard Label3D above its head; labels of
-##     actors side by side that would print over each other are stacked (_stack_labels()).
+##     actors side by side that would print over each other are stacked (_stack_labels()),
+##   - the enemy AI (Milestone 3), only while an EnemyDirector and AI enemies (group
+##     "ai_enemy") are in the scene, read from the director's debug API and never written:
+##     a magenta ring at the feet of each attack-token holder and a line from its chest to the
+##     player's, a small orange circle at each posturing enemy's slot with a dim line to it,
+##     the posture ring around the player (lavender, at the ankles), the player's view
+##     boundary (blue floor lines at rear_warning_angle_deg off the look) and the "both
+##     corners" sector directly behind (pink lines at rear_warning_behind_deg), so blind-spot
+##     priority and the rear warning can be judged from the side view and free fly, and each
+##     enemy's current navigation path (violet).
 ## Hurtboxes and labels hugging the active camera are skipped, so the player's own head
 ## does not wrap the first-person view. Actors come from group "actor". Reads only; never
 ## writes simulation state. Processes after the cameras (HudStyle.PROCESS_PRIORITY), so
@@ -34,6 +43,22 @@ const HALF_CIRCLE_SEGMENTS := 12
 @export var cone_color: Color = Color(1.0, 0.88, 0.1)
 @export var target_color: Color = Color(1.0, 1.0, 0.65)
 @export var block_color: Color = Color(0.15, 0.95, 1.0)
+## The enemy AI layer (see above). Each color is its own, since the tests count lines by color.
+@export var token_color: Color = Color(1.0, 0.2, 0.9)
+@export var slot_color: Color = Color(1.0, 0.6, 0.15)
+@export var ring_color: Color = Color(0.5, 0.58, 0.95)
+@export var view_color: Color = Color(0.2, 0.42, 1.0)
+@export var behind_color: Color = Color(1.0, 0.5, 0.65)
+@export var path_color: Color = Color(0.72, 0.5, 1.0)
+## Alpha of the line from a posturing enemy to its slot.
+@export var slot_line_alpha: float = 0.4
+## Radius (meters) of a slot's circle, and how far past a token holder's body its ring is.
+@export var slot_radius: float = 0.3
+@export var token_ring_margin: float = 0.25
+## Length (meters) of the view-boundary and behind-sector lines on the floor.
+@export var view_line_length: float = 6.0
+## Height above the floor the AI layer's floor marks are drawn at (meters), so they clear it.
+@export var floor_lift: float = 0.05
 ## Radius (meters) the block arc is drawn at around a guarding actor, and its height band
 ## above the feet.
 @export var block_arc_radius: float = 1.1
@@ -166,6 +191,7 @@ func rebuild() -> void:
 			seen[actor.get_instance_id()] = true
 			order.append(actor)
 		_stack_labels(order)
+		_add_ai_layer()
 	for id: int in _labels.keys():
 		if not seen.has(id):
 			var label := _labels[id]
@@ -173,6 +199,70 @@ func rebuild() -> void:
 				label.queue_free()
 			_labels.erase(id)
 	_flush()
+
+
+## The enemy AI layer: token holders, posture slots, the posture ring, the view boundary and
+## the behind sector, and navigation paths. Nothing without a director and AI enemies, so a
+## room without them draws what it always did.
+func _add_ai_layer() -> void:
+	var director := EnemyDirector.find(get_tree())
+	var enemies := get_tree().get_nodes_in_group(&"ai_enemy")
+	if director == null or enemies.is_empty():
+		return
+	var player := get_tree().get_first_node_in_group(&"player") as PlayerCharacter
+	if player != null and player.is_inside_tree():
+		_add_player_marks(player, director.debug_ring())
+	for holder: EnemyActor in director.debug_token_holders():
+		if is_instance_valid(holder) and holder.is_inside_tree() and not holder.is_gone():
+			_add_token_mark(holder, player)
+	for node: Node in enemies:
+		var enemy := node as EnemyActor
+		if enemy == null or not enemy.is_inside_tree() or enemy.is_gone():
+			continue
+		var slot := director.debug_slot_of(enemy)
+		if slot.is_finite():
+			var lifted := Vector3.UP * floor_lift
+			_add_circle(Transform3D(Basis(), slot + lifted), Vector3.ZERO, Vector3.RIGHT, Vector3.BACK,
+					slot_radius, slot_color, 0.0, TAU, CIRCLE_SEGMENTS)
+			_add_line(enemy.global_position + lifted, slot + lifted, Color(slot_color, slot_line_alpha))
+		_add_nav_path(enemy)
+
+
+## The posture ring (`ring` = nearest and furthest, meters) at the player's feet, the view
+## boundary (rear_warning_angle_deg off the look, both ways) and the behind sector (within
+## rear_warning_behind_deg of directly behind), as floor lines from the player.
+func _add_player_marks(player: PlayerCharacter, ring: Vector2) -> void:
+	var feet := player.global_position + Vector3.UP * floor_lift
+	var xform := Transform3D(Basis(), feet)
+	for radius: float in [ring.x, ring.y]:
+		if radius > 0.0:
+			_add_circle(xform, Vector3.ZERO, Vector3.RIGHT, Vector3.BACK, radius, ring_color, 0.0, TAU,
+					CIRCLE_SEGMENTS)
+	var tuning := Tuning.data
+	var edge := deg_to_rad(tuning.rear_warning_angle_deg)
+	var behind := deg_to_rad(tuning.rear_warning_behind_deg)
+	for offset: float in [edge, -edge]:
+		_add_line(feet, feet + ViewGeometry.forward(player.look_yaw + offset) * view_line_length, view_color)
+	for offset: float in [PI - behind, PI + behind]:
+		_add_line(feet, feet + ViewGeometry.forward(player.look_yaw + offset) * view_line_length, behind_color)
+
+
+## A ring at a token holder's feet, and a line from its chest to the player's.
+func _add_token_mark(holder: EnemyActor, player: PlayerCharacter) -> void:
+	var feet := Transform3D(Basis(), holder.global_position + Vector3.UP * floor_lift)
+	_add_circle(feet, Vector3.ZERO, Vector3.RIGHT, Vector3.BACK, holder.body_radius + token_ring_margin,
+			token_color, 0.0, TAU, CIRCLE_SEGMENTS)
+	if player != null and player.is_inside_tree():
+		_add_line(holder.get_chest_position(), player.get_chest_position(), token_color)
+
+
+## The enemy's current navigation path as a polyline (nothing without an agent or a path).
+func _add_nav_path(enemy: EnemyActor) -> void:
+	for node: Node in enemy.find_children("*", "NavigationAgent3D", false, false):
+		var path := (node as NavigationAgent3D).get_current_navigation_path()
+		for i: int in range(1, path.size()):
+			_add_line(path[i - 1] + Vector3.UP * floor_lift, path[i] + Vector3.UP * floor_lift, path_color)
+		return
 
 
 func _apply_enabled() -> void:

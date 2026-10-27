@@ -19,6 +19,8 @@ signal health_changed(actor: Node3D, health: float, max_health: float)
 signal actor_state_changed(actor: Node3D, old_state: int, new_state: int)
 signal grabbed(holder: Node3D, victim: Node3D)
 signal released(holder: Node3D, victim: Node3D)
+## A held victim broke free by mashing (CombatActor.break_free(), Milestone 3).
+signal grab_escaped(victim: Node3D, holder: Node3D)
 signal thrown(holder: Node3D, victim: Node3D)
 signal weapon_picked_up(actor: Node3D, weapon: Node3D)
 signal weapon_thrown(actor: Node3D, weapon: Node3D)
@@ -34,3 +36,6 @@ signal blocked(defender: Node3D, hit: HitInfo)
 signal perfect_blocked(defender: Node3D, hit: HitInfo)
 signal guard_broken(defender: Node3D, hit: HitInfo)
 signal guard_changed(actor: Node3D, guard: float, max_guard: float)
+## A boss entered a new phase (Milestone 3): 1 at spawn is implicit, so this fires on entering
+## phase 2.
+signal boss_phase_changed(boss: Node3D, phase: int)

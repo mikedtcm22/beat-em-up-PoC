@@ -7,8 +7,8 @@ A first-person beat-em-up proof of concept in Godot 4.7.2 (GDScript with static 
 2. Then read the current milestone plan in `docs/milestones/` and the parts of ARCHITECTURE.md your task touches.
 
 ## Run, test, look
-- **Play:** `godot --path .`. The main scene is the test room.
-- **Tests:** `tools/run_tests.sh` runs all GUT tests headless in about 6 s, using `--fixed-fps 60` so frame-timed tests are deterministic. `-gselect=<file>` runs one file. Read the full output for `SCRIPT ERROR` and `ERROR`.
+- **Play:** `godot --path .`. The main scene is the crowd room (Milestone 3); F6 switches to the training room.
+- **Tests:** `tools/run_tests.sh` runs all GUT tests headless in about 90 s, using `--fixed-fps 60` so frame-timed tests are deterministic. `-gselect=<file>` runs one file. Read the full output for `SCRIPT ERROR` and `ERROR`.
 - **Look at it:**
   - `tools/capture_combos.sh "<act title text>" 6` records combo-bot acts (`tests/bot/combo_bot.gd`) with Movie Maker into `captures/combos.avi`, plus `captures/bot.log` with the hits per act.
   - Tile stills with `ffmpeg -i captures/combos.avi -vf "fps=6,scale=480:-1,tile=5x4" -frames:v 1 sheet.png` and view them.
@@ -39,7 +39,7 @@ A first-person beat-em-up proof of concept in Godot 4.7.2 (GDScript with static 
 - Never commit `captures/`.
 
 ## Handoff protocol (every usage limit)
-A low-cost **usage-watcher** session paces itself. It checks the plan usage every 20 minutes below 70%, every 10 minutes up to 85% and every 5 minutes above that. At 90% of the 5-hour window or of the weekly limit, or sooner on a fast burn, it messages the working session to halt work and hand off. Work up to that 90% handoff; don't stop early. Size each launch to the headroom left below 90%. When a new phase or milestone doesn't fit, split off a first task that does, run it, and hand off at 90%. The rules and measured costs are in docs/HANDOFF.md, under "Usage rules for the working session".
+A low-cost **usage-watcher** session paces itself. It checks the plan usage every 30 minutes below 70%, every 15 minutes up to 85% and every 5 minutes above that (the account is a premium seat since 2026-10-25). At 90% of the 5-hour window or of the weekly limit, or sooner on a fast burn, it messages the working session to halt work and hand off. Work up to that 90% handoff; don't stop early. Size each launch to the headroom left below 90%. When a new phase or milestone doesn't fit, split off a first task that does, run it, and hand off at 90%. The rules and measured costs are in docs/HANDOFF.md, under "Usage rules for the working session".
 
 On that message, or whenever you're near a limit:
 1. Stop starting new work.
@@ -50,7 +50,7 @@ On that message, or whenever you're near a limit:
    - exact resume steps;
    - decisions since the last update;
    - anything Game-boy is waiting on.
-4. Commit and push HANDOFF.md. Tell Game-boy the handoff is done.
+4. Commit and push HANDOFF.md, then create the one-time resume task (HANDOFF.md, "Resume after a limit"), so the work restarts by itself after the reset. DM Game-boy on Slack only if something needs him.
 
 Also update HANDOFF.md at every phase boundary, so a hard stop never loses more than one phase.
 

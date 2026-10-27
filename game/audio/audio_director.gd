@@ -25,16 +25,23 @@ extends Node
 ## - **Blocks** (a hit_landed with `hit.blocked`): whoosh + block clack; a perfect block
 ##   plays the parry ting instead of the clack; a guard break adds the guard-break crash.
 ##   No grunt.
+## - **Armor** (a hit_landed with `hit.armor_absorbed`: a light hit on the Bruiser or the boss): the
+##   swing's whoosh and the block clack pitched down by `armor_clank_pitch` (a clank, `armor_clank_db`
+##   on top of the clack's own). No thud, no grunt: the hit registered and did nothing.
 ## - **Whiffs** (`attack_whiffed`): a whoosh at the striking limb, no impact.
 ## - **Wind-ups** (`windup_started`, while `Tuning.rear_warning_audio`): an effort grunt
 ##   and a whoosh at the attacker, so the player hears where an attack is coming from. A
 ##   wind-up knocked out of (`windup_ended` interrupted) cuts both: the effort would talk
 ##   over the pain grunt that follows.
+## - **Breaking free of a grab** (`grab_escaped`): a whoosh and a block clack at the holder's chest
+##   (the grip knocked off and the holder shoved away) and the holder's grunt, `grab_break_db`
+##   louder: the player's reward for the mash.
 ## - **Music:** a placeholder loop while `Tuning.music_enabled` (off by default).
 ##
 ## Every one-shot takes a random variant of its pool, never the pool's last one, with its
 ## pitch and volume varied by up to `sfx_pitch_variation` / `sfx_volume_variation` (±8%).
-## With every voice busy, the sound started longest ago gives way. The listener rides the
+## With every voice busy, the sound started longest ago gives way, a wind-up cue still
+## sounding for its attacker's wind-up last (it may be the only warning). The listener rides the
 ## player's eyes and look, in every camera mode. A sound plays at its layer's volume within
 ## `sfx_unit_size_m` of it, 6 dB quieter each time the distance doubles beyond that
 ## (updated every frame), and not at all beyond `sfx_max_distance_m`. Sounds more than
@@ -81,7 +88,8 @@ const LAYER_DB: Dictionary = {
 
 ## Pooled one-shot voices; with all of them busy, a new sound takes the one started longest
 ## ago. A voice budget, not a feel number: a synthetic six-enemy brawl (three attackers on
-## the player, the player's chains, a three-body finisher every 2 s) peaks at about 30.
+## the player, the player's chains, a three-body finisher every 2 s) peaks at about 30, and
+## tests/test_audio_crowd.gd measures it with six wind-ups sounding on top.
 @export var voice_count: int = 32
 ## The listener rides the player's eyes and look, so every camera (the debug views too)
 ## hears what the player would. Off, or with no player, the active camera hears.
@@ -99,6 +107,9 @@ var _base_db: Array[float] = []
 var _started: Array[int] = []
 ## Instance id of the actor whose wind-up each voice is sounding (0: none).
 var _windup_of: Array[int] = []
+## Wind-up cues taken over by another sound while their wind-up was still running (only when
+## every voice held one): the probe's R14, 0 in a healthy crowd fight.
+var windup_voices_stolen: int = 0
 var _plays: int = 0
 var _next: int = 0
 ## The swing the last hit came from (attacker instance id, physics frame), and the victims
@@ -149,6 +160,7 @@ func _ready() -> void:
 	CombatEvents.attack_whiffed.connect(_on_attack_whiffed)
 	CombatEvents.windup_started.connect(_on_windup_started)
 	CombatEvents.windup_ended.connect(_on_windup_ended)
+	CombatEvents.grab_escaped.connect(_on_grab_escaped)
 	_follow_player()
 	_apply_mix()
 
@@ -239,6 +251,11 @@ func _on_hit_landed(hit: HitInfo) -> void:
 		if hit.guard_broken:
 			play(&"guard_break", at, tuning.guard_break_db + gain)
 		return
+	if hit.armor_absorbed:
+		if swung:
+			play(&"whoosh", at, tuning.whoosh_db + gain)
+		play(&"block_clack", at, tuning.block_clack_db + tuning.armor_clank_db + gain, tuning.armor_clank_pitch)
+		return
 	for pool: StringName in TIER_LAYERS.get(hit.tier, []):
 		if pool == &"whoosh" and not swung:
 			continue
@@ -259,24 +276,42 @@ func _on_windup_started(attacker: Node3D, move: MoveData) -> void:
 	if attacker == null or not tuning.rear_warning_audio:
 		return
 	var id := attacker.get_instance_id()
-	for voice: AudioStreamPlayer3D in [
-		play(&"effort", _voice_position(attacker), tuning.windup_db, voice_pitch(attacker)),
-		play(&"whoosh", _strike_position(attacker, move), tuning.windup_db),
-	]:
-		if voice:
-			_windup_of[_voices.find(voice)] = id
+	# Each cue is tagged as the attacker's wind-up the moment it starts, so the next one cannot
+	# take it over.
+	var effort := play(&"effort", _voice_position(attacker), tuning.windup_db, voice_pitch(attacker))
+	if effort:
+		_windup_of[_voices.find(effort)] = id
+	var whoosh := play(&"whoosh", _strike_position(attacker, move), tuning.windup_db)
+	if whoosh:
+		_windup_of[_voices.find(whoosh)] = id
 
 
-## A wind-up knocked out of (a hit, a grab) cuts its effort and whoosh at once.
+## A wind-up knocked out of (a hit, a grab) cuts its effort and whoosh at once. One that ends
+## in its strike lets them ring out, and they stop being protected from voice stealing: the
+## warning they were is over.
 func _on_windup_ended(attacker: Node3D, interrupted: bool) -> void:
-	if not interrupted or attacker == null:
+	if attacker == null:
 		return
 	var id := attacker.get_instance_id()
 	for i in _voices.size():
 		if _windup_of[i] == id:
 			_windup_of[i] = 0
-			if _voices[i].playing:
+			if interrupted and _voices[i].playing:
 				_voices[i].stop()
+
+
+## A held player mashed free of an enemy's grab: the grip tears off with a whoosh and a clack at
+## the holder's chest, and the holder grunts as it is shoved away (existing pools, played
+## `grab_break_db` louder).
+func _on_grab_escaped(_victim: Node3D, holder: Node3D) -> void:
+	if holder == null or not is_instance_valid(holder):
+		return
+	var tuning := Tuning.data
+	var actor := holder as CombatActor
+	var at := actor.get_chest_position() if actor and actor.rig else holder.global_position
+	play(&"whoosh", at, tuning.whoosh_db + tuning.grab_break_db)
+	play(&"block_clack", at, tuning.block_clack_db + tuning.grab_break_db)
+	_grunt(holder)
 
 
 # --- Helpers -----------------------------------------------------------------------------
@@ -311,12 +346,17 @@ static func layer_db(pool: StringName) -> float:
 	return float(Tuning.data.get(LAYER_DB[pool]))
 
 
-## `actor`'s voice pitch: 1 plus a fixed share (from its name) of ±voice_pitch_spread.
+## `actor`'s voice pitch: 1 plus a fixed share (from its name) of ±voice_pitch_spread, times
+## its `voice_pitch_mult` when it has one (a Bruiser's or the boss's deeper voice).
 static func voice_pitch(actor: Node) -> float:
 	var spread := Tuning.data.voice_pitch_spread
 	var voice := RandomNumberGenerator.new()
 	voice.seed = hash(str(actor.name))
-	return 1.0 + voice.randf_range(-spread, spread)
+	var pitch := 1.0 + voice.randf_range(-spread, spread)
+	var mult: Variant = actor.get(&"voice_pitch_mult")
+	if mult is float and mult > 0.0:
+		pitch *= mult
+	return pitch
 
 
 func _grunt(actor: Node3D) -> void:
@@ -377,8 +417,9 @@ func _first_victim_of_swing(hit: HitInfo) -> bool:
 	return false
 
 
-## The index of a free voice, else of the busy one started longest ago (stopped). Searching
-## from the last one taken keeps a voice's tail free as long as possible.
+## The index of a free voice, else of the busy one started longest ago (stopped), a wind-up
+## cue whose wind-up is still running last: in a crowd it may be the only warning of an attack
+## from behind. Searching from the last one taken keeps a voice's tail free as long as possible.
 func _take_voice() -> int:
 	var n := _voices.size()
 	for k in n:
@@ -386,10 +427,17 @@ func _take_voice() -> int:
 		if not _voices[index].playing:
 			_next = (index + 1) % n
 			return index
-	var oldest := 0
+	var oldest := -1
 	for i in n:
-		if _started[i] < _started[oldest]:
+		if _windup_of[i] == 0 and (oldest < 0 or _started[i] < _started[oldest]):
 			oldest = i
+	if oldest < 0:
+		# Every voice is a live wind-up cue: the oldest of them gives way.
+		windup_voices_stolen += 1
+		oldest = 0
+		for i in n:
+			if _started[i] < _started[oldest]:
+				oldest = i
 	_voices[oldest].stop()
 	return oldest
 

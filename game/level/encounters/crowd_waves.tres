@@ -1,0 +1,8 @@
+[gd_resource type="Resource" script_class="EncounterTable" format=3]
+
+[ext_resource type="Script" path="res://game/level/encounter_table.gd" id="1_table"]
+
+[resource]
+script = ExtResource("1_table")
+waves = Array[PackedStringArray]([PackedStringArray("punk", "punk"), PackedStringArray("punk", "punk", "punk", "punk"), PackedStringArray("punk", "kicker", "punk", "thug", "punk", "punk"), PackedStringArray("bruiser", "punk", "kicker", "punk"), PackedStringArray("thug", "kicker", "punk", "punk", "kicker", "punk")])
+boss_wave = PackedStringArray("boss")

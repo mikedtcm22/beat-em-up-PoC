@@ -1,0 +1,121 @@
+{
+ "packages": [
+  {
+   "key": "enemy-ai-ring-and-tokens",
+   "title": "Enemy AI: walk round the ring, Kickers off the shared seats, resume in place after a reaction (boss stun-lock), beckon protection, detours, held-Bruiser armor, boss call-in hold",
+   "finding_ids": [
+    "final-fair-01",
+    "final-crowd-02",
+    "final-crowd-03",
+    "final-tells-05",
+    "final-fair-04",
+    "final-code-01",
+    "final-code-03",
+    "final-code-02",
+    "final-code-06"
+   ],
+   "files": [
+    "game/enemies/enemy_actor.gd",
+    "game/enemies/enemy_director.gd",
+    "game/enemies/kicker/kicker.gd",
+    "game/enemies/boss/boss.gd",
+    "game/enemies/boss/boss.tscn",
+    "game/enemies/bruiser/bruiser.gd (only if needed)",
+    "game/level/crowd_room.gd (only if needed)",
+    "game/autoload/tuning_data.gd (Enemies group: the Posture, Navigation, Director, Kicker, Bruiser and Boss subgroups only)",
+    "tests/test_enemy_actor.gd",
+    "tests/test_enemy_director.gd",
+    "tests/test_kicker.gd",
+    "tests/test_bruiser.gd",
+    "tests/test_boss.gd",
+    "tests/test_slice_crowd.gd",
+    "docs/milestones/M3-calls/P1-ai.md",
+    "docs/milestones/M3-calls/P1-director.md",
+    "docs/milestones/M3-calls/P2-kicker.md",
+    "docs/milestones/M3-calls/P3-bruiser.md",
+    "docs/milestones/M3-calls/P3-boss.md",
+    "docs/milestones/M3-calls/final-enemy-ai.md (new)"
+   ],
+   "notes": "Shared root cause. Three things combine. (1) APPROACH and RECOVER walk the navmesh chord straight to the slot (_travel/_path_direction), and the player is only a 0.3 m RVO obstacle. (2) The director reshuffles seats: Kickers are seated rear-first and the whole ring turns toward look_yaw+180 (_assign_slots 491-497, _match_slots 547-563), and newcomers weigh the same as incumbents. (3) Every reaction ends in _enter_approach, and only POSTURE may ask for a token (wants_token 197-202). Design one coherent fix:\n(a) crowd-02, fair-04, tells-05 walk. Move the Kicker's ring-orbit carrot (_posture_target, _enter_posture, _orbit_*) into EnemyActor for every archetype in APPROACH and RECOVER. Inside posture_ring_min_m, or with the slot more than about 60 degrees round, the enemy backs out radially to the ring facing the player, then travels the arc. Drop the duplicate overrides from kicker.gd and keep test_kicker's flank and waypoint tests green. Navmesh-check orbit points so none falls inside the car. _start_detour must not pick a blocked side again: alternate it on repeat stalls, or check clearance.\n(b) fair-01. An enemy whose reaction ends inside the ring or its strike range resumes in POSTURE where it stands, eligible for a token, instead of walking to a slot 2.5-4 m away. Do this at least for the boss. A boss-only override is acceptable if the base change upsets the Punk: test_enemy_actor.gd:877 asserts 'free again: back to its slot'. Change that assertion only deliberately, and log the call. Consider a wake-up rule: the boss gets priority for the next token after it gets up. Do NOT add a poise or post-get-up armor window. That is a new armor rule beyond SPEC section 7 and the boss heavy-hit departure still awaiting a ruling, so it needs Game-boy. If the AI fix alone doesn't let the boss attack, write the poise idea as a proposal in the call file. Re-measure with the full autopilot against the boss, seeds 0-2: the boss should land several attacks and the kill should take well over 40 s. Fix P3-boss.md line 51 and P1-ai call 20 yourself. Write corrected wording for README line 85, M3-judgement-calls line 71 and P4-int call 12 in final-enemy-ai.md, because the lead owns those files.\n(c) crowd-03. Kickers must not consume the non-Kickers' seats. Non-Kickers keep a stable minimum-movement ring: no whole-ring turn for Kickers, and no rear-first bumping. Each Kicker gets its own seat behind the look. Both the turn and the rear-first seating contribute, so a swap with the occupant alone won't pass. Gate, in a fought mixed six over seeds 0-2: posture at least about 1.5 of 6, the Kicker's blind-side share unchanged at 60-90%, and APPROACH-caused lens samples over half near the six-Punk level. Assert this in test_slice_crowd.gd.\n(d) tells-05. In _tick_posture, let a taunt in progress finish before acting on 'strayed'. In _assign_slots, weight newcomers (enemies with no claim) below incumbents, so the call-in can't flip the boss 180 degrees. Test in test_boss.gd: phase 2 from POSTURE plays the beckon for its full length, and the boss's flat distance stays at least posture_ring_min_m - 0.5 during the following APPROACH.\n(e) code-01. _apply_armor returns early when state == GRABBED and hit.attacker == holder. This is worse than the finding says: armor_heavy_to_stagger turns the throw's THROWN into STAGGER and leaves the Bruiser pinned to a player who has let go. Add tests in test_bruiser.gd: the knee jolts with no ARMOR, and the throw throws.\n(f) code-02. Boss._tick_adds returns before its countdown while GameInput.menu_open. Do not gate on ai_frozen. Add a test.\n(g) code-06. Move voice_pitch_mult 0.7 from Boss._init to boss.tscn, as in bruiser.tscn.\n(h) code-03, tests and comments only. Add a Kicker strafe test where the slot-seeking direction differs from the edge-ward one. Add a test that a walking, braced Bruiser with the AI on keeps its brace clip (_animate_legs). Update the contract comment at enemy_actor.gd:35-37. The hook-promotion refactor is out of scope; combat_actor.gd belongs to the instruments package. Put ARCHITECTURE line 455 wording in the call file.\nDo NOT touch the boss pound pose or the pound choice in _choose_attack: the boss-poses package owns the pose, and the lead adds a range gate after merge if it reports one is needed. test_m3_done_when.gd and the probe belong to the instruments package. Its code-05 change shifts R8 sampling, so compare numbers relatively. New tunables go in as @export_range in the listed subgroups only; the lead regenerates tuning/default.json and owns README, ARCHITECTURE and M3-judgement-calls."
+  },
+  {
+   "key": "boss-poses-and-pipe-rest",
+   "title": "Boss strike poses that dive the cap into the lens (pound and slam), and a dropped or thrown pipe that never settles",
+   "finding_ids": [
+    "final-tells-01",
+    "final-tells-02",
+    "final-tells-04"
+   ],
+   "files": [
+    "game/actors/poses/enemy_poses_boss.gd",
+    "game/actors/poses/grab_poses.gd",
+    "game/enemies/enemy_hold.gd",
+    "game/weapons/weapon.gd",
+    "game/enemies/thug/pipe_thug.gd",
+    "tools/gen_moves.gd and the regenerated move .tres files (only if the pound or slam timing must change)",
+    "game/autoload/tuning_data.gd (the 'Grab and weapons' group's weapon values, and the Pipe Thug and Enemy grabs subgroups only)",
+    "tests/test_enemy_moves_boss.gd",
+    "tests/test_enemy_moves_grab.gd",
+    "tests/test_player_grabbed.gd",
+    "tests/test_pipe_thug.gd",
+    "tests/test_boss_close_lens.gd (new)",
+    "docs/milestones/M3-calls/P2-thug.md",
+    "docs/milestones/M3-calls/P2-grab.md",
+    "docs/milestones/M3-calls/final-poses.md (new)"
+   ],
+   "notes": "Shared root cause for tells-01 and tells-04: the 2.3 m boss's strike keys fold the torso about 72 degrees forward, so the head and cap dive to lens height. The lens was only checked at 2.2 m (the pound) and up to 80% of the follow-up's wind-up (the slam).\n- tells-01. Re-author EnemyPosesBoss._pound's strike and strike_end keys: a deep squat with the spine near vertical, the head over the hips, and the fists driven down between the knees. Keep these intact: the held overhead wind-up key, the joint limits, and reach_m within 0.15 m of the measured strike (the rig tests in test_enemy_moves_boss.gd). Add the A6.3 0.25 m clearance check with the player at 0.9, 1.1 and 1.3 m, from the wind-up's held key through the hitstop. Put it in a NEW file, tests/test_boss_close_lens.gd: test_boss.gd belongs to the enemy-AI package, so copy its _nearest_to_the_lens and FPView.nearest_mesh setup. Leave the existing 2.2 m test alone. If no pose clears 0.9 m (the player stands at about 1.05 m after magnetism), give the numbers in final-poses.md. The fallback, excluding the pound under about 1.4 m in Boss._choose_attack, is the lead's to add after merge. Put the correction to P3-boss.md call 11 in final-poses.md (the enemy-AI package owns P3-boss.md).\n- tells-04. Re-author GrabPoses._slam so the head stays back and the arms and a torso turn carry the throw, for example swinging the held player up and to one side so the victim's view lurches before the release. Alternatively, release at the top of the lift with an up-and-back THROWN knockback (enemy_hold.gd). It must not read as the Bruiser's headbutt from the lens. Extend test_player_grabbed.gd's held-view clearance check to the whole slam follow-up, up to its strike frame; keep the headbutt's deliberate dive exempt. Judge both poses from first-person captures (tile sheets plus corner crops), not only from tests.\n- tells-02. Weapon._set_ground_physics serves both drop() and throw_from(). Give the grounded pipe a resting state: for example strong angular and linear damping, or a rotation lock except yaw once it is on the floor, and let it sleep. Thrown pipes must settle too. All values go in as @export_range: weapon-wide ones in 'Grab and weapons', drop-push ones in the Pipe Thug subgroup. Add tests in test_pipe_thug.gd: the pipe is within pickup_range and at rest 5 s after a drop, and a thrown pipe also comes to rest. Correct P2-thug call 1: the 0.64-1.03 m rest was measured while the pipe was still rolling.\nThe lead regenerates tuning/default.json. Don't touch boss.gd, test_boss.gd or combat_actor.gd."
+  },
+  {
+   "key": "lens-floor-and-warning-size",
+   "title": "Presentation: keep the first-person lens above the floor in face-down knockdowns, and keep the heavy rear-warning burst larger inside the corner clamp",
+   "finding_ids": [
+    "final-crowd-01",
+    "final-warn-01"
+   ],
+   "files": [
+    "game/camera/first_person_camera.gd",
+    "game/ui/rear_warning.gd",
+    "game/autoload/tuning_data.gd (the Camera group, KO view subgroup included, and the Rear warning group only)",
+    "tests/test_cameras.gd",
+    "tests/test_ko_view.gd",
+    "tests/test_ui.gd",
+    "tests/test_rear_warning.gd",
+    "docs/milestones/M3-calls/P1-hud.md",
+    "docs/milestones/M3-calls/final-presentation.md (new)"
+   ],
+   "notes": "- crowd-01 is a bug fix, not a spec change; the belly-slab view question stays Game-boy's. The lens is EyePoint plus a fixed cam_height_offset_m of -0.2 with no floor, so a face-down eye at 0.15 m puts it inside the floor box. Clamp the live lens y to the floor under the player plus a clearance: a new @export_range in the Camera group, about 0.13 m (near plane 0.05 plus a 0.08 margin). Apply the clamp before _ko_view_mix, so the KO blend is unchanged. For the floor, use player.global_position.y when grounded, or a ray down from EyePoint (never from the lens) on the world layer. _view_with is static and serves view_from_eye() for tests, so null-guard any get_world_3d use. Make it smooth: no pop at the clamp's edges. Add a test in test_ko_view.gd or test_cameras.gd: knock the real player down from 90, 135 and 180 degrees with a real hit, and assert lens y >= 0.05 m on every frame of LAUNCHED, DOWNED and GETUP, through update_camera(). A face-up knockdown must move less than about 2 cm. Confirm from a first-person still of a face-down knockdown that the floor is visible. Presentation only: never write game state.\n- warn-01 needs no spec change: it restores SPEC section 8's 'larger for the Bruiser and boss'. Today grunt and heavy are clamped independently to 0.2 x min(w,h). Instead, cap the pre-heavy size at edge / rear_warning_heavy_scale and draw a heavy as the capped grunt x heavy_scale. Treat steady and pop frames the same way, so a heavy pop is never smaller than a grunt pop. The steady defaults stay as they are (heavy 208 px < 216 at 1080p). Leave the default heavy pop clip as it is; changing it means changing the P1-hud defaults. Log it in P1-hud.md, along with the fact that the slider's upper range saturates, which the plan's binding 20% x 20% corner makes inherent (M3-plan.md:166). Do not narrow the @export_range: its ceiling depends on base_px and heavy_scale. At heavy_scale 1.0, equal sizes are fine. Add a test on a 16:9 1920x1080 canvas: for every size from the slider's min to its max, steady and at the pulse peak, heavy > grunt when heavy_scale > 1, and both stay inside the corner.\nPut ARCHITECTURE wording in final-presentation.md. The lead regenerates tuning/default.json and owns test_tuning_panel.gd."
+  },
+  {
+   "key": "instruments-and-evidence",
+   "title": "Instruments: the checker's between-acts false FAIL, per-PID test files, act-relative probe sampling, freed-holder release signal, honest perf columns, mixed-wave and boss-wave acts",
+   "finding_ids": [
+    "final-crowd-04",
+    "final-fair-05",
+    "final-code-04",
+    "final-code-05",
+    "final-perf-02",
+    "final-perf-01"
+   ],
+   "files": [
+    "tests/bot/acts/crowd_acts.gd",
+    "tests/bot/crowd_bot.gd",
+    "tests/bot/readability_probe.gd",
+    "tests/bot/warning_oracle.gd",
+    "tools/check_m3_log.py",
+    "game/level/encounter_spawner.gd (a public start-at-wave hook only)",
+    "game/actors/combat_actor.gd (the release_from_grab emit guard only)",
+    "tests/test_m3_done_when.gd",
+    "tests/test_check_m3_log.gd",
+    "tests/test_readability_probe.gd",
+    "tests/test_warning_oracle.gd",
+    "tests/test_encounter_spawner.gd",
+    "tests/test_m3_contracts.gd",
+    "docs/milestones/M3-calls/P4-int.md",
+    "docs/milestones/M3-calls/P1-instruments.md",
+    "docs/milestones/M3-calls/final-instruments.md (new)"
+   ],
+   "notes": "- fair-05. In check_m3_log.py, keep the act header's frame (ACT_HEADER already captures it) as act_frame, and skip as outside any WARN-CHECK whose frame < act_frame; keep the measuring flag too. Fix the source as well: the oracle ignores wind-ups while !_open, or start_act clears _live and _settling. Add tests in test_check_m3_log.gd (a wind-up in the gap that is printed after the next header does not FAIL) and in test_warning_oracle.gd.\n- code-04. Suffix user:// test paths with OS.get_process_id(), as test_tuning_panel.gd does (test_check_m3_log's log, test_readability_probe's probe_test), and clean them up in after_all. Give the probe an out_dir hook that _exit_tree() and write_json() use before the user:// fallback, so test_write_on_exit writes into a per-PID folder. Put ARCHITECTURE line 560/578 wording in final-instruments.md.\n- code-05. Time the lens and occlusion samples from the act's start, (frame - _start_frame) % N, not the absolute frame counter.\n- perf-01. release_from_grab emits CombatEvents.released(by if is_instance_valid(by) else null, self). The probe's _on_released and _on_grab_escaped accept null or a freed object (untyped, or Object plus is_instance_valid). Add a test in test_m3_contracts.gd: free the holder mid-hold, check that no ERROR follows and that released fires with null.\n- perf-02. Count the simulating ragdoll bodies directly: the get_ragdoll() bodies of rigs where is_ragdolling(), plus RigidBody3D pipes that are not sleeping. Otherwise drop the column. Relabel 'process' and 'physics' as the maximum over the last second, or drop them. The doc must say that the frame lines and R15 are the measure. Correct P4-int calls 14 and 20.\n- crowd-04. Add a public EncounterSpawner start-at-wave hook and test it in test_encounter_spawner.gd. Add a 'Mixed waves' act from wave 3 with the held-back autopilot for about 90 s, and a held-back boss-wave act that reaches phase 2 so the boss's attacks and adds show in a crowd. Extend test_m3_done_when.gd's waves test, or add a second one, to reach a mixed wave and assert R1, R3 and alive <= 6. Check that the acts run, one Godot process at a time. Do NOT record the evidence pack: the AI and pose packages change the numbers, so the lead records it and quotes readability.json after the merge. Fix P4-int.md's scope note.\nDon't touch the enemy AI, the boss, poses, the camera or the rear warning."
+  }
+ ],
+ "unassigned": []
+}

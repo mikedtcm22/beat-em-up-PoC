@@ -1,0 +1,37 @@
+{
+  "base": "m3/enemy-ai",
+  "concurrency": 4,
+  "note": "Merge state: m3/enemy-ai at d393a7b has S0 merged (587/587 tests, no SCRIPT ERROR; the preset regenerates unchanged at 419 values). The contracts as S0 LANDED them win over the plan's text where they differ: read docs/ARCHITECTURE.md's 'Enemy AI and the rear warning (Milestone 3)' section (the contract as landed) and docs/milestones/M3-calls/S0-scaffold.md (S0's 21 calls) first. Notable: break_free(invuln_frames := -1) reads Tuning.grab_break_invuln_frames; ViewGeometry also has forward(look_yaw); the director skeleton has may_start_windup(); tests/fixtures/stub_enemy and stub_director exist (S0 made them, so no package creates them); tests/test_m3_contracts.gd checks only that each tunable is declared in its subgroup (defaults are yours to retune: change the value in tuning_data.gd inside your own subgroup and regenerate the preset). tools/capture_bot.sh records at 1600x900 (the project's window override) at about 28% of real time. Fill ONLY your own pre-cut heading in docs/ARCHITECTURE.md. Five builders run in parallel on disjoint files (Part C §3 as amended): P1-ai, P1-director, P1-room, P1-hud, P1-instruments.",
+  "packages": [
+    {
+      "key": "P1-ai",
+      "section": "Part C §5 \"P1-ai: the enemy base and the Street Punk\", as amended by Part A §A2 (contracts as landed) and §A3.1",
+      "est": 10,
+      "note": "S0's notes for you: stub_enemy replaces every behaviour hook, has archetype &\"stub\" and no health tunable, so EnemyActor._ready() must cope with an archetype that names none (keep max_health); EnemyActor.windup_move() is a pass-through skeleton for you to replace (stub_enemy calls it). The punk_bot (training room, straight steering) is yours; the crowd room is being built in parallel by P1-room, so prove navigation with a tiny code-built navmesh arena inside your tests, per the plan. Judge the Punk's telegraph in first person at 1 m and 2.5 m from your sheets."
+    },
+    {
+      "key": "P1-director",
+      "section": "Part C §5 \"P1-director: tokens, blind-spot priority, spread\", as amended by Part A §A2.2, §A2.10 and §A3.2",
+      "est": 6,
+      "note": "Test against tests/fixtures/stub_enemy (S0's) so P1-ai's behaviour can't affect your tests after the merge. may_start_windup() enforces director_min_windup_gap_s at the wind-up start (R2) and is where you record each start."
+    },
+    {
+      "key": "P1-room",
+      "section": "Part C §5 \"P1-room: the crowd room, navigation, waves and F4 spawns\", as amended by Part A §A2.2 (waves hold while GameInput.menu_open), §A3.3 (a vehicle spawn tag behind the parked car)",
+      "est": 9,
+      "note": "S0 already made tests/fixtures/stub_enemy.gd/.tscn: don't create it; use it (and EncounterSpawner.scene_override) in your tests. The navigation codemap (docs/milestones/M3-codemap/godot-navigation.md) holds the bake recipe the spike proved; use it. Don't set run/main_scene (the lead does at the slice merge). F6 (GameInput.switch_room) already switches to res://game/level/crowd_room.tscn once it exists: check it both ways."
+    },
+    {
+      "key": "P1-hud",
+      "section": "Part C §5 \"P1-hud: the rear warning, the F3 AI overlay, the boss bar hookup, the wind-up voices\", as amended by Part A §A3.4 and Part B §B1 (the rule, exactly)",
+      "est": 8,
+      "note": "The trigger and side go through ViewGeometry.warning_corner() (S0). rear_warning_min_alpha is declared but Part B's brightness formula doesn't use it: use it or remove it (your subgroup) and log the call. You own game/ui/enemy_health_bars.gd in phase 1 for A3.4's boss-bar items. The warning is proved on TrainingDummy jabs (dummy_jab.reach_m is 1.05) in the training room; the AI isn't merged yet."
+    },
+    {
+      "key": "P1-instruments",
+      "section": "Part A §A3.5 \"P1-instruments\" (its whole brief is there), with Part B §B2 (the metrics R1-R15 and their thresholds) and §B3",
+      "est": 6,
+      "note": "Your files are new and only yours: tests/bot/readability_probe.gd, tests/bot/autopilot.gd, tests/bot/warning_oracle.gd and their three tests, plus docs/milestones/M3-calls/P1-instruments.md and the ARCHITECTURE heading 'Instruments: readability probe, autopilot, warning oracle'. Build them as plain helpers a bot can own (Node or RefCounted with an explicit API: attach(room/bot), tick, result dictionaries), duck-typed against RearWarning (P1-hud, not merged yet: corner_state(side) -> {active, count, heavy, alpha, size_px}) and against EnemyActor/EnemyDirector's S0 API. P1-int wires them into the crowd bot after the merge."
+    }
+  ]
+}

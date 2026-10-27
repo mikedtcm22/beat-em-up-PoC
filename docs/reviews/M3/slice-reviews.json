@@ -1,0 +1,329 @@
+{
+ "warn": {
+  "summary": "Lens L1 (warning correctness) at 356fccf. Every clause of Part B \u00a7B1's rule checks out against the code, the tests and new corner-crop recordings: the sides, both corners at \u00b120\u00b0 of directly behind (161\u00b0 lights both, 159\u00b0 lights left only), nothing at 55\u00b0 or less or out of range, W+ on the WU+ frame, the end on a landed or blocked hit, a whiff, an interrupt or a KO and never when the strike comes out, the brighter burst for two attackers, the larger burst for a heavy one, pause, F4's 0.25x, the finisher's slow-mo, the impact frame drawn over the HUD, the KO-view hide, and the cue's stereo direction. With real Punks, R10 holds (100%, 0 false positives, latency 0, end lag 0) across 190 wind-ups in P1-int's final run and 134 in my own run. The done-when's second half (behind-left, behind-right, directly behind) passes, with dummies and with real Punks. I found two defects. (1) Medium: a Punk that winds up 46-55\u00b0 off the look at strike range is off-screen (at most a sleeve at the edge) and gets no warning. The rule measures the bearing from the player's origin, but the lens sits ahead of the origin and SPEC \u00a75's field of view is 90\u00b0 horizontal (\u00b145\u00b0). R10 cannot see this because the oracle uses the same rule. (2) Low: in the training room, the warning comes back on at the revive while the KO view is still easing back to the eyes.",
+  "checked": [
+   "Setup: detached worktree at 356fccf (/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-slice-warn), imported; my recordings are in captures/review/; nothing committed",
+   "Read: M3-plan Part A (A2.1, A2.8, A2.14, A3.4, A3.5, A4), Part B \u00a7B1-B4, Part C \u00a72.9 and P1-hud, SPEC \u00a75 and \u00a78, ARCHITECTURE 'Rear warning and the F3 AI overlay', 'Instruments' and 'Slice integration', the judgement calls (P1-hud, P1-int, P1-instruments)",
+   "Code: game/ui/rear_warning.gd (trigger, end events, poll, KO suppression, brightness, heavy, pulses, burst_rect), game/combat/view_geometry.gd, game/ui/hud.gd (advance with game_delta x sim_scale, draw order: RearWarning above bars, log, help and callout, below the pause overlay), combat_actor.gd start_move, _advance_move (whiff at startup+active), _cancel_move and receive_hit, time_controller.gd (slow-mo delay and sim_scale), enemy_director.gd (may_start_windup, _player_closed, revive grace), audio_director.gd (wind-up cue, listener on the player's eyes and look, rear bus), player.gd look API and _revive, first_person_camera.gd (KEEP_WIDTH, KO view mix), tuning_data.gd 'Rear warning' group (no fallback reach, as A2.8 asks)",
+   "warning_bot recorded at 356fccf, all 12 'Warn:' acts (captures/review/wbot/bot.log, bot.avi); corner-crop sheets (top-left 30% | top-right 30%, every frame) for behind-left, behind-right, directly behind, the 161/159 edge, in view (50\u00b0 and 0\u00b0), out of range (2.6 m), two on the left, left+right+behind, heavy, blocked, interrupted",
+   "A review bot I wrote (tests/bot/review_warn_bot.gd, not committed): pause for 90 frames mid-wind-up; F4's 0.25x; a haymaker finisher (slow-mo plus impact frame) while a dummy behind-left winds up; KO of the player with live entries, a wind-up during the KO, a wind-up right after the revive",
+   "A review crowd bot (tests/bot/review_crowd_bot.gd), headless over Three Punks, Six Punks fight, blind spot, passive and Waves: the oracle's per-wind-up bearing, distance, reach and expected corner, and each hit on the player with the attacker's bearing and what its wind-up warned (captures/review/rcrowd.log)",
+   "An edge bot (tests/bot/review_edge_bot.gd): frozen real Punks at 0.95 m and bearings 40/45/50/54/56/60/-50\u00b0, the FP camera frustum test of origin, chest, head top and both fists, and the widget's state (captures/review/edge/bot.log, bot.avi)",
+   "P1-int captures: warn/ (log, corners.png), blind/ (log, my own corner crops at f336 and f787, full frames f760-808), passive/ log, headless_final/ (bot.log, readability.json total), the early FAIL lines in h_Six_Punks__observed_ and headless_all",
+   "Audio: stereo envelope of the wbot AVI per video frame during the behind-left, behind-right and behind wind-ups",
+   "Tests run: test_rear_warning (28/28), test_view_geometry (7/7), test_warning_oracle (20/20), test_slice_crowd (4/4), full suite (866/866, no SCRIPT ERROR or ERROR)",
+   "Edge cases in code: the same attacker winding up again (the entry is overwritten, or forgotten if the new wind-up shouldn't warn); a 'both' entry counts on both sides; re-pulse when n rises, including after the KO un-suppress; parry and blocked hits fire hit_landed; a hit during the active frames ends it by the poll (state); being grabbed ends it by windup_ended(true) or the poll; the windup_move() duplicate compared by move id; a freed or queued attacker"
+  ],
+  "sheets": [
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-slice-warn/captures/review/sheets/edge_band.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-slice-warn/captures/review/sheets/w_left.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-slice-warn/captures/review/sheets/w_right.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-slice-warn/captures/review/sheets/w_behind.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-slice-warn/captures/review/sheets/w_edges.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-slice-warn/captures/review/sheets/w_two.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-slice-warn/captures/review/sheets/w_heavy.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-slice-warn/captures/review/sheets/w_ends.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-slice-warn/captures/review/sheets/w_neg.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-slice-warn/captures/review/sheets/r_ko_full.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-slice-warn/captures/review/sheets/r_fin_full.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-slice-warn/captures/review/sheets/r_pause_quarter.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-slice-warn/captures/review/sheets/b_blind.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-slice-warn/captures/review/sheets/b_full_787.png"
+  ],
+  "passes": [
+   "Behind-left at 135\u00b0 lights the top-left only: wbot log 'W+ side=left count=1 f31 / WU+ Dummy1 f31 / W- side=left f54 / f54 Player: Sparring Jab'. In w_left.png (video frame = physics frame - 1) the burst is lit from video frame 30 to 52, and the top-right stays empty throughout.",
+   "Behind-right at -135\u00b0 lights the top-right only: W+ f159 to W- f182, the hit at f182; see w_right.png.",
+   "Directly behind (180\u00b0) lights both corners: W+ left and right at f287, W- both at f310 on the hit; see w_behind.png.",
+   "The 161/159 edge: 161\u00b0 lights both (f415-f438) and 159\u00b0 lights left only (f496-f519); see w_edges.png. Real Punks agree: in rcrowd.log, 157.0 gives left, 159.0 gives left, 160.5 gives both, and -161.9 and -162.1 give both.",
+   "Nothing for in-view wind-ups (50\u00b0 and 0\u00b0, f624 and f705) or out of range (135\u00b0 at 2.6 m, f833); w_neg.png has no burst in any tile. In the crowd, 62 of 190 wind-ups were in view, with 0 false positives (P1-int headless_final readability.json total).",
+   "Timing equals the wind-up: in every act the W+ frame is the WU+ frame (wbot, and slice warn f37/f147/f257/f367/f389). The burst draws in the same rendered frame (a corner crop shows it lit at video frame f-1). The Punk's warning lasts 22 frames (blind f336 to f358).",
+   "The end: a landed hit (f54, f182, f310), a block (W- f1556 is the frame of the BLOCKED hit, f1556), an interrupt (W- f1649 is the frame of 'WU- Dummy1 interrupted f1649'), a whiff (slice warn: WU- f59, then W- f62 when the whiff fires; rbot finisher: 'W- side=left f501 / WHIFF Dummy2 f501'). It never ends when the strike comes out: every WU- strike line is followed by a W- only at the hit or whiff, and rear_warning.gd:197-201 ignores windup_ended(false). KO and vanish are covered by test_the_warning_ends_on_every_end_event_and_poll.",
+   "Several attackers on a side: 'W+ side=left count=2 f964'; the burst turns visibly yellower and brighter, then drops back when the first lands at f981 (w_two.png, row 1 col 3 to row 4 col 2). Left, right and behind together: count 2 on both corners at f1258.",
+   "Heavy is larger: 'W+ side=right count=1 heavy=true f1390' (S0's stub). In w_heavy.png the right burst is visibly larger than the left one, and both stay inside their corners.",
+   "Pause holds the burst: review bot alpha 0.86 and scale 1.10 frozen from f40 to f120 while paused; the pulses resume on unpause, and W- comes on the hit at f144 (113 frames = a 23-frame wind-up + 90 paused). r_pause_quarter.png shows the burst over the paused view.",
+   "F4's 0.25x: WU+ f231 to W- f325 is 94 frames (about 4 x 23), and the two pulses span f231-f288 (57 frames, about 4 x 0.24 s).",
+   "Finisher: the haymaker FINISHER at f471 sets off the impact frame, which inks the whole screen with the HUD, burst included, for 2 frames (r_fin_full.png tiles 5-6); the burst carries on after it. The global slow-mo stretches the dummy's wind-up to 34 frames, and the warning lasts to its whiff at f501.",
+   "KO-view hide: 'KO Player f633' darkens both corners in the same frame, though the left wind-up runs on until it whiffs at f642. A dummy at 180\u00b0 winding up during the KO (WU+ f676) lights nothing. r_ko_full.png rows 2-4 show the KO view with no burst.",
+   "Audio direction: in the wbot AVI, the behind-left wind-up is 3.4 dB louder on the left, behind-right 3.4 dB louder on the right, and directly behind 0.0 dB; the cue starts in the W+ frame (video frame 30 for f31).",
+   "R10 with real Punks: P1-int headless_final has 192 WARN-CHECK ok and 0 FAIL over 190 wind-ups (54 left, 63 right, 13 both, 62 none), agreement 1.0, 0 false positives, latency 0, end lag 0. My headless run of 5 acts has 134 wind-ups and 0 FAIL. The blind act is 18/18 (corner crops b_blind.png: right at f336, both at f787). The slice warn act is 6/6.",
+   "Truth table: test_view_geometry.gd's TABLE matches Part B \u00a7B1 row for row and is written by hand; the wrap at \u00b13.1 rad and the frame-independence rows are there too. 7/7 pass.",
+   "Tests: test_rear_warning 28/28 (327 asserts, including test_warning_sweep_every_5_degrees: 72 bearings with the real dummy and HUD), test_warning_oracle 20/20, test_slice_crowd 4/4, full suite 866/866 with no ERROR lines.",
+   "Rule code: reach comes from warning_reach_m(move), else move.reach_m (rear_warning.gd:252-255). There is no rear_warning_fallback_reach_m (A2.8). The look is read through look_yaw, never the camera. The widget writes no game state (test_it_writes_no_game_state). The burst stays inside the 20% corner at every size (test_ui)."
+  ],
+  "also_noticed": [
+   "Chain links land with the corner already dark. Per B1.3 the warning ends on the jab's hit_landed; the Punk's cross (A2.14, no wind-up) then lands about 29 frames later. In my 5-act crowd run, 26 of 61 unblocked hits from outside the view were crosses, 23 of them after a warned jab. This follows the binding rule, but it bears on L2 rubric 10 ('would a new player know why they took damage').",
+   "The side is fixed at the wind-up's start (B1.4), so the corner stays lit after the player turns to face the attacker. rcrowd.log: Punk6 winds up at b=-55.5 (f2706) and is perfectly blocked at b=0.0 (f2728) with the right corner still lit. In the crowd, wind-ups 21 frames apart can keep one corner lit almost without a break (W- f2747, W+ f2748). This follows the plan; rear_warning_follow_turn exists if the gate wants it.",
+   "The heavy burst barely pops in: its steady 208 px (160 x 1.3) is clamped to the 216 px corner, so the pop grows 1.04x against 1.25x for a normal burst. Its pulses still show as alpha dips (w_heavy.png). Cosmetic.",
+   "Stereo separation of the cue is mild: 3.4 dB at 135\u00b0, with Godot's default audio/general/3d_panning_strength 0.5 (project.godot doesn't set it). The direction is right but weak on speakers. It is an M1/M2 audio setting.",
+   "The 3 'WARN-CHECK FAIL ... unexplained burst' lines in P1-int's early logs (h_Six_Punks__observed_ f1355, headless_all f4397 and f6088) are act-boundary artifacts: the act ended mid-wind-up, and P1-int call 8 makes the oracle ignore the HUD between acts. headless_final has none.",
+   "The oracle counts warning_windups 190 against the probe's windups 187 in headless_final (the oracle counts every non-player wind-up). Informational only.",
+   "Review scripts left untracked in the worktree, so the gate can rerun them: tests/bot/review_warn_bot.gd/.tscn, review_crowd_bot.gd/.tscn, review_edge_bot.gd/.tscn."
+  ],
+  "findings": [
+   {
+    "severity": "medium",
+    "title": "Punks winding up 46-55\u00b0 off the look at strike range are off-screen and unwarned",
+    "detail": "SPEC \u00a78 fires the warning when 'an enemy the player can't see starts winding up' (more than 55\u00b0 from camera forward), and SPEC \u00a75 sets the field of view at 90\u00b0 horizontal (first_person_camera.gd:102 keep_aspect = KEEP_WIDTH, fov_deg 90, so the view edge is at \u00b145\u00b0). Part B \u00a7B1 measures the bearing from the player's origin (player.gd:194-195 look_bearing_deg, then ViewGeometry). The lens sits ahead of the origin (the throat lens plus cam_forward_offset_m), so at the Punk's strike distance (0.9-1.0 m) the Punk is about 9-10\u00b0 further round as seen from the lens than the rule thinks. I measured frozen real Punks at 0.95 m in the crowd room. At 40\u00b0 and 45\u00b0 (origin bearing) only the near fist is in the camera frustum: an arm at the left edge, with the head and chest off-screen. At 50\u00b0 and 54\u00b0 none of origin, chest, head or fists is in the frustum (a red sleeve sliver at the left edge), and no warning. At 56\u00b0 and 60\u00b0 there is likewise nothing in the frustum, and the warning lights. On the right side, -50\u00b0 shows a bit more (head and arm at the edge). So a band of about 46-55\u00b0 per side is effectively blind and unwarned. In the crowd, 5 of 134 wind-ups started in that band, and 4 of them landed jab plus cross unblocked with no corner lit. R10 cannot see this: the oracle builds its expected corner from the same ViewGeometry rule from the same origin, so it agrees by construction. The done-when's behind-left, behind-right and behind clauses are unaffected; SPEC \u00a78's purpose (warn of what the player can't see) is not met in this band.",
+    "evidence": "captures/review/edge/bot.log: 'EDGE f272 mid b_look=50.0 b_cam_chest=-58.9 fov=90 keep=0 in_frustum= warning=', 'EDGE f385 mid b_look=54.0 b_cam_chest=-63.3 ... in_frustum= warning=', 'EDGE f498 mid b_look=56.0 ... in_frustum= warning=L', 'EDGE f46 mid b_look=40.0 ... in_frustum=Lfist warning='. The b_cam_chest sign is flipped by my angle convention; the magnitudes are what matter. Sheet captures/review/sheets/edge_band.png: tiles 3-4 (50\u00b0, 54\u00b0) show only a red sliver at the left edge and no burst; tile 5 (56\u00b0) shows the burst. captures/review/rcrowd.log: 'EV Six Punks, blind spot Punk2 f4543 b=46.9 d=0.99 reach=0.97 exp= ' then 'RHIT f4565 Punk2 punk_jab b=46.9 ... warned=' and 'RHIT f4593 Punk2 punk_cross b=47.1'; 'EV Three Punks Punk3 f612 b=-53.1' then RHIT f634 jab and f662 cross unwarned; 'EV Six Punks, passive Punk3 f6631 b=-51.2' then RHIT f6653 and f6681.",
+    "repro": "cd /Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-slice-warn && tools/capture_bot.sh res://tests/bot/review_edge_bot.tscn captures/review/edge \"\" && grep EDGE captures/review/edge/bot.log (frozen Punks at 0.95 m, bearings 40-60\u00b0, force_attack). Crowd numbers: godot --headless --fixed-fps 60 --path . res://tests/bot/review_crowd_bot.tscn -- \"--act=Three Punks|Six Punks, fight|Six Punks, blind spot|Six Punks, passive|Waves\", then pair EV lines in 45<|b|<=55 with the following RHIT lines.",
+    "suggested_fix": "Preferred, since the gate is locking feel defaults: measure the rule's bearing from the lens, not the body origin. Have PlayerCharacter.look_bearing_deg() and is_outside_view() pass a point a tunable distance ahead along the flat look (or the rig's eye point, which AudioDirector's listener already uses) as `from` to ViewGeometry. This stays simulation-safe and matches SPEC's 'from camera forward' more closely. The director's blind spot follows automatically, and test_view_geometry is unchanged (the function is pure). It needs Part B \u00a7B1's 'measured from the player's origin' amended, and the in-view negative control (warning_bot 'Warn: in view' and B3) moved from 50\u00b0 to about 40\u00b0 at 0.9 m. Alternative: retune rear_warning_angle_deg from 55 to about 46-47. That changes a SPEC \u00a78 number and would have to be logged as a departure taken by default. Either way, add a crowd-room test: a Punk at 50\u00b0 and 0.95 m whose chest is outside the FP frustum must warn.",
+    "files": [
+     "game/player/player.gd",
+     "game/combat/view_geometry.gd",
+     "game/ui/rear_warning.gd",
+     "game/camera/first_person_camera.gd",
+     "tests/bot/warning_bot.gd",
+     "docs/milestones/M3-plan.md"
+    ],
+    "spec_change": false
+   },
+   {
+    "severity": "low",
+    "title": "Warning re-arms at revive while the KO view is still on screen (training room)",
+    "detail": "RearWarning suppresses only while the player's health is 0 (rear_warning.gd:277-281 _suppressed; Part B \u00a7B1.9). But _revive() restores health at once (player.gd:663-664) while the KO view eases back to the eyes over ko_view_in_s 0.5 s (first_person_camera.gd:305-316), and look_yaw is reset to the body's facing. A wind-up that starts in that window lights a corner over the third-person shot of the player getting up. In the review bot, the revive is at f802; a dummy at the pre-KO +135\u00b0 winds up at f807, and both corners light while the frame still shows the lying or rising body from outside. In the crowd room this can't happen: the director holds wind-ups for director_revive_grace_s 1.5 s, longer than the 0.5 s return. In the training room it can: one dummy spars by default (test_room.gd sparring_dummies [1], F5 for all). The L1 lens asks for the hide during the KO view, not only at health 0.",
+    "evidence": "captures/review/rbot/bot.log: 'REVIVED Player f802', 'W+ side=left count=1 heavy=false f807', 'W+ side=right count=1 heavy=false f807', 'WU+ Dummy2 f807', '  getup f808 L(a=0.84 s=1.19 n=1) R(a=0.84 s=1.19 n=1) hp=100'. Sheet captures/review/sheets/r_ko_full.png, row 5 col 3 (video frame 808): the third-person KO view of the player rising, with both bursts lit.",
+    "repro": "cd /Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-slice-warn && tools/capture_bot.sh res://tests/bot/review_warn_bot.tscn captures/review/rbot \"Rev: KO view\" (god mode off, 5 HP, a jab KOs the player; after the auto-revive a dummy behind winds up within 0.5 s).",
+    "suggested_fix": "Keep the warning suppressed until the view is back in the eyes. Either keep it hidden for ko_view_in_s after CombatEvents.revived (a presentation-side timer on the revived event), or while the player is in the get-up that follows a KO (read the state; the HUD writes nothing). Word Part B \u00a7B1.9 as 'the KO view, until it is back in the eyes'. Add a case to test_it_hides_while_the_player_is_ko.",
+    "files": [
+     "game/ui/rear_warning.gd",
+     "tests/test_rear_warning.gd"
+    ],
+    "spec_change": false
+   }
+  ]
+ },
+ "crowd": {
+  "summary": "Lens L2 (first-person crowd readability) on the slice at 356fccf. I recorded acts 1-4 and Waves myself; they match the builder's headless_final run exactly. I also recorded an extra crowd-knockdown act, ran 15 headless act runs with a per-enemy lens-attribution probe, and made three windowed R15 runs.\n\nHard metrics: all pass in 42 act runs (R1 max 2, R2 min 21 f, R3 0 unwarned, R10 100% with 0 false positives, R11 0). Also passing: flinch-lock (longest chain 0.72-1.13 s, under 1.5 s), stalls (R13 0 stuck everywhere), R15 (p95 12.2-12.3 ms, spawn hitch 26-31.5 ms). In-lens wind-ups read at 1 m. Taunts and strafes don't read as threats.\n\nThe L2 rubric is not all yes:\n- Q6 fails: more than half the view is covered by enemies outside an attack, e.g. 60.75-61.25 s in Six Punks, observed.\n- Q5 only partly holds: a wall of Punks forms at strike range, and only 0.5-2.1 of six Punks are posturing at any time.\n- Q1 and Q10 fail for about 7% of wind-ups: those start 45-55 degrees off the look, outside the 90-degree lens but inside the warning's 55 degrees, so only an arm shows and no warning fires.\n\nRoot causes found:\n1. A real mechanical bug in EnemyActor. The latched avoidance velocity goes stale through the attack and the RECOVER hold, so a Punk backing off can walk the wrong way, sometimes at 4-6 m/s. One back-off circled 342 degrees round the player at 0.76-1.1 m. A two-line local patch (not committed) cut wrong-way frames by 85-95%, with every hard metric still passing.\n2. 73-86% of the over-half lens coverage (R8 misses, p95 50-62%) comes from Punks that are not attacking: the RECOVER hold, a token holder waiting at strike range, a Punk walking back after a hit. A Punk winding up alone covers only p50 34% of the lens.\n3. Attack cadence is the cheapest lever. At punk_attack_cooldown_s 6, two to three of the six Punks are posturing at a time, the passive player lasts 15-17 s instead of 12-14 s, and R8 drops (Six Punks, observed p95 61% to 34%). The cost is about 30-40% fewer wind-ups.\n\nAll recordings and scratch probes are in /Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-slice-crowd/captures/review and tests/review_scratch/. Nothing was committed.",
+  "checked": [
+   "Read M3-plan Part A, B and C (P1 packages, slice gate, risks), SPEC \u00a75/\u00a77/\u00a78/\u00a711/\u00a712, M3-calls P1-ai, P1-director, P1-room, P1-hud, P1-instruments and P1-int, and M3-judgement-calls.",
+   "Builder captures (.worktrees/m3-p1-int/captures/p1-int): every readability.json, the headless_final, multi s1-s8 and windowed_fight runs, and the turn360 sheet. The recordings were made 20:47-20:59, before 8020ad4 (lunge-frame fix, BLOCK_LEAD 26), so their per-act numbers differ slightly from the final code.",
+   "My recording at 356fccf: acts 'Punk 1v1', 'Three Punks', 'Six Punks, observed', 'Six Punks, fight' (captures/review/acts14, 102 s). Its readability.json is identical to the builder's headless_final, so the final code is deterministic.",
+   "My recording of 'Waves' (90 s, captures/review/waves) and of an extra act 'Review: crowd knockdowns' (six Punks with the default-style autopilot, so knockdowns and get-ups happen; captures/review/kd).",
+   "Sheets I made and viewed: observed 6 fps 0-4 (50.8-67.5 s); observed 12 fps 58.0-59.0; observed 4 fps 59-64 (orbit); observed 12 fps 54.1-54.6 (edge shove); fight 6 fps 0-3 (74-87.3 s); 1v1 12 fps 4.95-6.28 (first wind-up); Three Punks 6 fps at 17 and 40 s; waves 3 fps at 40 s; knockdown 12 fps 25.75-27.1.",
+   "Scratch probe tests/review_scratch/review_bot.gd (extends crowd_bot): every 5 frames the lens coverage per enemy (FPView grid, 32 columns, like R8) with each enemy's AI and actor state, distance, bearing and slot bearing; a frame-by-frame navigation trace (desired vs applied vs latched safe velocity); a wrong-way detector; a one-frame position-pop detector.",
+   "Headless runs: 3 seeds over Three Punks, observed, fight, passive and Waves (ww0-2); cov and cov2 attribution runs; seeds 0-3 of the knockdown act (kdp0-3).",
+   "Retune and patch experiments, each run locally and reverted: enemy_max_speed_mps 3.0 (wwt0, wwt2); _stop() clearing the latched velocity (wwA0, wwA2; reverted with git checkout, tree clean); punk_attack_cooldown_s 6 (cd6_0, cd6_2).",
+   "R15 windowed, three runs of 'Six Punks, fight' with no Movie Maker, machine load 2.6-4.5.",
+   "Code read: enemy_actor.gd (all states, latched navigation, RECOVER, ENGAGE wait), enemy_director.gd (grants, the may_start_windup gap and hit grace, slot spread and claims), crowd_bot.gd and slice_acts.gd, the probe's R4-R8, R9 and R13 code, room_kit PlayerObstacle, and combat_actor get-up placement (_move_under_ragdoll).",
+   "Edge cases: wind-up start bearings over 357 wind-ups; distances and lens shares during wind-ups; back-off arcs and durations per enemy; point-blank (under 0.8 m) frames and the player's state at the time; long APPROACH walks (stall check); get-up origin jumps; the passive KO time over 14 runs.",
+   "Feel-number scan of game/enemies and game/level: only tolerances and colours are constants (director _CLOCK_SLACK_S, _COST_SLACK_DEG and _HASH_BUCKETS; street_punk colours are exports)."
+  ],
+  "sheets": [
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-slice-crowd/captures/review/sheets/observed_orbit_4fps_59.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-slice-crowd/captures/review/sheets/observed_12fps_58.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-slice-crowd/captures/review/sheets/observed_6fps_3.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-slice-crowd/captures/review/sheets/observed_6fps_2.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-slice-crowd/captures/review/sheets/observed_edge_shove_12fps.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-slice-crowd/captures/review/sheets/1v1_wu1_12fps.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-slice-crowd/captures/review/sheets/fight_6fps_1.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-slice-crowd/captures/review/sheets/fight_6fps_3.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-slice-crowd/captures/review/sheets/waves_3fps_40.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-slice-crowd/captures/review/sheets/kd_getup_12fps.png"
+  ],
+  "passes": [
+   "Hard metrics: all 42 unpatched act runs of mine (recordings plus headless, 4 seeds) say ok. R1 max concurrent attackers 2 (cap 3), R2 min wind-up gap 21 f (n/a once, in 1v1), R3 0 unwarned hits, R10 agreement 1.0 with 0 false positives and latency and end lag 0 f, R11 max 0.",
+   "Rubric Q4 (two wind-ups start together): no. R2 is at least 21 frames in every act; e.g. observed f3452 (Punk6) and f3473 (Punk5) are exactly 21 apart.",
+   "Rubric Q2 (corner matches): yes. R10 100% in every act. Observed sheet 2 at 57.47-57.97 s: top-left for Punk6 behind-left (W+ f3452), then both corners once Punk5 starts behind-right (W+ f3473). Each corner goes dark on its contact frame (W- f3474 and f3493).",
+   "Rubric Q1 for wind-ups inside the lens: yes. 1v1_wu1_12fps.png at 5.2-5.53 s: the jab's cocked fist is raised beside the head and held, and the head stays visible. R4 occluded wind-ups 0% in every act. A lone Punk winding up in view covers p50 33-39% of the lens, max 0.61 (ww0-2).",
+   "Rubric Q3 (archetype at a glance): yes. Only Punks are in the slice, with a red jacket and yellow cap.",
+   "Rubric Q8 (taunts or strafes read as threats): no. The taunt is open-handed, arms wide and palms open (observed_6fps_2.png frames 12-13 at 59.47-59.63 s; fight_6fps_2 frame 11). Strafes are side-steps at 2.5-4 m with the guard up (observed_6fps_1 frames 10-19).",
+   "Rubric Q7 (attackers back off): yes in the typical case. Median back-off 0.75-1.33 s over a 16-36 degree arc (ww0-2, every act). 1v1_wu1_12fps frames 12-15 (5.95-6.2 s) and fight_6fps_1 frames 1-7 (77.5-78.5 s): the Punk walks back to about 2.5 m facing the player. Outliers in finding 1.",
+   "Flinch-lock: longest chain of reactions (gaps up to 12 f merged) 0.72-1.13 s in every act over seeds 0-2 and the builder's s1-s8, under the gate's 1.5 s. The longest unbroken reaction is 0.72 s (the shove's stagger).",
+   "Ring distance (R6): posturing Punks median 2.66-3.44 m, p10 2.42-2.64 m in all acts.",
+   "Navigation (R13): 0 stuck in all 42 act runs. The longest APPROACH walks (4.2-7.5 s) are 12-15 m walk-ins from spawn points, not stalls. waves_3fps_40.png frames 3-13 (41-44.3 s): Punks leave the west alley mouth one by one and walk straight in. Waves clears 3-4 waves in 90 s (R13 asks for 2).",
+   "R7 capsule overlap 0-0.30%, R14 0 wind-up voices stolen, R9 1.0 in most crowd acts with mixed waiters.",
+   "R15 windowed at 356fccf (three runs, load 2.6-4.5): frame p95 12.2, 12.3 and 12.2 ms (limit 16.7); spawn hitch 31.5, 26.1 and 26.5 ms (limit 33; median 26.5, little margin). captures/review/r15*/readability.json.",
+   "Get-ups in a crowd: no in-view pop seen. Across seeds 0-3 of the knockdown act, 2 of 21 get-ups moved the origin 0.74-0.79 m in one frame (POP lines in kdp*.log). Both were behind the player (bearing 150 and 175 degrees), and the jump is M2's design: the origin moves under the ragdoll's hips while the visible body blends. The in-view get-up at 25.9-26.2 s in kd/bot.avi was hidden by a nearer Punk."
+  ],
+  "also_noticed": [
+   "The cap of 3 is never reached: max concurrent attackers is 2 in all 42 runs. The 0.35 s wind-up gap and the 0.5 s hit grace bind first, so the effective cap is 2. Lock that knowingly when the gate locks the cap.",
+   "Blind-spot priority 1.0 (SPEC literal) means 65-75% of six-Punk wind-ups start outside the view. WARN-CHECK counts in my fight recording: 24 warned of 33. The Punks in front mostly stand while the ones behind attack, so readability leans on the corner bursts. This follows the spec; it is a feel default to lock knowingly.",
+   "'Six Punks, fight' can't show the attack-recover cycle. Only 1 of 31 wind-ups reached ATTACK; 28 went WINDUP->REACT (blocked on the first active frame, or punched out), and CROWD reports 0.0 backing off. Rubric Q7 has to be judged from observed and passive.",
+   "The builder's recordings in .worktrees/m3-p1-int/captures/p1-int were made before 8020ad4, so some numbers differ from the final code (observed: 27 vs 25 hits, ring median 3.16 vs 3.40). Quote headless_final or my acts14 numbers in M3-slice-gate.md.",
+   "P1-int call 4 says one Punk in front covers about 55% of the lens. Per-enemy attribution shows a Punk winding up in view covers p50 33-39% (max 0.61). The R8 misses are not inherent to the wind-up (finding 2).",
+   "A token holder at strike range waits with no timeout of its own (enemy_actor.gd:599-610 only counts frames while still closing). Only the director's 4 s token timeout applies.",
+   "RoomKit.PlayerObstacle (room_kit.gd:22-45) never sets its velocity, so the avoidance treats a player being knocked back at 3.5 m/s as standing still.",
+   "The parked car is close to the Punk's jacket red, so a Punk posturing in front of it loses silhouette contrast (three_6fps_17 frames 15-19 at 19.5-20.2 s; observed 59.5-60 s). Grey-block look question: default.",
+   "With the player not in god mode, 'Three Punks' KOs him in 3 of 5 runs (16.7-33 s) during the slow 360-degree turns. The sheets then show the KO view and the revive."
+  ],
+  "findings": [
+   {
+    "severity": "high",
+    "title": "Backing-off Punks walk the wrong way at up to 6 m/s because the latched avoidance velocity is stale",
+    "detail": "In the latched pattern, each tick _apply_velocity() makes last tick's _safe_velocity the body's sim_velocity. Through ATTACK and the 21-frame RECOVER hold, _stop() zeroes _nav.velocity but leaves _safe_velocity, and the avoidance's own internal velocity, as they were. The first walking tick of the back-off therefore applies an old velocity: here 4.1 m/s toward the player, while the desired velocity points away. The avoidance then keeps the body on that course for several frames. Seen in first person:\n- a Punk that has just attacked lunges past the player's shoulder and orbits him at 0.76-1.1 m instead of stepping back;\n- that orbit sweeps through the lens and doubles up with another Punk in front (the two-Punk wall in finding 2);\n- in other episodes a Punk zips sideways at 4-6 m/s, faster than its 2.6 m/s walk.\nThis breaks rubric Q7 and A3.1's 'RECOVER backs off ... walks back out to its slot'. It is a mechanical cause behind P1-int call 17's 'walks the long way round', which was reported but not traced.",
+    "evidence": "Frame trace (captures/review/cov3_bot.log, Six Punks observed, seed 0):\n- f480-f502, ATTACK then the RECOVER hold: navvel=(0.00,0.00) and simvel=(0,0), but safe stays at (2.44,3.34) to (2.38,3.31).\n- f504, first walking tick: navvel=(-1.73,-1.94), toward the slot; simvel=(2.38,3.31), the opposite way.\n- f504-f516: simvel stays about (2.6,3.6) while the Punk crosses past the player from (0.07,-1.17) to (0.59,-0.47).\nResult in cov2/bot.log: Punk5's back-off from f485 lasts 5.58 s and sweeps 342 degrees around the player, 3.25 s of it within 1.3 m, though its slot was only 28 degrees away at the start. In my recording this is observed 60.25-61.25 s: observed_orbit_4fps_59.png frames 5-9, two Punks side by side covering 85-90% of the lens.\nFrequency, ww0-2 (3 seeds, 5 acts):\n- moving more than 90 degrees off the wanted direction: 0.1-7.0% of walking frames;\n- episodes up to 62 frames, applied speed up to 6.0 m/s (ww0 observed Punk3 f2916-2977; ww2 fight Punk18 f4783-4843 at 4.2 m/s toward the player);\n- back-offs sweeping more than 90 degrees: up to 4 per act, max 342 and 291 degrees.\nTwo-line local patch in _stop() (_safe_velocity = Vector3.ZERO; _nav.set_velocity_forced(Vector3.ZERO)), wwA0 and wwA2:\n- wrong-way frames 105 to 18 (observed s0), 104 to 5 (fight s0), 167 to 17 (fight s2); longest episode 62 to 8 f;\n- max orbit 342 to 194 degrees; hard rows ok in all 10 acts.\nenemy_max_speed_mps 3.0 alone removes the speeds above 3 m/s but not the wrong direction (wwt0: Punk5 still 60 f toward the player).",
+    "repro": "cd .worktrees/m3-review-slice-crowd && godot --headless --path . --fixed-fps 60 res://tests/review_scratch/review_bot.tscn -- \"--act=Six Punks, observed\" --probe-out=captures/review/x --trace=Punk5:480:560, then read the TRACE lines (simvel vs navvel at f504). Or watch acts14/bot.avi at 58.5-62 s.",
+    "suggested_fix": "1. In EnemyActor, clear the latch whenever the body stops or a move takes over: in _stop() and _stop_reporting(), set _safe_velocity = Vector3.ZERO and call _nav.set_velocity_forced(Vector3.ZERO). Do the same when RECOVER and the REACT-to-APPROACH change begin.\n2. In _apply_velocity(), never apply a safe velocity more than 90 degrees off the desired one (use zero that tick), and clamp its length to the desired speed.\n3. Re-run test_slice_crowd and the determinism test.\nThe remaining long back-offs (P1-int call 17: a path blocked by a waiting Punk) still need the slot or back-off decision that call asks for.",
+    "files": [
+     "game/enemies/enemy_actor.gd"
+    ],
+    "spec_change": false
+   },
+   {
+    "severity": "medium",
+    "title": "Non-attacking Punks at strike range wall the lens (rubric Q6 fails, R8 p95 misses)",
+    "detail": "R8 misses in 4 of 5 six-Punk acts, p95 50-62%. Attributing each covered lens cell to its enemy shows what causes it:\n- 73-86% of the coverage in over-half samples comes from Punks not in WINDUP or ATTACK;\n- in observed and passive, the RECOVER hold contributes 44-52% (standing at strike range for recover_hold_s) and token holders in ENGAGE waiting for the director's go another 18-28%;\n- in fight and Waves, a Punk walking back after a hit (APPROACH) contributes 54-58%;\n- a winding-up Punk contributes only 4-25%; alone it covers p50 34% of the lens.\nThe RECOVER hold and the waiting holder stack in the front wedge while rear attackers hit. Rear hits' knockback also shoves the player into a waiting Punk's guard: point-blank frames (a Punk under 0.8 m in front) are 1-7% of samples, with mean coverage 0.58-0.67, mostly while the player is STAGGERed. In first person this reads as a red wall and fists at the lens, with no attack to read, exactly when two attacks land from behind.",
+    "evidence": "observed_orbit_4fps_59.png frames 7-9 (60.75-61.25 s): two Punks side by side cover 85-90% of the lens. Both are outside an attack: Punk5 in RECOVER (finding 1) and Punk3 in its RECOVER hold, while Punk1 (W+ left f3671) and Punk6 (W+ right f3692) hit from behind.\nobserved_12fps_58.png frames 4-11 (58.33-58.92 s): after Punk5's rear shove (f3493), the camera is inside a front Punk's guard, chin and fists filling 65-80%.\nOver-half attribution over seeds 0-2 (ww0-2, COV lines):\n- observed: 41 over-half samples, 29 with attackers covering under 25%; RECOVER 44%, ENGAGE 28%, ATTACK 22%, WINDUP 4%;\n- fight: 105 samples, 87; APPROACH 54%, WINDUP 12%;\n- passive: 31 samples, 21; RECOVER 52%;\n- Waves: 99 samples, 77; APPROACH 58%.\nR8 in acts14/readability.json: observed p95 58%, fight p95 53%. The probe's R5 reads 0.0% throughout (finding 5).",
+    "repro": "Record 'Six Punks, observed' (tools/capture_bot.sh res://tests/bot/crowd_bot.tscn <dir> \"Six Punks, observed\") and view 57.5-62 s of the movie at 4-12 fps. For the attribution, run tests/review_scratch/review_bot.tscn headless with --seed=0..2 and tally the COV lines with total over 0.5.",
+    "suggested_fix": "1. Fix finding 1 first.\n2. Let a token holder wait for the go just outside strike range (for example at the ring's inner edge). Step it in only when may_start_windup() would pass within the time it takes to close (distance / engage_speed_mps). Expose that as a director query.\n3. Make the RECOVER hold a slow back-step instead of standing at strike range, keeping the punish window.\n4. Take the cadence retune in finding 3 (punk_attack_cooldown_s 6: observed R8 p95 61% to 34%, over-half share 8.9% to 3.0%, seed 0).\nArgue the fight act's p50 (the autopilot faces its own target at 1 m) separately in M3-slice-gate.md.",
+    "files": [
+     "game/enemies/enemy_actor.gd",
+     "game/enemies/enemy_director.gd",
+     "game/autoload/tuning_data.gd"
+    ],
+    "spec_change": false
+   },
+   {
+    "severity": "medium",
+    "title": "Punks hardly posture (SPEC \u00a77); retune the cadence at the gate (punk_attack_cooldown_s 1.4 to about 6)",
+    "detail": "SPEC \u00a77 says enemies 'spend most of their time posturing'. As shipped, on average:\n- 0.3-0.6 of six Punks posture in the fight acts, 1.0-1.2 in observed and 2.0-2.1 in passive;\n- 2.0-2.4 are in ENGAGE, WINDUP or ATTACK;\n- the rest are backing off or reacting.\nSo a Punk is almost always at the player's nose (P1-int call 18 measured the same and changed nothing). R12 sits on its edge:\n- passive KO time 12.15-14.15 s in my runs and 11.98-16.0 s over the builder's 8 seeds (s6 at 11.98 s misses 12 s);\n- the worst 2 s of damage is exactly 30, the limit, in all 14 runs.\nThe cadence is bound by the director's gap and grace, not the Punk, until the cooldown passes about 4 s. This is a feel default the gate is locking.",
+    "evidence": "CROWD lines in ww0-2.log and acts14/bot.log: posturing 0.3-2.1 of 5.7-6.0 alive; attacking 2.0-2.4.\nR12: ww0/ww1/ww2 passive KO 14.15/12.28/12.15 s; builder multi s1-s8 11.98-16.0 s; max_damage_2s 30.0 in every run.\nWith --tune=punk_attack_cooldown_s=6.0 (cd6_0 and cd6_2), as shipped then retuned:\n- posturing: observed 1.0-1.2 to 2.2-2.4, passive 2.0-2.1 to 2.7-2.8, fight 0.3-0.6 to 2.0;\n- passive KO: 12.15-14.15 s to 15.1-17.1 s;\n- R8 p95: observed 61% to 34% (s0) and 50% to 45% (s2); fight 57% to 43% (s0) and 62% to 61% (s2); passive 47% to 37% (s0);\n- cost: wind-ups per act 17-27 to 13-16; Waves hits 29-31 to 8-12 in 90 s;\n- hard rows ok.",
+    "repro": "cd .worktrees/m3-review-slice-crowd && godot --headless --path . --fixed-fps 60 res://tests/bot/crowd_bot.tscn -- \"--act=Six Punks, observed|Six Punks, passive|Six Punks, fight|Waves\" --seed=0 \"--tune=punk_attack_cooldown_s=6.0\", then compare the CROWD and READABILITY lines with a run without --tune.",
+    "suggested_fix": "Lock punk_attack_cooldown_s at 5-6 s in the Street Punk subgroup (tuning_data.gd:669) and regenerate tuning/default.json, or pick a value between with a quick sweep (the builder found 3.5 had no effect). Record it as a feel default in M3-slice-gate.md with the posture share and the R12 margin. If the Waves pressure is too low after it, raise the attacker density rather than shortening the cooldown.",
+    "files": [
+     "game/autoload/tuning_data.gd",
+     "tuning/default.json"
+    ],
+    "spec_change": false
+   },
+   {
+    "severity": "medium",
+    "title": "7% of wind-ups start 45-55 degrees off the look: outside the 90-degree lens, inside the warning's 55 degrees",
+    "detail": "With the default 90-degree horizontal FOV the lens edge is at 45 degrees, but the warning (SPEC \u00a78: 'more than 55 degrees from camera forward') only fires beyond 55. A Punk winding up at 1 m inside that band shows only a shoulder and one hand at the screen edge, so its pose can't be read and no corner lights. The shove's two-palm wind-up, its distinguishing tell, is invisible. This fails rubric Q1 ('see the wind-up pose for most of its length') and Q10 ('know why they took damage') for those hits. At the minimum FOV of 75 degrees the blind band grows to 37.5-55 degrees.",
+    "evidence": "Wind-up start bearings over 357 wind-ups (ww0-2, every act): 26 at 45-55 degrees, 19 at 35-45, 87 under 35, 225 beyond 55 (warned).\nobserved_edge_shove_12fps.png (acts14 at 54.1-54.52 s): Punk2's shove (WU+ f3256, strike f3276, 'WARN-CHECK ok ... none f3256') shows only a red shoulder and one palm at the left edge; no head, no two-palm silhouette, no corner burst. Then the palm sweeps into the lens.\nThe same event at 54.3-54.47 s in observed_6fps_1.png frames 1-2.",
+    "repro": "View acts14/bot.avi at 54.1-54.7 s, or count wind-ups with 45 < |look_bearing_deg| <= 55 at WU+ in any six-Punk act.",
+    "suggested_fix": "Ask Game-boy, since 55 degrees is SPEC \u00a78's number. Option A: derive the threshold from the lens, e.g. fov_deg / 2 plus a small margin, so 'can't see it' and 'warned' meet. Option B: keep 55 for the warning, but have the director treat 45-55 degrees as blind for posture slots, so Punks don't attack from the band. Either way, record it in README's M3 departures.",
+    "files": [
+     "game/autoload/tuning_data.gd",
+     "game/combat/view_geometry.gd",
+     "docs/SPEC.md"
+    ],
+    "spec_change": true
+   },
+   {
+    "severity": "low",
+    "title": "R5 (front-wedge crowding) can't see the wall that forms",
+    "detail": "R5 counts only enemies in AiState.POSTURE (P1-instruments call 21). But the front crowd is made of token holders waiting at strike range (ENGAGE), the RECOVER hold, and walk-backs. So R5 reads 0.0% in every act while the sheets show two Punks side by side filling the front. The gate cites R5 for rubric Q5, so it gives false comfort.",
+    "evidence": "R5 '0.0% of frames' in all 42 act runs (acts14, waves, ww0-2, cov, kd), while observed_orbit_4fps_59.png frames 7-9 (60.75-61.25 s) show two Punks within 1.1 m in the front wedge. In my COV samples, frames with 2 or more Punks within 1.3 m and |bearing| under 50 degrees run 4.5-9.4% in observed and fight (cov/bot.log). readability_probe.gd:420-430 filters on _is_posturing().",
+    "repro": "Run any six-Punk act with the probe and compare R5 with the CROWD line's '... waiting at strike range, ... still within it in RECOVER' or with the sheets.",
+    "suggested_fix": "Add a companion row, or redefine R5: share of frames with 2 or more standing, non-attacking enemies (any AiState except WINDUP, ATTACK and KO, actor state not DOWNED or LAUNCHED) within \u00b145 degrees and within 1.5 m. Keep the posture-only count as R5a if the plan wants it.",
+    "files": [
+     "tests/bot/readability_probe.gd"
+    ],
+    "spec_change": false
+   }
+  ]
+ },
+ "code": {
+  "summary": "L4 (code and layers) review of the M3 slice diff (c971cf4..356fccf), done in /Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-slice-code. The game code holds up. Nothing in the simulation reads a camera, the presentation layer writes no game state, and every timing, distance, chance and speed comes from Tuning or move data. Tokens are released on every exit path I traced, F6 included. The navigation agent uses the latched velocity pattern, enemies leave their groups before they are freed, and the director's clock is correct at 1x and at the 0.25x cheat. Determinism and test flakiness are clean: two full suites gave 866/866 with 0 ERROR lines each. test_slice_crowd and test_enemy_director give identical output in separate processes, and the same crowd-bot act with the same seed is identical across processes. A preset saved before M3 loads with 0 warnings. M2's player grab still works with S0's pin-order change, checked by test and by a first-person recording on a real Punk, including one grabbed mid-wind-up. I found no high or medium defect. The four findings are all low: (1) per-act readability numbers can't be reproduced exactly, because the probe samples R4 and R8 on the absolute frame and acts carry state from the act run before; (2) a director made by EnemyDirector.ensure() is never seeded; (3) the 'resources still in use at exit' fix lives only in the bots, so a headless fixed-fps run of the main scene still prints it; (4) a few public members have no ## doc comment. All hard metrics pass in every P1-int readability.json: R1 \u2264 3 (the cap), R2 \u2265 21 frames, R3 0, R10 100% with 0 false positives, R11 0. I changed no feel defaults. Every scratch file is deleted, the worktree's git status is clean, nothing was committed and no Godot process is left running.",
+  "checked": [
+   "Read M3-plan Part A, Part B and Part C sections 1-5, M3-judgement-calls.md and every docs/milestones/M3-calls/*.md; README has no M3 departures section yet",
+   "The full game diff c971cf4..HEAD: enemy_actor.gd, enemy_director.gd, enemy_attack.gd, enemy_catalog.gd, street_punk.gd/.tscn, encounter_spawner.gd, crowd_room.gd/.tscn, room_kit.gd, nav_baker.gd, spawn_room_check.gd, view_geometry.gd, rear_warning.gd, and the diffs of hud.gd, debug_draw.gd, cheat_menu.gd, enemy_health_bars.gd, audio_director.gd, combat_actor.gd, player.gd, game_input.gd, tuning_overlay.gd, hit_detector.gd, hit_info.gd, move_data.gd, combat_events.gd, tuning_data.gd, humanoid_rig.gd, placeholder_anims.gd, project.godot",
+   "Searched simulation files (enemies, level, view geometry, player) for camera and viewport reads",
+   "Presentation write check: RearWarning, DebugDraw AI layer, HUD _follow_boss, AudioDirector voice protection, EnemyHealthBars",
+   "Searched M3 scripts for numeric literals, untyped functions and variables, and public functions without ## (game and instruments)",
+   "Token exit paths traced in code: hit, interrupt by block, grab, death, KO/vanish, _exit_tree (F4 removal, room switch), director pruning, take-back for menu_open and ai_frozen, timeout, the director's own _exit_tree",
+   "Scratch test: a Punk spawned on the crowd room's first frame (map iteration 0) -> navsync_a.log",
+   "Scratch test: wave_gap_s 0, first wave spawns on physics frame 2 -> navsync_b.log",
+   "Scratch test: director wind-up gap and hit grace in physics frames at 1x and at the 0.25x cheat -> review_code.log",
+   "Scratch test: two fresh RandomNumberGenerators and two fresh EnemyDirectors -> review_code.log",
+   "Scratch test: pre-M3 tuning/default.json (git show c971cf4) and an M2-style custom preset with overrides loaded through Tuning.load_preset_file",
+   "Scratch SceneTree script: crowd room -> F6 with a token held in ENGAGE -> training room -> an F4-style Punk (ensured director) holding a token -> F6 back (f6.log)",
+   "Full suite twice (full_run1.log, full_run2.log) and a diff of the two",
+   "test_slice_crowd and test_enemy_director, each run twice in separate processes, logs diffed",
+   "crowd_bot 'Six Punks, blind spot' headless twice (cross-process), and after 'Three Punks' and after 'Six Punks, passive' (act-order dependence)",
+   "punk_bot and warning_bot headless in the training room (ERROR and WARN-CHECK lines)",
+   "Main scene: headless --fixed-fps 1500 frames (with --verbose), headless real-time 900 frames, windowed 1500 frames; training room headless 1500 frames for comparison",
+   "test_grab_view and test_launch_from_hold run singly",
+   "Scratch crowd act grabbing a frozen Punk and a Punk mid-wind-up, recorded in first person (captures/review/grab/bot.avi, two sheets read)",
+   "Regenerated moves (gen_moves) and the default preset: checked for drift",
+   "Every P1-int readability.json (16 directories) parsed for R1, R2, R3, R10, R11; every P1-int bot.log checked for ERROR and 'still in use'",
+   "The probe's sampling code (readability_probe.gd tick) and the crowd bot's _reset/_quit"
+  ],
+  "sheets": [
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-slice-code/captures/review/grab/sheet_grab1.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-slice-code/captures/review/grab/sheet_grab2.png"
+  ],
+  "passes": [
+   "Simulation never reads a camera. A search of game/enemies, game/level (spawner, room, room kit, nav baker, spawn check), view_geometry.gd and the player's look API finds no camera or viewport read. The director's blind spot uses player.is_outside_view (enemy_director.gd:354) and ViewGeometry.bearing_deg(0, ...) (:421). The spawner's 'behind' uses player.is_outside_view (encounter_spawner.gd:209). The warning uses player.look_bearing_deg (rear_warning.gd:266).",
+   "Presentation never writes game state. RearWarning only subscribes and reads (rear_warning.gd:74-96, 240-267). The DebugDraw AI layer uses only EnemyDirector.find() and the debug_* read API (debug_draw.gd:207-265). The HUD's _follow_boss only reads (hud.gd:141-148). AudioDirector writes only its own voice pool. GameInput.menu_open is written by TuningOverlay, as A2.2 allows.",
+   "No feel numbers in scripts. Every timing, distance, chance and speed in enemy_actor.gd, enemy_director.gd and encounter_spawner.gd is a Tuning value or move data. The constants are tolerances (_CLOCK_SLACK_S, _COST_SLACK_DEG, _HASH_BUCKETS, SpawnRoomCheck.FLOOR_CLEARANCE), the spec's 20% corner (RearWarning.CORNER_SHARE) or 50/50 side picks. Room layout is CrowdRoom exports.",
+   "Static typing: no untyped function or variable in the M3 game files or the instruments (grep of the diffed files and of tests/bot/* and tests/fixtures/*).",
+   "Tokens are released on every exit path: hit (enemy_actor.gd:717-725), block interrupt (:729-733), grab (:737-741), death (:374-380), vanish (:772-782), _exit_tree for F4 removal and room switch (:125-128), the director's backstop pruning (enemy_director.gd:287-293), and take-back on menu_open, ai_frozen and closed player (:226-228, 299-308). Covered by test_enemy_actor.gd:582-650, 759-791 and test_enemy_director.gd:440-480, 644-735.",
+   "F6 room switch with tokens in hand, both ways (f6.log): 'f15 token holder Punk2 in ENGAGE; switching' -> 'f35 test_room.tscn, ai_enemy 0, directors 0' -> 'f38 training room: StreetPunk holds a token in ENGAGE, directors 1; switching back' -> 'f68 crowd_room.tscn, ai_enemy 0, directors 1'. No ERROR.",
+   "Groups are left before queue_free in all three paths: enemy_actor.gd:779-782, encounter_spawner.gd:147-151, cheat_menu.gd:290-295. Tested by test_a_dead_punk_leaves_every_group_before_it_is_freed and test_remove_all_enemies_leaves_no_group_member_in_the_same_frame.",
+   "No navigation query before the map sync causes an ERROR. A Punk spawned on the room's first frame (map iteration 0 at its first tick) and the first wave at wave_gap_s 0 (spawn on physics frame 2) both log 0 ERROR (navsync_a.log, navsync_b.log). The director guards map_get_closest_point (enemy_director.gd:522). punk_bot and warning_bot (training room, no navmesh) log 0 ERROR.",
+   "The latched NavigationAgent3D pattern is as the plan says: velocity_computed only stores the result (enemy_actor.gd:311-312), the desired velocity goes in and last tick's safe velocity becomes sim_velocity (:842-853), and non-FREE states report their real velocity (:866-871).",
+   "Director timers. At 1x the shortest gap between two enemies' wind-up starts is 21 physics frames, and the earliest wind-up start after an unblocked hit on the player is 30. At the 0.25x cheat they are 84 and 120: the gap and the grace are sim time (review_code.log:20-21). test_slow_motion_stretches_the_gap_with_it passes. Running through hitstop is the 2.6 contract.",
+   "Determinism: test_slice_crowd (4/4) and test_enemy_director (48/48), each run twice in separate processes, give identical logs (slice_1/2.log, director_1/2.log). crowd_bot 'Six Punks, blind spot' run twice gives identical logs (bot_blind_1/2.log).",
+   "No test flakiness: two full suites, each 866/866 tests, 33258 asserts, 0 ERROR or SCRIPT ERROR lines (full_run1.log, full_run2.log).",
+   "A preset saved before M3 loads cleanly. tuning/default.json from c971cf4 loads with err 0 and 0 warnings. An M2-style custom preset (attacker_cap 2, windup_mult 1.5, a dummy_jab startup override) applies its values, keeps dummy_jab.reach_m 1.05, and waves_enabled takes its default (review_code.log:11-15).",
+   "The 'resources still in use at exit' error is gone from the bots and tests: 0 in all 16 P1-int bot.log files, in my crowd_bot, punk_bot and warning_bot runs, in both full suites, and in a windowed 1500-frame run of the main scene.",
+   "M2's player grab survives the pin-order change. test_grab_view passes 12/12 and test_launch_from_hold 7/7. Recorded in first person on a real Punk: the held view is upright, the knees land, and the release is clean. Priority is player 0, held Punk 1, and the Punk's priority goes back to 0 afterwards (grab/bot.log). Grabbing a Punk mid-wind-up ends the wind-up as interrupted (WU- f294 interrupted=true). Sheets: sheet_grab1.png, sheet_grab2.png.",
+   "Generators in sync: gen_moves ('wrote 29 moves and 4 move sets') and gen_default_preset leave git status clean.",
+   "Hard metrics in every P1-int readability.json: R1 max 1-3 (cap 3), R2 min 21-92 frames (n/a for the 1v1 act), R3 0, R10 100% with 0 false positives, R11 0. All verdicts are ok."
+  ],
+  "also_noticed": [
+   "SpawnRoomCheck.has_room() (spawn_room_check.gd:55-66), used by the wave spawner, reads each body's drawn ragdoll pose (rig.get_visual_point_transform). That widens M2's single exception, which TimeController's doc names as 'the get-up, a dummy's respawn and its walk home'. Adapted from TrainingDummy._has_room as the plan says. Acceptable, but worth naming in that doc.",
+   "The tests hide a known in-process determinism quirk with warm-up runs instead of fixing it: the first room of a process starts avoidance one tick earlier (test_slice_crowd.gd:247-255; P1-ai call 3). Cross-process runs are deterministic.",
+   "The two full-suite runs differ by a constant 4 physics frames before test_slice_crowd (every WARN-CHECK frame number shifted by 4). Some earlier test takes a variable number of frames. Harmless for pass/fail, but it is what moves the probe's sample phase in finding 1.",
+   "waves_enabled is a preset-saved tunable. The F4 button and CrowdRoom.waves_enabled_on_start=false both write it, so 'waves off' survives F6 and goes into a saved preset (P1-room calls 1 and 16, made by default; it breaks neither the spec nor the done-when, so not re-litigated).",
+   "R11 reads 0 in every act because no Punk move knocks the player down. The row is measured but cannot fail until the Kicker or Bruiser lands.",
+   "RoomKit's class doc says 'Layout numbers live in the room's exports, never here', yet build_environment() hardcodes sky colours, fog density 0.008, the sun's rotation and energy, and shadow distance 40 (room_kit.gd:54-76). These are look numbers copied from the training room, not feel numbers."
+  ],
+  "findings": [
+   {
+    "severity": "low",
+    "title": "Per-act readability numbers can't be reproduced: R4 and R8 sample on the absolute frame, and acts carry state from the act run before",
+    "detail": "The probe takes its occlusion (R4) and lens-coverage (R8) samples when Engine.get_physics_frames() % occlusion_every (or % lens_every) == 0. Which frames of an act get sampled therefore depends on everything that ran before it. Identical simulations then give different soft numbers. Separately, the crowd bot's acts are not independent of the act before them, although P1-int call 10 says 'an act's numbers do not depend on which acts ran before it'. Per-frame metrics move too (R6 and the CROWD meter), so the simulation itself differs, not only the sampling. The gate quotes readability.json from runs of different make-up (single-act directories, headless_all, h_rest), so small differences between sources are expected and are not regressions. Hard metrics are unaffected.",
+    "evidence": "readability_probe.gd:342 and 353-356 (frame % occlusion_every, frame % lens_every on the absolute frame). full_run1.log vs full_run2.log: the six-Punk WARN-CHECK frames are all shifted by exactly 4, yet R8 p50 reads 10% vs 9%, and the autopilot act reads R4 '0% of 3' vs '0% of 1' and R8 p50 8% vs 6%. 'Six Punks, blind spot' alone (bot_blind_1.log) or after 'Six Punks, passive' (bot_passive_blind.log): R6 median 3.16 m, R8 p50 15%, CROWD '1.1 backing off, 0.44 still within it in RECOVER'. After 'Three Punks' (bot_three_blind.log): R6 3.11 m, R8 p50 16%, CROWD '1.0 backing off, 0.43'.",
+    "repro": "cd the review worktree; godot --headless --fixed-fps 60 --quit-after 40000 --path . res://tests/bot/crowd_bot.tscn -- \"--act=Three Punks|Six Punks, blind spot\" and compare the blind spot act's R6, R8 and CROWD lines with a run of --act=\"Six Punks, blind spot\" alone. For the phase effect, run tools/run_tests.sh twice and diff the R4 and R8 lines of test_slice_crowd.",
+    "suggested_fix": "Sample on (frame - _start_frame) % n in ReadabilityProbe.tick(). In crowd_bot._reset(), also reset what carries between acts, then confirm by rerunning the pair above: TimeController.clear(), the spawner's RNG, and the director's clock, reslot timer and _last_* times (e.g. a test-only EnemyDirector.reset()). Or say in the gate file that soft metrics vary by about \u00b11-2 points between run compositions.",
+    "files": [
+     "tests/bot/readability_probe.gd",
+     "tests/bot/crowd_bot.gd"
+    ],
+    "spec_change": false
+   },
+   {
+    "severity": "low",
+    "title": "A director made by EnemyDirector.ensure() (F4 spawns in the training room) is never seeded",
+    "detail": "rng_seed is only applied through its property setter, so a director that is never assigned a seed keeps RandomNumberGenerator.new()'s default. In Godot 4.7 that default is randomized. CrowdRoom assigns the seed, but EnemyDirector.ensure() (the training-room F4 path and the S0 fallback) does not. The blind-spot priority roll is then not reproducible from run to run whenever blind_spot_priority is below 1.0. That contradicts the class doc ('Seeds the director's random rolls') and the 2.6 contract ('seeded RNG').",
+    "evidence": "enemy_director.gd:33-36 (seed applied in the setter only), :46 (_rng := RandomNumberGenerator.new()), :128-135 (ensure() sets no seed). Scratch run: two fresh EnemyDirectors had RNG seeds 7849026454339830248 and -138142339259082094 (captures/review/review_code.log:18). Two fresh RNGs had different first randf values, 0.939588 vs 0.102315 (:17).",
+    "repro": "In the training room, set blind_spot_priority to 0.5 in F1, F4-spawn three Punks around the player, and log the TOK+ order. Restart and repeat: the grant order differs between runs.",
+    "suggested_fix": "Apply the seed unconditionally in _init() or _ready() (_rng.seed = rng_seed), so the default 0 actually seeds.",
+    "files": [
+     "game/enemies/enemy_director.gd"
+    ],
+    "spec_change": false
+   },
+   {
+    "severity": "low",
+    "title": "The 'resources still in use at exit' fix lives only in the bots: a headless fixed-fps run of the main scene still prints it",
+    "detail": "P1-int's fix (stop every player, wait about 150-250 ms of real time, then quit) is in crowd_bot._quit() and test_slice_crowd.after_all() only. The game itself does not drain its audio on quit. Any other headless, fixed-fps harness of the crowd room that ends during a fight therefore prints an ERROR line plus a leak WARNING, all of them audio streams and playbacks. Examples are a new bot, a smoke run or a check_m3_log.py input. Windowed play and a real-time headless 900-frame run were clean, so Game-boy will not see it. But A7.4's release smoke greps for ERROR, and run with --fixed-fps it would fail on this. That would need the same explanation every time.",
+    "evidence": "captures/review/main_headless.log: 'WARNING: 41 ObjectDB instances were leaked at exit' and 'ERROR: 13 resources still in use at exit' from godot --headless --fixed-fps 60 --quit-after 1500 --path . The --verbose run (main_headless_verbose.log:394-451) lists only AudioStreamWAV (effort, whoosh, thud, player_grunt) and AudioStreamPlaybackWAV. Clean: training room, same flags (training_headless.log); windowed 1500 frames (main_windowed.log); headless without fixed fps, 900 frames (main_headless_nofixed.log).",
+    "repro": "cd the review worktree && godot --headless --fixed-fps 60 --quit-after 1500 --path . 2>&1 | grep -E 'ERROR|leaked'",
+    "suggested_fix": "Give AudioDirector a quit drain: on NOTIFICATION_WM_CLOSE_REQUEST, or a GameInput quit hook, stop all voices and wait a short real-time delay before quitting, and drop the bot-side copies. At minimum, note in HANDOFF and A7.4 that headless smoke runs must not use --fixed-fps.",
+    "files": [
+     "game/audio/audio_director.gd",
+     "tests/bot/crowd_bot.gd",
+     "tests/test_slice_crowd.gd"
+    ],
+    "spec_change": false
+   },
+   {
+    "severity": "low",
+    "title": "A few public members of the new room code have no ## doc comment",
+    "detail": "CLAUDE.md requires ## doc comments on public API. RoomKit.box_mesh() and RoomKit.flat_material() are public static helpers with none. CrowdRoom's room-contract members player, spawner, director, geometry and nav_region (the 2.12 contract that bots and tests use) have none either, while nav_bake_usec beside them does. Everything else in the M3 game diff is documented.",
+    "evidence": "game/level/room_kit.gd:107 (static func box_mesh) and :116 (static func flat_material). game/level/crowd_room.gd:105-109 (var player, spawner, director, geometry, nav_region).",
+    "repro": "Read the lines above. An awk pass over the M3 files for public functions not preceded by ## found only these two new ones; the other hits are pre-M3.",
+    "suggested_fix": "Add one-line ## docs to those two functions and five variables.",
+    "files": [
+     "game/level/room_kit.gd",
+     "game/level/crowd_room.gd"
+    ],
+    "spec_change": false
+   }
+  ]
+ }
+}

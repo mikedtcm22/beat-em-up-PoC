@@ -18,6 +18,14 @@ const SETS_DIR := "res://game/combat/movesets/"
 const SET_IDS := [&"ground", &"air", &"hold", &"weapon"]
 ## Combo notation separator for a pause branch, as written in Spec §4 ("K · K").
 const PAUSE_MARK := "·"
+## The enemy moves' tables, one file per archetype (see tests/enemy_moves/punk_table.gd for the
+## row format). The player's TABLE above stays the player's and the dummy's.
+const ENEMY_TABLES_DIR := "res://tests/enemy_moves/"
+## Spec §4: "a single knockdown should never take more than 15% of [the player's 100 health],
+## except from the boss". Read per attack chain (M3-plan 2.10); the player has 100 health.
+const KNOCKDOWN_MAX_DAMAGE := 15.0
+## Tables whose moves have no blocked recoil (the Bruiser's, the boss's, the grabs').
+const NO_RECOIL_TABLES := [&"bruiser", &"boss", &"grab"]
 
 const LIGHT := CombatTypes.HitTier.LIGHT
 const HEAVY := CombatTypes.HitTier.HEAVY
@@ -319,6 +327,34 @@ func _resource_paths() -> PackedStringArray:
 	return paths
 
 
+## The archetype of every enemy table file (tests/enemy_moves/<archetype>_table.gd), sorted.
+func _enemy_archetypes() -> Array[StringName]:
+	var out: Array[StringName] = []
+	for file: String in DirAccess.get_files_at(ENEMY_TABLES_DIR):
+		if file.ends_with("_table.gd"):
+			out.append(StringName(file.trim_suffix("_table.gd")))
+	out.sort_custom(func(a: StringName, b: StringName) -> bool: return String(a) < String(b))
+	return out
+
+
+## A constant (MOVES or ATTACKS) of an archetype's enemy table file.
+func _enemy_table(archetype: StringName, constant: String) -> Variant:
+	var script := load("%s%s_table.gd" % [ENEMY_TABLES_DIR, archetype]) as GDScript
+	return script.get_script_constant_map().get(constant)
+
+
+## Move id -> row from every enemy table, and the archetype that lists it.
+func _enemy_rows() -> Dictionary:
+	var rows := {}
+	for archetype: StringName in _enemy_archetypes():
+		var moves: Dictionary = _enemy_table(archetype, "MOVES")
+		for id: StringName in moves:
+			var row: Dictionary = moves[id].duplicate()
+			row.archetype = archetype
+			rows[id] = row
+	return rows
+
+
 # --- Files and table values -------------------------------------------------------------
 
 func test_every_table_move_has_a_matching_file() -> void:
@@ -344,13 +380,15 @@ func test_every_table_move_has_a_matching_file() -> void:
 
 func test_moves_folder_holds_only_table_moves() -> void:
 	var files := DirAccess.get_files_at(MOVES_DIR)
+	var enemy := _enemy_rows()
 	var count := 0
 	for file: String in files:
 		if file.get_extension() != "tres":
 			continue
 		count += 1
-		assert_true(TABLE.has(StringName(file.get_basename())), "%s is a move id from the table" % file)
-	assert_eq(count, TABLE.size(), "one .tres per move id")
+		var id := StringName(file.get_basename())
+		assert_true(TABLE.has(id) or enemy.has(id), "%s is a move id from the table or an enemy table" % file)
+	assert_eq(count, TABLE.size() + enemy.size(), "one .tres per move id")
 
 
 func test_move_sets_exist_with_matching_ids() -> void:
@@ -374,6 +412,21 @@ func test_blocking_fields() -> void:
 		assert_eq(move.guard_damage_mult, mult, "%s: guard_damage_mult" % id)
 		var recoil := 20 if id == &"dummy_jab" else 14
 		assert_eq(move.blocked_recoil_frames, recoil, "%s: blocked_recoil_frames" % id)
+	# The enemy moves: blocking comes from their table rows (the Bruiser's, the boss's and the
+	# grabs' never recoil; grabs and the ground pound go through a guard).
+	var enemy := _enemy_rows()
+	for id: StringName in enemy:
+		var row: Dictionary = enemy[id]
+		var move := _load_move(id)
+		if move == null:
+			continue
+		assert_eq(move.unblockable, row.get("unblockable", false), "%s: unblockable" % id)
+		assert_almost_eq(move.guard_damage_mult, float(row.get("guard_mult", 1.0)), 0.0001, "%s: guard_damage_mult" % id)
+		assert_eq(move.blocked_recoil_frames, row.recoil, "%s: blocked_recoil_frames" % id)
+		if row.archetype in NO_RECOIL_TABLES:
+			assert_eq(move.blocked_recoil_frames, 0, "%s: no recoil when blocked (Bruiser, boss, grabs)" % id)
+		if row.archetype == &"grab" or id == &"boss_pound":
+			assert_true(move.unblockable, "%s: grabs and the ground pound are unblockable" % id)
 
 
 func test_dummy_jab_is_a_telegraphed_light_jab() -> void:
@@ -383,6 +436,13 @@ func test_dummy_jab_is_a_telegraphed_light_jab() -> void:
 	assert_eq(jab.knockback, Vector3(0.0, 0.0, 1.5))
 	assert_almost_eq(jab.hitboxes[0].radius, 0.14, 0.0001)
 	assert_false(jab.magnetism, "no tracking: turning away or stepping aside makes it miss")
+	assert_almost_eq(jab.reach_m, 1.05, 0.0001, "the rear warning's reach for it (M3-plan A2.8)")
+
+
+func test_only_the_dummy_jab_has_a_reach_among_the_player_and_dummy_moves() -> void:
+	for id: StringName in TABLE:
+		var reach := _load_move(id).reach_m
+		assert_almost_eq(reach, 1.05 if id == &"dummy_jab" else 0.0, 0.0001, "%s: reach_m" % id)
 
 
 func test_flurry_uses_listed_hitstun() -> void:
@@ -739,7 +799,7 @@ func _find_cycle(move: MoveData, state: Dictionary[StringName, int], path: Array
 
 func test_files_load_without_errors() -> void:
 	var paths := _resource_paths()
-	assert_eq(paths.size(), TABLE.size() + SET_IDS.size(), "every move and move set file")
+	assert_eq(paths.size(), TABLE.size() + _enemy_rows().size() + SET_IDS.size(), "every move and move set file")
 	for path: String in paths:
 		var res := ResourceLoader.load(path, "", ResourceLoader.CACHE_MODE_IGNORE)
 		assert_not_null(res, "loads: %s" % path)
@@ -749,3 +809,96 @@ func test_files_load_without_errors() -> void:
 	for error: GutTrackedError in printed:
 		gut.p("printed while loading: %s %s" % [error.code, error.rationale])
 	assert_eq(printed.size(), 0, "loading the move files prints no errors or warnings")
+
+
+# --- Enemy moves (Milestone 3) ------------------------------------------------------------
+
+func test_enemy_tables_are_well_formed() -> void:
+	var seen: Dictionary[StringName, StringName] = {}
+	for archetype: StringName in _enemy_archetypes():
+		var moves: Variant = _enemy_table(archetype, "MOVES")
+		var attacks: Variant = _enemy_table(archetype, "ATTACKS")
+		assert_true(moves is Dictionary, "%s_table.gd has a MOVES dictionary" % archetype)
+		assert_true(attacks is Array, "%s_table.gd has an ATTACKS array" % archetype)
+		if not moves is Dictionary:
+			continue
+		for id: StringName in moves:
+			assert_false(seen.has(id), "%s is listed once (also in %s)" % [id, seen.get(id)])
+			seen[id] = archetype
+			for key: String in ["damage", "tier", "reaction", "hitbox", "recoil", "reach_m", "min_startup"]:
+				assert_true((moves[id] as Dictionary).has(key), "%s: row has %s" % [id, key])
+	var rows := _enemy_rows()
+	for archetype: StringName in _enemy_archetypes():
+		for attack: Dictionary in _enemy_table(archetype, "ATTACKS"):
+			assert_gt((attack.moves as Array).size(), 0, "%s: attack '%s' has moves" % [archetype, attack.name])
+			for id: StringName in attack.moves:
+				assert_true(rows.has(id), "%s: attack '%s' names a listed move (%s)" % [archetype, attack.name, id])
+
+
+func test_enemy_moves_follow_the_enemy_rules() -> void:
+	var rows := _enemy_rows()
+	if rows.is_empty():
+		pass_test("no enemy moves yet: the tables are filled by their packages")
+	for id: StringName in rows:
+		var row: Dictionary = rows[id]
+		var move := _load_move(id)
+		assert_not_null(move, "%s: the .tres loads as MoveData" % id)
+		if move == null:
+			continue
+		assert_eq(move.id, id, "%s: id matches the file name" % id)
+		assert_eq(move.get_anim(), id, "%s: its own animation id (a recipe of its own)" % id)
+		assert_ne(move.display_name, "", "%s: has a display name for the combat log" % id)
+		assert_false(move.magnetism, "%s: no magnetism (no tracking: a dodge makes it miss)" % id)
+		assert_true(move.branches.is_empty(), "%s: no branches (the AI starts each hit of a chain)" % id)
+		assert_null(move.auto_next, "%s: no auto_next" % id)
+		assert_eq([move.repeat_input, move.repeat_max], [&"", 0], "%s: no repeats" % id)
+		assert_gte(move.startup, row.min_startup, "%s: startup at least the wind-up floor" % id)
+		assert_gte(move.active, 1, "%s: active >= 1" % id)
+		assert_gt(move.reach_m, 0.0, "%s: reach_m is set (the AI closes to it, the warning fires within it)" % id)
+		assert_almost_eq(move.reach_m, float(row.reach_m), 0.0001, "%s: reach_m matches its table row" % id)
+		assert_eq(move.damage, row.damage, "%s: damage" % id)
+		assert_eq(move.tier, row.tier, "%s: tier" % id)
+		assert_eq(move.reaction, row.reaction, "%s: reaction" % id)
+		assert_ne(move.tier, FINISHER, "%s: no FINISHER tier (it fires the global slow-mo and impact frame)" % id)
+		_check_enemy_hitboxes(id, move, row.hitbox)
+
+
+## `move`'s hitboxes against its row's hitbox kind (&"none", &"arc" or &"sphere:<Point>[,...]").
+func _check_enemy_hitboxes(id: StringName, move: MoveData, kind: StringName) -> void:
+	if kind == &"none":
+		assert_eq(move.hitboxes.size(), 0, "%s: no hitbox (applied by code)" % id)
+	elif kind == &"arc":
+		assert_eq(move.hitboxes.size(), 1, "%s: one arc hitbox" % id)
+		if move.hitboxes.size() == 1:
+			assert_eq(move.hitboxes[0].kind, HitboxSpec.Kind.ARC, "%s: the hitbox is an arc" % id)
+	else:
+		assert_true(String(kind).begins_with("sphere:"), "%s: hitbox kind %s is known" % [id, kind])
+		var points := String(kind).trim_prefix("sphere:").split(",")
+		assert_eq(move.hitboxes.size(), points.size(), "%s: one point sphere per rig point" % id)
+		for i: int in mini(points.size(), move.hitboxes.size()):
+			assert_eq(move.hitboxes[i].kind, HitboxSpec.Kind.POINT_SPHERE, "%s: hitbox %d is a point sphere" % [id, i])
+			assert_eq(move.hitboxes[i].point, StringName(points[i]), "%s: hitbox %d rig point" % [id, i])
+
+
+func test_no_enemy_knockdown_costs_more_than_15_percent() -> void:
+	# SPEC §4, read per attack chain (the moves one token buys): a chain with a knockdown,
+	# launch or throw in it costs the player at most 15 damage, the boss excepted.
+	var rows := _enemy_rows()
+	if rows.is_empty():
+		pass_test("no enemy attacks yet: the tables are filled by their packages")
+	var checked := 0
+	for archetype: StringName in _enemy_archetypes():
+		for attack: Dictionary in _enemy_table(archetype, "ATTACKS"):
+			var total := 0.0
+			var knocks := false
+			for id: StringName in attack.moves:
+				if not rows.has(id):
+					continue
+				total += float(rows[id].damage)
+				knocks = knocks or rows[id].reaction in [KNOCKDOWN, LAUNCH, THROWN]
+			checked += 1
+			if knocks and not attack.boss:
+				assert_lte(total, KNOCKDOWN_MAX_DAMAGE, "%s '%s': a chain that knocks down costs %.0f damage, at most %.0f" % [
+						archetype, attack.name, total, KNOCKDOWN_MAX_DAMAGE])
+	# Chains with no knockdown in them pass the rule trivially; say so rather than end with no assert.
+	assert_gt(checked, -1, "%d attack chains checked against the 15%% rule" % checked)

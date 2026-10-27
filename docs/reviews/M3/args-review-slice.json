@@ -1,0 +1,25 @@
+{
+  "round": "slice",
+  "base": "356fccf",
+  "base_branch": "m3/enemy-ai",
+  "review_concurrency": 3,
+  "fix_concurrency": 3,
+  "common_note": "THE SLICE GATE (M3-plan Part A §A4, Part C 'The slice gate'): one archetype, the Street Punk, end to end in the crowd room (the main scene): the enemy base, the director, the crowd room with waves, the rear warning, F3 and F4, and the instruments (readability probe R1-R15, autopilot, warning oracle). Other archetypes, enemy grabs and the boss come in phases 2-3: don't report their absence. The integration builder recorded every slice act with the probe on; its sheets, logs and readability.json files are in /Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-p1-int/captures/p1-int/ (read docs/milestones/M3-calls/P1-int.md first: per-act R-metrics, the flinch-lock fix, the lens-coverage levers it tried) (read them, and record your own where you need more). The hard metrics R1, R2, R3, R10 and R11 must pass; the soft ones are judged. Feel defaults are being locked at this gate (ring radius, circle speed, cadence, cap, wind-up gap, wind-up length), so a finding may propose a retune with its evidence.",
+  "lenses": [
+    {
+      "key": "warn",
+      "est": 4,
+      "brief": "Lens L1, WARNING CORRECTNESS (Part B §B4 L1, judged against Part B §B1's rule clause by clause). Check: the sides (135 left lights top-left only, 135 right top-right only), both corners within +-20 deg of directly behind (and the 159/161 edge), nothing in view (<= 55 deg) or out of range (reach_m + 1 m); timing equal to the wind-up (W+ on the WU+ frame); the end on land (blocked too), whiff, interrupt, KO and vanish, and never on the strike coming out; several attackers on a side brighter, a heavy larger (S0's stub can stand in); the hide during the player's KO view; pause; slow-mo and F4's 0.25x; the finisher's impact frame over the HUD; the audio cue's direction. Use the warning_bot acts (training room) AND the slice crowd act with real Punks (the oracle's WARN-CHECK lines and R10 in readability.json), and test_rear_warning*.gd. Corner-crop sheets for every case. The second half of M3's done-when ('the warning fires correctly behind-left, behind-right and directly behind') is judged by this lens."
+    },
+    {
+      "key": "crowd",
+      "est": 5,
+      "brief": "Lens L2, FIRST-PERSON CROWD READABILITY (Part B §B4 L2 rubric, all ten questions answered yes or no with frame references, plus the soft metrics R4-R9, R12, R13, R15 from readability.json). Judge the slice acts 'Punk 1v1', 'Three Punks', 'Six Punks, observed', 'Six Punks, fight', 'Waves' from full-resolution first-person sheets (6 fps over whole acts, 12 fps around wind-ups). Questions that matter most: does every in-view wind-up read at strike range (1 m) and at 2.5 m; do Punks posture AROUND the player on the 2.5-4 m ring rather than bunch in front; is there a flinch-lock (more than about 1.5 s of hits with no chance to act); does the Punk at strike range fill the lens (R8 p95 <= 50%); do get-ups pop or teleport in first person; do any enemies stall at doorways, the car or crates; do taunts or strafes read as threats; do attackers back off after attacking; would a new player know why they took damage. Record your own windowed run of 'Six Punks, fight' for R15 (frame time) if the builder's numbers are missing. This lens judges the first half of M3's done-when ('a 6-enemy fight is readable') for the slice."
+    },
+    {
+      "key": "code",
+      "est": 4,
+      "brief": "Lens L4, CODE AND LAYERS on the M3 diff from c971cf4 to the reviewed commit (git diff c971cf4..HEAD -- game tests tools). Check: simulation never reads a camera (the director, the enemies and the spawner use the player's look API / ViewGeometry); presentation (RearWarning, DebugDraw, HUD, audio) never writes game state; no feel numbers in scripts (every timing, distance, chance and speed a TuningData value or move data; exports for room geometry are fine); static types and ## docs on public API; tokens released on every exit path (hit, grab, KO, death, vanish, F4 removal, room switch with F6, menu_open, freeze); groups left before queue_free; no navigation query before the map sync (no ERROR lines); the latched NavigationAgent3D velocity pattern; the director's timers under hitstop, slow-mo and the 0.25x cheat; determinism (seeded RNG; run test_slice_crowd and test_enemy_director twice and compare); test flakiness (run the full suite twice and compare); a preset saved before M3 loads cleanly; the 'resources still in use at exit' error is gone; M2's player grab still works with S0's pin-order change (run test_grab_view and test_launch_from_hold, and record one grab act in first person)."
+    }
+  ]
+}

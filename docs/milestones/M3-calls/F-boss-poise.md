@@ -1,0 +1,74 @@
+# M3 judgement calls: F-boss-poise (the boss cannot be stun-locked by the basic chain)
+
+The problem (the independent verification of the final review's fixes, fair-01 left partial): a player who repeats P P P P (jab, jab, hook, uppercut) beat the boss in 38 to 40 s. The hook staggers it and the uppercut floors it about every 3 s, it spent 53 to 56% of its life in REACT, landed 2 hits a fight, and every grab was cut by the hook. Waking in place made it wind up after each get-up, but the next chain floored it again. Waking beside the player it also wound up at his nose (1.0 m), where the pound's raised arms are over the lens.
+
+Game-boy was not asked: the default that changes least was taken, and each call below says what it was weighed against. Measurements are headless runs of the crowd bot (`tests/bot/crowd_bot.tscn`, `-- --act="Boss fight" --seed=<n>`, seeds 0 to 11, the new `BOSSMETER` line from `tests/bot/acts/boss_acts.gd`); "before" is the same build with `boss_poise_s` 0, `boss_poise_after_reactions` 0, `boss_read_m` 0 and `boss_attack_cooldown_s` 4.0 (it reproduces the verifier's numbers: kill 38 to 41 s, REACT 52 to 55% on seeds 0 to 2).
+
+## Result
+
+| Boss alone, full autopilot, 12 seeds | before | after | target |
+| --- | --- | --- | --- |
+| REACT share of its life | 48% | **21%** | under about 30% |
+| hits it lands on the player | 3.1 (1 to 5) | **4.6** (3 to 6) | at least 5 |
+| damage it deals | 55 | 76 | |
+| wind-ups, of which cut | 5.3, 2.2 | 7.0, 1.8 (mostly grabs) | |
+| kill time | 41.5 s | 39.3 s (max 48.0) | still beatable: it was, 12 of 12 |
+| player KO'd (the room revives him) | 1 fight of 12 | 3 of 12 | |
+| pound and charge wind-ups that start under 1.35 m | 34% | 8% | |
+
+The hits target is **not met on average (4.6, and 3 to 6 a fight)**: see call 10, it is structural at 300 HP. The REACT target is met by a margin.
+
+## Poise
+
+1. **Poise starts when it is back on its feet after a stagger or a knockdown, not at the hit, and lasts `boss_poise_s` (4.0) or until its next attack ends (`boss_poise_attacks` 1).** While it lasts a heavy hit and a finisher are absorbed like a light one: the damage lands, the grey spark of the armor, no reaction, the move runs on. `Boss._tick_poise()` watches the state (STAGGER, LAUNCHED, THROWN, DOWNED, GETUP, then FREE), `_enter_recover()` counts its attacks. *Alternatives:* (a) poise from the first hit of the chain, so the uppercut that follows the hook is absorbed too (the boss would then never go down to a chain and the player would have no punish at all except the haymaker: one knockdown per chain is kept on purpose, the reeling boss is not poised); (b) a poise meter that heavy hits and finishers wear down (a new system with three numbers to find, beside the lead's wording); (c) a time-only poise (`boss_poise_attacks` 0). *Why this:* the lead's wording; (c) measured the same (six seeds, cooldown 1.0: time only 28% and 4.7 hits, ending with the first attack 29% and 4.8), so the attack count stays a tunable at the lead's value and costs nothing.
+
+2. **A cut wind-up does not end the poise, a finished attack does.** A heavy hit still cuts the grab (Game-boy's rule), the cut staggers it, and the poise goes on counting through the stagger: the finisher that follows the hook is absorbed (a stagger, not a knockdown). Without this the grab, which the autopilot cuts every time (its third punch is the hook), would still have cost the boss a knockdown per attempt. Tested (`test_a_heavy_hit_still_cuts_a_poised_boss_out_of_the_grab_and_the_poise_goes_on`).
+
+3. **The haymaker (`breaks_armor`) still knocks a poised boss down; a killing hit is never softened; a parry's recoil gives no poise.** The haymaker is the answer the spec names (SPEC §4: it breaks armor), as with the Bruiser. The parry's 36 frames of recoil are the player's reward for the timing; a poise after it would answer the reward with an immunity, and a recoil (HITSTUN) is not a stagger or a knockdown, so `_tick_poise()` does not owe one.
+
+4. **The finisher on the grab's wind-up keeps its own reaction (a knockdown), as the base's armor says.** *Alternative:* turn it into a stagger like the hook. *Why not:* a finisher as the first heavy contact on a grab (rather than after the hook) is rare, the rule stays the base's (`armor_finisher_to_stagger` false), and a knockdown from it is the deliberate punish.
+
+5. **The reaction cap is on: `boss_poise_after_reactions` 2 inside `boss_poise_window_s` 8.0.** Two hits that staggered or floored it within eight seconds make it poised until the older one is eight seconds old. The lead said "if poise alone doesn't do it": poise alone gives REACT 29% and 4.1 hits over twelve seeds (on the edge of the target), the cap alone 22% and 4.7, both 21% and 4.6. It is also a cleaner bound than a time that depends on how the boss's cooldown and the player's chain happen to line up. *Alternatives:* poise alone (29%); a bigger window (12 s: REACT 20%, 2.8 hits, a 33 s kill: the boss dies before it can attack); 3 reactions in 10 s (24%, 4.7 hits over six seeds: no better). Both are tunables at 0 for today's behaviour.
+
+6. **The wake-up hold lasts as long as the poise (`_resume_posture()` override: `max(posture_resume_s, poise)`).** The base holds a woken boss in POSTURE where it stands for `posture_resume_s` (3.0) and then the stray rule sends it to APPROACH, where it asks for no token; the timeline of a fight showed the boss posturing for 4 s of poise with its cooldown still running, then walking back to its slot and being floored on the way. `posture_resume_s` is a shared (Posture) tunable, so the lengthening is the boss's own.
+
+## Cadence
+
+7. **`boss_attack_cooldown_s` goes from 4.0 to 1.5.** Poise and the cap shorten the fight (the boss no longer loses the seconds after a chain to a stagger, so the player's damage rate goes up: with the old cooldown the kill came at 32 s, with 4.5 wind-ups and 2.4 hits) and the old 4.0 cooldown (counted from the attack's end through the recover hold and the walk back) then bound it. Twelve seeds with poise and the cap: cooldown 3.0 gives 4.7 wind-ups and 2.7 hits, 2.0 gives 5.4 and 3.0, **1.5 gives 7.0 and 4.6**, 1.0 gives 7.3 and 3.8. The cooldown alone (1.5, no poise) does nothing: 53% and 2.1 hits, the chain cuts what it lets start. *Alternative:* keep 4.0. *Why not:* it caps the hits at about 2.4 whatever the poise. The price: against a player who does nothing it hits 13 times a minute (8 or 9 before) and KOs him about every 25 s (R12's soft floor of 12 s is for six grunts and still holds).
+
+8. **`boss_grab_chance` and the other chances are unchanged (0.4, 0.3, 0.3).** Lowering the grab, the attack the hook always cuts, was measured over twelve seeds (0.1): 1.2 cut wind-ups instead of 1.8 but 6.4 wind-ups instead of 7.1 and the same 4.2 hits (a cut grab is a short attempt that frees the boss to try again). Not worth a changed number.
+
+## Waking at the nose
+
+9. **A step back before a charge or a pound that cannot be read, in ENGAGE (`Boss._tick_engage()`): with a token, the commit pause over and the player closer than `boss_read_m` (1.5 m), it walks backward at its walking speed for at most `boss_back_off_s` (0.8 s), then the base goes on.** The number comes from the shared first-person telegraph check run on the boss's moves (2.3 m body, a scratch scan, kept in `test_the_pound_and_the_charge_read_from_boss_read_m_and_not_from_the_nose`): the pound reads from 1.4 m, the charge and the grab from 1.2 m, none at 1.0 m (where a chain leaves the player; his magnetism stops him at about 1.05 m). The verifier's sheet (`boss_wake_pound.png`) shows the cause: the torso fills the lens and the raised arms are above it. Measured over twelve fights: pound and charge wind-ups under 1.35 m were 34% and are 8% (median distance 1.5 m, now 1.9 m), with no change in hits landed. The remaining 8% are players who follow it back, as a chain does: the bound is what keeps such a player attackable. *Alternatives, tried or weighed:* (a) **prefer the grab at that range** (the lead's first suggestion: it reads from 1.2 m): the hook always cuts it, so a boss at the nose that can only grab is the stun-lock again with extra steps; (b) hold the token request in POSTURE until the boss has backed out (my first version, `wants_token()` false while too close): the commit pause and the director's go still gave the wind-up at 1.0 to 1.2 m in the fights; (c) allow the charge as a barge at the nose: not measured at the lens, and nothing says it reads; (d) a faster retreat: the player follows at running speed, it would not outrun him either. The grab is thrown from where it stands (its range is 1.3 m).
+
+## The phase 2 beckon
+
+10. **The phase 2 beckon waits for the boss's next free moment (`_beckon_due`, `_tick_beckon()`).** It was made only if the boss happened to be posturing with no token when its health crossed half. With the new cadence it almost never is (POSTURE is 8% of its life): the recording of "Boss phase 2 adds" showed the bar halve, two Punks walk in from the doorways and no gesture. It now plays once, the first tick it is posturing with no token and no gesture under way. `test_a_busy_boss_beckons_at_its_next_free_moment_after_phase_two`.
+
+## What is left, and why
+
+11. **The hits target (at least 5) is missed: 4.6 on average, 3 to 6 a fight.** It cannot go much higher at 300 HP and the autopilot's speed: each landed hit knocks the player down, and the director withholds the boss's next wind-up while he is down and getting up (2.5 to 3 s a hit, the fairness rule of M3's director, not mine); the fight is as long as the player's damage rate lets it be, and a chain deals 32 in about a second against a boss that does not flinch, so the REACT time that made the fight 40 s long is the time that is now taken away. More health is the lever: `boss_health` 400 gives 4.8 hits and a 47 s kill, **500 gives 6.0 hits, a 56 s kill and the player KO'd in half of the fights**. Not taken: SPEC §7 says 300, and a spec change is Game-boy's call (in "requests" and "open risks"). Shortening the cycle between attacks (the RECOVER walk back to the slot is about 0.9 s an attack; the base's "attackers back off", rubric item 7) might give one more attack a fight (not measured); not touched, it is the crowd's readability rule.
+
+12. **No finisher slow-mo fix here.** An absorbed finisher (the uppercut into a poised boss) gets the grey spark and no impact frame (`VfxDirector` returns after the spark) but `HitDetector` still starts the global finisher slow-mo (0.3 for 250 ms) for any clean finisher, absorbed or not, and `CombatActor.impact_frame_ticks()` still delays the contact flash. Each chain into a poised boss therefore has its slow-mo with nothing to show for it. Both files are not mine (`hit_detector.gd` is S0's, `combat_actor.gd` the instruments package's); a request is in the final message: skip the slow-mo when every landed hit was absorbed, and decide the impact-frame delay after `_apply_armor()`.
+
+## What the first-person sheets showed (recorded with `tools/capture_bot.sh`, seed 0, local, never committed)
+
+- **"Boss fight" (40 s, `captures/poise/fight`):** the boss walks in from the east alley and winds up the pound; the jabs land grey sparks with no flinch, the pound lands (the red splat, BOFF, the knockdown view) and the player is up again. The next chain staggers it once (it was walking, un-poised); it wakes beside the player, its arms spread wide for the grab at the lens edges, the hook cuts it (THUD, a stagger), the uppercut that follows lands a grey spark and it stays on its feet; it then goes on to a charge and pounds (readable, the pound's strike at the player's chest), and at low health it is a blood-splattered wall at the nose that absorbs jab after jab until the bar is empty. Warnings: `WARN-CHECK ok` for all of its wind-ups; `check_m3_log.py` passes on the log.
+- **"Boss charge in front":** unchanged: the crouch, the dash, the THUD and the knockdown view.
+- **"Boss phase 2 adds":** the bar halves and flashes, two Punks walk in from the doorways, the boss's wind-ups from behind light both top corners (`WARN-CHECK ok`, latency 0). The beckon was absent in the recording that led to call 10.
+- `test_m3_done_when.gd` passes in the full run; `check_m3_log.py` passes on the "Boss fight", "Boss phase 2 adds", "Waves to the boss", "Boss wave, held back" and "Mixed six, fight" logs.
+
+## Tunables added (Boss subgroup; the preset is regenerated and in the commit; 0 for the first two and the third and fourth is today's)
+
+- `boss_poise_s` 4.0 (0-10), `boss_poise_attacks` 1 (0-4), `boss_poise_after_reactions` 2 (0-6), `boss_poise_window_s` 8.0 (1-30), `boss_read_m` 1.5 (0-4), `boss_back_off_s` 0.8 (0-3).
+- Changed: `boss_attack_cooldown_s` 4.0 to 1.5.
+- Today's boss: `boss_poise_s` 0, `boss_poise_after_reactions` 0, `boss_read_m` 0, `boss_attack_cooldown_s` 4.0.
+
+## For the lead (wording for the files the lead owns)
+
+- **README line 85**: replace "To judge in play: the boss is easy for the scripted player (it is killed in about 41-43 s, ... about 60-70 s)." and the sentence after it ("Whether it should also absorb heavy hits ... nothing is built for it.") with: "To judge in play: the boss now has poise. After a stagger or a knockdown, once it is on its feet, a heavy hit and a finisher do their damage but do not flinch it, for 4 s or until its next attack is over, and after two staggers or knockdowns in 8 s until the older is 8 s old; the haymaker still knocks it down and a heavy hit still cuts its grab. The scripted player (the full chain) kills it in about 39 s with the boss in reaction 21% of the time (it was 48%), and takes about 4.6 hits from it (3.1). It steps back before a charge or a pound that is too close to read. `boss_health` 500 would give about 6 hits and a 56 s fight; it is 300 by the spec."
+- **README line 152** (the heavy-hit armor departure): add that a heavy hit and a finisher are also absorbed for a while after it gets up (poise), the haymaker and the grab's cut excepted.
+- **"Where M3 departs from the spec"** (README): one new entry, "The boss has poise (SPEC §7 says only that light hits do not interrupt it)", with the numbers above; and the open question for Game-boy: more health (400 or 500) for a boss fight with at least five hits.
+- **M3-judgement-calls line 71** and the open question of `final-enemy-ai.md` ("should the boss have a poise window?"): taken, as calls 1 to 6 here; P3-boss call 4 gains a line that the boss's poise was weighed there and left out, and added here with the numbers that justified it.
+- **ARCHITECTURE**: the "Boss" heading is updated here (armor, poise, stepping back, measured, tunables, tests). "Life of an enemy" in the base section still says an enemy that wakes in place holds for `posture_resume_s`: for the boss it is `max(posture_resume_s, poise)`.

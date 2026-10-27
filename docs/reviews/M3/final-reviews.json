@@ -1,0 +1,705 @@
+{
+ "warn": {
+  "summary": "Lens L1 (warning correctness), final M3 review at 7a015cc, worktree /Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-warn.\n\nThe done-when's warning clause holds for every archetype: Punk, Kicker, Thug, Bruiser and Boss light the correct corner behind-left, behind-right and directly behind. Each warning starts on the wind-up's first frame and holds to the contact. The 159/161 edge, the 54/56 edge and every range edge follow the rule. The warning ends on a landed hit, a block, a whiff, an interrupt or a grab, and never when the strike comes out. An absorbed jab or hook on a Bruiser or the boss neither ends the warning nor stretches the wind-up. Pause, F4's 0.25x and the KO-view hide all behave as specified. Wind-up audio pans the right way (about +/-3.5 dB at 135 degrees, centred at 180).\n\nThe full suite passes: 1130 of 1130, with no SCRIPT ERROR or ERROR lines. check_m3_log.py is ok on every crowd log from P4-int and on my recordings. The one exception is P4-int's pre-fix seeds/s1_fight log, which still shows the R2 failure their call 21 already settled.\n\nI found no high or medium defects. There are two low ones:\n1. Above rear_warning_size 1.35 the heavy burst is no bigger than a grunt's, and the slider does nothing past that point.\n2. During the back elbow's 150-degree over-the-shoulder view, a wind-up ahead of the look is off camera and gets no warning. This departs from SPEC \u00a78's \"camera forward\" and is not in the departures list.\n\nThe Kicker \"crying wolf\" question passes. A jump kick from 3.2-3.7 m behind warns (reach 2.75 + 1 m, as the spec's margin asks) and the warning ends on the whiff. Real AI winds up from at most 2.70 m (`engage`), and only 3 of 24 warned real-AI jump kicks in P4-int's crowd logs whiffed.",
+  "checked": [
+   "Read M3-plan Part A/B (B1 truth table, B2 R1-R15, B3 evidence pack, B4 lenses), SPEC \u00a77, \u00a78, \u00a711, ARCHITECTURE 'Rear warning and the F3 AI overlay' and 'Instruments', M3-judgement-calls.md (rear warning and departure sections), M3-calls P1-hud, P1-instruments, P2-grab, P2-kicker, P3-boss, P3-bruiser, P4-int",
+   "Code: game/ui/rear_warning.gd (trigger, side, end events, poll, refresh, size and clamp, pulse, draw), game/combat/view_geometry.gd, game/ui/hud.gd (advance with game_delta x sim_scale, node order), game/actors/combat_actor.gd (start_move, _advance_move whiff emission, _cancel_move, receive_hit armor path), game/combat/hit_detector.gd (armored victim not frozen, hit_landed for blocked hits, team filter), game/enemies/enemy_actor.gd (warning_reach_m, _start_attack, engage distance, armor), enemy_hold.gd (grab connect/whiff, follow-up), boss.gd (heavy-absorb during charge/pound), kicker.gd, tools/gen_moves.gd reach_m values, audio_director.gd (wind-up cue, listener on the look, voice protection), time_controller.gd, impact_frame layering (layer 20 over HUD layer 10), tuning_data.gd 'Rear warning' ranges, player.gd _update_view_yaw / first_person_camera.gd view yaw",
+   "Full GUT suite at 7a015cc: captures/review/full_tests.log, 1130/1130 pass, 0 SCRIPT ERROR/ERROR, 112 s",
+   "Probe test tests/test_zz_review_warn.gd (crowd room, real HUD, real archetypes; log captures/review/probe1.log): Kicker jump kick at 180 deg 2.6/3.2/3.7/3.8 m and +-135 deg 3.7 m; Kicker sweep 135 deg 1.4 m, 180 deg 2.4/2.5 m; boss charge 180 deg 5.25/6.2/6.4 m and 135 deg 5.25 m; boss grab 180 and -135 deg; Bruiser grab 135 and 180 deg; Bruiser smash at +-159/+-161 deg; Punk jab at +-54/+-56 deg; Bruiser range edge 2.29/2.35 m; boss pound 159/161 deg; armor (real player jabs on Bruiser at 135 and -150 deg and on boss pound, synthetic heavy hook on boss pound); pause 40 frames mid-wind-up; F4 0.25x; KO view (health 0 then restored mid-wind-up); two on the left (Bruiser 120 deg + Punk 150 deg)",
+   "Probe test tests/test_zz_review_warn2.gd (captures/review/probe2.log, probe2b.log): heavy vs grunt burst size over rear_warning_size 0.5-3.0 at a 1920x1080 control; back elbow view yaw per frame and a Punk dead ahead winding up during it",
+   "Recording crowd_bot 'Rear warning, every archetype' (captures/review/warn_every): 15 wind-ups, check_m3_log ok; corner sheets per archetype; frame offset (video n = physics n+1) from sheets/offset_tl.png",
+   "Recording warning_bot all 'Warn:' acts (captures/review/warnbot): 12 WARN-CHECK ok; corner crops 'two on the left' and 'heavy'",
+   "Recording crowd_bot 'Boss charge behind|Bruiser winds up behind|Grab: from behind|Kicker behind warns' (captures/review/behind): 9 WARN-CHECK ok; full-frame sheets of the 180 deg charge and the grab from behind",
+   "Recording warning_bot 'Warn: heavy' with --tune=rear_warning_size=1.5 (captures/review/size15) against the default-size recording",
+   "Audio direction: L/R RMS over each wind-up in captures/review/warn_every/bot.avi and P4-int warn/bot.avi",
+   "check_m3_log.py over P4-int observed, fight, boss, warn, pickup, perf, perf_rec and all seeds/* logs plus my three recordings",
+   "Warned-wind-up outcomes (hit, whiff, interrupt, grab) across 12 P4-int crowd logs (scratchpad warn_outcomes.py)",
+   "P4-int sheets warn/sheets/warn_Kicker.png and warn_Boss.png; full frames at every W+ of P4-int fight/bot.avi (captures/review/p4_fight_sheets/fight_wplus.png)"
+  ],
+  "sheets": [
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-warn/captures/review/warn_every/sheets/corners_Punk.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-warn/captures/review/warn_every/sheets/corners_Kicker.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-warn/captures/review/warn_every/sheets/corners_Thug.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-warn/captures/review/warn_every/sheets/corners_Bruiser.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-warn/captures/review/warn_every/sheets/corners_Boss.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-warn/captures/review/size15/sheets/size_compare.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-warn/captures/review/warnbot/sheets/two_left.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-warn/captures/review/warnbot/sheets/heavy.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-warn/captures/review/behind/sheets/boss_charge_180.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-warn/captures/review/behind/sheets/grab_behind.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-warn/captures/review/p4_fight_sheets/fight_wplus.png"
+  ],
+  "passes": [
+   "Done-when, behind-left, behind-right, directly behind, every archetype. In captures/review/warn_every/bot.log all 15 WARN-CHECK lines are ok with lat=0 end=0. The corner sheets corners_{Punk,Kicker,Thug,Bruiser,Boss}.png show, per row: dark at f-1, then top-left only (135 L), top-right only (135 R), or both corners (180) from the first wind-up frame to the frame before contact, and dark on the contact frame.",
+   "Edges with real archetypes (probe1.log). Bruiser at 159 deg lights left only; at 161 deg both; at -159 deg right only; at -161 deg both. Boss pound at 159 deg lights left only and at 161 deg both. Punk at +-54 deg stays dark; at +56 deg it lights left and at -56 deg right. The warning_bot act 'Warn: edge of behind' shows both corners at 161 deg and left only at 159 deg.",
+   "Range edges: Bruiser smash at 2.29 m lights and at 2.35 m stays dark (edge 2.30). Kicker jump kick at 3.7 m lights and at 3.8 m stays dark (edge 3.75). Kicker sweep at 2.4 m lights and at 2.5 m stays dark. Boss charge at 6.2 m lights and at 6.4 m stays dark (edge 6.3). warning_bot 'in view' and 'out of range' acts are ok.",
+   "Kicker from 3.75 m (crying-wolf check). At 3.2 and 3.7 m behind, the corner stays lit for the 22-frame wind-up plus the 5-frame leap, then ends on the whiff (WU+ f186, WU- f208, WHIFF f214, lit f186-f213). That is the spec's +1 m margin working as written. Real AI winds up from at most 2.70 m (engage = reach - engage_margin_m). In P4-int's crowd logs, 21 of 24 warned real-AI jump kicks hit and 3 whiffed.",
+   "Boss charge's 5.3 m reach from behind. At 180 deg and 5.25 m, both corners light, heavy, from f836 to f890 and go dark on the hit at f891. That is 32 wind-up frames plus 23 frames of dash, so the warning outlives the strike coming out (WU- f868). Recording 'Boss charge behind': W+ f47, W- f98 on the hit; at 135 deg, W+ f269, W- f317 left only. Sheet boss_charge_180.png.",
+   "Grab wind-up and follow-up. Boss grab at 180 deg lights both corners (heavy) f1466-f1497 and goes dark on GRAB at f1498; the slam's wind-up (54 frames) stays dark. Bruiser grab at 135 deg lights left (heavy) and ends on the grab; the headbutt stays dark. Grab sheet grab_behind.png shows the warning lit until the connect, then the yank-round and the MASH prompt.",
+   "Never on the strike coming out. The Kicker's warning stays lit 5 frames past WU- (W- f509 against WU- f504); the boss charge's stays lit 23 frames past WU-. The crowd logs agree, e.g. fight Kicker1: WU- f516, W- f521.",
+   "Ends on whiff, block, interrupt, grab, KO and vanish. Whiffs: probe Kicker at 3.2 and 3.7 m, charge at 6.2 m, smash at 2.29 m. Block and interrupt: warning_bot 'blocked ends it' and 'hit out of it ends it' are ok, and in the crowd fight Punk1's W- f670 lands on its WU- f670 interrupted=true. Grab: shown above. KO, vanish and poll: test_rear_warning test_the_warning_ends_on_every_end_event_and_poll passes.",
+   "Armor does not end or stretch the warning. Real player jabs hit the Bruiser twice (HIT f4085 jab_1 ARMOR, f4095 jab_2 ARMOR); the left corner stays lit f4074-f4107 and goes dark on the smash's contact at f4108. WU+ f4074 to WU- f4108 is 34 frames, exactly its startup. The same holds for the Bruiser at -150 deg. The boss pound under two jabs runs WU+ f4424 to WU- f4460, 36 frames, exactly its startup. A synthetic heavy hook during the pound is absorbed (absorbed=true) and the warning stays lit to the contact.",
+   "Two attackers on a side are brighter. In the probe, the count goes 1 to 2 at f5535 (brightness 1.0 to 1.2, heavy stays true) and drops back to 1 with heavy false after the Bruiser's whiff at f5551. In warnbot/sheets/two_left.png, the count-2 burst's centre turns lemon yellow and the burst re-pulses.",
+   "Heavy burst is larger at default. warnbot/sheets/heavy.png shows the heavy burst on the right larger than the grunt's on the left, both inside the corner. corners_Bruiser and corners_Boss show larger bursts than corners_Punk. test_m3_done_when asserts heavy_size > grunt_size.",
+   "Pause. Paused for 40 frames mid-wind-up, the corner stays lit f4790-f4851 and ends on the hit at f4852 (22 + 40 frames).",
+   "F4 0.25x. The warning stays lit 88 frames (4 x 22), f4968-f5055, and ends on the hit at f5056. The pulse scale sampled every 6 frames shows two pulses over about 54 frames instead of 14.",
+   "KO-view hide. With health 0 from f5405, the corner is dark f5406-f5411; it relights at f5412 after health returns, and the wind-up then ends on the hit at f5420. This matches P1-hud call 7.",
+   "Audio direction (captures/review/warn_every/bot.avi). L-R level over each wind-up: 135 deg left +3.4 to +3.8 dB, 135 deg right -3.5 to -3.8 dB, 180 deg -0.2 to +0.1 dB, for all 5 archetypes.",
+   "Finisher impact frame over the HUD: by code, the ImpactFrame sits on canvas layer 20 above the HUD's layer 10 and inverts the whole screen, burst included, for 1-2 frames, as SPEC \u00a76 intends. The burst is not removed.",
+   "R10 and the log checker. check_m3_log.py is ok on P4-int's observed, fight, boss, warn, perf, perf_rec and every seeds/* log, and on my warn_every and behind recordings. The one exception is P4-int's pre-fix seeds/s1_fight log (R2 = 11, already settled by their call 21). Every log has R10 at 100%, 0 false positives, lat 0, end 0.",
+   "Every crowd warning start matches its corner and is visible over the fight. p4_fight_sheets/fight_wplus.png has a tile at each of the 15 W+ frames of 'Mixed six, fight'; each burst is fully visible over enemies at the nose. The RearWarning node draws above the over-head bars, the combat log and the help overlay (hud.tscn node order)."
+  ],
+  "also_noticed": [
+   "R10 in the crowd acts never checks B1.6 (heavy). The oracle counts warning_heavy_mismatch_frames (tests/bot/warning_oracle.gd:204, 327), but readability_probe.gd:909-914 and its R10 verdict (1034-1042) drop that count. The oracle also checks the widget's heavy flag rather than the drawn size, so finding 1 would pass R10 at any size.",
+   "Headless runs use a 1920x1920 viewport (probe2b.log: 'warning control size in headless: (1920, 1920)'). The corner is then 384x384, so no headless real-room test, including test_m3_done_when's heavy_size > grunt_size, ever exercises the 216 px corner clamp.",
+   "tools/check_m3_log.py reports FAIL on every warning_bot log (captures/review/warnbot/bot.log: 10 false 'no W+ line'). warning_bot prints 'W+ side=left count=1 heavy=false f31' with the frame last, and its WARN-CHECK frame is the act's check frame (f117), not the wind-up's (f31). The checker is meant for crowd logs (A7.1), but B3's main evidence for the done-when's warning clause is the warning_bot log, so a gate running the checker on it would read FAIL.",
+   "Wind-up audio pans about +/-3.5 dB at 135 deg (Godot's default 3D panning strength). The side is audible on headphones but mild. This is feel, so the default is kept.",
+   "The Kicker's 'crying wolf' case is only reachable when the player walks away mid-wind-up. A frozen Kicker winding up from 3.2-3.7 m warns for 27 frames and whiffs, which is spec-conformant."
+  ],
+  "findings": [
+   {
+    "severity": "low",
+    "title": "Above rear_warning_size 1.35 the heavy burst is no larger than a grunt's, and the size slider does nothing",
+    "detail": "SPEC \u00a78 says the Bruiser and boss get a larger burst, and SPEC \u00a711 makes burst size a tuning slider. RearWarning._steady_size() multiplies base_px x size x heavy_scale and then clamps to the corner's short side (216 px at 1080p). So once base x size reaches 216/1.3 = 166 px (size 1.04), the heavy burst stops growing and the grunt burst catches up. Ratios: 1.30 at size 1.0, 1.23 at 1.1, 1.12 at 1.2, and 1.00 from 1.35 up to the slider's 3.0. From 1.35 to 3.0 (about 60% of the range above the default) neither burst changes size and heavies look like grunts. At the default, the first frames of the heavy pop are also clipped: 216 px against the grunt's 200, a ratio of 1.08. The instruments cannot catch this: the oracle and probe check the heavy flag, not the drawn size; headless runs use a square 1920x1920 viewport that never hits the 216 px clamp; and test_ui only checks that every size stays inside the corner.",
+    "evidence": "captures/review/probe2b.log (1920x1080 control). Heavy against grunt: size 1.00 gives 208/160 px; 1.10 gives 216/176; 1.20 gives 216/192; 1.35, 1.50, 2.00 and 3.00 all give 216/216. Sheet captures/review/size15/sheets/size_compare.png: top row size 1.0 (the heavy burst on the right is larger), bottom row 'Warn: heavy' recorded with --tune=rear_warning_size=1.5 (both bursts the same size). Code: game/ui/rear_warning.gd:314-320 (_steady_size clamp), 148-155 (burst_rect clamp); game/autoload/tuning_data.gd:815 (size range 0.25-3.0), 829 (heavy_scale).",
+    "repro": "In F1, set Rear warning > rear_warning_size to 1.5. Let a Bruiser (or the boss) and a Punk wind up behind-left and behind-right; both corner bursts are 216 px. Headless: run tests/test_zz_review_warn2.gd::test_heavy_burst_against_size in the review worktree.",
+    "suggested_fix": "Keep the ratio inside the clamp: cap the grunt size at edge / rear_warning_heavy_scale and draw a heavy burst at grunt x heavy_scale, so a heavy is always heavy_scale times larger and fits the corner. Alternatively, limit the slider to what fits, about 1.04 at the defaults. Add a test_ui assertion that heavy is larger than grunt at every size on a 16:9 canvas.",
+    "files": [
+     "game/ui/rear_warning.gd",
+     "game/autoload/tuning_data.gd",
+     "tests/test_ui.gd"
+    ],
+    "spec_change": false
+   },
+   {
+    "severity": "low",
+    "title": "During the back elbow's 150-degree view turn, a wind-up ahead of the look is unseen and unwarned",
+    "detail": "SPEC \u00a78 fires the warning for an enemy 'more than 55\u00b0 from camera forward'. The build measures from look_yaw (decided call, M3-judgement-calls.md line 33, whose reasoning names spins and the KO view). The back elbow (RB, M2) is different: it turns the first-person view 150 degrees over the shoulder (camera_yaw_deg -150, held 6 frames) without changing look_yaw. For 19 of its 26 frames the camera points more than 55 degrees off the look. In that window, a Punk dead ahead of the look that starts its jab is 150 degrees off camera forward: off screen and unwarned. The probe shows it unwarned for its whole 22-frame wind-up (lit=false every frame) and off camera for the first 16 of those frames (cam-bearing 150 down to 56), visible only from 39 degrees, 5 frames before the strike. The reverse also happens: an enemy behind the look that winds up during the elbow lights the corners while it is plainly on screen. With the director favouring out-of-view (by look) enemies and a wind-up gap of 21 frames, a wind-up in that window is not rare in a crowd. The departure from the spec text is not in 'Possible spec departures (for Game-boy's ruling)', while the other warning departures (fixed side, 46-55 degree band, reach includes travel) are.",
+    "evidence": "captures/review/probe2.log. 'back elbow view yaw per frame: 0:-16 1:-53 2:-97 3:-134 4..13:-150 14:-147 ... 20:-56 21:-39 ... frames with |view| > 55: 19'. 'punk ahead during back elbow: 0:WU cam-bearing 150 lit=false ... 16:WU cam-bearing 56 lit=false | 17:WU cam-bearing 39 lit=false ... 21:WU cam-bearing 0 lit=false | 22:AT'. Code: tools/gen_moves.gd:72-74, 190-195 (BACK_ELBOW_VIEW_YAW_DEG -150, hold 6); game/player/player.gd:956-989 (_update_view_yaw); game/camera/first_person_camera.gd:261-262 (view = view_yaw x look basis); game/ui/rear_warning.gd:259-267 (bearing from look_bearing_deg only).",
+    "repro": "Crowd room, AI frozen: place a Punk 1.0 m dead ahead, press RB (back elbow), then force_attack(0) on the Punk 4 frames later. No corner lights, and the Punk is off screen for 16 of its 22 wind-up frames. Headless: tests/test_zz_review_warn2.gd::test_back_elbow_view_turn.",
+    "suggested_fix": "Either record it for Game-boy's ruling in M3-judgement-calls.md 'Possible spec departures' (the warning reads the look, not the camera; the back elbow's view turn is the visible case), or have the HUD widget, which is presentation and may read the view, also light a corner for an attacker more than rear_warning_angle_deg off the look rotated by player.get_camera_view_yaw(), while the director and the oracle stay on the look. Prefer the doc entry unless Game-boy wants the camera reading.",
+    "files": [
+     "game/ui/rear_warning.gd",
+     "docs/milestones/M3-judgement-calls.md"
+    ],
+    "spec_change": false
+   }
+  ]
+ },
+ "crowd": {
+  "summary": "I reviewed the merged M3 build at 7a015cc through the L2 crowd lens, in worktree /Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-crowd. I used P4-int's recordings and twelve runs of my own: seven Movie Maker recordings (knockdown lens, line-up, mixed waves, boss wave, guard vs wind-up) and headless fixed-fps runs with a pop monitor, a lens-cover sampler and the engage meter. My probe acts are in tests/bot/acts/zz_review_acts.gd, untracked and not committed. No Godot process is left running.\n\n**Hard metrics:** R1, R2, R3, R10 and R11 pass in every act and seed I ran, and tools/check_m3_log.py says ok on every log.\n\n**Four real defects:**\n1. **High.** Every knockdown from the side or behind puts the first-person lens 4.4 cm under the street for about 1.1 s. The floor vanishes and the player sees the undersides of the level. This is what P4-int called the \"pale floor slab\"; it is not the player's own body. In a crowd it is the usual case: all four knockdowns of a passive mixed crowd came from outside the view.\n2. **Medium.** The APPROACH state takes the straight navmesh path through the player to a slot on his far side. Avoidance turns this into an orbit at 0.75-0.9 m, facing him. A purple Bruiser filled the view for 3.5 s while it was not attacking. This is the main cause of the R8 lens-cover misses in the mixed fight.\n3. **Medium.** The Kicker's blind-side ring rotation keeps the whole fought crowd walking between slots. On average only 0.4-0.8 of 5.8 enemies are posturing; the same six with the rotation off posture 1.7-2.0, as six Punks do (1.7). This breaks SPEC \u00a77 (\"most of their time posturing\") and the posture share the slice gate accepted.\n4. **Low.** The evidence pack and the waves test never reach a mixed wave. \"Waves to the boss\" plays two Punk-only waves and a boss that throws one wind-up. My own runs fill the gap, and the mixed waves pass.\n\n**Two low flags:**\n- The face-up \"belly slab\" covers 71-77% of the lens for about 1 s. This is Game-boy's call.\n- A bruised Kicker drifts toward the clean Thug's colour.\n\n**What passes:** the posture ring, guards that never look like wind-ups, attackers backing off, armor hits that register, flinch-lock, get-up pops (none in 9 runs), the Kicker's flank, archetype identity when clean, and the boss in the street.",
+  "checked": [
+   "Read M3-plan Part A and Part B (B1-B4 and the L2 rubric), SPEC \u00a75, \u00a77, \u00a78, \u00a711 and \u00a712, ARCHITECTURE's M3 sections (enemy base, director, crowd room), M3-judgement-calls.md, M3-calls/P4-int.md and M3-slice-gate.md.",
+   "P4-int's evidence: observed, fight and boss sheets (overview_0-3, bruiser_close, boss_arrival, phase2), their readability.json files, and LOCK, CROWD and PILOT lines across the 17 seed logs.",
+   "My own sheets from P4-int's AVIs: observed t=5.2-8.0 s (the sweep knockdown) and fight t=14.6-18.6 s (the Bruiser at the nose).",
+   "Knockdown lens: Kicker sweep at 0/90/180 degrees, Bruiser smash at 0/135 degrees and boss pound at 0 degrees, each with look pitch 0 and -20. Per-frame lens height, eye height, own-body share and attacker share were logged, headless and with Movie Maker.",
+   "Archetype identity: a line-up of Kicker, armed Thug, Punk, unarmed Thug and Bruiser at 3.5 m and 7 m, clean, bruised, bloodied and at the view's edge; jacket RGB sampled in each damage look.",
+   "Guard vs wind-up from the lens at 3 m for the Thug, the Kicker (jump kick and sweep), the Bruiser and the Punk.",
+   "The table's mixed waves 3-5 (spawner count set to 2, no boss) for 90 s, with the held-back and the full autopilot; recorded in first person.",
+   "Mixed six against a passive player taking real damage (R11, R12).",
+   "A metered mixed-six fight, seeds 0-2, with the engage meter, a pop monitor (origin jumps over 0.35 m per frame) and a lens-cover sampler (the top enemy's archetype, AI state, distance, speed and slot angle). The same fight with prefers_blind_side off as a control, and the slice's 'Engage: fight' with six Punks as a baseline.",
+   "Metered 'Mixed six, observed', seeds 0-1 (pops, lens causes).",
+   "Boss wave against the held-back autopilot with phase 2 forced (health set to 49%): adds, charge, pound, grab and slam; recorded in first person.",
+   "AI state shares and episode lengths from the AI lines (APPROACH, POSTURE, ENGAGE, RECOVER), by archetype.",
+   "The Kicker's share of wind-ups from outside the view, from WU+ and WARN-CHECK lines.",
+   "Knockdown sources in the mixed acts: which side each sweep or smash came from.",
+   "Code read: first_person_camera.gd (_follow, _view_with, lens_offset, _ko_view_mix), enemy_actor.gd (_tick_approach, _posture_target, _travel, _path_direction, _apply_velocity, _stalled), enemy_director.gd (_update_slots, _assign_slots, _match_slots), encounter_table.wave_at, crowd_waves.tres, crowd_acts.gd, crowd_bot.gd, test_m3_done_when.gd's waves test, damage_look.gd, and the archetype palettes.",
+   "tools/check_m3_log.py on my mwaves, mixed, metered and boss logs."
+  ],
+  "sheets": [
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-crowd/captures/review/kd/kd_sweep_behind.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-crowd/captures/review/p4/obs_sweep_kd.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-crowd/captures/review/kd/kd_smash_front.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-crowd/captures/review/p4/fight_bruiser_nose.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-crowd/captures/review/bosswave/add_orbit.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-crowd/captures/review/mwaves/wave4.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-crowd/captures/review/mwaves/wave3.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-crowd/captures/review/mwaves/overview.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-crowd/captures/review/lineup/near.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-crowd/captures/review/lineup/far.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-crowd/captures/review/guard/guard_vs_windup.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-crowd/captures/review/bosswave/overview.png"
+  ],
+  "passes": [
+   "Hard R1, R2, R3, R10 and R11 pass in every run.",
+   "Mixed waves, held back (captures/review/mwaves/readability.json): R1 max 1, R2 min 21 f, R3 0 of 18 hits, R10 100% of 37 with 0 false.",
+   "Mixed passive with real damage: R11 max 15, R3 0 of 13, R10 100% of 10.",
+   "Metered fight, seeds 0-2: R3 0 unwarned, R10 100%.",
+   "Boss wave: R1 max 2, R3 0 of 9, R10 100% of 21.",
+   "check_m3_log.py says ok on mwaves, mixed, metered_s0b and boss: token holders at most 3 of 3, every WARN-CHECK ok.",
+   "Q1 (wind-up visible): R4 is 0% occluded of 23 in-view wind-ups (mixed waves), 0% of 15 (boss wave) and 0% of 9 (P4-int fight).",
+   "Q2 (corner matches the attacker): R10 100%, latency 0, end lag 0, in every act.",
+   "Q3 (archetype at a glance), clean: Kicker lime with black cap, Thug olive with cream cap and yellow pipe, Punk teal with yellow cap, Bruiser purple and larger. All are distinct at 3.5 m and 7 m and at the view's edge (lineup/near.png and far.png). The boss reads charcoal and orange in the street (bosswave/overview.png).",
+   "Q4 (no two wind-ups together): R2 is at least 21 f everywhere.",
+   "Q5 (ring, not a wall): R5 front-wedge crowding is 0% in every run. R6 median is 2.59-3.13 m with p10 at least 2.43 m in the observed, fought and mixed-wave acts; the misses are only with the full-speed autopilot, which kills on approach (known).",
+   "Q7 (back-off): in 'Mixed six, observed', 11 of 11 attacks go ATTACK to RECOVER to POSTURE.",
+   "Q8 (taunts and strafes never read as threats): guard and wind-up are plainly different for the Thug, both Kicker moves, the Bruiser and the Punk (guard/guard_vs_windup.png).",
+   "Q9 (armor registers): absorbed hits on the Bruiser show the grey spark (P4-int fight overview_3 frame 4, overview_2 frame 5).",
+   "Q10 (why did I take damage): R3 is 0 in all runs and out-of-view hits are warned. The exceptions are the 46-55 degree band (an existing call) and finding 1's knockdown view.",
+   "Flinch-lock: in passive and observed acts the longest chain equals one knockdown (2.02-2.15 s, never two reactions merged); in fights it is 0.28 s.",
+   "Get-up pops: 0 enemy origin jumps over 0.35 m per frame in 9 runs (metered fight seeds 0-2, no-ring seeds 0-2, observed seeds 0-1, boss wave). R7 is at most 0.23%.",
+   "Kicker flank: Kicker wind-ups come from outside the view 9 of 10, 3 of 5 and 3 of 5 in fight seeds 0-2, 13 of 21 in the mixed runs and 7 of 13 in mixed waves; Punks 3 of 8 to 5 of 7.",
+   "R12 for the mixed six: KO at 19.4 s (at least 12), worst 2 s exactly 30.",
+   "R13 mixed waves: 2 waves cleared in 90 s held back, 6 with the full autopilot, 0 stuck, peak alive 6.",
+   "Boss wave: the pound, charge (blocked) and grab with slam are all thrown; the phase 2 adds walk in; the MASH prompt shows; the bar shows BOSS."
+  ],
+  "also_noticed": [
+   "P4-int.md:70 describes the non-KO knockdown view as 'a pale floor slab and the player's own arm or torso'. The pale area in observed/sheets/overview_0 frames 12-14 and bruiser_close frames 2-7 is the background seen from under the floor (finding 1); own-body cover in those frames is 0-5%.",
+   "The 'LB PICK UP' cue sits at bottom centre, on the belt of whoever is at the player's nose, almost all the time while a dropped pipe lies within reach (mwaves/wave4.png frames 1-5, 7, 10, 13 and 17-20). It is truthful, since a Bruiser can't be grabbed unless staggered, but it is constant noise in a crowd.",
+   "The parry flash turns the raised forearms cyan over both top corners, which SPEC \u00a75 reserves for the warning (P4-int fight overview_0 frame 16, mwaves/wave3.png frame 4). The burst still draws on top (fight overview_1 frame 5). This is the M2 block pose.",
+   "In fought crowds, attacks rarely reach RECOVER: the held-back autopilot interrupts most of them (WINDUP to REACT in 11-12 of 17-22 wind-ups). So Q7 is judged from the observed act.",
+   "In P4-int's 'Waves to the boss' the fight happens in the dark alley mouth, where the charcoal boss is low-contrast on the dark walls, because the full-speed autopilot meets it there. In the street (my boss wave) it reads well.",
+   "The Kicker's jump kick travels 0.27 m per frame (about 16 m/s) over its 6 active frames. Whether it reads is for L3.",
+   "The widest empty arc between standing enemies in 'Mixed six, observed' has a mean of 113-141 degrees, against 103-108 for six Punks. It is part of finding 3.",
+   "R9 (soft) has too few mixed grants to judge: 50% of 4 in the observed act and in mixed waves, 67% of 9 in mixed passive."
+  ],
+  "findings": [
+   {
+    "severity": "high",
+    "title": "Face-down knockdowns (hit from the side or behind) put the first-person lens 4.4 cm under the street: the floor vanishes for about 1.1 s",
+    "detail": "In a non-KO knockdown the lens rides EyePoint plus cam_height_offset_m (-0.2 m), with no floor clamp; the KO view applies only when health <= 0. When the player falls face-down, EyePoint lies 0.15-0.18 m above the floor, so the lens sits at -0.044 m, inside the 1 m floor box. The floor is culled from below, and the lower 60% of the view becomes the background colour, with the undersides of curbs, doorstep boxes and the alley floor hanging under a horizon line. This lasts the whole DOWNED time: 67-68 frames (1.1 s) per knockdown. Face-up knockdowns, from the front, keep the lens at 0.116 m (finding 5). In a crowd the face-down case is the usual one: blind-spot priority sends the Kicker, the main knockdown source, from outside the view 60-90% of the time. In 'Review: mixed passive' all 4 knockdown hits came from outside the view: a sweep warned on both corners, a sweep on the right, and two Bruiser smashes on the left. P4-int's own observed recording shows it, and P4-int.md:70 misread it as the player's own body. A player would see the street disappear every time he is swept from behind; with the belly slab, every knockdown blinds him for 1-1.1 s.",
+    "evidence": "captures/review/kd/bot.log (Movie Maker, fixed 60 fps): 'KDLENS kicker b180 pitch 0: ... cam min y -0.044 m; 67 frames below floor top (y<0) ... first f+47 last f+113; own body max 0%'. Kicker b90: -0.044 m, 67 frames. Bruiser b135: -0.045 m, 68 frames. Front cases: kicker, bruiser and boss b0 min 0.116-0.117 m, 0 frames. kd_headless.log KDT lines: 'DOWNED f+54 cam_y -0.044 ... eye_y 0.154'. Sheets: captures/review/kd/kd_sweep_behind.png frames 6-14; captures/review/p4/obs_sweep_kd.png frames 5-13 (P4-int observed AVI, sweep from behind-left at f297); P4-int observed/sheets/bruiser_close.png frames 2-7. Code: game/camera/first_person_camera.gd:274-280 (lens_offset, height offset with no clamp), :253-266 (_view_with), :297-298 (the KO view only while dying); game/autoload/tuning_data.gd:511 (cam_height_offset_m = -0.2).",
+    "repro": "In the worktree: tools/capture_bot.sh res://tests/bot/crowd_bot.tscn captures/review/kd \"Review: knockdown lens\". The act is in tests/bot/acts/zz_review_acts.gd, untracked: AI frozen, god mode, a Kicker at 1.2 m and 180 degrees forced to sweep. Read the KDLENS lines and the frames at t=4.1-6.6 s. In play: let a Kicker sweep you from behind in the crowd room.",
+    "suggested_fix": "Keep the lens above the floor whatever the pose. Clamp the lens height in FirstPersonCamera._view_with/_follow to at least the floor (a ray down from EyePoint on the world layer) plus the near plane plus a margin of about 0.08 m. Or scale cam_height_offset_m by how upright the head is, so a lying eye isn't lowered 20 cm. Add a test (test_cameras.gd or test_ko_view.gd): a knockdown from 90, 135 and 180 degrees, with lens y >= 0.05 m on every frame. This is a bug fix, not the belly-slab view question, which stays Game-boy's.",
+    "files": [
+     "game/camera/first_person_camera.gd",
+     "game/autoload/tuning_data.gd",
+     "tests/test_cameras.gd"
+    ],
+    "spec_change": false
+   },
+   {
+    "severity": "medium",
+    "title": "APPROACH takes the straight path through the player to a far-side slot: non-attacking enemies orbit at 0.75-0.9 m facing him and wall 51-80% of the lens, for up to 3.5 s",
+    "detail": "_tick_approach walks the navmesh path to its posture slot and faces the player while within the ring. The navmesh doesn't know the player; he is only a 0.3 m avoidance obstacle. So an enemy that is inside the ring, after a reaction or while entering, with its slot on his far side, walks straight at him. Avoidance then slides it round his nose at contact distance, guard up, facing him, and sometimes it stands still there (v = 0 for 0.5 s at 0.81 m). In the mixed fight a Bruiser, after a break-free, spent f883-f1090 (3.5 s) at 0.80-0.98 m in APPROACH, with its slot -105 to -58 degrees round, covering 51-71% of the lens. In the frames its purple chest and arms fill about 90% of the view, face out of the top. A boss add did the same on entry after two jabs: f835-f890, slot 152 to 57 degrees round, 62-80% cover, while a rear warning lit behind it. This fails L2 Q6 (over half the view covered by enemies outside an attack) and Q5. It is the main cause of the soft R8 miss: APPROACH accounts for 34 of 56, 22 of 42 and 12 of 37 over-half lens samples in mixed fight seeds 0-2, against 0 in the six-Punk 'Engage: fight' (2-3 over-half samples in all). It also happens without any Kicker, in the boss wave.",
+    "evidence": "captures/review/hl/metered_s0b.log COVER lines: 'COVER f900 69% top Bruiser1 APPROACH FREE 69% at 0.80 m, v 2.06 m/s toward -0.06, ... slot -82 deg round, 3.29 m from the player' through f1090; 'COVER f1060 69% ... at 0.81 m, v 0.00 m/s'. METER: 'lens over half 56 of 388 samples ... by cause {\"APPROACH\":34,\"REACT\":6,\"WINDUP_ATTACK\":16}'. engage_fight_s0.log (six Punks): 'lens over half 2 of 328 samples ... {\"REACT\":2}'. bosswave/bot.log: 'COVER f860 80% top Punk1 APPROACH FREE 65% at 0.76 m ... slot 120 deg round'. Sheets: captures/review/p4/fight_bruiser_nose.png (P4-int fight AVI t=14.6-18.6 s, frames 1-4 and 12-18); captures/review/bosswave/add_orbit.png. Code: game/enemies/enemy_actor.gd:487-494 (_tick_approach), :887-906 (_travel, _path_direction).",
+    "repro": "In the worktree: godot --headless --path . --fixed-fps 60 res://tests/bot/crowd_bot.tscn -- \"--act=Review: metered fight\" --seed=0, then grep COVER and METER. Or view P4-int's captures/m3_p4/fight/bot.avi at 14.6-18.6 s.",
+    "suggested_fix": "Inside posture_ring_min (or with the slot more than about 60 degrees round), APPROACH first backs out radially to the ring, facing the player, as RECOVER does, then travels along the ring's arc to the slot. That generalises the Kicker's ring-circling path to every archetype. Alternatively, at the next reslot, re-seat an enemy that is inside the ring at its current bearing. Assert in test_slice_crowd or a new mixed test that APPROACH-caused over-half lens samples stay near the six-Punk level.",
+    "files": [
+     "game/enemies/enemy_actor.gd",
+     "game/enemies/enemy_director.gd"
+    ],
+    "spec_change": false
+   },
+   {
+    "severity": "medium",
+    "title": "The Kicker's blind-side ring rotation keeps a fought mixed crowd walking: posture falls to 0.4-0.8 of 5.8 enemies (1.7-2.0 without it)",
+    "detail": "With a Kicker alive, every reslot (every 1.5 s, on a spawn or death, or when the player moves 1 m) turns the whole ring so that a slot sits behind the look, and the Kickers take the rearmost slots first, bumping their occupants. In a fight the player keeps turning, so 'behind' keeps moving and the other five keep being sent to new slots, often across the player, which feeds finding 2. Same six, same seeds, prefers_blind_side switched off: POSTURE averages 1.66-1.98 against 0.38-0.78 with the rotation, and APPROACH 1.46-1.56 against 2.87-3.12. Lens-over-half samples are 5.7-8.2% against 9.8-14.9% (APPROACH-caused: 3-4 against 12-34), and the widest empty arc averages 119-127 against 133-148 degrees. Six Punks fought posture 1.7 on average, so the mixed crowd without the rotation matches the slice, and the rotation alone cuts posturing by 55-80%. The P2-kicker call costed this as 'pulling the others by up to half a step'; measured, it breaks SPEC \u00a77 ('spend most of their time posturing') and the accepted 'a third to two fifths of the time'. A fought mixed crowd postures 7-13% of the time. The Kicker's flank is worth keeping (blind-side share 60-90%); the side effect on the others is the defect.",
+    "evidence": "AI state shares, fight seeds 0-2 (captures/review/hl/metered_s0-2.log): {'APPROACH': 2.87, 'ENGAGE': 0.82, 'POSTURE': 0.78, ...}, {'APPROACH': 3.12, ... 'POSTURE': 0.38}, {'APPROACH': 3.09, ... 'POSTURE': 0.66}. No-ring (noring_s0-2.log): {'POSTURE': 1.98, 'APPROACH': 1.46}, {'POSTURE': 1.66, 'APPROACH': 1.56}, {'POSTURE': 1.8, 'APPROACH': 1.52}. CROWD lines: 'Review: metered fight ... 0.4 posturing ... widest empty arc 235 deg (mean 148)' against 'no blind-side ring ... 2.0 posturing ... (mean 119)'; 'Engage: fight ... 1.7 posturing'. METER no-ring seeds 0-2: '22 of 388 (5.7%) {APPROACH:4}', '32 (8.2%) {APPROACH:3}', '22 (5.7%) {APPROACH:4}'. P4-int's own CROWD line for 'Mixed six, fight': '0.4 posturing'. Code: game/enemies/enemy_director.gd:491-497 (ring turned to put a slot behind look_yaw), :547-563 (Kickers take the rear slots first); director_reslot_s 1.5 in tuning/default.json:290.",
+    "repro": "In the worktree: godot --headless --path . --fixed-fps 60 res://tests/bot/crowd_bot.tscn -- \"--act=Review: metered fight\" --seed=N, and the same with \"--act=Review: metered fight, no blind-side ring\" (it sets prefers_blind_side = false on the six). Compare the CROWD and METER lines and the AI state shares.",
+    "suggested_fix": "Keep the Kicker's rear seat without moving everyone else. Give the Kicker the rear slot by swapping seats with its occupant only, so one other enemy moves. Or turn the base only when no Kicker's slot is already within half a step of behind. Or rate-limit the turn to the look's rotation since the last reslot, above a threshold. Re-measure with the two acts above: posture at least about 1.5 of 6 in a fought mixed crowd, and the Kicker's blind-side share unchanged.",
+    "files": [
+     "game/enemies/enemy_director.gd"
+    ],
+    "spec_change": false
+   },
+   {
+    "severity": "low",
+    "title": "No mixed wave is in the evidence pack or the waves test: 'Waves to the boss' plays only the two Punk waves, and its boss throws one wind-up",
+    "detail": "With boss_wave_every 2, wave_at() gives wave 1 (2 Punks), wave 2 (4 Punks), then the boss. The mixed table waves 3-5 (Punk, Kicker, Punk, Thug, Punk, Punk; Bruiser, Punk, Kicker, Punk; Thug, Kicker, Punk, Punk, Kicker, Punk) never play in any recorded act. test_m3_done_when's waves test (1500 frames from wave 1) also reaches only waves 1-2. In 'Waves to the boss' the boss is beaten in APPROACH and its only wind-up starts after the act ends, so the boss's attacks and adds in a crowd are not evidenced either. Part B \u00a7B3 asks for a 'Crowd: waves' readability.json, and the L2 brief says mixed waves. My runs fill the gap, and the mixed waves pass.",
+    "evidence": "P4-int boss/bot.log spawns: Punk1-2 (f185, f221), Punk3-6 (f777-f885), Boss1 f1532, adds Punk7-8; readability 'windups 1', 'hits_on_player 0'. game/level/encounters/crowd_waves.tres; tests/bot/acts/crowd_acts.gd:33 (BOSS_EVERY 2), :103-113; tests/test_m3_done_when.gd:368-395 (WAVES_FRAMES 1500, asserts waves_started() >= 2). My fill-ins: captures/review/mwaves/readability.json ('Review: mixed waves, held back', waves 3-5): R1 1, R2 21 f, R3 0 of 18, R10 100% of 37, R13 2 waves and 0 stuck, peak alive 6, R8 p50 14% and p95 51%. captures/review/hl/boss/readability.json (boss wave held back, phase 2 forced): R1 2, R3 0 of 9, R10 100% of 21, R8 p95 51%.",
+    "repro": "Run P4-int's 'Waves to the boss' and grep 'new->ENTER': only Punks before Boss1. My acts: \"Review: mixed waves, held back\" (spawner._started = 2, boss_wave_every 0) and \"Review: boss wave, held back\" in tests/bot/acts/zz_review_acts.gd.",
+    "suggested_fix": "Add a 'Mixed waves' act to crowd_acts.gd that starts at wave 3 (or with boss_wave_every 0 and the count advanced) with the held-back autopilot for 90 s, and a held-back boss-wave act that reaches phase 2. Record both for the evidence pack and quote their readability.json in the gate and PR. Extend the waves test (or add a second one) so it reaches a mixed wave and asserts R1, R3 and alive <= 6 there.",
+    "files": [
+     "tests/bot/acts/crowd_acts.gd",
+     "tests/test_m3_done_when.gd"
+    ],
+    "spec_change": false
+   },
+   {
+    "severity": "low",
+    "title": "Flag for Game-boy (A7.2): the face-up non-KO knockdown ('belly slab') covers 71-77% of the lens for about 1 s and hides the attacker",
+    "detail": "From the front (Kicker sweep, Bruiser smash, boss pound), the player falls on his back and his own navy torso fills 71-77% of the view, over half for 54-60 frames (about 1 s) of the roughly 2 s knockdown. Only the top of the attacker shows above it. The view ends, and the street and the attacker's legs show around the slab, so on its own a player is not lost; per the plan this stays Game-boy's call. In a crowd it is the less common knockdown: most come from behind and give finding 1's under-floor view instead. Knockdowns run about 3 in 22-25 s for a passive player and 1 in 90 s for the held-back autopilot in mixed waves. Together with finding 1, every knockdown currently blinds the player for 1-1.1 s.",
+    "evidence": "captures/review/kd/bot.log: 'KDLENS bruiser b0 pitch 0: ... cam min y 0.117 m; ... own body max 71%, >50% for ~57 f'; 'kicker b0 ... own body max 75%, >50% for ~60 f'; 'boss b0 ... 75%, ~54 f'. Sheet captures/review/kd/kd_smash_front.png frames 8-17. P4-int observed/sheets/overview_1.png frames 14-15. Knockdown counts: P4-int observed readability 'knockdowns_on_player 3' in 22.4 s; mixed passive 3 in 25 s; mwaves 1 in 90 s.",
+    "repro": "\"Review: knockdown lens\" act, the Bruiser and Kicker at 0 degrees (t=10.6-13.1 s in captures/review/kd/bot.avi).",
+    "suggested_fix": "No change without Game-boy. The proposal on record (HANDOFF 12:05) is the KO view's out-of-body pose, shortened, for non-KO knockdowns. That would also cover finding 1, but finding 1's clamp is needed either way.",
+    "files": [
+     "game/camera/first_person_camera.gd"
+    ],
+    "spec_change": true
+   },
+   {
+    "severity": "low",
+    "title": "A bruised Kicker's jacket darkens to about the clean Thug's olive; at strike range the cap (black vs cream) is out of view, leaving the wrist accent and the pipe as tells",
+    "detail": "Clean, the two read apart at 3.5 and 7 m: lime against olive brightness, black cap against cream. The bruised and bloodied damage look lays dark 'scuffed' camo patches on the clothes. The Kicker's bruised jacket averages RGB (53,79,27) against the clean Thug's (51,63,29), and bloodied (60,70,27) against the Thug's (50,45,27). Close up (about 1 m), the lens sees the shades band, not the cap, so a bruised Kicker and an unarmed bruised Thug differ only by wrist accents and a slightly brighter green. This is a grey-box default and minor, since the armed Thug's yellow pipe is unmistakable. It is noted because the brief asks whether they are confusable: rarely, and only once both are bruised and the Thug has lost its pipe.",
+    "evidence": "captures/review/lineup/near.png (top-left clean, top-right bruised, bottom-left bloodied) and far.png; jacket samples from lineup/still_1.6, 2.6 and 3.6.png (30x40 px torso crops). mwaves/wave3.png frames 5 (bruised Kicker) and 16-17 (Thug at the nose, cap out of view). Palettes: game/enemies/kicker/kicker.gd:20-21, game/enemies/thug/pipe_thug.gd:24-25; scuff texture: game/fx/damage_look.gd.",
+    "repro": "\"Review: line-up\" act in tests/bot/acts/zz_review_acts.gd (AI frozen, rig.set_damage_look(BRUISED or BLOODIED)), frames at t=1.6, 2.6 and 3.6 s.",
+    "suggested_fix": "Grey-box: take the default and log it for the art pass (M4). If wanted now, tint the scuff detail by the base colour's value, so lime stays lighter than olive, or give the Thug's jacket a second cream accent at chest height that survives at 1 m.",
+    "files": [
+     "game/fx/damage_look.gd",
+     "game/enemies/kicker/kicker.gd",
+     "game/enemies/thug/pipe_thug.gd"
+    ],
+    "spec_change": false
+   }
+  ]
+ },
+ "tells": {
+  "summary": "Lens L3 (archetype tells and identity), final M3 review at 7a015cc, in the worktree /Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-tells. I recorded every enemy attack with force_attack on a frozen AI, at 3 m and at its own strike range (reach_m - engage_margin_m). I also recorded taunts with posture_taunt_chance 1.0, the armor, haymaker and mash-free acts, the Thug drop and pickup acts, and boss phase 2. Each recording was measured headless with a lens probe I wrote. It logs the nearest enemy mesh to the real camera each frame and the share of the view covered.\n\nThe tells mostly hold. Every attack reads as itself from 3 m, and the wind-ups differ within each archetype:\n- Punk: cocked fist for the jab, raised open palms for the shove.\n- Kicker: frontal crouch for the jump kick, side-on drop for the sweep.\n- Thug: pipe raised high and held.\n- Bruiser: both arms up for the smash, arms out horizontally for the grab.\n- Boss: crouch for the charge, Y-arms for the pound, arms wide for the grab.\n\nArmor reads (grey spark, no flinch, the wind-up runs on), the haymaker's break works, and the grab, MASH prompt, break-free and headbutt work.\n\nFive defects survived checking:\n1. The boss's ground pound folds its body over and drives its cap through the lens whenever the player stands within about 1.2 m, which is where he punches it from. In a real autopilot fight the cap comes within 0.03 m and fills 100% of the view.\n2. The Thug's dropped pipe never comes to rest. It rolls toward and past the player, leaves LB's reach after 2.8 s and is 4.5 m away after 18 s, still rolling.\n3. The Thug's taunt raises its pipe above its head for a second. This is the shared open-handed taunt with the pipe in the hand, and it reads as its pipe wind-up.\n4. The boss's grab slam reads as the Bruiser's headbutt from the lens: its cap dives into the view (0.115 m while the player is still held).\n5. Phase 2's beckon is cut one frame after it starts, because the adds' arrival re-seats the boss. The boss then walks past the player's shoulder (0.85 m, 59% of the view) to its new seat on the far side.\n\nThe targeted tests are green (test_boss 39/39, test_pipe_thug 19/19, test_player_grabbed 15/15, test_enemy_moves_punk 9/9, test_bruiser 27/27). None of them covers these cases. The temporary review acts are in tests/bot/acts/zz_review_acts.gd in the worktree, not committed.",
+  "checked": [
+   "Every enemy wind-up at 3 m and at strike range, frozen AI, god mode, force_attack, first person. Strike ranges: Punk jab 1.00 m, shove 0.92, Kicker jump kick 2.70, sweep 1.40, Thug pipe 1.18, Bruiser smash 1.25, Bruiser grab 1.10, Boss charge 5.25, pound 2.55, grab 1.25. Act 'RV tells 3m' / 'RV tells strike'; captures/review/tells/bot.avi, per-attack sheets in captures/review/tells/sheets/, log RVA/RVW/RVE lines.",
+   "Lens clearance per frame (FPView.mesh_distance from the real camera) for every one of those attacks (captures/review/tells_headless.log, RVL lines), and at several distances for the Boss pound (0.9-2.55 m), the Bruiser smash (0.9-1.25 m) and the Boss charge (1.3-3.5 m) (captures/review/dist_headless.log).",
+   "Lens clearance and view cover during the existing acts 'Bruiser shrugs off jabs', 'Bruiser smash', 'Bruiser 1v1', 'Bruiser among Punks, fight', 'Boss armor', 'Boss charge in front', 'Boss fight' (autopilot vs boss, 90 s), 'Thug 1v1', 'Kicker and Punks' (captures/review/lens_headless.log, RVLENS/RVNEAR lines).",
+   "Head visibility at the held wind-up key at look pitch 0 and -6 for every attack at 3 m and at strike range (captures/review/heads_headless.log, RVHEAD lines).",
+   "Taunts and strafing with posture_taunt_chance 1.0: Punk, Kicker, Thug and Bruiser posturing while the player turns (captures/review/taunts/bot.avi, TAUNT+/- lines, sheets overview_0/1, thug_taunt_f25, bruiser_taunt_f526).",
+   "Armor reads: recorded 'Bruiser shrugs off jabs', 'Haymaker breaks the armor', 'Boss armor', 'Bruiser grab: mash free' (captures/review/armor/bot.avi, sheets bruiser_windup_jabs, boss_armor, haymaker, mash_free, mash_release_20fps). Code: vfx_director.gd:365 grey spark, audio_director.gd:254-257 clank, combat_log_overlay.gd:61/136 ARMOR, hit_detector.gd:76 no victim hitstop on absorbed hits.",
+   "Break-free tracking: body distance, chest, camera position and FOV per frame after the release (captures/review/mash_headless.log, RVTRACK lines).",
+   "Thug pipe drop, LB cue and pickup: recorded 'Thug drops the pipe' and 'Take the Thug's pipe' (captures/review/thugboss/bot.avi, sheets thug_drop, thug_take). The dropped pipe's distance, velocity and pickup_target() were logged for 18 s (captures/review/pipe_headless2.log, RVPIPE lines). Code read: weapon.gd drop()/_set_ground_physics, player.gd pickup_target/_find_weapon/_find_grab_target, pickup_cue.gd.",
+   "Boss phase 2: recorded 'Boss phase 2 adds' (captures/review/thugboss sheets phase2_change, phase2_after). Headless phase-change probes: the same act plus three autopilot boss fights, seeds 0-2 (captures/review/phase2_headless.log, RVPHASE/RVBOSS lines). Code read: boss.gd _enter_phase2/_tick_adds, enemy_actor.gd _tick_posture/_enter_approach, enemy_director.gd _update_slots/_assign_slots/_match_slots.",
+   "The boss bar (boss_health_bar.gd), and identity at a glance with four archetypes side by side (taunts overview_0 frame 1).",
+   "Code read: enemy_actor.gd (force_attack, the taunt, armor, grab hold, warning_reach_m), street_punk.gd, kicker.gd, pipe_thug.gd, bruiser.gd, boss.gd, enemy_named_poses.gd (taunt), enemy_poses_punk.gd, grab_poses.gd (grab/headbutt/slam/holds), enemy_poses_boss.gd (pound/charge).",
+   "P4-int evidence: captures/m3_p4/pickup/sheets/pickup.png (the LB cue already vanishes at frame 14, consistent with the rolling pipe) and boss/sheets/phase2.png.",
+   "GUT, run with tools/run_tests.sh -gselect: test_boss, test_pipe_thug, test_player_grabbed, test_enemy_moves_punk, test_bruiser."
+  ],
+  "sheets": [
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-tells/captures/review/armor/sheets/boss_armor.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-tells/captures/review/thugboss/sheets/thug_drop.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-tells/captures/review/thug_taunt_vs_windup.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-tells/captures/review/taunts/sheets/thug_taunt_f25.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-tells/captures/review/tells/frames/slam_end.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-tells/captures/review/tells/frames/headbutt_end.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-tells/captures/review/thugboss/sheets/phase2_change.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-tells/captures/review/thugboss/sheets/phase2_after.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-tells/captures/review/tells/sheets/Thug_pipe_x3_3.00_zoom.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-tells/captures/review/tells/sheets/Bruiser_smash_3.00_zoom.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-tells/captures/review/tells/sheets/Bruiser_grab_3.00_zoom.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-tells/captures/review/tells/sheets/Kicker_jump_kick_3.00_zoom.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-tells/captures/review/tells/sheets/Kicker_sweep_3.00_zoom.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-tells/captures/review/tells/sheets/Punk_shove_3.00_zoom.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-tells/captures/review/tells/sheets/Boss_pound_2.55.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-tells/captures/review/armor/sheets/bruiser_windup_jabs.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-tells/captures/review/armor/sheets/haymaker.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-tells/captures/review/armor/sheets/mash_free.png"
+  ],
+  "passes": [
+   "Punk jab: from 3 m the right fist is cocked beside the head and held (tells/sheets/Punk_jab_cross_3.00_zoom.png frames 3-5). The cross link has no wind-up of its own. It follows only when the jab lands (f1458 jab hit, f1486 cross at 1.0 m), and after the whiffed jab at 3 m no cross comes (A2.14).",
+   "Punk shove: two raised open palms with the torso rocked back. It is told apart from the jab's single cocked fist (tells/sheets/Punk_shove_3.00_zoom.png frames 2-4).",
+   "Kicker: the jump kick is a frontal crouch with the arms back, then a leap. The sweep turns side-on and drops to one knee (Kicker_jump_kick_3.00_zoom, Kicker_sweep_3.00_zoom). Both land at their strike range (f1740 jump kick at 2.70 m, f1853 sweep at 1.40 m). The crouched sweep pose shows on the hit frames before the snap to stance (tells/frames/sweep_hit_60fps.png).",
+   "Thug: the pipe is raised vertically above the head and held for about 12 frames, the strongest read of all (Thug_pipe_x3_3.00_zoom frames 2-5). At 1.18 m all three swings land (f2067, f2099, f2134). At 3 m the whiffed opener ends the combo.",
+   "Bruiser smash: both arms straight up, held, which reads as overhead from 3 m (Bruiser_smash_3.00_zoom). The Bruiser grab: arms out horizontally with a forward crouch (Bruiser_grab_3.00_zoom). The two are distinct. Wind-ups are 34 and 32 frames, at least the heavy floor of 30.",
+   "Boss: the charge crouch reads at 5.25 m, the pound's Y-arms at 2.55 m, the grab's arms-wide pose at 3 m. Wind-ups are 32/36/32 frames, at least 30 (RVW lines). The charge lands at 5.25 m (f2819).",
+   "Identity at a glance: the Punk (teal, yellow cap), Kicker (lime, black cap), Thug (olive, white cap, yellow pipe) and Bruiser (purple, steel cap, larger) side by side are told apart by jacket and cap (taunts/sheets/overview_0.png frame 1). The boss is charcoal with orange.",
+   "Armor reads: jabs into the Bruiser's smash wind-up show a grey spark and a white flash with no flinch, and the smash lands on schedule (WU+ f430, jabs f443 and f453, WU- f464 interrupted=false; armor/sheets/bruiser_windup_jabs.png). Into the boss's pound, two jabs and a hook are absorbed (f52, f62, f74) and the pound lands (f77). The clank, ARMOR log line and no victim hitstop are in code (audio_director.gd:254-257, combat_log_overlay.gd:61/136, hit_detector.gd:76).",
+   "Haymaker breaks the armor: knockdown at f775. Once the Bruiser is up, a jab flinches it (f983, AI POSTURE->REACT). After the 2 s window a jab bounces again (f1056 grey spark, no REACT) (armor/sheets/haymaker.png).",
+   "Enemy grab: the held view tips up to the holder's face, and the MASH P / K! panel sits below centre with its bar filling on presses. The break-free at f1364 (headbutt WU- interrupted=true) shoves the Bruiser back with its arms flung (body 1.00 to 1.30 m, RVTRACK). The headbutt lands as the cap into the face (deliberate, P3-bruiser call 21).",
+   "LB cue and pickup: the cue appears while the pipe is in reach (RVPIPE f141 'cue on', 0.57 m). In 'Take the Thug's pipe', LB takes it and three pipe swings hit the Punk (f1845, f1858, f1875) (thugboss/sheets/thug_take.png).",
+   "Boss bar: it drains and flashes white on the drop to half (phase2_change.png frame 4). The adds come one at a time, 0.6 s apart (Punk1 f432, Punk2 f469), and walk in from the doorway (frames 4-15).",
+   "Grunt strafing never reads as a threat: guard up and side-step legs (taunts overview sheets). The 'I'm next' square-up precedes each step-in.",
+   "No SCRIPT ERROR or ERROR in any recording or headless run (capture_bot reports 0 for tells, taunts, armor and thugboss).",
+   "GUT: test_boss 39/39, test_pipe_thug 19/19, test_player_grabbed 15/15, test_enemy_moves_punk 9/9, test_bruiser 27/27; 0 SCRIPT ERROR/ERROR (captures/review/t_*.log)."
+  ],
+  "also_noticed": [
+   "Bruiser smash at the player's punching distance (0.9 m): at the strike the purple chest and arms cover 91% of the view for 3 sampled frames, and the elbow comes to 0.19-0.21 m ('Bruiser shrugs' and 'RV dist: Bruiser smash' RVLENS lines). This is within P3-bruiser's 0.1 m strike rule (call 21), so it is not filed.",
+   "The Bruiser's and boss's shared taunt (arms open wide, low) is a cousin of their grab wind-up (arms wide at shoulder height, crouched): taunts/sheets/bruiser_taunt_f526.png against tells/sheets/Bruiser_grab_3.00_zoom.png. Distance separates them (taunts on the ring, grabs at 1.1 m after the step-in), and so does the wind-up's vocal cue. Not filed.",
+   "The boss's grab wind-up at its own strike range (1.25 m) is a black chest covering 45% of the view. Its head is out of the view at the bots' -6 degree pitch (0.0% in guard, 0.5% at the held key) and barely in at 0 degrees (2.6%). The arms leave the frame edges (tells/sheets/Boss_grab_1.25.png, RVHEAD lines). P3-boss call 11 handed this range to P2-grab, which judged only the Bruiser at 1.1 m, so nobody judged it.",
+   "The bots' _reset() looks 6 degrees down (combo_bot.gd _reset: look_pitch -6), while the game starts level (player.gd:24). Sheets of the heavies at arm's length therefore show less of their heads than Game-boy will see.",
+   "The haymaker's armor break has no look of its own: the 2 s window shows only through the first hit's red burst against a grey spark. F3's 'ARMOR OFF' is debug only.",
+   "The 'BAM!' lettering of the pound knockdown is drawn over the HP panel (tells/sheets/Boss_pound_2.55.png frames 11-12). This is the contact point's lettering.",
+   "P4-int's own pickup sheet (m3-p4-int/captures/m3_p4/pickup/sheets/pickup.png) already shows the LB cue going out at frame 14 while nothing in view changed. That is the rolling pipe of finding 2.",
+   "In the boss fights, 2 of 3 autopilot seeds crossed half health with the boss in APPROACH or LAUNCHED, so no beckon was started at all (RVPHASE lines)."
+  ],
+  "findings": [
+   {
+    "severity": "high",
+    "title": "The boss's ground pound drives its cap through the lens when the player is within about 1.2 m",
+    "detail": "The pound's strike folds the 2.3 m boss over its knees (enemy_poses_boss.gd: 'the torso folded over them'), so its head travels forward about 0.6 m. If the player stands where he punches the boss from, the cap brim enters the lens. This happens in the last frames of the wind-up, before the strike frame, so it is not the deliberate hit (the pound's hitbox is a ring at the feet). Measured nearest boss mesh to the camera: 0.000 m at 0.9 m (Cap, boss_pound f35, the player still FREE), 0.105 m at 1.1 m, 0.298 m at 1.3 m, 1.54 m at the tested 2.55 m. The view goes 100% orange for several frames. Close to the player the pound is half the boss's choices: under boss_charge_min_m the charge is out, pound and grab are 0.3 each. With two or more others near, it is the only choice. So in a real fight it comes up a lot. The A6.3 test only checks the pound from posture_ring_min_m - 0.3 = 2.2 m.",
+    "evidence": "captures/review/dist_headless.log: 'RVLENS boss 1 at 0.90 m: nearest 0.000 m at f77 (Cap of Boss1, boss_pound f35, enemy WINDUP, player FREE)'; 'boss 1 at 1.10 m: nearest 0.105 m ... CapBrim'. captures/review/lens_headless.log, real AI: 'RVLENS Boss fight: nearest 0.030 m at f4586 (CapBrim of Boss1, boss_pound f36 ...); max cover 100%', 'RVNEAR Boss fight f4579-f4586 first: 0.166 CapBrim of Boss1, boss_pound f34, enemy WINDUP'; 'RVLENS Boss armor: nearest 0.013 m ... max cover 100%'. Recording captures/review/armor/bot.avi t=1.25-1.40 s: the cap brim fills the screen (sheets/boss_armor.png frames 13-15). Test gap at tests/test_boss.gd:798-808 (only from 2.2 m).",
+    "repro": "In the review worktree: godot --headless --path . --fixed-fps 60 res://tests/bot/crowd_bot.tscn -- --act=\"RV dist: Boss pound\" (frozen boss at 0.9/1.1 m, force_attack(1), grep RVLENS). Or record the existing act 'Boss armor' (boss at 1.5 m, the player jabs in and the pound lands) and view t=1.2-1.4 s. Or play: walk up to the boss and punch it until it pounds.",
+    "suggested_fix": "Re-pose the pound strike so the head stays over the hips: drop the hips into a deep squat with the spine near vertical and drive the fists down between the knees. Alternatively have the boss step back to its pound range before winding up when the player is inside about 1.4 m, or exclude the pound under that distance in Boss._choose_attack(). Extend test_the_pound_landing_keeps_the_boss_clear_of_the_lens to 0.9, 1.1 and 1.3 m, from the wind-up's held key through the hitstop.",
+    "files": [
+     "game/actors/poses/enemy_poses_boss.gd",
+     "game/enemies/boss/boss.gd",
+     "tests/test_boss.gd"
+    ],
+    "spec_change": false
+   },
+   {
+    "severity": "high",
+    "title": "The Thug's dropped pipe never comes to rest: it rolls past the player and out of LB's reach within 3 s",
+    "detail": "Weapon.drop() hands the capsule rigid body a 0.5 m/s push toward the hitter plus a spin about the vertical. On the floor the capsule turns that push into rolling, which nothing stops: there is no rolling resistance, and only the default angular damping slowly cuts it down. The pipe lands 0.57 m from the player, then rolls under and past him at about 0.45 m/s. The collision mask is world-only, so it passes through his body. It leaves pickup_range (1.5 m) 2.8 s after landing, and 18 s later it is still rolling 4.5 m away. The LB PICK UP cue goes out while the player has done nothing. A player who looks down sees the prize roll away behind him, and in a crowd he rarely gets to LB within 3 s. This breaks the P2-thug acceptance ('the pipe lies where it can be reached') and P2-thug call 1's measured rest of 0.64-1.03 m in front of him. test_pipe_thug only checks the pipe after 90 ticks (SETTLE_TICKS), while it is still in reach.",
+    "evidence": "captures/review/pipe_headless2.log (act 'RV pipe watch' wrapping ThugActs._drops): 'RVPIPE f141 cue on ... pipe d 0.57 avail true vel 1.76', 'f291 cue on pipe d 1.40 vel 0.40', 'f307 cue off ... pipe d 1.50 vel 0.39', 'f611 ... d 2.99 vel 0.23', 'f1211 ... d 4.46 vel 0.09'. Recording captures/review/thugboss/bot.avi, sheet sheets/thug_drop.png: the cue is shown in frames 8-17 and gone in frames 18-20 with the player still. The same in P4-int's pickup.png frame 14. Code at game/weapons/weapon.gd:100-114 (drop) and :121-126 (_set_ground_physics: no damping or physics material). tests/test_pipe_thug.gd:16 SETTLE_TICKS 90.",
+    "repro": "Record 'Thug drops the pipe' and keep watching the street after the knockdown for 5 s. Or run the review act 'RV pipe watch' headless and grep RVPIPE. In game: knock a Thug down with P P P P, wait 3 s, press LB: nothing is picked up.",
+    "suggested_fix": "Make a dropped pipe settle. Options: lock its rotation except yaw while it lies on the ground; give it high angular and linear damping once it touches the floor, or let it sleep after settling; or a physics material with rolling friction. Whichever is used, any value goes in TuningData (Pipe Thug subgroup), not a script constant. Add a test that the pipe is still within pickup_range 5 s after the drop.",
+    "files": [
+     "game/weapons/weapon.gd",
+     "game/enemies/thug/pipe_thug.gd",
+     "tests/test_pipe_thug.gd"
+    ],
+    "spec_change": false
+   },
+   {
+    "severity": "medium",
+    "title": "The Pipe Thug's taunt raises its pipe above its head, and it reads as the pipe wind-up",
+    "detail": "Every archetype plays the shared open-handed taunt (EnemyNamedPoses._taunt). It turns both hands palm-up with the arms out, and it is tested only for a Punk's hands below the shoulders. The Thug keeps its pipe in the right hand through it. The hand's turn swings the pipe up diagonally past the head, and it is held there about 1 s, from the ring and in view. Side by side with its real held wind-up (the pipe raised high over the head), the silhouettes are nearly the same. A3.1 says taunts never look like a wind-up, and the L2 rubric asks whether taunts read as threats. Here one does, at the default posture_taunt_chance 0.12 per posture pause, and no swing follows it. A false telegraph on the archetype whose telegraph is the strongest teaches the player to ignore it.",
+    "evidence": "captures/review/taunts/bot.avi (act 'RV taunts', posture_taunt_chance 1.0): log 'TAUNT+ f25 Thug1 bearing -10 dist 2.9' ... 'TAUNT- f91'. Sheet taunts/sheets/thug_taunt_f25.png frames 3-12 show the pipe raised past the head with the arms spread. captures/review/thug_taunt_vs_windup.png puts the taunt (left) beside the held wind-up at 3 m (right, tells/bot.avi t=8.55 s). Test coverage: tests/test_enemy_moves_punk.gd:101-120 (Punk hands only), tests/test_enemy_actor.gd:316.",
+    "repro": "In the review worktree: tools/capture_bot.sh res://tests/bot/crowd_bot.tscn captures/review/taunts \"RV taunts\" and view t=0.4-1.6 s. Or tune posture_taunt_chance to 1.0 and watch an armed Thug posture.",
+    "suggested_fix": "While armed, the Thug skips the taunt (an override in pipe_thug.gd of the hook that starts it), or plays an armed taunt that keeps the pipe resting on the shoulder and beckons with the free left hand only. Extend the taunt test to every archetype's scene and assert that the WeaponTip stays below the shoulders during the taunt.",
+    "files": [
+     "game/enemies/thug/pipe_thug.gd",
+     "game/actors/poses/enemy_named_poses.gd",
+     "tests/test_enemy_moves_punk.gd",
+     "tests/test_pipe_thug.gd"
+    ],
+    "spec_change": false
+   },
+   {
+    "severity": "medium",
+    "title": "The boss's grab slam reads as the Bruiser's headbutt from the lens: the cap dives into the view while the player is still held",
+    "detail": "The slam's strike pose bends the boss forward over the player ('throws him down and forward over its bent body', grab_poses.gd _slam). EnemyHold lets the player go and applies the THROWN hit by code at the strike frame. So nothing on screen throws him: the boss's forward fold just drives its head through where his face is. From first person, the last fifth of the slam's wind-up is the cap filling the screen, then BOFF and a knockback. That is the same picture as the Bruiser's headbutt (the grey cap into the face, THUD). The cap is 0.115 m from the lens at boss_slam f53, one frame before the strike, while the player is still GRABBED. The lift before it is only a small rise of the view. L3 asks each attack to read as itself. The boss's signature 25-damage attack and the Bruiser's headbutt are not told apart, and the 0.25 m held-view rule is broken before any hit lands. test_player_grabbed judges the hold only up to 80% of the follow-up's wind-up, which is exactly where the dive begins.",
+    "evidence": "captures/review/tells_headless.log: 'RVL Boss grab 1.25 m: nearest enemy mesh to the lens 0.115 m at f3338 (Cap, boss_slam f53, player GRABBED)'. Recording captures/review/tells/bot.avi t=55.3-55.9 s (tells/frames/slam_end.png: the orange cap grows to fill the view in frames 6-10, then BOFF) against t=42.7-43.3 s (tells/frames/headbutt_end.png: the grey cap into the view, THUD). The test window is at tests/test_player_grabbed.gd:226-230 (roundi(follow.startup * WINDUP_HOLD_AT)).",
+    "repro": "Record 'Boss grab slam' (or 'RV tells strike', the last attack) and view the 0.5 s before the throw. Then compare with 'Bruiser headbutt'.",
+    "suggested_fix": "Author the slam's strike so the boss's head stays back and the arms carry the motion. For example, the torso turns and both arms swing the held player up and down to one side, so the victim's view lurches up and sideways before the release. Or release at the top of the lift with an up-and-back THROWN knockback. Extend the held-view clearance check to the whole follow-up up to its strike frame for the slam (keep the headbutt's deliberate dive exempt).",
+    "files": [
+     "game/actors/poses/grab_poses.gd",
+     "game/enemies/enemy_hold.gd",
+     "tests/test_player_grabbed.gd"
+    ],
+    "spec_change": false
+   },
+   {
+    "severity": "medium",
+    "title": "The phase 2 beckon is cut one frame after it starts, and the boss then walks past the player's shoulder to a new seat",
+    "detail": "_enter_phase2() starts the beckon (_start_taunt) and calls in the first Punk on the same tick. On the director's next update the set of enemies has changed, so _assign_slots() re-spreads the ring. The new Punks sit where they spawn, and the greedy match can hand the boss the seat across the player. The boss is now off its slot, so _tick_posture() sends it to APPROACH, and _enter_approach() zeroes _taunt_frames. The beckon is gone after one frame. The boss then walks in a straight line from in front of the player to behind him, passing 0.85 m from him at bearing -23 with its body covering 59% of the view. A 2.3 m boss marching at arm's length without attacking reads like a charge. So the phase change Game-boy sees is the bar halving and the boss walking straight at him, not 'the turn, the beckon, the adds walking in'. In three autopilot fights the beckon started only once: in the other two the boss was in APPROACH or LAUNCHED at the change, so it was never started. The Kicker's orbit (kicker.gd _posture_target) solves the same straight-through walk for the Kicker only.",
+    "evidence": "captures/review/phase2_headless.log ('RV lens: Boss phase 2' wrapping BossActs._phase2): 'RVPHASE f16779 phase 2: boss state FREE ai POSTURE ... taunt_frames 66', 'RVBOSS f16780 APPROACH dist 4.03 bearing 0 slot (-1.351567, 0.2, 5.187556) taunt 0' (the slot is behind the player), 'RVBOSS nearest during the phase 2 APPROACH: 0.85 m at f16911 bearing -23', 'RVLENS Boss phase 2: ... max cover 59% at f16888 (RightForearm of Boss1, - f70, enemy FREE)'. Autopilot fights: 'RVPHASE no beckon within 2 s of the change' (seed 0, APPROACH) and 'boss state LAUNCHED' (seed 2). Recording captures/review/thugboss/bot.avi: sheets/phase2_change.png (frame 4 is the bar halving, then the boss walks toward the lens in guard) and sheets/phase2_after.png frames 1-4 (the boss's body sweeps past filling half the view). Code: boss.gd:258-266, enemy_actor.gd:476-484 and :531-538, enemy_director.gd:443-500.",
+    "repro": "Record 'Boss phase 2 adds' and view t=6.9-10 s. Or run the review act 'RV lens: Boss phase 2' headless and grep RVBOSS/RVPHASE.",
+    "suggested_fix": "Let the beckon finish before the boss leaves its seat: in Boss, hold the posture (ignore 'strayed') while the taunt plays. Or skip the boss in the reslot that the call-in's spawns trigger (keep its claim). Route any reslot walk round the ring instead of through the player, generalising the Kicker's orbit into the base or the director. Add a test: at phase 2 from POSTURE, the taunt clip plays for its full length and the boss's flat distance to the player stays at least posture_ring_min_m - 0.5 during the following APPROACH.",
+    "files": [
+     "game/enemies/boss/boss.gd",
+     "game/enemies/enemy_actor.gd",
+     "game/enemies/enemy_director.gd",
+     "tests/test_boss.gd"
+    ],
+    "spec_change": false
+   }
+  ]
+ },
+ "code": {
+  "summary": "L4 (code and layers) review of the whole M3 diff (c971cf4..7a015cc, game/tests/tools) in /Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-code. The layers are clean and the core rules hold. Simulation reads no camera. Presentation writes no game state; the only writers are the F4 CheatMenu (a debug tool, by design) and TuningOverlay setting GameInput.menu_open, which A2.2 allows. Tokens and holds are given back on every exit path I tried: hit, grab, break-free, KO, vanish, F4 remove-all with a real Bruiser holding the player, F6 mid-hold, menu_open and ai_frozen. A pre-M3 preset loads with 0 warnings. The full suite passed 1130/1130 twice with 0 SCRIPT ERROR/ERROR lines, and two runs of the 'Mixed six, fight' act gave identical event logs (159 lines). No finding breaks the done-when or a hard metric. What I found is all low severity, ranked by what Game-boy would notice: (1) his knees on a Bruiser he holds are absorbed by its armor, so he sees a grey spark and no held jolt (shown in a first-person sheet); (2) the boss's phase-2 call-in spawns Punks while F1/F4 is open, against A2.2; (3) archetypes override ten base-private members outside the documented hook list, and two of those overrides are guarded by no test (shown by mutation); (4) three tests write fixed user:// paths that every worktree shares, which can flake when worktrees run their suites in parallel; (5) the probe samples lens coverage on the absolute frame counter, so R8 drifts between identical runs; (6) one feel number is set in boss.gd's script.",
+  "checked": [
+   "Set up the worktree at 7a015cc and ran the import. Read the M3 plan Parts A and B, the curated judgement calls, M3-calls/P4-int.md and the M3 section of ARCHITECTURE (by grep).",
+   "Read in full: enemy_actor.gd, enemy_director.gd, enemy_hold.gd, boss.gd, bruiser.gd, kicker.gd, pipe_thug.gd, street_punk.gd, enemy_attack.gd, enemy_catalog.gd, view_geometry.gd, crowd_room.gd, encounter_spawner.gd, spawn_room_check.gd, nav_baker.gd, rear_warning.gd, grab_prompt.gd, pickup_cue.gd and tools/check_m3_log.py.",
+   "Read the M3 diffs of combat_actor.gd, hit_detector.gd, hit_info.gd, move_data.gd, combat_events.gd, game_input.gd, player.gd, weapon.gd, hud.gd, enemy_health_bars.gd, tuning_overlay.gd, combat_log_overlay.gd, debug_draw.gd, vfx_director.gd, audio_director.gd, cheat_menu.gd and tuning_data.gd.",
+   "Camera reads: grepped game/enemies, game/level, game/combat, combat_actor.gd and the player.gd M3 lines for get_camera_3d, Camera3D and camera. The only hits are CameraMath.damp_weight (pure maths) and get_eye_transform(), which is a rig point (player.gd:189).",
+   "Presentation writes: grepped the M3 diff of game/ui, game/fx, game/audio and game/camera for writes to state, health, look, velocity, tokens or slots, and for receive_hit, start_move, Tuning.set_value and menu_open. Only CheatMenu (debug tool) and TuningOverlay.menu_open (A2.2) write. pickup_target(), grab_break_progress(), warning_reach_m() and the director's debug_* API are read-only.",
+   "Feel numbers: scanned the M3 game scripts for numeric literals. Found boss.gd:56 voice_pitch_mult = 0.7. The RoomKit lighting values are copied from the M2 training room. GrabPrompt and PickupCue use pixel layout literals, as the HUD already did.",
+   "Static types and docs: scripted a scan of the functions M3 added for missing ## docs and untyped vars or params. Only room_kit.gd:107 box_mesh() and room_kit.gd:116 flat_material() lack ## docs.",
+   "Private overrides, by mutation: disabled each override, ran its test file, then restored it with git checkout. kicker _enter_posture: 3 tests fail. kicker _posture_target: 3 fail. kicker _pick_strafe_dir: 0 fail (16/16 pass). boss _face: 1 fails. boss react_to_block: 2 fail. boss _tick_control: 10 fail. bruiser _stop: 1 fails. bruiser _animate_legs: 0 fail (27/27 pass). bruiser _pin_spot: 1 fails. bruiser _tick_control: 3 fail. pipe_thug _on_hit_received: 7 fail.",
+   "Exit paths, from tests: hit (test_enemy_actor.gd:864, 880), grab (:889), KO (:910), removal (:923), blocked (:932), break-free (test_enemy_grab.gd:390), holder knocked down, killed or removed (:449, :470, :481), menu (test_enemy_director.gd:440, :457; test_enemy_actor.gd:1057, :1073; test_m3_contracts.gd:585), frozen AI (director :480; actor :1041), director leaving the tree (:925), freed holders (:847).",
+   "Exit path, my probe test_review_remove_all_while_a_real_bruiser_holds: a real Bruiser grabbed the player in the crowd room, then EncounterSpawner.remove_enemies() ran. The player was FREE again, pin priority went 1\u21920, the director had 0 holders, the MASH prompt hid, and RearWarning had 0 entries. Log: captures/review/probe2.log.",
+   "Exit path, my probe test_review_freeing_the_room_mid_fight (held, 1 holder and 1 waiting, room freed): 0 AI enemies, 0 directors, 0 weapons and 0 orphan nodes left.",
+   "F6 in the running game (tests/review_f6_boot.tscn): the switch came at f722 while the player was held and 1 holder had a token. In the training room: 0 AI enemies, 0 directors, player FREE, priority 0, menu_open false. Back in the crowd room the waves restarted (1 started, 2 alive). 0 ERROR during play. Log: captures/review/f6_probe.log.",
+   "Exit-time leaks: verbose F6 run shows only AudioStreamPlaybackWAV whoosh_04.wav still in use at quit. That is the headless audio-clock artifact test_m3_done_when.gd:88-91 already works around. Plain --quit-after 1500 runs of crowd_room.tscn and test_room.tscn exit with 0 warnings or errors.",
+   "Map-sync check (B4 L4): my probe spawned a Punk, a Kicker and the boss in the same frame the crowd room was built, before the navigation map's first sync, and ran 30 frames: no ERROR printed (captures/review/probe2.log).",
+   "Pre-M3 preset: loaded tuning/default.json from c971cf4 (327 keys, format 2) with Tuning.apply_preset: 0 warnings, all 443 values equal the shipped ones. A tuned M2 preset with move overrides (jab_1 lunge 3.5, damage 7; dummy_jab startup 9; attacker_cap 2) also gave 0 warnings, and dummy_jab keeps reach 1.05. M3 changed no pre-existing default (default.json diff).",
+   "Groups before queue_free: _tick_ko (enemy_actor.gd:849-852), remove_enemies (encounter_spawner.gd:149-152) and remove_spawned_dummies all leave their groups first. cull_dropped_pipes (pipe_thug.gd:130-131) leaves only thug_pipe, not weapon, before break_apart().",
+   "Dropped-pipe cap: drop() clears _flying (weapon.gd:106), so the new pipe counts at cull time. test_only_so_many_dropped_pipes_lie_in_the_street_the_oldest_go_first passes.",
+   "Determinism, full suite twice: 1130/1130 both times, 37382 asserts, 115 s and 117 s. The diff of the logs shows only the pipe's rest distance (1.01 m vs 0.97 m), a 6-frame offset of the global frame counter after it, and probe R8 p95 33% vs 35%.",
+   "Determinism, bot: ran 'Mixed six, fight' with --seed=0 twice. The WU, TOK, W and WARN-CHECK lines (159) are identical, and readability.json differs only in frame_ms_p95 and spawn_hitch_ms.",
+   "Settings: navigation async iterations are off (project.godot: map_use_async_iterations=false, region_use_async_iterations=false).",
+   "check_m3_log.py: read every rule. Ran it on all 24 P4-int bot logs: ok, except seeds/s1_fight, the pre-call-21 R2 failure (as P4-int recorded). Ran it on my two fight logs: ok, 23 WARN-CHECK, holders at most 3 of 3. Checked the probe prints exactly 'FAIL (hard)', which the checker's regex expects.",
+   "Nav bake wall clock (test_crowd_room.gd:58, limit 25 ms): 12 bakes took 1.8-2.8 ms at load average 2.9-3.8, so no flake risk.",
+   "Recorded 'Grab the staggered Bruiser' (crowd_bot) in first person and read the sheet around the knee (f112).",
+   "Probes on menu_open: phase 2 entered with the menu open spawned the boss's adds. The player held when the menu opens takes the headbutt."
+  ],
+  "sheets": [
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-code/captures/review/bruiser_grab/knee_sheet.png"
+  ],
+  "passes": [
+   "Simulation never reads a camera: no camera access in game/enemies, game/level, game/combat, combat_actor.gd or the M3 player code. The director, warning and oracle all go through ViewGeometry on look_yaw. The B1 truth table is hand-written (test_view_geometry.gd:23-33, plus the yaw-wrap and +X-look rows).",
+   "Presentation writes no game state: RearWarning, GrabPrompt, PickupCue (via the read-only pickup_target()), the armor spark (vfx_director.gd spawn_armor_spark), the audio clank and grab-escape, DebugDraw's AI layer (director debug_* API, get_current_navigation_path) and HUD _follow_boss only read. The only writers are CheatMenu (debug tool, documented) and TuningOverlay's menu_open (A2.2).",
+   "Tokens released on every exit path: hit, grab, break-free, KO, vanish, F4 remove-all, F6, menu_open and ai_frozen (tests listed under checked). My crowd-room probes show 0 holders after remove-all with a real holder and after freeing the room mid-fight.",
+   "Holds released: a holder removed by F4 lets go (the player's _control_grabbed checks the holder each tick, and the CombatActor pin releases a gone holder). The pin priority is restored (1\u21920 in my probe), the MASH prompt hides, and the F6 switch while held leaves no state behind (player FREE, menu_open false).",
+   "Groups left before queue_free for every enemy path: _tick_ko, remove_enemies and remove_spawned_dummies (test_cheat_spawns.gd:156, test_enemy_actor.gd:1014).",
+   "Determinism: two full runs both 1130/1130 with no flaky test. Two runs of the seeded 'Mixed six, fight' act have identical event logs (159 lines). Navigation async iterations are off.",
+   "No SCRIPT ERROR or ERROR lines and no orphans in two full test runs, in two headless 'Mixed six, fight' runs, in the 'Grab the staggered Bruiser' recording, during the F6 probe, or in 30 frames of enemies spawned before the map synced.",
+   "A preset saved before M3 loads cleanly: the c971cf4 default.json gives 0 warnings and all 443 values shipped. A tuned M2 preset with move overrides gives 0 warnings. No pre-M3 default changed.",
+   "Dropped-pipe cap holds at each drop: the dropped pipe counts immediately, and the oldest are cleared (test_pipe_thug.gd:377, :396).",
+   "tools/check_m3_log.py is correct on its rules: dedup of the twice-printed event lines, the post-READABILITY skip, the lat and W+ cross-check, end-of-frame holder counting and engine-error lines. It returns ok on all 23 post-fix P4-int logs and on my two runs, and its 8 unit tests pass.",
+   "Static types everywhere in the M3 scripts. ## docs are on every new public function except two RoomKit helpers.",
+   "A2.6 armored hitstop is implemented (hit_detector.gd 'clean' flag) and tested (test_m3_contracts.gd:261). The AI windup_move cache is cleared on windup_mult, floor and move edits (enemy_actor.gd:305-308)."
+  ],
+  "also_noticed": [
+   "R2 and the hold's follow-up (P4-int call 21): EnemyHold._connect_or_whiff starts the follow-up's wind-up (start_move(..., true), enemy_hold.gd:132) without asking may_start_windup(). A2.10's 'R2 guaranteed at the wind-up' therefore holds only because the probe now skips that start (readability_probe.gd:617). It is harmless in play: a GRABBED body takes hits only from its holder (combat_actor.gd:281-282). It is the lead's call whether this needs a ruling.",
+   "A player held when he opens F1 or F4 cannot mash (the overlay freezes his input), and the headbutt lands while the panel is open. My probe: health 100\u219285, knocked down. A2.2's 'an attack already winding up finishes' allows this by its letter.",
+   "waves_enabled sits in the preset's Enemies/Waves subgroup (tuning_data.gd:667), not in Debug, yet the F4 Waves button writes it. A preset saved after toggling waves off in F4 starts later sessions with no waves; the other F4 toggles are Debug-only and not saved.",
+   "check_m3_log.py takes the cap from tuning/default.json unless --cap is passed. A bot run with --tune=attacker_cap=1 that is checked without --cap is judged against 3, because the log does not record the tuned cap.",
+   "cull_dropped_pipes (pipe_thug.gd:130-131) takes a pipe out of thug_pipe but not out of 'weapon' before break_apart(). A same-frame _find_weapon() or pickup_target() could still see the culled pipe. Benign in practice: the player usually processes before the enemies.",
+   "A pipe the player throws re-lands uncounted until the next Thug drop, so the street can briefly hold thug_pipes_on_floor_max + 1 pipes.",
+   "In test_pipe_thug.gd:422, the dropped pipe's rest distance varies between identical runs (1.01 m vs 0.97 m). The rigid-body drop is not bit-reproducible across suite runs, but there is a 0.5 m margin to the 1.5 m pickup range.",
+   "grab_prompt.gd:26 documents advance(delta) as real seconds, but hud.gd passes game_delta.",
+   "room_kit.gd:107 box_mesh() and room_kit.gd:116 flat_material() have no ## doc comments.",
+   "The boss's phase-2 adds, when no spawner exists (training room), are named by scanning live Punk names (boss.gd:293). The CheatMenu's own _serials is not updated, so a later F4 Punk can get a duplicate name, which Godot then renames. Debug path only."
+  ],
+  "findings": [
+   {
+    "severity": "low",
+    "title": "Knees on a Bruiser the player holds are absorbed as armor: a grey spark, a clank, ARMOR in the log, and no held jolt",
+    "detail": "The player can grab a Bruiser only when it is staggered (or its armor is broken), and the knee is the grab's payoff. EnemyActor._apply_armor (enemy_actor.gd:815-831) applies armor_light whatever the victim's state, including GRABBED. CombatActor.receive_hit then returns at combat_actor.gd:424-428, before _apply_reaction's held-victim jolt (combat_actor.gd:1041). Every knee on a held, staggered Bruiser therefore shows the armor feedback: a grey spark and no reaction of the held body, unlike every other held enemy. Nobody decided this interaction: the armor calls are about the Bruiser's own wind-ups and standing hits. In first person it reads as 'my knee bounced off' at the moment the stagger-then-grab counter is meant to pay off.",
+    "evidence": "Probe test_review_knees_on_a_held_bruiser (captures/review/probe4.log) prints 'hit knee on Bruiser1: tier 0 armor_absorbed true reaction 0, victim state 10 anim held'. In the first-person sheet captures/review/bruiser_grab/knee_sheet.png (act 'Grab the staggered Bruiser', bot.log f112 'Knee 6.0 dmg LIGHT'), frames 5-6 (row 1 col 5, row 2 col 1) show a grey star spark on the held Bruiser and no burst or word. Frames 6-10 show the same held pose (no jolt). Compare the throw in row 3 (THUD and a red burst).",
+    "repro": "tools/capture_bot.sh res://tests/bot/crowd_bot.tscn captures/review/bruiser_grab \"Grab the staggered Bruiser\". Then: ffmpeg -ss 1.55 -t 1.67 -i bot.avi -vf fps=12,scale=480:-1,tile=5x4 -frames:v 1 knee_sheet.png. Or in play: hook a Bruiser, LB, P.",
+    "suggested_fix": "In EnemyActor._apply_armor, return early while state == GRABBED and hit.attacker == holder, so the hold's own knees jolt as on any held body. Alternatively, log it as a default for Game-boy's ruling and leave it.",
+    "files": [
+     "game/enemies/enemy_actor.gd",
+     "game/actors/combat_actor.gd"
+    ],
+    "spec_change": false
+   },
+   {
+    "severity": "low",
+    "title": "The boss's phase-2 call-in spawns Punks while F1 or F4 is open, which A2.2's fight hold forbids",
+    "detail": "A2.2 says that while GameInput.menu_open is true the fight holds and waves start no spawns. The wave loop honours this (encounter_spawner.gd:214), but the boss's call-in does not. Boss._tick_adds (boss.gd:237-254) keeps counting down _adds_frames and calls spawner.spawn_adds() (encounter_spawner.gd:122), and neither checks menu_open. The adds come 0.6 s apart (wave_spawn_interval_s). If Game-boy opens F1 just after the hit that halves the boss, the second Punk walks in while the panel is open. Editing boss_phase2_at or boss_adds_count live in F1 spawns them with the panel open. The spawned Punks stand still while the menu is open, so no damage follows; the violation is that the hold is not total.",
+    "evidence": "Probe test_review_boss_adds_while_a_menu_is_open (captures/review/probe2.log): with GameInput.menu_open = true and boss_phase2_at set to 0.95 on a boss at 90% health, it printed 'boss phase 2, alive before 1, alive after 3 with the menu open, adds 2'. The assertion 'nothing spawns while a menu is open (A2.2)' failed: expected 1, got 3.",
+    "repro": "In the crowd room, F4-spawn the boss, bring it to just above 50%, land the halving hit and press F1 within 0.6 s. Or open F1 and drag boss_phase2_at above the boss's health share. Headless: tools/run_tests.sh -gselect=test_zz_review_probe -gunit_test_name=test_review_boss_adds_while_a_menu_is_open (temporary probe in the review worktree).",
+    "suggested_fix": "In Boss._tick_adds, return before the countdown while GameInput.menu_open, as the spawner's _physics_process does. Optionally do the same for Tuning.data.ai_frozen. Phase 2 itself can still trigger; only the spawns wait.",
+    "files": [
+     "game/enemies/boss/boss.gd",
+     "game/level/encounter_spawner.gd"
+    ],
+    "spec_change": false
+   },
+   {
+    "severity": "low",
+    "title": "Archetypes override ten base-private members outside the documented hook list, and two overrides are guarded by no test",
+    "detail": "EnemyActor's contract (enemy_actor.gd:35-37) says archetypes override only the listed hooks, 'never the control tick'. The code does more. boss.gd overrides _tick_control (217), _face (171) and react_to_block (195). react_to_block re-implements CombatActor's recoil branch (combat_actor.gd:398-405) and writes its private _recoiling, so any change to the base recoil silently diverges. bruiser.gd overrides _tick_control (140), _stop (158), _animate_legs (167) and CombatActor._pin_spot (127). kicker.gd overrides _posture_target (75), _enter_posture (87) and _pick_strafe_dir (137). Its _enter_posture relies on a same-physics-frame handshake (Engine.get_physics_frames()) with the base's _tick_approach and _tick_recover call order, and it writes the base's _progress_best and _progress_frames. pipe_thug.gd rewrites _attacks and _next_attack (110-111). Disabling each override one at a time fails at least one test in nine of the eleven cases. Removing kicker _pick_strafe_dir fails none of test_kicker.gd's 16 tests, because test_a_kicker_that_is_in_view_strafes_toward_the_edge_of_the_view passes on the base's slot-seeking direction. Removing bruiser _animate_legs fails none of test_bruiser.gd's 27 tests: the brace test only covers _stop.",
+    "evidence": "Mutation runs (rename the override, run its test file, git checkout). Kicker: _enter_posture 13/16 pass, _posture_target 13/16, _pick_strafe_dir 16/16. Boss: _face 38/39, react_to_block 37/39, _tick_control 29/39. Bruiser: _stop 26/27, _animate_legs 27/27, _pin_spot 26/27, _tick_control 24/27. PipeThug: _on_hit_received 12/19.",
+    "repro": "/private/tmp/claude-501/-Users-arachne-repos-beat-em-up-PoC/d761797e-9cb1-4f02-bcab-6d8ac443a839/scratchpad/mutate.sh game/enemies/kicker/kicker.gd _pick_strafe_dir test_kicker. Same with game/enemies/bruiser/bruiser.gd _animate_legs test_bruiser.",
+    "suggested_fix": "Promote the real extension points to documented hooks, for example a turn-rate scale for _face, a post-tick hook instead of _tick_control, a CombatActor _recoil(frames) helper that both the base and the boss call, a strafe-direction hint, and a 'legs locked' query. Add a test where the Kicker's strafe direction differs from the slot-seeking one (no slot, or slot on the far side). Add a test that a strafing, braced Bruiser keeps its brace clip.",
+    "files": [
+     "game/enemies/boss/boss.gd",
+     "game/enemies/bruiser/bruiser.gd",
+     "game/enemies/kicker/kicker.gd",
+     "game/enemies/thug/pipe_thug.gd",
+     "game/enemies/enemy_actor.gd",
+     "tests/test_kicker.gd",
+     "tests/test_bruiser.gd"
+    ],
+    "spec_change": false
+   },
+   {
+    "severity": "low",
+    "title": "Tests write fixed user:// files shared by every worktree: a flake risk when suites run in parallel",
+    "detail": "Every worktree is the same Godot project ('Beat-em-Up PoC'), so all of them share one user:// directory. CLAUDE.md's parallel-worktree pattern runs several suites at once. test_check_m3_log.gd:26 writes user://check_m3_log_test.log, then runs python3 on it, about 8 times. test_readability_probe.gd:916 uses user://probe_test, and test_readability_probe.gd:938 deletes, expects and reads back user://readability.json, the same path the bot probe falls back to (readability_probe.gd:310). Two suites in two worktrees can overwrite or delete each other's file between the write and the read. test_tuning_panel.gd:6-21 already documents this hazard and scopes its directory with OS.get_process_id().",
+    "evidence": "~/Library/Application Support/Godot/app_userdata/Beat-em-Up PoC/ holds check_m3_log_test.log and readability.json, written by these tests, beside gut_tuning_3920 (the PID-scoped one). The code is at test_check_m3_log.gd:26 and test_readability_probe.gd:916, :938.",
+    "repro": "Run tools/run_tests.sh -gselect=test_check_m3_log in two worktrees at the same moment. One run can parse the other's log text, or find readability.json deleted.",
+    "suggested_fix": "Suffix the paths with OS.get_process_id(), as test_tuning_panel.gd does. Make test_write_on_exit point the probe at a per-PID folder instead of the user:// root.",
+    "files": [
+     "tests/test_check_m3_log.gd",
+     "tests/test_readability_probe.gd"
+    ],
+    "spec_change": false
+   },
+   {
+    "severity": "low",
+    "title": "The probe's lens-coverage sampling is keyed to the absolute frame counter, so R8 drifts between identical runs",
+    "detail": "readability_probe.gd:355 samples the lens when Engine.get_physics_frames() % lens_every == 0. Which frames get sampled therefore depends on how many frames earlier tests or acts ran. In the two full-suite runs, a 6-frame shift (caused by the pipe test's physics-dependent wait) changed test_slice_crowd's 'six punks, still player' R8 p95 from 33% to 35% with identical game behaviour. R8 is soft and is quoted in the gate files with its p95. The same act can report a different number run to run, which weakens 'measured in every seed' claims.",
+    "evidence": "Diff of captures/review/tests_run1.log and tests_run2.log, cleaned of colour codes (r1.txt and r2.txt in captures/review): line 1159 'R8 lens covered by enemies p50 5%, p95 33%' vs 'p95 35%'. WARN-CHECK frames are shifted by exactly 6 (f68177 vs f68171). The earlier difference is 'the dropped pipe lies 1.01 m' vs '0.97 m' (test_pipe_thug.gd:422).",
+    "repro": "Run tools/run_tests.sh twice and diff the READABILITY blocks of 'six punks, still player'.",
+    "suggested_fix": "Sample on (frame - _start_frame) % lens_every, and the same for occlusion_every, so the cadence is relative to the act's start.",
+    "files": [
+     "tests/bot/readability_probe.gd"
+    ],
+    "spec_change": false
+   },
+   {
+    "severity": "low",
+    "title": "boss.gd sets a feel number in script: voice_pitch_mult = 0.7",
+    "detail": "CLAUDE.md says feel numbers are never script constants. Boss._init (boss.gd:56) hard-codes the boss's voice pitch, an audio feel value. The Bruiser's equivalent 0.8 lives in bruiser.tscn as a scene export. The rest of the boss's _init sets behaviour flags, which is fine.",
+    "evidence": "game/enemies/boss/boss.gd:56 has 'voice_pitch_mult = 0.7'. game/enemies/bruiser/bruiser.tscn has 'voice_pitch_mult = 0.8'. boss.tscn sets none.",
+    "repro": "grep -n voice_pitch_mult game/enemies/boss/boss.gd game/enemies/*/**.tscn",
+    "suggested_fix": "Move it to boss.tscn (voice_pitch_mult = 0.7) like the Bruiser, or to a tunable in the Boss subgroup.",
+    "files": [
+     "game/enemies/boss/boss.gd",
+     "game/enemies/boss/boss.tscn"
+    ],
+    "spec_change": false
+   }
+  ]
+ },
+ "fair": {
+  "summary": "Lens L5 (fairness and pacing) at 7a015cc. Method: 75 probed acts, all at real damage (none in god mode), over 3 seeds, plus 4 first-person recordings. Players modelled: passive; the held-back autopilot; the full autopilot; a \"masher\" (full autopilot, no block or dodge); and a slower human (20-frame reaction, 270 deg/s turn). Fights covered: the mixed six with top-ups, 1 to 6 Punks, heavies, Thugs, 6 min and 3 min of waves, and the boss alone and as its wave.\n\nThe hard metrics pass everywhere:\n- R1: max 2.\n- R2: min 21 f.\n- R3: 0 unwarned of 1370 hits on the player.\n- R11: max 15 over 111 non-boss knockdowns.\n- R10: 100% wherever printed.\n- The full suite passes, 1130/1130, with no SCRIPT ERROR or ERROR.\n- No flinch-lock: the longest reaction chain in any act is one knockdown (2.30 s max), and no other attacker lands a hit within 150 f of a knockdown.\n- A passive player is KO'd in 15.4-25.8 s by the mixed six (R12 holds; worst 2 s is 30-32).\n- Waves repeat with no leaks: 20 waves and 4 boss waves in 6 min, node count back to about 4600 at every clear, 0 orphans.\n\nWhat fails is pacing. The danger falls away as soon as the player attacks:\n1. HIGH. The boss can be stun-locked to death. After every knockdown it walks back to its ring slot (APPROACH), and in APPROACH it never asks for a token. Each P P P P or K K K chain carries a heavy hit that staggers it and a finisher that floors it. The full autopilot kills it in 38-40 s while it throws 1-2 attacks. With boss_health 600 and cooldown 0.5 s it still throws nothing after its opener. The knobs the README names cannot fix this.\n2. MEDIUM. The same root cause applies to the whole crowd. 42% of the 234 enemies killed by aggressive players never wound up once, including 12 of 34 Bruisers. A masher with no defence takes less damage per minute than a defensive player.\n3. MEDIUM. The F1 attacker_cap slider does nothing from 2 to 6: the director's line rule lets only one attacker step in at a time. Damage also stops rising past 4 enemies.\n4. LOW-MEDIUM. An armoured Bruiser in APPROACH can jam against the player and fill the lens for about 3-5 s. It neither moves nor attacks, and jabs are absorbed, so nothing knocks it out of that state (R13 miss, 3 events in one run).\n5. LOW. tools/check_m3_log.py falsely FAILs a multi-act log when a wind-up starts between acts.\n\nR12's Thug case is fair. The chain needs a landed or blocked swing, and there is a gap to guard after the first swing's flinch; the autopilot parried swing 2 or 3 more than once. A reacting player takes 10-20, not 30.",
+  "checked": [
+   "Setup: worktree /Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-fair at 7a015cc, imported; my review acts in tests/bot/acts/zz_review_acts.gd (uncommitted). They log RVHIT, RVKO, RVREV, RVWAVE, RVSTAT and RVSTUCK and run with real damage; none is god mode",
+   "Read docs/milestones/M3-plan.md Part A and Part B (B1-B4, L5); SPEC \u00a75, \u00a77, \u00a78, \u00a711, \u00a712; ARCHITECTURE's Director, Crowd room, Boss and P4-int sections; M3-judgement-calls.md; M3-calls/P3-boss.md and P4-int.md; README departures at a063e75",
+   "Passive acts, seeds 0-2 (captures/review/runs/passive_s{0,1,2}.log): mixed six, then 1, 2, 3, 4 and 6 Punks, then heavies (boss, Bruiser, 2 Kickers), then Thugs (2 Thugs and 4 Punks); about 42 s each",
+   "Fights, seeds 0-2: held-back autopilot and full autopilot against a mixed six topped up in mix order (captures/review/runs/fight_s*.log); masher, slow held and slow full (captures/review/runs/slow_s*.log)",
+   "Attacker cap: --tune=attacker_cap 1, 2 and 6, and director_hit_grace_s 0, each on passive six Punks and on the held mixed fight (captures/review/runs/cap*.log and grace0.log)",
+   "Waves: 6 min with the full autopilot and 3 min with the held-back one, boss_wave_every 4 as shipped (captures/review/runs/waves_s0.log)",
+   "Boss, seeds 0-2: alone against the full autopilot (90 s), the held-back one (120 s) and a passive player (60 s); then the boss wave against full and held (captures/review/runs/boss_s*.log). Also held back for 300 s (bossheld_long.log), and the knobs run with boss_attack_cooldown_s 0.5 and boss_health 600 (boss_knobs.log)",
+   "Recordings, first person, at 2 stills/s: captures/review/boss_full (RV rec boss full), captures/review/mixed (passive, then masher), captures/review/stuck (the seed-1 slow held fight). Sheets in captures/review/sheets/",
+   "Log analysis: AI-state time shares, enemy KOs by AI state, never-wound-up counts by archetype, hits from two attackers within 40 f, hits after a knockdown, third-party hits on a held player, LOCK and CROWD lines, and tools/check_m3_log.py on every log",
+   "Code read: enemy_director.gd (may_start_windup, windup_eta_s, _grant, _player_closed); enemy_actor.gd (wants_token, _tick_free, _tick_approach, _tick_posture, _tick_engage, last_strike_eta_s, _stalled, _start_detour); boss.gd (_apply_armor, _commits_to_its_move); readability_probe.gd (R3, R11, R12, R13); crowd_bot.gd; autopilot.gd; tools/check_m3_log.py",
+   "Full test suite tools/run_tests.sh, with my act file moved out of the tree: 1130/1130 pass, 0 SCRIPT ERROR, 0 ERROR (captures/review/tests.log)"
+  ],
+  "sheets": [
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-fair/captures/review/sheets/boss_loop_13-18s.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-fair/captures/review/sheets/boss_loop_10-30s.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-fair/captures/review/sheets/masher_31-61s.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-fair/captures/review/sheets/stuck_bruiser_31.6-35.6s.png",
+   "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-fair/captures/review/sheets/passive_0-27s.png"
+  ],
+  "passes": [
+   "R3 hard: 0 unwarned of 1370 hits on the player over 75 acts, real damage, every player model (readability.json under captures/review/runs/*/)",
+   "R11 hard: worst non-boss knockdown 15 per hit and 15 per attack chain, over 111 non-boss knockdowns on a real-damage player (Bruiser smash or headbutt; Kicker sweep 8)",
+   "R1 and R2 hard: max 2 attackers at once, least wind-up gap 21 f, in every act; no 'FAIL (hard)' row anywhere",
+   "R12 passive time to KO (>= 12 s) is met. Mixed six: KO at 15.4, 22.3 and 25.8 s. Six Punks: 18.1-19.8 s. Thugs: 13.9-17.1 s. Heavies: 21.9-27.4 s. Boss alone: 35.1-38.8 s",
+   "R12 worst 2 s: 30-33 against 30 (soft). Judged fair. 32 = the Thug's 30 plus a hit; 33 = boss slam 25 + Kicker 8, and the boss is exempt from the 15% rule. The Thug's links follow only a landed or blocked swing, so a guard in time stops the chain at 10-20 (fight_s0 seed 2: pipe_1 lands f542, pipe_2 parried f574; fight_s1: pipe_3 parried f557)",
+   "Flinch-locks: the longest reaction chain in every act equals the longest single reaction, at most 2.30 s (one Kicker sweep knockdown). No hit from another attacker within 150 f of a knockdown in any run. No third-party hit on a held player in 85 enemy grabs, and the autopilot mashes free in 23 f",
+   "Boss winnable with revives: the full autopilot wins in 38-40 s with no KO over 3 seeds; the held-back one wins at 162 s after one KO and revive (bossheld_long.log, RVKO f6812, RVREV f6986, RVEKO Boss1 f9724)",
+   "Waves repeat with no leaks (waves_s0.log): waves 1-20 in 6 min, a boss wave every 4. Node count at each clear stays 4574-4670 and orphans 0 throughout. R13 cleared 4 waves in 90 s with the full autopilot and 2 with the held-back one",
+   "After a revive, the first enemy wind-up comes 1.7 s later (REV f1106, WU+ f1208 in passive_mixed_s0); the revive grace and the get-up hold",
+   "The full suite at 7a015cc: 1130/1130 pass in 134 s, no SCRIPT ERROR or ERROR"
+  ],
+  "also_noticed": [
+   "Dropped Thug pipes are never cleared during waves. pipes=4 on the street after 6 min (waves_s0.log RVSTAT t=230-360 s), about 2 per wave cycle; masher_31-61s.png frames 17-20 show 4 or more yellow pipes in the lane. This is not a node leak. A longer session will litter the lane and keep the LB cue lit.",
+   "A holder that is already within strike range skips windup_eta_s's 'strikes on the way' and line-head rules (enemy_actor.gd:656-673 goes straight to may_start_windup). In practice this means the Kicker's 2.75 m jump kick and the boss's pound and charge. 14 of the 17 hits from a second attacker within 40 f of the first were a Kicker jump kick, e.g. a Kicker jump kick then a boss pound 30 f apart, both unblocked (passive_s1, RV passive heavies). R1, R2 and the lock meter still pass, so it adds pressure rather than locks.",
+   "The Kicker sweep (8 damage, LIGHT tier, KNOCKDOWN) is the main source of time on the floor. One Kicker swept the slow full autopilot 3 times in 16 s (slow_s2, f9388, f9874, f10363), about 2.1 s down each; a passive player spends 37-43% of a mixed fight in reaction. Within spec and R11.",
+   "Passive damage rate by crowd size (dmg/s, seeds 0-2): 1 Punk 1.34-1.49; 2 Punks 2.50-2.65; 3 Punks 3.64-4.08; 4 Punks 4.47-4.62; 6 Punks 4.81 in every seed. The fifth and sixth Punk add almost nothing.",
+   "R9, blind grants, is a soft miss in my runs: 44-50% of 4-9 mixed grants. This belongs to the L2 lens.",
+   "The 'belly slab' view P4-int flagged shows at the end of passive_0-27s.png, frame 20 (the Bruiser smash knockdown). Not re-litigated."
+  ],
+  "findings": [
+   {
+    "severity": "high",
+    "title": "The boss can be stun-locked to death: after every knockdown it walks back to its slot and never gets to attack",
+    "detail": "In APPROACH an enemy never asks for a token: wants_token() needs ai_state POSTURE (enemy_actor.gd:197-202). Every reaction ends in _enter_approach() (enemy_actor.gd:449), and the enemy then walks to its ring slot 2.5-4 m away (_tick_approach, enemy_actor.gd:487-495). So a boss that gets up beside the player turns to walk away. The boss's armor absorbs heavy hits only while it winds up or runs a charge or pound (boss.gd:148-161), never while walking. So the standard chains loop on it. P P P P: jab and jab are absorbed (grey spark), the hook staggers it, the uppercut floors it. K K K: the front kick is absorbed, the roundhouse staggers, the spinning heel floors it. It gets up, walks (APPROACH), and the next chain lands before it reaches POSTURE. The full autopilot kills the 300 HP, two-phase boss in 38-40 s (3 seeds), and the boss lands 1-2 attacks (one charge or pound, 15-21 damage in all). In seed 0 the boss spends 12% of the run in REACT, 7% in APPROACH and 1% in POSTURE; it is KO'd at f2411. P3-boss, P4-int (call 12) and the README put this down to boss_health and boss_attack_cooldown_s. Those knobs do not reach it. With boss_attack_cooldown_s 0.5 and boss_health 600 it still throws nothing after its opener: 19 REACT->APPROACH->REACT cycles, 0% POSTURE, killed at 67 s (boss_knobs.log). In first person Game-boy sees the boss fall, rise, turn and fall again, every 5 s, with the boss bar draining and his own HP still at 85/100.",
+    "evidence": "captures/review/runs/boss_s0.log: AI lines from f589 to f1826 show 5 cycles of REACT->APPROACH->REACT with no WU+ for Boss1, and RVPHIT shows hook/roundhouse armor=false (staggered) against jab/front_kick armor=true. boss_s1 and boss_s2: KO at 38.3 and 38.5 s; moves landed: 1 charge and 2 charges. boss_knobs.log: WU+ only at f401 and f578, then none until KO at f4047. Sheets: boss_loop_13-18s.png at 4 fps shows the absorbed front kick (frame 3), BOFF and CRUNCH (frames 4-6), the boss on the floor (frames 7-12), getting up (13-15), jab sparks (16-17), WHAM and WHUMP (18-20). boss_loop_10-30s.png shows the loop repeat for 20 s. Code: enemy_actor.gd:197-202, :449, :487-495; boss.gd:148-161.",
+    "repro": "cd /Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-fair && godot --headless --fixed-fps 60 --path . res://tests/bot/crowd_bot.tscn -- \"--act=RV boss full\" --seed=0 --probe-out=captures/review/runs/x. The act is in tests/bot/acts/zz_review_acts.gd: the boss alone at spawn point 4, the full autopilot, real damage. Count the WU+ Boss lines and the REACT->APPROACH lines. Add \"--tune=boss_attack_cooldown_s=0.5\" \"--tune=boss_health=600\" for the knobs run. The shipped act \"Boss fight\" in boss_acts.gd shows the same.",
+    "suggested_fix": "Fix the AI, not the numbers: (a) An enemy whose reaction ends within its strike range or the ring's near edge should resume in POSTURE where it stands, eligible for a token, rather than walking to its slot. For the boss, consider a wake-up: priority for the next token and an attack straight from the get-up. (b) Give the boss a poise or post-get-up armor window, e.g. heavy hits absorbed for N frames after it stands, or at most one heavy stagger per X s, so one chain cannot always floor it. Its heavy-hit rule is already a logged departure in boss.gd. (c) Correct the README and M3-judgement-calls line that name boss_health and boss_attack_cooldown_s as the knobs. Re-measure with the full autopilot: the boss should get several attacks in, and the kill should take well over 40 s.",
+    "files": [
+     "game/enemies/enemy_actor.gd",
+     "game/enemies/boss/boss.gd",
+     "docs/milestones/M3-judgement-calls.md",
+     "README.md"
+    ],
+    "spec_change": false
+   },
+   {
+    "severity": "medium",
+    "title": "A 6-enemy fight barely threatens a player who attacks: chased enemies never fight back, and 42% of the killed never wind up",
+    "detail": "This shares finding 1's root cause: a hit sends an enemy to APPROACH, and in APPROACH or ENTER it cannot get a token. A player who walks up and punches keeps whoever he is hitting in REACT/APPROACH, and only enemies sitting in POSTURE on the ring ever attack him. Against a mixed six refilled whenever one falls, over 3 seeds and 60 s each: (a) The full autopilot takes 14-24 damage a minute (5-7 hits) and kills 27-29. (b) A masher, the full autopilot with defend off (no block, no dodge), takes 44-80 a minute and kills 26-29, never KO'd. That is less than the defensive slow held-back player, who takes 83-126 a minute and is KO'd once in seed 2. (c) The crowd winds up 13-21 times a minute against aggressive players and 34-46 against held-back ones. (d) Of 234 enemies the aggressive players killed, 98 (42%) never wound up once: 33 of 79 Punks, 38 of 82 Kickers, 15 of 39 Thugs, 12 of 34 Bruisers. (e) Bruisers last about 4.5 s once touched; Bruiser1 in fight_s0 was hit first at f4721 and KO'd at f4992, still in APPROACH. (f) In 6 min of waves the full autopilot took 66 damage in total, 8 hits, against 77 kills and 26 enemy wind-ups. (g) Living enemies spend about 72% of their time in ENTER or APPROACH against a masher; only about 3% is POSTURE (CROWD: 0.1-0.3 of 5.7 alive posturing). SPEC \u00a77 says 'the danger is numbers'. As built, the danger only lands on a player who does nothing (KO in 15-26 s). The departure 'attacks in turns' (M3-judgement-calls line 97) was measured only against passive or held-back players.",
+    "evidence": "captures/review/runs/slow_s{0,1,2}.log 'RV masher mixed': hits 6/6/10, damage 46/44/80, enemy KOs 26/29/26, R1 max 1. fight_s{0,1,2}.log 'RV full mixed': damage 20/24/14, enemy KOs 27/28/29, WU 16/21/13. waves_s0.log 'RV waves long full': 360 s, 8 hits, 66 damage, 77 enemy KOs, WU 26, CROWD '0.0 posturing'. Sheet masher_31-61s.png: 20 frames over 30 s, nearly every one a landed WHAM/BOFF/SMAK while HP goes 100 to 86. Code: enemy_actor.gd:197-202 and :449.",
+    "repro": "cd /Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-fair && for s in 0 1 2; do godot --headless --fixed-fps 60 --path . res://tests/bot/crowd_bot.tscn -- \"--act=RV masher mixed|RV full mixed|RV held mixed\" --seed=$s --probe-out=captures/review/runs/x$s > x$s.log; done. Then compare the RVHIT, RVEKO and WU+ counts and the CROWD lines per act. The summaries come from /private/tmp/claude-501/-Users-arachne-repos-beat-em-up-PoC/d761797e-9cb1-4f02-bcab-6d8ac443a839/scratchpad/summ.py and kostate.py.",
+    "suggested_fix": "Let an enemy fight back when the player engages it. For example, let wants_token() count an enemy in APPROACH within posture_ring_max_m of the player once its reaction ends. Or, in the director, give token priority to the enemy the player is hitting (a 'counter' grant), with may_start_windup still enforcing R2. Then re-measure the masher: it should take clearly more damage than a defensive player, not less. Put the result to Game-boy with the 'attacks in turns' departure.",
+    "files": [
+     "game/enemies/enemy_actor.gd",
+     "game/enemies/enemy_director.gd"
+    ],
+    "spec_change": false
+   },
+   {
+    "severity": "medium",
+    "title": "The F1 'attacker cap' does nothing from 2 to 6: the director's line rule lets one attacker step in at a time",
+    "detail": "SPEC \u00a77 and \u00a711 give Game-boy attacker_cap ('at most 3 enemies attack at once (tunable)', F1 'Enemies: attacker cap'), and the README tells him that is what it does. But windup_eta_s() returns INF to every holder except the line head (enemy_director.gd:215), and gives the head 'strikes on the way + hit grace' (:204-210). So holders walk in one at a time, and a third attacker never comes. Passive against six Punks at seed 0 gives the same result at cap 2, 3 and 6: 34 hits, 204 damage (4.81 dmg/s), KO 18.6, 19.8 and 19.8 s. At cap 6, R1 is still max 1. Only cap 1 changes anything: 26 hits, 3.68 dmg/s, KO 25.7 s. Hit grace 0 barely moves it (4.95 dmg/s), so the line rule is what limits the pace. The pressure also stops rising past four enemies: passive dmg/s for 1, 2, 3, 4 and 6 Punks is 1.34-1.49, 2.50-2.65, 3.64-4.08, 4.47-4.62 and 4.81. If Game-boy raises the cap to make crowds harder, nothing will happen, and no live tunable controls how many attack together.",
+    "evidence": "captures/review/runs/cap1.log, cap2.log, cap6.log and passive_s0.log (cap 3): the 'RV passive punks 6' rows read 'hits=34 dmg=204' at caps 2, 3 and 6; cap6 R1 'max 1'. grace0.log: 35 hits, 210 damage. Code: enemy_director.gd:189-216 (windup_eta_s) and :418 (the grant loop is the only place the cap is read); tuning_data.gd:559.",
+    "repro": "cd /Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-fair && for c in 1 2 3 6; do godot --headless --fixed-fps 60 --path . res://tests/bot/crowd_bot.tscn -- \"--act=RV passive punks 6\" --seed=0 \"--tune=attacker_cap=$c\" --probe-out=captures/review/runs/c$c > c$c.log; done; grep -h 'RVHIT' c*.log | sort -u | wc -l per file, or compare the R1 and R12 rows. The shipped 'Six Punks, passive' with --tune shows the same.",
+    "suggested_fix": "Make the cap matter: let windup_eta_s() give finite answers to the first attacker_cap holders, or to a separate live tunable such as director_parallel_engagers, not only the line head. Keep may_start_windup's 21-frame gap and the hit grace so R2 and the flinch-lock guard hold. Or, if one at a time is the intended feel, say so in the README and in the F1 tooltip, and expose the knob that really sets the pace.",
+    "files": [
+     "game/enemies/enemy_director.gd",
+     "game/autoload/tuning_data.gd",
+     "README.md"
+    ],
+    "spec_change": false
+   },
+   {
+    "severity": "low",
+    "title": "An armored Bruiser in APPROACH jams against the player and fills the lens for 3-5 s, neither moving nor attacking (R13)",
+    "detail": "Seed 1, the slow held-back fight. Bruiser8 reaches POSTURE at f1845, goes back to APPROACH at f1846 when its slot moves to the far side of the player, and then stands 0.8 m from him by the parked car for 4.8 s until it dies (f2136). It never attacks. The jabs it takes are absorbed (armor=true), so no reaction ever knocks it out of APPROACH. Stall detection (enemy_stuck_s 1.0, then a detour) does not free it. In first person its purple chest and fists fill the whole view for about 2 s, which Game-boy would see as a wall that just stands there. The same run has a Kicker stalled twice beside the car, 3 s each. The probe reports R13 at 3 stuck. Stuck events appear in 3 of the roughly 45 fight acts I ran (1, 1 and 3).",
+    "evidence": "captures/review/stuck/bot.log, the RVSTUCK lines: 'f2104 Bruiser8 APPROACH at (-2.86, 2.36) slot (-2.09, -1.05) player (-2.06, 2.44) since f1924'; Kicker9 'since f2416' and 'since f2840'. AI lines: Bruiser8 APPROACH->POSTURE f1845, POSTURE->APPROACH f1846, APPROACH->KO f2136. READABILITY: R13 '3 stuck' (miss), R8 'p95 57%' (miss). Sheet stuck_bruiser_31.6-35.6s.png, frames 10-20: the Bruiser's chest and fists cover the lens, grey armor sparks on the jabs, no attack. Code: enemy_actor.gd:487-495, :996-1023.",
+    "repro": "cd /Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-fair && godot --headless --fixed-fps 60 --path . res://tests/bot/crowd_bot.tscn -- \"--act=RV rec seed1 slow held\" --probe-out=captures/review/runs/x and grep RVSTUCK. Or watch captures/review/stuck/bot.avi at 32-36 s.",
+    "suggested_fix": "When an enemy in APPROACH is inside posture_ring_min_m of the player, have it either take POSTURE where it stands or back out first (the posture tick's 'never closer than the ring' rule), not keep pushing toward a slot on the far side of the player. This dovetails with the fix for finding 1. Check that a stall against the player's obstacle or the car does lead to a detour within enemy_stuck_s.",
+    "files": [
+     "game/enemies/enemy_actor.gd"
+    ],
+    "spec_change": false
+   },
+   {
+    "severity": "low",
+    "title": "tools/check_m3_log.py falsely FAILs a multi-act log when a wind-up starts in the gap between two acts",
+    "detail": "Between acts the bot runs on for 45 frames and then resets. A wind-up that starts in that gap and is cut short by the reset prints its WARN-CHECK line (lat=-) after the next act's '=== ' header. The checker sets measuring=True at every header (check_m3_log.py:121-131), so it judges that line as part of the new act. It then reports 'the corner never lit (lat=-)' (:200-204), although the HUD's W+ line for that side was printed on the wind-up's own frame, before the header. Rule (b) in P4-int call 9 was meant to skip exactly this. The gate tool can fail a good run.",
+    "evidence": "python3 tools/check_m3_log.py captures/review/runs/passive_s1.log reports 'FAIL: line 382 (RV passive punks 1, f2591, right): the corner never lit (lat=-)'. The log has 'W+ f2591 side=right count=1', 'WU+ f2591 Kicker9', 'W- f2600' and then '=== RV passive punks 1 (f2602)', then 'WARN-CHECK ok RV passive punks 1 right f2591 lat=- end=-'. passive_s2.log is the same at f15200 against the header at f15221.",
+    "repro": "cd /Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-fair && python3 tools/check_m3_log.py captures/review/runs/passive_s1.log",
+    "suggested_fix": "Record the frame in each act header, and skip (as 'outside') any WARN-CHECK line whose frame is earlier than the current act's header frame. Add that case to tests/test_check_m3_log.gd.",
+    "files": [
+     "tools/check_m3_log.py",
+     "tests/test_check_m3_log.gd"
+    ],
+    "spec_change": false
+   }
+  ]
+ },
+ "perf": {
+  "summary": "L6 (performance) passes on this machine (Apple M1, 8 GB, macOS, Metal, Forward+), with large CPU headroom. I measured with the probe off, using my own head/tail tick and frame sampler (tests/bot/review_perf_sampler.gd) and acts (tests/bot/acts/zz_review_perf_acts.gd) in /Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-perf. The machine was shared with 0 to 4 other agents' Godot processes, at load average 3 to 18. Results with six mixed enemies fighting and ragdolling, windowed 1600x900: wall-frame p95 13.6 to 14.6 ms over 3 runs, and 14.9 ms at 1920x928. The simulation tick (scripts plus Jolt plus navigation) costs p50 1.7 to 1.8 ms and p95 2.6 to 2.8 ms, so frames are GPU-bound. Six Bruisers: p95 13.1 to 15.5 ms. Boss wave with its phase-2 call-in: p95 12.0 to 13.7 ms. Spawns cost 1 to 7 ms of tick warm and 14 to 15 ms cold (the first of an archetype, the named-library build); the frames that contain them are at most 29.6 ms. A ragdoll build costs 0.56 to 0.60 ms of CPU (timed directly); build ticks are 2 to 11 ms and their frames at most 15 ms. The voice pool peaked at 12 to 17 of 32 voices, and no sound was cut in any windowed fight. Node, object and resource counts stay flat over 45 waves (static memory plateaus at about 202 MB). 90 Bruiser holds leak nothing. The official instrument agrees: R15 p95 13.9 and 14.4 ms over 3 runs. Its spawn hitch was 21.9 and 29.1 ms in two runs and 61.9 ms once; that one can't be tied to any game event and did not recur. The suite is 1130 of 1130 in 121.6 s. I found two real defects, both low and neither a player-facing perf problem: CombatEvents.released fires with an already-freed holder when the holder is removed mid-hold, and the perf act's engine columns are dead or mislabelled.",
+  "checked": [
+   "Setup: worktree .worktrees/m3-review-final-perf at 7a015cc, imported; machine Apple M1 (4P+4E), 8 GB, screen 1920x1080 at 60 Hz, Godot 4.7.2 Metal 4.0 Forward+; the load average is logged with every run",
+   "Read M3-plan Part A/B (B2 R14/R15, B3 performance row, B4 L6), SPEC \u00a710 target (1080p 60 fps, RTX 3060, 6 enemies), M3-calls/P4-int.md calls 14 and 20, and the P4-int perf, perf_boss and seeds logs and readability.json in .worktrees/m3-p4-int/captures/m3_p4/",
+   "Code read: readability_probe.gd R14/R15 (lines 142-153, 339-357, 520-580), crowd_acts.gd perf act (156-256), humanoid_rig.gd named-library cache (_named_library 847-851, checked that nothing mutates shared clips), ragdoll.gd setup, _exit_tree joint freeing and collision exceptions, audio_director.gd voice pool (_take_voice, wind-up tags), encounter_spawner.gd spawn and prune, pipe_thug.gd pipe cull, enemy_hold.gd (RefCounted), enemy_actor.gd _tick_ko, static _windup_cache, Tuning handlers, enemy_director prune, rear_warning, enemy_health_bars and debug_draw per-actor dicts (all pruned), cheat_menu spawn paths, nav_baker (synchronous bake, about 2 ms)",
+   "Act 'RVP mixed six' (the P4-int perf act's fight with the probe off), windowed 1600x900, 3 runs: captures/review/mixed1.log (load 4.1), mixed2.log (4.8), mixed3.log (7.5); plus 1920x928: mixed1080.log (load 5.1)",
+   "Act 'RVP six bruisers' (6 Bruisers kept alive, full-speed autopilot), windowed, 3 runs: bruisers1.log (load 18.2), bruisers2.log (12.7), bruisers_boss3.log (3.3)",
+   "Act 'RVP boss wave' (waves on, boss_wave_every 1, autopilot until phase 2 and its adds, then 6 s), windowed, 3 runs: boss1.log (load 4.5), bruisers_boss3.log (4.0), cold_boss4.log (7.5)",
+   "Act 'RVP cold first knockdown' (fresh process: the session's first Punk, first hits, first stagger and knockdown, then a second Punk), windowed, 2 runs: cold1.log (load 3.0), cold_boss4.log (6.7)",
+   "Per-enemy ragdoll-build ticks, first wind-up of each move and first hit of each kind (incl. armor), all marked by the sampler: mixed1-3, bruisers1-2, boss and cold logs",
+   "Direct CPU cost of Ragdoll setup and of spawn(), headless, every archetype: build_cost.log",
+   "Official instrument: 'Perf, six with ragdolls' windowed with the probe, 3 runs: captures/review/perf_probe{,2,3}/bot.log and readability.json (loads 4.1, 6.8, 8.0); tools/check_m3_log.py on run 1",
+   "Leak soak, headless, waves on, full-speed autopilot, god mode: 20 waves (soak1.log) and 45 waves (soak2.log, 53k ticks); counted objects, nodes, resources, orphans, static memory, nav agents, room children, thug_pipe and weapon groups, rigs, ragdoll simulators and the rig library cache",
+   "Hold churn, headless: 90 Bruiser grabs that connect, ending in turn with the headbutt landing, a mash-free, or the holder removed mid-hold; counts and player state after each: hold_churn.log, hold_churn2.log",
+   "Voice budget: a windowed scan of the AudioDirector pool every tick (peak busy voices, ticks with all 32 busy, voices replaced while more than 50 ms from their end, and of those wind-up cues)",
+   "Jolt monitor support: a 5-rigid-body headless probe (scratchpad rvp_jolt_active.gd)",
+   "Full test suite with a JUnit per-test timing: captures/review/tests.log and junit.xml (load 4.9 to 5.6)",
+   "Display conditions of every windowed run: vsync mode, refresh rate, focus, window size, driver"
+  ],
+  "sheets": [],
+  "passes": [
+   "R15, frame time with six mixed enemies fighting and ragdolling (probe off; at most 16.7 ms required): wall-frame p95 14.6, 13.6 and 13.6 ms (mixed1-3.log, loads 4.1, 4.8, 7.5); p99 16.6, 15.5 and 15.2; 0.3 to 0.9% of frames over 16.7 ms; no frame over 33 ms. At 1920x928: p95 14.9, max 22.9 (mixed1080.log). The official probe agrees: R15 p95 13.9, 14.4 and 14.4 ms (perf_probe*/bot.log); P4-int had 13.1 to 13.3",
+   "CPU headroom: the whole sim tick (scripts plus Jolt step plus navigation) is p50 1.72 to 1.81 ms, p95 2.60 to 2.79 ms, max 5.5 to 9.4 ms with six mixed enemies; process p95 0.50 to 0.53 ms; render CPU submission p95 about 0.6 ms (mixed1-3.log). Frames are GPU/present-bound: about 7.5 ms with one Punk (cold1.log, p50 7.9), plus about 0.4 ms per enemy. Against an RTX 3060 at 1080p this leaves wide headroom",
+   "A wave of Bruisers (6 kept alive): p95 15.5, 14.8 and 13.1 ms; tick p95 2.1 to 2.8 ms, max 11.1 (bruisers1, bruisers2, bruisers_boss3.log). The worst runs coincide with load 12 to 18 from other agents; at load 3.3 only 0.2% of frames are over 16.7 ms",
+   "Boss wave and phase-2 call-in: p95 12.0, 12.1 and 13.7 ms; the boss's spawn tick costs 14.0 to 15.0 ms (its cold 2.3 m named-library build) in a frame of 24.5 ms; the two adds' ticks cost 4.0 to 7.0 ms in frames of 17.7 and 18.9 ms; the worst frame within 0.5 s of phase 2 is 15.5 to 16.3 ms (boss1.log, cold_boss4.log, bruisers_boss3.log)",
+   "Spawn hitch (at most 33 ms required): warm spawns cost 1 to 7 ms of tick (keep_alive Bruiser7-11 4.9 to 7.7 ms; wave Punks 3.8 to 5.6 ms); cold first-of-archetype spawns 14 to 15 ms. The frame of a session's very first enemy spawn is 25.3 and 29.6 ms (cold1.log, cold_boss4.log); headless spawn() costs 1.4 to 1.9 ms (build_cost.log). Probe R15 spawn figures: 21.9 and 29.1 ms in 2 of my 3 runs",
+   "First-knockdown ragdoll build: Ragdoll setup costs 0.56 to 0.60 ms of CPU for every archetype (a second start 0.07 to 0.09 ms; build_cost.log). Windowed, a build tick (the knockdown hit's VFX and audio included) costs 2.0 to 6.5 ms in mixed fights and up to 10.6 ms with Bruisers; the frame containing it is at most 15.0 ms in the cold runs, and the worst frame within 0.5 s is at most 25.8 ms. That is no hitch, which confirms P4-int's call 20 with clean numbers",
+   "First-use costs: each enemy's first wind-up of each move costs at most 3.8 ms of tick (frame at most 17.8); the first hit of each kind, armor included, at most 4.7 ms (frame at most 14.6) (mixed3.log)",
+   "R14, voice budget: the pool peaks at 13, 13 and 12 of 32 (mixed six), 17 of 32 (six Bruisers) and 12 of 32 (boss wave), with 0 ticks of all 32 busy and 0 sounds cut while more than 50 ms remained, wind-up cues included, over 125 to 287 plays per act (mixed2, mixed3, mixed1080, bruisers_boss3, cold_boss4.log). The probe's R14 is 0 in all 3 runs",
+   "No leak over 20 and then 45 waves: at each wave clear, objects 11.6k to 12.3k, nodes 4.6k to 4.9k (the spread is KO'd bodies not yet blinked off), resources 288 to 290, orphans 0, nav agents back to 1. After clearing: nodes 4483 after both 20 and 45 waves, objects 11439 vs 11486 (the +47 are the bot oracle's Entry objects). Static memory climbs to about 202 MB by wave 12, then stays at 201.5 to 204.3 MB to wave 45 (soak1.log, soak2.log)",
+   "Dropped pipes: the thug_pipe group is capped at 4 (Tuning thug_pipes_on_floor_max) through 45 waves (soak2.log)",
+   "EnemyHold (RefCounted) and grab endings: 90 grabs held, 90 of 90 ended FREE within 300 ticks across headbutt, mash-free and mid-hold removal; nodes 4377 flat and static memory 191.5 to 191.8 MB between iterations 30 and 90. The object growth (+59, then +46) equals the bot oracle's accumulated entries (+50 finished and +10 live per 30), so the game adds nothing (hold_churn2.log)",
+   "The rig named-library cache is bounded at 4 entries (stance x fixed body heights 1.8, 2.05, 2.3) and stays at 4 through 45 waves; the shared clips are never mutated (only .length and track reads: combat_actor.gd:402,951, humanoid_rig.gd:224,578,931,966,976, enemy_actor.gd:603, boss.gd:205, bruiser.gd:117)",
+   "The static _windup_cache in enemy_actor.gd:75 is keyed by move, multiplier and floor, and cleared on F1 changes to those inputs: bounded",
+   "Test suite: 1130 of 1130 pass, 0 SCRIPT ERROR or ERROR, 121.6 s GUT / 129.8 s wall at load 4.9 to 5.6 (P4-int: 107.6 s at load 3 to 4). The M3 files take test_m3_done_when 8.8 s and test_slice_crowd 7.0 s; the largest is M2's test_ko_view.gd at 26.8 s (junit.xml)"
+  ],
+  "also_noticed": [
+   "R15's spawn hitch missed once with the official instrument: 61.9 ms in run 1 of 3 (perf_probe/bot.log; P4-int's sampler saw the same 60.1 ms frame in window 2, inside Punk2's 0.5 s, f107 to f130). The log shows no game event there except Punk2 walking in, which is a warm spawn costing 1 to 7 ms of tick in every probe-off run. Runs 2 and 3 gave 21.9 and 29.1 ms. In about 19,000 probe-off gameplay frames, no frame went over 26 ms except at process startup. I attribute it to contention from 3 or 4 other agents' Godot processes; the gate should quote the spread (21.9 to 61.9), not a single number",
+   "R15 is measured unthrottled: every windowed run reports vsync mode 1 (enabled) on a 60 Hz screen, yet runs at 90 to 125 fps with an unfocused window (Metal does not throttle it). So R15 is the unthrottled frame time, not the presented 60 Hz cadence. The 0.2 to 2% of frames over 16.7 ms would be single dropped vsyncs in a focused window on this M1, and they rise with load (0.2% at load 3.3, 2.2% at load 18)",
+   "R14 (windup_voices_stolen) cannot fail as built: audio_director.gd:423-441 increments it only when all 32 voices are live wind-up cues, while attacker_cap 3 allows about 6. Its 0 says nothing about the budget; the direct scan (peak 17 of 32, nothing cut) is the real evidence",
+   "A one-second stall (8 physics ticks in one frame) at about 0.25 s after process launch, before any gameplay, in 2 of 9 windowed runs (bruisers1.log, cold_boss4.log worst#1 at +0.06 s of the first act). This is process or window startup, not a fight hitch. It explains the 93 to 98 ms 'physics' figure in window 1 of the P4-int perf logs",
+   "CLAUDE.md says the test run takes 'about 90 s' (set by plan A1.6); it now takes 108 to 122 s",
+   "Bot-only growth in the crowd bot (not the game): the warning oracle keeps Entry objects in _finished and _live while no act is active (+50 and +10 per 30 grabs; 64 finished after 45 waves). log_lines, _ai_seen and _token_seen grow per event or enemy. These matter only for very long bot runs",
+   "Two 1-second frames at a load spike of 18 (bruisers1.log) were checked and not reproduced in bruisers2 or bruisers_boss3 (Bruiser1's first spawn: 13.1 ms frame), so they are environmental, not a cold Bruiser pipeline compile"
+  ],
+  "findings": [
+   {
+    "severity": "low",
+    "title": "CombatEvents.released fires with an already-freed holder when the holder is removed mid-hold",
+    "detail": "When the holder is freed while the player is GRABBED, the player's safety net releases him: PlayerCharacter._control_grabbed() at player.gd:630-634, or CombatActor._pin_to_holder() at combat_actor.gd:1499-1502, calls release_from_grab(). This happens on F4 'Remove every enemy' or 'Remove spawned enemies' (cheat_menu.gd:287-308 via EncounterSpawner.remove_enemies), a room switch, or the bot's clear_enemies(). release_from_grab() then emits CombatEvents.released(by, self) at combat_actor.gd:520 with `by` = the freed holder. Any subscriber whose parameter is typed (released is declared `holder: Node3D` at combat_events.gd:21) fails with 'Cannot convert argument 1 from Object to Object'. Today the only subscriber is the readability probe (readability_probe.gd:179, 703), so every such removal in a probed bot run prints an ERROR line, and tools/check_m3_log.py (ERROR_LINE, line 50) then fails that log. In the game itself nothing subscribes yet, so this is latent: the first presentation listener (camera, audio, HUD) would error the same way. Not a perf problem; I found it while checking EnemyHold for leaks.",
+    "evidence": "captures/review/hold_churn2.log (worktree m3-review-final-perf): 90 grabs held; exactly 30 lines 'ERROR: Error calling from signal 'released' to callable: 'Node(readability_probe.gd)::_on_released': Cannot convert argument 1 from Object to Object.', one per mid-hold removal (iterations i%3==2), none for the 60 headbutt or mash-free endings. Code: combat_actor.gd:504-520 (holder captured in `by`, then emitted), player.gd:660 (_holder_holds() false for a freed holder, then release).",
+    "repro": "cd /Users/arachne/repos/beat-em-up-PoC/.worktrees/m3-review-final-perf && godot --headless --fixed-fps 60 --path . res://tests/bot/crowd_bot.tscn -- \"--act=RVP hold churn\" | grep -c '^ERROR' gives 30. In the game: let a Bruiser grab you, open F4 during the hold and click 'Remove every enemy'; nothing visible happens today, but any typed listener on `released` errors.",
+    "suggested_fix": "In release_from_grab(), emit CombatEvents.released(by if is_instance_valid(by) else null, self). Optionally, make the probe's _on_released and _on_grab_escaped take untyped or Object parameters and check is_instance_valid(), as its other handlers do.",
+    "files": [
+     "game/actors/combat_actor.gd",
+     "game/player/player.gd",
+     "tests/bot/readability_probe.gd"
+    ],
+    "spec_change": false
+   },
+   {
+    "severity": "low",
+    "title": "The perf act's engine columns are dead or mislabelled: 'bodies' is always 0 under Jolt, and 'process' and 'physics' are per-second maxima, not the last frame",
+    "detail": "The 'Perf, six with ragdolls' act logs `Performance.PHYSICS_3D_ACTIVE_OBJECTS` as 'the active physics bodies (the ragdolls' bodies count)' (crowd_acts.gd:243, 255). Godot's Jolt server does not report this monitor: it reads 0 even with 5 falling rigid bodies. So every PERF line says '0 bodies' while 26 bodies go down per run, and the act gives no evidence about ragdoll body load. Its doc (crowd_acts.gd:169-171) also calls the 'process' and 'physics' columns 'the engine's own monitors for the last frame'. In Godot 4 these monitors hold the maximum over the last second, and the physics figure sums every tick of a frame. That is why window 1 reads 'physics 93.1' (and 98.5) while the same window's worst wall frame is 23.3 ms (22.0). Both columns mislead anyone citing the act for L6. P4-int's call 20 already says the frame lines are the measure; the instrument's own text says otherwise.",
+    "evidence": "All 29 windows of .worktrees/m3-p4-int/captures/m3_p4/perf/cache1.log through cache4.log and run1.log through run3.log show '0 bodies' alongside 'PERF 22 spawns ... 26 bodies went down'; same in captures/review/perf_probe{,2,3}/bot.log. The headless probe (scratchpad rvp_jolt_active.gd) prints 'RVP-JOLT engine=Jolt Physics active_objects=0 collision_pairs=0 islands=0' after 30 ticks with 5 RigidBody3D falling. cache1.log window 1: 'worst 23.3, process 10.3, physics 93.1'.",
+    "repro": "godot --path . res://tests/bot/crowd_bot.tscn -- \"--act=Perf, six with ragdolls\" and read the PERF window lines: 'N bodies' is always 0. Run any Jolt scene and read Performance.PHYSICS_3D_ACTIVE_OBJECTS: it is 0.",
+    "suggested_fix": "Count simulating ragdoll bodies directly: sum get_ragdoll() body counts over rigs where is_ragdolling() is true, plus RigidBody3D pipes that are not sleeping; or drop the column. Relabel 'process' and 'physics' as 'max over the last second' or remove them. The doc should say that only the frame lines and the probe's R15 are the measure.",
+    "files": [
+     "tests/bot/acts/crowd_acts.gd"
+    ],
+    "spec_change": false
+   }
+  ]
+ }
+}

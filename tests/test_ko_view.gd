@@ -16,6 +16,9 @@ extends GutTest
 const ROOM := preload("res://game/level/test_room.tscn")
 const FPView := preload("res://tests/fp_view.gd")
 const FAR := Vector3(30.0, 0.0, -30.0)
+const KICKER_SCENE := preload("res://game/enemies/kicker/kicker.tscn")
+const BRUISER_SCENE := preload("res://game/enemies/bruiser/bruiser.tscn")
+const StubDirector := preload("res://tests/fixtures/stub_director.gd")
 const FRAME := 1.0 / 60.0
 ## The most the lens may move (meters) or turn (degrees) in one tick on its way out or in:
 ## its whole path is about 2.3 m and up to 120 degrees (over the body: 85 down and across),
@@ -790,6 +793,144 @@ func test_a_ko_while_holding_ends_the_hold_view_into_the_ko_view() -> void:
 	var to_lens := view.origin - player.global_position
 	var to_jabber := jabber.global_position - player.global_position
 	assert_lt(to_lens.dot(to_jabber), 0.0, "the lens sits on the side away from the second fighter")
+
+
+# --- A knockdown that is not a KO: the lens stays above the floor (final review, crowd-01) ----
+
+
+## The lowest the real lens may go (m) in a knockdown, near plane 0.05 m: the floor is drawn from
+## above only, so a lens under it sees the background colour.
+const LENS_MIN_Y := 0.05
+## The most the floor may lift the lens of a body that falls face-up (m): that eye lies 0.3 m up.
+const FACE_UP_LIFT_M := 0.02
+
+
+## A second camera on the player, one with no floor under its lens (the clearance turned far
+## down while it updates, then put back): smoothed alike, so the two differ only by the floor.
+func _update_free_lens(free_cam: FirstPersonCamera) -> void:
+	var clearance := Tuning.data.cam_floor_clearance_m
+	Tuning.data.cam_floor_clearance_m = -10.0
+	free_cam.update_camera(FRAME)
+	Tuning.data.cam_floor_clearance_m = clearance
+
+
+## The real player (ahead, the look along -Z) struck by `scene`'s attack number `attack` from
+## `bearing_deg` (0 ahead, positive to the left, 180 behind) at `distance_m`: knocked down, down
+## and up again, the camera updated each tick. Returns the lens's records per tick (y of the
+## camera after shake, y of the view, y of the view with no floor, the player's state), the states seen and
+## whether the hit landed.
+func _knocked_down_by(scene: PackedScene, attack: int, bearing_deg: float, distance_m: float) -> Dictionary:
+	await _setup([])
+	Tuning.data.ai_frozen = true
+	Tuning.data.god_mode = false
+	add_child_autofree(StubDirector.new())
+	await _place_player(player.global_position, 0.0)
+	var cam := _camera()
+	var free_cam := _camera()
+	var enemy := scene.instantiate() as EnemyActor
+	var to := Basis(Vector3.UP, deg_to_rad(bearing_deg)) * Vector3(0.0, 0.0, -distance_m)
+	enemy.position = player.global_position + to
+	enemy.rotation.y = atan2(to.x, to.z)
+	room.add_child(enemy)
+	var landed := {hit = false}
+	var on_hit := func(hit: HitInfo) -> void:
+		landed.hit = landed.hit or hit.victim == player
+	CombatEvents.hit_landed.connect(on_hit)
+	await _ticks(10)
+	enemy.force_attack(attack)
+	var records: Array[Dictionary] = []
+	var seen := {}
+	var down_ticks := 0
+	for i in 420:
+		await _ticks(1)
+		cam.update_camera(FRAME)
+		_update_free_lens(free_cam)
+		var state := player.state
+		seen[state] = true
+		records.append({
+			state = state,
+			lens = cam.global_position.y,
+			view = cam.view_transform().origin.y,
+			raw = free_cam.view_transform().origin.y,
+			floor_y = player.global_position.y,
+		})
+		down_ticks += 1 if state == CombatTypes.ActorState.DOWNED else 0
+		if landed.hit and seen.has(CombatTypes.ActorState.GETUP) and state == CombatTypes.ActorState.FREE:
+			break
+	CombatEvents.hit_landed.disconnect(on_hit)
+	return {records = records, seen = seen, hit = landed.hit}
+
+
+## Judge one knockdown's records: the player went down and got up, the real lens (through
+## update_camera(), shake included) is at LENS_MIN_Y or more over the floor on every frame of
+## LAUNCHED, DOWNED and GETUP, the floor adds no jump of its own (the clamped lens never moves
+## more in a tick than the lens with no floor did), and what it lifted the lens by is returned.
+func _judge_lens_floor(result: Dictionary, label: String) -> Dictionary:
+	assert_true(result.hit, "%s: the hit landed" % label)
+	for state: int in [CombatTypes.ActorState.LAUNCHED, CombatTypes.ActorState.DOWNED, CombatTypes.ActorState.GETUP]:
+		assert_true(result.seen.has(state), "%s: the player went through %s" % [label,
+				CombatTypes.ActorState.keys()[state]])
+	var stats := {min_lens = INF, min_raw = INF, max_lift = 0.0, worst_step = 0.0, frames = 0}
+	var records: Array[Dictionary] = result.records
+	var down := [CombatTypes.ActorState.LAUNCHED, CombatTypes.ActorState.DOWNED, CombatTypes.ActorState.GETUP]
+	for i in records.size():
+		var r := records[i]
+		if not r.state in down:
+			continue
+		stats.frames += 1
+		stats.min_lens = minf(stats.min_lens, r.lens - r.floor_y)
+		stats.min_raw = minf(stats.min_raw, r.raw - r.floor_y)
+		stats.max_lift = maxf(stats.max_lift, r.view - r.raw)
+		if i > 0:
+			var step := absf(r.view - records[i - 1].view) - absf(r.raw - records[i - 1].raw)
+			stats.worst_step = maxf(stats.worst_step, step)
+	gut.p("%s: %d frames, lens at least %.3f m over the floor (%.3f with no floor), lifted at most %.1f cm" % [label,
+			stats.frames, stats.min_lens, stats.min_raw, stats.max_lift * 100.0])
+	assert_gte(stats.min_lens, LENS_MIN_Y, "%s: the lens never lower than %.2f m over the floor (it was %.3f)" % [label,
+			LENS_MIN_Y, stats.min_lens])
+	assert_lte(stats.worst_step, 0.001, "%s: the floor makes no jump (%.4f m more than the free lens in one tick)" % [label,
+			stats.worst_step])
+	return stats
+
+
+func test_a_knockdown_from_the_side_or_behind_keeps_the_lens_above_the_floor() -> void:
+	# Face-down on the street (struck from the side or behind), the eye lies 0.15 m up: the lens
+	# 0.2 m under it was 4 cm inside the street for the 1.1 s the body lay there.
+	for case: Array in [[KICKER_SCENE, 1, 180.0, 1.2, "Kicker's sweep from behind"],
+			[KICKER_SCENE, 1, 90.0, 1.2, "Kicker's sweep from the left"],
+			[BRUISER_SCENE, 0, 135.0, 1.25, "Bruiser's smash from behind-left"],
+			[BRUISER_SCENE, 0, -135.0, 1.25, "Bruiser's smash from behind-right"]]:
+		var result := await _knocked_down_by(case[0], case[1], case[2], case[3])
+		var stats := _judge_lens_floor(result, case[4])
+		assert_lt(stats.min_raw, 0.0, "%s: the case is the one that put the lens in the street (%.3f m with no floor)" % [
+				case[4], stats.min_raw])
+		assert_gt(stats.frames, 60, "%s: and it lasted (%d frames)" % [case[4], stats.frames])
+
+
+func test_a_knockdown_from_the_front_moves_the_lens_a_centimeter_or_so() -> void:
+	for case: Array in [[KICKER_SCENE, 1, 0.0, 1.2, "Kicker's sweep from the front"],
+			[BRUISER_SCENE, 0, 0.0, 1.25, "Bruiser's smash from the front"]]:
+		var result := await _knocked_down_by(case[0], case[1], case[2], case[3])
+		var stats := _judge_lens_floor(result, case[4])
+		assert_lt(stats.max_lift, FACE_UP_LIFT_M, "%s: face-up, the floor lifts the lens %.1f cm" % [case[4],
+				stats.max_lift * 100.0])
+
+
+func test_the_floor_under_a_flying_player_is_found_from_the_eye_and_standing_it_is_the_origin() -> void:
+	await _setup([])
+	assert_almost_eq(FirstPersonCamera.lens_floor_y(player, player.get_eye_transform().origin), 0.0, 0.01,
+			"standing: the street's top")
+	var eye := player.get_eye_transform().origin
+	player.global_position += Vector3.UP * 1.5
+	await _ticks(2)
+	assert_false(player.is_on_floor(), "in the air")
+	assert_almost_eq(FirstPersonCamera.lens_floor_y(player, player.get_eye_transform().origin), 0.0, 0.01,
+			"in the air: the street's top below the eye, found by a ray")
+	assert_eq(FirstPersonCamera.lens_floor_y(player, eye + Vector3.UP * 100.0), -INF,
+			"more than the ray's reach from the floor: none")
+	var loose := PlayerCharacter.new()
+	assert_eq(FirstPersonCamera.lens_floor_y(loose, Vector3.ZERO), -INF, "a player outside the tree: none, no error")
+	loose.free()
 
 
 # --- The other cameras ---------------------------------------------------------------------

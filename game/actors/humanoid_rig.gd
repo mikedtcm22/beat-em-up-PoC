@@ -129,6 +129,8 @@ const _FLASH_SHADER := preload("res://game/fx/hit_flash.gdshader")
 ## contact flash (_warm_flash()).
 static var _flash_warmed: bool = false
 static var _flash_warm_box: MeshInstance3D
+## The named animation libraries built so far, per stance and scale (see _named_library()).
+static var _named_libraries: Dictionary[String, AnimationLibrary] = {}
 
 var _built: bool = false
 ## Rig lengths are PlaceholderBody lengths times this.
@@ -322,9 +324,10 @@ func current_anim() -> StringName:
 
 
 ## True for every id in docs/ARCHITECTURE.md "Animation ids" and every move id with a
-## recipe (move animations are built on demand by play_move()).
+## recipe (move animations are built on demand by play_move()), the enemy moves' included.
 func has_anim(anim: StringName) -> bool:
-	return PlaceholderAnims.ANIM_IDS.has(anim) or PlaceholderAnims.MOVE_IDS.has(anim)
+	return PlaceholderAnims.ANIM_IDS.has(anim) or PlaceholderAnims.MOVE_IDS.has(anim) \
+			or PlaceholderEnemyPoses.has_recipe(anim)
 
 
 ## World transform of a bone (by humanoid name) or rig point (e.g. &"RightFistPoint").
@@ -831,8 +834,21 @@ func _build_animation() -> void:
 	# one animation at full weight. Every animation keys every animated bone
 	# (PlaceholderAnims.make), so nothing is left stale.
 	anim_player.deterministic = false
-	anim_player.add_animation_library(&"", PlaceholderAnims.build_library(_scale, stance))
+	anim_player.add_animation_library(&"", _named_library(_scale, stance))
 	anim_player.add_animation_library(_MOVE_LIBRARY, AnimationLibrary.new())
+
+
+## The named library of rigs of `rig_scale` standing in `stance_id`: built once (about 8 ms of the
+## 9 to 15 a rig costs to build, a visible hitch for each enemy of a wave) and shared by every rig
+## of that size and stance. Its clips depend on those two alone and nothing alters them after the
+## build (the rig only reads them: lengths, track samples, head curves), so one library serves any
+## number of AnimationPlayers. The per-move "moves" library stays per rig: the clips of a move
+## are built the first time that rig plays it.
+static func _named_library(rig_scale: float, stance_id: StringName) -> AnimationLibrary:
+	var key := "%s@%d" % [stance_id, roundi(rig_scale * 10000.0)]
+	if not _named_libraries.has(key):
+		_named_libraries[key] = PlaceholderAnims.build_library(rig_scale, stance_id)
+	return _named_libraries[key]
 
 
 # --- Runtime ---------------------------------------------------------------------------

@@ -8,9 +8,12 @@ extends CanvasLayer
 ## bottom-center, combat log right-middle, camera toast and pause caption top-center, help
 ## left-middle, the PARRY / GUARD BREAK callout just below the center (drawn over the log
 ## and the help, which "GUARD BREAK!" reaches into), over-head enemy bars and the center dot
-## in the 3D view. The top-left and top-right corners stay
-## clear for the rear-attack warning (Spec §8). The DebugDraw child (CombatDebugDraw, F3)
-## draws in 3D, in group "debug_draw".
+## in the 3D view, the MASH P / K! prompt (GrabPrompt) below the center while an enemy holds
+## the player, and the "LB" pick-up cue (PickupCue) low in the view while a weapon is within
+## LB's reach (a dropped pipe lies below the forward lens). The top-left and top-right corners stay
+## clear for the rear-attack warning (Spec §8), which RearWarning draws there. The DebugDraw
+## child (CombatDebugDraw, F3) draws in 3D, in group "debug_draw". The boss bar follows the
+## live actor in group "boss" by itself (no room or boss calls into the HUD).
 ##
 ## All time-based parts are driven from advance(delta), which _process() calls; tests can
 ## turn processing off and call advance() with chosen deltas. The HUD processes after the
@@ -26,6 +29,9 @@ extends CanvasLayer
 @onready var center_dot: CenterDot = $CenterDot
 @onready var combat_log: CombatLogOverlay = $CombatLog
 @onready var block_callout: BlockCallout = $BlockCallout
+@onready var rear_warning: RearWarning = $RearWarning
+@onready var grab_prompt: GrabPrompt = $GrabPrompt
+@onready var pickup_cue: PickupCue = $PickupCue
 @onready var camera_toast: CameraModeToast = $CameraToast
 @onready var help_overlay: HelpOverlay = $HelpOverlay
 @onready var pause_overlay: PauseOverlay = $PauseOverlay
@@ -45,7 +51,7 @@ func _ready() -> void:
 	CombatEvents.attack_started.connect(combat_log.on_attack_started)
 	CombatEvents.attack_whiffed.connect(combat_log.add_whiff)
 	CombatEvents.health_changed.connect(_on_health_changed)
-	CombatEvents.vanished.connect(enemy_bars.on_vanished)
+	CombatEvents.vanished.connect(_on_vanished)
 	CombatEvents.perfect_blocked.connect(_on_perfect_blocked)
 	CombatEvents.guard_broken.connect(_on_guard_broken)
 	GameInput.paused_changed.connect(pause_overlay.set_paused)
@@ -77,14 +83,22 @@ func advance(delta: float) -> void:
 		if _help_auto_hide_left <= 0.0:
 			help_overlay.visible = false
 	player_panel.advance(delta)
+	_follow_boss()
 	boss_bar.advance(delta)
 	enemy_bars.advance(game_delta)
 	center_dot.refresh(director)
 	camera_toast.advance(delta)
 	block_callout.advance(game_delta)
+	# The warning's pulses run on sim time: held by a pause, stretched by slow-mo and F4's 0.25x.
+	rear_warning.advance(game_delta * TimeController.sim_scale())
+	# The MASH prompt follows the held player's presses in real time.
+	grab_prompt.advance(game_delta)
+	# The "LB" cue breathes in game time, like the lettering.
+	pickup_cue.advance(game_delta)
 
 
-## Show the bottom-center boss bar for `actor` (Milestone 5).
+## Show the bottom-center boss bar for `actor` (the HUD shows it by itself for the live
+## actor in group "boss", see _follow_boss()).
 func show_boss(actor: CombatActor) -> void:
 	boss_bar.show_boss(actor)
 
@@ -118,6 +132,27 @@ func set_help_visible(shown: bool) -> void:
 ## Turn debug draw on or off, as F3 does.
 func set_debug_draw_enabled(on: bool) -> void:
 	debug_draw.enabled = on
+
+
+## CombatEvents.vanished: a KO'd actor that blinked off loses its over-head bar, and the boss
+## bar goes with the boss.
+func _on_vanished(actor: Node3D) -> void:
+	enemy_bars.on_vanished(actor)
+	if actor == boss_bar.boss:
+		boss_bar.hide_boss()
+
+
+## Show the boss bar for a live actor in group "boss" that it is not already showing. It is
+## not hidden by a boss's death (the bar drains to empty over the lying body) but by its
+## vanishing (_on_vanished()), its freeing (BossHealthBar.advance()), or hide_boss().
+func _follow_boss() -> void:
+	if is_instance_valid(boss_bar.boss) and boss_bar.boss.is_inside_tree() and not boss_bar.boss.is_gone():
+		return
+	for node: Node in get_tree().get_nodes_in_group(&"boss"):
+		var boss := node as CombatActor
+		if boss != null and boss.health > 0.0 and not boss.is_gone() and boss != boss_bar.boss:
+			boss_bar.show_boss(boss)
+			return
 
 
 func _on_hit_landed(hit: HitInfo) -> void:

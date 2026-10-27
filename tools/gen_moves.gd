@@ -79,6 +79,9 @@ const KNEE_PITCH_DEG := -12.0
 const KNEE_DROP_M := 0.05
 ## Weapons hit a guard harder (the held block): pipe swings drain it 1.5 times as fast.
 const PIPE_GUARD_MULT := 1.5
+## The sparring dummy's jab reaches a standing target at about 1.05 m (ARCHITECTURE "Strike
+## reach"): its MoveData.reach_m, which the rear warning's range reads.
+const DUMMY_JAB_REACH_M := 1.05
 
 ## Fixed ext_resource ids for the contract scripts (keeps re-runs diff-free).
 const SCRIPT_IDS: Dictionary[String, String] = {
@@ -242,6 +245,243 @@ func _build_moves() -> void:
 			Vector3(0.0, 0.0, 1.5), [_sphere(&"RightFistPoint", 0.14)])
 	dummy_jab.magnetism = false
 	dummy_jab.blocked_recoil_frames = 20
+	# The rear warning's reach for it (M3-plan A2.8): the jab connects at the sparring step-in.
+	dummy_jab.reach_m = DUMMY_JAB_REACH_M
+
+	_build_enemy_moves()
+
+
+## The Milestone 3 enemy moves, one function per archetype so parallel builders each edit
+## only their own (the doc lines between them keep the hunks apart). Enemy rules (enforced by
+## tests/test_move_data.gd from each archetype's tests/enemy_moves/<archetype>_table.gd): the
+## move's id is its animation id, no magnetism, no branches or auto_next (the AI starts each
+## hit of a chain itself), startup at least the archetype's wind-up floor, reach_m set (travel
+## included), grabs and the ground pound unblockable, and no FINISHER tier (the finisher fires
+## the global slow-mo and impact frame). Build each with _enemy().
+func _build_enemy_moves() -> void:
+	_punk_moves()
+	_kicker_moves()
+	_thug_moves()
+	_grab_moves()
+	_bruiser_moves()
+	_boss_moves()
+
+
+## The Street Punk's reaches (MoveData.reach_m): where each strike meets a standing 1.8 m body,
+## measured by tests/test_enemy_moves_punk.gd (within 0.15 m). The cross is a chain link: it
+## starts with no wind-up of its own, only if the jab landed or was blocked (M3-plan A2.14).
+const PUNK_JAB_REACH_M := 1.05
+const PUNK_CROSS_REACH_M := 1.21
+const PUNK_SHOVE_REACH_M := 0.97
+## The cross steps in this far (m) over its active frames: the jab's flinch pushes the player a
+## hand's breadth away, and the second link must still reach him. Its reach_m includes the step.
+const PUNK_CROSS_STEP_M := 0.15
+## The shove's push (m/s along the radial): a stagger that carries the player a body length.
+const PUNK_SHOVE_PUSH_MPS := 3.5
+
+
+## The Street Punk: punk_jab, punk_cross, punk_shove (P1-ai). Two attacks: the two-hit punch
+## (jab, then the cross) and the shove. The jab and the shove are telegraphed (startup is the
+## held wind-up, never below the grunt floor of 18 frames); the cross follows the jab with no
+## wind-up. Light tier, 6 damage each (SPEC §7), no lunge: the Punk walks into reach first.
+func _punk_moves() -> void:
+	var jab := _add(&"punk_jab", "Punk Jab", Vector3i(22, 3, 14), 6.0, LIGHT, FLINCH,
+			Vector3(0.0, 0.0, 1.5), [_sphere(&"RightFistPoint", 0.14)])
+	_enemy(jab, PUNK_JAB_REACH_M, 20)
+	var cross := _add(&"punk_cross", "Punk Cross", Vector3i(8, 3, 16), 6.0, LIGHT, FLINCH,
+			Vector3(0.0, 0.0, 1.5), [_sphere(&"LeftFistPoint", 0.14)])
+	_enemy(cross, PUNK_CROSS_REACH_M, 14)
+	cross.free_lunge = PUNK_CROSS_STEP_M
+	var shove := _add(&"punk_shove", "Punk Shove", Vector3i(20, 3, 18), 6.0, LIGHT, STAGGER,
+			Vector3(0.0, 0.0, PUNK_SHOVE_PUSH_MPS), [_sphere(&"LeftFistPoint", 0.16), _sphere(&"RightFistPoint", 0.16)])
+	_enemy(shove, PUNK_SHOVE_REACH_M, 14)
+
+
+## The Kicker's reaches (MoveData.reach_m), measured by tests/test_enemy_moves_kicker.gd (within
+## 0.15 m). The jump kick's includes its leap: the strike touches a standing body about 1.1 m
+## from where the strike pose stands, and the leap carries the body KICKER_LEAP_M further over
+## the active frames (A5.2), so the rear warning still fires from 4 m behind.
+const KICKER_JUMP_KICK_REACH_M := 2.75
+const KICKER_SWEEP_REACH_M := 1.45
+## The jump kick's leap (m), over its active frames (the base applies free_lunge from the last
+## startup frame; the wind-up never slides).
+const KICKER_LEAP_M := 1.6
+## What the sweep takes a standing player's legs out with: a knockdown that carries him a body
+## length (m/s along the radial) and lifts him a little (m/s).
+const KICKER_SWEEP_PUSH_MPS := 3.0
+const KICKER_SWEEP_LIFT_MPS := 1.5
+
+
+## The Kicker: kicker_jump_kick, kicker_sweep (P2-kicker). Two attacks, each one move with its
+## own held wind-up (never below the grunt floor of 18 frames): a jump kick (a crouch that coils,
+## then a leap of KICKER_LEAP_M with the right foot out, 8, a flinch) and a low sweep (a deep
+## crouch, the torso turned away, then a low spin with the right leg along the floor: an arc over
+## the LEGS only, 8, a knockdown; a jumping player passes over it). Light tier, 8 damage each
+## (SPEC §7): the 15% rule is met by the sweep alone (8).
+func _kicker_moves() -> void:
+	var kick := _add(&"kicker_jump_kick", "Kicker Jump Kick", Vector3i(22, 6, 18), 8.0, LIGHT, FLINCH,
+			Vector3(0.0, 0.0, 2.0), [_sphere(&"RightFootPoint", 0.2)])
+	_enemy(kick, KICKER_JUMP_KICK_REACH_M, 20)
+	kick.free_lunge = KICKER_LEAP_M
+	var sweep := _add(&"kicker_sweep", "Kicker Sweep", Vector3i(20, 5, 22), 8.0, LIGHT, KNOCKDOWN,
+			Vector3(0.0, KICKER_SWEEP_LIFT_MPS, KICKER_SWEEP_PUSH_MPS), [_arc(1.3, 80.0, 0.0, Vector2(0.0, 0.5))])
+	_enemy(sweep, KICKER_SWEEP_REACH_M, 14)
+
+
+## The Pipe Thug's reaches (MoveData.reach_m): where each pipe swing's tip meets a standing 1.8 m
+## body, measured by tests/test_enemy_moves_thug.gd (within 0.15 m). The second and third swings
+## are chain links: no wind-up of their own, only if the swing before landed or was blocked
+## (M3-plan A2.14).
+const THUG_PIPE_1_REACH_M := 1.23
+const THUG_PIPE_2_REACH_M := 1.38
+const THUG_PIPE_3_REACH_M := 1.43
+## The smash steps in this far (m) over its active frames: two flinches have pushed the player two
+## hands' breadths away from where the Thug stopped, and the third swing, which reaches no
+## further than the first, must still land. Its reach_m includes the step.
+const THUG_PIPE_3_STEP_M := 0.2
+## The flinching swings' push (m/s along the radial), the Punk's.
+const THUG_PIPE_FLINCH_MPS := 1.5
+## The third swing's push (m/s along the radial): a stagger that carries the player a body
+## length clear of the chain (the 15% rule: three swings of 10 may not end in a knockdown).
+const THUG_PIPE_3_PUSH_MPS := 3.5
+
+
+## The Pipe Thug: thug_pipe_1..3 (P2-thug). One attack, a three-swing pipe combo of 10 damage a
+## swing (SPEC §7). The first swing is the telegraph (startup is the held wind-up, never below the
+## grunt floor of 18 frames); the second and third follow with no wind-up of their own. The first
+## two flinch, the third staggers: a chain that ends in a knockdown would cost 30 damage, and no
+## knockdown may take more than 15 (M3-plan 2.10). Light tier, the pipe's guard drain
+## (PIPE_GUARD_MULT, as the player's own pipe swings). The strikes are the player's pipe swings'
+## (EnemyPosesThug reuses them), so the WeaponTip reaches the same spots. The unarmed Thug, after
+## it drops its pipe, throws the Punk's moves.
+func _thug_moves() -> void:
+	var swing_1 := _add(&"thug_pipe_1", "Thug Pipe Swing", Vector3i(22, 3, 14), 10.0, LIGHT, FLINCH,
+			Vector3(0.0, 0.0, THUG_PIPE_FLINCH_MPS), [_sphere(&"WeaponTip", 0.19)])
+	_enemy(swing_1, THUG_PIPE_1_REACH_M, 20)
+	var swing_2 := _add(&"thug_pipe_2", "Thug Pipe Backswing", Vector3i(12, 3, 14), 10.0, LIGHT, FLINCH,
+			Vector3(0.0, 0.0, THUG_PIPE_FLINCH_MPS), [_sphere(&"WeaponTip", 0.19)])
+	_enemy(swing_2, THUG_PIPE_2_REACH_M, 14)
+	var swing_3 := _add(&"thug_pipe_3", "Thug Pipe Smash", Vector3i(14, 4, 20), 10.0, LIGHT, STAGGER,
+			Vector3(0.0, 0.0, THUG_PIPE_3_PUSH_MPS), [_sphere(&"WeaponTip", 0.19)])
+	_enemy(swing_3, THUG_PIPE_3_REACH_M, 14)
+	swing_3.free_lunge = THUG_PIPE_3_STEP_M
+	for pipe: MoveData in [swing_1, swing_2, swing_3]:
+		pipe.guard_damage_mult = PIPE_GUARD_MULT
+
+
+## Where a grab connects (m from the holder's origin to the player's), the Bruiser's (2.05 m) and
+## the boss's (2.3 m): EnemyHold's range, Tuning.enemy_grab_range_m (1.05, at the rig's 1.8 m
+## reference height) times the holder's height over 1.8, to the nearest 5 cm, which is where the
+## grab's strike pose (GrabPoses: both fists out at the chest, the body leaning over the planted
+## feet) meets the player's chest. The AI closes to reach_m less engage_margin_m, inside the range.
+## tests/test_enemy_moves_grab.gd measures the pose and holds both to the tunable.
+const BRUISER_GRAB_REACH_M := 1.15
+const BOSS_GRAB_REACH_M := 1.3
+## The follow-ups strike a victim pinned Tuning.grabbed_pin_distance_m (0.9 m) from the holder, plus
+## the holder's radius over the player's (PlayerCharacter._pin_spot()): 1.0 m for the Bruiser, 1.05 m
+## for the boss.
+const HEADBUTT_REACH_M := 1.0
+const SLAM_REACH_M := 1.05
+## The headbutt's knockdown (a head-first shove, the victim lifted a little) and the slam's throw
+## (radial frame: z along the holder's push, y up): the player's own throw is (0, 5, 6.5).
+const HEADBUTT_KNOCKBACK := Vector3(0.0, 2.0, 4.0)
+const SLAM_KNOCKBACK := Vector3(0.0, 4.5, 6.0)
+
+
+## The enemy grabs on the player: bruiser_grab, bruiser_headbutt, boss_grab, boss_slam (P2-grab).
+## A grab is two moves, one attack (M3-plan §6): the grab is a hitbox-less, unblockable telegraph
+## whose strike frame connects by code (EnemyHold) or whiffs; on a connect the follow-up's startup
+## runs while the player is held (it is the mash window: the victim breaks free by mashing P and K
+## before its strike frame, Tuning.grab_break_presses) and at its strike frame the victim is let
+## go and a code-built hit from the move lands (the headbutt knocks down for 15; the slam throws for
+## 25, the boss's, HEAVY and THROWN: no FINISHER-tier enemy move, A2.13). None has a hitbox, so no
+## hit VFX for the grab itself; none recoils when blocked (a grab goes through a guard).
+func _grab_moves() -> void:
+	var grab := _add(&"bruiser_grab", "Bruiser Grab", Vector3i(32, 6, 24), 0.0, LIGHT,
+			CombatTypes.Reaction.NONE, Vector3.ZERO, [])
+	_enemy(grab, BRUISER_GRAB_REACH_M, 0, true)
+	var headbutt := _add(&"bruiser_headbutt", "Headbutt", Vector3i(60, 3, 24), 15.0, HEAVY, KNOCKDOWN,
+			HEADBUTT_KNOCKBACK, [])
+	_enemy(headbutt, HEADBUTT_REACH_M, 0, true)
+	var boss_grab := _add(&"boss_grab", "Boss Grab", Vector3i(32, 6, 24), 0.0, LIGHT,
+			CombatTypes.Reaction.NONE, Vector3.ZERO, [])
+	_enemy(boss_grab, BOSS_GRAB_REACH_M, 0, true)
+	var slam := _add(&"boss_slam", "Slam", Vector3i(54, 4, 30), 25.0, HEAVY, THROWN, SLAM_KNOCKBACK, [])
+	_enemy(slam, SLAM_REACH_M, 0, true)
+
+
+## The Bruiser's smash reach (MoveData.reach_m): where both fists, brought down in front of the chest
+## of a 2.05 m body, meet a standing 1.8 m body, measured by tests/test_enemy_moves_bruiser.gd (within
+## 0.15 m). The smash does not lunge: the Bruiser walks into reach first.
+const BRUISER_SMASH_REACH_M := 1.3
+## The smash's knockdown (m/s along the radial, up): a heavy hit that carries the player a body length
+## and lifts him off his feet, the 15% rule's 15 damage in one blow.
+const BRUISER_SMASH_KNOCKBACK := Vector3(0.0, 3.0, 4.0)
+
+
+## The Bruiser: bruiser_smash (P3-bruiser). Its other attack, the grab and headbutt, is P2-grab's
+## (_grab_moves()). One move with its own held wind-up (startup 34, never below the heavy floor of 30
+## frames): both fists raised over the head, then driven down together in front of the chest. 15
+## damage, HEAVY, a knockdown (SPEC §7: 15 is the 15% rule's limit), both fists as 0.2 m spheres (a
+## big body's fists; hitbox radii are absolute metres). Blockable, but a block costs the guard 60 of
+## 100 (4 per damage) and the Bruiser never recoils from it (blocked_recoil_frames 0): there is no
+## punish window, as SPEC §7 says of the heavies.
+func _bruiser_moves() -> void:
+	var smash := _add(&"bruiser_smash", "Bruiser Smash", Vector3i(34, 4, 26), 15.0, HEAVY, KNOCKDOWN,
+			BRUISER_SMASH_KNOCKBACK, [_sphere(&"LeftFistPoint", 0.2), _sphere(&"RightFistPoint", 0.2)])
+	_enemy(smash, BRUISER_SMASH_REACH_M, 0)
+
+
+## The boss's reaches (MoveData.reach_m), measured on a 2.3 m rig against a standing 1.8 m body by
+## tests/test_enemy_moves_boss.gd (within 0.15 m). The charge's includes its travel (A6.2): the arc
+## in front of the shoulder meets a standing body about BOSS_CHARGE_ARC_M plus its hurtbox from where
+## the charge starts, and the dash carries it BOSS_CHARGE_TRAVEL_M further over the active frames, so
+## a charge from behind still warns at its real range. The pound is a ring around the boss.
+const BOSS_CHARGE_REACH_M := 5.3
+const BOSS_POUND_REACH_M := 2.6
+## The charge's dash (m) over its active frames (the base applies free_lunge from the last startup
+## frame, so the wind-up never slides), and the arc's reach in front of the shoulder (m), its half
+## angle (degrees) and its height band (m above the boss's feet): the shoulder and the chest.
+const BOSS_CHARGE_TRAVEL_M := 4.0
+const BOSS_CHARGE_ARC_M := 1.1
+const BOSS_CHARGE_HALF_ANGLE_DEG := 35.0
+const BOSS_CHARGE_BAND_M := Vector2(0.5, 1.9)
+## The ground pound's ring (m) and its height band: the feet and the shins, so a jump clears it.
+const BOSS_POUND_RING_M := 2.5
+const BOSS_POUND_BAND_M := Vector2(0.0, 0.6)
+## What the charge bowls a standing player over with, and what the pound's shockwave does (m/s along
+## the radial, lift): the boss is exempt from the 15% rule (SPEC §4), but these stay a knockdown.
+const BOSS_CHARGE_KNOCKBACK := Vector3(0.0, 3.0, 6.0)
+const BOSS_POUND_KNOCKBACK := Vector3(0.0, 3.5, 4.5)
+
+
+## The boss: boss_charge, boss_pound (P3-boss); its grab and slam are _grab_moves()'s. Both are HEAVY
+## knockdowns (SPEC §7) with a held wind-up of at least the heavy floor of 30 frames, never recoil
+## when blocked (the table's rule for the boss) and have no FINISHER tier (A2.13). The charge is a
+## blockable shoulder: an arc 35 degrees either side of its facing and 0.5 to 1.9 m high, 20 damage,
+## with a dash of BOSS_CHARGE_TRAVEL_M over its 24 active frames (it stops at a wall); the pound is a
+## full ring of BOSS_POUND_RING_M, 0 to 0.6 m high, 15 damage, unblockable: a jump or a dodge gets out
+## of it.
+func _boss_moves() -> void:
+	var charge := _add(&"boss_charge", "Boss Charge", Vector3i(32, 24, 30), 20.0, HEAVY, KNOCKDOWN,
+			BOSS_CHARGE_KNOCKBACK, [_arc(BOSS_CHARGE_ARC_M, BOSS_CHARGE_HALF_ANGLE_DEG, 0.0, BOSS_CHARGE_BAND_M)])
+	_enemy(charge, BOSS_CHARGE_REACH_M, 0)
+	charge.free_lunge = BOSS_CHARGE_TRAVEL_M
+	var pound := _add(&"boss_pound", "Boss Ground Pound", Vector3i(36, 4, 30), 15.0, HEAVY, KNOCKDOWN,
+			BOSS_POUND_KNOCKBACK, [_arc(BOSS_POUND_RING_M, 180.0, 0.0, BOSS_POUND_BAND_M)])
+	_enemy(pound, BOSS_POUND_REACH_M, 0, true)
+
+
+## An enemy move's shared fields, set on a move made with _add(): no magnetism, the reach the
+## AI closes to and the warning fires within (MoveData.reach_m, travel included), the frames
+## its attacker recoils when it is blocked (0 for the Bruiser and the boss) and whether the guard
+## stops it. Returns `move`.
+func _enemy(move: MoveData, reach_m: float, recoil_frames: int, unblockable: bool = false) -> MoveData:
+	move.magnetism = false
+	move.reach_m = reach_m
+	move.blocked_recoil_frames = recoil_frames
+	move.unblockable = unblockable
+	return move
 
 
 ## Combo branches (docs/ARCHITECTURE.md "Branches").
