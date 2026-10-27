@@ -19,6 +19,12 @@ texture. The chain does to it what it does to the body:
 The fist's texture is packed with the body's into one image (`pack_textures`), so the palette step labels both from one
 image and the detail mask (A18) is baked from both. Every number is in pipeline.json `parts.fists`; the measured strap levels
 of the generation (the fraction of the model's height where the strap's lower and upper edges sit) are config, not code.
+
+F-punk-fix: with `parts.fists.generated.collar` the generated cuff and strap (everything above the strap's lower plane, torn
+flaps and a ragged rim) are thrown away and a clean COLLAR is built in their place (`build_collar`): a surface of revolution
+that starts at the block's top loop, funnels out to the arm's own outline plus a margin, carries a low ridge where the strap
+was, runs up to a rolled rim `cuff_over_m` above the arm's cut and closes inward, inside the arm. The collar is one colour (the
+glove's: the palette step labels its faces from the `pipe_collar` attribute) and takes no ink; the strap is no longer a colour.
 """
 import math
 import os
@@ -35,6 +41,7 @@ import pipe_common as pc  # noqa: E402
 
 FIST_ATTR = "pipe_fist"
 BAND_ATTR = "pipe_band"  # 1 on the fist faces between the strap's two planes
+COLLAR_ATTR = "pipe_collar"  # 1 on the faces of the clean collar (F-punk-fix): the glove's colour, no ink
 
 
 def smoothstep(t):
@@ -155,6 +162,7 @@ def make_side(src, side, box, cut, p_hand, d, gen, pf):
 	axis_xy = np.array([centre[0], centre[1]])
 
 	# the cuff: reach over the cut, then the rim's radius from the wrist
+	collar = gen.get("collar")
 	over = float(pf.get("cuff_over_m", 0.035))
 	margin = float(pf.get("cuff_margin_m", 0.008))
 	z_cut = 0.0
@@ -165,33 +173,38 @@ def make_side(src, side, box, cut, p_hand, d, gen, pf):
 	top = float(out[:, 2].max())
 	need = z_cut + over
 	stretch = 1.0
-	if need > top:
+	if collar:
+		# the generated cuff is thrown away by add_object: only the levels matter
+		top = need
+	elif need > top:
 		stretch = (need - z_strap_top) / max(top - z_strap_top, 1e-6)
 		above = out[:, 2] > z_strap_top
 		out[above, 2] = z_strap_top + (out[above, 2] - z_strap_top) * stretch
 		top = float(out[:, 2].max())
 	flare = 1.0
-	# the cuff must be wide enough at the arm's cut: its radius where the arm ends (the generated cuff narrows toward the rim)
-	band_m = float(gen.get("rim_band_m", 0.012))
-	at_cut = np.abs(out[:, 2] - min(max(z_cut, z_strap_top), top)) < band_m
-	if not at_cut.any():
-		at_cut = out[:, 2] > top - band_m
-	rim_r = float(np.linalg.norm(out[at_cut, :2] - axis_xy, axis=1).mean())
-	if r_wrist is not None:
-		flare = float(np.clip((r_wrist + margin) / max(rim_r, 1e-6), float(gen.get("flare_min", 0.8)), float(gen.get("flare_max", 1.6))))
-	# full flare from `ramp_m` above the block's top (a gauntlet: the strap and the cuff share the flared radius, so the strap
-	# stays on the visible outside instead of hiding under a bell that opens above it)
-	ramp_top = z_block_top + float(gen.get("ramp_m", 0.012))
-	ramp = smoothstep((out[:, 2] - z_block_top) / max(ramp_top - z_block_top, 1e-6))
-	k = 1.0 + (flare - 1.0) * ramp
-	out[:, :2] = axis_xy + (out[:, :2] - axis_xy) * k[:, None]
-	rim_after = float(np.linalg.norm(out[at_cut, :2] - axis_xy, axis=1).mean())
+	rim_after = 0.0
+	clamp = float(gen.get("ring_clamp_m", 0.0))
+	clamped = 0
+	if not collar:
+		# the cuff must be wide enough at the arm's cut: its radius where the arm ends (the generated cuff narrows toward the rim)
+		band_m = float(gen.get("rim_band_m", 0.012))
+		at_cut = np.abs(out[:, 2] - min(max(z_cut, z_strap_top), top)) < band_m
+		if not at_cut.any():
+			at_cut = out[:, 2] > top - band_m
+		rim_r = float(np.linalg.norm(out[at_cut, :2] - axis_xy, axis=1).mean())
+		if r_wrist is not None:
+			flare = float(np.clip((r_wrist + margin) / max(rim_r, 1e-6), float(gen.get("flare_min", 0.8)), float(gen.get("flare_max", 1.6))))
+		# full flare from `ramp_m` above the block's top (a gauntlet: the strap and the cuff share the flared radius, so the strap
+		# stays on the visible outside instead of hiding under a bell that opens above it)
+		ramp_top = z_block_top + float(gen.get("ramp_m", 0.012))
+		ramp = smoothstep((out[:, 2] - z_block_top) / max(ramp_top - z_block_top, 1e-6))
+		k = 1.0 + (flare - 1.0) * ramp
+		out[:, :2] = axis_xy + (out[:, :2] - axis_xy) * k[:, None]
+		rim_after = float(np.linalg.norm(out[at_cut, :2] - axis_xy, axis=1).mean())
 
 	# no spikes on the cuff: above the block each ring of the mesh (vertices within one bin of the same height) may stand at most
 	# ring_clamp_m beyond that ring's median radius, so the strap's buckle and the cuff's torn rim cannot become slivers
-	clamp = float(gen.get("ring_clamp_m", 0.0))
-	clamped = 0
-	if clamp > 0.0:
+	if clamp > 0.0 and not collar:
 		bin_m = float(gen.get("ring_bin_m", 0.003))
 		upper = out[:, 2] > z_block_top
 		rel = out[:, :2] - axis_xy
@@ -221,7 +234,12 @@ def make_side(src, side, box, cut, p_hand, d, gen, pf):
 	axis = -np.asarray(d, dtype=np.float64)  # the hanging frame's +z in the world
 	planes = [(p_hand + axis * z_block_top, axis), (p_hand + axis * z_strap_top, axis)]
 	wparams.update({"p_hand": p_hand, "d": np.asarray(d, dtype=np.float64)})
-	return {"co": world, "tris": tris, "uv": uv, "wparams": wparams, "report": report, "bisect": planes if gen.get("bisect_strap", True) else None}
+	collar_info = None
+	if collar:
+		collar_info = {"cfg": collar, "R": R, "p_hand": np.asarray(p_hand, dtype=np.float64), "z_block_top": z_block_top, "top": top, "z_cut": z_cut,
+			"arm_local": None if cut is None else cut.get("arm_local")}
+	return {"co": world, "tris": tris, "uv": uv, "wparams": wparams, "report": report, "bisect": planes if gen.get("bisect_strap", True) else None,
+		"collar": collar_info}
 
 
 def _rotation_between(a, b):
@@ -243,6 +261,147 @@ def fist_weights(co_world, wp):
 	return w
 
 
+def arm_outline(arm_local, z_lo, z_hi, bins, percentile):
+	"""The arm's outer outline about the hanging frame's axis between two heights: `bins` angular bins of the `percentile`-th
+	radius of the arm's vertices (empty bins interpolated around the circle, then a three-bin moving average). Returns
+	(theta bin centres, radius (bins,)). arm_local is (n, 3) in the hanging frame (z up the arm)."""
+	z = arm_local[:, 2]
+	theta = (np.arange(bins) + 0.5) * (2.0 * math.pi / bins) - math.pi
+	# a window with fewer vertices than bins grows up the arm (the weights decide how much of the forearm there is near the cut)
+	for _grow in range(12):
+		pts = arm_local[(z >= z_lo) & (z <= z_hi)]
+		if len(pts) >= bins:
+			break
+		z_hi += 0.01
+	if len(pts) < bins:
+		pc.fail("collar: only %d arm vertices between z %.3f and %.3f" % (len(pts), z_lo, z_hi))
+	ang = np.arctan2(pts[:, 1], pts[:, 0])
+	rad = np.hypot(pts[:, 0], pts[:, 1])
+	idx = np.clip(((ang + math.pi) / (2.0 * math.pi) * bins).astype(np.int64), 0, bins - 1)
+	r = np.full(bins, np.nan)
+	for b in range(bins):
+		m = idx == b
+		if m.any():
+			r[b] = float(np.percentile(rad[m], percentile))
+	have = np.nonzero(~np.isnan(r))[0]
+	r = np.interp(np.arange(bins), have, r[have], period=bins)
+	return theta, (np.roll(r, 1) + r + np.roll(r, -1)) / 3.0
+
+
+def build_collar(me, part, uv_name):
+	"""Replace the generated cuff and strap by the clean collar (module doc). `me` is the fist's mesh in the WORLD, already cut
+	along the strap's lower plane; returns a report dict. The faces above the plane are deleted, the loop the cut leaves on the
+	block is the collar's first ring, and rings of the same vertex count are lofted from it to the rim."""
+	info = part["collar"]
+	cfg = info["cfg"]
+	R, p = info["R"], info["p_hand"]
+	z_bt, top, z_cut = info["z_block_top"], info["top"], info["z_cut"]
+	arm = info["arm_local"]
+	if arm is None:
+		pc.fail("collar: no arm vertices to take the outline from")
+	bm = bmesh.new()
+	bm.from_mesh(me)
+	uv_layer = bm.loops.layers.uv.get(uv_name) or bm.loops.layers.uv.active
+	layer_c = bm.faces.layers.int.new(COLLAR_ATTR)  # before any face reference is taken: a new layer reallocates the face data
+	# the cut at the block's top, exactly: bisect, then drop every face above the plane
+	axis_w = R @ np.array([0.0, 0.0, 1.0])
+	plane_co = tuple(p + axis_w * z_bt)
+	geom = bm.verts[:] + bm.edges[:] + bm.faces[:]
+	bmesh.ops.bisect_plane(bm, geom=geom, dist=1e-7, plane_co=plane_co, plane_no=tuple(axis_w))
+	bm.faces.ensure_lookup_table()
+	above = [f for f in bm.faces if float((np.array(f.calc_center_median()) - np.array(plane_co)) @ axis_w) > 1e-6]
+	bmesh.ops.delete(bm, geom=above, context="FACES")
+	loose = [v for v in bm.verts if not v.link_faces]
+	if loose:
+		bmesh.ops.delete(bm, geom=loose, context="VERTS")
+	bm.verts.ensure_lookup_table()
+	bm.edges.ensure_lookup_table()
+	boundary = [e for e in bm.edges if len(e.link_faces) == 1]
+	if not boundary:
+		pc.fail("collar: the cut left no open loop on the block")
+	# order the loop into one cycle, each edge in its face's direction (start -> end)
+	nxt = {}
+	for e in boundary:
+		lp = e.link_loops[0]
+		a, b = lp.vert, lp.link_loop_next.vert
+		if a in nxt:
+			pc.fail("collar: the block's top is not a single simple loop")
+		nxt[a] = (b, lp)
+	start_v = next(iter(nxt))
+	cycle = [start_v]
+	v = nxt[start_v][0]
+	while v != start_v:
+		cycle.append(v)
+		if v not in nxt:
+			pc.fail("collar: the block's top loop is not closed")
+		v = nxt[v][0]
+	if len(cycle) != len(nxt):
+		pc.fail("collar: the cut left %d loop edges but one cycle of %d" % (len(nxt), len(cycle)))
+	loop_uv = []
+	for a in cycle:
+		loop_uv.append(tuple(nxt[a][1][uv_layer].uv))
+	n = len(cycle)
+	local = (np.array([tuple(a.co) for a in cycle]) - p) @ R  # (n, 3) in the hanging frame
+	c_loop = local[:, :2].mean(axis=0)
+	rel = local[:, :2] - c_loop
+	theta = np.arctan2(rel[:, 1], rel[:, 0])
+	rho0 = np.hypot(rel[:, 0], rel[:, 1])
+	# the arm's outline above the cut (the wrist's section, `z_cut`, up the rim)
+	bins = int(cfg.get("outline_bins", 24))
+	pct = float(cfg.get("outline_percentile", 90.0))
+	margin = float(cfg.get("margin_m", 0.0045))
+	ridge = float(cfg.get("ridge_m", 0.003))
+	rim_round = float(cfg.get("rim_round_m", 0.0015))
+	inner_in = float(cfg.get("inner_inset_m", 0.003))
+	rows = []  # (z, blend, extra margin) from the block's top up the rim
+	for dz, blend, extra in cfg["rings"]:
+		rows.append((z_bt + float(dz), float(blend), float(extra) * ridge))
+	rows.append((top - float(cfg.get("rim_below_m", 0.004)), 1.0, 0.0))
+	rows.append((top, 1.0, -rim_round))
+	rows.append((top, 1.0, None))  # the inner lip, inside the arm
+	z_floor = z_cut + float(cfg.get("outline_floor_m", 0.01))
+	ring_vertices = [cycle]
+	ring_z = []
+	for z, blend, extra in rows:
+		zs = max(z, z_floor)
+		th_o, r_o = arm_outline(arm, zs - float(cfg.get("outline_window_m", 0.015)), zs + float(cfg.get("outline_window_m", 0.015)), bins, pct)
+		a_theta = np.interp(theta, th_o, r_o, period=2.0 * math.pi)
+		centre = c_loop * (1.0 - blend) if blend < 1.0 else np.zeros(2)  # the arm's axis is the hanging frame's origin
+		bl = float(smoothstep(blend))
+		if extra is None:
+			target = a_theta - inner_in
+		else:
+			target = a_theta + margin + extra
+		rho = rho0 * (1.0 - bl) + target * bl
+		pos = np.stack([centre[0] + rho * np.cos(theta), centre[1] + rho * np.sin(theta), np.full(n, z)], axis=1)
+		world = pos @ R.T + p
+		ring = [bm.verts.new(tuple(w)) for w in world]
+		ring_vertices.append(ring)
+		ring_z.append(z)
+	faces_made = 0
+	collar_new = []
+	for j in range(len(ring_vertices) - 1):
+		lo, hi = ring_vertices[j], ring_vertices[j + 1]
+		for i in range(n):
+			a, b = cycle[i], cycle[(i + 1) % n]
+			a2, b2 = lo[i], lo[(i + 1) % n]
+			a3, b3 = hi[i], hi[(i + 1) % n]
+			# the loop edge a -> b runs in the block face's direction, so the strip runs b -> a on the lower edge of each quad
+			f = bm.faces.new((b2, a2, a3, b3))
+			f[layer_c] = 1
+			collar_new.append(f)
+			for lp, k in zip(f.loops, (i, i, i, i)):
+				lp[uv_layer].uv = loop_uv[(k + 1) % n] if lp.vert in (b2, b3) else loop_uv[k]
+			faces_made += 1
+	# the strip's quads run along the loop edges opposite to the block's faces, so the winding is consistent with the block by
+	# construction (no recalc_face_normals: the open surface has no inside to measure against)
+	bmesh.ops.triangulate(bm, faces=collar_new)
+	bm.to_mesh(me)
+	bm.free()
+	me.update()
+	return {"loop_vertices": n, "loop_rho_m": [round(float(v), 4) for v in (rho0.min(), np.median(rho0), rho0.max())], "rings": len(rows), "arm_vertices": int(len(arm)), "collar_quads": faces_made, "ring_z_m": [round(float(z), 5) for z in ring_z]}
+
+
 def add_object(name, part, image_name_uv_layer):
 	"""A mesh object from make_side()'s dict with its UV layer (named like the body's), the pipe_fist attribute set and the
 	weights written."""
@@ -252,6 +411,8 @@ def add_object(name, part, image_name_uv_layer):
 	layer = me.uv_layers.new(name=image_name_uv_layer)
 	flat = part["uv"].reshape(-1, 2).astype(np.float32)
 	layer.data.foreach_set("uv", flat.ravel())
+	if part.get("collar"):
+		part["collar_report"] = build_collar(me, part, image_name_uv_layer)
 	if part.get("bisect"):
 		# cut along the strap's two planes (perpendicular to the arm): the strap's colour borders run along edge loops and
 		# survive the decimation as clean rings instead of a zigzag

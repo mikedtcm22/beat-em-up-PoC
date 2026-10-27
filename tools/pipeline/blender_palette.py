@@ -49,6 +49,7 @@ import pipe_detail  # noqa: E402
 SLOT_ATTR = "pipe_slot"
 FIST_ATTR = "pipe_fist"
 BAND_ATTR = "pipe_band"
+COLLAR_ATTR = "pipe_collar"
 
 
 def srgb_to_lab(rgb):
@@ -227,20 +228,28 @@ def run(cfg, extra):
 				flipped += 1
 		label_slot = new
 
-	# ----- 3a. the generated fists' strap: exactly the faces between its two planes (pipe_band) are the strap's slot, and a fist
-	# face outside them that the texture called strap-coloured is the glove's (no stray spikes of yellow above or below the ring)
+	# ----- 3a. the generated fists' strap: exactly the faces between its two planes (pipe_band) are the strap's paint slot, and a
+	# fist face outside them that the texture called strap-coloured (palette.strap_slot) is the glove's (no stray spikes of yellow
+	# above or below the ring). F-punk-fix: palette.strap_paint_slot (default: the strap's own slot) is what the band is painted
+	# with, so the strap can be the glove's colour; the faces of the clean collar (pipe_collar) are the glove's whole.
 	band_report = None
-	if BAND_ATTR in me.attributes and FIST_ATTR in me.attributes and pc_cfg.get("strap_slot") is not None:
+	collar_dense = np.zeros(n_faces, dtype=np.int32)
+	if COLLAR_ATTR in me.attributes:
+		me.attributes[COLLAR_ATTR].data.foreach_get("value", collar_dense)
+	if FIST_ATTR in me.attributes and pc_cfg.get("strap_slot") is not None:
 		band = np.zeros(n_faces, dtype=np.int32)
-		me.attributes[BAND_ATTR].data.foreach_get("value", band)
+		if BAND_ATTR in me.attributes:
+			me.attributes[BAND_ATTR].data.foreach_get("value", band)
 		fist_f = np.zeros(n_faces, dtype=np.int32)
 		me.attributes[FIST_ATTR].data.foreach_get("value", fist_f)
 		strap, glove = int(pc_cfg["strap_slot"]), int(pc_cfg["glove_slot"])
+		strap_paint = int(pc_cfg.get("strap_paint_slot", strap))
 		in_band = (fist_f > 0) & (band > 0)
 		stray = (fist_f > 0) & (band == 0) & (label_slot == strap)
-		label_slot[in_band] = strap
+		label_slot[in_band] = strap_paint
 		label_slot[stray] = glove
-		band_report = {"strap_faces": int(in_band.sum()), "stray_strap_faces_made_glove": int(stray.sum())}
+		label_slot[collar_dense > 0] = glove
+		band_report = {"strap_faces": int(in_band.sum()), "stray_strap_faces_made_glove": int(stray.sum()), "collar_faces": int((collar_dense > 0).sum())}
 
 	# ----- 3b. regions: faces of one slot inside a box take another slot
 	region_report = []
@@ -474,9 +483,11 @@ def run(cfg, extra):
 	# ----- 6. relabel from the dense mesh, palette UVs, optional detail UV
 	centers = pb.face_centers(me)
 	new_label = np.zeros(len(me.polygons), dtype=np.int32)
+	new_collar = np.zeros(len(me.polygons), dtype=bool)
 	for i, c in enumerate(centers):
 		loc, nrm, idx, d = bvh.find_nearest(Vector(c))
 		new_label[i] = dense_label[idx]
+		new_collar[i] = collar_dense[idx] > 0
 	if fist_planes and pc_cfg.get("strap_slot") is not None and FIST_ATTR in me.attributes:
 		fist_final = np.zeros(len(me.polygons), dtype=np.int32)
 		me.attributes[FIST_ATTR].data.foreach_get("value", fist_final)
@@ -487,10 +498,12 @@ def run(cfg, extra):
 			h0 = (centers - np.asarray(c0)) @ np.asarray(n0)
 			h1 = (centers - np.asarray(c1)) @ np.asarray(n1)
 			near = (fist_final > 0) & (np.linalg.norm(centers - np.asarray(c0), axis=1) < 0.25)
-			new_label[near & (h0 >= -1e-6) & (h1 <= 1e-6)] = int(pc_cfg["strap_slot"])
+			new_label[near & (h0 >= -1e-6) & (h1 <= 1e-6)] = int(pc_cfg.get("strap_paint_slot", pc_cfg["strap_slot"]))
 			new_label[near & ~((h0 >= -1e-6) & (h1 <= 1e-6)) & (new_label == int(pc_cfg["strap_slot"]))] = int(pc_cfg["glove_slot"])
 	if FIST_ATTR in me.attributes:
 		me.attributes.remove(me.attributes[FIST_ATTR])
+	if COLLAR_ATTR in me.attributes:
+		me.attributes.remove(me.attributes[COLLAR_ATTR])
 	start2, total2, lv2 = pb.poly_arrays(me)
 	layer = me.uv_layers[0] if me.uv_layers else me.uv_layers.new(name="palette")
 	for extra_layer in [l for l in me.uv_layers if l.name != layer.name]:
@@ -508,9 +521,32 @@ def run(cfg, extra):
 		pb.activate(body)
 		bpy.ops.object.mode_set(mode="EDIT")
 		bpy.ops.mesh.select_all(action="SELECT")
+		if new_collar.any():
+			# the clean collar takes no ink: it is left out of the unwrap (its islands would only take atlas area from the faces that
+			# carry lines) and sent to a texel nothing covers below
+			bm_u = bmesh.from_edit_mesh(me)
+			bm_u.faces.ensure_lookup_table()
+			for f in bm_u.faces:
+				f.select_set(not new_collar[f.index])
+			bm_u.select_flush_mode()
+			bmesh.update_edit_mesh(me)
 		bpy.ops.uv.smart_project(angle_limit=math.radians(66), island_margin=0.004, correct_aspect=True, scale_to_bounds=False)
 		bpy.ops.uv.pack_islands(margin=0.004)
 		bpy.ops.object.mode_set(mode="OBJECT")
+		if new_collar.any():
+			grid = 256
+			d_layer = me.uv_layers["detail"]  # the edit-mode round trip invalidated the reference
+			uv_d = np.empty(len(me.loops) * 2, dtype=np.float32)
+			d_layer.data.foreach_get("uv", uv_d)
+			uv_d = uv_d.reshape(-1, 2).astype(np.float64)
+			start_d, total_d, _lv_d = pb.poly_arrays(me)
+			corners = uv_d[start_d[:, None] + np.arange(3)[None, :]][~new_collar]
+			covered = pipe_detail.dilate(pipe_detail.coverage(corners, grid, grid), 2) > 0.5
+			free = np.argwhere(~covered)
+			dead = (0.5 / grid, 0.5 / grid) if len(free) == 0 else ((free[0][1] + 0.5) / grid, (free[0][0] + 0.5) / grid)
+			for f in np.nonzero(new_collar)[0]:
+				uv_d[start_d[f]:start_d[f] + total_d[f]] = dead
+			d_layer.data.foreach_set("uv", uv_d.ravel().astype(np.float32))
 		me.uv_layers.active = me.uv_layers["palette"]
 	bake_report = None
 	if detail and pc_cfg.get("detail_bake") and image is not None:
@@ -519,8 +555,25 @@ def run(cfg, extra):
 		tri_idx = lv[start[:, None] + np.arange(3)[None, :]]
 		corner_uv = dense_uv_loops[start[:, None] + np.arange(3)[None, :]].astype(np.float64)
 		out_png = pc.repo_path(db["out"]) if "out" in db else os.path.join(pc.cfg_dir(cfg, "export_dir"), cfg["paths"]["export_name"] + "_detail.png")
-		gain = np.where(np.isin(new_label, db.get("no_ink_slots", [])), 0.0, 1.0)
-		bake_report = pipe_detail.bake(me, "detail", image, bvh, dense_verts_np, tri_idx, corner_uv, db, out_png, pc.work_path(cfg, "detail_source.png"), gain)
+		gain = np.where(np.isin(new_label, db.get("no_ink_slots", [])) | new_collar, 0.0, 1.0)
+		# zones (F-punk-fix): faces of some slots inside a box take their own ink_low / ink_high (the face's skin: a higher pair, so
+		# the texture's speckle drops out and the mouth and nose lines stay)
+		zone_low = np.full(len(me.polygons), float(db.get("ink_low", 0.04)))
+		zone_high = np.full(len(me.polygons), float(db.get("ink_high", 0.12)))
+		zone_id = np.zeros(len(me.polygons), dtype=np.int32)
+		zone_names = []
+		for zi, zone in enumerate(db.get("zones", []), start=1):
+			zsel = np.ones(len(me.polygons), dtype=bool)
+			if zone.get("slots"):
+				zsel &= np.isin(new_label, zone["slots"])
+			if zone.get("min"):
+				zsel &= np.all((centers >= np.array(zone["min"])) & (centers <= np.array(zone["max"])), axis=1)
+			zone_low[zsel] = float(zone["ink_low"])
+			zone_high[zsel] = float(zone["ink_high"])
+			zone_id[zsel] = zi
+			zone_names.append(zone.get("name", "zone%d" % zi))
+		bake_report = pipe_detail.bake(me, "detail", image, bvh, dense_verts_np, tri_idx, corner_uv, db, out_png, pc.work_path(cfg, "detail_source.png"), gain,
+			zone_low, zone_high, zone_id, zone_names)
 		bake_report["png"] = os.path.basename(out_png)  # the folder differs in a --check rebuild; the content must not
 		bake_report["sha256"] = pc.sha256_file(out_png)
 	me.materials.clear()

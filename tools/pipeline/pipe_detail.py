@@ -55,15 +55,25 @@ def erode(a, r):
 	return -dilate(-a, r)
 
 
-def ink_in_texture_space(pix, radius_px, low, high):
-	"""pix (h, w, 3) floats 0..1 -> ink (h, w) 0..1 by the black top-hat of each channel."""
+def ink_raw(pix, radius_px):
+	"""pix (h, w, 3) floats 0..1 -> the black top-hat of each channel, the largest channel's (h, w), unshaped."""
 	best = np.zeros(pix.shape[:2], dtype=np.float32)
 	for c in range(3):
 		ch = pix[:, :, c].astype(np.float32)
 		closing = erode(dilate(ch, radius_px), radius_px)
 		best = np.maximum(best, closing - ch)
-	t = np.clip((best - low) / max(high - low, 1e-6), 0.0, 1.0)
+	return best
+
+
+def shape(x, low, high):
+	"""A smoothstep from `low` to `high` (scalars or arrays): the raw top-hat becomes 0..1 ink."""
+	t = np.clip((x - low) / np.maximum(high - low, 1e-6), 0.0, 1.0)
 	return t * t * (3.0 - 2.0 * t)
+
+
+def ink_in_texture_space(pix, radius_px, low, high):
+	"""pix (h, w, 3) floats 0..1 -> ink (h, w) 0..1 by the black top-hat of each channel."""
+	return shape(ink_raw(pix, radius_px), low, high)
 
 
 def coverage(corner_uv, w, h):
@@ -144,23 +154,28 @@ def rasterize(me, layer_name, size):
 	return np.stack([rows, cols], axis=1), pos, face_of_texel
 
 
-def bake(me, layer_name, image, dense_bvh, dense_verts, dense_tris, dense_uv, cfg, out_png, source_png=None, face_gain=None):
+def bake(me, layer_name, image, dense_bvh, dense_verts, dense_tris, dense_uv, cfg, out_png, source_png=None, face_gain=None,
+		face_low=None, face_high=None, face_zone=None, zone_names=()):
 	"""Bake the mask of `me` (UV layer `layer_name`) from `image` (the dense mesh's texture) into out_png. dense_verts
 	(n, 3), dense_tris (m, 3) vertex indices, dense_uv (m, 3, 2) per-corner UVs; face_gain (one float per face of `me`, 1 = full ink, 0 = none: the lens
-	takes none) is optional. Returns a report dict."""
+	takes none) is optional. face_low / face_high (one float per face) override the smoothstep that turns the raw top-hat into ink
+	(`ink_low`, `ink_high` of the config by default): the face's skin takes a higher pair so the texture's speckle drops out and
+	the mouth and the nose line stay (config `zones`, built by blender_palette). face_zone (an int per face, 0 = none, k = zone_names[k-1])
+	only labels the report's percentiles of the raw top-hat per zone, the numbers the pairs are calibrated on. Returns a report dict."""
 	size = int(cfg.get("size", 1024))
 	w, h = image.size
 	pix = np.empty(w * h * 4, dtype=np.float32)
 	image.pixels.foreach_get(pix)
 	pix = pix.reshape(h, w, 4)[:, :, :3]
-	ink = ink_in_texture_space(pix, int(cfg.get("radius_px", 5)), float(cfg.get("ink_low", 0.04)), float(cfg.get("ink_high", 0.12)))
+	ink = ink_raw(pix, int(cfg.get("radius_px", 5)))
 	del pix
 	# no ink within edge_margin_px of an island's border: a seam of the generated texture is not a line of the character
 	margin = int(cfg.get("edge_margin_px", 6))
 	if margin > 0:
 		ink *= erode(coverage(dense_uv, w, h), margin)
+	low_default, high_default = float(cfg.get("ink_low", 0.04)), float(cfg.get("ink_high", 0.12))
 	if source_png:
-		_write_gray(ink, source_png, "detail_source")
+		_write_gray(shape(ink, low_default, high_default), source_png, "detail_source")
 	texel, pos, texel_face = rasterize(me, layer_name, size)
 	idx = np.empty(len(pos), dtype=np.int64)
 	loc = np.empty((len(pos), 3))
@@ -178,7 +193,29 @@ def bake(me, layer_name, image, dense_bvh, dense_verts, dense_tris, dense_uv, cf
 	l0 = 1.0 - l1 - l2
 	uvs = dense_uv[idx]
 	uv = uvs[:, 0] * l0[:, None] + uvs[:, 1] * l1[:, None] + uvs[:, 2] * l2[:, None]
-	value = bilinear(ink, uv)
+	raw = bilinear(ink, uv)
+	# the smoothstep is applied in TEXTURE space, before the sample (a thin line keeps its strength through the bilinear sample): once
+	# per distinct (low, high) pair of the faces, each texel taking its face's pair
+	if face_low is None:
+		value = bilinear(shape(ink, low_default, high_default), uv)
+	else:
+		lo_f = np.asarray(face_low, dtype=np.float64)
+		hi_f = np.asarray(face_high, dtype=np.float64) if face_high is not None else np.full(len(lo_f), high_default)
+		pairs = np.unique(np.stack([lo_f, hi_f], axis=1), axis=0)
+		value = np.zeros(len(raw))
+		face_pair = np.asarray(texel_face)
+		for lo, hi in pairs:
+			sel = (lo_f[face_pair] == lo) & (hi_f[face_pair] == hi)
+			if sel.any():
+				value[sel] = bilinear(shape(ink, lo, hi), uv[sel])
+	zone_report = {}
+	if face_zone is not None:
+		zt = np.asarray(face_zone)[texel_face]
+		for k, name in enumerate(zone_names, start=1):
+			m = zt == k
+			if m.any():
+				zone_report[name] = {"texels": int(m.sum()), "raw_percentiles": {str(q): round(float(np.percentile(raw[m], q)), 4) for q in (50, 80, 90, 95, 97, 98, 99, 99.5)},
+					"ink_texels_share": float((value[m] > 0.5).mean())}
 	if face_gain is not None:
 		value = value * np.asarray(face_gain)[texel_face]
 	mask = np.zeros((size, size), dtype=np.float32)
@@ -188,7 +225,7 @@ def bake(me, layer_name, image, dense_bvh, dense_verts, dense_tris, dense_uv, cf
 		mask = dilate(mask, grow)
 	_write_gray(mask, out_png, "punk_detail")
 	return {"size": size, "texels": int(len(pos)), "ink_texels_share": float((value > 0.5).mean()), "mean_ink": float(value.mean()),
-		"png": out_png}
+		"png": out_png, "zones": zone_report}
 
 
 def _write_gray(a, path, name):

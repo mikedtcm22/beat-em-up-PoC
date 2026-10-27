@@ -159,7 +159,47 @@
 				"flare_max": 2.0,
 				"weld_m": 1e-05,
 				"ramp_m": 0.004,
-				"ring_clamp_m": 0.004
+				"ring_clamp_m": 0.004,
+				"bisect_strap": false,
+				"collar": {
+					"margin_m": 0.009,
+					"ridge_m": 0.003,
+					"rim_round_m": 0.0015,
+					"inner_inset_m": 0.003,
+					"rim_below_m": 0.004,
+					"outline_bins": 24,
+					"outline_percentile": 90,
+					"outline_window_m": 0.015,
+					"outline_floor_m": 0.01,
+					"rings": [
+						[
+							0.006,
+							0.35,
+							0.0
+						],
+						[
+							0.012,
+							0.7,
+							0.0
+						],
+						[
+							0.0185,
+							1.0,
+							0.8
+						],
+						[
+							0.026,
+							1.0,
+							1.0
+						],
+						[
+							0.032,
+							1.0,
+							0.0
+						]
+					],
+					"arm_trim_below_cut_m": 0.004
+				}
 			},
 			"wrist_radius_m": 0.062,
 			"wrist_taper_m": 0.14
@@ -199,6 +239,26 @@
 			"grow_px": 0,
 			"no_ink_slots": [
 				19
+			],
+			"zones": [
+				{
+					"name": "face_skin",
+					"slots": [
+						6
+					],
+					"min": [
+						-0.2,
+						-0.2,
+						1.5
+					],
+					"max": [
+						0.2,
+						0.3,
+						1.8
+					],
+					"ink_low": 0.035,
+					"ink_high": 0.09
+				}
 			]
 		},
 		"regions": [
@@ -222,15 +282,79 @@
 					1.652
 				],
 				"bisect_z": true
+			},
+			{
+				"name": "frame",
+				"slot": 2,
+				"only_from": [
+					16,
+					18
+				],
+				"min": [
+					-0.135,
+					-0.12,
+					1.575
+				],
+				"max": [
+					0.135,
+					0.22,
+					1.675
+				]
+			},
+			{
+				"name": "frame_low",
+				"slot": 2,
+				"only_from": [
+					6,
+					17,
+					14,
+					16,
+					18
+				],
+				"min": [
+					-0.095,
+					0.06,
+					1.583
+				],
+				"max": [
+					0.095,
+					0.2,
+					1.592
+				],
+				"bisect_z": true
+			},
+			{
+				"name": "boots",
+				"slot": 14,
+				"only_from": [
+					6
+				],
+				"min": [
+					-0.5,
+					-0.5,
+					-0.02
+				],
+				"max": [
+					0.5,
+					0.5,
+					0.2
+				]
 			}
 		],
 		"strap_slot": 17,
 		"glove_slot": 2,
 		"fist_border_cell_m": 0.012,
-		"reserve_tris": 700
+		"reserve_tris": 700,
+		"strap_paint_slot": 2
 	},
 	"export": {
-		"hull_normal_digits": 5
+		"hull_normal_digits": 5,
+		"smooth_normals": {
+			"iterations": 6,
+			"crease_deg": 50,
+			"falloff": 2.0,
+			"self_weight": 1.0
+		}
 	},
 	"stills": {
 		"views": [

@@ -30,6 +30,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import pipe_blender as pb  # noqa: E402
 import pipe_common as pc  # noqa: E402
 import blender_dump_rig as dump  # noqa: E402
+import pipe_normals  # noqa: E402
 from blender_fit import rotation_between  # noqa: E402
 
 NAMES = pc.bone_names()
@@ -96,6 +97,24 @@ def write_hull_normals(meshes, digits):
 		me.color_attributes.active_color = attr
 		me.color_attributes.render_color_index = list(me.color_attributes).index(attr)
 		me.update()
+
+
+def smooth_shading_normals(meshes, cfg_sn):
+	"""Give each mesh smoothed per-vertex shading normals (pipe_normals, F-punk-fix) in place of the ones its own geometry gives:
+	computed from the variant's final positions, so the arms-down bake's normals follow the bake. Returns {mesh name: report}."""
+	out = {}
+	for m in meshes:
+		me = m.data
+		co = pb.verts(me)
+		tv, _tp = pb.tri_arrays(me)
+		before = pipe_normals.vertex_normals(co, tv)
+		n = pipe_normals.smooth_normals(co, tv, int(cfg_sn.get("iterations", 12)), float(cfg_sn.get("crease_deg", 50.0)),
+			float(cfg_sn.get("falloff", 2.0)), float(cfg_sn.get("self_weight", 1.0)))
+		for p in me.polygons:
+			p.use_smooth = True
+		me.normals_split_custom_set_from_vertices([tuple(float(c) for c in v) for v in n])
+		out[m.name] = {k: round(v, 4) for k, v in pipe_normals.report(before, n).items()}
+	return out
 
 
 def export_glb(path, meshes, arm):
@@ -189,6 +208,8 @@ def run(cfg, extra):
 	name = cfg["paths"]["export_name"]
 	variants = cfg.get("rig", {}).get("variants", ["apose"])
 	digits = int(cfg.get("export", {}).get("hull_normal_digits", 5))
+	sn_cfg = cfg.get("export", {}).get("smooth_normals")
+	shading = {}
 	os.makedirs(export_dir, exist_ok=True)
 	written = {}
 	for variant in variants:
@@ -209,6 +230,8 @@ def run(cfg, extra):
 		for m in meshes:
 			for p in m.data.polygons:
 				p.use_smooth = True
+		if sn_cfg:
+			shading[variant] = smooth_shading_normals(meshes, sn_cfg)
 		suffix = "" if variant == "apose" else "_" + variant
 		path = os.path.join(export_dir, name + suffix + ".glb")
 		if variant == "apose":
@@ -217,6 +240,8 @@ def run(cfg, extra):
 		export_glb(path, meshes, arm)
 		written[variant] = (path, out_dirs)
 	report = {"variants": {}}
+	if shading:
+		report["smooth_normals"] = shading
 	for variant, (path, out_dirs) in written.items():
 		info = check_glb(path, out_dirs)
 		info["file"] = pc.repo_rel(path)
