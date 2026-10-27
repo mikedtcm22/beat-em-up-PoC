@@ -4,6 +4,23 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-27 11:30 CDT: F-punk and F-player-art merged (1533/1534, the hero's A9 the one red test); the fix round running
+- **Merged:** F-punk (`08ddacf`) and F-player-art (`159eefb`), then the A22 routine on the combined head: the preset regenerated (516 values), the palette atlas regenerated (23 swatches, `--check` passes), the ARCHITECTURE add/add resolved by keeping both headings, and the full suite 1533/1534 with 0 SCRIPT, SHADER or ERROR lines. The one failure is `test_art_player`'s hero A9 against FPView's proxies (10 poses), which F-player-fix turns into a ratchet (call 20).
+  - **F-punk:** Street Punk A from T4 (front, left and back views), T8 rig and T9 glove fist; 14,984 triangles, 7 slots and 6 colours, with A18's 1k detail mask wired in `punk_art.tres`. A6 is asserted at 95% (torso 100, legs 95.3, head 99.9). Still missed and ratcheted: visible stretch 8.4 cm (the waist hem in the cross's twist), A9's cells 6.6%, and A11's torso anchor 6.0 cm. 135 credits.
+  - **F-player-art:** Hero C from T11 body, T12 rig and T13 wrapped fist; Body plus Body__fp_hidden, 26,418 triangles; `player_detail.png`. The game wears it now. No Body__fp_torso, since the shared exporter and the contract allow only two meshes. The one red test was the hero's A9 against FPView's proxies (1529/1530 on its branch). 105 credits.
+  - **Tripo:** the ledger stands at 295 of the 750 stop; the balance is 1205.
+- **The lead's look** (full-resolution stills beside the concepts):
+  - The Punk reads as concept A: the backwards cap, the shades, the teal vest over a dark tank, pale jeans, the taped left forearm and the fingerless gloves.
+  - The Punk's faults: yellow gauntlet cuffs that aren't in the concept (our brief asked for "an accent strap"), the cap and lens sharing one yellow, face speckle, and blotchy bands on the vest and forearms.
+  - The hero's look-down, guard and haymaker read as wrapped, gloved fists.
+  - The hero's faults: his jab, cross and hook show the bare elbow half of the upper arm as a stump ending in the flat cut cap (the probe frames the same way; it is M3's rule), lumpy fingers, and a near-black shin and shoe in the front kick.
+  - Judgement calls 18-21 record these choices.
+- **Next:** `docs/reviews/M4/args-F-fix.json`, three builders at once:
+  - F-punk-fix (Blender): the cuffs, the shades, the speckle and the blotches.
+  - F-player-fix (Blender): a rounded cap at the cut, the fists, the shoe value, Body__fp_torso, and the hero's A9 as a ratchet (call 20).
+  - P3-int (Godot): `ToonMaterials.outline(first_person)`, the real GLBs in A19, `test_m4_done_when.gd` and `look_probe` final.
+  - Then the six-lens review round, its fixes, README's M4 section, the PR (not merged) and the final DM.
+
 ### 2026-10-27 09:05 CDT: Game-boy picked Street Punk A and Hero C; F-punk and F-player-art running
 - **The pick** (09:00 CDT, in the working session's chat, not the DM): Street Punk A (`punk_a_denim_vest.jpg`, the concept the smoke stand-in was built from) and Hero C (`hero_c_martial.jpg`, whole, no mix and match). His words are in the decisions log and in each brief. He also wants a menu of hero options later; that is not M4, but F-player-art keeps the hero in files so a second hero needs no code change.
 - **Running since 09:04 CDT:** workflow `wf_63ca3032-218`, `workflow-build.js` with `docs/reviews/M4/args-F-art.json` (both packages, two Sonnet builders, one Blender slot each):
