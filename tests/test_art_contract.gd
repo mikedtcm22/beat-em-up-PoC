@@ -34,6 +34,9 @@ const ALPHA_SKIN := 0.8
 const ALPHA_NONE := 0.5
 const SWATCH_MIN := 4
 const SWATCH_MAX := 6
+## F-punk: a character may spend one more SLOT than it has flat colours (the Punk's lens is the cap's yellow on its own slot, so it
+## takes no damage marks); the number of flat COLOURS stays 4-6 (Part B A3, J6).
+const SWATCH_SLOTS_MAX := 7
 const SWATCH_COLUMNS := 32
 const SWATCH_ROWS := 2
 const SWATCH_PX := 8
@@ -305,8 +308,8 @@ func test_triangle_budgets() -> void:
 		assert_gt(total, 500, "%s: not an empty mesh" % path)
 
 
-## A face is a swatch: every vertex of a triangle sits on one swatch centre of the 256x16 atlas, and a character uses 4-6 of
-## them, none in the red band (hue 345-15 degrees with saturation above 0.5: red is for blood and the warning).
+## A face is a swatch: every vertex of a triangle sits on one swatch centre of the 256x16 atlas, and a character uses 4-6 flat colours (at most 7
+## slots: see SWATCH_SLOTS_MAX), none in the red band (hue 345-15 degrees with saturation above 0.5: red is for blood and the warning).
 func test_palette_uvs_sit_on_swatch_centres_few_and_never_red() -> void:
 	var atlas := _atlas_image()
 	for path: String in _glbs():
@@ -335,7 +338,11 @@ func test_palette_uvs_sit_on_swatch_centres_few_and_never_red() -> void:
 				slots[int(roundf(row)) * SWATCH_COLUMNS + int(roundf(col))] = true
 			assert_eq(bad_centres, 0, "%s %s: every UV is a swatch centre" % [path, n])
 			assert_eq(mixed_faces, 0, "%s %s: each face is on one swatch" % [path, n])
-		assert_between(slots.size(), SWATCH_MIN, SWATCH_MAX, "%s: %d swatches used" % [path, slots.size()])
+		var colours: Dictionary = {}
+		for slot: int in slots:
+			colours[_swatch_color(atlas, slot).to_html(false)] = true
+		assert_between(colours.size(), SWATCH_MIN, SWATCH_MAX, "%s: %d flat colours used" % [path, colours.size()])
+		assert_between(slots.size(), SWATCH_MIN, SWATCH_SLOTS_MAX, "%s: %d swatches used" % [path, slots.size()])
 		for slot: int in slots:
 			var c := _swatch_color(atlas, slot)
 			assert_ne(c, Color(1, 0, 1), "%s: slot %d is defined (not the magenta of an unused slot)" % [path, slot])

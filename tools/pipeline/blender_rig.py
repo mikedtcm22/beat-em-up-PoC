@@ -11,6 +11,10 @@ chain_joints). Weights, config rig.weights:
 	         solve leaves empty (interior and overlapping geometry) are filled the same way.
 Optional rig.smooth_iterations / rig.smooth_factor: Laplacian smoothing of the weights over the mesh's edges before the limit
 (the slice gate's contingency against candy-wrap at the shoulder, off by default).
+Optional rig.clamps (F-punk, the slice gate's named weight clamps: shoulder, collar, waist): a list of
+{name, bones, above_z_m, ramp_m, to}: the listed bones' weights above a height (Blender z, metres in the rig's 1.8 m space)
+move onto bone `to`, smoothstep over ramp_m (0 at above_z_m, all of it beyond), so a waistband that Tripo's rig hangs on the
+thigh bone follows the hips instead (the waist of a jeans mesh stretched 40x when a leg lifted, and the hurtbox fit missed it).
 Either way: at most rig.max_influences (4) per vertex, normalised, none on Root, every vertex weighted. The result is a
 joined Body with an Armature modifier and one vertex group per bone in table order.
 """
@@ -57,6 +61,15 @@ def run(cfg, extra):
 		used = "auto"
 	empty_before = int((w.sum(axis=1) < 1e-4).sum())
 	w, filled = pb.fill_unweighted(co, w)
+	clamp_report = []
+	for c in rigc.get("clamps", []):
+		cols = [NAMES.index(b) for b in c["bones"]]
+		t = np.clip((co[:, 2] - float(c["above_z_m"])) / max(float(c.get("ramp_m", 0.05)), 1e-6), 0.0, 1.0)
+		t = t * t * (3.0 - 2.0 * t)
+		moved = w[:, cols].sum(axis=1) * t
+		w[:, cols] *= (1.0 - t)[:, None]
+		w[:, NAMES.index(c["to"])] += moved
+		clamp_report.append({"name": c.get("name", ""), "vertices": int((moved > 1e-4).sum()), "weight_moved": float(moved.sum())})
 	smooth_n = int(rigc.get("smooth_iterations", 0))
 	if smooth_n > 0:
 		w = pb.smooth_weights(me, w, smooth_n, float(rigc.get("smooth_factor", 0.5)))
@@ -74,6 +87,7 @@ def run(cfg, extra):
 		"weights": used,
 		"weights_requested": mode,
 		"smooth_iterations": smooth_n,
+		"clamps": clamp_report,
 		"bones": len(arm.data.bones),
 		"vertices": len(co),
 		"unweighted_before_fill": empty_before,

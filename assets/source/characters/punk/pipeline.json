@@ -1,7 +1,7 @@
 {
 	"id": "punk",
-	"version": 1,
-	"note": "The smoke Punk (M4-plan A2 step 4): Gemini concept A redrawn flat, Tripo T1 image-to-model and T3 auto-rig v3.0 unity. The rig GLB is both the mesh (with its 2048 texture) and the source rig. Replaced in place by F-punk's pick.",
+	"version": 2,
+	"note": "The Street Punk (M4 F-punk): concept A (Game-boy's pick) through four flat Gemini views on the mannequin (views/), Tripo T4 multiview-to-model (3 views, seed 4101) and T8 auto-rig v3.0 unity on it. The rig GLB is both the mesh (with its texture) and the source rig. Replaces the smoke Punk in place.",
 	"paths": {
 		"work": "assets/source/_cache/punk/work",
 		"blend_dir": "assets/source/characters/punk/work",
@@ -10,9 +10,9 @@
 		"export_name": "punk"
 	},
 	"source": {
-		"mesh": "assets/source/characters/punk/smoke/0366578f_rig.glb",
+		"mesh": "assets/source/characters/punk/tripo/5374695c_rig.glb",
 		"rig": "same",
-		"facing_yaw_deg": 89.331563,
+		"facing_yaw_deg": 91.0183,
 		"sides": "keep"
 	},
 	"target": {
@@ -20,30 +20,147 @@
 	},
 	"fit": {
 		"landmarks": "rig",
-		"regularize": ["Spine", "Chest", "UpperChest"],
+		"regularize": [
+			"Spine",
+			"Chest",
+			"UpperChest"
+		],
 		"bone_map": {},
 		"swing": "measure",
 		"default_swing_deg": 45.0,
 		"warp_weights": "tripo",
 		"residual_limit_m": 0.01,
-		"sole_percentile": 0.0
+		"sole_percentile": 0.0,
+		"snap": {
+			"enabled": true,
+			"radius_m": 0.3
+		},
+		"girth_clamp": [
+			{
+				"name": "left_thigh",
+				"bones": [
+					"LeftUpperLeg"
+				],
+				"from": "LeftUpperLeg",
+				"to": "LeftLowerLeg",
+				"limit_m": 0.08,
+				"soft_m": 0.004
+			},
+			{
+				"name": "left_shin",
+				"bones": [
+					"LeftLowerLeg"
+				],
+				"from": "LeftLowerLeg",
+				"to": "LeftFoot",
+				"limit_m": 0.07,
+				"soft_m": 0.004
+			},
+			{
+				"name": "right_thigh",
+				"bones": [
+					"RightUpperLeg"
+				],
+				"from": "RightUpperLeg",
+				"to": "RightLowerLeg",
+				"limit_m": 0.08,
+				"soft_m": 0.004
+			},
+			{
+				"name": "right_shin",
+				"bones": [
+					"RightLowerLeg"
+				],
+				"from": "RightLowerLeg",
+				"to": "RightFoot",
+				"limit_m": 0.07,
+				"soft_m": 0.004
+			},
+			{
+				"name": "head",
+				"bones": [
+					"Head"
+				],
+				"shape": "sphere",
+				"from": [
+					0.0,
+					0.01,
+					1.685
+				],
+				"limit_m": 0.185,
+				"soft_m": 0.004
+			}
+		],
+		"bulge": [
+			{
+				"name": "knee_back_left",
+				"bones": [
+					"LeftUpperLeg",
+					"LeftLowerLeg"
+				],
+				"joint": "LeftLowerLeg",
+				"direction": "back",
+				"half_height_m": 0.14,
+				"amount_m": 0.04
+			},
+			{
+				"name": "knee_back_right",
+				"bones": [
+					"RightUpperLeg",
+					"RightLowerLeg"
+				],
+				"joint": "RightLowerLeg",
+				"direction": "back",
+				"half_height_m": 0.14,
+				"amount_m": 0.04
+			}
+		]
 	},
 	"rig": {
 		"weights": "tripo",
 		"max_influences": 4,
-		"variants": ["apose", "rest"]
+		"variants": [
+			"apose",
+			"rest"
+		],
+		"clamps": [
+			{
+				"name": "waist",
+				"bones": [
+					"LeftUpperLeg",
+					"RightUpperLeg"
+				],
+				"above_z_m": 0.955,
+				"ramp_m": 0.05,
+				"to": "Hips"
+			}
+		]
 	},
 	"parts": {
 		"fists": {
 			"enabled": true,
-			"glove_slot": 1,
+			"glove_slot": 2,
 			"strap_slot": 17,
 			"strap_height_m": 0.03,
 			"cuff_margin_m": 0.008,
 			"cuff_over_m": 0.035,
 			"cuff_below_wrist_m": 0.012,
 			"bevel_m": 0.022,
-			"bump_m": 0.006
+			"bump_m": 0.006,
+			"source": "generated",
+			"generated": {
+				"mesh": "assets/source/characters/punk/parts/fist/tripo/e70776cb_gen.glb",
+				"facing_yaw_deg": 90.0,
+				"block_top_frac": 0.7471,
+				"strap_top_frac": 0.8866,
+				"extent_fit": 0.9,
+				"rim_band_m": 0.012,
+				"flare_min": 0.8,
+				"flare_max": 2.0,
+				"weld_m": 1e-05
+			},
+			"wrist_radius_m": 0.056,
+			"wrist_taper_m": 0.14
 		},
 		"split_fp": {
 			"enabled": false
@@ -51,33 +168,208 @@
 	},
 	"palette": {
 		"mode": "fixed",
-		"slots": [1, 2, 6, 14, 16, 17],
+		"slots": [
+			2,
+			6,
+			14,
+			16,
+			17,
+			18
+		],
 		"max_swatches": 6,
 		"min_share": 0.004,
 		"majority_passes": 2,
 		"border_relax_iterations": 3,
 		"border_relax_factor": 0.5,
 		"budget_tris": 15000,
-		"detail_uv": false
+		"detail_uv": true,
+		"fist_budget_tris": 1500,
+		"unfold": {
+			"iterations": 12,
+			"factor": 0.5,
+			"ring": 1
+		},
+		"detail_bake": {
+			"size": 1024,
+			"radius_px": 5,
+			"ink_low": 0.02,
+			"ink_high": 0.07,
+			"grow_px": 0,
+			"out": "assets/export/characters/punk/punk_detail.png",
+			"no_ink_slots": [
+				19
+			]
+		},
+		"regions": [
+			{
+				"name": "lens",
+				"slot": 19,
+				"only_from": [
+					17,
+					14,
+					6,
+					16
+				],
+				"min": [
+					-0.095,
+					0.06,
+					1.592
+				],
+				"max": [
+					0.095,
+					0.2,
+					1.652
+				],
+				"bisect_z": true
+			}
+		]
 	},
 	"export": {
 		"hull_normal_digits": 5
 	},
 	"stills": {
-		"views": ["front", "three_quarter", "side"],
+		"views": [
+			"front",
+			"three_quarter",
+			"side"
+		],
 		"poses": {
 			"rest": {},
 			"guard": {
-				"Spine": [-3.0, 0.0, 0.0], "Chest": [-3.0, 0.0, 0.0], "Neck": [4.0, 0.0, 0.0], "Head": [2.0, 0.0, 0.0],
-				"LeftUpperArm": [43.5, -22.0, -13.5], "LeftLowerArm": [130.0, 0.0, 0.0],
-				"RightUpperArm": [40.0, 22.5, 13.0], "RightLowerArm": [134.5, 0.0, 0.0],
-				"LeftUpperLeg": [16.0, 0.0, -4.0], "LeftLowerLeg": [-24.0, 0.0, 0.0], "LeftFoot": [8.0, 0.0, 4.0],
-				"RightUpperLeg": [-6.0, 0.0, 5.0], "RightLowerLeg": [-16.0, 0.0, 0.0], "RightFoot": [22.0, 0.0, -5.0]
+				"Spine": [
+					-3.0,
+					0.0,
+					0.0
+				],
+				"Chest": [
+					-3.0,
+					0.0,
+					0.0
+				],
+				"Neck": [
+					4.0,
+					0.0,
+					0.0
+				],
+				"Head": [
+					2.0,
+					0.0,
+					0.0
+				],
+				"LeftUpperArm": [
+					43.5,
+					-22.0,
+					-13.5
+				],
+				"LeftLowerArm": [
+					130.0,
+					0.0,
+					0.0
+				],
+				"RightUpperArm": [
+					40.0,
+					22.5,
+					13.0
+				],
+				"RightLowerArm": [
+					134.5,
+					0.0,
+					0.0
+				],
+				"LeftUpperLeg": [
+					16.0,
+					0.0,
+					-4.0
+				],
+				"LeftLowerLeg": [
+					-24.0,
+					0.0,
+					0.0
+				],
+				"LeftFoot": [
+					8.0,
+					0.0,
+					4.0
+				],
+				"RightUpperLeg": [
+					-6.0,
+					0.0,
+					5.0
+				],
+				"RightLowerLeg": [
+					-16.0,
+					0.0,
+					0.0
+				],
+				"RightFoot": [
+					22.0,
+					0.0,
+					-5.0
+				]
 			},
-			"elbow_150": {"LeftLowerArm": [150.0, 0.0, 0.0], "RightLowerArm": [150.0, 0.0, 0.0]},
-			"arm_raise_140": {"LeftUpperArm": [140.0, 0.0, 0.0], "RightUpperArm": [140.0, 0.0, 0.0]},
-			"knee_m130": {"LeftUpperLeg": [40.0, 0.0, 0.0], "LeftLowerLeg": [-130.0, 0.0, 0.0], "RightUpperLeg": [-10.0, 0.0, 0.0]},
-			"spine_twist": {"Spine": [0.0, 30.0, 0.0], "Chest": [0.0, 30.0, 0.0], "UpperChest": [0.0, 20.0, 0.0], "Neck": [0.0, -20.0, 0.0]}
+			"elbow_150": {
+				"LeftLowerArm": [
+					150.0,
+					0.0,
+					0.0
+				],
+				"RightLowerArm": [
+					150.0,
+					0.0,
+					0.0
+				]
+			},
+			"arm_raise_140": {
+				"LeftUpperArm": [
+					140.0,
+					0.0,
+					0.0
+				],
+				"RightUpperArm": [
+					140.0,
+					0.0,
+					0.0
+				]
+			},
+			"knee_m130": {
+				"LeftUpperLeg": [
+					40.0,
+					0.0,
+					0.0
+				],
+				"LeftLowerLeg": [
+					-130.0,
+					0.0,
+					0.0
+				],
+				"RightUpperLeg": [
+					-10.0,
+					0.0,
+					0.0
+				]
+			},
+			"spine_twist": {
+				"Spine": [
+					0.0,
+					30.0,
+					0.0
+				],
+				"Chest": [
+					0.0,
+					30.0,
+					0.0
+				],
+				"UpperChest": [
+					0.0,
+					20.0,
+					0.0
+				],
+				"Neck": [
+					0.0,
+					-20.0,
+					0.0
+				]
+			}
 		}
 	}
 }

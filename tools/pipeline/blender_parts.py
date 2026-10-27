@@ -11,6 +11,9 @@ replace: reads work/03_rig.blend, writes work/04_parts.blend. The rig has no fin
 	at the Hand joint. Weights are 100% Hand (the cuff ramps to LowerArm). New faces carry the palette slot to use
 	(face attribute pipe_slot = slot + 1; 0 = take it from the texture), so the palette step needs no texture for them.
 	parts.fists: {enabled, glove_slot, strap_slot, strap_height_m, cuff_margin_m, cuff_over_m, bevel_m, bump_m}.
+	With parts.fists.source = "generated" the fist is a Tripo-generated glove fist (F-punk, task T9) instead: see
+	pipe_fist.py (placed on the fist box, its cuff reaching over the arm's cut and as wide as the WRIST, mirrored for the
+	right hand, its texture packed with the body's); parts.fists.generated holds its numbers.
 
 split: reads work/05_palette.blend, writes work/06_split.blend. For the player's first-person body (parts.split_fp.enabled):
 	the hidden part Body__fp_hidden = Chest and above, both Shoulders and the shoulder half of each upper arm (the cuts
@@ -31,6 +34,7 @@ from mathutils import Matrix, Vector
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import pipe_blender as pb  # noqa: E402
 import pipe_common as pc  # noqa: E402
+import pipe_fist  # noqa: E402
 from blender_fit import rotation_between  # noqa: E402
 
 NAMES = pc.bone_names()
@@ -204,6 +208,10 @@ def replace_hands(cfg, extra):
 	made = {}
 	cuts = {}
 	fists = []
+	generated = pf.get("source", "procedural") == "generated"
+	w_now = pb.weights_matrix(body, NAMES)  # the weights of the mesh after the hands' faces are gone
+	gsrc = pipe_fist.load_source(pf["generated"]) if generated else None
+	uv_name = me.uv_layers[0].name if len(me.uv_layers) else "UVMap"
 	for side in pc.SIDES:
 		p_hand = np.array(targets[side + "Hand"]["head"])
 		d = dirs[side]
@@ -215,7 +223,24 @@ def replace_hands(cfg, extra):
 			a = (co[near] - p_hand) @ d
 			radial = np.linalg.norm((co[near] - p_hand) - np.outer(a, d), axis=1)
 			a0, r_cut = float(a.min()), float(np.percentile(radial, 90))
-			cuts[side] = {"boundary_vertices": int(len(near)), "a_min_m": a0, "a_max_m": float(a.max()), "radius_m": r_cut}
+			cuts[side] = {"boundary_vertices": int(len(near)), "a_min_m": a0, "a_max_m": float(a.max()), "radius_m": r_cut,
+				"radius_median_m": float(np.median(radial))}
+		if generated:
+			r_med = cuts[side].get("radius_median_m", r_cut)
+			if len(near) >= 6 and pf.get("wrist_radius_m") and r_med > float(pf["wrist_radius_m"]):
+				# the concept's forearm is thicker at the wrist than its fist is wide: taper the arm toward the wrist
+				co, taper = pipe_fist.taper_wrist(co, w_now, side, p_hand, d, r_med, pf)
+				pb.set_verts(me, co)
+				cuts[side]["wrist_taper"] = taper
+				r_med = float(pf["wrist_radius_m"])
+				cuts[side]["radius_median_m_after"] = r_med
+			cut = {"a_min": a0, "radius_m": r_med} if len(near) >= 6 else None
+			part = pipe_fist.make_side(gsrc, side, table_boxes[side], cut, p_hand, d, pf["generated"], pf)
+			obj = pipe_fist.add_object("Fist" + side, part, uv_name)
+			made[side] = obj
+			fists.append(obj)
+			cuts[side].update({"fist": part["report"], "faces_deleted": deleted[side], "fist_triangles": part["report"]["triangles"]})
+			continue
 		cuff_r = max(r_cut, 0.05) + pf.get("cuff_margin_m", 0.008)
 		z_top = -(min(a0, 0.0) - pf.get("cuff_over_m", 0.035))
 		z_bottom = -pf.get("cuff_below_wrist_m", 0.012)
@@ -255,6 +280,16 @@ def replace_hands(cfg, extra):
 	pb.attach_armature(body, bpy.data.objects[pb.ARMATURE])
 	for p in body.data.polygons:
 		p.use_smooth = True
+	packed = None
+	if generated:
+		packed = pipe_fist.pack_textures(body, gsrc.image, pf["generated"])
+		pipe_fist.discard(gsrc)
+		for mat in list(bpy.data.materials):
+			if mat.users == 0:
+				bpy.data.materials.remove(mat)
+		for img in list(bpy.data.images):
+			if img.users == 0:
+				bpy.data.images.remove(img)
 
 	# A5 on the work file: fist vertices (Hand weight >= 0.9) un-swung into the table's frame
 	co = pb.verts(body.data)
@@ -273,7 +308,10 @@ def replace_hands(cfg, extra):
 			"bbox_centre_offset_m": float(np.linalg.norm((rest.max(axis=0) + rest.min(axis=0)) / 2 - bc)),
 			"extent_ratio": (ext / want).tolist()}
 	pb.save_blend(pc.work_path(cfg, "04_parts.blend"))
-	return {"enabled": True, "cuts": cuts, "fist_check": fist_check, "triangles_after": pb.triangle_count(body.data)}
+	out = {"enabled": True, "cuts": cuts, "fist_check": fist_check, "triangles_after": pb.triangle_count(body.data)}
+	if generated:
+		out["generated"] = {"source": gsrc.report, "atlas": packed}
+	return out
 
 
 TORSO_SET = ["Hips", "Spine", "Chest", "UpperChest", "Neck", "Head"]
