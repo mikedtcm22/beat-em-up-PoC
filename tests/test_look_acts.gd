@@ -99,7 +99,25 @@ func test_the_act_file_holds_the_plans_acts_with_their_slugs() -> void:
 		assert_true(String(act.title).begins_with("Look: "), "%s starts with Look:" % act.title)
 		assert_true(act.cam in [&"first_person", &"free_fly"], "%s has a camera mode" % act.title)
 		assert_true((act.fn as Callable).is_valid(), "%s has an act" % act.title)
-	assert_eq(slugs, SLUGS, "the acts are C1-C11 and C13, in the plan's order")
+	# SL-int adds the perf act after them (A16): C1-C11 and C13 stay first, in the plan's order.
+	assert_eq(slugs.slice(0, SLUGS.size()), SLUGS, "the acts are C1-C11 and C13, in the plan's order")
+	assert_eq(slugs.slice(SLUGS.size()), [&"p1"] as Array[StringName], "then SL-int's perf act")
+
+
+func test_the_perf_act_runs_six_art_punks_with_the_probe_on() -> void:
+	# The twin of the slug list's change: A16's act is in the file, titled as the lead's perf_compare
+	# asks for it, and no other act's title holds it or is held by it.
+	var perf: Dictionary = {}
+	for act in LookActs.acts(_bare_node()):
+		if act.slug == &"p1":
+			perf = act
+	assert_eq(perf.get("title"), "Look: Perf, six art Punks")
+	assert_eq(perf.get("cam"), &"first_person")
+	assert_true(perf.get("probe", false), "the probe is on, as the existing perf act has it")
+	assert_true((perf.fn as Callable).is_valid())
+	for title: String in ["Perf, six with ragdolls", "Look: Punk reacts at 1 m"]:
+		assert_false(title.to_lower().contains("look: perf, six art punks"))
+		assert_false("look: perf, six art punks".contains(title.to_lower()))
 
 
 func test_every_title_picks_only_its_own_act() -> void:

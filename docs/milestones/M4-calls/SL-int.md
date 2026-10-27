@@ -1,0 +1,108 @@
+# M4 calls: SL-int
+
+Package SL-int (phase 1c, M4-plan Part C section 6 with Part A A4, A12, A15, A16, A19): the smoke Punk fights in the game. Each call is the decision, an alternative not taken, and why. Part 2 is what the numbers say, for the slice gate; part 3 what the first-person sheets show. The machine was shared with other builders for most of the work (1-minute load average 1.9 to 3.6), so every perf figure is NOISY.
+
+## 1. Calls
+
+**C1. The A/B between the four smoke GLBs is a Debug tunable, `look_punk_art_variant`.**
+- *Decision.* An `@export_range(0, 3, 1)` int in "Debug" (A9: presets skip that group by name): 0 `punk.glb` (the scene's `punk_art.tres`, the default), 1 `punk_rest`, 2 `punk_auto`, 3 `punk_auto_rest`. It is read when a Punk's body is built, so it is set before the Punks spawn: `CAPTURE_ARGS="--tune=look_punk_art_variant=2" tools/capture_bot.sh res://tests/bot/crowd_bot.tscn <dir> "<act>"` (the combo bot's own `--tune`), or the F1 panel's Debug group. `look_acts.gd` prints `LOOK-ART variant <n> <glb>` at the start of every act and of the perf act, so a log says which Punk it recorded.
+- *Alternative.* A bot argument that swaps `rig.art` after a Punk spawns, or four scenes. Both need the rig rebuilt (art is read once in `build()`), and the first works only in a bot.
+- *Why not.* The tunable also works in a normal game, in the F1 panel, and the variants load only when asked for (`StreetPunk.ART_VARIANTS` are paths, not exports: the default game never loads three more 600 KB GLBs).
+
+**C2. `street_punk.gd` is touched (not on the brief's file list): `_configure_art()` picks the variant.**
+- *Decision.* `StreetPunk._configure_art(r)` sets `r.art` to the scene's `art` for variant 0 and to `load(ART_VARIANTS[variant - 1])` otherwise (nothing else changes in the file). `street_punk.tscn` sets `art = punk_art.tres`; the three variant resources sit beside it (`punk_rest_art.tres`, `punk_auto_art.tres`, `punk_auto_rest_art.tres`), all with `triangle_budget` 15000 and the shared palette atlas.
+- *Alternative.* Put the switch in `CombatActor._configure_art()` (the default `r.art = art`), where S0 left the hook.
+- *Why not.* `combat_actor.gd` is nobody's in phase 1c and every archetype shares it; the variants are the Punk's, and the Punk file is where its art is chosen. Reported in "requests".
+
+**C3. The prop hulls go on through the material's `next_pass`, via a new `RoomKit.prop_material(color)`.**
+- *Decision.* `RoomKit.prop_material(color)` is `ToonMaterials.environment(color, true)` (the box hull as the material's own `next_pass`, `edge_tag` 0). The crowd room's crates, dumpster and car and the training room's three crates use it; walls, windows, paint and the backdrop keep `flat_material()`. `RoomKit.add_box()`'s `overlay` argument stays unused (P1-toon C3 and P1-post C9 both said to use one route, not both).
+- *Alternative.* Pass `ToonMaterials.outline_for_part(BOX)` as `overlay` to `add_box()`.
+- *Why not.* The hull and the flat material would be tagged separately (the edge tag lives in the environment material), and the overlay route needs `look_hull_on_placeholders` read at two places; the `next_pass` route keeps tag and hull in one factory call, as P1-toon built it. `look_hull_on_placeholders` off gives no hull and tag 1 (the A16 fallback), tested.
+
+**C4. The art variant is warmed at the room's load by a throwaway rig, and `ToonMaterials.warm_up()` gets its own flag for it.**
+- *Decision.* The first rig a room builds is the player's (no art), and `RigPaint.warm_up()` runs `ToonMaterials.warm_up(parent)` once per run there, so a second call with an art instance would have been a no-op. `warm_up()` now has two once-per-run flags (the boxes under every hull mode; the skinned variant, whichever call brings it). `RoomKit.warm_up_art(room)`, called at the end of `build_presentation()`, builds a throwaway `HumanoidRig` wearing `punk_art.tres` (windowed only), hands its skeleton to `ToonMaterials.warm_up(room, skeleton)` (which duplicates it at once) and frees it. The warm-up's holder stands from the next frame on 2.5 m in front of and 1.2 m below the viewport's camera (it stood at the room's origin, where the player's lens never sees it), for two frames.
+- *Alternative.* Reset `_warmed` before the call (what `toon_acts.gd` does for its fixture), or warm at the first Punk's spawn.
+- *Why not.* The first would draw the boxes twice; the second puts the cost on the frame the warm-up exists to protect. Not measured to help: the perf run's first-spawn hitch is 30 to 33 ms at vsync on (a display refresh or two), the same as the mixed six's, inside the noise.
+
+**C5. The strain is measured against the SKINNED REST pose, in `tests/test_art_punk.gd`.**
+- *Decision.* P1-chain C13 found that A19's literal reference (the GLB's own mesh) fails the A-pose route at idle by construction (the arms swing 38 degrees to hang), and asked for the skinned rest. `SkinnedView.strain()` (P1-skin's file) measures against the authored mesh, so the test has its own `_strain()`: the same edges and triangles (`SkinnedView._mesh_data()` and `_prepare_strain()`), each edge's rest length taken from the mesh skinned at the rig's rest pose. Over every `PlaceholderAnims.ANIM_IDS` id and the three Punk moves at five phases, then the six peak flexes: 251 samples a GLB, 13 s for all four.
+- *Alternative.* Edit `SkinnedView.strain()` to take a reference.
+- *Why not.* The file is P1-skin's (P3-int's later); the helper is 60 lines of test code. Reported in "requests".
+
+**C6. A6's torso is counted by each vertex's dominant bone.**
+- *Decision.* `SkinnedView.hurtbox_fit()` counts only vertices one bind holds alone (weight at least 0.9999). The Punk's torso vertices are all blended, so it read 0 of 0, a torso share of 0.0%. `test_art_punk` has `_fit()`, the same rule with every vertex counted by its largest weight (the torso is 500 to 664 vertices, the legs about 2,300 to 2,460, the head about 820 to 840); the axis-point check is `hurtbox_fit()`'s.
+- *Alternative.* Weighted shares, or a threshold on the blended vertices.
+- *Why not.* The dominant bone is what the plan's wording ("torso and leg vertices within radius + 6 cm") reads as, and is simple.
+
+**C7. The tests assert what passes and print the rest.**
+- *Decision.* Every number is printed as `ART-PUNK <row> <glb>: ...` (A6, A9 at the 1 m poses, A11, A19, bind and floor), with `GATE: ...` after each bar a GLB misses. Asserted, for all four GLBs: `check()` empty, triangles at most 15,000, the soles within 5 mm of the floor at the rest, A6 axis points all inside and the torso at least 95%, A9 lens share within 4 points and at most 3% of cells differing at idle (both pitches), A11 within 2 cm for the head, A10 in full (CUSTOM0/1 are the bind pose, a hundred vertices' coordinates the same across idle, jab and knockdown, a damage-look change swaps the damage texture only), A19 no NaN and no sole under the floor in a planted pose. The bars each GLB misses (below) are not asserted: they are the gate's (A15).
+- *Alternative.* Assert every bar and leave the suite red, or loosen the bars.
+- *Why not.* The brief: "printing every number and asserting only what passes". A loosened bar would hide what the gate has to rule on.
+
+**C8. The perf act: `Look: Perf, six art Punks`.**
+- *Decision.* One entry in `acts()` and one function in `look_acts.gd` (slug p1, probe on like the existing perf act): six Punks from the six surround points, `keep_alive(6, &"punk")`, the autopilot for 1,800 ticks (30 s), reusing `CrowdActs._sample_frames()` and `_report_perf()`. The title is in no other title and none in it (`test_look_acts` checks it). The drawn art is never measured with SkinnedView in it (A4): the probe is the proxies'.
+- *Alternative.* A mixed six with the Punk swapped for the art (what "Perf, six with ragdolls" has).
+- *Why not.* A16 asks for six art Punks, and the lead's soft bars are per act.
+
+**C9. One act per process, and the filter "Waves" is three acts.**
+- *Decision.* Every recording is one act in its own process (L0-bench's rule); the A/B too (C2, C4, C5 for each of the four GLBs: the default's are the main pack's, the other three are `captures/sl-int/ab/v<n>/`). The 60 s autopilot is the crowd bot's "Waves to the boss", "Mixed waves" and "Waves" (the filter "Waves" matches all three: 3,385, 5,400 and 5,400 frames, 1.2 GB recorded and then deleted) and "Six Punks, fight" (all Punks, 27 s).
+- *Why.* The filter is a substring match, ignoring case.
+
+**C10. `look_acts.gd` must not name `StreetPunk`.**
+- *Decision.* The first `_log_art()` read `StreetPunk.ART_VARIANTS`; any recording made with that reference ended with "5 shaders were never freed", "98 resources still in use" and ten more `ERROR` lines at exit (a static reference from an act file to the Punk's script keeps the resources alive at shutdown). It now has its own four names (`PUNK_ARTS`). Every log is clean again.
+- *Alternative.* Accept the exit errors in the A/B logs.
+- *Why not.* A12: no `ERROR` in any evidence log.
+
+## 2. Assertions that changed
+
+One, forced by the perf act the plan asks this package to add to `look_acts.gd`:
+- `tests/test_look_acts.gd::test_the_act_file_holds_the_plans_acts_with_their_slugs`: `assert_eq(slugs, SLUGS, ...)` (the 12 slugs C1-C11 and C13) to `assert_eq(slugs.slice(0, SLUGS.size()), SLUGS, ...)` plus `assert_eq(slugs.slice(SLUGS.size()), [&"p1"], ...)`: the plan's acts stay first and in order, and the perf act is the one after them. Twin on the visible path: the new `test_the_perf_act_runs_six_art_punks_with_the_probe_on` (the title, the camera, the probe, the callable, no other title holding it or held by it), and `test_every_title_picks_only_its_own_act`, which already walks every title, passes with the new one.
+
+Nothing else: the full suite passes with the Punk in art and no other existing test edited (every test that builds a `StreetPunk` measures its proxies, A4: `FPView` counts the hidden primitives, never the art; the hurtboxes, rig points and reaches are the rig's). The count rose by `tests/test_art_punk.gd` (14) and the new `test_look_acts` test (1).
+
+## 3. What the numbers say (printed by `tests/test_art_punk.gd`; the gate rules on them)
+
+Bind and floor: all four GLBs pass `check()` and have 14,999 triangles; the lowest vertex at the rest is -4.3 mm on every one.
+
+| Row | punk (Tripo weights, A-pose) | punk_rest | punk_auto | punk_auto_rest |
+| --- | --- | --- | --- | --- |
+| A6 axis points outside the art | 0 | 0 | 0 | 0 |
+| A6 torso / legs / head within radius + slack | 99.4 / 89.1 / 95.0% | same | 98.5 / 90.9 / 96.9% | same |
+| A9 worst cells differing at the 1 m poses (bar 3%) | 6.1% (jab, +8 degrees) | 6.1% | 5.9% | 5.9% |
+| A9 lens share difference (bar 4 pp) | at most 2.0 pp | 2.0 | 1.5 | 1.5 |
+| A9 art nearer than the proxies (bar 2 cm), idle / the strikes | 13 to 14 cm / 12 to 61 cm | same | 11 to 13 / 12 to 57 | same |
+| A11 flash anchor to the skinned surface, head / torso / leg (bar 2 cm) | 1.5 / 4.2 / 4.8 cm | same | 1.5 / 4.2 / 4.7 | same |
+| A19 idle p99.9 / p0.1 / max / min (bars 1.6 / 0.6 / 2.2 / 0.4) | 2.00 / 0.45 / 5.37 / 0.17 | 2.07 / 0.45 / 5.64 / 0.09 | 1.99 / 0.44 / 5.79 / 0.17 | 1.97 / 0.45 / 5.79 / 0.17 |
+| A19 samples inside every bar (of 251) | 1 | 1 | 1 | 1 |
+| A19 worst p99.9 over the run | 5.61 (ko_front, downed_front) | 5.61 | 5.42 | 5.42 |
+
+- **A9 (the Punk's art against the proxies).** The art differs from the proxies by 1.1 to 2.1% of the cells at idle (inside the 3%) and its lens share is within 2 points in every pose, but in the jab and cross (at 0.95 m) 4.4 to 6.1% of the cells differ (the shove 2.2 and 3.9%), and the nearest figure (the second-largest gap between the art's and the proxies' depth in a cell they both cover) is 57 to 61 cm for the jab and cross and 12 to 19 cm for the shove and idle. The cause is the art's arms: they are far bulkier than the proxies' capsules (J1's "chunky silhouette"), so along an arm's edge a ray hits the art at 0.4 m and the proxy 0.6 m further back. The readability probe measures the proxies; the art covers within 2 points of the share of the view they say. The four GLBs differ by under 0.3 points in the cell shares. Decide at the gate: widen the proxies' arms (changes M3's tuned numbers) or slim the art, or accept the proxy figures as the readability measure.
+- **A11.** Only the head's flash is within 2 cm of the skin (1.5 cm); at the torso (4.2) and the legs (4.7 to 4.8) it floats or sinks 4 to 5 cm off the art: the anchor is clamped onto the hurtbox, which sits inside the bulkier art. The flash is a radial blob of radius 0.5 m, so the visible effect is nil in the recordings (the blob lands on the struck spot: C5's hook on the face, the jab on the head).
+- **A19 against the skinned rest.** No GLB passes: 250 of 251 samples miss a bar for each. At idle p99.9 is 2.0 (0.1% of the edges are stretched more than twice), p0.1 0.45 and the extremes 5.4 and 0.17. Peak flexes (Tripo weights, A-pose / the arms-down bake / heat-map / heat-map bake), p99.9 and triangles under 15% of rest area or flipped out of 14,999:
+  - guard 2.00 (260) / 2.09 (249) / 1.99 (251) / 1.97 (229);
+  - elbow 150 1.47 (220) / 1.47 (185) / 1.40 (212) / 1.40 (194);
+  - arm raise 140 3.70 (378) / 4.24 (398) / 3.23 (415) / 3.03 (411);
+  - knee -130 1.60 (228) / 1.61 (195) / 1.51 (227) / 1.51 (211);
+  - spine twist 1.94 (208) / 1.80 (180) / 1.78 (209) / 1.86 (188);
+  - lying 1.00 on all (only the Hips turn).
+  The A7 bar (at most 0.5% of the triangles, 75) is missed everywhere by a factor of 2 to 5: the armpit (arm raise: the edge between the shoulder and the upper arm falls to 0.03 to 0.05 of its length), the vest collar (spine twist: RightShoulder, 16 times; P1-chain located it between Neck and RightShoulder), the foot and lower leg when the body lies face down (`ko_front`, `downed_front`, `getup_front`, `knockdown_forward`: 31 to 47 times, a few edges of under a millimetre at rest). The worst ten of the default GLB, by the worst edge: `punk_shove` 25% RightHand x0.02; `ko_front` end and 75% LeftFoot x42; `thrown` end RightShoulder x0.03; the arm raise flex LeftShoulder x0.03; `getup_front` start and `downed_front` (four phases) LeftFoot x31. The heat-map weights (`auto`) have lower p99.9 at the arm raise (3.2 against 3.7) and the guard (1.99 against 2.00) and a worse worst edge at `ko_front` (x47 on LeftLowerLeg). **The two bind routes and the two weight sources differ by under 15% on the p99.9 figures and the triangle counts: nothing here picks between them.** The elbow, knee and spine twist are inside or near the bar; the shoulder is the problem, the foot's seam the second.
+- **Perf (NOISY; vsync off stalls every run for 1.0 s, about 100 frames in 1,100: the table is meaningless; `perf_compare.sh --force --runs 1`, HEAD 74cea07, load 3.2).** `Look: Perf, six art Punks`: 1,138 frames, mean 110.5 ms, p95 1,025.6, 108 stalls. `Perf, six with ragdolls`: 1,211 frames, mean 98.3, p95 1,024.4, 100 stalls. With `--vsync on` (load 2.0, the display's refresh quantises the times): art Punks 2,269 frames, mean 14.53 ms, p95 29.32, worst 40.1, spawn hitch 38.3, first spawn 32.1, first hit 30.1, first finisher 35.1, no stalls; the mixed six of primitives and Punks 2,278 frames, mean 14.58, p95 29.99, worst 40.6, spawn hitch 40.6, first spawn 33.6, first hit 33.1, first finisher 31.1. The two acts read the same within noise (six art Punks 15k triangles each with hulls and edges against a mixed six); both miss A16's soft bars, but the times are the display's refresh quantised (a mean of 14.5 ms means it refreshes faster than 60 Hz), so p95 says little. No baseline from `afdb39e` was run: that is the lead's, on a quiet machine.
+- **The 60 s autopilot with art Punks.** `Waves to the boss` (56 s), `Mixed waves` (90 s) and `Waves` (90 s) in one process, 0 `ERROR`; `tools/check_m3_log.py`: ok (82 WARN-CHECK, 13 warned, 83 wind-ups, token holders at most 3 of 3). R1 max 1 / 2 / 1 attackers, R2 min gap 54 / 21 / 21 frames, R3 0 unwarned hits (of 3, 17, 12), R10 100% of 8, 38, 36, R11 max 0 in every act: every hard row is met. `Six Punks, fight` (all Punks, 27 s): 0 `ERROR`, check_m3_log ok (16 WARN-CHECK, 17 wind-ups), R1 max 1, R2 56 frames, R3 0 of 8, R10 100% of 16, R11 0; the soft R8 (lens covered by enemies) p50 30% misses its 25% bar (six Punks in the lens at once; the proxies' figure, not the art's).
+
+## 4. What the sheets show (first person, 1600x900; `captures/sl-int/`, never committed)
+
+Looked at: C1 (face, +8 degrees), C2 (body), C3 (strafe), C4 (jab, cross, shove), C5 (reacts, the health looks, KO), C6 (distances), C7 (lineup), C9 (tour), C10 (side), C11 (hold), C13, the A/B montages for the four GLBs (C2 idle, C4 jab and cross, C5 hook), the debug-view recordings (edge views 4, 5, 6, mask off, hulls off), E1, E2.
+
+- **The Punk reads at 1 m as a person, a cartoon one.** A yellow backwards cap with a vent hole and a hard white highlight, yellow-lensed shades in a cyan frame, a pale smooth face with a nose (no mouth), a blue sleeveless vest over a navy tee, torn jeans, white-and-yellow sneakers. Two or three crisp bands with a violet shadow side, a rim on the vest's shoulder, an even 3 px ink hull and thin interior lines (chin, collar, nose, vest folds), no black in the shadows. Against the M3 primitive Punk (a teal block with a black bar for a face) it is a different game: it has the chunk the plan asked for.
+- **What is weak at 1 m.** (1) The gloves read as navy canisters (a rounded block, a flat top with a small knob, a cuff of torn ragged "claws" and a yellow strap), not as fists with knuckles (J3): in the jab and cross the glove fills half the view as an unlit navy slab with two bands and no detail. (2) The vest's hem and collar are saw-toothed (Tripo's mesh, kept by the decimation), which reads as torn cloth and also as noise at the shoulders. (3) The forearms differ: the left is skin pink, the right a pale cream sleeve (the forearm tape of concept A, by the plan's own note), so one arm looks ghostly. (4) The face has no mouth and the eyes are hidden (the plan's "simplified" face; it reads as a mask). (5) Bloodied (30% health) the pink skin goes translucent and grey under the damage tile (P1-toon C10: one damage texture for the whole palette). (6) At 5 m the silhouette is good; at 10 m the figure is 150 px tall, the cap, vest and jeans still read by colour, and the interior lines turn busy inside the hull.
+- **In motion.** The guard, jab, cross, shove, strafe, hook stagger, uppercut launch, get-up, KO and blink-off all play with no visible tearing at 1 m; the armpit and vest collar are the places the strain numbers flag, and they show as slight crumpling of the vest at the shoulder when the arm swings. The contact flash lands on the struck spot and white-outs the head or chest (the ink lines stay over it). The marks stick (the blood does not slide as the body moves). The KO slump ends in a clean blink-off (no ghost hull).
+- **Beside the placeholders (C7).** The Punk (left) reads as an illustration against three boxy toon mannequins (Kicker, Thug, Bruiser): the placeholders have the hull and the bands but flat swatches, hard-edged blocks and no interior lines, so J13 ("one game") is the weakest of the rubric until the others are replaced. The hulled crates, dumpster and car read right at every distance.
+- **The four GLBs are not told apart at 1 m** in C2, C4 and C5 (the montages): the same pose, the same silhouette, the same creases. A viewer would need the strain numbers or a close look at the shoulder in a raised-arm pose to choose.
+- **No doubled silhouette, crease or line** on the art Punk, the primitive Thug, Kicker and Bruiser, the crates, the dumpster or the car. Evidence: the edge pass's debug view 5 (only the depth lines) shows none along the Punk's or the crates' outline and a few one-pixel fragments at the placeholders' hull corners (ink on ink); view 4 (the mask) paints the Punk, the crates and the dumpster; mask off (fallback 2) looks the same as the default; hulls off (the A16 fallback) leaves the crates and the characters inked by the edge pass alone (a thinner, flatter line). E2 (its own scratch hulls; the real ones are covered by the views above): the unshaded hull 4.5 / 4.5 / 4.5 px (edges off / mask on / mask off), the lit hull 3.0 / 3.0 / 4.5, no hull 0.0 / 0.0 / 1.5: the same as P1-post's within one recorded pixel. Debug view 4 paints the sky red as well; the pass itself counts the sky as roughness 1 (lines draw at the skyline in the normal frame).
+
+## 5. Not done, or for someone else
+
+- A16's baseline run (`afdb39e` against this branch, 3 runs each, a quiet machine) is the lead's. The vsync-off stall (about 1 s every few seconds, 10% of the frames) made this package's single unvsynced run useless.
+- L5 (R4 and R8 with the art drawn, A4) was not run: the drawn-art probe is a separate windowed act and the brief did not ask for it here.
+- The placeholders' hull perf (A7, on and off) is measured by the lead's A16 run; this package only wired the props.
+- The warm-up's effect is not measured (C4).

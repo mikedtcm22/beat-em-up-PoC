@@ -28,12 +28,20 @@ extends RefCounted
 ## | C10 | Look: turntable | free fly camera round the Punk at rest, in the guard and lying (mesh QA) |
 ## | C11 | Look: hold the Punk | grab, three knees, throw |
 ## | C13 | Look: Punk, impact frame off | C5 with the impact frame off |
+## | P1 | Look: Perf, six art Punks | six art Punks and the autopilot for 30 s, frame times logged (A16); no marks, no rectangles |
 ##
-## Later packages add acts to this file (SL-int the perf act, F-motion C12, P3-int): a new act is one
-## entry of acts() and one function; use _begin(), _end(), LookRect.mark() and _watch() as these do.
+## The Punk in every act wears the art (game/actors/art/punk_art.tres). The A/B between the four smoke
+## GLBs is Tuning's Debug value look_punk_art_variant (0 punk.glb, 1 punk_rest, 2 punk_auto,
+## 3 punk_auto_rest), through the bot's own argument: CAPTURE_ARGS="--tune=look_punk_art_variant=2"
+## tools/capture_bot.sh ... "Look: Punk body at 1 m". Every act prints `LOOK-ART variant <n> <glb>` at
+## its start, so a log says which Punk it recorded.
+##
+## Later packages add acts to this file (F-motion C12, P3-int): a new act is one entry of acts() and
+## one function; use _begin(), _end(), LookRect.mark() and _watch() as these do.
 
 const LookRect := preload("res://tests/bot/look_rect.gd")
 const RoomActs := preload("res://tests/bot/acts/room_acts.gd")
+const CrowdActs := preload("res://tests/bot/acts/crowd_acts.gd")
 
 ## The 1 m recipe: where the Punk stands (x right, y ahead, metres), and where it stands for its
 ## punches to land (the reach of its two-hit punch, as the Punk bot's "two-hit punch lands").
@@ -128,6 +136,10 @@ const ORBIT_SETTLE_TICKS := 40
 const POSED_M := 1.0
 ## The comic effects' random seed (the VFX bot's).
 const VFX_SEED := 7
+## The four smoke GLBs by Tuning's look_punk_art_variant (StreetPunk's art, then its ART_VARIANTS).
+const PUNK_ARTS: Array[String] = ["punk", "punk_rest", "punk_auto", "punk_auto_rest"]
+## The perf act's length (30 s of the autopilot's fight; the mixed six's is 30 s too).
+const PERF_SIX_TICKS := 1800
 
 
 static func acts(bot: Node) -> Array[Dictionary]:
@@ -146,6 +158,8 @@ static func acts(bot: Node) -> Array[Dictionary]:
 		{title = "Look: hold the Punk", cam = &"first_person", slug = &"c11", fn = func() -> void: await _hold(bot)},
 		{title = "Look: Punk, impact frame off", cam = &"first_person", slug = &"c13",
 				fn = func() -> void: await _reacts(bot, "c13", false)},
+		{title = "Look: Perf, six art Punks", cam = &"first_person", slug = &"p1", probe = true,
+				fn = func() -> void: await _perf_six(bot)},
 	]
 
 
@@ -159,10 +173,18 @@ static func _begin(bot: Node) -> void:
 	bot.caption.visible = false
 	bot.god()
 	bot.freeze_ai(true)
+	_log_art(bot)
 	var vfx := bot.get_tree().get_first_node_in_group(VfxDirector.GROUP) as VfxDirector
 	if vfx:
 		vfx.clear()
 		vfx.rng.seed = VFX_SEED
+
+
+## `LOOK-ART variant <n> <glb>`: which of the four smoke GLBs the Punks of this run wear (Tuning's
+## look_punk_art_variant; 0 is the scene's punk.glb), so a recording says what it recorded.
+static func _log_art(bot: Node) -> void:
+	var variant := clampi(Tuning.data.look_punk_art_variant, 0, PUNK_ARTS.size() - 1)
+	bot.log_line("LOOK-ART variant %d %s" % [variant, PUNK_ARTS[variant]])
 
 
 ## The end of every act: the `end` mark and the caption back (the bot's own idle tail shows it).
@@ -619,3 +641,29 @@ static func _hold(bot: Node) -> void:
 	await bot._ticks(MARK_GAP_TICKS)
 	run.running = false
 	_end(bot, "c11")
+
+
+# --- P1: the perf act ----------------------------------------------------------------------------
+
+
+## M4-plan A16's perf act: six art Punks (the existing "Perf, six with ragdolls" spawns a mixed six)
+## walk in from the six surround points and the autopilot fights them for PERF_SIX_TICKS, a Punk
+## walking in whenever one falls; god mode. It reuses crowd_acts.gd's frame sampler and report: the
+## PERF lines (the whole run, each spawn and each fall) are the measure, wall-clock times, so run it in a
+## window that is not recording (tools/perf_compare.sh --act "Look: Perf, six art Punks"). The art is
+## drawn by the engine, never measured with SkinnedView here (A4): the probe is the proxies'.
+static func _perf_six(bot: Node) -> void:
+	bot.god()
+	_log_art(bot)
+	var run := {running = true, ms = PackedFloat32Array(), stamp = PackedFloat64Array(), spawns = [], downs = PackedFloat64Array()}
+	CrowdActs._sample_frames(bot, run)  # a coroutine of its own: it runs beside the act until `running` is cleared
+	for point: int in bot.SURROUND_POINTS:
+		bot.spawn_at_point(&"punk", point)
+		await bot._ticks(CrowdActs.SPAWN_GAP_FRAMES)
+	bot.keep_alive(bot.SURROUND_POINTS.size(), &"punk")
+	bot.pilot.enabled = true
+	await bot._ticks(PERF_SIX_TICKS)
+	run.running = false
+	await bot.get_tree().process_frame
+	await bot.get_tree().process_frame
+	CrowdActs._report_perf(bot, run)
