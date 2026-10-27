@@ -66,8 +66,8 @@
 			},
 			"xz_scale_m": 0.235,
 			"strap_taper_y_g": [
-				-0.4,
-				-0.25
+				-0.12,
+				0.06
 			],
 			"strap_margin_m": 0.006,
 			"flare_max": 1.5,
@@ -86,11 +86,11 @@
 					"soft": 0.15
 				},
 				"LeftUpperLeg": {
-					"radius_m": 0.115,
+					"radius_m": 0.108,
 					"soft": 0.2
 				},
 				"LeftLowerLeg": {
-					"radius_m": 0.1,
+					"radius_m": 0.092,
 					"soft": 0.2
 				},
 				"RightUpperArm": {
@@ -102,11 +102,19 @@
 					"soft": 0.15
 				},
 				"RightUpperLeg": {
-					"radius_m": 0.115,
+					"radius_m": 0.108,
 					"soft": 0.2
 				},
 				"RightLowerLeg": {
-					"radius_m": 0.1,
+					"radius_m": 0.092,
+					"soft": 0.2
+				},
+				"Spine": {
+					"radius_m": 0.15,
+					"soft": 0.2
+				},
+				"Hips": {
+					"radius_m": 0.16,
 					"soft": 0.2
 				}
 			}
@@ -117,7 +125,6 @@
 			"upper_arm_cut": 0.5,
 			"cap_depth_m": 0.03,
 			"cap_rings": 4,
-			"torso_mesh": false,
 			"weld_boundary_m": 0.002,
 			"hole_sides_max": 12,
 			"heal_edge_max_m": 0.012
@@ -325,7 +332,13 @@
 			"lo": 0.12,
 			"hi": 0.28,
 			"gain": 1.0,
-			"fist_gain": 1.0
+			"fist_gain": 1.0,
+			"skip_slots": [
+				6,
+				7,
+				8,
+				9
+			]
 		}
 	}
 }

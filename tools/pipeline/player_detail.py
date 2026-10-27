@@ -274,7 +274,7 @@ def load_final(cfg):
 	"""The final meshes' triangles: (positions (n, 3, 3), uv2 (n, 3, 2), slot (n,), border flags (n, 3), mesh name per triangle)."""
 	pb.open_blend(pc.work_path(cfg, "06_split.blend"))
 	pos, uv2, slot, flags, owner = [], [], [], [], []
-	for ob in pb.body_objects() + [bpy.data.objects[n] for n in ("Body__fp_torso",) if n in bpy.data.objects]:
+	for ob in pb.body_objects():
 		me = ob.data
 		co = pb.verts(me)
 		start, total, lv = pb.poly_arrays(me)
@@ -404,7 +404,10 @@ def run(cfg, extra):
 	stroke = smoothstep(ridge, t0, t1) * float(dc["stroke"]["gain"])
 	cc = dc["crease"]
 	crease = smoothstep(cav, float(cc["lo"]), float(cc["hi"])) * float(cc["gain"])
-	crease = np.where(use_fist, crease * float(cc.get("fist_gain", 1.0)), crease)
+	# bare muscle takes no crease ink (a groove 2 mm wide is 9 px at the 0.2 m the lead arm passes the lens); the fingers' creases
+	# on the fist piece do, and the cloth, wraps and glove everywhere
+	skin_slots = [int(x) for x in cc.get("skip_slots", [])]
+	crease = np.where(use_fist, crease * float(cc.get("fist_gain", 1.0)), np.where(np.isin(slot[tri], skin_slots), 0.0, crease))
 	stroke = np.maximum(stroke, crease)
 
 	ink = np.clip(np.maximum(border, stroke), 0.0, 1.0)
@@ -445,7 +448,7 @@ def run(cfg, extra):
 	ok = auv > 1e-6
 	texel_mm = np.sqrt(a3[ok] / auv[ok]) * 1000.0
 	return {
-		"file": pc.repo_rel(out_path), "sha256": pc.sha256_file(out_path), "size": size,
+		"file": os.path.basename(out_path), "sha256": pc.sha256_file(out_path), "size": size,
 		"triangles": int(len(pos)), "covered_texels": int(covered.sum()), "covered_share": float(covered.mean()),
 		"ink_share_of_covered": float((ink > 0.5).mean()), "border_texels": int((border > 0.5).sum()), "stroke_texels": int((stroke > 0.5).sum()), "crease_texels": int((crease > 0.5).sum()),
 		"texel_mm_p50": float(np.percentile(texel_mm, 50)), "texel_mm_p10": float(np.percentile(texel_mm, 10)), "texel_mm_p90": float(np.percentile(texel_mm, 90)),

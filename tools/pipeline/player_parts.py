@@ -25,8 +25,10 @@ split: reads work/05_palette.blend, writes work/06_split.blend. The first-person
 	and above, both Shoulders and the shoulder half of each upper arm; the visible Body keeps everything else and EVERY open loop
 	of it is closed with an inward rounded cap. Differences from blender_parts.py: the horizontal cut is made through every face
 	that can be hidden (the shoulder zone too), so the hidden part never reaches below the Chest joint (a shoulder-zone face
-	hung below it in the first run); and optional parts.split_fp.torso_mesh splits Body__fp_torso (Spine and Hips between the
-	two cuts: the belly and the belt) off the visible body, with its own caps.
+	hung below it in the first run); the generated mesh's pinholes, slits and non-manifold edges are cut out and patched (the contract
+	wants no open edge on the visible body); and the faces are triangulated (every later step reads triangles).
+	A third mesh Body__fp_torso (the belly and the belt, for fp_knockdown_hide_torso) is NOT built: the shared exporter writes only
+	Body and Body__fp_hidden, and test_art_contract names only those two (M4-calls/F-player-art.md C14).
 """
 import math
 import os
@@ -277,6 +279,7 @@ def girth_clamp(co, w, targets, spec):
 	"""Pull the surface of a limb in toward its bone's axis where it is fatter than the proxy's radius allows (the player's own arms
 	and legs are what first person measures against the primitives, A9): past radius_m the excess keeps only `soft` of itself, fading in over
 	the segment's ends and weighted by the bone's own weight, so a shoulder or a knee never creases. Returns (new vertices, report)."""
+	orig = co
 	out = co.copy()
 	report = {}
 	for bone, sp in spec.items():
@@ -295,9 +298,10 @@ def girth_clamp(co, w, targets, spec):
 		fade = smoothstep(u, -0.05, 0.12) * (1.0 - smoothstep(u, 0.88, 1.05))
 		k = w[:, NAMES.index(bone)] * fade
 		out += perp * ((scale - 1.0) * k)[:, None]
-		moved = np.linalg.norm(out - co, axis=1)
-		report[bone] = {"radius_m": radius, "vertices_moved": int((moved > 1e-5).sum()), "worst_move_m": float(moved.max())}
-		co = out
+		report[bone] = {"radius_m": radius, "vertices_over_radius": int(((r > radius) & (k > 1e-3)).sum()), "worst_overshoot_m": float(np.max((r - radius) * (k > 1e-3), initial=0.0))}
+		co = out.copy()
+	moved = np.linalg.norm(out - orig, axis=1)
+	report["_total"] = {"vertices_moved": int((moved > 1e-5).sum()), "worst_move_m": float(moved.max())}
 	return out, report
 
 
@@ -754,8 +758,7 @@ def separate_faces(body, mask, name):
 	bpy.ops.object.mode_set(mode="EDIT")
 	bpy.ops.mesh.separate(type="SELECTED")
 	bpy.ops.object.mode_set(mode="OBJECT")
-	before = {o.name for o in bpy.data.objects if o.type == "MESH"}
-	new = [o for o in bpy.data.objects if o.type == "MESH" and o != body and o.name not in ("Body", "Body__fp_hidden", "Body__fp_torso")]
+	new = [o for o in bpy.data.objects if o.type == "MESH" and o != body and o.name not in ("Body", "Body__fp_hidden")]
 	part = new[-1]
 	part.name = name
 	part.data.name = name
@@ -776,8 +779,6 @@ def split_fp(cfg, extra):
 	col = {n: i for i, n in enumerate(NAMES)}
 	z_cut = targets[sc.get("torso_cut_bone", "Chest")]["head"][2]
 	cut_t = float(sc.get("upper_arm_cut", 0.5))
-	torso_mesh = bool(sc.get("torso_mesh", False))
-	z_low = targets[sc.get("torso_low_bone", "Hips")]["head"][2] + float(sc.get("torso_low_above_m", 0.0))
 	arm_axes = {}
 	for side in pc.SIDES:
 		ua, la = np.array(targets[side + "UpperArm"]["head"]), np.array(targets[side + "LowerArm"]["head"])
@@ -799,8 +800,7 @@ def split_fp(cfg, extra):
 	bm.free()
 	me.update()
 
-	# ----- bisect: the horizontal cut through every face that can be hidden (torso set and shoulder zone), each upper arm
-	# across its axis at upper_arm_cut; with a torso mesh a second horizontal cut through the torso set at z_low
+	# ----- bisect: each upper arm across its axis at upper_arm_cut, then the horizontal cut through every face that can be hidden
 	bm = bmesh.new()
 	bm.from_mesh(me)
 	bm.faces.ensure_lookup_table()
@@ -829,9 +829,6 @@ def split_fp(cfg, extra):
 		bisect(faces_of([col[side + "UpperArm"]]), tuple(ua + axis * cut_t), tuple(axis / length))
 	# the horizontal cut goes through every face that can be hidden, the arms' and shoulders' too, so no hidden face hangs below it
 	bisect(faces_of(torso_cols + shoulder_cols + arm_cols), (0.0, 0.0, z_cut), (0.0, 0.0, 1.0))
-	if torso_mesh:
-		low = [f for f in bm.faces if f.is_valid and f.calc_center_median().z < z_cut + 1e-4]
-		bisect(low, (0.0, 0.0, z_low), (0.0, 0.0, 1.0))
 	bm.to_mesh(me)
 	bm.free()
 	me.update()
@@ -848,20 +845,8 @@ def split_fp(cfg, extra):
 		t = ((centers - ua) @ axis) / (length * length)
 		zone = np.isin(dom, [col[side + "UpperArm"], col[side + "Shoulder"]])
 		hidden |= zone & (t < cut_t) & (centers[:, 2] > z_cut - 1e-6)
-	belly = np.zeros(len(me.polygons), dtype=bool)
-	if torso_mesh:
-		belly = ~hidden & np.isin(dom, [col["Hips"], col["Spine"]]) & (centers[:, 2] > z_low) & (centers[:, 2] <= z_cut + 1e-6)
 	hid = separate_faces(body, hidden, pb.BODY_HIDDEN)
 	body = bpy.data.objects[pb.BODY]
-	tor = None
-	if torso_mesh:
-		me = body.data
-		w = pb.weights_matrix(body, NAMES)
-		dom = dominant_per_face(me, w)
-		centers = pb.face_centers(me)
-		belly = np.isin(dom, [col["Hips"], col["Spine"]]) & (centers[:, 2] > z_low) & (centers[:, 2] <= z_cut + 1e-6)
-		tor = separate_faces(body, belly, "Body__fp_torso")
-		body = bpy.data.objects[pb.BODY]
 
 	# ----- the hidden part's own pinholes (the generated mesh's defects, not its cuts): patch the short open loops
 	bm = bmesh.new()
@@ -876,9 +861,7 @@ def split_fp(cfg, extra):
 	depth, rings = float(sc.get("cap_depth_m", 0.03)), int(sc.get("cap_rings", 4))
 	heal = float(sc.get("heal_edge_max_m", 0.0))
 	cap_report = {"Body": add_caps(body.data, depth, rings, heal)}
-	if tor is not None:
-		cap_report["Body__fp_torso"] = add_caps(tor.data, depth, rings, heal)
-	parts = [body, hid] + ([tor] if tor is not None else [])
+	parts = [body, hid]
 	over_four = 0
 	for o in parts:
 		pb.attach_armature(o, bpy.data.objects[pb.ARMATURE])
@@ -890,7 +873,7 @@ def split_fp(cfg, extra):
 	pb.save_blend(pc.work_path(cfg, "06_split.blend"))
 	hc = pb.verts(hid.data)
 	return {"enabled": True, "open_edges_before_weld": open_before, "open_edges_after_weld": open_after, "hole_faces_filled": filled, "slit_edges_collapsed": healed, "defect_faces_cut_out": cut_out, "defect_faces_patched": patched, "open_edges_after_fill": open_after_fill, "z_cut_m": z_cut, "upper_arm_cut": cut_t, "hidden_faces": int(hidden.sum()), "visible_triangles": pb.triangle_count(body.data),
-		"hidden_triangles": pb.triangle_count(hid.data), "hidden_defect_faces_cut_out": hid_cut, "hidden_defect_faces_patched": hid_patched, "torso_triangles": pb.triangle_count(tor.data) if tor is not None else 0,
+		"hidden_triangles": pb.triangle_count(hid.data), "hidden_defect_faces_cut_out": hid_cut, "hidden_defect_faces_patched": hid_patched,
 		"vertices_over_four_influences_before_limit": over_four, "caps": cap_report,
 		"hidden_bbox": {"min": hc.min(axis=0).tolist(), "max": hc.max(axis=0).tolist()}}
 
