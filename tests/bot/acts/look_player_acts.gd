@@ -17,7 +17,7 @@ extends RefCounted
 ##   tools/look_sheets.sh captures/pa/bot.avi captures/pa/sheets
 ##
 ## | Act | Title | Shows |
-## | PA2 | Look: my knockdown | feel question 3 (M4-plan section 8): the Kicker behind him sweeps his legs and he falls face down and gets up, the first-person view of the lying body (the "belly slab"); record it with Tuning's fp_knockdown_hide_torso off (today) and on (`--tune=fp_knockdown_hide_torso=1`), on the primitives and with the probe body |
+## | PA2 | Look: my knockdown | feel question 3 (M4-plan section 8): the Kicker ahead of him sweeps his legs and he falls and gets up, the first-person view of the lying body (the "belly slab"); record it with Tuning's fp_knockdown_hide_torso off (today) and on (`--tune=fp_knockdown_hide_torso=1`), on the primitives and with the probe body |
 ## | PA1 | Look: my arms and legs | idle level, looking 45 and 65 degrees down; at 20 down the chain jab, cross, hook, uppercut, the front kick, the block's guard, the spin kick, the haymaker's charge and its swing; a Punk held 1.1 m ahead and kneed; then his own KO: the lens leaves his eyes and shows the whole body |
 ##
 ## Every act of this file prints the marks and rectangles of look_rect.gd for the player (`hands` and
@@ -53,10 +53,10 @@ const KO_HEALTH := 3.0
 const KO_WATCH_TICKS := 150
 const KO_OUT_MAX_TICKS := 240
 const KO_BACK_MAX_TICKS := 600
-## The knockdown: how far behind the player the Kicker stands (its sweep reaches 1.2 m in the tests), which
+## The knockdown: where the Kicker stands (x right, y ahead of the player, m; its sweep reaches 1.2 m), which
 ## of its attacks is the sweep, how long a body may take to go down and to get up (ticks), and the
 ## stills' places in the lying (ticks after he is down).
-const KICKER_BEHIND_M := 1.2
+const KICKER_REL := Vector2(0.0, 1.2)
 const KICKER_SWEEP := 1
 const DOWN_MAX_TICKS := 120
 const GETUP_MAX_TICKS := 300
@@ -201,7 +201,7 @@ static func _ko(bot: Node) -> void:
 	LookRect.mark(bot, SLUG, "ko_back_in_the_eyes", bot.player)
 
 
-## Feel question 3: the Kicker KICKER_BEHIND_M behind him sweeps his legs (god mode off, full health: a
+## Feel question 3: the Kicker KICKER_REL from him sweeps his legs (god mode off, full health: a
 ## knockdown, not a KO), he falls, lies and gets up. Marked as he goes down, three times while he lies
 ## (the lens in his own belly: the slab when it is not hidden) and when he is up. The view is the
 ## default, tipped a little down.
@@ -209,7 +209,7 @@ static func _knockdown(bot: Node) -> void:
 	_begin(bot)
 	LookRect.mark(bot, KNOCKDOWN_SLUG, "start")
 	await bot._look_to(LookActs.DEFAULT_PITCH_DEG, PITCH_TICKS)
-	var kicker: EnemyActor = bot.spawn(&"kicker", Vector2(0.0, -KICKER_BEHIND_M))
+	var kicker: EnemyActor = bot.spawn(&"kicker", KICKER_REL)
 	await bot._ticks(SETTLE_TICKS)
 	LookRect.mark(bot, KNOCKDOWN_SLUG, "standing", bot.player)
 	var run := {running = true}

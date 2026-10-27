@@ -457,7 +457,7 @@ func test_the_visible_mesh_is_watertight_and_the_split_closes_at_the_seam() -> v
 				continue
 			hidden_open += 1
 			unmatched += int(not visible_edges.has(key))
-		print("ART-PLAYER watertight, %s: Body %d open edges and %d edges three or more triangles share (non-manifold; printed, not asserted: the probe has 23 where its caps meet); Body__fp_hidden %d open edges, %d not on Body's" % [entry.name, open, over, hidden_open, unmatched])
+		print("ART-PLAYER watertight, %s: Body %d open edges and %d edges three or more triangles share (non-manifold; printed, not asserted: the probe has some where its caps meet); Body__fp_hidden %d open edges, %d not on Body's" % [entry.name, open, over, hidden_open, unmatched])
 		assert_gt(hidden_open, 0, "%s: the hidden part is open where it was cut (the seam is real)" % entry.name)
 		assert_eq(unmatched, 0, "%s: every open edge of the hidden part lies on the visible part (the seam closes)" % entry.name)
 
@@ -540,9 +540,15 @@ func _art_view_report() -> Dictionary:
 func test_a_hold_keeps_the_skinned_forearms_and_hands_off_the_lens_and_the_own_body_to_a_third() -> void:
 	# test_grab_view's rules on the art the lens draws: through the grab, the hold, three knees and the
 	# throw, no forearm or hand within 0.3 m of the lens and the own body over at most a third of the
-	# view (the proxies' figures are the other test's; the art is the drawn pose).
-	await _setup_room([Vector3(0, 0, -1.1)])
-	assert_true(player.rig.has_art(), "the player wears the art")
+	# view (the proxies' figures are the other test's; the art is the drawn pose). The probe body, and
+	# the hero's art when its GLB exists.
+	for entry: Dictionary in _arts():
+		await _check_hold(entry.name == "probe", entry.name)
+
+
+func _check_hold(probe: bool, what: String) -> void:
+	await _setup_room([Vector3(0, 0, -1.1)], probe)
+	assert_true(player.rig.has_art(), "%s: the player wears the art" % what)
 	var victim := _dummies()[0]
 	var worst := {arm = INF, own = 0.0, samples = 0}
 	var watch := func(ticks: int, always: bool) -> void:
@@ -570,11 +576,11 @@ func test_a_hold_keeps_the_skinned_forearms_and_hands_off_the_lens_and_the_own_b
 	assert_not_null(player.holding_enemy(), "regrabbed")
 	player.input.push_press(&"K", 2)
 	await watch.call(Tuning.get_move(&"throw").total_frames() + 10, false)
-	print("ART-PLAYER hold, art drawn: %d samples; nearest forearm or hand %.3f m (the rule: %.1f m); own body at most %.1f%% of the view (the rule: %.0f%%)" % [
-			worst.samples, worst.arm, ARM_CLEAR_M, worst.own * 100.0, OWN_SHARE_MAX * 100.0])
-	assert_gt(worst.samples, 40, "the hold was sampled")
-	assert_gte(worst.arm, ARM_CLEAR_M, "no forearm or hand within 0.3 m of the lens (nearest %.3f m)" % worst.arm)
-	assert_lte(worst.own, OWN_SHARE_MAX, "the own body covers at most a third of the view (%.0f%%)" % (worst.own * 100.0))
+	print("ART-PLAYER hold, %s drawn: %d samples; nearest forearm or hand %.3f m (the rule: %.1f m); own body at most %.1f%% of the view (the rule: %.0f%%)" % [
+			what, worst.samples, worst.arm, ARM_CLEAR_M, worst.own * 100.0, OWN_SHARE_MAX * 100.0])
+	assert_gt(worst.samples, 40, "%s: the hold was sampled" % what)
+	assert_gte(worst.arm, ARM_CLEAR_M, "%s: no forearm or hand within 0.3 m of the lens (nearest %.3f m)" % [what, worst.arm])
+	assert_lte(worst.own, OWN_SHARE_MAX, "%s: the own body covers at most a third of the view (%.0f%%)" % [what, worst.own * 100.0])
 
 
 ## The KO view's lens rules, on the art: from the killing blow through the get-up, the camera updated each
@@ -582,8 +588,13 @@ func test_a_hold_keeps_the_skinned_forearms_and_hands_off_the_lens_and_the_own_b
 ## of the drawn body (the upper half's included), the own body covers at most a third of the view, and
 ## lifting or hiding the head layer pops at most a head's edge into view (the primitives' figures in test_ko_view).
 func test_the_ko_view_keeps_its_distance_from_the_skinned_body_and_shows_all_of_it() -> void:
-	await _setup_room([Vector3(0.0, 0.0, -0.95)])
-	assert_true(player.rig.has_art())
+	for entry: Dictionary in _arts():
+		await _check_ko_view(entry.name == "probe", entry.name)
+
+
+func _check_ko_view(probe: bool, what: String) -> void:
+	await _setup_room([Vector3(0.0, 0.0, -0.95)], probe)
+	assert_true(player.rig.has_art(), "%s: the player wears the art" % what)
 	var cam := FirstPersonCamera.new()
 	add_child_autofree(cam)
 	cam.set_process(false)
@@ -626,19 +637,20 @@ func test_the_ko_view_keeps_its_distance_from_the_skinned_body_and_shows_all_of_
 			(stats.hides if hides else stats.lifts).append(float(share) / cells.size())
 		stats.previous_hides = hides
 		stats.shown_whole = stats.shown_whole or (not hides and cam.ko_view_weight() >= 1.0)
-	print("ART-PLAYER KO view, art drawn: %d samples; nearest vertex to the lens with the head layer lifted %.3f m (the rule: %.2f m); own body at most %.1f%% of the view; the head layer popping %s on the lift, %s on the hide" % [
-			stats.samples, stats.nearest, KO_BODY_CLEAR_M, stats.own * 100.0, stats.lifts, stats.hides])
-	assert_true(stats.shown_whole, "the whole body shows while the lens is out")
-	assert_eq(stats.lifts.size(), 1, "the head layer is lifted once")
-	assert_eq(stats.hides.size(), 1, "and hidden once")
-	assert_gte(stats.nearest, KO_BODY_CLEAR_M, "with the head layer lifted nothing of the drawn body comes within %.2f m of the lens (%.3f m)" % [KO_BODY_CLEAR_M, stats.nearest])
-	assert_lte(stats.own, OWN_SHARE_MAX, "the own body covers at most a third of the view (%.0f%%)" % (stats.own * 100.0))
+	print("ART-PLAYER KO view, %s drawn: %d samples; nearest vertex to the lens with the head layer lifted %.3f m (the rule: %.2f m); own body at most %.1f%% of the view; the head layer popping %s on the lift, %s on the hide" % [
+			what, stats.samples, stats.nearest, KO_BODY_CLEAR_M, stats.own * 100.0, stats.lifts, stats.hides])
+	assert_true(stats.shown_whole, "%s: the whole body shows while the lens is out" % what)
+	assert_eq(stats.lifts.size(), 1, "%s: the head layer is lifted once" % what)
+	assert_eq(stats.hides.size(), 1, "%s: and hidden once" % what)
+	assert_gte(stats.nearest, KO_BODY_CLEAR_M, "%s: with the head layer lifted nothing of the drawn body comes within %.2f m of the lens (%.3f m)" % [what, KO_BODY_CLEAR_M, stats.nearest])
+	assert_gte(stats.nearest, Tuning.data.ko_view_clearance_m, "%s: nor within the camera's own ko_view_clearance_m, which it tests the proxies against" % what)
+	assert_lte(stats.own, OWN_SHARE_MAX, "%s: the own body covers at most a third of the view (%.0f%%)" % [what, stats.own * 100.0])
 	for share: float in stats.hides:
-		assert_lte(share, 0.02, "hiding the head layer again pops no head, neck or shoulder out of view (%.1f%%)" % (share * 100.0))
+		assert_lte(share, 0.02, "%s: hiding the head layer again pops no head, neck or shoulder out of view (%.1f%%)" % [what, share * 100.0])
 	for share: float in stats.lifts:
-		assert_lte(share, 0.08, "lifting it pops at most a head's edge into view (%.1f%%)" % (share * 100.0))
-	assert_eq(player.state, CombatTypes.ActorState.FREE, "back on his feet")
-	assert_true(player.rig.first_person_body, "the rig's own layers are as they were")
+		assert_lte(share, 0.08, "%s: lifting it pops at most a head's edge into view (%.1f%%)" % [what, share * 100.0])
+	assert_eq(player.state, CombatTypes.ActorState.FREE, "%s: back on his feet" % what)
+	assert_true(player.rig.first_person_body, "%s: the rig's own layers are as they were" % what)
 	assert_eq(hidden_mesh.layers, CombatTypes.bit(CombatTypes.VIS_FP_HIDDEN))
 
 
@@ -692,7 +704,7 @@ func _knockdown(scene: PackedScene, attack: int, bearing_deg: float, distance_m:
 	room.add_child(enemy)
 	await _ticks(10)
 	enemy.force_attack(attack)
-	var out := {worst = 0.0, frames = 0, over_third = 0, over_half = 0, states = {}, hit = false, before = before, hidden_frames = 0}
+	var out := {worst = 0.0, frames = 0, over_third = 0, over_half = 0, states = {}, hit = false, before = before, hidden_frames = 0, art = player.rig.has_art()}
 	var down := [CombatTypes.ActorState.LAUNCHED, CombatTypes.ActorState.DOWNED, CombatTypes.ActorState.GETUP]
 	var hidden := CombatTypes.bit(CombatTypes.VIS_FP_HIDDEN)
 	for i in 300:
@@ -727,7 +739,7 @@ func test_the_knockdown_slab_off_and_on_on_the_primitives_and_on_the_probe_body(
 			var r := await _knockdown(KICKER_SCENE, 1, 180.0, 1.2, probe, hide)
 			results[[probe, hide]] = r
 			print("ART-PLAYER knockdown slab, %s, fp_knockdown_hide_torso %s: %d frames, own body at most %.0f%% of the view, over a third for %d frames, over half for %d; torso hidden on %d frames" % [
-					"probe body" if probe else "primitives", "on " if hide else "off", r.frames, r.worst * 100.0, r.over_third, r.over_half, r.hidden_frames])
+					"probe body" if probe else ("the hero's art" if r.art else "primitives"), "on " if hide else "off", r.frames, r.worst * 100.0, r.over_third, r.over_half, r.hidden_frames])
 			assert_gt(r.frames, 60, "the player went down and up")
 			assert_true(r.states.has(CombatTypes.ActorState.DOWNED) and r.states.has(CombatTypes.ActorState.GETUP))
 			if not hide:
@@ -738,13 +750,15 @@ func test_the_knockdown_slab_off_and_on_on_the_primitives_and_on_the_probe_body(
 				assert_eq(r.after, r.before, "on: and every mesh has its layers back after the get-up")
 			(r.camera as Node).queue_free()
 			await _ticks(1)
-	# The slab as M3 had it: over half the view, for a second, on the primitives.
-	assert_gt(results[[false, false]].worst, 0.5, "off, the primitives' belly fills over half the view (%.0f%%)" % (results[[false, false]].worst * 100.0))
-	assert_gt(results[[false, false]].over_half, 20, "for more than 20 frames")
+	# The slab as M3 had it: over half the view, for a second, on the primitives (which the player wears
+	# with the probe switch off until the hero's GLB exists).
+	if not results[[false, false]].art:
+		assert_gt(results[[false, false]].worst, 0.5, "off, the primitives' belly fills over half the view (%.0f%%)" % (results[[false, false]].worst * 100.0))
+		assert_gt(results[[false, false]].over_half, 20, "for more than 20 frames")
 	assert_gt(results[[true, false]].worst, 0.2, "and the probe body's own slab is real too (%.0f%%)" % (results[[true, false]].worst * 100.0))
 	for probe: bool in [false, true]:
 		var on: Dictionary = results[[probe, true]]
-		assert_lte(on.worst, OWN_SHARE_MAX, "%s, on: the own body covers at most a third of the view (%.0f%%)" % ["probe" if probe else "primitives", on.worst * 100.0])
+		assert_lte(on.worst, OWN_SHARE_MAX, "%s, on: the own body covers at most a third of the view (%.0f%%)" % ["probe" if probe else ("hero" if on.art else "primitives"), on.worst * 100.0])
 		assert_eq(on.over_third, 0)
 
 
