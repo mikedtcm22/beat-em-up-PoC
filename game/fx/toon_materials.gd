@@ -55,8 +55,9 @@ static var _art_warmed: bool = false
 
 ## A character's flat-colored toon material: `color` is the paint, `takes_marks` whether the
 ## damage look marks it (skin and clothes, not shades, belts and soles) and `glossy` whether
-## its highlight is the glossy factor's (shades, soles). Rim on, hull-tagged for the edge
-## pass when placeholders get hulls.
+## it takes the hard highlight, at the glossy factor (shades, belt, soles, hair, gloves: the
+## rig's dark paint). A paint that is not glossy is matte and takes none, as the art's matte
+## swatches take none. Rim on, hull-tagged for the edge pass when placeholders get hulls.
 static func character(color: Color, takes_marks: bool = false, glossy: bool = false) -> ShaderMaterial:
 	var material := _make(Kind.CHARACTER, glossy)
 	material.set_shader_parameter(&"albedo", color)
@@ -175,8 +176,12 @@ static func apply_look(material: ShaderMaterial) -> void:
 	material.set_shader_parameter(&"shadow_tint", data.look_shadow_tint)
 	material.set_shader_parameter(&"shadow_tint_amount", data.look_shadow_tint_amount)
 	material.set_shader_parameter(&"spec_cut", data.look_spec_cut)
-	# The room is matte; the glossy materials get the factor.
-	material.set_shader_parameter(&"spec_strength", 0.0 if room_surface else data.look_spec_strength)
+	# The room is matte, and so is a placeholder paint that is not glossy: the same rule as the art's
+	# matte swatches (toon.gdshader's swatch_spec), which take no hard highlight, so a flat-painted
+	# helmet, knee or forearm shows no white dot beside the matte Punk. The glossy materials (the
+	# glossy paints, the pipe, the art's glossy swatches) get the strength and the factor.
+	var matte := room_surface or (kind == Kind.CHARACTER and not bool(material.get_meta(_GLOSSY_META, false)))
+	material.set_shader_parameter(&"spec_strength", 0.0 if matte else data.look_spec_strength)
 	material.set_shader_parameter(&"spec_gloss", data.look_spec_gloss if material.get_meta(_GLOSSY_META, false) else 1.0)
 	# The rim is the characters' alone.
 	var has_rim := kind == Kind.CHARACTER or kind == Kind.ART
