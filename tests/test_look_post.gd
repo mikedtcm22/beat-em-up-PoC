@@ -190,6 +190,46 @@ func test_the_edge_and_grade_tunables_sit_in_look_and_the_switches_in_debug() ->
 		assert_false(Tuning.is_preset_property(property), "%s is an A/B, never saved" % property)
 
 
+func test_the_tonemap_tunable_picks_the_environments_tonemapper() -> void:
+	assert_eq(Tuning.defaults().look_tonemap, 0, "linear by default: a swatch keeps its hue and the ink stays ink")
+	assert_eq(LookPost.tonemap_mode(0), Environment.TONE_MAPPER_LINEAR)
+	assert_eq(LookPost.tonemap_mode(1), Environment.TONE_MAPPER_FILMIC, "M3's, for the A/B")
+	assert_eq(LookPost.tonemap_mode(2), Environment.TONE_MAPPER_REINHARDT)
+	assert_eq(LookPost.tonemap_mode(3), Environment.TONE_MAPPER_ACES)
+	var room := await _crowd(true)
+	var post := _posts(room)[0]
+	assert_eq(post.grade_environment().tonemap_mode, Environment.TONE_MAPPER_LINEAR)
+	Tuning.set_value(&"look_tonemap", 1)
+	assert_eq(post.grade_environment().tonemap_mode, Environment.TONE_MAPPER_FILMIC, "live")
+
+
+func test_the_sun_follows_its_tunables_in_both_rooms() -> void:
+	for room: Node in [await _crowd(true), await _training(true)]:
+		var sun := room.get_node("Sun") as DirectionalLight3D
+		var d := Tuning.data
+		assert_almost_eq(sun.rotation_degrees.x, -d.look_sun_elevation_deg, 0.01, "%s: the elevation" % room.name)
+		assert_almost_eq(sun.rotation_degrees.y, d.look_sun_yaw_deg, 0.01, "%s: the yaw" % room.name)
+		assert_almost_eq(sun.light_energy, d.look_sun_energy, 0.0001)
+		assert_almost_eq(sun.shadow_blur, d.look_sun_shadow_blur, 0.0001)
+		Tuning.set_value(&"look_sun_yaw_deg", 130.0)
+		Tuning.set_value(&"look_sun_elevation_deg", 30.0)
+		Tuning.set_value(&"look_sun_shadow_blur", 1.5)
+		assert_almost_eq(sun.rotation_degrees.y, 130.0, 0.01, "%s: moved live" % room.name)
+		assert_almost_eq(sun.rotation_degrees.x, -30.0, 0.01)
+		assert_almost_eq(sun.shadow_blur, 1.5, 0.0001)
+		Tuning.reset_to_default()
+
+
+func test_the_sun_tonemap_and_fill_tunables_sit_in_look_and_save_in_presets() -> void:
+	var group_of := {}
+	for info: Dictionary in Tuning.tuning_properties():
+		group_of[StringName(info.name)] = str(info.group)
+	for property: StringName in [&"look_sun_elevation_deg", &"look_sun_yaw_deg", &"look_sun_energy",
+			&"look_sun_shadow_blur", &"look_fill_strength", &"look_fill_yaw_deg", &"look_fill_pitch_deg", &"look_tonemap"]:
+		assert_eq(group_of.get(property), "Look", "%s is in Look" % property)
+		assert_true(Tuning.is_preset_property(property), "%s is saved in presets" % property)
+
+
 # --- The grade -------------------------------------------------------------------------------
 
 
@@ -598,6 +638,81 @@ func test_luma_clusters_find_the_bands_of_a_region() -> void:
 	assert_lt(centres[1], centres[2])
 	assert_almost_eq(LookProbe.shadow_ratio(image, Rect2i(0, 0, 30, 10)), 0.3 / 0.8, 0.05, "shadow over lit")
 	assert_eq(LookProbe.shadow_ratio(_flat(8, 8, Color.GRAY), Rect2i(0, 0, 8, 8)), 1.0, "one band")
+
+
+func _fill_rect(image: Image, rect: Rect2i, color: Color) -> void:
+	for y in range(rect.position.y, rect.end.y):
+		for x in range(rect.position.x, rect.end.x):
+			image.set_pixel(x, y, color)
+
+
+func test_hue_gap_is_the_short_way_round() -> void:
+	assert_almost_eq(LookProbe.hue_gap(350.0, 10.0), 20.0, 0.001)
+	assert_almost_eq(LookProbe.hue_gap(27.0, 337.0), 50.0, 0.001, "skin and its violet shadow")
+	assert_almost_eq(LookProbe.hue_gap(184.0, 184.0), 0.0, 0.001)
+
+
+func test_bands_of_a_swatch_family_with_each_bands_color() -> void:
+	# Two bands of teal (a lit and a shadow one) and a patch of yellow in one frame.
+	var image := _flat(40, 10, Color(0.1, 0.1, 0.1))
+	_fill_rect(image, Rect2i(0, 0, 10, 10), Color("#3f8f96"))
+	_fill_rect(image, Rect2i(10, 0, 10, 10), Color("#3f8f96").darkened(0.4))
+	_fill_rect(image, Rect2i(20, 0, 10, 10), Color("#e8bd2e"))
+	var teal := LookProbe.bands(image, Rect2i(0, 0, 40, 10), {hue = Color("#3f8f96").h * 360.0, hue_tol = 30.0, s_min = 0.25, v_min = 0.12}, 1)
+	assert_eq(teal.size(), 2, "the yellow and the dark ground are not teal")
+	assert_lt(teal[0].luma, teal[1].luma, "darkest first")
+	assert_almost_eq(LookProbe.hue_gap((teal[1].color as Color).h * 360.0, Color("#3f8f96").h * 360.0), 0.0, 1.0)
+	assert_almost_eq(float(teal[0].share) + float(teal[1].share), 1.0, 0.001)
+	# `only` keeps what differs from another frame (the character taken away).
+	var empty := _flat(40, 10, Color(0.1, 0.1, 0.1))
+	_fill_rect(empty, Rect2i(0, 0, 10, 10), Color("#3f8f96"))
+	var only_new := LookProbe.bands(image, Rect2i(0, 0, 40, 10), {hue = Color("#3f8f96").h * 360.0, hue_tol = 30.0, only = empty}, 1)
+	assert_eq(only_new.size(), 1, "the lit patch is in both frames, so it is the background's, not the character's")
+
+
+func test_a_line_scan_measures_the_half_maximum_width_at_1080p() -> void:
+	# A 3 px dark line on a bright ground, on a 1080 px tall image (so 1:1), one edge pixel only half dark.
+	var image := Image.create(60, 1080, false, Image.FORMAT_RGB8)
+	image.fill(Color(0.6, 0.6, 0.6))
+	_fill_rect(image, Rect2i(20, 0, 3, 1080), Color(0.07, 0.06, 0.09))
+	image.set_pixel(19, 5, Color(0.45, 0.45, 0.45))
+	var scan := LookProbe.line_width_scan(image, Vector2i(5, 5), Vector2i(1, 0), 40)
+	assert_gt(scan.width, 2.5)
+	assert_lt(scan.width, 3.6)
+	assert_almost_eq((scan.color as Color).r, 0.07, 0.01, "the darkest pixel is the ink")
+	# No line, or a body as dark as the line, is nothing to measure.
+	assert_eq(LookProbe.line_width_scan(_flat(60, 20, Color(0.6, 0.6, 0.6)), Vector2i(0, 5), Vector2i(1, 0), 40).width, -1.0)
+	var merged := _flat(60, 20, Color(0.6, 0.6, 0.6))
+	_fill_rect(merged, Rect2i(20, 0, 40, 20), Color(0.07, 0.06, 0.09))
+	assert_eq(LookProbe.line_width_scan(merged, Vector2i(5, 5), Vector2i(1, 0), 40).width, -1.0, "a line that never ends is not a line")
+
+
+func test_the_ring_a_frame_has_over_another_is_measured_by_coverage() -> void:
+	# `without`: a figure (bright grey) on a ground; `with`: the same with a 3 px ring of ink round it,
+	# the outer pixel of it half covered (so 2.5 px of ink), on a 1080 px tall image.
+	var ground := Color(0.45, 0.45, 0.45)
+	var without := Image.create(120, 1080, false, Image.FORMAT_RGB8)
+	without.fill(ground)
+	_fill_rect(without, Rect2i(50, 0, 20, 1080), Color(0.7, 0.7, 0.7))
+	var with := without.duplicate() as Image
+	var ink := Color(0.06, 0.06, 0.06)
+	_fill_rect(with, Rect2i(48, 0, 2, 1080), ink)
+	with.set_pixel(47, 500, ground.lerp(ink, 0.5))
+	for y in 1080:
+		with.set_pixel(47, y, ground.lerp(ink, 0.5))
+	_fill_rect(with, Rect2i(70, 0, 2, 1080), ink)
+	for y in 1080:
+		with.set_pixel(72, y, ground.lerp(ink, 0.5))
+	var window := Rect2i(30, 100, 60, 200)
+	var left := LookProbe.outer_ring_px(with, without, window, Vector2i(1, 0))
+	assert_almost_eq(float(left.width), 2.5, 0.2, "the ring's width from the left, in coverage")
+	var right := LookProbe.outer_ring_px(with, without, window, Vector2i(-1, 0))
+	assert_almost_eq(float(right.width), 2.5, 0.2, "and from the right")
+	var all := LookProbe.ring_width_px(with, without, window)
+	assert_almost_eq(float(all.width), 2.5, 0.2, "the median of every run")
+	assert_almost_eq((all.ink as Color).r, 0.06, 0.02, "the ink's colour")
+	var nothing := LookProbe.ring_width_px(without, without, window)
+	assert_eq(nothing.width, -1.0, "frames that agree have no ring")
 
 
 func test_white_and_changed_shares() -> void:

@@ -399,6 +399,68 @@ func test_materials_take_the_look_values_now_and_on_every_change() -> void:
 	assert_eq(character.get_shader_parameter(&"band_1"), 0.9, "a non-Look edit does not touch the look")
 
 
+func test_the_fill_is_the_characters_alone_and_follows_its_tunables() -> void:
+	var d := Tuning.data
+	var character := ToonMaterials.character(Color.WHITE)
+	var art := ToonMaterials.art(null)
+	var prop := ToonMaterials.prop(Color.WHITE)
+	var env := ToonMaterials.environment(Color.WHITE)
+	var grid := ToonMaterials.grid()
+	assert_gt(d.look_fill_strength, 0.0, "the fill is on, so a character that faces away from the sun has bands")
+	for material: ShaderMaterial in [character, art]:
+		assert_eq(material.get_shader_parameter(&"fill_strength"), d.look_fill_strength, "the characters have a fill")
+		assert_eq(material.get_shader_parameter(&"fill_dir"), ToonMaterials.fill_direction(d.look_fill_yaw_deg, d.look_fill_pitch_deg))
+	for material: ShaderMaterial in [prop, env, grid]:
+		assert_eq(material.get_shader_parameter(&"fill_strength"), 0.0, "the room and the pipe are lit by the sun alone")
+	Tuning.set_value(&"look_fill_strength", 0.5)
+	Tuning.set_value(&"look_fill_yaw_deg", 20.0)
+	assert_eq(character.get_shader_parameter(&"fill_strength"), 0.5, "the F1 panel's slider moves the fill live")
+	assert_eq(character.get_shader_parameter(&"fill_dir"), ToonMaterials.fill_direction(20.0, d.look_fill_pitch_deg))
+	assert_eq(env.get_shader_parameter(&"fill_strength"), 0.0)
+
+
+func test_the_fill_direction_is_a_unit_vector_in_the_cameras_view() -> void:
+	for yaw: float in [-90.0, -35.0, 0.0, 45.0, 90.0]:
+		for pitch: float in [-30.0, 0.0, 40.0, 80.0]:
+			assert_almost_eq(ToonMaterials.fill_direction(yaw, pitch).length(), 1.0, 0.0001, "%.0f, %.0f" % [yaw, pitch])
+	var ahead := ToonMaterials.fill_direction(0.0, 0.0)
+	assert_almost_eq(ahead.z, 1.0, 0.0001, "straight on is toward the lens (+Z in view space)")
+	assert_lt(ToonMaterials.fill_direction(-35.0, 0.0).x, 0.0, "a negative yaw is from the left")
+	assert_gt(ToonMaterials.fill_direction(0.0, 40.0).y, 0.0, "a positive pitch is from above")
+
+
+func test_the_fill_lights_a_front_the_sun_does_not_reach_and_only_for_the_directional_light() -> void:
+	# The shader's one change to the light: the stronger of the sun's and the fill's, only on the
+	# sun's own pass (a directional light), only on a surface that has a fill (fill_strength > 0).
+	var source := _source(LIGHT_PATH)
+	assert_true(source.contains("LIGHT_IS_DIRECTIONAL && fill_strength > 0.0"))
+	assert_true(source.contains("max(lit, fill_strength * dot(NORMAL, fill_dir))"))
+	var d := Tuning.data
+	var front := Vector3(0.0, 0.0, 1.0)
+	var fill := ToonMaterials.fill_direction(d.look_fill_yaw_deg, d.look_fill_pitch_deg)
+	var lit := maxf(-0.4, d.look_fill_strength * front.dot(fill))
+	var shade := ToonMaterials.band_shade(lit, 0.0005, d.look_band_1, d.look_band_2, d.look_mid_level,
+			d.look_shadow_level, d.look_shadow_tint, d.look_shadow_tint_amount)
+	var dark := ToonMaterials.band_shade(-0.4, 0.0005, d.look_band_1, d.look_band_2, d.look_mid_level,
+			d.look_shadow_level, d.look_shadow_tint, d.look_shadow_tint_amount)
+	assert_gt(shade.get_luminance(), dark.get_luminance() + 0.2, "a front facing away from the sun is not the flat shadow band")
+
+
+func test_the_hull_is_not_fogged() -> void:
+	# A fogged hull read 10 to 16 levels lighter than the HUD's ink at 2.5 to 10 m, and the line faded
+	# into the haze where the body did not.
+	assert_true(_source(OUTLINE_PATH).contains("render_mode unshaded, cull_front, fog_disabled"))
+
+
+func test_the_bands_leave_room_for_a_lit_front_below_the_suns_height() -> void:
+	# The slice gate's gap 2: look_band_2 above cos(the sun's elevation) left no vertical surface a lit
+	# band. A front that faces the sun reaches cos(elevation); the second break is under it.
+	var d := Tuning.defaults()
+	assert_lt(d.look_band_2, cos(deg_to_rad(d.look_sun_elevation_deg)), "a front facing the sun is lit")
+	assert_lt(d.look_band_1, d.look_band_2)
+	assert_gte(d.look_shadow_level, 0.4, "the shadow keeps 40% of the lit value (the look bible)")
+
+
 func test_hulls_take_the_outline_values() -> void:
 	var hull := ToonMaterials.outline_for_part(PlaceholderBody.Shape.BOX)
 	var own := ToonMaterials.outline_for_part(PlaceholderBody.Shape.BOX, true)

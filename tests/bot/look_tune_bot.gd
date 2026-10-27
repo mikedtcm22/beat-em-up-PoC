@@ -41,6 +41,12 @@ func _run() -> void:
 	caption.text = "done"
 	await _ticks(10)
 	print("\n".join(log_lines))
+	_quit()
+
+
+## Leave: the acts' enemies go, then the tree quits (a test's bot overrides this to stop instead).
+func _quit() -> void:
+	clear_enemies()
 	get_tree().quit()
 
 
