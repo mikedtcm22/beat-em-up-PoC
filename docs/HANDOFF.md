@@ -4,7 +4,7 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
-### 2026-10-27 16:45 CDT: both fix waves merged (1593/1593, 0 errors); the re-score and the evidence pack running
+### 2026-10-27 16:35 CDT: both fix waves merged (1593/1593, 0 errors); the re-score and the evidence pack running
 - **Merged:**
   - **`m4/fix-final-toon-gloss-and-turntable`** (`405d223`):
     - Per-swatch gloss: a glossy swatch is one step below its damage-class alpha. Only the Punk's lens is glossy, and it gets a camera glint (`look_glint_cut` 0.88, `look_glint_strength` 1.0). The matte vest, arms and cap lost their highlight blobs (about 3,840 pixels down to 8).
@@ -17,7 +17,7 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
     - stagger_back is re-posed with bent elbows (call 24; the four clip hashes regenerated with a reason note).
   - A22: the preset (519 values) and the atlas matched what's committed. The suite on `f4064a4` is 1593/1593 with 0 SCRIPT, SHADER or ERROR lines.
 - **The lead's look:** the stagger reads as a body knocked back with a broken guard. The Punk's cloth is clean and matte, with one white glint on the lens.
-- **Running since 16:45 CDT:**
+- **Running since 16:35 CDT:**
   - **The re-score:** one Opus reviewer scores J1-J14 on `f4064a4` (`wf_b65f3d05-528`, round `rescore`, args in `docs/reviews/M4/args-review-rescore.json`, worktree `.worktrees/m4-review-rescore-rs`).
   - **P3-evidence:** a Sonnet builder records the evidence pack, the clips, the DM pair, the feel A/B stills and `docs/reviews/M4/evidence/` (`wf_7aae052c-809`, `workflow-build.js` with `docs/reviews/M4/args-P3-evidence.json`, worktree `.worktrees/m4-p3-evidence`, branch `m4/p3-evidence`).
   - **If cut off:** rerun each with the same args.
