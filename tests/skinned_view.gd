@@ -156,25 +156,109 @@ static func hits(root: Node, cam: Transform3D, cols: int = FPView.COLS) -> Array
 	return out
 
 
+## The skinned vertices of `mi` that sit mostly (half the weight or more) on the binds of the
+## bones named in `bones`, rig space.
+static func bone_vertices(mi: MeshInstance3D, rig: HumanoidRig, bones: Array[StringName],
+		globals: Array[Transform3D] = []) -> PackedVector3Array:
+	var data := _mesh_data(mi.mesh as ArrayMesh)
+	var posed := skin_vertices(mi, rig, globals)
+	var share := PackedFloat32Array()
+	share.resize(posed.size())
+	for e: int in data.entry_vertex.size():
+		if bones.has(StringName(mi.skin.get_bind_name(data.entry_bind[e]))):
+			share[data.entry_vertex[e]] += data.entry_weight[e]
+	var out := PackedVector3Array()
+	for v: int in posed.size():
+		if share[v] >= 0.5:
+			out.append(posed[v])
+	return out
+
+
+## The distance (m) from world `point` to the nearest skinned triangle of `mi` at the pose: the
+## closest point of every triangle, brute force (for a handful of points, not a frame).
+static func surface_gap(mi: MeshInstance3D, rig: HumanoidRig, point: Vector3, globals: Array[Transform3D] = []) -> float:
+	var data := _mesh_data(mi.mesh as ArrayMesh)
+	var world := mi.global_transform * skin_vertices(mi, rig, globals)
+	var best := INF
+	for t: int in data.indices.size() / 3:
+		var a := world[data.indices[t * 3]]
+		var b := world[data.indices[t * 3 + 1]]
+		var c := world[data.indices[t * 3 + 2]]
+		best = minf(best, point.distance_to(_closest_on_triangle(point, a, b, c)))
+	return best
+
+
 ## Art against its view proxies at camera `cam`: the same grid cast both ways. Returns
 ## `{cells, differ (cells one covers and the other does not), art_share, proxy_share (the
 ## shares of the view each covers), nearest (the most meters the art is nearer the lens than
-## the proxies where both are hit; 0 when never), ...}`. The proxies are the rig's own
+## the proxies where both are hit; 0 when never), both}`. The proxies are the rig's own
 ## primitives, found by FPView.hits() (they are hidden while the art shows, but count: A4).
 static func compare_with_proxies(rig: HumanoidRig, cam: Transform3D, cols: int = FPView.COLS) -> Dictionary:
-	var art_cells := hits(rig, cam, cols)
 	var proxy_cells := FPView.hits(rig, cam, cols)
 	var proxy_depths := FPView.depths(rig, cam, cols)
+	var covered: Array[bool] = []
+	for mesh: MeshInstance3D in proxy_cells:
+		covered.append(mesh != null)
+	return _compare(hits(rig, cam, cols), covered, proxy_depths)
+
+
+## The same against the proxies' own meshes, ray-cast exactly (a TriangleMesh of their
+## triangles, as the art's): FPView's rays model a capsule by its closest approach to its axis
+## and a dome as a flat ellipsoid, which a ray along a limb or across the cap sees a few
+## centimeters off the primitives as they are drawn.
+static func compare_with_exact_proxies(rig: HumanoidRig, cam: Transform3D, cols: int = FPView.COLS) -> Dictionary:
+	var soup := Soup.new()
+	var faces := PackedVector3Array()
+	for mesh: MeshInstance3D in FPView.meshes_under(rig):
+		if not mesh.is_in_group(HumanoidRig.VIEW_PROXY_GROUP) or not FPView.is_drawn(mesh):
+			continue
+		if mesh.layers & CombatTypes.bit(CombatTypes.VIS_FP_HIDDEN):
+			continue
+		faces.append_array(mesh.global_transform * mesh.mesh.get_faces())
+	soup.triangles = TriangleMesh.new()
+	soup.triangles.create_from_faces(faces)
+	var rows := FPView.rows(cols)
+	var tan_h := tan(deg_to_rad(FPView.HALF_H_DEG))
+	var tan_v := tan_h * 9.0 / 16.0
+	var forward := -cam.basis.z
+	var covered: Array[bool] = []
+	var depths := PackedFloat32Array()
+	for row: int in rows:
+		for col: int in cols:
+			var ray := Vector3(((col + 0.5) / cols * 2.0 - 1.0) * tan_h, (1.0 - (row + 0.5) / rows * 2.0) * tan_v, -1.0)
+			var hit := _ray(soup, cam.origin, (cam.basis * ray).normalized(), forward)
+			covered.append(not hit.is_empty())
+			depths.append(float(hit.depth) if not hit.is_empty() else INF)
+	return _compare(hits(rig, cam, cols), covered, depths)
+
+
+## What is wrong with the art's framing against its proxies at `cam` (row A9: at most 3% of the
+## cells differ, the share of the view the art covers is within 4 points of the proxies', the
+## art is nowhere `nearest_limit` meters (2 cm) or more nearer the lens than the proxies), as
+## text lines headed by `label`; empty when it holds. `proxies` is compare_with_proxies() or
+## compare_with_exact_proxies()'s result.
+static func framing_problems(cmp: Dictionary, label: String, nearest_limit: float = 0.02) -> PackedStringArray:
+	var out := PackedStringArray()
+	if cmp.differ_share > 0.03:
+		out.append("%s: %.1f%% of the cells differ" % [label, cmp.differ_share * 100.0])
+	if absf(cmp.art_share - cmp.proxy_share) > 0.04:
+		out.append("%s: the art covers %.1f%% of the view, the proxies %.1f%%" % [label, cmp.art_share * 100.0, cmp.proxy_share * 100.0])
+	if cmp.nearest >= nearest_limit:
+		out.append("%s: the art is %.1f cm nearer the lens than its proxies" % [label, cmp.nearest * 100.0])
+	return out
+
+
+static func _compare(art_cells: Array[Dictionary], proxy_covered: Array[bool], proxy_depths: PackedFloat32Array) -> Dictionary:
 	var differ := 0
-	var art_covered := 0
-	var proxy_covered := 0
+	var art_count := 0
+	var proxy_count := 0
 	var nearest := 0.0
 	var both := 0
 	for i: int in art_cells.size():
 		var art_hit := not art_cells[i].is_empty()
-		var proxy_hit := proxy_cells[i] != null
-		art_covered += int(art_hit)
-		proxy_covered += int(proxy_hit)
+		var proxy_hit := proxy_covered[i]
+		art_count += int(art_hit)
+		proxy_count += int(proxy_hit)
 		differ += int(art_hit != proxy_hit)
 		if art_hit and proxy_hit:
 			both += 1
@@ -182,7 +266,7 @@ static func compare_with_proxies(rig: HumanoidRig, cam: Transform3D, cols: int =
 	var cells := art_cells.size()
 	return {
 		cells = cells, differ = differ, differ_share = float(differ) / cells,
-		art_share = float(art_covered) / cells, proxy_share = float(proxy_covered) / cells,
+		art_share = float(art_count) / cells, proxy_share = float(proxy_count) / cells,
 		both = both, nearest = nearest,
 	}
 
@@ -262,6 +346,38 @@ static func worst_lines(reports: Array[Dictionary], count: int = 10) -> PackedSt
 
 
 # --- Internals ---------------------------------------------------------------------------
+
+
+## The point of triangle abc nearest p (Ericson, Real-Time Collision Detection 5.1.5).
+static func _closest_on_triangle(p: Vector3, a: Vector3, b: Vector3, c: Vector3) -> Vector3:
+	var ab := b - a
+	var ac := c - a
+	var ap := p - a
+	var d1 := ab.dot(ap)
+	var d2 := ac.dot(ap)
+	if d1 <= 0.0 and d2 <= 0.0:
+		return a
+	var bp := p - b
+	var d3 := ab.dot(bp)
+	var d4 := ac.dot(bp)
+	if d3 >= 0.0 and d4 <= d3:
+		return b
+	var vc := d1 * d4 - d3 * d2
+	if vc <= 0.0 and d1 >= 0.0 and d3 <= 0.0:
+		return a + ab * (d1 / (d1 - d3))
+	var cp := p - c
+	var d5 := ab.dot(cp)
+	var d6 := ac.dot(cp)
+	if d6 >= 0.0 and d5 <= d6:
+		return c
+	var vb := d5 * d2 - d1 * d6
+	if vb <= 0.0 and d2 >= 0.0 and d6 <= 0.0:
+		return a + ac * (d2 / (d2 - d6))
+	var va := d3 * d6 - d5 * d4
+	if va <= 0.0 and d4 - d3 >= 0.0 and d5 - d6 >= 0.0:
+		return b + (c - b) * ((d4 - d3) / ((d4 - d3) + (d5 - d6)))
+	var denom := 1.0 / (va + vb + vc)
+	return a + ab * (vb * denom) + ac * (vc * denom)
 
 
 ## The rig an art mesh belongs to: the node above its skeleton.
@@ -385,19 +501,19 @@ static func _face_bone(soup: Soup, face: int) -> StringName:
 	return _dominant_bone(data, soup.skin, [data.indices[face * 3], data.indices[face * 3 + 1], data.indices[face * 3 + 2]])
 
 
-## A hash of the pose that skins `mi`: the bone transforms the soup was made from.
-static func _pose_key(rig: HumanoidRig) -> int:
+## A hash of what skins `mi`: the bone transforms, the rig's place, the skin and the mesh.
+static func _pose_key(mi: MeshInstance3D, rig: HumanoidRig) -> int:
 	var poses: Array[Transform3D] = []
 	for i: int in rig.skeleton.get_bone_count():
 		poses.append(rig.animation_pose(i))
-	return hash(poses) ^ hash(rig.global_transform)
+	return hash([poses, rig.global_transform, mi.skin.get_instance_id(), mi.mesh.get_instance_id()])
 
 
 ## The triangle mesh of `mi` at its rig's pose, made once per physics frame and pose.
 static func _soup(mi: MeshInstance3D, rig: HumanoidRig) -> Soup:
 	var id := mi.get_instance_id()
 	var frame := Engine.get_physics_frames()
-	var key := _pose_key(rig)
+	var key := _pose_key(mi, rig)
 	var soup: Soup = _soups.get(id)
 	if soup != null and soup.frame == frame and soup.pose_key == key:
 		return soup

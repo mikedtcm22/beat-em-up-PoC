@@ -13,6 +13,12 @@ const SkinnedView := preload("res://tests/skinned_view.gd")
 const FRAME := 1.0 / 60.0
 ## The probe's vertices land where the primitives' do, to float precision.
 const EXACT_M := 0.0002
+## How much nearer than FPView's proxies the probe may stand (see _framing_problems()), and
+## than the proxies' exact meshes.
+const FPVIEW_LOOSENESS_M := 0.07
+## Grazing rays along a seam between two triangles: a few cells at most, a few millimeters.
+const EXACT_NEAREST_M := 0.005
+const EXACT_DIFFER_SHARE := 0.005
 ## The rig heights the art is bound at: the Punk, the Bruiser and the boss.
 const HEIGHTS: Array[float] = [1.8, 2.05, 2.3]
 
@@ -454,3 +460,572 @@ func _edit_arrays(root: Node, change: Callable, flags: int = 0) -> void:
 	var mesh := ArrayMesh.new()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays, [], {}, flags)
 	mi.mesh = mesh
+
+
+# --- The bind route is what makes an A-pose art land on the table ------------------------------
+
+
+func test_translation_only_binds_would_not_land_an_a_pose_art_on_the_table() -> void:
+	# The control of the exact tests: bind the A-pose art the way Part C first wrote it (the
+	# joint's translation alone, R = identity) and the arms stay swung at the rest.
+	var rig := _rig(_art(Fixture.Authored.A_POSE))
+	var mi := rig.art_meshes()[0]
+	var good := mi.skin
+	var wrong := Skin.new()
+	for i: int in good.get_bind_count():
+		var origin := good.get_bind_pose(i).origin
+		var name := StringName(good.get_bind_name(i))
+		var joint := PlaceholderBody.pose_globals(Fixture.a_pose(), Vector3.ZERO, 1.0)[name] as Transform3D
+		wrong.add_named_bind(name, Transform3D(Basis.IDENTITY, -joint.origin))
+	var rest := _rest_globals(rig)
+	var right_gap := _worst_gap(SkinnedView.skin_vertices(mi, rig, rest), _rest_expected(rig, false))
+	mi.skin = wrong
+	var wrong_gap := _worst_gap(SkinnedView.skin_vertices(mi, rig, rest), _rest_expected(rig, false))
+	assert_lt(right_gap, EXACT_M)
+	assert_gt(wrong_gap, 0.2, "an arm swung 45 degrees stands %.2f m off the table without the swing in the binds" % wrong_gap)
+
+
+## The primitives' vertices at the table's rest, rig space (the rest-pose expectation).
+func _rest_expected(rig: HumanoidRig, player: bool) -> PackedVector3Array:
+	var empty := _rest_globals(rig)
+	var out := PackedVector3Array()
+	for hidden: bool in [false, true]:
+		for part: PlaceholderBody.Part in PlaceholderBody.parts(player):
+			if player and PlaceholderBody.is_fp_hidden(part) != hidden:
+				continue
+			if not player and hidden:
+				continue
+			var proxy := rig.find_child(String(part.name), true, false) as MeshInstance3D
+			var local := Transform3D(PlaceholderBody.euler_basis(part.rot_deg), part.offset * rig.rig_scale())
+			out.append_array(((empty[rig.skeleton.find_bone(part.bone)] as Transform3D) * local) \
+					* (proxy.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX] as PackedVector3Array))
+	return out
+
+
+# --- The marks stay on the body: CUSTOM0/1 -------------------------------------------------------
+
+
+func test_the_art_mesh_carries_its_bind_pose_position_and_normal_for_the_damage_look() -> void:
+	var art := _art(Fixture.Authored.A_POSE)
+	var rig := _rig(art)
+	var mesh := rig.art_meshes()[0].mesh as ArrayMesh
+	var custom := (Mesh.ARRAY_CUSTOM_RGB_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM0_SHIFT) | (Mesh.ARRAY_CUSTOM_RGB_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM1_SHIFT)
+	assert_eq(mesh.surface_get_format(0) & custom, custom, "CUSTOM0 and CUSTOM1 are RGB floats")
+	var arrays := mesh.surface_get_arrays(0)
+	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+	var c0: PackedFloat32Array = arrays[Mesh.ARRAY_CUSTOM0]
+	var c1: PackedFloat32Array = arrays[Mesh.ARRAY_CUSTOM1]
+	assert_eq(c0.size(), vertices.size() * 3)
+	assert_eq(c1.size(), normals.size() * 3)
+	# The original GLB mesh is untouched: the art mesh is a rebuild with the two channels added.
+	var source := (SkinnedArt.entry_of(art).scene.instantiate().find_child("Body", true, false) as MeshInstance3D)
+	var source_arrays := (source.mesh as ArrayMesh).surface_get_arrays(0)
+	var source_vertices: PackedVector3Array = source_arrays[Mesh.ARRAY_VERTEX]
+	var source_normals: PackedVector3Array = source_arrays[Mesh.ARRAY_NORMAL]
+	assert_eq(source_vertices.size(), vertices.size())
+	var before: Array[Vector3] = []
+	var step := maxi(vertices.size() / 100, 1)
+	for v: int in range(0, vertices.size(), step):
+		before.append(Vector3(c0[v * 3], c0[v * 3 + 1], c0[v * 3 + 2]))
+		assert_almost_eq(Vector3(c0[v * 3], c0[v * 3 + 1], c0[v * 3 + 2]), source_vertices[v], Vector3.ONE * 1e-6, "CUSTOM0 is the bind-pose position of vertex %d" % v)
+		assert_almost_eq(Vector3(c1[v * 3], c1[v * 3 + 1], c1[v * 3 + 2]), source_normals[v], Vector3.ONE * 1e-5, "CUSTOM1 is its normal")
+	source.get_parent().get_parent().get_parent().free()
+	# The same hundred vertices read after the rig has moved through idle, a jab and a knockdown:
+	# the skinned positions moved, the marks' coordinates did not.
+	var mi := rig.art_meshes()[0]
+	var rest_skinned := SkinnedView.skin_vertices(mi, rig)
+	var moved_vertices := 0
+	for label: String in ["jab", "knockdown_back"]:
+		_pose(rig, &"idle", 0.2)
+		if label == "jab":
+			var jab := _move(&"jab_1", 4, 3, 10)
+			rig.play_move(jab)
+			for i: int in jab.startup + 1:
+				rig.advance(FRAME)
+		else:
+			_pose(rig, &"knockdown_back", 0.3)
+		var posed := SkinnedView.skin_vertices(mi, rig)
+		for v: int in range(0, vertices.size(), step):
+			if posed[v].distance_to(rest_skinned[v]) > 0.01:
+				moved_vertices += 1
+		var after := (mi.mesh as ArrayMesh).surface_get_arrays(0)[Mesh.ARRAY_CUSTOM0] as PackedFloat32Array
+		var k := 0
+		for v: int in range(0, vertices.size(), step):
+			assert_eq(Vector3(after[v * 3], after[v * 3 + 1], after[v * 3 + 2]), before[k], "%s: the mark coordinate of vertex %d" % [label, v])
+			k += 1
+	assert_gt(moved_vertices, 50, "the body did move")
+
+
+# --- Shown, hidden, and the A/B ------------------------------------------------------------------
+
+
+func test_set_shown_hides_the_art_and_set_art_shown_swaps_it_with_the_proxies() -> void:
+	var rig := _rig(_art(Fixture.Authored.REST, true), 1.8, true)
+	var art_mesh := rig.art_meshes()[0]
+	assert_true(art_mesh.is_visible_in_tree())
+	rig.set_shown(false)
+	for mi: MeshInstance3D in rig.art_meshes():
+		assert_false(mi.is_visible_in_tree(), "%s blinks off with the KO" % mi.name)
+	for proxy: MeshInstance3D in _proxies(rig):
+		assert_false(FPView.is_drawn(proxy), "%s is not drawn while the rig is hidden" % proxy.name)
+	rig.set_shown(true)
+	assert_true(art_mesh.is_visible_in_tree())
+	rig.set_art_shown(false)
+	for mi: MeshInstance3D in rig.art_meshes():
+		assert_false(mi.visible)
+	for proxy: MeshInstance3D in _proxies(rig):
+		assert_true(proxy.visible)
+	rig.set_art_shown(true)
+	for mi: MeshInstance3D in rig.art_meshes():
+		assert_true(mi.visible)
+	for proxy: MeshInstance3D in _proxies(rig):
+		assert_false(proxy.visible)
+
+
+func test_look_show_art_reaches_every_rig_with_art_live() -> void:
+	var rig := _rig(_art())
+	var other := _rig(_art(Fixture.Authored.A_POSE))
+	Tuning.set_value(&"look_show_art", false)
+	for r: HumanoidRig in [rig, other]:
+		assert_false(r.art_meshes()[0].visible, "the art hides")
+		for proxy: MeshInstance3D in _proxies(r):
+			assert_true(proxy.visible, "the primitives it stands in for show")
+	Tuning.set_value(&"look_show_art", true)
+	for r: HumanoidRig in [rig, other]:
+		assert_true(r.art_meshes()[0].visible)
+		for proxy: MeshInstance3D in _proxies(r):
+			assert_false(proxy.visible)
+	Tuning.set_value(&"look_show_art", false)
+	Tuning.apply(TuningData.new())
+	assert_true(rig.art_meshes()[0].visible, "a preset or reset sets the tunable back")
+	# A rig built while it is off starts with the primitives showing.
+	Tuning.set_value(&"look_show_art", false)
+	var late := _rig(_art())
+	assert_false(late.art_meshes()[0].visible)
+	for proxy: MeshInstance3D in _proxies(late):
+		assert_true(proxy.visible)
+
+
+# --- FPView counts the proxies and skips the art --------------------------------------------------
+
+
+func test_fp_view_is_drawn_counts_proxies_by_their_follower_and_never_the_art() -> void:
+	var rig := _rig(_art(Fixture.Authored.REST, true), 1.8, true)
+	for mi: MeshInstance3D in rig.art_meshes():
+		assert_false(FPView.is_drawn(mi), "%s is the art: measured by SkinnedView" % mi.name)
+	for proxy: MeshInstance3D in _proxies(rig):
+		assert_false(proxy.visible)
+		assert_true(FPView.is_drawn(proxy), "%s is hidden but counts" % proxy.name)
+	var plain := _rig(null)
+	for mesh: MeshInstance3D in FPView.meshes_under(plain):
+		assert_true(FPView.is_drawn(mesh), "a primitive of a rig without art counts as before")
+	plain.visible = false
+	for mesh: MeshInstance3D in FPView.meshes_under(plain):
+		assert_false(FPView.is_drawn(mesh))
+	var stray := MeshInstance3D.new()
+	stray.mesh = BoxMesh.new()
+	add_child_autofree(stray)
+	assert_true(FPView.is_drawn(stray))
+	stray.visible = false
+	assert_false(FPView.is_drawn(stray))
+
+
+func test_fp_view_measures_a_rig_with_art_through_its_proxies_exactly_as_without_art() -> void:
+	var with_art := _rig(_art(Fixture.Authored.REST, true), 1.8, true)
+	var plain := _rig(null, 1.8, true)
+	plain.global_position = Vector3(0.0, 0.0, 0.0)
+	var poses: Array[StringName] = [&"idle", &"block", &"hold"]
+	for id: StringName in poses:
+		_pose(with_art, id, 0.3)
+		_pose(plain, id, 0.3)
+		for pitch: float in [0.0, -45.0, -60.0]:
+			var cam := _fp_camera(with_art, pitch)
+			var a := FPView.hits(with_art, cam)
+			var b := FPView.hits(plain, cam)
+			assert_eq(a.size(), b.size())
+			for i: int in a.size():
+				assert_eq(a[i].name if a[i] else &"", b[i].name if b[i] else &"", "%s at %.0f deg, cell %d" % [id, pitch, i])
+			assert_eq(FPView.nearest_mesh(with_art, cam.origin), FPView.nearest_mesh(plain, cam.origin))
+			assert_eq(FPView.outside_view(with_art, cam).size(), FPView.outside_view(plain, cam).size())
+	# The art is no primitive: never near anything for the distance helpers, never a hit.
+	var art_mesh := with_art.art_meshes()[0]
+	assert_eq(FPView.mesh_distance(art_mesh, Vector3.ZERO), INF)
+	assert_eq(FPView.ray_hit(art_mesh, Vector3(0.0, 1.0, 1.0), Vector3.FORWARD), INF)
+
+
+## The first-person camera of `rig` looking the way it faces, pitched by `pitch_deg`: the real
+## lens (EyePoint plus FirstPersonCamera.lens_offset()).
+func _fp_camera(rig: HumanoidRig, pitch_deg: float = 0.0, yaw_deg: float = 0.0, drop: float = 0.0) -> Transform3D:
+	var look := Basis(Vector3.UP, deg_to_rad(yaw_deg)) * rig.global_basis.orthonormalized()
+	var lens := rig.get_point_position(&"EyePoint") + Vector3.DOWN * drop + FirstPersonCamera.lens_offset(look)
+	return Transform3D(look * Basis.from_euler(Vector3(deg_to_rad(pitch_deg), 0.0, 0.0)), lens)
+
+
+# --- The ragdoll's write-back (A5) ---------------------------------------------------------------
+
+
+## A modifier that reads the skeleton the way the render server will see it: placed after the
+## Ragdoll (`before` false) it reads what the ragdoll left, before it (`before` true) the
+## simulator's raw output. It compares the bones' global poses, composed from the local poses
+## it reads, with Ragdoll._visual (visual_pose()): the pose the followers, the flash anchors
+## and the held pipe show.
+class PoseProbe:
+	extends SkeletonModifier3D
+	var rig: HumanoidRig
+	## The largest origin gap (m) and rotation gap (rad) to the ragdoll's visual pose, over
+	## every bone and every update.
+	var worst_origin: float = 0.0
+	var worst_angle: float = 0.0
+	var updates: int = 0
+	## Hips-and-Root-only positions the probe saw (the write-back moves them).
+	var hips_y: Array[float] = []
+	## A probe that ran earlier in the same update (before the Ragdoll), and the largest origin
+	## gap between its poses and this one's: what the Ragdoll modifier changed in between.
+	var peer: PoseProbe
+	var worst_vs_peer: float = 0.0
+	var last_globals: Array[Transform3D] = []
+
+	func _process_modification_with_delta(_delta: float) -> void:
+		var skeleton := get_skeleton()
+		var ragdoll := rig.get_ragdoll()
+		if skeleton == null or ragdoll == null or not ragdoll.is_running():
+			return
+		var globals: Array[Transform3D] = []
+		for i: int in skeleton.get_bone_count():
+			var local := skeleton.get_bone_pose(i)
+			var parent := skeleton.get_bone_parent(i)
+			globals.append(local if parent < 0 else globals[parent] * local)
+		for i: int in globals.size():
+			var visual := ragdoll.visual_pose(i)
+			worst_origin = maxf(worst_origin, globals[i].origin.distance_to(visual.origin))
+			worst_angle = maxf(worst_angle, globals[i].basis.get_rotation_quaternion().angle_to(visual.basis.get_rotation_quaternion()))
+		hips_y.append(globals[skeleton.find_bone(&"Hips")].origin.y)
+		if peer != null and peer.last_globals.size() == globals.size():
+			for i: int in globals.size():
+				worst_vs_peer = maxf(worst_vs_peer, globals[i].origin.distance_to(peer.last_globals[i].origin))
+		last_globals = globals
+		updates += 1
+
+
+## Start a ragdoll on `rig` and run it `frames` physics frames, `probe`s watching.
+func _run_ragdoll(rig: HumanoidRig, full: bool, frames: int, at_once: bool = false, part: Ragdoll.Part = Ragdoll.Part.ANY) -> void:
+	rig.ragdoll_start(full, rig.get_point_position(&"Head"), Vector3(0.0, 1.0, 4.0), Vector3.ZERO, part, 0.6, at_once)
+	for i: int in frames:
+		rig.advance(FRAME)
+		await get_tree().physics_frame
+
+
+func _probe(rig: HumanoidRig, before_ragdoll: bool) -> PoseProbe:
+	var probe := PoseProbe.new()
+	probe.rig = rig
+	probe.name = "ProbeBefore" if before_ragdoll else "ProbeAfter"
+	rig.skeleton.add_child(probe)
+	if before_ragdoll:
+		rig.skeleton.move_child(probe, rig.get_ragdoll().get_index())
+	return probe
+
+
+func test_a_partial_ragdoll_shows_the_skeleton_exactly_what_the_followers_show() -> void:
+	var rig := _rig(_art())
+	rig.ragdoll_start(false, rig.get_point_position(&"Head"), Vector3(0.0, 1.0, 4.0), Vector3.ZERO, Ragdoll.Part.ANY, 0.6)
+	var raw := _probe(rig, true)
+	var after := _probe(rig, false)
+	after.peer = raw
+	for i: int in 40:
+		rig.advance(FRAME)
+		await get_tree().physics_frame
+	assert_gt(after.updates, 30, "the probes ran")
+	assert_lt(after.worst_origin, 0.001, "PARTIAL: every bone within 1 mm of _visual (worst %.5f m)" % after.worst_origin)
+	assert_lt(after.worst_angle, 0.001, "and its rotation (worst %.5f rad)" % after.worst_angle)
+	# The control: without the write-back the simulator's raw output is what the skeleton
+	# holds, and it is not _visual's (the head and arms are drawn at a share of it).
+	assert_gt(raw.worst_origin, 0.01, "the raw simulator output is %.3f m from _visual in a stagger, so the test has teeth" % raw.worst_origin)
+	assert_gt(after.worst_vs_peer, 0.01, "and the Ragdoll modifier moved the bones by %.3f m" % after.worst_vs_peer)
+
+
+func test_a_full_ragdoll_and_a_launch_out_of_a_stagger_show_the_skeleton_what_the_followers_show() -> void:
+	var rig := _rig(_art(Fixture.Authored.A_POSE, true, true), 1.8, true)
+	rig.ragdoll_start(false, rig.get_point_position(&"Head"), Vector3(0.0, 1.0, 4.0), Vector3.ZERO, Ragdoll.Part.ANY, 0.6)
+	var after := _probe(rig, false)
+	for i: int in 8:
+		rig.advance(FRAME)
+		await get_tree().physics_frame
+	# At once, from the stagger: the head and arms ease in from the turns on screen.
+	rig.ragdoll_start(true, rig.get_point_position(&"Chest"), Vector3(0.0, 4.0, 6.0), Vector3(0.0, 0.0, 3.0), Ragdoll.Part.ANY, INF, true)
+	for i: int in 40:
+		rig.advance(FRAME)
+		await get_tree().physics_frame
+	assert_gt(after.updates, 40)
+	assert_lt(after.worst_origin, 0.001, "FULL: every bone within 1 mm of _visual (worst %.5f m)" % after.worst_origin)
+	assert_lt(after.worst_angle, 0.001, "and its rotation (worst %.5f rad)" % after.worst_angle)
+	var low := INF
+	for y: float in after.hips_y:
+		low = minf(low, y)
+	assert_lt(low, 0.9, "the Hips position went with the body (it fell %.2f m)" % low)
+
+
+func test_a_primitive_rigs_ragdoll_is_the_m3_code_path() -> void:
+	# No write-back on a rig without art: the skeleton holds what the simulator left (the same
+	# as before the Ragdoll modifier ran), and its followers show what an art rig's do.
+	var plain := _rig(null)
+	var worn := _rig(_art())
+	worn.global_position = Vector3(20.0, 0.0, 0.0)
+	var plain_ragdoll: Ragdoll
+	for rig: HumanoidRig in [plain, worn]:
+		rig.ragdoll_start(false, rig.get_point_position(&"Head"), Vector3(0.0, 1.0, 4.0), Vector3.ZERO, Ragdoll.Part.ANY, 0.6)
+	var plain_raw := _probe(plain, true)
+	var plain_after := _probe(plain, false)
+	plain_after.peer = plain_raw
+	for i: int in 30:
+		plain.advance(FRAME)
+		worn.advance(FRAME)
+		await get_tree().physics_frame
+	plain_ragdoll = plain.get_ragdoll()
+	assert_gt(plain_after.updates, 20)
+	assert_gt(plain_after.worst_origin, 0.01, "a primitive rig's skeleton is left as the simulator drew it, not _visual")
+	assert_eq(plain_after.worst_vs_peer, 0.0, "the Ragdoll modifier wrote nothing into it")
+	var worst := 0.0
+	for bone: StringName in PlaceholderBody.BONE_NAMES:
+		var a := plain.get_attachment(bone).transform
+		var b := worn.get_attachment(bone).transform
+		worst = maxf(worst, a.origin.distance_to(b.origin))
+	assert_lt(worst, 0.001, "the followers show the same body with art or without (worst %.5f m)" % worst)
+
+
+func test_the_skin_follows_a_stagger_and_a_launch_without_errors_or_nan() -> void:
+	var rig := _rig(_art(Fixture.Authored.A_POSE, false, true))
+	var mi := rig.art_meshes()[0]
+	rig.ragdoll_start(false, rig.get_point_position(&"Head"), Vector3(0.0, 1.0, 4.0), Vector3.ZERO, Ragdoll.Part.ANY, 0.6)
+	var after := _probe(rig, false)
+	for i: int in 20:
+		rig.advance(FRAME)
+		await get_tree().physics_frame
+	rig.ragdoll_start(true, rig.get_point_position(&"Chest"), Vector3(0.0, 4.0, 6.0), Vector3.ZERO)
+	for i: int in 30:
+		rig.advance(FRAME)
+		await get_tree().physics_frame
+	assert_true(rig.is_ragdolling())
+	var report := SkinnedView.strain(mi, rig, _visual_globals(rig))
+	assert_false(report.has_nan)
+	assert_lt(after.worst_origin, 0.001)
+	rig.get_ragdoll().stop()
+	rig.advance(FRAME)
+	await get_tree().physics_frame
+	assert_false(rig.is_ragdolling())
+	assert_true(mi.visible)
+
+
+## The ragdoll's visual pose as the skin globals.
+func _visual_globals(rig: HumanoidRig) -> Array[Transform3D]:
+	var out: Array[Transform3D] = []
+	for i: int in rig.skeleton.get_bone_count():
+		out.append(rig.get_ragdoll().visual_pose(i))
+	return out
+
+
+# --- The art against its proxies in first person (row A9) ---------------------------------------
+
+
+## Every pose of the player's first-person view the framing is judged at: [label, pitch, yaw,
+## setup Callable(rig)].
+func _player_view_poses() -> Array[Dictionary]:
+	var poses: Array[Dictionary] = []
+	poses.append({label = "idle ahead", pitch = 0.0, yaw = 0.0, setup = func(rig: HumanoidRig) -> void: _pose(rig, &"idle", 0.3)})
+	for pitch: float in [-45.0, -60.0]:
+		poses.append({label = "idle looking down %.0f" % pitch, pitch = pitch, yaw = 0.0, setup = func(rig: HumanoidRig) -> void: _pose(rig, &"idle", 0.3)})
+	for row: Array in [["jab", &"jab_1", 4, 3, 10], ["cross", &"jab_2", 4, 3, 10], ["hook", &"hook", 6, 3, 14], ["uppercut", &"uppercut", 8, 3, 22]]:
+		var move := _move(row[1], row[2], row[3], row[4])
+		poses.append({label = "%s active" % row[0], pitch = 0.0, yaw = 0.0, setup = func(rig: HumanoidRig) -> void:
+			_pose(rig, &"idle", 0.5)
+			rig.play_move(move)
+			for i: int in move.startup + 1:
+				rig.advance(FRAME)})
+	poses.append({label = "block", pitch = 0.0, yaw = 0.0, setup = func(rig: HumanoidRig) -> void: _pose(rig, &"block", 0.5)})
+	var knee := _move(&"knee", 5, 3, 12)
+	poses.append({label = "knee in the hold", pitch = 0.0, yaw = 0.0, setup = func(rig: HumanoidRig) -> void:
+		_pose(rig, &"hold", 0.3)
+		rig.play_move(knee)
+		for i: int in knee.startup + 1:
+			rig.advance(FRAME)})
+	var spin := _move(&"spin_kick", 6, 10, 16)
+	for yaw: float in [0.0, 120.0, 240.0]:
+		poses.append({label = "spin kick mid-turn, view %.0f" % yaw, pitch = 0.0, yaw = yaw, setup = func(rig: HumanoidRig) -> void:
+			_pose(rig, &"idle", 0.5)
+			rig.play_move(spin)
+			for i: int in spin.startup + 5:
+				rig.advance(FRAME)})
+	poses.append({label = "haymaker charge", pitch = 0.0, yaw = 0.0, setup = func(rig: HumanoidRig) -> void: _pose(rig, &"haymaker_charge", 0.4)})
+	return poses
+
+
+## What is wrong with the art's framing against its proxies at `cam` (row A9), as text lines.
+## The fixture is the primitives' own geometry, so the framing is judged twice: against the
+## proxies as FPView casts them, where the art may stand up to FPVIEW_LOOSENESS_M nearer than
+## the proxies (FPView models the cap as a flat ellipsoid and a capsule seen along its axis
+## roughly: the art is nearer by that, not by its own fault), and against the proxies' own
+## meshes ray-cast exactly, where the art is the same body to a millimeter. A GLB's test uses
+## SkinnedView.framing_problems() at the plan's 2 cm.
+func _framing_problems(rig: HumanoidRig, cam: Transform3D, label: String) -> PackedStringArray:
+	var out := SkinnedView.framing_problems(SkinnedView.compare_with_proxies(rig, cam), label, FPVIEW_LOOSENESS_M)
+	var exact := SkinnedView.compare_with_exact_proxies(rig, cam)
+	out.append_array(SkinnedView.framing_problems(exact, label + " (exact proxies)", EXACT_NEAREST_M))
+	if exact.differ_share > EXACT_DIFFER_SHARE:
+		out.append("%s: %d cells differ from the exact proxies" % [label, exact.differ])
+	return out
+
+
+func test_the_players_art_frames_like_its_proxies_in_first_person() -> void:
+	for authored: int in [Fixture.Authored.REST, Fixture.Authored.A_POSE]:
+		var rig := _rig(_art(authored, true), 1.8, true)
+		for row: Dictionary in _player_view_poses():
+			(row.setup as Callable).call(rig)
+			var cam := _fp_camera(rig, row.pitch, row.yaw)
+			var problems := _framing_problems(rig, cam, "authored %d, %s" % [authored, row.label])
+			assert_eq(problems, PackedStringArray(), "the framing")
+			var cmp := SkinnedView.compare_with_proxies(rig, cam)
+			# The relaxed stance shows nothing of the arms looking ahead; these show the body.
+			if row.label == "idle looking down -45" or row.label == "jab active":
+				assert_gt(cmp.proxy_share, 0.0, "%s: the player's own body is in view (%.1f%%)" % [row.label, cmp.proxy_share * 100.0])
+				assert_gt(cmp.both, 0, "%s: the two measures overlap" % row.label)
+
+
+func test_the_framing_check_has_teeth_an_art_bound_wrongly_fails_it() -> void:
+	var rig := _rig(_art(Fixture.Authored.A_POSE, true), 1.8, true)
+	var mi := rig.art_meshes()[0]
+	var good := mi.skin
+	var wrong := Skin.new()
+	var joints := PlaceholderBody.pose_globals(Fixture.a_pose(), Vector3.ZERO, 1.0)
+	for i: int in good.get_bind_count():
+		var name := StringName(good.get_bind_name(i))
+		wrong.add_named_bind(name, Transform3D(Basis.IDENTITY, -(joints[name] as Transform3D).origin))
+	_pose(rig, &"block", 0.5)
+	var cam := _fp_camera(rig)
+	assert_eq(_framing_problems(rig, cam, "right"), PackedStringArray())
+	mi.skin = wrong
+	assert_false(_framing_problems(rig, cam, "wrong").is_empty(), "a guard whose arms stay swung out is caught")
+
+
+func test_the_block_guard_keeps_forearms_and_hands_clear_of_the_lens() -> void:
+	var rig := _rig(_art(Fixture.Authored.A_POSE, true), 1.8, true)
+	_pose(rig, &"block", 0.5)
+	var cam := _fp_camera(rig)
+	var lens := rig.global_transform.affine_inverse() * cam.origin
+	var arm_bones: Array[StringName] = [&"LeftLowerArm", &"RightLowerArm", &"LeftHand", &"RightHand"]
+	var nearest := INF
+	var count := 0
+	for mi: MeshInstance3D in rig.art_meshes():
+		for v: Vector3 in SkinnedView.bone_vertices(mi, rig, arm_bones):
+			nearest = minf(nearest, v.distance_to(lens))
+			count += 1
+	assert_gt(count, 100, "the forearm and hand vertices were found")
+	assert_gte(nearest, 0.3, "the guard's forearms and hands stay 0.3 m from the lens (nearest %.3f m)" % nearest)
+
+
+func test_the_punks_art_frames_like_its_proxies_at_one_metre() -> void:
+	var rig := _rig(_art(Fixture.Authored.A_POSE))
+	rig.global_position = Vector3(0.0, 0.0, -1.0)
+	rig.rotation.y = PI
+	var eye := Vector3(0.0, 1.656, 0.0)
+	var punk_moves: Array[MoveData] = [load("res://game/combat/moves/punk_jab.tres"), load("res://game/combat/moves/punk_cross.tres"), load("res://game/combat/moves/punk_shove.tres")]
+	for yaw: float in [8.0, -6.0]:
+		var look := Basis(Vector3.UP, deg_to_rad(yaw))
+		var cam := Transform3D(look, eye + FirstPersonCamera.lens_offset(look))
+		_pose(rig, &"idle", 0.3)
+		assert_eq(_framing_problems(rig, cam, "idle, view %.0f" % yaw), PackedStringArray())
+		for move: MoveData in punk_moves:
+			_pose(rig, &"idle", 0.3)
+			rig.play_move(move)
+			for i: int in move.startup + 1:
+				rig.advance(FRAME)
+			assert_eq(_framing_problems(rig, cam, "%s active, view %.0f" % [move.id, yaw]), PackedStringArray())
+		var cmp := SkinnedView.compare_with_proxies(rig, cam)
+		assert_gt(cmp.proxy_share, 0.05, "the Punk fills the view at 1 m")
+		assert_gt(cmp.art_share, 0.05)
+
+
+func test_the_skinned_hits_carry_the_mesh_the_bone_and_the_depth_of_a_front_face() -> void:
+	var rig := _rig(_art(Fixture.Authored.REST))
+	rig.global_position = Vector3(0.0, 0.0, -1.0)
+	rig.rotation.y = PI
+	var cam := Transform3D(Basis.IDENTITY, Vector3(0.0, 1.5, 0.0))
+	var cells := SkinnedView.hits(rig, cam)
+	assert_eq(cells.size(), FPView.COLS * FPView.rows())
+	var covered := 0
+	var bones: Dictionary[StringName, int] = {}
+	for cell: Dictionary in cells:
+		if cell.is_empty():
+			continue
+		covered += 1
+		assert_same(cell.mesh, rig.art_meshes()[0])
+		assert_gt(cell.depth, 0.5, "a Punk 1 m away: front faces, not the far side")
+		assert_lt(cell.depth, 1.5)
+		bones[cell.bone] = bones.get(cell.bone, 0) + 1
+	assert_gt(covered, 100)
+	assert_true(bones.has(&"Head") or bones.has(&"UpperChest"), "the dominant bones are the body's (%s)" % [bones.keys()])
+	# From inside the body (the lens in the chest) the back faces are skipped, not hit.
+	var inside := SkinnedView.hits(rig, Transform3D(Basis.IDENTITY, Vector3(0.0, 1.2, -1.0)))
+	for cell: Dictionary in inside:
+		if not cell.is_empty():
+			assert_gt(float(cell.depth), FPView.NEAR)
+	# Art hidden: nothing to see.
+	rig.set_art_shown(false)
+	for cell: Dictionary in SkinnedView.hits(rig, cam):
+		assert_true(cell.is_empty(), "the A/B off: the art is not drawn")
+	rig.set_art_shown(true)
+	var hidden_rig := _rig(_art(Fixture.Authored.REST, true), 1.8, true)
+	var seen := SkinnedView.hits(hidden_rig, Transform3D(Basis.IDENTITY, Vector3(0.0, 1.2, 1.5)).looking_at(Vector3(0.0, 1.5, 0.0)))
+	for cell: Dictionary in seen:
+		if not cell.is_empty():
+			assert_ne(cell.mesh.name, &"ArtBody__fp_hidden", "the head layer is not drawn by the first-person camera")
+
+
+# --- Deformation (A19) --------------------------------------------------------------------------
+
+
+## The planted pose test: the lowest sole sample point of the rig's pose is on the floor.
+func _planted(rig: HumanoidRig) -> bool:
+	var globals: Dictionary[StringName, Transform3D] = {}
+	for i: int in rig.skeleton.get_bone_count():
+		globals[rig.skeleton.get_bone_name(i)] = rig.animation_pose(i)
+	return absf(PlaceholderBody.lowest_sole(globals, rig.rig_scale())) < 0.002
+
+
+## The strain of every art mesh of `rig` at its current pose, merged into one report of the
+## worst of each number.
+func _strain_now(rig: HumanoidRig, triangles: bool) -> Dictionary:
+	var merged := {}
+	for mi: MeshInstance3D in rig.art_meshes():
+		var report := SkinnedView.strain(mi, rig, [], 0.15, triangles)
+		if merged.is_empty():
+			merged = report
+			continue
+		for key: String in ["p_high", "max", "worst_bone"]:
+			pass
+		merged.p_high = maxf(merged.p_high, report.p_high)
+		merged.p_low = minf(merged.p_low, report.p_low)
+		merged.max = maxf(merged.max, report.max)
+		merged.min = minf(merged.min, report.min)
+		merged.lowest_y = minf(merged.lowest_y, report.lowest_y)
+		merged.has_nan = merged.has_nan or report.has_nan
+		merged.squashed += report.squashed
+		merged.flipped += report.flipped
+		merged.triangles += report.triangles
+		if absf(log(report.worst)) > absf(log(merged.worst)):
+			merged.worst = report.worst
+			merged.worst_bone = report.worst_bone
+	return merged
+
+
+## The strain problems of one sample (empty when it passes row A7's numbers).
+func _strain_problems(report: Dictionary, planted: bool) -> PackedStringArray:
+	var out := PackedStringArray()
+	if report.has_nan:
+		out.append("NaN")
+	if report.p_high > 1.6 or report.p_low < 0.6:
+		out.append("p99.9 %.2f / p0.1 %.2f outside [0.6, 1.6]" % [report.p_high, report.p_low])
+	if report.max > 2.2 or report.min < 0.4:
+		out.append("max %.2f / min %.2f outside [0.4, 2.2]" % [report.max, report.min])
+	if planted and report.lowest_y < -0.015:
+		out.append("a vertex %.1f cm under the floor in a planted pose" % [-report.lowest_y * 100.0])
+	return out

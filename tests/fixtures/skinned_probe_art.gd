@@ -40,18 +40,20 @@ const SWATCHES: Array[Color] = [
 
 ## A CharacterArt of the probe body: `authored` pose (Authored), `player` (wrapped hands and the
 ## FP-hidden part in its own mesh, Body__fp_hidden), `smooth` weights (see the file's docs).
-## `budget_slack` is the triangle budget above the mesh's own count.
+## `budget_slack` is the triangle budget above the mesh's own count. `copies` bakes the parts
+## that many times over (the same body again: a heavier mesh for the timing test).
 static func make(authored: int = Authored.REST, player: bool = false, smooth: bool = false,
-		budget_slack: int = 0) -> CharacterArt:
+		budget_slack: int = 0, copies: int = 1) -> CharacterArt:
 	var pose := a_pose() if authored == Authored.A_POSE else empty_pose()
 	var joints := PlaceholderBody.pose_globals(pose, Vector3.ZERO, 1.0)
 	var order := bind_order()
 	var visible_arrays := _empty_arrays()
 	var hidden_arrays := _empty_arrays()
 	var helper := HumanoidRig.new()
-	for part: PlaceholderBody.Part in PlaceholderBody.parts(player):
-		var target := hidden_arrays if player and PlaceholderBody.is_fp_hidden(part) else visible_arrays
-		_add_part(target, helper._make_mesh(part), part, joints, order, smooth)
+	for copy: int in copies:
+		for part: PlaceholderBody.Part in PlaceholderBody.parts(player):
+			var target := hidden_arrays if player and PlaceholderBody.is_fp_hidden(part) else visible_arrays
+			_add_part(target, helper._make_mesh(part), part, joints, order, smooth)
 	helper.free()
 	var triangles := 0
 	var root := Node3D.new()
