@@ -424,6 +424,10 @@ func test_dead_materials_leave_the_registry() -> void:
 	assert_gte(ToonMaterials._live.size(), before + 20, "tracked weakly while alive")
 	Tuning.set_value(&"look_band_2", 0.5)
 	assert_lt(ToonMaterials._live.size(), before + 20, "the dead ones are dropped on the next change")
+	# And without any change at all, a long run of spawns sweeps them as it goes.
+	for i in 1500:
+		ToonMaterials.character(Color(0.5, float(i % 7) / 7.0, 0.5))
+	assert_lt(ToonMaterials._live.size(), 1200, "the registry is swept as it grows")
 
 
 func test_the_edge_tag_marks_what_has_its_own_hull() -> void:

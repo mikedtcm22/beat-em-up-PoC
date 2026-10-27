@@ -31,10 +31,14 @@ const _KIND_META := &"toon_kind"
 const _GLOSSY_META := &"toon_glossy"
 const _FP_META := &"toon_fp"
 const _WARM_NAME := "ToonWarmUp"
+## The registry is swept of dead materials whenever it has grown past this many (and the bar
+## doubles from what is left), so a long session of spawns never lets it grow unbounded.
+const _SWEEP_AT := 256
 
 ## The materials made so far (weak: a rig's own die with it), the shared hulls by mode and
 ## first-person flag, and whether Tuning.changed is wired.
 static var _live: Array[WeakRef] = []
+static var _sweep_bar: int = _SWEEP_AT
 static var _hulls: Dictionary[int, ShaderMaterial] = {}
 static var _wired: bool = false
 ## The warm-up has run this run (warm_up()).
@@ -283,6 +287,9 @@ static func _hull(mode: int, first_person: bool) -> ShaderMaterial:
 ## Remember `material` weakly, wire Tuning.changed once, and give it the current Look values.
 static func _track(material: ShaderMaterial) -> ShaderMaterial:
 	_live.append(weakref(material))
+	if _live.size() >= _sweep_bar:
+		_sweep()
+		_sweep_bar = maxi(_SWEEP_AT, _live.size() * 2)
 	if not _wired:
 		_wired = true
 		Tuning.changed.connect(_on_tuning_changed)
@@ -300,5 +307,14 @@ static func _on_tuning_changed(property: StringName) -> void:
 		var material := ref.get_ref() as ShaderMaterial
 		if material != null:
 			apply_look(material)
+			alive.append(ref)
+	_live = alive
+
+
+## Drop the registry's dead entries.
+static func _sweep() -> void:
+	var alive: Array[WeakRef] = []
+	for ref: WeakRef in _live:
+		if ref.get_ref() != null:
 			alive.append(ref)
 	_live = alive

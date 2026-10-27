@@ -15,8 +15,8 @@
 
 uniform float band_1 : hint_range(0.0, 1.0) = 0.25;
 uniform float band_2 : hint_range(0.0, 1.0) = 0.62;
-// The width of a band edge in pixels: the transition is this many pixels wide wherever the
-// light changes across a surface (nothing to soften on a flat one). The look bible allows 2 px.
+// The width of a band edge in pixels at 1080p: the transition is this many pixels wide wherever
+// the light changes across a surface (nothing to soften on a flat one). The look bible allows 2 px.
 uniform float band_soft : hint_range(0.0, 8.0) = 1.2;
 uniform float mid_level : hint_range(0.0, 1.0) = 0.72;
 uniform float shadow_level : hint_range(0.0, 1.0) = 0.42;
@@ -31,7 +31,7 @@ uniform float spec_gloss : hint_range(1.0, 8.0) = 1.0;
 uniform float rim_cut : hint_range(0.0, 1.0) = 0.7;
 uniform float rim_power : hint_range(0.5, 8.0) = 3.0;
 uniform float rim_strength : hint_range(0.0, 1.0) = 0.35;
-// Halftone dots in the shadow band, in screen space: off at 0.
+// Halftone dots in the shadow band, in screen space (cells in pixels at 1080p): off at 0.
 uniform float halftone_strength : hint_range(0.0, 1.0) = 0.0;
 uniform float halftone_cell_px : hint_range(2.0, 24.0) = 6.0;
 
@@ -50,13 +50,14 @@ vec3 toon_shade(float lit, float edge) {
 void light() {
 	float ndl = dot(NORMAL, LIGHT);
 	float lit = ndl * ATTENUATION;
-	// Half a band edge, in light units: band_soft pixels of the light's own gradient (capped,
-	// so a shadow map's hard edge stays hard).
-	float edge = clamp(0.5 * band_soft * fwidth(lit), 0.0005, 0.08);
+	// Half a band edge, in light units: band_soft pixels (at 1080p) of the light's own gradient
+	// (capped, so a shadow map's hard edge stays hard).
+	float to_pixels = VIEWPORT_SIZE.y / 1080.0;
+	float edge = clamp(0.5 * band_soft * to_pixels * fwidth(lit), 0.0005, 0.08);
 	vec3 shade = toon_shade(lit, edge);
 	// Dots in the shadow band only: the deeper in shadow, the darker the dots.
 	if (halftone_strength > 0.0) {
-		vec2 cell = fract(FRAGCOORD.xy / halftone_cell_px) - 0.5;
+		vec2 cell = fract(FRAGCOORD.xy / (halftone_cell_px * to_pixels)) - 0.5;
 		float dots = 1.0 - smoothstep(0.28, 0.36, length(cell));
 		float in_shadow = 1.0 - smoothstep(band_1 - edge, band_1 + edge, lit);
 		shade *= 1.0 - halftone_strength * dots * in_shadow;
@@ -71,7 +72,7 @@ void light() {
 	DIFFUSE_LIGHT += shade * light_color;
 	// One hard highlight, lit side only.
 	float aligned = dot(NORMAL, normalize(LIGHT + VIEW));
-	float spec_edge = max(0.5 * band_soft * fwidth(aligned), 0.00001);
+	float spec_edge = max(0.5 * band_soft * to_pixels * fwidth(aligned), 0.00001);
 	float spec = smoothstep(spec_cut - spec_edge, spec_cut + spec_edge, aligned);
 	SPECULAR_LIGHT += spec * spec_strength * spec_gloss * step(0.0, ndl) * ATTENUATION * light_color;
 }

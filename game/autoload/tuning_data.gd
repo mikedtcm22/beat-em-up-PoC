@@ -1053,7 +1053,7 @@ extends Resource
 @export_range(0.0, 1.0, 0.01) var look_band_1: float = 0.25
 ## The second break: above it a surface is lit (see look_band_1).
 @export_range(0.0, 1.0, 0.01) var look_band_2: float = 0.62
-## How wide a band edge is, in pixels (the look bible: at most 2 at 1 m). 0 is a hard step.
+## How wide a band edge is, in pixels at 1080p (the look bible: at most 2 at 1 m). 0 is a hard step.
 @export_range(0.0, 8.0, 0.1) var look_band_soft: float = 1.2
 ## The shadow band's brightness as a share of the lit band's (the look bible: at least 40%,
 ## never black).
@@ -1082,7 +1082,7 @@ extends Resource
 @export var look_halftone_env: bool = false
 ## The same on the characters (off).
 @export var look_halftone_chars: bool = false
-## A halftone cell's size in pixels.
+## A halftone cell's size in pixels at 1080p.
 @export_range(2.0, 24.0, 0.5) var look_halftone_cell_px: float = 6.0
 ## How dark the dots are.
 @export_range(0.0, 1.0, 0.01) var look_halftone_strength: float = 0.5

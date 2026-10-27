@@ -14,7 +14,8 @@ extends RefCounted
 ## | Look: toon Punk at 3 m | the same at 3 m |
 ## | Look: toon dummies | two dummies, two Punks and the pipe on the street at 1 to 3 m |
 ## | Look: toon hit and damage | a jab (flinch and contact flash), then the bruised and bloodied looks, then the parry flash |
-## | Look: toon own limbs | the player's own arms and legs looking 45 degrees down: jab, cross, guard |
+## | Look: toon own limbs | the player's own arms looking 20 degrees down: jab, cross, guard |
+## | Look: toon halftone | a Punk and a dummy with the halftone dots switched on, live, on the room and the characters |
 ## | Look: toon art fixture | the procedural skinned art fixture (tests/fixtures/toon_art_probe.gd) in the art's toon material, its hull and its detail mask: bent, marked, flashed |
 
 const ArtProbe := preload("res://tests/fixtures/toon_art_probe.gd")
@@ -26,7 +27,7 @@ const FAR_M := 3.0
 ## The look: pitch of the face shot, the bot's default look, and the look down at the own limbs (degrees).
 const FACE_PITCH_DEG := 8.0
 const DEFAULT_PITCH_DEG := -6.0
-const LIMBS_PITCH_DEG := -45.0
+const LIMBS_PITCH_DEG := -20.0
 ## Ticks to turn the view, to let a spawned body settle, to hold a look (1.5 s) and a health look (1 s).
 const PITCH_TICKS := 10
 const SETTLE_TICKS := 30
@@ -43,8 +44,8 @@ const FIXTURE_REL := Vector2(0.0, 2.3)
 const FIXTURE_BENDS_DEG: Array[float] = [70.0, -50.0, 0.0]
 const FIXTURE_BEND_TICKS := 45
 const FIXTURE_HOLD_TICKS := 45
-## The pipe on the street: ahead and to the right (x right, y ahead, m) and its height.
-const PIPE_REL := Vector2(0.55, 1.5)
+## The pipe on the street: ahead, just inside the view's lowest ray (x right, y ahead, m) and its height.
+const PIPE_REL := Vector2(0.1, 2.4)
 const PIPE_HEIGHT_M := 0.2
 
 
@@ -55,6 +56,7 @@ static func acts(bot: Node) -> Array[Dictionary]:
 		{title = "Look: toon dummies", cam = &"first_person", fn = func() -> void: await _dummies(bot)},
 		{title = "Look: toon hit and damage", cam = &"first_person", fn = func() -> void: await _hit_and_damage(bot)},
 		{title = "Look: toon own limbs", cam = &"first_person", fn = func() -> void: await _own_limbs(bot)},
+		{title = "Look: toon halftone", cam = &"first_person", fn = func() -> void: await _halftone(bot)},
 		{title = "Look: toon art fixture", cam = &"first_person", fn = func() -> void: await _art_fixture(bot)},
 	]
 
@@ -149,6 +151,21 @@ static func _own_limbs(bot: Node) -> void:
 	await bot._release_block()
 	await bot._ticks(SETTLE_TICKS)
 	await bot._look_to(DEFAULT_PITCH_DEG, PITCH_TICKS)
+	_end(bot)
+
+
+## The halftone dots on (the room's and the characters'), for a look at them: they are off by
+## default (the look bible), and an act's tunables are put back at the next act.
+static func _halftone(bot: Node) -> void:
+	_begin(bot)
+	bot.spawn(&"punk", Vector2(0.4, 1.6))
+	var dummy := _dummy_at(bot, Vector2(-0.8, 2.2))
+	bot.tune(&"look_halftone_env", true)
+	bot.tune(&"look_halftone_chars", true)
+	bot.tune(&"look_halftone_strength", 0.6)
+	await bot._ticks(SETTLE_TICKS)
+	await bot._ticks(HOLD_TICKS)
+	dummy.queue_free()
 	_end(bot)
 
 
