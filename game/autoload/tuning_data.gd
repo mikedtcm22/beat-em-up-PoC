@@ -1056,9 +1056,9 @@ extends Resource
 @export_range(0.3, 1.0, 0.01) var look_mid_level: float = 0.72
 ## Where the bands break, on the light a surface gets (its angle to the sun, times the shadow
 ## map): below the first it is in shadow, below the second in the mid band, above it lit.
-@export_range(0.0, 1.0, 0.01) var look_band_1: float = 0.25
+@export_range(0.0, 1.0, 0.01) var look_band_1: float = 0.22
 ## The second break: above it a surface is lit (see look_band_1).
-@export_range(0.0, 1.0, 0.01) var look_band_2: float = 0.62
+@export_range(0.0, 1.0, 0.01) var look_band_2: float = 0.52
 ## How wide a band edge is, in pixels at 1080p (the look bible: at most 2 at 1 m). 0 is a hard step.
 @export_range(0.0, 8.0, 0.1) var look_band_soft: float = 1.2
 ## The shadow band's brightness as a share of the lit band's (the look bible: at least 40%,
@@ -1083,6 +1083,25 @@ extends Resource
 @export_range(0.5, 8.0, 0.1) var look_rim_power: float = 3.0
 ## How much the rim lifts the value (the look bible: +35%).
 @export_range(0.0, 1.0, 0.01) var look_rim_strength: float = 0.35
+## The sun's height above the horizon in degrees: it sets how much light a vertical surface gets
+## (cos of it), so how the bands fall on a character's front. Both rooms' sun (RoomKit).
+@export_range(10.0, 85.0, 1.0) var look_sun_elevation_deg: float = 45.0
+## The sun's direction about the vertical, the DirectionalLight3D's own yaw in degrees: where
+## the light comes from, so which side of a character is lit.
+@export_range(-180.0, 180.0, 1.0) var look_sun_yaw_deg: float = -50.0
+## The sun's energy. The toon bands take the light's color and cap its brightness, so this
+## only moves what the cast shadows and the specular read against.
+@export_range(0.2, 3.0, 0.05) var look_sun_energy: float = 1.2
+## The characters' fill light, as a share of a full light: a light fixed to the camera (in its
+## view space, so it never turns away from a character that faces the lens) that gives a
+## character that faces away from the sun two or three bands instead of one flat shadow. 0 is
+## off. Characters only: the room is lit by the sun alone.
+@export_range(0.0, 1.5, 0.01) var look_fill_strength: float = 0.8
+## The fill's direction in the camera's view: degrees to the right of the lens (negative: from
+## the left).
+@export_range(-90.0, 90.0, 1.0) var look_fill_yaw_deg: float = -35.0
+## The fill's height above the lens's axis in degrees.
+@export_range(-30.0, 80.0, 1.0) var look_fill_pitch_deg: float = 40.0
 ## Halftone dots in the shadow band of the room's surfaces, in screen space (off, as the look
 ## bible says).
 @export var look_halftone_env: bool = false
@@ -1139,6 +1158,10 @@ extends Resource
 @export_range(0, 2, 1) var look_aa_mode: int = 0
 
 @export_subgroup("Grade")
+## The tonemapper of both rooms' picture: 0 = linear (a flat color shows as authored, so a
+## swatch keeps its hue and the ink stays ink), 1 = filmic (M3's: brighter mid-tones, blacks
+## lifted, colors pulled toward grey), 2 = Reinhard, 3 = ACES.
+@export_range(0, 3, 1) var look_tonemap: int = 0
 ## The color grade (a LUT: cool shadows, warm highlights).
 @export var look_grade_enabled: bool = true
 ## How much of the grade shows: 0 = the picture as it is, 1 = the whole LUT.

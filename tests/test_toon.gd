@@ -19,6 +19,9 @@ const PINNED_UNIFORMS: Array[String] = [
 ]
 ## The first-person camera's horizontal field of view (Tuning.fov_deg's default).
 const FOV_DEG := 90.0
+## Where the light sweeps of the band tests start: not a multiple of the step from any default
+## break (a sample that lands exactly on a break is half way, a fourth color; F-look moved the breaks).
+const SWEEP_FROM := -0.2007
 
 
 func before_each() -> void:
@@ -311,7 +314,7 @@ func test_a_character_has_three_bands_and_a_shadow_that_is_never_black() -> void
 	assert_gt(shadow.r, 0.0, "never black")
 	var distinct: Array[Color] = []
 	for step in 41:
-		var color := _shade(-0.2 + 1.4 * float(step) / 40.0)
+		var color := _shade(SWEEP_FROM + 1.4 * float(step) / 40.0)
 		if not distinct.any(func(c: Color) -> bool: return c.is_equal_approx(color)):
 			distinct.append(color)
 	assert_eq(distinct.size(), 3, "three bands on a smooth sweep of light (edges a hair wide)")
@@ -320,7 +323,7 @@ func test_a_character_has_three_bands_and_a_shadow_that_is_never_black() -> void
 func test_the_room_has_two_bands() -> void:
 	var seen: Array[Color] = []
 	for step in 41:
-		var color := _shade(-0.2 + 1.4 * float(step) / 40.0, 1.0)
+		var color := _shade(SWEEP_FROM + 1.4 * float(step) / 40.0, 1.0)
 		if not seen.any(func(c: Color) -> bool: return c.is_equal_approx(color)):
 			seen.append(color)
 	assert_eq(seen.size(), 2, "lit and shadow: the mid band is as bright as the lit one")
@@ -390,7 +393,7 @@ func test_materials_take_the_look_values_now_and_on_every_change() -> void:
 	assert_eq(character.get_shader_parameter(&"halftone_strength"), 0.7)
 	# A whole-set change (a preset load) moves them too, and an unrelated edit leaves them be.
 	Tuning.apply(TuningData.new())
-	assert_eq(character.get_shader_parameter(&"band_1"), 0.25)
+	assert_eq(character.get_shader_parameter(&"band_1"), TuningData.new().look_band_1)
 	character.set_shader_parameter(&"band_1", 0.9)
 	Tuning.set_value(&"hit_flash_frames", 3)
 	assert_eq(character.get_shader_parameter(&"band_1"), 0.9, "a non-Look edit does not touch the look")

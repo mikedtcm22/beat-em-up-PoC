@@ -10,12 +10,15 @@ extends Node3D
 ##   ALBEDO and the line as ALPHA and never reads the screen. `look_edges_enabled` hides it,
 ##   and a hidden quad asks the renderer for no depth or normal buffer, so off costs nothing.
 ##   `look_edge_depth_only` swaps in the shader with EDGE_DEPTH_ONLY defined (no normal buffer).
-## - The grade: the room's Environment gets `adjustment_color_correction`, a 3D LUT built from
-##   assets/export/look/grade_lut.png (tools/gen_lut.gd). `look_grade_strength` mixes the LUT
-##   with the identity, so the texture is rebuilt when the strength changes.
+## - The tonemapper (`look_tonemap`) and the grade: the room's Environment gets
+##   `adjustment_color_correction`, a 3D LUT built from assets/export/look/grade_lut.png
+##   (tools/gen_lut.gd). `look_grade_strength` mixes the LUT with the identity, so the texture is
+##   rebuilt when the strength changes.
 ## - The AA mode: `look_aa_mode` sets the viewport's MSAA and FXAA (project.godot is untouched).
+## - The sun: the room's DirectionalLight3D ("Sun", RoomKit.build_environment) takes Look > Toon's
+##   elevation, yaw and energy, live.
 ##
-## Every number comes from Tuning (Look > Edges and Grade); it follows `Tuning.changed` live.
+## Every number comes from Tuning (Look > Edges, Grade and the sun); it follows `Tuning.changed` live.
 
 const EDGE_SHADER := preload("res://game/fx/edge_pass.gdshader")
 ## The grade LUT: a strip of N slices of N x N pixels, slice = blue, x = red, y = green
@@ -115,6 +118,18 @@ static func aa_settings(mode: int) -> Dictionary:
 	return {msaa = Viewport.MSAA_4X, ssaa = Viewport.SCREEN_SPACE_AA_DISABLED}
 
 
+## The Environment tonemapper for a `look_tonemap` value (0 linear, 1 filmic, 2 Reinhard, 3 ACES).
+static func tonemap_mode(value: int) -> Environment.ToneMapper:
+	match value:
+		1:
+			return Environment.TONE_MAPPER_FILMIC
+		2:
+			return Environment.TONE_MAPPER_REINHARDT
+		3:
+			return Environment.TONE_MAPPER_ACES
+	return Environment.TONE_MAPPER_LINEAR
+
+
 ## The edge shader with EDGE_DEPTH_ONLY defined: no normal-roughness buffer, no creases, no mask.
 static func depth_only_shader() -> Shader:
 	if _depth_only_shader == null:
@@ -125,6 +140,7 @@ static func depth_only_shader() -> Shader:
 
 ## Push every Look > Edges, Grade and AA tunable to the quad, the Environment and the viewport.
 func apply() -> void:
+	_apply_sun()
 	_apply_edges()
 	_apply_grade()
 	_apply_aa()
@@ -150,6 +166,13 @@ func _on_tuning_changed(property: StringName) -> void:
 		apply()
 
 
+## The room's sun follows Look > Toon's elevation, yaw and energy live (RoomKit.apply_sun()).
+func _apply_sun() -> void:
+	var sun := get_parent().get_node_or_null("Sun") as DirectionalLight3D if get_parent() != null else null
+	if sun != null:
+		RoomKit.apply_sun(sun)
+
+
 func _apply_edges() -> void:
 	var t := Tuning.data
 	_quad.visible = t.look_edges_enabled
@@ -171,6 +194,7 @@ func _apply_grade() -> void:
 	if _environment == null:
 		return
 	var t := Tuning.data
+	_environment.tonemap_mode = tonemap_mode(t.look_tonemap)
 	if not t.look_grade_enabled or _lut_size == 0:
 		_environment.adjustment_enabled = false
 		return

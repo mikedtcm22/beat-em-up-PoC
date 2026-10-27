@@ -174,6 +174,9 @@ static func apply_look(material: ShaderMaterial) -> void:
 	material.set_shader_parameter(&"rim_cut", data.look_rim_cut)
 	material.set_shader_parameter(&"rim_power", data.look_rim_power)
 	material.set_shader_parameter(&"rim_strength", data.look_rim_strength if has_rim else 0.0)
+	# The fill is the characters' alone too: the room is lit by the sun.
+	material.set_shader_parameter(&"fill_strength", data.look_fill_strength if has_rim else 0.0)
+	material.set_shader_parameter(&"fill_dir", fill_direction(data.look_fill_yaw_deg, data.look_fill_pitch_deg))
 	var dots := data.look_halftone_env if room_surface else data.look_halftone_chars
 	material.set_shader_parameter(&"halftone_strength", data.look_halftone_strength if dots else 0.0)
 	material.set_shader_parameter(&"halftone_cell_px", data.look_halftone_cell_px)
@@ -190,6 +193,15 @@ static func outline_width_m(dist: float, px: float, proj11: float, viewport_h: f
 	var fade := smoothstep(0.0, 1.0, (dist - lens_fade_m) / maxf(lens_fade_m, 0.0001))
 	var pixels := px * fp_scale * viewport_h / 1080.0
 	return pixels * 2.0 * clampf(dist, near_m, far_m) / (absf(proj11) * viewport_h) * fade
+
+
+## The fill light's direction in the camera's view space (x right, y up, z toward the lens), a
+## unit vector from the surface to the light: `yaw_deg` to the right of the lens (negative: from
+## the left) and `pitch_deg` above its axis. toon_light.gdshaderinc's `fill_dir`.
+static func fill_direction(yaw_deg: float, pitch_deg: float) -> Vector3:
+	var yaw := deg_to_rad(yaw_deg)
+	var pitch := deg_to_rad(pitch_deg)
+	return Vector3(sin(yaw) * cos(pitch), sin(pitch), cos(yaw) * cos(pitch))
 
 
 ## The band shade the toon lighting gives a surface whose light (the angle to the sun times the

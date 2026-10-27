@@ -60,7 +60,7 @@ static func build_environment(room: Node3D) -> void:
 	env.sky = sky
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
 	env.ambient_light_energy = 0.7
-	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	env.tonemap_mode = LookPost.tonemap_mode(Tuning.data.look_tonemap)
 	env.fog_enabled = true
 	env.fog_light_color = Color(0.6, 0.56, 0.55)
 	env.fog_density = 0.008
@@ -71,11 +71,17 @@ static func build_environment(room: Node3D) -> void:
 
 	var sun := DirectionalLight3D.new()
 	sun.name = "Sun"
-	sun.rotation_degrees = Vector3(-52.0, 32.0, 0.0)
-	sun.light_energy = 1.2
+	apply_sun(sun)
 	sun.shadow_enabled = true
 	sun.directional_shadow_max_distance = 40.0
 	room.add_child(sun)
+
+
+## Put `sun` where Tuning's Look > Toon says: its height above the horizon, the direction it comes
+## from and its energy (LookPost calls this again when one changes).
+static func apply_sun(sun: DirectionalLight3D) -> void:
+	sun.rotation_degrees = Vector3(-Tuning.data.look_sun_elevation_deg, Tuning.data.look_sun_yaw_deg, 0.0)
+	sun.light_energy = Tuning.data.look_sun_energy
 
 
 ## A solid box centred at `pos` (world layer, no mask), with a mesh when `material` is given,

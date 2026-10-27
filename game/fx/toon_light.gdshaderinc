@@ -12,6 +12,12 @@
 // map's term is in it). Below band_1 it is in shadow (shadow_level of the lit value, tinted
 // toward shadow_tint), between band_1 and band_2 it is mid (mid_level), above it is lit (1).
 // A material that wants two bands (the environment) sets mid_level to 1.
+//
+// The fill (characters only): a second source of light fixed to the camera, in view space, so a
+// character that faces away from the sun (about half of all of them, whatever its azimuth) still
+// has a lit side, a mid band and a shadow side on its front instead of one flat shadow. A
+// surface's light is the stronger of the sun's and the fill's; the sun's shadow map only dims
+// the sun's (a cast shadow shows where the fill does not reach).
 
 uniform float band_1 : hint_range(0.0, 1.0) = 0.25;
 uniform float band_2 : hint_range(0.0, 1.0) = 0.62;
@@ -27,6 +33,10 @@ uniform float shadow_tint_amount : hint_range(0.0, 1.0) = 0.45;
 uniform float spec_cut : hint_range(0.5, 1.0) = 0.99;
 uniform float spec_strength : hint_range(0.0, 2.0) = 0.5;
 uniform float spec_gloss : hint_range(1.0, 8.0) = 1.0;
+// The fill: a share of a full light (0 = none, the room's materials) and its direction in view
+// space (x right, y up, z toward the lens), a unit vector from the surface to the light.
+uniform float fill_strength : hint_range(0.0, 1.5) = 0.0;
+uniform vec3 fill_dir = vec3(-0.45, 0.55, 0.70);
 // The stepped rim (characters only: rim_strength is 0 elsewhere).
 uniform float rim_cut : hint_range(0.0, 1.0) = 0.7;
 uniform float rim_power : hint_range(0.5, 8.0) = 3.0;
@@ -50,6 +60,9 @@ vec3 toon_shade(float lit, float edge) {
 void light() {
 	float ndl = dot(NORMAL, LIGHT);
 	float lit = ndl * ATTENUATION;
+	if (LIGHT_IS_DIRECTIONAL && fill_strength > 0.0) {
+		lit = max(lit, fill_strength * dot(NORMAL, fill_dir));
+	}
 	// Half a band edge, in light units: band_soft pixels (at 1080p) of the light's own gradient
 	// (capped, so a shadow map's hard edge stays hard).
 	float to_pixels = VIEWPORT_SIZE.y / 1080.0;
