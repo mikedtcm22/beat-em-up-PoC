@@ -723,7 +723,7 @@ func test_the_detail_mask_is_a_uv2_ink_multiply_available_to_any_art() -> void:
 	var shader := _source(TOON_PATH)
 	assert_string_contains(shader, "texture(detail_tex, UV2).r", "R of the mask, on the second UV set")
 	assert_string_contains(shader, "color = mix(color, ink, ink_mask * detail_strength)", "toward ink, never shading")
-	assert_string_contains(shader, "uniform bool detail_sharp = false;", "the linear mix is the default: the Punk's face ink is tuned for it")
+	assert_string_contains(shader, "uniform bool detail_sharp = false;", "the linear mix is the default: an art opts in with metadata/detail_sharp")
 	assert_string_contains(shader, "if (detail_sharp) {", "sharp ink is a uniform, never a shader variant")
 	assert_string_contains(shader, "ink_mask = smoothstep(detail_cut - edge, detail_cut + edge, ink_mask);", "the mask is cut with an antialiased edge")
 	assert_string_contains(shader, "float edge = max(0.5 * fwidth(ink_mask), 0.0001);", "the edge is the mask's own screen-space gradient")
@@ -749,7 +749,7 @@ func test_the_sharp_ink_is_the_heros_alone_and_follows_the_cut() -> void:
 	var d := Tuning.data
 	assert_gt(d.look_detail_cut, 0.0, "the hero's ink is cut")
 	assert_lt(d.look_detail_cut, 0.3, "a low cut: 0.35 to 0.5 breaks the wraps' strands into dashes")
-	assert_false(bool(plain.get_shader_parameter(&"detail_sharp")), "an art made without it keeps the soft mix (the Punk's)")
+	assert_false(bool(plain.get_shader_parameter(&"detail_sharp")), "an art made without it keeps the soft mix")
 	assert_true(bool(sharp.get_shader_parameter(&"detail_sharp")))
 	assert_eq(sharp.get_shader_parameter(&"detail_cut"), d.look_detail_cut)
 	assert_eq(sharp.shader, plain.shader, "one shader")
@@ -761,14 +761,14 @@ func test_the_sharp_ink_is_the_heros_alone_and_follows_the_cut() -> void:
 	assert_false(bool(ToonMaterials.environment(Color.WHITE).get_shader_parameter(&"detail_sharp")))
 
 
-func test_the_heros_art_asks_for_sharp_ink_and_the_punks_does_not() -> void:
+func test_the_heros_and_the_punks_art_ask_for_sharp_ink_and_a_bare_art_does_not() -> void:
 	var hero_art := PlayerCharacter.worn_art(load("res://game/actors/art/player_art.tres") as CharacterArt)
 	assert_not_null(hero_art, "the hero's art is worn")
 	assert_not_null(hero_art.detail_mask, "with its mask")
 	assert_true(bool(hero_art.get_meta(&"detail_sharp", false)), "player_art.tres asks for sharp ink (a copy keeps it)")
 	var punk_art := load("res://game/actors/art/punk_art.tres") as CharacterArt
 	assert_not_null(punk_art.detail_mask, "the Punk has a mask too")
-	assert_false(bool(punk_art.get_meta(&"detail_sharp", false)), "the Punk's is the soft mix")
+	assert_true(bool(punk_art.get_meta(&"detail_sharp", false)), "punk_art.tres asks for sharp ink too (final-v1-01: its tape, mouth and laces are magnified to several pixels at 1 m)")
 	var hero := HumanoidRig.new()
 	hero.build_hurtboxes = false
 	hero.art = hero_art
@@ -780,7 +780,14 @@ func test_the_heros_art_asks_for_sharp_ink_and_the_punks_does_not() -> void:
 	punk.art = punk_art
 	add_child_autofree(punk)
 	punk.build()
-	assert_false(bool(punk.paint.art_material().get_shader_parameter(&"detail_sharp")), "the Punk's material mixes it")
+	assert_true(bool(punk.paint.art_material().get_shader_parameter(&"detail_sharp")), "the Punk's material cuts its ink")
+	var bare := HumanoidRig.new()
+	bare.build_hurtboxes = false
+	bare.art = (punk_art.duplicate() as CharacterArt)
+	bare.art.remove_meta(&"detail_sharp")
+	add_child_autofree(bare)
+	bare.build()
+	assert_false(bool(bare.paint.art_material().get_shader_parameter(&"detail_sharp")), "an art without the flag keeps the linear mix")
 
 
 func test_a_one_texel_line_stays_a_hard_line_when_it_is_magnified_with_sharp_ink() -> void:

@@ -12,3 +12,4 @@ scene = ExtResource("2_scene")
 palette = ExtResource("3_atlas")
 detail_mask = ExtResource("4_detail")
 triangle_budget = 15000
+metadata/detail_sharp = true

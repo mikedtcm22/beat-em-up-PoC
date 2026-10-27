@@ -54,6 +54,7 @@ const SWATCH_SLOTS_MAX := 7
 ## the shared dark grey (the gloves, the tank top, the shades' frame), the Punk's yellow (cap, laces) and the Punk's lens.
 const SLOT_DARK_GREY := 2
 const SLOT_SKIN := 6
+const SLOT_CREAM := 14
 const SLOT_YELLOW := 17
 const SLOT_LENS := 19
 ## The shades' frame: dark faces above and below the lens (the lens box is y 1.592-1.652 m, the frame's boxes a little beyond it).
@@ -90,10 +91,27 @@ const NORMAL_EDGE_ANGLE_DEG := 25.0
 const NORMAL_EDGE_SHARE_MAX := 0.18
 const NORMAL_MEAN_DEG_MAX := 19.0
 ## The face's skin carries the mouth and the nose line and no speckle: the share of its surface with ink over one half (the speckled
-## mask measured 2.6%, the lines alone 1.6%).
+## mask measured 2.6%, the lines alone 1.6%; F-cuff's re-bake 1.98%, the final-v1-06 retune 1.62%: face_skin 0.04 / 0.10).
 const FACE_INK_MIN := 0.004
 const FACE_INK_MAX := 0.02
+## The shipped share is 1.62% (final-v1-06: F-cuff's re-bake had moved it to 1.98% under a 2.0% ceiling, one sample from red); a mask
+## over FACE_INK_MARGIN_MAX has lost the margin, so a re-bake that moves a few samples cannot turn the suite red on its own.
+const FACE_INK_MARGIN_MAX := 0.0175
 const FACE_MIN_Y := 1.5
+## The cap's strap slot (final-v1-03): the dark arch in the cap's back panel, two boxes of pipeline.json's palette.regions
+## (strap_base, strap_top) cut at their planes so the borders run on edge loops. The mesh's border vertices sit within
+## ARCH_PLANE_M of the planes, and the old patch (20 faces, 3.9 x 1.7 cm, a ragged border) is under ARCH_FACES_MIN faces.
+const PUNK_CONFIG := "res://assets/source/characters/punk/pipeline.json"
+const ARCH_FACES_MIN := 60
+const ARCH_PLANE_M := 0.002
+const ARCH_ON_PLANE_MIN := 6
+## A mask value over this is ink under the sharp cut (look_detail_cut 0.15), whatever the filtered value: the cap, the laces and
+## the boots' ankles carry none of it (the generated texture's noise there is not a line).
+const INK_CUT := 0.15
+const CAP_MIN_Y := 1.69
+const LACES_MAX_Y := 0.2
+const ANKLE_MIN_Y := 0.05
+const CLEAN_INK_SHARE_MAX := 0.005
 const SWATCH_COLUMNS := 32
 const SWATCH_ROWS := 2
 const SWATCH_PX := 8
@@ -755,6 +773,138 @@ func test_the_punks_face_skin_keeps_its_lines_and_loses_the_speckle() -> void:
 	assert_gt(samples, 1000, "the head's skin was sampled")
 	assert_gt(share, FACE_INK_MIN, "the mouth mark and the nose line are in the mask")
 	assert_lt(share, FACE_INK_MAX, "and the skin's speckle is not")
+	assert_lt(share, FACE_INK_MARGIN_MAX, "with a margin under the ceiling (final-v1-06: 1.98% was one sample from red)")
+
+
+## The share of the samples of the faces `keep` selects ((slot, centre) -> bool) whose mask value is over `above` (four by four
+## barycentric samples a triangle, as the face-ink test takes them), and how many samples that was: Vector2(share, samples).
+func _mask_share(path: String, mask: Image, keep: Callable, above: float) -> Vector2:
+	var size := mask.get_width()
+	var arrays: Array = _body(path).arrays
+	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var uv: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV]
+	var uv2: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV2]
+	var index: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+	var samples := 0
+	var inked := 0
+	for t: int in index.size() / 3:
+		var a := index[t * 3]
+		var b := index[t * 3 + 1]
+		var c := index[t * 3 + 2]
+		if not bool(keep.call(_slot_of(uv[a]), (verts[a] + verts[b] + verts[c]) / 3.0)):
+			continue
+		for i: int in 4:
+			for j: int in 4 - i:
+				var wa := (float(i) + 0.5) / 4.0
+				var wb := (float(j) + 0.5) / 4.0
+				var wc := 1.0 - wa - wb
+				if wc < 0.0:
+					continue
+				var p := uv2[a] * wa + uv2[b] * wb + uv2[c] * wc
+				samples += 1
+				if mask.get_pixel(clampi(int(p.x * float(size)), 0, size - 1), clampi(int(p.y * float(size)), 0, size - 1)).r > above:
+					inked += 1
+	return Vector2(float(inked) / float(maxi(samples, 1)), float(samples))
+
+
+## final-v1-03, the cap's strap slot: the old one was a nearest-colour label of a few texels of the generated texture (20 coarse
+## faces, a ragged border, a ring of ink specks around it); the new one is authored like the lens: two boxes (an arch) cut at
+## their planes, so the dark grey's border is vertices ON the planes, and the cap and the arch take no ink.
+func test_the_punks_cap_strap_slot_is_a_clean_arch_on_edge_loops_with_no_ink_around_it() -> void:
+	var config: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(PUNK_CONFIG))
+	var regions: Dictionary = {}
+	for region: Dictionary in (config.palette.regions as Array):
+		regions[String(region.name)] = region
+	assert_true(regions.has("strap_base") and regions.has("strap_top"), "pipeline.json authors the strap slot as two regions (an arch)")
+	if not (regions.has("strap_base") and regions.has("strap_top")):
+		return
+	var half_width := float(regions.strap_base.max[0])
+	var base_y := float(regions.strap_base.min[2])
+	var top_y := float(regions.strap_top.max[2])
+	assert_true(bool(regions.strap_base.get("bisect_z", false)) and bool(regions.strap_base.get("bisect_x", false)), "cut at its planes first")
+	var arch := func(slot: int, centre: Vector3) -> bool: return slot == SLOT_DARK_GREY and centre.y > CAP_MIN_Y and centre.z < FACE_FRONT_Z
+	for path: String in _glbs():
+		if _id_of(path) != "punk" or not _facts(path).ok:
+			continue
+		var arrays: Array = _body(path).arrays
+		var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var uv: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV]
+		var index: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+		var faces := 0
+		var members: Dictionary[int, bool] = {}
+		for t: int in index.size() / 3:
+			var a := index[t * 3]
+			var centre := (verts[a] + verts[index[t * 3 + 1]] + verts[index[t * 3 + 2]]) / 3.0
+			if not bool(arch.call(_slot_of(uv[a]), centre)):
+				continue
+			faces += 1
+			for k: int in 3:
+				members[index[t * 3 + k]] = true
+		var low := INF
+		var high := -INF
+		var left := INF
+		var right := -INF
+		var on_base := 0
+		var on_left := 0
+		var on_right := 0
+		for v: int in members:
+			var p := verts[v]
+			low = minf(low, p.y)
+			high = maxf(high, p.y)
+			left = minf(left, p.x)
+			right = maxf(right, p.x)
+			if absf(p.y - base_y) < ARCH_PLANE_M:
+				on_base += 1
+			if absf(p.x + half_width) < ARCH_PLANE_M:
+				on_left += 1
+			if absf(p.x - half_width) < ARCH_PLANE_M:
+				on_right += 1
+		gut.p("ART-CONTRACT strap %s: %d dark faces in the arch, x %.1f to %.1f cm, y %.2f to %.2f m; vertices on the planes: base %d, left %d, right %d" % [
+				path.get_file(), faces, left * 100.0, right * 100.0, low, high, on_base, on_left, on_right])
+		assert_gte(faces, ARCH_FACES_MIN, "%s: the arch is a shape of its own, not a few coarse faces" % path)
+		assert_gte(right - left, 1.8 * half_width, "%s: it spans both boxes' width" % path)
+		assert_gte(high - low, 0.9 * (top_y - base_y), "%s: and their height" % path)
+		assert_lt(maxf(-left, right), half_width + ARCH_PLANE_M, "%s: nothing past the box's sides" % path)
+		assert_gt(low, base_y - ARCH_PLANE_M, "%s: nothing under its base" % path)
+		assert_lt(high, top_y + ARCH_PLANE_M, "%s: nothing over its top" % path)
+		assert_gte(on_base, ARCH_ON_PLANE_MIN, "%s: the base is a run of vertices on its plane (an edge loop)" % path)
+		assert_gte(on_left, ARCH_ON_PLANE_MIN, "%s: so is the left side" % path)
+		assert_gte(on_right, ARCH_ON_PLANE_MIN, "%s: and the right" % path)
+	var art := load("res://game/actors/art/punk_art.tres") as CharacterArt
+	if art == null or art.detail_mask == null or not _facts("res://assets/export/characters/punk/punk.glb").ok:
+		return
+	var mask := art.detail_mask.get_image()
+	var punk := "res://assets/export/characters/punk/punk.glb"
+	var cap := func(slot: int, centre: Vector3) -> bool: return slot == SLOT_YELLOW and centre.y > CAP_MIN_Y
+	var cap_share := _mask_share(punk, mask, cap, INK_CUT)
+	var arch_share := _mask_share(punk, mask, arch, INK_CUT)
+	gut.p("ART-CONTRACT cap ink: %.2f%% of %d cap samples and %.2f%% of %d arch samples are ink under the cut" % [cap_share.x * 100.0, cap_share.y, arch_share.x * 100.0, arch_share.y])
+	assert_gt(cap_share.y, 500.0, "the cap was sampled")
+	assert_lt(cap_share.x, CLEAN_INK_SHARE_MAX, "the cap is a clean yellow: no specks around the strap slot")
+	assert_eq(arch_share.x, 0.0, "the arch takes no ink")
+
+
+## final-v1-05, the laces: the generated texture's laces are noisy, and the top-hat inked 23% of the lace faces fully (leopard spots)
+## and 14% more faintly; the laces and the boots' ankles take no ink (the colour border of the yellow on the cream is the shape), the
+## sole and the toe keep their lines.
+func test_the_punks_laces_and_ankles_are_clean_the_soles_keep_their_lines() -> void:
+	var art := load("res://game/actors/art/punk_art.tres") as CharacterArt
+	var punk := "res://assets/export/characters/punk/punk.glb"
+	if art == null or art.detail_mask == null or not _facts(punk).ok:
+		return
+	var mask := art.detail_mask.get_image()
+	var laces := func(slot: int, centre: Vector3) -> bool: return slot == SLOT_YELLOW and centre.y < LACES_MAX_Y
+	var ankles := func(slot: int, centre: Vector3) -> bool: return (slot == SLOT_YELLOW or slot == SLOT_CREAM) and centre.y > ANKLE_MIN_Y and centre.y < LACES_MAX_Y
+	var soles := func(slot: int, centre: Vector3) -> bool: return slot == SLOT_CREAM and centre.y < ANKLE_MIN_Y
+	var lace_share := _mask_share(punk, mask, laces, INK_CUT)
+	var ankle_share := _mask_share(punk, mask, ankles, INK_CUT)
+	var sole_share := _mask_share(punk, mask, soles, INK_CUT)
+	gut.p("ART-CONTRACT laces: %.2f%% of %d lace samples, %.2f%% of %d ankle samples and %.2f%% of %d sole samples are ink under the cut" % [
+			lace_share.x * 100.0, lace_share.y, ankle_share.x * 100.0, ankle_share.y, sole_share.x * 100.0, sole_share.y])
+	assert_gt(lace_share.y, 500.0, "the laces were sampled")
+	assert_lt(lace_share.x, CLEAN_INK_SHARE_MAX, "the yellow laces are clean (leopard spots before: 23% inked)")
+	assert_lt(ankle_share.x, CLEAN_INK_SHARE_MAX, "and so is the cream round them")
+	assert_gt(sole_share.x, 0.0, "the sole keeps a line")
 
 
 ## A5: the fist fills the fist box. Vertices with weight >= 0.9 on a Hand bone, un-swung to the table's frame (the hand's

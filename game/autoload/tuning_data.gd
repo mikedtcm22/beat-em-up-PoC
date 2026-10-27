@@ -1119,12 +1119,12 @@ extends Resource
 @export_range(2.0, 24.0, 0.5) var look_halftone_cell_px: float = 6.0
 ## How dark the dots are.
 @export_range(0.0, 1.0, 0.01) var look_halftone_strength: float = 0.5
-## The cut of the hero's sharp ink: his detail mask (the wraps' strands, the straps' stitching,
-## the glove's lines) is thresholded here with a pixel-wide antialiased edge instead of mixed in
-## by its bilinear value, so a one-texel line stays a crisp line when it is magnified to 3 to 9
-## pixels at 0.2 to 0.4 m. A low cut keeps the strands whole (0.35 to 0.5 breaks them into
-## dashes). 0 is the soft linear mix (the Punk's, and the A/B). The Punk's own mask is always the
-## soft mix: its face ink is tuned for it.
+## The cut of the sharp ink: the detail mask of an art that asks for it (metadata/detail_sharp:
+## the hero's wraps, straps and glove lines, and the Punk's tape, mouth, nose and seams) is
+## thresholded here with a pixel-wide antialiased edge instead of mixed in by its bilinear value,
+## so a one-texel line stays a crisp line when it is magnified to 3 to 9 pixels at 0.2 to 0.4 m
+## (the hero) or about 2 pixels at 1 m (the Punk). A low cut keeps the strands whole (0.35 to 0.5
+## breaks them into dashes). 0 is the soft linear mix for every art (the A/B).
 @export_range(0.0, 0.9, 0.01) var look_detail_cut: float = 0.15
 
 @export_subgroup("Outline")
