@@ -25,7 +25,7 @@ The re-score's package "Placeholder paints take no hard highlight unless glossy,
 - New `test_only_the_glossy_paints_of_a_rig_take_the_hard_highlight`: over every `PlaceholderBody.Paint` of a real rig, `spec_strength` is `look_spec_strength` on `DARK` and 0 on the rest; the `spec_strength * spec_gloss` product `light()` multiplies is above 0 only on the glossy paint; a slider move (1.5) and a whole-set preset load leave the matte paints at 0 and keep the glossy one on the value; the pipe keeps its strength and the art's material keeps its (the swatches decide).
 - `test_the_art_material_is_the_glossy_kind_and_follows_the_glint_tunables`: only the message of the `spec_gloss` 1 check changed ("a matte placeholder's gloss factor is 1 (and its strength 0)").
 - *Fails without the fix.* With `toon_materials.gd` reverted to the base the two tests fail (2 of 44 failing: 0.5 where 0.0 was expected on every non-DARK paint and on the single character material); with the fix 44 of 44 pass. The shader-source tests (the `taken` term, `swatch_spec = 1.0;`) are unchanged and still pass: the shader is not touched.
-- Full suite: see part 4.
+- Full suite (`tools/run_tests.sh`, 291 s): 1594 of 1594 pass (the base's 1593 plus the new test), 0 SCRIPT ERROR, 0 SHADER ERROR, 0 ERROR lines (the two lines that contain the word are A12's own text).
 
 ## 3. What the first-person stills show
 
