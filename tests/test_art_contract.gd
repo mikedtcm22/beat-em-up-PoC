@@ -399,6 +399,45 @@ func test_hull_normals_and_the_detail_uv_are_there() -> void:
 		assert_lt(worst_split, 0.03, "%s: vertices at one position share one hull normal, across both parts too (no cracks)" % path)
 
 
+## F-punk (M4-plan A18): the Punk's detail mask is a 1k PNG with ink in R only (lines, never shading), and punk.glb and punk_rest.glb
+## carry the UV2 it is baked on, every vertex of it inside the unit square.
+func test_the_punk_detail_mask_is_a_1k_ink_only_png_on_the_punks_uv2() -> void:
+	var art := load("res://game/actors/art/punk_art.tres") as CharacterArt
+	assert_not_null(art.detail_mask, "punk_art.tres carries the detail mask")
+	var image := art.detail_mask.get_image()
+	assert_eq(image.get_size(), Vector2i(1024, 1024), "1k")
+	var ink := 0
+	var other := 0.0
+	var sum := 0.0
+	for y: int in range(0, 1024, 2):
+		for x: int in range(0, 1024, 2):
+			var c := image.get_pixel(x, y)
+			sum += c.r
+			other = maxf(other, maxf(c.g, c.b))
+			if c.r > 0.5:
+				ink += 1
+	var mean := sum / (512.0 * 512.0)
+	print("ART-CONTRACT punk_detail.png: mean ink %.4f, %d of 262144 sampled texels over 0.5" % [mean, ink])
+	assert_lt(other, 0.01, "G and B hold nothing (R is the ink)")
+	assert_gt(ink, 500, "there are lines")
+	assert_lt(mean, 0.08, "and they are lines, not a wash (shading would raise the mean)")
+	for name: String in ["punk.glb", "punk_rest.glb"]:
+		var path := "res://assets/export/characters/punk/%s" % name
+		var f := _facts(path)
+		if not f.ok:
+			continue
+		for n: String in (f.meshes as Dictionary):
+			var arrays: Array = (f.meshes[n] as Dictionary).arrays
+			var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+			var uv2: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV2] if arrays[Mesh.ARRAY_TEX_UV2] != null else PackedVector2Array()
+			assert_eq(uv2.size(), verts.size(), "%s %s: UV2 (detail) on every vertex" % [path, n])
+			var outside := 0
+			for uv: Vector2 in uv2:
+				if uv.x < -0.001 or uv.x > 1.001 or uv.y < -0.001 or uv.y > 1.001:
+					outside += 1
+			assert_eq(outside, 0, "%s %s: UV2 inside the unit square" % [path, n])
+
+
 ## A5: the fist fills the fist box. Vertices with weight >= 0.9 on a Hand bone, un-swung to the table's frame (the hand's
 ## measured direction turned back to hanging about the wrist joint), area-weighted centroid within 15 mm of the box centre,
 ## extents within 20% of 0.1 x 0.118 x 0.116 m.
