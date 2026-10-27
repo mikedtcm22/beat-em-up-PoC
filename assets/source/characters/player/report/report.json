@@ -1,7 +1,7 @@
 {
 	"asset": "player",
 	"version": 1,
-	"config_sha256": "37db5baf2d15fe9c0710c254db8f24bba0980f8b73b9c3b476dcae1b97c90b78",
+	"config_sha256": "1cbde532dfbc4da55f4017731dd8f7b820f5ef7e7ccc3d31eaff5b63928846a6",
 	"steps": {
 		"inspect": {
 			"source": {
@@ -870,15 +870,21 @@
 		},
 		"detail": {
 			"file": "player_detail.png",
-			"sha256": "a3a7c3872b57763e3ef6c8428a8ff7030539ce907b2e5dc5f09a096f81f1f9b0",
+			"sha256": "6bc1db43154d9ecc4ab08b3d68733056f62f67d023f72404f694525dc682178e",
 			"size": 1024,
 			"triangles": 26628,
 			"covered_texels": 499135,
 			"covered_share": 0.476012,
-			"ink_share_of_covered": 0.029231,
+			"ink_share_of_covered": 0.030727,
 			"border_texels": 10435,
-			"stroke_texels": 4716,
+			"stroke_texels": 5448,
 			"crease_texels": 3291,
+			"ink_mean": 0.039249,
+			"ink_texels": 40798,
+			"cleaned": {
+				"blob_texels_removed": 659,
+				"speck_pieces_removed": 905
+			},
 			"texel_mm_p50": 2.028214,
 			"texel_mm_p10": 1.477021,
 			"texel_mm_p90": 9.431836,
@@ -998,7 +1004,7 @@
 	"outputs": {
 		"player.glb": "57e2cb0b99412b3c00716cb02f1fd22b53ef6cf9d653bf1580fa46886fad26b7"
 	},
-	"hash": "6b6d75233d90d5231e879cb1f158691628c894ea06e5a927ccf81bf7e3e15b62",
+	"hash": "2a2abb30c52fb402ce74cfa31bb88f975bf56e698d263044e5513778382a81f5",
 	"stills": {
 		"variants": {
 			"apose": {

@@ -1098,9 +1098,13 @@ extends Resource
 @export_range(0.0, 3.0, 0.05) var look_sun_shadow_blur: float = 0.25
 ## The characters' fill light, as a share of a full light: a light fixed to the camera (in its
 ## view space, so it never turns away from a character that faces the lens) that gives a
-## character that faces away from the sun two or three bands instead of one flat shadow. 0 is
-## off. Characters only: the room is lit by the sun alone.
-@export_range(0.0, 1.5, 0.01) var look_fill_strength: float = 0.8
+## character that faces away from the sun a mid band and a shadow instead of one flat shadow.
+## 0 is off. Characters only: the room is lit by the sun alone. Keep it under look_band_2 (the
+## fill alone never reaches the lit band: that band is the sun's, so a front-lit character keeps
+## its sun-lit, fill-mid and violet shadow bands; at 0.8 the fill lit every lens-facing normal and
+## flattened the front-lit vest to one teal) and above look_band_1 / 0.63 (a lens-facing front is
+## a mid band, not the flat shadow: the F-look gap 2). The useful range is 0.35 to 0.45.
+@export_range(0.0, 1.5, 0.01) var look_fill_strength: float = 0.4
 ## The fill's direction in the camera's view: degrees to the right of the lens (negative: from
 ## the left).
 @export_range(-90.0, 90.0, 1.0) var look_fill_yaw_deg: float = -35.0
@@ -1115,6 +1119,13 @@ extends Resource
 @export_range(2.0, 24.0, 0.5) var look_halftone_cell_px: float = 6.0
 ## How dark the dots are.
 @export_range(0.0, 1.0, 0.01) var look_halftone_strength: float = 0.5
+## The cut of the hero's sharp ink: his detail mask (the wraps' strands, the straps' stitching,
+## the glove's lines) is thresholded here with a pixel-wide antialiased edge instead of mixed in
+## by its bilinear value, so a one-texel line stays a crisp line when it is magnified to 3 to 9
+## pixels at 0.2 to 0.4 m. A low cut keeps the strands whole (0.35 to 0.5 breaks them into
+## dashes). 0 is the soft linear mix (the Punk's, and the A/B). The Punk's own mask is always the
+## soft mix: its face ink is tuned for it.
+@export_range(0.0, 0.9, 0.01) var look_detail_cut: float = 0.15
 
 @export_subgroup("Outline")
 ## The inverted-hull outline's width in pixels at 1080p (the look bible: 3.5 to 4 px at 1 to

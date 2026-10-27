@@ -30,6 +30,7 @@ enum Hull { NORMAL, BOX, CYLINDER, RADIAL, ART }
 const _KIND_META := &"toon_kind"
 const _GLOSSY_META := &"toon_glossy"
 const _FP_META := &"toon_fp"
+const _SHARP_META := &"toon_sharp_detail"
 const _WARM_NAME := "ToonWarmUp"
 ## Where the warm-up's holder stands from the camera: this far ahead and this far below it, so
 ## a body drawn on it (feet at the holder) is in view.
@@ -68,9 +69,13 @@ static func character(color: Color, takes_marks: bool = false, glossy: bool = fa
 
 ## The skinned art's material: the palette `atlas` (and the player's `detail` mask on UV2 when
 ## given). Damage marks come from the rest pose (CUSTOM0/1) and the atlas's alpha; the hull's
-## edge tag is 0 (the art always has its hull).
-static func art(atlas: Texture2D, detail: Texture2D = null) -> ShaderMaterial:
+## edge tag is 0 (the art always has its hull). `sharp_detail`: the mask's ink is cut at
+## `look_detail_cut` with an antialiased edge instead of mixed in by its filtered value (the
+## hero's: his lines are magnified to several pixels at 0.2 to 0.4 m); the Punk's mask stays the
+## soft mix its face ink is tuned for.
+static func art(atlas: Texture2D, detail: Texture2D = null, sharp_detail: bool = false) -> ShaderMaterial:
 	var material := _make(Kind.ART, false)
+	material.set_meta(_SHARP_META, sharp_detail)
 	material.set_shader_parameter(&"albedo", Color.WHITE)
 	material.set_shader_parameter(&"albedo_tex", atlas)
 	material.set_shader_parameter(&"use_albedo_tex", atlas != null)
@@ -182,6 +187,10 @@ static func apply_look(material: ShaderMaterial) -> void:
 	var dots := data.look_halftone_env if room_surface else data.look_halftone_chars
 	material.set_shader_parameter(&"halftone_strength", data.look_halftone_strength if dots else 0.0)
 	material.set_shader_parameter(&"halftone_cell_px", data.look_halftone_cell_px)
+	# The hero's sharp ink: his art material only, and only while the cut is above 0 (0 is the A/B).
+	if kind == Kind.ART:
+		material.set_shader_parameter(&"detail_sharp", bool(material.get_meta(_SHARP_META, false)) and data.look_detail_cut > 0.0)
+		material.set_shader_parameter(&"detail_cut", data.look_detail_cut)
 
 
 ## The width of the hull line at `dist` metres from the lens, in metres, as toon_outline.gdshader
@@ -222,6 +231,17 @@ static func band_shade(lit: float, edge: float, band_1: float, band_2: float, mi
 	var out := shadow.lerp(Color(mid, mid, mid), b1).lerp(Color.WHITE, b2)
 	out.a = 1.0
 	return out
+
+
+## The share of ink a surface takes from its detail mask, as toon.gdshader computes it: `mask` is the
+## filtered mask value at the pixel, `gradient` how much it changes across one pixel (fwidth) and
+## `cut` the sharp ink's cut (`look_detail_cut`). `sharp` false is the linear mix (the mask as it is:
+## the Punk's); true cuts it with an edge one pixel wide, so a line is as hard as the hull's.
+static func detail_ink(mask: float, gradient: float, cut: float, sharp: bool) -> float:
+	if not sharp:
+		return mask
+	var edge := maxf(0.5 * gradient, 0.0001)
+	return smoothstep(cut - edge, cut + edge, mask)
 
 
 ## The hull's push direction for a vertex of a mesh, as toon_outline.gdshader computes it (unit
@@ -312,6 +332,7 @@ static func _make(kind: int, glossy: bool) -> ShaderMaterial:
 	material.set_shader_parameter(&"marks", 0.0)
 	material.set_shader_parameter(&"use_albedo_tex", false)
 	material.set_shader_parameter(&"use_detail_tex", false)
+	material.set_shader_parameter(&"detail_sharp", false)
 	material.set_shader_parameter(&"use_rest_custom", false)
 	material.set_shader_parameter(&"edge_tag", 1.0)
 	return material

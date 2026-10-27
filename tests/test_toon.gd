@@ -446,6 +446,40 @@ func test_the_fill_lights_a_front_the_sun_does_not_reach_and_only_for_the_direct
 	assert_gt(shade.get_luminance(), dark.get_luminance() + 0.2, "a front facing away from the sun is not the flat shadow band")
 
 
+func test_the_fill_alone_never_reaches_the_lit_band_so_a_front_lit_character_keeps_the_suns_bands() -> void:
+	# The final review (J5, L2): at 0.8 the fill lit every lens-facing normal by itself (about 40% of the cone
+	# of normals facing the lens reached the lit band) and the sun's mid and violet shadow bands were overwritten:
+	# a front-lit vest was one flat teal. The lit band is the sun's; the fill gives a mid band and a shadow.
+	var d := Tuning.defaults()
+	var fill := ToonMaterials.fill_direction(d.look_fill_yaw_deg, d.look_fill_pitch_deg)
+	assert_lt(d.look_fill_strength, d.look_band_2, "the fill at its brightest (a normal square to it) is under the lit break")
+	var shadow := 0
+	var mid := 0
+	var lit := 0
+	# The cone of normals within 45 degrees of the lens axis, uniform in solid angle.
+	var rings := 40
+	var around := 40
+	for i in rings:
+		var cos_theta := lerpf(1.0, cos(deg_to_rad(45.0)), (i + 0.5) / rings)
+		var sin_theta := sqrt(1.0 - cos_theta * cos_theta)
+		for j in around:
+			var phi := TAU * (j + 0.5) / around
+			var normal := Vector3(sin_theta * cos(phi), sin_theta * sin(phi), cos_theta)
+			var light := d.look_fill_strength * normal.dot(fill)
+			if light < d.look_band_1:
+				shadow += 1
+			elif light < d.look_band_2:
+				mid += 1
+			else:
+				lit += 1
+	var total := float(rings * around)
+	assert_eq(lit, 0, "the fill alone lights no lens-facing normal")
+	assert_gt(shadow / total, 0.3, "the fill leaves a shadow band on the side it does not reach")
+	assert_gt(mid / total, 0.3, "and a mid band where it does")
+	# The lens-facing front itself (what a character facing away from the sun shows) is a mid band, not the flat shadow.
+	assert_gt(d.look_fill_strength * Vector3(0.0, 0.0, 1.0).dot(fill), d.look_band_1 + 0.02, "a margin over the break, so the front does not shimmer")
+
+
 func test_the_hull_is_not_fogged() -> void:
 	# A fogged hull read 10 to 16 levels lighter than the HUD's ink at 2.5 to 10 m, and the line faded
 	# into the haze where the body did not.
@@ -688,7 +722,11 @@ func test_the_detail_mask_is_a_uv2_ink_multiply_available_to_any_art() -> void:
 	assert_eq(masked.get_shader_parameter(&"ink"), HudStyle.INK, "toward the one ink")
 	var shader := _source(TOON_PATH)
 	assert_string_contains(shader, "texture(detail_tex, UV2).r", "R of the mask, on the second UV set")
-	assert_string_contains(shader, "color = mix(color, ink,", "toward ink, never shading")
+	assert_string_contains(shader, "color = mix(color, ink, ink_mask * detail_strength)", "toward ink, never shading")
+	assert_string_contains(shader, "uniform bool detail_sharp = false;", "the linear mix is the default: the Punk's face ink is tuned for it")
+	assert_string_contains(shader, "if (detail_sharp) {", "sharp ink is a uniform, never a shader variant")
+	assert_string_contains(shader, "ink_mask = smoothstep(detail_cut - edge, detail_cut + edge, ink_mask);", "the mask is cut with an antialiased edge")
+	assert_string_contains(shader, "float edge = max(0.5 * fwidth(ink_mask), 0.0001);", "the edge is the mask's own screen-space gradient")
 	# A rig's art takes the CharacterArt's mask.
 	var art := CharacterArt.new()
 	art.id = &"player"
@@ -702,6 +740,78 @@ func test_the_detail_mask_is_a_uv2_ink_multiply_available_to_any_art() -> void:
 	rig.build()
 	assert_eq(rig.paint.art_material().get_shader_parameter(&"detail_tex"), mask)
 	assert_true(bool(rig.paint.art_material().get_shader_parameter(&"use_detail_tex")))
+
+
+func test_the_sharp_ink_is_the_heros_alone_and_follows_the_cut() -> void:
+	var mask := ImageTexture.create_from_image(Image.create(4, 4, false, Image.FORMAT_RGBA8))
+	var plain := ToonMaterials.art(VfxArt.clear_detail(), mask)
+	var sharp := ToonMaterials.art(VfxArt.clear_detail(), mask, true)
+	var d := Tuning.data
+	assert_gt(d.look_detail_cut, 0.0, "the hero's ink is cut")
+	assert_lt(d.look_detail_cut, 0.3, "a low cut: 0.35 to 0.5 breaks the wraps' strands into dashes")
+	assert_false(bool(plain.get_shader_parameter(&"detail_sharp")), "an art made without it keeps the soft mix (the Punk's)")
+	assert_true(bool(sharp.get_shader_parameter(&"detail_sharp")))
+	assert_eq(sharp.get_shader_parameter(&"detail_cut"), d.look_detail_cut)
+	assert_eq(sharp.shader, plain.shader, "one shader")
+	Tuning.set_value(&"look_detail_cut", 0.3)
+	assert_eq(sharp.get_shader_parameter(&"detail_cut"), 0.3, "moved live by the F1 panel")
+	Tuning.set_value(&"look_detail_cut", 0.0)
+	assert_false(bool(sharp.get_shader_parameter(&"detail_sharp")), "a cut of 0 is the A/B: the soft mix")
+	assert_false(bool(ToonMaterials.character(Color.WHITE).get_shader_parameter(&"detail_sharp")), "a primitive has none")
+	assert_false(bool(ToonMaterials.environment(Color.WHITE).get_shader_parameter(&"detail_sharp")))
+
+
+func test_the_heros_art_asks_for_sharp_ink_and_the_punks_does_not() -> void:
+	var hero_art := PlayerCharacter.worn_art(load("res://game/actors/art/player_art.tres") as CharacterArt)
+	assert_not_null(hero_art, "the hero's art is worn")
+	assert_not_null(hero_art.detail_mask, "with its mask")
+	assert_true(bool(hero_art.get_meta(&"detail_sharp", false)), "player_art.tres asks for sharp ink (a copy keeps it)")
+	var punk_art := load("res://game/actors/art/punk_art.tres") as CharacterArt
+	assert_not_null(punk_art.detail_mask, "the Punk has a mask too")
+	assert_false(bool(punk_art.get_meta(&"detail_sharp", false)), "the Punk's is the soft mix")
+	var hero := HumanoidRig.new()
+	hero.build_hurtboxes = false
+	hero.art = hero_art
+	add_child_autofree(hero)
+	hero.build()
+	assert_true(bool(hero.paint.art_material().get_shader_parameter(&"detail_sharp")), "the hero's material cuts its ink")
+	var punk := HumanoidRig.new()
+	punk.build_hurtboxes = false
+	punk.art = punk_art
+	add_child_autofree(punk)
+	punk.build()
+	assert_false(bool(punk.paint.art_material().get_shader_parameter(&"detail_sharp")), "the Punk's material mixes it")
+
+
+func test_a_one_texel_line_stays_a_hard_line_when_it_is_magnified_with_sharp_ink() -> void:
+	# A line one texel wide, magnified to about 6 pixels: the bilinear mask is a ramp up and down across the pixels
+	# (0.2 per pixel here). The linear mix draws the ramp (a grey smear 5 pixels wide beside the hull's hard line); the cut
+	# draws a line with an edge about a pixel wide. The shader's math is ToonMaterials.detail_ink().
+	var ramp: Array[float] = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 0.8, 0.6, 0.4, 0.2, 0.0]
+	var gradient := 0.2
+	var cut := Tuning.defaults().look_detail_cut
+	var soft_partial := 0
+	var sharp_partial := 0
+	var sharp_ink := 0
+	for value in ramp:
+		var soft := ToonMaterials.detail_ink(value, gradient, cut, false)
+		var hard := ToonMaterials.detail_ink(value, gradient, cut, true)
+		assert_eq(soft, value, "the linear mix is the mask itself")
+		if soft > 0.05 and soft < 0.95:
+			soft_partial += 1
+		if hard > 0.05 and hard < 0.95:
+			sharp_partial += 1
+		if hard > 0.95:
+			sharp_ink += 1
+	assert_gt(soft_partial, 6, "mixed in linearly it is a smear")
+	assert_lte(sharp_partial, 2, "cut, its two edges are a pixel wide")
+	assert_gt(sharp_ink, 5, "and the line is solid ink between them")
+	# Flat regions stay flat whatever the gradient (a plateau has none: the edge is at its minimum).
+	assert_eq(ToonMaterials.detail_ink(0.0, 0.0, cut, true), 0.0)
+	assert_eq(ToonMaterials.detail_ink(1.0, 0.0, cut, true), 1.0)
+	# A cut of 0.35 to 0.5 would lose the strand's flanks (the ramp's 0.4 values) and fragment a faint one.
+	assert_eq(ToonMaterials.detail_ink(0.3, gradient, 0.5, true), 0.0, "a faint value under a high cut is no ink")
+	assert_eq(ToonMaterials.detail_ink(0.3, gradient, cut, true), 1.0, "and under the low cut it is")
 
 
 func test_warming_up_is_a_headless_no_op() -> void:

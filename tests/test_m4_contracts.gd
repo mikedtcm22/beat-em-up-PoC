@@ -75,8 +75,9 @@ func test_the_contract_signatures_exist() -> void:
 		"res://game/fx/toon_materials.gd": {
 			# P1-toon: character() and environment() gained optional parameters (takes_marks and
 			# glossy; hulled), which the argument count includes (was 1 and 1). P3-int: outline()
-			# gained first_person (the player's own body, M4-calls/P3-int.md C1; was 0).
-			&"character": [3, true], &"art": [2, true], &"outline": [1, true], &"prop": [1, true],
+			# gained first_person (the player's own body, M4-calls/P3-int.md C1; was 0). Final review:
+			# art() gained sharp_detail (the hero's cut ink, M4-calls/fix-final-toon-light-and-ink.md C2; was 2).
+			&"character": [3, true], &"art": [3, true], &"outline": [1, true], &"prop": [1, true],
 			&"outline_for_prop": [0, true], &"environment": [2, true], &"grid": [0, true], &"warm_up": [2, true],
 		},
 		"res://game/actors/humanoid_rig.gd": {
