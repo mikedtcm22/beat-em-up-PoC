@@ -40,3 +40,8 @@ Package S0-contract (phase 0): the seams, the stubs, the Look tunables, the join
 
 ## C8. The test move is exactly `tests/test_vfx.gd` 688-835
 - **Decision.** Six tests and two helpers (`test_rig_damage_look_changes_materials_only` through `_red_share`) moved verbatim to `tests/test_damage_look.gd`: test_vfx.gd 53 -> 47 tests, test_damage_look.gd 6, same total. `test_damage_look_levels_at_66_and_33_percent` (679-686, no material access) and the two director-driven look tests (838+) stay in test_vfx.gd, as the brief's line range says.
+
+## C9. How "no behavior change" was shown
+- **Suite.** Base (`34cc150`): 1198 tests, 53 scripts. S0: 1216 tests, 55 scripts (+18 in `test_m4_contracts.gd`; the six moved damage-look tests are the same total); 0 `SCRIPT ERROR`, `SHADER ERROR` or `ERROR`.
+- **Capture.** `tools/capture_bot.sh res://tests/bot/combo_bot.tscn <dir> "Jab" 6` on the base and on S0: the same bot log (every hit on the same frame), the same 1815 frames, and idle frames 0-29 bit-identical. After the first hit the two recordings differ because `VfxDirector` seeds its generator with `randomize()` (vfx_director.gd:92), so the lettering and splats vary run to run. With that one line seeded to a constant in both trees (a temporary edit, reverted, never committed) all 1815 video frames are bit-identical (ffmpeg `psnr`: 1815 of 1815 `inf`), so the rig's materials, the contact flash and the damage marks draw exactly as on M3. Sheets read in both cases: jab, hook, uppercut and shove on the dummies in first person, the flash blobs, the launch and the floor.
+- **For L0-bench and later captures.** A before/after comparison on the full VFX needs the VFX generator seeded (the look acts do it, A12).
