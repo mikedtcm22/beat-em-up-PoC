@@ -1,0 +1,228 @@
+{
+	"id": "player",
+	"version": 1,
+	"note": "The hero, concept C (martial): Gemini flat views on the mannequin (views/), Tripo T11 multiview body and T12 auto-rig v3.0 unity. The rig GLB is both the mesh (with its texture) and the source rig, as for the smoke Punk. The fists and the detail mask are F-player-art's own steps (tools/pipeline/player_*.py).",
+	"paths": {
+		"work": "assets/source/_cache/player/work",
+		"blend_dir": "assets/source/characters/player/work",
+		"report": "assets/source/characters/player/report",
+		"export_dir": "assets/export/characters/player",
+		"export_name": "player"
+	},
+	"source": {
+		"mesh": "assets/source/characters/player/tripo/3ce1d980_rig.glb",
+		"rig": "same",
+		"facing_yaw_deg": 89.127809,
+		"sides": "keep"
+	},
+	"target": {
+		"head_top_m": 1.82
+	},
+	"fit": {
+		"landmarks": "rig",
+		"regularize": [
+			"Spine",
+			"Chest",
+			"UpperChest"
+		],
+		"bone_map": {},
+		"swing": "measure",
+		"default_swing_deg": 45.0,
+		"warp_weights": "tripo",
+		"residual_limit_m": 0.01,
+		"sole_percentile": 0.0
+	},
+	"rig": {
+		"weights": "tripo",
+		"max_influences": 4,
+		"variants": [
+			"apose"
+		]
+	},
+	"parts": {
+		"fists": {
+			"enabled": true,
+			"glove_slot": 35,
+			"strap_slot": 14,
+			"strap_height_m": 0.03,
+			"cuff_margin_m": 0.008,
+			"cuff_over_m": 0.035,
+			"cuff_below_wrist_m": 0.012,
+			"bevel_m": 0.022,
+			"bump_m": 0.006
+		},
+		"split_fp": {
+			"enabled": true,
+			"torso_cut_bone": "Chest",
+			"upper_arm_cut": 0.5,
+			"cap_depth_m": 0.03,
+			"cap_rings": 4
+		}
+	},
+	"palette": {
+		"mode": "fixed",
+		"slots": [
+			7,
+			14,
+			32,
+			33,
+			34,
+			35
+		],
+		"max_swatches": 6,
+		"min_share": 0.004,
+		"majority_passes": 2,
+		"border_relax_iterations": 3,
+		"border_relax_factor": 0.5,
+		"budget_tris": 30000,
+		"detail_uv": true
+	},
+	"export": {
+		"hull_normal_digits": 5
+	},
+	"stills": {
+		"views": [
+			"front",
+			"three_quarter",
+			"side"
+		],
+		"poses": {
+			"rest": {},
+			"guard": {
+				"Spine": [
+					-3.0,
+					0.0,
+					0.0
+				],
+				"Chest": [
+					-3.0,
+					0.0,
+					0.0
+				],
+				"Neck": [
+					4.0,
+					0.0,
+					0.0
+				],
+				"Head": [
+					2.0,
+					0.0,
+					0.0
+				],
+				"LeftUpperArm": [
+					43.5,
+					-22.0,
+					-13.5
+				],
+				"LeftLowerArm": [
+					130.0,
+					0.0,
+					0.0
+				],
+				"RightUpperArm": [
+					40.0,
+					22.5,
+					13.0
+				],
+				"RightLowerArm": [
+					134.5,
+					0.0,
+					0.0
+				],
+				"LeftUpperLeg": [
+					16.0,
+					0.0,
+					-4.0
+				],
+				"LeftLowerLeg": [
+					-24.0,
+					0.0,
+					0.0
+				],
+				"LeftFoot": [
+					8.0,
+					0.0,
+					4.0
+				],
+				"RightUpperLeg": [
+					-6.0,
+					0.0,
+					5.0
+				],
+				"RightLowerLeg": [
+					-16.0,
+					0.0,
+					0.0
+				],
+				"RightFoot": [
+					22.0,
+					0.0,
+					-5.0
+				]
+			},
+			"elbow_150": {
+				"LeftLowerArm": [
+					150.0,
+					0.0,
+					0.0
+				],
+				"RightLowerArm": [
+					150.0,
+					0.0,
+					0.0
+				]
+			},
+			"arm_raise_140": {
+				"LeftUpperArm": [
+					140.0,
+					0.0,
+					0.0
+				],
+				"RightUpperArm": [
+					140.0,
+					0.0,
+					0.0
+				]
+			},
+			"knee_m130": {
+				"LeftUpperLeg": [
+					40.0,
+					0.0,
+					0.0
+				],
+				"LeftLowerLeg": [
+					-130.0,
+					0.0,
+					0.0
+				],
+				"RightUpperLeg": [
+					-10.0,
+					0.0,
+					0.0
+				]
+			},
+			"spine_twist": {
+				"Spine": [
+					0.0,
+					30.0,
+					0.0
+				],
+				"Chest": [
+					0.0,
+					30.0,
+					0.0
+				],
+				"UpperChest": [
+					0.0,
+					20.0,
+					0.0
+				],
+				"Neck": [
+					0.0,
+					-20.0,
+					0.0
+				]
+			}
+		}
+	}
+}

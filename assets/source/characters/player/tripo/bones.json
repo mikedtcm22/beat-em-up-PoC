@@ -1,0 +1,2282 @@
+{
+	"version": 1,
+	"blender": "5.2.2 LTS",
+	"source": {
+		"file": "3ce1d980_rig.glb",
+		"bytes": 1283360,
+		"sha256": "3e86fe094d47aab2c729c1c40b79a3dc47bc2c27de9dec8c20f5f62f674ac0a8"
+	},
+	"import": {
+		"bone_heuristic": "BLENDER",
+		"guess_original_bind_pose": true,
+		"disable_bone_shape": true,
+		"importer": "gltf"
+	},
+	"space": "godot: x right, y up, the rig faces -z; blender (x, y, z) -> (x, z, -y)",
+	"objects": [
+		{
+			"name": "Armature",
+			"type": "ARMATURE",
+			"parent": null,
+			"location": [
+				-0.002807,
+				-0.001676,
+				0.0
+			],
+			"rotation_euler_deg": [
+				0.0,
+				0.0,
+				0.0
+			],
+			"scale": [
+				1.0,
+				1.0,
+				1.0
+			]
+		},
+		{
+			"name": "tripo_node_8ed16ed9-c690-4e99-b7ac-a573b37c2da1",
+			"type": "MESH",
+			"parent": "Armature",
+			"location": [
+				0.0,
+				0.0,
+				0.0
+			],
+			"rotation_euler_deg": [
+				0.0,
+				0.0,
+				0.0
+			],
+			"scale": [
+				1.0,
+				1.0,
+				1.0
+			]
+		}
+	],
+	"armatures": [
+		{
+			"name": "Armature",
+			"bone_count": 67,
+			"bones": [
+				{
+					"index": 0,
+					"name": "Hips",
+					"parent": null,
+					"head": [
+						-0.017578,
+						0.541016,
+						-0.001953
+					],
+					"tail": [
+						-0.017578,
+						0.603271,
+						-0.001953
+					],
+					"roll_rad": 0.0,
+					"length": 0.062255,
+					"deform": true,
+					"weighted_verts": 2120
+				},
+				{
+					"index": 1,
+					"name": "Spine",
+					"parent": "Hips",
+					"head": [
+						-0.017578,
+						0.611328,
+						-0.001953
+					],
+					"tail": [
+						-0.013672,
+						0.689453,
+						-0.001953
+					],
+					"roll_rad": 0.0,
+					"length": 0.078223,
+					"deform": true,
+					"weighted_verts": 2231
+				},
+				{
+					"index": 2,
+					"name": "Chest",
+					"parent": "Spine",
+					"head": [
+						-0.013672,
+						0.689453,
+						-0.001953
+					],
+					"tail": [
+						-0.021484,
+						0.759766,
+						-0.001953
+					],
+					"roll_rad": 0.0,
+					"length": 0.070745,
+					"deform": true,
+					"weighted_verts": 2067
+				},
+				{
+					"index": 3,
+					"name": "UpperChest",
+					"parent": "Chest",
+					"head": [
+						-0.021484,
+						0.759766,
+						-0.001953
+					],
+					"tail": [
+						-0.023973,
+						0.822703,
+						-0.001953
+					],
+					"roll_rad": 0.0,
+					"length": 0.062987,
+					"deform": true,
+					"weighted_verts": 1035
+				},
+				{
+					"index": 4,
+					"name": "Neck",
+					"parent": "UpperChest",
+					"head": [
+						-0.029297,
+						0.822266,
+						-0.001953
+					],
+					"tail": [
+						-0.025391,
+						0.853516,
+						-0.001953
+					],
+					"roll_rad": 0.0,
+					"length": 0.031493,
+					"deform": true,
+					"weighted_verts": 1618
+				},
+				{
+					"index": 5,
+					"name": "Neck_Twist_A",
+					"parent": "Neck",
+					"head": [
+						-0.025391,
+						0.853516,
+						-0.001953
+					],
+					"tail": [
+						-0.021484,
+						0.884766,
+						-0.001953
+					],
+					"roll_rad": 0.0,
+					"length": 0.031493,
+					"deform": true,
+					"weighted_verts": 1455
+				},
+				{
+					"index": 6,
+					"name": "Head",
+					"parent": "Neck",
+					"head": [
+						-0.021484,
+						0.884766,
+						-0.001953
+					],
+					"tail": [
+						0.03333,
+						0.914281,
+						-0.001953
+					],
+					"roll_rad": 0.0,
+					"length": 0.062255,
+					"deform": true,
+					"weighted_verts": 1446
+				},
+				{
+					"index": 7,
+					"name": "Left_Eye",
+					"parent": "Head",
+					"head": [
+						0.029297,
+						0.91211,
+						-0.025391
+					],
+					"tail": [
+						0.080078,
+						0.939453,
+						-0.048828
+					],
+					"roll_rad": 0.0,
+					"length": 0.062255,
+					"deform": true,
+					"weighted_verts": 0
+				},
+				{
+					"index": 8,
+					"name": "Right_Eye",
+					"parent": "Head",
+					"head": [
+						0.029297,
+						0.91211,
+						0.021484
+					],
+					"tail": [
+						0.080078,
+						0.939453,
+						0.044922
+					],
+					"roll_rad": 1e-06,
+					"length": 0.062255,
+					"deform": true,
+					"weighted_verts": 0
+				},
+				{
+					"index": 9,
+					"name": "Left_Shoulder",
+					"parent": "UpperChest",
+					"head": [
+						-0.001953,
+						0.791016,
+						-0.068359
+					],
+					"tail": [
+						-0.033203,
+						0.771484,
+						-0.126953
+					],
+					"roll_rad": 0.0,
+					"length": 0.069219,
+					"deform": true,
+					"weighted_verts": 1362
+				},
+				{
+					"index": 10,
+					"name": "Left_UpperArm",
+					"parent": "Left_Shoulder",
+					"head": [
+						-0.033203,
+						0.771484,
+						-0.126953
+					],
+					"tail": [
+						-0.037109,
+						0.650391,
+						-0.224609
+					],
+					"roll_rad": 0.0,
+					"length": 0.155614,
+					"deform": true,
+					"weighted_verts": 1182
+				},
+				{
+					"index": 11,
+					"name": "Left_LowerArm",
+					"parent": "Left_UpperArm",
+					"head": [
+						-0.037109,
+						0.650391,
+						-0.224609
+					],
+					"tail": [
+						0.012689,
+						0.562814,
+						-0.314962
+					],
+					"roll_rad": 0.0,
+					"length": 0.135326,
+					"deform": true,
+					"weighted_verts": 750
+				},
+				{
+					"index": 12,
+					"name": "Left_Hand",
+					"parent": "Left_LowerArm",
+					"head": [
+						0.012689,
+						0.562814,
+						-0.314962
+					],
+					"tail": [
+						0.025446,
+						0.538025,
+						-0.337693
+					],
+					"roll_rad": 0.0,
+					"length": 0.035971,
+					"deform": true,
+					"weighted_verts": 492
+				},
+				{
+					"index": 13,
+					"name": "Left_ThumbProximal",
+					"parent": "Left_Hand",
+					"head": [
+						0.041011,
+						0.542662,
+						-0.324221
+					],
+					"tail": [
+						0.063342,
+						0.521966,
+						-0.331301
+					],
+					"roll_rad": 0.0,
+					"length": 0.031259,
+					"deform": true,
+					"weighted_verts": 294
+				},
+				{
+					"index": 14,
+					"name": "Left_ThumbIntermediate",
+					"parent": "Left_ThumbProximal",
+					"head": [
+						0.063342,
+						0.521966,
+						-0.331301
+					],
+					"tail": [
+						0.074779,
+						0.506171,
+						-0.33239
+					],
+					"roll_rad": -1e-06,
+					"length": 0.019532,
+					"deform": true,
+					"weighted_verts": 189
+				},
+				{
+					"index": 15,
+					"name": "Left_ThumbDistal",
+					"parent": "Left_ThumbIntermediate",
+					"head": [
+						0.074779,
+						0.506171,
+						-0.33239
+					],
+					"tail": [
+						0.081341,
+						0.49711,
+						-0.333015
+					],
+					"roll_rad": 0.0,
+					"length": 0.011205,
+					"deform": true,
+					"weighted_verts": 112
+				},
+				{
+					"index": 16,
+					"name": "Left_ThumbDistalEnd",
+					"parent": "Left_ThumbDistal",
+					"head": [
+						0.081341,
+						0.497109,
+						-0.333015
+					],
+					"tail": [
+						0.087903,
+						0.488048,
+						-0.33364
+					],
+					"roll_rad": 0.0,
+					"length": 0.011205,
+					"deform": true,
+					"weighted_verts": 59
+				},
+				{
+					"index": 17,
+					"name": "Left_IndexProximal",
+					"parent": "Left_Hand",
+					"head": [
+						0.064431,
+						0.50726,
+						-0.367793
+					],
+					"tail": [
+						0.073145,
+						0.494189,
+						-0.378141
+					],
+					"roll_rad": 0.0,
+					"length": 0.018812,
+					"deform": true,
+					"weighted_verts": 143
+				},
+				{
+					"index": 18,
+					"name": "Left_IndexIntermediate",
+					"parent": "Left_IndexProximal",
+					"head": [
+						0.073145,
+						0.494189,
+						-0.378141
+					],
+					"tail": [
+						0.08077,
+						0.479483,
+						-0.384677
+					],
+					"roll_rad": 0.0,
+					"length": 0.017808,
+					"deform": true,
+					"weighted_verts": 51
+				},
+				{
+					"index": 19,
+					"name": "Left_IndexDistal",
+					"parent": "Left_IndexIntermediate",
+					"head": [
+						0.08077,
+						0.479483,
+						-0.384677
+					],
+					"tail": [
+						0.088131,
+						0.465287,
+						-0.390986
+					],
+					"roll_rad": -1e-06,
+					"length": 0.017191,
+					"deform": true,
+					"weighted_verts": 32
+				},
+				{
+					"index": 20,
+					"name": "Left_IndexDistalEnd",
+					"parent": "Left_IndexDistal",
+					"head": [
+						0.088131,
+						0.465287,
+						-0.390986
+					],
+					"tail": [
+						0.095492,
+						0.451091,
+						-0.397296
+					],
+					"roll_rad": -1e-06,
+					"length": 0.017191,
+					"deform": true,
+					"weighted_verts": 0
+				},
+				{
+					"index": 21,
+					"name": "Left_MiddleProximal",
+					"parent": "Left_Hand",
+					"head": [
+						0.052449,
+						0.499091,
+						-0.375962
+					],
+					"tail": [
+						0.059529,
+						0.487653,
+						-0.388489
+					],
+					"roll_rad": 0.0,
+					"length": 0.018381,
+					"deform": true,
+					"weighted_verts": 123
+				},
+				{
+					"index": 22,
+					"name": "Left_MiddleIntermediate",
+					"parent": "Left_MiddleProximal",
+					"head": [
+						0.059529,
+						0.487653,
+						-0.388489
+					],
+					"tail": [
+						0.067154,
+						0.472948,
+						-0.396659
+					],
+					"roll_rad": 0.0,
+					"length": 0.01847,
+					"deform": true,
+					"weighted_verts": 63
+				},
+				{
+					"index": 23,
+					"name": "Left_MiddleDistal",
+					"parent": "Left_MiddleIntermediate",
+					"head": [
+						0.067154,
+						0.472947,
+						-0.396659
+					],
+					"tail": [
+						0.073434,
+						0.460837,
+						-0.403387
+					],
+					"roll_rad": 0.0,
+					"length": 0.015211,
+					"deform": true,
+					"weighted_verts": 24
+				},
+				{
+					"index": 24,
+					"name": "Left_MiddleDistalEnd",
+					"parent": "Left_MiddleDistal",
+					"head": [
+						0.073434,
+						0.460837,
+						-0.403387
+					],
+					"tail": [
+						0.079713,
+						0.448726,
+						-0.410115
+					],
+					"roll_rad": -1e-06,
+					"length": 0.015211,
+					"deform": true,
+					"weighted_verts": 8
+				},
+				{
+					"index": 25,
+					"name": "Left_RingProximal",
+					"parent": "Left_Hand",
+					"head": [
+						0.037198,
+						0.493644,
+						-0.378141
+					],
+					"tail": [
+						0.043734,
+						0.481662,
+						-0.387944
+					],
+					"roll_rad": -1e-06,
+					"length": 0.016805,
+					"deform": true,
+					"weighted_verts": 155
+				},
+				{
+					"index": 26,
+					"name": "Left_RingIntermediate",
+					"parent": "Left_RingProximal",
+					"head": [
+						0.043734,
+						0.481662,
+						-0.387944
+					],
+					"tail": [
+						0.05027,
+						0.469135,
+						-0.396114
+					],
+					"roll_rad": -1e-06,
+					"length": 0.016321,
+					"deform": true,
+					"weighted_verts": 55
+				},
+				{
+					"index": 27,
+					"name": "Left_RingDistal",
+					"parent": "Left_RingIntermediate",
+					"head": [
+						0.05027,
+						0.469135,
+						-0.396114
+					],
+					"tail": [
+						0.055239,
+						0.459612,
+						-0.402325
+					],
+					"roll_rad": 0.0,
+					"length": 0.012408,
+					"deform": true,
+					"weighted_verts": 20
+				},
+				{
+					"index": 28,
+					"name": "Left_RingDistalEnd",
+					"parent": "Left_RingDistal",
+					"head": [
+						0.055239,
+						0.459612,
+						-0.402325
+					],
+					"tail": [
+						0.060208,
+						0.450088,
+						-0.408536
+					],
+					"roll_rad": 0.0,
+					"length": 0.012408,
+					"deform": true,
+					"weighted_verts": 0
+				},
+				{
+					"index": 29,
+					"name": "Left_PinkyProximal",
+					"parent": "Left_Hand",
+					"head": [
+						0.021948,
+						0.491466,
+						-0.375418
+					],
+					"tail": [
+						0.026306,
+						0.479483,
+						-0.381953
+					],
+					"roll_rad": 0.0,
+					"length": 0.014327,
+					"deform": true,
+					"weighted_verts": 159
+				},
+				{
+					"index": 30,
+					"name": "Left_PinkyIntermediate",
+					"parent": "Left_PinkyProximal",
+					"head": [
+						0.026306,
+						0.479483,
+						-0.381953
+					],
+					"tail": [
+						0.030118,
+						0.469135,
+						-0.386311
+					],
+					"roll_rad": 0.0,
+					"length": 0.011858,
+					"deform": true,
+					"weighted_verts": 46
+				},
+				{
+					"index": 31,
+					"name": "Left_PinkyDistal",
+					"parent": "Left_PinkyIntermediate",
+					"head": [
+						0.030118,
+						0.469135,
+						-0.386311
+					],
+					"tail": [
+						0.033468,
+						0.460044,
+						-0.390139
+					],
+					"roll_rad": 0.0,
+					"length": 0.010418,
+					"deform": true,
+					"weighted_verts": 22
+				},
+				{
+					"index": 32,
+					"name": "Left_PinkyDistalEnd",
+					"parent": "Left_PinkyDistal",
+					"head": [
+						0.033468,
+						0.460044,
+						-0.390139
+					],
+					"tail": [
+						0.036817,
+						0.450952,
+						-0.393967
+					],
+					"roll_rad": 0.0,
+					"length": 0.010418,
+					"deform": true,
+					"weighted_verts": 0
+				},
+				{
+					"index": 33,
+					"name": "Right_Shoulder",
+					"parent": "UpperChest",
+					"head": [
+						-0.001953,
+						0.791016,
+						0.064453
+					],
+					"tail": [
+						-0.033203,
+						0.771484,
+						0.123047
+					],
+					"roll_rad": 1e-06,
+					"length": 0.069219,
+					"deform": true,
+					"weighted_verts": 1190
+				},
+				{
+					"index": 34,
+					"name": "Right_UpperArm",
+					"parent": "Right_Shoulder",
+					"head": [
+						-0.033203,
+						0.771484,
+						0.123047
+					],
+					"tail": [
+						-0.029297,
+						0.650391,
+						0.220703
+					],
+					"roll_rad": 0.0,
+					"length": 0.155614,
+					"deform": true,
+					"weighted_verts": 976
+				},
+				{
+					"index": 35,
+					"name": "Right_LowerArm",
+					"parent": "Right_UpperArm",
+					"head": [
+						-0.029297,
+						0.650391,
+						0.220703
+					],
+					"tail": [
+						0.024553,
+						0.560811,
+						0.316401
+					],
+					"roll_rad": -1e-06,
+					"length": 0.141713,
+					"deform": true,
+					"weighted_verts": 610
+				},
+				{
+					"index": 36,
+					"name": "Right_Hand",
+					"parent": "Right_LowerArm",
+					"head": [
+						0.024553,
+						0.560811,
+						0.316401
+					],
+					"tail": [
+						0.03862,
+						0.535844,
+						0.339015
+					],
+					"roll_rad": -1e-06,
+					"length": 0.036505,
+					"deform": true,
+					"weighted_verts": 442
+				},
+				{
+					"index": 37,
+					"name": "Right_ThumbProximal",
+					"parent": "Right_Hand",
+					"head": [
+						0.052605,
+						0.538484,
+						0.323271
+					],
+					"tail": [
+						0.073215,
+						0.517302,
+						0.327279
+					],
+					"roll_rad": -1e-06,
+					"length": 0.029824,
+					"deform": true,
+					"weighted_verts": 219
+				},
+				{
+					"index": 38,
+					"name": "Right_ThumbIntermediate",
+					"parent": "Right_ThumbProximal",
+					"head": [
+						0.073215,
+						0.517302,
+						0.327279
+					],
+					"tail": [
+						0.087527,
+						0.503563,
+						0.329569
+					],
+					"roll_rad": 0.0,
+					"length": 0.019972,
+					"deform": true,
+					"weighted_verts": 120
+				},
+				{
+					"index": 39,
+					"name": "Right_ThumbDistal",
+					"parent": "Right_ThumbIntermediate",
+					"head": [
+						0.087527,
+						0.503563,
+						0.329569
+					],
+					"tail": [
+						0.095738,
+						0.49568,
+						0.330882
+					],
+					"roll_rad": 1e-06,
+					"length": 0.011458,
+					"deform": true,
+					"weighted_verts": 75
+				},
+				{
+					"index": 40,
+					"name": "Right_ThumbDistalEnd",
+					"parent": "Right_ThumbDistal",
+					"head": [
+						0.095738,
+						0.49568,
+						0.330882
+					],
+					"tail": [
+						0.103949,
+						0.487798,
+						0.332196
+					],
+					"roll_rad": -2e-06,
+					"length": 0.011458,
+					"deform": true,
+					"weighted_verts": 23
+				},
+				{
+					"index": 41,
+					"name": "Right_IndexProximal",
+					"parent": "Right_Hand",
+					"head": [
+						0.080085,
+						0.505852,
+						0.366208
+					],
+					"tail": [
+						0.088672,
+						0.494403,
+						0.37594
+					],
+					"roll_rad": 0.0,
+					"length": 0.017308,
+					"deform": true,
+					"weighted_verts": 122
+				},
+				{
+					"index": 42,
+					"name": "Right_IndexIntermediate",
+					"parent": "Right_IndexProximal",
+					"head": [
+						0.088672,
+						0.494403,
+						0.37594
+					],
+					"tail": [
+						0.096114,
+						0.48009,
+						0.382238
+					],
+					"roll_rad": -2e-06,
+					"length": 0.017317,
+					"deform": true,
+					"weighted_verts": 57
+				},
+				{
+					"index": 43,
+					"name": "Right_IndexDistal",
+					"parent": "Right_IndexIntermediate",
+					"head": [
+						0.096114,
+						0.48009,
+						0.382238
+					],
+					"tail": [
+						0.103299,
+						0.466274,
+						0.388317
+					],
+					"roll_rad": -2e-06,
+					"length": 0.016718,
+					"deform": true,
+					"weighted_verts": 28
+				},
+				{
+					"index": 44,
+					"name": "Right_IndexDistalEnd",
+					"parent": "Right_IndexDistal",
+					"head": [
+						0.103299,
+						0.466274,
+						0.388317
+					],
+					"tail": [
+						0.110484,
+						0.452457,
+						0.394396
+					],
+					"roll_rad": 0.0,
+					"length": 0.016718,
+					"deform": true,
+					"weighted_verts": 0
+				},
+				{
+					"index": 45,
+					"name": "Right_MiddleProximal",
+					"parent": "Right_Hand",
+					"head": [
+						0.066917,
+						0.500127,
+						0.374223
+					],
+					"tail": [
+						0.074932,
+						0.488105,
+						0.386817
+					],
+					"roll_rad": -2e-06,
+					"length": 0.019168,
+					"deform": true,
+					"weighted_verts": 142
+				},
+				{
+					"index": 46,
+					"name": "Right_MiddleIntermediate",
+					"parent": "Right_MiddleProximal",
+					"head": [
+						0.074932,
+						0.488105,
+						0.386817
+					],
+					"tail": [
+						0.082374,
+						0.473221,
+						0.394832
+					],
+					"roll_rad": 0.0,
+					"length": 0.018471,
+					"deform": true,
+					"weighted_verts": 68
+				},
+				{
+					"index": 47,
+					"name": "Right_MiddleDistal",
+					"parent": "Right_MiddleIntermediate",
+					"head": [
+						0.082374,
+						0.473221,
+						0.394832
+					],
+					"tail": [
+						0.088504,
+						0.460962,
+						0.401433
+					],
+					"roll_rad": 0.0,
+					"length": 0.015212,
+					"deform": true,
+					"weighted_verts": 29
+				},
+				{
+					"index": 48,
+					"name": "Right_MiddleDistalEnd",
+					"parent": "Right_MiddleDistal",
+					"head": [
+						0.088504,
+						0.460962,
+						0.401433
+					],
+					"tail": [
+						0.094633,
+						0.448704,
+						0.408033
+					],
+					"roll_rad": 0.0,
+					"length": 0.015212,
+					"deform": true,
+					"weighted_verts": 0
+				},
+				{
+					"index": 49,
+					"name": "Right_RingProximal",
+					"parent": "Right_Hand",
+					"head": [
+						0.052605,
+						0.494402,
+						0.377085
+					],
+					"tail": [
+						0.059475,
+						0.48238,
+						0.387962
+					],
+					"roll_rad": 0.0,
+					"length": 0.017608,
+					"deform": true,
+					"weighted_verts": 139
+				},
+				{
+					"index": 50,
+					"name": "Right_RingIntermediate",
+					"parent": "Right_RingProximal",
+					"head": [
+						0.059475,
+						0.48238,
+						0.387962
+					],
+					"tail": [
+						0.066345,
+						0.469213,
+						0.395977
+					],
+					"roll_rad": -1e-06,
+					"length": 0.016876,
+					"deform": true,
+					"weighted_verts": 54
+				},
+				{
+					"index": 51,
+					"name": "Right_RingDistal",
+					"parent": "Right_RingIntermediate",
+					"head": [
+						0.066345,
+						0.469213,
+						0.395977
+					],
+					"tail": [
+						0.071568,
+						0.459203,
+						0.40207
+					],
+					"roll_rad": -2e-06,
+					"length": 0.01283,
+					"deform": true,
+					"weighted_verts": 21
+				},
+				{
+					"index": 52,
+					"name": "Right_RingDistalEnd",
+					"parent": "Right_RingDistal",
+					"head": [
+						0.071568,
+						0.459203,
+						0.40207
+					],
+					"tail": [
+						0.07679,
+						0.449192,
+						0.408164
+					],
+					"roll_rad": -1e-06,
+					"length": 0.01283,
+					"deform": true,
+					"weighted_verts": 10
+				},
+				{
+					"index": 53,
+					"name": "Right_PinkyProximal",
+					"parent": "Right_Hand",
+					"head": [
+						0.036575,
+						0.492113,
+						0.375368
+					],
+					"tail": [
+						0.0423,
+						0.479518,
+						0.381665
+					],
+					"roll_rad": 0.0,
+					"length": 0.015201,
+					"deform": true,
+					"weighted_verts": 122
+				},
+				{
+					"index": 54,
+					"name": "Right_PinkyIntermediate",
+					"parent": "Right_PinkyProximal",
+					"head": [
+						0.0423,
+						0.479518,
+						0.381665
+					],
+					"tail": [
+						0.046308,
+						0.469213,
+						0.386245
+					],
+					"roll_rad": 0.0,
+					"length": 0.011968,
+					"deform": true,
+					"weighted_verts": 42
+				},
+				{
+					"index": 55,
+					"name": "Right_PinkyDistal",
+					"parent": "Right_PinkyIntermediate",
+					"head": [
+						0.046308,
+						0.469213,
+						0.386245
+					],
+					"tail": [
+						0.049828,
+						0.46016,
+						0.390269
+					],
+					"roll_rad": -1e-06,
+					"length": 0.010514,
+					"deform": true,
+					"weighted_verts": 16
+				},
+				{
+					"index": 56,
+					"name": "Right_PinkyDistalEnd",
+					"parent": "Right_PinkyDistal",
+					"head": [
+						0.049828,
+						0.46016,
+						0.390269
+					],
+					"tail": [
+						0.053349,
+						0.451106,
+						0.394292
+					],
+					"roll_rad": -1e-06,
+					"length": 0.010514,
+					"deform": true,
+					"weighted_verts": 0
+				},
+				{
+					"index": 57,
+					"name": "Left_UpperLeg",
+					"parent": "Hips",
+					"head": [
+						-0.009766,
+						0.521484,
+						-0.060547
+					],
+					"tail": [
+						-0.005859,
+						0.294922,
+						-0.056641
+					],
+					"roll_rad": 0.0,
+					"length": 0.22663,
+					"deform": true,
+					"weighted_verts": 2711
+				},
+				{
+					"index": 58,
+					"name": "Left_LowerLeg",
+					"parent": "Left_UpperLeg",
+					"head": [
+						-0.005859,
+						0.294922,
+						-0.056641
+					],
+					"tail": [
+						-0.041016,
+						0.068359,
+						-0.060547
+					],
+					"roll_rad": 0.0,
+					"length": 0.229307,
+					"deform": true,
+					"weighted_verts": 1425
+				},
+				{
+					"index": 59,
+					"name": "Left_Foot",
+					"parent": "Left_LowerLeg",
+					"head": [
+						-0.041016,
+						0.068359,
+						-0.060547
+					],
+					"tail": [
+						0.025391,
+						0.025391,
+						-0.064453
+					],
+					"roll_rad": 0.0,
+					"length": 0.079192,
+					"deform": true,
+					"weighted_verts": 527
+				},
+				{
+					"index": 60,
+					"name": "Left_Toes",
+					"parent": "Left_Foot",
+					"head": [
+						0.025391,
+						0.025391,
+						-0.064453
+					],
+					"tail": [
+						0.061518,
+						0.025391,
+						-0.066578
+					],
+					"roll_rad": 0.0,
+					"length": 0.036189,
+					"deform": true,
+					"weighted_verts": 320
+				},
+				{
+					"index": 61,
+					"name": "Left_ToesEnd",
+					"parent": "Left_Toes",
+					"head": [
+						0.061518,
+						0.025391,
+						-0.066578
+					],
+					"tail": [
+						0.097645,
+						0.025391,
+						-0.068703
+					],
+					"roll_rad": 0.0,
+					"length": 0.036189,
+					"deform": true,
+					"weighted_verts": 187
+				},
+				{
+					"index": 62,
+					"name": "Right_UpperLeg",
+					"parent": "Hips",
+					"head": [
+						-0.009766,
+						0.521485,
+						0.056641
+					],
+					"tail": [
+						-0.005859,
+						0.294922,
+						0.052734
+					],
+					"roll_rad": 0.0,
+					"length": 0.22663,
+					"deform": true,
+					"weighted_verts": 2754
+				},
+				{
+					"index": 63,
+					"name": "Right_LowerLeg",
+					"parent": "Right_UpperLeg",
+					"head": [
+						-0.005859,
+						0.294922,
+						0.052734
+					],
+					"tail": [
+						-0.041016,
+						0.068359,
+						0.060547
+					],
+					"roll_rad": 0.0,
+					"length": 0.229407,
+					"deform": true,
+					"weighted_verts": 1444
+				},
+				{
+					"index": 64,
+					"name": "Right_Foot",
+					"parent": "Right_LowerLeg",
+					"head": [
+						-0.041016,
+						0.068359,
+						0.060547
+					],
+					"tail": [
+						0.025391,
+						0.025391,
+						0.064453
+					],
+					"roll_rad": 0.0,
+					"length": 0.079192,
+					"deform": true,
+					"weighted_verts": 520
+				},
+				{
+					"index": 65,
+					"name": "Right_Toes",
+					"parent": "Right_Foot",
+					"head": [
+						0.025391,
+						0.025391,
+						0.064453
+					],
+					"tail": [
+						0.061518,
+						0.025391,
+						0.066578
+					],
+					"roll_rad": 0.0,
+					"length": 0.036189,
+					"deform": true,
+					"weighted_verts": 335
+				},
+				{
+					"index": 66,
+					"name": "Right_ToesEnd",
+					"parent": "Right_Toes",
+					"head": [
+						0.061518,
+						0.025391,
+						0.066578
+					],
+					"tail": [
+						0.097645,
+						0.025391,
+						0.068703
+					],
+					"roll_rad": 0.0,
+					"length": 0.036189,
+					"deform": true,
+					"weighted_verts": 169
+				}
+			],
+			"notes": [
+				"head, tail in Godot space after the armature object's transform; tails are the importer's heuristic, not file data"
+			]
+		}
+	],
+	"meshes": [
+		{
+			"name": "tripo_node_8ed16ed9-c690-4e99-b7ac-a573b37c2da1",
+			"vertices": 11963,
+			"triangles": 19790,
+			"polygons": 19790,
+			"bbox": {
+				"min": [
+					-0.111317,
+					0.0,
+					-0.406955
+				],
+				"max": [
+					0.111317,
+					1.0,
+					0.406955
+				],
+				"size": [
+					0.222634,
+					1.0,
+					0.813911
+				]
+			},
+			"armature": "Armature",
+			"modifiers": [
+				"ARMATURE"
+			],
+			"uv_layers": [
+				"UVMap"
+			],
+			"color_attributes": [],
+			"shape_keys": 0,
+			"groups": {
+				"Hips": {
+					"count": 2120,
+					"weight_sum": 533.305312,
+					"centroid": [
+						0.010078,
+						0.554422,
+						0.001512
+					]
+				},
+				"Spine": {
+					"count": 2231,
+					"weight_sum": 522.452462,
+					"centroid": [
+						-0.014128,
+						0.642001,
+						-0.009253
+					]
+				},
+				"Chest": {
+					"count": 2067,
+					"weight_sum": 368.774659,
+					"centroid": [
+						-0.01696,
+						0.699866,
+						-0.014709
+					]
+				},
+				"UpperChest": {
+					"count": 1035,
+					"weight_sum": 215.584416,
+					"centroid": [
+						8.6e-05,
+						0.816771,
+						-0.001645
+					]
+				},
+				"Neck": {
+					"count": 1618,
+					"weight_sum": 257.764294,
+					"centroid": [
+						-0.031472,
+						0.882292,
+						-0.000327
+					]
+				},
+				"Neck_Twist_A": {
+					"count": 1455,
+					"weight_sum": 264.358588,
+					"centroid": [
+						-0.019644,
+						0.908458,
+						0.002365
+					]
+				},
+				"Head": {
+					"count": 1446,
+					"weight_sum": 983.166584,
+					"centroid": [
+						-0.008962,
+						0.918428,
+						0.001912
+					]
+				},
+				"Left_Eye": {
+					"count": 0,
+					"weight_sum": 0.0,
+					"centroid": null
+				},
+				"Right_Eye": {
+					"count": 0,
+					"weight_sum": 0.0,
+					"centroid": null
+				},
+				"Left_Shoulder": {
+					"count": 1362,
+					"weight_sum": 421.513627,
+					"centroid": [
+						-0.022787,
+						0.758824,
+						-0.079476
+					]
+				},
+				"Left_UpperArm": {
+					"count": 1182,
+					"weight_sum": 616.56222,
+					"centroid": [
+						-0.043316,
+						0.707164,
+						-0.15549
+					]
+				},
+				"Left_LowerArm": {
+					"count": 750,
+					"weight_sum": 385.00402,
+					"centroid": [
+						-0.02265,
+						0.615021,
+						-0.256235
+					]
+				},
+				"Left_Hand": {
+					"count": 492,
+					"weight_sum": 209.709325,
+					"centroid": [
+						0.025445,
+						0.537896,
+						-0.334798
+					]
+				},
+				"Left_ThumbProximal": {
+					"count": 294,
+					"weight_sum": 61.562071,
+					"centroid": [
+						0.049427,
+						0.528618,
+						-0.32728
+					]
+				},
+				"Left_ThumbIntermediate": {
+					"count": 189,
+					"weight_sum": 71.887526,
+					"centroid": [
+						0.06841,
+						0.510341,
+						-0.332261
+					]
+				},
+				"Left_ThumbDistal": {
+					"count": 112,
+					"weight_sum": 30.395795,
+					"centroid": [
+						0.075635,
+						0.500065,
+						-0.330211
+					]
+				},
+				"Left_ThumbDistalEnd": {
+					"count": 59,
+					"weight_sum": 21.120376,
+					"centroid": [
+						0.074918,
+						0.491324,
+						-0.33185
+					]
+				},
+				"Left_IndexProximal": {
+					"count": 143,
+					"weight_sum": 57.183859,
+					"centroid": [
+						0.064824,
+						0.506034,
+						-0.367645
+					]
+				},
+				"Left_IndexIntermediate": {
+					"count": 51,
+					"weight_sum": 19.760841,
+					"centroid": [
+						0.075719,
+						0.490102,
+						-0.380519
+					]
+				},
+				"Left_IndexDistal": {
+					"count": 32,
+					"weight_sum": 13.049242,
+					"centroid": [
+						0.079926,
+						0.481476,
+						-0.384708
+					]
+				},
+				"Left_IndexDistalEnd": {
+					"count": 0,
+					"weight_sum": 0.0,
+					"centroid": null
+				},
+				"Left_MiddleProximal": {
+					"count": 123,
+					"weight_sum": 27.220072,
+					"centroid": [
+						0.053137,
+						0.498873,
+						-0.377543
+					]
+				},
+				"Left_MiddleIntermediate": {
+					"count": 63,
+					"weight_sum": 20.365922,
+					"centroid": [
+						0.059557,
+						0.486558,
+						-0.388995
+					]
+				},
+				"Left_MiddleDistal": {
+					"count": 24,
+					"weight_sum": 12.264195,
+					"centroid": [
+						0.068391,
+						0.471156,
+						-0.398966
+					]
+				},
+				"Left_MiddleDistalEnd": {
+					"count": 8,
+					"weight_sum": 1.385455,
+					"centroid": [
+						0.071856,
+						0.462517,
+						-0.403136
+					]
+				},
+				"Left_RingProximal": {
+					"count": 155,
+					"weight_sum": 41.019654,
+					"centroid": [
+						0.035559,
+						0.494436,
+						-0.378621
+					]
+				},
+				"Left_RingIntermediate": {
+					"count": 55,
+					"weight_sum": 15.509864,
+					"centroid": [
+						0.045103,
+						0.481608,
+						-0.388647
+					]
+				},
+				"Left_RingDistal": {
+					"count": 20,
+					"weight_sum": 12.103899,
+					"centroid": [
+						0.050163,
+						0.466701,
+						-0.397828
+					]
+				},
+				"Left_RingDistalEnd": {
+					"count": 0,
+					"weight_sum": 0.0,
+					"centroid": null
+				},
+				"Left_PinkyProximal": {
+					"count": 159,
+					"weight_sum": 61.310612,
+					"centroid": [
+						0.022921,
+						0.499841,
+						-0.370162
+					]
+				},
+				"Left_PinkyIntermediate": {
+					"count": 46,
+					"weight_sum": 11.394134,
+					"centroid": [
+						0.029639,
+						0.477725,
+						-0.382679
+					]
+				},
+				"Left_PinkyDistal": {
+					"count": 22,
+					"weight_sum": 11.236907,
+					"centroid": [
+						0.030476,
+						0.470063,
+						-0.385818
+					]
+				},
+				"Left_PinkyDistalEnd": {
+					"count": 0,
+					"weight_sum": 0.0,
+					"centroid": null
+				},
+				"Right_Shoulder": {
+					"count": 1190,
+					"weight_sum": 386.463685,
+					"centroid": [
+						-0.016166,
+						0.767171,
+						0.071625
+					]
+				},
+				"Right_UpperArm": {
+					"count": 976,
+					"weight_sum": 522.049868,
+					"centroid": [
+						-0.03863,
+						0.711741,
+						0.154989
+					]
+				},
+				"Right_LowerArm": {
+					"count": 610,
+					"weight_sum": 324.070337,
+					"centroid": [
+						-0.006643,
+						0.6123,
+						0.264644
+					]
+				},
+				"Right_Hand": {
+					"count": 442,
+					"weight_sum": 186.408693,
+					"centroid": [
+						0.041265,
+						0.539865,
+						0.337608
+					]
+				},
+				"Right_ThumbProximal": {
+					"count": 219,
+					"weight_sum": 51.543043,
+					"centroid": [
+						0.060608,
+						0.536554,
+						0.326053
+					]
+				},
+				"Right_ThumbIntermediate": {
+					"count": 120,
+					"weight_sum": 48.380885,
+					"centroid": [
+						0.082753,
+						0.511507,
+						0.330776
+					]
+				},
+				"Right_ThumbDistal": {
+					"count": 75,
+					"weight_sum": 23.290803,
+					"centroid": [
+						0.089334,
+						0.503272,
+						0.328733
+					]
+				},
+				"Right_ThumbDistalEnd": {
+					"count": 23,
+					"weight_sum": 5.353864,
+					"centroid": [
+						0.089717,
+						0.489414,
+						0.331837
+					]
+				},
+				"Right_IndexProximal": {
+					"count": 122,
+					"weight_sum": 42.732366,
+					"centroid": [
+						0.078098,
+						0.507063,
+						0.369364
+					]
+				},
+				"Right_IndexIntermediate": {
+					"count": 57,
+					"weight_sum": 17.684787,
+					"centroid": [
+						0.089134,
+						0.491639,
+						0.377558
+					]
+				},
+				"Right_IndexDistal": {
+					"count": 28,
+					"weight_sum": 17.222682,
+					"centroid": [
+						0.096687,
+						0.47705,
+						0.383796
+					]
+				},
+				"Right_IndexDistalEnd": {
+					"count": 0,
+					"weight_sum": 0.0,
+					"centroid": null
+				},
+				"Right_MiddleProximal": {
+					"count": 142,
+					"weight_sum": 37.686861,
+					"centroid": [
+						0.067415,
+						0.499535,
+						0.379887
+					]
+				},
+				"Right_MiddleIntermediate": {
+					"count": 68,
+					"weight_sum": 23.890253,
+					"centroid": [
+						0.075176,
+						0.486638,
+						0.387826
+					]
+				},
+				"Right_MiddleDistal": {
+					"count": 29,
+					"weight_sum": 14.799932,
+					"centroid": [
+						0.083628,
+						0.471312,
+						0.395196
+					]
+				},
+				"Right_MiddleDistalEnd": {
+					"count": 0,
+					"weight_sum": 0.0,
+					"centroid": null
+				},
+				"Right_RingProximal": {
+					"count": 139,
+					"weight_sum": 38.958474,
+					"centroid": [
+						0.051879,
+						0.495614,
+						0.380317
+					]
+				},
+				"Right_RingIntermediate": {
+					"count": 54,
+					"weight_sum": 14.416157,
+					"centroid": [
+						0.060036,
+						0.483407,
+						0.38781
+					]
+				},
+				"Right_RingDistal": {
+					"count": 21,
+					"weight_sum": 13.369921,
+					"centroid": [
+						0.065986,
+						0.467411,
+						0.397027
+					]
+				},
+				"Right_RingDistalEnd": {
+					"count": 10,
+					"weight_sum": 2.704593,
+					"centroid": [
+						0.0709,
+						0.459336,
+						0.401551
+					]
+				},
+				"Right_PinkyProximal": {
+					"count": 122,
+					"weight_sum": 49.168439,
+					"centroid": [
+						0.036324,
+						0.500205,
+						0.372575
+					]
+				},
+				"Right_PinkyIntermediate": {
+					"count": 42,
+					"weight_sum": 8.00159,
+					"centroid": [
+						0.043313,
+						0.478451,
+						0.384038
+					]
+				},
+				"Right_PinkyDistal": {
+					"count": 16,
+					"weight_sum": 9.171344,
+					"centroid": [
+						0.045526,
+						0.467362,
+						0.387585
+					]
+				},
+				"Right_PinkyDistalEnd": {
+					"count": 0,
+					"weight_sum": 0.0,
+					"centroid": null
+				},
+				"Left_UpperLeg": {
+					"count": 2711,
+					"weight_sum": 1121.386522,
+					"centroid": [
+						-0.005516,
+						0.448851,
+						-0.032216
+					]
+				},
+				"Left_LowerLeg": {
+					"count": 1425,
+					"weight_sum": 845.225143,
+					"centroid": [
+						-0.031608,
+						0.198996,
+						-0.056831
+					]
+				},
+				"Left_Foot": {
+					"count": 527,
+					"weight_sum": 261.146978,
+					"centroid": [
+						-0.015194,
+						0.036867,
+						-0.056886
+					]
+				},
+				"Left_Toes": {
+					"count": 320,
+					"weight_sum": 98.072525,
+					"centroid": [
+						0.021119,
+						0.017264,
+						-0.05956
+					]
+				},
+				"Left_ToesEnd": {
+					"count": 187,
+					"weight_sum": 65.879067,
+					"centroid": [
+						0.053131,
+						0.015723,
+						-0.061437
+					]
+				},
+				"Right_UpperLeg": {
+					"count": 2754,
+					"weight_sum": 1151.243104,
+					"centroid": [
+						-0.003938,
+						0.44549,
+						0.033868
+					]
+				},
+				"Right_LowerLeg": {
+					"count": 1444,
+					"weight_sum": 897.142233,
+					"centroid": [
+						-0.029406,
+						0.198117,
+						0.058625
+					]
+				},
+				"Right_Foot": {
+					"count": 520,
+					"weight_sum": 256.271668,
+					"centroid": [
+						-0.017275,
+						0.037968,
+						0.057683
+					]
+				},
+				"Right_Toes": {
+					"count": 335,
+					"weight_sum": 92.028015,
+					"centroid": [
+						0.014991,
+						0.016498,
+						0.061073
+					]
+				},
+				"Right_ToesEnd": {
+					"count": 169,
+					"weight_sum": 70.270243,
+					"centroid": [
+						0.057293,
+						0.015305,
+						0.061107
+					]
+				}
+			},
+			"max_influences": 4,
+			"influence_histogram": {
+				"1": 1373,
+				"2": 4175,
+				"3": 3173,
+				"4": 3242
+			},
+			"unweighted": 0,
+			"over_four": 0,
+			"not_normalized": 0,
+			"groups_without_bone": [],
+			"materials": [
+				"tripo_material_8ed16ed9-c690-4e99-b7ac-a573b37c2da1"
+			]
+		}
+	],
+	"materials": [
+		{
+			"name": "tripo_material_8ed16ed9-c690-4e99-b7ac-a573b37c2da1",
+			"base_color": [
+				0.8,
+				0.8,
+				0.8,
+				1.0
+			],
+			"metallic": 0.0,
+			"roughness": 0.9,
+			"image": "Color_8ed16ed9-c690-4e99-b7ac-a573b37c2da1"
+		}
+	],
+	"images": [
+		{
+			"name": "Color_8ed16ed9-c690-4e99-b7ac-a573b37c2da1",
+			"size": [
+				2048,
+				2048
+			],
+			"packed": true,
+			"file": null,
+			"colorspace": "sRGB",
+			"channels": 4,
+			"dominant_colors": [
+				{
+					"rgb_hex_16_levels": "#707070",
+					"share": 0.230713
+				},
+				{
+					"rgb_hex_16_levels": "#404050",
+					"share": 0.15332
+				},
+				{
+					"rgb_hex_16_levels": "#d0a080",
+					"share": 0.124512
+				},
+				{
+					"rgb_hex_16_levels": "#404040",
+					"share": 0.093262
+				},
+				{
+					"rgb_hex_16_levels": "#707060",
+					"share": 0.047119
+				},
+				{
+					"rgb_hex_16_levels": "#303030",
+					"share": 0.03833
+				}
+			]
+		}
+	],
+	"summary": {
+		"triangles": 19790,
+		"vertices": 11963,
+		"bbox": {
+			"min": [
+				-0.111317,
+				0.0,
+				-0.406955
+			],
+			"max": [
+				0.111317,
+				1.0,
+				0.406955
+			],
+			"size": [
+				0.222634,
+				1.0,
+				0.813911
+			]
+		},
+		"height_m": 1.0,
+		"feet_y": 0.0,
+		"bones": 67,
+		"unweighted": 0,
+		"max_influences": 4,
+		"over_four": 0,
+		"bones_without_vertices": [
+			"Left_Eye",
+			"Right_Eye",
+			"Left_IndexDistalEnd",
+			"Left_RingDistalEnd",
+			"Left_PinkyDistalEnd",
+			"Right_IndexDistalEnd",
+			"Right_MiddleDistalEnd",
+			"Right_PinkyDistalEnd"
+		],
+		"neutral_bone": {
+			"present": false,
+			"weighted_verts": 0
+		}
+	},
+	"facing": {
+		"params": {
+			"foot_band_of_height": 0.07,
+			"shin_band_of_height": [
+				0.12,
+				0.25
+			],
+			"min_foot_elongation": 1.3,
+			"head_band_of_height": 0.14,
+			"torso_band_of_height": [
+				0.5,
+				0.78
+			],
+			"nose_conflict_ratio": 1.15,
+			"dominant_color_samples": 4096,
+			"dominant_colors": 6
+		},
+		"toe": {
+			"feet": [
+				{
+					"dir_xz": [
+						0.996998,
+						-0.077428
+					],
+					"elongation": 2.122903,
+					"reach_toe_m": 0.120666,
+					"reach_heel_m": 0.054091,
+					"offset_dir_xz": [
+						0.99976,
+						0.021918
+					]
+				},
+				{
+					"dir_xz": [
+						0.998893,
+						0.047043
+					],
+					"elongation": 2.231101,
+					"reach_toe_m": 0.120762,
+					"reach_heel_m": 0.054739,
+					"offset_dir_xz": [
+						0.999955,
+						0.009448
+					]
+				}
+			],
+			"dir_xz": [
+				0.999884,
+				-0.015222
+			],
+			"feet_agree_deg": 7.137016
+		},
+		"nose": {
+			"dir_xz": [
+				-0.999884,
+				0.015222
+			],
+			"front_reach_m": 0.063874,
+			"back_reach_m": 0.086794,
+			"front_over_back": 0.735922
+		},
+		"agreement_deg": 180.0,
+		"confidence": "conflict",
+		"dir_xz": [
+			0.999884,
+			-0.015222
+		],
+		"yaw_deg_to_minus_z": 89.127809,
+		"axis": "+X"
+	},
+	"sides": {
+		"left_bones": 30,
+		"right_bones": 30,
+		"left_minus_right_lateral_m": -0.570065,
+		"consistent": true,
+		"left_is_minus_x": true
+	},
+	"names": {
+		"rig_table_missing": [
+			"Root",
+			"LeftShoulder",
+			"LeftUpperArm",
+			"LeftLowerArm",
+			"LeftHand",
+			"RightShoulder",
+			"RightUpperArm",
+			"RightLowerArm",
+			"RightHand",
+			"LeftUpperLeg",
+			"LeftLowerLeg",
+			"LeftFoot",
+			"LeftToes",
+			"RightUpperLeg",
+			"RightLowerLeg",
+			"RightFoot",
+			"RightToes"
+		],
+		"rig_table_extra": [
+			"Right_RingIntermediate",
+			"Left_ThumbDistal",
+			"Right_LowerLeg",
+			"Left_LowerArm",
+			"Left_UpperArm",
+			"Right_MiddleProximal",
+			"Left_ThumbDistalEnd",
+			"Right_ThumbProximal",
+			"Left_IndexDistalEnd",
+			"Left_LowerLeg",
+			"Right_MiddleIntermediate",
+			"Left_PinkyProximal",
+			"Right_PinkyDistal",
+			"Neck_Twist_A",
+			"Right_PinkyProximal",
+			"Left_MiddleDistalEnd",
+			"Left_MiddleDistal",
+			"Right_Eye",
+			"Right_ThumbIntermediate",
+			"Right_UpperLeg",
+			"Right_IndexDistalEnd",
+			"Left_MiddleProximal",
+			"Left_ThumbIntermediate",
+			"Left_PinkyDistalEnd",
+			"Left_Shoulder",
+			"Left_ThumbProximal",
+			"Right_PinkyDistalEnd",
+			"Right_RingDistalEnd",
+			"Left_Toes",
+			"Left_RingProximal",
+			"Left_RingIntermediate",
+			"Left_Eye",
+			"Right_Shoulder",
+			"Right_ThumbDistalEnd",
+			"Right_RingProximal",
+			"Right_IndexDistal",
+			"Left_UpperLeg",
+			"Left_Foot",
+			"Left_RingDistal",
+			"Right_UpperArm",
+			"Left_IndexProximal",
+			"Right_IndexProximal",
+			"Left_ToesEnd",
+			"Right_Toes",
+			"Left_Hand",
+			"Left_IndexDistal",
+			"Right_IndexIntermediate",
+			"Right_ToesEnd",
+			"Right_RingDistal",
+			"Right_PinkyIntermediate",
+			"Right_ThumbDistal",
+			"Right_LowerArm",
+			"Right_Foot",
+			"Right_MiddleDistalEnd",
+			"Right_Hand",
+			"Left_RingDistalEnd",
+			"Left_PinkyIntermediate",
+			"Left_PinkyDistal",
+			"Right_MiddleDistal",
+			"Left_IndexIntermediate",
+			"Left_MiddleIntermediate"
+		],
+		"profile_matched": 6,
+		"profile_unmatched": [
+			"Right_RingIntermediate",
+			"Left_ThumbDistal",
+			"Right_LowerLeg",
+			"Left_LowerArm",
+			"Left_UpperArm",
+			"Right_MiddleProximal",
+			"Left_ThumbDistalEnd",
+			"Right_ThumbProximal",
+			"Left_IndexDistalEnd",
+			"Left_LowerLeg",
+			"Right_MiddleIntermediate",
+			"Left_PinkyProximal",
+			"Right_PinkyDistal",
+			"Neck_Twist_A",
+			"Right_PinkyProximal",
+			"Left_MiddleDistalEnd",
+			"Left_MiddleDistal",
+			"Right_Eye",
+			"Right_ThumbIntermediate",
+			"Right_UpperLeg",
+			"Right_IndexDistalEnd",
+			"Left_MiddleProximal",
+			"Left_ThumbIntermediate",
+			"Left_PinkyDistalEnd",
+			"Left_Shoulder",
+			"Left_ThumbProximal",
+			"Right_PinkyDistalEnd",
+			"Right_RingDistalEnd",
+			"Left_Toes",
+			"Left_RingProximal",
+			"Left_RingIntermediate",
+			"Left_Eye",
+			"Right_Shoulder",
+			"Right_ThumbDistalEnd",
+			"Right_RingProximal",
+			"Right_IndexDistal",
+			"Left_UpperLeg",
+			"Left_Foot",
+			"Left_RingDistal",
+			"Right_UpperArm",
+			"Left_IndexProximal",
+			"Right_IndexProximal",
+			"Left_ToesEnd",
+			"Right_Toes",
+			"Left_Hand",
+			"Left_IndexDistal",
+			"Right_IndexIntermediate",
+			"Right_ToesEnd",
+			"Right_RingDistal",
+			"Right_PinkyIntermediate",
+			"Right_ThumbDistal",
+			"Right_LowerArm",
+			"Right_Foot",
+			"Right_MiddleDistalEnd",
+			"Right_Hand",
+			"Left_RingDistalEnd",
+			"Left_PinkyIntermediate",
+			"Left_PinkyDistal",
+			"Right_MiddleDistal",
+			"Left_IndexIntermediate",
+			"Left_MiddleIntermediate"
+		]
+	}
+}
