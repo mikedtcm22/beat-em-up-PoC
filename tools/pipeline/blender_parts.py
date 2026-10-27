@@ -210,6 +210,7 @@ def replace_hands(cfg, extra):
 	fists = []
 	generated = pf.get("source", "procedural") == "generated"
 	fist_planes = {}
+	trims = {}
 	w_now = pb.weights_matrix(body, NAMES)  # the weights of the mesh after the hands' faces are gone
 	gsrc = pipe_fist.load_source(pf["generated"]) if generated else None
 	uv_name = me.uv_layers[0].name if len(me.uv_layers) else "UVMap"
@@ -236,12 +237,21 @@ def replace_hands(cfg, extra):
 				r_med = float(pf["wrist_radius_m"])
 				cuts[side]["radius_median_m_after"] = r_med
 			cut = {"a_min": a0, "radius_m": r_med} if len(near) >= 6 else None
+			if cut is not None and pf["generated"].get("collar"):
+				# the forearm's own vertices in the hanging frame (after the taper): the collar takes its outline from them
+				arm_cols = [NAMES.index(side + "LowerArm"), NAMES.index(side + "Hand")]
+				arm_sel = (w_now[:, arm_cols].sum(axis=1) > 0.5) & (np.linalg.norm(co - p_hand, axis=1) < 0.3)
+				cut["arm_local"] = (co[arm_sel] - p_hand) @ rotation_between(np.array(pc.HANGING), d)
 			part = pipe_fist.make_side(gsrc, side, table_boxes[side], cut, p_hand, d, pf["generated"], pf)
 			obj = pipe_fist.add_object("Fist" + side, part, uv_name)
 			fist_planes[side] = [[list(map(float, c)), list(map(float, n))] for c, n in part["bisect"]] if part.get("bisect") else None
 			made[side] = obj
 			fists.append(obj)
 			cuts[side].update({"fist": part["report"], "faces_deleted": deleted[side], "fist_triangles": part["report"]["triangles"]})
+			if part.get("collar_report"):
+				cuts[side]["collar"] = part["collar_report"]
+				if pf["generated"]["collar"].get("arm_trim_below_cut_m") is not None:
+					trims[side] = (np.asarray(p_hand, dtype=np.float64), np.asarray(d, dtype=np.float64), float(part["collar"]["z_cut"]) - float(pf["generated"]["collar"]["arm_trim_below_cut_m"]))
 			continue
 		cuff_r = max(r_cut, 0.05) + pf.get("cuff_margin_m", 0.008)
 		z_top = -(min(a0, 0.0) - pf.get("cuff_over_m", 0.035))
@@ -269,6 +279,32 @@ def replace_hands(cfg, extra):
 		made[side] = obj
 		fists.append(obj)
 		cuts[side].update({"cuff_radius_m": cuff_r, "cuff_z_top": zt, "cuff_z_bottom": zb, "fist_triangles": len(acc.faces), "faces_deleted": deleted[side]})
+	# F-punk-fix: the arm's ragged open end (the faces the hands' deletion left torn, in the Tripo glove's dark) is trimmed back
+	# along a plane `arm_trim_below_cut_m` below the cut's top, so no flap can show under the collar, which covers it
+	if trims:
+		bm_t = bmesh.new()
+		bm_t.from_mesh(me)
+		trimmed = {}
+		for side, (p_t, d_t, z_t) in trims.items():
+			axis_t = -d_t  # the hanging frame's +z in the world, up the arm
+			plane_co = tuple(p_t + axis_t * z_t)
+			near_verts = [v for v in bm_t.verts if (np.array(v.co) - p_t) @ (np.array(v.co) - p_t) < 0.3 * 0.3]
+			geom_f = {f for v in near_verts for f in v.link_faces}
+			geom = list(geom_f) + sorted({e for f in geom_f for e in f.edges}, key=lambda e: e.index) + sorted({v for f in geom_f for v in f.verts}, key=lambda v: v.index)
+			bmesh.ops.bisect_plane(bm_t, geom=geom, dist=1e-7, plane_co=plane_co, plane_no=tuple(axis_t))
+			bm_t.faces.ensure_lookup_table()
+			below = [f for f in bm_t.faces if (np.array(f.calc_center_median()) - p_t) @ (np.array(f.calc_center_median()) - p_t) < 0.3 * 0.3
+				and float((np.array(f.calc_center_median()) - np.array(plane_co)) @ axis_t) < -1e-6]
+			trimmed[side] = len(below)
+			bmesh.ops.delete(bm_t, geom=below, context="FACES")
+		loose_t = [v for v in bm_t.verts if not v.link_faces]
+		if loose_t:
+			bmesh.ops.delete(bm_t, geom=loose_t, context="VERTS")
+		bm_t.to_mesh(me)
+		bm_t.free()
+		me.update()
+		for side, n_faces_trimmed in trimmed.items():
+			cuts[side]["arm_trim_faces_deleted"] = n_faces_trimmed
 	# the Body's own face attribute pipe_slot: 0 everywhere (take the slot from the texture)
 	if SLOT_ATTR not in me.attributes:
 		a = me.attributes.new(SLOT_ATTR, "INT", "FACE")
