@@ -46,6 +46,40 @@ The tuning panel and the cheat menu take every key while open, and the player st
 
 **Blocking:** hold B (Shift) with no direction to put the guard up; it stops hits from the front (within 60° of where you look) for a little chip damage and drains the guard meter under your health bar. Raise it on reaction to an attacker's wind-up, up to about a quarter second before the hit, for a perfect block ("PARRY!"): no damage, and the attacker staggers, so you can let go of B and grab it. An empty guard meter breaks the guard. P or K out of the guard attacks at once; pressed while a blocked hit pushes you back, it attacks as soon as the push-back ends. Holding B keeps the block: after a hit, a guard break or an attack out of the guard, the guard comes back up while B is still held (a perfect block needs a fresh press of B). Jump and LB do nothing while the guard is up.
 
+## Milestone 4 status: the art pipeline
+
+The game now has its look and its first real art. Everything is cel-shaded, the Street Punks wear a generated, rigged model of Game-boy's pick (Street Punk A), and the player sees his own arms and legs as Hero C. Milestone 4 is done when the Punk looks production-quality at 1 m from the camera, standing still and in motion (Spec §12), and Game-boy judges that.
+- **The look** (Spec §10; all of it in F1's "Look" group):
+  - **One toon shader for everything:** two or three lighting bands, tinted shadows (never black), one hard highlight and a rim light. Characters also get a soft fill light that follows the camera, so an enemy facing away from the sun doesn't fall into one flat shadow.
+  - **Outlines:** an ink outline (an inverted hull) on characters, props and the placeholder enemies, thinner with distance so a close enemy doesn't get a thick line. Your own arms and legs get a slightly thinner one.
+  - **Environment lines** from a depth-and-normal edge pass, a colour grade, and a linear tonemapper, which keeps every palette colour true.
+  - **Halftone dots:** available, but off by default (see below).
+- **The Street Punk** (concept A: a backwards yellow cap, yellow shades in a dark frame, a teal denim vest over a dark tank top, pale ripped jeans, a taped left forearm, fingerless gloves on wrist cuffs, cream high-tops with yellow laces):
+  - **Made by the pipeline, not by hand:** Gemini drew four views of the concept, and Tripo turned them into a model and rigged it. A headless Blender chain then fits the model to the game's skeleton, replaces the hands with separately generated glove fists, paints it in six flat palette colours with an ink-line mask, and exports it.
+  - **14,300 triangles**, within the 15,000 budget.
+  - **Same game underneath:** the game's own animations, hurtboxes, ragdoll, hit flash and damage looks drive the model, so every M3 number (reach, telegraphs, readability) is unchanged.
+- **Your own body** (Hero C: a sleeveless navy gi top, bare upper arms, cream forearm wraps, dark fingerless glove plates over bare fingers, slate trousers, wrapped ankles and black slip-ons with cream soles):
+  - **Full body:** 29,320 triangles, so the knockout view shows the whole body lying, and the shadow you see on the floor is your own.
+  - **Hidden in first person:** the head, chest and shoulders, as in M3. The belly and belt are their own mesh, so "hide torso in knockdowns" (below) hides only them.
+  - **Swappable:** the hero is files only (`game/actors/art/player_art.tres` names the model), so a later hero-select menu needs no code change.
+- **The comic effects:** a final pass on the lettering, bursts, speed lines and blood, drawn as SVG and rasterized to 512 px.
+- **Four first-person feel questions** that M2 left "until the art is in" are switches in F1's "Look > FP feel", each off by default (today's behaviour):
+  - **`hit_flash_fp_max_share`:** caps how much of the view a close hit flash can whiten (0.12 is the suggested value).
+  - **`hit_flash_finisher_radius_mult`:** makes the haymaker's flash show (2.0 is the suggested value).
+  - **`fp_knockdown_hide_torso`:** hides your belly while you lie in a knockdown, so it doesn't fill most of the view.
+  - **The combat log:** the L key toggles it, and `combat_log_hide_while_holding` hides it during a hold.
+- **To look at it:**
+  - F4's "Showcase Punk at 1 m" freezes one Punk in front of you, looping a 40 s take of everything it does, and you can walk round it.
+  - F1's Debug switch `look_show_art` off puts M3's primitive bodies back, to compare.
+
+**How the done-when is proved:**
+- **`tests/test_m4_done_when.gd`:** one test per measured row of the plan (A1-A14: the model's contract, budgets, colours, feet, fists, hurtbox fit, deformation, ragdoll, first-person framing, damage marks, the flash, the suite, assets and spend, readability). It prints one table of every row's state.
+  - Rows the art doesn't meet yet are held at today's figure (a ratchet), and the plan's own bar is printed beside them as a GATE line.
+- **The look probe** ('Look: final probe' in the crowd bot) measures the outline widths, the bands and the flash's share of the view.
+- **The final review:** six reviewers, each judging one area in first person from full-resolution recordings, scored the plan's 14 judged items 0 (fails), 1 (acceptable) or 2 (production). Two rounds of fixes followed. The final scores are in the PR. Game-boy's yes is the last part of the done-when.
+- **The rebuild:** every model rebuilds from the logged Tripo downloads to the same file (`tools/pipeline/run.py --asset punk --check` and `tools/pipeline/player_run.py --asset player --check`).
+- **Spend:** Tripo took 295 credits of the 750 set aside; each generation is in `assets/source/tripo_ledger.jsonl` and ASSETS.md.
+
 ## Milestone 3 status: enemy AI and the rear warning
 
 All five Spec §7 archetypes fight in the crowd street under a director, and the rear warning (Spec §8) flashes when something you can't see starts to wind up. It all runs on placeholder rigs, art and sound. Milestone 3 is done when a six-enemy fight is readable and the warning fires correctly behind-left, behind-right and directly behind (Spec §12).
@@ -153,6 +187,21 @@ The characters are procedural placeholders. Real art, VFX and audio come in Mile
 - **The boss has poise (Spec §7 says only that light hits don't interrupt it):** once it is back on its feet after a stagger or a knockdown, a heavy hit or a finisher does its damage but doesn't flinch it, for `boss_poise_s` (4 s) or until its next attack ends, and the same after `boss_poise_after_reactions` (2) reactions within `boss_poise_window_s` (8 s). The haymaker still knocks it down. Without it, the basic P P P P chain knocked the boss down every 3.3 s and it spent half its life in reactions. Set the three to 0 for the old boss. Game-boy kept the spec's 300 at sign-off.
 - **A KO'd enemy lies limp, blinks off and is freed (Spec §6):** the spec keeps bodies until the arena clears. M2 already approved the blink-off (`ko_linger_s`, `ko_blink_s`), and freeing a body is simpler than pooling it.
 - **The crowd mostly waits and attacks in turns (Spec §7):** at most 1 or 2 enemies attack at once against the cap of 3. In a six-Punk fight about a quarter of the crowd is circling on the ring at any moment (1.4-1.6 of 5.8); most of the rest stand squared up on the ring waiting for their go, walk out to it, or back off. The spec says "most of their time posturing", and a Punk attack cooldown of 5.0 s (`punk_attack_cooldown_s`, was 1.4) is the best posture share that doesn't gut the pressure. The hit grace (`director_hit_grace_s`) holds the next wind-up while you take hits.
+
+**Where M4 departs from the spec, for Game-boy to rule on (decided by default):**
+- **Rig and animation (Spec §10, pipeline steps 4-6):** the spec has Mixamo rig the characters, Mixamo and video mocap animate them, and Godot import them with the humanoid skeleton profile. Here Tripo's auto-rigger rigs the model (Game-boy: Tripo first, Mixamo skipped), and the headless Blender chain fits it to the game's own humanoid skeleton. The game's procedural animation set then drives it, the one M1-M3 tuned frame by frame. No Mixamo or mocap clip is used, and there is no humanoid-profile import. Generated clips would have had to be re-timed to every move's frame data, hitboxes and telegraphs.
+- **The Punk has a 1k ink-detail mask (Spec §10's table gives enemies the shared palette atlas only):** the mouth, nose, tape wraps, pocket flaps, stitching and the cap's strap are thin ink lines in a 1024 px mask on a second UV set, the same kind of mask the spec gives the player. Flat palette colours alone left the face and tape blank at 1 m. The mask is ink only, never shading, and the Punk still uses six flat palette colours.
+- **The player's head is not its own mesh (Spec §10, pipeline step 3):** the hero is three meshes. One is the visible body. The second is the hidden upper body (head, neck, chest, shoulders and the shoulder end of each upper arm, as in M3's approved "upper body in first person"). The third is the belly and belt, so the knockdown switch can hide them alone. The head is in the hidden mesh.
+- **Environment lines skip the characters:** the edge pass draws depth and normal lines on the street only. The characters already have the ink hull, and drawing both doubled their outlines.
+- **Halftone is off by default (Spec §10: "optional"):** it is in F1 (`look_halftone_env`, `look_halftone_chars`). Screen-space dots crawl on a moving body at 1 m.
+- **Performance is measured on the Apple M1, not an RTX 3060 (Spec §10):** there is no Windows machine. Interleaved runs on the M1, under load from other apps, put M4's frame time 2.4 ms above M3's on average and 3.4 ms at the 95th percentile ("Perf, six with ragdolls"; the plan's soft bar is +4 ms). M3 itself misses 16.7 ms at the 95th percentile on this machine. A quiet-machine A/B and the RTX 3060 target are still to run.
+- **The Punk's shades are the cap's yellow inside a dark frame:** the concept's lenses are a lighter gold. A seventh colour would break "4-6 colours per character", and the dark frame keeps the lens apart from the cap. A cream lens was tried and read as a khaki visor.
+- **Some of the plan's own measured bars are not met, and are held as ratchets:** none is a spec rule. The plan's bar is printed beside each, and the figures are in the done-when table.
+  - **First-person framing (A9):** the Punk's art covers 6.6% of cells differently from the hidden hit-test shapes (bar 3%), and the jab and cross lens share misses by about 1 point.
+  - **The rest:** deformation strain (A7), the hit flash's anchor at the torso (A11), the hero's legs inside the hurtboxes (A6), and the hero's walk keeping M3's step cadence (A4, his feet slide).
+- **Two looks left for Game-boy:**
+  - **Damage marks:** they are spread over the whole body, as M3's were, and the blood turns orange on the yellow cap.
+  - **The near upper arm:** in the haymaker and uppercut its cut end is a bare knob mid-view. That is M3's approved first-person framing, and showing the whole upper arm instead is an option.
 
 **Automated checks:**
 - `tools/run_tests.sh` runs 1198 tests headless in about 145 s, including an end-to-end suite where a scripted player performs every combo in the real test room and the Milestone 3 done-when test, `tests/test_m3_done_when.gd`.
