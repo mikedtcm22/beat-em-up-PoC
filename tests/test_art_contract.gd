@@ -25,6 +25,9 @@ const TOLERANCE_JOINT := 0.001
 const FIST_CENTROID_TOLERANCE := 0.015
 const FIST_EXTENT_TOLERANCE := 0.2
 const SOLE_TOLERANCE := 0.005
+## The mean dot of a mesh's decoded hull normal (COLOR) with its NORMAL: the right axes measure 0.92-0.96 on the smoke Punk
+## and the probe bodies (a normal baked in Blender's Z-up axes measured 0.31-0.34).
+const HULL_AGREE_MIN := 0.85
 const SWATCH_MIN := 4
 const SWATCH_MAX := 6
 const SWATCH_COLUMNS := 32
@@ -354,6 +357,10 @@ func test_hull_normals_and_the_detail_uv_are_there() -> void:
 				uv2 = arrays[Mesh.ARRAY_TEX_UV2]
 			if _id_of(path) == "probe_body":
 				assert_eq(uv2.size(), verts.size(), "%s %s: UV2 (detail) is present" % [path, n])
+			var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+			var agree := 0.0
+			var agree_z_up := 0.0
+			var agree_z_down := 0.0
 			for i: int in verts.size():
 				var c := colors[i]
 				var nrm := Vector3(c.r * 2.0 - 1.0, c.g * 2.0 - 1.0, c.b * 2.0 - 1.0)
@@ -364,6 +371,20 @@ func test_hull_normals_and_the_detail_uv_are_there() -> void:
 					worst_split = maxf(worst_split, (by_position[key] - nrm).length())
 				else:
 					by_position[key] = nrm
+				# the axis frame (slice-g2-01): COLOR is the hull direction in the file's Y-up axes, like NORMAL
+				if normals.size() == verts.size():
+					var dir := nrm.normalized()
+					agree += dir.dot(normals[i])
+					agree_z_up += Vector3(dir.x, dir.z, -dir.y).dot(normals[i])
+					agree_z_down += Vector3(dir.x, -dir.z, dir.y).dot(normals[i])
+			if normals.size() == verts.size() and not verts.is_empty():
+				agree /= verts.size()
+				agree_z_up /= verts.size()
+				agree_z_down /= verts.size()
+				gut.p("ART-CONTRACT hull axis: %s %s: mean dot(COLOR, NORMAL) as read %.3f (read as Blender Z-up %.3f, as Z-down %.3f)" % [path.get_file(), n, agree, agree_z_up, agree_z_down])
+				assert_gt(agree, HULL_AGREE_MIN, "%s %s: the hull normal (COLOR) agrees with NORMAL on average, so it is in the same Y-up axes (baked in Blender's Z-up it measures 0.3)" % [path, n])
+				assert_gt(agree, agree_z_up, "%s %s: COLOR reads better as (x, y, z) than as Blender's Z-up axes (x, z, -y)" % [path, n])
+				assert_gt(agree, agree_z_down, "%s %s: COLOR reads better as (x, y, z) than as (x, -z, y)" % [path, n])
 		assert_lt(worst_split, 0.03, "%s: vertices at one position share one hull normal, across both parts too (no cracks)" % path)
 
 

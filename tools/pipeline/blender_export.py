@@ -11,11 +11,15 @@ config rig.variants writes a GLB into paths.export_dir:
 	                         SkinnedArt's one code path gives R = identity for it.
 The COLOR attribute "hull_normal" holds the position-averaged smooth normal (n * 0.5 + 0.5) so inverted-hull outlines never
 crack at a hard edge or at the cut between the two parts; it is computed after the variant's final positions, from every face
-except the first-person caps, across both meshes. UV1 "palette", UV2 "detail" (when present) are written by the earlier steps.
+except the first-person caps, across both meshes. It is stored in glTF Y-up axes, the frame of the file's POSITION and NORMAL:
+the exporter turns those two from Blender's Z-up but passes a colour attribute through untouched, so write_hull_normals turns it
+(x, y, z) -> (x, z, -y) itself, and toon_outline.gdshader reads COLOR as a model-space Y-up direction.
+UV1 "palette", UV2 "detail" (when present) are written by the earlier steps.
 Export options are Part C 2.6's: GLB, Y up, skins, 4 influences, no animations, deform bones only, no materials or images, the
 active vertex colour, no compression. Afterwards each file is read back with blender_dump_rig and checked: 23 bones, joints
 against the chained table, unweighted vertices, influences, triangles, facing, soles. <paths.blend_dir (default work)>/<name>.blend keeps the A-pose file.
 """
+import json
 import os
 import sys
 
@@ -61,7 +65,13 @@ def bake_rest(meshes, dirs, targets):
 		pb.set_verts(m.data, out)
 
 
+def to_gltf_axes(n):
+	"""Blender Z-up rows turned to glTF Y-up, the exporter's own mapping for POSITION and NORMAL: (x, y, z) -> (x, z, -y)."""
+	return np.stack([n[:, 0], n[:, 2], -n[:, 1]], axis=1)
+
+
 def write_hull_normals(meshes, digits):
+	"""Bake the smooth normal into the COLOR attribute "hull_normal" (n * 0.5 + 0.5), in glTF Y-up axes (see the module doc)."""
 	cos, tris, keeps, lvs = [], [], [], []
 	for m in meshes:
 		me = m.data
@@ -81,7 +91,7 @@ def write_hull_normals(meshes, digits):
 			me.color_attributes.remove(attr)
 		attr = me.color_attributes.new("hull_normal", "FLOAT_COLOR", "CORNER")
 		rgba = np.ones((len(lv), 4), dtype=np.float32)
-		rgba[:, :3] = (n[lv] * 0.5 + 0.5).astype(np.float32)
+		rgba[:, :3] = (to_gltf_axes(n[lv]) * 0.5 + 0.5).astype(np.float32)
 		attr.data.foreach_set("color", rgba.ravel())
 		me.color_attributes.active_color = attr
 		me.color_attributes.render_color_index = list(me.color_attributes).index(attr)
@@ -102,9 +112,51 @@ def export_glb(path, meshes, arm):
 	bpy.ops.export_scene.gltf(**{k: v for k, v in opts.items() if k in props})
 
 
+COMPONENT_DTYPES = {5121: np.uint8, 5123: np.uint16, 5125: np.uint32, 5126: np.float32}
+COMPONENT_COUNTS = {"SCALAR": 1, "VEC2": 2, "VEC3": 3, "VEC4": 4}
+
+
+def read_accessor(js, blob, index):
+	"""One glTF accessor of a GLB's binary chunk as an (count, components) array (tightly packed or strided, never sparse)."""
+	acc = js["accessors"][index]
+	view = js["bufferViews"][acc["bufferView"]]
+	dtype = np.dtype(COMPONENT_DTYPES[acc["componentType"]])
+	n = COMPONENT_COUNTS[acc["type"]]
+	stride = view.get("byteStride", dtype.itemsize * n)
+	start = view.get("byteOffset", 0) + acc.get("byteOffset", 0)
+	rows = np.frombuffer(blob, dtype=np.uint8, count=stride * (acc["count"] - 1) + dtype.itemsize * n, offset=start)
+	return np.lib.stride_tricks.as_strided(rows, shape=(acc["count"], dtype.itemsize * n), strides=(stride, 1)).copy().view(dtype).reshape(acc["count"], n)
+
+
+def folded_triangles(path):
+	"""How many triangles of a written GLB have a winding that opposes the mean of their three vertex NORMALs (a fold: the
+	face turns away from the surface the shading says it is on). (Triangle count, folded count) over every mesh primitive;
+	glTF winding is counter-clockwise, so a front-facing triangle has cross(b - a, c - a) along its normals."""
+	data = open(path, "rb").read()
+	js, blob, off = None, b"", 12
+	while off < len(data):
+		length, kind = int.from_bytes(data[off:off + 4], "little"), data[off + 4:off + 8]
+		if kind == b"JSON":
+			js = json.loads(data[off + 8:off + 8 + length].decode("utf-8"))
+		elif kind == b"BIN\x00":
+			blob = data[off + 8:off + 8 + length]
+		off += 8 + length
+	total = folded = 0
+	for mesh in js["meshes"]:
+		for prim in mesh["primitives"]:
+			pos = read_accessor(js, blob, prim["attributes"]["POSITION"]).astype(np.float64)
+			nrm = read_accessor(js, blob, prim["attributes"]["NORMAL"]).astype(np.float64)
+			tri = read_accessor(js, blob, prim["indices"]).astype(np.int64).reshape(-1, 3)
+			face = np.cross(pos[tri[:, 1]] - pos[tri[:, 0]], pos[tri[:, 2]] - pos[tri[:, 0]])
+			total += len(tri)
+			folded += int(np.count_nonzero(np.einsum("ij,ij->i", face, nrm[tri[:, 0]] + nrm[tri[:, 1]] + nrm[tri[:, 2]]) < 0.0))
+	return total, folded
+
+
 def check_glb(path, expect_dirs):
 	"""Read a written GLB back and compare it with the contract (returns a dict of measurements)."""
 	d = dump.dump(path)
+	tris, folds = folded_triangles(path)
 	bones = {b["name"]: b for a in d["armatures"] for b in a["bones"]}
 	chain = pc.chain_joints(expect_dirs)
 	worst, worst_bone = 0.0, ""
@@ -121,6 +173,7 @@ def check_glb(path, expect_dirs):
 		"bones": s["bones"], "bone_names_exact": sorted(bones) == sorted(NAMES), "neutral_bone": s["neutral_bone"]["present"],
 		"unweighted": s["unweighted"], "max_influences": s["max_influences"], "over_four": s["over_four"],
 		"triangles": s["triangles"], "height_m": s["height_m"], "feet_y": s["feet_y"],
+		"folded_triangles": folds, "folded_share": folds / max(tris, 1),
 		"facing": {"axis": d["facing"]["axis"], "yaw": d["facing"]["yaw_deg_to_minus_z"], "confidence": d["facing"]["confidence"]},
 		"sides_consistent": d["sides"]["consistent"],
 		"worst_joint_error_mm": worst * 1000.0, "worst_joint": worst_bone,

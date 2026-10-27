@@ -485,6 +485,8 @@
 					"triangles": 14999,
 					"height_m": 1.817427,
 					"feet_y": -0.004291,
+					"folded_triangles": 159,
+					"folded_share": 0.010601,
 					"facing": {
 						"axis": "-Z",
 						"yaw": 2.429658,
@@ -524,7 +526,7 @@
 						]
 					},
 					"file": "punk.glb",
-					"sha256": "dae40500a36980e5f4ebbdba9a9b478370cb77139246b1fe52b4dab03b23def7",
+					"sha256": "9525b500b60f39840563dba2fdfc7efb5cd34db4282f91678d078d8c6de212dd",
 					"bytes": 616940
 				},
 				"rest": {
@@ -537,6 +539,8 @@
 					"triangles": 14999,
 					"height_m": 1.817427,
 					"feet_y": -0.004291,
+					"folded_triangles": 159,
+					"folded_share": 0.010601,
 					"facing": {
 						"axis": "-Z",
 						"yaw": 2.429658,
@@ -576,17 +580,17 @@
 						]
 					},
 					"file": "punk_rest.glb",
-					"sha256": "e6aa00f1d3a9ddb872232262142aae9e72a873f24996519e015e9de63f3fd1f6",
+					"sha256": "20326cd0fb34a1b2a37074e1e8812046de5addfcdd73a75c552ae784b987e31b",
 					"bytes": 616700
 				}
 			}
 		}
 	},
 	"outputs": {
-		"punk.glb": "dae40500a36980e5f4ebbdba9a9b478370cb77139246b1fe52b4dab03b23def7",
-		"punk_rest.glb": "e6aa00f1d3a9ddb872232262142aae9e72a873f24996519e015e9de63f3fd1f6"
+		"punk.glb": "9525b500b60f39840563dba2fdfc7efb5cd34db4282f91678d078d8c6de212dd",
+		"punk_rest.glb": "20326cd0fb34a1b2a37074e1e8812046de5addfcdd73a75c552ae784b987e31b"
 	},
-	"hash": "c0d8255da21998d5f857464a8370fd1f2a89d2eb538c20cb2bbf07ef1fae9ee4",
+	"hash": "d409e85826b30df3851fdd1b1b481cc1581c3a2af319bac6e8366d01e4d2fa86",
 	"stills": {
 		"variants": {
 			"apose": {
