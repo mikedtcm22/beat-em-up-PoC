@@ -772,7 +772,7 @@ Tooling only: no game file. The Punk and the player's limbs are recorded from th
 | c5 | `Look: Punk reacts at 1 m` | the player's jab, P P P P (hook stagger, uppercut launch), the get-up, health 100/65/30% held 1 s each, a jab that finishes it (KO, blink-off) |
 | c6 | `Look: distances` | the Punk at 1, 2.5, 5 and 10 m, view level |
 | c7 | `Look: lineup` | Punk, Kicker, Thug, Bruiser on a 2.2 m arc |
-| c8 | `Look: own limbs` | view -45 degrees: jab, cross, hook, front kick, guard, walking (subject: the player; rectangles of his hands and legs) |
+| c8 | `Look: own limbs` | view -45 degrees: jab, cross, hook, front kick, guard, walking; then -20 (the chain and the guard, where his arms are in the view) and -65 (walking, where the lead leg and the feet come in). Subject: the player; rectangles of his hands and legs |
 | c9 | `Look: street tour` | `room_acts`' tour with six frozen enemies in the street |
 | c10 | `Look: turntable` | free-fly camera once round the Punk at rest, in the guard, lying (mesh QA, not first person) |
 | c11 | `Look: hold the Punk` | grab, three knees (the third lets go), grab, throw |

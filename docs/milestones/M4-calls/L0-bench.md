@@ -47,6 +47,12 @@ Package L0-bench (M4-plan Part A A12): the look acts, `look_rect.gd`, `look_shee
 - **Decision.** The hold ends on the third knee (`max_knees`), so the act grabs the Punk again once it is back on its feet and throws it with K, as the combo bot's own grab act does.
 - **Alternative.** Press K straight after the third knee (it was a front kick on a staggering Punk).
 
+## 7b. C8: two more looks after the plan's 45 degrees
+
+- **Decision.** After the plan's sequence at 45 degrees down, the act looks 20 degrees down for the chain and the guard, then (turned round, so the lane's end is not in the way) 65 degrees down for walking.
+- **Alternative.** Only the plan's 45 degrees.
+- **Why.** The first recording showed what 45 degrees holds on the M3 look: the lane floor, the fists tucked under the HP panel, a strike's forearm sweeping through, one dark trouser leg in the front kick, and nothing but floor in the guard and the walk. J14 judges his arms and legs, and they are in the view at 20 degrees (the arms) and 65 (the lead leg, a shoe, the fists low in the corners). The plan's sequence is unchanged and comes first, so its marks keep their names.
+
 ## 8. C9: the street tour has a cast
 
 - **Decision.** Six frozen enemies (the four archetypes, a second Punk and Thug) stand in the street for the room's tour: four round the start for the turn on the spot, two beside the lane.
