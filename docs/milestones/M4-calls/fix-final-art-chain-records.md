@@ -1,6 +1,6 @@
 # M4 calls: fix-final-art-chain-records
 
-The final review's package "the art chain's records" (findings final-v5-01, final-v5-07, final-v5-03, final-v5-06 in `docs/reviews/M4/final-findings.json`; the lead's partition notes name this file `R-chain.md`, the task named this one, as it did for `fix-final-toon-light-and-ink.md`). Base: `m4/art-pipeline` at 3aa6f9a, which already has F-cuff's and toon-light-and-ink's chain changes. Each call is the decision, an alternative not taken, and why. No Tripo or Gemini call, no credit, no tunable; Blender was run headless only (never the MCP), one process at a time. Part 2 is what the tests do and how they were checked, part 3 what is handed to the lead.
+The final review's package "the art chain's records" (findings final-v5-01, final-v5-07, final-v5-03, final-v5-06 in `docs/reviews/M4/final-findings.json`; the lead's partition notes name this file `R-chain.md`, the task named this one, as it did for `fix-final-toon-light-and-ink.md`). Base: `m4/art-pipeline` at 3aa6f9a, which already has F-cuff's and toon-light-and-ink's chain changes. Each call is the decision, an alternative not taken, and why. No Tripo or Gemini call, no credit, no tunable; Blender was run headless only (never the MCP), one process at a time. Part 2 is what the tests do and how they were checked, part 3 what is handed to the lead, part 4 the suite.
 
 ## 1. Calls
 
@@ -41,7 +41,6 @@ The final review's package "the art chain's records" (findings final-v5-01, fina
 
 - Three tests added, all in `tests/test_art_contract.gd`: the probe key guard, the hero mask contract and the hero wear test. No assertion was changed or removed. The file's header comment lists the new rows.
 - Each fails without its fix, checked by hand: with the pre-fix `probe_report.json` back in place the guard fails with `steps.rig: keys the Punk's report has and the probe's lacks ["torso_blend"]`; with a typo in `player_art.tres`'s `metadata/detail_mask_path` the wear test fails on "names the mask" and on "holds a detail mask" (the silent drop in `worn_art()`). Both files restored afterwards.
-- The suite on the final tree: see part 4.
 
 ## 3. For the lead
 
@@ -54,3 +53,7 @@ The final review's package "the art chain's records" (findings final-v5-01, fina
   and, for the heat-map run, `python3 -I tools/pipeline/run.py --asset punk --check --set 'rig.weights="auto"' --set 'palette.detail_bake=null' --set paths.report=assets/source/characters/punk/report_auto --set paths.export_name=punk_auto`. The hero's check is `player_run.py`: `run.py --config assets/source/characters/player/pipeline.json --check` fails in `parts_replace` with `KeyError: 'glove_slot'`, because the hero's parts steps are `player_parts.py` (F-player-art C5). That is by design, and it is the mistake an A22 line would make if it were written from the Punk's. If a shared step changes its report keys after wave 2, the probe's `make_probe_body.py` and the Punk's and hero's reports need regenerating, and the new guard says so.
 - **One sentence for ARCHITECTURE.md (not mine to edit):** "`test_art_contract` compares the first-level keys of the probe report's `inspect`, `fit`, `rig` and `palette` steps with the Punk's report: a shared step that gains a report key needs `make_probe_body.py` rerun (the probe GLBs come out unchanged, the report and its hash move)."
 - **Wave 2.** The new tests sit after `test_each_character_report_names_the_glbs_it_exported`, away from the Punk rows of `test_art_contract.gd`. The ASSETS.md edits that touch Punk lines are the work-file and two-stills provenance text and the build dates on `punk*.glb` and `punk_detail.png` (above): a conflict there is a one-line choice.
+
+## 4. The suite
+
+`tools/run_tests.sh` on the final tree: **1578 tests in 73 scripts, 1578 passing** (the base's 1575 and the three new tests), 111,928 asserts, 0 `SCRIPT ERROR` and 0 `SHADER ERROR`; the only lines with `ERROR` in them are the done-when test's own `A12` note about the count. The new tests also run alone: `tools/run_tests.sh -gselect=test_art_contract.gd` is 25 of 25 (`ART-CONTRACT player_detail.png: mean ink 0.0393, 10207 of 262144 sampled texels over 0.5`). The files changed: `tests/fixtures/art/probe_report.json` (regenerated), `tests/test_art_contract.gd`, `ASSETS.md`, this file, and `tests/scratch_measure.gd.uid` (removed). No GLB, PNG or chain script was touched.
