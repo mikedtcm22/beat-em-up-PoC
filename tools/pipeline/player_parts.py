@@ -33,6 +33,7 @@ split: reads work/05_palette.blend, writes work/06_split.blend. The first-person
 import math
 import os
 import sys
+from collections import deque
 
 import bmesh
 import bpy
@@ -49,6 +50,8 @@ from blender_fit import rotation_between  # noqa: E402
 NAMES = pc.bone_names()
 SLOT_ATTR = "pipe_slot"
 CAP_ATTR = "pipe_cap"
+# face attribute: 1 on a face of the generated mesh (its winding is the source's), 0 on a face made here (see orient_untrusted)
+TRUST_ATTR = "pipe_trusted"
 FIST_BONES = ("Hand", "LowerArm")
 
 
@@ -158,9 +161,9 @@ def import_piece(path):
 	return g, faces, uv.reshape(-1, 2), pix, image
 
 
-def piece_labels(me, uv_layer, pix, slot_list):
+def piece_labels(me, uv_layer, pix, slot_list, smooth=None):
 	"""A palette slot per face of the dense piece: the texture colour at each face's UV centre, Lab-nearest among slot_list,
-	then two majority passes. (labels (n_faces,), mean delta-E)"""
+	then two majority passes and, with `smooth` (parts.fists.label_smooth: passes, lam), smooth_labels(). (labels (n_faces,), mean delta-E)"""
 	swatches = gp.swatches()
 	cand = srgb_to_lab(np.array([[c / 255.0 for c in swatches[s]["rgba"][:3]] for s in slot_list]))
 	fuv = triangle_uv_centres(me, uv_layer)
@@ -183,19 +186,42 @@ def piece_labels(me, uv_layer, pix, slot_list):
 			if top != label[f] and vals[top] * 2 > len(ns):
 				new[f] = top
 		label = new
+	if smooth:
+		label = smooth_labels(label, nb, int(smooth.get("passes", 0)), float(smooth.get("lam", 0.5)))
 	return label, de
 
 
-def decimate_with_borders(obj, target, keep_mask):
+def smooth_labels(label, nb, passes, lam):
+	"""Round the borders of a face labelling: each label is a 0/1 field over the faces, blended `passes` times with the mean of the
+	edge neighbours' (weight `lam` on the neighbours), and a face takes the label whose field is largest. A frayed border (the
+	generated texture's soft patches, labelled face by face) becomes a smooth curve, a speck vanishes, a feature wider than a few
+	faces keeps its place. Returns the new labels."""
+	if passes <= 0:
+		return label
+	kinds = np.unique(label)
+	field = (label[:, None] == kinds[None, :]).astype(np.float64)
+	src = np.concatenate([np.full(len(n), f, dtype=np.int64) for f, n in enumerate(nb)])
+	dst = np.concatenate([np.array(n, dtype=np.int64) for n in nb])
+	deg = np.maximum(np.array([len(n) for n in nb], dtype=np.float64), 1.0)
+	for _ in range(passes):
+		acc = np.zeros_like(field)
+		np.add.at(acc, src, field[dst])
+		field = (1.0 - lam) * field + lam * (acc / deg[:, None])
+	return kinds[np.argmax(field, axis=1)]
+
+
+def decimate_with_borders(obj, target, keep_mask, soft_weight=None):
 	"""Collapse-decimate obj (a copy) towards `target` triangles keeping the vertices in keep_mask (the colour borders) where they
-	are; returns (the new object, triangles, the worst distance a protected vertex moved). The vertex group's polarity is found by
-	a trial (Blender 5.2.2: the INVERTED group protects)."""
+	are; returns (the new object, triangles, the worst distance a protected vertex moved). `soft_weight` (per vertex, 0..1) holds the
+	vertices that are not pinned back in proportion (the fingers: where the lens looks, the decimation spends its triangles there).
+	The vertex group's polarity is found by a trial (Blender 5.2.2: the INVERTED group protects)."""
 	from mathutils import kdtree
 	co0 = pb.verts(obj.data)
 	protected_co = co0[keep_mask]
 	vg = obj.vertex_groups.new(name="pipe_keep")
-	for i in np.nonzero(keep_mask)[0]:
-		vg.add([int(i)], 1.0, "REPLACE")
+	weight = np.where(keep_mask, 1.0, 0.0) if soft_weight is None else np.where(keep_mask, 1.0, np.clip(soft_weight, 0.0, 0.999))
+	for i in np.nonzero(weight > 0.0)[0]:
+		vg.add([int(i)], float(weight[i]), "REPLACE")
 
 	def trial(ratio, invert):
 		dup = obj.copy()
@@ -418,7 +444,7 @@ def replace_hands(cfg, extra):
 		bm.to_mesh(dme)
 		bm.free()
 		dme.update()
-		labels, de = piece_labels(dme, dme.uv_layers[0], pix, slot_list)
+		labels, de = piece_labels(dme, dme.uv_layers[0], pix, slot_list, pf.get("label_smooth"))
 		# the colour borders: vertices where two labels meet
 		nb, pairs = face_neighbours(dme)
 		ev = np.empty(len(dme.edges) * 2, dtype=np.int32)
@@ -428,7 +454,43 @@ def replace_hands(cfg, extra):
 		for e, fs in pairs.items():
 			if len(fs) == 2 and labels[fs[0]] != labels[fs[1]]:
 				keep[ev[e]] = True
-		deci, tris, worst = decimate_with_borders(dense, int(pf["target_tris"]), keep)
+		# the decimation spends triangles where the lens looks: the vertices of the bare fingers (a slot in parts.fists.fine_slots)
+		# are held back in proportion to parts.fists.fine_weight, so they keep their shape and the plates and wraps give theirs up
+		soft = None
+		if pf.get("fine_slots"):
+			ev_faces = np.empty(len(dme.polygons) * 3, dtype=np.int32)
+			dme.polygons.foreach_get("vertices", ev_faces)
+			ev_faces = ev_faces.reshape(-1, 3)
+			soft = np.zeros(len(dme.vertices))
+			fine_faces = np.isin(labels, pf["fine_slots"])
+			soft[np.unique(ev_faces[fine_faces])] = float(pf.get("fine_weight", 0.5))
+		# the decimator also holds the vertices near a colour border back, so the triangles there stay small and a face that straddles
+		# the border cannot be a long tooth of the other colour
+		if float(pf.get("border_zone_m", 0.0)) > 0.0 and keep.any():
+			from mathutils import kdtree
+			dco0 = pb.verts(dme)
+			kd = kdtree.KDTree(int(keep.sum()))
+			for vi in np.nonzero(keep)[0]:
+				kd.insert(Vector(dco0[vi]), int(vi))
+			kd.balance()
+			zone = float(pf["border_zone_m"])
+			near = np.array([kd.find(Vector(p))[2] < zone for p in dco0])
+			soft = np.zeros(len(dco0)) if soft is None else soft
+			soft = np.where(near, np.maximum(soft, float(pf.get("border_zone_weight", 0.4))), soft)
+		# a colour border pinned at every vertex of the dense mesh (1.5 mm apart) leaves the decimator a fan of slivers along it, and a
+		# sliver goes to either colour by chance: the border frays. Pinned at one vertex per border_cell_m instead, the decimator joins
+		# them with straight edges and the faces on either side of an edge take one colour each
+		if float(pf.get("border_cell_m", 0.0)) > 0.0:
+			cell = float(pf["border_cell_m"])
+			dco = pb.verts(dme)
+			seen_cells, thin = set(), np.zeros(len(keep), dtype=bool)
+			for vi in np.nonzero(keep)[0]:
+				key = tuple(int(x) for x in np.floor(dco[vi] / cell))
+				if key not in seen_cells:
+					seen_cells.add(key)
+					thin[vi] = True
+			keep = thin
+		deci, tris, worst = decimate_with_borders(dense, int(pf["target_tris"]), keep, soft)
 		deci.name = "Fist" + side
 		# the collapse can leave a pinhole where the piece's own mesh was thin: close every small hole
 		bm = bmesh.new()
@@ -449,9 +511,21 @@ def replace_hands(cfg, extra):
 		bvh = BVHTree.FromPolygons([tuple(v) for v in dco], [tuple(int(i) for i in ldense[sdense[f]:sdense[f] + tdense[f]]) for f in range(len(sdense))])
 		fme = deci.data
 		fc = pb.face_centers(fme)
+		fco_ = pb.verts(fme)
+		# each decimated face takes the commonest label among the dense faces nearest to its centre and to three points part of the
+		# way to its corners (a face that straddles a border goes with most of its area), then the labelling is smoothed once more
 		new_label = np.zeros(len(fme.polygons), dtype=np.int32)
+		pf_start, pf_total, pf_lv = pb.poly_arrays(fme)
 		for i, c in enumerate(fc):
-			new_label[i] = labels[bvh.find_nearest(Vector(c))[2]]
+			corners = fco_[pf_lv[pf_start[i]:pf_start[i] + pf_total[i]]]
+			pts = [c] + [c + (q - c) * float(pf.get("relabel_reach", 0.6)) for q in corners]
+			votes = {}
+			for q in pts:
+				lab = int(labels[bvh.find_nearest(Vector(q))[2]])
+				votes[lab] = votes.get(lab, 0) + 1
+			new_label[i] = max(votes, key=votes.get)
+		nb_f, _pairs = face_neighbours(fme)
+		new_label = smooth_labels(new_label, nb_f, int(pf.get("label_smooth_decimated", {}).get("passes", 0)), float(pf.get("label_smooth_decimated", {}).get("lam", 0.5)))
 		attr = fme.attributes.new(SLOT_ATTR, "INT", "FACE")
 		attr.data.foreach_set("value", new_label.astype(np.int32) + 1)
 		for vg in list(deci.vertex_groups):
@@ -560,6 +634,51 @@ def boundary_loops(bm):
 	return loops
 
 
+def mark_trusted(bm):
+	"""Mark every face of the mesh as a face of the generated body (TRUST_ATTR 1): the winding it has is the source's, and what
+	the later cuts make is oriented against it, never by a global recalculation (see orient_untrusted)."""
+	layer = bm.faces.layers.int.get(TRUST_ATTR) or bm.faces.layers.int.new(TRUST_ATTR)
+	for f in bm.faces:
+		f[layer] = 1
+
+
+def orient_untrusted(bm):
+	"""Give each face made here (TRUST_ATTR 0: a hole patch, a cap) the winding of the faces it grew from and mark it trusted, by
+	a flood fill over manifold edges from the trusted faces next to it; returns how many were flipped. Blender's
+	recalc_face_normals over the whole body (what the first version of the split did) turned the legs, feet and part of the hips
+	of the hero inside out (88% of the shin's triangles faced their bone: the base pass culls them, the hull pass draws the near wall
+	as a black fill): one shell of a layered, partly non-manifold generated mesh gets its inside picked, and nothing local says it is
+	wrong. The winding of the source is right, so nothing global is recalculated."""
+	layer = bm.faces.layers.int.get(TRUST_ATTR)
+	if layer is None:
+		return 0
+	queue = deque()
+	for f in bm.faces:
+		if f[layer] != 1:
+			continue
+		for e in f.edges:
+			if len(e.link_faces) == 2 and any(g[layer] == 0 for g in e.link_faces):
+				queue.append(f)
+				break
+	flipped = 0
+	while queue:
+		f = queue.popleft()
+		for l in f.loops:
+			if len(l.edge.link_faces) != 2:
+				continue
+			o = l.link_loop_radial_next
+			nf = o.face
+			if nf[layer] == 1:
+				continue
+			if o.vert == l.vert:  # the two faces run the shared edge the same way: the new one is the wrong way round
+				nf.normal_flip()
+				flipped += 1
+			nf[layer] = 1
+			queue.append(nf)
+	bm.normal_update()
+	return flipped
+
+
 def heal_slits(bm, max_len, rounds):
 	"""Collapse the short open edges that a generated mesh leaves where two surfaces nearly touch (a sliver of one triangle, an
 	edge shared by three): each merges its two vertices, then the faces that collapse to nothing go. Only edges shorter than
@@ -638,7 +757,7 @@ def fill_holes_edges(bm, edges, sides):
 				lp[uv_p].uv = src.loops[0][uv_p].uv.copy()
 				if uv_d is not None:
 					lp[uv_d].uv = src.loops[0][uv_d].uv.copy()
-	bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+	orient_untrusted(bm)
 	return made
 
 
@@ -667,12 +786,32 @@ def fill_holes(bm, sides):
 				lp[uv_p].uv = src.loops[0][uv_p].uv.copy()
 				if uv_d is not None:
 					lp[uv_d].uv = src.loops[0][uv_d].uv.copy()
-	bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+	orient_untrusted(bm)
 	return len(made)
 
 
-def add_caps(me, depth, rings, heal_max=0.0):
-	"""Close every open loop of a mesh with an inward rounded cap (rings rings, depth deep); returns the cap report."""
+def cap_spec(sc, bone, mesh_name=""):
+	"""The cap settings of a loop whose vertices belong to `bone` mostly, on the mesh `mesh_name`: parts.split_fp.caps[<mesh>][<bone>],
+	caps[<mesh>].default, caps[<bone>], caps.default, over the older flat keys (cap_depth_m, cap_rings), each over the next."""
+	caps = sc.get("caps", {})
+	spec = {"dir": "in", "depth_m": float(sc.get("cap_depth_m", 0.03)), "rings": int(sc.get("cap_rings", 4))}
+	per_mesh = caps.get(mesh_name, {}) if isinstance(caps.get(mesh_name), dict) and "dir" not in caps.get(mesh_name, {}) else {}
+	for layer in (caps.get("default", {}), caps.get(bone, {}), per_mesh.get("default", {}), per_mesh.get(bone, {})):
+		if isinstance(layer, dict):
+			spec.update({k: v for k, v in layer.items() if not isinstance(v, dict)})
+	return spec
+
+
+def add_caps(obj, sc, heal_max=0.0):
+	"""Close every open loop of a mesh with a rounded cap and return the cap report. A loop's cap is built from the settings
+	cap_spec() finds for the bone that owns most of its vertices: `dir` "in" puts the dome inside the mesh (the waist, the leg tops:
+	nothing the lens meets), "out" puts it on the cut's outer side (the upper arm's end, so it reads as M3's Elbow capsule: a
+	convex dome, tangent to the arm at the ring, with smooth normals); `depth_m` is its height and `rings` its steps. The whole cap
+	takes the loop's commonest palette swatch (the skin's, on an arm), so no border of two colours crosses it; its UV2 is (0, 0), which
+	is empty (no ink); its faces carry CAP_ATTR (1; 2 when the spec says `wall_normals`: a cap nobody sees, whose ring then takes the wall's
+	shading normal, see player_normals.py) so the hull's smooth normal ignores them."""
+	me = obj.data
+	names_by_group = {vg.index: vg.name for vg in obj.vertex_groups}
 	bm = bmesh.new()
 	bm.from_mesh(me)
 	bm.faces.ensure_lookup_table()
@@ -696,47 +835,99 @@ def add_caps(me, depth, rings, heal_max=0.0):
 		flipped = float((adj - c) @ n_in) < 0.0
 		if flipped:
 			n_in = -n_in
-		ring_verts = [verts]
-		for k in range(1, rings):
-			phi = math.pi / 2 * k / rings
-			ring = []
-			for v in verts:
-				p = np.array(tuple(v.co))
-				q = bm.verts.new(tuple(c + n_in * depth * math.sin(phi) + (p - c) * math.cos(phi)))
-				for gi, wt in v[dl].items():
-					q[dl][gi] = wt
-				ring.append(q)
-			ring_verts.append(ring)
-		apex = bm.verts.new(tuple(c + n_in * depth))
 		acc = {}
 		for v in verts:
 			for gi, wt in v[dl].items():
 				acc[gi] = acc.get(gi, 0.0) + wt / len(verts)
+		owner = names_by_group.get(max(acc, key=acc.get), "") if acc else ""
+		spec = cap_spec(sc, owner, obj.name)
+		depth, rings = float(spec["depth_m"]), int(spec["rings"])
+		n_cap = n_in if spec["dir"] == "in" else -n_in
+		# the loop's commonest swatch (the faces next to the cut): the cap wears it whole
+		votes = {}
+		for l in order:
+			key = tuple(np.round(np.array(tuple(l.face.loops[0][uv_p].uv)), 4))
+			votes[key] = votes.get(key, 0) + 1
+		swatch_uv = max(votes, key=votes.get)
+		# the dome's rings above the first may have fewer vertices than the cut (a generated mesh cuts a ring of 75 at the arm): a ring
+		# of `ring_verts` points spaced along the loop by arc length, joined to the cut by a strip, so the dome has the rings its
+		# silhouette needs (the first version had four and read as a faceted lump) for fewer triangles
+		m = int(spec.get("ring_verts", 0))
+		n = len(verts)
+		if m <= 0 or m >= n:
+			m = n
+			coarse_pts = pts
+			coarse_src = [(i2, i2, 0.0) for i2 in range(n)]
+		else:
+			seg = np.linalg.norm(np.roll(pts, -1, axis=0) - pts, axis=1)
+			arc = np.concatenate([[0.0], np.cumsum(seg)])
+			coarse_pts, coarse_src = [], []
+			for j2 in range(m):
+				t = arc[-1] * j2 / m
+				i2 = int(min(np.searchsorted(arc, t, side="right") - 1, n - 1))
+				f2 = (t - arc[i2]) / max(arc[i2 + 1] - arc[i2], 1e-12)
+				coarse_pts.append(pts[i2] * (1.0 - f2) + pts[(i2 + 1) % n] * f2)
+				coarse_src.append((i2, (i2 + 1) % n, f2))
+			coarse_pts = np.array(coarse_pts)
+			arc_params = [arc[-1] * j2 / m for j2 in range(m)]
+		ring_verts = [verts]
+		for k in range(1, rings):
+			phi = math.pi / 2 * k / rings
+			ring = []
+			for j2 in range(m):
+				q = bm.verts.new(tuple(c + n_cap * depth * math.sin(phi) + (coarse_pts[j2] - c) * math.cos(phi)))
+				a_i, b_i, f2 = coarse_src[j2]
+				wa, wb = dict(verts[a_i][dl].items()), dict(verts[b_i][dl].items())
+				for gi in set(wa) | set(wb):
+					q[dl][gi] = wa.get(gi, 0.0) * (1.0 - f2) + wb.get(gi, 0.0) * f2
+				ring.append(q)
+			ring_verts.append(ring)
+		apex = bm.verts.new(tuple(c + n_cap * depth))
 		for gi, wt in acc.items():
 			apex[dl][gi] = wt
-		n = len(verts)
 		made = []
-		for k in range(1, rings):
-			for i in range(n):
-				a0, b0 = ring_verts[k - 1][i], ring_verts[k - 1][(i + 1) % n]
-				a1, b1 = ring_verts[k][i], ring_verts[k][(i + 1) % n]
-				made.append((bm.faces.new((b0, a0, a1, b1)), order[i]))
-		for i in range(n):
-			a, b = ring_verts[rings - 1][i], ring_verts[rings - 1][(i + 1) % n]
-			made.append((bm.faces.new((b, a, apex)), order[i]))
-		for f, src in made:
+		if m == n or rings < 2:
+			if rings >= 2:
+				for i2 in range(n):
+					a0, b0 = ring_verts[0][i2], ring_verts[0][(i2 + 1) % n]
+					a1, b1 = ring_verts[1][i2], ring_verts[1][(i2 + 1) % n]
+					made.append(bm.faces.new((b0, a0, a1, b1)))
+		else:
+			# the strip from the cut (n points) to the first ring (m points): walk both by arc length, one triangle per step
+			arc_a = list(arc)  # base vertex i at arc[i], arc[n] = the loop's length
+			arc_b = arc_params + [arc[-1]]
+			i2 = j2 = 0
+			while i2 < n or j2 < m:
+				if i2 < n and (j2 == m or arc_a[i2 + 1] <= arc_b[j2 + 1]):
+					made.append(bm.faces.new((ring_verts[0][(i2 + 1) % n], ring_verts[0][i2 % n], ring_verts[1][j2 % m])))
+					i2 += 1
+				else:
+					made.append(bm.faces.new((ring_verts[1][j2 % m], ring_verts[1][(j2 + 1) % m], ring_verts[0][i2 % n])))
+					j2 += 1
+		for k in range(2, rings):
+			for i2 in range(m):
+				a0, b0 = ring_verts[k - 1][i2], ring_verts[k - 1][(i2 + 1) % m]
+				a1, b1 = ring_verts[k][i2], ring_verts[k][(i2 + 1) % m]
+				made.append(bm.faces.new((b0, a0, a1, b1)))
+		last = ring_verts[rings - 1]
+		for i2 in range(len(last)):
+			a, b = last[i2], last[(i2 + 1) % len(last)]
+			made.append(bm.faces.new((b, a, apex)))
+		for f in made:
 			f.smooth = True
-			f[cap_attr] = 1
-			src_uv = src.face.loops[0][uv_p].uv.copy()
+			f[cap_attr] = 2 if spec.get("wall_normals", False) else 1
 			for lp in f.loops:
-				lp[uv_p].uv = src_uv
+				lp[uv_p].uv = swatch_uv
 				if uv_d is not None:
 					lp[uv_d].uv = (0.0, 0.0)
-		report.append({"vertices": n, "centre": c.tolist(), "dir_in": n_in.tolist(), "orientation_flipped": flipped, "tris": 2 * n * (rings - 1) + n})
+		report.append({"bone": owner, "dir": spec["dir"], "depth_m": depth, "rings": rings, "vertices": n, "ring_vertices": m, "centre": c.tolist(), "dir_in": n_in.tolist(),
+			"orientation_flipped": flipped, "tris": len(made)})
+	# the caps take the winding of the faces they close (never a global recalculation: see orient_untrusted)
+	flipped_caps = orient_untrusted(bm)
 	# a slit the cap walk stepped over (a vertex shared by three faces on a cut loop) is a short open edge now: collapse it
 	left = heal_slits(bm, heal_max, 3)
 	cut_out, patched = repair_defects(bm, 10 ** 9, 12, rounds=6) if heal_max > 0.0 else (0, 0)
-	report.append({"slit_edges_collapsed_after_caps": left, "defect_faces_cut_out": cut_out, "defect_faces_patched": patched,
+	report.append({"cap_faces_flipped_to_their_neighbours": flipped_caps, "slit_edges_collapsed_after_caps": left, "defect_faces_cut_out": cut_out, "defect_faces_patched": patched,
 		"open_edges_left": sum(1 for e in bm.edges if e.is_boundary)})
 	bmesh.ops.triangulate(bm, faces=bm.faces[:])  # the hole patches are n-gons and the caps quads: every later step reads triangles
 	bm.to_mesh(me)
@@ -787,6 +978,7 @@ def split_fp(cfg, extra):
 	# ----- weld the hairline cracks the generator leaves (open edges a millimetre apart): boundary vertices within weld_boundary_m merge
 	bm = bmesh.new()
 	bm.from_mesh(me)
+	mark_trusted(bm)
 	open_before = sum(1 for e in bm.edges if e.is_boundary)
 	bvs = list({v for e in bm.edges if e.is_boundary for v in e.verts})
 	if bvs and float(sc.get("weld_boundary_m", 0.0)) > 0.0:
@@ -829,6 +1021,14 @@ def split_fp(cfg, extra):
 		bisect(faces_of([col[side + "UpperArm"]]), tuple(ua + axis * cut_t), tuple(axis / length))
 	# the horizontal cut goes through every face that can be hidden, the arms' and shoulders' too, so no hidden face hangs below it
 	bisect(faces_of(torso_cols + shoulder_cols + arm_cols), (0.0, 0.0, z_cut), (0.0, 0.0, 1.0))
+	# the torso's lower plane (parts.split_fp.torso.low_bone's joint): every face that is not an arm's is cut there, so the belly and
+	# belt are one mesh with a straight lower edge and the legs another
+	tc = sc.get("torso", {})
+	arm_chain = [col[s2 + b] for s2 in pc.SIDES for b in ("Shoulder", "UpperArm", "LowerArm", "Hand")]
+	non_arm_cols = [i for i in range(len(NAMES)) if i not in arm_chain]
+	z_low = targets[tc["low_bone"]]["head"][2] if tc.get("enabled", False) else None
+	if z_low is not None:
+		bisect(faces_of(non_arm_cols), (0.0, 0.0, z_low), (0.0, 0.0, 1.0))
 	bm.to_mesh(me)
 	bm.free()
 	me.update()
@@ -847,6 +1047,15 @@ def split_fp(cfg, extra):
 		hidden |= zone & (t < cut_t) & (centers[:, 2] > z_cut - 1e-6)
 	hid = separate_faces(body, hidden, pb.BODY_HIDDEN)
 	body = bpy.data.objects[pb.BODY]
+	# the torso (Spine and Hips: the belly and the belt) from what is left: not an arm's face, between the two planes
+	torso = None
+	if z_low is not None:
+		w2 = pb.weights_matrix(body, NAMES)
+		dom2 = dominant_per_face(body.data, w2)
+		centers2 = pb.face_centers(body.data)
+		in_torso = np.isin(dom2, non_arm_cols) & (centers2[:, 2] > z_low - 1e-6) & (centers2[:, 2] < z_cut + 1e-6)
+		torso = separate_faces(body, in_torso, pb.BODY_TORSO)
+		body = bpy.data.objects[pb.BODY]
 
 	# ----- the hidden part's own pinholes (the generated mesh's defects, not its cuts): patch the short open loops
 	bm = bmesh.new()
@@ -858,10 +1067,12 @@ def split_fp(cfg, extra):
 	hid.data.update()
 
 	# ----- inward rounded caps on every open loop of the visible parts
-	depth, rings = float(sc.get("cap_depth_m", 0.03)), int(sc.get("cap_rings", 4))
 	heal = float(sc.get("heal_edge_max_m", 0.0))
-	cap_report = {"Body": add_caps(body.data, depth, rings, heal)}
+	cap_report = {"Body": add_caps(body, sc, heal)}
 	parts = [body, hid]
+	if torso is not None:
+		cap_report[pb.BODY_TORSO] = add_caps(torso, sc, heal)
+		parts.append(torso)
 	over_four = 0
 	for o in parts:
 		pb.attach_armature(o, bpy.data.objects[pb.ARMATURE])
@@ -872,7 +1083,11 @@ def split_fp(cfg, extra):
 			p.use_smooth = True
 	pb.save_blend(pc.work_path(cfg, "06_split.blend"))
 	hc = pb.verts(hid.data)
-	return {"enabled": True, "open_edges_before_weld": open_before, "open_edges_after_weld": open_after, "hole_faces_filled": filled, "slit_edges_collapsed": healed, "defect_faces_cut_out": cut_out, "defect_faces_patched": patched, "open_edges_after_fill": open_after_fill, "z_cut_m": z_cut, "upper_arm_cut": cut_t, "hidden_faces": int(hidden.sum()), "visible_triangles": pb.triangle_count(body.data),
+	torso_report = {"enabled": torso is not None}
+	if torso is not None:
+		tc_ = pb.verts(torso.data)
+		torso_report.update({"z_low_m": z_low, "triangles": pb.triangle_count(torso.data), "bbox": {"min": tc_.min(axis=0).tolist(), "max": tc_.max(axis=0).tolist()}})
+	return {"enabled": True, "torso": torso_report, "open_edges_before_weld": open_before, "open_edges_after_weld": open_after, "hole_faces_filled": filled, "slit_edges_collapsed": healed, "defect_faces_cut_out": cut_out, "defect_faces_patched": patched, "open_edges_after_fill": open_after_fill, "z_cut_m": z_cut, "upper_arm_cut": cut_t, "hidden_faces": int(hidden.sum()), "visible_triangles": pb.triangle_count(body.data),
 		"hidden_triangles": pb.triangle_count(hid.data), "hidden_defect_faces_cut_out": hid_cut, "hidden_defect_faces_patched": hid_patched,
 		"vertices_over_four_influences_before_limit": over_four, "caps": cap_report,
 		"hidden_bbox": {"min": hc.min(axis=0).tolist(), "max": hc.max(axis=0).tolist()}}

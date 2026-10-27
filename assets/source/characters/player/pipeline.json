@@ -48,7 +48,7 @@
 				7,
 				14
 			],
-			"target_tris": 3000,
+			"target_tris": 4000,
 			"cut_a_m": -0.06,
 			"radius_max_m": 0.14,
 			"reach_max_m": 0.35,
@@ -117,17 +117,109 @@
 					"radius_m": 0.16,
 					"soft": 0.2
 				}
-			}
+			},
+			"label_smooth": {
+				"passes": 80,
+				"lam": 0.5
+			},
+			"label_smooth_decimated": {
+				"passes": 2,
+				"lam": 0.5
+			},
+			"fine_slots": [
+				7
+			],
+			"fine_weight": 0.3,
+			"relabel_reach": 0.6,
+			"border_cell_m": 0.004,
+			"border_zone_m": 0.006,
+			"border_zone_weight": 0.5
 		},
 		"split_fp": {
 			"enabled": true,
 			"torso_cut_bone": "Chest",
 			"upper_arm_cut": 0.5,
-			"cap_depth_m": 0.03,
-			"cap_rings": 4,
 			"weld_boundary_m": 0.002,
 			"hole_sides_max": 12,
-			"heal_edge_max_m": 0.012
+			"heal_edge_max_m": 0.012,
+			"caps": {
+				"default": {
+					"dir": "in",
+					"depth_m": 0.03,
+					"rings": 4
+				},
+				"LeftUpperArm": {
+					"dir": "out",
+					"depth_m": 0.04,
+					"rings": 8,
+					"ring_verts": 32
+				},
+				"RightUpperArm": {
+					"dir": "out",
+					"depth_m": 0.04,
+					"rings": 8,
+					"ring_verts": 32
+				},
+				"Hips": {
+					"dir": "in",
+					"depth_m": 0.02,
+					"rings": 1,
+					"wall_normals": true
+				},
+				"LeftUpperLeg": {
+					"dir": "in",
+					"depth_m": 0.02,
+					"rings": 1,
+					"wall_normals": true
+				},
+				"RightUpperLeg": {
+					"dir": "in",
+					"depth_m": 0.02,
+					"rings": 1,
+					"wall_normals": true
+				},
+				"Body": {
+					"LeftUpperLeg": {
+						"dir": "out",
+						"depth_m": 0.04,
+						"rings": 5,
+						"ring_verts": 48,
+						"wall_normals": false
+					},
+					"RightUpperLeg": {
+						"dir": "out",
+						"depth_m": 0.04,
+						"rings": 5,
+						"ring_verts": 48,
+						"wall_normals": false
+					},
+					"Hips": {
+						"dir": "out",
+						"depth_m": 0.04,
+						"rings": 5,
+						"ring_verts": 48,
+						"wall_normals": false
+					}
+				},
+				"Body__fp_torso": {
+					"Spine": {
+						"dir": "out",
+						"depth_m": 0.05,
+						"rings": 6,
+						"ring_verts": 48
+					},
+					"Chest": {
+						"dir": "out",
+						"depth_m": 0.05,
+						"rings": 6,
+						"ring_verts": 48
+					}
+				}
+			},
+			"torso": {
+				"enabled": true,
+				"low_bone": "LeftUpperLeg"
+			}
 		}
 	},
 	"palette": {
@@ -142,11 +234,16 @@
 		],
 		"max_swatches": 6,
 		"min_share": 0.004,
-		"majority_passes": 2,
+		"majority_passes": 4,
 		"border_relax_iterations": 3,
 		"border_relax_factor": 0.5,
 		"budget_tris": 30000,
-		"detail_uv": true
+		"detail_uv": true,
+		"unfold": {
+			"iterations": 12,
+			"factor": 0.5,
+			"ring": 1
+		}
 	},
 	"export": {
 		"hull_normal_digits": 5
@@ -306,7 +403,13 @@
 			"radius_px": 3,
 			"lo": 0.04,
 			"hi": 0.1,
-			"gain": 1.0
+			"gain": 1.0,
+			"skip_slots": [
+				6,
+				7,
+				8,
+				9
+			]
 		},
 		"layout": {
 			"angle_deg": 66.0,
@@ -325,7 +428,8 @@
 				"LeftLowerLeg": 1.5,
 				"RightLowerLeg": 1.5,
 				"LeftUpperLeg": 1.2,
-				"RightUpperLeg": 1.2
+				"RightUpperLeg": 1.2,
+				"part:Body__fp_torso": 1.0
 			}
 		},
 		"crease": {
@@ -339,6 +443,17 @@
 				8,
 				9
 			]
+		}
+	},
+	"normals": {
+		"smooth": {
+			"bones": [
+				"LeftUpperArm",
+				"RightUpperArm"
+			],
+			"passes": 24,
+			"lam": 0.5,
+			"max_turn_deg": 45.0
 		}
 	}
 }

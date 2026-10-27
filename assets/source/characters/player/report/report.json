@@ -1,7 +1,7 @@
 {
 	"asset": "player",
 	"version": 1,
-	"config_sha256": "f91560d5c1dff029c350832504ab996de4d83a6afa51ff43ef34d3fa5d829ef1",
+	"config_sha256": "37db5baf2d15fe9c0710c254db8f24bba0980f8b73b9c3b476dcae1b97c90b78",
 	"steps": {
 		"inspect": {
 			"source": {
@@ -294,6 +294,33 @@
 				"RightFoot": 0.0,
 				"RightToes": 0.0
 			},
+			"landmark_residual_blend_m": {
+				"Hips": 0.005247,
+				"Spine": 0.003963,
+				"Chest": 0.000268,
+				"UpperChest": 0.025082,
+				"Neck": 0.007988,
+				"Head": 0.001012,
+				"LeftShoulder": 0.0,
+				"LeftUpperArm": 0.0,
+				"LeftLowerArm": 0.0,
+				"LeftHand": 0.0,
+				"RightShoulder": 0.01232,
+				"RightUpperArm": 0.0,
+				"RightLowerArm": 0.0,
+				"RightHand": 0.0,
+				"LeftUpperLeg": 0.001266,
+				"LeftLowerLeg": 0.0,
+				"LeftFoot": 0.0,
+				"LeftToes": 0.0,
+				"RightUpperLeg": 0.001237,
+				"RightLowerLeg": 0.0,
+				"RightFoot": 0.0,
+				"RightToes": 0.0
+			},
+			"snap": null,
+			"girth_clamp": [],
+			"bulge": [],
 			"worst_joint_residual": {
 				"bone": "UpperChest",
 				"m": 0.025082
@@ -318,6 +345,8 @@
 			"weights": "tripo",
 			"weights_requested": "tripo",
 			"smooth_iterations": 0,
+			"clamps": [],
+			"torso_blend": null,
 			"bones": 23,
 			"vertices": 9885,
 			"unweighted_before_fill": 0,
@@ -422,116 +451,116 @@
 			"sides": {
 				"Left": {
 					"faces_deleted": 1134,
-					"ring_vertices": 19,
+					"ring_vertices": 9633,
 					"ring_radius_m": 0.054578,
 					"body_radius_at_strap_m": 0.058258,
 					"strap_radius_m": 0.048699,
 					"flare": 1.31951,
 					"ring_offset_m": 0.008486,
 					"dense_triangles": 19273,
-					"triangles": 2999,
-					"protected_vertices": 569,
+					"triangles": 3999,
+					"protected_vertices": 335,
 					"protected_worst_move_m": 0.0,
 					"hole_faces_filled": 6,
 					"open_edges_left": 2,
 					"delta_e_mean": 17.028591,
 					"labels": {
-						"7": 3125,
-						"14": 4566,
-						"35": 11582
+						"7": 3211,
+						"14": 4580,
+						"35": 11482
 					}
 				},
 				"Right": {
 					"faces_deleted": 998,
-					"ring_vertices": 21,
+					"ring_vertices": 9633,
 					"ring_radius_m": 0.051726,
 					"body_radius_at_strap_m": 0.056017,
 					"strap_radius_m": 0.048699,
 					"flare": 1.273491,
 					"ring_offset_m": 0.004832,
 					"dense_triangles": 19273,
-					"triangles": 2999,
-					"protected_vertices": 569,
+					"triangles": 3999,
+					"protected_vertices": 333,
 					"protected_worst_move_m": 0.0,
 					"hole_faces_filled": 6,
 					"open_edges_left": 2,
 					"delta_e_mean": 17.028591,
 					"labels": {
-						"7": 3125,
-						"14": 4566,
-						"35": 11582
+						"7": 3211,
+						"14": 4580,
+						"35": 11482
 					}
 				}
 			},
 			"fist_check": {
 				"Left": {
-					"vertices": 1179,
-					"centroid_offset_m": 0.010985,
-					"bbox_centre_offset_m": 0.011103,
+					"vertices": 1668,
+					"centroid_offset_m": 0.013768,
+					"bbox_centre_offset_m": 0.010546,
 					"extent_ratio": [
-						1.009777,
-						1.007781,
-						1.09899
+						1.017905,
+						1.007672,
+						1.092675
 					]
 				},
 				"Right": {
-					"vertices": 1184,
-					"centroid_offset_m": 0.011019,
-					"bbox_centre_offset_m": 0.011282,
+					"vertices": 1656,
+					"centroid_offset_m": 0.013874,
+					"bbox_centre_offset_m": 0.010112,
 					"extent_ratio": [
-						1.003442,
-						1.007781,
-						1.098863
+						1.017906,
+						1.007673,
+						1.082601
 					]
 				}
 			},
-			"triangles_after": 23637
+			"triangles_after": 25637
 		},
 		"palette": {
 			"source_image": "removed",
-			"faces_dense": 23637,
+			"faces_dense": 25637,
 			"textured_faces": 17627,
-			"override_faces": 6010,
+			"override_faces": 8010,
 			"delta_e_mean": 7.276847,
 			"delta_e_p95": 12.678781,
 			"pruned_swatches": [],
-			"majority_flips": 1260,
-			"border_vertices": 1300,
-			"border_edges": 1497,
-			"protected_vertices": 4276,
+			"majority_flips": 2221,
+			"border_vertices": 1249,
+			"border_edges": 1440,
+			"protected_vertices": 5225,
 			"decimate": {
 				"invert_group": true,
 				"trials": [
 					{
 						"ratio": 1.0,
-						"tris": 23637
+						"tris": 25637
 					},
 					{
-						"ratio": 1.2692,
-						"tris": 23637
+						"ratio": 1.1702,
+						"tris": 25637
 					},
 					{
-						"ratio": 1.6109,
-						"tris": 23637
+						"ratio": 1.3693,
+						"tris": 25637
 					},
 					{
-						"ratio": 2.0445,
-						"tris": 23637
+						"ratio": 1.6024,
+						"tris": 25637
 					},
 					{
-						"ratio": 2.5949,
-						"tris": 23637
+						"ratio": 1.8751,
+						"tris": 25637
 					},
 					{
-						"ratio": 3.2934,
-						"tris": 23637
+						"ratio": 2.1942,
+						"tris": 25637
 					},
 					{
-						"ratio": 4.18,
-						"tris": 23637
+						"ratio": 2.5676,
+						"tris": 25637
 					}
 				],
-				"triangles": 23637,
+				"triangles": 25637,
 				"budget": 30000,
 				"budget_ok": true,
 				"protected_position_worst_m": 0.0
@@ -539,61 +568,142 @@
 			"swatches_used": {
 				"7": {
 					"name": "skin_tan",
-					"area_share": 0.174171,
-					"faces": 5538
+					"area_share": 0.173362,
+					"faces": 6854
 				},
 				"14": {
 					"name": "cream",
-					"area_share": 0.104,
-					"faces": 3376
+					"area_share": 0.107498,
+					"faces": 3674
 				},
 				"32": {
 					"name": "player_navy",
-					"area_share": 0.212291,
-					"faces": 2784
+					"area_share": 0.214593,
+					"faces": 2810
 				},
 				"33": {
 					"name": "player_slate",
-					"area_share": 0.290884,
-					"faces": 5006
+					"area_share": 0.294653,
+					"faces": 4988
 				},
 				"34": {
 					"name": "player_hair",
-					"area_share": 0.033387,
-					"faces": 861
+					"area_share": 0.033091,
+					"faces": 822
 				},
 				"35": {
 					"name": "player_charcoal",
-					"area_share": 0.185267,
-					"faces": 6072
+					"area_share": 0.176803,
+					"faces": 6489
 				}
 			},
 			"swatch_count": 6,
 			"detail_uv": true,
-			"triangles": 23637,
-			"vertices": 11814
+			"detail_bake": null,
+			"regions": [],
+			"region_cuts": [],
+			"fist_band": null,
+			"fist_border_thinned": 0,
+			"fist_strap_cuts": [],
+			"decimate_parts": [
+				{
+					"part": "body",
+					"invert_group": true,
+					"trials": [
+						{
+							"ratio": 1.0,
+							"tris": 25637
+						},
+						{
+							"ratio": 1.1702,
+							"tris": 25637
+						},
+						{
+							"ratio": 1.3693,
+							"tris": 25637
+						},
+						{
+							"ratio": 1.6024,
+							"tris": 25637
+						},
+						{
+							"ratio": 1.8751,
+							"tris": 25637
+						},
+						{
+							"ratio": 2.1942,
+							"tris": 25637
+						},
+						{
+							"ratio": 2.5676,
+							"tris": 25637
+						}
+					],
+					"triangles": 25637,
+					"budget": 30000,
+					"budget_ok": true,
+					"protected_vertices": 5225,
+					"protected_position_worst_m": 0.0
+				}
+			],
+			"unfold": {
+				"folded_before": 338,
+				"folded_after": 60,
+				"passes": 4,
+				"history": [
+					338,
+					101,
+					91,
+					61,
+					60
+				]
+			},
+			"triangles": 25637,
+			"vertices": 12814
 		},
 		"parts_split": {
 			"enabled": true,
+			"torso": {
+				"enabled": true,
+				"z_low_m": 0.925,
+				"triangles": 3280,
+				"bbox": {
+					"min": [
+						-0.212947,
+						-0.160553,
+						0.925
+					],
+					"max": [
+						0.22438,
+						0.173693,
+						1.255
+					]
+				}
+			},
 			"open_edges_before_weld": 69,
-			"open_edges_after_weld": 52,
+			"open_edges_after_weld": 57,
 			"hole_faces_filled": 0,
-			"slit_edges_collapsed": 17,
+			"slit_edges_collapsed": 28,
 			"defect_faces_cut_out": 0,
 			"defect_faces_patched": 0,
-			"open_edges_after_fill": 45,
+			"open_edges_after_fill": 42,
 			"z_cut_m": 1.205,
 			"upper_arm_cut": 0.5,
-			"hidden_faces": 6043,
-			"visible_triangles": 20248,
-			"hidden_triangles": 6170,
-			"hidden_defect_faces_cut_out": 15,
-			"hidden_defect_faces_patched": 4,
-			"vertices_over_four_influences_before_limit": 367,
+			"hidden_faces": 6042,
+			"visible_triangles": 19868,
+			"hidden_triangles": 6172,
+			"hidden_defect_faces_cut_out": 13,
+			"hidden_defect_faces_patched": 5,
+			"vertices_over_four_influences_before_limit": 362,
 			"caps": {
 				"Body": [
 					{
+						"bone": "RightLowerArm",
+						"dir": "in",
+						"depth_m": 0.03,
+						"rings": 4,
 						"vertices": 22,
+						"ring_vertices": 22,
 						"centre": [
 							0.554281,
 							0.092022,
@@ -605,10 +715,15 @@
 							0.724511
 						],
 						"orientation_flipped": false,
-						"tris": 154
+						"tris": 88
 					},
 					{
+						"bone": "LeftLowerArm",
+						"dir": "in",
+						"depth_m": 0.03,
+						"rings": 4,
 						"vertices": 18,
+						"ring_vertices": 18,
 						"centre": [
 							-0.552011,
 							0.079003,
@@ -620,13 +735,18 @@
 							0.698395
 						],
 						"orientation_flipped": false,
-						"tris": 126
+						"tris": 72
 					},
 					{
+						"bone": "LeftUpperArm",
+						"dir": "out",
+						"depth_m": 0.04,
+						"rings": 8,
 						"vertices": 75,
+						"ring_vertices": 32,
 						"centre": [
-							-0.305602,
-							0.010389,
+							-0.305603,
+							0.010386,
 							1.306497
 						],
 						"dir_in": [
@@ -635,14 +755,19 @@
 							-0.733207
 						],
 						"orientation_flipped": false,
-						"tris": 525
+						"tris": 331
 					},
 					{
+						"bone": "RightUpperArm",
+						"dir": "out",
+						"depth_m": 0.04,
+						"rings": 8,
 						"vertices": 73,
+						"ring_vertices": 32,
 						"centre": [
-							0.312723,
-							0.01293,
-							1.313054
+							0.312729,
+							0.012842,
+							1.313037
 						],
 						"dir_in": [
 							0.665728,
@@ -650,13 +775,47 @@
 							-0.722158
 						],
 						"orientation_flipped": false,
-						"tris": 511
+						"tris": 329
 					},
 					{
-						"vertices": 122,
+						"bone": "RightUpperLeg",
+						"dir": "out",
+						"depth_m": 0.04,
+						"rings": 5,
+						"vertices": 192,
+						"ring_vertices": 48,
 						"centre": [
-							-0.00305,
-							0.018127,
+							0.006755,
+							0.036056,
+							0.925
+						],
+						"dir_in": [
+							0.0,
+							0.0,
+							-1.0
+						],
+						"orientation_flipped": false,
+						"tris": 432
+					},
+					{
+						"cap_faces_flipped_to_their_neighbours": 0,
+						"slit_edges_collapsed_after_caps": 0,
+						"defect_faces_cut_out": 16,
+						"defect_faces_patched": 6,
+						"open_edges_left": 0
+					}
+				],
+				"Body__fp_torso": [
+					{
+						"bone": "Spine",
+						"dir": "out",
+						"depth_m": 0.05,
+						"rings": 6,
+						"vertices": 120,
+						"ring_vertices": 48,
+						"centre": [
+							5.5e-05,
+							0.019499,
 							1.205
 						],
 						"dir_in": [
@@ -665,12 +824,33 @@
 							-1.0
 						],
 						"orientation_flipped": false,
-						"tris": 854
+						"tris": 408
 					},
 					{
+						"bone": "RightUpperLeg",
+						"dir": "in",
+						"depth_m": 0.02,
+						"rings": 1,
+						"vertices": 192,
+						"ring_vertices": 192,
+						"centre": [
+							0.006755,
+							0.036056,
+							0.925
+						],
+						"dir_in": [
+							0.0,
+							0.0,
+							1.0
+						],
+						"orientation_flipped": false,
+						"tris": 192
+					},
+					{
+						"cap_faces_flipped_to_their_neighbours": 0,
 						"slit_edges_collapsed_after_caps": 0,
-						"defect_faces_cut_out": 24,
-						"defect_faces_patched": 7,
+						"defect_faces_cut_out": 0,
+						"defect_faces_patched": 0,
 						"open_edges_left": 0
 					}
 				]
@@ -684,31 +864,51 @@
 				"max": [
 					0.367654,
 					0.17337,
-					1.810088
+					1.806203
 				]
 			}
 		},
 		"detail": {
 			"file": "player_detail.png",
-			"sha256": "5b690d66dfc67865984fb0dc18da01c32be7c61ef9046576b165fd93fe91f65a",
+			"sha256": "a3a7c3872b57763e3ef6c8428a8ff7030539ce907b2e5dc5f09a096f81f1f9b0",
 			"size": 1024,
-			"triangles": 24248,
-			"covered_texels": 420438,
-			"covered_share": 0.400961,
-			"ink_share_of_covered": 0.026865,
-			"border_texels": 7965,
-			"stroke_texels": 4019,
-			"crease_texels": 2782,
-			"texel_mm_p50": 2.303098,
-			"texel_mm_p10": 1.657249,
-			"texel_mm_p90": 10.487617,
-			"from_fist_share": 0.16195,
+			"triangles": 26628,
+			"covered_texels": 499135,
+			"covered_share": 0.476012,
+			"ink_share_of_covered": 0.029231,
+			"border_texels": 10435,
+			"stroke_texels": 4716,
+			"crease_texels": 3291,
+			"texel_mm_p50": 2.028214,
+			"texel_mm_p10": 1.477021,
+			"texel_mm_p90": 9.431836,
+			"from_fist_share": 0.14592,
 			"layout": {
 				"islands": {
-					"Body": 1424,
-					"Body__fp_hidden": 506
+					"Body": 1173,
+					"Body__fp_hidden": 365,
+					"Body__fp_torso": 150
 				},
 				"scaled": {}
+			}
+		},
+		"normals": {
+			"smoothed": {
+				"Body": {
+					"vertices": 1278,
+					"normal_turned_deg_p95": 19.460647,
+					"normal_turned_deg_max": 38.811991
+				},
+				"Body__fp_hidden": {
+					"vertices": 1243,
+					"normal_turned_deg_p95": 41.175027,
+					"normal_turned_deg_max": 46.314448
+				},
+				"Body__fp_torso": {
+					"vertices": 265,
+					"normal_turned_deg_p95": 3.104951,
+					"normal_turned_deg_max": 4.176637
+				}
 			}
 		},
 		"export": {
@@ -720,14 +920,14 @@
 					"unweighted": 0,
 					"max_influences": 4,
 					"over_four": 0,
-					"triangles": 26418,
-					"height_m": 1.809938,
+					"triangles": 29320,
+					"height_m": 1.806053,
 					"feet_y": 0.00015,
-					"folded_triangles": 183,
-					"folded_share": 0.006927,
+					"folded_triangles": 92,
+					"folded_share": 0.003138,
 					"facing": {
 						"axis": "-Z",
-						"yaw": 0.387254,
+						"yaw": -0.439354,
 						"confidence": "conflict"
 					},
 					"sides_consistent": true,
@@ -736,8 +936,8 @@
 					"meshes": [
 						{
 							"name": "Body",
-							"triangles": 20248,
-							"vertices": 19565,
+							"triangles": 19868,
+							"vertices": 18001,
 							"uv_layers": [
 								"UVMap",
 								"UVMap.001"
@@ -748,8 +948,20 @@
 						},
 						{
 							"name": "Body__fp_hidden",
-							"triangles": 6170,
-							"vertices": 6331,
+							"triangles": 6172,
+							"vertices": 5939,
+							"uv_layers": [
+								"UVMap",
+								"UVMap.001"
+							],
+							"color_attributes": [
+								"Color"
+							]
+						},
+						{
+							"name": "Body__fp_torso",
+							"triangles": 3280,
+							"vertices": 2925,
 							"uv_layers": [
 								"UVMap",
 								"UVMap.001"
@@ -761,32 +973,32 @@
 					],
 					"bbox": {
 						"min": [
-							-0.677191,
+							-0.677719,
 							0.00015,
 							-0.249821
 						],
 						"max": [
-							0.681605,
-							1.810088,
+							0.68131,
+							1.806203,
 							0.162073
 						],
 						"size": [
-							1.358796,
-							1.809938,
+							1.35903,
+							1.806053,
 							0.411895
 						]
 					},
 					"file": "player.glb",
-					"sha256": "762de396e4a55a9077237e6f5da1faa5645357e4e3ef71f5207c7311f2a632ac",
-					"bytes": 1928256
+					"sha256": "57e2cb0b99412b3c00716cb02f1fd22b53ef6cf9d653bf1580fa46886fad26b7",
+					"bytes": 2013000
 				}
 			}
 		}
 	},
 	"outputs": {
-		"player.glb": "762de396e4a55a9077237e6f5da1faa5645357e4e3ef71f5207c7311f2a632ac"
+		"player.glb": "57e2cb0b99412b3c00716cb02f1fd22b53ef6cf9d653bf1580fa46886fad26b7"
 	},
-	"hash": "b1343dc98985eda52077259c3a7751be9d3d414be99593b079eeb64c9b80a2f0",
+	"hash": "6b6d75233d90d5231e879cb1f158691628c894ea06e5a927ccf81bf7e3e15b62",
 	"stills": {
 		"variants": {
 			"apose": {
@@ -794,9 +1006,9 @@
 					"rest": {
 						"nan": false,
 						"vs_glb_rest": {
-							"edge_p999": 2.335344,
-							"edge_max": 91.942621,
-							"edge_min": 0.279241,
+							"edge_p999": 2.825028,
+							"edge_max": 16.25519,
+							"edge_min": 0.277575,
 							"area_under_15pct": 0.000324
 						},
 						"vs_rig_rest": {
@@ -821,49 +1033,49 @@
 							{
 								"ratio": 1.0,
 								"at": [
-									-0.166714,
-									0.91833,
-									-0.02486
+									-0.20024,
+									0.85549,
+									0.038385
 								],
 								"bones": [
-									"LeftLowerArm",
-									"LeftLowerArm"
+									"LeftHand",
+									"LeftHand"
 								]
 							},
 							{
 								"ratio": 1.0,
 								"at": [
-									-0.167251,
-									0.935583,
-									-0.004988
+									-0.202525,
+									0.855366,
+									0.039591
 								],
 								"bones": [
-									"LeftLowerArm",
-									"LeftLowerArm"
+									"LeftHand",
+									"LeftHand"
 								]
 							},
 							{
 								"ratio": 1.0,
 								"at": [
-									-0.167647,
-									0.93556,
-									-0.01883
+									-0.198849,
+									0.786672,
+									-0.01951
 								],
 								"bones": [
-									"LeftLowerArm",
-									"LeftLowerArm"
+									"LeftHand",
+									"LeftHand"
 								]
 							},
 							{
 								"ratio": 1.0,
 								"at": [
-									-0.165176,
-									0.935046,
-									-0.01263
+									-0.200631,
+									0.790932,
+									-0.020156
 								],
 								"bones": [
-									"LeftLowerArm",
-									"LeftLowerArm"
+									"LeftHand",
+									"LeftHand"
 								]
 							}
 						]
@@ -871,30 +1083,18 @@
 					"guard": {
 						"nan": false,
 						"vs_glb_rest": {
-							"edge_p999": 4.42138,
-							"edge_max": 65.216603,
+							"edge_p999": 3.396782,
+							"edge_max": 11.574291,
 							"edge_min": 0.118098,
-							"area_under_15pct": 0.000691
+							"area_under_15pct": 0.000705
 						},
 						"vs_rig_rest": {
-							"edge_p999": 2.237561,
-							"edge_max": 8.622301,
+							"edge_p999": 2.550381,
+							"edge_max": 8.310233,
 							"edge_min": 0.118098,
-							"area_under_15pct": 0.000691
+							"area_under_15pct": 0.000705
 						},
 						"worst_edges": [
-							{
-								"ratio": 8.622301,
-								"at": [
-									-0.179176,
-									1.433719,
-									-0.070714
-								],
-								"bones": [
-									"LeftShoulder",
-									"LeftShoulder"
-								]
-							},
 							{
 								"ratio": 0.118098,
 								"at": [
@@ -932,15 +1132,27 @@
 								]
 							},
 							{
-								"ratio": 6.424305,
+								"ratio": 4.663332,
 								"at": [
-									-0.058336,
-									1.128295,
-									0.122932
+									-0.191422,
+									1.333452,
+									0.064598
 								],
 								"bones": [
-									"Spine",
-									"Spine"
+									"LeftUpperArm",
+									"LeftUpperArm"
+								]
+							},
+							{
+								"ratio": 0.221786,
+								"at": [
+									0.280683,
+									1.145456,
+									-0.01029
+								],
+								"bones": [
+									"RightLowerArm",
+									"RightUpperArm"
 								]
 							}
 						]
@@ -948,16 +1160,16 @@
 					"elbow_150": {
 						"nan": false,
 						"vs_glb_rest": {
-							"edge_p999": 2.335344,
-							"edge_max": 91.942621,
+							"edge_p999": 2.825028,
+							"edge_max": 16.25519,
 							"edge_min": 0.162562,
-							"area_under_15pct": 0.00079
+							"area_under_15pct": 0.000805
 						},
 						"vs_rig_rest": {
-							"edge_p999": 1.723745,
+							"edge_p999": 1.731498,
 							"edge_max": 2.008645,
 							"edge_min": 0.162562,
-							"area_under_15pct": 0.00079
+							"area_under_15pct": 0.000805
 						},
 						"worst_edges": [
 							{
@@ -1025,30 +1237,18 @@
 					"arm_raise_140": {
 						"nan": false,
 						"vs_glb_rest": {
-							"edge_p999": 10.141223,
-							"edge_max": 136.163326,
-							"edge_min": 0.081931,
-							"area_under_15pct": 0.006321
+							"edge_p999": 5.053409,
+							"edge_max": 37.017163,
+							"edge_min": 0.063584,
+							"area_under_15pct": 0.006319
 						},
 						"vs_rig_rest": {
-							"edge_p999": 4.46614,
-							"edge_max": 20.502353,
-							"edge_min": 0.087929,
-							"area_under_15pct": 0.005835
+							"edge_p999": 5.05271,
+							"edge_max": 19.481995,
+							"edge_min": 0.068975,
+							"area_under_15pct": 0.005023
 						},
 						"worst_edges": [
-							{
-								"ratio": 20.502353,
-								"at": [
-									-0.179176,
-									1.433719,
-									-0.070714
-								],
-								"bones": [
-									"LeftShoulder",
-									"LeftShoulder"
-								]
-							},
 							{
 								"ratio": 19.481995,
 								"at": [
@@ -1062,27 +1262,15 @@
 								]
 							},
 							{
-								"ratio": 0.087929,
+								"ratio": 0.068975,
 								"at": [
-									0.182734,
-									1.345915,
-									-0.062981
+									0.179005,
+									1.33297,
+									-0.061258
 								],
 								"bones": [
 									"RightUpperArm",
-									"RightUpperArm"
-								]
-							},
-							{
-								"ratio": 0.088435,
-								"at": [
-									0.221834,
-									1.36242,
-									0.078541
-								],
-								"bones": [
-									"RightUpperArm",
-									"RightUpperArm"
+									"RightShoulder"
 								]
 							},
 							{
@@ -1096,22 +1284,46 @@
 									"RightUpperArm",
 									"RightUpperArm"
 								]
+							},
+							{
+								"ratio": 0.093839,
+								"at": [
+									0.177214,
+									1.308849,
+									0.007756
+								],
+								"bones": [
+									"RightUpperArm",
+									"RightUpperArm"
+								]
+							},
+							{
+								"ratio": 10.074731,
+								"at": [
+									-0.191422,
+									1.333452,
+									0.064598
+								],
+								"bones": [
+									"LeftUpperArm",
+									"LeftUpperArm"
+								]
 							}
 						]
 					},
 					"knee_m130": {
 						"nan": false,
 						"vs_glb_rest": {
-							"edge_p999": 2.736499,
-							"edge_max": 91.942621,
+							"edge_p999": 4.280953,
+							"edge_max": 16.206959,
 							"edge_min": 0.092953,
-							"area_under_15pct": 0.000691
+							"area_under_15pct": 0.000705
 						},
 						"vs_rig_rest": {
-							"edge_p999": 2.084417,
+							"edge_p999": 2.913527,
 							"edge_max": 16.139488,
 							"edge_min": 0.092953,
-							"area_under_15pct": 0.000691
+							"area_under_15pct": 0.000705
 						},
 						"worst_edges": [
 							{
@@ -1127,30 +1339,6 @@
 								]
 							},
 							{
-								"ratio": 13.059305,
-								"at": [
-									-0.1021,
-									1.139304,
-									0.110343
-								],
-								"bones": [
-									"Spine",
-									"Spine"
-								]
-							},
-							{
-								"ratio": 12.473603,
-								"at": [
-									-0.058336,
-									1.128295,
-									0.122932
-								],
-								"bones": [
-									"Spine",
-									"Spine"
-								]
-							},
-							{
 								"ratio": 0.092953,
 								"at": [
 									-0.195781,
@@ -1163,15 +1351,39 @@
 								]
 							},
 							{
-								"ratio": 10.04846,
+								"ratio": 0.11321,
 								"at": [
-									-0.161271,
-									0.98319,
-									-0.067578
+									-0.21331,
+									0.502727,
+									0.035258
 								],
 								"bones": [
 									"LeftUpperLeg",
-									"LeftUpperLeg"
+									"LeftLowerLeg"
+								]
+							},
+							{
+								"ratio": 6.475444,
+								"at": [
+									0.128094,
+									1.12641,
+									-0.104871
+								],
+								"bones": [
+									"Spine",
+									"Hips"
+								]
+							},
+							{
+								"ratio": 0.176394,
+								"at": [
+									-0.209737,
+									0.484078,
+									0.046244
+								],
+								"bones": [
+									"LeftLowerLeg",
+									"LeftLowerLeg"
 								]
 							}
 						]
@@ -1179,16 +1391,16 @@
 					"spine_twist": {
 						"nan": false,
 						"vs_glb_rest": {
-							"edge_p999": 6.434364,
-							"edge_max": 81.561728,
-							"edge_min": 0.267681,
-							"area_under_15pct": 0.000648
+							"edge_p999": 5.518015,
+							"edge_max": 24.312434,
+							"edge_min": 0.136746,
+							"area_under_15pct": 0.001829
 						},
 						"vs_rig_rest": {
-							"edge_p999": 3.036687,
+							"edge_p999": 3.351331,
 							"edge_max": 24.313933,
-							"edge_min": 0.267681,
-							"area_under_15pct": 0.000324
+							"edge_min": 0.139595,
+							"area_under_15pct": 0.001829
 						},
 						"worst_edges": [
 							{
@@ -1216,18 +1428,6 @@
 								]
 							},
 							{
-								"ratio": 22.606136,
-								"at": [
-									0.181676,
-									1.04609,
-									0.042707
-								],
-								"bones": [
-									"RightUpperLeg",
-									"RightUpperLeg"
-								]
-							},
-							{
 								"ratio": 17.373519,
 								"at": [
 									-0.174005,
@@ -1240,15 +1440,27 @@
 								]
 							},
 							{
-								"ratio": 14.604068,
+								"ratio": 12.830432,
 								"at": [
-									-0.058336,
-									1.128295,
-									0.122932
+									-0.063041,
+									1.496711,
+									0.097359
 								],
 								"bones": [
-									"Spine",
-									"Spine"
+									"Neck",
+									"Neck"
+								]
+							},
+							{
+								"ratio": 8.532097,
+								"at": [
+									0.249875,
+									1.401205,
+									0.091102
+								],
+								"bones": [
+									"RightUpperArm",
+									"RightUpperArm"
 								]
 							}
 						]

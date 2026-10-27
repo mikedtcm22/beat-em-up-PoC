@@ -41,7 +41,8 @@ extends Camera3D
 ## today): a player knocked down without being killed lies on the camera for a second or two, and
 ## the lens, riding his eyes, sees the inside of his own belly as one slab (up to 74% of the view in
 ## M3, over half of it for 45 frames face down). With the switch on, the torso (the belly, belt and
-## pelvis primitives, or the skinned art's visible body) goes on the head layer this lens never
+## pelvis primitives, or the skinned art's Body__fp_torso mesh: its whole visible body when it has
+## none) goes on the head layer this lens never
 ## draws from the first frame of the knockdown to the get-up's end, and comes back to the layers it
 ## had. Only while this camera is the one drawing (a side view or free fly shows the whole body),
 ## and never in the KO view, which shows it whole.
@@ -67,6 +68,8 @@ extends Camera3D
 enum KoPose { NONE = -1, RIGHT, LEFT, FEET }
 ## The bones whose primitives are the torso the knockdown view hides (_find_torso_meshes()).
 const TORSO_BONES: Array[StringName] = [&"Hips", &"Spine"]
+## The name ending of the skinned art's torso mesh (the GLB's Body__fp_torso, attached as ArtBody__fp_torso).
+const FP_TORSO_SUFFIX := "__fp_torso"
 ## How many times _ko_room() halves the reach to find the lens's place clear of everything.
 const KO_ROOM_STEPS := 6
 ## How far below EyePoint lens_floor_y() looks for the floor of a player off the ground: the lens
@@ -437,21 +440,30 @@ func _restore_torso() -> void:
 
 
 ## The player's torso meshes: the primitives on the Hips and Spine bones (the pelvis, belt, belly and
-## belly top; the chest and above are on the head layer already), and the skinned art's visible
-## body, which has no part of its own for them (the hidden upper body is on the head layer). A mesh
-## on the head layer is left out.
+## belly top; the chest and above are on the head layer already), and on skinned art the mesh named
+## `*__fp_torso` (the belly and belt: Spine and Hips; the legs and forearms are the art's other
+## visible meshes and stay). Art without one (the probe body, an older GLB) has no part of its own
+## for them, so its whole visible body goes (the hidden upper body is on the head layer). A mesh on
+## the head layer is left out.
 func _find_torso_meshes() -> Array[MeshInstance3D]:
 	var out: Array[MeshInstance3D] = []
+	var art_visible: Array[MeshInstance3D] = []
+	var art_torso: Array[MeshInstance3D] = []
 	var default_layer := CombatTypes.bit(CombatTypes.VIS_DEFAULT)
 	for node: Node in player.rig.find_children("*", "MeshInstance3D", true, false):
 		var mesh := node as MeshInstance3D
 		if mesh.layers != default_layer:
 			continue
-		var is_art := mesh.is_in_group(HumanoidRig.ART_GROUP)
+		if mesh.is_in_group(HumanoidRig.ART_GROUP):
+			if not mesh.get_meta(SkinnedArt.FP_HIDDEN_META, false):
+				art_visible.append(mesh)
+				if String(mesh.name).ends_with(FP_TORSO_SUFFIX):
+					art_torso.append(mesh)
+			continue
 		var parent := mesh.get_parent()
-		var on_torso_bone := parent != null and TORSO_BONES.any(func(bone: StringName) -> bool: return parent.name == StringName("Bone%s" % bone))
-		if on_torso_bone or (is_art and not mesh.get_meta(SkinnedArt.FP_HIDDEN_META, false)):
+		if parent != null and TORSO_BONES.any(func(bone: StringName) -> bool: return parent.name == StringName("Bone%s" % bone)):
 			out.append(mesh)
+	out.append_array(art_torso if not art_torso.is_empty() else art_visible)
 	return out
 
 

@@ -71,6 +71,12 @@ const SWATCH_COLUMNS := 32
 const SWATCH_ROWS := 2
 const SWATCH_PX := 8
 const ARM_BONES: Array[String] = ["UpperArm", "LowerArm", "Hand"]
+## The share of a limb's triangles that may face their bone (creases, the crotch) before the limb is called inside out.
+const INSIDE_OUT_MAX := 0.15
+## How far (m) the arm's cap must bulge toward the shoulder past the cut (the dome is 0.04 m high).
+const DOME_MIN_M := 0.03
+## How far (m) the torso's rounded top may rise past the Chest joint (the dome is 0.05 m high).
+const TORSO_DOME_MAX_M := 0.06
 
 var _cache: Dictionary[String, Dictionary] = {}
 var _table: Dictionary = {}
@@ -196,7 +202,7 @@ func test_every_art_glb_loads_and_has_a_body() -> void:
 		var names: Array = (f.meshes as Dictionary).keys()
 		names.sort()
 		for n: String in names:
-			assert_true(n in ["Body", "Body__fp_hidden"], "%s: mesh %s is named Body or Body__fp_hidden" % [path, n])
+			assert_true(n in ["Body", "Body__fp_hidden", "Body__fp_torso"], "%s: mesh %s is named Body, Body__fp_hidden or Body__fp_torso" % [path, n])
 			assert_eq((f.meshes[n] as Dictionary).surfaces, 1, "%s %s: one surface" % [path, n])
 			assert_true(((f.meshes[n] as Dictionary).xf as Transform3D).is_equal_approx(Transform3D.IDENTITY), "%s %s: at the skeleton's origin" % [path, n])
 		assert_true("Body" in names, "%s has a Body" % path)
@@ -204,6 +210,8 @@ func test_every_art_glb_loads_and_has_a_body() -> void:
 			assert_eq(names, ["Body"], "%s: the Punk is one mesh" % path)
 		if _id_of(path) == "probe_body":
 			assert_eq(names, ["Body", "Body__fp_hidden"], "%s: the probe stands in for the player: visible and first-person-hidden parts" % path)
+		if _id_of(path) == "player":
+			assert_eq(names, ["Body", "Body__fp_hidden", "Body__fp_torso"], "%s: the hero is the visible body, the first-person-hidden upper body and the torso (the belly and belt: fp_knockdown_hide_torso hides only that)" % path)
 
 
 func test_the_skeleton_has_the_23_table_bones_and_no_neutral_bone() -> void:
@@ -749,6 +757,118 @@ func test_the_first_person_split_is_closed_and_above_the_waist() -> void:
 			lowest = minf(lowest, v.y)
 		assert_gt(lowest, _table_joint("Chest").y - 0.002, "%s: the hidden part starts at the Chest joint (y %.3f)" % [path, lowest])
 		assert_eq(_open_edges(_body(path)), 0, "%s: the visible body has no open loop: every cut is capped" % path)
+		if (f.meshes as Dictionary).has("Body__fp_torso"):
+			# the torso is the band between the hip joint and the Chest joint (its top is a rounded dome, M3's BellyTop, rising a little
+			# past the joint), closed on its own like the body
+			var torso: Dictionary = f.meshes["Body__fp_torso"]
+			var tv: PackedVector3Array = torso.arrays[Mesh.ARRAY_VERTEX]
+			var t_low := INF
+			var t_high := -INF
+			for v: Vector3 in tv:
+				t_low = minf(t_low, v.y)
+				t_high = maxf(t_high, v.y)
+			assert_gt(t_low, _table_joint("LeftUpperLeg").y - 0.002, "%s: the torso starts at the hip joint (y %.3f)" % [path, t_low])
+			assert_lt(t_high, _table_joint("Chest").y + TORSO_DOME_MAX_M, "%s: and ends at the Chest joint, its top a dome of at most %.0f mm (y %.3f)" % [path, TORSO_DOME_MAX_M * 1000.0, t_high])
+			assert_eq(_open_edges(torso), 0, "%s: the torso has no open loop either" % path)
+
+
+## The limbs are the right way out: a triangle of a leg or a foot faces away from its bone. The first split of the hero
+## recalculated the body's normals as a whole and turned the legs, the feet and part of the hips inside out: 49-96% of their triangles
+## faced the bone, the base pass culled them and the hull drew the near wall as a black fill (the front kick, the look-down). A leg
+## that is right measures 0-7% (the creases and the crotch face the other way); the bar is 15%. (A forearm is not measured: the Punk's
+## gauntlet cuff flares, so a good forearm faces its bone in 17-26%.)
+func test_no_limb_is_inside_out_its_triangles_face_away_from_their_bone() -> void:
+	for path: String in _glbs():
+		var f := _facts(path)
+		if not f.ok:
+			continue
+		var child_of: Dictionary[String, String] = {}
+		for b: Dictionary in _table.bones:
+			if String(b.parent) != "":
+				child_of[String(b.parent)] = String(b.name)
+		var rests: Dictionary[String, Vector3] = f.bone_rests
+		for n: String in (f.meshes as Dictionary):
+			var mesh: Dictionary = f.meshes[n]
+			var arrays: Array = mesh.arrays
+			var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+			var index: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+			var bones: PackedInt32Array = arrays[Mesh.ARRAY_BONES]
+			var weights: PackedFloat32Array = arrays[Mesh.ARRAY_WEIGHTS]
+			var binds: Array[String] = mesh.bind_names
+			var inward: Dictionary[String, int] = {}
+			var total: Dictionary[String, int] = {}
+			for t: int in index.size() / 3:
+				var share: Dictionary[int, float] = {}
+				for k: int in 3:
+					var v := index[t * 3 + k]
+					for s: int in 4:
+						share[bones[v * 4 + s]] = share.get(bones[v * 4 + s], 0.0) + weights[v * 4 + s]
+				var best := -1
+				var best_w := 0.0
+				for bind: int in share:
+					if share[bind] > best_w:
+						best_w = share[bind]
+						best = bind
+				var bone := binds[best]
+				if not (bone.ends_with("UpperLeg") or bone.ends_with("LowerLeg") or bone.ends_with("Foot")):
+					continue
+				var a := verts[index[t * 3]]
+				var b := verts[index[t * 3 + 1]]
+				var c := verts[index[t * 3 + 2]]
+				var head: Vector3 = rests[bone]
+				var tail: Vector3 = rests[child_of[bone]]
+				var axis := tail - head
+				var length := axis.length()
+				axis /= length
+				var rel := (a + b + c) / 3.0 - head
+				var radial := rel - axis * clampf(rel.dot(axis), 0.0, length)
+				if radial.length() < 0.01:
+					continue
+				# Godot's front faces wind clockwise, so the outward normal is (c - a) x (b - a)
+				var normal := (c - a).cross(b - a)
+				if normal.length() < 1e-10:
+					continue
+				total[bone] = total.get(bone, 0) + 1
+				if normal.normalized().dot(radial.normalized()) < -0.2:
+					inward[bone] = inward.get(bone, 0) + 1
+			for bone: String in total:
+				if total[bone] < 100:
+					continue
+				var share_in := float(inward.get(bone, 0)) / total[bone]
+				assert_lt(share_in, INSIDE_OUT_MAX, "%s %s %s: %d of %d triangles face the bone (%.0f%%): the limb is inside out" % [path, n, bone, inward.get(bone, 0), total[bone], share_in * 100.0])
+
+
+## The hero's upper arms end in a dome that bulges toward the shoulder (the first-person split's cut: M3's Elbow capsule has a
+## rounded end there, the first version had a flat inward cap): the visible mesh reaches at least DOME_MIN_M past the cut plane (the
+## upper-arm joint plus half the bone's length along it) toward the shoulder. Only the hero is cut this way.
+func test_the_upper_arm_cut_is_a_dome_that_bulges_toward_the_shoulder() -> void:
+	for path: String in _glbs():
+		if _id_of(path) != "player":
+			continue
+		var f := _facts(path)
+		if not f.ok:
+			continue
+		var rests: Dictionary[String, Vector3] = f.bone_rests
+		var body := _body(path)
+		var verts: PackedVector3Array = body.arrays[Mesh.ARRAY_VERTEX]
+		var bones: PackedInt32Array = body.arrays[Mesh.ARRAY_BONES]
+		var weights: PackedFloat32Array = body.arrays[Mesh.ARRAY_WEIGHTS]
+		var binds: Array[String] = body.bind_names
+		for side: String in ["Left", "Right"]:
+			var ua: Vector3 = rests[side + "UpperArm"]
+			var axis: Vector3 = rests[side + "LowerArm"] - ua
+			var length := axis.length()
+			axis /= length
+			var reach := INF
+			for v: int in verts.size():
+				var w := 0.0
+				for s: int in 4:
+					if binds[bones[v * 4 + s]] == side + "UpperArm":
+						w += weights[v * 4 + s]
+				if w >= 0.5:
+					reach = minf(reach, (verts[v] - ua).dot(axis))
+			var cut := length * 0.5
+			assert_lt(reach, cut - DOME_MIN_M, "%s: the %s upper arm's visible part reaches %.3f m along the arm, the cut is at %.3f: a dome of at least %.0f mm bulges toward the shoulder" % [path, side.to_lower(), reach, cut, DOME_MIN_M * 1000.0])
 
 
 ## Boundary edges of a mesh (an edge used by one triangle), counting vertices at one position as one vertex.
