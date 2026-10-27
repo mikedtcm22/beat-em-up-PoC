@@ -43,7 +43,7 @@
 				],
 				"from": "LeftUpperLeg",
 				"to": "LeftLowerLeg",
-				"limit_m": 0.08,
+				"limit_m": 0.078,
 				"soft_m": 0.004
 			},
 			{
@@ -53,7 +53,7 @@
 				],
 				"from": "LeftLowerLeg",
 				"to": "LeftFoot",
-				"limit_m": 0.07,
+				"limit_m": 0.068,
 				"soft_m": 0.004
 			},
 			{
@@ -63,7 +63,7 @@
 				],
 				"from": "RightUpperLeg",
 				"to": "RightLowerLeg",
-				"limit_m": 0.08,
+				"limit_m": 0.078,
 				"soft_m": 0.004
 			},
 			{
@@ -73,7 +73,7 @@
 				],
 				"from": "RightLowerLeg",
 				"to": "RightFoot",
-				"limit_m": 0.07,
+				"limit_m": 0.068,
 				"soft_m": 0.004
 			},
 			{
@@ -87,7 +87,7 @@
 					0.01,
 					1.685
 				],
-				"limit_m": 0.185,
+				"limit_m": 0.158,
 				"soft_m": 0.004
 			}
 		],
