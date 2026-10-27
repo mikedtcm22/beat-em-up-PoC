@@ -45,6 +45,8 @@ const ARM_BONES: Array[String] = ["UpperArm", "LowerArm", "Hand"]
 const INSIDE_OUT_MAX := 0.15
 ## How far (m) the arm's cap must bulge toward the shoulder past the cut (the dome is 0.04 m high).
 const DOME_MIN_M := 0.03
+## How far (m) the torso's rounded top may rise past the Chest joint (the dome is 0.05 m high).
+const TORSO_DOME_MAX_M := 0.06
 
 var _cache: Dictionary[String, Dictionary] = {}
 var _table: Dictionary = {}
@@ -522,7 +524,8 @@ func test_the_first_person_split_is_closed_and_above_the_waist() -> void:
 		assert_gt(lowest, _table_joint("Chest").y - 0.002, "%s: the hidden part starts at the Chest joint (y %.3f)" % [path, lowest])
 		assert_eq(_open_edges(_body(path)), 0, "%s: the visible body has no open loop: every cut is capped" % path)
 		if (f.meshes as Dictionary).has("Body__fp_torso"):
-			# the torso is the band between the hip joint and the Chest joint, closed on its own like the body
+			# the torso is the band between the hip joint and the Chest joint (its top is a rounded dome, M3's BellyTop, rising a little
+			# past the joint), closed on its own like the body
 			var torso: Dictionary = f.meshes["Body__fp_torso"]
 			var tv: PackedVector3Array = torso.arrays[Mesh.ARRAY_VERTEX]
 			var t_low := INF
@@ -531,7 +534,7 @@ func test_the_first_person_split_is_closed_and_above_the_waist() -> void:
 				t_low = minf(t_low, v.y)
 				t_high = maxf(t_high, v.y)
 			assert_gt(t_low, _table_joint("LeftUpperLeg").y - 0.002, "%s: the torso starts at the hip joint (y %.3f)" % [path, t_low])
-			assert_lt(t_high, _table_joint("Chest").y + 0.002, "%s: and ends at the Chest joint (y %.3f)" % [path, t_high])
+			assert_lt(t_high, _table_joint("Chest").y + TORSO_DOME_MAX_M, "%s: and ends at the Chest joint, its top a dome of at most %.0f mm (y %.3f)" % [path, TORSO_DOME_MAX_M * 1000.0, t_high])
 			assert_eq(_open_edges(torso), 0, "%s: the torso has no open loop either" % path)
 
 

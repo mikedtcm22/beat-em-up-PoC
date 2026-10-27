@@ -177,6 +177,43 @@
 					"depth_m": 0.02,
 					"rings": 1,
 					"wall_normals": true
+				},
+				"Body": {
+					"LeftUpperLeg": {
+						"dir": "out",
+						"depth_m": 0.04,
+						"rings": 5,
+						"ring_verts": 48,
+						"wall_normals": false
+					},
+					"RightUpperLeg": {
+						"dir": "out",
+						"depth_m": 0.04,
+						"rings": 5,
+						"ring_verts": 48,
+						"wall_normals": false
+					},
+					"Hips": {
+						"dir": "out",
+						"depth_m": 0.04,
+						"rings": 5,
+						"ring_verts": 48,
+						"wall_normals": false
+					}
+				},
+				"Body__fp_torso": {
+					"Spine": {
+						"dir": "out",
+						"depth_m": 0.05,
+						"rings": 6,
+						"ring_verts": 48
+					},
+					"Chest": {
+						"dir": "out",
+						"depth_m": 0.05,
+						"rings": 6,
+						"ring_verts": 48
+					}
 				}
 			},
 			"torso": {
@@ -197,11 +234,16 @@
 		],
 		"max_swatches": 6,
 		"min_share": 0.004,
-		"majority_passes": 2,
+		"majority_passes": 4,
 		"border_relax_iterations": 3,
 		"border_relax_factor": 0.5,
 		"budget_tris": 30000,
-		"detail_uv": true
+		"detail_uv": true,
+		"unfold": {
+			"iterations": 12,
+			"factor": 0.5,
+			"ring": 1
+		}
 	},
 	"export": {
 		"hull_normal_digits": 5

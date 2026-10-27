@@ -790,13 +790,15 @@ def fill_holes(bm, sides):
 	return len(made)
 
 
-def cap_spec(sc, bone):
-	"""The cap settings of a loop whose vertices belong to `bone` mostly: parts.split_fp.caps[<bone>] over caps.default, over the
-	older flat keys (cap_depth_m, cap_rings, inward)."""
+def cap_spec(sc, bone, mesh_name=""):
+	"""The cap settings of a loop whose vertices belong to `bone` mostly, on the mesh `mesh_name`: parts.split_fp.caps[<mesh>][<bone>],
+	caps[<mesh>].default, caps[<bone>], caps.default, over the older flat keys (cap_depth_m, cap_rings), each over the next."""
 	caps = sc.get("caps", {})
 	spec = {"dir": "in", "depth_m": float(sc.get("cap_depth_m", 0.03)), "rings": int(sc.get("cap_rings", 4))}
-	spec.update(caps.get("default", {}))
-	spec.update(caps.get(bone, {}))
+	per_mesh = caps.get(mesh_name, {}) if isinstance(caps.get(mesh_name), dict) and "dir" not in caps.get(mesh_name, {}) else {}
+	for layer in (caps.get("default", {}), caps.get(bone, {}), per_mesh.get("default", {}), per_mesh.get(bone, {})):
+		if isinstance(layer, dict):
+			spec.update({k: v for k, v in layer.items() if not isinstance(v, dict)})
 	return spec
 
 
@@ -838,7 +840,7 @@ def add_caps(obj, sc, heal_max=0.0):
 			for gi, wt in v[dl].items():
 				acc[gi] = acc.get(gi, 0.0) + wt / len(verts)
 		owner = names_by_group.get(max(acc, key=acc.get), "") if acc else ""
-		spec = cap_spec(sc, owner)
+		spec = cap_spec(sc, owner, obj.name)
 		depth, rings = float(spec["depth_m"]), int(spec["rings"])
 		n_cap = n_in if spec["dir"] == "in" else -n_in
 		# the loop's commonest swatch (the faces next to the cut): the cap wears it whole
