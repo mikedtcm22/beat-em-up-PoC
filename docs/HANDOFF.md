@@ -13,7 +13,12 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
   - The left-over list's warm-up and VFX items are done.
 - **The judgement calls log** has 17 entries, including the four feel toggles with their measured suggestions.
 - **Pick watch:** the usage watcher was asked (06:55) to read the DM on each check and message this session "Game-boy replied in the DM at <time>" when he replies. The one reminder went at 04:37, and no other DM goes to him.
-- **Running:** the lead's perf A/B, M3 `afdb39e` against `bf7b0ab` (both perf acts, 3 runs, vsync on, plus FXAA). Logs go to `captures/perf_compare/a16-int/`.
+- **The lead's perf A/B** (07:20; M3 `afdb39e` against `bf7b0ab`; vsync on; load 2.4-4.6 from other apps, so noisy in absolute terms, with the refs interleaved; logs in `captures/perf_compare/a16-int/`):
+  - "Perf, six with ragdolls": mean 12.17 against 14.73 ms (+2.6), p95 +4.2, spawn hitch +3.3.
+  - First spawn is -0.6 (ok; the gate run had +1.0 before the warm-up fixes).
+  - First hit is +3.2, missing A16's soft +2 bar. The gate run had +1.4, so this is within this load's noise; P3-int's quiet run decides it.
+  - "Look: Perf, six art Punks": 14.89 ms mean, and 11.85 with FXAA (about M3's level; one FXAA run had a 278 ms first-hit spike).
+  - M3 itself misses the 16.7 ms p95 bar on this machine with vsync on.
 - **On the pick:** `docs/reviews/M4/args-F-art.json` is ready (both packages, `blender: true`). Replace `<PICK_PUNK>` and `<PICK_HERO>` with his exact words, record the pick in the decisions log, and launch it through `workflow-build.js` (both run at once). They share the 750-credit stop, and each checks the ledger before a paid call.
 - **Left for after the pick:**
   1. F-punk: views, T4-T10, about 145 credits. Its brief carries gate gaps 3, 4, 5, 7, 9 and 13, the lens and cap swatch marks, a glove swatch value of 0.3 or more, a cuff radius from the wrist, and A18's detail mask, which goes to README for Game-boy's ruling.
