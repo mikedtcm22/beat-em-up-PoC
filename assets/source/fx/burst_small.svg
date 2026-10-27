@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0.0 0.0 512.0 512.0">
-<!-- Impact burst, small (light hits), variant 1. Drawn by tools/gen_fx.gd (original art, Beat-em-up PoC). -->
+<!-- Impact burst, small (light hits), variant 1. Ink line 20.65 units. Drawn by tools/gen_fx.gd (original art, Beat-em-up PoC). -->
 <defs>
 <radialGradient id="core" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#ffffff" stop-opacity="1.0"/><stop offset="1" stop-color="#fff6b8" stop-opacity="1.0"/></radialGradient>
 </defs>

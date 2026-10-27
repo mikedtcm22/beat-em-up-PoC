@@ -36,7 +36,6 @@ const AMBER := "#ffb030"
 ## Finisher accent red (the large burst, finisher lettering's extrusion).
 const ACCENT_RED := "#e8302a"
 const BLOOD := "#d0141f"
-const BLOOD_DARK := "#62070e"
 const BLOOD_LIGHT := "#ff5a5f"
 const PARRY_CYAN := "#59ebff"
 const WARNING_RED := "#ff4a2e"
@@ -186,8 +185,11 @@ func _save(name: String, svg: String) -> void:
 	file.close()
 
 
-## SVG document of `size` pixels showing `view` (user units), with `defs` and `body`.
-static func _doc(view: Rect2, defs: String, body: String, note: String) -> String:
+## SVG document of `size` pixels showing `view` (user units), with `defs` and `body`. A main ink line of
+## `ink` units is recorded in the note ("Ink line N units"), which tests/test_fx_m4.gd reads.
+static func _doc(view: Rect2, defs: String, body: String, note: String, ink: float = 0.0) -> String:
+	if ink > 0.0:
+		note += " Ink line %s units." % String.num(ink, 2)
 	var scale := RASTER_PX / maxf(view.size.x, view.size.y)
 	var w := roundi(view.size.x * scale)
 	var h := roundi(view.size.y * scale)
@@ -359,7 +361,10 @@ static func _dots(poly: PackedVector2Array, holes: Array[PackedVector2Array], pi
 func _lettering(word: String, finisher: bool) -> String:
 	_rng.seed = hash(word)
 	var kind := "word_finisher" if finisher else "word_heavy"
-	var grow := _ink(kind)
+	# The picture is WORD_ASPECT cap heights (100 units each) wide and 512 px in the PNG: a unit is this many
+	# texture px, and a weight or a pitch in texture px (INK_TABLE) is this many units.
+	var unit := WORD_ASPECT * 100.0 / RASTER_PX
+	var grow := _ink(kind) * unit
 	var shadow := Vector2(10.0, 12.0) if finisher else Vector2(7.0, 9.0)
 	# First every letter's size, tilt and bob, and the word's natural width.
 	var sizes := PackedFloat32Array()
@@ -373,37 +378,18 @@ func _lettering(word: String, finisher: bool) -> String:
 		tilts.append(deg_to_rad(_rng.randf_range(-6.0, 6.0)))
 		bobs.append(_rng.randf_range(-5.0, 5.0) - (5.0 if i == 0 else 0.0))
 		natural += width * s + LETTER_GAP
-	var stretch := WORD_ASPECT * 100.0 / (natural - LETTER_GAP)
-	var outers: Array[PackedVector2Array] = []
-	var counters: Array[Array] = []  # per part of outers, its counters (Array[PackedVector2Array])
-	var all_points := PackedVector2Array()
-	var x := 0.0
-	for i in word.length():
-		var contours: Array = GLYPHS[word[i]]
-		var width := _glyph_width(contours)
-		var s := sizes[i]
-		var xf := Transform2D(tilts[i], Vector2(s * stretch, s), 0.0, Vector2(x + width * s * stretch * 0.5, 50.0 + bobs[i]))
-		var center := Vector2(width * 0.5, 50.0)
-		var main := outers.size()
-		for k in contours.size():
-			var contour: Array = contours[k]
-			var pts := PackedVector2Array()
-			for j in range(0, contour.size(), 2):
-				var p := Vector2(contour[j], contour[j + 1]) - center
-				p.x += -p.y * 0.17  # lean right (italic)
-				pts.append(xf * p)
-			# A contour inside the letter's first is a counter (a hole); one outside it, like the
-			# dot of a "!", is a part of its own.
-			if k == 0 or not Geometry2D.is_point_in_polygon(pts[0], outers[main]):
-				outers.append(pts)
-				counters.append([] as Array[PackedVector2Array])
-				all_points.append_array(pts)
-			else:
-				counters[main].append(pts)
-		x += width * s * stretch + LETTER_GAP
-	var bounds := Rect2(all_points[0], Vector2.ZERO)
-	for p in all_points:
-		bounds = bounds.expand(p)
+	# Stretch the letters across until the picture (the letters, their ink and the shadow) is WORD_ASPECT
+	# cap heights wide: a first guess from the glyph widths, then one correction for the lean and the tilt.
+	var picture_margin := 2.0 * (grow + 2.0) + shadow.x
+	var target := WORD_ASPECT * 100.0 - picture_margin
+	var stretch := target / (natural - LETTER_GAP)
+	var letters := _set_letters(word, sizes, tilts, bobs, stretch)
+	stretch *= target / (letters.bounds as Rect2).size.x
+	letters = _set_letters(word, sizes, tilts, bobs, stretch)
+	var outers: Array[PackedVector2Array] = letters.outers
+	var counters: Array[Array] = letters.counters  # per part of outers, its counters (Array[PackedVector2Array])
+	var all_points: PackedVector2Array = letters.points
+	var bounds: Rect2 = letters.bounds
 	var top := bounds.position.y
 	var bottom := bounds.end.y
 	var view := bounds.grow(grow + 2.0)
@@ -434,7 +420,7 @@ func _lettering(word: String, finisher: bool) -> String:
 		for counter in counters[i]:
 			paths.append(_pts(counter))
 		body += _path(" ".join(paths), "url(#fill)", "", 0.0, ' fill-rule="evenodd"')
-	var pitch := _pitch(kind)
+	var pitch := _pitch(kind) * unit
 	var mid := (top + bottom) * 0.5
 	for i in outers.size():
 		body += _dots(outers[i], counters[i], pitch, Vector2.ZERO, Vector2.DOWN, mid, bottom,
@@ -445,7 +431,43 @@ func _lettering(word: String, finisher: bool) -> String:
 	var glint := all_points[0].lerp(all_points[1], 0.5) + Vector2(4.0, 9.0)
 	body += _path("M%s %s l14 -3 l-2 6 l-14 3 Z" % [_n(glint.x), _n(glint.y)], WHITE)
 	return _doc(view, defs, body, "Comic lettering \"%s\"%s. Cap height share of the width %s." % [
-		word, " (finisher style)" if finisher else "", String.num(100.0 / view.size.x, 4)])
+		word, " (finisher style)" if finisher else "", String.num(100.0 / view.size.x, 4)], grow)
+
+
+## The letters of `word` set across with every glyph stretched by `stretch`: {outers, counters, points,
+## bounds}. A contour inside a glyph's first is a counter (a hole); one outside it, like the dot of a "!",
+## is a part of its own.
+func _set_letters(word: String, sizes: PackedFloat32Array, tilts: PackedFloat32Array, bobs: PackedFloat32Array,
+		stretch: float) -> Dictionary:
+	var outers: Array[PackedVector2Array] = []
+	var counters: Array[Array] = []
+	var all_points := PackedVector2Array()
+	var x := 0.0
+	for i in word.length():
+		var contours: Array = GLYPHS[word[i]]
+		var width := _glyph_width(contours)
+		var s := sizes[i]
+		var xf := Transform2D(tilts[i], Vector2(s * stretch, s), 0.0, Vector2(x + width * s * stretch * 0.5, 50.0 + bobs[i]))
+		var center := Vector2(width * 0.5, 50.0)
+		var main := outers.size()
+		for k in contours.size():
+			var contour: Array = contours[k]
+			var pts := PackedVector2Array()
+			for j in range(0, contour.size(), 2):
+				var p := Vector2(contour[j], contour[j + 1]) - center
+				p.x += -p.y * 0.17  # lean right (italic)
+				pts.append(xf * p)
+			if k == 0 or not Geometry2D.is_point_in_polygon(pts[0], outers[main]):
+				outers.append(pts)
+				counters.append([] as Array[PackedVector2Array])
+				all_points.append_array(pts)
+			else:
+				counters[main].append(pts)
+		x += width * s * stretch + LETTER_GAP
+	var bounds := Rect2(all_points[0], Vector2.ZERO)
+	for p in all_points:
+		bounds = bounds.expand(p)
+	return {outers = outers, counters = counters, points = all_points, bounds = bounds}
 
 
 ## Every polygon of `letters` grown by `grow` units and moved by `offset`, as filled paths in `color`.
@@ -501,7 +523,7 @@ func _burst_small(variant: int) -> String:
 	var body := _path(_pts(star), "url(#core)", INK, ink)
 	body += _dots(star, [], _pitch("burst_small"), c, Vector2.ZERO, 120.0, 225.0, 0.0, _pitch("burst_small") * DOT_RADIUS,
 			ink * 0.5 + 2.0, DOT_YELLOW)
-	return _doc(Rect2(0, 0, 512, 512), defs, body, "Impact burst, small (light hits), variant %d." % (variant + 1))
+	return _doc(Rect2(0, 0, 512, 512), defs, body, "Impact burst, small (light hits), variant %d." % (variant + 1), ink)
 
 
 func _burst_medium(variant: int) -> String:
@@ -515,7 +537,7 @@ func _burst_medium(variant: int) -> String:
 	body += _dots(outer, [inner], _pitch("burst_medium"), c, Vector2.ZERO, 130.0, 230.0, 0.0,
 			_pitch("burst_medium") * DOT_RADIUS, ink * 0.5 + 2.0, DOT_ORANGE)
 	body += _path(_pts(inner), "url(#core)", INK, ink * INK_INNER)
-	return _doc(Rect2(0, 0, 512, 512), defs, body, "Impact burst, medium (heavy hits), variant %d." % (variant + 1))
+	return _doc(Rect2(0, 0, 512, 512), defs, body, "Impact burst, medium (heavy hits), variant %d." % (variant + 1), ink)
 
 
 func _burst_large(variant: int) -> String:
@@ -540,7 +562,7 @@ func _burst_large(variant: int) -> String:
 			_pitch("burst_large") * DOT_RADIUS, ink * 0.5 + 2.0, DOT_RED)
 	body += _path(_pts(mid), "url(#mid)", INK, ink * INK_INNER)
 	body += _path(_pts(_star(c, 9, Vector2(72, 88), Vector2(38, 48), 0.5 + variant * 0.3)), "url(#core)", INK, ink * INK_INNER * 0.8)
-	return _doc(Rect2(0, 0, 512, 512), defs, body, "Impact burst, large (finishers), variant %d, red finisher accent." % (variant + 1))
+	return _doc(Rect2(0, 0, 512, 512), defs, body, "Impact burst, large (finishers), variant %d, red finisher accent." % (variant + 1), ink)
 
 
 ## Four tapered streaks, one per 128 px row, thick end left, point right. White, tinted at
@@ -702,7 +724,7 @@ func _guard_break() -> String:
 		body += _path("M%s %s L%s %s" % [_n(c.x + push.x), _n(c.y + push.y),
 				_n(c.x + push.x + cos(a0 + gap) * 90.0), _n(c.y + push.y + sin(a0 + gap) * 90.0)], "none", INK, ink * INK_INNER)
 	body += _path(_pts(_star(c, 7, Vector2(60, 72), Vector2(26, 32))), WHITE, INK, ink * INK_INNER)
-	return _doc(Rect2(0, 0, 512, 512), defs, body, "Guard-break burst (amber shards).")
+	return _doc(Rect2(0, 0, 512, 512), defs, body, "Guard-break burst (amber shards).", ink)
 
 
 ## Milestone 3's rear-attack warning (Spec §8): a jagged red-orange alert burst with a "!".
@@ -721,7 +743,7 @@ func _rear_warning() -> String:
 			pts.append(xf * Vector2(contour[k], contour[k + 1]))
 		paths.append(_pts(pts))
 	body += _path(" ".join(paths), WHITE, INK, ink * INK_INNER)
-	return _doc(Rect2(0, 0, 512, 512), "", body, "Rear-attack warning burst (Milestone 3), red-orange.")
+	return _doc(Rect2(0, 0, 512, 512), "", body, "Rear-attack warning burst (Milestone 3), red-orange.", ink)
 
 
 # --- Damage tiles ----------------------------------------------------------------------

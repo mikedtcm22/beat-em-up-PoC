@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0.0 0.0 512.0 512.0">
-<!-- Guard-break burst (amber shards). Drawn by tools/gen_fx.gd (original art, Beat-em-up PoC). -->
+<!-- Guard-break burst (amber shards). Ink line 9.6 units. Drawn by tools/gen_fx.gd (original art, Beat-em-up PoC). -->
 <defs>
 <radialGradient id="amber" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#fff6b8" stop-opacity="1.0"/><stop offset="1" stop-color="#ffb030" stop-opacity="1.0"/></radialGradient>
 </defs>

@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0.0 0.0 512.0 512.0">
-<!-- Impact burst, large (finishers), variant 2, red finisher accent. Drawn by tools/gen_fx.gd (original art, Beat-em-up PoC). -->
+<!-- Impact burst, large (finishers), variant 2, red finisher accent. Ink line 8.0 units. Drawn by tools/gen_fx.gd (original art, Beat-em-up PoC). -->
 <defs>
 <radialGradient id="core" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#ffffff" stop-opacity="1.0"/><stop offset="1" stop-color="#fff6b8" stop-opacity="1.0"/></radialGradient>
 <radialGradient id="mid" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#ffd21f" stop-opacity="1.0"/><stop offset="1" stop-color="#ff9a1f" stop-opacity="1.0"/></radialGradient>
