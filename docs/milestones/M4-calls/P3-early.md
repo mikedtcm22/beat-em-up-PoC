@@ -74,7 +74,8 @@ Nothing else: no existing test depended on the idle's phase 0 once the phase is 
 
   The art agrees with the proxies to half a point at the median and under three at the 95th percentile, and the 6-Punk p95 is the only figure above a point; R4 reads zero both ways (no Punk hid another's wind-up in either fight). The proxies' own R8 median (27.6% and 29.9%) is over M3's 25% soft bar in these autopilot fights, as the gate saw (R8 p50 30% on "Six Punks, fight"): it is the fights, not the art. The drawn sample costs up to 212 ms a sample with six Punks (BVH builds for R4): this is why L5 is windowed work (A4).
 - **Write-back on the real GLB:** the skeleton equals the followers to 0.00000 m and 0.00000 rad on 103 updates through the Punk's own jab and on 328 updates from the stagger to the KO (276 with a ragdoll running).
-- **Rig upkeep:** 16 tests in `test_rig_upkeep`; the full suite is in the final message.
+- **Rig upkeep:** 16 tests in `test_rig_upkeep`.
+- **The suite:** `tools/run_tests.sh` 1472/1472 (the 1414 of the last merge and 58 new: `test_rig_upkeep` 16, `test_fp_feel_log` 10, `test_showcase` 16, `test_look_take` 3, `test_look_l5` 10, one in `test_look_acts` and two in `test_art_punk`), 0 `SCRIPT ERROR`, `SHADER ERROR` or `ERROR` in the whole output.
 
 ## 4. What the sheets show (first person, 1600x900, `captures/c14`, `c15`, `l5`; never committed)
 
