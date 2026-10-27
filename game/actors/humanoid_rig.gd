@@ -752,7 +752,17 @@ func _build_meshes() -> void:
 	_apply_layers()
 	if art != null:
 		_art_meshes = SkinnedArt.attach(self, art)
-		set_art_shown(true)
+		_apply_layers()
+		set_art_shown(Tuning.data.look_show_art)
+		if has_art():
+			Tuning.changed.connect(_on_tuning_changed)
+
+
+## Tuning's look_show_art (the live A/B of the art and the primitives) reaches every rig
+## that has art.
+func _on_tuning_changed(property: StringName) -> void:
+	if property == &"look_show_art" or property == &"":
+		set_art_shown(Tuning.data.look_show_art)
 
 
 func _make_mesh(part: PlaceholderBody.Part) -> Mesh:
@@ -1120,3 +1130,6 @@ func _apply_layers() -> void:
 		mesh_instance.layers = head_layer
 	for mesh_instance: MeshInstance3D in _body_meshes:
 		mesh_instance.layers = default_layer
+	# The art's FP-hidden mesh (a GLB mesh named *__fp_hidden) goes with the head meshes.
+	for mesh_instance: MeshInstance3D in _art_meshes:
+		mesh_instance.layers = head_layer if mesh_instance.get_meta(SkinnedArt.FP_HIDDEN_META, false) else default_layer
