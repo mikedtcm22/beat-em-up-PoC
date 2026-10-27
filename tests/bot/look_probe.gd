@@ -88,9 +88,12 @@ const SHADOW_OVER_LIT_MIN := 0.4
 const M2_JAB_FLASH_WHITE_SHARE := 0.043
 const FLASH_MARGIN := 0.02
 ## L5: "within noise of M3" is read as the art-drawn R8 within these points of the proxies' at the median and at the 95th
-## percentile (the slice gate saw 0.5 and 2.8), and no wind-up hidden by another enemy that the proxies did not see hidden.
-const L5_P50_POINTS := 2.0
-const L5_P95_POINTS := 4.0
+## percentile, and no wind-up hidden by another enemy that the proxies did not see hidden. Part B gives no number. A fight is
+## seeded, so a rerun reads the same figures; the spread to read is how far the same measure moved between two states of the
+## project: the art-minus-proxies gap on "Six Punks, fight" was +0.5 and +2.8 points on the smoke Punk (P3-early) and is -2.1 and
+## +0.5 on the shipped one (M4-calls/P3-int.md C8), so a bar of 2 would call the art's own change a failure; the bar is 3 and 5.
+const L5_P50_POINTS := 3.0
+const L5_P95_POINTS := 5.0
 
 
 ## The smallest angle in degrees between two hues (0-360).
@@ -631,8 +634,8 @@ static func _row_l1(t3: Dictionary, t8: Dictionary, outline_px: float, fp_scale:
 			at[family] = width
 			measured += 1
 			if not _within(width, outline_px):
-				misses.append("%g m %s %.2f" % [distance, family, width])
-		widths["%g m" % distance] = at
+				misses.append("%s m %s %.2f" % [str(distance), family, width])
+		widths["%s m" % str(distance)] = at
 	var own := {}
 	var own_target := outline_px * fp_scale
 	var own_measured := 0

@@ -10,8 +10,10 @@ extends GutTest
 ## and the plan's bar is printed as a GATE line. Nothing here is frozen to a number from one file of art beyond that margin: every
 ## figure is read from whatever is on disk. After the last test the table of all rows is printed ("DONE-WHEN ...").
 ##
-## Each test names the test that already holds its row elsewhere and mirrors it (a test script cannot call another's tests); the
-## full A19 strain run is shared with test_skinned_art through tests/art_strain.gd (kept per art, so it is made once).
+## Each test names the test that already holds its row elsewhere and mirrors it (a test script cannot call another's tests, and the
+## art fixers are changing the files that hold the helpers); the full A19 strain run is shared with test_skinned_art through
+## tests/art_strain.gd (kept per art, so it is made once). Three more tests at the end are P3-int's own: the player's first-person
+## hull from ToonMaterials.outline(true), the final probe's source acts, and the arithmetic of the windowed rows.
 ##
 ##   A1 test_art_contract, test_skinned_art      A8 test_skinned_art, test_art_punk
 ##   A2 test_art_contract                         A9 test_art_punk, test_art_player, test_skinned_art
@@ -28,6 +30,10 @@ const MotionProbe := preload("res://tests/fixtures/motion/motion_probe.gd")
 const Probe := preload("res://tests/bot/readability_probe.gd")
 const Pilot := preload("res://tests/bot/autopilot.gd")
 const CrowdBot := preload("res://tests/bot/crowd_bot.gd")
+const LookProbe := preload("res://tests/bot/look_probe.gd")
+const LookTuneActs := preload("res://tests/bot/acts/look_tune_acts.gd")
+const LookActs := preload("res://tests/bot/acts/look_acts.gd")
+const LookFinalActs := preload("res://tests/bot/acts/look_final_acts.gd")
 
 const PUNK_ART := "res://game/actors/art/punk_art.tres"
 const PLAYER_ART := "res://game/actors/art/player_art.tres"
@@ -69,6 +75,9 @@ const FRAMING_DIFFER := 0.03
 const FRAMING_SHARE := 0.04
 const FRAMING_NEAREST_M := 0.02
 const GUARD_CLEAR_M := 0.3
+## The slice gate's visible-stretch rule (contingency 4, M4-slice-gate.md): no edge the lens sees grows more than 2 cm over its length
+## in the skinned rest at the 1 m acts' poses.
+const VISIBLE_STRETCH_M := 0.02
 ## A11: the flash anchor within 2 cm of the skinned surface.
 const ANCHOR_M := 0.02
 ## A12: the suite's count only rises (M3 closed at 1198).
@@ -92,6 +101,8 @@ const FRAMING_RATCHET_PUNK_DIFFER := 0.09
 const FRAMING_RATCHET_PLAYER_DIFFER := 0.10
 const FRAMING_RATCHET_PLAYER_SHARE := 0.10
 const FRAMING_RATCHET_PLAYER_NEAREST_M := 0.12
+## A7, the Punk's visible stretch: the longest growth of an edge in view (today 8.4 cm, the waist hem in the cross's twist, F-punk).
+const VISIBLE_STRETCH_RATCHET_M := 0.10
 ## A11: the flash anchor to the skinned surface, by region (today the Punk's head 1.5 cm, torso 6.0 cm, leg 2.7 cm).
 const ANCHOR_RATCHET_M := {"head": 0.02, "torso": 0.10, "leg": 0.05}
 ## A11, the hero: the same, a margin wider (the hero's own figures are printed as they come).
@@ -550,6 +561,91 @@ func test_a7_the_strain_of_every_animation_and_move_is_held_at_its_ratchet() -> 
 				row.name, run.samples, run.in_bar, run.worst_high, run.problems.size(), run.kinds,
 				run.bad_bar, ", ".join(over) if not over.is_empty() else "none", share * 100.0])
 	print("DONE-WHEN A7 strain run: %.1f s" % ((Time.get_ticks_msec() - started) / 1000.0))
+
+
+## Which of `world` (vertices, world space) the camera `cam` draws: in front of the near plane, inside the view's half-angles and
+## facing the lens. Occlusion is not tested here, so this is a superset of what the lens sees (test_art_punk's `_in_view`).
+func _in_view(world: PackedVector3Array, normals: PackedVector3Array, cam: Transform3D) -> PackedByteArray:
+	var out := PackedByteArray()
+	out.resize(world.size())
+	var tan_h := tan(deg_to_rad(FPView.HALF_H_DEG))
+	var tan_v := tan_h * 9.0 / 16.0
+	var forward := -cam.basis.z
+	for v: int in world.size():
+		var to := world[v] - cam.origin
+		var depth := to.dot(forward)
+		if depth <= FPView.NEAR:
+			continue
+		if absf(to.dot(cam.basis.x)) > tan_h * depth or absf(to.dot(cam.basis.y)) > tan_v * depth:
+			continue
+		if normals[v].dot(-to) <= 0.0:
+			continue
+		out[v] = 1
+	return out
+
+
+## True when `point` is the first surface of `soup` along the ray from `origin` (nothing nearer by more than 1.5 cm).
+func _seen_from(soup: SkinnedView.Soup, origin: Vector3, point: Vector3) -> bool:
+	var to := point - origin
+	var dist := to.length()
+	var hit := soup.triangles.intersect_ray(origin, to / dist)
+	return hit.is_empty() or origin.distance_to(hit.position) >= dist - 0.015
+
+
+func test_a7_no_edge_the_lens_sees_of_the_punk_grows_more_than_its_ratchet_at_the_one_metre_poses() -> void:
+	# Source: test_art_punk::test_no_edge_in_view_grows_more_than_2_cm_in_the_one_metre_acts_poses (the slice gate's contingency 4,
+	# the visible-stretch test). At the 1 m acts' poses (idle and the Punk's three moves at their first active frame) from the
+	# face and the body views, every deforming edge the lens sees (both ends in the view, facing it, the first surface along their
+	# ray) grows at most 2 cm over its length in the skinned rest. The Punk misses the 2 cm bar (the waist hem in the cross's
+	# twist: weight smoothing, a torso height blend and the heat-map weights were tried, M4-calls/F-punk.md): held at a ratchet.
+	var rig := _rig(_arts()[0])
+	rig.global_position = Vector3(0.0, 0.0, -1.0)
+	rig.rotation.y = PI
+	var moves: Array[MoveData] = [null]
+	for id: String in PUNK_MOVES:
+		moves.append(_move_file(id))
+	var worst := 0.0
+	var worst_label := ""
+	var edges_seen := 0
+	for pitch: float in PUNK_VIEW_PITCHES:
+		var cam := _view(pitch)
+		for move: MoveData in moves:
+			_pose(rig, &"idle", 0.3)
+			if move != null:
+				rig.play_move(move)
+				for i: int in move.startup + 1:
+					rig.advance(FRAME)
+			for mi: MeshInstance3D in rig.art_meshes():
+				var data := SkinnedView._mesh_data(mi.mesh as ArrayMesh)
+				SkinnedView._prepare_strain(data)
+				var rest := SkinnedView.skin_vertices(mi, rig, SkinnedView.rest_pose(rig))
+				var posed := SkinnedView.skin_vertices(mi, rig)
+				var world := mi.global_transform * posed
+				var normals := SkinnedView.skin_normals(mi, rig)
+				var world_normals := PackedVector3Array()
+				world_normals.resize(normals.size())
+				for v: int in normals.size():
+					world_normals[v] = mi.global_transform.basis * normals[v]
+				var in_frustum := _in_view(world, world_normals, cam)
+				var soup := SkinnedView._soup(mi, rig, cam)
+				for e: int in data.edge_a.size():
+					var a := data.edge_a[e]
+					var b := data.edge_b[e]
+					if in_frustum[a] == 0 or in_frustum[b] == 0:
+						continue
+					edges_seen += 1
+					var grow := posed[a].distance_to(posed[b]) - rest[a].distance_to(rest[b])
+					if grow <= worst:
+						continue
+					if not (_seen_from(soup, cam.origin, world[a]) and _seen_from(soup, cam.origin, world[b])):
+						continue
+					worst = grow
+					worst_label = "%s pitch %+.0f, bones %s/%s" % [move.id if move != null else &"idle", pitch,
+							SkinnedView._dominant_bone(data, mi.skin, [a]), SkinnedView._dominant_bone(data, mi.skin, [b])]
+	assert_gt(edges_seen, 1000, "the poses were measured (%d edges in view)" % edges_seen)
+	assert_lte(worst, VISIBLE_STRETCH_RATCHET_M, "no edge in view grows more than the ratchet's %.0f cm (%.1f cm, %s)" % [VISIBLE_STRETCH_RATCHET_M * 100.0, worst * 100.0, worst_label])
+	_note("A7", worst <= VISIBLE_STRETCH_M, "punk visible stretch (slice gate contingency 4): %d edges in view over the 1 m poses, the longest growth %.1f cm (%s); bar %.0f cm, ratchet %.0f cm" % [
+			edges_seen, worst * 100.0, worst_label, VISIBLE_STRETCH_M * 100.0, VISIBLE_STRETCH_RATCHET_M * 100.0])
 
 
 # --- A8: ragdoll ---------------------------------------------------------------------------------------
@@ -1099,3 +1195,90 @@ func test_a14_the_autopilot_crowd_with_art_punks_keeps_the_hard_readability_metr
 			hard.append("%s %s" % [row.id, row.status])
 	_note("A14", true, "autopilot, %d art Punks over 900 ticks (%d fell): hard rows %s, none stuck; the 60 s windowed act is tools/check_m3_log.py's, the lead's run" % [
 			spawned, fallen, ", ".join(hard)])
+
+
+# --- P3-int's own: the first-person hull, and the windowed rows' arithmetic -----------------------------
+
+
+func test_the_players_art_hull_is_toon_materials_first_person_outline_and_an_enemys_is_the_full_width_one() -> void:
+	# P3-int step 1: RigPaint.outline_material() hands the rig's first_person_body to ToonMaterials.outline(first_person), so the
+	# player's art needs no PlayerCharacter._wear_first_person_hull() (deleted) and no call of ToonMaterials' private _hull(). No look
+	# change: the same two shared materials as before (M4-calls/P3-int.md C1 has the before and after of the player's hull width).
+	var hero := _rig(_arts()[1])
+	for mi: MeshInstance3D in hero.art_meshes():
+		assert_same(mi.material_overlay, ToonMaterials.outline(true), "%s wears the first-person variant" % mi.name)
+		assert_same(mi.material_overlay, hero.paint.outline_material(), "and it is what RigPaint hands out for the player's own body")
+	var punk := _rig(_arts()[0])
+	for mi: MeshInstance3D in punk.art_meshes():
+		assert_same(mi.material_overlay, ToonMaterials.outline(false), "%s wears the full-width one" % mi.name)
+	assert_same(ToonMaterials.outline(), ToonMaterials.outline(false), "no argument is the full-width hull")
+	assert_ne(ToonMaterials.outline(true), ToonMaterials.outline(false), "two materials")
+	assert_eq(ToonMaterials.outline(true).get_shader_parameter(&"fp_scale"), Tuning.data.look_outline_fp_scale, "the player's own line is x look_outline_fp_scale")
+	assert_eq(ToonMaterials.outline(false).get_shader_parameter(&"fp_scale"), 1.0, "an enemy's is full width")
+	assert_eq(ToonMaterials.outline(true).get_shader_parameter(&"mode"), ToonMaterials.Hull.ART)
+	var player := PlayerCharacter.new()
+	assert_false(player.has_method(&"_wear_first_person_hull"), "the player no longer picks his own hull")
+	player.free()
+	Tuning.set_value(&"look_outline_fp_scale", 0.5)
+	assert_eq(ToonMaterials.outline(true).get_shader_parameter(&"fp_scale"), 0.5, "the F1 panel still moves it live")
+
+
+func test_the_final_probes_source_acts_exist_by_title_and_it_is_the_only_act_with_its_title() -> void:
+	# The final act plays five acts by title (tests/bot/acts/look_final_acts.gd): a renamed act would silently read "not measured".
+	var bot := Node.new()
+	var titles := {}
+	for acts: Array[Dictionary] in [LookTuneActs.acts(bot), LookActs.acts(bot), LookFinalActs.acts(bot)]:
+		for act: Dictionary in acts:
+			titles[act.title] = int(titles.get(act.title, 0)) + 1
+	bot.free()
+	for title: String in LookFinalActs.SOURCES:
+		assert_eq(titles.get(title, 0), 1, "'%s' is one act" % title)
+	assert_eq(titles.get("Look: final probe", 0), 1)
+	for title: String in titles:
+		if title != "Look: final probe":
+			assert_false(title.to_lower().contains("look: final probe") or "look: final probe".contains(title.to_lower()), "no title holds the final probe's or is held by it (%s)" % title)
+
+
+func test_the_windowed_rows_are_summed_from_what_the_acts_measured_and_missed_bars_read_missed() -> void:
+	# look_probe.gd final_rows(): L1 (hull widths within a pixel of look_outline_px and under 4.5, the own body at x fp scale), L2
+	# (2-3 jacket bands, shadow/lit at least 0.4, the shadow's hue nearer the tint), L3 (M2's jab flash share + 2 points) and L5 (the
+	# art-drawn R8 within 2 and 4 points of the proxies', no hidden wind-up the proxies missed), from synthetic metrics.
+	var t3 := {}
+	for label: String in ["d1_0_m", "d2_5_m", "d5_0_m", "d10_0_m"]:
+		for family: String in ["crown", "left", "right"]:
+			t3["%s_%s_px1080" % [label, family]] = 3.6
+	var t8 := {"guard_left_px1080": 3.4, "guard_right_px1080": 3.0, "guard_top_px1080": 3.5}
+	var t1 := {
+		"front_lit_jacket_bands": 3, "front_lit_jacket_shadow_over_lit": 0.55,
+		"front_lit_jacket_luma_hue": "0.150/250/0.30/0.40,0.300/200/0.30/0.50,0.600/190/0.40/0.55",
+		"back_lit_jacket_bands": 1, "back_lit_jacket_shadow_over_lit": 1.0, "back_lit_jacket_luma_hue": "0.200/250/1.00/0.40",
+	}
+	var t5 := {"jab_flash_white_share_of_view": 0.039, "jab_flash_hit_landed": true}
+	var l5 := PackedStringArray([
+		"LOOK-L5 Six Punks, fight R8 (164 samples of the lens, 1644 ticks): proxies p50 27.6% p95 43.8% max 60.0% | art drawn p50 28.1% p95 46.5% max 62.0% | difference p50 +0.5 pp p95 +2.7 pp | cells that differ: mean 3.1% worst 10.2%",
+		"LOOK-L5 Six Punks, fight R4 (16 wind-ups, 14 in the lens, 2 never sampled): hidden by another enemy: proxies 0 of 14 | art drawn 0 of 14 | worst sample 212.0 ms",
+	])
+	var tint_hue := Color(0.36, 0.32, 0.55).h * 360.0
+	var good := LookProbe.final_rows({"t3": t3, "t8": t8, "t1": t1, "t5": t5}, l5, 3.75, 0.8, tint_hue)
+	for id: String in ["L1", "L2", "L3", "L5"]:
+		assert_eq(good[id].state, "met", "%s: %s" % [id, good[id].text])
+	assert_eq(LookProbe.parse_l5(l5)["Six Punks, fight"].r4_art, 0)
+	assert_almost_eq(float(LookProbe.parse_l5(l5)["Six Punks, fight"].diff_p95), 2.7, 0.001)
+	assert_eq(LookProbe.parse_bands(t1.front_lit_jacket_luma_hue).size(), 3)
+	# A hull 1.3 px off, a crown over the ceiling, a single band, a flash over M2's + 2 points and an art R8 6 points off at the 95th: each
+	# row misses, and says so.
+	var bad_t3 := t3.duplicate()
+	bad_t3["d2_5_m_left_px1080"] = 5.1
+	bad_t3["d10_0_m_crown_px1080"] = 2.4
+	var bad_t1 := t1.duplicate()
+	bad_t1["front_lit_jacket_bands"] = 1
+	var bad_l5 := PackedStringArray([l5[0].replace("difference p50 +0.5 pp p95 +2.7 pp", "difference p50 +0.5 pp p95 +6.0 pp"), l5[1]])
+	var bad := LookProbe.final_rows({"t3": bad_t3, "t8": t8, "t1": bad_t1, "t5": {"jab_flash_white_share_of_view": 0.07, "jab_flash_hit_landed": true}}, bad_l5, 3.75, 0.8, tint_hue)
+	for id: String in ["L1", "L2", "L3", "L5"]:
+		assert_eq(bad[id].state, "missed", "%s misses: %s" % [id, bad[id].text])
+	assert_eq(bad.L1.misses.size(), 2, "the 5.1 px side and the 2.4 px crown")
+	# Nothing measured (a headless run draws nothing): "not measured", never a pass.
+	var none := LookProbe.final_rows({}, PackedStringArray(), 3.75, 0.8, tint_hue)
+	for id: String in ["L1", "L2", "L3", "L5"]:
+		assert_eq(none[id].state, "not measured", id)
+	assert_eq(LookProbe.final_lines(none).size(), 4)
