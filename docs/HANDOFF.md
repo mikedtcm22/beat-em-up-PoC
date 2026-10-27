@@ -22,7 +22,8 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
   - re-record E1 and E2 with the real hulls, and check for doubled lines;
   - the edge pass has not yet run over the real toon materials.
 - **Concept pick:** none yet (DM read at 01:30).
-- **Next:** SL-int (`docs/reviews/M4/args-SL.json`, its note updated to this state), then the slice gate.
+- **Running:** SL-int, launched at 01:40 as Workflow run `wf_9934521a-9bf` (script `docs/reviews/M4/workflow-build.js`, args `docs/reviews/M4/args-SL.json` plus `"only": ["SL-int"]`; worktree `.worktrees/m4-sl-int`, branch `m4/sl-int`). To resume after a stop: `Workflow({scriptPath: "docs/reviews/M4/workflow-build.js", resumeFromRunId: "wf_9934521a-9bf", args: <the same>})`, or relaunch it fresh; the runner resumes from the branch state.
+- **Next:** when SL-int lands, merge it, then the slice gate (`docs/reviews/M4/workflow-review.js`, round "slice").
 
 ### 2026-10-27 00:25 CDT: P1-fx merged; only P1-post is still running in phase 1
 - **Merged:**
