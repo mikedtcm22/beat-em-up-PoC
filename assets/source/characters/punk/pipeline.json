@@ -163,11 +163,7 @@
 				"bisect_strap": false,
 				"collar": {
 					"margin_m": 0.004,
-					"inner_inset_m": 0.003,
-					"outline_bins": 24,
-					"outline_percentile": 90,
-					"outline_window_m": 0.015,
-					"outline_floor_m": 0.01,
+					"outline_bins": 48,
 					"rings": [
 						[
 							0.008,
@@ -190,40 +186,56 @@
 							0.0
 						],
 						[
-							0.054,
+							0.052,
 							0.95,
 							0.0
 						],
 						[
-							0.059,
+							0.057,
 							1.0,
 							0.0
 						]
 					],
 					"rim": [
 						[
-							-0.01,
+							-0.011,
 							0.0
 						],
 						[
-							-0.006,
+							-0.008,
+							0.0012
+						],
+						[
+							-0.005,
+							0.003
+						],
+						[
+							-0.0015,
 							0.0015
 						],
 						[
-							-0.003,
-							0.0028
-						],
-						[
-							-0.0008,
-							0.0032
-						],
-						[
 							0.0,
-							0.002
+							-0.002
 						]
 					],
 					"arm_trim_above_block_m": 0.0615,
-					"length_m": 0.071
+					"length_m": 0.071,
+					"outline_harmonics": 4,
+					"outline_above_m": 0.0005,
+					"ring_step_m": 0.004,
+					"clearance_top_m": 0.006,
+					"clearance_step_m": 0.002,
+					"min_clearance_m": 0.001,
+					"lip": [
+						[
+							-0.0015,
+							-0.0015
+						],
+						[
+							-0.005,
+							-0.003
+						]
+					]
 				}
 			},
 			"wrist_radius_m": 0.062,

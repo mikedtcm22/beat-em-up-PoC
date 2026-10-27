@@ -21,10 +21,19 @@ image and the detail mask (A18) is baked from both. Every number is in pipeline.
 of the generation (the fraction of the model's height where the strap's lower and upper edges sit) are config, not code.
 
 F-punk-fix: with `parts.fists.generated.collar` the generated cuff and strap (everything above the strap's lower plane, torn
-flaps and a ragged rim) are thrown away and a clean COLLAR is built in their place (`build_collar`): a surface of revolution
-that starts at the block's top loop, funnels out to the arm's own outline plus a margin, carries a low ridge where the strap
-was, runs up to a rolled rim `cuff_over_m` above the arm's cut and closes inward, inside the arm. The collar is one colour (the
-glove's: the palette step labels its faces from the `pipe_collar` attribute) and takes no ink; the strap is no longer a colour.
+flaps and a ragged rim) are thrown away and a clean COLLAR is built in their place (`build_collar`). The collar is one colour
+(the glove's: the palette step labels its faces from the `pipe_collar` attribute) and takes no ink; the strap is no longer a colour.
+
+F-cuff: the collar is a WRIST CUFF, the concept's dark band about as wide as the back of the glove, not a flange. It is a surface
+of revolution lofted from the block's top loop (the glove's neck) up the forearm: a long gentle funnel (`rings`, each a height
+above the block's top and how far it has blended from the loop's shape to the forearm's outline) that reaches the outline
+`margin_m` over the forearm at `full_z_m`, a band that follows the forearm's own cross-section there (`arm_section`: the arm's
+surface sliced at the ring's height, smoothed to a few Fourier harmonics and never inside the slice), a slight flare (`rim`), and
+a rolled lip that closes inward inside the arm (`lip`). The collar's size comes from its LENGTH (`length_m`, the same on both
+sides) and the forearm's own outline, never from a flange. The arm's lower end (the Tripo glove's torn, flared cuff remains) is
+trimmed away above `arm_trim_above_block_m` (blender_parts), so the cuff hugs the forearm proper and not the remains. The
+collar's skin clearance (the gap between its radius and the arm's slice along the band) is reported and must stay above
+`min_clearance_m`, or the run fails.
 """
 import math
 import os
@@ -237,7 +246,7 @@ def make_side(src, side, box, cut, p_hand, d, gen, pf):
 	wparams.update({"p_hand": p_hand, "d": np.asarray(d, dtype=np.float64)})
 	collar_info = None
 	if collar:
-		collar_info = {"cfg": collar, "R": R, "p_hand": np.asarray(p_hand, dtype=np.float64), "z_block_top": z_block_top, "top": top, "z_cut": z_cut,
+		collar_info = {"cfg": collar, "R": R, "p_hand": np.asarray(p_hand, dtype=np.float64), "z_block_top": z_block_top, "top": top,
 			"arm_tris": None if cut is None else cut.get("arm_tris")}
 	return {"co": world, "tris": tris, "uv": uv, "wparams": wparams, "report": report, "bisect": planes if gen.get("bisect_strap", True) else None,
 		"collar": collar_info}
@@ -308,13 +317,13 @@ def _chords(t, z):
 
 
 def build_collar(me, part, uv_name):
-	"""Replace the generated cuff and strap by the clean collar (module doc). `me` is the fist's mesh in the WORLD, already cut
+	"""Replace the generated cuff and strap by the wrist cuff (module doc). `me` is the fist's mesh in the WORLD, already cut
 	along the strap's lower plane; returns a report dict. The faces above the plane are deleted, the loop the cut leaves on the
-	block is the collar's first ring, and rings of the same vertex count are lofted from it to the rim."""
+	block is the collar's first ring, and rings of the same vertex count are lofted from it to the rim and back inside the arm."""
 	info = part["collar"]
 	cfg = info["cfg"]
 	R, p = info["R"], info["p_hand"]
-	z_bt, top, z_cut = info["z_block_top"], info["top"], info["z_cut"]
+	z_bt, top = info["z_block_top"], info["top"]
 	arm = info["arm_tris"]
 	if arm is None:
 		pc.fail("collar: no arm surface to take the outline from")
@@ -369,11 +378,10 @@ def build_collar(me, part, uv_name):
 	bins = int(cfg.get("outline_bins", 48))
 	harmonics = int(cfg.get("outline_harmonics", 4))
 	margin = float(cfg.get("margin_m", 0.004))
-	inner_in = float(cfg.get("inner_inset_m", 0.003))
-	rows = []  # (z, blend, extra radius in m) from the block's top up the rim
+	rows = []  # (z, blend, extra radius over the margin in m) from the block's top up the crest of the rim
 	for dz, blend, extra in cfg["rings"]:
 		rows.append((z_bt + float(dz), float(blend), float(extra)))
-	for dz, extra in cfg.get("rim", []):  # the rolled rim: heights below the top, each a little wider than the band
+	for dz, extra in cfg.get("rim", []):  # the flare and the roll's outer half: heights below the top, each wider than the band by `extra`
 		rows.append((top + float(dz), 1.0, float(extra)))
 	for a, b in zip(rows[:-1], rows[1:]):
 		if b[0] <= a[0]:
@@ -388,11 +396,12 @@ def build_collar(me, part, uv_name):
 			filled.append((a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f))
 		filled.append(b)
 	rows = filled
-	rows.append((top, 1.0, None))  # the inner lip, inside the arm
-	full = [r[0] for r in rows if r[1] >= 1.0 and r[2] is not None]
+	n_up = len(rows)  # the rings that climb; the lip's rings follow, coming back down inside the roll
+	for dz, offset in cfg.get("lip", []):  # the roll's inner half: heights below the top, `offset` from the arm's outline (negative: inside it)
+		rows.append((top + float(dz), 1.0, float(offset) - margin))
+	full = [r[0] for r in rows[:n_up] if r[1] >= 1.0]
 	z_full = min(full) if full else top
-	# the outline is read no lower than the arm's trimmed end (the ragged loop under it is gone), nor lower than the cut plus a floor
-	z_floor = z_bt + float(cfg["arm_trim_above_block_m"])  # the arm's trimmed end: the lowest level its surface is there
+	z_floor = z_bt + float(cfg["arm_trim_above_block_m"])  # the arm's trimmed end: the lowest level its surface is read at
 	ring_vertices = [cycle]
 	ring_z = []
 	ring_centre = []
@@ -403,11 +412,7 @@ def build_collar(me, part, uv_name):
 		a_theta = np.interp(theta, th_o, r_o, period=2.0 * math.pi)
 		centre = c_loop * (1.0 - blend) if blend < 1.0 else np.zeros(2)  # the arm's axis is the hanging frame's origin
 		bl = float(smoothstep(blend))
-		if extra is None:
-			target = a_theta - inner_in
-		else:
-			target = a_theta + margin + extra
-		rho = rho0 * (1.0 - bl) + target * bl
+		rho = rho0 * (1.0 - bl) + (a_theta + margin + extra) * bl
 		pos = np.stack([centre[0] + rho * np.cos(theta), centre[1] + rho * np.sin(theta), np.full(n, z)], axis=1)
 		world = pos @ R.T + p
 		ring = [bm.verts.new(tuple(w)) for w in world]
@@ -432,6 +437,9 @@ def build_collar(me, part, uv_name):
 		if clearance is None or float(gap[worst]) < clearance:
 			clearance = float(gap[worst])
 			clearance_at = [round(float(zq), 4), round(math.degrees(float(th_q[worst])), 1), round(float(r_q[worst]), 4)]
+	if clearance is not None and clearance < float(cfg.get("min_clearance_m", 0.0)):
+		pc.fail("collar: the arm stands only %.2f mm inside the collar at z %.4f (angle %.1f, arm radius %.4f): the skin would show through; the bar is %.2f mm" % (
+			clearance * 1000.0, clearance_at[0], clearance_at[1], clearance_at[2], float(cfg["min_clearance_m"]) * 1000.0))
 	faces_made = 0
 	collar_new = []
 	for j in range(len(ring_vertices) - 1):
@@ -453,7 +461,7 @@ def build_collar(me, part, uv_name):
 	bm.to_mesh(me)
 	bm.free()
 	me.update()
-	return {"loop_vertices": n, "loop_rho_m": [round(float(v), 4) for v in (rho0.min(), np.median(rho0), rho0.max())], "rings": len(rows), "arm_vertices": int(len(arm)), "collar_quads": faces_made, "ring_z_m": [round(float(z), 5) for z in ring_z],
+	return {"loop_vertices": n, "loop_rho_m": [round(float(v), 4) for v in (rho0.min(), np.median(rho0), rho0.max())], "rings": len(rows), "arm_triangles": int(len(arm)), "collar_quads": faces_made, "ring_z_m": [round(float(z), 5) for z in ring_z],
 		"full_z_m": round(float(z_full), 5), "top_z_m": round(float(top), 5), "min_clearance_m": None if clearance is None else round(clearance, 5), "min_clearance_at": clearance_at}
 
 
