@@ -54,6 +54,19 @@ Every Tripo task and every character GLB (Spec §10, steps 2-7). Tripo tasks are
 | Asset | Path | Source / service | License | Notes |
 | --- | --- | --- | --- | --- |
 
+### › Pipeline and fixtures (P1-chain)
+
+The Blender chain (`tools/pipeline/run.py`, M4-plan Part A A2) and the files only it writes. No Tripo task, no Gemini image, no credit.
+
+| Asset | Path | Source / service | License | Notes |
+| --- | --- | --- | --- | --- |
+| Shared palette (source) | `assets/source/palette/shared.json` | Written by hand for the project (slots 0-15: inks, neutrals, skin tones, all low saturation, none in the red band) | Project file | Per-character palette files (`punk.json`, `player.json`) sit beside it; `tools/pipeline/gen_palette.py` builds the atlas from all of them. |
+| Palette atlas | `assets/export/palette/palette_atlas.png` | `tools/pipeline/gen_palette.py` from `assets/source/palette/*.json` (standard library only, byte-reproducible) | Project file (generated) | 256x16 RGBA8, 8 px swatches, slot s at column s % 32, row s // 32. rgb = sRGB colour, alpha 255 = takes damage marks, 128 = does not. Nearest filter, no mipmaps (`.import` params set by run.py). The lead regenerates it after merges (merge=keep-ours). |
+| Probe body, A-pose | `tests/fixtures/art/probe_body.glb` | `tools/pipeline/make_probe_body.py` (a synthetic Tripo-like source: capsules, voxel remesh, painted texture, auto-weighted rig) then the whole chain (`run.py --config tests/fixtures/art/probe_pipeline.json`), Blender 5.2.2 headless | Project file (generated; no third-party content) | The chain's own deterministic test body: 23 named binds, joints on the table chained through the 38 degree arm swing, faces -Z, soles at y 0, `Body` + `Body__fp_hidden` (the player split) with inward caps, UV1 palette, UV2 detail, COLOR hull_normal, 10,022 triangles, the Blender-made fists. 6 swatches. Same input, same report hash. |
+| Probe body, arms-down bake | `tests/fixtures/art/probe_body_rest.glb` | Same chain, variant "rest" (the arm chains rotated back to hanging about the upper-arm joints) | Project file (generated) | The same body in the table's own rest: the bind formula gives R = identity, so it exercises the translation-only path. |
+| Probe pipeline config | `tests/fixtures/art/probe_pipeline.json` | Written for the project | Project file | Every step's parameters; the source is rebuilt, never committed. |
+| Probe report | `tests/fixtures/art/probe_report.json` | Written by `tools/pipeline/run.py` | Project file (generated) | Per-step measurements and the report hash (`run.py --check` rebuilds into a scratch folder and compares). |
+
 ## Look (Milestone 4)
 
 The grade LUT and other look textures (Spec §10, rendering). Rows by P1-post.

@@ -1,0 +1,22 @@
+{
+	"id": "shared",
+	"slot_range": [0, 15],
+	"note": "Slots 0-15 of the shared palette atlas (M4-plan 2.6): inks, neutrals and skin tones every character may use. Low saturation on purpose; nothing in the red band (hue 345-15 deg with saturation above 0.5). marks true = the swatch takes damage marks (atlas alpha 1.0), false = it does not (alpha 0.5, today's DARK).",
+	"swatches": [
+		{"slot": 0, "name": "ink", "srgb": "#120f17", "marks": false},
+		{"slot": 1, "name": "near_black", "srgb": "#2b2833", "marks": false},
+		{"slot": 2, "name": "dark_grey", "srgb": "#4b4854", "marks": true},
+		{"slot": 3, "name": "mid_grey", "srgb": "#8b8793", "marks": true},
+		{"slot": 4, "name": "light_grey", "srgb": "#c9c6cf", "marks": true},
+		{"slot": 5, "name": "off_white", "srgb": "#f1eee6", "marks": true},
+		{"slot": 6, "name": "skin_light", "srgb": "#f0c9a8", "marks": true},
+		{"slot": 7, "name": "skin_tan", "srgb": "#d9a47a", "marks": true},
+		{"slot": 8, "name": "skin_brown", "srgb": "#a8714c", "marks": true},
+		{"slot": 9, "name": "skin_deep", "srgb": "#6e4630", "marks": true},
+		{"slot": 10, "name": "steel", "srgb": "#5c6b7a", "marks": true},
+		{"slot": 11, "name": "canvas", "srgb": "#b9a98a", "marks": true},
+		{"slot": 12, "name": "olive_grey", "srgb": "#6f7466", "marks": true},
+		{"slot": 13, "name": "violet_grey", "srgb": "#6a6478", "marks": true},
+		{"slot": 14, "name": "cream", "srgb": "#e6dcc4", "marks": true}
+	]
+}
