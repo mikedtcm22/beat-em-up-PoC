@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="CharacterArt" format=3]
+
+[ext_resource type="Script" path="res://game/actors/character_art.gd" id="1_art"]
+[ext_resource type="Texture2D" path="res://assets/export/palette/palette_atlas.png" id="2_atlas"]
+
+[resource]
+script = ExtResource("1_art")
+id = &"player"
+palette = ExtResource("2_atlas")
+triangle_budget = 30000
+metadata/scene_path = "res://assets/export/characters/player/player.glb"
+metadata/detail_mask_path = "res://assets/export/characters/player/player_detail.png"

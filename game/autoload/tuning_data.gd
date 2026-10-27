@@ -1233,6 +1233,12 @@ extends Resource
 ## bake), 2 = punk_auto.glb (heat-map weights), 3 = punk_auto_rest.glb. Read when a Punk's body
 ## is built, so set it (a preset never holds it) before the Punks spawn.
 @export_range(0, 3, 1) var look_punk_art_variant: int = 0
+## The player wears the probe body (tests/fixtures/art/probe_body.glb: a mannequin through the real
+## chain, Body + Body__fp_hidden) instead of his primitives, until the hero's GLB exists
+## (F-player-int, M4-plan A14). Read when the player's body is built, so set it (a preset never
+## holds it) before the room loads. With the hero's GLB in place the player wears that and this
+## switch picks the probe over it.
+@export var look_player_art_probe: bool = false
 ## The edge pass's debug view: 0 = the picture, 1 = the roughness buffer (white = the world, black =
 ## a character or the sky), 2 = the normals, 3 = the distance, 4 = the character mask (red),
 ## 5 = only the depth lines, 6 = only the crease lines.
