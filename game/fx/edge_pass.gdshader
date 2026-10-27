@@ -11,8 +11,8 @@ shader_type spatial;
 // - The character mask. A toon material writes ROUGHNESS = 0 on a character (the "edge tag"),
 //   1 elsewhere, and the buffer carries it. The hull draws a character's silhouette, so no line
 //   is drawn within `mask_px` of a tagged pixel (a ring of 8 taps: the unshaded hull writes
-//   roughness 1, so one tap is not enough and a depth line would double the hull). The sky is
-//   roughness 0 in the buffer, so it is found from its depth and counted as 1.
+//   roughness 1, so one tap is not enough). The sky is roughness 0 in the buffer, with an empty
+//   (zero) normal, which is how it is told from a character and counted as 1.
 // - Everything is in whole pixels, scaled by the viewport height over 1080.
 //
 // With EDGE_DEPTH_ONLY defined (look_post.gd prepends it for the cheap fallback) the shader
@@ -56,12 +56,10 @@ bool is_sky(ivec2 p, ivec2 size) {
 }
 
 #ifndef EDGE_DEPTH_ONLY
-// Roughness of a pixel, the sky counted as 1. A pixel whose normal is empty (the buffer's clear
-// value, which a silhouette pixel of the MSAA resolve can keep beside real depth) counts as 1 too.
+// Roughness of a pixel, the sky counted as 1: the buffer is cleared to a zero normal there (probed),
+// and a pixel whose normal is empty (a silhouette pixel of the MSAA resolve can keep the clear
+// value beside real depth) counts as 1 too. One fetch, so the mask's ring stays cheap.
 float roughness_at(ivec2 p, ivec2 size) {
-	if (is_sky(p, size)) {
-		return 1.0;
-	}
 	vec4 nr = texelFetch(normal_tex, clamp(p, ivec2(0), size - 1), 0);
 	return length(nr.xyz * 2.0 - 1.0) < 0.5 ? 1.0 : nr.a;
 }
@@ -94,25 +92,11 @@ void fragment() {
 #ifndef EDGE_DEPTH_ONLY
 	vec4 nr0 = texelFetch(normal_tex, clamp(p, ivec2(0), size - 1), 0);
 	rough0 = roughness_at(p, size);
-	if (character_mask) {
-		int mk = int(round(mask_px * scale));
-		if (rough0 < 0.5) {
-			mask = 1.0;
-		} else if (mk > 0) {
-			vec2 dirs[8] = vec2[](vec2(1.0, 0.0), vec2(-1.0, 0.0), vec2(0.0, 1.0), vec2(0.0, -1.0),
-					vec2(0.7071, 0.7071), vec2(-0.7071, 0.7071), vec2(0.7071, -0.7071), vec2(-0.7071, -0.7071));
-			for (int i = 0; i < 8; i++) {
-				if (roughness_at(p + ivec2(round(dirs[i] * float(mk))), size) < 0.5) {
-					mask = 1.0;
-				}
-			}
-		}
-	}
 	// Creases: forward differences (one pixel line), never to the sky, never across a roughness
-	// class, only where the depth is continuous. Inside a character they draw (collars, brims);
-	// just outside one they do not (the hull is the line).
+	// class, only where the depth is continuous.
+	float crease_raw = 0.0;
 	vec3 n0 = nr0.xyz * 2.0 - 1.0;
-	if (!is_sky(p, size) && length(n0) > 0.5 && !(mask > 0.5 && rough0 >= 0.5)) {
+	if (!is_sky(p, size) && length(n0) > 0.5) {
 		n0 = normalize(n0);
 		ivec2 taps[2] = ivec2[](ivec2(k, 0), ivec2(0, k));
 		float sharp = 0.0;
@@ -124,8 +108,27 @@ void fragment() {
 				sharp = max(sharp, 1.0 - dot(n0, normalize(nq)));
 			}
 		}
-		crease_line = smoothstep(normal_threshold * 0.5, normal_threshold, sharp) * depth_gate;
+		crease_raw = smoothstep(normal_threshold * 0.5, normal_threshold, sharp) * depth_gate;
 	}
+	// The character mask. Only a pixel that has a line to lose looks at the ring (or all of them
+	// for the mask's debug view): most pixels have none.
+	if (character_mask) {
+		if (rough0 < 0.5) {
+			mask = 1.0;
+		} else if (depth_line > 0.0 || crease_raw > 0.0 || debug_view == 4) {
+			int mk = int(round(mask_px * scale));
+			vec2 dirs[8] = vec2[](vec2(1.0, 0.0), vec2(-1.0, 0.0), vec2(0.0, 1.0), vec2(0.0, -1.0),
+					vec2(0.7071, 0.7071), vec2(-0.7071, 0.7071), vec2(0.7071, -0.7071), vec2(-0.7071, -0.7071));
+			for (int i = 0; i < 8 && mk > 0; i++) {
+				if (roughness_at(p + ivec2(round(dirs[i] * float(mk))), size) < 0.5) {
+					mask = 1.0;
+				}
+			}
+		}
+	}
+	// Inside a character a crease draws (collars, brims); just outside one it does not (the hull is
+	// the line).
+	crease_line = (mask > 0.5 && rough0 >= 0.5) ? 0.0 : crease_raw;
 #endif
 	if (mask > 0.5) {
 		depth_line = 0.0;

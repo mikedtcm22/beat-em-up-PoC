@@ -183,8 +183,11 @@ func _apply_grade() -> void:
 
 func _apply_aa() -> void:
 	var mode := aa_settings(Tuning.data.look_aa_mode)
-	_viewport.msaa_3d = mode.msaa
-	_viewport.screen_space_aa = mode.ssaa
+	# Only a change is written: a viewport re-makes its render buffers when its MSAA mode moves.
+	if _viewport.msaa_3d != mode.msaa:
+		_viewport.msaa_3d = mode.msaa
+	if _viewport.screen_space_aa != mode.ssaa:
+		_viewport.screen_space_aa = mode.ssaa
 	_aa_applied = {msaa = _viewport.msaa_3d, ssaa = _viewport.screen_space_aa}
 
 

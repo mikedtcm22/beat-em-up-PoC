@@ -39,7 +39,7 @@ const MEASURE_STEP := 4
 const LINE_ROW_STEP := 3
 ## E2's spheres: radius and eye height (m), the distance ahead and the gap between two (m), the
 ## scan across a sphere's left edge (in sphere radii from its centre) and how the hull's width is
-## picked: the first dark run from the outside.
+## picked: the last dark run, the one at the sphere's body.
 const SPHERE_RADIUS_M := 0.45
 const SPHERE_HEIGHT_M := 1.45
 const SPHERE_AHEAD_M := 3.2
@@ -192,9 +192,9 @@ static func _mask_probe(bot: Node) -> void:
 		var values := {}
 		for sphere: Dictionary in spheres:
 			var key: String = sphere.name
-			values["%s_hull_px_edges_off" % key] = _outer_run_1080(hull_only, camera, sphere)
-			values["%s_hull_px_mask_on" % key] = _outer_run_1080(mask_on, camera, sphere)
-			values["%s_hull_px_mask_off" % key] = _outer_run_1080(mask_off, camera, sphere)
+			values["%s_px_edges_off" % key] = _hull_run_1080(hull_only, camera, sphere)
+			values["%s_px_mask_on" % key] = _hull_run_1080(mask_on, camera, sphere)
+			values["%s_px_mask_off" % key] = _hull_run_1080(mask_off, camera, sphere)
 		_metric(bot, "e2", values)
 	for sphere: Dictionary in spheres:
 		(sphere.node as Node).queue_free()
@@ -242,9 +242,10 @@ static func _shader_material(code: String) -> ShaderMaterial:
 	return material
 
 
-## The width, at 1080p, of the outermost dark run on a scan across the left edge of `sphere` (its
-## hull, plus whatever line the edge pass drew beside it); 0 when none.
-static func _outer_run_1080(image: Image, camera: Camera3D, sphere: Dictionary) -> float:
+## The width, at 1080p, of the dark run at the foot of the scan across the left edge of `sphere`: the
+## run that ends at its bright body, so a hull (and whatever line the edge pass drew beside it) and
+## not a building's line further out; 0 when there is none.
+static func _hull_run_1080(image: Image, camera: Camera3D, sphere: Dictionary) -> float:
 	var scale_to_image := float(image.get_width()) / camera.get_viewport().get_visible_rect().size.x
 	var centre := camera.unproject_position(sphere.centre) * scale_to_image
 	var edge := camera.unproject_position(sphere.centre + camera.global_basis.x * SPHERE_RADIUS_M) * scale_to_image
@@ -255,4 +256,4 @@ static func _outer_run_1080(image: Image, camera: Camera3D, sphere: Dictionary) 
 	var runs := LookProbe.dark_runs(image, from, to)
 	if runs.is_empty():
 		return 0.0
-	return snappedf(float(runs[0]) * LookProbe.to_1080p(image.get_height()), 0.01)
+	return snappedf(float(runs[runs.size() - 1]) * LookProbe.to_1080p(image.get_height()), 0.01)

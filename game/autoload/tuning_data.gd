@@ -1069,8 +1069,9 @@ extends Resource
 ## How sharp a corner draws a crease line: one minus the dot product of the two neighbouring
 ## surface normals (0 = flat, 1 = a right angle).
 @export_range(0.05, 1.0, 0.01) var look_edge_normal_threshold: float = 0.35
-## The lines fade out between these two distances (m): the look bible's 25 m to 60 m.
+## The lines start to fade out at this distance (m): the look bible's 25 m.
 @export_range(1.0, 200.0, 1.0) var look_edge_fade_start_m: float = 25.0
+## ... and are gone at this one (m): the look bible's 60 m.
 @export_range(2.0, 300.0, 1.0) var look_edge_fade_end_m: float = 60.0
 ## The character mask's reach in pixels at 1080p: no edge line is drawn this close to a drawn
 ## character, whose hull is the line there (the hull's width bound is 4.5 px).
