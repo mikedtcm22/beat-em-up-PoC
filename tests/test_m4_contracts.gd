@@ -2,9 +2,10 @@ extends GutTest
 ## The Milestone 4 contract scaffold (M4-plan Part C §2 as amended by Part A, package
 ## S0-contract): every seam, signature, tunable and data file the art packages build on, tested
 ## on its own before any of them lands. With `art == null` nothing here changes the M3 game:
-## the rig builds its 41/45 primitives, every material is today's StandardMaterial3D, and the
-## room, the pipe and the tuning panel behave as before. The art itself (SkinnedArt, the toon
-## shader, the edge pass) is tested by the packages that build it.
+## the rig builds its 41/45 primitives, and the room, the pipe and the tuning panel behave as
+## before (P1-toon since made every material the toon shader's and gave the placeholders their
+## hulls: see the notes where a test changed). The art itself (SkinnedArt, the toon shader, the
+## edge pass) is tested by the packages that build it.
 
 const DUMP := preload("res://tools/pipeline/dump_joints.gd")
 const JOINTS_PATH := "res://tools/pipeline/joints.json"
@@ -72,8 +73,10 @@ func test_the_contract_signatures_exist() -> void:
 		},
 		"res://game/actors/skinned_art.gd": {&"attach": [2, true], &"check": [1, true]},
 		"res://game/fx/toon_materials.gd": {
-			&"character": [1, true], &"art": [2, true], &"outline": [0, true], &"prop": [1, true],
-			&"outline_for_prop": [0, true], &"environment": [1, true], &"grid": [0, true], &"warm_up": [2, true],
+			# P1-toon: character() and environment() gained optional parameters (takes_marks and
+			# glossy; hulled), which the argument count includes (was 1 and 1).
+			&"character": [3, true], &"art": [2, true], &"outline": [0, true], &"prop": [1, true],
+			&"outline_for_prop": [0, true], &"environment": [2, true], &"grid": [0, true], &"warm_up": [2, true],
 		},
 		"res://game/actors/humanoid_rig.gd": {
 			&"has_art": [0, false], &"art_meshes": [0, false], &"set_art_shown": [1, false],
@@ -135,8 +138,12 @@ func test_a_rig_without_art_builds_exactly_the_m3_primitives() -> void:
 		assert_eq(meshes.size(), PlaceholderBody.parts(wrapped).size())
 		for mesh: MeshInstance3D in meshes:
 			assert_true(mesh.visible, "%s drawn" % mesh.name)
-			assert_null(mesh.material_overlay, "%s has no outline yet" % mesh.name)
-			assert_true(mesh.material_override is StandardMaterial3D, "%s: today's material" % mesh.name)
+			# P1-toon (A7): every placeholder has its hull on material_overlay and the toon
+			# shader's material (was: no overlay, a StandardMaterial3D).
+			assert_true(mesh.material_overlay is ShaderMaterial, "%s has its hull" % mesh.name)
+			assert_eq((mesh.material_overlay as ShaderMaterial).shader, ToonMaterials.OUTLINE_SHADER, "%s: the hull's shader" % mesh.name)
+			assert_true(mesh.material_override is ShaderMaterial, "%s: a toon material" % mesh.name)
+			assert_eq((mesh.material_override as ShaderMaterial).shader, ToonMaterials.TOON_SHADER, "%s: the toon shader" % mesh.name)
 			assert_false(mesh.is_in_group(HumanoidRig.VIEW_PROXY_GROUP), "%s is no proxy" % mesh.name)
 			assert_false(mesh.is_in_group(HumanoidRig.ART_GROUP), "%s is no art" % mesh.name)
 		assert_false(rig.has_art())
@@ -208,14 +215,16 @@ func test_rig_paint_holds_the_rigs_materials_and_colors() -> void:
 	rig.build_hurtboxes = false
 	add_child_autofree(rig)
 	rig.build()
-	var mats: Dictionary[int, StandardMaterial3D] = rig.get(&"_materials")
+	var mats: Dictionary[int, ShaderMaterial] = rig.get(&"_materials")
 	assert_true(is_same(mats, rig.paint.materials), "the rig's dictionary is the paint's")
 	assert_eq(mats.size(), PlaceholderBody.Paint.values().size())
 	for paint: int in mats:
 		assert_same(rig.paint.material(paint), mats[paint])
-		assert_eq(rig.paint.color_of(paint), mats[paint].albedo_color)
-		assert_eq(mats[paint].emission_energy_multiplier, 0.0)
-		assert_true(mats[paint].emission_enabled, "emission on from the build, so the parry flash never switches variants")
+		assert_eq(rig.paint.color_of(paint), mats[paint].get_shader_parameter(&"albedo"))
+		# P1-toon: the flash is a uniform of the one toon shader, at 0 from the build (was
+		# emission_energy_multiplier 0 with emission enabled); the shader is every paint's.
+		assert_eq(mats[paint].get_shader_parameter(&"flash_amount"), 0.0)
+		assert_eq(mats[paint].shader, ToonMaterials.TOON_SHADER, "the parry flash never switches variants: one shader")
 	assert_eq(rig.paint.color_of(PlaceholderBody.Paint.BODY), Color(0.1, 0.2, 0.3), "set before build(), applied at it")
 	assert_eq(rig.paint.color_of(PlaceholderBody.Paint.PANTS), Color(0.1, 0.2, 0.3).darkened(RigPaint.PANTS_DARKEN))
 	assert_eq(rig.paint.color_of(PlaceholderBody.Paint.DARK), RigPaint.DARK_COLOR)
@@ -227,8 +236,9 @@ func test_rig_paint_holds_the_rigs_materials_and_colors() -> void:
 	assert_eq(rig.paint.color_of(PlaceholderBody.Paint.SKIN), Color.BLUE)
 	assert_eq(rig.paint.base_materials().size(), mats.size(), "no art, so just the primitives'")
 	assert_null(rig.paint.art_material(), "no art, no art material")
-	assert_null(rig.paint.outline_material(), "no outline yet")
-	assert_null(rig.paint.outline_material_for(PlaceholderBody.parts()[0]), "no outline yet")
+	# P1-toon: the hulls exist (was: both null, no outline yet).
+	assert_not_null(rig.paint.outline_material(), "the art's hull")
+	assert_not_null(rig.paint.outline_material_for(PlaceholderBody.parts()[0]), "a placeholder's hull (A7)")
 
 
 func test_rig_paint_flash_damage_and_overlay_reach_every_base_material() -> void:
@@ -236,22 +246,24 @@ func test_rig_paint_flash_damage_and_overlay_reach_every_base_material() -> void
 	rig.art = _art()
 	add_child_autofree(rig)
 	rig.build()
-	var art_mat := rig.paint.art_material() as StandardMaterial3D
+	var art_mat := rig.paint.art_material() as ShaderMaterial
 	assert_not_null(art_mat, "a rig with art has an art material")
 	assert_same(rig.paint.art_material(), art_mat, "one per rig")
-	assert_eq(art_mat.albedo_texture, rig.art.palette, "the palette atlas")
-	assert_eq(art_mat.texture_filter, BaseMaterial3D.TEXTURE_FILTER_NEAREST, "nearest, no blur between swatches")
+	assert_eq(art_mat.get_shader_parameter(&"albedo_tex"), rig.art.palette, "the palette atlas")
+	assert_eq(art_mat.shader, ToonMaterials.TOON_SHADER, "the toon shader")
+	# Nearest, no blur between swatches: a sampler hint now, was texture_filter NEAREST.
+	assert_string_contains(ToonMaterials.TOON_SHADER.code, "uniform sampler2D albedo_tex : source_color, filter_nearest")
 	var bases := rig.paint.base_materials()
 	assert_eq(bases.size(), PlaceholderBody.Paint.values().size() + 1, "the primitives' and the art's")
 	assert_has(bases, art_mat)
 	rig.set_flash(0.8, Color.CYAN)
 	for base: Material in bases:
-		var mat := base as StandardMaterial3D
-		assert_eq(mat.emission, Color.CYAN)
-		assert_almost_eq(mat.emission_energy_multiplier, 0.8, 0.0001, "the parry flash covers the art too")
+		var mat := base as ShaderMaterial
+		assert_eq(mat.get_shader_parameter(&"flash_color"), Color.CYAN)
+		assert_almost_eq(float(mat.get_shader_parameter(&"flash_amount")), 0.8, 0.0001, "the parry flash covers the art too")
 	rig.set_flash(0.0)
 	for base: Material in bases:
-		assert_eq((base as StandardMaterial3D).emission_energy_multiplier, 0.0)
+		assert_eq((base as ShaderMaterial).get_shader_parameter(&"flash_amount"), 0.0)
 	rig.flash_at(Vector3(0.0, 1.0, -0.3), 1.0, 0.5, 0.5)
 	var overlay := rig.flash_overlay()
 	assert_not_null(overlay, "a contact flash runs")
@@ -261,7 +273,7 @@ func test_rig_paint_flash_damage_and_overlay_reach_every_base_material() -> void
 	for base: Material in bases:
 		assert_null(base.next_pass, "and gone when cleared")
 	rig.set_damage_look(DamageLook.Level.BRUISED)
-	assert_eq(rig.paint.materials[PlaceholderBody.Paint.SKIN].detail_albedo, VfxArt.texture(&"damage_bruised"),
+	assert_eq(rig.paint.materials[PlaceholderBody.Paint.SKIN].get_shader_parameter(&"damage_tex"), VfxArt.texture(&"damage_bruised"),
 			"the damage look still marks the primitives")
 
 
@@ -277,33 +289,35 @@ func test_rig_paint_warm_up_adds_nothing_headless() -> void:
 # --- ToonMaterials, RoomKit and the pipe: the call sites keep today's materials ---------------
 
 
-func test_toon_material_stubs_keep_todays_recipes() -> void:
-	var prop := ToonMaterials.prop(Color(0.1, 0.2, 0.3)) as StandardMaterial3D
-	assert_not_null(prop, "the pipe's material is the StandardMaterial3D recipe for now")
-	assert_eq(prop.albedo_color, Color(0.1, 0.2, 0.3))
-	assert_eq(prop.roughness, 0.5)
-	assert_almost_eq(prop.metallic, 0.4, 0.0001)
-	var env := ToonMaterials.environment(Color(0.4, 0.3, 0.2)) as StandardMaterial3D
-	assert_not_null(env, "the room's flat material is the StandardMaterial3D recipe for now")
-	assert_eq(env.albedo_color, Color(0.4, 0.3, 0.2))
-	assert_almost_eq(env.roughness, 0.9, 0.0001)
+## P1-toon: was test_toon_material_stubs_keep_todays_recipes, which pinned the StandardMaterial3D
+## recipes (prop rough 0.5 / metal 0.4, environment rough 0.9, the stub nulls). The factories now
+## return the toon shader's materials; the colors, the grid's shader and the warm-up no-op are
+## kept, and the recipes' roughness and metal are the toon look's (test_toon.gd).
+func test_toon_material_factories_return_the_toon_materials() -> void:
+	var prop := ToonMaterials.prop(Color(0.1, 0.2, 0.3))
+	assert_eq(prop.shader, ToonMaterials.TOON_SHADER, "the pipe's material is the toon shader")
+	assert_eq(prop.get_shader_parameter(&"albedo"), Color(0.1, 0.2, 0.3))
+	var env := ToonMaterials.environment(Color(0.4, 0.3, 0.2))
+	assert_eq(env.shader, ToonMaterials.TOON_SHADER, "the room's flat material is the toon shader")
+	assert_eq(env.get_shader_parameter(&"albedo"), Color(0.4, 0.3, 0.2))
 	var grid := ToonMaterials.grid() as ShaderMaterial
 	assert_not_null(grid)
 	assert_eq(grid.shader, load(GRID_SHADER_PATH), "the grey-box floor grid's shader")
-	assert_null(ToonMaterials.outline_for_prop(), "no hull yet")
-	assert_null(ToonMaterials.outline())
-	assert_null(ToonMaterials.character(Color.RED))
-	assert_null(ToonMaterials.art(null))
+	assert_eq(ToonMaterials.outline_for_prop().shader, ToonMaterials.OUTLINE_SHADER, "the pipe's hull (A7)")
+	assert_eq(ToonMaterials.outline().shader, ToonMaterials.OUTLINE_SHADER)
+	assert_not_null(ToonMaterials.character(Color.RED))
+	assert_not_null(ToonMaterials.art(null))
 	var children := get_child_count()
 	ToonMaterials.warm_up(self)
-	assert_eq(get_child_count(), children, "warming up is a no-op until there are variants")
+	assert_eq(get_child_count(), children, "warming up is a no-op without a window")
 
 
 func test_room_kit_materials_delegate_to_toon_materials() -> void:
 	var flat := RoomKit.flat_material(Color(0.42, 0.4, 0.44))
-	assert_true(flat is StandardMaterial3D, "today's recipe, typed Material")
-	assert_eq((flat as StandardMaterial3D).albedo_color, Color(0.42, 0.4, 0.44))
-	assert_almost_eq((flat as StandardMaterial3D).roughness, 0.9, 0.0001)
+	# P1-toon: the toon shader's material (was today's StandardMaterial3D recipe, rough 0.9).
+	assert_true(flat is ShaderMaterial, "a toon material, typed Material")
+	assert_eq((flat as ShaderMaterial).shader, ToonMaterials.TOON_SHADER)
+	assert_eq((flat as ShaderMaterial).get_shader_parameter(&"albedo"), Color(0.42, 0.4, 0.44))
 	assert_not_same(RoomKit.flat_material(Color.WHITE), RoomKit.flat_material(Color.WHITE), "one material per call, as before")
 	var grid := RoomKit.grid_material()
 	assert_true(grid is ShaderMaterial)
@@ -319,12 +333,13 @@ func test_the_pipe_takes_its_material_and_overlay_from_toon_materials() -> void:
 	var mesh := meshes[0] as MeshInstance3D
 	var cylinder := mesh.mesh as CylinderMesh
 	assert_not_null(cylinder)
-	var mat := cylinder.material as StandardMaterial3D
-	assert_not_null(mat, "the pipe's material, today's recipe")
-	assert_eq(mat.albedo_color, Color(0.2, 0.3, 0.4))
-	assert_eq(mat.roughness, 0.5)
-	assert_almost_eq(mat.metallic, 0.4, 0.0001)
-	assert_null(mesh.material_overlay, "no hull yet")
+	var mat := cylinder.material as ShaderMaterial
+	assert_not_null(mat, "the pipe's toon material")
+	assert_eq(mat.shader, ToonMaterials.TOON_SHADER)
+	assert_eq(mat.get_shader_parameter(&"albedo"), Color(0.2, 0.3, 0.4))
+	# P1-toon (A7): the pipe has a hull (was: no overlay), and its material is the toon shader's
+	# (was rough 0.5 / metal 0.4).
+	assert_eq((mesh.material_overlay as ShaderMaterial).shader, ToonMaterials.OUTLINE_SHADER, "the pipe's hull")
 
 
 # --- Tuning: the Look group --------------------------------------------------------------------

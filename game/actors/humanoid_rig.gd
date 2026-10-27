@@ -133,8 +133,6 @@ const _FALL_HEAD_SLACK := 0.02
 ## straight fade would point the spine this much higher (y of its unit up axis) than it
 ## points at either end.
 const _ROLL_MIN_GAIN := 0.1
-## The contact flash's overlay shader (flash_at()).
-const _FLASH_SHADER := preload("res://game/fx/hit_flash.gdshader")
 
 ## The named animation libraries built so far, per stance and scale (see _named_library()).
 static var _named_libraries: Dictionary[String, AnimationLibrary] = {}
@@ -152,7 +150,7 @@ var _hurt_shapes: Array[CollisionShape3D] = []
 var _hurt_specs: Array[PlaceholderBody.HurtSpec] = []
 ## Paint (PlaceholderBody.Paint) -> material. One set per rig so flashes stay per actor. The
 ## dictionary RigPaint fills (paint.materials).
-var _materials: Dictionary[int, StandardMaterial3D] = {}
+var _materials: Dictionary[int, ShaderMaterial] = {}
 ## The contact flash's overlay (flash_at()), made on first use: every material's next_pass
 ## while it runs, nobody's otherwise. Its point, in the frame of the bone node nearest it.
 var _flash_overlay: ShaderMaterial
@@ -462,7 +460,7 @@ func flash_at(point: Vector3, strength: float, radius: float, core: float,
 	RigPaint.end_warm_up()
 	if _flash_overlay == null:
 		_flash_overlay = ShaderMaterial.new()
-		_flash_overlay.shader = _FLASH_SHADER
+		_flash_overlay.shader = RigPaint.FLASH_SHADER
 		# First among the transparent passes, so the comic effects draw over it.
 		_flash_overlay.render_priority = Material.RENDER_PRIORITY_MIN
 	_flash_anchor = self
