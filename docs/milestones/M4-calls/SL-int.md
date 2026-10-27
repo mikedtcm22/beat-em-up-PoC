@@ -53,10 +53,18 @@ Package SL-int (phase 1c, M4-plan Part C section 6 with Part A A4, A12, A15, A16
 - *Alternative.* Accept the exit errors in the A/B logs.
 - *Why not.* A12: no `ERROR` in any evidence log.
 
+**C11. The warm-up's Punk art is held for the run (final review, V6-01).**
+- *Decision.* `RoomKit.warm_art()` loads `punk_art.tres` once and holds it in a static (`RoomKit._warm_art`, as `PlayerCharacter` holds the hero's art in `_hero_art`); the throwaway rig of `warm_up_art()` wears it (`RoomKit.build_warm_rig()`, the rig's building split out of `warm_up_art()` so a test can drive it headless) and is freed as before. The hold keeps the `CharacterArt` alive, so `SkinnedArt`'s cache `Entry` (which holds its art only by `WeakRef`) survives the rig, and a Street Punk's scene, which loads the same resource by path, gets that art and that entry: no `SkinnedArt._read()` on a Punk's spawn frame. `RoomKit.release_warm_art()` lets go (tests, and the W1 act, which checks that a room's load holds it again: `LOOK-WARM <room>: OK ... the Punk's art held after its rig is freed: true`).
+- *Alternative.* Make `SkinnedArt.Entry` hold its art strongly (only `clear_cache()` releases it); or hold the art on the room node.
+- *Why not.* A strong `Entry` gives up the documented weak cache (a freed art drops out of it; ARCHITECTURE "Skinned art on the rig") for every art, to fix one holder's omission; the weak cache stays, and `tests/test_art_warm_cache.gd` has a test that it does. A hold on the room node dies with the room, and the next room's first Punk would read again until its own warm-up ran. The static is one resource, and the F6 switch between the two rooms keeps it.
+- *What was wrong.* C4 above said the warm-up was "not measured to help" the first-spawn hitch. It could not have: the rig was the only holder of the art, so it was freed at the room's first frame with the art, and the first Punk of the first wave (3 s later) and of every later wave, once the street had emptied, read `punk.glb` on its spawn frame. Headless, on this loaded machine, a spawn read it in 19.3, 19.2 and 17.6 ms in three runs (and 18.7 ms for the first Punk of a later wave, V6's probe); with the hold the same spawn is 3.1 ms, the first Punk of the next wave 2.1 ms (`ART-WARM` lines of `tests/test_art_warm_cache.gd`). A16's `perf_compare.sh` re-measure is the lead's, on a quiet run (not run here).
+
 ## 2. Assertions that changed
 
 One, forced by the perf act the plan asks this package to add to `look_acts.gd`:
 - `tests/test_look_acts.gd::test_the_act_file_holds_the_plans_acts_with_their_slugs`: `assert_eq(slugs, SLUGS, ...)` (the 12 slugs C1-C11 and C13) to `assert_eq(slugs.slice(0, SLUGS.size()), SLUGS, ...)` plus `assert_eq(slugs.slice(SLUGS.size()), [&"p1"], ...)`: the plan's acts stay first and in order, and the perf act is the one after them. Twin on the visible path: the new `test_the_perf_act_runs_six_art_punks_with_the_probe_on` (the title, the camera, the probe, the callable, no other title holding it or held by it), and `test_every_title_picks_only_its_own_act`, which already walks every title, passes with the new one.
+
+C11 adds `tests/test_art_warm_cache.gd` (8 tests), and `RoomKit.warm_up_art()` still does nothing headless (`test_art_punk` and `test_flash_fp` hold that).
 
 Nothing else: the full suite passes with the Punk in art and no other existing test edited (every test that builds a `StreetPunk` measures its proxies, A4: `FPView` counts the hidden primitives, never the art; the hurtboxes, rig points and reaches are the rig's). The count rose by `tests/test_art_punk.gd` (14) and the new `test_look_acts` test (1).
 

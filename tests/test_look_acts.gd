@@ -13,6 +13,8 @@ const SLUGS: Array[StringName] = [&"c1", &"c2", &"c3", &"c4", &"c5", &"c6", &"c7
 const FIRST_ACT := "Look: Punk face"
 ## The longest an act may take in the tests (physics ticks).
 const MAX_TICKS := 900
+## The longest the long acts may take: C5 (the chain, the get-up, the health looks and the KO) and C9 (the tour).
+const LONG_MAX_TICKS := 2400
 const ROOM_FRAME := Vector2(1600.0, 900.0)
 
 
@@ -61,9 +63,9 @@ func _ticks(n: int) -> void:
 ## Run `bot` (already in the tree) until its acts are done, at most MAX_TICKS ticks; the log lines
 ## printed during the act, and what the bot looked like at its `start` mark: {caption_visible,
 ## ai_frozen, god_mode}.
-func _run_bot(bot: Variant) -> Dictionary:
+func _run_bot(bot: Variant, max_ticks: int = MAX_TICKS) -> Dictionary:
 	var seen := {}
-	for i in MAX_TICKS:
+	for i in max_ticks:
 		await get_tree().physics_frame
 		if seen.is_empty() and bot.log_lines.size() > 0:
 			for line: String in bot.log_lines:
@@ -73,7 +75,7 @@ func _run_bot(bot: Variant) -> Dictionary:
 					break
 		if bot.finished:
 			break
-	assert_true(bot.finished, "the act finished within %d ticks" % MAX_TICKS)
+	assert_true(bot.finished, "the act finished within %d ticks" % max_ticks)
 	return seen
 
 
@@ -271,6 +273,84 @@ func test_c1_runs_headless_and_prints_its_marks_and_rectangles() -> void:
 		regions[rect[3]] = true
 	for region: StringName in LookRect.ALL_REGIONS:
 		assert_true(regions.has(String(region)), "a %s rectangle was printed" % region)
+
+
+func test_c5_keeps_the_default_view_for_the_finishing_jab_and_pitches_down_when_the_ko_starts() -> void:
+	# final-v2-03: the finishing jab launches the Punk about 3 m back, where it lay on the lens's bottom edge at the
+	# default view (only the cap in the frame) for the KO slump and the blink-off, the J10 evidence. The view now
+	# stays at the default through the jab and the launch and pitches down KO_PITCH_DEG once the KO state starts.
+	var bot := QuietBot.new()
+	bot.act_filter = "Look: Punk reacts at 1 m"
+	add_child_autofree(bot)
+	var pitch_at_ko := NAN
+	var ran := 0
+	for i in LONG_MAX_TICKS:
+		await get_tree().physics_frame
+		ran += 1
+		if is_nan(pitch_at_ko) and bot.player != null:
+			for enemy: Node in get_tree().get_nodes_in_group(&"enemy"):
+				if (enemy as CombatActor).state == CombatTypes.ActorState.KO:
+					pitch_at_ko = bot.player.look_pitch
+		if bot.finished:
+			break
+	assert_true(bot.finished, "the act finished within %d ticks (%d)" % [LONG_MAX_TICKS, ran])
+	assert_almost_eq(pitch_at_ko, deg_to_rad(LookActs.DEFAULT_PITCH_DEG), 0.001, "the view is the default on the KO's first frame: the jab and the launch were seen from it")
+	assert_almost_eq(bot.player.look_pitch, deg_to_rad(LookActs.KO_PITCH_DEG), 0.001, "and it ends pitched down onto the body")
+	var frame_of := {}
+	var labels: Array[String] = []
+	for mark in _look_lines(bot, "LOOK-MARK"):
+		labels.append(mark[3])
+		frame_of[mark[3]] = int(mark[2].trim_prefix("f"))
+	for label: String in ["state_ko", "ko_slump", "ko_lying", "ko_blink_off", "ko_blink_on"]:
+		assert_has(labels, label, "C5 marks %s" % label)
+	if not (frame_of.has("state_ko") and frame_of.has("ko_slump") and frame_of.has("ko_lying") and frame_of.has("ko_blink_off") and frame_of.has("ko_blink_on")):
+		return
+	assert_lt(frame_of.state_ko, frame_of.ko_slump, "the KO starts, then the slump")
+	assert_lt(frame_of.ko_slump, frame_of.ko_lying, "then the lying")
+	assert_lt(frame_of.ko_lying, frame_of.ko_blink_off, "then the blink hides it")
+	assert_lt(frame_of.ko_blink_off, frame_of.ko_blink_on, "and shows it again")
+	# The body is in the frame at the slump and in the lying, its head in the upper part of the view: at the default view
+	# the head's rectangle was centred at about 670 px of 900, on the bottom edge's side, and the legs, which come
+	# nearest the lens, filled the rest. (The body's own rectangle is no test: a foot sphere near the lens clips it at 900.)
+	for label: String in ["ko_slump", "ko_lying"]:
+		var rects := {}
+		for rect in _look_lines(bot, "LOOK-RECT"):
+			if rect[2] == "f%d" % frame_of[label]:
+				rects[rect[3]] = Rect2(int(rect[4]), int(rect[5]), int(rect[6]), int(rect[7]))
+		assert_true(rects.has("head") and rects.has("body"), "%s: the head and the body are on the screen" % label)
+		if not rects.has("head"):
+			continue
+		print("LOOK-ACTS C5 %s: the head's rectangle %s" % [label, rects.head])
+		assert_lt((rects.head as Rect2).get_center().y, ROOM_FRAME.y * 0.6, "%s: the head is in the upper 60%% of the frame (%s)" % [label, rects.head])
+
+
+func test_c9s_cast_stands_beside_the_tours_walk_not_on_it() -> void:
+	# final-v4-04: the Punk 3.5 m ahead and the Bruiser 3.5 m behind stood on the two lines the tour walks, and the
+	# open-loop walk pressed against them for most of the act (a Punk's face and then a Bruiser's chest at 0.4 m).
+	# The cast flanks the lane now: the walk keeps its distance from everybody.
+	for entry: Dictionary in LookActs.TOUR_CAST:
+		assert_gte(absf((entry.rel as Vector2).x), 2.0, "%s at %s stands at least 2 m off the player's own line, ahead or behind" % [entry.id, entry.rel])
+	var bot := QuietBot.new()
+	bot.act_filter = "Look: street tour"
+	add_child_autofree(bot)
+	var nearest := INF
+	var ran := 0
+	for i in LONG_MAX_TICKS:
+		await get_tree().physics_frame
+		ran += 1
+		if bot.player != null:
+			for enemy: Node in get_tree().get_nodes_in_group(&"enemy"):
+				var gap := (enemy as Node3D).global_position - (bot.player as Node3D).global_position
+				gap.y = 0.0
+				nearest = minf(nearest, gap.length())
+		if bot.finished:
+			break
+	assert_true(bot.finished, "the act finished within %d ticks (%d)" % [LONG_MAX_TICKS, ran])
+	# Two bodies touch at 0.8 m, the Punk and the player (0.4 m radii; the Bruiser's is wider). On the walk lines the
+	# player stood at 0.8 m or so from them for hundreds of ticks; flanking at 2 m, the nearest any body comes is
+	# well over a metre.
+	print("LOOK-ACTS C9: the nearest the tour comes to anyone: %.2f m" % nearest)
+	assert_gt(nearest, 1.2, "the tour never comes within 1.2 m of anyone (%.2f)" % nearest)
 
 
 func test_the_warm_up_act_runs_and_says_so_when_there_is_no_window() -> void:

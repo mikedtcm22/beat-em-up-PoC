@@ -20,14 +20,14 @@ extends RefCounted
 ## | C2 | Look: Punk body at 1 m | the same at the default 6 degrees down, 3 s idle |
 ## | C3 | Look: Punk strafes at 1 m | a half circle at 1.0-1.3 m (the view follows), then a step in and out |
 ## | C4 | Look: Punk attacks at 1 m | its two-hit punch (jab, cross), then its shove, landing on the player |
-## | C5 | Look: Punk reacts at 1 m | a jab (flinch and flash), P P P P (hook stagger, uppercut launch), the get-up, health 100/65/30%, then a jab finishes it (KO slump, blink-off) |
+## | C5 | Look: Punk reacts at 1 m | a jab (flinch and flash), P P P P (hook stagger, uppercut launch), the get-up, health 100/65/30%, then a jab finishes it: the view keeps the default for the jab and the launch and pitches 30 degrees down once the KO starts (KO slump, lying, blink-off, blink-on) |
 ## | C6 | Look: distances | the Punk at 1, 2.5, 5 and 10 m |
 ## | C7 | Look: lineup | Punk, Kicker, Thug and Bruiser at 2.2 m, the street behind |
 ## | C8 | Look: own limbs | looking 45 degrees down: jab, cross, hook, front kick, block, walking; then 20 down (strikes, guard) and 65 down (walking) |
-## | C9 | Look: street tour | the room's tour with a cast of the four archetypes standing in the street |
+## | C9 | Look: street tour | the room's tour with a cast of the four archetypes standing in the street, flanking the lane the tour walks (not on it) |
 ## | C10 | Look: turntable | free fly camera round the Punk at rest, in the guard and lying (mesh QA) |
 ## | C11 | Look: hold the Punk | grab, three knees, throw |
-## | C13 | Look: Punk, impact frame off | C5 with the impact frame off |
+## | C13 | Look: Punk, impact frame off | C5 with the impact frame off (the same KO view) |
 ## | P1 | Look: Perf, six art Punks | six art Punks and the autopilot for 30 s, frame times logged (A16); no marks, no rectangles |
 ## | W1 | Look: warm-up in the lens | a room's load run again, cold, in a viewport of its own (the crowd room, then the training room): the art warm-up's holder is in the camera's frustum on both frames it is drawn (LOOK-WARM lines); no marks, no rectangles |
 ## | C14 | Look: Punk at 1 m, the long take | one 40 s first-person take of one Punk at 1 m, scripted (game/debug/showcase_script.gd, the same script the F4 "Showcase Punk at 1 m" loops): idle, a turntable, backs off and walks in, taunt, jab and cross, takes a jab, stagger, knockdown, get-up, a face-down fall and get-up, KO |
@@ -60,6 +60,9 @@ const LINEUP_M := 2.2
 ## (combo_bot._reset), a level look and the look down at the player's own limbs.
 const FACE_PITCH_DEG := 8.0
 const DEFAULT_PITCH_DEG := -6.0
+## The view of C5's KO (J10), once the KO state starts: the finishing jab launches the Punk about 3 m back, where
+## it lies on the lens's bottom edge at the default view (only the cap shows), so the view pitches down onto it.
+const KO_PITCH_DEG := -35.0
 const LEVEL_PITCH_DEG := 0.0
 const LIMBS_PITCH_DEG := -45.0
 ## C8's other two looks: where the guard and the strikes are in the view, and where the lead leg and
@@ -99,6 +102,11 @@ const HEALTH_MARK_TICKS := 30
 const SURVIVOR_HEALTH := 100.0
 const FINISH_HEALTH := 5.0
 const BLINK_MAX_TICKS := 600
+## The KO's own beats, in physics ticks (the body's state_frame, KO'd): the longest the finishing jab may take
+## to put it in KO, and the body down and still (the slump's mark). The lying (the last frame before the
+## blink) and the blink's first off and on frames are read from Tuning's ko_linger_s and the body's visibility.
+const KO_START_MAX_TICKS := 90
+const KO_SLUMP_TICKS := 45
 const HEALTH_SHARES: Array[float] = [1.0, 0.65, 0.3]
 ## The distances act: the Punk's distances (m) and how long each is held (1.5 s).
 const DISTANCES_M: Array[float] = [1.0, 2.5, 5.0, 10.0]
@@ -118,12 +126,16 @@ const WALK_TICKS := 60
 const WALK_MARK_TICKS := 20
 ## The street tour's cast: archetype and where it stands (x right, y ahead of the player's start, m).
 ## The first four ring the start for the tour's turn on the spot; the last two flank the lane the tour
-## then walks.
+## then walks. None stands on the tour's two walks (the player's own x axis, ahead and then back: RoomActs
+## _tour() walks open loop, forward, until x > 9 and then back until x < -9): the Punk and the Bruiser, which
+## stood on it at 3.5 m ahead and behind, were walked into and pushed against for most of the act (a Punk's face
+## at 0.4 m, then a Bruiser's chest), so the walk now passes 2 m beside each of them (a body's radius and the
+## player's leave 1.2 m between them).
 const TOUR_CAST: Array[Dictionary] = [
-	{id = &"punk", rel = Vector2(0.0, 3.5)},
+	{id = &"punk", rel = Vector2(2.0, 3.5)},
 	{id = &"kicker", rel = Vector2(-3.5, 0.0)},
 	{id = &"thug", rel = Vector2(3.5, 0.0)},
-	{id = &"bruiser", rel = Vector2(0.0, -3.5)},
+	{id = &"bruiser", rel = Vector2(-2.0, -3.5)},
 	{id = &"punk", rel = Vector2(-2.2, 6.0)},
 	{id = &"thug", rel = Vector2(2.4, 9.0)},
 ]
@@ -462,8 +474,11 @@ static func _attacks(bot: Node) -> void:
 ## The player's jab on the Punk (a flinch, the contact flash), a pause, then P P P P (the jab again,
 ## the hook's stagger, the uppercut's launch), the Punk down and getting up; then its health looks
 ## at 100, 65 and 30% held a second each, and a jab on what is left of it: the KO slump and the
-## blink-off (J10). `impact_frame` false is C13: the finisher's ink print off, so what the Punk does
-## at the hit is not covered.
+## blink-off (J10). The finishing jab and the launch are seen at the default view; once the KO state
+## starts the view pitches down KO_PITCH_DEG, so the body that lies about 3 m back is in the frame
+## (marks `ko_slump`, `ko_lying`, then `ko_blink_off` and `ko_blink_on`, the first frames the body is
+## hidden and shown again; the watcher's `state_ko` is the KO's first frame). `impact_frame` false is
+## C13: the finisher's ink print off, so what the Punk does at the hit is not covered.
 static func _reacts(bot: Node, slug: String, impact_frame: bool = true) -> void:
 	_begin(bot)
 	if not impact_frame:
@@ -498,9 +513,47 @@ static func _reacts(bot: Node, slug: String, impact_frame: bool = true) -> void:
 	CombatEvents.health_changed.emit(punk, punk.health, punk.max_health)
 	var ref: WeakRef = weakref(punk)
 	await bot._press(&"P", 2)
+	# The jab, its flash and the launch keep the default view; the view goes down when the KO starts.
+	await bot._wait_until(func() -> bool: return _in_ko(ref), KO_START_MAX_TICKS)
+	await bot._look_to(KO_PITCH_DEG, PITCH_TICKS)
+	await _ko_marks(bot, slug, ref)
 	await bot._wait_until(func() -> bool: return ref.get_ref() == null, BLINK_MAX_TICKS)
 	run.running = false
 	_end(bot, slug)
+
+
+## Whether the body `ref` holds is in the KO state (a body that is gone counts: the wait is over).
+static func _in_ko(ref: WeakRef) -> bool:
+	var body := ref.get_ref() as CombatActor
+	return body == null or body.state == CombatTypes.ActorState.KO
+
+
+## C5's marks of the KO, until the body is gone: `ko_slump` KO_SLUMP_TICKS into the state, `ko_lying`
+## on the last frame before the blink (Tuning's ko_linger_s), then `ko_blink_off` and `ko_blink_on`,
+## the first frame the blink hides the body and the next it shows it again.
+static func _ko_marks(bot: Node, slug: String, ref: WeakRef) -> void:
+	var linger := roundi(Tuning.data.ko_linger_s * Engine.physics_ticks_per_second)
+	var slump := false
+	var lying := false
+	var off := false
+	var on := false
+	while true:
+		var body := ref.get_ref() as CombatActor
+		if body == null or on:
+			return
+		if not slump and body.state_frame >= KO_SLUMP_TICKS:
+			slump = true
+			LookRect.mark(bot, slug, "ko_slump", body)
+		if not lying and body.state_frame >= linger - 1:
+			lying = true
+			LookRect.mark(bot, slug, "ko_lying", body)
+		if lying and not off and not body.rig.visible:
+			off = true
+			LookRect.mark(bot, slug, "ko_blink_off", body)
+		elif off and body.rig.visible:
+			on = true
+			LookRect.mark(bot, slug, "ko_blink_on", body)
+		await bot._ticks(1)
 
 
 # --- C6, C7: distance and company --------------------------------------------------------------
@@ -730,7 +783,7 @@ static func _perf_six(bot: Node) -> void:
 ## box and the five hull boxes are tested against that camera's frustum. Prints per room
 ##   LOOK-WARM <room> f<frame> holder (x y z) camera (x y z): skinned <in>/<n> hulls <in>/<n>
 ## for each frame, then the line to quote
-##   LOOK-WARM <room>: <OK|FAIL> ...
+##   LOOK-WARM <room>: <OK|FAIL> ... (also FAIL when the Punk's art is not held once the room's rig is freed)
 ## and nothing at all headless (the warm-up draws nothing there).
 static func _warm_up(bot: Node) -> void:
 	_begin(bot)
@@ -758,6 +811,9 @@ static func _warm_up_room(bot: Node, label: String, scene: String) -> void:
 	await tree.physics_frame
 	ToonMaterials._warmed = false
 	ToonMaterials._art_warmed = false
+	# The room's load holds the warm-up's Punk art again (RoomKit.warm_art()): let go of it first, so that
+	# what is held afterwards is this load's doing.
+	RoomKit.release_warm_art()
 	var room := (load(scene) as PackedScene).instantiate() as Node3D
 	view.add_child(room)
 	# The room's own director finds the player by group and the bot's room comes first in the tree:
@@ -797,9 +853,12 @@ static func _warm_up_room(bot: Node, label: String, scene: String) -> void:
 		skinned += frame.skinned
 		hulls_in += frame.hulls_in
 		hulls += frame.hulls
-	var ok := sane and drawn.size() >= WARM_FRAMES and skinned > 0 and hulls > 0 and skinned_in == skinned and hulls_in == hulls
-	bot.log_line("LOOK-WARM %s: %s the holder's skinned ArtBody AABB (%d of %d) and hull boxes (%d of %d) are in the camera frustum on %d frames it is drawn (%d expected; %d hidden before it was placed; frustum test sane: %s)" % [
-			label, "OK" if ok else "FAIL", skinned_in, skinned, hulls_in, hulls, drawn.size(), WARM_FRAMES, hidden, sane])
+	# The throwaway rig is freed by now (RoomKit.warm_up_art() frees it the frame it builds it): the art it wore
+	# must be held, or the first Punk of a wave reads punk.glb again on its spawn frame.
+	var held := RoomKit.warm_art_held()
+	var ok := sane and held and drawn.size() >= WARM_FRAMES and skinned > 0 and hulls > 0 and skinned_in == skinned and hulls_in == hulls
+	bot.log_line("LOOK-WARM %s: %s the holder's skinned ArtBody AABB (%d of %d) and hull boxes (%d of %d) are in the camera frustum on %d frames it is drawn (%d expected; %d hidden before it was placed; frustum test sane: %s; the Punk's art held after its rig is freed: %s)" % [
+			label, "OK" if ok else "FAIL", skinned_in, skinned, hulls_in, hulls, drawn.size(), WARM_FRAMES, hidden, sane, held])
 	view.queue_free()
 	await tree.process_frame
 	await tree.process_frame

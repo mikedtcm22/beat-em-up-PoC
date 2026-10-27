@@ -20,6 +20,14 @@ const WARM_ART := "res://game/actors/art/punk_art.tres"
 ## their first spawn would build one (26 to 31 ms with the Motion polish, about 17 ms more than M3).
 const WARM_LIBRARY_ENEMIES: Array[StringName] = [&"bruiser", &"boss"]
 
+## The warm-up's CharacterArt (warm_art()), held for the run. SkinnedArt's cache holds an art only
+## weakly (an Entry dies with its CharacterArt), and the throwaway rig is the only thing that
+## held this one: freed, it took the read of punk.glb with it, and the first Punk of every wave
+## (the street empty again) read the GLB on its spawn frame, about 19 ms against 2. Like
+## PlayerCharacter's hero art. Not a hold on the cache: a Punk's art still drops out of it when
+## nothing wears it.
+static var _warm_art: CharacterArt
+
 
 ## The player's avoidance obstacle (RVO): without it enemies walk straight through the player's
 ## position (godot-navigation codemap section 6.3). A child of the player, so it follows him;
@@ -184,25 +192,60 @@ static func build_presentation(room: Node3D) -> void:
 
 ## Windowed only: draw the skinned art's toon variant (the art's vertex format, the skin, the
 ## hull) once at the room's load, so the first Punk of a wave does not compile it on its
-## frame. A throwaway rig wears the Punk's art; ToonMaterials.warm_up() draws a copy of its
-## skeleton for two frames, in the lens once the room's camera has been placed (the second frame
-## of the room, not the first: the camera has not updated before that), and the rig is freed at
-## once. It also builds the Bruiser's and the boss's named libraries (warm_up_libraries()), whose
-## sizes the Punk's rig does not cover. Headless: nothing.
+## frame. A throwaway rig wears the Punk's art (build_warm_rig()); ToonMaterials.warm_up() draws a
+## copy of its skeleton for two frames, in the lens once the room's camera has been placed (the
+## second frame of the room, not the first: the camera has not updated before that), and the rig is
+## freed at once, but its art is held (warm_art()), so the read of the GLB that building it made stays
+## in SkinnedArt's cache for every Punk that spawns later. It also builds the Bruiser's and the
+## boss's named libraries (warm_up_libraries()), whose sizes the Punk's rig does not cover.
+## Headless: nothing.
 static func warm_up_art(room: Node3D) -> void:
 	if DisplayServer.get_name() == "headless":
 		return
 	warm_up_libraries()
-	if not ResourceLoader.exists(WARM_ART):
+	var rig := build_warm_rig(room)
+	if rig == null:
 		return
+	ToonMaterials.warm_up(room, rig.skeleton)
+	rig.queue_free()
+
+
+## The art the warm-up wears (WARM_ART), loaded once and held for the run, so that the cache entry
+## its read makes (SkinnedArt) outlives the throwaway rig, and so that a Street Punk's scene,
+## which loads the same resource by path, gets this CharacterArt and that entry. Null when the art
+## does not exist.
+static func warm_art() -> CharacterArt:
+	if _warm_art == null and ResourceLoader.exists(WARM_ART):
+		_warm_art = load(WARM_ART) as CharacterArt
+	return _warm_art
+
+
+## Whether the warm-up's art is loaded and held (warm_art() has run). For the look act that checks
+## the windowed warm-up (W1).
+static func warm_art_held() -> bool:
+	return _warm_art != null
+
+
+## Let go of the held art (warm_art()): the next call loads it afresh. For tests that count the
+## cache's reads.
+static func release_warm_art() -> void:
+	_warm_art = null
+
+
+## The throwaway rig of warm_up_art(), built under `room`: a HumanoidRig with no hurtboxes wearing
+## warm_art(), the art read and its meshes attached. The caller frees it. Null without the art.
+## No window needed (a test drives it headless); warm_up_art() is the windowed caller.
+static func build_warm_rig(room: Node3D) -> HumanoidRig:
+	var art := warm_art()
+	if art == null:
+		return null
 	var rig := HumanoidRig.new()
 	rig.name = "WarmUpRig"
 	rig.build_hurtboxes = false
-	rig.art = load(WARM_ART) as CharacterArt
+	rig.art = art
 	room.add_child(rig)
 	rig.build()
-	ToonMaterials.warm_up(room, rig.skeleton)
-	rig.queue_free()
+	return rig
 
 
 ## Build the boxer named animation library of each WARM_LIBRARY_ENEMIES body's size now
