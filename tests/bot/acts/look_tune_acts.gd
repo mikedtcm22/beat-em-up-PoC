@@ -69,6 +69,7 @@ const TEAL_S_MIN := 0.25
 const SKIN_S_MAX := 0.5
 const SKIN_S_MIN := 0.06
 const FAMILY_V_MIN := 0.12
+
 ## The skin's window of the head's rectangle (the face under the shades), as fractions of it.
 const FACE_WINDOW := Rect2(0.2, 0.45, 0.6, 0.55)
 ## The hull's windows: how far past the figure's rectangle they reach (px at 1600x900), and the rows of
@@ -151,7 +152,12 @@ static func _pair(bot: Node, slug: String, label: String, actor: CombatActor) ->
 	actor.visible = false
 	var off := await _shot(bot)
 	actor.visible = true
-	return {on = on, off = off}
+	# The same frame with the rim off (the shading's three bands alone), for the jacket's L2.
+	var rim := Tuning.data.look_rim_strength
+	bot.tune(&"look_rim_strength", 0.0)
+	var norim := await _shot(bot)
+	bot.tune(&"look_rim_strength", rim)
+	return {on = on, off = off, norim = norim}
 
 
 static func _metric(bot: Node, slug: String, values: Dictionary) -> void:
@@ -222,12 +228,21 @@ static func _band_metrics(bot: Node, slug: String, key: String, pair: Dictionary
 			Vector2i(Vector2(head.size) * FACE_WINDOW.size))
 	var teal_hue := Color(TEAL_SRGB).h * 360.0
 	var skin_hue := Color(SKIN_SRGB).h * 360.0
-	var jacket := LookProbe.bands(on, body, {hue = teal_hue, hue_tol = TEAL_HUE_TOL_DEG, s_min = TEAL_S_MIN,
+	# L2's bands are the three bands of the shading: the rim (+35% value, where a surface grazes the
+	# view, on the silhouette and in the folds inside it) is a fourth level of its own, so the jacket's
+	# bands are read from a frame with the rim off (`norim`, when the act took one), and the picture as
+	# it is (`jacket_with_rim`) is reported beside them.
+	var banded: Image = pair.get("norim", on)
+	var jacket := LookProbe.bands(banded, body, {hue = teal_hue, hue_tol = TEAL_HUE_TOL_DEG, s_min = TEAL_S_MIN,
+			v_min = FAMILY_V_MIN, only = off})
+	var with_rim := LookProbe.bands(on, body, {hue = teal_hue, hue_tol = TEAL_HUE_TOL_DEG, s_min = TEAL_S_MIN,
 			v_min = FAMILY_V_MIN, only = off})
 	var skin := LookProbe.bands(on, face, {hue = skin_hue, hue_tol = SKIN_HUE_TOL_DEG, s_min = SKIN_S_MIN,
 			s_max = SKIN_S_MAX, v_min = FAMILY_V_MIN, only = off})
 	var values := {}
 	values["%s_jacket_bands" % key] = jacket.size()
+	values["%s_jacket_bands_with_rim" % key] = with_rim.size()
+	values["%s_jacket_luma_hue_with_rim" % key] = _band_text(with_rim)
 	values["%s_jacket_luma_hue" % key] = _band_text(jacket)
 	if jacket.size() >= 2:
 		values["%s_jacket_shadow_over_lit" % key] = _round(jacket[0].luma / jacket[jacket.size() - 1].luma)
