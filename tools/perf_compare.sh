@@ -178,31 +178,42 @@ for act in order:
     for key, name, digits in METRICS:
         cells = ["%-18s" % name]
         for r in cols:
-            values = [x[key] for x in rows[(act, r)]]
+            # A hitch of -1 is an event that did not happen in that run: left out of the mean.
+            values = [x[key] for x in rows[(act, r)] if x[key] >= 0]
+            if not values:
+                means[(r, key)] = None
+                cells.append("%-26s" % "n/a (no event)")
+                continue
             means[(r, key)] = mean(values)
             cell = fmt(mean(values), digits)
             if len(values) > 1:
                 cell += " (%s..%s)" % (fmt(min(values), digits), fmt(max(values), digits))
+            if len(values) < len(rows[(act, r)]):
+                cell += " %d/%d runs" % (len(values), len(rows[(act, r)]))
             cells.append("%-26s" % cell)
         if len(cols) > 1:
-            d = means[(cols[-1], key)] - means[(cols[0], key)]
-            cells.append(("%+." + str(digits) + "f") % d)
+            a, b = means[(cols[0], key)], means[(cols[-1], key)]
+            cells.append("n/a" if a is None or b is None else ("%+." + str(digits) + "f") % (b - a))
         print("".join(cells))
     for r in cols:
         n = len(rows[(act, r)])
         if n < runs:
             print("  note: %s has %d of %d runs" % (r, n, runs))
     last = cols[-1]
-    def bar(ok):
-        return "ok" if ok else "MISS"
+    def bar(value, limit):
+        return "n/a" if value is None else ("ok" if value <= limit else "MISS")
+    def num(value):
+        return "n/a" if value is None else "%.2f" % value
     checks = [
-        "p95 <= %.1f: %s (%.2f)" % (p95_max, bar(means[(last, "p95_ms")] <= p95_max), means[(last, "p95_ms")]),
-        "spawn hitch <= %.0f: %s (%.1f)" % (spawn_max, bar(means[(last, "spawn_hitch_ms")] <= spawn_max), means[(last, "spawn_hitch_ms")]),
+        "p95 <= %.1f: %s (%s)" % (p95_max, bar(means[(last, "p95_ms")], p95_max), num(means[(last, "p95_ms")])),
+        "spawn hitch <= %.0f: %s (%s)" % (spawn_max, bar(means[(last, "spawn_hitch_ms")], spawn_max), num(means[(last, "spawn_hitch_ms")])),
     ]
     if len(cols) > 1:
         for key, name in (("first_hit_ms", "first hit"), ("first_spawn_ms", "first spawn")):
             base = means[(cols[0], key)]
-            checks.append("%s <= first ref + %.0f: %s (%.1f vs %.1f)" % (name, first_delta, bar(means[(last, key)] <= base + first_delta), means[(last, key)], base))
+            now = means[(last, key)]
+            limit = None if base is None else base + first_delta
+            checks.append("%s <= first ref + %.0f: %s (%s vs %s)" % (name, first_delta, "n/a" if limit is None else bar(now, limit), num(now), num(base)))
     print("  soft bars (A16) for %s: %s" % (last, "; ".join(checks)))
 PY
 echo "perf_compare: logs, results.tsv and report.txt in $OUT"
