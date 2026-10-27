@@ -399,6 +399,18 @@
 		"border_px": 1.0,
 		"border_soft_px": 0.5,
 		"dilate_px": 2,
+		"fist_skip_slots": [
+			35
+		],
+		"harden": {
+			"lo": 0.05,
+			"hi": 0.2
+		},
+		"clean": {
+			"blob_radius_texels": 2,
+			"blob_grow_texels": 1,
+			"speck_min_texels": 6
+		},
 		"stroke": {
 			"radius_px": 3,
 			"lo": 0.04,

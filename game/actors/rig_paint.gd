@@ -59,7 +59,8 @@ func art_material() -> Material:
 	if art == null:
 		return null
 	if _art_material == null:
-		_art_material = ToonMaterials.art(art.palette, art.detail_mask)
+		# The hero's art says so (metadata/detail_sharp in player_art.tres) when its mask's ink is to be sharp.
+		_art_material = ToonMaterials.art(art.palette, art.detail_mask, bool(art.get_meta(&"detail_sharp", false)))
 	return _art_material
 
 

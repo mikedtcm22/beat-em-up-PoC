@@ -15,6 +15,15 @@ The ink, per texel of the final surface:
 	        the trousers and the top, the creases of the fingers; not on the body's bare skin, detail.stroke.skip_slots): a ridge detector on the dense source's texture, at the
 	        point of the dense surface nearest to the texel. A ridge is darker than both sides along one of four directions
 	        (detail.stroke.radius_px apart), so a step between two colours is not a ridge and the borders are not drawn twice.
+The strokes are then made to be cut, not mixed: the toon shader thresholds the hero's mask at look_detail_cut with a pixel-wide
+antialiased edge (game/fx/toon.gdshader, `detail_sharp`), so any partial value or blot of the mask shows as hard ink. Therefore:
+	fist_skip_slots  the fist piece's glove (a dark swatch) takes no stroke or crease ink: the generated texture's mottling of a dark
+	        glove is not a line, and cut at look_detail_cut it was a black patch the size of the fingers;
+	harden  the stroke and crease terms are pushed toward 0 and 1 (smoothstep lo..hi), so a line is as wide wherever the ridge is
+	        strong or weak, and a faint ridge is no ink;
+	clean   morphological opening of the stroke terms (blob_radius_texels: a patch thicker than 2 r + 1 texels is a blot, not a
+	        strand, and goes with blob_grow_texels round it) and connected pieces under speck_min_texels (a speck is dirt, not a line).
+	        The borders are analytic and never cleaned.
 The mask is then grown by detail.dilate_px into the empty space round the UV islands, so a filtered lookup at an island's edge
 reads ink, not nothing. Deterministic: no random numbers, no time in the report.
 """
@@ -63,6 +72,65 @@ def max3(a):
 		for dx in (0, 1, 2):
 			out = np.maximum(out, p[dy:dy + h, dx:dx + w])
 	return out
+
+
+def shifted(a, dy, dx, fill):
+	"""`a` moved by (dy, dx) texels, the texels that come from outside the image `fill`."""
+	h, w = a.shape
+	out = np.full_like(a, fill)
+	ys, yd = (slice(0, h - dy), slice(dy, h)) if dy >= 0 else (slice(-dy, h), slice(0, h + dy))
+	xs, xd = (slice(0, w - dx), slice(dx, w)) if dx >= 0 else (slice(-dx, w), slice(0, w + dx))
+	out[yd, xd] = a[ys, xs]
+	return out
+
+
+def square_filter(a, radius, take_max):
+	"""A (2 r + 1) square maximum (take_max) or minimum filter; the outside of the image is the empty value."""
+	fill = 0.0 if take_max else 1.0
+	out = a.copy()
+	for dy in range(-radius, radius + 1):
+		for dx in range(-radius, radius + 1):
+			moved = shifted(a, dy, dx, fill)
+			out = np.maximum(out, moved) if take_max else np.minimum(out, moved)
+	return out
+
+
+def clean_lines(lines, cc):
+	"""The stroke terms of the mask (an image, 0..1) without its blots and specks, and what was removed.
+	cc: blob_radius_texels (0 = no opening), blob_grow_texels, speck_min_texels (0 = none)."""
+	ink = lines > 0.5
+	removed_blob = 0
+	r = int(cc.get("blob_radius_texels", 0))
+	if r > 0:
+		core = square_filter(square_filter(ink.astype(np.float32), r, False), r, True) > 0.5  # the opening: what survives an erosion
+		blot = square_filter(core.astype(np.float32), int(cc.get("blob_grow_texels", 1)), True) > 0.5
+		removed_blob = int((ink & blot).sum())
+		lines = np.where(blot, 0.0, lines)
+		ink = lines > 0.5
+	removed_specks = 0
+	smallest = int(cc.get("speck_min_texels", 0))
+	if smallest > 0:
+		h, w = ink.shape
+		seen = np.zeros_like(ink)
+		for y0, x0 in zip(*np.nonzero(ink)):
+			if seen[y0, x0]:
+				continue
+			seen[y0, x0] = True
+			piece, todo = [(y0, x0)], [(y0, x0)]
+			while todo:
+				y, x = todo.pop()
+				for dy in (-1, 0, 1):
+					for dx in (-1, 0, 1):
+						yy, xx = y + dy, x + dx
+						if 0 <= yy < h and 0 <= xx < w and ink[yy, xx] and not seen[yy, xx]:
+							seen[yy, xx] = True
+							piece.append((yy, xx))
+							todo.append((yy, xx))
+			if len(piece) < smallest:
+				for y, x in piece:
+					lines[y, x] = 0.0
+				removed_specks += 1
+	return lines, {"blob_texels_removed": removed_blob, "speck_pieces_removed": removed_specks}
 
 
 def vertex_cavity(verts, polys):
@@ -413,11 +481,20 @@ def run(cfg, extra):
 	stroke_skip = [int(x) for x in dc["stroke"].get("skip_slots", [])]
 	stroke = np.where(use_fist, stroke, np.where(np.isin(slot[tri], stroke_skip), 0.0, stroke))
 	stroke = np.maximum(stroke, crease)
-
-	ink = np.clip(np.maximum(border, stroke), 0.0, 1.0)
-	mask = np.zeros(size * size)
-	mask[idx] = ink
-	img2 = mask.reshape(size, size)
+	# the toon shader cuts this mask (look_detail_cut): the glove's mottling would be black patches, a partial value a line of its own
+	glove = use_fist & np.isin(slot[tri], [int(x) for x in dc.get("fist_skip_slots", [])])
+	stroke = np.where(glove, 0.0, stroke)
+	hd = dc.get("harden")
+	if hd:
+		stroke = smoothstep(stroke, float(hd["lo"]), float(hd["hi"]))
+	lines = np.zeros(size * size)
+	lines[idx] = stroke
+	lines, cleaned = clean_lines(lines.reshape(size, size), dc.get("clean", {}))
+	borders = np.zeros(size * size)
+	borders[idx] = border
+	img2 = np.clip(np.maximum(borders.reshape(size, size), lines), 0.0, 1.0)
+	ink = img2.ravel()[idx]
+	stroke_kept = lines.ravel()[idx]
 	cov = covered.reshape(size, size)
 	# grow into the empty space so a filtered lookup at an island's edge reads ink, not nothing
 	for _ in range(int(dc.get("dilate_px", 2))):
@@ -454,7 +531,8 @@ def run(cfg, extra):
 	return {
 		"file": os.path.basename(out_path), "sha256": pc.sha256_file(out_path), "size": size,
 		"triangles": int(len(pos)), "covered_texels": int(covered.sum()), "covered_share": float(covered.mean()),
-		"ink_share_of_covered": float((ink > 0.5).mean()), "border_texels": int((border > 0.5).sum()), "stroke_texels": int((stroke > 0.5).sum()), "crease_texels": int((crease > 0.5).sum()),
+		"ink_share_of_covered": float((ink > 0.5).mean()), "border_texels": int((border > 0.5).sum()), "stroke_texels": int((stroke_kept > 0.5).sum()), "crease_texels": int((crease > 0.5).sum()),
+		"ink_mean": float(img2.mean()), "ink_texels": int((img2 > 0.5).sum()), "cleaned": cleaned,
 		"texel_mm_p50": float(np.percentile(texel_mm, 50)), "texel_mm_p10": float(np.percentile(texel_mm, 10)), "texel_mm_p90": float(np.percentile(texel_mm, 90)),
 		"from_fist_share": float(use_fist.mean()), "layout": layout,
 	}

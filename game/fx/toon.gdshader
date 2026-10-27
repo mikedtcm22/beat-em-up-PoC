@@ -19,6 +19,12 @@ uniform bool use_albedo_tex = false;
 uniform sampler2D detail_tex : filter_linear_mipmap, repeat_disable;
 uniform bool use_detail_tex = false;
 uniform float detail_strength : hint_range(0.0, 1.0) = 1.0;
+// Sharp ink (the hero's mask; ToonMaterials sets it per material, off for the Punk, whose face ink
+// is tuned for the soft mix): the mask is cut at detail_cut with an edge one pixel wide (its own
+// screen-space gradient), so a line one texel wide stays a crisp line when it is magnified, where
+// the linear mix (the default) makes it a grey smear 3 to 9 pixels wide beside the hull's hard line.
+uniform bool detail_sharp = false;
+uniform float detail_cut : hint_range(0.0, 1.0) = 0.15;
 // The ink (HudStyle.INK): the hull's, the detail lines'.
 uniform vec3 ink : source_color = vec3(0.07, 0.06, 0.09);
 // The whole-body parry flash: this color times this share, added after the lighting.
@@ -64,7 +70,12 @@ void fragment() {
 		skin_marks = 1.0 - step(0.9, swatch.a);
 	}
 	if (use_detail_tex) {
-		color = mix(color, ink, texture(detail_tex, UV2).r * detail_strength);
+		float ink_mask = texture(detail_tex, UV2).r;
+		if (detail_sharp) {
+			float edge = max(0.5 * fwidth(ink_mask), 0.0001);
+			ink_mask = smoothstep(detail_cut - edge, detail_cut + edge, ink_mask);
+		}
+		color = mix(color, ink, ink_mask * detail_strength);
 	}
 	if (takes_marks > 0.0) {
 		vec3 w = abs(normalize(mark_normal));

@@ -10,3 +10,4 @@ palette = ExtResource("2_atlas")
 triangle_budget = 30000
 metadata/scene_path = "res://assets/export/characters/player/player.glb"
 metadata/detail_mask_path = "res://assets/export/characters/player/player_detail.png"
+metadata/detail_sharp = true
