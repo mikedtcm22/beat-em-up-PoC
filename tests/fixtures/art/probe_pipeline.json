@@ -1,0 +1,86 @@
+{
+	"id": "probe_body",
+	"version": 1,
+	"note": "The chain's own test body (tools/pipeline/make_probe_body.py builds the source; no credits). Facing, swing, proportions and the rig are not the table's: the chain has to fit it.",
+	"paths": {
+		"work": "assets/source/_cache/probe_body/work",
+		"report": "assets/source/_cache/probe_body/report",
+		"report_json": "tests/fixtures/art/probe_report.json",
+		"export_dir": "tests/fixtures/art",
+		"export_name": "probe_body"
+	},
+	"source": {
+		"mesh": "assets/source/_cache/probe_body/source/probe_source.glb",
+		"rig": "same",
+		"facing_yaw_deg": null,
+		"sides": "auto"
+	},
+	"target": {
+		"head_top_m": 1.82
+	},
+	"fit": {
+		"landmarks": "rig",
+		"bone_map": {},
+		"swing": "measure",
+		"default_swing_deg": 45.0,
+		"warp_weights": "tripo",
+		"residual_limit_m": 0.01,
+		"sole_percentile": 0.5
+	},
+	"rig": {
+		"weights": "auto",
+		"max_influences": 4,
+		"variants": ["apose", "rest"]
+	},
+	"parts": {
+		"fists": {
+			"enabled": true,
+			"glove_slot": 1,
+			"strap_slot": 5,
+			"strap_height_m": 0.03,
+			"cuff_margin_m": 0.008,
+			"cuff_over_m": 0.035,
+			"cuff_below_wrist_m": 0.012,
+			"bevel_m": 0.022,
+			"bump_m": 0.006
+		},
+		"split_fp": {
+			"enabled": true,
+			"torso_cut_bone": "Chest",
+			"upper_arm_cut": 0.5,
+			"cap_depth_m": 0.03,
+			"cap_rings": 4
+		}
+	},
+	"palette": {
+		"mode": "fixed",
+		"slots": [1, 2, 4, 5, 6, 10],
+		"max_swatches": 6,
+		"min_share": 0.004,
+		"majority_passes": 2,
+		"border_relax_iterations": 3,
+		"border_relax_factor": 0.5,
+		"budget_tris": 8000,
+		"detail_uv": true
+	},
+	"export": {
+		"hull_normal_digits": 5
+	},
+	"stills": {
+		"views": ["front", "three_quarter", "side"],
+		"poses": {
+			"rest": {},
+			"guard": {
+				"Spine": [-3.0, 0.0, 0.0], "Chest": [-3.0, 0.0, 0.0], "Neck": [4.0, 0.0, 0.0], "Head": [2.0, 0.0, 0.0],
+				"LeftUpperArm": [43.5, -22.0, -13.5], "LeftLowerArm": [130.0, 0.0, 0.0],
+				"RightUpperArm": [40.0, 22.5, 13.0], "RightLowerArm": [134.5, 0.0, 0.0],
+				"LeftUpperLeg": [16.0, 0.0, -4.0], "LeftLowerLeg": [-24.0, 0.0, 0.0], "LeftFoot": [8.0, 0.0, 4.0],
+				"RightUpperLeg": [-6.0, 0.0, 5.0], "RightLowerLeg": [-16.0, 0.0, 0.0], "RightFoot": [22.0, 0.0, -5.0]
+			},
+			"elbow_150": {"LeftLowerArm": [150.0, 0.0, 0.0], "RightLowerArm": [150.0, 0.0, 0.0]},
+			"arm_raise_140": {"LeftUpperArm": [140.0, 0.0, 0.0], "RightUpperArm": [140.0, 0.0, 0.0]},
+			"knee_m130": {"LeftUpperLeg": [40.0, 0.0, 0.0], "LeftLowerLeg": [-130.0, 0.0, 0.0], "RightUpperLeg": [-10.0, 0.0, 0.0]},
+			"spine_twist": {"Spine": [0.0, 30.0, 0.0], "Chest": [0.0, 30.0, 0.0], "UpperChest": [0.0, 20.0, 0.0], "Neck": [0.0, -20.0, 0.0]}
+		}
+	}
+}
