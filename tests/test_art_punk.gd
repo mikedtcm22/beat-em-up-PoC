@@ -12,10 +12,16 @@ extends GutTest
 ## which decides the bind route and the weights source from those numbers.
 ## The strain is against the SKINNED REST pose (the mesh skinned at the rig's rest), not the GLB's
 ## own mesh: for the A-pose route the latter is already strained at rest by construction
-## (M4-calls/P1-chain.md C13).
+## (M4-calls/P1-chain.md C13). punk.glb's strain is the run tests/art_strain.gd keeps for the whole
+## suite; the strain runs of the three locked A/B variants (about 14 s) are opt-in: set
+## ART_PUNK_VARIANT_STRAIN=1 (VARIANT_STRAIN_ENV).
 
 const SkinnedView := preload("res://tests/skinned_view.gd")
 const FPView := preload("res://tests/fp_view.gd")
+const ArtStrain := preload("res://tests/art_strain.gd")
+## Set to anything to also run the strain of the three locked A/B variants (the environment, so a plain tools/run_tests.sh skips
+## them): `ART_PUNK_VARIANT_STRAIN=1 tools/run_tests.sh -gselect=test_art_punk.gd`.
+const VARIANT_STRAIN_ENV := "ART_PUNK_VARIANT_STRAIN"
 const PUNK_SCENE := "res://game/enemies/punk/street_punk.tscn"
 const FRAME := 1.0 / 60.0
 ## The four GLBs by variant: the art resource, the GLB it wears, and the value of Tuning's
@@ -613,10 +619,26 @@ func _strain_run(rig: HumanoidRig) -> Dictionary:
 
 
 func test_the_strain_of_every_glb_against_the_skinned_rest_is_printed_for_the_gate() -> void:
+	# punk.glb's run is tests/art_strain.gd's, kept per art (the done-when and test_skinned_art read the same one): it is made
+	# once for the whole suite. The three other variants (the slice gate's locked A/B: the A-pose or rest-pose bind, the heat-map
+	# or automatic weights) are measured only with VARIANT_STRAIN_ENV set (about 6 s each, ~14 s in all): their figures were printed
+	# for the slice gate, which is closed.
 	var started := Time.get_ticks_msec()
+	var measured := 0
 	for row: Dictionary in VARIANTS:
+		if row.variant != 0 and OS.get_environment(VARIANT_STRAIN_ENV) == "":
+			print("ART-PUNK A19 %s: not measured (the slice gate's locked A/B variant; set %s=1 to run it)" % [row.name, VARIANT_STRAIN_ENV])
+			continue
 		var rig := _rig(_art(row))
-		var run := _strain_run(rig)
+		var run: Dictionary
+		if row.variant == 0:
+			var shipped := ArtStrain.SHIPPED[0]
+			run = ArtStrain.cached(shipped.path)
+			if run.is_empty():
+				run = ArtStrain.keep(shipped.path, ArtStrain.run(rig, ArtStrain.punk_moves()))
+		else:
+			run = _strain_run(rig)
+		measured += 1
 		var kinds := {}
 		var nan := 0
 		var floor_count := 0
@@ -665,8 +687,9 @@ func test_the_strain_of_every_glb_against_the_skinned_rest_is_printed_for_the_ga
 		assert_eq(nan, 0, "%s: no NaN" % row.name)
 		assert_eq(floor_count, 0, "%s: no vertex under the floor in a planted pose" % row.name)
 		assert_gt(run.samples, 200, "%s: every clip at five phases and the peak flexes" % row.name)
+	assert_gte(measured, 1, "punk.glb's strain is always measured")
 	var elapsed := (Time.get_ticks_msec() - started) / 1000.0
-	print("ART-PUNK A19: four GLBs in %.1f s" % elapsed)
+	print("ART-PUNK A19: %d of %d GLBs in %.1f s" % [measured, VARIANTS.size(), elapsed])
 
 
 func test_the_flip_count_does_not_charge_the_meshs_own_folds_to_a_pose() -> void:

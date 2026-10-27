@@ -310,10 +310,10 @@
 		"run_forward|boxer|1.278": "b643b56a891d9ac2ce83cd7744554c1fb98b251b08c40b9a1c32ae7e6425c4a4",
 		"run_forward|relaxed|1.0": "826dfddf6f095e04061b6abd7623d0b8e2711297d78be5292cc187ad9be95edc",
 		"run_forward|relaxed|1.278": "e7936799df35f4d5e31e932f0f03be2b759a62917e3336b4032089dcaa4b625f",
-		"stagger_back|boxer|1.0": "5d4f1e7a896c06398ac33426852fbab6a7b59d2b70c0bbfbbd44979d62471891",
-		"stagger_back|boxer|1.278": "a770c027ff8596fbcdba07f78fb7e464f98224a4800c0a9ac74a56c9c13146f0",
-		"stagger_back|relaxed|1.0": "49ca3e4c03f6139817544755159aef9f1f02751034e6c51d1f0f1cda459405c3",
-		"stagger_back|relaxed|1.278": "b0aa3f3f405b13274f33007a1394cfd2399821134ebab1df7fe7536d32187320",
+		"stagger_back|boxer|1.0": "820cb49b5647f7e1e10d678d9d668db49459ca0c025750e69ae3314b10b28a37",
+		"stagger_back|boxer|1.278": "fa0a04542ef3ce786f9cb9252dae7bfed507fd0254ca7a7f1bd36a283a43dc67",
+		"stagger_back|relaxed|1.0": "195f7b04ff166e36378177bcdee01244c02733bd30bcc9dd8ebb267654ae081c",
+		"stagger_back|relaxed|1.278": "2bbba956e20c9269fa53e17bf40e72e03404d6213dfbdb13551d35a402591bcd",
 		"stagger_forward|boxer|1.0": "71c335de706190586edab387e1bc8836f68705c4c6b1ce2d820798224c19a541",
 		"stagger_forward|boxer|1.278": "0a291f692fe7aebd3d3f91ccde4c96e9cff3848705289682e8f1cecc7c70ed97",
 		"stagger_forward|relaxed|1.0": "7cf9d0844df0cddc19006d8532143778700598cb8504188678c029ab14f33e33",
@@ -350,5 +350,8 @@
 		"walk_right|boxer|1.278": "5993c875d7a78dfe9e7cfdad25e8f890a97b66efcdc489f3916aabd7f6cd5288",
 		"walk_right|relaxed|1.0": "0d5f949666c6c5ec17ae37d840c959aba31164b4500e2faa427510142af35230",
 		"walk_right|relaxed|1.278": "9a007becd6f6ff16247cecb6901552afa87a1c844c1865b9c5af4105923edc0f"
+	},
+	"notes": {
+		"stagger_back": "M4 call 24 (the lead's, final review finding final-v2-01; a departure from A20's frozen-clip list, not from the SPEC): stagger_back_a and stagger_back_b are re-posed like stagger_right (upper arms about 40 degrees off the body then 28, elbows folded to 90-110 degrees, forearms forward and raised), so the skinned Punk's arms never go straight and horizontal, the rig's bind pose, after the third knee, on a grab release and in the long take. Only the arm tracks changed. The M3 hashes it replaced: boxer|1.0 5d4f1e7a896c, boxer|1.278 a770c027ff85, relaxed|1.0 49ca3e4c03f6, relaxed|1.278 b0aa3f3f405b."
 	}
 }

@@ -57,6 +57,8 @@ const PROBE_SILHOUETTE_POSES: Array[String] = ["idle looking down 60"]
 ## rounder than the proxies' boxes, so the art covers less), the knee in the hold (4.6%), the haymaker's charge and the front kick
 ## (7.5 and 8.1 cm nearer than FPView's loose proxies; 7.5 and 4.4 against the proxies' own meshes): M4-calls/F-player-art.md C13 and its Fix round. The probe's coverage floor does not hold for the hero's knee
 ## (the art's thigh and the proxies' knee box are different shapes at 0.3 m).
+## test_m4_done_when.gd's row A9 reads HERO_DIFFER_MAX, HERO_SHARE_MAX and HERO_NEAREST_MAX_M from here (they are public constants of
+## this script), so the done-when's mirror cannot be looser than this test; today's figures are 8.4%, 8.4 points and 8.1 cm.
 const HERO_DIFFER_MAX := 0.09
 const HERO_SHARE_MAX := 0.09
 const HERO_NEAREST_MAX_M := 0.09

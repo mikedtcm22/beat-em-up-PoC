@@ -26,18 +26,33 @@ const PLANTED_M := 0.002
 ## The Punk's own moves, whose clips the strain run plays as well (the file names in game/combat/moves).
 const PUNK_MOVES: Array[String] = ["punk_jab", "punk_cross", "punk_shove"]
 
-## The shipped art A19 covers (P3-int): each worn the way the game wears it (the hero dressed as the player). `problems_max` and
-## `high_max` are what the art does today, with a margin, a ratchet: the weak joint is the shoulder at the guard and the arm raise
-## (M4-calls/F-punk.md, F-player-art.md C15; the slice gate's contingency 4), and the hero's KO lying clips. A run may have at most
-## `problems_max` problem lines (two a sample: its p99.9 and its extremes; today 503 for the Punk's 251 samples, 424 for the
-## hero's 236) and a worst p99.9 of at most `high_max`. The art fixers only bring them down. The plan's bar (no problem line,
-## p99.9 within [P_LOW, P_HIGH]) is printed as GATE. The peak flexes' triangles (under 15% of their rest area or turned over)
-## are held to FLEX_RATCHET_SHARE of the art's triangles, where the plan's bar is BAD_TRIANGLES (today 1.56% at most).
+## The shipped art A19 covers (P3-int): each worn the way the game wears it (the hero dressed as the player). The plan's bar (no
+## problem line, p99.9 within [P_LOW, P_HIGH], the extremes within [MIN, MAX], at most BAD_TRIANGLES of the triangles under 15% of
+## their rest area or turned over at a peak flex) is printed as GATE; neither art meets it yet (the weak joint is the shoulder at
+## the guard and the arm raise, M4-calls/F-punk.md, F-player-art.md C15; the slice gate's contingency 4; and the hero's KO lying
+## clips), so what each does today is held as a RATCHET that can fail: a fix only brings the figures down.
+##
+## The ratchet is set per art from the figures of the final art (M4-calls/fix-final-done-when-ratchets-and-suite-time.md has each
+## old -> new), today's figure plus a small stated margin (a count of problem lines is no ratchet: it saturates at two a sample
+## plus one a peak flex, so a worse sample cannot raise it, and was dropped):
+## - `in_bar_min`: the samples inside every bar are at least today's count;
+## - `high_max`, `low_min`, `max_max`, `min_min`: the worst p99.9, the worst p0.1 and the extreme edge's stretch and compression
+##   over the whole run (about 5% over today; the compression floor is the number that a mis-weighted vertex would take to zero);
+## - `flex_share_max`: the peak flexes' triangles under 15% of their rest area or turned over, as a share of the art's triangles;
+## - the per-clip table (RATCHET_TABLE_PATH, made by tests/fixtures/strain/gen_strain_ratchet.tscn from today's run): every clip's own
+##   p99.9, p0.1, max and min over its five phases, and every peak flex's bad triangles, held to CLIP_MARGIN over today's, so a
+##   regression in a clip that is not the art's worst shows too.
+## The old SHIPPED rows read "problems_max 560 / 480"; ratchet_problems() is what test_skinned_art and test_m4_done_when assert.
 const SHIPPED: Array[Dictionary] = [
-	{name = "punk", path = "res://assets/export/characters/punk/punk.glb", player = false, budget = 15000, problems_max = 560, high_max = 4.6},
-	{name = "player", path = "res://assets/export/characters/player/player.glb", player = true, budget = 30000, problems_max = 480, high_max = 9.5},
+	{name = "punk", path = "res://assets/export/characters/punk/punk.glb", art = "res://game/actors/art/punk_art.tres", player = false, budget = 15000,
+			in_bar_min = 1, high_max = 4.23, low_min = 0.153, max_max = 12.85, min_min = 0.0144, flex_share_max = 0.0173},
+	{name = "player", path = "res://assets/export/characters/player/player.glb", art = "res://game/actors/art/player_art.tres", player = true, budget = 30000,
+			in_bar_min = 1, high_max = 9.1, low_min = 0.14, max_max = 39.1, min_min = 0.0282, flex_share_max = 0.0066},
 ]
-const FLEX_RATCHET_SHARE := 0.02
+## The per-clip ratchet's margin over today's figure (a ratio on p99.9 and the stretch; its inverse on p0.1 and the compression),
+## and the flex triangle count's (a ratio, and two triangles).
+const CLIP_MARGIN := 0.10
+const RATCHET_TABLE_PATH := "res://tests/fixtures/strain/strain_ratchet.json"
 
 static var _runs: Dictionary[String, Dictionary] = {}
 
@@ -134,7 +149,7 @@ static func strain(mi: MeshInstance3D, rig: HumanoidRig, rest: PackedVector3Arra
 		min = minf(1.0, sorted[0] if not sorted.is_empty() else 1.0),
 		max = maxf(1.0, sorted[sorted.size() - 1] if not sorted.is_empty() else 1.0),
 		worst = worst, worst_bone = &"", has_nan = has_nan, lowest_y = lowest,
-		triangles = data.indices.size() / 3, squashed = 0, flipped = 0,
+		triangles = data.indices.size() / 3, squashed = 0, flipped = 0, flipped_healed = 0,
 	}
 	if worst_edge >= 0:
 		report.worst_bone = SkinnedView._dominant_bone(data, mi.skin, [data.edge_a[worst_edge], data.edge_b[worst_edge]])
@@ -208,9 +223,10 @@ static func kind_of(text: String) -> String:
 
 ## A19 on `rig`'s art: every PlaceholderAnims.ANIM_IDS id and each of `moves` at five phases, then the peak flexes.
 ## `{problems (the lines), kinds (a count per kind), worst (the worst ten lines), samples, reports (every sample:
-## {label, report}), flexes ({label, report} of the peak flexes), worst_high (the highest p99.9 of any sample), in_bar (the
-## samples inside every bar), bad_bar (the triangles a peak flex may have under 15% of their rest area or turned over: the
-## share of the art's triangles)}`. `rig` is left in its last pose; the caller frees it.
+## {label, clip, report}), flexes ({label, report} of the peak flexes), worst_high (the highest p99.9 of any sample), worst_low
+## (the lowest p0.1), worst_max and worst_min (the longest stretch and the deepest compression of any edge), in_bar (the samples
+## inside every bar), bad_bar (the triangles a peak flex may have under 15% of their rest area or turned over: the share of the
+## art's triangles)}`. `rig` is left in its last pose; the caller frees it.
 static func run(rig: HumanoidRig, moves: Array[MoveData]) -> Dictionary:
 	var rests: Array[PackedVector3Array] = []
 	var masks: Array[PackedByteArray] = []
@@ -244,7 +260,7 @@ static func run(rig: HumanoidRig, moves: Array[MoveData]) -> Dictionary:
 			rig.advance(0.0)
 			var report := strain_at(rig, [], false, rests, masks)
 			var label := "%s %s" % [clip.label, phase[0]]
-			reports.append({label = label, report = report})
+			reports.append({label = label, clip = clip.label, report = report})
 			for text: String in problems_of(report, planted(rig)):
 				problems.append("%s: %s" % [label, text])
 	var flexes: Array[Dictionary] = []
@@ -252,7 +268,7 @@ static func run(rig: HumanoidRig, moves: Array[MoveData]) -> Dictionary:
 	for row: Dictionary in peak_poses():
 		var report := strain_at(rig, globals_of(rig, row.pose, row.hips), true, rests, masks)
 		triangles = report.triangles
-		reports.append({label = "flex: %s" % row.label, report = report})
+		reports.append({label = "flex: %s" % row.label, clip = "flex: %s" % row.label, report = report})
 		flexes.append({label = String(row.label), report = report})
 		for text: String in problems_of(report, false):
 			problems.append("flex: %s: %s" % [row.label, text])
@@ -264,15 +280,21 @@ static func run(rig: HumanoidRig, moves: Array[MoveData]) -> Dictionary:
 		kinds[kind] = int(kinds.get(kind, 0)) + 1
 	var in_bar := 0
 	var worst_high := 0.0
+	var worst_low := INF
+	var worst_max := 1.0
+	var worst_min := 1.0
 	for entry: Dictionary in reports:
 		var r: Dictionary = entry.report
 		if r.p_high <= P_HIGH and r.p_low >= P_LOW and r.max <= MAX and r.min >= MIN:
 			in_bar += 1
 		worst_high = maxf(worst_high, r.p_high)
+		worst_low = minf(worst_low, r.p_low)
+		worst_max = maxf(worst_max, r.max)
+		worst_min = minf(worst_min, r.min)
 	return {
 		problems = problems, kinds = kinds, worst = SkinnedView.worst_lines(reports), samples = reports.size(),
-		reports = reports, flexes = flexes, worst_high = worst_high, in_bar = in_bar,
-		bad_bar = roundi(BAD_TRIANGLES * triangles),
+		reports = reports, flexes = flexes, worst_high = worst_high, worst_low = worst_low, worst_max = worst_max,
+		worst_min = worst_min, in_bar = in_bar, bad_bar = roundi(BAD_TRIANGLES * triangles),
 	}
 
 
@@ -295,6 +317,91 @@ static func flexes_over_bar(run_result: Dictionary) -> PackedStringArray:
 		if bad > int(run_result.bad_bar):
 			out.append("%s %d" % [flex.label, bad])
 	return out
+
+
+## The per-clip figures of `run_result`: `{clip: {high, low, max, min, bad}}`, each over the clip's phases (`bad`: a peak flex's
+## triangles under 15% of their rest area or turned over; 0 for an animation or a move).
+static func clip_table(run_result: Dictionary) -> Dictionary:
+	var table := {}
+	for entry: Dictionary in run_result.reports:
+		var r: Dictionary = entry.report
+		var row: Dictionary = table.get(entry.clip, {high = 0.0, low = INF, max = 1.0, min = 1.0, bad = 0})
+		row.high = maxf(row.high, r.p_high)
+		row.low = minf(row.low, r.p_low)
+		row.max = maxf(row.max, r.max)
+		row.min = minf(row.min, r.min)
+		row.bad = maxi(row.bad, r.squashed + r.flipped)
+		table[entry.clip] = row
+	return table
+
+
+## The per-clip ratchet figures the file holds for the art `art_name` ("punk" or "player"), or an empty Dictionary.
+static func load_table(art_name: String) -> Dictionary:
+	var file := FileAccess.open(RATCHET_TABLE_PATH, FileAccess.READ)
+	if file == null:
+		return {}
+	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	if not parsed is Dictionary:
+		return {}
+	return (parsed as Dictionary).get(art_name, {})
+
+
+## What `run_result` does against the ratchet of `shipped` (a SHIPPED row) and `table` (load_table()): the lines that break it, or
+## an empty array when it holds. The whole-run figures first (in_bar, p99.9, p0.1, the extreme edges, the flex share), then every
+## clip against its own figures plus CLIP_MARGIN.
+static func ratchet_problems(run_result: Dictionary, shipped: Dictionary, table: Dictionary) -> PackedStringArray:
+	var out := PackedStringArray()
+	if run_result.in_bar < int(shipped.in_bar_min):
+		out.append("only %d samples inside every bar, at least %d held" % [run_result.in_bar, int(shipped.in_bar_min)])
+	if run_result.worst_high > float(shipped.high_max):
+		out.append("worst p99.9 %.3f over the ratchet %.3f" % [run_result.worst_high, float(shipped.high_max)])
+	if run_result.worst_low < float(shipped.low_min):
+		out.append("worst p0.1 %.3f under the ratchet %.3f" % [run_result.worst_low, float(shipped.low_min)])
+	if run_result.worst_max > float(shipped.max_max):
+		out.append("longest stretch x%.2f over the ratchet x%.2f" % [run_result.worst_max, float(shipped.max_max)])
+	if run_result.worst_min < float(shipped.min_min):
+		out.append("deepest compression x%.4f under the ratchet x%.4f" % [run_result.worst_min, float(shipped.min_min)])
+	var share := worst_flex_share(run_result)
+	if share > float(shipped.flex_share_max):
+		out.append("a peak flex has %.2f%% of the triangles squashed or turned over, over the ratchet %.2f%%" % [share * 100.0, float(shipped.flex_share_max) * 100.0])
+	var grow := 1.0 + CLIP_MARGIN
+	var shrink := 1.0 / grow
+	var rows := clip_table(run_result)
+	for clip: String in rows:
+		var row: Dictionary = rows[clip]
+		if not table.has(clip):
+			out.append("%s: no per-clip ratchet figure (regenerate tests/fixtures/strain/strain_ratchet.json)" % clip)
+			continue
+		var held: Dictionary = table[clip]
+		if row.high > float(held.high) * grow + 0.005:
+			out.append("%s: p99.9 %.3f over its figure %.3f + %d%%" % [clip, row.high, float(held.high), roundi(CLIP_MARGIN * 100.0)])
+		if row.low < float(held.low) * shrink - 0.005:
+			out.append("%s: p0.1 %.3f under its figure %.3f - %d%%" % [clip, row.low, float(held.low), roundi(CLIP_MARGIN * 100.0)])
+		if row.max > float(held.max) * grow + 0.005:
+			out.append("%s: stretch x%.2f over its figure x%.2f + %d%%" % [clip, row.max, float(held.max), roundi(CLIP_MARGIN * 100.0)])
+		if row.min < float(held.min) * shrink - 0.0005:
+			out.append("%s: compression x%.4f under its figure x%.4f - %d%%" % [clip, row.min, float(held.min), roundi(CLIP_MARGIN * 100.0)])
+		if row.bad > ceili(float(held.bad) * grow) + 2:
+			out.append("%s: %d triangles squashed or turned over, over its figure %d + %d%% + 2" % [clip, row.bad, int(held.bad), roundi(CLIP_MARGIN * 100.0)])
+	return out
+
+
+## Each whole-run ratchet beside what the run did, for the DONE-WHEN and gate lines: "worst p99.9 4.03 (ratchet 4.25, +5%)".
+static func margin_text(run_result: Dictionary, shipped: Dictionary) -> String:
+	var share := worst_flex_share(run_result)
+	return "ratchets (today, held, margin): in-bar samples %d >= %d; worst p99.9 %.2f <= %.2f (%+.1f%%); worst p0.1 %.2f >= %.2f (%+.1f%%); longest stretch x%.1f <= x%.1f (%+.1f%%); deepest compression x%.4f >= x%.4f (%+.1f%%); peak flex share %.2f%% <= %.2f%% (%+.2f points); every clip +%d%%" % [
+			run_result.in_bar, int(shipped.in_bar_min),
+			run_result.worst_high, float(shipped.high_max), _percent(float(shipped.high_max), run_result.worst_high),
+			run_result.worst_low, float(shipped.low_min), _percent(run_result.worst_low, float(shipped.low_min)),
+			run_result.worst_max, float(shipped.max_max), _percent(float(shipped.max_max), run_result.worst_max),
+			run_result.worst_min, float(shipped.min_min), _percent(run_result.worst_min, float(shipped.min_min)),
+			share * 100.0, float(shipped.flex_share_max) * 100.0, (float(shipped.flex_share_max) - share) * 100.0,
+			roundi(CLIP_MARGIN * 100.0)]
+
+
+## How far `held` is above `today`, in per cent of `today`.
+static func _percent(held: float, today: float) -> float:
+	return (held - today) / maxf(today, 1e-9) * 100.0
 
 
 static func _play(rig: HumanoidRig, animation: StringName, at: float) -> void:

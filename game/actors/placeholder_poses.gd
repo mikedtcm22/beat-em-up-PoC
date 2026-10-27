@@ -799,17 +799,22 @@ static func flinch_legs(base: Dictionary[StringName, Vector3]) -> Dictionary[Str
 	})
 
 
-## Stumbling backward: torso thrown back, arms out, one foot stepping back.
+## Stumbling backward: torso thrown back, the guard broken open, one foot stepping back. The upper arms
+## swing out to about 40 degrees off the body (then settle to about 28) with both elbows folded to about
+## 90-110 degrees and the forearms forward and raised, so the fists stay about 0.3 m in front of the hips
+## like the guard's (M4, the lead's call 24: they were straight arms flung out 75 degrees, which on the
+## skinned Punk, whose rig is bound in an A-pose, read as the rig showing its bind pose, a T, for 0.4 s
+## after every third knee, on a grab release and in a long fight; stagger_right got the same fix in M3).
 static func stagger_back_a(base: Dictionary[StringName, Vector3]) -> Dictionary[StringName, Vector3]:
 	return merge(base, {
 		&"Spine": Vector3(14.0, 0.0, 0.0),
 		&"Chest": Vector3(10.0, 0.0, 0.0),
 		&"Neck": Vector3(10.0, 0.0, 0.0),
 		&"Head": Vector3(12.0, 0.0, 0.0),
-		&"LeftUpperArm": Vector3(40.0, 0.0, -60.0),
-		&"LeftLowerArm": Vector3(40.0, 0.0, 0.0),
-		&"RightUpperArm": Vector3(30.0, 0.0, 66.0),
-		&"RightLowerArm": Vector3(36.0, 0.0, 0.0),
+		&"LeftUpperArm": Vector3(22.0, 0.0, -42.0),
+		&"LeftLowerArm": Vector3(95.0, 0.0, 0.0),
+		&"RightUpperArm": Vector3(18.0, 0.0, 44.0),
+		&"RightLowerArm": Vector3(92.0, 0.0, 0.0),
 		&"LeftUpperLeg": Vector3(26.0, 0.0, -4.0),
 		&"LeftLowerLeg": Vector3(-10.0, 0.0, 0.0),
 		&"LeftFoot": Vector3(10.0, 0.0, 4.0),
@@ -825,8 +830,10 @@ static func stagger_back_b(base: Dictionary[StringName, Vector3]) -> Dictionary[
 		&"Chest": Vector3(2.0, 0.0, 0.0),
 		&"Neck": Vector3(2.0, 0.0, 0.0),
 		&"Head": Vector3(4.0, 0.0, 0.0),
-		&"LeftUpperArm": Vector3(30.0, 0.0, -36.0),
-		&"RightUpperArm": Vector3(24.0, 0.0, 40.0),
+		&"LeftUpperArm": Vector3(12.0, 0.0, -28.0),
+		&"LeftLowerArm": Vector3(108.0, 0.0, 0.0),
+		&"RightUpperArm": Vector3(8.0, 0.0, 30.0),
+		&"RightLowerArm": Vector3(105.0, 0.0, 0.0),
 		&"LeftUpperLeg": Vector3(-14.0, 0.0, -4.0),
 		&"LeftLowerLeg": Vector3(-40.0, 0.0, 0.0),
 		&"LeftFoot": Vector3(30.0, 0.0, 4.0),

@@ -34,6 +34,7 @@ const LookProbe := preload("res://tests/bot/look_probe.gd")
 const LookTuneActs := preload("res://tests/bot/acts/look_tune_acts.gd")
 const LookActs := preload("res://tests/bot/acts/look_acts.gd")
 const LookFinalActs := preload("res://tests/bot/acts/look_final_acts.gd")
+const ArtPlayerTest := preload("res://tests/test_art_player.gd")
 
 const PUNK_ART := "res://game/actors/art/punk_art.tres"
 const PLAYER_ART := "res://game/actors/art/player_art.tres"
@@ -88,31 +89,34 @@ const TRIPO_CAP := 800.0
 const TRIPO_FLOOR := 700.0
 
 # --- RATCHETS: what the shipped art does today, with a margin (a fix only makes these better) ---
+## Each is today's figure on the final art plus a small margin (M4-calls/fix-final-done-when-ratchets-and-suite-time.md has every
+## old -> new): 5% on a length or a slide, half a point on a share of cells or of vertices, half a centimetre on an anchor. The plan's
+## bar is still printed beside each as a GATE line, where the art misses it. P3-int's first set (C4) was made on the pre-fix art and
+## sat 20% to 100% above what the art does.
 ## A4: the player's walks slide his planted soles by metres (M3's 0.6 s cycle at his speed, M4-calls/F-motion.md C7: a walk cannot
-## plant a 0.9 m leg at 6 m/s); the most a planted step may slide on his art (today 2.33 m, the side step; the enemies' are held at 2 cm).
-const SLIDE_RATCHET_PLAYER_M := 3.0
-## A6: the hero's vertices inside their hurtbox + slack, and the axis points outside the art (today legs 89.8%, one point).
-const FIT_RATCHET_PLAYER := 0.75
-const AXIS_OUTSIDE_RATCHET_PLAYER := 2
-## A9: the Punk at the 1 m acts' poses: cells that differ (today 6.7% at the cross); the lens share is held at the bar.
-const FRAMING_RATCHET_PUNK_DIFFER := 0.09
+## plant a 0.9 m leg at 6 m/s); the most a planted step may slide on his art (today 2.29 m, the side step; the enemies' are held at 2 cm).
+const SLIDE_RATCHET_PLAYER_M := 2.4
+## A6: the hero's vertices inside their hurtbox + slack, by region (today torso 100%, legs 89.4%, head 99.0%), and the axis points
+## outside the art (today none).
+const FIT_RATCHET_PLAYER := {"torso": 0.985, "legs": 0.88, "head": 0.975}
+const AXIS_OUTSIDE_RATCHET_PLAYER := 0
+## A9: the Punk at the 1 m acts' poses: cells that differ (today 6.5% at the cross); the lens share is held at the bar.
+const FRAMING_RATCHET_PUNK_DIFFER := 0.07
 ## A9: the Punk's wrist cuff follows the concept (F-cuff, the lead's call), so the jab and the cross at +8 degrees miss the 4 pp bar:
 ## their share gaps are ratcheted (worst today over the four GLBs 4.78 and 5.09 pp, plus 0.3; test_art_punk's FRAMING_SHARE_RATCHET_PP).
 const FRAMING_RATCHET_PUNK_SHARE := {
 	"punk_jab pitch +8": 0.051,
 	"punk_cross pitch +8": 0.054,
 }
-## A9: the hero over the 15 first-person poses: cells that differ (today 6.9%, the block), the lens share's gap (6.9 points, the
-## block), the nearest the art stands to the lens against its proxies (7.6 cm, the front kick).
-const FRAMING_RATCHET_PLAYER_DIFFER := 0.10
-const FRAMING_RATCHET_PLAYER_SHARE := 0.10
-const FRAMING_RATCHET_PLAYER_NEAREST_M := 0.12
+## A9: the hero over the 15 first-person poses is held to test_art_player's own HERO_* constants (HERO_DIFFER_MAX, HERO_SHARE_MAX,
+## HERO_NEAREST_MAX_M: read, not copied, so this row cannot be looser than the test it mirrors): cells that differ (today 8.4%, the
+## block), the lens share's gap (8.4 points, the block), the nearest the art stands to the lens against its proxies (8.1 cm, the front kick).
 ## A7, the Punk's visible stretch: the longest growth of an edge in view (today 8.4 cm, the waist hem in the cross's twist, F-punk).
-const VISIBLE_STRETCH_RATCHET_M := 0.10
-## A11: the flash anchor to the skinned surface, by region (today the Punk's head 1.5 cm, torso 6.0 cm, leg 2.7 cm).
-const ANCHOR_RATCHET_M := {"head": 0.02, "torso": 0.10, "leg": 0.05}
-## A11, the hero: the same, a margin wider (the hero's own figures are printed as they come).
-const ANCHOR_RATCHET_PLAYER_M := {"head": 0.06, "torso": 0.12, "leg": 0.08}
+const VISIBLE_STRETCH_RATCHET_M := 0.09
+## A11: the flash anchor to the skinned surface, by region (today the Punk's head 1.4 cm, torso 6.0 cm, leg 2.7 cm).
+const ANCHOR_RATCHET_M := {"head": 0.02, "torso": 0.065, "leg": 0.032}
+## A11, the hero: the same (today head 2.8 cm, torso 4.6 cm, leg 4.7 cm).
+const ANCHOR_RATCHET_PLAYER_M := {"head": 0.033, "torso": 0.051, "leg": 0.052}
 
 ## The first-person framing's own geometry: the player's eye height in the crowd room, and the 1 m acts' two views.
 const EYE_Y := 1.656
@@ -405,7 +409,8 @@ func test_a4_the_soles_stand_on_the_floor_and_the_walks_plant_them() -> void:
 				idle_low = minf(idle_low, posed[v].y)
 		assert_gt(idle_low, PLANTED_FLOOR_M, "%s: the idle's soles are never under -15 mm (%.1f mm)" % [row.name, idle_low * 1000.0])
 		_note("A4", worst_slide < SLIDE_M, "%s: rest sole %+.1f mm; four walks slide at most %.2f cm (bar 2 cm%s), lowest %.1f mm; idle lowest %.1f mm" % [
-				row.name, lowest * 1000.0, worst_slide * 100.0, "; the hero's keep M3's 0.6 s cycle, F-motion C7, ratchet %.0f cm" % (SLIDE_RATCHET_PLAYER_M * 100.0) if row.player else "",
+				row.name, lowest * 1000.0, worst_slide * 100.0, "; the hero's keep M3's 0.6 s cycle, F-motion C7, ratchet %.0f cm, margin %.1f cm" % [
+				SLIDE_RATCHET_PLAYER_M * 100.0, (SLIDE_RATCHET_PLAYER_M - worst_slide) * 100.0] if row.player else "",
 				worst_low * 1000.0, idle_low * 1000.0])
 
 
@@ -527,13 +532,19 @@ func test_a6_the_hurtboxes_sit_inside_the_art_at_idle() -> void:
 		for region: String in ["torso", "legs", "head"]:
 			if float(fit[region]) < FIT_SHARE:
 				misses.append("%s %.1f%% < 95%%" % [region, float(fit[region]) * 100.0])
-		_note("A6", misses.is_empty(), "%s: torso %.1f%% of %d vertices, legs %.1f%% of %d, head %.1f%% of %d, %d axis points outside%s" % [
+		var held := ""
+		if row.player:
+			held = "; ratchets torso %.1f%%, legs %.1f%%, head %.1f%% (margins %.1f, %.1f, %.1f points), axis points %d" % [
+					FIT_RATCHET_PLAYER.torso * 100.0, FIT_RATCHET_PLAYER.legs * 100.0, FIT_RATCHET_PLAYER.head * 100.0,
+					(fit.torso - FIT_RATCHET_PLAYER.torso) * 100.0, (fit.legs - FIT_RATCHET_PLAYER.legs) * 100.0,
+					(fit.head - FIT_RATCHET_PLAYER.head) * 100.0, AXIS_OUTSIDE_RATCHET_PLAYER]
+		_note("A6", misses.is_empty(), "%s: torso %.1f%% of %d vertices, legs %.1f%% of %d, head %.1f%% of %d, %d axis points outside%s%s" % [
 				row.name, fit.torso * 100.0, fit.counts.torso, fit.legs * 100.0, fit.counts.legs, fit.head * 100.0, fit.counts.head,
-				axis.size(), ("  (plan's bar missed: %s)" % "; ".join(misses)) if not misses.is_empty() else ""])
+				axis.size(), ("  (plan's bar missed: %s)" % "; ".join(misses)) if not misses.is_empty() else "", held])
 		assert_gt(fit.counts.torso, 100, "%s: the torso vertices were counted" % row.name)
-		var floor_share := FIT_SHARE if not row.player else FIT_RATCHET_PLAYER
 		for region: String in ["torso", "legs", "head"]:
-			assert_gte(float(fit[region]), floor_share, "%s: the %s vertices hug their hurtbox (%.1f%%)" % [row.name, region, float(fit[region]) * 100.0])
+			var floor_share: float = FIT_SHARE if not row.player else float(FIT_RATCHET_PLAYER[region])
+			assert_gte(float(fit[region]), floor_share, "%s: the %s vertices hug their hurtbox (%.1f%%, held at %.1f%%)" % [row.name, region, float(fit[region]) * 100.0, floor_share * 100.0])
 		if not row.player:
 			assert_eq(axis, [], "%s: every hurtbox axis point is inside the art" % row.name)
 		else:
@@ -562,12 +573,16 @@ func test_a7_the_strain_of_every_animation_and_move_is_held_at_its_ratchet() -> 
 		var over := ArtStrain.flexes_over_bar(run)
 		assert_eq(run.kinds.get("NaN", 0), 0, "%s: no NaN" % row.name)
 		assert_eq(run.kinds.get("the floor", 0), 0, "%s: no vertex under the floor in a planted pose" % row.name)
-		assert_lte(run.problems.size(), int(shipped.problems_max), "%s: no more problem lines than today (%d)" % [row.name, run.problems.size()])
-		assert_lte(run.worst_high, float(shipped.high_max), "%s: no worse a p99.9 than today (%.2f)" % [row.name, run.worst_high])
-		assert_lte(share, ArtStrain.FLEX_RATCHET_SHARE, "%s: no peak flex worse than today (%.2f%% of the triangles)" % [row.name, share * 100.0])
-		_note("A7", run.problems.is_empty() and over.is_empty(), "%s: %d samples, %d with every number inside the bars, worst p99.9 %.2f, %d problem lines %s; peak flexes over the %d-triangle bar: %s (worst %.2f%% of the triangles; the plan's bar is 0.5%%)" % [
+		# The ratchet can fail (tests/art_strain.gd): the samples inside the bars, the worst p99.9 and p0.1, the extreme edges, the
+		# peak flexes' share and every clip's own figures held to today's plus a margin. A count of problem lines is not held: it
+		# saturates at two a sample, so no regression could raise it.
+		var table := ArtStrain.load_table(row.name)
+		assert_false(table.is_empty(), "%s: the per-clip strain figures are shipped (tests/fixtures/strain/strain_ratchet.json)" % row.name)
+		var broken := ArtStrain.ratchet_problems(run, shipped, table)
+		assert_eq(broken.size(), 0, "%s: every strain ratchet holds: %s" % [row.name, broken.slice(0, 6)])
+		_note("A7", run.problems.is_empty() and over.is_empty(), "%s: %d samples, %d with every number inside the bars, worst p99.9 %.2f, %d problem lines %s; peak flexes over the %d-triangle bar: %s (worst %.2f%% of the triangles; the plan's bar is 0.5%%); %s" % [
 				row.name, run.samples, run.in_bar, run.worst_high, run.problems.size(), run.kinds,
-				run.bad_bar, ", ".join(over) if not over.is_empty() else "none", share * 100.0])
+				run.bad_bar, ", ".join(over) if not over.is_empty() else "none", share * 100.0, ArtStrain.margin_text(run, shipped)])
 	print("DONE-WHEN A7 strain run: %.1f s" % ((Time.get_ticks_msec() - started) / 1000.0))
 
 
@@ -652,8 +667,9 @@ func test_a7_no_edge_the_lens_sees_of_the_punk_grows_more_than_its_ratchet_at_th
 							SkinnedView._dominant_bone(data, mi.skin, [a]), SkinnedView._dominant_bone(data, mi.skin, [b])]
 	assert_gt(edges_seen, 1000, "the poses were measured (%d edges in view)" % edges_seen)
 	assert_lte(worst, VISIBLE_STRETCH_RATCHET_M, "no edge in view grows more than the ratchet's %.0f cm (%.1f cm, %s)" % [VISIBLE_STRETCH_RATCHET_M * 100.0, worst * 100.0, worst_label])
-	_note("A7", worst <= VISIBLE_STRETCH_M, "punk visible stretch (slice gate contingency 4): %d edges in view over the 1 m poses, the longest growth %.1f cm (%s); bar %.0f cm, ratchet %.0f cm" % [
-			edges_seen, worst * 100.0, worst_label, VISIBLE_STRETCH_M * 100.0, VISIBLE_STRETCH_RATCHET_M * 100.0])
+	_note("A7", worst <= VISIBLE_STRETCH_M, "punk visible stretch (slice gate contingency 4): %d edges in view over the 1 m poses, the longest growth %.1f cm (%s); bar %.0f cm, ratchet %.0f cm (margin %.1f cm)" % [
+			edges_seen, worst * 100.0, worst_label, VISIBLE_STRETCH_M * 100.0, VISIBLE_STRETCH_RATCHET_M * 100.0,
+			(VISIBLE_STRETCH_RATCHET_M - worst) * 100.0])
 
 
 # --- A8: ragdoll ---------------------------------------------------------------------------------------
@@ -835,8 +851,9 @@ func test_a9_the_art_frames_like_its_proxies_at_the_one_metre_poses_and_in_the_p
 			assert_gt(cmp.art_share, 0.03, "%s: the art fills the view at 1 m" % label)
 			assert_lte(absf(cmp.art_share - cmp.proxy_share), share_bar, "%s: the lens share is within %.1f points of the proxies'" % [label, share_bar * 100.0])
 			assert_lte(cmp.differ_share, FRAMING_RATCHET_PUNK_DIFFER, "%s: cells that differ stay under the ratchet (%.1f%%)" % [label, cmp.differ_share * 100.0])
-	_note("A9", worst_differ <= FRAMING_DIFFER and worst_share <= FRAMING_SHARE, "punk, %d poses at 1 m: worst cells differ %.1f%% (bar 3%%, ratchet %.0f%%), worst lens share gap %.1f points (bar 4; the jab and the cross at +8 degrees are ratcheted, F-cuff)" % [
-			poses, worst_differ * 100.0, FRAMING_RATCHET_PUNK_DIFFER * 100.0, worst_share * 100.0])
+	_note("A9", worst_differ <= FRAMING_DIFFER and worst_share <= FRAMING_SHARE, "punk, %d poses at 1 m: worst cells differ %.1f%% (bar 3%%, ratchet %.1f%%, margin %.1f points), worst lens share gap %.1f points (bar 4; the jab and the cross at +8 degrees are ratcheted exactly, F-cuff)" % [
+			poses, worst_differ * 100.0, FRAMING_RATCHET_PUNK_DIFFER * 100.0, (FRAMING_RATCHET_PUNK_DIFFER - worst_differ) * 100.0,
+			worst_share * 100.0])
 	var hero := _arts()[1]
 	var hero_rig := _rig(hero)
 	var hero_differ := 0.0
@@ -853,12 +870,13 @@ func test_a9_the_art_frames_like_its_proxies_at_the_one_metre_poses_and_in_the_p
 		hero_nearest = maxf(hero_nearest, cmp.nearest)
 		if not SkinnedView.framing_problems(cmp, row.label).is_empty():
 			hero_misses += 1
-		assert_lte(cmp.differ_share, FRAMING_RATCHET_PLAYER_DIFFER, "hero %s: cells that differ stay under the ratchet (%.1f%%)" % [row.label, cmp.differ_share * 100.0])
-		assert_lte(absf(cmp.art_share - cmp.proxy_share), FRAMING_RATCHET_PLAYER_SHARE, "hero %s: the lens share's gap stays under the ratchet (%.1f points)" % [row.label, absf(cmp.art_share - cmp.proxy_share) * 100.0])
-		assert_lte(cmp.nearest, FRAMING_RATCHET_PLAYER_NEAREST_M, "hero %s: the art is at most %.0f cm nearer the lens than its proxies (%.1f cm)" % [row.label, FRAMING_RATCHET_PLAYER_NEAREST_M * 100.0, cmp.nearest * 100.0])
-	_note("A9", hero_misses == 0, "player, %d first-person poses: %d miss the plan's bars; worst cells differ %.1f%% (bar 3%%, ratchet %.0f%%), lens share gap %.1f points (bar 4, ratchet %.0f), art nearer than its proxies by %.1f cm (bar 2, ratchet %.0f)" % [
-			views.size(), hero_misses, hero_differ * 100.0, FRAMING_RATCHET_PLAYER_DIFFER * 100.0, hero_share * 100.0,
-			FRAMING_RATCHET_PLAYER_SHARE * 100.0, hero_nearest * 100.0, FRAMING_RATCHET_PLAYER_NEAREST_M * 100.0])
+		assert_lte(cmp.differ_share, ArtPlayerTest.HERO_DIFFER_MAX, "hero %s: cells that differ stay under the ratchet (%.1f%%)" % [row.label, cmp.differ_share * 100.0])
+		assert_lte(absf(cmp.art_share - cmp.proxy_share), ArtPlayerTest.HERO_SHARE_MAX, "hero %s: the lens share's gap stays under the ratchet (%.1f points)" % [row.label, absf(cmp.art_share - cmp.proxy_share) * 100.0])
+		assert_lte(cmp.nearest, ArtPlayerTest.HERO_NEAREST_MAX_M, "hero %s: the art is at most %.1f cm nearer the lens than its proxies (%.1f cm)" % [row.label, ArtPlayerTest.HERO_NEAREST_MAX_M * 100.0, cmp.nearest * 100.0])
+	_note("A9", hero_misses == 0, "player, %d first-person poses: %d miss the plan's bars; worst cells differ %.1f%% (bar 3%%, ratchet %.1f%%, margin %.1f points), lens share gap %.1f points (bar 4, ratchet %.1f, margin %.1f), art nearer than its proxies by %.1f cm (bar 2, ratchet %.1f, margin %.1f cm)" % [
+			views.size(), hero_misses, hero_differ * 100.0, ArtPlayerTest.HERO_DIFFER_MAX * 100.0, (ArtPlayerTest.HERO_DIFFER_MAX - hero_differ) * 100.0,
+			hero_share * 100.0, ArtPlayerTest.HERO_SHARE_MAX * 100.0, (ArtPlayerTest.HERO_SHARE_MAX - hero_share) * 100.0,
+			hero_nearest * 100.0, ArtPlayerTest.HERO_NEAREST_MAX_M * 100.0, (ArtPlayerTest.HERO_NEAREST_MAX_M - hero_nearest) * 100.0])
 	# The guard's forearms and hands against the lens.
 	_pose(hero_rig, &"block", 0.5)
 	var cam := _fp_camera(hero_rig)
@@ -1028,10 +1046,10 @@ func test_a11_the_flash_shows_for_hit_flash_frames_and_sits_on_the_skinned_surfa
 			var gap := INF
 			for mi: MeshInstance3D in rig.art_meshes():
 				gap = minf(gap, SkinnedView.surface_gap(mi, rig, anchor))
-			gaps.append("%s %.1f cm" % [label, gap * 100.0])
+			gaps.append("%s %.1f cm (ratchet %.1f, margin %.1f)" % [label, gap * 100.0, float(ratchet[label]) * 100.0, (float(ratchet[label]) - gap) * 100.0])
 			if gap > ANCHOR_M:
 				misses.append("%s %.1f cm" % [label, gap * 100.0])
-			assert_lte(gap, float(ratchet[label]), "%s: the %s flash sits within %.0f cm of the skinned surface (%.1f cm)" % [row.name, label, float(ratchet[label]) * 100.0, gap * 100.0])
+			assert_lte(gap, float(ratchet[label]), "%s: the %s flash sits within %.1f cm of the skinned surface (%.1f cm)" % [row.name, label, float(ratchet[label]) * 100.0, gap * 100.0])
 			rig.set_flash(0.0)
 		_note("A11", misses.is_empty(), "%s: flash anchor to the skinned surface: %s%s" % [row.name, ", ".join(gaps), ("  (plan's 2 cm missed: %s)" % ", ".join(misses)) if not misses.is_empty() else ""])
 

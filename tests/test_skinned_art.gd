@@ -1582,9 +1582,43 @@ func test_the_strain_of_the_shipped_glbs_is_reported_for_the_gate() -> void:
 		assert_eq(run.kinds.get("NaN", 0), 0, "%s: no NaN" % row.path)
 		assert_eq(run.kinds.get("the floor", 0), 0, "%s: no vertex under the floor in a planted pose" % row.path)
 		assert_gt(run.samples, 200, "%s: every clip at five phases and the peak flexes" % row.path)
-		assert_lte(run.problems.size(), row.problems_max, "%s: no more problem lines than today (%d)" % [row.path, run.problems.size()])
-		assert_lte(run.worst_high, row.high_max, "%s: no worse a p99.9 than today (%.2f)" % [row.path, run.worst_high])
-		assert_lte(ArtStrain.worst_flex_share(run), ArtStrain.FLEX_RATCHET_SHARE, "%s: no peak flex with more folded or squashed triangles than today (%.2f%% of them)" % [row.path, 100.0 * ArtStrain.worst_flex_share(run)])
+		print("A19 strain of %s: %s" % [row.path, ArtStrain.margin_text(run, row)])
+		var table := ArtStrain.load_table(row.name)
+		assert_false(table.is_empty(), "%s: the per-clip strain figures are shipped (tests/fixtures/strain/strain_ratchet.json)" % row.path)
+		var broken := ArtStrain.ratchet_problems(run, row, table)
+		assert_eq(broken.size(), 0, "%s: every strain ratchet holds (the whole run's and each clip's): %s" % [row.path, broken.slice(0, 6)])
+
+
+func test_the_strain_ratchet_has_teeth() -> void:
+	# The ratchet of A7 fails when the art gets worse: a table tightened below today's figures (or a run made worse) is
+	# caught by each number it holds, on the Punk's kept run (a count of problem lines never was: it could not rise).
+	var row := ArtStrain.SHIPPED[0]
+	var rig := _glb_rig(row.path, 1.8, row.player)
+	var run := ArtStrain.cached(row.path)
+	if run.is_empty():
+		run = ArtStrain.keep(row.path, ArtStrain.run(rig, ArtStrain.punk_moves()))
+	var table := ArtStrain.load_table(row.name)
+	assert_eq(ArtStrain.ratchet_problems(run, row, table).size(), 0, "the shipped ratchet holds on today's run")
+	for field: String in ["high_max", "low_min", "max_max", "min_min", "flex_share_max"]:
+		var tight := row.duplicate()
+		tight[field] = float(row[field]) * (0.5 if field.ends_with("_max") else 2.0)
+		var lines := ArtStrain.ratchet_problems(run, tight, table)
+		assert_gt(lines.size(), 0, "a tightened %s fails (%s)" % [field, lines.slice(0, 1)])
+	var tight_bar := row.duplicate()
+	tight_bar.in_bar_min = int(run.in_bar) + 1
+	assert_gt(ArtStrain.ratchet_problems(run, tight_bar, table).size(), 0, "one more sample inside the bars than today's fails")
+	# Per clip: the figure is halved where lower is better (p99.9, the stretch, the triangles) and doubled where higher is.
+	for field: String in ["high", "low", "max", "min", "bad"]:
+		var tight_table := table.duplicate(true)
+		var clip := "idle" if field != "bad" else "flex: arm raise 140"
+		var held: float = tight_table[clip][field]
+		var lower_is_better := field == "high" or field == "max" or field == "bad"
+		tight_table[clip][field] = held * 0.5 if lower_is_better else held * 2.0
+		var lines := ArtStrain.ratchet_problems(run, row, tight_table)
+		assert_gt(lines.size(), 0, "a tightened per-clip %s fails (%s)" % [field, lines.slice(0, 1)])
+	var missing := table.duplicate(true)
+	missing.erase("walk_forward")
+	assert_gt(ArtStrain.ratchet_problems(run, row, missing).size(), 0, "a clip with no figure fails: new clips are held too")
 
 
 # --- The hurtboxes inside the art (row A6) ----------------------------------------------------------
