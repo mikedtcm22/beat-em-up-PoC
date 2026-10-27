@@ -22,12 +22,15 @@ The source texture and materials are dropped: the game draws the atlas.
 
 F-punk's additions (all opt-in by config, so the probe and the player run as before):
 	palette.regions: faces of a slot inside a box take another slot (the Punk's lens: the cap's yellow in front of the eyes,
-	  on its own swatch that takes no damage marks);
+	  on its own swatch that takes no damage marks; the cap's strap slot: a dark arch of two boxes). A region with bisect_z
+	  and/or bisect_x cuts the mesh along the box's horizontal and/or vertical planes first, so its borders run along edge
+	  loops and survive the decimation straight;
 	faces with the pipe_fist attribute (generated fists, blender_parts) are decimated on their own to
 	  palette.fist_budget_tris each, the rest of the body to the budget less both fists (their borders still protected);
 	palette.unfold: relax the folded triangles of the decimated mesh away (pipe_cleanup.unfold) and report the counts;
 	palette.detail_bake: the 1k ink-only detail mask on UV2 baked from the dense texture (pipe_detail.bake, plan A18); its
-	  no_ink_slots (the lens) get no ink.
+	  no_ink_slots (the lens) get no ink, and so does a zone with "no_ink": true (the Punk's laces and cap: the generated
+	  texture's noise there is not a line, and the colour border already gives the shape).
 """
 import math
 import os
@@ -136,9 +139,9 @@ def run(cfg, extra):
 	# border runs along an edge loop and survives the decimation straight
 	cuts_made = []
 	for reg in pc_cfg.get("regions", []):
-		if not reg.get("bisect_z"):
+		if not reg.get("bisect_z") and not reg.get("bisect_x"):
 			continue
-		for plane_z in (reg["min"][2], reg["max"][2]):
+		for plane_z in ((reg["min"][2], reg["max"][2]) if reg.get("bisect_z") else ()):
 			geom_faces = []
 			for f in bm.faces:
 				c = f.calc_center_median()
@@ -148,6 +151,19 @@ def run(cfg, extra):
 			before = len(bm.faces)
 			bmesh.ops.bisect_plane(bm, geom=geom, dist=1e-6, plane_co=(0.0, 0.0, plane_z), plane_no=(0.0, 0.0, 1.0))
 			cuts_made.append({"region": reg.get("name", ""), "z": plane_z, "faces_before": before, "faces_after": len(bm.faces)})
+		# the vertical planes (the strap slot's sides), cut after the horizontal ones so the faces they pass are already small:
+		# the cut runs the box's height plus a margin (a face straddling a corner is cut too, so the corner is a vertex)
+		margin_z = 0.01
+		for plane_x in ((reg["min"][0], reg["max"][0]) if reg.get("bisect_x") else ()):
+			geom_faces = []
+			for f in bm.faces:
+				c = f.calc_center_median()
+				if reg["min"][1] <= c.y <= reg["max"][1] and reg["min"][2] - margin_z <= c.z <= reg["max"][2] + margin_z and abs(c.x - plane_x) < 0.03:
+					geom_faces.append(f)
+			geom = list(geom_faces) + sorted({e for f in geom_faces for e in f.edges}, key=lambda e: e.index) + sorted({v for f in geom_faces for v in f.verts}, key=lambda v: v.index)
+			before = len(bm.faces)
+			bmesh.ops.bisect_plane(bm, geom=geom, dist=1e-6, plane_co=(plane_x, 0.0, 0.0), plane_no=(1.0, 0.0, 0.0))
+			cuts_made.append({"region": reg.get("name", ""), "x": plane_x, "faces_before": before, "faces_after": len(bm.faces)})
 	bmesh.ops.triangulate(bm, faces=bm.faces[:])
 	bm.to_mesh(me)
 	bm.free()
@@ -568,8 +584,10 @@ def run(cfg, extra):
 				zsel &= np.isin(new_label, zone["slots"])
 			if zone.get("min"):
 				zsel &= np.all((centers >= np.array(zone["min"])) & (centers <= np.array(zone["max"])), axis=1)
-			zone_low[zsel] = float(zone["ink_low"])
-			zone_high[zsel] = float(zone["ink_high"])
+			zone_low[zsel] = float(zone.get("ink_low", db.get("ink_low", 0.04)))
+			zone_high[zsel] = float(zone.get("ink_high", db.get("ink_high", 0.12)))
+			if zone.get("no_ink"):
+				gain[zsel] = 0.0
 			zone_id[zsel] = zi
 			zone_names.append(zone.get("name", "zone%d" % zi))
 		bake_report = pipe_detail.bake(me, "detail", image, bvh, dense_verts_np, tri_idx, corner_uv, db, out_png, pc.work_path(cfg, "detail_source.png"), gain,

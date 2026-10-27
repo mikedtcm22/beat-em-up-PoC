@@ -208,6 +208,8 @@ def bake(me, layer_name, image, dense_bvh, dense_verts, dense_tris, dense_uv, cf
 			sel = (lo_f[face_pair] == lo) & (hi_f[face_pair] == hi)
 			if sel.any():
 				value[sel] = bilinear(shape(ink, lo, hi), uv[sel])
+	if face_gain is not None:
+		value = value * np.asarray(face_gain)[texel_face]
 	zone_report = {}
 	if face_zone is not None:
 		zt = np.asarray(face_zone)[texel_face]
@@ -216,8 +218,6 @@ def bake(me, layer_name, image, dense_bvh, dense_verts, dense_tris, dense_uv, cf
 			if m.any():
 				zone_report[name] = {"texels": int(m.sum()), "raw_percentiles": {str(q): round(float(np.percentile(raw[m], q)), 4) for q in (50, 80, 90, 95, 97, 98, 99, 99.5)},
 					"ink_texels_share": float((value[m] > 0.5).mean())}
-	if face_gain is not None:
-		value = value * np.asarray(face_gain)[texel_face]
 	mask = np.zeros((size, size), dtype=np.float32)
 	mask[texel[:, 0], texel[:, 1]] = value
 	grow = int(cfg.get("grow_px", 0))
