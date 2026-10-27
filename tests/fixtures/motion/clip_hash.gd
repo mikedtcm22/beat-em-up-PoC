@@ -14,9 +14,14 @@ const TABLE_PATH := "res://tests/fixtures/motion/move_clip_hashes.json"
 ## Rig sizes a clip is built for (the Hips position track carries the scale): the Punk's and the boss's.
 const SCALES: Array[float] = [1.0, 1.278]
 const STANCES: Array[StringName] = [&"boxer", &"relaxed"]
+## Why a named hash is not the M3 clip's any more: the table is rewritten only for a reason, and each reason is kept in the table's
+## `notes` (with the M3 hashes it replaced), so the file says what moved and why.
+const NOTES := {
+	"stagger_back": "M4 call 24 (the lead's, final review finding final-v2-01; a departure from A20's frozen-clip list, not from the SPEC): stagger_back_a and stagger_back_b are re-posed like stagger_right (upper arms about 40 degrees off the body then 28, elbows folded to 90-110 degrees, forearms forward and raised), so the skinned Punk's arms never go straight and horizontal, the rig's bind pose, after the third knee, on a grab release and in the long take. Only the arm tracks changed. The M3 hashes it replaced: boxer|1.0 5d4f1e7a896c, boxer|1.278 a770c027ff85, relaxed|1.0 49ca3e4c03f6, relaxed|1.278 b0aa3f3f405b.",
+}
 
 
-## `{moves: {"<file>|<stance>|<scale>": hash}, named: {"<id>|<stance>|<scale>": hash}}` for every move file in
+## `{moves: {"<file>|<stance>|<scale>": hash}, named: {"<id>|<stance>|<scale>": hash}, notes: NOTES}` for every move file in
 ## MOVES_DIR and every id in PlaceholderAnims.ANIM_IDS. A move's entry hashes its clip four ways (plain, mirrored,
 ## from its charge, both), as a rig builds them.
 static func compute() -> Dictionary:
@@ -37,7 +42,7 @@ static func compute() -> Dictionary:
 		for stance: StringName in STANCES:
 			for scale: float in SCALES:
 				named["%s|%s|%s" % [id, stance, scale]] = sha(clip_text(named_clip(id, scale, stance)))
-	return {moves = moves, named = named}
+	return {moves = moves, named = named, notes = NOTES}
 
 
 ## The named clip as M3 built it (the polish off).
