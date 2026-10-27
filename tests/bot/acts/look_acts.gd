@@ -690,8 +690,8 @@ static func _perf_six(bot: Node) -> void:
 ## update, 1.2 m under the floor and behind the view, and so never drawn. A room's load is cold only
 ## once per run, so the act runs it again: the warm-up's two once-per-run flags are cleared and each
 ## of WARM_ROOMS loads afresh into a SubViewport of its own (its own world, so nothing of the bot's
-## room is touched and the recording's view is the bot's camera still), its camera as new as at the
-## game's start. Every frame the holder is drawn (the frame_pre_draw before it), the skinned ArtBody's
+## room is touched and the recording's view is the bot's camera still), its camera, riding that room's
+## own player, as new as at the game's start. Every frame the holder is drawn (the frame_pre_draw before it), the skinned ArtBody's
 ## box and the five hull boxes are tested against that camera's frustum. Prints per room
 ##   LOOK-WARM <room> f<frame> holder (x y z) camera (x y z): skinned <in>/<n> hulls <in>/<n>
 ## for each frame, then the line to quote
@@ -716,10 +716,23 @@ static func _warm_up_room(bot: Node, label: String, scene: String) -> void:
 	view.own_world_3d = true
 	view.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	bot.add_child(view)
+	# A room loaded at the game's start is built before the first frame's process step, where every
+	# camera is still unplaced: load this one from a physics frame, which runs before the process step
+	# of its frame, not from a process_frame (the step has begun, and the camera would be placed before
+	# the warm-up first looks at it).
+	await tree.physics_frame
 	ToonMaterials._warmed = false
 	ToonMaterials._art_warmed = false
 	var room := (load(scene) as PackedScene).instantiate() as Node3D
 	view.add_child(room)
+	# The room's own director finds the player by group and the bot's room comes first in the tree:
+	# hand it this room's player, as the game's start has (the camera is not updated before the next
+	# frame, so it is as cold as the game's).
+	var player := room.get(&"player") as PlayerCharacter
+	for child: Node in room.get_children():
+		if child is CameraDirector and player != null:
+			(child as CameraDirector).player = player
+			(child as CameraDirector).first_person_camera.player = player
 	var drawn: Array[Dictionary] = []
 	var hidden := 0
 	var sane := false
@@ -758,19 +771,20 @@ static func _warm_up_room(bot: Node, label: String, scene: String) -> void:
 
 
 ## What of the holder's meshes (the skinned art's, the hull boxes') are in `camera`'s frustum now:
-## `{skinned_in, skinned, hulls_in, hulls}`.
+## `{skinned_in, skinned, hulls_in, hulls}`: the art meshes of the skeleton's copy (group
+## HumanoidRig.ART_GROUP; its hidden view proxies are not counted) and the boxes under the holder.
 static func _warm_frame(holder: Node3D, camera: Camera3D) -> Dictionary:
 	var planes := camera.get_frustum()
 	var out := {skinned_in = 0, skinned = 0, hulls_in = 0, hulls = 0}
 	for node: Node in holder.find_children("*", "MeshInstance3D", true, false):
 		var mesh := node as MeshInstance3D
 		var inside := _in_frustum(mesh.global_transform * mesh.get_aabb(), planes)
-		if mesh.mesh is BoxMesh:
-			out.hulls += 1
-			out.hulls_in += int(inside)
-		else:
+		if mesh.is_in_group(HumanoidRig.ART_GROUP):
 			out.skinned += 1
 			out.skinned_in += int(inside)
+		elif mesh.get_parent() == holder:
+			out.hulls += 1
+			out.hulls_in += int(inside)
 	return out
 
 

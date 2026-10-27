@@ -237,7 +237,8 @@ static func hull_direction(mode: int, vertex: Vector3, normal: Vector3) -> Vecto
 ## frame, not the first: process_frame fires before any node's _process, so on the first frame
 ## the camera has not been placed yet (the FirstPersonCamera is at the world origin with no
 ## turn until its own first update) and a holder put by it would stand under the floor behind
-## the view, where the renderer culls it and builds nothing. It stays hidden until then.
+## the view, where the renderer culls it and builds nothing. It stays hidden until then, and is
+## scaled down to the camera's near distance when it shows: only the draw is wanted.
 static func warm_up(parent: Node, skinned: Node3D = null) -> void:
 	if parent == null or not parent.is_inside_tree() or DisplayServer.get_name() == "headless":
 		return
@@ -275,6 +276,9 @@ static func warm_up(parent: Node, skinned: Node3D = null) -> void:
 	var camera := parent.get_viewport().get_camera_3d() if is_instance_valid(holder) else null
 	if camera != null and is_instance_valid(holder):
 		holder.global_position = camera.global_position - camera.global_basis.z * WARM_DISTANCE_M + Vector3.DOWN * WARM_DROP_M
+		# In the lens, so the renderer draws it, but a speck: a pipeline is built by the draw, not by
+		# the picture, and a whole body and its metre boxes would flash for two frames at every load.
+		holder.scale = Vector3.ONE * camera.near
 		holder.visible = true
 	await parent.get_tree().process_frame
 	await parent.get_tree().process_frame
