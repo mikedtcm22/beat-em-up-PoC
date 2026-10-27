@@ -133,11 +133,23 @@ const _FALL_HEAD_SLACK := 0.02
 ## straight fade would point the spine this much higher (y of its unit up axis) than it
 ## points at either end.
 const _ROLL_MIN_GAIN := 0.1
+## The step of a Fibonacci hash (the golden ratio's fraction): consecutive hashes land evenly
+## spread round a loop (see _idle_phase()).
+const _IDLE_PHASE_STEP := 0.6180339887
 
 ## The named animation libraries built so far, per stance and scale (see _named_library()).
 static var _named_libraries: Dictionary[String, AnimationLibrary] = {}
+## What the Motion tunables and move_speed read when the cached libraries were built, and how
+## many times a change to them has dropped the cache (see _on_motion_tuning_changed()): a rig
+## whose own count is behind takes the rebuilt library at its next advance().
+static var _library_signature: Array = []
+static var _library_revision: int = 0
 
 var _built: bool = false
+## The _library_revision this rig's named library was taken at.
+var _library_seen: int = 0
+## Where in its loop the idle starts (see _own_idle_share()).
+var _idle_share: float = 0.0
 ## Rig lengths are PlaceholderBody lengths times this.
 var _scale: float = 1.0
 var _bone_index: Dictionary[StringName, int] = {}
@@ -210,6 +222,7 @@ func build() -> void:
 	if build_hurtboxes:
 		_build_hurtboxes()
 	_build_animation()
+	_idle_share = _own_idle_share()
 	_start(&"idle", &"idle", 0.0, 1.0)
 	advance(0.0)
 
@@ -322,6 +335,8 @@ func advance(dt: float) -> void:
 	if not _built:
 		return
 	var step := maxf(dt, 0.0)
+	if _library_seen != _library_revision:
+		_refresh_library()
 	anim_player.advance(step)
 	_apply_fade(step)
 	skeleton.advance(step)
@@ -848,6 +863,7 @@ func _build_animation() -> void:
 	anim_player.deterministic = false
 	anim_player.add_animation_library(&"", _named_library(_scale, stance))
 	anim_player.add_animation_library(_MOVE_LIBRARY, AnimationLibrary.new())
+	_library_seen = _library_revision
 
 
 ## The named library of rigs of `rig_scale` standing in `stance_id`: built once (about 8 ms of the
@@ -855,12 +871,84 @@ func _build_animation() -> void:
 ## of that size and stance. Its clips depend on those two alone and nothing alters them after the
 ## build (the rig only reads them: lengths, track samples, head curves), so one library serves any
 ## number of AnimationPlayers. The per-move "moves" library stays per rig: the clips of a move
-## are built the first time that rig plays it.
+## are built the first time that rig plays it. The Motion tunables and move_speed are read when it
+## is built, so a change to one of them drops the cache (_on_motion_tuning_changed()) and the next
+## call builds the library again.
 static func _named_library(rig_scale: float, stance_id: StringName) -> AnimationLibrary:
+	_watch_motion_tuning()
 	var key := "%s@%d" % [stance_id, roundi(rig_scale * 10000.0)]
 	if not _named_libraries.has(key):
+		_library_signature = _motion_signature()
 		_named_libraries[key] = PlaceholderAnims.build_library(rig_scale, stance_id)
 	return _named_libraries[key]
+
+
+## Listen, once, for the tunables the named clips are built from.
+static func _watch_motion_tuning() -> void:
+	if not Tuning.changed.is_connected(_on_motion_tuning_changed):
+		Tuning.changed.connect(_on_motion_tuning_changed)
+
+
+## Every value the named clips are built from, in the order PlaceholderAnims.Life declares them
+## (read through its script variables, so a value added there is watched without a change here).
+static func _motion_signature() -> Array:
+	var life := PlaceholderAnims.Life.from_tuning()
+	var values: Array = []
+	for info: Dictionary in life.get_property_list():
+		if int(info.usage) & PROPERTY_USAGE_SCRIPT_VARIABLE:
+			values.append(life.get(info.name))
+	return values
+
+
+## Tuning.changed: a Motion tunable, move_speed or Debug's look_motion_polish (or a whole-set
+## change: a preset, a reset) that changes what the named clips are built from drops the cached
+## libraries, so the F1 sliders are live. A change that leaves every value as it was (a reset
+## to the values already in use) does nothing: no rig takes a new library.
+static func _on_motion_tuning_changed(property: StringName) -> void:
+	if property != &"" and property != &"move_speed" and not String(property).begins_with("look_motion_"):
+		return
+	if _motion_signature() == _library_signature:
+		return
+	_named_libraries.clear()
+	_library_revision += 1
+
+
+## Take the library the cache holds now (built if it has to be) in place of the one this rig
+## was built with. A named clip that is playing goes on from the same share of its length on the
+## new clip (a stride or a breath may have changed length), faded in from the pose on screen
+## over locomotion_blend_s as every start is, so nothing pops; a move's clip (the "moves"
+## library is per rig and never rebuilt) and a rig with nothing playing are left as they are.
+func _refresh_library() -> void:
+	_library_seen = _library_revision
+	var fresh := _named_library(_scale, stance)
+	var old := anim_player.get_animation_library(&"")
+	if fresh == old:
+		return
+	var playing := anim_player.assigned_animation
+	var carry := playing != &"" and old.has_animation(playing)
+	var share := 0.0
+	if carry and anim_player.current_animation_length > 0.0:
+		share = anim_player.current_animation_position / anim_player.current_animation_length
+	var speed := anim_player.speed_scale
+	anim_player.remove_animation_library(&"")
+	anim_player.add_animation_library(&"", fresh)
+	if carry and fresh.has_animation(playing):
+		_start(playing, _current, locomotion_blend_s, speed)
+		anim_player.seek(share * fresh.get_animation(playing).length)
+
+
+## Where in its loop this rig's idle starts, as a share of the clip's length: a body of the crowd
+## (its actor is in the group "ai_enemy": EnemyActor joins it before it builds its body) takes it
+## from its actor's name, a Fibonacci hash, so the Punks of one wave, named Punk1 to Punk6, do not
+## breathe and bounce in step. Nothing random: the same name gives the same phase in every run.
+## Every other body, the player's, a training dummy's and a scratch rig's, starts at the first key as
+## it always did (the player's lens rides his head, and the dummies are tuning targets that stand
+## alone). Read once, when the rig is built, so an actor that leaves its groups (a KO'd body, a
+## scripted showcase) keeps the phase its idle was started at.
+func _own_idle_share() -> float:
+	if actor == null or not actor.is_in_group(&"ai_enemy"):
+		return 0.0
+	return fposmod(float(String(actor.name).hash()) * _IDLE_PHASE_STEP, 1.0)
 
 
 # --- Runtime ---------------------------------------------------------------------------
@@ -882,6 +970,8 @@ func _start(full_name: StringName, id: StringName, blend_s: float, speed: float)
 	anim_player.play(full_name, 0.0)
 	if restart:
 		anim_player.seek(0.0)
+	if id == &"idle" and full_name == &"idle" and _idle_share > 0.0:
+		anim_player.seek(_idle_share * anim_player.get_animation(full_name).length)
 	_current = id
 
 

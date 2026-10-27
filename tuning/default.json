@@ -499,6 +499,7 @@
 		"look_grade_enabled": true,
 		"look_grade_strength": 1.0,
 		"fp_knockdown_hide_torso": false,
+		"combat_log_hide_while_holding": false,
 		"look_motion_breath_deg": 1.5,
 		"look_motion_breath_hz": 0.25,
 		"look_motion_bounce_m": 0.005,

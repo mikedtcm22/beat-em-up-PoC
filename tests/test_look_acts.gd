@@ -99,10 +99,11 @@ func test_the_act_file_holds_the_plans_acts_with_their_slugs() -> void:
 		assert_true(String(act.title).begins_with("Look: "), "%s starts with Look:" % act.title)
 		assert_true(act.cam in [&"first_person", &"free_fly"], "%s has a camera mode" % act.title)
 		assert_true((act.fn as Callable).is_valid(), "%s has an act" % act.title)
-	# SL-int adds the perf act after them (A16), the slice gate's fixer the warm-up act (W1): C1-C11
-	# and C13 stay first, in the plan's order.
+	# SL-int adds the perf act after them (A16), the slice gate's fixer the warm-up act (W1), P3-early
+	# the long take (C14) and the L5 readability act: C1-C11 and C13 stay first, in the plan's order.
 	assert_eq(slugs.slice(0, SLUGS.size()), SLUGS, "the acts are C1-C11 and C13, in the plan's order")
-	assert_eq(slugs.slice(SLUGS.size()), [&"p1", &"w1"] as Array[StringName], "then SL-int's perf act and the warm-up act")
+	assert_eq(slugs.slice(SLUGS.size()), [&"p1", &"w1", &"c14", &"c15", &"l5"] as Array[StringName],
+			"then SL-int's perf act, the warm-up act, the long take, the F4 showcase and the L5 act")
 
 
 func test_the_perf_act_runs_six_art_punks_with_the_probe_on() -> void:
@@ -119,6 +120,33 @@ func test_the_perf_act_runs_six_art_punks_with_the_probe_on() -> void:
 	for title: String in ["Perf, six with ragdolls", "Look: Punk reacts at 1 m"]:
 		assert_false(title.to_lower().contains("look: perf, six art punks"))
 		assert_false("look: perf, six art punks".contains(title.to_lower()))
+
+
+func test_the_long_take_and_the_l5_act_are_in_the_file_with_titles_nothing_else_holds() -> void:
+	# P3-early: the 40 s long take (C14, for the DM), the F4 showcase act (C15) and the windowed L5 act (R4 and R8
+	# with the art drawn).
+	var by_slug := {}
+	for act in LookActs.acts(_bare_node()):
+		by_slug[act.slug] = act
+	assert_eq(by_slug[&"c14"].title, "Look: Punk at 1 m, the long take")
+	assert_eq(by_slug[&"c15"].title, "Look: F4 Showcase Punk")
+	assert_eq(by_slug[&"l5"].title, "Look: readability with the art drawn")
+	for slug: StringName in [&"c14", &"c15", &"l5"]:
+		assert_eq(by_slug[slug].cam, &"first_person")
+		assert_true((by_slug[slug].fn as Callable).is_valid())
+		assert_false(by_slug[slug].get("probe", false), "no probe: the act measures the lens itself")
+		var title := String(by_slug[slug].title).to_lower()
+		for act in LookActs.acts(_bare_node()):
+			if act.slug == slug:
+				continue
+			assert_false(title.contains(String(act.title).to_lower()), "%s does not hold %s" % [title, act.title])
+			assert_false(String(act.title).to_lower().contains(title), "%s does not hold %s" % [act.title, title])
+	# The titles of the other acts' files (the crowd, the slice, F-motion's) too: a capture filter is a
+	# substring match over every act of the run.
+	for other: String in ["Six Punks, fight", "Mixed six, fight", "Perf, six with ragdolls", "Look: extremes"]:
+		for slug: StringName in [&"c14", &"c15", &"l5"]:
+			var title := String(by_slug[slug].title).to_lower()
+			assert_false(title.contains(other.to_lower()) or other.to_lower().contains(title), "%s and %s" % [title, other])
 
 
 func test_every_title_picks_only_its_own_act() -> void:

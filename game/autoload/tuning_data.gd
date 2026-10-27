@@ -1148,6 +1148,10 @@ extends Resource
 ## First-person feel alternative: the non-KO knockdown hides the torso slab that fills the
 ## view while the body lies on the camera. Off = the M3 behavior.
 @export var fp_knockdown_hide_torso: bool = false
+## First-person feel alternative (grab-03): the combat log, docked right of the view center, sits
+## over the knee in a hold, so it hides for as long as the player holds an enemy and comes back
+## when the hold ends. Off = the M3 behavior (the L key puts the log away at any time).
+@export var combat_log_hide_while_holding: bool = false
 
 # Motion (F-motion): the life in the placeholder clips, read when a rig's named-clip library is
 # built (the first rig of a size and stance), so a change reaches the rigs built after it. The

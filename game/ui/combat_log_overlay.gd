@@ -8,6 +8,13 @@ extends Control
 ## ("<chip> chip" instead of "<damage> dmg") and the flag BLOCKED, PERFECT or GUARD BREAK. A hit
 ## armor absorbed (the Bruiser's, the boss's) carries the flag ARMOR and is drawn grey.
 ## Fed by GameHud from CombatEvents.hit_landed, attack_started and attack_whiffed.
+##
+## First person (Milestone 4, grab-03): the log sits over the knee in a hold, so TOGGLE_KEY puts it
+## away and brings it back (it keeps recording while hidden), and Tuning's
+## combat_log_hide_while_holding (FP feel, off) hides it for as long as the player holds an enemy.
+
+## The key that shows or hides the log, listed in the help overlay (HelpOverlay.KEY_ROWS).
+const TOGGLE_KEY := KEY_L
 
 @export var max_entries: int = 10
 @export var font_size: int = 14
@@ -20,6 +27,9 @@ extends Control
 var entries: Array[Dictionary] = []
 
 var _last_frame: int = -1
+## The log is held back while the player holds an enemy (Tuning's combat_log_hide_while_holding): it
+## still records, and draws nothing.
+var _held_back: bool = false
 # attacker instance id -> {move: MoveData, chain_step: int, input_timing: StringName}
 var _attacks: Dictionary[int, Dictionary] = {}
 
@@ -27,6 +37,36 @@ var _attacks: Dictionary[int, Dictionary] = {}
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	clip_contents = true
+
+
+func _process(_delta: float) -> void:
+	set_held_back(Tuning.data.combat_log_hide_while_holding and _player_holds())
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	var key := event as InputEventKey
+	if key != null and key.pressed and not key.echo and key.keycode == TOGGLE_KEY:
+		visible = not visible
+		get_viewport().set_input_as_handled()
+
+
+## True while the log is drawn: shown, and not held back by a hold.
+func is_showing() -> bool:
+	return visible and not _held_back
+
+
+## True while a hold keeps the log from drawing (see the class docs).
+func is_held_back() -> bool:
+	return _held_back
+
+
+## Hold the log back (it draws nothing and keeps recording) or let it draw again. _process() calls
+## it from the tunable and the player's hold; tests call it directly.
+func set_held_back(held_back: bool) -> void:
+	if held_back == _held_back:
+		return
+	_held_back = held_back
+	queue_redraw()
 
 
 ## CombatEvents.attack_started: remember chain step and timing for a later whiff line.
@@ -138,6 +178,18 @@ func _hit_color(hit: HitInfo) -> Color:
 	return _tier_color(hit.tier)
 
 
+## The player holds an enemy right now (a grab, or a knee that has not let go): read from the
+## player, never written.
+func _player_holds() -> bool:
+	if not is_inside_tree():
+		return false
+	var player := get_tree().get_first_node_in_group(&"player") as PlayerCharacter
+	if player == null:
+		return false
+	var held := player.holding_enemy()
+	return held != null and player.is_holding(held)
+
+
 func _tier_color(tier: CombatTypes.HitTier) -> Color:
 	match tier:
 		CombatTypes.HitTier.HEAVY:
@@ -172,6 +224,8 @@ static func _move_name(move: MoveData) -> String:
 
 
 func _draw() -> void:
+	if _held_back:
+		return
 	var font := HudStyle.regular_font()
 	draw_rect(Rect2(Vector2.ZERO, size), Color(HudStyle.INK, 0.62))
 	draw_rect(Rect2(Vector2.ZERO, size), Color(HudStyle.PAPER, 0.25), false, 2.0)
