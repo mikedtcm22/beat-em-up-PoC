@@ -4,6 +4,21 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-27 00:25 CDT: P1-fx merged; only P1-post is still running in phase 1
+- **Merged:**
+  - The P1-skin merge was green at 1313/1313.
+  - P1-fx (`657ca31`; its own branch passed 1269/1269). The preset is at 484 values. The suite on the merge is running.
+- **What P1-fx built:**
+  - Every effect is redrawn by `tools/gen_fx.gd` in `HudStyle.INK`, with stroke weights from `INK_TABLE`: 7.5 px at 1 m, about 2× the hull.
+  - Ben-Day dots on the bursts and on the lettering faces.
+  - A second variant per burst tier (`burst_*_2`), never repeated twice running.
+  - Every word is drawn at one cap height, with an inner highlight.
+  - Lying splats are unshaded (`vfx_splat_shade`), and blood is ink-outlined.
+  - Output is byte-stable, and a test reruns the generator to check it.
+- **The lead's look:** in C5's hook frame before and after, the effects read as one ink style with the toon Punk. The lettering is now the heaviest line on screen; it reads bold, not heavy. The contact flash's white blob still covers a big share of the view: that is a deferred feel question for P3-int's toggle.
+- **The look bible's VFX row** now names `INK_TABLE` instead of a tunable. `test_fx_m4` ties it to `look_outline_px`, so a hull change means a re-run of `gen_fx`.
+- **Next:** P1-post. Then SL-int, then the slice gate.
+
 ### 2026-10-27 00:10 CDT: P1-skin merged; P1-post and P1-fx still running
 5-hour 69% (resets 00:50 CDT), weekly 17%.
 - **Merged:**
