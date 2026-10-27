@@ -5,6 +5,9 @@ extends GutTest
 ## are windowed: tests/bot/look_probe.gd and tests/bot/acts/look_post_acts.gd.
 
 const GenLut := preload("res://tools/gen_lut.gd")
+const LookProbe := preload("res://tests/bot/look_probe.gd")
+const LookPostActs := preload("res://tests/bot/acts/look_post_acts.gd")
+const LookActs := preload("res://tests/bot/acts/look_acts.gd")
 const CROWD_PATH := "res://game/level/crowd_room.tscn"
 const TRAINING_PATH := "res://game/level/test_room.tscn"
 const EDGE_SHADER_PATH := "res://game/fx/edge_pass.gdshader"
@@ -18,8 +21,19 @@ const RED_SATURATION := 0.5
 const STREET_SATURATION_MAX := 0.30
 ## The hull's width bound (the look bible) in pixels at 1080p: the character mask has to reach it.
 const HULL_MAX_PX := 4.5
-## One step of an 8-bit channel.
-const BYTE_STEP := 1.0 / 255.0
+## The longest an act may take in the tests (physics ticks).
+const ACT_MAX_TICKS := 900
+## A scratch folder for look.json (under user://, so the repo stays clean).
+const PROBE_DIR := "user://look_post_test"
+
+
+## The crowd bot that stops instead of quitting the test run's tree when its acts are done.
+class QuietBot extends "res://tests/bot/crowd_bot.gd":
+	var finished: bool = false
+
+	func _quit() -> void:
+		clear_enemies()
+		finished = true
 
 
 func before_each() -> void:
@@ -495,3 +509,183 @@ func test_no_paint_of_an_enemy_the_dummies_or_the_player_is_red() -> void:
 	var training := await _training(false)
 	for dummy_color: Color in training.get(&"dummy_colors"):
 		assert_false(_in_red_band(dummy_color), "the training room's dummy %s" % dummy_color)
+
+
+# --- The probe's measurements ------------------------------------------------------------------
+
+
+## A WxH image filled with `fill`.
+func _flat(width: int, height: int, fill: Color) -> Image:
+	var image := Image.create(width, height, false, Image.FORMAT_RGB8)
+	image.fill(fill)
+	return image
+
+
+func test_dark_runs_count_the_lines_along_a_scan() -> void:
+	var image := _flat(40, 4, Color(0.6, 0.6, 0.6))
+	for x in [5, 6, 7, 8]:
+		image.set_pixel(x, 1, Color(0.03, 0.03, 0.03))
+	for x in [20, 21]:
+		image.set_pixel(x, 1, Color(0.03, 0.03, 0.03))
+	assert_eq(LookProbe.dark_runs(image, Vector2i(0, 1), Vector2i(39, 1)), PackedInt32Array([4, 2]), "a hull and a second line")
+	assert_eq(LookProbe.dark_runs(image, Vector2i(10, 1), Vector2i(30, 1)), PackedInt32Array([2]), "only the scanned part")
+	assert_eq(LookProbe.dark_runs(image, Vector2i(39, 1), Vector2i(0, 1)), PackedInt32Array([2, 4]), "either way")
+	assert_eq(LookProbe.dark_runs(image, Vector2i(0, 0), Vector2i(39, 0)).size(), 0, "a clean row")
+
+
+func test_line_width_is_the_median_of_what_the_pass_added_at_1080p() -> void:
+	# A 1080 px tall frame, so a pixel is a 1080p pixel; two 2 px vertical lines and a 1 px horizontal one.
+	var without := _flat(200, 1080, Color(0.5, 0.5, 0.5))
+	var with := without.duplicate() as Image
+	for y in range(100, 300):
+		for x in [50, 51, 120, 121]:
+			with.set_pixel(x, y, Color(0.03, 0.03, 0.03))
+	for x in range(10, 190):
+		with.set_pixel(x, 600, Color(0.03, 0.03, 0.03))
+	var width := LookProbe.line_width_px(with, without, Rect2i(0, 0, 200, 1080))
+	assert_eq(width, 2.0, "vertical lines are 2 px, the horizontal run is a row of 1 px lines: the median is the vertical ones'")
+	assert_eq(LookProbe.line_width_px(without, without, Rect2i(0, 0, 200, 1080)), 0.0, "nothing differs")
+	var shifted := LookProbe.line_width_px(with, without, Rect2i(0, 0, 200, 1080), 2)
+	assert_eq(shifted, 2.0, "a row step still finds it")
+
+
+func test_line_width_scales_to_1080p_from_a_shorter_frame() -> void:
+	var without := _flat(100, 540, Color(0.5, 0.5, 0.5))
+	var with := without.duplicate() as Image
+	for y in range(50, 200):
+		with.set_pixel(30, y, Color(0.0, 0.0, 0.0))
+	assert_almost_eq(LookProbe.line_width_px(with, without, Rect2i(0, 0, 100, 540)), 2.0, 0.001, "1 px of a 540 p frame is 2 px of 1080p")
+
+
+func test_luma_clusters_find_the_bands_of_a_region() -> void:
+	var image := _flat(30, 10, Color(0.8, 0.8, 0.8))
+	for y in 10:
+		for x in range(0, 10):
+			image.set_pixel(x, y, Color(0.3, 0.3, 0.3))
+		for x in range(10, 20):
+			image.set_pixel(x, y, Color(0.55, 0.55, 0.55))
+	var centres := LookProbe.luma_clusters(image, Rect2i(0, 0, 30, 10))
+	assert_eq(centres.size(), 3, "three bands: shadow, mid, lit")
+	assert_lt(centres[0], centres[1])
+	assert_lt(centres[1], centres[2])
+	assert_almost_eq(LookProbe.shadow_ratio(image, Rect2i(0, 0, 30, 10)), 0.3 / 0.8, 0.05, "shadow over lit")
+	assert_eq(LookProbe.shadow_ratio(_flat(8, 8, Color.GRAY), Rect2i(0, 0, 8, 8)), 1.0, "one band")
+
+
+func test_white_and_changed_shares() -> void:
+	var a := _flat(20, 10, Color(0.3, 0.3, 0.3))
+	var b := a.duplicate() as Image
+	for x in 5:
+		for y in 10:
+			b.set_pixel(x, y, Color.WHITE)
+	assert_almost_eq(LookProbe.white_share(b), 0.25, 0.001, "a quarter of the view is white")
+	assert_eq(LookProbe.white_share(a), 0.0)
+	assert_almost_eq(LookProbe.changed_share(a, b), 0.25, 0.001)
+	assert_eq(LookProbe.changed_share(a, a), 0.0)
+	assert_almost_eq(LookProbe.white_share(b, Rect2i(0, 0, 5, 10)), 1.0, 0.001, "in a region")
+	assert_eq(LookProbe.mean_delta_e(a, a), 0.0)
+	assert_gt(LookProbe.mean_delta_e(a, b), 10.0, "a quarter of the frame went from grey to white")
+
+
+func test_record_merges_keys_into_look_json() -> void:
+	var dir := ProjectSettings.globalize_path(PROBE_DIR)
+	DirAccess.remove_absolute(dir.path_join(LookProbe.LOOK_JSON))
+	var path := LookProbe.record("e1", {"edge_line_px_1080": 1.5}, dir)
+	assert_eq(path, dir.path_join(LookProbe.LOOK_JSON))
+	LookProbe.record("e2", {"lit_hull_px_mask_on": 4.0}, dir)
+	LookProbe.record("e1", {"edge_line_px_1080": 2.0, "x": 1}, dir)
+	var data: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(path))
+	assert_eq(data.keys().size(), 2, "both acts' keys are there")
+	assert_eq(data.e1.edge_line_px_1080, 2.0, "a key is replaced by its newer values")
+	assert_eq(data.e2.lit_hull_px_mask_on, 4.0)
+	DirAccess.remove_absolute(path)
+
+
+func test_a_headless_run_has_no_frame_to_grab() -> void:
+	assert_null(LookProbe.grab(get_viewport()), "the dummy renderer draws nothing")
+
+
+# --- The acts ----------------------------------------------------------------------------------
+
+
+func _bare_node() -> Node:
+	var node := Node.new()
+	autofree(node)
+	return node
+
+
+func test_the_act_file_lists_two_acts_with_picking_titles() -> void:
+	var node := _bare_node()
+	var acts := LookPostActs.acts(node)
+	var slugs: Array[StringName] = []
+	for act in acts:
+		slugs.append(act.slug)
+		assert_true(String(act.title).begins_with("Look: "))
+		assert_eq(act.cam, &"first_person")
+		assert_true((act.fn as Callable).is_valid())
+	assert_eq(slugs, [&"e1", &"e2"] as Array[StringName])
+	# A capture picks an act by a case-insensitive substring of its title: no title may be inside
+	# another of any act file's (L0-bench's too).
+	var titles: Array[String] = []
+	for act in acts + LookActs.acts(node):
+		titles.append(String(act.title).to_lower())
+	for title in titles:
+		var matches := 0
+		for other in titles:
+			if other.contains(title):
+				matches += 1
+		assert_eq(matches, 1, "'%s' picks one act" % title)
+
+
+func test_the_crowd_bot_loads_the_post_acts_by_name() -> void:
+	var bot := QuietBot.new()
+	autofree(bot)
+	var titles: Array[String] = []
+	for act in bot._collect_acts():
+		titles.append(act.title)
+	for act in LookPostActs.acts(bot):
+		assert_has(titles, act.title)
+
+
+func _run_act(title: String) -> QuietBot:
+	var bot := QuietBot.new()
+	bot.act_filter = title
+	add_child_autofree(bot)
+	for i in ACT_MAX_TICKS:
+		await get_tree().physics_frame
+		if bot.finished:
+			break
+	assert_true(bot.finished, "%s finished within %d ticks" % [title, ACT_MAX_TICKS])
+	return bot
+
+
+func _marks(bot: QuietBot, slug: String) -> Array[String]:
+	var out: Array[String] = []
+	for line: String in bot.log_lines:
+		if line.begins_with("LOOK-MARK %s " % slug):
+			out.append(line.split(" ")[3])
+	return out
+
+
+func test_e1_runs_headless_and_marks_every_state() -> void:
+	var bot := await _run_act("Look: edge pass and grade")
+	var marks := _marks(bot, "e1")
+	for label in ["start", "all_on", "edges_off", "both_off", "grade_off", "fxaa", "aa_off", "depth_only", "car", "end"]:
+		assert_has(marks, label)
+	assert_true(Tuning.data.look_edges_enabled and Tuning.data.look_grade_enabled, "the act put the look back")
+	assert_eq(Tuning.data.look_aa_mode, LookPost.AaMode.MSAA_4X)
+	assert_false(Tuning.data.look_edge_depth_only)
+
+
+func test_e2_runs_headless_and_marks_the_mask_states() -> void:
+	var bot := await _run_act("Look: edge mask probe")
+	var marks := _marks(bot, "e2")
+	for label in ["start", "edges_off", "mask_on", "mask_off", "view_roughness", "view_mask", "view_depth_lines", "view_creases", "end"]:
+		assert_has(marks, label)
+	assert_true(Tuning.data.look_edge_character_mask, "the act put the mask back")
+	assert_eq(Tuning.data.look_edge_debug_view, 0)
+	var leftover := 0
+	for child: Node in bot.room.get_children():
+		if child is MeshInstance3D and (child as MeshInstance3D).mesh is SphereMesh and not child.is_queued_for_deletion():
+			leftover += 1
+	assert_eq(leftover, 0, "the scratch spheres are gone")
