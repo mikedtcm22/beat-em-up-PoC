@@ -297,9 +297,9 @@
 		"stagger_back": {
 			"bad": 0,
 			"high": 3.6487,
-			"low": 0.3544,
+			"low": 0.3236,
 			"max": 19.8788,
-			"min": 0.1849
+			"min": 0.1286
 		},
 		"stagger_forward": {
 			"bad": 0,
@@ -683,10 +683,10 @@
 		},
 		"stagger_back": {
 			"bad": 0,
-			"high": 2.3259,
-			"low": 0.3385,
-			"max": 6.7554,
-			"min": 0.12
+			"high": 1.8993,
+			"low": 0.3572,
+			"max": 4.604,
+			"min": 0.0574
 		},
 		"stagger_forward": {
 			"bad": 0,
