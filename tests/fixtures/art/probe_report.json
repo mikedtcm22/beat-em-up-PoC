@@ -289,6 +289,7 @@
 			"weights_requested": "auto",
 			"smooth_iterations": 0,
 			"clamps": [],
+			"torso_blend": null,
 			"bones": 23,
 			"vertices": 11096,
 			"unweighted_before_fill": 0,
@@ -708,7 +709,7 @@
 		"probe_body.glb": "583f251d06f5a904e95ac160b1a1013659f0096f13d0eb9995866f23552330b3",
 		"probe_body_rest.glb": "2c110cb72af27a5d7465f7ca69da10b03466db0847ea71bf041daccdcbcd78b2"
 	},
-	"hash": "c8a83e6a4b4638e04cfdf50ec659c9db0a4f8a35475faa031fef413f5d3a7add",
+	"hash": "b61973f6d5797f4f7a577e5a252a3e975c12aa6ad68ce367ed7c5546168b2f0a",
 	"stills": {
 		"variants": {
 			"apose": {
