@@ -76,7 +76,12 @@ The game now has its look and its first real art. Everything is cel-shaded, the 
 - **`tests/test_m4_done_when.gd`:** one test per measured row of the plan (A1-A14: the model's contract, budgets, colours, feet, fists, hurtbox fit, deformation, ragdoll, first-person framing, damage marks, the flash, the suite, assets and spend, readability). It prints one table of every row's state.
   - Rows the art doesn't meet yet are held at today's figure (a ratchet), and the plan's own bar is printed beside them as a GATE line.
 - **The look probe** ('Look: final probe' in the crowd bot) measures the outline widths, the bands and the flash's share of the view.
-- **The final review:** six reviewers, each judging one area in first person from full-resolution recordings, scored the plan's 14 judged items 0 (fails), 1 (acceptable) or 2 (production). Two rounds of fixes followed. The final scores are in the PR. Game-boy's yes is the last part of the done-when.
+- **The final review:** six reviewers, each judging one area in first person from full-resolution recordings, scored the plan's 14 judged items 0 (fails), 1 (acceptable) or 2 (production). The mean was 1.29 against the plan's 1.5. Two rounds of fixes followed, then an independent re-score:
+  - J1 2 (reads as the concept), J2 1 (face), J3 1 (fists), J4 1 (ink), J5 2 (shading), J6 2 (palette), J7 2 (surface);
+  - J8 2 (deformation), J9 1 (life), J10 2 (contact), J11 1 (damage looks), J12 2 (wind-ups), J13 1 (one style), J14 1 (your arms and legs).
+  - That is a mean of 1.50, with no 0, so the plan's rule passes exactly at its bar.
+  - One more small round then fixed five of the re-score's findings: the shades whiting out when the head tips back, faceted face shading, dotted ink strokes, the striking glove's back, and highlights on the placeholders. It was judged from stills, not re-scored.
+  - Game-boy's yes is the last part of the done-when.
 - **The rebuild:** every model rebuilds from the logged Tripo downloads to the same file (`tools/pipeline/run.py --asset punk --check` and `tools/pipeline/player_run.py --asset player --check`).
 - **Spend:** Tripo took 295 credits of the 750 set aside; each generation is in `assets/source/tripo_ledger.jsonl` and ASSETS.md.
 
