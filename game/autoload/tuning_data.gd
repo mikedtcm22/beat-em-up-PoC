@@ -1078,9 +1078,9 @@ extends Resource
 @export_range(1.0, 8.0, 0.1) var look_spec_gloss: float = 3.0
 ## The stepped rim on characters shows past this share of a grazing view (0 to 1, higher is
 ## thinner; the look bible: about 25% of the silhouette band).
-@export_range(0.0, 1.0, 0.01) var look_rim_cut: float = 0.7
+@export_range(0.0, 1.0, 0.01) var look_rim_cut: float = 0.4
 ## The rim's falloff toward the middle of the body.
-@export_range(0.5, 8.0, 0.1) var look_rim_power: float = 3.0
+@export_range(0.5, 8.0, 0.1) var look_rim_power: float = 2.0
 ## How much the rim lifts the value (the look bible: +35%).
 @export_range(0.0, 1.0, 0.01) var look_rim_strength: float = 0.35
 ## The sun's height above the horizon in degrees: it sets how much light a vertical surface gets
@@ -1095,7 +1095,7 @@ extends Resource
 ## How soft the sun's shadow edges are (Light3D.shadow_blur: 0 is a hard edge, 1 Godot's default).
 ## A blurred edge is dithered by the renderer's shadow filter, and a toon band edge laid over that
 ## dither reads as a stippled strip 10 to 20 px wide (slice gate, gap 11): keep it small.
-@export_range(0.0, 3.0, 0.05) var look_sun_shadow_blur: float = 1.0
+@export_range(0.0, 3.0, 0.05) var look_sun_shadow_blur: float = 0.25
 ## The characters' fill light, as a share of a full light: a light fixed to the camera (in its
 ## view space, so it never turns away from a character that faces the lens) that gives a
 ## character that faces away from the sun two or three bands instead of one flat shadow. 0 is

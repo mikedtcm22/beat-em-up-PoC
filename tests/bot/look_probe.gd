@@ -354,6 +354,7 @@ static func outer_ring_px(with: Image, without: Image, rect: Rect2i, dir: Vector
 		var run := 0.0
 		var peak := 0.0
 		var started := -1
+		var ended := -1
 		for i in length:
 			var at := i if dir.x >= 0 and dir.y >= 0 else length - 1 - i
 			var c := cover[at * w + line] if vertical else cover[line * w + at]
@@ -362,6 +363,7 @@ static func outer_ring_px(with: Image, without: Image, rect: Rect2i, dir: Vector
 					started = i
 				run += c
 				peak = maxf(peak, c)
+				ended = i
 			elif started >= 0:
 				if peak >= RING_PEAK_MIN:
 					break
@@ -370,11 +372,34 @@ static func outer_ring_px(with: Image, without: Image, rect: Rect2i, dir: Vector
 				peak = 0.0
 				started = -1
 		if started > 0 and peak >= RING_PEAK_MIN and run <= float(limit):
-			widths.append(run)
+			# The run's width across the other axis through its middle, so a slanted edge (a run along
+			# a scan line is wider than the ring by 1 / cos of the slant) counts as the shorter of the two.
+			var mid := started + (ended - started) / 2
+			var at_mid := mid if dir.x >= 0 and dir.y >= 0 else length - 1 - mid
+			var across := _run_sum(cover, w, h, line if vertical else at_mid, at_mid if vertical else line, vertical)
+			widths.append(minf(run, across) if across > 0.0 else run)
 	if widths.is_empty():
 		return {width = -1.0, runs = 0}
 	widths.sort()
 	return {width = widths[widths.size() / 2] * to_1080p(with.get_height()), runs = widths.size()}
+
+
+## The sum of the coverage over the run of covered pixels through (x, y), along the row when
+## `horizontal`, else down the column.
+static func _run_sum(cover: PackedFloat32Array, w: int, h: int, x: int, y: int, horizontal: bool) -> float:
+	var step_x := 1 if horizontal else 0
+	var step_y := 0 if horizontal else 1
+	var cx := x
+	var cy := y
+	while cx - step_x >= 0 and cy - step_y >= 0 and cover[(cy - step_y) * w + cx - step_x] > COVER_MIN:
+		cx -= step_x
+		cy -= step_y
+	var sum := 0.0
+	while cx < w and cy < h and cover[cy * w + cx] > COVER_MIN:
+		sum += cover[cy * w + cx]
+		cx += step_x
+		cy += step_y
+	return sum
 
 
 ## How much of each pixel of `r` the ink covers: {cover (a PackedFloat32Array, row after row), ink_sum

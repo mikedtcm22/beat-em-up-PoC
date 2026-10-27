@@ -22,7 +22,8 @@ extends RefCounted
 ## | T4 | Look: tune damage at 1 m | health 100, 65 and 30%: the skin's bands and hue at each |
 ## | T5 | Look: tune jab flash | the player's jab on the Punk at 1 m: the white share of the frame the flash is drawn in (L3) |
 ## | T6 | Look: tune lineup, both lights | Punk, Kicker, Thug and Bruiser at 2.2 m, front-lit and back-lit |
-## | T7 | Look: tune street, both lights | the street's four views, front-lit and back-lit (the room's two bands, its lines) |
+## | T7 | Look: tune street, both lights | the street's four views, front-lit and back-lit (the room's two bands, its lines, the ink of its edge lines on screen) |
+## | T8 | Look: tune own hull | the player's own forearms, view 20 degrees down, in the guard: the hull's width on them, with the hull and with its width 0 (L1: x0.8 of the Punk's) |
 ##
 ## Log lines: `LOOK-TUNE <room> <slug> start ...` (what was set), `LOOK-METRIC <slug> <key> <value>`, and the
 ## LOOK-MARK / LOOK-RECT lines of look_rect.gd.
@@ -79,8 +80,14 @@ const SIDE_ROWS := Vector2(0.55, 0.9)
 const CROWN_ROWS := Vector2(0.6, 0.95)
 ## T5: how many physics frames to wait for the hit.
 const HIT_MAX_TICKS := 90
-## T7: the quarter turns of the view.
+## T7: the quarter turns of the view; the luma under which a pixel is ink, and the HUD's corner (as
+## fractions of the frame) that is left out of the ink search.
 const STREET_TURNS_DEG: Array[float] = [0.0, 90.0, -180.0, -90.0]
+const INK_LUMA_MAX := 0.075
+const HUD_CORNER := Vector2(0.3, 0.78)
+## T8: the view's pitch for the player's own arms, and how long the guard is held before the shot.
+const OWN_PITCH_DEG := -20.0
+const GUARD_TICKS := 40
 
 
 static func acts(bot: Node) -> Array[Dictionary]:
@@ -92,6 +99,7 @@ static func acts(bot: Node) -> Array[Dictionary]:
 		{title = "Look: tune jab flash", cam = &"first_person", slug = &"t5", fn = func() -> void: await _flash(bot)},
 		{title = "Look: tune lineup, both lights", cam = &"first_person", slug = &"t6", fn = func() -> void: await _lineup(bot)},
 		{title = "Look: tune street, both lights", cam = &"first_person", slug = &"t7", fn = func() -> void: await _street(bot)},
+		{title = "Look: tune own hull", cam = &"first_person", slug = &"t8", fn = func() -> void: await _own_hull(bot)},
 	]
 
 
@@ -432,5 +440,68 @@ static func _street(bot: Node) -> void:
 		for front: bool in [true, false]:
 			await _light(bot, front, base_yaw)
 			await bot._ticks(SHOW_TICKS)
-			LookRect.mark(bot, "t7", "turn%d_%s" % [roundi(turn), "front_lit" if front else "back_lit"])
+			var label := "turn%d_%s" % [roundi(turn), "front_lit" if front else "back_lit"]
+			var image := await _shot(bot)
+			LookRect.mark(bot, "t7", label)
+			if image != null:
+				_metric(bot, "t7", {"%s_edge_ink_rgb" % label: _ink_rgb(image)})
 	_end(bot, "t7")
+
+
+## The mean colour (0-255) of the ink-dark pixels of the street's frame, the HUD's corner left out: the
+## edge pass's lines and the hulls as they come out of the tonemapper and the grade, to set against
+## HudStyle.INK on screen.
+static func _ink_rgb(image: Image) -> String:
+	var sum := Vector3.ZERO
+	var count := 0
+	var hud_x := int(HUD_CORNER.x * image.get_width())
+	var hud_y := int(HUD_CORNER.y * image.get_height())
+	for y in range(0, image.get_height(), 2):
+		for x in range(0, image.get_width(), 2):
+			if x < hud_x and y > hud_y:
+				continue
+			var c := image.get_pixel(x, y)
+			if LookProbe.luma(c) < INK_LUMA_MAX:
+				sum += Vector3(c.r, c.g, c.b)
+				count += 1
+	if count == 0:
+		return "none"
+	return "%s (%d px)" % [_color_text(Color(sum.x / count, sum.y / count, sum.z / count)), count]
+
+
+# --- T8: the player's own hull ---------------------------------------------------------------------
+
+
+## The player's forearms and fists in the guard, looking down: the hull's outer ring on the left and
+## right of his hands' rectangle and above it, with the hull and with its width 0.
+static func _own_hull(bot: Node) -> void:
+	_begin(bot, "t8")
+	var px := Tuning.data.look_outline_px
+	await bot._look_to(OWN_PITCH_DEG, PITCH_TICKS + 5)
+	await bot._ticks(SETTLE_TICKS)
+	LookRect.mark(bot, "t8", "start")
+	await bot._hold_block()
+	await bot._ticks(GUARD_TICKS)
+	bot.tune(&"look_outline_px", px)
+	var on := await _shot(bot)
+	LookRect.mark(bot, "t8", "guard", bot.player)
+	bot.tune(&"look_outline_px", 0.0)
+	var flat := await _shot(bot)
+	bot.tune(&"look_outline_px", px)
+	await bot._release_block()
+	if on != null and flat != null:
+		LookProbe.dump(on, "t8_guard_on")
+		LookProbe.dump(flat, "t8_guard_flat")
+		var hands := _rect(bot, bot.player, LookRect.HANDS, on)
+		var scale := float(on.get_width()) / LookRect.FRAME_SIZE.x
+		var margin := roundi(RING_MARGIN_PX * scale)
+		var left := Rect2i(hands.position.x - margin, hands.position.y, hands.size.x / 3 + margin, hands.size.y)
+		var right := Rect2i(hands.end.x - hands.size.x / 3, hands.position.y, hands.size.x / 3 + margin, hands.size.y)
+		var top := Rect2i(hands.position.x, hands.position.y - margin, hands.size.x, hands.size.y / 3 + margin)
+		_metric(bot, "t8", {
+			"guard_left_px1080": _round(LookProbe.outer_ring_px(on, flat, left, Vector2i(1, 0)).width),
+			"guard_right_px1080": _round(LookProbe.outer_ring_px(on, flat, right, Vector2i(-1, 0)).width),
+			"guard_top_px1080": _round(LookProbe.outer_ring_px(on, flat, top, Vector2i(0, 1)).width),
+			"guard_all_px1080": _round(LookProbe.ring_width_px(on, flat, hands).width),
+		})
+	_end(bot, "t8")
