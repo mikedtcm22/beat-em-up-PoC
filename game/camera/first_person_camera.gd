@@ -380,13 +380,15 @@ func _ko_view_mix(delta: float, live: Transform3D) -> Transform3D:
 
 
 ## True when no mesh of the player's head layer (the ones this camera hides, found once per
-## player) lies within Tuning.ko_view_clearance_m of `lens`, by its bounding box.
+## player; the skinned art's are left out, the primitives that stand in for them are read) lies within Tuning.ko_view_clearance_m of `lens`, by its bounding box.
 func _head_clear_of(lens: Vector3) -> bool:
 	if _head_meshes.is_empty():
 		var hidden := CombatTypes.bit(CombatTypes.VIS_FP_HIDDEN)
 		for node: Node in player.rig.find_children("*", "MeshInstance3D", true, false):
 			var mesh := node as MeshInstance3D
-			if mesh.layers & hidden:
+			# The skinned art's head mesh is skipped: its bounding box is the bind pose's, not
+			# the body's. The hidden primitives (the view proxies) follow the pose and are read.
+			if mesh.layers & hidden and not mesh.is_in_group(HumanoidRig.ART_GROUP):
 				_head_meshes.append(mesh)
 	for mesh: MeshInstance3D in _head_meshes:
 		if (mesh.global_transform * mesh.get_aabb()).grow(Tuning.data.ko_view_clearance_m).has_point(lens):

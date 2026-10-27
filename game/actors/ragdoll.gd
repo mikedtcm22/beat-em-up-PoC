@@ -625,6 +625,10 @@ func _process_modification_with_delta(_delta: float) -> void:
 		head_share = _partial_share(tuning.ragdoll_partial_head_influence)
 		if _partial_part != Part.ARMS:
 			arm_share = _partial_share(tuning.ragdoll_partial_arm_influence)
+	# A rig with skinned art draws the skeleton's own pose, so what the followers show (the
+	# blended head and arms, the eased launch) is written back into it below; the primitives
+	# ride the followers and need none, so a primitive rig's skeleton stays the simulator's.
+	var write_back := rig.has_art()
 	for i: int in skeleton.get_bone_count():
 		var local := skeleton.get_bone_pose(i)
 		var parent := skeleton.get_bone_parent(i)
@@ -643,6 +647,11 @@ func _process_modification_with_delta(_delta: float) -> void:
 			# Eased in from the turn shown when the launch took over (start()).
 			local = Transform3D(Basis(_ease_from[i].slerp(local.basis.get_rotation_quaternion(), ease_w)), local.origin)
 		_visual[i] = local if parent < 0 else _visual[parent] * local
+		if write_back:
+			skeleton.set_bone_pose_rotation(i, local.basis.get_rotation_quaternion())
+			# Root and Hips are the bones the simulator moves (the rest keep their offsets).
+			if parent < 0 or skeleton.get_bone_parent(parent) < 0:
+				skeleton.set_bone_pose_position(i, local.origin)
 	visual_rig_transform = rig.global_transform
 	rig.show_visual_pose(_visual)
 	if mode != Mode.NONE:
