@@ -60,6 +60,7 @@ The final review's package "the toon light and ink" (findings final-v4-01, final
 ## 2. Assertions that changed, and the new tests
 
 - `tests/test_toon.gd::test_the_detail_mask_is_a_uv2_ink_multiply_available_to_any_art`: the literal `color = mix(color, ink,` is now `color = mix(color, ink, ink_mask * detail_strength)` (the multiply is unchanged), and it also pins the new pieces (`uniform bool detail_sharp = false;`, the `fwidth` edge, the `smoothstep` around `detail_cut`). The intent (the mask is R on UV2, toward ink, never shading, and the linear mix is the default) is unchanged. Twins below.
+- `tests/test_m4_contracts.gd::test_the_contract_signatures_exist`: `ToonMaterials.art` argument count `[2, true]` -> `[3, true]` (C2's optional `sharp_detail`; the file is S0's and not in my list, and the change is one table cell, the same one P3-int made for `outline`: the suite is red without it). Twin: `test_the_sharp_ink_is_the_heros_alone_and_follows_the_cut`.
 - `tests/test_look_post.gd::test_the_sun_tonemap_and_fill_tunables_sit_in_look_and_save_in_presets`: `look_detail_cut` joins the list (Look group, saved in presets).
 - New, `test_toon.gd`: `test_the_fill_alone_never_reaches_the_lit_band_so_a_front_lit_character_keeps_the_suns_bands` (fails at 0.8: the fill's peak 0.8 against 0.52, 650 of 1,600 sampled lens-facing normals lit, a 22% shadow share; passes at 0.4), `test_the_sharp_ink_is_the_heros_alone_and_follows_the_cut`, `test_the_heros_art_asks_for_sharp_ink_and_the_punks_does_not` (through `PlayerCharacter.worn_art()` and a rig of each), `test_a_one_texel_line_stays_a_hard_line_when_it_is_magnified_with_sharp_ink` (the math: a linear ramp over 8 partial pixels against 2 with the cut, and a faint 0.3 value gone under a 0.5 cut and ink under 0.15). The existing `test_the_fill_lights_a_front_the_sun_does_not_reach...` (the front is not the flat shadow band) still passes at 0.4.
 - No existing assertion was weakened. The mask's own bars (1024 x 1024, grey, mean ink under 0.08, over 500 texels) are art-chain-records' contract test; I checked them by decoding the PNG (above).
@@ -68,7 +69,7 @@ The final review's package "the toon light and ink" (findings final-v4-01, final
 
 - The fill: part 1, C1. `Look: final probe` on this tree: **L1 MISSED** (the 10 m sides 2.59 and 2.04 px, the own body's top 4.05; crown / left / right 1 m 3.48 / 4.50 / 3.24, 2.5 m 3.54 / 3.24 / 3.24, 5 m 3.54 / 3.19 / 3.23, 10 m 3.25 / 2.59 / 2.04), **L2 MET**, **L3 MET** (3.6%), **L5 MET** (R8 p50 -2.3 and -1.2 points, p95 -1.0; R4 hidden 0 of 15 and 0 of 14).
 - The mask: part 1, C3.
-- The suite: the last section of this file, after the full run.
+- The suite: `tools/run_tests.sh` on the final tree, **1565 tests in 72 scripts, 1565 passing** (the base's 1561, plus the four new tests), 0 `SCRIPT ERROR`, `SHADER ERROR` or `ERROR` lines. It needs `tuning/default.json` regenerated (C7): on the tree as committed, without it, four `test_tuning_panel` tests read the stale file (`look_fill_strength` 0.8, no `look_detail_cut`) and fail; they pass after `godot --headless -s tools/gen_default_preset.gd`, which I ran for the suite and did not commit. `player_run.py --asset player --check` reproduces the committed report hash (2a2abb30...).
 
 ## 4. What the first-person stills show (`captures/fix/`, never committed)
 
