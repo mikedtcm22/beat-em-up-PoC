@@ -7,7 +7,11 @@ extends RefCounted
 ## (it carries crouches, jumps, falls, lying down and getting up; it is keyed even when the
 ## hips stay put). Planted poses get their hip height from the feet: the lowest sole point
 ## is put on y = 0.
-## Real animation clips replace all of this in Milestone 4.
+##
+## Milestone 4 (F-motion, M4-plan A20) polishes the named clips on POLISHED_IDS and never a move: they
+## are eased (cubic keys), the idle breathes and bounces, the boxer's walks plant their feet, the
+## flinches overlap (game/actors/poses/motion_clips.gd; the amounts are Tuning's Look > Motion, read
+## into a Life when a library is built, and Tuning's Debug look_motion_polish builds the M3 clips).
 
 ## MoveData frames are 60 Hz sim frames (docs/ARCHITECTURE.md "Time model").
 const FRAME_S := 1.0 / 60.0

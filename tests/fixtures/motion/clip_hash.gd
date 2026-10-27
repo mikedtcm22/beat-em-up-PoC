@@ -5,7 +5,8 @@ extends RefCounted
 ## against that table. The table also holds the named clips as M3 built them: the polish may change only the clips A20
 ## names (PlaceholderAnims.POLISHED_IDS), and with the polish off every named clip is the M3 clip again.
 ##
-## `godot --headless -s tests/fixtures/motion/gen_clip_hashes.gd --quit-after 5` rewrites the table. Rewrite it only to
+## `godot --headless res://tests/fixtures/motion/gen_clip_hashes.tscn --quit-after 5` rewrites the table (a scene: a `-s` script has no
+## autoloads, which the polished clips read). Rewrite it only to
 ## add a clip: the table is the proof that a clip did not move.
 
 const MOVES_DIR := "res://game/combat/moves"

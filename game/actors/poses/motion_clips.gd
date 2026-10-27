@@ -26,7 +26,7 @@ extends RefCounted
 # --- Idle ---------------------------------------------------------------------------------------
 
 ## Keys per bounce (a bounce is the shortest thing the idle does).
-const KEYS_PER_BOUNCE := 8
+const KEYS_PER_BOUNCE := 6
 ## The idle is never shorter than this (s), whatever the breath rate.
 const IDLE_MIN_S := 2.0
 ## Breathing, in units of the amplitude (degrees): the chest rocks back and the upper chest
@@ -60,7 +60,7 @@ const NECK_SHARE := 0.5
 # --- Walks --------------------------------------------------------------------------------------
 
 ## Keys per cycle of a walk.
-const WALK_KEYS := 32
+const WALK_KEYS := 24
 ## The share of a cycle each foot is planted (the other is in the air; above half, both feet are
 ## down for a moment).
 const STANCE_SHARE := 0.56
@@ -113,8 +113,10 @@ const GRID_S := 1.0 / 60.0
 
 # --- Easing -------------------------------------------------------------------------------------
 
-## The grid an eased clip is sampled on (s).
+## The grid an eased clip is sampled on (s), and the most intervals a clip gets (a slow clip gets a
+## coarser grid: the curve is smooth, and a rig builds the library once per size).
 const EASE_GRID_S := 1.0 / 30.0
+const EASE_MAX_STEPS := 24
 
 ## The bones that lead a flinch (the shoulders and the arms they carry) and the ones that lag.
 const LEAD_BONES: Array[StringName] = [
@@ -432,9 +434,10 @@ static func ease(keys: Array[PlaceholderAnims.PoseKey], length: float, loop: boo
 			values.append(pose.get(bone, Vector3.ZERO))
 		tangents[bone] = _tangents(times, values, loop, drive_in)
 	var at: Array[float] = []
-	var steps := ceili(length / EASE_GRID_S - 1e-4)
+	var grid := maxf(EASE_GRID_S, length / EASE_MAX_STEPS)
+	var steps := ceili(length / grid - 1e-4)
 	for i: int in steps:
-		at.append(minf(i * EASE_GRID_S, length))
+		at.append(minf(i * grid, length))
 	at.append_array(times)
 	at.append(length)
 	at.sort()
@@ -530,13 +533,4 @@ static func _union(a: Dictionary[StringName, Vector3], b: Dictionary[StringName,
 	for key: StringName in b:
 		if not out.has(key):
 			out.append(key)
-	return out
-
-
-## A key between `a` and `b`, `w` of the way (bone by bone, the hip keys too).
-static func lerp_pose(a: Dictionary[StringName, Vector3], b: Dictionary[StringName, Vector3],
-		w: float) -> Dictionary[StringName, Vector3]:
-	var out: Dictionary[StringName, Vector3] = {}
-	for bone: StringName in _union(a, b):
-		out[bone] = (a.get(bone, Vector3.ZERO) as Vector3).lerp(b.get(bone, Vector3.ZERO), w)
 	return out

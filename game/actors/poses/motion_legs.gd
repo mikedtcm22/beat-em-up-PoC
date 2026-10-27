@@ -26,7 +26,6 @@ const MIN_REACH_M := 0.15
 const HEEL := Vector3(0.0, -0.085, 0.085)
 const TOES_JOINT := Vector3(0.0, -0.05, -0.13)
 const BALL_BELOW_TOES := Vector3(0.0, -0.035, 0.0)
-const TIP_BELOW_TOES := Vector3(0.0, -0.035, -0.12)
 
 
 ## The Hips' transform (rig space) for `pose` and a `hips_offset` from the rest position.

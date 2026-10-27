@@ -30,7 +30,7 @@ const BODY_PITCH_DEG := -6.0
 const FACE_PITCH_DEG := 8.0
 const LYING_PITCH_DEG := -40.0
 ## The look down at a bent leg (the knees are half a metre up, a metre ahead of an eye at 1.65 m).
-const LEGS_PITCH_DEG := -30.0
+const LEGS_PITCH_DEG := -42.0
 ## The walks' look: down enough that the feet come into the view at 1.5 m and more.
 const WALK_PITCH_DEG := -25.0
 const PITCH_TICKS := 10
