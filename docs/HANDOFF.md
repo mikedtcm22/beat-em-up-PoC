@@ -4,6 +4,27 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-26 20:50 CDT: Milestone 4 toolchain set-up started (branch `m4/art-pipeline`)
+- **Game-boy's toolchain calls (2026-10-26):**
+  - **Mixamo:** skipped for now; whether it's needed is assessed later. Tripo's auto-rigging is tried first.
+  - **3D generation:** Tripo.
+  - **Image generation:** Google Gemini.
+  - **Blender:** OK to install from the command line.
+- **Done:**
+  - Blender 5.2.2 LTS is installed with Homebrew (`brew install --cask blender@lts`). `blender` is on PATH and headless Python works (Python 3.13). No 4.x cask exists any more; the spec's "4.x" predates 5.x.
+  - `.env` is created (git-ignored) with empty `GEMINI_API_KEY=` and `TRIPO_API_KEY=` for Game-boy to fill in. `.env.example` and README's API keys and toolchain tables are updated.
+- **The lead's assessment of the Tripo MCP tutorial** (tripo3d.ai, "cursor-tripo-mcp-tutorial"):
+  - That route is Tripo's own Blender add-on (`VAST-AI-Research/tripo-3d-for-blender`, last release v0.7.7, 2025-11, before Blender 5.2) with its "Start MCP Server" button, plus `uvx tripo-mcp` in the MCP client.
+  - `tripo-mcp` is "alpha", untouched since 2025-04, and makes models from a text prompt into an open Blender.
+  - **Recommended instead:**
+    - call Tripo's REST API directly from a script with `TRIPO_API_KEY` (image-to-3D from the chosen concept in a T-pose, and Tripo's auto-rig), reproducible and with no Blender window needed;
+    - process in Blender headless (`blender --background --python`, SPEC §10);
+    - optionally add the general Blender MCP (`mcp-for-blender`, formerly `blender-mcp`, active, sets up Claude Code itself, also lists Tripo) for interactive look-and-fix work.
+- **Waiting on Game-boy:**
+  - the two keys in `.env`;
+  - optionally the Blender MCP setup (steps given in chat: `brew install uv`, `uvx mcp-for-blender setup`, restart the Claude app, open Blender; consider turning its telemetry off).
+- **Next:** plan M4 (`docs/milestones/M4-plan.md`). The toolchain-free parts (toon shader, outlines, post-processing, the comic VFX set) can start before the keys arrive.
+
 ### 2026-10-26: Game-boy signed off Milestone 3; PR #3 merged
 - **Game-boy (2026-10-26):** "happy with the enemy AI", M3 is complete as-is, and every judgement call and spec departure made in M3 is approved. README's "Where M3 departs from the spec" and `docs/milestones/M3-judgement-calls.md` now say so. The boss keeps the spec's 300 HP.
 - **PR #3 merged into `main`.** The `.worktrees/m3-*` worktrees can be pruned; every branch is pushed.
@@ -1179,6 +1200,7 @@ Every approved spec change so far is in README.md, "Where M1 departs from the sp
 - **Milestone 3 setup (2026-10-25 16:50 CDT):** M2 signed off and merged. M3 runs without Game-boy's input until it's done to spec, then a Slack DM with a playable link and a digest of judgement calls (each with an alternative not taken). The playable link is a GitHub Release with a zipped macOS export (downloading the official export templates is approved). The boss is in M3 as graybox with a placeholder name. Enemy grabs on the player can be broken by mashing P/K. The account is now a premium seat (5 times the limits): the watcher checks less often, and at a limit a scheduled task resumes the work after the reset.
 - **Comms (2026-10-25 17:35 CDT):** whenever work is blocked on Game-boy (an authorization, a permission prompt, a login, a decision), DM him on Slack (Michael, `U0AQMKKBL93`) at once, then carry on with anything not blocked.
 - **Milestone 3 signed off (2026-10-26):** Game-boy played the build, called M3 complete as-is and approved every M3 judgement call and spec departure (README, `docs/milestones/M3-judgement-calls.md`). The boss keeps 300 HP.
+- **Milestone 4 toolchain (2026-10-26):** skip Mixamo for now and assess later (Tripo auto-rig first); Tripo for 3D generation; Google Gemini for images; Blender installed from the command line (5.2.2 LTS).
 - **Process:** at each usage limit, hand off to Game-boy's second Claude account. Never assume the same session resumes.
 
 ## Usage watcher

@@ -194,7 +194,8 @@ Keys go in `.env` at the repo root. `.env` is git-ignored. `.env.example` lists 
 
 | Variable | Service | Present |
 | --- | --- | --- |
-| none yet | | |
+| `GEMINI_API_KEY` | Google Gemini, image generation (concept art) | not yet (template in `.env`) |
+| `TRIPO_API_KEY` | Tripo, 3D generation and auto-rigging | not yet (template in `.env`) |
 
 ## Toolchain status (Milestone 0)
 
@@ -203,13 +204,13 @@ Checked on 2026-10-21 on the dev Mac (Apple M1, macOS 26.3).
 | Tool | Status | Notes |
 | --- | --- | --- |
 | Godot 4 (standard) | ✅ 4.7.2 | Installed via Homebrew; `godot` is on PATH. Headless import and tests work. |
-| Blender + Blender MCP | ❌ missing | Not installed, and no Blender MCP is connected to Claude. |
+| Blender + Blender MCP | ✅ Blender 5.2.2 LTS / ❌ MCP | Blender installed with Homebrew on 2026-10-26 (`blender` on PATH, headless Python works); 5.2 is the current LTS (the spec's "4.x" predates it). No Blender MCP is connected yet. |
 | Git | ✅ 2.50.1 | |
 | Git LFS | ✅ 3.8.0 | Initialized for this repo only. |
 | GitHub CLI | ✅ 2.93.0 | Logged in as `mikedtcm22`. |
-| 3D generation API | ❌ no key | |
-| Image generation API | ❌ no key | |
-| Mixamo | ❓ unknown | Needs Game-boy's Adobe account. |
+| 3D generation API | ❌ no key | Tripo chosen (Game-boy, 2026-10-26). |
+| Image generation API | ❌ no key | Google Gemini chosen (Game-boy, 2026-10-26). |
+| Mixamo | ⏸ skipped for now | Game-boy, 2026-10-26: skip it and decide later whether it is needed; Tripo's auto-rigging is tried first. |
 | Video mocap | ❓ unknown | |
 | SFX library / API | ❌ missing | `assets/source/sfx/` is empty. |
 | GUT (unit tests) | ✅ 9.7.1 | Vendored in `addons/gut/`. |
