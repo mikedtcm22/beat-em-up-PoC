@@ -4,6 +4,41 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-26 22:40 CDT: M4 plan written; phase 0 (S0-contract, L0-bench, P1-tools) launching
+5-hour 34% (resets 2026-10-27 00:50 CDT), weekly 11%. The plan workflow cost about 29% of the window (8 agents, 3.0M tokens).
+- **The plan:** [M4-plan.md](milestones/M4-plan.md).
+  - The judge picked vertical-slice as the base and added 23 binding amendments (Part A). The main ones:
+    - A2: P1-pipe splits into P1-tools and P1-chain.
+    - A3: the A-pose bind route by default, with the arms-down bake as the slice gate's A/B.
+    - A4: the proxies stay, and the drawn art is measured with native TriangleMesh rays.
+    - A7: the hull goes on every character and prop.
+    - A8: the edge pass never reads the screen texture, and a first-hour roughness probe comes before building on it.
+    - A9: A/B switches go in "Debug", and every `vfx_*` tunable goes in "VFX".
+    - A10: Tripo has a 700 balance floor and a 750 ledger stop.
+    - A12: L0-bench and the C1-C13 look acts.
+    - A13: the red car gets recoloured, and no logos (concept D's sneakers).
+    - A14: F-player splits into art and integration.
+  - Part B is the done-when made checkable: the A1-A14 and L1-L5 rows, plus the J1-J14 rubric with critical items.
+  - Part C is vertical-slice, verbatim.
+  - The look targets are in [M4-look-bible.md](milestones/M4-look-bible.md).
+  - The three plans, `judge.json`, the codemaps and `reads.json` are committed.
+- **Lead pre-cuts done:**
+  - ASSETS.md sections: Concepts; Characters, with › Punk and › Player; Look.
+  - ARCHITECTURE "Art pipeline and look (Milestone 4)", with one heading per phase-0 and phase-1 package.
+  - `docs/milestones/M4-calls/`.
+  - `assets/source/_cache/` ignored, and the palette atlas set to keep-ours.
+  - The runner: [docs/reviews/M4/workflow-build.js](reviews/M4/workflow-build.js), with Godot slots (4) and Blender slots (2), and a Tripo credit report in each result.
+- **Phase 0** ([args-P0.json](reviews/M4/args-P0.json)). Each package runs as its own Workflow run (`only: [key]`), so each merge can happen as soon as its builder is done:
+  - **S0-contract:** the seams, RigPaint, the call-site stubs, `joints.json`, the test move, and the Look group.
+  - **L0-bench:** the look acts, `look_sheets.sh`, `perf_compare.sh`, and the before pack into `captures/m4_before/`.
+  - **P1-tools, steps 1-2 only:** `tripo.py`, `blender_dump_rig.py` and the Concepts ASSETS rows. No credits. It ends on a `wip:` commit, and a second launch after S0's merge does the mannequin and the smoke Punk T1-T3.
+- **Game-boy's pick:** none yet. The DM thread was read at 22:35.
+- **Next:**
+  1. Merge S0.
+  2. Then launch P1-skin, P1-toon and P1-chain, plus P1-tools' second launch (args-P1.json, still to write).
+  3. When L0-bench is done, launch P1-post (A8's probe first), then P1-fx.
+- **If cut off:** rerun each package with `Workflow({scriptPath: "docs/reviews/M4/workflow-build.js"})` and the args file, using `only: [key]`. The runner resumes each package from its branch.
+
 ### 2026-10-26 21:45 CDT: concepts sent; waiting on Game-boy's pick
 - Game-boy enabled billing on the Gemini project (21:40). Concept round 1 is in `assets/source/concepts/` (`concept_jobs.json`, `tools/gemini_image.py`, model `gemini-3-pro-image`, 2K): Street Punks A-D and hero sheets A-C. Both sheets were DMed at 21:42 CDT, asking for one Punk and one hero, mix-and-match allowed.
 - **Next, on his pick:** generate the orthographic front, side and back views of the picks (Gemini, with the picked image as a reference) for Tripo. The plan workflow is still running.

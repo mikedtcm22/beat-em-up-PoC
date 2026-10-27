@@ -33,3 +33,6 @@ tuning/default.json merge=keep-ours
 *.mov filter=lfs diff=lfs merge=lfs -text
 *.ttf filter=lfs diff=lfs merge=lfs -text
 *.otf filter=lfs diff=lfs merge=lfs -text
+
+# The palette atlas is generated (tools/pipeline/gen_palette.py): the lead regenerates it after merges.
+assets/export/palette/palette_atlas.png filter=lfs diff=lfs merge=keep-ours -text

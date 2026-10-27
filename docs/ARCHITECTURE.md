@@ -751,6 +751,26 @@ Both Debug toggles (`ai_frozen`, `god_mode`) are outside the preset: a test that
 
 **Rig build cost** (`HumanoidRig._named_library()`): the named `AnimationLibrary` of a (scale, stance) is built once and shared by every rig of that size and stance (it was 8 of the 9 to 15 ms each enemy cost to build; nothing alters the clips after the build). Windowed spawn hitch of "Perf, six with ragdolls": median 28.8 ms before, 25 ms after (limit 33); frame p95 13.1 ms (limit 16.7).
 
+## Art pipeline and look (Milestone 4)
+
+The plan is [milestones/M4-plan.md](milestones/M4-plan.md); this section is the contract as landed. Each package fills only its own heading.
+
+### Character art seams and RigPaint (S0-contract)
+
+### Look acts and the bench (L0-bench)
+
+### Tripo and the asset tools (P1-tools)
+
+### The Blender chain and the asset contract (P1-chain)
+
+### Skinned art on the rig, view proxies, ragdoll write-back (P1-skin)
+
+### Toon shader, hull, flash and damage on toon (P1-toon)
+
+### Edge pass, grade, rooms, look probe (P1-post)
+
+### Comic VFX, final pass (P1-fx)
+
 ## Ownership (Milestones 1-3)
 
 | Area | Files |

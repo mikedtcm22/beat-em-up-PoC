@@ -6,6 +6,37 @@ Every asset in the repo gets one row: where it came from, which service or tool 
 | --- | --- | --- | --- | --- |
 | DD2 NES Mission 1 screenshots | `reference/dd2-nes-mission1/*.jpg` | Game-boy's captures of the original game | © Technos Japan; reference only | Layout and pacing reference. Never traced, copied or shipped. |
 
+## Concepts (Milestone 4)
+
+Concept art for the Street Punk and the player's arms and legs (Spec §10, step 1), generated with Google's Gemini image models through `tools/gemini_image.py` from the job file `assets/source/concepts/concept_jobs.json`. Rows are added by P1-tools (M4-plan.md Part A §A2). Gemini's terms give the output to the user; check the account's terms before anything ships.
+
+| Asset | Path | Source / service | License | Notes |
+| --- | --- | --- | --- | --- |
+
+## Characters (Milestone 4)
+
+Every Tripo task and every character GLB (Spec §10, steps 2-7). Tripo tasks are logged with their real credit cost in `assets/source/tripo_ledger.jsonl` as well. Rows: the pipeline and the smoke Punk by P1-tools and P1-chain; "› Punk" by F-punk; "› Player" by F-player-art (M4-plan.md Part A §A2, §A14).
+
+| Asset | Path | Source / service | License | Notes |
+| --- | --- | --- | --- | --- |
+
+### › Punk
+
+| Asset | Path | Source / service | License | Notes |
+| --- | --- | --- | --- | --- |
+
+### › Player
+
+| Asset | Path | Source / service | License | Notes |
+| --- | --- | --- | --- | --- |
+
+## Look (Milestone 4)
+
+The grade LUT and other look textures (Spec §10, rendering). Rows by P1-post.
+
+| Asset | Path | Source / service | License | Notes |
+| --- | --- | --- | --- | --- |
+
 ## Effects (VFX)
 
 The comic effect set (Spec §6 and §10, "2D effects"; Milestone 2). Claude drew every piece as SVG with `tools/gen_fx.gd` (shapes from a seeded random generator; the lettering uses an original block alphabet defined in that script, no font outlines). The same script rasterizes each SVG to a 512 px PNG (long side, transparent) with Godot's built-in SVG rasterizer. Redraw and re-export with `godot --headless -s tools/gen_fx.gd`, then `godot --headless --import --quit`; after editing an SVG by hand, add `-- --raster-only`. Red is used only for blood, the rear-warning burst and finisher accents (Spec §10).

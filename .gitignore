@@ -33,3 +33,6 @@ Thumbs.db
 
 # Usage watcher's emergency snapshot (untracked by design)
 HANDOFF-SNAPSHOT.md
+
+# Rejected raw outputs and intermediates of the art pipeline (M4)
+assets/source/_cache/
