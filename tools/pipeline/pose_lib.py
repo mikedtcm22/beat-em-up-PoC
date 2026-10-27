@@ -119,3 +119,19 @@ def strain(rest_g, posed_g, tris, w=None):
 		"area_under_15pct": float((area < 0.15).mean()),
 		"nan": bool(np.isnan(posed_g).any()),
 	}
+
+
+def worst_edges(ref_g, posed_g, tris, w, k=5):
+	"""The k edges whose length changed most (ratio against the reference, stretch or squash): [{ratio, at, bones}]."""
+	edges = np.unique(np.sort(np.concatenate([tris[:, [0, 1]], tris[:, [1, 2]], tris[:, [2, 0]]]), axis=1), axis=0)
+	l0 = np.linalg.norm(ref_g[edges[:, 0]] - ref_g[edges[:, 1]], axis=1)
+	l1 = np.linalg.norm(posed_g[edges[:, 0]] - posed_g[edges[:, 1]], axis=1)
+	keep = l0 > 1e-5
+	ratio = np.where(keep, l1 / np.maximum(l0, 1e-9), 1.0)
+	score = np.abs(np.log(np.maximum(ratio, 1e-3)))
+	out = []
+	for i in np.argsort(-score)[:k]:
+		a, b = edges[i]
+		out.append({"ratio": float(ratio[i]), "at": ((ref_g[a] + ref_g[b]) / 2).tolist(),
+			"bones": [NAMES[int(np.argmax(w[a]))], NAMES[int(np.argmax(w[b]))]]})
+	return out

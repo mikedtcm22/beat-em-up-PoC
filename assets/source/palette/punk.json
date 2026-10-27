@@ -1,0 +1,9 @@
+{
+	"id": "punk",
+	"slot_range": [16, 31],
+	"note": "The Street Punk's own colours (concept A: teal denim vest and jeans, yellow cap, shades, laces and accent strap); skin, charcoal, cream and black come from the shared palette. Enemy main colours keep saturation of at least 0.5 (look bible); nothing in the red band.",
+	"swatches": [
+		{"slot": 16, "name": "punk_teal", "srgb": "#3f8f96", "marks": true},
+		{"slot": 17, "name": "punk_yellow", "srgb": "#e8bd2e", "marks": true}
+	]
+}

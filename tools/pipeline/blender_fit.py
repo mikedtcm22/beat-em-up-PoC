@@ -13,6 +13,9 @@ round (hurtboxes, rig points, reaches and first-person framing all derive from t
 	4. the proportion warp: every bone maps its own source segment (head, tail) onto the target segment, rotating and
 	   stretching ALONG the bone only (never girth), blended by the vertex weights (the source rig's own, or Blender's heat
 	   weights on a temporary armature); the topology is untouched, so the source's weights stay valid;
+	4b. config fit.regularize (e.g. ["Spine", "Chest", "UpperChest"]) puts those landmarks at the table's proportional places
+	   between Hips and Neck, so a generated rig whose torso joints are spaced differently does not make neighbouring bones
+	   stretch 1.3x and squash 0.6x;
 	5. the landmark residual is reported: a joint's source point, warped with the weights of its nearest vertex, against
 	   its target.
 Missing landmarks (no rig, or a bone the rig lacks) fall back to the table scaled to the mesh, so a bare mesh drawn on
@@ -142,6 +145,21 @@ def run(cfg, extra):
 				cur = T0[side + bone].copy()
 			L[side + bone] = np.array([cur[0], cur[1], sole_z + h])
 
+	# ----- 2b. regularise: the torso joints of a generated rig sit wherever the rig tool put them (Tripo's UpperChest is 9 cm below
+	# the table's); mapping each exactly makes the bones stretch 1.3x and squash 0.6x side by side. fit.regularize lists bones
+	# whose landmark is put at the table's proportional place between their neighbours (Hips and Neck for the torso chain).
+	regularized = {}
+	reg = fit.get("regularize", [])
+	if reg and "Hips" in L and "Neck" in L:
+		span = T0["Neck"][2] - T0["Hips"][2]
+		for b in reg:
+			if b in L:
+				frac = (T0[b][2] - T0["Hips"][2]) / span
+				regularized[b] = {"from": L[b].tolist()}
+				L[b] = L["Hips"] + (L["Neck"] - L["Hips"]) * frac
+				regularized[b]["to"] = L[b].tolist()
+				regularized[b]["moved_m"] = float(np.linalg.norm(L[b] - np.array(regularized[b]["from"])))
+
 	# ----- 3. the swing, measured
 	dirs = {}
 	swing_cfg = fit.get("swing", "measure")
@@ -257,6 +275,7 @@ def run(cfg, extra):
 		"sole_z_source_after_scale": sole_z,
 		"swing": {side: {"deg": pc.swing_deg_of(side, dirs[side]), "from": swing_source[side], "dir": list(dirs[side])} for side in pc.SIDES},
 		"landmarks_missing_filled_from_table": missing,
+		"regularized": regularized,
 		"warp_weights": warp_weight_source,
 		"unweighted_filled": filled,
 		"stretch": {k: transforms[k][3] for k in order},

@@ -181,7 +181,7 @@ def main(argv):
 		committed = pc.load_json(committed_path)["hash"]
 		scratch = os.path.join("assets", "source", "_cache", "check_" + cfg["id"])
 		shutil.rmtree(pc.repo_path(scratch), ignore_errors=True)
-		cfg["paths"] = dict(cfg["paths"], work=scratch + "/work", report=scratch + "/report", export_dir=scratch + "/export")
+		cfg["paths"] = dict(cfg["paths"], work=scratch + "/work", report=scratch + "/report", export_dir=scratch + "/export", blend_dir=scratch + "/blend")
 		cfg["paths"].pop("report_json", None)
 		opts["import"] = False
 		opts["stills"] = False
