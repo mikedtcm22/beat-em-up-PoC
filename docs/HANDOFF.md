@@ -4,6 +4,19 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-26 21:30 CDT: M4 working session started; the plan workflow running; Gemini images blocked on Game-boy
+5-hour 5% (resets 2026-10-27 00:50 CDT), weekly 6%.
+- **Sessions:** the M3 session is renamed "Beat-em-up: M3 session (done)". This session is "Beat-em-up: working session". The old watcher session (`local_618146a1`, Haiku) was told to restart its `/loop` with the "Usage watcher" prompt; a session started from another session can't start a new one.
+- **Running:** the plan workflow `wf_74e77973-52c` (task `w283e2yn1`):
+  - four Sonnet readers write `docs/milestones/M4-codemap/` (rig-render, fx-env-tooling, toolchain-tripo-gemini, toolchain-blender-godot);
+  - three Opus planners (rig-risk-first, look-first, vertical-slice) write `docs/milestones/M4-planning/m4-plan-*.md`;
+  - an Opus judge scores them and returns the amendments.
+  - **If cut off:** within this session, rerun the script with `resumeFromRunId: "wf_74e77973-52c"`. In a new session, write the plan from whatever codemaps and planning files exist.
+  - **Then:** the lead writes `docs/milestones/M4-plan.md` (Part A amendments, Part B the done-when made checkable, Part C the base plan), as in M3.
+- **Blocked on Game-boy (DMed 21:28 CDT):** the Gemini key is valid, but its project is on Google's free tier, which allows 0 image generations on every image model (`gemini-3-pro-image`, `gemini-3.1-flash-image`, `gemini-2.5-flash-image`, `gemini-3.1-flash-lite-image` all return 429 "limit: 0, Free Tier"). He's asked to set up billing on the key's project (AI Studio, Tier 1). The key's earlier "works" check only listed models. `gemini-2.5-flash` text is retired for new users; text calls would use `gemini-3.8-flash`.
+  - The concept prompts are ready (4 Street Punks, teal with a yellow accent as in M3, front A-pose; 3 hero design sheets with hand, fist and shoe callouts). The generator and its job file move into `tools/` with the plan.
+- **Next:** write the plan; launch the toolchain-free packages (toon shader, outlines, post, the VFX set); send the concepts as soon as images work.
+
 ### 2026-10-26 21:10 CDT: the M4 toolchain is ready; M4 starts in a fresh session
 5-hour 5% (resets 2026-10-27 00:50 CDT), weekly 6% (resets Mon 2026-11-02 05:00 CDT). No watcher is running; the M4 session starts one.
 - **Ready, verified by the lead:**
@@ -1260,9 +1273,9 @@ Otherwise say nothing beyond one short line: the two percentages and the next ch
 **Resume after a limit.** The working session creates the resume task itself as the last step of a handoff (the watcher's step 3 is the fallback when it was cut off first): `mcp__scheduled-tasks__create_scheduled_task` with the fields in the watcher's step 3, firing 10 minutes after the window that stopped work resets. The task wakes the working session if it still exists, which keeps its context, or else starts a takeover. Its prompt, verbatim:
 
 RESUME-PROMPT-START
-Resume the beat-em-up Milestone 3 work after a usage reset. The project is /Users/arachne/repos/beat-em-up-PoC (Godot 4.7.2, GitHub mikedtcm22/beat-em-up-PoC). Game-boy (the owner) asked on 2026-10-25 for the work to continue across usage limits without waiting for him, until Milestone 3 is done.
+Resume the beat-em-up Milestone 4 work after a usage reset. The project is /Users/arachne/repos/beat-em-up-PoC (Godot 4.7.2, GitHub mikedtcm22/beat-em-up-PoC). Game-boy (the owner) asked for the work to continue across usage limits without waiting for him, until Milestone 4 is done.
 1. Call mcp__ccd_session_mgmt__get_usage (load it with ToolSearch). If either the "5-hour limit" or the "Weekly · all models" window is still at 90% or more, create a copy of this task with mcp__scheduled-tasks__create_scheduled_task (a new taskId starting "beat-em-up-resume-", fireAt that window's resetsAt plus 10 minutes, the same prompt) and stop.
-2. Call mcp__ccd_session_mgmt__list_sessions (load it with ToolSearch). If a session titled exactly "Beat-em-up: working session" is listed and not archived, send it with mcp__ccd_session_mgmt__send_message: "Scheduled resume: the usage window has reset. Check get_usage, make sure a usage watcher is running (docs/HANDOFF.md, 'Usage watcher'), then resume Milestone 3 from the newest entry in docs/HANDOFF.md." If the result says "delivered" or "queued", you're done: say so in one line and stop.
+2. Call mcp__ccd_session_mgmt__list_sessions (load it with ToolSearch). If a session titled exactly "Beat-em-up: working session" is listed and not archived, send it with mcp__ccd_session_mgmt__send_message: "Scheduled resume: the usage window has reset. Check get_usage, make sure a usage watcher is running (docs/HANDOFF.md, 'Usage watcher'), then resume Milestone 4 from the newest entry in docs/HANDOFF.md." If the result says "delivered" or "queued", you're done: say so in one line and stop.
 3. Otherwise you are the new working session: follow the takeover prompt in docs/HANDOFF.md (the "Takeover prompt" section) exactly, starting with renaming this session "Beat-em-up: working session".
 RESUME-PROMPT-END
 
@@ -1297,11 +1310,11 @@ If no watcher is running, for example after an account switch, start one with th
 Game-boy pastes this into a new account's session. Keep the "Next steps" list current at every handoff; the rest changes rarely.
 
 ```
-You're taking over an in-progress Godot 4.7.2 project: a first-person beat-em-up proof of concept at /Users/arachne/repos/beat-em-up-PoC (GitHub: mikedtcm22/beat-em-up-PoC). I'm Game-boy, the project owner. Other Claude accounts did the work so far and handed off at their usage limits. We switch accounts at every usage limit, so treat the repo as the only source of truth. Work happens on branch m3/enemy-ai and the worktrees under .worktrees/.
+You're taking over an in-progress Godot 4.7.2 project: a first-person beat-em-up proof of concept at /Users/arachne/repos/beat-em-up-PoC (GitHub: mikedtcm22/beat-em-up-PoC). I'm Game-boy, the project owner. Other Claude accounts did the work so far and handed off at their usage limits. We switch accounts at every usage limit, so treat the repo as the only source of truth. Work happens on branch m4/art-pipeline and the worktrees under .worktrees/.
 
 Start by doing these, in order:
 1. Rename this session to "Beat-em-up: working session" (mcp__ccd_session_mgmt__set_session_title). The usage watcher finds you by that title.
-2. Read CLAUDE.md, then docs/HANDOFF.md (live status and exact resume steps; the newest entry is at the top). Then read docs/milestones/M3-plan.md and docs/milestones/M3-judgement-calls.md. Read docs/ARCHITECTURE.md, the codemaps in docs/milestones/M3-codemap/ and docs/SPEC.md §5, §7, §8 and §11 before touching code.
+2. Read CLAUDE.md, then docs/HANDOFF.md (live status and exact resume steps; the newest entry is at the top). Then read docs/milestones/M4-plan.md (once written; until then docs/milestones/M4-planning/ and the codemaps in docs/milestones/M4-codemap/). Read docs/ARCHITECTURE.md and docs/SPEC.md §5, §6, §10 and §12 before touching code.
 3. If no usage watcher is running (list your sessions), start one exactly as docs/HANDOFF.md describes under "Usage watcher" (Haiku, low effort, self-paced /loop, shares this checkout, its prompt verbatim).
 4. Check usage (mcp__ccd_session_mgmt__get_usage) before launching any workflow or agent.
 
