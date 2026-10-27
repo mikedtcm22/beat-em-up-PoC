@@ -116,7 +116,11 @@ What it says. Where the silhouette normal is mostly in X (the sides) the width w
 - 30% (bloodied): the face and arms take the skin's bloodied tile: red splats over a purple-pink wash, where SL-int's frame had a translucent grey with dark smudges. The vest, tee and jeans keep the clothes' blood. The cap and the lenses still take clothes-density splats (they share the clothes swatch, C7); the right forearm (the cream sleeve, a clothes swatch) shows the scuffed or bloody clothes tile, as before. The skin's bloodied tile has a translucent purple wash, so the skin at 30% reads lilac and slightly glassy rather than opaque as on M3's flat paint: that is the tile's alpha (`tools/gen_fx.gd`), the lead's call or F-punk's.
 - The act ends in the KO and blink-off as before; no SHADER ERROR in the log.
 
-## 4. For the lead
+## 4. Tests
+
+`tools/run_tests.sh` on the final tree: 62 scripts, **1379 of 1379 passing** (the base was 1378; the new test is `test_damage_look.test_the_art_shows_the_skin_tiles_on_the_skin_and_the_clothes_tiles_on_the_clothes`), 99,187 asserts, 0 `SCRIPT ERROR`, 0 `SHADER ERROR`, 0 `ERROR` lines (the two `WARNING: SkinnedArt: probe does not attach` lines are the probe tests' intended refusals). Added to existing tests: the per-mesh hull axis assertions and the alpha classes in `test_art_contract`, the `damage_skin_tex` pin, the skin-class shader literals and the skin tiles on the art in `test_toon`. What fails without the fix: the hull axis assertions on the old GLBs (16 failed asserts, part 2); the skin-tile test without `apply_art()`'s second texture; the alpha-class assertions against the old atlas (slots 6-9 at 1.0).
+
+## 5. For the lead
 
 - Gate pass (1) is the three `--check` lines in C3.
 - The fold counts (C4) go in the J7 mesh-QA line: 159 / 159 / 159 / 160 on the four Punk GLBs.
