@@ -1,0 +1,252 @@
+{
+  "source": "assets/source/tripo_ledger.jsonl (read on m4/p3-evidence at the merged head of m4/art-pipeline)",
+  "tripo": {
+    "tasks": [
+      {
+        "label": "T1",
+        "call": "image-to-model",
+        "endpoint": "/generation/image-to-model",
+        "task_id": "cb4af11c-3a03-435b-9ea3-29c08cfc11da",
+        "created": "2026-10-27T04:21:59Z",
+        "expected_credits": 30.0,
+        "status": "success",
+        "credits_consumed": 30.0,
+        "credits_source": "task",
+        "balance_before": 1500.0,
+        "balance_after": 1470.0,
+        "finished": "2026-10-27T04:23:43Z",
+        "duration_s": 102.2
+      },
+      {
+        "label": "T2",
+        "call": "rig-check",
+        "endpoint": "/animations/rig-check",
+        "task_id": "529a4cb0-5cbe-4f15-bf1d-9da49c626fd1",
+        "created": "2026-10-27T04:24:57Z",
+        "expected_credits": 0.0,
+        "status": "success",
+        "credits_consumed": 0.0,
+        "credits_source": "task",
+        "balance_before": 1470.0,
+        "balance_after": 1470.0,
+        "finished": "2026-10-27T04:25:00Z",
+        "duration_s": 2.6
+      },
+      {
+        "label": "T3",
+        "call": "rig",
+        "endpoint": "/animations/rig",
+        "task_id": "0366578f-11ec-4e54-8392-79b91ec6fa5e",
+        "created": "2026-10-27T04:25:04Z",
+        "expected_credits": 25.0,
+        "status": "success",
+        "credits_consumed": 25.0,
+        "credits_source": "task",
+        "balance_before": 1470.0,
+        "balance_after": 1445.0,
+        "finished": "2026-10-27T04:25:13Z",
+        "duration_s": 7.2
+      },
+      {
+        "label": "T4",
+        "call": "multiview",
+        "endpoint": "/generation/multiview-to-model",
+        "task_id": "9d477476-fd1d-408f-a8f9-c9c594e15fd7",
+        "created": "2026-10-27T14:13:17Z",
+        "expected_credits": 30.0,
+        "status": "success",
+        "credits_consumed": 30.0,
+        "credits_source": "task",
+        "balance_before": 1390.0,
+        "balance_after": 1360.0,
+        "finished": "2026-10-27T14:14:17Z",
+        "duration_s": 58.2
+      },
+      {
+        "label": "T5",
+        "call": "multiview",
+        "endpoint": "/generation/multiview-to-model",
+        "task_id": "1881f8ee-04b1-419c-a894-9f71a9c5f316",
+        "created": "2026-10-27T14:14:44Z",
+        "expected_credits": 30.0,
+        "status": "success",
+        "credits_consumed": 30.0,
+        "credits_source": "task",
+        "balance_before": 1360.0,
+        "balance_after": 1330.0,
+        "finished": "2026-10-27T14:15:48Z",
+        "duration_s": 62.8
+      },
+      {
+        "label": "T8c",
+        "call": "rig-check",
+        "endpoint": "/animations/rig-check",
+        "task_id": "99ee56bb-74e8-4adb-b6f8-8ab35f282bb7",
+        "created": "2026-10-27T14:17:06Z",
+        "expected_credits": 0.0,
+        "status": "success",
+        "credits_consumed": 0.0,
+        "credits_source": "task",
+        "balance_before": 1330.0,
+        "balance_after": 1330.0,
+        "finished": "2026-10-27T14:17:09Z",
+        "duration_s": 2.6
+      },
+      {
+        "label": "T8",
+        "call": "rig",
+        "endpoint": "/animations/rig",
+        "task_id": "5374695c-802e-457f-9a35-0ad27ee3e0a4",
+        "created": "2026-10-27T14:17:14Z",
+        "expected_credits": 25.0,
+        "status": "success",
+        "credits_consumed": 25.0,
+        "credits_source": "task",
+        "balance_before": 1330.0,
+        "balance_after": 1305.0,
+        "finished": "2026-10-27T14:17:23Z",
+        "duration_s": 7.3
+      },
+      {
+        "label": "T9",
+        "call": "multiview",
+        "endpoint": "/generation/multiview-to-model",
+        "task_id": "e70776cb-f323-4816-8fc7-0b91e45be2aa",
+        "created": "2026-10-27T14:23:26Z",
+        "expected_credits": 50.0,
+        "status": "success",
+        "credits_consumed": 50.0,
+        "credits_source": "task",
+        "balance_before": 1255.0,
+        "balance_after": 1205.0,
+        "finished": "2026-10-27T14:24:58Z",
+        "duration_s": 90.6
+      },
+      {
+        "label": "T11",
+        "call": "multiview",
+        "endpoint": "/generation/multiview-to-model",
+        "task_id": "8ed16ed9-c690-4e99-b7ac-a573b37c2da1",
+        "created": "2026-10-27T14:10:05Z",
+        "expected_credits": 30.0,
+        "status": "success",
+        "credits_consumed": 30.0,
+        "credits_source": "task",
+        "balance_before": 1445.0,
+        "balance_after": 1415.0,
+        "finished": "2026-10-27T14:11:14Z",
+        "duration_s": 67.5
+      },
+      {
+        "label": "T12check",
+        "call": "rig-check",
+        "endpoint": "/animations/rig-check",
+        "task_id": "74170c09-e7d7-4c42-bcab-063a13ed7991",
+        "created": "2026-10-27T14:11:39Z",
+        "expected_credits": 0.0,
+        "status": "success",
+        "credits_consumed": 0.0,
+        "credits_source": "task",
+        "balance_before": 1415.0,
+        "balance_after": 1415.0,
+        "finished": "2026-10-27T14:11:42Z",
+        "duration_s": 2.6
+      },
+      {
+        "label": "T12",
+        "call": "rig",
+        "endpoint": "/animations/rig",
+        "task_id": "3ce1d980-af5d-4976-8281-617db672f3f0",
+        "created": "2026-10-27T14:11:48Z",
+        "expected_credits": 25.0,
+        "status": "success",
+        "credits_consumed": 25.0,
+        "credits_source": "task",
+        "balance_before": 1415.0,
+        "balance_after": 1390.0,
+        "finished": "2026-10-27T14:11:57Z",
+        "duration_s": 7.3
+      },
+      {
+        "label": "T13",
+        "call": "multiview",
+        "endpoint": "/generation/multiview-to-model",
+        "task_id": "e0b15d52-7f99-4d5a-9814-beecbacd4008",
+        "created": "2026-10-27T14:22:04Z",
+        "expected_credits": 50.0,
+        "status": "success",
+        "credits_consumed": 50.0,
+        "credits_source": "task",
+        "balance_before": 1305.0,
+        "balance_after": 1205.0,
+        "finished": "2026-10-27T14:23:46Z",
+        "duration_s": 97.5
+      }
+    ],
+    "tasks_run": 12,
+    "credits_consumed_total": 295.0,
+    "by_call": {
+      "image-to-model": {
+        "tasks": 1,
+        "credits": 30.0
+      },
+      "rig-check": {
+        "tasks": 3,
+        "credits": 0.0
+      },
+      "rig": {
+        "tasks": 3,
+        "credits": 75.0
+      },
+      "multiview": {
+        "tasks": 5,
+        "credits": 190.0
+      }
+    },
+    "uploads_logged": 18,
+    "start_balance": 1500.0,
+    "end_balance": 1205.0,
+    "balance_note": "T9 was created while T13 was still running, so their balance fields overlap (T13's finish line shows a delta of 100 with 50 frozen: its own 50 plus T9's hold). The net after both is 1205, and it equals 1500 minus the sum of the tasks' credits_consumed.",
+    "m4_stop": 750,
+    "m4_cap_without_asking": 800,
+    "headroom_under_stop": 455.0,
+    "game_boy_allowance_of_account": 800,
+    "account_credits": 1500
+  },
+  "gemini": {
+    "images_by_job_file": [
+      {
+        "job_file": "assets/source/concepts/concept_jobs.json",
+        "images": 7,
+        "what": "round-1 concepts: Punks A-D and heroes A-C"
+      },
+      {
+        "job_file": "assets/source/characters/punk/smoke/smoke_jobs.json",
+        "images": 1,
+        "what": "the smoke Punk's flat front view"
+      },
+      {
+        "job_file": "assets/source/characters/punk/views/views_jobs.json",
+        "images": 4,
+        "what": "Punk views (front, back, left, right)"
+      },
+      {
+        "job_file": "assets/source/characters/punk/parts/fist/views/fist_jobs.json",
+        "images": 4,
+        "what": "Punk glove fist views"
+      },
+      {
+        "job_file": "assets/source/characters/player/views/views_jobs.json",
+        "images": 3,
+        "what": "hero views (front, back, left; the right is an ffmpeg mirror, no call)"
+      },
+      {
+        "job_file": "assets/source/characters/player/fist/views/fist_jobs.json",
+        "images": 4,
+        "what": "hero fist views"
+      }
+    ],
+    "images_total": 23,
+    "note": "counted from the job files (one image per job, gemini-3-pro-image, 2K); there is no Gemini ledger, so a re-run of a job would not show here. The plan estimated about 40 images, about 5 USD."
+  }
+}

@@ -1,0 +1,525 @@
+{
+  "source": "recordings of m4/p3-evidence at the merged head of m4/art-pipeline (6e2a2e1), windowed (Movie Maker, 1600x900), one act per process; the logs are in captures/m4/evidence/ (local, never committed)",
+  "bars": "M3's hard rows R1-R3, R10, R11 must be met (A14); R4 and R8 with the art drawn within noise of the proxies (L5: R8 within 3 points at the median and 5 at the 95th, no wind-up hidden that the proxies did not see hidden). R15 (frame time) is not measurable in a recording.",
+  "autopilot_60s": {
+    "act": "Waves to the boss",
+    "what": "the 60 s autopilot crowd act (56.4 s): the autopilot fights the waves up to the boss's adds, god mode, every Punk in the art",
+    "recording": "captures/m4/evidence/waves/bot.avi (local, never committed)",
+    "frames": 3385,
+    "seconds": 56.4,
+    "bot_log_error_lines": 0,
+    "check_m3_log": {
+      "exit": 0,
+      "first_line": "ok captures/m4/evidence/waves/bot.log: 7 WARN-CHECK (1 warned), 7 wind-ups, token holders at most 2 of 3, 269 lines",
+      "lines": [
+        "ok captures/m4/evidence/waves/bot.log: 7 WARN-CHECK (1 warned), 7 wind-ups, token holders at most 2 of 3, 269 lines",
+        "  most holders: Waves to the boss, f1183, holders Punk3, Punk5"
+      ]
+    },
+    "rows": [
+      {
+        "id": "R1",
+        "name": "attackers at once",
+        "hard": true,
+        "status": "ok",
+        "value": "max 1",
+        "limit": "cap 3"
+      },
+      {
+        "id": "R2",
+        "name": "wind-up start gap",
+        "hard": true,
+        "status": "ok",
+        "value": "min 80 f",
+        "limit": ">= 21 f"
+      },
+      {
+        "id": "R3",
+        "name": "unwarned hits",
+        "hard": true,
+        "status": "ok",
+        "value": "0 of 4 hits",
+        "limit": "0"
+      },
+      {
+        "id": "R4",
+        "name": "occluded wind-ups",
+        "hard": false,
+        "status": "ok",
+        "value": "0% of 6",
+        "limit": "<= 10%"
+      },
+      {
+        "id": "R5",
+        "name": "front wedge crowded",
+        "hard": false,
+        "status": "ok",
+        "value": "0.0% of frames",
+        "limit": "<= 5%"
+      },
+      {
+        "id": "R6",
+        "name": "posture ring",
+        "hard": false,
+        "status": "miss",
+        "value": "median 1.02 m, p10 1.00 m",
+        "limit": "median 2.5-4.0, p10 >= 2.2"
+      },
+      {
+        "id": "R7",
+        "name": "capsule overlap",
+        "hard": false,
+        "status": "miss",
+        "value": "12 f (1.16%)",
+        "limit": "<= 0.5%"
+      },
+      {
+        "id": "R8",
+        "name": "lens covered by enemies",
+        "hard": false,
+        "status": "ok",
+        "value": "p50 6%, p95 44%",
+        "limit": "p50 <= 25%, p95 <= 50%"
+      },
+      {
+        "id": "R9",
+        "name": "blind grants",
+        "hard": false,
+        "status": "n/a",
+        "value": "no mixed grants",
+        "limit": ""
+      },
+      {
+        "id": "R10",
+        "name": "warning vs the rule",
+        "hard": true,
+        "status": "ok",
+        "value": "100% of 7, 0 false, lat 0 f, end 0 f",
+        "limit": "100%, 0, lat <= 1 f, end <= 1 f"
+      },
+      {
+        "id": "R11",
+        "name": "knockdown hit damage",
+        "hard": true,
+        "status": "ok",
+        "value": "max 0",
+        "limit": "<= 15"
+      },
+      {
+        "id": "R12",
+        "name": "passive player",
+        "hard": false,
+        "status": "n/a",
+        "value": "not a passive act",
+        "limit": ""
+      },
+      {
+        "id": "R13",
+        "name": "stuck enemies, waves",
+        "hard": false,
+        "status": "ok",
+        "value": "0 stuck, 2 waves",
+        "limit": "0 stuck"
+      },
+      {
+        "id": "R14",
+        "name": "wind-up voices stolen",
+        "hard": false,
+        "status": "ok",
+        "value": "0",
+        "limit": "0"
+      },
+      {
+        "id": "R15",
+        "name": "frame time",
+        "hard": false,
+        "status": "n/a",
+        "value": "needs a windowed run, not a recording",
+        "limit": ""
+      }
+    ],
+    "m3_hard_rows_A14": {
+      "R1": {
+        "status": "ok",
+        "value": "max 1"
+      },
+      "R2": {
+        "status": "ok",
+        "value": "min 80 f"
+      },
+      "R3": {
+        "status": "ok",
+        "value": "0 of 4 hits"
+      },
+      "R10": {
+        "status": "ok",
+        "value": "100% of 7, 0 false, lat 0 f, end 0 f"
+      },
+      "R11": {
+        "status": "ok",
+        "value": "max 0"
+      }
+    },
+    "m3_hard_rows_all_met": true,
+    "soft_rows_missed": [
+      {
+        "id": "R6",
+        "name": "posture ring",
+        "value": "median 1.02 m, p10 1.00 m",
+        "limit": "median 2.5-4.0, p10 >= 2.2"
+      },
+      {
+        "id": "R7",
+        "name": "capsule overlap",
+        "value": "12 f (1.16%)",
+        "limit": "<= 0.5%"
+      }
+    ],
+    "key_figures": {
+      "max_concurrent_attackers": 1,
+      "min_windup_start_gap_frames": 80,
+      "hits_on_player": 4,
+      "unwarned_hits": 0,
+      "windups": 7,
+      "warning_oracle_agreement": 1.0,
+      "fp_enemy_coverage": {
+        "max": 0.670138895511627,
+        "p50": 0.0590277761220932,
+        "p95": 0.4375,
+        "samples": 282,
+        "share_over_50": 0.024822695035461
+      },
+      "ring_adherence": {
+        "median": 1.02303433418274,
+        "p10": 0.998380720615387,
+        "samples": 111
+      },
+      "capsule_overlap_share": 0.011605415860735,
+      "peak_alive": 4,
+      "spawns": 9,
+      "stuck_events": 0
+    }
+  },
+  "six_punks_fight": {
+    "act": "Six Punks, fight",
+    "what": "six art Punks, the autopilot fights for 25 s, a new Punk walking in whenever one falls (27.4 s); also the six-Punk clip's source",
+    "recording": "captures/m4/evidence/six/bot.avi (local, never committed)",
+    "frames": 1644,
+    "seconds": 27.4,
+    "bot_log_error_lines": 0,
+    "check_m3_log": {
+      "exit": 0,
+      "first_line": "ok captures/m4/evidence/six/bot.log: 16 WARN-CHECK (4 warned), 17 wind-ups, token holders at most 3 of 3, 335 lines",
+      "lines": [
+        "ok captures/m4/evidence/six/bot.log: 16 WARN-CHECK (4 warned), 17 wind-ups, token holders at most 3 of 3, 335 lines",
+        "  most holders: Six Punks, fight, f319, holders Punk3, Punk5, Punk6"
+      ]
+    },
+    "rows": [
+      {
+        "id": "R1",
+        "name": "attackers at once",
+        "hard": true,
+        "status": "ok",
+        "value": "max 1",
+        "limit": "cap 3"
+      },
+      {
+        "id": "R2",
+        "name": "wind-up start gap",
+        "hard": true,
+        "status": "ok",
+        "value": "min 56 f",
+        "limit": ">= 21 f"
+      },
+      {
+        "id": "R3",
+        "name": "unwarned hits",
+        "hard": true,
+        "status": "ok",
+        "value": "0 of 8 hits",
+        "limit": "0"
+      },
+      {
+        "id": "R4",
+        "name": "occluded wind-ups",
+        "hard": false,
+        "status": "ok",
+        "value": "0% of 13",
+        "limit": "<= 10%"
+      },
+      {
+        "id": "R5",
+        "name": "front wedge crowded",
+        "hard": false,
+        "status": "ok",
+        "value": "0.0% of frames",
+        "limit": "<= 5%"
+      },
+      {
+        "id": "R6",
+        "name": "posture ring",
+        "hard": false,
+        "status": "ok",
+        "value": "median 3.39 m, p10 2.61 m",
+        "limit": "median 2.5-4.0, p10 >= 2.2"
+      },
+      {
+        "id": "R7",
+        "name": "capsule overlap",
+        "hard": false,
+        "status": "ok",
+        "value": "0 f (0.00%)",
+        "limit": "<= 0.5%"
+      },
+      {
+        "id": "R8",
+        "name": "lens covered by enemies",
+        "hard": false,
+        "status": "miss",
+        "value": "p50 29%, p95 45%",
+        "limit": "p50 <= 25%, p95 <= 50%"
+      },
+      {
+        "id": "R9",
+        "name": "blind grants",
+        "hard": false,
+        "status": "n/a",
+        "value": "no mixed grants",
+        "limit": ""
+      },
+      {
+        "id": "R10",
+        "name": "warning vs the rule",
+        "hard": true,
+        "status": "ok",
+        "value": "100% of 16, 0 false, lat 0 f, end 0 f",
+        "limit": "100%, 0, lat <= 1 f, end <= 1 f"
+      },
+      {
+        "id": "R11",
+        "name": "knockdown hit damage",
+        "hard": true,
+        "status": "ok",
+        "value": "max 0",
+        "limit": "<= 15"
+      },
+      {
+        "id": "R12",
+        "name": "passive player",
+        "hard": false,
+        "status": "n/a",
+        "value": "not a passive act",
+        "limit": ""
+      },
+      {
+        "id": "R13",
+        "name": "stuck enemies, waves",
+        "hard": false,
+        "status": "ok",
+        "value": "0 stuck, 0 waves",
+        "limit": "0 stuck"
+      },
+      {
+        "id": "R14",
+        "name": "wind-up voices stolen",
+        "hard": false,
+        "status": "ok",
+        "value": "0",
+        "limit": "0"
+      },
+      {
+        "id": "R15",
+        "name": "frame time",
+        "hard": false,
+        "status": "n/a",
+        "value": "needs a windowed run, not a recording",
+        "limit": ""
+      }
+    ],
+    "m3_hard_rows_A14": {
+      "R1": {
+        "status": "ok",
+        "value": "max 1"
+      },
+      "R2": {
+        "status": "ok",
+        "value": "min 56 f"
+      },
+      "R3": {
+        "status": "ok",
+        "value": "0 of 8 hits"
+      },
+      "R10": {
+        "status": "ok",
+        "value": "100% of 16, 0 false, lat 0 f, end 0 f"
+      },
+      "R11": {
+        "status": "ok",
+        "value": "max 0"
+      }
+    },
+    "m3_hard_rows_all_met": true,
+    "soft_rows_missed": [
+      {
+        "id": "R8",
+        "name": "lens covered by enemies",
+        "value": "p50 29%, p95 45%",
+        "limit": "p50 <= 25%, p95 <= 50%"
+      }
+    ],
+    "key_figures": {
+      "max_concurrent_attackers": 1,
+      "min_windup_start_gap_frames": 56,
+      "hits_on_player": 8,
+      "unwarned_hits": 0,
+      "windups": 16,
+      "warning_oracle_agreement": 1.0,
+      "fp_enemy_coverage": {
+        "max": 0.588541686534882,
+        "p50": 0.288194447755814,
+        "p95": 0.453125,
+        "samples": 165,
+        "share_over_50": 0.0242424242424242
+      },
+      "ring_adherence": {
+        "median": 3.38995909690857,
+        "p10": 2.60630631446838,
+        "samples": 2454
+      },
+      "capsule_overlap_share": 0.0,
+      "peak_alive": 6,
+      "spawns": 11,
+      "stuck_events": 0
+    }
+  },
+  "art_drawn_vs_proxies_R4_R8": {
+    "act": "Look: readability with the art drawn",
+    "what": "the two fights run in turn with the art drawn by the engine measured through tests/bot/look_l5.gd (the triangles the lens draws, ragdolling rigs skinned in their drawn pose) beside the proxies",
+    "own_recording": {
+      "Six Punks, fight": {
+        "R8": {
+          "samples": 164,
+          "ticks": 1644,
+          "proxies": {
+            "p50_pct": 27.6,
+            "p95_pct": 43.8,
+            "max_pct": 55.9
+          },
+          "art_drawn": {
+            "p50_pct": 26.2,
+            "p95_pct": 42.5,
+            "max_pct": 54.2
+          },
+          "difference_pp": {
+            "p50": -1.4,
+            "p95": -1.2
+          },
+          "cells_that_differ_pct": {
+            "mean": 3.2,
+            "worst": 9.5
+          }
+        },
+        "R4": {
+          "windups": 16,
+          "in_lens": 14,
+          "never_sampled": 2,
+          "hidden_proxies": 0,
+          "of_proxies": 14,
+          "hidden_art_drawn": 0,
+          "of_art_drawn": 14,
+          "worst_sample_ms": 446.7
+        }
+      },
+      "Mixed six, fight": {
+        "R8": {
+          "samples": 194,
+          "ticks": 1944,
+          "proxies": {
+            "p50_pct": 30.7,
+            "p95_pct": 51.6,
+            "max_pct": 83.0
+          },
+          "art_drawn": {
+            "p50_pct": 29.9,
+            "p95_pct": 51.6,
+            "max_pct": 83.0
+          },
+          "difference_pp": {
+            "p50": -0.9,
+            "p95": 0.0
+          },
+          "cells_that_differ_pct": {
+            "mean": 1.7,
+            "worst": 9.4
+          }
+        },
+        "R4": {
+          "windups": 21,
+          "in_lens": 17,
+          "never_sampled": 1,
+          "hidden_proxies": 0,
+          "of_proxies": 17,
+          "hidden_art_drawn": 0,
+          "of_art_drawn": 17,
+          "worst_sample_ms": 170.4
+        }
+      }
+    },
+    "own_recording_bot_log_error_lines": 0,
+    "final_probe_run_L5": {
+      "state": "met",
+      "fights": {
+        "Mixed six, fight": {
+          "cells_mean": 0.014,
+          "cells_worst": 0.097,
+          "diff_p50": -0.7,
+          "diff_p95": -1.0,
+          "r4_art": 0,
+          "r4_proxies": 0,
+          "r8_art_p50": 0.26,
+          "r8_art_p95": 0.484,
+          "r8_proxies_p50": 0.267,
+          "r8_proxies_p95": 0.495,
+          "samples": 194,
+          "ticks": 1944,
+          "windups": 23,
+          "windups_in_view": 14,
+          "worst_ms": 214.6
+        },
+        "Six Punks, fight": {
+          "cells_mean": 0.032,
+          "cells_worst": 0.095,
+          "diff_p50": -2.1,
+          "diff_p95": -1.0,
+          "r4_art": 0,
+          "r4_proxies": 0,
+          "r8_art_p50": 0.264,
+          "r8_art_p95": 0.427,
+          "r8_proxies_p50": 0.285,
+          "r8_proxies_p95": 0.438,
+          "samples": 164,
+          "ticks": 1644,
+          "windups": 16,
+          "windups_in_view": 15,
+          "worst_ms": 1283.4
+        }
+      }
+    },
+    "state": "met",
+    "run_to_run_note": "the autopilot is not bit-identical between runs (the same fight read p50 proxies 27.6 and 28.5 in the two recordings), so the art-minus-proxies gap is quoted from each run's own pair, never across runs",
+    "check_m3_log_on_this_log": {
+      "exit": 1,
+      "first_line": "FAIL captures/m4/evidence/l5/bot.log: 0 WARN-CHECK (0 warned), 38 wind-ups, token holders at most 5 of 3, 654 lines",
+      "lines": [
+        "FAIL captures/m4/evidence/l5/bot.log: 0 WARN-CHECK (0 warned), 38 wind-ups, token holders at most 5 of 3, 654 lines",
+        "  most holders: Look: readability with the art drawn, f2200, holders Punk12, Punk13, Punk4, Punk9, Thug1",
+        "  note: 38 of 38 wind-ups have no WARN-CHECK line (the first: Punk3 f391)",
+        "  note: no WARN-CHECK line in this log: nothing to say about the warning",
+        "  FAIL: line 290: 4 token holders (Punk12, Punk13, Punk4, Punk9) over the cap of 3, in Look: readability with the art drawn at f2180",
+        "  FAIL: line 293: 5 token holders (Punk12, Punk13, Punk4, Punk9, Thug1) over the cap of 3, in Look: readability with the art drawn at f2200"
+      ]
+    },
+    "check_m3_log_note": "this act is not a probed act (no WARN-CHECK lines) and plays two fights in one act, so the token holders of the first fight's last Punks (Punk4 and Punk9, TOK+ with no TOK-) are still held when the second fight begins; check_m3_log counts them against the cap of 3. That is the checker's reading of a log that spans a room reset, not the autopilot's attacker cap: R1 (attackers at once) is measured on the two probed acts above, max 1 in both."
+  }
+}
