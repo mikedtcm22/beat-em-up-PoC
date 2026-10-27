@@ -1072,7 +1072,7 @@ extends Resource
 ## The one hard highlight shows where a surface faces the half vector this closely (1 is a
 ## point; the look bible keeps it under 3% of the visible surface).
 @export_range(0.5, 1.0, 0.001) var look_spec_cut: float = 0.99
-## How bright the highlight is.
+## How bright the highlight is, on the glossy materials; a matte paint takes none.
 @export_range(0.0, 2.0, 0.05) var look_spec_strength: float = 0.5
 ## The factor on the highlight of glossy materials (shades, belts, soles, the pipe).
 @export_range(1.0, 8.0, 0.1) var look_spec_gloss: float = 3.0
