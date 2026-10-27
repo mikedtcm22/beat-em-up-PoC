@@ -5,7 +5,8 @@ Plan: docs/milestones/M4-plan.md Part A A10 and Part C section 5 step 5; the API
 docs/milestones/M4-codemap/toolchain-tripo-gemini.md. Base URL https://openapi.tripo3d.ai/v3 (the v2
 API shuts down on 2026-10-31).
 
-Commands (a command that creates a task needs --label, the brief's row such as T1):
+Commands (a command that creates a task needs --label, the brief's row such as T1, AND --spend <credits>, which
+must equal the price table's expected cost for that exact request: a label alone can never spend):
 	balance                          free: live balance, frozen, the ledger's spend, headroom to the stop and the floor
 	ledger [--live]                  free: every ledger line summarised; --live also reconciles with the live balance
 	task <task_id>                   free: status and progress of one task (no URLs are printed)
@@ -18,8 +19,9 @@ Commands (a command that creates a task needs --label, the brief's row such as T
 	wait <task_id> [--out-dir D]     resume a task the ledger says was created but not finished
 	--self-test                      offline: prices, guards, lifecycle on a mock service, the key grep
 A <ref> is `task:<id>`, `file:<token>`, `url:https://...` or a local image path (uploaded first).
-Every task command takes --dry-run: it prints the request body and the expected cost, touches no network
-(--live adds one free balance call) and writes nothing. Task commands create the task, poll it, download every
+Every task command takes --dry-run: it prints the request body, the expected cost and the exact --spend to
+pass, touches no network (--live adds one free balance call) and writes nothing. Without --dry-run, a missing or
+different --spend is refused before anything is uploaded or created (rig-check included: it is `--spend 0`). Task commands create the task, poll it, download every
 output at once (the URLs die in 5 minutes) with no Authorization header into a NEW or EMPTY folder (default
 assets/source/_cache/tripo/<task_id>/), then append to the ledger. --opt values are JSON where they parse
 (true, 20000) and strings otherwise; --options names a JSON object of the same keys. Unknown keys are refused.
@@ -324,6 +326,20 @@ def expected_cost(call: str, body: Dict[str, Any], prices: Dict[str, Any]) -> Tu
 		if entry["call"] == call_key and all(body.get(k) == v for k, v in entry["when"].items()):
 			notes.append("UNVERIFIED PRICE: " + entry["note"])
 	return cost, notes
+
+
+def check_spend(spend: Optional[float], expected: float) -> None:
+	"""The second key of a paid call: --spend must be given and equal the table's cost for this exact request."""
+	if spend is None:
+		raise TripoError("--spend is required to run a task: pass --spend %s (the expected cost of this exact request; "
+			"--dry-run prints it). A label alone never spends." % format_credits(expected))
+	if not abs(float(spend) - float(expected)) <= 1e-6:  # written so that nan fails
+		raise TripoError("--spend %s does not match the price table's expected cost %s for this request; refused. "
+			"Run --dry-run to see the cost, and pass exactly that." % (format_credits(spend), format_credits(expected)))
+
+
+def format_credits(value: float) -> str:
+	return ("%d" % value) if float(value).is_integer() else ("%g" % value)
 
 
 # --------------------------------------------------------------------------- files, images
@@ -671,6 +687,7 @@ class Tripo:
 			self.say("  " + note)
 		for warning in plan["warnings"]:
 			self.say("WARNING: " + warning)
+		self.say("to run it: drop --dry-run and add --label <row> --spend %s" % format_credits(plan["expected"]))
 		spent = self.ledger.spent()
 		stop = float(self.policy["ledger_stop"])
 		verdict = "ok" if spent + plan["expected"] <= stop else "WOULD BE REFUSED"
@@ -685,9 +702,11 @@ class Tripo:
 
 	# --- running a task
 
-	def run(self, plan: Dict[str, Any], label: str, out_dir: Optional[str], poll_every: float, timeout: float) -> Dict[str, Any]:
+	def run(self, plan: Dict[str, Any], label: str, out_dir: Optional[str], poll_every: float, timeout: float,
+			spend: Optional[float] = None) -> Dict[str, Any]:
 		if not LABEL_RE.match(label or ""):
 			raise TripoError("--label is required (the brief's row, e.g. T1)")
+		check_spend(spend, plan["expected"])
 		out_path = self.check_out_dir(out_dir)
 		for note in plan["notes"]:
 			if note.startswith("UNVERIFIED"):
@@ -829,6 +848,7 @@ def build_parser():  # type: ignore[no-untyped-def]
 	for name in ("image-to-model", "multiview", "rig-check", "rig", "texture"):
 		p = sub.add_parser(name)
 		p.add_argument("--label", help="the brief's row, e.g. T1 (required to run)")
+		p.add_argument("--spend", type=float, help="credits this exact request costs by the price table (required to run; --dry-run prints it)")
 		p.add_argument("--dry-run", action="store_true")
 		p.add_argument("--live", action="store_true", help="with --dry-run: also read the live balance")
 		p.add_argument("--out-dir")
@@ -888,6 +908,25 @@ def cmd_ledger(svc: Tripo, live: bool) -> None:
 		svc.say("account spend %.2f (balance %.2f): %s" % (account, balance, verdict))
 
 
+def cmd_task(svc: Tripo, args: Any) -> None:
+	"""Plan one task from parsed arguments; print it (--dry-run) or run it. Every refusal that needs no network
+	(label, out-dir, spend) comes before anything is uploaded or created."""
+	call = args.command
+	fields: Dict[str, Any] = {"options": parse_options(args.opt, args.options)}
+	for name in ("input", "front", "left", "back", "right", "text"):
+		if getattr(args, name, None):
+			fields[name] = getattr(args, name)
+	if args.dry_run:
+		svc.dry_run(svc.plan(call, fields, True), args.live)
+		return
+	if not LABEL_RE.match(args.label or ""):
+		raise TripoError("--label is required (the brief's row, e.g. T1)")
+	svc.check_out_dir(args.out_dir)
+	check_spend(args.spend, svc.plan(call, fields, True)["expected"])  # an offline plan: nothing is uploaded yet
+	plan = svc.plan(call, fields, False)
+	svc.run(plan, args.label, args.out_dir, args.poll_every, args.timeout, args.spend)
+
+
 def main(argv: List[str]) -> int:
 	args = build_parser().parse_args(argv)
 	if args.self_test:
@@ -912,21 +951,7 @@ def main(argv: List[str]) -> int:
 		elif args.command == "wait":
 			svc.finish(args.task_id, svc.check_out_dir(args.out_dir), args.poll_every, args.timeout)
 		else:
-			call = args.command
-			fields = {"options": parse_options(args.opt, args.options)}
-			for name in ("input", "front", "left", "back", "right", "text"):
-				if getattr(args, name, None):
-					fields[name] = getattr(args, name)
-			if not args.dry_run:
-				# Cheap refusals first: nothing is uploaded for a task that could not run.
-				if not LABEL_RE.match(args.label or ""):
-					raise TripoError("--label is required (the brief's row, e.g. T1)")
-				svc.check_out_dir(args.out_dir)
-			plan = svc.plan(call, fields, args.dry_run)
-			if args.dry_run:
-				svc.dry_run(plan, args.live)
-			else:
-				svc.run(plan, args.label or "", args.out_dir, args.poll_every, args.timeout)
+			cmd_task(svc, args)
 	except TripoError as e:
 		print("tripo.py: " + redact(e), file=sys.stderr)
 		return e.code
@@ -1110,7 +1135,7 @@ def self_test() -> int:
 		out_dir = os.path.join(repo, "out", "t1")
 		plan = svc.plan("image-to-model", args, False)
 		check("the image was uploaded once", fake.upload_count == 1)
-		record = svc.run(plan, "T1", out_dir, 0, 30)
+		record = svc.run(plan, "T1", out_dir, 0, 30, spend=30.0)
 		check("success recorded with the task's real credits", record["status"] == "success" and record["credits_consumed"] == 30.0 and record["credits_source"] == "task")
 		check("balance before and after in the ledger", record["balance_before"] == 1500.0 and record["balance_after"] == 1470.0 and record["balance_delta"] == 30.0)
 		check("only known outputs are downloaded, none with a key header", len(fake.downloads) == 2 and not any("never" in u for u in fake.downloads))
@@ -1122,15 +1147,36 @@ def self_test() -> int:
 		check("ledger has upload, created, finished", kinds == ["upload", "created", "finished"], str(kinds))
 		check("ledger spend is 30", ledger.spent() == 30.0)
 		check("ledger lines carry no URLs", "https://" not in open(ledger.path).read())
-		refuses("a non-empty --out-dir is refused before spending", lambda: svc.run(plan, "T1b", out_dir, 0, 30), "not empty")
+		refuses("a non-empty --out-dir is refused before spending", lambda: svc.run(plan, "T1b", out_dir, 0, 30, spend=30.0), "not empty")
 		check("...and no task was created for it", len(fake.tasks) == 1)
-		refuses("a label is required", lambda: svc.run(plan, "", None, 0, 30), "label")
+		refuses("a label is required", lambda: svc.run(plan, "", None, 0, 30, spend=30.0), "label")
+		# the second key: --spend
+		refuses("a labelled run without --spend is refused", lambda: svc.run(plan, "T1c", None, 0, 30), "--spend is required")
+		refuses("a --spend below the price is refused", lambda: svc.run(plan, "T1c", None, 0, 30, spend=29.0), "does not match")
+		refuses("a --spend above the price is refused", lambda: svc.run(plan, "T1c", None, 0, 30, spend=31.0), "does not match")
+		refuses("--spend 0 on a paid task is refused", lambda: svc.run(plan, "T1c", None, 0, 30, spend=0.0), "does not match")
+		refuses("--spend nan is refused", lambda: svc.run(plan, "T1c", None, 0, 30, spend=float("nan")), "does not match")
+		check("...and none of those created a task", len(fake.tasks) == 1)
+		parser = build_parser()
+		cli = lambda *argv: parser.parse_args(list(argv))  # noqa: E731
+		fake.calls.clear()
+		uploads = fake.upload_count
+		refuses("the CLI refuses a labelled image-to-model with no --spend", lambda: cmd_task(svc, cli("image-to-model", "--label", "T1", "--input", png_ok)), "--spend is required")
+		refuses("the CLI refuses a mismatched --spend", lambda: cmd_task(svc, cli("image-to-model", "--label", "T1", "--input", png_ok, "--spend", "25")), "does not match")
+		refuses("the CLI refuses a paid rig with no --spend", lambda: cmd_task(svc, cli("rig", "--label", "T3", "--input", "task:abc12345")), "--spend is required")
+		refuses("the CLI refuses rig-check with no --spend (it is --spend 0)", lambda: cmd_task(svc, cli("rig-check", "--label", "T2", "--input", "task:abc12345")), "--spend is required")
+		refuses("the CLI refuses no label", lambda: cmd_task(svc, cli("rig", "--input", "task:abc12345", "--spend", "25")), "--label is required")
+		check("...with no network call, no upload and no task", fake.calls == [] and fake.upload_count == uploads and len(fake.tasks) == 1, str(fake.calls))
+		sink.truncate(0)
+		sink.seek(0)
+		cmd_task(svc, cli("image-to-model", "--dry-run", "--input", png_ok))
+		check("--dry-run names the --spend to pass", "--spend 30" in sink.getvalue() and fake.calls == [] and fake.upload_count == uploads)
 		refuses("--out-dir outside the repo is refused", lambda: svc.check_out_dir(os.path.join(tmp, "elsewhere")), "inside the repo")
 		# a failure
 		fake.next_status = ["running", "failed"]
 		fake.price = 0.0
 		try:
-			svc.run(svc.plan("rig", {"input": "task:" + list(fake.tasks)[0]}, False), "T3", None, 0, 30)
+			svc.run(svc.plan("rig", {"input": "task:" + list(fake.tasks)[0]}, False), "T3", None, 0, 30, spend=25.0)
 			check("a failed task raises", False)
 		except TripoError as e:
 			check("a failed task raises code 4", e.code == 4)
@@ -1146,7 +1192,7 @@ def self_test() -> int:
 		fake.price = 25.0
 		plan2 = svc.plan("rig-check", {"input": "task:abc12345"}, True)
 		try:
-			svc.run(plan2, "T2", None, 0, 0)  # a zero timeout: created, then 'timeout'
+			svc.run(plan2, "T2", None, 0, 0, spend=0.0)  # a zero timeout: created, then 'timeout'
 			check("a timeout raises", False)
 		except TripoError as e:
 			check("a timeout raises code 5 and leaves the created line", e.code == 5 and ledger.lines()[-1]["event"] == "created")
@@ -1158,7 +1204,7 @@ def self_test() -> int:
 		# secrets
 		fake.echo_key_error = True
 		try:
-			svc.run(svc.plan("rig", {"input": "task:abc12345"}, False), "T3b", None, 0, 30)
+			svc.run(svc.plan("rig", {"input": "task:abc12345"}, False), "T3b", None, 0, 30, spend=25.0)
 		except TripoError as e:
 			printed = redact(e)
 			check("an error that echoes the key is masked", key not in printed and "<key>" in printed)
