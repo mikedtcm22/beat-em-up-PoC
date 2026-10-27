@@ -28,7 +28,8 @@ F-punk's additions (all opt-in by config, so the probe and the player run as bef
 	faces with the pipe_fist attribute (generated fists, blender_parts) are decimated on their own to
 	  palette.fist_budget_tris each, the rest of the body to the budget less both fists (their borders still protected);
 	palette.unfold: relax the folded triangles of the decimated mesh away (pipe_cleanup.unfold) and report the counts;
-	palette.detail_bake: the 1k ink-only detail mask on UV2 baked from the dense texture (pipe_detail.bake, plan A18); its
+	palette.detail_bake: the 1k ink-only detail mask on UV2 baked from the dense texture (pipe_detail.bake, plan A18; G holds the lens's
+	  glint-gate streaks when `glint` is set); its
 	  no_ink_slots (the lens) get no ink, and so does a zone with "no_ink": true (the Punk's laces and cap: the generated
 	  texture's noise there is not a line, and the colour border already gives the shape).
 """
@@ -590,8 +591,11 @@ def run(cfg, extra):
 				gain[zsel] = 0.0
 			zone_id[zsel] = zi
 			zone_names.append(zone.get("name", "zone%d" % zi))
+		# the glint gate (rescore-rs-01): the faces of the glossy slots (the lens) get the authored streaks in G
+		glint_cfg = db.get("glint")
+		face_glint = np.isin(new_label, glint_cfg.get("slots", [])) if glint_cfg else None
 		bake_report = pipe_detail.bake(me, "detail", image, bvh, dense_verts_np, tri_idx, corner_uv, db, out_png, pc.work_path(cfg, "detail_source.png"), gain,
-			zone_low, zone_high, zone_id, zone_names)
+			zone_low, zone_high, zone_id, zone_names, glint_cfg, face_glint)
 		bake_report["png"] = os.path.basename(out_png)  # the folder differs in a --check rebuild; the content must not
 		bake_report["sha256"] = pc.sha256_file(out_png)
 	me.materials.clear()

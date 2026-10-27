@@ -482,7 +482,8 @@ func test_hull_normals_and_the_detail_uv_are_there() -> void:
 		assert_lt(worst_split, 0.03, "%s: vertices at one position share one hull normal, across both parts too (no cracks)" % path)
 
 
-## F-punk (M4-plan A18): the Punk's detail mask is a 1k PNG with ink in R only (lines, never shading), and punk.glb and punk_rest.glb
+## F-punk (M4-plan A18): the Punk's detail mask is a 1k PNG with ink in R only (lines, never shading), G the glint gate (the lens's two
+## authored streaks per eye, on the lens's texels only: tests/test_toon_glint.gd reads where) and B nothing, and punk.glb and punk_rest.glb
 ## carry the UV2 it is baked on, every vertex of it inside the unit square.
 func test_the_punk_detail_mask_is_a_1k_ink_only_png_on_the_punks_uv2() -> void:
 	var art := load("res://game/actors/art/punk_art.tres") as CharacterArt
@@ -490,18 +491,23 @@ func test_the_punk_detail_mask_is_a_1k_ink_only_png_on_the_punks_uv2() -> void:
 	var image := art.detail_mask.get_image()
 	assert_eq(image.get_size(), Vector2i(1024, 1024), "1k")
 	var ink := 0
-	var other := 0.0
+	var blue := 0.0
+	var gate := 0
 	var sum := 0.0
 	for y: int in range(0, 1024, 2):
 		for x: int in range(0, 1024, 2):
 			var c := image.get_pixel(x, y)
 			sum += c.r
-			other = maxf(other, maxf(c.g, c.b))
+			blue = maxf(blue, c.b)
+			if c.g > 0.5:
+				gate += 1
 			if c.r > 0.5:
 				ink += 1
 	var mean := sum / (512.0 * 512.0)
 	print("ART-CONTRACT punk_detail.png: mean ink %.4f, %d of 262144 sampled texels over 0.5" % [mean, ink])
-	assert_lt(other, 0.01, "G and B hold nothing (R is the ink)")
+	assert_lt(blue, 0.01, "B holds nothing (R is the ink, G the lens's glint gate)")
+	assert_gt(gate, 50, "G holds the lens's streaks (the glint gate)")
+	assert_lt(gate, 3000, "and only the lens's (a few thousand texels at full resolution, a few hundred sampled here)")
 	assert_gt(ink, 500, "there are lines")
 	assert_lt(mean, 0.08, "and they are lines, not a wash (shading would raise the mean)")
 	for name: String in ["punk.glb", "punk_rest.glb"]:

@@ -53,10 +53,14 @@ uniform float halftone_cell_px : hint_range(2.0, 24.0) = 6.0;
 // swatches from the camera-fixed fill direction: a flat visor never meets the sun's half vector
 // from the front, so without it the lens would never glint. Its cut (1 = a point) and its share of
 // the glossy highlight (0 = off, the lens then glints only where it faces the sun's half vector).
+// glint_gate (0 or 1; 1 for an art with no detail mask) multiplies the glint: it is a cap on an angle, so a
+// visor that turns to the light (the head tipped back, the Punk lying seen from above) would clip whole to
+// white; the art's mask (G) authors two streaks per eye on the lens and the glint can only light those.
 #ifdef TOON_SWATCH_SPEC
 varying float swatch_spec;
 varying float swatch_glint;
-uniform float glint_cut : hint_range(0.5, 1.0) = 0.88;
+varying float glint_gate;
+uniform float glint_cut : hint_range(0.5, 1.0) = 0.81;
 uniform float glint_strength : hint_range(0.0, 1.0) = 1.0;
 #endif
 
@@ -114,7 +118,7 @@ void light() {
 		float glint_aligned = dot(NORMAL, normalize(fill_dir + VIEW));
 		float glint_edge = max(0.5 * band_soft * to_pixels * fwidth(glint_aligned), 0.00001);
 		float glint = smoothstep(glint_cut - glint_edge, glint_cut + glint_edge, glint_aligned);
-		SPECULAR_LIGHT += glint * spec_strength * spec_gloss * glint_strength * light_color;
+		SPECULAR_LIGHT += glint * glint_gate * spec_strength * spec_gloss * glint_strength * light_color;
 	}
 #endif
 }
