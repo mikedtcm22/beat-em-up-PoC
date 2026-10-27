@@ -14,6 +14,7 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 - **The judgement calls log** has 17 entries, including the four feel toggles with their measured suggestions.
 - **Pick watch:** the usage watcher was asked (06:55) to read the DM on each check and message this session "Game-boy replied in the DM at <time>" when he replies. The one reminder went at 04:37, and no other DM goes to him.
 - **Running:** the lead's perf A/B, M3 `afdb39e` against `bf7b0ab` (both perf acts, 3 runs, vsync on, plus FXAA). Logs go to `captures/perf_compare/a16-int/`.
+- **On the pick:** `docs/reviews/M4/args-F-art.json` is ready (both packages, `blender: true`). Replace `<PICK_PUNK>` and `<PICK_HERO>` with his exact words, record the pick in the decisions log, and launch it through `workflow-build.js` (both run at once). They share the 750-credit stop, and each checks the ledger before a paid call.
 - **Left for after the pick:**
   1. F-punk: views, T4-T10, about 145 credits. Its brief carries gate gaps 3, 4, 5, 7, 9 and 13, the lens and cap swatch marks, a glove swatch value of 0.3 or more, a cuff radius from the wrist, and A18's detail mask, which goes to README for Game-boy's ruling.
   2. F-player-art: views, T11-T14, about 185 credits. The GLB goes to `assets/export/characters/player/player.glb`, optionally with `Body__fp_torso`.
