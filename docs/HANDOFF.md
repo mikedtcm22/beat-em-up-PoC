@@ -4,6 +4,26 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-27 01:35 CDT: P1-post merged; phase 1 is complete; SL-int next
+- **Merged:**
+  - The P1-fx merge was green at 1325/1325.
+  - P1-post (`8afcf7b`; its own branch passed 1266/1266, built on a base without P1-toon). The merge was clean. The preset is at 492 values. The merge is green at 1363/1363.
+- **What P1-post built:**
+  - The edge pass (`game/fx/edge_pass.gdshader`): near-side depth lines and normal creases. A dilated 8-tap character mask (`look_edge_mask_px`) keeps the lines off tag-0 surfaces, so the hull carries those silhouettes.
+  - The `street_dusk` LUT (`tools/gen_lut.gd` from `assets/source/look/grade.json`).
+  - The AA mode (`look_aa_mode`).
+  - LookPost, added by `RoomKit.build_presentation`. The training room now builds through RoomKit.
+  - The car is a muted blue-grey (A13).
+  - A8's probe answers are in `docs/milestones/M4-calls/P1-post.md`.
+- **The lead's look:** in C2 before and after, and E1 at 1 m, the street, crates, curb and the primitive Punk get 1 px ink lines; the HUD is untouched and the car is no longer red. Known weaknesses: dashed creases on the 1.5 cm window boxes (F-look), and 1 px lines stepping on curves, since MSAA doesn't smooth post lines.
+- **Perf (NOISY, the edge pass alone):** about +3.1 ms at 4x MSAA and +2.0 ms with FXAA on the M1. A16's soft bar may need FXAA once six art Punks are in.
+- **Open requests, all handed to SL-int:**
+  - prop hulls through `ToonMaterials.environment(color, true)` (the `next_pass` route);
+  - re-record E1 and E2 with the real hulls, and check for doubled lines;
+  - the edge pass has not yet run over the real toon materials.
+- **Concept pick:** none yet (DM read at 01:30).
+- **Next:** SL-int (`docs/reviews/M4/args-SL.json`, its note updated to this state), then the slice gate.
+
 ### 2026-10-27 00:25 CDT: P1-fx merged; only P1-post is still running in phase 1
 - **Merged:**
   - The P1-skin merge was green at 1313/1313.
@@ -1490,7 +1510,7 @@ You're taking over an in-progress Godot 4.7.2 project: a first-person beat-em-up
 
 Start by doing these, in order:
 1. Rename this session to "Beat-em-up: working session" (mcp__ccd_session_mgmt__set_session_title). The usage watcher finds you by that title.
-2. Read CLAUDE.md, then docs/HANDOFF.md (live status and exact resume steps; the newest entry is at the top). Then read docs/milestones/M4-plan.md (once written; until then docs/milestones/M4-planning/ and the codemaps in docs/milestones/M4-codemap/). Read docs/ARCHITECTURE.md and docs/SPEC.md §5, §6, §10 and §12 before touching code.
+2. Read CLAUDE.md, then docs/HANDOFF.md (live status and exact resume steps; the newest entry is at the top). Then read docs/milestones/M4-plan.md (its header says how to read it: the amendments in Part A win over Part C) and docs/milestones/M4-look-bible.md. Read docs/ARCHITECTURE.md and docs/SPEC.md §5, §6, §10 and §12 before touching code.
 3. If no usage watcher is running (list your sessions), start one exactly as docs/HANDOFF.md describes under "Usage watcher" (Haiku, low effort, self-paced /loop, shares this checkout, its prompt verbatim).
 4. Check usage (mcp__ccd_session_mgmt__get_usage) before launching any workflow or agent.
 
@@ -1503,7 +1523,9 @@ USAGE RULES:
 
 Next steps (Milestone 4; details are in docs/HANDOFF.md, newest entry first):
 - M1-M3 are signed off and merged. M4 (SPEC §12: the art pipeline proof) runs on branch m4/art-pipeline. Its toolchain is ready: Blender 5.2.2 LTS, the Blender MCP connected to my open Blender, and working TRIPO_API_KEY and GEMINI_API_KEY in .env. Mixamo is skipped for now.
-- Plan M4 first (docs/milestones/M4-plan.md), with a plan workflow as in M3 (docs/milestones/M3-plan.md and docs/reviews/M3/*.js are the templates), then build, review in first person, fix, and deliver.
+- The M4 plan is written (docs/milestones/M4-plan.md). Phase 1 is built and merged: S0, P1-tools, L0-bench, P1-toon, P1-chain, P1-skin, P1-fx and P1-post. The smoke Punk (concept A) is a GLB in assets/export/characters/punk/. Tripo spend is in assets/source/tripo_ledger.jsonl (stay at or under 800 credits without asking; the plan stops at 750).
+- Builders run through docs/reviews/M4/workflow-build.js, one Workflow run per package (args files in docs/reviews/M4/args-*.json; the newest HANDOFF entry names what is running and what is next). Reviews and the slice gate run through docs/reviews/M4/workflow-review.js. After each merge: godot --headless --import --quit, godot --headless -s tools/gen_default_preset.gd, then tools/run_tests.sh.
+- Order from here: SL-int (args-SL.json), the slice gate (two Opus lenses into docs/milestones/M4-slice-gate.md), phase 2 (F-motion, F-look, F-punk, F-player-art, F-player-int), phase 3 (P3-int, the final review, fixes), then the PR (not merged) and the DM. F-punk and F-player-art need my concept pick: check my DM (Slack channel D0AQUKX5DB6) at every phase boundary.
 - Run it without pausing, except for the concept pick (2-4 concepts each for the Street Punk and for the player's arms and legs: DM me the images on Slack, Michael, U0AQMKKBL93) and the final judgement of the Punk at 1 m. At the end, DM me a run command that opens the game in Godot, plus a digest of the key judgement calls with alternatives. If something blocks you on me, DM me at once.
 - I turned ultracode on (2026-10-24) and asked for multi-agent workflows: use Workflow scripts for substantive work (Opus plans and reviews, Sonnet codes). Don't put fine grey-block feel questions to me.
 
