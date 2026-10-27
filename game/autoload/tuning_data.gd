@@ -223,6 +223,9 @@ extends Resource
 @export_range(0.0, 2.0, 0.01) var vfx_burst_medium_m: float = 0.36
 @export_range(0.0, 2.0, 0.01) var vfx_burst_large_m: float = 0.62
 @export_range(0.03, 1.0, 0.01) var vfx_burst_s: float = 0.18
+## Each burst tier has two drawn variants and shows them in turn (never the same twice running); off,
+## every burst is the first one.
+@export var vfx_burst_variants: bool = true
 ## Share of a burst's, a spark's or a splash's time spent fading out at its end.
 @export_range(0.0, 1.0, 0.05) var vfx_burst_fade_share: float = 0.4
 ## Seconds a burst or a word takes to pop in: from vfx_pop_start of its size up past it to
@@ -236,7 +239,8 @@ extends Resource
 @export_range(0.0, 1.0, 0.05) var vfx_word_chance_light: float = 0.0
 @export_range(0.0, 1.0, 0.05) var vfx_word_chance_heavy: float = 1.0
 @export_range(0.0, 1.0, 0.05) var vfx_word_chance_finisher: float = 1.0
-## Word widths: small (light), medium (heavy), large (finisher).
+## Word widths: small (light), medium (heavy), large (finisher). Every lettering PNG is drawn the same
+## number of cap heights wide, so a width sets the letters' height, the same for every word.
 @export_range(0.0, 2.0, 0.01) var vfx_word_small_m: float = 0.3
 @export_range(0.0, 2.0, 0.01) var vfx_word_medium_m: float = 0.42
 @export_range(0.0, 2.0, 0.01) var vfx_word_large_m: float = 0.6
@@ -314,6 +318,8 @@ extends Resource
 @export_range(0.0, 1.0, 0.01) var vfx_blood_splat_m: float = 0.22
 @export_range(0.0, 60.0, 0.5) var vfx_blood_splat_s: float = 8.0
 @export_range(0, 200, 1) var vfx_blood_splat_max: int = 40
+## A splat is drawn flat and unshaded, at this share of its colors' brightness (1: as drawn).
+@export_range(0.4, 1.0, 0.01) var vfx_splat_shade: float = 0.85
 ## Head finishers: spit droplets and the chance of a tooth.
 @export_range(0, 20, 1) var vfx_spit_drops: int = 6
 @export_range(0.0, 0.2, 0.005) var vfx_spit_drop_m: float = 0.035

@@ -16,7 +16,8 @@ extends Node3D
 ## instead. A hit that armor absorbed (hit.armor_absorbed: a light hit on the Bruiser or the boss)
 ## gets a grey spark (the block spark's art, tinted) instead of the tier's burst, with no word and
 ## no blood: it registered and did nothing. Words are picked at random from their tier's pool, never the same word twice
-## in a row. The player's real lunges (a move with its own lunge, such as the flying kick,
+## in a row; a tier's burst is one of its two drawn variants (VfxArt.BURST_VARIANTS), never the same
+## one twice in a row. The player's real lunges (a move with its own lunge, such as the flying kick,
 ## carrying the player Tuning.vfx_lunge_lines_min_m; not the magnetism step-in of jabs and
 ## chain hits) get light speed lines (first person only).
 ##
@@ -66,6 +67,8 @@ var speed_lines: SpeedLines
 var impact_frame: ImpactFrame
 ## The last word shown; the next is never the same.
 var last_word: String = ""
+## The variant each tier's burst showed last (CombatTypes.HitTier order; -1 before the first): the next one differs.
+var last_burst_variant: Array[int] = [-1, -1, -1]
 
 var _live: Array[ComicSprite] = []
 var _pool: Array[ComicSprite] = []
@@ -160,7 +163,7 @@ func advance(real_dt: float) -> void:
 ## frame's canvas material, which cost the first hit 8-16 ms and the first finisher 1-3 ms
 ## more. So, once and for one rendered frame:
 ##   - one ComicSprite of each material variant the effects use (a popping effect: no depth
-##     test; a thrown droplet: the plain one; a splat lying on a surface: shaded) is shown
+##     test; the plain one, a thrown droplet's and a splat's lying on a surface) is shown
 ##     tiny and faint in front of the camera, then goes to the pool (a first hit also finds
 ##     sprites built);
 ##   - the impact frame draws its material on one pixel (ImpactFrame.warm()), only while the
@@ -234,6 +237,18 @@ func spawn_word(tier: CombatTypes.HitTier, point: Vector3, on_player: bool = fal
 	return sprite
 
 
+## The variant of `tier`'s burst for the next hit: any of them the first time, then never the one shown
+## last (always the first with Tuning.vfx_burst_variants off).
+func pick_burst_variant(tier: CombatTypes.HitTier) -> int:
+	var count := VfxArt.burst_variant_count(tier) if Tuning.data.vfx_burst_variants else 1
+	var last := last_burst_variant[tier]
+	var choice := 0
+	if count > 1:
+		choice = rng.randi() % count if last < 0 or last >= count else (last + 1 + rng.randi() % (count - 1)) % count
+	last_burst_variant[tier] = choice
+	return choice
+
+
 ## A random word from `tier`'s pool that is not the last word shown ("" if the pool is empty).
 func pick_word(tier: CombatTypes.HitTier) -> String:
 	var pool: PackedStringArray = [light_words, heavy_words, finisher_words][tier]
@@ -301,7 +316,9 @@ func spawn_splat(point: Vector3, normal: Vector3) -> ComicSprite:
 	sprite.roll = rng.randf_range(0.0, TAU)
 	sprite.fade_share = t.vfx_burst_fade_share
 	sprite.pops = false
-	sprite.shaded = true
+	# Flat and unshaded, like the other ink-and-flat-color effects: a sprite lit by the sun and the sky
+	# would grade smoothly where the toon floor steps. A little dark, so blood sits in the street.
+	sprite.modulate = Color(t.vfx_splat_shade, t.vfx_splat_shade, t.vfx_splat_shade, 1.0)
 	sprite.render_priority = 0
 	return sprite
 
@@ -367,7 +384,8 @@ func _on_hit_landed(hit: HitInfo) -> void:
 		return
 	var tier := hit.tier
 	var bursts: Array[float] = [t.vfx_burst_small_m, t.vfx_burst_medium_m, t.vfx_burst_large_m]
-	pop = spawn_pop(VfxArt.BURSTS[tier], point, bursts[tier] * t.vfx_scale, t.vfx_burst_s, PRIORITY_BURST)
+	pop = spawn_pop(VfxArt.BURSTS[tier], point, bursts[tier] * t.vfx_scale, t.vfx_burst_s, PRIORITY_BURST,
+			VfxArt.burst_texture(tier, pick_burst_variant(tier)))
 	if pop:
 		_set_kind_sizes(pop, bursts)
 		_frame(pop, on_player)
@@ -435,11 +453,11 @@ func _show_warm_sprites(camera: Camera3D) -> void:
 	var cam := camera.global_transform.orthonormalized()
 	var placed := Transform3D(cam.basis * Basis.from_scale(Vector3.ONE * WARM_SIZE_M),
 			cam.origin - cam.basis.z * WARM_DISTANCE_M)
-	for motion: ComicSprite.Motion in [ComicSprite.Motion.POP, ComicSprite.Motion.THROWN, ComicSprite.Motion.LYING]:
+	for motion: ComicSprite.Motion in [ComicSprite.Motion.POP, ComicSprite.Motion.THROWN]:
 		var sprite := _make_sprite()
 		sprite.motion = motion
 		sprite.no_depth_test = motion == ComicSprite.Motion.POP
-		sprite.shaded = motion == ComicSprite.Motion.LYING
+		sprite.shaded = false
 		sprite.set_art(VfxArt.texture(&"burst_small"))
 		sprite.modulate = Color(1.0, 1.0, 1.0, WARM_ALPHA)
 		sprite.global_transform = placed

@@ -789,7 +789,7 @@ func test_warm_up_shows_each_sprite_variant_once_then_pools_it() -> void:
 	assert_eq(_warm_sprites().size(), 0, "nothing until the director steps with a camera")
 	vfx.advance(TICK)
 	var shown := _warm_sprites()
-	assert_eq(shown.size(), 3, "one of each variant")
+	assert_eq(shown.size(), 2, "one of each variant")
 	var variants := []
 	for sprite: ComicSprite in shown:
 		variants.append([sprite.shaded, sprite.no_depth_test])
@@ -799,21 +799,21 @@ func test_warm_up_shows_each_sprite_variant_once_then_pools_it() -> void:
 		assert_lt(sprite.modulate.a, 0.1, "faint")
 		assert_eq(sprite.global_position.z, -VfxDirector.WARM_DISTANCE_M, "ahead of the lens")
 	variants.sort()
-	var wanted := [[false, false], [false, true], [true, false]]
+	var wanted := [[false, false], [false, true]]
 	wanted.sort()
-	assert_eq(variants, wanted, "popping (no depth test), thrown (plain) and lying (shaded)")
+	assert_eq(variants, wanted, "popping (no depth test) and thrown or lying (plain; a splat is unshaded since M4)")
 	assert_eq(vfx.live_effects().size(), 0, "no live effect")
 	vfx.advance(TICK)
 	assert_eq(_warm_sprites().size(), 0, "gone after their frame")
-	assert_eq(_pooled(), 3, "retired to the pool")
+	assert_eq(_pooled(), 2, "retired to the pool")
 	for i in 3:
 		vfx.advance(TICK)
 	assert_eq(_warm_sprites().size(), 0, "never shown again")
-	assert_eq(_pooled(), 3)
+	assert_eq(_pooled(), 2)
 	_land(_hit(CombatTypes.HitTier.LIGHT))
 	var burst := vfx.live_effects(&"burst_small")[0]
 	assert_true(shown.has(burst), "the first hit takes a sprite built at load")
-	assert_eq(_pooled(), 2)
+	assert_eq(_pooled(), 1)
 	assert_eq(burst.modulate, Color.WHITE, "with its own look")
 
 
@@ -825,7 +825,7 @@ func test_warm_up_waits_for_a_camera() -> void:
 	assert_eq(_warm_sprites().size(), 0, "no camera to place them against")
 	camera.make_current()
 	vfx.advance(TICK)
-	assert_eq(_warm_sprites().size(), 3)
+	assert_eq(_warm_sprites().size(), 2)
 
 
 ## The impact frame's material is drawn on one pixel for a frame, no more: not a flash.
@@ -859,7 +859,7 @@ func test_warm_up_draws_no_ink_with_the_photosensitivity_toggle_off() -> void:
 	for i in 4:
 		vfx.advance(TICK)
 		assert_false(vfx.impact_frame.visible, "no ink at tick %d" % i)
-	assert_eq(_pooled(), 3, "the sprites still warmed")
+	assert_eq(_pooled(), 2, "the sprites still warmed")
 	_land(_hit(CombatTypes.HitTier.FINISHER))
 	assert_false(vfx.impact_frame.visible, "and no flash")
 	Tuning.data.impact_frame_enabled = true

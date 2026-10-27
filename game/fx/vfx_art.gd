@@ -8,8 +8,17 @@ extends RefCounted
 ## is created (preload_all()), so no hit frame reads a file.
 
 const DIR := "res://assets/export/fx/"
-## Burst textures per hit tier (CombatTypes.HitTier order: light, heavy, finisher).
+## Burst textures per hit tier (CombatTypes.HitTier order: light, heavy, finisher): the first of each
+## tier's variants, and the name an effect of that tier goes by (ComicSprite.kind), whichever
+## variant it shows.
 const BURSTS: Array[StringName] = [&"burst_small", &"burst_medium", &"burst_large"]
+## Every tier's burst variants, in the same order (tools/gen_fx.gd draws two of each). VfxDirector
+## never shows one variant twice running.
+const BURST_VARIANTS: Array[Array] = [
+	[&"burst_small", &"burst_small_2"],
+	[&"burst_medium", &"burst_medium_2"],
+	[&"burst_large", &"burst_large_2"],
+]
 const BLOOD_SPLATS: Array[StringName] = [&"blood_splat_1", &"blood_splat_2", &"blood_splat_3"]
 ## The speed-line sheet holds this many streaks, one per row, thick end left.
 const SPEED_LINE_ROWS := 4
@@ -38,6 +47,17 @@ static func clear_detail() -> Texture2D:
 		image.fill(Color(0.0, 0.0, 0.0, 0.0))
 		_clear_detail = ImageTexture.create_from_image(image)
 	return _clear_detail
+
+
+## How many burst variants `tier` (a CombatTypes.HitTier) has.
+static func burst_variant_count(tier: int) -> int:
+	return BURST_VARIANTS[tier].size()
+
+
+## The texture of `tier`'s burst variant `variant` (wrapped into range), or null if missing.
+static func burst_texture(tier: int, variant: int = 0) -> Texture2D:
+	var names: Array = BURST_VARIANTS[tier]
+	return texture(names[posmod(variant, names.size())])
 
 
 ## The lettering texture for `word` ("KRAK" -> word_krak.png).

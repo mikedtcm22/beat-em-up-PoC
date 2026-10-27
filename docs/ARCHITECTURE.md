@@ -939,6 +939,22 @@ Every lit surface of the game is one toon shader, and every character and prop h
 
 ### Comic VFX, final pass (P1-fx)
 
+The M2 comic set (SVG drawn by `tools/gen_fx.gd`, rasterized to 512 px PNGs, ten words, SPEC §10) redrawn to the look bible, with two director changes (variants, splats). The calls are in [milestones/M4-calls/P1-fx.md](milestones/M4-calls/P1-fx.md).
+
+**One ink, weighted to the hull.** Every stroke is `HudStyle.INK` (`#120f17`, also the toon hull's and the HUD borders'): the blood's dark-red outlines are ink now. A stroke's weight is set from the effect's size on screen: `INK_TABLE` in the generator holds, per effect, the width in px at 1080p it is drawn at seen from 1.2 m (from the director's sizes and the view-share cap at fov 90) and the width in px of its main ink line there. Main effects (the three bursts, the lettering, the guard break) are inked at 7.5 px, twice the hull's `look_outline_px` (3.75); the rear warning at the HUD's 6 px border; sparks and particles lighter. A stroke is baked into its PNG, so the weight is an art parameter (edit `INK_TABLE`, rerun the generator), not a runtime tunable. The effects hold their size in metres, so on screen the line is 7.5 px from 1.0 to 1.2 m (the view-share cap holds the sprites' size there), about 5.8 px at 1.6 m and 3.7 px at 2.5 m. Each SVG's comment records its main line (`Ink line N units`).
+
+**Ben-Day dots** are explicit `<circle>`s on a 45-degree lattice (`_dots()`): on every burst's outer ring, growing toward the tips, and on the lower half of every lettering face. No random numbers, so a lattice is the same on every run; dot colours are a shade darker than the colour they sit on (red only on the finisher burst's red).
+
+**Lettering** is drawn to one cap height: every word's letters are stretched or squeezed across until the picture (letters, ink and shadow) is exactly four cap heights wide, so every word's PNG has the same cap-height share (0.25 of its width) and the director's width sizing (`vfx_word_*_m`) now sets one letter height for every word of a tier. Each letter has an ink outline grown from its shape (no stroke inside its counters), an inner highlight along its top and left (`HIGHLIGHT_*`), and the first letter keeps its glint. The ten words and 512 px are unchanged.
+
+**Burst variants.** `VfxArt.BURST_VARIANTS` lists two textures per tier (`burst_<tier>` and `burst_<tier>_2`); `VfxDirector.pick_burst_variant(tier)` picks one, never the one that tier showed last (`last_burst_variant`), from the director's seeded generator; `Tuning.vfx_burst_variants` off always shows the first. The sprite's `kind` stays `VfxArt.BURSTS[tier]`, only its texture differs. `VfxArt.burst_texture(tier, variant)` and `burst_variant_count(tier)` are the accessors.
+
+**Splats** (`Motion.LYING`) are unshaded and a little dark (`vfx_splat_shade`, 0.85): a lit sprite grades smoothly where the toon floor steps. They share the thrown droplets' material, so the warm-up now draws two variants (a popping sprite with no depth test, and a plain one) instead of three.
+
+**Reproducibility.** `godot --headless -s tools/gen_fx.gd` redraws and rasterizes every effect; `-- --out=<dir>` writes `<dir>/source` and `<dir>/export` instead of the project's folders (no `.import` patching). Every shape comes from a seeded generator, so a rerun leaves every SVG and PNG unchanged.
+
+**Tests.** `tests/test_fx_m4.gd`: ink px at 1.2 m against `look_outline_px` for every burst variant and every word (1.6-2.4 times), the rear warning against the HUD border, one ink in every SVG stroke, red only in blood, the warning and the finisher accents (pixel check), the variants never repeating (and off), one cap height, splats unshaded, the warm-up covering every `[shaded, no_depth_test]` an effect draws, every PNG logged and imported lossless, and the generator run in a second process reproducing every committed SVG and PNG byte for byte. `tests/test_vfx.gd` keeps the M2 behavior; its warm-up assertions count two variants. Tunables in "VFX": `vfx_burst_variants` (Bursts), `vfx_splat_shade` (Blood, spit and teeth).
+
 ## Ownership (Milestones 1-3)
 
 | Area | Files |
