@@ -87,8 +87,8 @@ const FINISHER_SETTINGS: Array[Dictionary] = [
 	{label = "mult15", share = 0.0, mult = 1.5},
 	{label = "mult20", share = 0.0, mult = 2.0},
 	{label = "mult30", share = 0.0, mult = 3.0},
+	{label = "mult20cap12", share = 0.12, mult = 2.0},
 	{label = "mult20cap06", share = 0.06, mult = 2.0},
-	{label = "mult30cap06", share = 0.06, mult = 3.0},
 ]
 
 
