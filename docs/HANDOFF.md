@@ -24,6 +24,11 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
   - the Bruiser and boss library warm-up in `RoomKit.warm_up_art` (P3-int);
   - the player box-hull corners at 4.2-4.7 px (F-player-art).
 - **Running:** F-player-int, launched 05:50 as `wf_bf4c7d7f-773` (args `docs/reviews/M4/args-F-player-int.json` plus `"only": ["F-player-int"]`; worktree `.worktrees/m4-f-player-int`, branch `m4/f-player-int`). It wires the player's art on the probe body, merge-safe: the game keeps M3's primitives until `player.glb` exists, and the probe is worn behind the Debug switch `look_player_art_probe`. It also does test_art_player, the lens rules on the skinned art, 'Look: my arms and legs', and feel question 3 (`fp_knockdown_hide_torso`).
+- **Also running:** P3-flash, launched 05:55 as `wf_d718820d-4e0` (args `docs/reviews/M4/args-P3-flash.json` plus `"only": ["P3-flash"]`; worktree `.worktrees/m4-p3-flash`, branch `m4/p3-flash`). It covers:
+  - feel questions 1 and 2 as toggles defaulting to today (`hit_flash_fp_max_share` 0, `hit_flash_finisher_radius_mult` 1.0);
+  - the Bruiser and boss library warm-up;
+  - the VFX checked under the linear tonemapper.
+  It and F-player-int both add to Look > FP feel; the lead merges that.
 - **The judgement calls log** (`docs/milestones/M4-judgement-calls.md`) has 15 entries.
 - **Concept pick:** none (DM read at 05:50; the one reminder went at 04:37).
 - **Usage:** the 5-hour window reset at 05:50 (60% before it); weekly 27%.
