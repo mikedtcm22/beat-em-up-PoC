@@ -63,20 +63,46 @@ static func sole_vertices(mi: MeshInstance3D, rig: HumanoidRig) -> PackedInt32Ar
 	return out
 
 
-## The foot slide of a walk cycle: the clip plays over `cycles` cycles while its rig moves along
-## `travel` (a unit vector in rig space) at `world_speed` meters per second of CLIP time (what
-## HumanoidRig.play_locomotion() does: it plays at v / move_speed, so the rig moves move_speed
-## meters per clip second). Each sole vertex's planted runs (under PLANT_M) are followed in
-## world space; a run's slide is how far the vertex strays from where it came down, and only runs
-## that begin in the middle cycle count (so none is cut by the ends). Returns `{slide (the worst
-## run, m), runs, planted_frames, lowest (the lowest vertex seen, m), worst_vertex_frame}`.
+## The foot slide of a walk cycle on the art: see walk_slide_with(); the points are the skinned `sole`
+## vertices (sole_vertices()).
 static func walk_slide(mi: MeshInstance3D, rig: HumanoidRig, anim: Animation, sole: PackedInt32Array,
 		travel: Vector3, world_speed: float, step_s: float = 1.0 / 120.0) -> Dictionary:
+	var sampler := func(globals: Array[Transform3D]) -> PackedVector3Array:
+		var posed := SkinnedView.skin_vertices(mi, rig, globals)
+		var out := PackedVector3Array()
+		for v: int in sole:
+			out.append(posed[v])
+		return out
+	return walk_slide_with(sampler, rig, anim, travel, world_speed, step_s)
+
+
+## The foot slide of a walk cycle on the placeholder's own sole points (the heel, the ball and the tip of
+## each foot, PlaceholderBody.SOLE_BONES), for rigs that wear no art (the Bruiser's and the boss's size).
+static func primitive_slide(rig: HumanoidRig, anim: Animation, travel: Vector3, world_speed: float,
+		step_s: float = 1.0 / 120.0) -> Dictionary:
+	var scale := rig.rig_scale()
+	var sampler := func(globals: Array[Transform3D]) -> PackedVector3Array:
+		var out := PackedVector3Array()
+		for i: int in PlaceholderBody.SOLE_BONES.size():
+			out.append(globals[rig.skeleton.find_bone(PlaceholderBody.SOLE_BONES[i])] * (PlaceholderBody.SOLE_OFFSETS[i] * scale))
+		return out
+	return walk_slide_with(sampler, rig, anim, travel, world_speed, step_s)
+
+
+## The foot slide of a walk cycle: the clip plays over three cycles while its rig moves along `travel` (a
+## unit vector in rig space) at `world_speed` meters per second of CLIP time (what HumanoidRig.
+## play_locomotion() does: it plays at v / move_speed, so the rig moves move_speed meters per clip second).
+## `sampler` gives the sole points (rig space) for the bone transforms of a sample. Each point's planted
+## runs (under PLANT_M) are followed in world space; a run's slide is how far the point strays from where
+## it came down, and only runs that begin in the middle cycle count (so none is cut by the ends).
+## Returns `{slide (the worst run, m), runs, planted_frames, lowest (the lowest point seen, m), worst_t,
+## worst_vertex}`.
+static func walk_slide_with(sampler: Callable, rig: HumanoidRig, anim: Animation, travel: Vector3,
+		world_speed: float, step_s: float = 1.0 / 120.0) -> Dictionary:
 	var length := anim.length
 	var frames := int(ceil(3.0 * length / step_s))
-	var start := Array([], TYPE_VECTOR3, "", null)
-	var run_start := {}  # vertex -> Vector3 where it came down
-	var run_begun := {}  # vertex -> bool counted
+	var run_start := {}  # point -> Vector3 where it came down
+	var run_begun := {}  # point -> bool counted
 	var slide := 0.0
 	var runs := 0
 	var planted_frames := 0
@@ -86,9 +112,9 @@ static func walk_slide(mi: MeshInstance3D, rig: HumanoidRig, anim: Animation, so
 	for f: int in frames + 1:
 		var tau := f * step_s
 		var t := fposmod(tau, length)
-		var posed := SkinnedView.skin_vertices(mi, rig, clip_globals(rig, anim, t))
+		var posed: PackedVector3Array = sampler.call(clip_globals(rig, anim, t))
 		var origin := travel * world_speed * tau
-		for v: int in sole:
+		for v: int in posed.size():
 			var p := posed[v]
 			lowest = minf(lowest, p.y)
 			var world := Vector3(p.x + origin.x, 0.0, p.z + origin.z)
@@ -110,3 +136,67 @@ static func walk_slide(mi: MeshInstance3D, rig: HumanoidRig, anim: Animation, so
 				run_begun.erase(v)
 	return {slide = slide, runs = runs, planted_frames = planted_frames, lowest = lowest, worst_t = worst_t,
 			worst_vertex = worst_vertex}
+
+
+## The key points of the hurtboxes (rig space) for bone transforms `globals`: a sphere's center and both
+## ends of a capsule's axis, in PlaceholderBody.hurt_specs() order.
+static func hurt_points(rig: HumanoidRig, globals: Array[Transform3D]) -> Array[Vector3]:
+	var scale := rig.rig_scale()
+	var out: Array[Vector3] = []
+	for spec: PlaceholderBody.HurtSpec in PlaceholderBody.hurt_specs():
+		out.append(globals[rig.skeleton.find_bone(spec.bone_a)] * (spec.offset_a * scale))
+		if spec.is_capsule():
+			out.append(globals[rig.skeleton.find_bone(spec.bone_b)] * (spec.offset_b * scale))
+	return out
+
+
+## How far each hurtbox key point moves over `anim` (the largest distance between any two of its places,
+## meters), sampled every `step_s`.
+static func hurt_extent(rig: HumanoidRig, anim: Animation, step_s: float = 1.0 / 30.0) -> PackedFloat32Array:
+	var samples: Array = []
+	var t := 0.0
+	while t < anim.length - 1e-6:
+		samples.append(hurt_points(rig, clip_globals(rig, anim, t)))
+		t += step_s
+	var out := PackedFloat32Array()
+	out.resize((samples[0] as Array).size())
+	for a: Array in samples:
+		for b: Array in samples:
+			for k: int in a.size():
+				out[k] = maxf(out[k], (a[k] as Vector3).distance_to(b[k]))
+	return out
+
+
+## The deformation of the art at bone transforms `globals` against the same art skinned at `rest`
+## (rest_globals()'s vertices): every deforming edge's posed length over its rest length. Returns `{p_low,
+## p_high (the 0.1 and 99.9 percentiles), min, max, worst (the edge farthest from 1), worst_bone}`
+## (tests/test_art_punk.gd's _strain without the triangles).
+static func strain(mi: MeshInstance3D, rig: HumanoidRig, rest: PackedVector3Array,
+		globals: Array[Transform3D]) -> Dictionary:
+	var data := SkinnedView._mesh_data(mi.mesh as ArrayMesh)
+	SkinnedView._prepare_strain(data)
+	var posed := SkinnedView.skin_vertices(mi, rig, globals)
+	var values := PackedFloat32Array()
+	var worst := 1.0
+	var worst_edge := -1
+	for e: int in data.edge_a.size():
+		var rest_length := rest[data.edge_a[e]].distance_to(rest[data.edge_b[e]])
+		if rest_length < SkinnedView.MIN_EDGE_M:
+			continue
+		var ratio := posed[data.edge_a[e]].distance_to(posed[data.edge_b[e]]) / rest_length
+		values.append(ratio)
+		if absf(log(maxf(ratio, 1e-6))) > absf(log(maxf(worst, 1e-6))):
+			worst = ratio
+			worst_edge = e
+	var sorted := values.duplicate()
+	sorted.sort()
+	var out := {
+		p_low = SkinnedView._percentile(sorted, data.edge_count, SkinnedView.STRAIN_LOW_Q),
+		p_high = SkinnedView._percentile(sorted, data.edge_count, SkinnedView.STRAIN_HIGH_Q),
+		min = minf(1.0, sorted[0] if not sorted.is_empty() else 1.0),
+		max = maxf(1.0, sorted[sorted.size() - 1] if not sorted.is_empty() else 1.0),
+		worst = worst, worst_bone = &"",
+	}
+	if worst_edge >= 0:
+		out.worst_bone = SkinnedView._dominant_bone(data, mi.skin, [data.edge_a[worst_edge], data.edge_b[worst_edge]])
+	return out

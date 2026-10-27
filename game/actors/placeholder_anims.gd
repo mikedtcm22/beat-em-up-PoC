@@ -182,7 +182,7 @@ static func build_named(id: StringName, scale: float,
 			})
 			keys = [_k(0.0, g), _k(1.0, breathe), _k(2.0, g)]
 			if polished:
-				var idle := MotionClips.idle(g, stance, life)
+				var idle := MotionClips.idle(g, stance, life, scale)
 				keys.assign(idle.keys)
 				length = idle.length
 				smooth = true

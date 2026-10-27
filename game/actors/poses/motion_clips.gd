@@ -82,9 +82,9 @@ const TOE_OUT_DEG := 6.0
 const FOOT_Z_FORWARD := Vector2(-0.05, 0.05)
 const FOOT_Z_STRAFE := Vector2(-0.09, 0.1)
 const FOOT_X_FORWARD := 0.145
-const FOOT_X_STRAFE := 0.23
+const FOOT_X_STRAFE := 0.25
 ## A strafe's sweep is this share of the stride (a side step is shorter than a walking one).
-const STRAFE_SWEEP_SHARE := 0.45
+const STRAFE_SWEEP_SHARE := 0.38
 ## The hips ride this far below the guard's height in a walk so the legs reach the stride, bob
 ## this much per step (highest at mid-stance), and sway toward the planted foot (m at 1.8 m).
 const WALK_DROP_M := 0.045
@@ -125,9 +125,12 @@ const LEAD_BONES: Array[StringName] = [
 # --- The idle -------------------------------------------------------------------------------------
 
 
-## The idle of a body in `g` (its stance pose): `{length, keys}`.
-static func idle(g: Dictionary[StringName, Vector3], stance: StringName, life: PlaceholderAnims.Life) -> Dictionary:
-	var calm := life.player_calm if stance == PlaceholderPoses.STANCE_RELAXED else 1.0
+## The idle of a body in `g` (its stance pose) on a rig of `scale`: `{length, keys}`. A bigger body moves
+## as little as a small one, in meters (the amplitudes are divided by `scale`, which the clip's own
+## lengths then multiply back), so no hurtbox moves more than the Punk's does.
+static func idle(g: Dictionary[StringName, Vector3], stance: StringName, life: PlaceholderAnims.Life,
+		scale: float = 1.0) -> Dictionary:
+	var calm := (life.player_calm if stance == PlaceholderPoses.STANCE_RELAXED else 1.0) / maxf(scale, 0.01)
 	var length := maxf(1.0 / maxf(life.breath_hz, 0.01), IDLE_MIN_S)
 	var bounces := maxi(roundi(life.bounce_hz * length), 1)
 	var count := bounces * KEYS_PER_BOUNCE
