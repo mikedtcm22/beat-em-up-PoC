@@ -31,6 +31,10 @@ const _KIND_META := &"toon_kind"
 const _GLOSSY_META := &"toon_glossy"
 const _FP_META := &"toon_fp"
 const _WARM_NAME := "ToonWarmUp"
+## Where the warm-up's holder stands from the camera: this far ahead and this far below it, so
+## a body drawn on it (feet at the holder) is in view.
+const WARM_DISTANCE_M := 2.5
+const WARM_DROP_M := 1.2
 ## The registry is swept of dead materials whenever it has grown past this many (and the bar
 ## doubles from what is left), so a long session of spawns never lets it grow unbounded.
 const _SWEEP_AT := 256
@@ -41,8 +45,11 @@ static var _live: Array[WeakRef] = []
 static var _sweep_bar: int = _SWEEP_AT
 static var _hulls: Dictionary[int, ShaderMaterial] = {}
 static var _wired: bool = false
-## The warm-up has run this run (warm_up()).
+## The warm-up has run this run (warm_up()), and whether its skinned variant has (the first
+## rig of a room is the player's, which has no art of its own, so the variant is asked for
+## separately, by the room's load).
 static var _warmed: bool = false
+static var _art_warmed: bool = false
 
 
 ## A character's flat-colored toon material: `color` is the paint, `takes_marks` whether the
@@ -222,24 +229,33 @@ static func hull_direction(mode: int, vertex: Vector3, normal: Vector3) -> Vecto
 ## Draw every toon variant once under `parent` at load, so the renderer compiles its pipelines
 ## before the first hit instead of on its frame (4-12 ms each, measured for the flash): a
 ## toon box with every hull mode on its overlay, and `skinned` (an art instance, a Node3D with
-## the skinned meshes) drawn with the art's toon material and hull. Windowed only, once per
-## run; the boxes free themselves after two frames.
+## the skinned meshes) drawn with the art's toon material and hull. Windowed only. The boxes
+## run once per run and the skinned variant once per run too, whichever call brings it (the
+## first rig of a room has no art, so the room's load asks for it separately). The holder
+## stands in front of the viewport's camera from the next frame on (WARM_DISTANCE_M), where it
+## is in view, and frees itself after two frames there.
 static func warm_up(parent: Node, skinned: Node3D = null) -> void:
-	if _warmed or parent == null or not parent.is_inside_tree() or DisplayServer.get_name() == "headless":
+	if parent == null or not parent.is_inside_tree() or DisplayServer.get_name() == "headless":
+		return
+	var boxes := not _warmed
+	var variant := skinned != null and not _art_warmed
+	if not boxes and not variant:
 		return
 	_warmed = true
+	_art_warmed = _art_warmed or skinned != null
 	var holder := Node3D.new()
 	holder.name = _WARM_NAME
 	parent.add_child(holder)
-	var color := character(Color.WHITE, true)
-	for mode: int in Hull.values():
-		var box := MeshInstance3D.new()
-		box.mesh = BoxMesh.new()
-		box.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-		box.material_override = color
-		box.material_overlay = _hull(mode, mode == Hull.NORMAL)
-		holder.add_child(box)
-	if skinned != null:
+	if boxes:
+		var color := character(Color.WHITE, true)
+		for mode: int in Hull.values():
+			var box := MeshInstance3D.new()
+			box.mesh = BoxMesh.new()
+			box.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+			box.material_override = color
+			box.material_overlay = _hull(mode, mode == Hull.NORMAL)
+			holder.add_child(box)
+	if variant:
 		var copy := skinned.duplicate() as Node3D
 		holder.add_child(copy)
 		var atlas := art(null)
@@ -247,9 +263,14 @@ static func warm_up(parent: Node, skinned: Node3D = null) -> void:
 			var mesh := node as MeshInstance3D
 			mesh.material_override = atlas
 			mesh.material_overlay = outline()
-	for frame in 2:
-		await parent.get_tree().process_frame
-	holder.queue_free()
+	await parent.get_tree().process_frame
+	var camera := parent.get_viewport().get_camera_3d() if is_instance_valid(holder) else null
+	if camera != null and is_instance_valid(holder):
+		holder.global_position = camera.global_position - camera.global_basis.z * WARM_DISTANCE_M + Vector3.DOWN * WARM_DROP_M
+	await parent.get_tree().process_frame
+	await parent.get_tree().process_frame
+	if is_instance_valid(holder):
+		holder.queue_free()
 
 
 static func _make(kind: int, glossy: bool) -> ShaderMaterial:

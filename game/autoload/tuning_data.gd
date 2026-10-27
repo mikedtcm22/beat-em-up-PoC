@@ -1158,6 +1158,11 @@ extends Resource
 ## Draw the skinned art (on) or the placeholder primitives it stands in for (off): the live
 ## A/B of Milestone 4. Presets never hold it.
 @export var look_show_art: bool = true
+## Which of the four smoke-Punk GLBs a Street Punk wears (the slice gate's A/B, SL-int): 0 =
+## punk.glb (Tripo's weights, the A-pose route, the default), 1 = punk_rest.glb (the arms-down
+## bake), 2 = punk_auto.glb (heat-map weights), 3 = punk_auto_rest.glb. Read when a Punk's body
+## is built, so set it (a preset never holds it) before the Punks spawn.
+@export_range(0, 3, 1) var look_punk_art_variant: int = 0
 ## The edge pass's debug view: 0 = the picture, 1 = the roughness buffer (white = the world, black =
 ## a character or the sky), 2 = the normals, 3 = the distance, 4 = the character mask (red),
 ## 5 = only the depth lines, 6 = only the crease lines.

@@ -83,7 +83,7 @@ func _build_street() -> void:
 	# Near side (+Z) stays low so the side-view debug camera can see the street.
 	_add_box(Vector3(0.0, 0.3, half_w + 0.25), Vector3(street_length, 0.6, 0.5), accent_mat)
 	# Crates for spatial reference and cover.
-	var crate_mat := RoomKit.flat_material(Color(0.55, 0.46, 0.3))
+	var crate_mat := RoomKit.prop_material(Color(0.55, 0.46, 0.3))
 	for p: Vector3 in [Vector3(-7.0, 0.5, -4.5), Vector3(-6.0, 0.5, -5.2), Vector3(8.0, 0.5, 4.5)]:
 		_add_box(p, Vector3(1.0, 1.0, 1.0), crate_mat)
 	# Dashed center line along the street.

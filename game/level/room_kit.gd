@@ -13,6 +13,8 @@ const CAMERA_DIRECTOR_SCRIPT := "res://game/camera/camera_director.gd"
 const HUD_SCENE := "res://game/ui/hud.tscn"
 const DEBUG_DRAW_SCENE := "res://game/ui/debug_draw.tscn"
 const TUNING_OVERLAY_SCENE := "res://game/ui/tuning_overlay.tscn"
+## The art the load-time warm-up draws (warm_up_art()): the Street Punk's, the room's commonest actor.
+const WARM_ART := "res://game/actors/art/punk_art.tres"
 
 
 ## The player's avoidance obstacle (RVO): without it enemies walk straight through the player's
@@ -120,6 +122,13 @@ static func flat_material(color: Color) -> Material:
 	return ToonMaterials.environment(color)
 
 
+## A prop box's material (a crate, the dumpster, the car): flat like flat_material(), and it wears
+## the inverted hull (ToonMaterials.environment(color, true)), so a prop is inked like a
+## character (M4-plan A7). Walls, the street and paint take flat_material() and get no hull.
+static func prop_material(color: Color) -> Material:
+	return ToonMaterials.environment(color, true)
+
+
 ## The grey-box floor grid (the training room's), or a flat grey if the shader is missing
 ## (ToonMaterials.grid()).
 static func grid_material() -> Material:
@@ -159,3 +168,21 @@ static func build_presentation(room: Node3D) -> void:
 	room.add_child(AudioDirector.new())
 	room.add_child(RumbleDirector.new())
 	room.add_child(LookPost.new())
+	warm_up_art(room)
+
+
+## Windowed only: draw the skinned art's toon variant (the art's vertex format, the skin, the
+## hull) once at the room's load, so the first Punk of a wave does not compile it on its
+## frame. A throwaway rig wears the Punk's art; ToonMaterials.warm_up() draws a copy of its
+## skeleton for two frames and the rig is freed at once. Headless: nothing.
+static func warm_up_art(room: Node3D) -> void:
+	if DisplayServer.get_name() == "headless" or not ResourceLoader.exists(WARM_ART):
+		return
+	var rig := HumanoidRig.new()
+	rig.name = "WarmUpRig"
+	rig.build_hurtboxes = false
+	rig.art = load(WARM_ART) as CharacterArt
+	room.add_child(rig)
+	rig.build()
+	ToonMaterials.warm_up(room, rig.skeleton)
+	rig.queue_free()
