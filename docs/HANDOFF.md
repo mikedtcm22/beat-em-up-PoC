@@ -4,6 +4,26 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-10-29 02:55 CDT: handoff at the weekly limit (90%); nothing running; still waiting on Game-boy's M4 judgement
+- **Why:** the usage watcher's message. The weekly window is at 90% and resets 2026-11-02 10:00 UTC; the 5-hour window is at 55%.
+- **State:** unchanged since the 18:35 entry below.
+  - Milestone 4 is delivered on `m4/art-pipeline` (`ff5976a`, pushed; nothing uncommitted).
+  - PR [#4](https://github.com/mikedtcm22/beat-em-up-PoC/pull/4) is open into `main` and **not merged**.
+  - The final DM went out 2026-10-27 18:33-18:35 CDT.
+  - No workflow, agent or builder is running.
+- **Game-boy:** no reply yet, and no thread reply, as of 02:50 CDT on 2026-10-29. He's waiting for nothing from us; we're waiting on:
+  - his yes, or the failing item numbers;
+  - the four FP feel switches;
+  - the departures;
+  - the damage-mark and arm-knob calls;
+  - the Tripo account type.
+- **Worktrees:** every `.worktrees/m4-*` worktree is clean, except `m4-fix-final-punk-spawn-cache-before-recut`. That one is detached at `aa6b5cd` and holds the throwaway, uncommitted act edits that re-cut M3's before side for C5, C9 and C13. Remove it with `git worktree remove --force` once the DM's media are no longer needed.
+- **Resume steps** (the resume task `beat-em-up-resume-20261102-1000` fires 2026-11-02 04:10 CST):
+  1. Read Game-boy's DM (D0AQUKX5DB6) for a reply after message `1793144123.040919`, including threads.
+  2. **No reply:** nothing to build. Leave the PR open, don't merge, and don't DM him again unless something needs him.
+  3. **A reply with failing items or changes:** plan them as fix packages with the same runners (see the 18:35 entry's "When he answers"), then re-record and reply in the DM.
+  4. **Sign-off:** merge PR #4 on his word only. Record his approved departures in README's "Where M4 departs from the spec" (turn "for Game-boy to rule on" into "approved by Game-boy"). Remove the M4 worktrees, and start Milestone 5 per SPEC §12.
+
 ### 2026-10-27 18:35 CDT: Milestone 4 delivered; PR #4 open; the final DM sent; waiting on Game-boy (pause 2)
 - **The DM to Game-boy** (Slack D0AQUKX5DB6, from 18:30 CDT), in order:
   1. The main message: the run command as a bash block, the A23 question word for word, the 14 numbered rubric items with the re-score (mean 1.50), and the post-re-score fixes.
