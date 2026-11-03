@@ -52,7 +52,7 @@ const HAND_PALM_REST_LEFT := Vector3(1.0, 0.0, 0.0)
 const HAND_THUMB_REST := Vector3(0.0, 0.0, -1.0)
 ## What the boxer's guard must show of it (rig space: +X right, +Y up, -Z forward, so the viewer facing the Punk is at -Z): the palm turned
 ## in (its x toward the midline) and not toward the viewer, the thumb back toward the Punk's own face, the knuckles up. The shipped guard
-## (idle, 0 to 3 s) reads 0.93 to 0.98 in, 0.14 to 0.34 away from the viewer, the thumb 0.93 to 0.97 back, the knuckles 0.96 to 0.99 up.
+## clips below read 0.92 to 0.98 in, 0.10 to 0.31 away from the viewer, the thumb 0.94 to 0.99 back, the knuckles 0.92 to 0.99 up.
 const GUARD_PALM_IN_MIN := 0.8
 const GUARD_PALM_FROM_VIEWER_MIN := 0.05
 const GUARD_THUMB_BACK_MIN := 0.85
