@@ -4,6 +4,21 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-03 10:50 CST: ARC and KIT merged (1678/1678); BOT building; still waiting on Game-boy's table
+- **Merged into `m5/level-blockout` and pushed** (`5d3548e`):
+  - **ARC** (`7cb70bc`): the attack arcs, `EnemyVariant` and `punk_veteran`, the wait ring, the arc slide, F3 arc lines, and R5/R5w, R6/R6w and R9 re-measured. The calls and the before/after numbers are in `docs/milestones/M5-calls/ARC.md`.
+  - **KIT** (`58f3429`): the level kit in `game/level/kit/`, the "Level" tuning group, layer 9, the spawner's finite mode, the GO cue and the test strip `tests/fixtures/level_strip.tscn`. 24 calls are in `M5-calls/KIT.md`.
+  - The one conflict was ARCHITECTURE.md's M5 heading; both sections are kept. The preset is regenerated (541 values). The full suite: 1678/1678, 286 s, 0 error lines.
+- **The lead's look:**
+  - "Arcs: six Punks": three Punks square up in front and the rest stand back on the wait ring. Nobody circles.
+  - The strip: the shutter, the gate, the stairs and the GO/CLEAR! panels read.
+  - KIT's scratch recording shows the controls help and the combat log over the view. BOT is told to record the plain view.
+- **Running:** `build.js` run `wf_65b663bc-bcc`, args `docs/reviews/M5/args-P1b.json` (`only: ["BOT"]`). Worktree `.worktrees/m5-bot`, branch `m5/bot`.
+- **README:** a draft of "Where M5 departs from the spec" (M5-1 arcs, M5-2 blind spot, M5-3 stairs, the spec-silent edges/KO/clear, the graybox stand-ins).
+- **Waiting on Game-boy:** the encounter table and the rear-warning question (Slack DM, ts `1793721201.659339`). No reply yet at 10:50.
+- **Next:** merge BOT and run the full suite. On his yes, launch phase 2 (STREET, ROOF, FINALE). Args: as P1, with `only` those three and `base` `m5/level-blockout`. Each package's `read` list is in the synthesis output, saved in the plan's §3.
+- **Usage:** 20% of the 5-hour window and 6% weekly at BOT's launch. ARC and KIT together cost about 8% (0.9M sub-agent tokens).
+
 ### 2026-11-03 09:55 CST: the M5 plan written; phase 1 (ARC and KIT) building; the encounter plan DM'd to Game-boy
 - **The plan:** [milestones/M5-plan.md](milestones/M5-plan.md), 275 lines. An Opus planner wrote it, an Opus critic reviewed it (4 high, 10 medium and 4 low issues), and an extra-effort synthesis applied most of the critique. It cost about 0.6M tokens, about 7% of the 5-hour window.
   - Packages: ARC (8%) and KIT (8%) in phase 1, then BOT (4%) after KIT merges. STREET, ROOF and FINALE in phase 2, after Game-boy's yes.

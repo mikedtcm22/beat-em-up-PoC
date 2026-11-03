@@ -209,6 +209,28 @@ The characters are procedural placeholders. Real art, VFX and audio come in Mile
   - **Damage marks:** they are spread over the whole body, as M3's were, and the blood turns orange on the yellow cap.
   - **The near upper arm:** in the haymaker and uppercut its cut end is a bare knob mid-view. That is M3's approved first-person framing, and showing the whole upper arm instead is an option.
 
+**Where M5 departs from the spec (decided by default, for Game-boy's ruling at sign-off):**
+- **M5-1. Attack arcs replace "Spread" (Spec §7; Game-boy's call, 2026-11-03):**
+  - Each archetype attacks from an arc centred on where the player looked when it engaged: Punk 90°, Pipe Thug 140°, Bruiser 180°, boss 270°, Kicker 360°.
+  - The line follows the player's turns for `engage_commit_s` (0.5 s), then holds until that enemy's attack and recovery end.
+  - When its arc has no free seat, an enemy waits on an outer ring (5.5-6.5 m) inside its arc, back from the fray.
+  - Variants override the arc in data: the veteran Punk is 140°, a `.tres` file in `game/enemies/variants/`.
+  - **Ours, not his:** when a wall or a drop leaves no room anywhere in an arc, the arc slides round to the nearest open stretch, so a wall is never a safe spot.
+  - **Keeping the spec reachable:** `director_even_spread` (Debug) brings M3's even spread back.
+- **M5-2. Blind-spot priority only for wide arcs (Spec §7; Game-boy's call):** only an enemy whose arc reaches past the view cone (half its arc > `rear_warning_angle_deg`) jumps the token queue from behind. A 90° Punk never does. Turning `blind_spot_needs_wide_arc` off restores "any enemy".
+- **M5-3. Stairs where the reference climbs ladders (Spec §9):**
+  - Graybox stair flights replace the ladders, with no new player state, and enemies still come down them at you.
+  - Walking bodies ride a hidden ramp on the step tips; bodies lying down rest on the steps.
+  - A first-person ladder climb is an M7 option.
+- **Where the spec is silent:**
+  - **Edges:** the player can't fall. An invisible guard holds him in every state. Enemies knocked down, launched or thrown over an edge are KO'd at once.
+    - With `level_edge_guard` off, a fall costs `level_fall_damage` (20) and respawns the player at the arena's start.
+  - **The player's KO** revives in place, and the arena stays locked. There are no lives.
+  - **The level's end:** the boss and his adds down shows "CLEAR!".
+- **Graybox stand-ins:**
+  - Screen 11's chain-like weapon is the pipe until M6 designs an original second weapon.
+  - The veteran Punk is marked by an orange tint over the whole Punk art.
+
 **Automated checks:**
 - `tools/run_tests.sh` runs 1198 tests headless in about 145 s, including an end-to-end suite where a scripted player performs every combo in the real test room and the Milestone 3 done-when test, `tests/test_m3_done_when.gd`.
 - `tools/capture_combos.sh` records the combo bot with Movie Maker to `captures/combos.avi`, writes a hit log to `captures/bot.log`, and extracts stills for review. Pass text to run only matching acts, for example `tools/capture_combos.sh "haymaker"`. `tests/bot/ragdoll_bot.tscn` and `tests/bot/vfx_bot.tscn` play the ragdoll and VFX acts the same way (record them with Movie Maker, `--write-movie`).
