@@ -1,0 +1,475 @@
+{
+	"id": "player",
+	"version": 1,
+	"note": "The hero, concept C (martial): Gemini flat views on the mannequin (views/), Tripo T11 multiview body and T12 auto-rig v3.0 unity. The rig GLB is both the mesh (with its texture) and the source rig, as for the smoke Punk. The fists and the detail mask are F-player-art's own steps (tools/pipeline/player_*.py).",
+	"paths": {
+		"work": "assets/source/_cache/player/work",
+		"blend_dir": "assets/source/characters/player/work",
+		"report": "assets/source/characters/player/report",
+		"export_dir": "assets/export/characters/player",
+		"export_name": "player"
+	},
+	"source": {
+		"mesh": "assets/source/characters/player/tripo/3ce1d980_rig.glb",
+		"rig": "same",
+		"facing_yaw_deg": 89.127809,
+		"sides": "keep"
+	},
+	"target": {
+		"head_top_m": 1.82
+	},
+	"fit": {
+		"landmarks": "rig",
+		"regularize": [
+			"Spine",
+			"Chest",
+			"UpperChest"
+		],
+		"bone_map": {},
+		"swing": "measure",
+		"default_swing_deg": 45.0,
+		"warp_weights": "tripo",
+		"residual_limit_m": 0.01,
+		"sole_percentile": 0.0
+	},
+	"rig": {
+		"weights": "tripo",
+		"max_influences": 4,
+		"variants": [
+			"apose"
+		]
+	},
+	"parts": {
+		"fists": {
+			"source": "tripo",
+			"mesh": "assets/source/characters/player/fist/tripo/e0b15d52_gen.glb",
+			"slots": [
+				35,
+				7,
+				14
+			],
+			"target_tris": 4000,
+			"cut_a_m": -0.06,
+			"radius_max_m": 0.14,
+			"reach_max_m": 0.35,
+			"map": {
+				"y_g": [
+					-0.49,
+					-0.05,
+					0.49
+				],
+				"a_m": [
+					-0.075,
+					0.0,
+					0.121
+				]
+			},
+			"xz_scale_m": 0.235,
+			"centre_band_height_g": 0.15,
+			"strap_margin_g": 0.05,
+			"ring_window_m": 0.02,
+			"ledge_window_m": 0.012,
+			"strap_taper_y_g": [
+				-0.12,
+				0.06
+			],
+			"strap_margin_m": 0.006,
+			"flare_max": 1.5,
+			"ring_blend_m": 0.07,
+			"ramp_a_m": [
+				-0.045,
+				0.0
+			],
+			"girth": {
+				"LeftUpperArm": {
+					"radius_m": 0.076,
+					"soft": 0.1
+				},
+				"LeftLowerArm": {
+					"radius_m": 0.059,
+					"soft": 0.15
+				},
+				"LeftUpperLeg": {
+					"radius_m": 0.108,
+					"soft": 0.2
+				},
+				"LeftLowerLeg": {
+					"radius_m": 0.092,
+					"soft": 0.2
+				},
+				"RightUpperArm": {
+					"radius_m": 0.076,
+					"soft": 0.1
+				},
+				"RightLowerArm": {
+					"radius_m": 0.059,
+					"soft": 0.15
+				},
+				"RightUpperLeg": {
+					"radius_m": 0.108,
+					"soft": 0.2
+				},
+				"RightLowerLeg": {
+					"radius_m": 0.092,
+					"soft": 0.2
+				},
+				"Spine": {
+					"radius_m": 0.15,
+					"soft": 0.2
+				},
+				"Hips": {
+					"radius_m": 0.16,
+					"soft": 0.2
+				}
+			},
+			"label_smooth": {
+				"passes": 80,
+				"lam": 0.5
+			},
+			"label_smooth_decimated": {
+				"passes": 2,
+				"lam": 0.5
+			},
+			"fine_slots": [
+				7
+			],
+			"fine_weight": 0.3,
+			"relabel_reach": 0.6,
+			"border_cell_m": 0.004,
+			"border_zone_m": 0.006,
+			"border_zone_weight": 0.5
+		},
+		"split_fp": {
+			"enabled": true,
+			"torso_cut_bone": "Chest",
+			"upper_arm_cut": 0.5,
+			"weld_boundary_m": 0.002,
+			"hole_sides_max": 12,
+			"heal_edge_max_m": 0.012,
+			"caps": {
+				"default": {
+					"dir": "in",
+					"depth_m": 0.03,
+					"rings": 4
+				},
+				"LeftUpperArm": {
+					"dir": "out",
+					"depth_m": 0.04,
+					"rings": 8,
+					"ring_verts": 32
+				},
+				"RightUpperArm": {
+					"dir": "out",
+					"depth_m": 0.04,
+					"rings": 8,
+					"ring_verts": 32
+				},
+				"Hips": {
+					"dir": "in",
+					"depth_m": 0.02,
+					"rings": 1,
+					"wall_normals": true
+				},
+				"LeftUpperLeg": {
+					"dir": "in",
+					"depth_m": 0.02,
+					"rings": 1,
+					"wall_normals": true
+				},
+				"RightUpperLeg": {
+					"dir": "in",
+					"depth_m": 0.02,
+					"rings": 1,
+					"wall_normals": true
+				},
+				"Body": {
+					"LeftUpperLeg": {
+						"dir": "out",
+						"depth_m": 0.04,
+						"rings": 5,
+						"ring_verts": 48,
+						"wall_normals": false
+					},
+					"RightUpperLeg": {
+						"dir": "out",
+						"depth_m": 0.04,
+						"rings": 5,
+						"ring_verts": 48,
+						"wall_normals": false
+					},
+					"Hips": {
+						"dir": "out",
+						"depth_m": 0.04,
+						"rings": 5,
+						"ring_verts": 48,
+						"wall_normals": false
+					}
+				},
+				"Body__fp_torso": {
+					"Spine": {
+						"dir": "out",
+						"depth_m": 0.05,
+						"rings": 6,
+						"ring_verts": 48
+					},
+					"Chest": {
+						"dir": "out",
+						"depth_m": 0.05,
+						"rings": 6,
+						"ring_verts": 48
+					}
+				}
+			},
+			"torso": {
+				"enabled": true,
+				"low_bone": "LeftUpperLeg"
+			}
+		}
+	},
+	"palette": {
+		"mode": "fixed",
+		"slots": [
+			7,
+			14,
+			32,
+			33,
+			34,
+			35
+		],
+		"max_swatches": 6,
+		"min_share": 0.004,
+		"majority_passes": 4,
+		"border_relax_iterations": 3,
+		"border_relax_factor": 0.5,
+		"budget_tris": 30000,
+		"detail_uv": true,
+		"unfold": {
+			"iterations": 12,
+			"factor": 0.5,
+			"ring": 1
+		}
+	},
+	"export": {
+		"hull_normal_digits": 5
+	},
+	"stills": {
+		"views": [
+			"front",
+			"three_quarter",
+			"side"
+		],
+		"poses": {
+			"rest": {},
+			"guard": {
+				"Spine": [
+					-3.0,
+					0.0,
+					0.0
+				],
+				"Chest": [
+					-3.0,
+					0.0,
+					0.0
+				],
+				"Neck": [
+					4.0,
+					0.0,
+					0.0
+				],
+				"Head": [
+					2.0,
+					0.0,
+					0.0
+				],
+				"LeftUpperArm": [
+					43.5,
+					-22.0,
+					-13.5
+				],
+				"LeftLowerArm": [
+					130.0,
+					0.0,
+					0.0
+				],
+				"RightUpperArm": [
+					40.0,
+					22.5,
+					13.0
+				],
+				"RightLowerArm": [
+					134.5,
+					0.0,
+					0.0
+				],
+				"LeftUpperLeg": [
+					16.0,
+					0.0,
+					-4.0
+				],
+				"LeftLowerLeg": [
+					-24.0,
+					0.0,
+					0.0
+				],
+				"LeftFoot": [
+					8.0,
+					0.0,
+					4.0
+				],
+				"RightUpperLeg": [
+					-6.0,
+					0.0,
+					5.0
+				],
+				"RightLowerLeg": [
+					-16.0,
+					0.0,
+					0.0
+				],
+				"RightFoot": [
+					22.0,
+					0.0,
+					-5.0
+				]
+			},
+			"elbow_150": {
+				"LeftLowerArm": [
+					150.0,
+					0.0,
+					0.0
+				],
+				"RightLowerArm": [
+					150.0,
+					0.0,
+					0.0
+				]
+			},
+			"arm_raise_140": {
+				"LeftUpperArm": [
+					140.0,
+					0.0,
+					0.0
+				],
+				"RightUpperArm": [
+					140.0,
+					0.0,
+					0.0
+				]
+			},
+			"knee_m130": {
+				"LeftUpperLeg": [
+					40.0,
+					0.0,
+					0.0
+				],
+				"LeftLowerLeg": [
+					-130.0,
+					0.0,
+					0.0
+				],
+				"RightUpperLeg": [
+					-10.0,
+					0.0,
+					0.0
+				]
+			},
+			"spine_twist": {
+				"Spine": [
+					0.0,
+					30.0,
+					0.0
+				],
+				"Chest": [
+					0.0,
+					30.0,
+					0.0
+				],
+				"UpperChest": [
+					0.0,
+					20.0,
+					0.0
+				],
+				"Neck": [
+					0.0,
+					-20.0,
+					0.0
+				]
+			}
+		}
+	},
+	"detail": {
+		"name": "player_detail.png",
+		"size": 1024,
+		"border_px": 1.0,
+		"border_soft_px": 0.5,
+		"dilate_px": 2,
+		"fist_skip_slots": [
+			35
+		],
+		"harden": {
+			"lo": 0.05,
+			"hi": 0.2
+		},
+		"clean": {
+			"blob_radius_texels": 2,
+			"blob_grow_texels": 1,
+			"speck_min_texels": 6
+		},
+		"stroke": {
+			"radius_px": 3,
+			"lo": 0.04,
+			"hi": 0.1,
+			"gain": 1.0,
+			"skip_slots": [
+				6,
+				7,
+				8,
+				9
+			]
+		},
+		"layout": {
+			"angle_deg": 66.0,
+			"margin": 0.002,
+			"weights": {
+				"default": 1.0,
+				"part:Body__fp_hidden": 0.3,
+				"LeftLowerArm": 1.8,
+				"RightLowerArm": 1.8,
+				"LeftHand": 1.8,
+				"RightHand": 1.8,
+				"LeftFoot": 1.5,
+				"RightFoot": 1.5,
+				"LeftToes": 1.5,
+				"RightToes": 1.5,
+				"LeftLowerLeg": 1.5,
+				"RightLowerLeg": 1.5,
+				"LeftUpperLeg": 1.2,
+				"RightUpperLeg": 1.2,
+				"part:Body__fp_torso": 1.0
+			}
+		},
+		"crease": {
+			"lo": 0.12,
+			"hi": 0.28,
+			"gain": 1.0,
+			"fist_gain": 1.0,
+			"skip_slots": [
+				6,
+				7,
+				8,
+				9
+			]
+		}
+	},
+	"normals": {
+		"smooth": {
+			"bones": [
+				"LeftUpperArm",
+				"RightUpperArm"
+			],
+			"passes": 24,
+			"lam": 0.5,
+			"max_turn_deg": 45.0
+		}
+	}
+}

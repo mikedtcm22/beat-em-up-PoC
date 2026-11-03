@@ -1,0 +1,817 @@
+{
+	"id": "punk",
+	"version": 2,
+	"note": "The Street Punk (M4 F-punk): concept A (Game-boy's pick) through four flat Gemini views on the mannequin (views/), Tripo T4 multiview-to-model (3 views, seed 4101) and T8 auto-rig v3.0 unity on it. The rig GLB is both the mesh (with its texture) and the source rig. Replaces the smoke Punk in place.",
+	"paths": {
+		"work": "assets/source/_cache/punk/work",
+		"blend_dir": "assets/source/characters/punk/work",
+		"report": "assets/source/characters/punk/report",
+		"export_dir": "assets/export/characters/punk",
+		"export_name": "punk"
+	},
+	"source": {
+		"mesh": "assets/source/characters/punk/tripo/5374695c_rig.glb",
+		"rig": "same",
+		"facing_yaw_deg": 91.0183,
+		"sides": "keep"
+	},
+	"target": {
+		"head_top_m": 1.82
+	},
+	"fit": {
+		"landmarks": "rig",
+		"regularize": [
+			"Spine",
+			"Chest",
+			"UpperChest"
+		],
+		"bone_map": {},
+		"swing": "measure",
+		"default_swing_deg": 45.0,
+		"warp_weights": "tripo",
+		"residual_limit_m": 0.01,
+		"sole_percentile": 0.0,
+		"snap": {
+			"enabled": true,
+			"radius_m": 0.3
+		},
+		"girth_clamp": [
+			{
+				"name": "left_thigh",
+				"bones": [
+					"LeftUpperLeg"
+				],
+				"from": "LeftUpperLeg",
+				"to": "LeftLowerLeg",
+				"limit_m": 0.078,
+				"soft_m": 0.004
+			},
+			{
+				"name": "left_shin",
+				"bones": [
+					"LeftLowerLeg"
+				],
+				"from": "LeftLowerLeg",
+				"to": "LeftFoot",
+				"limit_m": 0.068,
+				"soft_m": 0.004
+			},
+			{
+				"name": "right_thigh",
+				"bones": [
+					"RightUpperLeg"
+				],
+				"from": "RightUpperLeg",
+				"to": "RightLowerLeg",
+				"limit_m": 0.078,
+				"soft_m": 0.004
+			},
+			{
+				"name": "right_shin",
+				"bones": [
+					"RightLowerLeg"
+				],
+				"from": "RightLowerLeg",
+				"to": "RightFoot",
+				"limit_m": 0.068,
+				"soft_m": 0.004
+			},
+			{
+				"name": "head",
+				"bones": [
+					"Head"
+				],
+				"shape": "sphere",
+				"from": [
+					0.0,
+					0.01,
+					1.685
+				],
+				"limit_m": 0.158,
+				"soft_m": 0.004
+			}
+		],
+		"bulge": [
+			{
+				"name": "knee_back_left",
+				"bones": [
+					"LeftUpperLeg",
+					"LeftLowerLeg"
+				],
+				"joint": "LeftLowerLeg",
+				"direction": "back",
+				"half_height_m": 0.14,
+				"amount_m": 0.04
+			},
+			{
+				"name": "knee_back_right",
+				"bones": [
+					"RightUpperLeg",
+					"RightLowerLeg"
+				],
+				"joint": "RightLowerLeg",
+				"direction": "back",
+				"half_height_m": 0.14,
+				"amount_m": 0.04
+			}
+		]
+	},
+	"rig": {
+		"weights": "tripo",
+		"max_influences": 4,
+		"variants": [
+			"apose",
+			"rest"
+		],
+		"clamps": [
+			{
+				"name": "waist",
+				"bones": [
+					"LeftUpperLeg",
+					"RightUpperLeg"
+				],
+				"above_z_m": 0.955,
+				"ramp_m": 0.05,
+				"to": "Hips"
+			}
+		]
+	},
+	"parts": {
+		"fists": {
+			"enabled": true,
+			"glove_slot": 2,
+			"strap_slot": 17,
+			"strap_height_m": 0.03,
+			"cuff_margin_m": 0.014,
+			"cuff_over_m": 0.035,
+			"cuff_below_wrist_m": 0.012,
+			"bevel_m": 0.022,
+			"bump_m": 0.006,
+			"source": "generated",
+			"generated": {
+				"mesh": "assets/source/characters/punk/parts/fist/tripo/e70776cb_gen.glb",
+				"facing_yaw_deg": 90.0,
+				"source_side": "Right",
+				"block_top_frac": 0.7471,
+				"strap_top_frac": 0.8866,
+				"extent_fit": 0.9,
+				"rim_band_m": 0.012,
+				"flare_min": 0.8,
+				"flare_max": 2.0,
+				"weld_m": 1e-05,
+				"ramp_m": 0.004,
+				"ring_clamp_m": 0.004,
+				"bisect_strap": false,
+				"collar": {
+					"margin_m": 0.004,
+					"outline_bins": 48,
+					"rings": [
+						[
+							0.008,
+							0.1,
+							0.0
+						],
+						[
+							0.019,
+							0.27,
+							0.0
+						],
+						[
+							0.031,
+							0.5,
+							0.0
+						],
+						[
+							0.043,
+							0.76,
+							0.0
+						],
+						[
+							0.052,
+							0.95,
+							0.0
+						],
+						[
+							0.057,
+							1.0,
+							0.0
+						]
+					],
+					"rim": [
+						[
+							-0.011,
+							0.0
+						],
+						[
+							-0.008,
+							0.0012
+						],
+						[
+							-0.005,
+							0.003
+						],
+						[
+							-0.0015,
+							0.0015
+						],
+						[
+							0.0,
+							-0.002
+						]
+					],
+					"arm_trim_above_block_m": 0.0615,
+					"length_m": 0.071,
+					"outline_harmonics": 4,
+					"outline_above_m": 0.0005,
+					"ring_step_m": 0.004,
+					"clearance_top_m": 0.006,
+					"clearance_step_m": 0.002,
+					"min_clearance_m": 0.001,
+					"lip": [
+						[
+							-0.0015,
+							-0.0015
+						],
+						[
+							-0.005,
+							-0.003
+						]
+					]
+				}
+			},
+			"wrist_radius_m": 0.062,
+			"wrist_taper_m": 0.14
+		},
+		"split_fp": {
+			"enabled": false
+		}
+	},
+	"palette": {
+		"mode": "fixed",
+		"slots": [
+			2,
+			6,
+			14,
+			16,
+			17,
+			18
+		],
+		"max_swatches": 6,
+		"min_share": 0.004,
+		"majority_passes": 2,
+		"border_relax_iterations": 3,
+		"border_relax_factor": 0.5,
+		"budget_tris": 15000,
+		"detail_uv": true,
+		"fist_budget_tris": 1350,
+		"unfold": {
+			"iterations": 12,
+			"factor": 0.5,
+			"ring": 1
+		},
+		"detail_bake": {
+			"size": 1024,
+			"radius_px": 5,
+			"ink_low": 0.02,
+			"ink_high": 0.07,
+			"grow_px": 0,
+			"no_ink_slots": [
+				19
+			],
+			"zones": [
+				{
+					"name": "face_skin",
+					"slots": [
+						6
+					],
+					"min": [
+						-0.2,
+						-0.2,
+						1.5
+					],
+					"max": [
+						0.2,
+						0.3,
+						1.8
+					],
+					"ink_low": 0.04,
+					"ink_high": 0.1
+				},
+				{
+					"name": "nose",
+					"slots": [
+						6
+					],
+					"min": [
+						-0.03,
+						0.05,
+						1.535
+					],
+					"max": [
+						0.04,
+						0.2,
+						1.585
+					],
+					"ink_low": 0.02,
+					"ink_high": 0.05
+				},
+				{
+					"name": "strap",
+					"slots": [
+						2,
+						17
+					],
+					"min": [
+						-0.06,
+						0.05,
+						1.69
+					],
+					"max": [
+						0.06,
+						0.2,
+						1.76
+					],
+					"no_ink": true
+				},
+				{
+					"name": "cap",
+					"slots": [
+						17
+					],
+					"min": [
+						-0.5,
+						-0.5,
+						1.6
+					],
+					"max": [
+						0.5,
+						0.5,
+						2.0
+					],
+					"ink_low": 0.06,
+					"ink_high": 0.14
+				},
+				{
+					"name": "boots",
+					"slots": [
+						14
+					],
+					"min": [
+						-0.5,
+						-0.5,
+						-0.1
+					],
+					"max": [
+						0.5,
+						0.5,
+						0.2
+					],
+					"ink_low": 0.06,
+					"ink_high": 0.14
+				},
+				{
+					"name": "laces",
+					"slots": [
+						14,
+						17
+					],
+					"min": [
+						-0.5,
+						-0.5,
+						0.05
+					],
+					"max": [
+						0.5,
+						0.5,
+						0.2
+					],
+					"no_ink": true
+				},
+				{
+					"name": "shades_frame",
+					"slots": [
+						2
+					],
+					"min": [
+						-0.2,
+						-0.2,
+						1.56
+					],
+					"max": [
+						0.2,
+						0.3,
+						1.68
+					],
+					"no_ink": true
+				}
+			],
+			"glint": {
+				"slots": [
+					19
+				],
+				"slant_deg": 27.0,
+				"z_mid_m": 1.622,
+				"ramp_m": 0.004,
+				"fill_px": 2,
+				"bands": [
+					{
+						"x_m": -0.061,
+						"width_m": 0.028
+					},
+					{
+						"x_m": -0.039,
+						"width_m": 0.008
+					},
+					{
+						"x_m": 0.06,
+						"width_m": 0.022
+					},
+					{
+						"x_m": 0.082,
+						"width_m": 0.007
+					}
+				]
+			},
+			"clean": {
+				"cut": 0.15,
+				"bridge_px": 1,
+				"orient_radius_px": 3,
+				"align_deg": 35.0,
+				"min_straight": 0.0,
+				"min_extent_texels": 4,
+				"min_texels": 4,
+				"smooth_sigma": 0.5,
+				"smooth_gain": 1.05
+			},
+			"glove_lines": {
+				"slots": [
+					2
+				],
+				"bones": {
+					"left": "LeftHand",
+					"right": "RightHand"
+				},
+				"min_abs_x_m": 0.4,
+				"width_m": 0.0045,
+				"ramp_m": 0.003,
+				"fill_px": 2,
+				"features": [
+					{
+						"type": "ring",
+						"s_m": -0.058,
+						"min_h_m": -1.0
+					},
+					{
+						"type": "ring",
+						"s_m": -0.035,
+						"min_h_m": -1.0
+					},
+					{
+						"type": "ring",
+						"s_m": -0.012,
+						"min_h_m": -1.0
+					},
+					{
+						"type": "ring",
+						"s_m": 0.054,
+						"min_h_m": -1.0
+					},
+					{
+						"type": "outline",
+						"s_min_m": 0.012,
+						"s_max_m": 0.054,
+						"half_width_m": 0.03,
+						"corner_m": 0.008,
+						"min_h_m": 0.0
+					},
+					{
+						"type": "segment",
+						"s_min_m": 0.054,
+						"s_max_m": 0.082,
+						"t_m": -0.015,
+						"min_h_m": 0.0
+					},
+					{
+						"type": "segment",
+						"s_min_m": 0.054,
+						"s_max_m": 0.082,
+						"t_m": 0.0,
+						"min_h_m": 0.0
+					},
+					{
+						"type": "segment",
+						"s_min_m": 0.054,
+						"s_max_m": 0.082,
+						"t_m": 0.015,
+						"min_h_m": 0.0
+					}
+				]
+			},
+			"collar_in_unwrap": true
+		},
+		"regions": [
+			{
+				"name": "lens",
+				"slot": 19,
+				"only_from": [
+					17,
+					14,
+					6,
+					16
+				],
+				"min": [
+					-0.095,
+					0.06,
+					1.592
+				],
+				"max": [
+					0.095,
+					0.2,
+					1.652
+				],
+				"bisect_z": true
+			},
+			{
+				"name": "frame",
+				"slot": 2,
+				"only_from": [
+					16,
+					18
+				],
+				"min": [
+					-0.135,
+					-0.12,
+					1.575
+				],
+				"max": [
+					0.135,
+					0.22,
+					1.675
+				]
+			},
+			{
+				"name": "frame_low",
+				"slot": 2,
+				"only_from": [
+					6,
+					17,
+					14,
+					16,
+					18
+				],
+				"min": [
+					-0.095,
+					0.06,
+					1.583
+				],
+				"max": [
+					0.095,
+					0.2,
+					1.592
+				],
+				"bisect_z": true
+			},
+			{
+				"name": "boots",
+				"slot": 14,
+				"only_from": [
+					6
+				],
+				"min": [
+					-0.5,
+					-0.5,
+					-0.02
+				],
+				"max": [
+					0.5,
+					0.5,
+					0.2
+				]
+			},
+			{
+				"name": "cap_clean",
+				"slot": 17,
+				"only_from": [
+					2,
+					18,
+					16
+				],
+				"min": [
+					-0.5,
+					-0.5,
+					1.688
+				],
+				"max": [
+					0.5,
+					0.5,
+					2.0
+				]
+			},
+			{
+				"name": "strap_base",
+				"slot": 2,
+				"only_from": [
+					17,
+					14,
+					6,
+					16,
+					18
+				],
+				"min": [
+					-0.032,
+					0.05,
+					1.7
+				],
+				"max": [
+					0.032,
+					0.2,
+					1.722
+				],
+				"bisect_z": true,
+				"bisect_x": true
+			},
+			{
+				"name": "strap_top",
+				"slot": 2,
+				"only_from": [
+					17,
+					14,
+					6,
+					16,
+					18
+				],
+				"min": [
+					-0.022,
+					0.05,
+					1.722
+				],
+				"max": [
+					0.022,
+					0.2,
+					1.738
+				],
+				"bisect_z": true,
+				"bisect_x": true
+			}
+		],
+		"strap_slot": 17,
+		"glove_slot": 2,
+		"fist_border_cell_m": 0.012,
+		"reserve_tris": 700,
+		"strap_paint_slot": 2
+	},
+	"export": {
+		"hull_normal_digits": 5,
+		"smooth_normals": {
+			"iterations": 12,
+			"crease_deg": 50,
+			"falloff": 2.0,
+			"self_weight": 1.0
+		}
+	},
+	"stills": {
+		"views": [
+			"front",
+			"three_quarter",
+			"side"
+		],
+		"poses": {
+			"rest": {},
+			"guard": {
+				"Spine": [
+					-3.0,
+					0.0,
+					0.0
+				],
+				"Chest": [
+					-3.0,
+					0.0,
+					0.0
+				],
+				"Neck": [
+					4.0,
+					0.0,
+					0.0
+				],
+				"Head": [
+					2.0,
+					0.0,
+					0.0
+				],
+				"LeftUpperArm": [
+					43.5,
+					-22.0,
+					-13.5
+				],
+				"LeftLowerArm": [
+					130.0,
+					0.0,
+					0.0
+				],
+				"RightUpperArm": [
+					40.0,
+					22.5,
+					13.0
+				],
+				"RightLowerArm": [
+					134.5,
+					0.0,
+					0.0
+				],
+				"LeftUpperLeg": [
+					16.0,
+					0.0,
+					-4.0
+				],
+				"LeftLowerLeg": [
+					-24.0,
+					0.0,
+					0.0
+				],
+				"LeftFoot": [
+					8.0,
+					0.0,
+					4.0
+				],
+				"RightUpperLeg": [
+					-6.0,
+					0.0,
+					5.0
+				],
+				"RightLowerLeg": [
+					-16.0,
+					0.0,
+					0.0
+				],
+				"RightFoot": [
+					22.0,
+					0.0,
+					-5.0
+				]
+			},
+			"elbow_150": {
+				"LeftLowerArm": [
+					150.0,
+					0.0,
+					0.0
+				],
+				"RightLowerArm": [
+					150.0,
+					0.0,
+					0.0
+				]
+			},
+			"arm_raise_140": {
+				"LeftUpperArm": [
+					140.0,
+					0.0,
+					0.0
+				],
+				"RightUpperArm": [
+					140.0,
+					0.0,
+					0.0
+				]
+			},
+			"knee_m130": {
+				"LeftUpperLeg": [
+					40.0,
+					0.0,
+					0.0
+				],
+				"LeftLowerLeg": [
+					-130.0,
+					0.0,
+					0.0
+				],
+				"RightUpperLeg": [
+					-10.0,
+					0.0,
+					0.0
+				]
+			},
+			"spine_twist": {
+				"Spine": [
+					0.0,
+					30.0,
+					0.0
+				],
+				"Chest": [
+					0.0,
+					30.0,
+					0.0
+				],
+				"UpperChest": [
+					0.0,
+					20.0,
+					0.0
+				],
+				"Neck": [
+					0.0,
+					-20.0,
+					0.0
+				]
+			}
+		}
+	}
+}

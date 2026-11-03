@@ -21,6 +21,8 @@ const _BODY_POINTS: Array[StringName] = [
 	&"LeftFistPoint", &"RightFistPoint", &"LeftKneePoint", &"RightKneePoint",
 	&"LeftFootPoint", &"RightFootPoint",
 ]
+## The gauge's ink border, in pixels.
+const _BORDER_PX := 2.0
 
 ## Seconds a bar stays up after the latest hit.
 @export var show_seconds: float = 2.0
@@ -184,13 +186,23 @@ func get_bar_screen_position(actor: CombatActor) -> Vector2:
 	return bar.screen_position if bar != null and bar.on_screen else Vector2(-1.0, -1.0)
 
 
+## True when `bar` is drawn: on screen and its gauge, with the ink border, overlaps this
+## canvas. A head just in front of the camera plane projects millions of pixels away, where
+## float precision collapses the thin fill and the polygon fails to triangulate.
+func is_drawn(bar: Bar) -> bool:
+	return bar.on_screen and _rect_of(bar).grow(_BORDER_PX).intersects(Rect2(Vector2.ZERO, size))
+
+
+func _rect_of(bar: Bar) -> Rect2:
+	return Rect2(bar.screen_position - Vector2(bar_size.x * 0.5, bar_size.y + lift_px), bar_size)
+
+
 func _draw() -> void:
 	for bar: Bar in _bars:
-		if not bar.on_screen:
+		if not is_drawn(bar):
 			continue
 		var alpha := clampf(bar.time_left / fade_seconds, 0.0, 1.0) if fade_seconds > 0.0 else 1.0
-		var top_left := bar.screen_position - Vector2(bar_size.x * 0.5, bar_size.y + lift_px)
-		HudStyle.draw_gauge(self, Rect2(top_left, bar_size), slant, bar.gauge, HudStyle.HEALTH, 2.0, alpha)
+		HudStyle.draw_gauge(self, _rect_of(bar), slant, bar.gauge, HudStyle.HEALTH, _BORDER_PX, alpha)
 
 
 ## A KO'd actor's bar: once the killing hit's chunk has drained (the ghost down to the

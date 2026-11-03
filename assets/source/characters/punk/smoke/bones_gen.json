@@ -1,0 +1,275 @@
+{
+	"version": 1,
+	"blender": "5.2.2 LTS",
+	"source": {
+		"file": "cb4af11c_gen.glb",
+		"bytes": 1240740,
+		"sha256": "14a550e3999a14a34483b6886de262b8f0c7a835d6eb56fdb220b5b49c1d92f5"
+	},
+	"import": {
+		"bone_heuristic": "BLENDER",
+		"guess_original_bind_pose": true,
+		"disable_bone_shape": true,
+		"importer": "gltf"
+	},
+	"space": "godot: x right, y up, the rig faces -z; blender (x, y, z) -> (x, z, -y)",
+	"objects": [
+		{
+			"name": "tripo_node_cb4af11c-3a03-435b-9ea3-29c08cfc11da",
+			"type": "MESH",
+			"parent": null,
+			"location": [
+				0.0,
+				0.0,
+				0.0
+			],
+			"rotation_euler_deg": [
+				0.0,
+				0.0,
+				0.0
+			],
+			"scale": [
+				1.0,
+				1.0,
+				1.0
+			]
+		}
+	],
+	"armatures": [],
+	"meshes": [
+		{
+			"name": "tripo_node_cb4af11c-3a03-435b-9ea3-29c08cfc11da",
+			"vertices": 11870,
+			"triangles": 19510,
+			"polygons": 19510,
+			"bbox": {
+				"min": [
+					-0.110621,
+					-0.5,
+					-0.391977
+				],
+				"max": [
+					0.110998,
+					0.5,
+					0.392072
+				],
+				"size": [
+					0.221619,
+					1.0,
+					0.784049
+				]
+			},
+			"armature": null,
+			"modifiers": [],
+			"uv_layers": [
+				"UVMap"
+			],
+			"color_attributes": [],
+			"shape_keys": 0,
+			"groups": {},
+			"max_influences": 0,
+			"influence_histogram": {
+				"0": 11870
+			},
+			"unweighted": 11870,
+			"over_four": 0,
+			"not_normalized": 0,
+			"groups_without_bone": [],
+			"materials": [
+				"tripo_material_cb4af11c-3a03-435b-9ea3-29c08cfc11da"
+			]
+		}
+	],
+	"materials": [
+		{
+			"name": "tripo_material_cb4af11c-3a03-435b-9ea3-29c08cfc11da",
+			"base_color": [
+				0.8,
+				0.8,
+				0.8,
+				1.0
+			],
+			"metallic": 0.0,
+			"roughness": 0.9,
+			"image": "Color_cb4af11c-3a03-435b-9ea3-29c08cfc11da"
+		}
+	],
+	"images": [
+		{
+			"name": "Color_cb4af11c-3a03-435b-9ea3-29c08cfc11da",
+			"size": [
+				2048,
+				2048
+			],
+			"packed": true,
+			"file": null,
+			"colorspace": "sRGB",
+			"channels": 4,
+			"dominant_colors": [
+				{
+					"rgb_hex_16_levels": "#608080",
+					"share": 0.20874
+				},
+				{
+					"rgb_hex_16_levels": "#f0c0a0",
+					"share": 0.150391
+				},
+				{
+					"rgb_hex_16_levels": "#f0f0c0",
+					"share": 0.089844
+				},
+				{
+					"rgb_hex_16_levels": "#f0f0d0",
+					"share": 0.087158
+				},
+				{
+					"rgb_hex_16_levels": "#508080",
+					"share": 0.076904
+				},
+				{
+					"rgb_hex_16_levels": "#505050",
+					"share": 0.065674
+				}
+			]
+		}
+	],
+	"summary": {
+		"triangles": 19510,
+		"vertices": 11870,
+		"bbox": {
+			"min": [
+				-0.110621,
+				-0.5,
+				-0.391977
+			],
+			"max": [
+				0.110998,
+				0.5,
+				0.392072
+			],
+			"size": [
+				0.221619,
+				1.0,
+				0.784049
+			]
+		},
+		"height_m": 1.0,
+		"feet_y": -0.5,
+		"bones": 0,
+		"unweighted": 11870,
+		"max_influences": 0,
+		"over_four": 0,
+		"bones_without_vertices": [],
+		"neutral_bone": {
+			"present": false,
+			"weighted_verts": 0
+		}
+	},
+	"facing": {
+		"params": {
+			"foot_band_of_height": 0.07,
+			"shin_band_of_height": [
+				0.12,
+				0.25
+			],
+			"min_foot_elongation": 1.3,
+			"head_band_of_height": 0.14,
+			"torso_band_of_height": [
+				0.5,
+				0.78
+			],
+			"nose_conflict_ratio": 1.15,
+			"dominant_color_samples": 4096,
+			"dominant_colors": 6
+		},
+		"toe": {
+			"feet": [
+				{
+					"dir_xz": [
+						0.907763,
+						-0.419483
+					],
+					"elongation": 1.818674,
+					"reach_toe_m": 0.147591,
+					"reach_heel_m": 0.065289,
+					"offset_dir_xz": [
+						0.689973,
+						-0.723835
+					]
+				},
+				{
+					"dir_xz": [
+						0.917301,
+						0.398194
+					],
+					"elongation": 1.800596,
+					"reach_toe_m": 0.150707,
+					"reach_heel_m": 0.061742,
+					"offset_dir_xz": [
+						0.791932,
+						0.610609
+					]
+				}
+			],
+			"dir_xz": [
+				0.999932,
+				-0.011664
+			],
+			"feet_agree_deg": 48.267306
+		},
+		"nose": {
+			"dir_xz": [
+				-0.999932,
+				0.011664
+			],
+			"front_reach_m": 0.097488,
+			"back_reach_m": 0.105618,
+			"front_over_back": 0.923033
+		},
+		"agreement_deg": 180.0,
+		"confidence": "weak",
+		"dir_xz": [
+			0.999932,
+			-0.011664
+		],
+		"yaw_deg_to_minus_z": 89.331687,
+		"axis": "+X"
+	},
+	"sides": {
+		"left_bones": 0,
+		"right_bones": 0,
+		"left_minus_right_lateral_m": null,
+		"consistent": null,
+		"left_is_minus_x": null
+	},
+	"names": {
+		"rig_table_missing": [
+			"Root",
+			"Hips",
+			"Spine",
+			"Chest",
+			"UpperChest",
+			"Neck",
+			"Head",
+			"LeftShoulder",
+			"LeftUpperArm",
+			"LeftLowerArm",
+			"LeftHand",
+			"RightShoulder",
+			"RightUpperArm",
+			"RightLowerArm",
+			"RightHand",
+			"LeftUpperLeg",
+			"LeftLowerLeg",
+			"LeftFoot",
+			"LeftToes",
+			"RightUpperLeg",
+			"RightLowerLeg",
+			"RightFoot",
+			"RightToes"
+		],
+		"rig_table_extra": [],
+		"profile_matched": 0,
+		"profile_unmatched": []
+	}
+}

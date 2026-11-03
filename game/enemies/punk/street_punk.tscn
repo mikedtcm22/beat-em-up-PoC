@@ -1,7 +1,9 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://game/enemies/punk/street_punk.gd" id="1_punk"]
+[ext_resource type="Resource" path="res://game/actors/art/punk_art.tres" id="2_art"]
 
 [node name="StreetPunk" type="CharacterBody3D"]
 script = ExtResource("1_punk")
 display_name = "Punk"
+art = ExtResource("2_art")

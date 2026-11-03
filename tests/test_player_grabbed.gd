@@ -12,6 +12,7 @@ const BOSS_SCENE := preload("res://tests/fixtures/grab_test_boss.tscn")
 const HUD_SCENE := preload("res://game/ui/hud.tscn")
 const StubDirector := preload("res://tests/fixtures/stub_director.gd")
 const FPView := preload("res://tests/fp_view.gd")
+const SkinnedView := preload("res://tests/skinned_view.gd")
 const FRAME := 1.0 / 60.0
 ## Nothing may be nearer the lens than this (m): the grabber's head and hands stay at arm's length.
 const LENS_CLEARANCE_M := 0.25
@@ -446,3 +447,52 @@ func test_the_mash_prompt_is_below_the_center_and_clear_of_the_top_corners() -> 
 	assert_false(rect.intersects(Rect2(Vector2.ZERO, corners)), "clear of the top-left corner")
 	assert_false(rect.intersects(Rect2(Vector2(canvas.x - corners.x, 0.0), corners)), "clear of the top-right corner")
 	assert_eq(prompt.mouse_filter, Control.MOUSE_FILTER_IGNORE, "takes no clicks")
+
+
+## M4 (F-player-int): the twin of the held-view checks above on the SKINNED art. Those cast the player's
+## own body through the proxies (the primitives that stand in for his art, M4-plan A4); this one
+## has him wear the probe body (Tuning's Debug look_player_art_probe) and casts the triangles his lens
+## draws (tests/skinned_view.gd, in the drawn pose): held by the Bruiser-sized grabber from its connect
+## to its follow-up's held key, his own body covers at most a third of the view and no vertex of it is
+## nearer the lens than 0.25 m.
+func test_the_held_view_on_the_skinned_art_keeps_the_own_body_to_a_third_and_off_the_lens() -> void:
+	_scene.remove_child(_player)
+	_player.free()
+	Tuning.data.look_player_art_probe = true
+	_player = PlayerCharacter.new()
+	_scene.add_child(_player)
+	_player.input.scripted = true
+	await _ticks(2)
+	assert_true(_player.rig.has_art(), "the player wears the art")
+	var grabber := _grabber()
+	await _ticks(4)
+	var cam := _camera()
+	grabber.force_attack()
+	assert_true(await _held(grabber))
+	var follow: MoveData = load("res://game/combat/moves/bruiser_headbutt.tres")
+	var window := roundi(follow.startup * PlaceholderEnemyPoses.WINDUP_HOLD_AT)
+	var own_worst := 0.0
+	var nearest := INF
+	var samples := 0
+	for i in window:
+		await _ticks(1)
+		cam.update_camera(FRAME)
+		if _player.state != CombatTypes.ActorState.GRABBED or i % 4 != 0:
+			continue
+		var view := cam.view_transform()
+		var cells := SkinnedView.hits(_player.rig, view)
+		var own := 0
+		for cell: Dictionary in cells:
+			own += int(not cell.is_empty())
+		own_worst = maxf(own_worst, float(own) / cells.size())
+		var lens := _player.rig.global_transform.affine_inverse() * view.origin
+		for mi: MeshInstance3D in _player.rig.art_meshes():
+			if mi.layers & CombatTypes.bit(CombatTypes.VIS_FP_HIDDEN):
+				continue
+			for v: Vector3 in SkinnedView.skin_vertices(mi, _player.rig):
+				nearest = minf(nearest, v.distance_to(lens))
+		samples += 1
+	gut.p("held view on the art: %d samples, own body at most %.0f%% of the view, nearest drawn vertex %.3f m" % [samples, own_worst * 100.0, nearest])
+	assert_gt(samples, 5, "the hold was sampled")
+	assert_lte(own_worst, 1.0 / 3.0, "his own body, as drawn, covers at most a third of the view (%.0f%%)" % (own_worst * 100.0))
+	assert_gte(nearest, LENS_CLEARANCE_M, "no vertex of the body the lens draws is within %.2f m of it (%.3f)" % [LENS_CLEARANCE_M, nearest])

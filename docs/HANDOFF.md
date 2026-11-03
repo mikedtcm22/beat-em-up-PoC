@@ -4,6 +4,777 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-03 08:55 CDT: Game-boy signed off Milestone 4; PR #4 merged; M5 waits for his go (he'll turn on Ultracode first)
+- **Game-boy (session chat):** "I think with those notes, you can also go ahead and merge PR 4 now so we can move on. Let me know before you're going to get fully started with the next milestone, though: I'll want to turn on Ultracode so you can use sub-agents."
+  - **PR #4 merged into `main`.** README's M4 departures now read "accepted by Game-boy with M4's sign-off", and the two looks are carried forward to M6.
+- **His answers on the attack arcs** (in `docs/milestones/M5-inputs.md`):
+  - **The center line is fixed when the enemy engages,** with a grace period of about 0.5 s so a quick turn can't stun-lock a low-level enemy.
+  - **Variants may widen a type's arc** (a "veteran Punk").
+  - **Progression:** easy narrow-arc grunts early, mostly all-angle enemies later.
+- **Next: Milestone 5 (SPEC §12), the level blockout.**
+  - **Before starting:** tell Game-boy, then wait for his go. He'll turn on Ultracode so the work can use sub-agents and workflows.
+  - **Then:**
+    1. Branch `m5/<topic>` from `main`.
+    2. Plan with a workflow, folding in `M5-inputs.md`. The attack-arc director change is the first package, before the encounter plan.
+    3. The encounter plan goes to Game-boy for approval: SPEC §12's "approved encounter plan", one pause.
+  - The `.worktrees/m4-*` worktrees can be pruned; every M4 branch is pushed.
+
+### 2026-11-03: Game-boy passed M4's done-when ("punks look good - let's say passes at 1m"); merging PR #4 waits on his word; an AI change queued
+- **Game-boy (2026-11-03, session chat), after playing the build with both hand fixes:** "punks look good - let's say passes at 1m."
+  - That is the done-when's yes (SPEC §12 M4; Part B's pause 2).
+  - **PR #4 is not merged yet.** The lead asked him whether to merge it now, with the M4 departures and calls approved and the open items carried forward. At M3 his sign-off also approved the departures.
+- **His AI note, for a future pass (not art):** "I don't think we need to have *EVERY* enemy's strategy be trying to get behind you before they attack. The player should see the basic street-punks (for example) try to just square up with the player and attack head-on...or maybe from a slight angle (I think circling to attack from behind is a bit higher-level enemy tactic — maybe just one sneaky enemy-type in particular who does that)."
+  - **What it changes:** SPEC §7 already says the Street Punk "approaches head-on" and the Kicker "actively circles to the player's blind side". What sends every type behind is M3's director:
+    - its "Spread" rule (posture slots evenly all round);
+    - `blind_spot_priority` 1.0 (out-of-view enemies jump the token queue);
+    - each grunt taking any slot.
+  - **So it's a change to SPEC §7's director rules, by his word:**
+    - the grunts (Punk, Pipe Thug, Bruiser) posture in a front arc and attack head-on or from a slight angle;
+    - the Kicker stays the one sneaky type that circles behind;
+    - the boss keeps its own logic.
+  - **Effects to re-measure:** M3's readability numbers and the rear warning's tests, since fewer attacks come from behind.
+  - **Proposed timing:** a first, small package of Milestone 5, before the encounter plan, because the plan's arenas depend on how crowds stand.
+  - **Refined by Game-boy the same day: per-archetype attack arcs.** The written-up design, his words, a proposed mapping (Punk 90°, Pipe Thug 140°, Bruiser 180°, boss 270°, Kicker 360°) and three open questions for the M5 plan are in `docs/milestones/M5-inputs.md`.
+- **Next on the roadmap (SPEC §12):**
+  - **M5, level blockout:** first an encounter plan for Game-boy's approval (a pause). Then the graybox level from `reference/dd2-nes-mission1/`, with arena locks, spawns, pickups, hazards and the boss arena. Done when the level plays start to boss.
+  - **M6, full art and audio:** every enemy and the boss, environment modules, set dressing, final SFX. Done when no placeholder assets remain.
+  - **M7, polish and playtest build:** the perf target on an RTX 3060, bugs, the Windows export. Done when Game-boy plays start to finish and answers SPEC §1's four questions.
+- **Carried forward from M4:**
+  - the four FP feel switches (defaults off);
+  - the Tripo licence: the account type must be known before M6 generates many models;
+  - per-swatch damage-mark strength and the orange-on-cap blood (M6);
+  - the hero's arm knob (call 19);
+  - the hero-select menu;
+  - the quiet-machine perf A/B and the RTX 3060 measurement (M7).
+
+### 2026-11-02 22:00 CDT: both hand fixes merged (1615/1615, 0 errors); waiting on Game-boy again
+- **The Punk's fists** (`m4/f-fist-turn`, `694ddb0`, call 27):
+  - The T9 generated fist is a right-hand fist, and the first build mirrored it as if it were a left, so both hands hung palm outward. `pipe_fist.make_side` now honours `parts.fists.generated.source_side` ("Right" for the Punk).
+  - The four Punk GLBs are rebuilt, and new palm and thumb tests cover rest and the guard. No clip moved.
+  - The jab's lens-share ratchet went from 0.051 to 0.056.
+  - The chain checks print YES: Punk `445edd69`, heat-map `14dfa420`.
+- **The player's straight punches** (`m4/f-punch-turn`, `d6ccdf6`, call 28, Game-boy's request):
+  - `_jab_1` and `_jab_2` roll the fist about 90 degrees: 27 degrees in the lower arm and 63 in the hand. It lands palm-down, 34-36 degrees from level because the forearm rises.
+  - FistPoint moves 7 mm. The Punk's and dummy's punches aren't turned (`turn_fist` false).
+  - New `tests/test_punch_turn.gd`, and the clip hashes are regenerated with a note.
+- **After the merges:** regenerating the clip hashes and the M3 deformation table changed nothing. Regenerating the strain table loosened some limits (ratchets only tighten), so the committed table was kept; it passes. README's departures list the punch change as approved.
+- **Next:** show Game-boy the crops and the run command. Still open from the DM: the four feel switches, the departures, the damage-mark and arm-knob calls, and the Tripo account type. PR #4 stays unmerged until his sign-off.
+
+### 2026-11-02 21:20 CDT: Game-boy's second note (the player's straight punches land palm-down); F-punch-turn running beside F-fist-turn
+- **Game-boy's words** (session chat): "Another fix to hand positioning: this time for the player-character. When the player throws a straight punch, the fist should turn 90 degrees so that the curled fingers angle down toward the ground (rather than inward toward each other)."
+  - The lead logs it as call 28: his own request, and a departure from A20's frozen active-frame poses.
+- **Running since 21:20 CDT:** F-punch-turn (`wf_f7031a7b-dac`, `workflow-build.js` with `docs/reviews/M4/args-F-punch-turn.json`, worktree `.worktrees/m4-f-punch-turn`, branch `m4/f-punch-turn`).
+  - **Scope:** re-roll the forearm and hand in `_jab_1` and `_jab_2`'s strike so the fists turn 90 degrees and land palm-down. The twist is split between LowerArm and Hand. FistPoint stays within 1 cm, and a new `tests/test_punch_turn.gd` covers it.
+  - **Beside it:** F-fist-turn (the Punk's guard, `wf_172ba303-da5`) is still running.
+  - **If cut off:** rerun each with its args.
+- **Merge note:** both builders may regenerate `tests/fixtures/motion/move_clip_hashes.json` and the strain and M3-deformation fixtures. Merge F-fist-turn first, then F-punch-turn. On a conflict in those generated files, take either side, then regenerate with `gen_clip_hashes.tscn`, `gen_strain_ratchet.tscn` and `gen_m3_deformation.tscn` on the merged head. Then run the full suite and the chain checks.
+
+### 2026-11-02 20:50 CDT: Game-boy played M4: the Punk's hands turn the wrong way in the guard; the rest of the art "looks pretty good"; F-fist-turn running
+- **Game-boy's words** (in the session chat, after running `godot --path /Users/arachne/repos/beat-em-up-PoC`; the PR's GitHub files 404 for him, so the run command is his route): "main problem I see with the punk's art is that his hands don't turn the right way — his curled fingers are facing outward instead of inward when he has his hands up to fight. The rest of the art looks pretty good, though."
+  - **The lead's look:** in the C2 guard the viewer sees each fist's palm side, curled fingers outward and thumbs on the outside.
+  - **Likely cause:** the fist piece meets A5 (palm to the midline at rest), and the guard pose's forearm/hand roll turns it palm-forward. M3's symmetric box fists never showed this. The builder confirms which before fixing.
+- **Also fixed (`3c463df`):** his run printed `ERROR: Invalid polygon data, triangulation failed` from `hud_style.gd` `_draw_fill` via `enemy_health_bars.gd`.
+  - **Cause:** a head just in front of the camera plane projects millions of pixels off screen, the bar was still drawn there, and float precision collapsed its fill. A probe confirmed it: the fill fails from about 1e5 px off-canvas.
+  - **Fix:** `EnemyHealthBars.is_drawn()` now skips a bar whose gauge doesn't overlap the canvas. There's a new test in `test_health_bars.gd`, and the full suite is running.
+- **Running since 20:50 CDT:** F-fist-turn (`wf_172ba303-da5`, `workflow-build.js` with `docs/reviews/M4/args-F-fist-turn.json`, worktree `.worktrees/m4-f-fist-turn`, branch `m4/f-fist-turn`). It diagnoses the piece against the pose, fixes the root cause with a test, re-records C2, C4 and C11 with before/after crops, and checks the hero's fists. **If cut off:** rerun it with the same args.
+- **Next:**
+  1. Merge it with A22 and the chain checks; check the guard crops.
+  2. Copy its call 27 into `M4-judgement-calls.md` if it re-rolled a clip.
+  3. Show Game-boy the before/after in this chat (or the DM), with the run command again.
+  4. He hasn't yet answered the other open items (the feel switches, the departures, the damage-mark and arm-knob calls, the Tripo account type); ask once more after the hands are fixed. PR #4 stays unmerged until his sign-off.
+
+### 2026-10-29 02:55 CDT: handoff at the weekly limit (90%); nothing running; still waiting on Game-boy's M4 judgement
+- **Why:** the usage watcher's message. The weekly window is at 90% and resets 2026-11-02 10:00 UTC; the 5-hour window is at 55%.
+- **State:** unchanged since the 18:35 entry below.
+  - Milestone 4 is delivered on `m4/art-pipeline` (`ff5976a`, pushed; nothing uncommitted).
+  - PR [#4](https://github.com/mikedtcm22/beat-em-up-PoC/pull/4) is open into `main` and **not merged**.
+  - The final DM went out 2026-10-27 18:33-18:35 CDT.
+  - No workflow, agent or builder is running.
+- **Game-boy:** no reply yet, and no thread reply, as of 02:50 CDT on 2026-10-29. He's waiting for nothing from us; we're waiting on:
+  - his yes, or the failing item numbers;
+  - the four FP feel switches;
+  - the departures;
+  - the damage-mark and arm-knob calls;
+  - the Tripo account type.
+- **Worktrees:** every `.worktrees/m4-*` worktree is clean, except `m4-fix-final-punk-spawn-cache-before-recut`. That one is detached at `aa6b5cd` and holds the throwaway, uncommitted act edits that re-cut M3's before side for C5, C9 and C13. Remove it with `git worktree remove --force` once the DM's media are no longer needed.
+- **Resume steps** (the resume task `beat-em-up-resume-20261102-1000` fires 2026-11-02 04:10 CST):
+  1. Read Game-boy's DM (D0AQUKX5DB6) for a reply after message `1793144123.040919`, including threads.
+  2. **No reply:** nothing to build. Leave the PR open, don't merge, and don't DM him again unless something needs him.
+  3. **A reply with failing items or changes:** plan them as fix packages with the same runners (see the 18:35 entry's "When he answers"), then re-record and reply in the DM.
+  4. **Sign-off:** merge PR #4 on his word only. Record his approved departures in README's "Where M4 departs from the spec" (turn "for Game-boy to rule on" into "approved by Game-boy"). Remove the M4 worktrees, and start Milestone 5 per SPEC §12.
+
+### 2026-10-27 18:35 CDT: Milestone 4 delivered; PR #4 open; the final DM sent; waiting on Game-boy (pause 2)
+- **The DM to Game-boy** (Slack D0AQUKX5DB6, from 18:30 CDT), in order:
+  1. The main message: the run command as a bash block, the A23 question word for word, the 14 numbered rubric items with the re-score (mean 1.50), and the post-re-score fixes.
+  2. The M3/M4 pair at 1 m and three concept stills (Punk at 1 m, Punk full figure, hero C against his first-person limbs).
+  3. Three clips: the long take (5.4 MB), the six-Punk fight (8.0 MB), his arms and legs (1.6 MB).
+  4. The five-line metrics and the unmet plan bars.
+  5. The four feel questions with their A/B stills.
+  6. The departures, his two look calls (the damage marks; the arm knob), the Tripo licence question and the hero-menu note.
+  7. The judgement-call digest.
+- **The DM media:** `captures/m4/dm/out/`, re-recorded on `e78c156`; the hero concept pair and the feel stills come from `.worktrees/m4-p3-evidence/captures/m4/evidence/`. Keep both until sign-off.
+- **PR [#4](https://github.com/mikedtcm22/beat-em-up-PoC/pull/4)** into `main` is open, with no CI. **Never merge it until Game-boy signs off.**
+- **Waiting on Game-boy:**
+  - his yes, or which numbered items fail;
+  - the four feel switches;
+  - the departures;
+  - the damage-mark and arm-knob calls;
+  - the Tripo account type.
+- **When he answers:** turn each failed item or change into a fix package with the same runners (`workflow-build.js` for builds, `workflow-review.js` with `findings_path` for fix-only runs). Merge with A22 and the chain checks, re-record what changed, and reply in the DM thread. When he signs off, merge PR #4 (only on his word), record his approved departures in README, and start M5 per the spec.
+- **Worktrees** from this round can be removed after sign-off: `.worktrees/m4-*`. Keep `m4-p3-evidence` until the DM's media are no longer needed.
+
+### 2026-10-27 18:25 CDT: the re-score's fixes merged (1599/1599); PR #4 open; the DM media re-recording
+- **Merged:** `m4/fix-rescore-punk-art-chain` (`16f96e2`) and `m4/fix-rescore-placeholder-matte` (`a04bfb0`).
+  - The lens glint is gated by two authored streaks per eye (the mask's G channel), so a tipped-back head no longer whites out the shades. `look_glint_cut` is now 0.81.
+  - Normal smoothing is now 12 rounds, so the face falls into two clean bands.
+  - Strokes are cleaned at 1k (dots joined and dropped).
+  - The glove and cuff carry authored ink lines.
+  - Placeholder matte paints take no highlight.
+  - The suite on `e78c156` is 1599/1599 with 0 error lines. The Punk, probe, hero and heat-map `--check` all print YES (Punk `c4a510ff`, heat-map `6709a408`). README carries the scores.
+- **PR [#4](https://github.com/mikedtcm22/beat-em-up-PoC/pull/4)** is open into `main`. Never merge it before Game-boy signs off.
+- **Running:** the lead's re-record of the DM media on the final head, in `captures/m4/dm/` (c1, c2, c10, c14, pa1, six), one act per process. Then the pairs (M3 left from `captures/m4_before/`), the concept pairs, and clips 1-3 (1280x720 H.264, AAC 96k, at most 10 MB). The feel A/B stills from P3-evidence stay valid: the switches didn't change.
+- **Next:** the final DM to Game-boy (D0AQUKX5DB6), per A23 and the task:
+  - the run command as a code block;
+  - the ask, word for word;
+  - the numbered rubric with the scores;
+  - the pair, the concept stills and the three clips;
+  - the five-line metrics;
+  - the four feel questions with their A/B stills;
+  - the departures;
+  - the digest of judgement calls;
+  - credits;
+  - the Tripo licence question;
+  - the hero-menu note.
+
+### 2026-10-27 17:30 CDT: P3-evidence merged (the index and JSON files); the re-score's fixers still running
+- **Merged:** `m4/p3-evidence` (`47251d3`): `docs/reviews/M4/evidence/index.md` and five JSON files, all docs.
+  - **Recordings:** 26, every bot.log with 0 error lines. The media is local in `.worktrees/m4-p3-evidence/captures/m4/evidence/` (keep that worktree until the DM is sent).
+  - **The DM pair:** `pairs/c2/stills/c2_f109_idle_t060_m3_left_m4_right.png`.
+  - **The concept pairs:** in `concept_pairs/`.
+  - **The clips:** `clips/long_take_1m_c14.mp4` (5.2 MB), `six_punk_fight_2_to_10m.mp4` (7.7 MB) and `own_limbs_pa1.mp4` (1.6 MB).
+  - **The four feel A/B pairs:** in `feel_ab/`. Exact commands and calls are in `docs/milestones/M4-calls/P3-evidence.md`.
+  - **Caveat:** it was recorded on `6e2a2e1`, before the re-score's fixes. After those merge, re-record the DM pair, the concept pairs and clips 1 and 3 (the long take shows the lens whiteout the fix removes), using the commands in that calls file.
+
+### 2026-10-27 17:20 CDT: the re-score passes at the bar (mean 1.50); its two fix packages running beside P3-evidence
+- **The re-score on `f4064a4`:** J1 2, J2 1, J3 1, J4 1, J5 2, J6 2, J7 2, J8 2, J9 1, J10 2, J11 1, J12 2, J13 1, J14 1.
+  - That is a mean of 1.50, with no 0 and every critical item at 1 or more, so Part B's rule passes with zero margin. J1, J5 and J7 moved up from 1.
+  - **Findings:** five, all confirmed. They're in `docs/reviews/M4/rescore-findings.json` with the lead's order (call 26).
+    - The lens glint whites out the shades whenever the head tips back (a regression from the gloss fix).
+    - The striking glove's back is a featureless dome.
+    - The 1k ink strokes are sawtooth and dotted.
+    - The face's bands are faceted (normal smoothing stopped at 6 rounds).
+    - The placeholders keep a hard highlight beside the matte Punk.
+  - **Per-item suggestions:** the re-scorer's "one change per item still at 1" is in its summary in that file.
+- **Running since 17:15 CDT:** `wf_c36f16ac-f73`, round `rescore`, base `de24472`, two fixers: punk-art-chain (rs-01, -04, -03, -02 in that order) and placeholder-matte (rs-05). The worktrees are `.worktrees/m4-fix-rescore-<key>`. P3-evidence (`wf_7aae052c-809`) is still recording on `f4064a4`. **If cut off:** rerun with the same args.
+- **Next:**
+  1. Merge the two fixers with A22, including the chain checks.
+  2. Check the lens, glove, strokes and face from stills.
+  3. Merge P3-evidence.
+  4. Re-record only the DM's clips, pairs and concept stills on the fixed art: a small builder, or the lead.
+  5. README's scores line, the PR (not merged) and the final DM.
+
+### 2026-10-27 16:35 CDT: both fix waves merged (1593/1593, 0 errors); the re-score and the evidence pack running
+- **Merged:**
+  - **`m4/fix-final-toon-gloss-and-turntable`** (`405d223`):
+    - Per-swatch gloss: a glossy swatch is one step below its damage-class alpha. Only the Punk's lens is glossy, and it gets a camera glint (`look_glint_cut` 0.88, `look_glint_strength` 1.0). The matte vest, arms and cap lost their highlight blobs (about 3,840 pixels down to 8).
+    - The C10 turntable hides the hero and films the Punk's front.
+  - **`m4/fix-final-done-when-ratchets-and-suite-time`** (`c86a279`):
+    - A7's ratchet can fail now: per art, plus a per-clip table in `tests/fixtures/strain/strain_ratchet.json`.
+    - The done-when ratchets are set on the final art.
+    - `PlaceholderAnims.Life` reads TuningData.
+    - The suite takes 267 s of test time, down from 335 s.
+    - stagger_back is re-posed with bent elbows (call 24; the four clip hashes regenerated with a reason note).
+  - A22: the preset (519 values) and the atlas matched what's committed. The suite on `f4064a4` is 1593/1593 with 0 SCRIPT, SHADER or ERROR lines.
+- **The lead's look:** the stagger reads as a body knocked back with a broken guard. The Punk's cloth is clean and matte, with one white glint on the lens.
+- **Running since 16:35 CDT:**
+  - **The re-score:** one Opus reviewer scores J1-J14 on `f4064a4` (`wf_b65f3d05-528`, round `rescore`, args in `docs/reviews/M4/args-review-rescore.json`, worktree `.worktrees/m4-review-rescore-rs`).
+  - **P3-evidence:** a Sonnet builder records the evidence pack, the clips, the DM pair, the feel A/B stills and `docs/reviews/M4/evidence/` (`wf_7aae052c-809`, `workflow-build.js` with `docs/reviews/M4/args-P3-evidence.json`, worktree `.worktrees/m4-p3-evidence`, branch `m4/p3-evidence`).
+  - **If cut off:** rerun each with the same args.
+- **Next:**
+  1. Merge P3-evidence.
+  2. Put the re-score's figures in README (the scores line) and the PR.
+  3. If the re-score's mean is under 1.5, say so honestly in the DM, with the re-scorer's "one change per item".
+  4. Open the PR (never merged).
+  5. The final DM per A23 and §9.2.
+
+### 2026-10-27 15:25 CDT: punk-detail merged (1580/1580 on its branch); toon-gloss launches after the 15:50 reset
+- **Merged:** `m4/fix-final-punk-detail-zones-and-strap` (`bb3f1f4`). The merged tree is its tested tree plus the lead's docs; the preset and palette are unchanged.
+  - The Punk wears the sharp mask cut (`punk_art.tres` `metadata/detail_sharp`).
+  - The cap's strap slot is an authored dark arch on edge loops, with no ink on the cap.
+  - The laces and ankles carry no ink (laces 33.7% to 0%).
+  - The face ink is 1.62% (a 1.75% margin test, 2.0% ceiling), with a nose zone.
+  - **The lead's look:** a crisp mouth bar, a hooked nose stroke and a clean cap. The cap's highlight still washes over the arch: that's per-swatch gloss, toon-gloss's job.
+  - **Left open:** black dashes on the jeans in the C5 landing (not mask ink); the arch is two stepped boxes.
+- **Chain checks:** running now (the Punk, the probe, the hero and the heat-map build).
+- **Next:** the 16:00 resume task wakes this session. Then launch toon-gloss-and-turntable (`packages_wave2` in `final-findings.json`), merge it, run the ratchets fixer, the re-score, the docs, the PR and the DM.
+
+### 2026-10-27 14:55 CDT: art-chain-records merged (1578/1578); wave 2's punk-detail running; a resume task at 16:00
+- **Merged:** `m4/fix-final-art-chain-records` (`3d2e00d`).
+  - The probe report is regenerated (`--check` YES), with a Blender-free guard on the step report keys.
+  - The hero's mask has two contract tests.
+  - The ASSETS ledger, provenance and date rows are fixed, and the orphan `tests/scratch_measure.gd.uid` is removed.
+  - The merged tree is its tested tree plus two doc files. The A22 chain checks are now in the plan's A22.
+- **Running since 14:50 CDT:** wave 2's **punk-detail-zones-and-strap**, alone in the last headroom (`wf_a7ddd5a8-aff`, base `d82b195`, worktree `.worktrees/m4-fix-final-punk-detail-zones-and-strap`). It turns the sharp mask cut on for the Punk and tunes his mask, then the cap strap slot, the laces and the face ink. **If cut off:** rerun it with the same args (in the run's args); it continues from its newest `wip:` commit.
+- **After the 15:50 reset:**
+  1. Launch **toon-gloss-and-turntable**: `workflow-review.js`, `lenses` [], `packages` = the `packages_wave2` entry with that key (notes pointing at `final-findings.json`, `packages_wave2`), `findings_path` the same file, base = the head, and a `common_note` stating the merged state.
+  2. Merge both wave-2 branches with A22, including the chain checks. ASSETS's Punk rows may conflict with art-chain-records' dates: refresh the dates.
+  3. Run **done-when-ratchets-and-suite-time** (in `packages.packages`; includes the stagger_back re-pose, call 24).
+  4. Then one Opus re-score of J1-J14 on fresh recordings.
+  5. Then README, the evidence index, the PR and the final DM.
+- **Resume task:** `beat-em-up-resume-20261027-1550` fires at 16:00 CDT, so the work continues even if nothing else wakes the session.
+
+### 2026-10-27 14:40 CDT: wave 1's two fixers merged (1575/1575); art-chain-records running; then wave 2, then the ratchets
+- **Merged:** both branches went in with no conflicts, then A22: the preset (517 values) and the palette. The suite on `3aa6f9a` is 1575/1575 with 0 SCRIPT, SHADER or ERROR lines.
+  - **`m4/fix-final-toon-light-and-ink`** (`30f88f3`):
+    - `look_fill_strength` 0.8 to 0.4: front-lit characters keep the sun's bands, and L2 is now MET.
+    - The hero's mask ink is cut sharp: `look_detail_cut` 0.15, through `player_art.tres` `metadata/detail_sharp`, so the Punk's art is still the soft mix until wave 2 turns it on. The hero's mask was also cleaned of blots.
+    - The own-body hull now measures 3.85/3.74/4.05 px (top is 0.05 over its bar, a soft row).
+    - `player_parts.py`'s literals moved into `pipeline.json`.
+    - Call 14's reason is corrected.
+  - **`m4/fix-final-punk-spawn-cache-and-evidence-acts`** (`8e211dc`):
+    - `RoomKit.warm_art()` holds `punk_art.tres` in a static, so a wave's first Punk no longer re-reads its GLB (about 19 ms down to 1-4 ms, headless).
+    - C5 and C13 tip the view to -35 degrees for the KO.
+    - C9's cast stands off the tour's path.
+    - The M3 before side was re-cut for those three acts into `captures/m4_before_recut/` (use these as the A23 before pairs). Its worktree `.worktrees/m4-fix-final-punk-spawn-cache-before-recut` can be removed.
+- **The lead's look:** fill 0.4 gives the Punk's vest and face real violet shadow shapes (comic cel), and the hero's wraps are solid black strands where they were grey smears.
+- **Running since 14:40 CDT:** art-chain-records, alone (`wf_de024c6a-d0d`, base `3aa6f9a`): the probe report's `--check`, a contract test for the hero's mask, the ASSETS rows and the orphan `.uid`. **If cut off:** rerun it with the same args (in the run's args; its worktree is `.worktrees/m4-fix-final-art-chain-records`).
+- **Next, in this order** (the files overlap):
+  1. Merge art-chain-records.
+  2. Wave 2 (`packages_wave2` in `final-findings.json`), two fixers at once: toon-gloss-and-turntable (per-swatch gloss; turn the sharp ink on for the Punk and check his lines; the C10 front) and punk-detail-zones-and-strap.
+  3. done-when-ratchets-and-suite-time last, so the ratchets are set on the final art (plus the stagger_back re-pose, call 24).
+  4. Then one Opus re-score of J1-J14.
+- **Usage:** 82% of the 5-hour window at 14:35 (reset at 15:50 CDT). Expect the watcher's 90% message. Wave 2 waits for the reset.
+
+### 2026-10-27 14:10 CDT: V1 reviewed; every J item scored, mean 1.29 (bar 1.5); wave 1 fixing, wave 2 planned
+- **V1's scores:** J1 1, J2 1, J3 1, J4 1, J5 1, J6 2, J7 1.
+  - **All 14 items:** J1 1, J2 1, J3 1, J4 1, J5 1, J6 2, J7 1, J8 2, J9 1, J10 2, J11 1, J12 2, J13 1, J14 1.
+  - That is a mean of 1.29 against Part B's 1.5. There are no 0s, and every critical item is at least 1.
+  - The fixes aim at the 1s. After both waves merge, one Opus re-score of J1-J14 from fresh recordings decides the pass, and it is reported honestly to Game-boy either way.
+- **V1's findings:** 7, of which 6 survive. All of them, with the lead's rulings, are in `docs/reviews/M4/final-findings.json` (V1's entries plus `packages_wave2`).
+  - **The biggest:** the 1k detail mask is mixed raw and bilinear, so every interior ink line is a soft, dotted smear (final-v1-01). It's the same root cause as the hero's final-v3-01, which wave 1's toon-light-and-ink is fixing.
+  - Per-swatch gloss: the highlight lands on matte cloth and never on the shades (v1-04).
+  - The cap's strap slot is ragged (v1-03), the laces carry black speckle (v1-05), and the face ink sits one sample under its ceiling (v1-06).
+  - The C10 turntable never films the Punk's front (v1-07).
+  - The small-hands finding (v1-02) is refuted, and the lead agrees: it matches the concept and A5's box.
+- **Wave 1** (`wf_e45d9467-fd5`, running since 13:45 CDT, two at a time): toon-light-and-ink and punk-spawn-cache-and-evidence-acts are running. done-when-ratchets-and-suite-time and art-chain-records come next if the gate has room. Otherwise rerun the same args (`docs/reviews/M4/args-review-final-fix.json` plus the run's `common_note`) after the 15:50 CDT reset. The finished packages replay from their branches.
+- **Wave 2 waits for wave 1's merge:** both its packages share files with wave 1.
+  - **toon-gloss-and-turntable:** v1-04, v1-01 checked on the Punk, and v1-07.
+  - **punk-detail-zones-and-strap:** v1-03, v1-05, v1-06.
+  - **Launch:** `workflow-review.js` with `lenses` [], `packages` = `packages_wave2` (compact notes pointing at the file, as in `args-review-final-fix.json`), `findings_path` the same file, base = the merged head, and a `common_note` stating the merged state.
+- **Usage:** 78% of the 5-hour window at 14:03 (reset at 15:50 CDT), 45% weekly. The watcher (`local_618146a1`) is alive. Expect its 90% message during wave 1.
+
+### 2026-10-27 13:50 CDT: V2-V6 reviewed (16 of 24 findings survive); four fixers running; V1 still reviewing
+- **Scores:** V2: J8 2, J9 1, J10 2, J11 1, J12 2. V3: J14 1. V4: J13 1, plus second opinions J4 1 and J5 1. No item scores 0. V1 (J1-J7) is still running.
+  - The findings, the verdicts, the partition and the lead's overrides are in `docs/reviews/M4/final-findings.json`.
+  - **Overrides:** final-v2-01 (stagger_back's straight arms) is IN as call 24. final-v2-02 (whole-body damage marks) and final-v3-03 (the hero's arm knob, call 19) go to Game-boy (call 25).
+- **Running since 13:45 CDT:** the fixers only. Workflow `wf_e45d9467-fd5`, `workflow-review.js` with `docs/reviews/M4/args-review-final-fix.json` (its `common_note` is in the run's args). It runs two at a time, each gated on usage. The worktrees are `.worktrees/m4-fix-final-<key>` and the branches `m4/fix-final-<key>`.
+  - **toon-light-and-ink:** the camera fill flattens front-lit bands (L2/J5); the hero's mask ink is soft; the own-body hull's L1 figures; the hero chain's literals.
+  - **punk-spawn-cache-and-evidence-acts:** the warm-up's art cache dies, so each wave's first Punk re-reads its GLB (about 19 ms); C5's KO framing; the C9 tour walks into its cast.
+  - **done-when-ratchets-and-suite-time:** ratchets that can't fail; Life's copied defaults; the suite's skinning cost; the stagger_back re-pose.
+  - **art-chain-records:** the probe report's `--check` NO; a contract test for the hero's mask; stale ASSETS rows; an orphan `.uid`.
+  - **If cut off:** rerun with the same args. A package whose branch has a `wip:` commit continues from it, and a skipped package runs once there's room.
+- **Usage:** the 5-hour window was at 67% at 13:40 and resets at 15:50 CDT. The gate skips any fixer that doesn't fit; rerun the same args after the reset.
+- **Next:** when V1 finishes, partition and fix its findings as a second wave (lenses [], its packages, the findings file extended). Then merge every fix branch with A22.
+
+### 2026-10-27 13:35 CDT: F-cuff merged (`44b1a7e`); V1 running beside V2-V6
+- **Merged:** `m4/f-cuff` (`682ebbc`, 1561/1561 on its branch). It merged cleanly onto its own base plus two doc files, so the tested tree is the merged tree. The preset and palette were regenerated (`--check` passes).
+  - **The cuff:** each glove's cuff is now a band that follows the forearm, 7.1 cm long and at most 5.8 cm from the arm's axis (8.6 before). The flange is gone.
+  - **A9:** the lens-share bar now misses in the jab and the cross at +8 degrees (4.7-5.1 points against 4). Those poses are ratcheted per pose and print the plan's bar (call 22).
+  - **The lens:** back to the cap's yellow (#e8bd2e) in the dark frame. The A/B showed the cream reading as a khaki visor. The shades test now asserts the frame instead of a colour distance.
+  - **Probe fixture:** F-cuff found that its `--check` reports NO (hash `b61973f6` against `c8a83e6a`) on the merged base, before F-cuff's changes. That's for V5 or the fixers.
+- **The lead's look:** the guard at 1 m reads as fingerless gloves on wrist cuffs, and the yellow shades in their frame read as the concept's goggles.
+- **Running since 13:35 CDT:** V1 (the Punk standing at 1 m, J1-J7): workflow `wf_febf38e3-d3b`, round `final`, base `44b1a7e`, worktree `.worktrees/m4-review-final-v1`. V2-V6 (`wf_f116f808-22a`) are still running on `3eea29a`.
+- **Next:** when both are done, rerun `workflow-review.js` with all six lenses, `reviews` and `verdicts` from both journals, `no_fix` false and base `44b1a7e`, so the fixers run.
+
+### 2026-10-27 12:38 CDT: the fix round merged (1561 tests, all passing); F-cuff and the final review (V2-V6) running
+- **Merged:** `m4/f-punk-fix` (`891b7b1`), `m4/f-player-fix` (`7faf7ce`) and `m4/p3-int` (`60d35c1`), with no conflicts. Then the A22 routine: the preset, the palette atlas (23 swatches, `--check` passes) and the import. The full suite was 1560/1561 with 0 SCRIPT, SHADER or ERROR lines. The one failure was `test_m4_done_when`'s A1 mesh list, which P3-int wrote before F-player-fix added `Body__fp_torso`. It's fixed in `3eea29a`, and the done-when file passes 18/18. Also in `3eea29a`: two stray `.uid` files F-punk-fix committed in `tests/` are removed, and the F-player-int paragraph "The hull" is updated, since P3-int moved that code.
+  - **F-punk-fix:**
+    - a clean dark glove collar (no yellow, no slivers);
+    - a cream lens (#e6dcc4) in a dark frame;
+    - smoothed shading normals (`pipe_normals.py`; the blotches);
+    - the face's own ink thresholds (the speckle);
+    - 14,299 triangles.
+  - **F-player-fix:**
+    - The legs and shoes were inside out: `player_parts` recalculated every normal at the split. That, not the swatch, made the front kick's shoe black.
+    - convex 4 cm domes at the arm cut and the belly top;
+    - 4,000-triangle fists with clean label borders;
+    - `Body__fp_torso` (the knockdown slab is 43% of the view off and 19% on);
+    - the hero's A9 as a ratchet;
+    - 29,320 triangles; no Tripo retry.
+  - **P3-int:**
+    - `ToonMaterials.outline(first_person)` (T8 byte-identical);
+    - A19 on both shipped GLBs (Punk p99.9 4.12, hero 8.67, printed as GATE lines);
+    - `tests/test_m4_done_when.gd`: PASS on A1, A2, A3, A5, A8, A10, A12, A13 and A14; GATE with a ratchet on A4 (the hero's walks), A6 (the hero's legs, 89.4%), A7, A9 and A11;
+    - the act 'Look: final probe' (L1 and L2 missed, L3 and L5 met, on the pre-merge art).
+  - **Tripo:** still 295 credits; the fix round spent none.
+- **The lead's look** (full-resolution before and after stills beside the concepts):
+  - The hero's fixes all read: a convex arm end with no ink fan, a lit charcoal shoe with a cream sole in the front kick, clean fingers in the look-down.
+  - The Punk's head now reads as a cap, a pale visor and a face, and the yellow and slivers are gone.
+  - Two Punk items are left:
+    - The collar is a wide flat flange under each fist (a "plunger base"). A9's 4-point lens-share bar forced it, because the art is slimmer than the proxies' fist box.
+    - The lens is cream, where the concept's is gold.
+  - Judgement call 22: the cuff follows the concept, and a pose that misses the share bar becomes a ratchet. Call 23: the review runs beside F-cuff, with V1 held.
+- **Running since 12:40 CDT:**
+  - **F-cuff:** workflow `wf_990bebea-f76`, `workflow-build.js` with `docs/reviews/M4/args-F-cuff.json`; worktree `.worktrees/m4-f-cuff`, branch `m4/f-cuff`. It reshapes the cuff into the concept's wrist band and A/Bs the lens (the cap's yellow inside the dark frame, against the cream). **If cut off:** rerun it with the same args; it resumes from the branch.
+  - **The final review, V2-V6:** workflow `wf_f116f808-22a`, `workflow-review.js` with `docs/reviews/M4/args-review-final.json` (round `final`, base `3eea29a`, `no_fix` true, one skeptic per finding). The worktrees are `.worktrees/m4-review-final-<lens>`. **If cut off:** rerun it with the same args, plus `reviews` and `verdicts` from the journal (`subagents/workflows/wf_f116f808-22a/journal.jsonl`) for the agents that finished.
+- **Next:**
+  1. Merge F-cuff (A22) and look at its stills.
+  2. Run V1 (the Punk standing at 1 m, J1-J7) as round `final` with base = the merged head.
+  3. Run the fixers: rerun `workflow-review.js` with all six lenses, `reviews` and `verdicts` from both runs, and `no_fix` false.
+  4. Then README's M4 sections, the evidence pack index, the PR (not merged) and the final DM.
+- **The review's scores:** `workflow-review.js` gained a required `scores` field (J1-J14, each 0, 1 or 2 with evidence) for Part B's pass rule. The rule: no 0s, every critical item at least 1, and a mean of at least 1.5.
+
+### 2026-10-27 11:30 CDT: F-punk and F-player-art merged (1533/1534, the hero's A9 the one red test); the fix round running
+- **Merged:** F-punk (`08ddacf`) and F-player-art (`159eefb`), then the A22 routine on the combined head: the preset regenerated (516 values), the palette atlas regenerated (23 swatches, `--check` passes), the ARCHITECTURE add/add resolved by keeping both headings, and the full suite 1533/1534 with 0 SCRIPT, SHADER or ERROR lines. The one failure is `test_art_player`'s hero A9 against FPView's proxies (10 poses), which F-player-fix turns into a ratchet (call 20).
+  - **F-punk:** Street Punk A from T4 (front, left and back views), T8 rig and T9 glove fist; 14,984 triangles, 7 slots and 6 colours, with A18's 1k detail mask wired in `punk_art.tres`. A6 is asserted at 95% (torso 100, legs 95.3, head 99.9). Still missed and ratcheted: visible stretch 8.4 cm (the waist hem in the cross's twist), A9's cells 6.6%, and A11's torso anchor 6.0 cm. 135 credits.
+  - **F-player-art:** Hero C from T11 body, T12 rig and T13 wrapped fist; Body plus Body__fp_hidden, 26,418 triangles; `player_detail.png`. The game wears it now. No Body__fp_torso, since the shared exporter and the contract allow only two meshes. The one red test was the hero's A9 against FPView's proxies (1529/1530 on its branch). 105 credits.
+  - **Tripo:** the ledger stands at 295 of the 750 stop; the balance is 1205.
+- **The lead's look** (full-resolution stills beside the concepts):
+  - The Punk reads as concept A: the backwards cap, the shades, the teal vest over a dark tank, pale jeans, the taped left forearm and the fingerless gloves.
+  - The Punk's faults: yellow gauntlet cuffs that aren't in the concept (our brief asked for "an accent strap"), the cap and lens sharing one yellow, face speckle, and blotchy bands on the vest and forearms.
+  - The hero's look-down, guard and haymaker read as wrapped, gloved fists.
+  - The hero's faults: his jab, cross and hook show the bare elbow half of the upper arm as a stump ending in the flat cut cap (the probe frames the same way; it is M3's rule), lumpy fingers, and a near-black shin and shoe in the front kick.
+  - Judgement calls 18-21 record these choices.
+- **Running since 11:45 CDT:** workflow `wf_c5861a1d-df2`, `workflow-build.js` with `docs/reviews/M4/args-F-fix.json`; the worktrees are `.worktrees/m4-f-punk-fix`, `m4-f-player-fix` and `m4-p3-int`, on branches `m4/<key lower-case>`. **If cut off:** rerun it with the same args (`resumeFromRunId` in this session); the runner resumes each package from its branch. The three builders run at once:
+  - F-punk-fix (Blender): the cuffs, the shades, the speckle and the blotches.
+  - F-player-fix (Blender): a rounded cap at the cut, the fists, the shoe value, Body__fp_torso, and the hero's A9 as a ratchet (call 20).
+  - P3-int (Godot): `ToonMaterials.outline(first_person)`, the real GLBs in A19, `test_m4_done_when.gd` and `look_probe` final.
+  - Then the six-lens review round, its fixes, README's M4 section, the PR (not merged) and the final DM.
+
+### 2026-10-27 09:05 CDT: Game-boy picked Street Punk A and Hero C; F-punk and F-player-art running
+- **The pick** (09:00 CDT, in the working session's chat, not the DM): Street Punk A (`punk_a_denim_vest.jpg`, the concept the smoke stand-in was built from) and Hero C (`hero_c_martial.jpg`, whole, no mix and match). His words are in the decisions log and in each brief. He also wants a menu of hero options later; that is not M4, but F-player-art keeps the hero in files so a second hero needs no code change.
+- **Running since 09:04 CDT:** workflow `wf_63ca3032-218`, `workflow-build.js` with `docs/reviews/M4/args-F-art.json` (both packages, two Sonnet builders, one Blender slot each):
+  - F-punk: `.worktrees/m4-f-punk`, branch `m4/f-punk`. Views, T4-T10, about 145 credits; replaces `punk.glb` in place.
+  - F-player-art: `.worktrees/m4-f-player-art`, branch `m4/f-player-art`. Views, T11-T14, about 185 credits; writes `assets/export/characters/player/player.glb`.
+  - They share the 750-credit stop (the ledger stands at 55) and each reads the ledger before a paid call.
+  - **If cut off:** `Workflow({scriptPath: "/Users/arachne/repos/beat-em-up-PoC/docs/reviews/M4/workflow-build.js", resumeFromRunId: "wf_63ca3032-218", args: <args-F-art.json>})` in this session, or relaunch it fresh with the same args; the runner resumes each package from its branch.
+- **The watcher** was told the pick arrived and no longer reads the DM for it.
+- **Next:** merge each with the A22 routine as it lands, then P3-int proper, the final six-lens review, fixes, README's M4 section, the PR (not merged) and the final DM.
+- **Usage at launch:** 5-hour 12% (resets 15:50Z), weekly 29%.
+
+### 2026-10-27 07:00 CDT: P3-flash merged (1530/1530); all pick-independent work is done; waiting on the pick
+- **Merged:** P3-flash (`bf7b0ab`, suite 1530/1530, 0 SCRIPT, SHADER or ERROR lines; the ARCHITECTURE add/add resolved by keeping both headings). The preset is at 516 values.
+  - Feel question 1: `hit_flash_fp_max_share` (0 = off) stretches the flash's on-screen disc to a cap. Suggested 0.12: the hold's knee goes from 20.8% to about 5% of the view, but an ordinary jab's flash shrinks by about 40%.
+  - Feel question 2: `hit_flash_finisher_radius_mult` (1.0 = off). Suggested 2.0: the haymaker goes from 0.3% to 7.3%.
+  - `RoomKit.warm_up_libraries()` warms the Bruiser and boss libraries: a first spawn is 3-4 ms, against about 30 ms cold.
+  - The VFX need no change under the linear tonemapper.
+  - The left-over list's warm-up and VFX items are done.
+- **The judgement calls log** has 17 entries, including the four feel toggles with their measured suggestions.
+- **Pick watch:** the usage watcher was asked (06:55) to read the DM on each check and message this session "Game-boy replied in the DM at <time>" when he replies. The one reminder went at 04:37, and no other DM goes to him.
+- **The lead's perf A/B** (07:20; M3 `afdb39e` against `bf7b0ab`; vsync on; load 2.4-4.6 from other apps, so noisy in absolute terms, with the refs interleaved; logs in `captures/perf_compare/a16-int/`):
+  - "Perf, six with ragdolls": mean 12.17 against 14.73 ms (+2.6), p95 +4.2, spawn hitch +3.3.
+  - First spawn is -0.6 (ok; the gate run had +1.0 before the warm-up fixes).
+  - First hit is +3.2, missing A16's soft +2 bar. The gate run had +1.4, so this is within this load's noise; P3-int's quiet run decides it.
+  - "Look: Perf, six art Punks": 14.89 ms mean, and 11.85 with FXAA (about M3's level; one FXAA run had a 278 ms first-hit spike).
+  - M3 itself misses the 16.7 ms p95 bar on this machine with vsync on.
+- **On the pick:** `docs/reviews/M4/args-F-art.json` is ready (both packages, `blender: true`). Replace `<PICK_PUNK>` and `<PICK_HERO>` with his exact words, record the pick in the decisions log, and launch it through `workflow-build.js` (both run at once). They share the 750-credit stop, and each checks the ledger before a paid call.
+- **Left for after the pick:**
+  1. F-punk: views, T4-T10, about 145 credits. Its brief carries gate gaps 3, 4, 5, 7, 9 and 13, the lens and cap swatch marks, a glove swatch value of 0.3 or more, a cuff radius from the wrist, and A18's detail mask, which goes to README for Game-boy's ruling.
+  2. F-player-art: views, T11-T14, about 185 credits. The GLB goes to `assets/export/characters/player/player.glb`, optionally with `Body__fp_torso`.
+  3. P3-int proper:
+     - `test_m4_done_when`, `look_probe` final, and re-recording c14, c15, l5, ff1-3, pa1-2 and C1-C13 on the real art;
+     - `ToonMaterials.outline(first_person)`, so player.gd stops calling `_hull`;
+     - the real GLBs added to the A19 strain run;
+     - the final perf A/B.
+  4. Then the final review round (six lenses), fixes, the README M4 section, the PR (not merged) and the final DM.
+
+### 2026-10-27 06:40 CDT: F-player-int merged (1507/1507); P3-flash running; then only pick work is left
+- **Merged:** F-player-int (`f2f987c`, suite 1507/1507, 0 SCRIPT, SHADER or ERROR lines).
+  - The player wears CharacterArt through CombatActor.art. `player_art.tres` names `assets/export/characters/player/player.glb` in metadata, and a missing file means M3's primitives with no warning.
+  - The probe body is worn behind the Debug switch `look_player_art_probe`. `Body__fp_hidden` is on layer 2.
+  - `test_art_player`: the lens rules on the skinned probe. A hold's nearest forearm or hand is 0.320 m, the own body at most 25.1% of the view, and the KO view's nearest vertex 0.344 m.
+  - Feel question 3 (`fp_knockdown_hide_torso`) is wired, default off: 74% to 15% on primitives, 37% to 0% on the probe. On art it hides the whole visible body unless the hero GLB adds a `Body__fp_torso` mesh.
+  - New acts: 'Look: my arms and legs' (pa1) and 'Look: my knockdown' (pa2). Record them with `CAPTURE_ARGS=--tune=look_player_art_probe=1`.
+- **Requests carried:**
+  - `ToonMaterials.outline(first_person)` plus RigPaint, so player.gd stops calling `ToonMaterials._hull` (P3-int).
+  - F-player-art: put the hero GLB at the path above; it is worn with no edit. Optionally add `Body__fp_torso`.
+  - The lead adds the hero and the real Punk to `test_skinned_art`'s A19 strain run.
+- **Running:** P3-flash (`wf_d718820d-4e0`).
+- **Concept pick:** none (DM read at 06:35).
+- **Usage:** 5-hour 9%, weekly 29%.
+
+### 2026-10-27 05:55 CDT: P3-early and F-look merged (1491/1491); F-player-int running on the probe body; still no pick
+- **Merged:**
+  - P3-early (`c5878fa`, suite 1472/1472):
+    - the long take c14 and the F4 showcase on one script;
+    - the L key log toggle and `combat_log_hide_while_holding` (feel question 4);
+    - Motion libraries rebuilt live, and a per-rig idle phase for the crowd;
+    - the ragdoll write-back test on a real StreetPunk;
+    - the face-down evidence, and the L5 act. With the art drawn, R8 is within 0.3-2.8 pp of the proxies, and R4 matches.
+  - F-look (`1cffe88`, suite 1491/1491; an ARCHITECTURE add/add conflict at the end of the M4 section, resolved by keeping all three headings in order):
+    - the sun as tunables, a camera-fixed character fill (`look_fill_*`) and the linear tonemapper (`look_tonemap`; 1 = filmic);
+    - bands 0.22/0.52 and an unfogged hull, so the ink matches the HUD's;
+    - the street within 0.30 saturation, 12 cm window boxes, and redrawn damage tiles;
+    - L1, L2 and L3 in range. The preset is at 514 values.
+- **The lead's look:** in the F-look pairs, the C2 Punk at 1 m has 3 crisp bands, warm skin, teal that reads teal and an even ink line. The C7 lineup shares the ink and bands. The lime Kicker is very bright.
+- **Left over from these packages:**
+  - re-record the vfx_bot sheets under the linear tonemapper (P3-int);
+  - ARCHITECTURE's P1-toon and P1-post headings still quote the old defaults (F-look's heading lists what moved);
+  - the Bruiser and boss library warm-up in `RoomKit.warm_up_art` (P3-int);
+  - the player box-hull corners at 4.2-4.7 px (F-player-art).
+- **Running:** F-player-int, launched 05:50 as `wf_bf4c7d7f-773` (args `docs/reviews/M4/args-F-player-int.json` plus `"only": ["F-player-int"]`; worktree `.worktrees/m4-f-player-int`, branch `m4/f-player-int`). It wires the player's art on the probe body, merge-safe: the game keeps M3's primitives until `player.glb` exists, and the probe is worn behind the Debug switch `look_player_art_probe`. It also does test_art_player, the lens rules on the skinned art, 'Look: my arms and legs', and feel question 3 (`fp_knockdown_hide_torso`).
+- **Also running:** P3-flash, launched 05:55 as `wf_d718820d-4e0` (args `docs/reviews/M4/args-P3-flash.json` plus `"only": ["P3-flash"]`; worktree `.worktrees/m4-p3-flash`, branch `m4/p3-flash`). It covers:
+  - feel questions 1 and 2 as toggles defaulting to today (`hit_flash_fp_max_share` 0, `hit_flash_finisher_radius_mult` 1.0);
+  - the Bruiser and boss library warm-up;
+  - the VFX checked under the linear tonemapper.
+  It and F-player-int both add to Look > FP feel; the lead merges that.
+- **The judgement calls log** (`docs/milestones/M4-judgement-calls.md`) has 15 entries.
+- **Concept pick:** none (DM read at 05:50; the one reminder went at 04:37).
+- **Usage:** the 5-hour window reset at 05:50 (60% before it); weekly 27%.
+- **Next:**
+  1. Merge F-player-int.
+  2. On the pick: F-punk and F-player-art (Tripo spend: about 145 + 185 credits expected, inside the 750 stop), then F-player-int's switch to the real GLB.
+  3. Without the pick, everything else is done except P3-int proper: the flash toggles 1-2, `test_m4_done_when`, the quiet perf A/B, and re-recording on the real art. It waits on the art.
+
+### 2026-10-27 05:00 CDT: F-motion merged (1414/1414); P3-early launching beside F-look
+- **Merged:** F-motion (`9ae7166`). The merge was clean, the preset is at 505 values, and the suite is 1414/1414 with 0 SCRIPT, SHADER or ERROR lines.
+  - No move clip changed: 41 move files were hashed key for key first, and `test_motion_m4` holds them.
+  - The 17 `POLISHED_IDS` breathe, bounce and shift weight. MotionLegs IK plants the soles, and idle hurtboxes move under 1 cm.
+  - Boxer walks are stride-matched, so the soles slide at most 1.5 cm a step (M3: 0.9 m).
+  - Flinches have head lag and overshoot, and get-ups are eased.
+  - New: Look > Motion tunables and the Debug switch `look_motion_polish`.
+- **The lead's look:** the walk-in sheet has the feet planted and no pops.
+- **Feel calls for the final DM:**
+  - The enemies' stride-matched step rate is brisk ("a scurry at the approach pace"; `look_motion_stride_m`).
+  - The idle life is subtle at 1 m (bounded by A20's 1 cm hurtbox limit; the guard sway and head drift are the dials).
+- **Open risks from F-motion:**
+  - Three tests sit with no margin on ragdoll start poses (test_ragdoll face down, uppercut in a corner, test_ko_view revive).
+  - The first Bruiser or boss spawn pays about 17 ms more for its library build. Its request to `RoomKit.warm_up_art` is F-look's file, and P3-int takes it later.
+  - The player's relaxed walks still slide (F-player or P3-int).
+- **Running:** P3-early, launched 05:00 as `wf_e158b574-662` (args `docs/reviews/M4/args-P3-early.json` plus `"only": ["P3-early"]`; worktree `.worktrees/m4-p3-early`, branch `m4/p3-early`). This is the part of P3-int that needs neither the pick nor F-look's files:
+  - the long take and the F4 showcase;
+  - the combat-log toggle (feel question 4);
+  - F-motion's two HumanoidRig requests (libraries rebuilt on Tuning.changed; a per-rig idle phase);
+  - gate gaps 10 and 12, and G1's gap 1 (the L5 act).
+- **P3-int proper keeps:**
+  - the flash toggles (1 and 2), which wait for F-look's rig_paint and toon files;
+  - `fp_knockdown_hide_torso` (3), which waits for the player art;
+  - `test_m4_done_when`, `look_probe` final, re-recording on the picked Punk, and the quiet-machine perf A/B.
+- **Concept pick:** none (DM read at 04:50).
+
+### 2026-10-27 04:40 CDT: the gate's fixes merged (1385/1385); F-look and F-motion running; the one pick reminder sent
+- **Merged:**
+  - `m4/fix-slice-chain-contract` (`85a24dd`): the hull normals in glTF axes, re-export proven to change only COLOR_0; the skin damage class; run.py step checks.
+  - `m4/fix-slice-drawn-art-instruments` (`ef38dba`): R4 on art, SkinnedView's drawn pose, A7's flips against the skinned rest, the warm-up in the lens (act W1).
+  - The atlas check passes, the preset is at 492 values, and the suite is 1385/1385 with 0 SCRIPT, SHADER or ERROR lines.
+  - SG-instruments' ARCHITECTURE sentences are pasted, and the gate doc's "Fixes made" is filled.
+- **The lead's look:** C1 at 1 m now has the ink line over the cap crown and forearms. At C5 30% health, the skin takes bruises and blood, but still reads lilac and glassy, and the cap and lenses wear too much blood. Those are brief lines for F-look (in its brief) and F-punk.
+- **Running:**
+  - F-look, launched 04:35 as `wf_a9c179b1-77a` (args `docs/reviews/M4/args-F-look.json` plus `"only": ["F-look"]`; worktree `.worktrees/m4-f-look`, branch `m4/f-look`). It has the gate's gaps 2, 6 and 11 and the phase-1 look requests.
+  - F-motion (`wf_d130ab18-851`), still running.
+- **Not re-measured:** first spawn and first hit after the warm-up fix, because two builders share the machine. That moves to P3-int's quiet-machine perf A/B.
+- **Pick reminder (A21's one reminder)** sent at 04:37 in the DM (ts `1793093835.705379`): only pick-dependent work is left (F-punk, F-player-art, F-player-int). Never send another and never pick for him.
+- **Usage:** 5-hour 44% at 04:35 (resets 05:50); weekly 25%.
+- **Next:**
+  1. Merge F-motion and F-look as they land (A22 order: F-motion first), with the suite after each.
+  2. Read the DM at each boundary.
+  3. On the pick: F-punk (views, T4-T10) and F-player-art (views, T11-T14), then F-player-int. Their briefs carry the gate's F-punk gap lines (3, 4, 5, 7, 9, 13, plus the lens and cap swatch marks).
+  4. Without a pick: P3-int's parts that don't need the real Punk.
+
+### 2026-10-27 04:10 CDT: the slice gate's verdict is (b), proven with a contingency; its two fixers and F-motion running
+- **The gate** (`wf_36e8400a-165`): two Opus lenses, 16 findings, 10 survive one Sonnet skeptic each. Both lenses gave verdict **(b)**. The lead wrote `docs/milestones/M4-slice-gate.md`: the pass items with evidence, the locks, 13 ranked gaps with owners, and the refuted findings. The full output is in `docs/reviews/M4/slice-result.json`.
+- **Locked:**
+  - the A-pose bind route (`punk.glb`) and Tripo weights;
+  - the landmark-warp fit, keeping the bulk, and border-protected decimation;
+  - `look_outline_px` 3.75 (after the axis fix);
+  - placeholder hulls on, and the dilated edge mask;
+  - 4x MSAA, with FXAA as the switch offered in the final DM;
+  - proxies accepted for crowd readability, plus art-drawn guards for the close-range lens rules.
+- **Contingencies** for phase 2: the hull-normal axis fix before any F-punk or F-player-art export; A18's detail mask (a README departure for Game-boy's ruling); a girth clamp only if A6 misses on the real Punk; weight smoothing only if F-punk's visible-stretch test fails.
+- **The worst gap:** the hull normals are baked in Blender's Z-up axes, so no ink shows on top and bottom silhouettes. SL-int's "even 3 px hull" claim was wrong.
+- **Running:** the gate's fixers, resumed into the same run `wf_36e8400a-165` (args `docs/reviews/M4/args-review-slice-fix.json`):
+  - `chain-contract`: hull normals, the skin damage class, run.py step validation. Worktree `.worktrees/m4-fix-slice-chain-contract`, branch `m4/fix-slice-chain-contract`.
+  - `drawn-art-instruments`: R4 on art, the SkinnedView pose source, the strain flip rule, warm-up placement. Worktree `.worktrees/m4-fix-slice-drawn-art-instruments`, branch `m4/fix-slice-drawn-art-instruments`.
+  - F-motion (`wf_d130ab18-851`) is still running.
+- **To resume after a stop:** `Workflow({scriptPath: "docs/reviews/M4/workflow-review.js", resumeFromRunId: "wf_36e8400a-165", args: <args-review-slice-fix.json>})`. The reviewers and skeptics replay from cache, and the fixers continue from their `wip:` commits.
+- **Usage:** 5-hour 37% at 03:05 (the gate cost about 25%, double its estimate); weekly 24%.
+- **Concept pick:** none (DM read at 03:05).
+- **Next:**
+  1. Merge the two fixers and F-motion, then the suite.
+  2. Re-measure first spawn and first hit.
+  3. Paste SG-instruments' replacement sentences into ARCHITECTURE, and fill the gate doc's "Fixes made".
+  4. Launch F-look with gate gaps 2, 6 and 11 in its brief.
+  5. Once only pick work is left, send A21's one reminder.
+
+### 2026-10-27 02:55 CDT: SL-int merged (1378/1378); the A16 perf baseline, then the slice gate
+- **Merged:** SL-int (`59a0adf`). The merge was clean, the preset is unchanged at 492 values, and the merge is green at 1378/1378 with 0 SCRIPT, SHADER or ERROR lines.
+- **What SL-int built:**
+  - Every Street Punk wears the smoke Punk: `game/actors/art/punk_art.tres` on `punk.glb`. `check()` passes for all four GLBs.
+  - The A/B variants (`punk_rest`, `punk_auto`, `punk_auto_rest`) sit behind the Debug tunable `look_punk_art_variant`, or `CAPTURE_ARGS="--tune=look_punk_art_variant=N"`.
+  - Prop hulls on the crates, dumpster and car (`RoomKit.prop_material`), and the art warm-up at room load.
+  - `tests/test_art_punk.gd` prints A6, A9, A10, A11 and A19 for all four GLBs.
+  - The act "Look: Perf, six art Punks" (slug p1).
+  - Re-recorded C1-C11, C13, E1, E2, the A/B and the autopilot crowd acts. `check_m3_log` is ok, and R1-R3, R10 and R11 are met.
+  - Its captures are in `.worktrees/m4-sl-int/captures/sl-int/`. Keep that worktree until the gate is done.
+- **The lead's look:** C2 at 1 m reads as a cartoon character: cap, shades, vest, crisp bands, violet shadows and an even hull. At the jab, the four GLBs are indistinguishable and the glove fills half the view.
+- **For the gate (SL-int's numbers, in `M4-calls/SL-int.md` §3):**
+  - A19: no GLB passes; the shoulder is worst, then the foot seam face down. The bind routes and weight sources differ by under 15%.
+  - A9: the art's arms are bulkier than the proxies (6.1% of cells differ at the jab, against a 3% bar).
+  - A11: the flash anchor sits 4-5 cm off the skin.
+  - A6: the legs are at 89-91%.
+  - J3: the gloves read as canisters. J13: the placeholders look like another game.
+- **Runner changes:** `workflow-review.js` takes `skeptics` (1 or 3) and `max_packages`, and its findings schema has `locks`, `gaps` and `verdict` for the gate.
+- **Gate args:** `docs/reviews/M4/args-review-slice.json` has G1 (mechanics and contract) and G2 (deformation and look at 1 m), with `no_fix` true. The lead reads the findings before choosing at most 2 fix packages.
+- **The lead's A16 perf run (03:05, vsync on, load 2.4-4.6 from other apps; logs in `captures/perf_compare/a16/`):** on "Perf, six with ragdolls", M3 mean 12.10 ms against M4 14.53 (+2.4), p95 +3.4, spawn hitch +2.9. First spawn and first hit are within +2 ms (ok). M3 itself misses the p95 bar on this machine. On "Look: Perf, six art Punks": FXAA saves 2.3 ms, depth-only edges save 1.0, edges off save 3.5, and the placeholder hulls cost nothing measurable (A7 stays on).
+- **Running:** the slice gate, Workflow run `wf_36e8400a-165` (script `docs/reviews/M4/workflow-review.js`, args `docs/reviews/M4/args-review-slice.json`; reviewer worktrees `.worktrees/m4-review-slice-g1` and `-g2`, detached at `59a0adf`). It stops after the partition (`no_fix`). To resume after a stop: `Workflow({scriptPath, resumeFromRunId: "wf_36e8400a-165", args: <the file>})`.
+- **Also running:** F-motion, launched at 03:15 as Workflow run `wf_d130ab18-851` (args `docs/reviews/M4/args-F-motion.json` plus `"only": ["F-motion"]`; worktree `.worktrees/m4-f-motion`, branch `m4/f-motion`). It started alongside the gate because its files (the poses and anims) are disjoint from anything the gate locks, A20 bounds it to non-move clips, and it spends no credits. The plan's rule is "If the pick is still out: start F-motion and F-look on the smoke Punk". F-look waits for the gate's locks (AA mode, outline px, edge mask).
+- **Then:** read the locks, gaps and verdicts, write `docs/milestones/M4-slice-gate.md`, and resume the run with the chosen packages (at most 2) and `no_fix` false.
+- **Done before the gate:**
+  1. The lead's A16 perf baseline, on a quiet machine with vsync on. The script is in the scratchpad; to rerun it: `tools/perf_compare.sh --vsync on --runs 3 --act "Perf, six with ragdolls" --act "Look: Perf, six art Punks" afdb39e 59a0adf`, then FXAA, depth-only, hulls off and edges off on the head through a `GODOT=` wrapper that appends `--tune=...` after `--`.
+  2. Paste the numbers into the gate args' `PERF_PLACEHOLDER`.
+  3. Launch the gate, then write `docs/milestones/M4-slice-gate.md`.
+
+### 2026-10-27 01:35 CDT: P1-post merged; phase 1 is complete; SL-int next
+- **Merged:**
+  - The P1-fx merge was green at 1325/1325.
+  - P1-post (`8afcf7b`; its own branch passed 1266/1266, built on a base without P1-toon). The merge was clean. The preset is at 492 values. The merge is green at 1363/1363.
+- **What P1-post built:**
+  - The edge pass (`game/fx/edge_pass.gdshader`): near-side depth lines and normal creases. A dilated 8-tap character mask (`look_edge_mask_px`) keeps the lines off tag-0 surfaces, so the hull carries those silhouettes.
+  - The `street_dusk` LUT (`tools/gen_lut.gd` from `assets/source/look/grade.json`).
+  - The AA mode (`look_aa_mode`).
+  - LookPost, added by `RoomKit.build_presentation`. The training room now builds through RoomKit.
+  - The car is a muted blue-grey (A13).
+  - A8's probe answers are in `docs/milestones/M4-calls/P1-post.md`.
+- **The lead's look:** in C2 before and after, and E1 at 1 m, the street, crates, curb and the primitive Punk get 1 px ink lines; the HUD is untouched and the car is no longer red. Known weaknesses: dashed creases on the 1.5 cm window boxes (F-look), and 1 px lines stepping on curves, since MSAA doesn't smooth post lines.
+- **Perf (NOISY, the edge pass alone):** about +3.1 ms at 4x MSAA and +2.0 ms with FXAA on the M1. A16's soft bar may need FXAA once six art Punks are in.
+- **Open requests, all handed to SL-int:**
+  - prop hulls through `ToonMaterials.environment(color, true)` (the `next_pass` route);
+  - re-record E1 and E2 with the real hulls, and check for doubled lines;
+  - the edge pass has not yet run over the real toon materials.
+- **Concept pick:** none yet (DM read at 01:30).
+- **Running:** SL-int, launched at 01:40 as Workflow run `wf_9934521a-9bf` (script `docs/reviews/M4/workflow-build.js`, args `docs/reviews/M4/args-SL.json` plus `"only": ["SL-int"]`; worktree `.worktrees/m4-sl-int`, branch `m4/sl-int`). To resume after a stop: `Workflow({scriptPath: "docs/reviews/M4/workflow-build.js", resumeFromRunId: "wf_9934521a-9bf", args: <the same>})`, or relaunch it fresh; the runner resumes from the branch state.
+- **Next:** when SL-int lands, merge it, then the slice gate (`docs/reviews/M4/workflow-review.js`, round "slice").
+
+### 2026-10-27 00:25 CDT: P1-fx merged; only P1-post is still running in phase 1
+- **Merged:**
+  - The P1-skin merge was green at 1313/1313.
+  - P1-fx (`657ca31`; its own branch passed 1269/1269). The preset is at 484 values. The suite on the merge is running.
+- **What P1-fx built:**
+  - Every effect is redrawn by `tools/gen_fx.gd` in `HudStyle.INK`, with stroke weights from `INK_TABLE`: 7.5 px at 1 m, about 2× the hull.
+  - Ben-Day dots on the bursts and on the lettering faces.
+  - A second variant per burst tier (`burst_*_2`), never repeated twice running.
+  - Every word is drawn at one cap height, with an inner highlight.
+  - Lying splats are unshaded (`vfx_splat_shade`), and blood is ink-outlined.
+  - Output is byte-stable, and a test reruns the generator to check it.
+- **The lead's look:** in C5's hook frame before and after, the effects read as one ink style with the toon Punk. The lettering is now the heaviest line on screen; it reads bold, not heavy. The contact flash's white blob still covers a big share of the view: that is a deferred feel question for P3-int's toggle.
+- **The look bible's VFX row** now names `INK_TABLE` instead of a tunable. `test_fx_m4` ties it to `look_outline_px`, so a hull change means a re-run of `gen_fx`.
+- **Next:** P1-post. Then SL-int, then the slice gate.
+
+### 2026-10-27 00:10 CDT: P1-skin merged; P1-post and P1-fx still running
+5-hour 69% (resets 00:50 CDT), weekly 17%.
+- **Merged:**
+  - P1-chain's merge was green at 1272/1272.
+  - P1-skin (`4f4c650`; its own branch with P1-toon passed 1298/1298). The lead dropped a stray `tests/test_zz_scratch.gd.uid`. The preset is unchanged at 482 values. The suite on the merge is running.
+- **What P1-skin built:**
+  - `SkinnedArt.attach()` and `check()`: the A3 chained bind route, in the GLB's bind order, by name. Each surface is rebuilt with CUSTOM0/1. FP-hidden GLB meshes go on the head layer.
+  - The ragdoll write-back on art rigs only (A5). `look_show_art` works live. `_head_clear_of` skips the art.
+  - `FPView.is_drawn()` and `depths()`.
+  - `tests/skinned_view.gd`: CPU skinning, TriangleMesh rays, strain, hurtbox fit and surface gap.
+  - `tests/test_skinned_art.gd` (41 tests) and `skin_acts.gd`.
+  - A/B check: the art and the primitives draw pixel-identical silhouettes through stagger, launch and lying. The lead saw the toon sheet: the probe Punk follows every pose and the KO blink-off.
+- **For SL-int and the gate:**
+  - The A19 strain reference: P1-skin measures against the skinned rest (`strain(mi, rig, globals)`). Check that this is the reference P1-chain asked for (C13).
+  - P1-chain's `probe_body` GLBs fail A19: p99.9 2.08, with shoulder candy-wrap from the auto weights. They are reported only, not asserted.
+  - FPView's analytic proxies are looser than the drawn primitives, so real art can read up to 7 cm nearer. The GLB tests use 2 cm and may need a ruling.
+  - `check()` is strict. A GLB that fails it attaches nothing, the rig keeps its primitives, and it warns once.
+  - The 15 ms cost test is wall-clock and could flap under heavy load.
+- **Next:** when P1-post lands, merge it and launch SL-int, which wires `punk_art.tres` into StreetPunk, runs the 1 m acts on the art, and records the perf act. Then the slice gate. P1-fx merges whenever it is done.
+
+### 2026-10-27 00:20 CDT: P1-chain merged; the smoke Punk is a GLB
+- **Merged** (`c69214f`; its own branch passed 1243/1243). The suite on the merge is running.
+  - The Blender chain: `tools/pipeline/run.py` with the `blender_*` steps, `gen_palette.py` and `ab_sheet.sh`.
+  - Four Punk GLBs in `assets/export/characters/punk/`: `punk.glb` (Tripo weights, A-pose, the default), `punk_rest.glb` (arms-down bake), `punk_auto.glb` and `punk_auto_rest.glb` (heat-map weights).
+  - The palette atlas plus `shared.json` and `punk.json`; `pipeline.json`, `report/`, `report_auto/` and `work/punk.blend`.
+  - `tests/test_art_contract.gd`: 15 tests, 1655 assertions.
+  - The lead ignored the per-run stills. `gen_palette.py --check` says the atlas is current.
+- **The Punk:** 14,999 triangles, 6 swatches, 23 named binds and no `neutral_bone`. Its joints are within 0.001 mm of the table chained through the swing, and the fist is in the fist box. It reads as concept A (the lead looked at `punk_apose_poses.png`): the guard, elbow 150 and knee −130 hold their volume, the arm raise 140 pinches at the armpit, and the face is soft.
+- **For the slice gate** (nothing is fixed yet):
+  1. **A3's 1 cm landmark residual is 2.35 cm on the Punk** (1.4 mm on the probe). Tripo's torso bones tilt 8-17°. Rule on the bar (calls C6).
+  2. **A7 strain misses:** p99.9 is about 2.0 at the guard, 2.9-4.3 at the arm raise and about 1.9 at the spine twist. The worst edges are the armpit, the vest collar (Neck to RightShoulder) and the jeans hem. Heat-map weights score lower than Tripo's everywhere. Naive weight smoothing made it worse. The A-pose route is no worse than the bake.
+  3. **The strain reference:** P1-chain asks that A19 measure against the *skinned rest pose*. For the A-pose route the GLB's own mesh already reads 1.7 at idle (C13). P1-skin was already running when this came in, so SL-int or the gate checks which reference P1-skin used.
+  4. Pick the weights source and the bind route from `report/stills/ab_weights_x_route.png` and the numbers.
+  5. Smaller points: the wide glove cuff can read as a bracelet; the soles sit at −4.3 mm (inside 5 mm); palette ΔE averages 9.4, so thin seams may be lost.
+- **Running:** P1-skin, P1-post and P1-fx. After them: SL-int (the smoke Punk in the crowd room), then the slice gate.
+
+### 2026-10-27 00:00 CDT: P1-toon and P1-chain's probe body merged; P1-fx running
+5-hour 65% (resets 00:50 CDT), weekly 16%.
+- **Merged:**
+  - P1-chain's `probe_body.glb` wip (`d0b07d3`, 1228/1228). It brings the Blender chain scripts, the probe body in both variants (A-pose and rest) and the palette atlas.
+  - P1-toon (`60a9d64`; its own branch passed 1245/1245). The preset regenerates at 482 values. The lead updated S0's ARCHITECTURE text to follow the retype. The suite on the merge is running.
+- **What P1-toon built:**
+  - One toon shader for every lit surface (`game/fx/toon.gdshader` plus `toon_light.gdshaderinc`, and the grid) and ink hulls on `material_overlay` (`toon_outline.gdshader`, modes 0-4). The flash keeps `next_pass`.
+  - Width is in pixels between near and far, faded at the lens; the player's own body draws at ×0.8.
+  - A shadow-map guard: without it the hull fattened shadows by 50%.
+  - RigPaint and DamageLook now use ShaderMaterial, and a UV2 detail mask was tested on a fixture.
+  - The lead looked at its first-person stills. The forearm and wraps read cel-shaded with an even line. The street is strongly violet, which is for P1-post and F-look to mute.
+- **P1-toon's requests still open** (P1-post was already running without them; SL-int or a P1-post fix picks them up):
+  1. Crates, the dumpster and the car should use `ToonMaterials.environment(color, true)`, which gives them a hull.
+  2. The edge pass reads `edge_tag`: 0 on every hulled surface (the art and, by default, the primitive characters, dummies, the pipe and hulled boxes), 1 on walls, floor and grid.
+  3. P1-skin's `attach()` must keep COLOR and add CUSTOM0 and CUSTOM1 (rest position and rest normal), and should use `paint.art_material()` and `paint.outline_material()`.
+  4. SL-int calls `ToonMaterials.warm_up(room, <art Punk>)`.
+  5. F-look: the sun sits behind the enemies, so their fronts fall in the mid and shadow bands. The violet is strong, and skin reads pinkish.
+- **Running:**
+  - P1-fx: `wf_461db2b0-0b9` (task `w5qjeow6a`, [args-P1-fx.json](reviews/M4/args-P1-fx.json));
+  - P1-skin, P1-chain and P1-post, as above.
+
+### 2026-10-26 23:45 CDT: L0-bench merged; P1-post running
+5-hour 58% (resets 00:50 CDT), weekly 15%.
+- **L0-bench merged** (`f49e30c`). On its own base it passed 1210/1210; the suite on the merge is running.
+  - **Look acts:** C1-C11 and C13 are in `tests/bot/acts/look_acts.gd` (slugs c1..c13).
+  - **Tools:** `look_rect.gd` prints the LOOK-MARK and LOOK-RECT lines, and `tools/look_sheets.sh` turns them into stills and 2× crops. `tools/perf_compare.sh` runs `tests/bot/perf_bot.tscn` in temporary worktrees per ref. `CAPTURE_ARGS` now reaches the bot through `capture_bot.sh`.
+  - **The before pack:** `captures/m4_before/<slug>/` (778 MB, local, never committed). It was recorded one act per process, so re-record the same way to pair before and after stills by label.
+- **Perf note for the lead's real run (A16):** unattended windowed runs with vsync off stall for 1.0 s every few seconds on this M1 (about 15 frames in 1700). Vsync-on runs don't stall. Read the report's stalls row first. If it warns, run with the window in front, or use `--vsync on` and rule on the p95 bar.
+- **Running since 23:45:** P1-post, `wf_89f245d9-23a` (task `why16ktxx`), with [args-P1-post.json](reviews/M4/args-P1-post.json). Its steps:
+  - A8's probe first;
+  - then the edge quad, the LUT and the training room through RoomKit;
+  - the car recoloured;
+  - `look_probe.gd`;
+  - NOISY perf numbers only.
+- **Still running:** P1-skin, P1-toon and P1-chain. P1-fx takes the next free Godot slot.
+
+### 2026-10-26 23:40 CDT: P1-tools done and merged; the smoke Punk is through Tripo (55 credits)
+- **Merged:** `50b42d4`.
+  - The `--spend` guard on every paid Tripo call.
+  - The mannequin: `assets/source/mannequin/`, made by `blender_mannequin.py` from `joints.json`.
+  - `blender_views.py`: four-side textured stills of any GLB.
+  - The smoke sources in `assets/source/characters/punk/smoke/`: a Gemini flat front view of Punk A; the T1 generation `cb4af11c_gen.glb` (19,510 triangles, faithful to the concept); the T3 rig `0366578f_rig.glb`; their dumps; and `source.json`.
+- **Ledger:** T1 30.00 (texture v3.5 costs the same as standard), T2 0, T3 25.00. M4 has spent **55** credits; the balance is **1445**.
+- **What the smoke taught us** (for P1-chain, all in `source.json`):
+  - Tripo's model faces +X (`facing_yaw_deg` 89.33), and `Left_*` means the character's own left.
+  - The model is 1.000 m tall, so it scales by 1.8.
+  - Tripo's rig has 67 bones and roots at Hips with no Root. Its names map by dropping the underscore (`Left_UpperArm` becomes `LeftUpperArm`).
+  - Its arms sit 38-42° from vertical and its legs splay about 10°.
+  - It is broader and more muscular than the rig table: the shoulders sit 6-9 cm low.
+  - Gemini's flat view didn't follow the mannequin's stance. For F-punk, tighten that with the mannequin's numbers or an edit round.
+- **Left as is:** P1-tools asked to drop the price table's two settled "unverified" entries. Its own self-test pins that flag, so the table stays unchanged; it only prints a warning.
+- **Still running:** P1-skin, P1-toon, P1-chain (which will find the smoke on its check) and L0-bench. A background watch merges P1-chain's `probe_body.glb` commit once it is pushed.
+- **Game-boy's pick:** none yet (read 23:38).
+
+### 2026-10-26 23:15 CDT: S0 and P1-tools part 1 merged (1216/1216); phase 1 running
+5-hour 43% (resets 00:50 CDT), weekly 12%. Phase 0 cost about 9%, much less than its estimate.
+- **Merged into `m4/art-pipeline`:**
+  - P1-tools part 1 (`584c6b0`): `tripo.py`, `tripo_prices.json`, `blender_dump_rig.py`, the empty ledger and the Concepts rows. No credits; the balance is 1500.
+  - S0-contract (`4d8c391`): 1216/1216 headless, with 0 SCRIPT, SHADER or ERROR lines. The preset regenerates unchanged (462 values). A seeded combo_bot recording is bit-identical to M3 on all 1815 frames. The lead reviewed the hunks in humanoid_rig, combat_actor, weapon and room_kit.
+- **Lead fixes:**
+  - `tools/gemini_image.py` finds the key from a worktree (the environment, then the repo's `.env`, then the main checkout's).
+  - The Tripo ledger merges by union.
+- **A near miss in P1-tools part 1:** a command without `--dry-run` would have started a real 30-credit T1, and the permission check blocked it. Part 2's first step makes paid calls also require `--spend <expected>`.
+- **S0's calls worth knowing:**
+  - C1: `test_audio`'s group-order test now expects Look, then Debug.
+  - C3: `look_outline_px` seeds at 3.75.
+  - C4: the primitives are hidden only when `SkinnedArt.attach()` returns meshes.
+  - C5: `art_material()` is a plain StandardMaterial3D stub.
+- **Running since 23:10** ([args-P1.json](reviews/M4/args-P1.json)):
+  - P1-skin: `wf_9bd1db5f-395` (task `wkq826175`);
+  - P1-toon: `wf_fad395f7-7df` (task `wgv9cp8g1`);
+  - P1-chain: `wf_b2b8f7d8-4aa` (task `wxc5qcvcb`). It proves the chain on `probe_body.glb` (pushed early for P1-skin). Then it waits for the smoke, or returns `wip` and gets relaunched.
+  - P1-tools part 2: `wf_09fa509f-1ab` (task `wk0fwaqxa`). Steps: the `--spend` guard, the mannequin renders, a Gemini flat view of Punk A, then T1-T3 (55 credits expected, 85 ceiling).
+  - L0-bench is still `wf_cc211798-6b5`.
+- **Lead, as each lands:**
+  1. Merge P1-chain's `probe_body.glb` wip as soon as it is pushed (P1-skin uses it).
+  2. Merge P1-tools on its final commit, then relaunch P1-chain if it returned `wip`.
+  3. When L0-bench is done, merge it, then launch P1-post (A8's probe first), then P1-fx.
+  4. Run the full suite after every merge.
+- **Game-boy's pick:** none yet (read 22:35).
+
+### 2026-10-26 22:40 CDT: M4 plan written; phase 0 (S0-contract, L0-bench, P1-tools) launching
+5-hour 34% (resets 2026-10-27 00:50 CDT), weekly 11%. The plan workflow cost about 29% of the window (8 agents, 3.0M tokens).
+- **The plan:** [M4-plan.md](milestones/M4-plan.md).
+  - The judge picked vertical-slice as the base and added 23 binding amendments (Part A). The main ones:
+    - A2: P1-pipe splits into P1-tools and P1-chain.
+    - A3: the A-pose bind route by default, with the arms-down bake as the slice gate's A/B.
+    - A4: the proxies stay, and the drawn art is measured with native TriangleMesh rays.
+    - A7: the hull goes on every character and prop.
+    - A8: the edge pass never reads the screen texture, and a first-hour roughness probe comes before building on it.
+    - A9: A/B switches go in "Debug", and every `vfx_*` tunable goes in "VFX".
+    - A10: Tripo has a 700 balance floor and a 750 ledger stop.
+    - A12: L0-bench and the C1-C13 look acts.
+    - A13: the red car gets recoloured, and no logos (concept D's sneakers).
+    - A14: F-player splits into art and integration.
+  - Part B is the done-when made checkable: the A1-A14 and L1-L5 rows, plus the J1-J14 rubric with critical items.
+  - Part C is vertical-slice, verbatim.
+  - The look targets are in [M4-look-bible.md](milestones/M4-look-bible.md).
+  - The three plans, `judge.json`, the codemaps and `reads.json` are committed.
+- **Lead pre-cuts done:**
+  - ASSETS.md sections: Concepts; Characters, with › Punk and › Player; Look.
+  - ARCHITECTURE "Art pipeline and look (Milestone 4)", with one heading per phase-0 and phase-1 package.
+  - `docs/milestones/M4-calls/`.
+  - `assets/source/_cache/` ignored, and the palette atlas set to keep-ours.
+  - The runner: [docs/reviews/M4/workflow-build.js](reviews/M4/workflow-build.js), with Godot slots (4) and Blender slots (2), and a Tripo credit report in each result.
+- **Phase 0** ([args-P0.json](reviews/M4/args-P0.json)). Each package runs as its own Workflow run (`only: [key]`), so each merge can happen as soon as its builder is done:
+  - **S0-contract:** the seams, RigPaint, the call-site stubs, `joints.json`, the test move, and the Look group.
+  - **L0-bench:** the look acts, `look_sheets.sh`, `perf_compare.sh`, and the before pack into `captures/m4_before/`.
+  - **P1-tools, steps 1-2 only:** `tripo.py`, `blender_dump_rig.py` and the Concepts ASSETS rows. No credits. It ends on a `wip:` commit, and a second launch after S0's merge does the mannequin and the smoke Punk T1-T3.
+- **Running since 22:45:**
+  - S0-contract: `wf_24684a15-5d9` (task `wsy3wzufe`);
+  - L0-bench: `wf_cc211798-6b5` (task `wnphun6a9`);
+  - P1-tools: `wf_c1309863-fd9` (task `wbqn4zcx7`).
+  - Worktrees: `.worktrees/m4-<key>`. Branches: `m4/<key>`.
+- **Game-boy's pick:** none yet. The DM thread was read at 22:35.
+- **Next:**
+  1. Merge S0.
+  2. Then launch P1-skin, P1-toon and P1-chain, plus P1-tools' second launch (args-P1.json, still to write).
+  3. When L0-bench is done, launch P1-post (A8's probe first), then P1-fx.
+- **If cut off:** rerun each package with `Workflow({scriptPath: "docs/reviews/M4/workflow-build.js"})` and the args file, using `only: [key]`. The runner resumes each package from its branch.
+
+### 2026-10-26 21:45 CDT: concepts sent; waiting on Game-boy's pick
+- Game-boy enabled billing on the Gemini project (21:40). Concept round 1 is in `assets/source/concepts/` (`concept_jobs.json`, `tools/gemini_image.py`, model `gemini-3-pro-image`, 2K): Street Punks A-D and hero sheets A-C. Both sheets were DMed at 21:42 CDT, asking for one Punk and one hero, mix-and-match allowed.
+- **Next, on his pick:** generate the orthographic front, side and back views of the picks (Gemini, with the picked image as a reference) for Tripo. The plan workflow is still running.
+
+### 2026-10-26 21:30 CDT: M4 working session started; the plan workflow running; Gemini images blocked on Game-boy
+5-hour 5% (resets 2026-10-27 00:50 CDT), weekly 6%.
+- **Sessions:** the M3 session is renamed "Beat-em-up: M3 session (done)". This session is "Beat-em-up: working session". The old watcher session (`local_618146a1`, Haiku) was told to restart its `/loop` with the "Usage watcher" prompt; a session started from another session can't start a new one.
+- **Running:** the plan workflow `wf_74e77973-52c` (task `w283e2yn1`):
+  - four Sonnet readers write `docs/milestones/M4-codemap/` (rig-render, fx-env-tooling, toolchain-tripo-gemini, toolchain-blender-godot);
+  - three Opus planners (rig-risk-first, look-first, vertical-slice) write `docs/milestones/M4-planning/m4-plan-*.md`;
+  - an Opus judge scores them and returns the amendments.
+  - **If cut off:** within this session, rerun the script with `resumeFromRunId: "wf_74e77973-52c"`. In a new session, write the plan from whatever codemaps and planning files exist.
+  - **Then:** the lead writes `docs/milestones/M4-plan.md` (Part A amendments, Part B the done-when made checkable, Part C the base plan), as in M3.
+- **Blocked on Game-boy (DMed 21:28 CDT):** the Gemini key is valid, but its project is on Google's free tier, which allows 0 image generations on every image model (`gemini-3-pro-image`, `gemini-3.1-flash-image`, `gemini-2.5-flash-image`, `gemini-3.1-flash-lite-image` all return 429 "limit: 0, Free Tier"). He's asked to set up billing on the key's project (AI Studio, Tier 1). The key's earlier "works" check only listed models. `gemini-2.5-flash` text is retired for new users; text calls would use `gemini-3.8-flash`.
+  - The concept prompts are ready (4 Street Punks, teal with a yellow accent as in M3, front A-pose; 3 hero design sheets with hand, fist and shoe callouts). The generator and its job file move into `tools/` with the plan.
+- **Next:** write the plan; launch the toolchain-free packages (toon shader, outlines, post, the VFX set); send the concepts as soon as images work.
+
+### 2026-10-26 21:10 CDT: the M4 toolchain is ready; M4 starts in a fresh session
+5-hour 5% (resets 2026-10-27 00:50 CDT), weekly 6% (resets Mon 2026-11-02 05:00 CDT). No watcher is running; the M4 session starts one.
+- **Ready, verified by the lead:**
+  - **Blender 5.2.2 LTS** on PATH.
+  - **The Blender MCP** (`mcp-for-blender`, user scope in Claude Code) is connected to Game-boy's open Blender: add-on 1.8, up to date, telemetry off. Its Tripo generator is Premium-only, so call Tripo's own API with our key instead.
+  - **`.env`:**
+    - `TRIPO_API_KEY` works: `GET https://api.tripo3d.ai/v2/openapi/user/balance` returns 1500, with 0 frozen.
+    - `GEMINI_API_KEY` works (send it in the `x-goog-api-key` header, never in a URL). The image models are `gemini-3-pro-image`, `gemini-3.1-flash-image` and `gemini-2.5-flash-image`.
+    - Never print either key.
+  - Mixamo is skipped (try Tripo's auto-rig first).
+- **How M4 runs** (the lead's defaults, for Game-boy to change):
+  - **Like M3:** a plan workflow, parallel builders in worktrees, adversarial review in first person, fixes, and no pauses for grey-block feel questions.
+  - **Pauses on purpose:**
+    1. **The concept pick** (SPEC §10: 2-4 concepts, Game-boy picks one) for the Street Punk and for the player's arms and legs. DM him the images on Slack (Michael, `U0AQMKKBL93`; upload them to the DM) and carry on with the toolchain-free work meanwhile.
+    2. **The done-when:** the Punk at 1 m, standing and in motion, judged by him.
+  - **Tripo credits:** spend at most 800 of the 1500 without asking; log each generation's cost.
+  - **The playable link:** the GitHub release page 404'd for Game-boy (private repo; his browser isn't signed in as `mikedtcm22`). He asked for a link that opens the game in Godot, so give him the run command (`godot --path /Users/arachne/repos/beat-em-up-PoC`) as a Run-button code block, and a release only as a second option.
+  - The deferred "until the art is in" feel questions come due once the Punk is in: the flash's first-person size, the haymaker's flash, the knockdown view, and grab-03's combat log.
+- **Branch:** `m4/art-pipeline` (from `main` at `afdb39e`).
+
+### 2026-10-26 20:50 CDT: Milestone 4 toolchain set-up started (branch `m4/art-pipeline`)
+- **Game-boy's toolchain calls (2026-10-26):**
+  - **Mixamo:** skipped for now; whether it's needed is assessed later. Tripo's auto-rigging is tried first.
+  - **3D generation:** Tripo.
+  - **Image generation:** Google Gemini.
+  - **Blender:** OK to install from the command line.
+- **Done:**
+  - Blender 5.2.2 LTS is installed with Homebrew (`brew install --cask blender@lts`). `blender` is on PATH and headless Python works (Python 3.13). No 4.x cask exists any more; the spec's "4.x" predates 5.x.
+  - `.env` is created (git-ignored) with empty `GEMINI_API_KEY=` and `TRIPO_API_KEY=` for Game-boy to fill in. `.env.example` and README's API keys and toolchain tables are updated.
+- **The lead's assessment of the Tripo MCP tutorial** (tripo3d.ai, "cursor-tripo-mcp-tutorial"):
+  - That route is Tripo's own Blender add-on (`VAST-AI-Research/tripo-3d-for-blender`, last release v0.7.7, 2025-11, before Blender 5.2) with its "Start MCP Server" button, plus `uvx tripo-mcp` in the MCP client.
+  - `tripo-mcp` is "alpha", untouched since 2025-04, and makes models from a text prompt into an open Blender.
+  - **Recommended instead:**
+    - call Tripo's REST API directly from a script with `TRIPO_API_KEY` (image-to-3D from the chosen concept in a T-pose, and Tripo's auto-rig), reproducible and with no Blender window needed;
+    - process in Blender headless (`blender --background --python`, SPEC §10);
+    - optionally add the general Blender MCP (`mcp-for-blender`, formerly `blender-mcp`, active, sets up Claude Code itself, also lists Tripo) for interactive look-and-fix work.
+- **Waiting on Game-boy:**
+  - the two keys in `.env`;
+  - optionally the Blender MCP setup (steps given in chat: `brew install uv`, `uvx mcp-for-blender setup`, restart the Claude app, open Blender; consider turning its telemetry off).
+- **Next:** plan M4 (`docs/milestones/M4-plan.md`). The toolchain-free parts (toon shader, outlines, post-processing, the comic VFX set) can start before the keys arrive.
+
 ### 2026-10-26: Game-boy signed off Milestone 3; PR #3 merged
 - **Game-boy (2026-10-26):** "happy with the enemy AI", M3 is complete as-is, and every judgement call and spec departure made in M3 is approved. README's "Where M3 departs from the spec" and `docs/milestones/M3-judgement-calls.md` now say so. The boss keeps the spec's 300 HP.
 - **PR #3 merged into `main`.** The `.worktrees/m3-*` worktrees can be pruned; every branch is pushed.
@@ -1179,6 +1950,8 @@ Every approved spec change so far is in README.md, "Where M1 departs from the sp
 - **Milestone 3 setup (2026-10-25 16:50 CDT):** M2 signed off and merged. M3 runs without Game-boy's input until it's done to spec, then a Slack DM with a playable link and a digest of judgement calls (each with an alternative not taken). The playable link is a GitHub Release with a zipped macOS export (downloading the official export templates is approved). The boss is in M3 as graybox with a placeholder name. Enemy grabs on the player can be broken by mashing P/K. The account is now a premium seat (5 times the limits): the watcher checks less often, and at a limit a scheduled task resumes the work after the reset.
 - **Comms (2026-10-25 17:35 CDT):** whenever work is blocked on Game-boy (an authorization, a permission prompt, a login, a decision), DM him on Slack (Michael, `U0AQMKKBL93`) at once, then carry on with anything not blocked.
 - **Milestone 3 signed off (2026-10-26):** Game-boy played the build, called M3 complete as-is and approved every M3 judgement call and spec departure (README, `docs/milestones/M3-judgement-calls.md`). The boss keeps 300 HP.
+- **Milestone 4 toolchain (2026-10-26):** skip Mixamo for now and assess later (Tripo auto-rig first); Tripo for 3D generation; Google Gemini for images; Blender installed from the command line (5.2.2 LTS).
+- **M4 concept pick (2026-10-27 09:00 CDT, in the session chat):** Street Punk A and Hero C. His words: "Eventually, I'll want to allow for selecting from a menu of hero options, but for this demo, let's go with Hero C. I like Street Punk A, as well." The hero menu is a later milestone's feature; M4 builds Hero C only, with everything hero-specific in files.
 - **Process:** at each usage limit, hand off to Game-boy's second Claude account. Never assume the same session resumes.
 
 ## Usage watcher
@@ -1218,9 +1991,9 @@ Otherwise say nothing beyond one short line: the two percentages and the next ch
 **Resume after a limit.** The working session creates the resume task itself as the last step of a handoff (the watcher's step 3 is the fallback when it was cut off first): `mcp__scheduled-tasks__create_scheduled_task` with the fields in the watcher's step 3, firing 10 minutes after the window that stopped work resets. The task wakes the working session if it still exists, which keeps its context, or else starts a takeover. Its prompt, verbatim:
 
 RESUME-PROMPT-START
-Resume the beat-em-up Milestone 3 work after a usage reset. The project is /Users/arachne/repos/beat-em-up-PoC (Godot 4.7.2, GitHub mikedtcm22/beat-em-up-PoC). Game-boy (the owner) asked on 2026-10-25 for the work to continue across usage limits without waiting for him, until Milestone 3 is done.
+Resume the beat-em-up Milestone 4 work after a usage reset. The project is /Users/arachne/repos/beat-em-up-PoC (Godot 4.7.2, GitHub mikedtcm22/beat-em-up-PoC). Game-boy (the owner) asked for the work to continue across usage limits without waiting for him, until Milestone 4 is done.
 1. Call mcp__ccd_session_mgmt__get_usage (load it with ToolSearch). If either the "5-hour limit" or the "Weekly · all models" window is still at 90% or more, create a copy of this task with mcp__scheduled-tasks__create_scheduled_task (a new taskId starting "beat-em-up-resume-", fireAt that window's resetsAt plus 10 minutes, the same prompt) and stop.
-2. Call mcp__ccd_session_mgmt__list_sessions (load it with ToolSearch). If a session titled exactly "Beat-em-up: working session" is listed and not archived, send it with mcp__ccd_session_mgmt__send_message: "Scheduled resume: the usage window has reset. Check get_usage, make sure a usage watcher is running (docs/HANDOFF.md, 'Usage watcher'), then resume Milestone 3 from the newest entry in docs/HANDOFF.md." If the result says "delivered" or "queued", you're done: say so in one line and stop.
+2. Call mcp__ccd_session_mgmt__list_sessions (load it with ToolSearch). If a session titled exactly "Beat-em-up: working session" is listed and not archived, send it with mcp__ccd_session_mgmt__send_message: "Scheduled resume: the usage window has reset. Check get_usage, make sure a usage watcher is running (docs/HANDOFF.md, 'Usage watcher'), then resume Milestone 4 from the newest entry in docs/HANDOFF.md." If the result says "delivered" or "queued", you're done: say so in one line and stop.
 3. Otherwise you are the new working session: follow the takeover prompt in docs/HANDOFF.md (the "Takeover prompt" section) exactly, starting with renaming this session "Beat-em-up: working session".
 RESUME-PROMPT-END
 
@@ -1255,11 +2028,11 @@ If no watcher is running, for example after an account switch, start one with th
 Game-boy pastes this into a new account's session. Keep the "Next steps" list current at every handoff; the rest changes rarely.
 
 ```
-You're taking over an in-progress Godot 4.7.2 project: a first-person beat-em-up proof of concept at /Users/arachne/repos/beat-em-up-PoC (GitHub: mikedtcm22/beat-em-up-PoC). I'm Game-boy, the project owner. Other Claude accounts did the work so far and handed off at their usage limits. We switch accounts at every usage limit, so treat the repo as the only source of truth. Work happens on branch m3/enemy-ai and the worktrees under .worktrees/.
+You're taking over an in-progress Godot 4.7.2 project: a first-person beat-em-up proof of concept at /Users/arachne/repos/beat-em-up-PoC (GitHub: mikedtcm22/beat-em-up-PoC). I'm Game-boy, the project owner. Other Claude accounts did the work so far and handed off at their usage limits. We switch accounts at every usage limit, so treat the repo as the only source of truth. Work happens on branch m4/art-pipeline and the worktrees under .worktrees/.
 
 Start by doing these, in order:
 1. Rename this session to "Beat-em-up: working session" (mcp__ccd_session_mgmt__set_session_title). The usage watcher finds you by that title.
-2. Read CLAUDE.md, then docs/HANDOFF.md (live status and exact resume steps; the newest entry is at the top). Then read docs/milestones/M3-plan.md and docs/milestones/M3-judgement-calls.md. Read docs/ARCHITECTURE.md, the codemaps in docs/milestones/M3-codemap/ and docs/SPEC.md §5, §7, §8 and §11 before touching code.
+2. Read CLAUDE.md, then docs/HANDOFF.md (live status and exact resume steps; the newest entry is at the top). Then read docs/milestones/M4-plan.md (its header says how to read it: the amendments in Part A win over Part C) and docs/milestones/M4-look-bible.md. Read docs/ARCHITECTURE.md and docs/SPEC.md §5, §6, §10 and §12 before touching code.
 3. If no usage watcher is running (list your sessions), start one exactly as docs/HANDOFF.md describes under "Usage watcher" (Haiku, low effort, self-paced /loop, shares this checkout, its prompt verbatim).
 4. Check usage (mcp__ccd_session_mgmt__get_usage) before launching any workflow or agent.
 
@@ -1270,11 +2043,13 @@ USAGE RULES:
 - Prefer one agent per work package doing review, then fix, over many reviewers per package.
 - The watcher checks every 30 minutes below 70%, every 15 up to 85% and every 5 above. It tells you to halt and hand off at 90%; the handoff's last step is the scheduled resume task (docs/HANDOFF.md, "Resume after a limit").
 
-Next steps (Milestone 3; details are in docs/HANDOFF.md, newest entry first):
-- M3 is signed off and merged (PR #3, 2026-10-26); M2 too (PR #2). Next is Milestone 4, the art pipeline proof (SPEC §12): plan it once my toolchain items are in (docs/HANDOFF.md, newest entry). Its plan is docs/milestones/M3-plan.md (Part A amendments bind; Part B is the checkable done-when; Part C the base plan). Builds run through docs/reviews/M3/workflow-build.js with args in docs/reviews/M3/args-<phase>.json, resumable from branch state: rerun the same args after a cut-off.
-- I asked (2026-10-25) for M3 to run to completion without my input. When it's done to spec, DM me on Slack (Arachne Finance, Michael, U0AQMKKBL93) with (1) a link to a playable build (a GitHub Release with a zipped macOS export; the export preset and templates are set up) and (2) a digest of key judgement calls, each with at least one alternative not taken and why (docs/milestones/M3-judgement-calls.md). If something blocks you on me (an authorization, a login, a decision), DM me on Slack at once and carry on with what isn't blocked.
-- I turned ultracode on (2026-10-24) and asked for multi-agent workflows: use Workflow scripts for substantive work (Opus plans and reviews, Sonnet codes).
-- Don't put fine grey-block look or feel questions to me; take the default and log it.
+Next steps (Milestone 4; details are in docs/HANDOFF.md, newest entry first):
+- M1-M3 are signed off and merged. M4 (SPEC §12: the art pipeline proof) runs on branch m4/art-pipeline. Its toolchain is ready: Blender 5.2.2 LTS, the Blender MCP connected to my open Blender, and working TRIPO_API_KEY and GEMINI_API_KEY in .env. Mixamo is skipped for now.
+- The M4 plan is written (docs/milestones/M4-plan.md). Phase 1 is built and merged: S0, P1-tools, L0-bench, P1-toon, P1-chain, P1-skin, P1-fx and P1-post. The smoke Punk (concept A) is a GLB in assets/export/characters/punk/. Tripo spend is in assets/source/tripo_ledger.jsonl (stay at or under 800 credits without asking; the plan stops at 750).
+- Builders run through docs/reviews/M4/workflow-build.js, one Workflow run per package (args files in docs/reviews/M4/args-*.json; the newest HANDOFF entry names what is running and what is next). Reviews and the slice gate run through docs/reviews/M4/workflow-review.js. After each merge: godot --headless --import --quit, godot --headless -s tools/gen_default_preset.gd, then tools/run_tests.sh.
+- Order from here: SL-int (args-SL.json), the slice gate (two Opus lenses into docs/milestones/M4-slice-gate.md), phase 2 (F-motion, F-look, F-punk, F-player-art, F-player-int), phase 3 (P3-int, the final review, fixes), then the PR (not merged) and the DM. F-punk and F-player-art need my concept pick: check my DM (Slack channel D0AQUKX5DB6) at every phase boundary.
+- Run it without pausing, except for the concept pick (2-4 concepts each for the Street Punk and for the player's arms and legs: DM me the images on Slack, Michael, U0AQMKKBL93) and the final judgement of the Punk at 1 m. At the end, DM me a run command that opens the game in Godot, plus a digest of the key judgement calls with alternatives. If something blocks you on me, DM me at once.
+- I turned ultracode on (2026-10-24) and asked for multi-agent workflows: use Workflow scripts for substantive work (Opus plans and reviews, Sonnet codes). Don't put fine grey-block feel questions to me.
 
 Ground rules:
 - Never merge a milestone PR into main until I've played it and signed it off.

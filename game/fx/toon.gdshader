@@ -1,0 +1,124 @@
+shader_type spatial;
+// The one toon shader (Milestone 4, docs/ARCHITECTURE.md "Toon shader, hull, flash and damage
+// on toon"): the placeholder characters' flat paints, the skinned art's palette atlas, the
+// pipe and the room's boxes. One shader for all of them, so a switch of look, flash or damage
+// never changes the shader variant (a switch would compile one mid-fight): they are uniforms.
+// The lighting is toon_light.gdshaderinc's; the hull outline is toon_outline.gdshader's (on
+// the mesh's material_overlay); the contact flash is hit_flash.gdshader's (next_pass).
+render_mode ambient_light_disabled;
+
+// The art's palette atlas decides, per swatch, whether the hard highlight shows (swatch_spec and
+// swatch_glint below), and its detail mask's G where on that swatch the glint may show (glint_gate):
+// the lighting include declares and reads those varyings, and the glint's uniforms, only for a shader
+// that asks for them with this define (the floor's grid does not).
+#define TOON_SWATCH_SPEC
+#include "res://game/fx/toon_light.gdshaderinc"
+
+// The flat color (a placeholder paint, a prop, a wall), tinting the atlas when one is used.
+uniform vec4 albedo : source_color = vec4(1.0);
+// The art's palette atlas (256x16, each face's UV on its swatch's centre; the alpha is the
+// swatch's damage class: 1.0 takes the clothes' marks, 0.8 the skin's (damage_skin_tex), 0.5 none;
+// a glossy swatch (the shades' lens) is one 8-bit step lower in its class: 254, 203, 127).
+uniform sampler2D albedo_tex : source_color, filter_nearest, repeat_disable;
+uniform bool use_albedo_tex = false;
+// The art's optional detail mask on UV2: R = ink lines (seams, wraps, stitching), never shading; G = the
+// glint gate, the authored streaks on a glossy swatch (the Punk's lens, 0.5 on a streak's edge); B unused.
+uniform sampler2D detail_tex : filter_linear_mipmap, repeat_disable;
+uniform bool use_detail_tex = false;
+uniform float detail_strength : hint_range(0.0, 1.0) = 1.0;
+// Sharp ink (both characters' masks; ToonMaterials sets it per material from the art's
+// metadata/detail_sharp, off for an art that does not ask): the mask is cut at detail_cut with an
+// edge one pixel wide (its own screen-space gradient), so a line one texel wide stays a crisp line
+// when it is magnified, where the linear mix (the default) makes it a grey smear 3 to 9 pixels wide
+// beside the hull's hard line.
+uniform bool detail_sharp = false;
+uniform float detail_cut : hint_range(0.0, 1.0) = 0.15;
+// The ink (HudStyle.INK): the hull's, the detail lines'.
+uniform vec3 ink : source_color = vec3(0.07, 0.06, 0.09);
+// The whole-body parry flash: this color times this share, added after the lighting.
+uniform vec3 flash_color : source_color = vec3(1.0);
+uniform float flash_amount : hint_range(0.0, 1.0) = 0.0;
+// The damage look: a triplanar of damage_tex (one tile every 1/damage_scale m) over the
+// rest-pose position and normal of the art (CUSTOM0/1, so the marks stick to the moving body),
+// or the part's own vertex space for a rigid primitive; times marks (0 = takes none) and the
+// atlas's alpha. A look is a different damage_tex, never a different shader. The art is one
+// material, so its skin swatches take damage_skin_tex (the bruises, then the blood) where its
+// clothes take damage_tex (the scuffs, then the blood); a primitive's paint is one class, so
+// it never reads damage_skin_tex. Unset, damage_skin_tex is fully transparent (a clean skin).
+uniform sampler2D damage_tex : source_color, filter_linear_mipmap, repeat_enable;
+uniform sampler2D damage_skin_tex : source_color, hint_default_transparent, filter_linear_mipmap, repeat_enable;
+uniform float damage_scale : hint_range(0.1, 20.0) = 2.5;
+uniform float marks : hint_range(0.0, 1.0) = 0.0;
+uniform bool use_rest_custom = false;
+// The edge pass's tag, written as ROUGHNESS: 0 on a surface that has its own hull (the pass
+// skips its silhouette), 1 elsewhere.
+uniform float edge_tag : hint_range(0.0, 1.0) = 1.0;
+
+varying vec3 mark_pos;
+varying vec3 mark_normal;
+
+// The one swatch-gloss decode (ToonMaterials.swatch_glossy() mirrors it): the atlas alpha's class
+// (255 clothes, 204 skin, 128 none: read by the 0.9 and 0.75 thresholds) minus exactly one step is
+// glossy (any other alpha, a transparent texel, say, is matte).
+float swatch_gloss(float alpha) {
+	float a8 = floor(alpha * 255.0 + 0.5);
+	float class_a8 = alpha > 0.9 ? 255.0 : (alpha > 0.75 ? 204.0 : 128.0);
+	return 1.0 - step(0.5, abs(class_a8 - a8 - 1.0));
+}
+
+void vertex() {
+	if (use_rest_custom) {
+		mark_pos = CUSTOM0.xyz;
+		mark_normal = CUSTOM1.xyz;
+	} else {
+		mark_pos = VERTEX;
+		mark_normal = NORMAL;
+	}
+}
+
+void fragment() {
+	vec3 color = albedo.rgb;
+	float takes_marks = marks;
+	float skin_marks = 0.0;
+	// The share of the hard highlight this surface takes (toon_light.gdshaderinc multiplies it in) and
+	// whether it also takes the camera-fixed glint: a flat-painted surface takes the material's own
+	// highlight (spec_gloss: 1 matte, more glossy) and no glint; the art's swatches take both only
+	// where the atlas says glossy, so the vest, denim, cap and skin stay matte and the lens glints.
+	swatch_spec = 1.0;
+	swatch_glint = 0.0;
+	glint_gate = 1.0;
+	if (use_albedo_tex) {
+		vec4 swatch = texture(albedo_tex, UV);
+		color *= swatch.rgb;
+		takes_marks *= step(0.75, swatch.a);
+		skin_marks = 1.0 - step(0.9, swatch.a);
+		swatch_spec = swatch_gloss(swatch.a);
+		swatch_glint = swatch_spec;
+	}
+	if (use_detail_tex) {
+		float ink_mask = texture(detail_tex, UV2).r;
+		if (detail_sharp) {
+			float edge = max(0.5 * fwidth(ink_mask), 0.0001);
+			ink_mask = smoothstep(detail_cut - edge, detail_cut + edge, ink_mask);
+		}
+		color = mix(color, ink, ink_mask * detail_strength);
+		// The glint gate: an art with a mask lets its glossy swatch glint only on the streaks the mask's G
+		// authors, cut at 0.5 with the same one-pixel edge (the field is a distance ramp, so the cut is sharp).
+		// Without a mask the glint is the whole glossy swatch's.
+		float streak = texture(detail_tex, UV2).g;
+		float streak_edge = max(0.5 * fwidth(streak), 0.0001);
+		glint_gate = smoothstep(0.5 - streak_edge, 0.5 + streak_edge, streak);
+	}
+	if (takes_marks > 0.0) {
+		vec3 w = abs(normalize(mark_normal));
+		w /= max(w.x + w.y + w.z, 0.0001);
+		vec3 p = mark_pos * damage_scale;
+		vec4 d = texture(damage_tex, p.zy) * w.x + texture(damage_tex, p.xz) * w.y + texture(damage_tex, p.xy) * w.z;
+		vec4 d_skin = texture(damage_skin_tex, p.zy) * w.x + texture(damage_skin_tex, p.xz) * w.y + texture(damage_skin_tex, p.xy) * w.z;
+		d = mix(d, d_skin, skin_marks);
+		color = mix(color, d.rgb, d.a * takes_marks);
+	}
+	ALBEDO = color;
+	ROUGHNESS = edge_tag;
+	EMISSION = flash_color * flash_amount;
+}

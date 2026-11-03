@@ -9,6 +9,7 @@ extends GutTest
 
 const Probe := preload("res://tests/bot/readability_probe.gd")
 const STUB_ENEMY := preload("res://tests/fixtures/stub_enemy.tscn")
+const PUNK_SCENE := preload("res://game/enemies/punk/street_punk.tscn")
 const StubDirector := preload("res://tests/fixtures/stub_director.gd")
 
 
@@ -728,6 +729,42 @@ func test_r4_a_windup_behind_the_player_is_not_in_view() -> void:
 	var summary := _probe.end_act()
 	assert_eq(summary.metrics.occlusion_windups_in_view, 0)
 	assert_null(summary.metrics.occluded_windup_share)
+
+
+func _punks_in_line(show_art: bool) -> Dictionary:
+	# Two Street Punks in a line ahead of the player (art as the room draws it, or the primitives),
+	# the rear one winding up. The AI is frozen so only the forced attack moves.
+	Tuning.set_value(&"ai_frozen", true)
+	Tuning.set_value(&"look_show_art", show_art)
+	_probe.occlusion_every = 2
+	var blocker := _stub(0.0, 1.1, PUNK_SCENE)
+	var attacker := _stub(0.0, 2.6, PUNK_SCENE)
+	await _ticks(3)
+	attacker.force_attack()
+	await _ticks(40)
+	var summary := _probe.end_act()
+	return {summary = summary, blocker = blocker, attacker = attacker}
+
+
+func test_r4_an_art_punk_in_front_hides_the_windup_behind_it() -> void:
+	# M4: every Street Punk wears skinned art and hides its primitives, so R4 must count what stands
+	# in for the art (the view proxies, as R8 and A4 do): with the proxies skipped as invisible and
+	# the art's ArrayMesh never ray-cast, a Punk crowd read 0 by construction and R4 could not fail.
+	var run := await _punks_in_line(true)
+	var summary: Dictionary = run.summary
+	assert_true((run.blocker as EnemyActor).rig.has_art(), "the Punk wears the art")
+	assert_true((run.blocker as EnemyActor).rig.art_meshes()[0].is_visible_in_tree(), "and it shows")
+	assert_eq(summary.metrics.occlusion_windups_in_view, 1, "the rear Punk's wind-up is in the lens")
+	assert_eq(summary.metrics.occluded_windup_share, 1.0, "the Punk in front hides its chest")
+	assert_eq(_status(summary.verdict, "R4"), "miss")
+
+
+func test_r4_two_primitive_punks_in_line_read_the_same_as_the_art_ones() -> void:
+	# The control: the A/B off (the primitives show), the same line of two reads the same.
+	var run := await _punks_in_line(false)
+	var summary: Dictionary = run.summary
+	assert_eq(summary.metrics.occlusion_windups_in_view, 1)
+	assert_eq(summary.metrics.occluded_windup_share, 1.0)
 
 
 ## A wide, tall box on `enemy`'s body, the way a big enemy would fill the view.

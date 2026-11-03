@@ -532,6 +532,12 @@ func test_build_twice_is_safe() -> void:
 # --- Meshes, layers and materials ------------------------------------------------------
 
 
+## The flat color of a part's material (M4, P1-toon: the toon shader's `albedo` uniform; it was a
+## StandardMaterial3D's albedo_color).
+func _albedo(material: Material) -> Color:
+	return (material as ShaderMaterial).get_shader_parameter(&"albedo")
+
+
 func test_meshes_cast_shadows_and_use_few_flat_colors() -> void:
 	var rig := _rig()
 	var meshes := _meshes_under(rig)
@@ -539,10 +545,10 @@ func test_meshes_cast_shadows_and_use_few_flat_colors() -> void:
 	var colors: Array[Color] = []
 	for mesh: MeshInstance3D in meshes:
 		assert_eq(mesh.cast_shadow, GeometryInstance3D.SHADOW_CASTING_SETTING_ON, "%s casts shadows" % mesh.name)
-		var mat := mesh.material_override as StandardMaterial3D
+		var mat := mesh.material_override as ShaderMaterial
 		assert_not_null(mat, "%s has a flat material" % mesh.name)
-		if mat and not colors.has(mat.albedo_color):
-			colors.append(mat.albedo_color)
+		if mat and not colors.has(_albedo(mat)):
+			colors.append(_albedo(mat))
 	assert_between(colors.size(), 4, 6, "4 to 6 flat colors (Spec §10)")
 	assert_has(colors, rig.body_color)
 	assert_has(colors, rig.accent_color)
@@ -574,7 +580,7 @@ func test_the_players_trousers_stand_apart_from_its_shirt() -> void:
 	for rig: HumanoidRig in [player, enemy]:
 		var colors: Array[Color] = []
 		for mesh: MeshInstance3D in _meshes_under(rig):
-			var color := (mesh.material_override as StandardMaterial3D).albedo_color
+			var color := _albedo(mesh.material_override)
 			if not colors.has(color):
 				colors.append(color)
 		assert_between(colors.size(), 4, 6, "%s: 4 to 6 flat colors (Spec §10)" % rig.stance)
@@ -582,8 +588,8 @@ func test_the_players_trousers_stand_apart_from_its_shirt() -> void:
 
 ## The albedo of `rig`'s parts painted `paint` (PlaceholderBody.Paint).
 func _paint_color(rig: HumanoidRig, paint: int) -> Color:
-	var mats: Dictionary[int, StandardMaterial3D] = rig.get(&"_materials")
-	return mats[paint].albedo_color
+	var mats: Dictionary[int, ShaderMaterial] = rig.get(&"_materials")
+	return _albedo(mats[paint])
 
 
 func test_first_person_body_hides_only_head_neck_chest_and_shoulder_ends() -> void:
@@ -639,22 +645,24 @@ func test_upper_arm_parts_join_into_one_limb() -> void:
 	assert_not_null(rig.find_child("LeftElbow", true, false), "the rig builds the elbow ends")
 
 
+## M4, P1-toon: the whole-body flash is the toon material's `flash_color` times `flash_amount`
+## (was white emission: emission_enabled, emission, emission_energy_multiplier). Still one set
+## of materials per rig, still white by default.
 func test_flash_is_white_emission_per_rig() -> void:
 	var rig := _rig()
 	var other := _rig()
 	rig.set_flash(1.0)
 	for mesh: MeshInstance3D in _meshes_under(rig):
-		var mat := mesh.material_override as StandardMaterial3D
-		assert_true(mat.emission_enabled)
-		assert_eq(mat.emission, Color.WHITE)
-		assert_almost_eq(mat.emission_energy_multiplier, 1.0, 1e-4, "%s flashes" % mesh.name)
+		var mat := mesh.material_override as ShaderMaterial
+		assert_eq(mat.get_shader_parameter(&"flash_color"), Color.WHITE)
+		assert_almost_eq(float(mat.get_shader_parameter(&"flash_amount")), 1.0, 1e-4, "%s flashes" % mesh.name)
 	for mesh: MeshInstance3D in _meshes_under(other):
-		var mat := mesh.material_override as StandardMaterial3D
-		assert_almost_eq(mat.emission_energy_multiplier, 0.0, 1e-4, "other rigs do not flash")
+		var mat := mesh.material_override as ShaderMaterial
+		assert_almost_eq(float(mat.get_shader_parameter(&"flash_amount")), 0.0, 1e-4, "other rigs do not flash")
 	rig.set_flash(0.0)
 	for mesh: MeshInstance3D in _meshes_under(rig):
-		var mat := mesh.material_override as StandardMaterial3D
-		assert_almost_eq(mat.emission_energy_multiplier, 0.0, 1e-4, "flash cleared")
+		var mat := mesh.material_override as ShaderMaterial
+		assert_almost_eq(float(mat.get_shader_parameter(&"flash_amount")), 0.0, 1e-4, "flash cleared")
 
 
 ## Bounds of `rig`'s hand parts on `side`, in the hand bone's frame.
@@ -676,8 +684,8 @@ func _hand_colors(rig: HumanoidRig, side: String) -> Array[Color]:
 	var out: Array[Color] = []
 	for name: String in _hand_parts(side):
 		var part := rig.get_attachment(StringName(side + "Hand")).get_node_or_null(name) as MeshInstance3D
-		if part and not out.has((part.material_override as StandardMaterial3D).albedo_color):
-			out.append((part.material_override as StandardMaterial3D).albedo_color)
+		if part and not out.has(_albedo(part.material_override)):
+			out.append(_albedo(part.material_override))
 	return out
 
 
@@ -722,10 +730,10 @@ func test_hands_are_slightly_oversized_one_size_and_keep_the_rig_points() -> voi
 		assert_has(colors, player.skin_color, "a skin-colored %s hand" % side)
 		assert_has(colors, player.accent_color, "light %s wraps" % side)
 		assert_eq(colors.size(), 3, "skin, wraps and a dark glove accent")
-		assert_eq((skin.material_override as StandardMaterial3D).albedo_color, player.skin_color)
+		assert_eq(_albedo(skin.material_override), player.skin_color)
 		# An enemy: a dark glove, the bare fingers and a strap in the accent color.
 		colors = _hand_colors(enemy, side)
-		var glove_color := (glove.material_override as StandardMaterial3D).albedo_color
+		var glove_color := _albedo(glove.material_override)
 		assert_lt(glove_color.get_luminance(), 0.1, "a dark %s glove" % side)
 		assert_has(colors, enemy.skin_color, "bare %s fingers" % side)
 		assert_has(colors, enemy.accent_color, "a %s strap in the accent color" % side)
@@ -733,7 +741,7 @@ func test_hands_are_slightly_oversized_one_size_and_keep_the_rig_points() -> voi
 	for rig: HumanoidRig in [enemy, player]:
 		var colors: Array[Color] = []
 		for mesh: MeshInstance3D in _meshes_under(rig):
-			var color := (mesh.material_override as StandardMaterial3D).albedo_color
+			var color := _albedo(mesh.material_override)
 			if not colors.has(color):
 				colors.append(color)
 		assert_between(colors.size(), 4, 6, "%s: 4 to 6 flat colors (Spec §10)" % rig.stance)

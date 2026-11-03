@@ -50,26 +50,31 @@ extends Node3D
 ##
 ## Layout and art data live in PlaceholderBody (bones, rig points, meshes, hurtboxes),
 ## PlaceholderPoses (pose library) and PlaceholderAnims (animation builders).
+##
+## Art (Milestone 4): with `art` set, the primitives above are still built (names, followers,
+## layers, materials) but hidden, as the view proxies the first-person tests and camera keep
+## measuring, and SkinnedArt draws the character's skinned meshes on the skeleton instead.
+## Everything that paints the body (materials, flash, damage look) is RigPaint's.
 
 @export var height: float = 1.8
 @export var body_color: Color = Color(0.22, 0.42, 0.78):
 	set(value):
 		body_color = value
-		_apply_colors()
+		paint.apply_colors()
 @export var accent_color: Color = Color(0.92, 0.9, 0.85):
 	set(value):
 		accent_color = value
-		_apply_colors()
+		paint.apply_colors()
 @export var skin_color: Color = Color(0.86, 0.66, 0.5):
 	set(value):
 		skin_color = value
-		_apply_colors()
+		paint.apply_colors()
 ## The trousers' color. Fully transparent (the default) paints them body_color darkened, as
 ## on the enemies and dummies; the player's are a color of their own (_configure_rig()).
 @export var pants_color: Color = Color.TRANSPARENT:
 	set(value):
 		pants_color = value
-		_apply_colors()
+		paint.apply_colors()
 ## How the body stands, walks, and starts and ends every move (PlaceholderPoses.STANCE_*):
 ## &"boxer" keeps the fists up at the chin (enemies, dummies); &"relaxed" lets the arms
 ## hang loose until a strike (the player, so the first-person view stays clear). Strike
@@ -78,6 +83,9 @@ extends Node3D
 ## Player only (Spec §10): skin-colored hands with light wraps and a dark fingerless-glove
 ## plate instead of the enemies' dark fingerless gloves (the same size). Set before build().
 @export var wrapped_hands: bool = false
+## The skinned art this rig wears, or null for the placeholder primitives alone (exactly the
+## 41 meshes, 45 with wrapped_hands). Set before build(), by CombatActor._configure_art().
+@export var art: CharacterArt
 ## Player only: put the meshes PlaceholderBody.is_fp_hidden() names (head, neck, chest,
 ## shoulder balls and the shoulder end of each upper arm) on CombatTypes.VIS_FP_HIDDEN.
 @export var first_person_body: bool = false:
@@ -99,13 +107,16 @@ var skeleton: Skeleton3D
 var anim_player: AnimationPlayer
 ## The damage look shown (DamageLook.Level), set through set_damage_look().
 var damage_look: int = 0
+## Everything that paints this body: materials, flashes, the damage look and the outline.
+var paint: RigPaint
 
+## Group of the primitive meshes of a rig with art (every one of them, hidden while the art
+## shows): the view proxies, which the first-person tests and camera keep measuring.
+const VIEW_PROXY_GROUP := &"view_proxy"
+## Group of the skinned art's meshes (SkinnedArt.attach()).
+const ART_GROUP := &"rig_art"
 ## Library name for the move animations built by play_move().
 const _MOVE_LIBRARY := &"moves"
-## Shades, belt, soles and hair.
-const _DARK_COLOR := Color(0.07, 0.07, 0.08)
-## Trousers without a pants_color of their own are body_color darkened by this much.
-const _PANTS_DARKEN := 0.45
 ## A KO that starts while the body is already lying skips to this many seconds before
 ## the end of the ko_* slump, so the body does not stand back up first.
 const _KO_FROM_LYING_S := 0.28
@@ -122,17 +133,23 @@ const _FALL_HEAD_SLACK := 0.02
 ## straight fade would point the spine this much higher (y of its unit up axis) than it
 ## points at either end.
 const _ROLL_MIN_GAIN := 0.1
-## The contact flash's overlay shader (flash_at()).
-const _FLASH_SHADER := preload("res://game/fx/hit_flash.gdshader")
+## The step of a Fibonacci hash (the golden ratio's fraction): consecutive hashes land evenly
+## spread round a loop (see _idle_phase()).
+const _IDLE_PHASE_STEP := 0.6180339887
 
-## The contact flash has been warmed up this run, and the box warming it until the first
-## contact flash (_warm_flash()).
-static var _flash_warmed: bool = false
-static var _flash_warm_box: MeshInstance3D
 ## The named animation libraries built so far, per stance and scale (see _named_library()).
 static var _named_libraries: Dictionary[String, AnimationLibrary] = {}
+## What the Motion tunables and move_speed read when the cached libraries were built, and how
+## many times a change to them has dropped the cache (see _on_motion_tuning_changed()): a rig
+## whose own count is behind takes the rebuilt library at its next advance().
+static var _library_signature: Array = []
+static var _library_revision: int = 0
 
 var _built: bool = false
+## The _library_revision this rig's named library was taken at.
+var _library_seen: int = 0
+## Where in its loop the idle starts (see _own_idle_share()).
+var _idle_share: float = 0.0
 ## Rig lengths are PlaceholderBody lengths times this.
 var _scale: float = 1.0
 var _bone_index: Dictionary[StringName, int] = {}
@@ -143,8 +160,9 @@ var _point_nodes: Dictionary[StringName, Marker3D] = {}
 var _hurtboxes: Array[Hurtbox] = []
 var _hurt_shapes: Array[CollisionShape3D] = []
 var _hurt_specs: Array[PlaceholderBody.HurtSpec] = []
-## Paint (PlaceholderBody.Paint) -> material. One set per rig so flashes stay per actor.
-var _materials: Dictionary[int, StandardMaterial3D] = {}
+## Paint (PlaceholderBody.Paint) -> material. One set per rig so flashes stay per actor. The
+## dictionary RigPaint fills (paint.materials).
+var _materials: Dictionary[int, ShaderMaterial] = {}
 ## The contact flash's overlay (flash_at()), made on first use: every material's next_pass
 ## while it runs, nobody's otherwise. Its point, in the frame of the bone node nearest it.
 var _flash_overlay: ShaderMaterial
@@ -153,8 +171,14 @@ var _flash_on: bool = false
 var _flash_aimed: bool = false
 var _flash_anchor: Node3D
 var _flash_local: Vector3 = Vector3.ZERO
+## The aimed flash's radius was widened for a finisher (hit_flash_finisher_radius_mult): once per flash.
+var _flash_widened: bool = false
+## Whether the one static listener for finishers' hits (_watch_finishers()) is connected.
+static var _finishers_watched: bool = false
 var _head_meshes: Array[MeshInstance3D] = []
 var _body_meshes: Array[MeshInstance3D] = []
+## The skinned art's meshes, once SkinnedArt.attach() has added them.
+var _art_meshes: Array[MeshInstance3D] = []
 var _current: StringName = &""
 ## The body flurry alternates its leading fist on consecutive plays.
 var _flurry_mirrored: bool = false
@@ -182,6 +206,11 @@ var _bone_velocity: Array[Vector3] = []
 var _motion_valid: bool = false
 
 
+func _init() -> void:
+	paint = RigPaint.new(self)
+	_materials = paint.materials
+
+
 ## Create skeleton, meshes, hurtboxes, rig points and the animation library. Idempotent:
 ## a second call does nothing. Starts in idle, already posed.
 func build() -> void:
@@ -190,13 +219,14 @@ func build() -> void:
 	_built = true
 	_scale = maxf(height, 0.1) / PlaceholderBody.REF_HEIGHT
 	_build_skeleton()
-	_build_materials()
-	_warm_flash()
+	paint.build()
+	paint.warm_up(self)
 	_build_meshes()
 	_build_points()
 	if build_hurtboxes:
 		_build_hurtboxes()
 	_build_animation()
+	_idle_share = _own_idle_share()
 	_start(&"idle", &"idle", 0.0, 1.0)
 	advance(0.0)
 
@@ -309,6 +339,8 @@ func advance(dt: float) -> void:
 	if not _built:
 		return
 	var step := maxf(dt, 0.0)
+	if _library_seen != _library_revision:
+		_refresh_library()
 	anim_player.advance(step)
 	_apply_fade(step)
 	skeleton.advance(step)
@@ -391,15 +423,37 @@ func set_shown(shown: bool) -> void:
 	visible = shown
 
 
+## True when skinned art is on this rig (SkinnedArt.attach() added meshes). A rig whose art
+## failed to attach keeps drawing its primitives and counts as having none.
+func has_art() -> bool:
+	return not _art_meshes.is_empty()
+
+
+## The skinned art's meshes (read only); empty on a rig without art.
+func art_meshes() -> Array[MeshInstance3D]:
+	return _art_meshes
+
+
+## Show the skinned art (`shown` true) or the primitives it stands in for (false), live: the
+## A/B behind Tuning's look_show_art. The hidden set stays built either way, as the view
+## proxies. A rig without art meshes keeps its primitives visible.
+func set_art_shown(shown: bool) -> void:
+	if _art_meshes.is_empty():
+		return
+	for mesh_instance: MeshInstance3D in _art_meshes:
+		mesh_instance.visible = shown
+	for mesh_instance: MeshInstance3D in _head_meshes:
+		mesh_instance.visible = not shown
+	for mesh_instance: MeshInstance3D in _body_meshes:
+		mesh_instance.visible = not shown
+
+
 ## Whole-body flash, 0..1, as emission on every material: the cyan parry flash (a perfect
 ## block flashes the defender). Ends a contact flash (flash_at()); 0 clears both.
 func set_flash(amount: float, color: Color = Color.WHITE) -> void:
 	_show_flash_overlay(false)
 	_flash_aimed = false
-	var energy := clampf(amount, 0.0, 1.0)
-	for mat: StandardMaterial3D in _materials.values():
-		mat.emission = color
-		mat.emission_energy_multiplier = energy
+	paint.set_flash(amount, color)
 
 
 ## Contact flash (Spec §6, localized by Game-boy on 2026-10-24): the body mixes toward
@@ -417,17 +471,20 @@ func set_flash(amount: float, color: Color = Color.WHITE) -> void:
 ## struck part where it is shown. Ends a whole-body flash; set_flash(0.0) clears it.
 ## With `shown` false the flash is aimed on the struck part but drawn only from show_flash()
 ## (a finisher's waits out the impact frame).
+## First-person feel (Look > FP feel, both off by default): the overlay is told Tuning's
+## hit_flash_fp_max_share, the cap the shader puts on the flash's on-screen share of the view, and a
+## clean finisher's radius is widened by hit_flash_finisher_radius_mult when its hit lands
+## (CombatEvents.hit_landed, _on_hit_landed_widen(); the cap's share grows with it). The radius, core,
+## strength and the point that the struck actor passes in are used as they come.
 func flash_at(point: Vector3, strength: float, radius: float, core: float,
 		color: Color = Color.WHITE, shown: bool = true) -> void:
 	set_flash(0.0)
 	if not _built or strength <= 0.0 or radius <= 0.0:
 		return
-	if is_instance_valid(_flash_warm_box):
-		_flash_warm_box.queue_free()
-	_flash_warm_box = null
+	RigPaint.end_warm_up()
 	if _flash_overlay == null:
 		_flash_overlay = ShaderMaterial.new()
-		_flash_overlay.shader = _FLASH_SHADER
+		_flash_overlay.shader = RigPaint.FLASH_SHADER
 		# First among the transparent passes, so the comic effects draw over it.
 		_flash_overlay.render_priority = Material.RENDER_PRIORITY_MIN
 	_flash_anchor = self
@@ -445,6 +502,11 @@ func flash_at(point: Vector3, strength: float, radius: float, core: float,
 	_flash_overlay.set_shader_parameter(&"flash_core", clampf(core, 0.0, 1.0))
 	_flash_overlay.set_shader_parameter(&"flash_strength", clampf(strength, 0.0, 1.0))
 	_flash_overlay.set_shader_parameter(&"flash_color", color)
+	# First-person feel (M4, P3-flash): the cap on the flash's on-screen share (0 = off), and the
+	# finisher's widening (the hit's tier arrives with CombatEvents.hit_landed, _widen_finisher_flash()).
+	_flash_overlay.set_shader_parameter(&"flash_max_share", Tuning.data.hit_flash_fp_max_share)
+	_flash_widened = false
+	_watch_finishers()
 	_flash_aimed = true
 	if shown:
 		_show_flash_overlay(true)
@@ -467,7 +529,7 @@ func follow_flash() -> void:
 
 
 ## The contact flash's overlay while one runs (shader parameters flash_point, flash_radius,
-## flash_core, flash_strength, flash_color), else null.
+## flash_core, flash_strength, flash_color, flash_max_share), else null.
 func flash_overlay() -> ShaderMaterial:
 	return _flash_overlay if _flash_on else null
 
@@ -494,31 +556,85 @@ static func flash_falloff(dist: float, radius: float, core: float) -> float:
 	return 1.0 - smoothstep(0.0, 1.0, clampf((dist - inner) / span, 0.0, 1.0))
 
 
-## Once per run, the first rig built in a window draws the overlay shader at zero strength
-## (every pixel discarded) on a box at its feet until the first contact flash, so the
-## renderer compiles its pipelines at load instead of on the first hit's frame (measured:
-## 4-12 ms more on it). A separate mesh, so the rig's own materials carry no pass while idle.
-func _warm_flash() -> void:
-	if _flash_warmed or not is_inside_tree() or DisplayServer.get_name() == "headless":
+## How much a contact flash whose reach across the line of sight is `reach` m has to shrink on screen
+## to cover at most `max_share` of the view (Tuning hit_flash_fp_max_share, 0 = no cap), for a surface
+## `depth` m in front of the lens, as the overlay shader's cap_scale() computes it: 1 when the flash
+## already fits (or the cap is off), else the ratio of the radius whose disc covers the share to its own.
+## `proj11` is the camera's projection[1][1], 1 / tan(fov / 2); `aspect` the viewport's width over
+## its height.
+static func flash_cap_scale(reach: float, depth: float, proj11: float, aspect: float, max_share: float) -> float:
+	if max_share <= 0.0 or reach <= 0.0:
+		return 1.0
+	var limit := sqrt(4.0 * aspect * max_share / PI)
+	return minf(1.0, limit * maxf(depth, 0.0) / (reach * maxf(proj11, 0.0001)))
+
+
+## The distance (m) the flash's falloff reads for a fragment at `fragment` from the flash's point at
+## `point` (both in the camera's view space, z negative ahead), as the overlay shader's cap_distance()
+## computes it: the offset across the line of sight to the point stretched by 1 / flash_cap_scale() for
+## the flash's reach across that line at the fragment's offset along it (sqrt(radius^2 - along^2)),
+## the offset along it as it is. With no cap, or where the flash already fits, it is the plain
+## distance. What is inside `radius` of it is flashed, so on a surface the flash covers at most `max_share`
+## of the view (the disc around the point's screen position), a flash that fits is as it was, and a point
+## behind the near surface still flashes what lies in front of it.
+static func flash_cap_distance(fragment: Vector3, point: Vector3, radius: float, proj11: float,
+		aspect: float, max_share: float) -> float:
+	var offset := fragment - point
+	var sight := point.normalized() if point.length() > 0.0001 else Vector3(0.0, 0.0, -1.0)
+	var along := offset.dot(sight)
+	var reach := sqrt(maxf(radius * radius - along * along, 0.0))
+	var scale := flash_cap_scale(reach, -fragment.z, proj11, aspect, max_share)
+	if scale >= 1.0:
+		return offset.length()
+	var across := (offset - sight * along).length()
+	return Vector2(across / maxf(scale, 0.0001), along).length()
+
+
+## The share (0..1) of the view a flash disc of `radius` covers on a surface `depth` m in front
+## of the lens, as flash_cap_scale() reads it: the share the cap is compared with.
+static func flash_view_share(radius: float, depth: float, proj11: float, aspect: float) -> float:
+	var half_heights := radius * proj11 / maxf(depth, 0.0001)
+	return minf(PI * half_heights * half_heights / (4.0 * aspect), 1.0)
+
+
+## Listen, once, for the hits that land: a clean finisher's flash is widened (r3look-05). The flash
+## itself is aimed by the struck actor inside receive_hit(), which knows nothing of a hit's tier
+## here, and CombatEvents.hit_landed follows it in the same tick, so the radius is scaled then.
+static func _watch_finishers() -> void:
+	if not _finishers_watched:
+		_finishers_watched = true
+		CombatEvents.hit_landed.connect(_on_hit_landed_widen)
+
+
+## CombatEvents.hit_landed: the struck rig's flash of a clean finisher, wider by Tuning's
+## hit_flash_finisher_radius_mult. A blocked finisher (and a guard break) keeps the ordinary size.
+static func _on_hit_landed_widen(hit: HitInfo) -> void:
+	if hit.tier != CombatTypes.HitTier.FINISHER or hit.blocked or not is_instance_valid(hit.victim):
 		return
-	_flash_warmed = true
-	var warm := MeshInstance3D.new()
-	warm.name = "FlashWarmUp"
-	warm.mesh = BoxMesh.new()
-	warm.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	var mat := ShaderMaterial.new()
-	mat.shader = _FLASH_SHADER
-	warm.material_override = mat
-	add_child(warm)
-	_flash_warm_box = warm
+	var struck := hit.victim.get(&"rig") as HumanoidRig
+	if struck != null:
+		struck._widen_flash(Tuning.data.hit_flash_finisher_radius_mult)
+
+
+## Scale the aimed contact flash's radius by `mult`, once per flash (a hit that lands twice in a
+## tick, or the finisher's second target, widens it once). The flash's point and core stay. With
+## the share cap on, the flash's share of the view grows by the same factor in radius (mult squared,
+## at most the whole view), so the two alternatives compose: a finisher's flash is `mult` times an
+## ordinary one's wherever the cap bites, instead of the cap undoing the widening.
+func _widen_flash(mult: float) -> void:
+	if not _flash_aimed or _flash_widened or _flash_overlay == null or mult <= 1.0:
+		return
+	_flash_widened = true
+	_flash_overlay.set_shader_parameter(&"flash_radius", float(_flash_overlay.get_shader_parameter(&"flash_radius")) * mult)
+	var share := float(_flash_overlay.get_shader_parameter(&"flash_max_share"))
+	_flash_overlay.set_shader_parameter(&"flash_max_share", minf(share * mult * mult, 1.0))
 
 
 func _show_flash_overlay(on: bool) -> void:
 	if on == _flash_on:
 		return
 	_flash_on = on
-	for mat: StandardMaterial3D in _materials.values():
-		mat.next_pass = _flash_overlay if on else null
+	paint.show_flash_overlay(on, _flash_overlay)
 
 
 ## Damage look (Spec §6, "Damage you can see"): DamageLook.Level CLEAN, BRUISED or BLOODIED
@@ -527,8 +643,7 @@ func _show_flash_overlay(on: bool) -> void:
 ## Set by presentation (VfxDirector) from the health; re-applying a level re-reads its tuning.
 func set_damage_look(level: int) -> void:
 	damage_look = level
-	for paint: int in _materials:
-		DamageLook.apply(_materials[paint], paint, level)
+	paint.set_damage_look(level)
 
 
 # --- Ragdoll (see the class docs and game/actors/ragdoll.gd) ---------------------------
@@ -720,37 +835,37 @@ func _build_skeleton() -> void:
 	_bone_velocity.resize(skeleton.get_bone_count())
 
 
-func _build_materials() -> void:
-	for paint: int in PlaceholderBody.Paint.values():
-		var mat := StandardMaterial3D.new()
-		mat.roughness = 1.0
-		mat.metallic_specular = 0.2
-		# Emission stays enabled (black-energy) so set_flash() never switches shader variants.
-		mat.emission_enabled = true
-		mat.emission = Color.WHITE
-		mat.emission_energy_multiplier = 0.0
-		# Likewise the damage look's detail layer (transparent while clean), on the paints that
-		# take marks, so a look change swaps a texture and never the shader variant.
-		DamageLook.prepare(mat, paint)
-		_materials[paint] = mat
-	_apply_colors()
-
-
 func _build_meshes() -> void:
 	for part: PlaceholderBody.Part in PlaceholderBody.parts(wrapped_hands):
 		var mesh_instance := MeshInstance3D.new()
 		mesh_instance.name = part.name
 		mesh_instance.mesh = _make_mesh(part)
 		mesh_instance.material_override = _materials[part.paint]
+		mesh_instance.material_overlay = paint.outline_material_for(part)
 		mesh_instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 		mesh_instance.position = part.offset * _scale
 		mesh_instance.rotation_degrees = part.rot_deg
 		_bone_nodes[part.bone].add_child(mesh_instance)
+		if art != null:
+			mesh_instance.add_to_group(VIEW_PROXY_GROUP)
 		if PlaceholderBody.is_fp_hidden(part):
 			_head_meshes.append(mesh_instance)
 		else:
 			_body_meshes.append(mesh_instance)
 	_apply_layers()
+	if art != null:
+		_art_meshes = SkinnedArt.attach(self, art)
+		_apply_layers()
+		set_art_shown(Tuning.data.look_show_art)
+		if has_art():
+			Tuning.changed.connect(_on_tuning_changed)
+
+
+## Tuning's look_show_art (the live A/B of the art and the primitives) reaches every rig
+## that has art.
+func _on_tuning_changed(property: StringName) -> void:
+	if property == &"look_show_art" or property == &"":
+		set_art_shown(Tuning.data.look_show_art)
 
 
 func _make_mesh(part: PlaceholderBody.Part) -> Mesh:
@@ -836,6 +951,7 @@ func _build_animation() -> void:
 	anim_player.deterministic = false
 	anim_player.add_animation_library(&"", _named_library(_scale, stance))
 	anim_player.add_animation_library(_MOVE_LIBRARY, AnimationLibrary.new())
+	_library_seen = _library_revision
 
 
 ## The named library of rigs of `rig_scale` standing in `stance_id`: built once (about 8 ms of the
@@ -843,12 +959,84 @@ func _build_animation() -> void:
 ## of that size and stance. Its clips depend on those two alone and nothing alters them after the
 ## build (the rig only reads them: lengths, track samples, head curves), so one library serves any
 ## number of AnimationPlayers. The per-move "moves" library stays per rig: the clips of a move
-## are built the first time that rig plays it.
+## are built the first time that rig plays it. The Motion tunables and move_speed are read when it
+## is built, so a change to one of them drops the cache (_on_motion_tuning_changed()) and the next
+## call builds the library again.
 static func _named_library(rig_scale: float, stance_id: StringName) -> AnimationLibrary:
+	_watch_motion_tuning()
 	var key := "%s@%d" % [stance_id, roundi(rig_scale * 10000.0)]
 	if not _named_libraries.has(key):
+		_library_signature = _motion_signature()
 		_named_libraries[key] = PlaceholderAnims.build_library(rig_scale, stance_id)
 	return _named_libraries[key]
+
+
+## Listen, once, for the tunables the named clips are built from.
+static func _watch_motion_tuning() -> void:
+	if not Tuning.changed.is_connected(_on_motion_tuning_changed):
+		Tuning.changed.connect(_on_motion_tuning_changed)
+
+
+## Every value the named clips are built from, in the order PlaceholderAnims.Life declares them
+## (read through its script variables, so a value added there is watched without a change here).
+static func _motion_signature() -> Array:
+	var life := PlaceholderAnims.Life.from_tuning()
+	var values: Array = []
+	for info: Dictionary in life.get_property_list():
+		if int(info.usage) & PROPERTY_USAGE_SCRIPT_VARIABLE:
+			values.append(life.get(info.name))
+	return values
+
+
+## Tuning.changed: a Motion tunable, move_speed or Debug's look_motion_polish (or a whole-set
+## change: a preset, a reset) that changes what the named clips are built from drops the cached
+## libraries, so the F1 sliders are live. A change that leaves every value as it was (a reset
+## to the values already in use) does nothing: no rig takes a new library.
+static func _on_motion_tuning_changed(property: StringName) -> void:
+	if property != &"" and property != &"move_speed" and not String(property).begins_with("look_motion_"):
+		return
+	if _motion_signature() == _library_signature:
+		return
+	_named_libraries.clear()
+	_library_revision += 1
+
+
+## Take the library the cache holds now (built if it has to be) in place of the one this rig
+## was built with. A named clip that is playing goes on from the same share of its length on the
+## new clip (a stride or a breath may have changed length), faded in from the pose on screen
+## over locomotion_blend_s as every start is, so nothing pops; a move's clip (the "moves"
+## library is per rig and never rebuilt) and a rig with nothing playing are left as they are.
+func _refresh_library() -> void:
+	_library_seen = _library_revision
+	var fresh := _named_library(_scale, stance)
+	var old := anim_player.get_animation_library(&"")
+	if fresh == old:
+		return
+	var playing := anim_player.assigned_animation
+	var carry := playing != &"" and old.has_animation(playing)
+	var share := 0.0
+	if carry and anim_player.current_animation_length > 0.0:
+		share = anim_player.current_animation_position / anim_player.current_animation_length
+	var speed := anim_player.speed_scale
+	anim_player.remove_animation_library(&"")
+	anim_player.add_animation_library(&"", fresh)
+	if carry and fresh.has_animation(playing):
+		_start(playing, _current, locomotion_blend_s, speed)
+		anim_player.seek(share * fresh.get_animation(playing).length)
+
+
+## Where in its loop this rig's idle starts, as a share of the clip's length: a body of the crowd
+## (its actor is in the group "ai_enemy": EnemyActor joins it before it builds its body) takes it
+## from its actor's name, a Fibonacci hash, so the Punks of one wave, named Punk1 to Punk6, do not
+## breathe and bounce in step. Nothing random: the same name gives the same phase in every run.
+## Every other body, the player's, a training dummy's and a scratch rig's, starts at the first key as
+## it always did (the player's lens rides his head, and the dummies are tuning targets that stand
+## alone). Read once, when the rig is built, so an actor that leaves its groups (a KO'd body, a
+## scripted showcase) keeps the phase its idle was started at.
+func _own_idle_share() -> float:
+	if actor == null or not actor.is_in_group(&"ai_enemy"):
+		return 0.0
+	return fposmod(float(String(actor.name).hash()) * _IDLE_PHASE_STEP, 1.0)
 
 
 # --- Runtime ---------------------------------------------------------------------------
@@ -870,6 +1058,8 @@ func _start(full_name: StringName, id: StringName, blend_s: float, speed: float)
 	anim_player.play(full_name, 0.0)
 	if restart:
 		anim_player.seek(0.0)
+	if id == &"idle" and full_name == &"idle" and _idle_share > 0.0:
+		anim_player.seek(_idle_share * anim_player.get_animation(full_name).length)
 	_current = id
 
 
@@ -1111,17 +1301,6 @@ func _carrier_bone(spec: PlaceholderBody.HurtSpec, p: Vector3) -> StringName:
 	return bone
 
 
-func _apply_colors() -> void:
-	if _materials.is_empty():
-		return
-	_materials[PlaceholderBody.Paint.BODY].albedo_color = body_color
-	_materials[PlaceholderBody.Paint.PANTS].albedo_color = \
-			body_color.darkened(_PANTS_DARKEN) if pants_color.a <= 0.0 else pants_color
-	_materials[PlaceholderBody.Paint.ACCENT].albedo_color = accent_color
-	_materials[PlaceholderBody.Paint.SKIN].albedo_color = skin_color
-	_materials[PlaceholderBody.Paint.DARK].albedo_color = _DARK_COLOR
-
-
 func _apply_layers() -> void:
 	var default_layer := CombatTypes.bit(CombatTypes.VIS_DEFAULT)
 	var head_layer := CombatTypes.bit(CombatTypes.VIS_FP_HIDDEN) if first_person_body else default_layer
@@ -1129,3 +1308,6 @@ func _apply_layers() -> void:
 		mesh_instance.layers = head_layer
 	for mesh_instance: MeshInstance3D in _body_meshes:
 		mesh_instance.layers = default_layer
+	# The art's FP-hidden mesh (a GLB mesh named *__fp_hidden) goes with the head meshes.
+	for mesh_instance: MeshInstance3D in _art_meshes:
+		mesh_instance.layers = head_layer if mesh_instance.get_meta(SkinnedArt.FP_HIDDEN_META, false) else default_layer

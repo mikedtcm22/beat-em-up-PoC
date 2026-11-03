@@ -1,20 +1,15 @@
 extends Node3D
 ## Milestone 1 graybox test room: a short street (axis = world X), the player, three
 ## training dummies, a pipe, the camera director and the HUD. Built in code so it stays
-## readable as text; layout numbers live in the exports below.
+## readable as text; layout numbers live in the exports below. From Milestone 4 the sky, the
+## boxes, the materials and the presentation come from RoomKit, like the crowd room's, so one
+## look (the toon materials, the edge pass, the grade) serves both rooms.
 ## The centre dummy spars (throws telegraphed jabs to block); F5 ("sparring") toggles
 ## sparring on all three. A KO'd player gets back up after Tuning.player_revive_s.
 
 const PLAYER_SCENE := "res://game/player/player.tscn"
 const DUMMY_SCENE := "res://game/enemies/dummy/training_dummy.tscn"
 const PIPE_SCENE := "res://game/weapons/pipe.tscn"
-const CAMERA_DIRECTOR_SCENE := "res://game/camera/camera_director.tscn"
-const CAMERA_DIRECTOR_SCRIPT := "res://game/camera/camera_director.gd"
-const HUD_SCENE := "res://game/ui/hud.tscn"
-const DEBUG_DRAW_SCENE := "res://game/ui/debug_draw.tscn"
-## Milestone 2: the F1 tuning panel and the F4 cheat menu.
-const TUNING_OVERLAY_SCENE := "res://game/ui/tuning_overlay.tscn"
-const GRID_SHADER := "res://game/level/grid.gdshader"
 
 @export var street_length: float = 40.0
 @export var street_width: float = 14.0
@@ -63,41 +58,14 @@ func toggle_sparring() -> void:
 
 
 func _build_environment() -> void:
-	var env := Environment.new()
-	env.background_mode = Environment.BG_SKY
-	var sky := Sky.new()
-	var sky_mat := ProceduralSkyMaterial.new()
-	sky_mat.sky_top_color = Color(0.36, 0.42, 0.56)
-	sky_mat.sky_horizon_color = Color(0.72, 0.62, 0.55)
-	sky_mat.ground_horizon_color = Color(0.4, 0.37, 0.38)
-	sky_mat.ground_bottom_color = Color(0.2, 0.2, 0.22)
-	sky.sky_material = sky_mat
-	env.sky = sky
-	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-	env.ambient_light_energy = 0.7
-	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
-	env.fog_enabled = true
-	env.fog_light_color = Color(0.6, 0.56, 0.55)
-	env.fog_density = 0.008
-	var world_env := WorldEnvironment.new()
-	world_env.environment = env
-	add_child(world_env)
-
-	var sun := DirectionalLight3D.new()
-	sun.rotation_degrees = Vector3(-52.0, 32.0, 0.0)
-	sun.light_energy = 1.2
-	sun.shadow_enabled = true
-	sun.directional_shadow_max_distance = 40.0
-	add_child(sun)
+	RoomKit.build_environment(self)
 
 
 func _build_street() -> void:
-	var grid := ShaderMaterial.new()
-	grid.shader = load(GRID_SHADER)
-	_add_box(Vector3(0.0, -0.5, 0.0), Vector3(street_length + 20.0, 1.0, street_width + 20.0), grid)
+	_add_box(Vector3(0.0, -0.5, 0.0), Vector3(street_length + 20.0, 1.0, street_width + 20.0), RoomKit.grid_material())
 
-	var wall_mat := _flat_material(Color(0.42, 0.4, 0.44))
-	var accent_mat := _flat_material(Color(0.5, 0.46, 0.4))
+	var wall_mat := RoomKit.flat_material(Color(0.42, 0.4, 0.44))
+	var accent_mat := RoomKit.flat_material(Color(0.5, 0.46, 0.4))
 	var half_l := street_length * 0.5
 	var half_w := street_width * 0.5
 	# Far side (-Z): building fronts of varied height, like the reference's backdrop.
@@ -115,11 +83,11 @@ func _build_street() -> void:
 	# Near side (+Z) stays low so the side-view debug camera can see the street.
 	_add_box(Vector3(0.0, 0.3, half_w + 0.25), Vector3(street_length, 0.6, 0.5), accent_mat)
 	# Crates for spatial reference and cover.
-	var crate_mat := _flat_material(Color(0.55, 0.46, 0.3))
+	var crate_mat := RoomKit.prop_material(Color(0.5, 0.44, 0.35))
 	for p: Vector3 in [Vector3(-7.0, 0.5, -4.5), Vector3(-6.0, 0.5, -5.2), Vector3(8.0, 0.5, 4.5)]:
 		_add_box(p, Vector3(1.0, 1.0, 1.0), crate_mat)
 	# Dashed center line along the street.
-	var paint := _flat_material(Color(0.82, 0.8, 0.72))
+	var paint := RoomKit.flat_material(Color(0.6, 0.58, 0.52))
 	var dash := -half_l + 1.0
 	while dash < half_l:
 		_add_visual_box(Vector3(dash + 0.75, 0.005, -2.0), Vector3(1.5, 0.01, 0.15), paint)
@@ -149,57 +117,15 @@ func _spawn_actors() -> void:
 	add_child(pipe)
 
 
+## Cameras, HUD, the F1 tuning panel and F4 cheat menu, the VFX, audio and rumble directors
+## and the look's post pass: RoomKit.build_presentation(), the crowd room's too.
 func _build_presentation() -> void:
-	if ResourceLoader.exists(CAMERA_DIRECTOR_SCENE):
-		add_child((load(CAMERA_DIRECTOR_SCENE) as PackedScene).instantiate())
-	elif ResourceLoader.exists(CAMERA_DIRECTOR_SCRIPT):
-		var director: Node3D = (load(CAMERA_DIRECTOR_SCRIPT) as GDScript).new()
-		director.name = "CameraDirector"
-		add_child(director)
-	if ResourceLoader.exists(HUD_SCENE):
-		add_child((load(HUD_SCENE) as PackedScene).instantiate())
-	if ResourceLoader.exists(DEBUG_DRAW_SCENE) and get_tree().get_first_node_in_group(&"debug_draw") == null:
-		add_child((load(DEBUG_DRAW_SCENE) as PackedScene).instantiate())
-	# Milestone 2 (WP1): the F1 tuning panel and the F4 cheat menu (game/ui/tuning_overlay.gd).
-	if ResourceLoader.exists(TUNING_OVERLAY_SCENE):
-		add_child((load(TUNING_OVERLAY_SCENE) as PackedScene).instantiate())
-	add_child(VfxDirector.new())  # M2 WP2: comic VFX and damage looks (game/fx/vfx_director.gd)
-	add_child(AudioDirector.new())  # M2 WP3: hit-feel audio (game/audio/audio_director.gd)
-	add_child(RumbleDirector.new())  # M2 WP3: controller rumble (game/audio/rumble_director.gd)
+	RoomKit.build_presentation(self)
 
 
 func _add_box(pos: Vector3, size: Vector3, material: Material) -> StaticBody3D:
-	var body := StaticBody3D.new()
-	body.position = pos
-	body.collision_layer = CombatTypes.bit(CombatTypes.LAYER_WORLD)
-	body.collision_mask = 0
-	var shape := CollisionShape3D.new()
-	var box := BoxShape3D.new()
-	box.size = size
-	shape.shape = box
-	body.add_child(shape)
-	body.add_child(_box_mesh(size, material))
-	add_child(body)
-	return body
+	return RoomKit.add_box(self, pos, size, material)
 
 
 func _add_visual_box(pos: Vector3, size: Vector3, material: Material) -> void:
-	var mesh := _box_mesh(size, material)
-	mesh.position = pos
-	add_child(mesh)
-
-
-func _box_mesh(size: Vector3, material: Material) -> MeshInstance3D:
-	var mesh := MeshInstance3D.new()
-	var box := BoxMesh.new()
-	box.size = size
-	box.material = material
-	mesh.mesh = box
-	return mesh
-
-
-func _flat_material(color: Color) -> StandardMaterial3D:
-	var material := StandardMaterial3D.new()
-	material.albedo_color = color
-	material.roughness = 0.9
-	return material
+	RoomKit.add_visual_box(self, pos, size, material)

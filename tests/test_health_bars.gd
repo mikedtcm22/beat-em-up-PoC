@@ -255,3 +255,31 @@ func test_a_kod_enemys_bar_fades_once_its_last_chunk_has_drained() -> void:
 	var gauge := HealthGauge.new()
 	var drained_at := roundi((gauge.ghost_delay_s + 2.0 / dummy.max_health / gauge.ghost_drain_per_s) * 60.0)
 	assert_lte(gone_at, maxi(ko_at, drained_at) + roundi(bars.fade_seconds * 60.0) + 2, "and fades out once KO'd and drained")
+
+
+func test_a_bar_projected_far_off_the_canvas_is_not_drawn() -> void:
+	# A head just in front of the camera plane (a body at the lens) projects millions of
+	# pixels away. There, float precision collapses the bar's thin fill and drawing it logged
+	# "Invalid polygon data, triangulation failed" (Game-boy's M4 playtest, hud_style.gd).
+	var canvas := EnemyHealthBars.new()
+	canvas.size = Vector2(1280.0, 720.0)
+	add_child_autofree(canvas)
+	var bar := EnemyHealthBars.Bar.new()
+	bar.on_screen = true
+	bar.screen_position = Vector2(640.0, 300.0)
+	assert_true(canvas.is_drawn(bar), "a bar over a body on the canvas is drawn")
+	bar.screen_position = Vector2(-1.0e6, 1.0e6)
+	assert_false(canvas.is_drawn(bar), "a bar a million pixels off the canvas is not drawn")
+	var shift := canvas.slant * canvas.bar_size.y
+	var top_left := bar.screen_position - Vector2(canvas.bar_size.x * 0.5, canvas.bar_size.y + canvas.lift_px)
+	var length := 0.6 * (canvas.bar_size.x - shift)
+	var fill := PackedVector2Array([
+		top_left + Vector2(shift, 0.0), top_left + Vector2(shift + length, 0.0),
+		top_left + Vector2(length, canvas.bar_size.y), top_left + Vector2(0.0, canvas.bar_size.y),
+	])
+	assert_true(Geometry2D.triangulate_polygon(fill).is_empty(), "there, the fill could not be triangulated (why the bar is skipped)")
+	bar.screen_position = Vector2(-30.0, 300.0)
+	assert_true(canvas.is_drawn(bar), "a bar half over the canvas's edge is still drawn")
+	bar.on_screen = false
+	bar.screen_position = Vector2(640.0, 300.0)
+	assert_false(canvas.is_drawn(bar), "a bar off screen (head behind the camera) is not drawn")

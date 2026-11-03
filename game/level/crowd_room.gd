@@ -53,6 +53,11 @@ extends Node3D
 @export var window_pitch_m: float = 2.2
 @export var window_row_m: float = 2.1
 @export var window_first_m: float = 3.2
+## How deep a window box is and how far it stands out from the wall (m). A shallow box (the 3 cm
+## and 1.5 cm it was) has side faces under a pixel tall at a distance, and the edge pass's crease
+## lines on them come and go from pixel to pixel as dashes; a deeper one draws a steady outline.
+@export var window_depth_m: float = 0.12
+@export var window_proud_m: float = 0.09
 @export_group("Ends and alleys")
 ## The end walls (x = +-half_length) and the alley through each: width, length, wall thickness
 ## and height.
@@ -193,7 +198,7 @@ func _build_geometry() -> void:
 	var wall := RoomKit.flat_material(Color(0.42, 0.4, 0.44))
 	var accent := RoomKit.flat_material(Color(0.5, 0.46, 0.4))
 	# Alleys and doorways are dark openings, so a spawn point reads from across the street.
-	var dark := RoomKit.flat_material(Color(0.12, 0.1, 0.13))
+	var dark := RoomKit.flat_material(Color(0.26, 0.24, 0.27))
 	_build_lane()
 	_build_north(wall, accent, dark)
 	_build_ends(wall, dark)
@@ -206,7 +211,7 @@ func _build_lane() -> void:
 	var size := Vector3(lane_half_length * 2.0, 1.0, lane_half_width * 2.0)
 	RoomKit.add_box(geometry, Vector3(0.0, -0.5, 0.0), size, RoomKit.grid_material())
 	# The dashed centre line.
-	var paint := RoomKit.flat_material(Color(0.82, 0.8, 0.72))
+	var paint := RoomKit.flat_material(Color(0.6, 0.58, 0.52))
 	var x := -lane_half_length + 1.0
 	while x < lane_half_length - 1.0:
 		RoomKit.add_visual_box(geometry, Vector3(x + 0.75, 0.005, 0.0), Vector3(1.5, 0.01, 0.15), paint)
@@ -216,7 +221,7 @@ func _build_lane() -> void:
 ## The north fronts: a block between each pair of doorways (and at the ends), a dark back wall,
 ## floor and lintel for each doorway recess, and windows on the blocks.
 func _build_north(wall: Material, accent: Material, door: Material) -> void:
-	var window := RoomKit.flat_material(Color(0.16, 0.2, 0.28))
+	var window := RoomKit.flat_material(Color(0.2, 0.22, 0.28))
 	var edges: Array[float] = [-lane_half_length]
 	for x in door_xs:
 		edges.append(x - door_width * 0.5)
@@ -256,8 +261,9 @@ func _add_windows(x0: float, x1: float, z_face: float, height: float, material: 
 	var y := window_first_m
 	while y + window_size.y * 0.5 < height - 0.5:
 		for c in columns:
-			var window := RoomKit.add_visual_box(geometry, Vector3(start + float(c) * window_pitch_m, y, z_face + 0.015),
-					Vector3(window_size.x, window_size.y, 0.03), material)
+			var window := RoomKit.add_visual_box(geometry,
+					Vector3(start + float(c) * window_pitch_m, y, z_face + window_proud_m - window_depth_m * 0.5),
+					Vector3(window_size.x, window_size.y, window_depth_m), material)
 			window.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		y += window_row_m
 
@@ -320,12 +326,15 @@ func _build_south(curb: Material, fence: Material) -> void:
 
 
 func _build_props() -> void:
-	var crate := RoomKit.flat_material(Color(0.55, 0.46, 0.3))
+	var crate := RoomKit.prop_material(Color(0.5, 0.44, 0.35))
 	for p in crate_positions:
 		RoomKit.add_box(geometry, Vector3(p.x, crate_size * 0.5, p.z), Vector3(crate_size, crate_size, crate_size), crate)
-	RoomKit.add_box(geometry, car_position + Vector3.UP * car_size.y * 0.5, car_size, RoomKit.flat_material(Color(0.55, 0.2, 0.2)))
+	# A muted blue-grey: red is only for blood, the warning and finisher accents (M4-plan A13), and the
+	# street's own colors stay under the look bible's saturation of 0.30.
+	RoomKit.add_box(geometry, car_position + Vector3.UP * car_size.y * 0.5, car_size,
+			RoomKit.prop_material(Color(0.34, 0.38, 0.45)))
 	RoomKit.add_box(geometry, dumpster_position + Vector3.UP * dumpster_size.y * 0.5, dumpster_size,
-			RoomKit.flat_material(Color(0.2, 0.42, 0.3)))
+			RoomKit.prop_material(Color(0.28, 0.4, 0.34)))
 
 
 ## Drawn only: the ground beyond the near curb and a skyline on it, so looking across the street

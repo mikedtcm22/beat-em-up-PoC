@@ -1,0 +1,1255 @@
+{
+ "round": "slice",
+ "base": "59a0adf",
+ "reviews": {
+  "g1": {
+   "summary": "G1 (mechanics and contract) on 59a0adf, judged in /Users/arachne/repos/beat-em-up-PoC/.worktrees/m4-review-slice-g1. Pass items 1-3 hold, with four mechanics defects. (1) The rebuild is reproducible and spends no credit. `run.py --asset punk --check` gives the committed report hash for both weight sources (tripo c0d8255d, auto 262013f2) in 11 s. run.py and its steps contain no network code. The ledger accounts for all 55 credits (1500 to 1445). The literal `--from smoke` command crashes, because \"smoke\" is not a step. (2) The contract holds. test_art_contract (15), test_skinned_art (41) and test_art_punk (14) are green, and so is the full suite (1378/1378, no ERROR). check() is empty on all four GLBs, the joints sit 0.0005 mm off the chained table, and there is no neutral_bone. (3) The art fights in both rooms. The flash shows for exactly 2 rendered frames on the struck spot. In a real game run (a StreetPunk on punk.glb), the skeleton equals the followers to 0.0000 m through stagger, launch, downed, get-up and KO. The KO blink-off is clean. (4) Proxy honesty: R8 measured with the art drawn agrees with the proxies within 0.5 pp at p50 and 2 pp at p95, inside M3's spread, so L5 passes. Four defects: R4's occluder test uses `is_visible_in_tree()`, so an art Punk can never hide a wind-up. The art breaks close-range lens distances the proxies pass: the held Punk's cap comes 0.20 m from the lens against the 0.25 m rule, and the cross reaches 4.6 cm, inside the 5 cm near plane. The load-time art warm-up is placed from the camera before it first updates, so it is never in the frustum and draws nothing. A6 misses on the legs (89%), because the fit never changes girth, and the real Punk will inherit that. Verdict (b): proven, with a girth-fit contingency and two small instrument and warm-up fixes.",
+   "checked": [
+    "Plan Part A (A3, A4, A5, A8, A11, A15, A16, A19), Part B rows A1-A14 and L5, Part C §2.4-2.6 and §6; ARCHITECTURE M4 sections (P1-chain, P1-skin, SL-int); calls P1-chain, P1-skin, P1-post (A8 probe), SL-int (all sections)",
+    "tools/pipeline/run.py read in full before running: STEPS are 8 headless Blender steps plus gen_palette and an optional Godot import; no urllib/http/socket/tripo import in run.py, pipe_*.py or blender_* steps (the only 'http'-like hit is a node 'socket' variable in blender_dump_rig.py); tripo.py is never imported by the chain",
+    "Ran `python3 -I tools/pipeline/run.py --asset punk --check` (Tripo weights) and the same with `--set rig.weights=\"auto\" --set paths.report=.../report_auto --set paths.export_name=\"punk_auto\"`, plus `--from smoke --no-import` to test the plan's literal command",
+    "assets/source/tripo_ledger.jsonl tallied row by row (7 events, 3 tasks)",
+    "Committed GLB sha256 against report.json outputs (all four match)",
+    "tools/run_tests.sh -gselect for test_art_contract, test_skinned_art, test_art_punk; full suite (3:24)",
+    "Every ART-PUNK line (A6, A9 at 8 poses x 4 GLBs, A11, A19 worst-10 and flexes)",
+    "report.json fit.landmark_residual_m per joint and export variants (neutral_bone, worst_joint_error_mm)",
+    "Code: humanoid_rig.gd _build_meshes/set_art_shown/flash_at/animation_pose/_apply_fade/_refresh_pose/ragdoll_stop; ragdoll.gd:614-660 write-back; fp_view.gd is_drawn/_cast/ray_hit; skinned_view.gd hits/_soup/_ray/_skin_matrices; readability_probe.gd R4 (_sample_occlusion) and R8 (_sample_lens); engage_meter.gd lens; first_person_camera.gd _head_clear_of/_ko_room; room_kit.gd warm_up_art; toon_materials.gd warm_up; rig_paint.gd warm_up; hit_flash.gdshader falloff; tuning hit_flash_radius_m 0.25, hit_flash_core 0.5, hit_flash_frames 2",
+    "Every test that iterates rig meshes with is_visible_in_tree (test_player_grabbed, test_ko_view, test_health_bars, test_ragdoll, enemy_move_checks): all are on dummies or the player, so none is affected; test_grab_view and test_ko_view lens rules run only on dummies",
+    "SL-int sheets viewed: C5 overview, C5 f166 (launch, impact frame), C5 f216 downed vs M3 before f216, C5 ko_sheet, C11 overview vs M3 before C11 overview, dbg/c2_view5 body crop f109",
+    "Frames cut and viewed from SL-int AVIs: C5 f43-48 (jab flash), C11 f67-72 (knee flash), C4 f86-91 (cross hit) beside M3 before C4 f86-91, C5 f240/f270 (downed), c9 f0-5 and c7 f0-39 (looking for the warm-up holder)",
+    "ERROR count in all 34 SL-int bot.logs, the lead's A16 perf logs (captures/perf_compare/a16/*), and my own logs",
+    "tools/check_m3_log.py on SL-int auto_six and auto_waves and on my two L5 logs",
+    "Scratch GUT test tests/test_zz_review_g1.gd (local, uncommitted): R4 with two art Punks in line, both look_show_art states; holding an art Punk in the training room (grab, 3 knees, release, regrab, throw) with the art's nearest skinned vertex, in-view depth, its bone and drawn share against the proxies; a SkeletonModifier3D gap probe after Ragdoll on a real StreetPunk through jab, chain, LAUNCH, downed, get-up, finishing jab, KO and blink; the Punk's jab-cross and shove at 0.95 m against the lens; an art Punk's AI in the training room",
+    "Scratch L5 act tests/bot/acts/zz_review_acts.gd + tests/review_g1_sampler.gd: 'Six Punks, fight' and 'Mixed six, fight' run headless --fixed-fps 60, with R8 and R4 measured three ways on the probe's cadence",
+    "M3 R8/R4 baselines from 30+ readability.json files of M3 worktrees (Six Punks, fight; Mixed six, fight)",
+    "Windowed warm-up probe tests/review_g1/warm_probe.tscn (crowd room, 1280x720): every warm-up holder, its meshes' AABB corners against the camera frustum per frame, camera position and facing, screenshots f1-f6",
+    "The lead's A16 report (base/report.txt) for first spawn and first hit per act"
+   ],
+   "sheets": [
+    "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m4-review-slice-g1/captures/review/flash_c5_jab.png",
+    "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m4-review-slice-g1/captures/review/flash_c11_knee.png",
+    "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m4-review-slice-g1/captures/review/c4_cross_86_91.png",
+    "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m4-review-slice-g1/captures/review/before_c4_cross_86_91.png",
+    "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m4-sl-int/captures/sl-int/c11/sheets/c11/overview_01.png",
+    "/Users/arachne/repos/beat-em-up-PoC/captures/m4_before/c11/sheets/c11/overview_01.png",
+    "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m4-review-slice-g1/captures/review/warm_f1_f6.png",
+    "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m4-review-slice-g1/captures/review/warm_c7_first40.png",
+    "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m4-sl-int/captures/sl-int/c5/sheets/c5/overview_01.png"
+   ],
+   "passes": [
+    "Gate item 1, reproducible. `run.py --asset punk --check` prints 'reproducible: YES, the same report hash (committed c0d8255da219)' in 11.1 s (captures/review/check_tripo.log). The heat-map variant gives YES 262013f2a60a (check_auto.log). git status is clean afterwards (the atlas rewrite is byte-identical). No step can reach Tripo: run.py and its steps import no network module.",
+    "Gate item 1, ledger. 3 tasks: T1 cb4af11c 30 credits (1500 to 1470), T2 529a4cb0 rig-check 0, T3 0366578f 25 (1470 to 1445). The M4 sum of 55 is under the 750 cap, and each balance_after equals the next balance_before.",
+    "Gate item 2, contract. test_art_contract 15/15 (1655 asserts), test_skinned_art 41/41 (26611), test_art_punk 14/14 (2347), 0 ERROR lines (captures/review/test_*.log). check() is empty on all four GLBs; 14,999 triangles each. report.json export variants: neutral_bone false, worst joint 0.000532 mm (A-pose) and 0.0 (rest). Lowest rest vertex -4.3 mm.",
+    "A12. The full suite is 1378/1378, 99,083 asserts, 0 SCRIPT ERROR, SHADER ERROR or ERROR. The only WARNINGs are the two expected check() refusals (captures/review/full_suite.log).",
+    "A11, 2 frames. In C5 the jab whitens the face on video frames 44 and 45 and is gone at 46. In C11 the hold knee flashes on frames 68 and 69, gone at 70, centred on the struck cap and shoulder (flash_c5_jab.png, flash_c11_knee.png).",
+    "A11, the anchor offset is invisible (ruling). hit_flash_radius_m 0.25 and core 0.5 give full strength out to 12.5 cm. An anchor 4.2-4.8 cm inside the art leaves the nearest skin point at full white, and the white disc on the skin shrinks from about 12.5 to about 11.6 cm. The knee frames show it on the spot.",
+    "A8 and A5 in the game, not only on fixtures. A SkeletonModifier3D after Ragdoll on a real StreetPunk (punk.glb) read skeleton equal to followers at 0.0000 m and 0.001 rad or less on every update: HITSTUN 52, STAGGER/PARTIAL 20, LAUNCHED/FULL 43, DOWNED/FULL 75, GETUP (the fade) 30, KO/FULL 150. The one exception is the first stagger frame, when the new Ragdoll sat after my probe (idx 24 vs 26), which is the probe's own ordering. So there is no gap or pop at knockdown, get-up or KO (g1_probe3.log).",
+    "KO and blink-off. After the finishing jab, the art is shown for 139 frames, hidden for 33 frames, then the Punk is freed. The hull is the same MeshInstance3D's material_overlay, so it hides with it.",
+    "A10. test_art_punk asserts CUSTOM0/1 at the bind pose for all four GLBs, 100 vertices' coordinates identical across idle, jab and knockdown, and texture-only look swaps. In the C5 30%-health and KO frames the blood rides the body.",
+    "L5, R8 with the art drawn (headless, same frames, probe cadence, 32 columns). Six Punks: proxies p50 0.281 / p95 0.441, drawn 0.286 / 0.462, 164 samples. Mixed six: proxies 0.286 / 0.531, drawn 0.286 / 0.533, 194 samples. M3 spread: six Punks p50 0.21-0.35, p95 0.42-0.67; mixed six 0.29-0.33, 0.53-0.65. Within noise of M3, so the proxy-based R8, engage meter and lens shares are honest at crowd scale (captures/review/l5_six, l5_mixed).",
+    "L5, R4 with the art drawn. 0 occluded of 14 in view in both fights, by the proxies and by the art, as in every M3 run (0 of 6-17). The figure is right here, but only by luck of the scenes (see finding 1).",
+    "It fights in both rooms. Crowd room: the autopilot against six art Punks (check_m3_log ok; R1 max 1, R2 21-54 f, R3 0 unwarned, R10 100%, R11 0). Training room (scratch test): an art Punk is grabbed, kneed 3 times, released, regrabbed and thrown, and with the AI on it winds up 3 times and takes 5 hits.",
+    "FP layers in holds and grabs. No art vertex comes inside the 5 cm near plane during a hold (nearest in-view depth 0.192 m). The held art covers at most 39.8% of the view, under the 50% bar (proxies 37.7%).",
+    "FPView.is_drawn() and depths() are honest. Proxies count by their follower's visibility and art never counts. R8 and the engage meter use them, and the drawn comparison above agrees.",
+    "Every SL-int evidence log has 0 ERROR (31 logs; only scratch0-2, before SL-int C10, had the 10-line leak at exit). The A16 perf logs and my 6 runs have 0 ERROR. check_m3_log: ok on auto_six (16 WARN-CHECK), auto_waves (82) and my two L5 logs (16, 22).",
+    "Bind routes are mechanically identical. punk and punk_rest print the same A6 (torso 99.4, legs 89.1, head 95.0%), A9 (worst 6.1%, 2.0 pp) and A11 (1.5 / 4.2 / 4.8 cm). check() passes both."
+   ],
+   "also_noticed": [
+    "The A9 'nearest' gap at idle is 12.9-14.4 cm (art nearer than the proxies even standing), not only in strikes. The cap and the 0.083 m flared glove cuffs are the likely carriers (the hold's nearest vertex is on Head).",
+    "SL-int.md §3 A11 calls the flash 'a radial blob of radius 0.5 m'. The tunable is hit_flash_radius_m = 0.25 with core 0.5. Their 'nil visible effect' conclusion still holds (see passes).",
+    "The lead's A16 run: the art act's first spawn is 34.1 ms (32.7-35.5), against 32.3 for the mixed six on the same head and 31.3 on M3. That fits an unwarmed first draw (finding 3), but it is inside the vsync quantisation. A16's 'main + 2 ms' cannot be applied to the art act, which has no M3 run.",
+    "Tuning.reset_to_default() keeps Debug-group values. A test that flips look_show_art must restore it, or later tests measure with the art hidden (my first probe run did this). Existing tests do restore it.",
+    "`run.py --check` always rewrites assets/export/palette/palette_atlas.png (byte-identical, so no diff). That is harmless, but a dirty atlas in a worktree would be committed by it.",
+    "test_grab_view's and test_ko_view's lens rules run only on training dummies. No test holds or watches an art Punk against them, so the hold's 0.25 m rule had no art coverage before this review.",
+    "The M3 flash warm-up box (RigPaint FlashWarmUp) sits at the room origin until the first contact flash (warm probe: 'FlashWarmUp at (0,0,0)'). That is pre-M4 behaviour.",
+    "My scratch files stay untracked in the review worktree for the skeptics: tests/test_zz_review_g1.gd, tests/review_g1_sampler.gd, tests/bot/acts/zz_review_acts.gd, tests/review_g1/warm_probe.{gd,tscn}. crowd_bot loads zz_review_acts.gd in that worktree, so remove them before running the full suite there.",
+    "A16 perf: placeholder hulls show no measurable cost (14.50 vs 14.43 ms mean), so A7's default stays on. The edge pass costs about 3.5 ms at 4x MSAA. Both are the lead's numbers, not re-run."
+   ],
+   "findings": [
+    {
+     "severity": "medium",
+     "title": "R4 (occluded wind-ups) is blind to art Punks: their proxies are skipped and their art never hit",
+     "detail": "readability_probe._sample_occlusion skips every mesh with `not mesh.is_visible_in_tree()` and ray-casts the rest with FPView.ray_hit (primitives only). An art rig's proxies are visible=false (set_art_shown), and its ArrayMesh art returns INF, so an art Punk can never occlude another enemy's wind-up. Every Street Punk wears the art, so in a Punk crowd R4 is 0 by construction. R8 in the same file uses FPView.hits (is_drawn: proxies counted), so the two lens metrics now disagree about what is drawn. This is exactly the 'passes for the wrong reason' case A15's G1 asks about. Both crowd fights read 0 occluded today (the true figure too), but no future R4 on Punks can fail.",
+     "evidence": "tests/bot/readability_probe.gd:801. Scratch test tests/test_zz_review_g1.gd::test_r4_counts_an_art_punk_as_an_occluder (captures/review/g1_probe3.log): with the art shown, probe R4 = 0.0 for 1 wind-up in view, while the blocker hid the chest on 22 of 22 samples by its proxies (FPView.is_drawn) and 22 of 22 by its skinned art. With look_show_art false, the same scene gives probe R4 = 1.0.",
+     "repro": "cd /Users/arachne/repos/beat-em-up-PoC/.worktrees/m4-review-slice-g1 && tools/run_tests.sh -gselect=test_zz_review_g1.gd -gunit_test_name=test_r4_counts_an_art_punk_as_an_occluder ; read the REVIEW-G1 R4 lines (blocker StreetPunk 1.1 m ahead, attacker 2.6 m behind it, force_attack).",
+     "suggested_fix": "In _sample_occlusion, replace `not mesh.is_visible_in_tree()` with `not FPView.is_drawn(mesh)` so the proxies count, matching R8 and A4. Add a test_readability_probe case with two StreetPunks in line (art on) that expects share 1.0. Keep the drawn-art R4 in the L5 evidence act.",
+     "files": [
+      "tests/bot/readability_probe.gd",
+      "tests/test_readability_probe.gd"
+     ],
+     "spec_change": false
+    },
+    {
+     "severity": "medium",
+     "title": "The art breaks the close-range lens distances its proxies pass (hold: cap 0.20 m from the lens; cross: 4.6 cm, inside the near plane)",
+     "detail": "The lens tests measure the proxies, and the art is bulkier exactly where the camera gets close. While the player holds an art Punk (grab, knees, throw), the art's nearest vertex is 0.1996 m from the lens, on the Head bone (the cap), against M3's lens rule 'the victim stays 0.25 m or more from the lens'. The proxies read 0.256 m, so they pass by 6 mm. The Punk's jab-cross at 0.95 m brings the art to 4.63 cm from the lens, with an in-view vertex at depth 4.87 cm, inside the 5 cm near plane. The proxies stay at 5.41 cm. At that frame the art covers 69% of the view against 57% for the proxies. In C11 the cap visibly fills more of the lower-centre view than M3's head did. The cross's near-plane cut is about 1 mm at the frame's top edge and was not visible in C4 f90-91. No existing test can see either: test_grab_view runs on dummies, and FPView measures proxies.",
+     "evidence": "captures/review/g1_probe5.log: 'HOLD hold, knees, release: proxy_near 0.2556, art_near 0.1996, near_bone Head, art_depth_in_view 0.1924, art_share 0.382 (proxy 0.377)'; 'regrab and throw: proxy_near 0.2691, art_near 0.2017'. captures/review/g1_probe4.log: 'punk_cross: proxy_near 0.0541, art_near 0.0463, art_depth_in_view 0.0487, art_share 0.691, proxy_share 0.566'. Rule: tests/test_grab_view.gd:508. Sheets: SL-int c11 overview_01.png against captures/m4_before/c11 overview_01.png; captures/review/c4_cross_86_91.png against before_c4_cross_86_91.png.",
+     "repro": "cd /Users/arachne/repos/beat-em-up-PoC/.worktrees/m4-review-slice-g1 && tools/run_tests.sh -gselect=test_zz_review_g1.gd -gunit_test_name=test_holding_an_art_punk_keeps_the_lens_rules (training room, a StreetPunk 1.1 m ahead, AI frozen) and -gunit_test_name=test_the_punks_strikes_at_one_metre_against_the_lens (Punk at 0.95 m, force_attack 0 and 1).",
+     "suggested_fix": "F-punk: fit the cap and head volume within the head sphere + 5 cm (A6 head is 95.0%, at the bar). Add art-drawn versions of the lens rules to test_art_punk: a held victim's skinned vertices at least 0.25 m from the lens through grab, knees and throw, and no in-view vertex of a striking Punk nearer than FPView.NEAR. Do not widen the proxies (M3's tuned shares would move).",
+     "files": [
+      "tests/test_art_punk.gd",
+      "tests/test_grab_view.gd",
+      "assets/export/characters/punk/punk.glb",
+      "assets/source/characters/punk/pipeline.json"
+     ],
+     "spec_change": false
+    },
+    {
+     "severity": "medium",
+     "title": "The load-time art warm-up is placed from the camera before the camera first updates, so it is never in the lens and draws nothing",
+     "detail": "ToonMaterials.warm_up awaits one process_frame and then sets holder.global_position = camera.global_position - camera.global_basis.z * 2.5 + DOWN * 1.2. The process_frame signal fires before the FirstPersonCamera's own _process, so the camera is still at the world origin with an identity basis. The holder lands at (0, -1.2, -2.5), 1.2 m under the floor. Before the first render the camera moves to the eye (y 1.45) and turns to the player's facing (+X in the crowd room). For both frames the holder exists, every corner of the skinned ArtBody's AABB and of the five hull boxes is outside the frustum, so the GPU never draws them and the skinned toon, hull and shadow pipelines are not built at load. SL-int C4 and ARCHITECTURE:992 say it stands 'where the lens sees it'. No windowed test checks this (test_art_punk only checks that it adds nothing headless). The training room uses the same path.",
+     "evidence": "game/fx/toon_materials.gd:266-271 and game/level/room_kit.gd:178-188. Windowed probe tests/review_g1/warm_probe.tscn (captures/review/warm_probe2.log, warm_probe3.log): 'WARM f1: camera at (0,0,0) fwd (0,0,-1); ToonWarmUp at (0,-1.2,-2.5)'; 'f2: camera at (0.18, 1.45, 0) fwd (1,0,0); ... ArtBody vis true skin true aabb y -1.20..0.61 z -2.75..-2.29 corners in frustum 0'; holders gone at f4. Screenshots f1-f6 (captures/review/warm_f1_f6.png) and SL-int c7 frames 0-39 and c9 frames 0-5 (warm_c7_first40.png, warm_c9_first6.png) show no warm-up body. The lead's A16: the art act's first spawn is 34.1 ms against 32.3 for the mixed six.",
+     "repro": "cd /Users/arachne/repos/beat-em-up-PoC/.worktrees/m4-review-slice-g1 && godot --path . --resolution 1280x720 res://tests/bot/../review_g1/warm_probe.tscn --quit-after 600 (or res://tests/review_g1/warm_probe.tscn) ; grep 'WARM f' in the output.",
+     "suggested_fix": "Place the holder after the camera's first update: await a second process_frame (or RenderingServer.frame_pre_draw) before reading the camera, or compute the spot from the player's get_eye_transform() and look basis. Add a windowed check, in a look act, that the holder's AABB intersects the camera frustum on both frames it exists. Re-measure first spawn on the art act.",
+     "files": [
+      "game/fx/toon_materials.gd",
+      "game/level/room_kit.gd",
+      "tests/test_art_punk.gd"
+     ],
+     "spec_change": false
+    },
+    {
+     "severity": "medium",
+     "title": "A6 misses on the legs (89-91% within hurtbox + 6 cm): the chain never fits girth, so F-punk will repeat it",
+     "detail": "Hard row A6 needs at least 95% of torso and leg vertices within the hurtbox radius + 6 cm. Every GLB misses on the legs (punk 89.1% of 2,329 vertices, auto 90.9%), and the head sits exactly at the bar (95.0%). The cause is the chain, not only the smoke asset. blender_fit's proportion warp stretches along each bone only and 'never girth' (blender_fit.py:14, P1-chain C3), so whatever thickness Tripo generates ships as is. The same bulk is behind A9's 6.1% cell difference at the jab, A11's 4-5 cm anchor offset and finding 2. In play, a strike that visibly lands on the outer 6 cm or more of the baggy jeans can pass through without a hit, and a contact sinks 4-5 cm into the torso art before the hurtbox registers.",
+     "evidence": "captures/review/test_art_punk.log: 'ART-PUNK A6 punk: torso 99.4% of 500 vertices, legs 89.1% of 2329, head 95.0% of 818 ... GATE: legs 89.1% < 95%; head 95.0% < 95%' and 'A6 punk_auto: ... legs 90.9% of 2463 ... GATE'. tools/pipeline/blender_fit.py:14.",
+     "repro": "cd /Users/arachne/repos/beat-em-up-PoC/.worktrees/m4-review-slice-g1 && tools/run_tests.sh -gselect=test_art_punk.gd | grep 'ART-PUNK A6'",
+     "suggested_fix": "F-punk: generate the views on the rig's own proportions, as planned. If A6 legs or head still miss on the real GLB, add an optional per-region girth clamp to blender_fit (radial scale toward the bone axis for vertices past hurtbox radius + slack, blended by weight) before decimation, and assert A6 in test_art_punk for punk.glb.",
+     "files": [
+      "tools/pipeline/blender_fit.py",
+      "assets/source/characters/punk/pipeline.json",
+      "tests/test_art_punk.gd"
+     ],
+     "spec_change": false
+    },
+    {
+     "severity": "low",
+     "title": "The slice gate's reproducibility command `run.py --asset punk --from smoke` crashes; `--check` is the real command",
+     "detail": "Part C §6 item (1) names `run.py --asset punk --from smoke`, but 'smoke' is not a step name, so run.py raises ValueError at STEP_NAMES.index (after rewriting the palette atlas and the effective config). The intended check exists as `--check`, which rebuilds into _cache/check_punk and compares the report hash. A gate or final reviewer who runs the plan's text gets a traceback, not a verdict.",
+     "evidence": "tools/pipeline/run.py:202. Output: \"ValueError: 'smoke' is not in list\". `--check` prints 'reproducible: YES, the same report hash (committed c0d8255da219)' (captures/review/check_tripo.log).",
+     "repro": "cd /Users/arachne/repos/beat-em-up-PoC/.worktrees/m4-review-slice-g1 && python3 -I tools/pipeline/run.py --asset punk --from smoke --no-import",
+     "suggested_fix": "Have M4-slice-gate.md and the final review cite `run.py --asset punk --check` (plus the `--set rig.weights=\"auto\"` variant with paths.report=report_auto, paths.export_name=punk_auto). Optionally make run.py reject an unknown --from step with a usage line.",
+     "files": [
+      "tools/pipeline/run.py",
+      "docs/milestones/M4-slice-gate.md"
+     ],
+     "spec_change": false
+    },
+    {
+     "severity": "low",
+     "title": "SkinnedView measures the FK pose, not the drawn ragdoll pose, so drawn-art evidence during staggers and launches measures the wrong body",
+     "detail": "SkinnedView._skin_matrices uses rig.animation_pose() (_bone_globals, the FK pose) when no globals are passed, and hits()/_soup() never pass any. During a ragdoll the skin draws the Ragdoll write-back (the followers' _visual), which can be tens of centimetres from FK in a stagger. FPView's proxies follow the ragdoll, so in an L5 or A9 comparison over a live fight the art and the proxies are measured in different poses on every ragdoll frame. The L5 figures above include such frames, and they still agree within 2 pp.",
+     "evidence": "tests/skinned_view.gd:505-511 (_skin_matrices) and :630-647 (_soup). The STAGGER/PARTIAL frames of my gap probe show the skeleton following _visual (game/actors/ragdoll.gd:614-647), not _bone_globals.",
+     "repro": "Read tests/skinned_view.gd:_skin_matrices. Compare SkinnedView.skin_vertices(mi, rig) against skin_vertices(mi, rig, [ragdoll.visual_pose(i) ...]) on a staggered StreetPunk.",
+     "suggested_fix": "Give hits() and _soup() an optional globals source: when rig.is_ragdolling(), use rig.get_ragdoll().visual_pose(i) per bone. Use it in the L5 evidence act P3-int builds.",
+     "files": [
+      "tests/skinned_view.gd"
+     ],
+     "spec_change": false
+    }
+   ],
+   "locks": [
+    {
+     "item": "Bind route, mechanics side (A3)",
+     "pick": "The A-pose route: punk.glb, the default GLB, bound by SkinnedArt's chained formula",
+     "evidence": "Both routes pass check() with joints within 0.0005 mm (A-pose) and 0.0 mm (bake) of the chained table, and print identical A6 (99.4 / 89.1 / 95.0%), A9 (worst 6.1%, 2.0 pp, 61 cm) and A11 (1.5 / 4.2 / 4.8 cm) (test_art_punk.log). The in-game write-back probe on punk.glb is exact (0.0000 m). The bake deforms worse at the arm raise (p99.9 4.24 vs 3.70, 398 vs 378 bad triangles).",
+     "alternative": "The arms-down bake, punk_rest.glb (R = identity, translation-only binds)",
+     "why": "The two routes are mechanically indistinguishable, and one code path serves both. The A-pose route keeps the mesh nearer its source pose and is slightly better at the arm raise. The bake stays available behind look_punk_art_variant=1 as a contingency."
+    },
+    {
+     "item": "Proxy decision (A4, A9)",
+     "pick": "Accept the proxy figures for crowd-scale readability: keep the hidden proxies unwidened and the art unslimmed. Add art-drawn guards only for the close-range distance rules: held victim at least 0.25 m from the lens, no striking Punk vertex inside the 5 cm near plane. Treat A9's 3% cell bar on the Punk's strikes as reported, with the 4 pp lens-share bar binding.",
+     "evidence": "L5: R8 drawn vs proxies, six Punks p50 0.286 / 0.281 and p95 0.462 / 0.441; mixed six 0.286 / 0.286 and 0.533 / 0.531; all inside M3's spread. A9 lens share at most 2.0 pp at every 1 m pose. Where the answer changes is close range only: hold 0.20 vs 0.256 m, cross 4.6 vs 5.4 cm, coverage 69 vs 57% (findings 2 and 4).",
+     "alternative": "Widen the proxies' arms and head to the art's bulk",
+     "why": "Widening moves M3's tuned lens shares, wind-up telegraph shares and the KO and grab view rules that every first-person test was written against (A4: the proxies keep the tuned shapes). Slimming the art fights J1's chunky silhouette. The crowd-scale metrics already agree, so only the distance rules need the art itself."
+    },
+    {
+     "item": "Edge-mask outcome (A8)",
+     "pick": "The dilated character mask as built (A8's primary route, look_edge_character_mask on). Fallback 2 (mask off) stays a Debug switch; no fallback is adopted.",
+     "evidence": "SL-int §4: debug view 5 (depth lines only) shows a single silhouette on the art Punk and props, and mask-off looks the same as the default. E2 widths: 4.5 / 4.5 / 4.5 px for the unshaded hull (edges off / mask on / mask off). P1-post: the mask is what keeps a tagged hull-less character from getting an extra 1.5 px line. I viewed the dbg/c2_view5 body crop f109: one ink line, no doubled silhouette.",
+     "alternative": "Fallback 1: the hull as a lit shader writing ROUGHNESS 0 and EMISSION ink",
+     "why": "No doubled line appears with the mask. Fallback 1 adds a lit pass per hull (P1-post C-A8) and measured thinner (3.0 px) at the same setting."
+    },
+    {
+     "item": "A3 landmark residual (2.35 cm at UpperChest against the 1 cm bar)",
+     "pick": "No mechanical effect. Report it, do not fail the slice on it. F-punk targets 1 cm or less through views on the rig's proportions; if it stays above, G2 rules from the shoulder and collar deformation, not from mechanics.",
+     "evidence": "report.json fit.landmark_residual_m: UpperChest 0.0235, LeftShoulder 0.0199, RightShoulder 0.0153, Spine 0.0131, Hips 0.0105, limbs 0. Its consumers have far looser tolerances: A6 torso 99.4% within radius + 6 cm, all axis points inside, the flash core 12.5 cm, and hurtboxes and rig points that are the table's.",
+     "alternative": "Hold the 1 cm bar as a hard fail and re-fit now",
+     "why": "The residual is cross-talk from Tripo's tilted torso bones inside the mesh. It moves art surface about 2 cm, against 4-6 cm mechanical slack. Where it may matter is the armpit and collar strain, which is G2's lens."
+    }
+   ],
+   "gaps": [
+    {
+     "gap": "R4 cannot see an art Punk as an occluder, and the L5 drawn-art evidence act does not exist in the repo",
+     "evidence": "readability_probe.gd:801; scratch R4 test: art 0.0 vs primitives 1.0. L5 was run only by this review's scratch act (captures/review/l5_six, l5_mixed).",
+     "brief_line": "P3-int: switch readability_probe R4's occluder test to FPView.is_drawn() (proxies count), with a two-StreetPunk test. Land the windowed L5 evidence act that prints R4 and R8 with the art drawn beside the proxies for 'Six Punks, fight' and 'Mixed six, fight', skinning ragdolling rigs from Ragdoll.visual_pose.",
+     "owner": "P3-int"
+    },
+    {
+     "gap": "The load-time art and hull warm-up never draws (placed from the un-updated camera)",
+     "evidence": "warm_probe3.log: holder at (0,-1.2,-2.5), camera moved to (0.18,1.45,0) facing +X before the first render; 0 AABB corners in the frustum.",
+     "brief_line": "F-look: place the ToonMaterials.warm_up holder after the camera's first update (or from the player's eye and look), add a windowed check that its AABB is in the frustum on both frames, and re-measure the art act's first-spawn hitch.",
+     "owner": "F-look"
+    },
+    {
+     "gap": "The chain never fits girth; A6 legs 89-91% (and head at 95.0%) and the art's bulk beyond the proxies come with it",
+     "evidence": "ART-PUNK A6 lines; blender_fit.py:14 'never girth'; A9 6.1% cells and 57-61 cm nearest at the jab and cross; A11 4.2-4.8 cm.",
+     "brief_line": "F-punk: generate on the rig's own proportions and assert A6 (torso and legs 95%+, head 95%+) for punk.glb in test_art_punk. If it still misses, add a per-region girth clamp to blender_fit (radial, toward the bone axis, past hurtbox radius + slack) before decimation.",
+     "owner": "F-punk"
+    },
+    {
+     "gap": "No test holds the lens distance rules against an art Punk (hold victim at least 0.25 m, strike outside the near plane)",
+     "evidence": "Hold: art 0.1996 m (Head, the cap) vs proxies 0.2556 m. Cross at 0.95 m: art 4.63 cm, in-view depth 4.87 cm, inside FPView.NEAR 5 cm.",
+     "brief_line": "F-punk: bring the real Punk's cap and head inside head sphere + 5 cm, and add to test_art_punk the hold (grab, 3 knees, throw) and the jab-cross at 0.95 m measured on the skinned art: victim at least 0.25 m, no in-view vertex nearer than 5 cm.",
+     "owner": "F-punk"
+    },
+    {
+     "gap": "The player's art will meet the same bulk-versus-proxy risk in the lens rules",
+     "evidence": "The Punk's art runs 13-61 cm nearer than its proxies in some cells. A9 for the player asks for art never 2 cm or more nearer, and the guard at least 0.3 m. test_grab_view and test_ko_view rules run on primitives only.",
+     "brief_line": "F-player-int: run test_grab_view's lens rules (forearms and hands 0.3 m or more, own body a third of the view or less) and the KO view's head-layer clearance on the player's skinned art through SkinnedView, not only A9's 13 poses.",
+     "owner": "F-player-int"
+    },
+    {
+     "gap": "The in-game ragdoll write-back on the real GLB has no regression test (only fixtures)",
+     "evidence": "The scratch GapProbe on a StreetPunk through stagger, launch, downed, get-up and KO read 0.0000 m (g1_probe3.log); test_skinned_art's A5 tests use probe fixtures and rig.ragdoll_start, not a CombatActor's reactions.",
+     "brief_line": "F-motion: before changing any flinch, get-up or downed clip, add to test_art_punk a SkeletonModifier3D after Ragdoll on a real StreetPunk through jab, stagger, LAUNCH, get-up and KO, asserting skeleton equals the followers within 1 mm on every update.",
+     "owner": "F-motion"
+    }
+   ],
+   "verdict": {
+    "choice": "b",
+    "contingency": "Girth fit. F-punk generates the real Punk on the rig's own proportions. If A6 (legs or head) or the art-drawn lens distances still miss on the real GLB, add a per-region girth clamp to blender_fit before any other contingency. Alongside, the gate's fix package (or P3-int and F-look) fixes R4's occluder test (readability_probe.gd:801) and the warm-up placement (toon_materials.gd:266-269).",
+    "why": "From the mechanics side the chain is proven. It rebuilds byte for byte with no credit spent. The contract is strict (check() empty on all four GLBs, joints 0.0005 mm, no neutral_bone, 1378/1378 green). The art fights in both rooms. The flash lands for exactly 2 frames on the struck spot. Marks stick. The skin equals the followers through stagger, launch, get-up and KO. The KO blink is clean. Crowd-scale readability is unchanged with the art drawn. What fails is bulk: the art is thicker than the hurtboxes and proxies (A6 legs, A9 cells, the hold's 0.20 m and the cross's 4.6 cm). The chain causes this, since it never fits girth, so the real Punk will inherit it unless F-punk closes it. Two instrument and warm-up defects need small code fixes. None of this needs a re-plan or blocks spending on the real Punk."
+   }
+  },
+  "g2": {
+   "summary": "G2 (deformation and look at 1 m in first person) on m4/art-pipeline @ 59a0adf. The chain does work end to end. The smoke Punk reads as an illustrated character at 1 m, and the palette borders are clean. Two defects, though, are ones the real Punk and the player will both inherit.\n\n(1) The hull's smooth normals are baked in Blender's Z-up axes and are never converted to glTF Y-up. Read back in Godot, the decoded COLOR normal agrees with NORMAL by a mean dot of only 0.338, which is the mean of NORMAL.x² (0.364). Read as Z-up it agrees at 0.930. Every chain GLB has this, the probe body included. As a result the ink line is missing on every top and bottom silhouette: the cap crown, the elbow and forearm bottoms. I patched the shader locally to read the colour as Z-up, recorded once and reverted. That restores a continuous line.\n\n(2) Linear-blend skinning stretches the vest into a fin that rises to the nose during the jab wind-up's hold, and folds the collar and neck in the hook stagger. 122-124 edges grow by more than 2 cm. It looks the same on all four GLBs, so neither weight source nor either bind route fixes it, and the chain's weight smoothing (rig.smooth_iterations) has never been turned on.\n\nOther findings:\n- The gloves read as canisters. The glove swatch is 10 luma above ink, the fist is a full mitt where the concept has a fingerless glove, and the cuff flares to 0.083 m.\n- Lighting: look_band_2 is 0.62, above cos(52°) = 0.616 for the sun's elevation, so no vertical surface can reach the lit band. In the 1 m acts the Punk's front sits in the violet-tinted shadow band: one band, the teal vest reads blue and the skin reads lilac. Turning the grade off changes neither.\n- A7's triangle bar cannot pass on this mesh. 142-177 triangles are flagged in a rigid pose, and 159 are folded in the authored mesh. Without that baseline, the elbow, knee and spine twist pass; the guard is near the bar and the arm raise fails.\n- The interior detail is gone (mouth, pockets, stitching), so A18's detail mask is warranted.\n- The damage looks turn the skin grey.\n- The rim's edge is stippled.\n\nLocks: Tripo weights, the A-pose route, the current fit, border-protected decimation, outline 3.75 px (after the axis fix), 4x MSAA by look (FXAA acceptable), placeholder hulls on.\n\nVerdict: b. The contingency is weight smoothing at named joints, plus A18's mask. The hull-normal axis fix must land first.",
+   "checked": [
+    "Read M4-plan Part A (A1-A23), Part B (A1-A14, L1-L5, J1-J14), Part C section 6 slice gate; M4-look-bible.md; M4-calls/SL-int.md (all), P1-toon.md (C6, C10, measurements), P1-chain.md (C10 fists, smoke summary)",
+    "Set up worktree /Users/arachne/repos/beat-em-up-PoC/.worktrees/m4-review-slice-g2 at 59a0adf, imported",
+    "Ran tools/run_tests.sh -gselect=test_art_punk.gd: 14/14 pass, 125 ART-PUNK lines, numbers identical to SL-int section 3 (captures/review/test_art_punk.out)",
+    "Full-resolution SL-int stills and 2x crops: C1 f109 (face, head crop), C2 f109 (body, body and hands crops), C4 jab windup/strike f40/f62, cross strike f90, shove windup/strike f153/f173, C5 hook, launch, downed f216, getup f291, health 30% f531, KO f584 and ko_sheet, C6 2.5 m f199, C7 f109",
+    "12 fps sheets cut by me: C4 0.6-4.0 s, C5 2.4-5.8 s, C3 1.0-4.4 s; full-res frames C4 f44/f48/f52/f56, C5 f156/f162, C13 f178",
+    "Bind-route and weights A/B: SL-int abmontage/c4_jab.png; my montages of C4 f48 and C5 f162 across punk, punk_rest, punk_auto, punk_auto_rest (ab/v1-v3); P1-chain report/stills/ab_weights_x_route.png",
+    "Before/after: captures/m4_before c2 f109, c4 f48, c5 f162, c5 f531 against SL-int's same frames",
+    "Probe test tests/test_zz_g2_probe.gd (local, untracked): flip baseline at the skinned rest and authored mesh, deformation-only triangle counts per flex for all 4 GLBs; FP-visible strained cells at 1 m (48x27 grid, SkinnedView.hits depth test) for 12 poses x 2 pitches for punk and punk_auto; COLOR hull-normal decoding against NORMAL for punk, punk_auto, punk_rest, probe_body; absolute edge stretch (cm) in downed_front, ko_front, jab windup, stagger_left/right, shove",
+    "Pixel profiles (ffmpeg raw + python): hull widths at forearm sides, elbow bottoms, cap crown (C1 x=740-880), head side (C1 row 400), jeans and cap at 2.5 m (C6)",
+    "Colour clusters and luma histograms: vest, skin, cap at 1 m; vest and jeans at 2.5 m; Kicker/Bruiser/Punk in C7 hulls on vs off; HUD HP fill and paper against HudStyle constants (capture path colour-true)",
+    "New recordings (one act per process, captures/review/): C2 with look_aa_mode=1 (FXAA), C7 with look_hull_on_placeholders=0, C2 with look_grade_enabled=0, C1/C2/C4 with a local one-line shader probe reading the hull normal as Z-up (shader reverted with git checkout afterwards; git status shows only the probe test)",
+    "Palette atlas pixels (#3f8f96, #f0c9a8 etc. as in the JSON), report.json palette step (6 swatches, 2553 protected vertices, protected_position_worst 0.0)",
+    "SL-int dbg/c2_view5 (depth lines only) for a doubled silhouette on the Punk",
+    "Code read: toon_outline.gdshader (mode 4), toon.gdshader, toon_light.gdshaderinc (bands, rim), room_kit.gd sun, tuning_data.gd Look group, blender_export.write_hull_normals, blender_rig smooth_iterations, test_art_contract hull-normal test, test_toon fixture test, test_art_punk _strain and flexes, enemy_poses_punk _jab wind-up",
+    "Concept A (punk_a_denim_vest.jpg) full and head crop against C1/C2"
+   ],
+   "sheets": [
+    "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m4-review-slice-g2/captures/review/sheets/c1_hull_axis_before_after.png",
+    "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m4-review-slice-g2/captures/review/sheets/c2_hull_axis_before_after.png",
+    "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m4-review-slice-g2/captures/review/sheets/c1_cap_top_4x.png",
+    "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m4-review-slice-g2/captures/review/sheets/ab_c4_f48.png",
+    "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m4-review-slice-g2/captures/review/sheets/c4_f48.png",
+    "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m4-review-slice-g2/captures/review/sheets/before_c4_f48.png",
+    "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m4-review-slice-g2/captures/review/sheets/ab_c5_f162.png",
+    "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m4-review-slice-g2/captures/review/sheets/before_c5_f162.png",
+    "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m4-review-slice-g2/captures/review/sheets/c4_12fps_a.png",
+    "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m4-review-slice-g2/captures/review/sheets/c5_12fps_a.png",
+    "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m4-review-slice-g2/captures/review/sheets/aa_msaa_vs_fxaa_face.png",
+    "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m4-review-slice-g2/captures/review/sheets/aa_msaa_vs_fxaa_glove.png",
+    "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m4-review-slice-g2/captures/review/sheets/aa_diff_small.png",
+    "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m4-review-slice-g2/captures/review/sheets/c7_hull_on_off.png",
+    "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m4-review-slice-g2/captures/review/sheets/c2_forearm_patch_4x.png",
+    "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m4-review-slice-g2/captures/review/sheets/concept_a_head.png",
+    "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m4-sl-int/captures/sl-int/c5/sheets/c5/stills/c5_f531_health_30.png",
+    "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m4-sl-int/captures/sl-int/c4/sheets/c4/stills/c4_f62_punk_jab_strike.png"
+   ],
+   "passes": [
+    "R5 palette borders at 1 m are clean, not jaggy. In the 4x crops (aa_msaa_vs_fxaa_face.png, aa_msaa_vs_fxaa_glove.png), the lens/skin, strap/glove and vest/tee borders are smooth curves with no texel staircase under both AA modes. Border-protected decimation protected 2553 vertices with protected_position_worst 0.0 m (report.json, steps.palette).",
+    "Shadows are never black and are tinted. The darkest Punk fill (glove shadow) is (28,25,50), luma 27, against ink at luma 16. Skin shadow to lit luma is 166/209 = 0.79 (bible at least 0.4). The shadow side's hue shifts toward violet: the vest at hue 204-206 against punk_teal at 185 (C2 clusters).",
+    "Edge pass: no doubled silhouette on the Punk. SL-int dbg/c2_view5 (depth lines only) draws lines on the buildings and none along the Punk's outline. The doubled line along the vest lapel in the MSAA crop is hull on hull (vest over tee), not the edge pass.",
+    "The grade is on and the capture path is colour-true. C2 with look_grade_enabled=0 differs from the default (PSNR 32.4 dB). The HUD HP fill is captured as (252,208,40) against HudStyle.HEALTH (255,209,41), and the paper as (244,240,212) against (247,240,217).",
+    "The hull is on target where its normals are right. Head side at 1 m: 3 px at 1600x900 (C1 row 400, x 627-629), about 3.6 px at 1080p. Jeans sides at 2.5 m: 3-4 px (C6 rows 700-800). With the local axis probe the forearm sides measure 3 px and the cap crown 2 px (c2_axisfix, c1_axisfix).",
+    "AA by look: FXAA and 4x MSAA differ only along edges at 1 m (PSNR 33.5 dB, aa_diff_small.png). Palette borders are equally clean in both; FXAA only softens the thin interior lines slightly.",
+    "Placeholder hulls: with hulls on, the Kicker, Thug and Bruiser carry a line weight close to the Punk's. With hulls off they keep only the 1-1.25 px edge line, so two line weights share one frame (c7_hull_on_off.png). Paint colours are identical either way (Kicker (120,172,36), Bruiser (68,24,136)).",
+    "The 1 m wind-up still reads (J12). In the jab wind-up the cocked fist shows beside the head on the defender's left, and the shades stay in view (c4_f48.png).",
+    "Most motion keeps its volume at 1 m. The strafe (C3 12 fps sheet), flinch, uppercut launch (C13 f178), get-up and KO show no tearing. FP-visible hard strain (an edge outside [0.4, 2.2]) covers only 1-6 cells of about 240-400 art cells at idle, flinch, walk and stagger_back (probe.out).",
+    "Before/after: M3's primitive Punk (a teal box with a black visor bar, captures/m4_before/c2 f109) against M4's illustrated Punk at the same frame. The chunk and the silhouette read as a character (J1's silhouette at 1 and 2.5 m).",
+    "test_art_punk passes 14/14. Its A19 lines reproduce SL-int section 3 exactly, for example the guard's triangle counts 260/249/251/229 and the arm raise's 378/398/415/411.",
+    "Every evidence log has 0 SCRIPT ERROR/ERROR: c2_fxaa, c7_nohull, c2_nograde, c1/c2/c4_axisfix.",
+    "The four GLBs cannot be told apart at 1 m, in the jab wind-up (ab_c4_f48.png), the hook stagger (ab_c5_f162.png) or SL-int's montages. The bind-route and weights locks therefore rest on the numbers."
+   ],
+   "locks": [
+    {
+     "item": "Weights source",
+     "pick": "tripo (Tripo auto-rig weights, punk.glb)",
+     "evidence": "Deformation-only triangles (flips new vs rest plus squashed; probe.out), tripo/auto: guard 117/105, elbow 150 45/41, arm raise 140 228/262, knee -130 60/61, spine twist 54/59. Edges growing more than 2 cm (probe4.out): jab wind-up hold 124/122, stagger_left 71/46, stagger_right 62/41, downed_front 159/134. FP-visible hard-strain cells, jab strike: 12-14 against 2-5. A6 head fit 95.0% against 96.9%. The sheets are indistinguishable (ab_c4_f48.png, ab_c5_f162.png).",
+     "alternative": "auto (Blender heat-map weights, punk_auto.glb)",
+     "why": "Game-boy's order is Tripo's rig first, Blender's as the fallback, and the A/B doesn't separate the two visibly. The numbers split: tripo is better at the arm raise, auto at the staggers and strikes. The visible fins look the same on both, and weight smoothing applies to either. Switch to auto only if smoothing on the Tripo weights fails the visible-stretch bar, since auto has 30-35% fewer edges over 2 cm in the staggers."
+    },
+    {
+     "item": "Bind route (deformation side)",
+     "pick": "A-pose route (punk.glb, A3's default)",
+     "evidence": "Deformation-only triangles, A-pose against the arms-down bake: guard 117/128, arm raise 228/262, elbow 45/45, knee 60/60, spine twist 54/48. Arm-raise p99.9 3.70/4.24 (ART-PUNK A19). The bake has 35 fewer folded triangles at the hanging rest (159 against 194), but the hanging rest isn't a game pose. The Punk idles in the guard.",
+     "alternative": "the arms-down bake (punk_rest.glb)",
+     "why": "It is better or equal at the poses the game shows (guard and raised arms), and it is the spec route of A3. The bake wins only at the rest, which the player never sees."
+    },
+    {
+     "item": "Fit",
+     "pick": "Keep the landmark-warp fit onto the table (joints within 0.0005 mm), with the art's bulk as it is",
+     "evidence": "A6: torso 99.4%, head 95.0%, legs 89.1% (baggy jeans and big shoes). A9: 1.1-2.1% of cells differ at idle and 4.4-6.1% in the jab and cross, because the arms are bulkier than the proxy capsules (SL-int section 3). At 1 m the bulk reads as J1's chunky silhouette (C2 f109).",
+     "alternative": "Slim the art's arms to the proxies, or widen the proxies (changes M3's tuned numbers)",
+     "why": "Slimming loses the concept's chunk, which is what reads in first person. The proxies stay the readability measure (A4), and the legs' share is a concept trait F-punk's views on the mannequin's proportions address."
+    },
+    {
+     "item": "Border method",
+     "pick": "border-protected decimation",
+     "evidence": "The 4x crops at 1 m show smooth borders between lens and skin, strap and glove, vest and tee under 4x MSAA and FXAA (aa_msaa_vs_fxaa_face.png, aa_msaa_vs_fxaa_glove.png). protected_position_worst 0.0 m, 2553 protected vertices, every decimated face relabelled from the dense mesh (report.json).",
+     "alternative": "the posterized-texture fallback",
+     "why": "R5 doesn't materialise. Borders follow mesh edges and read clean at 1 m; only straight polygon segments show at the strap's corners."
+    },
+    {
+     "item": "Outline px (look_outline_px)",
+     "pick": "3.75 px at 1080p, valid only once the hull-normal axis fix lands",
+     "evidence": "Where the baked normal happens to be right (±X): head side 3 px at 1600x900, about 3.6 px at 1080p (C1 row 400). Jeans sides at 2.5 m: 3-4 px (C6). With the axis probe: forearm sides 3 px, cap crown 2 px (c2_axisfix, c1_axisfix). Before the fix the cap crown has 0 px (c1_cap_top_4x.png) and the elbow bottoms have under 1 px.",
+     "alternative": "4.0 px",
+     "why": "With correct normals the width sits inside the bible's 3.5-4 px and L1's ±1 px. Raising px now would only thicken the sides and leave the tops at zero. F-look re-measures L1 after the fix."
+    },
+    {
+     "item": "AA mode by look",
+     "pick": "4x MSAA",
+     "evidence": "C2 FXAA (captures/review/c2_fxaa) against SL-int's MSAA at the same frame: PSNR 33.5 dB, differences only along edges (aa_diff_small.png). Thin interior lines are a little softer under FXAA and some faint fragments drop out; palette borders are equally clean.",
+     "alternative": "FXAA (acceptable by look; the lead's perf has it at -2.3 ms mean)",
+     "why": "MSAA is spec-faithful and slightly crisper on the 1-2 px interior lines. FXAA shows no jaggies or smears at 1 m, so it is a clean fallback if perf demands it."
+    },
+    {
+     "item": "Placeholder hulls by look",
+     "pick": "on (look_hull_on_placeholders = true)",
+     "evidence": "c7_hull_on_off.png: with the hulls on, the Kicker, Thug and Bruiser carry a line weight near the Punk's. With them off, only the 1-1.25 px edge line remains, two line weights in one frame. The lead's perf measures no cost (14.43 against 14.50 ms mean).",
+     "alternative": "off (edge-pass lines only)",
+     "why": "J13 ('one game') is already the weakest item. Hulls on is the only setting where the placeholders and the Punk share an ink weight, and it is A7's spec reading."
+    },
+    {
+     "item": "Edge mask outcome (A8)",
+     "pick": "Keep the roughness mask (the primary design, no fallback)",
+     "evidence": "SL-int dbg/c2_view5 (depth lines only) has no line along the Punk's or the crates' silhouette. The default and mask-off frames look the same (SL-int section 4).",
+     "alternative": "fallback 2 (depth lines with the character skip off and a thinner hull)",
+     "why": "No doubled silhouette appears on the art. The lapel's double line is hull on hull, which no edge fallback would change."
+    }
+   ],
+   "gaps": [
+    {
+     "gap": "The hull's smooth normals (COLOR) are in Blender Z-up axes, so the ink line is missing on top and bottom silhouettes",
+     "evidence": "probe3.out: punk.glb mean dot(COLOR normal, NORMAL) is 0.338 as read and 0.930 read as Z-up. probe_body.glb gives 0.321 against 0.922. Cap crown at 1 m: 0 px of ink (c1_cap_top_4x.png); with the local probe it gets a continuous 2 px line (c1_hull_axis_before_after.png).",
+     "brief_line": "In tools/pipeline/blender_export.write_hull_normals (:84), encode the smooth normal in glTF axes (x, z, -y) before n*0.5+0.5. Re-export punk, punk_rest, punk_auto, punk_auto_rest and probe_body. Add to test_art_contract.test_hull_normals_and_the_detail_uv_are_there an assertion that the mean dot(decoded COLOR, NORMAL) per mesh is above 0.9. This lands before F-player-art's first export.",
+     "owner": "F-punk"
+    },
+    {
+     "gap": "The vest becomes a stretched fin at 1 m in the jab wind-up's hold, and the collar and neck fold in the hook stagger (J8*), on all four GLBs",
+     "evidence": "c4_f48.png, ab_c4_f48.png, c5_f162.png, ab_c5_f162.png. probe4.out: jab wind-up hold has 124 edges growing more than 2 cm (Spine 5.4 to 14.6 cm, RightUpperArm 7.5 to 13.1, RightShoulder 3.4 to 8.4), stagger_left 71. pipeline.json has no rig.smooth_iterations, so it runs at 0.",
+     "brief_line": "Turn on rig.smooth_iterations and smooth_factor. Clamp the weights at the named joints: no UpperArm weight on the vest side panel below the armpit; the collar on UpperChest, not Neck/Shoulder; the vest hem across Hips/Spine. Add a visible-stretch test: in the 1 m acts' poses (idle, jab, cross and shove wind-up and strike, flinch, staggers), no edge in an FP-visible cell grows by more than 2 cm. Re-record C4 and C5 at 12 fps.",
+     "owner": "F-punk"
+    },
+    {
+     "gap": "The gloves read as canisters (J3*)",
+     "evidence": "c2_f109_hands crop: smooth cylinders with no finger grooves. The glove swatch near_black renders (28,25,50)/(55,50,88) against ink (18,15,23), so no interior line can show on it. The fist is a full mitt where concept A has a fingerless glove with bare fingers. The cuff flares to a 0.083 m radius (P1-chain C10). In the jab strike the glove fills half the view as a flat slab (c4_f62).",
+     "brief_line": "In T9, build a fingerless glove with bare skin fingers and a knuckle face that turns toward the lens in straight punches. Use a glove swatch with value of at least about 0.3, for example dark_grey #4b4854, so ink and bands read on it. Set the cuff at the wrist's radius, not the cut's 90th percentile. Judge at the C2 chin guard and the C4 jab and cross strikes.",
+     "owner": "F-punk"
+    },
+    {
+     "gap": "At 1 m in the acts the Punk's front is one violet-tinted shadow band: the concept's teal reads blue, the skin reads lilac, and the 2-3 bands never show (J5*, J1*)",
+     "evidence": "C2 vest: 85% of pixels in one luma bucket. Vest hue 204-206 against punk_teal 185, skin hue 330-351 at sat 0.15 against skin_light hue 28. Colour math matches the shadow band, not the mid band. Grade off changes neither (c2_nograde). The sun is at 52° elevation (room_kit.gd:74), and look_band_2 is 0.62 (tuning_data.gd:1061), above cos 52° = 0.616.",
+     "brief_line": "Tune look_band_1 and look_band_2, the sun elevation and the shadow tint amount so that a front-on Punk at 1 m shows 2-3 bands. Judge from a back-lit and a front-lit heading, and keep the palette identity: rendered punk_teal and skin_light within about 10° of their swatch hue in the mid band. Record C2 at both headings.",
+     "owner": "F-look"
+    },
+    {
+     "gap": "The concept's interior detail is lost at 1 m: mouth, the vest's flap pockets and buttons, stitching, the tape edges (J2, J4)",
+     "evidence": "c1_f109_head crop against concept_a_head.png: no mouth or pockets. The 6-swatch palette and the absent detail mask remove them (report.json detail_uv false).",
+     "brief_line": "Add A18's 1k ink-only Punk detail mask on UV2: mouth line, pocket flaps and buttons, vest stitching, laces, tape edges, never shading. Log it in README's M4 departures for Game-boy's ruling.",
+     "owner": "F-punk"
+    },
+    {
+     "gap": "Damage looks on the art: the skin turns grey and translucent, and the bruised tile reads as camouflage on the jeans (J11)",
+     "evidence": "c5_f531_health_30.png: grey smudges and blood splats at clothes density on the skin, cap and lenses. C5 12 fps sheet, rows 2-4: dark teal blotches over the jeans and vest after four hits. P1-toon C10 gives the art one damage texture.",
+     "brief_line": "Give the palette a skin range and the toon shader a second damage texture, so skin takes bruises and blood while clothes take scuffs. Keep blood off the lenses and the cap's crown, or thin it there. Re-check C5's 100/65/30% at 1 m.",
+     "owner": "F-look"
+    },
+    {
+     "gap": "A7's triangle bar can't pass on this mesh: 142-177 triangles are already flagged in a rigid pose",
+     "evidence": "probe.out: the 'lying' flex flags 177 (punk) and 142 (punk_rest) triangles with 0 deformation; 159 triangles are folded in the authored mesh itself. Deformation-only counts: elbow 41-45, knee 60-63, spine twist 48-59 (inside 75), guard 97-128, arm raise 228-264.",
+     "brief_line": "In test_art_punk._strain (:497-510), and wherever the real Punk's A19 runs, count only the triangles that flip relative to the skinned rest, plus the squashed ones. Report the authored mesh's folded triangles separately as a J7 mesh-QA number, and fix the folds in the chain's decimation.",
+     "owner": "F-punk"
+    },
+    {
+     "gap": "The rim's boundary is a stippled 10-20 px band at 1 m",
+     "evidence": "c2_forearm_patch_4x.png: a speckled lit edge along the forearm silhouette. toon_light.gdshaderinc:66 smoothsteps the rim over a fixed ±0.02, not fwidth-scaled like the bands (:56), on the decimated mesh's noisy normals.",
+     "brief_line": "Soften the rim edge with an fwidth-based width like the bands (band_soft px), and move the rim's constants (0.02, 0.3, -0.35, 0.1) into Look tunables. Judge the C2 forearms at 4x.",
+     "owner": "F-look"
+    },
+    {
+     "gap": "Face-down strain is never seen by any 1 m act",
+     "evidence": "probe4.out: ko_front end has 10 edges growing more than 2 cm (RightFoot 0.5 to 3.5 cm); downed_front has 159 (Hips/Spine 7.9 to 16.8 cm). C5's downs are face-up (c5_f216, c5_f291).",
+     "brief_line": "Add a face-down knockdown, downed_front and getup_front at 1-2 m to the evidence acts (C5 or C12), so the final review sees the shoe seam and the waist. Weight the shoe rigidly to Foot/Toes.",
+     "owner": "P3-int"
+    },
+    {
+     "gap": "Colour fidelity: the vest and jeans share one swatch, and the forearm tape becomes a whole cream sleeve",
+     "evidence": "report.json: punk_teal covers 47.4% of the area (vest and jeans), so at 2.5 m they merge into one blue mass (C6 f199); the concept's jeans are a lighter grey-teal. Cream (13.5%) covers the whole right forearm next to the pink left one (C2 f109), where the concept has a partial tape wrap.",
+     "brief_line": "Give the jeans their own slot (merge dark_grey into near_black to stay at 6), and keep the tape as a narrow wrap with ink edges from the detail mask. Check C2 and C6 beside the concept.",
+     "owner": "F-punk"
+    }
+   ],
+   "verdict": {
+    "choice": "b",
+    "contingency": "Weight smoothing at named joints. Turn on the chain's existing rig.smooth_iterations and clamp the weights at the shoulder and armpit (UpperArm to Chest/UpperChest, no UpperArm weight on the vest side panel), the collar (Neck/Shoulder to UpperChest) and the waist (Hips to Spine), gated by a test that no FP-visible edge grows more than 2 cm in the 1 m acts' poses. Add A18's Punk detail mask for the lost interior lines. Precondition: a fixer lands the hull-normal axis fix in blender_export.write_hull_normals, with the contract assertion, before F-punk or F-player-art export anything.",
+    "why": "Not (a): two defects that the real Punk and the player would both inherit show in first person at 1 m. The ink line is missing on every top and bottom silhouette, because the hull normals are in Blender Z-up axes (mean dot 0.338, against 0.930 read as Z-up). The vest stretches into a fin in the jab wind-up's hold and in the hook stagger (124 edges grow more than 2 cm), and neither weight source nor either bind route fixes it. Not (c): the chain does work end to end (contract green, borders clean, bands and tinted shadows present, no doubled silhouette, grade on), and both defects have local, cheap fixes. The axis fix is a one-line export change, already shown to restore the crown line by a local probe recording. Weight smoothing already exists in blender_rig.py and has never been turned on. No credits and no re-plan are needed."
+   },
+   "findings": [
+    {
+     "severity": "high",
+     "title": "Hull smooth normals are baked in Blender Z-up axes; the ink line vanishes on every top and bottom silhouette",
+     "detail": "blender_export.write_hull_normals stores the position-averaged smooth normal as COLOR (n*0.5+0.5) in Blender's coordinates. The glTF exporter converts POSITION and NORMAL to Y-up but leaves a colour attribute untouched, so toon_outline.gdshader mode 4 pushes the hull along a vector rotated 90° about X. Only ±X-facing silhouettes get the right push. Up-facing surfaces push backward and down-facing ones forward. In first person at 1 m and 2.5 m the line is missing across the cap's crown and the elbow and forearm bottoms, and is thin wherever the silhouette normal has Y or Z in it. This breaks J4* (an even, continuous, uncracked hull) and L1. Every GLB from the chain carries it, the probe body included, so the real Punk and the player's body will too. test_art_contract checks only unit length and splits, and test_toon's fixture is built in Godot (Y-up), so no test can catch it. SL-int's 'an even 3 px ink hull' is contradicted.",
+     "evidence": "captures/review/probe3.out, mean dot(decoded COLOR, NORMAL): punk.glb as read 0.338, read as Z-up 0.930 (mean NORMAL.x² 0.364, which as-read equals by construction). punk_rest 0.343/0.927, probe_body 0.321/0.922, probe_body fp_hidden 0.312/0.964. Crown vertices (NORMAL.y > 0.95) decode to (0, -0.08, 0.65), pointing +Z (probe2.out). Pixels in C1 f109: no ink at x=740-880 across the cap top; x=800 goes sky luma 174 straight to cap 154 (c1_cap_top_4x.png). C6 2.5 m: no ink at the crown, x=780/800. C2 elbow bottoms: minimum luma 83/65 against ink 16. With a local one-line shader probe reading COLOR as (x, z, -y), since reverted: crown ink 2 px (luma 20-34) at x=760/800/860, forearm sides 3 px (c1_hull_axis_before_after.png, c2_hull_axis_before_after.png). Code: tools/pipeline/blender_export.py:64-87 (:84 the encode), game/fx/toon_outline.gdshader:49, tests/test_art_contract.gd:338-365.",
+     "repro": "cd /Users/arachne/repos/beat-em-up-PoC/.worktrees/m4-review-slice-g2 && tools/run_tests.sh -gselect=test_zz_g2_probe.gd -gunit_test_name=test_hull_normal_axis_hypothesis, then read the G2-PROBE lines. Visually: look at C1 f109 (SL-int c1 stills) at 4x across the cap top. No ink line runs between the two sides of the crown.",
+     "suggested_fix": "In write_hull_normals, convert before encoding: n_gltf = (n.x, n.z, -n.y); rgba[:, :3] = n_gltf * 0.5 + 0.5. Re-run the chain's export for punk (both weight sources, both routes) and probe_body. Add a contract assertion that the mean dot(decoded COLOR, NORMAL) per mesh is above 0.9. Re-measure L1 at 1, 2.5, 5 and 10 m afterwards.",
+     "files": [
+      "tools/pipeline/blender_export.py",
+      "game/fx/toon_outline.gdshader",
+      "tests/test_art_contract.gd",
+      "assets/export/characters/punk/punk.glb",
+      "tests/fixtures/art/probe_body.glb"
+     ],
+     "spec_change": false
+    },
+    {
+     "severity": "high",
+     "title": "Linear-blend skinning turns the vest into a stretched fin at 1 m in the jab wind-up's hold and folds the collar and neck in the hook stagger (J8*)",
+     "detail": "The Punk's main telegraph, the jab's wind-up, is held from 50% to 80% of startup, so this is on screen for about 0.3 s on every jab. In it a vest panel stretches upward from the chest to the nose, a tall blue slab that hides the lower face, with a pink gap of skin inside it. In the hook stagger (C5 f155-f175, a partial ragdoll) the vest collar becomes a large blue flap over the shoulder and the neck folds, so the head looks detached and lies on its side. M3's same frames show the same extreme torso twist as overlapping boxes, so the pose comes from the clip and the ragdoll; the stretch comes from the skin. All four GLBs look the same, so neither weight source and neither bind route is the fix. The chain's weight smoothing (blender_rig.py rig.smooth_iterations) has never been turned on.",
+     "evidence": "Stills: captures/review/sheets/c4_f48.png and c4_f52.png (fin), ab_c4_f48.png (same in all 4 GLBs), before_c4_f48.png (M3 torso top at y≈300, M4 fin to y≈200), c5_f162.png, ab_c5_f162.png, before_c5_f162.png. 12 fps sheet c4_12fps_a.png, top row, frames 3-4. probe4.out: jab wind-up hold has 124 edges (punk) and 122 (punk_auto) growing more than 2 cm (top: Spine 5.4 to 14.6 cm, RightUpperArm 7.5 to 13.1, RightShoulder 3.4 to 8.4); stagger_left 71/46, stagger_right 62/41. probe.out: FP-visible cells with an edge outside [0.4, 2.2] in the jab wind-up hold number 10 of 294 art cells (RightShoulder, Chest, Neck). A19's spine-twist worst edge is x15.9 at RightShoulder on every GLB (ART-PUNK). assets/source/characters/punk/pipeline.json rig has no smooth_iterations.",
+     "repro": "Open /Users/arachne/repos/beat-em-up-PoC/.worktrees/m4-sl-int/captures/sl-int/c4/bot.avi at frames 44-60 and c5/bot.avi at frames 155-175 (ffmpeg select='eq(n\\,48)'). Or run tools/capture_bot.sh res://tests/bot/crowd_bot.tscn <dir> \"Look: Punk attacks at 1 m\" and cut a 12 fps sheet from 0.6 s.",
+     "suggested_fix": "F-punk: set rig.smooth_iterations and smooth_factor in pipeline.json, and clamp the weights at named joints: no UpperArm or Shoulder weight on the vest side panel below the armpit, the collar on UpperChest, the vest hem blended Hips/Spine. Add a test, next to A19, that no edge in an FP-visible cell grows by more than 2 cm in the 1 m acts' poses (idle; jab, cross and shove wind-up and strike; flinch; staggers). Fall back to the auto weights if smoothing the Tripo weights doesn't get there.",
+     "files": [
+      "assets/source/characters/punk/pipeline.json",
+      "tools/pipeline/blender_rig.py",
+      "tests/test_art_punk.gd",
+      "game/actors/poses/enemy_poses_punk.gd"
+     ],
+     "spec_change": false
+    },
+    {
+     "severity": "medium",
+     "title": "The gloves read as canisters, not fists (J3*): near-black swatch, full mitt, flared cuff",
+     "detail": "At the chin guard each fist is a smooth rounded cylinder with a knob on top, a yellow strap and a flared, spiky cuff ring wider than the fist. The knuckle bumps sit on top, so the face the defender sees is smooth. In the jab and cross strikes the near glove fills about half the view as a flat navy slab. The glove swatch (near_black #2b2833) renders 10 luma above ink, so no interior ink line, crease or knuckle groove can show on it. Concept A has fingerless gloves with bare fingers; the chain's Blender fist is a full glove-coloured mitt. P1-chain C10 sets the cuff's radius from the cut's 90th percentile, so it flares to 0.083 m. The real Punk inherits all three choices unless T9 changes them.",
+     "evidence": "SL-int c2 crops/c2_f109_hands.png and the C1/C2 stills. Glove pixels in c4_f62 (jab strike): (28,25,50) shadow and (55,50,88) mid against ink (18,15,23). Concept: assets/source/concepts/punk_a_denim_vest.jpg (fingerless, bare fingers). docs/milestones/M4-calls/P1-chain.md C10 ('The Punk's cuff flares to 0.083 m'). report.json swatches_used: near_black 7.1%.",
+     "repro": "View /Users/arachne/repos/beat-em-up-PoC/.worktrees/m4-sl-int/captures/sl-int/c2/sheets/c2/crops/c2_f109_hands.png and c4/sheets/c4/stills/c4_f62_punk_jab_strike.png.",
+     "suggested_fix": "F-punk T9: a fingerless glove with bare skin fingers and the knuckle face toward the lens in straight punches. Use a glove swatch with value of at least about 0.3 (dark_grey #4b4854 or a dark navy) so bands and ink read. Set the cuff radius to the wrist's, not the cut boundary's.",
+     "files": [
+      "tools/pipeline/blender_parts.py",
+      "assets/source/characters/punk/pipeline.json",
+      "assets/source/palette/shared.json"
+     ],
+     "spec_change": false
+    },
+    {
+     "severity": "medium",
+     "title": "In the 1 m acts the Punk's front is one violet-tinted shadow band: no 2-3 bands, teal reads blue, skin reads lilac (J5*, J1*)",
+     "detail": "The sun is at 52° elevation, so a vertical surface's light is at most cos 52° = 0.616, below look_band_2 = 0.62. No vertical surface of a standing character can reach the lit band. At the acts' heading the Punk's front is beyond about 66° of azimuth from the sun, so it sits in the shadow band: albedo times 0.42 tinted 45% toward violet. The vest, face, cap and jeans each read as one flat band with a thin rim. The concept's teal vest (punk_teal #3f8f96, hue 185) renders sky-blue (hue 204-206), and the warm skin (#f0c9a8, hue 28) renders lilac-pink (hue 330-351, sat 0.15). Turning the grade off changes neither. Shadows are still at least 40% of lit, so the bible's shadow row passes, but L2's 2-3 clusters on the jacket and J1's colour identity fail at 1 m.",
+     "evidence": "luma_hist and clusters on the SL-int C2 f109 still: vest 85.4% of pixels in luma 100-109, one colour (48,112,160) at 70.4%. Cap: (192,152,44) at 54.7% plus a lit sliver (224,192,44) at 0.9%. With the grade off (captures/review/c2_nograde) the vest stays (48,116,160) and the skin (196,164,180). The atlas pixels are correct (#3f8f96, #f0c9a8). The HUD colours are captured exactly, so the capture isn't the cause. Hand math for skin through the shadow band and filmic gives (198,168,160) against the measured (196,164,180); through the mid band it gives (230,206,180). Code: game/level/room_kit.gd:74 (sun -52°), game/autoload/tuning_data.gd:1059-1061 (bands 0.25/0.62), game/fx/toon_light.gdshaderinc toon_shade().",
+     "repro": "python3 -I on the SL-int c2 still: crop 560,480 520x400, cluster by hue 180-235, sat > 0.3. Or view c2_f109_idle_t060.png beside assets/source/concepts/punk_a_denim_vest.jpg.",
+     "suggested_fix": "F-look: set look_band_2 below the sun's cos(elevation) (or lower the sun), and choose band_1 and the tint amount so a front-on Punk at 1 m shows 2-3 bands at both the acts' heading and the opposite one. Require the rendered mid band of each swatch to stay within about 10° of its hue. Record C2 at a front-lit and a back-lit heading.",
+     "files": [
+      "game/autoload/tuning_data.gd",
+      "game/level/room_kit.gd",
+      "game/fx/toon_light.gdshaderinc"
+     ],
+     "spec_change": false
+    },
+    {
+     "severity": "medium",
+     "title": "A7's triangle bar is unpassable on this mesh: 142-177 triangles flagged with zero deformation, and SL-int's 'missed everywhere by 2-5x' overstates the deformation",
+     "detail": "test_art_punk._strain counts a triangle as bad when it is squashed below 15% of its skinned-rest area, or when its posed winding opposes its posed vertex normals. The second test doesn't compare against the rest. The 'lying' flex is rigid (p0.1 = p99.9 = 1.00), yet it reports 177 (punk), 142 (punk_rest), 174 (auto) and 155 (auto_rest) bad triangles, all of them 'flipped'. The authored mesh itself has 159 triangles folded against its normals, about 1.06%, above the 75-triangle (0.5%) bar on its own. Counting only triangles that flip relative to the rest, plus the squashed ones, the elbow 150 (41-45), knee -130 (60-63) and spine twist (48-59) pass A7 on every GLB. The guard (97-128) is near the bar, and only the arm raise (228-264) truly fails. The gate's numbers for the bind-route and weights decision were therefore inflated by a constant. The 159 folded triangles are also a J7 mesh-QA item: possible pinholes or inverted shading under backface culling, not seen in the stills.",
+     "evidence": "captures/review/probe.out G2-PROBE lines. punk: baseline 194 flipped at the skinned rest (177 mixed), 159 in the authored mesh; guard: squashed 12, flipped 248, new 105, so the test reports 260 where deformation alone is 117. Similar lines for all four GLBs. Code: tests/test_art_punk.gd:497-510 (:508 is the flip test with no rest reference), :451 (lying).",
+     "repro": "cd /Users/arachne/repos/beat-em-up-PoC/.worktrees/m4-review-slice-g2 && tools/run_tests.sh -gselect=test_zz_g2_probe.gd -gunit_test_name=test_flip_baseline_and_flex_deltas",
+     "suggested_fix": "In test_art_punk._strain (and SkinnedView.strain, which F-punk will reuse), count flips as a sign change against the skinned rest's winding-versus-normal test, plus the squashed ones. Print the authored mesh's folded-triangle count as its own number, and remove the folds in the chain (decimation or normal recompute).",
+     "files": [
+      "tests/test_art_punk.gd",
+      "tests/skinned_view.gd"
+     ],
+     "spec_change": false
+    },
+    {
+     "severity": "medium",
+     "title": "The concept's interior detail is gone at 1 m: no mouth, no vest pockets or buttons, no stitching (A18's detail mask is warranted)",
+     "detail": "Concept A has a mouth line, two flap pockets with buttons on the vest, stitching and a taped forearm. The 6-swatch palette and the absent detail mask erase them. The face reads as a mask (J2's 'simplified' is met, but it no longer reads as the concept's face), and the vest is a flat panel. The only interior ink comes from hull-on-self overlaps (nose, jaw, collar), which are broken and dashed at 4x (aa_msaa_vs_fxaa_face.png). A18's trigger, interior lines missing at 1 m, is met.",
+     "evidence": "captures/review/sheets/concept_a_head.png against SL-int c1 crops/c1_f109_head.png and c2 crops/c2_f109_body.png. report.json steps.palette detail_uv false, swatch_count 6.",
+     "repro": "Compare the two images above side by side.",
+     "suggested_fix": "F-punk adds A18's 1k ink-only mask on UV2 (mouth, pocket flaps and buttons, stitching, laces, tape edges; never shading) and logs it in README's M4 departures for Game-boy's ruling.",
+     "files": [
+      "assets/source/characters/punk/pipeline.json",
+      "game/actors/art/punk_art.tres",
+      "README.md"
+     ],
+     "spec_change": true
+    },
+    {
+     "severity": "medium",
+     "title": "Damage looks on the art: the skin goes grey and translucent, blood lands at clothes density on the cap and lenses, and the bruised tile reads as camouflage (J11)",
+     "detail": "The art has one damage texture for the whole palette (P1-toon C10), so the skin takes the clothes' scuff and blood tiles. Bloodied at 30%, the face and arms turn a ghostly grey with dark smudges, and splats cover the cap and the yellow lenses like a print. After four hits in C5, the scuffed tile spreads dark teal blotches over the jeans and vest that read as camouflage at 1 m. M3's primitives had bruise and blood tiles on the skin paint, so this is a regression at the before/after frame.",
+     "evidence": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m4-sl-int/captures/sl-int/c5/sheets/c5/stills/c5_f531_health_30.png against captures/m4_before/c5/sheets/c5/stills/c5_f531_health_30.png; c5_12fps_a.png rows 2-4; docs/milestones/M4-calls/P1-toon.md C10.",
+     "repro": "View the two f531 stills side by side.",
+     "suggested_fix": "Give the palette a skin range (shared slots 6-9 as a mask channel) and the toon shader a damage_skin_tex, so skin gets bruises and blood and clothes get scuffs. Thin the marks on glossy and accessory swatches (lenses, cap).",
+     "files": [
+      "game/fx/toon.gdshader",
+      "game/actors/damage_look.gd",
+      "assets/source/palette/shared.json"
+     ],
+     "spec_change": false
+    },
+    {
+     "severity": "low",
+     "title": "The rim's edge is a stippled 10-20 px zone at 1 m (bible: band edges at most 2 px); the rim's softness is a constant in the shader",
+     "detail": "The rim is smoothstep(rim_cut ± 0.02, pow(1 - N·V, rim_power)) with a fixed width, unlike the bands, which use an fwidth-scaled edge. On the decimated mesh's noisy normals near the silhouette, the boundary aliases into a speckle along the forearms, visible at 1 m. The constants 0.02, 0.3, -0.35 and 0.1 are feel numbers in the shader rather than Look tunables (CLAUDE.md: no feel numbers in scripts).",
+     "evidence": "captures/review/sheets/c2_forearm_patch_4x.png (crop 540,500 200x200 of C2 f109 at 4x). game/fx/toon_light.gdshaderinc:66-67 against :56.",
+     "repro": "View the crop above, or zoom the SL-int C2 f109 still on the left forearm's inner edge.",
+     "suggested_fix": "Use an fwidth-based rim edge (band_soft px at 1080p) and expose the rim's softness and its light gates as Look tunables.",
+     "files": [
+      "game/fx/toon_light.gdshaderinc",
+      "game/autoload/tuning_data.gd"
+     ],
+     "spec_change": false
+    },
+    {
+     "severity": "low",
+     "title": "Face-down strain is large but never seen: no 1 m act shows a face-down body",
+     "detail": "A19's worst ten lists ko_front, downed_front and getup_front. In absolute terms, the shoe has 5 mm edges that grow to 3.5 cm (spikes), and the waist has 8 cm edges that grow to 17 cm when lying face down. C5's knockdowns and KO are face-up, so no sheet the final review or Game-boy sees covers it. In play, a hit from behind leaves the Punk face down 1-3 m from the lens.",
+     "evidence": "captures/review/probe4.out: punk ko_front end, 10 edges grow more than 2 cm (RightFoot 0.5 to 3.5 cm); downed_front, 159 edges (Hips 7.9 to 16.8 cm, Spine 9.4 to 18.0 cm). punk_auto: 7 and 134. SL-int c5 stills f216 and f291 are face-up.",
+     "repro": "cd /Users/arachne/repos/beat-em-up-PoC/.worktrees/m4-review-slice-g2 && tools/run_tests.sh -gselect=test_zz_g2_probe.gd -gunit_test_name=test_absolute_stretch_in_the_worst_clips",
+     "suggested_fix": "P3-int or F-motion: add a face-down knockdown, downed_front and getup_front at 1-2 m to the evidence acts. F-punk: weight the shoe rigidly to Foot/Toes and check the waist under the weight-smoothing pass.",
+     "files": [
+      "tests/bot/acts/look_acts.gd",
+      "assets/source/characters/punk/pipeline.json"
+     ],
+     "spec_change": false
+    },
+    {
+     "severity": "low",
+     "title": "Palette fidelity: the vest and jeans share one swatch, and the forearm tape becomes a whole cream sleeve",
+     "detail": "punk_teal covers 47.4% of the body's area, the vest and the jeans together. At 2.5 m they merge into one blue mass, where concept A's jeans are a lighter grey-teal. The concept's partial forearm tape maps to cream over the whole right forearm. Under the shadow tint, cream and skin_light differ only slightly, so one arm reads as a pale, ghostly sleeve next to the pink one (SL-int's 'forearm mismatch'). Both come from the chain's nearest-swatch mapping with a 6-swatch cap, which the real Punk would repeat.",
+     "evidence": "assets/source/characters/punk/report/report.json steps.palette.swatches_used (punk_teal 0.474, cream 0.135). SL-int c6 stills c6_f199_d2_5_m.png and C2 f109 forearms (skin (188,160,164) against cream area (188,172,180)).",
+     "repro": "View the C6 2.5 m still beside assets/source/concepts/punk_a_denim_vest.jpg.",
+     "suggested_fix": "Give the jeans their own slot (merge dark_grey into near_black to stay within 6), and draw the tape as a narrow wrap with ink edges from the detail mask instead of a sleeve-sized swatch.",
+     "files": [
+      "assets/source/characters/punk/pipeline.json",
+      "assets/source/palette/punk.json"
+     ],
+     "spec_change": false
+    }
+   ],
+   "also_noticed": [
+    "The white dot under the Punk's nose in C1, and on his chest in C2, is the crosshair at the screen centre, not a piercing.",
+    "The backwards cap with its 'vent hole' and the saw-toothed armholes match concept A (snapback opening, frayed armholes). Those are not chain defects. The spikes on the glove cuffs are not in the concept.",
+    "In the C4 jab strike an ink-dark wedge, (18,17,25), crosses the near glove at about 0.35 m. It stays with the local axis probe, so it isn't the axis bug. It may be the hull's world-width growth inside look_outline_near_m (0.3 m); unexplained.",
+    "The doubled line along the vest lapel at 4x is hull on hull (the vest's line over the tee's), not the edge pass. dbg/c2_view5 shows no depth line on the Punk.",
+    "During the C5 reacts the player's own arm and fist are still M3 primitives (F-player-art and F-player-int scope).",
+    "My local probe test is left untracked at /Users/arachne/repos/beat-em-up-PoC/.worktrees/m4-review-slice-g2/tests/test_zz_g2_probe.gd (plus .uid) for skeptics to re-run. Its outputs are in captures/review/probe.out, probe2.out, probe3.out and probe4.out. Nothing is committed, and toon_outline.gdshader was restored with git checkout.",
+    "The lead's perf showed placeholder hulls with no cost and FXAA at -2.3 ms. By look, both the hull-on and the MSAA locks hold; FXAA is a clean fallback at 1 m.",
+    "SL-int section 4's claims of 'an even 3 px ink hull' and '2-3 crisp bands' are not supported by the pixels: no hull on top and bottom silhouettes, and one dominant band on the vest, cap and face at 1 m."
+   ]
+  }
+ },
+ "verdicts": {
+  "slice-g1-01": {
+   "survives": true,
+   "votes": [
+    {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "Confirmed. R4 in the readability probe cannot see an art Punk. It skips the rig's hidden proxies and returns INF for the art, so an art Punk never occludes another enemy's wind-up. This is a real instrument defect, not an approved departure, a logged default call or out of scope: A4 (M4-plan.md:112) says the readability probe keeps measuring the rig's proxies, SL-int.md:79 repeats that, and R8 does measure them, so R4 drifted from the stated intent. The defect is latent for now, because both crowd fights read R4 = 0 and the true figure is also 0.",
+     "evidence": "1) Repro at 59a0adf: `tools/run_tests.sh -gselect=test_zz_review_g1.gd -gunit_test_name=test_r4_counts_an_art_punk_as_an_occluder` fails. With the art shown the probe prints `REVIEW-G1 R4 art shown: has_art_ true, in_view 1, probe_r4 0.0, samples 22, proxies_by_is_drawn 22, art_rays 22`. With look_show_art false it prints `probe_r4 1.0`. So the blocker hides the chest on 22 of 22 samples by its proxies and by its skinned art, yet the probe says 0.\n2) Code path: tests/bot/readability_probe.gd:801 filters with `mesh.layers & VIS_FP_HIDDEN or not mesh.is_visible_in_tree()` and then calls `FPView.ray_hit`. HumanoidRig.set_art_shown (game/actors/humanoid_rig.gd:421-428) sets every body and head primitive's `visible = false` while the art shows, so `is_visible_in_tree()` is false for the proxies and they are skipped. The art meshes are visible, but `FPView.ray_hit` (tests/fp_view.gd:124-190) only handles Box, Cylinder, Capsule and Sphere meshes and returns INF for an ArrayMesh. Nothing else can hide the wind-up. `FPView.is_drawn` (fp_view.gd:39-46) is the helper meant to decide this: it counts a view proxy while its bone follower is visible and rejects ART_GROUP meshes. R8 already uses it, through FPView.hits (fp_view.gd:86), so the two lens metrics disagree about what is drawn.\n3) The probe is M3 code: `git diff afdb39e 59a0adf` shows no change to readability_probe.gd, so the M4 plan's 'readability_probe.gd (only if it breaks)' never triggered because the break is silent. tests/test_readability_probe.gd covers R4 only with primitive stub enemies (lines 694-730), so nothing covers art rigs. No crowd test asserts R4.\n4) The suggested fix works. I ran it as a probe subclass overriding `_sample_occlusion` with `not FPView.is_drawn(mesh)`, in a scratch test since deleted, with no edit to a tracked file. Results: unfixed, art shown, blocker gives R4 0.0 (blind); fixed, art shown, blocker gives 1.0; fixed, art shown, lone wind-up gives 0.0 (no false positive); fixed, primitives shown, blocker gives 1.0; unfixed, primitives shown, blocker gives 1.0 (M3 behaviour unchanged). A rig without art takes the `mesh.is_visible_in_tree()` branch of is_drawn, so M3 numbers are unchanged.\n5) Current impact: the reviewer's L5 recordings (captures/review/l5_mixed/bot.log:336, l5_six/bot.log:258) show R4 occluded by the proxies 0 and by the drawn art 0 over 14 in-view wind-ups. The probe's own R4 row reads 'ok 0% of 17' and 'ok 0% of 13'. So no wrong number is reported today, but the R4 row of every Punk-crowd act is 0 by construction and can never read 'miss'.\n6) The proxies understate the art's occlusion, because SL-int.md:79 says the art's arms are bulkier than the proxy capsules. The proxy-based R4 is therefore a lower bound on the drawn figure, and that is what the L5 evidence act (drawn-art R4 beside the proxy figures) is for.",
+     "root_cause": "In `_sample_occlusion`, R4's mesh filter uses `mesh.is_visible_in_tree()`, left over from M3, instead of `FPView.is_drawn(mesh)`, which M4's A4 introduced as the one place that says which meshes count. An art rig's primitive proxies are `visible=false` (set_art_shown), so they are skipped. Its skinned ArrayMesh passes the visibility test but `FPView.ray_hit` returns INF for any non-primitive mesh. Neither representation of an art Punk can hide a wind-up.",
+     "files_to_change": [
+      "/Users/arachne/repos/beat-em-up-PoC/tests/bot/readability_probe.gd",
+      "/Users/arachne/repos/beat-em-up-PoC/tests/test_readability_probe.gd",
+      "/Users/arachne/repos/beat-em-up-PoC/docs/ARCHITECTURE.md"
+     ],
+     "fix_needs_spec_change": false
+    }
+   ]
+  },
+  "slice-g1-02": {
+   "survives": false,
+   "votes": [
+    {
+     "refuted": true,
+     "confidence": "medium",
+     "reason": "The numbers reproduce exactly, but they are not a medium defect against the spec or the plan. What survives is a low-severity gap, to be listed under \"gaps\" and not given a fix package on the smoke Punk. (1) No M4 row or rubric item is violated. A9's 2 cm \"nearer than the proxies\" bar is player-only. For the Punk, A9 is a cell-difference and lens-share bar, and the hold passes it (art share 38.2% against proxies 37.7%, 0.5 pp; the bar is 4 pp). The 0.25 m victim rule is an M2/M3 test on the proxies (tests/test_grab_view.gd:508) plus an ARCHITECTURE sentence about the hold view. M4-plan A4 deliberately keeps the existing first-person tests measuring the proxies. (2) The hold shortfall comes from head volume that A6 allows. The nearest vertex (3964, on the Head bone) is 0.2436 m from the head hurtbox centre, 9.4 cm outside the 0.15 m sphere. That is one of the vertices A6 allows beyond sphere+5 cm (cap brim and hair, tagged; the Punk's head is 95.0%, the bar). Even in-slack head vertices read 0.248 m (vertex 4176, 2 cm outside the sphere, during a knee). So the suggested fix, \"fit within the head sphere + 5 cm\", cannot restore 0.25 m. The proxies pass by only 6 mm, and A6's own 5 cm head slack makes the rule unsatisfiable in principle. This is a plan-level tension, not a chain error. (3) The cross is not a new class of defect. M3's proxies already bring the fist to 5.41 cm from the lens at the strike, against the 5 cm near plane; the strike lands on the defender's face, and no Punk-strike lens rule exists (the Bruiser's 0.1 m rule is Bruiser-specific). The art is 0.8 cm nearer, and its in-view vertex is 1.3 mm inside the near plane at the frame's top edge. The real-camera recording (c4_cross_86_91.png against before_c4_cross_86_91.png) shows no cut, only a glove filling the view with a hit flash, as the primitive fist and cap brim did in M3. The art bulk in strikes is already recorded in SL-int §3 as the A9 gate item (\"widen the proxies, slim the art, or accept the proxy figures\"). (4) Visually, c11 overview_01.png against the M3 sheet shows the cap in the same lower-centre place at the same share, with nothing clipped (0.2 m against a 0.05 m near plane). What is real: test_art_punk's A9 poses stop at the end of startup, before contact, and nothing measures the drawn art's nearest vertex or in-view depth through a hold or a strike. Record that as a gap: F-punk should add art-drawn lens checks, and the gate should decide whether the 0.25 m rule or A6's head slack gives way.",
+     "evidence": "Reproduced both repros at 59a0adf in the reviewer worktree, one Godot process at a time. Hold (test_holding_an_art_punk_keeps_the_lens_rules): proxy_near 0.2556, art_near 0.1996, near_bone Head, art_depth_in_view 0.1924, art_share 0.382 against proxy 0.377 (the regrab and throw: 0.2691 and 0.2017). Strikes (test_the_punks_strikes_at_one_metre_against_the_lens): punk_cross proxy_near 0.0541, art_near 0.0463, art_depth_in_view 0.0487, art_share 0.691, proxy_share 0.566; punk_shove art 0.304 m, proxies 0.285 m, so the art is farther. Extra scratch probe (deleted afterwards): head hurtbox HurtboxHead radius 0.1500, rig scale 1.0. The nearest hold vertex is 3964, 0.2436 m from the head centre, outside the sphere by 0.0936 m (A6 allows 0.05), art_near 0.1996 at hold tick 32. Through the knees, vertex 4176 sits 0.0197 m outside the sphere and reads art_near 0.2482, proxy 0.2641. test_cameras.gd:301 asserts the camera near is 0.05. Plan check: M4-plan A9 (the \"never ≥ 2 cm nearer\" clause is the player's), A4 (proxies stay), A6 (head slack 5 cm, brim and hair allowed by tag); tests/test_art_punk.gd:285-340 samples the Punk poses at `move.startup + 1` frames, i.e. the held wind-up, not the contact frames. tests/test_enemy_moves_punk.gd has no lens-distance rule for the Punk's strikes; test_bruiser.gd has 0.1 m for the Bruiser. SL-int.md §3 already lists the art bulk beyond the proxies in strikes and leaves it to the gate. Sheets viewed: c4_cross_86_91.png against before_c4_cross_86_91.png, and the SL-int c11 overview_01.png against the m4_before one. Nothing clips or cuts in either, and the shares match. The scratch probe file was removed, and I made no other changes (another skeptic's untracked tests/test_zz_skeptic_g104.gd is in the worktree and is not mine).",
+     "root_cause": "The drawn art is bulkier than the proxies the lens tests measure, as the plan intends (A4 keeps the proxies; J1 wants a chunky silhouette), and A6 permits the head 5 cm of slack plus tagged cap brim and hair. The held victim's head hurtbox is a 0.15 m sphere. The hold view (grab_view_back_m 0.24, grab_view_pitch_deg, grab_view_rise_m in game/autoload/tuning_data.gd) was tuned in M2 so the proxies sit at 0.256 m, leaving a 6 mm margin on the 0.25 m rule, so any A6-compliant head breaks it. For the strikes the same bulk (glove and forearm) brings the fist to 4.6 cm. The proxies already sat at 5.41 cm in M3, with no Punk-strike lens rule. The test gap is in tests/test_art_punk.gd and tests/skinned_view.gd: they have no nearest-vertex or in-view-depth measure of the skinned art through a hold or at strike contact. test_grab_view and FPView measure proxies only, and test_art_punk's A9 samples only the end of startup.",
+     "files_to_change": [
+      "tests/test_art_punk.gd",
+      "tests/skinned_view.gd",
+      "docs/milestones/M4-plan.md",
+      "game/autoload/tuning_data.gd"
+     ],
+     "fix_needs_spec_change": true
+    }
+   ]
+  },
+  "slice-g1-03": {
+   "survives": true,
+   "votes": [
+    {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "Confirmed as a real defect, not an approved departure or out of scope. SL-int C4 and ARCHITECTURE.md:933/992 and the M4-plan R9 mitigation (\"warm every variant at room load, the skinned one included\") all promise a holder the lens sees. At the reviewed commit it is placed 1.2 m under the floor and never drawn, so no warm-up pipeline is built at load. The user-visible cost is not demonstrated. A16 passes (first spawn +1.0 ms, first hit +1.4 ms, against a +2 ms bar), and my frame-time runs showed no separable first-Punk hitch above the noise. C4 itself says \"Not measured to help\". Medium severity is arguably high for a mechanism whose effect is unmeasured and whose gates pass; low-to-medium is fairer.",
+     "evidence": "Reproduced in windowed Godot 4.7.2 on 59a0adf, using my own scratch probes (since deleted) that read RenderingServer.viewport_get_render_info for the root viewport.\n\n1. As found, both holders exist for two rendered frames: a boxes holder under the player's Rig and a skeleton holder under CrowdRoom. Both sit at (0,-1.2,-2.5) while the camera is at (0.18,1.45,0) facing +X. The visible pass shows 35 then 33 objects and 390 then 386 primitives, the same as the steady state with no holder (33 objects, 386 primitives). The shadow pass shows 46 objects and 556 then 552 primitives, again the same as steady state. The ArtBody has 14,999 triangles and the five hull boxes have 12 each, so any draw would add tens of thousands of primitives. None appears.\n\n2. Control, with the holders moved into the lens after the camera's first update: the visible pass jumps to 45 objects and 30,504 primitives, and the shadow pass to 58 objects and 30,670 primitives. The ArtBody and its hull are drawn in both passes, so the geometry is drawable and only the placement is wrong.\n\n3. Root cause, from the code. warm_up() does `await parent.get_tree().process_frame` and then reads camera.global_position and global_basis. SceneTree.process emits process_frame before any node's _process, and FirstPersonCamera places itself only in _process via update_camera(). The camera is a top_level node and still sits at the world origin with an identity basis, so the holder lands at (0,-1.2,-2.5). Before the first render the camera moves to the eye and faces +X, so for both frames the holder is out of frame. The player's rig calls the same ToonMaterials.warm_up() from RigPaint.warm_up(), so the training room and the five-box variant warm-up have the same defect. VfxDirector's own warm-up works because it runs from its own _process after the camera in tree order.\n\n4. Quantification attempt. Around the first Punk spawn, the as-found frame times were 39.7 and 38.2, 35.8 and 23.1, and 42.7 and 22.2 ms. The control was 30.7 and 23.5, and 34.6 and 24.5 ms. That is at most about 5 ms of difference on a machine under load from other agents' Godot runs, and I could not separate it from noise.\n\n5. Trap in the suggested fix. I emulated \"the holder is not moved at process_frame #1\" by resetting both holders to local origin, as a bare second await would leave them. Frames 1 and 2 then render a dark navy screen with only the HUD (probe screenshots origin_f1.png and origin_f2.png in the scratchpad), because the camera at (0.18,1.45,0) is inside the Punk copy that sits at the room origin. As found, the first frames show the street. A fix that merely awaits a second process_frame therefore trades \"never drawn\" for a visible dark first frame or two.",
+     "root_cause": "ToonMaterials.warm_up() positions the holder from the viewport camera right after `await process_frame`. That signal fires before the camera's _process, so the camera is still at the world origin with an identity basis. The holder is placed at (0,-1.2,-2.5), under the floor and behind the player's +X view. The camera then moves to the eye and faces +X, and both the boxes and the ArtBody are outside the frustum in the visible and shadow passes for the whole two frames. The comment, ARCHITECTURE.md:933/992 and SL-int C4 say it stands where the lens sees it, but no windowed test checks that the lens draws it.",
+     "files_to_change": [
+      "game/fx/toon_materials.gd",
+      "tests/bot/acts/look_acts.gd",
+      "docs/milestones/M4-calls/SL-int.md"
+     ],
+     "fix_needs_spec_change": false
+    }
+   ]
+  },
+  "slice-g1-04": {
+   "survives": false,
+   "votes": [
+    {
+     "refuted": true,
+     "confidence": "high",
+     "reason": "The A6 figure reproduces (legs 89.1% of 2,329 for punk, 90.9% of 2,463 for punk_auto, head 94.99%), but the finding's cause and consequence do not hold. The legs do not fail on girth: the thighs and shins, the baggy jeans proper, sit inside the leg hurtbox + 6 cm. The 11% 'miss' is a waist and hip band that Tripo's weights spread onto UpperLeg and that the test's by-dominant-bone rule counts as 'legs'. A strike on that band lands on the torso hurtbox in three quarters of the cases. The suggested fix (a girth clamp in blender_fit) would pinch the belt and address nothing. A6 stays a recordable gap for the gate, to be read as a measurement choice, not a chain defect.",
+     "evidence": "Reproduced in Godot at the reviewed commit 59a0adf, idle at phase 0.3, with a scratch probe (deleted afterwards) beside the existing test. Reproduction: punk 'legs 89.1% of 2329' and punk_auto 'legs 90.9% of 2463', matching captures/review/test_art_punk.log. The probe's further breakdown: (1) 172 of punk's 255 missing leg vertices lie in the y~1.0 m band, above the hip joint (0.925 m) and above the Hips bone (0.975 m), and their dominant weight share is a median 0.48, so they are blended pelvis, belt and waist geometry. punk_auto: 133 of 224 in the same band, median 0.44. (2) Vertices below the hip joint are 96.9% (punk) and 96.6% (auto) inside radius + 6 cm; the remaining misses there are about 30 vertices near y 0.5 at the idle knee bend, and no thigh or shin is off by more than a few centimetres. (3) 191 of the 255 misses are inside the torso hurtbox + 6 cm, so a strike there resolves on the torso. (4) Legs counted against the union of the torso and leg hurtboxes: 97.3% (punk), 97.6% (auto), above the 95% bar. (5) The worst miss is 6.7 cm past the 6 cm slack (punk, idle); the median excess is 2.2 cm. In the bind pose the table-joint analysis gives legs 90.6%; LowerLeg vertices 100% (667/667 and 606/606), and all 218 misses are UpperLeg vertices in y 0.80-1.09 m, with 0.99-1.09 m accounting for 204 of them; 0.8% of vertices below the hip joint miss. (6) The result is fragile to the region rule: assigning each vertex by summed torso-bone versus leg-bone weight gives torso 95.5% (622 vertices) and legs 94.8% (2,226) in the bind pose. The remaining leg misses then are 115 vertices at 0.8-1.1 m with a median excess of 1.0 cm and a maximum of 3.6 cm. (7) The auto heat-map weights give the same band, so it is not Tripo-weight-specific. Part C §5 step 4 and the P1-chain C3 'never girth' wording are a binding plan design, not a chain bug, and SL-int C6 already logged the dominant-bone counting rule. A9's arm-bulk cell difference and A11's anchor clamp (SL-int.md §3) have different mechanisms and are not evidence for leg girth.",
+     "root_cause": "The measurement, not the proportion warp. tests/test_art_punk.gd `_fit()` (SL-int C6) assigns each vertex to torso, legs or head by its single largest-weight bone and measures it only against that region's own hurtbox. Tripo's (and the heat-map) weights blend the hip and waist band between Hips, Spine and UpperLeg, with the leg's share below 0.5. Those pelvis vertices (y~1.0 m) are therefore counted as 'legs' and measured against a leg capsule whose axis starts at the hip joint (0.925 m, radius 0.1). They sit 1-7 cm past radius + 6 cm of that cap, yet are mostly inside the torso capsule (radius 0.2, axis from 1.045 m, plus 6 cm). The art's leg girth is fine (thighs and shins at 99% or above). The head's 94.99% is one vertex short of the bar under the same dominant-bone rule. A girth clamp in blender_fit.py would not change this and would deform the belt line.",
+     "files_to_change": [
+      "tests/test_art_punk.gd",
+      "tests/skinned_view.gd",
+      "docs/milestones/M4-slice-gate.md"
+     ],
+     "fix_needs_spec_change": false
+    }
+   ]
+  },
+  "slice-g1-05": {
+   "survives": true,
+   "votes": [
+    {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "Confirmed as stated, low severity. The command in M4-plan Part C section 6 item (1), `run.py --asset punk --from smoke`, crashes with a traceback. The intended check, `--check`, works and passes. The only defect is plan wording plus missing step-name validation in run.py. No spec change and no pipeline behaviour change is needed.",
+     "evidence": "Reproduced at 59a0adf in the review worktree. `python3 -I tools/pipeline/run.py --asset punk --from smoke --no-import` prints \"wrote assets/export/palette/palette_atlas.png (17 swatches, 260 bytes)\" and then:\n  File \"tools/pipeline/run.py\", line 202, in main: names = STEP_NAMES[STEP_NAMES.index(opts[\"from\"]):]\n  ValueError: 'smoke' is not in list\n`run.py --list` shows the only steps are inspect, fit, rig, parts_replace, palette, parts_split, export, stills. Both the repro and a second probe (`--only nonsuch`, which gives a StopIteration traceback at line 207) left `git status` unchanged. The palette atlas rewrite is byte-identical, and the effective config goes to the gitignored work/ folder.\nThe text appears at docs/milestones/M4-plan.md:716 (Part C section 6, \"The slice gate\") and is copied at docs/milestones/M4-planning/m4-plan-vertical-slice.md:256. Part A A15 (line 286), which the task says overrides Part C section 6, does not repeat the command. Part B has no row for it, so it is a stale item in an overridden section.\n`--check` is the real reproducibility command and is documented in the run.py docstring, ARCHITECTURE.md line 857 and M4-calls/P1-chain.md lines 7 and 77. Reviewer logs show it passing for both weight sources: captures/review/check_tripo.log ends \"reproducible: YES, the same report hash (committed c0d8255da219)\" and check_auto.log ends \"reproducible: YES ... (committed 262013f2a60a)\". P1-chain.md line 7 says `run.py --asset punk --check` reproduces the hash for both weight sources.\nUnknown flags already get a clean \"unknown argument\" exit 2 (line 170), so an unknown step name is the one input that crashes.",
+     "root_cause": "Part C section 6 item (1) was written before the chain existed and names `--from smoke`. `smoke` is the asset's source-folder name (assets/source/characters/punk/smoke), not a step. run.py never checks the `--from` or `--only` value against STEP_NAMES. It runs `STEP_NAMES.index(opts[\"from\"])` at line 202 and `next(... for s in STEPS if s[0] == name)` at line 207 on the raw string, so a bad name raises ValueError or StopIteration instead of printing a usage line. It fails only after gen_palette and the effective-config write, so those side effects (harmless here) have already happened.",
+     "files_to_change": [
+      "/Users/arachne/repos/beat-em-up-PoC/docs/milestones/M4-slice-gate.md (lead's output: cite `python3 -I tools/pipeline/run.py --asset punk --check` for the tripo weights, and the same with `--set rig.weights=\"auto\"` plus paths.report=report_auto and paths.export_name=punk_auto for the auto variant, as a pass)",
+      "/Users/arachne/repos/beat-em-up-PoC/docs/milestones/M4-plan.md (line 716, optional: replace `--from smoke` with `--check`)",
+      "/Users/arachne/repos/beat-em-up-PoC/docs/milestones/M4-planning/m4-plan-vertical-slice.md (line 256, same optional wording fix)",
+      "/Users/arachne/repos/beat-em-up-PoC/tools/pipeline/run.py (optional hardening: validate opts[\"from\"] and opts[\"only\"] against STEP_NAMES before line 198 and return 2 with a usage line listing the steps)"
+     ],
+     "fix_needs_spec_change": false
+    }
+   ]
+  },
+  "slice-g1-06": {
+   "survives": true,
+   "votes": [
+    {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "Confirmed as a low-severity test-tooling gap, not a game defect and not a spec or plan departure. SkinnedView.hits(), _soup(), compare_with_proxies() and compare_with_exact_proxies() can only skin the FK pose, while the skin on screen and FPView's proxies follow Ragdoll._visual during a ragdoll. The cost is bounded: no committed test or hard done-when row measures a ragdolling rig with these functions, and the L5 evidence act that would does not exist yet.",
+     "evidence": "CODE PATH (at 59a0adf). _skin_matrices (tests/skinned_view.gd:505-511) takes rig.animation_pose(bone), which is HumanoidRig._bone_globals (game/actors/humanoid_rig.gd:697-698), unless `globals` is non-empty. hits() (:147) calls _soup(mi, rig, cam), and _soup (:630-647) calls _skin_matrices(mi.skin, rig, []) with a hard-coded empty array. _pose_key (:622-626) is also built from animation_pose, so the soup cache is keyed on FK too. compare_with_proxies() and compare_with_exact_proxies() (:301-343) go through hits(), so none of them can take a ragdoll pose. Only the vertex-level helpers (skin_vertices, faces, skin_normals, strain, bone_vertices, surface_gap) accept `globals`. tests/test_skinned_art.gd:809 and :820-823 pass the ragdoll's visual_pose(i) to strain() for exactly this reason, and the header comment (:10-12) says to do so. So the \"caller passes globals\" design exists, but the grid-ray entry point cannot be given them.\n\nWHAT IS DRAWN. Ragdoll._process_modification_with_delta (game/actors/ragdoll.gd:614-647) writes _visual into the skeleton when rig.has_art(). rig.show_visual_pose(_visual) moves the bone followers that carry the view proxies. tests/test_skinned_art.gd's test_a_partial_ragdoll_shows_the_skeleton_exactly_what_the_followers_show and the FULL variant assert the skeleton equals _visual to within 1 mm, and both pass in captures/review/test_skinned_art.log. So the art and the proxies are at _visual, while hits() measures FK.\n\nREPRODUCTION (scratch GUT probe, since deleted). The rig was a HumanoidRig wearing the smoke Punk (punk_art.tres), height 1.8 m. I called skin_vertices(mi, rig) (FK) and skin_vertices(mi, rig, visual) with visual = ragdoll.visual_pose(i). I then cast the 48x27 grid against a soup built from each. A partial stagger ran from frame 8 to 40; a launch out of it ran from frame 8 to 40; the camera sat 1.6 m in front of the Punk.\n- Stagger: worst skinned-vertex gap 0.176 m at frame 8, 0.158 m at frame 16, 0.055 m at frame 24, then under 1 cm. Mean gap 5.6 cm at frame 8. Covered cells differing from the visual pose: 9 of 1296 (0.7%) at frames 8 and 16, 4 at frame 24, 0 from frame 32.\n- Launch from a stagger: worst vertex gap 0.134 m at frame 8, then 0.066 to 0.076 m; mean about 6 cm. Cells differing 15-21 of 1296 (1.2-1.6%). Without a floor the bodies barely moved, so this understates a real launch.\n- The project's own tests/test_ragdoll.gd (log line in captures/review) prints \"full ragdoll gap to the animation: 0.291 m flying (0.217 m caught up), 0.123 m lying (hands 0.461 m)\". It allows up to 0.8 m right after a launch. That is the same FK-versus-visual gap, measured on real Punks over a real knockdown, so \"tens of centimetres\" holds for launches and downed bodies.\n\nOVERSTATED OR LIMITED. (1) In a stagger alone the worst vertex is about 18 cm in the first 0.3 s and the mean is about 5 cm, so \"tens of cm\" is a launch and downed claim more than a stagger claim. (2) Only the lens share and R4/R8 occlusion would shift: at most about 1.5% of grid cells in my probe, which fits the reviewer's \"within 2 pp\". (3) The \"L5 figures above\" are the reviewer's own scratch sampler (tests/review_g1_sampler.gd, untracked), not a committed measurement. (4) The header documents that FK is the default pose.\n\nPLAN CHECK. M4-plan A4 gives hits(root, cam, cols) with no pose argument. A9's poses are all static (the Punk at the 1 m acts, the player's first-person poses), and a static rig has FK equal to what is drawn. Where the drawn mode may run is test_skinned_art, test_art_player and one windowed evidence act for L5. SL-int.md:106 records that the L5 drawn-art act was not run, and tests/bot/acts/look_acts.gd:654 says the perf act never uses SkinnedView. No logged call or approved departure covers measuring a ragdolling body at FK, so it is neither a departure nor out of scope. It is an omission in the A4 helper that the future L5 act would inherit.",
+     "root_cause": "SkinnedView's grid-ray path (hits -> _soup -> _skin_matrices, plus _pose_key and the two compare_* wrappers) has no pose source other than rig.animation_pose(), the FK _bone_globals. Only the vertex-level helpers take a `globals` array. A caller of hits() or compare_with_proxies() therefore cannot get the pose the render server draws during a ragdoll (Ragdoll._visual, written back into the skeleton for art rigs, A5). The A4 signature never specified a pose argument, and all A9 and A4 consumers are static poses, so nothing flagged it.",
+     "files_to_change": [
+      "/Users/arachne/repos/beat-em-up-PoC/tests/skinned_view.gd (_skin_matrices or a new _pose_globals(rig): use rig.get_ragdoll().visual_pose(i) when rig.is_ragdolling(); _soup passes it; _pose_key hashes the same poses; update the header comment lines 10-12)",
+      "/Users/arachne/repos/beat-em-up-PoC/tests/test_skinned_art.gd (add a staggered-rig test that hits() agrees with skin_vertices(..., visual globals) and differs from FK)",
+      "The L5 windowed evidence act P3-int builds (tests/bot/acts/ or the readability probe wiring), which must use the ragdoll-aware path"
+     ],
+     "fix_needs_spec_change": false
+    }
+   ]
+  },
+  "slice-g2-01": {
+   "survives": true,
+   "votes": [
+    {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "Confirmed as a real defect. The hull direction is baked in Blender's Z-up axes and the glTF exporter never converts a colour attribute, so toon_outline.gdshader mode 4 pushes the hull along a vector turned 90 degrees about X. It is not an approved departure, a logged default call or out of M4 scope. ARCHITECTURE.md:863 and :923 and M4-plan.md:594 describe the baked normal as the smooth normal in rest pose, in the same space as NORMAL (a +Y-up GLB). P1-toon C15 and P1-chain say nothing about Z-up. The hull breaks plan row L1 (width within 1 px at 1, 2.5, 5 and 10 m) and critical rubric item J4 (an even, continuous, uncracked hull) wherever a silhouette normal has a Y or Z component. SL-int.md:96 ('an even 3 px ink hull') is contradicted. The severity \"high\" is fair: the chain is shared, so the real Punk and the player's body will inherit it.",
+     "evidence": "1. Repro in Godot, as given: tools/run_tests.sh -gselect=test_zz_g2_probe.gd -gunit_test_name=test_hull_normal_axis_hypothesis prints, for mean dot(decoded COLOR, NORMAL), read as is vs read as Z-up: punk.glb 0.338 vs 0.930, punk_rest.glb 0.343 vs 0.927, probe_body.glb Body 0.321 vs 0.922, Body__fp_hidden 0.312 vs 0.964. The as-read value tracks mean NORMAL.x^2 (0.364, 0.370, 0.338, 0.345) because dot(COLOR, NORMAL) = x^2 by construction when COLOR holds (bx, by, bz) and NORMAL holds (bx, bz, -by).\n2. Second, Godot-free check: I parsed punk.glb and probe_body.glb in pure Python from the raw glTF accessors. COLOR_0 is VEC4 normalized uint16 and untouched by the exporter; NORMAL and POSITION are Y-up. I got 0.337 as read and 0.930 as Z-up. Up-facing crown vertices (NORMAL.y > 0.95, 22 of them) decode to (0.002, -0.074, 0.653), i.e. +Z, which is backward in Godot (the Punk faces -Z). Down-facing vertices (193) decode to (-0.018, 0.046, -0.873), i.e. -Z, forward. With the (x, z, -y) swap the crown decodes to +Y and the down-facing vertices to -Y.\n3. Shader path: at rest the skinned NORMAL equals CUSTOM1, so rotate_arc is the identity and dir is the decoded COLOR. A normal (nx, ny, nz) pushes along (nx, -nz, ny). An up-facing silhouette pushes along +Z and a down-facing one along -Z. Both are parallel to the view axis of a first-person lens, so the hull adds no silhouette width there. Only normals with an X component extend the line.\n4. Pixels: I cropped C1 f109 from SL-int's still and from the reviewer's axis-corrected rerun (captures/review/c1_axisfix). In the SL-int still there is no ink along the whole cap crown, just sky going straight to cap yellow, and the line only starts down the sides. In the corrected still the line is continuous around the crown. captures/review/sheets/c1_hull_axis_before_after.png and c2_hull_axis_before_after.png show the same for the forearm bottoms.\n5. No test can catch it. tests/test_art_contract.gd:338-365 checks only that COLOR is a unit vector and that vertices at one position share one value. tests/fixtures/toon_art_probe.gd builds COLOR in Godot Y-up, so test_toon passes. The 'verified on a cube' note in docs/milestones/M4-codemap/toolchain-blender-godot.md would also pass: an axis permutation of a cube corner is still a corner direction, so the push stays consistent per position.\n6. The tracked tree is clean at 59a0adf (git diff is empty). The shader probe the reviewer ran was reverted. The untracked probe tests under tests/ are the review's and are not touched.",
+     "root_cause": "In tools/pipeline/blender_export.py write_hull_normals (lines 64-87), the smooth normals are computed by pb.smooth_vertex_normals from pb.verts(me), the mesh's object-local Blender Z-up coordinates. They are encoded unchanged at line 84 as rgba[:, :3] = n[lv] * 0.5 + 0.5. export_glb then writes POSITION and NORMAL converted to Y-up, (x, y, z) -> (x, z, -y), with export_yup=True. The exporter leaves the COLOR attribute (export_vertex_color=\"ACTIVE\") alone, so the GLB's COLOR is in a different frame from its NORMAL. Godot imports COLOR_0 as is. game/fx/toon_outline.gdshader:49 decodes it with normalize(COLOR.rgb * 2.0 - 1.0), takes it as a Y-up model-space direction, and uses it as the hull push direction. The rotate_arc step (lines 50-53) is correct only if COLOR is in the same space as CUSTOM1/NORMAL. The fix belongs in the export, not the shader: the Godot-side fixture and tests (tests/fixtures/toon_art_probe.gd, test_toon) and the documented contract (ARCHITECTURE.md:863, M4-plan.md:594, '+Y up') all assume Y-up COLOR.",
+     "files_to_change": [
+      "tools/pipeline/blender_export.py (write_hull_normals: convert n to glTF Y-up, n_gltf = (n.x, n.z, -n.y), before the *0.5+0.5 encode; update the docstring at line 12 to say 'in glTF Y-up axes')",
+      "assets/export/characters/punk/punk.glb, punk_rest.glb, punk_auto.glb, punk_auto_rest.glb (regenerate through the chain's export step for both weight sources and both routes; the existing .glb.import files can stay but need a re-import)",
+      "tests/fixtures/art/probe_body.glb and probe_body_rest.glb (regenerate; tests/fixtures/art/probe_report.json and the Punk report.json / report_auto/ files carry the GLB sha256 and are checked at tests/test_art_contract.gd:541 and :574, so they must be regenerated with the GLBs)",
+      "tests/test_art_contract.gd (test_hull_normals_and_the_detail_uv_are_there, lines 338-365: add a per-mesh agreement check between decoded COLOR and NORMAL. Aim for a mean dot of about 0.85 or more, since the correct decode measures 0.92-0.96 and 0.9 leaves a thin margin, and also assert it beats the (x, z, -y) permuted read, so the axis frame cannot regress.)",
+      "docs/ARCHITECTURE.md:863 and docs/milestones/M4-plan.md:594 (say that COLOR hull_normal is in the GLB's Y-up axes, like NORMAL)",
+      "Re-measure L1 at 1, 2.5, 5 and 10 m and re-record the C1, C2, C4 and C6 stills afterwards. Re-record SL-int's A/B and montage packs if the slice gate cites them, and correct the 'even 3 px ink hull' claim at docs/milestones/M4-calls/SL-int.md:96."
+     ],
+     "fix_needs_spec_change": false
+    }
+   ]
+  },
+  "slice-g2-02": {
+   "survives": false,
+   "votes": [
+    {
+     "refuted": true,
+     "confidence": "high",
+     "reason": "The slab is real, but it is not a skinning stretch. In the jab wind-up hold the vest's left front panel and collar are swung toward the lens by the clip's roughly 48 degree torso yaw. Nothing is lifted or stretched. Rigid binding gives the same slab, so weight smoothing or clamping cannot remove it. The finding's premise that smoothing was never tried is also wrong. The C5 hook-stagger half shows the same pose as M3 and was not reproducible as strain. The occlusion itself is a clip and volume question under A20, not a J8 deformation defect.",
+     "evidence": "I rebuilt the C4 wind-up hold on the CPU: a one-off GUT probe that skins punk.glb with SkinnedView, Punk at 0.95 m, camera pitch -7 deg, hold at 65% of startup. A software render matches SL-int's real frame f55 (head position, slab position, slab top at the chin and nose).\n\n- Strain along the slab: rays through x=800/840/880, y=230..490 of a 1600x900 frame hit LeftShoulder, Chest, Spine and Neck triangles. Their worst edge ratios are 1.00 to 1.33, with posed y within 1 cm of rest y. Nothing is lifted.\n- Collar top: the highest LeftShoulder-dominant vest vertex is at y=1.572 m at rest and 1.571 m posed. The head's chin is about 1.58 m, so the collar top is not raised toward the nose.\n- Why it covers the lower face: the posed vertices move about 0.12 m toward the centre line and about 0.05 to 0.06 m toward the camera (rest x -0.12 to posed x 0.01, rest z -0.15 to posed z -0.21). That is a rigid yaw of the left chest panel to depth 0.71-0.80 m. The pink gap is the Neck-weighted skin behind the open collar.\n- Counterfactual: skinning every vertex rigid on its dominant bone (no blending at all) renders the same slab at the same place and height. Over the 1,740 vertices in the slab rectangle, the mean distance between LBS and rigid is 1.6 cm (219 vertices over 3 cm, max 9.4 cm). Blend weights do not make the slab.\n- Pose source: enemy_poses_punk.gd `_jab` wind-up has Hips yaw -26, Spine -12, Chest -10, with Neck +22 and Head +22 compensating, and RightUpperArm roll 82. Removing the arm raise leaves the torso-twist edges unchanged; removing the twist drops the worst edge from x13 to x0.09. M3's before_c4_f48 and before_c5_f162 show the same twist and a head lying on its side as boxes. The art vest is just bulkier (J1 chunky) and closer to the lens.\n- Strained edges that do exist (x13-15 at the Neck/RightShoulder/Head collar sliver on the Punk's right, the armpit) are already in SL-int's A19 notes (\"vest collar 16 times; the shoulder is the problem\"). They sit mostly outside this slab. The reviewer's own probe.out counts 10 hard cells of 294 visible art cells at the hold.\n- Premise check: docs/milestones/M4-calls/P1-chain.md C7 says rig.smooth_iterations was tried at 3 and 8 iterations and dropped. The worst edge went from 5.5 to 22 and p99.9 did not fall, because the 4-influence cut undoes the smoothing. \"Never turned on\" is false, and the suggested fix was already measured as worse.\n- C5 half: the head lies on its side and the torso is twisted about 80-90 degrees in M3's boxes too, so the pose is the clip and the ragdoll. The partial ragdoll is not reproducible on the CPU, and the stagger_left clip's worst edges are x1.6 (Chest 7.4 to 11.7 cm), not extreme.\n\nI deleted my scratch probes from the worktree and left no Godot process running.",
+     "root_cause": "The Punk's wind-up key pose, authored in M3 for box proxies. `_jab` in game/actors/poses/enemy_poses_punk.gd has a combined Hips, Spine and Chest yaw of about -48 degrees, and the art's bulky vest panel and collar swing into the lens at 0.71-0.80 m. The gap between M3's box top at y~300 and M4's collar top at y~200 comes from the art's larger, higher vest volume plus that rotation, not from linear-blend stretch. The occlusion needs a clip or volume decision, and A20 freezes the Punk move clips by hash. The real but minor skin issues are separate, already known, and not in this slab: collar/neck/shoulder sliver edges and the armpit (A19 x15.9 at RightShoulder), caused by Tripo's weights not following the regularised torso joints.",
+     "files_to_change": [],
+     "fix_needs_spec_change": false
+    }
+   ]
+  },
+  "slice-g2-03": {
+   "survives": true,
+   "votes": [
+    {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "Confirmed by looking at the evidence stills and measuring their pixels. The finding is a real look defect against rubric item J3*, but it is not a defect in the chain's mechanics and no spec change is needed. It is a ranked fidelity gap (A15), and the plan already routes the fix to F-punk T9 (fingerless glove, bare fingers, accent strap). SL-int's own sheet notes list the same weakness, and P1-chain's report deferred the cuff flare to \"the look review at 1 m\". Nothing approved or logged settles it: C10's only reason for the flare is \"the concept's glove cuffs are wide\". The three claimed inheritances differ. The mitt shape is a stand-in that T9 replaces, so it is not inherited. The near_black swatch is per-asset config (glove_slot 1 in pipeline.json). The cuff radius rule is chain code and is reused whenever a fist is built from a cut. Two fix hints need correction. Facing the knuckle face toward the lens will not help, because the chain already puts the knuckle bumps on the distal face and they are 6 mm tall in one swatch. The cuff cannot be set to \"the wrist's radius\", because the chain never measures the forearm radius.",
+     "evidence": "Images viewed: SL-int c2/crops/c2_f109_hands.png, c1 f109 still, c4_f62_punk_jab_strike.png, the concept punk_a_denim_vest.jpg and P1-chain's punk_apose_poses.png.\n\n- At the chin guard each glove is a smooth rounded cylinder with a small knob on top and a yellow strap. Below the strap is a wide dark ring with ragged, spiky edges, wider than the fist.\n- In the jab strike the near glove is a flat navy mass covering the upper-left half of the 1600x900 frame, with no visible knuckles.\n- The concept shows fingerless gloves with bare skin fingers and a modest cuff.\n- Pixel counts (ffmpeg raw dump): in the jab crop the glove is (28,25,50) for 75.3% of pixels and (55,50,88) for 13.6%. In the c2 chin-guard crop it is (30,27,52) for 58.5%, so the glove is essentially one flat band there. Ink is #120f17, luma about 16; glove shadow luma is about 27, so about +11, and mid-band luma is about 54.\n- The shader scales the shadow band to 0.42 of albedo (toon_light.gdshaderinc, look_shadow_level 0.42). For near_black (#2b2833) that lands within a few luma of the ink hull. dark_grey (#4b4854) would land roughly 30 above ink.\n- The punk pipeline.json sets glove_slot 1 (near_black) and strap_slot 17, with bump_m 0.006 and cuff_margin_m 0.008.\n- report.json parts_replace cuts: boundary p90 radius 0.0754 (left) and 0.0824 (right), so cuff_radius_m is 0.0834 and 0.0904 after the +8 mm margin. Fist half-width is 0.05 m and the placeholder forearm radius is about 0.056 m, so the cuff is about 1.7x the fist and 1.5x the forearm. The cut boundary spans 47 mm and 40 mm along the arm axis, so it is ragged. Both cuts were made by deleting faces whose mean Hand weight exceeds 0.5.\n- The knuckle ellipsoids are 16x14x8 mm, placed on the block's bottom (distal) face. That is correct for a guard fist pointing up, but they are too small, and in one swatch and one flat band they cannot read.\n- The chain has no path to import an externally generated fist (grep of blender_parts.py finds none), so T9 needs a new mode.\n- ARCHITECTURE.md's placeholder `_gloved_hand()` already has a bare-finger band in a skin colour. The chain's fist_geometry has no equivalent.",
+     "root_cause": "The chain's built-in fist is `fist_geometry()` in tools/pipeline/blender_parts.py. It is one glove-slot rounded block with four tiny same-swatch bumps, a thumb ellipsoid, a smooth 16-segment cuff tube and an accent strap ring. It has no bare-finger band, and the knuckles are too small and too dark to read. Three things combine.\n\n1. `replace_hands()` sets the cuff radius to `max(r_cut, 0.05) + cuff_margin_m`, where r_cut is the 90th percentile of the ragged boundary left by the Hand-weight face deletion. That boundary sits on Tripo's flared glove cuff, so the tube comes out 0.083 to 0.090 m in radius against a fist half-width of 0.05 m. The ragged spikes are most likely the remaining Tripo glove-coloured faces and the cut edge poking around the smooth tube. This was not confirmed in 3D; it is inferred from the stills and the cut data.\n2. The punk pipeline.json picks glove_slot 1 (near_black, #2b2833). The toon shader's shadow band (0.42 of albedo, violet-tinted) then lands about 10 luma above the ink hull colour #120f17. The glove sits in the shadow band in most poses, so interior ink and knuckle bumps cannot read.\n3. The only logged justification, P1-chain C10 (\"the concept's glove cuffs are wide\"), was explicitly deferred to the 1 m look review. This gate is that review.\n\nThe real Punk (T9) will not inherit the mitt shape. It does inherit the palette rule that a dark glove snaps to near_black, whose shadow band is about the ink value, and the cut-boundary-derived cuff radius.",
+     "files_to_change": [
+      "/Users/arachne/repos/beat-em-up-PoC/tools/pipeline/blender_parts.py",
+      "/Users/arachne/repos/beat-em-up-PoC/assets/source/characters/punk/pipeline.json",
+      "/Users/arachne/repos/beat-em-up-PoC/assets/source/palette/punk.json",
+      "/Users/arachne/repos/beat-em-up-PoC/assets/export/characters/punk/punk.glb",
+      "/Users/arachne/repos/beat-em-up-PoC/docs/milestones/M4-plan.md"
+     ],
+     "fix_needs_spec_change": false
+    }
+   ]
+  },
+  "slice-g2-04": {
+   "survives": true,
+   "votes": [
+    {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "The symptom reproduces, and it fails done-when rows L2 and J5* at 59a0adf. It is not an approved departure or a logged default call. HANDOFF.md:95 lists it only as an open item for F-look (the sun sits behind the enemies, the violet is strong, skin reads pinkish), which is already assigned to F-look in plan section 7. The finding's stated cause and its suggested fix are wrong, though. Lowering look_band_2 below cos 52 degrees changes nothing at the acts' heading; the cause is the sun's direction relative to the Punk's facing, plus look_band_1.",
+     "evidence": "1) Symptom, reproduced with a stdlib PNG decoder on SL-int's c2_f109_idle_t060.png (crop 560,480 520x400, hue 180-235, sat > 0.3). The vest is 85166 px, 73.8% of them (48,112,160), and 91.5% sit in luma bins 12-13 of the 32 that LookProbe.luma_clusters uses, so that is ONE cluster. The skin crop is 88.5% in luma bin 21 with (184,160,160) at 75.5%. Viewing the still beside punk_a_denim_vest.jpg shows a flat sky-blue vest and lilac-pink skin, so J5* and L2 fail at 1 m.\n2) The atlas and chain are fine. The turntable (c10 rest_q180, the sun-facing back of the same Punk in the same room) shows the vest in three clusters: shadow (48,112,160) 16.4%, mid (64,152,160) 48.6% at hue about 183 against the atlas 185, and lit (80,168,176) 12.7%. The violet shift happens only in the shadow band, which is the bible's own 45% tint, so the smoke asset and the chain are not at fault.\n3) Actual cause. crowd_room.gd:24 starts the player facing +X (yaw -90). The Punk stands 1 m ahead and faces -X. room_kit.gd:74 (-52, 32, 0) gives L = (0.326, 0.788, 0.522) toward the sun, so a vertical front has N.L = -0.33. That is backlit and self-shadowed, so lit = N.L * ATTENUATION is 0 or negative, which is below look_band_1 = 0.25. The front is therefore 122 degrees off the sun, not 66 degrees. The autopilot crowd (auto_six) and the strafe (c3, which never rotates a Punk's front to the sun) show the same contre-jour.\n4) The finding's suggested fix fails at the acts' heading. I recorded C2 (act \"Look: Punk body at 1 m\") with --tune=look_band_2=0.5 (band_2 below the sun's cos 52 degrees). The vest (73.8% at (48,112,160)) and skin (75.5% at (184,160,160)) histograms are identical to the baseline, to the digit. Setting band_1=0 and band_2=0.3 does change the front. Most of that change is the lit=0 pixels (shadow-map-shadowed) sitting exactly on the band_1 edge and blending 50/50 to a flat (56,136,160), so it is a threshold artefact, not a real fix.\n5) The band_2 point is only a second cause that would bite once the sun is moved. cos 52 degrees = 0.616 < 0.62, so no vertical surface ever reaches the lit band, and a fully front-lit Punk would be one mid band.\n6) The look bible's violet tint (45%) is the design, and the \"within 10 degrees of its hue\" requirement is the reviewer's own addition. The mid band already stays within 9 degrees (194 versus 185 degrees in the half-blend experiment, 183 degrees in the turntable).",
+     "root_cause": "The look was tuned on the primitive Punk's rounded limbs, where every normal direction occurs, and is now judged on a mesh whose chest and face front is nearly flat. The fixed sun at room_kit.gd:74 (-52 pitch, 32 yaw) shines on the side the player faces. In the crowd room the player starts facing +X (crowd_room.gd:24) and the Punk faces -X, so its whole front is contre-jour, with N.L about -0.33 and the shadow map giving 0. That is below look_band_1 = 0.25 (tuning_data.gd:1059), so the front is the tinted shadow band: teal becomes blue and skin lilac. Raising or lowering band_2 makes no difference there. Secondary cause: look_band_2 = 0.62 sits above cos 52 degrees = 0.616, so even a front-lit vertical surface would be mid band only. A fixed directional sun leaves roughly half of all enemies, who face the player from every side, contre-jour whatever the azimuth. A real fix therefore needs both a sun or character-lighting change and a band_2 change.",
+     "files_to_change": [
+      "game/level/room_kit.gd",
+      "game/autoload/tuning_data.gd",
+      "tuning/default.json",
+      "game/fx/toon_light.gdshaderinc",
+      "game/fx/toon_materials.gd",
+      "tests/test_toon.gd",
+      "tests/bot/acts/look_tune_acts.gd",
+      "tests/bot/acts/look_acts.gd"
+     ],
+     "fix_needs_spec_change": false
+    }
+   ]
+  },
+  "slice-g2-05": {
+   "survives": true,
+   "votes": [
+    {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "Confirmed. The flip half of A7's triangle bar has no rest reference, so it counts the mesh's own folded triangles, and no pose can get under the bar. The finding needs four corrections: the offset is not a constant, the guard fails A7 rather than sitting near it, the spine-twist pass depends on the flip definition, and the 159 folds are slivers, not pinholes. Neither the plan nor any logged call approves the measurement. The plan (A19, row A7) says only \"flipped\" and never defines the reference. P1-skin C7 chose \"face normal against the skinned vertex normals\", which only works on the probe fixtures because their baseline is 0. P1-chain C13 already set the principle \"measure against the skinned rest\", and the squash and edge tests follow it. The flip test was missed. The done-when row cannot discriminate, so this is not an out-of-scope default.",
+     "evidence": "REPRODUCED at 59a0adf. I re-ran `tools/run_tests.sh -gselect=test_zz_g2_probe.gd -gunit_test_name=test_flip_baseline_and_flex_deltas`. All 28 G2-PROBE lines match captures/review/probe.out, with no SCRIPT or SHADER errors. The 'lying' flex is rigid (ART-PUNK A19 lines: p99.9 1.00, p0.1 1.00). It still reports squashed 0 and flipped 177 (punk), 142 (rest), 174 (auto), 155 (auto_rest). Baseline flips at the skinned rest are 194, 159, 179 and 161. The authored mesh has 159 flipped triangles (160 on auto_rest), which is 1.06% of 14,999 against the 75-triangle (0.5%) bar. I also parsed punk.glb and punk_rest.glb in pure Python (scratchpad glbfold.py) and got the same 159 independently.\n\nCODE: tests/test_art_punk.gd:508-509 counts `-cross.dot(normals[a]+normals[b]+normals[c]) < 0.0` as flipped. It never compares that sign with the skinned rest's, while the squash test on the line above does use `rest`. tests/skinned_view.gd:446 does the same, and its reference is the authored mesh. :575-576 applies `(squashed+flipped)/triangles > BAD_TRIANGLES` (0.005). docs/ARCHITECTURE.md:908 and M4-calls/P1-skin.md C7 document the absolute definition.\n\nNUMBERS. Deformation-only (squashed + newly flipped vs the skinned rest), for punk / punk_rest / punk_auto / punk_auto_rest, with the raw test count in brackets:\n- guard 117 / 128 / 105 / 97 (260 / 249 / 251 / 229)\n- elbow 150: 45 / 45 / 41 / 41 (220 / 185 / 212 / 194)\n- arm raise 140: 228 / 262 / 262 / 264 (378 / 398 / 415 / 411)\n- knee -130: 60 / 60 / 61 / 63 (228 / 195 / 227 / 211)\n- spine twist: 54 / 48 / 59 / 49 (208 / 180 / 209 / 188)\n- lying: 0 / 0 / 1 / 1\n\nSL-int's \"missed everywhere by 2-5x\" and \"nothing here picks between the routes\" were built on the raw counts.\n\nCORRECTIONS TO THE FINDING:\n1. The inflation is not a constant. It is a per-GLB offset (the lying counts 177 / 142 / 174 / 155). The A-pose bind route carries about 35 more flips at its skinned rest (194 vs 159) because the 38-degree swing-down turns triangles over. This biases the route comparison against the A-pose route. Raw: A-pose is worse than the arms-down bake at elbow (220 vs 185) and knee (228 vs 195), and guard (260 vs 249). Deformation-only: elbow 45 = 45, knee 60 = 60, and A-pose is better at guard (117 vs 128) and arm raise (228 vs 262). Only the spine twist is worse for A-pose (54 vs 48). The gate should recompute the bind-route A/B on deformation-only numbers.\n2. \"The guard is near the bar\" is wrong. It misses on all four GLBs by deformation-only (97-128, 1.3-1.7x over), and by 1.5-1.9x on the two-sided count below. Only the elbow and knee pass under either definition. The arm raise fails at 3x or more.\n3. The spine-twist pass depends on the flip definition. The 48-59 figures count only \"newly flipped\" triangles. The finding's own suggested fix (a sign change against the rest) also counts triangles that un-flip. I measured that with a scratch test, now deleted: the spine twist becomes 75 / 57 / 82 / 65, so punk (75 fails the test's `>0.005`) and auto (82) miss the bar. The knee becomes 65-68 and the elbow 41-45, both still passing. Whoever implements the fix must pick the definition, and I recommend newly-flipped only (a fold that goes away is not damage). The finding's \"sum\" also double-counts squashed-and-flipped overlap, by up to 6 triangles.\n4. The J7 claim (\"possible pinholes or inverted shading\") is mostly wrong. Of the 159 folded triangles, none has an inconsistent winding with a neighbour, none touches the mesh's 66 open-edge vertices, and 93 are slivers under 2 mm altitude. Their median area is 20 mm² against 138 mm² for the mesh. 145 are doubled back at more than 120 degrees against an edge neighbour (median neighbour dot -0.98). They are knife-edge folds where the smoothed vertex normals disagree with the face, a shading risk and not a hole risk. I did not render them.\n\nCHAIN CAUSE of the folds. The Tripo source (assets/source/characters/punk/smoke/cb4af11c_gen.glb, 19,510 triangles) has 30 folded triangles (0.15%, under the bar) and 0 open edges. The exported 14,999-triangle GLB has 159 (1.06%) and 66 open edges. Nothing in tools/pipeline counts folds or flips (grep of blender_*.py and pipe_*.py). The likely source is the palette step's Collapse decimation (blender_palette.py:95-110, 230-290, 19.5k to 15k) and the fist part-replacement (blender_parts.py). I did not isolate which step. F-punk will repeat this.",
+     "root_cause": "The flip half of A7/A19 is an absolute test: posed winding against posed vertex normals, with no comparison to the skinned rest. It counts every triangle already folded against its normals before any bone moves (142-194 here) as a flex failure. The squash test and the edge strain use the skinned rest as reference (P1-chain C13), but the flip test was left out of that fix. P1-skin C7 defined it that way on probe fixtures that have a baseline of 0. On the real mesh the chain's decimation and part replacement raise the authored mesh's folded triangles from 30 (Tripo source) to 159, and the chain has no check for them.",
+     "files_to_change": [
+      "/Users/arachne/repos/beat-em-up-PoC/tests/test_art_punk.gd",
+      "/Users/arachne/repos/beat-em-up-PoC/tests/skinned_view.gd",
+      "/Users/arachne/repos/beat-em-up-PoC/tests/test_skinned_art.gd",
+      "/Users/arachne/repos/beat-em-up-PoC/docs/ARCHITECTURE.md",
+      "/Users/arachne/repos/beat-em-up-PoC/docs/milestones/M4-calls/P1-skin.md",
+      "/Users/arachne/repos/beat-em-up-PoC/docs/milestones/M4-calls/SL-int.md",
+      "/Users/arachne/repos/beat-em-up-PoC/tools/pipeline/blender_palette.py",
+      "/Users/arachne/repos/beat-em-up-PoC/tools/pipeline/blender_stills.py"
+     ],
+     "fix_needs_spec_change": false
+    }
+   ]
+  },
+  "slice-g2-06": {
+   "survives": true,
+   "votes": [
+    {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "Not refuted. I compared the images and read the chain. The concept front view (smoke/punk_smoke_front.jpg, captures/review/sheets/concept_a_head.png) has a mouth line, two flap pockets with buttons, vest seams and tape wraps. The 1 m renders (SL-int c1 c1_f109_head.png, c2 c2_f109_body.png) show a smooth pink face with a nose and no mouth, and a flat teal vest with no pockets, buttons or stitching. SL-int's own notes (M4-calls/SL-int.md §4, weak point 4) record the same: \"no mouth ... reads as a mask\". A18's trigger (interior lines missing at 1 m, found by the slice gate) is met for the concept's interior detail, though only partly for J4: some interior lines remain (chin, collar, nose, vest folds), but they are ragged and dashed (aa_msaa_vs_fxaa_face.png). This is not an approved departure or a logged default that settles the matter. A18 names exactly this case as the contingency, and SPEC §10 (enemy: shared palette atlas only) is why the Punk shipped without a mask. The chain caused it and the real Punk will repeat it, so it falls inside the lead's scope for the gate. Two corrections to the finding as written. (1) The taped forearm is not gone: the tape survives as a cream colour block on the right forearm (SL-int notes the \"ghostly\" arm), and only the wrap lines are lost. (2) A mouth-less face still meets J2's \"simplified\", as the finding concedes. That puts severity at medium at most: it is a real gap for F-punk to close, not a defect in the code at 59a0adf.",
+     "evidence": "I changed nothing and ran no Godot process; every check was a file read. (a) assets/source/characters/punk/report/report.json steps.palette: detail_uv false, swatch_count 6, faces_dense 21263 decimated to 14999 triangles, majority_flips 819, source_image \"removed\". (b) assets/source/characters/punk/pipeline.json: palette.detail_uv is false, majority_passes 2, budget_tris 15000. (c) Parsing assets/export/characters/punk/punk.glb: the Body primitive has attributes COLOR_0, JOINTS_0, NORMAL, POSITION, TEXCOORD_0 and WEIGHTS_0, with no TEXCOORD_1, so there is no UV2 to carry a mask. It also has no images and no materials. game/actors/art/punk_art.tres sets no detail_mask. (d) The source texture does carry the lines, so the chain erased them. I extracted the 2048 px Tripo albedo from smoke/0366578f_rig.glb. It has thin tone-on-tone lines: pocket-flap outlines with a button, jeans seams and tape wrap curves. It also has smeared mush near chart borders. These sub-face lines fall inside one swatch or get flipped away. (e) The shader and material path is already wired and tested on a fixture only: game/fx/toon.gdshader lines 18-20 and 60-61 (detail_tex on UV2, R mixed toward ink), game/fx/toon_materials.gd:78, game/actors/rig_paint.gd:62, tests/test_toon.gd:603-635. blender_palette.py creates an empty \"detail\" UV layer when detail_uv is true (lines 318-320). Nothing in tools/pipeline paints or exports a mask image. (f) M4-plan A18 (lines 320-323) gives the default (no mask) and the trigger (the slice gate, or J4 or J1, finds interior lines missing at 1 m). That makes the finding's trigger claim a judgement, but one A18 invites the gate to make. The comparison images are the finding's repro and I looked at them: concept_a_head.png against c1_f109_head.png and c2_f109_body.png.",
+     "root_cause": "The palette step in tools/pipeline/blender_palette.py turns the dense, textured Tripo body into one-swatch-per-face colour, and that discards sub-face line detail. It labels each face with the nearest of 6 swatches from a 3x3 texel box at its UV centre, runs 2 majority-filter passes, protects only colour-border vertices, decimates to 15k triangles, and drops the source texture. Tripo's pocket, button, seam, tape and mouth lines are thin, low-contrast marks in a darker tone of the same colour. They vanish in the labelling, the majority filter and the decimation. The mesh carries no matching geometry, and the edge and hull passes only ink geometric creases and hull-on-hull overlaps (nose, jaw, collar, vest hem). The chain's escape hatch, palette.detail_uv with the UV2 ink mask (M4-plan A18, toon.gdshader detail_tex), is off for the Punk. punk.glb has no UV2, punk_art.tres has no detail_mask, and no pipeline step bakes a mask from the dense texture. The real Punk will inherit this unless F-punk adds the mask path.",
+     "files_to_change": [
+      "assets/source/characters/punk/pipeline.json (palette.detail_uv true)",
+      "tools/pipeline/blender_palette.py (add a bake of the dense texture's thin dark lines onto the decimated mesh's UV2 layout, through the existing dense-to-decimated BVH relabel, with cleanup so Tripo's smeared zones don't become mush; write the 1k ink-only mask; or a new tools/pipeline step)",
+      "tools/pipeline/blender_export.py (confirm UV2 reaches the GLB as TEXCOORD_1)",
+      "assets/export/characters/punk/punk_detail.png plus its .import",
+      "game/actors/art/punk_art.tres (set detail_mask)",
+      "tests/test_art_punk.gd (UV2 present; mask 1k, R-only ink, never shading)",
+      "tests/test_toon.gd (stale comment 'the Punk ships without one'; the fixture assertions themselves are unaffected)",
+      "README.md (M4 departures section: log A18 for Game-boy's ruling)",
+      "docs/SPEC.md §10 asset table, enemy row (shared atlas only), only if Game-boy approves the departure"
+     ],
+     "fix_needs_spec_change": true
+    }
+   ]
+  },
+  "slice-g2-07": {
+   "survives": true,
+   "votes": [
+    {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "The core of slice-g2-07 holds. On the drawn art the skin takes the clothes' damage tiles, so bruised skin shows grey smudges and bloodied skin shows clothes-density splats, where M3's primitives showed purple and yellow bruises and the skin blood tile. It is a chain gap that the real Punk inherits, and C10 listed it as an open risk for exactly this review. Two sub-claims do not hold as stated: the jeans and vest camouflage is M3's unchanged tile, and the lens blood comes from the smoke palette. Both are called out below.",
+     "evidence": "REPRODUCED by viewing the stills with the Read tool.\n- SL-int c5_f471_health_65.png (BRUISED): the arms and face are mauve-grey with dark semi-transparent smudges and scratch marks, and there is no purple or yellow bruise anywhere. M3's c5_f471_health_65.png has the primitive skin with purple and yellow bruise tiles. The clean frame c5_f411_health_100.png shows flat peach skin, so the grey comes from the damage tile and not from the shading.\n- SL-int c5_f531_health_30.png (BLOODIED): the face and forearms are pale grey-pink with dark blobs under red splats. The splats are the clothes' damage_blood tile, at the same size and density on the skin, the vest, the cap and the lenses. M3's frame shows the skin with its bruise and blood tiles, and its blood sits on the skin paint and the cap.\n- SL-int's own notes already record this: docs/milestones/M4-calls/SL-int.md §4 weak-point (5) says \"Bloodied (30% health) the pink skin goes translucent and grey under the damage tile (P1-toon C10)\".\nCODE PATH.\n- game/fx/damage_look.gd `apply_art()` sets `damage_tex` from `texture_for(PlaceholderBody.Paint.BODY, level)`, so the art always gets the clothes' tile: damage_scuffed at BRUISED and damage_blood at BLOODIED. The primitives still get damage_bruised and damage_bloodied for Paint.SKIN through `apply()`. The header comment says the art shows the clothes' tiles \"there is no skin mask in the palette\".\n- game/fx/toon.gdshader has a single `damage_tex`, mixed over every fragment whose swatch alpha passes `step(0.75, swatch.a)`.\n- assets/source/palette/shared.json marks skin slots 6-9 `marks:true`, the same as every clothes swatch. tools/pipeline/gen_palette.py writes only two alpha values, 255 and 128, so the atlas cannot tell skin from cloth.\n- game/actors/rig_paint.gd `set_damage_look()` calls `apply_art()`, and VfxDirector calls `rig.set_damage_look(level)` at the 66% and 33% thresholds.\n- tests/test_art_punk.gd A10 only asserts that a level change swaps `damage_tex` and leaves the shader and other uniforms alone. Nothing asserts that skin gets a skin tile, so the green suite does not contradict the finding.\n- C10 in docs/milestones/M4-calls/P1-toon.md says \"If the final review wants bruises on the skin, the palette needs a skin range ... and the shader a second texture; open risk\", and §4 lists it as not done. So it is a logged default whose own revisit condition is now met. It does not touch SPEC.md. It does fall short of Spec §6 and §391 (clean, then bruised, then bloodied; \"comic blood, bruising\") and of rubric J11 (\"bruised ... read at 1 m\"), because no bruise ever appears on the skin.\nWHAT DOES NOT HOLD.\n(a) \"Jeans and vest read as camouflage\" is not a regression and not chain-caused. M3's c5_f471_health_65.png shows the same dark blobs on the teal vest (same damage_scuffed tile, same vfx_damage_tile_m 0.4). They are more visible on the art only because the vest is a brighter teal. It is a taste call on an unchanged M3 asset, so drop it or rate it low.\n(b) The lens blood comes from the smoke palette, not C10. assets/source/palette/punk.json has only punk_teal and punk_yellow, both marks:true, and the lenses, cap and strap all use punk_yellow. M3's shades were the DARK paint with no marks, and M3's cap did take blood. The chain already supports a no-marks swatch (alpha 0.5), so a separate lens swatch with marks:false fixes the lenses in F-punk without any chain change. The finding's wider point stands: marks is a binary per-swatch flag, so a glossy or accessory swatch cannot take thinner marks.\nSEVERITY. J11 is not a starred item. Clean, scuffed and bloodied are still distinguishable and the marks stick (A10 passes). What is lost is skin bruising, which is why medium (a judged gap) is fair. It repeats for every concept's real Punk, because every Punk has skin.",
+     "root_cause": "The art is one material with one `damage_tex` uniform, and the palette atlas's alpha is a binary \"takes marks\" flag with no skin class. `DamageLook.apply_art()` therefore always uses the clothes' tiles (damage_scuffed, then damage_blood) for the whole body, and skin slots 6-9 and the cap, lens and strap swatch all take the same marks. This is P1-toon C10, which was chosen by default and flagged as an open risk. The lens case is also a smoke-palette choice: the lenses share the cap's marks:true punk_yellow swatch.",
+     "files_to_change": [
+      "assets/source/palette/shared.json (mark the skin slots 6-9 as skin)",
+      "assets/source/palette/punk.json and the Punk's palette assignment in tools/pipeline/blender_palette.py or the pipeline (a separate lens swatch with marks:false; a smoke-asset fix that F-punk can do in place)",
+      "tools/pipeline/gen_palette.py (a third alpha class for skin, or a mask encoding) and assets/export/palette/palette_atlas.png regenerated; tools/pipeline/pipe_common.py if it validates the alpha",
+      "game/fx/toon.gdshader (a `damage_skin_tex` uniform; the skin mask picks it over `damage_tex`; optionally a thinner mark strength per swatch class)",
+      "game/fx/damage_look.gd (`apply_art()` sets both textures, using texture_for(Paint.SKIN) for the skin one; `prepare()` fills the new slot with the clear texture so there is no shader variant switch) and game/fx/toon_materials.gd (default for the new uniform)",
+      "tests: test_art_contract.gd:501 (the alpha encoding), test_toon.gd (the uniform list), test_damage_look.gd and test_art_punk.gd A10 (the names list and a skin-tile assertion), test_m4_contracts.gd if the arity or uniform list is pinned",
+      "docs/milestones/M4-plan.md Part C §2.6 and §2.7 and docs/ARCHITECTURE.md (palette alpha and the uniform list) and the P1-toon C10 note"
+     ],
+     "fix_needs_spec_change": false
+    }
+   ]
+  },
+  "slice-g2-08": {
+   "survives": false,
+   "votes": [
+    {
+     "refuted": true,
+     "confidence": "high",
+     "reason": "The cited stippled patch (C2 f109, left forearm, crop 540,500) is not the rim. The stipple is real, but it is the mid-to-shadow band edge dithered by the shadow map's soft filter, so the finding's cause and its fwidth-rim fix are wrong. In frames I rendered losslessly, the rim never shows on the left forearm, and where the rim does show (the right forearm) its edge is 1-4 px and polygon-crisp.",
+     "evidence": "I re-rendered C2 f109 losslessly (PNG sequence, 1600x900, in a scratch copy of the reviewer's worktree at 59a0adf, run by `godot --write-movie`). The unmodified copy was byte-identical to the SL-int frame.\n\n1. The stipple is not JPEG. It shows in the lossless frame as pixel-to-pixel noise (G: 187 192 195 190 197 195 188 184 186 169 188 180 162 165 ...).\n2. The patch is not the rim.\n   - With `--tune=look_rim_strength=0`, 7,906 pixels change, none in the 100 px cell (600,500) that holds the patch. They are on the right forearm, torso, head and jacket.\n   - The patch stat (cream pixels 813, intermediate 971, noise/px 13.0) is unchanged.\n   - Diffing against that run shows the rim only as thin strips and one polygon on the right side of the frame. The rim is zero on the left forearm.\n   - `look_spec_strength=0` and `look_band_2=1` also leave the patch unchanged.\n3. The patch is not albedo. Albedo-only output (DIFFUSE_LIGHT constant) gives a flat tan forearm.\n4. It is the shadow-band to mid-band edge, noised by the shadow term.\n   - The forearm is in the violet-tinted shadow band and the patch is the mid band.\n   - With `lit = ndl` (ATTENUATION dropped), the edge becomes one crisp polygon edge (noise/px 4.29, cream 3,272).\n   - With `rendering/lights_and_shadows/directional_shadow/soft_shadow_filter_quality=0` (hard), the stipple also disappears. The patch stays a crisp shadow-terminated shape (noise/px 4.61).\n5. The rim is not soft where it actually shows. On the right forearm, the rim's own contribution (base minus rim-off, G channel) rises within 1-4 px:\n   - row 560: 2 to 25 in 1 px;\n   - row 640: 0, 2, 12, 20, 25;\n   - row 700: 2, 21, 29, 34, 39.\n   The rim is wider than that only where a flat grazing surface makes it a wide strip, and its edge there is still not stippled.\n6. The constants 0.02, 0.3, -0.35 and 0.1 are real literals in the shader. They are shape constants of a smoothstep, not tuning feel numbers. The plan lists only `look_rim_*` (cut, power, strength), and no rubric or measured row (A1-A14, L1-L5, J5) requires a rim-softness tunable. Nothing in the evidence shows the fixed width causing a visible defect.",
+     "root_cause": "The rim is smoothstep(rim_cut ± 0.02, pow(1 - N·V, rim_power)) at game/fx/toon_light.gdshaderinc:66-67. On a smooth surface its edge is 1-4 px, and no frame in C2 shows it stippled; the left forearm has no rim at all at f109.\n\nThe stipple the finding saw is the shadow-band to mid-band edge. At game/fx/toon_light.gdshaderinc:56, `float lit = ndl * ATTENUATION` puts the sun's shadow-map term inside the band input. Where the Punk's arm is in penumbra at the band_1 (0.25) crossing, Godot's default soft shadow filter makes ATTENUATION a per-pixel dither. That dither gives lit pixel-scale noise around band_1, and the fwidth edge, capped at 0.08, cannot smooth it.\n\nThat is a separate low-severity defect in the band logic. Its edge is about 5-8 px and noisy, against the bible's at-most-2-px band edge. It can reappear wherever a self-shadow penumbra crosses a band threshold. An fwidth-based rim would not touch it.\n\nIf the lead wants the real defect filed separately, the fix is in the band's shadow handling. Options: take ATTENUATION through its own hard or steep step before multiplying with ndl, or set the directional shadow soft filter to hard or its quality to the lowest. The project does not set it today, so it uses Godot's default.",
+     "files_to_change": [
+      "game/fx/toon_light.gdshaderinc (only for the separate band-edge defect: line 56, `lit = ndl * ATTENUATION`; none for the finding as stated, since the rim is not the cause)",
+      "project.godot (alternative for the separate defect: rendering/lights_and_shadows/directional_shadow/soft_shadow_filter_quality; not set today, so the default applies)"
+     ],
+     "fix_needs_spec_change": false
+    }
+   ]
+  },
+  "slice-g2-09": {
+   "survives": false,
+   "votes": [
+    {
+     "refuted": true,
+     "confidence": "medium",
+     "reason": "The numbers reproduce, but they do not show a visible defect, and the finding's premise that face-down is the large, unseen hazard does not hold. (1) I recorded the missing evidence myself: the Punk hit from behind in first person, lying face down at 1.4 m, getting up at about 1.4 m, and a face-down KO at 1.6 m looking at the shoes. None show a spike, tear, floater or collapse. The shoes are clean rounded blobs, the back and arms read well, and the get-up is only lumpy at the vest hem and hips. The strain metric overstates what the lens sees. (2) In play the face-up path, which C5 already records and SL-int judged clean, is nearly as strained. In the real ragdoll sequence, face-up DOWNED has 173 spike edges (worst +10.0 cm) and face-down 201 (+11.5 cm). The launch phase is identical at 219 and +12 cm. The face-up get-up has 144 and +8.9 cm against 179 and +13.2 cm face-down. Face-down is roughly 15 to 50% worse, not categorically different. (3) Most of it is already documented. SL-int.md section 3 lists the face-down foot and lower-leg seam, with ko_front/downed_front/getup_front/knockdown_forward at 31 to 47 times, and the A19 worst-ten and 'worst p99.9 5.61 (ko_front, downed_front)' are already inputs to the gate. A19 is red on every sample for all four GLBs, so these clips add no gate decision. The suggested fixes (weight smoothing at joints, rigid shoe weights) are the gate's own named contingencies and phase-2 F-punk work. (4) The 'waist 8 to 17 cm' wording misattributes the cause; it is the armpit and flank from the overhead arm, not the waist or hips (see root cause). What stays true is that no existing act shows a face-down body. C5 is face-up (hit from the front), C10's lying stance is downed_back at 1.8 m, and a from-behind hit does leave the Punk face down. That is at most a one-line evidence-coverage note, not a defect or a fix package.",
+     "evidence": "REPRO. The recorded repro is a probe that prints no asserts ('Risky'); probe4.out is confirmed. My probe (copy in the scratchpad dir g209/test_zz_g209.gd) at 59a0adf, against the skinned rest, counting edges that grow more than 2 cm and more than 1.6x:\n- downed_front: 116 spike edges (89 with rest over 2 cm), worst +8.9 cm, p99.9 5.66, max 31.7. Its worst-edge rows (Hips 7.9 cm, Spine 7.3 to 9.4 cm) match the probe's absolute list.\n- getup_front start: 114 edges, p99.9 5.66, +9.0 cm.\n- ko_front end: 6 edges (foot and lower-leg seam, rest 0.5 to 3.3 cm, worst +3.1 cm), p99.9 5.61.\n- Face-up, same method: downed_back 3 edges (+2.2 cm), p99.9 1.92. ko_back 32 edges (+3.8 cm), p99.9 3.20.\n- A 48x27 grid of TriangleMesh rays from 1, 2 and 3 m shows 2 to 53 of the 145 spike vertices visible, which only says they could show, not that they do.\n\nABLATION of the downed_front pose:\n- as authored 114 spike edges, +9.0 cm;\n- arms zeroed 5, +3.1 cm;\n- left arm only zeroed 6;\n- legs zeroed 110, feet zeroed 109;\n- neck, head and spine zeroed 112;\n- Hips only 0.\nko_front: legs or feet zeroed gives 0, so its 6 spikes are the ankle seam. ko_back: arms zeroed gives 0.\n\nIN PLAY (crowd room, real Punk, synthetic HitInfo with from_behind true or false, LAUNCH, ragdoll on; measured from the authored mesh, whose idle baseline is 55 edges and +5.2 cm):\n- from the front, LAUNCHED 219 / +12.0 cm / p99.9 4.82; DOWNED (downed_back) 173 / +10.0 / 4.29; GETUP (getup_back) 144 / +8.9 / 4.55.\n- from behind, LAUNCHED 219 / +12.0 / 4.82; DOWNED (downed_front) 201 / +11.5 / 5.66; GETUP (getup_front) 179 / +13.2 / 6.69.\n\nRECORDINGS (first person, 1600x900, my own acts with the frozen Punk's yaw pinned away from the lens, because a frozen AI Punk still turns to face the player and a first attempt landed face-up):\n- captures/review/g209a/f145.png, f181.png, f217.png and f223.png: lying 1.4 m and get-up, clean, no spikes; lumpy only at the vest hem and hips in f223.\n- captures/review/g209b/f126.png: face-down KO at 1.6 m, pitch -52, shoes and soles clean.\n- Both runs: 0 SCRIPT ERROR or ERROR in bot.log.\n\nSL-int c5 stills f216 (downed) and f291 (get-up), face-up, show the same class of look with the same order of strain.",
+     "root_cause": "The metric spikes are one authoring and weighting fact, not a face-down-specific defect. PlaceholderPoses.downed_front() (game/actors/placeholder_poses.gd:346) puts LeftUpperArm at (150, 0, -20), an overhead arm raise, and getup_front, knockdown_forward and ko_front inherit it. The Tripo weights bleed LeftUpperArm onto flank vertices (Chest 0.41 / LeftUpperArm 0.22, Spine 0.37 / LeftUpperLeg 0.26). This is the same armpit and flank stretch the A19 'arm raise 140' flex reports (p99.9 3.70, 378 triangles), so the vertices sit on the trunk's side and the 'Hips', 'Spine' and 'Chest' labels are only the dominant bone of one end. The foot spikes are ankle-seam edges of 0.5 to 3 cm at rest, stretched by the plantar-flexed feet (LeftFoot and RightFoot -50 to -70) in downed_front and ko_front, which SL-int already records. In play the ragdoll's own lying pose adds comparable strain face-up (173 spike edges) and face-down (201). The evidence gap is that tests/bot/acts/look_acts.gd has no from-behind act; C5 and the C10 'lying' stance are face-up. Closing it needs a hit from behind with the frozen Punk's yaw pinned away from the lens, because EnemyActor's _face() turns it to the player even with ai_frozen.",
+     "files_to_change": [],
+     "fix_needs_spec_change": false
+    }
+   ]
+  },
+  "slice-g2-10": {
+   "survives": false,
+   "votes": [
+    {
+     "refuted": true,
+     "confidence": "high",
+     "reason": "The symptom is real: vest and jeans render as one blue mass, and one forearm reads paler than the other. But the finding's cause and its fix are wrong. The merge is not made by the chain's nearest-swatch mapping or the 6-swatch cap. It is already in the source image the chain was given, and a separate jeans slot would change almost nothing. The \"whole cream sleeve\" overstates what the mesh has. The tape is a band the concept draws, and the plan keeps it on purpose. The tape fix the finding suggests (a detail mask on the Punk) is a spec departure that needs Game-boy's ruling.",
+     "evidence": "Reproduced at 59a0adf from the shipped files, without running Godot.\n\n1. Counts match the finding.\n- report.json lists punk_teal at 0.4737 and cream at 0.1353.\n- Parsing punk.glb gives the same shares.\n- Teal is 86-87% of both upper legs, 88-89% of the shoulders, and 71-81% of hips, spine and chest. So vest and jeans do share one swatch.\n- The C6 2.5 m still (c6_f199_d2_5_m.png) has vest pixels (49,105,147) and (55,119,156) and jeans (50,107,149). The two are the same blue.\n\n2. The merge is upstream of the palette step.\n- The Gemini flat re-render fed to Tripo (smoke/punk_smoke_front.jpg) already has vest (86,136,141) and jeans (86,134,140).\n- Concept A's jeans are (147,169,161), a clearly lighter grey-teal (dE76 18.7 from the vest).\n- The re-render prompt in smoke_jobs.json says \"Colour palette strictly limited to ... teal main, yellow accent, dark charcoal, off-white and skin\". That flattened the jeans into the vest teal.\n- Tripo's 2048 texture, sampled by dominant-bone faces from 0366578f_rig.glb, has median vest (89,128,128) and median jeans (88,128,127). That is dE76 0.72. No swatch rule can separate two colours that are identical in the input.\n\n3. The suggested fix is inert on this input. I labelled every texture face to its nearest swatch.\n- With a concept-grey-teal jeans swatch added: 78% of jeans faces stay punk_teal, and only 2% take the new swatch (vest: 83% teal).\n- With dark_grey folded into near_black and the jeans swatch added: 80% of jeans stay teal, 2% take the new swatch.\n- Adding steel, olive_grey or mid_grey gives jeans and vest nearly the same split, so both flip together.\n- The 6-swatch cap is the spec's: SPEC section 10 says \"4-6 flat colors per character\" and A3 says 4-6. It is not a chain artifact.\n\n4. The tape is not a whole sleeve. The mesh has cream on the left LowerArm only from about t=0.25 to 0.7 of the bone length (cream is 28% of that bone's area, skin 31%, glove cuff about 42%). Skin sits above and the glove below. The right forearm is 58% skin_light with no cream. The concept draws a partial wrap there. Cream is the correct nearest swatch for a cream bandage. The plan keeps it deliberately as the asymmetric landmark: M4-plan line 725 uses \"Punk A: the forearm tape\" to settle which side is left. SL-int already logged the forearm mismatch as a known sheet note.\n\n5. The pale look comes from the shared palette values and the grade. Cream is shared slot 14 and skin_light is slot 6. On screen the two forearms are (189,162,167) against (189,172,180), a small gap. That is F-look and F-punk territory, not a chain fault.\n\n6. The detail-mask part of the suggestion needs a spec decision. SPEC section 10 says enemies use the shared atlas only. A18 says the Punk ships with no detail mask. It is added only after the slice gate or the final review finds the Punk's interior lines missing at 1 m, and then it needs Game-boy's ruling logged in README.\n\n7. F-punk replaces punk.glb in place with the picked concept and its own palette slots (slots 16-31 in punk.json). Nothing here carries over through blender_palette.py. The one repeat risk is the Gemini views step flattening two close colours together again, so F-punk can add a colour-separation check against the concept at its views step. That is a watch item, not a chain defect.",
+     "root_cause": "Concept A's grey-teal jeans were lost at the smoke Gemini flat re-render, before Tripo and before the palette step. The prompt told Gemini \"teal main\" and the output painted the jeans the vest's teal. The palette step (tools/pipeline/blender_palette.py) labels each face from the texture colour, so it can only keep two regions apart if the texture does. Here both are the same colour, so any swatch set maps them together. The cream forearm band is the concept's partial tape mapped to the correct nearest shared swatch. The paleness against skin comes from the shared swatch values and the grade, not from nearest-swatch mapping or the cap.",
+     "files_to_change": [],
+     "fix_needs_spec_change": true
+    }
+   ]
+  }
+ },
+ "findings": [
+  {
+   "id": "slice-g1-01",
+   "severity": "medium",
+   "title": "R4 (occluded wind-ups) is blind to art Punks: their proxies are skipped and their art never hit",
+   "survives": true,
+   "files": [
+    "tests/bot/readability_probe.gd",
+    "tests/test_readability_probe.gd"
+   ]
+  },
+  {
+   "id": "slice-g1-02",
+   "severity": "medium",
+   "title": "The art breaks the close-range lens distances its proxies pass (hold: cap 0.20 m from the lens; cross: 4.6 cm, inside the near plane)",
+   "survives": false,
+   "files": [
+    "tests/test_art_punk.gd",
+    "tests/test_grab_view.gd",
+    "assets/export/characters/punk/punk.glb",
+    "assets/source/characters/punk/pipeline.json"
+   ]
+  },
+  {
+   "id": "slice-g1-03",
+   "severity": "medium",
+   "title": "The load-time art warm-up is placed from the camera before the camera first updates, so it is never in the lens and draws nothing",
+   "survives": true,
+   "files": [
+    "game/fx/toon_materials.gd",
+    "game/level/room_kit.gd",
+    "tests/test_art_punk.gd"
+   ]
+  },
+  {
+   "id": "slice-g1-04",
+   "severity": "medium",
+   "title": "A6 misses on the legs (89-91% within hurtbox + 6 cm): the chain never fits girth, so F-punk will repeat it",
+   "survives": false,
+   "files": [
+    "tools/pipeline/blender_fit.py",
+    "assets/source/characters/punk/pipeline.json",
+    "tests/test_art_punk.gd"
+   ]
+  },
+  {
+   "id": "slice-g1-05",
+   "severity": "low",
+   "title": "The slice gate's reproducibility command `run.py --asset punk --from smoke` crashes; `--check` is the real command",
+   "survives": true,
+   "files": [
+    "tools/pipeline/run.py",
+    "docs/milestones/M4-slice-gate.md"
+   ]
+  },
+  {
+   "id": "slice-g1-06",
+   "severity": "low",
+   "title": "SkinnedView measures the FK pose, not the drawn ragdoll pose, so drawn-art evidence during staggers and launches measures the wrong body",
+   "survives": true,
+   "files": [
+    "tests/skinned_view.gd"
+   ]
+  },
+  {
+   "id": "slice-g2-01",
+   "severity": "high",
+   "title": "Hull smooth normals are baked in Blender Z-up axes; the ink line vanishes on every top and bottom silhouette",
+   "survives": true,
+   "files": [
+    "tools/pipeline/blender_export.py",
+    "game/fx/toon_outline.gdshader",
+    "tests/test_art_contract.gd",
+    "assets/export/characters/punk/punk.glb",
+    "tests/fixtures/art/probe_body.glb"
+   ]
+  },
+  {
+   "id": "slice-g2-02",
+   "severity": "high",
+   "title": "Linear-blend skinning turns the vest into a stretched fin at 1 m in the jab wind-up's hold and folds the collar and neck in the hook stagger (J8*)",
+   "survives": false,
+   "files": [
+    "assets/source/characters/punk/pipeline.json",
+    "tools/pipeline/blender_rig.py",
+    "tests/test_art_punk.gd",
+    "game/actors/poses/enemy_poses_punk.gd"
+   ]
+  },
+  {
+   "id": "slice-g2-03",
+   "severity": "medium",
+   "title": "The gloves read as canisters, not fists (J3*): near-black swatch, full mitt, flared cuff",
+   "survives": true,
+   "files": [
+    "tools/pipeline/blender_parts.py",
+    "assets/source/characters/punk/pipeline.json",
+    "assets/source/palette/shared.json"
+   ]
+  },
+  {
+   "id": "slice-g2-04",
+   "severity": "medium",
+   "title": "In the 1 m acts the Punk's front is one violet-tinted shadow band: no 2-3 bands, teal reads blue, skin reads lilac (J5*, J1*)",
+   "survives": true,
+   "files": [
+    "game/autoload/tuning_data.gd",
+    "game/level/room_kit.gd",
+    "game/fx/toon_light.gdshaderinc"
+   ]
+  },
+  {
+   "id": "slice-g2-05",
+   "severity": "medium",
+   "title": "A7's triangle bar is unpassable on this mesh: 142-177 triangles flagged with zero deformation, and SL-int's 'missed everywhere by 2-5x' overstates the deformation",
+   "survives": true,
+   "files": [
+    "tests/test_art_punk.gd",
+    "tests/skinned_view.gd"
+   ]
+  },
+  {
+   "id": "slice-g2-06",
+   "severity": "medium",
+   "title": "The concept's interior detail is gone at 1 m: no mouth, no vest pockets or buttons, no stitching (A18's detail mask is warranted)",
+   "survives": true,
+   "files": [
+    "assets/source/characters/punk/pipeline.json",
+    "game/actors/art/punk_art.tres",
+    "README.md"
+   ]
+  },
+  {
+   "id": "slice-g2-07",
+   "severity": "medium",
+   "title": "Damage looks on the art: the skin goes grey and translucent, blood lands at clothes density on the cap and lenses, and the bruised tile reads as camouflage (J11)",
+   "survives": true,
+   "files": [
+    "game/fx/toon.gdshader",
+    "game/actors/damage_look.gd",
+    "assets/source/palette/shared.json"
+   ]
+  },
+  {
+   "id": "slice-g2-08",
+   "severity": "low",
+   "title": "The rim's edge is a stippled 10-20 px zone at 1 m (bible: band edges at most 2 px); the rim's softness is a constant in the shader",
+   "survives": false,
+   "files": [
+    "game/fx/toon_light.gdshaderinc",
+    "game/autoload/tuning_data.gd"
+   ]
+  },
+  {
+   "id": "slice-g2-09",
+   "severity": "low",
+   "title": "Face-down strain is large but never seen: no 1 m act shows a face-down body",
+   "survives": false,
+   "files": [
+    "tests/bot/acts/look_acts.gd",
+    "assets/source/characters/punk/pipeline.json"
+   ]
+  },
+  {
+   "id": "slice-g2-10",
+   "severity": "low",
+   "title": "Palette fidelity: the vest and jeans share one swatch, and the forearm tape becomes a whole cream sleeve",
+   "survives": false,
+   "files": [
+    "assets/source/characters/punk/pipeline.json",
+    "assets/source/palette/punk.json"
+   ]
+  }
+ ],
+ "packages": {
+  "packages": [
+   {
+    "key": "chain-contract",
+    "title": "The chain-to-shader contract: hull normals in glTF axes, a skin class for damage marks, run.py step validation",
+    "finding_ids": [
+     "slice-g2-01",
+     "slice-g2-07",
+     "slice-g1-05"
+    ],
+    "files": [
+     "tools/pipeline/blender_export.py",
+     "tools/pipeline/run.py",
+     "tools/pipeline/gen_palette.py",
+     "tools/pipeline/pipe_common.py",
+     "tools/pipeline/make_probe_body.py",
+     "assets/source/palette/shared.json",
+     "assets/export/palette/palette_atlas.png",
+     "assets/export/palette/palette_atlas.png.import",
+     "assets/export/characters/punk/punk.glb",
+     "assets/export/characters/punk/punk_rest.glb",
+     "assets/export/characters/punk/punk_auto.glb",
+     "assets/export/characters/punk/punk_auto_rest.glb",
+     "assets/export/characters/punk/*.glb.import",
+     "assets/source/characters/punk/report/**",
+     "assets/source/characters/punk/report_auto/**",
+     "assets/source/characters/punk/work/**",
+     "tests/fixtures/art/probe_body.glb",
+     "tests/fixtures/art/probe_body_rest.glb",
+     "tests/fixtures/art/probe_body*.glb.import",
+     "tests/fixtures/art/probe_report.json",
+     "tests/test_art_contract.gd",
+     "game/fx/toon.gdshader",
+     "game/fx/damage_look.gd",
+     "game/actors/rig_paint.gd",
+     "tests/test_damage_look.gd",
+     "tests/test_toon.gd",
+     "tests/test_m4_contracts.gd",
+     "docs/ARCHITECTURE.md",
+     "docs/milestones/M4-plan.md",
+     "docs/milestones/M4-planning/m4-plan-vertical-slice.md",
+     "docs/milestones/M4-calls/SG-chain.md"
+    ],
+    "notes": "Severity first: slice-g2-01 (high) is the must-land item. Do it first and commit it before you start slice-g2-07. Shared root: what the chain bakes into the GLB and atlas does not match what the toon shaders read.\n\n1) slice-g2-01, hull normals.\n- In blender_export.write_hull_normals (lines 64-87), convert each smooth normal to glTF Y-up before the encode: n_gltf = (n.x, n.z, -n.y), then rgba[:, :3] = n_gltf * 0.5 + 0.5. Fix the docstring at line 12 ('in glTF Y-up axes').\n- Do not touch toon_outline.gdshader. The Godot-side fixture, test_toon and the documented contract already assume Y-up COLOR.\n- Re-export through the chain from its cached steps, never re-running Tripo:\n  - tripo weights: `python3 -I tools/pipeline/run.py --asset punk --from export`;\n  - auto weights: the same with `--set rig.weights=\"auto\"` plus paths.report=report_auto and paths.export_name=punk_auto. Confirm the exact override set from report_auto's recorded config and M4-calls/P1-chain.md.\n  - Both bind routes come out of each run. Rebuild the probe fixtures with `python3 -I tools/pipeline/make_probe_body.py`.\n- PROVE THE RE-EXPORT CHANGED ONLY COLOR_0. Byte-compare every other accessor and the skin and node data, old against new GLB: POSITION, NORMAL, TEXCOORD_*, JOINTS_0, WEIGHTS_0, indices, inverse binds. Put the result in your calls file. That proof keeps every other gate number valid: A6, A9, A19, strain and perf.\n- Then run `godot --headless --import --quit`. In test_art_contract.gd's test_hull_normals_and_the_detail_uv_are_there, add two per-mesh assertions on each shipped GLB and the probe fixtures:\n  - the mean dot(normalize(COLOR.rgb*2-1), NORMAL) is at least about 0.85 (the correct decode measures 0.92-0.96);\n  - it beats the (x, z, -y)-permuted read, so the axis frame cannot regress.\n- `run.py --asset punk --check` and the auto-variant check must both pass afterwards. Record both commands and results in your calls file; the lead cites them as gate pass (1).\n- Windowed (one Godot process at a time):\n  - re-measure L1 at 1, 2.5, 5 and 10 m;\n  - record C1, C2, C4 and C6 into your worktree's captures/ (never commit them);\n  - look at the full-resolution stills and 2x crops: ink continuous on the cap crown and the elbow and forearm bottoms, an even width, and no new doubling with the edge pass. Report the numbers and what you saw.\n- Optional, last (from slice-g2-05, which the other package owns): add the authored mesh's folded-triangle count (face winding against its vertex normals) to the export step's report. Do not change decimation or geometry: fold removal is an F-punk brief line.\n\n2) slice-g2-07, damage on skin.\n- Add a skin class: a `skin: true` flag on shared.json slots 6-9, written by gen_palette.py as a third atlas alpha value, for example 1.0 clothes marks, 0.75 skin marks, 0.5 none. Keep it byte-reproducible. Update pipe_common.py only if it validates the alpha.\n- Regenerate palette_atlas.png and update the alpha assertion at test_art_contract.gd:501.\n- In toon.gdshader, add `damage_skin_tex` with a clear default hint. The skin alpha selects it over damage_tex in the triplanar.\n- In DamageLook.apply_art(), set damage_tex to the clothes tiles as today and damage_skin_tex to texture_for(Paint.SKIN), the bruised then bloodied tiles that M3's primitives wore. prepare() fills both with the clear texture.\n- Do NOT edit game/fx/toon_materials.gd or tests/test_art_punk.gd; the other package owns them.\n  - If a material default is needed, set it in DamageLook.prepare(), or in RigPaint only if the slot fill lives there.\n  - test_art_punk's A10 reads damage_tex only, so keep damage_tex's clothes sequence unchanged. Put the skin-tile assertion in test_damage_look.gd.\n  - Update the uniform list in test_toon.gd, and test_m4_contracts.gd if it pins it.\n- Leave the lens and cap swatch in punk.json alone. Re-assigning palette slots changes the GLB's UVs and would break the COLOR-only proof. It is an F-punk brief line, as is the scuffed tile's own art (tools/gen_fx.gd, not yours).\n- Any mark-strength number goes in the palette JSON as data, never a script constant. If a tunable is truly needed, it goes only in tuning_data.gd's Look > Toon subgroup; the lead regenerates tuning/default.json.\n- Evidence: record the damage-looks act (100/65/30%, then hits, C5) and check at 1 m that skin shows bruises then blood, clothes show scuffs, and the face no longer goes grey.\n\n3) slice-g1-05, run.py step validation.\n- In run.py, validate opts['from'] and opts['only'] against STEP_NAMES before any side effect (before gen_palette and the effective-config write; today the indexing is at lines 202 and 207). On a bad name, print a usage line listing the steps and return 2. Confirm `--from smoke` now exits 2 and writes nothing.\n- Replace `--from smoke` with `--check` at M4-plan.md:716, and at m4-plan-vertical-slice.md:256 (optional).\n\nDocs you own:\n- ARCHITECTURE.md: :863, COLOR hull_normal in the GLB's Y-up axes like NORMAL; :870 and :922, the palette alpha classes and the new uniform; :929, damage on art.\n- M4-plan.md: :594, and Part C §2.6 and §2.7.\n- Do not edit M4-calls/SL-int.md or P1-*.md: the lead's M4-slice-gate.md corrects SL-int's 'even 3 px ink hull' claim.\n- Log your calls and numbers in docs/milestones/M4-calls/SG-chain.md.\n\nRules:\n- Headless Blender only, never the Blender MCP, and never alongside a Godot process of your own.\n- If gen_palette rewrites the atlas during a chain run before your palette change, it must stay byte-identical: check git diff.\n- Run the full suite (tools/run_tests.sh) at the end and read the whole output for SCRIPT ERROR, SHADER ERROR and ERROR. The count only goes up."
+   },
+   {
+    "key": "drawn-art-instruments",
+    "title": "The instruments and the warm-up follow the drawn body: R4 counts art Punks, SkinnedView reads the ragdoll pose, strain flips against the skinned rest, the art warm-up in the lens",
+    "finding_ids": [
+     "slice-g1-03",
+     "slice-g2-05",
+     "slice-g1-01",
+     "slice-g1-06"
+    ],
+    "files": [
+     "tests/bot/readability_probe.gd",
+     "tests/test_readability_probe.gd",
+     "tests/skinned_view.gd",
+     "tests/test_skinned_art.gd",
+     "tests/test_art_punk.gd",
+     "game/fx/toon_materials.gd",
+     "game/level/room_kit.gd",
+     "tests/bot/acts/look_acts.gd",
+     "tests/test_look_acts.gd",
+     "docs/milestones/M4-calls/SG-instruments.md"
+    ],
+    "notes": "Shared root: M4's measurement code and the load-time warm-up still assume what M3 drew, or what the FK pose or the pre-update camera says, rather than what the lens draws. Every item here is a test or presentation fix. None changes game state or an asset.\n\n1) slice-g1-03, the warm-up placement (medium).\n- ToonMaterials.warm_up() reads the camera right after `await process_frame`, before the FirstPersonCamera's first _process, so the holder lands at (0,-1.2,-2.5), out of the frustum.\n- Place it only after the camera's first update: a second process_frame, RenderingServer.frame_pre_draw, or the player's get_eye_transform() and look basis via RoomKit.warm_up_art. Verify which ordering actually holds in 4.7.2.\n- Edit only warm_up() in toon_materials.gd and warm_up_art() in room_kit.gd. The other package must not touch toon_materials.gd and you must not touch any material defaults.\n- Add a windowed check in look_acts.gd, in an existing or a new look act, plus test_look_acts.gd if acts are pinned. Log a LOOK line saying the holder's skinned ArtBody AABB and the hull boxes intersect the camera frustum on both frames they exist, in the crowd room and the training room. Record that act and quote the line.\n- Re-measure first spawn and first hit on 'Look: Perf, six art Punks' against 59a0adf with tools/perf_compare.sh (interleaved, vsync on, --runs 3). Report them as NOISY deltas.\n\n2) slice-g2-05, the flip half of the strain test (medium).\n- In test_art_punk._strain and SkinnedView.strain, a triangle counts as flipped only when sign(dot(winding normal, mean vertex normal)) in the pose differs from the same sign at the skinned rest. Keep the squash test (area below 15% of the skinned rest). The P1-chain C13 reference stays.\n- Print the authored mesh's folded-triangle count per GLB as its own ART-PUNK number (about 159 on punk.glb).\n- Re-print A7 and A19 for all four GLBs: elbow 150, knee -130, spine twist, guard and arm raise. Expected: elbow about 41-45, knee about 60-63 and twist about 48-59 pass; guard 97-128 is near the 75 bar; the arm raise fails. Report what you measure.\n- test_skinned_art's probe-fixture strain tests have a baseline of 0 and must stay green.\n- Fold removal in the chain is NOT yours. It is an F-punk brief line; the other package may add a fold count to the chain report.\n\n3) slice-g1-01, R4 on art Punks.\n- In readability_probe._sample_occlusion, replace `not mesh.is_visible_in_tree()` with `not FPView.is_drawn(mesh)`, so the proxies count, matching R8 and A4.\n- Add a test_readability_probe case: two StreetPunks in line with the art on, the rear one winding up; expect share 1.0.\n- Re-run one autopilot crowd act ('Six Punks, fight', or the act SL-int used for auto_six). Confirm R4 still reads its true figure and R8 is unchanged.\n\n4) slice-g1-06, SkinnedView's pose source (low).\n- Add a pose source to hits(), _soup(), _skin_matrices and _pose_key, plus the compare_* wrappers: when rig.is_ragdolling(), use the ragdoll's visual pose per bone (rig.get_ragdoll().visual_pose(i), or whatever the real 4.7 API in ragdoll.gd is), else rig.animation_pose(). Update the header comment at lines 10-12.\n- Add a test_skinned_art case: a staggered rig whose hits() agrees with skin_vertices(..., visual globals) and differs from FK.\n- The L5 evidence act is P3-int's; just make the path available.\n\nRules:\n- Do not edit docs/ARCHITECTURE.md, M4-plan.md or any other package's M4-calls file; the other package owns ARCHITECTURE.md. Write the exact replacement sentences in docs/milestones/M4-calls/SG-instruments.md for the lead to paste at merge: R4's filter at :569; A4 and the strain flip rule at :904-908; the warm-up wording at :933 and :992; the SkinnedView pose source.\n- No tuning_data.gd changes.\n- One Godot process at a time, never left running. Never commit captures/.\n- Run the full suite at the end and read the whole output for SCRIPT ERROR, SHADER ERROR and ERROR."
+   }
+  ],
+  "unassigned": [
+   {
+    "id": "slice-g2-04",
+    "reason": "Out of scope for the gate's fixers: this is F-look's job. Plan Part C §7 gives F-look '2-3 readable bands on the jacket' and the toon, post, room_kit and Look tunables, and F-look starts on the gate's locks. Tuning band_2 and the sun now would pre-empt that tuning and collide with the instruments package's toon_materials.gd and room_kit.gd. It becomes a phase-2 brief line for F-look: band_2 below cos(sun elevation) = 0.616; a sun or character-light change so contre-jour fronts (about half of all enemies, whatever the azimuth) still show 2-3 bands; each swatch's rendered mid band within about 10° of its hue (teal not blue, skin not lilac); C2 recorded front-lit and back-lit."
+   },
+   {
+    "id": "slice-g2-03",
+    "reason": "Out of scope for the gate's fixers: the full mitt and the near_black glove are the smoke asset's, and F-punk replaces both hands through T9. Plan §7 F-punk step 4 already specifies a dark fingerless glove with bare fingers and an accent strap, with the knuckle face shown to the lens. Fixing the chain-inherited parts now means re-running parts_replace and palette. That changes the Punk's geometry and UVs mid-gate, invalidates the A/B numbers, and breaks the chain package's COLOR-only re-export proof. tools/pipeline/** and palette/punk.json are F-punk's in phase 2. They become F-punk brief lines: replace_hands sets the cuff radius from the wrist, not the cut's 90th percentile; a dark glove swatch stays at a value of about 0.3 or more, so its shadow band clears the ink."
+   },
+   {
+    "id": "slice-g2-06",
+    "reason": "Needs Game-boy, and it is F-punk's work. Adding the detail mask departs from SPEC §10's asset table (enemies use the shared atlas only), so spec_change is true. A18 says F-punk adds the 1k ink-only mask on UV2, baked from the dense texture (mouth, pocket flaps and buttons, stitching, tape edges, never shading), and logs it in README's M4 departures for his ruling. The gate's part is to record that A18's trigger is met (interior lines missing at 1 m), which feeds verdict (b), 'proven with a contingency'."
+   }
+  ]
+ },
+ "fixes": [],
+ "usage": [
+  {
+   "label": "review:g1",
+   "five_hour": 12,
+   "weekly": 19,
+   "reserved": 0,
+   "headroom": 71
+  },
+  {
+   "label": "review:g2",
+   "five_hour": 12,
+   "weekly": 19,
+   "reserved": 6,
+   "headroom": 65
+  },
+  {
+   "label": "skeptic:slice-g1-01:0",
+   "five_hour": 24,
+   "weekly": 22,
+   "reserved": 6,
+   "headroom": 60
+  },
+  {
+   "label": "skeptic:slice-g1-05:0",
+   "five_hour": 24,
+   "weekly": 22,
+   "reserved": 7,
+   "headroom": 59
+  },
+  {
+   "label": "skeptic:slice-g1-04:0",
+   "five_hour": 24,
+   "weekly": 22,
+   "reserved": 8,
+   "headroom": 58
+  },
+  {
+   "label": "skeptic:slice-g1-02:0",
+   "five_hour": 24,
+   "weekly": 22,
+   "reserved": 9,
+   "headroom": 57
+  },
+  {
+   "label": "skeptic:slice-g1-03:0",
+   "five_hour": 24,
+   "weekly": 22,
+   "reserved": 10,
+   "headroom": 56
+  },
+  {
+   "label": "skeptic:slice-g1-06:0",
+   "five_hour": 24,
+   "weekly": 22,
+   "reserved": 11,
+   "headroom": 55
+  },
+  {
+   "label": "skeptic:slice-g2-01:0",
+   "five_hour": 26,
+   "weekly": 22,
+   "reserved": 5,
+   "headroom": 59
+  },
+  {
+   "label": "skeptic:slice-g2-02:0",
+   "five_hour": 26,
+   "weekly": 22,
+   "reserved": 5,
+   "headroom": 59
+  },
+  {
+   "label": "skeptic:slice-g2-03:0",
+   "five_hour": 28,
+   "weekly": 22,
+   "reserved": 5,
+   "headroom": 57
+  },
+  {
+   "label": "skeptic:slice-g2-04:0",
+   "five_hour": 28,
+   "weekly": 22,
+   "reserved": 5,
+   "headroom": 57
+  },
+  {
+   "label": "skeptic:slice-g2-05:0",
+   "five_hour": 29,
+   "weekly": 22,
+   "reserved": 5,
+   "headroom": 56
+  },
+  {
+   "label": "skeptic:slice-g2-06:0",
+   "five_hour": 30,
+   "weekly": 22,
+   "reserved": 5,
+   "headroom": 55
+  },
+  {
+   "label": "skeptic:slice-g2-07:0",
+   "five_hour": 30,
+   "weekly": 22,
+   "reserved": 5,
+   "headroom": 55
+  },
+  {
+   "label": "skeptic:slice-g2-08:0",
+   "five_hour": 31,
+   "weekly": 23,
+   "reserved": 5,
+   "headroom": 54
+  },
+  {
+   "label": "skeptic:slice-g2-09:0",
+   "five_hour": 31,
+   "weekly": 23,
+   "reserved": 5,
+   "headroom": 54
+  },
+  {
+   "label": "skeptic:slice-g2-10:0",
+   "five_hour": 31,
+   "weekly": 23,
+   "reserved": 5,
+   "headroom": 54
+  },
+  {
+   "label": "partition",
+   "five_hour": 35,
+   "weekly": 23,
+   "reserved": 0,
+   "headroom": 55
+  }
+ ]
+}

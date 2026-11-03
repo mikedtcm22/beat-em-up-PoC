@@ -10,6 +10,10 @@
 # machine-wide lock of CAPTURE_SLOTS slots (default 2) under CAPTURE_LOCK_DIR (default
 # ~/.cache/beat-em-up-capture) makes a second recording wait for a free slot, and a slot whose
 # recorder died is taken over. Set GODOT to use another binary.
+# CAPTURE_ARGS="<args>" forwards more arguments to the bot after --act= (split on spaces, so no
+# argument holds one): `--seed=2` (a crowd bot's name offset), `--tune=<property>=<number>` (a
+# TuningData value for the run, for A/B sheets), `--probe-out=<dir>`:
+#   CAPTURE_ARGS="--tune=impact_frame_enabled=0" tools/capture_bot.sh res://tests/bot/crowd_bot.tscn captures/c13 "Look: Punk reacts" 6
 # Then make sheets, for example:
 #   ffmpeg -loglevel error -y -ss <t> -t <d> -i <out dir>/bot.avi -vf "fps=12,scale=480:-1,tile=5x4" -frames:v 1 sheet.png
 set -euo pipefail
@@ -73,6 +77,11 @@ done
 # --- Record ---
 ARGS=()
 if [ -n "$FILTER" ]; then ARGS=(-- "--act=$FILTER"); fi
+if [ -n "${CAPTURE_ARGS:-}" ]; then
+	[ ${#ARGS[@]} -eq 0 ] && ARGS=(--)
+	read -r -a EXTRA_ARGS <<< "$CAPTURE_ARGS"
+	ARGS+=("${EXTRA_ARGS[@]}")
+fi
 status=0
 # A bot whose script fails to parse never quits: cap the recording (CAPTURE_MAX_FRAMES, default
 # 15 minutes of game time at 60 fps) so Movie Maker can't fill the disk.

@@ -799,17 +799,22 @@ static func flinch_legs(base: Dictionary[StringName, Vector3]) -> Dictionary[Str
 	})
 
 
-## Stumbling backward: torso thrown back, arms out, one foot stepping back.
+## Stumbling backward: torso thrown back, the guard broken open, one foot stepping back. The upper arms
+## swing out to about 40 degrees off the body (then settle to about 28) with both elbows folded to about
+## 90-110 degrees and the forearms forward and raised, so the fists stay about 0.3 m in front of the hips
+## like the guard's (M4, the lead's call 24: they were straight arms flung out 75 degrees, which on the
+## skinned Punk, whose rig is bound in an A-pose, read as the rig showing its bind pose, a T, for 0.4 s
+## after every third knee, on a grab release and in a long fight; stagger_right got the same fix in M3).
 static func stagger_back_a(base: Dictionary[StringName, Vector3]) -> Dictionary[StringName, Vector3]:
 	return merge(base, {
 		&"Spine": Vector3(14.0, 0.0, 0.0),
 		&"Chest": Vector3(10.0, 0.0, 0.0),
 		&"Neck": Vector3(10.0, 0.0, 0.0),
 		&"Head": Vector3(12.0, 0.0, 0.0),
-		&"LeftUpperArm": Vector3(40.0, 0.0, -60.0),
-		&"LeftLowerArm": Vector3(40.0, 0.0, 0.0),
-		&"RightUpperArm": Vector3(30.0, 0.0, 66.0),
-		&"RightLowerArm": Vector3(36.0, 0.0, 0.0),
+		&"LeftUpperArm": Vector3(22.0, 0.0, -42.0),
+		&"LeftLowerArm": Vector3(95.0, 0.0, 0.0),
+		&"RightUpperArm": Vector3(18.0, 0.0, 44.0),
+		&"RightLowerArm": Vector3(92.0, 0.0, 0.0),
 		&"LeftUpperLeg": Vector3(26.0, 0.0, -4.0),
 		&"LeftLowerLeg": Vector3(-10.0, 0.0, 0.0),
 		&"LeftFoot": Vector3(10.0, 0.0, 4.0),
@@ -825,8 +830,10 @@ static func stagger_back_b(base: Dictionary[StringName, Vector3]) -> Dictionary[
 		&"Chest": Vector3(2.0, 0.0, 0.0),
 		&"Neck": Vector3(2.0, 0.0, 0.0),
 		&"Head": Vector3(4.0, 0.0, 0.0),
-		&"LeftUpperArm": Vector3(30.0, 0.0, -36.0),
-		&"RightUpperArm": Vector3(24.0, 0.0, 40.0),
+		&"LeftUpperArm": Vector3(12.0, 0.0, -28.0),
+		&"LeftLowerArm": Vector3(108.0, 0.0, 0.0),
+		&"RightUpperArm": Vector3(8.0, 0.0, 30.0),
+		&"RightLowerArm": Vector3(105.0, 0.0, 0.0),
 		&"LeftUpperLeg": Vector3(-14.0, 0.0, -4.0),
 		&"LeftLowerLeg": Vector3(-40.0, 0.0, 0.0),
 		&"LeftFoot": Vector3(30.0, 0.0, 4.0),
@@ -1164,9 +1171,9 @@ static func _recipe(id: StringName, g: Dictionary[StringName, Vector3],
 		wg: Dictionary[StringName, Vector3]) -> MovePoses:
 	match id:
 		&"jab_1":
-			return _jab_1(g)
+			return _jab_1(g, true)
 		&"jab_2":
-			return _jab_2(g)
+			return _jab_2(g, true)
 		&"hook":
 			return _hook(g)
 		&"uppercut":
@@ -1220,7 +1227,69 @@ static func _recipe(id: StringName, g: Dictionary[StringName, Vector3],
 # docs/ARCHITECTURE.md (checked by tests/test_humanoid_rig.gd), and so punches come into
 # the view of the first-person lens (FirstPersonCamera.lens_offset()).
 
-static func _jab_1(g: Dictionary[StringName, Vector3]) -> MovePoses:
+# The straight punches' corkscrew (Game-boy, 2026-11-02, M4 call 28): over the punch the fist turns about 90 degrees, so it lands
+# palm down with the curled fingers toward the ground and the back of the hand up. M3's pose left it standing on its edge, thumb up,
+# the fingers curled inward at the other hand. The roll is about the forearm's own long axis, so the fist (the strike point) stays
+# where the hits were tuned: it moves 7 mm at most, the 5 mm the strike point sits off that axis. "Down" is as far as the forearm
+# allows: it rises 34 and 36 degrees at contact, so the palm lands 34 and 36 degrees from straight down (tests/test_punch_turn.gd).
+# The roll is split between the lower arm and the hand, as a real forearm's is, so the skinned wrist does not candy-wrap: a roll all
+# in the hand pinched the hero's wrist to 78% of its width (the skin blends lower arm to hand over about 9 cm), this split to 89%.
+# The lower arm's roll is nearly the same in the wind-up as in the strike, and the hand's is what turns over between them. Two keys
+# that differ by a bend alone slerp as a bend, so the fist keeps the path M3 gave it (a lower arm rolled only at contact sweeps the
+# wrist 3-4 cm off it halfway). A lower arm rolled as far at the wind-up as at contact would be better still, but a roll that follows a
+# bend past 90 degrees makes the Euler triple jump more than PlaceholderAnims.MAX_STEP_DEG between keys, which subdivides the clip
+# and lerps the angles, and the wrist wanders up to 6 cm; 15 degrees at the wind-up and 27 at contact keep the keys M3 had.
+# The lower arm takes the smaller part of the turn because the ragdoll's elbow is a hinge and the hand has no body of its own.
+# These are the player's moves (jab_1 and jab_2 as _recipe() builds them). The Street Punk's cross and the sparring dummy's jab are
+# the same strikes without the turn (A20: no enemy clip changes), so they take the default `turn_fist = false`.
+## How far the fist has turned over at contact (degrees about the forearm's axis, from standing on its edge to palm down).
+const PUNCH_TURN_DEG := 90.0
+## How much of that the lower arm carries at contact (the hand carries the rest).
+const PUNCH_TURN_LOWER_DEG := 27.0
+## How far the fist is turned in the wind-up key: the fist at the chin stays nearly as it was, and the rest of the turn is the snap
+## over the last two frames of the startup. The lower arm carries most of this one (see above), the hand the rest.
+const PUNCH_TURN_WINDUP_DEG := 22.5
+const PUNCH_TURN_WINDUP_LOWER_DEG := 15.0
+
+
+## `pose` with `side`'s (&"Left" or &"Right") fist turned `turn_deg` degrees about the forearm's long axis from where `pose` had it,
+## toward palm down for a forearm raised forward (the left hand's palm faces inward at rest, the right's the other way: they roll
+## opposite ways). The lower arm keeps its elbow bend and is rolled `lower_deg` of that; the hand takes the rest.
+static func _turn_fist(pose: Dictionary[StringName, Vector3], side: StringName, turn_deg: float, lower_deg: float) -> Dictionary[StringName, Vector3]:
+	var direction := 1.0 if side == &"Right" else -1.0
+	var lower := StringName(String(side) + "LowerArm")
+	var hand := StringName(String(side) + "Hand")
+	var out := pose.duplicate()
+	out[lower] = _rolled(pose.get(lower, Vector3.ZERO), direction * lower_deg)
+	out[hand] = _rolled(pose.get(hand, Vector3.ZERO), direction * (turn_deg - lower_deg))
+	return out
+
+
+## The Euler angles (degrees, YXZ) of the rotation `euler` followed by a roll of `roll_deg` about the bone's own long axis (y, after
+## the bend). A roll that follows a bend is not a lone y angle in YXZ, so the angles are composed and read back, as the equivalent
+## triple nearest `euler`: the elbow's bend runs past 90 degrees in a wind-up, where the principal triple flips to (180 - x, y + 180,
+## z + 180) and a clip that lerped between the two would wander.
+static func _rolled(euler: Vector3, roll_deg: float) -> Vector3:
+	var basis := PlaceholderBody.euler_basis(euler) * Basis(Vector3.UP, deg_to_rad(roll_deg))
+	var e := basis.get_euler(EULER_ORDER_YXZ)
+	var principal := Vector3(rad_to_deg(e.x), rad_to_deg(e.y), rad_to_deg(e.z))
+	var flipped := Vector3(180.0 - principal.x, principal.y + 180.0, principal.z + 180.0)
+	var best := principal
+	var best_distance := INF
+	for candidate: Vector3 in [principal, flipped]:
+		var near := Vector3(
+				candidate.x + 360.0 * roundf((euler.x - candidate.x) / 360.0),
+				candidate.y + 360.0 * roundf((euler.y - candidate.y) / 360.0),
+				candidate.z + 360.0 * roundf((euler.z - candidate.z) / 360.0))
+		if near.distance_to(euler) < best_distance:
+			best_distance = near.distance_to(euler)
+			best = near
+	return best
+
+
+## The left jab. `turn_fist` rolls the left fist over the punch (see PUNCH_TURN_DEG): the wind-up key is turned a little
+## (PUNCH_TURN_WINDUP_DEG) and the strike key all the way. Off, it is the pose M3 shipped.
+static func _jab_1(g: Dictionary[StringName, Vector3], turn_fist: bool = false) -> MovePoses:
 	var windup := merge(g, {
 		&"Hips": Vector3(0.0, 6.0, 0.0),
 		&"LeftUpperArm": Vector3(48.0, 0.0, -10.0),
@@ -1245,10 +1314,14 @@ static func _jab_1(g: Dictionary[StringName, Vector3]) -> MovePoses:
 		&"RightLowerLeg": Vector3(-14.0, 0.0, 0.0),
 		&"RightFoot": Vector3(24.0, 0.0, -5.0),
 	})
+	if turn_fist:
+		windup = _turn_fist(windup, &"Left", PUNCH_TURN_WINDUP_DEG, PUNCH_TURN_WINDUP_LOWER_DEG)
+		strike = _turn_fist(strike, &"Left", PUNCH_TURN_DEG, PUNCH_TURN_LOWER_DEG)
 	return _mp(g, windup, strike)
 
 
-static func _jab_2(g: Dictionary[StringName, Vector3]) -> MovePoses:
+## The right cross, the jab's mirror in its turn: the right fist rolls the other way (see _jab_1()).
+static func _jab_2(g: Dictionary[StringName, Vector3], turn_fist: bool = false) -> MovePoses:
 	var windup := merge(g, {
 		&"Hips": Vector3(0.0, -8.0, 0.0),
 		&"RightUpperArm": Vector3(40.0, 0.0, 12.0),
@@ -1274,6 +1347,9 @@ static func _jab_2(g: Dictionary[StringName, Vector3]) -> MovePoses:
 		&"RightFoot": Vector3(30.0, 0.0, -5.0),
 		&"RightToes": Vector3(20.0, 0.0, 0.0),
 	})
+	if turn_fist:
+		windup = _turn_fist(windup, &"Right", PUNCH_TURN_WINDUP_DEG, PUNCH_TURN_WINDUP_LOWER_DEG)
+		strike = _turn_fist(strike, &"Right", PUNCH_TURN_DEG, PUNCH_TURN_LOWER_DEG)
 	return _mp(g, windup, strike)
 
 

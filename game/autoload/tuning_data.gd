@@ -223,6 +223,9 @@ extends Resource
 @export_range(0.0, 2.0, 0.01) var vfx_burst_medium_m: float = 0.36
 @export_range(0.0, 2.0, 0.01) var vfx_burst_large_m: float = 0.62
 @export_range(0.03, 1.0, 0.01) var vfx_burst_s: float = 0.18
+## Each burst tier has two drawn variants and shows them in turn (never the same twice running); off,
+## every burst is the first one.
+@export var vfx_burst_variants: bool = true
 ## Share of a burst's, a spark's or a splash's time spent fading out at its end.
 @export_range(0.0, 1.0, 0.05) var vfx_burst_fade_share: float = 0.4
 ## Seconds a burst or a word takes to pop in: from vfx_pop_start of its size up past it to
@@ -236,7 +239,8 @@ extends Resource
 @export_range(0.0, 1.0, 0.05) var vfx_word_chance_light: float = 0.0
 @export_range(0.0, 1.0, 0.05) var vfx_word_chance_heavy: float = 1.0
 @export_range(0.0, 1.0, 0.05) var vfx_word_chance_finisher: float = 1.0
-## Word widths: small (light), medium (heavy), large (finisher).
+## Word widths: small (light), medium (heavy), large (finisher). Every lettering PNG is drawn the same
+## number of cap heights wide, so a width sets the letters' height, the same for every word.
 @export_range(0.0, 2.0, 0.01) var vfx_word_small_m: float = 0.3
 @export_range(0.0, 2.0, 0.01) var vfx_word_medium_m: float = 0.42
 @export_range(0.0, 2.0, 0.01) var vfx_word_large_m: float = 0.6
@@ -314,6 +318,8 @@ extends Resource
 @export_range(0.0, 1.0, 0.01) var vfx_blood_splat_m: float = 0.22
 @export_range(0.0, 60.0, 0.5) var vfx_blood_splat_s: float = 8.0
 @export_range(0, 200, 1) var vfx_blood_splat_max: int = 40
+## A splat is drawn flat and unshaded, at this share of its colors' brightness (1: as drawn).
+@export_range(0.4, 1.0, 0.01) var vfx_splat_shade: float = 0.85
 ## Head finishers: spit droplets and the chance of a tooth.
 @export_range(0, 20, 1) var vfx_spit_drops: int = 6
 @export_range(0.0, 0.2, 0.005) var vfx_spit_drop_m: float = 0.035
@@ -1038,12 +1044,250 @@ extends Resource
 @export_range(0.0, 1.0, 0.05) var rumble_block_strong: float = 0.0
 @export_range(0.0, 500.0, 5.0) var rumble_block_ms: float = 40.0
 
+# The look (Milestone 4; docs/milestones/M4-look-bible.md has the targets). One subgroup per
+# owning package, each declared here by the contract scaffold with a seed tunable, so a
+# package only adds lines inside its own subgroup. There is no Art subgroup: its one planned
+# name, look_show_art, lives in Debug below, since presets skip that group by name and the
+# art switch is an A/B, not a look setting.
+@export_group("Look")
+@export_subgroup("Toon")
+## The middle band's brightness as a share of the lit band's (the look bible: 72%). The
+## shadow band sits below it, tinted, never black.
+@export_range(0.3, 1.0, 0.01) var look_mid_level: float = 0.72
+## Where the bands break, on the light a surface gets (its angle to the sun, times the shadow
+## map): below the first it is in shadow, below the second in the mid band, above it lit.
+@export_range(0.0, 1.0, 0.01) var look_band_1: float = 0.22
+## The second break: above it a surface is lit (see look_band_1).
+@export_range(0.0, 1.0, 0.01) var look_band_2: float = 0.52
+## How wide a band edge is, in pixels at 1080p (the look bible: at most 2 at 1 m). 0 is a hard step.
+@export_range(0.0, 8.0, 0.1) var look_band_soft: float = 1.2
+## The shadow band's brightness as a share of the lit band's (the look bible: at least 40%,
+## never black).
+@export_range(0.2, 1.0, 0.01) var look_shadow_level: float = 0.42
+## The color the shadow band's hue is shifted toward (a violet), by look_shadow_tint_amount.
+@export var look_shadow_tint: Color = Color(0.36, 0.32, 0.55)
+## How far the shadow's hue is shifted toward look_shadow_tint, brightness kept (the look
+## bible: 45%).
+@export_range(0.0, 1.0, 0.01) var look_shadow_tint_amount: float = 0.45
+## The one hard highlight shows where a surface faces the half vector this closely (1 is a
+## point; the look bible keeps it under 3% of the visible surface).
+@export_range(0.5, 1.0, 0.001) var look_spec_cut: float = 0.99
+## How bright the highlight is, on the glossy materials; a matte paint takes none.
+@export_range(0.0, 2.0, 0.05) var look_spec_strength: float = 0.5
+## The factor on the highlight of glossy materials (shades, belts, soles, the pipe).
+@export_range(1.0, 8.0, 0.1) var look_spec_gloss: float = 3.0
+## The glint on a glossy swatch of the skinned art (the Punk's lens; the palette JSON's `gloss`):
+## a second hard highlight from the fill light's camera-fixed direction, shown where the surface
+## faces that light's half vector this closely (1 is a point, 0.81 is within 36 degrees; lower
+## makes a bigger glint). A visor facing the lens never meets the sun's half vector, so without it
+## the lens would never glint; every matte swatch (denim, cotton, cap, skin) takes no highlight.
+## The cut only decides WHEN the lens glints: WHERE is the art's mask (the detail mask's G, the lens's
+## two authored streaks per eye), so a head tipped back into the cone lights the streaks, never the lens.
+@export_range(0.5, 1.0, 0.001) var look_glint_cut: float = 0.81
+## The glint's strength as a share of the glossy highlight (0 is off: a glossy swatch then
+## highlights only where it faces the sun's half vector, look_spec_cut).
+@export_range(0.0, 1.0, 0.05) var look_glint_strength: float = 1.0
+## The stepped rim on characters shows past this share of a grazing view (0 to 1, higher is
+## thinner; the look bible: about 25% of the silhouette band).
+@export_range(0.0, 1.0, 0.01) var look_rim_cut: float = 0.4
+## The rim's falloff toward the middle of the body.
+@export_range(0.5, 8.0, 0.1) var look_rim_power: float = 2.0
+## How much the rim lifts the value (the look bible: +35%).
+@export_range(0.0, 1.0, 0.01) var look_rim_strength: float = 0.35
+## The sun's height above the horizon in degrees: it sets how much light a vertical surface gets
+## (cos of it), so how the bands fall on a character's front. Both rooms' sun (RoomKit).
+@export_range(10.0, 85.0, 1.0) var look_sun_elevation_deg: float = 45.0
+## The sun's direction about the vertical, the DirectionalLight3D's own yaw in degrees: where
+## the light comes from, so which side of a character is lit.
+@export_range(-180.0, 180.0, 1.0) var look_sun_yaw_deg: float = -50.0
+## The sun's energy. The toon bands take the light's color and cap its brightness, so this
+## only moves what the cast shadows and the specular read against.
+@export_range(0.2, 3.0, 0.05) var look_sun_energy: float = 1.2
+## How soft the sun's shadow edges are (Light3D.shadow_blur: 0 is a hard edge, 1 Godot's default).
+## A blurred edge is dithered by the renderer's shadow filter, and a toon band edge laid over that
+## dither reads as a stippled strip 10 to 20 px wide (slice gate, gap 11): keep it small.
+@export_range(0.0, 3.0, 0.05) var look_sun_shadow_blur: float = 0.25
+## The characters' fill light, as a share of a full light: a light fixed to the camera (in its
+## view space, so it never turns away from a character that faces the lens) that gives a
+## character that faces away from the sun a mid band and a shadow instead of one flat shadow.
+## 0 is off. Characters only: the room is lit by the sun alone. Keep it under look_band_2 (the
+## fill alone never reaches the lit band: that band is the sun's, so a front-lit character keeps
+## its sun-lit, fill-mid and violet shadow bands; at 0.8 the fill lit every lens-facing normal and
+## flattened the front-lit vest to one teal) and above look_band_1 / 0.63 (a lens-facing front is
+## a mid band, not the flat shadow: the F-look gap 2). The useful range is 0.35 to 0.45.
+@export_range(0.0, 1.5, 0.01) var look_fill_strength: float = 0.4
+## The fill's direction in the camera's view: degrees to the right of the lens (negative: from
+## the left).
+@export_range(-90.0, 90.0, 1.0) var look_fill_yaw_deg: float = -35.0
+## The fill's height above the lens's axis in degrees.
+@export_range(-30.0, 80.0, 1.0) var look_fill_pitch_deg: float = 40.0
+## Halftone dots in the shadow band of the room's surfaces, in screen space (off, as the look
+## bible says).
+@export var look_halftone_env: bool = false
+## The same on the characters (off).
+@export var look_halftone_chars: bool = false
+## A halftone cell's size in pixels at 1080p.
+@export_range(2.0, 24.0, 0.5) var look_halftone_cell_px: float = 6.0
+## How dark the dots are.
+@export_range(0.0, 1.0, 0.01) var look_halftone_strength: float = 0.5
+## The cut of the sharp ink: the detail mask of an art that asks for it (metadata/detail_sharp:
+## the hero's wraps, straps and glove lines, and the Punk's tape, mouth, nose and seams) is
+## thresholded here with a pixel-wide antialiased edge instead of mixed in by its bilinear value,
+## so a one-texel line stays a crisp line when it is magnified to 3 to 9 pixels at 0.2 to 0.4 m
+## (the hero) or about 2 pixels at 1 m (the Punk). A low cut keeps the strands whole (0.35 to 0.5
+## breaks them into dashes). 0 is the soft linear mix for every art (the A/B).
+@export_range(0.0, 0.9, 0.01) var look_detail_cut: float = 0.15
+
+@export_subgroup("Outline")
+## The inverted-hull outline's width in pixels at 1080p (the look bible: 3.5 to 4 px at 1 to
+## 3 m, never above 4.5).
+@export_range(0.5, 8.0, 0.05) var look_outline_px: float = 3.75
+## The line holds its pixel width from this distance from the lens (m) out to look_outline_far_m;
+## nearer it is as wide in the world as here (so wider on screen: the player's own arms are
+## seen at 0.3 to 0.6 m).
+@export_range(0.1, 5.0, 0.05) var look_outline_near_m: float = 0.3
+## Beyond this distance (m) the line is as wide in the world as here, so thinner on screen
+## (the look bible keeps it at 2 px or more out to 10 m).
+@export_range(2.0, 60.0, 0.5) var look_outline_far_m: float = 12.0
+## The player's own body in first person is drawn this much of the line's width (the look
+## bible: x0.8).
+@export_range(0.0, 1.5, 0.05) var look_outline_fp_scale: float = 0.8
+## The line fades out from this distance from the lens (m) to twice it, so a lens never sits
+## inside a hull.
+@export_range(0.0, 0.5, 0.01) var look_outline_lens_fade_m: float = 0.1
+## Primitive characters, dummies, props and the room's boxes get the hull too, so the
+## placeholders sit beside the art in one style (Spec §10 asks for it on characters and props).
+## Read when a body, a prop or a room's box is built: a change shows on the next one.
+@export var look_hull_on_placeholders: bool = true
+
+@export_subgroup("Edges")
+## The post-process edge lines on the environment (creases, silhouettes, floor edges).
+@export var look_edges_enabled: bool = true
+## The edge lines' width in pixels at 1080p (the look bible: 1 to 1.5 px; the pass draws whole
+## pixels, so 1.5 and 1.0 differ only at a 1440p or taller screen).
+@export_range(0.5, 4.0, 0.05) var look_edge_px: float = 1.25
+## How big a depth step draws a silhouette line: the share of the one-over-distance the next
+## pixels lose (0.5 = half). A plane never draws, however steep.
+@export_range(0.02, 1.0, 0.01) var look_edge_depth_threshold: float = 0.08
+## How sharp a corner draws a crease line: one minus the dot product of the two neighbouring
+## surface normals (0 = flat, 1 = a right angle).
+@export_range(0.05, 1.0, 0.01) var look_edge_normal_threshold: float = 0.35
+## The lines start to fade out at this distance (m): the look bible's 25 m.
+@export_range(1.0, 200.0, 1.0) var look_edge_fade_start_m: float = 25.0
+## ... and are gone at this one (m): the look bible's 60 m.
+@export_range(2.0, 300.0, 1.0) var look_edge_fade_end_m: float = 60.0
+## The character mask's reach in pixels at 1080p: no edge line is drawn this close to a drawn
+## character, whose hull is the line there (the hull's width bound is 4.5 px).
+@export_range(0.0, 16.0, 0.5) var look_edge_mask_px: float = 6.0
+## The anti-aliasing: 0 = 4x MSAA (the project's), 1 = FXAA (the cheap one for the Mac), 2 = off.
+## Applied to the room's viewport; project.godot is untouched.
+@export_range(0, 2, 1) var look_aa_mode: int = 0
+
+@export_subgroup("Grade")
+## The tonemapper of both rooms' picture: 0 = linear (a flat color shows as authored, so a
+## swatch keeps its hue and the ink stays ink), 1 = filmic (M3's: brighter mid-tones, blacks
+## lifted, colors pulled toward grey), 2 = Reinhard, 3 = ACES.
+@export_range(0, 3, 1) var look_tonemap: int = 0
+## The color grade (a LUT: cool shadows, warm highlights).
+@export var look_grade_enabled: bool = true
+## How much of the grade shows: 0 = the picture as it is, 1 = the whole LUT.
+@export_range(0.0, 1.0, 0.05) var look_grade_strength: float = 1.0
+
+@export_subgroup("FP feel")
+## First-person feel alternative: the non-KO knockdown hides the torso slab that fills the
+## view while the body lies on the camera. Off = the M3 behavior.
+@export var fp_knockdown_hide_torso: bool = false
+## First-person feel alternative (grab-03): the combat log, docked right of the view center, sits
+## over the knee in a hold, so it hides for as long as the player holds an enemy and comes back
+## when the hold ends. Off = the M3 behavior (the L key puts the log away at any time).
+@export var combat_log_hide_while_holding: bool = false
+## First-person feel alternative (grab-05, hit-01): the most of the view a contact flash may change on
+## screen (0.06 = 6%), whatever the camera distance. The flash shader (hit_flash.gdshader) shrinks the
+## flash across the line of sight to its point where it would cover more: a knee in a hold or a flurry's
+## jabs a few centimeters from the lens, which change a fifth of the view. A flash that already fits
+## is not touched, so one farther away is as it was. The figure is the share of the view the flash's
+## disc may cover; what it changes on a body is less (a disc is partly off the body), about a third
+## to a half of it at close range. 0 = off, the M2 / M3 behavior.
+@export_range(0.0, 0.5, 0.005) var hit_flash_fp_max_share: float = 0.0
+## First-person feel alternative (r3look-05): a clean finisher's contact flash is this many times
+## hit_flash_radius_m, so the haymaker's and the uppercut's, which barely show in the first-person view
+## (their contact is behind the surface the lens sees), read. Only a clean finisher's flash (a blocked
+## finisher's is the ordinary size). With hit_flash_fp_max_share on, the cap's share grows by the same
+## factor for it (this squared), so it stays this many times an ordinary flash. 1 = off, the M3 behavior.
+@export_range(1.0, 4.0, 0.05) var hit_flash_finisher_radius_mult: float = 1.0
+
+# Motion (F-motion): the life in the placeholder clips, read when a rig's named-clip library is
+# built (the first rig of a size and stance), so a change reaches the rigs built after it. The
+# idle breathes and bounces without moving a hurtbox 1 cm, and the walks plant their feet; no move
+# clip uses any of it (M4-plan A20).
+@export_subgroup("Motion")
+## Breathing: how far the chest rocks at the top of a breath (degrees; the upper chest and the
+## shoulders follow in proportion). The torso hurtbox moves less than a centimeter.
+@export_range(0.0, 4.0, 0.1) var look_motion_breath_deg: float = 1.5
+## Breaths per second. The idle loop is one breath long, so this sets its length (about 4 s).
+@export_range(0.1, 1.0, 0.05) var look_motion_breath_hz: float = 0.25
+## The boxer bounce: how far the hips dip at the bottom of a bounce (meters at 1.8 m; the knees
+## compensate, so the soles stay planted). A hurtbox moves at most this far.
+@export_range(0.0, 0.03, 0.001) var look_motion_bounce_m: float = 0.005
+## Bounces per second (snapped to a whole number per breath).
+@export_range(0.5, 3.0, 0.1) var look_motion_bounce_hz: float = 1.5
+## The weight shift: how far the pelvis rolls over each foot in turn (degrees), once per breath.
+@export_range(0.0, 5.0, 0.1) var look_motion_shift_deg: float = 1.0
+## How far the guard's arms and shoulders sway with the bounce and the breath (degrees). They
+## have no hurtbox, so this is the most the idle shows of the Punk's hands and shoulders.
+@export_range(0.0, 8.0, 0.1) var look_motion_guard_sway_deg: float = 3.0
+## Head micro-motion: a slow drift and tilt of the head (degrees), which keeps the hurtbox's
+## center within a few millimeters.
+@export_range(0.0, 4.0, 0.1) var look_motion_head_deg: float = 1.4
+## The player's relaxed idle gets this share of the above (first person: the view rides his
+## head, so a quiet body keeps the lens steady).
+@export_range(0.0, 1.0, 0.05) var look_motion_player_calm: float = 0.35
+## How far a Punk's feet sweep while planted in a walk (meters). The clip is as long as the
+## sweep takes at move_speed, so the planted foot moves as fast as the body does and does not
+## slide; the step is a little longer than this. Applies to enemies (the boxer stance).
+@export_range(0.3, 0.9, 0.01) var look_motion_stride_m: float = 0.62
+## The pelvis' turn with each step (degrees); the chest turns against it by the counter-swing.
+@export_range(0.0, 10.0, 0.1) var look_motion_hip_roll_deg: float = 4.0
+## How far the chest and shoulders turn against the pelvis in a walk (degrees).
+@export_range(0.0, 15.0, 0.1) var look_motion_counter_swing_deg: float = 5.0
+## Overlap in a flinch: how long (s) the head lags the body's snap and the shoulders lead it.
+@export_range(0.0, 0.1, 0.005) var look_motion_overlap_s: float = 0.025
+## Overlap: how far the head overshoots the hit pose before it settles (share of the snap).
+@export_range(0.0, 0.5, 0.01) var look_motion_overshoot: float = 0.15
+
 @export_group("Debug")
 @export var god_mode: bool = false
 @export var one_hit_ko: bool = false
 ## Enemy AI stands still, faces the player and asks for nothing (F4 "Freeze AI"): a scripted
 ## act can then place and trigger each attacker by hand.
 @export var ai_frozen: bool = false
+## Draw the skinned art (on) or the placeholder primitives it stands in for (off): the live
+## A/B of Milestone 4. Presets never hold it.
+@export var look_show_art: bool = true
+## Which of the four smoke-Punk GLBs a Street Punk wears (the slice gate's A/B, SL-int): 0 =
+## punk.glb (Tripo's weights, the A-pose route, the default), 1 = punk_rest.glb (the arms-down
+## bake), 2 = punk_auto.glb (heat-map weights), 3 = punk_auto_rest.glb. Read when a Punk's body
+## is built, so set it (a preset never holds it) before the Punks spawn.
+@export_range(0, 3, 1) var look_punk_art_variant: int = 0
+## The player wears the probe body (tests/fixtures/art/probe_body.glb: a mannequin through the real
+## chain, Body + Body__fp_hidden) instead of his primitives, until the hero's GLB exists
+## (F-player-int, M4-plan A14). Read when the player's body is built, so set it (a preset never
+## holds it) before the room loads. With the hero's GLB in place the player wears that and this
+## switch picks the probe over it.
+@export var look_player_art_probe: bool = false
+## The edge pass's debug view: 0 = the picture, 1 = the roughness buffer (white = the world, black =
+## a character or the sky), 2 = the normals, 3 = the distance, 4 = the character mask (red),
+## 5 = only the depth lines, 6 = only the crease lines.
+@export_range(0, 6, 1) var look_edge_debug_view: int = 0
+## A8's switch: the edge pass skips pixels near a drawn character (on), or draws its depth lines
+## there too (off: the fallback for a thinner hull, the lines may double).
+@export var look_edge_character_mask: bool = true
+## The cheap fallback: depth lines only, so the renderer makes no normal-roughness buffer (no
+## creases, no character mask).
+@export var look_edge_depth_only: bool = false
+## Motion's A/B (read when a named-clip library is built): off builds the M3 clips, with linear
+## keys and no life, so a capture can pair an M3 and an M4 recording of one act.
+@export var look_motion_polish: bool = true
 
 
 func hitstop_s(tier: CombatTypes.HitTier) -> float:

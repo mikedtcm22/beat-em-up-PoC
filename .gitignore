@@ -33,3 +33,15 @@ Thumbs.db
 
 # Usage watcher's emergency snapshot (untracked by design)
 HANDOFF-SNAPSHOT.md
+
+# Rejected raw outputs and intermediates of the art pipeline (M4)
+assets/source/_cache/
+
+# Per-run pipeline stills and dump copies (only the A/B and pose sheets are committed)
+assets/source/characters/*/report*/stills/*_front.png
+assets/source/characters/*/report*/stills/*_side.png
+assets/source/characters/*/report*/stills/*_three_quarter.png
+assets/source/characters/*/report*/stills/*_sheet.png
+# ... except the hero's pose sheet, which is committed (an ASSETS.md row names it)
+!assets/source/characters/player/report/stills/apose_sheet.png
+assets/source/characters/*/report*/bones.json

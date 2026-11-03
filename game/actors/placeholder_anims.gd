@@ -7,7 +7,11 @@ extends RefCounted
 ## (it carries crouches, jumps, falls, lying down and getting up; it is keyed even when the
 ## hips stay put). Planted poses get their hip height from the feet: the lowest sole point
 ## is put on y = 0.
-## Real animation clips replace all of this in Milestone 4.
+##
+## Milestone 4 (F-motion, M4-plan A20) polishes the named clips on POLISHED_IDS and never a move: they
+## are eased (cubic keys), the idle breathes and bounces, the boxer's walks plant their feet, the
+## flinches overlap (game/actors/poses/motion_clips.gd; the amounts are Tuning's Look > Motion, read
+## into a Life when a library is built, and Tuning's Debug look_motion_polish builds the M3 clips).
 
 ## MoveData frames are 60 Hz sim frames (docs/ARCHITECTURE.md "Time model").
 const FRAME_S := 1.0 / 60.0
@@ -65,6 +69,70 @@ const MOVE_IDS: Array[StringName] = [
 ]
 
 
+## The named animations the polish of Milestone 4 (F-motion, M4-plan A20) may change: it eases
+## them (cubic rotation keys), gives the idles and the boxer's walks their life, lets the
+## flinches overlap, and eases the others' arrival. Every other named animation, and every move,
+## is built exactly as in Milestone 3 (tests/test_motion_m4.gd holds each one to its hash).
+const POLISHED_IDS: Array[StringName] = [
+	&"idle", &"walk_forward", &"walk_back", &"walk_left", &"walk_right", &"run_forward", &"taunt", &"brace",
+	&"flinch_head_front", &"flinch_head_left", &"flinch_head_right", &"flinch_gut", &"flinch_legs",
+	&"getup_back", &"getup_front", &"downed_back", &"downed_front",
+]
+
+
+## The motion tunables (Tuning "Look" > "Motion") as one value, so a clip can be built from
+## numbers a test picks. `from_tuning()` reads the live ones, `off()` is the Milestone 3 clips,
+## and `Life.new()` is the defaults of a fresh TuningData (there is no second copy of them here:
+## a re-tuned default reaches every test that builds a clip from `Life.new()`, and
+## tests/test_motion_m4.gd holds `Life.new()` equal to `from_tuning()` on a fresh TuningData).
+class Life:
+	var enabled: bool = true
+	var breath_deg: float
+	var breath_hz: float
+	var bounce_m: float
+	var bounce_hz: float
+	var shift_deg: float
+	var guard_sway_deg: float
+	var head_deg: float
+	var player_calm: float
+	var stride_m: float
+	var hip_roll_deg: float
+	var counter_swing_deg: float
+	var overlap_s: float
+	var overshoot: float
+	## Tuning's move_speed: the walks' clip is as long as their stride takes at this speed.
+	var move_speed: float
+
+	## The values of `source`, or of a fresh TuningData (the shipped defaults) when it is null.
+	func _init(source: TuningData = null) -> void:
+		var data: TuningData = source if source != null else TuningData.new()
+		enabled = data.look_motion_polish
+		breath_deg = data.look_motion_breath_deg
+		breath_hz = data.look_motion_breath_hz
+		bounce_m = data.look_motion_bounce_m
+		bounce_hz = data.look_motion_bounce_hz
+		shift_deg = data.look_motion_shift_deg
+		guard_sway_deg = data.look_motion_guard_sway_deg
+		head_deg = data.look_motion_head_deg
+		player_calm = data.look_motion_player_calm
+		stride_m = data.look_motion_stride_m
+		hip_roll_deg = data.look_motion_hip_roll_deg
+		counter_swing_deg = data.look_motion_counter_swing_deg
+		overlap_s = data.look_motion_overlap_s
+		overshoot = data.look_motion_overshoot
+		move_speed = data.move_speed
+
+	## The live tunables (Tuning.data): the values the game builds its clips from.
+	static func from_tuning() -> Life:
+		return Life.new(Tuning.data)
+
+	## The Milestone 3 clips: linear keys, no life.
+	static func off() -> Life:
+		var life := Life.new()
+		life.enabled = false
+		return life
+
+
 ## One key: a pose at a time in seconds.
 class PoseKey:
 	var time: float
@@ -91,20 +159,27 @@ static func animated_bones() -> Array[StringName]:
 ## Library holding every id in ANIM_IDS, lengths scaled for a rig of
 ## `scale` x PlaceholderBody.REF_HEIGHT standing in `stance` (PlaceholderPoses.STANCE_*).
 static func build_library(scale: float,
-		stance: StringName = PlaceholderPoses.STANCE_BOXER) -> AnimationLibrary:
+		stance: StringName = PlaceholderPoses.STANCE_BOXER, life: Life = null) -> AnimationLibrary:
 	var lib := AnimationLibrary.new()
+	if life == null:
+		life = Life.from_tuning()
 	for id: StringName in ANIM_IDS:
-		lib.add_animation(id, build_named(id, scale, stance))
+		lib.add_animation(id, build_named(id, scale, stance, life))
 	return lib
 
 
 ## One named (non-move) animation. Everything that starts or ends standing does so in
 ## `stance`'s pose.
 static func build_named(id: StringName, scale: float,
-		stance: StringName = PlaceholderPoses.STANCE_BOXER) -> Animation:
+		stance: StringName = PlaceholderPoses.STANCE_BOXER, life: Life = null) -> Animation:
 	var g := PlaceholderPoses.stance_pose(stance)
 	var keys: Array[PoseKey] = []
 	var length := 1.0
+	if life == null:
+		life = Life.from_tuning()
+	# The polish (A20): false = the M3 clip, true = cubic keys on every track.
+	var smooth := false
+	var polished := life.enabled and POLISHED_IDS.has(id)
 	match id:
 		&"idle":
 			length = 2.0
@@ -116,6 +191,11 @@ static func build_named(id: StringName, scale: float,
 				&"RightLowerLeg": Vector3(-5.0, 0.0, 0.0), &"RightFoot": Vector3(2.0, 0.0, 0.0),
 			})
 			keys = [_k(0.0, g), _k(1.0, breathe), _k(2.0, g)]
+			if polished:
+				var idle := MotionClips.idle(g, stance, life, scale)
+				keys.assign(idle.keys)
+				length = idle.length
+				smooth = true
 		&"walk_forward", &"walk_back":
 			length = 0.6
 			var contact := PlaceholderPoses.walk_contact(g)
@@ -132,6 +212,13 @@ static func build_named(id: StringName, scale: float,
 			if id == &"walk_back":
 				for key: PoseKey in keys:
 					key.time = length - key.time
+			if polished and stance != PlaceholderPoses.STANCE_RELAXED:
+				# The boxer's walk plants its feet: see MotionClips. (The player's keeps its keys,
+				# eased below.)
+				var walk := MotionClips.walk(id, g, scale, life)
+				keys.assign(walk.keys)
+				length = walk.length
+				smooth = true
 		&"walk_right", &"walk_left":
 			length = 0.6
 			var wide := PlaceholderPoses.step_wide(g)
@@ -140,6 +227,11 @@ static func build_named(id: StringName, scale: float,
 				wide = _legs(g, PlaceholderPoses.mirror(wide))
 				close = _legs(g, PlaceholderPoses.mirror(close))
 			keys = [_k(0.0, g), _k(0.2, wide), _k(0.4, close), _k(0.6, g)]
+			if polished and stance != PlaceholderPoses.STANCE_RELAXED:
+				var strafe := MotionClips.walk(id, g, scale, life)
+				keys.assign(strafe.keys)
+				length = strafe.length
+				smooth = true
 		&"jump":
 			length = 0.35
 			keys = [_k(0.0, g), _k(0.1, PlaceholderPoses.jump_takeoff(g)),
@@ -226,6 +318,9 @@ static func build_named(id: StringName, scale: float,
 				_:
 					f = PlaceholderPoses.flinch_legs(g)
 			keys = [_k(0.0, g), _k(0.06, f), _k(0.1, f), _k(0.25, g)]
+			if polished:
+				keys.assign(MotionClips.flinch(g, f, length, life))
+				smooth = true
 		&"stagger_back", &"stagger_left", &"stagger_right", &"stagger_forward":
 			length = 0.6
 			var a: Dictionary[StringName, Vector3]
@@ -307,7 +402,13 @@ static func build_named(id: StringName, scale: float,
 		_:
 			push_warning("PlaceholderAnims: unknown animation id '%s'" % id)
 			keys = [_k(0.0, g), _k(length, g)]
-	return make(keys, length, LOOPING.has(id), scale)
+	# The rest of the polished list keeps its key poses at their times, eased between them (a clip
+	# that was authored with more life, above, is already dense).
+	var looping := LOOPING.has(id)
+	if polished and not smooth:
+		keys = MotionClips.ease(keys, length, looping, String(id).begins_with("getup"))
+		smooth = true
+	return make(keys, length, looping, scale, smooth)
 
 
 ## Animation for `move` in `stance`: length move.total_frames() / 60 s; the move's start
@@ -409,8 +510,10 @@ static func _legs(base: Dictionary[StringName, Vector3],
 	return PlaceholderPoses.merge(base, PlaceholderPoses.only(legs_from, PlaceholderPoses.LEG_BONES))
 
 
-## Build an Animation from pose keys (any order; a later key at the same time wins).
-static func make(keys: Array[PoseKey], length: float, loop: bool, scale: float) -> Animation:
+## Build an Animation from pose keys (any order; a later key at the same time wins). `smooth` gives
+## every track cubic interpolation (the polished clips, M4-plan A20; their keys are dense enough
+## that it only rounds them off); false is linear, as the moves and the Milestone 3 clips have.
+static func make(keys: Array[PoseKey], length: float, loop: bool, scale: float, smooth: bool = false) -> Animation:
 	var sorted: Array[PoseKey] = []
 	for key: PoseKey in keys:
 		var t := clampf(key.time, 0.0, length)
@@ -432,7 +535,8 @@ static func make(keys: Array[PoseKey], length: float, loop: bool, scale: float) 
 	for bone: StringName in animated_bones():
 		var track := anim.add_track(Animation.TYPE_ROTATION_3D)
 		anim.track_set_path(track, NodePath("Skeleton3D:%s" % bone))
-		anim.track_set_interpolation_type(track, Animation.INTERPOLATION_LINEAR)
+		anim.track_set_interpolation_type(track,
+				Animation.INTERPOLATION_CUBIC if smooth else Animation.INTERPOLATION_LINEAR)
 		for key: PoseKey in sorted:
 			var euler: Vector3 = key.pose.get(bone, Vector3.ZERO)
 			anim.rotation_track_insert_key(track, key.time,
@@ -441,7 +545,8 @@ static func make(keys: Array[PoseKey], length: float, loop: bool, scale: float) 
 	# put) so a cross-fade never leaves the hips where an earlier animation put them.
 	var hips_track := anim.add_track(Animation.TYPE_POSITION_3D)
 	anim.track_set_path(hips_track, NodePath("Skeleton3D:Hips"))
-	anim.track_set_interpolation_type(hips_track, Animation.INTERPOLATION_LINEAR)
+	anim.track_set_interpolation_type(hips_track,
+			Animation.INTERPOLATION_CUBIC if smooth else Animation.INTERPOLATION_LINEAR)
 	var rest: Vector3 = PlaceholderBody.BONE_REST[&"Hips"]
 	for key: PoseKey in sorted:
 		anim.position_track_insert_key(hips_track, key.time, (rest + key.hips) * scale)

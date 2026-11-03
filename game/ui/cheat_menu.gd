@@ -3,8 +3,9 @@ extends PanelContainer
 ## The F4 cheat menu (Spec §11): god mode, one-hit KOs, any enemy of the EnemyCatalog (the
 ## training dummy, the Punk, the Kicker...) spawned at the crosshair, time scale 0.25x or 1x, and
 ## reset dummies (plus removing the spawned ones or every enemy), waves on or off (in a room with
-## an EncounterSpawner) and a frozen AI. "Skip to arena N" waits for the arenas (Milestone 5) and
-## shows disabled. TuningOverlay hosts it. A debug tool: unlike the HUD it writes game state
+## an EncounterSpawner), a frozen AI and, from Milestone 4, the Showcase Punk: a frozen Street Punk
+## 1 m ahead that loops the long take (ShowcaseScript), so the player can walk round it. "Skip to
+## arena N" waits for the arenas (Milestone 5) and shows disabled. TuningOverlay hosts it. A debug tool: unlike the HUD it writes game state
 ## (Tuning's "Debug" group, TimeController.debug_scale, the enemies, the waves). Each action is a
 ## public method, so tests and bots can use them without the buttons.
 
@@ -35,6 +36,9 @@ const DUMMY_SCENE := "res://game/enemies/dummy/training_dummy.tscn"
 ## A spot whose floor is more than this above or below the player's is skipped (a crate top,
 ## the curb).
 @export_range(0.0, 2.0, 0.05) var spawn_max_rise_m: float = 0.3
+## The Showcase Punk stands this far ahead of the player's feet (the 1 m of the final judgement),
+## on the floor, nearer the player than the walls, crates and bodies allow only by the search above.
+@export_range(0.5, 3.0, 0.1) var showcase_distance_m: float = 1.0
 @export var spawn_colors: Array[Color] = [
 	Color(0.2, 0.62, 0.66), Color(0.72, 0.62, 0.18), Color(0.56, 0.4, 0.3), Color(0.36, 0.5, 0.78),
 ]
@@ -52,12 +56,18 @@ var skip_arena_button: Button
 var enemy_option: OptionButton
 var waves_button: Button
 var freeze_toggle: CheckButton
+var showcase_toggle: CheckButton
+## The Showcase Punk's runner while the showcase is on (null = off); the Punk is its parent.
+var showcase: ShowcaseRunner
 ## Enemies (dummies and AI enemies) this menu spawned, oldest first.
 var spawned: Array[CombatActor] = []
 ## Tests: enemy id -> the PackedScene to spawn instead of the catalog's, in a room with no
 ## EncounterSpawner (a room with one spawns through it, and its own scene_override).
 var scene_override: Dictionary = {}
 
+## Freeze AI as it was when the showcase went on (it goes back to this when the showcase goes off,
+## unless the player changed it since).
+var _showcase_saved_frozen: bool = false
 ## Instance id -> Vector4(post x, y, z, yaw) of each dummy seen (record_posts()).
 var _posts: Dictionary[int, Vector4] = {}
 var _status: Label
@@ -75,6 +85,9 @@ func _ready() -> void:
 func _exit_tree() -> void:
 	if Tuning.changed.is_connected(_on_tuning_changed):
 		Tuning.changed.disconnect(_on_tuning_changed)
+	# A room switched with the showcase on: the Punk goes with its room, Freeze AI goes back.
+	if is_showcase_on():
+		_stop_showcase()
 
 
 ## Show the current cheat states (Tuning and TimeController may change elsewhere).
@@ -92,6 +105,9 @@ func refresh() -> void:
 	if freeze_toggle:
 		freeze_toggle.set_pressed_no_signal(Tuning.data.ai_frozen)
 		freeze_toggle.text = "Freeze AI (enemies stand still): %s" % ("ON" if Tuning.data.ai_frozen else "off")
+	if showcase_toggle:
+		showcase_toggle.set_pressed_no_signal(is_showcase_on())
+		showcase_toggle.text = "Showcase Punk at 1 m (walk round it): %s" % ("ON" if is_showcase_on() else "off")
 	if waves_button:
 		var has_spawner := _spawner() != null
 		waves_button.disabled = not has_spawner
@@ -323,6 +339,89 @@ func set_ai_frozen(on: bool) -> void:
 	Tuning.set_value(&"ai_frozen", on)
 
 
+## The Showcase Punk: a Street Punk `showcase_distance_m` ahead of the player, facing him, frozen
+## where it stands and playing the long take (ShowcaseScript) over and over; off, it is freed. It is
+## a real EnemyActor of the catalog (so it wears whatever the Punk wears) taken off its own tick, out
+## of the enemy groups the director, the spawner and the probes read, off the navigation avoidance
+## and with its hurtboxes off: nothing hits it and nothing reads it, and the player can walk round
+## it. While it shows, Freeze AI is on (the crowd stands, so nothing attacks the player walking
+## round); off, the Punk is freed and Freeze AI goes back to what it was, unless the player changed
+## it meanwhile. It works in both rooms: it needs no spawner and no navmesh.
+func set_showcase(on: bool) -> void:
+	if on == is_showcase_on():
+		refresh()
+		return
+	if on:
+		_start_showcase()
+	else:
+		_stop_showcase()
+	refresh()
+
+
+## True while the Showcase Punk stands.
+func is_showcase_on() -> bool:
+	return is_instance_valid(showcase)
+
+
+## Where the Showcase Punk would stand and face: {position: Vector3, yaw: float}, or {} when there
+## is no clear spot: showcase_distance_m ahead of the player's feet along his look, on the floor,
+## the nearest clear spot (_clear_spot_near()) when a wall, a crate or a body is there.
+func showcase_point() -> Dictionary:
+	var player := get_tree().get_first_node_in_group(&"player") as PlayerCharacter
+	var space := _space()
+	if player == null or space == null:
+		return {}
+	var flat := _flat(-player.get_look_basis().z, Vector3.FORWARD)
+	var spot := _on_floor(space, player.global_position + flat * showcase_distance_m, player)
+	var clear := _clear_spot_near(space, spot, -flat, player, EnemyCatalog.body_size(&"punk"))
+	if clear.is_empty():
+		return {}
+	spot = clear.position
+	var facing := player.global_position - spot
+	return {position = spot, yaw = atan2(-facing.x, -facing.z)}
+
+
+func _start_showcase() -> void:
+	var point := showcase_point()
+	var host := _world()
+	var scene := EnemyCatalog.scene(&"punk")
+	if point.is_empty() or host == null or scene == null:
+		_say("No room for the Showcase Punk there.")
+		return
+	var punk := scene.instantiate() as EnemyActor
+	if punk == null:
+		_say("Could not make the Showcase Punk.")
+		return
+	punk.name = "ShowcasePunk"
+	punk.display_name = "Showcase Punk"
+	punk.position = host.to_local(point.position)
+	punk.rotation.y = float(point.yaw) - host.global_rotation.y
+	host.add_child(punk)
+	ShowcaseRunner.unplug(punk)
+	var runner := ShowcaseRunner.new()
+	runner.name = "ShowcaseRunner"
+	punk.add_child(runner)
+	runner.setup(punk, Transform3D(Basis(Vector3.UP, float(point.yaw)), point.position))
+	showcase = runner
+	_showcase_saved_frozen = Tuning.data.ai_frozen
+	set_ai_frozen(true)
+	_say("Showcase Punk: the long take, %.0f s, on a loop." % runner.take_seconds())
+
+
+func _stop_showcase() -> void:
+	var punk: CombatActor = showcase.actor if is_instance_valid(showcase) else null
+	showcase = null
+	if is_instance_valid(punk):
+		for group: StringName in [&"actor", &"enemy", &"ai_enemy"]:
+			if punk.is_in_group(group):
+				punk.remove_from_group(group)
+		punk.queue_free()
+	# Freeze AI back to what it was, unless the player changed it while the showcase stood.
+	if Tuning.data.ai_frozen:
+		set_ai_frozen(_showcase_saved_frozen)
+	_say("Showcase Punk removed.")
+
+
 # --- Building ---------------------------------------------------------------------------
 
 
@@ -395,6 +494,9 @@ func _build() -> void:
 	freeze_toggle = CheckButton.new()
 	freeze_toggle.toggled.connect(set_ai_frozen)
 	box.add_child(freeze_toggle)
+	showcase_toggle = CheckButton.new()
+	showcase_toggle.toggled.connect(set_showcase)
+	box.add_child(showcase_toggle)
 
 	var arena_row := HBoxContainer.new()
 	arena_row.add_theme_constant_override(&"separation", 8)

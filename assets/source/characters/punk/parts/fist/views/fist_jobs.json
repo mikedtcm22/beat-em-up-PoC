@@ -1,0 +1,46 @@
+[
+	{
+		"out": "fist_left.jpg",
+		"prompt": "Original game asset for a stylized comic-book brawler video game: the LEFT HAND of a Street Punk, drawn as a tightly CLOSED FIST wearing a dark grey fingerless glove. The first reference image is the character design (look at the charcoal fingerless gloves on its hands: a padded dark glove that covers the palm and the back of the hand and wraps the wrist, with the finger segments left bare skin). Draw only this one fist, hanging straight down from the wrist like a hammer fist: the wrist at the TOP with the glove's cuff ending in a clean flat horizontal cut (no forearm, no sleeve, no arm above the cuff), the four fingers curled tightly into the palm so that their first knuckles form a row at the BOTTOM of the fist, the thumb folded across the front of the curled index and middle fingers. Glove design: charcoal dark grey (#4b4854, not black) padded glove; a slightly lighter dark-grey padded plate over the back of the hand with a stitched seam line and a row of small knuckle bumps at the bottom; a mustard-yellow strap (#e8bd2e) with a small buckle wrapped round the wrist cuff; the fingers' middle segments and the thumb tip are bare light skin (#f0c9a8) with a thin darker skin-tone line between the fingers. Chunky, slightly oversized and simple, a fist that reads at a glance. Proportions: the fist is about 10 cm wide, 12 cm tall below the cuff and 11.6 cm deep, the cuff about 8 cm across; fill about 70 percent of the image height with the whole fist and cuff, centred, with a clear margin on all sides. Strictly ORTHOGRAPHIC, like a 3D modelling reference: no perspective, no foreshortening. This image is the input of a 3D reconstruction, so it must be FLAT: flat unshaded albedo colours only, as if painted straight onto the surfaces under perfectly even light. No outlines of any colour around shapes, no cel shading, no shading, no gradients, no highlights, no reflections, no cast shadow, no ground shadow, no ambient occlusion. Keep fine detail (seams, stitching, the strap's edges, the finger separations) as thin slightly darker lines in the surface's own colour, never black. Plain flat solid #d9d9d9 background. One object only, no text, no letters, no labels, no extra views, no watermark. No logos or brand marks. No red or pink anywhere except natural light skin tone. VIEW: LEFT-SIDE, the camera is on the character's left, so we see the OUTER side of the left fist, the back of the hand: the padded back-of-the-hand plate with its seam, the yellow strap across the wrist, the knuckles at the bottom with the bare finger segments below them, the folded thumb on the image's left. (Generated first; it is the anchor for the other views.)",
+		"refs": [
+			"../../../../../concepts/punk_a_denim_vest.jpg"
+		],
+		"model": "gemini-3-pro-image",
+		"aspect": "1:1",
+		"size": "2K"
+	},
+	{
+		"out": "fist_front.jpg",
+		"prompt": "TURNTABLE RENDER. The second reference image shows a dark grey fingerless glove on a closed left fist seen from the character's left side (we see the back of the hand and the thumb on the image's left). Show the SAME fist after rotating it 90 degrees about its vertical axis, so that the thumb now points straight at the camera. In this new view we look at the fist from its thumb side: the back-of-hand plate is turned away and seen edge-on as a thin sliver at the image's right, the thumb fills the middle of the image, folded in front of the curled index finger (the thumb's knuckle and tip nearest the camera), the cuff above with the yellow strap seen from the side wrapping round, the glove's thumb-side edge on the left. The silhouette is clearly narrower than the reference's and different from it. Same glove, same colours, same size, same cuff cut and cuff top edge at the same height in the frame. Flat unshaded albedo colours, no outlines around shapes, no shading, no cast shadow, plain flat solid #d9d9d9 background, one object only, no text, no logos. Strictly orthographic, the fist hanging straight down from the wrist with the knuckles at the bottom.",
+		"refs": [
+			"fist_left.jpg"
+		],
+		"model": "gemini-3-pro-image",
+		"aspect": "1:1",
+		"size": "2K"
+	},
+	{
+		"out": "fist_back.jpg",
+		"prompt": "TURNTABLE RENDER. The reference images show a dark grey fingerless glove on a closed left fist: the first is the LEFT-SIDE view (the back of the hand, the thumb on the image's left), the second is the FRONT view rotated 90 degrees from it (seen from the thumb side). Show the SAME fist rotated a further 180 degrees from the front view, so that we now look at it from the LITTLE-FINGER side, from the character's back: the thumb is hidden behind the fist, we see the glove's outer pinky-side edge, the heel of the hand and the curled little finger's bare segment at the bottom, the padded back-of-hand plate seen edge-on as a thin sliver at the image's left, the cuff and the yellow strap with its buckle at the top. Same glove, same colours, same size, same cuff cut and the cuff top edge at the same height in the frame. Flat unshaded albedo colours, no outlines around shapes, no shading, no cast shadow, plain flat solid #d9d9d9 background, one object only, no text, no logos. Strictly orthographic, the fist hanging straight down from the wrist with the knuckles at the bottom.",
+		"refs": [
+			"fist_left.jpg",
+			"fist_front.jpg"
+		],
+		"model": "gemini-3-pro-image",
+		"aspect": "1:1",
+		"size": "2K"
+	},
+	{
+		"out": "fist_right.jpg",
+		"prompt": "Original game asset for a stylized comic-book brawler video game: the LEFT HAND of a Street Punk, drawn as a tightly CLOSED FIST wearing a dark grey fingerless glove. The first reference image is the character design (look at the charcoal fingerless gloves on its hands: a padded dark glove that covers the palm and the back of the hand and wraps the wrist, with the finger segments left bare skin). Draw only this one fist, hanging straight down from the wrist like a hammer fist: the wrist at the TOP with the glove's cuff ending in a clean flat horizontal cut (no forearm, no sleeve, no arm above the cuff), the four fingers curled tightly into the palm so that their first knuckles form a row at the BOTTOM of the fist, the thumb folded across the front of the curled index and middle fingers. Glove design: charcoal dark grey (#4b4854, not black) padded glove; a slightly lighter dark-grey padded plate over the back of the hand with a stitched seam line and a row of small knuckle bumps at the bottom; a mustard-yellow strap (#e8bd2e) with a small buckle wrapped round the wrist cuff; the fingers' middle segments and the thumb tip are bare light skin (#f0c9a8) with a thin darker skin-tone line between the fingers. Chunky, slightly oversized and simple, a fist that reads at a glance. Proportions: the fist is about 10 cm wide, 12 cm tall below the cuff and 11.6 cm deep, the cuff about 8 cm across; fill about 70 percent of the image height with the whole fist and cuff, centred, with a clear margin on all sides. Strictly ORTHOGRAPHIC, like a 3D modelling reference: no perspective, no foreshortening. This image is the input of a 3D reconstruction, so it must be FLAT: flat unshaded albedo colours only, as if painted straight onto the surfaces under perfectly even light. No outlines of any colour around shapes, no cel shading, no shading, no gradients, no highlights, no reflections, no cast shadow, no ground shadow, no ambient occlusion. Keep fine detail (seams, stitching, the strap's edges, the finger separations) as thin slightly darker lines in the surface's own colour, never black. Plain flat solid #d9d9d9 background. One object only, no text, no letters, no labels, no extra views, no watermark. No logos or brand marks. No red or pink anywhere except natural light skin tone. VIEW: RIGHT-SIDE, the camera is on the character's right, so we see the INNER (palm) side of the left fist: the curled bare fingers pressed into the dark glove's padded palm, the thumb's bare tip, the cuff and the yellow strap at the top, the knuckles at the bottom. The reference images after the first are the approved LEFT-SIDE, FRONT and BACK views of the same fist: same fist, same colours, same size and height in the frame, same cuff cut and the same position of the cuff's top edge.",
+		"refs": [
+			"../../../../../concepts/punk_a_denim_vest.jpg",
+			"fist_left.jpg",
+			"fist_front.jpg",
+			"fist_back.jpg"
+		],
+		"model": "gemini-3-pro-image",
+		"aspect": "1:1",
+		"size": "2K"
+	}
+]

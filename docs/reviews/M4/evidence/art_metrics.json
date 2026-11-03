@@ -1,0 +1,268 @@
+{
+  "source": "the DONE-WHEN table printed by tests/test_m4_done_when.gd inside the FULL tools/run_tests.sh on m4/p3-evidence (the merged head of m4/art-pipeline, 6e2a2e1); log captures/m4/evidence/full_suite.log (local)",
+  "full_run": {
+    "scripts": 74,
+    "tests": 1593,
+    "passing": 1593,
+    "asserts": 113837,
+    "test_time_s": 301.117,
+    "script_shader_error_lines": 0,
+    "exit_code": 0
+  },
+  "legend": "PASS = the plan's bar is met and asserted at the bar. GATE (ratchet held) = the shipped art misses the plan's bar on at least one figure; the test asserts a ratchet (what the art does today plus a margin) so a fix can only improve it, and prints the plan's bar as a GATE line. Nothing below is rounded in the art's favour.",
+  "counts": {
+    "PASS": 9,
+    "GATE": 5
+  },
+  "evidence_recordings": {
+    "bot_logs": 26,
+    "script_shader_error_lines": 0,
+    "note": "every recording of this pack (captures/m4/evidence/<dir>/bot.log, local); the A12 clause on evidence bot.logs"
+  },
+  "windowed_rows": "L1-L3 and L5 are in look.json, L4 (perf) is in look.json from the slice gate's runs",
+  "rows": [
+    {
+      "id": "A1",
+      "what": "GLB contract",
+      "state": "PASS",
+      "plan_bar": "23 named binds, no neutral_bone or unknown name; exported joints within 1 mm of the table chained through the swing; faces -Z, soles at y 0; at most 4 normalized influences; every vertex weighted, none on Root",
+      "figures": [
+        {
+          "met_plan_bar": true,
+          "text": "punk: check() clean, 1 meshes x 23 binds, faces -Z (toe z -0.229, heel z 0.101)"
+        },
+        {
+          "met_plan_bar": true,
+          "text": "player: check() clean, 3 meshes x 23 binds, faces -Z (toe z -0.240, heel z 0.076)"
+        }
+      ],
+      "ratchet": null
+    },
+    {
+      "id": "A2",
+      "what": "Triangles",
+      "state": "PASS",
+      "plan_bar": "Punk <= 15,000; player <= 30,000 (probe LOD excluded)",
+      "figures": [
+        {
+          "met_plan_bar": true,
+          "text": "punk: 14300 of 15000 triangles"
+        },
+        {
+          "met_plan_bar": true,
+          "text": "player: 29320 of 30000 triangles"
+        }
+      ],
+      "ratchet": null
+    },
+    {
+      "id": "A3",
+      "what": "Colours",
+      "state": "PASS",
+      "plan_bar": "4-6 swatches per character from the shared atlas; none in the red band (hue 345-15 deg, S > 0.5); no environment or prop colour in the red band",
+      "figures": [
+        {
+          "met_plan_bar": true,
+          "text": "punk: 6 flat colours on 7 swatches, none in the red band"
+        },
+        {
+          "met_plan_bar": true,
+          "text": "player: 6 flat colours on 6 swatches, none in the red band"
+        },
+        {
+          "met_plan_bar": true,
+          "text": "the crowd room and the training room: 313 surfaces, none in the red band (the car is muted)"
+        }
+      ],
+      "ratchet": null
+    },
+    {
+      "id": "A4",
+      "what": "Feet",
+      "state": "GATE",
+      "plan_bar": "lowest sole vertex at rest y in [-5, +5] mm; planted frames of every walk and idle never below -15 mm; foot slide <= 2 cm per planted step",
+      "figures": [
+        {
+          "met_plan_bar": true,
+          "text": "punk: rest sole -4.1 mm; four walks slide at most 1.25 cm (bar 2 cm), lowest -5.4 mm; idle lowest -3.6 mm"
+        },
+        {
+          "met_plan_bar": false,
+          "text": "player: rest sole +0.2 mm; four walks slide at most 228.85 cm (bar 2 cm; the hero's keep M3's 0.6 s cycle, F-motion C7, ratchet 240 cm, margin 11.1 cm), lowest -9.5 mm; idle lowest -1.7 mm"
+        }
+      ],
+      "gate_summary": "the hero's planted soles slide 228.85 cm over the four walks against the 2 cm bar: his walk keeps M3's 0.6 s cycle at his speed (F-motion C7), so the bar cannot be met without a new cycle; the Punk meets it (1.25 cm). Ratchet 240 cm.",
+      "ratchet": "the hero's slide <= 240 cm (today 228.85 cm, margin 11.1 cm); the Punk is held at the plan's 2 cm"
+    },
+    {
+      "id": "A5",
+      "what": "Fists",
+      "state": "PASS",
+      "plan_bar": "centroid within 15 mm of the fist box at FistPoint; extents within +-20% of 0.1 x 0.118 x 0.116 m",
+      "figures": [
+        {
+          "met_plan_bar": true,
+          "text": "punk: fist centroid off the box by Left 3.2 mm, extents x1.00/1.00/0.98; Right 4.4 mm, extents x1.00/1.00/0.98"
+        },
+        {
+          "met_plan_bar": true,
+          "text": "player: fist centroid off the box by Left 8.9 mm, extents x0.98/1.08/1.00; Right 9.0 mm, extents x0.98/1.08/1.00"
+        }
+      ],
+      "ratchet": null
+    },
+    {
+      "id": "A6",
+      "what": "Hurtbox fit at idle",
+      "state": "GATE",
+      "plan_bar": "every hurtbox axis point inside the art; >= 95% of torso and leg vertices within radius + 6 cm; head within the head sphere + 5 cm",
+      "figures": [
+        {
+          "met_plan_bar": true,
+          "text": "punk: torso 100.0% of 1334 vertices, legs 95.2% of 2678, head 99.9% of 1583, 0 axis points outside"
+        },
+        {
+          "met_plan_bar": false,
+          "text": "player: torso 100.0% of 3071 vertices, legs 89.4% of 6213, head 99.0% of 1894, 0 axis points outside  (plan's bar missed: legs 89.4% < 95%); ratchets torso 98.5%, legs 88.0%, head 97.5% (margins 1.5, 1.4, 1.5 points), axis points 0"
+        }
+      ],
+      "gate_summary": "the hero's leg vertices inside their hurtbox + 6 cm are 89.4% against 95% (a waist and hip band; torso 100%, head 99.0%); the Punk meets every region (legs 95.2%).",
+      "ratchet": "the hero's torso >= 98.5%, legs >= 88.0%, head >= 97.5% (today 100.0 / 89.4 / 99.0); axis points outside = 0"
+    },
+    {
+      "id": "A7",
+      "what": "Deformation",
+      "state": "GATE",
+      "plan_bar": "strain over every ANIM_IDS id and every Punk move at 5 phases: p99.9 in [0.6, 1.6], max in [0.4, 2.2], no NaN; peak flexes (guard, elbow 150, arm raise 140, knee -130, spine twist, lying): <= 0.5% of triangles under 15% of rest area or flipped",
+      "figures": [
+        {
+          "met_plan_bar": false,
+          "text": "punk: 251 samples, 1 with every number inside the bars, worst p99.9 4.03, 503 problem lines { \"strain range\": 500, \"flipped or squashed triangles\": 3 }; peak flexes over the 72-triangle bar: guard 115, arm raise 140 236, knee -130 77 (worst 1.65% of the triangles; the plan's bar is 0.5%); ratchets (today, held, margin): in-bar samples 1 >= 1; worst p99.9 4.03 <= 4.23 (+5.0%); worst p0.1 0.16 >= 0.15 (+5.1%); longest stretch x12.2 <= x12.8 (+5.0%); deepest compression x0.0152 >= x0.0144 (+5.6%); peak flex share 1.65% <= 1.73% (+0.08 points); every clip +10%"
+        },
+        {
+          "met_plan_bar": false,
+          "text": "player: 236 samples, 1 with every number inside the bars, worst p99.9 8.67, 472 problem lines { \"strain range\": 470, \"flipped or squashed triangles\": 2 }; peak flexes over the 147-triangle bar: arm raise 140 185, knee -130 173 (worst 0.63% of the triangles; the plan's bar is 0.5%); ratchets (today, held, margin): in-bar samples 1 >= 1; worst p99.9 8.67 <= 9.10 (+5.0%); worst p0.1 0.15 >= 0.14 (+5.1%); longest stretch x37.2 <= x39.1 (+5.0%); deepest compression x0.0297 >= x0.0282 (+5.3%); peak flex share 0.63% <= 0.66% (+0.03 points); every clip +10%"
+        },
+        {
+          "met_plan_bar": false,
+          "text": "punk visible stretch (slice gate contingency 4): 48722 edges in view over the 1 m poses, the longest growth 8.4 cm (punk_cross pitch -6, bones Spine/Spine); bar 2 cm, ratchet 9 cm (margin 0.6 cm)"
+        }
+      ],
+      "gate_summary": "NOT MET on either art. Punk: 1 of 251 samples inside every bar, worst p99.9 4.03 against 1.6 (thrown and launched), peak flexes guard 115, arm raise 140 236, knee -130 77 triangles against a bar of 72 (1.65% against 0.5%), longest visible stretch 8.4 cm against 2 cm. Hero: 1 of 236 samples inside, worst p99.9 8.67 (get-ups), arm raise 185 and knee 173 triangles against 147 (0.63% against 0.5%). Held at ratchets (+5%, every clip +10%).",
+      "ratchet": "per art (Punk / hero): in-bar samples >= 1; worst p99.9 <= 4.23 / 9.10 (today 4.03 / 8.67); worst p0.1 >= 0.15 / 0.14; longest stretch <= x12.8 / x39.1; deepest compression >= x0.0144 / x0.0282; peak flex share <= 1.73% / 0.66% (today 1.65% / 0.63%); every clip +10% (tests/fixtures/strain/strain_ratchet.json); the Punk's visible stretch <= 9 cm (today 8.4 cm)"
+    },
+    {
+      "id": "A8",
+      "what": "Ragdoll",
+      "state": "PASS",
+      "plan_bar": "skeleton vs Ragdoll._visual <= 1 mm on every bone, partial and full; primitive rigs identical to M3",
+      "figures": [
+        {
+          "met_plan_bar": true,
+          "text": "punk and player: skeleton vs Ragdoll._visual worst 0.00000 m over 140 updates (partial, then a launch at once); a primitive rig's skeleton untouched"
+        }
+      ],
+      "ratchet": null
+    },
+    {
+      "id": "A9",
+      "what": "First-person framing",
+      "state": "GATE",
+      "plan_bar": "art vs proxies on the 48x27 grid: <= 3% of cells differ; lens share delta <= 4 pp per pose; player art never >= 2 cm nearer the lens than its proxies; block-guard forearms and hands >= 0.3 m from the lens",
+      "figures": [
+        {
+          "met_plan_bar": false,
+          "text": "punk, 8 poses at 1 m: worst cells differ 6.5% (bar 3%, ratchet 7.0%, margin 0.5 points), worst lens share gap 5.0 points (bar 4; the jab and the cross at +8 degrees are ratcheted exactly, F-cuff)"
+        },
+        {
+          "met_plan_bar": false,
+          "text": "player, 15 first-person poses: 11 miss the plan's bars; worst cells differ 8.4% (bar 3%, ratchet 9.0%, margin 0.6 points), lens share gap 8.4 points (bar 4, ratchet 9.0, margin 0.6), art nearer than its proxies by 8.1 cm (bar 2, ratchet 9.0, margin 0.9 cm)"
+        },
+        {
+          "met_plan_bar": true,
+          "text": "player block guard: nearest forearm or hand vertex 0.336 m from the lens (bar 0.3 m)"
+        }
+      ],
+      "gate_summary": "NOT MET. Punk: worst 6.5% of cells differ (bar 3%) and a lens share gap of 5.0 points (bar 4; the jab and the cross at +8 degrees, F-cuff's wrist cuff). Hero: 11 of 15 first-person poses miss the bars, worst 8.4% of cells, 8.4 points of lens share, the art 8.1 cm nearer the lens than its proxies (the front kick) against 2 cm. The block guard's 0.3 m clearance is met (0.336 m).",
+      "ratchet": "Punk: cells differing <= 7.0% (today 6.5%); lens share gap held at 4 pp except jab +8 <= 5.1 pp and cross +8 <= 5.4 pp (today 5.0). Hero: cells <= 9.0%, lens share gap <= 9.0 pp, art nearer its proxies <= 9.0 cm (today 8.4%, 8.4 pp, 8.1 cm)"
+    },
+    {
+      "id": "A10",
+      "what": "Marks stick",
+      "state": "PASS",
+      "plan_bar": "CUSTOM0/1 hold bind-pose position and normal; mark coordinates of 100 sample vertices identical across idle, jab and knockdown; a damage-look change swaps textures only (same shader)",
+      "figures": [
+        {
+          "met_plan_bar": true,
+          "text": "punk: CUSTOM0/1 are the bind pose on 101 sample vertices through idle, a jab and a knockdown (303 moves of the skin); three damage looks, one shader"
+        },
+        {
+          "met_plan_bar": true,
+          "text": "player: CUSTOM0/1 are the bind pose on 303 sample vertices through idle, a jab and a knockdown (906 moves of the skin); three damage looks, one shader"
+        }
+      ],
+      "ratchet": null
+    },
+    {
+      "id": "A11",
+      "what": "Flash on the art",
+      "state": "GATE",
+      "plan_bar": "the contact flash shows for exactly hit_flash_frames rendered frames; anchor within 2 cm of the CPU-skinned surface for head, torso and leg hits at 1 m",
+      "figures": [
+        {
+          "met_plan_bar": true,
+          "text": "a real Street Punk's art flashes for exactly hit_flash_frames rendered frames (shown for [2, 1, 3] frames at hit_flash_frames 2, 1, 3 from the jab's hit)"
+        },
+        {
+          "met_plan_bar": false,
+          "text": "punk: flash anchor to the skinned surface: head 1.4 cm (ratchet 2.0, margin 0.6), torso 6.0 cm (ratchet 6.5, margin 0.5), leg 2.7 cm (ratchet 3.2, margin 0.5)  (plan's 2 cm missed: torso 6.0 cm, leg 2.7 cm)"
+        },
+        {
+          "met_plan_bar": false,
+          "text": "player: flash anchor to the skinned surface: head 2.8 cm (ratchet 3.3, margin 0.5), torso 4.6 cm (ratchet 5.1, margin 0.5), leg 4.7 cm (ratchet 5.2, margin 0.5)  (plan's 2 cm missed: head 2.8 cm, torso 4.6 cm, leg 4.7 cm)"
+        }
+      ],
+      "gate_summary": "the flash anchor to the skinned surface: Punk head 1.4 cm meets 2 cm, torso 6.0 cm and leg 2.7 cm miss; hero head 2.8, torso 4.6, leg 4.7 cm all miss. The flash-shows-exactly-hit_flash_frames half of the row passes.",
+      "ratchet": "Punk: head <= 2.0, torso <= 6.5, leg <= 3.2 cm (today 1.4 / 6.0 / 2.7); hero: head <= 3.3, torso <= 5.1, leg <= 5.2 cm (today 2.8 / 4.6 / 4.7)"
+    },
+    {
+      "id": "A12",
+      "what": "Suite",
+      "state": "PASS",
+      "plan_bar": "every pre-M4 test passes with its intent intact and the count only rises (>= 1198); 0 SCRIPT ERROR / SHADER ERROR / ERROR in the suite and in every evidence bot.log; with look_show_art off every M3 test behaves as on main",
+      "figures": [
+        {
+          "met_plan_bar": true,
+          "text": "1593 test functions in 74 files against M3's 1198; look_show_art off shows the primitives of both characters (the full run's SCRIPT/SHADER/ERROR count is the lead's read of tools/run_tests.sh)"
+        }
+      ],
+      "ratchet": null
+    },
+    {
+      "id": "A13",
+      "what": "Assets and money",
+      "state": "PASS",
+      "plan_bar": "every file under assets/export/** and assets/source/concepts/** has an ASSETS.md row; binaries are LFS; the ledger accounts for every credit; M4's Tripo spend <= 750 (cap 800)",
+      "figures": [
+        {
+          "met_plan_bar": true,
+          "text": "88 files under assets/export and assets/source/concepts, each named in ASSETS.md and in LFS; Tripo: 12 tasks, 295 credits (stop 750, cap 800), lowest balance 1205 (floor 700)"
+        }
+      ],
+      "ratchet": null
+    },
+    {
+      "id": "A14",
+      "what": "Readability holds",
+      "state": "PASS",
+      "plan_bar": "in the 60 s autopilot crowd act with art Punks M3's hard metrics (R1-R3, R10, R11) are met and 0 errors",
+      "figures": [
+        {
+          "met_plan_bar": true,
+          "text": "autopilot, 9 art Punks over 900 ticks (6 fell): hard rows R1 ok, R2 ok, R3 ok, R10 ok, R11 ok, none stuck; the 60 s windowed act is tools/check_m3_log.py's, the lead's run"
+        }
+      ],
+      "ratchet": null
+    }
+  ]
+}

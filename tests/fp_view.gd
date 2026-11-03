@@ -3,6 +3,13 @@ extends RefCounted
 ## camera at the real lens (EyePoint + FirstPersonCamera.lens_offset()) sees of a rig's
 ## primitive meshes, found by ray-casting them the way the camera renders them. Shared by
 ## tests/test_humanoid_rig.gd and tests/test_combat_integration.gd.
+##
+## A rig with skinned art (Milestone 4) hides its primitives and draws the art, but these
+## helpers keep measuring the primitives, the view proxies (HumanoidRig.VIEW_PROXY_GROUP): they
+## follow the same skeleton and carry the tuned shapes every first-person test was written
+## against. is_drawn() is the one place that says which meshes count; the art itself is
+## measured by tests/skinned_view.gd (native triangle rays), which the fidelity tests set
+## beside these numbers.
 
 ## Horizontal FOV half-angle of the first-person camera and the vertical half-angle that
 ## gives at 16:9 with Camera3D.KEEP_WIDTH (Spec §5).
@@ -24,6 +31,20 @@ static func camera(eye: Vector3, look: Basis) -> Transform3D:
 	return Transform3D(look, eye + FirstPersonCamera.lens_offset(look))
 
 
+## True when `mesh` counts as drawn for the helpers below. The skinned art is never one (its
+## bind-pose bounding box and its ArrayMesh are no use to them: tests/skinned_view.gd measures
+## it). A view proxy (a primitive of a rig with art) counts while its bone follower is visible,
+## although it is hidden itself while the art shows, so it follows the whole rig's blink and
+## nothing else. Any other mesh counts when it is visible in the tree.
+static func is_drawn(mesh: MeshInstance3D) -> bool:
+	if mesh.is_in_group(HumanoidRig.ART_GROUP):
+		return false
+	if mesh.is_in_group(HumanoidRig.VIEW_PROXY_GROUP):
+		var parent := mesh.get_parent() as Node3D
+		return parent != null and parent.is_visible_in_tree()
+	return mesh.is_visible_in_tree()
+
+
 static func meshes_under(node: Node) -> Array[MeshInstance3D]:
 	var out: Array[MeshInstance3D] = []
 	for child: Node in node.find_children("*", "MeshInstance3D", true, false):
@@ -40,6 +61,21 @@ static func meshes_under(node: Node) -> Array[MeshInstance3D]:
 ## faces are culled).
 static func hits(root: Node, cam: Transform3D, cols: int = COLS,
 		skip: Array[MeshInstance3D] = []) -> Array[MeshInstance3D]:
+	var cast := _cast(root, cam, cols, skip)
+	var out: Array[MeshInstance3D] = []
+	out.assign(cast[0])
+	return out
+
+
+## The depth (along the camera's view axis, meters) of each cell's nearest surface in hits(),
+## INF where it sees none. Same grid, same order.
+static func depths(root: Node, cam: Transform3D, cols: int = COLS,
+		skip: Array[MeshInstance3D] = []) -> PackedFloat32Array:
+	return _cast(root, cam, cols, skip)[1]
+
+
+## [the meshes of hits(), their depths].
+static func _cast(root: Node, cam: Transform3D, cols: int, skip: Array[MeshInstance3D]) -> Array:
 	var row_count := rows(cols)
 	var tan_h := tan(deg_to_rad(HALF_H_DEG))
 	var tan_v := tan_h * 9.0 / 16.0
@@ -47,7 +83,7 @@ static func hits(root: Node, cam: Transform3D, cols: int = COLS,
 	var meshes: Array[MeshInstance3D] = []
 	var spheres: Array[Vector4] = []
 	for mesh: MeshInstance3D in meshes_under(root):
-		if mesh.layers & CombatTypes.bit(CombatTypes.VIS_FP_HIDDEN) or skip.has(mesh) or not mesh.is_visible_in_tree():
+		if mesh.layers & CombatTypes.bit(CombatTypes.VIS_FP_HIDDEN) or skip.has(mesh) or not is_drawn(mesh):
 			continue
 		var radius := mesh.mesh.get_aabb().size.length() * 0.5
 		var c := cam.affine_inverse() * mesh.global_position
@@ -62,6 +98,7 @@ static func hits(root: Node, cam: Transform3D, cols: int = COLS,
 		meshes.append(mesh)
 		spheres.append(Vector4(c.x, c.y, c.z, radius))
 	var out: Array[MeshInstance3D] = []
+	var out_depth := PackedFloat32Array()
 	for row: int in row_count:
 		for col: int in cols:
 			# Camera-space ray with z = -1, so the ray parameter is the depth in front of the lens.
@@ -78,7 +115,8 @@ static func hits(root: Node, cam: Transform3D, cols: int = COLS,
 					best_t = t
 					best = meshes[i]
 			out.append(best)
-	return out
+			out_depth.append(best_t)
+	return [out, out_depth]
 
 
 ## Depth along `dir` (from `origin`, both world space) where the ray enters `mesh`'s front
@@ -166,7 +204,7 @@ static func covered(cells: Array[MeshInstance3D]) -> float:
 
 
 ## Distance from world `point` to the surface of `mesh`'s primitive (0 inside it); spheres
-## are treated as balls of their radius.
+## are treated as balls of their radius. INF for a mesh that is no primitive.
 static func mesh_distance(mesh: MeshInstance3D, point: Vector3) -> float:
 	var local := mesh.global_transform.affine_inverse() * point
 	if mesh.mesh is BoxMesh:
@@ -180,18 +218,21 @@ static func mesh_distance(mesh: MeshInstance3D, point: Vector3) -> float:
 	elif mesh.mesh is CylinderMesh:
 		radius = (mesh.mesh as CylinderMesh).top_radius
 		half_axis = (mesh.mesh as CylinderMesh).height * 0.5
-	else:
+	elif mesh.mesh is SphereMesh:
 		radius = (mesh.mesh as SphereMesh).radius
+	else:
+		# A skinned or imported mesh is no primitive: it is never near anything here.
+		return INF
 	var axis_point := Geometry3D.get_closest_point_to_segment(local, Vector3(0.0, -half_axis, 0.0), Vector3(0.0, half_axis, 0.0))
 	return maxf(axis_point.distance_to(local) - radius, 0.0)
 
 
-## Nearest distance from `point` to any drawn mesh under `root` (see hits() for which meshes
-## the first-person camera draws), or INF.
+## Nearest distance from `point` to any drawn primitive under `root` (see hits() and
+## is_drawn() for which meshes count), or INF.
 static func nearest_mesh(root: Node, point: Vector3, keep: Callable = Callable()) -> float:
 	var nearest := INF
 	for mesh: MeshInstance3D in meshes_under(root):
-		if mesh.layers & CombatTypes.bit(CombatTypes.VIS_FP_HIDDEN) or not mesh.is_visible_in_tree():
+		if mesh.layers & CombatTypes.bit(CombatTypes.VIS_FP_HIDDEN) or not is_drawn(mesh):
 			continue
 		if keep.is_valid() and not keep.call(mesh):
 			continue
@@ -199,7 +240,7 @@ static func nearest_mesh(root: Node, point: Vector3, keep: Callable = Callable()
 	return nearest
 
 
-## The meshes under `root` (any render layer, visible ones only) with a corner of their
+## The meshes under `root` (any render layer, drawn ones only: is_drawn()) with a corner of their
 ## bounding box behind the lens or outside the 16:9 view of `cam` shrunk to `margin` (1 =
 ## the view's edge): empty when all of `root` is in frame. The boxes overestimate a rotated
 ## capsule or sphere a little, so a body that passes is whole in frame.
@@ -209,7 +250,7 @@ static func outside_view(root: Node, cam: Transform3D, margin: float = 1.0) -> A
 	var inverse := cam.affine_inverse()
 	var out: Array[MeshInstance3D] = []
 	for mesh: MeshInstance3D in meshes_under(root):
-		if not mesh.is_visible_in_tree():
+		if not is_drawn(mesh):
 			continue
 		var box := mesh.mesh.get_aabb()
 		for i: int in 8:
