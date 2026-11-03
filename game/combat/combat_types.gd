@@ -68,6 +68,11 @@ const LAYER_PROJECTILE := 7
 ## (and, with Tuning.ragdoll_collide_ragdolls, other ragdolls) only. No actor body, hurtbox
 ## or hit query ever sees it.
 const LAYER_RAGDOLL := 8
+## The invisible guard along a level's open edges (Milestone 5, game/level/kit/edge_guard.gd): in the
+## player's mask in every state and in a standing enemy's, in no ghost enemy's, so a knocked-down,
+## launched or thrown enemy crosses it and a HazardVolume past the lip KOs it. The navmesh bake
+## parses it too, so the mesh stops an agent radius short of it.
+const LAYER_EDGE_GUARD := 9
 
 ## Visual layers (1-based). Head and neck meshes of the player go on FP_HIDDEN,
 ## which the first-person camera's cull mask excludes; they still cast shadows.

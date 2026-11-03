@@ -39,3 +39,11 @@ signal guard_changed(actor: Node3D, guard: float, max_guard: float)
 ## A boss entered a new phase (Milestone 3): 1 at spawn is implicit, so this fires on entering
 ## phase 2.
 signal boss_phase_changed(boss: Node3D, phase: int)
+## An arena's lock has closed (Milestone 5, game/level/kit/arena.gd): its table starts.
+signal arena_locked(arena: Node3D)
+## An arena's table has finished and its ahead barrier is opening: the GO cue shows.
+signal arena_cleared(arena: Node3D)
+## The level's last arena is cleared (LevelRoot): "CLEAR!".
+signal level_cleared(level: Node3D)
+## An enemy entered a HazardVolume and was KO'd at once.
+signal hazard_ko(actor: Node3D, hazard: Node3D)

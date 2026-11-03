@@ -21,11 +21,20 @@ extends Node3D
 ## (GameInput.menu_open, the F1 and F4 menus): no timer runs and nothing spawns. Whether they run
 ## at all is the tunable waves_enabled (set_waves_enabled() writes it, so F1 and F4 agree).
 ## Timers run in sim time (slow-mo and the F4 0.25x slow them).
+##
+## Finite mode (Milestone 5): `play_table(table, points)` plays a table whose `loop` is false once,
+## on the given spawn points (an arena's), never inserts the boss wave, lets a table name the point
+## a spawn comes in at (`wave_points`; a named point overrides the behind share, and one too near
+## the player waits spawn_named_wait_s, then the nearest free point with the same tag takes it),
+## and emits `table_finished` when the last wave is cleared, adds included. `stop()` leaves it idle.
+## The level (LevelRoot) owns the one spawner and hands each arena its table and points on lock.
 
 ## A wave has just started: its number (1 for the first) and the ids it will spawn.
 signal wave_started(number: int, ids: PackedStringArray)
 ## Every enemy of wave `number` is down; the gap to the next wave starts.
 signal wave_cleared(number: int)
+## A finite table's last wave is cleared, the boss's adds included (Milestone 5): the arena opens.
+signal table_finished()
 
 const GROUP := &"encounter_spawner"
 const TABLE_PATH := "res://game/level/encounters/crowd_waves.tres"
@@ -36,8 +45,9 @@ const FALLBACK_ID := &"punk"
 @export var rng_seed: int = 0
 
 ## Where enemies may walk in from: {position: Vector3, yaw: float (the way it faces on
-## arrival), tag: StringName (&"doorway", &"alley" or &"vehicle"), lane_point: Vector3 (where
-## it walks to first)}. The room fills it in.
+## arrival), tag: StringName (&"doorway", &"alley", &"vehicle" or &"stairwell"), lane_point: Vector3
+## (where it walks to first), name: StringName (optional: what a table's `wave_points` call it)}.
+## The room fills it in.
 var spawn_points: Array[Dictionary] = []
 ## Tests: enemy id -> the PackedScene to spawn instead of the catalog's.
 var scene_override: Dictionary = {}
@@ -46,7 +56,10 @@ var table: EncounterTable
 ## The node enemies are added to: this node's parent (the room) unless set.
 var host: Node3D
 
-enum _Phase { GAP, SPAWNING, FIGHTING }
+## IDLE: nothing runs (a level's spawner between arenas, and after a finite table's end).
+enum _Phase { GAP, SPAWNING, FIGHTING, IDLE }
+## The retry period (s) of a named spawn that cannot be placed yet.
+const NAMED_RETRY_S := 0.1
 
 var _rng := RandomNumberGenerator.new()
 ## Archetype label -> enemies of it spawned so far (the n in "Punk 3").
@@ -57,6 +70,16 @@ var _timer: float = 0.0
 ## Waves started so far.
 var _started: int = 0
 var _queue: Array[StringName] = []
+## The spawn point name of each id in `_queue` (&"" = choose), always as long as it.
+var _queue_points: Array[StringName] = []
+## Finite mode: the table plays once (play_table() with a table whose `loop` is false).
+var _finite: bool = false
+## Spawns of the wave that choose their point (the behind share counts these only), and how many
+## have spawned.
+var _wave_free: int = 0
+var _wave_free_spawned: int = 0
+## Sim seconds the head of the queue, a named spawn, has waited for its point.
+var _head_wait: float = 0.0
 var _wave_size: int = 0
 var _wave_spawned: int = 0
 var _wave_behind: int = 0
@@ -135,6 +158,15 @@ func spawn_adds(id: StringName, count: int, near: Vector3) -> Array[EnemyActor]:
 	return out
 
 
+## Take one enemy out of the game now: it leaves its groups first (a scan in the same frame no longer
+## finds it), then is freed.
+static func remove_enemy(enemy: Node) -> void:
+	for group: StringName in [&"ai_enemy", &"enemy", &"actor", &"boss"]:
+		if enemy.is_in_group(group):
+			enemy.remove_from_group(group)
+	enemy.queue_free()
+
+
 ## Take enemies out of `tree` now: every member of "ai_enemy", or with `only_ai` false every
 ## member of "enemy" too (the training dummies). Each leaves its groups first, so a scan in the
 ## same frame no longer finds it, then is freed. Returns how many.
@@ -147,10 +179,7 @@ static func remove_enemies(tree: SceneTree, only_ai: bool = false) -> int:
 			if not doomed.has(node):
 				doomed.append(node)
 	for node in doomed:
-		for group: StringName in [&"ai_enemy", &"enemy", &"actor", &"boss"]:
-			if node.is_in_group(group):
-				node.remove_from_group(group)
-		node.queue_free()
+		remove_enemy(node)
 	return doomed.size()
 
 
@@ -187,17 +216,42 @@ func start_at_wave(number: int) -> void:
 	_phase = _Phase.GAP
 	_timer = Tuning.data.wave_gap_s
 	_queue.clear()
+	_queue_points.clear()
 	_members.clear()
 	_wave_size = 0
 	_wave_spawned = 0
+	_wave_free = 0
+	_wave_free_spawned = 0
 	_wave_behind = 0
 	_wave_behind_quota = 0
+	_head_wait = 0.0
 	_last_point = -1
+
+
+## Play `new_table` once on `points` (an arena's spawn points, see the class docs): the waves start
+## over, wave 1 `wave_gap_s` from now. A table whose `loop` is true plays as the crowd room's does
+## (boss wave included) on those points. Whether waves run at all is still the tunable
+## waves_enabled (F1), as for the crowd room. What is in the room stays; `table_finished` follows the
+## last wave's clear.
+func play_table(new_table: EncounterTable, points: Array[Dictionary]) -> void:
+	table = new_table
+	spawn_points = points
+	_finite = new_table != null and not new_table.loop
+	start_at_wave(1)
+
+
+## Stop the table: nothing more spawns and no timer runs (the enemies in the room stay). A level's
+## spawner is stopped between arenas.
+func stop() -> void:
+	_phase = _Phase.IDLE
+	_queue.clear()
+	_queue_points.clear()
+	_head_wait = 0.0
 
 
 ## True from a wave's first spawn until its last enemy is down.
 func wave_running() -> bool:
-	return _phase != _Phase.GAP
+	return _phase == _Phase.SPAWNING or _phase == _Phase.FIGHTING
 
 
 ## The id a wave spawns for `id`: `id` itself when it has a scene (an override or the catalog's),
@@ -237,11 +291,16 @@ func _physics_process(delta: float) -> void:
 	_prune_members()
 	match _phase:
 		_Phase.GAP:
+			if _finite and (table == null or _started >= table.waves.size()):
+				_finish()
+				return
 			_timer -= step
 			if _timer <= 0.0 and _begin_wave():
 				_phase = _Phase.SPAWNING
 				_timer = 0.0
 		_Phase.SPAWNING:
+			if not _queue_points.is_empty() and _queue_points[0] != &"":
+				_head_wait += step
 			_timer -= step
 			if _timer <= 0.0:
 				_timer = Tuning.data.wave_spawn_interval_s
@@ -253,23 +312,40 @@ func _physics_process(delta: float) -> void:
 				_phase = _Phase.GAP
 				_timer = Tuning.data.wave_gap_s
 				wave_cleared.emit(_started)
+				if _finite and table != null and _started >= table.waves.size():
+					_finish()
+
+
+## A finite table is played out: idle, and `table_finished`.
+func _finish() -> void:
+	_phase = _Phase.IDLE
+	table_finished.emit()
 
 
 ## Start the next wave of the table; false when the table has none.
 func _begin_wave() -> bool:
 	if table == null:
 		return false
-	var ids := table.wave_at(_started, Tuning.data.boss_wave_every)
+	var ids := table.wave_at(_started, 0 if _finite else Tuning.data.boss_wave_every)
 	if ids.is_empty():
 		return false
+	var names := table.points_for(_started) if _finite else PackedStringArray()
 	_started += 1
 	_queue.clear()
-	for id in ids:
-		_queue.append(resolve_id(StringName(id)))
+	_queue_points.clear()
+	_wave_free = 0
+	for i in ids.size():
+		_queue.append(resolve_id(StringName(ids[i])))
+		var named := StringName(names[i]) if i < names.size() else &""
+		_queue_points.append(named)
+		if named == &"":
+			_wave_free += 1
 	_wave_size = _queue.size()
 	_wave_spawned = 0
+	_wave_free_spawned = 0
 	_wave_behind = 0
-	_wave_behind_quota = roundi(_wave_size * Tuning.data.wave_behind_share)
+	_head_wait = 0.0
+	_wave_behind_quota = roundi(_wave_free * Tuning.data.wave_behind_share)
 	wave_started.emit(_started, ids)
 	return true
 
@@ -281,11 +357,16 @@ func _spawn_next() -> void:
 	var id := _queue[0]
 	var body := EnemyCatalog.body_size(id)
 	var valid := valid_point_indices(body)
+	if _queue_points[0] != &"" and _spawn_named(id, valid):
+		return
+	if _queue_points[0] != &"":
+		return  # its point is not free yet: try again soon
 	if valid.size() > 1 and valid.has(_last_point):
 		valid.erase(_last_point)
 	# A random order that still hits the wave's quota of "behind" spawns: the chance of the next
-	# one being from behind is what is left of the quota over what is left of the wave.
-	var want_behind := _rng.randf() * float(_wave_size - _wave_spawned) < float(_wave_behind_quota - _wave_behind)
+	# one being from behind is what is left of the quota over what is left of the wave (the spawns
+	# that choose their point: a named one is where the table says, whoever looks where).
+	var want_behind := _rng.randf() * float(_wave_free - _wave_free_spawned) < float(_wave_behind_quota - _wave_behind)
 	var behind: Array[int] = []
 	var ahead: Array[int] = []
 	for index in valid:
@@ -299,10 +380,52 @@ func _spawn_next() -> void:
 	var point := spawn_points[index]
 	_last_point = index
 	_queue.remove_at(0)
+	_queue_points.remove_at(0)
 	_wave_spawned += 1
+	_wave_free_spawned += 1
+	_head_wait = 0.0
 	if is_behind(point):
 		_wave_behind += 1
 	spawn_enemy(id, point.position, point.yaw, true, point.lane_point)
+
+
+## Spawn the head of the queue, a named spawn, at its point if that is free (in `valid`), or, once
+## it has waited spawn_named_wait_s, at the nearest free point with the same tag. False (and a
+## short retry) when neither is. A name no point has is treated as no name.
+func _spawn_named(id: StringName, valid: Array[int]) -> bool:
+	var named := _queue_points[0]
+	var wanted := -1
+	for i in spawn_points.size():
+		if StringName(spawn_points[i].get("name", &"")) == named:
+			wanted = i
+			break
+	if wanted < 0:
+		push_warning("EncounterSpawner: no spawn point named '%s'" % named)
+		_queue_points[0] = &""
+		_wave_free += 1
+		_wave_behind_quota = roundi(_wave_free * Tuning.data.wave_behind_share)
+		return false
+	var chosen := wanted if valid.has(wanted) else -1
+	if chosen < 0 and _head_wait >= Tuning.data.spawn_named_wait_s:
+		var tag: StringName = spawn_points[wanted].get("tag", &"")
+		var best := INF
+		for index in valid:
+			if StringName(spawn_points[index].get("tag", &"")) != tag:
+				continue
+			var d := _flat_distance(spawn_points[index].position, spawn_points[wanted].position)
+			if d < best:
+				best = d
+				chosen = index
+	if chosen < 0:
+		_timer = NAMED_RETRY_S
+		return false
+	var point := spawn_points[chosen]
+	_queue.remove_at(0)
+	_queue_points.remove_at(0)
+	_wave_spawned += 1
+	_head_wait = 0.0
+	spawn_enemy(id, point.position, point.yaw, true, point.lane_point)
+	return true
 
 
 func _prune_members() -> void:

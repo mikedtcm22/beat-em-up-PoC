@@ -32,6 +32,8 @@ extends CanvasLayer
 @onready var rear_warning: RearWarning = $RearWarning
 @onready var grab_prompt: GrabPrompt = $GrabPrompt
 @onready var pickup_cue: PickupCue = $PickupCue
+## The "GO" arrow and "CLEAR!" of the level (Milestone 5); built in _ready(), a child like the others.
+var go_cue: GoCue
 @onready var camera_toast: CameraModeToast = $CameraToast
 @onready var help_overlay: HelpOverlay = $HelpOverlay
 @onready var pause_overlay: PauseOverlay = $PauseOverlay
@@ -47,6 +49,8 @@ var _help_auto_hide_left: float = 0.0
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	process_priority = HudStyle.PROCESS_PRIORITY
+	go_cue = GoCue.new()
+	add_child(go_cue)
 	CombatEvents.hit_landed.connect(_on_hit_landed)
 	CombatEvents.attack_started.connect(combat_log.on_attack_started)
 	CombatEvents.attack_whiffed.connect(combat_log.add_whiff)
@@ -95,6 +99,8 @@ func advance(delta: float) -> void:
 	grab_prompt.advance(game_delta)
 	# The "LB" cue breathes in game time, like the lettering.
 	pickup_cue.advance(game_delta)
+	# So does the level's "GO" arrow (and "CLEAR!").
+	go_cue.advance(game_delta)
 
 
 ## Show the bottom-center boss bar for `actor` (the HUD shows it by itself for the live

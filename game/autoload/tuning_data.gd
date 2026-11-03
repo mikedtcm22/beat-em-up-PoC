@@ -992,6 +992,35 @@ extends Resource
 ## Test room: seconds before a KO'd player gets back up at full health.
 @export_range(0.5, 10.0, 0.1) var player_revive_s: float = 2.5
 
+@export_group("Level")
+@export_subgroup("Arena locks")
+## Seconds a barrier takes to close (a shutter drops, a gate slides, a car rolls across).
+@export_range(0.1, 3.0, 0.05) var barrier_close_s: float = 0.6
+## Seconds a barrier takes to open once the arena is clear.
+@export_range(0.1, 3.0, 0.05) var barrier_open_s: float = 0.8
+## An arena's behind barrier closes once the player is this far (m) past it, along the walk, so
+## he can never be shut on the wrong side of it.
+@export_range(0.5, 6.0, 0.1) var arena_lock_inset_m: float = 2.0
+## A named spawn point nearer the player than spawn_min_player_distance_m (or with no room) is
+## waited for this long (s); then the nearest free point with the same tag is used.
+@export_range(0.0, 10.0, 0.1) var spawn_named_wait_s: float = 2.0
+@export_subgroup("Drop-offs")
+## The invisible guard along every open edge (physics layer 9): the player can never walk or be
+## knocked off, a standing enemy never walks off. Off, the player can fall (the fall rule below).
+@export var level_edge_guard: bool = true
+## Health the player loses to a fall (with the guard off), before he is put back at the arena's
+## Respawn marker.
+@export_range(0.0, 100.0, 1.0) var level_fall_damage: float = 20.0
+## Seconds the player cannot be hurt after a fall.
+@export_range(0.0, 5.0, 0.1) var level_fall_invuln_s: float = 1.5
+@export_subgroup("GO cue")
+## Seconds the "GO" arrow shows after an arena clears.
+@export_range(0.5, 6.0, 0.1) var go_cue_s: float = 2.0
+## Size of the cue (1 = the default panel).
+@export_range(0.5, 2.0, 0.05) var go_cue_size: float = 1.0
+## Seconds of one swell of the cue's breath (0 = steady).
+@export_range(0.0, 2.0, 0.05) var go_cue_pulse_s: float = 0.5
+
 @export_group("Audio")
 @export_subgroup("Mix")
 ## Volume of every sound effect, in dB: the SFX bus limiter's pre-gain, so turning it down
