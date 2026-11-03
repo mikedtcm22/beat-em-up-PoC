@@ -45,6 +45,27 @@ const FLINCHES: Array[StringName] = [
 	&"flinch_head_front", &"flinch_head_left", &"flinch_head_right", &"flinch_gut", &"flinch_legs",
 ]
 const STANCES: Array[StringName] = [PlaceholderPoses.STANCE_BOXER, PlaceholderPoses.STANCE_RELAXED]
+## F-fist-turn: the hand frame at rest that M4-plan A5 gives the fist piece (tests/test_art_contract.gd holds every Punk GLB to it): the
+## knuckles run down the arm (-Y), the palm faces the midline (+X for the left hand, -X for the right) and the thumb points forward (-Z).
+const HAND_KNUCKLES_REST := Vector3(0.0, -1.0, 0.0)
+const HAND_PALM_REST_LEFT := Vector3(1.0, 0.0, 0.0)
+const HAND_THUMB_REST := Vector3(0.0, 0.0, -1.0)
+## What the boxer's guard must show of it (rig space: +X right, +Y up, -Z forward, so the viewer facing the Punk is at -Z): the palm turned
+## in (its x toward the midline) and not toward the viewer, the thumb back toward the Punk's own face, the knuckles up. The shipped guard
+## (idle, 0 to 3 s) reads 0.93 to 0.98 in, 0.14 to 0.34 away from the viewer, the thumb 0.93 to 0.97 back, the knuckles 0.96 to 0.99 up.
+const GUARD_PALM_IN_MIN := 0.8
+const GUARD_PALM_FROM_VIEWER_MIN := 0.05
+const GUARD_THUMB_BACK_MIN := 0.85
+const GUARD_THUMB_TO_FACE_MIN := 0.3
+const GUARD_PALM_TO_FACE_MIN := 0.3
+const GUARD_KNUCKLES_UP_MIN := 0.9
+## A strike lands knuckles first (the knuckles forward) with the palm turned in (a vertical punch).
+const STRIKE_KNUCKLES_FORWARD_MIN := 0.5
+const STRIKE_PALM_IN_MIN := 0.8
+## The clips of the boxer's stance that keep the guard up (the idle, the walks, the brace, the head flinch's peak; the gut flinch folds the
+## arms down and is no guard).
+const GUARD_CLIPS: Array[Array] = [[&"idle", 0.0], [&"idle", 0.7], [&"idle", 1.3], [&"idle", 2.9], [&"walk_forward", 0.1], [&"walk_back", 0.1],
+		[&"walk_left", 0.1], [&"walk_right", 0.1], [&"brace", 0.25], [&"flinch_head_front", 0.1]]
 
 var _table: Dictionary = {}
 
@@ -901,3 +922,62 @@ func test_the_extremes_are_the_strain_tests_flexes_and_the_lying_poses() -> void
 		var bone := rig.skeleton.find_bone(&"RightHand")
 		var got := rig.skeleton.get_bone_global_pose(bone)
 		assert_almost_eq(got.origin, (expected[&"RightHand"] as Transform3D).origin, Vector3.ONE * 0.002, "%s: the rig shows the pose" % row.label)
+
+
+# --- F-fist-turn: which way the fists face --------------------------------------------------------
+
+
+## Where a hand's knuckles, palm and thumb point in rig space (the bone's pose turns the A5 frame), and the Punk's own face from it.
+func _hand_frame(rig: HumanoidRig, side: String) -> Dictionary:
+	var hand := rig.skeleton.get_bone_global_pose(rig.skeleton.find_bone(StringName(side + "Hand")))
+	var head := rig.skeleton.get_bone_global_pose(rig.skeleton.find_bone(&"Head")).origin
+	var basis := hand.basis.orthonormalized()
+	var palm_rest := HAND_PALM_REST_LEFT if side == "Left" else -HAND_PALM_REST_LEFT
+	return {"palm": basis * palm_rest, "thumb": basis * HAND_THUMB_REST, "knuckles": basis * HAND_KNUCKLES_REST,
+			"to_face": (head - hand.origin).normalized()}
+
+
+## Plays `anim` on `rig` and lets `at` seconds pass.
+func _play_at(rig: HumanoidRig, anim: StringName, at: float) -> void:
+	rig.play(anim, 0.0)
+	rig.advance(0.0)
+	rig.advance(at)
+
+
+## Game-boy's playtest of the M4 build: "his curled fingers are facing outward instead of inward when he has his hands up to fight". The
+## fist piece hung palm-outward (a right-hand fist taken for a left one), and no test could see it, because M3's box fists were symmetric.
+## With the piece held to A5 (tests/test_art_contract.gd), the guard pose is what decides which way each fist faces in the fight: the
+## palm turned in toward the face, the thumb back toward it, the knuckles up, and the palm never to the viewer.
+func test_the_boxers_guard_turns_each_palm_in_and_each_thumb_back_to_the_face() -> void:
+	var rig := _rig()
+	for row: Array in GUARD_CLIPS:
+		_play_at(rig, row[0], row[1])
+		for side: String in ["Left", "Right"]:
+			var f := _hand_frame(rig, side)
+			var palm: Vector3 = f.palm
+			var thumb: Vector3 = f.thumb
+			var in_x := palm.x * (1.0 if side == "Left" else -1.0)
+			var label := "%s %.2f s, the %s hand" % [row[0], row[1], side.to_lower()]
+			print("FIST-TURN %s: palm in %.2f, from the viewer %.2f, to the face %.2f; thumb back %.2f, to the face %.2f; knuckles up %.2f" % [
+					label, in_x, palm.z, palm.dot(f.to_face), thumb.z, thumb.dot(f.to_face), (f.knuckles as Vector3).y])
+			assert_gt(in_x, GUARD_PALM_IN_MIN, "%s: the palm is turned in toward the midline" % label)
+			assert_gt(palm.z, GUARD_PALM_FROM_VIEWER_MIN, "%s: the palm is turned away from the viewer (+Z is behind the Punk), the curled fingers do not face the lens" % label)
+			assert_gt(palm.dot(f.to_face), GUARD_PALM_TO_FACE_MIN, "%s: the palm faces the Punk's own face" % label)
+			assert_gt(thumb.z, GUARD_THUMB_BACK_MIN, "%s: the thumb points back toward the Punk, not out at the viewer" % label)
+			assert_gt(thumb.dot(f.to_face), GUARD_THUMB_TO_FACE_MIN, "%s: the thumb sits on the side next to the face" % label)
+			assert_gt((f.knuckles as Vector3).y, GUARD_KNUCKLES_UP_MIN, "%s: the knuckles are up" % label)
+
+
+## The Punk's jab (the right fist) and cross (the left) land knuckles first with the palm turned in; held to the first active frame.
+func test_the_punks_jab_and_cross_land_knuckles_first_with_the_palm_turned_in() -> void:
+	var rig := _rig()
+	for row: Array in [["punk_jab", "Right"], ["punk_cross", "Left"]]:
+		var move := _move(row[0])
+		rig.play_move(move, 0.0)
+		rig.advance(0.0)
+		rig.advance(move.startup / 60.0 + 0.02)
+		var f := _hand_frame(rig, row[1])
+		var in_x := (f.palm as Vector3).x * (1.0 if row[1] == "Left" else -1.0)
+		print("FIST-TURN %s, the %s hand at its first active frame: knuckles forward %.2f, palm in %.2f" % [row[0], row[1].to_lower(), -(f.knuckles as Vector3).z, in_x])
+		assert_gt(-(f.knuckles as Vector3).z, STRIKE_KNUCKLES_FORWARD_MIN, "%s: the %s fist lands knuckles first" % [row[0], row[1].to_lower()])
+		assert_gt(in_x, STRIKE_PALM_IN_MIN, "%s: the %s palm is turned in" % [row[0], row[1].to_lower()])

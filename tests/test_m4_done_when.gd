@@ -103,11 +103,13 @@ const AXIS_OUTSIDE_RATCHET_PLAYER := 0
 ## A9: the Punk at the 1 m acts' poses: cells that differ (today 6.5% at the cross); the lens share is held at the bar.
 const FRAMING_RATCHET_PUNK_DIFFER := 0.07
 ## A9: the Punk's wrist cuff follows the concept (F-cuff, the lead's call), so the jab and the cross at +8 degrees miss the 4 pp bar:
-## their share gaps are ratcheted (worst today over the four GLBs 4.78 and 5.09 pp, plus 0.3; test_art_punk's FRAMING_SHARE_RATCHET_PP).
+## their share gaps are ratcheted (worst over the four GLBs 4.78 and 5.09 pp, plus 0.3; test_art_punk's FRAMING_SHARE_RATCHET_PP). F-fist-turn
+## (the fists turned palm-in): the jab's gap is 5.25-5.32 pp, so its ratchet is 0.056, with the art's own share held at STRIKE_ART_SHARE_MIN.
 const FRAMING_RATCHET_PUNK_SHARE := {
-	"punk_jab pitch +8": 0.051,
+	"punk_jab pitch +8": 0.056,
 	"punk_cross pitch +8": 0.054,
 }
+const STRIKE_ART_SHARE_MIN := 0.27
 ## A9: the hero over the 15 first-person poses is held to test_art_player's own HERO_* constants (HERO_DIFFER_MAX, HERO_SHARE_MAX,
 ## HERO_NEAREST_MAX_M: read, not copied, so this row cannot be looser than the test it mirrors): cells that differ (today 8.4%, the
 ## block), the lens share's gap (8.4 points, the block), the nearest the art stands to the lens against its proxies (8.1 cm, the front kick).
@@ -850,6 +852,8 @@ func test_a9_the_art_frames_like_its_proxies_at_the_one_metre_poses_and_in_the_p
 			poses += 1
 			assert_gt(cmp.art_share, 0.03, "%s: the art fills the view at 1 m" % label)
 			assert_lte(absf(cmp.art_share - cmp.proxy_share), share_bar, "%s: the lens share is within %.1f points of the proxies'" % [label, share_bar * 100.0])
+			if FRAMING_RATCHET_PUNK_SHARE.has("%s pitch %+.0f" % [move.id if move != null else &"idle", pitch]):
+				assert_gt(cmp.art_share, STRIKE_ART_SHARE_MIN, "%s: the striking art itself keeps at least %.0f%% of the view" % [label, STRIKE_ART_SHARE_MIN * 100.0])
 			assert_lte(cmp.differ_share, FRAMING_RATCHET_PUNK_DIFFER, "%s: cells that differ stay under the ratchet (%.1f%%)" % [label, cmp.differ_share * 100.0])
 	_note("A9", worst_differ <= FRAMING_DIFFER and worst_share <= FRAMING_SHARE, "punk, %d poses at 1 m: worst cells differ %.1f%% (bar 3%%, ratchet %.1f%%, margin %.1f points), worst lens share gap %.1f points (bar 4; the jab and the cross at +8 degrees are ratcheted exactly, F-cuff)" % [
 			poses, worst_differ * 100.0, FRAMING_RATCHET_PUNK_DIFFER * 100.0, (FRAMING_RATCHET_PUNK_DIFFER - worst_differ) * 100.0,

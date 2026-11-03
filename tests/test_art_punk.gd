@@ -44,10 +44,15 @@ const FRAMING_NEAREST_M := 0.02
 ## primitive fist-and-forearm boxes, so the strikes at +8 degrees miss the plan's 4 pp lens-share bar. Each missing pose's share gap
 ## is a ratchet at its worst figure over the four GLBs (jab 4.78, cross 5.09 pp) plus 0.3 pp; the plan's bar is still printed as GATE.
 ## Every other pose is held at 4 pp. (Before F-cuff the flange held all of them: worst 3.8 pp.)
+## F-fist-turn: the fists were turned palm-in (the right fist is the generated model as it came and the left its mirror, M4-calls/
+## F-fist-turn.md), which moves the jab's gap to 5.25-5.32 pp over the four GLBs (the cross's to 5.17-5.32, inside its 5.4): the jab's
+## ratchet 0.051 -> 0.056 (5.32 plus 0.3, rounded up). The twin on the visible path is STRIKE_ART_SHARE_MIN: the loosened bar cannot
+## hide the art shrinking, the striking art keeps filling its share of the view (jab 28.1-28.2%, cross 27.6-27.8%).
 const FRAMING_SHARE_RATCHET_PP := {
-	"punk_jab pitch +8": 0.051,
+	"punk_jab pitch +8": 0.056,
 	"punk_cross pitch +8": 0.054,
 }
+const STRIKE_ART_SHARE_MIN := 0.27
 const ANCHOR_M := 0.02
 ## F-punk's rules: no edge of the art in view grows more than this over its skinned rest length in the 1 m acts' poses (the
 ## visible-stretch test), a held victim stays this far from the lens, no in-view vertex of a striking Punk is nearer than FPView.NEAR.
@@ -345,6 +350,8 @@ func test_the_framing_of_every_glb_against_its_proxies_at_the_one_metre_poses_is
 				# cell count and the nearest figure at the jab, cross and shove are the gate's, and those two poses' shares are
 				# ratcheted, FRAMING_SHARE_RATCHET_PP):
 				assert_lte(absf(cmp.art_share - cmp.proxy_share), share_bar, "%s: the lens share differs by at most %.1f pp" % [label, share_bar * 100.0])
+				if FRAMING_SHARE_RATCHET_PP.has("%s pitch %+.0f" % [pose.label, pitch]):
+					assert_gt(cmp.art_share, STRIKE_ART_SHARE_MIN, "%s: the striking art itself keeps at least %.0f%% of the view" % [label, STRIKE_ART_SHARE_MIN * 100.0])
 				if pose.move == null:
 					assert_lte(cmp.differ_share, FRAMING_DIFFER, "%s: at most 3%% of the cells differ at idle" % label)
 				if cmp.differ_share > FRAMING_DIFFER:
@@ -358,6 +365,124 @@ func test_the_framing_of_every_glb_against_its_proxies_at_the_one_metre_poses_is
 		print("ART-PUNK A9 %s: worst differ %.1f%%, worst lens share %.1f pp, nearest %.1f cm%s" % [
 				row.name, worst_differ * 100.0, worst_share * 100.0, worst_nearest * 100.0,
 				("  GATE: %d poses miss: %s" % [gate.size(), "; ".join(gate.slice(0, 4))]) if not gate.is_empty() else "  (meets A9)"])
+
+
+# --- F-fist-turn: which way the drawn fists face in the guard ----------------------------------------
+
+
+## The skin slot of the fingerless gloves' bare fingers and thumb (palette/shared.json skin_light), and the bars of the next test. The
+## fist is the faces with every vertex at least FIST_WEIGHT on a Hand bone. Its bare skin is the curled fingers (they curl into the palm,
+## so the skin's centroid sits on the palm side) and the thumb pad, the skin faces on the front half of the fist in the hand's rest frame.
+## What the shipped art shows in the guard (the idle at 0.3 s, all four GLBs, both fists): the curled fingers 2.8 cm toward the face and
+## 1.8 to 1.9 cm away from the viewer of the fist's own centroid, the thumb pad 3.0 to 3.1 cm toward the face. The art before
+## F-fist-turn (the palm outward, run on the GLBs of e04bf75) read -0.3 to -0.4 cm toward the face (the fingers on the outside) and 0.9 cm
+## away from the viewer, the thumb pad 1.3 to 1.5 cm: the fingers sat on the outer face of the fist, where the lens saw them.
+const SKIN_SLOT := 6
+const FIST_WEIGHT := 0.9
+const GUARD_FINGERS_TO_FACE_MIN_M := 0.01
+const GUARD_FINGERS_FROM_VIEWER_MIN_M := 0.0
+const GUARD_THUMB_TO_FACE_MIN_M := 0.005
+const THUMB_FRONT_M := 0.01
+
+
+## One fist of the drawn art in the guard, by side ("Left" or "Right"): {fist, fingers, thumb} the area-weighted centroids (rig space) of its
+## faces, its bare-skin faces and its bare-skin faces on the front of the hand (the thumb); Vector3.INF where there are none.
+func _fist_centroids(mi: MeshInstance3D, rig: HumanoidRig, side: String) -> Dictionary:
+	var arrays: Array = (mi.mesh as ArrayMesh).surface_get_arrays(0)
+	var rest: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var uv: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV]
+	var index: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+	var bones: PackedInt32Array = arrays[Mesh.ARRAY_BONES]
+	var weights: PackedFloat32Array = arrays[Mesh.ARRAY_WEIGHTS]
+	var hand := side + "Hand"
+	var skin: Skin = mi.skin
+	var wrist := Vector3.ZERO
+	var elbow := Vector3.ZERO
+	var hand_bind := -1
+	for i: int in skin.get_bind_count():
+		var bind := String(skin.get_bind_name(i))
+		if bind == hand:
+			wrist = skin.get_bind_pose(i).affine_inverse().origin
+			hand_bind = i
+		elif bind == side + "LowerArm":
+			elbow = skin.get_bind_pose(i).affine_inverse().origin
+	var unswing := Basis(Quaternion((wrist - elbow).normalized(), Vector3.DOWN))
+	var posed := SkinnedView.skin_vertices(mi, rig)
+	var on_hand := PackedByteArray()
+	on_hand.resize(rest.size())
+	for v: int in rest.size():
+		var w := 0.0
+		for k: int in 4:
+			if bones[v * 4 + k] == hand_bind:
+				w += weights[v * 4 + k]
+		on_hand[v] = 1 if w >= FIST_WEIGHT else 0
+	var area := 0.0
+	var fist := Vector3.ZERO
+	var skin_area := 0.0
+	var fingers := Vector3.ZERO
+	var thumb_area := 0.0
+	var thumb := Vector3.ZERO
+	var fist_front_z := 0.0
+	var fist_area_rest := 0.0
+	for t: int in index.size() / 3:
+		var i0 := index[t * 3]
+		var i1 := index[t * 3 + 1]
+		var i2 := index[t * 3 + 2]
+		if on_hand[i0] == 0 or on_hand[i1] == 0 or on_hand[i2] == 0:
+			continue
+		var r0 := unswing * (rest[i0] - wrist)
+		var r1 := unswing * (rest[i1] - wrist)
+		var r2 := unswing * (rest[i2] - wrist)
+		var a := (posed[i1] - posed[i0]).cross(posed[i2] - posed[i0]).length() * 0.5
+		fist_front_z += (r0.z + r1.z + r2.z) / 3.0 * a
+		fist_area_rest += a
+	if fist_area_rest < 0.001:
+		return {"fist": Vector3.INF, "fingers": Vector3.INF, "thumb": Vector3.INF}
+	fist_front_z /= fist_area_rest
+	for t: int in index.size() / 3:
+		var i0 := index[t * 3]
+		var i1 := index[t * 3 + 1]
+		var i2 := index[t * 3 + 2]
+		if on_hand[i0] == 0 or on_hand[i1] == 0 or on_hand[i2] == 0:
+			continue
+		var a := (posed[i1] - posed[i0]).cross(posed[i2] - posed[i0]).length() * 0.5
+		var c := (posed[i0] + posed[i1] + posed[i2]) / 3.0
+		var rz := (unswing * (rest[i0] - wrist)).z + (unswing * (rest[i1] - wrist)).z + (unswing * (rest[i2] - wrist)).z
+		fist += c * a
+		area += a
+		if int(floorf(uv[i0].x * 32.0)) + 32 * int(floorf(uv[i0].y * 2.0)) == SKIN_SLOT:
+			fingers += c * a
+			skin_area += a
+			if rz / 3.0 < fist_front_z - THUMB_FRONT_M:
+				thumb += c * a
+				thumb_area += a
+	return {"fist": fist / area, "fingers": fingers / skin_area if skin_area > 0.0 else Vector3.INF,
+			"thumb": thumb / thumb_area if thumb_area > 0.0 else Vector3.INF}
+
+
+## Game-boy's playtest: "his curled fingers are facing outward instead of inward when he has his hands up to fight". The twin, on the
+## drawn mesh, of the contract's palm test and the guard pose test: skin the art in the guard (the idle) and ask where the bare curled
+## fingers and the thumb pad sit relative to the fist, toward the Punk's own face (the head bone) or the viewer (-Z of the rig).
+func test_in_the_guard_each_fists_curled_fingers_and_thumb_are_on_the_side_of_the_punks_face() -> void:
+	for row: Dictionary in VARIANTS:
+		var rig := _rig(_art(row))
+		_pose(rig, &"idle", 0.3)
+		var mi := rig.art_meshes()[0]
+		var head := rig.skeleton.get_bone_global_pose(rig.skeleton.find_bone(&"Head")).origin
+		for side: String in ["Left", "Right"]:
+			var c := _fist_centroids(mi, rig, side)
+			assert_ne(c.fingers, Vector3.INF, "%s: the %s fist has bare fingers" % [row.name, side])
+			assert_ne(c.thumb, Vector3.INF, "%s: the %s fist has a thumb pad" % [row.name, side])
+			if c.fingers == Vector3.INF or c.thumb == Vector3.INF:
+				continue
+			var to_face: Vector3 = (head - (c.fist as Vector3)).normalized()
+			var fingers: Vector3 = (c.fingers as Vector3) - (c.fist as Vector3)
+			var thumb: Vector3 = (c.thumb as Vector3) - (c.fist as Vector3)
+			print("ART-PUNK FIST-TURN %s %s, in the guard: the curled fingers %+.1f cm toward the face, %+.1f cm away from the viewer; the thumb pad %+.1f cm toward the face" % [
+					row.name, side, fingers.dot(to_face) * 100.0, fingers.z * 100.0, thumb.dot(to_face) * 100.0])
+			assert_gt(fingers.dot(to_face), GUARD_FINGERS_TO_FACE_MIN_M, "%s %s: the curled fingers face the Punk's own face" % [row.name, side])
+			assert_gt(fingers.z, GUARD_FINGERS_FROM_VIEWER_MIN_M, "%s %s: and not the viewer (+Z is behind the Punk)" % [row.name, side])
+			assert_gt(thumb.dot(to_face), GUARD_THUMB_TO_FACE_MIN_M, "%s %s: the thumb sits on the inside, next to the face" % [row.name, side])
 
 
 # --- A10: the marks stick -------------------------------------------------------------------------
