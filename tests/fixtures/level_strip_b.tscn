@@ -134,15 +134,28 @@ solid = false
 
 [node name="SkylineA" type="Node3D" parent="Geometry"]
 script = ExtResource("2_level_bloc")
-position = Vector3(19, 4.25, -14)
-size = Vector3(14, 19.5, 32)
+position = Vector3(32, 3.25, -13)
+size = Vector3(12, 17.5, 14)
 solid = false
 
 [node name="SkylineB" type="Node3D" parent="Geometry"]
 script = ExtResource("2_level_bloc")
-position = Vector3(17, 1.25, -47)
-size = Vector3(10, 13.5, 26)
+position = Vector3(51, 0.75, -4)
+size = Vector3(14, 12.5, 20)
 look = &"accent"
+solid = false
+
+[node name="SkylineC" type="Node3D" parent="Geometry"]
+script = ExtResource("2_level_bloc")
+position = Vector3(40, 4.75, -35)
+size = Vector3(12, 20.5, 18)
+look = &"accent"
+solid = false
+
+[node name="SkylineD" type="Node3D" parent="Geometry"]
+script = ExtResource("2_level_bloc")
+position = Vector3(26, -0.25, -35)
+size = Vector3(8, 10.5, 10)
 solid = false
 
 [node name="Barriers" type="Node3D" parent="."]
