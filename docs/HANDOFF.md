@@ -4,6 +4,33 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-03: Game-boy passed M4's done-when ("punks look good - let's say passes at 1m"); merging PR #4 waits on his word; an AI change queued
+- **Game-boy (2026-11-03, session chat), after playing the build with both hand fixes:** "punks look good - let's say passes at 1m."
+  - That is the done-when's yes (SPEC §12 M4; Part B's pause 2).
+  - **PR #4 is not merged yet.** The lead asked him whether to merge it now, with the M4 departures and calls approved and the open items carried forward. At M3 his sign-off also approved the departures.
+- **His AI note, for a future pass (not art):** "I don't think we need to have *EVERY* enemy's strategy be trying to get behind you before they attack. The player should see the basic street-punks (for example) try to just square up with the player and attack head-on...or maybe from a slight angle (I think circling to attack from behind is a bit higher-level enemy tactic — maybe just one sneaky enemy-type in particular who does that)."
+  - **What it changes:** SPEC §7 already says the Street Punk "approaches head-on" and the Kicker "actively circles to the player's blind side". What sends every type behind is M3's director:
+    - its "Spread" rule (posture slots evenly all round);
+    - `blind_spot_priority` 1.0 (out-of-view enemies jump the token queue);
+    - each grunt taking any slot.
+  - **So it's a change to SPEC §7's director rules, by his word:**
+    - the grunts (Punk, Pipe Thug, Bruiser) posture in a front arc and attack head-on or from a slight angle;
+    - the Kicker stays the one sneaky type that circles behind;
+    - the boss keeps its own logic.
+  - **Effects to re-measure:** M3's readability numbers and the rear warning's tests, since fewer attacks come from behind.
+  - **Proposed timing:** a first, small package of Milestone 5, before the encounter plan, because the plan's arenas depend on how crowds stand.
+- **Next on the roadmap (SPEC §12):**
+  - **M5, level blockout:** first an encounter plan for Game-boy's approval (a pause). Then the graybox level from `reference/dd2-nes-mission1/`, with arena locks, spawns, pickups, hazards and the boss arena. Done when the level plays start to boss.
+  - **M6, full art and audio:** every enemy and the boss, environment modules, set dressing, final SFX. Done when no placeholder assets remain.
+  - **M7, polish and playtest build:** the perf target on an RTX 3060, bugs, the Windows export. Done when Game-boy plays start to finish and answers SPEC §1's four questions.
+- **Carried forward from M4:**
+  - the four FP feel switches (defaults off);
+  - the Tripo licence: the account type must be known before M6 generates many models;
+  - per-swatch damage-mark strength and the orange-on-cap blood (M6);
+  - the hero's arm knob (call 19);
+  - the hero-select menu;
+  - the quiet-machine perf A/B and the RTX 3060 measurement (M7).
+
 ### 2026-11-02 22:00 CDT: both hand fixes merged (1615/1615, 0 errors); waiting on Game-boy again
 - **The Punk's fists** (`m4/f-fist-turn`, `694ddb0`, call 27):
   - The T9 generated fist is a right-hand fist, and the first build mirrored it as if it were a left, so both hands hung palm outward. `pipe_fist.make_side` now honours `parts.fists.generated.source_side` ("Right" for the Punk).
