@@ -2,9 +2,14 @@
 
 Imported by blender_parts.py (Blender 5.x, headless; never the Blender MCP). `parts.fists.source = "generated"` makes the
 hands of the body a Tripo-generated fist instead of the procedural block of blender_parts.fist_geometry. The generated
-model is a LEFT fist hanging from its wrist (cuff at the top, knuckles at the bottom, thumb toward the front, back of the
-hand toward the character's left) that Tripo delivers facing +X like any character (the same yaw the body uses), with its own
-texture. The chain does to it what it does to the body:
+model is a fist hanging from its wrist (cuff at the top, knuckles at the bottom, thumb toward the front) that Tripo delivers
+facing +X like any character (the same yaw the body uses), with its own texture. Which HAND it is was measured, not assumed
+(F-fist-turn, M4-calls/F-fist-turn.md): in the chain's frame the curled fingers and the thumb's pad sit on the -X side of the
+block, the padded plate and the knuckle ridges on the +X side, the thumb toward -Z. A hand hanging with its thumb forward has
+its palm toward the midline (A5), so palm toward -X with the thumb forward is a RIGHT fist: `generated.source_side` says
+"Right", the right fist is the model as it came and the LEFT one is its mirror in x. (The first F-punk build took it for a left
+fist, so each fist hung with its palm outward and, raised in the guard, showed the curled fingers to the viewer.) The chain does
+to it what it does to the body:
 
 	1. import (untrusted data), flatten to world space, turn to face +Y (Blender), weld the importer's split vertices
 	   (UVs live on the loops), triangulate;
@@ -14,7 +19,7 @@ texture. The chain does to it what it does to the body:
 	3. the cuff above the strap is stretched up so it reaches `cuff_over_m` above the arm's cut and flared so its rim is
 	   `cuff_margin_m` wider than the WRIST's radius (the median radius of the cut's boundary, not its 90th percentile and not
 	   the source's cuff: the arm must pass through the cuff and never poke out), the block is left as drawn;
-	4. the right fist is the left one mirrored in x (winding reversed);
+	4. the other hand is the model mirrored in x (winding reversed, UVs likewise);
 	5. weights: 100% Hand, the cuff ramps to LowerArm (smoothstep from `cuff_below_wrist_m` below the wrist to the cuff's top).
 The fist's texture is packed with the body's into one image (`pack_textures`), so the palette step labels both from one
 image and the detail mask (A18) is baked from both. Every number is in pipeline.json `parts.fists`; the measured strap levels
@@ -141,11 +146,12 @@ def make_side(src, side, box, cut, p_hand, d, gen, pf):
 	names = pc.bone_names()
 	co = src.co.copy()
 	tris = src.tris.copy()
-	if side == "Right":
+	mirror = side != str(gen.get("source_side", "Left"))
+	if mirror:
 		co[:, 0] = -co[:, 0]
 		tris = tris[:, ::-1]
 	uv = src.uv.copy()
-	if side == "Right":
+	if mirror:
 		uv = uv[:, ::-1, :]
 	z0, z1 = float(co[:, 2].min()), float(co[:, 2].max())
 	height = z1 - z0

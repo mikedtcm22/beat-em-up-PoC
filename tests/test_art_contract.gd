@@ -1106,6 +1106,77 @@ func test_the_fists_fill_the_fist_box() -> void:
 				assert_between(ext[axis] / float(sz[axis]), 1.0 - FIST_EXTENT_TOLERANCE, 1.0 + FIST_EXTENT_TOLERANCE, "%s: %s fist extent on axis %d is %.3f against %.3f" % [path, side, axis, ext[axis], sz[axis]])
 
 
+## F-fist-turn (the lead's note on Game-boy's playtest: "his curled fingers are facing outward instead of inward when he has his
+## hands up to fight"). A5 says each fist hangs knuckles down the arm (-Y), palm to the midline, thumb forward (-Z), and the A5 box is
+## symmetric, so the extents and the centroid above cannot see which way a hand faces. The Punk's fist is a generated glove, a fingerless
+## glove on a clenched hand: its bare fingers and thumb are the skin-coloured faces, curled into the palm, and its padded back is the dark
+## side. So the area-weighted centroid of the fist's skin faces, taken from the centroid of the whole fist in the hand's table frame
+## (un-swung as in A5), says where the palm is (x: toward the midline is +x for the left hand, -x for the right) and where the thumb and
+## the fingers' front are (z: forward is -z). The first F-punk build had both fists with the palm OUTWARD (the model is a right-hand fist
+## and was taken for a left one): -2.0 cm and -1.5 cm on the left. The bars are a centimetre and a centimetre, the shipped about 2 cm.
+const FIST_PALM_MIN_M := 0.01
+const FIST_THUMB_FRONT_MIN_M := 0.008
+
+
+## The skin faces' centroid minus the whole fist's, in the hand's table frame, per side ("Left" or "Right") of the GLB at `path`.
+func _fist_skin_offset(path: String, side: String) -> Vector3:
+	var body := _body(path)
+	var joints := _joints(path)
+	var arrays: Array = body.arrays
+	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var uv: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV]
+	var index: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+	var hand := side + "Hand"
+	var basis := Basis(Quaternion((joints[hand] - joints[side + "LowerArm"]).normalized(), Vector3.DOWN))
+	var wrist: Vector3 = joints[hand]
+	var hand_w := PackedFloat32Array()
+	hand_w.resize(verts.size())
+	for v: int in verts.size():
+		hand_w[v] = _weight_on(arrays, body.bind_names, v, hand)
+	var area := 0.0
+	var centroid := Vector3.ZERO
+	var skin_area := 0.0
+	var skin_centroid := Vector3.ZERO
+	for t: int in index.size() / 3:
+		var i0 := index[t * 3]
+		var i1 := index[t * 3 + 1]
+		var i2 := index[t * 3 + 2]
+		if hand_w[i0] < 0.9 or hand_w[i1] < 0.9 or hand_w[i2] < 0.9:
+			continue
+		var p0 := basis * (verts[i0] - wrist)
+		var p1 := basis * (verts[i1] - wrist)
+		var p2 := basis * (verts[i2] - wrist)
+		var a := (p1 - p0).cross(p2 - p0).length() * 0.5
+		var c := (p0 + p1 + p2) / 3.0
+		area += a
+		centroid += c * a
+		if _slot_of(uv[i0]) == SLOT_SKIN:
+			skin_area += a
+			skin_centroid += c * a
+	if area < 0.001 or skin_area < 0.0005:
+		return Vector3.INF
+	return skin_centroid / skin_area - centroid / area
+
+
+func test_the_punks_fists_hang_palm_to_the_midline_and_thumb_forward() -> void:
+	for path: String in _glbs():
+		if _id_of(path) != "punk":
+			continue
+		var f := _facts(path)
+		if not f.ok:
+			continue
+		for side: String in ["Left", "Right"]:
+			var toward_midline := 1.0 if side == "Left" else -1.0
+			var off := _fist_skin_offset(path, side)
+			assert_ne(off, Vector3.INF, "%s: the %s fist has bare skin on it" % [path, side])
+			if off == Vector3.INF:
+				continue
+			gut.p("ART-CONTRACT fist %s %s: the bare fingers sit %+.1f mm toward the midline, %+.1f mm along the bone toward the knuckles, %+.1f mm toward the front of the hand" % [
+					path.get_file(), side, off.x * toward_midline * 1000.0, -off.y * 1000.0, -off.z * 1000.0])
+			assert_gt(off.x * toward_midline, FIST_PALM_MIN_M, "%s: the %s fist's palm (the curled bare fingers) is toward the midline, not outward (A5)" % [path, side])
+			assert_gt(-off.z, FIST_THUMB_FRONT_MIN_M, "%s: the %s fist's thumb and finger pads are toward the front, -Z (A5)" % [path, side])
+
+
 ## The first-person split: the hidden part is the upper body (everything at or above the waist cut), and the visible body has
 ## no open loop left (every cut closed by an inward cap), welded by position.
 func test_the_first_person_split_is_closed_and_above_the_waist() -> void:
