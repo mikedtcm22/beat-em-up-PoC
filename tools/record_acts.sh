@@ -25,6 +25,7 @@ for spec in "$@"; do
 		ffmpeg -loglevel error -y -i "$out/$slug/bot.avi" -vf "fps=${SHEET_FPS:-2},scale=480:-1,tile=5x4" \
 			"$out/$slug/sheets/overview_%02d.png" < /dev/null >> "$out/$slug.sheets.out" 2>&1
 	fi
-	errors=$(grep -cE 'SCRIPT ERROR|SHADER ERROR|^ERROR' "$out/$slug/bot.log" 2>/dev/null || echo "?")
+	errors=$(grep -cE 'SCRIPT ERROR|SHADER ERROR|^ERROR' "$out/$slug/bot.log" 2>/dev/null || true)
+	errors="${errors:-?}"
 	echo "$slug exit=$code errors=$errors"
 done
