@@ -64,14 +64,14 @@
 		"impact_body_stagger|boxer|1.278": "7bef4358c06551fa51da7587b67f5fdef87f5e78b7da3c4e91cff68583e1179f",
 		"impact_body_stagger|relaxed|1.0": "c24f1d38c9907099a931260a2318e6b4dedf2e24363080ca24c013a05659079c",
 		"impact_body_stagger|relaxed|1.278": "c7396198175ef83c5475c56d4c4ca2355d7aafb7ee190cea53cd2bb3d5c143d1",
-		"jab_1|boxer|1.0": "220c23be4ea9a0a442cd0285ea09536d289a2b325156e6eb3180d4b94804b3c8",
-		"jab_1|boxer|1.278": "badb1a5851dd85e0c71c135961ef97a8696813370240387699d76dd140fd063c",
-		"jab_1|relaxed|1.0": "5890b8b9c6f8c0fd9fb04cdb0f35f1c409ae96865d674527f2a0feaccc0140b5",
-		"jab_1|relaxed|1.278": "dc1a71ec5d83cc8ef7ef9b2c5a8746cc1f9e9b428c728e76e3de79af42a3b3f1",
-		"jab_2|boxer|1.0": "f8f2bb52ddfb4e2bd9d9a7217f1e6b5aa229d08730ec0abd1480e49eb7e9ae0a",
-		"jab_2|boxer|1.278": "51ba395cad7d1bd59a96a687fa80909792f63b74f6d602781fe13b4ffb1d4d82",
-		"jab_2|relaxed|1.0": "c205d1750446ec26a807b25289b03a8d1dc6245cd20aa23b9c92b273f9cd4de5",
-		"jab_2|relaxed|1.278": "9b255833f56c941344a77c3e9c5ac7064f1acaf27e7faed10725b3052cb455f7",
+		"jab_1|boxer|1.0": "4e593fff84cee68df117d90f3224377bb6df43e60082ea46853bdc0447f0ef33",
+		"jab_1|boxer|1.278": "e6feb86239d8c0c90608e5206bfdc4f5ba8a4a0295d492ef47cdfae6fb359bff",
+		"jab_1|relaxed|1.0": "d1df01e811136d57bff55a241165614f4717870d31a5e6bb14c28488e2110fc1",
+		"jab_1|relaxed|1.278": "058d8745722b67f8e357fdd6f20464d5feb385ac792443006618fa79f86ba5f3",
+		"jab_2|boxer|1.0": "c031b1b3685a8dd0ffc1de13c72575bb797b312cd3872353a1e564c51482902b",
+		"jab_2|boxer|1.278": "11a0a9e98c49ab4f0fb841a81d516034baed053b818e0e4699de2ab07a344415",
+		"jab_2|relaxed|1.0": "49d042dfef58838d72e09a2a3a07c7e4402bb86112bad9954cb65d310c0123c9",
+		"jab_2|relaxed|1.278": "b2e3953bec0751f4827b8df26b0e1e9efda8ea949fcf4cdc2ae98d974e262e16",
 		"kicker_jump_kick|boxer|1.0": "e8071c90ea12f3061c71fca09860f273786aa7180dc2276f280f2c5d00c1b7de",
 		"kicker_jump_kick|boxer|1.278": "2e1a55717e69bab4171fd64439d13990c80294448e670a6bc47800ac69567cc8",
 		"kicker_jump_kick|relaxed|1.0": "436899dd4be553a397f5ee36ce4f3258b33e47565e22d2303f7057ad6be88aee",
@@ -352,6 +352,8 @@
 		"walk_right|relaxed|1.278": "9a007becd6f6ff16247cecb6901552afa87a1c844c1865b9c5af4105923edc0f"
 	},
 	"notes": {
+		"jab_1": "M4 call 28 (Game-boy's own request on 2026-11-02, a departure from A20's frozen active-frame poses, not from the SPEC; M4-calls/F-punch-turn.md): the player's straight punches turn the fist over, so at contact it lands palm down with the curled fingers toward the ground instead of standing on its edge with the fingers curled inward. jab_1's left arm: the lower arm and the hand are rolled about the forearm's long axis (the wind-up key 22.5 degrees, the strike key 90), nothing else changed; the fist point moves 7.1 mm at most. The Street Punk's cross and the sparring dummy's jab, which reuse these strikes, are built without the turn and keep their hashes. The M3 hashes it replaced: boxer|1.0 220c23be4ea9, boxer|1.278 badb1a5851dd, relaxed|1.0 5890b8b9c6f8, relaxed|1.278 dc1a71ec5d83.",
+		"jab_2": "M4 call 28 (Game-boy's own request on 2026-11-02, a departure from A20's frozen active-frame poses, not from the SPEC; M4-calls/F-punch-turn.md): the player's straight punches turn the fist over, so at contact it lands palm down with the curled fingers toward the ground instead of standing on its edge with the fingers curled inward. jab_2's right arm: the lower arm and the hand are rolled about the forearm's long axis (the wind-up key 22.5 degrees, the strike key 90), nothing else changed; the fist point moves 7.1 mm at most. The Street Punk's cross and the sparring dummy's jab, which reuse these strikes, are built without the turn and keep their hashes. The M3 hashes it replaced: boxer|1.0 f8f2bb52ddfb, boxer|1.278 51ba395cad7d, relaxed|1.0 c205d1750446, relaxed|1.278 9b255833f56c.",
 		"stagger_back": "M4 call 24 (the lead's, final review finding final-v2-01; a departure from A20's frozen-clip list, not from the SPEC): stagger_back_a and stagger_back_b are re-posed like stagger_right (upper arms about 40 degrees off the body then 28, elbows folded to 90-110 degrees, forearms forward and raised), so the skinned Punk's arms never go straight and horizontal, the rig's bind pose, after the third knee, on a grab release and in the long take. Only the arm tracks changed. The M3 hashes it replaced: boxer|1.0 5d4f1e7a896c, boxer|1.278 a770c027ff85, relaxed|1.0 49ca3e4c03f6, relaxed|1.278 b0aa3f3f405b."
 	}
 }
