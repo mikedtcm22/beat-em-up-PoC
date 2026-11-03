@@ -30,7 +30,8 @@ A first-person beat-em-up proof of concept in Godot 4.7.2 (GDScript with static 
 - Instead, create worktrees yourself, for example `git worktree add .worktrees/<name> -b <branch> <base>` (`.worktrees/` is git- and Godot-ignored).
 - Tell each agent its absolute worktree path and to `cd` there for every command. Each worktree needs its own `godot --headless --import --quit` first.
 - Give each agent disjoint files to own. Merge the branches yourself afterwards.
-- Pattern used throughout: build, then an adversarial review (mechanics, plus feel judged from captures), then a fix pass.
+- Pattern used throughout: build, then the lead's own look at the captures, then a lean adversarial review (mechanics, plus feel judged from captures), then one fix pass.
+- **Which model and effort for which role, and the process rules that keep usage down** (from Milestone 5 on): docs/HANDOFF.md, "Model, effort and process rules from Milestone 5 on". The runners are `tools/workflows/build.js` (Sonnet builders) and `tools/workflows/review.js` (Opus visual lenses, Sonnet code lenses and skeptics). `tools/record_acts.sh` records a round's acts once, for every agent to share.
 
 ## Git
 - Work happens on a milestone branch, `m<N>/<topic>`, with one PR per milestone into `main`. **Never merge a milestone PR until Game-boy signs it off.**

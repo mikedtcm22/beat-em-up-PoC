@@ -4,6 +4,19 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-03 09:30 CDT: the usage rules for M5 on, the new runners, and branch m5/level-blockout; M5 starts in a fresh session
+- **Game-boy asked** for usage advice for the coming milestones ("get as far through milestones with this week's usage limit as we can ... while maintaining the current quality"), approved it, and asked for it written in. It's also in a fresh-session prompt, so M5 starts in a new chat.
+- **Written in:**
+  - the section "Model, effort and process rules from Milestone 5 on" (below the old usage rules), with M4's measured costs;
+  - CLAUDE.md's "Parallel work" pointer to it;
+  - the takeover prompt, rewritten for M5.
+- **New tools:**
+  - `tools/workflows/build.js`: Sonnet builders at high effort, an image budget, self-contained reading lists, and milestone-neutral `milestone` and `summary` args.
+  - `tools/workflows/review.js`: Opus visual lenses at high, `model: "sonnet"` code lenses, one Sonnet medium skeptic per medium or high finding (lows to `for_lead_triage`), an optional lead partition (`partition: false`), at most 3 fix packages, and `captures_dir`.
+  - `tools/record_acts.sh`: record a round's acts once for every agent.
+- **Branch:** `m5/level-blockout`, cut from `main` at `eb08e26`. Its first commit is this setup, and the working checkout is on it.
+- **Next:** Game-boy pastes the takeover prompt (below, "Takeover prompt") into a new session, with Ultracode on if he wants it. That session plans M5 with the new structure. This old session should then be renamed (for example "Beat-em-up: M4 session (done)") so the watcher reaches the new one.
+
 ### 2026-11-03 08:55 CDT: Game-boy signed off Milestone 4; PR #4 merged; M5 waits for his go (he'll turn on Ultracode first)
 - **Game-boy (session chat):** "I think with those notes, you can also go ahead and merge PR 4 now so we can move on. Let me know before you're going to get fully started with the next milestone, though: I'll want to turn on Ultracode so you can use sub-agents."
   - **PR #4 merged into `main`.** README's M4 departures now read "accepted by Game-boy with M4's sign-off", and the two looks are carried forward to M6.
@@ -2016,6 +2029,41 @@ RESUME-PROMPT-END
 - **Concurrency:** with the premium seat, a workflow may run up to about 6 heavy agents at once while the window is under 60%, and at most two above that.
 - **The handoff's last step** is the resume task (above), so the work restarts by itself after the reset.
 
+**Model, effort and process rules from Milestone 5 on** (Game-boy, 2026-11-03: get as far through the milestones on one week's limit as possible, at M4's quality). The runners `tools/workflows/build.js` and `tools/workflows/review.js` have these as their defaults; copy their args pattern into `docs/reviews/M<N>/`.
+
+| Role | Model and effort | Note |
+| --- | --- | --- |
+| Lead (the working session) | Opus, high | A fresh session at each milestone start: HANDOFF carries everything, and a long lead context is re-read every turn. |
+| Milestone plan | One Opus planner at high, then one Opus critic at medium | Extra or max effort only for the plan's final synthesis. No planner panel. |
+| Visual review lenses (art, motion, feel, judged from images) | Opus, high | Where Opus clearly beats Sonnet. At most 3 lenses a round. |
+| Code, test and pipeline review lenses | Sonnet, high | Set `model: "sonnet"` on the lens. |
+| Builders and fixers | Sonnet, high | As in M4. They found the inside-out legs and the right-hand fist. |
+| Skeptics | Sonnet, medium | Only for medium and high findings. Lows come back in `for_lead_triage`, and the lead promotes any with `verdicts`. |
+| Partition | The lead inline (`partition: false`), or Sonnet medium | |
+| Evidence, clips, docs | Sonnet, medium, or the lead's own scripted commands | |
+| Usage gates and the watcher | Haiku, low | |
+
+Extra or max effort is for two things only: the plan's synthesis, and a diagnosis two agents have already failed on.
+
+**Process rules:**
+1. **The lead's look comes first.** Before any review round, the lead looks at full-resolution stills of what changed, beside the concept or the spec. In M4 that caught the cuffs and the shades at almost no cost.
+2. **One review round, then one fix wave, then a targeted re-check** of only the changed items, not a full re-score. Use 3 lenses (for example: what the player sees; motion and feel; code, tests and pipeline), not 6.
+3. **Record once.** The lead runs `tools/record_acts.sh <dir> "<slug>|<act title>" ...` once per round and passes the folder as `captures_dir`. Reviewers and builders judge from it and record only what's missing.
+4. **Image budget** (`image_budget`, default 25 for builders and 30 for reviewers). Scan contact sheets at about 1000 px wide; read a full-resolution crop only for the item being judged.
+5. **Self-contained briefs.** Each package names its own reading list (`read`, plus the round's short `read_first`). Agents search rather than read whole documents. Keep the milestone plan short, with each package's brief in one place.
+6. **Batch small fixes into one fixer.** Every parallel fixer re-reads the same documents. Use at most 3 fix packages a round.
+7. **Ultracode** (when Game-boy turns it on for sub-agents) doesn't lift these caps: workflows stay inside them unless he says otherwise.
+8. **The weekly limit is account-wide.** Between 2026-10-27 evening and 10-29 it went from about 50% to 90% while no M4 agent ran. Check `get_usage` before each launch, not only at milestone start.
+
+**Measured in M4** (sub-agent tokens; the 5-hour window on this seat):
+
+| Work | Tokens | 5-hour window |
+| --- | --- | --- |
+| A Sonnet builder or fixer | 0.25-0.9M (most 0.5-0.7M) | about 4-7% |
+| An Opus visual reviewer, recording and reading full-resolution stills | about 0.8-1.2M | about 5-7% |
+| The six-lens round (5 Opus reviewers, 21 Sonnet skeptics, a partition) | 6.3M | about 36% |
+| The one-reviewer re-score (13 skeptics) | 1.6M | about 9% |
+
 If no watcher is running, for example after an account switch, start one with that prompt. A new account's watcher reports that account's usage.
 
 **The working session must be titled "Beat-em-up: working session"** so the watcher and the resume task can find it. A new working session renames itself to that first, with `mcp__ccd_session_mgmt__set_session_title`.
@@ -2028,34 +2076,43 @@ If no watcher is running, for example after an account switch, start one with th
 Game-boy pastes this into a new account's session. Keep the "Next steps" list current at every handoff; the rest changes rarely.
 
 ```
-You're taking over an in-progress Godot 4.7.2 project: a first-person beat-em-up proof of concept at /Users/arachne/repos/beat-em-up-PoC (GitHub: mikedtcm22/beat-em-up-PoC). I'm Game-boy, the project owner. Other Claude accounts did the work so far and handed off at their usage limits. We switch accounts at every usage limit, so treat the repo as the only source of truth. Work happens on branch m4/art-pipeline and the worktrees under .worktrees/.
+You're the new working session for a Godot 4.7.2 project: a first-person beat-em-up proof of concept at /Users/arachne/repos/beat-em-up-PoC (GitHub: mikedtcm22/beat-em-up-PoC). I'm Game-boy, the owner. Milestones 1-4 are signed off and merged into main. Earlier sessions did that work and handed off; the repo is the source of truth. This session runs Milestone 5 (SPEC §12): the level blockout.
 
 Start by doing these, in order:
-1. Rename this session to "Beat-em-up: working session" (mcp__ccd_session_mgmt__set_session_title). The usage watcher finds you by that title.
-2. Read CLAUDE.md, then docs/HANDOFF.md (live status and exact resume steps; the newest entry is at the top). Then read docs/milestones/M4-plan.md (its header says how to read it: the amendments in Part A win over Part C) and docs/milestones/M4-look-bible.md. Read docs/ARCHITECTURE.md and docs/SPEC.md §5, §6, §10 and §12 before touching code.
-3. If no usage watcher is running (list your sessions), start one exactly as docs/HANDOFF.md describes under "Usage watcher" (Haiku, low effort, self-paced /loop, shares this checkout, its prompt verbatim).
-4. Check usage (mcp__ccd_session_mgmt__get_usage) before launching any workflow or agent.
+1. Rename this session to "Beat-em-up: working session" (mcp__ccd_session_mgmt__set_session_title); the usage watcher finds you by that title.
+2. Read CLAUDE.md, then the newest entries of docs/HANDOFF.md (newest at the top) and its section "Model, effort and process rules from Milestone 5 on". Then read docs/milestones/M5-inputs.md (my calls for M5) and docs/SPEC.md §7, §9 and §12. Look at the level reference images in reference/dd2-nes-mission1/. Search docs/ARCHITECTURE.md for what you need rather than reading it whole.
+3. If no usage watcher is running (list your sessions), start one exactly as docs/HANDOFF.md describes under "Usage watcher".
+4. Check usage (mcp__ccd_session_mgmt__get_usage) before every launch.
 
-USAGE RULES:
-- The account is a premium seat (5x the old limits): a heavy Opus agent costs about 3% of a 5-hour window; see docs/HANDOFF.md's cost table.
-- At most 4 Godot-bound builders at once (8 GB of RAM); up to about 6 heavy agents while the window is under 60%.
-- Work up to the 90% handoff; don't stop early. Check get_usage before each launch and size the launch to the headroom left below 90%. If the next phase or milestone doesn't fit (say at 70%), spend a little of the headroom splitting it into a first task that fits, run it with wip commits, and hand off at 90%. Details: docs/HANDOFF.md, "Usage rules for the working session".
-- Prefer one agent per work package doing review, then fix, over many reviewers per package.
-- The watcher checks every 30 minutes below 70%, every 15 up to 85% and every 5 above. It tells you to halt and hand off at 90%; the handoff's last step is the scheduled resume task (docs/HANDOFF.md, "Resume after a limit").
+HOW TO SPEND THE WEEK (I want to get as far through the milestones as this week's limit allows, at M4's quality):
+- Follow HANDOFF's "Model, effort and process rules from Milestone 5 on" table:
+  - Opus at high effort for you, the plan and the visual review lenses;
+  - Sonnet at high for builders, fixers and the code/test/pipeline lenses;
+  - Sonnet at medium for skeptics, only on medium and high findings;
+  - Haiku at low for gates.
+  - Extra effort only for the plan's final synthesis.
+- Use the runners tools/workflows/build.js and tools/workflows/review.js (milestone: 5); keep args files in docs/reviews/M5/.
+- Your own look first, then at most 3 review lenses, one fix wave, and a targeted re-check of only what changed.
+- Record once per round with tools/record_acts.sh and pass it as captures_dir. Keep image budgets. Write self-contained briefs with their own reading lists, and batch small fixes into one fixer.
+- Ultracode (if I turn it on) doesn't lift those caps.
+- Work up to the watcher's 90% handoff; size each launch to the headroom below 90%.
 
-Next steps (Milestone 4; details are in docs/HANDOFF.md, newest entry first):
-- M1-M3 are signed off and merged. M4 (SPEC §12: the art pipeline proof) runs on branch m4/art-pipeline. Its toolchain is ready: Blender 5.2.2 LTS, the Blender MCP connected to my open Blender, and working TRIPO_API_KEY and GEMINI_API_KEY in .env. Mixamo is skipped for now.
-- The M4 plan is written (docs/milestones/M4-plan.md). Phase 1 is built and merged: S0, P1-tools, L0-bench, P1-toon, P1-chain, P1-skin, P1-fx and P1-post. The smoke Punk (concept A) is a GLB in assets/export/characters/punk/. Tripo spend is in assets/source/tripo_ledger.jsonl (stay at or under 800 credits without asking; the plan stops at 750).
-- Builders run through docs/reviews/M4/workflow-build.js, one Workflow run per package (args files in docs/reviews/M4/args-*.json; the newest HANDOFF entry names what is running and what is next). Reviews and the slice gate run through docs/reviews/M4/workflow-review.js. After each merge: godot --headless --import --quit, godot --headless -s tools/gen_default_preset.gd, then tools/run_tests.sh.
-- Order from here: SL-int (args-SL.json), the slice gate (two Opus lenses into docs/milestones/M4-slice-gate.md), phase 2 (F-motion, F-look, F-punk, F-player-art, F-player-int), phase 3 (P3-int, the final review, fixes), then the PR (not merged) and the DM. F-punk and F-player-art need my concept pick: check my DM (Slack channel D0AQUKX5DB6) at every phase boundary.
-- Run it without pausing, except for the concept pick (2-4 concepts each for the Street Punk and for the player's arms and legs: DM me the images on Slack, Michael, U0AQMKKBL93) and the final judgement of the Punk at 1 m. At the end, DM me a run command that opens the game in Godot, plus a digest of the key judgement calls with alternatives. If something blocks you on me, DM me at once.
-- I turned ultracode on (2026-10-24) and asked for multi-agent workflows: use Workflow scripts for substantive work (Opus plans and reviews, Sonnet codes). Don't put fine grey-block feel questions to me.
+MILESTONE 5:
+- Work on branch m5/level-blockout: it's already cut from main, and its first commit is the M5 setup (the usage rules, the runners, tools/record_acts.sh). One PR into main at the end; never merge it until I've played it and signed it off.
+- Plan with one Opus planner and one Opus critic, into a short docs/milestones/M5-plan.md where each package's brief is self-contained.
+- The first package is the attack-arc director change in M5-inputs.md:
+  - a per-archetype attack arc fixed when the enemy engages, after about a 0.5 s grace period;
+  - a full arc means waiting back from the fray inside it;
+  - wider arcs for trickier types and for later variants.
+  - Re-measure M3's readability metrics and the rear warning's tests.
+- Then the encounter plan, which needs my approval (SPEC §12): DM it to me on Slack (Michael, U0AQMKKBL93, DM D0AQUKX5DB6). It should show the difficulty progression level by level, with easy narrow-arc grunts early and mostly all-angle enemies later. Ask me the open rear-warning question in M5-inputs.md with it.
+- Then the graybox level from the reference (SPEC §9): arena locks, spawns, pickups, hazards and the boss arena. Done when the level plays from start to boss.
+- At the end, give me a run command that opens the game in Godot (godot --path /Users/arachne/repos/beat-em-up-PoC) as a code block; GitHub links 404 for me. Add a digest of the key judgement calls, each with the alternative not taken.
 
 Ground rules:
-- Never merge a milestone PR into main until I've played it and signed it off.
-- Any change to the spec needs my approval. In M3, don't stop for it: build the reading that departs least, keep the spec's value reachable (a tunable) where you can, and list it in README as "decided by default, for Game-boy's ruling at sign-off".
-- Commit early on branches (prefix "wip:" for unfinished work), push often, and update docs/HANDOFF.md at every phase boundary.
-- When the watcher warns, do the handoff in CLAUDE.md immediately. Stop running workflows and agents, commit and push everything, save any unfinished agents' findings into the repo, and update HANDOFF.md, including this prompt's "Next steps". Then create the scheduled resume task ("Resume after a limit"). DM me only if the resume needs me.
-- Judge visual and feel work from recorded captures (Movie Maker via tools/capture_combos.sh or tests/bot/vfx_bot.tscn), not just tests, and show me what you saw.
+- Any change to the spec needs my approval. Build the reading that departs least, keep the spec's value reachable as a tunable, and list it in README as decided by default, for my ruling at sign-off.
+- Commit early on branches ("wip:" for unfinished work), push often, and update docs/HANDOFF.md at every phase boundary.
+- When the watcher warns, do the handoff in CLAUDE.md at once, including the resume task. DM me only if something blocks on me.
+- Judge visual and feel work from recorded first-person captures, not just tests, and show me what you saw.
 - Keep me posted briefly: what's done, what's running, what you need from me.
 ```
