@@ -4,7 +4,7 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
-### 2026-11-02 22:40 CDT: both hand fixes merged (1615/1615, 0 errors); waiting on Game-boy again
+### 2026-11-02 22:00 CDT: both hand fixes merged (1615/1615, 0 errors); waiting on Game-boy again
 - **The Punk's fists** (`m4/f-fist-turn`, `694ddb0`, call 27):
   - The T9 generated fist is a right-hand fist, and the first build mirrored it as if it were a left, so both hands hung palm outward. `pipe_fist.make_side` now honours `parts.fists.generated.source_side` ("Right" for the Punk).
   - The four Punk GLBs are rebuilt, and new palm and thumb tests cover rest and the guard. No clip moved.
