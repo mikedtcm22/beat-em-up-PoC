@@ -1,0 +1,67 @@
+{
+  "milestone": 5,
+  "summary": "the level blockout: Game-boy's attack arcs in the director, the level kit, then the graybox Mission 1 level from the reference, start to boss",
+  "base": "m5/level-blockout",
+  "read_first": [
+    "docs/milestones/M5-plan.md §1 (only the decisions your brief names) and §2 'Tuning' and 'File ownership'"
+  ],
+  "arch_heading": "## Level blockout (Milestone 5)",
+  "captures_dir": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m5-kit/captures/kit",
+  "image_budget": 25,
+  "concurrency": 1,
+  "note": "Phase 1b: ARC and KIT are merged into m5/level-blockout (1678/1678 tests). KIT landed the level kit as documented in ARCHITECTURE.md '### Level kit (KIT)' and docs/milestones/M5-calls/KIT.md: LevelRoot (group level_root) API player, director, spawner, nav_region, sections, player_start, player_yaw_deg, enemies(), arenas(), current_arena(), route_points(), first_route_point(arena), next_target(arena) (INF after the last), start_at_arena(index) (index 0 stands the player at Start, later ones at the arena's first route point). The strip is tests/fixtures/level_strip.tscn (two sections, two arenas). captures_dir is KIT's own scratch recording of the strip (its scratch bot was captures/kitbot/strip_bot.gd in KIT's worktree, never committed; look at it for ideas, don't copy it blindly). In KIT's recording the controls-help panel and the combat-log panel cover much of the first-person view: make sure your acts show the plain first-person view the crowd bot shows (find how crowd_bot.gd hides or skips them) so Game-boy and the reviewers judge the level, not the panels. tools/record_acts.sh already has the lead's fallback that cuts plain overview sheets (sheets/overview_NN.png) for acts without LOOK-MARK lines: keep it when you add BOT_SCENE.",
+  "packages": [
+    {
+      "key": "ARC",
+      "section": "§3 'ARC: Attack arcs in the director'",
+      "est": 8,
+      "read": [
+        "docs/milestones/M5-inputs.md",
+        "docs/milestones/M5-plan.md §1 D1-D6, §2 'Enemies', 'Tuning', 'File ownership'",
+        "docs/ARCHITECTURE.md '### Director', '### Rear warning and the F3 AI overlay', '### Instruments: readability probe, autopilot, warning oracle'",
+        "game/enemies/enemy_director.gd (header, _track_waiting, _grant, _assign_slots, _flank_angle, _snap_slot)",
+        "game/enemies/enemy_actor.gd (grep wants_token|grant_token|set_slot|_tick_posture|_enter_recover|_wakes_in_place|has_token_priority)",
+        "game/autoload/tuning_data.gd lines 577-724",
+        "tests/bot/readability_probe.gd (grep R5|R6|R9|LIMITS)",
+        "tests/test_m3_done_when.gd (header)",
+        "tests/test_enemy_director.gd (grep blind)"
+      ],
+      "note": "Record your own acts (arc_acts.gd) with tools/capture_bot.sh res://tests/bot/crowd_bot.tscn ...; compare 'Arcs: mixed six' against the baseline 'fight' sheets in captures_dir: Punks should square up in front instead of spreading round. Put the before/after readability numbers in M5-calls/ARC.md."
+    },
+    {
+      "key": "KIT",
+      "section": "§3 'KIT: Level kit and the test strip'",
+      "est": 8,
+      "read": [
+        "docs/milestones/M5-plan.md §1 D7-D13, §2 (all but 'Enemies')",
+        "docs/SPEC.md §9 (lines 262-286)",
+        "docs/ARCHITECTURE.md '## Physics and visual layers (`CombatTypes`)', '### Crowd room, navigation and waves', '### Pipe Thug and the dropped pipe'",
+        "game/level/crowd_room.gd (_ready, spawn_point_list)",
+        "game/level/room_kit.gd (function list, add_box, spawn_player)",
+        "game/level/nav_baker.gd",
+        "game/level/encounter_spawner.gd (header, _physics_process, _begin_wave, _spawn_next, valid_point_indices, spawn_adds)",
+        "game/level/encounter_table.gd",
+        "game/actors/combat_actor.gd (_set_ghost and its callers, grep)",
+        "game/weapons/weapon.gd (_ready, drop)",
+        "game/ui/pickup_cue.gd"
+      ],
+      "note": "Your Movie Maker look of the strip: take one of capture_bot.sh's machine slots by recording one at a time and never beside another of your Godot processes. The GO cue is presentation: it only subscribes to CombatEvents and reads state."
+    },
+    {
+      "key": "BOT",
+      "section": "§3 'BOT: Level-run bot'",
+      "est": 4,
+      "read": [
+        "docs/milestones/M5-plan.md §2 'Level kit', 'File ownership'",
+        "docs/ARCHITECTURE.md '### Instruments: readability probe, autopilot, warning oracle', '### Level kit (KIT)'",
+        "tests/bot/crowd_bot.gd (_room_scene, _run, fight, hold_back, the log lines, ACTS_DIR)",
+        "tests/bot/autopilot.gd (exports)",
+        "tools/record_acts.sh",
+        "tools/capture_bot.sh"
+      ]
+    }
+  ],
+  "only": [
+    "BOT"
+  ]
+}
