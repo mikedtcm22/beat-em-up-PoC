@@ -43,3 +43,7 @@ Each call: the decision / an alternative not taken / why.
 - `test_m3_contracts.gd`: the catalog's id list gains `punk_veteran`.
 - `test_slice_crowd.gd` (not in ARC's ownership table; the three tests that assert M3's spread: six Punks round a standing player with R9 "outside the view", "the posture slots are spread all round the player", "a fought mixed six keeps posturing and the Kickers behind"): each sets `director_even_spread = true` as its first line, assertions unchanged, and the file resets the switch in `before_each`/`after_each`. Twin on the visible path for the new default: `tests/test_attack_arcs.gd` and the arc acts. Reported as a request below.
 - `test_m3_contracts.gd` (`ENEMY_SUBGROUPS`) and `test_tuning_panel.gd` (the heading list): "Attack arcs" added after "Director" (the plan's own new subgroup).
+
+## Full run
+
+`tools/run_tests.sh`: 1645 tests, 1645 passing, 115006 asserts, 298 s, no SCRIPT ERROR, SHADER ERROR or ERROR line. "Arcs:" acts (recorded with `capture_bot.sh`, 0 script errors): hard rows R1, R2, R3, R10, R11 ok in all four; R5, R5w, R6, R6w, R7, R13 ok; R9 60% of 5 in the mixed six, n/a elsewhere.
