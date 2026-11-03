@@ -613,7 +613,7 @@ const TUNABLES := {
 
 ## The subgroups of "Enemies", in order (the F1 headings).
 const ENEMY_SUBGROUPS: PackedStringArray = [
-	"Wind-up", "Posture", "Navigation", "Director", "Waves", "Street Punk", "Kicker", "Pipe Thug",
+	"Wind-up", "Posture", "Navigation", "Director", "Attack arcs", "Waves", "Street Punk", "Kicker", "Pipe Thug",
 	"Enemy grabs", "Bruiser", "Boss",
 ]
 
@@ -719,7 +719,7 @@ func test_the_catalog_lists_only_scenes_that_exist() -> void:
 	var ids: Array[StringName] = []
 	for entry: Dictionary in EnemyCatalog.ENTRIES:
 		ids.append(entry.id)
-	assert_eq(ids, [&"dummy", &"punk", &"kicker", &"thug", &"bruiser", &"boss"] as Array[StringName])
+	assert_eq(ids, [&"dummy", &"punk", &"punk_veteran", &"kicker", &"thug", &"bruiser", &"boss"] as Array[StringName])
 	for entry: Dictionary in EnemyCatalog.ENTRIES:
 		assert_true(String(entry.scene).begins_with("res://game/enemies/"), "%s: a scene under game/enemies" % entry.id)
 		assert_true(String(entry.scene).ends_with(".tscn"))

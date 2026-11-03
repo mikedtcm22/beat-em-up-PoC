@@ -64,6 +64,7 @@ func after_all() -> void:
 func before_each() -> void:
 	Tuning.reset_to_default()
 	Tuning.set_value(&"waves_enabled", false)
+	Tuning.set_value(&"director_even_spread", false)  # a Debug value: reset_to_default() leaves it
 	TimeController.clear()
 	GameInput.menu_open = false
 
@@ -71,6 +72,7 @@ func before_each() -> void:
 func after_each() -> void:
 	GameInput.menu_open = false
 	Tuning.reset_to_default()
+	Tuning.set_value(&"director_even_spread", false)
 	TimeController.clear()
 
 
@@ -195,6 +197,7 @@ func _closest_pair(enemies: Array[EnemyActor]) -> float:
 
 
 func test_six_punks_round_a_standing_player_keep_the_rules_and_the_hard_metrics() -> void:
+	Tuning.set_value(&"director_even_spread", true)  # M5: these assert M3's spread; the arcs have tests/test_attack_arcs.gd
 	var seen := await _six_punk_run()
 	assert_lte(seen.most_attacking, Tuning.data.attacker_cap, "never more than attacker_cap in WINDUP or ATTACK")
 	# The crowd attacks in turns (P1-engage): a holder waits squared up on the ring while the one in
@@ -241,6 +244,7 @@ func _posturing(enemies: Array[EnemyActor]) -> Array[EnemyActor]:
 
 
 func test_the_posture_slots_are_spread_all_round_the_player() -> void:
+	Tuning.set_value(&"director_even_spread", true)  # M5: these assert M3's spread; the arcs have tests/test_attack_arcs.gd
 	# The director seats every enemy at an even share of the 360 degrees, snapped onto the navmesh
 	# (a slot inside a crate or the car is moved a step round the circle), so with six enemies the
 	# widest gap between two neighbouring slots is the even share plus each one's jitter and a
@@ -371,6 +375,7 @@ func _fought_mixed_six(seed_value: int) -> Dictionary:
 
 
 func test_a_fought_mixed_six_keeps_posturing_and_the_kickers_behind_without_walling_the_lens() -> void:
+	Tuning.set_value(&"director_even_spread", true)  # M5: these assert M3's spread; the arcs have tests/test_attack_arcs.gd
 	# The Kickers' blind-side seats used to turn the whole ring and bump the others' seats at every
 	# reslot: the other five were sent across the player and walked at his nose (a mixed fight posed
 	# 0.4-0.8 of 5.8 against the six Punks' 1.4-1.8, and an enemy in APPROACH covered over half the

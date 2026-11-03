@@ -23,11 +23,15 @@ extends Node
 ## - answers may_start_windup() with the pacing rule (director_min_windup_gap_s between two
 ##   wind-up starts, readability metric R2), and windup_eta_s() with how soon it would say yes, so
 ##   a holder waits squared up on the ring and steps in only when its go is near;
-## - gives every live enemy a posture slot: the enemies that are not Kickers evenly spaced around the
-##   player, the arrangement turned as little as possible from where they stand (a newcomer
-##   weighs little against one already seated), each on its own radius of the ring, snapped onto
-##   the navmesh when there is one; each Kicker has a seat of its own as near directly behind the
-##   look as it can be, and the others never move for it.
+## - gives every live enemy a seat (Milestone 5, Game-boy's attack arcs; docs/ARCHITECTURE.md "Attack
+##   arcs"): each enemy has an arc of the circle round the player (its archetype's or variant's,
+##   Tuning "Attack arcs") centred on its line, the player's look when it engaged (held after
+##   engage_commit_s). Inner seats lie on the posture ring inside the arc, director_seat_gap_deg apart,
+##   and only an inner-seated enemy is granted a token; the rest stand on the wait ring, still inside
+##   their arc, until an inner seat frees. A Kicker keeps its seat as near directly behind the look as
+##   it can be. A seat is on the navmesh, on the player's floor and reachable. With the Debug switch
+##   `director_even_spread` on, M3's rule instead: the enemies that are not Kickers evenly spaced all
+##   round the player, turned as little as possible from where they stand.
 ##
 ## A subclass that defines its own script (the test fixture tests/fixtures/stub_director.gd)
 ## decides nothing on its own: the loop only runs for this script itself.
@@ -45,8 +49,14 @@ const _CLOCK_SLACK_S := 0.001
 const _COST_SLACK_DEG := 0.000001
 ## Resolution of the per-enemy name hash that picks its jitter and radius.
 const _HASH_BUCKETS := 4096
-## The step (degrees) of the search for a Kicker's seat outward from directly behind the look.
+## The step (degrees) of the search for a Kicker's seat outward from directly behind the look, and
+## of the search for a free angle inside an arc.
 const _FLANK_SEARCH_DEG := 5.0
+## The whole circle (degrees).
+const _FULL_DEG := 360.0
+## Seat kinds (EnemyActor.seat_kind).
+const _INNER := &"inner"
+const _WAIT := &"wait"
 
 var _rng := RandomNumberGenerator.new()
 ## The player as of this tick (for _committed()).
@@ -70,6 +80,18 @@ var _slots: Dictionary = {}
 var _claims: Dictionary = {}
 ## Enemy -> how many times it reported stalling since its last token: each nudges its angle.
 var _stalls: Dictionary = {}
+## The engage book (D1): enemy -> {engaged: bool (now), has_line: bool (ever), committed: bool (past
+## the grace), line: float (world yaw, degrees), since: float (clock of the last engagement)}.
+## Driven by the enemy's AI state, never by a camera.
+var _engage: Dictionary = {}
+## Enemy -> its seat's kind (&"inner" or &"wait"), the arc slide (degrees) it was seated with, and
+## the line it was seated for.
+var _kinds: Dictionary = {}
+var _slides: Dictionary = {}
+var _seat_lines: Dictionary = {}
+## Per reslot: seat point reachable (flat key -> bool), and arc center -> slide (degrees).
+var _reach_cache: Dictionary = {}
+var _slide_cache: Dictionary = {}
 ## Clock of the last wind-up start (any enemy); -INF before the first.
 var _last_windup_s: float = -INF
 ## Clock of the last hit that landed on the player (a blocked one does not count); -INF before.
@@ -258,6 +280,52 @@ func debug_waiting() -> Array[EnemyActor]:
 	return _live(_waiting)
 
 
+## The wait ring's nearest and furthest distance from the player (m).
+func debug_wait_ring() -> Vector2:
+	return Vector2(Tuning.data.wait_ring_min_m, maxf(Tuning.data.wait_ring_max_m, Tuning.data.wait_ring_min_m))
+
+
+## `enemy`'s center line as a world yaw in degrees (the bearing convention of ViewGeometry with a look
+## of 0), `NAN` when it is not engaged (and always with director_even_spread on, which has none).
+func debug_line_of(enemy: EnemyActor) -> float:
+	var row: Dictionary = _engage.get(enemy, {})
+	return float(row.line) if bool(row.get("engaged", false)) else NAN
+
+
+## The center of the arc `enemy` was seated for: its line plus the slide of a slid arc (see
+## debug_arc_slid()), `NAN` when it is not engaged. The enemy keeps its strafing inside this.
+func debug_arc_center_of(enemy: EnemyActor) -> float:
+	var line := debug_line_of(enemy)
+	return line + float(_slides.get(enemy, 0.0)) if not is_nan(line) else NAN
+
+
+## `enemy`'s seat kind: &"inner", &"wait", or &"" when it has no seat.
+func debug_seat_kind(enemy: EnemyActor) -> StringName:
+	return _kinds.get(enemy, &"")
+
+
+## True once `enemy`'s line is fixed: engaged and past the grace of engage_commit_s.
+func is_committed_line(enemy: EnemyActor) -> bool:
+	var row: Dictionary = _engage.get(enemy, {})
+	return bool(row.get("engaged", false)) and bool(row.get("committed", false))
+
+
+## True when `enemy`'s arc was slid round (the player faces a wall or the drop, so no point inside
+## its arc is on his floor) to the nearest stretch with room.
+func debug_arc_slid(enemy: EnemyActor) -> bool:
+	return absf(float(_slides.get(enemy, 0.0))) > 0.0
+
+
+## True when the blind-spot priority applies to `enemy` (D5): its arc reaches the blind spot (half the
+## arc past rear_warning_angle_deg), or `blind_spot_needs_wide_arc` is off, or director_even_spread
+## is on (M3: any enemy).
+func blind_spot_eligible(enemy: EnemyActor) -> bool:
+	var tuning := Tuning.data
+	if tuning.director_even_spread or not tuning.blind_spot_needs_wide_arc:
+		return true
+	return enemy.attack_arc_deg() * 0.5 > tuning.rear_warning_angle_deg
+
+
 # --- The loop ---
 
 
@@ -275,6 +343,8 @@ func _step(dt: float) -> void:
 	_take_back(not (held or closed))
 	# Slots first: an enemy granted a token this tick already has the slot it backs off to.
 	if player:
+		if not Tuning.data.director_even_spread:
+			_track_engagement(player, members)
 		_update_slots(player, members)
 	if not held and not closed and not player.is_invulnerable():
 		_grant(player, members)
@@ -287,7 +357,7 @@ func _scrub() -> void:
 		if not is_instance_valid(_holders[i]):
 			_holders.remove_at(i)
 		i -= 1
-	for book: Dictionary in [_granted_s, _wait_since, _slots, _claims, _stalls]:
+	for book: Dictionary in [_granted_s, _wait_since, _slots, _claims, _stalls, _engage, _kinds, _slides, _seat_lines]:
 		for key: Variant in book.keys():
 			if not is_instance_valid(key):
 				book.erase(key)
@@ -419,15 +489,25 @@ func _grant(player: PlayerCharacter, members: Array[EnemyActor]) -> void:
 		if not _holders.has(enemy) and _committed(enemy):
 			active += 1
 	var angle := Tuning.data.rear_warning_angle_deg
+	var arcs := not Tuning.data.director_even_spread
 	while not _waiting.is_empty() and (cap == 0 or active < cap):
-		var pick: EnemyActor = _waiting[0]
-		var blind := false
-		var blind_ones: Array = []
+		# Only an inner-seated enemy is granted a token (arcs on), but for one that just woke in place
+		# inside its arc (the boss), which is served first.
+		var pool: Array[EnemyActor] = []
 		var waking: EnemyActor = null
 		for waiter: EnemyActor in _waiting:
-			if waking == null and waiter.has_token_priority():
+			var wakes := waiter.has_token_priority() and (not arcs or _in_own_arc(waiter, player))
+			if waking == null and wakes:
 				waking = waiter
-			if player.is_outside_view(waiter.global_position, angle):
+			if wakes or not arcs or _kinds.get(waiter, &"") == _INNER:
+				pool.append(waiter)
+		if pool.is_empty():
+			break
+		var pick: EnemyActor = pool[0]
+		var blind := false
+		var blind_ones: Array[EnemyActor] = []
+		for waiter in pool:
+			if blind_spot_eligible(waiter) and player.is_outside_view(waiter.global_position, angle):
 				blind_ones.append(waiter)
 		if waking != null:
 			# An enemy that just got up beside the player (the boss) is served before the queue and
@@ -445,6 +525,15 @@ func _grant(player: PlayerCharacter, members: Array[EnemyActor]) -> void:
 		active += 1
 
 
+## True when `enemy` stands inside its own arc: within half the arc of its center (line plus slide).
+func _in_own_arc(enemy: EnemyActor, player: PlayerCharacter) -> bool:
+	var center := debug_arc_center_of(enemy)
+	if is_nan(center):
+		return true
+	var bearing := ViewGeometry.bearing_deg(0.0, player.global_position, enemy.global_position)
+	return absf(wrapf(bearing - center, -180.0, 180.0)) <= enemy.attack_arc_deg() * 0.5
+
+
 # --- Posture slots (spread) ---
 
 
@@ -452,7 +541,7 @@ func _grant(player: PlayerCharacter, members: Array[EnemyActor]) -> void:
 ## changed (a spawn, a death) or when something asked. Every live enemy has a seat, token holders
 ## included, so an attack neither moves the others nor loses its enemy its place.
 func _update_slots(player: PlayerCharacter, members: Array[EnemyActor]) -> void:
-	for book: Dictionary in [_slots, _claims]:
+	for book: Dictionary in [_slots, _claims, _kinds, _slides, _seat_lines]:
 		for key: Variant in book.keys():
 			if not members.has(key):
 				book.erase(key)
@@ -463,7 +552,7 @@ func _update_slots(player: PlayerCharacter, members: Array[EnemyActor]) -> void:
 	var origin := player.global_position
 	var moved := _slot_origin == Vector3.INF \
 			or Vector2(origin.x - _slot_origin.x, origin.z - _slot_origin.z).length() > Tuning.data.director_reslot_move_m
-	if not (_reslot_pending or moved or _clock_s >= _reslot_at_s or ids != _slot_ids):
+	if not (_reslot_pending or moved or _clock_s >= _reslot_at_s or ids != _slot_ids or _line_drifted(members)):
 		return
 	_slot_ids = ids
 	_slot_origin = origin
@@ -472,7 +561,18 @@ func _update_slots(player: PlayerCharacter, members: Array[EnemyActor]) -> void:
 	_assign_slots(player, members)
 
 
-## Spread `set` around the player. The enemies that are not Kickers share the 360 degrees evenly, the
+## Seat `set` round the player: by arcs (Milestone 5), or, with director_even_spread on, M3's even
+## spread.
+func _assign_slots(player: PlayerCharacter, set: Array[EnemyActor]) -> void:
+	_reach_cache.clear()
+	_slide_cache.clear()
+	if Tuning.data.director_even_spread:
+		_assign_even(player, set)
+	else:
+		_assign_arcs(player, set)
+
+
+## M3's spread of `set` around the player. The enemies that are not Kickers share the 360 degrees evenly, the
 ## arrangement turned the least it can be from where they sit (an enemy that has a seat from last
 ## time sits there, wherever it stands now: a crowd that walks past each other, or an attacker at
 ## the player's nose, does not reshuffle the ring; a new one sits where it stands but weighs only
@@ -480,7 +580,7 @@ func _update_slots(player: PlayerCharacter, members: Array[EnemyActor]) -> void:
 ## enemy already on it the seat across the player). A Kicker is no part of that arrangement: it
 ## takes a seat of its own as near directly behind the look as it can be (_flank_angles()), so the
 ## look turning moves the Kickers and nobody else.
-func _assign_slots(player: PlayerCharacter, set: Array[EnemyActor]) -> void:
+func _assign_even(player: PlayerCharacter, set: Array[EnemyActor]) -> void:
 	var n := set.size()
 	if n == 0:
 		return
@@ -541,7 +641,361 @@ func _assign_slots(player: PlayerCharacter, set: Array[EnemyActor]) -> void:
 		var slot := _snap_slot(player, seat[i] + offsets[i], radii[i])
 		_claims[set[i]] = seat[i]
 		_slots[set[i]] = slot
-		set[i].set_slot(slot)
+		_kinds[set[i]] = _INNER
+		_slides.erase(set[i])
+		set[i].set_slot(slot, _INNER)
+
+
+# --- Attack arcs (Milestone 5) ---
+
+
+## The engage book (D1). An enemy engages on its first tick in POSTURE (it reached its seat) or in
+## ENGAGE, or on its first APPROACH tick within arc_engage_radius_m of the player (at least
+## wait_ring_max_m + 0.5, so no wait seat lies outside it), and again when it is back in one of
+## those from an attack, its recovery or a reaction (a hit, a knockdown...). From an engagement
+## until engage_commit_s later its line is the player's look; after that the line is a fixed world
+## yaw until the next engagement. An approaching enemy keeps its engagement at any distance; ENTER,
+## WINDUP, ATTACK, RECOVER, REACT and KO end it (the old line and seat are kept until the next one).
+func _track_engagement(player: PlayerCharacter, members: Array[EnemyActor]) -> void:
+	var tuning := Tuning.data
+	var radius := maxf(tuning.arc_engage_radius_m, tuning.wait_ring_max_m + 0.5)
+	var look := rad_to_deg(player.look_yaw)
+	for enemy in members:
+		var row: Dictionary = _engage.get(enemy, {})
+		if row.is_empty():
+			row = {engaged = false, has_line = false, committed = false, line = look, since = -INF}
+			_engage[enemy] = row
+		var state := enemy.ai_state
+		var near := _flat_distance(enemy.global_position, player.global_position) <= radius
+		var eligible := state == EnemyActor.AiState.POSTURE or state == EnemyActor.AiState.ENGAGE \
+				or (state == EnemyActor.AiState.APPROACH and near)
+		if eligible and not row.engaged:
+			row.engaged = true
+			row.has_line = true
+			row.committed = false
+			row.since = _clock_s
+			row.line = look
+		elif row.engaged and not eligible and state != EnemyActor.AiState.APPROACH:
+			row.engaged = false
+		if row.engaged and not row.committed:
+			row.line = look
+			if _clock_s - float(row.since) >= tuning.engage_commit_s - _CLOCK_SLACK_S:
+				row.committed = true
+
+
+## True when an engaged enemy's line has moved more than director_slot_retry_deg from the line its seat
+## was made for (the player turned inside the grace, or it engaged anew): the seats are reassigned.
+func _line_drifted(members: Array[EnemyActor]) -> bool:
+	if Tuning.data.director_even_spread:
+		return false
+	for enemy in members:
+		var row: Dictionary = _engage.get(enemy, {})
+		if not bool(row.get("engaged", false)) or not _seat_lines.has(enemy):
+			continue
+		if absf(wrapf(float(row.line) - float(_seat_lines[enemy]), -180.0, 180.0)) > Tuning.data.director_slot_retry_deg:
+			return true
+	return false
+
+
+## Seat `set` by arcs (D3, D4). Per enemy that is not a Kicker: its arc is `attack_arc_deg()` wide
+## about its line (the player's look, for one that has never engaged), slid round when the player's floor
+## has no room inside it. Inner seats (the posture ring, inside the arc, director_seat_gap_deg
+## apart, on a grid of the arc) go first to the enemies that hold their seat still (token holders,
+## then the longest engaged, while the seat lies inside the arc), then to the rest, longest engaged
+## first, nearest to the player for the ones that never engaged; an enemy with no inner seat to take
+## stands on the wait ring (inside its arc, no two bodies touching), keeping the one it had. A Kicker
+## takes the seat nearest directly behind the look that no inner seat is within director_flank_gap_deg of.
+func _assign_arcs(player: PlayerCharacter, set: Array[EnemyActor]) -> void:
+	if set.is_empty():
+		return
+	var origin := player.global_position
+	var look := rad_to_deg(player.look_yaw)
+	var tuning := Tuning.data
+	var gap := tuning.director_seat_gap_deg
+	var ring_min := tuning.posture_ring_min_m
+	var ring_max := maxf(tuning.posture_ring_max_m, ring_min)
+	var plans: Dictionary = {}
+	var inner_taken := PackedFloat64Array()
+	var wait_points: Array[Vector3] = []
+	var seekers: Array[EnemyActor] = []
+	var flank: Array[EnemyActor] = []
+	var keepers: Array[EnemyActor] = []
+	var info: Dictionary = {}  # enemy -> {line, arc, slide, center}
+	for enemy in set:
+		var row: Dictionary = _engage.get(enemy, {})
+		var line := float(row.line) if bool(row.get("has_line", false)) else look
+		var arc := enemy.attack_arc_deg()
+		var slide := _arc_slide(player, line, arc)
+		info[enemy] = {line = line, arc = arc, slide = slide, center = line + slide}
+		if enemy.prefers_blind_side:
+			flank.append(enemy)
+			continue
+		var kept: bool = _kinds.get(enemy, &"") == _INNER and _claims.has(enemy) and not _stalls.has(enemy)
+		if kept and (_holders.has(enemy) or (bool(row.get("has_line", false)) \
+				and _inside_arc(float(_claims[enemy]), line + slide, arc))):
+			keepers.append(enemy)
+		else:
+			seekers.append(enemy)
+	# Keepers first: the holders in grant order, then the longest engaged.
+	keepers.sort_custom(func(a: EnemyActor, b: EnemyActor) -> bool: return _keeps_before(a, b))
+	for enemy in keepers:
+		var angle := float(_claims[enemy])
+		var radius := _inner_radius(enemy)
+		var point := _seat_point(player, angle, radius, true)
+		var clear := _gap_clear(angle, inner_taken, gap)
+		if not point.is_finite() or (not clear and not _holders.has(enemy)):
+			seekers.append(enemy)
+			continue
+		inner_taken.append(angle)
+		plans[enemy] = {angle = angle, point = point, kind = _INNER}
+	# The rest: the longest engaged first, the ones that never engaged by distance.
+	seekers.sort_custom(func(a: EnemyActor, b: EnemyActor) -> bool: return _seeks_before(a, b, origin))
+	for enemy in seekers:
+		var data: Dictionary = info[enemy]
+		var bearing := ViewGeometry.bearing_deg(0.0, origin, enemy.global_position) + _stall_nudge(enemy)
+		var found := _find_inner(player, enemy, float(data.center), float(data.arc), bearing, inner_taken)
+		if found.is_empty():
+			var prior := float(_claims[enemy]) if _kinds.get(enemy, &"") == _WAIT and _claims.has(enemy) and not _stalls.has(enemy) else NAN
+			found = _find_wait(player, enemy, float(data.center), float(data.arc), bearing, wait_points, prior)
+		if found.is_empty():
+			found = _nearest_standing_seat(player, enemy, bearing)
+		if found.kind == _INNER:
+			inner_taken.append(float(found.angle))
+		else:
+			wait_points.append(found.point)
+		plans[enemy] = found
+	# A Kicker: as M3, the seat nearest directly behind the look, never moving the others.
+	if not flank.is_empty():
+		var behind := look + 180.0
+		var indices: Array[int] = []
+		for i in set.size():
+			if flank.has(set[i]):
+				indices.append(i)
+		var taken := inner_taken.duplicate()
+		for i in _flank_order(set, indices, behind, origin):
+			var enemy := set[i]
+			var offset := tuning.director_spread_jitter_deg * (_unit_hash(String(enemy.name) + "/jitter") * 2.0 - 1.0) + _stall_nudge(enemy)
+			var side := signf(wrapf(float(_claims[enemy]) - behind, -180.0, 180.0)) if _claims.has(enemy) else 1.0
+			if side == 0.0:
+				side = 1.0
+			var angle := _flank_angle(behind, offset, taken, side)
+			taken.append(angle + offset)
+			plans[enemy] = {angle = angle, point = _snap_slot(player, angle + offset, _inner_radius(enemy)), kind = _INNER}
+	for enemy in set:
+		var plan: Dictionary = plans[enemy]
+		var data: Dictionary = info[enemy]
+		_claims[enemy] = plan.angle
+		_slots[enemy] = plan.point
+		_kinds[enemy] = plan.kind
+		_slides[enemy] = float(data.slide)
+		_seat_lines[enemy] = float(data.line)
+		enemy.set_slot(plan.point, plan.kind)
+
+
+## Keepers' order: token holders first (grant order), then the earlier engaged.
+func _keeps_before(a: EnemyActor, b: EnemyActor) -> bool:
+	var ha := _holders.find(a)
+	var hb := _holders.find(b)
+	if (ha >= 0) != (hb >= 0):
+		return ha >= 0
+	if ha >= 0:
+		return ha < hb
+	return _engaged_since(a) < _engaged_since(b)
+
+
+## Seekers' order: ever engaged first, the longest engaged first; then by distance to the player.
+func _seeks_before(a: EnemyActor, b: EnemyActor, origin: Vector3) -> bool:
+	var sa := _engaged_since(a)
+	var sb := _engaged_since(b)
+	if sa != sb:
+		return sa < sb
+	var da := _flat_distance(a.global_position, origin)
+	var db := _flat_distance(b.global_position, origin)
+	return da < db or (da == db and a.get_instance_id() < b.get_instance_id())
+
+
+## The clock of `enemy`'s last engagement, INF when it never engaged.
+func _engaged_since(enemy: EnemyActor) -> float:
+	var row: Dictionary = _engage.get(enemy, {})
+	return float(row.since) if bool(row.get("has_line", false)) else INF
+
+
+## An enemy's own radius on the posture ring (a hash of its name, as in M3) and on the wait ring.
+func _inner_radius(enemy: EnemyActor) -> float:
+	var ring_min := Tuning.data.posture_ring_min_m
+	return lerpf(ring_min, maxf(Tuning.data.posture_ring_max_m, ring_min), _unit_hash(String(enemy.name) + "/radius"))
+
+
+func _wait_radius(enemy: EnemyActor) -> float:
+	var wait_min := Tuning.data.wait_ring_min_m
+	return lerpf(wait_min, maxf(Tuning.data.wait_ring_max_m, wait_min), _unit_hash(String(enemy.name) + "/wait"))
+
+
+## True when `angle` lies within half of `arc` of `center` (the whole circle always does).
+static func _inside_arc(angle: float, center: float, arc: float) -> bool:
+	return arc >= _FULL_DEG or absf(wrapf(angle - center, -180.0, 180.0)) <= arc * 0.5 + _COST_SLACK_DEG
+
+
+## True when `angle` is at least `gap` degrees from every angle in `taken`.
+static func _gap_clear(angle: float, taken: PackedFloat64Array, gap: float) -> bool:
+	for other in taken:
+		if absf(wrapf(angle - other, -180.0, 180.0)) < gap - _COST_SLACK_DEG:
+			return false
+	return true
+
+
+## The inner seat grid of an arc: as many seats as fit `gap` degrees apart, evenly spaced across the
+## arc (a 90 degree arc at a gap of 40: -45, 0 and +45 off its center; the whole circle: every 40).
+static func _seat_grid(center: float, arc: float, gap: float) -> PackedFloat64Array:
+	var out := PackedFloat64Array()
+	if arc >= _FULL_DEG - gap:
+		var around := maxi(int(_FULL_DEG / gap), 1)
+		for k in around:
+			out.append(center + float(k) * _FULL_DEG / float(around))
+		return out
+	var count := int(arc / gap) + 1
+	if count <= 1:
+		out.append(center)
+		return out
+	for k in count:
+		out.append(center - arc * 0.5 + float(k) * arc / float(count - 1))
+	return out
+
+
+## Angles in 5 degree steps across an arc, nearest to `target` first.
+static func _arc_angles(center: float, arc: float, target: float) -> PackedFloat64Array:
+	var angles: Array[float] = []
+	if arc >= _FULL_DEG:
+		for k in int(_FULL_DEG / _FLANK_SEARCH_DEG):
+			angles.append(target + float(k) * _FLANK_SEARCH_DEG)
+	else:
+		var half := arc * 0.5
+		var k := 0.0
+		while k <= arc + _COST_SLACK_DEG:
+			angles.append(center - half + k)
+			k += _FLANK_SEARCH_DEG
+	angles.sort_custom(func(a: float, b: float) -> bool:
+		return absf(wrapf(a - target, -180.0, 180.0)) < absf(wrapf(b - target, -180.0, 180.0)))
+	return PackedFloat64Array(angles)
+
+
+## Radii from `radius` down to `lowest` in steps of director_slot_snap_tolerance_m, `radius` first.
+static func _radii_down(radius: float, lowest: float) -> PackedFloat64Array:
+	var out := PackedFloat64Array([radius])
+	var step := maxf(Tuning.data.director_slot_snap_tolerance_m, 0.1)
+	var r := radius - step
+	while r >= lowest - _COST_SLACK_DEG:
+		out.append(r)
+		r -= step
+	return out
+
+
+## An inner seat for `enemy` in the arc about `center` that no taken seat is within the gap of:
+## the grid points nearest `bearing` first, then any 5 degree step inside the arc, at the enemy's
+## own radius first and then, nearer the player (down to the ring's near edge), where the first radius
+## is off the navmesh. {angle, point, kind} or {} when the arc has none.
+func _find_inner(player: PlayerCharacter, enemy: EnemyActor, center: float, arc: float, bearing: float,
+		taken: PackedFloat64Array) -> Dictionary:
+	var gap := Tuning.data.director_seat_gap_deg
+	var ordered: Array[float] = []
+	var grid := _seat_grid(center, arc, gap)
+	var sorter := func(a: float, b: float) -> bool:
+		return absf(wrapf(a - bearing, -180.0, 180.0)) < absf(wrapf(b - bearing, -180.0, 180.0))
+	var grid_sorted: Array[float] = []
+	for angle in grid:
+		grid_sorted.append(angle)
+	grid_sorted.sort_custom(sorter)
+	ordered.append_array(grid_sorted)
+	for angle in _arc_angles(center, arc, bearing):
+		ordered.append(angle)
+	var radii := _radii_down(_inner_radius(enemy), Tuning.data.posture_ring_min_m)
+	for radius in radii:
+		for angle in ordered:
+			if not _gap_clear(angle, taken, gap):
+				continue
+			var point := _seat_point(player, angle, radius, true)
+			if point.is_finite():
+				return {angle = angle, point = point, kind = _INNER}
+	return {}
+
+
+## A wait seat for `enemy`: on the wait ring (its own radius, then nearer down to posture_ring_max_m + 1),
+## inside the arc about `center`, the angle it had (`prior`, NAN = none) or else the nearest to `bearing`
+## inside the arc, and no nearer another waiter than two body radii. {angle, point, kind} or {}.
+func _find_wait(player: PlayerCharacter, enemy: EnemyActor, center: float, arc: float, bearing: float,
+		taken: Array[Vector3], prior: float) -> Dictionary:
+	var tuning := Tuning.data
+	var apart := 2.0 * tuning.enemy_avoid_radius_m
+	var relative := clampf(wrapf(bearing - center, -180.0, 180.0), -arc * 0.5, arc * 0.5) if arc < _FULL_DEG else bearing - center
+	var angles: Array[float] = []
+	if not is_nan(prior) and _inside_arc(prior, center, arc):
+		angles.append(prior)
+	for angle in _arc_angles(center, arc, center + relative):
+		angles.append(angle)
+	var radius := _wait_radius(enemy)
+	for r in _radii_down(radius, minf(tuning.posture_ring_max_m + 1.0, radius)):
+		for angle in angles:
+			var point := _seat_point(player, angle, r, true)
+			if not point.is_finite():
+				continue
+			var crowded := false
+			for other in taken:
+				if _flat_distance(point, other) < apart:
+					crowded = true
+					break
+			if not crowded:
+				return {angle = angle, point = point, kind = _WAIT}
+	return {}
+
+
+## The last resort (no seat anywhere in the arc): the navmesh point nearest the wait ring on the line to
+## where the enemy stands, on the player's floor; a wait seat, or the raw wait-ring point without a navmesh.
+func _nearest_standing_seat(player: PlayerCharacter, enemy: EnemyActor, bearing: float) -> Dictionary:
+	var origin := player.global_position
+	var raw := origin + ViewGeometry.forward(deg_to_rad(bearing)) * _wait_radius(enemy)
+	var map := _nav_map(player)
+	var point := raw
+	if map.is_valid():
+		point = NavigationServer3D.map_get_closest_point(map, raw)
+	return {angle = bearing, point = point, kind = _WAIT}
+
+
+## How far (degrees) the arc about `line` must slide for the player's floor to have room inside it:
+## 0 when it has some already (a point on the navmesh at the posture ring's near or far edge inside
+## the arc), else the nearest offset in director_slot_retry_deg steps, right first, that has. 0 too
+## when nothing has (a raw seat). Cached for the reslot.
+func _arc_slide(player: PlayerCharacter, line: float, arc: float) -> float:
+	if arc >= _FULL_DEG or not _nav_map(player).is_valid():
+		return 0.0
+	var key := Vector2i(roundi(line * 2.0), roundi(arc))
+	if _slide_cache.has(key):
+		return float(_slide_cache[key])
+	var slide := 0.0
+	if not _arc_has_room(player, line, arc):
+		var step := Tuning.data.director_slot_retry_deg
+		var found := false
+		for k in range(1, int(_FULL_DEG * 0.5 / step) + 1):
+			for way: float in [1.0, -1.0]:
+				if _arc_has_room(player, line + way * float(k) * step, arc):
+					slide = way * float(k) * step
+					found = true
+					break
+			if found:
+				break
+	_slide_cache[key] = slide
+	return slide
+
+
+## True when some seat point inside the arc about `center` is on the player's floor, on the posture
+## ring's near or far edge.
+func _arc_has_room(player: PlayerCharacter, center: float, arc: float) -> bool:
+	var ring_min := Tuning.data.posture_ring_min_m
+	var ring_max := maxf(Tuning.data.posture_ring_max_m, ring_min)
+	for angle in _arc_angles(center, arc, center):
+		for radius: float in [ring_min, ring_max]:
+			if _seat_point(player, angle, radius, false).is_finite():
+				return true
+	return false
 
 
 ## The Kickers of `set` (indices `flank`), the one nearest directly behind first.
@@ -637,28 +1091,75 @@ func _match_slots(angles: PackedFloat64Array, slot_angles: PackedFloat64Array, s
 
 
 ## The slot at `angle_deg` (world, see ViewGeometry.bearing_deg() with a yaw of 0) and `radius`
-## m from the player. With a synced navmesh it is snapped onto it; a slot that snaps further
-## than director_slot_snap_tolerance_m (inside a crate, past a wall) tries the next angle step,
-## director_slot_retry_deg, to either side, and so on around. No navmesh (the training room), or
-## no angle that works: the raw point.
+## m from the player. With a synced navmesh it is snapped onto it (_seat_point()); a slot that
+## cannot be seated there (further than director_slot_snap_tolerance_m from the navmesh: inside a
+## crate, past a wall; on another floor: more than director_slot_max_rise_m off the player's; or one
+## the enemy cannot reach) tries the next angle step, director_slot_retry_deg, to either side, and
+## so on around. No navmesh (the training room), or no angle that works: the raw point.
 func _snap_slot(player: PlayerCharacter, angle_deg: float, radius: float) -> Vector3:
 	var origin := player.global_position
 	var raw := origin + ViewGeometry.forward(deg_to_rad(angle_deg)) * radius
-	var map := player.get_world_3d().navigation_map
-	if NavigationServer3D.map_get_iteration_id(map) == 0 or NavigationServer3D.map_get_regions(map).is_empty():
+	if not _nav_map(player).is_valid():
 		return raw
-	var tolerance := Tuning.data.director_slot_snap_tolerance_m
 	var retry := Tuning.data.director_slot_retry_deg
-	var steps := int(180.0 / retry)
+	var steps := int(_FULL_DEG * 0.5 / retry)
 	for i in steps + 1:
 		for side: float in [1.0, -1.0]:
 			if i == 0 and side < 0.0:
 				continue
-			var tried := origin + ViewGeometry.forward(deg_to_rad(angle_deg + side * float(i) * retry)) * radius
-			var snapped := NavigationServer3D.map_get_closest_point(map, tried)
-			if Vector2(snapped.x - tried.x, snapped.z - tried.z).length() <= tolerance:
-				return snapped
+			var seat := _seat_point(player, angle_deg + side * float(i) * retry, radius, true)
+			if seat.is_finite():
+				return seat
 	return raw
+
+
+## The navigation map the player stands on once it has synced a navmesh (iteration above 0, a region on
+## it), else an invalid RID (no map query is made before the first sync).
+func _nav_map(player: PlayerCharacter) -> RID:
+	var map := player.get_world_3d().navigation_map
+	if NavigationServer3D.map_get_iteration_id(map) == 0 or NavigationServer3D.map_get_regions(map).is_empty():
+		return RID()
+	return map
+
+
+## The seat point at `angle_deg` and `radius` m from the player, or Vector3.INF when it cannot be a
+## seat: without a navmesh it is the raw point; with one it is snapped onto the navmesh and rejected
+## when it snaps further than director_slot_snap_tolerance_m away (flat), when it is on another
+## floor (its y differs from the player's by more than director_slot_max_rise_m: the closest navmesh
+## point to a seat past a catwalk's lip is the street below) and, with `check_reach`, when the
+## enemy cannot walk there (a path from the player ends further than the tolerance from it; asked
+## once per point and reslot, _reach_cache).
+func _seat_point(player: PlayerCharacter, angle_deg: float, radius: float, check_reach: bool) -> Vector3:
+	var origin := player.global_position
+	var raw := origin + ViewGeometry.forward(deg_to_rad(angle_deg)) * radius
+	var map := _nav_map(player)
+	if not map.is_valid():
+		return raw
+	var tuning := Tuning.data
+	var snapped := NavigationServer3D.map_get_closest_point(map, raw)
+	if _flat_distance(snapped, raw) > tuning.director_slot_snap_tolerance_m:
+		return Vector3.INF
+	if absf(snapped.y - origin.y) > tuning.director_slot_max_rise_m:
+		return Vector3.INF
+	if check_reach and not _reachable(map, origin, snapped):
+		return Vector3.INF
+	return snapped
+
+
+## True when a path on `map` from the player's feet gets to within director_slot_snap_tolerance_m of
+## `point` (flat). Cached for the reslot.
+func _reachable(map: RID, origin: Vector3, point: Vector3) -> bool:
+	var key := Vector2i(roundi(point.x * 4.0), roundi(point.z * 4.0))
+	if _reach_cache.has(key):
+		return bool(_reach_cache[key])
+	var path := NavigationServer3D.map_get_path(map, NavigationServer3D.map_get_closest_point(map, origin), point, true)
+	var reached := not path.is_empty() and _flat_distance(path[path.size() - 1], point) <= Tuning.data.director_slot_snap_tolerance_m
+	_reach_cache[key] = reached
+	return reached
+
+
+static func _flat_distance(a: Vector3, b: Vector3) -> float:
+	return Vector2(a.x - b.x, a.z - b.z).length()
 
 
 ## The angular nudge (degrees) of an enemy that reported stalling: +1, -1, +2, -2 retry steps.

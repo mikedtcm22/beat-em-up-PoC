@@ -50,6 +50,11 @@ const HALF_CIRCLE_SEGMENTS := 12
 @export var view_color: Color = Color(0.2, 0.42, 1.0)
 @export var behind_color: Color = Color(1.0, 0.5, 0.65)
 @export var path_color: Color = Color(0.72, 0.5, 1.0)
+## Attack arcs (Milestone 5): the two edges of each engaged enemy's arc and its center line as floor lines
+## from the player, an arc that slid round a wall or a drop in its own color, and the wait ring.
+@export var arc_color: Color = Color(0.2, 0.9, 0.7)
+@export var arc_slid_color: Color = Color(1.0, 0.9, 0.2)
+@export var wait_ring_color: Color = Color(0.35, 0.75, 0.55)
 ## Alpha of the line from a posturing enemy to its slot.
 @export var slot_line_alpha: float = 0.4
 ## Radius (meters) of a slot's circle, and how far past a token holder's body its ring is.
@@ -57,6 +62,8 @@ const HALF_CIRCLE_SEGMENTS := 12
 @export var token_ring_margin: float = 0.25
 ## Length (meters) of the view-boundary and behind-sector lines on the floor.
 @export var view_line_length: float = 6.0
+## How long (m) an arc's edge lines run from the player.
+@export var arc_line_length: float = 8.0
 ## Height above the floor the AI layer's floor marks are drawn at (meters), so they clear it.
 @export var floor_lift: float = 0.05
 ## Radius (meters) the block arc is drawn at around a guarding actor, and its height band
@@ -201,8 +208,8 @@ func rebuild() -> void:
 	_flush()
 
 
-## The enemy AI layer: token holders, posture slots, the posture ring, the view boundary and
-## the behind sector, and navigation paths. Nothing without a director and AI enemies, so a
+## The enemy AI layer: token holders, posture slots, the posture ring and the wait ring, the view
+## boundary and the behind sector, each engaged enemy's attack arc, and navigation paths. Nothing without a director and AI enemies, so a
 ## room without them draws what it always did.
 func _add_ai_layer() -> void:
 	var director := EnemyDirector.find(get_tree())
@@ -212,6 +219,7 @@ func _add_ai_layer() -> void:
 	var player := get_tree().get_first_node_in_group(&"player") as PlayerCharacter
 	if player != null and player.is_inside_tree():
 		_add_player_marks(player, director.debug_ring())
+		_add_arc_marks(player, director, enemies)
 	for holder: EnemyActor in director.debug_token_holders():
 		if is_instance_valid(holder) and holder.is_inside_tree() and not holder.is_gone():
 			_add_token_mark(holder, player)
@@ -234,6 +242,13 @@ func _add_ai_layer() -> void:
 func _add_player_marks(player: PlayerCharacter, ring: Vector2) -> void:
 	var feet := player.global_position + Vector3.UP * floor_lift
 	var xform := Transform3D(Basis(), feet)
+	var director := EnemyDirector.find(get_tree())
+	if director != null:
+		var wait_ring := director.debug_wait_ring()
+		for radius: float in [wait_ring.x, wait_ring.y]:
+			if radius > 0.0:
+				_add_circle(xform, Vector3.ZERO, Vector3.RIGHT, Vector3.BACK, radius, wait_ring_color, 0.0, TAU,
+						CIRCLE_SEGMENTS)
 	for radius: float in [ring.x, ring.y]:
 		if radius > 0.0:
 			_add_circle(xform, Vector3.ZERO, Vector3.RIGHT, Vector3.BACK, radius, ring_color, 0.0, TAU,
@@ -245,6 +260,32 @@ func _add_player_marks(player: PlayerCharacter, ring: Vector2) -> void:
 		_add_line(feet, feet + ViewGeometry.forward(player.look_yaw + offset) * view_line_length, view_color)
 	for offset: float in [PI - behind, PI + behind]:
 		_add_line(feet, feet + ViewGeometry.forward(player.look_yaw + offset) * view_line_length, behind_color)
+
+
+## Each engaged enemy's attack arc: its two edges (center plus or minus half the arc, world yaw from the
+## director's debug_arc_center_of()) and the center line, floor lines from the player; an arc that slid
+## (debug_arc_slid()) in arc_slid_color. Arcs that coincide (six Punks, one look) are drawn once, and the
+## whole circle (the Kicker) has no edges.
+func _add_arc_marks(player: PlayerCharacter, director: EnemyDirector, enemies: Array[Node]) -> void:
+	var feet := player.global_position + Vector3.UP * floor_lift
+	var seen: Dictionary = {}
+	for node: Node in enemies:
+		var enemy := node as EnemyActor
+		if enemy == null or not enemy.is_inside_tree() or enemy.is_gone():
+			continue
+		var center := director.debug_arc_center_of(enemy)
+		var half := enemy.attack_arc_deg() * 0.5
+		if is_nan(center) or half >= 180.0:
+			continue
+		var slid := director.debug_arc_slid(enemy)
+		var key := Vector3(roundf(center), half, 1.0 if slid else 0.0)
+		if seen.has(key):
+			continue
+		seen[key] = true
+		var color := arc_slid_color if slid else arc_color
+		for offset: float in [-half, half]:
+			_add_line(feet, feet + ViewGeometry.forward(deg_to_rad(center + offset)) * arc_line_length, color)
+		_add_line(feet, feet + ViewGeometry.forward(deg_to_rad(center)) * arc_line_length, Color(color, slot_line_alpha))
 
 
 ## A ring at a token holder's feet, and a line from its chest to the player's.

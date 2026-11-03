@@ -104,6 +104,7 @@ func before_each() -> void:
 	# The Debug toggles are not in the preset: put them back by hand, or one test's frozen AI or
 	# god mode is the next one's.
 	Tuning.set_value(&"ai_frozen", false)
+	Tuning.set_value(&"director_even_spread", false)
 	Tuning.set_value(&"god_mode", false)
 	Tuning.set_value(&"waves_enabled", false)
 	TimeController.clear()
@@ -125,6 +126,7 @@ func after_each() -> void:
 	GameInput.menu_open = false
 	Tuning.reset_to_default()
 	Tuning.set_value(&"ai_frozen", false)
+	Tuning.set_value(&"director_even_spread", false)
 	Tuning.set_value(&"god_mode", false)
 	TimeController.clear()
 
@@ -320,6 +322,39 @@ func test_the_negative_controls_show_nothing() -> void:
 
 
 func test_a_mixed_six_soak_keeps_the_hard_metrics() -> void:
+	var summary := await _mixed_six_soak(false)
+	# M5's rows on the attack arcs (soft rows, but this soak is where they were seen to hold).
+	for id in ["R5", "R5w", "R6", "R6w", "R9"]:
+		assert_ne(_status_of(summary.verdict, id), "miss", "%s on the arcs: %s" % [id, _value_of(summary.verdict, id)])
+
+
+## The same soak with the Debug switch on (M3's director: the even spread, a token to any waiter, the
+## blind-spot roll for any enemy): M3's numbers must hold as they did, R5 and R6 included.
+func test_a_mixed_six_soak_with_the_even_spread_switch_on_keeps_m3s_numbers() -> void:
+	var summary := await _mixed_six_soak(true)
+	for id in ["R5", "R6"]:
+		assert_ne(_status_of(summary.verdict, id), "miss", "%s as M3 counted it: %s" % [id, _value_of(summary.verdict, id)])
+	assert_eq(_status_of(summary.verdict, "R6w"), "n/a", "no wait ring in M3's director")
+	Tuning.data.director_even_spread = false
+
+
+func _status_of(rows: Array[Dictionary], id: String) -> String:
+	for row in rows:
+		if row.id == id:
+			return row.status
+	return "missing"
+
+
+func _value_of(rows: Array[Dictionary], id: String) -> String:
+	for row in rows:
+		if row.id == id:
+			return str(row.value)
+	return ""
+
+
+## The 1500-frame mixed soak; returns the act's summary after asserting the hard rows.
+func _mixed_six_soak(even_spread: bool) -> Dictionary:
+	Tuning.data.director_even_spread = even_spread
 	_room = await _room_up(true)
 	var probe := Probe.new()
 	probe.print_summary = false
@@ -368,6 +403,7 @@ func test_a_mixed_six_soak_keeps_the_hard_metrics() -> void:
 	assert_gte(archetypes.size(), 3, "at least three of the four archetypes wound up in %d frames (%s)" % [SOAK_FRAMES, str(archetypes.keys())])
 	assert_eq(int(metrics.stuck_events), 0, "R13: nobody stuck for 3 s")
 	assert_lte(most_alive, MIXED_SIX.size(), "never more than six alive")
+	return summary
 
 
 # --- 3. The waves ------------------------------------------------------------------------------------

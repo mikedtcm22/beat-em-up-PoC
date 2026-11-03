@@ -485,6 +485,53 @@ func test_r5_and_r6_enemies_around_the_player_on_the_ring_are_fine() -> void:
 	assert_eq(_status(summary.verdict, "R6"), "ok")
 
 
+func _wait_seated(bearing: float, dist: float) -> EnemyActor:
+	var stub := _stub(bearing, dist)
+	stub.seat_kind = &"wait"
+	return stub
+
+
+func test_r5_counts_only_the_inner_seated_and_r5w_the_wait_seated_near_him() -> void:
+	# Five on the wait ring in front: M3's R5 (every posturing enemy) would call that crowded.
+	for bearing in [0.0, 12.0, -12.0, 25.0, -25.0]:
+		_wait_seated(bearing, 6.0)
+	await _ticks(20)
+	var summary := _probe.end_act()
+	assert_gt(summary.metrics.front_wedge_crowding_all, 0.8, "the M3 population is crowded (information)")
+	assert_eq(summary.metrics.front_wedge_crowding, 0.0, "R5 counts the inner seated, within the posture ring plus 0.5 m")
+	assert_eq(_status(summary.verdict, "R5"), "ok")
+	assert_eq(summary.metrics.wait_seat_inside, 0.0)
+	assert_eq(_status(summary.verdict, "R5w"), "ok")
+	assert_eq(summary.metrics.ring_adherence.median, null, "R6 has nobody: all five wait")
+	assert_between(summary.metrics.wait_ring_adherence.median, 5.9, 6.1)
+	assert_eq(_status(summary.verdict, "R6w"), "ok")
+
+
+func test_r5w_a_wait_seated_enemy_inside_5_m_is_a_miss() -> void:
+	_wait_seated(0.0, 4.2)
+	await _ticks(20)
+	var summary := _probe.end_act()
+	assert_eq(summary.metrics.wait_seat_inside, 1.0)
+	assert_eq(_status(summary.verdict, "R5w"), "miss")
+	assert_eq(_status(summary.verdict, "R6w"), "miss", "and 4.2 m is off the wait ring")
+
+
+func test_r9_a_punk_out_of_view_is_no_blind_waiter() -> void:
+	var front := _stub(0.0, 3.0)
+	var behind := _stub(150.0, 3.0)
+	behind.archetype = &"punk"
+	front.want_token = true
+	behind.want_token = true
+	var director := EnemyDirector.ensure(_scene)
+	await _ticks(4)
+	front.grant_token(false)
+	await _ticks(3)
+	var summary := _probe.end_act()
+	assert_false(director.blind_spot_eligible(behind))
+	assert_eq(summary.metrics.mixed_grants, 0, "a Punk behind him does not make a mixed queue")
+	assert_eq(_status(summary.verdict, "R9"), "n/a")
+
+
 func test_r7_counts_frames_with_two_standing_capsules_overlapping() -> void:
 	var a := _stub(0.0, 3.0)
 	var b := _stub(90.0, 3.0)
@@ -835,7 +882,11 @@ func _clean_metrics() -> Dictionary:
 	m.occluded_windup_share = 0.05
 	m.occlusion_windups_in_view = 10
 	m.front_wedge_crowding = 0.02
+	m.front_wedge_crowding_all = 0.02
+	m.wait_seat_inside = 0.0
 	m.ring_adherence = {"median": 3.2, "p10": 2.6, "samples": 100}
+	m.ring_adherence_all = {"median": 3.2, "p10": 2.6, "samples": 100}
+	m.wait_ring_adherence = {"median": 6.0, "p10": 5.6, "samples": 40}
 	m.capsule_overlap_frames = 1
 	m.capsule_overlap_share = 0.001
 	m.fp_enemy_coverage = {"p50": 0.15, "p95": 0.35, "samples": 20}
@@ -861,7 +912,15 @@ func test_verdict_passes_a_clean_run_and_names_each_threshold() -> void:
 	for row in rows:
 		assert_true(row.status == "ok" or row.status == "n/a", "%s %s: %s" % [row.id, row.status, row.value])
 	assert_true(Probe.hard_ok(rows))
-	assert_eq(rows.size(), 15, "one row per metric R1 to R15")
+	# M5: was `rows.size() == 15`; the M3 rows R5 and R6 changed their population and print the old one
+	# as information (R5a, R6a), with the twins R5w and R6w on the wait ring. R1 to R15 are each still one row.
+	var primary := 0
+	for row in rows:
+		if (row.id as String).substr(1).is_valid_int():
+			primary += 1
+	assert_eq(primary, 15, "one row per metric R1 to R15")
+	for twin in ["R5a", "R5w", "R6a", "R6w"]:
+		assert_ne(_status(rows, twin), "missing", "and the M5 row %s" % twin)
 	assert_eq(_status(rows, "R12"), "ok")
 	assert_eq(_status(rows, "R13"), "ok")
 
@@ -874,6 +933,7 @@ func test_verdict_hard_rows_fail_and_soft_rows_miss() -> void:
 		["R3", "unwarned_hits", 1, "FAIL"],
 		["R4", "occluded_windup_share", 0.11, "miss"],
 		["R5", "front_wedge_crowding", 0.06, "miss"],
+		["R5w", "wait_seat_inside", 0.06, "miss"],
 		["R7", "capsule_overlap_share", 0.006, "miss"],
 		["R9", "blind_grant_share", 0.5, "miss"],
 		["R10", "warning_oracle_agreement", 0.9, "FAIL"],
@@ -898,6 +958,13 @@ func test_verdict_hard_rows_fail_and_soft_rows_miss() -> void:
 	assert_eq(_row_for(m, "R6"), "miss", "median over 4.0 m")
 	m.ring_adherence = {"median": 3.0, "p10": 2.1, "samples": 1}
 	assert_eq(_row_for(m, "R6"), "miss", "10th percentile under 2.2 m")
+	m = _clean_metrics()
+	m.wait_ring_adherence = {"median": 4.5, "p10": 4.2, "samples": 1}
+	assert_eq(_row_for(m, "R6w"), "miss", "R6w: the wait ring's median under 5.0 m (the near edge less 0.5)")
+	m.wait_ring_adherence = {"median": 7.2, "p10": 6.0, "samples": 1}
+	assert_eq(_row_for(m, "R6w"), "miss", "R6w: over 7.0 m")
+	m.wait_ring_adherence = {"median": 6.0, "p10": 5.6, "samples": 1}
+	assert_eq(_row_for(m, "R6w"), "ok")
 	m = _clean_metrics()
 	m.fp_enemy_coverage = {"p50": 0.26, "p95": 0.4, "samples": 1}
 	assert_eq(_row_for(m, "R8"), "miss", "median over 25%")
