@@ -19,6 +19,7 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
     - the boss keeps its own logic.
   - **Effects to re-measure:** M3's readability numbers and the rear warning's tests, since fewer attacks come from behind.
   - **Proposed timing:** a first, small package of Milestone 5, before the encounter plan, because the plan's arenas depend on how crowds stand.
+  - **Refined by Game-boy the same day: per-archetype attack arcs.** The written-up design, his words, a proposed mapping (Punk 90°, Pipe Thug 140°, Bruiser 180°, boss 270°, Kicker 360°) and three open questions for the M5 plan are in `docs/milestones/M5-inputs.md`.
 - **Next on the roadmap (SPEC §12):**
   - **M5, level blockout:** first an encounter plan for Game-boy's approval (a pause). Then the graybox level from `reference/dd2-nes-mission1/`, with arena locks, spawns, pickups, hazards and the boss arena. Done when the level plays start to boss.
   - **M6, full art and audio:** every enemy and the boss, environment modules, set dressing, final SFX. Done when no placeholder assets remain.
