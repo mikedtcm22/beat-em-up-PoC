@@ -4,6 +4,18 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-03 11:20 CST: phase 1 done (BOT merged); waiting on Game-boy's table for phase 2
+- **BOT merged** (`35156c4`, merge `2b3fa5f`, pushed; 1683/1683 on its branch, and nothing but docs changed under it):
+  - `tests/bot/level_bot.{gd,tscn}` plays any `LevelRoot` or a lone section, with `--level`, `--from` and `--to`.
+  - The acts are "Run: held back", "Run: knock-off" and "Run: timing".
+  - `record_acts.sh` takes `BOT_SCENE`.
+  - Strip times: 32.7 s at full speed in god mode, 103 s held back. The calls are in `M5-calls/BOT.md`.
+  - **Routes must be straight walkable lines between route markers**, and the last route point must reach past each arena's lock inset. This matters to STREET, ROOF and FINALE.
+- **The lead's look:** the held-back run on the strip shows the plain first-person view. The walk eases to each route point, and the GO arrow shows as the shutter opens. The stairs and the chain-link gate read.
+- **Phase 2 is ready to launch** with `docs/reviews/M5/args-P2.json` (STREET, ROOF, FINALE; concurrency 3; KIT's notes on each package). First fill in Game-boy's approval words in the `note`, and apply any change he asks for to `reference/encounters.md`.
+- **Slack replies:** the watcher now also reads the DM thread on every check and relays Game-boy's replies to this session.
+- **Still waiting on Game-boy:** the table and the rear-warning question. No reply at 11:20.
+
 ### 2026-11-03 10:50 CST: ARC and KIT merged (1678/1678); BOT building; still waiting on Game-boy's table
 - **Merged into `m5/level-blockout` and pushed** (`5d3548e`):
   - **ARC** (`7cb70bc`): the attack arcs, `EnemyVariant` and `punk_veteran`, the wait ring, the arc slide, F3 arc lines, and R5/R5w, R6/R6w and R9 re-measured. The calls and the before/after numbers are in `docs/milestones/M5-calls/ARC.md`.
