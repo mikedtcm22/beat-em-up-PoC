@@ -700,6 +700,40 @@ extends Resource
 ## many degrees from every other seat (the others never move for it).
 @export_range(0.0, 90.0, 5.0) var director_flank_gap_deg: float = 20.0
 
+@export_subgroup("Attack arcs")
+## Each archetype attacks from an arc of the circle round the player (Milestone 5; Game-boy's
+## attack arcs, replacing M3's even spread): the sector, in degrees, centred on its line (the
+## player's look when it engages, held after engage_commit_s). The trickier the enemy, the wider
+## the arc; 360 attacks from anywhere (the Kicker also circles to the blind side). An archetype
+## with no tunable of its own (the training dummy, a test stub) has 360. A variant resource
+## (game/enemies/variants/) can override an archetype's arc.
+@export_range(10.0, 360.0, 5.0) var punk_arc_deg: float = 90.0
+@export_range(10.0, 360.0, 5.0) var thug_arc_deg: float = 140.0
+@export_range(10.0, 360.0, 5.0) var bruiser_arc_deg: float = 180.0
+@export_range(10.0, 360.0, 5.0) var boss_arc_deg: float = 270.0
+@export_range(10.0, 360.0, 5.0) var kicker_arc_deg: float = 360.0
+## An enemy's line follows the player's look for this long (s) after it engages (it reaches its
+## seat, or comes within arc_engage_radius_m), then holds until its next engagement: a quick turn
+## cannot stun-lock a Punk into walking round forever, and turning your back after the grace lets
+## it hit you from behind.
+@export_range(0.0, 3.0, 0.05) var engage_commit_s: float = 0.5
+## An approaching enemy engages (fixes its line) when it comes this near (m) to the player. At
+## least wait_ring_max_m + 0.5, so no wait seat lies outside it.
+@export_range(2.0, 20.0, 0.5) var arc_engage_radius_m: float = 7.0
+## Inner seats inside an arc are at least this many degrees apart: a 90 degree arc seats three.
+@export_range(10.0, 120.0, 5.0) var director_seat_gap_deg: float = 40.0
+## The wait ring: with no free inner seat in its arc an enemy stands back here (m from the
+## player), inside its arc, until one frees.
+@export_range(3.0, 12.0, 0.1) var wait_ring_min_m: float = 5.5
+@export_range(3.0, 14.0, 0.1) var wait_ring_max_m: float = 6.5
+## A seat whose floor is more than this (m) above or below the player's is rejected (a catwalk's
+## lip must not seat an enemy on the street below).
+@export_range(0.1, 3.0, 0.05) var director_slot_max_rise_m: float = 0.5
+## The blind-spot priority (blind_spot_priority) is for enemies whose arc reaches the blind
+## spot (half the arc past rear_warning_angle_deg): not a 90 degree Punk. Off: any enemy, as SPEC §7
+## words it.
+@export var blind_spot_needs_wide_arc: bool = true
+
 @export_subgroup("Waves")
 ## Waves spawn on their own in the crowd street (off: only F4 spawns).
 @export var waves_enabled: bool = true
@@ -1257,6 +1291,10 @@ extends Resource
 
 @export_group("Debug")
 @export var god_mode: bool = false
+## A/B switch for Milestone 5's attack arcs: on brings back all of M3's director (the even spread
+## round the player, a token to any waiter, the blind-spot roll for any enemy, no engage line).
+## Presets never hold it.
+@export var director_even_spread: bool = false
 @export var one_hit_ko: bool = false
 ## Enemy AI stands still, faces the player and asks for nothing (F4 "Freeze AI"): a scripted
 ## act can then place and trigger each attacker by hand.

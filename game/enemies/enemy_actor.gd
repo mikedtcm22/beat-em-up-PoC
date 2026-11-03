@@ -55,6 +55,8 @@ enum AiState { ENTER, APPROACH, POSTURE, ENGAGE, WINDUP, ATTACK, RECOVER, REACT,
 
 ## Two velocities closer than this (m/s, squared) count as the same (_reset_avoidance()).
 const RESET_EPSILON_SQ := 0.0025
+## The whole circle (degrees): the attack arc of an archetype with no tunable.
+const FULL_ARC_DEG := 360.0
 
 ## &"punk", &"kicker", &"thug", &"bruiser" or &"boss".
 @export var archetype: StringName = &""
@@ -80,6 +82,12 @@ var has_token: bool = false
 var blind_priority_granted: bool = false
 ## Where the director wants it to stand on the posture ring; Vector3.INF = none.
 var posture_slot: Vector3 = Vector3.INF
+## What kind of seat that is: &"inner" (on the posture ring, inside its arc: only these are granted a
+## token) or &"wait" (on the wait ring, back from the fray, until an inner seat in its arc frees).
+var seat_kind: StringName = &"inner"
+## The variant this enemy is (game/enemies/variants/), or null for the archetype as it is. Set by
+## EnemyCatalog.apply_variant() before the enemy enters the tree.
+var variant: EnemyVariant
 
 ## Cached wind-up copies of moves (windup_move()), keyed by move id, multiplier and floor.
 static var _windup_cache: Dictionary[String, MoveData] = {}
@@ -156,6 +164,7 @@ func _ready() -> void:
 	_next_attack = _choose_attack()
 	_setup_navigation()
 	Tuning.changed.connect(_on_tuning_changed)
+	_apply_variant_look()
 
 
 func _exit_tree() -> void:
@@ -266,11 +275,42 @@ func revoke_token() -> void:
 		_enter_approach()
 
 
-## The director's posture slot for it (world position).
-func set_slot(pos: Vector3) -> void:
+## The director's seat for it (world position) and its kind (&"inner" or &"wait", see seat_kind).
+func set_slot(pos: Vector3, kind: StringName = &"inner") -> void:
 	posture_slot = pos
+	seat_kind = kind
 	_progress_best = INF
 	_progress_frames = 0
+
+
+## The arc (degrees) of the circle round the player it attacks from, centred on its line (the player's
+## look when it engaged): its variant's, else the archetype's tunable (Tuning "Attack arcs",
+## `<archetype>_arc_deg`), else the whole circle (an archetype with no tunable, as in M3).
+func attack_arc_deg() -> float:
+	if variant != null and variant.arc_deg >= 0.0:
+		return variant.arc_deg
+	var key := StringName("%s_arc_deg" % archetype)
+	if archetype != &"" and key in Tuning.data:
+		return float(Tuning.data.get(key))
+	return FULL_ARC_DEG
+
+
+## Make this enemy `value` (an EnemyVariant): its arc counts at once, its tint shows as soon as the
+## rig is built (now, when it already is).
+func set_variant(value: EnemyVariant) -> void:
+	variant = value
+	_apply_variant_look()
+
+
+## Paint the variant's tint on the body: the primitives' jacket and the skinned art's whole palette
+## (the toon shader multiplies its albedo into the swatch). Nothing without a variant tint or a rig.
+func _apply_variant_look() -> void:
+	if variant == null or variant.tint.a <= 0.0 or rig == null:
+		return
+	rig.body_color = Color(variant.tint, 1.0)
+	var art_material := rig.paint.art_material() as ShaderMaterial
+	if art_material != null:
+		art_material.set_shader_parameter(&"albedo", Color(variant.tint, 1.0))
 
 
 ## The reach_m of the attack it will throw next (0 = it has none).
@@ -733,8 +773,11 @@ func _tick_posture(player: CombatActor) -> void:
 		_enter_approach()
 		return
 	var outward := -to_player.normalized() if dist > 0.01 else Vector3.ZERO
+	# On a wait seat the ring is the wait ring, back from the fray.
+	var ring_min := tuning.wait_ring_min_m if seat_kind == &"wait" else tuning.posture_ring_min_m
+	var ring_max := tuning.wait_ring_max_m if seat_kind == &"wait" else tuning.posture_ring_max_m
 	# Never closer than the ring: back out at walking speed (a pause does not stop it).
-	var too_close := dist < tuning.posture_ring_min_m
+	var too_close := dist < ring_min
 	if _pause_frames > 0:
 		_pause_frames -= 1
 		if too_close:
@@ -752,9 +795,31 @@ func _tick_posture(player: CombatActor) -> void:
 	var tangent := Vector3(-outward.z, 0.0, outward.x) * _strafe_dir
 	var velocity := tangent * (tuning.posture_circle_speed_mps * _circle_mult() * _speed_mult())
 	# Stay on the ring: one metre a second per metre of error, at most the walking speed.
-	var radius := clampf(dist, tuning.posture_ring_min_m, tuning.posture_ring_max_m)
+	var radius := clampf(dist, ring_min, maxf(ring_max, ring_min))
 	velocity += outward * clampf(radius - dist, -_walk_speed(), _walk_speed())
-	_apply_velocity(velocity.limit_length(_walk_speed()))
+	_apply_velocity(_keep_in_arc(player, velocity.limit_length(_walk_speed())))
+
+
+## Strafing only inside its arc: a velocity that would carry it further past the edge of its arc (the
+## director's arc center plus or minus half the arc) loses its sideways part and turns the strafe round.
+## No arc to keep (not engaged, no director, the whole circle) leaves the velocity as it is.
+func _keep_in_arc(player: CombatActor, velocity: Vector3) -> Vector3:
+	var half := attack_arc_deg() * 0.5
+	var director := EnemyDirector.find(get_tree())
+	if director == null or half >= FULL_ARC_DEG * 0.5:
+		return velocity
+	var center := director.debug_arc_center_of(self)
+	if is_nan(center) or velocity.length_squared() < 0.0001:
+		return velocity
+	var origin := player.global_position
+	var now := absf(wrapf(ViewGeometry.bearing_deg(0.0, origin, global_position) - center, -180.0, 180.0))
+	var ahead := global_position + velocity.normalized() * Tuning.data.enemy_slot_reach_m
+	var then := absf(wrapf(ViewGeometry.bearing_deg(0.0, origin, ahead) - center, -180.0, 180.0))
+	if then <= half or then <= now:
+		return velocity
+	_strafe_dir = -_strafe_dir
+	var radial := _flat(global_position - origin).normalized()
+	return radial * velocity.dot(radial)
 
 
 ## Stand for posture_pause_s; now and then, in that pause, taunt.
