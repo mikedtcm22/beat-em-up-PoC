@@ -613,7 +613,7 @@ const TUNABLES := {
 
 ## The subgroups of "Enemies", in order (the F1 headings).
 const ENEMY_SUBGROUPS: PackedStringArray = [
-	"Wind-up", "Posture", "Navigation", "Director", "Waves", "Street Punk", "Kicker", "Pipe Thug",
+	"Wind-up", "Posture", "Navigation", "Director", "Attack arcs", "Waves", "Street Punk", "Kicker", "Pipe Thug",
 	"Enemy grabs", "Bruiser", "Boss",
 ]
 
