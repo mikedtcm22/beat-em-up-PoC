@@ -91,10 +91,12 @@ func _b(x: float, y: float, z: float) -> Vector3:
 	return B_AT + Vector3(x, y, z)
 
 
-## Kill every AI enemy of the level (health to 0, as a test of the spawner's "cleared").
+## Kill every AI enemy of the level (health to 0, as a test of the spawner's "cleared") and take the
+## bodies away: a probe stub stands where it died and would hold its spawn point.
 func _kill_all(level: LevelRoot) -> void:
 	for enemy in level.enemies():
 		enemy.health = 0.0
+	EncounterSpawner.remove_enemies(get_tree(), true)
 
 
 # --- Sections, seams, arenas ---------------------------------------------------------------
@@ -471,3 +473,195 @@ func test_six_posturing_punks_near_the_edge_never_enter_the_hazard() -> void:
 	assert_eq(int(metrics.stuck_events), 0, "R13: nobody stuck for 3 s")
 	for enemy in level.enemies():
 		assert_lt(enemy.global_position.x, _b(5.5, 0.0, 0.0).x, "%s stayed on the terrace" % enemy.name)
+
+
+# --- Clearing: the ahead barrier, the GO cue, CLEAR! ---------------------------------------
+
+
+## Wait until `check` is true or `frames` pass.
+func _until(check: Callable, frames: int) -> bool:
+	for i in frames:
+		if check.call():
+			return true
+		await _ticks(1)
+	return check.call()
+
+
+## Kill the enemies of the running wave as they appear, until `done` or `frames` pass.
+func _kill_until(level: LevelRoot, done: Callable, frames: int) -> bool:
+	for i in frames:
+		if done.call():
+			return true
+		_kill_all(level)
+		await _ticks(1)
+	return done.call()
+
+
+func test_the_ahead_barrier_stays_closed_until_the_table_finishes_then_opens_with_arena_cleared_and_the_go_cue() -> void:
+	var level := await _level()
+	var cue := GoCue.new()
+	add_child_autofree(cue)
+	var arena := level.arenas()[0]
+	var wave_ids: Array[int] = []
+	level.spawner.wave_started.connect(func(number: int, ids: PackedStringArray) -> void: wave_ids.append(number * 10 + ids.size()))
+	_put_player(level, Vector3(0.0, 0.1, -7.5))
+	await _ticks(4)
+	assert_eq(arena.state, Arena.State.LOCKED)
+	assert_true(await _until(func() -> bool: return level.enemies().size() == 2, 60), "wave 1: two Punks come in")
+	assert_true(arena.ahead.is_closed(), "the shutter stays closed while they live")
+	_kill_all(level)
+	assert_true(await _until(func() -> bool: return level.enemies().size() == 3, 60), "wave 2 follows")
+	assert_true(arena.ahead.is_closed(), "still closed in wave 2")
+	assert_eq(arena.state, Arena.State.LOCKED)
+	assert_true(_cleared.is_empty())
+	assert_true(await _kill_until(level, func() -> bool: return arena.state == Arena.State.CLEARED, 120), "table finished: arena clears")
+	assert_eq(wave_ids, [12, 23] as Array[int], "wave 1 had two enemies, wave 2 three; the boss wave never came")
+	assert_eq(_cleared, [arena] as Array[Node3D], "arena_cleared fired once")
+	assert_false(arena.ahead.is_closed(), "the ahead barrier opens")
+	assert_true(cue.is_showing(), "the GO cue shows")
+	assert_false(cue.is_clear())
+	assert_eq(_levels_cleared, 0, "arena 1 is not the last")
+	assert_eq(level.current_arena(), level.arenas()[1], "the next arena is current")
+	assert_true(level.arenas()[1].armed, "and armed")
+	level.spawner.table_finished.emit()
+	assert_eq(_cleared.size(), 1, "a second table_finished clears nothing more")
+
+
+func test_the_go_cue_points_at_the_next_arena_relative_to_the_look_and_ends() -> void:
+	var level := await _level()
+	var cue := GoCue.new()
+	add_child_autofree(cue)
+	cue.player = level.player
+	var target := level.next_target(level.arenas()[0])
+	assert_true(target.is_finite())
+	assert_true(level.arenas()[1].contains(target), "the target is arena 2's first route point")
+	cue.show_go(target)
+	level.player.global_position = Vector3(0.0, 0.0, -20.0)
+	level.player.look_yaw = 0.0  # looking along -Z; the target is at z -24, x 6.5: ahead and to the right
+	var toward := cue.arrow_degrees()
+	assert_gt(toward, 5.0, "to his right: the arrow turns clockwise (%.1f)" % toward)
+	assert_lt(toward, 80.0)
+	level.player.look_yaw = PI  # looking back along +Z: the target is behind
+	assert_gt(absf(cue.arrow_degrees()), 120.0, "behind him: the arrow points down")
+	level.player.look_yaw = atan2(-(target.x - 0.0), -(target.z + 20.0))
+	assert_almost_eq(cue.arrow_degrees(), 0.0, 0.5, "dead ahead: straight up")
+	Tuning.set_value(&"go_cue_s", 1.0)
+	cue.show_go(target)
+	cue.advance(0.5)
+	assert_true(cue.is_showing())
+	cue.advance(0.6)
+	assert_false(cue.is_showing(), "it ends after go_cue_s")
+	assert_eq(cue.swell_at(0.0), 0.0)
+	assert_gt(cue.swell_at(Tuning.data.go_cue_pulse_s * 0.5), 0.0, "it breathes")
+	Tuning.set_value(&"go_cue_pulse_s", 0.0)
+	assert_eq(cue.swell_at(0.1), 0.0, "steady with the pulse off")
+	assert_false(level.next_target(level.arenas()[1]).is_finite(), "no arrow after the last arena")
+
+
+func test_the_last_arenas_clear_emits_level_cleared_and_shows_clear() -> void:
+	var level := await _level()
+	var cue := GoCue.new()
+	add_child_autofree(cue)
+	level.start_at_arena(1)
+	await _ticks(4)
+	_put_player(level, _b(0.0, 0.1, -3.0))
+	await _ticks(4)
+	var arena := level.arenas()[1]
+	assert_eq(arena.state, Arena.State.LOCKED, "arena 2 locked behind him")
+	assert_true(arena.behind.is_closed(), "the seam shutter closed again")
+	assert_true(await _kill_until(level, func() -> bool: return arena.state == Arena.State.CLEARED, 240))
+	assert_eq(_levels_cleared, 1, "level_cleared fired")
+	assert_eq(_cleared, [arena] as Array[Node3D])
+	assert_true(cue.is_showing())
+	assert_true(cue.is_clear(), "CLEAR!, not GO")
+	cue.advance(60.0)
+	assert_true(cue.is_showing(), "CLEAR! stays")
+	cue.reset()
+	assert_false(cue.is_showing())
+	assert_false(arena.ahead.is_closed(), "the last arena's gate opens too")
+
+
+func test_the_hud_carries_a_go_cue_stepped_by_advance() -> void:
+	var hud := (load("res://game/ui/hud.tscn") as PackedScene).instantiate() as GameHud
+	add_child_autofree(hud)
+	assert_not_null(hud.go_cue, "the HUD builds its GoCue")
+	assert_eq(hud.go_cue.get_parent(), hud)
+	hud.go_cue.show_go(Vector3(1.0, 0.0, -5.0))
+	Tuning.set_value(&"go_cue_s", 1.0)
+	hud.go_cue.show_go(Vector3(1.0, 0.0, -5.0))
+	hud.advance(0.4)
+	assert_true(hud.go_cue.is_showing())
+	hud.advance(0.7)
+	assert_false(hud.go_cue.is_showing(), "advance() counts it down")
+
+
+# --- The player, pickups, restarting at an arena ---------------------------------------------
+
+
+func test_a_ko_d_player_gets_back_up_in_place_and_the_arena_stays_locked() -> void:
+	Tuning.set_value(&"god_mode", false)
+	var level := await _level()
+	var player := level.player
+	var arena := level.arenas()[0]
+	_put_player(level, Vector3(0.0, 0.1, -9.0))
+	await _ticks(4)
+	assert_eq(arena.state, Arena.State.LOCKED)
+	var spot := player.global_position
+	player.receive_hit(_hit(player, CombatTypes.Reaction.KNOCKDOWN, Vector3(0.0, 3.0, -2.0), 500.0))
+	await _ticks(10)
+	assert_lte(player.health, 0.0, "he is KO'd")
+	assert_true(await _until(func() -> bool: return player.health > 0.0, 400), "and gets back up (auto_revive)")
+	await _ticks(60)
+	assert_lt(_flat(player.global_position, spot), 4.0, "in place, not sent back to the start")
+	assert_eq(arena.state, Arena.State.LOCKED, "the arena stays locked")
+	assert_true(arena.behind.is_closed(), "the car stays shut")
+	assert_true(arena.ahead.is_closed())
+
+
+func test_the_pipe_lies_at_its_pickup_spot() -> void:
+	var level := await _level()
+	var spot := level.sections[1].pickup_spots()[0]
+	var pipes := get_tree().get_nodes_in_group(&"weapon")
+	assert_eq(pipes.size(), 1, "one weapon in the strip")
+	await _ticks(90)
+	var pipe := pipes[0] as Weapon
+	assert_lt(_flat(pipe.global_position, spot.global_position), 0.3, "it lies where the spot is")
+	assert_lt(absf(pipe.global_position.y - spot.global_position.y), 0.3, "on the terrace floor")
+	assert_true(pipe.is_available(), "an ordinary pick-up")
+
+
+func test_start_at_arena_1_clears_the_earlier_arenas_and_stands_the_player_at_its_first_route_point() -> void:
+	var level := await _level()
+	_put_player(level, Vector3(0.0, 0.1, -9.0))
+	await _ticks(4)
+	assert_eq(level.arenas()[0].state, Arena.State.LOCKED)
+	level.start_at_arena(1)
+	await _ticks(6)
+	var arenas := level.arenas()
+	assert_eq(arenas[0].state, Arena.State.CLEARED, "the earlier arena is cleared")
+	assert_eq(arenas[1].state, Arena.State.WAITING)
+	assert_false(arenas[0].ahead.is_closed(), "and the seam open")
+	assert_false(arenas[0].behind.is_closed(), "its car open")
+	assert_true(arenas[1].ahead.is_closed(), "the terrace gate shut")
+	assert_eq(level.current_arena(), arenas[1])
+	assert_true(arenas[1].armed)
+	assert_false(arenas[0].armed)
+	assert_lt(_flat(level.player.global_position, _b(0.0, 0.0, -1.0)), 0.3, "he stands at arena 2's first route point")
+	assert_true(arenas[1].contains(level.player.global_position))
+	assert_true(_cleared.is_empty(), "no signals")
+	level.start_at_arena(0)
+	await _ticks(4)
+	assert_eq(arenas[0].state, Arena.State.WAITING)
+	assert_true(arenas[0].ahead.is_closed())
+	assert_lt(level.player.global_position.distance_to(level.player_start), 0.3, "the first arena starts at Start")
+	assert_true(arenas[1].ahead.is_closed() and arenas[0].armed and not arenas[1].armed)
+
+
+func test_a_level_can_start_at_a_later_arena_by_its_export() -> void:
+	var level := (load(STRIP) as PackedScene).instantiate() as LevelRoot
+	level.with_presentation = false
+	level.start_arena = 1
+	add_child_autofree(level)
+	await _ticks(SYNC_FRAMES)
+	assert_eq(level.arenas()[0].state, Arena.State.CLEARED)
+	assert_eq(level.current_arena(), level.arenas()[1])
