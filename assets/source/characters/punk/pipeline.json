@@ -151,6 +151,7 @@
 			"generated": {
 				"mesh": "assets/source/characters/punk/parts/fist/tripo/e70776cb_gen.glb",
 				"facing_yaw_deg": 90.0,
+				"source_side": "Right",
 				"block_top_frac": 0.7471,
 				"strap_top_frac": 0.8866,
 				"extent_fit": 0.9,
