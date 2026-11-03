@@ -1230,12 +1230,13 @@ static func _recipe(id: StringName, g: Dictionary[StringName, Vector3],
 # The straight punches' corkscrew (Game-boy, 2026-11-02, M4 call 28): over the punch the fist turns about 90 degrees, so it lands
 # palm down with the curled fingers toward the ground and the back of the hand up. M3's pose left it standing on its edge, thumb up,
 # the fingers curled inward at the other hand. The roll is about the forearm's own long axis, so the fist (the strike point) stays
-# where the hits were tuned: it moves 7 mm at most, the 5 mm the strike point sits off that axis.
+# where the hits were tuned: it moves 7 mm at most, the 5 mm the strike point sits off that axis. "Down" is as far as the forearm
+# allows: it rises 34 and 36 degrees at contact, so the palm lands 34 and 36 degrees from straight down (tests/test_punch_turn.gd).
 # The roll is split between the lower arm and the hand, as a real forearm's is, so the skinned wrist does not candy-wrap: a roll all
 # in the hand pinched the hero's wrist to 78% of its width (the skin blends lower arm to hand over about 9 cm), this split to 89%.
 # The lower arm's roll is nearly the same in the wind-up as in the strike, and the hand's is what turns over between them. Two keys
 # that differ by a bend alone slerp as a bend, so the fist keeps the path M3 gave it (a lower arm rolled only at contact sweeps the
-# wrist 4 cm off it halfway). A lower arm rolled as far at the wind-up as at contact would be better still, but a roll that follows a
+# wrist 3-4 cm off it halfway). A lower arm rolled as far at the wind-up as at contact would be better still, but a roll that follows a
 # bend past 90 degrees makes the Euler triple jump more than PlaceholderAnims.MAX_STEP_DEG between keys, which subdivides the clip
 # and lerps the angles, and the wrist wanders up to 6 cm; 15 degrees at the wind-up and 27 at contact keep the keys M3 had.
 # The lower arm takes the smaller part of the turn because the ragdoll's elbow is a hinge and the hand has no body of its own.

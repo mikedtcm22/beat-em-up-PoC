@@ -350,14 +350,17 @@ func test_the_fist_point_stays_near_m3s_on_every_frame_of_the_clip() -> void:
 		var twin := PlaceholderAnims.build_move_with(_m3_twin(id, poses), move, 1.0)
 		var hand_i := rig.skeleton.find_bone(side + "Hand")
 		var offset: Vector3 = PlaceholderBody.POINT_OFFSET[StringName(side + "FistPoint")]
+		var worst_here := 0.0
 		for f: int in move.total_frames() + 1:
 			var t := minf(float(f) * FRAME, anim.length)
 			var now: Transform3D = MotionProbe.clip_globals(rig, anim, t)[hand_i]
 			var before: Transform3D = MotionProbe.clip_globals(rig, twin, t)[hand_i]
 			var moved := (now * offset - before * offset).length()
+			worst_here = maxf(worst_here, moved)
 			if moved > worst:
 				worst = moved
 				worst_at = "%s frame %d" % [id, f]
+		gut.p("%s: the fist point's worst move from M3's over every frame: %.1f mm" % [id, worst_here * 1000.0])
 	gut.p("the fist point's worst move from M3's over both clips, every frame: %.1f mm (%s)" % [worst * 1000.0, worst_at])
 	assert_lt(worst, FIST_FRAME_MAX_M, "the fist point is within 2 cm of M3's on every frame (%.1f mm at %s)" % [worst * 1000.0, worst_at])
 
