@@ -21,11 +21,13 @@ extends Node
 ## | R2 min_windup_start_gap_frames | least gap between wind-up starts of two different enemies (a hold's follow-up is no start) |
 ## | R3 unwarned_hits | hits on the player whose attack had no wind-up of at least the floor |
 ## | R4 occluded_windup_share | in-view wind-ups whose chest another enemy hid for over half of it |
-## | R5 front_wedge_crowding | share of frames with over 3 posturing enemies within 45 degrees of the look |
-## | R6 ring_adherence | posturing enemies' flat distance to the player: median and 10th percentile |
+## | R5 front_wedge_crowding | share of frames with over 3 posturing enemies within 45 degrees of the look, counting those within posture_ring_max_m + 0.5 (M5: the wait ring is its twin R5w; the M3 population stays printed as `front_wedge_crowding_all`) |
+## | R5w wait_seat_inside | share of frames with a wait-seated posturing enemy inside 5 m (M5 twin of R5) |
+## | R6 ring_adherence | inner-seated posturing enemies' flat distance to the player: median and 10th percentile (M5; M3's all-posturing population stays as `ring_adherence_all`) |
+## | R6w wait_ring_adherence | wait-seated posturing enemies' distance: median and 10th percentile against the wait ring (M5 twin of R6) |
 ## | R7 capsule_overlap_frames | frames with two standing enemies' capsules overlapping |
 ## | R8 fp_enemy_coverage | share of the lens covered by enemy meshes: p50 and p95 |
-## | R9 blind_grant_share | token grants to an enemy out of view when both kinds waited |
+## | R9 blind_grant_share | token grants to an enemy out of view when both kinds waited; M5: "out of view" counts only enemies the blind-spot priority applies to (EnemyDirector.blind_spot_eligible()) and that hold an inner seat, N/A when none waited |
 ## | R10 warning_* | the widget's corner against the rule (the oracle) |
 ## | R11 max_knockdown_hit_damage_non_boss | most damage of a non-boss hit that knocked the player down |
 ## | R12 passive_time_to_ko_s, max_damage_2s | a player who never acts: time to KO, worst 2 s of damage |
@@ -46,6 +48,9 @@ const LIMITS := {
 	"ring_median_min_m": 2.5,
 	"ring_median_max_m": 4.0,
 	"ring_p10_min_m": 2.2,
+	"wait_inside_m": 5.0,
+	"wait_inside_share_max": 0.05,
+	"wait_ring_slack_m": 0.5,
 	"capsule_overlap_share_max": 0.005,
 	"coverage_p50_max": 0.25,
 	"coverage_p95_max": 0.50,
@@ -429,20 +434,40 @@ func _attacker_cap() -> int:
 	return director.attacker_cap() if director else Tuning.data.attacker_cap
 
 
-## R5, R6 and R7: who stands where.
+## R5, R5w, R6, R6w and R7: who stands where. M5: the posture ring's population is the inner-seated
+## posturers (a wait-seated one stands back on the wait ring, which has its own rows); the M3
+## populations are kept as `_all` information.
 func _tick_crowd(live: Array[CombatActor]) -> void:
 	if live.is_empty():
 		return
 	_acc.crowd_frames += 1
 	var in_wedge := 0
+	var in_wedge_all := 0
+	var wait_inside := false
+	var near := Tuning.data.posture_ring_max_m + 0.5
 	for enemy in live:
 		if not _is_posturing(enemy):
 			continue
-		_acc.ring.append(_flat_distance(enemy))
-		if absf(_bearing(enemy.global_position)) <= FRONT_WEDGE_DEG:
+		var distance := _flat_distance(enemy)
+		var waiting := _seat_kind(enemy) == &"wait"
+		_acc.ring_all.append(distance)
+		var wedge := absf(_bearing(enemy.global_position)) <= FRONT_WEDGE_DEG
+		if wedge:
+			in_wedge_all += 1
+		if waiting:
+			_acc.wait_ring.append(distance)
+			if distance < LIMITS.wait_inside_m:
+				wait_inside = true
+			continue
+		_acc.ring.append(distance)
+		if wedge and distance <= near:
 			in_wedge += 1
 	if in_wedge > FRONT_WEDGE_MAX:
 		_acc.wedge_frames += 1
+	if in_wedge_all > FRONT_WEDGE_MAX:
+		_acc.wedge_all_frames += 1
+	if wait_inside:
+		_acc.wait_inside_frames += 1
 	var standing: Array[CombatActor] = []
 	for enemy in live:
 		if enemy.state not in [CombatTypes.ActorState.DOWNED, CombatTypes.ActorState.LAUNCHED,
@@ -461,6 +486,12 @@ func _tick_crowd(live: Array[CombatActor]) -> void:
 				overlapping = true
 	if overlapping:
 		_acc.overlap_frames += 1
+
+
+## The seat kind the director gave `enemy` (&"inner" for an enemy with none: M3's, and a test stub).
+func _seat_kind(enemy: CombatActor) -> StringName:
+	var kind: Variant = enemy.get(&"seat_kind")
+	return StringName(kind) if kind != null else &"inner"
 
 
 ## R9: a token that appeared this frame went to an enemy out of view while enemies in view also
@@ -486,9 +517,13 @@ func _tick_grants(live: Array[CombatActor]) -> void:
 				_acc.mixed_grants += 1
 				if before.outside:
 					_acc.blind_mixed_grants += 1
+		# M5: a waiter counts when the director could grant it (an inner seat), and is "outside" only when
+		# the blind-spot priority applies to it (a wide arc), so a Punk behind him is no blind waiter.
+		var director := EnemyDirector.find(get_tree())
+		var eligible := director == null or director.blind_spot_eligible(enemy as EnemyActor)
 		now[id] = {
-			"wants": enemy.has_method(&"wants_token") and bool(enemy.call(&"wants_token")),
-			"outside": absf(_bearing(enemy.global_position)) > angle,
+			"wants": enemy.has_method(&"wants_token") and bool(enemy.call(&"wants_token")) and _seat_kind(enemy) == &"inner",
+			"outside": absf(_bearing(enemy.global_position)) > angle and eligible,
 			"token": token,
 		}
 	_prev = now
@@ -851,7 +886,8 @@ func _new_acc() -> Dictionary:
 		"min_gap": -1, "windups": 0,
 		"hits_on_player": 0, "damage_taken": 0.0, "unwarned_hits": 0, "unwarned": [],
 		"occl_in_view": 0, "occl_occluded": 0, "occl_unsampled": 0,
-		"crowd_frames": 0, "wedge_frames": 0, "ring": PackedFloat32Array(),
+		"crowd_frames": 0, "wedge_frames": 0, "wedge_all_frames": 0, "wait_inside_frames": 0,
+		"ring": PackedFloat32Array(), "ring_all": PackedFloat32Array(), "wait_ring": PackedFloat32Array(),
 		"standing2_frames": 0, "overlap_frames": 0,
 		"cover": PackedFloat32Array(),
 		"grants": 0, "mixed_grants": 0, "blind_mixed_grants": 0,
@@ -870,6 +906,8 @@ func _merge_accs() -> Dictionary:
 		var acc: Dictionary = act.acc
 		for key in ["frames", "cap_violation_frames", "windups", "hits_on_player", "unwarned_hits",
 				"occl_in_view", "occl_occluded", "occl_unsampled", "crowd_frames", "wedge_frames",
+				"wedge_all_frames", "wait_inside_frames",
+				"wedge_all_frames", "wait_inside_frames",
 				"standing2_frames", "overlap_frames", "grants", "mixed_grants", "blind_mixed_grants",
 				"knockdowns", "stuck_events", "waves_cleared", "waves_cleared_90s", "voices_stolen", "spawns"]:
 			out[key] += acc[key]
@@ -884,7 +922,7 @@ func _merge_accs() -> Dictionary:
 		if acc.ko_time_s >= 0.0 and (out.ko_time_s < 0.0 or acc.ko_time_s < out.ko_time_s):
 			out.ko_time_s = acc.ko_time_s
 		out.unwarned.append_array(acc.unwarned)
-		for key in ["ring", "cover", "frame_ms"]:
+		for key in ["ring", "ring_all", "wait_ring", "cover", "frame_ms"]:
 			out[key].append_array(acc[key])
 		out.voices_measured = out.voices_measured or acc.voices_measured
 	return out
@@ -910,10 +948,22 @@ func _metrics(acc: Dictionary, warning: Dictionary) -> Dictionary:
 		"occluded_windup_share": (float(acc.occl_occluded) / sampled_windups) if sampled_windups > 0 else null,
 		"occlusion_windups_in_view": sampled_windups,
 		"front_wedge_crowding": (float(acc.wedge_frames) / acc.crowd_frames) if acc.crowd_frames > 0 else null,
+		"front_wedge_crowding_all": (float(acc.wedge_all_frames) / acc.crowd_frames) if acc.crowd_frames > 0 else null,
+		"wait_seat_inside": (float(acc.wait_inside_frames) / acc.crowd_frames) if acc.crowd_frames > 0 else null,
 		"ring_adherence": {
 			"median": _percentile(ring, 0.5) if not ring.is_empty() else null,
 			"p10": _percentile(ring, 0.1) if not ring.is_empty() else null,
 			"samples": ring.size(),
+		},
+		"ring_adherence_all": {
+			"median": _percentile(acc.ring_all, 0.5) if not acc.ring_all.is_empty() else null,
+			"p10": _percentile(acc.ring_all, 0.1) if not acc.ring_all.is_empty() else null,
+			"samples": acc.ring_all.size(),
+		},
+		"wait_ring_adherence": {
+			"median": _percentile(acc.wait_ring, 0.5) if not acc.wait_ring.is_empty() else null,
+			"p10": _percentile(acc.wait_ring, 0.1) if not acc.wait_ring.is_empty() else null,
+			"samples": acc.wait_ring.size(),
 		},
 		"capsule_overlap_frames": acc.overlap_frames,
 		"capsule_overlap_share": (float(acc.overlap_frames) / acc.standing2_frames) if acc.standing2_frames > 0 else null,
@@ -1015,6 +1065,16 @@ func verdict(m: Dictionary, summary: Dictionary = {}) -> Array[Dictionary]:
 		out.append(_row("R5", "front wedge crowded", false, float(m.front_wedge_crowding) <= LIMITS.front_wedge_crowding_max,
 				"%.1f%% of frames" % (float(m.front_wedge_crowding) * 100.0),
 				"<= %.0f%%" % (LIMITS.front_wedge_crowding_max * 100.0)))
+	# R5 as M3 counted it (every posturing enemy), information only; R5w is its twin on the wait ring
+	if m.front_wedge_crowding_all != null:
+		out.append(_row("R5a", "front wedge, M3 population", false, true,
+				"%.1f%% of frames" % (float(m.front_wedge_crowding_all) * 100.0), "info"))
+	if m.wait_seat_inside == null:
+		out.append(_na("R5w", "wait seats near him", false, "no enemies"))
+	else:
+		out.append(_row("R5w", "wait seats near him", false, float(m.wait_seat_inside) <= LIMITS.wait_inside_share_max,
+				"%.1f%% of frames" % (float(m.wait_seat_inside) * 100.0),
+				"no wait-seated enemy inside %.0f m, <= %.0f%%" % [LIMITS.wait_inside_m, LIMITS.wait_inside_share_max * 100.0]))
 	# R6
 	var ring: Dictionary = m.ring_adherence
 	if ring.median == null:
@@ -1027,6 +1087,21 @@ func verdict(m: Dictionary, summary: Dictionary = {}) -> Array[Dictionary]:
 		)
 		out.append(_row("R6", "posture ring", false, ring_ok, "median %.2f m, p10 %.2f m" % [ring.median, ring.p10],
 				"median %.1f-%.1f, p10 >= %.1f" % [LIMITS.ring_median_min_m, LIMITS.ring_median_max_m, LIMITS.ring_p10_min_m]))
+	# R6 as M3 counted it, information only; R6w is its twin on the wait ring
+	var ring_all: Dictionary = m.ring_adherence_all
+	if ring_all.median != null:
+		out.append(_row("R6a", "ring, M3 population", false, true,
+				"median %.2f m, p10 %.2f m" % [ring_all.median, ring_all.p10], "info"))
+	var wait_ring: Dictionary = m.wait_ring_adherence
+	if wait_ring.median == null:
+		out.append(_na("R6w", "wait ring", false, "nobody waiting"))
+	else:
+		var wait_lo: float = Tuning.data.wait_ring_min_m - LIMITS.wait_ring_slack_m
+		var wait_hi: float = Tuning.data.wait_ring_max_m + LIMITS.wait_ring_slack_m
+		out.append(_row("R6w", "wait ring", false,
+				float(wait_ring.median) >= wait_lo and float(wait_ring.median) <= wait_hi and float(wait_ring.p10) >= wait_lo,
+				"median %.2f m, p10 %.2f m" % [wait_ring.median, wait_ring.p10],
+				"median %.1f-%.1f, p10 >= %.1f" % [wait_lo, wait_hi, wait_lo]))
 	# R7
 	if m.capsule_overlap_share == null:
 		out.append(_na("R7", "capsule overlap", false, "under two standing"))
@@ -1045,7 +1120,7 @@ func verdict(m: Dictionary, summary: Dictionary = {}) -> Array[Dictionary]:
 				"p50 <= %.0f%%, p95 <= %.0f%%" % [LIMITS.coverage_p50_max * 100.0, LIMITS.coverage_p95_max * 100.0]))
 	# R9 (the 0.9 in the director's own test is hard; in a crowd act it is soft)
 	if m.blind_grant_share == null:
-		out.append(_na("R9", "blind grants", false, "no mixed grants"))
+		out.append(_na("R9", "blind grants", false, "no mixed grants (no blind-eligible waiter out of view)"))
 	else:
 		out.append(_row("R9", "blind grants", false, float(m.blind_grant_share) >= LIMITS.blind_grant_share_min_crowd,
 				"%.0f%% of %d" % [float(m.blind_grant_share) * 100.0, m.mixed_grants],
