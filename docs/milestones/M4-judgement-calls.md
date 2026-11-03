@@ -1,6 +1,6 @@
 # M4 judgement calls
 
-The lead's calls, kept as the work goes, for the final DM's digest. Each one gives the decision, the alternative not taken, and why. The builders' own calls are in `docs/milestones/M4-calls/<package>.md`, and the slice gate's locks are in `docs/milestones/M4-slice-gate.md`.
+The lead's calls, kept as the work goes, for the final DM's digest. Game-boy signed M4 off on 2026-11-03 ("punks look good - let's say passes at 1m") and asked for the PR to be merged. The calls stand as made, and calls 27 and 28 came from his playtest. Each one gives the decision, the alternative not taken, and why. The builders' own calls are in `docs/milestones/M4-calls/<package>.md`, and the slice gate's locks are in `docs/milestones/M4-slice-gate.md`.
 
 1. **Phase 1 ran on concept A as a stand-in while the pick was out.** *Alternative:* wait for the pick. *Why:* the slice proves the chain, not the design. The real Punk replaces `punk.glb` in place (same path, same `punk_art.tres`), so nothing built on the stand-in is thrown away.
 2. **Tripo's own weights and the A-pose bind route are locked.** *Alternative:* Blender's heat-map weights, or the arms-down bake. *Why:* the four variants can't be told apart at 1 m in first person, and their strain numbers differ by under 15% and split both ways. Game-boy's order was Tripo first. The other three stay behind `look_punk_art_variant`.

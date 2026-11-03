@@ -4,6 +4,21 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-03 08:55 CDT: Game-boy signed off Milestone 4; PR #4 merged; M5 waits for his go (he'll turn on Ultracode first)
+- **Game-boy (session chat):** "I think with those notes, you can also go ahead and merge PR 4 now so we can move on. Let me know before you're going to get fully started with the next milestone, though: I'll want to turn on Ultracode so you can use sub-agents."
+  - **PR #4 merged into `main`.** README's M4 departures now read "accepted by Game-boy with M4's sign-off", and the two looks are carried forward to M6.
+- **His answers on the attack arcs** (in `docs/milestones/M5-inputs.md`):
+  - **The center line is fixed when the enemy engages,** with a grace period of about 0.5 s so a quick turn can't stun-lock a low-level enemy.
+  - **Variants may widen a type's arc** (a "veteran Punk").
+  - **Progression:** easy narrow-arc grunts early, mostly all-angle enemies later.
+- **Next: Milestone 5 (SPEC §12), the level blockout.**
+  - **Before starting:** tell Game-boy, then wait for his go. He'll turn on Ultracode so the work can use sub-agents and workflows.
+  - **Then:**
+    1. Branch `m5/<topic>` from `main`.
+    2. Plan with a workflow, folding in `M5-inputs.md`. The attack-arc director change is the first package, before the encounter plan.
+    3. The encounter plan goes to Game-boy for approval: SPEC §12's "approved encounter plan", one pause.
+  - The `.worktrees/m4-*` worktrees can be pruned; every M4 branch is pushed.
+
 ### 2026-11-03: Game-boy passed M4's done-when ("punks look good - let's say passes at 1m"); merging PR #4 waits on his word; an AI change queued
 - **Game-boy (2026-11-03, session chat), after playing the build with both hand fixes:** "punks look good - let's say passes at 1m."
   - That is the done-when's yes (SPEC §12 M4; Part B's pause 2).

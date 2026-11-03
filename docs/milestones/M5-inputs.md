@@ -40,4 +40,18 @@ Game-boy's calls for the next milestone, recorded as he made them, for the M5 pl
 2. **The mapping above,** and whether later levels or enemy variants widen a type's arc (for example a "veteran Punk" at 140°).
 3. **The rear warning.** With mostly front-arc grunts it will fire less often, mostly for Kickers and the boss. Should a crowd of Punks ever reach behind you, for example when you're surrounded and turn?
 
+**Game-boy's answers (2026-11-03, session chat):**
+
+> I think it has to be based on when he engages — and we can have a bit of a grace-period for the enemy AI in terms of deciding at what point the enemy engages (a half-second or something). Otherwise, the player can basically stun-lock lower level enemies just by turning quickly, which seems lame to me.
+
+> I'm on board with later variants getting wider arcs ("veteran punk" as an example). As the game progresses, there are probably mostly enemies that can attack at all-angles. Just want there to be a progression to those enemies so that at early levels there are some strategically easier guys to warm up with.
+
+**What they settle:**
+1. **The center line is fixed when the enemy engages,** not tied to where the player looks. Turning your back on a Punk lets him hit you from behind.
+   - The moment of engagement has a grace period of about 0.5 s (a tunable, `engage_commit_s` or similar). Within it, the enemy re-picks its line if the player turns, so a quick turn can't stun-lock a low-level enemy into endless repositioning.
+   - After it, the line holds until the attack and its recovery end.
+2. **Variants widen the arc.** For example, a "veteran Punk" at 140°. The arc is per archetype, or per variant, in data, so a later variant is a resource, not code.
+3. **A difficulty progression across the game.** Early levels lean on narrow-arc grunts, the strategically easier warm-up. Later levels are mostly all-angle enemies. M5's encounter plan should show the progression level by level.
+4. **The rear warning:** not answered yet. It follows from the above: it fires for wide-arc types and for any enemy whose fixed line ends up behind the player.
+
 **Effects to re-measure:** M3's readability metrics (R1-R15) and the rear warning's tests (`tests/test_m3_done_when.gd`), since fewer attacks come from behind. The director's tunables live in the "Enemies" group in F1.
