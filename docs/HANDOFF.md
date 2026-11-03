@@ -4,10 +4,10 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
-### 2026-11-02 21:10 CDT: Game-boy's second note (the player's straight punches land palm-down); F-punch-turn running beside F-fist-turn
+### 2026-11-02 21:20 CDT: Game-boy's second note (the player's straight punches land palm-down); F-punch-turn running beside F-fist-turn
 - **Game-boy's words** (session chat): "Another fix to hand positioning: this time for the player-character. When the player throws a straight punch, the fist should turn 90 degrees so that the curled fingers angle down toward the ground (rather than inward toward each other)."
   - The lead logs it as call 28: his own request, and a departure from A20's frozen active-frame poses.
-- **Running since 21:05 CDT:** F-punch-turn (`wf_f7031a7b-dac`, `workflow-build.js` with `docs/reviews/M4/args-F-punch-turn.json`, worktree `.worktrees/m4-f-punch-turn`, branch `m4/f-punch-turn`).
+- **Running since 21:20 CDT:** F-punch-turn (`wf_f7031a7b-dac`, `workflow-build.js` with `docs/reviews/M4/args-F-punch-turn.json`, worktree `.worktrees/m4-f-punch-turn`, branch `m4/f-punch-turn`).
   - **Scope:** re-roll the forearm and hand in `_jab_1` and `_jab_2`'s strike so the fists turn 90 degrees and land palm-down. The twist is split between LowerArm and Hand. FistPoint stays within 1 cm, and a new `tests/test_punch_turn.gd` covers it.
   - **Beside it:** F-fist-turn (the Punk's guard, `wf_172ba303-da5`) is still running.
   - **If cut off:** rerun each with its args.
