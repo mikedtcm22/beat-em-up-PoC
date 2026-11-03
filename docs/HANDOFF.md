@@ -4,6 +4,15 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-02 21:10 CDT: Game-boy's second note (the player's straight punches land palm-down); F-punch-turn running beside F-fist-turn
+- **Game-boy's words** (session chat): "Another fix to hand positioning: this time for the player-character. When the player throws a straight punch, the fist should turn 90 degrees so that the curled fingers angle down toward the ground (rather than inward toward each other)."
+  - The lead logs it as call 28: his own request, and a departure from A20's frozen active-frame poses.
+- **Running since 21:05 CDT:** F-punch-turn (`wf_f7031a7b-dac`, `workflow-build.js` with `docs/reviews/M4/args-F-punch-turn.json`, worktree `.worktrees/m4-f-punch-turn`, branch `m4/f-punch-turn`).
+  - **Scope:** re-roll the forearm and hand in `_jab_1` and `_jab_2`'s strike so the fists turn 90 degrees and land palm-down. The twist is split between LowerArm and Hand. FistPoint stays within 1 cm, and a new `tests/test_punch_turn.gd` covers it.
+  - **Beside it:** F-fist-turn (the Punk's guard, `wf_172ba303-da5`) is still running.
+  - **If cut off:** rerun each with its args.
+- **Merge note:** both builders may regenerate `tests/fixtures/motion/move_clip_hashes.json` and the strain and M3-deformation fixtures. Merge F-fist-turn first, then F-punch-turn. On a conflict in those generated files, take either side, then regenerate with `gen_clip_hashes.tscn`, `gen_strain_ratchet.tscn` and `gen_m3_deformation.tscn` on the merged head. Then run the full suite and the chain checks.
+
 ### 2026-11-02 20:50 CDT: Game-boy played M4: the Punk's hands turn the wrong way in the guard; the rest of the art "looks pretty good"; F-fist-turn running
 - **Game-boy's words** (in the session chat, after running `godot --path /Users/arachne/repos/beat-em-up-PoC`; the PR's GitHub files 404 for him, so the run command is his route): "main problem I see with the punk's art is that his hands don't turn the right way — his curled fingers are facing outward instead of inward when he has his hands up to fight. The rest of the art looks pretty good, though."
   - **The lead's look:** in the C2 guard the viewer sees each fist's palm side, curled fingers outward and thumbs on the outside.
