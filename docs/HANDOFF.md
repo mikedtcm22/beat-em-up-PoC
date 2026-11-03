@@ -4,6 +4,20 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-02 20:50 CDT: Game-boy played M4: the Punk's hands turn the wrong way in the guard; the rest of the art "looks pretty good"; F-fist-turn running
+- **Game-boy's words** (in the session chat, after running `godot --path /Users/arachne/repos/beat-em-up-PoC`; the PR's GitHub files 404 for him, so the run command is his route): "main problem I see with the punk's art is that his hands don't turn the right way — his curled fingers are facing outward instead of inward when he has his hands up to fight. The rest of the art looks pretty good, though."
+  - **The lead's look:** in the C2 guard the viewer sees each fist's palm side, curled fingers outward and thumbs on the outside.
+  - **Likely cause:** the fist piece meets A5 (palm to the midline at rest), and the guard pose's forearm/hand roll turns it palm-forward. M3's symmetric box fists never showed this. The builder confirms which before fixing.
+- **Also fixed (`3c463df`):** his run printed `ERROR: Invalid polygon data, triangulation failed` from `hud_style.gd` `_draw_fill` via `enemy_health_bars.gd`.
+  - **Cause:** a head just in front of the camera plane projects millions of pixels off screen, the bar was still drawn there, and float precision collapsed its fill. A probe confirmed it: the fill fails from about 1e5 px off-canvas.
+  - **Fix:** `EnemyHealthBars.is_drawn()` now skips a bar whose gauge doesn't overlap the canvas. There's a new test in `test_health_bars.gd`, and the full suite is running.
+- **Running since 20:50 CDT:** F-fist-turn (`wf_172ba303-da5`, `workflow-build.js` with `docs/reviews/M4/args-F-fist-turn.json`, worktree `.worktrees/m4-f-fist-turn`, branch `m4/f-fist-turn`). It diagnoses the piece against the pose, fixes the root cause with a test, re-records C2, C4 and C11 with before/after crops, and checks the hero's fists. **If cut off:** rerun it with the same args.
+- **Next:**
+  1. Merge it with A22 and the chain checks; check the guard crops.
+  2. Copy its call 27 into `M4-judgement-calls.md` if it re-rolled a clip.
+  3. Show Game-boy the before/after in this chat (or the DM), with the run command again.
+  4. He hasn't yet answered the other open items (the feel switches, the departures, the damage-mark and arm-knob calls, the Tripo account type); ask once more after the hands are fixed. PR #4 stays unmerged until his sign-off.
+
 ### 2026-10-29 02:55 CDT: handoff at the weekly limit (90%); nothing running; still waiting on Game-boy's M4 judgement
 - **Why:** the usage watcher's message. The weekly window is at 90% and resets 2026-11-02 10:00 UTC; the 5-hour window is at 55%.
 - **State:** unchanged since the 18:35 entry below.
