@@ -204,6 +204,7 @@ The characters are procedural placeholders. Real art, VFX and audio come in Mile
 - **Some of the plan's own measured bars are not met, and are held as ratchets:** none is a spec rule. The plan's bar is printed beside each, and the figures are in the done-when table.
   - **First-person framing (A9):** the Punk's art covers 6.6% of cells differently from the hidden hit-test shapes (bar 3%), and the jab and cross lens share misses by about 1 point.
   - **The rest:** deformation strain (A7), the hit flash's anchor at the torso (A11), the hero's legs inside the hurtboxes (A6), and the hero's walk keeping M3's step cadence (A4, his feet slide).
+- **The player's jab and cross land palm-down (Game-boy's request, 2026-11-02):** the fist rolls about 90 degrees over the punch, so at contact the back of the glove is up and the curled fingers point down. That changes two of the frozen strike poses. The hit point moves 7 mm, so reach and hits are unchanged. With a straight wrist the palm ends 34-36 degrees from level, because the forearm rises at contact. The Punk's and the training dummy's punches keep M3's vertical fist.
 - **Two looks left for Game-boy:**
   - **Damage marks:** they are spread over the whole body, as M3's were, and the blood turns orange on the yellow cap.
   - **The near upper arm:** in the haymaker and uppercut its cut end is a bare knob mid-view. That is M3's approved first-person framing, and showing the whole upper arm instead is an option.

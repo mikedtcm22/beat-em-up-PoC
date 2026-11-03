@@ -4,6 +4,19 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-02 22:40 CDT: both hand fixes merged (1615/1615, 0 errors); waiting on Game-boy again
+- **The Punk's fists** (`m4/f-fist-turn`, `694ddb0`, call 27):
+  - The T9 generated fist is a right-hand fist, and the first build mirrored it as if it were a left, so both hands hung palm outward. `pipe_fist.make_side` now honours `parts.fists.generated.source_side` ("Right" for the Punk).
+  - The four Punk GLBs are rebuilt, and new palm and thumb tests cover rest and the guard. No clip moved.
+  - The jab's lens-share ratchet went from 0.051 to 0.056.
+  - The chain checks print YES: Punk `445edd69`, heat-map `14dfa420`.
+- **The player's straight punches** (`m4/f-punch-turn`, `d6ccdf6`, call 28, Game-boy's request):
+  - `_jab_1` and `_jab_2` roll the fist about 90 degrees: 27 degrees in the lower arm and 63 in the hand. It lands palm-down, 34-36 degrees from level because the forearm rises.
+  - FistPoint moves 7 mm. The Punk's and dummy's punches aren't turned (`turn_fist` false).
+  - New `tests/test_punch_turn.gd`, and the clip hashes are regenerated with a note.
+- **After the merges:** regenerating the clip hashes and the M3 deformation table changed nothing. Regenerating the strain table loosened some limits (ratchets only tighten), so the committed table was kept; it passes. README's departures list the punch change as approved.
+- **Next:** show Game-boy the crops and the run command. Still open from the DM: the four feel switches, the departures, the damage-mark and arm-knob calls, and the Tripo account type. PR #4 stays unmerged until his sign-off.
+
 ### 2026-11-02 21:20 CDT: Game-boy's second note (the player's straight punches land palm-down); F-punch-turn running beside F-fist-turn
 - **Game-boy's words** (session chat): "Another fix to hand positioning: this time for the player-character. When the player throws a straight punch, the fist should turn 90 degrees so that the curled fingers angle down toward the ground (rather than inward toward each other)."
   - The lead logs it as call 28: his own request, and a departure from A20's frozen active-frame poses.
