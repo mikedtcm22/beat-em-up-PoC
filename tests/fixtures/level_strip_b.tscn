@@ -122,8 +122,8 @@ size = Vector3(0.3, 4, 24)
 
 [node name="Drop" type="Area3D" parent="Geometry"]
 script = ExtResource("4_hazard_vol")
-position = Vector3(7.3, -1.25, -12.15)
-size = Vector3(3, 8.5, 24)
+position = Vector3(25.8, -1.25, -12.15)
+size = Vector3(40, 8.5, 60)
 
 [node name="Ground" type="Node3D" parent="Geometry"]
 script = ExtResource("2_level_bloc")

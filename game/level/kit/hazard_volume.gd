@@ -111,7 +111,8 @@ func _fall(player: PlayerCharacter) -> void:
 		if arena == null:
 			return
 		at = arena.respawn_position()
-	var health_after := maxf(player.health - Tuning.data.level_fall_damage, minf(player.health, 1.0))
+	var damage: float = 0.0 if Tuning.data.god_mode else Tuning.data.level_fall_damage
+	var health_after := maxf(player.health - damage, minf(player.health, 1.0))
 	var yaw := player.look_yaw
 	player.reset_state()
 	player.health = health_after

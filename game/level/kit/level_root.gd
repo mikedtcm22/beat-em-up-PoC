@@ -41,6 +41,10 @@ const GROUP := &"level_root"
 @export var nav_agent_max_climb: float = 0.2
 @export var nav_floor_tolerance: float = 0.3
 @export var nav_floor_lift: float = 0.2
+@export_group("Safety")
+## An AI enemy that falls this far (m) below the lowest floor of the level, past every HazardVolume's
+## catch floor, is removed (nothing there to land on).
+@export var void_depth_m: float = 30.0
 
 var player: PlayerCharacter
 var director: EnemyDirector
@@ -57,6 +61,7 @@ var sections: Array[LevelSection] = []
 var container: Node3D
 
 var _arenas: Array[Arena] = []
+var _lowest_floor_y: float = 0.0
 
 
 func _ready() -> void:
@@ -187,6 +192,13 @@ func _route_yaw(from: Vector3, fallback: float) -> float:
 	return fallback
 
 
+func _physics_process(_delta: float) -> void:
+	var limit := _lowest_floor_y - void_depth_m
+	for enemy in enemies():
+		if enemy.global_position.y < limit:
+			EncounterSpawner.remove_enemy(enemy)
+
+
 # --- Building -----------------------------------------------------------------------------
 
 
@@ -237,6 +249,7 @@ func _bake_navigation() -> void:
 		guards.append_array(section.edge_guards())
 		for height in section.floor_heights:
 			heights.append(section.global_position.y + height)
+			_lowest_floor_y = minf(_lowest_floor_y, section.global_position.y + height)
 		for flight in section.stairs():
 			stairs.append(flight.footprint())
 	# Every barrier closed and every guard on while the mesh is baked: each arena is an island that

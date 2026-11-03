@@ -5,9 +5,13 @@ extends Node3D
 ## solid steps climbing toward local -Z from the node's origin, which is the middle of the foot's
 ## front edge on the lower floor. `rise_m` is the whole climb, `run_m` the whole depth, `width_m` the
 ## width across X; the step count is the smallest that keeps every step at or under
-## `max_step_rise_m`, so the navmesh agent's climb (0.2 m) and the player's capsule take them. Each
-## step is a box from the floor up, so nothing is hollow. The nav bake keeps the polygons inside
-## `footprint()` (NavBaker). Every number is an export.
+## `max_step_rise_m`, so the navmesh agent's climb (0.2 m) takes them. Each step is a box from the
+## floor up, so nothing is hollow, on the world layer: a body lying on the flight (a ghost: downed,
+## KO'd) rests on the steps. A capsule cannot ride up a box step, though (the edge of a 0.18 m step is a
+## 60 degree wall to a 0.35 m capsule), so a hidden glide ramp, a box laid along the tips of the
+## steps and a hair above them, on the guard layer (9: `CombatTypes.LAYER_EDGE_GUARD`, the player's and
+## a standing enemy's mask), carries every walking body up and down; the steps are what is drawn. The
+## nav bake keeps the polygons inside `footprint()` (NavBaker). Every number is an export.
 
 @export_range(0.5, 12.0, 0.05) var rise_m: float = 4.5:
 	set(value):
@@ -31,6 +35,11 @@ extends Node3D
 	set(value):
 		look = value
 		_rebuild()
+
+## How far the glide ramp stands above the tips of the steps (m), so a capsule never touches one.
+@export_range(0.0, 0.05, 0.005) var glide_lift_m: float = 0.01
+## The glide ramp's thickness (m).
+@export_range(0.05, 1.0, 0.05) var glide_thickness_m: float = 0.3
 
 var _steps: Node3D
 
@@ -77,3 +86,26 @@ func _rebuild() -> void:
 		block.look = look
 		block.position = Vector3(0.0, top * 0.5, -depth * (float(i) + 0.5))
 		_steps.add_child(block)
+	_steps.add_child(_make_glide(rise, depth, count))
+
+
+## The ramp along the tips of the steps: from the floor one step's depth before the foot up to the
+## last tread's start, its top a hair above the line through the tips.
+func _make_glide(rise: float, depth: float, count: int) -> StaticBody3D:
+	var from := Vector3(0.0, glide_lift_m, depth)
+	var to := Vector3(0.0, rise * float(count) + glide_lift_m, -depth * float(count - 1))
+	var along := to - from
+	var angle := atan2(along.y, -along.z)
+	var normal := Vector3(0.0, cos(angle), sin(angle))
+	var body := StaticBody3D.new()
+	body.name = "Glide"
+	body.collision_layer = CombatTypes.bit(CombatTypes.LAYER_EDGE_GUARD)
+	body.collision_mask = 0
+	body.position = (from + to) * 0.5 - normal * glide_thickness_m * 0.5
+	body.rotation.x = angle
+	var shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = Vector3(width_m, glide_thickness_m, along.length())
+	shape.shape = box
+	body.add_child(shape)
+	return body

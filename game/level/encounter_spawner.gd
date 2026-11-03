@@ -157,6 +157,15 @@ func spawn_adds(id: StringName, count: int, near: Vector3) -> Array[EnemyActor]:
 	return out
 
 
+## Take one enemy out of the game now: it leaves its groups first (a scan in the same frame no longer
+## finds it), then is freed.
+static func remove_enemy(enemy: Node) -> void:
+	for group: StringName in [&"ai_enemy", &"enemy", &"actor", &"boss"]:
+		if enemy.is_in_group(group):
+			enemy.remove_from_group(group)
+	enemy.queue_free()
+
+
 ## Take enemies out of `tree` now: every member of "ai_enemy", or with `only_ai` false every
 ## member of "enemy" too (the training dummies). Each leaves its groups first, so a scan in the
 ## same frame no longer finds it, then is freed. Returns how many.
@@ -169,10 +178,7 @@ static func remove_enemies(tree: SceneTree, only_ai: bool = false) -> int:
 			if not doomed.has(node):
 				doomed.append(node)
 	for node in doomed:
-		for group: StringName in [&"ai_enemy", &"enemy", &"actor", &"boss"]:
-			if node.is_in_group(group):
-				node.remove_from_group(group)
-		node.queue_free()
+		remove_enemy(node)
 	return doomed.size()
 
 
