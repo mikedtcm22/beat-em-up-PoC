@@ -4,6 +4,25 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-03 09:55 CST: the M5 plan written; phase 1 (ARC and KIT) building; the encounter plan DM'd to Game-boy
+- **The plan:** [milestones/M5-plan.md](milestones/M5-plan.md), 275 lines. An Opus planner wrote it, an Opus critic reviewed it (4 high, 10 medium and 4 low issues), and an extra-effort synthesis applied most of the critique. It cost about 0.6M tokens, about 7% of the 5-hour window.
+  - Packages: ARC (8%) and KIT (8%) in phase 1, then BOT (4%) after KIT merges. STREET, ROOF and FINALE in phase 2, after Game-boy's yes.
+  - Decisions D1-D15 are in the plan's §1. README departures M5-1 (the arcs and the slide), M5-2 (blind-spot priority) and M5-3 (stairs for ladders); the spec-silent D8 and D13; the D12 stand-in.
+- **The encounter table:** [reference/encounters.md](../reference/encounters.md): 7 arenas, 34 enemies, about 9-10 minutes. [reference/dd2-nes-mission1/notes.md](../reference/dd2-nes-mission1/notes.md) is filled in, and the screen order checks out against the fan map.
+- **The DM to Game-boy** (Slack DM `D0AQUKX5DB6`, ts `1793721201.659339`, with the full table in two thread replies) asks:
+  1. to approve the table;
+  2. the rear-warning question (default: Punks never come round behind on their own).
+  - Also three defaults he can overrule: stairs for ladders, the player can't fall, and an arc blocked by a wall slides.
+  - **Waiting on him.** Phase 2 (the level) starts only on his yes. Apply any change he asks for to encounters.md first.
+- **Running:** `tools/workflows/build.js`, run `wf_91b0b6e1-2cb`, with args `docs/reviews/M5/args-P1.json` (`only: ["ARC", "KIT"]`, concurrency 2). Worktrees `.worktrees/m5-arc` and `.worktrees/m5-kit`, branches `m5/arc` and `m5/kit`.
+  - If it's cut off, rerun the same args: the loader resumes from each branch's newest `wip:` commit.
+- **Next:**
+  1. Merge ARC, then KIT. Regenerate the default preset and run the full suite.
+  2. Look at "Arcs: six Punks" and "Arcs: turn your back", and play the strip.
+  3. Launch BOT: the same args with `only: ["BOT"]`.
+- **Also:** `captures/m5-baseline/` holds the pre-arc crowd recordings ("Mixed six, observed" and "Mixed six, fight"). `tools/record_acts.sh` now cuts overview sheets for acts without LOOK-MARK lines.
+- **Usage:** 12% of the 5-hour window and 5% weekly before phase 1 launched.
+
 ### 2026-11-03 09:18 CST: M5 working session started; the plan workflow running
 - **This session** is titled "Beat-em-up: working session" and runs M5 on `m5/level-blockout`, with Ultracode on. The old M4 session is renamed "(done)".
 - **Usage watcher:** a new one started from this session, [Beat-em-up: usage watcher](#local_5fa6c438-0fb3-4c35-b5b8-9f561074267b) (`local_5fa6c438-0fb3-4c35-b5b8-9f561074267b`, Haiku low). The old watcher (`local_618146a1-...`) had stopped on 10-29.
