@@ -1,0 +1,7 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/level/kit/level_root.gd" id="1_level_root"]
+
+[node name="LevelStrip" type="Node3D"]
+script = ExtResource("1_level_root")
+section_paths = PackedStringArray("res://tests/fixtures/level_strip_a.tscn", "res://tests/fixtures/level_strip_b.tscn")

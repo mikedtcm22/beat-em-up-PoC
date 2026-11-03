@@ -53,6 +53,7 @@ enabled=PackedStringArray("res://addons/gut/plugin.cfg")
 3d_physics/layer_6="downed_body"
 3d_physics/layer_7="projectile"
 3d_physics/layer_8="ragdoll"
+3d_physics/layer_9="edge_guard"
 3d_render/layer_1="default"
 3d_render/layer_2="fp_hidden"
 3d_render/layer_3="debug"

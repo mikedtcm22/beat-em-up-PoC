@@ -1551,11 +1551,16 @@ func _leave_hold_under_hips() -> void:
 
 
 ## Ghost bodies (flying, downed, held, KO) only collide with the world, so the living
-## can walk over them; flying-body impacts use a shape query instead.
+## can walk over them; flying-body impacts use a shape query instead. The level's edge guard
+## (layer 9, Milestone 5) is the exception that makes it the player's: his mask holds it in
+## every state, ghost too, so a launch or a charge can never throw him off an edge; a ghost
+## enemy crosses it (and is KO'd by the hazard past the lip), a standing enemy is stopped.
 func _set_ghost(ghost: bool) -> void:
 	if ghost:
 		collision_layer = CombatTypes.bit(CombatTypes.LAYER_DOWNED_BODY)
 		collision_mask = CombatTypes.bit(CombatTypes.LAYER_WORLD)
+		if team == 0:
+			collision_mask |= CombatTypes.bit(CombatTypes.LAYER_EDGE_GUARD)
 	else:
 		collision_layer = CombatTypes.bit(
 			CombatTypes.LAYER_PLAYER_BODY if team == 0 else CombatTypes.LAYER_ENEMY_BODY
@@ -1564,6 +1569,7 @@ func _set_ghost(ghost: bool) -> void:
 			CombatTypes.bit(CombatTypes.LAYER_WORLD)
 			| CombatTypes.bit(CombatTypes.LAYER_PLAYER_BODY)
 			| CombatTypes.bit(CombatTypes.LAYER_ENEMY_BODY)
+			| CombatTypes.bit(CombatTypes.LAYER_EDGE_GUARD)
 		)
 
 

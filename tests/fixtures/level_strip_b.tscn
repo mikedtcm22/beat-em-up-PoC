@@ -1,0 +1,217 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/level/kit/level_section.gd" id="1_level_sect"]
+[ext_resource type="Script" path="res://game/level/kit/level_block.gd" id="2_level_bloc"]
+[ext_resource type="Script" path="res://game/level/kit/edge_guard.gd" id="3_edge_guard"]
+[ext_resource type="Script" path="res://game/level/kit/hazard_volume.gd" id="4_hazard_vol"]
+[ext_resource type="Script" path="res://game/level/kit/barrier.gd" id="5_barrier"]
+[ext_resource type="Script" path="res://game/level/kit/pickup_spot.gd" id="6_pickup_spo"]
+[ext_resource type="Resource" path="res://tests/fixtures/strip/arena_b.tres" id="7_arena_b"]
+[ext_resource type="Script" path="res://game/level/kit/arena.gd" id="8_arena"]
+[ext_resource type="Script" path="res://game/level/kit/spawn_point.gd" id="9_spawn_poin"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_1"]
+size = Vector3(14, 6, 19.85)
+
+[node name="LevelStripB" type="Node3D"]
+script = ExtResource("1_level_sect")
+floor_heights = PackedFloat32Array(0)
+
+[node name="Entry" type="Marker3D" parent="."]
+position = Vector3(0, 0, 0)
+
+[node name="Exit" type="Marker3D" parent="."]
+position = Vector3(-0.5, 0, -20)
+
+[node name="Geometry" type="Node3D" parent="."]
+
+[node name="Building" type="Node3D" parent="Geometry"]
+script = ExtResource("2_level_bloc")
+position = Vector3(-1.5, -3.25, -12.15)
+size = Vector3(14, 4.5, 24)
+
+[node name="Terrace" type="Node3D" parent="Geometry"]
+script = ExtResource("2_level_bloc")
+position = Vector3(-0.5, -0.5, -12.15)
+size = Vector3(12, 1, 24)
+look = &"floor"
+
+[node name="EntryWallL" type="Node3D" parent="Geometry"]
+script = ExtResource("2_level_bloc")
+position = Vector3(-4, 1.75, -0.45)
+size = Vector3(5, 5.5, 0.6)
+
+[node name="EntryWallR" type="Node3D" parent="Geometry"]
+script = ExtResource("2_level_bloc")
+position = Vector3(3.5, 1.75, -0.45)
+size = Vector3(4, 5.5, 0.6)
+
+[node name="EntryLintel" type="Node3D" parent="Geometry"]
+script = ExtResource("2_level_bloc")
+position = Vector3(0, 4, -0.45)
+size = Vector3(3, 1, 0.6)
+look = &"accent"
+
+[node name="BackWall" type="Node3D" parent="Geometry"]
+script = ExtResource("2_level_bloc")
+position = Vector3(-1.5, 1.75, -24.65)
+size = Vector3(14, 5.5, 1)
+look = &"accent"
+
+[node name="LeftWall1" type="Node3D" parent="Geometry"]
+script = ExtResource("2_level_bloc")
+position = Vector3(-7.5, 1.75, -1.825)
+size = Vector3(2, 5.5, 3.35)
+
+[node name="LeftWall2" type="Node3D" parent="Geometry"]
+script = ExtResource("2_level_bloc")
+position = Vector3(-7.5, 1.75, -9.5)
+size = Vector3(2, 5.5, 8)
+
+[node name="LeftWall3" type="Node3D" parent="Geometry"]
+script = ExtResource("2_level_bloc")
+position = Vector3(-7.5, 1.75, -19.825)
+size = Vector3(2, 5.5, 8.65)
+
+[node name="StairFloor" type="Node3D" parent="Geometry"]
+script = ExtResource("2_level_bloc")
+position = Vector3(-7.25, -0.5, -4.5)
+size = Vector3(1.5, 1, 2)
+look = &"floor"
+
+[node name="StairBack" type="Node3D" parent="Geometry"]
+script = ExtResource("2_level_bloc")
+position = Vector3(-8.25, 1.75, -4.5)
+size = Vector3(0.5, 5.5, 2)
+look = &"dark"
+
+[node name="StairLintel" type="Node3D" parent="Geometry"]
+script = ExtResource("2_level_bloc")
+position = Vector3(-7.25, 3.65, -4.5)
+size = Vector3(1.5, 1.7, 2)
+look = &"accent"
+
+[node name="DoorFloor" type="Node3D" parent="Geometry"]
+script = ExtResource("2_level_bloc")
+position = Vector3(-7.25, -0.5, -14.5)
+size = Vector3(1.5, 1, 2)
+look = &"floor"
+
+[node name="DoorBack" type="Node3D" parent="Geometry"]
+script = ExtResource("2_level_bloc")
+position = Vector3(-8.25, 1.75, -14.5)
+size = Vector3(0.5, 5.5, 2)
+look = &"dark"
+
+[node name="DoorLintel" type="Node3D" parent="Geometry"]
+script = ExtResource("2_level_bloc")
+position = Vector3(-7.25, 3.65, -14.5)
+size = Vector3(1.5, 1.7, 2)
+look = &"accent"
+
+[node name="ParkedCar" type="Node3D" parent="Geometry"]
+script = ExtResource("2_level_bloc")
+position = Vector3(2.6, 0.75, -15.5)
+size = Vector3(1.8, 1.5, 4.2)
+look = &"prop"
+
+[node name="EdgeGuard" type="Node3D" parent="Geometry"]
+script = ExtResource("3_edge_guard")
+position = Vector3(5.65, 2, -12.15)
+size = Vector3(0.3, 4, 24)
+
+[node name="Drop" type="Area3D" parent="Geometry"]
+script = ExtResource("4_hazard_vol")
+position = Vector3(7.3, -1.25, -12.15)
+size = Vector3(3, 8.5, 24)
+
+[node name="Ground" type="Node3D" parent="Geometry"]
+script = ExtResource("2_level_bloc")
+position = Vector3(20, -6, -30)
+size = Vector3(80, 1, 100)
+look = &"dark"
+solid = false
+
+[node name="SkylineA" type="Node3D" parent="Geometry"]
+script = ExtResource("2_level_bloc")
+position = Vector3(19, 4.25, -14)
+size = Vector3(14, 19.5, 32)
+solid = false
+
+[node name="SkylineB" type="Node3D" parent="Geometry"]
+script = ExtResource("2_level_bloc")
+position = Vector3(17, 1.25, -47)
+size = Vector3(10, 13.5, 26)
+look = &"accent"
+solid = false
+
+[node name="Barriers" type="Node3D" parent="."]
+
+[node name="Gate" type="Node3D" parent="Barriers"]
+script = ExtResource("5_barrier")
+position = Vector3(-0.5, 0, -20)
+kind = 1
+width_m = 12.0
+height_m = 3.5
+start_closed = true
+open_side = -1
+
+[node name="Pickups" type="Node3D" parent="."]
+
+[node name="PipeSpot" type="Marker3D" parent="Pickups"]
+script = ExtResource("6_pickup_spo")
+position = Vector3(-3, 0, -10)
+
+[node name="Route" type="Node3D" parent="."]
+
+[node name="R0" type="Marker3D" parent="Route"]
+position = Vector3(0, 0, -1)
+
+[node name="R1" type="Marker3D" parent="Route"]
+position = Vector3(0, 0, -10)
+
+[node name="R2" type="Marker3D" parent="Route"]
+position = Vector3(-0.5, 0, -18.5)
+
+[node name="Arenas" type="Node3D" parent="."]
+
+[node name="Arena2" type="Node3D" parent="Arenas"]
+script = ExtResource("8_arena")
+arena_id = &"strip_b2"
+table = ExtResource("7_arena_b")
+ahead_barrier = NodePath("../../Barriers/Gate")
+
+[node name="LockTrigger" type="Area3D" parent="Arenas/Arena2"]
+position = Vector3(-1.5, 2, -10.075)
+collision_layer = 0
+collision_mask = 0
+
+[node name="Shape" type="CollisionShape3D" parent="Arenas/Arena2/LockTrigger"]
+shape = SubResource("BoxShape3D_1")
+
+[node name="Respawn" type="Marker3D" parent="Arenas/Arena2"]
+position = Vector3(-0.5, 0, -8)
+
+[node name="Stairwell" type="Marker3D" parent="Arenas/Arena2"]
+script = ExtResource("9_spawn_poin")
+position = Vector3(-7.15, 0, -4.5)
+tag = &"stairwell"
+
+[node name="LanePoint" type="Marker3D" parent="Arenas/Arena2/Stairwell"]
+position = Vector3(3.15, 0, 0)
+
+[node name="Doorway" type="Marker3D" parent="Arenas/Arena2"]
+script = ExtResource("9_spawn_poin")
+position = Vector3(-7.15, 0, -14.5)
+tag = &"doorway"
+
+[node name="LanePoint" type="Marker3D" parent="Arenas/Arena2/Doorway"]
+position = Vector3(3.15, 0, 0)
+
+[node name="Vehicle" type="Marker3D" parent="Arenas/Arena2"]
+script = ExtResource("9_spawn_poin")
+position = Vector3(4, 0, -18.4)
+tag = &"vehicle"
+
+[node name="LanePoint" type="Marker3D" parent="Arenas/Arena2/Vehicle"]
+position = Vector3(-3, 0, 0.4)
