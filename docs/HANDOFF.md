@@ -4,6 +4,29 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-04 13:30 CST: M6 working session started; the proposal is written; waiting on Game-boy's sign-off and four answers
+- **This session** is titled "Beat-em-up: working session". The M5 session is "Beat-em-up: M5 (signed off)". The watcher [Beat-em-up: usage watcher](#local_5fa6c438-0fb3-4c35-b5b8-9f561074267b) is still running.
+- **Branch:** `m6/full-art-audio`, cut from `main` at `78223dc`.
+- **The proposal:** [milestones/M6-proposal.md](milestones/M6-proposal.md).
+  - What's still placeholder.
+  - The phases:
+    - 0: concepts and one DM;
+    - 1: KIT, AUDIO and LOOKS, which need no picks;
+    - 2: CREW, HEAVIES, DRESS and WEAPONS, after the picks;
+    - 3: the review round.
+  - Decisions D1-D9, and the checkable done-when.
+- **Waiting on Game-boy:**
+  1. sign-off;
+  2. the audio source (Sonniss plus ElevenLabs for the voices is recommended);
+  3. Tripo: about 700-900 credits. The live balance is 1,205, and M4's floor of 700 leaves only 505, so he either lowers the floor to 250 or tops up. The licence (account type) is still open;
+  4. Ultracode on.
+- **Next on his yes:**
+  1. The lead writes `docs/milestones/M6-plan.md` (self-contained briefs), and one Opus critic at medium reviews it.
+  2. Args go in `docs/reviews/M6/`.
+  3. Launch CONCEPTS, then phase 1.
+  4. Rewrite the takeover prompt for M6.
+- **Usage at start:** 2% of the 5-hour window (it resets at 14:50 CST) and 12% weekly (it resets 11-09 04:00 CST).
+
 ### 2026-11-04 13:45 CST: Game-boy signed off Milestone 5; PR #5 merged; M6 waits for his go
 - **Game-boy (session chat):** "Signed off". He played the build with his two playtest changes in.
 - **README:** M5's "decided by default" departures now read "accepted by Game-boy with M5's sign-off, 2026-11-04". His two playtest rulings (the Kicker's opportunistic flank, and behind spawns that don't wait) are in their own section.
@@ -2205,9 +2228,9 @@ Otherwise say nothing beyond one short line: the two percentages and the next ch
 **Resume after a limit.** The working session creates the resume task itself as the last step of a handoff (the watcher's step 3 is the fallback when it was cut off first): `mcp__scheduled-tasks__create_scheduled_task` with the fields in the watcher's step 3, firing 10 minutes after the window that stopped work resets. The task wakes the working session if it still exists, which keeps its context, or else starts a takeover. Its prompt, verbatim:
 
 RESUME-PROMPT-START
-Resume the beat-em-up Milestone 5 work after a usage reset. The project is /Users/arachne/repos/beat-em-up-PoC (Godot 4.7.2, GitHub mikedtcm22/beat-em-up-PoC). Game-boy (the owner) asked for the work to continue across usage limits without waiting for him, until Milestone 5 is done.
+Resume the beat-em-up Milestone 6 work after a usage reset. The project is /Users/arachne/repos/beat-em-up-PoC (Godot 4.7.2, GitHub mikedtcm22/beat-em-up-PoC). Game-boy (the owner) asked for the work to continue across usage limits without waiting for him, until Milestone 6 is done.
 1. Call mcp__ccd_session_mgmt__get_usage (load it with ToolSearch). If either the "5-hour limit" or the "Weekly · all models" window is still at 90% or more, create a copy of this task with mcp__scheduled-tasks__create_scheduled_task (a new taskId starting "beat-em-up-resume-", fireAt that window's resetsAt plus 10 minutes, the same prompt) and stop.
-2. Call mcp__ccd_session_mgmt__list_sessions (load it with ToolSearch). If a session titled exactly "Beat-em-up: working session" is listed and not archived, send it with mcp__ccd_session_mgmt__send_message: "Scheduled resume: the usage window has reset. Check get_usage, make sure a usage watcher is running (docs/HANDOFF.md, 'Usage watcher'), then resume Milestone 5 from the newest entry in docs/HANDOFF.md." If the result says "delivered" or "queued", you're done: say so in one line and stop.
+2. Call mcp__ccd_session_mgmt__list_sessions (load it with ToolSearch). If a session titled exactly "Beat-em-up: working session" is listed and not archived, send it with mcp__ccd_session_mgmt__send_message: "Scheduled resume: the usage window has reset. Check get_usage, make sure a usage watcher is running (docs/HANDOFF.md, 'Usage watcher'), then resume Milestone 6 from the newest entry in docs/HANDOFF.md." If the result says "delivered" or "queued", you're done: say so in one line and stop.
 3. Otherwise you are the new working session: follow the takeover prompt in docs/HANDOFF.md (the "Takeover prompt" section) exactly, starting with renaming this session "Beat-em-up: working session".
 RESUME-PROMPT-END
 
