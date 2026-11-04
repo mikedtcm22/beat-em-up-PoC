@@ -29,3 +29,7 @@ Each: the decision / the alternative not taken / why.
 **C13 The Thug's pipe is still the cylinder in the captures.** PROPS's pipe art is wired by WEAPONS (`pipe_thug.gd`'s pipe lines are WEAPONS's). The fist box is 0.1 x 0.118 x 0.116 m and the pipe 0.064 m, so the procedural fists hold it at any grip offset between 0.028 and 0.04 m. Seen in "Thug three swings".
 
 **Credits** (Tripo, 165 in all, ceiling 250): Kicker generation 30 + rig 25 (first model, unused), generation 30 + rig 25 (the retry, used); Thug generation 30 + rig 25; rig-checks free.
+
+**C14 `test_look_l5.gd`'s two "enemy without art" tests used the Kicker, the last shipped enemy with no art.** Old: `_enemy(KICKER_SCENE, ...)`; new: `_enemy(KICKER_SCENE, ..., true)`, which clears the scene's `art` before it enters the tree, so the rig draws its primitives exactly as before. No assertion changed (the two tests still assert `has_art()` false and the same measures). The twin on the visible path is `test_a_windup_behind_an_enemy_with_art...` and the Punk tests beside them. REQUEST: when HEAVIES gives the Bruiser and the boss art, nothing else in the file needs to change. / Deleting the two tests, or using the Bruiser (HEAVIES's art would break them next).
+
+**C15 `placeholder_ratchet.json`: `primitive_bodies` 4 -> 2 in mission1, crowd_room and test_room** (the Kicker and the Thug; the Bruiser and the boss remain).
