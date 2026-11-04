@@ -13,6 +13,9 @@ extends Node3D
 
 ## The local y of each walkable floor of this section.
 @export var floor_heights: PackedFloat32Array = PackedFloat32Array([0.0])
+## The ambience bed's pool while the player is in this section (Milestone 6, D8), for example
+## `&"ambience_street"` or `&"ambience_roof"`. Empty: the AudioDirector's default bed.
+@export var ambience: StringName = &""
 
 
 func entry() -> Marker3D:

@@ -12,8 +12,9 @@ extends Node3D
 ## collider is `thickness_m` deep and centred on local z 0.
 ##
 ## `close()` and `open()` are logical at once (the collider goes with the call) and the panel
-## follows; `moved(closed)` fires when it has arrived. `snap()` jumps (the level's start and the
-## bake). Every number is an export or a tunable.
+## follows; `CombatEvents.barrier_moving` fires when a call changes the state (Milestone 6, the
+## barrier sounds) and `moved(closed)` when the panel has arrived. `snap()` jumps (the level's start
+## and the bake) and fires neither. Every number is an export or a tunable.
 
 ## The panel has finished closing (`closed` true) or opening (false).
 signal moved(closed: bool)
@@ -52,6 +53,8 @@ func _ready() -> void:
 
 ## Start closing: the collider is there now, the panel arrives within `barrier_close_s`.
 func close() -> void:
+	if not _closed:
+		CombatEvents.barrier_moving.emit(self, true)
 	_closed = true
 	_target = 1.0
 	_apply_collider()
@@ -61,6 +64,8 @@ func close() -> void:
 
 ## Start opening: the collider is gone now, the panel is out of the way within `barrier_open_s`.
 func open() -> void:
+	if _closed:
+		CombatEvents.barrier_moving.emit(self, false)
 	_closed = false
 	_target = 0.0
 	_apply_collider()

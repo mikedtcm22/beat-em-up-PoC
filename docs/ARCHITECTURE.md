@@ -1254,6 +1254,60 @@ Files: `game/level/mission1/boss_roof.tscn` (section 3), `game/level/mission1/mi
 
 **Done-when** (`tests/test_m5_done_when.gd`): the real level, seeded, god mode and `one_hit_ko`, `wave_gap_s` 1.0 and `wave_spawn_interval_s` 0.2 (restored by the test), the autopilot with `approach_max_m` 40, each arena through `start_at_arena(k)`: it locks, `spawner` spawns exactly its table (plus `boss_adds_count` for A7), never over 6 alive, its behind barrier closed all through the fight, it clears inside 1800 frames and opens its ahead barrier, in level order; the readability probe's hard rows hold per arena; the boss is set to half health by the test, calls his two Punks in at A7's points and the last clear emits `level_cleared` once; all seven arenas and 34 enemies when every section exists; no two sections' solid blocks overlap (an `EdgeGuard` is not solid scenery and is left out); the boss roof alone (door, edge guard at the rail and at the gap, a launched Punk KO'd); the level is the main scene and F6's first room. The file's wall-time budget is 120 s.
 
+## Full art and audio (Milestone 6)
+
+The plan is [milestones/M6-plan.md](milestones/M6-plan.md). The art only draws (its D1): colliders, the navmesh, hurtboxes and the hidden hit-test proxies are M5's, so every M3-M5 number holds. Each package fills its own heading below with the contract as it landed.
+
+### Step 0: shared declarations (the lead)
+
+- `CombatEvents.section_entered(section)` (LevelRoot emits it: KIT), `barrier_moving(barrier, closing)` (Barrier emits it at the top of `close()` and `open()`, only when the state changes) and `weapon_landed(weapon)` (WEAPONS emits it).
+- `LevelSection.ambience: StringName` (the bed's pool; empty is the default bed) and `MoveData.impact_sfx: StringName` (the weapon-hit pool, `weapon_<impact_sfx>_hit`; empty for fists and feet).
+- The palette ranges of the plan's §2 "Palette slots" (`punk.json` 16-21, `player.json` 32-37; no swatch moved).
+
+### The art chain for every character (CHAIN)
+
+_Filled by CHAIN._
+
+### Damage classes, the veteran's palette, the inventory (LOOKS)
+
+_Filled by LOOKS._
+
+### The environment kit (KIT)
+
+_Filled by KIT._
+
+### Ingest, manifest, voices and the audition room (AUDIO)
+
+_Filled by AUDIO._
+
+### The static-prop path and every rigid model (PROPS)
+
+_Filled by PROPS._
+
+### The Bruiser and the boss (HEAVIES)
+
+_Filled by HEAVIES._
+
+### The Kicker and the Pipe Thug (CREW)
+
+_Filled by CREW._
+
+### The level, the crowd street and the training room (DRESS)
+
+_Filled by DRESS._
+
+### The catalog, the second weapon and the glint (WEAPONS)
+
+_Filled by WEAPONS._
+
+### The near upper arm (ARM)
+
+_Filled by ARM._
+
+### The generated sound effects (SFX)
+
+_Filled by SFX._
+
 ## Ownership (Milestones 1-3)
 
 | Area | Files |

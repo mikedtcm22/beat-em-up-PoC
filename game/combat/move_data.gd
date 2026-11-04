@@ -83,6 +83,11 @@ extends Resource
 ## or when repeats are exhausted (flurry -> shove).
 @export var auto_next: MoveData
 
+@export_group("Audio")
+## The weapon-hit pool for this move (Milestone 6, D22): a landed hit plays
+## `weapon_<impact_sfx>_hit`. Empty for fists and feet, which keep the tier's hit stack.
+@export var impact_sfx: StringName = &""
+
 
 func get_anim() -> StringName:
 	return anim if anim != &"" else id
