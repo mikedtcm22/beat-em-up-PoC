@@ -1,11 +1,12 @@
 extends GutTest
 ## The Kicker flanks opportunistically (Milestone 5, Game-boy's playtest). The director has a Kicker
 ## flank (take the seat nearest directly behind the look, strafe toward the view's edge, circle fast)
-## only while the player is busy with another enemy he faces: another live, engaged enemy that is not itself
-## flanking stands inside his view within kicker_flank_busy_radius_m and nearer the middle of the view than
-## the Kicker. It starts after kicker_flank_on_s of that, stops after kicker_flank_off_s of its absence and
-## after kicker_flank_faced_off_s once he turns onto the Kicker (it then fights from in view); otherwise it is seated by its own arc like any enemy, so a
-## one-on-one is fought face to face. Real player, director and Kickers on a flat floor (no navmesh: the
+## only while the player is busy with another enemy he faces: another live, engaged enemy that is not
+## itself flanking stands inside his view within kicker_flank_busy_radius_m and nearer the middle of
+## the view than the Kicker. It starts after kicker_flank_on_s of that, stops after kicker_flank_off_s
+## of its absence and after kicker_flank_faced_off_s once he turns onto the Kicker (it then fights
+## from in view); otherwise it is seated by its own arc like any enemy, so a one-on-one is fought face
+## to face. Real player, director and Kickers on a flat floor (no navmesh: the
 ## enemies steer straight); the tests that judge the decision freeze the AI (the director still decides
 ## and seats), the ones that judge the behaviour let it walk. Every tick is one physics frame.
 
