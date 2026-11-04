@@ -14,8 +14,8 @@
 		"second_weapon": 0
 	},
 	"test_room": {
-		"primitive_bodies": 5,
-		"tints": 4,
+		"primitive_bodies": 4,
+		"tints": 1,
 		"boxes": 27,
 		"cylinder_weapons": 2,
 		"second_weapon": 0
