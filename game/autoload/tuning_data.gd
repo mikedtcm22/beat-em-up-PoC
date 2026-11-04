@@ -345,6 +345,10 @@ extends Resource
 @export_range(0.0, 1.0, 0.01) var vfx_bruised_at: float = 0.66
 @export_range(0.0, 1.0, 0.01) var vfx_bloodied_at: float = 0.33
 @export_range(0.05, 2.0, 0.05) var vfx_damage_tile_m: float = 0.4
+## The blood's hard edge (M6 D6): the bloodied look's alpha is cut at this value with an edge one
+## pixel wide, so a blob is red and ink and nothing between (a soft alpha over the yellow cap read
+## orange). 0 keeps M4's soft blend. Off with `look_marks_per_swatch`.
+@export_range(0.0, 0.95, 0.05) var vfx_blood_edge_cut: float = 0.5
 
 @export_group("Ragdoll")
 ## Victim reactions (Spec §6, the tier table's "Victim reaction" row; game/actors/ragdoll.gd):
@@ -1426,6 +1430,11 @@ extends Resource
 ## Motion's A/B (read when a named-clip library is built): off builds the M3 clips, with linear
 ## keys and no life, so a capture can pair an M3 and an M4 recording of one act.
 @export var look_motion_polish: bool = true
+## A/B for M6's damage marks per swatch (D6): on, a swatch that says "blood": false (the Punk's cap,
+## laces and strap) scuffs but never takes blood, and blood has a hard edge (`vfx_blood_edge_cut`);
+## off brings back M4's: every clothes swatch takes the blood tile, soft-edged. Read at each look
+## change. Presets never hold it.
+@export var look_marks_per_swatch: bool = true
 
 
 func hitstop_s(tier: CombatTypes.HitTier) -> float:

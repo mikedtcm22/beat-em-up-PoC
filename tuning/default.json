@@ -175,6 +175,7 @@
 		"vfx_bruised_at": 0.66,
 		"vfx_bloodied_at": 0.33,
 		"vfx_damage_tile_m": 0.4,
+		"vfx_blood_edge_cut": 0.5,
 		"ragdoll_enabled": true,
 		"ragdoll_player": false,
 		"ragdoll_partial_influence": 0.9,

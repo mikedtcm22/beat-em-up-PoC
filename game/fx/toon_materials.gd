@@ -244,12 +244,12 @@ static func band_shade(lit: float, edge: float, band_1: float, band_2: float, mi
 
 
 ## Whether the atlas alpha `alpha` (0 to 1) marks a glossy swatch, as toon.gdshader's swatch_gloss()
-## decodes it: a damage class's alpha (1.0 clothes, 0.8 skin, 0.5 none, as 255, 204, 128 of 255)
-## minus exactly one 8-bit step (any other alpha is matte). gen_palette.py writes it from a swatch's
+## decodes it: a damage class's alpha (1.0 clothes, 0.9 clothes without blood, 0.8 skin, 0.5 none, as 255,
+## 230, 204, 128 of 255) minus exactly one 8-bit step (any other alpha is matte). gen_palette.py writes it from a swatch's
 ## `"gloss": true`.
 static func swatch_glossy(alpha: float) -> bool:
 	var a8 := floorf(alpha * 255.0 + 0.5)
-	var class_a8 := 255.0 if alpha > 0.9 else (204.0 if alpha > 0.75 else 128.0)
+	var class_a8 := 255.0 if alpha > 0.95 else (230.0 if alpha > 0.85 else (204.0 if alpha > 0.75 else 128.0))
 	return absf(class_a8 - a8 - 1.0) < 0.5
 
 

@@ -38,7 +38,7 @@ func test_rig_damage_look_changes_materials_only() -> void:
 	assert_true(_takes_marks(mats[PlaceholderBody.Paint.SKIN]), "bruised skin")
 	assert_eq(_damage_tex(mats[PlaceholderBody.Paint.SKIN]), VfxArt.texture(&"damage_bruised"))
 	# Was uv1_triplanar: the shader maps the texture triplanar (three taps blended by the normal).
-	assert_string_contains(FileAccess.get_file_as_string(TOON_PATHS[0]), "texture(damage_tex, p.zy) * w.x + texture(damage_tex, p.xz) * w.y + texture(damage_tex, p.xy) * w.z")
+	assert_string_contains(FileAccess.get_file_as_string(TOON_PATHS[0]), "textureGrad(tex, p.zy, dpdx.zy, dpdy.zy) * w.x + textureGrad(tex, p.xz, dpdx.xz, dpdy.xz) * w.y")
 	for paint: int in [PlaceholderBody.Paint.BODY, PlaceholderBody.Paint.PANTS, PlaceholderBody.Paint.ACCENT]:
 		assert_eq(_damage_tex(mats[paint]), VfxArt.texture(&"damage_scuffed"), "scuffed clothes: paint %d" % paint)
 	assert_false(_takes_marks(mats[PlaceholderBody.Paint.DARK]), "shades and soles stay")
@@ -68,7 +68,7 @@ func _variant_props(mat: ShaderMaterial) -> Dictionary:
 	for path: String in TOON_PATHS:
 		for found in declared.search_all(FileAccess.get_file_as_string(path)):
 			var key := found.get_string(1)
-			if key != "damage_tex" and key != "damage_scale":
+			if not ["damage_tex", "damage_scale", "damage_scuff_tex", "blood_edge"].has(key):
 				out[key] = mat.get_shader_parameter(key)
 	return out
 
@@ -213,3 +213,80 @@ func _red_share(name: StringName) -> float:
 			if c.r > 0.55 and c.r > c.g * 2.5 and c.r > c.b * 2.5:
 				red += 1
 	return float(red) / maxf(seen, 1.0)
+
+
+# --- Marks per swatch (M6 D6) -------------------------------------------------------------------
+
+
+func _atlas_alpha(slot: int) -> float:
+	var image := (load("res://assets/export/palette/palette_atlas.png") as Texture2D).get_image()
+	if image.is_compressed():
+		image.decompress()
+	return image.get_pixel((slot % 32) * 8 + 4, (slot / 32) * 8 + 4).a
+
+
+## The Punk's cap, laces and strap (slot 17) say "blood": false: at the bloodied look the art shows them the scuffs, never the blood
+## tile, while the vest, the jeans and the skin still show their blood (the shader's choice, mirrored by DamageLook.art_tile_for_alpha(),
+## whose thresholds the shader source pins below).
+func test_blood_never_lands_on_a_blood_false_swatch() -> void:
+	var swatches := _palette_swatches()
+	var no_blood := 0
+	for sw: Dictionary in swatches:
+		var alpha := _atlas_alpha(sw.slot)
+		var tile := DamageLook.art_tile_for_alpha(alpha, DamageLook.Level.BLOODIED)
+		if not sw.marks:
+			assert_null(tile, "%s takes no marks" % sw.name)
+		elif sw.skin:
+			assert_eq(tile, VfxArt.texture(&"damage_bloodied"), "%s: the skin's blood" % sw.name)
+		elif sw.blood:
+			assert_eq(tile, VfxArt.texture(&"damage_blood"), "%s takes the blood" % sw.name)
+		else:
+			no_blood += 1
+			assert_eq(tile, VfxArt.texture(&"damage_scuffed"), "%s takes the scuffs and never the blood" % sw.name)
+			assert_eq(_red_share(&"damage_scuffed"), 0.0, "and the tile it shows has no red")
+			assert_eq(DamageLook.art_tile_for_alpha(alpha, DamageLook.Level.BRUISED), VfxArt.texture(&"damage_scuffed"), "scuffed when bruised")
+			assert_null(DamageLook.art_tile_for_alpha(alpha, DamageLook.Level.CLEAN), "and clean when clean")
+	assert_gte(no_blood, 1, "the Punk's cap swatch is one")
+	# The Punk's slot 17 is the one (D6: no Punk rebuild, the cap, laces and strap share it).
+	assert_between(_atlas_alpha(17), 0.85, 0.95, "slot 17 is the no-blood class")
+	assert_gte(_atlas_alpha(16), 0.95, "the vest takes the blood")
+	var shader := FileAccess.get_file_as_string(TOON_PATHS[0])
+	assert_string_contains(shader, "no_blood = step(0.85, swatch.a) * (1.0 - step(0.95, swatch.a));")
+	assert_string_contains(shader, "d = damage_triplanar(damage_scuff_tex, p, w, dpdx, dpdy);")
+	assert_string_contains(shader, "if (blood_edge > 0.0 && no_blood < 0.5) {", "the cut is for the blood, not the scuffs a cap shows")
+
+
+func _palette_swatches() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var dir := DirAccess.open("res://assets/source/palette")
+	for file: String in dir.get_files():
+		if not file.ends_with(".json"):
+			continue
+		var pal: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/source/palette/%s" % file))
+		for sw: Dictionary in pal.swatches:
+			out.append({slot = int(sw.slot), name = String(sw.name), marks = bool(sw.get("marks", true)),
+					skin = bool(sw.get("skin", false)), blood = bool(sw.get("blood", true))})
+	return out
+
+
+func test_the_art_look_has_a_hard_blood_edge_and_the_a_b_switch_gives_m4s_back() -> void:
+	var art := ToonMaterials.art(load("res://assets/export/palette/palette_atlas.png") as Texture2D)
+	assert_eq(art.get_shader_parameter(&"blood_edge"), null, "unset: the shader's default, 0 = off")
+	for level: int in [DamageLook.Level.CLEAN, DamageLook.Level.BRUISED]:
+		DamageLook.apply_art(art, level)
+		assert_eq(art.get_shader_parameter(&"blood_edge"), 0.0, "no cut before the blood (level %d)" % level)
+	DamageLook.apply_art(art, DamageLook.Level.BLOODIED)
+	assert_eq(art.get_shader_parameter(&"blood_edge"), Tuning.data.vfx_blood_edge_cut, "bloodied: the blood's alpha is cut at the tunable")
+	assert_gt(Tuning.data.vfx_blood_edge_cut, 0.0)
+	assert_eq(art.get_shader_parameter(&"damage_scuff_tex"), VfxArt.texture(&"damage_scuffed"), "the cap's scuffs")
+	Tuning.data.vfx_blood_edge_cut = 0.7
+	DamageLook.apply_art(art, DamageLook.Level.BLOODIED)
+	assert_eq(art.get_shader_parameter(&"blood_edge"), 0.7, "the tunable is live")
+	# The switch: off, the cap takes the blood tile and the blood is M4's soft blend.
+	Tuning.data.look_marks_per_swatch = false
+	DamageLook.apply_art(art, DamageLook.Level.BLOODIED)
+	assert_eq(art.get_shader_parameter(&"blood_edge"), 0.0, "no cut")
+	assert_eq(art.get_shader_parameter(&"damage_scuff_tex"), VfxArt.texture(&"damage_blood"), "and the cap bloodies as it did in M4")
+	assert_eq(DamageLook.art_tile_for_alpha(230.0 / 255.0, DamageLook.Level.BLOODIED), VfxArt.texture(&"damage_blood"))
+	for property: StringName in [&"vfx_blood_edge_cut", &"look_marks_per_swatch"]:
+		assert_has(DamageLook.TUNABLES, property, "a change re-applies the look on the live enemies")

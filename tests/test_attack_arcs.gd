@@ -319,19 +319,28 @@ func test_the_arcs_are_the_ones_game_boy_asked_for() -> void:
 	assert_eq(_stub(&"punk", _at(0.0, 5.0), false).attack_arc_deg(), 120.0, "the tunable is live")
 
 
-func test_the_variant_tints_the_body_when_it_is_spawned() -> void:
+func test_the_variant_wears_its_own_palette_when_it_is_spawned() -> void:
 	await _setup()
 	var vet := EncounterSpawner.make_enemy(EnemyCatalog.scene(&"punk_veteran"), &"punk_veteran", {})
 	assert_not_null(vet)
 	assert_eq(vet.attack_arc_deg(), 140.0, "the spawner's own make_enemy() puts the variant on")
 	vet.position = _at(0.0, 9.0)
 	_scene.add_child(vet)
-	await _ticks(2)
-	var tint := EnemyCatalog.variant(&"punk_veteran").tint
-	assert_eq(vet.rig.paint.color_of(PlaceholderBody.Paint.BODY), Color(tint, 1.0), "the jacket shows the variant's tint")
 	var plain := EncounterSpawner.make_enemy(EnemyCatalog.scene(&"punk"), &"punk", {})
+	plain.position = _at(90.0, 9.0)
+	_scene.add_child(plain)
+	await _ticks(2)
+	var variant := EnemyCatalog.variant(&"punk_veteran")
+	assert_eq(variant.tint.a, 0.0, "no tint: the palette swap retired it (D4)")
+	assert_not_null(variant.palette, "the veteran has his own atlas")
+	var vet_art := vet.rig.paint.art_material() as ShaderMaterial
+	var plain_art := plain.rig.paint.art_material() as ShaderMaterial
+	assert_not_null(vet_art, "the veteran's rig has art")
+	assert_eq(vet_art.get_shader_parameter(&"albedo_tex"), variant.palette, "the veteran's art material reads his atlas")
+	assert_eq(vet_art.get_shader_parameter(&"albedo"), Color.WHITE, "and nothing multiplies it (the tint's way recoloured the skin)")
+	assert_ne(plain_art.get_shader_parameter(&"albedo_tex"), variant.palette, "a plain Punk keeps the shared atlas")
 	assert_null(plain.variant, "a plain Punk has no variant")
-	plain.free()
+	assert_ne(vet_art, plain_art, "one material per rig: the Punk next to him is untouched")
 
 
 # --- The Kicker, the Bruiser and the boss (D4) ------------------------------------------------
