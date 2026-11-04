@@ -4,6 +4,32 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-04 15:00 CST: the M6 plan is written; step 0 done (suite running); phase 1 launches next
+- **The plan:** [milestones/M6-plan.md](milestones/M6-plan.md) (649 lines), committed `49914b4` with its four codemaps (`docs/milestones/M6-codemap/`) and the args `docs/reviews/M6/args-P1.json`, `args-P2.json` and `args-P2b.json`.
+  - It came from workflow `wf_8346b955-f3c`: four Sonnet readers, an Opus planner, an Opus critic (17 issues, 4 high) and an Opus xhigh synthesis that applied them all. About 1.65M sub-agent tokens.
+  - The lead read the whole plan, and it stands as written.
+- **The packages** (their estimate in % of a 5-hour window):
+  - **Phase 1:** CHAIN 10 (the roster: M4's tests and chain per character; the dummy), KIT 10, PROPS 9 (the static-prop path; the pipe, the bike chain's parts, the car, dumpster, AC unit and water tank; Tripo at most 270), AUDIO 8 (ingest, manifest, ElevenLabs voices at most 6000 credits, the audition room), LOOKS 7 (D6 blood per swatch, D4 the veteran's palette, `test_m6_no_placeholders.gd`).
+  - **Phase 2:** HEAVIES 13 (Tripo at most 350), CREW 12 (250), DRESS 12, WEAPONS 8, ARM 6.
+  - **SFX 6** (phase 2, after AUDIO): every sound effect that isn't a voice, from ElevenLabs (ceiling 20,000; Game-boy's call at 15:05).
+  - **All of M6:** about 175% of a 5-hour window (three windows), 17-21 weekly points.
+- **Changes from the approved proposal** (method, not spec):
+  - D2: the kit modules are Godot-procedural `ArrayMesh`es, not Blender-scripted;
+  - new packages PROPS and ARM;
+  - D7 (the near arm) moved to phase 2's ARM.
+  - Game-boy is told.
+- **Step 0** (the lead), not yet committed: the full suite runs first, into `captures/m6-step0/suite.out`.
+  - The signals `section_entered`, `barrier_moving` (emitted only when a barrier's state changes) and `weapon_landed`.
+  - `LevelSection.ambience`, `MoveData.impact_sfx`.
+  - `punk.json` narrowed to 16-21 and `player.json` to 32-37 (`gen_palette.py --check` says the atlas is current).
+  - The ARCHITECTURE.md section "Full art and audio (Milestone 6)" with every package's heading, and the ASSETS.md headings.
+- **Next:**
+  1. The suite green: commit step 0 and push.
+  2. `get_usage`.
+  3. Launch P1: `tools/workflows/build.js` with `docs/reviews/M6/args-P1.json` (3 Godot slots; CHAIN and PROPS take the Blender slots).
+  4. Merge each package as it finishes (the plan's §4 step 2).
+- **Usage:** a new 5-hour window, 2% (it resets at 19:50 CST); weekly 15%.
+
 ### 2026-11-04 14:25 CST: CONCEPTS merged; the pick sent; the plan workflow still running
 - **CONCEPTS** (`448496f`, merge `c24da33`, about 0.21M sub-agent tokens) made 19 Gemini images with no retries.
   - The sheets are in `assets/source/concepts/m6/sheets/`: kicker, thug, bruiser, boss (with the names), weapon, moods.
@@ -2254,7 +2280,14 @@ Every approved spec change so far is in README.md, "Where M1 departs from the sp
   - **Second weapon A** (`weapon_a.jpg`): a bike chain and padlock. A short sideways whip, the padlock landing last, medium reach.
   - **Moods:** street **A** (`mood_street_a.jpg`: warm brick, sodium street lamps, rust, wooden crates) and roof **C** (`mood_roof_a.jpg`, since the sheet relabels the roofs C/D: warm brick parapets, orange dusk, water tanks, ducts, skylights, AC units).
 - **The Tripo licence (2026-11-04 14:45 CST, session chat):** the key is on Tripo's **paid API platform**, with credits he bought ("Yes, paid API"). Tripo's help page gives paid users full rights to their outputs, including commercial use, and keeps rights only to free users' outputs. So ASSETS.md records each Tripo model as "Tripo API (paid credits): owned by the project, commercial use". The phase 2 gate is cleared.
-- **Still open:** pruning the old worktrees; the Sonniss download.
+- **The prune (2026-11-04 14:50 CST):** "Yes, prune them". All 90 M3-M5 worktrees are removed, and 89 GB is free.
+- **Every sound from ElevenLabs (2026-11-04 15:05 CST, session chat):** "Why don't we just use ElevenLabs for all sound instead? Would the 40k credits I have be enough to cover that?" This replaces option (a)'s Sonniss half.
+  - The account is Starter with 40,000 credits (none used; it renews about Dec 3).
+  - **The lead's estimate:**
+    - every pool comes to about 160 s of audio per take (the voices about 46 s, the hit stack and blocks about 16 s, the weapons about 11 s, the barriers about 24 s, the stings about 3 s, the two beds about 60 s);
+    - at 40 credits a second that's about 6,400 credits a take, about 19,000 with 3 candidates per clip, and about 24,000 with a redo round after his audition.
+  - **The plan:** SONNISS became SFX (phase 2, ceiling 20,000). D19 is rewritten, and the M6 ElevenLabs stop is 30,000 (`max_call` 1200). AUDIO's tools are made general. `args-P2b.json` is gone.
+- **Still open:** nothing.
 
 ## Usage watcher
 A separate low-cost Claude Code session, "Beat-em-up: usage watcher". Start it from the working session with `start_session`: initiation `user_asked`, `model` claude-haiku-5-5, `effort` low, `use_worktree` false, and the prompt below verbatim.

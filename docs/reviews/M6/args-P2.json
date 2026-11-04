@@ -13,6 +13,21 @@
   "note": "Phase 2: phase 1 (CHAIN, KIT, PROPS, AUDIO, LOOKS) is merged into the base: the art roster, the kit, StaticArt with the pipe, bike-chain and prop art, the audio manifest, and the placeholder inventory with its ratchet (lower only what you cleared). THE PICK (Game-boy, HANDOFF d2a0cba; files in assets/source/concepts/m6/): Kicker C (kicker_c.jpg: a hooded lime vest, a lime bandana, a black cap, a ponytail, wrapped forearms, black cargo shorts over lime leggings, black boots); Pipe Thug B (thug_b.jpg: a black beanie, a yellow-patterned bandana, a sleeveless olive hoodie with a black chest strap and a yellow buckle, yellow wrist wraps, olive trousers with yellow bands, black boots); Bruiser A (bruiser_a.jpg: a purple hood with a steel visor and a purple mask, a padded purple jacket over steel chest plates, steel forearm guards and knee pads, a cream belt, black trousers, steel-capped boots); Boss C (boss_c.jpg) named Ox Pellerin, the underground-fight champion (a hooded charcoal robe with orange trim, an orange champion's belt, boxing gloves with orange wraps, shorts over black tights, laced boots; darken the charcoal: it rendered as light slate); second weapon A = bike_chain (weapon_a.jpg); moods street A (mood_street_a.jpg) and roof C (mood_roof_a.jpg). TRIPO LICENCE: answered (the paid API platform, HANDOFF 0d6a5c9); ASSETS rows read 'Tripo API (paid credits): owned by the project, commercial use'. Tripo only through tools/pipeline/tripo.py within your package's ceiling (plan §3; a character retry costs 55: a generation plus its rig); the M6 ledger stop is 900, the floor 700. Gemini only through tools/gemini_image.py job files within your ceiling. Shared files by region (plan §2 'Shared files'): test_room.gd (DRESS the geometry; WEAPONS lines 114-117), gen_moves.gd and move_data.gd (ARM: the haymaker, the uppercut and fp_show_upper_arm; WEAPONS: the weapon moves and impact_sfx values), test_art_contract.gd (ARM only), tuning_data.gd (your own subgroup; Debug lines appended). A package that adds or changes a palette JSON regenerates the atlas on its branch. The lead merges each package as it finishes and regenerates the default preset, the palette atlas and the ratchet, so conflicts there are expected and fine. Don't touch A6's PickupSpot weapon_scene (the lead sets it after WEAPONS).",
   "packages": [
     {
+      "key": "SFX",
+      "section": "§3 'SFX: The generated sound effects'",
+      "est": 6,
+      "read": [
+        "docs/milestones/M6-codemap/audio.md §1, §4 and §6",
+        "docs/milestones/M6-plan.md §1 D18-D19, D21, D23-D24, §2 'Audio', 'Placeholder inventory'",
+        "docs/ARCHITECTURE.md '### Ingest, manifest, voices and the audition room (AUDIO)'",
+        "docs/milestones/M6-calls/AUDIO.md (the measured ElevenLabs rate and the voice jobs, your pattern)",
+        "assets/source/sfx/manifest.json",
+        "tools/audio/eleven_sfx.py and tools/audio/ingest.py (their docstrings)",
+        "tests/test_audio.gd lines 124-243"
+      ],
+      "note": "ElevenLabs is the only paid service you may call, through tools/audio/eleven_sfx.py: ceiling 20000 credits for this package (the M6 policy stop is 30000; AUDIO's voices used part of it, read the ledger first). Never print, log or write the key. Each job's MP3s go into a new empty folder and reach ffmpeg as path arguments. You can't hear: choose by measured features, and leave the judgement to Game-boy's audition room."
+    },
+    {
       "key": "HEAVIES",
       "section": "§3 'HEAVIES: The Bruiser and the boss'",
       "est": 13,
@@ -112,6 +127,7 @@
     }
   ],
   "only": [
+    "SFX",
     "HEAVIES",
     "CREW",
     "DRESS",

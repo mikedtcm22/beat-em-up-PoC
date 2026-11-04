@@ -10,7 +10,7 @@ SPEC §12: all enemies and the boss, environment modules and set dressing, final
   - Moods: street A (`mood_street_a.jpg`) and roof C (`mood_roof_a.jpg`; the sheet relabels the roofs C/D).
 - **The Tripo licence:** the key is on Tripo's paid API platform. Each ASSETS row reads "Tripo API (paid credits): owned by the project, commercial use".
 - **The prune is done:** one worktree is left, and `df` shows 89 GB free.
-- **Still open:** the Sonniss download (§4 step 1).
+- **Every sound from ElevenLabs** (Game-boy, 2026-11-04 15:05, session chat, replacing his option (a)'s Sonniss half): "Why don't we just use ElevenLabs for all sound instead?" The account is Starter with 40,000 credits. So there is no download, SONNISS became SFX (§3), and nothing is open.
 
 So nothing waits on the pick any more. The packages are phased by what must merge first and by the machine's slots.
 
@@ -29,12 +29,10 @@ So nothing waits on the pick any more. The packages are phased by what must merg
     - an emit line at the top of `Barrier.close()` and of `open()` (`barrier.gd:56-68`);
     - the field `LevelSection.ambience: StringName`;
     - the field `MoveData.impact_sfx: StringName = &""`.
-  - `.env.example` gains `SONNISS_DIR` (default `~/sfx-library/sonniss`).
 - **Phase 1, P1 (`args-P1.json`): CHAIN, KIT, PROPS, AUDIO, LOOKS.**
   - Each needs only step 0. Three Godot slots; CHAIN and PROPS hold the two Blender slots.
   - The lead merges each package as it finishes. After each merge: regenerate the default preset and the atlas (`python3 -I tools/pipeline/gen_palette.py`), re-measure the inventory ratchet, and run the full suite.
-- **Phase 2, P2 (`args-P2.json`), once all of phase 1 has merged: HEAVIES, CREW, DRESS, WEAPONS, ARM.** HEAVIES, CREW and ARM are Blender-bound, at most two at once.
-- **SONNISS, P2b (`args-P2b.json`).** The lead launches it once `SONNISS_DIR` holds WAVs, and only while at most two Godot-bound builders are running: separate runs don't share build.js's semaphores (`build.js:107-108`).
+- **Phase 2, P2 (`args-P2.json`), once all of phase 1 has merged: SFX, HEAVIES, CREW, DRESS, WEAPONS, ARM.** HEAVIES, CREW and ARM are Blender-bound, at most two at once. SFX needs only AUDIO's merge.
 - **Phase 3:**
   - the lead's look;
   - one review round (3 lenses), one fix wave (at most 3 fixers), a targeted re-check;
@@ -109,10 +107,11 @@ Each gives the decision / the alternative not taken / why / whether it's a READM
   - `assets/source/sfx/manifest.json` maps each shipped wav to its source, licence, trim, fades and gain. It writes the ASSETS rows, and `ingest.py --check` rebuilds from it.
   - The game keeps `SfxBank`'s glob (`sfx_bank.gd:17`) and Tuning's dB (`LAYER_DB`, `audio_director.gd:77`).
   - / Not a runtime manifest. / No.
-- **D19 Sonniss lives outside the repo.**
-  - The bundle sits at `SONNISS_DIR` (from `.env` or `--sonniss-root`; default `~/sfx-library/sonniss`). The tools refuse a folder inside the repo.
-  - Its licence forbids redistributing the sounds as sound effects (`audio.md` §7), so only processed game files ship; the manifest names each source as `sonniss:<path relative to SONNISS_DIR>`.
-  - / Not raw files in LFS (SPEC §3, `SPEC.md:83`). / **README departure.**
+- **D19 Every sound is generated** (Game-boy's call, 2026-11-04).
+  - The hit stack, blocks, barriers, weapons, stings and the two beds come from the ElevenLabs sound-effects API through AUDIO's tools, as the voices do. SFX (phase 2) generates and chooses them.
+  - There's no download, no redistribution clause, and every sound is prompted to the game's comic style.
+  - **The fallback** if his audition finds the generated impacts weak: the manifest's `source` takes any origin, so a recorded library can replace one pool without code.
+  - / Not the Sonniss bundle (option (a)'s first half, which he replaced the same day). / No departure: SPEC §2 lists an AI sound-effects API.
 - **D20 Voices per archetype** from ElevenLabs.
   - Pools `grunt_<archetype>`, `effort_<archetype>` and `ko_<archetype>`, keyed by `EnemyActor.archetype` (`enemy_actor.gd:62`).
   - An empty pool falls back to the shared `grunt` and `effort`, which are re-sourced too: the dummy's archetype is `&""`, so it always uses them.
@@ -181,21 +180,19 @@ Each gives the decision / the alternative not taken / why / whether it's a READM
 - `Dressing` is a non-solid `Node3D` holding `KitPiece`s (`kind`, `size`). `PropSpot` exports `prop_id: StringName`, `size: Vector3` and `hull: bool`.
 - `Barrier` keeps `Panel`, `Collider`, its API and its tunables.
 
-**Audio (AUDIO; SONNISS, WEAPONS use).**
-- **The manifest** `assets/source/sfx/manifest.json`: `{"slots": {"<pool>": {"min_variants", "long", "loop", "space": "3d"|"2d"}}, "files": [{"file", "pool", "source": "sonniss:<path relative to SONNISS_DIR>" | "elevenlabs:<ledger id>" | "gen_sfx", "licence", "trim_s", "fade_ms", "peak_db" | "lufs", "notes"}]}`.
+**Audio (AUDIO; SFX, WEAPONS use).**
+- **The manifest** `assets/source/sfx/manifest.json`: `{"slots": {"<pool>": {"min_variants", "long", "loop", "space": "3d"|"2d"}}, "files": [{"file", "pool", "source": "elevenlabs:<ledger id>" | "gen_sfx", "licence", "trim_s", "fade_ms", "peak_db" | "lufs", "notes"}]}`.
 - **Tools:**
-  - `python3 -I tools/audio/ingest.py [--only <pool>] [--check] [--sonniss-root <dir>]`:
+  - `python3 -I tools/audio/ingest.py [--only <pool>] [--check]`:
     - uses ffmpeg only;
-    - reads `SONNISS_DIR` from `.env` (the main checkout's in a worktree, as `gemini_image.py:27-37` does), refusing a folder inside the repo;
-    - `--check` prints `skipped N (no SONNISS_DIR)` instead of passing silently.
+    - `--check` rebuilds every row's PCM from its source and fails on any difference.
   - `python3 -I tools/audio/eleven_sfx.py <jobs.json> --label <text> --ceiling <credits>`:
     - reads `ELEVEN_LABS_API_KEY` or `ELEVENLABS_API_KEY` and never prints it;
     - sets `model_id` and `duration_seconds`;
     - reads `GET /v1/user/subscription` before and after each call;
     - keeps a ledger, `assets/source/sfx/eleven_ledger.jsonl`;
-    - refuses calls past `tools/audio/eleven_policy.json` `{"milestone": "M6", "stop": 12000, "max_call": 400}`;
+    - refuses calls past `tools/audio/eleven_policy.json` `{"milestone": "M6", "stop": 30000, "max_call": 1200}` (a 30 s bed at 40 credits a second fits one call);
     - puts the MP3s in LFS under `assets/source/sfx/eleven/<job>/`.
-  - `python3 -I tools/audio/sonniss_index.py` (SONNISS).
 - **New pools:**
   - `grunt_|effort_|ko_` + `punk|kicker|thug|bruiser|boss`, and the shared `grunt` and `effort` (re-sourced);
   - `player_grunt` (re-sourced), `boss_phase` (long);
@@ -233,7 +230,7 @@ Each gives the decision / the alternative not taken / why / whether it's a READM
 
 **Tuning** (new properties are `@export_range`, in the package's own subgroup):
 - "Level": "Kit" (KIT, `kit_trim_m_per_tile`); "Section light" (DRESS, `section_light_blend_s`); "Weapon look" (WEAPONS, the glint; `tuning_data.gd:1052`).
-- "Audio" (AUDIO): new subgroups "World", "Stings" and "Ambience" (`ambience_db`, `ambience_fade_s`), and `boss_line_db` in "Voices". `test_audio.gd:187`'s list becomes `["Mix", "Tiers", "Layers", "Voices", "Blocks", "World", "Stings", "Ambience", "Distance", "Music", "Rumble"]`. SONNISS changes values only.
+- "Audio" (AUDIO): new subgroups "World", "Stings" and "Ambience" (`ambience_db`, `ambience_fade_s`), and `boss_line_db` in "Voices". `test_audio.gd:187`'s list becomes `["Mix", "Tiers", "Layers", "Voices", "Blocks", "World", "Stings", "Ambience", "Distance", "Music", "Rumble"]`. SFX changes values only.
 - "Look": "Trim" (KIT). "VFX" > "Damage looks" (LOOKS): `vfx_blood_edge_cut`.
 - "Debug" (`tuning_data.gd:1392`; lines appended at its end): `kit_draw_graybox` (KIT), `look_marks_per_swatch` (LOOKS), `look_near_arm` (ARM), `audio_legacy_bank` (AUDIO), `weapon_floor_amber` (WEAPONS).
 
@@ -241,7 +238,7 @@ Each gives the decision / the alternative not taken / why / whether it's a READM
 - "## Characters (Milestone 6)", with "### › Dummy" (CHAIN), "### › Veteran Punk" (LOOKS), "### › Kicker" and "### › Pipe Thug" (CREW), "### › Bruiser" and "### › Boss" (HEAVIES). ARM updates M4's "### › Player" rows.
 - "## Props and weapons (Milestone 6)" (PROPS).
 - "## Environment kit (Milestone 6)", with "### › Kit" (KIT) and "### › Dressing" (DRESS).
-- "## Audio" (`ASSETS.md:172`) gains "### › Voices (ElevenLabs)" (AUDIO) and "### › Recorded SFX (Sonniss)" (SONNISS).
+- "## Audio" (`ASSETS.md:172`) gains "### › Voices (ElevenLabs)" (AUDIO) and "### › Sound effects (ElevenLabs)" (SFX).
 
 **Acts:**
 - CHAIN: "Look: <Name> at 1 m" for every roster id (`tests/bot/acts/roster_acts.gd`).
@@ -264,7 +261,7 @@ Each gives the decision / the alternative not taken / why / whether it's a READM
 | DRESS | `game/level/mission1/{street,roofs,boss_roof}.tscn` (everything except A6's `weapon_scene`), `LevelSection`'s light exports, the light blend in `level_root.gd`, `look_post.gd:164-175`, `crowd_room.gd` and `test_room.gd` geometry, `trim_layout.json` colours, `tests/test_m6_dress.gd`, `tour_acts.gd`, `tests/test_m5_{street,roofs}.gd` (dressing-only edits) |
 | WEAPONS | `game/weapons/*` (except `art/`), `player.gd`'s weapon paths, `pipe_thug.gd`'s pipe lines, the weapon tables of `placeholder_poses.gd` and `placeholder_anims.gd`, `gen_moves.gd`'s weapon moves and `impact_sfx` values, `test_room.gd:114-117`, `tests/{test_weapons_m6,test_pickup_cue}.gd`, `test_level_kit.gd:621-661`, `weapon_acts.gd` |
 | ARM | `tools/pipeline/{player_parts.py,player_run.py}`, `assets/{source,export}/characters/player/`, `first_person_camera.gd` (the arm swap), the `__fp_arm` lines in `skinned_art.gd` (`:23-25`, `:243`) and `humanoid_rig.gd` (`:1311-1313`), `fp_show_upper_arm` in `move_data.gd`, `gen_moves.gd:134-160`, `tests/{test_art_player,test_skinned_art}.gd`, `test_art_contract.gd:33, 245-262, 1180-1200`, the player's row and `*_PLAYER` constants wherever CHAIN put them |
-| SONNISS | `tools/audio/sonniss_index.py`, the hit-stack, block, world, sting and ambience wavs and their manifest rows, values in the Audio group, `test_audio.gd`'s ranking expectations |
+| SFX | `assets/source/sfx/eleven/sfx_*` (its jobs and MP3s), the hit-stack, block, world, sting and ambience wavs and their manifest rows, values in the Audio group, `test_audio.gd`'s ranking expectations |
 | Lead | step 0, README.md, docs/HANDOFF.md, the ASSETS.md headings, `tuning_presets/default.tres`, the atlas PNG and the ratchet at merges, A6's `weapon_scene` (`roofs.tscn:1117-1119`), the merges |
 
 **Shared files.** Each owner edits only its own region, appends, and never reorders; the lead resolves conflicts between adjacent lines:
@@ -370,7 +367,7 @@ Plus the perf act's numbers, at the first commit and at the end.
 
 ### AUDIO: Ingest, manifest, voices and the audition room
 est 8 · Godot · no Blender · P1 · ElevenLabs at most 6000 credits; no Tripo, no Gemini.
-**Goal.** The pipeline and the slots, so that SONNISS only chooses files; every voice from ElevenLabs; an audition room for Game-boy's ear.
+**Goal.** The pipeline and the slots, so that SFX only generates and chooses files; every voice from ElevenLabs; an audition room for Game-boy's ear.
 **Read.** `audio.md` (all); this plan §1 D8, D18-D25, §2 "Audio", "Tuning", "Placeholder inventory".
 **Build.**
 - **`ingest.py`** (§2):
@@ -394,7 +391,7 @@ est 8 · Godot · no Blender · P1 · ElevenLabs at most 6000 credits; no Tripo,
   - `play_2d`, `set_ambience` and the bed player, subscribed to `section_entered`, defaulting to `ambience_street` with no section;
   - per-archetype pools with the fallback;
   - `impact_sfx` read off `hit.move`.
-  - World slots stay empty until SONNISS: an empty pool plays nothing and logs nothing, and the inventory counts it as `empty_slots`.
+  - World slots stay empty until SFX: an empty pool plays nothing and logs nothing, and the inventory counts it as `empty_slots`.
 - **The audition room** in the training room:
   - `[` and `]` page through the banks;
   - the digits play the variants;
@@ -551,29 +548,40 @@ est 6 · Godot · Blender · P2 (after CHAIN) · no paid services.
 - the full suite passes;
 - `player_run.py --check` says YES.
 
-### SONNISS: The recorded SFX
-est 5 · Godot · no Blender · P2b · no paid services (an ElevenLabs fallback needs Game-boy's yes, then at most 6000).
-**First step:** resolve the folder as `ingest.py` does (`SONNISS_DIR` in `.env`, else `~/sfx-library/sonniss`) and run `find <folder> -iname '*.wav' | head -1`. If that prints nothing, stop with no commit, and say so in the summary.
-**Goal.** Choose and ingest the hit stack, blocks, barriers, weapons, stings and the two beds from the bundle, so that `generated_sfx` and `empty_slots` reach 0.
-**Read.** `audio.md` §1, §4 and §7; ARCHITECTURE.md "### Ingest, manifest, voices and the audition room (AUDIO)"; the manifest.
+### SFX: The generated sound effects
+est 6 · Godot · no Blender · P2 (needs only AUDIO's merge) · ElevenLabs at most 20000 credits; no Tripo, no Gemini.
+**Goal.** Generate, choose and ingest every pool that isn't a voice, through AUDIO's `eleven_sfx.py` and `ingest.py`, so that `generated_sfx` and `empty_slots` reach 0 (the music loop excepted, D25):
+- the hit stack (`whoosh`, `thud`, `crack`, `crunch`, `body_fall`, `sub_thump`) and the blocks (`block_clack`, `parry_ting`, `guard_break`);
+- the barriers, the weapons (`weapon_pickup|throw|break|land`, and `weapon_<impact_sfx>_hit` for the pipe and the bike chain);
+- the GO and CLEAR stings, and the two ambience beds.
+
+**Read.** `audio.md` §1, §4 and §6; this plan §1 D18-D19, D21, D23-D24, §2 "Audio", "Placeholder inventory"; ARCHITECTURE.md "### Ingest, manifest, voices and the audition room (AUDIO)"; `docs/milestones/M6-calls/AUDIO.md` (the measured rate); the manifest; `tests/test_audio.gd` lines 124-243.
 **Build.**
-- `sonniss_index.py`: a CSV of path, duration, rate, channels, tags, peak and early-peak time. It reads the bundle by path argument and never runs anything from inside it.
-- Shortlist by name, metadata and measured features: whooshes peak within 50 ms; hit layers stay under 1.5 s.
-- 3-4 variants per pool.
-- Rebalance the Layers dB, so that the tier ranking holds.
-- Crossfade the beds so they loop seamlessly.
-- ASSETS rows: royalty-free, no attribution, the bundle's year.
+- One jobs file per group (`assets/source/sfx/eleven/sfx_<group>/`).
+  - Prompts in the game's style: comic-book, punchy, dry (no reverb tail), and original (never "like <a game or film>").
+  - Each hit-stack pool is one layer: a thud is the body impact alone, a crack the bone snap alone. The tier stack layers them.
+- Always set `duration_seconds` (0.5 s at least).
+  - Ingest trims to the test's limits: one-shots under 1.5 s, and whooshes peaking within 50 ms.
+  - The beds use `loop: true` at about 20-30 s; the stings are 1-2 s, in 2D.
+- **Before the batch, project its cost** from AUDIO's measured rate. Use 3 candidates per kept clip within the ceiling; otherwise 2; otherwise 1, and say so in `requests`.
+- **Choosing:**
+  - choose by measured features (onset, peak time, length, spectral centroid against the old file's role) and log each choice;
+  - the runners-up stay in their job folders, so a later swap needs no new generation.
+- 3-4 variants per hit-stack pool (at least the test's minimums), and 2 per world pool.
+- Rebalance the Layers dB so that `test_audio.gd`'s tier ranking holds.
+- The ASSETS rows read "ElevenLabs sound-effects API (Starter, commercial licence)", with the ledger id.
 
 **Done when:**
 - the full suite passes;
-- `ingest.py --check` rebuilds every row (no skips);
-- the audition room plays every pool new.
+- `ingest.py --check` rebuilds every row;
+- `generated_sfx` and `empty_slots` are 0;
+- the audition room plays every pool new;
+- the calls file lists the cost by group.
 
 ## 4. Merge order and phase 3
 
 1. **Step 0 (§0).**
-   - DM Game-boy the one open item: download one Sonniss GDC bundle and unzip it into `~/sfx-library/sonniss/<year>/` (or set `SONNISS_DIR` in `.env`). The newest, 2026, is about 7.5 GB (unverified); 2024's is 23.5 GB. 89 GB is free.
-   - In the same DM, name D2's change.
+   - DM Game-boy D2's change (sent 14:56 CST; the Sonniss ask in it is withdrawn, D19).
    - Launch P1 after `get_usage`.
 2. **Phase 1 merges.** Merge each P1 package as it finishes; after each, the preset, the atlas, the ratchet and the full suite.
    - After LOOKS, send its A/B stills.
@@ -583,7 +591,7 @@ est 5 · Godot · no Blender · P2b · no paid services (an ElevenLabs fallback 
 4. **Phase 2 merges.** Merge each P2 package as it finishes.
    - After WEAPONS, set `Pickups/PipeBigShutter`'s `weapon_scene` to `bike_chain.tscn` (`roofs.tscn:1117-1119`), rerun `test_m5_roofs.gd`, and lower `second_weapon`.
    - After ARM, send its stills.
-   - Then SONNISS. One post-merge fixer (Sonnet). HANDOFF.
+   - One post-merge fixer (Sonnet). HANDOFF.
 5. **Record once** into `captures/m6-final/` with `tools/record_acts.sh`:
    - every "Look: <Name> at 1 m" (punk, kicker, thug, bruiser, boss, dummy), "Look: lineup", "Look: weapons", "Look: props", "Look: own limbs";
    - with `BOT_SCENE=res://tests/bot/level_bot.tscn`: "Look: arena tour", "Look: drops", "Look: seams", and "Run: held back" for the street (0-2), the roofs (3-5) and the boss (6).
@@ -604,7 +612,7 @@ est 5 · Godot · no Blender · P2b · no paid services (an ElevenLabs fallback 
 | 2 | Triangle budgets: enemy 15000, boss 30000, module 5000, prop or weapon 3000; the sheet 2048² | A2 on the roster, `test_kit.gd`, `StaticArt.check()` |
 | 3 | Every asset has an ASSETS.md row with source, service and licence; binaries in LFS | A13 (`assets/export`, concepts), `test_audio_m6.gd` (`assets/source/sfx`) |
 | 4 | Every generated asset rebuilds | `run.py --check` per character and prop, `player_run.py --check`, `gen_palette.py --check`, `gen_trim.gd --check`, `ingest.py --check` (no skips) |
-| 5 | Paid services stay inside the policy | `test_m6_tripo_ledger.gd` (<= 900, floor 700); `test_audio_m6.gd` (ElevenLabs <= 12000) |
+| 5 | Paid services stay inside the policy | `test_m6_tripo_ledger.gd` (<= 900, floor 700); `test_audio_m6.gd` (ElevenLabs <= 30000) |
 | 6 | The game underneath is unchanged | `test_m6_colliders.gd`; the M3, M4 (on the roster) and M5 done-when tests; the readability metrics |
 | 7 | Frame time | §4 step 8, against M5 |
 | 8 | Game-boy's judgement | the characters at 1 m at the Punk's bar, the world, the audio in the audition room |
@@ -617,13 +625,13 @@ Usage at the plan's start was about 3% of the 5-hour window and 12% weekly. A So
 | --- | --- | --- |
 | 0 | The plan, its critic, the synthesis | about 6% |
 | 1 | CHAIN 10, KIT 10, PROPS 9, AUDIO 8, LOOKS 7; the lead (step 0, 5 merges, suites, the DM) 8 | about 52% |
-| 2 | HEAVIES 13, CREW 12, DRESS 12, WEAPONS 8, ARM 6, SONNISS 5; a fixer 5; the lead 9 | about 70% |
+| 2 | SFX 6, HEAVIES 13, CREW 12, DRESS 12, WEAPONS 8, ARM 6; a fixer 5; the lead 9 | about 71% |
 | 3 | 2 Opus lenses 12, a Sonnet lens 3, skeptics 5, fixers up to 15, re-check 4, perf 2, the lead 6 | at most 47% |
 | M6 | | about 175% at most: three windows with handoffs, about 17-21 weekly points |
 
 **Splits at the 90% handoff.** Check `get_usage` before every launch.
 - **Window 1:** phases 0 and 1 (about 60%), then DRESS and WEAPONS (§4 step 3).
-- **Window 2:** HEAVIES, CREW, ARM, SONNISS, the fixer. A builder that's cut off resumes from its `wip:` commit when the same args are rerun.
+- **Window 2:** SFX, HEAVIES, CREW, ARM, the fixer. A builder that's cut off resumes from its `wip:` commit when the same args are rerun.
 - **Window 3:** phase 3. The lenses and skeptics in one window, never splitting a lens.
 
 ## 7. Critique applied
@@ -647,3 +655,5 @@ Usage at the plan's start was about 3% of the 5-hour window and 12% weekly. A So
 | L4 | Applied | Bitexact flags, and `--check` compares PCM. |
 | L5 | Applied | D2 names the change, and §4 step 1's DM carries it. |
 | L6 | Applied | CHAIN owns `make_probe_body.py --regions`. |
+
+**Since the critique:** Game-boy chose ElevenLabs for every sound (2026-11-04 15:05). SONNISS became SFX in phase 2 (§3), D19 was rewritten, the ElevenLabs stop went from 12000 to 30000 (40,000 on the account), and H2 and H4's Sonniss parts are moot.
