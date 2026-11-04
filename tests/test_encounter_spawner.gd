@@ -590,6 +590,7 @@ func test_a_named_point_with_a_unique_tag_held_by_the_player_falls_back_to_the_n
 
 
 func test_a_behind_point_in_the_players_view_waits_then_the_nearest_free_point_outside_the_view_takes_it() -> void:
+	Tuning.set_value(&"spawn_behind_waits_out_of_view", true)  # M5's hold: the mode this tests
 	Tuning.set_value(&"spawn_named_wait_s", 0.5)
 	var spawner := _spawner()
 	# The player looks along -Z: "Door" is in his view. The alley is the nearer point outside it, the doorway the farther.
@@ -607,6 +608,7 @@ func test_a_behind_point_in_the_players_view_waits_then_the_nearest_free_point_o
 
 
 func test_a_behind_point_the_player_looks_away_from_in_time_is_used_itself() -> void:
+	Tuning.set_value(&"spawn_behind_waits_out_of_view", true)  # M5's hold: the mode this tests
 	Tuning.set_value(&"spawn_named_wait_s", 2.0)
 	var spawner := _spawner()
 	var points := _named_points([["Door", Vector3(0.0, 0.0, -9.0), "doorway", true], ["RearAlley", Vector3(3.0, 0.0, 9.0), "alley"]])
@@ -622,6 +624,7 @@ func test_a_behind_point_the_player_looks_away_from_in_time_is_used_itself() -> 
 
 
 func test_a_behind_point_already_outside_the_view_is_used_without_waiting() -> void:
+	Tuning.set_value(&"spawn_behind_waits_out_of_view", true)  # M5's hold: the mode this tests
 	Tuning.set_value(&"spawn_named_wait_s", 5.0)
 	var spawner := _spawner()
 	var points := _named_points([["Rear", Vector3(7.0, 0.0, 9.0), "doorway", true], ["Other", Vector3(-7.0, 0.0, 9.0), "doorway"]])
@@ -634,6 +637,7 @@ func test_a_behind_point_already_outside_the_view_is_used_without_waiting() -> v
 
 
 func test_a_behind_point_with_every_point_in_view_still_spawns_after_the_any_tag_wait() -> void:
+	Tuning.set_value(&"spawn_behind_waits_out_of_view", true)  # M5's hold: the mode this tests
 	Tuning.set_value(&"spawn_named_wait_s", 0.5)
 	Tuning.set_value(&"spawn_named_any_wait_s", 1.0)
 	var spawner := _spawner()
@@ -648,9 +652,39 @@ func test_a_behind_point_with_every_point_in_view_still_spawns_after_the_any_tag
 	assert_almost_eq(enemies[0].global_position.x, 0.0, 0.05, "at the nearest free point of any tag: its own")
 
 
+func test_with_the_hold_off_a_behind_point_in_the_players_view_is_used_at_once() -> void:
+	# The default (Game-boy's playtest ruling): the out_of_view flag is ignored, no lull before the spawn.
+	assert_false(Tuning.data.spawn_behind_waits_out_of_view, "off by default")
+	Tuning.set_value(&"spawn_named_wait_s", 5.0)
+	var spawner := _spawner()
+	var points := _named_points([["Door", Vector3(0.0, 0.0, -9.0), "doorway", true], ["RearAlley", Vector3(3.0, 0.0, 9.0), "alley"]])
+	spawner.play_table(_finite([["punk"]], [["Door"]]), points)
+	spawner.set_waves_enabled(true)
+	await _ticks(30)
+	var enemies := _enemies()
+	assert_eq(enemies.size(), 1, "it spawns without waiting for the player to look away")
+	assert_almost_eq(enemies[0].global_position.z, -9.0, 0.05, "at the named point itself, in his view")
+
+
+func test_with_the_hold_off_a_behind_point_that_is_not_free_still_falls_back_by_tag() -> void:
+	Tuning.set_value(&"spawn_named_wait_s", 0.5)
+	var spawner := _spawner()
+	# "Near" is 1.5 m from the player (inside spawn_min_player_distance_m); the flag does not matter.
+	var points := _named_points([["Near", Vector3(0.0, 0.0, -1.5), "doorway", true], ["Far", Vector3(6.0, 0.0, -9.0), "doorway"]])
+	spawner.play_table(_finite([["punk"]], [["Near"]]), points)
+	spawner.set_waves_enabled(true)
+	await _ticks(20)
+	assert_eq(_enemies().size(), 0, "a point nearer than spawn_min_player_distance_m is waited for")
+	await _ticks(30)
+	var enemies := _enemies()
+	assert_eq(enemies.size(), 1, "after spawn_named_wait_s the same-tag point takes it")
+	assert_almost_eq(enemies[0].global_position.x, 6.0, 0.05, "the nearest free point of its own tag")
+
+
 ## Frames from the player turning away (the named behind point is then free) to the spawn, with the retry
 ## period `retry_s`; -1 when it does not come in 90.
 func _frames_to_spawn_after_turning(retry_s: float) -> int:
+	Tuning.set_value(&"spawn_behind_waits_out_of_view", true)  # M5's hold: the mode this tests
 	Tuning.set_value(&"spawn_named_wait_s", 9.0)
 	Tuning.set_value(&"spawn_named_retry_s", retry_s)
 	_player.look_yaw = 0.0
