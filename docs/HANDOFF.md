@@ -13,7 +13,7 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
   - a "Kicker left alone" act;
   - the single-file leak in test_kicker.gd fixed;
   - the holder reseat kept and tested.
-- **Fixer `faced`** (review.js run `wf_d92b342d-e0c`, fixers only) is on branch `m5/fix-feedback-faced`. **Resume:** if it was cut off, rerun review.js with the same args. Then:
+- **Fixer `faced`** (review.js run `wf_67a4b1ab-53a`, fixers only; the first launch, `wf_d92b342d-e0c`, failed on the args shape: `packages` must be `{packages: [...]}`) is on branch `m5/fix-feedback-faced`. **Resume:** if it was cut off, rerun review.js with the same args. Then:
   1. merge it;
   2. look at its recordings;
   3. run the suite;
