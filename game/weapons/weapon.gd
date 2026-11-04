@@ -19,6 +19,8 @@ var _thrower: CombatActor
 var _throw_move: MoveData
 var _flying: bool = false
 var _mesh: MeshInstance3D
+var _cylinder: CylinderMesh
+var _material: ShaderMaterial
 
 
 func _ready() -> void:
@@ -35,25 +37,39 @@ func _ready() -> void:
 	shape.shape = capsule
 	add_child(shape)
 	_mesh = MeshInstance3D.new()
-	var cylinder := CylinderMesh.new()
-	cylinder.top_radius = radius
-	cylinder.bottom_radius = radius
-	cylinder.height = length
-	cylinder.material = ToonMaterials.prop(color)
-	_mesh.mesh = cylinder
+	_cylinder = CylinderMesh.new()
+	_cylinder.height = length
+	_material = ToonMaterials.prop(color)
+	_cylinder.material = _material
+	_mesh.mesh = _cylinder
 	_mesh.material_overlay = ToonMaterials.outline_for_prop()
 	add_child(_mesh)
 	_set_ground_physics()
+	_refresh_look()
 
 
 func is_available() -> bool:
 	return holder == null and not _flying
 
 
+## The look: lying on the floor (nobody holds it, it is not flying) the pipe takes the tunable
+## weapon_floor_color and a thicker radius (weapon_floor_radius_scale), so it reads against the
+## floor's grey from across a room; in a hand or in the air it keeps its own `color` and `radius`.
+func _refresh_look() -> void:
+	if _material == null or _cylinder == null:
+		return
+	var lying := holder == null and not _flying
+	_material.set_shader_parameter(&"albedo", Tuning.data.weapon_floor_color if lying else color)
+	var drawn := radius * (Tuning.data.weapon_floor_radius_scale if lying else 1.0)
+	_cylinder.top_radius = drawn
+	_cylinder.bottom_radius = drawn
+
+
 ## Attach to `actor`'s grip. The pipe's long axis points from grip to tip.
 func attach_to(actor: CombatActor) -> void:
 	holder = actor
 	_flying = false
+	_refresh_look()
 	freeze = true
 	collision_layer = 0
 	collision_mask = 0
@@ -83,6 +99,7 @@ func throw_from(actor: CombatActor, velocity: Vector3, move: MoveData) -> void:
 	freeze = false
 	_set_air_damping()
 	_flying = true
+	_refresh_look()
 	collision_layer = CombatTypes.bit(CombatTypes.LAYER_PROJECTILE)
 	collision_mask = CombatTypes.bit(CombatTypes.LAYER_WORLD) | CombatTypes.bit(CombatTypes.LAYER_ENEMY_BODY)
 	linear_velocity = velocity
@@ -103,6 +120,7 @@ func drop(velocity: Vector3 = Vector3.ZERO, spin_rps: float = 0.0) -> void:
 	holder = null
 	_flying = false
 	_thrower = null
+	_refresh_look()
 	reparent(world, false)
 	global_transform = start
 	freeze = false
@@ -179,6 +197,7 @@ func _on_body_entered(body: Node) -> void:
 				CombatEvents.hit_landed.emit(hit)
 		linear_velocity *= -0.2
 	_flying = false
+	_refresh_look()
 	_set_ground_physics.call_deferred()
 	if durability <= 0:
 		CombatEvents.weapon_broke.emit(_thrower, self)

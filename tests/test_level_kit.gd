@@ -299,7 +299,7 @@ func test_every_spawn_point_is_on_the_navmesh_inside_its_arena_and_reaches_its_l
 			assert_lt(_flat(snapped, at), 0.3, "%s snaps to the navmesh" % label)
 			assert_lt(absf(snapped.y - at.y), 0.5, "%s on its floor" % label)
 			assert_true(_reaches(level, at, lane), "%s has a path to its lane point" % label)
-			assert_true(point.has_all(["position", "yaw", "tag", "lane_point", "name"]), "the spawner's point keys")
+			assert_true(point.has_all(["position", "yaw", "tag", "lane_point", "name", "out_of_view"]), "the spawner's point keys")
 		for other in level.arenas():
 			if other != arena:
 				for point in list:
@@ -628,6 +628,37 @@ func test_the_pipe_lies_at_its_pickup_spot() -> void:
 	assert_lt(_flat(pipe.global_position, spot.global_position), 0.3, "it lies where the spot is")
 	assert_lt(absf(pipe.global_position.y - spot.global_position.y), 0.3, "on the terrace floor")
 	assert_true(pipe.is_available(), "an ordinary pick-up")
+
+
+func _albedo(pipe: Weapon) -> Color:
+	var mesh := pipe.get_child(pipe.get_child_count() - 1) as MeshInstance3D
+	var cylinder := mesh.mesh as CylinderMesh
+	return (cylinder.material as ShaderMaterial).get_shader_parameter(&"albedo")
+
+
+func _drawn_radius(pipe: Weapon) -> float:
+	var mesh := pipe.get_child(pipe.get_child_count() - 1) as MeshInstance3D
+	return (mesh.mesh as CylinderMesh).top_radius
+
+
+func test_a_weapon_lying_on_the_floor_is_drawn_in_the_floor_contrast_colour_and_a_held_one_in_its_own() -> void:
+	var level := await _level()
+	var pipe := get_tree().get_nodes_in_group(&"weapon")[0] as Weapon
+	await _ticks(10)
+	assert_eq(_albedo(pipe), Tuning.data.weapon_floor_color, "lying: the tunable floor colour")
+	assert_ne(_albedo(pipe), pipe.color, "which is not the held look")
+	assert_almost_eq(_drawn_radius(pipe), pipe.radius * Tuning.data.weapon_floor_radius_scale, 0.0001, "and thicker")
+	pipe.attach_to(level.player)
+	await _ticks(4)
+	assert_eq(_albedo(pipe), pipe.color, "in a hand: its own colour")
+	assert_almost_eq(_drawn_radius(pipe), pipe.radius, 0.0001, "and its own radius")
+	pipe.drop(Vector3.ZERO, 0.0)
+	await _ticks(4)
+	assert_eq(_albedo(pipe), Tuning.data.weapon_floor_color, "dropped: the floor colour again")
+	var floor_grey := LevelBlock.COLORS[&"floor"] as Color
+	var contrast := absf(Tuning.data.weapon_floor_color.get_luminance() - floor_grey.get_luminance())
+	var hue_gap := absf(Tuning.data.weapon_floor_color.s - floor_grey.s)
+	assert_true(contrast > 0.25 or hue_gap > 0.5, "the floor colour stands out from the floor's grey (luminance gap %.2f, saturation gap %.2f)" % [contrast, hue_gap])
 
 
 func test_start_at_arena_1_clears_the_earlier_arenas_and_stands_the_player_at_its_first_route_point() -> void:

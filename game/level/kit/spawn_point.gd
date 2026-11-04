@@ -9,6 +9,12 @@ extends Marker3D
 ## nearest free point with the same tag.
 @export var tag: StringName = &"doorway"
 
+## A "behind" point (the approved table's behind spawns): the spawner holds an enemy named to it
+## while the point is inside the player's view and lets it in once the player looks away (see
+## EncounterSpawner), so it arrives unseen. Off, the point spawns whoever looks where ("ahead" and
+## "side" doors).
+@export var out_of_view: bool = false
+
 var _lane: Marker3D
 
 
@@ -38,6 +44,7 @@ func yaw() -> float:
 	return atan2(-facing.x, -facing.z)
 
 
-## The EncounterSpawner's point: {position, yaw, tag, lane_point, name}.
+## The EncounterSpawner's point: {position, yaw, tag, lane_point, name, out_of_view}.
 func as_point() -> Dictionary:
-	return {position = global_position, yaw = yaw(), tag = tag, lane_point = lane_position(), name = name}
+	return {position = global_position, yaw = yaw(), tag = tag, lane_point = lane_position(), name = name,
+			out_of_view = out_of_view}
