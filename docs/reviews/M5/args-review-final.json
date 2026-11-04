@@ -2,7 +2,7 @@
   "milestone": 5,
   "summary": "the level blockout: Game-boy's attack arcs in the director, the level kit, then the graybox Mission 1 level from the reference (street, three roofs, the boss roof), start to boss",
   "round": "final",
-  "base": "<the merged head after FIX2>",
+  "base": "2e4455e1949ccd675ccb3957c466cf97952e524e",
   "base_branch": "m5/level-blockout",
   "read_first": [
     "docs/milestones/M5-plan.md §1 (the decisions) and §5 (this round)",
@@ -26,8 +26,11 @@
       "brief": "Code, tests and pipeline, over the diff from main (git diff main...HEAD):\n- the §2 contracts as landed, against ARCHITECTURE.md's '## Level blockout (Milestone 5)';\n- no numbers in scripts (tunables in tuning_data.gd's groups);\n- the layer rules (the GO cue, F3 and the HUD only read state);\n- readability thresholds moved only with a log entry and a twin;\n- the done-when test is honest (no forced clears, no assertion that can't fail);\n- named spawns can't stall a wave;\n- the suite's growth in tests and time, against M4's 1588 tests and 267 s."
     }
   ],
-  "common_note": "<state after FIX2: fill in>",
-  "skeptic_severities": ["high", "medium"],
+  "common_note": "State: m5/level-blockout at 2e4455e. ARC, KIT, BOT, STREET, ROOF, FINALE and the post-merge fixer FIX2 are all merged (calls in docs/milestones/M5-calls/*.md). Suite: 1729/1729, 294 s alone, 0 error lines. test_m5_done_when plays all 7 arenas and 34 enemies. Times: the god-mode timing run (captures_dir/timing.log) takes 197.4 s for the whole level; the held-back runs take street 135.8 s, roofs 182.9 s and boss 108.0 s, 426.7 s in all. Recordings in captures_dir: arc-punks, arc-turn, arc-mixed, arc-quick (the crowd room's arc acts); street/held, roofs/held, boss/held (level_bot 'Run: held back' with --from/--to 0-2, 3-5 and 6); seams ('Look: seams', both seams, barrier closed and open); knock-catwalk ('Run: knock-off' --from=4). Each has bot.avi, bot.log and sheets/ (overview pages at 2 stills a second, 5x4 tiles); probed acts also have readability.json. Cut finer sheets yourself with ffmpeg from bot.avi when you need a moment. Accepted and not findings: the graybox look (art is M6); the veteran Punk's whole-body orange tint (a graybox stand-in in README); the README M5 departures, which are for Game-boy's ruling, so judge whether each is built as described, not whether it should exist; a KO'd body that slides to the boss roof's lip lies on the deck edge. Severity: high = it would spoil Game-boy's sign-off play (a stall, a crash, a wrong table, a barrier or drop that doesn't read, a fight that's unfair); medium = he'd notice it, and it's wrong against the plan or the approved table; low = polish. Give each finding the files to change, so the lead can partition the fixes.",
+  "skeptic_severities": [
+    "high",
+    "medium"
+  ],
   "partition": false,
   "max_packages": 3,
   "fix_concurrency": 2,
