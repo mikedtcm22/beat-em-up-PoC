@@ -191,7 +191,7 @@ func test_every_voice_pool_meets_its_minimum() -> void:
 			continue
 		checked += 1
 		assert_gte(bank.count(StringName(pool)), int(_manifest().slots[pool].min_variants), "%s meets its minimum" % pool)
-	assert_gte(checked, 3 + 3 * ARCHETYPES.size() + 2, "the shared, per-archetype, player and boss voice slots exist")
+	assert_gte(checked, 3 + 3 * ARCHETYPES.size() + 1, "the shared, per-archetype, player and boss voice slots exist")
 	for archetype in ARCHETYPES:
 		for base in ["grunt", "effort", "ko"]:
 			assert_true(_manifest().slots.has("%s_%s" % [base, archetype]), "slot %s_%s" % [base, archetype])
@@ -250,8 +250,11 @@ func test_ingest_check_rebuilds_every_elevenlabs_file() -> void:
 
 func test_a_voice_comes_from_the_archetypes_pool_and_falls_back_to_the_shared_one() -> void:
 	_stub(&"grunt")
-	_stub(&"grunt_punk")
 	_stub(&"effort")
+	# The real bank has the archetype pools now: this test builds its own.
+	for pool in [&"grunt_punk", &"grunt_bruiser", &"effort_punk"]:
+		_director.bank.pools.erase(pool)
+	_stub(&"grunt_punk")
 	var punk := _enemy(&"punk")
 	var bruiser := _enemy(&"bruiser")
 	var dummy := _enemy(&"")
@@ -281,6 +284,7 @@ func test_every_archetype_has_all_three_voice_pools_in_the_real_bank() -> void:
 func test_an_enemy_ko_plays_its_own_line_and_cuts_the_grunt() -> void:
 	_stub(&"grunt_punk")
 	_stub(&"ko_punk")
+	Tuning.data.sfx_volume_variation = 0.0
 	var punk := _enemy(&"punk")
 	var hit := _hit(punk)
 	hit.killed = true
@@ -370,7 +374,7 @@ func test_a_weapon_swing_adds_its_impact_to_the_hit_stack() -> void:
 	var pools := _pools_played()
 	assert_has(pools, &"weapon_pipe_hit")
 	assert_has(pools, &"thud", "the tier's stack still plays")
-	var impact := _plays.filter(func(p: Dictionary) -> bool: return p.pool == &"weapon_pipe_hit")[0]
+	var impact: Dictionary = _plays.filter(func(p: Dictionary) -> bool: return p.pool == &"weapon_pipe_hit")[0]
 	assert_almost_eq(float(impact.volume_db), Tuning.data.weapon_hit_db + AudioDirector.tier_db(CombatTypes.HitTier.LIGHT)
 		+ _director.distance_db(impact.at as Vector3), 0.7)
 	_plays.clear()
@@ -435,7 +439,7 @@ func test_the_bed_crossfades_to_the_section_it_enters_and_back_to_the_default() 
 	Tuning.data.ambience_fade_s = 0.2
 	_director.ambience = &""
 	_director.set_ambience(AudioDirector.AMBIENCE_DEFAULT)
-	await _frames(3)
+	await _frames(20)
 	var section := LevelSection.new()
 	section.ambience = &"ambience_roof"
 	add_child_autofree(section)

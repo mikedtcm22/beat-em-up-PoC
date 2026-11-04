@@ -11,7 +11,7 @@ Usage (ffmpeg and the standard library only):
 The manifest, assets/source/sfx/manifest.json, is the ingest record:
 	{"slots": {"<pool>": {"min_variants", "long", "loop", "space": "3d"|"2d"}},
 	 "files": [{"file", "pool", "source": "elevenlabs:<ledger id>" | "gen_sfx", "licence", "trim_s": [start, end],
-	            "fade_ms": [in, out], "peak_db" | "lufs", "gain_db", "loop_xfade_ms", "notes"}]}
+	            "fade_ms": [in, out], "peak_db" | "rms_db" | "lufs", "gain_db", "loop_xfade_ms", "notes"}]}
 `file` is a name in assets/export/sfx/ (`<pool>_<nn>.wav`, the pool being the stem up to the last underscore,
 as game/audio/sfx_bank.gd reads it). A slot is a pool the game plays; one with fewer files than
 `min_variants` is an empty slot (the placeholder inventory counts it). `long` exempts a pool from the
@@ -22,16 +22,18 @@ with ffmpeg to 16-bit mono 44.1 kHz and does the rest in plain arithmetic, so a 
 	1. trim to `trim_s` (found from the take's own level the first time: its onset, 3 ms before, to its last
 	   sound, 30 ms after, or at the pool's `max_s`);
 	2. linear fades of `fade_ms` so both ends sit at zero (the tests want the ends within 0.004);
-	3. `gain_db`, found the first time from the target `peak_db` (-1 dBFS, like gen_sfx) or `lufs`.
+	3. `gain_db`, found the first time from the target `peak_db` (-1 dBFS, like gen_sfx), `rms_db` (voices) or
+	   `lufs` (beds); the last two never push the peak past `peak_cap_db`.
 A loop is not trimmed or faded: `loop_xfade_ms` crossfades its tail into its head, so the file ends where
 it begins. Every number found is written to the row, so `--check` redoes the same arithmetic and fails on
 any difference in the PCM (`--tolerance N` allows N least-significant bits).
 
 A picks file chooses the takes of each pool, in the order they become variants 01, 02, ...:
 	{"slots": {"grunt_punk": {"min_variants": 3}},
-	 "defaults": {"peak_db": -1.0, "fade_ms": [4, 8], "max_s": 1.4},
+	 "defaults": {"peak_db": -1.0, "max_s": 1.4},
 	 "pools": {"grunt_punk": {"takes": ["voices/grunt_punk_02", "voices/grunt_punk_01"], "max_s": 1.0, "notes": "..."}}}
-A pool's own keys override `defaults`; `lufs` replaces `peak_db`. Ingesting a pool removes its old files
+A pool's own keys override `defaults`; of `lufs`, `rms_db` and `peak_db` the first present is the target. Fades default to 4 ms in and 8 ms out, the
+out being 60 ms when `max_s` cut a sound that was still going. Ingesting a pool removes its old files
 first (the placeholders of the pool included).
 """
 import argparse
@@ -159,16 +161,19 @@ def integrated_lufs(samples):
 # --------------------------------------------------------------------------- the arithmetic
 
 def find_trim(samples, max_s):
-	"""[start_s, end_s]: the take's onset less 3 ms to its last sound plus 30 ms, ending at `max_s` at the latest."""
+	"""([start_s, end_s], cut): the take's onset less 3 ms to its last sound plus 30 ms, ending at `max_s` at
+	the latest; `cut` is true when `max_s` ended it (the sound was still going, so it wants a longer fade)."""
 	peak = peak_of(samples)
 	threshold = max(peak * 10.0 ** (SILENCE_REL_DB / 20.0), 10.0 ** (SILENCE_FLOOR_DB / 20.0)) * FULL
 	first = next((i for i, s in enumerate(samples) if abs(s) >= threshold), 0)
 	last = next((i for i in range(len(samples) - 1, -1, -1) if abs(samples[i]) >= threshold), len(samples) - 1)
 	start = max(0, first - int(ONSET_PRE_S * RATE))
 	end = min(len(samples), last + int(TAIL_S * RATE))
+	cut = False
 	if max_s and end - start > int(max_s * RATE):
 		end = start + int(max_s * RATE)
-	return [round(start / RATE, 6), round(end / RATE, 6)]
+		cut = True
+	return [round(start / RATE, 6), round(end / RATE, 6)], cut
 
 
 def apply_row(source, row):
@@ -203,7 +208,8 @@ def apply_row(source, row):
 
 
 def fit_gain(source, row):
-	"""gain_db for a row whose trim and fades are set: the `peak_db` target, or `lufs` capped to -1 dBFS peak."""
+	"""gain_db for a row whose trim and fades are set: the `peak_db` target, or the `rms_db` (a short voice, so
+	its takes sit at one loudness) or `lufs` (a bed) target, those two capped at `peak_cap_db` (-1 dBFS)."""
 	trial = dict(row)
 	trial["gain_db"] = 0.0
 	shaped = apply_row(source, trial)
@@ -212,8 +218,10 @@ def fit_gain(source, row):
 		raise IngestError("%s is silent" % row.get("file"))
 	if row.get("lufs") is not None:
 		gain = float(row["lufs"]) - integrated_lufs(shaped)
-		limit = float(row.get("peak_cap_db", -1.0)) - to_db(peak)
-		gain = min(gain, limit)
+		gain = min(gain, float(row.get("peak_cap_db", -1.0)) - to_db(peak))
+	elif row.get("rms_db") is not None:
+		gain = float(row["rms_db"]) - to_db(rms_of(shaped))
+		gain = min(gain, float(row.get("peak_cap_db", -1.0)) - to_db(peak))
 	else:
 		gain = float(row.get("peak_db", DEFAULTS["peak_db"])) - to_db(peak)
 	return round(gain, 2)
@@ -225,12 +233,13 @@ def build_row(take_path, row, loop):
 	if loop:
 		row.setdefault("loop_xfade_ms", 0.0)
 	else:
+		cut = False
 		if not row.get("trim_s"):
-			row["trim_s"] = find_trim(source, row.pop("max_s", None))
+			row["trim_s"], cut = find_trim(source, row.pop("max_s", None))
 		else:
 			row.pop("max_s", None)
 		if "fade_ms" not in row or row["fade_ms"] is None:
-			row["fade_ms"] = list(DEFAULTS["fade_ms"])
+			row["fade_ms"] = [DEFAULTS["fade_ms"][0], LONG_FADE_MS if cut else DEFAULTS["fade_ms"][1]]
 		span = row["trim_s"][1] - row["trim_s"][0]
 		if span * 1000.0 < row["fade_ms"][0] + row["fade_ms"][1]:
 			raise IngestError("%s: %.0f ms is too short for its fades" % (row["file"], span * 1000.0))
@@ -315,7 +324,7 @@ def cmd_init(args):
 
 def features(samples):
 	peak = peak_of(samples)
-	trim = find_trim(samples, None)
+	trim, _cut = find_trim(samples, None)
 	a, b = int(trim[0] * RATE), int(trim[1] * RATE)
 	active = samples[a:b]
 	crossings = sum(1 for i in range(1, len(active)) if (active[i - 1] < 0) != (active[i] < 0))
@@ -362,7 +371,7 @@ def cmd_picks(args):
 	for pool, slot in picks.get("slots", {}).items():
 		current = manifest["slots"].setdefault(pool, {"min_variants": 1, "long": False, "loop": False, "space": "3d"})
 		current.update(slot)
-	defaults = dict(DEFAULTS)
+	defaults = {k: v for k, v in DEFAULTS.items() if k != "fade_ms"}
 	defaults.update(picks.get("defaults", {}))
 	for pool, spec in picks["pools"].items():
 		if not NAME_RE.match(pool):
@@ -374,7 +383,11 @@ def cmd_picks(args):
 			raise IngestError("pool '%s' has no slot: declare it under \"slots\"" % pool)
 		options = dict(defaults)
 		options.update({k: v for k, v in spec.items() if k not in ("takes", "notes")})
-		if "lufs" in spec and "peak_db" not in spec:
+		# One loudness target: lufs, else rms_db, else peak_db.
+		if "lufs" in options:
+			options.pop("rms_db", None)
+			options.pop("peak_db", None)
+		elif "rms_db" in options:
 			options.pop("peak_db", None)
 		remove_pool_files(pool, manifest)
 		for n, take in enumerate(spec["takes"], 1):
@@ -382,7 +395,7 @@ def cmd_picks(args):
 				raise IngestError("take '%s' is not in the ledger" % take)
 			file_name = "%s_%02d.wav" % (pool, n)
 			row = {"file": file_name, "pool": pool, "source": "elevenlabs:" + take, "licence": ELEVEN_LICENCE}
-			for key in ("peak_db", "lufs", "max_s", "fade_ms", "peak_cap_db"):
+			for key in ("peak_db", "rms_db", "lufs", "max_s", "fade_ms", "peak_cap_db"):
 				if key in options and options[key] is not None:
 					row[key] = options[key]
 			if slot.get("loop"):
@@ -521,7 +534,7 @@ def cmd_assets(args):
 			continue
 		kept.append(line)
 	lines = kept
-	sections = [("### › Voices (ElevenLabs)", True, "Every generated voice, from the ElevenLabs sound-effects API on the Starter plan (commercial licence), with its ledger id. 16-bit mono 44.1 kHz WAV in Git LFS, rebuilt from the MP3 takes in `assets/source/sfx/eleven/` by `tools/audio/ingest.py` (`--check` proves it). Source takes: `assets/source/sfx/eleven/voices/` (every candidate MP3, Git LFS), jobs and picks beside it; the ledger is `assets/source/sfx/eleven_ledger.jsonl`. The M2 placeholders of the 38 SFX that were not replaced are kept as `tests/fixtures/sfx_legacy/` (procedural, project-owned) for the audition room's A/B.")]
+	sections = [("### › Voices (ElevenLabs)", True, "Every generated voice, from the ElevenLabs sound-effects API on the Starter plan (commercial licence), with its ledger id. 16-bit mono 44.1 kHz WAV in Git LFS, rebuilt from the MP3 takes in `assets/source/sfx/eleven/` by `tools/audio/ingest.py` (`--check` proves it). Source takes: `assets/source/sfx/eleven/voices/` (every candidate MP3, Git LFS), jobs and picks beside it, and `assets/source/sfx/eleven/probe/` (the two takes that measured the credit rate: 0.5 s and 1.0 s, unused); the ledger is `assets/source/sfx/eleven_ledger.jsonl`. The M2 placeholders of the 38 SFX that were not replaced are kept as `tests/fixtures/sfx_legacy/` (procedural, project-owned) for the audition room's A/B.")]
 	for heading, voices, intro in sections:
 		rows = [r for r in manifest["files"] if r["source"].startswith("elevenlabs:") and bool(VOICE_POOLS.match(r["pool"])) == voices]
 		table = ["", intro, "", "| Asset | Path | Source / service | License | Notes |", "| --- | --- | --- | --- | --- |"]

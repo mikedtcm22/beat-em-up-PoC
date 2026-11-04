@@ -414,7 +414,7 @@ def settle(service, ledger, label, start_used, recorded_run):
 	recorded: the remainder makes the ledger's total the account's. Returns the final count."""
 	final = None
 	steady = 0
-	for _ in range(30):
+	for _ in range(40):
 		time.sleep(5)
 		try:
 			now = service.subscription()["used"]
@@ -422,7 +422,7 @@ def settle(service, ledger, label, start_used, recorded_run):
 			continue
 		steady = steady + 1 if now == final else 0
 		final = now
-		if steady >= 3:
+		if steady >= 6:
 			break
 	if final is None:
 		final = start_used + recorded_run
