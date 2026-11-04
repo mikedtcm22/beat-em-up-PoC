@@ -5,7 +5,7 @@ extends GutTest
 ## wave_spawn_interval_s, restored by before_each / after_each).
 ##
 ## 1. Every arena locks, spawns exactly its table, never has more than six alive, clears and opens, in
-##    level order, with R1 (the attacker cap), R3 (no hit without its wind-up) and R10 (the warning
+##    level order, its ahead barrier shut all through the fight and its behind barrier too, with R1 (the attacker cap), R3 (no hit without its wind-up) and R10 (the warning
 ##    against the rule) hard throughout (the readability probe, one act per arena).
 ## 2. The boss arena: at half health (set by the test) the boss calls in his two Punks at A7's spawn
 ##    points, and the last arena's clear emits `level_cleared`.
@@ -14,8 +14,10 @@ extends GutTest
 ## 4. No two sections' solid blocks overlap (plan §2 "Level space").
 ## 5. The level is the main scene and F6's first room.
 ##
-## Sections missing in a worktree are skipped by LevelRoot, so the test adapts to how many arenas the
-## level has; the full-level counts (7 arenas, 34 enemies) are asserted when all of them are there.
+## The assembled level is asserted whole, unconditionally: three sections (LevelRoot skips a section
+## that is missing or does not load, with only a warning, so a broken one must fail here), 7 arenas,
+## 34 enemies. Only the tests that load a lone section on purpose tolerate fewer. The seams are walked
+## in tests/test_m5_seams.gd.
 
 const LEVEL_PATH := "res://game/level/mission1/mission1.tscn"
 const BOSS_ROOF := "res://game/level/mission1/boss_roof.tscn"
@@ -151,6 +153,7 @@ func _play(arena: Arena, on_tick: Callable = Callable()) -> Dictionary:
 	var peak := 0
 	var locked := false
 	var behind_closed := true
+	var ahead_closed := true
 	for i in LOCK_FRAMES:
 		await get_tree().physics_frame
 		if arena.state != Arena.State.WAITING:
@@ -167,6 +170,8 @@ func _play(arena: Arena, on_tick: Callable = Callable()) -> Dictionary:
 		peak = maxi(peak, _level.spawner.alive_count())
 		if arena.behind and arena.state == Arena.State.LOCKED and not arena.behind.is_closed():
 			behind_closed = false
+		if arena.ahead and arena.state == Arena.State.LOCKED and not arena.ahead.is_closed():
+			ahead_closed = false
 		if on_tick.is_valid():
 			on_tick.call(seen)
 	var frames := Engine.get_physics_frames() - start
@@ -175,7 +180,7 @@ func _play(arena: Arena, on_tick: Callable = Callable()) -> Dictionary:
 	pilot.queue_free()
 	probe.queue_free()
 	return {locked = locked, cleared = arena.state == Arena.State.CLEARED, frames = frames, ids = seen.size(),
-			peak = peak, behind_closed = behind_closed, first_seen = seen, archetypes = archetypes, verdict = summary.verdict}
+			peak = peak, behind_closed = behind_closed, ahead_closed = ahead_closed, first_seen = seen, archetypes = archetypes, verdict = summary.verdict}
 
 
 ## The player walks into `arena` from where he stands: when he is not where it locks on him he is
@@ -203,8 +208,9 @@ func test_every_arena_locks_spawns_its_table_and_clears_in_order() -> void:
 	# first arena's start is the street end, so the test puts him at its first route point: the bot
 	# run walks that in for real).
 	_locked_order.clear()
+	assert_eq(_level.sections.size(), 3, "mission1.tscn built all three sections (street, roofs, boss roof): none skipped")
 	var arenas := _level.arenas()
-	assert_gt(arenas.size(), 0, "the level has arenas")
+	assert_eq(arenas.size(), FULL_ARENAS, "the level has %d arenas" % FULL_ARENAS)
 	var spawned_total := 0
 	var boss_arena := arenas.size() - 1
 	var expected_order: Array[StringName] = []
@@ -229,6 +235,7 @@ func test_every_arena_locks_spawns_its_table_and_clears_in_order() -> void:
 		assert_eq(int(stats.ids), expected, "%s spawned exactly its table (and the boss's adds)" % tag)
 		spawned_total += int(stats.ids)
 		if arena.ahead:
+			assert_true(stats.ahead_closed, "%s: its ahead barrier was closed all through the fight" % tag)
 			assert_false(arena.ahead.is_closed(), "%s: its ahead barrier opened on the clear" % tag)
 		if arena.behind:
 			assert_true(stats.behind_closed, "%s: its behind barrier was closed all through the fight" % tag)
@@ -252,8 +259,7 @@ func test_every_arena_locks_spawns_its_table_and_clears_in_order() -> void:
 	assert_eq(_locked_order, expected_order, "the arenas locked in level order")
 	assert_eq(_cleared_order, expected_order, "and cleared in level order")
 	assert_eq(_level_cleared, 1, "the last clear emitted level_cleared once")
-	if arenas.size() == FULL_ARENAS:
-		assert_eq(spawned_total, FULL_ENEMIES, "the whole level spawns %d enemies" % FULL_ENEMIES)
+	assert_eq(spawned_total, FULL_ENEMIES, "the whole level spawns %d enemies" % FULL_ENEMIES)
 	var wall_ms := Time.get_ticks_msec() - wall_start
 	gut.p("mission 1: %d arenas, %d enemies, %d ms wall" % [arenas.size(), spawned_total, wall_ms])
 	assert_lt(wall_ms, WALL_BUDGET_MS, "the level run took %d ms (budget %d)" % [wall_ms, WALL_BUDGET_MS])
