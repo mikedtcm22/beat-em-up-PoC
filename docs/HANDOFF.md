@@ -4,6 +4,22 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-04 00:00 CST: M5 built and reviewed; PR #5 open; waiting on Game-boy's play and sign-off
+- **The fix wave merged** (`c2ddebc`, `2f7e269`, `7229ce9`; run `wf_2178beaf-dba`, about 0.67M sub-agent tokens). The lead also:
+  - moved roofs Skyline Block5 out of the boss roof's gap view (`96fa4a9`) and regenerated the preset (556 values);
+  - added `##` docs on the new tunables (`5feaa2d`).
+- **Suite:** 1748/1748, 293 s, 0 error lines. `test_m5_done_when` covers 3 sections, 7 arenas and 34 enemies. `test_m5_seams.gd` walks the real seams.
+- **The targeted re-check** (run `wf_1122fe50-342`, about 0.29M tokens): every fixed item is confirmed. The one partial is `sees-06` (the parapet outline shows only from the unreachable seams pose 11). It found no regressions; its one new low (missing tunable docs) is fixed.
+- **Re-recordings** are in `captures/m5-recheck/`: roofs/held (178.4 s), drops and seams.
+- **PR:** [mikedtcm22/beat-em-up-PoC#5](https://github.com/mikedtcm22/beat-em-up-PoC/pull/5), `m5/level-blockout` into `main`. It's mergeable, and there's no CI on the repo. **Never merge it before Game-boy signs it off.**
+- **Waiting on Game-boy:**
+  1. He plays the level (`godot --path /Users/arachne/repos/beat-em-up-PoC`).
+  2. He rules on README's "Where M5 departs from the spec" (decided by default).
+  3. He signs off.
+  - The judgement-call digest was sent with the run command, in the session chat and in a Slack DM.
+- **Next after sign-off:** record his rulings in README (change the heading to "accepted"), merge PR #5, then plan M6 (art for the level and the second weapon, per SPEC §12).
+- **Usage:** about 26% of the new 5-hour window, 11% weekly. M5 in all: about 6.4M sub-agent tokens.
+
 ### 2026-11-03 23:00 CST: final review done (no highs, 5 mediums); the fix wave running (3 Sonnet fixers)
 - **The review** (`review.js` run `wf_35fbfae3-70f`, about 1.45M sub-agent tokens, about 7% of the 5-hour window): lenses `sees` and `feel` (Opus) and `code` (Sonnet), on `captures/m5-final/`.
   - 16 findings: 5 medium survived their skeptics, and 11 lows came to the lead.
