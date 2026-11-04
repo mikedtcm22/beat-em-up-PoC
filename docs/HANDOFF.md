@@ -4,6 +4,30 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-03 23:00 CST: final review done (no highs, 5 mediums); the fix wave running (3 Sonnet fixers)
+- **The review** (`review.js` run `wf_35fbfae3-70f`, about 1.45M sub-agent tokens, about 7% of the 5-hour window): lenses `sees` and `feel` (Opus) and `code` (Sonnet), on `captures/m5-final/`.
+  - 16 findings: 5 medium survived their skeptics, and 11 lows came to the lead.
+  - The mediums:
+    - `sees-01`: behind spawns pop into view (A4's RoofDoorBehind lies ahead; named spawns skip the view rule);
+    - `sees-02`: A6's pipe is hard to find;
+    - `sees-03`: the boss roof's rail gap reads as a ledge;
+    - `code-01`: the done-when's totals are asserted only conditionally;
+    - `code-02`: no test crosses the seams.
+  - Promoted lows: `feel-02` (a long-range token gives a 4-5 s lull), `code-04` (the probe's total() double-counts two keys), `code-05` (script numbers), `sees-05` (the GO cue holds until faced), `sees-06` (the parapet outline) and `code-06` (an orphan uid).
+  - The lead takes `code-07` (README). He notes in README `sees-04`/`feel-01` (A7's R6/R8 misses are the boss alone), `feel-03` (the pilot never jumps) and `code-03`.
+  - Everything is in `docs/reviews/M5/findings-final.json`, with the lead's rulings (`lead_overrides`) and the three packages.
+- **Running:** the fix wave, `review.js` run `wf_2178beaf-dba` (`findings_path` mode, fix_concurrency 3). Packages:
+  - `spawns` (branch `m5/fix-final-spawns`);
+  - `level-tests` (`m5/fix-final-level-tests`);
+  - `arcs` (`m5/fix-final-arcs`).
+  - Worktrees are `.worktrees/m5-fix-final-<key>`. If it's cut off, rerun the same args: each fixer resumes from its newest `wip:` commit.
+- **Next:**
+  1. Merge the three fix branches and regenerate `tuning/default.json` (`godot --headless -s tools/gen_default_preset.gd`). Run the full suite.
+  2. The targeted re-check: re-record roofs/held, boss/held and arc-quick/arc-punks. `sees` re-judges sees-01/02/03/06, `feel` re-judges feel-02, and `code` (Sonnet) re-judges code-01/02/04/05.
+  3. Open the PR, then send Game-boy the run command and the digest.
+- **README:** M5 status (a draft), the level's tests and bot, and the boss arena's soft misses are in. CLAUDE.md has M5's suite figures.
+- **Usage:** 20% of the 5-hour window before the fix wave (it resets at 23:30 CST), 10% weekly.
+
 ### 2026-11-03 22:10 CST: FIX2 merged (1729/1729); phase 3 recording for the review
 - **FIX2 merged** (`c97fa09`, merge `2e4455e`; run `wf_a1a41ce1-d8a`, about 0.39M sub-agent tokens). Its calls are in `M5-calls/FIX2.md`. It fixed all seven items:
   1. Roofs R0 moved past A4's lock inset, and the done-when walks the player into A1.
