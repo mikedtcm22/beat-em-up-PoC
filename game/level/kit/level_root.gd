@@ -41,6 +41,11 @@ const GROUP := &"level_root"
 @export var nav_agent_max_climb: float = 0.2
 @export var nav_floor_tolerance: float = NavBaker.FLOOR_TOLERANCE_M
 @export var nav_floor_lift: float = NavBaker.FLOOR_LIFT_M
+@export_group("Sections")
+## A section takes over as "the one the player is in" (`CombatEvents.section_entered`) only when one
+## of its route points is this much nearer (m) than the current section's nearest, so a player
+## standing at a seam does not make it flicker.
+@export_range(0.0, 5.0, 0.1) var section_switch_margin_m: float = 1.0
 @export_group("Safety")
 ## An AI enemy that falls this far (m) below the lowest floor of the level, past every HazardVolume's
 ## catch floor, is removed (nothing there to land on).
@@ -62,6 +67,10 @@ var container: Node3D
 
 var _arenas: Array[Arena] = []
 var _lowest_floor_y: float = 0.0
+## The section the player is in (section_entered's last), -1 before the first.
+var _section_index: int = -1
+## Every route point with the section it belongs to: (point, section index).
+var _route_owners: Array[Dictionary] = []
 
 
 func _ready() -> void:
@@ -97,8 +106,10 @@ func _ready() -> void:
 	_place_pickups()
 	if with_presentation:
 		RoomKit.build_presentation(self)
+	_index_route()
 	if start_arena > 0:
 		start_at_arena(start_arena)
+	_track_section()
 
 
 ## The AI enemies in the level (members of "ai_enemy"), dead and alive.
@@ -192,7 +203,60 @@ func _route_yaw(from: Vector3, fallback: float) -> float:
 	return fallback
 
 
+## The section the player is in, or null before the level has one.
+func current_section() -> LevelSection:
+	return sections[_section_index] if _section_index >= 0 and _section_index < sections.size() else null
+
+
+## Which section owns each route point, for the section tracking.
+func _index_route() -> void:
+	_route_owners.clear()
+	for k in sections.size():
+		for point in sections[k].route_points():
+			_route_owners.append({point = point, section = k})
+
+
+## `CombatEvents.section_entered` (Milestone 6, D12; the ambience bed and, in DRESS, the section's
+## light follow it): once when the level starts, then each time the section owning the route point
+## nearest the player changes. A section wins the nearest point only by `section_switch_margin_m`, so
+## the seam does not flicker. A level with no route has no section to be in; its first is the one.
+func _track_section() -> void:
+	if sections.is_empty() or player == null:
+		return
+	var nearest := _nearest_owner(player.global_position)
+	if _section_index >= 0 and nearest != _section_index:
+		var current := _owner_distance(player.global_position, _section_index)
+		if _owner_distance(player.global_position, nearest) > current - section_switch_margin_m:
+			nearest = _section_index
+	if nearest == _section_index:
+		return
+	_section_index = nearest
+	CombatEvents.section_entered.emit(sections[_section_index])
+
+
+## The section whose route point is nearest `at` (the first section when there is no route).
+func _nearest_owner(at: Vector3) -> int:
+	var best := 0
+	var best_distance := INF
+	for entry in _route_owners:
+		var d := at.distance_squared_to(entry.point as Vector3)
+		if d < best_distance:
+			best_distance = d
+			best = int(entry.section)
+	return best
+
+
+## The distance from `at` to the nearest route point of section `k` (INF when it has none).
+func _owner_distance(at: Vector3, k: int) -> float:
+	var best := INF
+	for entry in _route_owners:
+		if int(entry.section) == k:
+			best = minf(best, at.distance_to(entry.point as Vector3))
+	return best
+
+
 func _physics_process(_delta: float) -> void:
+	_track_section()
 	var limit := _lowest_floor_y - void_depth_m
 	for enemy in enemies():
 		if enemy.global_position.y < limit:
