@@ -1,0 +1,210 @@
+{
+	"asset": "_fixture",
+	"version": 1,
+	"config_sha256": "b88997c92c1f291f05ba32e63d304a175761f6b51780db09b8af286f931c4a30",
+	"steps": {
+		"inspect": {
+			"source": {
+				"builder": "fixture_crate",
+				"triangles": 108
+			},
+			"scale": 1.0,
+			"bbox_m": {
+				"min": [
+					-0.53,
+					-0.53,
+					0.0
+				],
+				"max": [
+					0.53,
+					0.53,
+					1.05
+				],
+				"size": [
+					1.06,
+					1.06,
+					1.05
+				]
+			},
+			"orient": {
+				"yaw_deg": 0.0
+			},
+			"target": {
+				"axis": "y",
+				"size_m": 1.05,
+				"origin": "base_center"
+			},
+			"triangles": 108
+		},
+		"palette": {
+			"source_image": null,
+			"faces_dense": 108,
+			"textured_faces": 0,
+			"override_faces": 108,
+			"delta_e_mean": 0.0,
+			"delta_e_p95": 0.0,
+			"pruned_swatches": [],
+			"majority_flips": 0,
+			"border_vertices": 0,
+			"border_edges": 0,
+			"protected_vertices": 72,
+			"decimate": {
+				"invert_group": true,
+				"trials": [
+					{
+						"ratio": 1.0,
+						"tris": 108
+					},
+					{
+						"ratio": 27.7778,
+						"tris": 108
+					},
+					{
+						"ratio": 771.6049,
+						"tris": 108
+					},
+					{
+						"ratio": 21433.4705,
+						"tris": 108
+					},
+					{
+						"ratio": 595374.1808,
+						"tris": 108
+					},
+					{
+						"ratio": 16538171.6879,
+						"tris": 108
+					},
+					{
+						"ratio": 459393657.9978,
+						"tris": 108
+					}
+				],
+				"triangles": 108,
+				"budget": 3000,
+				"budget_ok": true,
+				"protected_position_worst_m": 0.0
+			},
+			"swatches_used": {
+				"1": {
+					"name": "near_black",
+					"area_share": 0.05417,
+					"faces": 48
+				},
+				"11": {
+					"name": "canvas",
+					"area_share": 0.806105,
+					"faces": 12
+				},
+				"63": {
+					"name": "rust_brown",
+					"area_share": 0.139725,
+					"faces": 48
+				}
+			},
+			"swatch_count": 3,
+			"detail_uv": false,
+			"detail_bake": null,
+			"regions": [],
+			"region_cuts": [],
+			"fist_band": null,
+			"fist_border_thinned": 0,
+			"fist_strap_cuts": [],
+			"decimate_parts": [
+				{
+					"part": "body",
+					"invert_group": true,
+					"trials": [
+						{
+							"ratio": 1.0,
+							"tris": 108
+						},
+						{
+							"ratio": 27.7778,
+							"tris": 108
+						},
+						{
+							"ratio": 771.6049,
+							"tris": 108
+						},
+						{
+							"ratio": 21433.4705,
+							"tris": 108
+						},
+						{
+							"ratio": 595374.1808,
+							"tris": 108
+						},
+						{
+							"ratio": 16538171.6879,
+							"tris": 108
+						},
+						{
+							"ratio": 459393657.9978,
+							"tris": 108
+						}
+					],
+					"triangles": 108,
+					"budget": 3000,
+					"budget_ok": true,
+					"protected_vertices": 72,
+					"protected_position_worst_m": 0.0
+				}
+			],
+			"unfold": null,
+			"triangles": 108,
+			"vertices": 72
+		},
+		"export": {
+			"variants": {
+				"prop": {
+					"file": "_fixture.glb",
+					"sha256": "ff89e97079741280a972fc5d54053d5e34e401cb3423957a10a76737d46b7699",
+					"bytes": 10432,
+					"triangles": 108,
+					"folded_triangles": 0,
+					"meshes": [
+						{
+							"name": "Crate",
+							"triangles": 108,
+							"vertices": 72,
+							"bbox_godot": {
+								"min": [
+									-0.53,
+									0.0,
+									0.53
+								],
+								"max": [
+									0.53,
+									1.05,
+									-0.53
+								]
+							}
+						}
+					],
+					"bbox_godot": {
+						"min": [
+							-0.53,
+							0.0,
+							-0.53
+						],
+						"max": [
+							0.53,
+							1.05,
+							0.53
+						],
+						"size": [
+							1.06,
+							1.05,
+							1.06
+						]
+					}
+				}
+			}
+		}
+	},
+	"outputs": {
+		"_fixture.glb": "ff89e97079741280a972fc5d54053d5e34e401cb3423957a10a76737d46b7699"
+	},
+	"hash": "e9515276135a4af61ad382f1fbe755340d436883af9251f8ad6207a8a09b5013"
+}

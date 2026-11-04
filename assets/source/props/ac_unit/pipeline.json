@@ -1,0 +1,51 @@
+{
+	"id": "ac_unit",
+	"kind": "prop",
+	"version": 1,
+	"note": "A rooftop air-conditioning condenser, grey with a few rust stains, from Tripo; long axis X, origin at the base centre, stretched to a 1.0 x 0.7 x 0.7 box (the pinned box is 0.8 high; the generated unit is flatter, 0.7 reads as a unit on its feet).",
+	"source": {
+		"mesh": "assets/source/props/ac_unit/tripo/6b76be5c_gen.glb"
+	},
+	"orient": {
+		"yaw_deg": 45.0
+	},
+	"target": {
+		"dims_m": {
+			"x": 1.0,
+			"y": 0.7,
+			"z": 0.7
+		},
+		"origin": "base_center"
+	},
+	"palette": {
+		"slots": [
+			4,
+			3,
+			63,
+			1,
+			2
+		],
+		"max_swatches": 5,
+		"min_share": 0.01,
+		"budget_tris": 3000,
+		"border_cell_m": 0.04,
+		"majority_passes": 2,
+		"armature": false,
+		"unfold": {
+			"iterations": 12,
+			"factor": 0.5,
+			"ring": 1
+		}
+	},
+	"export": {
+		"mesh_name": "AcUnit",
+		"smooth_angle_deg": 40.0
+	},
+	"paths": {
+		"work": "assets/source/_cache/ac_unit/work",
+		"blend_dir": "assets/source/_cache/ac_unit/work",
+		"report": "assets/source/props/ac_unit/report",
+		"export_dir": "assets/export/props/ac_unit",
+		"export_name": "ac_unit"
+	}
+}

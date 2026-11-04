@@ -1,0 +1,11 @@
+{
+	"id": "props",
+	"slot_range": [60, 63],
+	"note": "Slots 60-63 of the shared palette atlas (M6 PROPS): the hero props, following mood_street_a.jpg and mood_roof_a.jpg (sodium-lit rust and brick, steel tanks, dumpster green). The greys and near-blacks come from the shared slots. Nothing in the red band (hue 345-15 deg with saturation above 0.5): the orange and the rust sit at hue 25.",
+	"swatches": [
+		{"slot": 60, "name": "car_orange", "srgb": "#b9692f", "marks": false},
+		{"slot": 61, "name": "dumpster_green", "srgb": "#46634f", "marks": false},
+		{"slot": 62, "name": "tank_blue", "srgb": "#5b7894", "marks": false},
+		{"slot": 63, "name": "rust_brown", "srgb": "#8a5733", "marks": false}
+	]
+}

@@ -1,0 +1,53 @@
+{
+	"id": "car",
+	"kind": "prop",
+	"version": 1,
+	"note": "A parked late-1970s sedan, rust-orange, from Tripo; long axis X, the nose toward +X, wheels on the floor (origin at the base centre); the barrier car and the crowd street's car draw it.",
+	"source": {
+		"mesh": "assets/source/props/car/tripo/d0e6fac3_gen.glb"
+	},
+	"orient": {
+		"yaw_deg": -45.0
+	},
+	"target": {
+		"dims_m": {
+			"x": 4.2,
+			"y": 1.5,
+			"z": 1.9
+		},
+		"origin": "base_center"
+	},
+	"palette": {
+		"slots": [
+			60,
+			63,
+			1,
+			2,
+			4,
+			14,
+			10
+		],
+		"max_swatches": 6,
+		"min_share": 0.002,
+		"budget_tris": 2800,
+		"border_cell_m": 0.05,
+		"majority_passes": 2,
+		"armature": false,
+		"unfold": {
+			"iterations": 12,
+			"factor": 0.5,
+			"ring": 1
+		}
+	},
+	"export": {
+		"mesh_name": "Car",
+		"smooth_angle_deg": 40.0
+	},
+	"paths": {
+		"work": "assets/source/_cache/car/work",
+		"blend_dir": "assets/source/_cache/car/work",
+		"report": "assets/source/props/car/report",
+		"export_dir": "assets/export/props/car",
+		"export_name": "car"
+	}
+}

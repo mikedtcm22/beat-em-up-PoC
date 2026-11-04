@@ -1,0 +1,200 @@
+{
+	"asset": "car",
+	"version": 1,
+	"config_sha256": "a37b91949effdeed7f01308c28ab253350ef193c4e5a424d07c55b517558fa19",
+	"steps": {
+		"inspect": {
+			"source": {
+				"mesh": "assets/source/props/car/tripo/d0e6fac3_gen.glb",
+				"sha256": "2c4cc1b8765d3fc669620e20b1df91019a12b3baca5283c0d9ee558918a4ec94",
+				"vertices_before_weld": 6646,
+				"triangles": 10418
+			},
+			"scale": [
+				4.186547,
+				4.348437,
+				3.904023
+			],
+			"bbox_m": {
+				"min": [
+					-2.1,
+					-0.95,
+					0.0
+				],
+				"max": [
+					2.1,
+					0.95,
+					1.5
+				],
+				"size": [
+					4.2,
+					1.9,
+					1.5
+				]
+			},
+			"orient": {
+				"yaw_deg": -45.0
+			},
+			"target": {
+				"dims_m": {
+					"x": 4.2,
+					"y": 1.5,
+					"z": 1.9
+				},
+				"origin": "base_center"
+			},
+			"triangles": 10418
+		},
+		"palette": {
+			"source_image": "removed",
+			"faces_dense": 10418,
+			"textured_faces": 10418,
+			"override_faces": 0,
+			"delta_e_mean": 14.488286,
+			"delta_e_p95": 21.163399,
+			"pruned_swatches": [
+				{
+					"slot": 14,
+					"into": 4,
+					"share": 0.003115
+				}
+			],
+			"majority_flips": 437,
+			"border_vertices": 661,
+			"border_edges": 711,
+			"protected_vertices": 561,
+			"decimate": {
+				"invert_group": true,
+				"trials": [
+					{
+						"ratio": 0.2688,
+						"tris": 2800
+					}
+				],
+				"triangles": 2800,
+				"budget": 2800,
+				"budget_ok": true,
+				"protected_position_worst_m": 0.0
+			},
+			"swatches_used": {
+				"1": {
+					"name": "near_black",
+					"area_share": 0.129412,
+					"faces": 391
+				},
+				"2": {
+					"name": "dark_grey",
+					"area_share": 0.087116,
+					"faces": 364
+				},
+				"4": {
+					"name": "light_grey",
+					"area_share": 0.037155,
+					"faces": 275
+				},
+				"10": {
+					"name": "steel",
+					"area_share": 0.026914,
+					"faces": 243
+				},
+				"60": {
+					"name": "car_orange",
+					"area_share": 0.609022,
+					"faces": 1242
+				},
+				"63": {
+					"name": "rust_brown",
+					"area_share": 0.110382,
+					"faces": 285
+				}
+			},
+			"swatch_count": 6,
+			"detail_uv": false,
+			"detail_bake": null,
+			"regions": [],
+			"region_cuts": [],
+			"fist_band": null,
+			"fist_border_thinned": 100,
+			"fist_strap_cuts": [],
+			"decimate_parts": [
+				{
+					"part": "body",
+					"invert_group": true,
+					"trials": [
+						{
+							"ratio": 0.2688,
+							"tris": 2800
+						}
+					],
+					"triangles": 2800,
+					"budget": 2800,
+					"budget_ok": true,
+					"protected_vertices": 561,
+					"protected_position_worst_m": 0.0
+				}
+			],
+			"unfold": {
+				"folded_before": 197,
+				"folded_after": 103,
+				"passes": 1,
+				"history": [
+					197,
+					103
+				]
+			},
+			"triangles": 2800,
+			"vertices": 1410
+		},
+		"export": {
+			"variants": {
+				"prop": {
+					"file": "car.glb",
+					"sha256": "3c2127cb9bd9adf28c99075ca04d556b0893587a6cd12e6c0153b05737d2cb1f",
+					"bytes": 105728,
+					"triangles": 2798,
+					"folded_triangles": 63,
+					"meshes": [
+						{
+							"name": "Car",
+							"triangles": 2798,
+							"vertices": 1410,
+							"bbox_godot": {
+								"min": [
+									-2.07259,
+									-0.001902,
+									0.951712
+								],
+								"max": [
+									2.073454,
+									1.50008,
+									-0.948644
+								]
+							}
+						}
+					],
+					"bbox_godot": {
+						"min": [
+							-2.07259,
+							-0.001902,
+							-0.948644
+						],
+						"max": [
+							2.073454,
+							1.50008,
+							0.951712
+						],
+						"size": [
+							4.146044,
+							1.501982,
+							1.900356
+						]
+					}
+				}
+			}
+		}
+	},
+	"outputs": {
+		"car.glb": "3c2127cb9bd9adf28c99075ca04d556b0893587a6cd12e6c0153b05737d2cb1f"
+	},
+	"hash": "24ddc486a79a8b9235ddfae40719377207ee8dd551fccf4c1a67375eb5713e8d"
+}

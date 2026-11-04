@@ -1,0 +1,77 @@
+{
+	"id": "bike_lock",
+	"kind": "prop",
+	"version": 1,
+	"note": "The bike chain's padlock (weapon A of M6, weapon_a.jpg): Tripo image-to-model from ref.jpg, turned shackle toward the grip and body toward the free end, 0.15 m, centred at 0.35 m on the weapon's Y axis; the Grip and the Link are scripted parts.",
+	"source": {
+		"mesh": "assets/source/props/bike_lock/tripo/270451cc_gen.glb"
+	},
+	"orient": {
+		"rotate_x_deg": 180.0,
+		"yaw_deg": 90.0
+	},
+	"target": {
+		"axis": "y",
+		"size_m": 0.15,
+		"origin": "center",
+		"offset_m": [
+			0.0,
+			0.35,
+			0.0
+		]
+	},
+	"palette": {
+		"slots": [
+			29,
+			10,
+			1
+		],
+		"max_swatches": 3,
+		"min_share": 0.01,
+		"budget_tris": 1500,
+		"border_cell_m": 0.012,
+		"majority_passes": 2,
+		"armature": false,
+		"unfold": {
+			"iterations": 12,
+			"factor": 0.5,
+			"ring": 1
+		}
+	},
+	"export": {
+		"mesh_name": "Lock",
+		"smooth_angle_deg": 40.0,
+		"parts": [
+			{
+				"name": "Grip",
+				"builder": "bike_grip",
+				"args": {
+					"z0": -0.425,
+					"length": 0.22
+				},
+				"offset_m": [
+					0.0,
+					0.0,
+					0.0
+				]
+			},
+			{
+				"name": "Link",
+				"builder": "bike_link",
+				"args": {},
+				"offset_m": [
+					0.0,
+					0.0,
+					0.0
+				]
+			}
+		]
+	},
+	"paths": {
+		"work": "assets/source/_cache/bike_lock/work",
+		"blend_dir": "assets/source/_cache/bike_lock/work",
+		"report": "assets/source/props/bike_lock/report",
+		"export_dir": "assets/export/props/bike_lock",
+		"export_name": "bike_lock"
+	}
+}

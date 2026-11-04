@@ -1,0 +1,43 @@
+{
+	"id": "_fixture",
+	"kind": "prop",
+	"version": 1,
+	"note": "The proving model of the static-prop path (M6 PROPS): a Blender-scripted 1 m crate, no Tripo, every face on a slot. Its GLB is what test_static_art.gd runs StaticArt on.",
+	"source": {
+		"builder": "fixture_crate",
+		"builder_args": {
+			"size": 1.0
+		}
+	},
+	"orient": {
+		"yaw_deg": 0.0
+	},
+	"target": {
+		"axis": "y",
+		"size_m": 1.05,
+		"origin": "base_center"
+	},
+	"palette": {
+		"slots": [
+			11,
+			63,
+			1
+		],
+		"max_swatches": 3,
+		"min_share": 0.004,
+		"majority_passes": 0,
+		"budget_tris": 3000,
+		"armature": false
+	},
+	"export": {
+		"mesh_name": "Crate",
+		"smooth_angle_deg": 35.0
+	},
+	"paths": {
+		"work": "assets/source/_cache/_fixture/work",
+		"report": "assets/source/props/_fixture/report",
+		"export_dir": "assets/export/props/_fixture",
+		"export_name": "_fixture",
+		"blend_dir": "assets/source/_cache/_fixture/work"
+	}
+}
