@@ -4,6 +4,7 @@ extends GutTest
 ## line (ARENA+, WAVE, ARENA-, LEVEL); the walk never goes into a closed barrier; a Punk launched at the
 ## strip's drop is KO'd by the hazard (HAZARD); a lone section scene is wrapped as a one-section level.
 
+const MISSION_1 := "res://game/level/mission1/mission1.tscn"
 const STRIP_A := "res://tests/fixtures/level_strip_a.tscn"
 ## The most ticks the whole strip run may take (both arenas, the walk between them).
 const RUN_BUDGET_TICKS := 5400
@@ -126,6 +127,24 @@ func test_knock_off_logs_a_hazard_ko() -> void:
 	assert_true(ok, "the hazard took the launched Punk")
 	assert_eq(_count("HAZARD"), 1, "one HAZARD line")
 	assert_eq(_bot.hazard_kos, 1)
+
+
+func test_the_knock_off_hazard_is_chosen_by_the_arena_the_act_starts_from() -> void:
+	await _make_bot(MISSION_1)
+	var by_from: Array[int] = []
+	for from in _bot.level.arenas().size():
+		var found := _bot.first_hazard(from)
+		by_from.append(int(found.arena) if not found.is_empty() else -1)
+	gut.p("first hazard arena by --from 0..6: %s" % [by_from])
+	assert_eq(by_from[0], 3, "from the start: the terrace's drop, the first of the level")
+	assert_eq(by_from[3], 3, "--from=3: the terrace's")
+	assert_eq(by_from[4], 4, "--from=4: the catwalk's")
+	assert_eq(by_from[5], 5, "--from=5: the top roof's")
+	assert_eq(by_from[6], 6, "--from=6: the boss roof's")
+	var boss := _bot.first_hazard(6)
+	assert_true(boss.hazard.get_path().get_concatenated_names().contains("BossRoof"), "and it is the boss roof's own edge")
+	var catwalk := _bot.first_hazard(4)
+	assert_true(String(catwalk.hazard.name) == "DropCatwalk", "the catwalk's is DropCatwalk (%s)" % catwalk.hazard.name)
 
 
 func test_a_lone_section_scene_is_wrapped_as_a_level() -> void:

@@ -67,6 +67,8 @@ const DEFAULT_LEVEL := "res://tests/fixtures/level_strip.tscn"
 @export_group("Knock-off")
 ## The player stands this far from the lip (m) and the Punk this far ahead of him.
 @export_range(1.0, 8.0) var knock_stand_off_m: float = 3.0
+## A hazard volume belongs to an arena of its section when it is this near (m, flat) its lock volume.
+@export_range(0.0, 5.0) var knock_hazard_reach_m: float = 1.0
 @export_range(0.5, 4.0) var knock_gap_m: float = 1.6
 ## The launch (m/s): along the way to the lip, and up.
 @export_range(2.0, 20.0) var knock_speed_mps: float = 9.0
@@ -421,26 +423,51 @@ func _alive_count() -> int:
 # --- Knock-off -----------------------------------------------------------------------------
 
 
-## The first arena (level order) that has a hazard volume beside it, as {arena: int, hazard:
-## HazardVolume}; empty when the level has none. A hazard belongs to the arena whose lock volume it
-## is nearest to (flat gap between the two boxes).
-func first_hazard() -> Dictionary:
+## The first arena (level order) from `from` on that has a hazard volume, as {arena: int, hazard:
+## HazardVolume}; of that arena's hazards the one nearest the arena's first route point (where the
+## player stands when the act starts there). A hazard belongs to an arena when it is in the same
+## section and within knock_hazard_reach_m (flat) of its lock volume. Empty when none is at or after
+## `from`. `--from=<arena>` therefore picks the arena the knock-off is recorded in.
+func first_hazard(from: int = 0) -> Dictionary:
 	var arenas := level.arenas()
-	var best := {}
-	for node: Node in get_tree().get_nodes_in_group(HazardVolume.GROUP):
-		var hazard := node as HazardVolume
-		if hazard == null:
-			continue
-		var owner_index := -1
-		var owner_gap := INF
-		for i in arenas.size():
-			var gap := _box_gap(hazard.global_position, hazard.size, arenas[i])
-			if gap < owner_gap:
-				owner_gap = gap
-				owner_index = i
-		if owner_index >= 0 and (best.is_empty() or owner_index < int(best.arena)):
-			best = {arena = owner_index, hazard = hazard}
-	return best
+	for i in range(maxi(from, 0), arenas.size()):
+		var arena := arenas[i]
+		var section := _section_of(arena)
+		var stand := level.first_route_point(arena)
+		if not stand.is_finite():
+			stand = arena.global_position
+		var best := {}
+		var best_distance := INF
+		for node: Node in get_tree().get_nodes_in_group(HazardVolume.GROUP):
+			var hazard := node as HazardVolume
+			if hazard == null or _section_of(hazard) != section:
+				continue
+			if _box_gap(hazard.global_position, hazard.size, arena) > knock_hazard_reach_m:
+				continue
+			var distance := _flat_distance_to_box(stand, hazard)
+			if distance < best_distance:
+				best_distance = distance
+				best = {arena = i, hazard = hazard}
+		if not best.is_empty():
+			return best
+	return {}
+
+
+## The LevelSection `node` is under (null when none).
+func _section_of(node: Node) -> LevelSection:
+	var up := node.get_parent()
+	while up != null and not up is LevelSection:
+		up = up.get_parent()
+	return up as LevelSection
+
+
+## The flat distance (m) from `point` to the nearest point of the hazard's box.
+func _flat_distance_to_box(point: Vector3, hazard: HazardVolume) -> float:
+	var local := hazard.global_transform.affine_inverse() * point
+	var half := hazard.size * 0.5
+	var near := Vector3(clampf(local.x, -half.x, half.x), local.y, clampf(local.z, -half.z, half.z))
+	var d := hazard.global_transform * near - point
+	return Vector2(d.x, d.z).length()
 
 
 ## The flat gap (m) between a box (centre, size) and `arena`'s lock volume (0 when they overlap).
@@ -458,13 +485,13 @@ func _box_gap(centre: Vector3, size: Vector3, arena: Arena) -> float:
 	return INF
 
 
-## In the first arena with a hazard: the player walks to the lip, stands knock_stand_off_m short of it,
+## In the first arena from `from` (the act's `--from=`) with a hazard: the player walks to the lip, stands knock_stand_off_m short of it,
 ## a Punk appears ahead of him and is launched over the edge, and the hazard takes it (`HAZARD` in the
 ## log). Returns true when the hazard KO'd it.
-func knock_off() -> bool:
-	var found := first_hazard()
+func knock_off(from: int = 0) -> bool:
+	var found := first_hazard(from)
 	if found.is_empty():
-		log_line("NOTE f%d no hazard volume in this level" % Engine.get_physics_frames())
+		log_line("NOTE f%d no hazard volume from arena %d on" % [Engine.get_physics_frames(), from])
 		return false
 	var hazard: HazardVolume = found.hazard
 	level.start_at_arena(int(found.arena))
