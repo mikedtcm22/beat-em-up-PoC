@@ -1073,7 +1073,7 @@ solid = false
 
 [node name="Block5" type="Node3D" parent="Geometry/Skyline"]
 script = ExtResource("2_block")
-position = Vector3(44, -0.9, -40)
+position = Vector3(84, -0.9, -40)
 size = Vector3(14, 8.8, 14)
 solid = false
 
