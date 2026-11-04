@@ -52,6 +52,38 @@ The tuning panel and the cheat menu take every key while open, and the player st
 
 **Blocking:** hold B (Shift) with no direction to put the guard up; it stops hits from the front (within 60° of where you look) for a little chip damage and drains the guard meter under your health bar. Raise it on reaction to an attacker's wind-up, up to about a quarter second before the hit, for a perfect block ("PARRY!"): no damage, and the attacker staggers, so you can let go of B and grab it. An empty guard meter breaks the guard. P or K out of the guard attacks at once; pressed while a blocked hit pushes you back, it attacks as soon as the push-back ends. Holding B keeps the block: after a hit, a guard break or an attack out of the guard, the guard comes back up while B is still held (a perfect block needs a fresh press of B). Jump and LB do nothing while the guard is up.
 
+## Milestone 5 status: the level blockout
+
+Mission 1 now plays from the street to the boss as one graybox level. Enemies attack from Game-boy's attack arcs instead of the even spread round you. Milestone 5 is done when the level plays from start to boss (Spec §12).
+- **The attack arcs** (Game-boy's call; Spec §7):
+  - Each type attacks from an arc centred on where you looked when it engaged: Punk 90°, Pipe Thug 140°, Bruiser 180°, boss 270°, Kicker 360°.
+  - For the first 0.5 s, a quick turn re-aims an enemy's arc. After that its line holds, so turning your back on a Punk lets him hit you from behind.
+  - Enemies with no free seat in their arc wait further out (5.5-6.5 m), back from the fray.
+  - Variants widen the arc in data: the veteran Punk (orange) attacks from 140°.
+  - F3 draws each enemy's arc, and the arcs' numbers are in F1's "Enemies > Attack arcs".
+- **The level** (`game/level/mission1/`; the approved table is [reference/encounters.md](reference/encounters.md)):
+  - Seven arenas and 34 enemies, laid out after the reference's screens:
+    - the street (the loading dock, the crate yard, the warehouse stair);
+    - three roofs (the terrace, the catwalk, the top roof's six-at-once crowd);
+    - the 20 x 20 m boss roof.
+  - **Arena locks:** a car, a gate or a shutter closes the way ahead and behind until the last enemy is down. Then it opens with a "GO" arrow.
+  - Stairs climb from the street to the roofs.
+  - Every drop has a rail with gaps and an invisible guard for you. An enemy knocked over it is KO'd.
+  - A pipe lies on the top roof, and Pipe Thugs drop theirs.
+  - The boss calls in two Punks at half health. "CLEAR!" ends the level.
+- **The level kit** (`game/level/kit/`) builds any later level from scenes: sections chained by Entry and Exit markers, arenas, barriers, spawn points, stairs, edges, hazards and pickups. Its numbers are in F1's "Level" group.
+
+**How the done-when is proved:**
+- **`tests/test_m5_done_when.gd`** plays the real level arena by arena:
+  - it checks each arena locks, spawns exactly its table, never has more than six alive and clears in order;
+  - it checks the boss's adds and the single `level_cleared`;
+  - it checks the edge guard and a launched Punk's KO;
+  - it checks that no two sections overlap.
+- **The level-run bot** (`tests/bot/level_bot.tscn`) plays the whole level:
+  - In god mode at full speed: 197 s, all seven arenas in order, with no stall.
+  - Held back with real damage, as the recordings show: about 427 s, about 7 minutes, so a first run takes about 8-11 minutes.
+- **M3's readability metrics are re-measured** under the arcs. Every hard row holds in every arena.
+
 ## Milestone 4 status: the art pipeline
 
 The game now has its look and its first real art. Everything is cel-shaded, the Street Punks wear a generated, rigged model of Game-boy's pick (Street Punk A), and the player sees his own arms and legs as Hero C. Milestone 4 is done when the Punk looks production-quality at 1 m from the camera, standing still and in motion (Spec §12), and Game-boy judges that.
