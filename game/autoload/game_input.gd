@@ -31,7 +31,7 @@ const BINDINGS := {
 	&"cheats": [KEY_F4],
 	&"help": [KEY_H],
 	&"sparring": [KEY_F5],  # toggle sparring on every training dummy
-	&"switch_room": [KEY_F6],  # the crowd street <-> the training room (Milestone 3)
+	&"switch_room": [KEY_F6],  # Mission 1 -> the crowd street -> the training room (Milestone 5)
 	# Free-fly debug camera (keeps WASD/mouse for the player).
 	&"fly_forward": [KEY_UP],
 	&"fly_back": [KEY_DOWN],

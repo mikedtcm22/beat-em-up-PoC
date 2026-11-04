@@ -8,9 +8,15 @@ One playable level that tests whether a first-person beat-em-up feels good to pl
 godot --path .
 ```
 
-This opens the crowd street (`game/level/crowd_room.tscn`): a 30 m lane with doorways, alleys, a parked car and crates, and the player at the middle. A first wave of Street Punks walks in a few seconds after it loads. The waves repeat for as long as you live, each with up to six mixed enemies (Punks, Kickers, Pipe Thugs and Bruisers) coming out of the doorways, the alleys and from behind the car, and about a third of each wave comes from outside your view. After every fourth wave the boss comes in on his own, and calls in two Punks at half health.
+This opens Mission 1 (`game/level/mission1/mission1.tscn`), the graybox level from start to boss: a street, three rooftops and the boss roof, with seven fights in all (the table is in [reference/encounters.md](reference/encounters.md)).
+- Each fight shuts the way ahead and behind until its last enemy is down. Then the barrier opens and a "GO" arrow points the way on.
+- Stairs take you from the street up to the roofs. You can't fall off an edge, but an enemy you knock over one is out.
+- The boss waits on the top roof and calls in two Punks at half health. "CLEAR!" ends the level.
+- A first run takes about 8-10 minutes.
 
-F6 switches to the Milestone 2 training room (and back): the player, three training dummies and a pipe. The centre dummy spars: come within 1.7 m in front of it and it steps in and throws a telegraphed jab every couple of seconds, to block (or dodge, or hit it out of its wind-up). To open the editor instead, run `godot --path . -e`.
+F6 cycles the rooms: the level, then the Milestone 3 crowd street, then the Milestone 2 training room, and back to the level.
+- **The crowd street** (`game/level/crowd_room.tscn`) is a 30 m lane with doorways, alleys, a parked car and crates. Waves of up to six mixed enemies repeat for as long as you live, about a third of each from outside your view, and the boss comes in alone after every fourth wave.
+- **The training room** has the player, three training dummies and a pipe. The centre dummy spars: come within 1.7 m in front of it and it steps in and throws a telegraphed jab every couple of seconds, to block (or dodge, or hit it out of its wind-up). To open the editor instead, run `godot --path . -e`.
 
 | Action | Gamepad (Xbox) | Keyboard + mouse |
 | --- | --- | --- |
@@ -29,7 +35,7 @@ F6 switches to the Milestone 2 training room (and back): the player, three train
 | Tuning panel: every tunable and move, presets | View | F1 |
 | Cheats: god mode, one-hit KOs, spawn any enemy at the crosshair, remove spawned / all enemies, waves on / off, freeze AI, time scale 0.25× / 1×, reset dummies | | F4 |
 | Sparring: all three dummies throw jabs / none do (training room only) | | F5 |
-| Switch room: crowd street / training room | | F6 |
+| Switch room: level / crowd street / training room | | F6 |
 | Controls help | | H |
 
 The free-fly camera moves with the arrow keys and PgUp/PgDn, and turns while you hold the middle mouse button. The player keeps WASD and the mouse.
