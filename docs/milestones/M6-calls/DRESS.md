@@ -23,3 +23,13 @@ Each is decision / alternative not taken / why. The contract is in `docs/ARCHITE
 ## Requests
 
 None outside my files. The lead regenerates the default preset (one new value, `section_light_blend_s`), and `trim_sheet.png` is the one binary I changed (LFS).
+
+## Test changes (old -> new, with their twins)
+
+- `test_art_punk.gd` `_hulls_of` (the crowd street's and the training room's hull counts): read a BoxMesh's material `next_pass` only -> also an ArrayMesh with the hull on its `material_overlay` (a kit module, or a prop's art), skipping actors' and weapons' meshes; the crowd street's count now runs over the room (geometry and dressing), because the car and dumpster are prop spots. The numbers asserted are unchanged (crates + 2, 3 crates, more than 20 and 5 bare). Twin on the visible path: `test_m6_dress.gd::test_the_prop_fallbacks_stay_in_the_bibles_band_and_the_crowd_street_hulls_its_props` (each crate module's overlay, each prop art's overlay).
+- `test_look_post.gd` `test_no_environment_or_prop_color_is_red_and_the_car_is_muted`: "the muted car blue-grey is among the meshes' colours" -> "`PropSpot.PROPS[car].color` is that blue-grey" (the car is atlas art now, orange, outside the flat-colour read). The band asserts on the car are unchanged. Twin: the same `test_m6_dress.gd` test (every fallback colour inside saturation 0.30, value 0.25-0.6).
+- `test_level_bot.gd` act list: appended `"Look: arena tour"` (file order, `tour_acts.gd` last). Twin: `test_m6_dress.gd::test_the_arena_tour_act_lists_every_section`.
+
+## Numbers
+
+- Perf: level walk, `910448e` (M5) against `f4ad2d2` (this branch at that commit, all of M6's phase 1 and DRESS), windowed, vsync on, 2 runs, on a machine at load 3 to 6 (other builders; not a baseline): mean 10.04 -> 11.70 ms (+1.66), p95 14.30 -> 15.49 (bar 16.7 met), spawn hitch 47.4 -> 31.7, first spawn 15.8 -> 25.8 and first hit 16.4 -> 18.5 (the two A16 soft bars read MISS, as in KIT's measure; first spawn includes a run's 34 ms outlier), one 1.0 s stall in one HEAD run (the machine's, 1 of 2). The lead should repeat it on a quiet machine.

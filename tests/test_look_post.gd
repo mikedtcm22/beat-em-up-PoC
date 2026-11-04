@@ -530,8 +530,11 @@ func test_no_environment_or_prop_color_is_red_and_the_car_is_muted() -> void:
 			seen[colors[key]] = true
 			assert_false(_in_red_band(colors[key]), "%s is not red" % key)
 	assert_gt(seen.size(), 8, "the rooms' colors were read (walls, crates, the car, the dumpster, the street)")
-	assert_true(seen.has(Color(0.34, 0.38, 0.45)), "the car is the muted blue-grey")
-	var car := Color(0.34, 0.38, 0.45)
+	# The car is a prop spot drawing PROPS's art on the atlas since M6 DRESS, so its flat colour is no longer
+	# among the meshes' (the twin on the visible path: test_m6_dress.gd, the art draws and the fallback colour
+	# stays inside the band); the fallback box's muted blue-grey is what must stay muted.
+	var car: Color = PropSpot.PROPS[&"car"].color
+	assert_eq(car, Color(0.34, 0.38, 0.45), "the car's fallback is the muted blue-grey")
 	assert_lte(car.s, STREET_SATURATION_MAX, "the car is inside the look bible's street saturation")
 	assert_between(car.v, 0.25, 0.6, "and its value")
 

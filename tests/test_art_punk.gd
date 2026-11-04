@@ -845,15 +845,29 @@ func _surface(mi: MeshInstance3D) -> ShaderMaterial:
 	return (mi.mesh as BoxMesh).material as ShaderMaterial if mi.mesh is BoxMesh else null
 
 
-## Count the room's box meshes that wear the prop hull (the material's next_pass is a toon hull)
-## and those that do not; the hulled ones also carry the edge tag 0 (the edge pass skips them).
+## Count the room's meshes that wear the prop hull and those that do not. A box wears it as its material's
+## next_pass (M5's look, and the graybox switch's); a kit module or a prop's art wears it as the mesh's
+## overlay (M6 DRESS: the module's material is the one shared trim material, a StaticArt's is the atlas's).
+## The hulled ones also carry the edge tag 0 where a material holds one (a module's trim material and the
+## atlas's draw ROUGHNESS from the shader, so they are not read).
 func _hulls_of(root: Node) -> Dictionary:
 	var hulled := 0
 	var bare := 0
 	var tags_ok := true
 	for node: Node in root.find_children("*", "MeshInstance3D", true, false):
-		var material := _surface(node as MeshInstance3D)
+		var mesh_node := node as MeshInstance3D
+		if _worn(mesh_node):
+			continue  # an actor's or a weapon's own mesh: this counts the room's
+		var overlay := mesh_node.material_overlay as ShaderMaterial
+		var overlaid := overlay != null and overlay.shader == ToonMaterials.OUTLINE_SHADER
+		var material := _surface(mesh_node)
 		if material == null:
+			if not (mesh_node.mesh is ArrayMesh) or not mesh_node.is_visible_in_tree():
+				continue
+			if overlaid:
+				hulled += 1
+			else:
+				bare += 1
 			continue
 		if material.next_pass is ShaderMaterial and (material.next_pass as ShaderMaterial).shader == ToonMaterials.OUTLINE_SHADER:
 			hulled += 1
@@ -865,13 +879,23 @@ func _hulls_of(root: Node) -> Dictionary:
 	return {hulled = hulled, bare = bare, tags_ok = tags_ok}
 
 
+## Whether `node` is part of an actor or a weapon.
+func _worn(node: Node) -> bool:
+	var at := node.get_parent()
+	while at != null:
+		if at is CombatActor or at is Weapon:
+			return true
+		at = at.get_parent()
+	return false
+
+
 func test_the_crowd_rooms_crates_dumpster_and_car_wear_the_hull_and_the_walls_do_not() -> void:
 	var room := (load(CROWD_ROOM) as PackedScene).instantiate() as CrowdRoom
 	room.with_presentation = false
 	room.waves_enabled_on_start = false
 	add_child_autofree(room)
 	await get_tree().physics_frame
-	var count := _hulls_of(room.geometry)
+	var count := _hulls_of(room)  # the geometry and the dressing (the car and the dumpster are prop spots)
 	assert_eq(count.hulled, room.crate_positions.size() + 2, "the crates, the dumpster and the car")
 	assert_gt(count.bare, 20, "the street's walls, windows, paint and backdrop have none")
 	assert_true(count.tags_ok, "a hulled prop is tagged 0 for the edge pass and the rest 1")

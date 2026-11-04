@@ -61,6 +61,32 @@ func test_a_prop_spot_stands_for_each_pinned_prop() -> void:
 		assert_true(ids.has(id), "a '%s' spot is placed in the level" % id)
 
 
+func test_the_prop_fallbacks_stay_in_the_bibles_band_and_the_crowd_street_hulls_its_props() -> void:
+	for id: StringName in PropSpot.PROPS:
+		var color: Color = PropSpot.PROPS[id].color
+		assert_lte(color.s, 0.305, "%s's fallback colour: saturation at most 0.30" % id)
+		assert_between(color.v, 0.245, 0.605, "%s's fallback colour: value" % id)
+	var room := await _build(CROWD_PATH)
+	var overlays := 0
+	for node: Node in room.find_children("*", "MeshInstance3D", true, false):
+		var mesh_node := node as MeshInstance3D
+		if mesh_node.get_parent() is StaticBody3D and mesh_node.material_overlay != null:
+			overlays += 1  # a crate module's hull
+		if mesh_node.get_parent() is StaticArt:
+			assert_not_null(mesh_node.material_overlay, "%s draws the prop hull" % mesh_node.name)
+	assert_eq(overlays, (room as CrowdRoom).crate_positions.size(), "each crate module wears the prop hull on its overlay")
+
+
+func test_the_arena_tour_act_lists_every_section() -> void:
+	var acts := load("res://tests/bot/level_acts/tour_acts.gd") as GDScript
+	var poses: Array = acts.get(&"POSES")
+	assert_gt(poses.size(), 15, "the tour has its poses")
+	var sections: Dictionary = {}
+	for pose: Dictionary in poses:
+		sections[int(pose.section)] = true
+	assert_eq(sections.keys().size(), 3, "street, roofs and boss roof")
+
+
 func test_the_skyline_blocks_are_facades() -> void:
 	for path: String in SECTION_PATHS:
 		var section := (load(path) as PackedScene).instantiate() as LevelSection
