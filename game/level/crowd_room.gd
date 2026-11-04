@@ -16,7 +16,7 @@ extends Node3D
 ##
 ## The room contract for bots and tests (M3-plan 2.12): `player`, `player_start`, `player_yaw_deg`,
 ## `with_presentation`, `waves_enabled_on_start`, `rng_seed`, `spawner`, `director`, enemies().
-## The training room (test_room.tscn) is the other room; F6 switches (GameInput.switch_room()).
+## F6 cycles Mission 1, this room and the training room (GameInput.switch_room()).
 
 @export_group("Player")
 @export var player_start: Vector3 = Vector3(0.0, 0.0, 0.0)

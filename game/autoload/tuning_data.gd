@@ -700,6 +700,48 @@ extends Resource
 ## many degrees from every other seat (the others never move for it).
 @export_range(0.0, 90.0, 5.0) var director_flank_gap_deg: float = 20.0
 
+@export_subgroup("Attack arcs")
+## Each archetype attacks from an arc of the circle round the player (Milestone 5; Game-boy's
+## attack arcs, replacing M3's even spread): the sector, in degrees, centred on its line (the
+## player's look when it engages, held after engage_commit_s). The trickier the enemy, the wider
+## the arc; 360 attacks from anywhere (the Kicker also circles to the blind side). An archetype
+## with no tunable of its own (the training dummy, a test stub) has 360. A variant resource
+## (game/enemies/variants/) can override an archetype's arc.
+@export_range(10.0, 360.0, 5.0) var punk_arc_deg: float = 90.0
+@export_range(10.0, 360.0, 5.0) var thug_arc_deg: float = 140.0
+@export_range(10.0, 360.0, 5.0) var bruiser_arc_deg: float = 180.0
+@export_range(10.0, 360.0, 5.0) var boss_arc_deg: float = 270.0
+@export_range(10.0, 360.0, 5.0) var kicker_arc_deg: float = 360.0
+## An enemy's line follows the player's look for this long (s) after it engages (it reaches its
+## seat, or comes within arc_engage_radius_m), then holds until its next engagement: a quick turn
+## cannot stun-lock a Punk into walking round forever, and turning your back after the grace lets
+## it hit you from behind.
+@export_range(0.0, 3.0, 0.05) var engage_commit_s: float = 0.5
+## An approaching enemy engages (fixes its line) when it comes this near (m) to the player. At
+## least wait_ring_max_m + arc_engage_wait_margin_m, so no wait seat lies outside it.
+@export_range(2.0, 20.0, 0.5) var arc_engage_radius_m: float = 7.0
+## How far past wait_ring_max_m the engage radius always reaches (m).
+@export_range(0.0, 3.0, 0.1) var arc_engage_wait_margin_m: float = 0.5
+## A wait seat may sit as near as posture_ring_max_m plus this (m) when the wait ring is full.
+@export_range(0.0, 4.0, 0.1) var wait_seat_floor_gap_m: float = 1.0
+## A token goes only to an enemy within posture_ring_max_m plus this (m) of the player: one promoted
+## from a wait seat walks to its inner seat first, so it has the chase time to land its attack
+## (granted from the wait ring it ran out of engage_timeout_s short and sat out a cooldown).
+@export_range(0.0, 3.0, 0.1) var token_grant_margin_m: float = 0.5
+## Inner seats inside an arc are at least this many degrees apart: a 90 degree arc seats three.
+@export_range(10.0, 120.0, 5.0) var director_seat_gap_deg: float = 40.0
+## The wait ring: with no free inner seat in its arc an enemy stands back here (m from the
+## player), inside its arc, until one frees.
+@export_range(3.0, 12.0, 0.1) var wait_ring_min_m: float = 5.5
+@export_range(3.0, 14.0, 0.1) var wait_ring_max_m: float = 6.5
+## A seat whose floor is more than this (m) above or below the player's is rejected (a catwalk's
+## lip must not seat an enemy on the street below).
+@export_range(0.1, 3.0, 0.05) var director_slot_max_rise_m: float = 0.5
+## The blind-spot priority (blind_spot_priority) is for enemies whose arc reaches the blind
+## spot (half the arc past rear_warning_angle_deg): not a 90 degree Punk. Off: any enemy, as SPEC §7
+## words it.
+@export var blind_spot_needs_wide_arc: bool = true
+
 @export_subgroup("Waves")
 ## Waves spawn on their own in the crowd street (off: only F4 spawns).
 @export var waves_enabled: bool = true
@@ -750,6 +792,27 @@ extends Resource
 ## again as many wind-ups, from behind. It is a plateau from 2.5 s to 3.5 s (the director's pacing
 ## sets the cadence there: 17 and 16 attacks); 1.2 s (the S0 seed) gave 21, 5 s gave 12.
 @export_range(0.0, 10.0, 0.1) var kicker_attack_cooldown_s: float = 3.0
+## Milestone 5 (Game-boy's playtest): a Kicker flanks only while the player is busy with someone
+## else (see kicker_flank_busy_radius_m); otherwise it is seated by its own arc like any enemy, so a
+## one-on-one is fought face to face. Off: M5's rule, a Kicker always takes the seat nearest directly
+## behind the look. (director_even_spread on: M3's rule, always flank, whatever this says.)
+@export var kicker_flank_opportunistic: bool = true
+## A Kicker counts the player as busy while another live, engaged enemy that is not itself flanking
+## stands inside the player's view within this distance (m) of him and nearer the middle of the view than
+## the Kicker is (the player faces that enemy, not the Kicker). 4.5 is the token reach: posture_ring_max_m
+## 4.0 plus token_grant_margin_m 0.5, the farthest an enemy can be and still be about to attack.
+@export_range(1.0, 12.0, 0.1) var kicker_flank_busy_radius_m: float = 4.5
+## Seconds the player must have been busy before a Kicker starts flanking (the engage grace, so a
+## glance at a Punk, or a quick turn past one, does not send it round).
+@export_range(0.0, 3.0, 0.05) var kicker_flank_on_s: float = 0.5
+## Seconds the player must have been free (not busy) before a Kicker stops flanking and squares up
+## where it is: longer than the on-delay, so a Punk dipping out of view for a moment does not flip it.
+@export_range(0.0, 5.0, 0.05) var kicker_flank_off_s: float = 1.0
+## Seconds a flanking Kicker keeps flanking once the player faces it (it stands inside his view and no other
+## enemy he is busy with is nearer the middle of it). 0 is the tick he faces it: "when he turns on it, it
+## fights". kicker_flank_off_s still times the other way the flank ends (the other enemy leaves the view or
+## the radius, or goes down).
+@export_range(0.0, 3.0, 0.05) var kicker_flank_faced_off_s: float = 0.0
 
 @export_subgroup("Pipe Thug")
 @export_range(5.0, 500.0, 1.0) var thug_health: float = 35.0
@@ -957,6 +1020,77 @@ extends Resource
 @export_range(0.7, 1.05, 0.01) var sparring_step_in_m: float = 0.9
 ## Test room: seconds before a KO'd player gets back up at full health.
 @export_range(0.5, 10.0, 0.1) var player_revive_s: float = 2.5
+
+@export_group("Level")
+@export_subgroup("Arena locks")
+## Seconds a barrier takes to close (a shutter drops, a gate slides, a car rolls across).
+@export_range(0.1, 3.0, 0.05) var barrier_close_s: float = 0.6
+## Seconds a barrier takes to open once the arena is clear.
+@export_range(0.1, 3.0, 0.05) var barrier_open_s: float = 0.8
+## An arena's behind barrier closes once the player is this far (m) past it, along the walk, so
+## he can never be shut on the wrong side of it.
+@export_range(0.5, 6.0, 0.1) var arena_lock_inset_m: float = 2.0
+## A named spawn point nearer the player than spawn_min_player_distance_m (or with no room) is
+## waited for this long (s); then the nearest free point with the same tag is used. With
+## spawn_behind_waits_out_of_view on, the same wait holds a behind point (a spawn point flagged
+## `out_of_view`) while it is inside the player's view; then the nearest free point outside the view,
+## of any tag, takes it.
+@export_range(0.0, 10.0, 0.1) var spawn_named_wait_s: float = 2.0
+## When no point of its tag is free either (a point with a unique tag, with the player standing
+## by it), a further wait (s) after spawn_named_wait_s; then the nearest free point of any tag in
+## the arena takes it, so a player holding a spot cannot stall the wave.
+@export_range(0.0, 20.0, 0.1) var spawn_named_any_wait_s: float = 3.0
+## How often (s) a named spawn that cannot be placed yet (its point is too near the player, has no
+## room or, for a behind point with spawn_behind_waits_out_of_view on, is in view) tries again.
+@export_range(0.02, 1.0, 0.01) var spawn_named_retry_s: float = 0.1
+## Off (the default, Game-boy's playtest ruling): a behind point (flagged `out_of_view`) is used like
+## any named point, at once when it is free, even with the point inside the player's view, so there is
+## no lull before a hit from behind. On: M5's hold, a behind point waits (spawn_named_wait_s, then
+## spawn_named_any_wait_s) while it is inside the player's view and falls back to the nearest free
+## point outside the view.
+@export var spawn_behind_waits_out_of_view: bool = false
+@export_subgroup("Weapon look")
+## The colour of a weapon lying on the floor (a level's pick-up, a dropped or landed pipe), so it
+## reads against the floor's grey from across a room. In a hand or in the air it keeps its own colour.
+@export var weapon_floor_color: Color = Color(0.96, 0.7, 0.1)
+## How much thicker a weapon is drawn while it lies on the floor (the collision does not change).
+@export_range(1.0, 4.0, 0.1) var weapon_floor_radius_scale: float = 1.6
+@export_subgroup("Drop-offs")
+## The invisible guard along every open edge (physics layer 9): the player can never walk or be
+## knocked off, a standing enemy never walks off. Off, the player can fall (the fall rule below).
+@export var level_edge_guard: bool = true
+## Health the player loses to a fall (with the guard off), before he is put back at the arena's
+## Respawn marker.
+@export_range(0.0, 100.0, 1.0) var level_fall_damage: float = 20.0
+## Seconds the player cannot be hurt after a fall.
+@export_range(0.0, 5.0, 0.1) var level_fall_invuln_s: float = 1.5
+@export_subgroup("GO cue")
+## Seconds the "GO" arrow shows after an arena clears.
+@export_range(0.5, 6.0, 0.1) var go_cue_s: float = 2.0
+## Size of the cue (1 = the default panel).
+@export_range(0.5, 2.0, 0.05) var go_cue_size: float = 1.0
+## Seconds of one swell of the cue's breath (0 = steady).
+@export_range(0.0, 2.0, 0.05) var go_cue_pulse_s: float = 0.5
+## "GO" stays up at least go_cue_s and then until the player faces the exit (his look within
+## go_cue_face_deg of it) or comes within go_cue_pass_m of it, but no longer than go_cue_max_s.
+## Off, it lasts go_cue_s as in the first build.
+@export var go_cue_until_faced: bool = true
+## A look within this many degrees of the exit counts as facing it.
+@export_range(5.0, 90.0, 1.0) var go_cue_face_deg: float = 30.0
+## Coming within this flat distance of the exit (m) ends the cue.
+@export_range(0.5, 12.0, 0.5) var go_cue_pass_m: float = 3.0
+## The longest the cue stays up (s) while go_cue_until_faced is on.
+@export_range(2.0, 20.0, 0.5) var go_cue_max_s: float = 8.0
+## The panel's layout (pixels at 1920 x 1080, before go_cue_size): the gap between the word and the
+## arrow, the padding round them (across, down) and the offset of the panel's shadow.
+## The gap between the word and the arrow (px).
+@export_range(0.0, 100.0, 1.0) var go_cue_gap_px: float = 26.0
+## The padding across (px).
+@export_range(0.0, 100.0, 1.0) var go_cue_pad_x_px: float = 34.0
+## The padding down (px).
+@export_range(0.0, 100.0, 1.0) var go_cue_pad_y_px: float = 18.0
+## The panel shadow's offset (px).
+@export_range(0.0, 20.0, 0.5) var go_cue_shadow_px: float = 6.0
 
 @export_group("Audio")
 @export_subgroup("Mix")
@@ -1257,6 +1391,10 @@ extends Resource
 
 @export_group("Debug")
 @export var god_mode: bool = false
+## A/B switch for Milestone 5's attack arcs: on brings back all of M3's director (the even spread
+## round the player, a token to any waiter, the blind-spot roll for any enemy, no engage line).
+## Presets never hold it.
+@export var director_even_spread: bool = false
 @export var one_hit_ko: bool = false
 ## Enemy AI stands still, faces the player and asks for nothing (F4 "Freeze AI"): a scripted
 ## act can then place and trigger each attacker by hand.

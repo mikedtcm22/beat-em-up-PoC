@@ -8,9 +8,15 @@ One playable level that tests whether a first-person beat-em-up feels good to pl
 godot --path .
 ```
 
-This opens the crowd street (`game/level/crowd_room.tscn`): a 30 m lane with doorways, alleys, a parked car and crates, and the player at the middle. A first wave of Street Punks walks in a few seconds after it loads. The waves repeat for as long as you live, each with up to six mixed enemies (Punks, Kickers, Pipe Thugs and Bruisers) coming out of the doorways, the alleys and from behind the car, and about a third of each wave comes from outside your view. After every fourth wave the boss comes in on his own, and calls in two Punks at half health.
+This opens Mission 1 (`game/level/mission1/mission1.tscn`), the graybox level from start to boss: a street, three rooftops and the boss roof, with seven fights in all (the table is in [reference/encounters.md](reference/encounters.md)).
+- Each fight shuts the way ahead and behind until its last enemy is down. Then the barrier opens and a "GO" arrow points the way on.
+- Stairs take you from the street up to the roofs. You can't fall off an edge, but an enemy you knock over one is out.
+- The boss waits on the top roof and calls in two Punks at half health. "CLEAR!" ends the level.
+- A first run takes about 8-10 minutes.
 
-F6 switches to the Milestone 2 training room (and back): the player, three training dummies and a pipe. The centre dummy spars: come within 1.7 m in front of it and it steps in and throws a telegraphed jab every couple of seconds, to block (or dodge, or hit it out of its wind-up). To open the editor instead, run `godot --path . -e`.
+F6 cycles the rooms: the level, then the Milestone 3 crowd street, then the Milestone 2 training room, and back to the level.
+- **The crowd street** (`game/level/crowd_room.tscn`) is a 30 m lane with doorways, alleys, a parked car and crates. Waves of up to six mixed enemies repeat for as long as you live, about a third of each from outside your view, and the boss comes in alone after every fourth wave.
+- **The training room** has the player, three training dummies and a pipe. The centre dummy spars: come within 1.7 m in front of it and it steps in and throws a telegraphed jab every couple of seconds, to block (or dodge, or hit it out of its wind-up). To open the editor instead, run `godot --path . -e`.
 
 | Action | Gamepad (Xbox) | Keyboard + mouse |
 | --- | --- | --- |
@@ -29,7 +35,7 @@ F6 switches to the Milestone 2 training room (and back): the player, three train
 | Tuning panel: every tunable and move, presets | View | F1 |
 | Cheats: god mode, one-hit KOs, spawn any enemy at the crosshair, remove spawned / all enemies, waves on / off, freeze AI, time scale 0.25× / 1×, reset dummies | | F4 |
 | Sparring: all three dummies throw jabs / none do (training room only) | | F5 |
-| Switch room: crowd street / training room | | F6 |
+| Switch room: level / crowd street / training room | | F6 |
 | Controls help | | H |
 
 The free-fly camera moves with the arrow keys and PgUp/PgDn, and turns while you hold the middle mouse button. The player keeps WASD and the mouse.
@@ -45,6 +51,40 @@ The tuning panel and the cheat menu take every key while open, and the player st
 **The rear warning:** when an enemy outside your view starts winding up an attack, a red-orange burst flashes in the top-left corner (it is behind you on the left), the top-right (behind on the right), or both (directly behind). It stays until the attack lands or is stopped, so turn, dodge or block.
 
 **Blocking:** hold B (Shift) with no direction to put the guard up; it stops hits from the front (within 60° of where you look) for a little chip damage and drains the guard meter under your health bar. Raise it on reaction to an attacker's wind-up, up to about a quarter second before the hit, for a perfect block ("PARRY!"): no damage, and the attacker staggers, so you can let go of B and grab it. An empty guard meter breaks the guard. P or K out of the guard attacks at once; pressed while a blocked hit pushes you back, it attacks as soon as the push-back ends. Holding B keeps the block: after a hit, a guard break or an attack out of the guard, the guard comes back up while B is still held (a perfect block needs a fresh press of B). Jump and LB do nothing while the guard is up.
+
+## Milestone 5 status: the level blockout
+
+Mission 1 now plays from the street to the boss as one graybox level. Enemies attack from Game-boy's attack arcs instead of the even spread round you. Milestone 5 is done when the level plays from start to boss (Spec §12).
+- **The attack arcs** (Game-boy's call; Spec §7):
+  - Each type attacks from an arc centred on where you looked when it engaged: Punk 90°, Pipe Thug 140°, Bruiser 180°, boss 270°, Kicker 360°.
+  - For the first 0.5 s, a quick turn re-aims an enemy's arc. After that its line holds, so turning your back on a Punk lets him hit you from behind.
+  - Enemies with no free seat in their arc wait further out (5.5-6.5 m), back from the fray.
+  - Variants widen the arc in data: the veteran Punk (orange) attacks from 140°.
+  - A Kicker gets behind you only while you're facing someone else. Turn to it and it fights. One-on-one, it squares up where it stands and fights you face to face (Game-boy's playtest ruling, 2026-11-04).
+  - F3 draws each enemy's arc, and the arcs' numbers are in F1's "Enemies > Attack arcs".
+- **The level** (`game/level/mission1/`; the approved table is [reference/encounters.md](reference/encounters.md)):
+  - Seven arenas and 34 enemies, laid out after the reference's screens:
+    - the street (the loading dock, the crate yard, the warehouse stair);
+    - three roofs (the terrace, the catwalk, the top roof's six-at-once crowd);
+    - the 20 x 20 m boss roof.
+  - **Arena locks:** a car, a gate or a shutter closes the way ahead and behind until the last enemy is down. Then it opens with a "GO" arrow.
+  - Stairs climb from the street to the roofs.
+  - Every drop has a rail with gaps and an invisible guard for you. An enemy knocked over it is KO'd.
+  - A pipe lies on the top roof, and Pipe Thugs drop theirs.
+  - The boss calls in two Punks at half health. "CLEAR!" ends the level.
+- **The level kit** (`game/level/kit/`) builds any later level from scenes: sections chained by Entry and Exit markers, arenas, barriers, spawn points, stairs, edges, hazards and pickups. Its numbers are in F1's "Level" group.
+
+**How the done-when is proved:**
+- **`tests/test_m5_done_when.gd`** plays the real level arena by arena:
+  - it checks each arena locks, spawns exactly its table, never has more than six alive and clears in order;
+  - it checks the boss's adds and the single `level_cleared`;
+  - it checks the edge guard and a launched Punk's KO;
+  - it checks that no two sections overlap.
+- **The level-run bot** (`tests/bot/level_bot.tscn`) plays the whole level:
+  - In god mode at full speed: 197 s, all seven arenas in order, with no stall.
+  - Held back with real damage, as the recordings show: about 427 s, about 7 minutes, so a first run takes about 8-11 minutes.
+- **M3's readability metrics are re-measured** under the arcs. Every hard row holds in every arena.
+  - In the boss arena, two soft rows miss: the ring's closest tenth (R6, p10 about 1.8 m) and the lens covered (R8, p95 about 57%). Every sample behind them is the boss alone up close, during his own moves, with no add involved. That's his size, not a crowd.
 
 ## Milestone 4 status: the art pipeline
 
@@ -209,10 +249,53 @@ The characters are procedural placeholders. Real art, VFX and audio come in Mile
   - **Damage marks:** they are spread over the whole body, as M3's were, and the blood turns orange on the yellow cap.
   - **The near upper arm:** in the haymaker and uppercut its cut end is a bare knob mid-view. That is M3's approved first-person framing, and showing the whole upper arm instead is an option.
 
+**Where M5 departs from the spec, ruled by Game-boy at his playtest (2026-11-04):**
+- **Kickers flank only when you're busy (Spec §7 says the Kicker "prefers the player's blind side"):**
+  - A Kicker goes round to your back only while you face another enemy within 4.5 m (`kicker_flank_busy_radius_m`): one in your view and nearer its middle than the Kicker. It starts after that has held 0.5 s (`kicker_flank_on_s`) and stops 1 s after the other enemy leaves your view or goes down (`kicker_flank_off_s`), so a glance doesn't flip it. Turn to the Kicker and it stops and fights at once (`kicker_flank_faced_off_s`, 0 s), even with a Punk still in view beside it.
+  - Otherwise it is seated by its 360° arc like any enemy: it holds where it stands, squares up and attacks from there, at the normal circling pace.
+  - His words: in a one-on-one the Kicker kept "trying to maneuver behind me the whole time (so a LOT of whiffs)".
+  - `kicker_flank_opportunistic` off brings back M5's always-flank.
+- **Spawns don't wait for your back (this replaces the hold that the final review's fix wave added, decided by default before the playtest):**
+  - An enemy the table sends from a behind door comes in on schedule, even while that door is in your view. His words: the wait "makes it seem like there's a lot of nothing going on and then suddenly you're hit from behind".
+  - `spawn_behind_waits_out_of_view` on brings back the hold.
+
+**Where M5 departs from the spec (decided by default; accepted by Game-boy with M5's sign-off, 2026-11-04):**
+- **M5-1. Attack arcs replace "Spread" (Spec §7; Game-boy's call, 2026-11-03):**
+  - Each archetype attacks from an arc centred on where the player looked when it engaged: Punk 90°, Pipe Thug 140°, Bruiser 180°, boss 270°, Kicker 360°.
+  - The line follows the player's turns for `engage_commit_s` (0.5 s), then holds until that enemy's attack and recovery end.
+  - When its arc has no free seat, an enemy waits on an outer ring (5.5-6.5 m) inside its arc, back from the fray.
+  - An enemy is given its attack only within about 4.5 m of you, so one moved up from the outer ring walks to its seat first (`token_grant_margin_m`, 0.5 m past the posture ring).
+  - Variants override the arc in data: the veteran Punk is 140°, a `.tres` file in `game/enemies/variants/`.
+  - **Ours, not his:** when a wall or a drop leaves no room anywhere in an arc, the arc slides round to the nearest open stretch, so a wall is never a safe spot.
+  - **Keeping the spec reachable:** `director_even_spread` (Debug) brings M3's even spread back.
+- **M5-2. Blind-spot priority only for wide arcs (Spec §7; Game-boy's call):** only an enemy whose arc reaches past the view cone (half its arc > `rear_warning_angle_deg`) jumps the token queue from behind. A 90° Punk never does. Turning `blind_spot_needs_wide_arc` off restores "any enemy".
+- **Punks never come round behind you on their own (Spec §7, §8; the rear-warning question, left at its default):** a Punk reaches your back only when you turn it on him after he engages, so the warning fires mostly for Kickers, the Bruiser's flank, the boss, and Punks you turned away from. A wider `punk_arc_deg` (or a wider variant, as the veteran Punk's 140°) lets them reach round.
+- **M5-3. Stairs where the reference climbs ladders (Spec §9):**
+  - Graybox stair flights replace the ladders, with no new player state, and enemies still come down them at you.
+  - Walking bodies ride a hidden ramp on the step tips; bodies lying down rest on the steps.
+  - A first-person ladder climb is an M7 option.
+- **Where the spec is silent:**
+  - **Edges:** the player can't fall. An invisible guard holds him in every state. Enemies knocked down, launched or thrown over an edge are KO'd at once.
+    - With `level_edge_guard` off, a fall costs `level_fall_damage` (20) and respawns the player at the arena's start.
+  - **The player's KO** revives in place, and the arena stays locked. There are no lives.
+  - **The level's end:** the boss and his adds down shows "CLEAR!".
+  - **The GO arrow** shows for at least `go_cue_s` (2 s), then until you face the way on (within 30°) or reach it, at most 8 s. `go_cue_until_faced` off gives the fixed 2 s.
+- **Graybox stand-ins:**
+  - Screen 11's chain-like weapon is the pipe until M6 designs an original second weapon.
+  - The veteran Punk is marked by an orange tint over the whole Punk art.
+  - A weapon lying on the floor is drawn amber and thicker (`weapon_floor_color`, `weapon_floor_radius_scale`), so it can be found on the grey floor. A held or thrown weapon keeps its look.
+
 **Automated checks:**
-- `tools/run_tests.sh` runs 1198 tests headless in about 145 s, including an end-to-end suite where a scripted player performs every combo in the real test room and the Milestone 3 done-when test, `tests/test_m3_done_when.gd`.
+- `tools/run_tests.sh` runs about 1770 tests headless in about 300 s. Among them:
+  - an end-to-end suite where a scripted player performs every combo in the real test room;
+  - each milestone's done-when test (`tests/test_m3_done_when.gd`, `tests/test_m4_done_when.gd`, `tests/test_m5_done_when.gd`, which plays the whole level arena by arena);
+  - the level's own tests (`tests/test_m5_street.gd`, `tests/test_m5_roofs.gd`, `tests/test_level_kit.gd`, `tests/test_level_bot.gd`).
 - `tools/capture_combos.sh` records the combo bot with Movie Maker to `captures/combos.avi`, writes a hit log to `captures/bot.log`, and extracts stills for review. Pass text to run only matching acts, for example `tools/capture_combos.sh "haymaker"`. `tests/bot/ragdoll_bot.tscn` and `tests/bot/vfx_bot.tscn` play the ragdoll and VFX acts the same way (record them with Movie Maker, `--write-movie`).
 - `tests/bot/crowd_bot.tscn` plays the crowd street the same way: its acts are in `tests/bot/acts/` (one file per area, such as `crowd_acts.gd` for the mixed six, the waves to the boss, the mixed waves, the boss wave held back and the rear warning for every archetype). Pass text to run matching acts and `--seed=<n>` to repeat one with other seeds, for example `tools/capture_bot.sh res://tests/bot/crowd_bot.tscn captures/crowd "Mixed six" 6`. A probed act runs the readability probe, which writes `readability.json` (15 metrics, five of them hard) next to the recording, and the warning oracle, which checks the HUD's corners against Spec §8 at every wind-up. The perf act is recorded windowed, not with Movie Maker: `godot --path . res://tests/bot/crowd_bot.tscn -- --act="Perf, six with ragdolls"`.
+- `tests/bot/level_bot.tscn` plays a level, or a lone section, arena by arena. `--level=<res:// path>` picks it, and `--from=<arena>` / `--to=<arena>` pick the arenas.
+  - Acts: "Run: held back" (real damage, the probe in every arena), "Run: knock-off" (a Punk launched over the chosen arena's drop), "Run: timing" (god mode at full speed; run it headless with `--presentation=0` for the `LEVEL` time) and "Look: seams" (both section seams, barrier closed and open).
+  - Record any bot with `tools/capture_bot.sh`, or several acts at once into one folder with `tools/record_acts.sh <out dir> "<slug>|<act title>" ...` (`BOT_SCENE` picks the bot, `CAPTURE_ARGS` passes its arguments).
+  - The bot's held-back pilot never jumps, so the boss's unblockable Ground Pound always lands. Its A7 damage and time are higher than a human's.
 - `tools/check_m3_log.py <bot.log>` reads a crowd bot log and exits 1 if a warning corner is missing or wrong, a token count goes over the cap, a hard metric fails or the log has a script error. `tools/capture_bot.sh` writes `bot.log` next to the recording.
 
 ## Repo layout

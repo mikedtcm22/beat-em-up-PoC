@@ -223,3 +223,79 @@ func test_the_ai_layer_writes_no_game_state() -> void:
 	_draw.rebuild()
 	assert_eq([holder.global_position, holder.has_token, holder.posture_slot, director.holders.size(),
 			_player.global_position, _player.look_yaw, director.released.size()], before)
+
+
+# --- Attack arcs (Milestone 5) -------------------------------------------------------------------
+
+
+## A stub director that says which enemies are engaged, on which line, and whether their arc slid.
+class ArcDirector:
+	extends StubDirector
+	var centers: Dictionary = {}
+	var slid: Dictionary = {}
+
+	func debug_arc_center_of(enemy: EnemyActor) -> float:
+		return float(centers.get(enemy, NAN))
+
+	func debug_arc_slid(enemy: EnemyActor) -> bool:
+		return bool(slid.get(enemy, false))
+
+
+func _arc_counts() -> Dictionary:
+	_draw.rebuild()
+	return {
+		arc = _draw.count_lines_of_color(_draw.arc_color),
+		center = _draw.count_lines_of_color(Color(_draw.arc_color, _draw.slot_line_alpha)),
+		slid = _draw.count_lines_of_color(_draw.arc_slid_color),
+		wait = _draw.count_lines_of_color(_draw.wait_ring_color),
+	}
+
+
+func test_the_wait_ring_is_drawn_in_its_own_color_and_leaves_the_posture_ring_alone() -> void:
+	_add_director()
+	_add_enemy(Vector3(0.0, 0.0, -3.0))
+	assert_eq(_arc_counts().wait, 2 * CombatDebugDraw.CIRCLE_SEGMENTS, "two circles for the wait ring")
+	assert_eq(_counts().ring, 2 * CombatDebugDraw.CIRCLE_SEGMENTS, "the posture ring's lines are what they were")
+
+
+func test_an_engaged_enemy_draws_its_arc_edges_and_center_line() -> void:
+	var director := ArcDirector.new()
+	add_child_autofree(director)
+	_director = director
+	var one := _add_enemy(Vector3(0.0, 0.0, -3.0))
+	one.archetype = &"punk"
+	var two := _add_enemy(Vector3(1.0, 0.0, -3.0))
+	two.archetype = &"punk"
+	var counts := _arc_counts()
+	assert_eq(counts.arc, 0, "nobody engaged: no arc")
+	director.centers[one] = 0.0
+	director.centers[two] = 0.0
+	counts = _arc_counts()
+	assert_eq(counts.arc, 2, "two enemies on the same line share one arc: its two edges")
+	assert_eq(counts.center, 1, "and its center line")
+	# The edges are half the 90 degree arc either side of the line, from the player.
+	var verts: PackedVector3Array = _draw.get(&"_verts")
+	var colors: PackedColorArray = _draw.get(&"_colors")
+	var bearings: Array[float] = []
+	for i in range(0, verts.size() - 1, 2):
+		if colors[i] == _draw.arc_color:
+			var dir := verts[i + 1] - verts[i]
+			bearings.append(snappedf(ViewGeometry.bearing_deg(0.0, Vector3.ZERO, Vector3(dir.x, 0.0, dir.z)), 0.01))
+	bearings.sort()
+	assert_eq(bearings, [-45.0, 45.0] as Array[float])
+	director.centers[two] = 90.0
+	assert_eq(_arc_counts().arc, 4, "another line, another arc")
+	director.slid[two] = true
+	counts = _arc_counts()
+	assert_eq(counts.arc, 2)
+	assert_eq(counts.slid, 2, "a slid arc is marked in its own color")
+
+
+func test_a_360_degree_enemy_draws_no_edges() -> void:
+	var director := ArcDirector.new()
+	add_child_autofree(director)
+	_director = director
+	var kicker := _add_enemy(Vector3(0.0, 0.0, -3.0))
+	kicker.archetype = &"kicker"
+	director.centers[kicker] = 0.0
+	assert_eq(_arc_counts().arc, 0)

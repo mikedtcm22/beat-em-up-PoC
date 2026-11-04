@@ -1,0 +1,11 @@
+# fix-final-arcs: judgement calls
+
+**final-feel-02: the token reach.** Decision: `_grant` only pools an inner-seated waiter within `posture_ring_max_m + token_grant_margin_m` (4.0 + 0.5 m) of the player (new tunable, Enemies > Attack arcs); a boss that wakes in place is exempt as before; the check applies only with arcs on. A Punk promoted from a wait seat walks to its inner seat first (it is in POSTURE, so it does), then gets the token. Not taken: letting the chase time start from the ring (changes the engage rules), or skipping the cooldown after a give-up (hides the cause). Margin 0.5 m rather than 1.0: a grant at 5 m still ran a 2 s chase against a moving player. The stub-based tests (`test_no_token_comes_from_a_wait_seat...`) now put the stub onto its seat before it expects a token. In the re-recorded 'Arcs: quick turns' Punk1 no longer holds a token from 6.4 m and no longer gives up; its walk to the seat took 3 s because the player flips his look every few frames, so the longest gap from an attack's end to the next wind-up is 2.8 s (was 5.4 s). Still-player test: no give-up, no lull above 2.5 s.
+
+**final-code-04.** Removed the duplicated keys in `_merge_accs`; a test sums two equal acts and checks the total's R5w equals the acts' average.
+
+**final-code-05 (my part).** `NavBaker.FLOOR_TOLERANCE_M` / `FLOOR_LIFT_M` stay as the single source and LevelRoot's `nav_floor_tolerance` / `nav_floor_lift` take them as export defaults (not taken: tunables, because the bake runs from an @export on the level, not from Tuning). The director's two offsets became tunables `arc_engage_wait_margin_m` (0.5) and `wait_seat_floor_gap_m` (1.0), same defaults. GoCue layout: `go_cue_gap_px`, `go_cue_pad_x_px`, `go_cue_pad_y_px`, `go_cue_shadow_px`. NAMED_RETRY_S left to 'spawns'.
+
+**final-sees-05.** "GO" stays at least `go_cue_s`, then until the player's look is within `go_cue_face_deg` (30) of the exit, or he is within `go_cue_pass_m` (3 m, flat) of its target point ("crosses it": the target is the next arena's first route point, past the barrier), capped at `go_cue_max_s` (8). `go_cue_until_faced` off restores the fixed time. Not taken: requiring the arrow to hold up for a beat (the minimum time already gives one).
+
+**final-code-06.** `git rm tests/test_zz_debug.gd.uid`.

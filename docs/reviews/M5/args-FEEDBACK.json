@@ -1,0 +1,30 @@
+{
+  "milestone": 5,
+  "summary": "the level blockout: Game-boy's attack arcs in the director, the level kit, then the graybox Mission 1 level from the reference, start to boss",
+  "plan": "docs/reviews/M5/fix-feedback.md",
+  "base": "m5/level-blockout",
+  "read_first": [
+    "docs/ARCHITECTURE.md, the director's contract and 'Attack arcs' (grep for them)",
+    "game/enemies/enemy_director.gd (the class docs, _assign_arcs, _flank_order, _flank_angle, the grant loop)",
+    "game/enemies/kicker/kicker.gd"
+  ],
+  "arch_heading": "## Level blockout (Milestone 5)",
+  "captures_dir": "/Users/arachne/repos/beat-em-up-PoC/captures/m5-feedback",
+  "image_budget": 20,
+  "concurrency": 1,
+  "note": "Game-boy's playtest feedback on the finished M5 (PR #5, unmerged, m5/level-blockout at 3a038e6, suite 1748/1748 in 293 s). Both items are his rulings, so build them as the brief says. The lead recorded A4 held back as it plays now into captures_dir/before/a4 (bot.avi, bot.log, sheets/), the 'before' of item 1.",
+  "packages": [
+    {
+      "key": "FEEDBACK",
+      "section": "the whole file (items 1 and 2, and 'Done when')",
+      "est": 15,
+      "read": [
+        "game/level/encounter_spawner.gd (_spawn_named and the class docs)",
+        "game/level/kit/spawn_point.gd",
+        "tests/bot/acts/kicker_acts.gd and tests/bot/level_bot.gd (how the autopilot is driven)",
+        "game/autoload/tuning_data.gd, the 'Kicker' and 'Attack arcs' subgroups and the Level group's spawn tunables"
+      ]
+    }
+  ],
+  "only": ["FEEDBACK"]
+}

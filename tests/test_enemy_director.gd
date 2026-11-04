@@ -22,6 +22,7 @@ var _starts: Array[int] = []
 
 func before_each() -> void:
 	Tuning.reset_to_default()
+	Tuning.data.director_even_spread = false  # a Debug value: reset_to_default() leaves it
 	TimeController.clear()
 	TimeController.debug_scale = 1.0
 	GameInput.menu_open = false
@@ -36,6 +37,7 @@ func after_each() -> void:
 	GameInput.menu_open = false
 	PlaceholderAnims.warn_on_fallback = true
 	Tuning.reset_to_default()
+	Tuning.data.director_even_spread = false
 	TimeController.clear()
 
 
@@ -937,6 +939,7 @@ func test_leaving_the_tree_returns_every_token() -> void:
 
 
 func test_n_enemies_are_spread_evenly_around_the_player() -> void:
+	Tuning.data.director_even_spread = true  # M3's director: the spread is what this tests
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 5
 	for n in range(1, 7):
@@ -1002,6 +1005,7 @@ func test_the_slots_follow_a_player_who_moved_but_not_one_who_shuffled() -> void
 
 
 func test_a_new_enemy_gets_a_slot_at_once_and_the_crowd_makes_room() -> void:
+	Tuning.data.director_even_spread = true  # M3's director: the spread is what this tests
 	await _setup(0, 1.0)
 	Tuning.data.director_reslot_s = 10.0
 	var stubs := _crowd(2)
@@ -1018,6 +1022,7 @@ func test_a_new_enemy_gets_a_slot_at_once_and_the_crowd_makes_room() -> void:
 
 
 func test_a_token_holder_keeps_its_slot_and_its_place_in_the_spread() -> void:
+	Tuning.data.director_even_spread = true  # M3's director: the spread is what this tests
 	await _setup(1, 0.0)
 	var stubs := _crowd(3)
 	await _ticks(4)
@@ -1070,6 +1075,7 @@ func test_an_enemy_that_walks_across_the_player_keeps_its_seat() -> void:
 
 
 func test_a_dead_enemy_has_no_slot_and_the_rest_close_ranks() -> void:
+	Tuning.data.director_even_spread = true  # M3's director: the spread is what this tests
 	await _setup(0, 1.0)
 	var stubs := _crowd(4)
 	for stub in stubs:
@@ -1094,6 +1100,8 @@ func _slots_of(stubs: Array) -> Array[Vector3]:
 
 func test_a_kicker_takes_a_seat_of_its_own_as_near_directly_behind_the_look_as_it_can() -> void:
 	await _setup(0, 1.0)
+	# The seat behind the look is the flank's geometry: M5's always-flank switch (the busy rule has its own tests).
+	Tuning.data.kicker_flank_opportunistic = false
 	var jitter := Tuning.data.director_spread_jitter_deg
 	var gap := Tuning.data.director_flank_gap_deg
 	for others in [0, 1, 2, 4]:
@@ -1125,6 +1133,8 @@ func test_a_kicker_takes_a_seat_of_its_own_as_near_directly_behind_the_look_as_i
 
 func test_two_kickers_take_seats_of_their_own_behind_the_look_and_the_others_keep_their_ring() -> void:
 	await _setup(0, 1.0)
+	# The seat behind the look is the flank's geometry: M5's always-flank switch (the busy rule has its own tests).
+	Tuning.data.kicker_flank_opportunistic = false
 	var jitter := Tuning.data.director_spread_jitter_deg
 	var gap := Tuning.data.director_flank_gap_deg
 	var others: Array[StubEnemy] = [_stub(_at(AHEAD, 3.0), false), _stub(_at(90.0, 3.0), false)]
@@ -1150,6 +1160,8 @@ func test_a_kicker_moves_nobody_else_when_the_look_turns() -> void:
 	# seats first, so every reslot moved the other enemies too (the fought mixed crowd walked instead of
 	# posturing). Now only the Kicker moves.
 	await _setup(0, 1.0)
+	# The seat behind the look is the flank's geometry: M5's always-flank switch (the busy rule has its own tests).
+	Tuning.data.kicker_flank_opportunistic = false
 	Tuning.data.director_reslot_s = 0.2
 	var ring := _crowd(4)
 	for stub in ring:
@@ -1174,6 +1186,7 @@ func test_a_kicker_moves_nobody_else_when_the_look_turns() -> void:
 
 
 func test_a_newcomer_never_takes_the_seat_of_an_enemy_already_on_the_ring() -> void:
+	Tuning.data.director_even_spread = true  # M3's director: the spread is what this tests
 	# The boss's phase 2 call-in: the first Punk spawns on the boss's side of the player, and with two
 	# enemies the two mirrored arrangements cost the same, so the boss could be handed the seat across
 	# the player (it walked 7.6 m through him, cutting its beckon). A newcomer weighs
@@ -1223,6 +1236,7 @@ func test_an_enemy_waking_in_place_is_served_before_the_queue_and_the_blind_spot
 
 
 func test_a_stalled_enemy_is_given_another_angle() -> void:
+	Tuning.data.director_even_spread = true  # M3's director: the spread is what this tests
 	await _setup(0, 1.0)
 	Tuning.data.director_slot_retry_deg = 20.0
 	var stubs := _crowd(3)

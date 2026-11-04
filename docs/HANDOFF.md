@@ -4,6 +4,220 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-04 13:45 CST: Game-boy signed off Milestone 5; PR #5 merged; M6 waits for his go
+- **Game-boy (session chat):** "Signed off". He played the build with his two playtest changes in.
+- **README:** M5's "decided by default" departures now read "accepted by Game-boy with M5's sign-off, 2026-11-04". His two playtest rulings (the Kicker's opportunistic flank, and behind spawns that don't wait) are in their own section.
+- **PR #5 is merged into `main`.** Every `m5/*` branch is pushed, and the `.worktrees/m5-*` worktrees can be pruned.
+- **Next: Milestone 6 (SPEC §12): art for the level and the second weapon.** Also carried forward from M4 are the damage marks and the near upper arm.
+  - **Before starting:** tell Game-boy, then wait for his go.
+  - **Then:**
+    1. Branch `m6/<topic>` from `main`.
+    2. Plan with a workflow, under the M5 usage and process rules.
+    3. Start it in a fresh session, which reads this file first.
+
+### 2026-11-04 10:15 CST: Game-boy's playtest feedback done (1766/1766); PR #5 updated; waiting on his play and sign-off again
+- **Merged on `m5/level-blockout`:**
+  - FEEDBACK (`b417ba0`);
+  - the fix `fix-feedback-faced` (merge `2e8a4a4`): a Kicker he faces fights; busy counts only the enemy nearer the middle of his view; `kicker_flank_faced_off_s` 0; the "Kicker left alone" act; the leak in a test_kicker.gd single-file run; the holder test;
+  - the comment polish (`26134ef`, `8a2bf73`).
+- **The targeted re-check** (one Sonnet agent, read-only) confirmed every item and found no highs or mediums. Its two lows: one was comment polish, now done. The other is that a Kicker already winding up when he turns away can still hit from the side. That's the holder rule, and it's kept.
+- **Suite:** 1766/1766 in 299 s, 0 error lines. The done-when plays 7 arenas and 34 enemies.
+- **Recordings** are in `captures/m5-feedback/`: before/, after/, and fix/ with alone, opportunist, oneonone and a4.
+- **Waiting on Game-boy:** play again, sign off, and rule on README's "decided by default" M5 departures. His two playtest rulings are recorded as his, in README's new "ruled by Game-boy at his playtest" section.
+- **Next after sign-off:** as before. Record his rulings in README, merge PR #5, then plan M6.
+- **Usage:** about 9% of the 5-hour window and 12% weekly. This round used about 1.2M sub-agent tokens: the builder 0.32M, the review 0.54M, the fixer 0.21M and the re-check 0.1M.
+
+### 2026-11-04 09:40 CST: FEEDBACK merged (1761/1761); reviewed (one medium); fixer `faced` running
+- **FEEDBACK** is merged into `m5/level-blockout` (`b417ba0`, fast-forward). README has Game-boy's two rulings (`e8fc568`). The suite on the merged branch: 1761/1761, 327 s under load, 0 error lines.
+- **Recordings** are in `captures/m5-feedback/`: before/a4, plus after/{oneonone, opportunist, flanks, a4, a6}. One-on-one, the Kicker fights from in view; in A6 it gets behind while the Punk is busy with him.
+- **The review** (run `wf_a5f90cf4-699`; `feel` on Opus, `code` on Sonnet; about 0.54M tokens) found one medium, confirmed by its skeptic, and three lows. The medium is `feedback-feel-01`: a Kicker he has turned on keeps flanking while a Punk is in view. The lead's rulings are in `docs/reviews/M5/findings-feedback.json`:
+  - busy counts only the enemy he faces, the one nearer the middle of the view;
+  - a faced Kicker stops at once (`kicker_flank_faced_off_s` 0);
+  - a "Kicker left alone" act;
+  - the single-file leak in test_kicker.gd fixed;
+  - the holder reseat kept and tested.
+- **Fixer `faced`** (review.js run `wf_67a4b1ab-53a`, fixers only; the first launch, `wf_d92b342d-e0c`, failed on the args shape: `packages` must be `{packages: [...]}`) is on branch `m5/fix-feedback-faced`. **Resume:** if it was cut off, rerun review.js with the same args. Then:
+  1. merge it;
+  2. look at its recordings;
+  3. run the suite;
+  4. update CLAUDE.md's suite figures;
+  5. push, update PR #5, and post the run command to Game-boy.
+
+### 2026-11-04 08:35 CST: Game-boy played M5 ("mostly good"); two changes from him; package FEEDBACK building
+- **His two rulings** (word for word in `docs/reviews/M5/fix-feedback.md`):
+  1. Kickers get behind you only *opportunistically*, while you're fighting someone else. One-on-one they must not keep running round you, which caused a lot of whiffs.
+  2. Spawns don't wait for your back to be turned. The `out_of_view` hold made long lulls and then a hit from behind.
+- **Package FEEDBACK** (one Sonnet builder, `tools/workflows/build.js` with `docs/reviews/M5/args-FEEDBACK.json`) is on branch `m5/feedback` in `.worktrees/m5-feedback`. The brief is `docs/reviews/M5/fix-feedback.md`.
+  - Item 1: the director flanks a Kicker only while another engaged enemy is in view within 4.5 m, with on and off hysteresis and the switch `kicker_flank_opportunistic`. Otherwise it's seated by its 360° arc and holds where it stands. The new hook is `set_flanking()` and `is_flanking()`.
+  - Item 2: the switch `spawn_behind_waits_out_of_view`, default off.
+- **The lead's "before"** recording of A4 held back is in `captures/m5-feedback/before/a4/`.
+- **Resume:** if the builder was cut off, rerun build.js with the same args (it resumes from the branch). Then:
+  1. merge `m5/feedback` into `m5/level-blockout`;
+  2. look at its recordings against the before;
+  3. run the full suite;
+  4. write README's rulings (two M5 departures change: the Kicker's flank and "behind spawns out of view");
+  5. push, update PR #5, and post the run command to Game-boy.
+- **The PR** stays unmerged until he signs off. The rest of the build is "mostly good" by his word, and there are no rulings yet on the other departures.
+
+### 2026-11-04 00:00 CST: M5 built and reviewed; PR #5 open; waiting on Game-boy's play and sign-off
+- **The fix wave merged** (`c2ddebc`, `2f7e269`, `7229ce9`; run `wf_2178beaf-dba`, about 0.67M sub-agent tokens). The lead also:
+  - moved roofs Skyline Block5 out of the boss roof's gap view (`96fa4a9`) and regenerated the preset (556 values);
+  - added `##` docs on the new tunables (`5feaa2d`).
+- **Suite:** 1748/1748, 293 s, 0 error lines. `test_m5_done_when` covers 3 sections, 7 arenas and 34 enemies. `test_m5_seams.gd` walks the real seams.
+- **The targeted re-check** (run `wf_1122fe50-342`, about 0.29M tokens): every fixed item is confirmed. The one partial is `sees-06` (the parapet outline shows only from the unreachable seams pose 11). It found no regressions; its one new low (missing tunable docs) is fixed.
+- **Re-recordings** are in `captures/m5-recheck/`: roofs/held (178.4 s), drops and seams.
+- **PR:** [mikedtcm22/beat-em-up-PoC#5](https://github.com/mikedtcm22/beat-em-up-PoC/pull/5), `m5/level-blockout` into `main`. It's mergeable, and there's no CI on the repo. **Never merge it before Game-boy signs it off.**
+- **Waiting on Game-boy:**
+  1. He plays the level (`godot --path /Users/arachne/repos/beat-em-up-PoC`).
+  2. He rules on README's "Where M5 departs from the spec" (decided by default).
+  3. He signs off.
+  - The judgement-call digest was sent with the run command, in the session chat and in a Slack DM.
+- **Next after sign-off:** record his rulings in README (change the heading to "accepted"), merge PR #5, then plan M6 (art for the level and the second weapon, per SPEC §12).
+- **Usage:** 0% of the new 5-hour window (it reset at 23:30 CST), 11% weekly. The previous window ended at 24%. M5 in all: about 6M sub-agent tokens.
+
+### 2026-11-03 23:00 CST: final review done (no highs, 5 mediums); the fix wave running (3 Sonnet fixers)
+- **The review** (`review.js` run `wf_35fbfae3-70f`, about 1.45M sub-agent tokens, about 7% of the 5-hour window): lenses `sees` and `feel` (Opus) and `code` (Sonnet), on `captures/m5-final/`.
+  - 16 findings: 5 medium survived their skeptics, and 11 lows came to the lead.
+  - The mediums:
+    - `sees-01`: behind spawns pop into view (A4's RoofDoorBehind lies ahead; named spawns skip the view rule);
+    - `sees-02`: A6's pipe is hard to find;
+    - `sees-03`: the boss roof's rail gap reads as a ledge;
+    - `code-01`: the done-when's totals are asserted only conditionally;
+    - `code-02`: no test crosses the seams.
+  - Promoted lows: `feel-02` (a long-range token gives a 4-5 s lull), `code-04` (the probe's total() double-counts two keys), `code-05` (script numbers), `sees-05` (the GO cue holds until faced), `sees-06` (the parapet outline) and `code-06` (an orphan uid).
+  - The lead takes `code-07` (README). He notes in README `sees-04`/`feel-01` (A7's R6/R8 misses are the boss alone), `feel-03` (the pilot never jumps) and `code-03`.
+  - Everything is in `docs/reviews/M5/findings-final.json`, with the lead's rulings (`lead_overrides`) and the three packages.
+- **Running:** the fix wave, `review.js` run `wf_2178beaf-dba` (`findings_path` mode, fix_concurrency 3). Packages:
+  - `spawns` (branch `m5/fix-final-spawns`);
+  - `level-tests` (`m5/fix-final-level-tests`);
+  - `arcs` (`m5/fix-final-arcs`).
+  - Worktrees are `.worktrees/m5-fix-final-<key>`. If it's cut off, rerun the same args: each fixer resumes from its newest `wip:` commit.
+- **Next:**
+  1. Merge the three fix branches and regenerate `tuning/default.json` (`godot --headless -s tools/gen_default_preset.gd`). Run the full suite.
+  2. The targeted re-check: re-record roofs/held, boss/held and arc-quick/arc-punks. `sees` re-judges sees-01/02/03/06, `feel` re-judges feel-02, and `code` (Sonnet) re-judges code-01/02/04/05.
+  3. Open the PR, then send Game-boy the run command and the digest.
+- **README:** M5 status (a draft), the level's tests and bot, and the boss arena's soft misses are in. CLAUDE.md has M5's suite figures.
+- **Usage:** 20% of the 5-hour window before the fix wave (it resets at 23:30 CST), 10% weekly.
+
+### 2026-11-03 22:10 CST: FIX2 merged (1729/1729); phase 3 recording for the review
+- **FIX2 merged** (`c97fa09`, merge `2e4455e`; run `wf_a1a41ce1-d8a`, about 0.39M sub-agent tokens). Its calls are in `M5-calls/FIX2.md`. It fixed all seven items:
+  1. Roofs R0 moved past A4's lock inset, and the done-when walks the player into A1.
+  2. The z -83 seam has one owner, the boss roof's fence.
+  3. The z -53 seam was looked at and is clean.
+  4. The GO arrow is drawn as triangles, with `tests/test_go_cue.gd`.
+  5. A named spawn falls back to any free point after `spawn_named_wait_s` + `spawn_named_any_wait_s` (new, 3.0 s; the preset now has 542 values).
+  6. `knock_off(from)` picks the hazard of the named arena.
+  7. R13 doesn't apply to a one-wave table. There's a new act, "Look: seams".
+- **Suite** (alone on the machine): 1729/1729, 294 s, 0 error lines. `test_m5_done_when` covers 7 arenas and 34 enemies, in a 9.3 s wall.
+- **Also on the branch:** README "Play it", CLAUDE.md "Play" and the H help say the level is the main scene and F6 cycles three rooms (`6a98ae4`). Game-boy was told the level is playable, with the run command.
+- **Running:** the recordings for the final review into `captures/m5-final/`.
+  - The arc acts (`arc-punks`, `arc-turn`, `arc-mixed`, `arc-quick`), `seams` and `knock-catwalk` (`--from=4`).
+  - `street/held` (0-2), `roofs/held` (3-5) and `boss/held` (6).
+- **Next:** run the timing log into `captures/m5-final/timing.log`. Then fill `docs/reviews/M5/args-review-final.json`'s `base` (`2e4455e`) and `common_note`, and run `tools/workflows/review.js` with it: lenses `sees`, `feel` (Opus) and `code` (Sonnet); skeptics on medium and high; `partition: false`, so the lead partitions inline into at most 3 fixers.
+- **Usage:** 11% of the 5-hour window (it resets at 23:30 CST), 8% weekly.
+
+### 2026-11-03 21:05 CST: phase 2 merged; the level plays start to boss; suite and recording running
+- **Built and merged** (`build.js` run `wf_ccbf580f-37d`, about 0.96M sub-agent tokens, about 8% of the 5-hour window). Merges `34fc4a6`, `5d60ac1` and `3db7d07` into `m5/level-blockout`. The only conflicts were in ARCHITECTURE.md's Mission 1 headings; all three sections are kept.
+  - **STREET** (`3ecb56a`): `game/level/mission1/street.tscn`, A1-A3, tables `a1-a3.tres` (13 enemies), `tests/test_m5_street.gd` (17 tests). Calls are in `M5-calls/STREET.md`.
+  - **ROOF** (`4054f3e`): `roofs.tscn`, A4-A6, `a4-a6.tres` (18 enemies), three drop edges with guards and hazards, and the pipe pickup. `tests/test_m5_roofs.gd` has 13 tests.
+  - **FINALE** (`6d3d08b`): `boss_roof.tscn` (A7, 20 x 20 m) and `a7.tres` (the boss; his adds come from the boss's own call-in), plus `mission1.tscn` (the `LevelRoot`). The level is **the main scene now**, and F6 cycles level, crowd room, training room. `tests/test_m5_done_when.gd` has 8 tests.
+  - No tunables were added, so the preset is unchanged.
+- **Whole-level timing** (god mode, full speed, headless): all 7 arenas in order, no STALL or BLOCKED, `LEVEL 194.8` s. Per arena: A1 8.6, A2 22.2, A3 24.1, A4 16.6, A5 24.7, A6 29.2, A7 37.7 s.
+- **Running:** the full suite (into `captures/m5-p2/suite.out`) and the held-back recording of the whole level (`captures/m5-p2/rec/held/`).
+- **The post-merge fixer list so far:**
+  - `go_cue.gd:191`'s triangulation ERROR (a degenerate arrow polygon).
+  - The knock-off act always picks A4's drop.
+  - A unique-tag named spawn waits forever while the player stands within 4 m of it. It needs a fallback to any free point after a wait.
+  - The STREET/ROOF seam: the 6 m shutter against the terrace's wall.
+  - Plus anything the suite, the done-when or the recording shows.
+
+### 2026-11-03 20:25 CST: Game-boy approved the table; phase 2 (STREET, ROOF, FINALE) building
+- **Game-boy's words** (session chat, 20:20): "OK, enemy arcs are good. Let's continue with the rest of M5 now."
+  - He played the arcs in the crowd room before saying it. Before that he asked for the run command to be posted with every playable update; a memory now says so.
+  - So `reference/encounters.md` is approved as drafted, with no changes.
+  - The rear-warning question takes its default (no: Punks never come round behind on their own). It's in README's M5 list as decided by default, and in M5-inputs.md.
+  - The three overrulable defaults (stairs, no falls, the arc slide) stand, for his ruling at sign-off.
+- **Running:** `tools/workflows/build.js` with `docs/reviews/M5/args-P2.json` (`only: ["STREET", "ROOF", "FINALE"]`, concurrency 3). Worktrees `.worktrees/m5-street`, `m5-roof` and `m5-finale`, on branches `m5/street`, `m5/roof` and `m5/finale`. If it's cut off, rerun the same args: the loader resumes from each branch's newest `wip:` commit.
+- **Next:**
+  1. Merge STREET, then ROOF, then FINALE. Regenerate the preset, then run the full suite and `test_m5_done_when.gd`.
+  2. Record "Run: timing" on the whole level, and take the lead's look.
+  3. Run one post-merge Sonnet fixer for what only the whole level shows.
+  4. Phase 3: the review round (plan §5).
+- **Usage at launch:** 0% of the 5-hour window (it resets at 23:30 CST), 6% weekly. Plan §7 estimates phase 2 at about 32%.
+
+### 2026-11-03 11:20 CST: phase 1 done (BOT merged); waiting on Game-boy's table for phase 2
+- **BOT merged** (`35156c4`, merge `2b3fa5f`, pushed; 1683/1683 on its branch, and nothing but docs changed under it):
+  - `tests/bot/level_bot.{gd,tscn}` plays any `LevelRoot` or a lone section, with `--level`, `--from` and `--to`.
+  - The acts are "Run: held back", "Run: knock-off" and "Run: timing".
+  - `record_acts.sh` takes `BOT_SCENE`.
+  - Strip times: 32.7 s at full speed in god mode, 103 s held back. The calls are in `M5-calls/BOT.md`.
+  - **Routes must be straight walkable lines between route markers**, and the last route point must reach past each arena's lock inset. This matters to STREET, ROOF and FINALE.
+- **The lead's look:** the held-back run on the strip shows the plain first-person view. The walk eases to each route point, and the GO arrow shows as the shutter opens. The stairs and the chain-link gate read.
+- **Phase 2 is ready to launch** with `docs/reviews/M5/args-P2.json` (STREET, ROOF, FINALE; concurrency 3; KIT's notes on each package). First fill in Game-boy's approval words in the `note`, and apply any change he asks for to `reference/encounters.md`.
+- **Slack replies:** the watcher now also reads the DM thread on every check and relays Game-boy's replies to this session.
+- **Still waiting on Game-boy:** the table and the rear-warning question. No reply at 11:20.
+
+### 2026-11-03 10:50 CST: ARC and KIT merged (1678/1678); BOT building; still waiting on Game-boy's table
+- **Merged into `m5/level-blockout` and pushed** (`5d3548e`):
+  - **ARC** (`7cb70bc`): the attack arcs, `EnemyVariant` and `punk_veteran`, the wait ring, the arc slide, F3 arc lines, and R5/R5w, R6/R6w and R9 re-measured. The calls and the before/after numbers are in `docs/milestones/M5-calls/ARC.md`.
+  - **KIT** (`58f3429`): the level kit in `game/level/kit/`, the "Level" tuning group, layer 9, the spawner's finite mode, the GO cue and the test strip `tests/fixtures/level_strip.tscn`. 24 calls are in `M5-calls/KIT.md`.
+  - The one conflict was ARCHITECTURE.md's M5 heading; both sections are kept. The preset is regenerated (541 values). The full suite: 1678/1678, 286 s, 0 error lines.
+- **The lead's look:**
+  - "Arcs: six Punks": three Punks square up in front and the rest stand back on the wait ring. Nobody circles.
+  - The strip: the shutter, the gate, the stairs and the GO/CLEAR! panels read.
+  - KIT's scratch recording shows the controls help and the combat log over the view. BOT is told to record the plain view.
+- **Running:** `build.js` run `wf_65b663bc-bcc`, args `docs/reviews/M5/args-P1b.json` (`only: ["BOT"]`). Worktree `.worktrees/m5-bot`, branch `m5/bot`.
+- **README:** a draft of "Where M5 departs from the spec" (M5-1 arcs, M5-2 blind spot, M5-3 stairs, the spec-silent edges/KO/clear, the graybox stand-ins).
+- **Waiting on Game-boy:** the encounter table and the rear-warning question (Slack DM, ts `1793721201.659339`). No reply yet at 10:50.
+- **Next:** merge BOT and run the full suite. On his yes, launch phase 2 (STREET, ROOF, FINALE). Args: as P1, with `only` those three and `base` `m5/level-blockout`. Each package's `read` list is in the synthesis output, saved in the plan's §3.
+- **Usage:** 20% of the 5-hour window and 6% weekly at BOT's launch. ARC and KIT together cost about 8% (0.9M sub-agent tokens).
+
+### 2026-11-03 09:55 CST: the M5 plan written; phase 1 (ARC and KIT) building; the encounter plan DM'd to Game-boy
+- **The plan:** [milestones/M5-plan.md](milestones/M5-plan.md), 275 lines. An Opus planner wrote it, an Opus critic reviewed it (4 high, 10 medium and 4 low issues), and an extra-effort synthesis applied most of the critique. It cost about 0.6M tokens, about 7% of the 5-hour window.
+  - Packages: ARC (8%) and KIT (8%) in phase 1, then BOT (4%) after KIT merges. STREET, ROOF and FINALE in phase 2, after Game-boy's yes.
+  - Decisions D1-D15 are in the plan's §1. README departures M5-1 (the arcs and the slide), M5-2 (blind-spot priority) and M5-3 (stairs for ladders); the spec-silent D8 and D13; the D12 stand-in.
+- **The encounter table:** [reference/encounters.md](../reference/encounters.md): 7 arenas, 34 enemies, about 9-10 minutes. [reference/dd2-nes-mission1/notes.md](../reference/dd2-nes-mission1/notes.md) is filled in, and the screen order checks out against the fan map.
+- **The DM to Game-boy** (Slack DM `D0AQUKX5DB6`, ts `1793721201.659339`, with the full table in two thread replies) asks:
+  1. to approve the table;
+  2. the rear-warning question (default: Punks never come round behind on their own).
+  - Also three defaults he can overrule: stairs for ladders, the player can't fall, and an arc blocked by a wall slides.
+  - **Waiting on him.** Phase 2 (the level) starts only on his yes. Apply any change he asks for to encounters.md first.
+- **Running:** `tools/workflows/build.js`, run `wf_91b0b6e1-2cb`, with args `docs/reviews/M5/args-P1.json` (`only: ["ARC", "KIT"]`, concurrency 2). Worktrees `.worktrees/m5-arc` and `.worktrees/m5-kit`, branches `m5/arc` and `m5/kit`.
+  - If it's cut off, rerun the same args: the loader resumes from each branch's newest `wip:` commit.
+- **Next:**
+  1. Merge ARC, then KIT. Regenerate the default preset and run the full suite.
+  2. Look at "Arcs: six Punks" and "Arcs: turn your back", and play the strip.
+  3. Launch BOT: the same args with `only: ["BOT"]`.
+- **Also:** `captures/m5-baseline/` holds the pre-arc crowd recordings ("Mixed six, observed" and "Mixed six, fight"). `tools/record_acts.sh` now cuts overview sheets for acts without LOOK-MARK lines.
+- **Usage:** 12% of the 5-hour window and 5% weekly before phase 1 launched.
+
+### 2026-11-03 09:18 CST: M5 working session started; the plan workflow running
+- **This session** is titled "Beat-em-up: working session" and runs M5 on `m5/level-blockout`, with Ultracode on. The old M4 session is renamed "(done)".
+- **Usage watcher:** a new one started from this session, [Beat-em-up: usage watcher](#local_5fa6c438-0fb3-4c35-b5b8-9f561074267b) (`local_5fa6c438-0fb3-4c35-b5b8-9f561074267b`, Haiku low). The old watcher (`local_618146a1-...`) had stopped on 10-29.
+- **Usage at start:** 5-hour 5%, weekly 4%.
+- **Running:** workflow `wf_f5a98b47-0fc` (script `m5-plan`). An Opus planner (high) writes `docs/milestones/M5-plan.md`, the draft `reference/encounters.md` and the per-screen `reference/dd2-nes-mission1/notes.md`. Then an Opus critic (medium), then an Opus synthesis (xhigh), which also drafts the encounter-plan DM. Nothing is committed yet. If it's cut off, resume it with the same script and `resumeFromRunId`.
+- **The lead's framing for the plan:**
+  - Phase 1: ARC (the attack-arc director change), plus the level-kit mechanics built in a test strip. They don't depend on the encounter table: locks and barriers, the GO cue, drop-offs, climbs, the arena controller, pickups and a level bot.
+  - The pause: the encounter plan and the rear-warning question go to Game-boy.
+  - Phase 2, after his approval: the level itself.
+  - Phase 3: the lead's look, 3 lenses, one fix wave, a re-check, then the PR.
+  - Budget: about 1.25 five-hour windows for all of M5, so M6 and M7 fit the week.
+- **The resume prompt** below now says Milestone 5.
+- **`.worktrees/`** holds 51 GB of M3 and M4 worktrees. All are clean and pushed, except `m4-fix-final-punk-spawn-cache-before-recut`, which has an uncommitted `look_acts.gd` experiment. They're left in place; 52 GB of disk is free.
+
+### 2026-11-03 09:30 CDT: the usage rules for M5 on, the new runners, and branch m5/level-blockout; M5 starts in a fresh session
+- **Game-boy asked** for usage advice for the coming milestones ("get as far through milestones with this week's usage limit as we can ... while maintaining the current quality"), approved it, and asked for it written in. It's also in a fresh-session prompt, so M5 starts in a new chat.
+- **Written in:**
+  - the section "Model, effort and process rules from Milestone 5 on" (below the old usage rules), with M4's measured costs;
+  - CLAUDE.md's "Parallel work" pointer to it;
+  - the takeover prompt, rewritten for M5.
+- **New tools:**
+  - `tools/workflows/build.js`: Sonnet builders at high effort, an image budget, self-contained reading lists, and milestone-neutral `milestone` and `summary` args.
+  - `tools/workflows/review.js`: Opus visual lenses at high, `model: "sonnet"` code lenses, one Sonnet medium skeptic per medium or high finding (lows to `for_lead_triage`), an optional lead partition (`partition: false`), at most 3 fix packages, and `captures_dir`.
+  - `tools/record_acts.sh`: record a round's acts once for every agent.
+- **Branch:** `m5/level-blockout`, cut from `main` at `eb08e26`. Its first commit is this setup, and the working checkout is on it.
+- **Next:** Game-boy pastes the takeover prompt (below, "Takeover prompt") into a new session, with Ultracode on if he wants it. That session plans M5 with the new structure. This old session should then be renamed (for example "Beat-em-up: M4 session (done)") so the watcher reaches the new one.
+
 ### 2026-11-03 08:55 CDT: Game-boy signed off Milestone 4; PR #4 merged; M5 waits for his go (he'll turn on Ultracode first)
 - **Game-boy (session chat):** "I think with those notes, you can also go ahead and merge PR 4 now so we can move on. Let me know before you're going to get fully started with the next milestone, though: I'll want to turn on Ultracode so you can use sub-agents."
   - **PR #4 merged into `main`.** README's M4 departures now read "accepted by Game-boy with M4's sign-off", and the two looks are carried forward to M6.
@@ -1991,9 +2205,9 @@ Otherwise say nothing beyond one short line: the two percentages and the next ch
 **Resume after a limit.** The working session creates the resume task itself as the last step of a handoff (the watcher's step 3 is the fallback when it was cut off first): `mcp__scheduled-tasks__create_scheduled_task` with the fields in the watcher's step 3, firing 10 minutes after the window that stopped work resets. The task wakes the working session if it still exists, which keeps its context, or else starts a takeover. Its prompt, verbatim:
 
 RESUME-PROMPT-START
-Resume the beat-em-up Milestone 4 work after a usage reset. The project is /Users/arachne/repos/beat-em-up-PoC (Godot 4.7.2, GitHub mikedtcm22/beat-em-up-PoC). Game-boy (the owner) asked for the work to continue across usage limits without waiting for him, until Milestone 4 is done.
+Resume the beat-em-up Milestone 5 work after a usage reset. The project is /Users/arachne/repos/beat-em-up-PoC (Godot 4.7.2, GitHub mikedtcm22/beat-em-up-PoC). Game-boy (the owner) asked for the work to continue across usage limits without waiting for him, until Milestone 5 is done.
 1. Call mcp__ccd_session_mgmt__get_usage (load it with ToolSearch). If either the "5-hour limit" or the "Weekly · all models" window is still at 90% or more, create a copy of this task with mcp__scheduled-tasks__create_scheduled_task (a new taskId starting "beat-em-up-resume-", fireAt that window's resetsAt plus 10 minutes, the same prompt) and stop.
-2. Call mcp__ccd_session_mgmt__list_sessions (load it with ToolSearch). If a session titled exactly "Beat-em-up: working session" is listed and not archived, send it with mcp__ccd_session_mgmt__send_message: "Scheduled resume: the usage window has reset. Check get_usage, make sure a usage watcher is running (docs/HANDOFF.md, 'Usage watcher'), then resume Milestone 4 from the newest entry in docs/HANDOFF.md." If the result says "delivered" or "queued", you're done: say so in one line and stop.
+2. Call mcp__ccd_session_mgmt__list_sessions (load it with ToolSearch). If a session titled exactly "Beat-em-up: working session" is listed and not archived, send it with mcp__ccd_session_mgmt__send_message: "Scheduled resume: the usage window has reset. Check get_usage, make sure a usage watcher is running (docs/HANDOFF.md, 'Usage watcher'), then resume Milestone 5 from the newest entry in docs/HANDOFF.md." If the result says "delivered" or "queued", you're done: say so in one line and stop.
 3. Otherwise you are the new working session: follow the takeover prompt in docs/HANDOFF.md (the "Takeover prompt" section) exactly, starting with renaming this session "Beat-em-up: working session".
 RESUME-PROMPT-END
 
@@ -2016,6 +2230,41 @@ RESUME-PROMPT-END
 - **Concurrency:** with the premium seat, a workflow may run up to about 6 heavy agents at once while the window is under 60%, and at most two above that.
 - **The handoff's last step** is the resume task (above), so the work restarts by itself after the reset.
 
+**Model, effort and process rules from Milestone 5 on** (Game-boy, 2026-11-03: get as far through the milestones on one week's limit as possible, at M4's quality). The runners `tools/workflows/build.js` and `tools/workflows/review.js` have these as their defaults; copy their args pattern into `docs/reviews/M<N>/`.
+
+| Role | Model and effort | Note |
+| --- | --- | --- |
+| Lead (the working session) | Opus, high | A fresh session at each milestone start: HANDOFF carries everything, and a long lead context is re-read every turn. |
+| Milestone plan | One Opus planner at high, then one Opus critic at medium | Extra or max effort only for the plan's final synthesis. No planner panel. |
+| Visual review lenses (art, motion, feel, judged from images) | Opus, high | Where Opus clearly beats Sonnet. At most 3 lenses a round. |
+| Code, test and pipeline review lenses | Sonnet, high | Set `model: "sonnet"` on the lens. |
+| Builders and fixers | Sonnet, high | As in M4. They found the inside-out legs and the right-hand fist. |
+| Skeptics | Sonnet, medium | Only for medium and high findings. Lows come back in `for_lead_triage`, and the lead promotes any with `verdicts`. |
+| Partition | The lead inline (`partition: false`), or Sonnet medium | |
+| Evidence, clips, docs | Sonnet, medium, or the lead's own scripted commands | |
+| Usage gates and the watcher | Haiku, low | |
+
+Extra or max effort is for two things only: the plan's synthesis, and a diagnosis two agents have already failed on.
+
+**Process rules:**
+1. **The lead's look comes first.** Before any review round, the lead looks at full-resolution stills of what changed, beside the concept or the spec. In M4 that caught the cuffs and the shades at almost no cost.
+2. **One review round, then one fix wave, then a targeted re-check** of only the changed items, not a full re-score. Use 3 lenses (for example: what the player sees; motion and feel; code, tests and pipeline), not 6.
+3. **Record once.** The lead runs `tools/record_acts.sh <dir> "<slug>|<act title>" ...` once per round and passes the folder as `captures_dir`. Reviewers and builders judge from it and record only what's missing.
+4. **Image budget** (`image_budget`, default 25 for builders and 30 for reviewers). Scan contact sheets at about 1000 px wide; read a full-resolution crop only for the item being judged.
+5. **Self-contained briefs.** Each package names its own reading list (`read`, plus the round's short `read_first`). Agents search rather than read whole documents. Keep the milestone plan short, with each package's brief in one place.
+6. **Batch small fixes into one fixer.** Every parallel fixer re-reads the same documents. Use at most 3 fix packages a round.
+7. **Ultracode** (when Game-boy turns it on for sub-agents) doesn't lift these caps: workflows stay inside them unless he says otherwise.
+8. **The weekly limit is account-wide.** Between 2026-10-27 evening and 10-29 it went from about 50% to 90% while no M4 agent ran. Check `get_usage` before each launch, not only at milestone start.
+
+**Measured in M4** (sub-agent tokens; the 5-hour window on this seat):
+
+| Work | Tokens | 5-hour window |
+| --- | --- | --- |
+| A Sonnet builder or fixer | 0.25-0.9M (most 0.5-0.7M) | about 4-7% |
+| An Opus visual reviewer, recording and reading full-resolution stills | about 0.8-1.2M | about 5-7% |
+| The six-lens round (5 Opus reviewers, 21 Sonnet skeptics, a partition) | 6.3M | about 36% |
+| The one-reviewer re-score (13 skeptics) | 1.6M | about 9% |
+
 If no watcher is running, for example after an account switch, start one with that prompt. A new account's watcher reports that account's usage.
 
 **The working session must be titled "Beat-em-up: working session"** so the watcher and the resume task can find it. A new working session renames itself to that first, with `mcp__ccd_session_mgmt__set_session_title`.
@@ -2028,34 +2277,43 @@ If no watcher is running, for example after an account switch, start one with th
 Game-boy pastes this into a new account's session. Keep the "Next steps" list current at every handoff; the rest changes rarely.
 
 ```
-You're taking over an in-progress Godot 4.7.2 project: a first-person beat-em-up proof of concept at /Users/arachne/repos/beat-em-up-PoC (GitHub: mikedtcm22/beat-em-up-PoC). I'm Game-boy, the project owner. Other Claude accounts did the work so far and handed off at their usage limits. We switch accounts at every usage limit, so treat the repo as the only source of truth. Work happens on branch m4/art-pipeline and the worktrees under .worktrees/.
+You're the new working session for a Godot 4.7.2 project: a first-person beat-em-up proof of concept at /Users/arachne/repos/beat-em-up-PoC (GitHub: mikedtcm22/beat-em-up-PoC). I'm Game-boy, the owner. Milestones 1-4 are signed off and merged into main. Earlier sessions did that work and handed off; the repo is the source of truth. This session runs Milestone 5 (SPEC §12): the level blockout.
 
 Start by doing these, in order:
-1. Rename this session to "Beat-em-up: working session" (mcp__ccd_session_mgmt__set_session_title). The usage watcher finds you by that title.
-2. Read CLAUDE.md, then docs/HANDOFF.md (live status and exact resume steps; the newest entry is at the top). Then read docs/milestones/M4-plan.md (its header says how to read it: the amendments in Part A win over Part C) and docs/milestones/M4-look-bible.md. Read docs/ARCHITECTURE.md and docs/SPEC.md §5, §6, §10 and §12 before touching code.
-3. If no usage watcher is running (list your sessions), start one exactly as docs/HANDOFF.md describes under "Usage watcher" (Haiku, low effort, self-paced /loop, shares this checkout, its prompt verbatim).
-4. Check usage (mcp__ccd_session_mgmt__get_usage) before launching any workflow or agent.
+1. Rename this session to "Beat-em-up: working session" (mcp__ccd_session_mgmt__set_session_title); the usage watcher finds you by that title.
+2. Read CLAUDE.md, then the newest entries of docs/HANDOFF.md (newest at the top) and its section "Model, effort and process rules from Milestone 5 on". Then read docs/milestones/M5-inputs.md (my calls for M5) and docs/SPEC.md §7, §9 and §12. Look at the level reference images in reference/dd2-nes-mission1/. Search docs/ARCHITECTURE.md for what you need rather than reading it whole.
+3. If no usage watcher is running (list your sessions), start one exactly as docs/HANDOFF.md describes under "Usage watcher".
+4. Check usage (mcp__ccd_session_mgmt__get_usage) before every launch.
 
-USAGE RULES:
-- The account is a premium seat (5x the old limits): a heavy Opus agent costs about 3% of a 5-hour window; see docs/HANDOFF.md's cost table.
-- At most 4 Godot-bound builders at once (8 GB of RAM); up to about 6 heavy agents while the window is under 60%.
-- Work up to the 90% handoff; don't stop early. Check get_usage before each launch and size the launch to the headroom left below 90%. If the next phase or milestone doesn't fit (say at 70%), spend a little of the headroom splitting it into a first task that fits, run it with wip commits, and hand off at 90%. Details: docs/HANDOFF.md, "Usage rules for the working session".
-- Prefer one agent per work package doing review, then fix, over many reviewers per package.
-- The watcher checks every 30 minutes below 70%, every 15 up to 85% and every 5 above. It tells you to halt and hand off at 90%; the handoff's last step is the scheduled resume task (docs/HANDOFF.md, "Resume after a limit").
+HOW TO SPEND THE WEEK (I want to get as far through the milestones as this week's limit allows, at M4's quality):
+- Follow HANDOFF's "Model, effort and process rules from Milestone 5 on" table:
+  - Opus at high effort for you, the plan and the visual review lenses;
+  - Sonnet at high for builders, fixers and the code/test/pipeline lenses;
+  - Sonnet at medium for skeptics, only on medium and high findings;
+  - Haiku at low for gates.
+  - Extra effort only for the plan's final synthesis.
+- Use the runners tools/workflows/build.js and tools/workflows/review.js (milestone: 5); keep args files in docs/reviews/M5/.
+- Your own look first, then at most 3 review lenses, one fix wave, and a targeted re-check of only what changed.
+- Record once per round with tools/record_acts.sh and pass it as captures_dir. Keep image budgets. Write self-contained briefs with their own reading lists, and batch small fixes into one fixer.
+- Ultracode (if I turn it on) doesn't lift those caps.
+- Work up to the watcher's 90% handoff; size each launch to the headroom below 90%.
 
-Next steps (Milestone 4; details are in docs/HANDOFF.md, newest entry first):
-- M1-M3 are signed off and merged. M4 (SPEC §12: the art pipeline proof) runs on branch m4/art-pipeline. Its toolchain is ready: Blender 5.2.2 LTS, the Blender MCP connected to my open Blender, and working TRIPO_API_KEY and GEMINI_API_KEY in .env. Mixamo is skipped for now.
-- The M4 plan is written (docs/milestones/M4-plan.md). Phase 1 is built and merged: S0, P1-tools, L0-bench, P1-toon, P1-chain, P1-skin, P1-fx and P1-post. The smoke Punk (concept A) is a GLB in assets/export/characters/punk/. Tripo spend is in assets/source/tripo_ledger.jsonl (stay at or under 800 credits without asking; the plan stops at 750).
-- Builders run through docs/reviews/M4/workflow-build.js, one Workflow run per package (args files in docs/reviews/M4/args-*.json; the newest HANDOFF entry names what is running and what is next). Reviews and the slice gate run through docs/reviews/M4/workflow-review.js. After each merge: godot --headless --import --quit, godot --headless -s tools/gen_default_preset.gd, then tools/run_tests.sh.
-- Order from here: SL-int (args-SL.json), the slice gate (two Opus lenses into docs/milestones/M4-slice-gate.md), phase 2 (F-motion, F-look, F-punk, F-player-art, F-player-int), phase 3 (P3-int, the final review, fixes), then the PR (not merged) and the DM. F-punk and F-player-art need my concept pick: check my DM (Slack channel D0AQUKX5DB6) at every phase boundary.
-- Run it without pausing, except for the concept pick (2-4 concepts each for the Street Punk and for the player's arms and legs: DM me the images on Slack, Michael, U0AQMKKBL93) and the final judgement of the Punk at 1 m. At the end, DM me a run command that opens the game in Godot, plus a digest of the key judgement calls with alternatives. If something blocks you on me, DM me at once.
-- I turned ultracode on (2026-10-24) and asked for multi-agent workflows: use Workflow scripts for substantive work (Opus plans and reviews, Sonnet codes). Don't put fine grey-block feel questions to me.
+MILESTONE 5:
+- Work on branch m5/level-blockout: it's already cut from main, and its first commit is the M5 setup (the usage rules, the runners, tools/record_acts.sh). One PR into main at the end; never merge it until I've played it and signed it off.
+- Plan with one Opus planner and one Opus critic, into a short docs/milestones/M5-plan.md where each package's brief is self-contained.
+- The first package is the attack-arc director change in M5-inputs.md:
+  - a per-archetype attack arc fixed when the enemy engages, after about a 0.5 s grace period;
+  - a full arc means waiting back from the fray inside it;
+  - wider arcs for trickier types and for later variants.
+  - Re-measure M3's readability metrics and the rear warning's tests.
+- Then the encounter plan, which needs my approval (SPEC §12): DM it to me on Slack (Michael, U0AQMKKBL93, DM D0AQUKX5DB6). It should show the difficulty progression level by level, with easy narrow-arc grunts early and mostly all-angle enemies later. Ask me the open rear-warning question in M5-inputs.md with it.
+- Then the graybox level from the reference (SPEC §9): arena locks, spawns, pickups, hazards and the boss arena. Done when the level plays from start to boss.
+- At the end, give me a run command that opens the game in Godot (godot --path /Users/arachne/repos/beat-em-up-PoC) as a code block; GitHub links 404 for me. Add a digest of the key judgement calls, each with the alternative not taken.
 
 Ground rules:
-- Never merge a milestone PR into main until I've played it and signed it off.
-- Any change to the spec needs my approval. In M3, don't stop for it: build the reading that departs least, keep the spec's value reachable (a tunable) where you can, and list it in README as "decided by default, for Game-boy's ruling at sign-off".
-- Commit early on branches (prefix "wip:" for unfinished work), push often, and update docs/HANDOFF.md at every phase boundary.
-- When the watcher warns, do the handoff in CLAUDE.md immediately. Stop running workflows and agents, commit and push everything, save any unfinished agents' findings into the repo, and update HANDOFF.md, including this prompt's "Next steps". Then create the scheduled resume task ("Resume after a limit"). DM me only if the resume needs me.
-- Judge visual and feel work from recorded captures (Movie Maker via tools/capture_combos.sh or tests/bot/vfx_bot.tscn), not just tests, and show me what you saw.
+- Any change to the spec needs my approval. Build the reading that departs least, keep the spec's value reachable as a tunable, and list it in README as decided by default, for my ruling at sign-off.
+- Commit early on branches ("wip:" for unfinished work), push often, and update docs/HANDOFF.md at every phase boundary.
+- When the watcher warns, do the handoff in CLAUDE.md at once, including the resume task. DM me only if something blocks on me.
+- Judge visual and feel work from recorded first-person captures, not just tests, and show me what you saw.
 - Keep me posted briefly: what's done, what's running, what you need from me.
 ```

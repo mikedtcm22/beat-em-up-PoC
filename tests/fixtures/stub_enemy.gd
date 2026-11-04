@@ -46,8 +46,9 @@ func revoke_token() -> void:
 	blind_priority_granted = false
 
 
-func set_slot(pos: Vector3) -> void:
+func set_slot(pos: Vector3, kind: StringName = &"inner") -> void:
 	posture_slot = pos
+	seat_kind = kind
 
 
 func attack_range_m() -> float:

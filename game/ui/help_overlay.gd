@@ -31,7 +31,7 @@ const DEBUG_ROWS: Array[Array] = [
 	["Debug draw", &"debug_draw"],
 	["Cheats", &"cheats"],
 	["Sparring dummies on / off", &"sparring"],
-	["Switch room: crowd street / training", &"switch_room"],
+	["Switch room: level / crowd street / training", &"switch_room"],
 	["Help", &"help"],
 	["Pause", &"pause"],
 	["Restart (while paused)", &"restart"],

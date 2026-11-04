@@ -7,8 +7,8 @@ A first-person beat-em-up proof of concept in Godot 4.7.2 (GDScript with static 
 2. Then read the current milestone plan in `docs/milestones/` and the parts of ARCHITECTURE.md your task touches.
 
 ## Run, test, look
-- **Play:** `godot --path .`. The main scene is the crowd room (Milestone 3); F6 switches to the training room.
-- **Tests:** `tools/run_tests.sh` runs all GUT tests headless in about 4.5 minutes (267 s of test time at the end of M4, 1588 tests, on the shared 8 GB machine; the M3 suite took 90 s), using `--fixed-fps 60` so frame-timed tests are deterministic. `-gselect=<file>` runs one file. `-gjunit_xml_file=res://captures/<name>.xml` writes the per-file times. Read the full output for `SCRIPT ERROR`, `SHADER ERROR` and `ERROR`. `ART_PUNK_VARIANT_STRAIN=1` adds the strain runs of the Punk's three locked A/B variants (about 14 s).
+- **Play:** `godot --path .`. The main scene is the Mission 1 level (Milestone 5); F6 cycles the crowd room, the training room and back.
+- **Tests:** `tools/run_tests.sh` runs all GUT tests headless in about 5 minutes (299 s of test time at the end of M5, 1766 tests, on the shared 8 GB machine; M4 ended at 1588 tests and 267 s), using `--fixed-fps 60` so frame-timed tests are deterministic. `-gselect=<file>` runs one file. `-gjunit_xml_file=res://captures/<name>.xml` writes the per-file times. Read the full output for `SCRIPT ERROR`, `SHADER ERROR` and `ERROR`. `ART_PUNK_VARIANT_STRAIN=1` adds the strain runs of the Punk's three locked A/B variants (about 14 s).
 - **Look at it:**
   - `tools/capture_combos.sh "<act title text>" 6` records combo-bot acts (`tests/bot/combo_bot.gd`) with Movie Maker into `captures/combos.avi`, plus `captures/bot.log` with the hits per act.
   - Tile stills with `ffmpeg -i captures/combos.avi -vf "fps=6,scale=480:-1,tile=5x4" -frames:v 1 sheet.png` and view them.
@@ -30,7 +30,8 @@ A first-person beat-em-up proof of concept in Godot 4.7.2 (GDScript with static 
 - Instead, create worktrees yourself, for example `git worktree add .worktrees/<name> -b <branch> <base>` (`.worktrees/` is git- and Godot-ignored).
 - Tell each agent its absolute worktree path and to `cd` there for every command. Each worktree needs its own `godot --headless --import --quit` first.
 - Give each agent disjoint files to own. Merge the branches yourself afterwards.
-- Pattern used throughout: build, then an adversarial review (mechanics, plus feel judged from captures), then a fix pass.
+- Pattern used throughout: build, then the lead's own look at the captures, then a lean adversarial review (mechanics, plus feel judged from captures), then one fix pass.
+- **Which model and effort for which role, and the process rules that keep usage down** (from Milestone 5 on): docs/HANDOFF.md, "Model, effort and process rules from Milestone 5 on". The runners are `tools/workflows/build.js` (Sonnet builders) and `tools/workflows/review.js` (Opus visual lenses, Sonnet code lenses and skeptics). `tools/record_acts.sh` records a round's acts once, for every agent to share.
 
 ## Git
 - Work happens on a milestone branch, `m<N>/<topic>`, with one PR per milestone into `main`. **Never merge a milestone PR until Game-boy signs it off.**

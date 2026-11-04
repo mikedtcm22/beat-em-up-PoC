@@ -1,0 +1,28 @@
+{
+  "milestone": 5,
+  "summary": "the level blockout: Game-boy's attack arcs in the director, the level kit, then the graybox Mission 1 level from the reference, start to boss",
+  "plan": "docs/reviews/M5/fix-P2.md",
+  "base": "m5/level-blockout",
+  "read_first": [
+    "docs/milestones/M5-plan.md §2 'Level kit', 'Level space' and 'File ownership' (grep for them; nothing else of the plan)",
+    "docs/milestones/M5-calls/STREET.md, ROOF.md and FINALE.md (the builders' calls and open risks)"
+  ],
+  "arch_heading": "## Level blockout (Milestone 5)",
+  "captures_dir": "/Users/arachne/repos/beat-em-up-PoC/captures/m5-p2/rec",
+  "image_budget": 25,
+  "concurrency": 1,
+  "note": "Post-merge fixer. STREET, ROOF and FINALE are merged into m5/level-blockout (dc7c051). The lead recorded the whole level held back into captures_dir/held (bot.avi, bot.log, readability.json, look/*.png). Read the lead's look/ sheets before recording your own. Fix every numbered item in the brief, in one branch, with a commit per item or a few.",
+  "packages": [
+    {
+      "key": "FIX2",
+      "section": "the whole file (items 1-7 and 'Done when')",
+      "est": 5,
+      "read": [
+        "tests/test_m5_done_when.gd",
+        "game/level/kit/level_root.gd (start_at_arena, first_route_point)",
+        "captures/m5-p2/suite.out lines 3700-3760 in the lead's checkout (/Users/arachne/repos/beat-em-up-PoC), the failing output"
+      ]
+    }
+  ],
+  "only": ["FIX2"]
+}

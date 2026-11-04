@@ -1,0 +1,415 @@
+{
+ "round": "final",
+ "base": "2e4455e1949ccd675ccb3957c466cf97952e524e",
+ "findings": [
+  {
+   "id": "final-sees-01",
+   "lens": "sees",
+   "severity": "medium",
+   "title": "'Behind' spawns pop into plain view: A4's Kicker (both waves) and A6's veteran Punk",
+   "detail": "Named spawn points ignore the player's view. EncounterSpawner._spawn_named places the enemy at the named point whenever it is free; is_behind() only steers free points. A4's RoofDoorBehind (roofs.tscn:1173, local (2.65,0,-4.5), about level (5.65,4.5,-57.5)) is not behind the player at all. It sits 2 m in front of R0 (-3,0,-2.5) and the lock point, at about 75 deg to his right, 6 m from DoorAhead in the same wall. When the player turns 35 deg right to face the DoorAhead Punk (wave 1, f201), the Kicker materialises in the doorway in the middle of his view 0.6 s later: the doorway is empty at f224-f236 and the Kicker stands in it at f239. Wave 2 repeats it (Kicker standing in the doorway at f1587). In A6, RoofAccess (22.5,7.5,-5.35) and BehindDoor (15.5,7.5,-5.35) share the +Z wall 7 m apart and spawn 0.6 s apart. Once the player turns to the Kicker from BehindDoor, the veteran Punk appears in the next doorway in view (f6805, 2 frames after his spawn at f6803). The approved table's 'behind' spawn is the one that should arrive unseen; here it arrives in the player's face.",
+   "evidence": "popin.png row 1 (roofs/held f224-f242 every 3 frames: empty doorway, then the Kicker at f239); spawns.png row 2 tiles 7-12 (f239, f257, f287; f1587, f1605, f1635); vet.png (roofs/held f6790-f6811, the veteran in the left doorway at f6805); probe.png tile 5 'a4_lock_right' (probe f321): the RoofDoorBehind doorway right beside the entry; encounter_spawner.gd:361 and 397-435 (no view test for named points); roofs.tscn:1173-1178",
+   "repro": "tools/capture_bot.sh res://tests/bot/level_bot.tscn <out> 'Run: held back' with CAPTURE_ARGS='--level=res://game/level/mission1/mission1.tscn --from=3 --to=5'. Cut frames 224-242 and 6790-6811 of bot.avi.",
+   "suggested_fix": "(a) Move A4's RoofDoorBehind behind the lock point, beside the seam shutter on the terrace's back wall (local z > -1.5) or at the far right corner of the back wall, so it lies behind a player who has just walked in. (b) In _spawn_named, when the named point's tag or table entry marks it behind, wait while is_behind() is false (reusing spawn_named_wait_s), then fall back to the nearest out-of-view point with the same tag. That keeps the table's 'behind' true whichever way he looks; it is a small rule change, so record it in M5-calls. (c) Optionally move RoofAccess off BehindDoor's wall, or space their table order so they don't spawn back to back.",
+   "files": [
+    "game/level/encounter_spawner.gd",
+    "game/level/mission1/roofs.tscn",
+    "game/level/mission1/encounters/a6.tres",
+    "tests/test_encounter_spawner.gd"
+   ],
+   "spec_change": false,
+   "skeptics": [
+    {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "Confirmed for A4: RoofDoorBehind sits at local (2.65,0,-4.5), 2 m past the entry point R0 (-3,0,-2.5) along the walking direction (-Z). It is ahead of and beside a player who has just come in, not behind him. reference/encounters.md says A4's behind spawn is \"a roof door beside the stair you came up (behind)\". Named spawns skip any view test, so the Kicker appears in the doorway whenever the player turns toward it. The A6 half is weaker. BehindDoor and RoofAccess (z -5.35) are behind a player entering from the north, and they only come into view when the bot turns round. That is inherent to a named point and only worth a small rule change.",
+     "root_cause": "The scene data is wrong for A4: RoofDoorBehind lies ahead of the entry, so \"behind\" is false from the first frame. _spawn_named has no view or behind rule, so named \"behind\" points arrive in view whenever the player has turned toward them (A6's BehindDoor/RoofAccess).",
+     "files_to_change": [
+      "game/level/mission1/roofs.tscn",
+      "game/level/encounter_spawner.gd",
+      "docs/milestones/M5-calls/ROOF.md",
+      "tests/test_m5_roofs.gd"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "final-sees-02",
+   "lens": "sees",
+   "severity": "medium",
+   "title": "A6's floor pipe is hard to find: grey on grey, behind the crate stack",
+   "detail": "The plan's 'pipe lying in front of the big shutter' (PipeBigShutter, roofs.tscn:1094, level (17.6,12,-75.4)) is drawn in the weapon's default Color(0.55,0.58,0.62) (weapon.gd:9), on a floor of nearly the same grey. The crate stack stands between it and the arrival point and the route. From the arrival (R14) and from 13 m and 7 m on its own line, a crate fills the view (probe f65, f129). From R15, 8 m away, only a sliver of it shows past a crate (probe2 f65). Only from about 4-5 m (R16, pitch -18) does it read as a small grey stick (probe2 f129). In the held-back run the bot was over it before the LB prompt showed, and the pipe itself never appeared in frame (roofs/held f9640, f9699). In a six-enemy fight Game-boy will very likely never notice the weapon the screen puts on the floor.",
+   "evidence": "probe.png tiles 1-4 (captures/review/probe f65, f129, f193, f257); crops.png top (probe f193, the pipe behind a crate at 3 m); probe2.png tiles 1-2 (probe2 f65, f129); pipe2.png (roofs/held f9640, f9699: prompt, no pipe in view); weapon.gd:9",
+   "repro": "Record 'Look: seams' with poses at (17.6,12,-62.5) yaw 0, (21,12,-68) yaw 25 pitch -12 and (22,12,-74) yaw 72 pitch -18 (level space), and look for the pipe.",
+   "suggested_fix": "Place PipeBigShutter in open floor in the line of sight from the A6 arrival, for example x 19-20 level, between the shutter and the crates, rather than in their shadow. Give a pickup lying on the floor a graybox read: a brighter or accent colour (a Tuning or a pickup export, not a script number), or a slow glint or outline while it can be picked up, so it shows at 10+ m. The Thug's dropped pipe gets the same treatment for free.",
+   "files": [
+    "game/level/mission1/roofs.tscn",
+    "game/weapons/weapon.gd",
+    "game/weapons/pipe.tscn"
+   ],
+   "spec_change": false,
+   "skeptics": [
+    {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "The pipe is hard to find. The plan's `sees` lens requires \"the pipe is findable\". The pipe sits in a crate stack's lee, in the weapon's default grey, with no read-from-distance aid beyond the LB prompt, which only shows within pickup range.",
+     "root_cause": "Two causes. First, the placement of PipeBigShutter in roofs.tscn (generated by tools/gen_roofs.py) puts it behind stack B's lee, out of the sight lines from the A6 arrival and the route. Second, the weapon's look: weapon.gd uses a floor-grey default colour with a thin 0.028 m radius, and nothing makes a pickup lying on the floor stand out at range. Both are graybox findability gaps against the plan's \"pipe is findable\" criterion; this is not a logged call or an approved departure.",
+     "files_to_change": [
+      "game/level/mission1/roofs.tscn",
+      "tools/gen_roofs.py",
+      "game/weapons/weapon.gd",
+      "game/weapons/pipe.tscn",
+      "game/autoload/tuning_data.gd"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "final-sees-03",
+   "lens": "sees",
+   "severity": "medium",
+   "title": "The boss roof's rail gap doesn't read as a 12 m drop: a pale plane beyond reads as a ledge",
+   "detail": "The table has the boss roof's one open edge as 'a gap in the rail'. The gap is between RailEndNear and RailEndFar (boss_roof.tscn, local z -8..-13 at x 9.85). Through it, at a natural pitch, the player sees a pale flat plane running out to a building face, with a sharp near edge at the deck's lip and no void, no depth falloff and no ground detail (crops.png bottom, probe f897). Looking 40 deg down at the lip shows deck, then a pale box-like surface (probe2 f193). Nothing in first person says 'fall here'. The likely cause is the fog-lightened, untextured Ground at local y -12.5, together with SkylineA/C, giving a ledge-onto-a-lower-roof look. The A5 catwalk side, by contrast, reads well, because the terrace below has the grid and its rail (probe2 f385). The knock-off mechanics are fine; this is only the read.",
+   "evidence": "crops.png bottom (captures/review/probe f897, pose a7_open_edge at level (28,12,-95), yaw -90, pitch -12); probe.png tile 12 (a7_center_right, f769); probe2.png tile 3 (a7_lip_down, f193) against tile 6 (a5_lip_down, f385)",
+   "repro": "Record 'Look: seams' with a pose at level (28,12,-95) yaw -90 pitch -12 and one at (30.5,12,-93.5) yaw -90 pitch -40, and compare with (7.5,9,-72) yaw 90 pitch -40 on the catwalk.",
+   "suggested_fix": "Give the drop depth cues in graybox. Use the floor grid look (or a darker 'street' look with lane marks) on boss_roof's Ground and a couple of low blocks down there (cars, a street) so the 12 m reads. Pull SkylineA/C back or offset them so the view through the gap falls to the ground, not onto a pale face. Optionally add a dark lip trim or hazard stripe on the deck edge in the gap. Check A6's east rail gaps the same way (Block4 stands 13 m beyond it; probe f577, probe2 f321).",
+   "files": [
+    "game/level/mission1/boss_roof.tscn",
+    "game/level/mission1/roofs.tscn"
+   ],
+   "spec_change": false,
+   "skeptics": [
+    {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "Confirmed from the recorded frames. Through the rail gap the view runs out to a flat, fog-lightened plane with a sharp lip. It has no grid, no marks and no depth falloff. At 40 degrees down the nearest thing is a pale box-like surface, not a street. Nothing logged in M5-calls or the README makes this an approved departure. FINALE call 6 only sets the catch floor, and ROOF call 5 only sets the ground height on roofs. The drop is a real hazard, so the read matters for a sign-off play. Medium is right: the knock-off mechanics work and only the read is wrong.",
+     "root_cause": "The off-deck scenery has no depth cues. The Ground block uses the flat \"dark\" look, which fog lightens to a pale plane, and it has no grid, lane marks or street props. SkylineA and SkylineC stand close behind the gap, so the view falls onto their faces and a ledge-like plane, not a deep void or a street. The gap has no lip marking either.",
+     "files_to_change": [
+      "game/level/mission1/boss_roof.tscn"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "final-sees-04",
+   "lens": "sees",
+   "severity": "low",
+   "title": "Boss fight: lens covered by enemies p95 57% (soft R8 miss)",
+   "detail": "In the boss arena the boss, and the adds at close range, cover more than half the lens 5% of the time. The soft limit is p95 <= 50%. The mixed-six arc act sits on the limit (p95 50%, reported as a miss). The player loses sight of the room in the boss fight; ARC.md's R8 row says 'held' for the arc acts only.",
+   "evidence": "captures/m5-final/boss/held/readability.json R8 'p50 10%, p95 57%' (miss); arc-mixed/readability.json R8 'p50 24%, p95 50%' (miss); boss overview_01 tiles 18-20 (8.5-9.5 s), the boss filling the frame",
+   "repro": "Read the R8 verdicts in the two readability.json files.",
+   "suggested_fix": "Log it in M5-calls/FINALE.md as a known soft miss with the reason (the boss's size at strike range), or nudge the boss's posture distance out a little (a Tuning value).",
+   "files": [
+    "docs/milestones/M5-calls/FINALE.md",
+    "game/autoload/tuning_data.gd"
+   ],
+   "spec_change": false,
+   "skeptics": []
+  },
+  {
+   "id": "final-sees-05",
+   "lens": "sees",
+   "severity": "low",
+   "title": "GO cue disappears after 2 s even while the player still faces away",
+   "detail": "After A1's clear, the cue shows at 21.5 s and is gone by about 23.5 s, while the bot is still turning (its last arrow points left, at the gate, at 23.4 s). go_cue_s is 2.0, and nothing keeps the cue up until the player faces the exit or crosses the barrier. A player who is busy watching a KO can miss it. The open barrier still reads, so this is polish.",
+   "evidence": "st_go.png tiles 3-22 (street/held 21.5-23.4 s); go_cue.gd:102-109; tuning_data.gd:1022",
+   "repro": "Watch street/held/bot.avi from 21 s to 25 s.",
+   "suggested_fix": "Keep the cue until the arrow has pointed within about 30 deg of straight up for a beat, or until the player passes the open barrier, with go_cue_s as a minimum; or raise go_cue_s to 3-4 s.",
+   "files": [
+    "game/ui/go_cue.gd",
+    "game/autoload/tuning_data.gd"
+   ],
+   "spec_change": false,
+   "skeptics": []
+  },
+  {
+   "id": "final-sees-06",
+   "lens": "sees",
+   "severity": "low",
+   "title": "Dashed outline seam on the A6 parapet top beside the A6/A7 gate",
+   "detail": "Seen from A6 left of the gate, the top edge of the low parapet (ParapetWest) where it meets the terrace tower shows a broken, dashed outline line. That is the sign of two coplanar faces or a sliver overlap, and the edge-outline pass flickers along it. The rest of the seam is clean.",
+   "evidence": "seams_sheet.png tile 12 = pose 11 'a6_gate_left_closed' (seams/bot.avi frame 769); seams_zoom.png panel 3",
+   "repro": "Watch seams/bot.avi frames 719-783 (pose 11).",
+   "suggested_fix": "Trim ParapetWest (or the tower block FarWall1) so their faces don't share a plane at the junction (end one 0.05 m short, or raise one top by 0.02 m).",
+   "files": [
+    "game/level/mission1/roofs.tscn"
+   ],
+   "spec_change": false,
+   "skeptics": []
+  },
+  {
+   "id": "final-feel-01",
+   "lens": "feel",
+   "severity": "low",
+   "title": "A7's R6 and R8 misses are the boss alone, but the rows report them as crowding",
+   "detail": "In A7, R8 (p95 57-60%) and R6 (p10 1.73 m in a chained run) miss. Every lens sample over 50% is Boss1 alone, 0.85-1.05 m, bearing 0, while he winds up, attacks or recovers; no add is ever in it. 31 of the 32 posture samples within 2.2 m are the boss stepping back from about 1.0 to 1.86 m in POSTURE after he reacts to a hit (the other is one Punk23 sample). So the fight is not crowded: it is his size and his close-range moves. The rows count him as a crowd, though, so every boss-arena run prints 'miss' and a later reader can't tell a real crowding problem from this. The R6 p10 also depends on the run: 2.39 m with --from=6 alone, 1.73 m chained from A1.",
+   "evidence": "captures/m5-final/boss/held/bot.log: 'R8 lens covered by enemies p50 10%, p95 57% miss'. Chained whole-level run (my headless run): 'R6 posture ring median 3.44 m, p10 1.73 m miss' and 'R8 p50 9%, p95 60% miss'. Probe samples: 'COVERPROBE f3862 0.70 | Boss1 d=0.85 b=0 ai=6 ; Punk1 d=0.99 b=77 ai=7' (the only sample with an add close), 'COVERPROBE f5372 0.84 | Boss1 d=1.04 b=-0 ai=5 ; Punk1 d=3.20'. Close-posture samples: 'CLOSEPROBE f22050 Boss1 d=1.11 b=-0 seat=inner' through 'f22090 d=1.80', then 'AI f22096 Boss1 POSTURE->ENGAGE'.",
+   "repro": "godot --headless --path . --fixed-fps 60 res://tests/bot/level_bot.tscn -- '--act=Run: held back' --level=res://game/level/mission1/mission1.tscn  (read A7's R6 and R8). Add a print in readability_probe._sample_lens for samples over 0.5 listing each ai_enemy's distance and state.",
+   "suggested_fix": "Add twins on the same pattern as D6: R8b, the lens share without the boss's mesh (or without the enemy in its own attack), and R6b, inner posturers without the boss. Keep the old rows printed for information, and log the change old -> new in M5-calls/FINALE.md as 'the boss's size up close'. No gameplay change.",
+   "files": [
+    "tests/bot/readability_probe.gd",
+    "docs/milestones/M5-calls/FINALE.md"
+   ],
+   "spec_change": false,
+   "skeptics": []
+  },
+  {
+   "id": "final-feel-02",
+   "lens": "feel",
+   "severity": "low",
+   "title": "A Punk promoted from a wait seat can get its token 5-6.4 m out, run out of chase time and leave a lull of about 4-5 s",
+   "detail": "When a wait-seated Punk takes a freed inner seat, the director can grant its token on the same tick while the Punk still stands on the wait ring. Its chase has only engage_timeout_s (2.0 s) of walking to close about 5 m at engage_speed_mps 3.0, while the step-in aims at a moving or turning player. Sometimes it gives up about 1.4 m short without swinging, then sits out its 5.0 s cooldown. In 'Arcs: quick turns', Punk1 got its token at 6.36 m (f330), gave it back at f473 at 1.44 m without winding up, and nobody wound up from f352 to f677 (5.4 s) with three Punks round a player standing still. In the level, 4 of 120 grants came from more than 5 m out, and the 5.88 m grant (Punk18, f16118) ended in a give-up (f16306). It's rare, but in a 3-Punk fight it reads as a stalled Punk.",
+   "evidence": "Quick-turns probe: 'TOKPROBE f2249 Punk1 kind=inner dist=6.36 slotdist=3.66' (the same Punk1 grant, at f330 when that act runs alone: 'TOK+ f330 Punk1', 'PROBE f330 Punk1 dist=6.36') and 'AI f473 Punk1 ENGAGE->APPROACH / PROBE f473 Punk1 dist=1.44 / TOK- f473 Punk1'. captures/m5-final/arc-quick/bot.log has the same timeline (TOK+ f330, TOK- f473, next WU+ f676). Level: 'TOKPROBE f16118 Punk18 kind=inner dist=5.88 slotdist=2.88', then 'AI f16306 Punk18 ENGAGE->APPROACH'. game/enemies/enemy_actor.gd:918-921 (engage_frames > engage_timeout_s -> _give_up_engage, which sets the full cooldown).",
+   "repro": "godot --headless --path . --fixed-fps 60 res://tests/bot/crowd_bot.tscn -- '--act=Arcs: quick turns'; read TOK+ and ENGAGE->APPROACH for Punk1 (f330 to f473).",
+   "suggested_fix": "Grant a token only once the promoted enemy is within posture_ring_max_m + a margin of the player. Or have the chase time out measured from that ring, or skip the cooldown when a give-up follows a promotion. Either fix belongs in the director's grant or in _give_up_engage, not in a tuning cut.",
+   "files": [
+    "game/enemies/enemy_director.gd",
+    "game/enemies/enemy_actor.gd",
+    "tests/test_attack_arcs.gd"
+   ],
+   "spec_change": false,
+   "skeptics": []
+  },
+  {
+   "id": "final-feel-03",
+   "lens": "feel",
+   "severity": "low",
+   "title": "The held-back autopilot never jumps, so the boss arena's damage and time aren't human-like",
+   "detail": "The boss's Ground Pound is unblockable and a jump clears it (gen_moves.gd:259, :449). The held-back pilot never jumps or dodges ('dodges':0), so all 13 pounds in A7 land: 195 of the arena's 210 damage, against 8 damage in A1-A6 together. The player goes down and stands up in place at least twice, 22% of A7 is spent in reaction, and the 102-108 s A7 time includes the time spent down. The time still fits inside 8-12 min, but A7's damage and time from this run are not evidence of how a human would feel the ramp. A pilot that jumps the pound would make the boss-arena numbers trustworthy for the re-check.",
+   "evidence": "captures/m5-final/boss/held/readability.json: damage_taken 210.0, hits_on_player 24. bot.log: 13 lines of 'Player: Boss Ground Pound 15.0 dmg HEAVY'; every 'Boss Charge' line is BLOCKED. Damage A1-A6 = 0, 0, 0, 0, 0, 8 (street and roofs readability.json). 'LOCK Run: held back: a7: ... 22% of 108.0 s in reaction'. PILOT a7: dodges 0.",
+   "repro": "grep 'Player:' captures/m5-final/boss/held/bot.log | sort -u",
+   "suggested_fix": "Give the autopilot one rule: when a wind-up of an unblockable move with a low height band starts in range (boss_pound), jump on its lead. Re-record 'Run: held back' --from=6 for A7's time.",
+   "files": [
+    "tests/bot/autopilot.gd"
+   ],
+   "spec_change": false,
+   "skeptics": []
+  },
+  {
+   "id": "final-code-01",
+   "lens": "code",
+   "severity": "medium",
+   "title": "The done-when passes on a level with missing or broken sections (its totals are asserted only conditionally)",
+   "detail": "LevelRoot skips a section scene that does not exist or does not load, with only a push_warning. test_every_arena_locks_spawns_its_table_and_clears_in_order adapts to however many arenas it finds: it asserts only arenas.size() > 0, and the 7-arena and 34-enemy totals are inside `if arenas.size() == FULL_ARENAS:`. The header says 'Sections missing in a worktree are skipped ... so the test adapts'. That was right while phase 2 was split across worktrees; with the level merged it makes the milestone's done-when able to pass with a broken street.tscn, roofs.tscn or boss_roof.tscn (even one arena). Nothing else in the suite asserts the assembled level has 7 arenas and 34 enemies: test_m5_street, test_m5_roofs and the boss-roof tests each load their own section alone.",
+   "evidence": "tests/test_m5_done_when.gd:17-18 (header), :207 `assert_gt(arenas.size(), 0, ...)`, :255 `if arenas.size() == FULL_ARENAS:`; game/level/kit/level_root.gd _build_sections() `push_warning(... skipped)`. Not run: the claim is from reading the test and the loader.",
+   "repro": "Rename game/level/mission1/roofs.tscn (or put a parse error in it), then `tools/run_tests.sh -gselect=test_m5_done_when`: test_every_arena... plays 4 arenas, skips the totals assertion, and passes.",
+   "suggested_fix": "Assert unconditionally `_level.sections.size() == 3`, `arenas.size() == FULL_ARENAS` and `spawned_total == FULL_ENEMIES`, and drop the 'adapts' wording from the header. Optionally fail on any push_warning from LevelRoot.",
+   "files": [
+    "tests/test_m5_done_when.gd"
+   ],
+   "spec_change": false,
+   "skeptics": [
+    {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "Confirmed by reading code. The 7-arena and 34-enemy totals are asserted only under `if arenas.size() == FULL_ARENAS:` (test_m5_done_when.gd:255-256). The only unconditional check is `assert_gt(arenas.size(), 0)` (line 207). LevelRoot._build_sections() (level_root.gd:205-214) skips a missing or non-LevelSection scene with only a push_warning. No other test asserts the assembled level has 7 arenas or 34 enemies. A grep shows FULL_ARENAS and FULL_ENEMIES are used only in this one file. test_m5_roofs.gd:175/190 and test_level_bot.gd:165 each load their own section or strip. test_level_kit.gd:129 deliberately tests the skip behavior on a fake missing path. So a broken or missing street, roofs or boss section would still pass the done-when. The header's \"adapts\" wording is stale now that the level is merged. I did not run the repro. It follows directly from the code.",
+     "root_cause": "The test was written while phase 2 was split across worktrees and was made tolerant of missing sections. The merged level kept the conditional assertions. LevelRoot's skip-with-warning behavior is intentional (tested in test_level_kit) but nothing in the done-when checks that the real level is complete.",
+     "files_to_change": [
+      "tests/test_m5_done_when.gd"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "final-code-02",
+   "lens": "code",
+   "severity": "medium",
+   "title": "No suite test crosses the section seams or the real stairs and gates in the assembled level; ahead barriers of A4-A6 are never asserted closed during their fights",
+   "detail": "The done-when jumps to each arena with start_at_arena(k) and, when the player is not already inside its lock volume, teleports him to the arena's first route point (_walk_into). The street and roofs tests bot-walk each section alone (a lone section is wrapped as a one-section level) and the boss roof is tested alone. So the walk through the street/roofs seam shutter at z -53 (landing at y 4.5 onto the terrace) and the roofs/boss gate at A6/A7, and the walk up stairs 2 and 3 into the next arena inside the real chained level, are covered only by the lead's recordings (timing.log, 'Look: seams'), not by a regression test; a later edit to a section's Exit/Entry, route points or nav links would pass the suite. Also, `_play` tracks only that the behind barrier stayed closed; the done-when's ahead-barrier check is `assert_false(ahead.is_closed())` after the clear, which also passes if the ahead barrier was never closed. test_m5_street asserts ahead closed while locked for the street; test_m5_roofs asserts only that ahead opens, so A4-A6's ahead barriers are never asserted shut during a fight on the real data.",
+   "evidence": "tests/test_m5_done_when.gd:184-193 (_walk_into teleports), :168 (only behind_closed tracked), :232; tests/test_m5_roofs.gd:448,451 (opens only); tests/test_m5_street.gd:301 (ahead closed, street only); tests/test_level_bot.gd runs only the strip's two arenas (run_level(0, 1)).",
+   "repro": "Move roofs.tscn's Entry, or open A4's ahead gate in the scene (start_closed false), and run the suite: the done-when still passes, because the player is teleported past the seam and ahead-closed is never asserted for A4-A6.",
+   "suggested_fix": "Add a god-mode test that runs the level bot's run_level(0, -1, false, false) on mission1.tscn with the waves quickened (as the timing run does) and asserts every arena clears in order with no BLOCKED or STALL line and the player ending inside the boss arena. Track `ahead_closed` during LOCKED in _play and assert it, for every arena that has an ahead barrier.",
+   "files": [
+    "tests/test_m5_done_when.gd",
+    "tests/test_level_bot.gd"
+   ],
+   "spec_change": false,
+   "skeptics": [
+    {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "Confirmed by reading the tests. No suite test walks the assembled mission1 level across the street/roofs seam, the roofs/boss gate or the real stairs. A4-A6 ahead barriers are never asserted closed during a fight. I did not run the suite or the repro.",
+     "root_cause": "The done-when test teleports instead of walking and tracks only the behind barrier. The per-section tests wrap each section as a one-section level. No test runs the bot across the chained level, so a Section Exit/Entry, route point, nav link or barrier start_closed regression would pass the suite.",
+     "files_to_change": [
+      "tests/test_m5_done_when.gd",
+      "tests/test_m5_roofs.gd",
+      "tests/test_level_bot.gd"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "final-code-03",
+   "lens": "code",
+   "severity": "low",
+   "title": "The boss-arena clear in the done-when never exercises the boss fight: his half health is set by the test and one_hit_ko is on",
+   "detail": "The `half` callback writes boss.health to 50% on the first tick he exists, which triggers phase 2 and the call-in at once, and `one_hit_ko` plus god mode then end it. The header discloses the first part. So the test proves the adds arrive at A7's doors and the arena clears, but not that the boss's real phase 1, his 270-degree arc seating, or the half-health trigger work in the assembled level. That is covered only by the held-back recording (boss/held: a7 108.0 s, hard rows ok). Not a forced clear (the arena still clears through the table), so low.",
+   "evidence": "tests/test_m5_done_when.gd:218-223 (`half` callback), :124-126 (_quicken sets god_mode and one_hit_ko).",
+   "repro": "Read the test; delete the `half` callback and the boss never reaches phase 2 within the one-hit kill, so the add assertions (`punks == boss_adds_count`) depend on the forced health.",
+   "suggested_fix": "Keep the forced half-health path, and add one A7 run with god_mode on but one_hit_ko off and the boss's health left alone, asserting the adds arrive at his natural half health and the arena clears within a generous frame budget.",
+   "files": [
+    "tests/test_m5_done_when.gd"
+   ],
+   "spec_change": false,
+   "skeptics": []
+  },
+  {
+   "id": "final-code-04",
+   "lens": "code",
+   "severity": "low",
+   "title": "readability_probe._merge_accs() lists wedge_all_frames and wait_inside_frames twice, so total() double-counts them",
+   "detail": "The key list in _merge_accs has `\"wedge_all_frames\", \"wait_inside_frames\",` on two consecutive lines (a merge artifact), and each key is added once per occurrence. In total(), the merged R5w (wait_seat_inside) and the R5a information row are therefore doubled: a run that truly spends 3% of its crowd frames with a wait-seated enemy inside 5 m reports 6% and a spurious R5w miss against the 5% limit (the limit is effectively 2.5% on merged totals). Per-act rows, which the arena logs and the done-when use, are unaffected.",
+   "evidence": "tests/bot/readability_probe.gd:921-922. `out[key] += acc[key]` runs once per list entry. Read from the code, not run.",
+   "repro": "Run two acts through a Probe, call total(), and compare metrics.wait_seat_inside with the per-act values.",
+   "suggested_fix": "Delete one of the duplicate lines and add a total()-vs-single-act assertion for wait_seat_inside to test_readability_probe.gd.",
+   "files": [
+    "tests/bot/readability_probe.gd",
+    "tests/test_readability_probe.gd"
+   ],
+   "spec_change": false,
+   "skeptics": []
+  },
+  {
+   "id": "final-code-05",
+   "lens": "code",
+   "severity": "low",
+   "title": "A few feel and layout numbers are still script constants or untuned offsets",
+   "detail": "The 'no numbers in scripts' rule is mostly kept (every arc, ring, lock, fall and GO-cue value is a tunable). Leftovers: EncounterSpawner.NAMED_RETRY_S = 0.1 (the named-spawn retry period, next to its two tunable waits); NavBaker.FLOOR_TOLERANCE_M = 0.3 and FLOOR_LIFT_M = 0.2, duplicating LevelRoot's exported nav_floor_tolerance and nav_floor_lift (the defaults can drift apart); the director's `posture_ring_max_m + 1.0` (retry radius floor) and `wait_ring_max_m + 0.5` (engage radius), which the plan fixes literally in D1 and D3 but which F1 cannot tune; and GoCue's panel numbers (gap 26, pad 34 x 18, shadow 6) beside its exported font and arrow sizes. All are low-risk, but they are numbers a tuning pass could want.",
+   "evidence": "game/level/encounter_spawner.gd:63,429; game/level/nav_baker.gd:32-33,54-55; game/enemies/enemy_director.gd:661,936; game/ui/go_cue.gd:134-138.",
+   "repro": "grep the files above.",
+   "suggested_fix": "Move NAMED_RETRY_S into 'Arena locks' (or reuse spawn_named_wait_s granularity), have NavBaker take the defaults from LevelRoot's exports (or drop the constants), and turn the director's two offsets and GoCue's layout numbers into tunables or exports.",
+   "files": [
+    "game/level/encounter_spawner.gd",
+    "game/level/nav_baker.gd",
+    "game/enemies/enemy_director.gd",
+    "game/ui/go_cue.gd",
+    "game/autoload/tuning_data.gd"
+   ],
+   "spec_change": false,
+   "skeptics": []
+  },
+  {
+   "id": "final-code-06",
+   "lens": "code",
+   "severity": "low",
+   "title": "Orphan tests/test_zz_debug.gd.uid committed by KIT",
+   "detail": "A .uid file with no script, left from a scratch debug test (added in 'wip: kit: stairs glide ramp, hazard catch ...'). Harmless at run time, but it is debris in the PR.",
+   "evidence": "git ls-files: tests/test_zz_debug.gd.uid has no tests/test_zz_debug.gd; introduced in M5 (commit 6bf35b5).",
+   "repro": "ls tests/test_zz_debug.gd*",
+   "suggested_fix": "git rm tests/test_zz_debug.gd.uid",
+   "files": [
+    "tests/test_zz_debug.gd.uid"
+   ],
+   "spec_change": false,
+   "skeptics": []
+  },
+  {
+   "id": "final-code-07",
+   "lens": "code",
+   "severity": "low",
+   "title": "README 'Automated checks' still quotes M3's figures and says nothing of the level tests or bots",
+   "detail": "README says the suite runs '1198 tests ... in about 145 s' and its crowd-bot paragraph never mentions the level bot, tools/record_acts.sh, test_m5_done_when.gd or BOT_SCENE. The suite is now 1729 tests, 298.7 s. CLAUDE.md quotes M4's 1588 tests and 267 s. Game-boy reads the README to run and verify the milestone.",
+   "evidence": "README.md 'Automated checks' (first bullet) against this run's totals (83 scripts, 1729 tests, 298.717 s).",
+   "repro": "Read README.md 'Automated checks'.",
+   "suggested_fix": "Update the README and CLAUDE.md figures to 1729 tests and about 300 s, and add two lines for the level bot (`BOT_SCENE=res://tests/bot/level_bot.tscn tools/record_acts.sh`, 'Run: held back', 'Run: timing', 'Look: seams') and test_m5_done_when.gd.",
+   "files": [
+    "README.md",
+    "CLAUDE.md"
+   ],
+   "spec_change": false,
+   "skeptics": []
+  }
+ ],
+ "lead_overrides": {
+  "final-sees-01": "Fix both halves. (a) A4's RoofDoorBehind moves to a roof door that is truly behind a player entering A4, beside the stair he came up, as encounters.md says. (b) Behind spawns obey the view rule even when named. Give SpawnPoint an explicit flag (for example `out_of_view: bool`), and set it on every point the approved table calls 'behind' (A2 Alley, A3 Brick, A4 RoofDoorBehind, A5 DoorBehindStair, A6 BehindDoor and RoofAccess; check encounters.md). While a flagged point is inside the player's view (the spawner's own is_behind rule), its spawn waits up to spawn_named_wait_s. Then it falls back to the nearest free out-of-view point in the arena (any tag). Only after spawn_named_any_wait_s does it take any free point, so the FIX2 no-stall guarantee holds. 'Ahead' named points still spawn in view, as the reference's door ahead does. Add tests for both: a flagged point in view waits, then falls back out of view; nothing stalls.",
+  "final-sees-02": "Make the A6 pipe findable in graybox. Move the PickupSpot out of the crate stack's lee into the sight line from the A6 arrival and the route, so it is visible within about 10 m. Give a weapon lying on the floor more contrast than the floor grey (a tunable colour or value in the weapon's look; the held weapon may keep its look). Judge in first person from the A6 arrival and at 13 m and 7 m. The crowd room's and the training room's pipes change with it, which is fine.",
+  "final-sees-03": "The boss roof's open edge must read as a 12 m drop through the rail gap. Give the off-deck ground street depth cues: a darker look, the grid or lane marks, a few street blocks or cars below. Push SkylineA and SkylineC back, so the view through the gap falls onto the street far below, not onto a near face. Mark the gap's lip. Judge in first person at the gap, at eye level and 40 degrees down. Check A4's and A5's drops too, and change them only if they read as ledges as well.",
+  "final-sees-06": "Trim the sliver or coplanar face on ParapetWest's top beside the A6/A7 gate, so its outline is unbroken. Look from A6 left of the gate.",
+  "final-feel-02": "Promoted to fix (lead's ruling): in a three-Punk fight, a stalled Punk and a 4-5 s lull read as broken. Fix the root cause: a token must not go to an enemy too far out to land it. Either grant only once the promoted enemy is within its engage reach (a tunable margin over the posture ring), or let it walk to its inner seat first. Keep the arcs and the 0.5 s engage grace as they are. Add a test that reproduces 'Arcs: quick turns' Punk1: no give-up and no lull longer than about 2.5 s with three Punks round a still player. Re-record 'Arcs: quick turns' and 'Arcs: six Punks', and check that R1, R2 and R10 still hold.",
+  "final-code-01": "Assert the full level unconditionally: mission1.tscn builds exactly three sections (no skip warning), 7 arenas and 34 enemies. Keep the lone-section tolerance only where a test loads a lone section on purpose.",
+  "final-code-02": "Add a suite test, kept under about 15 s, that crosses each seam in the assembled level as the player would. Walk him (no teleport) from A3's exit up stair 1 through the open shutter into A4's lock, and from A6's exit through the open gate into A7's lock. Assert each lock fires. During each fight in A4-A6, assert the ahead barrier is closed.",
+  "final-code-04": "Promoted (a real double count, a one-line fix): remove the duplicated keys in readability_probe._merge_accs, and add a test that total() equals the sum of the acts.",
+  "final-code-05": "Promoted, but only these: EncounterSpawner.NAMED_RETRY_S becomes a tunable in Level > Arena locks (F1 owns the spawner); NavBaker's FLOOR_TOLERANCE_M and FLOOR_LIFT_M read one source with LevelRoot's exported values; the director's `posture_ring_max_m + 1.0` and `wait_ring_max_m + 0.5` become tunables in Enemies > Attack arcs, with the same defaults; GoCue's panel numbers become tunables in Level > GO cue. No behaviour changes.",
+  "final-sees-05": "Promoted (cheap polish): the GO cue stays up until the player faces the open exit (within a tunable angle) or crosses it, and at least go_cue_s, with a tunable cap (about 8 s). Add a tunable switch that restores the fixed go_cue_s.",
+  "final-code-06": "Promoted: delete the orphan tests/test_zz_debug.gd.uid.",
+  "final-sees-04": "Not fixed in this wave: the lead notes it in README. The boss alone at close range covers the lens; feel-01 shows no add is involved.",
+  "final-feel-01": "Not fixed in this wave: the lead notes in README and the FINALE call that A7's R6 and R8 misses are the boss's size.",
+  "final-feel-03": "Not fixed: the held-back pilot not jumping only affects the bot's evidence for A7. The lead notes it.",
+  "final-code-03": "Not fixed: the held-back recording covers the boss's real fight. The lead notes it.",
+  "final-code-07": "The lead updates README and CLAUDE.md himself."
+ },
+ "packages": [
+  {
+   "key": "spawns",
+   "title": "Behind spawns out of view, the findable pipe, the parapet seam, the spawner's retry tunable",
+   "finding_ids": [
+    "final-sees-01",
+    "final-sees-02",
+    "final-sees-06",
+    "final-code-05"
+   ],
+   "files": [
+    "game/level/encounter_spawner.gd",
+    "game/level/kit/spawn_point.gd",
+    "game/level/mission1/roofs.tscn",
+    "game/level/mission1/street.tscn",
+    "game/level/mission1/encounters/a2.tres",
+    "game/level/mission1/encounters/a3.tres",
+    "game/level/mission1/encounters/a4.tres",
+    "game/level/mission1/encounters/a5.tres",
+    "game/level/mission1/encounters/a6.tres",
+    "game/weapons/weapon.gd",
+    "game/weapons/pipe.tscn",
+    "tests/test_encounter_spawner.gd",
+    "tests/test_m5_roofs.gd",
+    "tests/test_m5_street.gd",
+    "tests/test_level_kit.gd",
+    "tuning_data.gd: Level > Arena locks, and a weapon-look subgroup"
+   ],
+   "notes": "Of final-code-05 you take only NAMED_RETRY_S (the spawner is yours); the other leftovers belong to the 'arcs' package. Re-record the roofs held-back run with BOT_SCENE=res://tests/bot/level_bot.tscn and CAPTURE_ARGS=\"--level=res://game/level/mission1/mission1.tscn --from=3 --to=5\". Look at A4's and A6's spawns in first person, and at the pipe from the A6 arrival. The lead's rulings are in the findings file's lead_overrides."
+  },
+  {
+   "key": "level-tests",
+   "title": "The done-when asserts the whole level; a seam-crossing test; the boss roof's drop reads",
+   "finding_ids": [
+    "final-code-01",
+    "final-code-02",
+    "final-sees-03"
+   ],
+   "files": [
+    "tests/test_m5_done_when.gd",
+    "tests/test_m5_seams.gd (new)",
+    "tests/test_level_bot.gd",
+    "game/level/mission1/boss_roof.tscn",
+    "game/level/mission1/mission1.tscn"
+   ],
+   "notes": "Suite growth: at most about 15 s more. For sees-03, record 'Look: seams' or your own poses at the boss roof's gap (level_bot, --from=6), and look at them. Don't edit roofs.tscn: the 'spawns' package owns it. The reviewer found A4's and A5's drops read; if you see otherwise, report it."
+  },
+  {
+   "key": "arcs",
+   "title": "No long-range token lull; the probe's double count; script numbers to tunables; the GO cue holds until faced; the orphan uid",
+   "finding_ids": [
+    "final-feel-02",
+    "final-code-04",
+    "final-code-05",
+    "final-sees-05",
+    "final-code-06"
+   ],
+   "files": [
+    "game/enemies/enemy_director.gd",
+    "game/enemies/enemy_actor.gd",
+    "tests/test_attack_arcs.gd",
+    "tests/test_enemy_director.gd",
+    "tests/bot/readability_probe.gd",
+    "tests/test_readability_probe.gd",
+    "game/level/nav_baker.gd",
+    "game/level/kit/level_root.gd",
+    "game/ui/go_cue.gd",
+    "tests/test_go_cue.gd",
+    "tests/test_zz_debug.gd.uid",
+    "tuning_data.gd: Enemies > Attack arcs, Level > GO cue"
+   ],
+   "notes": "Of final-code-05 you take everything except NAMED_RETRY_S (the 'spawns' package owns the spawner). Re-record 'Arcs: quick turns' and 'Arcs: six Punks' with tools/record_acts.sh (the default crowd bot), and look at the result. Check that every R1-R15 hard row still holds in test_m3_done_when and the arc tests."
+  }
+ ]
+}

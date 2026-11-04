@@ -31,7 +31,7 @@ const BINDINGS := {
 	&"cheats": [KEY_F4],
 	&"help": [KEY_H],
 	&"sparring": [KEY_F5],  # toggle sparring on every training dummy
-	&"switch_room": [KEY_F6],  # the crowd street <-> the training room (Milestone 3)
+	&"switch_room": [KEY_F6],  # Mission 1 -> the crowd street -> the training room (Milestone 5)
 	# Free-fly debug camera (keeps WASD/mouse for the player).
 	&"fly_forward": [KEY_UP],
 	&"fly_back": [KEY_DOWN],
@@ -42,8 +42,10 @@ const BINDINGS := {
 	&"fly_look": ["mb:3"],  # hold middle mouse to steer the free-fly camera
 }
 
-## The rooms F6 switches between (switch_room()): the crowd street and the training room.
+## The rooms F6 cycles through (switch_room()): Mission 1 (the main scene), the crowd street and the
+## training room.
 const ROOM_SCENES: Array[String] = [
+	"res://game/level/mission1/mission1.tscn",
 	"res://game/level/crowd_room.tscn",
 	"res://game/level/test_room.tscn",
 ]
@@ -136,7 +138,7 @@ func _input(event: InputEvent) -> void:
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 
-## Switch to the other room of ROOM_SCENES (F6): clear hitstop and slow-mo, unpause and change
+## Switch to the next room of ROOM_SCENES (F6): clear hitstop and slow-mo, unpause and change
 ## scene. Nothing happens when the target scene doesn't exist (the crowd room, until it is
 ## merged), or when the current scene is neither room (a bot or test host).
 func switch_room() -> void:
@@ -149,15 +151,15 @@ func switch_room() -> void:
 	get_tree().change_scene_to_file(target)
 
 
-## The scene F6 would switch to: the other of ROOM_SCENES than the running scene, "" when the
-## running scene is neither.
+## The scene F6 would switch to: the one after the running scene in ROOM_SCENES (the list wraps), ""
+## when the running scene is none of them.
 func other_room() -> String:
 	var current := get_tree().current_scene
 	return room_after(current.scene_file_path if current else "")
 
 
-## The room F6 goes to from the scene at `scene_path`: the other of ROOM_SCENES, "" when it is
-## neither of them (a bot or test host) or when that other room's scene does not exist (yet).
+## The room F6 goes to from the scene at `scene_path`: the next of ROOM_SCENES, "" when it is none
+## of them (a bot or test host) or when that next room's scene does not exist (yet).
 static func room_after(scene_path: String) -> String:
 	var index := ROOM_SCENES.find(scene_path)
 	if index < 0:

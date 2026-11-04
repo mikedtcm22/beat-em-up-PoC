@@ -613,7 +613,7 @@ const TUNABLES := {
 
 ## The subgroups of "Enemies", in order (the F1 headings).
 const ENEMY_SUBGROUPS: PackedStringArray = [
-	"Wind-up", "Posture", "Navigation", "Director", "Waves", "Street Punk", "Kicker", "Pipe Thug",
+	"Wind-up", "Posture", "Navigation", "Director", "Attack arcs", "Waves", "Street Punk", "Kicker", "Pipe Thug",
 	"Enemy grabs", "Bruiser", "Boss",
 ]
 
@@ -669,18 +669,18 @@ func test_f6_switches_rooms_and_the_help_lists_it() -> void:
 	assert_eq(GameInput.BINDINGS[&"switch_room"], [KEY_F6])
 	assert_true(InputMap.has_action(&"switch_room"), "registered")
 	assert_eq(GameInput.ROOM_SCENES, [
-		"res://game/level/crowd_room.tscn", "res://game/level/test_room.tscn"] as Array[String])
+		"res://game/level/mission1/mission1.tscn", "res://game/level/crowd_room.tscn",
+		"res://game/level/test_room.tscn"] as Array[String])
 	var listed := false
 	for row: Array in HelpOverlay.DEBUG_ROWS:
 		listed = listed or row[1] == &"switch_room"
 	assert_true(listed, "a help row for the room switch")
 	assert_eq(HelpOverlay.binding_text([&"switch_room"], false), "F6")
-	# The other of the two rooms from whichever is running; none from anywhere else, and none
-	# while the target scene does not exist (the crowd room, until P1-room lands: F6 then does
-	# nothing in the training room).
-	assert_eq(GameInput.room_after(GameInput.ROOM_SCENES[0]), GameInput.ROOM_SCENES[1], "from the crowd room to the training room")
-	var crowd_exists := ResourceLoader.exists(GameInput.ROOM_SCENES[0])
-	assert_eq(GameInput.room_after(GameInput.ROOM_SCENES[1]), GameInput.ROOM_SCENES[0] if crowd_exists else "", "and back, when the crowd room exists")
+	# The next room of the three from whichever is running, wrapping (level, crowd room, training
+	# room, level); none from anywhere else, and none while the target scene does not exist.
+	for i in GameInput.ROOM_SCENES.size():
+		var next: String = GameInput.ROOM_SCENES[(i + 1) % GameInput.ROOM_SCENES.size()]
+		assert_eq(GameInput.room_after(GameInput.ROOM_SCENES[i]), next if ResourceLoader.exists(next) else "", "from room %d to the next" % i)
 	assert_eq(GameInput.room_after("res://tests/bot/combo_bot.tscn"), "", "a bot or test host is neither room")
 	assert_eq(GameInput.room_after(""), "")
 	# Run from here (a test host, not a room) F6 does nothing.
@@ -719,7 +719,7 @@ func test_the_catalog_lists_only_scenes_that_exist() -> void:
 	var ids: Array[StringName] = []
 	for entry: Dictionary in EnemyCatalog.ENTRIES:
 		ids.append(entry.id)
-	assert_eq(ids, [&"dummy", &"punk", &"kicker", &"thug", &"bruiser", &"boss"] as Array[StringName])
+	assert_eq(ids, [&"dummy", &"punk", &"punk_veteran", &"kicker", &"thug", &"bruiser", &"boss"] as Array[StringName])
 	for entry: Dictionary in EnemyCatalog.ENTRIES:
 		assert_true(String(entry.scene).begins_with("res://game/enemies/"), "%s: a scene under game/enemies" % entry.id)
 		assert_true(String(entry.scene).ends_with(".tscn"))

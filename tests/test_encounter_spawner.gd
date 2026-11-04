@@ -450,3 +450,298 @@ func test_adds_come_in_at_the_nearest_free_points_and_join_the_wave() -> void:
 	assert_almost_eq(adds[1].global_position.x, 3.0, 0.05, "then the next nearest")
 	assert_ne(adds[0].global_position, adds[1].global_position, "never two at one point")
 	assert_eq(spawner.spawn_adds(&"punk", 9, Vector3(9.0, 0.0, -10.0)).size(), 2, "only the two free points are left")
+
+
+# --- Finite mode (Milestone 5, KIT) ------------------------------------------------------
+
+
+## A finite table of `waves` (arrays of ids) with optional point names per wave.
+func _finite(waves: Array, names: Array = []) -> EncounterTable:
+	var table := EncounterTable.new()
+	table.loop = false
+	for wave: Array in waves:
+		table.waves.append(PackedStringArray(wave))
+	for wave: Array in names:
+		table.wave_points.append(PackedStringArray(wave))
+	return table
+
+
+## Points `list` as [name, position, tag] rows, each walking to the origin.
+func _named_points(list: Array) -> Array[Dictionary]:
+	var points: Array[Dictionary] = []
+	for row: Array in list:
+		points.append({name = StringName(row[0]), position = row[1], yaw = 0.0, tag = StringName(row[2]), lane_point = Vector3.ZERO,
+				out_of_view = row.size() > 3 and bool(row[3])})
+	return points
+
+
+func test_a_finite_table_plays_once_never_the_boss_wave_and_says_when_it_is_finished() -> void:
+	Tuning.set_value(&"boss_wave_every", 1)  # a looping table would put the boss after every wave
+	var spawner := _spawner()
+	var finished: Array[int] = []
+	var ids_seen: Array[String] = []
+	spawner.table_finished.connect(func() -> void: finished.append(spawner.waves_started()))
+	spawner.wave_started.connect(func(_n: int, ids: PackedStringArray) -> void: ids_seen.append(",".join(ids)))
+	spawner.play_table(_finite([["punk", "punk"], ["punk"]]), _grid_points())
+	spawner.set_waves_enabled(true)
+	await _ticks(40)
+	assert_eq(spawner.waves_started(), 1)
+	assert_true(spawner.wave_running())
+	for enemy in _enemies():
+		enemy.health = 0.0
+	await _ticks(30)
+	assert_eq(spawner.waves_started(), 2, "wave 2 follows wave 1, no boss wave between them")
+	assert_true(finished.is_empty(), "not finished while wave 2 lives")
+	for enemy in _enemies():
+		enemy.health = 0.0
+	await _ticks(30)
+	assert_eq(finished, [2] as Array[int], "table_finished once, after the last wave's clear")
+	assert_eq(ids_seen, ["punk,punk", "punk"] as Array[String], "the boss wave never came")
+	assert_false(spawner.wave_running())
+	await _ticks(120)
+	assert_eq(spawner.waves_started(), 2, "and nothing starts again")
+	assert_eq(finished.size(), 1)
+
+
+func test_a_finite_table_waits_for_the_adds_too() -> void:
+	var spawner := _spawner()
+	var finished: Array[int] = []
+	spawner.table_finished.connect(func() -> void: finished.append(1))
+	spawner.play_table(_finite([["punk"]]), _grid_points())
+	spawner.set_waves_enabled(true)
+	await _ticks(20)
+	var adds := spawner.spawn_adds(&"punk", 2, Vector3(0.0, 0.0, -10.0))
+	assert_eq(adds.size(), 2)
+	for enemy in _enemies():
+		if not adds.has(enemy):
+			enemy.health = 0.0
+	await _ticks(20)
+	assert_true(finished.is_empty(), "the boss's adds hold the table")
+	for enemy in adds:
+		enemy.health = 0.0
+	await _ticks(20)
+	assert_eq(finished.size(), 1)
+
+
+func test_an_empty_finite_table_finishes_at_once_and_stop_leaves_the_spawner_idle() -> void:
+	var spawner := _spawner()
+	var finished: Array[int] = []
+	spawner.table_finished.connect(func() -> void: finished.append(1))
+	spawner.set_waves_enabled(true)
+	spawner.play_table(_finite([]), _grid_points())
+	await _ticks(10)
+	assert_eq(finished.size(), 1)
+	spawner.play_table(_finite([["punk"]]), _grid_points())
+	spawner.stop()
+	await _ticks(60)
+	assert_eq(_enemies().size(), 0, "a stopped spawner spawns nothing")
+	assert_eq(finished.size(), 1)
+	assert_false(spawner.wave_running())
+
+
+func test_a_named_point_overrides_the_behind_share() -> void:
+	Tuning.set_value(&"wave_behind_share", 1.0)  # everything that chooses its point comes from outside the view
+	var spawner := _spawner()
+	spawner.play_table(_finite([["punk", "punk", "punk"]], [["FrontA", "FrontB", ""]]),
+			_named_points([["FrontA", Vector3(-4.0, 0.0, -10.0), "doorway"], ["FrontB", Vector3(4.0, 0.0, -10.0), "doorway"],
+			["Rear", Vector3(0.0, 0.0, 10.0), "alley"]]))  # the player looks along -Z
+	spawner.set_waves_enabled(true)
+	await _ticks(90)
+	var enemies := _enemies()
+	assert_eq(enemies.size(), 3)
+	var at_front := enemies.filter(func(e: EnemyActor) -> bool: return e.global_position.z < 0.0)
+	assert_eq(at_front.size(), 2, "the two named spawns came in at their points in view, whatever the share says")
+	assert_eq(enemies.filter(func(e: EnemyActor) -> bool: return e.global_position.z > 0.0).size(), 1,
+			"the unnamed one chose from outside the view")
+
+
+func test_a_named_point_too_near_the_player_waits_then_the_nearest_free_point_of_its_tag_takes_it() -> void:
+	Tuning.set_value(&"spawn_named_wait_s", 0.5)
+	var spawner := _spawner()
+	var points := _named_points([["Near", Vector3(0.0, 0.0, -2.0), "doorway"], ["Far", Vector3(0.0, 0.0, -9.0), "doorway"],
+			["FarAlley", Vector3(0.0, 0.0, -6.0), "alley"], ["Farther", Vector3(8.0, 0.0, -9.0), "doorway"]])
+	spawner.play_table(_finite([["punk"]], [["Near"]]), points)
+	spawner.set_waves_enabled(true)
+	await _ticks(30)
+	assert_eq(_enemies().size(), 0, "the named point is within spawn_min_player_distance_m: it waits (0.5 s: %d frames)" % 30)
+	await _ticks(60)
+	var enemies := _enemies()
+	assert_eq(enemies.size(), 1, "after spawn_named_wait_s it spawns")
+	assert_almost_eq(enemies[0].global_position.z, -9.0, 0.05, "at the nearest free point with the same tag (not the nearer alley, not the farther doorway)")
+	assert_almost_eq(enemies[0].global_position.x, 0.0, 0.05)
+
+
+func test_a_named_point_with_a_unique_tag_held_by_the_player_falls_back_to_the_nearest_point_of_any_tag() -> void:
+	Tuning.set_value(&"spawn_named_wait_s", 0.5)
+	Tuning.set_value(&"spawn_named_any_wait_s", 1.0)
+	var spawner := _spawner()
+	# "Hold" is the only point of its tag and the player stands within spawn_min_player_distance_m of it.
+	var points := _named_points([["Hold", Vector3(0.0, 0.0, -2.0), "alley"], ["Next", Vector3(3.0, 0.0, -9.0), "doorway"],
+			["Far", Vector3(-9.0, 0.0, -9.0), "doorway"]])
+	spawner.play_table(_finite([["punk"]], [["Hold"]]), points)
+	spawner.set_waves_enabled(true)
+	await _ticks(60)
+	assert_eq(_enemies().size(), 0, "past spawn_named_wait_s (0.5 s) there is still no point of its tag: it holds")
+	await _ticks(60)
+	var enemies := _enemies()
+	assert_eq(enemies.size(), 1, "after spawn_named_any_wait_s more the wave arrives")
+	assert_almost_eq(enemies[0].global_position.x, 3.0, 0.05, "at the nearest free point of any tag")
+	assert_almost_eq(enemies[0].global_position.z, -9.0, 0.05)
+
+
+func test_a_behind_point_in_the_players_view_waits_then_the_nearest_free_point_outside_the_view_takes_it() -> void:
+	Tuning.set_value(&"spawn_behind_waits_out_of_view", true)  # M5's hold: the mode this tests
+	Tuning.set_value(&"spawn_named_wait_s", 0.5)
+	var spawner := _spawner()
+	# The player looks along -Z: "Door" is in his view. The alley is the nearer point outside it, the doorway the farther.
+	var points := _named_points([["Door", Vector3(0.0, 0.0, -9.0), "doorway", true], ["Ahead", Vector3(6.0, 0.0, -9.0), "doorway"],
+			["RearAlley", Vector3(3.0, 0.0, 9.0), "alley"], ["RearDoor", Vector3(-9.0, 0.0, 9.0), "doorway"]])
+	spawner.play_table(_finite([["punk"]], [["Door"]]), points)
+	spawner.set_waves_enabled(true)
+	await _ticks(30)
+	assert_eq(_enemies().size(), 0, "a behind point in view is not used (0.5 s: 30 frames)")
+	await _ticks(60)
+	var enemies := _enemies()
+	assert_eq(enemies.size(), 1, "after spawn_named_wait_s the spawn happens")
+	assert_almost_eq(enemies[0].global_position.x, 3.0, 0.05, "at the nearest free point outside the view, any tag (the alley, not the doorway)")
+	assert_almost_eq(enemies[0].global_position.z, 9.0, 0.05)
+
+
+func test_a_behind_point_the_player_looks_away_from_in_time_is_used_itself() -> void:
+	Tuning.set_value(&"spawn_behind_waits_out_of_view", true)  # M5's hold: the mode this tests
+	Tuning.set_value(&"spawn_named_wait_s", 2.0)
+	var spawner := _spawner()
+	var points := _named_points([["Door", Vector3(0.0, 0.0, -9.0), "doorway", true], ["RearAlley", Vector3(3.0, 0.0, 9.0), "alley"]])
+	spawner.play_table(_finite([["punk"]], [["Door"]]), points)
+	spawner.set_waves_enabled(true)
+	await _ticks(30)
+	assert_eq(_enemies().size(), 0, "in view: held")
+	_player.look_yaw = PI  # he turns round: the door is behind him now
+	await _ticks(20)
+	var enemies := _enemies()
+	assert_eq(enemies.size(), 1, "it spawns well before spawn_named_wait_s is up")
+	assert_almost_eq(enemies[0].global_position.z, -9.0, 0.05, "at the named door itself")
+
+
+func test_a_behind_point_already_outside_the_view_is_used_without_waiting() -> void:
+	Tuning.set_value(&"spawn_behind_waits_out_of_view", true)  # M5's hold: the mode this tests
+	Tuning.set_value(&"spawn_named_wait_s", 5.0)
+	var spawner := _spawner()
+	var points := _named_points([["Rear", Vector3(7.0, 0.0, 9.0), "doorway", true], ["Other", Vector3(-7.0, 0.0, 9.0), "doorway"]])
+	spawner.play_table(_finite([["punk"]], [["Rear"]]), points)
+	spawner.set_waves_enabled(true)
+	await _ticks(30)
+	var enemies := _enemies()
+	assert_eq(enemies.size(), 1)
+	assert_almost_eq(enemies[0].global_position.x, 7.0, 0.05, "exactly where the table says")
+
+
+func test_a_behind_point_with_every_point_in_view_still_spawns_after_the_any_tag_wait() -> void:
+	Tuning.set_value(&"spawn_behind_waits_out_of_view", true)  # M5's hold: the mode this tests
+	Tuning.set_value(&"spawn_named_wait_s", 0.5)
+	Tuning.set_value(&"spawn_named_any_wait_s", 1.0)
+	var spawner := _spawner()
+	var points := _named_points([["Door", Vector3(0.0, 0.0, -9.0), "doorway", true], ["Ahead", Vector3(6.0, 0.0, -9.0), "doorway"]])
+	spawner.play_table(_finite([["punk"]], [["Door"]]), points)
+	spawner.set_waves_enabled(true)
+	await _ticks(60)
+	assert_eq(_enemies().size(), 0, "past spawn_named_wait_s there is no point outside the view: it holds")
+	await _ticks(60)
+	var enemies := _enemies()
+	assert_eq(enemies.size(), 1, "after spawn_named_any_wait_s more it cannot stall the wave")
+	assert_almost_eq(enemies[0].global_position.x, 0.0, 0.05, "at the nearest free point of any tag: its own")
+
+
+func test_with_the_hold_off_a_behind_point_in_the_players_view_is_used_at_once() -> void:
+	# The default (Game-boy's playtest ruling): the out_of_view flag is ignored, no lull before the spawn.
+	assert_false(Tuning.data.spawn_behind_waits_out_of_view, "off by default")
+	Tuning.set_value(&"spawn_named_wait_s", 5.0)
+	var spawner := _spawner()
+	var points := _named_points([["Door", Vector3(0.0, 0.0, -9.0), "doorway", true], ["RearAlley", Vector3(3.0, 0.0, 9.0), "alley"]])
+	spawner.play_table(_finite([["punk"]], [["Door"]]), points)
+	spawner.set_waves_enabled(true)
+	await _ticks(30)
+	var enemies := _enemies()
+	assert_eq(enemies.size(), 1, "it spawns without waiting for the player to look away")
+	assert_almost_eq(enemies[0].global_position.z, -9.0, 0.05, "at the named point itself, in his view")
+
+
+func test_with_the_hold_off_a_behind_point_that_is_not_free_still_falls_back_by_tag() -> void:
+	Tuning.set_value(&"spawn_named_wait_s", 0.5)
+	var spawner := _spawner()
+	# "Near" is 1.5 m from the player (inside spawn_min_player_distance_m); the flag does not matter.
+	var points := _named_points([["Near", Vector3(0.0, 0.0, -1.5), "doorway", true], ["Far", Vector3(6.0, 0.0, -9.0), "doorway"]])
+	spawner.play_table(_finite([["punk"]], [["Near"]]), points)
+	spawner.set_waves_enabled(true)
+	await _ticks(20)
+	assert_eq(_enemies().size(), 0, "a point nearer than spawn_min_player_distance_m is waited for")
+	await _ticks(30)
+	var enemies := _enemies()
+	assert_eq(enemies.size(), 1, "after spawn_named_wait_s the same-tag point takes it")
+	assert_almost_eq(enemies[0].global_position.x, 6.0, 0.05, "the nearest free point of its own tag")
+
+
+## Frames from the player turning away (the named behind point is then free) to the spawn, with the retry
+## period `retry_s`; -1 when it does not come in 90.
+func _frames_to_spawn_after_turning(retry_s: float) -> int:
+	Tuning.set_value(&"spawn_behind_waits_out_of_view", true)  # M5's hold: the mode this tests
+	Tuning.set_value(&"spawn_named_wait_s", 9.0)
+	Tuning.set_value(&"spawn_named_retry_s", retry_s)
+	_player.look_yaw = 0.0
+	var spawner := _spawner()
+	var points := _named_points([["Door", Vector3(0.0, 0.0, -9.0), "doorway", true]])
+	spawner.play_table(_finite([["punk"]], [["Door"]]), points)
+	spawner.set_waves_enabled(true)
+	await _ticks(23)  # off the retry's phase, whatever the period
+	_player.look_yaw = PI
+	for frame in 90:
+		await _ticks(1)
+		if not _enemies().is_empty():
+			spawner.queue_free()
+			await _ticks(2)
+			return frame + 1
+	return -1
+
+
+func test_the_named_retry_period_is_a_tunable() -> void:
+	assert_almost_eq(Tuning.data.spawn_named_retry_s, 0.1, 0.0001, "the default is the old constant")
+	var slow := await _frames_to_spawn_after_turning(1.0)
+	EncounterSpawner.remove_enemies(get_tree())
+	await _ticks(2)
+	var fast := await _frames_to_spawn_after_turning(0.02)
+	assert_between(fast, 1, 4, "a 0.02 s retry picks it up within a few frames")
+	assert_gt(slow, fast, "a 1 s retry waits longer (%d frames against %d)" % [slow, fast])
+
+
+func test_a_named_point_that_is_free_is_used_without_waiting() -> void:
+	Tuning.set_value(&"spawn_named_wait_s", 5.0)
+	var spawner := _spawner()
+	var points := _named_points([["Here", Vector3(7.0, 0.0, -8.0), "doorway"], ["There", Vector3(-7.0, 0.0, -8.0), "doorway"]])
+	spawner.play_table(_finite([["punk"]], [["There"]]), points)
+	spawner.set_waves_enabled(true)
+	await _ticks(30)
+	var enemies := _enemies()
+	assert_eq(enemies.size(), 1)
+	assert_almost_eq(enemies[0].global_position.x, -7.0, 0.05, "exactly where the table says")
+
+
+func test_an_unknown_point_name_falls_back_to_choosing() -> void:
+	var spawner := _spawner()
+	spawner.play_table(_finite([["punk"]], [["Nowhere"]]), _grid_points())
+	spawner.set_waves_enabled(true)
+	await _ticks(40)
+	assert_eq(_enemies().size(), 1, "it still spawns")
+
+
+func test_a_looping_table_is_unchanged_by_the_new_fields() -> void:
+	var table := EncounterTable.new()
+	table.waves.append(PackedStringArray(["punk"]))
+	assert_true(table.loop, "tables loop unless told otherwise")
+	assert_eq(table.wave_at(0, 0), PackedStringArray(["punk"]))
+	assert_eq(table.wave_at(1, 0), PackedStringArray(["punk"]), "and wrap")
+	assert_eq(table.wave_at(1, 1), PackedStringArray(["boss"]), "with the boss wave")
+	table.loop = false
+	assert_eq(table.wave_at(1, 1), PackedStringArray(), "finite: past the end is empty, never the boss")
+	assert_eq(table.points_for(0), PackedStringArray([""]), "no names: one empty per id")
+	table.wave_points.append(PackedStringArray(["Alley"]))
+	assert_eq(table.points_for(0), PackedStringArray(["Alley"]))

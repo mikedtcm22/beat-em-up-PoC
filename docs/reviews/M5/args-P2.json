@@ -1,0 +1,61 @@
+{
+  "milestone": 5,
+  "summary": "the level blockout: Game-boy's attack arcs in the director, the level kit, then the graybox Mission 1 level from the reference, start to boss",
+  "base": "m5/level-blockout",
+  "read_first": [
+    "docs/milestones/M5-plan.md §1 (only the decisions your brief names) and §2 'Tuning' and 'File ownership'"
+  ],
+  "arch_heading": "## Level blockout (Milestone 5)",
+  "image_budget": 25,
+  "concurrency": 3,
+  "note": "Phase 2. Game-boy approved reference/encounters.md as drafted, with no changes (2026-11-03, \"OK, enemy arcs are good. Let's continue with the rest of M5 now\"): build exactly its arenas, waves, spawn sides and pickups. The rear-warning question took its default: Punks never come round behind on their own, which the merged arcs already do, so no director change is wanted. ARC, KIT and BOT are merged into m5/level-blockout. STREET, ROOF and FINALE build at the same time and own disjoint files (plan §2 'File ownership' and 'Level space'): build only inside your own footprint. The lead merges STREET, ROOF, then FINALE, and runs the whole level after.",
+  "packages": [
+    {
+      "key": "STREET",
+      "section": "§3 'STREET: Street section (arenas A1-A3)'",
+      "est": 6,
+      "read": [
+        "reference/encounters.md (A1-A3, 'How the reference converts')",
+        "reference/dd2-nes-mission1/notes.md (rows 01-04)",
+        "reference/dd2-nes-mission1/01.jpg-04.jpg (layout only)",
+        "docs/milestones/M5-plan.md §1 D7-D11, §2 'Level kit', 'Scene conventions', 'Level space', 'File ownership'",
+        "docs/ARCHITECTURE.md '### Level kit (KIT)', '### Level-run bot (BOT)'",
+        "tests/fixtures/level_strip_a.tscn"
+      ],
+      "note": "From KIT (M5-calls/KIT.md): copy the strip's node patterns. Each arena has LockTrigger, Respawn and SpawnPoints with a LanePoint; the seam shutter is the ExitBarrier. A HazardVolume must cover the whole void past an edge, with its catch floor at a depth no floor height is within 0.3 m of. A car barrier needs room beside the opening to slide aside (a side street or an alley mouth of its width), or it pops through geometry. A stair flight belongs to the arena below, so the lower arena's lock volume runs up to the barrier. Stairs are LevelStairs (walking bodies ride a hidden glide ramp on layer 9). Record with BOT's level_bot (BOT_SCENE=res://tests/bot/level_bot.tscn, CAPTURE_ARGS=\"--level=<your section scene>\"), and judge the plain first-person view."
+    },
+    {
+      "key": "ROOF",
+      "section": "§3 'ROOF: Roof section (arenas A4-A6)'",
+      "est": 6,
+      "read": [
+        "reference/encounters.md (A4-A6, 'How the reference converts')",
+        "reference/dd2-nes-mission1/notes.md (rows 05-11)",
+        "reference/dd2-nes-mission1/05.jpg-11.jpg and full-map.jpg (layout only)",
+        "docs/milestones/M5-plan.md §1 D7-D11, §2 'Level kit', 'Scene conventions', 'Level space', 'File ownership'",
+        "docs/ARCHITECTURE.md '### Level kit (KIT)', '### Level-run bot (BOT)'",
+        "tests/fixtures/level_strip_b.tscn"
+      ],
+      "note": "From KIT (M5-calls/KIT.md): copy the strip's node patterns. Each arena has LockTrigger, Respawn and SpawnPoints with a LanePoint; the seam shutter is the ExitBarrier. A HazardVolume must cover the whole void past an edge, with its catch floor at a depth no floor height is within 0.3 m of. A car barrier needs room beside the opening to slide aside (a side street or an alley mouth of its width), or it pops through geometry. A stair flight belongs to the arena below, so the lower arena's lock volume runs up to the barrier. Stairs are LevelStairs (walking bodies ride a hidden glide ramp on layer 9). Record with BOT's level_bot (BOT_SCENE=res://tests/bot/level_bot.tscn, CAPTURE_ARGS=\"--level=<your section scene>\"), and judge the plain first-person view."
+    },
+    {
+      "key": "FINALE",
+      "section": "§3 'FINALE: Boss roof, level root and done-when'",
+      "est": 7,
+      "read": [
+        "reference/encounters.md (A7, 'Totals')",
+        "reference/dd2-nes-mission1/notes.md (row 12) and 12.jpg (layout only)",
+        "docs/milestones/M5-plan.md §1 D9-D14, §2 'Level kit', 'Level space', 'File ownership'",
+        "docs/ARCHITECTURE.md '### Boss' (grep spawn_adds, boss_adds_count), '### Level kit (KIT)', '### Level-run bot (BOT)'",
+        "game/autoload/game_input.gd (ROOM_SCENES, switch_room, room_after)",
+        "tests/test_m3_done_when.gd (as a pattern)"
+      ],
+      "note": "From KIT (M5-calls/KIT.md): copy the strip's node patterns. Each arena has LockTrigger, Respawn and SpawnPoints with a LanePoint; the seam shutter is the ExitBarrier. A HazardVolume must cover the whole void past an edge, with its catch floor at a depth no floor height is within 0.3 m of. A car barrier needs room beside the opening to slide aside (a side street or an alley mouth of its width), or it pops through geometry. A stair flight belongs to the arena below, so the lower arena's lock volume runs up to the barrier. Stairs are LevelStairs (walking bodies ride a hidden glide ramp on layer 9). Record with BOT's level_bot (BOT_SCENE=res://tests/bot/level_bot.tscn, CAPTURE_ARGS=\"--level=<your section scene>\"), and judge the plain first-person view. FINALE: build boss_roof.tscn first and test it alone; the whole-level done-when runs after the lead merges STREET and ROOF, and a post-merge fixer takes what only the whole level shows."
+    }
+  ],
+  "only": [
+    "STREET",
+    "ROOF",
+    "FINALE"
+  ]
+}

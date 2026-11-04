@@ -163,7 +163,9 @@ func test_the_kicker_is_the_fast_flanker_of_the_catalog() -> void:
 	for group: StringName in [&"actor", &"enemy", &"ai_enemy"]:
 		assert_true(kicker.is_in_group(group), "in group %s" % group)
 	assert_gt(kicker._walk_speed(), Tuning.data.approach_speed_mps, "it walks faster than the base pace (kicker_speed_mult)")
-	assert_almost_eq(kicker._circle_mult(), Tuning.data.kicker_circle_mult, 0.0001, "it circles fast")
+	assert_almost_eq(kicker._circle_mult(), 1.0, 0.0001, "not flanking, it circles at the base pace (Milestone 5)")
+	kicker.set_flanking(true)
+	assert_almost_eq(kicker._circle_mult(), Tuning.data.kicker_circle_mult, 0.0001, "flanking, it circles fast")
 	assert_eq(kicker._attacks.size(), 2, "the jump kick and the sweep")
 	assert_eq(kicker._attacks[0].moves[0].id, &"kicker_jump_kick")
 	assert_eq(kicker._attacks[1].moves[0].id, &"kicker_sweep")
@@ -207,9 +209,11 @@ func test_each_attack_says_how_far_it_reaches_for_the_engage_step() -> void:
 func test_with_a_punk_and_a_kicker_the_kicker_takes_the_slot_nearest_directly_behind() -> void:
 	_make_player()
 	_make_director()
-	var punk := _punk(_ahead(7.0, 20.0))
-	var kicker := _kicker(_ahead(7.0, -25.0))
-	await _ticks(20)
+	# The Punk is engaged in front, inside the busy radius, so the Kicker flanks (Milestone 5).
+	var punk := _punk(_ahead(3.5, 20.0))
+	var kicker := _kicker(_ahead(6.0, -25.0))
+	await _ticks(90)
+	assert_true(kicker.is_flanking(), "the player is busy with the Punk, so it flanks")
 	var kicker_slot := _director.debug_slot_of(kicker)
 	var punk_slot := _director.debug_slot_of(punk)
 	assert_true(kicker_slot.is_finite() and punk_slot.is_finite(), "both have slots")
@@ -218,6 +222,8 @@ func test_with_a_punk_and_a_kicker_the_kicker_takes_the_slot_nearest_directly_be
 
 
 func test_the_kicker_walks_round_the_ring_to_the_back_and_never_across_the_front() -> void:
+	# The walk round is the flank's geometry: M5's always-flank switch, so no Punk is needed to start it.
+	Tuning.data.kicker_flank_opportunistic = false
 	_make_player()
 	_make_director()
 	var kicker := _kicker(_ahead(5.0))
@@ -236,10 +242,13 @@ func test_the_kicker_walks_round_the_ring_to_the_back_and_never_across_the_front
 
 
 func test_a_kicker_that_is_in_view_strafes_toward_the_edge_of_the_view() -> void:
+	# While it flanks (an enemy makes its own director, which decides this: M5's always-flank switch).
+	Tuning.data.kicker_flank_opportunistic = false
 	_make_player()
 	for bearing: float in [20.0, -20.0, 40.0, -40.0]:
 		var kicker := _kicker(_ahead(3.0, bearing), "KickerB%d" % int(bearing))
-		await _ticks(2)
+		await _ticks(6)  # its director is added a frame late and decides on its first step
+		assert_true(kicker.is_flanking(), "flanking")
 		var dir := kicker._pick_strafe_dir()
 		var away := Vector3(kicker.global_position.x, 0.0, kicker.global_position.z).normalized()
 		var tangent := Vector3(-away.z, 0.0, away.x) * dir
@@ -254,10 +263,12 @@ func test_the_edge_ward_strafe_wins_over_the_way_to_the_slot_in_view() -> void:
 	# view heads for the nearer edge of the view instead, even where that is away from the slot. (The
 	# test above has no slot, so the base's own answer was the same coin and nothing held the override.)
 	_make_player()
+	Tuning.data.kicker_flank_opportunistic = false
 	var kicker := _kicker(_ahead(3.0, 20.0), "KickerEdge")
 	var punk := _punk(_ahead(3.0, 20.0), "PunkSlot")
-	await _ticks(2)
+	await _ticks(6)  # its director is added a frame late and decides on its first step
 	Tuning.data.ai_frozen = true
+	assert_true(kicker.is_flanking(), "flanking (M5's always-flank switch)")
 	# The slot is straight ahead: toward it is toward the middle of the view, away from the edge.
 	var slot := _ahead(3.0, 0.0)
 	kicker.set_slot(slot)
@@ -404,7 +415,7 @@ func test_a_lone_kicker_flanks_in_the_crowd_room_and_its_wind_up_behind_lights_b
 	var lit: Array[StringName] = []
 	var first := {frame = -1, bearing = 0.0}
 	var on_wind_up := func(attacker: Node3D, _move_data: MoveData) -> void:
-		if first.frame >= 0:
+		if first.frame >= 0 or not attacker is Kicker:
 			return
 		first.frame = Engine.get_physics_frames()
 		first.bearing = player.look_bearing_deg(attacker.global_position)
@@ -412,6 +423,13 @@ func test_a_lone_kicker_flanks_in_the_crowd_room_and_its_wind_up_behind_lights_b
 			if warning.corner_state(side).active:
 				lit.append(side)
 	CombatEvents.windup_started.connect(on_wind_up)
+	# A Punk holds the player's attention in front (the Kicker flanks only while he is busy with another
+	# enemy he faces: he looks straight at the Punk, so the Kicker coming in from the east alley is off
+	# the middle), kept from attacking so the first wind-up is the Kicker's.
+	player.look_yaw = 0.0
+	player.rotation.y = 0.0
+	room.spawner.spawn_enemy(&"punk", player.global_position + Vector3(0.0, 0.0, -3.0), 0.0, false, Vector3.INF)
+	Tuning.data.god_mode = true
 	var point: Dictionary = room.spawner.spawn_points[4]
 	var kicker := room.spawner.spawn_enemy(&"kicker", point.position, point.yaw, false, point.lane_point)
 	var seen := {closest = INF}
@@ -424,3 +442,13 @@ func test_a_lone_kicker_flanks_in_the_crowd_room_and_its_wind_up_behind_lights_b
 	assert_gt(absf(first.bearing), 150.0, "from directly behind the look (%.0f degrees)" % first.bearing)
 	assert_gte(seen.closest, Tuning.data.posture_ring_min_m - RING_SLACK_M, "it never came nearer than the ring on the way: %.2f m" % seen.closest)
 	assert_eq(lit, [&"left", &"right"] as Array[StringName], "both corners were lit on the wind-up's first frame")
+	# Wind down before the room goes: the AI frozen (no new hit or grunt), the sounds already playing run out,
+	# then the room is freed here, so no AudioStreamPlayback is still alive at exit (a single-file run of this
+	# test leaked 12 instances and 6 resources otherwise).
+	Tuning.data.ai_frozen = true
+	await _ticks(90)
+	for node: Node in room.find_children("*", "", true, false):
+		if node is AudioStreamPlayer or node is AudioStreamPlayer3D:
+			node.call(&"stop")
+	await _ticks(2)
+	room.free()

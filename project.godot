@@ -12,7 +12,7 @@ config_version=5
 
 config/name="Beat-em-Up PoC"
 config/description="First-person beat-em-up proof of concept."
-run/main_scene="res://game/level/crowd_room.tscn"
+run/main_scene="res://game/level/mission1/mission1.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 
 [autoload]
@@ -53,6 +53,7 @@ enabled=PackedStringArray("res://addons/gut/plugin.cfg")
 3d_physics/layer_6="downed_body"
 3d_physics/layer_7="projectile"
 3d_physics/layer_8="ragdoll"
+3d_physics/layer_9="edge_guard"
 3d_render/layer_1="default"
 3d_render/layer_2="fp_hidden"
 3d_render/layer_3="debug"
