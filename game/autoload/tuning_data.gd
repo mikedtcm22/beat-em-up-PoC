@@ -1055,6 +1055,11 @@ extends Resource
 @export var weapon_floor_color: Color = Color(0.96, 0.7, 0.1)
 ## How much thicker a weapon is drawn while it lies on the floor (the collision does not change).
 @export_range(1.0, 4.0, 0.1) var weapon_floor_radius_scale: float = 1.6
+@export_subgroup("Prop art")
+## How much of tuning's floor colour (weapon_floor_color) a weapon's ART takes while it lies on the floor (M6, until the
+## floor glint replaces it): 0 keeps the art's own colours, 1 multiplies them by the floor colour outright (the steel of a
+## chain goes near black), so a weapon reads against the floor and its palette still shows.
+@export_range(0.0, 1.0, 0.05) var weapon_art_floor_tint: float = 0.45
 @export_subgroup("Drop-offs")
 ## The invisible guard along every open edge (physics layer 9): the player can never walk or be
 ## knocked off, a standing enemy never walks off. Off, the player can fall (the fall rule below).
@@ -1426,6 +1431,9 @@ extends Resource
 ## Motion's A/B (read when a named-clip library is built): off builds the M3 clips, with linear
 ## keys and no life, so a capture can pair an M3 and an M4 recording of one act.
 @export var look_motion_polish: bool = true
+## A/B of D14 (M6 PROPS): a static prop's baked-smooth-normal hull (on) or the screen edge pass's lines alone (off). Read when a
+## StaticArt is built, so set it (a preset never holds it) before the room loads.
+@export var prop_art_hull: bool = true
 
 
 func hitstop_s(tier: CombatTypes.HitTier) -> float:

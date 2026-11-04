@@ -1,7 +1,7 @@
 {
 	"asset": "ac_unit",
 	"version": 1,
-	"config_sha256": "f6570e576ab5fa97ccd35f246ec0d6760c9a2926c3031fcc33eba3fa4a5135be",
+	"config_sha256": "b7b6164d8982c638b338750faba01e5ad33c2962a515fb7d2f9054fb52bf3349",
 	"steps": {
 		"inspect": {
 			"source": {
@@ -137,10 +137,10 @@
 			"variants": {
 				"prop": {
 					"file": "ac_unit.glb",
-					"sha256": "4bbe8b72b60ee6fe394c03564ba401f5ec8ef4df8dc141d1a194e9b5efa8a4db",
-					"bytes": 155988,
+					"sha256": "2eb1c96ac5fab05429117bd4125cf703fc7bc21ea06bc0eeb8ee084b58e3942b",
+					"bytes": 114264,
 					"triangles": 3000,
-					"folded_triangles": 261,
+					"folded_triangles": 355,
 					"meshes": [
 						{
 							"name": "AcUnit",
@@ -182,7 +182,7 @@
 		}
 	},
 	"outputs": {
-		"ac_unit.glb": "4bbe8b72b60ee6fe394c03564ba401f5ec8ef4df8dc141d1a194e9b5efa8a4db"
+		"ac_unit.glb": "2eb1c96ac5fab05429117bd4125cf703fc7bc21ea06bc0eeb8ee084b58e3942b"
 	},
-	"hash": "4a99b58b414bce3a0cf818aef0108c40713ae7d6817db36cf87ae1c43b4185c6"
+	"hash": "dfe4f10dd995d2ac6e7d71532f1a8fdf30b60fb2b50c69ddd91c78345233203e"
 }

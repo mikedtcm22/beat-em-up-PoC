@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://cf7axoammffeo"
-path="res://.godot/imported/bike_lock.glb-51cbcc241d77051d5da64a9e723b3850.scn"
+uid="uid://bmbhjsmtq8yb6"
+path="res://.godot/imported/bike_chain.glb-c61041abf3447a65ca99525b7ca5de52.scn"
 
 [deps]
 
-source_file="res://assets/export/props/bike_lock/bike_lock.glb"
-dest_files=["res://.godot/imported/bike_lock.glb-51cbcc241d77051d5da64a9e723b3850.scn"]
+source_file="res://assets/export/props/bike_chain/bike_chain.glb"
+dest_files=["res://.godot/imported/bike_chain.glb-c61041abf3447a65ca99525b7ca5de52.scn"]
 
 [params]
 

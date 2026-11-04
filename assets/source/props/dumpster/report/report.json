@@ -1,7 +1,7 @@
 {
 	"asset": "dumpster",
 	"version": 1,
-	"config_sha256": "514fc985a3803eafcfbb8999bea8b9d045b8ec559244ae2b514e4ef7bd6b90c2",
+	"config_sha256": "7ca33b1da847993e2faf040ac9f84d5605869ea3eb3f0569141d1db38d8caaf6",
 	"steps": {
 		"inspect": {
 			"source": {
@@ -134,10 +134,10 @@
 			"variants": {
 				"prop": {
 					"file": "dumpster.glb",
-					"sha256": "93c90154b57df9211ed001969fcc52e018509c165b774159a27a14a59e5d50b2",
-					"bytes": 113904,
+					"sha256": "938b11619ef791314a8f8332359eaaf906dd565ef394a77795fd3f3b72d52648",
+					"bytes": 98784,
 					"triangles": 2799,
-					"folded_triangles": 95,
+					"folded_triangles": 112,
 					"meshes": [
 						{
 							"name": "Dumpster",
@@ -179,7 +179,7 @@
 		}
 	},
 	"outputs": {
-		"dumpster.glb": "93c90154b57df9211ed001969fcc52e018509c165b774159a27a14a59e5d50b2"
+		"dumpster.glb": "938b11619ef791314a8f8332359eaaf906dd565ef394a77795fd3f3b72d52648"
 	},
-	"hash": "67fb45b3b2e9a893f47c9f73d5da65f89beda2f84c94450abf3afbf03b372355"
+	"hash": "036deed88f81b744701d5085e4b0f47dfd0c6ec66b48588e08d48601b178a33e"
 }

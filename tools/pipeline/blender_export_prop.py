@@ -9,6 +9,7 @@ glTF-Y-up encoding the characters use, so toon_outline.gdshader's mode 4 reads i
 
 Config (all optional):
 	export.mesh_name       the Body's name in the file (default: the asset id), "Lock", "Pipe" ...
+	export.smooth_normals  {iterations, crease_deg, falloff, self_weight}: the characters' crease-preserving normal blend (blender_export)
 	export.smooth_angle_deg  the shading: a Smooth-by-Angle at this crease angle (default 35), so a crate stays a crate and a
 	                       tank stays round; the vertices split at a sharp edge on export, the hull normal stays smooth
 	export.parts           extra scripted meshes added after the palette (tools/pipeline/prop_models.py): a list of
@@ -102,9 +103,15 @@ def run(cfg, extra):
 	meshes = [body] + parts
 	be.write_hull_normals(meshes, int(ex.get("hull_normal_digits", 5)))
 	angle = math.radians(float(ex.get("smooth_angle_deg", 35.0)))
+	sn_cfg = ex.get("smooth_normals")
+	shading = {}
 	for m in meshes:
 		pb.activate(m)
 		bpy.ops.object.shade_smooth_by_angle(angle=angle)
+	if sn_cfg:
+		# generated surfaces are lumpy at a centimetre or two and the toon bands cut on the normal alone: the characters' crease-preserving
+		# normal blend (pipe_normals, F-punk-fix) in place of the geometry's own, one normal per vertex
+		shading = be.smooth_shading_normals(meshes, sn_cfg)
 	os.makedirs(export_dir, exist_ok=True)
 	path = os.path.join(export_dir, name + ".glb")
 	blend_dir = pc.repo_path(cfg["paths"].get("blend_dir", cfg["paths"]["work"]))
@@ -126,7 +133,10 @@ def run(cfg, extra):
 	info = {"file": pc.repo_rel(path), "sha256": pc.sha256_file(path), "bytes": os.path.getsize(path), "triangles": tris,
 		"folded_triangles": folds, "meshes": infos,
 		"bbox_godot": {"min": list(glo), "max": list(ghi), "size": [ghi[i] - glo[i] for i in range(3)]}}
-	return {"variants": {"prop": info}}
+	report = {"variants": {"prop": info}}
+	if shading:
+		report["smooth_normals"] = shading
+	return report
 
 
 if __name__ == "__main__":

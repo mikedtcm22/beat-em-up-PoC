@@ -62,9 +62,10 @@ func _ready() -> void:
 	if not entry.problems.is_empty():
 		push_warning("StaticArt: %s does not draw: %s" % [scene.resource_path, "; ".join(entry.problems)])
 		return
+	var drawn_hull := hull and Tuning.data.prop_art_hull
 	material = ToonMaterials.art_prop(palette)
-	material.set_shader_parameter(&"edge_tag", 0.0 if hull else 1.0)
-	var overlay: ShaderMaterial = ToonMaterials.outline() if hull else null
+	material.set_shader_parameter(&"edge_tag", 0.0 if drawn_hull else 1.0)
+	var overlay: ShaderMaterial = ToonMaterials.outline() if drawn_hull else null
 	for part: ArtMesh in entry.meshes:
 		_add(part, part.node_name, part.xf, overlay)
 		if part.node_name == repeat_mesh and repeat_pitch_m > 0.0:

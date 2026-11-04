@@ -1,16 +1,20 @@
 {
-	"asset": "bike_lock",
+	"asset": "bike_chain",
 	"version": 1,
-	"config_sha256": "578ec75b63f175a3bc6dd30ce52575290f404dab6f0ff5c74d6804fc62485150",
+	"config_sha256": "fd7eb10365317eaf3b84ccc8d7823ef4fb01e40897bb56850df0715a56f21f26",
 	"steps": {
 		"inspect": {
 			"source": {
-				"mesh": "assets/source/props/bike_lock/tripo/270451cc_gen.glb",
+				"mesh": "assets/source/props/bike_chain/tripo/270451cc_gen.glb",
 				"sha256": "c015d798a571ca05fcf340f09367f3e918d1ea4e31374a4d2e26a4757ae540ca",
 				"vertices_before_weld": 6435,
 				"triangles": 10835
 			},
-			"scale": 0.15,
+			"scale": [
+				0.15,
+				0.15,
+				0.15
+			],
 			"bbox_m": {
 				"min": [
 					-0.048523,
@@ -127,9 +131,9 @@
 		"export": {
 			"variants": {
 				"prop": {
-					"file": "bike_lock.glb",
-					"sha256": "87445253e01f8f75e7d49dcadb88917586b32b3f825344c05822b76e381070fe",
-					"bytes": 75128,
+					"file": "bike_chain.glb",
+					"sha256": "0a6f21f5d8c230a0a2cb09cb8b8857a09192e3eb29639c52bae5ef7e4b40253d",
+					"bytes": 74164,
 					"triangles": 1895,
 					"folded_triangles": 9,
 					"meshes": [
@@ -207,7 +211,7 @@
 		}
 	},
 	"outputs": {
-		"bike_lock.glb": "87445253e01f8f75e7d49dcadb88917586b32b3f825344c05822b76e381070fe"
+		"bike_chain.glb": "0a6f21f5d8c230a0a2cb09cb8b8857a09192e3eb29639c52bae5ef7e4b40253d"
 	},
-	"hash": "9f32cd446e6ed9a3bc347b3709763e9f32a936f92359fb33307c5cb05fb58048"
+	"hash": "c01196953ee2442b1ab13fa62596468b989d57820d26c099b9441f47afabeff8"
 }

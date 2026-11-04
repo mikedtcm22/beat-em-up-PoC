@@ -21,14 +21,12 @@
 		"slots": [
 			62,
 			63,
-			2,
-			10,
-			1
+			2
 		],
-		"max_swatches": 5,
+		"max_swatches": 3,
 		"min_share": 0.01,
 		"budget_tris": 3000,
-		"border_cell_m": 0.05,
+		"border_cell_m": 0.12,
 		"majority_passes": 2,
 		"armature": false,
 		"unfold": {
@@ -39,7 +37,12 @@
 	},
 	"export": {
 		"mesh_name": "WaterTank",
-		"smooth_angle_deg": 40.0
+		"smooth_normals": {
+			"iterations": 12,
+			"crease_deg": 50.0,
+			"falloff": 2.0
+		},
+		"smooth_angle_deg": 80.0
 	},
 	"paths": {
 		"work": "assets/source/_cache/water_tank/work",

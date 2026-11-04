@@ -8,7 +8,11 @@
 				"builder": "fixture_crate",
 				"triangles": 108
 			},
-			"scale": 1.0,
+			"scale": [
+				1.0,
+				1.0,
+				1.0
+			],
 			"bbox_m": {
 				"min": [
 					-0.53,
@@ -206,5 +210,5 @@
 	"outputs": {
 		"_fixture.glb": "ff89e97079741280a972fc5d54053d5e34e401cb3423957a10a76737d46b7699"
 	},
-	"hash": "e9515276135a4af61ad382f1fbe755340d436883af9251f8ad6207a8a09b5013"
+	"hash": "eeda328542865bb36f1e33cf53c782350042b603809fe607754a8e2d71c96199"
 }

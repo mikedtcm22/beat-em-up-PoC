@@ -10,6 +10,10 @@ extends RigidBody3D
 ## The drawn pipe's radius (m); the collision capsule stays as it is, so a thicker pipe (the Pipe
 ## Thug's, which has to read on the floor from across the street) never changes a hit or a fall.
 @export var radius: float = 0.028
+## The weapon's art (M6, game/weapons/art/<id>.tscn: a StaticArt in the art frame, centred on the origin with its long axis on +Y
+## and the grip 0.12 m from the -Y end). Set, the art draws and the cylinder does not (it stays, hidden, as the hit-free proxy the
+## floor look and the M1-M5 tests read); null keeps the placeholder cylinder.
+@export var art_scene: PackedScene
 
 ## Hits left before the weapon breaks (Spec §4: 8).
 var durability: int = 8
@@ -21,6 +25,7 @@ var _flying: bool = false
 var _mesh: MeshInstance3D
 var _cylinder: CylinderMesh
 var _material: ShaderMaterial
+var _art: StaticArt
 
 
 func _ready() -> void:
@@ -36,13 +41,18 @@ func _ready() -> void:
 	capsule.height = length
 	shape.shape = capsule
 	add_child(shape)
+	if art_scene != null:
+		_art = art_scene.instantiate() as StaticArt
+		if _art != null:
+			add_child(_art)
 	_mesh = MeshInstance3D.new()
 	_cylinder = CylinderMesh.new()
 	_cylinder.height = length
 	_material = ToonMaterials.prop(color)
 	_cylinder.material = _material
 	_mesh.mesh = _cylinder
-	_mesh.material_overlay = ToonMaterials.outline_for_prop()
+	_mesh.material_overlay = ToonMaterials.outline_for_prop() if _art == null else null
+	_mesh.visible = _art == null
 	add_child(_mesh)
 	_set_ground_physics()
 	_refresh_look()
@@ -63,6 +73,8 @@ func _refresh_look() -> void:
 	var drawn := radius * (Tuning.data.weapon_floor_radius_scale if lying else 1.0)
 	_cylinder.top_radius = drawn
 	_cylinder.bottom_radius = drawn
+	if _art != null:
+		_art.set_tint(Color.WHITE.lerp(Tuning.data.weapon_floor_color, Tuning.data.weapon_art_floor_tint) if lying else Color.WHITE)
 
 
 ## Attach to `actor`'s grip. The pipe's long axis points from grip to tip.

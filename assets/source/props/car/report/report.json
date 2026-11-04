@@ -1,7 +1,7 @@
 {
 	"asset": "car",
 	"version": 1,
-	"config_sha256": "a37b91949effdeed7f01308c28ab253350ef193c4e5a424d07c55b517558fa19",
+	"config_sha256": "9ae51e73c5a8bd64a92d63e88a6967bfeca6717412815e3ccb071cc659ae680f",
 	"steps": {
 		"inspect": {
 			"source": {
@@ -149,10 +149,10 @@
 			"variants": {
 				"prop": {
 					"file": "car.glb",
-					"sha256": "3c2127cb9bd9adf28c99075ca04d556b0893587a6cd12e6c0153b05737d2cb1f",
-					"bytes": 105728,
+					"sha256": "c2ac321776c740dd99d2c79e0dcb219a341a5c5a0728d1edd745d448c8d3372b",
+					"bytes": 102728,
 					"triangles": 2798,
-					"folded_triangles": 63,
+					"folded_triangles": 119,
 					"meshes": [
 						{
 							"name": "Car",
@@ -190,11 +190,18 @@
 						]
 					}
 				}
+			},
+			"smooth_normals": {
+				"Car": {
+					"mean_deg": 15.6018,
+					"p99_deg": 54.2454,
+					"over_15_deg_share": 0.4149
+				}
 			}
 		}
 	},
 	"outputs": {
-		"car.glb": "3c2127cb9bd9adf28c99075ca04d556b0893587a6cd12e6c0153b05737d2cb1f"
+		"car.glb": "c2ac321776c740dd99d2c79e0dcb219a341a5c5a0728d1edd745d448c8d3372b"
 	},
-	"hash": "24ddc486a79a8b9235ddfae40719377207ee8dd551fccf4c1a67375eb5713e8d"
+	"hash": "865b2496814d78fe3a7397d4be3cd9ee8e341d51a2bb0ea7c6b4e098367cf147"
 }

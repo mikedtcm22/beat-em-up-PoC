@@ -39,7 +39,7 @@
 	},
 	"export": {
 		"mesh_name": "AcUnit",
-		"smooth_angle_deg": 40.0
+		"smooth_angle_deg": 60.0
 	},
 	"paths": {
 		"work": "assets/source/_cache/ac_unit/work",
