@@ -168,9 +168,17 @@ func _on_tuning_changed(property: StringName) -> void:
 
 ## The room's sun follows Look > Toon's elevation, yaw and energy live (RoomKit.apply_sun()).
 func _apply_sun() -> void:
-	var sun := get_parent().get_node_or_null("Sun") as DirectionalLight3D if get_parent() != null else null
-	if sun != null:
-		RoomKit.apply_sun(sun)
+	var room := get_parent()
+	var sun := room.get_node_or_null("Sun") as DirectionalLight3D if room != null else null
+	if sun == null:
+		return
+	# A level section with its own light (Milestone 6, D12) owns the sun's direction, colour and energy
+	# (LevelRoot blends them); Tuning's sun applies only where no section light does. The shadow blur is
+	# Tuning's everywhere.
+	if room.has_method(&"section_light_applies") and bool(room.call(&"section_light_applies")):
+		sun.shadow_blur = Tuning.data.look_sun_shadow_blur
+		return
+	RoomKit.apply_sun(sun)
 
 
 func _apply_edges() -> void:

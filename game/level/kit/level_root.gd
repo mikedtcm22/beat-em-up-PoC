@@ -71,6 +71,13 @@ var _lowest_floor_y: float = 0.0
 var _section_index: int = -1
 ## Every route point with the section it belongs to: (point, section index).
 var _route_owners: Array[Dictionary] = []
+## The level's light now, and the blend it is in the middle of (Milestone 6, D12): the light it left, the
+## light it goes to and how far (0 to 1).
+var _light_now: Dictionary = {}
+var _light_from: Dictionary = {}
+var _light_to: Dictionary = {}
+var _light_t: float = 1.0
+var _light_is_default: bool = false
 
 
 func _ready() -> void:
@@ -230,8 +237,105 @@ func _track_section() -> void:
 			nearest = _section_index
 	if nearest == _section_index:
 		return
+	var first := _section_index < 0
 	_section_index = nearest
+	_retarget_light(first)
 	CombatEvents.section_entered.emit(sections[_section_index])
+
+
+## Whether the section the player is in has its own light and the switch is on: LookPost then leaves
+## the sun to the blend (Tuning's Look > Toon sun applies only where no section light does).
+func section_light_applies() -> bool:
+	var section := current_section()
+	return Tuning.data.section_light_enabled and section != null and section.light_enabled
+
+
+## Tuning's sun and the room's default fog and sky, the light of a section with none of its own.
+func default_light() -> Dictionary:
+	var t := Tuning.data
+	return {
+		sun_elevation = t.look_sun_elevation_deg, sun_yaw = t.look_sun_yaw_deg, sun_color = Color.WHITE,
+		sun_energy = t.look_sun_energy, fog_color = RoomKit.DEFAULT_FOG_COLOR, fog_density = RoomKit.DEFAULT_FOG_DENSITY,
+		sky_top = RoomKit.DEFAULT_SKY_TOP, sky_horizon = RoomKit.DEFAULT_SKY_HORIZON,
+	}
+
+
+## The light the level is at now (mid-blend between two sections' while it changes).
+func current_light() -> Dictionary:
+	return _light_now
+
+
+## How far the blend to the current section's light has got, 0 to 1 (1: arrived).
+func section_light_progress() -> float:
+	return _light_t
+
+
+## The light `section` calls for.
+func light_for(section: LevelSection) -> Dictionary:
+	if section != null and section.light_enabled and Tuning.data.section_light_enabled:
+		return section.light()
+	return default_light()
+
+
+## The blend of two lights at `t` (0 to 1, eased): colours and numbers lerp, the sun's yaw the short way.
+static func blend_light(a: Dictionary, b: Dictionary, t: float) -> Dictionary:
+	if a.is_empty():
+		return b.duplicate()
+	var e := smoothstep(0.0, 1.0, clampf(t, 0.0, 1.0))
+	var out := {}
+	for key: StringName in b:
+		var from: Variant = a.get(key, b[key])
+		if from is Color:
+			out[key] = (from as Color).lerp(b[key] as Color, e)
+		elif key == &"sun_yaw":
+			out[key] = rad_to_deg(lerp_angle(deg_to_rad(float(from)), deg_to_rad(float(b[key])), e))
+		else:
+			out[key] = lerpf(float(from), float(b[key]), e)
+	return out
+
+
+## Aim the blend at the current section's light (snapping when it is the first or the blend is 0).
+func _retarget_light(snap: bool) -> void:
+	var target := light_for(current_section())
+	if target == _light_to:
+		return
+	# Tuning's sun moving live (the F1 panel) is not a change of section: it follows at once.
+	var was_default := _light_is_default
+	_light_is_default = not section_light_applies()
+	_light_from = _light_now
+	_light_to = target
+	_light_t = 1.0 if snap or (was_default and _light_is_default) or Tuning.data.section_light_blend_s <= 0.0 else 0.0
+	if _light_t >= 1.0:
+		_light_now = _light_to.duplicate()
+		_apply_light()
+
+
+## Advance the blend and put the light on the sun, the fog and the sky.
+func _step_light(delta: float) -> void:
+	_retarget_light(false)
+	if _light_t >= 1.0:
+		return
+	var seconds := Tuning.data.section_light_blend_s
+	_light_t = 1.0 if seconds <= 0.0 else minf(1.0, _light_t + delta / seconds)
+	_light_now = blend_light(_light_from, _light_to, _light_t)
+	_apply_light()
+
+
+func _apply_light() -> void:
+	var sun := get_node_or_null("Sun") as DirectionalLight3D
+	if sun != null:
+		sun.rotation_degrees = Vector3(-float(_light_now.sun_elevation), float(_light_now.sun_yaw), 0.0)
+		sun.light_color = _light_now.sun_color
+		sun.light_energy = float(_light_now.sun_energy)
+	var world := get_node_or_null("WorldEnvironment") as WorldEnvironment
+	if world != null and world.environment != null:
+		var env := world.environment
+		env.fog_light_color = _light_now.fog_color
+		env.fog_density = float(_light_now.fog_density)
+		var sky := env.sky.sky_material as ProceduralSkyMaterial if env.sky != null else null
+		if sky != null:
+			sky.sky_top_color = _light_now.sky_top
+			sky.sky_horizon_color = _light_now.sky_horizon
 
 
 ## The section whose route point is nearest `at` (the first section when there is no route).
@@ -255,8 +359,9 @@ func _owner_distance(at: Vector3, k: int) -> float:
 	return best
 
 
-func _physics_process(_delta: float) -> void:
+func _physics_process(delta: float) -> void:
 	_track_section()
+	_step_light(delta)
 	var limit := _lowest_floor_y - void_depth_m
 	for enemy in enemies():
 		if enemy.global_position.y < limit:

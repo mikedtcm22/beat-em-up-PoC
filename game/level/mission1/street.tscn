@@ -26,6 +26,16 @@ size = Vector3(18, 10, 23)
 [node name="Street" type="Node3D"]
 script = ExtResource("1_sect")
 floor_heights = PackedFloat32Array(0, 4.5)
+ambience = &"ambience_street"
+light_enabled = true
+sun_elevation_deg = 38.0
+sun_yaw_deg = -50.0
+sun_color = Color(1, 0.86, 0.68, 1)
+sun_energy = 1.2
+fog_color = Color(0.52, 0.5, 0.6, 1)
+fog_density = 0.011
+sky_top_color = Color(0.22, 0.28, 0.42, 1)
+sky_horizon_color = Color(0.64, 0.5, 0.5, 1)
 
 [node name="Entry" type="Marker3D" parent="."]
 position = Vector3(0, 0, 0)
@@ -54,6 +64,7 @@ script = ExtResource("2_block")
 position = Vector3(-4, 5, -52.5)
 size = Vector3(8, 12, 1)
 look = &"accent"
+module = &"wall"
 
 [node name="RightWall" type="Node3D" parent="Geometry"]
 script = ExtResource("2_block")
@@ -235,66 +246,77 @@ script = ExtResource("2_block")
 position = Vector3(-8.4, 0.24, -41.5)
 size = Vector3(0.2, 0.08, 6)
 solid = false
+draw_box = false
 
 [node name="ShutterRib2" type="Node3D" parent="Geometry"]
 script = ExtResource("2_block")
 position = Vector3(-8.4, 0.59, -41.5)
 size = Vector3(0.2, 0.08, 6)
 solid = false
+draw_box = false
 
 [node name="ShutterRib3" type="Node3D" parent="Geometry"]
 script = ExtResource("2_block")
 position = Vector3(-8.4, 0.94, -41.5)
 size = Vector3(0.2, 0.08, 6)
 solid = false
+draw_box = false
 
 [node name="ShutterRib4" type="Node3D" parent="Geometry"]
 script = ExtResource("2_block")
 position = Vector3(-8.4, 1.29, -41.5)
 size = Vector3(0.2, 0.08, 6)
 solid = false
+draw_box = false
 
 [node name="ShutterRib5" type="Node3D" parent="Geometry"]
 script = ExtResource("2_block")
 position = Vector3(-8.4, 1.64, -41.5)
 size = Vector3(0.2, 0.08, 6)
 solid = false
+draw_box = false
 
 [node name="ShutterRib6" type="Node3D" parent="Geometry"]
 script = ExtResource("2_block")
 position = Vector3(-8.4, 1.99, -41.5)
 size = Vector3(0.2, 0.08, 6)
 solid = false
+draw_box = false
 
 [node name="ShutterRib7" type="Node3D" parent="Geometry"]
 script = ExtResource("2_block")
 position = Vector3(-8.4, 2.34, -41.5)
 size = Vector3(0.2, 0.08, 6)
 solid = false
+draw_box = false
 
 [node name="ShutterRib8" type="Node3D" parent="Geometry"]
 script = ExtResource("2_block")
 position = Vector3(-8.4, 2.69, -41.5)
 size = Vector3(0.2, 0.08, 6)
 solid = false
+draw_box = false
 
 [node name="ShutterRib9" type="Node3D" parent="Geometry"]
 script = ExtResource("2_block")
 position = Vector3(-8.4, 3.04, -41.5)
 size = Vector3(0.2, 0.08, 6)
 solid = false
+draw_box = false
 
 [node name="ShutterRib10" type="Node3D" parent="Geometry"]
 script = ExtResource("2_block")
 position = Vector3(-8.4, 3.39, -41.5)
 size = Vector3(0.2, 0.08, 6)
 solid = false
+draw_box = false
 
 [node name="ShutterRib11" type="Node3D" parent="Geometry"]
 script = ExtResource("2_block")
 position = Vector3(-8.4, 3.74, -41.5)
 size = Vector3(0.2, 0.08, 6)
 solid = false
+draw_box = false
 
 [node name="AlleyFloor" type="Node3D" parent="Geometry"]
 script = ExtResource("2_block")
@@ -433,6 +455,7 @@ script = ExtResource("2_block")
 position = Vector3(-4.5, 0.8, -30)
 size = Vector3(3, 1.6, 1.8)
 look = &"prop"
+draw_box = false
 
 [node name="Barricade4" type="Node3D" parent="Geometry"]
 script = ExtResource("2_block")
@@ -452,6 +475,7 @@ script = ExtResource("2_block")
 position = Vector3(-6.4, 2, -25.5)
 size = Vector3(0.2, 4, 9)
 look = &"fence"
+draw_box = false
 
 [node name="BeyondFloor" type="Node3D" parent="Geometry"]
 script = ExtResource("2_block")
@@ -527,12 +551,14 @@ script = ExtResource("2_block")
 position = Vector3(-4.4, 1.275, -26.5)
 size = Vector3(2.4, 2.05, 5)
 look = &"prop"
+draw_box = false
 
 [node name="VanWheels" type="Node3D" parent="Geometry"]
 script = ExtResource("2_block")
 position = Vector3(-4.4, 0.25, -26.5)
 size = Vector3(2.2, 0.5, 3.8)
 look = &"dark"
+draw_box = false
 
 [node name="Stairs" type="Node3D" parent="Geometry"]
 script = ExtResource("3_stairs")
@@ -1022,3 +1048,313 @@ tag = &"stairwell"
 
 [node name="LanePoint" type="Marker3D" parent="Arenas/A3/LandingB"]
 position = Vector3(1.8, 0, 2.7)
+
+[node name="DressingStreet" type="Node3D" parent="."]
+script = ExtResource("11_dressing")
+
+[node name="WinR1" type="MeshInstance3D" parent="DressingStreet"]
+script = ExtResource("12_piece")
+position = Vector3(5.85, 4.6, -37.5)
+rotation = Vector3(0, -1.5708, 0)
+kind = &"window"
+size = Vector3(1.3, 1.9, 0.3)
+
+[node name="WinR2" type="MeshInstance3D" parent="DressingStreet"]
+script = ExtResource("12_piece")
+position = Vector3(5.85, 4.6, -40.5)
+rotation = Vector3(0, -1.5708, 0)
+kind = &"window"
+size = Vector3(1.3, 1.9, 0.3)
+
+[node name="WinR3" type="MeshInstance3D" parent="DressingStreet"]
+script = ExtResource("12_piece")
+position = Vector3(5.85, 4.6, -43.5)
+rotation = Vector3(0, -1.5708, 0)
+kind = &"window"
+size = Vector3(1.3, 1.9, 0.3)
+
+[node name="WinR4" type="MeshInstance3D" parent="DressingStreet"]
+script = ExtResource("12_piece")
+position = Vector3(5.85, 8.4, -37.5)
+rotation = Vector3(0, -1.5708, 0)
+kind = &"window"
+size = Vector3(1.3, 1.9, 0.3)
+
+[node name="WinR5" type="MeshInstance3D" parent="DressingStreet"]
+script = ExtResource("12_piece")
+position = Vector3(5.85, 8.4, -40.5)
+rotation = Vector3(0, -1.5708, 0)
+kind = &"window"
+size = Vector3(1.3, 1.9, 0.3)
+
+[node name="WinR6" type="MeshInstance3D" parent="DressingStreet"]
+script = ExtResource("12_piece")
+position = Vector3(5.85, 8.4, -43.5)
+rotation = Vector3(0, -1.5708, 0)
+kind = &"window"
+size = Vector3(1.3, 1.9, 0.3)
+
+[node name="WinR7" type="MeshInstance3D" parent="DressingStreet"]
+script = ExtResource("12_piece")
+position = Vector3(5.85, 8.4, -46.5)
+rotation = Vector3(0, -1.5708, 0)
+kind = &"window"
+size = Vector3(1.3, 1.9, 0.3)
+
+[node name="WinR8" type="MeshInstance3D" parent="DressingStreet"]
+script = ExtResource("12_piece")
+position = Vector3(5.85, 8.4, -49.5)
+rotation = Vector3(0, -1.5708, 0)
+kind = &"window"
+size = Vector3(1.3, 1.9, 0.3)
+
+[node name="WinL1" type="MeshInstance3D" parent="DressingStreet"]
+script = ExtResource("12_piece")
+position = Vector3(-5.85, 4.6, -32)
+rotation = Vector3(0, 1.5708, 0)
+kind = &"window"
+size = Vector3(1.3, 1.9, 0.3)
+
+[node name="WinL2" type="MeshInstance3D" parent="DressingStreet"]
+script = ExtResource("12_piece")
+position = Vector3(-5.85, 8.4, -32)
+rotation = Vector3(0, 1.5708, 0)
+kind = &"window"
+size = Vector3(1.3, 1.9, 0.3)
+
+[node name="WinL3" type="MeshInstance3D" parent="DressingStreet"]
+script = ExtResource("12_piece")
+position = Vector3(-5.85, 4.6, -35)
+rotation = Vector3(0, 1.5708, 0)
+kind = &"window"
+size = Vector3(1.3, 1.9, 0.3)
+
+[node name="WinL4" type="MeshInstance3D" parent="DressingStreet"]
+script = ExtResource("12_piece")
+position = Vector3(-5.85, 8.4, -35)
+rotation = Vector3(0, 1.5708, 0)
+kind = &"window"
+size = Vector3(1.3, 1.9, 0.3)
+
+[node name="WinL5" type="MeshInstance3D" parent="DressingStreet"]
+script = ExtResource("12_piece")
+position = Vector3(-5.85, 4.6, -47)
+rotation = Vector3(0, 1.5708, 0)
+kind = &"window"
+size = Vector3(1.3, 1.9, 0.3)
+
+[node name="WinL6" type="MeshInstance3D" parent="DressingStreet"]
+script = ExtResource("12_piece")
+position = Vector3(-5.85, 8.4, -47)
+rotation = Vector3(0, 1.5708, 0)
+kind = &"window"
+size = Vector3(1.3, 1.9, 0.3)
+
+[node name="WinL7" type="MeshInstance3D" parent="DressingStreet"]
+script = ExtResource("12_piece")
+position = Vector3(-5.85, 4.6, -50)
+rotation = Vector3(0, 1.5708, 0)
+kind = &"window"
+size = Vector3(1.3, 1.9, 0.3)
+
+[node name="WinL8" type="MeshInstance3D" parent="DressingStreet"]
+script = ExtResource("12_piece")
+position = Vector3(-5.85, 8.4, -50)
+rotation = Vector3(0, 1.5708, 0)
+kind = &"window"
+size = Vector3(1.3, 1.9, 0.3)
+
+[node name="WinR9" type="MeshInstance3D" parent="DressingStreet"]
+script = ExtResource("12_piece")
+position = Vector3(5.85, 4.6, -1.5)
+rotation = Vector3(0, -1.5708, 0)
+kind = &"window"
+size = Vector3(1.3, 1.9, 0.3)
+
+[node name="WinR10" type="MeshInstance3D" parent="DressingStreet"]
+script = ExtResource("12_piece")
+position = Vector3(5.85, 8.4, -1.5)
+rotation = Vector3(0, -1.5708, 0)
+kind = &"window"
+size = Vector3(1.3, 1.9, 0.3)
+
+[node name="WinR11" type="MeshInstance3D" parent="DressingStreet"]
+script = ExtResource("12_piece")
+position = Vector3(5.85, 4.6, -30)
+rotation = Vector3(0, -1.5708, 0)
+kind = &"window"
+size = Vector3(1.3, 1.9, 0.3)
+
+[node name="WinR12" type="MeshInstance3D" parent="DressingStreet"]
+script = ExtResource("12_piece")
+position = Vector3(5.85, 8.4, -30)
+rotation = Vector3(0, -1.5708, 0)
+kind = &"window"
+size = Vector3(1.3, 1.9, 0.3)
+
+[node name="WinR13" type="MeshInstance3D" parent="DressingStreet"]
+script = ExtResource("12_piece")
+position = Vector3(5.85, 8.4, -10.75)
+rotation = Vector3(0, -1.5708, 0)
+kind = &"window"
+size = Vector3(1.3, 1.9, 0.3)
+
+[node name="WinR14" type="MeshInstance3D" parent="DressingStreet"]
+script = ExtResource("12_piece")
+position = Vector3(5.85, 8.4, -25.25)
+rotation = Vector3(0, -1.5708, 0)
+kind = &"window"
+size = Vector3(1.3, 1.9, 0.3)
+
+[node name="WinR15" type="MeshInstance3D" parent="DressingStreet"]
+script = ExtResource("12_piece")
+position = Vector3(5.85, 8.4, -34.25)
+rotation = Vector3(0, -1.5708, 0)
+kind = &"window"
+size = Vector3(1.3, 1.9, 0.3)
+
+[node name="WinL9" type="MeshInstance3D" parent="DressingStreet"]
+script = ExtResource("12_piece")
+position = Vector3(-5.85, 8.4, -9.5)
+rotation = Vector3(0, 1.5708, 0)
+kind = &"window"
+size = Vector3(1.3, 1.9, 0.3)
+
+[node name="WinL10" type="MeshInstance3D" parent="DressingStreet"]
+script = ExtResource("12_piece")
+position = Vector3(-5.85, 8.4, -18.5)
+rotation = Vector3(0, 1.5708, 0)
+kind = &"window"
+size = Vector3(1.3, 1.9, 0.3)
+
+[node name="WinL11" type="MeshInstance3D" parent="DressingStreet"]
+script = ExtResource("12_piece")
+position = Vector3(-5.85, 8.4, -39.5)
+rotation = Vector3(0, 1.5708, 0)
+kind = &"window"
+size = Vector3(1.3, 1.9, 0.3)
+
+[node name="WinL12" type="MeshInstance3D" parent="DressingStreet"]
+script = ExtResource("12_piece")
+position = Vector3(-5.85, 8.4, -43.5)
+rotation = Vector3(0, 1.5708, 0)
+kind = &"window"
+size = Vector3(1.3, 1.9, 0.3)
+
+[node name="CorniceR1" type="MeshInstance3D" parent="DressingStreet"]
+script = ExtResource("12_piece")
+position = Vector3(5.775, 10.7, -44.25)
+rotation = Vector3(0, -1.5708, 0)
+kind = &"cornice"
+size = Vector3(17.5, 0.6, 0.45)
+
+[node name="CorniceL1" type="MeshInstance3D" parent="DressingStreet"]
+script = ExtResource("12_piece")
+position = Vector3(-5.775, 10.7, -34.25)
+rotation = Vector3(0, 1.5708, 0)
+kind = &"cornice"
+size = Vector3(8.5, 0.6, 0.45)
+
+[node name="CorniceL2" type="MeshInstance3D" parent="DressingStreet"]
+script = ExtResource("12_piece")
+position = Vector3(-5.775, 10.7, -48.75)
+rotation = Vector3(0, 1.5708, 0)
+kind = &"cornice"
+size = Vector3(8.5, 0.6, 0.45)
+
+[node name="FrameR1" type="MeshInstance3D" parent="DressingStreet"]
+script = ExtResource("12_piece")
+position = Vector3(5.9, 1.83, -25.25)
+rotation = Vector3(0, -1.5708, 0)
+kind = &"door_frame"
+size = Vector3(2.86, 3.66, 0.2)
+
+[node name="FrameR2" type="MeshInstance3D" parent="DressingStreet"]
+script = ExtResource("12_piece")
+position = Vector3(5.9, 1.83, -34.25)
+rotation = Vector3(0, -1.5708, 0)
+kind = &"door_frame"
+size = Vector3(2.86, 3.66, 0.2)
+
+[node name="FrameAlley1" type="MeshInstance3D" parent="DressingStreet"]
+script = ExtResource("12_piece")
+position = Vector3(-5.9, 1.85, -9.5)
+rotation = Vector3(0, 1.5708, 0)
+kind = &"door_frame"
+size = Vector3(3.36, 3.7, 0.2)
+
+[node name="FrameAlley2" type="MeshInstance3D" parent="DressingStreet"]
+script = ExtResource("12_piece")
+position = Vector3(-5.9, 1.85, -18.5)
+rotation = Vector3(0, 1.5708, 0)
+kind = &"door_frame"
+size = Vector3(3.36, 3.7, 0.2)
+
+[node name="FrameLot1" type="MeshInstance3D" parent="DressingStreet"]
+script = ExtResource("12_piece")
+position = Vector3(5.9, 1.65, -1.5)
+rotation = Vector3(0, -1.5708, 0)
+kind = &"door_frame"
+size = Vector3(3.16, 3.3, 0.2)
+
+[node name="FrameLot2" type="MeshInstance3D" parent="DressingStreet"]
+script = ExtResource("12_piece")
+position = Vector3(5.9, 1.65, -30)
+rotation = Vector3(0, -1.5708, 0)
+kind = &"door_frame"
+size = Vector3(3.16, 3.3, 0.2)
+
+[node name="Shutter1" type="MeshInstance3D" parent="DressingStreet"]
+script = ExtResource("12_piece")
+position = Vector3(-8.35, 1.875, -41.5)
+rotation = Vector3(0, 1.5708, 0)
+kind = &"shutter"
+size = Vector3(5.9, 3.75, 0.12)
+
+[node name="Housing1" type="MeshInstance3D" parent="DressingStreet"]
+script = ExtResource("12_piece")
+position = Vector3(-8.15, 4, -41.5)
+rotation = Vector3(0, 1.5708, 0)
+kind = &"housing"
+size = Vector3(6.2, 0.5, 0.4)
+
+[node name="SideFence1" type="MeshInstance3D" parent="DressingStreet"]
+script = ExtResource("12_piece")
+position = Vector3(-6.4, 2, -25.5)
+rotation = Vector3(0, 1.5708, 0)
+kind = &"chainlink"
+size = Vector3(9, 4, 0.2)
+
+[node name="Van1" type="Node3D" parent="DressingStreet"]
+script = ExtResource("13_spot")
+position = Vector3(-4.4, 0, -26.5)
+rotation = Vector3(0, 1.5708, 0)
+prop_id = &"car"
+size = Vector3(5, 1.9, 2.3)
+
+[node name="YardDumpster1" type="Node3D" parent="DressingStreet"]
+script = ExtResource("13_spot")
+position = Vector3(-4.5, 0, -30)
+prop_id = &"dumpster"
+size = Vector3(3, 1.6, 1.8)
+
+[node name="Ac1" type="Node3D" parent="DressingStreet"]
+script = ExtResource("13_spot")
+position = Vector3(5.65, 3, -5.7)
+rotation = Vector3(0, -1.5708, 0)
+prop_id = &"ac_unit"
+size = Vector3(1, 0.8, 0.7)
+
+[node name="Ac2" type="Node3D" parent="DressingStreet"]
+script = ExtResource("13_spot")
+position = Vector3(-5.65, 3, -3.6)
+rotation = Vector3(0, 1.5708, 0)
+prop_id = &"ac_unit"
+size = Vector3(1, 0.8, 0.7)
+
+[node name="Ac3" type="Node3D" parent="DressingStreet"]
+script = ExtResource("13_spot")
+position = Vector3(-5.65, 3, -48.5)
+rotation = Vector3(0, 1.5708, 0)
+prop_id = &"ac_unit"
+size = Vector3(1, 0.8, 0.7)

@@ -9,14 +9,14 @@
 	"crowd_room": {
 		"primitive_bodies": 4,
 		"tints": 0,
-		"boxes": 74,
+		"boxes": 0,
 		"cylinder_weapons": 0,
 		"second_weapon": 0
 	},
 	"test_room": {
 		"primitive_bodies": 4,
 		"tints": 1,
-		"boxes": 27,
+		"boxes": 0,
 		"cylinder_weapons": 0,
 		"second_weapon": 0
 	},

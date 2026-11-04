@@ -399,4 +399,8 @@ The environment kit's trim sheet (Milestone 6, KIT; plan D2 and D10): 16 strips 
 
 ### › Dressing
 
-_Filled by DRESS._
+The level's and the rooms' dressing (Milestone 6, DRESS; plan D9, D11, D12). It adds no file under `assets/`: the facades, door frames, windows, shutters and rails are `KitPiece`s of the kit's procedural meshes placed in the section scenes (`game/level/mission1/{street,roofs,boss_roof}.tscn`, one `Dressing` node each), the car, dumpster, air conditioners and water tanks are `PropSpot`s drawing PROPS's scenes, and the crowd street and the training room pass an art kind to `RoomKit.add_box`. The only asset change is a retune.
+
+| Asset | Path | Source / service | License | Notes |
+| --- | --- | --- | --- | --- |
+| Trim sheet, retuned to the moods (`mood_street_a.jpg` and `mood_roof_a.jpg`): warmer brick and crate planks, blue-grey asphalt, concrete, roof tar and metal, a darker facade | `assets/source/kit/trim_layout.json` → `assets/export/kit/trim_sheet.png` (the same two files as "Kit") | Repainted by `tools/gen_trim.gd` | Original, project-owned | Still inside the look bible's environment band (`tests/test_kit.gd` reads every pixel). Git LFS |

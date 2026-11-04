@@ -16,6 +16,33 @@ extends Node3D
 ## The ambience bed's pool while the player is in this section (Milestone 6, D8), for example
 ## `&"ambience_street"` or `&"ambience_roof"`. Empty: the AudioDirector's default bed.
 @export var ambience: StringName = &""
+@export_group("Light")
+## The section has its own light (Milestone 6, DRESS; D12): `LevelRoot` blends the level's sun, fog and
+## sky horizon to these over Tuning's `section_light_blend_s` when the player enters the section. Off:
+## the section takes Tuning's sun (Look > Toon) and the room's default fog.
+@export var light_enabled: bool = false
+## The sun's height above the horizon (degrees) and the direction it comes from (the light's own yaw).
+@export_range(5.0, 85.0, 1.0) var sun_elevation_deg: float = 45.0
+@export_range(-180.0, 180.0, 1.0) var sun_yaw_deg: float = -50.0
+## The sun's colour and energy (the toon bands take both).
+@export var sun_color: Color = Color.WHITE
+@export_range(0.2, 3.0, 0.05) var sun_energy: float = 1.2
+## The fog's colour and density: the colour is what the far world fades to, so a dark one gives a drop
+## and a far skyline depth instead of a pale plane.
+@export var fog_color: Color = Color(0.6, 0.56, 0.55)
+@export_range(0.0, 0.05, 0.0005) var fog_density: float = 0.008
+## The sky the far gaps show: its top and its horizon.
+@export var sky_top_color: Color = Color(0.36, 0.42, 0.56)
+@export var sky_horizon_color: Color = Color(0.72, 0.62, 0.55)
+
+
+## This section's light as the blend reads it: sun_elevation, sun_yaw, sun_color, sun_energy, fog_color,
+## fog_density, sky_top, sky_horizon.
+func light() -> Dictionary:
+	return {
+		sun_elevation = sun_elevation_deg, sun_yaw = sun_yaw_deg, sun_color = sun_color, sun_energy = sun_energy,
+		fog_color = fog_color, fog_density = fog_density, sky_top = sky_top_color, sky_horizon = sky_horizon_color,
+	}
 
 
 func entry() -> Marker3D:
