@@ -4,6 +4,40 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-04 14:05 CST: Game-boy said go; CONCEPTS and the plan workflow are running
+- **Game-boy's answers** (session chat):
+  - "OK we're ready to begin": the proposal is approved.
+  - **Audio option (a):** Sonniss for the hit stack and the world sounds, ElevenLabs for the voices.
+  - **ElevenLabs Starter** ($1, a commercial licence, 30,000 credits a month). The key is `ELEVEN_LABS_API_KEY`, and it works.
+  - **Tripo** is topped up to 1,705.
+  - **Ultracode** is on.
+- **Committed** (`ddb0a06`):
+  - `tripo_prices.json`'s policy is now M6: start 1705, floor 700, stop 900;
+  - README's key row and `.env.example`;
+  - `docs/reviews/M6/brief-CONCEPTS.md` and `args-P0.json`.
+- **Running:**
+  1. **CONCEPTS:** `build.js` run `wf_29312051-0d8` with `args-P0.json`, worktree `.worktrees/m6-concepts`, branch `m6/concepts`, Gemini images only (at most 30). It makes:
+     - 3 concepts each for the Kicker, Thug, Bruiser and boss;
+     - 3 boss names;
+     - 3 weapons;
+     - 2 street moods and 2 roof moods;
+     - the sheets and a DM draft.
+     - **If cut off:** rerun build.js with the same args.
+  2. **The plan workflow** `wf_8346b955-f3c` (script `m6-plan`):
+     - four Sonnet readers write `docs/milestones/M6-codemap/` (art-chain, audio, level-env, weapons-looks);
+     - an Opus planner writes `docs/milestones/M6-plan.md` and `docs/reviews/M6/args-P1.json`/`args-P2.json`;
+     - then an Opus critic, then the Opus xhigh synthesis.
+     - **If cut off:** in this session, rerun its script with `resumeFromRunId`. In a new session, finish the plan from whatever codemaps exist.
+- **The lead's correction for the plan:** the Sonniss bundle (tens of GB) must live **outside the repo** (say `~/sfx-library/sonniss/`, the path read from an env var or an argument). Inside it, Godot would import every WAV and git would see it. Only the picked, trimmed files are committed.
+- **Asked of Game-boy:**
+  - prune the 90 M3-M5 worktrees (62 GB). All their HEADs are on origin, and the only uncommitted files are reviewer scratch, a stray log, M4's chain report stills and M4's throwaway act edit;
+  - download the Sonniss bundle (28 GB free before the prune);
+  - the Tripo account type (it gates phase 2's Tripo tasks).
+- **Next:**
+  1. CONCEPTS done: look at the sheets, then send the DM (Slack D0AQUKX5DB6, and in the session chat).
+  2. The plan done: review it, commit, and launch phase 1 with `args-P1.json`.
+  3. Rewrite the takeover prompt for M6.
+
 ### 2026-11-04 13:30 CST: M6 working session started; the proposal is written; waiting on Game-boy's sign-off and four answers
 - **This session** is titled "Beat-em-up: working session". The M5 session is "Beat-em-up: M5 (signed off)". The watcher [Beat-em-up: usage watcher](#local_5fa6c438-0fb3-4c35-b5b8-9f561074267b) is still running.
 - **Branch:** `m6/full-art-audio`, cut from `main` at `78223dc`.
