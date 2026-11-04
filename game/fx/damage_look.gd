@@ -13,6 +13,10 @@ extends RefCounted
 ## The art is one material, but its palette atlas says where the skin is (the alpha class of the
 ## skin swatches, tools/pipeline/gen_palette.py): the clothes take `damage_tex` (scuffs, then
 ## blood), the skin takes `damage_skin_tex` (the bruises, then the blood), the primitives' tiles.
+## Per swatch (M6 D6): the atlas also says which clothes take no blood ("blood": false in the palette JSON, alpha
+## class 230: the Punk's cap, laces and strap). Those show the scuffs at both looks (`damage_scuff_tex`), and the
+## blood everywhere else is cut hard at `vfx_blood_edge_cut` (`blood_edge`), so no soft red-over-yellow orange.
+## `look_marks_per_swatch` off gives M4's look back (the blood tile on every clothes swatch, soft).
 ## Materials only: no mesh, pose or hurtbox changes. The hit flash (the contact flash's
 ## overlay pass, the parry's emission) still covers the marks.
 ## A look is a swap of the `damage_tex` uniform (and the art's `damage_skin_tex`) and `damage_scale`
@@ -24,7 +28,8 @@ extends RefCounted
 enum Level { CLEAN, BRUISED, BLOODIED }
 
 ## TuningData properties that change how a look is drawn or chosen.
-const TUNABLES: Array[StringName] = [&"vfx_bruised_at", &"vfx_bloodied_at", &"vfx_damage_tile_m"]
+const TUNABLES: Array[StringName] = [&"vfx_bruised_at", &"vfx_bloodied_at", &"vfx_damage_tile_m",
+		&"vfx_blood_edge_cut", &"look_marks_per_swatch"]
 
 
 ## The look for a health share (health / max health, 0..1).
@@ -77,15 +82,35 @@ static func apply(material: ShaderMaterial, paint: int, level: int) -> void:
 	material.set_shader_parameter(&"damage_scale", _scale())
 
 
-## Show `level` on the skinned art's `material`: the clothes' tiles in `damage_tex` and the skin's
-## in `damage_skin_tex`; the shader picks one by the swatch's alpha class (toon.gdshader). Clean
-## is the transparent texture in both.
+## Show `level` on the skinned art's `material`: the clothes' tiles in `damage_tex`, the skin's
+## in `damage_skin_tex` and the scuffs a no-blood swatch keeps in `damage_scuff_tex`; the shader picks
+## one by the swatch's alpha class (toon.gdshader). Clean is the transparent texture in all three.
+## The blood's hard edge is on with the bloodied look only.
 static func apply_art(material: ShaderMaterial, level: int) -> void:
 	var clothes := texture_for(PlaceholderBody.Paint.BODY, level)
 	var skin := texture_for(PlaceholderBody.Paint.SKIN, level)
+	var per_swatch := Tuning.data.look_marks_per_swatch
+	var scuffs := texture_for(PlaceholderBody.Paint.BODY, mini(level, Level.BRUISED)) if per_swatch else clothes
 	material.set_shader_parameter(&"damage_tex", clothes if clothes else VfxArt.clear_detail())
 	material.set_shader_parameter(&"damage_skin_tex", skin if skin else VfxArt.clear_detail())
+	material.set_shader_parameter(&"damage_scuff_tex", scuffs if scuffs else VfxArt.clear_detail())
+	material.set_shader_parameter(&"blood_edge", Tuning.data.vfx_blood_edge_cut if per_swatch and level >= Level.BLOODIED else 0.0)
 	material.set_shader_parameter(&"damage_scale", _scale())
+
+
+## The tile the skinned art shows at `level` on a swatch whose atlas alpha is `alpha`, as toon.gdshader
+## chooses it (a CPU mirror of the shader's class branch, which the tests read the real atlas through):
+## null for a swatch that takes no marks (alpha under 0.75) or a clean look, the skin's tile (0.75 up to
+## 0.85), the clothes' scuffs for a swatch that takes no blood (0.85 up to 0.95: `"blood": false`, the
+## Punk's cap) and the clothes' (the scuffs, then the blood) from 0.95.
+static func art_tile_for_alpha(alpha: float, level: int) -> Texture2D:
+	if alpha < 0.75:
+		return null
+	if alpha < 0.85:
+		return texture_for(PlaceholderBody.Paint.SKIN, level)
+	if alpha < 0.95 and Tuning.data.look_marks_per_swatch:
+		return texture_for(PlaceholderBody.Paint.BODY, mini(level, Level.BRUISED))
+	return texture_for(PlaceholderBody.Paint.BODY, level)
 
 
 ## The shader's `damage_scale`: tiles per metre.

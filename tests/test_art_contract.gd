@@ -40,8 +40,10 @@ const SOLE_TOLERANCE := 0.005
 ## The mean dot of a mesh's decoded hull normal (COLOR) with its NORMAL: the right axes measure 0.92-0.96 on the smoke Punk
 ## and the probe bodies (a normal baked in Blender's Z-up axes measured 0.31-0.34).
 const HULL_AGREE_MIN := 0.85
-## The atlas alpha classes (tools/pipeline/gen_palette.py; game/fx/toon.gdshader decodes them with step(0.75) and step(0.9)).
+## The atlas alpha classes (tools/pipeline/gen_palette.py; game/fx/toon.gdshader decodes them with step(0.75), step(0.85) and step(0.95)).
 const ALPHA_CLOTHES := 1.0
+## The clothes that scuff and never take blood (`"blood": false`, M6 D6).
+const ALPHA_NO_BLOOD := 0.9
 const ALPHA_SKIN := 0.8
 const ALPHA_NONE := 0.5
 const SWATCH_MIN := 4
@@ -1332,7 +1334,8 @@ func _open_edges(mesh: Dictionary) -> int:
 
 
 ## The palette atlas is the shared palette JSON made real: 256x16, every swatch at its slot's centre, alpha the damage class:
-## 1.0 clothes marks, 0.8 skin marks (`"skin": true`, slots 6-9), 0.5 none (slice-g2-07).
+## 1.0 clothes marks, 0.9 clothes scuffs without blood (`"blood": false`, M6 D6), 0.8 skin marks (`"skin": true`,
+## slots 6-9), 0.5 none (slice-g2-07).
 func test_the_palette_atlas_is_the_palette_json_made_real() -> void:
 	var atlas := _atlas_image()
 	assert_not_null(atlas, "the atlas imports")
@@ -1361,12 +1364,17 @@ func test_the_palette_atlas_is_the_palette_json_made_real() -> void:
 			var skin := bool(sw.get("skin", false))
 			var takes := bool(sw.get("marks", true))
 			assert_false(skin and not takes, "%s slot %d: a skin swatch takes marks" % [file, slot])
-			var want_alpha := ALPHA_NONE if not takes else ALPHA_SKIN if skin else ALPHA_CLOTHES
+			var blood := bool(sw.get("blood", true))
+			assert_false(skin and not blood, "%s slot %d: a skin swatch always takes blood" % [file, slot])
+			assert_false(not takes and not blood, "%s slot %d: blood: false means something only where marks land" % [file, slot])
+			var want_alpha := ALPHA_NONE if not takes else ALPHA_SKIN if skin else ALPHA_CLOTHES if blood else ALPHA_NO_BLOOD
 			var alpha := _swatch_alpha(atlas, slot)
-			assert_almost_eq(alpha, want_alpha, 0.01, "%s slot %d: alpha 1.0 takes the clothes' marks, 0.8 the skin's, 0.5 none" % [file, slot])
-			# the shader's own decode (toon.gdshader: takes_marks *= step(0.75, a); skin_marks = 1 - step(0.9, a)) gives the same classes
+			assert_almost_eq(alpha, want_alpha, 0.01, "%s slot %d: alpha 1.0 takes the clothes' marks, 0.9 the scuffs only, 0.8 the skin's, 0.5 none" % [file, slot])
+			# the shader's own decode (toon.gdshader: takes_marks *= step(0.75, a); skin_marks = 1 - step(0.85, a);
+			# no_blood = step(0.85, a) * (1 - step(0.95, a))) gives the same classes
 			assert_eq(alpha >= 0.75, takes, "%s slot %d: the shader reads 'takes marks' from the alpha" % [file, slot])
-			assert_eq(alpha >= 0.75 and alpha < 0.9, skin, "%s slot %d: the shader reads 'skin' from the alpha" % [file, slot])
+			assert_eq(alpha >= 0.75 and alpha < 0.85, skin, "%s slot %d: the shader reads 'skin' from the alpha" % [file, slot])
+			assert_eq(alpha >= 0.85 and alpha < 0.95, takes and not blood, "%s slot %d: the shader reads 'no blood' from the alpha" % [file, slot])
 			assert_false(_in_red_band(want), "%s slot %d (%s) is in the red band" % [file, slot, sw.srgb])
 	assert_gt(seen.size(), 10, "the shared palette is there")
 
@@ -1584,3 +1592,91 @@ func _swatch_alpha(atlas: Image, slot: int) -> float:
 func _in_red_band(c: Color) -> bool:
 	var hue := c.h * 360.0
 	return (hue >= 345.0 or hue <= 15.0) and c.s > 0.5
+
+
+# --- Variant atlases (M6 D4, LOOKS) -----------------------------------------------------------
+
+
+## The slots a GLB's faces sit on (the UV1 swatch centres of every mesh).
+func _slots_used_by(path: String) -> Dictionary:
+	var slots: Dictionary = {}
+	var f := _facts(path)
+	if not f.ok:
+		return slots
+	for n: String in (f.meshes as Dictionary):
+		var uvs: PackedVector2Array = ((f.meshes[n] as Dictionary).arrays as Array)[Mesh.ARRAY_TEX_UV]
+		for uv: Vector2 in uvs:
+			slots[int(roundf(uv.y * SWATCH_ROWS - 0.5)) * SWATCH_COLUMNS + int(roundf(uv.x * SWATCH_COLUMNS - 0.5))] = true
+	return slots
+
+
+func _variant_atlas(id: String) -> Image:
+	var tex := load("res://assets/export/palette/%s_atlas.png" % id) as Texture2D
+	if tex == null:
+		return null
+	var img := tex.get_image()
+	if img.is_compressed():
+		img.decompress()
+	return img
+
+
+func _hue_gap(a: Color, b: Color) -> float:
+	var gap := absf(a.h - b.h) * 360.0
+	return minf(gap, 360.0 - gap)
+
+
+## A variant atlas is the shared atlas with a few slots recoloured: every alpha is the base's (the damage class and the gloss), every
+## other swatch is the base's colour, the recoloured ones are the variant JSON's, saturated, not red, and clear of the Punk's teal and
+## the player's navy; the Punk's body still uses 4-6 colours under it (A3).
+func test_a_variant_atlas_recolours_swatches_and_keeps_every_alpha() -> void:
+	var base := _atlas_image()
+	var dir := DirAccess.open(PALETTE_DIR + "/variants")
+	assert_not_null(dir, "assets/source/palette/variants exists")
+	if dir == null:
+		return
+	var teal := _swatch_color(base, 16)
+	var navy := _swatch_color(base, 32)
+	var checked := 0
+	for file: String in dir.get_files():
+		if not file.ends_with(".json"):
+			continue
+		var v: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("%s/variants/%s" % [PALETTE_DIR, file]))
+		var img := _variant_atlas(String(v.id))
+		assert_not_null(img, "%s: the atlas is built (python3 -I tools/pipeline/gen_palette.py)" % file)
+		if img == null:
+			continue
+		checked += 1
+		assert_eq(img.get_size(), base.get_size(), "%s: the same 256x16" % file)
+		var changed: Dictionary = {}
+		for sw: Dictionary in v.swatches:
+			changed[int(sw.slot)] = Color.html(sw.srgb)
+			for key: String in ["marks", "skin", "gloss", "blood"]:
+				assert_false(sw.has(key), "%s slot %d: a variant keeps its swatch's damage class (no %s)" % [file, sw.slot, key])
+		for slot in 64:
+			assert_eq(_swatch_alpha(img, slot), _swatch_alpha(base, slot), "%s slot %d: the alpha (damage class, gloss) is the base's" % [file, slot])
+			var got := _swatch_color(img, slot)
+			if changed.has(slot):
+				var want: Color = changed[slot]
+				assert_almost_eq(got.r, want.r, 0.005, "%s slot %d red" % [file, slot])
+				assert_almost_eq(got.g, want.g, 0.005, "%s slot %d green" % [file, slot])
+				assert_almost_eq(got.b, want.b, 0.005, "%s slot %d blue" % [file, slot])
+				assert_ne(got.to_html(false), _swatch_color(base, slot).to_html(false), "%s slot %d: really recoloured" % [file, slot])
+				assert_gte(got.s, 0.5, "%s slot %d: an enemy's main colour keeps saturation of 0.5 (look bible)" % [file, slot])
+				assert_false(_in_red_band(got), "%s slot %d: not red" % [file, slot])
+				assert_gte(_hue_gap(got, teal), 40.0, "%s slot %d: clear of the Punk's teal" % [file, slot])
+				assert_gte(_hue_gap(got, navy), 40.0, "%s slot %d: clear of the player's navy" % [file, slot])
+			else:
+				assert_eq(got.to_html(false), _swatch_color(base, slot).to_html(false), "%s slot %d: the base's colour" % [file, slot])
+		for path: String in _glbs():
+			if _id_of(path) != String(v.base):
+				continue
+			var colours: Dictionary = {}
+			var slots := _slots_used_by(path)
+			for slot: int in slots:
+				colours[_swatch_color(img, slot).to_html(false)] = true
+				assert_false(_in_red_band(_swatch_color(img, slot)), "%s under %s: slot %d is not red" % [path.get_file(), file, slot])
+			assert_between(colours.size(), SWATCH_MIN, SWATCH_MAX, "%s under %s: %d flat colours used" % [path.get_file(), file, colours.size()])
+			if path.get_file() == "%s.glb" % v.base:
+				for slot: int in changed:
+					assert_true(slots.has(slot), "%s: the swatch %d the variant recolours is on the body" % [path.get_file(), slot])
+	assert_gt(checked, 0, "at least one variant atlas (the veteran Punk's)")

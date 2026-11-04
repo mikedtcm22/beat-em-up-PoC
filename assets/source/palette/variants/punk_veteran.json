@@ -1,0 +1,17 @@
+{
+	"id": "punk_veteran",
+	"base": "punk",
+	"note": "The Veteran Punk (M6 D4): the Street Punk's atlas with the vest and the trousers recoloured. Violet vest and burnt-orange trousers: saturated (at least 0.5), not in the red band, clear of the Punk's teal (hue 185) and the player's navy (hue 235). The cap, laces, strap, lens, skin and shades are the Punk's own. Only the rgb changes: every swatch keeps its damage class and gloss, so the marks, the blood-free cap and the lens read as on the Punk. Built by tools/pipeline/gen_palette.py into assets/export/palette/punk_veteran_atlas.png.",
+	"swatches": [
+		{
+			"slot": 16,
+			"name": "veteran_violet",
+			"srgb": "#8a3fb0"
+		},
+		{
+			"slot": 18,
+			"name": "veteran_rust",
+			"srgb": "#b8651b"
+		}
+	]
+}

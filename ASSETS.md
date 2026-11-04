@@ -102,7 +102,7 @@ The Blender chain (`tools/pipeline/run.py`, M4-plan Part A A2) and the files onl
 | Asset | Path | Source / service | License | Notes |
 | --- | --- | --- | --- | --- |
 | Shared palette (source) | `assets/source/palette/shared.json` | Written by hand for the project (slots 0-15: inks, neutrals, skin tones, all low saturation, none in the red band) | Project file | Per-character palette files (`punk.json`, `player.json`) sit beside it; `tools/pipeline/gen_palette.py` builds the atlas from all of them. |
-| Palette atlas | `assets/export/palette/palette_atlas.png` | `tools/pipeline/gen_palette.py` from `assets/source/palette/*.json` (standard library only, byte-reproducible) | Project file (generated) | 256x16 RGBA8, 8 px swatches, slot s at column s % 32, row s // 32. rgb = sRGB colour, alpha 255 = takes damage marks, 128 = does not. Nearest filter, no mipmaps (`.import` params set by run.py). The lead regenerates it after merges (merge=keep-ours). |
+| Palette atlas | `assets/export/palette/palette_atlas.png` | `tools/pipeline/gen_palette.py` from `assets/source/palette/*.json` (standard library only, byte-reproducible) | Project file (generated) | 256x16 RGBA8, 8 px swatches, slot s at column s % 32, row s // 32. rgb = sRGB colour, alpha 255 = takes damage marks, 230 = scuffs but never blood (`"blood": false`, M6 D6: the Punk's cap, laces and strap), 204 = skin, 128 = takes none. Nearest filter, no mipmaps (`.import` params set by run.py). The lead regenerates it after merges (merge=keep-ours). |
 | Probe body, A-pose | `tests/fixtures/art/probe_body.glb` | `tools/pipeline/make_probe_body.py` (a synthetic Tripo-like source: capsules, voxel remesh, painted texture, auto-weighted rig) then the whole chain (`run.py --config tests/fixtures/art/probe_pipeline.json`), Blender 5.2.2 headless | Project file (generated; no third-party content) | The chain's own deterministic test body: 23 named binds, joints on the table chained through the 38 degree arm swing, faces -Z, soles at y 0, `Body` + `Body__fp_hidden` (the player split) with inward caps, UV1 palette, UV2 detail, COLOR hull_normal, 10,022 triangles, the Blender-made fists. 6 swatches. Same input, same report hash. |
 | Probe body, arms-down bake | `tests/fixtures/art/probe_body_rest.glb` | Same chain, variant "rest" (the arm chains rotated back to hanging about the upper-arm joints) | Project file (generated) | The same body in the table's own rest: the bind formula gives R = identity, so it exercises the translation-only path. |
 | Probe pipeline config | `tests/fixtures/art/probe_pipeline.json` | Written for the project | Project file | Every step's parameters; the source is rebuilt, never committed. |
@@ -266,7 +266,10 @@ _Filled by CHAIN._
 
 ### › Veteran Punk
 
-_Filled by LOOKS._
+| Asset | Path | Source / service | License | Notes |
+| --- | --- | --- | --- | --- |
+| Veteran Punk palette (source) | `assets/source/palette/variants/punk_veteran.json` | Written by hand for the project (M6 D4): the vest (slot 16) violet `#8a3fb0` and the trousers (slot 18) burnt orange `#b8651b` | Project file | Saturated, not red, clear of the Punk's teal and the player's navy. Only rgb changes; every swatch keeps its damage class and gloss. |
+| Veteran Punk atlas | `assets/export/palette/punk_veteran_atlas.png` | `tools/pipeline/gen_palette.py` from the shared palette plus the variant file (standard library only, byte-reproducible) | Project file (generated) | 256x16 RGBA8, the shared atlas with slots 16 and 18 recoloured; set on the veteran's art material (`EnemyVariant.palette`), retiring the old tint. Nearest filter, no mipmaps. Regenerated at merges with the base atlas. |
 
 ### › Kicker
 
