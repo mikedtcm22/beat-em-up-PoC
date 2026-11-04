@@ -718,8 +718,15 @@ extends Resource
 ## it hit you from behind.
 @export_range(0.0, 3.0, 0.05) var engage_commit_s: float = 0.5
 ## An approaching enemy engages (fixes its line) when it comes this near (m) to the player. At
-## least wait_ring_max_m + 0.5, so no wait seat lies outside it.
+## least wait_ring_max_m + arc_engage_wait_margin_m, so no wait seat lies outside it.
 @export_range(2.0, 20.0, 0.5) var arc_engage_radius_m: float = 7.0
+@export_range(0.0, 3.0, 0.1) var arc_engage_wait_margin_m: float = 0.5
+## A wait seat may sit as near as posture_ring_max_m plus this (m) when the wait ring is full.
+@export_range(0.0, 4.0, 0.1) var wait_seat_floor_gap_m: float = 1.0
+## A token goes only to an enemy within posture_ring_max_m plus this (m) of the player: one promoted
+## from a wait seat walks to its inner seat first, so it has the chase time to land its attack
+## (granted from the wait ring it ran out of engage_timeout_s short and sat out a cooldown).
+@export_range(0.0, 3.0, 0.1) var token_grant_margin_m: float = 0.5
 ## Inner seats inside an arc are at least this many degrees apart: a 90 degree arc seats three.
 @export_range(10.0, 120.0, 5.0) var director_seat_gap_deg: float = 40.0
 ## The wait ring: with no free inner seat in its arc an enemy stands back here (m from the
@@ -1035,6 +1042,19 @@ extends Resource
 @export_range(0.5, 2.0, 0.05) var go_cue_size: float = 1.0
 ## Seconds of one swell of the cue's breath (0 = steady).
 @export_range(0.0, 2.0, 0.05) var go_cue_pulse_s: float = 0.5
+## "GO" stays up at least go_cue_s and then until the player faces the exit (his look within
+## go_cue_face_deg of it) or comes within go_cue_pass_m of it, but no longer than go_cue_max_s.
+## Off, it lasts go_cue_s as in the first build.
+@export var go_cue_until_faced: bool = true
+@export_range(5.0, 90.0, 1.0) var go_cue_face_deg: float = 30.0
+@export_range(0.5, 12.0, 0.5) var go_cue_pass_m: float = 3.0
+@export_range(2.0, 20.0, 0.5) var go_cue_max_s: float = 8.0
+## The panel's layout (pixels at 1920 x 1080, before go_cue_size): the gap between the word and the
+## arrow, the padding round them (across, down) and the offset of the panel's shadow.
+@export_range(0.0, 100.0, 1.0) var go_cue_gap_px: float = 26.0
+@export_range(0.0, 100.0, 1.0) var go_cue_pad_x_px: float = 34.0
+@export_range(0.0, 100.0, 1.0) var go_cue_pad_y_px: float = 18.0
+@export_range(0.0, 20.0, 0.5) var go_cue_shadow_px: float = 6.0
 
 @export_group("Audio")
 @export_subgroup("Mix")

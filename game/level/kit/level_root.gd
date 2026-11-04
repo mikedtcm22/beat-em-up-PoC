@@ -39,8 +39,8 @@ const GROUP := &"level_root"
 @export var nav_agent_radius: float = 0.5
 @export var nav_agent_height: float = 1.8
 @export var nav_agent_max_climb: float = 0.2
-@export var nav_floor_tolerance: float = 0.3
-@export var nav_floor_lift: float = 0.2
+@export var nav_floor_tolerance: float = NavBaker.FLOOR_TOLERANCE_M
+@export var nav_floor_lift: float = NavBaker.FLOOR_LIFT_M
 @export_group("Safety")
 ## An AI enemy that falls this far (m) below the lowest floor of the level, past every HazardVolume's
 ## catch floor, is removed (nothing there to land on).

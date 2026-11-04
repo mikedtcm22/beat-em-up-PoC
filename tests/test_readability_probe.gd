@@ -516,6 +516,23 @@ func test_r5w_a_wait_seated_enemy_inside_5_m_is_a_miss() -> void:
 	assert_eq(_status(summary.verdict, "R6w"), "miss", "and 4.2 m is off the wait ring")
 
 
+func test_the_total_of_two_equal_acts_has_the_per_act_shares_not_double() -> void:
+	# final-code-04: _merge_accs listed the wait-seat and wedge-all counters twice, so a merged share doubled.
+	for bearing in [0.0, 12.0, -12.0, 25.0, -25.0]:
+		_wait_seated(bearing, 4.2)
+	await _ticks(20)
+	var first := _probe.end_act()
+	_probe.start_act("again")
+	await _ticks(20)
+	var second := _probe.end_act()
+	var total := _probe.total().metrics as Dictionary
+	assert_gt(float(first.metrics.wait_seat_inside), 0.5, "the act has wait-seated enemies inside 5 m")
+	var expected := (float(first.metrics.wait_seat_inside) + float(second.metrics.wait_seat_inside)) * 0.5
+	assert_almost_eq(float(total.wait_seat_inside), expected, 0.05, "the total's R5w is the acts' average")
+	assert_lte(float(total.wait_seat_inside), 1.0, "a share is never above 1")
+	assert_lte(float(total.front_wedge_crowding_all), 1.0, "nor the information row")
+
+
 func test_r9_a_punk_out_of_view_is_no_blind_waiter() -> void:
 	var front := _stub(0.0, 3.0)
 	var behind := _stub(150.0, 3.0)

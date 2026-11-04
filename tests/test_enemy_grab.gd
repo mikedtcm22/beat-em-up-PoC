@@ -593,7 +593,7 @@ func test_the_director_gives_nobody_a_token_while_the_player_is_held() -> void:
 	for i in 2:
 		var other := StubEnemyScene.instantiate() as EnemyActor
 		other.name = "Waiter%d" % i
-		other.position = Vector3(-4.0 + 8.0 * i, 0.0, -4.0)
+		other.position = Vector3(-3.0 + 6.0 * i, 0.0, -2.5)  # inside the token reach (4.5 m)
 		_scene.add_child(other)
 		others.append(other)
 	await _ticks(2)

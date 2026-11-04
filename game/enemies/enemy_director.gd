@@ -493,13 +493,17 @@ func _grant(player: PlayerCharacter, members: Array[EnemyActor]) -> void:
 	while not _waiting.is_empty() and (cap == 0 or active < cap):
 		# Only an inner-seated enemy is granted a token (arcs on), but for one that just woke in place
 		# inside its arc (the boss), which is served first.
+		# One that has been promoted from a wait seat but still stands out on the wait ring walks to its
+		# inner seat first (token_grant_margin_m): a token granted 6 m out ran out of chase time.
 		var pool: Array[EnemyActor] = []
 		var waking: EnemyActor = null
+		var reach := Tuning.data.posture_ring_max_m + Tuning.data.token_grant_margin_m
 		for waiter: EnemyActor in _waiting:
 			var wakes := waiter.has_token_priority() and (not arcs or _in_own_arc(waiter, player))
 			if waking == null and wakes:
 				waking = waiter
-			if wakes or not arcs or _kinds.get(waiter, &"") == _INNER:
+			var near := _flat_distance(waiter.global_position, player.global_position) <= reach
+			if wakes or not arcs or (_kinds.get(waiter, &"") == _INNER and near):
 				pool.append(waiter)
 		if pool.is_empty():
 			break
@@ -651,14 +655,14 @@ func _assign_even(player: PlayerCharacter, set: Array[EnemyActor]) -> void:
 
 ## The engage book (D1). An enemy engages on its first tick in POSTURE (it reached its seat) or in
 ## ENGAGE, or on its first APPROACH tick within arc_engage_radius_m of the player (at least
-## wait_ring_max_m + 0.5, so no wait seat lies outside it), and again when it is back in one of
+## wait_ring_max_m + arc_engage_wait_margin_m, so no wait seat lies outside it), and again when it is back in one of
 ## those from an attack, its recovery or a reaction (a hit, a knockdown...). From an engagement
 ## until engage_commit_s later its line is the player's look; after that the line is a fixed world
 ## yaw until the next engagement. An approaching enemy keeps its engagement at any distance; ENTER,
 ## WINDUP, ATTACK, RECOVER, REACT and KO end it (the old line and seat are kept until the next one).
 func _track_engagement(player: PlayerCharacter, members: Array[EnemyActor]) -> void:
 	var tuning := Tuning.data
-	var radius := maxf(tuning.arc_engage_radius_m, tuning.wait_ring_max_m + 0.5)
+	var radius := maxf(tuning.arc_engage_radius_m, tuning.wait_ring_max_m + tuning.arc_engage_wait_margin_m)
 	var look := rad_to_deg(player.look_yaw)
 	for enemy in members:
 		var row: Dictionary = _engage.get(enemy, {})
@@ -919,7 +923,7 @@ func _find_inner(player: PlayerCharacter, enemy: EnemyActor, center: float, arc:
 	return {}
 
 
-## A wait seat for `enemy`: on the wait ring (its own radius, then nearer down to posture_ring_max_m + 1),
+## A wait seat for `enemy`: on the wait ring (its own radius, then nearer down to posture_ring_max_m + wait_seat_floor_gap_m),
 ## inside the arc about `center`, the angle it had (`prior`, NAN = none) or else the nearest to `bearing`
 ## inside the arc, and no nearer another waiter than two body radii. {angle, point, kind} or {}.
 func _find_wait(player: PlayerCharacter, enemy: EnemyActor, center: float, arc: float, bearing: float,
@@ -933,7 +937,7 @@ func _find_wait(player: PlayerCharacter, enemy: EnemyActor, center: float, arc: 
 	for angle in _arc_angles(center, arc, center + relative):
 		angles.append(angle)
 	var radius := _wait_radius(enemy)
-	for r in _radii_down(radius, minf(tuning.posture_ring_max_m + 1.0, radius)):
+	for r in _radii_down(radius, minf(tuning.posture_ring_max_m + tuning.wait_seat_floor_gap_m, radius)):
 		for angle in angles:
 			var point := _seat_point(player, angle, r, true)
 			if not point.is_finite():
