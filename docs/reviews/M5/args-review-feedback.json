@@ -1,0 +1,31 @@
+{
+  "milestone": 5,
+  "summary": "the level blockout: Game-boy's attack arcs in the director, the level kit, then the graybox Mission 1 level; this round reviews only his playtest feedback package (FEEDBACK)",
+  "round": "feedback",
+  "base": "e8fc568",
+  "base_branch": "m5/level-blockout",
+  "read_first": [
+    "docs/reviews/M5/fix-feedback.md (Game-boy's words and the brief)",
+    "docs/milestones/M5-calls/FEEDBACK.md (the builder's calls)",
+    "README.md 'Where M5 departs from the spec, ruled by Game-boy at his playtest'"
+  ],
+  "captures_dir": "/Users/arachne/repos/beat-em-up-PoC/captures/m5-feedback",
+  "image_budget": 20,
+  "lenses": [
+    {
+      "key": "feel",
+      "brief": "Does the build answer Game-boy's two complaints? Judge it from the first-person recordings in captures_dir: after/oneonone, after/opportunist, after/flanks, after/a4 against before/a4, and after/a6 (the six-at-once crowd with a Kicker, then 2 Punks and a Kicker). Each has bot.avi, bot.log with KICKER lines in the Kicker acts, and sheets/. Cut finer sheets from bot.avi with ffmpeg when you need a moment.\n- One-on-one: the Kicker squares up and fights from in view. It doesn't run round him, and a turn toward it doesn't send it away again.\n- With others: the Kicker gets behind him opportunistically while he fights someone in front, and reads as an opportunist, not a pest. When he turns on it, it fights.\n- No flip-flopping: watch the A4 and A6 runs for a Kicker that keeps switching between flanking and not (bot.log has no flank lines in level runs, so judge from motion).\n- Spawns: a behind-door enemy now arrives on schedule. Check that this doesn't leave the arena dead between waves, and that an enemy appearing in view at a behind door reads as coming through the door, not as a pop.\n- Is anything worse than before? Compare A4's pressure, pacing and number of Kicker attacks."
+    },
+    {
+      "key": "code",
+      "model": "sonnet",
+      "brief": "Code and tests of the FEEDBACK package: git diff ace4aa9..e8fc568.\n- EnemyDirector._track_flanking() and _player_busy(): the hysteresis is correct on the director's clock; the two-Kicker order is stable; a mode change reslots and a Kicker that stops flanking really takes the seat nearest where it stands; nothing stalls (a Kicker that never gets a seat, a token holder stranded by a mode change, an endless reslot).\n- The switches kicker_flank_opportunistic and director_even_spread restore the old rule exactly.\n- The layer rules: the director is the only writer of set_flanking(), and it reads no camera.\n- No numbers in scripts: the new tunables are in tuning_data.gd's groups with docs, and tuning/default.json holds them.\n- The spawner switch spawn_behind_waits_out_of_view: off ignores the flag and on is the old behaviour, exactly.\n- Tests: honest (no assertion that can't fail); the existing Kicker tests the builder switched or gave a Punk still test what they claim; tests/test_kicker_flank.gd covers the brief's cases. Run tests/test_kicker_flank.gd, tests/test_kicker.gd and tests/test_encounter_spawner.gd alone with tools/run_tests.sh -gselect=<file>."
+    }
+  ],
+  "common_note": "State: m5/level-blockout at e8fc568, with FEEDBACK (b417ba0) merged on ace4aa9 and README's rulings on top. Suite on the builder's branch: 1761/1761 in 306 s, 0 error lines (1748 in 293 s before). The two items are Game-boy's own rulings, so don't question whether they should exist: judge whether they're built as he asked and whether anything regressed. Accepted, not findings: the graybox look; the M5 departures in README already ruled or awaiting his ruling. Severity: high = it would spoil his next play (the run-around still shows one-on-one, a stall, a crash, a Kicker stuck); medium = he'd notice it (visible flip-flopping, a behind spawn that pops in badly, a dead lull); low = polish. Give each finding the files to change.",
+  "skeptic_severities": ["high", "medium"],
+  "partition": false,
+  "max_packages": 2,
+  "fix_concurrency": 1,
+  "review_concurrency": 2
+}

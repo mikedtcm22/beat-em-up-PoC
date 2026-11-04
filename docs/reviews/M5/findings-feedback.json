@@ -1,0 +1,136 @@
+{
+ "round": "feedback",
+ "base": "e8fc568",
+ "findings": [
+  {
+   "severity": "medium",
+   "title": "Turning on a Kicker doesn't end its flank while a Punk is still in view, so it keeps dodging to the view's edge in front of him",
+   "detail": "_player_busy() asks only whether another engaged enemy stands in the view within 4.5 m. It never asks whether the player is facing, or fighting, the Kicker itself. So when he turns squarely onto the Kicker and a Punk is still inside the 55 degree half-view beside it, the Kicker stays in flanking mode. It keeps its fast circling and the strafe toward the nearer edge, and it heads for the seat behind him instead of attacking. It stops only 1 s (kicker_flank_off_s) after the Punk leaves the view or the radius. Game-boy's words are 'opportunistically when you're fighting other enemies', and the brief says 'When he turns on it, it fights'. Here he has turned on it and it still runs. The held-back bot snap-turns to the nearest enemy, so in the recording the Kicker stays mostly centred and the fault reads as a Kicker that idles in front for about 2.5 s without attacking. A human who keeps his eyes on the Kicker would see it slide out of the view at the edge while he stares at it. That is the pest motion he complained about, now in a 2-on-1.",
+   "evidence": "A4 headless probe (set_flanking instrumented): Kicker1 flanking from f882 to f1047; samples f885-f1035 at bearings 0, -34, -32, -22, 0, 24, 45, 0, 0, 0, 0, all APPROACH; first attack only at f1071 after the flank ended. Recorded A4 is the same run offset by 431 frames (Kicker2 WU f2359 probe = f1928 recorded). First person: captures/review/a4_w1_flank.png, tiles 12-18 (9.2-10.4 s): the Kicker centred in front, guard up, no attack. Also after/opportunist/bot.log 'KICKER f911 bearing 0 dist 2.7 POSTURE flanking true'. Over the A4 and A6 probes, 20 of 99 flanking samples have the Kicker within 20 degrees of the look and not attacking.",
+   "repro": "cd /Users/arachne/repos/beat-em-up-PoC/.worktrees/m5-review-feedback-feel. Add a print in EnemyActor.set_flanking() logging frame, flag, look_bearing_deg and ai_state. Run godot --headless --path . --fixed-fps 60 --quit-after 20000 res://tests/bot/level_bot.tscn -- --level=res://game/level/mission1/mission1.tscn --from=3 --to=3 and read Kicker1 between f882 and f1047. Or in the crowd room: a Punk 3 m ahead and 30 degrees to the left, a Kicker 2.6 m dead ahead, the player's look held on the Kicker. It walks out of the view's edge instead of attacking.",
+   "suggested_fix": "In _player_busy(), don't count the player as busy for this Kicker while the Kicker is the one he is facing. For example, return false when the Kicker is inside a centre cone (a new tunable such as kicker_flank_faced_deg, about 20 degrees, in the Kicker subgroup), or when the Kicker is nearer the look than every busy enemy. Keep the existing hysteresis on top so a sweep of the look past it doesn't flip it. Add a test in tests/test_kicker_flank.gd: a Punk in view at 30 degrees and the look held on the Kicker; the Kicker stops flanking after kicker_flank_off_s and winds up in view. Update the busy definition in docs/ARCHITECTURE.md and README's ruling line ('only while another enemy stands in your view') to match.",
+   "files": [
+    "game/enemies/enemy_director.gd",
+    "game/autoload/tuning_data.gd",
+    "tuning/default.json",
+    "tests/test_kicker_flank.gd",
+    "docs/ARCHITECTURE.md",
+    "README.md"
+   ],
+   "spec_change": false,
+   "id": "feedback-feel-01",
+   "lens": "feel",
+   "verdict": {
+    "survives": true,
+    "votes": [
+     {
+      "refuted": false,
+      "confidence": "medium",
+      "reason": "The behaviour reproduces and the code path is as described. It is a gap in how the ruling was built, not a regression. Severity is arguably low-to-medium, because the literal ruling (\"another enemy in your view\") is met and a Kicker that flanks while a Punk is engaged is the intended opportunism.",
+      "evidence": "The A4 probe log at captures/review/a4_probe.log shows Kicker1 in POSTURE at bearing 0, 2.6 m (squared up, directly faced) from f855 to f870. Punk1 reaches ENGAGE at f858. At f882 the log reads \"PROBE-FLIP f882 Kicker1 true bearing 0 dist 2.6 POSTURE\", then APPROACH at f883 and fl=true. The bearings then run 0, -34 and on, which is the strafe toward the view's edge. _player_busy() in game/enemies/enemy_director.gd (lines 608-623) checks only the radius, the engaged state and is_outside_view for the OTHER enemies. It never looks at whether the player faces the Kicker. The brief (docs/reviews/M5/fix-feedback.md line 98) says \"once the autopilot turns to the Kicker, the Kicker stops circling\". The builder's own call (M5-calls/FEEDBACK.md line 30) records the same effect at f911 and calls it \"hysteresis doing its job\". The hysteresis only delays the exit by kicker_flank_off_s (1 s). It does not stop a Kicker that is being faced from entering or staying in flank mode while another enemy is in view. I read the code and logs and did not re-run Godot.",
+      "root_cause": "_player_busy() counts any other engaged enemy in the half-view within 4.5 m as \"busy\" and ignores whether the player is facing this Kicker. A Kicker squarely in front can therefore flip to flanking when a Punk drifts into view. It then circles out of the view and does not attack until 1 s after the Punk leaves.",
+      "files_to_change": [
+       "game/enemies/enemy_director.gd",
+       "game/autoload/tuning_data.gd",
+       "tests/test_kicker_flank.gd",
+       "docs/ARCHITECTURE.md",
+       "README.md"
+      ],
+      "fix_needs_spec_change": true
+     }
+    ],
+    "triage": null
+   }
+  },
+  {
+   "severity": "low",
+   "title": "The recordings never show the cases the change is about: a Kicker left last, or a behind door in view",
+   "detail": "'Kicker one on one' spawns each Kicker at the east alley, straight ahead, so it never starts out of view and the player never turns. In A4 and A6 the Kicker is always KO'd before the Punks, so the case Game-boy named (A6 wave 2 once the Punks are down) never happens in a recorded run. For spawns, every behind door was already out of view when its enemy came, except the A6 RoofAccess veteran, so the old hold would almost never have fired in these runs. The before/after A4 comparison therefore can't show the lull going away. My probe act ('Kicker left alone': the Punk weakened while the Kicker flanks behind) and a spawn print over the whole level both passed. The lead's sign-off evidence still lacks a first-person look at either case.",
+   "evidence": "after/oneonone/bot.log: every ENTER and APPROACH line at bearing 0. Recorded A6: Kicker2 last wind-up f3490, Punk4 f3798, Punk3 f4225. Full-level spawn probe: 15 behind-point spawns, 1 in_view=true (punk_veteran RoofAccess dist 9.2). A4 wave 1 before and after identical in captures/review/a4_spawn_ba.png. Probe recording: /Users/arachne/repos/beat-em-up-PoC/.worktrees/m5-review-feedback-feel/captures/review/alone/bot.log (Punk KO f449, Kicker at bearing 0 from f476, wind-ups f481, f709 and f954 all WARN-CHECK none).",
+   "repro": "Read the KICKER lines in after/oneonone/bot.log; grep 'new->ENTER' and the KO lines in after/a6/bot.log.",
+   "suggested_fix": "Add a 'Kicker left alone' act to tests/bot/acts/kicker_acts.gd: a Punk and a Kicker, and once the Kicker is flanking past 110 degrees set the Punk's health to 1 so the autopilot finishes it. Log one KICKER line every 15 ticks. Add a 'Behind door in view' act or level-bot option that faces the player at A4's RoofDoorBehind at the wave start, so the immediate spawn shows in first person. Record both into the round's captures.",
+   "files": [
+    "tests/bot/acts/kicker_acts.gd",
+    "tests/bot/level_bot.gd"
+   ],
+   "spec_change": false,
+   "id": "feedback-feel-02",
+   "lens": "feel",
+   "verdict": {
+    "survives": false,
+    "votes": [],
+    "triage": "lead"
+   }
+  },
+  {
+   "severity": "low",
+   "title": "tests/test_kicker.gd run alone now ends with a leak ERROR (the full suite is clean)",
+   "detail": "The crowd-room test, whose changed body adds a Punk spawn and god_mode, makes tools/run_tests.sh -gselect=test_kicker.gd print 'WARNING: N ObjectDB instances were leaked at exit' and 'ERROR: N resources still in use at exit'. The same file on the base commit ace4aa9 prints neither. The full suite has 0 ERROR lines, so this shows only on a single-file run, but the brief and the review rules say to read for ERROR and run the touched files alone. Running only this test reproduces it: 16 instances and 8 resources.",
+   "evidence": "tests/test_kicker.gd:398-434; run log with 'ERROR: 5 resources still in use at exit' for the whole file and '8 resources' for the single test; base worktree at ace4aa9 gives none.",
+   "repro": "cd .worktrees/m5-review-feedback-code && tools/run_tests.sh -gselect=test_kicker.gd -gunit_test_name=test_a_lone_kicker_flanks_in_the_crowd_room_and_its_wind_up_behind_lights_both_corners ; look for the ERROR line at exit. Repeat at ace4aa9 for the clean baseline.",
+   "suggested_fix": "Find what the new Punk or the god_mode line leaves alive at exit (try freeing the spawned Punk explicitly before the test ends, or add it as a child of the room with add_child_autofree) and reset Tuning.data.god_mode in the test's cleanup.",
+   "files": [
+    "tests/test_kicker.gd"
+   ],
+   "spec_change": false,
+   "id": "feedback-code-01",
+   "lens": "code",
+   "verdict": {
+    "survives": false,
+    "votes": [],
+    "triage": "lead"
+   }
+  },
+  {
+   "severity": "low",
+   "title": "A token-holding Kicker that stops flanking is reseated at once, not left on its seat",
+   "detail": "In _assign_arcs the keeper test is `not _unflanked.has(enemy) and ...`. That makes a Kicker that has just stopped flanking a seeker even when it holds a token (the keeper rule normally exempts _holders). The brief says a token holder keeps its seat until its attack ends and the mode change applies afterwards as a non-holder. In practice a holder mid wind-up is moved to the free seat nearest where it stands, up to about 20 degrees from the old one, and its attack is unaffected (set_slot only resets the progress counters). No test covers the holder case, so the departure from the brief is unverified.",
+   "evidence": "game/enemies/enemy_director.gd, the `kept` line (about 819) and _unflanked set in _track_flanking (about 599).",
+   "repro": "Read the code: a Kicker in WINDUP or ATTACK holding a token, flanking, with the Punk leaving the view for kicker_flank_off_s. On that tick _unflanked contains it and it is a seeker. A probe would need the Kicker's WINDUP to straddle the 1 s off-delay.",
+   "suggested_fix": "Either exempt token holders from _unflanked (`not _unflanked.has(enemy) or _holders.has(enemy)`, so the holder keeps its seat and reseats at the next reslot after the attack), or record the departure in M5-calls/FEEDBACK.md and add one test for a holder that stops flanking.",
+   "files": [
+    "game/enemies/enemy_director.gd",
+    "tests/test_kicker_flank.gd"
+   ],
+   "spec_change": false,
+   "id": "feedback-code-02",
+   "lens": "code",
+   "verdict": {
+    "survives": false,
+    "votes": [],
+    "triage": "lead"
+   }
+  }
+ ],
+ "lead_overrides": {
+  "feedback-feel-01": "Fix it, in the direction of Game-boy's words ('when you're fighting other enemies'): the player is busy with someone else only when that someone is the one he faces. (1) _player_busy(): another live, engaged, non-flanking enemy within kicker_flank_busy_radius_m counts only if it is inside the view AND nearer the middle of the view than this Kicker (smaller absolute look bearing). A Kicker out of view is farther from the middle than anything in view, so behind him the rule is as now. (2) Faced: a Kicker inside the view that is nearer the middle than every such other enemy is the one he faces. A flanking Kicker that is faced stops flanking after kicker_flank_faced_off_s (new tunable in the Kicker subgroup, default 0.0 = on the tick it is faced) instead of kicker_flank_off_s; kicker_flank_off_s stays for the other way busy ends (the other enemy leaves the view or the radius, or goes down). (3) The on-delay (kicker_flank_on_s) is unchanged, so a Kicker he glances away from does not set off at once. Tests in tests/test_kicker_flank.gd: a Punk and a Kicker both in view, the player looking straight at the Kicker: it never flanks; the same with the look on the Punk: it flanks after kicker_flank_on_s; a flanking Kicker that the player turns to (instant look_yaw write onto it, the Punk still in view at the side) stops flanking within kicker_flank_faced_off_s plus a tick and then attacks from in view; the reviewer's A4 case (Kicker squared up at bearing 0, a Punk engaging in view beside it) never flips it to flanking. Update ARCHITECTURE.md's Kicker rule, the class docs, and README's ruling bullet (it says 'while another enemy stands in your view within 4.5 m': make it 'while you face another enemy within 4.5 m; turn to the Kicker and it stops and fights').",
+  "feedback-feel-02": "Take half: add the 'Kicker left alone' act to tests/bot/acts/kicker_acts.gd as the reviewer describes (a Punk and a Kicker, the autopilot fights; once the Kicker is flanking past 110 degrees, set the Punk's health to 1 so the autopilot finishes it; one KICKER line every 15 ticks with bearing, distance, state, flanking) and record it. Skip the behind-door act: the reviewer's full-level spawn probe and its crop of the A6 veteran stepping out of the recess cover it.",
+  "feedback-code-01": "Fix it: test_kicker.gd run alone must end with no leak ERROR, as on ace4aa9. Free what the changed crowd-room test leaves alive and restore Tuning.data.god_mode in its cleanup.",
+  "feedback-code-02": "Keep the behaviour, which is better than the brief's: a holder that stops flanking is reseated to the seat nearest where it stands (its old claim is a seat behind the look it may never have reached, so keeping it would send it running after its attack). Add one test (a token-holding Kicker that stops flanking keeps its token and its attack lands or whiffs normally), and log the call in the fix calls file."
+ },
+ "packages": [
+  {
+   "key": "faced",
+   "title": "A Kicker he faces fights: the busy test counts only the enemy he faces; faced off-delay; the left-alone act; the single-file leak; the holder test",
+   "finding_ids": [
+    "feedback-feel-01",
+    "feedback-feel-02",
+    "feedback-code-01",
+    "feedback-code-02"
+   ],
+   "files": [
+    "game/enemies/enemy_director.gd",
+    "game/enemies/kicker/kicker.gd",
+    "game/autoload/tuning_data.gd (Kicker subgroup)",
+    "tuning/default.json",
+    "tests/test_kicker_flank.gd",
+    "tests/test_kicker.gd",
+    "tests/bot/acts/kicker_acts.gd",
+    "docs/ARCHITECTURE.md",
+    "README.md (only the 'Kickers flank only when you're busy' ruling bullet)",
+    "docs/milestones/M5-calls/fix-feedback-faced.md"
+   ],
+   "notes": "The lead's rulings are in lead_overrides and win. Re-record into your worktree's captures/fix/ with tools/record_acts.sh: 'Kicker opportunist', 'Kicker left alone' (new), 'Kicker one on one', and A4 held back with the level bot (BOT_SCENE=res://tests/bot/level_bot.tscn CAPTURE_ARGS=\"--level=res://game/level/mission1/mission1.tscn --from=3 --to=3\", slug a4). Look at them first person: when the autopilot faces the Kicker it fights from in view at once; while it fights the Punk the Kicker still gets behind; no flip-flop. The before and after recordings of this round are in /Users/arachne/repos/beat-em-up-PoC/captures/m5-feedback/ (before/a4, after/*) and the reviewer's in /Users/arachne/repos/beat-em-up-PoC/.worktrees/m5-review-feedback-feel/captures/review/."
+  }
+ ]
+}
