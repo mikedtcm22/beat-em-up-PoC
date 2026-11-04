@@ -4,6 +4,18 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-04 10:15 CST: Game-boy's playtest feedback done (1766/1766); PR #5 updated; waiting on his play and sign-off again
+- **Merged on `m5/level-blockout`:**
+  - FEEDBACK (`b417ba0`);
+  - the fix `fix-feedback-faced` (merge `2e8a4a4`): a Kicker he faces fights; busy counts only the enemy nearer the middle of his view; `kicker_flank_faced_off_s` 0; the "Kicker left alone" act; the leak in a test_kicker.gd single-file run; the holder test;
+  - the comment polish (`26134ef`, `8a2bf73`).
+- **The targeted re-check** (one Sonnet agent, read-only) confirmed every item and found no highs or mediums. Its two lows: one was comment polish, now done. The other is that a Kicker already winding up when he turns away can still hit from the side. That's the holder rule, and it's kept.
+- **Suite:** 1766/1766 in 299 s, 0 error lines. The done-when plays 7 arenas and 34 enemies.
+- **Recordings** are in `captures/m5-feedback/`: before/, after/, and fix/ with alone, opportunist, oneonone and a4.
+- **Waiting on Game-boy:** play again, sign off, and rule on README's "decided by default" M5 departures. His two playtest rulings are recorded as his, in README's new "ruled by Game-boy at his playtest" section.
+- **Next after sign-off:** as before. Record his rulings in README, merge PR #5, then plan M6.
+- **Usage:** about 9% of the 5-hour window and 12% weekly. This round used about 1.2M sub-agent tokens: the builder 0.32M, the review 0.54M, the fixer 0.21M and the re-check 0.1M.
+
 ### 2026-11-04 09:40 CST: FEEDBACK merged (1761/1761); reviewed (one medium); fixer `faced` running
 - **FEEDBACK** is merged into `m5/level-blockout` (`b417ba0`, fast-forward). README has Game-boy's two rulings (`e8fc568`). The suite on the merged branch: 1761/1761, 327 s under load, 0 error lines.
 - **Recordings** are in `captures/m5-feedback/`: before/a4, plus after/{oneonone, opportunist, flanks, a4, a6}. One-on-one, the Kicker fights from in view; in A6 it gets behind while the Punk is busy with him.
