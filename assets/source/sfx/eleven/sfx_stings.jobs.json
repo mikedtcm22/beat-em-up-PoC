@@ -1,0 +1,21 @@
+{
+	"group": "sfx_stings",
+	"jobs": [
+		{
+			"id": "sting_go_v1",
+			"pool": "sting_go",
+			"text": "A short punchy comic action-game GO stinger: two bright brass hits rising, an energetic call to move on, about one and a half seconds. A short musical sting only, no voices, dry with no reverb tail, ends cleanly.",
+			"duration_seconds": 1.8,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "sting_clear_v1",
+			"pool": "sting_clear",
+			"text": "A short triumphant victory stinger: a bright major brass hit with a cymbal shimmer and a quick resolving flourish, about two seconds. A short musical sting only, no voices, dry with no reverb tail, ends cleanly.",
+			"duration_seconds": 2.0,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		}
+	]
+}

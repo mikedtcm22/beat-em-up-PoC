@@ -1,0 +1,77 @@
+{
+	"group": "sfx_blocks",
+	"jobs": [
+		{
+			"id": "block_clack_v1",
+			"pool": "block_clack",
+			"text": "A sharp hard clack of a raised forearm blocking a punch: a short dry wooden knock with a bright edge. Single isolated sound effect, no music, no voices, no background noise, dry close-microphone recording with no reverb and no echo tail, punchy comic action-game style, ends cleanly.",
+			"duration_seconds": 0.5,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "block_clack_v2",
+			"pool": "block_clack",
+			"text": "A tight leather glove smacking onto a forearm guard, a crisp dry slap-knock, very short. Single isolated sound effect, no music, no voices, no background noise, dry close-microphone recording with no reverb and no echo tail, punchy comic action-game style, ends cleanly.",
+			"duration_seconds": 0.5,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "block_clack_v3",
+			"pool": "block_clack",
+			"text": "A bright dry tick-knock of two hard bones meeting in a block, snappy and brief. Single isolated sound effect, no music, no voices, no background noise, dry close-microphone recording with no reverb and no echo tail, punchy comic action-game style, ends cleanly.",
+			"duration_seconds": 0.5,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "parry_ting_v1",
+			"pool": "parry_ting",
+			"text": "A bright metallic ting like a steel pipe tapped by a coin, a clean ringing chime that rings briefly and fades, a reward for a perfect block. Single isolated sound effect, no music, no voices, no background noise, dry close-microphone recording with no reverb and no echo tail, punchy comic action-game style, ends cleanly.",
+			"duration_seconds": 0.8,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "parry_ting_v2",
+			"pool": "parry_ting",
+			"text": "A crisp high sparkling ting of two blades touching, a short ringing shimmer and a quick fade. Single isolated sound effect, no music, no voices, no background noise, dry close-microphone recording with no reverb and no echo tail, punchy comic action-game style, ends cleanly.",
+			"duration_seconds": 0.8,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "parry_ting_v3",
+			"pool": "parry_ting",
+			"text": "A clear glassy metallic ping with a tiny click at the start, short ring, dry. Single isolated sound effect, no music, no voices, no background noise, dry close-microphone recording with no reverb and no echo tail, punchy comic action-game style, ends cleanly.",
+			"duration_seconds": 0.8,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "guard_break_v1",
+			"pool": "guard_break",
+			"text": "A heavy shattering crash of a guard being broken: a loud crack, a splintering burst of wood and metal and a low boom, ending quickly. Single isolated sound effect, no music, no voices, no background noise, dry close-microphone recording with no reverb and no echo tail, punchy comic action-game style, ends cleanly.",
+			"duration_seconds": 1.0,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "guard_break_v2",
+			"pool": "guard_break",
+			"text": "A violent breaking-through impact: a hard clack, a crash of crumbling debris and a deep boom, short and dramatic. Single isolated sound effect, no music, no voices, no background noise, dry close-microphone recording with no reverb and no echo tail, punchy comic action-game style, ends cleanly.",
+			"duration_seconds": 1.0,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "guard_break_v3",
+			"pool": "guard_break",
+			"text": "A crushing smash of a defence collapsing: a sharp crack, shattering fragments and a low thump, brief. Single isolated sound effect, no music, no voices, no background noise, dry close-microphone recording with no reverb and no echo tail, punchy comic action-game style, ends cleanly.",
+			"duration_seconds": 1.0,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		}
+	]
+}
