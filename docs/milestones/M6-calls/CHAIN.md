@@ -28,9 +28,16 @@ Each: the decision / the alternative not taken / why.
 
 **C13 Test assertion changes** (old -> new): `test_look_post.gd` "the training room's dummy colours are not red" (`dummy_colors`) -> the dummies wear the dummy art untinted and the room has no `dummy_colors` (the colours themselves are held by the dummy's roster A3, which runs on the art's swatches, and by `test_art_roster`'s slot and red-band check). `test_art_contract` the probe-report keys test: one probe vs Punk -> probe and every roster report vs Punk (stricter). `test_m4_done_when`: the row constants moved into roster files (same numbers); A1's mesh list is the row's.
 
+**C14 `test_health_bars.gd`'s silhouette skins the art** (a file nobody owns; the full run found it). Its `_silhouette()` read every visible mesh's bind-pose vertices, right for the primitives (their parts follow their bones) and wrong for art, which the training dummy now wears: the bars "floated" 47-424 px off a body measured at its A-pose. The art meshes are now skinned in the rig's current pose (`SkinnedView.skin_vertices`); the 3 px and 12 px bars are unchanged and pass. / Loosening the bars, or testing a primitive dummy. / The assertion measures the drawn body, and that is what changed.
+
 ## The inventory drop for the lead
 
-CHAIN clears no placeholder category by itself except:
-- `primitive_bodies`: the training room's three dummies and the F4 catalog's `dummy` entry: 4 bodies in the training room (3 dummies plus the catalog's dummy; the player already has art) and 1 in the catalog count where that scene's count includes `dummy` (the crowd room: 0; mission1: 0).
-- `tints`: the training room's dummy colour multiply (`test_room.gd:107`, 3 dummies) is gone: the training room loses 1 tint source (the three colours were one category line).
-Everything else (`boxes`, `cylinder_weapons`, `second_weapon`, `generated_sfx`, `empty_slots`) is untouched.
+CHAIN clears two things, both for the dummy:
+- `primitive_bodies`: the id `dummy` now has art (`has_art()` true), so it leaves the count of every scene that can put it in play: the training room (its three dummies, and the F4 catalog entry) and any scene counted through `EnemyCatalog.available()`. Counted by id that is -1 in each of those scenes; counted by instance it is -3 in the training room.
+- `tints`: the training room's dummy colour multiply (`test_room.gd`'s `dummy.color = dummy_colors[...]`, three colours) is gone: -1 (the training room).
+Nothing else moves: `boxes`, `cylinder_weapons`, `second_weapon`, `generated_sfx` and `empty_slots` are untouched. `TrainingDummy.color` and `accent` still exist for the hidden primitives and `game/ui/cheat_menu.gd:276` still sets `dummy.color` for a spawned dummy (invisible now; a request below).
+
+## Requests (files I do not own)
+
+- `game/ui/cheat_menu.gd:276` sets `dummy.color` from `spawn_colors` on a spawned dummy; the art ignores it now (it still colours the hidden primitives). A later package can drop the line and `spawn_colors`.
+- `test_skinned_art.gd` (ARM's) needs no change; if ARM moves the hero's strain figures, they are `ArtStrain.PLAYER_ROW` and `tests/fixtures/strain/strain_ratchet.json`.
