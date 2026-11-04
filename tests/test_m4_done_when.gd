@@ -408,7 +408,7 @@ func test_a4_the_soles_stand_on_the_floor_and_the_walks_plant_them() -> void:
 		var worst_slide := 0.0
 		var worst_low := INF
 		for id: StringName in walks:
-			var clip := PlaceholderAnims.build_named(id, 1.0, stance, PlaceholderAnims.Life.new())
+			var clip := PlaceholderAnims.build_named(id, rig.rig_scale(), stance, PlaceholderAnims.Life.new())
 			# The enemies' walks at the probe's 120 Hz, as test_motion_m4; the hero's, whose slide is metres, at 60 Hz.
 			var result := MotionProbe.walk_slide(mi, rig, clip, sole, walks[id], Tuning.data.move_speed, FRAME if row.player else FRAME / 2.0)
 			worst_slide = maxf(worst_slide, result.slide)
@@ -417,7 +417,7 @@ func test_a4_the_soles_stand_on_the_floor_and_the_walks_plant_them() -> void:
 			var slide_bar: float = SLIDE_RATCHET_PLAYER_M if row.player else float(row.ratchets.slide_m)
 			assert_lt(result.slide, slide_bar, "%s %s: a planted step slides at most %.2f cm (%.2f cm)" % [row.name, id, slide_bar * 100.0, result.slide * 100.0])
 			assert_gt(result.lowest, PLANTED_FLOOR_M, "%s %s: no sole vertex under -15 mm (%.1f mm)" % [row.name, id, result.lowest * 1000.0])
-		var idle := PlaceholderAnims.build_named(&"idle", 1.0, stance, PlaceholderAnims.Life.new())
+		var idle := PlaceholderAnims.build_named(&"idle", rig.rig_scale(), stance, PlaceholderAnims.Life.new())
 		var idle_low := INF
 		for step: int in 13:
 			var posed := SkinnedView.skin_vertices(mi, rig, MotionProbe.clip_globals(rig, idle, idle.length * float(step) / 12.0))
@@ -473,13 +473,13 @@ func test_a5_the_fists_fill_the_fist_box() -> void:
 				continue
 			centroid /= area
 			var c: Array = box.center_rest_global
-			var gap := centroid.distance_to(Vector3(c[0], c[1], c[2]))
-			assert_lt(gap, FIST_CENTROID_M, "%s: the %s fist's centroid is %.1f mm from the fist box" % [row.name, box.side, gap * 1000.0])
+			var gap := centroid.distance_to(Vector3(c[0], c[1], c[2]) * rig.rig_scale())  # the box is the 1.8 m table's; the rig is scaled (M6 HEAVIES)
+			assert_lt(gap / rig.rig_scale(), FIST_CENTROID_M, "%s: the %s fist's centroid is %.1f mm from the fist box (%.1f mm in the 1.8 m table's frame, the bar)" % [row.name, box.side, gap * 1000.0, gap / rig.rig_scale() * 1000.0])
 			var size: Array = box.size
 			var ext := hi - lo
 			var ratios := PackedStringArray()
 			for axis: int in 3:
-				var ratio := ext[axis] / float(size[axis])
+				var ratio := ext[axis] / (float(size[axis]) * rig.rig_scale())
 				ratios.append("%.2f" % ratio)
 				assert_between(ratio, 1.0 - float(row.ratchets.a5_extent), 1.0 + float(row.ratchets.a5_extent), "%s: the %s fist's extent on axis %d is x%.2f of the box" % [row.name, box.side, axis, ratio])
 			summary.append("%s %.1f mm, extents x%s" % [box.side, gap * 1000.0, "/".join(ratios)])

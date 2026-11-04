@@ -110,7 +110,7 @@
 					0.01,
 					1.685
 				],
-				"limit_m": 0.185,
+				"limit_m": 0.178,
 				"soft_m": 0.004
 			}
 		],
@@ -137,7 +137,12 @@
 				"half_height_m": 0.14,
 				"amount_m": 0.04
 			}
-		]
+		],
+		"sole_offset_m": -0.0245,
+		"sole_flatten": {
+			"height_m": 0.09,
+			"bins": 24
+		}
 	},
 	"rig": {
 		"weights": "tripo",
@@ -146,7 +151,46 @@
 			"apose",
 			"rest"
 		],
-		"clamps": []
+		"clamps": [
+			{
+				"name": "waist",
+				"bones": [
+					"LeftUpperLeg",
+					"RightUpperLeg"
+				],
+				"above_z_m": 0.86,
+				"ramp_m": 0.08,
+				"to": "Hips"
+			},
+			{
+				"name": "left_sole",
+				"bones": [
+					"LeftLowerLeg"
+				],
+				"below_z_m": 0.1,
+				"ramp_m": 0.03,
+				"to": "LeftFoot"
+			},
+			{
+				"name": "right_sole",
+				"bones": [
+					"RightLowerLeg"
+				],
+				"below_z_m": 0.1,
+				"ramp_m": 0.03,
+				"to": "RightFoot"
+			},
+			{
+				"name": "head_skirt",
+				"bones": [
+					"Head"
+				],
+				"below_z_m": 1.5,
+				"ramp_m": 0.06,
+				"to": "Neck"
+			}
+		],
+		"smooth_iterations": 3
 	},
 	"parts": {
 		"fists": {
