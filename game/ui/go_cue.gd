@@ -168,24 +168,37 @@ func _draw() -> void:
 
 
 ## A block arrow of `length` centred on `centre`, pointing up when `angle` is 0 and turned clockwise
-## by it: an ink outline, a yellow fill.
+## by it: an ink outline, a yellow fill. Drawn as triangles (see `arrow_triangles`): one polygon
+## through the engine's triangulation failed at a few turns (`Invalid polygon data`).
 func _draw_arrow(centre: Vector2, angle: float, length: float, scale_by: float) -> void:
+	for pass_index in 2:
+		var outline := border * 0.6 * scale_by if pass_index == 0 else 0.0
+		var color := HudStyle.INK if pass_index == 0 else HudStyle.HEALTH
+		var tris := arrow_triangles(angle, length, scale_by, outline)
+		for i in range(0, tris.size(), 3):
+			draw_primitive(
+					PackedVector2Array([centre + tris[i], centre + tris[i + 1], centre + tris[i + 2]]),
+					PackedColorArray([color, color, color]), PackedVector2Array())
+
+
+## The arrow's triangles (three points each, relative to its centre): the head and the shaft, grown
+## by `grow` pixels for the outline, turned clockwise by `angle` (radians; 0 when it is not finite).
+## No sliver: every triangle has an area at every angle.
+func arrow_triangles(angle: float, length: float, scale_by: float, grow: float = 0.0) -> PackedVector2Array:
+	if not is_finite(angle):
+		angle = 0.0
 	var half := length * 0.5
-	var head := arrow_head_width * scale_by * 0.5
+	var head := maxf(arrow_head_width * scale_by * 0.5, arrow_shaft_width * scale_by * 0.5 + 1.0)
 	var shaft := arrow_shaft_width * scale_by * 0.5
 	var neck := -half + length * 0.46
-	var outline := border * 0.6 * scale_by
-	for pass_index in 2:
-		var grow := outline if pass_index == 0 else 0.0
-		var points := PackedVector2Array([
-			Vector2(0.0, -half - grow * 1.4),
-			Vector2(head + grow, neck),
-			Vector2(shaft + grow * 0.5, neck),
-			Vector2(shaft + grow * 0.5, half + grow),
-			Vector2(-shaft - grow * 0.5, half + grow),
-			Vector2(-shaft - grow * 0.5, neck),
-			Vector2(-head - grow, neck),
-		])
-		for i in points.size():
-			points[i] = centre + points[i].rotated(angle)
-		draw_colored_polygon(points, HudStyle.INK if pass_index == 0 else HudStyle.HEALTH)
+	# The shaft starts inside the head, so the two never leave a seam between them.
+	var overlap := length * 0.1
+	var tip := Vector2(0.0, -half - grow * 1.4)
+	var points := PackedVector2Array([
+		tip, Vector2(head + grow, neck), Vector2(-head - grow, neck),
+		Vector2(shaft + grow * 0.5, neck - overlap), Vector2(shaft + grow * 0.5, half + grow), Vector2(-shaft - grow * 0.5, half + grow),
+		Vector2(shaft + grow * 0.5, neck - overlap), Vector2(-shaft - grow * 0.5, half + grow), Vector2(-shaft - grow * 0.5, neck - overlap),
+	])
+	for i in points.size():
+		points[i] = points[i].rotated(angle)
+	return points

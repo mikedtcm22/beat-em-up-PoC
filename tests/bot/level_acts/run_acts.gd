@@ -3,7 +3,8 @@ extends RefCounted
 ## (`--level=`), from `--from` to `--to` (default the whole level). See tests/bot/level_bot.gd.
 ##   "Run: held back"  the held-back autopilot plays the level with real damage (a KO stands the player
 ##                     up in place), the readability probe running over each arena
-##   "Run: knock-off"  in the first arena with a hazard volume, a Punk is launched over the edge
+##   "Run: knock-off"  in the first arena from `--from` on with a hazard volume, a Punk is launched over
+##                     the edge (`--from=4` the catwalk's drop, `--from=6` the boss roof's edge)
 ##   "Run: timing"     god mode, the full-speed autopilot, no probe: logs each arena's time and LEVEL
 ##                     (run it headless: `godot --headless --path . res://tests/bot/level_bot.tscn
 ##                     -- --act="Run: timing" --presentation=0`)
@@ -24,7 +25,7 @@ static func _held_back(bot: Node) -> void:
 
 static func _knock_off(bot: Node) -> void:
 	await bot._look_to(0.0, 10)
-	await bot.knock_off()
+	await bot.knock_off(bot.from_arena)
 	await bot._ticks(60)
 
 

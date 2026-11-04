@@ -570,6 +570,24 @@ func test_a_named_point_too_near_the_player_waits_then_the_nearest_free_point_of
 	assert_almost_eq(enemies[0].global_position.x, 0.0, 0.05)
 
 
+func test_a_named_point_with_a_unique_tag_held_by_the_player_falls_back_to_the_nearest_point_of_any_tag() -> void:
+	Tuning.set_value(&"spawn_named_wait_s", 0.5)
+	Tuning.set_value(&"spawn_named_any_wait_s", 1.0)
+	var spawner := _spawner()
+	# "Hold" is the only point of its tag and the player stands within spawn_min_player_distance_m of it.
+	var points := _named_points([["Hold", Vector3(0.0, 0.0, -2.0), "alley"], ["Next", Vector3(3.0, 0.0, -9.0), "doorway"],
+			["Far", Vector3(-9.0, 0.0, -9.0), "doorway"]])
+	spawner.play_table(_finite([["punk"]], [["Hold"]]), points)
+	spawner.set_waves_enabled(true)
+	await _ticks(60)
+	assert_eq(_enemies().size(), 0, "past spawn_named_wait_s (0.5 s) there is still no point of its tag: it holds")
+	await _ticks(60)
+	var enemies := _enemies()
+	assert_eq(enemies.size(), 1, "after spawn_named_any_wait_s more the wave arrives")
+	assert_almost_eq(enemies[0].global_position.x, 3.0, 0.05, "at the nearest free point of any tag")
+	assert_almost_eq(enemies[0].global_position.z, -9.0, 0.05)
+
+
 func test_a_named_point_that_is_free_is_used_without_waiting() -> void:
 	Tuning.set_value(&"spawn_named_wait_s", 5.0)
 	var spawner := _spawner()

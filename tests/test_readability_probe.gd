@@ -980,6 +980,17 @@ func test_verdict_r2_reads_the_directors_gap_tunable() -> void:
 	assert_eq(_row_for(m, "R2"), "ok", "0.2 s is 12 frames")
 
 
+func test_r13_does_not_ask_a_finite_table_with_fewer_than_two_waves_for_two_waves() -> void:
+	var m := _clean_metrics()
+	m.waves_cleared_90s = 1
+	assert_eq(_row_for(m, "R13", {"seconds": 112.0, "tags": {}}), "miss", "no table known: asked as before")
+	assert_eq(_row_for(m, "R13", {"seconds": 112.0, "tags": {}, "table_waves": -1}), "miss", "a looping table (the crowd room): asked as before")
+	assert_eq(_row_for(m, "R13", {"seconds": 112.0, "tags": {}, "table_waves": 1}), "ok", "the boss arena's one wave: not asked")
+	assert_eq(_row_for(m, "R13", {"seconds": 112.0, "tags": {}, "table_waves": 3}), "miss", "a three-wave arena is asked")
+	m.stuck_events = 1
+	assert_eq(_row_for(m, "R13", {"seconds": 112.0, "tags": {}, "table_waves": 1}), "miss", "and stuck enemies still count")
+
+
 func test_verdict_r1_with_cap_zero_never_fails_and_r13_waves_need_a_long_act() -> void:
 	var m := _clean_metrics()
 	m.attacker_cap = 0

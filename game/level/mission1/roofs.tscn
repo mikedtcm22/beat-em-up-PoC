@@ -714,13 +714,13 @@ size = Vector3(2, 18, 2)
 
 [node name="ParapetWest" type="Node3D" parent="Geometry/TopRoof"]
 script = ExtResource("2_block")
-position = Vector3(12.3, 8.2, -20.5)
-size = Vector3(0.6, 1.4, 19)
+position = Vector3(12.3, 8.2, -20.2)
+size = Vector3(0.6, 1.4, 18.4)
 
 [node name="PenthouseBody" type="Node3D" parent="Geometry/TopRoof"]
 script = ExtResource("2_block")
-position = Vector3(14.6, 9.75, -27.8)
-size = Vector3(4, 4.5, 4)
+position = Vector3(14.6, 9.75, -27.6)
+size = Vector3(4, 4.5, 3.6)
 
 [node name="PenthouseFrontWall0" type="Node3D" parent="Geometry/TopRoof"]
 script = ExtResource("2_block")
@@ -749,18 +749,6 @@ look = &"accent"
 script = ExtResource("2_block")
 position = Vector3(16.35, 9.5, -24.8)
 size = Vector3(0.5, 5, 2)
-
-[node name="FenceW" type="Node3D" parent="Geometry/TopRoof"]
-script = ExtResource("2_block")
-position = Vector3(14.8, 9.25, -29.7)
-size = Vector3(4.4, 3.5, 0.2)
-look = &"fence"
-
-[node name="FenceE" type="Node3D" parent="Geometry/TopRoof"]
-script = ExtResource("2_block")
-position = Vector3(23.5, 9.25, -29.7)
-size = Vector3(5, 3.5, 0.2)
-look = &"fence"
 
 [node name="StackA" type="Node3D" parent="Geometry/TopRoof"]
 script = ExtResource("2_block")
@@ -1110,7 +1098,7 @@ position = Vector3(14.6, 7.5, -22.4)
 [node name="Route" type="Node3D" parent="."]
 
 [node name="R0" type="Marker3D" parent="Route"]
-position = Vector3(-3, 0, -1.5)
+position = Vector3(-3, 0, -2.5)
 
 [node name="R1" type="Marker3D" parent="Route"]
 position = Vector3(-3, 0, -9)

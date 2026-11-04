@@ -4,6 +4,7 @@ extends GutTest
 ## line (ARENA+, WAVE, ARENA-, LEVEL); the walk never goes into a closed barrier; a Punk launched at the
 ## strip's drop is KO'd by the hazard (HAZARD); a lone section scene is wrapped as a one-section level.
 
+const MISSION_1 := "res://game/level/mission1/mission1.tscn"
 const STRIP_A := "res://tests/fixtures/level_strip_a.tscn"
 ## The most ticks the whole strip run may take (both arenas, the walk between them).
 const RUN_BUDGET_TICKS := 5400
@@ -128,6 +129,36 @@ func test_knock_off_logs_a_hazard_ko() -> void:
 	assert_eq(_bot.hazard_kos, 1)
 
 
+func test_the_knock_off_hazard_is_chosen_by_the_arena_the_act_starts_from() -> void:
+	await _make_bot(MISSION_1)
+	var by_from: Array[int] = []
+	for from in _bot.level.arenas().size():
+		var found := _bot.first_hazard(from)
+		by_from.append(int(found.arena) if not found.is_empty() else -1)
+	gut.p("first hazard arena by --from 0..6: %s" % [by_from])
+	assert_eq(by_from[0], 3, "from the start: the terrace's drop, the first of the level")
+	assert_eq(by_from[3], 3, "--from=3: the terrace's")
+	assert_eq(by_from[4], 4, "--from=4: the catwalk's")
+	assert_eq(by_from[5], 5, "--from=5: the top roof's")
+	assert_eq(by_from[6], 6, "--from=6: the boss roof's")
+	var boss := _bot.first_hazard(6)
+	assert_true(boss.hazard.get_path().get_concatenated_names().contains("BossRoof"), "and it is the boss roof's own edge")
+	var terrace := _bot.first_hazard(3)
+	assert_eq(String(terrace.hazard.name), "DropFront", "the terrace's is DropFront, not the catwalk's drop above it (%s)" % terrace.hazard.name)
+	var catwalk := _bot.first_hazard(4)
+	assert_true(String(catwalk.hazard.name) == "DropCatwalk", "the catwalk's is DropCatwalk (%s)" % catwalk.hazard.name)
+
+
+func test_the_knock_off_works_at_the_terrace_the_catwalk_the_top_roof_and_the_boss_roof() -> void:
+	await _make_bot(MISSION_1)
+	for from in [3, 4, 5, 6]:
+		var before := _bot.hazard_kos
+		var ok: bool = await _bot.knock_off(from)
+		assert_true(ok, "--from=%d: the hazard took the launched Punk" % from)
+		assert_eq(_bot.hazard_kos, before + 1, "--from=%d: one more HAZARD" % from)
+		_bot.clear_enemies()
+
+
 func test_a_lone_section_scene_is_wrapped_as_a_level() -> void:
 	await _make_bot(STRIP_A)
 	assert_not_null(_bot.level, "a level was built")
@@ -135,9 +166,9 @@ func test_a_lone_section_scene_is_wrapped_as_a_level() -> void:
 	assert_eq(_bot.level.arenas().size(), 1, "its one arena")
 
 
-func test_the_act_file_lists_the_three_run_acts() -> void:
+func test_the_act_files_list_the_run_acts_and_the_seam_look() -> void:
 	await _make_bot()
 	var titles: Array[String] = []
 	for act in _bot._collect_acts():
 		titles.append(act.title)
-	assert_eq(titles, ["Run: held back", "Run: knock-off", "Run: timing"] as Array[String])
+	assert_eq(titles, ["Run: held back", "Run: knock-off", "Run: timing", "Look: seams"] as Array[String])

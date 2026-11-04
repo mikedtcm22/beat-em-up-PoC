@@ -256,6 +256,7 @@ func end_act() -> Dictionary:
 		"tags": _tags.duplicate(),
 		"frames": frames,
 		"seconds": float(frames) / Engine.physics_ticks_per_second,
+		"table_waves": _table_waves(),
 		"metrics": _metrics(_acc, warning),
 		"acc": _acc,
 	}
@@ -563,6 +564,17 @@ func _tick_progress(live: Array[CombatActor], frame: int) -> void:
 			_acc.waves_cleared_90s += 1
 	_alive_prev = alive
 	_acc.peak_alive = maxi(_acc.peak_alive, alive)
+
+
+## The wave count of the finite table the room's spawner plays (an arena's), -1 with none or a
+## looping one (the crowd room's).
+func _table_waves() -> int:
+	var spawner: Variant = root.get("spawner") if root else null
+	if spawner is EncounterSpawner:
+		var table := (spawner as EncounterSpawner).table
+		if table != null and not table.loop:
+			return table.waves.size()
+	return -1
 
 
 ## R15: note the frame a new enemy appeared.
@@ -1154,7 +1166,11 @@ func verdict(m: Dictionary, summary: Dictionary = {}) -> Array[Dictionary]:
 				"KO %s, worst 2 s %.0f" % ["no" if m.passive_time_to_ko_s == null else "%.1f s" % float(m.passive_time_to_ko_s), float(m.max_damage_2s)],
 				"KO >= %.0f s, 2 s <= %.0f" % [LIMITS.passive_time_to_ko_min_s, LIMITS.max_damage_2s]))
 	# R13
-	var waves_applies := seconds >= WAVE_WINDOW_S
+	# R13's wave count asks a table for waves it may not have: a finite table (an arena's) with fewer
+	# than the minimum (the boss arena's one wave and his adds) cannot show it; the crowd room's
+	# looping table, and an act with no table, are asked as before.
+	var table_waves := int(summary.get("table_waves", -1))
+	var waves_applies := seconds >= WAVE_WINDOW_S and (table_waves < 0 or table_waves >= LIMITS.waves_cleared_90s_min)
 	var r13_ok := int(m.stuck_events) <= LIMITS.stuck_events_max and (not waves_applies or int(m.waves_cleared_90s) >= LIMITS.waves_cleared_90s_min)
 	out.append(_row("R13", "stuck enemies, waves", false, r13_ok,
 			"%d stuck, %d waves" % [m.stuck_events, m.waves_cleared_90s],

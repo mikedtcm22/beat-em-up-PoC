@@ -1004,6 +1004,10 @@ extends Resource
 ## A named spawn point nearer the player than spawn_min_player_distance_m (or with no room) is
 ## waited for this long (s); then the nearest free point with the same tag is used.
 @export_range(0.0, 10.0, 0.1) var spawn_named_wait_s: float = 2.0
+## When no point of its tag is free either (a point with a unique tag, with the player standing
+## by it), a further wait (s) after spawn_named_wait_s; then the nearest free point of any tag in
+## the arena takes it, so a player holding a spot cannot stall the wave.
+@export_range(0.0, 20.0, 0.1) var spawn_named_any_wait_s: float = 3.0
 @export_subgroup("Drop-offs")
 ## The invisible guard along every open edge (physics layer 9): the player can never walk or be
 ## knocked off, a standing enemy never walks off. Off, the player can fall (the fall rule below).
