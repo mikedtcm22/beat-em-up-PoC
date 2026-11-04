@@ -720,6 +720,7 @@ extends Resource
 ## An approaching enemy engages (fixes its line) when it comes this near (m) to the player. At
 ## least wait_ring_max_m + arc_engage_wait_margin_m, so no wait seat lies outside it.
 @export_range(2.0, 20.0, 0.5) var arc_engage_radius_m: float = 7.0
+## How far past wait_ring_max_m the engage radius always reaches (m).
 @export_range(0.0, 3.0, 0.1) var arc_engage_wait_margin_m: float = 0.5
 ## A wait seat may sit as near as posture_ring_max_m plus this (m) when the wait ring is full.
 @export_range(0.0, 4.0, 0.1) var wait_seat_floor_gap_m: float = 1.0
@@ -1046,14 +1047,21 @@ extends Resource
 ## go_cue_face_deg of it) or comes within go_cue_pass_m of it, but no longer than go_cue_max_s.
 ## Off, it lasts go_cue_s as in the first build.
 @export var go_cue_until_faced: bool = true
+## A look within this many degrees of the exit counts as facing it.
 @export_range(5.0, 90.0, 1.0) var go_cue_face_deg: float = 30.0
+## Coming within this flat distance of the exit (m) ends the cue.
 @export_range(0.5, 12.0, 0.5) var go_cue_pass_m: float = 3.0
+## The longest the cue stays up (s) while go_cue_until_faced is on.
 @export_range(2.0, 20.0, 0.5) var go_cue_max_s: float = 8.0
 ## The panel's layout (pixels at 1920 x 1080, before go_cue_size): the gap between the word and the
 ## arrow, the padding round them (across, down) and the offset of the panel's shadow.
+## The gap between the word and the arrow (px).
 @export_range(0.0, 100.0, 1.0) var go_cue_gap_px: float = 26.0
+## The padding across (px).
 @export_range(0.0, 100.0, 1.0) var go_cue_pad_x_px: float = 34.0
+## The padding down (px).
 @export_range(0.0, 100.0, 1.0) var go_cue_pad_y_px: float = 18.0
+## The panel shadow's offset (px).
 @export_range(0.0, 20.0, 0.5) var go_cue_shadow_px: float = 6.0
 
 @export_group("Audio")
