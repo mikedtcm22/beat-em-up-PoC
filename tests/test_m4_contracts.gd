@@ -314,6 +314,19 @@ func test_toon_material_factories_return_the_toon_materials() -> void:
 	assert_eq(get_child_count(), children, "warming up is a no-op without a window")
 
 
+## M6 KIT (D10): the kit's one trim material is a toon-lit ShaderMaterial of its own shader, the same
+## object on every call, with the flat `albedo` tint a test can read and the edge pass's tag.
+func test_the_trim_material_is_one_toon_lit_shader_material() -> void:
+	var trim := ToonMaterials.trim()
+	assert_true(trim is ShaderMaterial)
+	assert_eq(trim.shader, load(ToonMaterials.TRIM_SHADER), "the trim shader (the grid's precedent: its own shader, the same lighting)")
+	assert_same(ToonMaterials.trim(), trim, "one shared material, not one per call (the room's flat materials are one per call)")
+	assert_eq(trim.get_shader_parameter(&"albedo"), Color.WHITE)
+	assert_eq(trim.get_shader_parameter(&"edge_tag"), 1.0, "ROUGHNESS 1: the edge pass keeps working on a module")
+	assert_true(trim.shader.code.contains("toon_light.gdshaderinc"), "lit by the one toon lighting")
+	assert_true(trim.shader.code.contains("ROUGHNESS = edge_tag"), "writes the edge pass's tag")
+
+
 func test_room_kit_materials_delegate_to_toon_materials() -> void:
 	var flat := RoomKit.flat_material(Color(0.42, 0.4, 0.44))
 	# P1-toon: the toon shader's material (was today's StandardMaterial3D recipe, rough 0.9).
@@ -370,6 +383,7 @@ func test_every_look_subgroup_has_a_documented_seed() -> void:
 		"Outline": [&"look_outline_px", &"look_hull_on_placeholders"],
 		"Edges": [&"look_edges_enabled"],
 		"Grade": [&"look_grade_enabled"],
+		"Trim": [&"look_trim_ink_cut"],
 		"FP feel": [&"fp_knockdown_hide_torso"],
 		"Motion": [&"look_motion_breath_deg"],
 	}
@@ -387,7 +401,7 @@ func test_every_look_subgroup_has_a_documented_seed() -> void:
 		assert_ne(docs.get(StringName(info.name), ""), "", "%s is documented" % info.name)
 		if int(info.type) == TYPE_FLOAT or int(info.type) == TYPE_INT:
 			assert_eq(int(info.hint), PROPERTY_HINT_RANGE, "%s is a slider" % info.name)
-	assert_eq(order, PackedStringArray(["Toon", "Outline", "Edges", "Grade", "FP feel", "Motion"]), "the owners' subgroups, in order")
+	assert_eq(order, PackedStringArray(["Toon", "Outline", "Edges", "Grade", "Trim", "FP feel", "Motion"]), "the owners' subgroups, in order")
 	for sub: String in seeds:
 		for name: StringName in seeds[sub]:
 			assert_has(found.get(sub, []), name)

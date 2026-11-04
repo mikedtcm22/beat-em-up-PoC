@@ -20,8 +20,9 @@ const INK := HudStyle.INK
 const TOON_SHADER := preload("res://game/fx/toon.gdshader")
 const OUTLINE_SHADER := preload("res://game/fx/toon_outline.gdshader")
 const GRID_SHADER := "res://game/level/grid.gdshader"
+const TRIM_SHADER := "res://game/fx/trim.gdshader"
 ## What a ShaderMaterial made here is, for which Look values it takes (see apply_look()).
-enum Kind { CHARACTER, ART, PROP, ENVIRONMENT, GRID, HULL, ART_PROP }
+enum Kind { CHARACTER, ART, PROP, ENVIRONMENT, GRID, HULL, ART_PROP, TRIM }
 ## How the hull pushes a mesh out (toon_outline.gdshader's `mode`): along the normal
 ## (spheres, capsules), by sign(VERTEX) per axis (boxes), radially plus sign(y) (cylinders),
 ## from the sphere's centre (a hemisphere's open rim), by the skinned art's baked smooth normal.
@@ -51,6 +52,8 @@ static var _wired: bool = false
 ## separately, by the room's load).
 static var _warmed: bool = false
 static var _art_warmed: bool = false
+## The one trim material (trim()).
+static var _trim: ShaderMaterial
 
 
 ## A character's flat-colored toon material: `color` is the paint, `takes_marks` whether the
@@ -168,6 +171,25 @@ static func grid() -> ShaderMaterial:
 	return _track(material)
 
 
+## The environment kit's ONE material (Milestone 6, KIT; D10): the trim shader with the sheet and its
+## strip table, shared by every module, dressing piece and barrier panel (the same object on every
+## call, so the draw count follows the mesh count only). Lit like the room, two bands and matte; it
+## keeps the flat `albedo` tint (white) a test can read, and takes the sheet's tiling and its ink cut
+## from Tuning (kit_trim_m_per_tile, look_trim_ink_cut, look_trim_lod_cap).
+static func trim() -> ShaderMaterial:
+	if _trim == null:
+		var material := ShaderMaterial.new()
+		material.shader = load(TRIM_SHADER)
+		material.set_meta(_KIND_META, Kind.TRIM)
+		material.set_shader_parameter(&"albedo", Color.WHITE)
+		material.set_shader_parameter(&"trim_tex", TrimSheet.texture())
+		material.set_shader_parameter(&"strips", TrimSheet.uniform_rows())
+		material.set_shader_parameter(&"ink", INK)
+		material.set_shader_parameter(&"edge_tag", 1.0)
+		_trim = _track(material)
+	return _trim
+
+
 ## Take the current Look values (Tuning.data) on `material`, a material made here. Called when
 ## one is made and on every `Tuning.changed`.
 static func apply_look(material: ShaderMaterial) -> void:
@@ -180,7 +202,7 @@ static func apply_look(material: ShaderMaterial) -> void:
 		material.set_shader_parameter(&"lens_fade_m", data.look_outline_lens_fade_m)
 		material.set_shader_parameter(&"fp_scale", data.look_outline_fp_scale if material.get_meta(_FP_META, false) else 1.0)
 		return
-	var room_surface := kind == Kind.ENVIRONMENT or kind == Kind.GRID
+	var room_surface := kind == Kind.ENVIRONMENT or kind == Kind.GRID or kind == Kind.TRIM
 	material.set_shader_parameter(&"band_1", data.look_band_1)
 	material.set_shader_parameter(&"band_2", data.look_band_2)
 	material.set_shader_parameter(&"band_soft", data.look_band_soft)
@@ -208,6 +230,10 @@ static func apply_look(material: ShaderMaterial) -> void:
 	var dots := data.look_halftone_env if room_surface else data.look_halftone_chars
 	material.set_shader_parameter(&"halftone_strength", data.look_halftone_strength if dots else 0.0)
 	material.set_shader_parameter(&"halftone_cell_px", data.look_halftone_cell_px)
+	if kind == Kind.TRIM:
+		material.set_shader_parameter(&"tile_m", data.kit_trim_m_per_tile)
+		material.set_shader_parameter(&"ink_cut", data.look_trim_ink_cut)
+		material.set_shader_parameter(&"lod_cap", data.look_trim_lod_cap)
 	# The art's own: the glint on its glossy swatches, and the sharp ink of an art that asks for it
 	# (only while the cut is above 0: 0 is the A/B).
 	if kind == Kind.ART or kind == Kind.ART_PROP:
@@ -329,6 +355,11 @@ static func warm_up(parent: Node, skinned: Node3D = null) -> void:
 			box.material_override = color
 			box.material_overlay = _hull(mode, mode == Hull.NORMAL)
 			holder.add_child(box)
+		# The kit's trim material, on a module, so its pipeline is built here and not on a frame.
+		var module := MeshInstance3D.new()
+		module.mesh = KitMesh.build(&"wall", Vector3.ONE * 1.2)
+		module.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+		holder.add_child(module)
 	if variant:
 		var copy := skinned.duplicate() as Node3D
 		holder.add_child(copy)
@@ -403,7 +434,7 @@ static func _track(material: ShaderMaterial) -> ShaderMaterial:
 static func _on_tuning_changed(property: StringName) -> void:
 	# Only a Look value (or a whole-set change) moves a material; the damage tile is the damage
 	# look's, re-read when it is applied.
-	if property != &"" and not String(property).begins_with("look_"):
+	if property != &"" and not String(property).begins_with("look_") and property != &"kit_trim_m_per_tile":
 		return
 	var alive: Array[WeakRef] = []
 	for ref: WeakRef in _live:

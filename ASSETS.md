@@ -341,7 +341,12 @@ Static props and weapon art (docs/ARCHITECTURE.md "The static-prop path"), made 
 
 ### › Kit
 
-_Filled by KIT._
+The environment kit's trim sheet (Milestone 6, KIT; plan D2 and D10): 16 strips of 128 px on one 2048 px sheet, painted procedurally by `godot --headless -s tools/gen_trim.gd` from `assets/source/kit/trim_layout.json` (`--check` compares), then `godot --headless --import --quit`. Every pixel comes from an integer hash of its place, so a repaint is identical. The modules themselves are not assets: they are procedural meshes (`game/level/kit/art/kit_mesh.gd`) on this sheet.
+
+| Asset | Path | Source / service | License | Notes |
+| --- | --- | --- | --- | --- |
+| Trim sheet: brick, plaster, concrete, asphalt, kerb, roof tar, gravel, metal, shutter, chain-link (alpha scissor), wood crate, trim, ink, glass, dark interior, facade; RGB the surface, alpha the ink mask (the wire's coverage on the chain-link) | `assets/source/kit/trim_layout.json` → `assets/export/kit/trim_sheet.png` | Painted by Claude in GDScript (`tools/gen_trim.gd`) | Original, project-owned | Every painted pixel inside the look bible's environment band (saturation at most 0.30, value 0.25 to 0.6); no ink on a strip's border; imported lossless with mipmaps, alpha border fix off. Git LFS |
+| The sheet's strip table (row, period in metres, flags), read by `TrimSheet` and fed to the trim shader | `assets/export/kit/trim_strips.json` | Written by `tools/gen_trim.gd` | Original, project-owned | |
 
 ### › Dressing
 

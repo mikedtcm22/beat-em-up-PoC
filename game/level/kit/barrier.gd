@@ -15,6 +15,12 @@ extends Node3D
 ## follows; `CombatEvents.barrier_moving` fires when a call changes the state (Milestone 6, the
 ## barrier sounds) and `moved(closed)` when the panel has arrived. `snap()` jumps (the level's start
 ## and the bake) and fires neither. Every number is an export or a tunable.
+##
+## Art (Milestone 6, KIT; D13): the `Panel` holds the kit's pieces, a `KitMesh` `shutter` slab and its
+## `housing` (which stays), a `gate` of posts, rails and wire, or one `PropSpot` car per
+## `car_length_m` of the opening (the parked-car rule below), all visual: the collider is the
+## `Collider` body and the panel's position is the same animated offset. Tuning's `kit_draw_graybox`
+## builds M5's boxes instead.
 
 ## The panel has finished closing (`closed` true) or opening (false).
 signal moved(closed: bool)
@@ -160,13 +166,58 @@ func _build() -> void:
 	_panel = Node3D.new()
 	_panel.name = "Panel"
 	add_child(_panel)
+	var kit := RoomKit.kit_art(&"shutter")
 	match kind:
 		Kind.SHUTTER:
-			_build_shutter()
+			if kit:
+				_build_shutter_art()
+			else:
+				_build_shutter()
 		Kind.GATE:
-			_build_gate()
+			if kit:
+				_build_gate_art()
+			else:
+				_build_gate()
 		Kind.CAR:
-			_build_cars()
+			if kit:
+				_build_cars_art()
+			else:
+				_build_cars()
+
+
+## The kit's roller shutter: the slats on the panel, the roll housing above the opening (it stays).
+func _build_shutter_art() -> void:
+	_piece(_panel, &"shutter", Vector3(0.0, height_m * 0.5, 0.0), Vector3(width_m, height_m, thickness_m * 0.6))
+	_piece(self, &"housing", Vector3(0.0, height_m + 0.25, 0.0), Vector3(width_m + 0.4, 0.5, thickness_m + 0.3))
+
+
+## The kit's chain-link gate: posts, rails and the wire, as one piece on the panel.
+func _build_gate_art() -> void:
+	_piece(_panel, &"gate", Vector3(0.0, height_m * 0.5, 0.0), Vector3(width_m, height_m, thickness_m))
+
+
+## Parked cars across the opening, one `PropSpot` car per `car_length_m` (as many as fill it), each
+## fitted to its share of the opening and to the barrier's height, so the closed panel is as tall as
+## the collider (the Tripo car, when PROPS's scene exists, is stretched to it).
+func _build_cars_art() -> void:
+	var count := maxi(ceili(width_m / car_length_m - 0.05), 1)
+	var length := width_m / float(count)
+	for i in count:
+		var spot := PropSpot.new()
+		spot.name = "Car%d" % (i + 1)
+		spot.prop_id = &"car"
+		spot.size = Vector3(length - 0.25, height_m, thickness_m)
+		spot.position = Vector3(-width_m * 0.5 + length * (float(i) + 0.5), 0.0, 0.0)
+		_panel.add_child(spot)
+
+
+static func _piece(parent: Node3D, art: StringName, pos: Vector3, size: Vector3) -> KitPiece:
+	var piece := KitPiece.new()
+	piece.kind = art
+	piece.size = size
+	piece.position = pos
+	parent.add_child(piece)
+	return piece
 
 
 ## A corrugated roller shutter: a slab with a rib every quarter metre, and the roll housing above

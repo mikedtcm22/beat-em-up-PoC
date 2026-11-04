@@ -2,7 +2,7 @@
 	"mission1": {
 		"primitive_bodies": 4,
 		"tints": 1,
-		"boxes": 489,
+		"boxes": 0,
 		"cylinder_weapons": 0,
 		"second_weapon": 1
 	},

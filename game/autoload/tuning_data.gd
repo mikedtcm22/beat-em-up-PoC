@@ -1100,6 +1100,11 @@ extends Resource
 @export_range(0.0, 100.0, 1.0) var go_cue_pad_y_px: float = 18.0
 ## The panel shadow's offset (px).
 @export_range(0.0, 20.0, 0.5) var go_cue_shadow_px: float = 6.0
+@export_subgroup("Kit")
+## The trim sheet's tiling (Milestone 6, KIT): the metres one width of the sheet (2048 px) covers on a
+## module's face. The strips are painted for 4 m; a smaller number makes the brick, the plaster and the
+## asphalt finer, a larger one coarser. The faces' UVs are in metres, so a wall of any length fits.
+@export_range(1.0, 16.0, 0.25) var kit_trim_m_per_tile: float = 4.0
 
 @export_group("Audio")
 @export_subgroup("Mix")
@@ -1336,6 +1341,17 @@ extends Resource
 ## How much of the grade shows: 0 = the picture as it is, 1 = the whole LUT.
 @export_range(0.0, 1.0, 0.05) var look_grade_strength: float = 1.0
 
+@export_subgroup("Trim")
+## The trim material's ink (the painted seams and joints of the sheet, its alpha) is cut at this level,
+## with an edge one pixel wide (as toon.gdshader's detail_cut does for the characters), so a seam
+## stays a crisp line under the sheet's mipmaps. Lower: thicker lines. 1 would show no line.
+@export_range(0.05, 0.95, 0.01) var look_trim_ink_cut: float = 0.5
+## The sharpest mip level (0 = the sheet's full 2048 px) the trim material may read when a surface
+## runs away from the lens. A strip is a 128 px band that wraps, so a level past about 4 (16 px)
+## would blend one band into its neighbour; the cap keeps a far wall's detail from smearing into
+## the next strip. Higher: a calmer far wall, and a blend between strips.
+@export_range(1.0, 7.0, 0.25) var look_trim_lod_cap: float = 4.0
+
 @export_subgroup("FP feel")
 ## First-person feel alternative: the non-KO knockdown hides the torso slab that fills the
 ## view while the body lies on the camera. Off = the M3 behavior.
@@ -1444,6 +1460,11 @@ extends Resource
 ## lines alone (off). Read when a StaticArt is built, so set it (a preset never holds it) before the
 ## room loads.
 @export var prop_art_hull: bool = true
+## KIT's A/B (Milestone 6, D1): every block, barrier panel, stair flight and room box draws as M5's
+## graybox (a flat colour box, the grid floor, plain barrier boxes), the kit's modules, dressing and
+## prop spots hidden. The colliders are the same either way. Read when a block is built, so set it
+## (a preset never holds it) before the level loads.
+@export var kit_draw_graybox: bool = false
 
 
 func hitstop_s(tier: CombatTypes.HitTier) -> float:

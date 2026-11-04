@@ -99,11 +99,14 @@ static func apply_sun(sun: DirectionalLight3D) -> void:
 	sun.shadow_blur = Tuning.data.look_sun_shadow_blur
 
 
-## A solid box centred at `pos` (world layer, no mask), with a mesh when `material` is given,
-## added to `parent`. Parent it under the room's geometry node: that node is what the navmesh
-## bakes from. `overlay` goes on the mesh's `material_overlay` (a prop's hull).
+## A solid box centred at `pos` (world layer, no mask), with a mesh when `material` is given (or
+## `art` is a kit kind), added to `parent`. Parent it under the room's geometry node: that node is
+## what the navmesh bakes from. `overlay` goes on the mesh's `material_overlay` (a prop's hull).
+## `art` (Milestone 6, KIT; D9): the KitMesh kind drawn instead of the plain box, on the trim
+## material, over the same collider. `&""` and `&"box"` are M5's look, and so is every kind while
+## Tuning's `kit_draw_graybox` is on.
 static func add_box(parent: Node, pos: Vector3, size: Vector3, material: Material = null,
-		overlay: Material = null) -> StaticBody3D:
+		overlay: Material = null, art: StringName = &"") -> StaticBody3D:
 	var body := StaticBody3D.new()
 	body.position = pos
 	body.collision_layer = CombatTypes.bit(CombatTypes.LAYER_WORLD)
@@ -113,23 +116,35 @@ static func add_box(parent: Node, pos: Vector3, size: Vector3, material: Materia
 	box.size = size
 	shape.shape = box
 	body.add_child(shape)
-	if material:
-		body.add_child(box_mesh(size, material, overlay))
+	if material or kit_art(art):
+		body.add_child(box_mesh(size, material, overlay, art))
 	parent.add_child(body)
 	return body
 
 
 ## A box that is only drawn (paint, the far skyline): no collision, and the navmesh ignores it.
 static func add_visual_box(parent: Node, pos: Vector3, size: Vector3, material: Material,
-		overlay: Material = null) -> MeshInstance3D:
-	var mesh := box_mesh(size, material, overlay)
+		overlay: Material = null, art: StringName = &"") -> MeshInstance3D:
+	var mesh := box_mesh(size, material, overlay, art)
 	mesh.position = pos
 	parent.add_child(mesh)
 	return mesh
 
 
-static func box_mesh(size: Vector3, material: Material, overlay: Material = null) -> MeshInstance3D:
+## Whether `art` names a kit module that is drawn now: a KitMesh kind, with the graybox switch off.
+static func kit_art(art: StringName) -> bool:
+	return art != &"" and art != &"box" and KitMesh.KINDS.has(art) and not Tuning.data.kit_draw_graybox
+
+
+## A box mesh of `size` in `material`; with a kit `art` kind (see add_box) the module's mesh on the
+## shared trim material instead, `material` unused.
+static func box_mesh(size: Vector3, material: Material, overlay: Material = null,
+		art: StringName = &"") -> MeshInstance3D:
 	var mesh := MeshInstance3D.new()
+	if kit_art(art):
+		mesh.mesh = KitMesh.build(art, size)
+		mesh.material_overlay = overlay
+		return mesh
 	var box := BoxMesh.new()
 	box.size = size
 	box.material = material

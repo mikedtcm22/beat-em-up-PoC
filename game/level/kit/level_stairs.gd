@@ -12,6 +12,10 @@ extends Node3D
 ## steps and a hair above them, on the guard layer (9: `CombatTypes.LAYER_EDGE_GUARD`, the player's and
 ## a standing enemy's mask), carries every walking body up and down; the steps are what is drawn. The
 ## nav bake keeps the polygons inside `footprint()` (NavBaker). Every number is an export.
+##
+## Art (Milestone 6, KIT; D11): the steps stay collider-only (`draw_box` false) and ONE mesh draws the
+## flight, a `KitMesh.build_stairs` of exactly this many steps (named `Flight`), so 25 steps are one
+## draw, not 25. Tuning's `kit_draw_graybox` and the editor draw the steps' boxes as in M5.
 
 @export_range(0.5, 12.0, 0.05) var rise_m: float = 4.5:
 	set(value):
@@ -78,14 +82,22 @@ func _rebuild() -> void:
 	var count := step_count()
 	var rise := rise_m / float(count)
 	var depth := run_m / float(count)
+	var kit := not Engine.is_editor_hint() and RoomKit.kit_art(&"stair_flight")
 	for i in count:
 		var block := LevelBlock.new()
 		block.name = "Step%d" % (i + 1)
 		var top := rise * float(i + 1)
 		block.size = Vector3(width_m, top, depth)
 		block.look = look
+		block.draw_box = not kit
 		block.position = Vector3(0.0, top * 0.5, -depth * (float(i) + 0.5))
 		_steps.add_child(block)
+	if kit:
+		var flight := MeshInstance3D.new()
+		flight.name = "Flight"
+		flight.mesh = KitMesh.build_stairs(width_m, rise_m, run_m, count)
+		flight.position = Vector3(0.0, rise_m * 0.5, -run_m * 0.5)
+		_steps.add_child(flight)
 	_steps.add_child(_make_glide(rise, depth, count))
 
 
