@@ -1200,6 +1200,27 @@ API (for act files and tests): `walk_route(arena_index = -1) -> bool` (along `Le
 
 Log lines, each with its physics frame: `ARENA+ f<frame> <id>`, `WAVE f<frame> <id> <n>`, `ARENA- f<frame> <id> <seconds>` (since the lock), `LEVEL f<frame> <seconds>` (since `run_level` began, pauses included), `HAZARD f<frame> <enemy> <hazard>`, and the failure lines `STALL`, `BLOCKED`, `NOTE`. Acts (level-agnostic): "Run: held back" (held-back autopilot, real damage, probe per arena), "Run: knock-off" (in the first arena with a hazard volume a Punk is launched over the edge), "Run: timing" (god mode, full-speed autopilot, no probe; run it headless with `--presentation=0` to log `LEVEL`).
 
+### Mission 1: the street (STREET)
+
+Files: `game/level/mission1/street.tscn` (a `LevelSection`), `game/level/mission1/encounters/a{1,2,3}.tres`, `tests/test_m5_street.gd`. No tunables.
+
+**Layout** (section space, `Entry` at the origin, the walk along -Z, floors at y 0 and 4.5): a 12 m wide street (x -6..6) between building walls (x +-6..8) running z +3 to -53; `Start` (3, 0, 0.8) in a pocket behind the first car; `Exit` (3, 4.5, -53), the landing under the seam shutter (`ExitBarrier`, a SHUTTER 6 x 3.5, x 0..6). `floor_heights` [0, 4.5]. Every barrier is 6 m wide in a neck on the x 0..6 half, the other half closed by a barricade or fence panel:
+- `StartCar` (CAR, z -1.5, A1 behind, starts open, slides right into a parking lot in the right wall), `Gate` (GATE, z -14, A1 ahead / A2 behind, slides left along a fence panel), `YardCar` (CAR, z -30, A2 ahead / A3 behind, a lot in the right wall), `ExitBarrier` (SHUTTER, z -53, y 4.5, A3 ahead).
+
+**Arenas** (lock volumes, level space z): A1 -1.5..-14 (`street_a1`), A2 -14..-30 (`street_a2`), A3 -30..-53 and up to y 4.5 (`street_a3`; the stair and the landing belong to it). Spawn points (each with a `LanePoint`, inside its own arena):
+
+| Arena | Points (tag) | Table (`loop = false`, `wave_points`) |
+| --- | --- | --- |
+| A1 | `Doorway` (doorway, dock shutter recess, right), `Alley` (alley, left) | punk Doorway, punk Alley |
+| A2 | `Alley` (alley, rear left), `Office` (doorway, right), `VanL`, `VanR` (vehicle, the van's back doors, left) | wave 1 punk Alley, punk Office, punk VanL; wave 2 punk VanL, punk Office, thug VanR |
+| A3 | `Brick` (doorway, right, rear), `WarehouseA`, `WarehouseB` (doorway, the warehouse shutter, left), `LandingA`, `LandingB` (stairwell, on the landing) | wave 1 punk LandingA, punk LandingB; wave 2 punk Brick, punk WarehouseA, thug WarehouseB |
+
+**Stair 1**: a `LevelStairs` at (4.5, 0, -41), rise 4.5, run 7.5, width 3 (x 3..6, head at z -48.5); the landing is a solid block x 0..6, z -48.5..-53. Its open edges (the landing's -X edge, its front edge beside the head, the stair's -X side) each have an `EdgeGuard` and a non-solid rail; there is no hazard volume (the drop is to the street, in the same arena).
+
+**Set dressing** (all `LevelBlock`s): dock and office doorway recesses with dark backs, a roller-shutter recess for the warehouse, two crate alleys, two parked-car lots, crate stacks along the walls, a van, a chain-link fence along A2's left, non-solid skyline and the view beyond the fence. Solid blocks lie inside z +4..-53, x -11.4..13.4; nothing is solid past the `Exit`.
+
+**Tests**: `tests/test_m5_street.gd` (17).
+
 ## Ownership (Milestones 1-3)
 
 | Area | Files |
