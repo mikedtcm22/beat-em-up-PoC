@@ -24,3 +24,4 @@ hitboxes = Array[ExtResource("hitbox_spec_gd")]([SubResource("hitbox_0")])
 magnetism = false
 free_lunge = 0.2
 reach_m = 1.43
+impact_sfx = &"pipe"

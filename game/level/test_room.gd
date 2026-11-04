@@ -10,6 +10,7 @@ extends Node3D
 const PLAYER_SCENE := "res://game/player/player.tscn"
 const DUMMY_SCENE := "res://game/enemies/dummy/training_dummy.tscn"
 const PIPE_SCENE := "res://game/weapons/pipe.tscn"
+const CHAIN_SCENE := "res://game/weapons/bike_chain.tscn"
 
 @export var street_length: float = 40.0
 @export var street_width: float = 14.0
@@ -21,6 +22,8 @@ const PIPE_SCENE := "res://game/weapons/pipe.tscn"
 	Vector3(-0.8, 0.0, -1.8), Vector3(-0.5, 0.0, 0.0), Vector3(-0.8, 0.0, 1.8)
 ]
 @export var pipe_position: Vector3 = Vector3(-3.0, 0.15, 2.6)
+## The bike chain (Milestone 6, the second weapon), two metres from the pipe so neither is in reach of the other.
+@export var chain_position: Vector3 = Vector3(-1.0, 0.15, 2.6)
 ## Indices of the dummies that spar from the start (Dummy 2, the centre one).
 @export var sparring_dummies: Array[int] = [1]
 ## Build the presentation layer (cameras, HUD). Tests can turn this off.
@@ -111,6 +114,10 @@ func _spawn_actors() -> void:
 	pipe.position = pipe_position
 	pipe.rotation_degrees = Vector3(0.0, 30.0, 90.0)
 	add_child(pipe)
+	var chain := (load(CHAIN_SCENE) as PackedScene).instantiate() as Weapon
+	chain.position = chain_position
+	chain.rotation_degrees = Vector3(0.0, -20.0, 90.0)
+	add_child(chain)
 
 
 ## Cameras, HUD, the F1 tuning panel and F4 cheat menu, the VFX, audio and rumble directors

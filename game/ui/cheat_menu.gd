@@ -273,7 +273,6 @@ func spawn_dummy() -> TrainingDummy:
 	var number := get_tree().get_nodes_in_group(&"enemy").size() + 1
 	dummy.name = "SpawnedDummy%d" % (spawned.size() + 1)
 	dummy.display_name = "Dummy %d" % number
-	dummy.color = spawn_colors[spawned.size() % spawn_colors.size()] if not spawn_colors.is_empty() else dummy.color
 	dummy.position = host.to_local(point.position)
 	dummy.rotation.y = float(point.yaw) - host.global_rotation.y
 	host.add_child(dummy)

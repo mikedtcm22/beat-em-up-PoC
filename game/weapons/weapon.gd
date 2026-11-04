@@ -1,10 +1,13 @@
 class_name Weapon
 extends RigidBody3D
-## A pick-up melee weapon (placeholder pipe). Lies on the ground as a rigid body, rides
+## A pick-up melee weapon (the pipe, the bike chain: WeaponDef says which). Lies on the ground as a rigid body, rides
 ## the holder's WeaponGrip while held, and flies as a projectile when thrown.
 ## Swing hitboxes use the holder's WeaponTip rig point, so the visual never affects hits.
 
 @export var display_name: String = "Pipe"
+## The weapon's kind (M6, D5): the id of its WeaponDef (game/weapons/defs/<id>.tres), which says which moves the player has
+## while he holds it. The scene names the def, not the other way round, so the two resources never refer to each other.
+@export var def_id: StringName = &"pipe"
 @export var length: float = 0.85
 @export var color: Color = Color(0.55, 0.58, 0.62)
 ## The drawn pipe's radius (m); the collision capsule stays as it is, so a thicker pipe (the Pipe
@@ -26,6 +29,18 @@ var _mesh: MeshInstance3D
 var _cylinder: CylinderMesh
 var _material: ShaderMaterial
 var _art: StaticArt
+var _glint: WeaponGlint
+## True from a throw or a drop until the weapon first touches something: that touch is its landing (CombatEvents.weapon_landed).
+var _land_pending: bool = false
+
+## The weapon's def (WeaponCatalog.get_def(def_id)): its move set, throw, swing ids and impact layer.
+var def: WeaponDef:
+	get:
+		if def == null:
+			def = WeaponCatalog.get_def(def_id)
+			if def == null:
+				def = WeaponCatalog.get_def(&"pipe")
+		return def
 
 
 func _ready() -> void:
@@ -53,6 +68,14 @@ func _ready() -> void:
 	_mesh.mesh = _cylinder
 	_mesh.material_overlay = ToonMaterials.outline_for_prop() if _art == null else null
 	_mesh.visible = _art == null
+	_glint = WeaponGlint.new()
+	_glint.name = "Glint"
+	add_child(_glint)
+	if _art != null and _art.repeat_mesh != &"":
+		var chain := ChainSim.new()
+		chain.name = "ChainSim"
+		add_child(chain)
+		chain.setup(self, _art)
 	add_child(_mesh)
 	_set_ground_physics()
 	_refresh_look()
@@ -62,25 +85,34 @@ func is_available() -> bool:
 	return holder == null and not _flying
 
 
-## The look: lying on the floor (nobody holds it, it is not flying) the pipe takes the tunable
-## weapon_floor_color and a thicker radius (weapon_floor_radius_scale), so it reads against the
-## floor's grey from across a room; in a hand or in the air it keeps its own `color` and `radius`.
+## The look. A weapon lying on the floor (nobody holds it, it is not flying) shows the floor glint (WeaponGlint, D28: a
+## sparkle above it that reads from across a street); in a hand or in the air it does not. With the Debug switch
+## `weapon_floor_amber` on it is M5's look instead: the tunable weapon_floor_color, a thicker radius
+## (weapon_floor_radius_scale) and the art tinted (weapon_art_floor_tint), and no glint.
 func _refresh_look() -> void:
-	if _material == null or _cylinder == null:
-		return
 	var lying := holder == null and not _flying
-	_material.set_shader_parameter(&"albedo", Tuning.data.weapon_floor_color if lying else color)
-	var drawn := radius * (Tuning.data.weapon_floor_radius_scale if lying else 1.0)
-	_cylinder.top_radius = drawn
-	_cylinder.bottom_radius = drawn
+	var amber: bool = lying and Tuning.data.weapon_floor_amber
+	if _material != null and _cylinder != null:
+		_material.set_shader_parameter(&"albedo", Tuning.data.weapon_floor_color if amber else color)
+		var drawn := radius * (Tuning.data.weapon_floor_radius_scale if amber else 1.0)
+		_cylinder.top_radius = drawn
+		_cylinder.bottom_radius = drawn
 	if _art != null:
-		_art.set_tint(Color.WHITE.lerp(Tuning.data.weapon_floor_color, Tuning.data.weapon_art_floor_tint) if lying else Color.WHITE)
+		_art.set_tint(Color.WHITE.lerp(Tuning.data.weapon_floor_color, Tuning.data.weapon_art_floor_tint) if amber else Color.WHITE)
+	if _glint != null:
+		_glint.refresh()
+
+
+## Redraw the look from the weapon's state and the tunables (a Debug switch changed while it lies there).
+func refresh_look() -> void:
+	_refresh_look()
 
 
 ## Attach to `actor`'s grip. The pipe's long axis points from grip to tip.
 func attach_to(actor: CombatActor) -> void:
 	holder = actor
 	_flying = false
+	_land_pending = false
 	_refresh_look()
 	freeze = true
 	collision_layer = 0
@@ -111,6 +143,7 @@ func throw_from(actor: CombatActor, velocity: Vector3, move: MoveData) -> void:
 	freeze = false
 	_set_air_damping()
 	_flying = true
+	_land_pending = true
 	_refresh_look()
 	collision_layer = CombatTypes.bit(CombatTypes.LAYER_PROJECTILE)
 	collision_mask = CombatTypes.bit(CombatTypes.LAYER_WORLD) | CombatTypes.bit(CombatTypes.LAYER_ENEMY_BODY)
@@ -131,6 +164,7 @@ func drop(velocity: Vector3 = Vector3.ZERO, spin_rps: float = 0.0) -> void:
 	var world: Node = holder.get_parent() if is_instance_valid(holder) and holder.get_parent() else get_tree().current_scene
 	holder = null
 	_flying = false
+	_land_pending = true
 	_thrower = null
 	_refresh_look()
 	reparent(world, false)
@@ -175,8 +209,17 @@ func _set_air_damping() -> void:
 	angular_damp = 0.0
 
 
+## The weapon's first contact after a throw or a drop is its landing: CombatEvents.weapon_landed, once (the sound's hook).
+func _announce_landing() -> void:
+	if not _land_pending:
+		return
+	_land_pending = false
+	CombatEvents.weapon_landed.emit(self)
+
+
 func _on_body_entered(body: Node) -> void:
 	if not _flying:
+		_announce_landing()
 		return
 	var victim := body as CombatActor
 	if victim and is_instance_valid(_thrower) and victim.team != _thrower.team and _throw_move:
@@ -212,5 +255,8 @@ func _on_body_entered(body: Node) -> void:
 	_refresh_look()
 	_set_ground_physics.call_deferred()
 	if durability <= 0:
+		_land_pending = false
 		CombatEvents.weapon_broke.emit(_thrower, self)
 		break_apart()
+	else:
+		_announce_landing()

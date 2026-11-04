@@ -1059,6 +1059,36 @@ extends Resource
 @export var weapon_floor_color: Color = Color(0.96, 0.7, 0.1)
 ## How much thicker a weapon is drawn while it lies on the floor (the collision does not change).
 @export_range(1.0, 4.0, 0.1) var weapon_floor_radius_scale: float = 1.6
+## The floor glint (M6, D28), the look of a weapon lying on the floor now that the amber is retired: a small four-point
+## sparkle that floats above it, drawn facing the lens and never smaller than `weapon_glint_min_angle_deg` on screen
+## (so it still shows from across a street), pulsing at `weapon_glint_pulse_hz`. Gone while the weapon is held or flying.
+@export_range(0.0, 1.5, 0.05) var weapon_glint_height_m: float = 0.45
+## The glint's drawn size (m) when it is near; far away the angular floor below takes over.
+@export_range(0.1, 1.0, 0.05) var weapon_glint_size_m: float = 0.35
+## The smallest angle the glint covers on screen (degrees): 1.6 is about 17 px of a 900 px frame at 10 m.
+@export_range(0.5, 5.0, 0.1) var weapon_glint_min_angle_deg: float = 1.6
+@export_range(0.2, 4.0, 0.1) var weapon_glint_pulse_hz: float = 1.1
+## How far the glint dims at the bottom of a pulse (0 = steady, 1 = out).
+@export_range(0.0, 1.0, 0.05) var weapon_glint_pulse_depth: float = 0.35
+## Degrees a second the four points turn, so the sparkle twinkles.
+@export_range(0.0, 180.0, 5.0) var weapon_glint_spin_dps: float = 30.0
+@export_range(0.2, 3.0, 0.1) var weapon_glint_intensity: float = 1.2
+## A warm white: no red (SPEC section 10) and not the retired amber.
+@export var weapon_glint_color: Color = Color(1.0, 0.96, 0.78)
+## The bike chain's links (M6, a presentation-only sim; docs/ARCHITECTURE.md, WEAPONS): Verlet points pinned at the grip and
+## drawn as a MultiMesh of the art's `Link`, a point to the tip's nominal line. It never touches a hit or a body.
+@export_range(3, 16, 1) var weapon_chain_points: int = 8
+@export_range(1, 10, 1) var weapon_chain_iterations: int = 4
+## How hard each point is pulled back to the straight line from the grip (1/s): high keeps the chain near the weapon's axis
+## (the padlock stays under the hitbox), low lets it trail and whip.
+@export_range(0.0, 120.0, 1.0) var weapon_chain_follow_rate: float = 30.0
+@export_range(0.0, 30.0, 0.5) var weapon_chain_gravity: float = 9.8
+## The share of speed each point loses a step.
+@export_range(0.0, 0.5, 0.01) var weapon_chain_damping: float = 0.04
+## A grip that moves further than this in one step (m: a pick-up, a reparent) snaps the chain straight rather than whipping it.
+@export_range(0.1, 3.0, 0.05) var weapon_chain_snap_m: float = 0.6
+## The distance between two drawn links along the chain (m); the Link mesh is 0.05 m long.
+@export_range(0.02, 0.06, 0.002) var weapon_chain_link_pitch_m: float = 0.032
 @export_subgroup("Prop art")
 ## How much of tuning's floor colour (weapon_floor_color) a weapon's ART takes while it lies on the floor (M6, until the
 ## floor glint replaces it): 0 keeps the art's own colours, 1 multiplies them by the floor colour outright (the steel of a
@@ -1492,6 +1522,11 @@ extends Resource
 ## (tests/fixtures/sfx_legacy/) instead of the final sounds. The training room's audition room
 ## toggles it with the minus key. Presets never hold it.
 @export var audio_legacy_bank: bool = false
+## A/B switch for the floor glint (M6, D28): on brings back M5's look, a weapon on the floor coloured `weapon_floor_color`
+## and drawn thicker (its art tinted), and no glint. Presets never hold it.
+@export var weapon_floor_amber: bool = false
+## A/B switch for the bike chain's sim: off draws StaticArt's straight repeats of the link instead. Presets never hold it.
+@export var weapon_chain_sim: bool = true
 
 
 func hitstop_s(tier: CombatTypes.HitTier) -> float:

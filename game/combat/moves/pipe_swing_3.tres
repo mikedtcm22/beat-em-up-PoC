@@ -22,3 +22,4 @@ reaction = 3
 tier = 2
 guard_damage_mult = 1.5
 hitboxes = Array[ExtResource("hitbox_spec_gd")]([SubResource("hitbox_0")])
+impact_sfx = &"pipe"

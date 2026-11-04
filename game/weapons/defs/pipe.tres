@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="WeaponDef" format=3]
+
+[ext_resource type="Script" path="res://game/weapons/weapon_def.gd" id="1_def"]
+[ext_resource type="PackedScene" path="res://game/weapons/pipe.tscn" id="2_scene"]
+[ext_resource type="Resource" path="res://game/combat/movesets/weapon.tres" id="3_set"]
+[ext_resource type="Resource" path="res://game/combat/moves/weapon_throw.tres" id="4_throw"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"pipe"
+display_name = "Pipe"
+scene = ExtResource("2_scene")
+move_set = ExtResource("3_set")
+throw_move = ExtResource("4_throw")
+swing_ids = Array[StringName]([&"pipe_swing_1", &"pipe_swing_2", &"pipe_swing_3"])
+impact_sfx = &"pipe"

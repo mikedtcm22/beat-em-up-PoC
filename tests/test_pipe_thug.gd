@@ -185,7 +185,10 @@ func test_a_thug_is_an_ai_enemy_with_its_health_attack_and_look() -> void:
 	assert_almost_eq(thug.attack_range_m(), 1.23, 0.001, "it closes to the first swing's reach")
 	# SPEC §10: red is the warning's, the blood's and the finishers'. The jacket is a green.
 	assert_lt(thug.color.r, thug.color.g, "the jacket is no red")
-	assert_lt(thug.pipe_color.r + 0.01, 1.0, "nor is the pipe a red")
+	# M6: the pipe is the painted art (one pipe_paint swatch, no red), no longer a cylinder the Thug colours.
+	var carried := PipeThug.PIPE_SCENE.instantiate() as Weapon
+	assert_not_null(carried.art_scene, "the pipe is the shared painted art, not a coloured cylinder")
+	carried.free()
 	assert_ne(thug.color, Color(0.86, 0.5, 0.16), "not the training dummy's orange")
 
 

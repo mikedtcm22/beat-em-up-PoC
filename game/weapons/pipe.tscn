@@ -5,4 +5,5 @@
 
 [node name="Pipe" type="RigidBody3D"]
 script = ExtResource("1_weapon")
+def_id = &"pipe"
 art_scene = ExtResource("2_art")

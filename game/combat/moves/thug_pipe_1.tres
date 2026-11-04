@@ -21,3 +21,4 @@ blocked_recoil_frames = 20
 hitboxes = Array[ExtResource("hitbox_spec_gd")]([SubResource("hitbox_0")])
 magnetism = false
 reach_m = 1.23
+impact_sfx = &"pipe"

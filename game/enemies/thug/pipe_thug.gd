@@ -23,10 +23,6 @@ const DROPPED_AT_META := &"dropped_at"
 ## dummy's orange, the Punk and the Kicker at a glance. SPEC §10: no red.
 @export var color: Color = Color(0.4, 0.52, 0.14)
 @export var accent: Color = Color(0.93, 0.9, 0.78)
-## The pipe's color and drawn radius: brighter and thicker than the training room's grey pipe, so
-## it reads in the Thug's hand from the ring and, dropped, on the street's grey floor.
-@export var pipe_color: Color = Color(0.96, 0.74, 0.1)
-@export var pipe_radius: float = 0.04
 ## Spawns carrying a pipe. Off, the Thug is born unarmed (tests, bots): it throws the Punk's attacks.
 @export var armed: bool = true
 
@@ -86,8 +82,6 @@ func _on_hit_received(hit: HitInfo) -> void:
 ## reparents it on the next idle frame).
 func _take_up_pipe() -> void:
 	_pipe = PIPE_SCENE.instantiate() as Weapon
-	_pipe.color = pipe_color
-	_pipe.radius = pipe_radius
 	add_child(_pipe)
 	_pipe.attach_to(self)
 

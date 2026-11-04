@@ -340,6 +340,8 @@ func test_room_kit_materials_delegate_to_toon_materials() -> void:
 
 
 func test_the_pipe_takes_its_material_and_overlay_from_toon_materials() -> void:
+	# M6 (D28): the amber is the Debug switch `weapon_floor_amber`'s now; the glint is the default (twin below).
+	Tuning.set_value(&"weapon_floor_amber", true)
 	var weapon := Weapon.new()
 	weapon.color = Color(0.2, 0.3, 0.4)
 	add_child_autofree(weapon)
@@ -355,6 +357,11 @@ func test_the_pipe_takes_its_material_and_overlay_from_toon_materials() -> void:
 	# P1-toon (A7): the pipe has a hull (was: no overlay), and its material is the toon shader's
 	# (was rough 0.5 / metal 0.4).
 	assert_eq((mesh.material_overlay as ShaderMaterial).shader, ToonMaterials.OUTLINE_SHADER, "the pipe's hull")
+	Tuning.set_value(&"weapon_floor_amber", false)
+	# The twin on the default path: no amber, the pipe's own colour, and the glint instead.
+	weapon.refresh_look()
+	assert_eq(mat.get_shader_parameter(&"albedo"), weapon.color, "lying with the amber off: its own colour")
+	assert_true(weapon.find_child("Glint", false, false).visible, "and the glint shows")
 
 
 # --- Tuning: the Look group --------------------------------------------------------------------

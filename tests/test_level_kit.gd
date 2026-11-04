@@ -642,6 +642,8 @@ func _drawn_radius(pipe: Weapon) -> float:
 
 
 func test_a_weapon_lying_on_the_floor_is_drawn_in_the_floor_contrast_colour_and_a_held_one_in_its_own() -> void:
+	# M6 (D28): this is M5's look, the Debug switch `weapon_floor_amber`; the glint is the default (the next test).
+	Tuning.set_value(&"weapon_floor_amber", true)
 	var level := await _level()
 	var pipe := get_tree().get_nodes_in_group(&"weapon")[0] as Weapon
 	await _ticks(10)
@@ -659,6 +661,23 @@ func test_a_weapon_lying_on_the_floor_is_drawn_in_the_floor_contrast_colour_and_
 	var contrast := absf(Tuning.data.weapon_floor_color.get_luminance() - floor_grey.get_luminance())
 	var hue_gap := absf(Tuning.data.weapon_floor_color.s - floor_grey.s)
 	assert_true(contrast > 0.25 or hue_gap > 0.5, "the floor colour stands out from the floor's grey (luminance gap %.2f, saturation gap %.2f)" % [contrast, hue_gap])
+
+
+func test_a_weapon_lying_on_the_floor_shows_the_glint_and_keeps_its_own_colour_by_default() -> void:
+	var level := await _level()
+	var pipe := get_tree().get_nodes_in_group(&"weapon")[0] as Weapon
+	await _ticks(10)
+	var glint := pipe.find_child("Glint", false, false) as WeaponGlint
+	assert_not_null(glint, "a weapon carries a glint")
+	assert_true(glint.visible, "lying: the glint shows")
+	assert_eq(_albedo(pipe), pipe.color, "and the weapon is not amber")
+	assert_almost_eq(_drawn_radius(pipe), pipe.radius, 0.0001, "nor thicker")
+	pipe.attach_to(level.player)
+	await _ticks(4)
+	assert_false(glint.visible, "in a hand: no glint")
+	pipe.drop(Vector3.ZERO, 0.0)
+	await _ticks(4)
+	assert_true(glint.visible, "dropped: the glint again")
 
 
 func test_start_at_arena_1_clears_the_earlier_arenas_and_stands_the_player_at_its_first_route_point() -> void:

@@ -9,8 +9,8 @@ const MOVE_SETS: Dictionary[StringName, String] = {
 	&"ground": "res://game/combat/movesets/ground.tres",
 	&"air": "res://game/combat/movesets/air.tres",
 	&"hold": "res://game/combat/movesets/hold.tres",
-	&"weapon": "res://game/combat/movesets/weapon.tres",
 }
+## The pipe's throw (WeaponDef.throw_move of `pipe`: a held weapon throws with its def's).
 const WEAPON_THROW_PATH := "res://game/combat/moves/weapon_throw.tres"
 const ATTACK_IDS: Array[StringName] = [&"P", &"K", &"RB"]
 ## Rig animation shown while a charged P waits for its release (_charging_hold()).
@@ -47,7 +47,6 @@ var _ko_getup: bool = false
 static var _hero_art: Dictionary[CharacterArt, CharacterArt] = {}
 
 var _sets: Dictionary[StringName, MoveSet] = {}
-var _weapon_throw_move: MoveData
 ## Button edges since the last sim frame, in arrival order: [button, pressed].
 var _pending_edges: Array[Array] = []
 var _move_input: Vector2 = Vector2.ZERO
@@ -129,8 +128,6 @@ func _ready() -> void:
 	for key: StringName in MOVE_SETS:
 		if ResourceLoader.exists(MOVE_SETS[key]):
 			_sets[key] = load(MOVE_SETS[key]) as MoveSet
-	if ResourceLoader.exists(WEAPON_THROW_PATH):
-		_weapon_throw_move = load(WEAPON_THROW_PATH) as MoveData
 	parser.move_set = _sets.get(&"ground")
 	rig.advance(0.0)
 	_standing_eye = _eye_in_body()
@@ -472,7 +469,7 @@ func _feed_parser() -> void:
 
 
 func _control_free() -> void:
-	_use_set(&"weapon" if _weapon else &"ground")
+	_use_set(_carry_set())
 	if parser.consume(&"TURN"):
 		_start_quick_turn()
 	if _action_lock > 0:
@@ -715,7 +712,7 @@ func _match_lift_pose() -> void:
 
 
 func _start_selection(selection: ComboParser.Selection) -> void:
-	if _weapon == null and selection.move.id.begins_with("pipe_swing"):
+	if _weapon == null and WeaponCatalog.is_swing(selection.move.id):
 		parser.reset_chain()
 		return
 	parser.notify_started(selection)
@@ -735,8 +732,8 @@ func _on_move_finished(move: MoveData) -> void:
 	else:
 		_held = null
 		_return_to_neutral()
-	if move.id == &"throw" or move.id == &"weapon_throw":
-		_use_set(&"weapon" if _weapon else &"ground")
+	if move.id == &"throw" or WeaponCatalog.is_throw(move.id):
+		_use_set(_carry_set())
 
 
 func _on_move_frame(move: MoveData, frame: int) -> void:
@@ -745,7 +742,7 @@ func _on_move_frame(move: MoveData, frame: int) -> void:
 		return
 	if move.id == &"throw" and _holding_valid():
 		_throw_held(move)
-	elif move.id == &"weapon_throw" and _weapon:
+	elif WeaponCatalog.is_throw(move.id) and _weapon:
 		var dir := get_look_basis() * Vector3.FORWARD
 		_weapon.throw_from(self, (dir + Vector3.UP * 0.08).normalized() * Tuning.data.weapon_throw_speed, move)
 		CombatEvents.weapon_thrown.emit(self, _weapon)
@@ -757,7 +754,7 @@ func _on_move_hits(move: MoveData, hits: Array[HitInfo]) -> void:
 		_knees += 1
 		if _knees >= Tuning.data.max_knees:
 			_release_held(true)
-	if _weapon and move.id.begins_with("pipe_swing"):
+	if _weapon and _weapon.def.owns_swing(move.id):
 		_weapon.durability -= hits.size()
 		if _weapon.durability <= 0:
 			var broken := _weapon
@@ -1073,7 +1070,7 @@ func _start_jump() -> void:
 func _land() -> void:
 	_air_attack = false
 	parser.reset_chain()
-	_use_set(&"weapon" if _weapon else &"ground")
+	_use_set(_carry_set())
 	_enter_state(CombatTypes.ActorState.FREE)
 	rig.play(&"land", 0.04)
 	_action_lock = Tuning.data.land_lock_frames
@@ -1159,6 +1156,11 @@ func _can_steer_body() -> bool:
 	]
 
 
+## The move set of what he carries: the held weapon's (its def's id), else the ground set.
+func _carry_set() -> StringName:
+	return _weapon.def.id if _weapon else &"ground"
+
+
 func _use_set(key: StringName) -> void:
 	if _sets.has(key):
 		parser.move_set = _sets[key]
@@ -1170,9 +1172,9 @@ func _use_set(key: StringName) -> void:
 ## LB: throw the held weapon, else grab an enemy in front (CombatActor.can_be_grabbed():
 ## anytime it stands, outside its strike's active frames), else pick up a weapon.
 func _grab_action() -> bool:
-	if _weapon and _weapon_throw_move:
+	if _weapon and _weapon.def.throw_move:
 		parser.reset_chain()
-		start_move(_weapon_throw_move, 1, &"root")
+		start_move(_weapon.def.throw_move, 1, &"root")
 		return true
 	var target := _find_grab_target()
 	if target:
@@ -1306,7 +1308,7 @@ func _release_held(stagger: bool) -> void:
 	if _holding_valid():
 		_held.release_from_grab(get_forward() * Tuning.data.release_push, stagger)
 	_held = null
-	_use_set(&"weapon" if _weapon else &"ground")
+	_use_set(_carry_set())
 
 
 func _throw_held(move: MoveData) -> void:
@@ -1357,7 +1359,8 @@ func _pick_up(weapon: Weapon) -> void:
 	parser.reset_chain()
 	_weapon = weapon
 	weapon.attach_to(self)
-	_use_set(&"weapon")
+	_sets[weapon.def.id] = weapon.def.move_set
+	_use_set(weapon.def.id)
 	rig.play(&"pickup", 0.05)
 	_action_lock = Tuning.data.pickup_lock_frames
 	CombatEvents.weapon_picked_up.emit(self, weapon)
