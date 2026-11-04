@@ -277,6 +277,11 @@ func test_the_spawn_point_kinds_follow_the_plan() -> void:
 	assert_lt(_point_named(arenas[0], "Alley").position.z, LOCK_AT[0].z, "A1's spawns are all ahead of the player")
 	assert_gt(_point_named(arenas[1], "Alley").position.z, _point_named(arenas[1], "VanL").position.z, "A2's alley is the rear one, the van the front")
 	assert_gt(_point_named(arenas[2], "Brick").position.z, _point_named(arenas[2], "LandingA").position.z, "A3's brick door is behind the landing")
+	# The plan's behind spawns arrive unseen: flagged, and nothing else on the street is.
+	for index in arenas.size():
+		for point in arenas[index].spawn_point_list():
+			var behind: bool = (index == 1 and point.name == &"Alley") or (index == 2 and point.name == &"Brick")
+			assert_eq(bool(point.out_of_view), behind, "A%d/%s: flagged exactly when the plan calls it behind" % [index + 1, point.name])
 
 
 # --- Playing the arenas --------------------------------------------------------------------

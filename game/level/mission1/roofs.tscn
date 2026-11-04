@@ -90,8 +90,31 @@ look = &"accent"
 
 [node name="RightAWall1" type="Node3D" parent="Geometry/Terrace"]
 script = ExtResource("2_block")
-position = Vector3(3, 0.5, -1.5)
-size = Vector3(2, 11, 3)
+position = Vector3(3, 0.5, -0.25)
+size = Vector3(2, 11, 0.5)
+
+[node name="RightAFloorStair" type="Node3D" parent="Geometry/Terrace"]
+script = ExtResource("2_block")
+position = Vector3(3, -2.5, -1.5)
+size = Vector3(2, 5, 2)
+look = &"floor"
+
+[node name="RightABackStair" type="Node3D" parent="Geometry/Terrace"]
+script = ExtResource("2_block")
+position = Vector3(3.75, 3, -1.5)
+size = Vector3(0.5, 6, 2)
+look = &"dark"
+
+[node name="RightALintelStair" type="Node3D" parent="Geometry/Terrace"]
+script = ExtResource("2_block")
+position = Vector3(3, 4.3, -1.5)
+size = Vector3(2, 3.4, 2)
+look = &"accent"
+
+[node name="RightAWallMid" type="Node3D" parent="Geometry/Terrace"]
+script = ExtResource("2_block")
+position = Vector3(3, 0.5, -2.75)
+size = Vector3(2, 11, 0.5)
 
 [node name="RightBWall0" type="Node3D" parent="Geometry/Terrace"]
 script = ExtResource("2_block")
@@ -714,8 +737,8 @@ size = Vector3(2, 18, 2)
 
 [node name="ParapetWest" type="Node3D" parent="Geometry/TopRoof"]
 script = ExtResource("2_block")
-position = Vector3(12.3, 8.2, -20.2)
-size = Vector3(0.6, 1.4, 18.4)
+position = Vector3(12.3, 8.2, -20.175)
+size = Vector3(0.6, 1.4, 18.35)
 
 [node name="PenthouseBody" type="Node3D" parent="Geometry/TopRoof"]
 script = ExtResource("2_block")
@@ -1093,7 +1116,7 @@ start_closed = true
 
 [node name="PipeBigShutter" type="Marker3D" parent="Pickups"]
 script = ExtResource("7_pickup")
-position = Vector3(14.6, 7.5, -22.4)
+position = Vector3(19.5, 7.5, -18)
 
 [node name="Route" type="Node3D" parent="."]
 
@@ -1172,8 +1195,9 @@ position = Vector3(-3, 0, -5)
 
 [node name="RoofDoorBehind" type="Marker3D" parent="Arenas/Arena4"]
 script = ExtResource("9_spawn")
-position = Vector3(2.65, 0, -4.5)
+position = Vector3(2.65, 0, -1.5)
 tag = &"doorway"
+out_of_view = true
 
 [node name="LanePoint" type="Marker3D" parent="Arenas/Arena4/RoofDoorBehind"]
 position = Vector3(-3.15, 0, 0)
@@ -1232,6 +1256,7 @@ position = Vector3(-3.15, 0, 0)
 script = ExtResource("9_spawn")
 position = Vector3(7, 4.5, -28.65)
 tag = &"doorway"
+out_of_view = true
 
 [node name="LanePoint" type="Marker3D" parent="Arenas/Arena5/DoorBehindStair"]
 position = Vector3(0, 0, 3.15)
@@ -1273,6 +1298,7 @@ position = Vector3(3.15, 0, 0)
 script = ExtResource("9_spawn")
 position = Vector3(15.5, 7.5, -5.35)
 tag = &"doorway"
+out_of_view = true
 
 [node name="LanePoint" type="Marker3D" parent="Arenas/Arena6/BehindDoor"]
 position = Vector3(0, 0, -3.15)
@@ -1281,6 +1307,7 @@ position = Vector3(0, 0, -3.15)
 script = ExtResource("9_spawn")
 position = Vector3(22.5, 7.5, -5.35)
 tag = &"doorway"
+out_of_view = true
 
 [node name="LanePoint" type="Marker3D" parent="Arenas/Arena6/RoofAccess"]
 position = Vector3(0, 0, -3.15)

@@ -433,6 +433,14 @@
 		"arena_lock_inset_m": 2.0,
 		"spawn_named_wait_s": 2.0,
 		"spawn_named_any_wait_s": 3.0,
+		"spawn_named_retry_s": 0.1,
+		"weapon_floor_color": [
+			0.959999978542328,
+			0.699999988079071,
+			0.100000001490116,
+			1.0
+		],
+		"weapon_floor_radius_scale": 1.6,
 		"level_edge_guard": true,
 		"level_fall_damage": 20.0,
 		"level_fall_invuln_s": 1.5,

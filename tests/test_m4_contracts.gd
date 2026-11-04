@@ -338,7 +338,7 @@ func test_the_pipe_takes_its_material_and_overlay_from_toon_materials() -> void:
 	var mat := cylinder.material as ShaderMaterial
 	assert_not_null(mat, "the pipe's toon material")
 	assert_eq(mat.shader, ToonMaterials.TOON_SHADER)
-	assert_eq(mat.get_shader_parameter(&"albedo"), Color(0.2, 0.3, 0.4))
+	assert_eq(mat.get_shader_parameter(&"albedo"), Tuning.data.weapon_floor_color, "lying on the floor it takes the floor colour (Level > Weapon look)")
 	# P1-toon (A7): the pipe has a hull (was: no overlay), and its material is the toon shader's
 	# (was rough 0.5 / metal 0.4).
 	assert_eq((mesh.material_overlay as ShaderMaterial).shader, ToonMaterials.OUTLINE_SHADER, "the pipe's hull")

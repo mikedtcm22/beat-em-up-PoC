@@ -26,8 +26,9 @@ extends Node3D
 ## on the given spawn points (an arena's), never inserts the boss wave, lets a table name the point
 ## a spawn comes in at (`wave_points`; a named point overrides the behind share, and one too near
 ## the player waits spawn_named_wait_s, then the nearest free point with the same tag takes it, and
-## after spawn_named_any_wait_s more the nearest free point of any tag),
-## and emits `table_finished` when the last wave is cleared, adds included. `stop()` leaves it idle.
+## after spawn_named_any_wait_s more the nearest free point of any tag; a named point flagged
+## `out_of_view` (a behind spawn) also waits while it is inside the player's view, and then the nearest
+## free point outside the view takes it, any tag), and emits `table_finished` when the last wave is cleared, adds included. `stop()` leaves it idle.
 ## The level (LevelRoot) owns the one spawner and hands each arena its table and points on lock.
 
 ## A wave has just started: its number (1 for the first) and the ids it will spawn.
@@ -47,7 +48,8 @@ const FALLBACK_ID := &"punk"
 
 ## Where enemies may walk in from: {position: Vector3, yaw: float (the way it faces on
 ## arrival), tag: StringName (&"doorway", &"alley", &"vehicle" or &"stairwell"), lane_point: Vector3
-## (where it walks to first), name: StringName (optional: what a table's `wave_points` call it)}.
+## (where it walks to first), name: StringName (optional: what a table's `wave_points` call it),
+## out_of_view: bool (optional: a "behind" point, see below)}.
 ## The room fills it in.
 var spawn_points: Array[Dictionary] = []
 ## Tests: enemy id -> the PackedScene to spawn instead of the catalog's.
@@ -59,8 +61,6 @@ var host: Node3D
 
 ## IDLE: nothing runs (a level's spawner between arenas, and after a finite table's end).
 enum _Phase { GAP, SPAWNING, FIGHTING, IDLE }
-## The retry period (s) of a named spawn that cannot be placed yet.
-const NAMED_RETRY_S := 0.1
 
 var _rng := RandomNumberGenerator.new()
 ## Archetype label -> enemies of it spawned so far (the n in "Punk 3").
@@ -279,6 +279,12 @@ func valid_point_indices(body: Vector2) -> Array[int]:
 	return out
 
 
+## Whether spawn point `point` is inside the player's view: false with no player (nobody to see it).
+func _in_view(point: Dictionary) -> bool:
+	var player := _player()
+	return player != null and not player.is_outside_view(point.position, Tuning.data.rear_warning_angle_deg)
+
+
 ## Whether spawn point `point` is outside the player's view (the blind spot); false with no player.
 func is_behind(point: Dictionary) -> bool:
 	var player := _player()
@@ -393,7 +399,10 @@ func _spawn_next() -> void:
 ## Spawn the head of the queue, a named spawn, at its point if that is free (in `valid`), or, once
 ## it has waited spawn_named_wait_s, at the nearest free point with the same tag, or, once it has
 ## waited spawn_named_any_wait_s more (a unique tag, the player holding the spot), at the nearest free
-## point of any tag. False (and a short retry) when none is. A name no point has is treated as no name.
+## point of any tag. A point flagged `out_of_view` (a behind spawn) is not used while it is in the
+## player's view: after spawn_named_wait_s the nearest free point outside the view takes the spawn
+## instead (any tag). False (and a short retry, spawn_named_retry_s) when none is. A name no point has is
+## treated as no name.
 func _spawn_named(id: StringName, valid: Array[int]) -> bool:
 	var named := _queue_points[0]
 	var wanted := -1
@@ -407,12 +416,20 @@ func _spawn_named(id: StringName, valid: Array[int]) -> bool:
 		_wave_free += 1
 		_wave_behind_quota = roundi(_wave_free * Tuning.data.wave_behind_share)
 		return false
-	var chosen := wanted if valid.has(wanted) else -1
+	var hidden_only := bool(spawn_points[wanted].get("out_of_view", false))
+	var chosen := -1
+	if valid.has(wanted) and not (hidden_only and _in_view(spawn_points[wanted])):
+		chosen = wanted
 	if chosen < 0 and _head_wait >= Tuning.data.spawn_named_wait_s:
+		# A behind point goes to the nearest free point outside the view (any tag); the others keep
+		# to their own tag.
 		var tag: StringName = spawn_points[wanted].get("tag", &"")
 		var best := INF
 		for index in valid:
-			if StringName(spawn_points[index].get("tag", &"")) != tag:
+			if hidden_only:
+				if _in_view(spawn_points[index]):
+					continue
+			elif StringName(spawn_points[index].get("tag", &"")) != tag:
 				continue
 			var d := _flat_distance(spawn_points[index].position, spawn_points[wanted].position)
 			if d < best:
@@ -426,7 +443,7 @@ func _spawn_named(id: StringName, valid: Array[int]) -> bool:
 				nearest = d
 				chosen = index
 	if chosen < 0:
-		_timer = NAMED_RETRY_S
+		_timer = Tuning.data.spawn_named_retry_s
 		return false
 	var point := spawn_points[chosen]
 	_queue.remove_at(0)

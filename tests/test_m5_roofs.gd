@@ -505,7 +505,7 @@ func test_the_guard_holds_the_player_at_every_open_edge() -> void:
 		assert_gt(level.player.global_position.y, from.y - 0.5, "%s: still on his floor" % c[0])
 
 
-func test_the_pipe_lies_in_front_of_the_big_shutter() -> void:
+func test_the_pipe_lies_on_open_floor_in_sight_of_a6s_arrival() -> void:
 	var level := await _level()
 	var spots := _roofs(level).pickup_spots()
 	assert_eq(spots.size(), 1, "one pickup spot")
@@ -516,8 +516,33 @@ func test_the_pipe_lies_in_front_of_the_big_shutter() -> void:
 	assert_lt(_flat(pipe.global_position, spots[0].global_position), 0.3, "it lies at its spot")
 	assert_lt(absf(pipe.global_position.y - _p(level, 0.0, 12.0, 0.0).y), 0.4, "on the top roof")
 	var shutter: Vector3 = _arena(level, 2).get_node("BigShutter").global_position
-	assert_lt(_flat(pipe.global_position, shutter), 3.0, "within a few metres of the big shutter's doorway")
+	assert_lt(_flat(pipe.global_position, shutter), 10.0, "on the way to the big shutter's doorway")
 	assert_true(pipe.is_available(), "an ordinary pick-up")
+	# The player arrives at R14: eyes 1.6 m up. The pipe is in his sight from there,
+	# within about 10 m, with no crate in the way (it lay in the crate stack's lee before).
+	var arrival: Vector3 = _roofs(level).get_node("Route/R14").global_position
+	assert_lt(_flat(pipe.global_position, arrival), 11.0, "within about 10 m of the arrival")
+	var query := PhysicsRayQueryParameters3D.create(arrival + Vector3.UP * 1.6, pipe.global_position + Vector3.UP * 0.05,
+			CombatTypes.bit(CombatTypes.LAYER_WORLD))
+	var hit := level.get_world_3d().direct_space_state.intersect_ray(query)
+	assert_true(hit.is_empty(), "nothing stands between the arrival and the pipe: %s" % [hit.get("collider")])
+
+
+func test_the_behind_spawns_are_flagged_and_a4s_is_behind_a_player_who_has_just_walked_in() -> void:
+	var level := await _level()
+	var flagged := {&"a4_terrace": [&"RoofDoorBehind"], &"a5_catwalk": [&"DoorBehindStair"],
+			&"a6_top_roof": [&"BehindDoor", &"RoofAccess"]}
+	for arena in _roofs(level).arena_list():
+		for point in arena.spawn_point_list():
+			assert_eq(bool(point.out_of_view), (flagged.get(arena.arena_id, []) as Array).has(point.name),
+					"%s/%s: flagged exactly when the table calls it behind" % [arena.arena_id, point.name])
+	# A4: he walks in at R0 and then along the terrace (-Z); the door is behind his shoulder, out of a 55 degree view.
+	var door: Vector3 = _arena(level, 0).get_node("RoofDoorBehind").global_position
+	var r0: Vector3 = _roofs(level).get_node("Route/R0").global_position
+	assert_gt(door.z, r0.z, "the door is on the stair's side of where he walks in (behind him, not ahead)")
+	_put_player(level, r0)
+	level.player.look_yaw = 0.0
+	assert_true(level.player.is_outside_view(door, Tuning.data.rear_warning_angle_deg), "and outside his view as he starts along the terrace")
 
 
 func test_a6s_first_wave_fits_the_roof_and_nobody_goes_over() -> void:

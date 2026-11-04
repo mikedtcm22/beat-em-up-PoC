@@ -1002,12 +1002,23 @@ extends Resource
 ## he can never be shut on the wrong side of it.
 @export_range(0.5, 6.0, 0.1) var arena_lock_inset_m: float = 2.0
 ## A named spawn point nearer the player than spawn_min_player_distance_m (or with no room) is
-## waited for this long (s); then the nearest free point with the same tag is used.
+## waited for this long (s); then the nearest free point with the same tag is used. The same wait
+## holds a behind point (a spawn point flagged `out_of_view`) while it is inside the player's view; then
+## the nearest free point outside the view, of any tag, takes it.
 @export_range(0.0, 10.0, 0.1) var spawn_named_wait_s: float = 2.0
 ## When no point of its tag is free either (a point with a unique tag, with the player standing
 ## by it), a further wait (s) after spawn_named_wait_s; then the nearest free point of any tag in
 ## the arena takes it, so a player holding a spot cannot stall the wave.
 @export_range(0.0, 20.0, 0.1) var spawn_named_any_wait_s: float = 3.0
+## How often (s) a named spawn that cannot be placed yet (its point is too near the player, has no
+## room or, for a behind point, is in view) tries again.
+@export_range(0.02, 1.0, 0.01) var spawn_named_retry_s: float = 0.1
+@export_subgroup("Weapon look")
+## The colour of a weapon lying on the floor (a level's pick-up, a dropped or landed pipe), so it
+## reads against the floor's grey from across a room. In a hand or in the air it keeps its own colour.
+@export var weapon_floor_color: Color = Color(0.96, 0.7, 0.1)
+## How much thicker a weapon is drawn while it lies on the floor (the collision does not change).
+@export_range(1.0, 4.0, 0.1) var weapon_floor_radius_scale: float = 1.6
 @export_subgroup("Drop-offs")
 ## The invisible guard along every open edge (physics layer 9): the player can never walk or be
 ## knocked off, a standing enemy never walks off. Off, the player can fall (the fall rule below).
