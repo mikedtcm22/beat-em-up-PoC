@@ -1,0 +1,369 @@
+{
+	"id": "bruiser",
+	"version": 2,
+	"note": "The Bruiser (M6 HEAVIES): concept A (Game-boy's pick) through three flat Gemini views on the mannequin (views/, fitted to its frame by views_fit.py), Tripo multiview (front, left, back, seed 6101) and auto-rig v3.0 unity. A procedural fist. Authored at 1.8 m, worn at 2.05 m.",
+	"paths": {
+		"work": "assets/source/_cache/bruiser/work",
+		"blend_dir": "assets/source/characters/bruiser/work",
+		"report": "assets/source/characters/bruiser/report",
+		"export_dir": "assets/export/characters/bruiser",
+		"export_name": "bruiser"
+	},
+	"source": {
+		"mesh": "assets/source/characters/bruiser/tripo/984d3404_rig.glb",
+		"rig": "same",
+		"facing_yaw_deg": 90.3298,
+		"sides": "keep"
+	},
+	"target": {
+		"head_top_m": 1.82
+	},
+	"fit": {
+		"landmarks": "rig",
+		"regularize": [
+			"Spine",
+			"Chest",
+			"UpperChest"
+		],
+		"bone_map": {},
+		"swing": "measure",
+		"default_swing_deg": 45.0,
+		"warp_weights": "tripo",
+		"residual_limit_m": 0.01,
+		"sole_percentile": 0.0,
+		"snap": {
+			"enabled": true,
+			"radius_m": 0.3
+		},
+		"girth_clamp": [
+			{
+				"name": "left_thigh",
+				"bones": [
+					"LeftUpperLeg"
+				],
+				"from": "LeftUpperLeg",
+				"to": "LeftLowerLeg",
+				"limit_m": 0.085,
+				"soft_m": 0.004
+			},
+			{
+				"name": "left_shin",
+				"bones": [
+					"LeftLowerLeg"
+				],
+				"from": "LeftLowerLeg",
+				"to": "LeftFoot",
+				"limit_m": 0.075,
+				"soft_m": 0.004
+			},
+			{
+				"name": "right_thigh",
+				"bones": [
+					"RightUpperLeg"
+				],
+				"from": "RightUpperLeg",
+				"to": "RightLowerLeg",
+				"limit_m": 0.085,
+				"soft_m": 0.004
+			},
+			{
+				"name": "right_shin",
+				"bones": [
+					"RightLowerLeg"
+				],
+				"from": "RightLowerLeg",
+				"to": "RightFoot",
+				"limit_m": 0.075,
+				"soft_m": 0.004
+			},
+			{
+				"name": "torso",
+				"bones": [
+					"Hips",
+					"Spine",
+					"Chest",
+					"UpperChest"
+				],
+				"from": "Spine",
+				"to": "UpperChest",
+				"from_offset": [
+					0.0,
+					0.0,
+					-0.03
+				],
+				"to_offset": [
+					0.0,
+					0.0,
+					0.08
+				],
+				"limit_m": 0.245,
+				"soft_m": 0.006
+			},
+			{
+				"name": "head",
+				"bones": [
+					"Head"
+				],
+				"shape": "sphere",
+				"from": [
+					0.0,
+					0.01,
+					1.685
+				],
+				"limit_m": 0.185,
+				"soft_m": 0.004
+			}
+		],
+		"bulge": [
+			{
+				"name": "knee_back_left",
+				"bones": [
+					"LeftUpperLeg",
+					"LeftLowerLeg"
+				],
+				"joint": "LeftLowerLeg",
+				"direction": "back",
+				"half_height_m": 0.14,
+				"amount_m": 0.04
+			},
+			{
+				"name": "knee_back_right",
+				"bones": [
+					"RightUpperLeg",
+					"RightLowerLeg"
+				],
+				"joint": "RightLowerLeg",
+				"direction": "back",
+				"half_height_m": 0.14,
+				"amount_m": 0.04
+			}
+		]
+	},
+	"rig": {
+		"weights": "tripo",
+		"max_influences": 4,
+		"variants": [
+			"apose",
+			"rest"
+		],
+		"clamps": []
+	},
+	"parts": {
+		"fists": {
+			"enabled": true,
+			"glove_slot": 46,
+			"strap_slot": 45,
+			"strap_height_m": 0.03,
+			"cuff_margin_m": 0.008,
+			"cuff_over_m": 0.035,
+			"cuff_below_wrist_m": 0.012,
+			"bevel_m": 0.022,
+			"bump_m": 0.006
+		},
+		"split_fp": {
+			"enabled": false
+		}
+	},
+	"palette": {
+		"mode": "fixed",
+		"slots": [
+			6,
+			14,
+			44,
+			45,
+			46
+		],
+		"max_swatches": 6,
+		"min_share": 0.004,
+		"majority_passes": 2,
+		"border_relax_iterations": 3,
+		"border_relax_factor": 0.5,
+		"budget_tris": 15000,
+		"detail_uv": true,
+		"fist_budget_tris": 1350,
+		"unfold": {
+			"iterations": 12,
+			"factor": 0.5,
+			"ring": 1
+		},
+		"detail_bake": {
+			"size": 1024,
+			"radius_px": 5,
+			"ink_low": 0.02,
+			"ink_high": 0.07,
+			"grow_px": 0,
+			"no_ink_slots": [],
+			"zones": [],
+			"clean": {
+				"cut": 0.15,
+				"bridge_px": 1,
+				"orient_radius_px": 3,
+				"align_deg": 35.0,
+				"min_straight": 0.0,
+				"min_extent_texels": 4,
+				"min_texels": 4,
+				"smooth_sigma": 0.5,
+				"smooth_gain": 1.05
+			}
+		},
+		"strap_slot": 17,
+		"glove_slot": 2,
+		"fist_border_cell_m": 0.012,
+		"reserve_tris": 700,
+		"strap_paint_slot": 2
+	},
+	"export": {
+		"hull_normal_digits": 5,
+		"smooth_normals": {
+			"iterations": 12,
+			"crease_deg": 50,
+			"falloff": 2.0,
+			"self_weight": 1.0
+		}
+	},
+	"stills": {
+		"views": [
+			"front",
+			"three_quarter",
+			"side"
+		],
+		"poses": {
+			"rest": {},
+			"guard": {
+				"Spine": [
+					-3.0,
+					0.0,
+					0.0
+				],
+				"Chest": [
+					-3.0,
+					0.0,
+					0.0
+				],
+				"Neck": [
+					4.0,
+					0.0,
+					0.0
+				],
+				"Head": [
+					2.0,
+					0.0,
+					0.0
+				],
+				"LeftUpperArm": [
+					43.5,
+					-22.0,
+					-13.5
+				],
+				"LeftLowerArm": [
+					130.0,
+					0.0,
+					0.0
+				],
+				"RightUpperArm": [
+					40.0,
+					22.5,
+					13.0
+				],
+				"RightLowerArm": [
+					134.5,
+					0.0,
+					0.0
+				],
+				"LeftUpperLeg": [
+					16.0,
+					0.0,
+					-4.0
+				],
+				"LeftLowerLeg": [
+					-24.0,
+					0.0,
+					0.0
+				],
+				"LeftFoot": [
+					8.0,
+					0.0,
+					4.0
+				],
+				"RightUpperLeg": [
+					-6.0,
+					0.0,
+					5.0
+				],
+				"RightLowerLeg": [
+					-16.0,
+					0.0,
+					0.0
+				],
+				"RightFoot": [
+					22.0,
+					0.0,
+					-5.0
+				]
+			},
+			"elbow_150": {
+				"LeftLowerArm": [
+					150.0,
+					0.0,
+					0.0
+				],
+				"RightLowerArm": [
+					150.0,
+					0.0,
+					0.0
+				]
+			},
+			"arm_raise_140": {
+				"LeftUpperArm": [
+					140.0,
+					0.0,
+					0.0
+				],
+				"RightUpperArm": [
+					140.0,
+					0.0,
+					0.0
+				]
+			},
+			"knee_m130": {
+				"LeftUpperLeg": [
+					40.0,
+					0.0,
+					0.0
+				],
+				"LeftLowerLeg": [
+					-130.0,
+					0.0,
+					0.0
+				],
+				"RightUpperLeg": [
+					-10.0,
+					0.0,
+					0.0
+				]
+			},
+			"spine_twist": {
+				"Spine": [
+					0.0,
+					30.0,
+					0.0
+				],
+				"Chest": [
+					0.0,
+					30.0,
+					0.0
+				],
+				"UpperChest": [
+					0.0,
+					20.0,
+					0.0
+				],
+				"Neck": [
+					0.0,
+					-20.0,
+					0.0
+				]
+			}
+		}
+	}
+}

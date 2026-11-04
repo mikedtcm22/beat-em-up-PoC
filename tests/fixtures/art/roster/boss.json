@@ -1,0 +1,19 @@
+{
+	"id": "boss",
+	"label": "Ox Pellerin",
+	"art": "res://game/actors/art/boss_art.tres",
+	"actor_scene": "res://game/enemies/boss/boss.tscn",
+	"height_m": 2.3,
+	"budget": 30000,
+	"meshes": [
+		"Body"
+	],
+	"moves": [
+		"boss_charge",
+		"boss_pound",
+		"boss_grab",
+		"boss_slam"
+	],
+	"ratchets": {},
+	"notes": ""
+}

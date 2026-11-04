@@ -1,0 +1,18 @@
+{
+	"id": "bruiser",
+	"label": "Bruiser",
+	"art": "res://game/actors/art/bruiser_art.tres",
+	"actor_scene": "res://game/enemies/bruiser/bruiser.tscn",
+	"height_m": 2.05,
+	"budget": 15000,
+	"meshes": [
+		"Body"
+	],
+	"moves": [
+		"bruiser_smash",
+		"bruiser_grab",
+		"bruiser_headbutt"
+	],
+	"ratchets": {},
+	"notes": ""
+}

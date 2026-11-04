@@ -15,7 +15,7 @@ const ENTRIES: Array[Dictionary] = [
 	{id = &"kicker", label = "Kicker", scene = "res://game/enemies/kicker/kicker.tscn"},
 	{id = &"thug", label = "Pipe Thug", scene = "res://game/enemies/thug/pipe_thug.tscn"},
 	{id = &"bruiser", label = "Bruiser", scene = "res://game/enemies/bruiser/bruiser.tscn"},
-	{id = &"boss", label = "Boss", scene = "res://game/enemies/boss/boss.tscn"},
+	{id = &"boss", label = "Ox Pellerin", scene = "res://game/enemies/boss/boss.tscn"},
 ]
 
 ## id -> Vector2(body radius, body height), read once from an instance (body_size()).
