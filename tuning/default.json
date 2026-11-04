@@ -453,11 +453,11 @@
 		"weapon_floor_radius_scale": 1.6,
 		"weapon_glint_height_m": 0.45,
 		"weapon_glint_size_m": 0.35,
-		"weapon_glint_min_angle_deg": 1.6,
+		"weapon_glint_min_angle_deg": 3.0,
 		"weapon_glint_pulse_hz": 1.1,
 		"weapon_glint_pulse_depth": 0.35,
 		"weapon_glint_spin_dps": 30.0,
-		"weapon_glint_intensity": 1.2,
+		"weapon_glint_intensity": 1.6,
 		"weapon_glint_color": [
 			1.0,
 			0.959999978542328,

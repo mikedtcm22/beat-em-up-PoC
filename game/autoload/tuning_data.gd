@@ -1065,14 +1065,15 @@ extends Resource
 @export_range(0.0, 1.5, 0.05) var weapon_glint_height_m: float = 0.45
 ## The glint's drawn size (m) when it is near; far away the angular floor below takes over.
 @export_range(0.1, 1.0, 0.05) var weapon_glint_size_m: float = 0.35
-## The smallest angle the glint covers on screen (degrees): 1.6 is about 17 px of a 900 px frame at 10 m.
-@export_range(0.5, 5.0, 0.1) var weapon_glint_min_angle_deg: float = 1.6
+## The smallest angle the glint covers on screen (degrees): 3 is about 35 px of a 900 px frame at any distance (the
+## first recording at 1.6 left a 12 px star at 10 m, which hardly read).
+@export_range(0.5, 6.0, 0.1) var weapon_glint_min_angle_deg: float = 3.0
 @export_range(0.2, 4.0, 0.1) var weapon_glint_pulse_hz: float = 1.1
 ## How far the glint dims at the bottom of a pulse (0 = steady, 1 = out).
 @export_range(0.0, 1.0, 0.05) var weapon_glint_pulse_depth: float = 0.35
 ## Degrees a second the four points turn, so the sparkle twinkles.
 @export_range(0.0, 180.0, 5.0) var weapon_glint_spin_dps: float = 30.0
-@export_range(0.2, 3.0, 0.1) var weapon_glint_intensity: float = 1.2
+@export_range(0.2, 3.0, 0.1) var weapon_glint_intensity: float = 1.6
 ## A warm white: no red (SPEC section 10) and not the retired amber.
 @export var weapon_glint_color: Color = Color(1.0, 0.96, 0.78)
 ## The bike chain's links (M6, a presentation-only sim; docs/ARCHITECTURE.md, WEAPONS): Verlet points pinned at the grip and
