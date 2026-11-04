@@ -83,6 +83,7 @@ Mission 1 now plays from the street to the boss as one graybox level. Enemies at
   - In god mode at full speed: 197 s, all seven arenas in order, with no stall.
   - Held back with real damage, as the recordings show: about 427 s, about 7 minutes, so a first run takes about 8-11 minutes.
 - **M3's readability metrics are re-measured** under the arcs. Every hard row holds in every arena.
+  - In the boss arena, two soft rows miss: the ring's closest tenth (R6, p10 about 1.8 m) and the lens covered (R8, p95 about 57%). Every sample behind them is the boss alone up close, during his own moves, with no add involved. That's his size, not a crowd.
 
 ## Milestone 4 status: the art pipeline
 
@@ -271,9 +272,16 @@ The characters are procedural placeholders. Real art, VFX and audio come in Mile
   - The veteran Punk is marked by an orange tint over the whole Punk art.
 
 **Automated checks:**
-- `tools/run_tests.sh` runs 1198 tests headless in about 145 s, including an end-to-end suite where a scripted player performs every combo in the real test room and the Milestone 3 done-when test, `tests/test_m3_done_when.gd`.
+- `tools/run_tests.sh` runs about 1730 tests headless in about 300 s. Among them:
+  - an end-to-end suite where a scripted player performs every combo in the real test room;
+  - each milestone's done-when test (`tests/test_m3_done_when.gd`, `tests/test_m4_done_when.gd`, `tests/test_m5_done_when.gd`, which plays the whole level arena by arena);
+  - the level's own tests (`tests/test_m5_street.gd`, `tests/test_m5_roofs.gd`, `tests/test_level_kit.gd`, `tests/test_level_bot.gd`).
 - `tools/capture_combos.sh` records the combo bot with Movie Maker to `captures/combos.avi`, writes a hit log to `captures/bot.log`, and extracts stills for review. Pass text to run only matching acts, for example `tools/capture_combos.sh "haymaker"`. `tests/bot/ragdoll_bot.tscn` and `tests/bot/vfx_bot.tscn` play the ragdoll and VFX acts the same way (record them with Movie Maker, `--write-movie`).
 - `tests/bot/crowd_bot.tscn` plays the crowd street the same way: its acts are in `tests/bot/acts/` (one file per area, such as `crowd_acts.gd` for the mixed six, the waves to the boss, the mixed waves, the boss wave held back and the rear warning for every archetype). Pass text to run matching acts and `--seed=<n>` to repeat one with other seeds, for example `tools/capture_bot.sh res://tests/bot/crowd_bot.tscn captures/crowd "Mixed six" 6`. A probed act runs the readability probe, which writes `readability.json` (15 metrics, five of them hard) next to the recording, and the warning oracle, which checks the HUD's corners against Spec §8 at every wind-up. The perf act is recorded windowed, not with Movie Maker: `godot --path . res://tests/bot/crowd_bot.tscn -- --act="Perf, six with ragdolls"`.
+- `tests/bot/level_bot.tscn` plays a level, or a lone section, arena by arena. `--level=<res:// path>` picks it, and `--from=<arena>` / `--to=<arena>` pick the arenas.
+  - Acts: "Run: held back" (real damage, the probe in every arena), "Run: knock-off" (a Punk launched over the chosen arena's drop), "Run: timing" (god mode at full speed; run it headless with `--presentation=0` for the `LEVEL` time) and "Look: seams" (both section seams, barrier closed and open).
+  - Record any bot with `tools/capture_bot.sh`, or several acts at once into one folder with `tools/record_acts.sh <out dir> "<slug>|<act title>" ...` (`BOT_SCENE` picks the bot, `CAPTURE_ARGS` passes its arguments).
+  - The bot's held-back pilot never jumps, so the boss's unblockable Ground Pound always lands. Its A7 damage and time are higher than a human's.
 - `tools/check_m3_log.py <bot.log>` reads a crowd bot log and exits 1 if a warning corner is missing or wrong, a token count goes over the cap, a hard metric fails or the log has a script error. `tools/capture_bot.sh` writes `bot.log` next to the recording.
 
 ## Repo layout
