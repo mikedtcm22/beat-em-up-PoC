@@ -25,7 +25,8 @@ extends Node3D
 ## Finite mode (Milestone 5): `play_table(table, points)` plays a table whose `loop` is false once,
 ## on the given spawn points (an arena's), never inserts the boss wave, lets a table name the point
 ## a spawn comes in at (`wave_points`; a named point overrides the behind share, and one too near
-## the player waits spawn_named_wait_s, then the nearest free point with the same tag takes it),
+## the player waits spawn_named_wait_s, then the nearest free point with the same tag takes it, and
+## after spawn_named_any_wait_s more the nearest free point of any tag),
 ## and emits `table_finished` when the last wave is cleared, adds included. `stop()` leaves it idle.
 ## The level (LevelRoot) owns the one spawner and hands each arena its table and points on lock.
 
@@ -390,8 +391,9 @@ func _spawn_next() -> void:
 
 
 ## Spawn the head of the queue, a named spawn, at its point if that is free (in `valid`), or, once
-## it has waited spawn_named_wait_s, at the nearest free point with the same tag. False (and a
-## short retry) when neither is. A name no point has is treated as no name.
+## it has waited spawn_named_wait_s, at the nearest free point with the same tag, or, once it has
+## waited spawn_named_any_wait_s more (a unique tag, the player holding the spot), at the nearest free
+## point of any tag. False (and a short retry) when none is. A name no point has is treated as no name.
 func _spawn_named(id: StringName, valid: Array[int]) -> bool:
 	var named := _queue_points[0]
 	var wanted := -1
@@ -415,6 +417,13 @@ func _spawn_named(id: StringName, valid: Array[int]) -> bool:
 			var d := _flat_distance(spawn_points[index].position, spawn_points[wanted].position)
 			if d < best:
 				best = d
+				chosen = index
+	if chosen < 0 and _head_wait >= Tuning.data.spawn_named_wait_s + Tuning.data.spawn_named_any_wait_s:
+		var nearest := INF
+		for index in valid:
+			var d := _flat_distance(spawn_points[index].position, spawn_points[wanted].position)
+			if d < nearest:
+				nearest = d
 				chosen = index
 	if chosen < 0:
 		_timer = NAMED_RETRY_S

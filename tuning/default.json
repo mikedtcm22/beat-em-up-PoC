@@ -432,6 +432,7 @@
 		"barrier_open_s": 0.8,
 		"arena_lock_inset_m": 2.0,
 		"spawn_named_wait_s": 2.0,
+		"spawn_named_any_wait_s": 3.0,
 		"level_edge_guard": true,
 		"level_fall_damage": 20.0,
 		"level_fall_invuln_s": 1.5,

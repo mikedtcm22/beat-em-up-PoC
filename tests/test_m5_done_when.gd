@@ -178,6 +178,20 @@ func _play(arena: Arena, on_tick: Callable = Callable()) -> Dictionary:
 			peak = peak, behind_closed = behind_closed, first_seen = seen, archetypes = archetypes, verdict = summary.verdict}
 
 
+## The player walks into `arena` from where he stands: when he is not where it locks on him he is
+## put at its first route point, which must lock it (inside its volume and past its behind barrier's
+## inset). Only the street's Start is outside the first arena; the bot run walks that in for real.
+func _walk_into(arena: Arena) -> void:
+	var player := _level.player
+	if arena.contains(player.global_position) and arena.past_inset(player.global_position):
+		return
+	var point := _level.first_route_point(arena)
+	assert_true(point.is_finite(), "%s has a route point" % arena.arena_id)
+	if point.is_finite():
+		assert_true(arena.past_inset(point), "%s: its first route point is far enough past its behind barrier to lock" % arena.arena_id)
+		player.global_position = point
+
+
 # --- 1 and 2. The level, arena by arena ----------------------------------------------------------
 
 
@@ -185,7 +199,9 @@ func test_every_arena_locks_spawns_its_table_and_clears_in_order() -> void:
 	var wall_start := Time.get_ticks_msec()
 	await _level_up()
 	_quicken()
-	# The player starts inside the first arena: it locked during the two frames of setup.
+	# start_at_arena(k) stands the player at arena k's first route point, where it locks on him (the
+	# first arena's start is the street end, so the test puts him at its first route point: the bot
+	# run walks that in for real).
 	_locked_order.clear()
 	var arenas := _level.arenas()
 	assert_gt(arenas.size(), 0, "the level has arenas")
@@ -196,6 +212,7 @@ func test_every_arena_locks_spawns_its_table_and_clears_in_order() -> void:
 		var arena := arenas[k]
 		expected_order.append(arena.arena_id)
 		_level.start_at_arena(k)
+		_walk_into(arena)
 		_level.spawner.set_waves_enabled(true)
 		var is_boss := arena.table != null and arena.table.waves.size() == 1 and arena.table.waves[0] == PackedStringArray(["boss"])
 		var half := func(seen: Dictionary) -> void:
