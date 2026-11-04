@@ -52,6 +52,6 @@ Game-boy's calls for the next milestone, recorded as he made them, for the M5 pl
    - After it, the line holds until the attack and its recovery end.
 2. **Variants widen the arc.** For example, a "veteran Punk" at 140°. The arc is per archetype, or per variant, in data, so a later variant is a resource, not code.
 3. **A difficulty progression across the game.** Early levels lean on narrow-arc grunts, the strategically easier warm-up. Later levels are mostly all-angle enemies. M5's encounter plan should show the progression level by level.
-4. **The rear warning:** not answered yet. It follows from the above: it fires for wide-arc types and for any enemy whose fixed line ends up behind the player.
+4. **The rear warning:** not answered. It follows from the above: it fires for wide-arc types and for any enemy whose fixed line ends up behind the player. Asked again with the encounter table ("should a crowd of Punks ever come round behind you on their own?"), it took its default, no, when Game-boy approved the table and said to go on (2026-11-03 20:20 CST, session chat: "OK, enemy arcs are good. Let's continue with the rest of M5 now."). It's listed in README as decided by default, for his ruling at sign-off.
 
 **Effects to re-measure:** M3's readability metrics (R1-R15) and the rear warning's tests (`tests/test_m3_done_when.gd`), since fewer attacks come from behind. The director's tunables live in the "Enemies" group in F1.

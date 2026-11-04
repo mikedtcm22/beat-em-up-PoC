@@ -4,6 +4,20 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-03 20:25 CST: Game-boy approved the table; phase 2 (STREET, ROOF, FINALE) building
+- **Game-boy's words** (session chat, 20:20): "OK, enemy arcs are good. Let's continue with the rest of M5 now."
+  - He played the arcs in the crowd room before saying it. Before that he asked for the run command to be posted with every playable update; a memory now says so.
+  - So `reference/encounters.md` is approved as drafted, with no changes.
+  - The rear-warning question takes its default (no: Punks never come round behind on their own). It's in README's M5 list as decided by default, and in M5-inputs.md.
+  - The three overrulable defaults (stairs, no falls, the arc slide) stand, for his ruling at sign-off.
+- **Running:** `tools/workflows/build.js` with `docs/reviews/M5/args-P2.json` (`only: ["STREET", "ROOF", "FINALE"]`, concurrency 3). Worktrees `.worktrees/m5-street`, `m5-roof` and `m5-finale`, on branches `m5/street`, `m5/roof` and `m5/finale`. If it's cut off, rerun the same args: the loader resumes from each branch's newest `wip:` commit.
+- **Next:**
+  1. Merge STREET, then ROOF, then FINALE. Regenerate the preset, then run the full suite and `test_m5_done_when.gd`.
+  2. Record "Run: timing" on the whole level, and take the lead's look.
+  3. Run one post-merge Sonnet fixer for what only the whole level shows.
+  4. Phase 3: the review round (plan §5).
+- **Usage at launch:** 0% of the 5-hour window (it resets at 23:30 CST), 6% weekly. Plan §7 estimates phase 2 at about 32%.
+
 ### 2026-11-03 11:20 CST: phase 1 done (BOT merged); waiting on Game-boy's table for phase 2
 - **BOT merged** (`35156c4`, merge `2b3fa5f`, pushed; 1683/1683 on its branch, and nothing but docs changed under it):
   - `tests/bot/level_bot.{gd,tscn}` plays any `LevelRoot` or a lone section, with `--level`, `--from` and `--to`.

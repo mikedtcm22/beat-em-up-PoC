@@ -218,6 +218,7 @@ The characters are procedural placeholders. Real art, VFX and audio come in Mile
   - **Ours, not his:** when a wall or a drop leaves no room anywhere in an arc, the arc slides round to the nearest open stretch, so a wall is never a safe spot.
   - **Keeping the spec reachable:** `director_even_spread` (Debug) brings M3's even spread back.
 - **M5-2. Blind-spot priority only for wide arcs (Spec §7; Game-boy's call):** only an enemy whose arc reaches past the view cone (half its arc > `rear_warning_angle_deg`) jumps the token queue from behind. A 90° Punk never does. Turning `blind_spot_needs_wide_arc` off restores "any enemy".
+- **Punks never come round behind you on their own (Spec §7, §8; the rear-warning question, left at its default):** a Punk reaches your back only when you turn it on him after he engages, so the warning fires mostly for Kickers, the Bruiser's flank, the boss, and Punks you turned away from. A wider `punk_arc_deg` (or a wider variant, as the veteran Punk's 140°) lets them reach round.
 - **M5-3. Stairs where the reference climbs ladders (Spec §9):**
   - Graybox stair flights replace the ladders, with no new player state, and enemies still come down them at you.
   - Walking bodies ride a hidden ramp on the step tips; bodies lying down rest on the steps.

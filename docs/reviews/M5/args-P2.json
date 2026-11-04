@@ -8,7 +8,7 @@
   "arch_heading": "## Level blockout (Milestone 5)",
   "image_budget": 25,
   "concurrency": 3,
-  "note": "Phase 2 (Game-boy approved reference/encounters.md: <fill in his words and any changes>). ARC, KIT and BOT are merged into m5/level-blockout. STREET, ROOF and FINALE build at the same time and own disjoint files (plan §2 'File ownership' and 'Level space'): build only inside your own footprint. The lead merges STREET, ROOF, then FINALE, and runs the whole level after.",
+  "note": "Phase 2. Game-boy approved reference/encounters.md as drafted, with no changes (2026-11-03, \"OK, enemy arcs are good. Let's continue with the rest of M5 now\"): build exactly its arenas, waves, spawn sides and pickups. The rear-warning question took its default: Punks never come round behind on their own, which the merged arcs already do, so no director change is wanted. ARC, KIT and BOT are merged into m5/level-blockout. STREET, ROOF and FINALE build at the same time and own disjoint files (plan §2 'File ownership' and 'Level space'): build only inside your own footprint. The lead merges STREET, ROOF, then FINALE, and runs the whole level after.",
   "packages": [
     {
       "key": "STREET",

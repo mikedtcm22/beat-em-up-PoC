@@ -1,4 +1,6 @@
-# Mission 1 encounter plan (draft for Game-boy's approval)
+# Mission 1 encounter plan (approved by Game-boy, 2026-11-03)
+
+Approved as drafted, in the session chat at 20:20 CST: "OK, enemy arcs are good. Let's continue with the rest of M5 now." The level is built from this table.
 
 SPEC §9's encounter table, from the reference screens in `dd2-nes-mission1/` (layout and pacing only). One block per arena, in level order. "Behind" means a spawn point behind the player as he walks in.
 
