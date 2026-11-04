@@ -21,3 +21,21 @@
     - `test_look_post.gd` `_mesh_colors` and `test_every_street_surface_is_inside_the_bibles_saturation_and_value`: a trim-material mesh is skipped from the albedo reading (its `albedo` is the white tint) and counted, `checked > 20` -> `checked + kit > 20`. Twin on the visible path: `test_kit.gd::test_every_painted_pixel_of_the_sheet_is_inside_the_environment_band` (reads the sheet's pixels: saturation at most 0.30, value 0.25-0.6).
     - `test_m4_contracts.gd`: added `test_the_trim_material_is_one_toon_lit_shader_material`; the flat-material tests are unchanged.
     - `test_level_kit.gd` barrier panel asserts (`:210-214`): unchanged and passing (the panel's offset is the same).
+
+## The inventory drop KIT expects (plan §2 "Placeholder inventory")
+
+Counted on the built `mission1.tscn` (visible `MeshInstance3D`s under the sections, no presentation), the graybox switch on (= M5) against off:
+
+- **`boxes`, mission1: 489 -> 5.** The 5 left are `PropSpot` fallback boxes: the four cars of the two car barriers (`StartCar`, `YardCar`, two each) and the dumpster spot over the street's `Crates`. They clear when PROPS's scenes land. 330 kit meshes replace the rest (blocks, the 25 stair steps' boxes as one flight, the barrier parts), all on one material.
+- **`boxes`, crowd street and training room: unchanged** (their boxes become modules when DRESS passes `art` to `RoomKit.add_box`).
+- `tints`, `cylinder_weapons`, `primitive_bodies`, `second_weapon`, the audio columns: not touched.
+
+## Numbers
+
+- **Collider snapshot:** mission1 231, crowd room 38, training room 14 static colliders, held by `test_m6_colliders.gd` (3 tests).
+- **Tests:** full run 1807 of 1807 (87 files, 333 s on the busy machine), no SCRIPT ERROR, SHADER ERROR or ERROR. `test_kit.gd` is 37 of them.
+- **Perf: level walk** (`910448e` the M5 baseline against the final commit, windowed, vsync on, 2 runs each, forced on a machine at load 4-10 because other builders were running, so the numbers are not a baseline): mean 12.40 ms -> 13.75 ms (+1.35, about 11%), p95 15.93 -> 16.53, worst 120.8 -> 77.3, spawn hitch 105.3 (one 189 ms outlier in the baseline) -> 23.9. The two soft bars on the first spawn and first hit read MISS by 0.5 ms, inside the run to run spread of the baseline itself (mean 9.67 and 15.12 on the same ref). The lead should repeat it on a quiet machine: `tools/perf_compare.sh --bot res://tests/bot/perf_level_bot.tscn --act "Perf: level walk" 910448e <ref>`. Draw count: the level is 330 kit meshes on one shared material (M5: 489 meshes, each with its own `ShaderMaterial`), but each wall is 5 to 10 times the triangles of a box (plinth, battens), and the sheet adds a 2048 px anisotropic texture and a shadow pass over the pieces.
+
+## Look: kit strip
+
+`tools/capture_bot.sh res://tests/bot/level_bot.tscn captures/kit/strip2 "Look: kit strip" 2` with `CAPTURE_ARGS="--level=res://game/level/mission1/mission1.tscn"`; sheets cut at each pose's `KIT` frame + 30. Judged first person: A1 reads as a brick street (courses, pale mortar, ink at the creases), the doorways are still dark openings (the frame boards are lighter trim round them, the recess stays `dark`), the 20 windows and three cornices read at 2 to 8 m, the chain-link fence and gate are see-through with a crisp wire, the roller shutter reads as slats, the stair flight as treads, the skyline as windowed facades. No dashed coplanar line and no doubled ink beside the hulls was seen; the crate battens beside the prop hull are heavy at one corner (the hull plus the batten's own edge). The roofs and the boss roof were looked at only through `Look: seams` (shutter, gate, catwalk gate, boss back gate): they draw, nothing is broken, nothing was dressed.
