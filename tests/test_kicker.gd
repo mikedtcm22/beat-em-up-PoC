@@ -423,8 +423,11 @@ func test_a_lone_kicker_flanks_in_the_crowd_room_and_its_wind_up_behind_lights_b
 			if warning.corner_state(side).active:
 				lit.append(side)
 	CombatEvents.windup_started.connect(on_wind_up)
-	# A Punk holds the player's attention in front (the Kicker flanks only while he is busy), kept from
-	# attacking so the first wind-up is the Kicker's.
+	# A Punk holds the player's attention in front (the Kicker flanks only while he is busy with another
+	# enemy he faces: he looks straight at the Punk, so the Kicker coming in from the east alley is off
+	# the middle), kept from attacking so the first wind-up is the Kicker's.
+	player.look_yaw = 0.0
+	player.rotation.y = 0.0
 	room.spawner.spawn_enemy(&"punk", player.global_position + Vector3(0.0, 0.0, -3.0), 0.0, false, Vector3.INF)
 	Tuning.data.god_mode = true
 	var point: Dictionary = room.spawner.spawn_points[4]
@@ -439,3 +442,13 @@ func test_a_lone_kicker_flanks_in_the_crowd_room_and_its_wind_up_behind_lights_b
 	assert_gt(absf(first.bearing), 150.0, "from directly behind the look (%.0f degrees)" % first.bearing)
 	assert_gte(seen.closest, Tuning.data.posture_ring_min_m - RING_SLACK_M, "it never came nearer than the ring on the way: %.2f m" % seen.closest)
 	assert_eq(lit, [&"left", &"right"] as Array[StringName], "both corners were lit on the wind-up's first frame")
+	# Wind down before the room goes: the AI frozen (no new hit or grunt), the sounds already playing run out,
+	# then the room is freed here, so no AudioStreamPlayback is still alive at exit (a single-file run of this
+	# test leaked 12 instances and 6 resources otherwise).
+	Tuning.data.ai_frozen = true
+	await _ticks(90)
+	for node: Node in room.find_children("*", "", true, false):
+		if node is AudioStreamPlayer or node is AudioStreamPlayer3D:
+			node.call(&"stop")
+	await _ticks(2)
+	room.free()

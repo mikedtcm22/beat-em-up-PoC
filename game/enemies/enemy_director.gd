@@ -30,7 +30,7 @@ extends Node
 ##   and only an inner-seated enemy is granted a token; the rest stand on the wait ring, still inside
 ##   their arc, until an inner seat frees. A Kicker takes the seat as near directly behind the look as
 ##   it can be only while it is flanking (Milestone 5, Game-boy's playtest: while the player is busy with
-##   another enemy in his view, with hysteresis; _track_flanking(), told to it by set_flanking());
+##   another enemy he faces, with hysteresis, and not once he turns to the Kicker; _track_flanking(), told to it by set_flanking());
 ##   otherwise it is seated by its own arc like any enemy. A seat is on the navmesh, on the player's floor and reachable. With the Debug switch
 ##   `director_even_spread` on, M3's rule instead: the enemies that are not Kickers evenly spaced all
 ##   round the player, turned as little as possible from where they stand.
@@ -582,6 +582,7 @@ func _track_flanking(player: PlayerCharacter, members: Array[EnemyActor]) -> voi
 			row.flanking = true
 			row.since = INF
 		else:
+			var faced := _is_faced(player, enemy)
 			var busy := _player_busy(player, members, enemy)
 			# `since` runs while the opposite of the decision holds.
 			var opposite := busy != bool(row.flanking)
@@ -590,7 +591,11 @@ func _track_flanking(player: PlayerCharacter, members: Array[EnemyActor]) -> voi
 			else:
 				if is_inf(float(row.since)):
 					row.since = _clock_s
-				var needed := tuning.kicker_flank_on_s if busy else tuning.kicker_flank_off_s
+				# Starting waits the on-delay; stopping waits the off-delay, or the shorter faced one when
+				# he has turned onto this Kicker (it fights from where it is as soon as he faces it).
+				var needed := tuning.kicker_flank_on_s
+				if not busy:
+					needed = tuning.kicker_flank_faced_off_s if faced else tuning.kicker_flank_off_s
 				if _clock_s - float(row.since) >= needed - _CLOCK_SLACK_S:
 					row.flanking = busy
 					row.since = INF
@@ -602,11 +607,16 @@ func _track_flanking(player: PlayerCharacter, members: Array[EnemyActor]) -> voi
 
 
 ## True while the player is busy for `kicker`: another live, engaged enemy that is not itself flanking
-## stands inside his view (the rear warning's angle) within kicker_flank_busy_radius_m of him. "Engaged"
-## is any enemy that has come to the fight (not entering, not knocked out) whatever it is doing, so a
-## Punk winding up, striking or recovering still keeps him busy.
+## is the one he faces. It counts only when it stands inside his view within kicker_flank_busy_radius_m
+## of him AND as near the middle of the view as this Kicker or nearer (a look bearing no larger; a tie is busy, so
+## of two Kickers side by side one flanks), so turning onto
+## the Kicker ends the busy-ness while a Punk is still in view beside it. A Kicker out of view is farther
+## from the middle than anything in view. "Engaged" is any enemy that has come to the fight (not
+## entering, not knocked out) whatever it is doing, so a Punk winding up, striking or recovering still
+## keeps him busy.
 func _player_busy(player: PlayerCharacter, members: Array[EnemyActor], kicker: EnemyActor) -> bool:
 	var tuning := Tuning.data
+	var kicker_off := _off_middle_deg(player, kicker)
 	for other in members:
 		if other == kicker or other.is_flanking():
 			continue
@@ -615,9 +625,22 @@ func _player_busy(player: PlayerCharacter, members: Array[EnemyActor], kicker: E
 				continue
 		if _flat_distance(other.global_position, player.global_position) > tuning.kicker_flank_busy_radius_m:
 			continue
-		if not player.is_outside_view(other.global_position, tuning.rear_warning_angle_deg):
+		if player.is_outside_view(other.global_position, tuning.rear_warning_angle_deg):
+			continue
+		if _off_middle_deg(player, other) <= kicker_off:
 			return true
 	return false
+
+
+## True while the player faces `kicker`: it stands inside his view, and no other enemy that would make him
+## busy is nearer the middle (the caller has found him not busy). Decides how long a flank lingers.
+func _is_faced(player: PlayerCharacter, kicker: EnemyActor) -> bool:
+	return not player.is_outside_view(kicker.global_position, Tuning.data.rear_warning_angle_deg)
+
+
+## How far `enemy` stands from the middle of the player's view (degrees, 0 to 180).
+func _off_middle_deg(player: PlayerCharacter, enemy: EnemyActor) -> float:
+	return absf(player.look_bearing_deg(enemy.global_position))
 
 
 # --- Posture slots (spread) ---

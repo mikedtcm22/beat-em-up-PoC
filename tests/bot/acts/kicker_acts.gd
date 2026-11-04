@@ -9,7 +9,8 @@ extends RefCounted
 ## fights a lone Kicker for 30 s, turning to face it, and the Kicker should square up in view and
 ## attack from there, never running round him (one log line a second: bearing, distance, state,
 ## flanking). "Kicker opportunist": the autopilot fights a Punk and the Kicker gets behind while he
-## is busy; once he turns to the Kicker (the Punk down, or out of the busy radius), it stops circling. The jump kick and the sweep in
+## is busy; once he turns to the Kicker (the Punk down, out of the busy radius, or merely no longer the one he faces),
+## it stops circling at once and fights from in view. "Kicker left alone": the Punk is dropped to 1 HP while the Kicker is behind him. The jump kick and the sweep in
 ## front are thrown with force_attack() on a frozen AI, so the wind-up is judged from the lens at
 ## its attack's own range; "jumped over" has the player jump the sweep. "Kicker and Punks" is the
 ## mixed crowd (cadence and the blind side against the Punk's). Acts with `probe = true` print the
@@ -25,6 +26,7 @@ static func acts(bot: Node) -> Array[Dictionary]:
 		{title = "Kicker flanks", cam = &"first_person", probe = true, fn = func() -> void: await _flanks(bot)},
 		{title = "Kicker one on one", cam = &"first_person", probe = true, fn = func() -> void: await _one_on_one(bot)},
 		{title = "Kicker opportunist", cam = &"first_person", probe = true, fn = func() -> void: await _opportunist(bot)},
+		{title = "Kicker left alone", cam = &"first_person", probe = true, fn = func() -> void: await _left_alone(bot)},
 		{title = "Kicker jump kick in front", cam = &"first_person", fn = func() -> void: await _front(bot, 0, 2.6)},
 		{title = "Kicker sweep in front", cam = &"first_person", fn = func() -> void: await _front(bot, 1, 1.4)},
 		{title = "Kicker sweep jumped over", cam = &"first_person", fn = func() -> void: await _jumped_over(bot)},
@@ -79,6 +81,29 @@ static func _opportunist(bot: Node) -> void:
 	bot.pilot.enabled = true
 	for i in 40:
 		await bot._ticks(60)
+		_log_kicker(bot, kicker, punk)
+
+
+## The case the opportunist act never reaches: a Punk and a Kicker, the held-back autopilot fighting the
+## Punk (the Kicker goes round behind him); once the Kicker is flanking past 110 degrees the Punk is left at
+## 1 HP, so the autopilot finishes it and is left with the Kicker alone behind him. It should turn onto the
+## Kicker and fight it from in view, not be run round again. One line every 15 ticks for 25 s, with the
+## frame the Punk went down.
+static func _left_alone(bot: Node) -> void:
+	_seed_names(bot)
+	bot.god()
+	var punk: EnemyActor = bot.spawn(&"punk", Vector2(0.5, 3.5))
+	var kicker: EnemyActor = bot.spawn_at_point(&"kicker", 4)
+	bot.hold_back()
+	bot.pilot.enabled = true
+	var weakened := false
+	for i in 100:
+		await bot._ticks(15)
+		if not weakened and is_instance_valid(kicker) and kicker.is_flanking() \
+				and absf(bot.player.look_bearing_deg(kicker.global_position)) > 110.0 and is_instance_valid(punk):
+			weakened = true
+			punk.health = 1.0
+			bot.log_line("KICKER f%d the Punk is left at 1 HP" % Engine.get_physics_frames())
 		_log_kicker(bot, kicker, punk)
 
 

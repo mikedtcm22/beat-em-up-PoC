@@ -341,6 +341,7 @@
 		"kicker_flank_busy_radius_m": 4.5,
 		"kicker_flank_on_s": 0.5,
 		"kicker_flank_off_s": 1.0,
+		"kicker_flank_faced_off_s": 0.0,
 		"thug_health": 35.0,
 		"thug_attack_cooldown_s": 8.0,
 		"thug_speed_mult": 0.95,
