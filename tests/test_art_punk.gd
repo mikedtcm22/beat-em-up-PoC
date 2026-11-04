@@ -19,10 +19,14 @@ extends GutTest
 const SkinnedView := preload("res://tests/skinned_view.gd")
 const FPView := preload("res://tests/fp_view.gd")
 const ArtStrain := preload("res://tests/art_strain.gd")
+const Roster := preload("res://tests/art_roster.gd")
 ## Set to anything to also run the strain of the three locked A/B variants (the environment, so a plain tools/run_tests.sh skips
 ## them): `ART_PUNK_VARIANT_STRAIN=1 tools/run_tests.sh -gselect=test_art_punk.gd`.
 const VARIANT_STRAIN_ENV := "ART_PUNK_VARIANT_STRAIN"
-const PUNK_SCENE := "res://game/enemies/punk/street_punk.tscn"
+## M6 (CHAIN, D26): the Punk's own facts are read from his roster file (tests/fixtures/art/roster/punk.json), M4's numbers moved
+## in unchanged: the scene, the height, the budget, his moves, the lens-share ratchets and the strike art's floor, the stretch ratchet
+## over the four GLBs.
+var PUNK: Dictionary = Roster.row("punk")
 const FRAME := 1.0 / 60.0
 ## The four GLBs by variant: the art resource, the GLB it wears, and the value of Tuning's
 ## look_punk_art_variant that picks it.
@@ -34,7 +38,6 @@ const VARIANTS: Array[Dictionary] = [
 ]
 ## M4-plan Part B's bars: A2 the Punk's triangles, A6 the hurtbox fit, A9 the framing, A11 the
 ## flash anchor, A19 the strain.
-const TRIANGLE_BUDGET := 15000
 const FIT_TORSO_LEGS := 0.95
 const FIT_HEAD := 0.95
 const FRAMING_DIFFER := 0.03
@@ -46,20 +49,15 @@ const FRAMING_NEAREST_M := 0.02
 ## Every other pose is held at 4 pp. (Before F-cuff the flange held all of them: worst 3.8 pp.)
 ## F-fist-turn: the fists were turned palm-in (the right fist is the generated model as it came and the left its mirror, M4-calls/
 ## F-fist-turn.md), which moves the jab's gap to 5.25-5.32 pp over the four GLBs (the cross's to 5.17-5.32, inside its 5.4): the jab's
-## ratchet 0.051 -> 0.056 (5.32 plus 0.3, rounded up). The twin on the visible path is STRIKE_ART_SHARE_MIN: the loosened bar cannot
+## ratchet 0.051 -> 0.056 (5.32 plus 0.3, rounded up). The twin on the visible path is the roster's `a9_strike_art_share_min`: the loosened bar cannot
 ## hide the art shrinking, the striking art keeps filling its share of the view (jab 28.1-28.2%, cross 27.6-27.8%).
-const FRAMING_SHARE_RATCHET_PP := {
-	"punk_jab pitch +8": 0.056,
-	"punk_cross pitch +8": 0.054,
-}
-const STRIKE_ART_SHARE_MIN := 0.27
+## (Both now live in the roster file: `a9_lens_pp` and `a9_strike_art_share_min`.)
 const ANCHOR_M := 0.02
 ## F-punk's rules: no edge of the art in view grows more than this over its skinned rest length in the 1 m acts' poses (the
 ## visible-stretch test), a held victim stays this far from the lens, no in-view vertex of a striking Punk is nearer than FPView.NEAR.
 const VISIBLE_STRETCH_M := 0.02
 ## What the asset does today (the cross's torso twist stretches the vest hem at the waist; weight smoothing, a torso height blend
 ## and the heat-map weights were tried, M4-calls/F-punk.md): the test fails below this, and prints the 2 cm bar as the gate.
-const VISIBLE_STRETCH_RATCHET_M := 0.10
 const HELD_CLEAR_M := 0.25
 const STRIKE_DISTANCE_M := 0.95
 const ROOM := preload("res://game/level/test_room.tscn")
@@ -101,7 +99,7 @@ func _art(row: Dictionary) -> CharacterArt:
 ## A bare rig wearing `art` at the Punk's height (hurtboxes for the fit test), idle.
 func _rig(art: CharacterArt, hurtboxes: bool = false) -> HumanoidRig:
 	var rig := HumanoidRig.new()
-	rig.height = 1.8
+	rig.height = float(PUNK.height_m)
 	rig.build_hurtboxes = hurtboxes
 	rig.art = art
 	add_child_autofree(rig)
@@ -116,7 +114,7 @@ func _rig(art: CharacterArt, hurtboxes: bool = false) -> HumanoidRig:
 func _punk() -> StreetPunk:
 	var stage := Node3D.new()
 	add_child_autofree(stage)
-	var punk := (load(PUNK_SCENE) as PackedScene).instantiate() as StreetPunk
+	var punk := (load(PUNK.actor_scene) as PackedScene).instantiate() as StreetPunk
 	stage.add_child(punk)
 	return punk
 
@@ -141,10 +139,7 @@ func _globals_of(rig: HumanoidRig, pose: Dictionary[StringName, Vector3], hips: 
 
 
 func _punk_moves() -> Array[MoveData]:
-	var out: Array[MoveData] = []
-	for id: String in ["punk_jab", "punk_cross", "punk_shove"]:
-		out.append(load("res://game/combat/moves/%s.tres" % id) as MoveData)
-	return out
+	return Roster.moves_of(PUNK)
 
 
 func _lines(title: String, lines: PackedStringArray) -> void:
@@ -172,7 +167,7 @@ func test_a_street_punk_wears_the_art_through_combat_actor_art() -> void:
 	assert_eq(visible_proxies, 0, "the primitives are the hidden view proxies")
 	assert_gt(punk.rig.get_tree().get_nodes_in_group(HumanoidRig.VIEW_PROXY_GROUP).size(), 30, "and they are all still built")
 	var tris: int = (punk.rig.art_meshes()[0].mesh.surface_get_arrays(0)[Mesh.ARRAY_INDEX] as PackedInt32Array).size() / 3
-	assert_lte(tris, TRIANGLE_BUDGET, "A2: the Punk's %d triangles" % tris)
+	assert_lte(tris, int(PUNK.budget), "A2: the Punk's %d triangles" % tris)
 	# The hull and the toon art material are on it.
 	var mesh := punk.rig.art_meshes()[0]
 	assert_true(mesh.material_override is ShaderMaterial, "toon art material")
@@ -219,7 +214,7 @@ func test_the_four_glbs_pass_check_stay_in_budget_and_stand_on_the_floor() -> vo
 	for row: Dictionary in VARIANTS:
 		var art := _art(row)
 		assert_eq(SkinnedArt.check(art), PackedStringArray(), "%s keeps the contract" % row.name)
-		assert_eq(art.triangle_budget, TRIANGLE_BUDGET)
+		assert_eq(art.triangle_budget, int(PUNK.budget))
 		var rig := _rig(art)
 		assert_true(rig.has_art(), row.name)
 		var lowest := INF
@@ -338,7 +333,7 @@ func test_the_framing_of_every_glb_against_its_proxies_at_the_one_metre_poses_is
 						rig.advance(FRAME)
 				var cmp := SkinnedView.compare_with_proxies(rig, cam)
 				var label := "%s %s pitch %+.0f" % [row.name, pose.label, pitch]
-				var share_bar: float = FRAMING_SHARE_RATCHET_PP.get("%s pitch %+.0f" % [pose.label, pitch], FRAMING_SHARE_PP)
+				var share_bar: float = Roster.lens_bar(PUNK, "%s pitch %+.0f" % [pose.label, pitch])
 				worst_differ = maxf(worst_differ, cmp.differ_share)
 				worst_share = maxf(worst_share, absf(cmp.art_share - cmp.proxy_share))
 				worst_nearest = maxf(worst_nearest, cmp.nearest)
@@ -348,10 +343,10 @@ func test_the_framing_of_every_glb_against_its_proxies_at_the_one_metre_poses_is
 				assert_gt(cmp.proxy_share, 0.03, "%s: so do the proxies" % label)
 				# What passes today (the art is narrower than the proxies' fist boxes in the jab and the cross at +8 degrees, so the
 				# cell count and the nearest figure at the jab, cross and shove are the gate's, and those two poses' shares are
-				# ratcheted, FRAMING_SHARE_RATCHET_PP):
+				# ratcheted, the roster's `a9_lens_pp`):
 				assert_lte(absf(cmp.art_share - cmp.proxy_share), share_bar, "%s: the lens share differs by at most %.1f pp" % [label, share_bar * 100.0])
-				if FRAMING_SHARE_RATCHET_PP.has("%s pitch %+.0f" % [pose.label, pitch]):
-					assert_gt(cmp.art_share, STRIKE_ART_SHARE_MIN, "%s: the striking art itself keeps at least %.0f%% of the view" % [label, STRIKE_ART_SHARE_MIN * 100.0])
+				if (PUNK.ratchets.a9_lens_pp as Dictionary).has("%s pitch %+.0f" % [pose.label, pitch]):
+					assert_gt(cmp.art_share, float(PUNK.ratchets.a9_strike_art_share_min), "%s: the striking art itself keeps at least %.0f%% of the view" % [label, float(PUNK.ratchets.a9_strike_art_share_min) * 100.0])
 				if pose.move == null:
 					assert_lte(cmp.differ_share, FRAMING_DIFFER, "%s: at most 3%% of the cells differ at idle" % label)
 				if cmp.differ_share > FRAMING_DIFFER:
@@ -985,7 +980,7 @@ func _arena() -> Dictionary:
 	var player := PlayerCharacter.new()
 	stage.add_child(player)
 	player.input.scripted = true
-	var punk := (load(PUNK_SCENE) as PackedScene).instantiate() as StreetPunk
+	var punk := (load(PUNK.actor_scene) as PackedScene).instantiate() as StreetPunk
 	punk.position = Vector3(0.0, 0.0, -1.0)
 	punk.rotation.y = 0.0
 	stage.add_child(punk)
@@ -1195,8 +1190,8 @@ func test_no_edge_in_view_grows_more_than_2_cm_in_the_one_metre_acts_poses() -> 
 		assert_gt(edges_seen, 1000, "%s: the poses were measured (%d edges in view)" % [row.name, edges_seen])
 		if worst > VISIBLE_STRETCH_M:
 			print("ART-PUNK   GATE: %s misses the 2 cm bar by %.1f cm" % [row.name, (worst - VISIBLE_STRETCH_M) * 100.0])
-		assert_lte(worst, VISIBLE_STRETCH_RATCHET_M, "%s: no edge in view grows more than the ratchet's %.0f cm (%.1f cm at %s)" % [
-				row.name, VISIBLE_STRETCH_RATCHET_M * 100.0, worst * 100.0, worst_label])
+		assert_lte(worst, float(PUNK.ratchets.variant_stretch_m), "%s: no edge in view grows more than the ratchet's %.0f cm (%.1f cm at %s)" % [
+				row.name, float(PUNK.ratchets.variant_stretch_m) * 100.0, worst * 100.0, worst_label])
 
 
 ## The nearest art vertex of `punk` to the lens `cam` ({distance, bone}), and with `in_view` only those the camera draws (inside
@@ -1242,7 +1237,7 @@ func test_a_held_punk_stays_a_quarter_metre_from_the_lens_through_the_grab_three
 	for i: int in dummies.size():
 		dummies[i].sparring = false
 		dummies[i].set_post(Vector3(30.0 + i * 3.0, 0.0, -30.0), 0.0, true)
-	var punk := (load(PUNK_SCENE) as PackedScene).instantiate() as StreetPunk
+	var punk := (load(PUNK.actor_scene) as PackedScene).instantiate() as StreetPunk
 	room.add_child(punk)
 	punk.global_position = player.global_position + player.global_basis * Vector3(0.0, 0.0, -1.1)
 	var to_player := player.global_position - punk.global_position

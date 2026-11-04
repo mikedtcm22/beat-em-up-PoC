@@ -72,7 +72,7 @@ func _ready() -> void:
 		var whole: Dictionary = file.get("whole", {})
 		if whole.is_empty():
 			whole = {
-				in_bar_min = maxi(run.in_bar - 1, 0),
+				in_bar_min = run.in_bar,
 				high_max = snappedf(run.worst_high * (1.0 + WHOLE_MARGIN), 0.01),
 				low_min = snappedf(run.worst_low * (1.0 - WHOLE_MARGIN), 0.001),
 				max_max = snappedf(run.worst_max * (1.0 + WHOLE_MARGIN), 0.01),

@@ -31,8 +31,10 @@ const HERO_GLB := "res://assets/export/characters/player/player.glb"
 const HERO_MASK := "res://assets/export/characters/player/player_detail.png"
 const HERO_ART := "res://game/actors/art/player_art.tres"
 const HERO_MESHES: Array[String] = ["Body", "Body__fp_hidden", "Body__fp_torso"]
-## Budgets per character id (SPEC §10: 15,000 enemy, 30,000 player); the probe bodies stand in for the player.
-const BUDGETS: Dictionary[String, int] = {"punk": 15000, "player": 30000, "probe_body": 30000}
+## Budgets of the characters that are not in the roster (the hero's is SPEC §10's 30,000; the probe bodies stand in for the player).
+## Every roster character's (tests/fixtures/art/roster/<id>.json, M6 CHAIN) comes from its file: budgets().
+const BUDGETS: Dictionary[String, int] = {"player": 30000, "probe_body": 30000}
+const Roster := preload("res://tests/art_roster.gd")
 const TOLERANCE_JOINT := 0.001
 const FIST_CENTROID_TOLERANCE := 0.015
 const FIST_EXTENT_TOLERANCE := 0.2
@@ -148,12 +150,20 @@ func _glbs() -> Array[String]:
 	return out
 
 
+## Budgets per character id: the roster's, then BUDGETS' (SPEC §10: 15,000 enemy, 30,000 player, the boss's 30,000 in its file).
+func budgets() -> Dictionary[String, int]:
+	var out: Dictionary[String, int] = BUDGETS.duplicate()
+	for id: String in Roster.ids():
+		out[id] = int(Roster.row(id).budget)
+	return out
+
+
 ## The character id a GLB path stands for: tests/fixtures/art/probe_body_rest.glb -> probe_body, .../punk/punk_rest.glb -> punk.
 func _id_of(path: String) -> String:
 	var base: String = path.get_file().get_basename()
 	if base.ends_with("_rest"):
 		base = base.trim_suffix("_rest")
-	for id: String in BUDGETS:
+	for id: String in budgets():
 		if base == id or base.begins_with(id + "_"):
 			return id
 	return base
@@ -252,8 +262,10 @@ func test_every_art_glb_loads_and_has_a_body() -> void:
 			assert_eq((f.meshes[n] as Dictionary).surfaces, 1, "%s %s: one surface" % [path, n])
 			assert_true(((f.meshes[n] as Dictionary).xf as Transform3D).is_equal_approx(Transform3D.IDENTITY), "%s %s: at the skeleton's origin" % [path, n])
 		assert_true("Body" in names, "%s has a Body" % path)
-		if _id_of(path) == "punk":
-			assert_eq(names, ["Body"], "%s: the Punk is one mesh" % path)
+		if Roster.ids().has(_id_of(path)):
+			var want_meshes: Array = Roster.row(_id_of(path)).meshes.duplicate()
+			want_meshes.sort()
+			assert_eq(names, want_meshes, "%s: the meshes its roster file names" % path)
 		if _id_of(path) == "probe_body":
 			assert_eq(names, ["Body", "Body__fp_hidden"], "%s: the probe stands in for the player: visible and first-person-hidden parts" % path)
 		if _id_of(path) == "player":
@@ -387,7 +399,7 @@ func test_triangle_budgets() -> void:
 		var total := 0
 		for n: String in (f.meshes as Dictionary):
 			total += _triangles(f.meshes[n])
-		var budget: int = BUDGETS.get(_id_of(path), 15000)
+		var budget: int = budgets().get(_id_of(path), 15000)
 		assert_true(total <= budget, "%s: %d triangles against its budget %d" % [path, total, budget])
 		assert_gt(total, 500, "%s: not an empty mesh" % path)
 
@@ -1452,21 +1464,28 @@ func test_each_character_report_names_the_glbs_it_exported() -> void:
 ## data (a swatch per slot, a snap per bone).
 func test_the_probe_report_has_the_step_report_keys_the_punks_report_has() -> void:
 	assert_true(FileAccess.file_exists(PUNK_REPORT), "the Punk's chain report is committed")
-	var probe: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(PROBE_REPORT))
 	var punk: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(PUNK_REPORT))
-	for step: String in UNCONDITIONAL_REPORT_STEPS:
-		assert_true((probe.steps as Dictionary).has(step), "the probe report has the %s step" % step)
-		assert_true((punk.steps as Dictionary).has(step), "the Punk's report has the %s step" % step)
-		if not (probe.steps as Dictionary).has(step) or not (punk.steps as Dictionary).has(step):
-			continue
-		var probe_keys: Array = (probe.steps[step] as Dictionary).keys()
-		var punk_keys: Array = (punk.steps[step] as Dictionary).keys()
-		probe_keys.sort()
-		punk_keys.sort()
-		var missing: Array = punk_keys.filter(func(k: Variant) -> bool: return not probe_keys.has(k))
-		var extra: Array = probe_keys.filter(func(k: Variant) -> bool: return not punk_keys.has(k))
-		assert_eq(missing, [], "steps.%s: keys the Punk's report has and the probe's lacks (rerun python3 -I tools/pipeline/make_probe_body.py: the GLBs come out unchanged, the report and its hash move)" % step)
-		assert_eq(extra, [], "steps.%s: keys the probe's report has and the Punk's lacks (the Punk's report is the stale one: run.py --asset punk)" % step)
+	# The probe's report, and (M6) every other roster character's: a new character's chain report has the same keys.
+	var reports: Dictionary[String, String] = {"the probe": PROBE_REPORT}
+	for id: String in Roster.ids():
+		if id != "punk":
+			reports["the %s" % id] = "res://assets/source/characters/%s/report/report.json" % id
+	for who: String in reports:
+		assert_true(FileAccess.file_exists(reports[who]), "%s's chain report is committed" % who)
+		var probe: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(reports[who]))
+		for step: String in UNCONDITIONAL_REPORT_STEPS:
+			assert_true((probe.steps as Dictionary).has(step), "%s's report has the %s step" % [who, step])
+			assert_true((punk.steps as Dictionary).has(step), "the Punk's report has the %s step" % step)
+			if not (probe.steps as Dictionary).has(step) or not (punk.steps as Dictionary).has(step):
+				continue
+			var probe_keys: Array = (probe.steps[step] as Dictionary).keys()
+			var punk_keys: Array = (punk.steps[step] as Dictionary).keys()
+			probe_keys.sort()
+			punk_keys.sort()
+			var missing: Array = punk_keys.filter(func(k: Variant) -> bool: return not probe_keys.has(k))
+			var extra: Array = probe_keys.filter(func(k: Variant) -> bool: return not punk_keys.has(k))
+			assert_eq(missing, [], "%s steps.%s: keys the Punk's report has and its lacks (rerun python3 -I tools/pipeline/make_probe_body.py, and run.py --asset dummy: the GLBs come out unchanged, the report and its hash move)" % [who, step])
+			assert_eq(extra, [], "%s steps.%s: keys its report has and the Punk's lacks (the Punk's report is the stale one: run.py --asset punk)" % [who, step])
 
 
 ## M4-plan A18 for the hero (Spec §10: "palette atlas + 1k detail mask"; the most-seen asset of the milestone): his mask is a

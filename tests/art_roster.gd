@@ -155,4 +155,5 @@ static func shipped_row(id: String) -> Dictionary:
 		return {}
 	var out := {name = id, path = glb_of(r), art = String(r.art), player = false, budget = int(r.budget)}
 	out.merge(file.whole)
+	out.in_bar_min = int(out.in_bar_min)
 	return out
