@@ -4,6 +4,23 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-04 14:25 CST: CONCEPTS merged; the pick sent; the plan workflow still running
+- **CONCEPTS** (`448496f`, merge `c24da33`, about 0.21M sub-agent tokens) made 19 Gemini images with no retries.
+  - The sheets are in `assets/source/concepts/m6/sheets/`: kicker, thug, bruiser, boss (with the names), weapon, moods.
+  - Its calls are in `docs/milestones/M6-calls/CONCEPTS.md`. The flaws it kept:
+    - Kicker A's eyes show skin;
+    - the boss's charcoal reads as light slate in all three;
+    - boss A reads as a puffy suit.
+- **The lead's look:** the frames, A-poses and colour identities hold, and there's no red. No boss copies the reference's masked, bare-chested heavy.
+- **The pick went out** at 14:25 CST, in the session chat (the six sheets) and on Slack (DM `D0AQUKX5DB6`, one stacked image, file `F0CEWQPH38E`). It asks for:
+  1. a design per type;
+  2. the boss's name;
+  3. the weapon;
+  4. a street mood (A/B) and a roof mood (C/D).
+  - Also asked: the prune and the Tripo account type.
+  - **Never pick for him.**
+- **Still running:** the plan workflow `wf_8346b955-f3c`.
+
 ### 2026-11-04 14:05 CST: Game-boy said go; CONCEPTS and the plan workflow are running
 - **Game-boy's answers** (session chat):
   - "OK we're ready to begin": the proposal is approved.
