@@ -383,7 +383,7 @@
     "game/level/mission1/boss_roof.tscn",
     "game/level/mission1/mission1.tscn"
    ],
-   "notes": "Suite growth: at most about 15 s more. For sees-03, record 'Look: seams' or your own poses at the boss roof's gap (level_bot, --from=6), and look at them. Change roofs.tscn only if A4's or A5's drop reads as a ledge too, and then only its off-deck ground blocks (the 'spawns' package owns roofs.tscn's spawn points, pipe and parapet; keep your edit to those ground blocks)."
+   "notes": "Suite growth: at most about 15 s more. For sees-03, record 'Look: seams' or your own poses at the boss roof's gap (level_bot, --from=6), and look at them. Don't edit roofs.tscn: the 'spawns' package owns it. The reviewer found A4's and A5's drops read; if you see otherwise, report it."
   },
   {
    "key": "arcs",
