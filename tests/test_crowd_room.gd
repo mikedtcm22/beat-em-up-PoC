@@ -298,10 +298,12 @@ func test_the_player_stands_in_the_open() -> void:
 # --- F6 -----------------------------------------------------------------------------------
 
 
-func test_f6_finds_the_other_room_both_ways() -> void:
+func test_f6_cycles_level_crowd_street_training_room() -> void:
 	assert_true(ResourceLoader.exists(ROOM_PATH))
-	assert_eq(GameInput.room_after(TRAINING_PATH), ROOM_PATH, "from the training room to the crowd street")
-	assert_eq(GameInput.room_after(ROOM_PATH), TRAINING_PATH, "and back")
-	assert_eq(GameInput.ROOM_SCENES[0], ROOM_PATH)
+	assert_eq(GameInput.room_after(ROOM_PATH), TRAINING_PATH, "from the crowd street to the training room")
+	var level: String = GameInput.ROOM_SCENES[0]
+	assert_eq(GameInput.room_after(TRAINING_PATH), level if ResourceLoader.exists(level) else "", "from the training room round to the level")
+	assert_eq(GameInput.room_after(level), ROOM_PATH if ResourceLoader.exists(level) else "", "and from the level to the crowd street")
+	assert_eq(GameInput.ROOM_SCENES[1], ROOM_PATH)
 	var room := await _room()
 	assert_eq(room.scene_file_path, ROOM_PATH, "the scene knows its own path, so F6 can tell where it is")

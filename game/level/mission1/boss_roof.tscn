@@ -1,0 +1,251 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/level/kit/level_section.gd" id="1_sect"]
+[ext_resource type="Script" path="res://game/level/kit/level_block.gd" id="2_blk"]
+[ext_resource type="Script" path="res://game/level/kit/edge_guard.gd" id="3_guard"]
+[ext_resource type="Script" path="res://game/level/kit/hazard_volume.gd" id="4_haz"]
+[ext_resource type="Resource" path="res://game/level/mission1/encounters/a7.tres" id="5_table"]
+[ext_resource type="Script" path="res://game/level/kit/arena.gd" id="6_arena"]
+[ext_resource type="Script" path="res://game/level/kit/spawn_point.gd" id="7_spawn"]
+
+[sub_resource type="BoxShape3D" id="Box_lock"]
+size = Vector3(21, 8, 20.5)
+
+[node name="BossRoof" type="Node3D"]
+script = ExtResource("1_sect")
+floor_heights = PackedFloat32Array(0)
+
+[node name="Entry" type="Marker3D" parent="."]
+
+[node name="Exit" type="Marker3D" parent="."]
+position = Vector3(0, 0, -20)
+
+[node name="Start" type="Marker3D" parent="."]
+position = Vector3(0, 0, -0.5)
+
+[node name="Geometry" type="Node3D" parent="."]
+
+[node name="Deck" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(0, -0.5, -10)
+size = Vector3(20, 1, 20)
+look = &"floor"
+
+[node name="Building" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(0, -6.5, -10)
+size = Vector3(20, 11, 20)
+look = &"wall"
+
+[node name="SideWall" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(-10.5, 2.5, -10)
+size = Vector3(1, 5, 20)
+look = &"wall"
+
+[node name="GateDoor" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(-9.85, 1.3, -3)
+size = Vector3(0.3, 2.6, 2.2)
+look = &"dark"
+solid = false
+
+[node name="GateDoorLintel" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(-9.85, 2.85, -3)
+size = Vector3(0.3, 0.5, 2.8)
+look = &"accent"
+solid = false
+
+[node name="ServiceDoor" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(-9.85, 1.3, -11)
+size = Vector3(0.3, 2.6, 2.2)
+look = &"dark"
+solid = false
+
+[node name="ServiceDoorLintel" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(-9.85, 2.85, -11)
+size = Vector3(0.3, 0.5, 2.8)
+look = &"accent"
+solid = false
+
+[node name="BackBulkhead" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(0, 2.5, -20.5)
+size = Vector3(8, 5, 1)
+look = &"wall"
+
+[node name="RoofDoor" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(0, 1.4, -19.85)
+size = Vector3(2.6, 2.8, 0.3)
+look = &"dark"
+solid = false
+
+[node name="RoofDoorLintel" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(0, 3.05, -19.85)
+size = Vector3(3.4, 0.5, 0.3)
+look = &"accent"
+solid = false
+
+[node name="BackFenceL" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(-7, 1.5, -20.3)
+size = Vector3(6, 3, 0.6)
+look = &"fence"
+
+[node name="BackFenceR" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(7, 1.5, -20.3)
+size = Vector3(6, 3, 0.6)
+look = &"fence"
+
+[node name="BackCorner" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(-10.5, 2.5, -20.5)
+size = Vector3(1, 5, 1)
+look = &"wall"
+
+[node name="EntryFenceL" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(-6, 1.5, 0.3)
+size = Vector3(8, 3, 0.6)
+look = &"fence"
+
+[node name="EntryFenceR" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(6, 1.5, 0.3)
+size = Vector3(8, 3, 0.6)
+look = &"fence"
+
+[node name="EntryPostL" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(-10.5, 2.5, 0.3)
+size = Vector3(1, 5, 0.6)
+look = &"wall"
+
+[node name="RailA" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(9.85, 0.5, -4)
+size = Vector3(0.15, 1, 8)
+look = &"accent"
+solid = false
+
+[node name="RailB" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(9.85, 0.5, -16.5)
+size = Vector3(0.15, 1, 7)
+look = &"accent"
+solid = false
+
+[node name="RailEndNear" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(9.85, 0.55, -8)
+size = Vector3(0.3, 1.1, 0.3)
+look = &"accent"
+solid = false
+
+[node name="RailEndFar" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(9.85, 0.55, -13)
+size = Vector3(0.3, 1.1, 0.3)
+look = &"accent"
+solid = false
+
+[node name="EdgeGuard" type="Node3D" parent="Geometry"]
+script = ExtResource("3_guard")
+position = Vector3(10.15, 2, -10)
+size = Vector3(0.3, 4, 20)
+
+[node name="Drop" type="Area3D" parent="Geometry"]
+script = ExtResource("4_haz")
+position = Vector3(30, -4, -10)
+size = Vector3(40, 14, 60)
+
+[node name="Ground" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(20, -12.5, -10)
+size = Vector3(100, 1, 100)
+look = &"dark"
+solid = false
+
+[node name="SkylineA" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(22, 2, -2)
+size = Vector3(10, 28, 12)
+look = &"wall"
+solid = false
+
+[node name="SkylineB" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(40, -2, -18)
+size = Vector3(14, 20, 14)
+look = &"accent"
+solid = false
+
+[node name="SkylineC" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(30, -4, -36)
+size = Vector3(12, 16, 12)
+look = &"wall"
+solid = false
+
+[node name="SkylineD" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(48, 6, 8)
+size = Vector3(12, 36, 12)
+look = &"accent"
+solid = false
+
+[node name="Route" type="Node3D" parent="."]
+
+[node name="R0" type="Marker3D" parent="Route"]
+position = Vector3(0, 0, -3)
+
+[node name="R1" type="Marker3D" parent="Route"]
+position = Vector3(0, 0, -12)
+
+[node name="Arenas" type="Node3D" parent="."]
+
+[node name="Arena7" type="Node3D" parent="Arenas"]
+script = ExtResource("6_arena")
+arena_id = &"a7"
+table = ExtResource("5_table")
+
+[node name="LockTrigger" type="Area3D" parent="Arenas/Arena7"]
+position = Vector3(0, 4, -10.25)
+collision_layer = 0
+collision_mask = 0
+
+[node name="Shape" type="CollisionShape3D" parent="Arenas/Arena7/LockTrigger"]
+shape = SubResource("Box_lock")
+
+[node name="Respawn" type="Marker3D" parent="Arenas/Arena7"]
+position = Vector3(0, 0, -6)
+
+[node name="RoofDoor" type="Marker3D" parent="Arenas/Arena7"]
+script = ExtResource("7_spawn")
+position = Vector3(0, 0, -18.6)
+tag = &"doorway"
+
+[node name="LanePoint" type="Marker3D" parent="Arenas/Arena7/RoofDoor"]
+position = Vector3(0, 0, 3.5)
+
+[node name="ServiceDoor" type="Marker3D" parent="Arenas/Arena7"]
+script = ExtResource("7_spawn")
+position = Vector3(-9.0, 0, -11)
+tag = &"doorway"
+
+[node name="LanePoint" type="Marker3D" parent="Arenas/Arena7/ServiceDoor"]
+position = Vector3(4.0, 0, 0)
+
+[node name="GateDoor" type="Marker3D" parent="Arenas/Arena7"]
+script = ExtResource("7_spawn")
+position = Vector3(-9.0, 0, -3)
+tag = &"doorway"
+
+[node name="LanePoint" type="Marker3D" parent="Arenas/Arena7/GateDoor"]
+position = Vector3(4.0, 0, 0)
