@@ -253,6 +253,7 @@ The characters are procedural placeholders. Real art, VFX and audio come in Mile
   - Each archetype attacks from an arc centred on where the player looked when it engaged: Punk 90°, Pipe Thug 140°, Bruiser 180°, boss 270°, Kicker 360°.
   - The line follows the player's turns for `engage_commit_s` (0.5 s), then holds until that enemy's attack and recovery end.
   - When its arc has no free seat, an enemy waits on an outer ring (5.5-6.5 m) inside its arc, back from the fray.
+  - An enemy is given its attack only within about 4.5 m of you, so one moved up from the outer ring walks to its seat first (`token_grant_margin_m`, 0.5 m past the posture ring).
   - Variants override the arc in data: the veteran Punk is 140°, a `.tres` file in `game/enemies/variants/`.
   - **Ours, not his:** when a wall or a drop leaves no room anywhere in an arc, the arc slides round to the nearest open stretch, so a wall is never a safe spot.
   - **Keeping the spec reachable:** `director_even_spread` (Debug) brings M3's even spread back.
@@ -267,12 +268,15 @@ The characters are procedural placeholders. Real art, VFX and audio come in Mile
     - With `level_edge_guard` off, a fall costs `level_fall_damage` (20) and respawns the player at the arena's start.
   - **The player's KO** revives in place, and the arena stays locked. There are no lives.
   - **The level's end:** the boss and his adds down shows "CLEAR!".
+  - **The GO arrow** shows for at least `go_cue_s` (2 s), then until you face the way on (within 30°) or reach it, at most 8 s. `go_cue_until_faced` off gives the fixed 2 s.
+  - **Spawns behind you:** an enemy the table sends from behind waits while its door is in your view. After `spawn_named_wait_s` it comes from another door out of view, and after `spawn_named_any_wait_s` from any free door, so a wave never stalls.
 - **Graybox stand-ins:**
   - Screen 11's chain-like weapon is the pipe until M6 designs an original second weapon.
   - The veteran Punk is marked by an orange tint over the whole Punk art.
+  - A weapon lying on the floor is drawn amber and thicker (`weapon_floor_color`, `weapon_floor_radius_scale`), so it can be found on the grey floor. A held or thrown weapon keeps its look.
 
 **Automated checks:**
-- `tools/run_tests.sh` runs about 1730 tests headless in about 300 s. Among them:
+- `tools/run_tests.sh` runs about 1750 tests headless in about 295 s. Among them:
   - an end-to-end suite where a scripted player performs every combo in the real test room;
   - each milestone's done-when test (`tests/test_m3_done_when.gd`, `tests/test_m4_done_when.gd`, `tests/test_m5_done_when.gd`, which plays the whole level arena by arena);
   - the level's own tests (`tests/test_m5_street.gd`, `tests/test_m5_roofs.gd`, `tests/test_level_kit.gd`, `tests/test_level_bot.gd`).
