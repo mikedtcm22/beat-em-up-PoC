@@ -798,7 +798,8 @@ extends Resource
 ## behind the look. (director_even_spread on: M3's rule, always flank, whatever this says.)
 @export var kicker_flank_opportunistic: bool = true
 ## A Kicker counts the player as busy while another live, engaged enemy that is not itself flanking
-## stands inside the player's view within this distance (m) of him. 4.5 is the token reach: posture_ring_max_m
+## stands inside the player's view within this distance (m) of him and nearer the middle of the view than
+## the Kicker is (the player faces that enemy, not the Kicker). 4.5 is the token reach: posture_ring_max_m
 ## 4.0 plus token_grant_margin_m 0.5, the farthest an enemy can be and still be about to attack.
 @export_range(1.0, 12.0, 0.1) var kicker_flank_busy_radius_m: float = 4.5
 ## Seconds the player must have been busy before a Kicker starts flanking (the engage grace, so a
@@ -807,6 +808,11 @@ extends Resource
 ## Seconds the player must have been free (not busy) before a Kicker stops flanking and squares up
 ## where it is: longer than the on-delay, so a Punk dipping out of view for a moment does not flip it.
 @export_range(0.0, 5.0, 0.05) var kicker_flank_off_s: float = 1.0
+## Seconds a flanking Kicker keeps flanking once the player faces it (it stands inside his view and no other
+## enemy he is busy with is nearer the middle of it). 0 is the tick he faces it: "when he turns on it, it
+## fights". kicker_flank_off_s still times the other way the flank ends (the other enemy leaves the view or
+## the radius, or goes down).
+@export_range(0.0, 3.0, 0.05) var kicker_flank_faced_off_s: float = 0.0
 
 @export_subgroup("Pipe Thug")
 @export_range(5.0, 500.0, 1.0) var thug_health: float = 35.0
