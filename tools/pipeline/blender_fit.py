@@ -388,6 +388,8 @@ def run(cfg, extra):
 			w_fade = np.clip(1.0 - (new_co[sel, 2] - floor_here) / h_range, 0.0, 1.0)
 			new_co[sel, 2] -= d * w_fade
 			flatten_report["left" if side < 0 else "right"] = {"max_rise_m": float(rise.max()), "vertices": int(sel.sum())}
+		# (in the notes, not a report key of its own: every roster report keeps the Punk's step keys, test_art_contract)
+		notes.append("sole_flatten " + str({k: {"max_rise_m": round(v["max_rise_m"], 4), "vertices": v["vertices"]} for k, v in flatten_report.items()}))
 	pb.set_verts(me, new_co)
 	for p in me.polygons:
 		p.use_smooth = True
@@ -413,7 +415,6 @@ def run(cfg, extra):
 		"landmark_residual_blend_m": residual_blend,
 		"snap": snap_report,
 		"girth_clamp": girth_report,
-		**({"sole_flatten": flatten_report} if flatten_report is not None else {}),
 		"bulge": bulge_report,
 		"worst_joint_residual": {"bone": worst_joint, "m": residual[worst_joint]},
 		"residual_limit_m": limit,

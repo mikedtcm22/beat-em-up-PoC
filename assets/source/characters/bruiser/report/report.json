@@ -9884,16 +9884,6 @@
 					"max_pulled_m": 0.083229
 				}
 			],
-			"sole_flatten": {
-				"left": {
-					"max_rise_m": 0.03069,
-					"vertices": 648
-				},
-				"right": {
-					"max_rise_m": 0.029747,
-					"vertices": 531
-				}
-			},
 			"bulge": [
 				{
 					"name": "knee_back_left",
@@ -9924,7 +9914,9 @@
 					1.811723
 				]
 			},
-			"notes": []
+			"notes": [
+				"sole_flatten {'left': {'max_rise_m': 0.0307, 'vertices': 648}, 'right': {'max_rise_m': 0.0297, 'vertices': 531}}"
+			]
 		},
 		"rig": {
 			"weights": "tripo",
@@ -10308,7 +10300,7 @@
 		"bruiser.glb": "344586368a3fed5f1d9bd7cd0e552906a38e9af90224718d2ef51943649c88e3",
 		"bruiser_rest.glb": "1bf5b4b873ae4e6b830847d94a59d34dac9dfbb0ff5a32aad7777231837c7c50"
 	},
-	"hash": "62ace7f7fef66dc5d973d899ad9303017d56af85711192cce14462631af6f02d",
+	"hash": "ca30d699e67b02453059613506b39899d2729ef78a4965c1da7c9b74eca07b79",
 	"stills": {
 		"variants": {
 			"apose": {
