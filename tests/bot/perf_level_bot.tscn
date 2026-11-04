@@ -1,0 +1,7 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://tests/bot/perf_level_bot.gd" id="1_bot"]
+
+[node name="PerfLevelBot" type="Node"]
+script = ExtResource("1_bot")
+level_path = "res://game/level/mission1/mission1.tscn"
