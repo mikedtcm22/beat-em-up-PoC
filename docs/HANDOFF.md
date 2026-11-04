@@ -2253,7 +2253,8 @@ Every approved spec change so far is in README.md, "Where M1 departs from the sp
   - **Boss C** (`boss_c.jpg`), named **Ox Pellerin**, the underground-fight champion: a hooded charcoal robe with orange trim, an orange champion's belt, boxing gloves with orange wraps, shorts over black tights, laced boots. Darken the charcoal: it rendered as light slate. A web check found no game or film character of that name.
   - **Second weapon A** (`weapon_a.jpg`): a bike chain and padlock. A short sideways whip, the padlock landing last, medium reach.
   - **Moods:** street **A** (`mood_street_a.jpg`: warm brick, sodium street lamps, rust, wooden crates) and roof **C** (`mood_roof_a.jpg`, since the sheet relabels the roofs C/D: warm brick parapets, orange dusk, water tanks, ducts, skylights, AC units).
-- **Still open:** the Tripo account type (it gates phase 2's Tripo tasks); pruning the old worktrees; the Sonniss download.
+- **The Tripo licence (2026-11-04 14:45 CST, session chat):** the key is on Tripo's **paid API platform**, with credits he bought ("Yes, paid API"). Tripo's help page gives paid users full rights to their outputs, including commercial use, and keeps rights only to free users' outputs. So ASSETS.md records each Tripo model as "Tripo API (paid credits): owned by the project, commercial use". The phase 2 gate is cleared.
+- **Still open:** pruning the old worktrees; the Sonniss download.
 
 ## Usage watcher
 A separate low-cost Claude Code session, "Beat-em-up: usage watcher". Start it from the working session with `start_session`: initiation `user_asked`, `model` claude-haiku-5-5, `effort` low, `use_worktree` false, and the prompt below verbatim.
