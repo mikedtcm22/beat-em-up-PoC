@@ -1,0 +1,11 @@
+{
+	"id": "dummy",
+	"art": "res://game/actors/art/dummy_art.tres",
+	"actor_scene": "res://game/enemies/dummy/training_dummy.tscn",
+	"height_m": 1.8,
+	"budget": 15000,
+	"meshes": ["Body"],
+	"moves": ["dummy_jab"],
+	"ratchets": {},
+	"notes": "The padded training dummy (M6 CHAIN, D17): the chain's probe mannequin through the shipped folders, no credits, no first-person split (the dummy is never the player). Held to the plan's bars until a figure shows otherwise; a ratchet is added here with its reason."
+}

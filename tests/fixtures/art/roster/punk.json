@@ -1,0 +1,35 @@
+{
+	"id": "punk",
+	"art": "res://game/actors/art/punk_art.tres",
+	"actor_scene": "res://game/enemies/punk/street_punk.tscn",
+	"height_m": 1.8,
+	"budget": 15000,
+	"meshes": [
+		"Body"
+	],
+	"moves": [
+		"punk_jab",
+		"punk_cross",
+		"punk_shove"
+	],
+	"ratchets": {
+		"a5_extent": 0.2,
+		"a6": null,
+		"a9_cells": 0.07,
+		"a9_lens_pp": {
+			"*": 0.04,
+			"punk_jab pitch +8": 0.056,
+			"punk_cross pitch +8": 0.054
+		},
+		"a9_strike_art_share_min": 0.27,
+		"anchor_m": {
+			"head": 0.02,
+			"torso": 0.065,
+			"leg": 0.032
+		},
+		"stretch_m": 0.09,
+		"variant_stretch_m": 0.1,
+		"slide_m": 0.02
+	},
+	"notes": "M4's numbers moved in unchanged (M6 CHAIN). a9_cells 0.07: the cross at 6.5% (M4 fix-final ratchets). a9_lens_pp: F-cuff and F-fist-turn (the jab's and the cross's +8 degree poses; the twin is a9_strike_art_share_min). anchor_m: the contact point is clamped onto the nearest bone's follower. stretch_m 0.09: the waist hem in the cross's twist (F-punk); variant_stretch_m 0.10 is test_art_punk's, over all four GLBs."
+}

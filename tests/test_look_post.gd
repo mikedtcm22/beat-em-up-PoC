@@ -575,9 +575,15 @@ func test_no_paint_of_an_enemy_the_dummies_or_the_player_is_red() -> void:
 			assert_false(_in_red_band(color), "%s paint %d %s is not red" % [path.get_file(), paint, color])
 			checked += 1
 	assert_gt(checked, 30)
+	# M6 CHAIN (D17): the dummies' own colours (orange, green, violet) are gone; the one padded look is the dummy art's four
+	# swatches, which the roster's A3 holds out of the red band. What replaces the old per-colour check is the visible path: each
+	# dummy of the training room wears that art, and nothing multiplies it.
 	var training := await _training(false)
-	for dummy_color: Color in training.get(&"dummy_colors"):
-		assert_false(_in_red_band(dummy_color), "the training room's dummy %s" % dummy_color)
+	assert_null(training.get(&"dummy_colors"), "the training room has no per-dummy colours any more")
+	for dummy: TrainingDummy in training.get(&"dummies"):
+		assert_true(dummy.rig.has_art(), "%s wears the dummy art" % dummy.name)
+		for mi: MeshInstance3D in dummy.rig.art_meshes():
+			assert_eq(mi.material_override.get_shader_parameter(&"albedo"), Color.WHITE, "%s: the art is drawn untinted" % dummy.name)
 
 
 # --- The probe's measurements ------------------------------------------------------------------
