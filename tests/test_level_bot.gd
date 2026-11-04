@@ -143,8 +143,20 @@ func test_the_knock_off_hazard_is_chosen_by_the_arena_the_act_starts_from() -> v
 	assert_eq(by_from[6], 6, "--from=6: the boss roof's")
 	var boss := _bot.first_hazard(6)
 	assert_true(boss.hazard.get_path().get_concatenated_names().contains("BossRoof"), "and it is the boss roof's own edge")
+	var terrace := _bot.first_hazard(3)
+	assert_eq(String(terrace.hazard.name), "DropFront", "the terrace's is DropFront, not the catwalk's drop above it (%s)" % terrace.hazard.name)
 	var catwalk := _bot.first_hazard(4)
 	assert_true(String(catwalk.hazard.name) == "DropCatwalk", "the catwalk's is DropCatwalk (%s)" % catwalk.hazard.name)
+
+
+func test_the_knock_off_works_at_the_terrace_the_catwalk_the_top_roof_and_the_boss_roof() -> void:
+	await _make_bot(MISSION_1)
+	for from in [3, 4, 5, 6]:
+		var before := _bot.hazard_kos
+		var ok: bool = await _bot.knock_off(from)
+		assert_true(ok, "--from=%d: the hazard took the launched Punk" % from)
+		assert_eq(_bot.hazard_kos, before + 1, "--from=%d: one more HAZARD" % from)
+		_bot.clear_enemies()
 
 
 func test_a_lone_section_scene_is_wrapped_as_a_level() -> void:

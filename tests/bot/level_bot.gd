@@ -426,7 +426,8 @@ func _alive_count() -> int:
 ## The first arena (level order) from `from` on that has a hazard volume, as {arena: int, hazard:
 ## HazardVolume}; of that arena's hazards the one nearest the arena's first route point (where the
 ## player stands when the act starts there). A hazard belongs to an arena when it is in the same
-## section and within knock_hazard_reach_m (flat) of its lock volume. Empty when none is at or after
+## section, within knock_hazard_reach_m (flat) of its lock volume and reaching the floor height of its
+## first route point (the catwalk's drop above the terrace is not the terrace's). Empty when none is at or after
 ## `from`. `--from=<arena>` therefore picks the arena the knock-off is recorded in.
 func first_hazard(from: int = 0) -> Dictionary:
 	var arenas := level.arenas()
@@ -444,6 +445,8 @@ func first_hazard(from: int = 0) -> Dictionary:
 				continue
 			if _box_gap(hazard.global_position, hazard.size, arena) > knock_hazard_reach_m:
 				continue
+			if absf(stand.y - hazard.global_position.y) > hazard.size.y * 0.5:
+				continue  # a drop beside the floor the arena stands on, not one far above or below it
 			var distance := _flat_distance_to_box(stand, hazard)
 			if distance < best_distance:
 				best_distance = distance
@@ -497,25 +500,28 @@ func knock_off(from: int = 0) -> bool:
 	level.start_at_arena(int(found.arena))
 	_route_start(int(found.arena))
 	await _ticks(2)
-	# The point of the hazard's box nearest the player, flat, and the way to it.
-	var local := hazard.global_transform.affine_inverse() * player.global_position
+	# The point of the hazard's box nearest the arena's middle (not the player, who may stand at a
+	# stair head or a gate: the lip across the arena from it is clear), flat, and the way to it.
+	var middle := _arena_middle(level.arenas()[int(found.arena)], player.global_position.y)
+	var local := hazard.global_transform.affine_inverse() * middle
 	var half := hazard.size * 0.5
 	var lip_local := Vector3(clampf(local.x, -half.x, half.x), local.y, clampf(local.z, -half.z, half.z))
 	var lip := hazard.global_transform * lip_local
-	var way := lip - player.global_position
+	var way := lip - middle
 	way.y = 0.0
 	var distance := way.length()
 	if distance < 0.01:
 		return false
 	way /= distance
-	if distance > knock_stand_off_m:
-		var stand := player.global_position + way * (distance - knock_stand_off_m)
-		await walk_to(stand, 0.4, int(point_budget_s * Engine.physics_ticks_per_second))
+	var stand := lip - way * knock_stand_off_m
+	stand.y = player.global_position.y
+	var arrived := await walk_to(stand, 0.4, int(point_budget_s * Engine.physics_ticks_per_second))
 	await _face_way(way)
 	freeze_ai(true)
 	var punk := spawn(&"punk", Vector2(0.0, knock_gap_m))
 	await _ticks(30)
 	if punk == null or not is_instance_valid(punk):
+		log_line("NOTE f%d knock-off: no Punk (walk to the lip %s, player at %s, stand %s)" % [Engine.get_physics_frames(), "arrived" if arrived else "failed", player.global_position, stand])
 		return false
 	var before := hazard_kos
 	var hit := HitInfo.new()
@@ -531,6 +537,13 @@ func knock_off(from: int = 0) -> bool:
 	await _wait_until(func() -> bool: return hazard_kos > before, int(knock_wait_s * Engine.physics_ticks_per_second))
 	await _ticks(30)
 	return hazard_kos > before
+
+
+## The middle of `arena`'s lock volume, at height `y`.
+func _arena_middle(arena: Arena, y: float) -> Vector3:
+	var trigger := arena.get_node_or_null("LockTrigger") as Node3D
+	var at := trigger.global_position if trigger else arena.global_position
+	return Vector3(at.x, y, at.z)
 
 
 ## Ease the look round to flat direction `way` and hold still a moment.
