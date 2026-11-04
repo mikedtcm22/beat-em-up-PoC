@@ -1,10 +1,10 @@
 {
 	"id": "weapons",
 	"slot_range": [28, 31],
-	"note": "Slots 28-31 of the shared palette atlas (M6 PROPS): the weapons' own colours. The bike chain: dark blue-steel links, the brass padlock (glossy: the one hard highlight on a weapon), yellow tape on the grip; the pipe's paint. Greys, blacks and rust come from the shared slots. Nothing in the red band (hue 345-15 deg with saturation above 0.5).",
+	"note": "Slots 28-31 of the shared palette atlas (M6 PROPS): the weapons' own colours. The bike chain: dark blue-steel links, the brass padlock (matte: test_toon.gd holds the Punk's lens as the one glossy swatch), yellow tape on the grip; the pipe's paint. Greys, blacks and rust come from the shared slots. Nothing in the red band (hue 345-15 deg with saturation above 0.5).",
 	"swatches": [
 		{"slot": 28, "name": "chain_steel", "srgb": "#44505e", "marks": false},
-		{"slot": 29, "name": "padlock_brass", "srgb": "#c9a22c", "marks": false, "gloss": true},
+		{"slot": 29, "name": "padlock_brass", "srgb": "#c9a22c", "marks": false},
 		{"slot": 30, "name": "grip_tape", "srgb": "#e6d03a", "marks": false},
 		{"slot": 31, "name": "pipe_paint", "srgb": "#dba91c", "marks": false}
 	]

@@ -290,7 +290,7 @@ Static props and weapon art (docs/ARCHITECTURE.md "The static-prop path"), made 
 
 | Asset | Path | Source / service | License | Notes |
 | --- | --- | --- | --- | --- |
-| Weapons palette | `assets/source/palette/weapons.json` | Project file: written by PROPS | Project file | Slots 28-31: chain_steel, padlock_brass (glossy), grip_tape, pipe_paint. No red. |
+| Weapons palette | `assets/source/palette/weapons.json` | Project file: written by PROPS | Project file | Slots 28-31: chain_steel, padlock_brass (matte), grip_tape, pipe_paint. No red. |
 | Props palette | `assets/source/palette/props.json` | Project file: written by PROPS | Project file | Slots 60-63: car_orange, dumpster_green, tank_blue, rust_brown, following the street and roof moods. No red. |
 | Prop reference job file | `assets/source/props/ref_jobs.json` | Written by PROPS for `tools/gemini_image.py` (five jobs, 1:1, the mood frames as style reference) | Project file; the prompts are our own text | Flat unshaded colours on #d9d9d9, three-quarter view, no red, no text. Rerun one with `python3 -I tools/gemini_image.py assets/source/props/ref_jobs.json <asset>/ref`. |
 | Prop config writer | `tools/pipeline/make_prop_config.py` | Project file: written by PROPS | Project file | Holds each prop's settings and writes its `pipeline.json`. |
