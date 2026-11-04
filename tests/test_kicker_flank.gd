@@ -1,9 +1,10 @@
 extends GutTest
 ## The Kicker flanks opportunistically (Milestone 5, Game-boy's playtest). The director has a Kicker
 ## flank (take the seat nearest directly behind the look, strafe toward the view's edge, circle fast)
-## only while the player is busy: another live, engaged enemy that is not itself flanking stands inside
-## his view within kicker_flank_busy_radius_m. It starts after kicker_flank_on_s of that and stops after
-## kicker_flank_off_s of its absence; otherwise it is seated by its own arc like any enemy, so a
+## only while the player is busy with another enemy he faces: another live, engaged enemy that is not itself
+## flanking stands inside his view within kicker_flank_busy_radius_m and nearer the middle of the view than
+## the Kicker. It starts after kicker_flank_on_s of that, stops after kicker_flank_off_s of its absence and
+## after kicker_flank_faced_off_s once he turns onto the Kicker (it then fights from in view); otherwise it is seated by its own arc like any enemy, so a
 ## one-on-one is fought face to face. Real player, director and Kickers on a flat floor (no navmesh: the
 ## enemies steer straight); the tests that judge the decision freeze the AI (the director still decides
 ## and seats), the ones that judge the behaviour let it walk. Every tick is one physics frame.
@@ -113,6 +114,18 @@ func _world_bearing(point: Vector3) -> float:
 ## The bearing of the director's seat for `enemy` from the player's look (degrees, positive left).
 func _seat_off_look(enemy: EnemyActor) -> float:
 	return _player.look_bearing_deg(_director.slot_for(enemy))
+
+
+## Turn the look dead onto `point`.
+func _face(point: Vector3) -> void:
+	_player.look_yaw = atan2(-point.x, -point.z)
+
+
+## Tick with the look held dead onto `node` each tick (the held-back autopilot's snap-turn), `n` ticks.
+func _face_for(node: Node3D, n: int) -> void:
+	for i in n:
+		_face(node.global_position)
+		await get_tree().physics_frame
 
 
 func _off(a: float, b: float) -> float:
@@ -243,10 +256,10 @@ func test_a_glance_never_starts_a_flank() -> void:
 	assert_false(flanked, "a 0.2 s glance at the Punk never starts the flank")
 
 
-func test_the_flank_ends_after_the_off_delay_when_he_turns_to_the_kicker() -> void:
+func test_the_flank_ends_after_the_off_delay_when_the_punk_leaves_the_view() -> void:
 	Tuning.data.ai_frozen = true
-	var kicker := _kicker(_ahead(4.0, -10.0))
-	var punk := _punk(_ahead(3.5, 15.0))
+	var kicker := _kicker(_ahead(4.0, -20.0))
+	var punk := _punk(_ahead(3.5, 10.0))
 	assert_gte(await _until(func() -> bool: return kicker.is_flanking(), 120), 0, "it flanks first")
 	await _ticks(60)
 	# He turns round so the Punk leaves the view (the Kicker, frozen, stays where it is).
@@ -263,6 +276,96 @@ func test_the_flank_ends_after_the_off_delay_when_he_turns_to_the_kicker() -> vo
 	assert_lte(_off(_world_bearing(_director.slot_for(kicker)), _world_bearing(kicker.global_position)),
 			Tuning.data.director_seat_gap_deg + Tuning.data.director_spread_jitter_deg,
 			"its seat is by where it stands (%.0f, it stands at %.0f)" % [_world_bearing(_director.slot_for(kicker)), _world_bearing(kicker.global_position)])
+
+
+func test_a_player_facing_the_kicker_is_not_busy_with_a_punk_in_view_beside_it() -> void:
+	Tuning.data.ai_frozen = true
+	var kicker := _kicker(_ahead(3.5, 0.0))
+	var punk := _punk(_ahead(3.5, 30.0))
+	var flanked := false
+	for t in _ticks_for(Tuning.data.kicker_flank_on_s + Tuning.data.kicker_flank_off_s + 1.0):
+		await _ticks(1)
+		flanked = flanked or kicker.is_flanking()
+	assert_false(_player.is_outside_view(punk.global_position, Tuning.data.rear_warning_angle_deg), "the Punk is in view")
+	assert_false(flanked, "the look on the Kicker, a Punk in view at 30 degrees: it never flanks")
+
+
+func test_the_look_on_the_punk_sends_the_kicker_round_after_the_on_delay() -> void:
+	Tuning.data.ai_frozen = true
+	var kicker := _kicker(_ahead(3.5, 30.0))
+	_punk(_ahead(3.5, 0.0))
+	var started := _director._clock_s
+	var ticks := await _until(func() -> bool: return kicker.is_flanking(), 120)
+	assert_gte(ticks, 0, "the same two, the look on the Punk: it flanks")
+	assert_gte(_director._clock_s - started, Tuning.data.kicker_flank_on_s - 0.05, "not before the on-delay")
+	assert_lte(ticks, _ticks_for(Tuning.data.kicker_flank_on_s) + TICK_SLACK, "and within it plus a tick or two (%d ticks)" % ticks)
+
+
+func test_turning_onto_a_flanking_kicker_stops_its_flank_at_once_with_a_punk_still_in_view() -> void:
+	Tuning.data.ai_frozen = true
+	var kicker := _kicker(_ahead(3.5, 30.0))
+	var punk := _punk(_ahead(3.5, 0.0))
+	assert_gte(await _until(func() -> bool: return kicker.is_flanking(), 120), 0, "it flanks first")
+	await _ticks(30)
+	assert_true(kicker.is_flanking(), "and keeps on flanking while he looks at the Punk")
+	_face(kicker.global_position)  # an instant turn onto it: the Punk is now 30 degrees off, still in view
+	assert_false(_player.is_outside_view(punk.global_position, Tuning.data.rear_warning_angle_deg), "the Punk is still in view")
+	var ticks := await _until(func() -> bool: return not kicker.is_flanking(), _ticks_for(Tuning.data.kicker_flank_faced_off_s) + TICK_SLACK)
+	assert_gte(ticks, 0, "it stops flanking within kicker_flank_faced_off_s plus a tick (%d ticks)" % ticks)
+	assert_lt(Tuning.data.kicker_flank_faced_off_s, Tuning.data.kicker_flank_off_s, "that is the shorter delay")
+	# Held on it from here, the rule holds: it never goes back.
+	var again := false
+	for t in _ticks_for(Tuning.data.kicker_flank_on_s + 1.0):
+		await _ticks(1)
+		again = again or kicker.is_flanking()
+	assert_false(again, "and it stays unflanked while he faces it")
+
+
+func test_a_kicker_he_turns_onto_attacks_from_in_view_while_the_punk_is_still_there() -> void:
+	var kicker := _kicker(_ahead(3.5, 30.0))
+	var punk := _punk(_ahead(3.5, 0.0))
+	# Keep the Punk from attacking so the Kicker's attacks are the ones counted.
+	punk.set_process(false)
+	punk.set_physics_process(false)
+	assert_gte(await _until(func() -> bool: return kicker.is_flanking(), 120), 0, "it flanks first")
+	# He looks at the Punk until the Kicker is round behind him, then turns onto it and keeps on it.
+	var behind := await _until(func() -> bool: return absf(_player.look_bearing_deg(kicker.global_position)) > 120.0, 900)
+	assert_gte(behind, 0, "it went round behind him")
+	var seen_before := _winds.size()
+	var winds_in_view := 0
+	for t in _ticks_for(8.0):
+		_face(kicker.global_position)
+		await _ticks(1)
+		for i in range(seen_before, _winds.size()):
+			if _winds[i].attacker == kicker and not _winds[i].outside:
+				winds_in_view += 1
+		seen_before = _winds.size()
+		if winds_in_view > 0:
+			break
+	assert_gt(winds_in_view, 0, "once he faced it, it wound up from inside the view")
+	assert_false(kicker.is_flanking(), "not flanking while he faces it")
+
+
+func test_a_kicker_that_has_a_token_when_it_stops_flanking_keeps_it_and_its_attack_goes_on() -> void:
+	var kicker := _kicker(_ahead(3.5, 30.0))
+	var punk := _punk(_ahead(3.5, 0.0))
+	punk.set_process(false)
+	punk.set_physics_process(false)
+	assert_gte(await _until(func() -> bool: return kicker.is_flanking(), 120), 0, "it flanks first")
+	# He looks at the Punk until the Kicker winds up (behind him, holding its token), then turns round.
+	var wound_up := await _until(func() -> bool: return kicker.ai_state == EnemyActor.AiState.WINDUP, 900)
+	assert_gte(wound_up, 0, "the Kicker winds up")
+	assert_true(_director.debug_token_holders().has(kicker), "holding a token")
+	assert_true(kicker.is_flanking(), "and still flanking")
+	_face(kicker.global_position)
+	await _ticks(TICK_SLACK)
+	assert_false(kicker.is_flanking(), "he turned onto it: the flank ended")
+	assert_true(_director.debug_token_holders().has(kicker), "it keeps its token")
+	assert_eq(kicker.ai_state, EnemyActor.AiState.WINDUP, "and its wind-up goes on")
+	var attacked := await _until(func() -> bool: return kicker.ai_state == EnemyActor.AiState.ATTACK, 240)
+	assert_gte(attacked, 0, "and its attack goes off (a hit or a whiff)")
+	var released := await _until(func() -> bool: return not _director.debug_token_holders().has(kicker), 240)
+	assert_gte(released, 0, "the token goes back only when the attack has ended")
 
 
 func test_the_opportunistic_switch_off_sends_a_lone_kicker_behind_as_in_m5() -> void:

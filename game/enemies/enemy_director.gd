@@ -608,7 +608,8 @@ func _track_flanking(player: PlayerCharacter, members: Array[EnemyActor]) -> voi
 
 ## True while the player is busy for `kicker`: another live, engaged enemy that is not itself flanking
 ## is the one he faces. It counts only when it stands inside his view within kicker_flank_busy_radius_m
-## of him AND nearer the middle of the view than this Kicker (a smaller look bearing), so turning onto
+## of him AND as near the middle of the view as this Kicker or nearer (a look bearing no larger; a tie is busy, so
+## of two Kickers side by side one flanks), so turning onto
 ## the Kicker ends the busy-ness while a Punk is still in view beside it. A Kicker out of view is farther
 ## from the middle than anything in view. "Engaged" is any enemy that has come to the fight (not
 ## entering, not knocked out) whatever it is doing, so a Punk winding up, striking or recovering still
@@ -626,7 +627,7 @@ func _player_busy(player: PlayerCharacter, members: Array[EnemyActor], kicker: E
 			continue
 		if player.is_outside_view(other.global_position, tuning.rear_warning_angle_deg):
 			continue
-		if _off_middle_deg(player, other) < kicker_off:
+		if _off_middle_deg(player, other) <= kicker_off:
 			return true
 	return false
 
