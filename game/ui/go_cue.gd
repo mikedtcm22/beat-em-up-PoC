@@ -3,7 +3,9 @@ extends Control
 ## The "GO" cue and "CLEAR!" (Milestone 5, SPEC §9): when an arena is cleared and its barrier opens a
 ## comic panel shows "GO" and an arrow toward the next arena, relative to where the player looks
 ## (straight up: ahead, right: to his right, down: behind); when the level's last arena clears it
-## says "CLEAR!" and stays. It breathes (go_cue_pulse_s), sizes with go_cue_size and lasts go_cue_s.
+## says "CLEAR!" and stays. It breathes (go_cue_pulse_s) and sizes with go_cue_size. "GO" stays at
+## least go_cue_s and then, with go_cue_until_faced, until the player faces the exit (within
+## go_cue_face_deg) or comes within go_cue_pass_m of it, at most go_cue_max_s; off, it lasts go_cue_s.
 ## Presentation only: it subscribes to CombatEvents, reads the player and the level and writes
 ## nothing. Driven by GameHud.advance() with game time (held by a pause), like PickupCue.
 
@@ -61,7 +63,7 @@ func _exit_tree() -> void:
 		CombatEvents.level_cleared.disconnect(_on_level_cleared)
 
 
-## Show "GO" with its arrow toward `target` (a world point) for go_cue_s.
+## Show "GO" with its arrow toward `target` (a world point) for go_cue_s at least (see `_is_done`).
 func show_go(target: Vector3) -> void:
 	_clear = false
 	_target = target
@@ -105,10 +107,26 @@ func advance(delta: float) -> void:
 	_age += delta
 	if not _clear:
 		_left -= delta
-		if _left <= 0.0:
+		if _left <= 0.0 and _is_done():
 			visible = false
 			return
 	queue_redraw()
+
+
+## True when "GO" may go down (its minimum time is over): the fixed time rule, or the player has
+## faced the exit or come up to it, or the cap go_cue_max_s ran out.
+func _is_done() -> bool:
+	var tuning := Tuning.data
+	if not tuning.go_cue_until_faced or _age >= maxf(tuning.go_cue_max_s, tuning.go_cue_s):
+		return true
+	if not _target.is_finite():
+		return true
+	if not is_instance_valid(player):
+		player = get_tree().get_first_node_in_group(&"player") as PlayerCharacter
+	if player == null:
+		return true
+	var flat := Vector2(player.global_position.x - _target.x, player.global_position.z - _target.z)
+	return absf(arrow_degrees()) <= tuning.go_cue_face_deg or flat.length() <= tuning.go_cue_pass_m
 
 
 ## The arrow's turn on screen in degrees: 0 points up (the target is straight ahead), positive
@@ -153,11 +171,11 @@ func _draw() -> void:
 	var font_size := roundi((clear_font_size if _clear else go_font_size) * scale_by)
 	var text_size := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size)
 	var arrow := Vector2.ZERO if _clear else Vector2(arrow_length, arrow_length) * scale_by
-	var gap := 0.0 if _clear else 26.0 * scale_by
-	var pad := Vector2(34.0, 18.0) * scale_by
+	var gap := 0.0 if _clear else Tuning.data.go_cue_gap_px * scale_by
+	var pad := Vector2(Tuning.data.go_cue_pad_x_px, Tuning.data.go_cue_pad_y_px) * scale_by
 	var panel_size := Vector2(text_size.x + gap + arrow.x, maxf(text_size.y, arrow.y)) + pad * 2.0
 	var panel := Rect2((size - panel_size) * 0.5, panel_size)
-	HudStyle.draw_panel(self, panel, slant, HudStyle.PAPER, border * scale_by, Vector2(6.0, 6.0))
+	HudStyle.draw_panel(self, panel, slant, HudStyle.PAPER, border * scale_by, Vector2.ONE * Tuning.data.go_cue_shadow_px)
 	var ink := HudStyle.INK
 	var baseline := panel.position.y + (panel_size.y + font.get_ascent(font_size) - font.get_descent(font_size)) * 0.5
 	HudStyle.draw_text(self, Vector2(panel.position.x + pad.x, baseline), text, font_size, ink)

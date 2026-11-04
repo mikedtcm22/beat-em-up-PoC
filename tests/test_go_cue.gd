@@ -67,3 +67,71 @@ func test_the_cue_draws_over_a_sweep_of_looks_without_an_error() -> void:
 		cue.advance(0.03)
 		await get_tree().process_frame
 	assert_true(cue.is_showing(), "still showing after the sweep")
+
+
+# --- How long "GO" stays (final-sees-05): until the player faces the exit ---------------------------
+
+
+func _cue_with_player(look_deg: float) -> GoCue:
+	Tuning.reset_to_default()
+	var cue := _cue()
+	cue.size = Vector2(600.0, 180.0)
+	var player := PlayerCharacter.new()
+	add_child_autofree(player)
+	cue.player = player
+	player.global_position = Vector3.ZERO
+	player.look_yaw = deg_to_rad(look_deg)
+	return cue
+
+
+func _run(cue: GoCue, seconds: float) -> void:
+	for i in int(seconds * 10.0):
+		cue.advance(0.1)
+
+
+func test_the_cue_outlasts_go_cue_s_while_the_player_faces_away_and_ends_when_he_faces_the_exit() -> void:
+	# The exit is straight ahead (-Z); the player looks 120 degrees away from it.
+	var cue := _cue_with_player(120.0)
+	cue.show_go(Vector3(0.0, 0.0, -20.0))
+	_run(cue, 5.0)
+	assert_true(cue.is_showing(), "5 s on (the fixed time was 2 s) and he still faces away")
+	cue.player.look_yaw = deg_to_rad(20.0)  # within 30 degrees of the exit
+	cue.advance(0.1)
+	assert_false(cue.is_showing(), "gone once he faces it")
+
+
+func test_the_cue_never_goes_before_go_cue_s_even_when_the_player_faces_the_exit() -> void:
+	var cue := _cue_with_player(0.0)
+	cue.show_go(Vector3(0.0, 0.0, -20.0))
+	_run(cue, 1.8)
+	assert_true(cue.is_showing(), "1.8 s: still up, facing it from the start")
+	_run(cue, 0.5)
+	assert_false(cue.is_showing(), "gone just after go_cue_s (2 s)")
+
+
+func test_the_cue_is_gone_at_the_cap_if_he_never_turns() -> void:
+	var cue := _cue_with_player(180.0)
+	cue.show_go(Vector3(0.0, 0.0, -20.0))
+	_run(cue, 7.5)
+	assert_true(cue.is_showing(), "7.5 s: up")
+	_run(cue, 1.0)
+	assert_false(cue.is_showing(), "gone at the 8 s cap")
+
+
+func test_the_cue_ends_when_the_player_gets_up_to_the_exit() -> void:
+	var cue := _cue_with_player(180.0)
+	cue.show_go(Vector3(0.0, 0.0, -20.0))
+	_run(cue, 3.0)
+	assert_true(cue.is_showing())
+	cue.player.global_position = Vector3(0.0, 0.0, -18.0)  # 2 m short of it, looking away
+	cue.advance(0.1)
+	assert_false(cue.is_showing(), "he is through the barrier: the cue is done")
+
+
+func test_the_switch_off_restores_the_fixed_time() -> void:
+	var cue := _cue_with_player(180.0)
+	Tuning.data.go_cue_until_faced = false
+	cue.show_go(Vector3(0.0, 0.0, -20.0))
+	_run(cue, 2.2)
+	assert_false(cue.is_showing(), "2 s and gone, as in the first build")
+	Tuning.reset_to_default()

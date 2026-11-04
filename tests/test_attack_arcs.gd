@@ -246,6 +246,10 @@ func test_no_token_comes_from_a_wait_seat_and_the_longest_waiter_takes_a_freed_s
 	await _setup(null, Vector3.ZERO, 6)
 	var punks := await _punks(6, 0.0, 8)
 	await _ticks(60)
+	for punk in punks:
+		if _director.debug_seat_kind(punk) == &"inner":
+			punk.position = _director.slot_for(punk)  # a stub stands where it is put: onto its seat
+	await _ticks(10)
 	var waiting: Array[StubEnemy] = []
 	for punk in punks:
 		if _director.debug_seat_kind(punk) == &"wait":
@@ -262,7 +266,10 @@ func test_no_token_comes_from_a_wait_seat_and_the_longest_waiter_takes_a_freed_s
 	assert_eq(_director.debug_seat_kind(punks[3]), &"inner", "the longest waiter takes the seat that freed")
 	assert_eq(_director.debug_seat_kind(punks[4]), &"wait")
 	assert_eq(_director.debug_seat_kind(punks[5]), &"wait")
-	assert_true(punks[3].has_token, "and is granted its token from it")
+	assert_false(punks[3].has_token, "but no token while it still stands out on the wait ring")
+	punks[3].position = _director.slot_for(punks[3])
+	await _ticks(10)
+	assert_true(punks[3].has_token, "it is granted its token once it has walked to the seat")
 
 
 func test_a_punk_on_the_wait_ring_commits_after_the_grace_and_a_turn_does_not_move_its_seat() -> void:
@@ -519,3 +526,75 @@ func test_no_seat_snaps_to_a_floor_4_5_m_below_the_edge() -> void:
 	await _ticks(120)
 	for punk in punks:
 		assert_lt(absf(_director.slot_for(punk).y - _player.global_position.y), 0.5, "%s still, after he turned" % punk.name)
+
+
+func test_a_token_goes_only_to_an_enemy_within_the_ring_plus_the_margin() -> void:
+	# Feel (final-feel-02): a Punk promoted from a wait seat was granted its token 6 m out and ran out of
+	# chase time short of the player. The numbers (4 m ring, 0.5 m margin) are written out here by hand.
+	await _setup(null, Vector3.ZERO, 3)
+	var near := _stub(&"punk", _at(0.0, 4.4))
+	var far := _stub(&"punk", _at(10.0, 4.8))
+	await _ticks(30)
+	assert_eq(_director.debug_seat_kind(near), &"inner")
+	assert_eq(_director.debug_seat_kind(far), &"inner")
+	assert_true(near.has_token, "4.4 m out: granted")
+	assert_false(far.has_token, "4.8 m out: not yet")
+	far.position = _at(10.0, 4.4)
+	await _ticks(10)
+	assert_true(far.has_token, "granted once it is within reach")
+
+
+func test_the_margin_is_a_tunable() -> void:
+	Tuning.data.token_grant_margin_m = 2.0
+	await _setup(null, Vector3.ZERO, 3)
+	var punk := _stub(&"punk", _at(0.0, 5.8))
+	await _ticks(30)
+	assert_true(punk.has_token, "a 2 m margin reaches 6 m")
+
+
+func test_a_punk_promoted_from_the_wait_ring_chases_and_attacks_with_no_give_up() -> void:
+	# 'Arcs: quick turns' Punk1 (final-feel-02): three Punks stand round a still player and a fourth waits
+	# on the wait ring; one dies and the waiter is promoted. It must not give up its chase and the fight
+	# must not lull for long.
+	await _setup(null, Vector3.ZERO, 3)
+	var punks: Array[StreetPunk] = []
+	for i in 4:
+		var punk := PUNK_SCENE.instantiate() as StreetPunk
+		punk.name = "Punk%d" % (i + 1)
+		punk.position = _at(-30.0 + 20.0 * float(i), 7.0)
+		_scene.add_child(punk)
+		punks.append(punk)
+		await _ticks(6)
+	await _ticks(240)
+	var waiter: StreetPunk = null
+	for punk in punks:
+		if _director.debug_seat_kind(punk) == &"wait":
+			waiter = punk
+	assert_not_null(waiter, "one Punk waits")
+	var dying: StreetPunk = punks[0] if punks[0] != waiter else punks[1]
+	dying.health = 0.0
+	dying.queue_free()
+	var gave_up := 0
+	var longest_lull := 0
+	var lull := 0
+	var swung := false
+	var was_engaging: Dictionary = {}
+	for tick in 900:
+		await _ticks(1)
+		_player.health = _player.max_health
+		var any_attacking := false
+		for punk in punks:
+			if not is_instance_valid(punk) or punk.health <= 0.0:
+				continue
+			if bool(was_engaging.get(punk, false)) and punk.ai_state == EnemyActor.AiState.APPROACH:
+				gave_up += 1
+			was_engaging[punk] = punk.ai_state == EnemyActor.AiState.ENGAGE
+			if punk.ai_state == EnemyActor.AiState.WINDUP or punk.ai_state == EnemyActor.AiState.ATTACK:
+				any_attacking = true
+				if punk == waiter:
+					swung = true
+		lull = 0 if any_attacking else lull + 1
+		longest_lull = maxi(longest_lull, lull)
+	assert_eq(gave_up, 0, "no engage chase gave up")
+	assert_true(swung, "the promoted Punk got to swing")
+	assert_lte(longest_lull, 150, "no lull longer than 2.5 s with the Punks round a still player")

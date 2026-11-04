@@ -919,7 +919,6 @@ func _merge_accs() -> Dictionary:
 		for key in ["frames", "cap_violation_frames", "windups", "hits_on_player", "unwarned_hits",
 				"occl_in_view", "occl_occluded", "occl_unsampled", "crowd_frames", "wedge_frames",
 				"wedge_all_frames", "wait_inside_frames",
-				"wedge_all_frames", "wait_inside_frames",
 				"standing2_frames", "overlap_frames", "grants", "mixed_grants", "blind_mixed_grants",
 				"knockdowns", "stuck_events", "waves_cleared", "waves_cleared_90s", "voices_stolen", "spawns"]:
 			out[key] += acc[key]
