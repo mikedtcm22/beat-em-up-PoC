@@ -4,6 +4,22 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-04 08:35 CST: Game-boy played M5 ("mostly good"); two changes from him; package FEEDBACK building
+- **His two rulings** (word for word in `docs/reviews/M5/fix-feedback.md`):
+  1. Kickers get behind you only *opportunistically*, while you're fighting someone else. One-on-one they must not keep running round you, which caused a lot of whiffs.
+  2. Spawns don't wait for your back to be turned. The `out_of_view` hold made long lulls and then a hit from behind.
+- **Package FEEDBACK** (one Sonnet builder, `tools/workflows/build.js` with `docs/reviews/M5/args-FEEDBACK.json`) is on branch `m5/feedback` in `.worktrees/m5-feedback`. The brief is `docs/reviews/M5/fix-feedback.md`.
+  - Item 1: the director flanks a Kicker only while another engaged enemy is in view within 4.5 m, with on and off hysteresis and the switch `kicker_flank_opportunistic`. Otherwise it's seated by its 360° arc and holds where it stands. The new hook is `set_flanking()` and `is_flanking()`.
+  - Item 2: the switch `spawn_behind_waits_out_of_view`, default off.
+- **The lead's "before"** recording of A4 held back is in `captures/m5-feedback/before/a4/`.
+- **Resume:** if the builder was cut off, rerun build.js with the same args (it resumes from the branch). Then:
+  1. merge `m5/feedback` into `m5/level-blockout`;
+  2. look at its recordings against the before;
+  3. run the full suite;
+  4. write README's rulings (two M5 departures change: the Kicker's flank and "behind spawns out of view");
+  5. push, update PR #5, and post the run command to Game-boy.
+- **The PR** stays unmerged until he signs off. The rest of the build is "mostly good" by his word, and there are no rulings yet on the other departures.
+
 ### 2026-11-04 00:00 CST: M5 built and reviewed; PR #5 open; waiting on Game-boy's play and sign-off
 - **The fix wave merged** (`c2ddebc`, `2f7e269`, `7229ce9`; run `wf_2178beaf-dba`, about 0.67M sub-agent tokens). The lead also:
   - moved roofs Skyline Block5 out of the boss roof's gap view (`96fa4a9`) and regenerated the preset (556 values);
