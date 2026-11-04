@@ -60,6 +60,7 @@ Mission 1 now plays from the street to the boss as one graybox level. Enemies at
   - For the first 0.5 s, a quick turn re-aims an enemy's arc. After that its line holds, so turning your back on a Punk lets him hit you from behind.
   - Enemies with no free seat in their arc wait further out (5.5-6.5 m), back from the fray.
   - Variants widen the arc in data: the veteran Punk (orange) attacks from 140°.
+  - A Kicker gets behind you only while someone else in front of you keeps you busy. One-on-one, it squares up where it stands and fights you face to face (Game-boy's playtest ruling, 2026-11-04).
   - F3 draws each enemy's arc, and the arcs' numbers are in F1's "Enemies > Attack arcs".
 - **The level** (`game/level/mission1/`; the approved table is [reference/encounters.md](reference/encounters.md)):
   - Seven arenas and 34 enemies, laid out after the reference's screens:
@@ -248,6 +249,16 @@ The characters are procedural placeholders. Real art, VFX and audio come in Mile
   - **Damage marks:** they are spread over the whole body, as M3's were, and the blood turns orange on the yellow cap.
   - **The near upper arm:** in the haymaker and uppercut its cut end is a bare knob mid-view. That is M3's approved first-person framing, and showing the whole upper arm instead is an option.
 
+**Where M5 departs from the spec, ruled by Game-boy at his playtest (2026-11-04):**
+- **Kickers flank only when you're busy (Spec §7 says the Kicker "prefers the player's blind side"):**
+  - A Kicker goes round to your back only while another enemy stands in your view within 4.5 m (`kicker_flank_busy_radius_m`). It starts after that has held 0.5 s (`kicker_flank_on_s`) and stops 1 s after it ends (`kicker_flank_off_s`), so a glance doesn't flip it.
+  - Otherwise it is seated by its 360° arc like any enemy: it holds where it stands, squares up and attacks from there, at the normal circling pace.
+  - His words: in a one-on-one the Kicker kept "trying to maneuver behind me the whole time (so a LOT of whiffs)".
+  - `kicker_flank_opportunistic` off brings back M5's always-flank.
+- **Spawns don't wait for your back (this replaces "Spawns behind you" below, decided by default before the playtest):**
+  - An enemy the table sends from a behind door comes in on schedule, even while that door is in your view. His words: the wait "makes it seem like there's a lot of nothing going on and then suddenly you're hit from behind".
+  - `spawn_behind_waits_out_of_view` on brings back the hold.
+
 **Where M5 departs from the spec (decided by default, for Game-boy's ruling at sign-off):**
 - **M5-1. Attack arcs replace "Spread" (Spec §7; Game-boy's call, 2026-11-03):**
   - Each archetype attacks from an arc centred on where the player looked when it engaged: Punk 90°, Pipe Thug 140°, Bruiser 180°, boss 270°, Kicker 360°.
@@ -269,14 +280,13 @@ The characters are procedural placeholders. Real art, VFX and audio come in Mile
   - **The player's KO** revives in place, and the arena stays locked. There are no lives.
   - **The level's end:** the boss and his adds down shows "CLEAR!".
   - **The GO arrow** shows for at least `go_cue_s` (2 s), then until you face the way on (within 30°) or reach it, at most 8 s. `go_cue_until_faced` off gives the fixed 2 s.
-  - **Spawns behind you:** an enemy the table sends from behind waits while its door is in your view. After `spawn_named_wait_s` it comes from another door out of view, and after `spawn_named_any_wait_s` from any free door, so a wave never stalls.
 - **Graybox stand-ins:**
   - Screen 11's chain-like weapon is the pipe until M6 designs an original second weapon.
   - The veteran Punk is marked by an orange tint over the whole Punk art.
   - A weapon lying on the floor is drawn amber and thicker (`weapon_floor_color`, `weapon_floor_radius_scale`), so it can be found on the grey floor. A held or thrown weapon keeps its look.
 
 **Automated checks:**
-- `tools/run_tests.sh` runs about 1750 tests headless in about 295 s. Among them:
+- `tools/run_tests.sh` runs about 1760 tests headless in about 305 s. Among them:
   - an end-to-end suite where a scripted player performs every combo in the real test room;
   - each milestone's done-when test (`tests/test_m3_done_when.gd`, `tests/test_m4_done_when.gd`, `tests/test_m5_done_when.gd`, which plays the whole level arena by arena);
   - the level's own tests (`tests/test_m5_street.gd`, `tests/test_m5_roofs.gd`, `tests/test_level_kit.gd`, `tests/test_level_bot.gd`).
