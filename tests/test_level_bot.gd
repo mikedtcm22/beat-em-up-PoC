@@ -154,9 +154,9 @@ func test_a_lone_section_scene_is_wrapped_as_a_level() -> void:
 	assert_eq(_bot.level.arenas().size(), 1, "its one arena")
 
 
-func test_the_act_file_lists_the_three_run_acts() -> void:
+func test_the_act_files_list_the_run_acts_and_the_seam_look() -> void:
 	await _make_bot()
 	var titles: Array[String] = []
 	for act in _bot._collect_acts():
 		titles.append(act.title)
-	assert_eq(titles, ["Run: held back", "Run: knock-off", "Run: timing"] as Array[String])
+	assert_eq(titles, ["Run: held back", "Run: knock-off", "Run: timing", "Look: seams"] as Array[String])
