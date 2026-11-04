@@ -300,8 +300,8 @@
 		],
 		"max_swatches": 6,
 		"min_share": 0.004,
-		"majority_passes": 2,
-		"border_relax_iterations": 3,
+		"majority_passes": 6,
+		"border_relax_iterations": 5,
 		"border_relax_factor": 0.5,
 		"budget_tris": 30000,
 		"detail_uv": true,
@@ -314,8 +314,8 @@
 		"detail_bake": {
 			"size": 1024,
 			"radius_px": 5,
-			"ink_low": 0.02,
-			"ink_high": 0.07,
+			"ink_low": 0.04,
+			"ink_high": 0.11,
 			"grow_px": 0,
 			"no_ink_slots": [],
 			"zones": [],
@@ -325,8 +325,8 @@
 				"orient_radius_px": 3,
 				"align_deg": 35.0,
 				"min_straight": 0.0,
-				"min_extent_texels": 4,
-				"min_texels": 4,
+				"min_extent_texels": 14,
+				"min_texels": 24,
 				"smooth_sigma": 0.5,
 				"smooth_gain": 1.05
 			}

@@ -13,6 +13,29 @@
 		"bruiser_grab",
 		"bruiser_headbutt"
 	],
-	"ratchets": {},
-	"notes": ""
+	"ratchets": {
+		"a6": {
+			"legs": 0.895
+		},
+		"a9_cells": 0.26,
+		"a9_lens_pp": {
+			"*": 0.04,
+			"idle pitch +8": 0.05,
+			"idle pitch -6": 0.063,
+			"bruiser_smash pitch +8": 0.188,
+			"bruiser_smash pitch -6": 0.177,
+			"bruiser_grab pitch +8": 0.152,
+			"bruiser_grab pitch -6": 0.219,
+			"bruiser_headbutt pitch +8": 0.145,
+			"bruiser_headbutt pitch -6": 0.061
+		},
+		"a9_strike_art_share_min": 0.35,
+		"anchor_m": {
+			"head": 0.035,
+			"torso": 0.02,
+			"leg": 0.029
+		},
+		"stretch_m": 0.145
+	},
+	"notes": "The Bruiser (M6 HEAVIES), 2.05 m, procedural fists. Ratchets are today's figure plus a few tenths, the plan's bars still printed as GATE; a ratchet only moves down. a6.legs 0.895: the concept's baggy cargo trousers over knee pads against a leg capsule of r 0.1 x 1.139 (the torso, 99%, and the head, 97%, meet the 95% bar after the girth clamps; the legs hold at 90% with thigh/shin clamps of 0.085/0.075 m: the Punk's 0.078/0.068 would make the trousers read as sticks under a 1 m wide jacket). a9_cells and a9_lens_pp: the art is a padded jacket, plates and guards, far bulkier than the primitive body that the proxies are (at 1 m the smash, grab and headbutt fill 65-88% of the view against the proxies' 60-82%): the lens share and the cells that differ are the heavy's bulk, not a misplacement; a9_strike_art_share_min is the twin (the art itself keeps 35% of the view). anchor_m: the flash anchor is clamped onto the nearest bone's follower, 3.4 cm at the helmet and 2.8 cm at the thigh at 2.05 m (the plan's 2 cm at 1.8 m scales to 2.3). stretch_m 0.145: the jacket's hem and hips (a long triangle of the decimated back) in the overhead smash's lunge; the Punk's is 0.09."
 }

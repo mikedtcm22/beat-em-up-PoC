@@ -14,6 +14,20 @@
 		"boss_grab",
 		"boss_slam"
 	],
-	"ratchets": {},
-	"notes": ""
+	"ratchets": {
+		"a9_cells": 0.145,
+		"a9_lens_pp": {
+			"*": 0.04,
+			"boss_charge pitch +8": 0.086,
+			"boss_charge pitch -6": 0.06
+		},
+		"a9_strike_art_share_min": 0.39,
+		"anchor_m": {
+			"head": 0.067,
+			"torso": 0.026,
+			"leg": 0.02
+		},
+		"stretch_m": 0.075
+	},
+	"notes": "Ox Pellerin (M6 HEAVIES), 2.3 m, a generated glove fist, 30000 triangles (SPEC 10's Boss row). Today's figure plus a few tenths; the plan's bars still printed as GATE; a ratchet only moves down. a6 holds the plan's 95% on all three regions (thigh/shin clamps 0.077/0.067). a9_cells 14.5%: the grab at 1 m (the art fills 84%, as its proxies do 84%; the robe's sleeves and the belt differ from the primitive's boxes) and the charge. a9_lens_pp: the charge's wind-up (the art keeps 40% of the view against the proxies' 46-49%: the proxies' raised arms are boxes, the robe's sleeves fall away); a9_strike_art_share_min is its twin. anchor_m head 6.7 cm and torso 2.6 cm: the hood's top stands 12 cm above the head capsule and the belt plate 3 cm off the torso capsule. stretch_m 0.075: the robe's wide sleeve over the upper arm in the grab (the Punk's is 0.09). a5_extent holds the default 20%: the boxing glove is the generated glove fitted to the same fist box as every fist (no ratchet)."
 }
