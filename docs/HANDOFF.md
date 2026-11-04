@@ -4,6 +4,22 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-04 09:40 CST: FEEDBACK merged (1761/1761); reviewed (one medium); fixer `faced` running
+- **FEEDBACK** is merged into `m5/level-blockout` (`b417ba0`, fast-forward). README has Game-boy's two rulings (`e8fc568`). The suite on the merged branch: 1761/1761, 327 s under load, 0 error lines.
+- **Recordings** are in `captures/m5-feedback/`: before/a4, plus after/{oneonone, opportunist, flanks, a4, a6}. One-on-one, the Kicker fights from in view; in A6 it gets behind while the Punk is busy with him.
+- **The review** (run `wf_a5f90cf4-699`; `feel` on Opus, `code` on Sonnet; about 0.54M tokens) found one medium, confirmed by its skeptic, and three lows. The medium is `feedback-feel-01`: a Kicker he has turned on keeps flanking while a Punk is in view. The lead's rulings are in `docs/reviews/M5/findings-feedback.json`:
+  - busy counts only the enemy he faces, the one nearer the middle of the view;
+  - a faced Kicker stops at once (`kicker_flank_faced_off_s` 0);
+  - a "Kicker left alone" act;
+  - the single-file leak in test_kicker.gd fixed;
+  - the holder reseat kept and tested.
+- **Fixer `faced`** (review.js run `wf_d92b342d-e0c`, fixers only) is on branch `m5/fix-feedback-faced`. **Resume:** if it was cut off, rerun review.js with the same args. Then:
+  1. merge it;
+  2. look at its recordings;
+  3. run the suite;
+  4. update CLAUDE.md's suite figures;
+  5. push, update PR #5, and post the run command to Game-boy.
+
 ### 2026-11-04 08:35 CST: Game-boy played M5 ("mostly good"); two changes from him; package FEEDBACK building
 - **His two rulings** (word for word in `docs/reviews/M5/fix-feedback.md`):
   1. Kickers get behind you only *opportunistically*, while you're fighting someone else. One-on-one they must not keep running round you, which caused a lot of whiffs.
