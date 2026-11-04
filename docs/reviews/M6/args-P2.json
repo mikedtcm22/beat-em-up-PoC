@@ -1,0 +1,121 @@
+{
+  "milestone": 6,
+  "summary": "full art and audio: every enemy and the boss through the M4 pipeline, environment modules and set dressing, final SFX, the second weapon and M4's two carried looks; done when no placeholder assets remain",
+  "base": "m6/full-art-audio",
+  "plan": "docs/milestones/M6-plan.md",
+  "read_first": [
+    "docs/milestones/M6-plan.md §0, §1 (only the decisions your brief names) and §2 'File ownership', 'Shared files', 'Tuning' and 'ASSETS.md'"
+  ],
+  "arch_heading": "## Full art and audio (Milestone 6)",
+  "captures_dir": "/Users/arachne/repos/beat-em-up-PoC/captures/m5-final",
+  "image_budget": 30,
+  "concurrency": 3,
+  "note": "Phase 2: phase 1 (CHAIN, KIT, PROPS, AUDIO, LOOKS) is merged into the base: the art roster, the kit, StaticArt with the pipe, bike-chain and prop art, the audio manifest, and the placeholder inventory with its ratchet (lower only what you cleared). THE PICK (Game-boy, HANDOFF d2a0cba; files in assets/source/concepts/m6/): Kicker C (kicker_c.jpg: a hooded lime vest, a lime bandana, a black cap, a ponytail, wrapped forearms, black cargo shorts over lime leggings, black boots); Pipe Thug B (thug_b.jpg: a black beanie, a yellow-patterned bandana, a sleeveless olive hoodie with a black chest strap and a yellow buckle, yellow wrist wraps, olive trousers with yellow bands, black boots); Bruiser A (bruiser_a.jpg: a purple hood with a steel visor and a purple mask, a padded purple jacket over steel chest plates, steel forearm guards and knee pads, a cream belt, black trousers, steel-capped boots); Boss C (boss_c.jpg) named Ox Pellerin, the underground-fight champion (a hooded charcoal robe with orange trim, an orange champion's belt, boxing gloves with orange wraps, shorts over black tights, laced boots; darken the charcoal: it rendered as light slate); second weapon A = bike_chain (weapon_a.jpg); moods street A (mood_street_a.jpg) and roof C (mood_roof_a.jpg). TRIPO LICENCE: answered (the paid API platform, HANDOFF 0d6a5c9); ASSETS rows read 'Tripo API (paid credits): owned by the project, commercial use'. Tripo only through tools/pipeline/tripo.py within your package's ceiling (plan §3; a character retry costs 55: a generation plus its rig); the M6 ledger stop is 900, the floor 700. Gemini only through tools/gemini_image.py job files within your ceiling. Shared files by region (plan §2 'Shared files'): test_room.gd (DRESS the geometry; WEAPONS lines 114-117), gen_moves.gd and move_data.gd (ARM: the haymaker, the uppercut and fp_show_upper_arm; WEAPONS: the weapon moves and impact_sfx values), test_art_contract.gd (ARM only), tuning_data.gd (your own subgroup; Debug lines appended). A package that adds or changes a palette JSON regenerates the atlas on its branch. The lead merges each package as it finishes and regenerates the default preset, the palette atlas and the ratchet, so conflicts there are expected and fine. Don't touch A6's PickupSpot weapon_scene (the lead sets it after WEAPONS).",
+  "packages": [
+    {
+      "key": "HEAVIES",
+      "section": "§3 'HEAVIES: The Bruiser and the boss'",
+      "est": 13,
+      "blender": true,
+      "read": [
+        "docs/milestones/M6-codemap/art-chain.md §1-§4 and §8-§9",
+        "docs/milestones/M6-plan.md §1 D3, D6, D15-D16, §2 'Art roster', 'Palette slots', 'Placeholder inventory'",
+        "docs/ARCHITECTURE.md '### The art chain for every character (CHAIN)'",
+        "tests/fixtures/art/roster/punk.json (the worked example)",
+        "assets/source/characters/punk/pipeline.json and assets/source/characters/punk/views/views_jobs.json",
+        "docs/milestones/M4-calls/F-punk.md (grep 'C1|C3|C4|C5|C7|C17')",
+        "tools/pipeline/tripo.py lines 1-40 and tools/pipeline/tripo_prices.json",
+        "the picked concepts assets/source/concepts/m6/bruiser_a.jpg and boss_c.jpg",
+        "game/enemies/bruiser/*.gd and game/enemies/boss/*.gd (grep '_build_attacks|_configure_rig')",
+        "game/enemies/boss/boss.tscn lines 1-12 and game/ui/boss_health_bar.gd lines 45-52"
+      ],
+      "note": "Tripo ceiling 350 credits, Gemini 24 images. Boss budget 30000 (SPEC §10's Boss row). The boss's fists are a generated glove fist by default (50 credits, the Punk's T9 route); the Bruiser's are procedural. Clamp the torso girth before asking for a per-character A6 ratchet; log any ratchet (A6, the boss's a5_extent) with its reason. Name the boss Ox Pellerin: boss.tscn's display_name and the catalog label (enemy_catalog.gd:18)."
+    },
+    {
+      "key": "CREW",
+      "section": "§3 'CREW: The Kicker and the Pipe Thug'",
+      "est": 12,
+      "blender": true,
+      "read": [
+        "docs/milestones/M6-codemap/art-chain.md §1-§4 and §8-§9",
+        "docs/milestones/M6-plan.md §1 D3, D6, D15-D16, §2 'Art roster', 'Palette slots', 'Static props' (the weapon art frame), 'Placeholder inventory'",
+        "docs/ARCHITECTURE.md '### The art chain for every character (CHAIN)'",
+        "tests/fixtures/art/roster/punk.json (the worked example)",
+        "assets/source/characters/punk/pipeline.json and assets/source/characters/punk/views/views_jobs.json",
+        "docs/milestones/M4-calls/F-punk.md (grep 'C1|C3|C4|C5|C7|C17')",
+        "tools/pipeline/tripo.py lines 1-40 and tools/pipeline/tripo_prices.json",
+        "the picked concepts assets/source/concepts/m6/kicker_c.jpg and thug_b.jpg",
+        "game/enemies/kicker/*.gd and game/enemies/thug/*.gd (grep '_build_attacks|_configure_rig')",
+        "game/actors/poses/enemy_poses_thug.gd lines 1-100",
+        "game/weapons/weapon.gd lines 66-90 and game/weapons/art/pipe.tscn"
+      ],
+      "note": "Tripo ceiling 250 credits, Gemini 20 images. Procedural fists for both; a generated fist needs the lead's yes (ask in requests). The Thug's hands hold PROPS's pipe at a 0.028-0.04 m grip."
+    },
+    {
+      "key": "DRESS",
+      "section": "§3 'DRESS: The level, the crowd street and the training room'",
+      "est": 12,
+      "read": [
+        "docs/milestones/M6-plan.md §1 D1, D8-D13, §2 'Kit', 'Static props', 'Tuning', 'Placeholder inventory'",
+        "docs/ARCHITECTURE.md '### The environment kit (KIT)'",
+        "docs/milestones/M6-codemap/level-env.md §1, §4-§6 and §8",
+        "docs/milestones/M4-look-bible.md 'Colour'",
+        "the picked moods assets/source/concepts/m6/mood_street_a.jpg and mood_roof_a.jpg",
+        "reference/encounters.md (location types per arena)",
+        "docs/reviews/M5/findings-final.json (grep 'final-sees-0[2356]')",
+        "game/fx/look_post.gd lines 150-200",
+        "game/level/kit/level_root.gd lines 60-130"
+      ],
+      "note": "No paid services. Place PropSpots for car, dumpster, ac_unit and water_tank at the pinned fallback sizes; PROPS's scenes are merged, so they draw art. Section light (D12) is yours: LevelSection's light exports, LevelRoot's blend and LookPost's sun rule; section_entered already fires (KIT). Compare 'Perf: level walk' against KIT's baseline commit (its sha is in docs/milestones/M6-calls/KIT.md)."
+    },
+    {
+      "key": "WEAPONS",
+      "section": "§3 'WEAPONS: The catalog, the second weapon and the glint'",
+      "est": 8,
+      "read": [
+        "docs/milestones/M6-codemap/weapons-looks.md §1-§3 and §6-§7",
+        "docs/milestones/M6-plan.md §1 D5, D22-D23, D28, §2 'Weapons', 'Static props', 'Audio', 'Placeholder inventory'",
+        "docs/ARCHITECTURE.md '### The static-prop path and every rigid model (PROPS)'",
+        "game/weapons/weapon.gd",
+        "game/player/player.gd (grep 'weapon|pipe_swing|WEAPON_THROW')",
+        "tools/gen_moves.gd lines 210-230 and 500-540",
+        "game/actors/placeholder_poses.gd lines 155-180, 1205-1220 and 2050-2200",
+        "game/enemies/thug/pipe_thug.gd lines 10-35 and 80-135",
+        "game/level/kit/pickup_spot.gd",
+        "tests/test_m5_roofs.gd lines 505-530",
+        "the picked weapon assets/source/concepts/m6/weapon_a.jpg"
+      ],
+      "note": "No paid services, no Blender: the pipe's art and the bike chain's parts (Lock, Grip, Link) are merged (PROPS); build the weapon scenes, the moves and the presentation sim on them. Emit CombatEvents.weapon_landed (declared in step 0) at the first contact after a throw or a drop. Don't touch A6's PickupSpot."
+    },
+    {
+      "key": "ARM",
+      "section": "§3 'ARM: The near upper arm'",
+      "est": 6,
+      "blender": true,
+      "read": [
+        "docs/milestones/M6-codemap/weapons-looks.md §5",
+        "docs/milestones/M6-plan.md §1 D7, §2 'Art roster'",
+        "tools/pipeline/player_parts.py lines 20-40 and 960-990",
+        "tools/pipeline/player_run.py lines 1-60",
+        "assets/source/characters/player/pipeline.json (grep split_fp)",
+        "game/camera/first_person_camera.gd lines 40-80 and 400-470",
+        "game/actors/skinned_art.gd lines 18-30 and 235-250",
+        "game/actors/humanoid_rig.gd lines 1300-1315",
+        "tools/gen_moves.gd lines 130-160",
+        "docs/milestones/M4-calls/F-player-art.md (grep check)",
+        "tests/test_skinned_art.gd lines 180-210",
+        "tests/test_art_player.gd lines 245-315 and 455-475",
+        "tests/test_art_contract.gd lines 28-36, 245-262 and 1180-1200",
+        "the player's mesh list and *_PLAYER constants as CHAIN landed them (grep '_PLAYER|fp_torso' tests)"
+      ],
+      "note": "CHAIN's roster is merged: you alone change the player's mesh list and *_PLAYER constants; log old -> new for any number that moves. The only Blender run is the hero's rebuild (player_run.py). Your A/B stills (the haymaker and the uppercut mid-strike, old and new) go to the lead for Game-boy: name their paths in the result."
+    }
+  ],
+  "only": [
+    "HEAVIES",
+    "CREW",
+    "DRESS",
+    "WEAPONS",
+    "ARM"
+  ]
+}
