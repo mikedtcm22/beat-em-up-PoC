@@ -251,7 +251,7 @@ The characters are procedural placeholders. Real art, VFX and audio come in Mile
 
 **Where M5 departs from the spec, ruled by Game-boy at his playtest (2026-11-04):**
 - **Kickers flank only when you're busy (Spec §7 says the Kicker "prefers the player's blind side"):**
-  - A Kicker goes round to your back only while another enemy stands in your view within 4.5 m (`kicker_flank_busy_radius_m`). It starts after that has held 0.5 s (`kicker_flank_on_s`) and stops 1 s after it ends (`kicker_flank_off_s`), so a glance doesn't flip it.
+  - A Kicker goes round to your back only while you face another enemy within 4.5 m (`kicker_flank_busy_radius_m`): one in your view and nearer its middle than the Kicker. It starts after that has held 0.5 s (`kicker_flank_on_s`) and stops 1 s after the other enemy leaves your view or goes down (`kicker_flank_off_s`), so a glance doesn't flip it. Turn to the Kicker and it stops and fights at once (`kicker_flank_faced_off_s`, 0 s), even with a Punk still in view beside it.
   - Otherwise it is seated by its 360° arc like any enemy: it holds where it stands, squares up and attacks from there, at the normal circling pace.
   - His words: in a one-on-one the Kicker kept "trying to maneuver behind me the whole time (so a LOT of whiffs)".
   - `kicker_flank_opportunistic` off brings back M5's always-flank.

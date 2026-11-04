@@ -5,7 +5,7 @@ extends EnemyActor
 ## right foot out, 8, a flinch) and the low sweep (a held drop to the floor, then a low spin that
 ## takes a standing player's legs out, 8, a knockdown; a jumping player passes over it). It
 ## flanks opportunistically (Milestone 5, Game-boy's playtest): only while the player is busy with someone
-## else does the director (is_flanking()) give it a seat of its own directly behind the look (the others'
+## else he faces (turn to the Kicker and it fights) does the director (is_flanking()) give it a seat of its own directly behind the look (the others'
 ## seats are not moved for it), and it gets there by walking round the posture ring at a fast pace,
 ## visibly leaving the view at its edge, never through the player (the way round the ring is EnemyActor's,
 ## for every archetype: _orbit_toward()). Otherwise it is seated by its own arc like any enemy and squares up
