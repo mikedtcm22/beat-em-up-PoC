@@ -348,8 +348,10 @@ func test_the_bruiser_stands_at_the_flank_never_behind() -> void:
 func test_the_kicker_circles_to_directly_behind() -> void:
 	await _setup()
 	var kicker := _stub(&"kicker", _at(0.0, 5.0))
-	var punk := _stub(&"punk", _at(0.0, 6.0))
-	await _ticks(40)
+	# The Punk is in his view inside the busy radius (Milestone 5), so the Kicker flanks.
+	var punk := _stub(&"punk", _at(20.0, 3.5))
+	await _ticks(70)
+	assert_true(kicker.is_flanking(), "the Kicker flanks while the Punk keeps him busy")
 	assert_gte(_off(_seat_bearing(kicker), 0.0), 135.0, "the Kicker's seat is behind him (bearing %.0f)" % _seat_bearing(kicker))
 	assert_lte(_off(_seat_bearing(punk), 0.0), 45.0 + EDGE_SLACK, "the Punk's is in front")
 

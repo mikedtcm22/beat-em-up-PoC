@@ -1100,6 +1100,8 @@ func _slots_of(stubs: Array) -> Array[Vector3]:
 
 func test_a_kicker_takes_a_seat_of_its_own_as_near_directly_behind_the_look_as_it_can() -> void:
 	await _setup(0, 1.0)
+	# The seat behind the look is the flank's geometry: M5's always-flank switch (the busy rule has its own tests).
+	Tuning.data.kicker_flank_opportunistic = false
 	var jitter := Tuning.data.director_spread_jitter_deg
 	var gap := Tuning.data.director_flank_gap_deg
 	for others in [0, 1, 2, 4]:
@@ -1131,6 +1133,8 @@ func test_a_kicker_takes_a_seat_of_its_own_as_near_directly_behind_the_look_as_i
 
 func test_two_kickers_take_seats_of_their_own_behind_the_look_and_the_others_keep_their_ring() -> void:
 	await _setup(0, 1.0)
+	# The seat behind the look is the flank's geometry: M5's always-flank switch (the busy rule has its own tests).
+	Tuning.data.kicker_flank_opportunistic = false
 	var jitter := Tuning.data.director_spread_jitter_deg
 	var gap := Tuning.data.director_flank_gap_deg
 	var others: Array[StubEnemy] = [_stub(_at(AHEAD, 3.0), false), _stub(_at(90.0, 3.0), false)]
@@ -1156,6 +1160,8 @@ func test_a_kicker_moves_nobody_else_when_the_look_turns() -> void:
 	# seats first, so every reslot moved the other enemies too (the fought mixed crowd walked instead of
 	# posturing). Now only the Kicker moves.
 	await _setup(0, 1.0)
+	# The seat behind the look is the flank's geometry: M5's always-flank switch (the busy rule has its own tests).
+	Tuning.data.kicker_flank_opportunistic = false
 	Tuning.data.director_reslot_s = 0.2
 	var ring := _crowd(4)
 	for stub in ring:
