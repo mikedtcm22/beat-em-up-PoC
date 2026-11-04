@@ -15,7 +15,7 @@ extends GutTest
 
 const MOVES_DIR := "res://game/combat/moves/"
 const SETS_DIR := "res://game/combat/movesets/"
-const SET_IDS := [&"ground", &"air", &"hold", &"weapon"]
+const SET_IDS := [&"ground", &"air", &"hold", &"weapon", &"bike_chain"]
 ## Combo notation separator for a pause branch, as written in Spec §4 ("K · K").
 const PAUSE_MARK := "·"
 ## The enemy moves' tables, one file per archetype (see tests/enemy_moves/punk_table.gd for the
@@ -63,6 +63,11 @@ const TABLE := {
 	&"pipe_swing_2": [10.0, HEAVY, STAGGER],
 	&"pipe_swing_3": [10.0, FINISHER, KNOCKDOWN],
 	&"weapon_throw": [15.0, HEAVY, KNOCKDOWN],
+	# The bike chain (M6, D5): the spec's numbers on the pipe's tiers.
+	&"chain_swing_1": [10.0, LIGHT, FLINCH],
+	&"chain_swing_2": [10.0, HEAVY, STAGGER],
+	&"chain_swing_3": [10.0, FINISHER, KNOCKDOWN],
+	&"chain_throw": [15.0, HEAVY, KNOCKDOWN],
 	&"impact_body_knockdown": [5.0, HEAVY, KNOCKDOWN],
 	&"impact_body_stagger": [0.0, LIGHT, STAGGER],
 	# The sparring training dummy's telegraphed jab (the held block's practice partner).
@@ -89,6 +94,9 @@ const SPHERE_POINTS := {
 	&"pipe_swing_1": [&"WeaponTip"],
 	&"pipe_swing_2": [&"WeaponTip"],
 	&"pipe_swing_3": [&"WeaponTip"],
+	&"chain_swing_1": [&"WeaponTip"],
+	&"chain_swing_2": [&"WeaponTip"],
+	&"chain_swing_3": [&"WeaponTip"],
 	&"dummy_jab": [&"RightFistPoint"],
 }
 
@@ -100,11 +108,11 @@ const ARCS := {
 }
 
 ## Moves with no hitbox: their hit is applied by code (held victim, projectile, body impact).
-const NO_HITBOX := [&"throw", &"weapon_throw", &"impact_body_knockdown", &"impact_body_stagger"]
+const NO_HITBOX := [&"throw", &"weapon_throw", &"chain_throw", &"impact_body_knockdown", &"impact_body_stagger"]
 
 ## Moves that do not use target magnetism; every other move does.
 const NO_MAGNETISM := [
-	&"knee", &"spinning_heel", &"spin_kick", &"back_elbow", &"throw", &"weapon_throw",
+	&"knee", &"spinning_heel", &"spin_kick", &"back_elbow", &"throw", &"weapon_throw", &"chain_throw",
 	&"impact_body_knockdown", &"impact_body_stagger", &"dummy_jab",
 ]
 
@@ -147,6 +155,12 @@ const EXPECTED_ROOTS := {
 		[K, NORMAL, &"", &"front_kick"],
 		[RB, NORMAL, &"", &"back_elbow"],
 	],
+	&"bike_chain": [
+		[P, NORMAL, &"", &"chain_swing_1"],
+		[K, NORMAL, DOWNED_NEAR, &"stomp"],
+		[K, NORMAL, &"", &"front_kick"],
+		[RB, NORMAL, &"", &"back_elbow"],
+	],
 }
 
 ## ARCHITECTURE "Move sets": each set's interrupt branches, same form. Air and hold have none.
@@ -155,6 +169,7 @@ const EXPECTED_INTERRUPTS := {
 	&"air": [],
 	&"hold": [],
 	&"weapon": [[RB, NORMAL, &"", &"back_elbow"]],
+	&"bike_chain": [[RB, NORMAL, &"", &"back_elbow"]],
 }
 
 ## ARCHITECTURE "Branches": every move's own branches, in order, same form.
@@ -192,6 +207,10 @@ const EXPECTED_BRANCHES := {
 	&"pipe_swing_2": [[P, NORMAL, &"", &"pipe_swing_3"]],
 	&"pipe_swing_3": [],
 	&"weapon_throw": [],
+	&"chain_swing_1": [[P, NORMAL, &"", &"chain_swing_2"]],
+	&"chain_swing_2": [[P, NORMAL, &"", &"chain_swing_3"]],
+	&"chain_swing_3": [],
+	&"chain_throw": [],
 	&"impact_body_knockdown": [],
 	&"impact_body_stagger": [],
 	&"dummy_jab": [],
@@ -408,7 +427,7 @@ func test_blocking_fields() -> void:
 	for id: StringName in TABLE:
 		var move := _load_move(id)
 		assert_false(move.unblockable, "%s: blockable" % id)
-		var mult := 1.5 if String(id).begins_with("pipe_swing") else 1.0
+		var mult := 1.5 if String(id).begins_with("pipe_swing") or String(id).begins_with("chain_swing") else 1.0
 		assert_eq(move.guard_damage_mult, mult, "%s: guard_damage_mult" % id)
 		var recoil := 20 if id == &"dummy_jab" else 14
 		assert_eq(move.blocked_recoil_frames, recoil, "%s: blocked_recoil_frames" % id)
@@ -597,7 +616,7 @@ func test_ground_set_roots() -> void:
 
 
 func test_ground_and_weapon_interrupt_back_elbow() -> void:
-	for set_id: StringName in [&"ground", &"weapon"]:
+	for set_id: StringName in [&"ground", &"weapon", &"bike_chain"]:
 		var move_set := _load_set(set_id)
 		var branch := _first_match(move_set.interrupt_branches, CombatTypes.IN_BACK, -1, {})
 		assert_not_null(branch, "%s: RB interrupt" % set_id)
@@ -631,6 +650,17 @@ func test_weapon_set() -> void:
 	assert_eq(_ids(_walk(weapon, "RB")), PackedStringArray(["back_elbow"]), "RB")
 	assert_lt(_root_index(weapon, &"stomp"), _root_index(weapon, &"front_kick"),
 			"the conditional stomp root comes first")
+
+
+func test_bike_chain_set() -> void:
+	var chain := _load_set(&"bike_chain")
+	var moves := _walk(chain, "P P P")
+	assert_eq(_ids(moves), PackedStringArray(["chain_swing_1", "chain_swing_2", "chain_swing_3"]), "P P P with the bike chain")
+	assert_eq(_damages(moves), PackedFloat64Array([10, 10, 10]), "chain swing damage")
+	var downed := {CombatTypes.COND_DOWNED_TARGET_NEAR: true}
+	assert_eq(_ids(_walk(chain, "K", downed)), PackedStringArray(["stomp"]), "K near a downed enemy")
+	assert_eq(_ids(_walk(chain, "K")), PackedStringArray(["front_kick"]), "plain K")
+	assert_eq(_ids(_walk(chain, "RB")), PackedStringArray(["back_elbow"]), "RB")
 
 
 # --- Per-move flags -----------------------------------------------------------------------

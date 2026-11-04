@@ -1,7 +1,7 @@
 {
 	"mission1": {
 		"primitive_bodies": 4,
-		"tints": 1,
+		"tints": 0,
 		"boxes": 0,
 		"cylinder_weapons": 0,
 		"second_weapon": 1
@@ -15,7 +15,7 @@
 	},
 	"test_room": {
 		"primitive_bodies": 4,
-		"tints": 1,
+		"tints": 0,
 		"boxes": 27,
 		"cylinder_weapons": 0,
 		"second_weapon": 0

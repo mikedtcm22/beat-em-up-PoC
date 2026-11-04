@@ -63,6 +63,7 @@ const MOVES: Array = [
 	[&"spin_kick", 6, 10, 16], [&"back_elbow", 5, 3, 18], [&"knee", 5, 3, 12],
 	[&"throw", 8, 2, 20], [&"stomp", 8, 3, 14], [&"pipe_swing_1", 7, 3, 12],
 	[&"pipe_swing_2", 7, 3, 12], [&"pipe_swing_3", 9, 4, 20], [&"weapon_throw", 6, 1, 14],
+	[&"chain_swing_1", 6, 3, 12], [&"chain_swing_2", 6, 3, 12], [&"chain_swing_3", 10, 4, 22], [&"chain_throw", 6, 1, 14],
 	[&"impact_body_knockdown", 0, 1, 0], [&"impact_body_stagger", 0, 1, 0],
 	[&"dummy_jab", 24, 3, 16],
 ]
@@ -127,6 +128,10 @@ func _reach_rows() -> Array[Reach]:
 		Reach.new(&"pipe_swing_1", [&"WeaponTip"], -0.7, 1.0, 1.7, 0.18, &"stand", head),
 		Reach.new(&"pipe_swing_2", [&"WeaponTip"], -0.7, 1.0, 1.7, 0.18, &"stand", head),
 		Reach.new(&"pipe_swing_3", [&"WeaponTip"], -0.7, 1.0, 1.7, 0.2, &"stand", head),
+		# The bike chain (M6): the pipe's recipes, so the tip's envelope is the pipe's.
+		Reach.new(&"chain_swing_1", [&"WeaponTip"], -0.7, 1.0, 1.7, 0.2, &"stand", head),
+		Reach.new(&"chain_swing_2", [&"WeaponTip"], -0.7, 1.0, 1.7, 0.2, &"stand", head),
+		Reach.new(&"chain_swing_3", [&"WeaponTip"], -0.7, 1.0, 1.7, 0.22, &"stand", head),
 	]
 
 
@@ -1043,7 +1048,7 @@ func test_player_moves_and_animations_start_and_end_in_the_relaxed_stance() -> v
 		for i: int in points.size():
 			assert_almost_eq(_local(rig, points[i]), stance[i], Vector3.ONE * 0.01, "%s: %s in the stance" % [what, points[i]])
 	var other: Array[StringName] = [&"knee", &"pipe_swing_1", &"pipe_swing_2", &"pipe_swing_3",
-			&"weapon_throw", &"flying_kick", &"spin_kick"]
+			&"weapon_throw", &"chain_swing_1", &"chain_swing_2", &"chain_swing_3", &"chain_throw", &"flying_kick", &"spin_kick"]
 	for row: Array in MOVES:
 		var move := _move(row)
 		rig.play(&"idle", 0.0)
@@ -1341,7 +1346,7 @@ func test_pipe_swings_meet_the_head_without_passing_through_it() -> void:
 	var head := _hurtboxes_of(target, CombatTypes.Region.HEAD)[0]
 	for rig: HumanoidRig in _stance_rigs():
 		_place_target(rig, target, &"stand")
-		for id: StringName in [&"pipe_swing_1", &"pipe_swing_2", &"pipe_swing_3"]:
+		for id: StringName in [&"pipe_swing_1", &"pipe_swing_2", &"pipe_swing_3", &"chain_swing_1", &"chain_swing_2", &"chain_swing_3"]:
 			_to_first_active_frame(rig, _move_by_id(id))
 			var grip := rig.get_point_position(&"WeaponGrip")
 			var tip := rig.get_point_position(&"WeaponTip")
@@ -1590,7 +1595,7 @@ func test_pipe_swings_come_into_first_person_view() -> void:
 	# smash): the grip stays further out than the tip, and the body fills at most about a
 	# third of the view.
 	var rig := _player_rig()
-	for id: StringName in [&"pipe_swing_1", &"pipe_swing_2", &"pipe_swing_3"]:
+	for id: StringName in [&"pipe_swing_1", &"pipe_swing_2", &"pipe_swing_3", &"chain_swing_1", &"chain_swing_2", &"chain_swing_3"]:
 		_to_first_active_frame(rig, _move_by_id(id))
 		var hits := _fp_hits(rig, _fp_camera(rig))
 		assert_lt(_body_share(hits), 0.34, "%s: the body fills %.0f%% of the view" % [id, _body_share(hits) * 100.0])

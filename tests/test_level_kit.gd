@@ -661,6 +661,7 @@ func test_a_weapon_lying_on_the_floor_is_drawn_in_the_floor_contrast_colour_and_
 	var contrast := absf(Tuning.data.weapon_floor_color.get_luminance() - floor_grey.get_luminance())
 	var hue_gap := absf(Tuning.data.weapon_floor_color.s - floor_grey.s)
 	assert_true(contrast > 0.25 or hue_gap > 0.5, "the floor colour stands out from the floor's grey (luminance gap %.2f, saturation gap %.2f)" % [contrast, hue_gap])
+	Tuning.set_value(&"weapon_floor_amber", false)
 
 
 func test_a_weapon_lying_on_the_floor_shows_the_glint_and_keeps_its_own_colour_by_default() -> void:
