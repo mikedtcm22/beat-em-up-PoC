@@ -62,7 +62,8 @@ const FULL_ARC_DEG := 360.0
 @export var archetype: StringName = &""
 ## Bruiser and boss: the rear warning's burst is larger, the wind-up floor is the heavy one.
 @export var heavy: bool = false
-## The Kicker: the director gives it slots in the blind arc first.
+## The Kicker: it may flank (the director seats it directly behind the player's look while he is busy
+## with someone else; see is_flanking()).
 @export var prefers_blind_side: bool = false
 ## The audio director's pitch multiplier for this enemy's voice (deeper heavies), read duck-typed.
 @export var voice_pitch_mult: float = 1.0
@@ -85,6 +86,8 @@ var posture_slot: Vector3 = Vector3.INF
 ## What kind of seat that is: &"inner" (on the posture ring, inside its arc: only these are granted a
 ## token) or &"wait" (on the wait ring, back from the fray, until an inner seat in its arc frees).
 var seat_kind: StringName = &"inner"
+## Whether the director has it flanking (set_flanking()).
+var _flanking: bool = false
 ## The variant this enemy is (game/enemies/variants/), or null for the archetype as it is. Set by
 ## EnemyCatalog.apply_variant() before the enemy enters the tree.
 var variant: EnemyVariant
@@ -281,6 +284,18 @@ func set_slot(pos: Vector3, kind: StringName = &"inner") -> void:
 	seat_kind = kind
 	_progress_best = INF
 	_progress_frames = 0
+
+
+## The director's ruling on whether this enemy is flanking (Milestone 5, Game-boy's playtest): it gets
+## behind the player's look because he is busy with someone else, and the Kicker then strafes toward the
+## view's edge and circles fast. False by default; only the director writes it.
+func set_flanking(on: bool) -> void:
+	_flanking = on
+
+
+## True while the director has this enemy flanking (set_flanking()).
+func is_flanking() -> bool:
+	return _flanking
 
 
 ## The arc (degrees) of the circle round the player it attacks from, centred on its line (the player's

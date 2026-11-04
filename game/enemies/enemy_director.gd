@@ -28,8 +28,10 @@ extends Node
 ##   Tuning "Attack arcs") centred on its line, the player's look when it engaged (held after
 ##   engage_commit_s). Inner seats lie on the posture ring inside the arc, director_seat_gap_deg apart,
 ##   and only an inner-seated enemy is granted a token; the rest stand on the wait ring, still inside
-##   their arc, until an inner seat frees. A Kicker keeps its seat as near directly behind the look as
-##   it can be. A seat is on the navmesh, on the player's floor and reachable. With the Debug switch
+##   their arc, until an inner seat frees. A Kicker takes the seat as near directly behind the look as
+##   it can be only while it is flanking (Milestone 5, Game-boy's playtest: while the player is busy with
+##   another enemy in his view, with hysteresis; _track_flanking(), told to it by set_flanking());
+##   otherwise it is seated by its own arc like any enemy. A seat is on the navmesh, on the player's floor and reachable. With the Debug switch
 ##   `director_even_spread` on, M3's rule instead: the enemies that are not Kickers evenly spaced all
 ##   round the player, turned as little as possible from where they stand.
 ##
@@ -89,6 +91,13 @@ var _engage: Dictionary = {}
 var _kinds: Dictionary = {}
 var _slides: Dictionary = {}
 var _seat_lines: Dictionary = {}
+## Kicker (an enemy that prefers_blind_side) -> its flank decision: {flanking: bool, since: float}, `since`
+## being the clock when the opposite of its decision began to hold (busy for a Kicker not flanking, free
+## for one that is), or INF while it does not.
+var _flank: Dictionary = {}
+## The Kickers that stopped flanking this tick (a set: enemy -> true): _assign_arcs() seats them anew,
+## as seekers, rather than letting them keep the seat behind the look.
+var _unflanked: Dictionary = {}
 ## Per reslot: seat point reachable (flat key -> bool), and arc center -> slide (degrees).
 var _reach_cache: Dictionary = {}
 var _slide_cache: Dictionary = {}
@@ -316,6 +325,11 @@ func debug_arc_slid(enemy: EnemyActor) -> bool:
 	return absf(float(_slides.get(enemy, 0.0))) > 0.0
 
 
+## True while `enemy` is flanking by the director's ruling (Kickers only; set_flanking()).
+func debug_is_flanking(enemy: EnemyActor) -> bool:
+	return enemy.is_flanking()
+
+
 ## True when the blind-spot priority applies to `enemy` (D5): its arc reaches the blind spot (half the
 ## arc past rear_warning_angle_deg), or `blind_spot_needs_wide_arc` is off, or director_even_spread
 ## is on (M3: any enemy).
@@ -345,6 +359,7 @@ func _step(dt: float) -> void:
 	if player:
 		if not Tuning.data.director_even_spread:
 			_track_engagement(player, members)
+		_track_flanking(player, members)
 		_update_slots(player, members)
 	if not held and not closed and not player.is_invulnerable():
 		_grant(player, members)
@@ -357,7 +372,7 @@ func _scrub() -> void:
 		if not is_instance_valid(_holders[i]):
 			_holders.remove_at(i)
 		i -= 1
-	for book: Dictionary in [_granted_s, _wait_since, _slots, _claims, _stalls, _engage, _kinds, _slides, _seat_lines]:
+	for book: Dictionary in [_granted_s, _wait_since, _slots, _claims, _stalls, _engage, _kinds, _slides, _seat_lines, _flank]:
 		for key: Variant in book.keys():
 			if not is_instance_valid(key):
 				book.erase(key)
@@ -538,6 +553,73 @@ func _in_own_arc(enemy: EnemyActor, player: PlayerCharacter) -> bool:
 	return absf(wrapf(bearing - center, -180.0, 180.0)) <= enemy.attack_arc_deg() * 0.5
 
 
+# --- Flanking (Kickers) ---
+
+
+## Decide which Kickers flank (Milestone 5, Game-boy's playtest) and tell them (set_flanking()). With
+## director_even_spread on, or kicker_flank_opportunistic off, a Kicker always flanks (M3's and M5's
+## rule). Otherwise it flanks only while the player is busy (_player_busy()): it starts once that has held
+## for kicker_flank_on_s, and stops once it has been false for kicker_flank_off_s, on the director's own
+## clock. The Kickers are decided one after the other in a stable order, each seeing the ones decided
+## before it this tick and the others as of the last, so two Kickers never wait on each other: the first
+## stays in front and the second may flank. A change of mode asks for a reslot.
+func _track_flanking(player: PlayerCharacter, members: Array[EnemyActor]) -> void:
+	var tuning := Tuning.data
+	var always := tuning.director_even_spread or not tuning.kicker_flank_opportunistic
+	var kickers: Array[EnemyActor] = []
+	for enemy in members:
+		if enemy.prefers_blind_side:
+			kickers.append(enemy)
+	kickers.sort_custom(func(a: EnemyActor, b: EnemyActor) -> bool: return a.get_instance_id() < b.get_instance_id())
+	_unflanked.clear()
+	for enemy in kickers:
+		var row: Dictionary = _flank.get(enemy, {})
+		if row.is_empty():
+			row = {flanking = false, since = INF}
+			_flank[enemy] = row
+		var was: bool = row.flanking
+		if always:
+			row.flanking = true
+			row.since = INF
+		else:
+			var busy := _player_busy(player, members, enemy)
+			# `since` runs while the opposite of the decision holds.
+			var opposite := busy != bool(row.flanking)
+			if not opposite:
+				row.since = INF
+			else:
+				if is_inf(float(row.since)):
+					row.since = _clock_s
+				var needed := tuning.kicker_flank_on_s if busy else tuning.kicker_flank_off_s
+				if _clock_s - float(row.since) >= needed - _CLOCK_SLACK_S:
+					row.flanking = busy
+					row.since = INF
+		if bool(row.flanking) != was:
+			_reslot_pending = true
+			if was:
+				_unflanked[enemy] = true
+		enemy.set_flanking(bool(row.flanking))
+
+
+## True while the player is busy for `kicker`: another live, engaged enemy that is not itself flanking
+## stands inside his view (the rear warning's angle) within kicker_flank_busy_radius_m of him. "Engaged"
+## is any enemy that has come to the fight (not entering, not knocked out) whatever it is doing, so a
+## Punk winding up, striking or recovering still keeps him busy.
+func _player_busy(player: PlayerCharacter, members: Array[EnemyActor], kicker: EnemyActor) -> bool:
+	var tuning := Tuning.data
+	for other in members:
+		if other == kicker or other.is_flanking():
+			continue
+		match other.ai_state:
+			EnemyActor.AiState.ENTER, EnemyActor.AiState.KO:
+				continue
+		if _flat_distance(other.global_position, player.global_position) > tuning.kicker_flank_busy_radius_m:
+			continue
+		if not player.is_outside_view(other.global_position, tuning.rear_warning_angle_deg):
+			return true
+	return false
+
+
 # --- Posture slots (spread) ---
 
 
@@ -545,7 +627,7 @@ func _in_own_arc(enemy: EnemyActor, player: PlayerCharacter) -> bool:
 ## changed (a spawn, a death) or when something asked. Every live enemy has a seat, token holders
 ## included, so an attack neither moves the others nor loses its enemy its place.
 func _update_slots(player: PlayerCharacter, members: Array[EnemyActor]) -> void:
-	for book: Dictionary in [_slots, _claims, _kinds, _slides, _seat_lines]:
+	for book: Dictionary in [_slots, _claims, _kinds, _slides, _seat_lines, _flank]:
 		for key: Variant in book.keys():
 			if not members.has(key):
 				book.erase(key)
@@ -731,10 +813,11 @@ func _assign_arcs(player: PlayerCharacter, set: Array[EnemyActor]) -> void:
 		var arc := enemy.attack_arc_deg()
 		var slide := _arc_slide(player, line, arc)
 		info[enemy] = {line = line, arc = arc, slide = slide, center = line + slide}
-		if enemy.prefers_blind_side:
+		if enemy.prefers_blind_side and enemy.is_flanking():
 			flank.append(enemy)
 			continue
-		var kept: bool = _kinds.get(enemy, &"") == _INNER and _claims.has(enemy) and not _stalls.has(enemy)
+		# A Kicker that has just stopped flanking is a seeker: the inner seat nearest where it stands.
+		var kept: bool = not _unflanked.has(enemy) and _kinds.get(enemy, &"") == _INNER and _claims.has(enemy) and not _stalls.has(enemy)
 		if kept and (_holders.has(enemy) or (bool(row.get("has_line", false)) \
 				and _inside_arc(float(_claims[enemy]), line + slide, arc))):
 			keepers.append(enemy)

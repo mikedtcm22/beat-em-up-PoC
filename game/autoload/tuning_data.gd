@@ -792,6 +792,21 @@ extends Resource
 ## again as many wind-ups, from behind. It is a plateau from 2.5 s to 3.5 s (the director's pacing
 ## sets the cadence there: 17 and 16 attacks); 1.2 s (the S0 seed) gave 21, 5 s gave 12.
 @export_range(0.0, 10.0, 0.1) var kicker_attack_cooldown_s: float = 3.0
+## Milestone 5 (Game-boy's playtest): a Kicker flanks only while the player is busy with someone
+## else (see kicker_flank_busy_radius_m); otherwise it is seated by its own arc like any enemy, so a
+## one-on-one is fought face to face. Off: M5's rule, a Kicker always takes the seat nearest directly
+## behind the look. (director_even_spread on: M3's rule, always flank, whatever this says.)
+@export var kicker_flank_opportunistic: bool = true
+## A Kicker counts the player as busy while another live, engaged enemy that is not itself flanking
+## stands inside the player's view within this distance (m) of him. 4.5 is the token reach: posture_ring_max_m
+## 4.0 plus token_grant_margin_m 0.5, the farthest an enemy can be and still be about to attack.
+@export_range(1.0, 12.0, 0.1) var kicker_flank_busy_radius_m: float = 4.5
+## Seconds the player must have been busy before a Kicker starts flanking (the engage grace, so a
+## glance at a Punk, or a quick turn past one, does not send it round).
+@export_range(0.0, 3.0, 0.05) var kicker_flank_on_s: float = 0.5
+## Seconds the player must have been free (not busy) before a Kicker stops flanking and squares up
+## where it is: longer than the on-delay, so a Punk dipping out of view for a moment does not flip it.
+@export_range(0.0, 5.0, 0.05) var kicker_flank_off_s: float = 1.0
 
 @export_subgroup("Pipe Thug")
 @export_range(5.0, 500.0, 1.0) var thug_health: float = 35.0
@@ -1010,17 +1025,24 @@ extends Resource
 ## he can never be shut on the wrong side of it.
 @export_range(0.5, 6.0, 0.1) var arena_lock_inset_m: float = 2.0
 ## A named spawn point nearer the player than spawn_min_player_distance_m (or with no room) is
-## waited for this long (s); then the nearest free point with the same tag is used. The same wait
-## holds a behind point (a spawn point flagged `out_of_view`) while it is inside the player's view; then
-## the nearest free point outside the view, of any tag, takes it.
+## waited for this long (s); then the nearest free point with the same tag is used. With
+## spawn_behind_waits_out_of_view on, the same wait holds a behind point (a spawn point flagged
+## `out_of_view`) while it is inside the player's view; then the nearest free point outside the view,
+## of any tag, takes it.
 @export_range(0.0, 10.0, 0.1) var spawn_named_wait_s: float = 2.0
 ## When no point of its tag is free either (a point with a unique tag, with the player standing
 ## by it), a further wait (s) after spawn_named_wait_s; then the nearest free point of any tag in
 ## the arena takes it, so a player holding a spot cannot stall the wave.
 @export_range(0.0, 20.0, 0.1) var spawn_named_any_wait_s: float = 3.0
 ## How often (s) a named spawn that cannot be placed yet (its point is too near the player, has no
-## room or, for a behind point, is in view) tries again.
+## room or, for a behind point with spawn_behind_waits_out_of_view on, is in view) tries again.
 @export_range(0.02, 1.0, 0.01) var spawn_named_retry_s: float = 0.1
+## Off (the default, Game-boy's playtest ruling): a behind point (flagged `out_of_view`) is used like
+## any named point, at once when it is free, even with the point inside the player's view, so there is
+## no lull before a hit from behind. On: M5's hold, a behind point waits (spawn_named_wait_s, then
+## spawn_named_any_wait_s) while it is inside the player's view and falls back to the nearest free
+## point outside the view.
+@export var spawn_behind_waits_out_of_view: bool = false
 @export_subgroup("Weapon look")
 ## The colour of a weapon lying on the floor (a level's pick-up, a dropped or landed pipe), so it
 ## reads against the floor's grey from across a room. In a hand or in the air it keeps its own colour.

@@ -28,7 +28,8 @@ extends Node3D
 ## the player waits spawn_named_wait_s, then the nearest free point with the same tag takes it, and
 ## after spawn_named_any_wait_s more the nearest free point of any tag; a named point flagged
 ## `out_of_view` (a behind spawn) also waits while it is inside the player's view, and then the nearest
-## free point outside the view takes it, any tag), and emits `table_finished` when the last wave is cleared, adds included. `stop()` leaves it idle.
+## free point outside the view takes it, any tag, only with the tunable spawn_behind_waits_out_of_view on,
+## which is off by default: Game-boy's playtest ruling, so a behind point spawns at once), and emits `table_finished` when the last wave is cleared, adds included. `stop()` leaves it idle.
 ## The level (LevelRoot) owns the one spawner and hands each arena its table and points on lock.
 
 ## A wave has just started: its number (1 for the first) and the ids it will spawn.
@@ -399,9 +400,11 @@ func _spawn_next() -> void:
 ## Spawn the head of the queue, a named spawn, at its point if that is free (in `valid`), or, once
 ## it has waited spawn_named_wait_s, at the nearest free point with the same tag, or, once it has
 ## waited spawn_named_any_wait_s more (a unique tag, the player holding the spot), at the nearest free
-## point of any tag. A point flagged `out_of_view` (a behind spawn) is not used while it is in the
-## player's view: after spawn_named_wait_s the nearest free point outside the view takes the spawn
-## instead (any tag). False (and a short retry, spawn_named_retry_s) when none is. A name no point has is
+## point of any tag. With the tunable spawn_behind_waits_out_of_view on (off by default: Game-boy's
+## playtest ruling, no lull before a hit from behind), a point flagged `out_of_view` (a behind spawn) is
+## not used while it is in the player's view: after spawn_named_wait_s the nearest free point outside the
+## view takes the spawn instead (any tag). Off, the flag is ignored and a behind point is used like any
+## named point, at once when it is free. False (and a short retry, spawn_named_retry_s) when none is. A name no point has is
 ## treated as no name.
 func _spawn_named(id: StringName, valid: Array[int]) -> bool:
 	var named := _queue_points[0]
@@ -416,7 +419,8 @@ func _spawn_named(id: StringName, valid: Array[int]) -> bool:
 		_wave_free += 1
 		_wave_behind_quota = roundi(_wave_free * Tuning.data.wave_behind_share)
 		return false
-	var hidden_only := bool(spawn_points[wanted].get("out_of_view", false))
+	# The out_of_view flag only holds a spawn while spawn_behind_waits_out_of_view is on (off by default).
+	var hidden_only := Tuning.data.spawn_behind_waits_out_of_view and bool(spawn_points[wanted].get("out_of_view", false))
 	var chosen := -1
 	if valid.has(wanted) and not (hidden_only and _in_view(spawn_points[wanted])):
 		chosen = wanted

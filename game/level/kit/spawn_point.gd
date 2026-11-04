@@ -9,10 +9,11 @@ extends Marker3D
 ## nearest free point with the same tag.
 @export var tag: StringName = &"doorway"
 
-## A "behind" point (the approved table's behind spawns): the spawner holds an enemy named to it
-## while the point is inside the player's view and lets it in once the player looks away (see
-## EncounterSpawner), so it arrives unseen. Off, the point spawns whoever looks where ("ahead" and
-## "side" doors).
+## A "behind" point (the approved table's behind spawns). Only while the tunable
+## spawn_behind_waits_out_of_view is on (off by default: Game-boy's playtest ruling, no lull before a hit
+## from behind) does the spawner hold an enemy named to it while the point is inside the player's view
+## and let it in once the player looks away (see EncounterSpawner), so it arrives unseen. With that
+## switch off, the flag is ignored and the point spawns at once like the "ahead" and "side" doors.
 @export var out_of_view: bool = false
 
 var _lane: Marker3D
