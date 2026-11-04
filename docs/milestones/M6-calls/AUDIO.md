@@ -81,3 +81,10 @@ The choice list is also `assets/source/sfx/eleven/voices.picks.json` (the input 
 - **WEAPONS:** `MoveData.impact_sfx` values `pipe` and `bike_chain` (the pools are `weapon_pipe_hit`, `weapon_bike_chain_hit`), emit `weapon_landed`; the director also needs `weapon_picked_up`, `weapon_thrown` and `weapon_broke` to keep carrying the weapon node (it plays at `weapon.global_position`).
 - **LOOKS (ratchet):** `generated_sfx` 12 -> 9 pools and `empty_slots` 16 at this merge.
 - **Lead:** the merge regenerates `tuning/default.json` (this branch's copy is generated); `tools/audio/eleven_policy.json`'s rate 10 is measured, tell SFX.
+
+## Evidence
+
+- Full suite on this branch: 1794 of 1794 pass (1766 at M5's end, +27 in `test_audio_m6.gd`, +1 in `test_audio.gd`), 320 s, no SCRIPT ERROR, SHADER ERROR or ERROR.
+- `python3 -I tools/audio/ingest.py --check`: 85 rows, 0 problems, 16 empty slots. `gen_sfx.gd` rerun leaves `tests/fixtures/sfx_legacy/` unchanged.
+- No captures: the package has no visual work beyond the audition room's one label.
+- The lead plays the audition room: training room (F6 twice), `]` pages the banks, `1` to `9` play variants, `-` old and new, `=` the whole bank.
