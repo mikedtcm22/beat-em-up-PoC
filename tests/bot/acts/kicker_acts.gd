@@ -3,8 +3,13 @@ extends RefCounted
 ## person unless the title says otherwise. Record with
 ##   tools/capture_bot.sh res://tests/bot/crowd_bot.tscn captures/p2-kicker "Kicker flanks" 6
 ##
-## "Kicker flanks": the player stands still and a Kicker walks in from ahead: it should circle
-## to his back and the rear warning fire when it winds up there. The jump kick and the sweep in
+## "Kicker flanks": the player stands still, a Punk holds his front and a Kicker walks in from ahead:
+## the player is busy, so (Milestone 5, opportunistic flanking) it should circle to his back and the
+## rear warning fire when it winds up there. "Kicker one on one" is Game-boy's case: the autopilot
+## fights a lone Kicker for 30 s, turning to face it, and the Kicker should square up in view and
+## attack from there, never running round him (one log line a second: bearing, distance, state,
+## flanking). "Kicker opportunist": the autopilot fights a Punk and the Kicker gets behind while he
+## is busy; once he turns to the Kicker (the Punk down, or out of the busy radius), it stops circling. The jump kick and the sweep in
 ## front are thrown with force_attack() on a frozen AI, so the wind-up is judged from the lens at
 ## its attack's own range; "jumped over" has the player jump the sweep. "Kicker and Punks" is the
 ## mixed crowd (cadence and the blind side against the Punk's). Acts with `probe = true` print the
@@ -18,6 +23,8 @@ const JUMP_AT_FRAME := 11
 static func acts(bot: Node) -> Array[Dictionary]:
 	return [
 		{title = "Kicker flanks", cam = &"first_person", probe = true, fn = func() -> void: await _flanks(bot)},
+		{title = "Kicker one on one", cam = &"first_person", probe = true, fn = func() -> void: await _one_on_one(bot)},
+		{title = "Kicker opportunist", cam = &"first_person", probe = true, fn = func() -> void: await _opportunist(bot)},
 		{title = "Kicker jump kick in front", cam = &"first_person", fn = func() -> void: await _front(bot, 0, 2.6)},
 		{title = "Kicker sweep in front", cam = &"first_person", fn = func() -> void: await _front(bot, 1, 1.4)},
 		{title = "Kicker sweep jumped over", cam = &"first_person", fn = func() -> void: await _jumped_over(bot)},
@@ -31,20 +38,61 @@ static func acts(bot: Node) -> Array[Dictionary]:
 	]
 
 
-## The player stands still (god mode), one Kicker walks in from the east alley, ahead of him: it
-## takes its slot round at his back, and from there winds up; the oracle checks the warning at
-## every wind-up.
+## The player stands still (god mode), a Punk holds his front and one Kicker walks in from the east
+## alley, ahead of him: he is busy, so it takes its slot round at his back, and from there winds up;
+## the oracle checks the warning at every wind-up.
 static func _flanks(bot: Node) -> void:
 	_seed_names(bot)
 	bot.god()
+	bot.spawn(&"punk", Vector2(1.0, 3.5))
 	var kicker: EnemyActor = bot.spawn_at_point(&"kicker", 4)
 	for i in 60:
 		await bot._ticks(15)
-		if is_instance_valid(kicker):
-			bot.log_line("KICKER f%d bearing %d dist %.1f %s" % [Engine.get_physics_frames(),
-					roundi(bot.player.look_bearing_deg(kicker.global_position)),
-					Vector2(kicker.global_position.x - bot.player.global_position.x,
-							kicker.global_position.z - bot.player.global_position.z).length(), kicker.ai_state_name()])
+		_log_kicker(bot, kicker)
+
+
+## Game-boy's case, a lone Kicker: god mode, the held-back autopilot (it turns to face what is nearest)
+## fights it for 30 s. One line a second.
+static func _one_on_one(bot: Node) -> void:
+	_seed_names(bot)
+	bot.god()
+	var kicker: EnemyActor = bot.spawn_at_point(&"kicker", 4)
+	bot.hold_back()
+	bot.pilot.enabled = true
+	for i in 30:
+		await bot._ticks(60)
+		_log_kicker(bot, kicker)
+		if not is_instance_valid(kicker) or kicker.health <= 0.0:
+			# It went down: the next one walks in, so the 30 s stay a one-on-one.
+			bot.log_line("KICKER down at %d s: the next walks in" % (i + 1))
+			kicker = bot.spawn_at_point(&"kicker", 4)
+
+
+## A Punk and a Kicker, the held-back autopilot fighting (it faces the nearest, the Punk): the Kicker
+## gets behind while he is busy with the Punk. 40 s, one line a second.
+static func _opportunist(bot: Node) -> void:
+	_seed_names(bot)
+	bot.god()
+	var punk: EnemyActor = bot.spawn(&"punk", Vector2(0.5, 3.5))
+	var kicker: EnemyActor = bot.spawn_at_point(&"kicker", 4)
+	bot.hold_back()
+	bot.pilot.enabled = true
+	for i in 40:
+		await bot._ticks(60)
+		_log_kicker(bot, kicker, punk)
+
+
+## One line: where the Kicker is off the look, how far, what it is doing and whether it flanks (and
+## whether the Punk it is judged against is still up).
+static func _log_kicker(bot: Node, kicker: EnemyActor, punk: EnemyActor = null) -> void:
+	if not is_instance_valid(kicker):
+		return
+	var tail := "" if punk == null else " punk %s" % ("up" if is_instance_valid(punk) and punk.health > 0.0 else "down")
+	bot.log_line("KICKER f%d bearing %d dist %.1f %s flanking %s%s" % [Engine.get_physics_frames(),
+			roundi(bot.player.look_bearing_deg(kicker.global_position)),
+			Vector2(kicker.global_position.x - bot.player.global_position.x,
+					kicker.global_position.z - bot.player.global_position.z).length(),
+			kicker.ai_state_name(), kicker.is_flanking(), tail])
 
 
 ## The player stands at the south curb facing north, the wall of the street at his back, so the
