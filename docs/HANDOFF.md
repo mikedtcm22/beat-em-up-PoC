@@ -18,7 +18,7 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
   3. He signs off.
   - The judgement-call digest was sent with the run command, in the session chat and in a Slack DM.
 - **Next after sign-off:** record his rulings in README (change the heading to "accepted"), merge PR #5, then plan M6 (art for the level and the second weapon, per SPEC §12).
-- **Usage:** about 26% of the new 5-hour window, 11% weekly. M5 in all: about 6.4M sub-agent tokens.
+- **Usage:** 0% of the new 5-hour window (it reset at 23:30 CST), 11% weekly. The previous window ended at 24%. M5 in all: about 6M sub-agent tokens.
 
 ### 2026-11-03 23:00 CST: final review done (no highs, 5 mediums); the fix wave running (3 Sonnet fixers)
 - **The review** (`review.js` run `wf_35fbfae3-70f`, about 1.45M sub-agent tokens, about 7% of the 5-hour window): lenses `sees` and `feel` (Opus) and `code` (Sonnet), on `captures/m5-final/`.
