@@ -40,6 +40,9 @@ const DEBUG_ROWS: Array[Array] = [
 ## [label, keycode] debug keys that are not input-map actions: the overlays' own.
 const KEY_ROWS: Array[Array] = [
 	["Combat log on / off", CombatLogOverlay.TOGGLE_KEY],
+	AuditionRoom.HELP_ROWS[0],
+	AuditionRoom.HELP_ROWS[1],
+	AuditionRoom.HELP_ROWS[2],
 ]
 
 ## [inputs, result] (Spec §4 combos). "·" is the pause branch.

@@ -118,9 +118,12 @@ func _spawn_actors() -> void:
 
 
 ## Cameras, HUD, the F1 tuning panel and F4 cheat menu, the VFX, audio and rumble directors
-## and the look's post pass: RoomKit.build_presentation(), the crowd room's too.
+## and the look's post pass: RoomKit.build_presentation(), the crowd room's too, then the sound
+## audition room (game/audio/audition_room.gd).
 func _build_presentation() -> void:
 	RoomKit.build_presentation(self)
+	# The sound audition room (Milestone 6): the bracket, digit, minus and equals keys.
+	add_child(AuditionRoom.new())
 
 
 func _add_box(pos: Vector3, size: Vector3, material: Material) -> StaticBody3D:

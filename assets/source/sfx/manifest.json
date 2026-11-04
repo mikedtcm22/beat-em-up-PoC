@@ -1,0 +1,474 @@
+{
+	"slots": {
+		"block_clack": {
+			"min_variants": 2,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"body_fall": {
+			"min_variants": 2,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"crack": {
+			"min_variants": 3,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"crunch": {
+			"min_variants": 3,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"effort": {
+			"min_variants": 1,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"grunt": {
+			"min_variants": 1,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"guard_break": {
+			"min_variants": 2,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"music_loop": {
+			"min_variants": 1,
+			"long": true,
+			"loop": true,
+			"space": "2d"
+		},
+		"parry_ting": {
+			"min_variants": 2,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"player_grunt": {
+			"min_variants": 1,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"sub_thump": {
+			"min_variants": 2,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"thud": {
+			"min_variants": 3,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"whoosh": {
+			"min_variants": 3,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		}
+	},
+	"files": [
+		{
+			"file": "block_clack_01.wav",
+			"pool": "block_clack",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "block_clack_02.wav",
+			"pool": "block_clack",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "block_clack_03.wav",
+			"pool": "block_clack",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "body_fall_01.wav",
+			"pool": "body_fall",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "body_fall_02.wav",
+			"pool": "body_fall",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "body_fall_03.wav",
+			"pool": "body_fall",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "crack_01.wav",
+			"pool": "crack",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "crack_02.wav",
+			"pool": "crack",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "crack_03.wav",
+			"pool": "crack",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "crunch_01.wav",
+			"pool": "crunch",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "crunch_02.wav",
+			"pool": "crunch",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "crunch_03.wav",
+			"pool": "crunch",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "effort_01.wav",
+			"pool": "effort",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "effort_02.wav",
+			"pool": "effort",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "effort_03.wav",
+			"pool": "effort",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "grunt_01.wav",
+			"pool": "grunt",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "grunt_02.wav",
+			"pool": "grunt",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "grunt_03.wav",
+			"pool": "grunt",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "grunt_04.wav",
+			"pool": "grunt",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "grunt_05.wav",
+			"pool": "grunt",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "guard_break_01.wav",
+			"pool": "guard_break",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "guard_break_02.wav",
+			"pool": "guard_break",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "music_loop_01.wav",
+			"pool": "music_loop",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "parry_ting_01.wav",
+			"pool": "parry_ting",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "parry_ting_02.wav",
+			"pool": "parry_ting",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "parry_ting_03.wav",
+			"pool": "parry_ting",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "player_grunt_01.wav",
+			"pool": "player_grunt",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "player_grunt_02.wav",
+			"pool": "player_grunt",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "player_grunt_03.wav",
+			"pool": "player_grunt",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "sub_thump_01.wav",
+			"pool": "sub_thump",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "sub_thump_02.wav",
+			"pool": "sub_thump",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "thud_01.wav",
+			"pool": "thud",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "thud_02.wav",
+			"pool": "thud",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "thud_03.wav",
+			"pool": "thud",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "thud_04.wav",
+			"pool": "thud",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "whoosh_01.wav",
+			"pool": "whoosh",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "whoosh_02.wav",
+			"pool": "whoosh",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "whoosh_03.wav",
+			"pool": "whoosh",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "whoosh_04.wav",
+			"pool": "whoosh",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		}
+	]
+}
