@@ -96,6 +96,30 @@
 			"duration_seconds": 0.8,
 			"candidates": 3,
 			"prompt_influence": 0.5
+		},
+		{
+			"id": "weapon_break_v3",
+			"pool": "weapon_break",
+			"text": "A sudden hard metallic snap, a steel bar breaking in one sharp crack at the very start, then a brief clatter of two pieces dropping. Single isolated sound effect, no music, no voices, no background noise, dry close-microphone recording with no reverb and no echo tail, punchy comic action-game style, ends cleanly.",
+			"duration_seconds": 1.0,
+			"candidates": 4,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "weapon_bike_chain_hit_v3",
+			"pool": "weapon_bike_chain_hit",
+			"text": "A heavy bike chain slapping hard onto a body in one instant: a sharp wet-metal smack with a short jangle of links right on the impact. Single isolated sound effect, no music, no voices, no background noise, dry close-microphone recording with no reverb and no echo tail, punchy comic action-game style, ends cleanly.",
+			"duration_seconds": 0.7,
+			"candidates": 4,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "weapon_bike_chain_hit_v4",
+			"pool": "weapon_bike_chain_hit",
+			"text": "A padlock on a chain swung into a man's back: a dull heavy clonk with a quick jingle, loudest right at the start. Single isolated sound effect, no music, no voices, no background noise, dry close-microphone recording with no reverb and no echo tail, punchy comic action-game style, ends cleanly.",
+			"duration_seconds": 0.7,
+			"candidates": 4,
+			"prompt_influence": 0.5
 		}
 	]
 }

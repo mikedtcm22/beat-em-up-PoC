@@ -41,29 +41,34 @@ PICKS_OUT = os.path.join(ELEVEN, "sfx.picks.json")
 # that is loudest at once.
 ROLES = {
 	"whoosh": (300, 120, 600, 1200, 6000, 0.6, 45),
-	"thud": (180, 80, 400, 150, 1100, 0.5, 400),
-	"crack": (150, 60, 400, 1800, 7000, 0.5, 400),
-	"crunch": (420, 200, 800, 700, 5000, 0.8, 400),
-	"body_fall": (550, 250, 1000, 100, 2500, 1.0, 600),
-	"sub_thump": (400, 200, 800, 40, 400, 0.8, 400),
-	"block_clack": (140, 60, 400, 900, 5000, 0.5, 400),
-	"parry_ting": (500, 250, 800, 1800, 9000, 0.8, 400),
-	"guard_break": (650, 350, 1000, 500, 5000, 1.0, 400),
+	"thud": (180, 80, 400, 150, 1100, 0.5, 40),
+	"crack": (150, 60, 400, 1800, 7000, 0.5, 40),
+	"crunch": (420, 200, 800, 700, 5000, 0.8, 120),
+	"body_fall": (550, 250, 1000, 100, 2500, 1.0, 150),
+	"sub_thump": (400, 200, 800, 40, 400, 0.8, 80),
+	"block_clack": (140, 60, 400, 900, 5000, 0.5, 40),
+	"parry_ting": (500, 250, 800, 1800, 9000, 0.8, 40),
+	"guard_break": (650, 350, 1000, 500, 5000, 1.0, 100),
 	"barrier_shutter_close": (850, 500, 1400, 400, 5000, 1.4, 1400),
 	"barrier_shutter_open": (1000, 500, 1400, 400, 5000, 1.4, 1400),
 	"barrier_gate_close": (850, 500, 1400, 400, 5000, 1.4, 1400),
 	"barrier_gate_open": (1000, 500, 1400, 400, 5000, 1.4, 1400),
 	"barrier_car_close": (1200, 600, 1400, 120, 3500, 1.4, 1400),
 	"barrier_car_open": (1200, 600, 1400, 120, 3500, 1.4, 1400),
-	"weapon_pickup": (450, 200, 700, 800, 6000, 0.7, 700),
-	"weapon_throw": (600, 300, 800, 500, 5000, 0.8, 800),
-	"weapon_break": (900, 500, 1200, 500, 6000, 1.2, 1200),
-	"weapon_land": (650, 300, 800, 500, 6000, 0.8, 800),
-	"weapon_pipe_hit": (500, 200, 700, 700, 5500, 0.7, 700),
-	"weapon_bike_chain_hit": (550, 250, 800, 800, 6000, 0.8, 800),
+	"weapon_pickup": (450, 200, 700, 800, 6000, 0.7, 150),
+	"weapon_throw": (600, 300, 800, 500, 5000, 0.8, 150),
+	"weapon_break": (900, 500, 1200, 500, 6000, 1.2, 120),
+	"weapon_land": (650, 300, 800, 500, 6000, 0.8, 100),
+	"weapon_pipe_hit": (500, 200, 700, 700, 5500, 0.7, 50),
+	"weapon_bike_chain_hit": (550, 250, 800, 800, 6000, 0.8, 50),
 	"sting_go": (1500, 900, 1800, 400, 5000, 1.8, 1800),
 	"sting_clear": (1700, 1000, 2000, 400, 5000, 2.0, 2000),
 }
+# A variant whose best take still peaks later than this is left out (a whoosh loudest after 50 ms fails
+# tests/test_audio.gd; the pool has more variants than its minimum).
+HARD_PEAK_MS = {"whoosh": 50, "weapon_pipe_hit": 100, "weapon_bike_chain_hit": 100, "weapon_break": 150}
+# The pools that must be dry: a tail after a hit, a block or a clack is reverb (a barrier rattles on and a sting rings).
+HITS_DRY = ("whoosh", "thud", "crack", "crunch", "body_fall", "sub_thump", "block_clack", "parry_ting", "guard_break")
 BED_LUFS = -20.0
 BED_XFADE_MS = 1000.0
 
@@ -108,19 +113,19 @@ def measure(samples, max_s=None):
 	a, b = int(round(trim[0] * RATE)), int(round(trim[1] * RATE))
 	active = samples[a:b]
 	peak = ingest.peak_of(samples)
-	window = int(0.005 * RATE)
-	best, best_at = -1.0, 0
-	for w in range(0, max(len(active) - window, 1), window):
-		level = ingest.rms_of(active[w:w + window])
+	# The loudest 5 ms window exactly as tests/test_audio.gd finds it (windows of 0.005 s, the first maximum wins).
+	best, best_w = -1.0, 0
+	for w in range(int(len(active) / (0.005 * RATE))):
+		level = ingest.rms_of(active[int(w * 0.005 * RATE):int((w + 1) * 0.005 * RATE)])
 		if level > best:
-			best, best_at = level, w
+			best, best_w = level, w
 	split = int(len(active) * 0.6)
 	whole = sum(float(s) * s for s in active) or 1.0
 	tail = sum(float(s) * s for s in active[split:]) / whole
 	clipped = sum(1 for s in active if abs(s) >= 0.944 * 32768.0)
 	return {"length_s": len(samples) / RATE, "active_ms": (trim[1] - trim[0]) * 1000.0, "cut": cut,
 		"peak_db": ingest.to_db(peak), "rms_db": ingest.to_db(ingest.rms_of(active)),
-		"crest_db": ingest.to_db(peak) - ingest.to_db(ingest.rms_of(active)), "peak_ms": best_at / RATE * 1000.0,
+		"crest_db": ingest.to_db(peak) - ingest.to_db(ingest.rms_of(active)), "peak_ms": best_w * 5.0,
 		"centroid": centroid_hz(samples, a + int(0.003 * RATE)), "tail": tail, "clip": clipped, "trim": trim}
 
 
@@ -137,22 +142,22 @@ def score(pool, f):
 		pen += 0.6
 		why.append("short")
 	if f["centroid"] < c_lo:
-		pen += math.log2(c_lo / max(f["centroid"], 1.0)) * 0.8
+		pen += math.log2(c_lo / max(f["centroid"], 1.0)) * 1.2
 		why.append("dull")
 	if f["centroid"] > c_hi:
-		pen += math.log2(f["centroid"] / c_hi) * 0.8
+		pen += math.log2(f["centroid"] / c_hi) * 1.2
 		why.append("bright")
 	if f["peak_ms"] > peak_limit:
 		pen += 2.0 + (f["peak_ms"] - peak_limit) / 50.0
 		why.append("late peak")
-	if f["tail"] > 0.25 and pool not in ("barrier_car_open", "barrier_car_close", "sting_go", "sting_clear"):
+	if f["tail"] > 0.25 and (pool in HITS_DRY or pool.endswith("_hit")):
 		pen += (f["tail"] - 0.25) * 4.0
 		why.append("tail")
 	if f["clip"] > 40:
 		pen += 0.5
 		why.append("flat top")
-	if f["rms_db"] < -32.0:
-		pen += 1.0
+	if f["rms_db"] < -29.0:
+		pen += 1.0 + (-29.0 - f["rms_db"]) * 0.2
 		why.append("air")
 	return pen, ",".join(why)
 
@@ -201,8 +206,10 @@ def cmd_table(groups, write=None):
 					pen, why = score(pool, f)
 				rows.append((pen, n, ledger_id, f, why))
 			rows.sort(key=lambda r: (r[0], r[1]))
-			chosen.setdefault(pool, []).append((job_id, rows[0], rows))
-			print("%s  (%s)" % (job_id, job["text"][:78]))
+			dropped = pool in HARD_PEAK_MS and rows[0][3]["peak_ms"] >= HARD_PEAK_MS[pool]
+			if not dropped:
+				chosen.setdefault(pool, []).append((job_id, rows[0], rows))
+			print("%s  (%s)%s" % (job_id, job["text"][:78], "  DROPPED: no take peaks in time" if dropped else ""))
 			for pen, n, ledger_id, f, why in sorted(rows, key=lambda r: r[1]):
 				mark = "*" if ledger_id == rows[0][2] else " "
 				if job.get("loop"):
@@ -250,7 +257,7 @@ def cmd_levels():
 	"""rms over the first 0.4 s (what the tier test sums) and over the active part, of variant 01 of each pool."""
 	for pool in ("whoosh", "thud", "crack", "crunch", "body_fall", "sub_thump", "block_clack", "parry_ting", "guard_break",
 			"grunt", "effort", "ko_punk", "player_grunt", "weapon_pipe_hit", "weapon_bike_chain_hit"):
-		files = sorted(n for n in os.listdir(ingest.EXPORT) if ingest.pool_of(n) == pool)
+		files = sorted(n for n in os.listdir(ingest.EXPORT) if n.endswith(".wav") and ingest.pool_of(n) == pool)
 		if not files:
 			continue
 		rows = []
