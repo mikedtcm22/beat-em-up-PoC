@@ -161,37 +161,226 @@ size = Vector3(40, 14, 60)
 
 [node name="Ground" type="Node3D" parent="Geometry"]
 script = ExtResource("2_blk")
-position = Vector3(20, -12.5, -10)
-size = Vector3(100, 1, 100)
-look = &"dark"
+position = Vector3(60, -12.5, -10)
+size = Vector3(200, 1, 200)
+look = &"floor"
 solid = false
 
 [node name="SkylineA" type="Node3D" parent="Geometry"]
 script = ExtResource("2_blk")
-position = Vector3(46, -2, -12)
+position = Vector3(84, -2, -12)
 size = Vector3(10, 20, 12)
 look = &"wall"
 solid = false
 
 [node name="SkylineB" type="Node3D" parent="Geometry"]
 script = ExtResource("2_blk")
-position = Vector3(60, 3, -32)
+position = Vector3(92, 3, -40)
 size = Vector3(12, 30, 12)
 look = &"accent"
 solid = false
 
 [node name="SkylineC" type="Node3D" parent="Geometry"]
 script = ExtResource("2_blk")
-position = Vector3(40, -6, -36)
+position = Vector3(70, -6, -44)
 size = Vector3(10, 12, 10)
 look = &"wall"
 solid = false
 
 [node name="SkylineD" type="Node3D" parent="Geometry"]
 script = ExtResource("2_blk")
-position = Vector3(54, -4, 10)
+position = Vector3(76, -4, 16)
 size = Vector3(12, 16, 12)
 look = &"accent"
+solid = false
+
+[node name="SidewalkNear" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(12, -11.85, -10)
+size = Vector3(4, 0.3, 90)
+look = &"accent"
+solid = false
+
+[node name="SidewalkFar" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(40, -11.85, -10)
+size = Vector3(4, 0.3, 90)
+look = &"accent"
+solid = false
+
+[node name="LowBlockA" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(50, -8.5, -22)
+size = Vector3(14, 7, 20)
+look = &"wall"
+solid = false
+
+[node name="LowBlockB" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(50, -9.5, 6)
+size = Vector3(14, 5, 20)
+look = &"accent"
+solid = false
+
+[node name="LowBlockC" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(50, -9, -50)
+size = Vector3(14, 6, 20)
+look = &"wall"
+solid = false
+
+[node name="LaneDash0" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(26, -11.98, -45)
+size = Vector3(0.25, 0.04, 2.5)
+look = &"accent"
+solid = false
+
+[node name="LaneDash1" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(26, -11.98, -38)
+size = Vector3(0.25, 0.04, 2.5)
+look = &"accent"
+solid = false
+
+[node name="LaneDash2" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(26, -11.98, -31)
+size = Vector3(0.25, 0.04, 2.5)
+look = &"accent"
+solid = false
+
+[node name="LaneDash3" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(26, -11.98, -24)
+size = Vector3(0.25, 0.04, 2.5)
+look = &"accent"
+solid = false
+
+[node name="LaneDash4" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(26, -11.98, -17)
+size = Vector3(0.25, 0.04, 2.5)
+look = &"accent"
+solid = false
+
+[node name="LaneDash5" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(26, -11.98, -10)
+size = Vector3(0.25, 0.04, 2.5)
+look = &"accent"
+solid = false
+
+[node name="LaneDash6" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(26, -11.98, -3)
+size = Vector3(0.25, 0.04, 2.5)
+look = &"accent"
+solid = false
+
+[node name="LaneDash7" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(26, -11.98, 4)
+size = Vector3(0.25, 0.04, 2.5)
+look = &"accent"
+solid = false
+
+[node name="LaneDash8" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(26, -11.98, 11)
+size = Vector3(0.25, 0.04, 2.5)
+look = &"accent"
+solid = false
+
+[node name="LaneDash9" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(26, -11.98, 18)
+size = Vector3(0.25, 0.04, 2.5)
+look = &"accent"
+solid = false
+
+[node name="LaneDash10" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(26, -11.98, 25)
+size = Vector3(0.25, 0.04, 2.5)
+look = &"accent"
+solid = false
+
+[node name="Car1" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(19, -11.3, -22)
+size = Vector3(1.9, 1.4, 4.4)
+look = &"prop"
+solid = false
+
+[node name="Car2" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(35, -11.3, -4)
+size = Vector3(1.9, 1.4, 4.4)
+look = &"prop"
+solid = false
+
+[node name="Car3" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(19, -11.3, 8)
+size = Vector3(1.9, 1.4, 4.4)
+look = &"prop"
+solid = false
+
+[node name="Car4" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(33, -11.3, -30)
+size = Vector3(1.9, 1.4, 4.4)
+look = &"prop"
+solid = false
+
+[node name="Car5" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(19, -11.3, -44)
+size = Vector3(1.9, 1.4, 4.4)
+look = &"prop"
+solid = false
+
+[node name="Car6" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(33, -11.3, 16)
+size = Vector3(1.9, 1.4, 4.4)
+look = &"prop"
+solid = false
+
+[node name="LipStripe0" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(9.7, 0.03, -12.5)
+size = Vector3(0.6, 0.06, 1.0)
+look = &"dark"
+solid = false
+
+[node name="LipStripe1" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(9.7, 0.03, -11.5)
+size = Vector3(0.6, 0.06, 1.0)
+look = &"accent"
+solid = false
+
+[node name="LipStripe2" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(9.7, 0.03, -10.5)
+size = Vector3(0.6, 0.06, 1.0)
+look = &"dark"
+solid = false
+
+[node name="LipStripe3" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(9.7, 0.03, -9.5)
+size = Vector3(0.6, 0.06, 1.0)
+look = &"accent"
+solid = false
+
+[node name="LipStripe4" type="Node3D" parent="Geometry"]
+script = ExtResource("2_blk")
+position = Vector3(9.7, 0.03, -8.5)
+size = Vector3(0.6, 0.06, 1.0)
+look = &"dark"
 solid = false
 
 [node name="Route" type="Node3D" parent="."]
