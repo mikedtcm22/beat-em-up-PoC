@@ -1,0 +1,28 @@
+{
+  "milestone": 6,
+  "summary": "full art and audio: every enemy and the boss through the M4 pipeline, environment modules and set dressing, final SFX, the second weapon; done when no placeholder assets remain",
+  "base": "m6/full-art-audio",
+  "plan": "docs/reviews/M6/brief-CONCEPTS.md",
+  "read_first": [],
+  "image_budget": 40,
+  "concurrency": 3,
+  "note": "Phase 0. The M6 plan is being written beside you; your brief is self-contained. Your branch is cut from m6/full-art-audio (the proposal, the Tripo M6 policy, the ElevenLabs key row). You make images only: no Godot, no Tripo, no audio.",
+  "packages": [
+    {
+      "key": "CONCEPTS",
+      "section": "the whole file",
+      "est": 3,
+      "effort": "medium",
+      "godot": false,
+      "read": [
+        "docs/milestones/M6-proposal.md §2 'Phase 0' and §3 D4-D5",
+        "assets/source/concepts/concept_jobs.json (the punk_a_denim_vest job is the house frame)",
+        "tools/gemini_image.py (its docstring)",
+        "docs/milestones/M4-look-bible.md 'Shading' and 'Colour'",
+        "reference/encounters.md (arena locations, barriers, the 'Weapons' and 'Roles' lines)",
+        "reference/dd2-nes-mission1/notes.md (screen 12's boss, to avoid)",
+        "ASSETS.md (grep the concept rows of Milestone 4 for the pattern)"
+      ]
+    }
+  ]
+}

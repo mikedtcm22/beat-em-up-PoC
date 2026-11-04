@@ -2,10 +2,11 @@
 	"_about": "Price table and spending policy for tools/pipeline/tripo.py. Prices are credits (1 credit = USD 0.01) from the official pricing table read on 2026-10-26 (docs/milestones/M4-codemap/toolchain-tripo-gemini.md section 2.5). tripo.py reads every number it charges from here, never from a literal; a call that has no price here is refused. The policy block is the plan's A10: before every task the script refuses if (live balance - frozen - expected) < balance_floor, or if max(ledger sum, start_balance - live balance) + expected > ledger_stop. There is deliberately no flag to override either; past ledger_stop the lead asks Game-boy and edits this file.",
 	"checked": "2026-10-26",
 	"policy": {
-		"milestone": "M4",
-		"start_balance": 1500,
+		"_about": "M6 (Game-boy, 2026-11-04): he topped the account up to 1705 credits for M6's characters, weapons and hero props; the lead's estimate is 700-900, so the stop is 900 and the floor stays 700. M4's policy was start 1500, floor 700, stop 750 (its ledger rows keep milestone M4).",
+		"milestone": "M6",
+		"start_balance": 1705,
 		"balance_floor": 700,
-		"ledger_stop": 750
+		"ledger_stop": 900
 	},
 	"generation": {
 		"_about": "image-to-model and multiview-to-model share one table. no_texture is texture=false; standard/detailed/extreme is texture_quality with texture on (pbr=true forces texture on). 'fast' is priced as 'standard' (quality_alias).",

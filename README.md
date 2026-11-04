@@ -334,6 +334,7 @@ Keys go in `.env` at the repo root. `.env` is git-ignored. `.env.example` lists 
 | --- | --- | --- |
 | `GEMINI_API_KEY` | Google Gemini, image generation (concepts and the character views) | yes, since 2026-10-26, on a billed (Tier 1) project; sent in the `x-goog-api-key` header by `tools/gemini_image.py` |
 | `TRIPO_API_KEY` | Tripo, 3D generation and auto-rigging | yes, since 2026-10-26; every paid call goes through `tools/pipeline/tripo.py --spend <credits>`, logged in `assets/source/tripo_ledger.jsonl` |
+| `ELEVEN_LABS_API_KEY` | ElevenLabs, the sound-effects API (Milestone 6's voices: efforts, pain grunts, the boss) | yes, since 2026-11-04, on the Starter plan (commercial licence, 30,000 credits a month). The name is Game-boy's; the SDK's standard name is `ELEVENLABS_API_KEY`, and the M6 audio tools read either |
 
 ## Toolchain status (Milestone 0)
 
