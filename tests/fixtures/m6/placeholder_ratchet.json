@@ -1,0 +1,27 @@
+{
+	"mission1": {
+		"primitive_bodies": 4,
+		"tints": 1,
+		"boxes": 489,
+		"cylinder_weapons": 2,
+		"second_weapon": 1
+	},
+	"crowd_room": {
+		"primitive_bodies": 4,
+		"tints": 0,
+		"boxes": 74,
+		"cylinder_weapons": 1,
+		"second_weapon": 0
+	},
+	"test_room": {
+		"primitive_bodies": 5,
+		"tints": 4,
+		"boxes": 27,
+		"cylinder_weapons": 2,
+		"second_weapon": 0
+	},
+	"global": {
+		"generated_sfx": 12,
+		"empty_slots": 0
+	}
+}
