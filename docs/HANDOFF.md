@@ -4,6 +4,18 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-04 15:15 CST: step 0 merged (1766/1766); phase 1 running
+- **Step 0** (`b995e56`): 1766/1766 in 321 s, 0 error lines. `8ef8b28` is the ElevenLabs-only plan change.
+- **Running:** phase 1, `tools/workflows/build.js` run `wf_fa4aea82-d60` with `docs/reviews/M6/args-P1.json` (CHAIN, KIT, PROPS, AUDIO, LOOKS; 3 Godot slots, and CHAIN and PROPS share the 2 Blender slots).
+  - The worktrees are `.worktrees/m6-<key>`, on branches `m6/<key>`.
+  - **If cut off:** rerun build.js with the same args. Each builder resumes from its newest `wip:` commit, and a finished package (its "M6 <KEY>:" commit) is skipped.
+- **Next** (the plan's §4 step 2):
+  1. Merge each package, in any order. After each: `godot --headless -s tools/gen_default_preset.gd`, `python3 -I tools/pipeline/gen_palette.py`, re-measure the placeholder ratchet, and run the full suite.
+  2. Send LOOKS's A/B stills.
+  3. Play the audition room after AUDIO, and send its run command.
+  4. Then phase 2 (`args-P2.json`: SFX, HEAVIES, CREW, DRESS, WEAPONS, ARM).
+- **Usage at launch:** 5-hour 3% (it resets at 19:50 CST), weekly 15%.
+
 ### 2026-11-04 15:00 CST: the M6 plan is written; step 0 done (suite running); phase 1 launches next
 - **The plan:** [milestones/M6-plan.md](milestones/M6-plan.md) (649 lines), committed `49914b4` with its four codemaps (`docs/milestones/M6-codemap/`) and the args `docs/reviews/M6/args-P1.json`, `args-P2.json` and `args-P2b.json`.
   - It came from workflow `wf_8346b955-f3c`: four Sonnet readers, an Opus planner, an Opus critic (17 issues, 4 high) and an Opus xhigh synthesis that applied them all. About 1.65M sub-agent tokens.
