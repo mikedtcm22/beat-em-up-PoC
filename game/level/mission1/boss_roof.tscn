@@ -174,29 +174,29 @@ solid = false
 
 [node name="SkylineA" type="Node3D" parent="Geometry"]
 script = ExtResource("2_blk")
-position = Vector3(22, 2, -2)
-size = Vector3(10, 28, 12)
+position = Vector3(46, -2, -12)
+size = Vector3(10, 20, 12)
 look = &"wall"
 solid = false
 
 [node name="SkylineB" type="Node3D" parent="Geometry"]
 script = ExtResource("2_blk")
-position = Vector3(40, -2, -18)
-size = Vector3(14, 20, 14)
+position = Vector3(60, 3, -32)
+size = Vector3(12, 30, 12)
 look = &"accent"
 solid = false
 
 [node name="SkylineC" type="Node3D" parent="Geometry"]
 script = ExtResource("2_blk")
-position = Vector3(30, -4, -36)
-size = Vector3(12, 16, 12)
+position = Vector3(40, -6, -36)
+size = Vector3(10, 12, 10)
 look = &"wall"
 solid = false
 
 [node name="SkylineD" type="Node3D" parent="Geometry"]
 script = ExtResource("2_blk")
-position = Vector3(48, 6, 8)
-size = Vector3(12, 36, 12)
+position = Vector3(54, -4, 10)
+size = Vector3(12, 16, 12)
 look = &"accent"
 solid = false
 
