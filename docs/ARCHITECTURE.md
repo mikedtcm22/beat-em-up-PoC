@@ -1221,6 +1221,26 @@ Files: `game/level/mission1/street.tscn` (a `LevelSection`), `game/level/mission
 
 **Tests**: `tests/test_m5_street.gd` (17).
 
+### Mission 1: the roofs (ROOF)
+
+Files: `game/level/mission1/roofs.tscn`, `game/level/mission1/encounters/a{4,5,6}.tres`, `tests/test_m5_roofs.gd`. No tunables, no script: the scene is a `LevelSection` built only of kit nodes, written by a throwaway generator (the `.tscn` is the source). `Entry` is the origin, level (3, 4.5, -53) (the seam shutter's centre, so local = plan - that); `Exit` is local (19, 7.5, -30), the A6/A7 gate's centre; `ExitBarrier` is that gate (`GATE`, 4 m, closed). `floor_heights` [0, 1, 4.5, 7.5]. A `Start` marker (local (-3, 0, -2), on the terrace) serves the lone section; in the level only the first section's `Start` is used.
+
+**Arenas** (ids `a4_terrace`, `a5_catwalk`, `a6_top_roof`; each `Arena` has `LockTrigger`, `Respawn` and three or four `SpawnPoint`s with a `LanePoint`; every point and lane point is inside its own box, and the boxes overlap no other arena's point):
+- **A4**: 10 m wide, 28 m long, floor 0 then a 6-step `LevelStairs` flight (1 m) at plan z -65.2..-67, floor 1.0. Behind: STREET's seam shutter (bound by `LevelRoot`). Ahead: the gate at stair 2's head (`GateStair2`, plan (5, 9, -79.5), turned -90 degrees to walk +X, sliding into the far wall). Stair 2 (3.5 m, 6 m run, 3 m wide, plan x -1..5, z -78..-81) is in A4's box, so the arena below owns it. Spawns, all door recesses in the right wall (3 m wide, 1.5 deep): `RoofDoorBehind` (z -57.5), `DoorAhead` (-63.5), `DoorPastStep` (-74). Open edge: the whole -X side.
+- **A5**: 10 m wide, walked +Z, floor 4.5. Behind: `GateStair2`. Ahead: `ShutterStair3` at stair 3's head (plan (15, 12, -62.5), turned -90). Stair 3 (3 m, 6 m run) is in A5's box. Spawns: `DoorFar` (+Z end wall), `DoorSide` (+X wall), `DoorBehindStair` (the far wall by stair 2's head). Open edge: the -X side from z -78 to -61, over the terrace.
+- **A6**: 14 m wide, 24 m long, floor 7.5. Behind: `ShutterStair3`. Ahead: the exit gate. Spawns: `BigShutter` (a penthouse's recess, shutter doorway), `Alley` (between two crate stacks against the parapet), `BehindDoor` and `RoofAccess` (recesses in the +Z wall). A solid parapet (1.4 m) closes the -X side over the catwalk. Open edge: the +X side.
+Boxes in plan coordinates: A4 x -5.5..6.8, y 4..9.8, z -81..-52.5; A5 x 5..16.7, y 8.5..11.7, z -82.8..-59.2; A6 x 15..29, y 11.8..18, z -82.8..-57.3 (A5 and A6 are split by height where they share x and z).
+
+**Tables** (`a4..a6.tres`, `loop = false`, `wave_points` parallel to `waves`): A4 [punk@DoorAhead, kicker@RoofDoorBehind], [punk@DoorPastStep, punk@DoorAhead, kicker@RoofDoorBehind]; A5 [punk@DoorFar, punk@DoorBehindStair], [bruiser@DoorFar, punk@DoorBehindStair]; A6 [thug@BigShutter, punk@BigShutter, punk@Alley, bruiser@Alley, kicker@BehindDoor, punk_veteran@RoofAccess], [punk@BigShutter, punk@Alley, kicker@BehindDoor]. That is 5, 4 and 9 enemies, the encounter plan's order and spawn sides.
+
+**Drops**: each open edge has an `EdgeGuard` just outside the floor edge (layer 9 only), a drawn curb and a low rail with gaps (non-solid posts and bars), and a `HazardVolume` over the whole void past the guard. `DropFront` (-X of the terrace, from the guard out 55 m, up to plan y 12) and `DropEast` (+X of the top roof) have a catch floor at plan y -0.8, the street's ground, which no floor height is within 0.3 m of; non-solid ground drawn there and skyline blocks beyond. `DropCatwalk` (the catwalk's -X side, over the terrace) has no catch floor of its own: it starts at plan y 7.9 so a standing or lightly launched enemy on the terrace below never touches it, and a body knocked off the catwalk is KO'd at the lip and lies out its KO on the terrace.
+
+**Nav links**: four `NavigationLink3D`s (`Links`: the step flight's foot and head, stair 2's foot, stair 3's foot) join the flights to their floors. The nav bake drops a polygon that straddles a flight's foot (its centre outside the stair footprint, its top more than a floor-band above the floor), and whether the join survives depends on where the bake's cell grid falls, which moves with the level's bounds; a flight failed to connect in one bake and not in another. The links make the join independent of the grid. Stair 2 and stair 3's heads join no floor (the gates are there).
+
+**Pickup**: one `PickupSpot` (the pipe) 1.4 m in front of the big shutter's recess.
+
+**Tests**: `tests/test_m5_roofs.gd` (13): the section contract, the tables against the plan, every point inside its own arena and on the navmesh, islands and flights, every floor height on the navmesh, the route, no solid block outside the footprint, each arena's table on the probe stub (named points, never over six), a Punk launched off each edge is KO'd, the guard holds the player at every edge, the pipe, A6's six real enemies on the roof, and the lone section under the level bot (god mode, three arenas, no STALL or BLOCKED, no hazard KO).
+
 ## Ownership (Milestones 1-3)
 
 | Area | Files |
