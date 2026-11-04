@@ -4,6 +4,23 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-03 22:10 CST: FIX2 merged (1729/1729); phase 3 recording for the review
+- **FIX2 merged** (`c97fa09`, merge `2e4455e`; run `wf_a1a41ce1-d8a`, about 0.39M sub-agent tokens). Its calls are in `M5-calls/FIX2.md`. It fixed all seven items:
+  1. Roofs R0 moved past A4's lock inset, and the done-when walks the player into A1.
+  2. The z -83 seam has one owner, the boss roof's fence.
+  3. The z -53 seam was looked at and is clean.
+  4. The GO arrow is drawn as triangles, with `tests/test_go_cue.gd`.
+  5. A named spawn falls back to any free point after `spawn_named_wait_s` + `spawn_named_any_wait_s` (new, 3.0 s; the preset now has 542 values).
+  6. `knock_off(from)` picks the hazard of the named arena.
+  7. R13 doesn't apply to a one-wave table. There's a new act, "Look: seams".
+- **Suite** (alone on the machine): 1729/1729, 294 s, 0 error lines. `test_m5_done_when` covers 7 arenas and 34 enemies, in a 9.3 s wall.
+- **Also on the branch:** README "Play it", CLAUDE.md "Play" and the H help say the level is the main scene and F6 cycles three rooms (`6a98ae4`). Game-boy was told the level is playable, with the run command.
+- **Running:** the recordings for the final review into `captures/m5-final/`.
+  - The arc acts (`arc-punks`, `arc-turn`, `arc-mixed`, `arc-quick`), `seams` and `knock-catwalk` (`--from=4`).
+  - `street/held` (0-2), `roofs/held` (3-5) and `boss/held` (6).
+- **Next:** run the timing log into `captures/m5-final/timing.log`. Then fill `docs/reviews/M5/args-review-final.json`'s `base` (`2e4455e`) and `common_note`, and run `tools/workflows/review.js` with it: lenses `sees`, `feel` (Opus) and `code` (Sonnet); skeptics on medium and high; `partition: false`, so the lead partitions inline into at most 3 fixers.
+- **Usage:** 11% of the 5-hour window (it resets at 23:30 CST), 8% weekly.
+
 ### 2026-11-03 21:05 CST: phase 2 merged; the level plays start to boss; suite and recording running
 - **Built and merged** (`build.js` run `wf_ccbf580f-37d`, about 0.96M sub-agent tokens, about 8% of the 5-hour window). Merges `34fc4a6`, `5d60ac1` and `3db7d07` into `m5/level-blockout`. The only conflicts were in ARCHITECTURE.md's Mission 1 headings; all three sections are kept.
   - **STREET** (`3ecb56a`): `game/level/mission1/street.tscn`, A1-A3, tables `a1-a3.tres` (13 enemies), `tests/test_m5_street.gd` (17 tests). Calls are in `M5-calls/STREET.md`.
