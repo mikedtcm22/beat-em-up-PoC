@@ -1,0 +1,11 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/actors/art/static_art.gd" id="1_art"]
+[ext_resource type="PackedScene" path="res://assets/export/props/car/car.glb" id="2_glb"]
+[ext_resource type="Texture2D" path="res://assets/export/palette/palette_atlas.png" id="3_atlas"]
+
+[node name="Car" type="Node3D"]
+script = ExtResource("1_art")
+scene = ExtResource("2_glb")
+palette = ExtResource("3_atlas")
+hull = true

@@ -1,0 +1,187 @@
+{
+	"asset": "water_tank",
+	"version": 1,
+	"config_sha256": "7b604901a94b07e996bf5a14005d3f5ff17c74880c6ef27b4c3022b2162b4f0c",
+	"steps": {
+		"inspect": {
+			"source": {
+				"mesh": "assets/source/props/water_tank/tripo/6353938e_gen.glb",
+				"sha256": "b2a26105ab3e5db80f75aa851da7123b61273559728890a3d30167ca7d351726",
+				"vertices_before_weld": 7077,
+				"triangles": 10862
+			},
+			"scale": [
+				2.476011,
+				2.496366,
+				2.6
+			],
+			"bbox_m": {
+				"min": [
+					-1.0,
+					-1.0,
+					0.0
+				],
+				"max": [
+					1.0,
+					1.0,
+					2.6
+				],
+				"size": [
+					2.0,
+					2.0,
+					2.6
+				]
+			},
+			"orient": {
+				"yaw_deg": 0.0
+			},
+			"target": {
+				"dims_m": {
+					"x": 2.0,
+					"y": 2.6,
+					"z": 2.0
+				},
+				"origin": "base_center"
+			},
+			"triangles": 10862
+		},
+		"palette": {
+			"source_image": "removed",
+			"faces_dense": 10862,
+			"textured_faces": 10862,
+			"override_faces": 0,
+			"delta_e_mean": 12.851485,
+			"delta_e_p95": 19.629047,
+			"pruned_swatches": [],
+			"majority_flips": 1450,
+			"border_vertices": 1753,
+			"border_edges": 1960,
+			"protected_vertices": 466,
+			"decimate": {
+				"invert_group": true,
+				"trials": [
+					{
+						"ratio": 0.2762,
+						"tris": 2998
+					}
+				],
+				"triangles": 2998,
+				"budget": 3000,
+				"budget_ok": true,
+				"protected_position_worst_m": 0.0
+			},
+			"swatches_used": {
+				"2": {
+					"name": "dark_grey",
+					"area_share": 0.109142,
+					"faces": 600
+				},
+				"62": {
+					"name": "tank_blue",
+					"area_share": 0.82306,
+					"faces": 1948
+				},
+				"63": {
+					"name": "rust_brown",
+					"area_share": 0.067798,
+					"faces": 450
+				}
+			},
+			"swatch_count": 3,
+			"detail_uv": false,
+			"detail_bake": null,
+			"regions": [],
+			"region_cuts": [],
+			"fist_band": null,
+			"fist_border_thinned": 1287,
+			"fist_strap_cuts": [],
+			"decimate_parts": [
+				{
+					"part": "body",
+					"invert_group": true,
+					"trials": [
+						{
+							"ratio": 0.2762,
+							"tris": 2998
+						}
+					],
+					"triangles": 2998,
+					"budget": 3000,
+					"budget_ok": true,
+					"protected_vertices": 466,
+					"protected_position_worst_m": 0.0
+				}
+			],
+			"unfold": {
+				"folded_before": 81,
+				"folded_after": 44,
+				"passes": 2,
+				"history": [
+					81,
+					61,
+					44
+				]
+			},
+			"triangles": 2998,
+			"vertices": 1494
+		},
+		"export": {
+			"variants": {
+				"prop": {
+					"file": "water_tank.glb",
+					"sha256": "dc91b713ab910e039861bc073d0d6e2eb0fe955d4afd6e9f9357b841f9bea2e2",
+					"bytes": 115780,
+					"triangles": 2998,
+					"folded_triangles": 106,
+					"meshes": [
+						{
+							"name": "WaterTank",
+							"triangles": 2998,
+							"vertices": 1494,
+							"bbox_godot": {
+								"min": [
+									-0.939353,
+									-0.000117,
+									0.95443
+								],
+								"max": [
+									0.959902,
+									2.584065,
+									-0.99892
+								]
+							}
+						}
+					],
+					"bbox_godot": {
+						"min": [
+							-0.939353,
+							-0.000117,
+							-0.99892
+						],
+						"max": [
+							0.959902,
+							2.584065,
+							0.95443
+						],
+						"size": [
+							1.899255,
+							2.584182,
+							1.95335
+						]
+					}
+				}
+			},
+			"smooth_normals": {
+				"WaterTank": {
+					"mean_deg": 9.8928,
+					"p99_deg": 44.0061,
+					"over_15_deg_share": 0.2102
+				}
+			}
+		}
+	},
+	"outputs": {
+		"water_tank.glb": "dc91b713ab910e039861bc073d0d6e2eb0fe955d4afd6e9f9357b841f9bea2e2"
+	},
+	"hash": "29656cedce5ab7d1566a08c6db1ef34f21825743fd086505f66b8c0321cf858a"
+}

@@ -451,6 +451,7 @@
 			1.0
 		],
 		"weapon_floor_radius_scale": 1.6,
+		"weapon_art_floor_tint": 0.45,
 		"level_edge_guard": true,
 		"level_fall_damage": 20.0,
 		"level_fall_invuln_s": 1.5,

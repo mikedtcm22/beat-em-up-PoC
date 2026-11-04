@@ -232,6 +232,7 @@ func _floor_amber() -> bool:
 
 
 ## 1 for a weapon (or each weapon under an actor) whose drawn mesh is a CylinderMesh, as `node` itself or below it.
+## A hidden cylinder (the proxy a weapon with `art_scene` keeps) does not draw, so it does not count.
 func _cylinder_weapons(node: Node) -> int:
 	var n := 0
 	var weapons: Array[Node] = node.find_children("*", "Weapon", true, false)
@@ -239,7 +240,7 @@ func _cylinder_weapons(node: Node) -> int:
 		weapons.append(node)
 	for weapon: Node in weapons:
 		for mesh_instance: Node in weapon.find_children("*", "MeshInstance3D", true, false):
-			if (mesh_instance as MeshInstance3D).mesh is CylinderMesh:
+			if (mesh_instance as MeshInstance3D).mesh is CylinderMesh and (mesh_instance as MeshInstance3D).visible:
 				n += 1
 				break
 	return n

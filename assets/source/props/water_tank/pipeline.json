@@ -1,0 +1,54 @@
+{
+	"id": "water_tank",
+	"kind": "prop",
+	"version": 1,
+	"note": "A rooftop water tank on four braced legs, blue-grey steel with rust bands, from Tripo; rotationally symmetric, origin at the base centre, stretched to the pinned 2.0 x 2.6 x 2.0 box (the roof's tanks and the boss roof's skyline draw it).",
+	"source": {
+		"mesh": "assets/source/props/water_tank/tripo/6353938e_gen.glb"
+	},
+	"orient": {
+		"yaw_deg": 0.0
+	},
+	"target": {
+		"dims_m": {
+			"x": 2.0,
+			"y": 2.6,
+			"z": 2.0
+		},
+		"origin": "base_center"
+	},
+	"palette": {
+		"slots": [
+			62,
+			63,
+			2
+		],
+		"max_swatches": 3,
+		"min_share": 0.01,
+		"budget_tris": 3000,
+		"border_cell_m": 0.12,
+		"majority_passes": 2,
+		"armature": false,
+		"unfold": {
+			"iterations": 12,
+			"factor": 0.5,
+			"ring": 1
+		}
+	},
+	"export": {
+		"mesh_name": "WaterTank",
+		"smooth_normals": {
+			"iterations": 12,
+			"crease_deg": 50.0,
+			"falloff": 2.0
+		},
+		"smooth_angle_deg": 80.0
+	},
+	"paths": {
+		"work": "assets/source/_cache/water_tank/work",
+		"blend_dir": "assets/source/_cache/water_tank/work",
+		"report": "assets/source/props/water_tank/report",
+		"export_dir": "assets/export/props/water_tank",
+		"export_name": "water_tank"
+	}
+}

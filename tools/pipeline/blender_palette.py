@@ -131,7 +131,7 @@ def decimate_trial(body, ratio, group, invert):
 
 def run(cfg, extra):
 	pc_cfg = cfg["palette"]
-	pb.open_blend(pc.work_path(cfg, "04_parts.blend"))
+	pb.open_blend(pc.work_path(cfg, "04_parts.blend"))  # the static-prop path's inspect step writes this name too
 	body = bpy.data.objects[pb.BODY]
 	me = body.data
 	bm = bmesh.new()
@@ -321,6 +321,19 @@ def run(cfg, extra):
 	protected = set(border_nb) | fixed_verts
 	cell = float(pc_cfg.get("fist_border_cell_m", 0.0))
 	thinned = 0
+	# the static-prop path (M6 PROPS): the same thinning for every colour border of the body (a rust patch's border at the dense
+	# mesh's millimetres would hold more triangles than a prop's budget), one protected vertex per palette.border_cell_m
+	body_cell = float(pc_cfg.get("border_cell_m", 0.0))
+	if body_cell > 0.0:
+		seen_body = set()
+		for v in sorted(border_nb):
+			if v not in fixed_verts:
+				key = tuple(np.floor(co[v] / body_cell).astype(int))
+				if key in seen_body:
+					protected.discard(v)
+					thinned += 1
+				else:
+					seen_body.add(key)
 	if cell > 0.0 and fist_mask.any():
 		# a colour border of a generated fist is thinned to one protected vertex per `cell` metres (a ring at the dense
 		# mesh's 1.5 mm would hold most of the fists' budget); the decimator closes the gaps with straight edges
@@ -621,7 +634,8 @@ def run(cfg, extra):
 			bpy.data.images.remove(img)
 	for p in me.polygons:
 		p.use_smooth = True
-	pb.attach_armature(body, bpy.data.objects[pb.ARMATURE])
+	if pc_cfg.get("armature", True) and pb.ARMATURE in bpy.data.objects:  # the static-prop path (M6 PROPS) has none
+		pb.attach_armature(body, bpy.data.objects[pb.ARMATURE])
 	pb.set_scene_prop("pipe_face_slots", [int(s) for s in new_label])
 	pb.save_blend(pc.work_path(cfg, "05_palette.blend"))
 

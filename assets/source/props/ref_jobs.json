@@ -1,0 +1,52 @@
+[
+	{
+		"out": "bike_chain/ref.jpg",
+		"prompt": "The reference image is only the mood and the colours of the world, not the object to copy. Draw: a heavy brass padlock with a steel shackle, closed, a keyhole on its face, chunky and slightly oversized like a cartoon prop, brass yellow body, dull grey-blue steel shackle, near-black keyhole. Original prop for a stylized comic-book brawler video game set at dusk in a gritty late-1980s city (the reference image shows the mood: warm brick, sodium lamps, rust, wooden crates, orange dusk). This image is the input of a 3D reconstruction, so it must be FLAT: flat unshaded albedo colours only, as if the colours were painted straight onto the surfaces under perfectly even light. No outlines of any colour around shapes, no cel shading, no shading, no gradients, no highlights, no reflections, no texture noise, no cast shadow, no ground shadow, no ambient occlusion, no rim light. Keep the object's fine detail as thin, slightly darker lines in the object's own colour (panel seams, grilles, bolts, rust patches as flat darker brown shapes), never black. ONE object only, centred, the whole object in frame with margin on every side, seen from a three-quarter view slightly above (about 25 degrees), orthographic-looking with no strong perspective, sitting on nothing: plain flat solid #d9d9d9 background. No text, no letters, no numbers, no logos or brand marks, no people. Colour palette limited to a few flat colours. Absolutely no red or pink anywhere (red is reserved for blood in this game).",
+		"refs": [
+			"../concepts/m6/weapon_a.jpg"
+		],
+		"model": "gemini-3-pro-image",
+		"aspect": "1:1",
+		"size": "2K"
+	},
+	{
+		"out": "car/ref.jpg",
+		"prompt": "The reference image is only the mood and the colours of the world, not the object to copy. Draw: a parked late-1970s compact sedan, boxy, two round headlights and a plain grille, a rusty sodium-orange body with a few flat darker rust patches, dark blue-grey tinted windows, light grey bumpers, near-black tyres with grey hubcaps, seen from the front-left three-quarter view. Original prop for a stylized comic-book brawler video game set at dusk in a gritty late-1980s city (the reference image shows the mood: warm brick, sodium lamps, rust, wooden crates, orange dusk). This image is the input of a 3D reconstruction, so it must be FLAT: flat unshaded albedo colours only, as if the colours were painted straight onto the surfaces under perfectly even light. No outlines of any colour around shapes, no cel shading, no shading, no gradients, no highlights, no reflections, no texture noise, no cast shadow, no ground shadow, no ambient occlusion, no rim light. Keep the object's fine detail as thin, slightly darker lines in the object's own colour (panel seams, grilles, bolts, rust patches as flat darker brown shapes), never black. ONE object only, centred, the whole object in frame with margin on every side, seen from a three-quarter view slightly above (about 25 degrees), orthographic-looking with no strong perspective, sitting on nothing: plain flat solid #d9d9d9 background. No text, no letters, no numbers, no logos or brand marks, no people. Colour palette limited to a few flat colours. Absolutely no red or pink anywhere (red is reserved for blood in this game).",
+		"refs": [
+			"../concepts/m6/mood_street_a.jpg"
+		],
+		"model": "gemini-3-pro-image",
+		"aspect": "1:1",
+		"size": "2K"
+	},
+	{
+		"out": "dumpster/ref.jpg",
+		"prompt": "The reference image is only the mood and the colours of the world, not the object to copy. Draw: a large steel street dumpster with a hinged flat lid closed, two lid handles, heavy rectangular body with a slight taper and four small wheels or feet, dark muted green with flat rust-brown patches on the edges and corners, near-black handles and dark grey lid. Original prop for a stylized comic-book brawler video game set at dusk in a gritty late-1980s city (the reference image shows the mood: warm brick, sodium lamps, rust, wooden crates, orange dusk). This image is the input of a 3D reconstruction, so it must be FLAT: flat unshaded albedo colours only, as if the colours were painted straight onto the surfaces under perfectly even light. No outlines of any colour around shapes, no cel shading, no shading, no gradients, no highlights, no reflections, no texture noise, no cast shadow, no ground shadow, no ambient occlusion, no rim light. Keep the object's fine detail as thin, slightly darker lines in the object's own colour (panel seams, grilles, bolts, rust patches as flat darker brown shapes), never black. ONE object only, centred, the whole object in frame with margin on every side, seen from a three-quarter view slightly above (about 25 degrees), orthographic-looking with no strong perspective, sitting on nothing: plain flat solid #d9d9d9 background. No text, no letters, no numbers, no logos or brand marks, no people. Colour palette limited to a few flat colours. Absolutely no red or pink anywhere (red is reserved for blood in this game).",
+		"refs": [
+			"../concepts/m6/mood_street_a.jpg"
+		],
+		"model": "gemini-3-pro-image",
+		"aspect": "1:1",
+		"size": "2K"
+	},
+	{
+		"out": "ac_unit/ref.jpg",
+		"prompt": "The reference image is only the mood and the colours of the world, not the object to copy. Draw: a rooftop air-conditioning condenser unit: a light grey rectangular metal box with a large round fan grille on the top face with visible fan blades, a vented side panel, small dark feet, a short grey pipe stub, mid grey and light grey with near-black grille and a few rust-brown stains. Original prop for a stylized comic-book brawler video game set at dusk in a gritty late-1980s city (the reference image shows the mood: warm brick, sodium lamps, rust, wooden crates, orange dusk). This image is the input of a 3D reconstruction, so it must be FLAT: flat unshaded albedo colours only, as if the colours were painted straight onto the surfaces under perfectly even light. No outlines of any colour around shapes, no cel shading, no shading, no gradients, no highlights, no reflections, no texture noise, no cast shadow, no ground shadow, no ambient occlusion, no rim light. Keep the object's fine detail as thin, slightly darker lines in the object's own colour (panel seams, grilles, bolts, rust patches as flat darker brown shapes), never black. ONE object only, centred, the whole object in frame with margin on every side, seen from a three-quarter view slightly above (about 25 degrees), orthographic-looking with no strong perspective, sitting on nothing: plain flat solid #d9d9d9 background. No text, no letters, no numbers, no logos or brand marks, no people. Colour palette limited to a few flat colours. Absolutely no red or pink anywhere (red is reserved for blood in this game).",
+		"refs": [
+			"../concepts/m6/mood_roof_a.jpg"
+		],
+		"model": "gemini-3-pro-image",
+		"aspect": "1:1",
+		"size": "2K"
+	},
+	{
+		"out": "water_tank/ref.jpg",
+		"prompt": "The reference image is only the mood and the colours of the world, not the object to copy. Draw: a rooftop water tank: a round steel cylinder with horizontal bands and a shallow conical lid, standing on four angled steel legs with cross-braces, blue-grey steel with flat rust-brown patches and rust-brown bands, dark grey legs. Original prop for a stylized comic-book brawler video game set at dusk in a gritty late-1980s city (the reference image shows the mood: warm brick, sodium lamps, rust, wooden crates, orange dusk). This image is the input of a 3D reconstruction, so it must be FLAT: flat unshaded albedo colours only, as if the colours were painted straight onto the surfaces under perfectly even light. No outlines of any colour around shapes, no cel shading, no shading, no gradients, no highlights, no reflections, no texture noise, no cast shadow, no ground shadow, no ambient occlusion, no rim light. Keep the object's fine detail as thin, slightly darker lines in the object's own colour (panel seams, grilles, bolts, rust patches as flat darker brown shapes), never black. ONE object only, centred, the whole object in frame with margin on every side, seen from a three-quarter view slightly above (about 25 degrees), orthographic-looking with no strong perspective, sitting on nothing: plain flat solid #d9d9d9 background. No text, no letters, no numbers, no logos or brand marks, no people. Colour palette limited to a few flat colours. Absolutely no red or pink anywhere (red is reserved for blood in this game).",
+		"refs": [
+			"../concepts/m6/mood_roof_a.jpg"
+		],
+		"model": "gemini-3-pro-image",
+		"aspect": "1:1",
+		"size": "2K"
+	}
+]

@@ -21,7 +21,7 @@ const TOON_SHADER := preload("res://game/fx/toon.gdshader")
 const OUTLINE_SHADER := preload("res://game/fx/toon_outline.gdshader")
 const GRID_SHADER := "res://game/level/grid.gdshader"
 ## What a ShaderMaterial made here is, for which Look values it takes (see apply_look()).
-enum Kind { CHARACTER, ART, PROP, ENVIRONMENT, GRID, HULL }
+enum Kind { CHARACTER, ART, PROP, ENVIRONMENT, GRID, HULL, ART_PROP }
 ## How the hull pushes a mesh out (toon_outline.gdshader's `mode`): along the normal
 ## (spheres, capsules), by sign(VERTEX) per axis (boxes), radially plus sign(y) (cylinders),
 ## from the sphere's centre (a hemisphere's open rim), by the skinned art's baked smooth normal.
@@ -90,6 +90,20 @@ static func art(atlas: Texture2D, detail: Texture2D = null, sharp_detail: bool =
 	material.set_shader_parameter(&"marks", 1.0)
 	material.set_shader_parameter(&"damage_tex", VfxArt.clear_detail())
 	material.set_shader_parameter(&"damage_scale", 1.0 / maxf(Tuning.data.vfx_damage_tile_m, 0.01))
+	material.set_shader_parameter(&"edge_tag", 0.0)
+	return _track(material)
+
+
+## A static art prop's material (M6, StaticArt): the palette `atlas` read per swatch like the skinned art's, with no
+## skin, no damage marks, no rim and no fill (the sun lights it like the room), and `tint` multiplying the swatches (a weapon
+## on the floor takes the floor colour). The hard highlight and the glint land on the atlas's glossy swatches only. Its hull is
+## outline(): the baked smooth normal in COLOR, read from the rest normal StaticArt puts in CUSTOM1.
+static func art_prop(atlas: Texture2D, tint: Color = Color.WHITE) -> ShaderMaterial:
+	var material := _make(Kind.ART_PROP, true)
+	material.set_shader_parameter(&"albedo", tint)
+	material.set_shader_parameter(&"albedo_tex", atlas)
+	material.set_shader_parameter(&"use_albedo_tex", atlas != null)
+	material.set_shader_parameter(&"ink", INK)
 	material.set_shader_parameter(&"edge_tag", 0.0)
 	return _track(material)
 
@@ -196,7 +210,7 @@ static func apply_look(material: ShaderMaterial) -> void:
 	material.set_shader_parameter(&"halftone_cell_px", data.look_halftone_cell_px)
 	# The art's own: the glint on its glossy swatches, and the sharp ink of an art that asks for it
 	# (only while the cut is above 0: 0 is the A/B).
-	if kind == Kind.ART:
+	if kind == Kind.ART or kind == Kind.ART_PROP:
 		material.set_shader_parameter(&"glint_cut", data.look_glint_cut)
 		material.set_shader_parameter(&"glint_strength", data.look_glint_strength)
 		material.set_shader_parameter(&"detail_sharp", bool(material.get_meta(_SHARP_META, false)) and data.look_detail_cut > 0.0)

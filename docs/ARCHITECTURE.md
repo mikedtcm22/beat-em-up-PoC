@@ -1298,7 +1298,31 @@ _Filled by AUDIO._
 
 ### The static-prop path and every rigid model (PROPS)
 
-_Filled by PROPS._
+A rigid model (a weapon, a car, a dumpster, a tank) goes through its own small chain and is drawn by one node. It has no armature, no skin and no detail mask, and it is outside every character art test (`CharacterArt`, `SkinnedArt`).
+
+**The pipeline: `python3 -I tools/pipeline/run.py --asset <id> --kind prop [--check]`.**
+- It reads `assets/source/props/<id>/pipeline.json` (`"kind": "prop"`; `tools/pipeline/make_prop_config.py` writes every one) and runs three Blender steps:
+  - `inspect` (`blender_prop_inspect.py`): imports `source.mesh` (a Tripo GLB) or builds `source.builder` (`prop_models.py`: `pipe`, `bike_grip`, `bike_link`, `fixture_crate`, every face already on a slot), flattens and welds it, turns it (`orient.yaw_deg`, `rotate_x_deg`), scales it (`target.size_m` on one Godot axis, or `target.dims_m` per axis, a stretch to a pinned box), puts the origin (`target.origin`: `base_center`, `center`, `keep`; `offset_m`) and writes the file the palette step reads.
+  - `palette` (`blender_palette.py`, `palette.armature: false`): the characters' labelling by Lab distance, swatch pruning, majority filter and border-protected decimation to `palette.budget_tris`, with `palette.border_cell_m` thinning the protected colour borders to one vertex per cell (a rust patch's border at the dense mesh's millimetres would hold more than the budget). `palette.unfold` relaxes folds.
+  - `export` (`blender_export_prop.py`): the Body named `export.mesh_name`, scripted `export.parts` added (`{name, builder, args, offset_m, yaw_deg}`), UV1 `palette` on swatch centres, the smooth hull normal in COLOR (`hull_normal`, the characters' encoding), shading by Smooth-by-Angle (`export.smooth_angle_deg`) or, for lumpy generated surfaces, the characters' crease-preserving blend (`export.smooth_normals`); GLB with no skin, no materials, no animation.
+- It writes `assets/export/props/<id>/<id>.glb`, `assets/source/props/<id>/report/report.json` (the hash of the config, the step reports and the GLB's sha256; `--check` rebuilds in `assets/source/_cache/check_<id>` and compares) and the Godot `.import` (the GLB contract's params).
+- Slots (`assets/source/palette/weapons.json` 28-31, `props.json` 60-63, no red): chain_steel, padlock_brass (matte: the Punk's lens stays the one glossy swatch, test_toon.gd), grip_tape, pipe_paint; car_orange, dumpster_green, tank_blue, rust_brown. Greys, near-black and cream come from the shared slots.
+
+**`StaticArt`** (`game/actors/art/static_art.gd`, a `Node3D`).
+- Exports: `scene` (the GLB), `palette` (the atlas), `triangle_budget` (3000), `hull`, and `repeat_mesh` / `repeat_range_m` / `repeat_pitch_m` / `repeat_twist_deg` (the bike chain draws its `Link` again along Y, turned 90 degrees on each, until WEAPONS' sim takes over).
+- `_ready()` makes one `MeshInstance3D` per GLB mesh, named as the mesh is, with `ToonMaterials.art_prop(palette)` (kind `ART_PROP`: the atlas read per swatch, the hard highlight and the glint on glossy swatches only, no rim, no fill, no marks) and, with `hull` and `Tuning.prop_art_hull` on, `ToonMaterials.outline()` as `material_overlay`. The surfaces are rebuilt with the vertex normal in CUSTOM1 so that hull mode 4 pushes along the baked smooth normal (D14: never `Hull.BOX`). With the hull off, `edge_tag` is 1 and the screen edge pass outlines it.
+- API: `check() -> PackedStringArray` (empty = ok: a scene and an atlas, no skin, UV1 and COLOR on every surface, at most `triangle_budget` triangles, unique mesh names), `bounds() -> AABB` and `triangles() -> int`, `mesh_names()`, `instances()`, `set_tint(Color)`, and the static `check_art`, `bounds_of`, `mesh_names_of`. It draws and nothing else: a prop scene is visual only, its collider is the block or barrier it dresses.
+
+**Prop scenes** (`game/level/props/<id>.tscn`, a `StaticArt` with the hull on): `car`, `dumpster`, `ac_unit`, `water_tank`. The frame is the base centre (origin on the floor, the box centred on x and z) and the long axis along X, which is how the barrier's cars and the crowd street's boxes lie (`car_size`, `dumpster_size`); the car's nose points +X. The sizes are the pinned boxes (4.2 x 1.5 x 1.9, 2.0 x 1.3 x 1.0, 1.0 x 0.7 x 0.7, 2.0 x 2.6 x 2.0); `test_static_art.gd` holds length and depth within 12% of the fallback box. DRESS places them through `PropSpot` and may scale them to the spot's `size`.
+
+**Weapon art** (`game/weapons/art/<id>.tscn`, a `StaticArt`): the frame is centred on the weapon's origin with its long axis on local +Y, `Weapon.length` (0.85) long within 2 cm, the grip 0.12 m from the -Y end.
+- `pipe` (scripted): one mesh, `Pipe`.
+- `bike_chain`: three meshes, `Lock` (the Tripo padlock, brass, at the +Y end, its shackle toward the grip), `Grip` (the taped handle, at the -Y end) and `Link` (one link at the origin, in the XZ plane).
+- `Weapon.art_scene: PackedScene` (`weapon.gd`): set, the art draws and the cylinder does not. The cylinder is kept, invisible and without its hull, because the floor look and the M1-M5 tests read it. While the weapon lies on the floor the art takes `Tuning.weapon_art_floor_tint` (Level > Prop art, 0.45) of `weapon_floor_color`; in a hand or in the air it keeps the atlas's colours. `pipe.tscn` sets `art_scene`, so the Thug's pipe and the training room's draw art. `bike_chain.tscn`, the `WeaponDef` and the sim are WEAPONS'.
+
+**Tunables:** Level > Prop art `weapon_art_floor_tint`; Debug `prop_art_hull` (the D14 A/B).
+
+**Tests:** `tests/test_static_art.gd` (the fixture crate proves the path with no Tripo; every scene's `check()`; the weapon frame; `Lock`, `Grip` and `Link`; footprints; the hull mode; the committed reports; the ledger). **Look:** `tests/bot/acts/prop_acts.gd`, "Look: props at 1 m and 5 m", "Look: props hull A/B", "Look: props weapons" (the crowd bot).
 
 ### The Bruiser and the boss (HEAVIES)
 

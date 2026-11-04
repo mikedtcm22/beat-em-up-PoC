@@ -1,0 +1,46 @@
+{
+	"id": "pipe",
+	"kind": "prop",
+	"version": 1,
+	"note": "The pipe weapon, scripted in Blender (prop_models.pipe, no Tripo): a painted tube with dark caps, a wrapped grip near the -Y end and two rings, 0.85 m long, centred, long axis +Y in the weapon art frame.",
+	"source": {
+		"builder": "pipe",
+		"builder_args": {
+			"length": 0.85,
+			"radius": 0.032
+		}
+	},
+	"orient": {},
+	"target": {
+		"origin": "keep"
+	},
+	"palette": {
+		"slots": [
+			31,
+			2,
+			1,
+			63
+		],
+		"max_swatches": 4,
+		"min_share": 0.0,
+		"budget_tris": 1000,
+		"majority_passes": 2,
+		"armature": false,
+		"unfold": {
+			"iterations": 12,
+			"factor": 0.5,
+			"ring": 1
+		}
+	},
+	"export": {
+		"mesh_name": "Pipe",
+		"smooth_angle_deg": 35.0
+	},
+	"paths": {
+		"work": "assets/source/_cache/pipe/work",
+		"blend_dir": "assets/source/_cache/pipe/work",
+		"report": "assets/source/props/pipe/report",
+		"export_dir": "assets/export/props/pipe",
+		"export_name": "pipe"
+	}
+}
