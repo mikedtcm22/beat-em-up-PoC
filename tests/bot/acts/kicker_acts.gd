@@ -84,7 +84,7 @@ static func _opportunist(bot: Node) -> void:
 
 ## One line: where the Kicker is off the look, how far, what it is doing and whether it flanks (and
 ## whether the Punk it is judged against is still up).
-static func _log_kicker(bot: Node, kicker: EnemyActor, punk: EnemyActor = null) -> void:
+static func _log_kicker(bot: Node, kicker: Variant, punk: Variant = null) -> void:
 	if not is_instance_valid(kicker):
 		return
 	var tail := "" if punk == null else " punk %s" % ("up" if is_instance_valid(punk) and punk.health > 0.0 else "down")

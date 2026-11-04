@@ -23,7 +23,15 @@ Branch `m5/feedback`, from `m5/level-blockout` at ace4aa9. Brief: `docs/reviews/
 - **Other paths that delay a spawn by the view:** none. `EncounterSpawner._in_view()` is used only in the hold; the unnamed spawns use `is_behind()` to pick which pool a point comes from (`wave_behind_share`: picks, never waits, and falls back to the other pool when one is empty). The scenes and the A4 door recess are unchanged.
 
 ## What the recordings showed
-(See the end of this file.)
+
+Recorded with `tools/record_acts.sh` into `captures/feedback/` (oneonone, opportunist, flanks, a4); judged first person from my own 1 fps contact sheets (`captures/feedback/s/`).
+
+- **Kicker one on one** (31 s, god mode, held-back autopilot): the Kicker walks in from the east alley, in front of him, and from then on every `KICKER` line has it at bearing -1 to 1 from the look, 2.6-2.8 m, `flanking false`. It stands squared up in view, winds up in view (jump kick, sweep), and the autopilot parries and hits it; it is KO'd at 14 s and 27 s and the next walks in the same way. No circling at all; the sheet shows it centred in front in every tile. Warning oracle: 6 of 6 wind-ups right, 0 false, readability hard rows ok.
+- **Kicker opportunist** (Punk 3.5 m ahead, autopilot fights): the Kicker flanks from the start (busy), walks out of the view's left edge (bearing 43, 132, then -168 behind him) in about 7 s, and winds up a jump kick from directly behind at f514. The autopilot turns to it, and from f611 it is `flanking false`, POSTURE at bearing 0, 2.6 m, squared up and attacking from in view. Once, at f911, the Punk drifted into view while the player fought the Kicker, so it began to flank again for 0.5 s of busy, and let go 1 s after the Punk fell: that is the hysteresis doing its job, no run round was visible.
+- **Kicker flanks** (Punk in front, the player standing): the Kicker walks round the ring (bearing 0 to 167 over 7 s, never nearer than 2.5 m) and winds up from 167 degrees, both corners warned (WARN-CHECK both, lat 0). Hard rows R1, R2, R3, R10, R11 ok in this act and in the one-on-one.
+- **A4, held back, after** (45.5 s, 2752 frames) against the lead's before (43.7 s, 2641): the same arena, both Kickers in the sheet are seen in front of him and fight from in view; the two Kickers' wind-ups per wave are the same count (4 and 4 sweeps/jump kicks). The behind spawns arrive without the wait. I did not run a measured comparison of whiffs.
 
 ## Open
-- Nothing found yet that needs the lead.
+
+- Nothing needs the lead. Not measured: how often the Kicker flanks in the full level run (in A4 it is the Punks that keep the player busy, so it does at times); no tunable was changed by measurement, the defaults are the brief's.
+- Suite: 1761 tests in 306 s on the shared machine (the brief's reference 1748 in 293 s: +13 tests, +4%).
