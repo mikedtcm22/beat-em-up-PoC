@@ -1,0 +1,461 @@
+{
+	"group": "voices",
+	"jobs": [
+		{
+			"id": "grunt_punk_v1",
+			"pool": "grunt_punk",
+			"text": "A young scrappy street punk, mid-pitched snarling male voice: a short sharp 'ugh' as he is punched in the gut. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 0.8,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "grunt_punk_v2",
+			"pool": "grunt_punk",
+			"text": "A young scrappy street punk, mid-pitched snarling male voice: a breathy 'oof' as he takes a body blow. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 0.8,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "grunt_punk_v3",
+			"pool": "grunt_punk",
+			"text": "A young scrappy street punk, mid-pitched snarling male voice: a pained 'agh' as he is hit in the face. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 0.8,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "grunt_punk_v4",
+			"pool": "grunt_punk",
+			"text": "A young scrappy street punk, mid-pitched snarling male voice: a grunting 'hunh' as he is knocked back. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 0.8,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "effort_punk_v1",
+			"pool": "effort_punk",
+			"text": "A young scrappy street punk, mid-pitched snarling male voice: a short 'hah' exhale as he winds up a punch. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 0.7,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "effort_punk_v2",
+			"pool": "effort_punk",
+			"text": "A young scrappy street punk, mid-pitched snarling male voice: a quick 'hup' as he gets ready to swing. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 0.7,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "effort_punk_v3",
+			"pool": "effort_punk",
+			"text": "A young scrappy street punk, mid-pitched snarling male voice: a snarling 'hyah' as he draws his arm back to strike. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 0.7,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "ko_punk_v1",
+			"pool": "ko_punk",
+			"text": "A young scrappy street punk, mid-pitched snarling male voice: a long falling groan 'uuugh' as he is knocked out and collapses. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 1.2,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "ko_punk_v2",
+			"pool": "ko_punk",
+			"text": "A young scrappy street punk, mid-pitched snarling male voice: a gasping cry 'ahh' then a sagging groan as he is beaten down. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 1.2,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "grunt_kicker_v1",
+			"pool": "grunt_kicker",
+			"text": "A wiry fast agile young man, higher-pitched sharp male voice: a short sharp 'ugh' as he is punched in the gut. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 0.8,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "grunt_kicker_v2",
+			"pool": "grunt_kicker",
+			"text": "A wiry fast agile young man, higher-pitched sharp male voice: a breathy 'oof' as he takes a body blow. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 0.8,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "grunt_kicker_v3",
+			"pool": "grunt_kicker",
+			"text": "A wiry fast agile young man, higher-pitched sharp male voice: a pained 'agh' as he is hit in the face. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 0.8,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "grunt_kicker_v4",
+			"pool": "grunt_kicker",
+			"text": "A wiry fast agile young man, higher-pitched sharp male voice: a grunting 'hunh' as he is knocked back. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 0.8,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "effort_kicker_v1",
+			"pool": "effort_kicker",
+			"text": "A wiry fast agile young man, higher-pitched sharp male voice: a short 'hah' exhale as he winds up a punch. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 0.7,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "effort_kicker_v2",
+			"pool": "effort_kicker",
+			"text": "A wiry fast agile young man, higher-pitched sharp male voice: a quick 'hup' as he gets ready to swing. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 0.7,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "effort_kicker_v3",
+			"pool": "effort_kicker",
+			"text": "A wiry fast agile young man, higher-pitched sharp male voice: a snarling 'hyah' as he draws his arm back to strike. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 0.7,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "ko_kicker_v1",
+			"pool": "ko_kicker",
+			"text": "A wiry fast agile young man, higher-pitched sharp male voice: a long falling groan 'uuugh' as he is knocked out and collapses. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 1.2,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "ko_kicker_v2",
+			"pool": "ko_kicker",
+			"text": "A wiry fast agile young man, higher-pitched sharp male voice: a gasping cry 'ahh' then a sagging groan as he is beaten down. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 1.2,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "grunt_thug_v1",
+			"pool": "grunt_thug",
+			"text": "A burly gruff street thug, low-mid raspy male voice: a short sharp 'ugh' as he is punched in the gut. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 0.9,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "grunt_thug_v2",
+			"pool": "grunt_thug",
+			"text": "A burly gruff street thug, low-mid raspy male voice: a breathy 'oof' as he takes a body blow. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 0.9,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "grunt_thug_v3",
+			"pool": "grunt_thug",
+			"text": "A burly gruff street thug, low-mid raspy male voice: a pained 'agh' as he is hit in the face. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 0.9,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "grunt_thug_v4",
+			"pool": "grunt_thug",
+			"text": "A burly gruff street thug, low-mid raspy male voice: a grunting 'hunh' as he is knocked back. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 0.9,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "effort_thug_v1",
+			"pool": "effort_thug",
+			"text": "A burly gruff street thug, low-mid raspy male voice: a short 'hah' exhale as he winds up a punch. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 0.7,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "effort_thug_v2",
+			"pool": "effort_thug",
+			"text": "A burly gruff street thug, low-mid raspy male voice: a quick 'hup' as he gets ready to swing. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 0.7,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "effort_thug_v3",
+			"pool": "effort_thug",
+			"text": "A burly gruff street thug, low-mid raspy male voice: a snarling 'hyah' as he draws his arm back to strike. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 0.7,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "ko_thug_v1",
+			"pool": "ko_thug",
+			"text": "A burly gruff street thug, low-mid raspy male voice: a long falling groan 'uuugh' as he is knocked out and collapses. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 1.2,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "ko_thug_v2",
+			"pool": "ko_thug",
+			"text": "A burly gruff street thug, low-mid raspy male voice: a gasping cry 'ahh' then a sagging groan as he is beaten down. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 1.2,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "grunt_bruiser_v1",
+			"pool": "grunt_bruiser",
+			"text": "A huge heavy brute, a deep growling male voice, natural speed: a short sharp 'ugh' as he is punched in the gut. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 1.0,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "grunt_bruiser_v2",
+			"pool": "grunt_bruiser",
+			"text": "A huge heavy brute, a deep growling male voice, natural speed: a breathy 'oof' as he takes a body blow. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 1.0,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "grunt_bruiser_v3",
+			"pool": "grunt_bruiser",
+			"text": "A huge heavy brute, a deep growling male voice, natural speed: a pained 'agh' as he is hit in the face. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 1.0,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "grunt_bruiser_v4",
+			"pool": "grunt_bruiser",
+			"text": "A huge heavy brute, a deep growling male voice, natural speed: a grunting 'hunh' as he is knocked back. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 1.0,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "effort_bruiser_v1",
+			"pool": "effort_bruiser",
+			"text": "A huge heavy brute, a deep growling male voice, natural speed: a short 'hah' exhale as he winds up a punch. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 0.9,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "effort_bruiser_v2",
+			"pool": "effort_bruiser",
+			"text": "A huge heavy brute, a deep growling male voice, natural speed: a quick 'hup' as he gets ready to swing. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 0.9,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "effort_bruiser_v3",
+			"pool": "effort_bruiser",
+			"text": "A huge heavy brute, a deep growling male voice, natural speed: a snarling 'hyah' as he draws his arm back to strike. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 0.9,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "ko_bruiser_v1",
+			"pool": "ko_bruiser",
+			"text": "A huge heavy brute, a deep growling male voice, natural speed: a long falling groan 'uuugh' as he is knocked out and collapses. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 1.4,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "ko_bruiser_v2",
+			"pool": "ko_bruiser",
+			"text": "A huge heavy brute, a deep growling male voice, natural speed: a gasping cry 'ahh' then a sagging groan as he is beaten down. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 1.4,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "grunt_boss_v1",
+			"pool": "grunt_boss",
+			"text": "A big menacing crime boss, deep gravelly commanding male voice, natural speed: a short sharp 'ugh' as he is punched in the gut. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 1.0,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "grunt_boss_v2",
+			"pool": "grunt_boss",
+			"text": "A big menacing crime boss, deep gravelly commanding male voice, natural speed: a breathy 'oof' as he takes a body blow. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 1.0,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "grunt_boss_v3",
+			"pool": "grunt_boss",
+			"text": "A big menacing crime boss, deep gravelly commanding male voice, natural speed: a pained 'agh' as he is hit in the face. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 1.0,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "grunt_boss_v4",
+			"pool": "grunt_boss",
+			"text": "A big menacing crime boss, deep gravelly commanding male voice, natural speed: a grunting 'hunh' as he is knocked back. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 1.0,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "effort_boss_v1",
+			"pool": "effort_boss",
+			"text": "A big menacing crime boss, deep gravelly commanding male voice, natural speed: a short 'hah' exhale as he winds up a punch. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 0.9,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "effort_boss_v2",
+			"pool": "effort_boss",
+			"text": "A big menacing crime boss, deep gravelly commanding male voice, natural speed: a quick 'hup' as he gets ready to swing. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 0.9,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "effort_boss_v3",
+			"pool": "effort_boss",
+			"text": "A big menacing crime boss, deep gravelly commanding male voice, natural speed: a snarling 'hyah' as he draws his arm back to strike. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 0.9,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "ko_boss_v1",
+			"pool": "ko_boss",
+			"text": "A big menacing crime boss, deep gravelly commanding male voice, natural speed: a long falling groan 'uuugh' as he is knocked out and collapses. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 1.4,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "ko_boss_v2",
+			"pool": "ko_boss",
+			"text": "A big menacing crime boss, deep gravelly commanding male voice, natural speed: a gasping cry 'ahh' then a sagging groan as he is beaten down. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 1.4,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "grunt_v1",
+			"pool": "grunt",
+			"text": "A generic tough male street fighter, mid-pitched voice: a short sharp 'ugh' as he is punched in the gut. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 0.8,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "grunt_v2",
+			"pool": "grunt",
+			"text": "A generic tough male street fighter, mid-pitched voice: a breathy 'oof' as he takes a body blow. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 0.8,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "grunt_v3",
+			"pool": "grunt",
+			"text": "A generic tough male street fighter, mid-pitched voice: a pained 'agh' as he is hit in the face. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 0.8,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "grunt_v4",
+			"pool": "grunt",
+			"text": "A generic tough male street fighter, mid-pitched voice: a grunting 'hunh' as he is knocked back. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 0.8,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "effort_v1",
+			"pool": "effort",
+			"text": "A generic tough male street fighter, mid-pitched voice: a short 'hah' exhale as he winds up a punch. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 0.7,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "effort_v2",
+			"pool": "effort",
+			"text": "A generic tough male street fighter, mid-pitched voice: a quick 'hup' as he gets ready to swing. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 0.7,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "effort_v3",
+			"pool": "effort",
+			"text": "A generic tough male street fighter, mid-pitched voice: a snarling 'hyah' as he draws his arm back to strike. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 0.7,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "player_grunt_v1",
+			"pool": "player_grunt",
+			"text": "A young man, determined and stoic, restrained low-volume male voice, suppressing the sound: a short suppressed 'hn' as he takes a hit. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 0.8,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "player_grunt_v2",
+			"pool": "player_grunt",
+			"text": "A young man, determined and stoic, restrained low-volume male voice, suppressing the sound: a clipped 'uh' as he is struck. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 0.8,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "player_grunt_v3",
+			"pool": "player_grunt",
+			"text": "A young man, determined and stoic, restrained low-volume male voice, suppressing the sound: a quick breathy 'oof' as he is winded. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 0.8,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "boss_phase_v1",
+			"pool": "boss_phase",
+			"text": "A big menacing crime boss, deep gravelly commanding male voice, natural speed: a furious enraged roar as he turns serious and goes berserk, bellowing. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 2.0,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "boss_phase_v2",
+			"pool": "boss_phase",
+			"text": "A big menacing crime boss, deep gravelly commanding male voice, natural speed: an angry bellowed shout calling his gang to attack, no words, a deep roar. Non-verbal, no words, no music, no background noise, dry close-microphone recording, no reverb, comic action-game style.",
+			"duration_seconds": 2.0,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		}
+	]
+}

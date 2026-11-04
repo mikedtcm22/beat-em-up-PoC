@@ -1,0 +1,9 @@
+{
+	"milestone": "M6",
+	"stop": 30000,
+	"max_call": 1200,
+	"credits_per_second": 10,
+	"model_id": "eleven_text_to_sound_v3",
+	"output_format": "mp3_44100_128",
+	"note": "stop: the most the M6 ledger may ever hold in credits (the Starter account has 40000). max_call: no single call may cost more (a 30 s bed is 1200 at 40 credits a second). credits_per_second: the rate used to project a call before it runs (docs say 40, measured 10 on 2026-11-04: 15 credits for 1.5 s of v3 output, see M6-calls/AUDIO.md); the tool measures the real cost of every call from /v1/user/subscription and writes it to the ledger."
+}

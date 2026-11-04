@@ -1,0 +1,1582 @@
+{
+	"slots": {
+		"ambience_roof": {
+			"min_variants": 1,
+			"long": true,
+			"loop": true,
+			"space": "2d"
+		},
+		"ambience_street": {
+			"min_variants": 1,
+			"long": true,
+			"loop": true,
+			"space": "2d"
+		},
+		"barrier_car_close": {
+			"min_variants": 2,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"barrier_car_open": {
+			"min_variants": 2,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"barrier_gate_close": {
+			"min_variants": 2,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"barrier_gate_open": {
+			"min_variants": 2,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"barrier_shutter_close": {
+			"min_variants": 2,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"barrier_shutter_open": {
+			"min_variants": 2,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"block_clack": {
+			"min_variants": 2,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"body_fall": {
+			"min_variants": 2,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"boss_phase": {
+			"min_variants": 1,
+			"long": true,
+			"loop": false,
+			"space": "3d"
+		},
+		"crack": {
+			"min_variants": 3,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"crunch": {
+			"min_variants": 3,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"effort": {
+			"min_variants": 2,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"effort_boss": {
+			"min_variants": 2,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"effort_bruiser": {
+			"min_variants": 2,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"effort_kicker": {
+			"min_variants": 2,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"effort_punk": {
+			"min_variants": 2,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"effort_thug": {
+			"min_variants": 2,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"grunt": {
+			"min_variants": 3,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"grunt_boss": {
+			"min_variants": 3,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"grunt_bruiser": {
+			"min_variants": 3,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"grunt_kicker": {
+			"min_variants": 3,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"grunt_punk": {
+			"min_variants": 3,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"grunt_thug": {
+			"min_variants": 3,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"guard_break": {
+			"min_variants": 2,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"ko_boss": {
+			"min_variants": 1,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"ko_bruiser": {
+			"min_variants": 1,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"ko_kicker": {
+			"min_variants": 1,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"ko_punk": {
+			"min_variants": 1,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"ko_thug": {
+			"min_variants": 1,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"music_loop": {
+			"min_variants": 1,
+			"long": true,
+			"loop": true,
+			"space": "2d"
+		},
+		"parry_ting": {
+			"min_variants": 2,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"player_grunt": {
+			"min_variants": 2,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"sting_clear": {
+			"min_variants": 1,
+			"long": false,
+			"loop": false,
+			"space": "2d"
+		},
+		"sting_go": {
+			"min_variants": 1,
+			"long": false,
+			"loop": false,
+			"space": "2d"
+		},
+		"sub_thump": {
+			"min_variants": 2,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"thud": {
+			"min_variants": 3,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"weapon_bike_chain_hit": {
+			"min_variants": 2,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"weapon_break": {
+			"min_variants": 2,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"weapon_land": {
+			"min_variants": 2,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"weapon_pickup": {
+			"min_variants": 2,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"weapon_pipe_hit": {
+			"min_variants": 2,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"weapon_throw": {
+			"min_variants": 2,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"whoosh": {
+			"min_variants": 3,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		}
+	},
+	"files": [
+		{
+			"file": "block_clack_01.wav",
+			"pool": "block_clack",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "block_clack_02.wav",
+			"pool": "block_clack",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "block_clack_03.wav",
+			"pool": "block_clack",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "body_fall_01.wav",
+			"pool": "body_fall",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "body_fall_02.wav",
+			"pool": "body_fall",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "body_fall_03.wav",
+			"pool": "body_fall",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "boss_phase_01.wav",
+			"pool": "boss_phase",
+			"source": "elevenlabs:voices/boss_phase_v1_03",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.040567,
+				1.751088
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": 0.78
+		},
+		{
+			"file": "boss_phase_02.wav",
+			"pool": "boss_phase",
+			"source": "elevenlabs:voices/boss_phase_v2_03",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.068526,
+				1.793469
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": 0.79
+		},
+		{
+			"file": "crack_01.wav",
+			"pool": "crack",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "crack_02.wav",
+			"pool": "crack",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "crack_03.wav",
+			"pool": "crack",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "crunch_01.wav",
+			"pool": "crunch",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "crunch_02.wav",
+			"pool": "crunch",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "crunch_03.wav",
+			"pool": "crunch",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "effort_01.wav",
+			"pool": "effort",
+			"source": "elevenlabs:voices/effort_v1_03",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.053741,
+				0.345351
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": 0.74
+		},
+		{
+			"file": "effort_02.wav",
+			"pool": "effort",
+			"source": "elevenlabs:voices/effort_v2_03",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.02712,
+				0.307143
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": 1.11
+		},
+		{
+			"file": "effort_03.wav",
+			"pool": "effort",
+			"source": "elevenlabs:voices/effort_v3_03",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.089819,
+				0.517937
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": 1.09
+		},
+		{
+			"file": "effort_boss_01.wav",
+			"pool": "effort_boss",
+			"source": "elevenlabs:voices/effort_boss_v1_03",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.06966,
+				0.492698
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": 2.94
+		},
+		{
+			"file": "effort_boss_02.wav",
+			"pool": "effort_boss",
+			"source": "elevenlabs:voices/effort_boss_v2_03",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.030272,
+				0.283175
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": -0.23
+		},
+		{
+			"file": "effort_boss_03.wav",
+			"pool": "effort_boss",
+			"source": "elevenlabs:voices/effort_boss_v3_03",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.07322,
+				0.837755
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": 0.26
+		},
+		{
+			"file": "effort_bruiser_01.wav",
+			"pool": "effort_bruiser",
+			"source": "elevenlabs:voices/effort_bruiser_v1_02",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.030363,
+				0.337596
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": 0.09
+		},
+		{
+			"file": "effort_bruiser_02.wav",
+			"pool": "effort_bruiser",
+			"source": "elevenlabs:voices/effort_bruiser_v2_03",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.00644,
+				0.313175
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": 0.62
+		},
+		{
+			"file": "effort_bruiser_03.wav",
+			"pool": "effort_bruiser",
+			"source": "elevenlabs:voices/effort_bruiser_v3_03",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.081111,
+				0.679093
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": 1.0
+		},
+		{
+			"file": "effort_kicker_01.wav",
+			"pool": "effort_kicker",
+			"source": "elevenlabs:voices/effort_kicker_v1_01",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.052313,
+				0.359705
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": 3.11
+		},
+		{
+			"file": "effort_kicker_02.wav",
+			"pool": "effort_kicker",
+			"source": "elevenlabs:voices/effort_kicker_v2_02",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.050249,
+				0.256803
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": 0.49
+		},
+		{
+			"file": "effort_kicker_03.wav",
+			"pool": "effort_kicker",
+			"source": "elevenlabs:voices/effort_kicker_v3_02",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.075034,
+				0.608413
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": 0.12
+		},
+		{
+			"file": "effort_punk_01.wav",
+			"pool": "effort_punk",
+			"source": "elevenlabs:voices/effort_punk_v1_02",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.109342,
+				0.554354
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": 2.53
+		},
+		{
+			"file": "effort_punk_02.wav",
+			"pool": "effort_punk",
+			"source": "elevenlabs:voices/effort_punk_v2_02",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.043288,
+				0.34805
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": 0.79
+		},
+		{
+			"file": "effort_punk_03.wav",
+			"pool": "effort_punk",
+			"source": "elevenlabs:voices/effort_punk_v3_03",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.017347,
+				0.57424
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": -0.01
+		},
+		{
+			"file": "effort_thug_01.wav",
+			"pool": "effort_thug",
+			"source": "elevenlabs:voices/effort_thug_v1_03",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.067574,
+				0.599252
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": 1.41
+		},
+		{
+			"file": "effort_thug_02.wav",
+			"pool": "effort_thug",
+			"source": "elevenlabs:voices/effort_thug_v2_02",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.109728,
+				0.452562
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": 0.19
+		},
+		{
+			"file": "effort_thug_03.wav",
+			"pool": "effort_thug",
+			"source": "elevenlabs:voices/effort_thug_v3_03",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.058571,
+				0.601905
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": 2.34
+		},
+		{
+			"file": "grunt_01.wav",
+			"pool": "grunt",
+			"source": "elevenlabs:voices/grunt_v1_03",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.0,
+				0.36263
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": 0.61
+		},
+		{
+			"file": "grunt_02.wav",
+			"pool": "grunt",
+			"source": "elevenlabs:voices/grunt_v2_02",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.019274,
+				0.693084
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": 0.75
+		},
+		{
+			"file": "grunt_03.wav",
+			"pool": "grunt",
+			"source": "elevenlabs:voices/grunt_v3_03",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.004671,
+				0.483061
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": 0.46
+		},
+		{
+			"file": "grunt_04.wav",
+			"pool": "grunt",
+			"source": "elevenlabs:voices/grunt_v4_03",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.04229,
+				0.328662
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": 0.59
+		},
+		{
+			"file": "grunt_boss_01.wav",
+			"pool": "grunt_boss",
+			"source": "elevenlabs:voices/grunt_boss_v1_01",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.045805,
+				0.568866
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": -0.2
+		},
+		{
+			"file": "grunt_boss_02.wav",
+			"pool": "grunt_boss",
+			"source": "elevenlabs:voices/grunt_boss_v2_02",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.067982,
+				0.91127
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": -0.58
+		},
+		{
+			"file": "grunt_boss_03.wav",
+			"pool": "grunt_boss",
+			"source": "elevenlabs:voices/grunt_boss_v3_02",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.050771,
+				0.756803
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": 0.85
+		},
+		{
+			"file": "grunt_boss_04.wav",
+			"pool": "grunt_boss",
+			"source": "elevenlabs:voices/grunt_boss_v4_02",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.256757,
+				0.619388
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": -0.18
+		},
+		{
+			"file": "grunt_bruiser_01.wav",
+			"pool": "grunt_bruiser",
+			"source": "elevenlabs:voices/grunt_bruiser_v1_03",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.090544,
+				0.454535
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": -1.08
+		},
+		{
+			"file": "grunt_bruiser_02.wav",
+			"pool": "grunt_bruiser",
+			"source": "elevenlabs:voices/grunt_bruiser_v2_01",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.052993,
+				0.646213
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": -3.79
+		},
+		{
+			"file": "grunt_bruiser_03.wav",
+			"pool": "grunt_bruiser",
+			"source": "elevenlabs:voices/grunt_bruiser_v3_03",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.050839,
+				0.555147
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": 0.29
+		},
+		{
+			"file": "grunt_bruiser_04.wav",
+			"pool": "grunt_bruiser",
+			"source": "elevenlabs:voices/grunt_bruiser_v4_01",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.03483,
+				0.390023
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": -2.96
+		},
+		{
+			"file": "grunt_kicker_01.wav",
+			"pool": "grunt_kicker",
+			"source": "elevenlabs:voices/grunt_kicker_v1_03",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.022313,
+				0.387438
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": 0.97
+		},
+		{
+			"file": "grunt_kicker_02.wav",
+			"pool": "grunt_kicker",
+			"source": "elevenlabs:voices/grunt_kicker_v2_01",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.042698,
+				0.662789
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": 3.17
+		},
+		{
+			"file": "grunt_kicker_03.wav",
+			"pool": "grunt_kicker",
+			"source": "elevenlabs:voices/grunt_kicker_v3_01",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.031474,
+				0.501746
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": 1.58
+		},
+		{
+			"file": "grunt_kicker_04.wav",
+			"pool": "grunt_kicker",
+			"source": "elevenlabs:voices/grunt_kicker_v4_01",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.044014,
+				0.399116
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": 4.1
+		},
+		{
+			"file": "grunt_punk_01.wav",
+			"pool": "grunt_punk",
+			"source": "elevenlabs:voices/grunt_punk_v1_01",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.047143,
+				0.490703
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": 0.46
+		},
+		{
+			"file": "grunt_punk_02.wav",
+			"pool": "grunt_punk",
+			"source": "elevenlabs:voices/grunt_punk_v2_02",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.063152,
+				0.8
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": 7.3
+		},
+		{
+			"file": "grunt_punk_03.wav",
+			"pool": "grunt_punk",
+			"source": "elevenlabs:voices/grunt_punk_v3_03",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.027982,
+				0.503923
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": 2.85
+		},
+		{
+			"file": "grunt_punk_04.wav",
+			"pool": "grunt_punk",
+			"source": "elevenlabs:voices/grunt_punk_v4_02",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.195238,
+				0.589819
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": -0.1
+		},
+		{
+			"file": "grunt_thug_01.wav",
+			"pool": "grunt_thug",
+			"source": "elevenlabs:voices/grunt_thug_v1_03",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.089048,
+				0.710567
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": 5.66
+		},
+		{
+			"file": "grunt_thug_02.wav",
+			"pool": "grunt_thug",
+			"source": "elevenlabs:voices/grunt_thug_v2_02",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.138141,
+				0.672971
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": 0.2
+		},
+		{
+			"file": "grunt_thug_03.wav",
+			"pool": "grunt_thug",
+			"source": "elevenlabs:voices/grunt_thug_v3_03",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.102336,
+				0.661837
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": 0.14
+		},
+		{
+			"file": "grunt_thug_04.wav",
+			"pool": "grunt_thug",
+			"source": "elevenlabs:voices/grunt_thug_v4_02",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.120907,
+				0.663107
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": 2.75
+		},
+		{
+			"file": "guard_break_01.wav",
+			"pool": "guard_break",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "guard_break_02.wav",
+			"pool": "guard_break",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "ko_boss_01.wav",
+			"pool": "ko_boss",
+			"source": "elevenlabs:voices/ko_boss_v1_03",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.06907,
+				1.207755
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": 1.15
+		},
+		{
+			"file": "ko_boss_02.wav",
+			"pool": "ko_boss",
+			"source": "elevenlabs:voices/ko_boss_v2_02",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.072154,
+				1.254036
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": 0.9
+		},
+		{
+			"file": "ko_bruiser_01.wav",
+			"pool": "ko_bruiser",
+			"source": "elevenlabs:voices/ko_bruiser_v1_03",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.023265,
+				1.217143
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": 1.3
+		},
+		{
+			"file": "ko_bruiser_02.wav",
+			"pool": "ko_bruiser",
+			"source": "elevenlabs:voices/ko_bruiser_v2_01",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.094331,
+				1.188481
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": 0.28
+		},
+		{
+			"file": "ko_kicker_01.wav",
+			"pool": "ko_kicker",
+			"source": "elevenlabs:voices/ko_kicker_v1_01",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.026395,
+				1.011383
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": 0.43
+		},
+		{
+			"file": "ko_kicker_02.wav",
+			"pool": "ko_kicker",
+			"source": "elevenlabs:voices/ko_kicker_v2_02",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.025964,
+				1.053968
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": -0.41
+		},
+		{
+			"file": "ko_punk_01.wav",
+			"pool": "ko_punk",
+			"source": "elevenlabs:voices/ko_punk_v1_03",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.088912,
+				1.100204
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": 0.84
+		},
+		{
+			"file": "ko_punk_02.wav",
+			"pool": "ko_punk",
+			"source": "elevenlabs:voices/ko_punk_v2_02",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.091156,
+				1.124603
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": 0.31
+		},
+		{
+			"file": "ko_thug_01.wav",
+			"pool": "ko_thug",
+			"source": "elevenlabs:voices/ko_thug_v1_01",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.097574,
+				1.033832
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": 1.94
+		},
+		{
+			"file": "ko_thug_02.wav",
+			"pool": "ko_thug",
+			"source": "elevenlabs:voices/ko_thug_v2_01",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.110862,
+				1.036757
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": 2.12
+		},
+		{
+			"file": "music_loop_01.wav",
+			"pool": "music_loop",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "parry_ting_01.wav",
+			"pool": "parry_ting",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "parry_ting_02.wav",
+			"pool": "parry_ting",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "parry_ting_03.wav",
+			"pool": "parry_ting",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "player_grunt_01.wav",
+			"pool": "player_grunt",
+			"source": "elevenlabs:voices/player_grunt_v1_02",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.0178,
+				0.377732
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": -3.19
+		},
+		{
+			"file": "player_grunt_02.wav",
+			"pool": "player_grunt",
+			"source": "elevenlabs:voices/player_grunt_v2_03",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.048413,
+				0.34322
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": -1.85
+		},
+		{
+			"file": "player_grunt_03.wav",
+			"pool": "player_grunt",
+			"source": "elevenlabs:voices/player_grunt_v3_02",
+			"licence": "ElevenLabs Starter plan: commercial use, owned by the project",
+			"rms_db": -16.0,
+			"peak_cap_db": -1.0,
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"trim_s": [
+				0.06034,
+				0.647143
+			],
+			"fade_ms": [
+				4.0,
+				8.0
+			],
+			"gain_db": 3.65
+		},
+		{
+			"file": "sub_thump_01.wav",
+			"pool": "sub_thump",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "sub_thump_02.wav",
+			"pool": "sub_thump",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "thud_01.wav",
+			"pool": "thud",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "thud_02.wav",
+			"pool": "thud",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "thud_03.wav",
+			"pool": "thud",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "thud_04.wav",
+			"pool": "thud",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "whoosh_01.wav",
+			"pool": "whoosh",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "whoosh_02.wav",
+			"pool": "whoosh",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "whoosh_03.wav",
+			"pool": "whoosh",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		},
+		{
+			"file": "whoosh_04.wav",
+			"pool": "whoosh",
+			"source": "gen_sfx",
+			"licence": "Project-owned (procedural, tools/gen_sfx.gd)",
+			"trim_s": null,
+			"fade_ms": null,
+			"peak_db": -1.0,
+			"notes": "the Milestone 2 placeholder"
+		}
+	]
+}

@@ -1,0 +1,3 @@
+{"group": "probe", "jobs": [
+ {"id": "probe_effort", "text": "short male effort grunt as he swings a fist, dry, close microphone", "duration_seconds": 1.0, "candidates": 1, "prompt_influence": 0.5}
+]}

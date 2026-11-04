@@ -1,11 +1,17 @@
 extends SceneTree
 ## Generates the Milestone 2 placeholder sound effects (Spec §6 "Audio", WP3 in
-## docs/milestones/M2-plan.md) as 16-bit mono 44.1 kHz WAV files in assets/export/sfx/.
+## docs/milestones/M2-plan.md) as 16-bit mono 44.1 kHz WAV files (see OUT_DIR).
 ## Everything is synthesized here: filtered and enveloped noise, tones, decaying modes and
 ## a small formant voice, with no recordings. Each pool has several variants named
 ## `<pool>_<nn>.wav`; game/audio/sfx_bank.gd loads every pool it finds in that folder, so
 ## a new pool or variant needs no code beyond this script (the AudioDirector picks pools
 ## by name).
+##
+## Milestone 6: the final sounds come from ElevenLabs (tools/audio/), and this script now writes the
+## Milestone 2 placeholders to tests/fixtures/sfx_legacy/ (the audition room's "old", Debug
+## `audio_legacy_bank`), where they stay as the fixture; assets/export/sfx/ holds whatever the manifest
+## (assets/source/sfx/manifest.json) names. The files there that are still gen_sfx rows are byte-identical
+## copies of these, which `tools/audio/ingest.py --check` verifies.
 ##
 ## Usage, from the project root:
 ##     godot --headless -s tools/gen_sfx.gd
@@ -24,7 +30,7 @@ extends SceneTree
 ## "Audio" group, never here. Files are normalized to the same peak, so a layer's volume
 ## in Tuning is its whole loudness.
 
-const OUT_DIR := "res://assets/export/sfx/"
+const OUT_DIR := "res://tests/fixtures/sfx_legacy/"
 const RATE := 44100
 ## Every file is normalized to this peak (-1 dBFS).
 const PEAK := 0.89
