@@ -2241,6 +2241,19 @@ Every approved spec change so far is in README.md, "Where M1 departs from the sp
 - **Milestone 4 toolchain (2026-10-26):** skip Mixamo for now and assess later (Tripo auto-rig first); Tripo for 3D generation; Google Gemini for images; Blender installed from the command line (5.2.2 LTS).
 - **M4 concept pick (2026-10-27 09:00 CDT, in the session chat):** Street Punk A and Hero C. His words: "Eventually, I'll want to allow for selecting from a menu of hero options, but for this demo, let's go with Hero C. I like Street Punk A, as well." The hero menu is a later milestone's feature; M4 builds Hero C only, with everything hero-specific in files.
 - **Process:** at each usage limit, hand off to Game-boy's second Claude account. Never assume the same session resumes.
+- **Milestone 6 go (2026-11-04 14:00 CST, session chat):** "OK we're ready to begin". Approved: `docs/milestones/M6-proposal.md`, and his answers:
+  - **Audio option (a):** the Sonniss GDC bundle for the hit stack and the world sounds; ElevenLabs for the voices.
+  - **ElevenLabs:** upgraded to Starter, "if for nothing else than not having to deal with re-doing sounds not licensed for commercial use". Key `ELEVEN_LABS_API_KEY`.
+  - **Tripo** topped up to 1,705 credits.
+  - **Ultracode** on.
+- **M6 picks (2026-11-04 14:35 CST, session chat), word for word:** "Kicker: C / Pipe-Thug: B / Bruiser: A / Boss: C / Boss Name: C / Second Weapon: A / Moods: A and C". That is (sheets in `assets/source/concepts/m6/sheets/`):
+  - **Kicker C** (`kicker_c.jpg`): a hooded lime vest, a lime bandana, a black cap, a ponytail, wrapped forearms, black cargo shorts over lime leggings, black boots.
+  - **Pipe Thug B** (`thug_b.jpg`): a black beanie, a yellow-patterned bandana, a sleeveless olive hoodie with a black chest strap and a yellow buckle, yellow wrist wraps, olive trousers with yellow bands, black boots.
+  - **Bruiser A** (`bruiser_a.jpg`): a purple hood with a steel visor and a purple mask, a padded purple jacket over steel chest plates, steel forearm guards and knee pads, a cream belt, black trousers, steel-capped boots.
+  - **Boss C** (`boss_c.jpg`), named **Ox Pellerin**, the underground-fight champion: a hooded charcoal robe with orange trim, an orange champion's belt, boxing gloves with orange wraps, shorts over black tights, laced boots. Darken the charcoal: it rendered as light slate. A web check found no game or film character of that name.
+  - **Second weapon A** (`weapon_a.jpg`): a bike chain and padlock. A short sideways whip, the padlock landing last, medium reach.
+  - **Moods:** street **A** (`mood_street_a.jpg`: warm brick, sodium street lamps, rust, wooden crates) and roof **C** (`mood_roof_a.jpg`, since the sheet relabels the roofs C/D: warm brick parapets, orange dusk, water tanks, ducts, skylights, AC units).
+- **Still open:** the Tripo account type (it gates phase 2's Tripo tasks); pruning the old worktrees; the Sonniss download.
 
 ## Usage watcher
 A separate low-cost Claude Code session, "Beat-em-up: usage watcher". Start it from the working session with `start_session`: initiation `user_asked`, `model` claude-haiku-5-5, `effort` low, `use_worktree` false, and the prompt below verbatim.
