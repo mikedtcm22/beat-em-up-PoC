@@ -1,5 +1,6 @@
 {
 	"id": "dummy",
+	"label": "Dummy",
 	"art": "res://game/actors/art/dummy_art.tres",
 	"actor_scene": "res://game/enemies/dummy/training_dummy.tscn",
 	"height_m": 1.8,

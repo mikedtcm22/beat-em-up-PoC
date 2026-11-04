@@ -1,5 +1,6 @@
 {
 	"id": "punk",
+	"label": "Punk",
 	"art": "res://game/actors/art/punk_art.tres",
 	"actor_scene": "res://game/enemies/punk/street_punk.tscn",
 	"height_m": 1.8,

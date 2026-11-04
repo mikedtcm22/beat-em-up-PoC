@@ -3,7 +3,8 @@ extends RefCounted
 ## row of test_m4_done_when (A1-A12), test_art_punk's checks, the strain runs (art_strain.gd) and test_art_roster. A new
 ## character adds its own file and its own tests/fixtures/strain/<id>.json and changes no test.
 ##
-## A roster file is `{"id", "art", "actor_scene", "height_m", "budget", "meshes", "moves", "ratchets", "notes"}`:
+## A roster file is `{"id", "label", "art", "actor_scene", "height_m", "budget", "meshes", "moves", "ratchets", "notes"}`:
+## - `label`: the name the character's look act carries, "Look: <label> at 1 m" (tests/bot/acts/roster_acts.gd); default the id, capitalised;
 ## - `art`: the CharacterArt (game/actors/art/<id>_art.tres); `actor_scene`: the scene whose rig wears it;
 ## - `height_m`: the body_height the art is checked at (the art is authored at 1.8 m and scaled, M6 D15);
 ## - `budget`: SPEC §10's triangles (15000, the boss 30000: SPEC §10 has a Boss row);
@@ -70,6 +71,7 @@ static func row(id: String) -> Dictionary:
 	out.meshes = out.get("meshes", ["Body"])
 	out.moves = out.get("moves", [])
 	out.notes = String(out.get("notes", ""))
+	out.label = String(out.get("label", id.capitalize()))
 	var given: Dictionary = out.get("ratchets", {})
 	var ratchets: Dictionary = (BARS as Dictionary).duplicate(true)
 	for key: String in given:
