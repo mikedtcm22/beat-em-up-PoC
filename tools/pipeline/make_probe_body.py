@@ -2,6 +2,13 @@
 
 	python3 -I tools/pipeline/make_probe_body.py             build the source, run the whole chain, write the fixture
 	python3 -I tools/pipeline/make_probe_body.py --source    only build the source (assets/source/_cache/probe_body/source/)
+	  --regions <json>   the five region colours ({"skin", "torso", "arms", "legs", "feet": "#rrggbb"}) in place of REGIONS' defaults
+	  --out <dir>        build the source into <dir> instead of SOURCE_DIR
+	  --name <name>      the source file is <name>_source.glb (default "probe")
+	The three arguments are how the training dummy's source is made (M6 CHAIN):
+	  python3 -I tools/pipeline/make_probe_body.py --source --regions assets/source/characters/dummy/regions.json \
+	      --out assets/source/characters/dummy/source --name dummy
+	With none of them the build is byte for byte the probe's, so the probe report's hash holds.
 
 It stands in for a Tripo delivery so every step of the chain is exercised without spending a credit. The source is a
 single watertight skin (five regions: head and neck, torso, arms, legs, feet; hands are blobs the chain replaces with
@@ -13,7 +20,7 @@ measure the swing, fit the table and rig it. Same Blender, same bytes: the build
 numpy generator.
 
 Run inside Blender (`blender --background --factory-startup --python tools/pipeline/make_probe_body.py -- build <dir>`)
-it builds probe_source.glb into <dir>; run by plain python it drives Blender and then run.py.
+it builds <name>_source.glb into <dir>; run by plain python it drives Blender and then run.py.
 """
 import os
 import subprocess
@@ -42,7 +49,8 @@ VOXEL_M = 0.018
 TEXTURE_PX = 1024
 
 
-def build_source(outdir):
+def build_source(outdir, regions_path=None, name="probe"):
+	import json
 	import math
 
 	import bmesh
@@ -52,6 +60,13 @@ def build_source(outdir):
 	import pipe_blender as pb
 
 	pb.reset_scene()
+	regions = dict(REGIONS)
+	if regions_path:
+		with open(regions_path) as f:
+			given = json.load(f)
+		if sorted(given) != sorted(REGIONS):
+			raise SystemExit("--regions needs exactly the keys %s, got %s" % (sorted(REGIONS), sorted(given)))
+		regions = given
 	J = dict(pc.table_joints())
 	# Source proportions: long arms, short legs, a taller torso, A-pose swing 38 degrees.
 	for side in pc.SIDES:
@@ -173,7 +188,7 @@ def build_source(outdir):
 	bpy.ops.object.mode_set(mode="OBJECT")
 	co = pb.verts(me)
 	centers = pb.face_centers(me)
-	region_names = sorted(REGIONS)
+	region_names = sorted(regions)
 	dist = np.zeros((len(centers), len(segments)))
 	for k, (a, b, r) in enumerate(segments):
 		a_, b_ = np.array(a), np.array(b)
@@ -182,7 +197,7 @@ def build_source(outdir):
 		dist[:, k] = np.linalg.norm(centers - (a_ + t[:, None] * ab), axis=1) - r
 	nearest = np.argmin(dist, axis=1)
 	face_region = np.array([region_names.index(seg_regions[k]) for k in nearest])
-	rgb = {n: np.array([int(REGIONS[n][i:i + 2], 16) for i in (1, 3, 5)], dtype=np.float64) / 255.0 for n in region_names}
+	rgb = {n: np.array([int(regions[n][i:i + 2], 16) for i in (1, 3, 5)], dtype=np.float64) / 255.0 for n in region_names}
 	rng = np.random.RandomState(1234)
 	shade = 0.94 + 0.12 * rng.random_sample(len(centers))
 	shade *= 0.9 + 0.1 * np.clip((centers[:, 2] - 0.3) / 1.5, 0.0, 1.0)
@@ -258,7 +273,7 @@ def build_source(outdir):
 	obj.parent = arm
 	obj.matrix_parent_inverse = Matrix.Identity(4)
 	os.makedirs(outdir, exist_ok=True)
-	path = os.path.join(outdir, "probe_source.glb")
+	path = os.path.join(outdir, name + "_source.glb")
 	bpy.ops.object.select_all(action="SELECT")
 	bpy.ops.export_scene.gltf(filepath=path, export_format="GLB", export_yup=True, export_skins=True, export_influence_nb=4,
 		export_animations=False, export_apply=False, export_materials="EXPORT", export_image_format="AUTO", export_texcoords=True)
@@ -266,20 +281,40 @@ def build_source(outdir):
 	return path
 
 
+def option(argv, flag):
+	"""The value after `flag` in argv, or None."""
+	if flag in argv:
+		return argv[argv.index(flag) + 1]
+	return None
+
+
 def main():
 	argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else sys.argv[1:]
 	if INSIDE_BLENDER:
 		if argv[:1] == ["build"]:
-			build_source(argv[1])
+			build_source(argv[1], argv[2] or None, argv[3])
 		return 0
-	source_dir = pc.repo_path(SOURCE_DIR)
+	regions = option(argv, "--regions")
+	out = option(argv, "--out")
+	name = option(argv, "--name") or "probe"
+	source_dir = pc.repo_path(out or SOURCE_DIR)
 	os.makedirs(source_dir, exist_ok=True)
-	cmd = ["blender", "--background", "--factory-startup", "--python-exit-code", "1", "--python", os.path.join(HERE, "make_probe_body.py"), "--", "build", source_dir]
+	cmd = ["blender", "--background", "--factory-startup", "--python-exit-code", "1", "--python", os.path.join(HERE, "make_probe_body.py"), "--", "build", source_dir,
+		pc.repo_path(regions) if regions else "", name]
 	print("+ " + " ".join(cmd[:3]) + " ... build")
 	subprocess.run(cmd, check=True)
 	if "--source" in argv:
 		return 0
-	cmd = [sys.executable, "-I", os.path.join(HERE, "run.py"), "--config", CONFIG] + [a for a in argv if a != "--source"]
+	passthrough = []
+	skip = False
+	for a in argv:
+		if skip:
+			skip = False
+		elif a in ("--regions", "--out", "--name"):
+			skip = True
+		elif a != "--source":
+			passthrough.append(a)
+	cmd = [sys.executable, "-I", os.path.join(HERE, "run.py"), "--config", CONFIG] + passthrough
 	print("+ " + " ".join(cmd))
 	return subprocess.run(cmd).returncode
 

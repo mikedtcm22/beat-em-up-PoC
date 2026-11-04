@@ -11,6 +11,7 @@ extends RefCounted
 ## body and its FP-hidden half) reports the worst of its meshes per number, and the sum of their triangles.
 
 const SkinnedView := preload("res://tests/skinned_view.gd")
+const Roster := preload("res://tests/art_roster.gd")
 const FRAME := 1.0 / 60.0
 ## Part B row A7 (and A19)'s bars.
 const P_HIGH := 1.6
@@ -23,8 +24,6 @@ const FLOOR_M := -0.015
 const BAD_TRIANGLES := 0.005
 ## A planted pose: the lowest sole point is within this of the floor.
 const PLANTED_M := 0.002
-## The Punk's own moves, whose clips the strain run plays as well (the file names in game/combat/moves).
-const PUNK_MOVES: Array[String] = ["punk_jab", "punk_cross", "punk_shove"]
 
 ## The shipped art A19 covers (P3-int): each worn the way the game wears it (the hero dressed as the player). The plan's bar (no
 ## problem line, p99.9 within [P_LOW, P_HIGH], the extremes within [MIN, MAX], at most BAD_TRIANGLES of the triangles under 15% of
@@ -43,12 +42,13 @@ const PUNK_MOVES: Array[String] = ["punk_jab", "punk_cross", "punk_shove"]
 ##   p99.9, p0.1, max and min over its five phases, and every peak flex's bad triangles, held to CLIP_MARGIN over today's, so a
 ##   regression in a clip that is not the art's worst shows too.
 ## The old SHIPPED rows read "problems_max 560 / 480"; ratchet_problems() is what test_skinned_art and test_m4_done_when assert.
-const SHIPPED: Array[Dictionary] = [
-	{name = "punk", path = "res://assets/export/characters/punk/punk.glb", art = "res://game/actors/art/punk_art.tres", player = false, budget = 15000,
-			in_bar_min = 1, high_max = 4.23, low_min = 0.153, max_max = 12.85, min_min = 0.0144, flex_share_max = 0.0173},
-	{name = "player", path = "res://assets/export/characters/player/player.glb", art = "res://game/actors/art/player_art.tres", player = true, budget = 30000,
-			in_bar_min = 1, high_max = 9.1, low_min = 0.14, max_max = 39.1, min_min = 0.0282, flex_share_max = 0.0066},
-]
+## M6 (CHAIN): the Punk's row, and every other roster character's, is read from tests/fixtures/strain/<id>.json and the roster
+## (tests/art_roster.gd shipped_row()); the hero's row stays here, as M4 set it (ARM changes it). SHIPPED[0] is the Punk. The
+## Punk's figures moved into tests/fixtures/strain/punk.json unchanged (high_max 4.23, low_min 0.153, max_max 12.85, min_min
+## 0.0144, flex_share_max 0.0173, in_bar_min 1; the hero's: 9.1, 0.14, 39.1, 0.0282, 0.0066).
+static var SHIPPED: Array[Dictionary] = _shipped()
+const PLAYER_ROW := {name = "player", path = "res://assets/export/characters/player/player.glb", art = "res://game/actors/art/player_art.tres", player = true, budget = 30000,
+		in_bar_min = 1, high_max = 9.1, low_min = 0.14, max_max = 39.1, min_min = 0.0282, flex_share_max = 0.0066}
 ## The per-clip ratchet's margin over today's figure (a ratio on p99.9 and the stretch; its inverse on p0.1 and the compression),
 ## and the flex triangle count's (a ratio, and two triangles).
 const CLIP_MARGIN := 0.10
@@ -70,10 +70,23 @@ static func keep(key: String, run: Dictionary) -> Dictionary:
 
 ## The Punk's three moves.
 static func punk_moves() -> Array[MoveData]:
-	var out: Array[MoveData] = []
-	for id: String in PUNK_MOVES:
-		out.append(load("res://game/combat/moves/%s.tres" % id) as MoveData)
+	return roster_moves("punk")
+
+
+## The rows the strain run covers by name for test_skinned_art and test_art_punk: the Punk's (from the roster) and the hero's. The
+## other roster characters' rows are ArtRoster.shipped_row(id), run by test_m4_done_when.
+static func _shipped() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var punk := Roster.shipped_row("punk")
+	if not punk.is_empty():
+		out.append(punk)
+	out.append(PLAYER_ROW.duplicate())
 	return out
+
+
+## The own moves of roster character `id` (its `moves`), whose clips the strain run plays besides the animations.
+static func roster_moves(id: String) -> Array[MoveData]:
+	return Roster.moves_of(Roster.row(id))
 
 
 ## The peak flexes of row A7: [label, pose (bone -> Euler degrees), hips offset].
@@ -335,8 +348,12 @@ static func clip_table(run_result: Dictionary) -> Dictionary:
 	return table
 
 
-## The per-clip ratchet figures the file holds for the art `art_name` ("punk" or "player"), or an empty Dictionary.
+## The per-clip ratchet figures held for the art `art_name`: a roster character's from tests/fixtures/strain/<id>.json, the hero's
+## from RATCHET_TABLE_PATH; an empty Dictionary when there are none.
 static func load_table(art_name: String) -> Dictionary:
+	var own := Roster.strain_file(art_name)
+	if own.has("clips"):
+		return own.clips
 	var file := FileAccess.open(RATCHET_TABLE_PATH, FileAccess.READ)
 	if file == null:
 		return {}

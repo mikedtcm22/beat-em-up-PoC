@@ -20,9 +20,6 @@ const PIPE_SCENE := "res://game/weapons/pipe.tscn"
 @export var dummy_positions: Array[Vector3] = [
 	Vector3(-0.8, 0.0, -1.8), Vector3(-0.5, 0.0, 0.0), Vector3(-0.8, 0.0, 1.8)
 ]
-@export var dummy_colors: Array[Color] = [
-	Color(0.86, 0.5, 0.16), Color(0.5, 0.72, 0.2), Color(0.62, 0.32, 0.72)
-]
 @export var pipe_position: Vector3 = Vector3(-3.0, 0.15, 2.6)
 ## Indices of the dummies that spar from the start (Dummy 2, the centre one).
 @export var sparring_dummies: Array[int] = [1]
@@ -104,7 +101,6 @@ func _spawn_actors() -> void:
 		var dummy := (load(DUMMY_SCENE) as PackedScene).instantiate() as TrainingDummy
 		dummy.name = "Dummy%d" % (n + 1)
 		dummy.display_name = "Dummy %d" % (n + 1)
-		dummy.color = dummy_colors[n % dummy_colors.size()]
 		dummy.position = dummy_positions[n]
 		var to_player := player_start - dummy_positions[n]
 		dummy.rotation.y = atan2(-to_player.x, -to_player.z)  # face the player start
