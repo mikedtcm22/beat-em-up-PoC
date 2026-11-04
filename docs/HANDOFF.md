@@ -4,6 +4,17 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-04 13:45 CST: Game-boy signed off Milestone 5; PR #5 merged; M6 waits for his go
+- **Game-boy (session chat):** "Signed off". He played the build with his two playtest changes in.
+- **README:** M5's "decided by default" departures now read "accepted by Game-boy with M5's sign-off, 2026-11-04". His two playtest rulings (the Kicker's opportunistic flank, and behind spawns that don't wait) are in their own section.
+- **PR #5 is merged into `main`.** Every `m5/*` branch is pushed, and the `.worktrees/m5-*` worktrees can be pruned.
+- **Next: Milestone 6 (SPEC §12): art for the level and the second weapon.** Also carried forward from M4 are the damage marks and the near upper arm.
+  - **Before starting:** tell Game-boy, then wait for his go.
+  - **Then:**
+    1. Branch `m6/<topic>` from `main`.
+    2. Plan with a workflow, under the M5 usage and process rules.
+    3. Start it in a fresh session, which reads this file first.
+
 ### 2026-11-04 10:15 CST: Game-boy's playtest feedback done (1766/1766); PR #5 updated; waiting on his play and sign-off again
 - **Merged on `m5/level-blockout`:**
   - FEEDBACK (`b417ba0`);

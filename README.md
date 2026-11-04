@@ -259,7 +259,7 @@ The characters are procedural placeholders. Real art, VFX and audio come in Mile
   - An enemy the table sends from a behind door comes in on schedule, even while that door is in your view. His words: the wait "makes it seem like there's a lot of nothing going on and then suddenly you're hit from behind".
   - `spawn_behind_waits_out_of_view` on brings back the hold.
 
-**Where M5 departs from the spec (decided by default, for Game-boy's ruling at sign-off):**
+**Where M5 departs from the spec (decided by default; accepted by Game-boy with M5's sign-off, 2026-11-04):**
 - **M5-1. Attack arcs replace "Spread" (Spec §7; Game-boy's call, 2026-11-03):**
   - Each archetype attacks from an arc centred on where the player looked when it engaged: Punk 90°, Pipe Thug 140°, Bruiser 180°, boss 270°, Kicker 360°.
   - The line follows the player's turns for `engage_commit_s` (0.5 s), then holds until that enemy's attack and recovery end.
