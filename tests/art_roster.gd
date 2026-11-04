@@ -10,7 +10,7 @@ extends RefCounted
 ## - `meshes`: the GLB's mesh names; `moves`: the character's own move ids (game/combat/moves/<id>.tres) that A7's strain run,
 ##   A9's framing at 1 m and A10 play, in place of the Punk's three;
 ## - `ratchets`: only what departs from the plan's bar, each with its reason in `notes` (a ratchet only moves down):
-##   `a5_extent` (the fist box's extent, 0.2), `a6` ({torso, legs, head}: the vertex shares held in place of 95%),
+##   `a5_extent` (the fist box's extent, 0.2), `a6` ({torso, legs, head, axis_outside}: the vertex shares held in place of 95% and the axis points the art may leave outside, 0),
 ##   `a9_cells` (cells that differ, 3%), `a9_lens_pp` (the lens-share gap, 4 points: a number, or {"*": default, "<move> pitch
 ##   <+/-n>": that pose's}), `a9_strike_art_share_min` (the twin of a loosened lens gap: the striking art keeps this share of the
 ##   view), `anchor_m` ({head, torso, leg}, 2 cm), `stretch_m` (the longest edge growth in view, 2 cm), `variant_stretch_m`,

@@ -539,7 +539,9 @@ func _fit_ratchet(row: Dictionary) -> Dictionary:
 	if row.player:
 		return FIT_RATCHET_PLAYER
 	if row.ratchets.a6 is Dictionary:
-		return row.ratchets.a6
+		var own: Dictionary = {torso = FIT_SHARE, legs = FIT_SHARE, head = FIT_SHARE}
+		own.merge(row.ratchets.a6, true)
+		return own
 	return {torso = FIT_SHARE, legs = FIT_SHARE, head = FIT_SHARE}
 
 
@@ -570,10 +572,13 @@ func test_a6_the_hurtboxes_sit_inside_the_art_at_idle() -> void:
 		for region: String in ["torso", "legs", "head"]:
 			var floor_share: float = float(_fit_ratchet(row)[region])
 			assert_gte(float(fit[region]), floor_share, "%s: the %s vertices hug their hurtbox (%.1f%%, held at %.1f%%)" % [row.name, region, float(fit[region]) * 100.0, floor_share * 100.0])
+		var axis_ratchet := AXIS_OUTSIDE_RATCHET_PLAYER
 		if not row.player:
+			axis_ratchet = int((row.ratchets.a6 as Dictionary).get("axis_outside", 0)) if row.ratchets.a6 is Dictionary else 0
+		if not row.player and axis_ratchet == 0:
 			assert_eq(axis, [], "%s: every hurtbox axis point is inside the art" % row.name)
 		else:
-			assert_lte(axis.size(), AXIS_OUTSIDE_RATCHET_PLAYER, "%s: at most %d axis points outside the art (%s)" % [row.name, AXIS_OUTSIDE_RATCHET_PLAYER, axis])
+			assert_lte(axis.size(), axis_ratchet, "%s: at most %d axis points outside the art (%s)" % [row.name, axis_ratchet, axis])
 
 
 # --- A7: deformation ---------------------------------------------------------------------------------
@@ -1132,7 +1137,7 @@ func test_a12_the_suite_count_only_rises_and_look_show_art_off_is_the_primitives
 		var late := _rig(row)
 		assert_false(late.art_meshes()[0].visible, "%s: a rig built while it is off starts with the primitives" % row.name)
 		Tuning.set_value(&"look_show_art", true)
-	_note("A12", true, "%d test functions in %d files against M3's %d; look_show_art off shows the primitives of both characters (the full run's SCRIPT/SHADER/ERROR count is the lead's read of tools/run_tests.sh)" % [count, files, SUITE_COUNT_MIN])
+	_note("A12", true, "%d test functions in %d files against M3's %d; look_show_art off shows the primitives of every roster character and the hero (the full run's SCRIPT/SHADER/ERROR count is the lead's read of tools/run_tests.sh)" % [count, files, SUITE_COUNT_MIN])
 
 
 # --- A13: assets and money ------------------------------------------------------------------------------

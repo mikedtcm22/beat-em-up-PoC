@@ -4,8 +4,26 @@
 	"actor_scene": "res://game/enemies/dummy/training_dummy.tscn",
 	"height_m": 1.8,
 	"budget": 15000,
-	"meshes": ["Body"],
-	"moves": ["dummy_jab"],
-	"ratchets": {},
-	"notes": "The padded training dummy (M6 CHAIN, D17): the chain's probe mannequin through the shipped folders, no credits, no first-person split (the dummy is never the player). Held to the plan's bars until a figure shows otherwise; a ratchet is added here with its reason."
+	"meshes": [
+		"Body"
+	],
+	"moves": [
+		"dummy_jab"
+	],
+	"ratchets": {
+		"a6": {
+			"torso": 0.95,
+			"legs": 0.95,
+			"head": 0.95,
+			"axis_outside": 1
+		},
+		"a9_cells": 0.051,
+		"anchor_m": {
+			"head": 0.02,
+			"torso": 0.064,
+			"leg": 0.039
+		},
+		"stretch_m": 0.035
+	},
+	"notes": "The padded training dummy (M6 CHAIN, D17): the chain's probe mannequin through the shipped folders, no credits, no first-person split (the dummy is never the player). Ratchets, each today's figure plus a margin as M4's were (0.5 point on a share of cells, 0.5 cm on an anchor, 5% on a length), with the plan's bar still printed as GATE: a6.axis_outside 1 (one axis point of the left leg's capsule is not enclosed by the probe's leg, the shares themselves are 98-100%); a9_cells 5.1% (the jab's cells at +8 degrees, 4.6% today); anchor_m torso 6.4 and leg 3.9 cm (the contact point is clamped onto the nearest bone's follower, as the Punk's, 5.9 and 3.4 cm today); stretch_m 3.5 cm (the spine in the jab's twist at pitch -6, 3.3 cm today; the Punk's is 8.4)."
 }
