@@ -4,12 +4,13 @@ extends EnemyActor
 ## out of its wind-up. Two attacks: the jump kick (a held crouch, then a leap of 1.6 m with the
 ## right foot out, 8, a flinch) and the low sweep (a held drop to the floor, then a low spin that
 ## takes a standing player's legs out, 8, a knockdown; a jumping player passes over it). It
-## flanks opportunistically (Milestone 5, Game-boy's playtest): only while the player is busy with someone
-## else he faces (turn to the Kicker and it fights) does the director (is_flanking()) give it a seat of its own directly behind the look (the others'
-## seats are not moved for it), and it gets there by walking round the posture ring at a fast pace,
-## visibly leaving the view at its edge, never through the player (the way round the ring is EnemyActor's,
-## for every archetype: _orbit_toward()). Otherwise it is seated by its own arc like any enemy and squares up
-## where it stands, so a one-on-one is fought face to face. Told from the Punk by a lime jacket with
+## flanks opportunistically (Milestone 5, Game-boy's playtest): only while the player is busy with
+## someone else he faces (turn to the Kicker and it fights) does the director (is_flanking()) give it
+## a seat of its own directly behind the look (the others' seats are not moved for it), and it gets
+## there by walking round the posture ring at a fast pace, visibly leaving the view at its edge, never
+## through the player (the way round the ring is EnemyActor's, for every archetype: _orbit_toward()).
+## Otherwise it is seated by its own arc like any enemy and squares up where it stands, so a
+## one-on-one is fought face to face. Told from the Punk by a lime jacket with
 ## near-black accents (SPEC §10 reserves red) and a higher voice.
 ##
 ## What is the Kicker's own, beside the data (hooks, as the Punk): while flanking, how fast it circles and

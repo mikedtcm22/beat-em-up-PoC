@@ -29,9 +29,10 @@ extends Node
 ##   engage_commit_s). Inner seats lie on the posture ring inside the arc, director_seat_gap_deg apart,
 ##   and only an inner-seated enemy is granted a token; the rest stand on the wait ring, still inside
 ##   their arc, until an inner seat frees. A Kicker takes the seat as near directly behind the look as
-##   it can be only while it is flanking (Milestone 5, Game-boy's playtest: while the player is busy with
-##   another enemy he faces, with hysteresis, and not once he turns to the Kicker; _track_flanking(), told to it by set_flanking());
-##   otherwise it is seated by its own arc like any enemy. A seat is on the navmesh, on the player's floor and reachable. With the Debug switch
+##   it can be only while it is flanking (Milestone 5, Game-boy's playtest: while the player is busy
+##   with another enemy he faces, with hysteresis, and not once he turns to the Kicker;
+##   _track_flanking(), told to it by set_flanking()); otherwise it is seated by its own arc like any
+##   enemy. A seat is on the navmesh, on the player's floor and reachable. With the Debug switch
 ##   `director_even_spread` on, M3's rule instead: the enemies that are not Kickers evenly spaced all
 ##   round the player, turned as little as possible from where they stand.
 ##
@@ -608,10 +609,10 @@ func _track_flanking(player: PlayerCharacter, members: Array[EnemyActor]) -> voi
 
 ## True while the player is busy for `kicker`: another live, engaged enemy that is not itself flanking
 ## is the one he faces. It counts only when it stands inside his view within kicker_flank_busy_radius_m
-## of him AND as near the middle of the view as this Kicker or nearer (a look bearing no larger; a tie is busy, so
-## of two Kickers side by side one flanks), so turning onto
-## the Kicker ends the busy-ness while a Punk is still in view beside it. A Kicker out of view is farther
-## from the middle than anything in view. "Engaged" is any enemy that has come to the fight (not
+## of him AND as near the middle of the view as this Kicker or nearer (a look bearing no larger; a tie
+## is busy, so of two Kickers side by side one flanks), so turning onto the Kicker ends the busy-ness
+## while a Punk is still in view beside it. A Kicker out of view is farther from the middle than
+## anything in view. "Engaged" is any enemy that has come to the fight (not
 ## entering, not knocked out) whatever it is doing, so a Punk winding up, striking or recovering still
 ## keeps him busy.
 func _player_busy(player: PlayerCharacter, members: Array[EnemyActor], kicker: EnemyActor) -> bool:
