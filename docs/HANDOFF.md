@@ -4,6 +4,21 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-03 21:05 CST: phase 2 merged; the level plays start to boss; suite and recording running
+- **Built and merged** (`build.js` run `wf_ccbf580f-37d`, about 0.96M sub-agent tokens, about 8% of the 5-hour window). Merges `34fc4a6`, `5d60ac1` and `3db7d07` into `m5/level-blockout`. The only conflicts were in ARCHITECTURE.md's Mission 1 headings; all three sections are kept.
+  - **STREET** (`3ecb56a`): `game/level/mission1/street.tscn`, A1-A3, tables `a1-a3.tres` (13 enemies), `tests/test_m5_street.gd` (17 tests). Calls are in `M5-calls/STREET.md`.
+  - **ROOF** (`4054f3e`): `roofs.tscn`, A4-A6, `a4-a6.tres` (18 enemies), three drop edges with guards and hazards, and the pipe pickup. `tests/test_m5_roofs.gd` has 13 tests.
+  - **FINALE** (`6d3d08b`): `boss_roof.tscn` (A7, 20 x 20 m) and `a7.tres` (the boss; his adds come from the boss's own call-in), plus `mission1.tscn` (the `LevelRoot`). The level is **the main scene now**, and F6 cycles level, crowd room, training room. `tests/test_m5_done_when.gd` has 8 tests.
+  - No tunables were added, so the preset is unchanged.
+- **Whole-level timing** (god mode, full speed, headless): all 7 arenas in order, no STALL or BLOCKED, `LEVEL 194.8` s. Per arena: A1 8.6, A2 22.2, A3 24.1, A4 16.6, A5 24.7, A6 29.2, A7 37.7 s.
+- **Running:** the full suite (into `captures/m5-p2/suite.out`) and the held-back recording of the whole level (`captures/m5-p2/rec/held/`).
+- **The post-merge fixer list so far:**
+  - `go_cue.gd:191`'s triangulation ERROR (a degenerate arrow polygon).
+  - The knock-off act always picks A4's drop.
+  - A unique-tag named spawn waits forever while the player stands within 4 m of it. It needs a fallback to any free point after a wait.
+  - The STREET/ROOF seam: the 6 m shutter against the terrace's wall.
+  - Plus anything the suite, the done-when or the recording shows.
+
 ### 2026-11-03 20:25 CST: Game-boy approved the table; phase 2 (STREET, ROOF, FINALE) building
 - **Game-boy's words** (session chat, 20:20): "OK, enemy arcs are good. Let's continue with the rest of M5 now."
   - He played the arcs in the crowd room before saying it. Before that he asked for the run command to be posted with every playable update; a memory now says so.
