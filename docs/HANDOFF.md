@@ -4,6 +4,34 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-04 16:40 CST: phase 1 merged (1872/1872); stills and the audition room sent; phase 2 running
+- **Phase 1 is merged** into `m6/full-art-audio` and pushed (`56b960c`): 1872/1872 in 324 s, 0 error lines.
+  - The merge order was LOOKS, CHAIN (`5e8e757`), PROPS (`a337809`), KIT (`d342e02`) and AUDIO (`56b960c`). After each merge: the atlas, the preset, the ratchet and the full suite.
+  - The lead's fixes at merge:
+    - `test_m6_no_placeholders.gd` skips a hidden proxy cylinder, so `cylinder_weapons` fell to 0.
+    - `test_kit.gd` sees PROPS's art: the trim-material count skips StaticArt, and the fallback test uses an id with no scene.
+    - `.gitattributes` gives the ElevenLabs ledger a union merge.
+  - The ratchet now: mission1 primitive_bodies 4, tints 1, boxes 0 (was 489), cylinder_weapons 0, second_weapon 1; crowd_room 4, 0, 74, 0, 0; test_room 4, 1, 27, 0, 0; global generated_sfx 9, empty_slots 16 (AUDIO declared the slots, and SFX takes them to 0).
+  - The paid services: Tripo 150 credits (PROPS; the balance is 1555, and M6 has spent 150 of its 900 stop); ElevenLabs 1649 of 40,000. **The ElevenLabs rate is measured at 10 credits a second, not 40.** Gemini: 5 images.
+  - The phase 1 worktrees `.worktrees/m6-{chain,kit,props,audio,looks}` still hold their captures; prune them after M6.
+- **Sent to Game-boy** (Slack DM, 16:35): the cap's blood A/B, the veteran, street A1's kit and the props, weapons and dummy; the audition room's keys (training room: `]`/`[` page the banks, `1`-`9` play a take, `=` plays the bank, `-` swaps old and new) and the run command. Nothing waits on him.
+- **The lead's look** (from the packages' stills):
+  - The cap keeps its yellow, and the blood is hard-edged.
+  - The veteran reads at 1 m and 5 m.
+  - A1's brick, windows, cornices and chain-link read as a street; the bricks are chunky.
+  - The car and the tank read at 5 m, but are faceted at 1 m. The AC unit is pale.
+  - The Thug's pipe in hand isn't confirmed in any capture (end-on only).
+  - For the phase 3 review: the audition rows in the help overlay show "BracketRight" and "Minus", and one line runs past the panel's edge.
+- **Running:** phase 2, `tools/workflows/build.js` run `wf_6b1bdf77-3ee` with `docs/reviews/M6/args-P2.json` (SFX, HEAVIES, CREW, DRESS, WEAPONS, ARM; 3 Godot slots, and HEAVIES, CREW and ARM take the Blender slots).
+  - The args now carry phase 1's handover: each package's requests from the calls files, the alpha classes and the measured ElevenLabs rate.
+  - **If cut off:** rerun build.js with the same args (the file). Each builder resumes from its newest `wip:` commit, and a finished package is skipped.
+- **Next** (the plan's §4 step 4):
+  1. Merge each P2 package as it finishes; after each, the atlas, the preset, the ratchet and the full suite.
+  2. After WEAPONS: set `Pickups/PipeBigShutter`'s `weapon_scene` to `bike_chain.tscn` (`roofs.tscn:1117-1119`), rerun `test_m5_roofs.gd`, and lower `second_weapon`.
+  3. After ARM, send its stills. After SFX, send the audition room again. After HEAVIES and CREW, send the four characters at 1 m beside their concepts.
+  4. One post-merge fixer (Sonnet) if needed; HANDOFF; then phase 3 (§4 steps 5-9).
+- **Usage at launch:** 5-hour 21% (it resets at 19:50 CST), weekly 18%. Phase 1 cost about 16 points of the 5-hour window, against its estimate of 44.
+
 ### 2026-11-04 15:15 CST: step 0 merged (1766/1766); phase 1 running
 - **Step 0** (`b995e56`): 1766/1766 in 321 s, 0 error lines. `8ef8b28` is the ElevenLabs-only plan change.
 - **Running:** phase 1, `tools/workflows/build.js` run `wf_fa4aea82-d60` with `docs/reviews/M6/args-P1.json` (CHAIN, KIT, PROPS, AUDIO, LOOKS; 3 Godot slots, and CHAIN and PROPS share the 2 Blender slots).
