@@ -25,6 +25,10 @@ const BELT_MAX := Vector3(0.3, 0.6, 1.2)
 const ROBE_MIN := Vector3(-0.9, -0.6, 0.7)
 const ROBE_MAX := Vector3(0.9, 0.6, 1.9)
 ## The legs' box in the authored frame (x across, y front, z up): the tights from the boots to the shorts' hem, narrower than the arms.
+## The face's centre in the authored frame, inside the hood (FIX-ART-B: the brow, nose and jaw strokes of the texture are drawn here).
+const FACE_MIN := Vector3(-0.09, -0.3, 1.5)
+const FACE_MAX := Vector3(0.09, 0.3, 1.8)
+const FACE_INK_MIN := 0.02
 const LEGS_MIN := Vector3(-0.33, -0.6, 0.1)
 const LEGS_MAX := Vector3(0.33, 0.6, 0.95)
 ## Floors the M6 export fails and today's passes (see ROLL-OX.md for the figures).
@@ -252,3 +256,37 @@ func test_the_tights_carry_no_skin() -> void:
 			named = true
 			assert_eq(int(region.slot), SLOT_CHARCOAL, "the region paints charcoal")
 	assert_true(named, "the config names the region")
+
+
+## FIX-ART-B (feedback-chars-03): the face is skin all through (a region keeps slot 7 where the texture's shading was nearest the
+## grey shorts, and leaves the hood's charcoal alone) and the texture's own faint strokes are drawn through a lower ink pair on a
+## box inside the hood, so the nose, the mouth corner and the jaw have a line. The phase-2a export had no ink on the face.
+func test_the_face_is_skin_and_carries_the_textures_strokes() -> void:
+	var cfg: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(PIPELINE))
+	var lock: Dictionary = {}
+	for region: Dictionary in cfg.palette.regions:
+		if region.name == "face_lock":
+			lock = region
+	assert_false(lock.is_empty(), "the config names the face_lock region")
+	assert_eq(int(lock.slot), SLOT_SKIN, "it keeps skin")
+	var from: Array[int] = []
+	for slot: Variant in lock.only_from:
+		from.append(int(slot))
+	assert_true(from.has(SLOT_SHORTS), "it takes the shorts' grey off the face")
+	assert_false(from.has(SLOT_CHARCOAL), "but never turns the hood's lining to skin")
+	var zone: Dictionary = {}
+	for z: Dictionary in cfg.palette.detail_bake.zones:
+		if z.name == "face_skin":
+			zone = z
+	assert_lt(float(zone.ink_low), 0.04, "the face's ink pair is below the default")
+	assert_gt(float(zone.crease_deg), 180.0, "and is never the crease")
+	assert_lt(float(zone.max[0]), 0.12, "on a box inside the hood")
+	var face := _ink_share(func(tri: int) -> bool: return _slot_of_tri(tri) == SLOT_SKIN and _in_box(tri, FACE_MIN, FACE_MAX))
+	print("FIX-ART-B Ox face ink: %d faces %d of %d samples (%.4f)" % [face.faces, face.ink, face.samples, face.share])
+	assert_gt(int(face.faces), 200, "the face box holds skin faces (%d)" % face.faces)
+	assert_gte(float(face.share), FACE_INK_MIN, "the face carries its strokes (%.4f)" % face.share)
+	var hood := 0
+	for tri: int in _tris().size() / 3:
+		if _slot_of_tri(tri) == SLOT_CHARCOAL and _in_box(tri, FACE_MIN, FACE_MAX):
+			hood += 1
+	assert_gt(hood, 200, "the hood's charcoal is still charcoal beside the face (%d faces)" % hood)

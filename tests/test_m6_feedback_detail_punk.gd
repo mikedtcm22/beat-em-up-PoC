@@ -181,6 +181,8 @@ func test_the_punks_config_holds_the_recipe_values() -> void:
 	for off: String in ["skin_body", "dark_body", "wraps", "lens", "face_skin", "nose", "laces", "strap", "shades_frame"]:
 		assert_gt(float(zones[off].crease_deg), 180.0, "%s draws no crease" % off)
 	assert_lt(float(zones.vest.valley_deg), 30.0, "the vest draws shallow valleys")
+	assert_gte(float(zones.vest.valley_deg), 18.0, "but not the shallowest (FIX-ART-B: 15 degrees scribbled on the back and hem at 1 m)")
+	assert_gte(float(detail.crease.valley.min_chain_m), 0.55, "and only along long chains")
 	assert_lt(float(zones.jeans.valley_deg), 30.0, "and so do the trousers")
 	assert_false(zones.cap.has("valley_deg"), "the cap draws none")
 
