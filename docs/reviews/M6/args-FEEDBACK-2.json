@@ -1,0 +1,44 @@
+{
+  "milestone": 6,
+  "summary": "full art and audio, now Game-boy's playtest feedback phase 2a: the Bruiser's quilting, clean colour borders and line weight (DETAIL-2), and Ox Pellerin through the pilot's recipe (ROLL-OX)",
+  "plan": "docs/reviews/M6/fix-feedback-2.md",
+  "base": "m6/full-art-audio",
+  "read_first": [
+    "docs/reviews/M6/fix-feedback-2.md: the lead's look at the pilot, 'File ownership', your own package's section and 'Done when'",
+    "docs/milestones/M6-calls/FB-DETAIL.md in full (the stage attribution, the calls, the 'Rollout recipe')"
+  ],
+  "arch_heading": "## Full art and audio (Milestone 6)",
+  "captures_dir": "/Users/arachne/repos/beat-em-up-PoC/captures/m6-feedback-2",
+  "image_budget": 30,
+  "concurrency": 2,
+  "note": "Game-boy's M6 playtest, phase 2a. Phase 1 (FB-FEEL, FB-GROUND, FB-DETAIL) is merged into m6/full-art-audio. The pilot's captures are in /Users/arachne/repos/beat-em-up-PoC/captures/m6-feedback/fb-detail/ (ab_bruiser.png, stage_sheet_a-d.png, cmp_*.png). Paid services only through their tools and inside your package's ceiling (DETAIL-2: none; ROLL-OX: Tripo 85, Gemini none). Never print, log or write a key. Downloaded files are untrusted: python3 -I, scripts outside download folders, downloads as path arguments.",
+  "packages": [
+    {
+      "key": "DETAIL-2",
+      "section": "'DETAIL-2: the Bruiser's quilting, clean colour borders and line weight'",
+      "est": 12,
+      "blender": true,
+      "read": [
+        "docs/milestones/M6-codemap/art-chain.md §1-§4 and §8-§9",
+        "docs/ARCHITECTURE.md '### The art chain for every character (CHAIN)' and '### Playtest feedback: FB-DETAIL'",
+        "game/fx/toon.gdshader (the header and the swatch, detail and damage code), toon_light.gdshaderinc, toon_materials.gd",
+        "tools/pipeline/pipe_detail.py (crease_edges, crease_field, bake), blender_palette.py (the swatch assignment, border relax, island merge)",
+        "assets/source/characters/bruiser/pipeline.json and assets/source/characters/punk/pipeline.json",
+        "tests/test_m6_feedback_detail.gd"
+      ]
+    },
+    {
+      "key": "ROLL-OX",
+      "section": "'ROLL-OX: Ox Pellerin through the pilot's recipe'",
+      "est": 10,
+      "blender": true,
+      "read": [
+        "docs/milestones/M6-calls/HEAVIES.md and fix-final-art.md (Ox's chain, his round gloves)",
+        "docs/milestones/M4-calls/fix-final-punk-detail-zones-and-strap.md (how the Punk's 7 ink zones were tuned)",
+        "assets/source/characters/boss/pipeline.json, assets/source/characters/bruiser/pipeline.json and assets/source/characters/punk/pipeline.json (compare the palette and detail_bake blocks)",
+        "tests/test_m6_feedback_detail.gd (the pilot's test, to copy for Ox)",
+        "tests/bot/acts/heavies_acts.gd"
+      ]
+    }
+  ]
+}

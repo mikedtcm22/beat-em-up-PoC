@@ -338,6 +338,19 @@ The characters are procedural placeholders. Real art, VFX and audio come in Mile
   - The veteran Punk is marked by an orange tint over the whole Punk art.
   - A weapon lying on the floor is drawn amber and thicker (`weapon_floor_color`, `weapon_floor_radius_scale`), so it can be found on the grey floor. A held or thrown weapon keeps its look.
 
+**Where M6 departs from the spec, ruled by Game-boy at his playtest (2026-11-05):**
+- **You feel the hits you take (Spec §6 gives every hit one camera stack):**
+  - When a clean hit lands on you:
+    - the view shakes 2.5 times as hard, with at least 0.3 trauma;
+    - it kicks 2.5 times as far;
+    - the head rolls away from the blow (2°, 4° and 7° by tier).
+  - An ink vignette with white comic strokes flashes on the side the hit came from, scaled by its damage, and the HP panel jolts.
+  - His words: "I got knocked down to almost half-health without even realizing anything was happening to my character."
+  - Blocked hits and the hits you land keep Spec §6's values.
+  - The vignette is ink and paper, not red: the style rules keep red for blood, the rear warning and finishers (`hurt_overlay_color` changes it).
+  - `hurt_feel_enabled` off gives M6's view.
+- **No sting on GO** (a plan item, not a spec rule): an arena's GO is silent, and the CLEAR sting after the boss stays. `audio_sting_go` on brings it back.
+
 **Where M6 departs from the spec, for Game-boy to rule on:**
 - **M4's departures now cover every character:**
   - **Rig and animation (Spec §10, pipeline steps 4-6):** the Kicker, the Pipe Thug, the Bruiser and Ox Pellerin are rigged by Tripo and fitted to the game's own skeleton, and they play the game's own animation set, as the Punk does. No Mixamo or mocap clip is used. Their telegraph timings are M3's.
