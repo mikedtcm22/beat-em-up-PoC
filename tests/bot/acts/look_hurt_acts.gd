@@ -9,7 +9,10 @@ extends RefCounted
 ##  - "Look: player hurt blocked": his guard held, a Punk's jab and a Bruiser's smash from the front: the
 ##    light feel of M6 (the vignette at hurt_overlay_blocked_scale, no strokes, no roll);
 ##  - "Look: player hurt burst": three Punks at once, front, right and left, the last with the shove,
-##    real damage, the view's stack of three in a row.
+##    real damage, the view's stack of three in a row;
+##  - "Look: player hurt looking down": the player looks down about 45 degrees (as at a stomp) and takes a
+##    Punk's jab from behind, the left and the front (VFIX-FEEL: the edge must follow the floor-plane side
+##    at any pitch, the bottom edge from behind readable on the pale ground).
 ## The edge and the roll come from the attacker's side (hit_bearing). The recording judges what the view
 ## and the HUD do (the shake, the head's roll, the edge vignette, the health panel's jolt). The bot log
 ## prints `HURT <who> <side>` before each attack and `HURT-HIT <tier> <damage> <blocked>` for each hit he
@@ -66,6 +69,14 @@ const FREE_MAX_TICKS := 240
 const AFTER_TICKS := 40
 ## A pitch a little under level, as the default view of the look acts.
 const PITCH_DEG := -6.0
+## The pitch of "Look: player hurt looking down": about what a stomp on a downed enemy looks at.
+const DOWN_PITCH_DEG := -45.0
+## The sides of the looking-down act: behind first (the one that read as ahead), then the left and the front.
+const DOWN_SIDES: Array[Dictionary] = [
+	{bearing = 180.0, label = "behind"},
+	{bearing = 90.0, label = "left"},
+	{bearing = 0.0, label = "front"},
+]
 
 
 static func acts(bot: Node) -> Array[Dictionary]:
@@ -77,6 +88,8 @@ static func acts(bot: Node) -> Array[Dictionary]:
 				fn = func() -> void: await _blocked(bot)},
 		{title = "Look: player hurt burst", cam = &"first_person", slug = &"hurt_burst",
 				fn = func() -> void: await _burst(bot)},
+		{title = "Look: player hurt looking down", cam = &"first_person", slug = &"hurt_down",
+				fn = func() -> void: await _looking_down(bot)},
 	]
 
 
@@ -85,6 +98,14 @@ static func _hurt(bot: Node) -> void:
 	for attack: Dictionary in ATTACKS:
 		for side: Dictionary in SIDES:
 			await _one(bot, attack, side)
+	_end(bot, log_hit)
+
+
+## The Punk's jab from behind, the left and the front, with the player looking down 45 degrees.
+static func _looking_down(bot: Node) -> void:
+	var log_hit := await _begin(bot, DOWN_PITCH_DEG)
+	for side: Dictionary in DOWN_SIDES:
+		await _one(bot, ATTACKS[0], side)
 	_end(bot, log_hit)
 
 
@@ -138,7 +159,7 @@ static func _burst(bot: Node) -> void:
 
 
 ## God mode off, the AI frozen, the hits taken logged, the view a little under level. Returns the logger.
-static func _begin(bot: Node) -> Callable:
+static func _begin(bot: Node, pitch_deg: float = PITCH_DEG) -> Callable:
 	bot.caption.visible = false
 	bot.god(false)
 	bot.freeze_ai(true)
@@ -146,7 +167,7 @@ static func _begin(bot: Node) -> Callable:
 		if hit.victim == bot.player:
 			bot.log_line("HURT-HIT %s %.0f %s" % [CombatTypes.tier_name(hit.tier), hit.damage, str(hit.blocked)])
 	CombatEvents.hit_landed.connect(log_hit)
-	await bot._look_to(PITCH_DEG, 6)
+	await bot._look_to(pitch_deg, 6)
 	await bot._ticks(SETTLE_TICKS)
 	return log_hit
 

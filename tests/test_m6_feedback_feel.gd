@@ -13,6 +13,11 @@ const BRUISER_SCENE := preload("res://game/enemies/bruiser/bruiser.tscn")
 const JAB_RANGE_M := 0.9
 ## ...and for the Bruiser's smash.
 const SMASH_RANGE_M := 1.2
+## The pitches (degrees) of the pitched-view tests: a stomp looks about 45 down, 60 is steeper, 30 up.
+const PITCHES_DEG: Array[float] = [-45.0, -60.0, 30.0]
+## The roll and kick (degrees) a previous hit left on the camera, in the carried-view tests.
+const CARRIED_ROLL_DEG := 12.0
+const CARRIED_KICK_DEG := 6.0
 
 ## Stand-in for the player (as test_cameras.gd's): the camera-facing API only.
 class FakePlayer extends PlayerCharacter:
@@ -293,6 +298,39 @@ func test_the_overlay_side_follows_the_contact() -> void:
 		assert_gt(right.edge_strength(edge), 0.0, "every edge shows the even share")
 
 
+func test_a_clean_hit_from_behind_is_inked_heavier_than_the_same_blow_on_another_edge() -> void:
+	var player := _player()
+	var enemy := _enemy()
+	var gain := Tuning.data.hurt_overlay_bottom_ink_gain
+	assert_gt(gain, 1.0, "the bottom ink is heavier by default")
+	var behind := _overlay()
+	behind.on_player_hit(_hit(enemy, player, CombatTypes.HitTier.LIGHT, Vector3.BACK, 6.0), Transform3D.IDENTITY)
+	var left := _overlay()
+	left.on_player_hit(_hit(enemy, player, CombatTypes.HitTier.LIGHT, Vector3.LEFT, 6.0), Transform3D.IDENTITY)
+	assert_almost_eq(behind.edge_strength(HurtOverlay.Edge.BOTTOM), left.edge_strength(HurtOverlay.Edge.LEFT) * gain, 0.0001,
+			"the same blow, the bottom edge inked by the gain")
+	assert_almost_eq(behind.stroke_strength(HurtOverlay.Edge.BOTTOM), left.stroke_strength(HurtOverlay.Edge.LEFT), 0.0001,
+			"the strokes' strength is the same (their length is the gain's, in the draw)")
+	# A block stays as faint as M6: no gain, no strokes.
+	var blocked := _hit(enemy, player, CombatTypes.HitTier.LIGHT, Vector3.BACK, 6.0)
+	blocked.blocked = true
+	var guarded := _overlay()
+	guarded.on_player_hit(blocked, Transform3D.IDENTITY)
+	assert_almost_eq(guarded.edge_strength(HurtOverlay.Edge.BOTTOM),
+			HurtOverlay.strength_for(6.0) * Tuning.data.hurt_overlay_blocked_scale, 0.0001, "a block's bottom edge is not boosted")
+	assert_almost_eq(guarded.stroke_strength(HurtOverlay.Edge.BOTTOM), 0.0, 0.0001, "no strokes on a block")
+
+
+func test_the_strokes_have_an_ink_rim_that_is_ink_not_red() -> void:
+	var data := TuningData.new()
+	assert_gt(data.hurt_overlay_outline_width, 0.0, "a rim by default")
+	var rim := data.hurt_overlay_outline_color
+	assert_lt(maxf(rim.r, maxf(rim.g, rim.b)), 0.2, "dark ink")
+	assert_gt(rim.a, 0.8, "opaque enough to read on any ground")
+	assert_eq([data.hurt_overlay_outline_width, data.hurt_overlay_bottom_ink_gain, data.hurt_overlay_bottom_stroke_gain],
+			[0.007, 1.5, 1.4], "the shipped look")
+
+
 func test_the_overlay_fades_out_and_a_block_is_lighter() -> void:
 	var player := _player()
 	var enemy := _enemy()
@@ -359,7 +397,9 @@ func test_the_health_panel_jolts_in_proportion_to_the_damage_and_settles() -> vo
 ## unit vector (a world direction, the player looking down -Z) it stands along, `range_m` its distance.
 ## The hit comes out of HitDetector, with the contact on the player's own hurtbox. Returns the hit, the
 ## camera and the overlay (both listening to the event, the camera the viewport's).
-func _real_hit(scene: PackedScene, from: Vector3, range_m: float) -> Dictionary:
+## `pitch_deg` is the player's look pitch (negative looks down) and `carry`, when set, adds a roll and a
+## punch of a earlier hit to the camera (and lets them reach their peak) before the attack.
+func _real_hit(scene: PackedScene, from: Vector3, range_m: float, pitch_deg: float = 0.0, carry: bool = false) -> Dictionary:
 	Tuning.reset_to_default()
 	Tuning.data.ai_frozen = true
 	Tuning.data.god_mode = false
@@ -383,6 +423,7 @@ func _real_hit(scene: PackedScene, from: Vector3, range_m: float) -> Dictionary:
 	var player := PlayerCharacter.new()
 	stage.add_child(player)
 	player.input.scripted = true
+	player.look_pitch = deg_to_rad(pitch_deg)
 	var director := preload("res://tests/fixtures/stub_director.gd").new()
 	stage.add_child(director)
 	var cam := FirstPersonCamera.new()
@@ -391,6 +432,10 @@ func _real_hit(scene: PackedScene, from: Vector3, range_m: float) -> Dictionary:
 	cam.player = player
 	cam.make_current()
 	cam.update_camera(DT)
+	if carry:
+		cam.add_roll(CARRIED_ROLL_DEG)
+		cam.add_punch(Vector2(CARRIED_KICK_DEG, CARRIED_KICK_DEG))
+		cam.update_camera(cam.punch_duration_s * cam.punch_attack_share)
 	var overlay := HurtOverlay.new()
 	stage.add_child(overlay)
 	var hits: Array[HitInfo] = []
@@ -476,6 +521,130 @@ func test_a_real_bruiser_smash_from_the_left_rolls_right() -> void:
 	_assert_edge(r.overlay, HurtOverlay.Edge.LEFT, [HurtOverlay.Edge.RIGHT, HurtOverlay.Edge.TOP, HurtOverlay.Edge.BOTTOM],
 			"the smash from the left")
 	assert_lt(_peak_roll(r.cam), -0.5)
+
+
+# --- The bearing is measured on the floor plane (verify-world-02) ----------------------------------------
+
+
+## The sides of a Punk's jab and the edge each lights: ahead the top, behind the bottom, left and right
+## their own. One real hit per test (a second stage in a test would feed its first player's hits to the
+## new overlay too).
+const SIDE_EDGES: Array[Dictionary] = [
+	{from = Vector3(0.0, 0.0, -1.0), edge = HurtOverlay.Edge.TOP, name = "front"},
+	{from = Vector3.BACK, edge = HurtOverlay.Edge.BOTTOM, name = "behind"},
+	{from = Vector3.LEFT, edge = HurtOverlay.Edge.LEFT, name = "left"},
+	{from = Vector3.RIGHT, edge = HurtOverlay.Edge.RIGHT, name = "right"},
+]
+
+
+## A real jab from side `side` (an index of SIDE_EDGES) at `pitch_deg`, the camera carrying a hit's roll and
+## kick or not: the struck edge has the strokes and every other far fewer.
+func _assert_side(side: int, pitch_deg: float, carry: bool) -> void:
+	var s: Dictionary = SIDE_EDGES[side]
+	var r := await _real_hit(PUNK_SCENE, s.from, JAB_RANGE_M, pitch_deg, carry)
+	var label := "%s at pitch %.0f%s" % [s.name, pitch_deg, " carrying a hit" if carry else ""]
+	assert_not_null(r.hit, "the jab landed: %s" % label)
+	if r.hit == null:
+		return
+	var overlay: HurtOverlay = r.overlay
+	var lit: int = s.edge
+	assert_gt(overlay.stroke_strength(lit), 0.0, "strokes on the struck edge: %s" % label)
+	for edge: int in 4:
+		if edge != lit:
+			assert_lt(overlay.stroke_strength(edge), overlay.stroke_strength(lit) * 0.3,
+					"far fewer strokes on edge %d: %s" % [edge, label])
+
+
+func test_a_real_jab_from_the_front_lights_the_top_edge_looking_down_45() -> void:
+	await _assert_side(0, -45.0, false)
+
+
+func test_a_real_jab_from_behind_lights_the_bottom_edge_looking_down_45() -> void:
+	await _assert_side(1, -45.0, false)
+
+
+func test_a_real_jab_from_the_left_lights_the_left_edge_looking_down_45() -> void:
+	await _assert_side(2, -45.0, false)
+
+
+func test_a_real_jab_from_the_right_lights_the_right_edge_looking_down_45() -> void:
+	await _assert_side(3, -45.0, false)
+
+
+func test_a_real_jab_from_behind_lights_the_bottom_edge_looking_down_60() -> void:
+	await _assert_side(1, -60.0, false)
+
+
+func test_a_real_jab_from_the_front_lights_the_top_edge_looking_down_60() -> void:
+	await _assert_side(0, -60.0, false)
+
+
+func test_a_real_jab_from_the_front_lights_the_top_edge_looking_up_30() -> void:
+	await _assert_side(0, 30.0, false)
+
+
+func test_a_real_jab_from_behind_lights_the_bottom_edge_looking_up_30() -> void:
+	await _assert_side(1, 30.0, false)
+
+
+func test_a_real_jab_from_the_left_lights_the_left_edge_looking_up_30() -> void:
+	await _assert_side(2, 30.0, false)
+
+
+func test_a_real_jab_from_behind_lights_the_bottom_edge_with_a_carried_roll_and_kick() -> void:
+	await _assert_side(1, 0.0, true)
+
+
+func test_a_real_jab_from_the_front_lights_the_top_edge_with_a_carried_roll_and_kick() -> void:
+	await _assert_side(0, 0.0, true)
+
+
+func test_a_real_jab_from_the_right_lights_the_right_edge_looking_down_with_a_carried_roll_and_kick() -> void:
+	await _assert_side(3, -45.0, true)
+
+
+func test_the_bearing_ignores_pitch_roll_and_the_attackers_height_under_the_lens() -> void:
+	var player := _player()
+	var enemy := _enemy()
+	var hit := _hit(enemy, player, CombatTypes.HitTier.LIGHT, Vector3.BACK)
+	hit.direction = Vector3.ZERO
+	var eye := Vector3(0.0, EYE_Y, 0.0)
+	var cases: Array[Dictionary] = [
+		{at = Vector3(0.0, 0.0, 0.9), want = PI},
+		{at = Vector3(0.0, 0.0, -0.9), want = 0.0},
+		{at = Vector3(0.9, 0.0, 0.0), want = PI / 2.0},
+		{at = Vector3(-0.9, 0.0, 0.0), want = -PI / 2.0},
+	]
+	for pitch: float in [-80.0, -60.0, -45.0, -30.0, 0.0, 30.0, 60.0]:
+		for roll: float in [0.0, 12.0, -20.0]:
+			var basis := Basis.from_euler(Vector3(deg_to_rad(pitch), 0.0, deg_to_rad(roll)), EULER_ORDER_YXZ)
+			var view := Transform3D(basis, eye)
+			for c: Dictionary in cases:
+				enemy.global_position = c.at
+				assert_almost_eq(absf(FirstPersonCamera.hit_bearing(view, hit)), absf(float(c.want)), 0.001,
+						"pitch %.0f roll %.0f, attacker at %s" % [pitch, roll, str(c.at)])
+	# A yawed view: the attacker is measured against where the player looks.
+	var yawed := Transform3D(Basis.from_euler(Vector3(deg_to_rad(-45.0), deg_to_rad(90.0), 0.0), EULER_ORDER_YXZ), eye)
+	enemy.global_position = Vector3(0.0, 0.0, -0.9)  # the player looks along -X: this is on his right
+	assert_almost_eq(FirstPersonCamera.hit_bearing(yawed, hit), PI / 2.0, 0.001, "a yawed, pitched view")
+
+
+func test_the_overlay_reads_the_view_without_the_kick_of_a_previous_hit() -> void:
+	var player := _player()
+	var cam := _camera(player)
+	cam.make_current()
+	var enemy := _enemy()
+	enemy.global_position = Vector3(0.0, 0.0, 0.9)
+	cam.add_roll(CARRIED_ROLL_DEG * 2.0)
+	cam.add_punch(Vector2(CARRIED_KICK_DEG, CARRIED_KICK_DEG))
+	cam.update_camera(cam.punch_duration_s * cam.punch_attack_share)
+	var overlay := HurtOverlay.new()
+	add_child_autofree(overlay)
+	var hit := _hit(enemy, player, CombatTypes.HitTier.LIGHT, Vector3.BACK)
+	overlay.call(&"_on_hit_landed", hit)
+	assert_gt(overlay.stroke_strength(HurtOverlay.Edge.BOTTOM), 0.0, "from behind: the bottom edge")
+	assert_almost_eq(overlay.stroke_strength(HurtOverlay.Edge.LEFT), 0.0, 0.001, "not tipped onto the left by the carried roll")
+	assert_almost_eq(overlay.stroke_strength(HurtOverlay.Edge.RIGHT), 0.0, 0.001, "nor onto the right")
 
 
 func test_the_real_contact_is_on_the_players_own_hurtbox_and_says_nothing_of_the_side() -> void:

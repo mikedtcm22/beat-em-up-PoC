@@ -814,17 +814,22 @@ func _toward(point: Vector3) -> Vector2:
 
 
 ## Where a hit on the player came from, as an angle off the view's forward in radians: 0 = ahead,
-## +PI/2 = from the right, PI = from behind. It reads the attacker's position against `view` (the
-## contact point is on the player's own hurtbox, a few tenths of a metre from the lens, and says nothing
-## about the side). With no attacker in the tree, or one within hurt_bearing_min_m of the lens
-## horizontally, the way the hit pushes stands in. Read-only: it never writes the attacker.
+## +PI/2 = from the right, PI = from behind. It is measured on the floor plane, from the view's yaw only:
+## the attacker's origin is at floor level, 1.6 m under the lens, so a pitched view would read a Punk behind
+## a player who looks down at a stomp as ahead of him (and the roll and kick a last hit left on the camera
+## would skew the next bearing). It reads the attacker's position (the contact point is on the player's own
+## hurtbox, a few tenths of a metre from the lens, and says nothing about the side). With no attacker in the
+## tree, or one within hurt_bearing_min_m of the lens horizontally, the way the hit pushes stands in.
+## Read-only: it never writes the attacker.
 static func hit_bearing(view: Transform3D, hit: HitInfo) -> float:
+	var yaw := Basis(Vector3.UP, view.basis.get_euler(EULER_ORDER_YXZ).y)
 	var local := Vector3.ZERO
 	var attacker := hit.attacker
 	if attacker != null and is_instance_valid(attacker) and attacker.is_inside_tree():
-		local = view.basis.inverse() * (attacker.global_position - view.origin)
+		local = yaw.inverse() * (attacker.global_position - view.origin)
+	local.y = 0.0
 	if Vector2(local.x, local.z).length() < Tuning.data.hurt_bearing_min_m:
-		local = view.basis.inverse() * (-hit.direction)
+		local = yaw.inverse() * (-hit.direction)
 	return atan2(local.x, -local.z)
 
 
