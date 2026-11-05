@@ -55,6 +55,8 @@ static func drawn_boxes(root: Node) -> Array[Dictionary]:
 		if owner_node is LevelBlock:
 			var block := owner_node as LevelBlock
 			box = block.global_transform * AABB(-block.size * 0.5, block.size)
+		elif owner_node is StaticBody3D:
+			box = _body_box(owner_node as StaticBody3D, box)
 		out.append({node = mesh, box = box, owner = owner_node})
 	return out
 
@@ -79,6 +81,19 @@ static func _box_owner(mesh: MeshInstance3D, root: Node) -> Node:
 		if parent != null and parent.name == &"Geometry":
 			return mesh
 	return null
+
+
+## The box a world body draws: its collider's box where the mesh is that box with the kit's standoffs (a plinth board) on it, else the mesh's
+## own bounds.
+static func _body_box(body: StaticBody3D, mesh_box: AABB) -> AABB:
+	for child in body.get_children():
+		var shape := child as CollisionShape3D
+		if shape != null and shape.shape is BoxShape3D:
+			var size := (shape.shape as BoxShape3D).size
+			if mesh_box.size.x - size.x < 0.11 and mesh_box.size.y - size.y < 0.11 and mesh_box.size.z - size.z < 0.11 \
+					and mesh_box.size.x >= size.x - 0.001 and mesh_box.size.y >= size.y - 0.001 and mesh_box.size.z >= size.z - 0.001:
+				return shape.global_transform * AABB(-size * 0.5, size)
+	return mesh_box
 
 
 static func _axis_aligned(basis: Basis) -> bool:
@@ -168,9 +183,12 @@ static func _visible_area(items: Array[Dictionary], i: int, j: int, axis: int, s
 ## The rectangles of `item`'s `side` face of `axis` that it does not draw (an InsetBlock's yielded overlaps).
 static func clips_of(item: Dictionary, axis: int, side: int) -> Array[Rect2]:
 	var block := item.owner as InsetBlock
-	if block == null:
-		return []
-	return block.clipped_rects(axis, side)
+	if block != null:
+		return block.clipped_rects(axis, side)
+	var out: Array[Rect2] = []
+	if item.owner.has_meta(RoomKit.CLIPPED_META):
+		out.assign((item.owner.get_meta(RoomKit.CLIPPED_META) as Dictionary).get(MeshClip.key(axis, side), []))
+	return out
 
 
 static func _area(rects: Array[Rect2]) -> float:
@@ -255,8 +273,6 @@ static func holes(root: Node, min_area: float = MIN_AREA_M2) -> Array[Dictionary
 	var space := (root as Node3D).get_world_3d().direct_space_state if root is Node3D else null
 	var out: Array[Dictionary] = []
 	for i in items.size():
-		if not items[i].owner is InsetBlock:
-			continue
 		var box: AABB = items[i].box
 		for axis in 3:
 			var u := (axis + 1) % 3

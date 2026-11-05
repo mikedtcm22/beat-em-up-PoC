@@ -129,6 +129,72 @@ static func add_box(parent: Node, pos: Vector3, size: Vector3, material: Materia
 	return body
 
 
+## The meta key under which a box of a code-built room keeps what it does not draw: {MeshClip.key(axis, side): Array[Rect2]}, world
+## space, in the plane's (u, v) coordinates (tests/m6_coplanar_scan.gd reads it).
+const CLIPPED_META := &"clipped_rects"
+
+
+## Makes no two drawn faces of the solid boxes under `geometry` (the ones `add_box` made) share a plane (Milestone 6 playtest
+## verification, VFIX-WORLD; the level's blocks do it with `yields_to`, a room builds its boxes in loops, so it is decided here,
+## once the room's boxes are all in): where two boxes' faces look the same way in one plane, the smaller box (then the later
+## one) does not draw its face over the overlap (MeshClip), so there is only the other's, with no fight and no step. The colliders
+## and the navmesh never change. A box with no kit mesh (the graybox switch) is left as it is.
+static func resolve_coplanar(geometry: Node) -> void:
+	var boxes: Array[Dictionary] = []
+	for child in geometry.get_children():
+		var body := child as StaticBody3D
+		if body == null or body.collision_layer != CombatTypes.bit(CombatTypes.LAYER_WORLD):
+			continue
+		var shape := body.get_child(0) as CollisionShape3D if body.get_child_count() > 0 else null
+		var mesh := body.get_child(1) as MeshInstance3D if body.get_child_count() > 1 else null
+		if shape == null or mesh == null or not (shape.shape is BoxShape3D) or not (mesh.mesh is ArrayMesh):
+			continue
+		var size := (shape.shape as BoxShape3D).size
+		boxes.append({body = body, mesh = mesh, size = size, box = AABB(body.position - size * 0.5, size), clips = {}})
+	var coplanar: float = Tuning.data.kit_coplanar_m
+	for i in boxes.size():
+		for j in range(i + 1, boxes.size()):
+			var found := MeshClip.overlaps(boxes[i].box, boxes[j].box, coplanar)
+			if found.is_empty():
+				continue
+			var i_wins := _wins(boxes[i], boxes[j])
+			var loser: Dictionary = boxes[j] if i_wins else boxes[i]
+			var winner: Dictionary = boxes[i] if i_wins else boxes[j]
+			var overlaps := MeshClip.overlaps(loser.box, winner.box, coplanar)
+			for face_key: String in overlaps:
+				var rects: Array = (loser.clips as Dictionary).get(face_key, [])
+				rects.append(overlaps[face_key])
+				(loser.clips as Dictionary)[face_key] = rects
+	for entry in boxes:
+		var clips: Dictionary = entry.clips
+		if clips.is_empty():
+			continue
+		var local := {}
+		var world := {}
+		var body: StaticBody3D = entry.body
+		for face_key: String in clips:
+			var axis := int(face_key.substr(0, 1))
+			var u := (axis + 1) % 3
+			var v := (axis + 2) % 3
+			var shifts: Array[Rect2] = []
+			var shifted: Array[Rect2] = []
+			for rect: Rect2 in clips[face_key]:
+				shifted.append(rect)
+				shifts.append(Rect2(rect.position - Vector2(body.position[u], body.position[v]), rect.size))
+			world[face_key] = shifted
+			local[face_key] = shifts
+		var mesh: MeshInstance3D = entry.mesh
+		mesh.mesh = MeshClip.clip_box(mesh.mesh, entry.size, local, Tuning.data.kit_clip_standoff_m, coplanar)
+		body.set_meta(CLIPPED_META, world)
+
+
+## Whether box `a` of resolve_coplanar wins a shared plane against `b`: the bigger one, then the earlier.
+static func _wins(a: Dictionary, b: Dictionary) -> bool:
+	var volume_a: float = (a.box as AABB).get_volume()
+	var volume_b: float = (b.box as AABB).get_volume()
+	return volume_a >= volume_b
+
+
 ## A box that is only drawn (paint, the far skyline): no collision, and the navmesh ignores it.
 static func add_visual_box(parent: Node, pos: Vector3, size: Vector3, material: Material,
 		overlay: Material = null, art: StringName = &"") -> MeshInstance3D:

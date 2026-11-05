@@ -23,17 +23,6 @@ extends LevelBlock
 	set(value):
 		yields_to = value
 		_rebuild()
-## Two faces closer than this (metres) are in one plane.
-@export_range(0.0, 0.05, 0.001) var coplanar_m: float = 0.004:
-	set(value):
-		coplanar_m = value
-		_rebuild()
-## How far out of the box's face (metres) the kit's own standoffs are taken out with it (a wall's plinth board stands off its
-## face by 5 cm: it is the same face for this purpose).
-@export_range(0.0, 0.5, 0.005) var standoff_m: float = 0.06:
-	set(value):
-		standoff_m = value
-		_rebuild()
 
 
 ## The rectangles of this block's `side` face of `axis` (1 the + face, 0 the - face) that it does not draw, in the plane's
@@ -45,7 +34,7 @@ func clipped_rects(axis: int, side: int) -> Array[Rect2]:
 	var offset := global_position
 	var u := (axis + 1) % 3
 	var v := (axis + 2) % 3
-	for rect in _clips().get(_key(axis, side), []):
+	for rect in _clips().get(MeshClip.key(axis, side), []):
 		out.append(Rect2(rect.position + Vector2(offset[u], offset[v]), rect.size))
 	return out
 
@@ -59,13 +48,7 @@ func _make_mesh(material: Material) -> MeshInstance3D:
 	var clips := _clips()
 	if clips.is_empty():
 		return mesh
-	var drawn := mesh.mesh as ArrayMesh
-	for key: String in clips:
-		var axis := int(key.substr(0, 1))
-		var side := int(key.substr(2, 1))
-		var plane := size[axis] * 0.5 * (1.0 if side == 1 else -1.0)
-		drawn = MeshClip.clip(drawn, axis, side, plane, standoff_m, coplanar_m, clips[key])
-	mesh.mesh = drawn
+	mesh.mesh = MeshClip.clip_box(mesh.mesh, size, clips, Tuning.data.kit_clip_standoff_m, Tuning.data.kit_coplanar_m)
 	return mesh
 
 
@@ -82,25 +65,11 @@ func _clips() -> Dictionary:
 		var partner := get_node_or_null(path) as Node3D
 		if partner == null:
 			continue
-		var other := _box_of(partner, inverse)
-		for axis in 3:
-			var u := (axis + 1) % 3
-			var v := (axis + 2) % 3
-			var overlap := Rect2(
-					maxf(mine.position[u], other.position[u]), maxf(mine.position[v], other.position[v]),
-					minf(mine.end[u], other.end[u]) - maxf(mine.position[u], other.position[u]),
-					minf(mine.end[v], other.end[v]) - maxf(mine.position[v], other.position[v]))
-			if overlap.size.x <= 0.0 or overlap.size.y <= 0.0:
-				continue
-			for side in 2:
-				var mine_plane: float = mine.end[axis] if side == 1 else mine.position[axis]
-				var other_plane: float = other.end[axis] if side == 1 else other.position[axis]
-				if absf(mine_plane - other_plane) > coplanar_m:
-					continue
-				var key := _key(axis, side)
-				if not out.has(key):
-					out[key] = [] as Array[Rect2]
-				(out[key] as Array[Rect2]).append(overlap)
+		var found := MeshClip.overlaps(mine, _box_of(partner, inverse), Tuning.data.kit_coplanar_m)
+		for face_key: String in found:
+			if not out.has(face_key):
+				out[face_key] = [] as Array[Rect2]
+			(out[face_key] as Array[Rect2]).append(found[face_key])
 	return out
 
 
@@ -114,6 +83,3 @@ func _box_of(partner: Node3D, inverse: Transform3D) -> AABB:
 		return inverse * piece.global_transform * piece.mesh.get_aabb()
 	return AABB()
 
-
-static func _key(axis: int, side: int) -> String:
-	return "%d|%d" % [axis, side]

@@ -30,6 +30,56 @@ class Vertex:
 		return out
 
 
+## The key of a face in the dictionaries below: its axis and side.
+static func key(axis: int, side: int) -> String:
+	return "%d|%d" % [axis, side]
+
+
+## The overlaps of box `mine` with box `other` (one space, axis-aligned) on every face of `mine` that lies in one plane with
+## `other`'s face looking the same way (within `coplanar` metres): {key(axis, side): Rect2 in the plane's (u, v) coordinates}.
+static func overlaps(mine: AABB, other: AABB, coplanar: float) -> Dictionary:
+	var out := {}
+	for axis in 3:
+		var u := (axis + 1) % 3
+		var v := (axis + 2) % 3
+		var overlap := Rect2(
+				maxf(mine.position[u], other.position[u]), maxf(mine.position[v], other.position[v]),
+				minf(mine.end[u], other.end[u]) - maxf(mine.position[u], other.position[u]),
+				minf(mine.end[v], other.end[v]) - maxf(mine.position[v], other.position[v]))
+		if overlap.size.x <= 0.0 or overlap.size.y <= 0.0:
+			continue
+		for side in 2:
+			var mine_plane: float = mine.end[axis] if side == 1 else mine.position[axis]
+			var other_plane: float = other.end[axis] if side == 1 else other.position[axis]
+			if absf(mine_plane - other_plane) <= coplanar:
+				out[key(axis, side)] = overlap
+	return out
+
+
+## `mesh` (a box centred on its origin of size `size`) with every rectangle in `clips` ({key: Array[Rect2]}, the plane's (u, v)
+## coordinates in the mesh's space) taken out of its face; a mesh that is not an ArrayMesh is converted first.
+static func clip_box(mesh: Mesh, size: Vector3, clips: Dictionary, standoff: float, coplanar: float) -> ArrayMesh:
+	var drawn := as_array_mesh(mesh)
+	for face_key: String in clips:
+		var axis := int(face_key.substr(0, 1))
+		var side := int(face_key.substr(2, 1))
+		var plane := size[axis] * 0.5 * (1.0 if side == 1 else -1.0)
+		drawn = clip(drawn, axis, side, plane, standoff, coplanar, clips[face_key])
+	return drawn
+
+
+## `mesh` as an ArrayMesh: a primitive mesh (the plain box) is built into one, with its material on the surface.
+static func as_array_mesh(mesh: Mesh) -> ArrayMesh:
+	var array_mesh := mesh as ArrayMesh
+	if array_mesh != null:
+		return array_mesh
+	var out := ArrayMesh.new()
+	for surface in mesh.get_surface_count():
+		out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, mesh.surface_get_arrays(surface))
+		out.surface_set_material(surface, mesh.surface_get_material(surface))
+	return out
+
+
 ## `mesh` with `rects` removed from its faces on the plane (see the class comment).
 static func clip(mesh: ArrayMesh, axis: int, side: int, plane: float, depth: float, tolerance: float, rects: Array[Rect2]) -> ArrayMesh:
 	var out := ArrayMesh.new()
@@ -47,6 +97,7 @@ static func clip(mesh: ArrayMesh, axis: int, side: int, plane: float, depth: flo
 		var kept_normals := PackedVector3Array()
 		var kept_uvs := PackedVector2Array()
 		var kept_colors := PackedColorArray()
+		var has_colors := not colors.is_empty()
 		var kept_indices := PackedInt32Array()
 		for t in range(0, indices.size(), 3):
 			var corners: Array[Vertex] = []
@@ -73,7 +124,8 @@ static func clip(mesh: ArrayMesh, axis: int, side: int, plane: float, depth: flo
 					kept_verts.append(vertex.position)
 					kept_normals.append(vertex.normal)
 					kept_uvs.append(vertex.uv)
-					kept_colors.append(vertex.color)
+					if has_colors:
+						kept_colors.append(vertex.color)
 				for k in range(1, polygon.size() - 1):
 					kept_indices.append_array(PackedInt32Array([base, base + k, base + k + 1]))
 		if kept_verts.is_empty():
@@ -83,7 +135,8 @@ static func clip(mesh: ArrayMesh, axis: int, side: int, plane: float, depth: flo
 		clipped[Mesh.ARRAY_VERTEX] = kept_verts
 		clipped[Mesh.ARRAY_NORMAL] = kept_normals
 		clipped[Mesh.ARRAY_TEX_UV] = kept_uvs
-		clipped[Mesh.ARRAY_COLOR] = kept_colors
+		if has_colors:
+			clipped[Mesh.ARRAY_COLOR] = kept_colors
 		clipped[Mesh.ARRAY_INDEX] = kept_indices
 		out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, clipped)
 		out.surface_set_material(out.get_surface_count() - 1, mesh.surface_get_material(surface))

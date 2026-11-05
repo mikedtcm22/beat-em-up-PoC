@@ -193,12 +193,6 @@ func test_a_floor_face_wears_the_asphalt_strip() -> void:
 # --- The cause: two coplanar planes ---------------------------------------------------------------
 
 
-## The smallest shared area (square metres) that counts in the two code-built rooms: their boxes come from crowd_room.gd and
-## test_room.gd (not the level's scenes, so not the InsetBlock's to fix), where only slivers of 0.3 m2 and less remain
-## (docs/milestones/M6-calls/FIX-WORLD.md, "Requests"). Everything a player could see as a flicker is far above it.
-const ROOM_MIN_AREA_M2 := 0.5
-
-
 func _scan(scene: String, min_area: float) -> Array[Dictionary]:
 	var holder := Node.new()
 	add_child_autofree(holder)
@@ -217,29 +211,57 @@ func test_no_two_drawn_faces_of_the_level_share_a_plane_over_an_area() -> void:
 	assert_eq(found.size(), 0, "no two drawn faces of the level (any module, look or thickness) share a plane (a z-fight)")
 
 
-func test_no_block_of_the_level_leaves_a_hole_or_a_step() -> void:
+func _holes_and_steps(scene: String) -> Array[Dictionary]:
 	var holder := Node.new()
 	add_child_autofree(holder)
-	var root := Snapshot.instantiate(Snapshot.LEVEL, holder)
+	var root := Snapshot.instantiate(scene, holder)
 	await get_tree().physics_frame
 	await get_tree().physics_frame
-	var holes := Scan.holes(root)
-	for hole in holes:
-		gut.p(String(hole.text))
-	assert_eq(holes.size(), 0, "no rectangle a block takes out of its face is left undrawn")
-	var steps := Scan.steps(root)
-	for step in steps:
-		gut.p(String(step.text))
-	assert_eq(steps.size(), 0, "no face stands a few centimetres in front of another that it only partly covers (a step the edge pass inks)")
+	var found: Array[Dictionary] = []
+	found.append_array(Scan.holes(root))
+	found.append_array(Scan.steps(root))
+	for item in found:
+		gut.p(String(item.text))
+	return found
+
+
+func test_no_block_of_the_level_leaves_a_hole_or_a_step() -> void:
+	var found: Array[Dictionary] = await _holes_and_steps(Snapshot.LEVEL)
+	assert_eq(found.size(), 0, "no rectangle a block takes out of its face is left undrawn, and no face stands a few centimetres in front of another it only partly covers (a step the edge pass inks)")
+
+
+func test_no_box_of_the_crowd_street_leaves_a_hole_or_a_step() -> void:
+	var found: Array[Dictionary] = await _holes_and_steps(Snapshot.CROWD)
+	assert_eq(found.size(), 0, "no hole and no step in the crowd street")
+
+
+func test_the_rooms_boxes_yield_their_overlaps_and_collide_as_they_did() -> void:
+	## The room's coplanar slivers (17 in the crowd street, 2 in the training room at 0.02 m2 before) are taken out of the smaller box's
+	## face, so some boxes carry what they do not draw; the colliders are tests/test_m6_colliders.gd's.
+	for scene: String in [Snapshot.CROWD, Snapshot.TRAINING]:
+		var holder := Node.new()
+		add_child_autofree(holder)
+		var root := Snapshot.instantiate(scene, holder)
+		await get_tree().physics_frame
+		var clipped := 0
+		for item in Scan.drawn_boxes(root):
+			if (item.owner as Node).has_meta(RoomKit.CLIPPED_META):
+				clipped += 1
+		assert_gt(clipped, 0, "%s: some box yields an overlap" % scene)
+
+
+func test_no_box_of_the_training_room_leaves_a_hole_or_a_step() -> void:
+	var found: Array[Dictionary] = await _holes_and_steps(Snapshot.TRAINING)
+	assert_eq(found.size(), 0, "no hole and no step in the training room")
 
 
 func test_no_two_drawn_faces_of_the_crowd_street_share_a_plane_over_an_area() -> void:
-	var found: Array[Dictionary] = await _scan(Snapshot.CROWD, ROOM_MIN_AREA_M2)
+	var found: Array[Dictionary] = await _scan(Snapshot.CROWD, Scan.MIN_AREA_M2)
 	assert_eq(found.size(), 0, "no two drawn faces of the crowd street share a plane")
 
 
 func test_no_two_drawn_faces_of_the_training_room_share_a_plane_over_an_area() -> void:
-	var found: Array[Dictionary] = await _scan(Snapshot.TRAINING, ROOM_MIN_AREA_M2)
+	var found: Array[Dictionary] = await _scan(Snapshot.TRAINING, Scan.MIN_AREA_M2)
 	assert_eq(found.size(), 0, "no two drawn faces of the training room share a plane")
 
 

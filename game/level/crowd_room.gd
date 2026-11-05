@@ -207,6 +207,7 @@ func _build_geometry() -> void:
 	_build_south(accent, dark)
 	_build_props()
 	_build_backdrop(wall, accent)
+	RoomKit.resolve_coplanar(geometry)
 
 
 func _build_lane() -> void:
