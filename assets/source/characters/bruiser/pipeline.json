@@ -220,7 +220,7 @@
 		"max_swatches": 6,
 		"min_share": 0.004,
 		"majority_passes": 6,
-		"border_relax_iterations": 5,
+		"border_relax_iterations": 0,
 		"border_relax_factor": 0.5,
 		"budget_tris": 15000,
 		"detail_uv": true,
@@ -239,22 +239,80 @@
 			"no_ink_slots": [],
 			"zones": [
 				{
-					"name": "plates",
+					"name": "chest_plates",
 					"slots": [
 						45
 					],
 					"min": [
-						-0.75,
+						-0.27,
 						-0.5,
 						0.55
 					],
 					"max": [
-						0.75,
+						0.27,
 						0.5,
 						1.58
 					],
-					"ink_low": 0.006,
-					"ink_high": 0.03
+					"ink_low": 0.08,
+					"ink_high": 0.2,
+					"crease_deg": 30
+				},
+				{
+					"name": "cloth",
+					"slots": [
+						44
+					],
+					"min": [
+						-0.75,
+						-0.5,
+						0.0
+					],
+					"max": [
+						0.75,
+						0.5,
+						2.0
+					],
+					"ink_low": 0.04,
+					"ink_high": 0.11,
+					"crease_deg": 80
+				},
+				{
+					"name": "guard_left",
+					"slots": [
+						45
+					],
+					"min": [
+						-0.9,
+						-0.5,
+						0.3
+					],
+					"max": [
+						-0.27,
+						0.5,
+						1.58
+					],
+					"ink_low": 0.08,
+					"ink_high": 0.2,
+					"crease_deg": 58
+				},
+				{
+					"name": "guard_right",
+					"slots": [
+						45
+					],
+					"min": [
+						0.27,
+						-0.5,
+						0.3
+					],
+					"max": [
+						0.9,
+						0.5,
+						1.58
+					],
+					"ink_low": 0.08,
+					"ink_high": 0.2,
+					"crease_deg": 58
 				}
 			],
 			"clean": {
@@ -267,13 +325,21 @@
 				"min_texels": 24,
 				"smooth_sigma": 0.5,
 				"smooth_gain": 1.05
+			},
+			"crease": {
+				"angle_deg": 70,
+				"width_m": 0.005,
+				"ramp_m": 0.003,
+				"spacing_m": 0.003,
+				"min_chain_m": 0.2
 			}
 		},
 		"strap_slot": 45,
 		"glove_slot": 46,
 		"fist_border_cell_m": 0.012,
 		"reserve_tris": 700,
-		"strap_paint_slot": 46
+		"strap_paint_slot": 46,
+		"min_island_area_m2": 0.003
 	},
 	"export": {
 		"hull_normal_digits": 5,
