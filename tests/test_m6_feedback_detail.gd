@@ -141,11 +141,17 @@ func test_interior_ink_in_the_plate_and_jacket_zones() -> void:
 	assert_gt(int(mask_report.crease.texels_on_a_crease), 5000, "from texels on a crease of the dense mesh")
 
 
-## No other character's config asks for a crease, an island merge or a border relax of 0, so their `run.py --check` hashes are the M6 ones.
+## A character has taken the recipe when it has its own roll-out test, `tests/test_m6_feedback_detail_<id>.gd`, which then holds its keys.
+## The guards below skip it, so each roll-out adds its own test and none edits these lists.
+func _rolled_out(id: String) -> bool:
+	return id == "bruiser" or FileAccess.file_exists("res://tests/test_m6_feedback_detail_%s.gd" % id)
+
+
+## No character that hasn't rolled out asks for a crease, an island merge or a border relax of 0, so its `run.py --check` hash is the M6 one.
 func test_no_other_character_uses_the_pilots_keys() -> void:
 	var dir := DirAccess.open("res://assets/source/characters")
 	for id: String in dir.get_directories():
-		if id == "bruiser" or id == "boss":  # ROLL-OX: Ox's roll-out owns tests/test_m6_feedback_detail_boss.gd
+		if _rolled_out(id):
 			continue
 		var path := "res://assets/source/characters/%s/pipeline.json" % id
 		if not FileAccess.file_exists(path):
@@ -207,10 +213,12 @@ func test_the_mask_carries_a_palette_slot_per_texel() -> void:
 	assert_lt(share, 0.08, "and most texels keep their face's swatch (%.4f)" % share)
 
 
-## No other art's mask is marked as carrying codes (alpha 128/255; they are opaque), whatever their blue channel holds (the hero's is a
-## grey), so the shader leaves their swatches as they were. The Bruiser's is marked.
+## No art that hasn't rolled out has a mask marked as carrying codes (alpha 128/255; they are opaque), whatever their blue channel holds
+## (the hero's is a grey), so the shader leaves their swatches as they were. The Bruiser's is marked.
 func test_no_other_mask_has_codes() -> void:
 	for id: String in ["punk", "player", "kicker", "thug", "boss"]:
+		if _rolled_out(id):
+			continue
 		var img := (load("res://assets/export/characters/%s/%s_detail.png" % [id, id]) as Texture2D).get_image()
 		if img.is_compressed():
 			img.decompress()
@@ -289,11 +297,11 @@ func test_the_lines_are_the_punks_weight_and_the_quilting_is_on() -> void:
 	assert_lt(float(report.texel_swatch.differ_from_face_share), 0.08, "few texels leave their face's swatch")
 
 
-## The new keys are the Bruiser's alone (their absence is what keeps every other `run.py --check` hash).
+## The new keys belong to the characters that have rolled out (their absence is what keeps every other `run.py --check` hash).
 func test_no_other_character_uses_the_valley_or_texel_keys() -> void:
 	var dir := DirAccess.open("res://assets/source/characters")
 	for id: String in dir.get_directories():
-		if id == "bruiser":
+		if _rolled_out(id):
 			continue
 		var path := "res://assets/source/characters/%s/pipeline.json" % id
 		if not FileAccess.file_exists(path):
