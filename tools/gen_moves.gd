@@ -148,8 +148,9 @@ func _build_moves() -> void:
 			[_sphere(&"RightFistPoint", 0.12)])
 	_add(&"hook", "Hook", Vector3i(6, 3, 14), 8.0, HEAVY, STAGGER, Vector3(-2.2, 0.0, 0.6),
 			[_sphere(&"LeftFistPoint", 0.14)])
-	_add(&"uppercut", "Uppercut", Vector3i(8, 3, 22), 12.0, FINISHER, LAUNCH, Vector3(0.0, 6.0, 3.0),
+	var uppercut := _add(&"uppercut", "Uppercut", Vector3i(8, 3, 22), 12.0, FINISHER, LAUNCH, Vector3(0.0, 6.0, 3.0),
 			[_sphere(&"RightFistPoint", 0.14)])
+	uppercut.fp_show_upper_arm = true
 	var flurry := _add(&"body_flurry", "Body Blow", Vector3i(2, 2, 6), 2.0, LIGHT, FLINCH,
 			Vector3(0.0, 0.0, 0.3), [_sphere(&"LeftFistPoint", 0.12), _sphere(&"RightFistPoint", 0.12)])
 	flurry.hitstun = 10
@@ -163,6 +164,7 @@ func _build_moves() -> void:
 	var haymaker := _add(&"haymaker", "Haymaker", Vector3i(14, 3, 26), 18.0, FINISHER, LAUNCH,
 			Vector3(0.0, 4.0, 8.0), [_sphere(&"RightFistPoint", 0.16)])
 	haymaker.breaks_armor = true
+	haymaker.fp_show_upper_arm = true
 
 	# Kick chain: K K K, K · K, and the P P K finisher.
 	_kick(_add(&"front_kick", "Front Kick", Vector3i(7, 3, 14), 8.0, LIGHT, FLINCH,

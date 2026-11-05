@@ -137,7 +137,7 @@ func test_the_punks_m4_numbers_moved_into_the_roster_unchanged() -> void:
 	assert_eq(shipped.name, "punk", "ArtStrain.SHIPPED[0] is the Punk, from his strain file")
 	assert_eq([shipped.in_bar_min, shipped.high_max, shipped.low_min, shipped.max_max, shipped.min_min, shipped.flex_share_max], [1, 4.23, 0.153, 12.85, 0.0144, 0.0173])
 	var hero: Dictionary = ArtStrain.SHIPPED[1]
-	assert_eq([hero.name, hero.high_max, hero.low_min, hero.max_max, hero.min_min, hero.flex_share_max], ["player", 9.1, 0.14, 39.1, 0.0282, 0.0066], "the hero's row is as M4 set it")
+	assert_eq([hero.name, hero.high_max, hero.low_min, hero.max_max, hero.min_min, hero.flex_share_max], ["player", 11.8, 0.097, 39.1, 0.0282, 0.0066], "the hero's row is as M6 ARM set it (M4 set 9.1 and 0.14: Body__fp_arm splits the hidden mesh, tests/art_strain.gd says why)")
 
 
 func test_every_catalog_art_is_warmed_and_a_broken_one_is_not_silent() -> void:

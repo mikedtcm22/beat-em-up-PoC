@@ -1528,6 +1528,11 @@ extends Resource
 @export var weapon_floor_amber: bool = false
 ## A/B switch for the bike chain's sim: off draws StaticArt's straight repeats of the link instead. Presets never hold it.
 @export var weapon_chain_sim: bool = true
+## ARM's A/B (Milestone 6, D7): the hero's upper arms are drawn in the first-person lens during the
+## haymaker and the uppercut (the moves that say fp_show_upper_arm: his art's Body__fp_arm mesh goes
+## on the default layer while they run), or off, M5's view where the arm starts at the elbow's dome.
+## Read every frame. Presets never hold it.
+@export var look_near_arm: bool = true
 
 
 func hitstop_s(tier: CombatTypes.HitTier) -> float:

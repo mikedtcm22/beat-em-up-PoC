@@ -68,6 +68,8 @@ const HERO_COVERAGE_MIN := 0.40
 const ARM_SHARE_SLACK := 0.03
 ## The torso mesh of the hero's GLB (the belly and belt, what fp_knockdown_hide_torso hides on the art).
 const TORSO_MESH := &"ArtBody__fp_torso"
+## The hero's upper-arm mesh (the shoulder half of each upper arm: the haymaker and the uppercut show it, M6 D7).
+const ARM_MESH := &"ArtBody__fp_arm"
 
 var room: Node3D
 var player: PlayerCharacter
@@ -291,16 +293,21 @@ func test_the_probe_body_is_two_meshes_body_visible_and_body_fp_hidden_on_the_hi
 	assert_ne(hidden.layers & other.cull_mask, 0, "the side view and free fly show it")
 
 
-func test_the_hero_is_three_meshes_the_belly_and_belt_on_the_visible_layer_apart_from_the_legs() -> void:
+func test_the_hero_is_four_meshes_the_belly_and_belt_on_the_visible_layer_apart_from_the_legs() -> void:
 	var hero := PlayerCharacter.worn_art(load(PLAYER_ART) as CharacterArt)
 	if hero == null:
 		return
 	var rig := _rig(hero)
-	assert_eq(rig.art_meshes().size(), 3, "Body, Body__fp_hidden and Body__fp_torso")
+	assert_eq(rig.art_meshes().size(), 4, "Body, Body__fp_hidden, Body__fp_torso and Body__fp_arm")
 	var body := _art_mesh(rig, &"ArtBody")
 	var torso := _art_mesh(rig, TORSO_MESH)
 	var hidden := _art_mesh(rig, &"ArtBody__fp_hidden")
+	var arm := _art_mesh(rig, ARM_MESH)
 	assert_not_null(torso, "the torso mesh is there")
+	assert_not_null(arm, "the upper-arm mesh is there")
+	assert_eq(arm.layers, CombatTypes.bit(CombatTypes.VIS_FP_HIDDEN), "the upper arms start hidden from the lens: only the moves that say fp_show_upper_arm lift them")
+	assert_true(arm.get_meta(SkinnedArt.FP_HIDDEN_META, false), "and carry the hidden meta, so the knockdown view does not take them for the visible body")
+	assert_eq(arm.cast_shadow, GeometryInstance3D.SHADOW_CASTING_SETTING_ON)
 	assert_eq(torso.layers, CombatTypes.bit(CombatTypes.VIS_DEFAULT), "the belly and belt are on the visible layer: the lens looking down sees them")
 	assert_eq(body.layers, torso.layers)
 	assert_eq(hidden.layers, CombatTypes.bit(CombatTypes.VIS_FP_HIDDEN))
@@ -308,8 +315,9 @@ func test_the_hero_is_three_meshes_the_belly_and_belt_on_the_visible_layer_apart
 	var torso_tris: int = ((torso.mesh as ArrayMesh).surface_get_arrays(0)[Mesh.ARRAY_INDEX] as PackedInt32Array).size() / 3
 	var body_tris: int = ((body.mesh as ArrayMesh).surface_get_arrays(0)[Mesh.ARRAY_INDEX] as PackedInt32Array).size() / 3
 	var hidden_tris: int = ((hidden.mesh as ArrayMesh).surface_get_arrays(0)[Mesh.ARRAY_INDEX] as PackedInt32Array).size() / 3
-	print("ART-PLAYER hero meshes: Body %d, Body__fp_hidden %d, Body__fp_torso %d triangles (%d of the 30000)" % [body_tris, hidden_tris, torso_tris, body_tris + hidden_tris + torso_tris])
-	assert_lte(body_tris + hidden_tris + torso_tris, 30000, "the budget holds with the third mesh")
+	var arm_tris: int = ((arm.mesh as ArrayMesh).surface_get_arrays(0)[Mesh.ARRAY_INDEX] as PackedInt32Array).size() / 3
+	print("ART-PLAYER hero meshes: Body %d, Body__fp_hidden %d, Body__fp_torso %d, Body__fp_arm %d triangles (%d of the 30000)" % [body_tris, hidden_tris, torso_tris, arm_tris, body_tris + hidden_tris + torso_tris + arm_tris])
+	assert_lte(body_tris + hidden_tris + torso_tris + arm_tris, 30000, "the budget holds with the fourth mesh")
 	# the camera takes only the torso mesh for the knockdown view
 	var p := await _player(false)
 	var cam := FirstPersonCamera.new()
@@ -321,6 +329,7 @@ func test_the_hero_is_three_meshes_the_belly_and_belt_on_the_visible_layer_apart
 		names.append(mesh.name)
 	assert_has(names, TORSO_MESH, "the camera's knockdown view hides the belly and belt mesh")
 	assert_does_not_have(names, &"ArtBody", "and leaves the legs and forearms")
+	assert_does_not_have(names, ARM_MESH, "and the upper arms, which are the hidden layer's and not the visible body's")
 
 
 func test_the_art_hull_of_the_players_body_is_the_first_person_one() -> void:
@@ -537,6 +546,17 @@ func test_the_visible_mesh_is_watertight_and_the_split_closes_at_the_seam() -> v
 			open += int(visible_edges[key] == 1)
 			over += int(visible_edges[key] > 2)
 		assert_eq(open, 0, "%s: Body has no open edge: every cut of the split is capped" % entry.name)
+		# The hero's upper arms (the shoulder half of each) are a mesh of their own, closed on its own; the hidden part's cut at the
+		# shoulder side of them lies on its edges.
+		var arm := _art_mesh(rig, ARM_MESH)
+		var closing_edges := visible_edges.duplicate()
+		if arm != null:
+			var arm_edges := _edges(arm)
+			var arm_open := 0
+			for key: String in arm_edges:
+				arm_open += int(arm_edges[key] == 1)
+				closing_edges[key] = closing_edges.get(key, 0) + arm_edges[key]
+			assert_eq(arm_open, 0, "%s: the upper-arm mesh has no open edge: both its cuts are capped" % entry.name)
 		# The hidden part is open where it was cut (the waist, the arms); each of its open edges is
 		# an edge of the visible part, so together they close: no hollow where the lens sees both
 		# (the KO view's).
@@ -546,7 +566,7 @@ func test_the_visible_mesh_is_watertight_and_the_split_closes_at_the_seam() -> v
 			if hidden_edges[key] != 1:
 				continue
 			hidden_open += 1
-			unmatched += int(not visible_edges.has(key))
+			unmatched += int(not closing_edges.has(key))
 		print("ART-PLAYER watertight, %s: Body %d open edges and %d edges three or more triangles share (non-manifold; printed, not asserted: the probe has some where its caps meet)%s; Body__fp_hidden %d open edges, %d not on Body's%s" % [entry.name, open, over,
 				(", torso %d open edges" % torso_open) if torso != null else "", hidden_open, unmatched, " or the torso's" if torso != null else ""])
 		assert_gt(hidden_open, 0, "%s: the hidden part is open where it was cut (the seam is real)" % entry.name)
@@ -1021,3 +1041,109 @@ func test_the_knockdown_act_runs_headless_and_the_torso_switch_is_in_its_log() -
 		assert_true(Tuning.data.god_mode)
 		bot.queue_free()
 		await get_tree().physics_frame
+
+
+# --- The near upper arm (M6 D7, ARM) ---------------------------------------------------------
+
+const MOVES_DIR := "res://game/combat/moves/"
+
+
+## The moves that say fp_show_upper_arm: the haymaker and the uppercut, no other (every .tres of the catalog is read).
+func test_only_the_haymaker_and_the_uppercut_show_the_upper_arm() -> void:
+	var showing: Array[StringName] = []
+	for file: String in DirAccess.get_files_at(MOVES_DIR):
+		if not file.ends_with(".tres"):
+			continue
+		var move := load(MOVES_DIR + file) as MoveData
+		if move != null and move.fp_show_upper_arm:
+			showing.append(move.id)
+	showing.sort()
+	assert_eq(showing, [&"haymaker", &"uppercut"] as Array[StringName], "the straight punches and the hook keep M5's view: the arm starts at the elbow's dome")
+	assert_true(TuningData.new().look_near_arm, "look_near_arm defaults to the new view")
+	assert_eq(Tuning._property_info(Tuning.tuning_properties(), &"look_near_arm").group, "Debug", "in the Debug group (the A/B)")
+	assert_false(Tuning.is_preset_property(&"look_near_arm"), "which presets skip")
+
+
+func _lens_on(p: PlayerCharacter) -> FirstPersonCamera:
+	var cam := FirstPersonCamera.new()
+	add_child_autofree(cam)
+	cam.set_process(false)
+	cam.player = p
+	cam.current = true
+	cam.update_camera(FRAME)
+	return cam
+
+
+## Whether the lens `cam` draws `mesh` (a layer of the mesh in its cull mask).
+func _draws(cam: Camera3D, mesh: MeshInstance3D) -> bool:
+	return (mesh.layers & cam.cull_mask) != 0
+
+
+func test_the_first_person_lens_draws_the_upper_arms_only_while_the_haymaker_or_the_uppercut_runs() -> void:
+	var hero := PlayerCharacter.worn_art(load(PLAYER_ART) as CharacterArt)
+	if hero == null:
+		return
+	var p := await _player(false)
+	var arm := _art_mesh(p.rig, ARM_MESH)
+	var body := _art_mesh(p.rig, &"ArtBody")
+	assert_not_null(arm, "the hero wears the upper-arm mesh")
+	if arm == null:
+		return
+	var cam := _lens_on(p)
+	assert_false(_draws(cam, arm), "standing: the lens does not draw the upper arms")
+	assert_true(_draws(cam, body), "and draws Body")
+	for id: StringName in [&"haymaker", &"uppercut"]:
+		var move := load(MOVES_DIR + "%s.tres" % id) as MoveData
+		p.start_move(move)
+		cam.update_camera(FRAME)
+		assert_true(_draws(cam, arm), "%s running: the lens draws the upper arms" % id)
+		assert_eq(arm.layers, CombatTypes.bit(CombatTypes.VIS_DEFAULT), "%s: on the default layer" % id)
+		p._enter_state(CombatTypes.ActorState.FREE)
+		cam.update_camera(FRAME)
+		assert_false(_draws(cam, arm), "%s over: hidden again" % id)
+		assert_eq(arm.layers, CombatTypes.bit(CombatTypes.VIS_FP_HIDDEN), "%s over: back on the hidden layer" % id)
+	for id: StringName in [&"jab_1", &"jab_2", &"hook", &"front_kick", &"knee"]:
+		p.start_move(load(MOVES_DIR + "%s.tres" % id) as MoveData)
+		cam.update_camera(FRAME)
+		assert_false(_draws(cam, arm), "%s running: the upper arms stay hidden" % id)
+		p._enter_state(CombatTypes.ActorState.FREE)
+	# the switch: off is M5's view
+	Tuning.data.look_near_arm = false
+	p.start_move(load(MOVES_DIR + "haymaker.tres") as MoveData)
+	cam.update_camera(FRAME)
+	assert_false(_draws(cam, arm), "look_near_arm off: the haymaker keeps the arm hidden")
+	Tuning.data.look_near_arm = true
+	cam.update_camera(FRAME)
+	assert_true(_draws(cam, arm), "and on again, the next frame draws it")
+	# a lens that is not the current camera puts the layers back (the side view took over mid-move)
+	cam.current = false
+	cam.update_camera(FRAME)
+	assert_eq(arm.layers, CombatTypes.bit(CombatTypes.VIS_FP_HIDDEN), "the lens that is not current leaves the layers as the rig set them")
+	# a first-person lens swapped off the player mid-move restores too
+	cam.current = true
+	cam.update_camera(FRAME)
+	assert_true(_draws(cam, arm))
+	cam.player = null
+	assert_eq(arm.layers, CombatTypes.bit(CombatTypes.VIS_FP_HIDDEN), "a new player puts the arm back on the hidden layer")
+
+
+func test_the_side_view_and_free_fly_always_draw_the_upper_arms() -> void:
+	var hero := PlayerCharacter.worn_art(load(PLAYER_ART) as CharacterArt)
+	if hero == null:
+		return
+	var p := await _player(false)
+	var arm := _art_mesh(p.rig, ARM_MESH)
+	assert_not_null(arm)
+	if arm == null:
+		return
+	var side := Camera3D.new()
+	add_child_autofree(side)
+	var cam := _lens_on(p)
+	assert_true(_draws(side, arm), "standing: a camera with the default mask draws the arms (the side view, free fly)")
+	p.start_move(load(MOVES_DIR + "haymaker.tres") as MoveData)
+	cam.update_camera(FRAME)
+	assert_true(_draws(side, arm), "and during the haymaker")
+	p._enter_state(CombatTypes.ActorState.FREE)
+	cam.update_camera(FRAME)
+	assert_true(_draws(side, arm), "and after it")
+	assert_true(arm.is_visible_in_tree(), "the arm mesh is never switched off: it casts the shadow the player sees")

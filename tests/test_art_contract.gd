@@ -30,7 +30,7 @@ const UNCONDITIONAL_REPORT_STEPS: Array[String] = ["inspect", "fit", "rig", "pal
 const HERO_GLB := "res://assets/export/characters/player/player.glb"
 const HERO_MASK := "res://assets/export/characters/player/player_detail.png"
 const HERO_ART := "res://game/actors/art/player_art.tres"
-const HERO_MESHES: Array[String] = ["Body", "Body__fp_hidden", "Body__fp_torso"]
+const HERO_MESHES: Array[String] = ["Body", "Body__fp_hidden", "Body__fp_torso", "Body__fp_arm"]
 ## Budgets of the characters that are not in the roster (the hero's is SPEC §10's 30,000; the probe bodies stand in for the player).
 ## Every roster character's (tests/fixtures/art/roster/<id>.json, M6 CHAIN) comes from its file: budgets().
 const BUDGETS: Dictionary[String, int] = {"player": 30000, "probe_body": 30000}
@@ -260,7 +260,7 @@ func test_every_art_glb_loads_and_has_a_body() -> void:
 		var names: Array = (f.meshes as Dictionary).keys()
 		names.sort()
 		for n: String in names:
-			assert_true(n in ["Body", "Body__fp_hidden", "Body__fp_torso"], "%s: mesh %s is named Body, Body__fp_hidden or Body__fp_torso" % [path, n])
+			assert_true(n in HERO_MESHES, "%s: mesh %s is named Body, Body__fp_hidden, Body__fp_torso or Body__fp_arm" % [path, n])
 			assert_eq((f.meshes[n] as Dictionary).surfaces, 1, "%s %s: one surface" % [path, n])
 			assert_true(((f.meshes[n] as Dictionary).xf as Transform3D).is_equal_approx(Transform3D.IDENTITY), "%s %s: at the skeleton's origin" % [path, n])
 		assert_true("Body" in names, "%s has a Body" % path)
@@ -271,7 +271,7 @@ func test_every_art_glb_loads_and_has_a_body() -> void:
 		if _id_of(path) == "probe_body":
 			assert_eq(names, ["Body", "Body__fp_hidden"], "%s: the probe stands in for the player: visible and first-person-hidden parts" % path)
 		if _id_of(path) == "player":
-			assert_eq(names, ["Body", "Body__fp_hidden", "Body__fp_torso"], "%s: the hero is the visible body, the first-person-hidden upper body and the torso (the belly and belt: fp_knockdown_hide_torso hides only that)" % path)
+			assert_eq(names, ["Body", "Body__fp_arm", "Body__fp_hidden", "Body__fp_torso"], "%s: the hero is the visible body, the first-person-hidden upper body, the torso (the belly and belt: fp_knockdown_hide_torso hides only that) and the shoulder half of each upper arm (fp_show_upper_arm shows only that)" % path)
 
 
 func test_the_skeleton_has_the_23_table_bones_and_no_neutral_bone() -> void:
@@ -1317,6 +1317,40 @@ func test_the_upper_arm_cut_is_a_dome_that_bulges_toward_the_shoulder() -> void:
 					reach = minf(reach, (verts[v] - ua).dot(axis))
 			var cut := length * 0.5
 			assert_lt(reach, cut - DOME_MIN_M, "%s: the %s upper arm's visible part reaches %.3f m along the arm, the cut is at %.3f: a dome of at least %.0f mm bulges toward the shoulder" % [path, side.to_lower(), reach, cut, DOME_MIN_M * 1000.0])
+
+
+## The hero's Body__fp_arm (M6 D7) is the shoulder half of each upper arm: closed on its own (the shoulder-side loop has its inward cap
+## and the elbow-side loop one that sits inside Body's dome, so a lens that sees only this mesh and Body finds no hollow), on the
+## shoulder side of the cut plane (it reaches the plane, never past it), and one piece for each arm.
+func test_the_upper_arm_mesh_is_closed_and_ends_at_the_cut() -> void:
+	for path: String in _glbs():
+		if _id_of(path) != "player":
+			continue
+		var f := _facts(path)
+		if not f.ok or not (f.meshes as Dictionary).has("Body__fp_arm"):
+			assert_true(f.ok and (f.meshes as Dictionary).has("Body__fp_arm"), "%s has Body__fp_arm" % path)
+			continue
+		var arm: Dictionary = f.meshes["Body__fp_arm"]
+		assert_eq(_open_edges(arm), 0, "%s: Body__fp_arm has no open loop: its shoulder side is capped and so is its elbow side" % path)
+		var rests: Dictionary[String, Vector3] = f.bone_rests
+		var verts: PackedVector3Array = arm.arrays[Mesh.ARRAY_VERTEX]
+		for side: String in ["Left", "Right"]:
+			var ua: Vector3 = rests[side + "UpperArm"]
+			var axis: Vector3 = rests[side + "LowerArm"] - ua
+			var length := axis.length()
+			axis /= length
+			var cut := length * 0.5
+			var far := -INF
+			var count := 0
+			for v: Vector3 in verts:
+				# the arm's own half of the mesh: the side its upper-arm joint is on
+				if (v.x - ua.x) * signf(ua.x) < -0.25 * length or (v - ua).length() > length:
+					continue
+				count += 1
+				far = maxf(far, (v - ua).dot(axis))
+			assert_gt(count, 100, "%s: Body__fp_arm holds the %s arm (%d vertices)" % [path, side.to_lower(), count])
+			assert_lt(far, cut + 0.003, "%s: the %s arm piece stops at the cut (%.3f m along the arm, the cut is at %.3f)" % [path, side.to_lower(), far, cut])
+			assert_gt(far, cut - 0.003, "%s: and reaches it, so Body's dome closes the join (%.3f of %.3f)" % [path, far, cut])
 
 
 ## Boundary edges of a mesh (an edge used by one triangle), counting vertices at one position as one vertex.

@@ -1424,7 +1424,11 @@ _Filled by DRESS._
 
 ### The near upper arm (ARM)
 
-_Filled by ARM._
+M6 D7. The hero's GLB has a fourth mesh, `Body__fp_arm`: the shoulder half of each upper arm (the faces the upper arm bone owns on the shoulder side of `parts.split_fp.upper_arm_cut`), separated from `Body__fp_hidden` in `player_parts.py` (`split_fp`, `parts.split_fp.arm`).
+- **Pipeline.** The shoulder-side loop gets an inward cap and so does the elbow-side one (`caps.Body__fp_arm`, `wall_normals`, so the shading normal on its ring is the wall's and the hull-normal test holds); an add_caps pass that leaves a loop open would cut the faces round it. The piece is swollen radially by `arm.push_m` (0 at the cut's ring, ramping over `elbow_ramp_m`; 0 at its shoulder loop, ramping over `shoulder_ramp_m`), and Body's upper-arm dome is sunk `inset_m` below the wall it is tangent to: together they keep the dome from showing through the wall in ragged patches. `pipe_blender.body_objects()` lists `BODY_ARM`, so detail, normals and export see it. `player_run.py --asset player --check` says YES (report hash in `report.json`).
+- **Runtime.** `SkinnedArt.FP_ARM_SUFFIX` (`__fp_arm`) is first-person-hidden like `__fp_hidden` (same layer, same `fp_hidden` meta). `MoveData.fp_show_upper_arm` (Camera group) is set by `gen_moves.gd` on the haymaker and the uppercut only. `FirstPersonCamera._update_arm()` (after `_update_torso()` in `update_camera()`): while it is the current camera, `look_near_arm` (Tuning, Debug, default on) is on and the player's `current_move` runs (ATTACK or WINDUP) with the flag, the `*__fp_arm` meshes go to the default layer; any other frame puts the layers back (`_restore_arm()`; also on `set_player()`). Cameras with the default mask (side view, free fly) draw the mesh always, because it only ever sits on the hidden layer or the default one. Primitives (no art) are unchanged.
+- **Budget.** 29,732 of 30,000 triangles (Body 19,868, hidden 4,820, torso 3,280, arm 1,764).
+- **Ratchet.** The strain run reports each mesh's own percentiles, so the arm's triangles moved the hero's `PLAYER_ROW` in `tests/art_strain.gd` (reasons there); `tests/fixtures/strain/strain_ratchet.json` regenerated for the player.
 
 ### The generated sound effects (SFX)
 
