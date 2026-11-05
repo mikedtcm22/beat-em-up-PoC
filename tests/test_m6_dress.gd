@@ -17,11 +17,17 @@ const SECTION_PATHS: Array[String] = [
 const DOORWAY_PIECES: Array[StringName] = [&"door_frame", &"shutter", &"housing"]
 const ALLOWED_NODE_NAMES: Array[String] = ["ToonWarmUp", "FlashWarmUp", "EdgeQuad"]
 const SETTLE_FRAMES := 4
+const PROPS_PALETTE_PATH := "res://assets/source/palette/props.json"
+const CAR_SLOT := 60
+## The characters' main hues (degrees): the Punk's teal, the player's blue, the dummy's, the veteran's and Ox's
+## orange, the veteran's violet and the Bruiser's purple, the Kicker's lime, the Thug's olive and yellow.
+const FIGHTER_HUES_DEG: Array[float] = [180.0, 215.0, 28.0, 280.0, 75.0, 60.0, 50.0]
 
 
 func after_each() -> void:
 	Tuning.data.section_light_blend_s = 2.5
 	Tuning.data.section_light_enabled = true
+	Tuning.data.section_fog_sky_affect = TuningData.new().section_fog_sky_affect
 
 
 # --- No graybox box ---------------------------------------------------------------------------------
@@ -75,6 +81,27 @@ func test_the_prop_fallbacks_stay_in_the_bibles_band_and_the_crowd_street_hulls_
 		if mesh_node.get_parent() is StaticArt:
 			assert_not_null(mesh_node.material_overlay, "%s draws the prop hull" % mesh_node.name)
 	assert_eq(overlays, (room as CrowdRoom).crate_positions.size(), "each crate module wears the prop hull on its overlay")
+
+
+## The props' own slots of the shared atlas (assets/source/palette/props.json, 60-63) hold the look bible's
+## environment band: saturation at most 0.30, value 0.25-0.6 (final review, world-03). The test reads the drawn
+## pixels of the atlas and the source file, not the fallback boxes' colours (which never draw).
+func test_the_props_atlas_swatches_stay_in_the_bibles_band_and_the_car_is_off_every_fighters_hue() -> void:
+	var atlas := (load("res://assets/export/palette/palette_atlas.png") as Texture2D).get_image()
+	var source: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(PROPS_PALETTE_PATH))
+	var swatches: Array = source.swatches
+	assert_eq(swatches.size(), 4, "props.json holds slots 60 to 63")
+	for entry: Dictionary in swatches:
+		var slot := int(entry.slot)
+		var color := atlas.get_pixel((slot % 32) * 8 + 4, (slot / 32) * 8 + 4)
+		assert_eq(color.to_html(false), String(entry.srgb).trim_prefix("#"), "%s: the atlas draws props.json's colour" % entry.name)
+		assert_lte(color.s, 0.305, "%s: saturation at most 0.30" % entry.name)
+		assert_between(color.v, 0.245, 0.605, "%s: value 0.25-0.6" % entry.name)
+		assert_false(color.s > 0.5 and (color.h > 0.958 or color.h < 0.042), "%s is not in the red band" % entry.name)
+	var car := atlas.get_pixel((CAR_SLOT % 32) * 8 + 4, (CAR_SLOT / 32) * 8 + 4)
+	for fighter_hue_deg: float in FIGHTER_HUES_DEG:
+		var apart := absf(fposmod(car.h * 360.0 - fighter_hue_deg + 180.0, 360.0) - 180.0)
+		assert_gt(apart, 30.0, "the car's hue is at least 30 degrees from the fighter hue %.0f" % fighter_hue_deg)
 
 
 func test_the_arena_tour_act_lists_every_section() -> void:
@@ -174,6 +201,41 @@ func test_the_sections_light_the_level_differently() -> void:
 	assert_ne(lights[0].sun_color, lights[1].sun_color, "the roofs' sun is another colour than the street's")
 	assert_lt(lights[1].sun_elevation, lights[0].sun_elevation, "the roofs' sun is lower")
 	assert_lt((lights[2].fog_color as Color).v, (lights[0].fog_color as Color).v, "the boss roof's fog is darker (a drop with depth)")
+
+
+func test_adjacent_sections_keep_their_sun_close_so_the_blend_does_not_sweep_the_shadows() -> void:
+	var lights: Array[Dictionary] = []
+	for path: String in SECTION_PATHS:
+		var section := (load(path) as PackedScene).instantiate() as LevelSection
+		add_child_autofree(section)
+		lights.append(section.light())
+	for k in lights.size() - 1:
+		var turn := absf(fposmod(float(lights[k + 1].sun_yaw) - float(lights[k].sun_yaw) + 180.0, 360.0) - 180.0)
+		assert_lte(turn, 12.0, "sections %d and %d: the sun's yaw differs by at most 12 degrees (%.0f)" % [k, k + 1, turn])
+	for light: Dictionary in lights:
+		assert_gte(float(light.sun_elevation), 35.0, "a sun at 35 degrees or more: the player's own shadow stays short")
+
+
+func test_the_fog_lets_the_dusk_sky_show_in_every_room_and_the_level_keeps_it_live() -> void:
+	assert_lt(Tuning.data.section_fog_sky_affect, 0.6, "the fog does not paint the whole sky its own colour")
+	for path: String in [CROWD_PATH, TRAINING_PATH, LEVEL_PATH]:
+		var room := await _build(path)
+		var world := room.get_node("WorldEnvironment") as WorldEnvironment
+		assert_almost_eq(world.environment.fog_sky_affect, Tuning.data.section_fog_sky_affect, 0.0001, "%s: the fog's cover of the sky is Tuning's" % path)
+	var level := (await _build(LEVEL_PATH)) as LevelRoot
+	Tuning.data.section_fog_sky_affect = 0.8
+	await _ticks(2)
+	assert_almost_eq((level.get_node("WorldEnvironment") as WorldEnvironment).environment.fog_sky_affect, 0.8, 0.0001, "the level follows the F1 panel")
+	Tuning.data.section_fog_sky_affect = TuningData.new().section_fog_sky_affect
+
+
+func test_a_section_without_a_light_of_its_own_defaults_to_the_rooms_fog_and_sky() -> void:
+	var section := LevelSection.new()
+	add_child_autofree(section)
+	assert_eq(section.fog_color, RoomKit.DEFAULT_FOG_COLOR)
+	assert_eq(section.fog_density, RoomKit.DEFAULT_FOG_DENSITY)
+	assert_eq(section.sky_top_color, RoomKit.DEFAULT_SKY_TOP)
+	assert_eq(section.sky_horizon_color, RoomKit.DEFAULT_SKY_HORIZON)
 
 
 func test_the_light_blends_over_the_tuned_time() -> void:

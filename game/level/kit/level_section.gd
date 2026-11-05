@@ -29,11 +29,11 @@ extends Node3D
 @export_range(0.2, 3.0, 0.05) var sun_energy: float = 1.2
 ## The fog's colour and density: the colour is what the far world fades to, so a dark one gives a drop
 ## and a far skyline depth instead of a pale plane.
-@export var fog_color: Color = Color(0.6, 0.56, 0.55)
-@export_range(0.0, 0.05, 0.0005) var fog_density: float = 0.008
+@export var fog_color: Color = RoomKit.DEFAULT_FOG_COLOR
+@export_range(0.0, 0.05, 0.0005) var fog_density: float = RoomKit.DEFAULT_FOG_DENSITY
 ## The sky the far gaps show: its top and its horizon.
-@export var sky_top_color: Color = Color(0.36, 0.42, 0.56)
-@export var sky_horizon_color: Color = Color(0.72, 0.62, 0.55)
+@export var sky_top_color: Color = RoomKit.DEFAULT_SKY_TOP
+@export var sky_horizon_color: Color = RoomKit.DEFAULT_SKY_HORIZON
 
 
 ## This section's light as the blend reads it: sun_elevation, sun_yaw, sun_color, sun_energy, fog_color,

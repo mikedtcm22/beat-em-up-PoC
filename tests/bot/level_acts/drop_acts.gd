@@ -6,6 +6,8 @@ extends RefCounted
 ##   "Look: drops"  logs `DROP <n> <label> f<frame>`, the frame to cut the still at; needs the whole
 ##                  level (`--level=res://game/level/mission1/mission1.tscn`).
 
+const TourActs := preload("res://tests/bot/level_acts/tour_acts.gd")
+
 ## Seconds each pose is held.
 const HOLD_S := 1.0
 
@@ -41,7 +43,7 @@ static func _drops(bot: Node) -> void:
 		player.rotation.y = yaw
 		player.look_yaw = yaw
 		player.look_pitch = deg_to_rad(float(pose.pitch))
-		await bot._ticks(4)
+		await TourActs.settle_light(bot, section, player.global_position)
 		bot.log_line("DROP %d %s f%d" % [n, pose.label, Engine.get_physics_frames()])
 		await bot._ticks(int(HOLD_S * Engine.physics_ticks_per_second))
 
