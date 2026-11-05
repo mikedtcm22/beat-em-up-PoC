@@ -24,7 +24,9 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
     - valley scribbles across his chest.
   - **The Punk** changed only a little.
   - **Ox** is modest: cleaner trim, the leg streak gone, but his face is still a flat tan shape at 1 m.
-- **Running:** the round's shared recordings, `bash <scratchpad>/record_feedback.sh` (task `bsf9qxu3k`), into `captures/m6-feedback-review/`:
+- **Recorded** (all 20 acts `exit=0 errors=0`) into `captures/m6-feedback-review/`. The lead's look: the ground's still-view change is 0.017 / 0.039 grey levels at A1 / A2 (M6 5.1), and the walk reads as one steady comic street.
+- **Running:** review.js run `wf_17f7b1df-712` (task `wnmelu5xp`) with `docs/reviews/M6/args-review-feedback.json`. **If cut off:** rerun it with `resumeFromRunId`, or with `reviews`/`verdicts` from the journal.
+- **The recordings** (for reference; the script was `<scratchpad>/record_feedback.sh`):
   - **crowd lane:** r_kicker, r_thug, r_bruiser, r_boss, lineup, heavies, dj, dk, dt, dp1, dp2, dp3, dox, damage, hurt, fight;
   - **level lane:** drift, tour, walk (perf_level_bot), run_street (arenas 0-2).
   - **If cut off:** the script is lost with the scratchpad. Rerun the same `tools/record_acts.sh` lines (the act list is in `args-review-feedback.json`'s common note).
