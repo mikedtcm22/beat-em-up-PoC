@@ -1439,11 +1439,11 @@ extends Resource
 ## M6 DETAIL-2: an art whose detail mask carries a palette slot per texel (the Bruiser's) takes each
 ## texel's swatch, so a colour border follows the texture, not the 2 cm faces. A border at texel
 ## resolution (2.6 mm) is exact up close but crawls once a texel is smaller than a pixel, so the
-## swatch fades to the face's between this many texels per pixel (every texel is its own, 1.5 is
-## about 2 m) and `look_texel_swatch_fade_far`.
-@export_range(0.1, 8.0, 0.1) var look_texel_swatch_fade_near: float = 1.5
-## The texels per pixel at and beyond which a texel takes its face's swatch (about 6 m at 4).
-@export_range(0.2, 16.0, 0.1) var look_texel_swatch_fade_far: float = 4.0
+## swatch fades to the face's between this many texels per pixel (below it every texel is its own;
+## the Bruiser's texels are about 4 mm, so 1 is about 3 m) and `look_texel_swatch_fade_far`.
+@export_range(0.1, 8.0, 0.1) var look_texel_swatch_fade_near: float = 1.0
+## The texels per pixel at and beyond which a texel takes its face's swatch (about 10 m at 3).
+@export_range(0.2, 16.0, 0.1) var look_texel_swatch_fade_far: float = 3.0
 
 @export_subgroup("Outline")
 ## The inverted-hull outline's width in pixels at 1080p (the look bible: 3.5 to 4 px at 1 to

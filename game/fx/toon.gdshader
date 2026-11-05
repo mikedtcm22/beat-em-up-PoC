@@ -33,7 +33,7 @@ uniform bool use_detail_tex = false;
 // border farther away crawls (a texel is smaller than a pixel), so from texel_swatch_fade.x to .y texels per pixel the
 // colour fades to the face's, which the hull's multisampling holds steady.
 uniform bool use_texel_swatch = true;
-uniform vec2 texel_swatch_fade = vec2(1.5, 4.0);
+uniform vec2 texel_swatch_fade = vec2(1.0, 3.0);
 // The atlas's layout (tools/pipeline/gen_palette.py COLUMNS, ROWS): a slot's swatch centre.
 const vec2 ATLAS_GRID = vec2(32.0, 2.0);
 uniform float detail_strength : hint_range(0.0, 1.0) = 1.0;
