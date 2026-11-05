@@ -1435,10 +1435,9 @@ extends Resource
 ## breaks them into dashes). 0 is the soft linear mix for every art (the A/B).
 @export_range(0.0, 0.9, 0.01) var look_detail_cut: float = 0.15
 
-@export_subgroup("Texel swatch")
 ## M6 DETAIL-2: an art whose detail mask carries a palette slot per texel (the Bruiser's) takes each
 ## texel's swatch, so a colour border follows the texture, not the 2 cm faces. A border at texel
-## resolution (2.6 mm) is exact up close but crawls once a texel is smaller than a pixel, so the
+## resolution (about 4 mm) is exact up close but crawls once a texel is smaller than a pixel, so the
 ## swatch fades to the face's between this many texels per pixel (below it every texel is its own;
 ## the Bruiser's texels are about 4 mm, so 1 is about 3 m) and `look_texel_swatch_fade_far`.
 @export_range(0.1, 8.0, 0.1) var look_texel_swatch_fade_near: float = 1.0
