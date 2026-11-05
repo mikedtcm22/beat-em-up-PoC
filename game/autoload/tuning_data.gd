@@ -1155,6 +1155,10 @@ extends Resource
 @export_range(0.0, 0.3, 0.01) var sfx_pitch_variation: float = 0.08
 ## ...and its volume (as amplitude) by up to plus or minus this share (Spec §6: 8%).
 @export_range(0.0, 0.3, 0.01) var sfx_volume_variation: float = 0.08
+## The sound audition room's (debug) feel: how far in front of the listener a one-shot is played (m), and the gap left after a
+## variant when the whole bank plays (s).
+@export_range(0.5, 10.0, 0.1) var audition_ahead_m: float = 2.0
+@export_range(0.0, 2.0, 0.05) var audition_bank_gap_s: float = 0.35
 @export_subgroup("Tiers")
 ## Every one-shot of a hit (its layers, or a blocked hit's clack, ting or crash) is this many
 ## dB louder per tier, so the tiers rank in loudness as well as in layers.
@@ -1260,11 +1264,6 @@ extends Resource
 # package only adds lines inside its own subgroup. There is no Art subgroup: its one planned
 # name, look_show_art, lives in Debug below, since presets skip that group by name and the
 # art switch is an A/B, not a look setting.
-@export_subgroup("Sound room")
-## The audition room's (debug) feel: how far in front of the listener a one-shot is played (m), and the gap left after a
-## variant when the whole bank plays (s).
-@export_range(0.5, 10.0, 0.1) var audition_ahead_m: float = 2.0
-@export_range(0.0, 2.0, 0.05) var audition_bank_gap_s: float = 0.35
 @export_group("Look")
 @export_subgroup("Toon")
 ## The middle band's brightness as a share of the lit band's (the look bible: 72%). The
