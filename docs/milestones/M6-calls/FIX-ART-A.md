@@ -22,3 +22,6 @@ Each call: the decision / the alternative not taken / why. No Tripo task (0 cred
 
 ## Findings answered
 chars-01, -02, -04, -05, -08, code-05 and the Thug's and Kicker's part of code-04: fixed as above.
+
+## Suite
+Full `tools/run_tests.sh` on the final build: 2010 tests, 577 s on the loaded machine; no SCRIPT ERROR, SHADER ERROR or ERROR line. One failure, my new Kicker test (it compared JSON floats with `Array.has(23)`); fixed by comparing ints, then `test_m6_feedback_detail_kicker.gd` (9/9) and `_thug.gd` (8/8) rerun green; no other file touched since the full run. `run.py --check` YES for thug, kicker, bruiser, boss, dummy, punk; `player_run.py --asset player --check` YES; `gen_palette.py --check` current; `gen_trim.gd` rewrote identical files. No strain, A9 or roster ratchet moved (the strain and roster tests passed on the new GLBs).

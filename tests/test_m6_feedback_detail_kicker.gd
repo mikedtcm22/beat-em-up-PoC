@@ -229,7 +229,10 @@ func test_the_eyes_are_skin_and_the_mask_is_plain() -> void:
 		regions[reg.name] = reg
 	assert_true(regions.has("eyes"), "the eyes have a region")
 	assert_eq(int(regions.eyes.slot), 6, "it paints skin")
-	assert_true(regions.eyes.only_from.has(23) and not regions.eyes.only_from.has(22), "from the cap's black only, never the lime mask")
+	var from: Array[int] = []
+	for slot: Variant in regions.eyes.only_from:
+		from.append(int(slot))  # JSON numbers are floats
+	assert_true(from.has(23) and not from.has(22), "from the cap's black only, never the lime mask")
 	var faces := 0
 	var black := 0
 	for tri: int in _tris().size() / 3:
