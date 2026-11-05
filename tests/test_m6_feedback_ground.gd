@@ -398,6 +398,28 @@ func test_the_scan_finds_a_pair_a_step_and_a_hole_and_passes_a_clean_yield() -> 
 	assert_gt(Scan.holes(holder).size(), 0, "two blocks that yield to each other leave the overlap undrawn: a hole")
 
 
+func test_a_block_yields_only_what_a_kit_piece_really_draws() -> void:
+	## A cornice is three boards, each standing out further than the one below, so its bounds' end face is a staircase: a block
+	## that gave the whole rectangle up would leave a hole where the piece has no board.
+	var holder := Node3D.new()
+	add_child_autofree(holder)
+	var piece := KitPiece.new()
+	piece.kind = &"cornice"
+	piece.size = Vector3(6.0, 0.6, 0.45)
+	holder.add_child(piece)
+	var block := InsetBlock.new()
+	block.size = Vector3(2.0, 2.0, 2.0)
+	block.position = Vector3(2.0, 0.0, 0.0)
+	holder.add_child(block)
+	block.yields_to = [block.get_path_to(piece)] as Array[NodePath]
+	await get_tree().physics_frame
+	var area := 0.0
+	for rect in block.clipped_rects(0, 1):
+		area += rect.get_area()
+	assert_almost_eq(area, 0.45 * 0.2 + 0.30 * 0.2 + 0.15 * 0.2, 0.001, "the three boards' end caps (0.18 m2), not the bounds' 0.27 m2")
+	assert_eq(block.clipped_rects(0, 1).size(), 3, "one rectangle for each board's end cap")
+
+
 func test_the_boss_roofs_far_ground_is_not_solid_and_lies_below_the_street() -> void:
 	var holder := Node.new()
 	add_child_autofree(holder)

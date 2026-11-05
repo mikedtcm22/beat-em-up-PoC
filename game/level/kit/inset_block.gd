@@ -67,9 +67,27 @@ func _clips() -> Dictionary:
 			continue
 		var found := MeshClip.overlaps(mine, _box_of(partner, inverse), Tuning.data.kit_coplanar_m)
 		for face_key: String in found:
+			var rects: Array[Rect2] = [found[face_key]]
+			var piece := partner as MeshInstance3D
+			if piece != null and piece.mesh != null:
+				rects = _covered_by(piece, inverse, face_key, found[face_key], mine)
 			if not out.has(face_key):
 				out[face_key] = [] as Array[Rect2]
-			(out[face_key] as Array[Rect2]).append(found[face_key])
+			(out[face_key] as Array[Rect2]).append_array(rects)
+	return out
+
+
+## The parts of `overlap` (this block's `face_key` plane) that a kit piece's own faces cover: a piece is not a box (a cornice is
+## three boards, each standing out further than the one below), so its bounds' face is only partly there, and a block that gave
+## the whole rectangle up would leave a hole where the piece has none.
+func _covered_by(piece: MeshInstance3D, inverse: Transform3D, face_key: String, overlap: Rect2, mine: AABB) -> Array[Rect2]:
+	var axis := int(face_key.substr(0, 1))
+	var side := int(face_key.substr(2, 1))
+	var plane: float = mine.end[axis] if side == 1 else mine.position[axis]
+	var out: Array[Rect2] = []
+	for face in MeshClip.face_rects(piece.mesh, inverse * piece.global_transform, axis, side, plane, Tuning.data.kit_coplanar_m):
+		if face.intersects(overlap):
+			out.append(face.intersection(overlap))
 	return out
 
 

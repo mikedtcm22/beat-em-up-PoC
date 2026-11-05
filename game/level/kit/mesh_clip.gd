@@ -56,6 +56,46 @@ static func overlaps(mine: AABB, other: AABB, coplanar: float) -> Dictionary:
 	return out
 
 
+## The rectangles of `mesh`'s faces that lie on the plane `plane` of `axis` and look outward from it (`side` 1: +, 0: -), in the plane's
+## (u, v) coordinates of the space `to_space` takes the mesh into, deduplicated (a quad is two triangles with one bounding
+## rectangle). The kit's faces are axis-aligned quads, so a triangle's bounds are its quad's.
+static func face_rects(mesh: Mesh, to_space: Transform3D, axis: int, side: int, plane: float, tolerance: float) -> Array[Rect2]:
+	var out: Array[Rect2] = []
+	var u := (axis + 1) % 3
+	var v := (axis + 2) % 3
+	var sign_out := 1.0 if side == 1 else -1.0
+	for surface in mesh.get_surface_count():
+		var arrays := mesh.surface_get_arrays(surface)
+		var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+		var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+		for t in range(0, indices.size(), 3):
+			var normal := (to_space.basis * normals[indices[t]]).normalized()
+			if normal[axis] * sign_out < 0.99:
+				continue
+			var low := Vector2(INF, INF)
+			var high := Vector2(-INF, -INF)
+			var on_plane := true
+			for k in 3:
+				var corner := to_space * verts[indices[t + k]]
+				if absf(corner[axis] - plane) > tolerance:
+					on_plane = false
+					break
+				low = Vector2(minf(low.x, corner[u]), minf(low.y, corner[v]))
+				high = Vector2(maxf(high.x, corner[u]), maxf(high.y, corner[v]))
+			if not on_plane:
+				continue
+			var rect := Rect2(low, high - low)
+			var known := false
+			for other in out:
+				if other.position.is_equal_approx(rect.position) and other.size.is_equal_approx(rect.size):
+					known = true
+					break
+			if not known:
+				out.append(rect)
+	return out
+
+
 ## `mesh` (a box centred on its origin of size `size`) with every rectangle in `clips` ({key: Array[Rect2]}, the plane's (u, v)
 ## coordinates in the mesh's space) taken out of its face; a mesh that is not an ArrayMesh is converted first.
 static func clip_box(mesh: Mesh, size: Vector3, clips: Dictionary, standoff: float, coplanar: float) -> ArrayMesh:

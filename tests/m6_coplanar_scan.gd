@@ -170,14 +170,34 @@ static func _name(item: Dictionary) -> String:
 static func _visible_area(items: Array[Dictionary], i: int, j: int, axis: int, side: int, plane: float, a: AABB, b: AABB, space: PhysicsDirectSpaceState3D) -> float:
 	var u := (axis + 1) % 3
 	var v := (axis + 2) % 3
-	var start: Array[Rect2] = [Rect2(
-			maxf(a.position[u], b.position[u]), maxf(a.position[v], b.position[v]),
-			minf(a.end[u], b.end[u]) - maxf(a.position[u], b.position[u]),
-			minf(a.end[v], b.end[v]) - maxf(a.position[v], b.position[v]))]
+	var plane_b: float = b.end[axis] if side == 1 else b.position[axis]
+	var start: Array[Rect2] = []
+	for rect_a in _face_rects(items[i], a, axis, side, plane):
+		for rect_b in _face_rects(items[j], b, axis, side, plane_b):
+			if rect_a.intersects(rect_b):
+				start.append(rect_a.intersection(rect_b))
 	for k in [i, j]:
 		for clip in clips_of(items[k], axis, side):
 			start = _subtract(start, clip)
 	return _area(visible_rects(items, [i, j], axis, side, plane, start, space))
+
+
+## The rectangles of `item`'s face (its box `box`): a kit piece's own faces on that plane (a cornice is three boards, not a box), else the
+## box's face.
+static func _face_rects(item: Dictionary, box: AABB, axis: int, side: int, plane: float) -> Array[Rect2]:
+	var piece := item.owner as MeshInstance3D
+	if piece != null and piece.mesh != null:
+		return MeshClip.face_rects(piece.mesh, piece.global_transform, axis, side, plane, COPLANAR_M)
+	var u := (axis + 1) % 3
+	var v := (axis + 2) % 3
+	return [Rect2(box.position[u], box.position[v], box.size[u], box.size[v])] as Array[Rect2]
+
+
+static func _area(rects: Array[Rect2]) -> float:
+	var area := 0.0
+	for rect in rects:
+		area += rect.get_area()
+	return area
 
 
 ## The rectangles of `item`'s `side` face of `axis` that it does not draw (an InsetBlock's yielded overlaps).
@@ -189,13 +209,6 @@ static func clips_of(item: Dictionary, axis: int, side: int) -> Array[Rect2]:
 	if item.owner.has_meta(RoomKit.CLIPPED_META):
 		out.assign((item.owner.get_meta(RoomKit.CLIPPED_META) as Dictionary).get(MeshClip.key(axis, side), []))
 	return out
-
-
-static func _area(rects: Array[Rect2]) -> float:
-	var area := 0.0
-	for rect in rects:
-		area += rect.get_area()
-	return area
 
 
 ## `start` (rectangles in the plane's (u, v) coordinates) less what a box other than `skip` covers just outside the plane and
@@ -291,6 +304,9 @@ static func holes(root: Node, min_area: float = MIN_AREA_M2) -> Array[Dictionary
 					if absf(other_plane - plane) > COPLANAR_M:
 						continue
 					var drawn: Array[Rect2] = [Rect2(other.position[u], other.position[v], other.size[u], other.size[v])]
+					var piece := items[j].owner as MeshInstance3D
+					if piece != null and piece.mesh != null:
+						drawn = MeshClip.face_rects(piece.mesh, piece.global_transform, axis, side, other_plane, COPLANAR_M)
 					for clip in clips_of(items[j], axis, side):
 						drawn = _subtract(drawn, clip)
 					for rect in drawn:
