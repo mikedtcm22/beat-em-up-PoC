@@ -28,7 +28,14 @@ const SLOT_CREAM := 14
 const SLOT_PURPLE := 44
 const SLOT_STRAP := 45
 const SLOT_BLACK := 46
-const SLOTS_ALLOWED: Array[int] = [6, 14, 44, 45, 46]
+## The helmet's own purple (FIX-ART-B, feedback-chars-07): the same colour as slot 44 that scuffs and never bleeds.
+const SLOT_HELMET := 47
+const SLOTS_ALLOWED: Array[int] = [6, 14, 44, 45, 46, 47]
+## The no-blood damage class in the atlas's alpha (gen_palette.NO_BLOOD_ALPHA = 230).
+const NO_BLOOD_ALPHA := 230.0 / 255.0
+## Under the visor in the mesh's frame (x across, y up, -z the front): the scarf's purple, not the texture's cream wedge (FIX-ART-B).
+const UNDER_VISOR_MIN := Vector3(-0.17, 1.57, -0.38)
+const UNDER_VISOR_MAX := Vector3(0.17, 1.62, -0.05)
 ## The chest plates in the authored 1.8 m frame (x across, y up, -z the front): the concept's breastplate between the open jacket's
 ## flaps, from above the belt to under the scarf.
 const CHEST_MIN := Vector3(-0.14, 1.12, -0.5)
@@ -106,7 +113,7 @@ func test_his_swatch_set_is_unchanged() -> void:
 	for uv: Vector2 in uvs:
 		seen[_slot_of(uv)] = true
 	for slot: int in seen:
-		assert_true(SLOTS_ALLOWED.has(slot), "slot %d is one of 6, 14, 44, 45, 46" % slot)
+		assert_true(SLOTS_ALLOWED.has(slot), "slot %d is one of 6, 14, 44, 45, 46, 47" % slot)
 	for slot: int in [SLOT_PURPLE, SLOT_STRAP, SLOT_BLACK]:
 		assert_true(seen.has(slot), "slot %d is on the mesh" % slot)
 
@@ -235,7 +242,7 @@ func test_the_mask_carries_a_palette_slot_per_texel() -> void:
 	var c := _codes()
 	print("DETAIL-2 codes: %d of %d samples coded, %d differ from the face" % [c.coded, c.total, c.differ])
 	assert_gte(float(c.coded) / float(c.total), 0.99, "nearly every sample of every face has a code (%d of %d)" % [c.coded, c.total])
-	assert_eq(int(c.allowed), int(c.coded), "and each names one of 6, 14, 44, 45, 46")
+	assert_eq(int(c.allowed), int(c.coded), "and each names one of 6, 14, 44, 45, 46, 47")
 	var share := float(c.differ) / float(c.total)
 	assert_gt(share, 0.002, "the codes move some borders off the faces (%.4f)" % share)
 	assert_lt(share, 0.08, "and most texels keep their face's swatch (%.4f)" % share)
@@ -299,10 +306,42 @@ func test_the_helmet_is_purple() -> void:
 		var c := _centre(tri)
 		if c.y > 1.72 and absf(c.x) < 0.25:
 			n += 1
-			if _slot_of_tri(tri) == SLOT_PURPLE:
+			if _slot_of_tri(tri) == SLOT_HELMET:
 				purple += 1
 	assert_gt(n, 100, "the helmet's top holds faces (%d)" % n)
-	assert_gte(float(purple) / float(n), 0.95, "its top is purple (%d of %d)" % [purple, n])
+	assert_gte(float(purple) / float(n), 0.95, "its top is the helmet's purple (%d of %d)" % [purple, n])
+
+
+## FIX-ART-B (feedback-chars-07): hard headgear scuffs and never bleeds, so the helmet's purple is its own swatch (the same colour,
+## alpha class 230), where the jacket's purple (slot 44) takes blood.
+func test_the_helmet_swatch_is_the_jackets_purple_that_never_bleeds() -> void:
+	var atlas := (load("res://assets/export/palette/palette_atlas.png") as Texture2D).get_image()
+	if atlas.is_compressed():
+		atlas.decompress()
+	var jacket := atlas.get_pixel((SLOT_PURPLE % SWATCH_COLUMNS) * 8 + 4, (SLOT_PURPLE / SWATCH_COLUMNS) * 8 + 4)
+	var helmet := atlas.get_pixel((SLOT_HELMET % SWATCH_COLUMNS) * 8 + 4, (SLOT_HELMET / SWATCH_COLUMNS) * 8 + 4)
+	assert_eq(helmet.to_html(false), jacket.to_html(false), "the same purple")
+	assert_almost_eq(helmet.a, NO_BLOOD_ALPHA, 0.005, "the helmet takes scuffs and no blood")
+	assert_almost_eq(jacket.a, 1.0, 0.005, "the jacket still takes the clothes' marks and blood")
+	var on_helmet := 0
+	for tri: int in _tris().size() / 3:
+		if _slot_of_tri(tri) == SLOT_HELMET:
+			on_helmet += 1
+	assert_gt(on_helmet, 300, "the swatch is on the mesh (%d faces)" % on_helmet)
+
+
+## FIX-ART-B (feedback-chars-06): under the visor is the scarf's purple, not the texture's cream or skin wedge.
+func test_under_the_visor_is_the_scarf_not_a_cream_wedge() -> void:
+	var n := 0
+	var wedge := 0
+	for tri: int in _tris().size() / 3:
+		if _in_box(_centre(tri), UNDER_VISOR_MIN, UNDER_VISOR_MAX):
+			n += 1
+			var slot := _slot_of_tri(tri)
+			if slot == SLOT_CREAM or slot == SLOT_SKIN:
+				wedge += 1
+	assert_gt(n, 30, "the box under the visor holds faces (%d)" % n)
+	assert_eq(wedge, 0, "none of them is cream or skin (%d of %d)" % [wedge, n])
 
 
 ## The line weight: a crease line is `width_m` plus 1.7 `ramp_m` across at the shader's cut, 10 mm in the pilot and about 7.8 mm now; the valley ink (quilting, folds) is on for the cloth and off for the scarf and the helmet.

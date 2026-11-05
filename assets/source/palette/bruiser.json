@@ -1,7 +1,10 @@
 {
 	"id": "bruiser",
-	"slot_range": [44, 49],
-	"note": "The Bruiser's own colours (M6 concept A: a purple hood, mask and padded jacket over steel plates and guards, black trousers and boots, a cream belt); skin and cream come from the shared palette. The purple keeps the enemy main colour's saturation (0.44: the Tripo texture's jacket is a dull violet and the pipeline labels by nearest colour). The steel (visor, chest plates, forearm guards, knee pads, boot caps) scuffs and darkens but never takes blood: armour does not bleed. Nothing in the red band and nothing glossy.",
+	"slot_range": [
+		44,
+		49
+	],
+	"note": "The Bruiser's own colours (M6 concept A: a purple hood, mask and padded jacket over steel plates and guards, black trousers and boots, a cream belt); skin and cream come from the shared palette. The purple keeps the enemy main colour's saturation (0.44: the Tripo texture's jacket is a dull violet and the pipeline labels by nearest colour). The helmet's back and top are the same purple in their own swatch (slot 47) that scuffs and never takes blood: hard headgear does not bleed (M6 FIX-ART-B). The steel (visor, chest plates, forearm guards, knee pads, boot caps) scuffs and darkens but never takes blood: armour does not bleed. Nothing in the red band and nothing glossy.",
 	"swatches": [
 		{
 			"slot": 44,
@@ -21,6 +24,13 @@
 			"name": "bruiser_black",
 			"srgb": "#2a2531",
 			"marks": true
+		},
+		{
+			"slot": 47,
+			"name": "bruiser_helmet",
+			"srgb": "#755394",
+			"marks": true,
+			"blood": false
 		}
 	]
 }

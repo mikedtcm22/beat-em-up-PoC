@@ -1,7 +1,7 @@
 {
 	"asset": "boss",
 	"version": 2,
-	"config_sha256": "2a66d3cdae359451b60bbf948b5268573efff5f2ce5fd75c4992a90faa993978",
+	"config_sha256": "aeb165bd253df2454b5754319baf38469eb8312228792246cc8c6efc1701da9b",
 	"steps": {
 		"inspect": {
 			"source": {
@@ -15451,8 +15451,8 @@
 			"swatches_used": {
 				"7": {
 					"name": "skin_tan",
-					"area_share": 0.050615,
-					"faces": 1652
+					"area_share": 0.050759,
+					"faces": 1654
 				},
 				"50": {
 					"name": "boss_charcoal",
@@ -15466,8 +15466,8 @@
 				},
 				"53": {
 					"name": "boss_shorts",
-					"area_share": 0.060516,
-					"faces": 1862
+					"area_share": 0.060371,
+					"faces": 1860
 				},
 				"54": {
 					"name": "boss_glove",
@@ -15480,8 +15480,8 @@
 			"detail_bake": {
 				"size": 1024,
 				"texels": 364202,
-				"ink_texels_share": 0.069121,
-				"mean_ink": 0.068605,
+				"ink_texels_share": 0.070442,
+				"mean_ink": 0.070062,
 				"png": "boss_detail.png",
 				"zones": {
 					"robe": {
@@ -15555,18 +15555,18 @@
 						"ink_texels_share": 0.051486
 					},
 					"face_skin": {
-						"texels": 8206,
+						"texels": 7871,
 						"raw_percentiles": {
 							"50": 0.0039,
-							"80": 0.0112,
-							"90": 0.018,
-							"95": 0.0294,
-							"97": 0.0443,
-							"98": 0.0701,
-							"99": 0.1283,
-							"99.5": 0.1854
+							"80": 0.0109,
+							"90": 0.0173,
+							"95": 0.0288,
+							"97": 0.0445,
+							"98": 0.0739,
+							"99": 0.1324,
+							"99.5": 0.1951
 						},
-						"ink_texels_share": 0.019254
+						"ink_texels_share": 0.077119
 					},
 					"gloves": {
 						"texels": 8070,
@@ -15586,45 +15586,45 @@
 				"glint": null,
 				"clean": {
 					"before": {
-						"pieces": 1440,
-						"texels": 32262,
-						"pieces_le6": 836,
-						"texels_in_le6_share": 0.0619,
+						"pieces": 1536,
+						"texels": 33019,
+						"pieces_le6": 913,
+						"texels_in_le6_share": 0.0649,
 						"median": 4.0,
-						"pieces_over20": 292
+						"pieces_over20": 307
 					},
 					"after": {
-						"pieces": 221,
-						"texels": 29978,
-						"pieces_le6": 2,
-						"texels_in_le6_share": 0.0002,
-						"median": 73.0,
-						"pieces_over20": 219
+						"pieces": 230,
+						"texels": 30513,
+						"pieces_le6": 4,
+						"texels_in_le6_share": 0.0003,
+						"median": 72.5,
+						"pieces_over20": 226
 					},
-					"bridged_texels": 573,
-					"pieces_dropped": 1143,
-					"texels_dropped": 7448
+					"bridged_texels": 648,
+					"pieces_dropped": 1209,
+					"texels_dropped": 7835
 				},
 				"glove_lines": null,
 				"crease": {
-					"texels_on_a_crease": 23665,
-					"ink_share_before": 0.00572,
-					"ink_share_after": 0.06912
+					"texels_on_a_crease": 23696,
+					"ink_share_before": 0.00696,
+					"ink_share_after": 0.07044
 				},
 				"texel_swatch": {
 					"texels": 364202,
-					"texture_decided": 350028,
-					"differ_from_face_share": 0.01102,
-					"majority_moved": 1748,
+					"texture_decided": 342676,
+					"differ_from_face_share": 0.01052,
+					"majority_moved": 1721,
 					"share": {
-						"7": 0.04936,
-						"50": 0.7467,
-						"51": 0.11795,
-						"53": 0.06391,
+						"7": 0.04995,
+						"50": 0.74646,
+						"51": 0.11765,
+						"53": 0.06386,
 						"54": 0.02208
 					}
 				},
-				"sha256": "f488854c5a73df1868402f71bfaefe0bc30bdc395a59d83b94e86f285aa98014"
+				"sha256": "9b3c6f3b123dcf1e724e1a901b75d82f3232a8aa578562af5b57f52c080bcf2b"
 			},
 			"regions": [
 				{
@@ -15646,6 +15646,11 @@
 					"name": "legs_not_skin",
 					"slot": 50,
 					"faces": 1145
+				},
+				{
+					"name": "face_lock",
+					"slot": 7,
+					"faces": 797
 				}
 			],
 			"region_cuts": [],
@@ -15767,7 +15772,7 @@
 						]
 					},
 					"file": "boss.glb",
-					"sha256": "c6a6ba75fd28b3743485ffd8fa3ae581834bc1508ab4fe83c1c6792f54d9d105",
+					"sha256": "365c70a1555255e4b9a22a9b1e1545348b2a9e9f9576ef9fd487b9d95fd55834",
 					"bytes": 1820752
 				},
 				"rest": {
@@ -15822,7 +15827,7 @@
 						]
 					},
 					"file": "boss_rest.glb",
-					"sha256": "be11f83bc83a3f734411a8e7129158ed34c6c416d75c4434c84ceaf3adcc8543",
+					"sha256": "bc45f75c5895f48aa9e55298d50014818441310614d6f7693eaead8a4ea9998b",
 					"bytes": 1820260
 				}
 			},
@@ -15845,8 +15850,8 @@
 		}
 	},
 	"outputs": {
-		"boss.glb": "c6a6ba75fd28b3743485ffd8fa3ae581834bc1508ab4fe83c1c6792f54d9d105",
-		"boss_rest.glb": "be11f83bc83a3f734411a8e7129158ed34c6c416d75c4434c84ceaf3adcc8543"
+		"boss.glb": "365c70a1555255e4b9a22a9b1e1545348b2a9e9f9576ef9fd487b9d95fd55834",
+		"boss_rest.glb": "bc45f75c5895f48aa9e55298d50014818441310614d6f7693eaead8a4ea9998b"
 	},
-	"hash": "1071c03e3d4491a7470d7d4b3b4d5b652129a505a927ec0178755e9f813c2695"
+	"hash": "e138738d7a19ad0287568ae2bd3ac6fd07e058ed151ee87239cad4ed9de03a7b"
 }
