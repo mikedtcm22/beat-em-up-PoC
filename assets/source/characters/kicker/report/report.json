@@ -10496,5 +10496,981 @@
 		"kicker.glb": "cd1c3de0836def4d17f7bec6573eaa2858531850b2b3ea4d757046b306e9c688",
 		"kicker_rest.glb": "454daa47ab57f83ee8b03cb10f398ee9232e8ed102fbf2d4c9d5a00986099068"
 	},
-	"hash": "ab48c7fc1854d827349e585fbba38dbd67c19d6bf088aa2b07cd1d970a93a4a0"
+	"hash": "ab48c7fc1854d827349e585fbba38dbd67c19d6bf088aa2b07cd1d970a93a4a0",
+	"stills": {
+		"variants": {
+			"apose": {
+				"strain": {
+					"rest": {
+						"nan": false,
+						"vs_glb_rest": {
+							"edge_p999": 1.240284,
+							"edge_max": 1.653014,
+							"edge_min": 0.280652,
+							"area_under_15pct": 6.7e-05
+						},
+						"vs_rig_rest": {
+							"edge_p999": 1.0,
+							"edge_max": 1.0,
+							"edge_min": 1.0,
+							"area_under_15pct": 0.0
+						},
+						"worst_edges": [
+							{
+								"ratio": 1.0,
+								"at": [
+									0.283148,
+									1.061737,
+									-0.02255
+								],
+								"bones": [
+									"RightLowerArm",
+									"RightLowerArm"
+								]
+							},
+							{
+								"ratio": 1.0,
+								"at": [
+									-0.09515,
+									1.009737,
+									0.09673
+								],
+								"bones": [
+									"Hips",
+									"Hips"
+								]
+							},
+							{
+								"ratio": 1.0,
+								"at": [
+									-0.108021,
+									0.996413,
+									0.078848
+								],
+								"bones": [
+									"Hips",
+									"Hips"
+								]
+							},
+							{
+								"ratio": 1.0,
+								"at": [
+									0.119677,
+									0.048205,
+									0.085538
+								],
+								"bones": [
+									"RightFoot",
+									"RightFoot"
+								]
+							},
+							{
+								"ratio": 1.0,
+								"at": [
+									0.124257,
+									0.047943,
+									0.083362
+								],
+								"bones": [
+									"RightFoot",
+									"RightFoot"
+								]
+							}
+						]
+					},
+					"guard": {
+						"nan": false,
+						"vs_glb_rest": {
+							"edge_p999": 1.566343,
+							"edge_max": 2.573812,
+							"edge_min": 0.124433,
+							"area_under_15pct": 0.000867
+						},
+						"vs_rig_rest": {
+							"edge_p999": 1.66324,
+							"edge_max": 2.590323,
+							"edge_min": 0.124432,
+							"area_under_15pct": 0.000867
+						},
+						"worst_edges": [
+							{
+								"ratio": 0.124432,
+								"at": [
+									0.26515,
+									1.14943,
+									-0.011334
+								],
+								"bones": [
+									"RightLowerArm",
+									"RightUpperArm"
+								]
+							},
+							{
+								"ratio": 0.127855,
+								"at": [
+									0.184501,
+									1.135031,
+									-0.024399
+								],
+								"bones": [
+									"RightLowerArm",
+									"RightUpperArm"
+								]
+							},
+							{
+								"ratio": 0.134098,
+								"at": [
+									0.269257,
+									1.149572,
+									-0.008323
+								],
+								"bones": [
+									"RightLowerArm",
+									"RightUpperArm"
+								]
+							},
+							{
+								"ratio": 0.134955,
+								"at": [
+									-0.177742,
+									1.137455,
+									-0.020506
+								],
+								"bones": [
+									"LeftLowerArm",
+									"LeftUpperArm"
+								]
+							},
+							{
+								"ratio": 0.161995,
+								"at": [
+									-0.259715,
+									1.149206,
+									-0.010329
+								],
+								"bones": [
+									"LeftLowerArm",
+									"LeftUpperArm"
+								]
+							}
+						]
+					},
+					"elbow_150": {
+						"nan": false,
+						"vs_glb_rest": {
+							"edge_p999": 1.537381,
+							"edge_max": 2.664061,
+							"edge_min": 0.122004,
+							"area_under_15pct": 0.000667
+						},
+						"vs_rig_rest": {
+							"edge_p999": 1.535562,
+							"edge_max": 2.664073,
+							"edge_min": 0.122003,
+							"area_under_15pct": 0.0006
+						},
+						"worst_edges": [
+							{
+								"ratio": 0.122003,
+								"at": [
+									0.269257,
+									1.149572,
+									-0.008323
+								],
+								"bones": [
+									"RightLowerArm",
+									"RightUpperArm"
+								]
+							},
+							{
+								"ratio": 0.125908,
+								"at": [
+									-0.26461,
+									1.142531,
+									-0.010737
+								],
+								"bones": [
+									"LeftLowerArm",
+									"LeftUpperArm"
+								]
+							},
+							{
+								"ratio": 0.16743,
+								"at": [
+									0.177665,
+									1.133069,
+									-0.016281
+								],
+								"bones": [
+									"RightLowerArm",
+									"RightUpperArm"
+								]
+							},
+							{
+								"ratio": 0.193613,
+								"at": [
+									-0.177742,
+									1.137455,
+									-0.020506
+								],
+								"bones": [
+									"LeftLowerArm",
+									"LeftUpperArm"
+								]
+							},
+							{
+								"ratio": 0.214421,
+								"at": [
+									0.275894,
+									1.143799,
+									-0.003745
+								],
+								"bones": [
+									"RightLowerArm",
+									"RightUpperArm"
+								]
+							}
+						]
+					},
+					"arm_raise_140": {
+						"nan": false,
+						"vs_glb_rest": {
+							"edge_p999": 2.534226,
+							"edge_max": 4.066065,
+							"edge_min": 0.13398,
+							"area_under_15pct": 0.000467
+						},
+						"vs_rig_rest": {
+							"edge_p999": 2.719492,
+							"edge_max": 9.350397,
+							"edge_min": 0.13641,
+							"area_under_15pct": 0.000333
+						},
+						"worst_edges": [
+							{
+								"ratio": 9.350397,
+								"at": [
+									0.063104,
+									1.255629,
+									-0.150765
+								],
+								"bones": [
+									"Chest",
+									"Chest"
+								]
+							},
+							{
+								"ratio": 0.13641,
+								"at": [
+									-0.165368,
+									1.301062,
+									-0.056855
+								],
+								"bones": [
+									"LeftUpperArm",
+									"LeftUpperArm"
+								]
+							},
+							{
+								"ratio": 0.142345,
+								"at": [
+									-0.183702,
+									1.366162,
+									-0.082598
+								],
+								"bones": [
+									"LeftUpperArm",
+									"LeftShoulder"
+								]
+							},
+							{
+								"ratio": 0.160829,
+								"at": [
+									0.172259,
+									1.297251,
+									0.044506
+								],
+								"bones": [
+									"RightUpperArm",
+									"RightUpperArm"
+								]
+							},
+							{
+								"ratio": 5.907476,
+								"at": [
+									0.188364,
+									1.337742,
+									0.061327
+								],
+								"bones": [
+									"RightUpperArm",
+									"RightUpperArm"
+								]
+							}
+						]
+					},
+					"knee_m130": {
+						"nan": false,
+						"vs_glb_rest": {
+							"edge_p999": 1.660232,
+							"edge_max": 4.064456,
+							"edge_min": 0.117619,
+							"area_under_15pct": 0.0008
+						},
+						"vs_rig_rest": {
+							"edge_p999": 1.66023,
+							"edge_max": 4.064438,
+							"edge_min": 0.117619,
+							"area_under_15pct": 0.000733
+						},
+						"worst_edges": [
+							{
+								"ratio": 0.117619,
+								"at": [
+									-0.12933,
+									0.965927,
+									-0.070404
+								],
+								"bones": [
+									"LeftUpperLeg",
+									"LeftUpperLeg"
+								]
+							},
+							{
+								"ratio": 0.151581,
+								"at": [
+									-0.050031,
+									0.531841,
+									0.025062
+								],
+								"bones": [
+									"LeftUpperLeg",
+									"LeftLowerLeg"
+								]
+							},
+							{
+								"ratio": 0.162629,
+								"at": [
+									-0.119182,
+									0.962372,
+									-0.075191
+								],
+								"bones": [
+									"LeftUpperLeg",
+									"LeftUpperLeg"
+								]
+							},
+							{
+								"ratio": 0.209896,
+								"at": [
+									-0.14593,
+									0.984573,
+									-0.048762
+								],
+								"bones": [
+									"Hips",
+									"Hips"
+								]
+							},
+							{
+								"ratio": 0.231543,
+								"at": [
+									-0.160366,
+									0.488511,
+									0.069182
+								],
+								"bones": [
+									"LeftLowerLeg",
+									"LeftLowerLeg"
+								]
+							}
+						]
+					},
+					"spine_twist": {
+						"nan": false,
+						"vs_glb_rest": {
+							"edge_p999": 1.599536,
+							"edge_max": 2.29527,
+							"edge_min": 0.338135,
+							"area_under_15pct": 0.0
+						},
+						"vs_rig_rest": {
+							"edge_p999": 1.566195,
+							"edge_max": 2.9748,
+							"edge_min": 0.394946,
+							"area_under_15pct": 0.0
+						},
+						"worst_edges": [
+							{
+								"ratio": 2.9748,
+								"at": [
+									0.188364,
+									1.337742,
+									0.061327
+								],
+								"bones": [
+									"RightUpperArm",
+									"RightUpperArm"
+								]
+							},
+							{
+								"ratio": 0.394946,
+								"at": [
+									-0.056642,
+									1.21779,
+									-0.134115
+								],
+								"bones": [
+									"Chest",
+									"Chest"
+								]
+							},
+							{
+								"ratio": 2.450596,
+								"at": [
+									0.063104,
+									1.255629,
+									-0.150765
+								],
+								"bones": [
+									"Chest",
+									"Chest"
+								]
+							},
+							{
+								"ratio": 0.421835,
+								"at": [
+									0.125641,
+									1.158453,
+									-0.088225
+								],
+								"bones": [
+									"Hips",
+									"Hips"
+								]
+							},
+							{
+								"ratio": 2.29527,
+								"at": [
+									-0.042471,
+									1.333366,
+									-0.136854
+								],
+								"bones": [
+									"Chest",
+									"Chest"
+								]
+							}
+						]
+					}
+				},
+				"stills": [
+					"assets/source/characters/kicker/report/stills/apose_rest_front.png",
+					"assets/source/characters/kicker/report/stills/apose_rest_three_quarter.png",
+					"assets/source/characters/kicker/report/stills/apose_rest_side.png",
+					"assets/source/characters/kicker/report/stills/apose_guard_front.png",
+					"assets/source/characters/kicker/report/stills/apose_guard_three_quarter.png",
+					"assets/source/characters/kicker/report/stills/apose_guard_side.png",
+					"assets/source/characters/kicker/report/stills/apose_elbow_150_front.png",
+					"assets/source/characters/kicker/report/stills/apose_elbow_150_three_quarter.png",
+					"assets/source/characters/kicker/report/stills/apose_elbow_150_side.png",
+					"assets/source/characters/kicker/report/stills/apose_arm_raise_140_front.png",
+					"assets/source/characters/kicker/report/stills/apose_arm_raise_140_three_quarter.png",
+					"assets/source/characters/kicker/report/stills/apose_arm_raise_140_side.png",
+					"assets/source/characters/kicker/report/stills/apose_knee_m130_front.png",
+					"assets/source/characters/kicker/report/stills/apose_knee_m130_three_quarter.png",
+					"assets/source/characters/kicker/report/stills/apose_knee_m130_side.png",
+					"assets/source/characters/kicker/report/stills/apose_spine_twist_front.png",
+					"assets/source/characters/kicker/report/stills/apose_spine_twist_three_quarter.png",
+					"assets/source/characters/kicker/report/stills/apose_spine_twist_side.png"
+				]
+			},
+			"rest": {
+				"strain": {
+					"rest": {
+						"nan": false,
+						"vs_glb_rest": {
+							"edge_p999": 1.000009,
+							"edge_max": 1.000014,
+							"edge_min": 0.999849,
+							"area_under_15pct": 0.0
+						},
+						"vs_rig_rest": {
+							"edge_p999": 1.0,
+							"edge_max": 1.0,
+							"edge_min": 1.0,
+							"area_under_15pct": 0.0
+						},
+						"worst_edges": [
+							{
+								"ratio": 1.0,
+								"at": [
+									0.283148,
+									1.061737,
+									-0.02255
+								],
+								"bones": [
+									"RightLowerArm",
+									"RightLowerArm"
+								]
+							},
+							{
+								"ratio": 1.0,
+								"at": [
+									-0.09515,
+									1.009737,
+									0.09673
+								],
+								"bones": [
+									"Hips",
+									"Hips"
+								]
+							},
+							{
+								"ratio": 1.0,
+								"at": [
+									-0.108021,
+									0.996413,
+									0.078848
+								],
+								"bones": [
+									"Hips",
+									"Hips"
+								]
+							},
+							{
+								"ratio": 1.0,
+								"at": [
+									0.119677,
+									0.048205,
+									0.085538
+								],
+								"bones": [
+									"RightFoot",
+									"RightFoot"
+								]
+							},
+							{
+								"ratio": 1.0,
+								"at": [
+									0.124257,
+									0.047943,
+									0.083362
+								],
+								"bones": [
+									"RightFoot",
+									"RightFoot"
+								]
+							}
+						]
+					},
+					"guard": {
+						"nan": false,
+						"vs_glb_rest": {
+							"edge_p999": 1.62736,
+							"edge_max": 3.826679,
+							"edge_min": 0.124433,
+							"area_under_15pct": 0.000867
+						},
+						"vs_rig_rest": {
+							"edge_p999": 1.627362,
+							"edge_max": 3.826694,
+							"edge_min": 0.124433,
+							"area_under_15pct": 0.000867
+						},
+						"worst_edges": [
+							{
+								"ratio": 0.124433,
+								"at": [
+									0.26515,
+									1.14943,
+									-0.011334
+								],
+								"bones": [
+									"RightLowerArm",
+									"RightUpperArm"
+								]
+							},
+							{
+								"ratio": 0.127855,
+								"at": [
+									0.184501,
+									1.135031,
+									-0.024399
+								],
+								"bones": [
+									"RightLowerArm",
+									"RightUpperArm"
+								]
+							},
+							{
+								"ratio": 0.134098,
+								"at": [
+									0.269257,
+									1.149572,
+									-0.008323
+								],
+								"bones": [
+									"RightLowerArm",
+									"RightUpperArm"
+								]
+							},
+							{
+								"ratio": 0.134955,
+								"at": [
+									-0.177742,
+									1.137455,
+									-0.020506
+								],
+								"bones": [
+									"LeftLowerArm",
+									"LeftUpperArm"
+								]
+							},
+							{
+								"ratio": 0.161995,
+								"at": [
+									-0.259715,
+									1.149206,
+									-0.010329
+								],
+								"bones": [
+									"LeftLowerArm",
+									"LeftUpperArm"
+								]
+							}
+						]
+					},
+					"elbow_150": {
+						"nan": false,
+						"vs_glb_rest": {
+							"edge_p999": 1.535563,
+							"edge_max": 2.664055,
+							"edge_min": 0.122003,
+							"area_under_15pct": 0.0006
+						},
+						"vs_rig_rest": {
+							"edge_p999": 1.535561,
+							"edge_max": 2.664067,
+							"edge_min": 0.122003,
+							"area_under_15pct": 0.0006
+						},
+						"worst_edges": [
+							{
+								"ratio": 0.122003,
+								"at": [
+									0.269257,
+									1.149572,
+									-0.008323
+								],
+								"bones": [
+									"RightLowerArm",
+									"RightUpperArm"
+								]
+							},
+							{
+								"ratio": 0.125908,
+								"at": [
+									-0.26461,
+									1.142531,
+									-0.010737
+								],
+								"bones": [
+									"LeftLowerArm",
+									"LeftUpperArm"
+								]
+							},
+							{
+								"ratio": 0.16743,
+								"at": [
+									0.177665,
+									1.133069,
+									-0.016281
+								],
+								"bones": [
+									"RightLowerArm",
+									"RightUpperArm"
+								]
+							},
+							{
+								"ratio": 0.193612,
+								"at": [
+									-0.177742,
+									1.137455,
+									-0.020506
+								],
+								"bones": [
+									"LeftLowerArm",
+									"LeftUpperArm"
+								]
+							},
+							{
+								"ratio": 0.214421,
+								"at": [
+									0.275894,
+									1.143799,
+									-0.003745
+								],
+								"bones": [
+									"RightLowerArm",
+									"RightUpperArm"
+								]
+							}
+						]
+					},
+					"arm_raise_140": {
+						"nan": false,
+						"vs_glb_rest": {
+							"edge_p999": 2.692561,
+							"edge_max": 12.424387,
+							"edge_min": 0.119963,
+							"area_under_15pct": 0.000667
+						},
+						"vs_rig_rest": {
+							"edge_p999": 2.692561,
+							"edge_max": 12.424433,
+							"edge_min": 0.119963,
+							"area_under_15pct": 0.000667
+						},
+						"worst_edges": [
+							{
+								"ratio": 12.424433,
+								"at": [
+									0.063104,
+									1.255629,
+									-0.150765
+								],
+								"bones": [
+									"Chest",
+									"Chest"
+								]
+							},
+							{
+								"ratio": 0.119963,
+								"at": [
+									-0.183702,
+									1.366162,
+									-0.082598
+								],
+								"bones": [
+									"LeftUpperArm",
+									"LeftShoulder"
+								]
+							},
+							{
+								"ratio": 0.140228,
+								"at": [
+									-0.165368,
+									1.301062,
+									-0.056855
+								],
+								"bones": [
+									"LeftUpperArm",
+									"LeftUpperArm"
+								]
+							},
+							{
+								"ratio": 0.158819,
+								"at": [
+									0.172259,
+									1.297251,
+									0.044506
+								],
+								"bones": [
+									"RightUpperArm",
+									"RightUpperArm"
+								]
+							},
+							{
+								"ratio": 0.17567,
+								"at": [
+									-0.207323,
+									1.409819,
+									0.082901
+								],
+								"bones": [
+									"LeftUpperArm",
+									"LeftUpperArm"
+								]
+							}
+						]
+					},
+					"knee_m130": {
+						"nan": false,
+						"vs_glb_rest": {
+							"edge_p999": 1.660232,
+							"edge_max": 4.064456,
+							"edge_min": 0.117619,
+							"area_under_15pct": 0.000733
+						},
+						"vs_rig_rest": {
+							"edge_p999": 1.66023,
+							"edge_max": 4.064438,
+							"edge_min": 0.117619,
+							"area_under_15pct": 0.000733
+						},
+						"worst_edges": [
+							{
+								"ratio": 0.117619,
+								"at": [
+									-0.12933,
+									0.965927,
+									-0.070404
+								],
+								"bones": [
+									"LeftUpperLeg",
+									"LeftUpperLeg"
+								]
+							},
+							{
+								"ratio": 0.151581,
+								"at": [
+									-0.050031,
+									0.531841,
+									0.025062
+								],
+								"bones": [
+									"LeftUpperLeg",
+									"LeftLowerLeg"
+								]
+							},
+							{
+								"ratio": 0.162629,
+								"at": [
+									-0.119182,
+									0.962372,
+									-0.075191
+								],
+								"bones": [
+									"LeftUpperLeg",
+									"LeftUpperLeg"
+								]
+							},
+							{
+								"ratio": 0.209896,
+								"at": [
+									-0.14593,
+									0.984573,
+									-0.048762
+								],
+								"bones": [
+									"Hips",
+									"Hips"
+								]
+							},
+							{
+								"ratio": 0.231543,
+								"at": [
+									-0.160366,
+									0.488511,
+									0.069182
+								],
+								"bones": [
+									"LeftLowerLeg",
+									"LeftLowerLeg"
+								]
+							}
+						]
+					},
+					"spine_twist": {
+						"nan": false,
+						"vs_glb_rest": {
+							"edge_p999": 1.568522,
+							"edge_max": 2.766269,
+							"edge_min": 0.417071,
+							"area_under_15pct": 0.0
+						},
+						"vs_rig_rest": {
+							"edge_p999": 1.568523,
+							"edge_max": 2.766318,
+							"edge_min": 0.41707,
+							"area_under_15pct": 0.0
+						},
+						"worst_edges": [
+							{
+								"ratio": 2.766318,
+								"at": [
+									0.188364,
+									1.337742,
+									0.061327
+								],
+								"bones": [
+									"RightUpperArm",
+									"RightUpperArm"
+								]
+							},
+							{
+								"ratio": 0.41707,
+								"at": [
+									0.125641,
+									1.158453,
+									-0.088225
+								],
+								"bones": [
+									"Hips",
+									"Hips"
+								]
+							},
+							{
+								"ratio": 0.433218,
+								"at": [
+									-0.056642,
+									1.21779,
+									-0.134115
+								],
+								"bones": [
+									"Chest",
+									"Chest"
+								]
+							},
+							{
+								"ratio": 2.29527,
+								"at": [
+									-0.042471,
+									1.333366,
+									-0.136854
+								],
+								"bones": [
+									"Chest",
+									"Chest"
+								]
+							},
+							{
+								"ratio": 0.476957,
+								"at": [
+									0.008701,
+									1.238152,
+									-0.148988
+								],
+								"bones": [
+									"Chest",
+									"Chest"
+								]
+							}
+						]
+					}
+				},
+				"stills": [
+					"assets/source/characters/kicker/report/stills/rest_rest_front.png",
+					"assets/source/characters/kicker/report/stills/rest_rest_three_quarter.png",
+					"assets/source/characters/kicker/report/stills/rest_rest_side.png",
+					"assets/source/characters/kicker/report/stills/rest_guard_front.png",
+					"assets/source/characters/kicker/report/stills/rest_guard_three_quarter.png",
+					"assets/source/characters/kicker/report/stills/rest_guard_side.png",
+					"assets/source/characters/kicker/report/stills/rest_elbow_150_front.png",
+					"assets/source/characters/kicker/report/stills/rest_elbow_150_three_quarter.png",
+					"assets/source/characters/kicker/report/stills/rest_elbow_150_side.png",
+					"assets/source/characters/kicker/report/stills/rest_arm_raise_140_front.png",
+					"assets/source/characters/kicker/report/stills/rest_arm_raise_140_three_quarter.png",
+					"assets/source/characters/kicker/report/stills/rest_arm_raise_140_side.png",
+					"assets/source/characters/kicker/report/stills/rest_knee_m130_front.png",
+					"assets/source/characters/kicker/report/stills/rest_knee_m130_three_quarter.png",
+					"assets/source/characters/kicker/report/stills/rest_knee_m130_side.png",
+					"assets/source/characters/kicker/report/stills/rest_spine_twist_front.png",
+					"assets/source/characters/kicker/report/stills/rest_spine_twist_three_quarter.png",
+					"assets/source/characters/kicker/report/stills/rest_spine_twist_side.png"
+				]
+			}
+		}
+	}
 }
