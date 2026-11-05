@@ -4,6 +4,37 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-05 12:40 CST: FEEDBACK phase 2b merged (2006/2006); the review round's recordings running
+- **Merged into `m6/full-art-audio`:** ROLL-KICKER (`40e03ba`), ROLL-THUG (`45f9ac0`), ROLL-PUNK (`fdb9ee0`) and OX-2 (`5d21aa3`); merge head `82bab12`, pushed.
+  - **Conflicts:**
+    - ARCHITECTURE.md, with every heading kept;
+    - ASSETS.md, where the Thug's builder had overwritten the **Kicker's** mask row with Thug text; the lead kept the Kicker's own row.
+  - Preset 631 values (unchanged), atlas current, every `run.py --check`, `player_run.py --asset player --check` and `gen_trim --check` YES.
+  - Suite 2006/2006 in 407 s with `ART_PUNK_VARIANT_STRAIN=1`, 0 error lines.
+  - No Tripo or Gemini spent in phase 2b: every raw model held its detail.
+- **What each did** (calls in `docs/milestones/M6-calls/<KEY>.md`; A/B sheets copied to `captures/m6-feedback-3/ab/`):
+  - **Kicker:** relax 0, island 0.0015, crease 60°, valleys on the vest and shorts, texel swatches, seven zones. The hood, drawstrings, zip, pocket and hem are inked now. Strain `min_min` moved 0.0367 -> 0.0183 (one edge in walk clips).
+  - **Thug:** relax 0, island 0.0015, crease 60°, hoodie valleys 15° (none on the trousers, which scribbled), texel swatches, `hoodie` and `trousers` zones.
+  - **Punk:** crease and valley ink, plus texel swatches. He has no island merge (it broke the cap's strap arch) and keeps relax 3 and M4's seven zones. The mesh is byte-identical and the veteran swap recolours unchanged. Shared tests loosened for his blue channel: `test_art_contract.gd` (B <= 20/255, `STROKE_PIECES_MAX` 600 -> 800) and `test_toon_glint.gd`.
+  - **OX-2:** texel swatches, lines 0.0035/0.0025, robe valleys 12°, and the region `legs_not_skin`, which repaints the tan streak down his tights. `test_art_heavies.gd`'s region filter is narrowed to glove regions.
+- **The lead's look:**
+  - **The Kicker** is a clear win.
+  - **The Thug** has two regressions:
+    - a hard black patch over the right half of his face and bandana at 1 m (a dark texture patch the texel borders now show sharply);
+    - valley scribbles across his chest.
+  - **The Punk** changed only a little.
+  - **Ox** is modest: cleaner trim, the leg streak gone, but his face is still a flat tan shape at 1 m.
+- **Running:** the round's shared recordings, `bash <scratchpad>/record_feedback.sh` (task `bsf9qxu3k`), into `captures/m6-feedback-review/`:
+  - **crowd lane:** r_kicker, r_thug, r_bruiser, r_boss, lineup, heavies, dj, dk, dt, dp1, dp2, dp3, dox, damage, hurt, fight;
+  - **level lane:** drift, tour, walk (perf_level_bot), run_street (arenas 0-2).
+  - **If cut off:** the script is lost with the scratchpad. Rerun the same `tools/record_acts.sh` lines (the act list is in `args-review-feedback.json`'s common note).
+- **Next:**
+  1. When the recordings are done (check each `exit=0 errors=0` line), run `tools/workflows/review.js` with `docs/reviews/M6/args-review-feedback.json`: lenses chars and world (Opus), code (Sonnet), skeptics on highs and mediums, `partition: false`.
+  2. The lead partitions the survivors, plus the Thug's face and chest, the Punk's vest valleys and Ox's face, into at most 3 fix packages. One fix wave.
+  3. The suite, and perf against `663cafc` on a quiet machine.
+  4. README's M6 status (the ground, the detail), PR #6's body, and the DM with the stills and the run command. Merge only on his word.
+- **Usage:** 5-hour 9%, weekly 38%. Phase 2b's four builders took 55 min.
+
 ### 2026-11-05 11:25 CST: FEEDBACK phase 2a merged (1983/1983); stills sent; phase 2b building (Kicker, Thug, Punk, Ox opt-in)
 - **Merged into `m6/full-art-audio`:**
   - DETAIL-2 (branch `m6/detail-2`, `dff8d47`) and ROLL-OX (`m6/roll-ox`, `426e820`); merge head `8bf750f`.
