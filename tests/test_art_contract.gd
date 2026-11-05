@@ -547,7 +547,9 @@ func test_the_punk_detail_mask_is_a_1k_ink_only_png_on_the_punks_uv2() -> void:
 				ink += 1
 	var mean := sum / (512.0 * 512.0)
 	print("ART-CONTRACT punk_detail.png: mean ink %.4f, %d of 262144 sampled texels over 0.5" % [mean, ink])
-	assert_lt(blue, 0.01, "B holds nothing (R is the ink, G the lens's glint gate)")
+	# M6 ROLL-PUNK: B was nothing (0.01) and now holds the palette slot per texel (slot + 1, at most 20 = the lens's 19), the mask's alpha is the marker
+	# 128 / 255 (tests/test_m6_feedback_detail_punk.gd reads the codes and checks that each names one of the Punk's slots).
+	assert_lte(blue, 20.0 / 255.0 + 0.001, "B holds only the palette slot codes (R is the ink, G the lens's glint gate)")
 	assert_gt(gate, 50, "G holds the lens's streaks (the glint gate)")
 	assert_lt(gate, 3000, "and only the lens's (a few thousand texels at full resolution, a few hundred sampled here)")
 	assert_gt(ink, 500, "there are lines")
@@ -849,7 +851,8 @@ const STROKE_CUT_8BIT := 38
 const STROKE_SMALL_TEXELS := 6
 const STROKE_SMALL_SHARE_MAX := 0.12
 const STROKE_MEDIAN_MIN := 6
-const STROKE_PIECES_MAX := 600
+## 600 until M6 ROLL-PUNK; 800 now (654 measured): the vest's and the trousers' crease lines are new pieces; the dots test (share and median) is unchanged and the 1,144 dotted pieces of the bake before the cleanup still fail.
+const STROKE_PIECES_MAX := 800
 
 
 func test_the_punks_strokes_are_lines_not_dots() -> void:

@@ -280,6 +280,110 @@
 			],
 			"zones": [
 				{
+					"name": "lens",
+					"slots": [
+						19
+					],
+					"min": [
+						-0.5,
+						-0.5,
+						1.5
+					],
+					"max": [
+						0.5,
+						0.5,
+						1.8
+					],
+					"crease_deg": 181
+				},
+				{
+					"name": "skin_body",
+					"slots": [
+						6
+					],
+					"min": [
+						-0.75,
+						-0.5,
+						0.0
+					],
+					"max": [
+						0.75,
+						0.5,
+						2.0
+					],
+					"crease_deg": 181
+				},
+				{
+					"name": "dark_body",
+					"slots": [
+						2
+					],
+					"min": [
+						-0.75,
+						-0.5,
+						0.0
+					],
+					"max": [
+						0.75,
+						0.5,
+						2.0
+					],
+					"crease_deg": 181
+				},
+				{
+					"name": "vest",
+					"slots": [
+						16
+					],
+					"min": [
+						-0.75,
+						-0.5,
+						0.8
+					],
+					"max": [
+						0.75,
+						0.5,
+						1.7
+					],
+					"crease_deg": 75,
+					"valley_deg": 15
+				},
+				{
+					"name": "jeans",
+					"slots": [
+						18
+					],
+					"min": [
+						-0.5,
+						-0.5,
+						0.0
+					],
+					"max": [
+						0.5,
+						0.5,
+						1.1
+					],
+					"crease_deg": 75,
+					"valley_deg": 18
+				},
+				{
+					"name": "wraps",
+					"slots": [
+						14
+					],
+					"min": [
+						-0.9,
+						-0.5,
+						0.4
+					],
+					"max": [
+						0.9,
+						0.5,
+						1.6
+					],
+					"crease_deg": 181
+				},
+				{
 					"name": "face_skin",
 					"slots": [
 						6
@@ -295,7 +399,8 @@
 						1.8
 					],
 					"ink_low": 0.04,
-					"ink_high": 0.1
+					"ink_high": 0.1,
+					"crease_deg": 181
 				},
 				{
 					"name": "nose",
@@ -313,7 +418,8 @@
 						1.585
 					],
 					"ink_low": 0.02,
-					"ink_high": 0.05
+					"ink_high": 0.05,
+					"crease_deg": 181
 				},
 				{
 					"name": "strap",
@@ -331,7 +437,8 @@
 						0.2,
 						1.76
 					],
-					"no_ink": true
+					"no_ink": true,
+					"crease_deg": 181
 				},
 				{
 					"name": "cap",
@@ -349,7 +456,8 @@
 						2.0
 					],
 					"ink_low": 0.06,
-					"ink_high": 0.14
+					"ink_high": 0.14,
+					"crease_deg": 60
 				},
 				{
 					"name": "boots",
@@ -367,7 +475,8 @@
 						0.2
 					],
 					"ink_low": 0.06,
-					"ink_high": 0.14
+					"ink_high": 0.14,
+					"crease_deg": 55
 				},
 				{
 					"name": "laces",
@@ -385,7 +494,8 @@
 						0.5,
 						0.2
 					],
-					"no_ink": true
+					"no_ink": true,
+					"crease_deg": 181
 				},
 				{
 					"name": "shades_frame",
@@ -402,7 +512,8 @@
 						0.3,
 						1.68
 					],
-					"no_ink": true
+					"no_ink": true,
+					"crease_deg": 181
 				}
 			],
 			"glint": {
@@ -507,7 +618,26 @@
 					}
 				]
 			},
-			"collar_in_unwrap": true
+			"collar_in_unwrap": true,
+			"texel_swatch": {
+				"blur_px": 1.0,
+				"passes": 2,
+				"fill_px": 3,
+				"rings": 1
+			},
+			"crease": {
+				"angle_deg": 70,
+				"width_m": 0.0035,
+				"ramp_m": 0.0025,
+				"spacing_m": 0.003,
+				"min_chain_m": 0.2,
+				"valley": {
+					"angle_deg": 999,
+					"min_chain_m": 0.45,
+					"width_m": 0.003,
+					"ramp_m": 0.002
+				}
+			}
 		},
 		"regions": [
 			{
