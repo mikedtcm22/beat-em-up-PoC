@@ -4,6 +4,56 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-04 18:50 CST: phase 2 merged (1919/1919); every inventory key is 0; stills sent; phase 3 recording
+- **Phase 2 is merged** into `m6/full-art-audio` and pushed (`28b1be0`): 1919/1919 in 364 s, 0 error lines. One GUT warning: `test_art_heavies.gd` leaves 2 unfreed children (a phase 3 fix item).
+  - The merge order was SFX, WEAPONS, then A6's floor weapon (`7f7c7cb`: the pickup is now `Pickups/ChainBigShutter` with `weapon_scene` = `bike_chain.tscn`); a suite there passed 1892/1892. Then HEAVIES, CREW, ARM and DRESS, merged in a scratch worktree while that suite ran, fast-forwarded, and one suite on all of it.
+  - The conflicts, all kept both sides:
+    - `tuning_data.gd`'s Debug tail;
+    - `roofs.tscn`'s ext_resources (the chain and DRESS's scripts);
+    - `blender_fit.py`: HEAVIES's sole flatten is step 5e, CREW's sole lift 5f;
+    - the ratchet: the lower numbers, then re-measured;
+    - the veteran atlas: regenerated.
+  - **The ratchet:** every key is 0 in mission1, crowd_room and test_room, and globally (generated_sfx 0, empty_slots 0). Done-when row 1 holds.
+  - **The paid services:**
+    - Tripo: M6 has spent 495 of its 900 stop (PROPS 150, HEAVIES 180, CREW 165), and the balance is 1210 (floor 700).
+    - ElevenLabs: 4843 credits on the ledger, of the 30,000 stop.
+    - Gemini: 34 images.
+  - Phase 2 cost about 22 points of the 5-hour window (21% to 43%), against its estimate of 71.
+- **Sent to Game-boy** (Slack DM, 18:48):
+  - stills: the four characters beside their concepts, two lineups, the near-arm A/B, and the street and roof tours;
+  - the audition room's keys and the run command.
+  - **He is asked one thing: the near arm.** Keep it and fix the shading (the lead leans this way), or turn it off for M5's view (`look_near_arm`). The arm sits in the shadow band: violet, with an ink step at the cut, and a navy shoulder shard in the uppercut.
+- **The lead's look** (from the packages' stills):
+  - The Kicker and the Thug read as their concepts.
+  - The Bruiser's steel and purple blotch at 1 m, and his head is out of frame at 1 m.
+  - Ox Pellerin reads, but his gloves are smaller than the concept's. The 1 m act's bar read "BOSS", recorded before the rename; the lineup reads "OX PELLERIN", and every spawn path goes through `make_enemy`.
+  - The four silhouettes are distinct in the lineups.
+  - The tours read as a dusk street and copper roofs; the tanks' rust is blotchy.
+  - The near arm: as above.
+- **Items for phase 3's review and fix wave** (from the builders and the lead):
+  - the help overlay's "BracketRight"/"Minus" and its overflowing line;
+  - the Bruiser's blotches; the boss's small gloves;
+  - the held weapon is out of view in first-person swings (as the pipe always was), so the chain's whip is unseen in hand;
+  - DRESS:
+    - the rooms keep Tuning's grey sun;
+    - the facade has no lit windows;
+    - the boss deck reads flat;
+    - the roofs have no AC units;
+    - the section-light blend in motion is unjudged;
+  - frame time: +16.5% mean (10.04 to 11.70 ms) against `910448e`, on a loaded machine, so re-measure quietly;
+  - `test_art_heavies.gd`'s unfreed children.
+- **Running:** the phase 3 recording (§4 step 5), `bash <scratchpad>/record_final.sh`, into `captures/m6-final/`.
+  - Two lanes: the crowd bot's acts (the six "Look: <label> at 1 m", lineup, heavies, weapons, props, props weapons, own limbs, rooms tour) and the level bot's acts (tour, drops, seams, and "Run: held back" 0-2, 3-5, 6).
+  - The lanes log to `captures/m6-final/lane_*.log`.
+  - **If cut off:** rerun the missing slugs with `tools/record_acts.sh` (the script's lines are in this entry's commit message).
+- **Next** (§4 steps 6-9):
+  1. The lead's look at `captures/m6-final`.
+  2. Write `docs/reviews/M6/args-review-final.json` (lenses `chars`, `world`, `code`; the items above in `common_note`) and run `tools/workflows/review.js`.
+  3. One fix wave and a re-check.
+  4. Perf on a quiet machine.
+  5. README's M6 departures, the PR, and the DM.
+- **Usage now:** 5-hour 44% (it resets at 19:50 CST), weekly 22%.
+
 ### 2026-11-04 16:40 CST: phase 1 merged (1872/1872); stills and the audition room sent; phase 2 running
 - **Phase 1 is merged** into `m6/full-art-audio` and pushed (`56b960c`): 1872/1872 in 324 s, 0 error lines.
   - The merge order was LOOKS, CHAIN (`5e8e757`), PROPS (`a337809`), KIT (`d342e02`) and AUDIO (`56b960c`). After each merge: the atlas, the preset, the ratchet and the full suite.
