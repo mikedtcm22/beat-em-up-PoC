@@ -50,4 +50,4 @@ Steps for a character, after the pilot's recipe (steps 1-8 of FB-DETAIL.md stay)
 6. **Check** every other character's `--check` is still YES (the shared files `pipe_detail.py`, `blender_palette.py` changed behind keys), then the character's own test file (copy `tests/test_m6_feedback_detail.gd`'s `test_the_mask_carries_a_palette_slot_per_texel` and `test_no_other_mask_has_codes`, adding the new id to the unmarked list's exceptions).
 7. **Do not** raise `budget_tris` to 20000 for the look: the 20k sheet shows a few pixels of silhouette for 33% more triangles.
 
-**Full suite**: see the result of the final run (recorded in the commit message and the structured result).
+**Full suite**: 1977 of 1977 (1970 at the merge head plus the seven new tests), 387 s on the shared machine, no SCRIPT ERROR, SHADER ERROR or ERROR line. A first run failed `test_m4_contracts`'s list of the Look subgroups when the tunables had a subgroup of their own: they sit in "Toon" beside `look_detail_cut`.
