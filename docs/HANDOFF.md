@@ -4,6 +4,42 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-05 11:25 CST: FEEDBACK phase 2a merged (1983/1983); stills sent; phase 2b building (Kicker, Thug, Punk, Ox opt-in)
+- **Merged into `m6/full-art-audio`:**
+  - DETAIL-2 (branch `m6/detail-2`, `dff8d47`) and ROLL-OX (`m6/roll-ox`, `426e820`); merge head `8bf750f`.
+  - The only conflict was ARCHITECTURE.md, with both headings kept.
+  - Preset 631 values, atlas current, every character's `run.py --check` and `player_run.py --asset player --check` YES.
+  - Suite 1983/1983 in 389 s, 0 error lines.
+  - Then `b454424`: the detail guards in `tests/test_m6_feedback_detail.gd` now skip any character that has its own `tests/test_m6_feedback_detail_<id>.gd` (`_rolled_out()`), so rollouts don't edit shared lists. 13/13 alone.
+- **DETAIL-2:**
+  - **Texel swatches:** the mask's B carries a palette slot per texel (RGBA, alpha 128/255 is the marker); `toon.gdshader` does a `texelFetch` and fades back to the face swatch from 1 to 3 texels per pixel (Look > Toon `look_texel_swatch_fade_near/far`; Debug `look_texel_swatch`).
+  - **Valley ink** on the cloth (`crease.valley`, zone `valley_deg`); lines 7.8 mm; the helmet painted purple by regions.
+  - **20k bought nothing visible**, so 15k ships and there's no ruling to ask.
+  - **The quilting is folds only:** the mesh has no stitching.
+  - **Not checked:** the texel fade in motion at 5-10 m, and perf on a quiet machine (+0.11 ms mean on a loaded one).
+  - The recipe's part 2 is in DETAIL-2.md.
+- **ROLL-OX:**
+  - config only: relax 0, island 0.0004 (0.002 ate the laces), crease 70°, and seven ink zones;
+  - no Tripo (the raw model holds the detail);
+  - two ratchets moved (strain `min_min` 0.028 -> 0.016 in one floored-pose edge, A6 legs 0.95 -> 0.949).
+- **The lead's look:**
+  - **The Bruiser** at 2.5 m reads as armour with clean borders.
+  - **Ox** is cleaner but modest. His orange trim still steps until OX-2.
+  - **The A/B sheet `ab_bruiser_2.png` is mislabelled** (the builder didn't read it back), so the 20k sheet went to Game-boy instead.
+  - Captures are copied to `captures/m6-feedback-2/{detail-2,roll-ox}/`.
+- **Sent to Game-boy:** `bruiser_15k_20k.jpg` and `ox_ab.jpg`, the plan for phase 2b, and the run command. Nothing is waiting on him from this round. Still unanswered from M6: the near-arm keep/off and the frame-time accept-or-lever.
+- **Running:** build.js run `wf_11fac342-cd2` (task `w1b8z5qea`), with `docs/reviews/M6/args-FEEDBACK-3.json` and brief `docs/reviews/M6/fix-feedback-3.md`.
+  - Four builders on the two Blender slots, so two waves: ROLL-KICKER and ROLL-THUG (Tripo 85 each, only if the model is flat), then ROLL-PUNK (veteran swap and the M4 variants guarded; no Tripo) and OX-2 (texel swatches, line weight, robe valleys).
+  - The chain and `toon.gdshader` are frozen this round.
+  - Branches `m6/roll-kicker`, `m6/roll-thug`, `m6/roll-punk`, `m6/ox-2`.
+  - **If cut off:** rerun build.js with the same args.
+- **Next:**
+  1. Merge all four (preset, atlas, every `--check`, the suite).
+  2. The lead's look at each `ab_<id>.png` and the lineup.
+  3. One review round (chars and world/feel on Opus, code on Sonnet), one fix wave, the suite, and perf against `663cafc` on a quiet machine.
+  4. README's M6 status (the ground, the detail), PR #6's body, and the DM with stills and the run command. Merge only on his word.
+- **Usage at launch:** 5-hour 3% (just reset), weekly 37%. Phase 2a's two builders took 57 min.
+
 ### 2026-11-05 10:20 CST: FEEDBACK phase 1 merged (1970/1970); stills sent; phase 2a building (DETAIL-2, ROLL-OX)
 - **Merged into `m6/full-art-audio`:** FB-FEEL (`a40ede2`), FB-GROUND (`3967fc9`) and FB-DETAIL (`4f2e0f3`). The only conflicts were in ARCHITECTURE.md, where all three headings were kept.
   - The preset is regenerated (629 values), the atlas is current, and `gen_trim --check` passes.
