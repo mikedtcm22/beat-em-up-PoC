@@ -30,11 +30,15 @@ func test_both_heavies_are_in_the_roster_with_their_own_heights_and_budgets() ->
 	assert_eq(int(bruiser.budget), 15000)
 	assert_eq(int(boss.budget), 30000, "SPEC section 10's Boss row")
 	assert_eq(String(boss.label), "Ox Pellerin")
+	# The actors go under a holder the test frees: an EnemyActor makes the EnemyDirector as its sibling, and one made as a child of
+	# the test node itself stayed there (GUT's "unfreed children" warning, final-code-04).
+	var holder := Node3D.new()
+	add_child_autofree(holder)
 	for id: String in ["bruiser", "boss"]:
 		assert_eq(Roster.problems(id), PackedStringArray(), "%s: the roster file is complete" % id)
 		var scene := load(String(Roster.row(id).actor_scene)) as PackedScene
 		var actor := scene.instantiate() as EnemyActor
-		add_child_autofree(actor)
+		holder.add_child(actor)
 		await get_tree().physics_frame
 		assert_true(actor.rig.has_art(), "%s: wears its art (no primitive body left)" % id)
 		assert_almost_eq(actor.rig.height, float(Roster.row(id).height_m), 0.0001, "%s: the rig is at its height" % id)
@@ -98,6 +102,44 @@ func test_the_boss_is_darker_than_the_concepts_slate_and_its_orange_is_clear_of_
 			dummy_orange = Color.html(String(sw.srgb))
 	assert_gte(absf(orange.h - dummy_orange.h) * 360.0, 5.0, "the champion's orange is told from the dummy's muted orange by hue")
 	assert_gt(orange.s, dummy_orange.s, "and is the more saturated")
+
+
+func _swatch(id: String, swatch_name: String) -> Dictionary:
+	var palette: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/source/palette/%s.json" % id))
+	for sw: Dictionary in palette.swatches:
+		if sw.name == swatch_name:
+			return sw
+	return {}
+
+
+## final-chars-01: the boss's gloves read beside his charcoal sleeves: their own swatch of boss.json, darker than the robe, and the
+## chain's config, the palette and the generated fist's slots agree on it (the wrist wrap above them is the orange).
+func test_the_boss_gloves_are_their_own_darker_slot_and_the_chain_agrees() -> void:
+	var glove := _swatch("boss", "boss_glove")
+	var charcoal := _swatch("boss", "boss_charcoal")
+	assert_false(glove.is_empty(), "boss.json has a glove swatch")
+	assert_lt(Color.html(String(glove.srgb)).v, Color.html(String(charcoal.srgb)).v, "the glove leather is darker than the robe")
+	var cfg: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/source/characters/boss/pipeline.json"))
+	assert_eq(int(cfg.parts.fists.glove_slot), int(glove.slot), "parts.fists.glove_slot is the glove's slot")
+	var regions: Array = cfg.palette.regions
+	assert_eq(regions.size(), 2, "one glove region a hand")
+	for region: Dictionary in regions:
+		assert_eq(int(region.slot), int(glove.slot), "%s labels the glove's slot" % region.name)
+	assert_eq(int(cfg.palette.strap_paint_slot), int(_swatch("boss", "boss_orange").slot), "the wrist wrap is the orange")
+	assert_true((cfg.palette.slots as Array).has(float(glove.slot)), "the labelling may use the glove's slot")
+
+
+## final-chars-03: the steel is a mid-value blue-grey (it lit to near white at #9aa4c0) and the plates take ink through a zone.
+func test_the_bruisers_steel_is_mid_value_and_the_plates_have_an_ink_zone() -> void:
+	var steel := Color.html(String(_swatch("bruiser", "bruiser_steel").srgb))
+	var purple := Color.html(String(_swatch("bruiser", "bruiser_purple").srgb))
+	assert_lt(steel.v, 0.68, "the steel is a mid value (%.2f)" % steel.v)
+	assert_gt(steel.v, 0.4, "and still lighter than the black")
+	assert_gt(absf(steel.h - purple.h) * 360.0, 40.0, "told from the purple by hue")
+	var cfg: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/source/characters/bruiser/pipeline.json"))
+	var zones: Array = cfg.palette.detail_bake.zones
+	assert_gt(zones.size(), 0, "the plates have a detail_bake zone")
+	assert_true((zones[0].slots as Array).has(float(_swatch("bruiser", "bruiser_steel").slot)), "on the steel's slot")
 
 
 ## The nearest vertex of the art of `actor`, drawn inside the view of `cam`, to the lens.

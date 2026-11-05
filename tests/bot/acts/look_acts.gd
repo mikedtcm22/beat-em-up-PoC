@@ -225,6 +225,26 @@ static func acts(bot: Node) -> Array[Dictionary]:
 # --- The shared steps -------------------------------------------------------------------------
 
 
+## The pitch (degrees) that frames `subject` the way `base_deg` frames the Punk: `base_deg` itself for a body at the Punk's own
+## scale (rig scale 1, so the Punk's, the dummy's and every 1.8 m frame stays exactly as M4 recorded it), and for a taller or
+## smaller one the base turned by how much higher or lower its head stands in the view than a 1.8 m head at the same distance
+## would (the elevation of its Head bone from the lens, less that of the same bone on a body scaled to 1.8 m). The Bruiser
+## (2.05 m) and Ox Pellerin (2.3 m) at the Punk's fixed +8 degrees had their heads cut off at 1 m (M6 final-chars-02).
+static func framed_pitch_deg(bot: Node, subject: CombatActor, base_deg: float) -> float:
+	var camera: Camera3D = bot.get_viewport().get_camera_3d()
+	if camera == null or subject == null or subject.rig == null:
+		return base_deg
+	var scale: float = subject.rig.rig_scale()
+	if is_equal_approx(scale, 1.0):
+		return base_deg
+	var head: Vector3 = subject.rig.get_visual_point_transform(&"Head").origin
+	var floor_y := subject.global_position.y
+	var flat := Vector2(head.x - camera.global_position.x, head.z - camera.global_position.z).length()
+	var up := atan2(head.y - camera.global_position.y, flat)
+	var same_on_punk := atan2(floor_y + (head.y - floor_y) / scale - camera.global_position.y, flat)
+	return base_deg + rad_to_deg(up - same_on_punk)
+
+
 ## The start of every act: the caption off (the bot sets its text before the act runs, so it is up
 ## for a frame or two of the act's slate), god mode, the AI frozen, the comic effects cleared and
 ## seeded.

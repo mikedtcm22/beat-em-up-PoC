@@ -1,7 +1,8 @@
 extends RefCounted
 ## The roster's look acts (Milestone 6, CHAIN): one act per roster character (tests/art_roster.gd), "Look: <label> at 1 m", the
 ## character 1 m ahead of the player standing in its idle, seen first the way C1 shows the Punk (the view 8 degrees up) and then
-## the way C2 does (6 degrees down). The same framing for every character, so a new character is judged against the Punk's frames
+## the way C2 does (6 degrees down). The same framing for every character (turned by how much higher a taller head stands, so the
+## Bruiser's and Ox Pellerin's heads are in the frame as the Punk's is, LookActs.framed_pitch_deg), so a new character is judged against the Punk's frames
 ## in captures/m4/dm (C1, C2) with nothing else changed. A character added to tests/fixtures/art/roster/ gets its act with no edit
 ## here. Record one with
 ##   tools/capture_bot.sh res://tests/bot/crowd_bot.tscn captures/<key> "Look: Dummy at 1 m" 6
@@ -43,11 +44,11 @@ static func _look(bot: Node, id: String) -> void:
 	var slug := "r_%s" % id
 	LookActs._begin(bot)
 	var subject := _subject(bot, id)
-	await bot._look_to(LookActs.FACE_PITCH_DEG, LookActs.PITCH_TICKS)
+	await bot._look_to(LookActs.framed_pitch_deg(bot, subject, LookActs.FACE_PITCH_DEG), LookActs.PITCH_TICKS)
 	await bot._ticks(LookActs.SETTLE_TICKS)
 	LookRect.mark(bot, slug, "start")
 	await LookActs._idle_marks(bot, slug, subject, IDLE_TICKS, "face")
-	await bot._look_to(LookActs.DEFAULT_PITCH_DEG, LookActs.PITCH_TICKS)
+	await bot._look_to(LookActs.framed_pitch_deg(bot, subject, LookActs.DEFAULT_PITCH_DEG), LookActs.PITCH_TICKS)
 	await bot._ticks(LookActs.SETTLE_TICKS)
 	await LookActs._idle_marks(bot, slug, subject, IDLE_TICKS, "body")
 	LookActs._end(bot, slug)
