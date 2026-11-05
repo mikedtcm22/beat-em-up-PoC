@@ -12,7 +12,9 @@ extends Control
 ## (`hurt_overlay_full_damage`) and it fades over `hurt_overlay_fade_s`. Its colour is the ink, not red
 ## (SPEC §10 keeps red for blood, the rear warning and finisher accents): `hurt_overlay_color` and
 ## `hurt_overlay_stroke_color` are one change away from red. A blocked hit shows a weaker vignette
-## (`hurt_overlay_blocked_scale`) and no strokes. All of it is off with Debug's hurt_feel_enabled.
+## (`hurt_overlay_blocked_scale`) and no strokes. Each stroke has an ink rim (`hurt_overlay_outline_width`) so
+## it reads on any ground, and a clean hit's bottom edge, the one he cannot see, is inked heavier and its strokes
+## are longer (`hurt_overlay_bottom_ink_gain`, `_bottom_stroke_gain`). All of it is off with Debug's hurt_feel_enabled.
 
 ## The four edges, as indices into edge_strength().
 enum Edge { LEFT, RIGHT, TOP, BOTTOM }
@@ -105,7 +107,9 @@ func on_player_hit(hit: HitInfo, view: Transform3D) -> void:
 	var bearing := FirstPersonCamera.hit_bearing(view, hit)
 	var weights := edge_weights(bearing)
 	for i: int in 4:
-		_edges[i] = maxf(_edges[i], weights[i] * strength)
+		# The bottom edge of a clean hit is inked heavier: the blows from behind are the ones he cannot see.
+		var ink := tuning.hurt_overlay_bottom_ink_gain if i == Edge.BOTTOM and not hit.blocked else 1.0
+		_edges[i] = maxf(_edges[i], weights[i] * strength * ink)
 	if not hit.blocked:
 		# Strokes: on the side it came from, and the top edge for a blow from dead ahead.
 		var top := tuning.hurt_overlay_top_threshold
@@ -151,7 +155,8 @@ func _draw() -> void:
 			_draw_vignette(edge, depth_px, tuning.hurt_overlay_color, strength)
 		var stroke := _strokes[edge]
 		if stroke > 0.0 and tuning.hurt_overlay_strokes > 0:
-			_draw_strokes(edge, depth_px, tuning.hurt_overlay_stroke_color, stroke)
+			var reach := depth_px * (tuning.hurt_overlay_bottom_stroke_gain if edge == Edge.BOTTOM else 1.0)
+			_draw_strokes(edge, reach, tuning.hurt_overlay_stroke_color, stroke)
 
 
 ## The unit vector pointing into the screen from `edge`, and the one along the edge.
@@ -184,8 +189,8 @@ func _edge_point(edge: int, along: float, inward: float) -> Vector2:
 func _draw_vignette(edge: int, depth_px: float, color: Color, strength: float) -> void:
 	var tuning := Tuning.data
 	var stop := tuning.hurt_overlay_mid_stop
-	var solid := Color(color.r, color.g, color.b, color.a * strength)
-	var middle := Color(color.r, color.g, color.b, color.a * strength * tuning.hurt_overlay_mid_alpha)
+	var solid := Color(color.r, color.g, color.b, clampf(color.a * strength, 0.0, 1.0))
+	var middle := Color(color.r, color.g, color.b, clampf(color.a * strength * tuning.hurt_overlay_mid_alpha, 0.0, 1.0))
 	var clear := Color(color.r, color.g, color.b, 0.0)
 	draw_polygon(PackedVector2Array([
 		_edge_point(edge, 0.0, 0.0), _edge_point(edge, 1.0, 0.0),
@@ -204,14 +209,21 @@ func _draw_strokes(edge: int, depth_px: float, color: Color, strength: float) ->
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(_seed * 4 + edge)
 	var tint := Color(color.r, color.g, color.b, color.a * clampf(strength * tuning.hurt_overlay_stroke_gain, 0.0, 1.0))
+	var rim_px := tuning.hurt_overlay_outline_width * size.y
+	var rim_color := tuning.hurt_overlay_outline_color
+	var rim := Color(rim_color.r, rim_color.g, rim_color.b, rim_color.a * tint.a / maxf(color.a, 0.01))
 	for i: int in count:
 		var along := (float(i) + 0.5 + rng.randf_range(-tuning.hurt_overlay_stroke_jitter, tuning.hurt_overlay_stroke_jitter)) / float(count)
 		var half_width := tuning.hurt_overlay_stroke_width / float(count)
 		var length := depth_px * (tuning.hurt_overlay_stroke_len_min + rng.randf() * tuning.hurt_overlay_stroke_len_range) \
 				* clampf(strength + tuning.hurt_overlay_stroke_len_floor, 0.0, 1.0)
 		var lean := rng.randf_range(-tuning.hurt_overlay_stroke_lean, tuning.hurt_overlay_stroke_lean) * half_width
-		draw_colored_polygon(PackedVector2Array([
+		var tooth := PackedVector2Array([
 			_edge_point(edge, along - half_width, 0.0),
 			_edge_point(edge, along + half_width, 0.0),
 			_edge_point(edge, along + lean, length),
-		]), tint)
+		])
+		draw_colored_polygon(tooth, tint)
+		if rim_px > 0.0:
+			# The ink rim along the tooth's two slanted sides (the base is on the screen's edge).
+			draw_polyline(PackedVector2Array([tooth[0], tooth[2], tooth[1]]), rim, rim_px, true)

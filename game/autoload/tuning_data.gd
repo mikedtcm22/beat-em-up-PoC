@@ -276,6 +276,15 @@ extends Resource
 ## A blocked hit's vignette is shallower than a clean hit's: its depth is the clean depth times
 ## hurt_overlay_blocked_scale times this, at most the clean depth (a block's edge stays thin).
 @export_range(1.0, 10.0, 0.5) var hurt_overlay_blocked_depth_gain: float = 2.0
+## Every impact stroke has an ink rim, so it reads on any ground (the pale street, a bright sky): its
+## width, as a share of the screen's height, and its colour.
+@export_range(0.0, 0.03, 0.001) var hurt_overlay_outline_width: float = 0.007
+@export var hurt_overlay_outline_color: Color = Color(0.05, 0.04, 0.07, 0.95)
+## A clean hit's bottom edge (a blow from behind, which the player cannot see coming) is inked this much
+## stronger than the same blow on another edge (1 = the same; the alpha stays at most 1), and its strokes
+## are this much longer (so they rise above the health panel at the screen's bottom left).
+@export_range(1.0, 2.0, 0.05) var hurt_overlay_bottom_ink_gain: float = 1.5
+@export_range(1.0, 2.5, 0.05) var hurt_overlay_bottom_stroke_gain: float = 1.4
 
 @export_group("VFX")
 ## Comic effects (Spec §6; VfxDirector, game/fx/). Sizes are meters at the contact point

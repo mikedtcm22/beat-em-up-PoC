@@ -141,6 +141,15 @@
 		"hurt_overlay_stroke_gain": 1.5,
 		"hurt_overlay_top_threshold": 0.5,
 		"hurt_overlay_blocked_depth_gain": 2.0,
+		"hurt_overlay_outline_width": 0.007,
+		"hurt_overlay_outline_color": [
+			0.0500000007450581,
+			0.0399999991059303,
+			0.0700000002980232,
+			0.949999988079071
+		],
+		"hurt_overlay_bottom_ink_gain": 1.5,
+		"hurt_overlay_bottom_stroke_gain": 1.4,
 		"vfx_scale": 1.0,
 		"vfx_max_view_share": 0.25,
 		"vfx_min_view_share": 0.04,

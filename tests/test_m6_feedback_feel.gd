@@ -298,6 +298,39 @@ func test_the_overlay_side_follows_the_contact() -> void:
 		assert_gt(right.edge_strength(edge), 0.0, "every edge shows the even share")
 
 
+func test_a_clean_hit_from_behind_is_inked_heavier_than_the_same_blow_on_another_edge() -> void:
+	var player := _player()
+	var enemy := _enemy()
+	var gain := Tuning.data.hurt_overlay_bottom_ink_gain
+	assert_gt(gain, 1.0, "the bottom ink is heavier by default")
+	var behind := _overlay()
+	behind.on_player_hit(_hit(enemy, player, CombatTypes.HitTier.LIGHT, Vector3.BACK, 6.0), Transform3D.IDENTITY)
+	var left := _overlay()
+	left.on_player_hit(_hit(enemy, player, CombatTypes.HitTier.LIGHT, Vector3.LEFT, 6.0), Transform3D.IDENTITY)
+	assert_almost_eq(behind.edge_strength(HurtOverlay.Edge.BOTTOM), left.edge_strength(HurtOverlay.Edge.LEFT) * gain, 0.0001,
+			"the same blow, the bottom edge inked by the gain")
+	assert_almost_eq(behind.stroke_strength(HurtOverlay.Edge.BOTTOM), left.stroke_strength(HurtOverlay.Edge.LEFT), 0.0001,
+			"the strokes' strength is the same (their length is the gain's, in the draw)")
+	# A block stays as faint as M6: no gain, no strokes.
+	var blocked := _hit(enemy, player, CombatTypes.HitTier.LIGHT, Vector3.BACK, 6.0)
+	blocked.blocked = true
+	var guarded := _overlay()
+	guarded.on_player_hit(blocked, Transform3D.IDENTITY)
+	assert_almost_eq(guarded.edge_strength(HurtOverlay.Edge.BOTTOM),
+			HurtOverlay.strength_for(6.0) * Tuning.data.hurt_overlay_blocked_scale, 0.0001, "a block's bottom edge is not boosted")
+	assert_almost_eq(guarded.stroke_strength(HurtOverlay.Edge.BOTTOM), 0.0, 0.0001, "no strokes on a block")
+
+
+func test_the_strokes_have_an_ink_rim_that_is_ink_not_red() -> void:
+	var data := TuningData.new()
+	assert_gt(data.hurt_overlay_outline_width, 0.0, "a rim by default")
+	var rim := data.hurt_overlay_outline_color
+	assert_lt(maxf(rim.r, maxf(rim.g, rim.b)), 0.2, "dark ink")
+	assert_gt(rim.a, 0.8, "opaque enough to read on any ground")
+	assert_eq([data.hurt_overlay_outline_width, data.hurt_overlay_bottom_ink_gain, data.hurt_overlay_bottom_stroke_gain],
+			[0.007, 1.5, 1.4], "the shipped look")
+
+
 func test_the_overlay_fades_out_and_a_block_is_lighter() -> void:
 	var player := _player()
 	var enemy := _enemy()
