@@ -151,17 +151,6 @@ static func box_mesh(size: Vector3, material: Material, overlay: Material = null
 	if kit_art(art):
 		mesh.mesh = KitMesh.build(art, size)
 		mesh.material_overlay = overlay
-		if Tuning.data.draw_box_shadow_kinds.has(String(art)):
-			# The module's sun shadow is cast by its plain box (12 triangles, not the plinth's and the battens'):
-			# a twin that draws nothing, and the module itself stops casting.
-			mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-			var caster := MeshInstance3D.new()
-			caster.name = "ShadowBox"
-			var box := BoxMesh.new()
-			box.size = size
-			caster.mesh = box
-			caster.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY
-			mesh.add_child(caster)
 		return mesh
 	var box := BoxMesh.new()
 	box.size = size

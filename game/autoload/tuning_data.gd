@@ -1153,11 +1153,6 @@ extends Resource
 ## under which neighbouring faces count as one surface when a level is simplified, and over which an edge stays hard.
 @export_range(0.0, 90.0, 1.0) var draw_prop_lod_merge_deg: float = 25.0
 @export_range(0.0, 90.0, 1.0) var draw_prop_lod_split_deg: float = 25.0
-## The kit modules whose sun shadow is cast by their plain box (M6 final review, perf): a wall, floor, slab or deck
-## module is its box plus a plinth and battens a few centimetres proud, many times the triangles of 910448e's box in
-## every shadow cascade; its shadow is the box's. Empty draws every module's own triangles into the shadow pass.
-## Read when a block is built, so set it (a preset never holds it) before the level loads.
-@export var draw_box_shadow_kinds: PackedStringArray = PackedStringArray(["wall", "floor", "slab", "deck"])
 @export_subgroup("Section light")
 ## How long the level's light takes to change from one section's to the next's (Milestone 6, DRESS; D12):
 ## the sun's direction, colour and energy, the fog and the sky horizon, blended from the moment the

@@ -28,13 +28,34 @@ The machine's load (3 to 17 from other apps) makes wall time worth little, so th
 
 ## Numbers
 
-Fixed poses (`"Perf: counters"`, 14 poses, windowed, vsync off), sum of the 25th percentile frame time, minimum of runs, interleaved:
+Fixed poses (`"Perf: counters"`, 14 poses, windowed, vsync on, sum of the 25th percentile frame time in ms, minimum of 3 interleaved runs, quiet machine):
 
-| | 910448e | HEAD before | after |
+| | 910448e | HEAD before the fix | after |
 |---|---|---|---|
-| ms (sum over 14 poses) | 113 | 143 | 132 |
-| draws per frame (visible) | 2425 total | 1181 total | 1202 total |
-| visible primitives (sum) | 448k | 1 159k | 1 159k |
-| shadow primitives (sum) | 450k | 1 051k | 662k |
+| ms (sum over 14 poses) | 101 | 143 (+41%) | 117 (+16%) |
+| visible draw calls (sum) | 2426 | 1181 | 1202 |
+| visible primitives (sum) | 471k | 1 159k | 1 159k |
+| shadow primitives (sum) | 473k | 1 051k | 662k |
 
-The level walk, `tools/perf_compare.sh --force --runs 4 --bot res://tests/bot/perf_level_bot.tscn --act "Perf: level walk" 910448e HEAD`: see the report below.
+The level walk, `tools/perf_compare.sh --force --runs 4 --vsync on --bot res://tests/bot/perf_level_bot.tscn --act "Perf: level walk" 910448e HEAD` (the run at 2 am, load 3 to 6, 0 stalls but for 1 to 2 frames):
+
+| | 910448e | HEAD (1e8544f) |
+|---|---|---|
+| mean ms | 9.46 (9.44..9.49) | 10.96 (10.87..11.07), +15.9% |
+| p95 ms | 12.97 | 14.26 (bar 16.7: ok) |
+| first hit ms | 15.7 | 15.3 (bar base + 2: ok) |
+| first finisher ms | 16.1 | 17.5 (+1.4) |
+| spawn hitch ms | 21.2 | 25.0 (bar 33: ok) |
+
+The same walk before the fix, by the finding's run (load 3 to 7, vsync off): 12.23 -> 14.61 ms (+19.5%). With vsync on the machine paces to a 120 Hz display, so the means are not that run's; the ratio is what compares. Vsync off stalled (about 380 frames of 1 s, a drawable not released) in the unattended hours, so the report is vsync on.
+
+## What is left, and what the rest would cost
+
+The walk's mean (run on 1e8544f, which still had the box twin below; removed, the same numbers: 10.85 ms on 9f59170's) is 0.9 points over the 15% bar; the first-hit and finisher hitches are inside it. What is left of the gap is spread, not one thing: with every shadow off the poses cost what 910448e does with its own, the kit's walls, floors and slabs are a plinth and battens (about 8 to 10 times a box's triangles in the visible pass), and the props wear a hull (about 4% of the poses). The levers not taken, each with its cost:
+
+- Occlusion culling (one box occluder per solid wall, floor and slab): about 6 to 10% on the poses, but at the roofs' drop pose it hid the skyline and the cars below it; the cause was not found in the time, and a culling that can hide what is seen is not invisible.
+- A plain box as the shadow caster of the kit's wall, floor, slab and deck modules (a shadow-only twin, tried and removed): the tour stayed pixel-identical but the walk did not move (10.86 ms), and the twin's BoxMesh counted as a placeholder box in the ratchet and in the mesh-count tests.
+- A box for the kit's walls in the visible pass (no plinth, no battens): fewer triangles, but the plinth and the brick courses are the look.
+- Shadow off on windows (about 1%) or the skyline (about 1.5%): seen in the tour, so no.
+- Visible levels of detail on the props (200 000 fewer primitives): no measurable time.
+- Merging dressing pieces per section (the finding's lever): the pieces measured at no more than 1% each by kind (windows, frames, cornices, fences), so a merge would not reach the 0.9 points.
