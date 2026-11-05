@@ -29,6 +29,10 @@ The glint gate (rescore-rs-01, config `detail_bake.glint`): the shades' lens is 
 which whites the whole lens out when the head tips back. G holds the AUTHORED streaks of concept A, two diagonal bands per eye, as a
 signed-distance ramp (0.5 on a band's edge, so the shader's cut at 0.5 draws the edge sharp from a 1k texel) on the lens's texels only;
 the shader multiplies the glint by it, so the glint can only ever light a streak. Every other texel's G is 0.
+The crease ink (M6 FB-DETAIL, config `detail_bake.crease`): a Tripo texture is delit and flat, so the edges of a plate, a visor or a guard
+are in its GEOMETRY and never in its colours, and the top-hat finds only the texture's scribbles. `crease` draws the sharp edges of the dense mesh
+(the dihedral angle between two faces over `angle_deg`) as a distance ramp of `width_m` on the baked texels near them, merged with the texture's
+ink before the cleanup; a zone's `crease_deg` replaces the angle on its faces (a number over 180 turns it off). See crease_edges().
 Every number is in pipeline.json palette.detail_bake; the lines' look is calibrated on the picture the step writes beside the
 mask (<report>/detail_source.png: the ink in texture space).
 """
@@ -312,6 +316,85 @@ def clean_strokes(mask, covered, cc):
 		"texels_dropped": int(dropped.sum())}
 
 
+def crease_edges(verts, tris, min_deg, spacing_m, min_chain_m=0.0):
+	"""The sharp edges of a triangle mesh as points: verts (n, 3), tris (m, 3) vertex indices -> (points (k, 3), angles (k,) in degrees),
+	one point every `spacing_m` along every interior edge whose two faces meet at more than `min_deg` degrees (0 = flat). The sculpt's
+	bumps make short crease fragments and a plate's edge a long run, so a run of connected crease edges (at the lowest angle asked for)
+	shorter than `min_chain_m` in all is dropped."""
+	a, b, c = verts[tris[:, 0]], verts[tris[:, 1]], verts[tris[:, 2]]
+	nrm = np.cross(b - a, c - a)
+	nrm /= np.maximum(np.linalg.norm(nrm, axis=1, keepdims=True), 1e-12)
+	e = np.concatenate([tris[:, [0, 1]], tris[:, [1, 2]], tris[:, [2, 0]]])
+	face = np.tile(np.arange(len(tris)), 3)
+	key = np.sort(e, axis=1)
+	order = np.lexsort((key[:, 1], key[:, 0]))
+	key, face = key[order], face[order]
+	same = np.all(key[1:] == key[:-1], axis=1)
+	first = np.nonzero(same)[0]
+	f0, f1 = face[first], face[first + 1]
+	ang = np.degrees(np.arccos(np.clip((nrm[f0] * nrm[f1]).sum(1), -1.0, 1.0)))
+	keep = ang > min_deg
+	ea, eb = key[first[keep], 0], key[first[keep], 1]
+	p0, p1 = verts[ea], verts[eb]
+	ang = ang[keep]
+	if min_chain_m > 0.0 and len(ang):
+		parent = {}
+
+		def find(x):
+			while parent.setdefault(x, x) != x:
+				parent[x] = parent[parent[x]]
+				x = parent[x]
+			return x
+		for u, v in zip(ea.tolist(), eb.tolist()):
+			parent[find(u)] = find(v)
+		root = np.array([find(u) for u in ea.tolist()])
+		length = np.linalg.norm(p1 - p0, axis=1)
+		total = {}
+		for r, l in zip(root.tolist(), length.tolist()):
+			total[r] = total.get(r, 0.0) + l
+		long_run = np.array([total[r] >= min_chain_m for r in root.tolist()])
+		p0, p1, ang = p0[long_run], p1[long_run], ang[long_run]
+	steps = np.maximum(np.ceil(np.linalg.norm(p1 - p0, axis=1) / max(spacing_m, 1e-4)).astype(np.int64), 1)
+	pts, angs = [], []
+	for k in range(int(steps.max()) + 1 if len(steps) else 0):
+		sel = steps >= k
+		t = (k / steps[sel])[:, None]
+		pts.append(p0[sel] * (1 - t) + p1[sel] * t)
+		angs.append(ang[sel])
+	if not pts:
+		return np.zeros((0, 3)), np.zeros(0)
+	return np.concatenate(pts), np.concatenate(angs)
+
+
+def crease_field(pos, face_deg, verts, tris, cfg):
+	"""The crease ink at each texel: pos (n, 3) the texels' surface points, face_deg (n,) the angle each texel's zone asks for. 1 on an
+	edge, falling to 0 at `width_m` / 2 + `ramp_m`; 0 where no crease edge lies within that reach."""
+	from mathutils import kdtree
+	width, ramp = float(cfg.get("width_m", 0.006)), float(cfg.get("ramp_m", 0.003))
+	reach = width / 2.0 + ramp
+	field = np.zeros(len(pos))
+	pts, angs = crease_edges(verts, tris, float(np.min(face_deg)), float(cfg.get("spacing_m", 0.003)), float(cfg.get("min_chain_m", 0.0)))
+	if not len(pts):
+		return field
+	for deg in np.unique(face_deg):
+		if deg > 180.0:
+			continue
+		sel = np.nonzero(face_deg == deg)[0]
+		p = pts[angs >= deg]
+		if not len(p):
+			continue
+		kd = kdtree.KDTree(len(p))
+		for i, q in enumerate(p):
+			kd.insert(Vector(q), i)
+		kd.balance()
+		for i in sel:
+			hit = kd.find(Vector(pos[i]))
+			d = hit[2]
+			if d < reach:
+				field[i] = np.clip((width / 2.0 + ramp - d) / max(ramp, 1e-6), 0.0, 1.0)
+	return field
+
+
 def glove_lines_field(s, t, h, cfg):
 	"""The ink of the glove's authored lines at points given in a hand's frame: s metres along the hand bone from the wrist toward the
 	knuckles, t across the hand, h out of the back of the hand (all (n,)). `cfg`: width_m (a line's width, where the shader's cut lies),
@@ -375,7 +458,7 @@ def fill_border(values, covered, px):
 
 
 def bake(me, layer_name, image, dense_bvh, dense_verts, dense_tris, dense_uv, cfg, out_png, source_png=None, face_gain=None,
-		face_low=None, face_high=None, face_zone=None, zone_names=(), glint=None, face_glint=None, glove=None, hand_frames=None, face_slot=None):
+		face_low=None, face_high=None, face_zone=None, zone_names=(), glint=None, face_glint=None, glove=None, hand_frames=None, face_slot=None, face_crease=None):
 	"""Bake the mask of `me` (UV layer `layer_name`) from `image` (the dense mesh's texture) into out_png. dense_verts
 	(n, 3), dense_tris (m, 3) vertex indices, dense_uv (m, 3, 2) per-corner UVs; face_gain (one float per face of `me`, 1 = full ink, 0 = none: the lens
 	takes none) is optional. face_low / face_high (one float per face) override the smoothstep that turns the raw top-hat into ink
@@ -384,7 +467,8 @@ def bake(me, layer_name, image, dense_bvh, dense_verts, dense_tris, dense_uv, cf
 	only labels the report's percentiles of the raw top-hat per zone, the numbers the pairs are calibrated on. glint (the config's `glint`
 	dict) and face_glint (one bool per face of `me`: the lens's) write the glint gate into G, see the module doc. glove (the config's
 	`glove_lines`), hand_frames ({side: {sign, head, a, b, c}} in the mesh's frame) and face_slot (the palette slot per face) add the glove's
-	authored lines into R. Returns a report dict."""
+	authored lines into R. face_crease (one angle per face of `me`, only with the config's `crease`) is each face's crease threshold in degrees.
+	Returns a report dict."""
 	size = int(cfg.get("size", 1024))
 	w, h = image.size
 	pix = np.empty(w * h * 4, dtype=np.float32)
@@ -431,6 +515,12 @@ def bake(me, layer_name, image, dense_bvh, dense_verts, dense_tris, dense_uv, cf
 			sel = (lo_f[face_pair] == lo) & (hi_f[face_pair] == hi)
 			if sel.any():
 				value[sel] = bilinear(shape(ink, lo, hi), uv[sel])
+	crease_report = None
+	if cfg.get("crease") and face_crease is not None:
+		field = crease_field(pos, np.asarray(face_crease, dtype=np.float64)[texel_face], dense_verts, dense_tris, cfg["crease"])
+		before = float((value > 0.5).mean())
+		value = np.maximum(value, field)
+		crease_report = {"texels_on_a_crease": int((field > 0.5).sum()), "ink_share_before": round(before, 5), "ink_share_after": round(float((value > 0.5).mean()), 5)}
 	if face_gain is not None:
 		value = value * np.asarray(face_gain)[texel_face]
 	zone_report = {}
@@ -479,7 +569,8 @@ def bake(me, layer_name, image, dense_bvh, dense_verts, dense_tris, dense_uv, cf
 		glint_report = {"texels": int(lens.sum()), "gate_share": round(float((field[lens] > 0.5).mean()), 4) if lens.any() else 0.0}
 	_write_gray(mask, out_png, "punk_detail", gate)
 	return {"size": size, "texels": int(len(pos)), "ink_texels_share": float((value > 0.5).mean()), "mean_ink": float(value.mean()),
-		"png": out_png, "zones": zone_report, "glint": glint_report, "clean": clean_report, "glove_lines": glove_report}
+		"png": out_png, "zones": zone_report, "glint": glint_report, "clean": clean_report, "glove_lines": glove_report,
+		**({"crease": crease_report} if crease_report is not None else {})}
 
 
 def _write_gray(a, path, name, g=None):
