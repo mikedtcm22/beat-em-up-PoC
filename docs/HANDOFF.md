@@ -4,6 +4,51 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-05 14:35 CST: the fix wave merged (2027/2027); frame time running; a verification round next
+- **Merged into `m6/full-art-audio`** (head `d582d21`, pushed), with no conflicts:
+  - FIX-FEEL (`f32acc8`);
+  - FIX-WORLD (`33ca985`);
+  - FIX-ART-A (`f837a44`);
+  - FIX-ART-B (`0c1c1ac`).
+  - The preset is unchanged after the regeneration (FIX-FEEL wrote its 15 values). The atlas is current; every `run.py --check`, `player_run.py --asset player --check` and `gen_trim --check` is YES.
+  - Suite 2027/2027 in 414 s with `ART_PUNK_VARIANT_STRAIN=1`, 0 error lines, the same 3 expected warnings.
+  - No paid service spent in the wave.
+- **What each did** (calls in `docs/milestones/M6-calls/FIX-*.md`):
+  - **FIX-FEEL:**
+    - the hurt bearing comes from the attacker's position, with `-hit.direction` as the fallback;
+    - 15 shape numbers moved into Hit feel > Hurt;
+    - six real-hit tests; with the old bearing put back, five fail;
+    - `look_hurt_acts.gd` hits from four sides, plus the acts "finishers" (a synthetic FINISHER-tier hit, since no enemy move is FINISHER), "blocked" and "burst".
+  - **FIX-WORLD:**
+    - the BossRoof Ground's top is at -0.25, clear of the skyline strips at -0.5;
+    - `tests/m6_coplanar_scan.gd` found 85 more wall-top and corner pairs, fixed by `InsetBlock` (the drawn mesh 2 cm in, the collider unchanged) on 41 blocks;
+    - a calmer, paler ground tile, mirrored to a 16 m repeat;
+    - the strip ink fade by the mean footprint.
+    - Its A1 drift rose a little (still 0.0165 -> 0.0291), against M6's 5.1.
+  - **FIX-ART-A:**
+    - the Thug's `face_right` and `bandana_right` regions (only from slot 40), a `hood_neck` zone (creases only above z 1.35) and a plain waist;
+    - the Kicker's `eyes` region and plain eyes and mask zones;
+    - `_rolled_out` needs `detail_bake.crease`.
+  - **FIX-ART-B:**
+    - Ox's `face_lock` region (slots 7 and 53; 50 turned the hood lining tan) and `face_skin` at ink 0.012 / 0.03. The mauve patches are the toon shadow band, not slot 53: answered, not fixed.
+    - The Bruiser's `visor` zone and `under_visor` region, and slot 47 `bruiser_helmet` (purple, blood false).
+    - The Punk's vest valleys: `min_chain_m` 0.45 -> 0.6 (the brief said 0.55), `valley_deg` 18.
+    - The Bruiser's strain fixture regenerated (held clip min 0.1489 -> 0.088).
+- **The lead's look** (the fixers' stills):
+  - the hurt edge matches the side for the Bruiser smash from all four sides;
+  - the ground is calmer and opener;
+  - the Thug's half-face and the Bruiser's cream wedge are gone;
+  - Ox has a nose, a mouth corner and a jaw line;
+  - the Kicker's eyes are a plain skin band, calmer but no longer shades.
+- **README:** "After Game-boy's playtest (2026-11-05)" is under the M6 status (uncommitted until the verification round).
+- **Running:** `tools/perf_compare.sh --force --vsync on --runs 4 --bot res://tests/bot/perf_level_bot.tscn --act "Perf: level walk" --act "Perf: counters" --out captures/m6-feedback-fix/perf 910448e 663cafc HEAD`.
+  - It runs at load 3.5-4, from Game-boy's own apps (App Store agent, ChatGPT), so it has to be forced, as M6's numbers were.
+  - **If cut off:** rerun it.
+- **Next:**
+  1. Record the verification acts on `d582d21`, after perf so the machine stays quiet: `bash <scratchpad>/record_verify.sh`, the review round's 18 acts into `captures/m6-feedback-verify/` (the script is `record_feedback.sh` with the folder changed and dp2/dp3 dropped).
+  2. A verification round: `review.js` with `docs/reviews/M6/args-review-verify.json` (chars and world on Opus, code on Sonnet, skeptics on highs and mediums, `partition` false). Independent reviewers check each finding the wave took, against before (`captures/m6-feedback-review/`) and after.
+  3. If anything survives, one small fix pass; then README's frame-time lines, PR #6's body, and the DM with the stills and the run command. Merge only on his word.
+
 ### 2026-11-05 13:15 CST: the FEEDBACK review done (2 high, 5 medium survive); the fix wave running (FIX-FEEL, FIX-WORLD, FIX-ART-A, FIX-ART-B)
 - **The review** (run `wf_17f7b1df-712`; every finding with detail, fix and verdict in `docs/reviews/M6/findings-feedback.json`):
   - **Passes:**
