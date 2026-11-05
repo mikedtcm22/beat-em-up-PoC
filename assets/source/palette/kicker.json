@@ -18,6 +18,13 @@
 			"srgb": "#3b3a43",
 			"marks": true,
 			"blood": false
+		},
+		{
+			"slot": 24,
+			"name": "kicker_shade",
+			"srgb": "#8c5f4e",
+			"marks": true,
+			"skin": true
 		}
 	]
 }
