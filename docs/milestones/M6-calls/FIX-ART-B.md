@@ -1,6 +1,6 @@
 # FIX-ART-B: Ox, the Bruiser and the Punk (judgement calls)
 
-Each call: the decision / the alternative not taken / why. The review's fix wave (`docs/reviews/M6/fix-feedback-final.md`, "FIX-ART-B"), base `6161da7`. Config and palette JSON only: no Tripo task (0 credits), no Gemini image, no tunable, no spec change, no chain or shader change. Sheets (the worktree's `captures/sheets/`, never committed; before = the review's recordings in `captures/m6-feedback-review/`, after = the same acts here): `ox_1m_v1.png` to `ox_1m_v6.png` (the face's steps), `ox_off.png`, `bru_1m.png`, `punk_back.png`, `m25.png` (Ox and the Punk at 2.5 m).
+Each call: the decision / the alternative not taken / why. The review's fix wave (`docs/reviews/M6/fix-feedback-final.md`, "FIX-ART-B"), base `6161da7`. Config and palette JSON only: no Tripo task (0 credits), no Gemini image, no tunable, no spec change, no chain or shader change. Sheets (the worktree's `captures/sheets/`, never committed; before = the review's recordings in `captures/m6-feedback-review/`, after = the same acts here): `ox_1m_v1.png` to `ox_1m_v6.png` (the face's steps), `ox_off.png`, `bru_1m.png`, `bru_final.png`, `punk_back.png`, `m25.png` (Ox and the Punk at 2.5 m).
 
 ## Calls
 
@@ -20,7 +20,8 @@ Each call: the decision / the alternative not taken / why. The review's fix wave
 
 ## Ratchets moved (old -> new)
 
-None. The roster, strain and A/B fixtures held (the suite passes unchanged). The one assertion I changed is in my own file: `test_m6_feedback_detail.gd::test_the_helmet_is_purple` read slot 44 on the helmet's top (old: `slot == SLOT_PURPLE`, share >= 0.95; new: `slot == SLOT_HELMET`, share >= 0.95), because the helmet is slot 47 by design. Twin on the visible path: `test_the_helmet_swatch_is_the_jackets_purple_that_never_bleeds` (the atlas cell is the same colour at alpha 230 against the jacket's 255, and 300 or more faces carry it). `SLOTS_ALLOWED` gained 47 (the mask's codes may name it).
+- `tests/fixtures/strain/bruiser.json`, per-clip figures, regenerated with `gen_strain_ratchet.tscn -- bruiser` after the first full run (2008 of 2009) failed `test_m4_done_when`'s Bruiser row: the clip `held`'s `min` 0.1489 -> 0.088 (deeper compression: the helmet and visor regions moved the decimation's colour borders; `low` 0.2779 -> 0.2651, `high` 2.8814 -> 2.8621), and a few other clips moved by noise both ways (`min` 0.0484 -> 0.0628 better, `high` 4.2143 -> 4.4495 worse). The whole-run bars hold: deepest compression x0.0264 (the Bruiser's whole-run figure in `whole` is untouched), worst p99.9 7.2606, in-bar 1. / Narrowing the helmet's region to bring `held` back: it only moves where the border is, and 0.088 is a stiff idle's mild squash, not a strike. After the regeneration `test_m4_done_when`, `test_skinned_art` and `test_art_heavies` pass; the full suite was not rerun (the fixture is the only change since the full run).
+- No other ratchet moved: the Ox and Punk fixtures, the roster rows (a6, a7, a9) and the A/B GLBs held. The one assertion I changed is in my own file: `test_m6_feedback_detail.gd::test_the_helmet_is_purple` read slot 44 on the helmet's top (old: `slot == SLOT_PURPLE`, share >= 0.95; new: `slot == SLOT_HELMET`, share >= 0.95), because the helmet is slot 47 by design. Twin on the visible path: `test_the_helmet_swatch_is_the_jackets_purple_that_never_bleeds` (the atlas cell is the same colour at alpha 230 against the jacket's 255, and 300 or more faces carry it). `SLOTS_ALLOWED` gained 47 (the mask's codes may name it).
 
 ## Tests
 
