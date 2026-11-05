@@ -21,7 +21,7 @@
 		"second_weapon": 0
 	},
 	"global": {
-		"generated_sfx": 9,
-		"empty_slots": 16
+		"generated_sfx": 0,
+		"empty_slots": 0
 	}
 }

@@ -1379,7 +1379,24 @@ _Filled by ARM._
 
 ### The generated sound effects (SFX)
 
-_Filled by SFX._
+Every pool that is not a voice is an ElevenLabs take now (plan D19), ingested through AUDIO's tools; the game, the director and the tests are unchanged, and the music loop (D25) is the one placeholder left. `ingest.py --check` rebuilds all 114 rows from their MP3s with no empty slot.
+
+**Source** (`assets/source/sfx/eleven/`, MP3s in LFS): one jobs file per group, `sfx_<group>.jobs.json`, run through `eleven_sfx.py` (label `SFX`), takes in `sfx_<group>/<job id>_<nn>.mp3`:
+- `sfx_hits`: `whoosh`, `thud`, `crack`, `crunch`, `body_fall`, `sub_thump` (each pool one layer of the tier stack; 4 candidates a prompt);
+- `sfx_blocks`: `block_clack`, `parry_ting`, `guard_break`;
+- `sfx_barriers`: `barrier_<shutter|gate|car>_<close|open>`;
+- `sfx_weapons`: `weapon_pickup|throw|break|land` and `weapon_pipe_hit`, `weapon_bike_chain_hit`;
+- `sfx_stings`: `sting_go`, `sting_clear`;
+- `sfx_beds`: `ambience_street`, `ambience_roof` (25 s, `loop: true`).
+A job id is `<pool>_v<n>`, one variant of its pool; each has 3 or 4 candidate takes and the runners-up stay on disk.
+
+**The choice** is `sfx.picks.json` (beside the jobs files), written by `python3 -I tools/audio/sfx_pick.py --picks <groups...>` and ingested by `ingest.py --picks`. `sfx_pick.py --table <group>` prints every take with its measured features (active length, time of the loudest 5 ms window, spectral centroid, tail share, flat-top samples, rms; a bed's spread, events and seam) and its penalty against its pool's role (`ROLES`); `--legacy` prints the placeholders' features and `--levels` the loudness of the shipped pools. To swap a variant, edit its take in the picks file and run `ingest.py --picks assets/source/sfx/eleven/sfx.picks.json` (exact; `--check` verifies). `sfx_assets.py` writes the ASSETS section "Sound effects (ElevenLabs)".
+
+**What ships:** whoosh 3, thud 4, crack 3, crunch 3, body_fall 3, sub_thump 3, block_clack 3, parry_ting 3, guard_break 3, each barrier pool 2, weapon_pickup, throw, break, land and pipe_hit 2, weapon_bike_chain_hit 2, each sting and bed 1. Stings are declared `long` in the manifest (`sting_clear` is 1.6 s); beds are `lufs` -20 with a 1000 ms loop crossfade.
+
+**Mix** (Tuning > Audio, values only): the hit stack is peak-normalised at -1 dBFS and the voices RMS -16 dBFS, so the dB values keep a voice 4 to 7 dB under a light hit, measured over the first 0.4 s (light -26.0, heavy -21.3, finisher -16.3 dBFS; the voices -29 to -34). The values and the reasoning are in `docs/milestones/M6-calls/SFX.md`, call 9.
+
+**Tests:** none added. `test_audio.gd` (the tier ranking by the real samples, whooshes loudest within 50 ms, ends at silence, one-shot cap) and `test_audio_m6.gd` (manifest and files both ways, the ledger, ASSETS rows, `ingest.py --check`) cover every pool; `test_m6_no_placeholders.gd`'s ratchet `global` is 0 and 0.
 
 ## Ownership (Milestones 1-3)
 
