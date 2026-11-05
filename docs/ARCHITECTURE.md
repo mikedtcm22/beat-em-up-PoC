@@ -1465,6 +1465,18 @@ A job id is `<pool>_v<n>`, one variant of its pool; each has 3 or 4 candidate ta
 
 **Tests:** none added. `test_audio.gd` (the tier ranking by the real samples, whooshes loudest within 50 ms, ends at silence, one-shot cap) and `test_audio_m6.gd` (manifest and files both ways, the ledger, ASSETS rows, `ingest.py --check`) cover every pool; `test_m6_no_placeholders.gd`'s ratchet `global` is 0 and 0.
 
+
+### Playtest feedback: FB-DETAIL
+
+Game-boy found the Bruiser "blobby" and asked for every enemy to be upscaled toward its concept. The pilot changed the chain, not the model (the raw Tripo mesh holds the plates and quilting; the loss was in the palette and ink stages). Three opt-in config keys, each defaulting to today's behaviour (every other character's `run.py --check` is unchanged):
+
+- `palette.detail_bake.crease` `{angle_deg, width_m, ramp_m, spacing_m, min_chain_m}`: the dense mesh's sharp edges (dihedral angle over `angle_deg`, in runs of at least `min_chain_m` of connected edges) are drawn as ink on the baked texels (`pipe_detail.crease_edges`, `crease_field`), merged with the texture's ink before the stroke cleanup. A `detail_bake.zones[]` entry's `crease_deg` replaces the angle on its faces (over 180 = off). The report gains a `crease` block only when the key is set.
+- `palette.min_island_area_m2`, `island_passes` (default 2): a connected patch of one label under that area takes the label its border shares most (step 3-island of `blender_palette.py`, after the majority filter). The report gains `island_flips` only when set.
+- `palette.border_relax_iterations` is not new, but the Bruiser sets it to 0: the relax smoothed the colour borders, which are the plate edges.
+- Review tool: `tools/pipeline/blender_stage_still.py <work.blend> <out.png> tex|swatch|solid <view> [px] [cx cy cz ortho_m]`.
+
+The Bruiser stays at 15,000 triangles. Tests: `tests/test_m6_feedback_detail.gd`; his roster and strain ratchets moved with their reasons in `docs/milestones/M6-calls/FB-DETAIL.md`, which also holds the stage attribution and the rollout recipe for the Kicker, the Pipe Thug, Ox Pellerin and the Punk.
+
 ## Ownership (Milestones 1-3)
 
 | Area | Files |
