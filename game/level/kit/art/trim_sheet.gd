@@ -7,6 +7,8 @@ extends RefCounted
 
 const SHEET_PATH := "res://assets/export/kit/trim_sheet.png"
 const STRIPS_PATH := "res://assets/export/kit/trim_strips.json"
+## The street's ground tile (FB-GROUND): one picture sampled in world metres by every face on a `ground` strip.
+const GROUND_PATH := "res://assets/export/kit/ground_sheet.png"
 ## The shader's `strips` array holds this many rows.
 const ROWS := 16
 
@@ -43,6 +45,16 @@ static func index(strip_name: StringName) -> int:
 	return int(entry.index)
 
 
+## Whether `strip_name` is a ground strip (the asphalt): its faces sample the ground tile in world metres.
+static func is_ground(strip_name: StringName) -> bool:
+	return bool(strip(strip_name).get("ground", false))
+
+
+## The metres one side of the ground tile covers as painted (the tile's own, `ground_m_per_tile` is the live value).
+static func ground_tile_m() -> float:
+	return float(table().get("ground", {}).get("tile_m", 8.0))
+
+
 ## Whether `strip_name` is an alpha-scissor strip (the chain-link's): its faces wear ToonMaterials.trim_scissor().
 static func is_scissor(strip_name: StringName) -> bool:
 	return bool(strip(strip_name).get("scissor", false))
@@ -61,14 +73,19 @@ static func period_m(strip_name: StringName) -> float:
 	return float(strip(strip_name).get("period_m", 1.0))
 
 
-## The shader's `strips` uniform: per row (v0, vh, period_m, flags: 1 scissor, 2 ink only).
+## The shader's `strips` uniform: per row (v0, vh, period_m, flags: 1 scissor, 2 ink only, 4 ground).
 static func uniform_rows() -> PackedVector4Array:
 	var rows := PackedVector4Array()
 	rows.resize(ROWS)
 	for entry: Dictionary in table().get("strips", []):
-		var flags := (1.0 if bool(entry.scissor) else 0.0) + (2.0 if bool(entry.ink_only) else 0.0)
+		var flags := (1.0 if bool(entry.scissor) else 0.0) + (2.0 if bool(entry.ink_only) else 0.0) + (4.0 if bool(entry.get("ground", false)) else 0.0)
 		rows[int(entry.index)] = Vector4(float(entry.v0), float(entry.vh), float(entry.period_m), flags)
 	return rows
+
+
+## The ground tile's texture (imported, with mipmaps).
+static func ground_texture() -> Texture2D:
+	return load(GROUND_PATH) as Texture2D
 
 
 ## The sheet's texture (imported, with mipmaps).

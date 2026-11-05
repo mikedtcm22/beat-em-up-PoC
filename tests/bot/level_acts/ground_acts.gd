@@ -61,8 +61,8 @@ static func _apply(bot: Node, variant: String) -> void:
 			ToonMaterials.trim().set_shader_parameter(&"lod_cap", 12.0)
 		"dbg_strip", "dbg_lod", "dbg_alpha":
 			ToonMaterials.trim().set_shader_parameter(&"debug_view", {"dbg_strip": 1, "dbg_lod": 2, "dbg_alpha": 4}[variant])
-		"strip_interp":
-			ToonMaterials.trim().set_shader_parameter(&"strip_interpolated", true)
+		"sheet_off":
+			bot.tune(&"ground_sheet_off", true)
 		"flat":
 			var image := Image.create(64, 64, true, Image.FORMAT_RGBA8)
 			image.fill(Color(0.35, 0.35, 0.4, 0.0))

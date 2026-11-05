@@ -773,6 +773,7 @@ script = ExtResource("2_block")
 position = Vector3(14.6, 7.25, -24.8)
 size = Vector3(3, 0.5, 2)
 look = &"floor"
+draw_box = false
 
 [node name="PenthouseFrontBackShutter" type="Node3D" parent="Geometry/TopRoof"]
 script = ExtResource("2_block")
