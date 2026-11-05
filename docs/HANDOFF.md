@@ -4,7 +4,34 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
-### 2026-11-04 21:20 CST: the fix wave merged (1931/1931); perf over the bar, its fixer running; README written
+### 2026-11-05 03:05 CST: Milestone 6 delivered; PR #6 open; waiting on Game-boy's play and sign-off
+- **The perf fix is merged** (`c2b68c1`, branch `m6/fix-final-perf`). The cause was the trim shader writing `ALPHA_SCISSOR_THRESHOLD` on one branch, which made all 330 kit meshes alpha-clip: no depth prepass, and the full fragment in every shadow cascade.
+  - It is now split: an opaque `trim()`, and `trim_scissor()` for the chain-link's wire alone.
+  - The car, the tank and the dumpster cast their shadow from a coarser shadow-only copy (new group Level > Draw cost).
+  - The bench gains renderer counters and the acts "Perf: counters" and "Perf: inventory".
+  - The tour stills before and after are pixel-identical at 15 of 20 poses. The lead's look at the chain-link fence and the car confirms it.
+  - The calls are in `docs/milestones/M6-calls/fix-final-perf.md`.
+- **Suite:** 1936/1936 in 366 s, with 0 error lines and every ratchet key at 0. The preset is regenerated (603 values), and the atlas is current.
+- **Frame time** (interleaved, vsync on, load 3-4; reports in `captures/perf_compare/20261105-022216` and `-024739`):
+  - **The level walk** against 910448e: 9.43 to 10.87 ms, **+15.3%**, 0.3 points over the plan's 15% line. p95 14.16, and every soft bar is ok.
+  - **"Perf: counters"**: +15.4%.
+  - **Six with ragdolls** against main: +12.3%.
+  - **For Game-boy:** accept it, or pick a visible lever (the costs are in the calls doc).
+- **A fact-check** of README, the PR body and ARCHITECTURE (workflow `wf_d59b1d6d-d29`, 16 Sonnet agents) checked 162 claims and found 13 errors; the skeptics refuted none. All are corrected (`30191a8`):
+  - the boss is 29,298 triangles, and his gloves are slot 54;
+  - the arena clear times are 131/174/108 s (the "132/175/111" in the 19:15 entry are the movie lengths);
+  - the voices' picks file;
+  - the placeholder allow list;
+  - the chain swings on the pipe's poses;
+  - the held weapon is out of view in first person;
+  - Gemini used 55 images in all (19 of them concepts).
+- **PR #6** (https://github.com/mikedtcm22/beat-em-up-PoC/pull/6) is open, mergeable, with no CI. **Never merge it without Game-boy's sign-off.**
+- **The worktrees are pruned** (all 23). Their local captures are in `captures/m6-worktrees/<name>/` (3.4 GB, never committed). Every branch is on origin.
+- **Sent to Game-boy** (Slack, about 03:10): the run command, the audition keys, the PR, the judgement calls, and two open questions: keep the near arm, and accept the frame time.
+- **Usage at this point:** 5-hour 7%, weekly 33%. The watcher `local_a81a721f` is alive (last active 07:49Z).
+- **Next:** wait for Game-boy's play. Then act on his rulings (a FEEDBACK package as in M5, if needed), and merge only on his word.
+
+### 2026-11-04 20:55 CST: the fix wave merged (1931/1931); perf over the bar, its fixer running; README written
 - **The fix wave is merged** (`752de4e`): 1931/1931 in 376 s, 0 error lines, and the GUT warning is gone. The only conflict was the atlas, which was regenerated.
   - **art:**
     - Ox's gloves are now round, from a redrawn front view (2 Gemini images, 1 Tripo glove of 50 credits), in their own near-black slot 54 with the orange wrap.
