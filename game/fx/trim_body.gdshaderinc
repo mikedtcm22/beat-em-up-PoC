@@ -16,18 +16,29 @@ uniform float scissor_cut : hint_range(0.05, 0.95) = 0.35;
 // The edge pass's tag, written as ROUGHNESS: 1 on the world, so its lines draw on a module.
 uniform float edge_tag : hint_range(0.0, 1.0) = 1.0;
 
+// A debug view of the sampling (FB-GROUND): 0 the picture; 1 the strip index; 2 the mip level the footprint wants (log2 of the
+// texels a pixel covers, 0 to 12 as black to white); 3 the ink mask; 4 the sheet's alpha as it is sampled.
+uniform int debug_view : hint_range(0, 4) = 0;
+
 varying vec2 face_m;
 varying vec3 tint;
 varying float strip_id;
+// The strip's row, flat: one value across a face whatever the face's size (the cause of the street floor's flashing, see
+// docs/milestones/M6-calls/FB-GROUND.md). strip_id is the same number interpolated, which M6's material used.
+varying flat float strip_row;
+// 1 gives M6's behaviour back (the interpolated strip id), for the A/B (Tuning's ground_strip_interpolated).
+uniform bool strip_interpolated = false;
 
 void vertex() {
 	face_m = UV;
 	tint = COLOR.rgb;
 	strip_id = COLOR.a * 255.0;
+	strip_row = strip_id;
 }
 
 void fragment() {
-	vec4 row = strips[clamp(int(strip_id + 0.5), 0, 15)];
+	float sid = strip_interpolated ? strip_id : strip_row;
+	vec4 row = strips[clamp(int(sid + 0.5), 0, 15)];
 	// Repeats of the strip: U across the sheet, V up the strip (the image's y runs down).
 	vec2 t = vec2(face_m.x / tile_m, face_m.y / max(row.z, 0.01));
 	vec2 uv = vec2(t.x, row.x + (1.0 - fract(t.y)) * row.y);
@@ -53,6 +64,13 @@ void fragment() {
 	float mask = smoothstep(ink_cut - edge, ink_cut + edge, c.a);
 	color = mix(color, ink, mask);
 #endif
+	if (debug_view == 1) {
+		color = vec3(sid / 15.0);
+	} else if (debug_view == 2) {
+		color = vec3(clamp(log2(max(texels, 1.0)) / 12.0, 0.0, 1.0));
+	} else if (debug_view == 4) {
+		color = vec3(c.a);
+	}
 	ALBEDO = color * albedo.rgb * tint;
 	ROUGHNESS = edge_tag;
 }
