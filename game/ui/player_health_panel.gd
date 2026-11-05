@@ -106,7 +106,7 @@ func jolt_offset() -> Vector2:
 	if _jolt_left <= 0.0:
 		return Vector2.ZERO
 	var fade := _jolt_left / maxf(Tuning.data.hurt_panel_jolt_s, 0.01)
-	return Vector2(sin(_time * 95.0), cos(_time * 113.0)) * _jolt_px * fade
+	return Vector2(sin(_time * Tuning.data.hurt_panel_jolt_rate_x), cos(_time * Tuning.data.hurt_panel_jolt_rate_y)) * _jolt_px * fade
 
 
 func _draw() -> void:
