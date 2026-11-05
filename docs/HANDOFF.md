@@ -4,6 +4,45 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-05 17:45 CST: the verification fix pass merged; the suite and the lead's look running
+- **Merged** into `m6/full-art-audio`, with no conflicts: `m6/vfix-feel` (d94b9dd), `m6/vfix-world` (7c0f7db), `m6/vfix-kicker` (18e72d9) and `m6/vfix-heavies` (3ae9709). Then the preset was regenerated with the two kit tunables (3e7084e).
+  - Every `--check` passes (bruiser, boss, kicker, thug, punk, dummy, player; the palette; the trim).
+- **What each fixer did:**
+  - **VFIX-FEEL:**
+    - `hit_bearing` works on the floor plane from the yaw alone;
+    - HurtOverlay reads `view_transform()`, which leaves out the kick;
+    - the strokes have an ink rim, and the bottom edge is inked ×1.5 with strokes ×1.4 longer;
+    - new act "Look: player hurt looking down";
+    - 11 new tests fail on d582d21.
+  - **VFIX-WORLD:**
+    - InsetBlock now cuts the shared overlap out of its mesh (`yields_to`, new `MeshClip`), with no recess;
+    - `tools/solve_insets.gd` and `tools/apply_yields.py` wrote 97 yields on 89 blocks;
+    - `RoomKit.resolve_coplanar` does the same for the rooms;
+    - the scan has `holes()` and `steps()` (27 steps on d582d21, 0 now) and covers the KitPieces.
+    - The ground's mirror move was tried and dropped, because it made A2 drift worse. The near-deck fade is unchanged.
+  - **VFIX-KICKER:**
+    - the eyes region is back at z 1.625-1.665 and the zone at 1.62-1.675;
+    - new slot 24 `kicker_shade` (skin class);
+    - eye ink 0.1/0.22, A/B option c1.
+  - **VFIX-HEAVIES:**
+    - the Bruiser's `helmet_front` (slot 47) and a new `visor_fill`;
+    - `under_visor` at z 1.5-1.575 with no bisect, since bisect would loosen the stretch ratchets by about 60%; a small stair remains;
+    - Ox's `face_skin` zone from z 1.58, with ink 0.012/0.04;
+    - the strain ratchet back to 2afbe4d's figures except one row (held.min);
+    - the closure test needs a `func test_` and the path on a code line.
+- **The lead's look at the fixers' sheets:** the seams match 82bab12; looking down, a hit from behind lights the bottom edge; the Kicker has his brim back and a shaded band; the Bruiser's helmet is one dome; Ox has no blot.
+- **README** has the verification round's notes (the suite count is still to fill in).
+- **Running:**
+  - the suite (`ART_PUNK_VARIANT_STRAIN=1`), logging to the scratchpad's `suite_vfix.log`;
+  - next, the scratchpad's `record_final.sh` into `captures/m6-verify-final/`.
+- **Next:**
+  1. Read the suite's result.
+  2. Record, and check the 5 seam sites, the pitched hurt and the three characters.
+  3. A perf check against d582d21, because each InsetBlock now has its own mesh.
+  4. README, CLAUDE.md, PR #6's body.
+  5. The DM.
+  6. Merge only on his word.
+
 ### 2026-11-05 16:20 CST: the verification round done (3 medium survive); its fix pass running (VFIX-FEEL, VFIX-WORLD, VFIX-KICKER, VFIX-HEAVIES)
 - **Verification** (run `wf_05ec4fe8-e6f`; every finding in full in `docs/reviews/M6/findings-verify.json`).
   - **Confirmed fixed:**

@@ -91,20 +91,25 @@ Every enemy, the boss, the level and the sounds are now final art and audio, and
 **After Game-boy's playtest (2026-11-05):**
 - **The ground no longer flashes.**
   - The cause was a z-fight: a hidden ground slab under the boss roof sat in the same plane as the street. It now sits clear of every drawn surface.
-  - A new test scans every drawn block in the level, the crowd street and the training room for faces that share a plane. It found 85 more pairs where wall tops and corners met, and 41 blocks now draw 2 cm inside their colliders (`InsetBlock`); the colliders are unchanged.
+  - A new test scans every drawn block in the level, the crowd street and the training room for faces that share a plane. It found 85 more pairs where wall tops and corners met. Where two blocks meet in one plane, one of them now cuts the shared part out of its own drawn mesh (`InsetBlock.yields_to`: 97 cuts on 89 blocks, written by `tools/solve_insets.gd`), and the rooms do the same as they build. The colliders are unchanged. The first fix pulled those faces 2 cm in instead, and the edge ink drew the small steps it left as seam lines; the verification round caught that, and the test now fails on any step too.
   - The street wears a comic ground: one 2048 px tile over 8 m of flat tones (a pale road, broad worn pools, a few ink-outlined patches) under bold tapered ink (cracks, a manhole, drain grates). It is mirrored on every other tile, so it repeats every 16 m.
 - **GO is silent** (see the departures below).
-- **You feel the hits you take** (see the departures below). The ink vignette and the head roll point where the attacker stands: a hit from the left lights the left edge, one from behind the bottom edge.
+- **You feel the hits you take** (see the departures below). The ink vignette and the head roll point where the attacker stands: a hit from the left lights the left edge, one from behind the bottom edge. The side is measured on the floor plane, so it stays right when you look down at a stomp. Each stroke has an ink rim, and the bottom edge is inked heavier, so a hit from behind reads on the pale ground.
 - **Every enemy has more detail, closer to its concept.** It's all chain config, with no new models and no Tripo or Gemini spend:
   - **Colour borders now follow the texture,** per texel, instead of snapping to 2 cm mesh faces. Small colour islands are no longer averaged away.
   - **Ink is drawn where the model has creases and folds,** taken from the dense mesh before it's decimated, and the lines are thinner.
   - Each character has its own fixes from the review:
     - the Thug's face and bandana;
-    - the Kicker's eyes and mask;
-    - the Bruiser's visor slit, with the scarf beneath it; his helmet now scuffs but never bleeds;
-    - Ox's nose, mouth and jaw lines;
+    - the Kicker's mask, and a shaded band under his cap's brim with his eyes in it, as in his concept;
+    - the Bruiser's visor slit, with the scarf beneath it; his helmet is one purple dome that scuffs but never bleeds;
+    - Ox's nose, mouth and jaw lines, without the blot under the nose;
     - calmer lines on the Punk's vest.
   - `look_texel_swatch` in F1's Debug group switches the per-texel borders off.
+- **An independent verification round** re-recorded every act on the fixes and confirmed most of them. It found three problems, now fixed:
+  - the Kicker's eyes had shipped from a build his fixer had rejected, which turned his brim to skin;
+  - the 2 cm recess left seam lines on five walls;
+  - the hurt cue swapped front and back when looking down past about 30°.
+- **The same fix pass** restored the Bruiser's strain ratchet, which the art fixes had loosened, and tightened two guard tests. The ground's mirrored pairs stay: moving its features out of the fold made the ground crawl more at a distance.
 
 **How the done-when is proved:**
 - **`tests/test_m6_no_placeholders.gd`** counts every kind of placeholder in the level, the crowd street and the training room: primitive bodies, tints, grey boxes, cylinder weapons, a missing second weapon, generated sounds and empty sound slots. Every count is 0 (`tests/fixtures/m6/placeholder_ratchet.json`). The allowed list is short: the music loop (by pool), the shader warm-up meshes and the edge-pass quad (by node), and the edge guards. A mesh that is hidden or off the default layer (F3's debug draws, the hidden proxies) is not counted. The legacy A/B bank is in `tests/fixtures/sfx_legacy/`, outside the scanned `assets/export/sfx`.
