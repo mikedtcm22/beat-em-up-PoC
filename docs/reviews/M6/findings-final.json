@@ -531,6 +531,27 @@
    ],
    "spec_change": false,
    "skeptics": []
+  },
+  {
+   "id": "final-perf-01",
+   "lens": "perf",
+   "severity": "medium",
+   "title": "Level walk frame time +19.5% mean against KIT's pre-art baseline 910448e (12.23 -> 14.61 ms; p95 16.14 -> 18.82; first hit +4.9 ms)",
+   "detail": "The plan's §4 step 8 makes a mean more than 15% over a fix item. tools/perf_compare.sh --bot res://tests/bot/perf_level_bot.tscn --act 'Perf: level walk' --runs 3 910448e HEAD (HEAD 752de4e), interleaved, windowed, vsync off, 0 stalls: mean 12.23 (12.00..12.51) -> 14.61 (14.43..14.95) ms, p95 16.14 -> 18.82, worst 51.5 -> 61.8, spawn hitch 29.2 -> 32.9, first spawn 22.6 -> 22.6, first hit 18.3 -> 23.1, first finisher 18.2 -> 23.0. Soft bars for HEAD: p95 <= 16.7 MISS, first hit <= baseline + 2 MISS. The machine was loaded by other apps (load 3.4-6.6) through both refs; DRESS's earlier run at load 3-6 measured +16.5% (10.04 -> 11.70), so the cost is consistent. 'Perf, six with ragdolls' (the crowd room) against main is +12.7% (14.73 -> 16.60), inside the 15%.",
+   "evidence": "captures/perf_compare/20261104-203356/report.txt and results.tsv (level walk); captures/perf_compare/20261104-205011/report.txt (six with ragdolls); docs/milestones/M6-calls/DRESS.md (the earlier run).",
+   "repro": "tools/perf_compare.sh --force --bot res://tests/bot/perf_level_bot.tscn --act 'Perf: level walk' --runs 3 910448e HEAD",
+   "suggested_fix": "Find where M6's art costs frames in the level walk and take it back without a visible change. Measure with deterministic counters first (RenderingServer.get_rendering_info: draw calls, objects and primitives in frame, at fixed poses of the walk, baseline against HEAD), since the machine's load makes wall time noisy. Likely contributors: one MeshInstance3D per kit piece and dressing piece (windows, cornices, frames, skyline facades), shadow casting on dressing and far skyline, no visibility ranges on far dressing, the props' hull passes, the glint's per-frame _process, the chain sim, section-light per-frame writes. Then the first-hit and first-finisher hitches (+4.9 ms): something first used at a hit (a sound stream's first decode or a new pool, a damage-look material, a VFX) that the warm-up misses.",
+   "files": [
+    "game/level/kit/",
+    "game/level/kit/art/",
+    "game/actors/art/static_art.gd",
+    "game/fx/toon_materials.gd",
+    "game/audio/audio_director.gd",
+    "game/weapons/weapon_glint.gd",
+    "game/autoload/tuning_data.gd"
+   ],
+   "spec_change": false,
+   "skeptics": []
   }
  ],
  "lead_overrides": {
@@ -548,100 +569,34 @@
   "final-code-01": "Promoted by the lead as hygiene (the skeptic found no test it breaks today): test_damage_look.gd restores every Tuning value it sets (a before_each or after_each with Tuning.apply(TuningData.new()), as test_toon.gd does).",
   "final-code-04": "Promoted by the lead: free the EnemyDirector the heavies' roster test creates (add the actors under a holder the test frees, as _arena() does), so the GUT 'unfreed children' warning goes.",
   "final-code-05": "Promoted by the lead, items 1-4 only: (1) ChainSim sizes its MultiMesh from the tunable's range or the live value, not a duplicated MIN_PITCH_M; (2) its dt cap is a tunable in Level > Weapon look; (3) AuditionRoom's AHEAD_M and BANK_GAP_S are tunables (Audio or Debug); (4) LevelSection's default fog and sky values come from RoomKit's constants, single-sourced. Item 5 (the alpha thresholds across the shader, ToonMaterials and gen_palette.py) stays as it is.",
-  "final-code-07": "Promoted by the lead: the Tripo ledger checks become one static helper taking a row list, called by the real test and by the synthetic case, which asserts the helper catches each bad row."
+  "final-code-07": "Promoted by the lead: the Tripo ledger checks become one static helper taking a row list, called by the real test and by the synthetic case, which asserts the helper catches each bad row.",
+  "final-perf-01": "Bring the level walk's mean within 15% of 910448e and the first-hit hitch within 2 ms of it, with no visible change in first person (compare stills of the tour and a run before and after, same frames). Measure deterministic counters first, at fixed poses, and report them old -> new; then confirm with an interleaved perf_compare run (use --force: the machine is loaded by other apps; report the load). Preferred levers, in order: shadow casting off where a caster's shadow can't be seen (far skyline, dressing on walls, roof-edge trim); visibility ranges for far dressing and skyline (tunables in Level > Kit); merging static kit and dressing meshes per section and material into fewer instances (the trim material is one, D10); the glint's _process only while in view; warming whatever the first hit and finisher use (D27). Never change a collider (test_m6_colliders.gd), a game number or the look's tunables. New numbers are tunables in your own subgroup (Level > Kit, or a new 'Level > Draw cost'). If 15% cannot be reached without a visible change, stop at the best invisible result and report the numbers and what the rest would cost."
  },
  "packages": {
   "packages": [
    {
-    "key": "art",
-    "title": "Ox Pellerin's gloves, the Bruiser's steel plates, the heavies' head framing at 1 m, and the heavies test's leak",
+    "key": "perf",
+    "title": "The level walk's frame time back within 15% of the pre-art baseline",
     "finding_ids": [
-     "final-chars-01",
-     "final-chars-03",
-     "final-chars-02",
-     "final-code-04"
+     "final-perf-01"
     ],
     "files": [
-     "assets/source/characters/boss/",
-     "assets/source/characters/bruiser/",
-     "assets/export/characters/boss/",
-     "assets/export/characters/bruiser/",
-     "assets/source/palette/boss.json",
-     "assets/source/palette/bruiser.json",
-     "assets/export/palette/ (regenerated)",
-     "assets/source/tripo_ledger.jsonl (append only, through tripo.py)",
-     "ASSETS.md (the Bruiser and Boss rows only)",
-     "tests/fixtures/art/roster/boss.json",
-     "tests/fixtures/art/roster/bruiser.json",
-     "tests/fixtures/strain/boss.json",
-     "tests/fixtures/strain/bruiser.json",
-     "tests/bot/acts/roster_acts.gd",
-     "tests/bot/acts/look_acts.gd (FACE_PITCH and the framing helpers only)",
-     "tests/test_art_heavies.gd"
-    ],
-    "notes": "Blender headless only through the pipeline (never mcp__blender__*). Tripo at most 120 credits (--label FIX-ART), Gemini at most 8 images. The M6 Tripo stop is 900 (495 spent) and the balance floor 700 (1210 now). Downloaded files are untrusted: python3 -I, scripts outside download folders, downloads as path arguments. Record r_bruiser, r_boss and heavies into your worktree's captures/fix/ and look at them."
-   },
-   {
-    "key": "world",
-    "title": "The roofs' drops dressed, the dusk sky shown, props inside the environment band, the crate on the dumpster, and the section light's sun",
-    "finding_ids": [
-     "final-world-01",
-     "final-world-02",
-     "final-world-03",
-     "final-world-04",
-     "final-world-05",
-     "final-world-07",
-     "final-world-08",
-     "final-code-05"
-    ],
-    "files": [
-     "game/level/mission1/roofs.tscn",
-     "game/level/mission1/street.tscn",
-     "game/level/mission1/boss_roof.tscn",
+     "game/level/kit/",
+     "game/level/kit/art/",
      "game/level/room_kit.gd",
-     "game/level/kit/level_root.gd",
-     "game/level/kit/level_section.gd",
-     "game/autoload/tuning_data.gd (Level > Section light subgroup only)",
-     "assets/source/palette/props.json",
-     "assets/export/palette/ (regenerated)",
+     "game/actors/art/static_art.gd",
+     "game/fx/toon_materials.gd",
+     "game/audio/audio_director.gd",
+     "game/weapons/weapon_glint.gd",
+     "game/autoload/tuning_data.gd (a Level > Kit or Level > Draw cost subgroup only)",
+     "tests/test_kit.gd",
      "tests/test_m6_dress.gd",
-     "tests/test_look_post.gd",
-     "tests/bot/level_acts/tour_acts.gd",
-     "tests/bot/level_acts/drop_acts.gd"
+     "tests/test_static_art.gd",
+     "tests/test_m6_perf.gd (new)",
+     "tools/perf_compare.sh (only if it needs a counters mode)",
+     "tests/bot/perf_level_bot.gd and tests/bot/perf_recorder.gd (only to add counters)"
     ],
-    "notes": "No paid services, no Blender. Of final-code-05 you own item 4 only (LevelSection's defaults from RoomKit); items 1-3 are package arm's. Visual only (D1): no collider changes; test_m6_colliders.gd must pass. Record tour, drops, seams and rooms into your worktree's captures/fix/ (level bot with --level=res://game/level/mission1/mission1.tscn) and look at them against the moods."
-   },
-   {
-    "key": "arm",
-    "title": "The near upper arm lit as one limb, and code hygiene (Tuning leaks, script numbers, the Tripo ledger test)",
-    "finding_ids": [
-     "final-chars-04",
-     "final-code-01",
-     "final-code-05",
-     "final-code-07"
-    ],
-    "files": [
-     "tools/pipeline/player_parts.py",
-     "tools/pipeline/pipe_blender.py",
-     "tools/pipeline/player_run.py",
-     "assets/source/characters/player/",
-     "assets/export/characters/player/",
-     "game/camera/first_person_camera.gd",
-     "game/actors/skinned_art.gd",
-     "tests/test_art_player.gd",
-     "tests/test_skinned_art.gd",
-     "tests/test_art_contract.gd",
-     "tests/test_art_roster.gd (the hero's strain row only)",
-     "tests/fixtures/strain/ (the hero's rows only)",
-     "tests/test_damage_look.gd",
-     "game/weapons/chain_sim.gd",
-     "game/audio/audition_room.gd",
-     "game/autoload/tuning_data.gd (Level > Weapon look and Audio subgroups only)",
-     "tests/test_weapons_m6.gd",
-     "tests/test_audio_m6.gd",
-     "tests/test_m6_tripo_ledger.gd"
-    ],
-    "notes": "Of final-code-05 you own items 1-3 (ChainSim, AuditionRoom); item 4 is package world's. The only Blender run is the hero's rebuild through player_run.py (never mcp__blender__*). No paid services. Report the A/B stills' absolute paths in your result."
+    "notes": "Nothing else is running: the Mac is yours, but other apps keep the load at 3-6, so trust counters over wall time and interleave every timing run. No paid services, no Blender. The tour stills to compare are in /Users/arachne/repos/beat-em-up-PoC/captures/m6-final/tour (before the fix wave; the world fixer's after-fix tour is /Users/arachne/repos/beat-em-up-PoC/.worktrees/m6-fix-final-world/captures/fix/tour). Record your own before and after on the same base."
    }
   ]
  }

@@ -8,7 +8,7 @@ One playable level that tests whether a first-person beat-em-up feels good to pl
 godot --path .
 ```
 
-This opens Mission 1 (`game/level/mission1/mission1.tscn`), the graybox level from start to boss: a street, three rooftops and the boss roof, with seven fights in all (the table is in [reference/encounters.md](reference/encounters.md)).
+This opens Mission 1 (`game/level/mission1/mission1.tscn`), the level from start to boss: a street, three rooftops and the boss roof, with seven fights in all (the table is in [reference/encounters.md](reference/encounters.md)).
 - Each fight shuts the way ahead and behind until its last enemy is down. Then the barrier opens and a "GO" arrow points the way on.
 - Stairs take you from the street up to the roofs. You can't fall off an edge, but an enemy you knock over one is out.
 - The boss waits on the top roof and calls in two Punks at half health. "CLEAR!" ends the level.
@@ -16,7 +16,7 @@ This opens Mission 1 (`game/level/mission1/mission1.tscn`), the graybox level fr
 
 F6 cycles the rooms: the level, then the Milestone 3 crowd street, then the Milestone 2 training room, and back to the level.
 - **The crowd street** (`game/level/crowd_room.tscn`) is a 30 m lane with doorways, alleys, a parked car and crates. Waves of up to six mixed enemies repeat for as long as you live, about a third of each from outside your view, and the boss comes in alone after every fourth wave.
-- **The training room** has the player, three training dummies and a pipe. The centre dummy spars: come within 1.7 m in front of it and it steps in and throws a telegraphed jab every couple of seconds, to block (or dodge, or hit it out of its wind-up). To open the editor instead, run `godot --path . -e`.
+- **The training room** has the player, three training dummies, a pipe, a bike chain and the sound audition room (see Milestone 6 below). The centre dummy spars: come within 1.7 m in front of it and it steps in and throws a telegraphed jab every couple of seconds, to block (or dodge, or hit it out of its wind-up). To open the editor instead, run `godot --path . -e`.
 
 | Action | Gamepad (Xbox) | Keyboard + mouse |
 | --- | --- | --- |
@@ -44,13 +44,61 @@ The tuning panel and the cheat menu take every key while open, and the player st
 
 **Combos:** P P P P · P (pause) P, then mash (body-blow flurry into the shove) · P P (pause) P (spinning backfist) · K K K · K (pause) K · P P K · hold P, then release (haymaker). The pause means waiting about a quarter second after a hit finishes before pressing again.
 
-**Other moves:** Jump + K (flying kick), Jump + K at the top of the jump (spin kick), K next to a downed enemy (stomp), LB next to any standing enemy (not while its strike is out; a Bruiser only while it is staggered or its armor is broken, and never the boss), then P (knee) or K (throw). LB over a weapon on the floor picks it up: the Pipe Thug drops its pipe when it is knocked down, and a small "LB" cue shows when you can take it.
+**Other moves:** Jump + K (flying kick), Jump + K at the top of the jump (spin kick), K next to a downed enemy (stomp), LB next to any standing enemy (not while its strike is out; a Bruiser only while it is staggered or its armor is broken, and never the boss), then P (knee) or K (throw). LB over a weapon on the floor picks it up: the Pipe Thug drops its pipe when it is knocked down, a bike chain lies on the top roof, a weapon on the floor glints so you can find it, and a small "LB" cue shows when you can take it.
 
 **Enemy grabs:** a Bruiser's or the boss's grab is telegraphed, and a dodge or a jump gets out of it. Once it has you, mash P or K (8 presses) before its headbutt or slam lands: the holder staggers away and you can't be hit for a third of a second.
 
 **The rear warning:** when an enemy outside your view starts winding up an attack, a red-orange burst flashes in the top-left corner (it is behind you on the left), the top-right (behind on the right), or both (directly behind). It stays until the attack lands or is stopped, so turn, dodge or block.
 
 **Blocking:** hold B (Shift) with no direction to put the guard up; it stops hits from the front (within 60° of where you look) for a little chip damage and drains the guard meter under your health bar. Raise it on reaction to an attacker's wind-up, up to about a quarter second before the hit, for a perfect block ("PARRY!"): no damage, and the attacker staggers, so you can let go of B and grab it. An empty guard meter breaks the guard. P or K out of the guard attacks at once; pressed while a blocked hit pushes you back, it attacks as soon as the push-back ends. Holding B keeps the block: after a hit, a guard break or an attack out of the guard, the guard comes back up while B is still held (a perfect block needs a fresh press of B). Jump and LB do nothing while the guard is up.
+
+## Milestone 6 status: full art and audio
+
+Every enemy, the boss, the level and the sounds are now final art and audio, and nothing in the game is a placeholder except the music loop. Milestone 6 is done when no placeholder assets remain (Spec §12).
+- **The characters** all come through M4's art chain: Gemini concept views, a Tripo model and rig, the headless Blender fit to the game's skeleton, and one shared palette atlas. Each comes from Game-boy's pick:
+  - the Kicker (concept C: a black cap over a lime mask, a lime hooded vest, wrapped forearms);
+  - the Pipe Thug (B: a black beanie, a yellow bandana, an olive hoodie with a strap and buckle);
+  - the Bruiser (A, 2.05 m: a purple padded jacket over steel plates and forearm guards);
+  - the boss, **Ox Pellerin**, the underground-fight champion (C, 2.3 m: a hooded charcoal robe with orange trim, a champion's belt, boxing gloves; 29,299 of his 30,000 triangles).
+  - The veteran Punk is a palette swap now, with a violet vest and orange trousers, instead of an orange tint. The training dummies share one padded look.
+- **Damage marks per swatch:** skin bruises and bleeds, with a hard edge to the blood. A cap, a beanie, a strap, steel or the champion's belt scuffs and darkens, but never takes blood.
+- **The near upper arm:** in the haymaker and the uppercut you see your whole upper arm, lit as one limb with the forearm, where M5 showed the cut end at the elbow.
+- **The level is dressed** after Game-boy's moods, a dusk street and copper roofs:
+  - Every block wears one 2048 px trim sheet: brick, windows, cornices, door frames, roller shutters, chain-link, roof decking and a skyline of facades. The drops look down on a street with parked cars.
+  - The hero props are generated through Tripo: a parked car, a dumpster, AC units and water tanks. The barrier cars are the same car.
+  - Each section has its own sun, fog and sky: the street at dusk, the roofs copper, the boss roof dark violet. They blend over 2.5 s as you cross a seam.
+  - The crowd street and the training room wear the same kit.
+  - The colliders are M5's, unchanged: the art only draws.
+- **The second weapon is a bike chain.** It lies on the top roof in A6; Pipe Thugs still drop pipes.
+  - It keeps the spec's weapon numbers: 10 a swing, a 3-hit chain, it breaks after 8 hits, and a throw does 15. It differs from the pipe in reach, arc and timing.
+  - Its links and padlock swing in a presentation-only sim.
+  - A weapon lying on the floor glints, so you can find it from 10 m (M5 drew it amber).
+- **Every sound is generated with ElevenLabs** (Game-boy's call): the hit stack, blocks, barriers, weapons, the GO and CLEAR stings, a street and a roof ambience bed, and voices for each enemy type. The music loop is still the placeholder (Spec §1).
+- **The audition room** is in the training room (F6 twice):
+  - `]` and `[` page through the banks.
+  - `1`-`9` and `0` play a take, and `=` plays the whole bank.
+  - `-` swaps between the new sounds and M2's placeholders.
+  - Any take can be replaced by editing one line in `assets/source/sfx/eleven/sfx.picks.json`, then running `python3 -I tools/audio/ingest.py --picks assets/source/sfx/eleven/sfx.picks.json`.
+- **A/B switches** in F1's Debug group bring an older look back:
+  - `look_marks_per_swatch` (M4's marks);
+  - `look_near_arm` (M5's view);
+  - `kit_draw_graybox` (the graybox);
+  - `section_light_enabled` (one sun);
+  - `weapon_floor_amber` (M5's amber weapons);
+  - `weapon_chain_sim` (a straight chain);
+  - `audio_legacy_bank` (M2's sounds).
+
+**How the done-when is proved:**
+- **`tests/test_m6_no_placeholders.gd`** counts every kind of placeholder in the level, the crowd street and the training room: primitive bodies, tints, grey boxes, cylinder weapons, a missing second weapon, generated sounds and empty sound slots. Every count is 0 (`tests/fixtures/m6/placeholder_ratchet.json`). The allowed list is by name: the music loop, the shader warm-up meshes, the edge-pass quad and the legacy A/B bank.
+- **The budgets hold:** enemies 15,000 triangles, the boss and the player 30,000, props and weapons 3,000, modules 5,000, and one 2048 px trim sheet.
+- **Every generated asset rebuilds to its hash:**
+  - `run.py --check` for each character and prop, and `player_run.py --check`;
+  - `gen_palette.py --check` and `gen_trim.gd --check`;
+  - `ingest.py --check`.
+  - Every asset has an `ASSETS.md` row with its source, service and licence, and the binaries are in LFS.
+- **The paid services stayed inside the policy:** Tripo 545 of M6's 900 credits, ElevenLabs 4,843 of 30,000.
+- **The game underneath is M5's:** `tests/test_m6_colliders.gd` holds every static collider, and the M3-M5 done-when tests pass with every character's art. The held-back level run clears every arena (street 132 s, roofs 175 s, boss 111 s; M5 took 136, 183 and 108).
+- **Frame time:** FRAME_TIME_PENDING
 
 ## Milestone 5 status: the level blockout
 
@@ -285,10 +333,24 @@ The characters are procedural placeholders. Real art, VFX and audio come in Mile
   - The veteran Punk is marked by an orange tint over the whole Punk art.
   - A weapon lying on the floor is drawn amber and thicker (`weapon_floor_color`, `weapon_floor_radius_scale`), so it can be found on the grey floor. A held or thrown weapon keeps its look.
 
+**Where M6 departs from the spec, for Game-boy to rule on:**
+- **M4's departures now cover every character:**
+  - **Rig and animation (Spec §10, pipeline steps 4-6):** the Kicker, the Pipe Thug, the Bruiser and Ox Pellerin are rigged by Tripo and fitted to the game's own skeleton, and they play the game's own animation set, as the Punk does. No Mixamo or mocap clip is used. Their telegraph timings are M3's.
+  - **A 1k ink-detail mask on every enemy (Spec §10's table gives enemies and the boss the shared palette atlas only):** each character's seams, straps, wraps and face lines are thin ink in its own mask, as the Punk's are. Their colours are still flat palette swatches, 4-6 each.
+- **Performance is still measured on the Apple M1, not an RTX 3060 (Spec §10):** see "Frame time" above.
+
+**Where M6 departs from the plan or the look bible (decided by default; none is a spec rule):**
+- **Some of the plan's measured bars are held as ratchets,** as in M4: first-person framing (A9), the hit flash's anchor (A11), visible stretch (A7) and the Bruiser's legs inside his hurtboxes (A6, 90% against the 95% bar). Each ratchet is in that character's roster file (`tests/fixtures/art/roster/<id>.json`) with its reason. The Bruiser's art fills more of the view than his hit-test shapes in the smash and the grab (65-88% against 60-82%); slimming him to the shapes would have lost the plates and guards.
+- **The Bruiser's purple is a little duller than the look bible asks for an enemy's main colour** (saturation 0.44 against 0.5). The pipeline labels his texture by the nearest palette colour, and Tripo's violet is dull.
+- **The Bruiser's chest has fewer plate edges than the concept:** the steel reads as steel, with ink seams at the shoulders, but the generated model carries few plate lines.
+- **Three concept views per character, not four:** front, left and back, the views Tripo's accepted Punk run used.
+- **The environment modules are procedural Godot meshes on the trim sheet, not Blender-scripted ones** (a change from the approved proposal's method; the 5k module budget and the 2k sheet hold).
+- **The held weapon is out of view during a first-person swing,** as M5's pipe was, so the chain's whip shows only while it lies, flies or is held still.
+
 **Automated checks:**
-- `tools/run_tests.sh` runs about 1770 tests headless in about 300 s. Among them:
+- `tools/run_tests.sh` runs about 1930 tests headless in about 375 s. Among them:
   - an end-to-end suite where a scripted player performs every combo in the real test room;
-  - each milestone's done-when test (`tests/test_m3_done_when.gd`, `tests/test_m4_done_when.gd`, `tests/test_m5_done_when.gd`, which plays the whole level arena by arena);
+  - each milestone's done-when test (`tests/test_m3_done_when.gd`; `tests/test_m4_done_when.gd`, now run for every character in the art roster; `tests/test_m5_done_when.gd`, which plays the whole level arena by arena; `tests/test_m6_no_placeholders.gd`);
   - the level's own tests (`tests/test_m5_street.gd`, `tests/test_m5_roofs.gd`, `tests/test_level_kit.gd`, `tests/test_level_bot.gd`).
 - `tools/capture_combos.sh` records the combo bot with Movie Maker to `captures/combos.avi`, writes a hit log to `captures/bot.log`, and extracts stills for review. Pass text to run only matching acts, for example `tools/capture_combos.sh "haymaker"`. `tests/bot/ragdoll_bot.tscn` and `tests/bot/vfx_bot.tscn` play the ragdoll and VFX acts the same way (record them with Movie Maker, `--write-movie`).
 - `tests/bot/crowd_bot.tscn` plays the crowd street the same way: its acts are in `tests/bot/acts/` (one file per area, such as `crowd_acts.gd` for the mixed six, the waves to the boss, the mixed waves, the boss wave held back and the rear warning for every archetype). Pass text to run matching acts and `--seed=<n>` to repeat one with other seeds, for example `tools/capture_bot.sh res://tests/bot/crowd_bot.tscn captures/crowd "Mixed six" 6`. A probed act runs the readability probe, which writes `readability.json` (15 metrics, five of them hard) next to the recording, and the warning oracle, which checks the HUD's corners against Spec §8 at every wind-up. The perf act is recorded windowed, not with Movie Maker: `godot --path . res://tests/bot/crowd_bot.tscn -- --act="Perf, six with ragdolls"`.
