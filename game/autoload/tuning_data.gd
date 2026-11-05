@@ -1189,7 +1189,8 @@ extends Resource
 @export_subgroup("Ground")
 ## The street's ground tile (M6 playtest feedback, FB-GROUND; assets/export/kit/ground_sheet.png): the metres one side of
 ## it covers. It is painted for 8; a smaller number repeats its cracks, squares and manhole more often, a larger one
-## spreads them. It is sampled in world metres, so two floor blocks butt without a seam at any value.
+## spreads them. It is sampled in world metres, so two floor blocks butt without a seam at any value. The tile is mirrored on
+## every other tile along the street's length, so its manhole and grates repeat down the street every twice this.
 @export_range(2.0, 16.0, 0.5) var ground_m_per_tile: float = 8.0
 ## Where the ground's ink starts to soften with distance (the mip level at which the cut's edge begins to widen)...
 @export_range(0.0, 8.0, 0.25) var ground_ink_soft_from_lod: float = 2.0
@@ -1198,8 +1199,10 @@ extends Resource
 ## ...and the most it widens (0.45: the ink then shows as the sheet's own coverage, a crack dimming with the mips).
 @export_range(0.0, 0.5, 0.01) var ground_ink_soft_max: float = 0.45
 ## The strips' ink (the concrete's joints, the kerb's, the plaster's cracks) fades out between these two sizes of a
-## pixel, in texels of the 2048 px sheet: the capped mip (Look > Trim) would alias it past the first, so it is gone by the
-## second. A wall seen square at 10 m is about 9 texels a pixel, at 20 m about 17.
+## pixel, in texels of the 2048 px sheet, measured as the mean of the pixel's two sides (FIX-WORLD: the longer side alone
+## faded a roof deck's or a kerb top's seams within 6 to 10 m, where the eye sees them at a graze): the capped mip
+## (Look > Trim) would alias it past the first, so it is gone by the second. A wall seen square at 10 m is about 9 texels
+## a pixel, at 20 m about 17; a deck seen from eye height at 10 m is about 15 (46 along, 5 across).
 @export_range(1.0, 256.0, 1.0) var ground_ink_fade_start_texels: float = 16.0
 @export_range(2.0, 512.0, 1.0) var ground_ink_fade_end_texels: float = 64.0
 @export_subgroup("Draw cost")

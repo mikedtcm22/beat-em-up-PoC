@@ -40,6 +40,7 @@ const WALK_M_PER_S := 0.8
 const HELD: Array[Dictionary] = [
 	{label = "gap", section = 2, at = Vector3(8.5, 0.0, -10.5), yaw = -90.0, pitch = -38.0},
 	{label = "deck", section = 1, at = Vector3(19.0, 7.5, -8.5), yaw = 0.0, pitch = -8.0},
+	{label = "deck_far", section = 1, at = Vector3(19.0, 7.5, -8.5), yaw = 90.0, pitch = -4.0},
 ]
 
 

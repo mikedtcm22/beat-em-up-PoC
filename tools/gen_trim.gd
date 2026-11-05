@@ -33,6 +33,8 @@ const STRIPS := "res://assets/export/kit/trim_strips.json"
 const GROUND := "res://assets/export/kit/ground_sheet.png"
 ## The thinnest ink feature (px) any strip or the ground may paint: narrower marks alias under the mips.
 const MIN_INK_PX := 5
+## The ground's dark patches are outlined this many px each side of the edge.
+const DARK_RING_PX := 3
 ## HudStyle.INK, the one ink (0.07, 0.06, 0.09).
 const INK := Color(0.07, 0.06, 0.09)
 ## The environment band the painted colours are clamped into (the look bible), with a margin for the
@@ -475,8 +477,7 @@ var _ink: PackedFloat32Array = PackedFloat32Array()
 var _rng := RandomNumberGenerator.new()
 
 
-## The ground tile: flat tones (base, worn patches cool and warm, dark patches, tar-sealed seams, oil stains, patched
-## squares) under bold ink (branching tapered cracks, the squares' outlines, a manhole, drain grates). Tileable both ways.
+## The ground tile: flat tones (base, broad worn pools cool and warm, a few dark patches, two patched squares) under bold ink (branching tapered cracks, the squares' outlines, a manhole, drain grates). Tileable both ways.
 func _paint_ground(spec: Dictionary) -> Image:
 	var size := int(spec.px)
 	_w = size
@@ -496,6 +497,8 @@ func _paint_ground(spec: Dictionary) -> Image:
 	warp_y.resize(count)
 	var colors: Array[Color] = []
 	colors.resize(count)
+	var dark_mask := PackedByteArray()
+	dark_mask.resize(count)
 	for y in size:
 		for x in size:
 			var idx := y * size + x
@@ -506,31 +509,30 @@ func _paint_ground(spec: Dictionary) -> Image:
 			var p := posmod(int(wx), size)
 			var q := posmod(int(wy), size)
 			var color: Color = tone.base
-			var worn := _noise(p, q, 256, 202)
-			if worn > 0.63:
-				# A worn patch is a cool rim round a warm core (the lamp's pool): two flat bands, not a split.
-				color = tone.worn_warm if worn > 0.69 else tone.worn
-			elif worn < 0.25:
-				color = tone.dark
-			# A tar-sealed repair: a wavy seam, wider and narrower along its length, only where the gate lets it.
-			var seam := absf(_noise(p, q, 256, 203) - 0.5)
-			if seam < 0.032 * (0.35 + _noise(x, y, 128, 207)) and _noise(x, y, 512, 206) > 0.42:
-				color = tone.tar
-			# An oil stain: a dark flat blot.
-			if _noise(p, q, 128, 204) > 0.80 and _noise(x, y, 1024, 208) > 0.40:
-				color = tone.oil
+			# A broad worn pool (a lamp's light on the road) in four cells a tile: a cool rim round a warm core, two flat bands.
+			var worn := _noise(p, q, 512, 202)
+			if worn > 0.58:
+				color = tone.worn_warm if worn > 0.66 else tone.worn
+			if _noise(p, q, 512, 212) < 0.10:
+				dark_mask[idx] = 1
 			colors[idx] = color
+	# The dark patches (a puddle's shadow, a stretch of fresh tar): few and large, a flat tone with an inked outline.
+	for idx in count:
+		if dark_mask[idx] == 1:
+			colors[idx] = tone.dark
+	_outline_mask(dark_mask, DARK_RING_PX)
 	# Patched squares: a flat tone and an inked outline, the edges wobbled by the warp.
-	for rect: Array in [[420, 520, 150, 100], [1500, 1180, 190, 120], [900, 1700, 130, 170]]:
+	for rect: Array in [[420, 520, 150, 100], [1500, 1180, 190, 120]]:
 		_ground_rect(colors, warp_x, warp_y, tone.patch, int(rect[0]), int(rect[1]), float(rect[2]), float(rect[3]), 4.5)
-	# The manhole: a ring, an inner ring, a bar grate.
-	_ground_manhole(colors, tone.cover, 1500, 560)
+	# The manhole: a ring, an inner ring, a bar grate. It and the grates sit well inside the tile (the shader mirrors the tile on
+	# every other tile down the street, so a feature near the top or bottom edge would sit next to its own reflection).
+	_ground_manhole(colors, tone.cover, 900, 1020)
 	# Drain grates (a frame and bars), one lying one way and one the other.
-	_ground_grate(colors, tone.cover, 250, 1450, 85, 50, false)
-	_ground_grate(colors, tone.cover, 1760, 1830, 48, 80, true)
+	_ground_grate(colors, tone.cover, 600, 1500, 85, 50, false)
+	_ground_grate(colors, tone.cover, 1700, 300, 48, 80, true)
 	# Branching cracks, tapered: a fat root, a thin tip, never under MIN_INK_PX wide.
-	for crack in [[120, 220, 0.25, 170, 7.5], [980, 140, -0.35, 150, 7.0], [1650, 300, 0.55, 140, 6.5], [300, 980, -0.15, 160, 7.0],
-			[1250, 900, 2.6, 130, 6.5], [1800, 1520, 3.5, 150, 7.0], [700, 1300, -0.6, 110, 6.0], [1950, 800, 1.9, 120, 6.0]]:
+	for crack in [[120, 220, 0.25, 170, 7.5], [1650, 300, 0.55, 140, 6.5], [1250, 900, 2.6, 130, 6.5], [1800, 1520, 3.5, 150, 7.0],
+			[700, 1300, -0.6, 110, 6.0]]:
 		_crack(float(crack[0]), float(crack[1]), float(crack[2]), int(crack[3]), float(crack[4]), 0)
 	var bytes := PackedByteArray()
 	bytes.resize(count * 4)
@@ -544,6 +546,55 @@ func _paint_ground(spec: Dictionary) -> Image:
 		bytes[idx * 4 + 2] = int(round(color.b * 255.0))
 		bytes[idx * 4 + 3] = int(round(a * 255.0))
 	return Image.create_from_data(size, size, false, Image.FORMAT_RGBA8, bytes)
+
+
+## An outline of `half` px each side of the edge of `mask`, stamped into the ink layer: the dilated mask without the eroded one,
+## its coverage softened a pixel so the 0.5 contour is the shape's edge (a ring at least 2 x half wide, so never under MIN_INK_PX).
+func _outline_mask(mask: PackedByteArray, half: int) -> void:
+	var outer := _dilate(mask, half)
+	var inner := _erode(mask, half)
+	var ring := PackedFloat32Array()
+	ring.resize(mask.size())
+	for idx in mask.size():
+		ring[idx] = 1.0 if outer[idx] == 1 and inner[idx] == 0 else 0.0
+	for y in _h:
+		for x in _w:
+			var sum := 0.0
+			for dy in range(-1, 2):
+				for dx in range(-1, 2):
+					sum += ring[posmod(y + dy, _h) * _w + posmod(x + dx, _w)]
+			_ink_at(x, y, minf(sum / 4.5, 1.0) if sum > 0.0 else 0.0)
+
+
+## `mask` grown by `radius` px (a square window, wrapping both ways).
+func _dilate(mask: PackedByteArray, radius: int) -> PackedByteArray:
+	return _window(_window(mask, radius, true, true), radius, true, false)
+
+
+## `mask` shrunk by `radius` px (a square window, wrapping both ways).
+func _erode(mask: PackedByteArray, radius: int) -> PackedByteArray:
+	return _window(_window(mask, radius, false, true), radius, false, false)
+
+
+## One separable pass of a (2 radius + 1) px window over the tile's rows (`horizontal`) or columns: a pixel is 1 when any
+## (`any`) or every pixel in its window is.
+func _window(mask: PackedByteArray, radius: int, any: bool, horizontal: bool) -> PackedByteArray:
+	var out := PackedByteArray()
+	out.resize(mask.size())
+	var width := 2 * radius + 1
+	for line in (_h if horizontal else _w):
+		var count := 0
+		for k in range(-radius, radius + 1):
+			count += mask[_at(k, line, horizontal)]
+		for i in (_w if horizontal else _h):
+			out[_at(i, line, horizontal)] = 1 if (count > 0 if any else count == width) else 0
+			count += mask[_at(i + radius + 1, line, horizontal)] - mask[_at(i - radius, line, horizontal)]
+	return out
+
+
+## The index of position `i` along a row (`horizontal`) or a column `line`, wrapping.
+func _at(i: int, line: int, horizontal: bool) -> int:
+	return line * _w + posmod(i, _w) if horizontal else posmod(i, _h) * _w + line
 
 
 ## Coverage of a feature `distance` px from its centre line (or edge) when it is `half` px from that line to its edge:
@@ -609,8 +660,8 @@ func _ground_manhole(colors: Array[Color], tone: Color, cx: int, cy: int) -> voi
 			_ink_at(xx, yy, _coverage(5.5, absf(d - 90.0)))
 			_ink_at(xx, yy, _coverage(3.5, absf(d - 66.0)))
 			if d < 62.0:
-				# Horizontal bars every 24 px and one upright bar through the middle.
-				_ink_at(xx, yy, _coverage(3.5, absf(fposmod(dy + 12.0, 24.0) - 12.0)))
+				# Horizontal bars every 36 px and one upright bar through the middle.
+				_ink_at(xx, yy, _coverage(4.5, absf(fposmod(dy + 18.0, 36.0) - 18.0)))
 				_ink_at(xx, yy, _coverage(3.5, absf(dx)))
 
 
@@ -627,7 +678,7 @@ func _ground_grate(colors: Array[Color], tone: Color, cx: int, cy: int, hw: int,
 			_ink_at(xx, yy, _coverage(4.0, absf(edge)))
 			if edge < -7.0:
 				var along := float(yy - cy) if vertical else float(xx - cx)
-				_ink_at(xx, yy, _coverage(3.5, absf(fposmod(along + 11.0, 22.0) - 11.0)))
+				_ink_at(xx, yy, _coverage(4.5, absf(fposmod(along + 17.0, 34.0) - 17.0)))
 
 
 ## A minimal .import for the sheet: lossless, mipmaps, the alpha untouched (it is the ink mask and the

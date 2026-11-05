@@ -149,7 +149,9 @@ func test_the_trim_material_samples_the_ground_in_world_metres_with_its_mips_fre
 	assert_true(bool(material.get_shader_parameter(&"ground_on")))
 	var code := FileAccess.get_file_as_string("res://game/fx/trim_body.gdshaderinc")
 	assert_string_contains(code, "world_m = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xz", "the ground's coordinates are the world's")
-	assert_string_contains(code, "textureGrad(ground_tex, gt, ggx, ggy)", "the ground's gradients are the surface's own: every mip level in reach")
+	assert_string_contains(code, "textureGrad(ground_tex, gtm, ggx, ggy)", "the ground's gradients are the surface's own: every mip level in reach")
+	assert_string_contains(code, "vec2 gtm = vec2(gt.x, abs(mod(gt.y, 2.0) - 1.0))", "the tile is mirrored on every other tile down the street, so its manhole and grates repeat every two")
+	assert_string_contains(code, "fade_texels = sqrt(abs(gx.x * gy.y - gx.y * gy.x)) * sheet", "a strip's ink fades by the mean side of the footprint, not the longer")
 	assert_string_contains(code, "textureGrad(trim_tex, uv, gx * keep, gy * keep)", "the strips keep the capped mip")
 	assert_string_contains(code, "mask *= 1.0 - smoothstep(ink_fade.x, ink_fade.y, texels)", "and fade their ink where the cap would alias it")
 

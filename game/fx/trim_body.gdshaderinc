@@ -10,14 +10,16 @@ uniform float tile_m = 4.0;
 // w = flags (1 scissor, 2 ink only, 4 ground).
 uniform vec4 strips[16];
 // The street's ground (FB-GROUND): a strip with flag 4 samples ground_tex instead, in WORLD metres (x, -z) over `ground_m`
-// metres a tile, with every mip level in reach (it is one picture, not a stack of wrapped strips, so nothing bleeds
+// metres a tile (mirrored on every other tile along z, the street's length, so its manhole and grates fall in two places over
+// two tiles and the repeat down the street is 2 x ground_m, with no seam: a mirror is continuous at its fold), with every mip level in reach (it is one picture, not a stack of wrapped strips, so nothing bleeds
 // and the sheet's lod cap does not apply). ground_on false is the Debug switch: the strip's own paint, M6's way.
 uniform sampler2D ground_tex : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform float ground_m = 8.0;
 uniform bool ground_on = true;
 // How the ink softens with distance. On the ground, the cut's edge widens from (x) mip levels by (y) a level up to (z), so a
 // crack that shrinks under a pixel dims smoothly and never pops; on a strip, the ink fades out between (x) and (y) texels a
-// pixel, where the capped mip would alias it (Tuning's Level > Ground).
+// pixel (the geometric mean of the footprint's two sides, so a roof deck or kerb top seen at a graze keeps its seams as far as a
+// wall does), where the capped mip would alias it (Tuning's Level > Ground).
 uniform vec3 ink_soft = vec3(2.0, 0.12, 0.45);
 uniform vec2 ink_fade = vec2(16.0, 64.0);
 uniform vec3 ink : source_color = vec3(0.07, 0.06, 0.09);
@@ -44,15 +46,15 @@ void vertex() {
 }
 
 // The ink's coverage from the sheet's alpha `a`: the cut at ink_cut with an edge one pixel wide, and then the distance's
-// softening (the ground) or fade (a strip), by the `texels` one pixel covers.
-float ink_mask(float a, float texels, bool ground) {
+// softening (the ground, by the `texels` one pixel covers along its longer side) or fade (a strip, by `fade_texels`, the mean side).
+float ink_mask(float a, float texels, float fade_texels, bool ground) {
 	float edge = max(0.5 * fwidth(a), 0.0001);
 	if (ground) {
 		edge += clamp((log2(max(texels, 1.0)) - ink_soft.x) * ink_soft.y, 0.0, ink_soft.z);
 	}
 	float mask = smoothstep(ink_cut - edge, ink_cut + edge, a);
 	if (!ground) {
-		mask *= 1.0 - smoothstep(ink_fade.x, ink_fade.y, texels);
+		mask *= 1.0 - smoothstep(ink_fade.x, ink_fade.y, fade_texels);
 	}
 	return mask;
 }
@@ -67,16 +69,25 @@ void fragment() {
 	vec2 gy = dFdy(t) * vec2(1.0, -row.y);
 	// The ground's own coordinates (derivatives taken here, outside any branch).
 	vec2 gt = vec2(world_m.x, -world_m.y) / ground_m;
-	vec2 ggx = dFdx(gt);
-	vec2 ggy = dFdy(gt);
+	// Mirrored on every other tile along z: the triangle wave of gt.y, and the gradient turned the same way (only the lod and
+	// the anisotropy's axis read it). Across the street (x) the tile repeats as it is, so the two halves of the street
+	// are not each other's reflection.
+	vec2 gtm = vec2(gt.x, abs(mod(gt.y, 2.0) - 1.0));
+	vec2 fold = vec2(1.0, sign(mod(gt.y, 2.0) - 1.0));
+	vec2 ggx = dFdx(gt) * fold;
+	vec2 ggy = dFdy(gt) * fold;
 	vec4 c;
 	float texels;
+	float fade_texels;
 	if (ground) {
 		texels = max(length(ggx), length(ggy)) * float(textureSize(ground_tex, 0).x);
-		c = textureGrad(ground_tex, gt, ggx, ggy);
+		fade_texels = texels;
+		c = textureGrad(ground_tex, gtm, ggx, ggy);
 	} else {
 		// Texels one pixel covers; past 2^lod_cap the gradients are scaled back so the level stops there.
-		texels = max(length(gx), length(gy)) * float(textureSize(trim_tex, 0).x);
+		float sheet = float(textureSize(trim_tex, 0).x);
+		texels = max(length(gx), length(gy)) * sheet;
+		fade_texels = sqrt(abs(gx.x * gy.y - gx.y * gy.x)) * sheet;
 		float keep = min(1.0, exp2(lod_cap) / max(texels, 0.0001));
 		c = textureGrad(trim_tex, uv, gx * keep, gy * keep);
 	}
@@ -86,11 +97,11 @@ void fragment() {
 		ALPHA = c.a;
 		ALPHA_SCISSOR_THRESHOLD = scissor_cut;
 	} else {
-		color = mix(color, ink, ink_mask(c.a, texels, ground));
+		color = mix(color, ink, ink_mask(c.a, texels, fade_texels, ground));
 		ALPHA = 1.0;
 	}
 #else
-	color = mix(color, ink, ink_mask(c.a, texels, ground));
+	color = mix(color, ink, ink_mask(c.a, texels, fade_texels, ground));
 #endif
 	if (debug_view == 1) {
 		color = vec3(strip_id / 15.0);
