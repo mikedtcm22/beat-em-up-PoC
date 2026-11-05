@@ -274,7 +274,48 @@
 					],
 					"ink_low": 0.04,
 					"ink_high": 0.11,
-					"crease_deg": 80
+					"crease_deg": 80,
+					"valley_deg": 11
+				},
+				{
+					"name": "scarf",
+					"slots": [
+						44
+					],
+					"min": [
+						-0.2,
+						0.0,
+						1.3
+					],
+					"max": [
+						0.2,
+						0.5,
+						1.68
+					],
+					"ink_low": 0.04,
+					"ink_high": 0.11,
+					"crease_deg": 181,
+					"valley_deg": 181
+				},
+				{
+					"name": "helmet",
+					"slots": [
+						44
+					],
+					"min": [
+						-0.3,
+						-0.4,
+						1.68
+					],
+					"max": [
+						0.3,
+						0.4,
+						1.95
+					],
+					"ink_low": 0.04,
+					"ink_high": 0.11,
+					"crease_deg": 80,
+					"valley_deg": 181
 				},
 				{
 					"name": "guard_left",
@@ -328,10 +369,22 @@
 			},
 			"crease": {
 				"angle_deg": 70,
-				"width_m": 0.005,
-				"ramp_m": 0.003,
+				"width_m": 0.0035,
+				"ramp_m": 0.0025,
 				"spacing_m": 0.003,
-				"min_chain_m": 0.2
+				"min_chain_m": 0.2,
+				"valley": {
+					"angle_deg": 999,
+					"min_chain_m": 0.35,
+					"width_m": 0.003,
+					"ramp_m": 0.002
+				}
+			},
+			"texel_swatch": {
+				"blur_px": 1.0,
+				"passes": 2,
+				"fill_px": 3,
+				"rings": 1
 			}
 		},
 		"strap_slot": 45,
@@ -339,7 +392,45 @@
 		"fist_border_cell_m": 0.012,
 		"reserve_tris": 700,
 		"strap_paint_slot": 46,
-		"min_island_area_m2": 0.003
+		"min_island_area_m2": 0.003,
+		"regions": [
+			{
+				"name": "helmet_back",
+				"slot": 44,
+				"min": [
+					-0.3,
+					-0.4,
+					1.55
+				],
+				"max": [
+					0.3,
+					0.02,
+					1.95
+				],
+				"only_from": [
+					45,
+					46
+				]
+			},
+			{
+				"name": "helmet_top",
+				"slot": 44,
+				"min": [
+					-0.3,
+					-0.4,
+					1.71
+				],
+				"max": [
+					0.3,
+					0.4,
+					1.95
+				],
+				"only_from": [
+					45,
+					46
+				]
+			}
+		]
 	},
 	"export": {
 		"hull_normal_digits": 5,

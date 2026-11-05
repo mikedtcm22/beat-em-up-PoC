@@ -33,7 +33,9 @@ F-punk's additions (all opt-in by config, so the probe and the player run as bef
 	  glint-gate streaks when `glint` is set, and the glove's authored lines when `glove_lines` is); its
 	  no_ink_slots (the lens) get no ink, and so does a zone with "no_ink": true (the Punk's laces and cap: the generated
 	  texture's noise there is not a line, and the colour border already gives the shape);
-	palette.detail_bake.crease (M6 FB-DETAIL): the dense mesh's sharp edges as ink (pipe_detail.crease_field), a zone's crease_deg per face.
+	palette.detail_bake.crease (M6 FB-DETAIL): the dense mesh's sharp edges as ink (pipe_detail.crease_field), a zone's crease_deg per face;
+	its `valley` (M6 DETAIL-2) draws the concave edges (quilting, folds) at their own angle and chain length, a zone's valley_deg per face.
+	palette.detail_bake.texel_swatch (M6 DETAIL-2): a palette slot per texel in the mask's B (pipe_detail.texel_labels), so colour borders follow the texture.
 """
 import math
 import os
@@ -310,6 +312,7 @@ def run(cfg, extra):
 	region_report = []
 	if island_flips is not None:  # an entry of the always-present list, so the shared report keys stay the Punk's (test_art_contract's guard)
 		region_report.append({"name": "island_merge", "min_area_m2": float(pc_cfg["min_island_area_m2"]), "faces": int(island_flips)})
+	region_set = np.zeros(n_faces, dtype=bool)  # the dense faces a region painted: the texture does not decide their texels (M6 DETAIL-2)
 	if pc_cfg.get("regions"):
 		centers_dense = pb.face_centers(me)
 		for reg in pc_cfg["regions"]:
@@ -319,6 +322,7 @@ def run(cfg, extra):
 				inside &= np.isin(label_slot, reg["only_from"])
 			sel = inside & need
 			label_slot[sel] = int(reg["slot"])
+			region_set |= sel
 			region_report.append({"name": reg.get("name", ""), "slot": int(reg["slot"]), "faces": int(sel.sum())})
 
 	# ----- 4. relax the border loops
@@ -636,6 +640,7 @@ def run(cfg, extra):
 		zone_id = np.zeros(len(me.polygons), dtype=np.int32)
 		zone_names = []
 		face_crease = np.full(len(me.polygons), float((db.get("crease") or {}).get("angle_deg", 60.0)))
+		face_valley = np.full(len(me.polygons), float(((db.get("crease") or {}).get("valley") or {}).get("angle_deg", 999.0)))
 		for zi, zone in enumerate(db.get("zones", []), start=1):
 			zsel = np.ones(len(me.polygons), dtype=bool)
 			if zone.get("slots"):
@@ -648,6 +653,8 @@ def run(cfg, extra):
 				gain[zsel] = 0.0
 			if "crease_deg" in zone:
 				face_crease[zsel] = float(zone["crease_deg"])
+			if "valley_deg" in zone:
+				face_valley[zsel] = float(zone["valley_deg"])
 			zone_id[zsel] = zi
 			zone_names.append(zone.get("name", "zone%d" % zi))
 		# the glint gate (rescore-rs-01): the faces of the glossy slots (the lens) get the authored streaks in G
@@ -665,8 +672,27 @@ def run(cfg, extra):
 				out_dir = np.array([sign, 0.0, 0.0]) - axis * sign * axis[0]
 				out_dir /= np.linalg.norm(out_dir)
 				frames[side] = {"sign": sign, "head": head, "a": axis, "b": out_dir, "c": np.cross(axis, out_dir)}
+		# M6 DETAIL-2, config `texel_swatch`: each baked texel also gets its palette slot (B), taken from the texture's own colour among the
+		# slots the texel's dense face and its neighbours carry (`rings` rings of faces), so a colour border follows the texture, not the faces
+		swatch = None
+		ts = db.get("texel_swatch")
+		if ts:
+			cand = [int(sl) for sl in slots if (dense_label == sl).any()]
+			col_of = {sl: i for i, sl in enumerate(cand)}
+			ring = np.zeros((n_faces, len(cand)), dtype=bool)
+			for f in range(n_faces):
+				if int(dense_label[f]) in col_of:
+					ring[f, col_of[int(dense_label[f])]] = True
+			for _ in range(int(ts.get("rings", 1))):
+				grown = ring.copy()
+				for f in range(n_faces):
+					for g in nb[f]:
+						grown[f] |= ring[g]
+				ring = grown
+			swatch = {"lab_fn": srgb_to_lab, "slots": cand, "cand_lab": cand_lab[[slots.index(sl) for sl in cand]], "dense_ok": need & ~region_set,
+				"ring": ring, "face_slot": new_label}
 		bake_report = pipe_detail.bake(me, "detail", image, bvh, dense_verts_np, tri_idx, corner_uv, db, out_png, pc.work_path(cfg, "detail_source.png"), gain,
-			zone_low, zone_high, zone_id, zone_names, glint_cfg, face_glint, glove_cfg, frames, new_label, face_crease)
+			zone_low, zone_high, zone_id, zone_names, glint_cfg, face_glint, glove_cfg, frames, new_label, face_crease, face_valley, swatch)
 		bake_report["png"] = os.path.basename(out_png)  # the folder differs in a --check rebuild; the content must not
 		bake_report["sha256"] = pc.sha256_file(out_png)
 	me.materials.clear()

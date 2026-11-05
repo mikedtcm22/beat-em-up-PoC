@@ -8,6 +8,9 @@ extends GutTest
 ## docs/milestones/M6-calls/FB-DETAIL.md). Every other character's `run.py --check` is a command, not a test: the roster test
 ## (tests/test_art_roster.gd) hashes each report against its GLBs, and the shared-step guard in test_art_contract.gd would fail
 ## on a new unconditional report key.
+##
+## DETAIL-2 (phase 2a, the Bruiser's quilting, clean colour borders and line weight) adds the tests at the end: the valley ink, the
+## palette slot per texel in the mask's blue channel (and what reads it), the helmet region and the lines' weight.
 
 const GLB := "res://assets/export/characters/bruiser/bruiser.glb"
 const MASK := "res://assets/export/characters/bruiser/bruiser_detail.png"
@@ -164,3 +167,137 @@ func test_the_bruisers_config_holds_the_recipe_values() -> void:
 		if zone.has("crease_deg"):
 			with_crease += 1
 	assert_gte(with_crease, 3, "the chest plates, the guards and the cloth ask for their own angle")
+
+
+# --- DETAIL-2 -------------------------------------------------------------------------------------------------------------------
+
+## Samples of the mask's blue channel over the mesh: how many carry a code, how many name a slot other than the face's own.
+func _codes() -> Dictionary:
+	var uv2: PackedVector2Array = _arrays[Mesh.ARRAY_TEX_UV2]
+	var idx := _tris()
+	var coded := 0
+	var differ := 0
+	var allowed := 0
+	var total := 0
+	for tri: int in idx.size() / 3:
+		var face_slot := _slot_of_tri(tri)
+		for w: Vector3 in SAMPLES:
+			var uv: Vector2 = uv2[idx[tri * 3]] * w.x + uv2[idx[tri * 3 + 1]] * w.y + uv2[idx[tri * 3 + 2]] * w.z
+			var c := _mask.get_pixel(clampi(int(uv.x * _mask.get_width()), 0, _mask.get_width() - 1), clampi(int(uv.y * _mask.get_height()), 0, _mask.get_height() - 1))
+			var code := roundi(c.b * 255.0)
+			total += 1
+			if code > 0:
+				coded += 1
+				if SLOTS_ALLOWED.has(code - 1):
+					allowed += 1
+				if code - 1 != face_slot:
+					differ += 1
+	return {"total": total, "coded": coded, "differ": differ, "allowed": allowed}
+
+
+## The colour border follows the texture: every texel the mesh uses has a code, each names one of the Bruiser's slots, and a few
+## per cent of them name a swatch other than their face's (the border moved off the faces' staircase), never most of them.
+func test_the_mask_carries_a_palette_slot_per_texel() -> void:
+	var c := _codes()
+	print("DETAIL-2 codes: %d of %d samples coded, %d differ from the face" % [c.coded, c.total, c.differ])
+	assert_gte(float(c.coded) / float(c.total), 0.99, "nearly every sample of every face has a code (%d of %d)" % [c.coded, c.total])
+	assert_eq(int(c.allowed), int(c.coded), "and each names one of 6, 14, 44, 45, 46")
+	var share := float(c.differ) / float(c.total)
+	assert_gt(share, 0.002, "the codes move some borders off the faces (%.4f)" % share)
+	assert_lt(share, 0.08, "and most texels keep their face's swatch (%.4f)" % share)
+
+
+## No other art's mask is marked as carrying codes (alpha 128/255; they are opaque), whatever their blue channel holds (the hero's is a
+## grey), so the shader leaves their swatches as they were. The Bruiser's is marked.
+func test_no_other_mask_has_codes() -> void:
+	for id: String in ["punk", "player", "kicker", "thug", "boss"]:
+		var img := (load("res://assets/export/characters/%s/%s_detail.png" % [id, id]) as Texture2D).get_image()
+		if img.is_compressed():
+			img.decompress()
+		var least := 1.0
+		for y: int in range(0, img.get_height(), 4):
+			for x: int in range(0, img.get_width(), 4):
+				least = minf(least, img.get_pixel(x, y).a)
+		assert_gte(least, 0.999, "%s: the mask is opaque" % id)
+	assert_almost_eq(_mask.get_pixel(0, 0).a, 128.0 / 255.0, 0.01, "the Bruiser's mask carries the marker, 128 / 255")
+
+
+## The decode: a code names its slot's swatch centre (the face UVs of the mesh are the same function), 0 names none.
+func test_the_code_decodes_to_the_slots_swatch() -> void:
+	assert_eq(ToonMaterials.texel_swatch_uv(0), Vector2(-1.0, -1.0), "0 is none")
+	var uvs: PackedVector2Array = _arrays[Mesh.ARRAY_TEX_UV]
+	var checked := 0
+	for tri: int in range(0, _tris().size() / 3, 97):
+		var uv := uvs[_tris()[tri * 3]]
+		var slot := _slot_of(uv)
+		assert_eq(ToonMaterials.texel_swatch_uv(slot + 1), uv, "slot %d: the code's swatch is the face's UV" % slot)
+		checked += 1
+	assert_gt(checked, 100, "faces were checked")
+	var shader := FileAccess.get_file_as_string("res://game/fx/toon.gdshader")
+	assert_string_contains(shader, "const vec2 ATLAS_GRID = vec2(32.0, 2.0);", "the shader's atlas grid is the layout's")
+	assert_string_contains(shader, "texelFetch(detail_tex", "a code is read with no filtering (an index must not be interpolated)")
+	assert_string_contains(shader, "w > 0.5 ? texel_swatch.a : swatch.a", "the damage class and gloss follow the texel's swatch")
+	assert_string_contains(shader, "uniform bool use_texel_swatch = true;", "a uniform, never a shader variant")
+
+
+## The art's material takes the switch and the fade from Tuning; off is M6's face swatches.
+func test_the_material_carries_the_switch_and_the_fade() -> void:
+	var material := ToonMaterials.art(load("res://assets/export/palette/palette_atlas.png") as Texture2D, load(MASK) as Texture2D, true)
+	ToonMaterials.apply_look(material)
+	assert_true(bool(material.get_shader_parameter(&"use_texel_swatch")), "on by default")
+	var fade: Vector2 = material.get_shader_parameter(&"texel_swatch_fade")
+	assert_lt(fade.x, fade.y, "a fade from %.1f to %.1f texels per pixel" % [fade.x, fade.y])
+	var before := Tuning.data.look_texel_swatch
+	Tuning.data.look_texel_swatch = false
+	ToonMaterials.apply_look(material)
+	assert_false(bool(material.get_shader_parameter(&"use_texel_swatch")), "the A/B switch gives the face swatches back")
+	Tuning.data.look_texel_swatch = before
+	ToonMaterials.apply_look(material)
+
+
+## The helmet is the purple of the concept (the texture painted its back and sides steel in patches); the visor stays steel.
+func test_the_helmet_is_purple() -> void:
+	var purple := 0
+	var n := 0
+	for tri: int in _tris().size() / 3:
+		var c := _centre(tri)
+		if c.y > 1.72 and absf(c.x) < 0.25:
+			n += 1
+			if _slot_of_tri(tri) == SLOT_PURPLE:
+				purple += 1
+	assert_gt(n, 100, "the helmet's top holds faces (%d)" % n)
+	assert_gte(float(purple) / float(n), 0.95, "its top is purple (%d of %d)" % [purple, n])
+
+
+## The line weight: a crease line is `width_m` plus 1.7 `ramp_m` across at the shader's cut, 10 mm in the pilot and about 7.8 mm now; the valley ink (quilting, folds) is on for the cloth and off for the scarf and the helmet.
+func test_the_lines_are_the_punks_weight_and_the_quilting_is_on() -> void:
+	var cfg: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(PIPELINE))
+	var crease: Dictionary = cfg.palette.detail_bake.crease
+	var across := float(crease.width_m) + 1.7 * float(crease.ramp_m)
+	assert_lte(across, 0.008, "crease lines at most 8 mm across (%.4f; the pilot's 0.0101)" % across)
+	assert_gte(across, 0.004, "and not thinner than the mask holds (%.4f)" % across)
+	assert_true(crease.has("valley"), "the valley ink is configured")
+	var zones: Dictionary = {}
+	for zone: Dictionary in cfg.palette.detail_bake.zones:
+		zones[zone.name] = zone
+	assert_lt(float(zones.cloth.valley_deg), 30.0, "the cloth draws shallow valleys")
+	assert_gt(float(zones.scarf.valley_deg), 180.0, "the scarf draws none")
+	assert_gt(float(zones.helmet.valley_deg), 180.0, "nor the helmet")
+	assert_false(zones.chest_plates.has("valley_deg"), "the steel keeps its creases only")
+	var report: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(REPORT)).steps.palette.detail_bake
+	assert_true(report.has("texel_swatch"), "the report says the texel codes were baked")
+	assert_lt(float(report.texel_swatch.differ_from_face_share), 0.08, "few texels leave their face's swatch")
+
+
+## The new keys are the Bruiser's alone (their absence is what keeps every other `run.py --check` hash).
+func test_no_other_character_uses_the_valley_or_texel_keys() -> void:
+	var dir := DirAccess.open("res://assets/source/characters")
+	for id: String in dir.get_directories():
+		if id == "bruiser":
+			continue
+		var path := "res://assets/source/characters/%s/pipeline.json" % id
+		if not FileAccess.file_exists(path):
+			continue
+		var text := FileAccess.get_file_as_string(path)
+		assert_false(text.contains("texel_swatch"), "%s: no texel codes" % id)
+		assert_false(text.contains("valley"), "%s: no valley ink" % id)

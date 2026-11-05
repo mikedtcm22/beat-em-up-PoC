@@ -1435,6 +1435,15 @@ extends Resource
 ## breaks them into dashes). 0 is the soft linear mix for every art (the A/B).
 @export_range(0.0, 0.9, 0.01) var look_detail_cut: float = 0.15
 
+## M6 DETAIL-2: an art whose detail mask carries a palette slot per texel (the Bruiser's) takes each
+## texel's swatch, so a colour border follows the texture, not the 2 cm faces. A border at texel
+## resolution (about 4 mm) is exact up close but crawls once a texel is smaller than a pixel, so the
+## swatch fades to the face's between this many texels per pixel (below it every texel is its own;
+## the Bruiser's texels are about 4 mm, so 1 is about 3 m) and `look_texel_swatch_fade_far`.
+@export_range(0.1, 8.0, 0.1) var look_texel_swatch_fade_near: float = 1.0
+## The texels per pixel at and beyond which a texel takes its face's swatch (about 10 m at 3).
+@export_range(0.2, 16.0, 0.1) var look_texel_swatch_fade_far: float = 3.0
+
 @export_subgroup("Outline")
 ## The inverted-hull outline's width in pixels at 1080p (the look bible: 3.5 to 4 px at 1 to
 ## 3 m, never above 4.5).
@@ -1612,6 +1621,10 @@ extends Resource
 ## off brings back M4's: every clothes swatch takes the blood tile, soft-edged. Read at each look
 ## change. Presets never hold it.
 @export var look_marks_per_swatch: bool = true
+## A/B of M6 DETAIL-2's texel swatches: on, an art whose detail mask has palette codes in its blue
+## channel (the Bruiser's) takes each texel's swatch; off, every face takes its own, as M6 did. Read
+## when a material is made or refreshed. Presets never hold it.
+@export var look_texel_swatch: bool = true
 ## A/B of D14 (M6 PROPS): a static prop's baked-smooth-normal hull (on) or the screen edge pass's
 ## lines alone (off). Read when a StaticArt is built, so set it (a preset never holds it) before the
 ## room loads.

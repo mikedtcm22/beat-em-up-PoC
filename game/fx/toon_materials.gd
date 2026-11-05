@@ -264,6 +264,23 @@ static func apply_look(material: ShaderMaterial) -> void:
 		material.set_shader_parameter(&"glint_strength", data.look_glint_strength)
 		material.set_shader_parameter(&"detail_sharp", bool(material.get_meta(_SHARP_META, false)) and data.look_detail_cut > 0.0)
 		material.set_shader_parameter(&"detail_cut", data.look_detail_cut)
+		# M6 DETAIL-2: the texel swatches of a mask that carries them (B above 0), the Bruiser's; the fade is in texels per pixel
+		material.set_shader_parameter(&"use_texel_swatch", data.look_texel_swatch)
+		material.set_shader_parameter(&"texel_swatch_fade", Vector2(data.look_texel_swatch_fade_near, maxf(data.look_texel_swatch_fade_far, data.look_texel_swatch_fade_near + 0.1)))
+
+
+## The atlas's layout, as tools/pipeline/gen_palette.py has it (COLUMNS, ROWS) and toon.gdshader's ATLAS_GRID.
+const ATLAS_COLUMNS := 32
+const ATLAS_ROWS := 2
+
+
+## The atlas UV of the swatch a detail mask's blue channel names (M6 DETAIL-2), `code8` the channel as 0-255: the slot plus 1, so 0 names
+## none and the face's own swatch stays (Vector2(-1, -1)). toon.gdshader decodes it the same way (the CPU mirror, for tests).
+static func texel_swatch_uv(code8: int) -> Vector2:
+	if code8 <= 0:
+		return Vector2(-1.0, -1.0)
+	var slot := code8 - 1
+	return Vector2((float(slot % ATLAS_COLUMNS) + 0.5) / float(ATLAS_COLUMNS), (float(slot / ATLAS_COLUMNS) + 0.5) / float(ATLAS_ROWS))
 
 
 ## The width of the hull line at `dist` metres from the lens, in metres, as toon_outline.gdshader

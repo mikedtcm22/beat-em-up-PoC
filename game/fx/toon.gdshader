@@ -22,9 +22,21 @@ uniform vec4 albedo : source_color = vec4(1.0);
 uniform sampler2D albedo_tex : source_color, filter_nearest, repeat_disable;
 uniform bool use_albedo_tex = false;
 // The art's optional detail mask on UV2: R = ink lines (seams, wraps, stitching), never shading; G = the
-// glint gate, the authored streaks on a glossy swatch (the Punk's lens, 0.5 on a streak's edge); B unused.
+// glint gate, the authored streaks on a glossy swatch (the Punk's lens, 0.5 on a streak's edge); B = the texel's palette
+// slot + 1 (M6 DETAIL-2, tools/pipeline/pipe_detail.py texel_labels; 0 = none: the face's swatch), and only in a mask whose alpha
+// is 128/255 (pipe_detail.CODE_MARK; the hero's B is a grey, the rest are opaque), so every other art takes the face's swatch as before;
+// an art whose mask carries codes takes each texel's swatch (the colour, the damage class and the gloss), so a colour border follows
+// the texture, not the 2 cm faces.
 uniform sampler2D detail_tex : filter_linear_mipmap, repeat_disable;
 uniform bool use_detail_tex = false;
+// The A/B of the texel swatches (Tuning's look_texel_swatch; off = every face takes its own swatch, M6's look), and the texels per
+// pixel over which they give way to the face's swatch: a border at texel resolution is exact up close, but a nearest-sampled
+// border farther away crawls (a texel is smaller than a pixel), so from texel_swatch_fade.x to .y texels per pixel the
+// colour fades to the face's, which the hull's multisampling holds steady.
+uniform bool use_texel_swatch = true;
+uniform vec2 texel_swatch_fade = vec2(1.0, 3.0);
+// The atlas's layout (tools/pipeline/gen_palette.py COLUMNS, ROWS): a slot's swatch centre.
+const vec2 ATLAS_GRID = vec2(32.0, 2.0);
 uniform float detail_strength : hint_range(0.0, 1.0) = 1.0;
 // Sharp ink (both characters' masks; ToonMaterials sets it per material from the art's
 // metadata/detail_sharp, off for an art that does not ask): the mask is cut at detail_cut with an
@@ -105,6 +117,19 @@ void fragment() {
 	glint_gate = 1.0;
 	if (use_albedo_tex) {
 		vec4 swatch = texture(albedo_tex, UV);
+		if (use_detail_tex && use_texel_swatch) {
+			vec2 texels = UV2 * vec2(textureSize(detail_tex, 0));
+			// the derivatives come before the branch (they are undefined in a non-uniform one)
+			float texels_per_pixel = max(length(dFdx(texels)), length(dFdy(texels)));
+			vec4 fetched = texelFetch(detail_tex, clamp(ivec2(texels), ivec2(0), textureSize(detail_tex, 0) - 1), 0);
+			float code = fetched.b;
+			if (fetched.a < 0.9 && code > 0.0) {
+				float slot = floor(code * 255.0 + 0.5) - 1.0;
+				vec4 texel_swatch = texture(albedo_tex, (vec2(mod(slot, ATLAS_GRID.x), floor(slot / ATLAS_GRID.x)) + 0.5) / ATLAS_GRID);
+				float w = 1.0 - smoothstep(texel_swatch_fade.x, texel_swatch_fade.y, texels_per_pixel);
+				swatch = vec4(mix(swatch.rgb, texel_swatch.rgb, w), w > 0.5 ? texel_swatch.a : swatch.a);
+			}
+		}
 		color *= swatch.rgb;
 		takes_marks *= step(0.75, swatch.a);
 		skin_marks = 1.0 - step(0.85, swatch.a);
