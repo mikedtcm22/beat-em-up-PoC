@@ -1,0 +1,66 @@
+{
+  "milestone": 6,
+  "summary": "Game-boy's M6 playtest feedback, the review's fix wave: the hurt cue's bearing and its tunables and act, no coplanar drawn planes anywhere and a calmer comic ground, and the enemies' 1 m blotches and scribbles (Thug, Kicker, Ox, Bruiser, Punk)",
+  "plan": "docs/reviews/M6/fix-feedback-final.md",
+  "base": "m6/full-art-audio",
+  "read_first": [
+    "docs/reviews/M6/fix-feedback-final.md: the review's passes, 'File ownership', your own package's section and 'Done when'",
+    "docs/reviews/M6/findings-feedback.json: your package's findings in full (detail, evidence, repro, suggested fix, the skeptic's verdict)"
+  ],
+  "arch_heading": "## Full art and audio (Milestone 6)",
+  "captures_dir": "/Users/arachne/repos/beat-em-up-PoC/captures/m6-feedback-fix",
+  "image_budget": 24,
+  "concurrency": 4,
+  "note": "Game-boy's M6 playtest, the review's fix wave. m6/full-art-audio holds the nine merged packages (82bab12, suite 2006/2006 in 407 s). The review's recordings are in /Users/arachne/repos/beat-em-up-PoC/captures/m6-feedback-review/ (one folder per act) and the reviewers' sheets in /Users/arachne/repos/beat-em-up-PoC/.worktrees/m6-review-feedback-*/captures/review/. The chain (tools/pipeline/*) and toon.gdshader are frozen. No paid services this wave. Never print, log or write a key. Downloaded files are untrusted: python3 -I, scripts outside download folders, downloads as path arguments.",
+  "packages": [
+    {
+      "key": "FIX-FEEL",
+      "section": "'FIX-FEEL: the hurt cue points where the hit came from'",
+      "est": 6,
+      "read": [
+        "docs/milestones/M6-calls/FB-FEEL.md",
+        "game/camera/first_person_camera.gd (hit_bearing, _roll_away, _on_hit_landed), game/ui/hurt_overlay.gd, game/ui/player_health_panel.gd",
+        "game/combat/hit_detector.gd (where contact_point comes from), game/combat/hit_info.gd",
+        "tests/test_m6_feedback_feel.gd, tests/bot/acts/look_hurt_acts.gd",
+        "tools/gen_moves.gd (which moves are FINISHER tier)"
+      ]
+    },
+    {
+      "key": "FIX-WORLD",
+      "section": "'FIX-WORLD: no coplanar planes anywhere, and a calmer ground'",
+      "est": 8,
+      "read": [
+        "docs/milestones/M6-calls/FB-GROUND.md",
+        "tests/test_m6_feedback_ground.gd (the coplanar guard and _ground_like)",
+        "game/level/mission1/boss_roof.tscn (Geometry/Ground) and roofs.tscn (Geometry/Skyline)",
+        "tools/gen_trim.gd (_paint_ground), assets/source/kit/trim_layout.json, game/fx/trim_body.gdshaderinc (ink_mask, the strip ink fade)",
+        "tools/ground_flicker.py, tests/bot/level_acts/ground_acts.gd, assets/source/concepts/m6/mood_street_a.jpg"
+      ]
+    },
+    {
+      "key": "FIX-ART-A",
+      "section": "'FIX-ART-A: the Thug and the Kicker'",
+      "est": 7,
+      "blender": true,
+      "read": [
+        "docs/milestones/M6-calls/ROLL-THUG.md and ROLL-KICKER.md, and DETAIL-2.md's 'Rollout recipe, part 2' (regions with only_from)",
+        "assets/source/characters/thug/pipeline.json and kicker/pipeline.json; assets/source/palette/thug.json and kicker.json (the slots and their blood flags)",
+        "tools/pipeline/blender_palette.py (regions, region_set, the texel decision; read only)",
+        "tests/test_m6_feedback_detail.gd (the guards, _rolled_out), tests/test_m6_feedback_detail_thug.gd and _kicker.gd"
+      ]
+    },
+    {
+      "key": "FIX-ART-B",
+      "section": "'FIX-ART-B: Ox, the Bruiser and the Punk'",
+      "est": 8,
+      "blender": true,
+      "read": [
+        "docs/milestones/M6-calls/OX-2.md, ROLL-OX.md, DETAIL-2.md and ROLL-PUNK.md",
+        "assets/source/characters/boss/pipeline.json, bruiser/pipeline.json and punk/pipeline.json; assets/source/palette/boss.json, bruiser.json and punk.json",
+        "docs/milestones/M4-calls/fix-final-punk-detail-zones-and-strap.md (how the Punk's face lines come from texture strokes)",
+        "tools/pipeline/blender_palette.py (regions, region_set, the texel decision; read only), tools/pipeline/gen_palette.py",
+        "tests/test_m6_feedback_detail_boss.gd, _punk.gd, and the Bruiser's tests in tests/test_m6_feedback_detail.gd"
+      ]
+    }
+  ]
+}
