@@ -1145,6 +1145,10 @@ extends Resource
 ## within 0.12 m: a shadow is soft and falls on the floor), cast by a shadow-only twin of the prop's mesh; 0 draws the prop's own triangles in the shadow
 ## pass too. Read when a StaticArt model is first built, so set it (a preset never holds it) before the room loads.
 @export_range(0.0, 0.5, 0.01) var draw_prop_shadow_error_m: float = 0.12
+## The distance (m) from the lens past which a prop's shadow twin is not drawn: the sun's shadows end at 40 m
+## (RoomKit.build_environment), and a car's or a tank's shadow is a few metres long, so 60 m shows no change.
+## 0 draws it at every distance. Read when a StaticArt is built.
+@export_range(0.0, 200.0, 5.0) var draw_prop_shadow_range_m: float = 60.0
 ## The simplification's normal merge angle and split angle (degrees; ImporterMesh.generate_lods): the surface angle
 ## under which neighbouring faces count as one surface when a level is simplified, and over which an edge stays hard.
 @export_range(0.0, 90.0, 1.0) var draw_prop_lod_merge_deg: float = 25.0

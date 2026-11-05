@@ -44,6 +44,8 @@ func test_a_prop_casts_its_shadow_from_a_coarser_twin() -> void:
 		assert_lt(_tris(twins[i].mesh), _tris(drawn.mesh), "the twin has fewer triangles")
 		assert_eq(twins[i].transform, drawn.transform, "and stands where the mesh does")
 		assert_same(twins[i].material_override, drawn.material_override, "on the same material (the same vertex format)")
+		assert_eq(twins[i].visibility_range_end, Tuning.data.draw_prop_shadow_range_m, "and is not drawn past the range")
+	assert_gt(Tuning.data.draw_prop_shadow_range_m, 40.0, "the range is beyond the sun's shadow distance (RoomKit's 40 m)")
 
 
 func test_the_twin_stays_within_the_tunables_error() -> void:

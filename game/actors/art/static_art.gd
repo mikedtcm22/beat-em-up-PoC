@@ -171,6 +171,8 @@ func _add(part: ArtMesh, node_name: StringName, xf: Transform3D, overlay: Shader
 		caster.transform = xf
 		caster.material_override = material
 		caster.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY
+		# Past the sun's shadow distance (RoomKit: 40 m) and the length of a tall prop's shadow, no shadow of it is seen.
+		caster.visibility_range_end = Tuning.data.draw_prop_shadow_range_m
 		add_child(caster)
 		_shadow_casters.append(caster)
 
