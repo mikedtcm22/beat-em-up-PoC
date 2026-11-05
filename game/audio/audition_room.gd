@@ -15,11 +15,12 @@ extends Node
 ## The keys are ignored while an overlay (F1, F4) holds the fight (`GameInput.menu_open`), and are
 ## listed in the help overlay.
 
-## [label, keycode] rows for the help overlay (HelpOverlay.KEY_ROWS lists them).
+## [label, keycode, key text] rows for the help overlay (HelpOverlay.KEY_ROWS lists them; the key text
+## stands in for the keycode's own name, which reads "BracketRight").
 const HELP_ROWS: Array[Array] = [
-	["Sound room: next bank (the [ key goes back)", KEY_BRACKETRIGHT],
-	["Sound room: play variant 1-9 (0 is the tenth); = plays the bank", KEY_1],
-	["Sound room: new / old sounds", KEY_MINUS],
+	["Sound room: next / previous bank", KEY_BRACKETRIGHT, "]  ["],
+	["Sound room: play a take / the bank", KEY_1, "1-9, 0  ="],
+	["Sound room: new / old sounds", KEY_MINUS, "-"],
 ]
 ## How far in front of the listener a one-shot is played (m), and the gap left after a variant when the
 ## whole bank plays (s).

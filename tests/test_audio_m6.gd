@@ -565,6 +565,14 @@ func test_the_training_room_has_the_audition_room_and_the_help_overlay_lists_its
 		rows.append(str(row[0]))
 	for row: Array in AuditionRoom.HELP_ROWS:
 		assert_has(rows, str(row[0]), "the help overlay lists the sound room's keys")
+	var help := HelpOverlay.new()
+	add_child_autofree(help)
+	var texts: Array[String] = []
+	for node: Node in help.find_children("*", "Label", true, false):
+		texts.append((node as Label).text)
+	for row: Array in AuditionRoom.HELP_ROWS:
+		assert_has(texts, str(row[2]), "the overlay names the key as it reads: %s" % row[2])
+	assert_false(texts.has("BracketRight") or texts.has("Minus"), "never the keycode's own name")
 
 
 func _frames(n: int) -> void:
