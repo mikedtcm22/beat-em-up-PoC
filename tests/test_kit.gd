@@ -60,7 +60,7 @@ func test_every_kind_is_within_5000_triangles_at_the_census_sizes() -> void:
 			assert_not_null(mesh, "%s at %s builds" % [kind, size])
 			assert_gt(KitMesh.triangle_count(mesh), 0, "%s at %s has triangles" % [kind, size])
 			assert_lte(KitMesh.triangle_count(mesh), KitMesh.MAX_TRIANGLES, "%s at %s is within the module budget" % [kind, size])
-			assert_eq(mesh.get_surface_count(), 1, "%s is one surface" % kind)
+			assert_eq(mesh.get_surface_count(), 2 if WIRE_KINDS.has(kind) else 1, "%s is one surface (a fence's and a gate's wire is a second)" % kind)
 
 
 func test_box_and_unknown_kinds_are_not_modules() -> void:
@@ -134,10 +134,48 @@ func test_every_module_is_on_the_one_shared_trim_material() -> void:
 	var trim := ToonMaterials.trim()
 	assert_same(ToonMaterials.trim(), trim, "trim() is one object")
 	assert_eq(trim.shader, load(ToonMaterials.TRIM_SHADER))
+	var wire := ToonMaterials.trim_scissor()
+	assert_same(ToonMaterials.trim_scissor(), wire, "trim_scissor() is one object")
+	assert_ne(wire.shader, trim.shader, "the wire's variant is its own shader (the alpha scissor)")
 	for kind: StringName in CENSUS:
 		var mesh := KitMesh.build(kind, (CENSUS[kind] as Array)[0])
-		assert_same(mesh.surface_get_material(0), trim, "%s draws on the shared material" % kind)
+		for surface in mesh.get_surface_count():
+			var material := mesh.surface_get_material(surface)
+			if WIRE_KINDS.has(kind) and surface == 1:
+				assert_same(material, wire, "%s's wire draws on the scissor variant" % kind)
+			else:
+				assert_same(material, trim, "%s draws on the shared material" % kind)
 	assert_same(KitMesh.build_stairs(3.0, 4.5, 7.5, 25).surface_get_material(0), trim)
+
+
+## The kinds with a wire: the posts and rails are the opaque surface, the wire the second.
+const WIRE_KINDS: Array[StringName] = [&"chainlink", &"gate"]
+
+
+## `code` without its comment lines.
+func _code_lines(code: String) -> String:
+	var out := PackedStringArray()
+	for line in code.split("\n"):
+		if not line.strip_edges().begins_with("//"):
+			out.append(line)
+	return "\n".join(out)
+
+
+func test_only_the_scissor_strips_faces_wear_the_scissor_shader() -> void:
+	# A shader that writes ALPHA_SCISSOR_THRESHOLD (even on one branch) loses the depth prepass and the cheap
+	# shadow pass for every mesh on it (M6 final review, perf): the opaque trim shader must never write it.
+	assert_false(_code_lines(ToonMaterials.trim().shader.code).contains("#define TRIM_SCISSOR"), "the shared trim shader does not scissor")
+	assert_true(_code_lines(ToonMaterials.trim_scissor().shader.code).contains("#define TRIM_SCISSOR"))
+	for kind: StringName in CENSUS:
+		var mesh := KitMesh.build(kind, (CENSUS[kind] as Array)[0])
+		for surface in mesh.get_surface_count():
+			var scissor_faces := mesh.surface_get_material(surface) == ToonMaterials.trim_scissor()
+			var colors: PackedColorArray = mesh.surface_get_arrays(surface)[Mesh.ARRAY_COLOR]
+			for color in colors:
+				var row := roundi(color.a * 255.0)
+				var is_wire := bool(TrimSheet.table().strips[row].scissor)
+				assert_eq(is_wire, scissor_faces, "%s: a face on the scissor strip is on the scissor surface and no other is" % kind)
+				break
 
 
 func test_the_trim_material_keeps_a_flat_albedo_tint_and_the_sheets_table() -> void:
@@ -510,12 +548,14 @@ func test_the_whole_level_draws_on_one_trim_material() -> void:
 	for found: Node in level.container.find_children("*", "MeshInstance3D", true, false):
 		var mesh := found as MeshInstance3D
 		if mesh.mesh is ArrayMesh and not _in_static_art(mesh):
-			var material := (mesh.mesh as ArrayMesh).surface_get_material(0)
-			if material == ToonMaterials.trim():
-				kit_meshes += 1
-			materials[material] = true
+			for surface in (mesh.mesh as ArrayMesh).get_surface_count():
+				var material := (mesh.mesh as ArrayMesh).surface_get_material(surface)
+				if material == ToonMaterials.trim():
+					kit_meshes += 1
+				materials[material] = true
 	assert_gt(kit_meshes, 150, "the level's blocks and the dressing are kit meshes")
-	assert_eq(materials.size(), 1, "and they share one material (the props and weapons are StaticArt on the atlas)")
+	assert_lte(materials.size(), 2, "and they share the trim material, and the chain-link's scissor variant (the props and weapons are StaticArt on the atlas)")
+	assert_true(materials.has(ToonMaterials.trim()))
 
 
 ## Whether `node` is part of a prop's or a weapon's StaticArt (PROPS: drawn on the palette atlas).

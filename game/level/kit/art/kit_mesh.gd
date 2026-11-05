@@ -3,8 +3,9 @@ extends RefCounted
 ## The environment kit's modules (Milestone 6, KIT; plan D2): procedural meshes on the one trim sheet,
 ## built from a `kind` and a `size`, so a wall of any length or height fits (the street's run 1 to 17.5 m).
 ## `KitMesh.build(kind, size)` returns one `ArrayMesh`, cached per (kind, size), with ONE surface whose
-## material is `ToonMaterials.trim()` (the shared one). Every kind is centred on the box `size` it fills
-## (the node's origin is that box's centre), with its front along +Z where a kind has one, and is at
+## material is `ToonMaterials.trim()` (the shared one). The exception is the chain-link's wire: its faces are
+## a surface of their own on `ToonMaterials.trim_scissor()` (a `gate` is two surfaces, a `chainlink` the wire
+## alone), so only they pay for the alpha scissor. Every kind is centred on the box `size` it fills (the node's origin is that box's centre), with its front along +Z where a kind has one, and is at
 ## most MAX_TRIANGLES triangles (SPEC §10's 5k module).
 ##
 ## The faces' UVs are in METRES (u along the face left to right as seen from outside, v up it from the
@@ -277,11 +278,10 @@ static func _stairs(b: Builder, size: Vector3, count: int) -> void:
 ## Accumulates one surface of quads: positions, normals, UVs in metres, the vertex colour (tint and
 ## strip) and the triangles in Godot's clockwise front-face order.
 class Builder:
-	var _verts := PackedVector3Array()
-	var _normals := PackedVector3Array()
-	var _uvs := PackedVector2Array()
-	var _colors := PackedColorArray()
-	var _indices := PackedInt32Array()
+	## The faces on opaque strips, and the faces on the scissor strip (the chain-link's wire), which wear a
+	## material of their own (see finish()).
+	var _opaque := Buffer.new()
+	var _wire := Buffer.new()
 
 	## A quad whose bottom-left corner is `origin`, running `width` along `right` and `height` along
 	## `up` (unit vectors; the face looks along right x up), with its UV at the corner `uv0` and one
@@ -291,20 +291,21 @@ class Builder:
 			return
 		var normal := right.cross(up)
 		var color := Color(tint.r, tint.g, tint.b, float(TrimSheet.index(strip)) / 255.0)
-		var base := _verts.size()
-		_verts.append(origin)
-		_verts.append(origin + right * width)
-		_verts.append(origin + right * width + up * height)
-		_verts.append(origin + up * height)
-		_uvs.append(uv0)
-		_uvs.append(uv0 + Vector2(width, 0.0))
-		_uvs.append(uv0 + Vector2(width, height))
-		_uvs.append(uv0 + Vector2(0.0, height))
+		var buffer := _wire if TrimSheet.is_scissor(strip) else _opaque
+		var base := buffer.verts.size()
+		buffer.verts.append(origin)
+		buffer.verts.append(origin + right * width)
+		buffer.verts.append(origin + right * width + up * height)
+		buffer.verts.append(origin + up * height)
+		buffer.uvs.append(uv0)
+		buffer.uvs.append(uv0 + Vector2(width, 0.0))
+		buffer.uvs.append(uv0 + Vector2(width, height))
+		buffer.uvs.append(uv0 + Vector2(0.0, height))
 		for i in 4:
-			_normals.append(normal)
-			_colors.append(color)
+			buffer.normals.append(normal)
+			buffer.colors.append(color)
 		# Counter-clockwise seen from outside is (0, 1, 2), so the clockwise front face is (0, 2, 1).
-		_indices.append_array(PackedInt32Array([base, base + 2, base + 1, base, base + 3, base + 2]))
+		buffer.indices.append_array(PackedInt32Array([base, base + 2, base + 1, base, base + 3, base + 2]))
 
 	## A box of `size` centred at `center`, each face on the strip `faces` names for it: `top`, `bottom`,
 	## `front` (+Z), `back` (-Z), `sides` (the four of them), or `all`; the more specific wins.
@@ -325,15 +326,31 @@ class Builder:
 		face(Vector3(lo.x, hi.y, hi.z), Vector3.RIGHT, Vector3.FORWARD, size.x, size.z, top, Vector2.ZERO, tint)
 		face(Vector3(lo.x, lo.y, lo.z), Vector3.RIGHT, Vector3.BACK, size.x, size.z, bottom, Vector2.ZERO, tint)
 
+	## The mesh: a surface of the opaque faces on `ToonMaterials.trim()` (first, when there are any) and a surface
+	## of the scissor strip's faces on `ToonMaterials.trim_scissor()`. Most kinds are the one surface; `gate`
+	## is two (its frame and its wire).
 	func finish() -> ArrayMesh:
-		var arrays: Array = []
-		arrays.resize(Mesh.ARRAY_MAX)
-		arrays[Mesh.ARRAY_VERTEX] = _verts
-		arrays[Mesh.ARRAY_NORMAL] = _normals
-		arrays[Mesh.ARRAY_TEX_UV] = _uvs
-		arrays[Mesh.ARRAY_COLOR] = _colors
-		arrays[Mesh.ARRAY_INDEX] = _indices
 		var mesh := ArrayMesh.new()
-		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-		mesh.surface_set_material(0, ToonMaterials.trim())
+		for pair: Array in [[_opaque, ToonMaterials.trim()], [_wire, ToonMaterials.trim_scissor()]]:
+			var buffer: Buffer = pair[0]
+			if buffer.verts.is_empty():
+				continue
+			var arrays: Array = []
+			arrays.resize(Mesh.ARRAY_MAX)
+			arrays[Mesh.ARRAY_VERTEX] = buffer.verts
+			arrays[Mesh.ARRAY_NORMAL] = buffer.normals
+			arrays[Mesh.ARRAY_TEX_UV] = buffer.uvs
+			arrays[Mesh.ARRAY_COLOR] = buffer.colors
+			arrays[Mesh.ARRAY_INDEX] = buffer.indices
+			mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+			mesh.surface_set_material(mesh.get_surface_count() - 1, pair[1])
 		return mesh
+
+
+## One surface's accumulating arrays.
+class Buffer:
+	var verts := PackedVector3Array()
+	var normals := PackedVector3Array()
+	var uvs := PackedVector2Array()
+	var colors := PackedColorArray()
+	var indices := PackedInt32Array()
