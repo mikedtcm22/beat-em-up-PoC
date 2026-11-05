@@ -194,6 +194,53 @@ extends Resource
 ## Share of hit_flash_radius_m flashing at full strength before the smooth fade to nothing.
 @export_range(0.0, 1.0, 0.05) var hit_flash_core: float = 0.5
 
+@export_subgroup("Hurt")
+## What the player feels when he is the one hit (M6 playtest, Game-boy's ruling: a Punk's jab went by
+## unnoticed). SPEC §6's table (shake_* and cam_punch_*) still holds for the hits he lands and for
+## the ones his guard stops; these scale and add to it for a clean hit he takes. Every part goes off
+## together with Debug's hurt_feel_enabled.
+## Trauma of a hit taken = the tier's shake_* times this, and never less than hurt_shake_min.
+@export_range(0.0, 10.0, 0.1) var hurt_shake_mult: float = 2.5
+## The least trauma any clean hit taken adds (a light jab: 0.1 x 2.5 would be a quarter).
+@export_range(0.0, 1.0, 0.01) var hurt_shake_min: float = 0.3
+## The camera punch (the kick the way the blow pushes) of a hit taken = the tier's cam_punch_*_deg times this.
+@export_range(0.0, 10.0, 0.1) var hurt_punch_mult: float = 2.5
+## The head's roll, away from the side the blow came from, per tier, in degrees (it uses the punch's
+## snap-and-settle). A blow from straight ahead or behind rolls the head to alternating sides.
+@export_range(0.0, 20.0, 0.5) var hurt_roll_light_deg: float = 2.0
+@export_range(0.0, 20.0, 0.5) var hurt_roll_heavy_deg: float = 4.0
+@export_range(0.0, 20.0, 0.5) var hurt_roll_finisher_deg: float = 7.0
+## How much of the roll a blow from dead ahead or behind still gets (1 = as much as one from the side).
+@export_range(0.0, 1.0, 0.05) var hurt_roll_frontal_share: float = 0.5
+## The edge vignette (game/ui/hurt_overlay.gd, drawn under the HUD's panels). Its colour is the ink,
+## not red: SPEC §10 keeps red for blood, the rear warning and the finisher accents. Alpha is the
+## strongest it gets (a finisher, or a hit of hurt_overlay_full_damage).
+@export var hurt_overlay_color: Color = Color(0.05, 0.04, 0.07, 0.8)
+## The comic impact strokes along the struck edge (spikes pointing in), and their colour.
+@export var hurt_overlay_stroke_color: Color = Color(0.97, 0.94, 0.85, 0.9)
+## How many impact strokes a hit draws on its edge (0 = a plain vignette).
+@export_range(0, 16, 1) var hurt_overlay_strokes: int = 7
+## Seconds the vignette and the strokes take to fade out.
+@export_range(0.1, 1.5, 0.05) var hurt_overlay_fade_s: float = 0.45
+## How deep the vignette reaches in from the edge, as a share of the screen's height: at a hit of
+## no damage, and at hurt_overlay_full_damage or more.
+@export_range(0.0, 0.6, 0.01) var hurt_overlay_depth_min: float = 0.12
+@export_range(0.0, 0.6, 0.01) var hurt_overlay_depth_max: float = 0.32
+## The damage at which the vignette is at its deepest and strongest; below it, in proportion.
+@export_range(1.0, 100.0, 1.0) var hurt_overlay_full_damage: float = 20.0
+## The weakest a hit's vignette is, as a share of the strongest (so a 3-damage jab still shows).
+@export_range(0.0, 1.0, 0.05) var hurt_overlay_min_strength: float = 0.5
+## The share of a hit's vignette every edge gets whichever way it came; the rest is on the side
+## it came from (left, right, or the bottom edge for a blow from behind).
+@export_range(0.0, 1.0, 0.05) var hurt_overlay_even_share: float = 0.3
+## A blocked hit's vignette, as a share of a clean hit's (0 = none), and no strokes.
+@export_range(0.0, 1.0, 0.05) var hurt_overlay_blocked_scale: float = 0.2
+## The health panel's jolt on damage: its offset in canvas pixels per point of damage taken (capped
+## at hurt_panel_jolt_max_px), and the seconds it takes to settle.
+@export_range(0.0, 20.0, 0.1) var hurt_panel_jolt_px_per_hp: float = 1.2
+@export_range(0.0, 60.0, 1.0) var hurt_panel_jolt_max_px: float = 22.0
+@export_range(0.05, 1.0, 0.05) var hurt_panel_jolt_s: float = 0.25
+
 @export_group("VFX")
 ## Comic effects (Spec §6; VfxDirector, game/fx/). Sizes are meters at the contact point
 ## (a word's or a burst's width); times are seconds of sim time, so slow-mo stretches them.
@@ -1502,6 +1549,13 @@ extends Resource
 
 @export_group("Debug")
 @export var god_mode: bool = false
+## The player feels the hits he takes (M6 playtest): the larger shake and punch, the head's roll, the
+## edge vignette and the health panel's jolt (Tuning > Hit feel > Hurt). Off gives M6's view back,
+## where a hit taken felt as one landed. Presets never hold it.
+@export var hurt_feel_enabled: bool = true
+## M6's GO sting: on plays `sting_go` when an arena's table finishes, as M6 did; off (Game-boy's
+## ruling at his playtest) is silent. The level's CLEAR! sting is not affected. Presets never hold it.
+@export var audio_sting_go: bool = false
 ## A/B switch for Milestone 5's attack arcs: on brings back all of M3's director (the even spread
 ## round the player, a token to any waiter, the blind-spot roll for any enemy, no engage line).
 ## Presets never hold it.
@@ -1593,6 +1647,27 @@ func shake(tier: CombatTypes.HitTier) -> float:
 		CombatTypes.HitTier.FINISHER:
 			return shake_finisher
 	return shake_light
+
+
+## Trauma a clean hit of `tier` adds to the view of the player it hits (hurt_feel_enabled): the tier's
+## shake times hurt_shake_mult, never under hurt_shake_min.
+func hurt_shake(tier: CombatTypes.HitTier) -> float:
+	return clampf(maxf(shake(tier) * hurt_shake_mult, hurt_shake_min), 0.0, 1.0)
+
+
+## Camera punch, in degrees, of a clean hit of `tier` on the player (hurt_feel_enabled).
+func hurt_punch_deg(tier: CombatTypes.HitTier) -> float:
+	return cam_punch_deg(tier) * hurt_punch_mult
+
+
+## Head roll, in degrees, of a clean hit of `tier` on the player (hurt_feel_enabled).
+func hurt_roll_deg(tier: CombatTypes.HitTier) -> float:
+	match tier:
+		CombatTypes.HitTier.HEAVY:
+			return hurt_roll_heavy_deg
+		CombatTypes.HitTier.FINISHER:
+			return hurt_roll_finisher_deg
+	return hurt_roll_light_deg
 
 
 func cam_punch_deg(tier: CombatTypes.HitTier) -> float:

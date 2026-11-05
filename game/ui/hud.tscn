@@ -14,6 +14,7 @@
 [ext_resource type="Script" uid="uid://tv3uearc4ock" path="res://game/ui/rear_warning.gd" id="12_rear"]
 [ext_resource type="Script" path="res://game/ui/grab_prompt.gd" id="13_grab"]
 [ext_resource type="Script" path="res://game/ui/pickup_cue.gd" id="14_pickup"]
+[ext_resource type="Script" path="res://game/ui/hurt_overlay.gd" id="15_hurt"]
 
 [node name="Hud" type="CanvasLayer"]
 process_mode = 3
@@ -21,6 +22,16 @@ layer = 10
 script = ExtResource("1_hud")
 
 [node name="DebugDraw" parent="." instance=ExtResource("10_debug")]
+
+[node name="HurtOverlay" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("15_hurt")
 
 [node name="EnemyHealthBars" type="Control" parent="."]
 layout_mode = 3

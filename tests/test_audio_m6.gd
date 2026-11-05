@@ -384,6 +384,9 @@ func test_a_weapon_swing_adds_its_impact_to_the_hit_stack() -> void:
 
 
 func test_the_stings_play_2d_on_arena_cleared_and_level_cleared() -> void:
+	# M6 feedback: the GO sting is off by default (Debug's audio_sting_go); this is M6's behaviour with it on.
+	# The default-off twin is in test_m6_feedback_feel.gd.
+	Tuning.data.audio_sting_go = true
 	_director.bank.pools[&"sting_go"] = [_wav()]
 	_director.bank.pools[&"sting_clear"] = [_wav()]
 	var arena := Node3D.new()

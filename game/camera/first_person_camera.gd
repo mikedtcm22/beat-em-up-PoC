@@ -84,6 +84,10 @@ const PITCH_LIMIT_RAD := PI * 89.0 / 180.0
 ## A punch whose contact point is this close to screen center (radians) dips the view
 ## instead, since "toward the contact" has no direction there.
 const PUNCH_CENTER_RAD := PI / 180.0
+## A contact nearer the lens than this horizontally says nothing about the side a blow came from.
+const HURT_SIDE_MIN_M := 0.05
+## A blow whose bearing has a sine under this is "from dead ahead or behind" for the roll.
+const HURT_FRONTAL_SINE := 0.1
 
 ## The player this camera rides. Null (or freed) holds the last view.
 var player: PlayerCharacter:
@@ -129,6 +133,11 @@ var _arm_materials: Dictionary[MeshInstance3D, Material] = {}
 var _view: Transform3D = Transform3D.IDENTITY
 ## Live punches: x = pitch kick and y = yaw kick at the peak (radians), z = age (seconds).
 var _punches: Array[Vector3] = []
+## Live head rolls (a hit taken): x = peak in radians (positive tips the head to its left), y = age in
+## seconds. They use the punch's envelope and duration; the strongest one's size is the most they sum to.
+var _rolls: Array[Vector2] = []
+## Which side a blow from dead ahead or behind rolls the head to next (alternates, so it never sticks).
+var _roll_flip: float = 1.0
 var _shake_time: float = 0.0
 var _noise: FastNoiseLite = FastNoiseLite.new()
 
@@ -249,9 +258,22 @@ func get_punch_deg() -> Vector2:
 	return Vector2(rad_to_deg(punch.x), rad_to_deg(punch.y))
 
 
-## True when no punch is running and trauma is zero.
+## Start a head roll that peaks at `roll_deg` (positive tips the head to its left, the way it goes away
+## from a blow that came from the right) and eases back like a punch.
+func add_roll(roll_deg: float) -> void:
+	if is_zero_approx(roll_deg):
+		return
+	_rolls.append(Vector2(deg_to_rad(roll_deg), 0.0))
+
+
+## Current head roll in degrees (positive: tipped to the left).
+func get_roll_deg() -> float:
+	return rad_to_deg(_roll_rad())
+
+
+## True when no punch or roll is running and trauma is zero.
 func is_settled() -> bool:
-	return trauma <= 0.0 and _punches.is_empty()
+	return trauma <= 0.0 and _punches.is_empty() and _rolls.is_empty()
 
 
 func _player_ok() -> bool:
@@ -702,12 +724,19 @@ func _advance_effects(delta: float) -> void:
 			_punches.remove_at(i)
 		else:
 			_punches[i] = punch
+	for i: int in range(_rolls.size() - 1, -1, -1):
+		var roll := _rolls[i]
+		roll.y += delta
+		if roll.y >= punch_duration_s:
+			_rolls.remove_at(i)
+		else:
+			_rolls[i] = roll
 
 
 ## Punch and shake as a transform in the view's local space.
 func _effects_transform() -> Transform3D:
 	var punch := _punch_rad()
-	var rotation_rad := Vector3(punch.x, punch.y, 0.0)
+	var rotation_rad := Vector3(punch.x, punch.y, _roll_rad())
 	var offset := Vector3.ZERO
 	var amount := trauma * trauma * Tuning.data.screen_shake_intensity
 	if amount > 0.0:
@@ -732,6 +761,16 @@ func _punch_rad() -> Vector2:
 	return total.limit_length(strongest)
 
 
+## Sum of the live head rolls in radians, no larger than the strongest one's peak.
+func _roll_rad() -> float:
+	var total := 0.0
+	var strongest := 0.0
+	for roll: Vector2 in _rolls:
+		total += roll.x * _punch_envelope(roll.y / punch_duration_s)
+		strongest = maxf(strongest, absf(roll.x))
+	return clampf(total, -strongest, strongest)
+
+
 ## Smooth noise in -1..1, one independent channel per shake axis.
 func _shake_noise(channel: int) -> float:
 	var sample := _noise.get_noise_2d(_shake_time * shake_frequency_hz, float(channel) * 37.0)
@@ -754,9 +793,17 @@ func _on_hit_landed(hit: HitInfo) -> void:
 	if not is_attacker and hit.victim != player:
 		return
 	var feel := blocked_feel_scale if hit.blocked else 1.0
-	add_trauma(Tuning.data.shake(hit.tier) * feel)
+	var tuning := Tuning.data
+	if not is_attacker and tuning.hurt_feel_enabled and not hit.blocked:
+		# The player takes a clean hit (M6 playtest): the victim's larger stack, the head rolling away
+		# from the blow's side. SPEC §6's table still holds for the hits he lands and the ones he blocks.
+		add_trauma(tuning.hurt_shake(hit.tier))
+		add_punch(_away(hit) * tuning.hurt_punch_deg(hit.tier))
+		add_roll(_roll_away(hit) * tuning.hurt_roll_deg(hit.tier))
+		return
+	add_trauma(tuning.shake(hit.tier) * feel)
 	var direction := _toward(hit.contact_point) if is_attacker else _away(hit)
-	add_punch(direction * Tuning.data.cam_punch_deg(hit.tier) * feel)
+	add_punch(direction * tuning.cam_punch_deg(hit.tier) * feel)
 
 
 ## Unit kick (x = pitch up, y = yaw left) that turns the view toward `point`. A contact at
@@ -768,6 +815,28 @@ func _toward(point: Vector3) -> Vector2:
 	if angles.length() < PUNCH_CENTER_RAD:
 		return Vector2(-1.0, 0.0)
 	return angles.normalized()
+
+
+## Where a hit on the player came from, as an angle off the view's forward in radians: 0 = ahead,
+## +PI/2 = from the right, PI = from behind. It reads the contact point against `view`, or, when that is
+## within HURT_SIDE_MIN_M of the lens horizontally (a contact at the body), the way the hit pushes.
+static func hit_bearing(view: Transform3D, hit: HitInfo) -> float:
+	var local := view.basis.inverse() * (hit.contact_point - view.origin)
+	if Vector2(local.x, local.z).length() < HURT_SIDE_MIN_M:
+		local = view.basis.inverse() * (-hit.direction)
+	return atan2(local.x, -local.z)
+
+
+## Signed roll unit for a hit on the player (positive tips the head to its left, away from a blow on the
+## right): the sine of the bearing, at least hurt_roll_frontal_share of full, its sign flipping each
+## time for a blow from straight ahead or behind.
+func _roll_away(hit: HitInfo) -> float:
+	var lateral := sin(hit_bearing(_view, hit))
+	var sign_of := signf(lateral)
+	if absf(lateral) < HURT_FRONTAL_SINE:
+		_roll_flip = -_roll_flip
+		sign_of = _roll_flip
+	return sign_of * maxf(absf(lateral), Tuning.data.hurt_roll_frontal_share)
 
 
 ## Unit kick (x = pitch up, y = yaw left) that jolts the view the way the hit pushes the
