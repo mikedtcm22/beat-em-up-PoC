@@ -12,6 +12,7 @@
 [ext_resource type="Resource" path="res://game/level/mission1/encounters/a4.tres" id="10_a4"]
 [ext_resource type="Resource" path="res://game/level/mission1/encounters/a5.tres" id="11_a5"]
 [ext_resource type="Resource" path="res://game/level/mission1/encounters/a6.tres" id="12_a6"]
+[ext_resource type="PackedScene" path="res://game/weapons/bike_chain.tscn" id="13_chain"]
 
 [sub_resource type="BoxShape3D" id="Box_1"]
 size = Vector3(12.3, 5.8, 28.5)
@@ -1114,9 +1115,10 @@ start_closed = true
 
 [node name="Pickups" type="Node3D" parent="."]
 
-[node name="PipeBigShutter" type="Marker3D" parent="Pickups"]
+[node name="ChainBigShutter" type="Marker3D" parent="Pickups"]
 script = ExtResource("7_pickup")
 position = Vector3(19.5, 7.5, -18)
+weapon_scene = ExtResource("13_chain")
 
 [node name="Route" type="Node3D" parent="."]
 

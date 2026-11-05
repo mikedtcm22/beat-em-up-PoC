@@ -4,7 +4,7 @@
 		"tints": 0,
 		"boxes": 0,
 		"cylinder_weapons": 0,
-		"second_weapon": 1
+		"second_weapon": 0
 	},
 	"crowd_room": {
 		"primitive_bodies": 4,
