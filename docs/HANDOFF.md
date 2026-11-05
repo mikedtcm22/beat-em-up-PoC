@@ -4,6 +4,49 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-05 10:20 CST: FEEDBACK phase 1 merged (1970/1970); stills sent; phase 2a building (DETAIL-2, ROLL-OX)
+- **Merged into `m6/full-art-audio`:** FB-FEEL (`a40ede2`), FB-GROUND (`3967fc9`) and FB-DETAIL (`4f2e0f3`). The only conflicts were in ARCHITECTURE.md, where all three headings were kept.
+  - The preset is regenerated (629 values), the atlas is current, and `gen_trim --check` passes.
+  - Suite: 1970/1970 in 391 s, with 0 error lines.
+  - Pushed at `aca0c10`, which adds README's "ruled by Game-boy at his playtest (2026-11-05)" section (the hurt feel, no GO sting) and the phase 2a brief.
+- **What each found and built** (calls in `docs/milestones/M6-calls/FB-*.md`; captures copied to `captures/m6-feedback/fb-*/`):
+  - **FB-GROUND:** the flashing was a **z-fight**: `boss_roof.tscn`'s drawn-only 200 m Ground had its top at world y 0, the street Floor's plane. Ink, the mip cap, shadows and the section light each changed the drift metric by 0.0.
+    - The Ground is now 0.5 m lower, and roofs' PenthouseFrontFloorShutter no longer draws. Both colliders are unchanged.
+    - New: a comic `ground_sheet.png` (8 m world-space tile), bold ink on the strips, the "Level > Ground" tunables and `tools/ground_flicker.py`.
+    - Open: it's a little busy (camo-like patches), and the manhole repeats every 8 m.
+  - **FB-FEEL:**
+    - `audio_sting_go` (default off);
+    - the "Hit feel > Hurt" stack on the player as victim (shake ×2.5 with a 0.3 floor, punch ×2.5, a roll of 2/4/7°);
+    - `HurtOverlay` (ink, with paper strokes, on the struck edge) and the HP panel jolt;
+    - `hurt_feel_enabled` gives M6 back.
+  - **FB-DETAIL:** the loss was the palette's border relax smearing the plate borders, plus a flat delit Tripo texture with no lines to find. It added three opt-in keys and tuned them on the Bruiser (15k kept):
+    - crease ink (`detail_bake.crease`, per-zone `crease_deg`);
+    - the island merge (`palette.min_island_area_m2`);
+    - border relax 0.
+
+    The rollout recipe is in FB-DETAIL.md.
+- **The lead's look:** the ground and the hurt feel are good. The Bruiser is a clear step (visor frame, plate seams, buckle, guard straps) but still short of concept A:
+  - the quilting reads as flat purple;
+  - the colour borders are ragged face steps, with purple blotches on the steel and knee pads;
+  - the lines are about 1 cm at 1 m, heavier than the Punk's.
+- **Sent to Game-boy** (Slack DM, 3 files): the ground A/B, the hurt vignette, and the Bruiser A/B with the plan and the run command. He's told a 20k-versus-15k ruling for the Bruiser is coming. No ruling is pending from him yet on this round. The near-arm keep/off and the frame-time accept-or-lever are still unanswered from M6.
+- **Running:** build.js run `wf_2522a6a1-11d` (task `wb0g2enm8`), with `docs/reviews/M6/args-FEEDBACK-2.json` and brief `docs/reviews/M6/fix-feedback-2.md`. Each builder holds one of the two Blender slots:
+  - **`DETAIL-2`** (branch `m6/detail-2`):
+    - quilt and soft-seam ink from the dense mesh's valleys;
+    - colour borders that follow the texture, opt-in per art, with the damage marks following them;
+    - the Punk's line weight;
+    - a 20k variant's stills for Game-boy's ruling (15k ships);
+    - a "Rollout recipe, part 2". No paid services.
+  - **`ROLL-OX`** (branch `m6/roll-ox`): the pilot's recipe on Ox, plus the Punk's kind of texture ink zones (he has none). Tripo ceiling 85.
+  - **If cut off:** rerun build.js with the same args.
+- **Next:**
+  1. Merge both, regenerating the preset, the atlas and the ratchet, then the suite.
+  2. The lead's look. Send Game-boy `ab_bruiser_2.png`, `ab_boss.png` and the 20k question.
+  3. **Phase 2b:** the Kicker, the Pipe Thug and the Punk on recipe parts 1+2, one builder each (2 Blender slots, so 2 then 1), plus Ox opting into DETAIL-2's keys. Tripo left: 355 within the stop.
+  4. One review round (chars and world/feel on Opus, code on Sonnet), one fix wave, the suite and perf against `663cafc`.
+  5. README's M6 status for the ground and detail, PR #6's body, and the DM. Merge only on his word.
+- **Usage at launch:** 5-hour 14%, weekly 36%. Phase 1's three builders took about 10% of the 5-hour window in 70 min.
+
 ### 2026-11-05 09:30 CST: Game-boy played M6; four fixes from him; phase 1 of FEEDBACK building (FB-FEEL, FB-GROUND, FB-DETAIL)
 - **His four items**, word for word in `docs/reviews/M6/fix-feedback.md`:
   1. The street's ground has no clear texture and blinks or flashes constantly. Make it a comic-book texture.
