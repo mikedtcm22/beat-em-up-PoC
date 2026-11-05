@@ -4,6 +4,36 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-05 09:30 CST: Game-boy played M6; four fixes from him; phase 1 of FEEDBACK building (FB-FEEL, FB-GROUND, FB-DETAIL)
+- **His four items**, word for word in `docs/reviews/M6/fix-feedback.md`:
+  1. The street's ground has no clear texture and blinks or flashes constantly. Make it a comic-book texture.
+  2. Lose the victory sound on the GO sections.
+  3. The player's view should react more when he's hit ("knocked down to almost half-health without even realizing").
+  4. Upscale every enemy's detail toward its concept: too blobby, the Bruiser worst.
+- **The lead's diagnosis:**
+  - **Item 1:** the asphalt strip is a soft mottle with ink cracks one texel wide, and the trim shader caps the mip level at 4 (`lod_cap`). That's the lead suspect. The before recording is `captures/m6-feedback/before/walk/` (0 error lines).
+  - **Item 2:** `sting_go` plays on `arena_cleared`.
+  - **Item 3:** the player gets the same SPEC §6 shake and punch whether he lands a hit or takes it (a light hit is 0.1 trauma), and there is no overlay.
+  - **Item 4:** the Bruiser's raw Tripo model already holds concept A's detail (quilting, separate plates, visor, guards). The loss is in our chain:
+    - per-face swatches with ragged borders;
+    - few interior ink lines (the Punk has 7 ink zones, the Bruiser 1 and Ox 0);
+    - 12 iterations of normal smoothing;
+    - 15k triangles (from 20k).
+- **Running:** `tools/workflows/build.js`, run `wf_36bffae8-16c` (task `wwlmg4jui`), with `docs/reviews/M6/args-FEEDBACK.json`. Three Sonnet builders:
+  - `FB-FEEL`: items 2 and 3, plus the act "Look: player hurt";
+  - `FB-GROUND`: item 1, find the cause with numbers, then a comic ground, plus the act "Look: ground drift";
+  - `FB-DETAIL`: item 4's pilot on the Bruiser, stage-by-stage attribution, the levers, and a "Rollout recipe" in its calls file. Tripo ceiling 85, Gemini 4.
+  - Their worktrees are `.worktrees/m6-fb-<key>`, on branches `m6/fb-<key>`.
+  - **If cut off:** rerun build.js with the same args (each builder resumes from its newest `wip:` commit).
+- **Next:**
+  1. Merge each package as it lands (the preset, the atlas and the ratchet), then the lead's look at its captures.
+  2. Send Game-boy the Bruiser's A/B stills.
+  3. Phase 2: roll the recipe out to the Kicker, the Thug, Ox and the Punk, one builder each, owning only its own character's files.
+  4. One review round (chars and world/feel on Opus, code on Sonnet), one fix wave, the suite and perf.
+  5. README's "ruled by Game-boy at his M6 playtest", update PR #6, and the DM with the run command.
+  6. Merge only on his word.
+- **Usage at launch:** 5-hour 0%, weekly 34%. The watcher `local_a81a721f` is alive.
+
 ### 2026-11-05 03:05 CST: Milestone 6 delivered; PR #6 open; waiting on Game-boy's play and sign-off
 - **The perf fix is merged** (`c2b68c1`, branch `m6/fix-final-perf`). The cause was the trim shader writing `ALPHA_SCISSOR_THRESHOLD` on one branch, which made all 330 kit meshes alpha-clip: no depth prepass, and the full fragment in every shadow cascade.
   - It is now split: an opaque `trim()`, and `trim_scissor()` for the chain-link's wire alone.
