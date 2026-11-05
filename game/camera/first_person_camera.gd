@@ -70,6 +70,9 @@ enum KoPose { NONE = -1, RIGHT, LEFT, FEET }
 const TORSO_BONES: Array[StringName] = [&"Hips", &"Spine"]
 ## The name ending of the skinned art's torso mesh (the GLB's Body__fp_torso, attached as ArtBody__fp_torso).
 const FP_TORSO_SUFFIX := "__fp_torso"
+## The name ending of the skinned art's upper-arm mesh (the GLB's Body__fp_arm, attached as ArtBody__fp_arm): hidden from this
+## lens like the head, lifted onto the default layer while a move that says fp_show_upper_arm runs (_update_arm()).
+const FP_ARM_SUFFIX := SkinnedArt.FP_ARM_SUFFIX
 ## How many times _ko_room() halves the reach to find the lens's place clear of everything.
 const KO_ROOM_STEPS := 6
 ## How far below EyePoint lens_floor_y() looks for the floor of a player off the ground: the lens
@@ -117,6 +120,9 @@ var _head_meshes: Array[MeshInstance3D] = []
 ## while it is hidden from this lens (_update_torso(); empty when none is).
 var _torso_meshes: Array[MeshInstance3D] = []
 var _torso_layers: Dictionary[MeshInstance3D, int] = {}
+## The player's upper-arm meshes (found when a move first shows them) and the layers each had while it is lifted (_update_arm()).
+var _arm_meshes: Array[MeshInstance3D] = []
+var _arm_layers: Dictionary[MeshInstance3D, int] = {}
 ## The view before punch and shake: where the player is looking.
 var _view: Transform3D = Transform3D.IDENTITY
 ## Live punches: x = pitch kick and y = yaw kick at the peak (radians), z = age (seconds).
@@ -167,6 +173,8 @@ func set_player(value: PlayerCharacter) -> void:
 	_ko_was_out = false
 	_head_meshes.clear()
 	_torso_meshes.clear()
+	_restore_arm()
+	_arm_meshes.clear()
 	set_cull_mask_value(CombatTypes.VIS_FP_HIDDEN, false)
 	snap()
 
@@ -183,6 +191,7 @@ func update_camera(delta: float) -> void:
 	if _player_ok():
 		_view = _ko_view_mix(delta, _follow(delta))
 		_update_torso()
+		_update_arm()
 	_advance_effects(delta)
 	global_transform = _view * _effects_transform()
 
@@ -437,6 +446,51 @@ func _restore_torso() -> void:
 		if is_instance_valid(mesh):
 			mesh.layers = _torso_layers[mesh]
 	_torso_layers.clear()
+
+
+## True while the move the player is running says fp_show_upper_arm (the haymaker, the uppercut) and Tuning.look_near_arm is on.
+func _arm_move_running() -> bool:
+	if not Tuning.data.look_near_arm or player.current_move == null:
+		return false
+	var state := player.state
+	return (state == CombatTypes.ActorState.ATTACK or state == CombatTypes.ActorState.WINDUP) and player.current_move.fp_show_upper_arm
+
+
+## Draw the upper arms in this lens for a move that shows them (fp_show_upper_arm), or put their layers back. The mesh goes onto the
+## default layer the lens draws; done only while this camera is current, so the side view and free fly (which draw every layer) are
+## untouched. Checked every update while lifted, so a rig that resets its layers meanwhile is lifted again, and a hit that ends the
+## move, a camera switch or a respawn puts them back at once.
+func _update_arm() -> void:
+	if not (current and _arm_move_running()):
+		_restore_arm()
+		return
+	if _arm_meshes.is_empty():
+		_arm_meshes = _find_arm_meshes()
+	var default_layer := CombatTypes.bit(CombatTypes.VIS_DEFAULT)
+	for mesh: MeshInstance3D in _arm_meshes:
+		if not is_instance_valid(mesh):
+			continue
+		if not _arm_layers.has(mesh):
+			_arm_layers[mesh] = mesh.layers
+		mesh.layers = default_layer
+
+
+## Give every upper-arm mesh the layers it had before _update_arm() lifted it.
+func _restore_arm() -> void:
+	for mesh: MeshInstance3D in _arm_layers:
+		if is_instance_valid(mesh):
+			mesh.layers = _arm_layers[mesh]
+	_arm_layers.clear()
+
+
+## The player's skinned-art meshes named `*__fp_arm` (none on the probe body, an older GLB or the primitives).
+func _find_arm_meshes() -> Array[MeshInstance3D]:
+	var out: Array[MeshInstance3D] = []
+	for node: Node in player.rig.find_children("*", "MeshInstance3D", true, false):
+		var mesh := node as MeshInstance3D
+		if mesh.is_in_group(HumanoidRig.ART_GROUP) and String(mesh.name).ends_with(FP_ARM_SUFFIX):
+			out.append(mesh)
+	return out
 
 
 ## The player's torso meshes: the primitives on the Hips and Spine bones (the pelvis, belt, belly and

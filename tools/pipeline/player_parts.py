@@ -22,7 +22,7 @@ replace: reads work/03_rig.blend, writes work/04_parts.blend and work/04a_fists_
 	  The dense, textured pieces are kept in work/04a_fists_dense.blend for the detail mask (player_detail.py).
 
 split: reads work/05_palette.blend, writes work/06_split.blend. The first-person body (parts.split_fp): Body__fp_hidden = Chest
-	and above, both Shoulders and the shoulder half of each upper arm; the visible Body keeps everything else and EVERY open loop
+	and above and both Shoulders (and, when parts.split_fp.arm.enabled is off, the shoulder half of each upper arm too); the visible Body keeps everything else and EVERY open loop
 	of it is closed with an inward rounded cap. Differences from blender_parts.py: the horizontal cut is made through every face
 	that can be hidden (the shoulder zone too), so the hidden part never reaches below the Chest joint (a shoulder-zone face
 	hung below it in the first run); the generated mesh's pinholes, slits and non-manifold edges are cut out and patched (the contract
@@ -31,6 +31,11 @@ split: reads work/05_palette.blend, writes work/06_split.blend. The first-person
 	faces that are not an arm's, between the Chest joint's plane and the plane of parts.split_fp.torso.low_bone's joint, are separated
 	into it after the hidden part (split_fp; the shipped player.glb has Body, Body__fp_hidden and Body__fp_torso, and test_art_contract
 	asserts the three). The step before this one wrote the first two only (M4-calls/F-player-art.md C14); F-player-fix added the third.
+A fourth mesh Body__fp_arm (M6 D7, ARM) IS built when parts.split_fp.arm.enabled: the shoulder half of each upper arm (the faces
+the upper arm owns on the shoulder side of the cut at upper_arm_cut), separated from the hidden part after its defects are patched.
+It is first-person-hidden like the hidden part and FirstPersonCamera lifts it for the moves that say fp_show_upper_arm (the haymaker
+and the uppercut), so the lens sees the arm come in from the shoulder. Its loop on the shoulder side is closed with an inward cap
+(a hollow tube would show the lens the inside of the sleeve); the loop on the elbow side lies on Body's dome, which closes it.
 """
 import math
 import os
@@ -954,7 +959,7 @@ def separate_faces(body, mask, name):
 	bpy.ops.object.mode_set(mode="EDIT")
 	bpy.ops.mesh.separate(type="SELECTED")
 	bpy.ops.object.mode_set(mode="OBJECT")
-	new = [o for o in bpy.data.objects if o.type == "MESH" and o != body and o.name not in ("Body", "Body__fp_hidden")]
+	new = [o for o in bpy.data.objects if o.type == "MESH" and o != body and o.name not in ("Body", "Body__fp_hidden", "Body__fp_torso", "Body__fp_arm")]
 	part = new[-1]
 	part.name = name
 	part.data.name = name
@@ -1071,6 +1076,22 @@ def split_fp(cfg, extra):
 	bm.free()
 	hid.data.update()
 
+	# ----- the shoulder half of each upper arm (M6 D7): the faces of the hidden part the upper arm owns, on the shoulder side of the cut
+	arm = None
+	arm_report = {"enabled": False}
+	if sc.get("arm", {}).get("enabled", False):
+		w3 = pb.weights_matrix(hid, NAMES)
+		dom3 = dominant_per_face(hid.data, w3)
+		centers3 = pb.face_centers(hid.data)
+		in_arm = np.zeros(len(hid.data.polygons), dtype=bool)
+		for side in pc.SIDES:
+			ua, axis, length = arm_axes[side]
+			t3 = ((centers3 - ua) @ axis) / (length * length)
+			in_arm |= (dom3 == col[side + "UpperArm"]) & (t3 < cut_t)
+		arm = separate_faces(hid, in_arm, pb.BODY_ARM)
+		hid = bpy.data.objects[pb.BODY_HIDDEN]
+		arm_report = {"enabled": True, "faces": int(in_arm.sum())}
+
 	# ----- inward rounded caps on every open loop of the visible parts
 	heal = float(sc.get("heal_edge_max_m", 0.0))
 	cap_report = {"Body": add_caps(body, sc, heal)}
@@ -1078,6 +1099,11 @@ def split_fp(cfg, extra):
 	if torso is not None:
 		cap_report[pb.BODY_TORSO] = add_caps(torso, sc, heal)
 		parts.append(torso)
+	if arm is not None:
+		cap_report[pb.BODY_ARM] = add_caps(arm, sc, heal)
+		parts.append(arm)
+		ac = pb.verts(arm.data)
+		arm_report.update({"triangles": pb.triangle_count(arm.data), "bbox": {"min": ac.min(axis=0).tolist(), "max": ac.max(axis=0).tolist()}})
 	over_four = 0
 	for o in parts:
 		pb.attach_armature(o, bpy.data.objects[pb.ARMATURE])
@@ -1092,7 +1118,7 @@ def split_fp(cfg, extra):
 	if torso is not None:
 		tc_ = pb.verts(torso.data)
 		torso_report.update({"z_low_m": z_low, "triangles": pb.triangle_count(torso.data), "bbox": {"min": tc_.min(axis=0).tolist(), "max": tc_.max(axis=0).tolist()}})
-	return {"enabled": True, "torso": torso_report, "open_edges_before_weld": open_before, "open_edges_after_weld": open_after, "hole_faces_filled": filled, "slit_edges_collapsed": healed, "defect_faces_cut_out": cut_out, "defect_faces_patched": patched, "open_edges_after_fill": open_after_fill, "z_cut_m": z_cut, "upper_arm_cut": cut_t, "hidden_faces": int(hidden.sum()), "visible_triangles": pb.triangle_count(body.data),
+	return {"enabled": True, "torso": torso_report, "arm": arm_report, "open_edges_before_weld": open_before, "open_edges_after_weld": open_after, "hole_faces_filled": filled, "slit_edges_collapsed": healed, "defect_faces_cut_out": cut_out, "defect_faces_patched": patched, "open_edges_after_fill": open_after_fill, "z_cut_m": z_cut, "upper_arm_cut": cut_t, "hidden_faces": int(hidden.sum()), "visible_triangles": pb.triangle_count(body.data),
 		"hidden_triangles": pb.triangle_count(hid.data), "hidden_defect_faces_cut_out": hid_cut, "hidden_defect_faces_patched": hid_patched,
 		"vertices_over_four_influences_before_limit": over_four, "caps": cap_report,
 		"hidden_bbox": {"min": hc.min(axis=0).tolist(), "max": hc.max(axis=0).tolist()}}

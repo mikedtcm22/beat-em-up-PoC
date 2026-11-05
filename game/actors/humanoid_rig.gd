@@ -1308,6 +1308,7 @@ func _apply_layers() -> void:
 		mesh_instance.layers = head_layer
 	for mesh_instance: MeshInstance3D in _body_meshes:
 		mesh_instance.layers = default_layer
-	# The art's FP-hidden mesh (a GLB mesh named *__fp_hidden) goes with the head meshes.
+	# The art's FP-hidden meshes (a GLB mesh named *__fp_hidden, and the upper arms' *__fp_arm, which FirstPersonCamera lifts
+	# for the moves that show them) go with the head meshes.
 	for mesh_instance: MeshInstance3D in _art_meshes:
 		mesh_instance.layers = head_layer if mesh_instance.get_meta(SkinnedArt.FP_HIDDEN_META, false) else default_layer

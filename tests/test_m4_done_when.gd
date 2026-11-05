@@ -158,7 +158,7 @@ func _arts() -> Array[Dictionary]:
 	assert_not_null(hero, "the hero's art is worn: assets/export/characters/player/player.glb is shipped")
 	if hero != null:
 		out.append({name = "player", art = hero, player = true, budget = TRIANGLES_PLAYER,
-				glb = "res://assets/export/characters/player/player.glb", height = 1.8, meshes = ["Body", "Body__fp_hidden", "Body__fp_torso"],
+				glb = "res://assets/export/characters/player/player.glb", height = 1.8, meshes = ["Body", "Body__fp_hidden", "Body__fp_torso", "Body__fp_arm"],
 				moves = [], ratchets = {a5_extent = FIST_EXTENT}})
 	return out
 
@@ -293,8 +293,9 @@ func test_a1_the_glb_contract_holds_on_the_shipped_art() -> void:
 		for part: SkinnedArt.ArtMesh in entry.meshes:
 			names.append(String(part.node_name))
 		names.sort()
-		# The hero is three meshes since F-player-fix (test_art_contract: the belly and belt are their own
-		# Body__fp_torso, so fp_knockdown_hide_torso hides only them).
+		# The hero is four meshes since M6 ARM (test_art_contract): the belly and belt are their own Body__fp_torso, so
+		# fp_knockdown_hide_torso hides only them (F-player-fix), and the shoulder half of each upper arm is Body__fp_arm, which
+		# fp_show_upper_arm lifts into the lens for the haymaker and the uppercut.
 		var want := PackedStringArray(row.meshes)
 		want.sort()
 		assert_eq(names, want, "%s: the meshes the pipeline contract names" % row.name)

@@ -218,11 +218,23 @@
 						"rings": 6,
 						"ring_verts": 48
 					}
+				},
+				"Body__fp_arm": {
+					"default": {
+						"dir": "in",
+						"depth_m": 0.03,
+						"rings": 2,
+						"ring_verts": 20,
+						"wall_normals": true
+					}
 				}
 			},
 			"torso": {
 				"enabled": true,
 				"low_bone": "LeftUpperLeg"
+			},
+			"arm": {
+				"enabled": true
 			}
 		}
 	},
@@ -445,7 +457,8 @@
 				"RightLowerLeg": 1.5,
 				"LeftUpperLeg": 1.2,
 				"RightUpperLeg": 1.2,
-				"part:Body__fp_torso": 1.0
+				"part:Body__fp_torso": 1.0,
+				"part:Body__fp_arm": 0.5
 			}
 		},
 		"crease": {
