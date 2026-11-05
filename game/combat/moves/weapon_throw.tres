@@ -16,3 +16,4 @@ knockback = Vector3(0, 2, 6)
 reaction = 3
 tier = 1
 magnetism = false
+impact_sfx = &"pipe"

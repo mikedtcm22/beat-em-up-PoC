@@ -240,6 +240,8 @@ func test_a_weapon_with_art_draws_the_art_and_not_the_cylinder() -> void:
 
 func test_the_art_takes_the_floor_tint_lying_and_its_own_colours_otherwise() -> void:
 	Tuning.reset_to_default()
+	# M6 (D28): the tint is M5's amber look, the Debug switch `weapon_floor_amber`; by default the glint shows instead (twin below).
+	Tuning.set_value(&"weapon_floor_amber", true)
 	var weapon := (load("res://game/weapons/pipe.tscn") as PackedScene).instantiate() as Weapon
 	add_child_autofree(weapon)
 	var art := weapon.find_children("*", "Node3D", false, false).filter(func(n: Node) -> bool: return n is StaticArt)[0] as StaticArt
@@ -250,6 +252,9 @@ func test_the_art_takes_the_floor_tint_lying_and_its_own_colours_otherwise() -> 
 	weapon._refresh_look()
 	assert_eq(art.material.get_shader_parameter(&"albedo"), Color.WHITE, "at 0 the art keeps its own colours")
 	Tuning.reset_to_default()
+	Tuning.set_value(&"weapon_floor_amber", false)
+	weapon._refresh_look()
+	assert_eq(art.material.get_shader_parameter(&"albedo"), Color.WHITE, "with the amber off (the default) it keeps its own colours lying too")
 
 
 func test_the_prop_pipeline_reports_name_the_glbs_they_exported() -> void:

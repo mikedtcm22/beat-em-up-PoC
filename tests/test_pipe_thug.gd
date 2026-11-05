@@ -185,7 +185,10 @@ func test_a_thug_is_an_ai_enemy_with_its_health_attack_and_look() -> void:
 	assert_almost_eq(thug.attack_range_m(), 1.23, 0.001, "it closes to the first swing's reach")
 	# SPEC §10: red is the warning's, the blood's and the finishers'. The jacket is a green.
 	assert_lt(thug.color.r, thug.color.g, "the jacket is no red")
-	assert_lt(thug.pipe_color.r + 0.01, 1.0, "nor is the pipe a red")
+	# M6: the pipe is the painted art (one pipe_paint swatch, no red), no longer a cylinder the Thug colours.
+	var carried := PipeThug.PIPE_SCENE.instantiate() as Weapon
+	assert_not_null(carried.art_scene, "the pipe is the shared painted art, not a coloured cylinder")
+	carried.free()
 	assert_ne(thug.color, Color(0.86, 0.5, 0.16), "not the training dummy's orange")
 
 
@@ -210,7 +213,8 @@ func test_it_spawns_holding_a_pipe_in_its_right_hand() -> void:
 	assert_eq(pipe.get_parent(), thug.rig.get_attachment(&"WeaponGrip"), "on the grip of its right hand")
 	assert_true(pipe.freeze, "it rides the hand, no physics of its own")
 	assert_true(_free_pipes().is_empty(), "nothing lies on the floor yet")
-	assert_ne(pipe.color, Color(0.55, 0.58, 0.62), "a brighter pipe than the training room's, so it reads")
+	# M6: no brighter-coloured cylinder any more; the pipe is the painted art and the floor glint shows it where it lies.
+	assert_not_null(pipe.art_scene, "the pipe is the shared painted art")
 
 
 func test_born_unarmed_it_carries_no_pipe_and_throws_the_punks_moves() -> void:

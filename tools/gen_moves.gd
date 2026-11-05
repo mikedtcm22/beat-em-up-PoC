@@ -79,6 +79,16 @@ const KNEE_PITCH_DEG := -12.0
 const KNEE_DROP_M := 0.05
 ## Weapons hit a guard harder (the held block): pipe swings drain it 1.5 times as fast.
 const PIPE_GUARD_MULT := 1.5
+## The weapons' impact layers (MoveData.impact_sfx: the pool is `weapon_<name>_hit`, D22).
+const PIPE_IMPACT := &"pipe"
+const CHAIN_IMPACT := &"bike_chain"
+## The bike chain's strike sphere (M6, D5): the pipe's three pose recipes and the pipe's WeaponTip, the hitbox moved along the weapon
+## (m, in the point's frame, -Z toward the padlock) and its radius changed. The first two lashes are short and wide, the padlock
+## lands last: the finisher's sphere sits past the tip, so the chain's reach grows over the three.
+const CHAIN_LASH_OFFSET_M := 0.06
+const CHAIN_LASH_RADIUS_M := 0.2
+const CHAIN_LOCK_OFFSET_M := -0.1
+const CHAIN_LOCK_RADIUS_M := 0.22
 ## The sparring dummy's jab reaches a standing target at about 1.05 m (ARCHITECTURE "Strike
 ## reach"): its MoveData.reach_m, which the rear warning's range reads.
 const DUMMY_JAB_REACH_M := 1.05
@@ -226,6 +236,25 @@ func _build_moves() -> void:
 	var weapon_throw := _add(&"weapon_throw", "Weapon Throw", Vector3i(6, 1, 14), 15.0, HEAVY,
 			KNOCKDOWN, Vector3(0.0, 2.0, 6.0), [])
 	weapon_throw.magnetism = false
+	for pipe: MoveData in [pipe_1, pipe_2, pipe_3, weapon_throw]:
+		pipe.impact_sfx = PIPE_IMPACT
+
+	# The bike chain (M6, D5: the spec's numbers, 10 a swing, a three-hit chain, a throw of 15). The poses are the pipe's three
+	# recipes (placeholder_poses.gd); what differs is the timing (a whip starts quicker, the padlock's finisher later), the
+	# sphere (CHAIN_*) and the sound.
+	var chain_1 := _add(&"chain_swing_1", "Chain Lash", Vector3i(6, 3, 12), 10.0, LIGHT, FLINCH,
+			Vector3(0.0, 0.0, 2.0), [_sphere_at(&"WeaponTip", CHAIN_LASH_RADIUS_M, Vector3(0.0, 0.0, CHAIN_LASH_OFFSET_M))])
+	var chain_2 := _add(&"chain_swing_2", "Chain Backlash", Vector3i(6, 3, 12), 10.0, HEAVY, STAGGER,
+			Vector3(1.0, 0.0, 2.0), [_sphere_at(&"WeaponTip", CHAIN_LASH_RADIUS_M, Vector3(0.0, 0.0, CHAIN_LASH_OFFSET_M))])
+	var chain_3 := _add(&"chain_swing_3", "Padlock Smash", Vector3i(10, 4, 22), 10.0, FINISHER, KNOCKDOWN,
+			Vector3(0.0, 2.0, 6.0), [_sphere_at(&"WeaponTip", CHAIN_LOCK_RADIUS_M, Vector3(0.0, 0.0, CHAIN_LOCK_OFFSET_M))])
+	var chain_throw := _add(&"chain_throw", "Chain Throw", Vector3i(6, 1, 14), 15.0, HEAVY,
+			KNOCKDOWN, Vector3(0.0, 2.0, 6.0), [])
+	chain_throw.magnetism = false
+	for chain: MoveData in [chain_1, chain_2, chain_3]:
+		chain.guard_damage_mult = PIPE_GUARD_MULT
+	for chain: MoveData in [chain_1, chain_2, chain_3, chain_throw]:
+		chain.impact_sfx = CHAIN_IMPACT
 
 	# Body impacts: applied by code when a flying or shoved body hits someone.
 	var fly_body := _add(&"impact_body_knockdown", "Flying Body", Vector3i(0, 1, 0), 5.0, HEAVY,
@@ -367,6 +396,7 @@ func _thug_moves() -> void:
 	swing_3.free_lunge = THUG_PIPE_3_STEP_M
 	for pipe: MoveData in [swing_1, swing_2, swing_3]:
 		pipe.guard_damage_mult = PIPE_GUARD_MULT
+		pipe.impact_sfx = PIPE_IMPACT
 
 
 ## Where a grab connects (m from the holder's origin to the player's), the Bruiser's (2.05 m) and
@@ -507,6 +537,8 @@ func _build_branches() -> void:
 	_set_branches(&"roundhouse", [_branch(K, &"spinning_heel")])
 	_set_branches(&"pipe_swing_1", [_branch(P, &"pipe_swing_2")])
 	_set_branches(&"pipe_swing_2", [_branch(P, &"pipe_swing_3")])
+	_set_branches(&"chain_swing_1", [_branch(P, &"chain_swing_2")])
+	_set_branches(&"chain_swing_2", [_branch(P, &"chain_swing_3")])
 
 
 ## Move sets (docs/ARCHITECTURE.md "Move sets"). Conditional roots go before plain ones.
@@ -529,6 +561,12 @@ func _build_sets() -> Array[MoveSet]:
 	], []))
 	sets.append(_move_set(&"weapon", [
 		_branch(P, &"pipe_swing_1"),
+		_branch(K, &"stomp", NORMAL, DOWNED_NEAR),
+		_branch(K, &"front_kick"),
+		_branch(RB, &"back_elbow"),
+	], [_branch(RB, &"back_elbow")]))
+	sets.append(_move_set(&"bike_chain", [
+		_branch(P, &"chain_swing_1"),
 		_branch(K, &"stomp", NORMAL, DOWNED_NEAR),
 		_branch(K, &"front_kick"),
 		_branch(RB, &"back_elbow"),
@@ -570,6 +608,13 @@ func _sphere(point: StringName, radius: float) -> HitboxSpec:
 	spec.kind = HitboxSpec.Kind.POINT_SPHERE
 	spec.point = point
 	spec.radius = radius
+	return spec
+
+
+## A point sphere moved `offset` along the point's own axes (the bike chain's lash and padlock reach).
+func _sphere_at(point: StringName, radius: float, offset: Vector3) -> HitboxSpec:
+	var spec := _sphere(point, radius)
+	spec.offset = offset
 	return spec
 
 
@@ -722,7 +767,7 @@ func _verify_files() -> void:
 			_fail("%s embeds a MoveData sub_resource" % path)
 		if text.contains('path="%s"' % path):
 			_fail("%s references itself" % path)
-	for set_id: String in ["ground", "air", "hold", "weapon"]:
+	for set_id: String in ["ground", "air", "hold", "weapon", "bike_chain"]:
 		var path := SETS_DIR + set_id + ".tres"
 		var text := FileAccess.get_file_as_string(path)
 		if text.contains('script = ExtResource("%s")' % SCRIPT_IDS["res://game/combat/move_data.gd"]):

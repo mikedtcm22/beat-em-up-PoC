@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="WeaponDef" format=3]
+
+[ext_resource type="Script" path="res://game/weapons/weapon_def.gd" id="1_def"]
+[ext_resource type="PackedScene" path="res://game/weapons/bike_chain.tscn" id="2_scene"]
+[ext_resource type="Resource" path="res://game/combat/movesets/bike_chain.tres" id="3_set"]
+[ext_resource type="Resource" path="res://game/combat/moves/chain_throw.tres" id="4_throw"]
+
+[resource]
+script = ExtResource("1_def")
+id = &"bike_chain"
+display_name = "Bike Chain"
+scene = ExtResource("2_scene")
+move_set = ExtResource("3_set")
+throw_move = ExtResource("4_throw")
+swing_ids = Array[StringName]([&"chain_swing_1", &"chain_swing_2", &"chain_swing_3"])
+impact_sfx = &"bike_chain"

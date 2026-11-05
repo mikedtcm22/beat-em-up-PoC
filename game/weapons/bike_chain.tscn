@@ -1,0 +1,10 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://game/weapons/weapon.gd" id="1_weapon"]
+[ext_resource type="PackedScene" path="res://game/weapons/art/bike_chain.tscn" id="2_art"]
+
+[node name="BikeChain" type="RigidBody3D"]
+script = ExtResource("1_weapon")
+def_id = &"bike_chain"
+display_name = "Bike Chain"
+art_scene = ExtResource("2_art")

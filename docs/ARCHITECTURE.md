@@ -167,6 +167,10 @@ Ids are the `.tres` names in `game/combat/moves/`. Each move's animation id equa
 | `pipe_swing_2` | P P with weapon | 7/3/12 | 10 | HEAVY | STAGGER | 1,0,2 | WeaponTip r0.18 | z ≤ −0.7, y 1.0–1.7 |
 | `pipe_swing_3` | P P P with weapon | 9/4/20 | 10 | FINISHER | KNOCKDOWN | 0,2,6 | WeaponTip r0.2 | z ≤ −0.7, y 1.0–1.7 |
 | `weapon_throw` | LB with weapon | 6/1/14 | 15 | HEAVY | KNOCKDOWN | 0,2,6 | none (spawns projectile) | — |
+| `chain_swing_1` | P with the bike chain | 6/3/12 | 10 | LIGHT | FLINCH | 0,0,2 | WeaponTip +0.06 toward the hand, r0.2 | z ≤ −0.7, y 1.0–1.7 |
+| `chain_swing_2` | P P with the bike chain | 6/3/12 | 10 | HEAVY | STAGGER | 1,0,2 | WeaponTip +0.06 toward the hand, r0.2 | z ≤ −0.7, y 1.0–1.7 |
+| `chain_swing_3` | P P P with the bike chain | 10/4/22 | 10 | FINISHER | KNOCKDOWN | 0,2,6 | WeaponTip 0.1 past the tip, r0.22 | z ≤ −0.7, y 1.0–1.7 |
+| `chain_throw` | LB with the bike chain | 6/1/14 | 15 | HEAVY | KNOCKDOWN | 0,2,6 | none (spawns projectile) | — |
 | `impact_body_knockdown` | flying body hits someone | 0/1/0 | 5 | HEAVY | KNOCKDOWN | 0,2,3 | none | — |
 | `impact_body_stagger` | shoved body hits someone | 0/1/0 | 0 | LIGHT | STAGGER | 0,0,2 | none | — |
 | `dummy_jab` | sparring training dummy | 24/3/16 | 6 | LIGHT | FLINCH | 0,0,1.5 | RightFistPoint r0.14, no magnetism | z ≤ −0.65, y 1.35–1.65 |
@@ -192,6 +196,9 @@ Kicks use the camera offsets `camera_pitch_deg = −10` and `camera_drop_m = 0.0
 - `weapon.tres`
   - Roots: `P → pipe_swing_1`, `K [downed_target_near] → stomp`, `K → front_kick`, `RB → back_elbow`
   - Interrupt: `RB → back_elbow`
+- `bike_chain.tres` (M6)
+  - Roots: `P → chain_swing_1`, `K [downed_target_near] → stomp`, `K → front_kick`, `RB → back_elbow`
+  - Interrupt: `RB → back_elbow`
 
 **Branches:**
 - `jab_1`: `P → jab_2`, `P (PAUSE) → body_flurry`
@@ -202,6 +209,8 @@ Kicks use the camera offsets `camera_pitch_deg = −10` and `camera_drop_m = 0.0
 - `roundhouse`: `K → spinning_heel`
 - `pipe_swing_1`: `P → pipe_swing_2`
 - `pipe_swing_2`: `P → pipe_swing_3`
+- `chain_swing_1`: `P → chain_swing_2`
+- `chain_swing_2`: `P → chain_swing_3`
 
 The knee count, releasing the victim on the third knee, the throw direction, dodging, jumping, grabbing and weapon handling are player-controller logic. They are not branches.
 
@@ -1371,7 +1380,25 @@ _Filled by DRESS._
 
 ### The catalog, the second weapon and the glint (WEAPONS)
 
-_Filled by WEAPONS._
+**`WeaponDef`** (`game/weapons/weapon_def.gd`, a `Resource`; files `game/weapons/defs/<id>.tres`) and **`WeaponCatalog`** (`weapon_catalog.gd`, static: `get_def(id)`, `all()`, `is_swing(move_id)`, `is_throw(move_id)`, `clear()`; ids `pipe`, `bike_chain`).
+- Fields: `id`, `display_name`, `scene: PackedScene`, `move_set: MoveSet`, `throw_move: MoveData`, `swing_ids: Array[StringName]` (chain order), `impact_sfx: StringName`; `owns_swing(id)`.
+- **`Weapon.def_id`** (an export, default `pipe`) names the def and `Weapon.def` resolves it (the pipe's def if the id is unknown). The def points at the scene and the scene at the id, so the two resources never refer to each other. The scenes are `game/weapons/pipe.tscn` (path kept) and `game/weapons/bike_chain.tscn`; both keep the capsule collider, the grip 0.12 m from the -Y end and the hidden proxy cylinder (the amber path and the M1-M5 tests read it).
+- **`player.gd` reads the held weapon's def**: `_carry_set()` is the def's id (registered in `_sets` at pick-up) or `ground`; the swing refusal, the durability cost per body hit and the LB throw use `def.swing_ids` and `def.throw_move` (`WeaponCatalog.is_swing/is_throw` where no weapon is held any more). `MOVE_SETS` holds the ground, air and hold sets only; `WEAPON_THROW_PATH` stays as the pipe's throw.
+
+**The bike chain's moves** (`gen_moves.gd`, the spec's numbers, D5): `chain_swing_1/2/3` (LIGHT/FLINCH 6/3/12, HEAVY/STAGGER 6/3/12, FINISHER/KNOCKDOWN 10/4/22, 10 damage, `guard_damage_mult` 1.5, `WeaponTip` spheres r0.2, r0.2 and r0.22 moved +0.06, +0.06 and -0.10 m along the weapon: a short wide lash twice, the padlock out past the tip last) and `chain_throw` (6/1/14, 15, HEAVY/KNOCKDOWN); the set `bike_chain` (`movesets/bike_chain.tres`: P, stomp, front kick, back elbow like the pipe's). The poses are the pipe's three recipes and the throw (`PlaceholderPoses` dispatches both ids to them; `MOVE_IDS`, `_WEAPON_MOVES` and `_FREE_ARM` list the chain's). Every weapon move names its `impact_sfx` (`pipe` on the pipe's swings, throw and the Thug's three swings; `bike_chain` on the chain's), which the director turns into `weapon_pipe_hit` / `weapon_bike_chain_hit`.
+
+**`ChainSim`** (`chain_sim.gd`, a `Node3D` child of a weapon whose art repeats a mesh): presentation only.
+- `weapon_chain_points` Verlet points, the first pinned at the end of the `Grip` mesh, each pulled toward the straight line along the weapon's +Y at `weapon_chain_follow_rate` (1/s), with gravity, damping, `weapon_chain_iterations` length passes. It steps in world space by `delta` times the game-time scale (`TimeController.scale_for(holder)`, so the holder's hitstop freezes it; `sim_scale()` when nobody holds it) from the weapon's own transform; a grip that moves more than `weapon_chain_snap_m` in a step (a pick-up, a reparent) snaps it straight.
+- It draws the art's own `Link` as one `MultiMesh` (the art's material and hull, a link every `weapon_chain_link_pitch_m` along the points, each turned 90 degrees on the one before; the GLB's link is flat in XZ with its long side on Z, so Z is turned onto the chain) and moves the `Lock` mesh to the last point (turned along the last segment). StaticArt's straight repeats are hidden while it runs (`Debug` `weapon_chain_sim` off brings them back).
+- It never writes a hit, a body or a transform of the weapon: the hit is the rig's `WeaponTip`, as for the pipe. API: `step(dt)`, `points_local()`, `links_drawn()`, `rest_length()`, `is_ready_to_draw()`.
+
+**The glint (D28)** (`weapon_glint.gd`, `glint.gdshader`): a `WeaponGlint` `Node3D` named `Glint` on every weapon, top-level, `weapon_glint_height_m` above the weapon's position, one camera-facing quad with an additive four-point sparkle; its width is `max(weapon_glint_size_m, distance x tan(weapon_glint_min_angle_deg))` computed in the vertex shader, so it never covers less than that angle (3 degrees, 0.52 m at 10 m, with the defaults). Visible only while `weapon.is_available()` and `weapon_floor_amber` is off. `Debug` `weapon_floor_amber` brings M5's look back (the floor colour, the thicker radius, the art tint of `weapon_art_floor_tint`) and no glint. Statics for tests: `WeaponGlint.wanted(weapon)`, `drawn_size_m(d)`, `angular_size_deg(d)`, `position_above(weapon)`.
+
+**`CombatEvents.weapon_landed(weapon)`** fires once at a weapon's first contact after a throw or a drop (not for a pickup spot's placement, and not for a throw that breaks the weapon: `weapon_broke` plays then). `weapon_picked_up`, `weapon_thrown` and `weapon_broke` keep carrying the weapon node.
+
+**Tunables** (Level > Weapon look): `weapon_glint_height_m`, `weapon_glint_size_m`, `weapon_glint_min_angle_deg`, `weapon_glint_pulse_hz`, `weapon_glint_pulse_depth`, `weapon_glint_spin_dps`, `weapon_glint_intensity`, `weapon_glint_color`, `weapon_chain_points`, `weapon_chain_iterations`, `weapon_chain_follow_rate`, `weapon_chain_gravity`, `weapon_chain_damping`, `weapon_chain_snap_m`, `weapon_chain_link_pitch_m`. Debug: `weapon_floor_amber`, `weapon_chain_sim`.
+
+**Tests:** `tests/test_weapons_m6.gd` (the catalog, the spec's numbers per def, pick-up, the three-hit chain at 10, the break after 8 hits, the throw of 15, the guard drain, durability, `weapon_landed` once per landing, the glint from 10 m at eye height, the sim). **Look:** `tests/bot/acts/weapon_acts.gd`, "Look: weapons" (the crowd bot).
 
 ### The near upper arm (ARM)
 
