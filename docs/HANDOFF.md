@@ -4,6 +4,43 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-04 21:20 CST: the fix wave merged (1931/1931); perf over the bar, its fixer running; README written
+- **The fix wave is merged** (`752de4e`): 1931/1931 in 376 s, 0 error lines, and the GUT warning is gone. The only conflict was the atlas, which was regenerated.
+  - **art:**
+    - Ox's gloves are now round, from a redrawn front view (2 Gemini images, 1 Tripo glove of 50 credits), in their own near-black slot 54 with the orange wrap.
+    - The Bruiser's steel is `#7a839e`, with a plate ink zone. This one is *partial*: his chest has fewer plate edges than the concept. His strain ratchet moved slightly (logged B-1r).
+    - The 1 m acts frame each head by height (`LookActs.framed_pitch_deg`).
+    - The heavies test frees its director.
+  - **world:**
+    - The roofs' drop floors are dressed: asphalt, sidewalks, lane dashes and 11 car spots.
+    - `section_fog_sky_affect` is 0.3, so the dusk sky shows.
+    - The props are inside the environment band (the car is `car_wine #765a62`).
+    - CratesTop's `draw_box` is off.
+    - The acts settle the light before their first mark.
+    - Sun yaw: street -50, roofs -60, boss -70. Elevation: 38, 36, 35.
+    - LevelSection's defaults come from RoomKit.
+  - **arm:**
+    - The lifted arm gets its own band copy (`look_near_arm_band_1/_2/_mid_level`, Debug).
+    - The hull normals bend at the cut.
+    - The upper arm's stray navy and hair patches are repainted as skin.
+    - Hygiene: `test_damage_look` resets Tuning; ChainSim's and AuditionRoom's numbers are tunables; the ledger test's checks are one shared helper.
+  - **The lead's re-check** from the fixers' captures: the gloves read as gloves, the faces are framed, the sky shows, the drop reads as a street, and the arm is one tan limb.
+  - The paid services in all: Tripo 545 of 900 (balance 1160); ElevenLabs 4,843 of 30,000; Gemini 36 images.
+- **Perf** (§4 step 8; the machine was busy throughout with other apps, at load 3.4-9.2, but every comparison was interleaved):
+  - **The level walk** against `910448e`: mean 12.23 to 14.61 ms (**+19.5%**), p95 16.14 to 18.82, first hit 18.3 to 23.1 ms. Over the 15% line, so it's fix item `final-perf-01`.
+  - **"Perf, six with ragdolls"** against `main`: mean 14.73 to 16.60 ms (+12.7%). Within the line.
+  - The reports are in `captures/perf_compare/20261104-203356` and `20261104-205011`.
+- **Running:** the perf fixer, `review.js` run `wf_21d1d394-f48` (package `perf`, branch `m6/fix-final-perf`). It measures render counters first, takes back draw cost with no visible change, and warms whatever the first hit uses.
+  - **If cut off:** rerun with the same args (`docs/reviews/M6/findings-final.json` now holds only the `perf` package).
+- **README:** the M6 status section and its departures are written (`329b9de`). Its "Frame time" line reads `FRAME_TIME_PENDING`, to fill once perf lands. CLAUDE.md quotes M6's suite numbers.
+- **Sent to Game-boy** (Slack, 21:15): the fixes, plus stills of Ox, the near arm A/B and the world. The near-arm keep/off question is still open: the arm is on by default, and `look_near_arm` gives M5's view.
+- **Next:**
+  1. Merge perf, then the suite and an interleaved perf run.
+  2. Fill README's frame-time line.
+  3. Open the PR (never merge it without sign-off).
+  4. Send the DM with the run command and the audition keys.
+  5. Rewrite HANDOFF's takeover prompt for M6, and prune the worktrees.
+
 ### 2026-11-04 19:45 CST: the final review done (8 survive); the fix wave running
 - **The review** (`wf_9935c9e9-811`, about 25 minutes, 28 agents). The findings, verdicts and the lead's rulings are in `docs/reviews/M6/findings-final.json` (`2ec1110`).
   - **Survived:**
