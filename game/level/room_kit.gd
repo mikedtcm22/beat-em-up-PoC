@@ -19,6 +19,12 @@ const WARM_ART := "res://game/actors/art/punk_art.tres"
 ## the Punk's, which the throwaway rig builds: the Bruiser's and the boss's bodies are other sizes, so
 ## their first spawn would build one (26 to 31 ms with the Motion polish, about 17 ms more than M3).
 const WARM_LIBRARY_ENEMIES: Array[StringName] = [&"bruiser", &"boss"]
+## The rooms' default sky and fog (build_environment()), which a level section with no light of its own keeps
+## (LevelRoot.default_light(), M6 D12).
+const DEFAULT_SKY_TOP := Color(0.36, 0.42, 0.56)
+const DEFAULT_SKY_HORIZON := Color(0.72, 0.62, 0.55)
+const DEFAULT_FOG_COLOR := Color(0.6, 0.56, 0.55)
+const DEFAULT_FOG_DENSITY := 0.008
 
 ## The warm-up's CharacterArt (warm_art()), held for the run. SkinnedArt's cache holds an art only
 ## weakly (an Entry dies with its CharacterArt), and the throwaway rig is the only thing that
@@ -66,8 +72,8 @@ static func build_environment(room: Node3D) -> void:
 	env.background_mode = Environment.BG_SKY
 	var sky := Sky.new()
 	var sky_mat := ProceduralSkyMaterial.new()
-	sky_mat.sky_top_color = Color(0.36, 0.42, 0.56)
-	sky_mat.sky_horizon_color = Color(0.72, 0.62, 0.55)
+	sky_mat.sky_top_color = DEFAULT_SKY_TOP
+	sky_mat.sky_horizon_color = DEFAULT_SKY_HORIZON
 	sky_mat.ground_horizon_color = Color(0.4, 0.37, 0.38)
 	sky_mat.ground_bottom_color = Color(0.2, 0.2, 0.22)
 	sky.sky_material = sky_mat
@@ -76,8 +82,8 @@ static func build_environment(room: Node3D) -> void:
 	env.ambient_light_energy = 0.7
 	env.tonemap_mode = LookPost.tonemap_mode(Tuning.data.look_tonemap)
 	env.fog_enabled = true
-	env.fog_light_color = Color(0.6, 0.56, 0.55)
-	env.fog_density = 0.008
+	env.fog_light_color = DEFAULT_FOG_COLOR
+	env.fog_density = DEFAULT_FOG_DENSITY
 	var world_env := WorldEnvironment.new()
 	world_env.name = "WorldEnvironment"
 	world_env.environment = env

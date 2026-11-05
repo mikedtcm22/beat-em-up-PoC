@@ -33,6 +33,8 @@ const _GLOSSY_META := &"toon_glossy"
 const _FP_META := &"toon_fp"
 const _SHARP_META := &"toon_sharp_detail"
 const _WARM_NAME := "ToonWarmUp"
+## The static prop the warm-up draws once so StaticArt's pipeline is built at load (smallest of the four).
+const WARM_PROP := "res://game/level/props/ac_unit.tscn"
 ## Where the warm-up's holder stands from the camera: this far ahead and this far below it, so
 ## a body drawn on it (feet at the holder) is in view.
 const WARM_DISTANCE_M := 2.5
@@ -360,6 +362,12 @@ static func warm_up(parent: Node, skinned: Node3D = null) -> void:
 		module.mesh = KitMesh.build(&"wall", Vector3.ONE * 1.2)
 		module.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 		holder.add_child(module)
+		# A static prop (M6 D27): StaticArt's pipeline (art_prop on a mesh with CUSTOM0/1 and COLOR and no
+		# skin, with the baked-normal hull on its overlay) is not one the skinned warm-up builds.
+		if ResourceLoader.exists(WARM_PROP):
+			var prop := (load(WARM_PROP) as PackedScene).instantiate() as Node3D
+			if prop != null:
+				holder.add_child(prop)
 	if variant:
 		var copy := skinned.duplicate() as Node3D
 		holder.add_child(copy)

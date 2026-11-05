@@ -7,6 +7,9 @@
 [ext_resource type="Resource" path="res://game/level/mission1/encounters/a7.tres" id="5_table"]
 [ext_resource type="Script" path="res://game/level/kit/arena.gd" id="6_arena"]
 [ext_resource type="Script" path="res://game/level/kit/spawn_point.gd" id="7_spawn"]
+[ext_resource type="Script" path="res://game/level/kit/art/dressing.gd" id="90_dressing"]
+[ext_resource type="Script" path="res://game/level/kit/art/kit_piece.gd" id="91_piece"]
+[ext_resource type="Script" path="res://game/level/kit/art/prop_spot.gd" id="92_spot"]
 
 [sub_resource type="BoxShape3D" id="Box_lock"]
 size = Vector3(21, 8, 20.5)
@@ -14,6 +17,16 @@ size = Vector3(21, 8, 20.5)
 [node name="BossRoof" type="Node3D"]
 script = ExtResource("1_sect")
 floor_heights = PackedFloat32Array(0)
+ambience = &"ambience_roof"
+light_enabled = true
+sun_elevation_deg = 24.0
+sun_yaw_deg = -100.0
+sun_color = Color(0.98, 0.74, 0.6, 1)
+sun_energy = 1.2
+fog_color = Color(0.31, 0.29, 0.4, 1)
+fog_density = 0.015
+sky_top_color = Color(0.2, 0.2, 0.34, 1)
+sky_horizon_color = Color(0.56, 0.38, 0.38, 1)
 
 [node name="Entry" type="Marker3D" parent="."]
 
@@ -30,6 +43,7 @@ script = ExtResource("2_blk")
 position = Vector3(0, -0.5, -10)
 size = Vector3(20, 1, 20)
 look = &"floor"
+module = &"deck"
 
 [node name="Building" type="Node3D" parent="Geometry"]
 script = ExtResource("2_blk")
@@ -165,6 +179,7 @@ position = Vector3(60, -12.5, -10)
 size = Vector3(200, 1, 200)
 look = &"floor"
 solid = false
+module = &"slab_dark"
 
 [node name="SkylineA" type="Node3D" parent="Geometry"]
 script = ExtResource("2_blk")
@@ -172,6 +187,7 @@ position = Vector3(84, -2, -12)
 size = Vector3(10, 20, 12)
 look = &"wall"
 solid = false
+module = &"skyline"
 
 [node name="SkylineB" type="Node3D" parent="Geometry"]
 script = ExtResource("2_blk")
@@ -179,6 +195,7 @@ position = Vector3(92, 3, -40)
 size = Vector3(12, 30, 12)
 look = &"accent"
 solid = false
+module = &"skyline"
 
 [node name="SkylineC" type="Node3D" parent="Geometry"]
 script = ExtResource("2_blk")
@@ -186,6 +203,7 @@ position = Vector3(70, -6, -44)
 size = Vector3(10, 12, 10)
 look = &"wall"
 solid = false
+module = &"skyline"
 
 [node name="SkylineD" type="Node3D" parent="Geometry"]
 script = ExtResource("2_blk")
@@ -193,6 +211,7 @@ position = Vector3(76, -4, 16)
 size = Vector3(12, 16, 12)
 look = &"accent"
 solid = false
+module = &"skyline"
 
 [node name="SidewalkNear" type="Node3D" parent="Geometry"]
 script = ExtResource("2_blk")
@@ -214,6 +233,7 @@ position = Vector3(50, -8.5, -22)
 size = Vector3(14, 7, 20)
 look = &"wall"
 solid = false
+module = &"skyline"
 
 [node name="LowBlockB" type="Node3D" parent="Geometry"]
 script = ExtResource("2_blk")
@@ -221,6 +241,7 @@ position = Vector3(50, -9.5, 6)
 size = Vector3(14, 5, 20)
 look = &"accent"
 solid = false
+module = &"skyline"
 
 [node name="LowBlockC" type="Node3D" parent="Geometry"]
 script = ExtResource("2_blk")
@@ -228,6 +249,7 @@ position = Vector3(50, -9, -50)
 size = Vector3(14, 6, 20)
 look = &"wall"
 solid = false
+module = &"skyline"
 
 [node name="LaneDash0" type="Node3D" parent="Geometry"]
 script = ExtResource("2_blk")
@@ -312,6 +334,7 @@ position = Vector3(19, -11.3, -22)
 size = Vector3(1.9, 1.4, 4.4)
 look = &"prop"
 solid = false
+draw_box = false
 
 [node name="Car2" type="Node3D" parent="Geometry"]
 script = ExtResource("2_blk")
@@ -319,6 +342,7 @@ position = Vector3(35, -11.3, -4)
 size = Vector3(1.9, 1.4, 4.4)
 look = &"prop"
 solid = false
+draw_box = false
 
 [node name="Car3" type="Node3D" parent="Geometry"]
 script = ExtResource("2_blk")
@@ -326,6 +350,7 @@ position = Vector3(19, -11.3, 8)
 size = Vector3(1.9, 1.4, 4.4)
 look = &"prop"
 solid = false
+draw_box = false
 
 [node name="Car4" type="Node3D" parent="Geometry"]
 script = ExtResource("2_blk")
@@ -333,6 +358,7 @@ position = Vector3(33, -11.3, -30)
 size = Vector3(1.9, 1.4, 4.4)
 look = &"prop"
 solid = false
+draw_box = false
 
 [node name="Car5" type="Node3D" parent="Geometry"]
 script = ExtResource("2_blk")
@@ -340,6 +366,7 @@ position = Vector3(19, -11.3, -44)
 size = Vector3(1.9, 1.4, 4.4)
 look = &"prop"
 solid = false
+draw_box = false
 
 [node name="Car6" type="Node3D" parent="Geometry"]
 script = ExtResource("2_blk")
@@ -347,6 +374,7 @@ position = Vector3(33, -11.3, 16)
 size = Vector3(1.9, 1.4, 4.4)
 look = &"prop"
 solid = false
+draw_box = false
 
 [node name="LipStripe0" type="Node3D" parent="Geometry"]
 script = ExtResource("2_blk")
@@ -432,3 +460,68 @@ tag = &"doorway"
 
 [node name="LanePoint" type="Marker3D" parent="Arenas/Arena7/GateDoor"]
 position = Vector3(4.0, 0, 0)
+
+[node name="Dressing" type="Node3D" parent="."]
+script = ExtResource("90_dressing")
+
+[node name="Frame1" type="MeshInstance3D" parent="Dressing"]
+script = ExtResource("91_piece")
+position = Vector3(-9.6, 1.35, -3)
+rotation = Vector3(0, 1.5708, 0)
+kind = &"door_frame"
+size = Vector3(2.56, 2.7, 0.2)
+
+[node name="Frame2" type="MeshInstance3D" parent="Dressing"]
+script = ExtResource("91_piece")
+position = Vector3(-9.6, 1.35, -11)
+rotation = Vector3(0, 1.5708, 0)
+kind = &"door_frame"
+size = Vector3(2.56, 2.7, 0.2)
+
+[node name="Frame3" type="MeshInstance3D" parent="Dressing"]
+script = ExtResource("91_piece")
+position = Vector3(0, 1.45, -19.6)
+kind = &"door_frame"
+size = Vector3(2.96, 2.9, 0.2)
+
+[node name="Car1" type="Node3D" parent="Dressing"]
+script = ExtResource("92_spot")
+position = Vector3(19, -12, -22)
+rotation = Vector3(0, 1.5708, 0)
+prop_id = &"car"
+size = Vector3(4.4, 1.4, 1.9)
+
+[node name="Car2" type="Node3D" parent="Dressing"]
+script = ExtResource("92_spot")
+position = Vector3(35, -12, -4)
+rotation = Vector3(0, 1.5708, 0)
+prop_id = &"car"
+size = Vector3(4.4, 1.4, 1.9)
+
+[node name="Car3" type="Node3D" parent="Dressing"]
+script = ExtResource("92_spot")
+position = Vector3(19, -12, 8)
+rotation = Vector3(0, 1.5708, 0)
+prop_id = &"car"
+size = Vector3(4.4, 1.4, 1.9)
+
+[node name="Car4" type="Node3D" parent="Dressing"]
+script = ExtResource("92_spot")
+position = Vector3(33, -12, -30)
+rotation = Vector3(0, 1.5708, 0)
+prop_id = &"car"
+size = Vector3(4.4, 1.4, 1.9)
+
+[node name="Car5" type="Node3D" parent="Dressing"]
+script = ExtResource("92_spot")
+position = Vector3(19, -12, -44)
+rotation = Vector3(0, 1.5708, 0)
+prop_id = &"car"
+size = Vector3(4.4, 1.4, 1.9)
+
+[node name="Car6" type="Node3D" parent="Dressing"]
+script = ExtResource("92_spot")
+position = Vector3(33, -12, 16)
+rotation = Vector3(0, 1.5708, 0)
+prop_id = &"car"
+size = Vector3(4.4, 1.4, 1.9)

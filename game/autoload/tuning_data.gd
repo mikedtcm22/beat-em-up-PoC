@@ -1136,6 +1136,12 @@ extends Resource
 ## module's face. The strips are painted for 4 m; a smaller number makes the brick, the plaster and the
 ## asphalt finer, a larger one coarser. The faces' UVs are in metres, so a wall of any length fits.
 @export_range(1.0, 16.0, 0.25) var kit_trim_m_per_tile: float = 4.0
+@export_subgroup("Section light")
+## How long the level's light takes to change from one section's to the next's (Milestone 6, DRESS; D12):
+## the sun's direction, colour and energy, the fog and the sky horizon, blended from the moment the
+## player enters the new section (`CombatEvents.section_entered`). 0 snaps. Each section's own light is
+## its `LevelSection` exports (the street's dusk, the roofs' copper, the boss roof's dark drop).
+@export_range(0.0, 10.0, 0.1) var section_light_blend_s: float = 2.5
 
 @export_group("Audio")
 @export_subgroup("Mix")
@@ -1533,6 +1539,9 @@ extends Resource
 ## on the default layer while they run), or off, M5's view where the arm starts at the elbow's dome.
 ## Read every frame. Presets never hold it.
 @export var look_near_arm: bool = true
+## DRESS's A/B (Milestone 6, D12): each section's own light (sun, fog, sky) on, or Tuning's one sun
+## and the room's default fog everywhere, as in M5. Read live by the level. Presets never hold it.
+@export var section_light_enabled: bool = true
 
 
 func hitstop_s(tier: CombatTypes.HitTier) -> float:
