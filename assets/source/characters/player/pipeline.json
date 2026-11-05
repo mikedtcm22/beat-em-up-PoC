@@ -156,13 +156,15 @@
 					"dir": "out",
 					"depth_m": 0.04,
 					"rings": 8,
-					"ring_verts": 32
+					"ring_verts": 32,
+					"inset_m": 0.006
 				},
 				"RightUpperArm": {
 					"dir": "out",
 					"depth_m": 0.04,
 					"rings": 8,
-					"ring_verts": 32
+					"ring_verts": 32,
+					"inset_m": 0.006
 				},
 				"Hips": {
 					"dir": "in",
@@ -234,7 +236,10 @@
 				"low_bone": "LeftUpperLeg"
 			},
 			"arm": {
-				"enabled": true
+				"enabled": true,
+				"push_m": 0.004,
+				"elbow_ramp_m": 0.008,
+				"shoulder_ramp_m": 0.015
 			}
 		}
 	},

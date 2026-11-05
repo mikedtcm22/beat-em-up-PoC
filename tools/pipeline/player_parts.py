@@ -816,7 +816,8 @@ def add_caps(obj, sc, heal_max=0.0):
 	"""Close every open loop of a mesh with a rounded cap and return the cap report. A loop's cap is built from the settings
 	cap_spec() finds for the bone that owns most of its vertices: `dir` "in" puts the dome inside the mesh (the waist, the leg tops:
 	nothing the lens meets), "out" puts it on the cut's outer side (the upper arm's end, so it reads as M3's Elbow capsule: a
-	convex dome, tangent to the arm at the ring, with smooth normals); `depth_m` is its height and `rings` its steps. The whole cap
+	convex dome, tangent to the arm at the ring, with smooth normals); `depth_m` is its height and `rings` its steps; `inset_m` sinks its
+	rings below the wall they are tangent to (zero at the cut, the full amount from about 15 degrees up the dome). The whole cap
 	takes the loop's commonest palette swatch (the skin's, on an arm), so no border of two colours crosses it; its UV2 is (0, 0), which
 	is empty (no ink); its faces carry CAP_ATTR (1; 2 when the spec says `wall_normals`: a cap nobody sees, whose ring then takes the wall's
 	shading normal, see player_normals.py) so the hull's smooth normal ignores them."""
@@ -852,6 +853,7 @@ def add_caps(obj, sc, heal_max=0.0):
 		owner = names_by_group.get(max(acc, key=acc.get), "") if acc else ""
 		spec = cap_spec(sc, owner, obj.name)
 		depth, rings = float(spec["depth_m"]), int(spec["rings"])
+		inset = float(spec.get("inset_m", 0.0))
 		n_cap = n_in if spec["dir"] == "in" else -n_in
 		# the loop's commonest swatch (the faces next to the cut): the cap wears it whole
 		votes = {}
@@ -885,7 +887,12 @@ def add_caps(obj, sc, heal_max=0.0):
 			phi = math.pi / 2 * k / rings
 			ring = []
 			for j2 in range(m):
-				q = bm.verts.new(tuple(c + n_cap * depth * math.sin(phi) + (coarse_pts[j2] - c) * math.cos(phi)))
+				radial = coarse_pts[j2] - c
+				pos = c + n_cap * depth * math.sin(phi) + radial * math.cos(phi)
+				if inset > 0.0:
+					# sunk below the wall the dome is tangent to (spec `inset_m`, the upper arms': Body__fp_arm's wall lies over it and must hide it)
+					pos = pos - radial / max(np.linalg.norm(radial), 1e-9) * inset * float(smoothstep01(math.sin(phi) / 0.25))
+				q = bm.verts.new(tuple(pos))
 				a_i, b_i, f2 = coarse_src[j2]
 				wa, wb = dict(verts[a_i][dl].items()), dict(verts[b_i][dl].items())
 				for gi in set(wa) | set(wb):
@@ -964,6 +971,57 @@ def separate_faces(body, mask, name):
 	part.name = name
 	part.data.name = name
 	return part
+
+
+def smoothstep01(x):
+	x = np.clip(x, 0.0, 1.0)
+	return x * x * (3.0 - 2.0 * x)
+
+
+def push_arm_out(arm, arm_axes, cut_t, ac):
+	"""Swell the upper-arm piece radially by ac.push_m (M6 D7): Body's convex dome at the cut reaches into the piece (it is tangent to the arm
+	at the cut's ring, so it lies a millimetre inside the piece's wall there), and the generated wall dips by more than that in places: with
+	both on screen the dome showed through in ragged patches with edge lines. The push is zero at the cut's ring and ramps up over
+	ac.elbow_ramp_m (so the join with Body stays closed), and zero again at the piece's shoulder-side loop (ac.shoulder_ramp_m: the hidden
+	part's edge there must stay on the piece's). Returns a report."""
+	push = float(ac.get("push_m", 0.0))
+	if push <= 0.0:
+		return {"push_m": 0.0}
+	bm = bmesh.new()
+	bm.from_mesh(arm.data)
+	bm.verts.ensure_lookup_table()
+	co = np.array([tuple(v.co) for v in bm.verts])
+	boundary = np.array([any(e.is_boundary for e in v.link_edges) for v in bm.verts])
+	best_side, axial, radial = [], np.zeros(len(co)), np.zeros_like(co)
+	sides = list(arm_axes.keys())
+	d_side = []
+	for side in sides:
+		ua, axis, length = arm_axes[side]
+		rel = co - ua
+		t = rel @ (axis / length)
+		perp = rel - np.outer(t, axis / length)
+		d_side.append((np.linalg.norm(perp, axis=1), t, perp))
+	pick = np.argmin(np.stack([d[0] for d in d_side]), axis=0)
+	for i in range(len(co)):
+		dist, t, perp = d_side[pick[i]]
+		axial[i] = t[i] - arm_axes[sides[pick[i]]][2] * cut_t  # metres past the cut toward the elbow (negative on the shoulder side)
+		radial[i] = perp[i] / max(dist[i], 1e-9)
+	on_ring = boundary & (np.abs(axial) < 0.001)
+	on_shoulder = boundary & ~on_ring
+	w = np.ones(len(co))
+	if on_ring.any():
+		d_ring = np.min(np.linalg.norm(co[:, None, :] - co[on_ring][None, :, :], axis=2), axis=1)
+		w = np.minimum(w, smoothstep01(d_ring / float(ac.get("elbow_ramp_m", 0.008))))
+	if on_shoulder.any():
+		d_sh = np.min(np.linalg.norm(co[:, None, :] - co[on_shoulder][None, :, :], axis=2), axis=1)
+		w = np.minimum(w, smoothstep01(d_sh / float(ac.get("shoulder_ramp_m", 0.015))))
+	moved = radial * (push * w)[:, None]
+	for i, v in enumerate(bm.verts):
+		v.co = tuple(co[i] + moved[i])
+	bm.to_mesh(arm.data)
+	bm.free()
+	arm.data.update()
+	return {"push_m": push, "ring_vertices": int(on_ring.sum()), "shoulder_vertices": int(on_shoulder.sum()), "max_moved_m": float(np.linalg.norm(moved, axis=1).max())}
 
 
 def split_fp(cfg, extra):
@@ -1091,6 +1149,7 @@ def split_fp(cfg, extra):
 		arm = separate_faces(hid, in_arm, pb.BODY_ARM)
 		hid = bpy.data.objects[pb.BODY_HIDDEN]
 		arm_report = {"enabled": True, "faces": int(in_arm.sum())}
+		arm_report["push"] = push_arm_out(arm, arm_axes, cut_t, sc["arm"])
 
 	# ----- inward rounded caps on every open loop of the visible parts
 	heal = float(sc.get("heal_edge_max_m", 0.0))

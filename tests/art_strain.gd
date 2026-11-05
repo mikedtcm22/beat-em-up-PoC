@@ -48,11 +48,11 @@ const PLANTED_M := 0.002
 ## 0.0144, flex_share_max 0.0173, in_bar_min 1; the hero's: 9.1, 0.14, 39.1, 0.0282, 0.0066).
 ## M6 ARM moved the hero's: the shoulder half of each upper arm is a mesh of its own (Body__fp_arm), and the run reports the worst of
 ## each mesh's own percentiles, so the same triangles that sat in the 4,761-vertex hidden part now set the p99.9 and p0.1 of a
-## 1,764-triangle mesh (the figures do not move with the caps: rings 1 and 2 give the same 10.742 and 0.1009): high_max 9.1 -> 11.3
-## (10.742 + 5%), low_min 0.14 -> 0.096 (0.1009 - 5%), flex_share_max 0.0066 -> 0.0073 (0.696% + 5%); max_max, min_min unchanged.
+## 1,764-triangle mesh (the figures do not move with the caps: rings 1 and 2 give the same 10.742 and 0.1009 before the push below):
+## high_max 9.1 -> 11.8 (11.244 + 5%), low_min 0.14 -> 0.097 (0.1019 - 5%); flex_share_max (today 0.642%), max_max and min_min unchanged.
 static var SHIPPED: Array[Dictionary] = _shipped()
 const PLAYER_ROW := {name = "player", path = "res://assets/export/characters/player/player.glb", art = "res://game/actors/art/player_art.tres", player = true, budget = 30000,
-		in_bar_min = 1, high_max = 11.3, low_min = 0.096, max_max = 39.1, min_min = 0.0282, flex_share_max = 0.0073}
+		in_bar_min = 1, high_max = 11.8, low_min = 0.097, max_max = 39.1, min_min = 0.0282, flex_share_max = 0.0066}
 ## The per-clip ratchet's margin over today's figure (a ratio on p99.9 and the stretch; its inverse on p0.1 and the compression),
 ## and the flex triangle count's (a ratio, and two triangles).
 const CLIP_MARGIN := 0.10
