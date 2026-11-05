@@ -43,7 +43,7 @@ static func _drops(bot: Node) -> void:
 		player.rotation.y = yaw
 		player.look_yaw = yaw
 		player.look_pitch = deg_to_rad(float(pose.pitch))
-		await TourActs.settle_light(bot, section)
+		await TourActs.settle_light(bot, section, player.global_position)
 		bot.log_line("DROP %d %s f%d" % [n, pose.label, Engine.get_physics_frames()])
 		await bot._ticks(int(HOLD_S * Engine.physics_ticks_per_second))
 
