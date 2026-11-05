@@ -21,7 +21,7 @@
         "docs/milestones/M6-calls/FIX-FEEL.md and FB-FEEL.md",
         "game/camera/first_person_camera.gd (hit_bearing and its callers), game/ui/hurt_overlay.gd",
         "tests/test_m6_feedback_feel.gd (the six real-hit tests), tests/bot/acts/look_hurt_acts.gd",
-        "game/combat/moves/stomp.tres and movesets/ground.tres (why the player looks down)"
+        "game/combat/moves/stomp.tres and game/combat/movesets/ground.tres (why the player looks down)"
       ]
     },
     {
