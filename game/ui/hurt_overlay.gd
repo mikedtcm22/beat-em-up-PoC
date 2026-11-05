@@ -125,7 +125,12 @@ func _on_hit_landed(hit: HitInfo) -> void:
 	if hit == null or not is_instance_valid(hit.victim) or not hit.victim.is_in_group(&"player"):
 		return
 	var camera := get_viewport().get_camera_3d() if is_inside_tree() else null
-	var view := camera.global_transform if camera != null else (hit.victim as Node3D).global_transform
+	# The view without the last hit's kick and roll (the live transform carries them), when the camera has one.
+	var view := (hit.victim as Node3D).global_transform
+	if camera is FirstPersonCamera:
+		view = (camera as FirstPersonCamera).view_transform()
+	elif camera != null:
+		view = camera.global_transform
 	on_player_hit(hit, view)
 
 
