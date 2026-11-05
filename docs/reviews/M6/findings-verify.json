@@ -1,0 +1,446 @@
+{
+ "round": "verify",
+ "base": "d582d21",
+ "reviews": {
+  "chars": {
+   "summary": "Chars lens verification of the fix wave at d582d21. Fully fixed: the Thug's half-face (chars-01) and his skin now bruises on both cheeks; the Thug's chest scribble (chars-02), with the V-shaped hood drape and the pocket ink kept; the Thug's waistband dashes (chars-08); the Kicker's mask slashes (chars-05); the Bruiser's double visor stripes and cream wedge (chars-06, colour part); the Punk's vest. The veteran is still clearly different at 5 m. The Ox claim (a) holds. His face faces are slot 7, and their texel codes are 97.6% slot 7 with no slot 53. Swatches on and off look the same, and bloodied, the face takes the skin bruise. So the mauve patches are the toon shadow band, and the face stays flat: answered, not fixed. Four defects stay or are new. (1) The Kicker's eye fix shipped the build its own call rejected. The region max z in pipeline.json is 1.685 (the call says 1.665), so the cap's brim tips and underside are painted skin, and the face is a blank pale band, further from the concept's shaded eyes. (2) The Bruiser's helmet still bleeds on a front band just above the visor: 64 slot-44 faces at z 1.64-1.71 sit below helmet_top's min z of 1.71, and a red drip lands there at 20% health. (3) Ox's new face ink is a hairy blot under the nose plus a stray comma at the jaw at 1 m, over the remaining mauve patches. (4) The Bruiser's under-visor scarf keeps the stair-stepped outline, now purple on grey. No new crawl was visible in the fight sheet, though that check was coarse.",
+   "checked": [
+    "Setup: worktree .worktrees/m6-review-verify-chars at d582d21, imported; one Godot at a time, none left running; the probe act file was deleted afterwards",
+    "chars-01 Thug half-face: r_thug f49 head crops, before against after (heads_tk.png top row); lineup at 2.2 m (thug_waist.png)",
+    "chars-01 skin rule: a probe act with the Thug at 20% health, swatches on and off (tk_blood.png top row, rvc f579/f629)",
+    "chars-02 Thug chest scribble and claim (d), the drape and pocket ink: r_thug f209 body at 1 m, dt yaw150 back (thug_body.png)",
+    "chars-08 Thug waistband: lineup t000 waist zoom, before against after (thug_waist.png)",
+    "chars-03 Ox and claim (a): GLB face-box slot counts (7:764, 50:261, 51:247 in x+-0.09; only 7 slot-53 faces in x+-0.15); detail-texture texel codes on the slot-7 face faces (7:13560, 50:94, 51:41); swatches on against off bloodied (rvc f139/f189, ox_bru_blood.png, bru_helmet_zoom.png bottom)",
+    "Claim (c) Ox's nose stroke at 1 m: r_boss f49/f109 head at full resolution (ox_face.png)",
+    "chars-04/-05 Kicker eyes and mask: r_kicker f49/f109/f169 and dk yaw0/yaw90 before against after (heads_tk.png bottom, kick_turns.png)",
+    "Claim (b) Kicker against the concept kicker_c.jpg at 1 m and 2.2 m (kick_concept.png); the pipeline.json eyes region and zone values against FIX-ART-A A-4",
+    "Kicker skin rule: bloodied probe; the eye band bruises (tk_blood.png bottom row)",
+    "chars-06 Bruiser visor and wedge: r_bruiser f49 head, before against after (heads_bo.png top)",
+    "Claim (e) the Bruiser's helmet colour at 1 m (heads_bo), 2.2 m (lineup_ba.png) and 5 m (heavies5.png); bloodied helmet against face (rvc f359/f409); GLB slot counts by height band on the helmet front",
+    "Claim (f) Punk vest: dp1 yaw0/yaw150 before against after (punk_turns.png); the veteran at 1 m and 5 m from a recorded lk2 act (vet.png)",
+    "Regressions in motion: fight frames 930-951 every 3 frames (fight/verify_940.png)",
+    "Shader damage-class logic toon.gdshader:119-136 and the swatch alpha classes in gen_palette.py:52-99"
+   ],
+   "sheets": [
+    "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m6-review-verify-chars/captures/review/heads_tk.png",
+    "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m6-review-verify-chars/captures/review/kick_turns.png",
+    "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m6-review-verify-chars/captures/review/kick_concept.png",
+    "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m6-review-verify-chars/captures/review/bru_helmet_zoom.png",
+    "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m6-review-verify-chars/captures/review/ox_bru_blood.png",
+    "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m6-review-verify-chars/captures/review/ox_face.png",
+    "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m6-review-verify-chars/captures/review/heads_bo.png",
+    "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m6-review-verify-chars/captures/review/thug_body.png"
+   ],
+   "passes": [
+    "chars-01 FIXED: the Thug's right face and bandana are skin and yellow at 1 m and 2.2 m (heads_tk.png top right; thug_waist.png right). Bloodied, both cheeks take the purple bruise (tk_blood.png top middle).",
+    "chars-02 FIXED: no valley hatch on the Thug's neck and chest at 1 m; the hood's drape still reads as two or three V crease lines (thug_body.png top right). The back view keeps the pocket and hem ink (thug_body.png bottom right).",
+    "chars-08 FIXED: the Thug's dotted waistband ring at 2.2 m is gone (thug_waist.png, the waist row at about y 630).",
+    "chars-05 FIXED: the Kicker's lime mask is plain at 1 m and at 60/120 degrees (kick_turns.png).",
+    "chars-06 visor stripes FIXED: one dark slit, with the second parallel stripe gone; the cream wedge is now scarf purple (heads_bo.png top right).",
+    "Claim (a) CONFIRMED: Ox's face faces carry slot 7 (no 53 in x+-0.09). The texel codes there are 97.6% slot 7, with 0.7% slot 50 and 0.3% slot 51 and no 53. Swatches on and off render identically bloodied (rvc f139 against f189), and the face takes the skin bruise there. The mauve patches are the shadow band, so the damage-class half of chars-03 was never slot 53 on the face and is fine.",
+    "Claim (e), colour: the helmet's purple matches the jacket at 1 m, 2.2 m and 5 m (heads_bo, lineup_ba, heavies5). Slot 47 has the same sRGB and matte alpha 230 (swatch_gloss reads it as non-glossy).",
+    "Claim (f): the Punk's vest front edges, pockets and hem are still inked at 1.6 m (punk_turns.png), and the back is plainer. The veteran is clearly different at 5 m (purple vest, orange trousers; vet.png right).",
+    "The skin rule now holds for the Kicker's eye band: it bruises at 20% health (tk_blood.png bottom middle).",
+    "No new crawl or shimmer is visible on the roster in the fight frames 930-951 (fight/verify_940.png), at sheet resolution only."
+   ],
+   "scores": [],
+   "also_noticed": [
+    "Ox's skin faces carry about 1% texel codes of slot 50 (charcoal cloth, blood true) and 51 near the hood border. Those texels take the cloth tile instead of a bruise. Tiny; not reported.",
+    "In the probe, red lands on the Bruiser's black visor slit (slot 46, blood true). It is the texture's slit, so it is arguably fine, but steel armour with a bleeding slit is a ruling for the lead.",
+    "helmet_back takes slot 46 (black) as well as 44 and 45 from z 1.55, so the collar's back is now no-blood. FIX-ART-B noted and accepted this.",
+    "My 'Review: chars bloodied' probe spawned the Bruiser off-centre (head rect x 1164), probably from a spawn collision. It doesn't affect the judgement.",
+    "FIX-ART-B's Ox ink share (4.7% of the face box) is real, but the strokes it buys are mostly the blot and the comma, not a readable nose, mouth or jaw."
+   ]
+  },
+  "world": {
+   "summary": "The fixes hold, but the wave added one new visible defect. On the hurt cue (feedback-world-01 and -03), every recorded hit lights the edge on the attacker's side. That covers 41 hits in the hurt acts and the real hits in passive_mix and passive_six whose side I could pin down. The new finisher, blocked and burst acts exist and read correctly. The boss roof gap toggle (feedback-world-02 and code-02) is gone: tour pose 17 d1 went from 0.213 (jitter 0.138) to 0.053 (jitter 0.011), and the other 19 poses are unchanged. The ground (feedback-world-05) is paler and calmer, and its higher A1 numbers come from bold, clean features, not shimmer. The new defect: the InsetBlock recesses leave 2 to 4 cm steps where a pulled-back face extends past its partner, and the edge pass now draws ink seam lines there. I found them on the catwalk brick wall, the terrace door pillars, the side of the penthouse, a pilaster at the street start and a building corner in the skyline-up view. At distance they are dashed and crawl slightly. Second, the new bearing uses the camera's full pitched basis against the attacker's feet. Beyond about 30 degrees of pitch, front and back swap, for example a rear hit shows as a frontal one while the player looks down to stomp. Two lows remain: the street's mirror pair is visible down its length, and the rooms' coplanar guard was relaxed to 0.5 m2.",
+   "checked": [
+    "hurt/bot.log + bot.avi: band-luminance change at all 41 'Player:' hits (front/left/right/behind for Punk jab and cross, Kicker jump kick, Bruiser smash, Punk shove, Thug pipe combo, synthetic finisher; 2 blocked; 2 bursts)",
+    "hurt stills f101, f274, f447, f621, f1405, f2189, f4440, f1250, f3685 (sides), bottom-edge crops after vs BEFORE f277 (HP panel overlap)",
+    "hurt burst f5676-5735 at 12 fps (nausea, two edges, settle)",
+    "passive_mix and passive_six: every damaging hit measured; the hits whose side the W+ warning gives (side=right/left), checked against the edge that lit; crops at f745-758 and f1278-1291 (left strokes); full frames f200-1283 (attacker positions)",
+    "hit_bearing() and hurt_overlay.on_player_hit code, including blocked path (no strokes), pitch dependence computed by hand",
+    "drift: tools/ground_flicker.py after and BEFORE, all phases; per-frame full-frame d1 on gap/deck/deck_far/a1 held stills (no alternation)",
+    "tour: per-pose d1 mean/max/jitter for 20 poses after vs BEFORE; amplified before/after difference sheet of all 20 poses; full-res before|after crops at poses 0, 4, 5, 7, 9, 10, 12, 14",
+    "per-frame d1 at the catwalk seam column (tour f687-730) before vs after",
+    "all 41 InsetBlocks listed with their insets (street 17, roofs 23, boss_roof 1) and their in-file coplanar partners/coverage",
+    "tests/m6_coplanar_scan.gd pairing logic (mesh AABBs, 4 mm, 0.02 m2) and test_m6_feedback_ground.gd room thresholds",
+    "ground vs mood_street_a.jpg: drift f40/f640/f1150 before|after",
+    "mirror fold: full-res far-ground crops drift f640, f1100; shader triangle-wave and gradient code",
+    "A1 walk peak-change frames f606-609 at full res (grate/manhole shimmer)",
+    "walk: whole-act d1/d2 street and roofs before vs after; frame alignment check (deterministic); diff sheet of roofs walk every 90 frames; full frames f5040, f7380",
+    "walk start barricade/crate crops f120, f330 before|after",
+    "code-03 fade change (geometric mean) in trim_body.gdshaderinc"
+   ],
+   "sheets": [
+    "/private/tmp/claude-501/-Users-arachne-repos-beat-em-up-PoC/21dfb0ac-e45b-4ac0-bc13-2a0a12b0eada/scratchpad/pair2s.png",
+    "/private/tmp/claude-501/-Users-arachne-repos-beat-em-up-PoC/21dfb0ac-e45b-4ac0-bc13-2a0a12b0eada/scratchpad/pent_zoom.png",
+    "/private/tmp/claude-501/-Users-arachne-repos-beat-em-up-PoC/21dfb0ac-e45b-4ac0-bc13-2a0a12b0eada/scratchpad/pairs_b1.png",
+    "/private/tmp/claude-501/-Users-arachne-repos-beat-em-up-PoC/21dfb0ac-e45b-4ac0-bc13-2a0a12b0eada/scratchpad/pairs_c2.png",
+    "/private/tmp/claude-501/-Users-arachne-repos-beat-em-up-PoC/21dfb0ac-e45b-4ac0-bc13-2a0a12b0eada/scratchpad/tour_diff.png",
+    "/private/tmp/claude-501/-Users-arachne-repos-beat-em-up-PoC/21dfb0ac-e45b-4ac0-bc13-2a0a12b0eada/scratchpad/hurt_sides.png",
+    "/private/tmp/claude-501/-Users-arachne-repos-beat-em-up-PoC/21dfb0ac-e45b-4ac0-bc13-2a0a12b0eada/scratchpad/fold.png",
+    "/private/tmp/claude-501/-Users-arachne-repos-beat-em-up-PoC/21dfb0ac-e45b-4ac0-bc13-2a0a12b0eada/scratchpad/ground_cmp.png"
+   ],
+   "passes": [
+    "feedback-world-01 fixed (hurt act): the edge that changes most matches the act's side for all 34 unblocked hits. Front gives top (e.g. f99 top -55, f1403 top -76, f3996 top -91). Left gives left (f272 -15, f1664 -122). Right gives right (f445 -20, f1925 -123, f4217 -77). Behind gives bottom (f618 -9, f2186 -54, f4438 -60). Stills hurt_sides.png confirm.",
+    "feedback-world-01 fixed in real play: passive_six f292 and f320 (Punk6 warned right) light the right edge; f1218 and f1246 (warned right) light the right edge; f1329 (Punk3 warned left) lights the left edge. In passive_mix, f1374 (warned left) lights the left edge, and f746 (Punk at the left edge) shows left strokes in the crops of f745-752. Attackers in view light the top (passive_six f674, f878, f1115; passive_mix f216, f931, f1044). In passive_mix f498, the Bruiser headbutt after the grab comes from in front and lights the top.",
+    "feedback-world-03 fixed: finisher (synthetic, logged), blocked (0.9 and 2.2 damage, faint, no strokes per code path hurt_overlay.gd:108) and burst (3 real hits in 30 frames) acts recorded; burst strip at 12 fps shows two edges then settles, not nauseating; rear-hit bottom strokes run the full bottom edge beside the HP panel (bottoms.png), not hidden",
+    "feedback-world-02 and code-02 fixed: drift gap still 0.0756 and creep 0.363 (fixer's numbers reproduced). Per-frame full-frame d1 over the gap still runs 0.02-0.09 with no alternation. Tour pose 17 boss_gap_down: mean 0.213 to 0.053, jitter 0.138 to 0.011. The other 19 tour poses match BEFORE within 0.01.",
+    "feedback-world-05 fixed (taste): ground paler, fewer and larger pools, sparse ink, closer to the mood than BEFORE (ground_cmp.png); A2 drift fell (still 0.039->0.0014, walk 0.93->0.44)",
+    "A1 rise is not shimmer: the A1 walk's peak frames f606-609 at full res show a bold, clean grate and manhole with no aliasing. d2/d1 is unchanged (1.47 vs 1.43).",
+    "No new flashing across the god-mode level walk: whole-act d1 and d2 match BEFORE (street 7.29 to 7.24 and 12.24 to 12.18; roofs 8.36 to 8.36 and 14.10 to 14.11).",
+    "No crack, sliver of sky, light leak or floating edge found at the InsetBlocks in the tour or the walk diff sheets (only the seam lines in finding 1); street-start barricade/crate unchanged (barr_cmp)",
+    "feedback-code-03: deck_far creep 0.1337 matches the fixer's 0.1331, no new shimmer there",
+    "Mirror fold: no hard line or mip seam seen at fold rows in full-res far-ground crops"
+   ],
+   "scores": [],
+   "also_noticed": [
+    "The hurt 'ink strokes' are pale cream translucent teeth with no ink outline. On the newly paler ground, the bottom (rear) strokes of light hits have only moderate contrast: the Punk jab from behind at f618 lowers the bottom band by only 9 levels, against 55 for a frontal jab. It is still readable; Game-boy may judge that rear light hits read too faintly.",
+    "drift 'deck' held view: creep d1 0.733 is the highest creep value in the act (a1 0.117, deck_far 0.134). There is no BEFORE of this view, and FIX-WORLD compared only deck_far before and after its fade change, so a near-deck shimmer from keeping more seam ink at a graze is unmeasured.",
+    "The tour's street_a2_doors, street_warehouse and street_skyline_up poses have higher frame-to-frame jitter (0.12-0.23) than the rest, identical BEFORE and after: pre-existing, not from this wave.",
+    "The InsetBlock -x/+x insets shift the brick u-origin by 2 cm on whole walls (visible in the walk diff sheet as full-wall brick differences); harmless on its own.",
+    "The bearing reads the camera's live transform, which already carries the previous hit's roll and pitch kick; in a burst the second hit's bearing includes that kick (small)."
+   ]
+  },
+  "code": {
+   "summary": "Code lens, merged head d582d21. The fix wave's code holds. The bearing fix is correct and read-only, all 15 tunables are `@export_range` in Hit feel > Hurt with the old literals as defaults, `tuning/default.json` regenerates byte-identical, the colliders are unchanged, and the scan and the real-hit tests can fail (shown by sabotage). Every `--check` says YES: `run.py` for six characters, `player_run.py`, `gen_palette.py`, `gen_trim.gd`. One medium defect: the committed Kicker eyes config is not the one FIX-ART-A's calls file says it settled on, and the Kicker's cap reads shorter than the calls say it should. Everything else is low: a blanket strain-ratchet regeneration, stale ASSETS.md rows, scan scope limits, an unused INSET_STEP_M constant, and a guard that a comment can satisfy.",
+   "checked": [
+    "FirstPersonCamera.hit_bearing: reads attacker.global_position only (read-only); handles null, freed (probe test: freed node falls back to -hit.direction, no error), not in tree (falls back), within hurt_bearing_min_m (falls back); the overlay and _roll_away both call the one static function (first_person_camera.gd:821, hurt_overlay.gd:105)",
+    "Sabotage: old contact-point bearing put back in a scratch copy, test_m6_feedback_feel.gd: left jab, right jab, Bruiser smash from the front and the contact-on-hurtbox test fail; the jab from the front, jab from behind and smash from the left still pass with the old code, so five-fail is plausible, not all six",
+    "15 new tunables: all @export_range under Hit feel > Hurt (tuning_data.gd:197), defaults equal the old literals (test asserts them), tools/gen_default_preset.gd rewrites tuning/default.json identically (git status clean), test_tuning_panel 28/28 with the 36 -> 51 row count",
+    "No feel literal left in hurt_overlay.gd, player_health_panel.gd or the camera hurt path (remaining 0.5 is bin-centre geometry, 0.05 a divide guard); layer rules: overlay, camera and panel only read hit/attacker state",
+    "InsetBlock: _make_mesh override only, so the collider is the parent's; mesh = size - inset_min - inset_max centred at (inset_min - inset_max)/2, right per axis and both faces; test_m6_colliders 3/3 pass on unchanged fixtures (covers the whole level, so the 41 blocks); inset values in scenes are 0.02/0.04/0.06 tiers; INSET_STEP_M is never used in code",
+    "tests/m6_coplanar_scan.gd sabotage: BossRoof Ground back to y -13 (top -0.5) fails test_m6_feedback_ground with 2 skyline pairs; at y -12.5 (top 0) fails with 9 pairs and the clear-below test; committed -12.75 passes 16/16",
+    "Scan scope probes: downward faces included over the level gives 0 pairs (no hole); Dressing meshes added to the scan give 7 coplanar cornice/wall tops at y 11 (0.16-0.88 m2); crowd room 17 and training room 2 pairs of 0.02-0.3 m2 sit under the 0.5 m2 ROOM_MIN_AREA_M2",
+    "trim_body.gdshaderinc: mirrored gtm = (gt.x, abs(mod(gt.y,2)-1)); gradients are taken from the continuous gt per pixel and turned by sign(mod-1), so lod and anisotropy have no discontinuity at the fold, and a seamless tile (tested at 99%/97%) means no tap seam; sqrt(|det|) fade formula and its test string present; gen_trim.gd --check matches",
+    "run.py --check YES for bruiser, boss, kicker, thug, punk, dummy; player_run.py --asset player --check YES; gen_palette.py --check current; no working-tree change afterwards",
+    "Palette: slot 47 bruiser_helmet #755394 equals slot 44, blood false, marks true; regions only_from match FIX-ART-A/B calls for the Thug, Ox, Bruiser; the Kicker eyes box does not (see findings)",
+    "_rolled_out now needs detail_bake.crease; the new each-test-names-its-pipeline test fails when the kicker file's pipeline path string is altered (can fail); it passes on a bare string, so a comment would satisfy it",
+    "tests/fixtures/strain/bruiser.json diff: whole bars unchanged; ~40 per-clip rows moved, `held` min 0.1489 -> 0.088 as logged, but many `high` figures also rose",
+    "ASSETS.md rows for the changed binaries read against the diff",
+    "No API key, token or secret in the diff; calls files say 0 Tripo/Gemini/ElevenLabs spend and the diff has no sign of any",
+    "Single-file runs: test_m6_feedback_feel 26/26, test_m6_feedback_ground 16/16, test_m6_feedback_detail 16/16, _boss 10/10, _thug 8/8, _punk 6/6, _kicker 9/9, test_tuning_panel 28/28, test_m6_colliders 3/3"
+   ],
+   "sheets": [
+    "/Users/arachne/repos/beat-em-up-PoC/captures/m6-feedback-verify/r_kicker/sheets/r_kicker/crops/r_kicker_f49_head.png",
+    "/Users/arachne/repos/beat-em-up-PoC/captures/m6-feedback-review/r_kicker/sheets/r_kicker/crops/r_kicker_f49_head.png"
+   ],
+   "passes": [
+    "feedback-code-01 and -world-04: the shape numbers are Tuning rows with the old defaults; default.json matches the generator; no literal left in the overlay, panel or camera hurt path",
+    "feedback-world-01 (code side): attacker bearing is read-only, covers null, freed, out-of-tree and near-lens fallbacks, and is shared by the overlay and the roll; the real-hit tests fail on the old code",
+    "feedback-code-02: the general scan fires on Ground at both old heights; no downward-face hole in the level; the committed Ground top (-0.25) is clean",
+    "feedback-code-03: the shader uses the mean-side footprint, asserted by the test; the mirrored ground's derivatives are sound; gen_trim --check matches",
+    "Colliders unchanged (test_m6_colliders), InsetBlock geometry correct per axis and face",
+    "All art configs reproducible: run.py --check YES x6, player_run YES, gen_palette current",
+    "Slot 47 has blood false and slot 44's colour; the helmet, Ox and Thug regions match the calls; the Punk min_chain_m 0.6 (brief 0.55) is documented as a call and the test holds it at 0.55 or more",
+    "No keys printed and no paid-API spend visible"
+   ],
+   "scores": [],
+   "also_noticed": [
+    "The Kicker's face now has no eye marks at all (a bare skin band with a mauve shadow patch under the cap): reads blank, a taste call for the visual lens",
+    "An InsetBlock that only abuts another (rather than overlaps) leaves a 2-6 cm recessed slit. It is a closed box, so no hole, but a hairline could show at a perfectly aligned view; I did not look in the captures",
+    "The mirrored ground gives a 16 m repeat, not a longer pattern; the manhole and grates now appear as mirrored pairs across each fold; art lens",
+    "Strip ink never fades on an extremely grazing surface, because the geometric mean tends to 0 as the footprint degenerates; the fixer measured d1 at deck_far only for still and creep"
+   ]
+  }
+ },
+ "findings": [
+  {
+   "id": "verify-chars-01",
+   "lens": "chars",
+   "severity": "medium",
+   "title": "Kicker at 1-1.6 m: the merged eyes region is the build FIX-ART-A rejected (z max 1.685, not 1.665). The cap's brim tips and underside turn skin, and the face is a blank pale band with no cap shade.",
+   "detail": "chars-04 is PARTLY FIXED. The black bar and its scratches are gone, and the band now bruises as skin. However, assets/source/characters/kicker/pipeline.json has the 'eyes' region max z at 1.685 (line 434) and the 'eyes' zone max z at 1.69. FIX-ART-A A-4 says the final values are 1.665 and 1.675, and that 1.685 'cut 2 cm off the cap's lower edge and made it read short'. The shipped export matches 1.685 (run.py --check YES), so the rejected first build is what merged. At 1 m and 60/120 degrees, a skin-coloured lip sticks out of the brim's left tip. In profile (dk yaw90), the brim's underside is skin. Against the concept (kicker_c.jpg: dark shade under the brim with eyes in it), the result moves further away at 2.2 m: before it read as sunglasses, now it reads as an empty pale strip between the cap and the mask, a featureless face (Game-boy's 'blobby' ask).",
+   "evidence": "pipeline.json eyes region max [0.13, 0.3, 1.685] (lines 420-436) against FIX-ART-A.md:13 '1.625..1.665'; the same 1.685 in .worktrees/m6-fix-art-a. Stills: heads_tk.png bottom right (pale lip at the brim's left tip, compared with bottom left); kick_turns.png cols 2 and 4 (r_kicker f109/f169 after; dk_f139 yaw90 after: skin under the brim); kick_concept.png (concept | before | after at 2.2 m, lineup c7_f49). BEFORE: captures/m6-feedback-review/r_kicker/sheets/r_kicker/crops/r_kicker_f49_head.png; AFTER: captures/m6-feedback-verify/r_kicker/sheets/r_kicker/crops/r_kicker_f49_head.png, dk/sheets/dk/crops/dk_f139_head.png",
+   "repro": "tools/capture_bot.sh res://tests/bot/crowd_bot.tscn <out> \"Look: Kicker at 1 m\" 6, mark face_t000/face_t060; or the 'Look: Kicker' detail act (dk), yaw90",
+   "suggested_fix": "assets/source/characters/kicker/pipeline.json: set the eyes region max z to 1.665 and the eyes zone max z to 1.675, as the call says, then rebuild and check the brim at yaw 0/90. For the concept's shaded eyes, consider a darker skin-class swatch (alpha 204, so it still bruises) for the band in assets/source/palette/kicker.json, instead of plain slot 6.",
+   "files": [
+    "assets/source/characters/kicker/pipeline.json",
+    "assets/source/palette/kicker.json",
+    "docs/milestones/M6-calls/FIX-ART-A.md"
+   ],
+   "spec_change": false,
+   "survives": true,
+   "votes": [
+    {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "The shipped config has the first build's z values that FIX-ART-A.md says it rejected. The 1 m crop shows the result: a blank pale band under the cap, with skin at the brim tips.",
+     "evidence": "In assets/source/characters/kicker/pipeline.json the eyes region has max z 1.685 (line 434, min z 1.625) and the eyes zone has max z 1.69 (line 369, min z 1.62). FIX-ART-A.md:13 says the final values are region 1.625..1.665 and zone 1.62..1.675, and that 1.685 cut 2 cm off the cap's lower edge. A grep for '1.665' in the config finds nothing, and git history shows the same file (commit 94d0843). I compared r_kicker_f49_head.png before and after. Before, the eyes are a dark shaded band under the brim. After, the eyes are a flat pale skin band between the cap and the mask, and a skin-coloured lip sticks out at the cap's left tip. There are no shade features, so the face reads blank.",
+     "root_cause": "The first FIX-ART-A build (region max z 1.685, zone max z 1.69) was committed to pipeline.json, not the trimmed 1.665 / 1.675 values the call documents. The region recolours the cap's lower edge and brim underside to skin slot 6 instead of leaving them as cap. The plain skin swatch also has no darker shade for the eyes.",
+     "files_to_change": [
+      "assets/source/characters/kicker/pipeline.json",
+      "assets/source/palette/kicker.json"
+     ],
+     "fix_needs_spec_change": false
+    }
+   ]
+  },
+  {
+   "id": "verify-chars-02",
+   "lens": "chars",
+   "severity": "low",
+   "title": "Bruiser at 1 m, bloodied: the helmet's front band just above the visor is still slot 44 and takes blood (chars-07 partly fixed)",
+   "detail": "The new slot 47 (no blood) covers helmet_top (z >= 1.71) and helmet_back (y <= 0.02). The helmet's front between the visor frame and z 1.71 is left out. The GLB has 34 slot-44 faces at front z 1.68-1.71 and 30 at 1.64-1.68 (y > 0.02), while z 1.71-1.95 is all 47. At 20% health a red blood drip with a tan smear sits on the purple dome right above the grey visor frame, the same with swatches on or off (so it is the face slot, not a texel code). The top and back only scuff, as intended. The colour matches the jacket at 1, 2.2 and 5 m.",
+   "evidence": "bru_helmet_zoom.png top row (rvc f359 swatches on, f409 off: a red drip on the helmet front); ox_bru_blood.png bottom row; GLB counts from bruiser_rest.glb: box [-0.3,0.02,1.68]-[0.3,0.5,1.71] -> {44: 34}, [-0.3,0.02,1.71]-[0.3,0.5,1.75] -> {47: 35}; pipeline.json helmet_top min z 1.71",
+   "repro": "Spawn a Bruiser 1 m ahead, set health to 20% and emit health_changed (as looks_acts._health does), view at the framed face pitch. Look at the purple just above the visor.",
+   "suggested_fix": "assets/source/characters/bruiser/pipeline.json: add a region 'helmet_front' {slot 47, only_from [44], min [-0.3, 0.02, 1.64], max [0.3, 0.4, 1.71]}, kept above the under_visor box (z <= 1.64), or lower helmet_top's min z to about 1.66 with only_from [44] on the front. Check that the scarf (z < 1.64) still bleeds.",
+   "files": [
+    "assets/source/characters/bruiser/pipeline.json"
+   ],
+   "spec_change": false,
+   "survives": false,
+   "votes": []
+  },
+  {
+   "id": "verify-chars-03",
+   "lens": "chars",
+   "severity": "low",
+   "title": "Ox at 1 m: the new face ink is a hairy black blot under the nose and a stray comma at the jaw, over the mauve shadow patches that stay",
+   "detail": "chars-03 is ANSWERED, NOT FIXED (claim a confirmed: the patches are the skin's shadow band, and they bruise rather than scuff). Claim (c): at 1 m the nose stroke is not a line. It is a ragged black blot with spiky tendrils under the nose. A separate tadpole-shaped stroke sits on the lower-left jaw, and the mouth is a broken dashed line. With the big mauve lip and nose patches unchanged, the face still reads as flat tan, now with two black blots. At 2.5-5 m the strokes read as features. The texture is the stated limit, but the jaw comma and the blot size can be tuned in config.",
+   "evidence": "ox_face.png (r_boss f49 and f109 head, AFTER, full resolution); heads_bo.png bottom row (BEFORE left, AFTER right); pipeline.json face_skin {x +-0.09, ink 0.012/0.03, crease 181}, clean.min_extent_texels 14 / min_texels 24",
+   "repro": "tools/capture_bot.sh res://tests/bot/crowd_bot.tscn <out> \"Look: Ox\" 6, mark face_t000 at 1 m",
+   "suggested_fix": "assets/source/characters/boss/pipeline.json detail_bake: raise the face_skin zone's min z to drop the jaw comma, or narrow its box below the mouth, and nudge ink_high from 0.03 to about 0.04 so the blot thins to a line. If the remaining mauve patches must go, that is the toon ramp or normals (a chain or shader matter, as FIX-ART-B notes), not a palette slot.",
+   "files": [
+    "assets/source/characters/boss/pipeline.json"
+   ],
+   "spec_change": false,
+   "survives": false,
+   "votes": []
+  },
+  {
+   "id": "verify-chars-04",
+   "lens": "chars",
+   "severity": "low",
+   "title": "Bruiser at 1 m: under the visor, the scarf keeps the stair-stepped pyramid outline, now purple against the grey visor (chars-06 partly fixed)",
+   "detail": "under_visor turned the cream and skin faces to slot 44, so the colour is right, but the region follows the same face staircase. At 1 m a stepped purple trapezoid still cuts into the visor's grey frame where the cream wedge was. Cosmetic; it is less visible than the cream wedge.",
+   "evidence": "heads_bo.png top row (BEFORE left: cream stepped wedge; AFTER right: purple stepped wedge under the slit); AFTER captures/m6-feedback-verify/r_bruiser/sheets/r_bruiser/crops/r_bruiser_f49_head.png",
+   "repro": "r_bruiser act, face_t000 at 1 m",
+   "suggested_fix": "assets/source/characters/bruiser/pipeline.json: give under_visor a bisect_z at the visor frame's lower edge (as other regions use), or lower its max z from 1.64 to the frame's edge, so the steel frame's faces keep slot 45 and the border runs straight.",
+   "files": [
+    "assets/source/characters/bruiser/pipeline.json"
+   ],
+   "spec_change": false,
+   "survives": false,
+   "votes": []
+  },
+  {
+   "id": "verify-world-01",
+   "lens": "world",
+   "severity": "medium",
+   "title": "InsetBlock recesses draw new ink seam lines on continuous walls, which break into dashes and crawl at distance",
+   "detail": "FIX-WORLD pulls an InsetBlock's drawn face back 2-4 cm over its whole extent. Many of those faces are only partly covered by the coplanar partner they were fighting: a wall end in a corner plane, a pillar between doors, the front walls beside the penthouse body. Where the partner's face ends, a 2-4 cm step now shows on what was a flush surface. The edge pass draws an ink line along it, full height or dashed. Seen in the tour, before|after: (a) roofs_catwalk, a new broken vertical line on the large brick wall; (b) roofs_terrace_doors, new outlines on the left edges and top of the brick pillars between the doors, in a fight arena at 3-6 m; (c) roofs_top_roof, a new vertical line on the right side face of the penthouse where PenthouseFrontWall1 (+x inset 0.02) meets PenthouseBody; (d) street_start, a pilaster whose ink line now runs its full height; (e) street_skyline_up, a dashed line parallel to a building corner. At the catwalk seam, per-frame change during the held pose rises slightly over BEFORE (0.95/0.65/0.57 vs 0.65/0.54/0.48 in the first frames), so the dashes crawl with the idle sway. The fixer checked only the gap, the deck and street A1/A2.",
+   "evidence": "tour/bot.avi (captures/m6-feedback-verify vs m6-feedback-review): f711 crop 400x420 at (1100,0), new dashed line at about x 1160, y 80-230 (pair2s.png); f555 crops at (330,120) and (1130,120) (pairs_b1.png); f815 crop 220x200 at (560,250) (pent_zoom.png); f45 crop at (1180,0) and f305 crop at (120,40) (pairs_c2.png); amplified difference of all 20 poses (tour_diff.png). Blocks: roofs.tscn Catwalk/EndWall0 (-x 0.02, partner RightAWall0 covers 22 of 30.2 m2), Terrace/RightAWall1 and RightAWallMid (-x 0.02), RightBWall2 (-x 0.04), TopRoof/PenthouseFrontWall0/1 (-x/+x 0.02, +z 0.02, +y 0.06), BackWall2 (+x 0.02); game/level/kit/inset_block.gd:28-34",
+   "repro": "Before|after at tour f711: ffmpeg -i <run>/tour/bot.avi -vf \"select='eq(n,711)',crop=400:420:1100:0\" for captures/m6-feedback-review and captures/m6-feedback-verify. Or in play, stand on the catwalk or the terrace and look at the long brick wall and the door pillars.",
+   "suggested_fix": "Only recess a face that its partner covers completely, so the recess stays hidden. Where neither face is fully covered (an end face in a corner plane, a pillar beside a door), stop sharing the plane in another way: shorten the drawn box along the axis where it overlaps the partner (pull the overlapping end back into the partner's volume), so no visible face is stepped. Extend tests/m6_coplanar_scan.gd to flag a recessed face whose area outside its partner is visible (a step of 0.005-0.05 m over at least 0.02 m2). Then re-record the tour and diff it against 82bab12.",
+   "files": [
+    "game/level/kit/inset_block.gd",
+    "game/level/mission1/roofs.tscn",
+    "game/level/mission1/street.tscn",
+    "tests/m6_coplanar_scan.gd"
+   ],
+   "spec_change": false,
+   "survives": true,
+   "votes": [
+    {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "Confirmed. tour f711 shows a new dashed vertical ink line on the brick wall in the verify recording and none in the BEFORE recording. It is a regression the wave introduced, not an approved departure or a logged call. The fix-world calls say the fixer checked only coplanar overlap, not the exposed step.",
+     "evidence": "I cropped tour/bot.avi frame 711 (400x420 at 1100,0) from captures/m6-feedback-review and captures/m6-feedback-verify. The BEFORE crop has a clean brick wall. The AFTER crop has a dashed dark vertical line at about x=62, y=80-230, on the wall left of the corner. roofs.tscn (game/level/mission1/) has Catwalk/EndWall0 as an InsetBlock with inset_min=(0.02,0,0), position (2.375,2.55,-7) and size (0.75,15.1,2). Its partner Terrace/RightAWall0 is a plain block (3,0.5,-7), size (2,11,2), which only partly covers the end face, so a 2 cm step shows where the partner ends. inset_block.gd _make_mesh shrinks the drawn box uniformly over the whole face, with no check that the partner covers it. tests/m6_coplanar_scan.gd (MIN_AREA_M2 0.02, _visible_area) only looks for faces still sharing a plane. It does not flag a recessed face that is partly exposed, so the regression passed the suite.",
+     "root_cause": "InsetBlock._make_mesh pulls the whole drawn face back by 2-4 cm. Where the coplanar partner covers only part of that face (corner-plane wall ends, pillars between doors, penthouse front walls), the remainder becomes a visible 2-4 cm step on a previously flush surface. The depth-and-normal edge pass inks that step, and the line breaks into dashes at distance and crawls with the camera sway. The scan checks only for shared planes, not for exposed steps.",
+     "files_to_change": [
+      "game/level/kit/inset_block.gd",
+      "game/level/mission1/roofs.tscn",
+      "game/level/mission1/street.tscn",
+      "tests/m6_coplanar_scan.gd"
+     ],
+     "fix_needs_spec_change": false
+    }
+   ]
+  },
+  {
+   "id": "verify-world-02",
+   "lens": "world",
+   "severity": "medium",
+   "title": "The hurt bearing uses the pitched view against the attacker's feet: beyond about 30 degrees of pitch, front and back swap",
+   "detail": "hit_bearing() takes local = view.basis.inverse() * (attacker.global_position - view.origin) with the camera's full basis, then atan2(local.x, -local.z). The attacker's origin is at floor level, 1.6 m below the lens. With the player looking down by more than atan(d/1.6) (29 degrees for an attacker 0.9 m away), an attacker directly behind lands in front of the camera plane. The bearing becomes 0: top strokes, no bottom strokes. Looking up by the same amount turns a frontal hit into 180 degrees (bottom strokes). Looking down that far is normal play: the ground moveset has a stomp and a stomp kick on downed enemies, so the player looks down while the rest of the crowd hits from behind. The FIX-FEEL tests use a level camera, so they cannot catch this. The roll is unaffected (its lateral component is the same); the overlay's top/bottom edge is wrong.",
+   "evidence": "game/camera/first_person_camera.gd:821-828 (hit_bearing). Hand calculation with the same maths: attacker behind at 0.9 m with pitch down 30/40/60 degrees gives bearing 0 (front); attacker in front at 0.9 m with pitch up 30 degrees or more gives 180. At pitch 10-20 degrees both are correct. The overlay passes camera.global_transform (hurt_overlay.gd:124-126), which includes pitch. game/combat/moves/stomp.tres, stomp_kick.tres, movesets/ground.tres exist.",
+   "repro": "Add a test to tests/test_m6_feedback_feel.gd. Pitch the player's camera 45 degrees down. Put a Punk 0.9 m behind and land a real jab through HitDetector. Assert that the bottom stroke weight exceeds the top. It fails today: edge_weights(0) lights the top.",
+   "suggested_fix": "Measure the bearing in the horizontal plane. Take the view's yaw only: var fwd := -view.basis.z; fwd.y = 0; normalise it, with a fallback to view.basis.y when looking straight down. Project (attacker - lens) onto the XZ plane, then take atan2 of the components along right and fwd. Or build Basis(Vector3.UP, view.basis.get_euler().y) and use its inverse. Keep the -hit.direction fallback.",
+   "files": [
+    "game/camera/first_person_camera.gd",
+    "tests/test_m6_feedback_feel.gd"
+   ],
+   "spec_change": false,
+   "survives": true,
+   "votes": [
+    {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "Confirmed by reading the code and hand-computing the maths. I did not run a Godot test. hit_bearing uses the full pitched view basis against the attacker's floor-level origin, so beyond about 30 degrees of pitch the bearing flips between front and back. It is an unapproved defect in new FIX-FEEL code, not a logged call or a spec departure. Medium severity is fair: a Punk behind the player while the player looks down to stomp gets the wrong overlay edge.",
+     "evidence": "game/camera/first_person_camera.gd:821-829 (hit_bearing): local = view.basis.inverse() * (attacker.global_position - view.origin), then atan2(local.x, -local.z). Hand calculation, pitch down 45 degrees, attacker directly behind at 0.9 m, lens 1.6 m up. Camera forward is (0, -0.707, -0.707) and the back axis (0, 0.707, 0.707). rel = (0, -1.6, 0.9) gives local.z = -1.6*0.707 + 0.9*0.707 = -0.495. That makes -local.z positive, so the bearing is 0 (ahead). The fallback does not rescue it: horizontal length sqrt(0^2 + 0.495^2) = 0.495, and hurt_bearing_min_m is 0.05 (tuning_data.gd:249). hurt_overlay.gd:105 passes camera.global_transform (pitch included, lines 124-126) to hit_bearing, and edge_weights lights the top edge for a bearing of 0. The roll is unaffected because it uses sin(bearing) and the lateral component is the same. Existing tests (tests/test_m6_feedback_feel.gd:489-520) use level views, so none of them catches it.",
+     "root_cause": "hit_bearing builds the local vector with the camera's full 3D basis, including pitch, and the attacker position is at foot level 1.6 m below the lens. The vertical offset therefore leaks into the forward/back component once the camera is pitched, and local.z changes sign. The bearing has to be measured in the horizontal plane (yaw only).",
+     "files_to_change": [
+      "game/camera/first_person_camera.gd",
+      "tests/test_m6_feedback_feel.gd"
+     ],
+     "fix_needs_spec_change": false
+    }
+   ]
+  },
+  {
+   "id": "verify-world-03",
+   "lens": "world",
+   "severity": "low",
+   "title": "The ground's z-mirror is visible down the street as a symmetric pair of grate, crack and patched square either side of the fold",
+   "detail": "The 16 m mirrored repeat replaced the 8 m one. Looking down the street, though, the drain grate, the branching crack and the outlined patched square appear twice, mirror images flanking the manhole row, within about 6-8 m of each other. The reflection reads as a deliberate symmetric layout rather than random ground. The brief asked that the 16 m mirrored repeat not be obvious. There is no seam or mip line at the fold.",
+   "evidence": "captures/m6-feedback-verify/drift/bot.avi f640 and f1100, crop 1000x200 at (300,380) (fold.png): the grate at about x 130-215 and x 240-290 and the crack-and-square at about x 500-700 near and mirrored far. Shader: game/fx/trim_body.gdshaderinc gtm = vec2(gt.x, abs(mod(gt.y, 2.0) - 1.0)).",
+   "repro": "Watch 'Look: ground drift' at A2 (f619-1218), or stand at street A2 and look down the street's length.",
+   "suggested_fix": "In tools/gen_trim.gd, keep the strongly shaped features (patched square, branching crack, grate) out of the half-tile next to the fold rows (v near 0 and 1), so a feature and its reflection are at least 8 m apart. Or make the patched square symmetric in z so its reflection looks like a second copy, not a mirror. Rerun gen_trim.gd --check and the A1/A2 drift numbers.",
+   "files": [
+    "tools/gen_trim.gd",
+    "game/fx/trim_body.gdshaderinc"
+   ],
+   "spec_change": false,
+   "survives": false,
+   "votes": []
+  },
+  {
+   "id": "verify-world-04",
+   "lens": "world",
+   "severity": "low",
+   "title": "The general coplanar guard holds the crowd street and the training room only to 0.5 m2, so 17 + 2 slivers remain",
+   "detail": "The fix plan for world-02 says the coplanar test must cover the crowd street and the training room, and that any two drawn faces sharing a plane over an overlapping area fail it. FIX-WORLD left 17 coplanar slivers in the crowd street and 2 in the training room: floor joins at y 0, and curb and lintel tops at y 6, 8, 9, 2.4, 1 and 5, all up to 0.3 m2. Their tests pass only with ROOM_MIN_AREA_M2 = 0.5, against 0.02 for the level. The calls file says this openly and asks for crowd_room.gd and test_room.gd to build InsetBlocks. It is still a rule the wave was asked to make hold and did not. The crowd street is where the crowd fights are recorded.",
+   "evidence": "tests/test_m6_feedback_ground.gd:196-226 (ROOM_MIN_AREA_M2 := 0.5 for test_no_two_drawn_faces_of_the_crowd_street... and ..._training_room...); docs/milestones/M6-calls/FIX-WORLD.md 'Requests'; docs/reviews/M6/fix-feedback-final.md FIX-WORLD item 1",
+   "repro": "Set ROOM_MIN_AREA_M2 to MIN_AREA_M2 (0.02) in tests/test_m6_feedback_ground.gd and run tools/run_tests.sh -gselect=test_m6_feedback_ground.gd: the two room tests fail with 17 and 2 pairs.",
+   "suggested_fix": "Give RoomKit.add_box an optional inset (or build InsetBlocks) in game/level/crowd_room.gd and test_room.gd for the listed pairs, then drop ROOM_MIN_AREA_M2.",
+   "files": [
+    "game/level/crowd_room.gd",
+    "game/level/test_room.gd",
+    "game/level/room_kit.gd",
+    "tests/test_m6_feedback_ground.gd"
+   ],
+   "spec_change": false,
+   "survives": false,
+   "votes": []
+  },
+  {
+   "id": "verify-code-01",
+   "lens": "code",
+   "severity": "medium",
+   "title": "Committed Kicker eyes config is the first build FIX-ART-A rejected, not the settled one in its calls file; the cap's lower edge reads short and the eyes are gone",
+   "detail": "FIX-ART-A A-4 says the first build (region z up to 1.685) cost the cap 2 cm of its lower edge, 'read short', and that 1.665 keeps the brim; the eyes zone is stated as z 1.62..1.675. The committed assets/source/characters/kicker/pipeline.json has the `eyes` region max z 1.685 (min 1.625) and the `eyes` zone z 1.62..1.69. run.py --check reproduces the shipped GLB from this config, so the 1.685 build shipped. The new test box (z 1.63..1.66) cannot tell the two apart. In the fresh recording the cap's shadowed underside and thick brim of the BEFORE still are gone, the cap is a thin shell over a large bare forehead band, and nothing marks eyes.",
+   "evidence": "assets/source/characters/kicker/pipeline.json (eyes region max z 1.685, eyes zone max z 1.69); docs/milestones/M6-calls/FIX-ART-A.md A-4 ('1.665 keeps the brim', 'z 1.62..1.675'); tests/test_m6_feedback_detail_kicker.gd:239 (box 1.63..1.66); captures/m6-feedback-verify/r_kicker/sheets/r_kicker/crops/r_kicker_f49_head.png against captures/m6-feedback-review/r_kicker/.../r_kicker_f49_head.png",
+   "repro": "cd the worktree; grep -n -A12 '\"name\": \"eyes\"' assets/source/characters/kicker/pipeline.json; read the A-4 call; view the two head crops side by side.",
+   "suggested_fix": "Decide which numbers are the intended ones. Either set the region max z to 1.665 and the zone to 1.62..1.675 and rebuild (run.py --asset kicker, then --check), or correct the calls file and show a 1 m still of the shipped build. Tighten the test to pin the region's max z so the two builds differ.",
+   "files": [
+    "assets/source/characters/kicker/pipeline.json",
+    "docs/milestones/M6-calls/FIX-ART-A.md",
+    "tests/test_m6_feedback_detail_kicker.gd"
+   ],
+   "spec_change": false,
+   "survives": true,
+   "votes": [
+    {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "The config/calls mismatch is real and reproduced by reading the files. The committed pipeline.json carries the build the fixer's own calls file says it rejected. I did not view the head crops (no image reads), so the \"cap reads short, no eyes\" visual claim rests on the reviewer's account plus the fixer's own note that 1.685 shortened the cap.",
+     "evidence": "assets/source/characters/kicker/pipeline.json: the eyes zone (slots 23,6) has min z 1.62 and max z 1.69. The eyes region (slot 6, only_from 23,6) has min z 1.625 and max z 1.685. FIX-ART-A.md A-4 states region z 1.625..1.665 and zone 1.62..1.675, and says \"Region z up to 1.685 (my first build): the cap lost 2 cm of its lower edge and read short\". The only commit touching the file after the ROLL-KICKER one is 94d0843 (the FIX-ART-A wip), so no later change reconciled the two. run.py --check said YES after the merge, so the shipped GLB is built from 1.685. tests/test_m6_feedback_detail_kicker.gd lines 238-240 use box z 1.63..1.66, and the 1.665 and 1.685 builds both pass it (the 1.685 build adds more slot-6 skin above 1.665). The test therefore cannot tell the builds apart. It also never pins the region's max z.",
+     "root_cause": "The fixer settled on 1.665 and 1.675 after seeing that 1.685 shortened the cap. The edit reverting to those values was never committed or never rebuilt. The calls file documents the settled numbers while the config and GLB hold the first build. The test box is too narrow, 1.63..1.66, to catch the difference.",
+     "files_to_change": [
+      "assets/source/characters/kicker/pipeline.json",
+      "assets/characters/kicker (the rebuilt GLB, via tools/pipeline/run.py --asset kicker, then --check)",
+      "tests/test_m6_feedback_detail_kicker.gd",
+      "docs/milestones/M6-calls/FIX-ART-A.md (only if 1.685 is kept)"
+     ],
+     "fix_needs_spec_change": false
+    }
+   ]
+  },
+  {
+   "id": "verify-code-02",
+   "lens": "code",
+   "severity": "low",
+   "title": "The Bruiser's per-clip strain ratchet was regenerated wholesale, loosening about 14 clips' `high` ceilings; the log names only `held` and one other clip",
+   "detail": "FIX-ART-B regenerated tests/fixtures/strain/bruiser.json after test_m4_done_when failed on `held`. The `whole` bars are unchanged, but about 40 clip rows moved. `high` rose on hold 3.505 -> 3.748 (+7%), hold_collar 4.238 -> 4.505 (+6%), bruiser_headbutt 4.214 -> 4.450, jump, thrown 6.455 -> 6.603, walk_* 2.997 -> 3.064, and more; `bad` counts moved (spine twist 179 -> 184). The cause is legitimate (the helmet and visor regions moved the colour-aware decimation borders, so the mesh changed), and `held` min 0.1489 -> 0.088 is explained. But the ratchet was reset for every clip rather than only `held`, and the log says 'a few other clips moved by noise both ways' without listing the rises.",
+   "evidence": "git diff 2afbe4d d582d21 -- tests/fixtures/strain/bruiser.json (python compare of old and new clips: held, hold, hold_collar, bruiser_headbutt, thrown, walk_* high up); docs/milestones/M6-calls/FIX-ART-B.md 'Ratchets moved'",
+   "repro": "git show 2afbe4d:tests/fixtures/strain/bruiser.json against the new file, clip by clip.",
+   "suggested_fix": "Keep the regenerated `held` row and restore the old figure for every clip that only got worse (or list each rise with its figure in FIX-ART-B), or note that the whole-run bars (high_max 8.65) are the real bar and say so.",
+   "files": [
+    "tests/fixtures/strain/bruiser.json",
+    "docs/milestones/M6-calls/FIX-ART-B.md"
+   ],
+   "spec_change": false,
+   "survives": false,
+   "votes": []
+  },
+  {
+   "id": "verify-code-03",
+   "lens": "code",
+   "severity": "low",
+   "title": "ASSETS.md rows for several changed binaries are stale or silent",
+   "detail": "Bruiser GLB row (line 432) still says '4 colours (slots 6 unused ... 14, 44, 45, 46)' and 'the same swatches', but the helmet now uses slot 47. The palette atlas row (105) lists the alpha-230 no-blood class as 'the Punk's cap, laces and strap' only; slot 47 (Bruiser helmet) is now in it, and palette_atlas.png and punk_veteran_atlas.png changed. The Punk rows (69 mask, 111 chain config) say nothing of this wave's valley change (min_chain_m 0.45 -> 0.6, vest valley_deg 15 -> 18) though punk_detail.png was rebaked. The Kicker mask row (384) and the Bruiser mask row (434) do not name the new eyes/mask and visor zones (their chain rows do).",
+   "evidence": "ASSETS.md:432, 105, 363, 69, 111, 384, 434; git diff 2afbe4d d582d21 -- ASSETS.md touches the chain, palette, trim, ground and Ox mask rows only",
+   "repro": "Read those lines against `git diff 2afbe4d d582d21 --stat -- assets/export`.",
+   "suggested_fix": "One clause each: slot 47 on the Bruiser GLB and atlas rows, the Punk valley numbers on its mask or config row, the new zones on the Kicker and Bruiser mask rows.",
+   "files": [
+    "ASSETS.md"
+   ],
+   "spec_change": false,
+   "survives": false,
+   "votes": []
+  },
+  {
+   "id": "verify-code-04",
+   "lens": "code",
+   "severity": "low",
+   "title": "The 'general' coplanar guard still leaves out the Dressing pieces and the crowd and training rooms' slivers",
+   "detail": "The brief asked that any two drawn faces sharing a plane fail. The scan keeps only LevelBlock meshes and world bodies; 83 Dressing ArrayMeshes (DressingStreet, DressingA, Roofs/Dressing, BossRoof/Dressing) are not boxes it sees. With Dressing meshes added to a scratch copy it reports 7 pairs: wall tops against cornice tops, all at y 11 (0.16-0.88 m2). They are high up and probably not seen from the player's heights, but the guard says nothing about them. The crowd room (17 pairs) and the training room (2) are held only to 0.5 m2 (ROOM_MIN_AREA_M2); real pairs of 0.02-0.3 m2 remain, including 0.29 m2 floor tops at y 0 and 0.25 m2 tops at 6 and 2.4. FIX-WORLD logs this as a request for the room builders.",
+   "evidence": "tests/m6_coplanar_scan.gd _box_owner (no Dressing case); scratch run with Dressing meshes: 'Geometry/RightWall2/Body and Street/DressingA1/CorniceR1: y+ face at 11.000, 0.16 m2' and six more; room probe at MIN_AREA 0.02: crowd 17 pairs, training 2; tests/test_m6_feedback_ground.gd ROOM_MIN_AREA_M2 0.5",
+   "repro": "Edit _box_owner to return the mesh for ArrayMesh instances under a node whose name begins with Dressing; run test_m6_feedback_ground.gd. For the rooms, call Scan.pairs(root, 0.02) on Snapshot.CROWD and Snapshot.TRAINING.",
+   "suggested_fix": "Inset the cornice tops by 2 cm (or drop their top face) and include Dressing meshes in the scan. Make the rooms' boxes InsetBlocks, or inset RoomKit.add_box, and drop ROOM_MIN_AREA_M2 to 0.02.",
+   "files": [
+    "tests/m6_coplanar_scan.gd",
+    "tests/test_m6_feedback_ground.gd",
+    "game/level/crowd_room.gd",
+    "game/level/test_room.gd"
+   ],
+   "spec_change": false,
+   "survives": false,
+   "votes": []
+  },
+  {
+   "id": "verify-code-05",
+   "lens": "code",
+   "severity": "low",
+   "title": "INSET_STEP_M is a dead constant in InsetBlock; the insets are hand-typed numbers in 41 scene nodes",
+   "detail": "game/level/kit/inset_block.gd declares `const INSET_STEP_M := 0.02` and its doc says each tier is a step of it, but nothing reads it. The tiers (0.02, 0.04, 0.06 and per-axis mixes) are typed into the scenes, so the constant neither enforces nor documents anything checked, and a number sits in a script that CLAUDE.md's 'no numbers in scripts' rule would not allow if it did anything. Nothing validates that insets are tier multiples; only the scan catches a clash.",
+   "evidence": "game/level/kit/inset_block.gd:15; grep -rn INSET_STEP_M game tests tools finds only the declaration and a doc comment",
+   "repro": "grep -rn INSET_STEP_M game tests tools",
+   "suggested_fix": "Delete the constant and say '2 cm per tier' in the doc comment, or move it to an @export on a level-kit tuning resource and add a test that every inset is a multiple of it.",
+   "files": [
+    "game/level/kit/inset_block.gd"
+   ],
+   "spec_change": false,
+   "survives": false,
+   "votes": []
+  },
+  {
+   "id": "verify-code-06",
+   "lens": "code",
+   "severity": "low",
+   "title": "The code-05 closure test is satisfied by a bare string, so a comment-only roll-out test file still opts its character out of the shared guards",
+   "detail": "_rolled_out(id) now needs the pipeline's detail_bake.crease, and test_every_roll_out_test_reads_its_own_pipeline_and_the_recipe asserts each tests/test_m6_feedback_detail_<id>.gd contains the text 'characters/<id>/pipeline.json'. A comment or an unused const containing that path satisfies it. Altering the kicker file's path string does make the test fail (checked), so it can fail, but an empty file with the string and no tests still passes, and every enemy already has crease in its config, so the guards stay skipped for all four enemies.",
+   "evidence": "tests/test_m6_feedback_detail.gd:154-182; sabotage run: replacing 'characters/kicker/pipeline.json' in tests/test_m6_feedback_detail_kicker.gd gives 15/16 with the new test failing",
+   "repro": "Replace the body of test_m6_feedback_detail_thug.gd with `extends GutTest` plus a comment holding the path; test_m6_feedback_detail.gd still passes.",
+   "suggested_fix": "Have the test count at least one `func test_` in the file that reads PIPELINE (parse for `func test_` and a use of the path constant), not just the path text.",
+   "files": [
+    "tests/test_m6_feedback_detail.gd"
+   ],
+   "spec_change": false,
+   "survives": false,
+   "votes": []
+  }
+ ]
+}
