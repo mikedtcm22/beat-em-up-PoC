@@ -376,3 +376,43 @@ func test_no_other_character_uses_the_valley_or_texel_keys() -> void:
 		var text := FileAccess.get_file_as_string(path)
 		assert_false(text.contains("texel_swatch"), "%s: no texel codes" % id)
 		assert_false(text.contains("valley"), "%s: no valley ink" % id)
+
+
+## VFIX-HEAVIES (verify-chars-02): the helmet's front band between the visor frame and the dome is the no-blood swatch too (it kept the
+## jacket's slot 44 and a drip landed above the visor); the scarf below the visor still takes blood.
+func test_the_helmet_front_never_bleeds_and_the_scarf_still_does() -> void:
+	var band := 0
+	var bleeding := 0
+	var scarf := 0
+	for tri: int in _tris().size() / 3:
+		var c := _centre(tri)
+		if absf(c.x) > 0.3 or c.z > -0.02:
+			continue
+		var slot := _slot_of_tri(tri)
+		if c.y >= 1.64 and c.y <= 1.71:
+			band += 1
+			if slot == SLOT_PURPLE:
+				bleeding += 1
+		elif c.y < 1.55 and c.y > 1.3 and slot == SLOT_PURPLE:
+			scarf += 1
+	assert_gt(band, 40, "the band above the visor holds faces (%d)" % band)
+	assert_eq(bleeding, 0, "none of them is the bleeding purple (%d)" % bleeding)
+	assert_gt(scarf, 100, "the scarf below the visor still bleeds (%d faces)" % scarf)
+
+
+## VFIX-HEAVIES (verify-chars-04): the scarf's top edge under the visor is one straight horizontal border (the region is cut along its
+## top plane), so no scarf face stands in the steel frame above it and no steel or cream face hangs in the scarf below it.
+func test_the_scarf_border_under_the_visor_is_straight() -> void:
+	var stray_up := 0
+	var stray_down := 0
+	for tri: int in _tris().size() / 3:
+		var c := _centre(tri)
+		if absf(c.x) > 0.15 or c.z > -0.1 or c.z < -0.38:
+			continue
+		var slot := _slot_of_tri(tri)
+		if c.y > 1.58 and c.y < 1.66 and slot == SLOT_PURPLE:
+			stray_up += 1
+		if c.y > 1.50 and c.y < 1.57 and (slot == SLOT_STRAP or slot == SLOT_CREAM or slot == SLOT_SKIN):
+			stray_down += 1
+	assert_eq(stray_up, 0, "no scarf purple stands in the frame (%d)" % stray_up)
+	assert_eq(stray_down, 0, "no steel, cream or skin face hangs in the scarf (%d)" % stray_down)

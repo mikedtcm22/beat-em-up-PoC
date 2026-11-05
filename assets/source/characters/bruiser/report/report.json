@@ -1,7 +1,7 @@
 {
 	"asset": "bruiser",
 	"version": 2,
-	"config_sha256": "432afd7dfe16f3f884569ef68cb2a8e8a5b73da999e2af6052cdc22398c999ed",
+	"config_sha256": "07ca0ab167cf23afe1af51ea4424df298cefb319a6358bc41dc532ce1eab8a5a",
 	"steps": {
 		"inspect": {
 			"source": {
@@ -10039,10 +10039,10 @@
 		},
 		"palette": {
 			"source_image": "removed",
-			"faces_dense": 20177,
-			"textured_faces": 17001,
+			"faces_dense": 20637,
+			"textured_faces": 17461,
 			"override_faces": 3176,
-			"delta_e_mean": 9.412087,
+			"delta_e_mean": 9.47589,
 			"delta_e_p95": 16.204394,
 			"pruned_swatches": [
 				{
@@ -10051,15 +10051,15 @@
 					"share": 5.1e-05
 				}
 			],
-			"majority_flips": 1670,
-			"border_vertices": 956,
-			"border_edges": 970,
-			"protected_vertices": 2576,
+			"majority_flips": 1690,
+			"border_vertices": 1024,
+			"border_edges": 1040,
+			"protected_vertices": 2644,
 			"decimate": {
 				"invert_group": true,
 				"trials": [
 					{
-						"ratio": 0.7434,
+						"ratio": 0.7268,
 						"tris": 14999
 					}
 				],
@@ -10071,190 +10071,190 @@
 			"swatches_used": {
 				"14": {
 					"name": "cream",
-					"area_share": 0.013274,
-					"faces": 233
+					"area_share": 0.01325,
+					"faces": 229
 				},
 				"44": {
 					"name": "bruiser_purple",
-					"area_share": 0.298903,
-					"faces": 4254
+					"area_share": 0.296134,
+					"faces": 4294
 				},
 				"45": {
 					"name": "bruiser_steel",
-					"area_share": 0.253012,
-					"faces": 4018
+					"area_share": 0.249806,
+					"faces": 3982
 				},
 				"46": {
 					"name": "bruiser_black",
-					"area_share": 0.385045,
-					"faces": 5842
+					"area_share": 0.385046,
+					"faces": 5782
 				},
 				"47": {
 					"name": "bruiser_helmet",
-					"area_share": 0.049766,
-					"faces": 652
+					"area_share": 0.055764,
+					"faces": 712
 				}
 			},
 			"swatch_count": 5,
 			"detail_uv": true,
 			"detail_bake": {
 				"size": 1024,
-				"texels": 233272,
-				"ink_texels_share": 0.097624,
-				"mean_ink": 0.097042,
+				"texels": 234739,
+				"ink_texels_share": 0.09629,
+				"mean_ink": 0.096395,
 				"png": "bruiser_detail.png",
 				"zones": {
 					"chest_plates": {
-						"texels": 25718,
+						"texels": 24990,
 						"raw_percentiles": {
-							"50": 0.003,
-							"80": 0.0104,
-							"90": 0.0195,
-							"95": 0.0354,
-							"97": 0.0538,
-							"98": 0.0698,
-							"99": 0.0981,
-							"99.5": 0.1213
+							"50": 0.0031,
+							"80": 0.0102,
+							"90": 0.0194,
+							"95": 0.0362,
+							"97": 0.0548,
+							"98": 0.0711,
+							"99": 0.0982,
+							"99.5": 0.123
 						},
-						"ink_texels_share": 0.259779
+						"ink_texels_share": 0.257103
 					},
 					"cloth": {
-						"texels": 64093,
+						"texels": 65055,
 						"raw_percentiles": {
 							"50": 0.0026,
-							"80": 0.0046,
+							"80": 0.0047,
 							"90": 0.0078,
-							"95": 0.0106,
-							"97": 0.012,
-							"98": 0.0153,
-							"99": 0.0216,
-							"99.5": 0.0294
+							"95": 0.011,
+							"97": 0.0127,
+							"98": 0.0157,
+							"99": 0.0228,
+							"99.5": 0.0299
 						},
-						"ink_texels_share": 0.125474
+						"ink_texels_share": 0.124633
 					},
 					"scarf": {
-						"texels": 9749,
+						"texels": 10187,
 						"raw_percentiles": {
-							"50": 0.0039,
+							"50": 0.0038,
 							"80": 0.0078,
 							"90": 0.0118,
-							"95": 0.0157,
-							"97": 0.0197,
-							"98": 0.0235,
-							"99": 0.0315,
-							"99.5": 0.0403
+							"95": 0.0174,
+							"97": 0.0231,
+							"98": 0.0296,
+							"99": 0.0422,
+							"99.5": 0.0595
 						},
-						"ink_texels_share": 0.001026
+						"ink_texels_share": 0.002454
 					},
 					"helmet": {
-						"texels": 6064,
+						"texels": 6092,
 						"raw_percentiles": {
 							"50": 0.0024,
-							"80": 0.0045,
+							"80": 0.0046,
 							"90": 0.0078,
-							"95": 0.0104,
+							"95": 0.0102,
 							"97": 0.0118,
-							"98": 0.0144,
-							"99": 0.0196,
-							"99.5": 0.0314
+							"98": 0.014,
+							"99": 0.0195,
+							"99.5": 0.0315
 						},
-						"ink_texels_share": 0.00874
+						"ink_texels_share": 0.0087
 					},
 					"guard_left": {
-						"texels": 11471,
+						"texels": 11611,
 						"raw_percentiles": {
-							"50": 0.0002,
-							"80": 0.0068,
-							"90": 0.0113,
-							"95": 0.0181,
-							"97": 0.0312,
-							"98": 0.0482,
-							"99": 0.0905,
-							"99.5": 0.1291
+							"50": 0.0003,
+							"80": 0.0067,
+							"90": 0.011,
+							"95": 0.0175,
+							"97": 0.0274,
+							"98": 0.0415,
+							"99": 0.0902,
+							"99.5": 0.1269
 						},
-						"ink_texels_share": 0.13277
+						"ink_texels_share": 0.137886
 					},
 					"guard_right": {
-						"texels": 11137,
+						"texels": 11135,
 						"raw_percentiles": {
 							"50": 0.0,
-							"80": 0.0049,
-							"90": 0.0103,
-							"95": 0.0157,
-							"97": 0.0231,
-							"98": 0.0388,
-							"99": 0.0889,
-							"99.5": 0.1239
+							"80": 0.0046,
+							"90": 0.01,
+							"95": 0.0155,
+							"97": 0.0229,
+							"98": 0.0357,
+							"99": 0.0837,
+							"99.5": 0.1276
 						},
-						"ink_texels_share": 0.127054
+						"ink_texels_share": 0.127077
 					},
 					"visor": {
-						"texels": 1835,
+						"texels": 1840,
 						"raw_percentiles": {
 							"50": 0.0117,
-							"80": 0.0251,
-							"90": 0.0383,
-							"95": 0.057,
-							"97": 0.0829,
-							"98": 0.1002,
-							"99": 0.1498,
-							"99.5": 0.1779
+							"80": 0.0253,
+							"90": 0.0387,
+							"95": 0.0545,
+							"97": 0.0748,
+							"98": 0.0995,
+							"99": 0.1531,
+							"99.5": 0.175
 						},
-						"ink_texels_share": 0.037057
+						"ink_texels_share": 0.029891
 					}
 				},
 				"glint": null,
 				"clean": {
 					"before": {
-						"pieces": 2293,
-						"texels": 30084,
-						"pieces_le6": 1346,
-						"texels_in_le6_share": 0.1207,
+						"pieces": 2239,
+						"texels": 30270,
+						"pieces_le6": 1284,
+						"texels_in_le6_share": 0.1157,
 						"median": 5.0,
-						"pieces_over20": 336
+						"pieces_over20": 355
 					},
 					"after": {
-						"pieces": 273,
-						"texels": 23527,
-						"pieces_le6": 6,
-						"texels_in_le6_share": 0.0009,
-						"median": 55.0,
-						"pieces_over20": 264
+						"pieces": 298,
+						"texels": 23919,
+						"pieces_le6": 5,
+						"texels_in_le6_share": 0.0006,
+						"median": 51.0,
+						"pieces_over20": 287
 					},
-					"bridged_texels": 857,
-					"pieces_dropped": 1857,
-					"texels_dropped": 11701
+					"bridged_texels": 844,
+					"pieces_dropped": 1797,
+					"texels_dropped": 11575
 				},
 				"glove_lines": null,
 				"crease": {
-					"texels_on_a_crease": 22376,
-					"ink_share_before": 0.00249,
-					"ink_share_after": 0.09762
+					"texels_on_a_crease": 22185,
+					"ink_share_before": 0.00254,
+					"ink_share_after": 0.09629
 				},
 				"texel_swatch": {
-					"texels": 233272,
-					"texture_decided": 196661,
-					"differ_from_face_share": 0.01105,
-					"majority_moved": 924,
+					"texels": 234739,
+					"texture_decided": 193194,
+					"differ_from_face_share": 0.01048,
+					"majority_moved": 907,
 					"share": {
-						"14": 0.01323,
-						"44": 0.2936,
-						"45": 0.25455,
-						"46": 0.39043
+						"14": 0.01328,
+						"44": 0.29215,
+						"45": 0.25104,
+						"46": 0.38966
 					}
 				},
-				"sha256": "886be519a7c401d7ecc699adbc5a5466a35e3ada903b7d78ef77a8cf3c6c4782"
+				"sha256": "a35e92c7a710517b55fbc681412bfbfeecf3ca19c8e033936f4ee0c845fce6b2"
 			},
 			"regions": [
 				{
 					"name": "island_merge",
 					"min_area_m2": 0.003,
-					"faces": 144
+					"faces": 139
 				},
 				{
 					"name": "helmet_back",
 					"slot": 47,
-					"faces": 666
+					"faces": 682
 				},
 				{
 					"name": "helmet_top",
@@ -10264,10 +10264,33 @@
 				{
 					"name": "under_visor",
 					"slot": 44,
-					"faces": 198
+					"faces": 677
+				},
+				{
+					"name": "helmet_front",
+					"slot": 47,
+					"faces": 64
+				},
+				{
+					"name": "visor_fill",
+					"slot": 45,
+					"faces": 10
 				}
 			],
-			"region_cuts": [],
+			"region_cuts": [
+				{
+					"region": "under_visor",
+					"z": 1.5,
+					"faces_before": 19521,
+					"faces_after": 19663
+				},
+				{
+					"region": "under_visor",
+					"z": 1.575,
+					"faces_before": 19663,
+					"faces_after": 19741
+				}
+			],
 			"fist_band": null,
 			"fist_border_thinned": 0,
 			"fist_strap_cuts": [],
@@ -10277,30 +10300,32 @@
 					"invert_group": true,
 					"trials": [
 						{
-							"ratio": 0.7434,
+							"ratio": 0.7268,
 							"tris": 14999
 						}
 					],
 					"triangles": 14999,
 					"budget": 15000,
 					"budget_ok": true,
-					"protected_vertices": 2576,
+					"protected_vertices": 2644,
 					"protected_position_worst_m": 0.0
 				}
 			],
 			"unfold": {
-				"folded_before": 136,
-				"folded_after": 8,
-				"passes": 7,
+				"folded_before": 135,
+				"folded_after": 6,
+				"passes": 9,
 				"history": [
-					136,
-					60,
-					34,
-					18,
-					15,
-					12,
-					10,
-					8
+					135,
+					58,
+					32,
+					17,
+					14,
+					11,
+					9,
+					8,
+					7,
+					6
 				]
 			},
 			"triangles": 14999,
@@ -10321,11 +10346,11 @@
 					"triangles": 14999,
 					"height_m": 1.815202,
 					"feet_y": -0.003479,
-					"folded_triangles": 81,
-					"folded_share": 0.0054,
+					"folded_triangles": 85,
+					"folded_share": 0.005667,
 					"facing": {
 						"axis": "-Z",
-						"yaw": 3.192591,
+						"yaw": 2.982155,
 						"confidence": "conflict"
 					},
 					"sides_consistent": true,
@@ -10335,7 +10360,7 @@
 						{
 							"name": "Body",
 							"triangles": 14999,
-							"vertices": 15201,
+							"vertices": 15268,
 							"uv_layers": [
 								"UVMap",
 								"UVMap.001"
@@ -10354,17 +10379,17 @@
 						"max": [
 							0.501424,
 							1.811723,
-							0.237973
+							0.238314
 						],
 						"size": [
 							0.996314,
 							1.815202,
-							0.496701
+							0.497042
 						]
 					},
 					"file": "bruiser.glb",
-					"sha256": "ae0da35f58b835d89141f570756fdc74664e3cf9adb0dda3abac6c3140314210",
-					"bytes": 1131132
+					"sha256": "bee9cd232d4b4a9c54a6a9fbf89893cc949d726d0f62cdf534a4f5236df3903b",
+					"bytes": 1135684
 				},
 				"rest": {
 					"bones": 23,
@@ -10376,11 +10401,11 @@
 					"triangles": 14999,
 					"height_m": 1.815202,
 					"feet_y": -0.003479,
-					"folded_triangles": 142,
-					"folded_share": 0.009467,
+					"folded_triangles": 144,
+					"folded_share": 0.009601,
 					"facing": {
 						"axis": "-Z",
-						"yaw": 3.192591,
+						"yaw": 2.982155,
 						"confidence": "weak"
 					},
 					"sides_consistent": true,
@@ -10390,7 +10415,7 @@
 						{
 							"name": "Body",
 							"triangles": 14999,
-							"vertices": 15208,
+							"vertices": 15266,
 							"uv_layers": [
 								"UVMap",
 								"UVMap.001"
@@ -10409,40 +10434,40 @@
 						"max": [
 							0.367496,
 							1.811723,
-							0.237973
+							0.238314
 						],
 						"size": [
 							0.728774,
 							1.815202,
-							0.496701
+							0.497042
 						]
 					},
 					"file": "bruiser_rest.glb",
-					"sha256": "868edf2765e4d1e72889d7115b948a572f663d65b48abec864a1ae26387e1115",
-					"bytes": 1131228
+					"sha256": "c367195341fe9cb43f18df6413abc80897b7ea9c0da563ab3492eae5efae600c",
+					"bytes": 1135172
 				}
 			},
 			"smooth_normals": {
 				"apose": {
 					"Body": {
-						"mean_deg": 17.7314,
-						"p99_deg": 54.973,
-						"over_15_deg_share": 0.4962
+						"mean_deg": 17.7083,
+						"p99_deg": 55.5624,
+						"over_15_deg_share": 0.4947
 					}
 				},
 				"rest": {
 					"Body": {
-						"mean_deg": 17.8906,
-						"p99_deg": 55.5813,
-						"over_15_deg_share": 0.4997
+						"mean_deg": 17.8372,
+						"p99_deg": 55.5052,
+						"over_15_deg_share": 0.495
 					}
 				}
 			}
 		}
 	},
 	"outputs": {
-		"bruiser.glb": "ae0da35f58b835d89141f570756fdc74664e3cf9adb0dda3abac6c3140314210",
-		"bruiser_rest.glb": "868edf2765e4d1e72889d7115b948a572f663d65b48abec864a1ae26387e1115"
+		"bruiser.glb": "bee9cd232d4b4a9c54a6a9fbf89893cc949d726d0f62cdf534a4f5236df3903b",
+		"bruiser_rest.glb": "c367195341fe9cb43f18df6413abc80897b7ea9c0da563ab3492eae5efae600c"
 	},
-	"hash": "d62991fb80adca041d88b36944a955edcb2b9af319331bfd3f5a333a30bfb44b"
+	"hash": "73c8bdd11a898c3417a2eaa39eae63c8ca10d966415a6e8d63cf26615ef95817"
 }
