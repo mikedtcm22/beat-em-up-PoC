@@ -240,6 +240,42 @@ extends Resource
 @export_range(0.0, 20.0, 0.1) var hurt_panel_jolt_px_per_hp: float = 1.2
 @export_range(0.0, 60.0, 1.0) var hurt_panel_jolt_max_px: float = 22.0
 @export_range(0.05, 1.0, 0.05) var hurt_panel_jolt_s: float = 0.25
+## The rattle's two rates, in radians per second (x and y; unequal so the offset traces a loop, not a line).
+@export_range(10.0, 300.0, 1.0) var hurt_panel_jolt_rate_x: float = 95.0
+@export_range(10.0, 300.0, 1.0) var hurt_panel_jolt_rate_y: float = 113.0
+## Which way a hit came from is the attacker's position against the view (the contact point is on the
+## player's own hurtbox, a few tenths of a metre from the lens). An attacker nearer the lens than this
+## horizontally (metres) has no side: the push direction stands in.
+@export_range(0.0, 1.0, 0.01) var hurt_bearing_min_m: float = 0.05
+## A blow whose bearing has a sine smaller than this (nearly dead ahead or behind) counts as frontal: the
+## roll alternates sides instead of keeping one.
+@export_range(0.0, 0.5, 0.01) var hurt_roll_frontal_sine: float = 0.1
+## The vignette's gradient: the band's mid-stop sits at this share of the depth, at this share of the
+## edge's alpha (it then falls to nothing at the depth).
+@export_range(0.05, 0.95, 0.05) var hurt_overlay_mid_stop: float = 0.4
+@export_range(0.0, 1.0, 0.05) var hurt_overlay_mid_alpha: float = 0.4
+## One impact stroke's length: this share of the vignette's depth at least, plus up to this much more
+## (random per stroke), then scaled by the strength (see hurt_overlay_stroke_len_floor).
+@export_range(0.1, 2.0, 0.05) var hurt_overlay_stroke_len_min: float = 0.55
+@export_range(0.0, 2.0, 0.05) var hurt_overlay_stroke_len_range: float = 0.7
+## The length scale of a stroke is the hit's strength plus this, up to 1 (so a weak hit's strokes are
+## not stubs).
+@export_range(0.0, 1.0, 0.05) var hurt_overlay_stroke_len_floor: float = 0.3
+## The strokes' width across the edge, as a share of the edge's length shared by all of them (0.4 = the
+## strokes' bases cover 40% of it).
+@export_range(0.05, 1.0, 0.05) var hurt_overlay_stroke_width: float = 0.4
+## How far a stroke's tip leans off the straight-in line, as a share of its half-width, either way.
+@export_range(0.0, 3.0, 0.05) var hurt_overlay_stroke_lean: float = 0.6
+## How far a stroke's place along the edge is jittered, as a share of the spacing, either way.
+@export_range(0.0, 0.5, 0.05) var hurt_overlay_stroke_jitter: float = 0.3
+## The strokes' opacity is the hit's strength times this (up to 1): the strokes reach full opacity before the vignette does.
+@export_range(1.0, 4.0, 0.1) var hurt_overlay_stroke_gain: float = 1.5
+## A blow from ahead lights the top edge's strokes only when its cosine against the view is over this
+## (0 = any blow in the front half; the top edge's strength then rises to full at dead ahead).
+@export_range(0.0, 0.95, 0.05) var hurt_overlay_top_threshold: float = 0.5
+## A blocked hit's vignette is shallower than a clean hit's: its depth is the clean depth times
+## hurt_overlay_blocked_scale times this, at most the clean depth (a block's edge stays thin).
+@export_range(1.0, 10.0, 0.5) var hurt_overlay_blocked_depth_gain: float = 2.0
 
 @export_group("VFX")
 ## Comic effects (Spec §6; VfxDirector, game/fx/). Sizes are meters at the contact point

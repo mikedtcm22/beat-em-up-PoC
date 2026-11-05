@@ -84,10 +84,6 @@ const PITCH_LIMIT_RAD := PI * 89.0 / 180.0
 ## A punch whose contact point is this close to screen center (radians) dips the view
 ## instead, since "toward the contact" has no direction there.
 const PUNCH_CENTER_RAD := PI / 180.0
-## A contact nearer the lens than this horizontally says nothing about the side a blow came from.
-const HURT_SIDE_MIN_M := 0.05
-## A blow whose bearing has a sine under this is "from dead ahead or behind" for the roll.
-const HURT_FRONTAL_SINE := 0.1
 
 ## The player this camera rides. Null (or freed) holds the last view.
 var player: PlayerCharacter:
@@ -818,11 +814,16 @@ func _toward(point: Vector3) -> Vector2:
 
 
 ## Where a hit on the player came from, as an angle off the view's forward in radians: 0 = ahead,
-## +PI/2 = from the right, PI = from behind. It reads the contact point against `view`, or, when that is
-## within HURT_SIDE_MIN_M of the lens horizontally (a contact at the body), the way the hit pushes.
+## +PI/2 = from the right, PI = from behind. It reads the attacker's position against `view` (the
+## contact point is on the player's own hurtbox, a few tenths of a metre from the lens, and says nothing
+## about the side). With no attacker in the tree, or one within hurt_bearing_min_m of the lens
+## horizontally, the way the hit pushes stands in. Read-only: it never writes the attacker.
 static func hit_bearing(view: Transform3D, hit: HitInfo) -> float:
-	var local := view.basis.inverse() * (hit.contact_point - view.origin)
-	if Vector2(local.x, local.z).length() < HURT_SIDE_MIN_M:
+	var local := Vector3.ZERO
+	var attacker := hit.attacker
+	if attacker != null and is_instance_valid(attacker) and attacker.is_inside_tree():
+		local = view.basis.inverse() * (attacker.global_position - view.origin)
+	if Vector2(local.x, local.z).length() < Tuning.data.hurt_bearing_min_m:
 		local = view.basis.inverse() * (-hit.direction)
 	return atan2(local.x, -local.z)
 
@@ -833,7 +834,7 @@ static func hit_bearing(view: Transform3D, hit: HitInfo) -> float:
 func _roll_away(hit: HitInfo) -> float:
 	var lateral := sin(hit_bearing(_view, hit))
 	var sign_of := signf(lateral)
-	if absf(lateral) < HURT_FRONTAL_SINE:
+	if absf(lateral) < Tuning.data.hurt_roll_frontal_sine:
 		_roll_flip = -_roll_flip
 		sign_of = _roll_flip
 	return sign_of * maxf(absf(lateral), Tuning.data.hurt_roll_frontal_share)

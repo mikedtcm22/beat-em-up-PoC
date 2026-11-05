@@ -6,7 +6,7 @@ extends Control
 ## transform, and writes no game state.
 ##
 ## Each hit with the player as its victim pulses a dark vignette in from the screen's edges, strongest on
-## the side the blow came from (the contact point against the view: ahead, left, right, or behind, which
+## the side the blow came from (the attacker's position against the view: ahead, left, right, or behind, which
 ## lights the bottom edge) and with `hurt_overlay_even_share` on every edge, with comic impact strokes
 ## (spikes pointing in) along the struck edge. Its depth and strength grow with the damage
 ## (`hurt_overlay_full_damage`) and it fades over `hurt_overlay_fade_s`. Its colour is the ink, not red
@@ -108,13 +108,14 @@ func on_player_hit(hit: HitInfo, view: Transform3D) -> void:
 		_edges[i] = maxf(_edges[i], weights[i] * strength)
 	if not hit.blocked:
 		# Strokes: on the side it came from, and the top edge for a blow from dead ahead.
+		var top := tuning.hurt_overlay_top_threshold
 		var strokes: Array[float] = [maxf(-sin(bearing), 0.0), maxf(sin(bearing), 0.0),
-				maxf(cos(bearing) - 0.5, 0.0) * 2.0, maxf(-cos(bearing), 0.0)]
+				maxf(cos(bearing) - top, 0.0) / maxf(1.0 - top, 0.05), maxf(-cos(bearing), 0.0)]
 		for i: int in 4:
 			_strokes[i] = maxf(_strokes[i], strokes[i] * strength)
 	var damage_share := clampf(hit.damage / maxf(tuning.hurt_overlay_full_damage, 0.01), 0.0, 1.0)
 	_depth = maxf(_depth * _alive_share(), lerpf(tuning.hurt_overlay_depth_min, tuning.hurt_overlay_depth_max,
-			damage_share) * minf(feel * 2.0, 1.0))
+			damage_share) * minf(feel * tuning.hurt_overlay_blocked_depth_gain, 1.0))
 	_seed += 1
 	queue_redraw()
 
@@ -173,33 +174,37 @@ func _edge_point(edge: int, along: float, inward: float) -> Vector2:
 	return origin + axes[1] * length * along + axes[0] * inward
 
 
-## A gradient band along `edge`: the colour's alpha x `strength` at the edge, a little under half of it
-## at 40% of the depth, nothing at the depth.
+## A gradient band along `edge`: the colour's alpha x `strength` at the edge, hurt_overlay_mid_alpha of it
+## at hurt_overlay_mid_stop of the depth, nothing at the depth.
 func _draw_vignette(edge: int, depth_px: float, color: Color, strength: float) -> void:
+	var tuning := Tuning.data
+	var stop := tuning.hurt_overlay_mid_stop
 	var solid := Color(color.r, color.g, color.b, color.a * strength)
-	var middle := Color(color.r, color.g, color.b, color.a * strength * 0.4)
+	var middle := Color(color.r, color.g, color.b, color.a * strength * tuning.hurt_overlay_mid_alpha)
 	var clear := Color(color.r, color.g, color.b, 0.0)
 	draw_polygon(PackedVector2Array([
 		_edge_point(edge, 0.0, 0.0), _edge_point(edge, 1.0, 0.0),
-		_edge_point(edge, 1.0, depth_px * 0.4), _edge_point(edge, 0.0, depth_px * 0.4),
+		_edge_point(edge, 1.0, depth_px * stop), _edge_point(edge, 0.0, depth_px * stop),
 	]), PackedColorArray([solid, solid, middle, middle]))
 	draw_polygon(PackedVector2Array([
-		_edge_point(edge, 0.0, depth_px * 0.4), _edge_point(edge, 1.0, depth_px * 0.4),
+		_edge_point(edge, 0.0, depth_px * stop), _edge_point(edge, 1.0, depth_px * stop),
 		_edge_point(edge, 1.0, depth_px), _edge_point(edge, 0.0, depth_px),
 	]), PackedColorArray([middle, middle, clear, clear]))
 
 
 ## Comic impact strokes: spikes pointing in from `edge`, set across it by this hit's seed.
 func _draw_strokes(edge: int, depth_px: float, color: Color, strength: float) -> void:
-	var count := Tuning.data.hurt_overlay_strokes
+	var tuning := Tuning.data
+	var count := tuning.hurt_overlay_strokes
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(_seed * 4 + edge)
-	var tint := Color(color.r, color.g, color.b, color.a * clampf(strength * 1.5, 0.0, 1.0))
+	var tint := Color(color.r, color.g, color.b, color.a * clampf(strength * tuning.hurt_overlay_stroke_gain, 0.0, 1.0))
 	for i: int in count:
-		var along := (float(i) + 0.5 + rng.randf_range(-0.3, 0.3)) / float(count)
-		var half_width := 0.4 / float(count)
-		var length := depth_px * (0.55 + rng.randf() * 0.7) * clampf(strength + 0.3, 0.0, 1.0)
-		var lean := rng.randf_range(-0.6, 0.6) * half_width
+		var along := (float(i) + 0.5 + rng.randf_range(-tuning.hurt_overlay_stroke_jitter, tuning.hurt_overlay_stroke_jitter)) / float(count)
+		var half_width := tuning.hurt_overlay_stroke_width / float(count)
+		var length := depth_px * (tuning.hurt_overlay_stroke_len_min + rng.randf() * tuning.hurt_overlay_stroke_len_range) \
+				* clampf(strength + tuning.hurt_overlay_stroke_len_floor, 0.0, 1.0)
+		var lean := rng.randf_range(-tuning.hurt_overlay_stroke_lean, tuning.hurt_overlay_stroke_lean) * half_width
 		draw_colored_polygon(PackedVector2Array([
 			_edge_point(edge, along - half_width, 0.0),
 			_edge_point(edge, along + half_width, 0.0),

@@ -7,6 +7,12 @@ extends GutTest
 const DT := 1.0 / 60.0
 ## The eye point's height of the stand-in player.
 const EYE_Y := 1.68
+const PUNK_SCENE := preload("res://game/enemies/punk/street_punk.tscn")
+const BRUISER_SCENE := preload("res://game/enemies/bruiser/bruiser.tscn")
+## How far a real attacker stands from the player for a jab (m): inside the jab's 1.05 m reach.
+const JAB_RANGE_M := 0.9
+## ...and for the Bruiser's smash.
+const SMASH_RANGE_M := 1.2
 
 ## Stand-in for the player (as test_cameras.gd's): the camera-facing API only.
 class FakePlayer extends PlayerCharacter:
@@ -344,3 +350,190 @@ func test_the_health_panel_jolts_in_proportion_to_the_damage_and_settles() -> vo
 	healed.health = 50.0
 	healed.on_health_changed(80.0, 100.0)
 	assert_eq(healed._jolt_left, 0.0, "healing does not jolt")
+
+
+# --- Real hits: the bearing is the attacker's side (feedback-world-01) ---------------------------------
+
+
+## Run one real hit on a real player: `scene` is the attacker's scene (a Punk or a Bruiser), `from` the
+## unit vector (a world direction, the player looking down -Z) it stands along, `range_m` its distance.
+## The hit comes out of HitDetector, with the contact on the player's own hurtbox. Returns the hit, the
+## camera and the overlay (both listening to the event, the camera the viewport's).
+func _real_hit(scene: PackedScene, from: Vector3, range_m: float) -> Dictionary:
+	Tuning.reset_to_default()
+	Tuning.data.ai_frozen = true
+	Tuning.data.god_mode = false
+	Tuning.data.one_hit_ko = false
+	Tuning.data.cam_forward_offset_m = 0.0
+	Tuning.data.cam_height_offset_m = 0.0
+	TimeController.clear()
+	PlaceholderAnims.warn_on_fallback = false
+	var stage := Node3D.new()
+	add_child_autofree(stage)
+	var floor_body := StaticBody3D.new()
+	floor_body.collision_layer = CombatTypes.bit(CombatTypes.LAYER_WORLD)
+	floor_body.collision_mask = 0
+	var shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = Vector3(60.0, 1.0, 60.0)
+	shape.shape = box
+	shape.position = Vector3(0.0, -0.5, 0.0)
+	floor_body.add_child(shape)
+	stage.add_child(floor_body)
+	var player := PlayerCharacter.new()
+	stage.add_child(player)
+	player.input.scripted = true
+	var director := preload("res://tests/fixtures/stub_director.gd").new()
+	stage.add_child(director)
+	var cam := FirstPersonCamera.new()
+	stage.add_child(cam)
+	cam.set_process(false)
+	cam.player = player
+	cam.make_current()
+	cam.update_camera(DT)
+	var overlay := HurtOverlay.new()
+	stage.add_child(overlay)
+	var hits: Array[HitInfo] = []
+	var on_hit := func(hit: HitInfo) -> void:
+		if hit.victim == player:
+			hits.append(hit)
+	CombatEvents.hit_landed.connect(on_hit)
+	var enemy := scene.instantiate() as EnemyActor
+	enemy.position = from * range_m
+	enemy.rotation.y = atan2(enemy.position.x, enemy.position.z)
+	stage.add_child(enemy)
+	for i: int in 10:
+		await get_tree().physics_frame
+	enemy.force_attack(0)
+	for i: int in 240:
+		if not hits.is_empty():
+			break
+		await get_tree().physics_frame
+	CombatEvents.hit_landed.disconnect(on_hit)
+	return {hit = hits[0] if not hits.is_empty() else null, cam = cam, overlay = overlay, player = player}
+
+
+func _peak_roll(cam: FirstPersonCamera) -> float:
+	cam.update_camera(cam.punch_duration_s * cam.punch_attack_share)
+	return cam.get_roll_deg()
+
+
+## The struck edge carries the strokes, and every other edge far fewer (a real attacker is never exactly
+## on an axis, so a few degrees of bearing leak a little onto a neighbour); on the sides and behind the
+## vignette is also strongest there.
+func _assert_edge(overlay: HurtOverlay, lit: int, others: Array[int], what: String, vignette: bool = true) -> void:
+	var stroke := overlay.stroke_strength(lit)
+	assert_gt(stroke, 0.0, "%s: strokes on the struck edge" % what)
+	for edge: int in others:
+		assert_lt(overlay.stroke_strength(edge), stroke * 0.3, "%s: far fewer strokes on edge %d" % [what, edge])
+		if vignette:
+			assert_lt(overlay.edge_strength(edge), overlay.edge_strength(lit), "%s: edge %d is weaker" % [what, edge])
+
+
+func test_a_real_jab_from_the_front_lights_the_top_edge_and_rolls_either_way() -> void:
+	var r := await _real_hit(PUNK_SCENE, Vector3(0.0, 0.0, -1.0), JAB_RANGE_M)
+	assert_not_null(r.hit, "the jab landed")
+	var overlay: HurtOverlay = r.overlay
+	_assert_edge(overlay, HurtOverlay.Edge.TOP, [HurtOverlay.Edge.LEFT, HurtOverlay.Edge.RIGHT, HurtOverlay.Edge.BOTTOM],
+			"from the front", false)
+	assert_gt(absf(_peak_roll(r.cam)), 0.5, "a frontal blow still rolls the head, by the frontal share")
+
+
+func test_a_real_jab_from_the_left_lights_the_left_edge_and_rolls_the_head_right() -> void:
+	var r := await _real_hit(PUNK_SCENE, Vector3.LEFT, JAB_RANGE_M)
+	assert_not_null(r.hit, "the jab landed")
+	_assert_edge(r.overlay, HurtOverlay.Edge.LEFT, [HurtOverlay.Edge.RIGHT, HurtOverlay.Edge.TOP, HurtOverlay.Edge.BOTTOM],
+			"from the left")
+	assert_lt(_peak_roll(r.cam), -0.5, "tipped to the right, away from the blow")
+
+
+func test_a_real_jab_from_the_right_lights_the_right_edge_and_rolls_the_head_left() -> void:
+	var r := await _real_hit(PUNK_SCENE, Vector3.RIGHT, JAB_RANGE_M)
+	assert_not_null(r.hit, "the jab landed")
+	_assert_edge(r.overlay, HurtOverlay.Edge.RIGHT, [HurtOverlay.Edge.LEFT, HurtOverlay.Edge.TOP, HurtOverlay.Edge.BOTTOM],
+			"from the right")
+	assert_gt(_peak_roll(r.cam), 0.5, "tipped to the left, away from the blow")
+
+
+func test_a_real_jab_from_behind_lights_the_bottom_edge() -> void:
+	var r := await _real_hit(PUNK_SCENE, Vector3.BACK, JAB_RANGE_M)
+	assert_not_null(r.hit, "the jab landed")
+	_assert_edge(r.overlay, HurtOverlay.Edge.BOTTOM, [HurtOverlay.Edge.LEFT, HurtOverlay.Edge.RIGHT, HurtOverlay.Edge.TOP],
+			"from behind")
+
+
+func test_a_real_bruiser_smash_from_the_front_is_not_read_as_from_the_right() -> void:
+	# The review's own case (feedback-world-01): the smash from straight ahead struck the right and bottom edges.
+	var r := await _real_hit(BRUISER_SCENE, Vector3(0.0, 0.0, -1.0), SMASH_RANGE_M)
+	assert_not_null(r.hit, "the smash landed")
+	_assert_edge(r.overlay, HurtOverlay.Edge.TOP, [HurtOverlay.Edge.LEFT, HurtOverlay.Edge.RIGHT, HurtOverlay.Edge.BOTTOM],
+			"the smash from the front", false)
+
+
+func test_a_real_bruiser_smash_from_the_left_rolls_right() -> void:
+	var r := await _real_hit(BRUISER_SCENE, Vector3.LEFT, SMASH_RANGE_M)
+	assert_not_null(r.hit, "the smash landed")
+	_assert_edge(r.overlay, HurtOverlay.Edge.LEFT, [HurtOverlay.Edge.RIGHT, HurtOverlay.Edge.TOP, HurtOverlay.Edge.BOTTOM],
+			"the smash from the left")
+	assert_lt(_peak_roll(r.cam), -0.5)
+
+
+func test_the_real_contact_is_on_the_players_own_hurtbox_and_says_nothing_of_the_side() -> void:
+	# Why the bearing reads the attacker: the contact is within a body's width of the lens, whichever
+	# side the blow came from, and often on the wrong side of it.
+	var r := await _real_hit(PUNK_SCENE, Vector3.LEFT, JAB_RANGE_M)
+	var hit: HitInfo = r.hit
+	assert_not_null(hit)
+	var view := (r.cam as FirstPersonCamera).view_transform()
+	assert_lt((hit.contact_point - view.origin).length(), 0.5, "the contact is a few tenths from the lens")
+	assert_almost_eq(rad_to_deg(FirstPersonCamera.hit_bearing(view, hit)), -90.0, 15.0, "the attacker is on the left")
+
+
+func test_the_bearing_reads_the_attacker_not_the_contact() -> void:
+	var player := _player()
+	var enemy := _enemy()
+	enemy.global_position = Vector3(0.0, 0.0, -2.0)
+	var view := Transform3D(Basis.IDENTITY, Vector3(0.0, EYE_Y, 0.0))
+	var hit := _hit(enemy, player, CombatTypes.HitTier.LIGHT, Vector3.BACK)
+	# A contact behind and right of the lens, as a real one often is; the attacker stands ahead.
+	hit.contact_point = view.origin + Vector3(0.2, -0.1, 0.25)
+	hit.direction = Vector3(0.0, 0.0, 1.0)
+	assert_almost_eq(FirstPersonCamera.hit_bearing(view, hit), 0.0, 0.001, "ahead, whatever the contact says")
+	enemy.global_position = Vector3(2.0, 0.0, 0.0)
+	assert_almost_eq(FirstPersonCamera.hit_bearing(view, hit), PI / 2.0, 0.001, "from the right")
+	enemy.global_position = Vector3(0.0, 0.0, 2.0)
+	assert_almost_eq(absf(FirstPersonCamera.hit_bearing(view, hit)), PI, 0.001, "from behind")
+
+
+func test_the_bearing_falls_back_to_the_push_without_an_attacker_or_at_the_lens() -> void:
+	var view := Transform3D(Basis.IDENTITY, Vector3(0.0, EYE_Y, 0.0))
+	var hit := HitInfo.new()
+	hit.contact_point = view.origin + Vector3(0.0, 0.0, 0.2)
+	hit.direction = Vector3.RIGHT  # pushed to the right: it came from the left
+	assert_almost_eq(FirstPersonCamera.hit_bearing(view, hit), -PI / 2.0, 0.001, "no attacker: the push")
+	var enemy := _enemy()
+	enemy.global_position = Vector3(0.0, 0.0, 0.0)  # at the lens horizontally
+	hit.attacker = enemy
+	assert_almost_eq(FirstPersonCamera.hit_bearing(view, hit), -PI / 2.0, 0.001, "at the lens: the push")
+	Tuning.data.hurt_bearing_min_m = 0.0
+	enemy.global_position = Vector3(0.0, 0.0, -0.5)
+	assert_almost_eq(FirstPersonCamera.hit_bearing(view, hit), 0.0, 0.001, "the minimum is a tunable")
+
+
+func test_the_hurt_shape_numbers_are_tunables_with_todays_defaults() -> void:
+	var data := TuningData.new()
+	assert_eq([data.hurt_bearing_min_m, data.hurt_roll_frontal_sine, data.hurt_overlay_mid_stop,
+			data.hurt_overlay_mid_alpha, data.hurt_overlay_stroke_len_min, data.hurt_overlay_stroke_len_range,
+			data.hurt_overlay_stroke_len_floor, data.hurt_overlay_stroke_width, data.hurt_overlay_stroke_lean,
+			data.hurt_overlay_stroke_jitter, data.hurt_overlay_stroke_gain, data.hurt_overlay_top_threshold,
+			data.hurt_overlay_blocked_depth_gain, data.hurt_panel_jolt_rate_x, data.hurt_panel_jolt_rate_y],
+			[0.05, 0.1, 0.4, 0.4, 0.55, 0.7, 0.3, 0.4, 0.6, 0.3, 1.5, 0.5, 2.0, 95.0, 113.0], "unchanged on screen")
+	# And they reach the screen: a shorter stroke range shortens what the overlay draws; the jolt rate moves the rattle.
+	var panel := PlayerHealthPanel.new()
+	add_child_autofree(panel)
+	panel.health = 100.0
+	panel.on_health_changed(80.0, 100.0)
+	panel._time = 0.01
+	var before := panel.jolt_offset()
+	Tuning.data.hurt_panel_jolt_rate_x = 200.0
+	assert_ne(panel.jolt_offset().x, before.x, "the rattle's rate is read from Tuning")
