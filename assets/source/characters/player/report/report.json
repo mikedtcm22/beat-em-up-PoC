@@ -1,7 +1,7 @@
 {
 	"asset": "player",
 	"version": 1,
-	"config_sha256": "c2325011ccf0ca3123b4d7e44d3b82c26c4af5712bebfc7ada4b959552ac5ff5",
+	"config_sha256": "6a4eb988aaea2c9b4a4314f1267084ea571b65e48155b773884ba0fda39d6174",
 	"steps": {
 		"inspect": {
 			"source": {
@@ -689,6 +689,17 @@
 					"shoulder_vertices": 104,
 					"max_moved_m": 0.004
 				},
+				"hull": {
+					"hull_ramp_m": 0.012,
+					"vertices_bent": 182,
+					"vertices": 886
+				},
+				"skin": {
+					"skin_only": true,
+					"skin_slot": 7,
+					"faces_repainted": 509,
+					"faces": 1764
+				},
 				"triangles": 1764,
 				"bbox": {
 					"min": [
@@ -982,20 +993,20 @@
 		},
 		"detail": {
 			"file": "player_detail.png",
-			"sha256": "2f6fa6d36b161250d54881f3b7606303e841766f9965a81efe2ecd4d6de1e704",
+			"sha256": "818a80e0f854a9ff91a569ced1443e4fb0a2fa704c93bb89e4c3532877defb92",
 			"size": 1024,
 			"triangles": 26628,
 			"covered_texels": 484091,
 			"covered_share": 0.461665,
-			"ink_share_of_covered": 0.031009,
-			"border_texels": 10429,
+			"ink_share_of_covered": 0.030606,
+			"border_texels": 10234,
 			"stroke_texels": 5102,
-			"crease_texels": 3179,
-			"ink_mean": 0.038994,
-			"ink_texels": 40604,
+			"crease_texels": 3178,
+			"ink_mean": 0.037907,
+			"ink_texels": 39464,
 			"cleaned": {
 				"blob_texels_removed": 648,
-				"speck_pieces_removed": 920
+				"speck_pieces_removed": 909
 			},
 			"texel_mm_p50": 2.066276,
 			"texel_mm_p10": 1.504713,
@@ -1073,7 +1084,7 @@
 						{
 							"name": "Body__fp_arm",
 							"triangles": 1764,
-							"vertices": 1735,
+							"vertices": 1632,
 							"uv_layers": [
 								"UVMap",
 								"UVMap.001"
@@ -1125,16 +1136,16 @@
 						]
 					},
 					"file": "player.glb",
-					"sha256": "5905beb44d119c276aed79d4ba85bb9ba89ba4348baa0a861089f898a11476ff",
-					"bytes": 2054788
+					"sha256": "c4cc33358f297e6172390be1eec17a8248760639bcdb3b35fa1c9ac373d0f66a",
+					"bytes": 2047784
 				}
 			}
 		}
 	},
 	"outputs": {
-		"player.glb": "5905beb44d119c276aed79d4ba85bb9ba89ba4348baa0a861089f898a11476ff"
+		"player.glb": "c4cc33358f297e6172390be1eec17a8248760639bcdb3b35fa1c9ac373d0f66a"
 	},
-	"hash": "bf82f700a0bfcda69711498d4eec7bee0e7e8f3dcdebf94fab4ead79a12bc7de",
+	"hash": "14584401984c0ddb6c2fef72b99e098cd4cca3cc04bc897644d9561f899fa773",
 	"stills": {
 		"variants": {
 			"apose": {

@@ -1547,6 +1547,13 @@ extends Resource
 ## on the default layer while they run), or off, M5's view where the arm starts at the elbow's dome.
 ## Read every frame. Presets never hold it.
 @export var look_near_arm: bool = true
+## How the near upper arm is lit while it is drawn (M6 fix-final-arm): the toon bands of its material copy, so it reads as one limb
+## with the forearm. The sun and the fill light a raised arm's underside below band_1 (a violet tube beside the lit forearm); the arm
+## takes these instead: shadow only below `look_near_arm_band_1` (0 = only a surface turned right away from the light), full light
+## above `look_near_arm_band_2`, and the mid band at `look_near_arm_mid_level` between. The toon values (Look > Toon) are the forearm's.
+@export_range(0.0, 0.5, 0.01) var look_near_arm_band_1: float = 0.0
+@export_range(0.0, 1.0, 0.01) var look_near_arm_band_2: float = 0.35
+@export_range(0.3, 1.0, 0.01) var look_near_arm_mid_level: float = 0.86
 ## DRESS's A/B (Milestone 6, D12): each section's own light (sun, fog, sky) on, or Tuning's one sun
 ## and the room's default fog everywhere, as in M5. Read live by the level. Presets never hold it.
 @export var section_light_enabled: bool = true
