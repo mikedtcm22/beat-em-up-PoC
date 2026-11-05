@@ -29,6 +29,8 @@ const ROBE_MAX := Vector3(0.9, 0.6, 1.9)
 const FACE_MIN := Vector3(-0.09, -0.3, 1.5)
 const FACE_MAX := Vector3(0.09, 0.3, 1.8)
 const FACE_INK_MIN := 0.02
+## VFIX-HEAVIES (verify-chars-03): the face's ink share stays under this, so the nose is a line and not a blot (FIX-ART-B's pair gave 0.047).
+const FACE_INK_MAX := 0.045
 const LEGS_MIN := Vector3(-0.33, -0.6, 0.1)
 const LEGS_MAX := Vector3(0.33, 0.6, 0.95)
 ## Floors the M6 export fails and today's passes (see ROLL-OX.md for the figures).
@@ -290,3 +292,18 @@ func test_the_face_is_skin_and_carries_the_textures_strokes() -> void:
 		if _slot_of_tri(tri) == SLOT_CHARCOAL and _in_box(tri, FACE_MIN, FACE_MAX):
 			hood += 1
 	assert_gt(hood, 200, "the hood's charcoal is still charcoal beside the face (%d faces)" % hood)
+
+
+## VFIX-HEAVIES (verify-chars-03): the face's ink box starts above the jaw (no stray comma on the chin) and its high end is raised so the
+## nose stroke thins to a line; the share stays under FACE_INK_MAX (the first pair, 0.012 / 0.03 from z 1.5, drew a blot and a comma).
+func test_the_face_ink_is_a_line_not_a_blot_and_has_no_jaw_comma() -> void:
+	var cfg: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(PIPELINE))
+	var zone: Dictionary = {}
+	for z: Dictionary in cfg.palette.detail_bake.zones:
+		if z.name == "face_skin":
+			zone = z
+	assert_gte(float(zone.min[2]), 1.55, "the box starts above the jaw")
+	assert_gte(float(zone.ink_high), 0.035, "the high end is raised past FIX-ART-B's 0.03")
+	var face := _ink_share(func(tri: int) -> bool: return _slot_of_tri(tri) == SLOT_SKIN and _in_box(tri, FACE_MIN, FACE_MAX))
+	assert_lte(float(face.share), FACE_INK_MAX, "a line, not a blot (%.4f)" % face.share)
+	assert_gte(float(face.share), FACE_INK_MIN, "and still a line (%.4f)" % face.share)

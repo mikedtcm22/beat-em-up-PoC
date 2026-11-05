@@ -1,7 +1,7 @@
 {
 	"asset": "boss",
 	"version": 2,
-	"config_sha256": "aeb165bd253df2454b5754319baf38469eb8312228792246cc8c6efc1701da9b",
+	"config_sha256": "b99cfabb9ef93bc414e6a56bb4d79f980c0e336c3d47ab4cdcc7bf945caabbc0",
 	"steps": {
 		"inspect": {
 			"source": {
@@ -15480,8 +15480,8 @@
 			"detail_bake": {
 				"size": 1024,
 				"texels": 364202,
-				"ink_texels_share": 0.070442,
-				"mean_ink": 0.070062,
+				"ink_texels_share": 0.070057,
+				"mean_ink": 0.069688,
 				"png": "boss_detail.png",
 				"zones": {
 					"robe": {
@@ -15555,18 +15555,18 @@
 						"ink_texels_share": 0.051486
 					},
 					"face_skin": {
-						"texels": 7871,
+						"texels": 3839,
 						"raw_percentiles": {
-							"50": 0.0039,
-							"80": 0.0109,
-							"90": 0.0173,
-							"95": 0.0288,
-							"97": 0.0445,
-							"98": 0.0739,
-							"99": 0.1324,
-							"99.5": 0.1951
+							"50": 0.0047,
+							"80": 0.0123,
+							"90": 0.0191,
+							"95": 0.027,
+							"97": 0.0353,
+							"98": 0.0443,
+							"99": 0.0808,
+							"99.5": 0.1189
 						},
-						"ink_texels_share": 0.077119
+						"ink_texels_share": 0.053139
 					},
 					"gloves": {
 						"texels": 8070,
@@ -15586,30 +15586,30 @@
 				"glint": null,
 				"clean": {
 					"before": {
-						"pieces": 1536,
-						"texels": 33019,
-						"pieces_le6": 913,
-						"texels_in_le6_share": 0.0649,
+						"pieces": 1499,
+						"texels": 32872,
+						"pieces_le6": 878,
+						"texels_in_le6_share": 0.0635,
 						"median": 4.0,
-						"pieces_over20": 307
+						"pieces_over20": 303
 					},
 					"after": {
-						"pieces": 230,
-						"texels": 30513,
-						"pieces_le6": 4,
+						"pieces": 229,
+						"texels": 30449,
+						"pieces_le6": 3,
 						"texels_in_le6_share": 0.0003,
-						"median": 72.5,
+						"median": 73.0,
 						"pieces_over20": 226
 					},
-					"bridged_texels": 648,
-					"pieces_dropped": 1209,
-					"texels_dropped": 7835
+					"bridged_texels": 617,
+					"pieces_dropped": 1180,
+					"texels_dropped": 7711
 				},
 				"glove_lines": null,
 				"crease": {
-					"texels_on_a_crease": 23696,
-					"ink_share_before": 0.00696,
-					"ink_share_after": 0.07044
+					"texels_on_a_crease": 23879,
+					"ink_share_before": 0.00614,
+					"ink_share_after": 0.07006
 				},
 				"texel_swatch": {
 					"texels": 364202,
@@ -15624,7 +15624,7 @@
 						"54": 0.02208
 					}
 				},
-				"sha256": "9b3c6f3b123dcf1e724e1a901b75d82f3232a8aa578562af5b57f52c080bcf2b"
+				"sha256": "355c24a42c0247938a0f84bbddb7183fdeb6d65beea3244a711f06a9c360c87d"
 			},
 			"regions": [
 				{
@@ -15853,5 +15853,5 @@
 		"boss.glb": "365c70a1555255e4b9a22a9b1e1545348b2a9e9f9576ef9fd487b9d95fd55834",
 		"boss_rest.glb": "bc45f75c5895f48aa9e55298d50014818441310614d6f7693eaead8a4ea9998b"
 	},
-	"hash": "e138738d7a19ad0287568ae2bd3ac6fd07e058ed151ee87239cad4ed9de03a7b"
+	"hash": "f743555887bb91d40d8647c4c4996164ae0ef5bd6a6827acda1a8f32ce9ebf73"
 }
