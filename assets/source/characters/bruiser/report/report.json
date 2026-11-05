@@ -10052,7 +10052,6 @@
 				}
 			],
 			"majority_flips": 1670,
-			"island_flips": 144,
 			"border_vertices": 899,
 			"border_edges": 912,
 			"protected_vertices": 2519,
@@ -10187,7 +10186,13 @@
 				},
 				"sha256": "9956488286bc242da7681f3652b59badaa549fda514cf71ef82d59096bf16e4d"
 			},
-			"regions": [],
+			"regions": [
+				{
+					"name": "island_merge",
+					"min_area_m2": 0.003,
+					"faces": 144
+				}
+			],
 			"region_cuts": [],
 			"fist_band": null,
 			"fist_border_thinned": 0,
@@ -10367,5 +10372,5 @@
 		"bruiser.glb": "6ce46043bc54f302e6710de2090e98b31d49ce1120b9a58295a1cde2757532c7",
 		"bruiser_rest.glb": "24cef9843f774b777119158cab627fd0b0b3250f9cd7d6081126377150d5ec2e"
 	},
-	"hash": "68ef6d8a2ed5d7fa4fc52cbee02f0e667ce6baf1e7b12dfef80156ab8295ddaf"
+	"hash": "cfca31bbeca0d36970397aee18ef970e0f1910ae54b7edec4e9478633e0c0bf3"
 }

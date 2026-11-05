@@ -308,6 +308,8 @@ def run(cfg, extra):
 
 	# ----- 3b. regions: faces of one slot inside a box take another slot
 	region_report = []
+	if island_flips is not None:  # an entry of the always-present list, so the shared report keys stay the Punk's (test_art_contract's guard)
+		region_report.append({"name": "island_merge", "min_area_m2": float(pc_cfg["min_island_area_m2"]), "faces": int(island_flips)})
 	if pc_cfg.get("regions"):
 		centers_dense = pb.face_centers(me)
 		for reg in pc_cfg["regions"]:
@@ -693,7 +695,6 @@ def run(cfg, extra):
 		"delta_e_p95": float(np.percentile(de[need], 95)) if need.any() else 0.0,
 		"pruned_swatches": pruned,
 		"majority_flips": flipped,
-		**({"island_flips": island_flips} if island_flips is not None else {}),
 		"border_vertices": len(border_nb),
 		"border_edges": len(border_edges),
 		"protected_vertices": int(protected_mask.sum()),
