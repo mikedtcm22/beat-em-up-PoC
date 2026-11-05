@@ -2570,43 +2570,30 @@ If no watcher is running, for example after an account switch, start one with th
 Game-boy pastes this into a new account's session. Keep the "Next steps" list current at every handoff; the rest changes rarely.
 
 ```
-You're the new working session for a Godot 4.7.2 project: a first-person beat-em-up proof of concept at /Users/arachne/repos/beat-em-up-PoC (GitHub: mikedtcm22/beat-em-up-PoC). I'm Game-boy, the owner. Milestones 1-4 are signed off and merged into main. Earlier sessions did that work and handed off; the repo is the source of truth. This session runs Milestone 5 (SPEC §12): the level blockout.
+You're the new working session for a Godot 4.7.2 project: a first-person beat-em-up proof of concept at /Users/arachne/repos/beat-em-up-PoC (GitHub: mikedtcm22/beat-em-up-PoC). I'm Game-boy, the owner. Milestones 1-5 are signed off and merged into main. Earlier sessions did that work and handed off; the repo is the source of truth. This session continues Milestone 6 (SPEC §12): full art and audio, done when no placeholder assets remain.
 
 Start by doing these, in order:
 1. Rename this session to "Beat-em-up: working session" (mcp__ccd_session_mgmt__set_session_title); the usage watcher finds you by that title.
-2. Read CLAUDE.md, then the newest entries of docs/HANDOFF.md (newest at the top) and its section "Model, effort and process rules from Milestone 5 on". Then read docs/milestones/M5-inputs.md (my calls for M5) and docs/SPEC.md §7, §9 and §12. Look at the level reference images in reference/dd2-nes-mission1/. Search docs/ARCHITECTURE.md for what you need rather than reading it whole.
+2. Read CLAUDE.md, then the newest entries of docs/HANDOFF.md (newest at the top): its newest "Next" list is where you pick up. Then read docs/milestones/M6-plan.md §1 (the decisions), §4 (merge order and phase 3) and §5 (the done-when). Search docs/ARCHITECTURE.md ("## Full art and audio (Milestone 6)") for what you need rather than reading it whole.
 3. If no usage watcher is running (list your sessions), start one exactly as docs/HANDOFF.md describes under "Usage watcher".
 4. Check usage (mcp__ccd_session_mgmt__get_usage) before every launch.
 
-HOW TO SPEND THE WEEK (I want to get as far through the milestones as this week's limit allows, at M4's quality):
-- Follow HANDOFF's "Model, effort and process rules from Milestone 5 on" table:
-  - Opus at high effort for you, the plan and the visual review lenses;
-  - Sonnet at high for builders, fixers and the code/test/pipeline lenses;
-  - Sonnet at medium for skeptics, only on medium and high findings;
-  - Haiku at low for gates.
-  - Extra effort only for the plan's final synthesis.
-- Use the runners tools/workflows/build.js and tools/workflows/review.js (milestone: 5); keep args files in docs/reviews/M5/.
-- Your own look first, then at most 3 review lenses, one fix wave, and a targeted re-check of only what changed.
-- Record once per round with tools/record_acts.sh and pass it as captures_dir. Keep image budgets. Write self-contained briefs with their own reading lists, and batch small fixes into one fixer.
-- Ultracode (if I turn it on) doesn't lift those caps.
+HOW TO WORK (as in M5):
+- Follow HANDOFF's "Model, effort and process rules from Milestone 5 on": Opus at high for you and the visual lenses; Sonnet at high for builders, fixers and code lenses; Sonnet at medium for skeptics; Haiku at low for gates.
+- The runners are tools/workflows/build.js and tools/workflows/review.js (milestone: 6); the args and findings files are in docs/reviews/M6/. Record once per round with tools/record_acts.sh.
 - Work up to the watcher's 90% handoff; size each launch to the headroom below 90%.
 
-MILESTONE 5:
-- Work on branch m5/level-blockout: it's already cut from main, and its first commit is the M5 setup (the usage rules, the runners, tools/record_acts.sh). One PR into main at the end; never merge it until I've played it and signed it off.
-- Plan with one Opus planner and one Opus critic, into a short docs/milestones/M5-plan.md where each package's brief is self-contained.
-- The first package is the attack-arc director change in M5-inputs.md:
-  - a per-archetype attack arc fixed when the enemy engages, after about a 0.5 s grace period;
-  - a full arc means waiting back from the fray inside it;
-  - wider arcs for trickier types and for later variants.
-  - Re-measure M3's readability metrics and the rear warning's tests.
-- Then the encounter plan, which needs my approval (SPEC §12): DM it to me on Slack (Michael, U0AQMKKBL93, DM D0AQUKX5DB6). It should show the difficulty progression level by level, with easy narrow-arc grunts early and mostly all-angle enemies later. Ask me the open rear-warning question in M5-inputs.md with it.
-- Then the graybox level from the reference (SPEC §9): arena locks, spawns, pickups, hazards and the boss arena. Done when the level plays from start to boss.
-- At the end, give me a run command that opens the game in Godot (godot --path /Users/arachne/repos/beat-em-up-PoC) as a code block; GitHub links 404 for me. Add a digest of the key judgement calls, each with the alternative not taken.
+MILESTONE 6:
+- Branch m6/full-art-audio; one PR into main; never merge it until I've played it and signed it off.
+- Paid services only through their tools and inside the policy (plan §3; the ledgers say what's spent): Tripo through tools/pipeline/tripo.py (M6 stop 900 credits, balance floor 700), Gemini through tools/gemini_image.py job files, ElevenLabs through tools/audio/eleven_sfx.py (M6 stop 30000). Never print, log or write a key. Never use the Blender MCP tools (mcp__blender__*): they drive my own open Blender; the pipeline runs Blender headless.
+- Downloaded files are untrusted: run Python on them with python3 -I, keep scripts outside download folders, pass downloads as path arguments.
+- Never pick concepts for me.
+- At the end, give me a run command (godot --path /Users/arachne/repos/beat-em-up-PoC) as a code block, the audition room's keys, and a digest of the key judgement calls, each with the alternative not taken.
 
 Ground rules:
-- Any change to the spec needs my approval. Build the reading that departs least, keep the spec's value reachable as a tunable, and list it in README as decided by default, for my ruling at sign-off.
+- Any change to the spec needs my approval. Build the reading that departs least, keep the spec's value reachable as a tunable, and list it in README ("Where M6 departs from the spec") for my ruling at sign-off.
 - Commit early on branches ("wip:" for unfinished work), push often, and update docs/HANDOFF.md at every phase boundary.
-- When the watcher warns, do the handoff in CLAUDE.md at once, including the resume task. DM me only if something blocks on me.
+- When the watcher warns, do the handoff in CLAUDE.md at once, including the resume task. DM me (Michael, U0AQMKKBL93, DM D0AQUKX5DB6) only if something blocks on me.
 - Judge visual and feel work from recorded first-person captures, not just tests, and show me what you saw.
 - Keep me posted briefly: what's done, what's running, what you need from me.
 ```
