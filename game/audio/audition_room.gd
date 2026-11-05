@@ -22,10 +22,6 @@ const HELP_ROWS: Array[Array] = [
 	["Sound room: play a take / the bank", KEY_1, "1-9, 0  ="],
 	["Sound room: new / old sounds", KEY_MINUS, "-"],
 ]
-## How far in front of the listener a one-shot is played (m), and the gap left after a variant when the
-## whole bank plays (s).
-const AHEAD_M := 2.0
-const BANK_GAP_S := 0.35
 
 var director: AudioDirector
 ## Every pool that can be heard, sorted, and the page it is on.
@@ -155,7 +151,7 @@ func play_bank() -> void:
 		_play(pool, stream)
 		if str(pool).begins_with("ambience"):
 			return
-		await get_tree().create_timer(stream.get_length() + BANK_GAP_S).timeout
+		await get_tree().create_timer(stream.get_length() + Tuning.data.audition_bank_gap_s).timeout
 
 
 func _play(pool: StringName, stream: AudioStream) -> void:
@@ -169,7 +165,7 @@ func _play(pool: StringName, stream: AudioStream) -> void:
 		var ahead := -view.basis.z
 		ahead.y = 0.0
 		ahead = ahead.normalized() if ahead.length_squared() > 0.0001 else Vector3.FORWARD
-		director.play_stream(pool, stream, view.origin + ahead * AHEAD_M, AudioDirector.pool_db(pool))
+		director.play_stream(pool, stream, view.origin + ahead * Tuning.data.audition_ahead_m, AudioDirector.pool_db(pool))
 	_update_label()
 
 

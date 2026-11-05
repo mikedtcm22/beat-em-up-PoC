@@ -123,6 +123,8 @@ var _torso_layers: Dictionary[MeshInstance3D, int] = {}
 ## The player's upper-arm meshes (found when a move first shows them) and the layers each had while it is lifted (_update_arm()).
 var _arm_meshes: Array[MeshInstance3D] = []
 var _arm_layers: Dictionary[MeshInstance3D, int] = {}
+## The material each lifted arm mesh had before its lit copy went on (_update_arm()): null where it had none.
+var _arm_materials: Dictionary[MeshInstance3D, Material] = {}
 ## The view before punch and shake: where the player is looking.
 var _view: Transform3D = Transform3D.IDENTITY
 ## Live punches: x = pitch kick and y = yaw kick at the peak (radians), z = age (seconds).
@@ -472,6 +474,8 @@ func _update_arm() -> void:
 			continue
 		if not _arm_layers.has(mesh):
 			_arm_layers[mesh] = mesh.layers
+			_arm_materials[mesh] = mesh.material_override
+			mesh.material_override = _arm_lit_copy(mesh.material_override)
 		mesh.layers = default_layer
 
 
@@ -480,7 +484,23 @@ func _restore_arm() -> void:
 	for mesh: MeshInstance3D in _arm_layers:
 		if is_instance_valid(mesh):
 			mesh.layers = _arm_layers[mesh]
+			mesh.material_override = _arm_materials.get(mesh)
 	_arm_layers.clear()
+	_arm_materials.clear()
+
+
+## A copy of the arm's toon material whose bands are the near arm's own (Tuning's look_near_arm_*), so the arm lights like the lit
+## forearm instead of falling into the shadow band under the shoulder. The copy is made when the arm is lifted (it carries the damage
+## look and tint of that moment) and dropped when the arm goes back; any other material is returned as it is.
+func _arm_lit_copy(material: Material) -> Material:
+	var shader_material := material as ShaderMaterial
+	if shader_material == null:
+		return material
+	var copy := shader_material.duplicate() as ShaderMaterial
+	copy.set_shader_parameter(&"band_1", Tuning.data.look_near_arm_band_1)
+	copy.set_shader_parameter(&"band_2", Tuning.data.look_near_arm_band_2)
+	copy.set_shader_parameter(&"mid_level", Tuning.data.look_near_arm_mid_level)
+	return copy
 
 
 ## The player's skinned-art meshes named `*__fp_arm` (none on the probe body, an older GLB or the primitives).

@@ -16,6 +16,16 @@ const TOON_PATHS: Array[String] = ["res://game/fx/toon.gdshader", "res://game/fx
 
 
 ## The material's `damage_tex` uniform (was detail_albedo).
+## Tuning is an autoload that outlives the script: the tests below set tile size, edge cut and the per-swatch switch, so each
+## starts from and leaves the shipped defaults (as test_toon.gd does).
+func before_each() -> void:
+	Tuning.apply(TuningData.new())
+
+
+func after_each() -> void:
+	Tuning.apply(TuningData.new())
+
+
 func _damage_tex(mat: ShaderMaterial) -> Variant:
 	return mat.get_shader_parameter(&"damage_tex")
 
@@ -290,3 +300,13 @@ func test_the_art_look_has_a_hard_blood_edge_and_the_a_b_switch_gives_m4s_back()
 	assert_eq(DamageLook.art_tile_for_alpha(230.0 / 255.0, DamageLook.Level.BLOODIED), VfxArt.texture(&"damage_blood"))
 	for property: StringName in [&"vfx_blood_edge_cut", &"look_marks_per_swatch"]:
 		assert_has(DamageLook.TUNABLES, property, "a change re-applies the look on the live enemies")
+
+
+## Declared last on purpose: the per-swatch test before it sets look_marks_per_swatch false, vfx_blood_edge_cut 0.7 and the
+## tile 0.5 m, and none of that may reach a later script.
+func test_a_test_that_changed_the_tuning_leaves_the_shipped_defaults_behind() -> void:
+	var defaults := TuningData.new()
+	assert_eq(Tuning.data.look_marks_per_swatch, defaults.look_marks_per_swatch)
+	assert_true(Tuning.data.look_marks_per_swatch, "M6's per-swatch look is the default")
+	assert_eq(Tuning.data.vfx_blood_edge_cut, defaults.vfx_blood_edge_cut)
+	assert_eq(Tuning.data.vfx_damage_tile_m, defaults.vfx_damage_tile_m)

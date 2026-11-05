@@ -14,8 +14,9 @@ extends Node3D
 const GRIP_MESH := &"Grip"
 const LOCK_MESH := &"Lock"
 const LINK_MESH := &"Link"
-## How many links the MultiMesh can hold: the free length over the smallest pitch the tunable allows (the range's minimum, 0.02 m).
-const MIN_PITCH_M := 0.02
+## The tunable that sets the link pitch: its @export_range's minimum sizes the MultiMesh (min_pitch_m()), so lowering the range
+## in tuning_data.gd can never truncate the links.
+const PITCH_PROPERTY := &"weapon_chain_link_pitch_m"
 
 var _weapon: Weapon
 var _art: StaticArt
@@ -55,7 +56,7 @@ func setup(weapon: Weapon, art: StaticArt) -> void:
 	var multimesh := MultiMesh.new()
 	multimesh.transform_format = MultiMesh.TRANSFORM_3D
 	multimesh.mesh = _link.mesh
-	multimesh.instance_count = int(ceil(_rest_length / MIN_PITCH_M)) + 1
+	multimesh.instance_count = int(ceil(_rest_length / min_pitch_m())) + 1
 	multimesh.visible_instance_count = 0
 	_multi.multimesh = multimesh
 	_multi.material_override = art.material
@@ -102,6 +103,17 @@ func _apply_visibility() -> void:
 			node.visible = not simulated
 
 
+## The smallest link pitch the tunable allows (m): the minimum of weapon_chain_link_pitch_m's @export_range, read from the
+## property list so the one number lives in tuning_data.gd. The live value stands in when the range cannot be read.
+static func min_pitch_m() -> float:
+	for prop: Dictionary in TuningData.new().get_property_list():
+		if prop.name == PITCH_PROPERTY:
+			var parts := String(prop.hint_string).split(",")
+			if parts.size() >= 2 and String(parts[0]).is_valid_float():
+				return maxf(float(parts[0]), 0.001)
+	return maxf(Tuning.data.weapon_chain_link_pitch_m, 0.001)
+
+
 ## Advance the chain by `dt` seconds of game time and redraw it. Public so a test can step it by hand.
 func step(dt: float) -> void:
 	if _multi == null or dt <= 0.0:
@@ -109,7 +121,7 @@ func step(dt: float) -> void:
 			_reset()
 			_draw()
 		return
-	dt = minf(dt, 1.0 / 30.0)
+	dt = minf(dt, Tuning.data.weapon_chain_max_dt_s)
 	var count := _count()
 	var world := _weapon.global_transform
 	var grip := world * _start_local

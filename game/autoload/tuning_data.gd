@@ -1090,6 +1090,9 @@ extends Resource
 @export_range(0.1, 3.0, 0.05) var weapon_chain_snap_m: float = 0.6
 ## The distance between two drawn links along the chain (m); the Link mesh is 0.05 m long.
 @export_range(0.02, 0.06, 0.002) var weapon_chain_link_pitch_m: float = 0.032
+## The longest step the chain sim integrates in one go (s): a longer frame is cut to it, so a hitch cannot blow the Verlet
+## points apart (the stability limit; 1/30 s).
+@export_range(0.01, 0.1, 0.001) var weapon_chain_max_dt_s: float = 1.0 / 30.0
 @export_subgroup("Prop art")
 ## How much of tuning's floor colour (weapon_floor_color) a weapon's ART takes while it lies on the floor (M6, until the
 ## floor glint replaces it): 0 keeps the art's own colours, 1 multiplies them by the floor colour outright (the steel of a
@@ -1157,6 +1160,10 @@ extends Resource
 @export_range(0.0, 0.3, 0.01) var sfx_pitch_variation: float = 0.08
 ## ...and its volume (as amplitude) by up to plus or minus this share (Spec §6: 8%).
 @export_range(0.0, 0.3, 0.01) var sfx_volume_variation: float = 0.08
+## The sound audition room's (debug) feel: how far in front of the listener a one-shot is played (m), and the gap left after a
+## variant when the whole bank plays (s).
+@export_range(0.5, 10.0, 0.1) var audition_ahead_m: float = 2.0
+@export_range(0.0, 2.0, 0.05) var audition_bank_gap_s: float = 0.35
 @export_subgroup("Tiers")
 ## Every one-shot of a hit (its layers, or a blocked hit's clack, ting or crash) is this many
 ## dB louder per tier, so the tiers rank in loudness as well as in layers.
@@ -1544,6 +1551,13 @@ extends Resource
 ## on the default layer while they run), or off, M5's view where the arm starts at the elbow's dome.
 ## Read every frame. Presets never hold it.
 @export var look_near_arm: bool = true
+## How the near upper arm is lit while it is drawn (M6 fix-final-arm): the toon bands of its material copy, so it reads as one limb
+## with the forearm. The sun and the fill light a raised arm's underside below band_1 (a violet tube beside the lit forearm); the arm
+## takes these instead: shadow only below `look_near_arm_band_1` (0 = only a surface turned right away from the light), full light
+## above `look_near_arm_band_2`, and the mid band at `look_near_arm_mid_level` between. The toon values (Look > Toon) are the forearm's.
+@export_range(0.0, 0.5, 0.01) var look_near_arm_band_1: float = 0.0
+@export_range(0.0, 1.0, 0.01) var look_near_arm_band_2: float = 0.35
+@export_range(0.3, 1.0, 0.01) var look_near_arm_mid_level: float = 0.86
 ## DRESS's A/B (Milestone 6, D12): each section's own light (sun, fog, sky) on, or Tuning's one sun
 ## and the room's default fog everywhere, as in M5. Read live by the level. Presets never hold it.
 @export var section_light_enabled: bool = true

@@ -1127,6 +1127,40 @@ func test_the_first_person_lens_draws_the_upper_arms_only_while_the_haymaker_or_
 	assert_eq(arm.layers, CombatTypes.bit(CombatTypes.VIS_FP_HIDDEN), "a new player puts the arm back on the hidden layer")
 
 
+## The near arm lights as one limb with the forearm (M6 fix-final-arm): the lens gives it a copy of the art material with the arm's own
+## bands (Tuning look_near_arm_*) while it is drawn, and puts the shared material back with the layers.
+func test_the_near_arm_is_lit_by_its_own_bands_while_drawn_and_the_shared_material_comes_back() -> void:
+	var hero := PlayerCharacter.worn_art(load(PLAYER_ART) as CharacterArt)
+	if hero == null:
+		return
+	var p := await _player(false)
+	var arm := _art_mesh(p.rig, ARM_MESH)
+	var body := _art_mesh(p.rig, &"ArtBody")
+	if arm == null:
+		assert_not_null(arm, "the hero wears the upper-arm mesh")
+		return
+	var shared := arm.material_override
+	assert_not_null(shared)
+	assert_eq(body.material_override, shared, "the arm and Body share one art material")
+	var cam := _lens_on(p)
+	p.start_move(load(MOVES_DIR + "haymaker.tres") as MoveData)
+	cam.update_camera(FRAME)
+	var lit := arm.material_override as ShaderMaterial
+	assert_not_null(lit)
+	assert_ne(lit, shared, "drawn: the arm has its own copy")
+	assert_eq(body.material_override, shared, "Body keeps the shared material (the forearm's bands are the toon values)")
+	assert_eq(lit.get_shader_parameter(&"band_1"), Tuning.data.look_near_arm_band_1)
+	assert_eq(lit.get_shader_parameter(&"band_2"), Tuning.data.look_near_arm_band_2)
+	assert_eq(lit.get_shader_parameter(&"mid_level"), Tuning.data.look_near_arm_mid_level)
+	assert_lt(Tuning.data.look_near_arm_band_1, (shared as ShaderMaterial).get_shader_parameter(&"band_1"), "the arm's shadow band starts lower than the toon's")
+	assert_eq(lit.shader, (shared as ShaderMaterial).shader, "same toon shader")
+	cam.update_camera(FRAME)
+	assert_eq(arm.material_override, lit, "frame after frame it keeps the one copy (no new material each frame)")
+	p._enter_state(CombatTypes.ActorState.FREE)
+	cam.update_camera(FRAME)
+	assert_eq(arm.material_override, shared, "move over: the shared material is back")
+
+
 func test_the_side_view_and_free_fly_always_draw_the_upper_arms() -> void:
 	var hero := PlayerCharacter.worn_art(load(PLAYER_ART) as CharacterArt)
 	if hero == null:

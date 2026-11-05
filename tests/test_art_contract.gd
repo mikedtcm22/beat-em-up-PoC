@@ -470,7 +470,13 @@ func test_hull_normals_and_the_detail_uv_are_there() -> void:
 			var agree := 0.0
 			var agree_z_up := 0.0
 			var agree_z_down := 0.0
+			var counted := 0
 			for i: int in verts.size():
+				# M6 fix-final-arm: the upper-arm piece's hull turns along the arm within ARM_HULL_RAMP_M of the cut (blender_export.bend_hull_normals),
+				# so no ink is drawn over the forearm: those vertices are meant to differ from NORMAL and from Body's dome ring they share a position with
+				if n == "Body__fp_arm" and _on_arm_cut(f, verts[i]):
+					continue
+				counted += 1
 				var c := colors[i]
 				var nrm := Vector3(c.r * 2.0 - 1.0, c.g * 2.0 - 1.0, c.b * 2.0 - 1.0)
 				if i % 97 == 0:
@@ -486,15 +492,36 @@ func test_hull_normals_and_the_detail_uv_are_there() -> void:
 					agree += dir.dot(normals[i])
 					agree_z_up += Vector3(dir.x, dir.z, -dir.y).dot(normals[i])
 					agree_z_down += Vector3(dir.x, -dir.z, dir.y).dot(normals[i])
-			if normals.size() == verts.size() and not verts.is_empty():
-				agree /= verts.size()
-				agree_z_up /= verts.size()
-				agree_z_down /= verts.size()
+			if normals.size() == verts.size() and counted > 0:
+				agree /= counted
+				agree_z_up /= counted
+				agree_z_down /= counted
 				gut.p("ART-CONTRACT hull axis: %s %s: mean dot(COLOR, NORMAL) as read %.3f (read as Blender Z-up %.3f, as Z-down %.3f)" % [path.get_file(), n, agree, agree_z_up, agree_z_down])
 				assert_gt(agree, HULL_AGREE_MIN, "%s %s: the hull normal (COLOR) agrees with NORMAL on average, so it is in the same Y-up axes (baked in Blender's Z-up it measures 0.3)" % [path, n])
 				assert_gt(agree, agree_z_up, "%s %s: COLOR reads better as (x, y, z) than as Blender's Z-up axes (x, z, -y)" % [path, n])
 				assert_gt(agree, agree_z_down, "%s %s: COLOR reads better as (x, y, z) than as (x, -z, y)" % [path, n])
 		assert_lt(worst_split, 0.03, "%s: vertices at one position share one hull normal, across both parts too (no cracks)" % path)
+
+
+## The width of the hull's turn at the upper-arm piece's elbow-side loop (parts.split_fp.arm.hull_ramp_m, 0.012 m; a millimetre of slack on each side).
+const ARM_HULL_RAMP_M := 0.013
+
+
+## Whether `v` (a vertex of the hero's Body__fp_arm) lies within the hull's turn of the cut plane of either upper arm.
+func _on_arm_cut(facts: Dictionary, v: Vector3) -> bool:
+	var rests: Dictionary[String, Vector3] = facts.bone_rests
+	if not rests.has("LeftUpperArm"):
+		return false
+	for side: String in ["Left", "Right"]:
+		var ua: Vector3 = rests[side + "UpperArm"]
+		var axis: Vector3 = rests[side + "LowerArm"] - ua
+		var length := axis.length()
+		if (v.x - ua.x) * signf(ua.x) < -0.25 * length or (v - ua).length() > length:
+			continue
+		var past := (v - ua).dot(axis / length) - length * 0.5
+		if past > -ARM_HULL_RAMP_M and past < 0.003:
+			return true
+	return false
 
 
 ## F-punk (M4-plan A18): the Punk's detail mask is a 1k PNG with ink in R only (lines, never shading), G the glint gate (the lens's two
@@ -1351,6 +1378,44 @@ func test_the_upper_arm_mesh_is_closed_and_ends_at_the_cut() -> void:
 			assert_gt(count, 100, "%s: Body__fp_arm holds the %s arm (%d vertices)" % [path, side.to_lower(), count])
 			assert_lt(far, cut + 0.003, "%s: the %s arm piece stops at the cut (%.3f m along the arm, the cut is at %.3f)" % [path, side.to_lower(), far, cut])
 			assert_gt(far, cut - 0.003, "%s: and reaches it, so Body's dome closes the join (%.3f of %.3f)" % [path, far, cut])
+
+
+## M6 fix-final-arm: Body__fp_arm is bare skin (one swatch: the generated top's navy and charcoal patches made a dark shard at the
+## shoulder end in the uppercut), and its hull outline turns along the arm at the elbow-side loop, so no ink line is drawn over the
+## forearm: the COLOR (hull normal) of the vertices on the cut's plane points at the shoulder, not out of the wall.
+func test_the_upper_arm_mesh_is_one_skin_swatch_and_its_hull_stays_inside_at_the_cut() -> void:
+	for path: String in _glbs():
+		if _id_of(path) != "player":
+			continue
+		var f := _facts(path)
+		if not f.ok or not (f.meshes as Dictionary).has("Body__fp_arm"):
+			assert_true(f.ok and (f.meshes as Dictionary).has("Body__fp_arm"), "%s has Body__fp_arm" % path)
+			continue
+		var arm: Dictionary = f.meshes["Body__fp_arm"]
+		var uvs: PackedVector2Array = arm.arrays[Mesh.ARRAY_TEX_UV]
+		var slots := {}
+		for uv: Vector2 in uvs:
+			slots[int(uv.y * 2.0) * 32 + int(uv.x * 32.0)] = true
+		assert_eq(slots.size(), 1, "%s: Body__fp_arm uses one palette swatch (%s)" % [path, str(slots.keys())])
+		var verts: PackedVector3Array = arm.arrays[Mesh.ARRAY_VERTEX]
+		var colors: PackedColorArray = arm.arrays[Mesh.ARRAY_COLOR]
+		var rests: Dictionary[String, Vector3] = f.bone_rests
+		var on_cut := 0
+		for side: String in ["Left", "Right"]:
+			var ua: Vector3 = rests[side + "UpperArm"]
+			var axis: Vector3 = rests[side + "LowerArm"] - ua
+			var length := axis.length()
+			axis /= length
+			for i in verts.size():
+				var v := verts[i]
+				if (v.x - ua.x) * signf(ua.x) < -0.25 * length or (v - ua).length() > length:
+					continue
+				if absf((v - ua).dot(axis) - length * 0.5) > 0.0015:
+					continue
+				on_cut += 1
+				var hull := Vector3(colors[i].r, colors[i].g, colors[i].b) * 2.0 - Vector3.ONE
+				assert_gt(hull.normalized().dot(-axis), 0.9, "%s: the hull of a vertex on the %s cut points along the arm to the shoulder" % [path, side.to_lower()])
+		assert_gt(on_cut, 40, "%s: the cut's loops were found (%d vertices)" % [path, on_cut])
 
 
 ## Boundary edges of a mesh (an edge used by one triangle), counting vertices at one position as one vertex.

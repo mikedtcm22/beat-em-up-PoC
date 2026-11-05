@@ -21,6 +21,11 @@ BODY = "Body"
 BODY_HIDDEN = "Body__fp_hidden"
 BODY_TORSO = "Body__fp_torso"
 BODY_ARM = "Body__fp_arm"
+# point attributes a part can carry to bend its inverted-hull outline direction (blender_export.write_hull_normals): a weight 0..1 and a
+# unit direction (Blender axes); the hull normal of a vertex turns from the smooth normal toward the direction by the weight. M6 ARM:
+# the near upper arm's loop on the elbow side turns along the arm, so its hull stays inside the arm and draws no ink line over the forearm
+HULL_W_ATTR = "pipe_hull_w"
+HULL_DIR_ATTR = "pipe_hull_dir"
 ARMATURE = "Armature"
 PREVIEW_COLLECTION = "Preview"
 

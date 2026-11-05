@@ -239,7 +239,9 @@
 				"enabled": true,
 				"push_m": 0.004,
 				"elbow_ramp_m": 0.008,
-				"shoulder_ramp_m": 0.015
+				"shoulder_ramp_m": 0.015,
+				"hull_ramp_m": 0.012,
+				"skin_only": true
 			}
 		}
 	},

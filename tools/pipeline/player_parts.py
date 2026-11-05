@@ -1024,6 +1024,80 @@ def push_arm_out(arm, arm_axes, cut_t, ac):
 	return {"push_m": push, "ring_vertices": int(on_ring.sum()), "shoulder_vertices": int(on_shoulder.sum()), "max_moved_m": float(np.linalg.norm(moved, axis=1).max())}
 
 
+def arm_axial(arm, arm_axes, cut_t):
+	"""For the vertices of the upper-arm piece: (coordinates, the arm each belongs to, metres past the cut toward the elbow,
+	the unit axis of that arm pointing toward the elbow). Left and right are told apart by the nearer axis."""
+	co = pb.verts(arm.data)
+	sides = list(arm_axes.keys())
+	dist, ts = [], []
+	for side in sides:
+		ua, axis, length = arm_axes[side]
+		rel = co - ua
+		t = rel @ (axis / length)
+		dist.append(np.linalg.norm(rel - np.outer(t, axis / length), axis=1))
+		ts.append(t)
+	pick = np.argmin(np.stack(dist), axis=0)
+	axial = np.zeros(len(co))
+	unit = np.zeros_like(co)
+	for i in range(len(co)):
+		ua, axis, length = arm_axes[sides[pick[i]]]
+		axial[i] = ts[pick[i]][i] - length * cut_t
+		unit[i] = axis / length
+	return co, axial, unit
+
+
+def mark_arm_hull(arm, arm_axes, cut_t, ac):
+	"""Let the upper-arm piece's hull outline stop at the cut (M6 fix-final-arm): its ink is the back faces pushed out along the smooth
+	normal, and at the loop on the elbow side that pushed a jagged ink line out over the forearm's skin (the piece is a hair higher than
+	Body's wall there). The vertices within ac.hull_ramp_m of that loop get a point weight (pb.HULL_W_ATTR, a smoothstep) and the direction
+	along the arm toward the shoulder (pb.HULL_DIR_ATTR), which blender_export.write_hull_normals turns the hull normal toward: the ink there
+	lies inside the arm. The shoulder-side loop keeps its outline (it is the piece's silhouette against the world). Returns a report."""
+	ramp = float(ac.get("hull_ramp_m", 0.0))
+	if ramp <= 0.0:
+		return {"hull_ramp_m": 0.0}
+	co, axial, unit = arm_axial(arm, arm_axes, cut_t)
+	me = arm.data
+	count = len(co)
+	w = (1.0 - smoothstep01(np.abs(axial) / ramp)) * ((axial > -ramp) & (axial < 0.002))
+	for name, kind, dom in ((pb.HULL_W_ATTR, "FLOAT", "POINT"), (pb.HULL_DIR_ATTR, "FLOAT_VECTOR", "POINT")):
+		if name in me.attributes:
+			me.attributes.remove(me.attributes[name])
+		me.attributes.new(name, kind, dom)
+	me.attributes[pb.HULL_W_ATTR].data.foreach_set("value", w.astype(np.float32))
+	me.attributes[pb.HULL_DIR_ATTR].data.foreach_set("vector", (-unit).astype(np.float32).ravel())
+	me.update()
+	return {"hull_ramp_m": ramp, "vertices_bent": int((w > 0.01).sum()), "vertices": count}
+
+
+def arm_skin_only(arm, cfg):
+	"""Paint every face of the upper-arm piece the hero's skin swatch (M6 fix-final-arm): the generated mesh scatters the navy of the
+	top, the charcoal and the hair colour over the upper arm in patches, which the near lens showed as a dark shard at the shoulder end
+	in the uppercut. The forearm below it is bare skin, so the piece is too: each face whose swatch is not a skin swatch (palette.slots,
+	gen_palette's `skin` flag) takes the first skin swatch's centre in the `palette` UV layer. Returns a report."""
+	me = arm.data
+	swatches = gp.swatches()
+	slots = list(cfg["palette"]["slots"])
+	skin = [s for s in slots if swatches[s].get("skin")]
+	if not skin:
+		return {"skin_only": False}
+	uv = me.uv_layers["palette"]
+	start, total, _lv = pb.poly_arrays(me)
+	uvs = np.zeros((len(me.loops), 2), dtype=np.float64)
+	uv.data.foreach_get("uv", uvs.ravel())
+	target_u, target_v = gp.uv_of_slot(skin[0])
+	changed = 0
+	for f in range(len(start)):
+		sl = slice(int(start[f]), int(start[f] + total[f]))
+		cu, cv = uvs[sl].mean(axis=0)
+		if gp.slot_of_uv(cu, 1.0 - cv) in skin:
+			continue
+		uvs[sl] = (target_u, 1.0 - target_v)
+		changed += 1
+	uv.data.foreach_set("uv", uvs.ravel())
+	me.update()
+	return {"skin_only": True, "skin_slot": skin[0], "faces_repainted": changed, "faces": len(start)}
+
+
 def split_fp(cfg, extra):
 	sc = cfg["parts"].get("split_fp", {})
 	pb.open_blend(pc.work_path(cfg, "05_palette.blend"))
@@ -1160,6 +1234,9 @@ def split_fp(cfg, extra):
 		parts.append(torso)
 	if arm is not None:
 		cap_report[pb.BODY_ARM] = add_caps(arm, sc, heal)
+		arm_report["hull"] = mark_arm_hull(arm, arm_axes, cut_t, sc["arm"])
+		if sc["arm"].get("skin_only", False):
+			arm_report["skin"] = arm_skin_only(arm, cfg)
 		parts.append(arm)
 		ac = pb.verts(arm.data)
 		arm_report.update({"triangles": pb.triangle_count(arm.data), "bbox": {"min": ac.min(axis=0).tolist(), "max": ac.max(axis=0).tolist()}})
