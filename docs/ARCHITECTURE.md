@@ -1512,6 +1512,10 @@ Phase 2a of Game-boy's "less blobby" ruling: the Bruiser's colour borders, quilt
 
 Tests: `tests/test_m6_feedback_detail.gd` (codes per texel, other masks unmarked, the decode, the material's switch and fade, the helmet, the line weight and quilting config). Calls and the rollout recipe, part 2: `docs/milestones/M6-calls/DETAIL-2.md`.
 
+### Playtest feedback: ROLL-OX
+
+Ox Pellerin takes the FB-DETAIL recipe (`docs/milestones/M6-calls/FB-DETAIL.md`, "Rollout recipe") with no chain change: `assets/source/characters/boss/pipeline.json` sets `palette.border_relax_iterations` 0, `palette.min_island_area_m2` 0.0004 (small enough to keep the orange boot laces), `palette.detail_bake.crease` (70 degrees, 5 mm, 0.2 m chains) and seven `detail_bake.zones` (robe, shorts, boots, belt, trim, face_skin, gloves; a later zone wins on shared faces, `crease_deg` over 180 turns the crease off: the face and the round gloves). `budget_tris` stays 30000 and the generated glove is untouched. Contract: no new API, no new tunable, the report has the pilot's `crease` block and `island_merge` region entry. Tests: `tests/test_m6_feedback_detail_boss.gd`. His two ratchet moves (a6 legs 0.949, strain `min_min` 0.016) and what DETAIL-2's keys would add are in `docs/milestones/M6-calls/ROLL-OX.md`.
+
 ## Ownership (Milestones 1-3)
 
 | Area | Files |

@@ -145,7 +145,7 @@ func test_interior_ink_in_the_plate_and_jacket_zones() -> void:
 func test_no_other_character_uses_the_pilots_keys() -> void:
 	var dir := DirAccess.open("res://assets/source/characters")
 	for id: String in dir.get_directories():
-		if id == "bruiser":
+		if id == "bruiser" or id == "boss":  # ROLL-OX: Ox's roll-out owns tests/test_m6_feedback_detail_boss.gd
 			continue
 		var path := "res://assets/source/characters/%s/pipeline.json" % id
 		if not FileAccess.file_exists(path):
