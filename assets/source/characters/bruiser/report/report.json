@@ -1,7 +1,7 @@
 {
 	"asset": "bruiser",
 	"version": 2,
-	"config_sha256": "47b8b9c8e793dd9cc7ca405f9145bf8df60268fb16ebafb3c3fd6f4150f80a0c",
+	"config_sha256": "9c0f00ccd05cfe3048d8a7b74c588bc447e335ed06ee9d67de9c4e2e4748734f",
 	"steps": {
 		"inspect": {
 			"source": {
@@ -10096,54 +10096,96 @@
 			"detail_bake": {
 				"size": 1024,
 				"texels": 234331,
-				"ink_texels_share": 0.155101,
-				"mean_ink": 0.153851,
+				"ink_texels_share": 0.119289,
+				"mean_ink": 0.118483,
 				"png": "bruiser_detail.png",
 				"zones": {
-					"plates": {
-						"texels": 48736,
+					"chest_plates": {
+						"texels": 26092,
 						"raw_percentiles": {
-							"50": 0.0014,
-							"80": 0.0078,
-							"90": 0.0152,
-							"95": 0.0277,
-							"97": 0.0438,
-							"98": 0.0621,
-							"99": 0.0917,
-							"99.5": 0.1256
+							"50": 0.0032,
+							"80": 0.0107,
+							"90": 0.0196,
+							"95": 0.036,
+							"97": 0.0539,
+							"98": 0.0708,
+							"99": 0.0966,
+							"99.5": 0.1257
 						},
-						"ink_texels_share": 0.354112
+						"ink_texels_share": 0.345776
+					},
+					"cloth": {
+						"texels": 76231,
+						"raw_percentiles": {
+							"50": 0.0027,
+							"80": 0.0049,
+							"90": 0.0078,
+							"95": 0.0109,
+							"97": 0.012,
+							"98": 0.0149,
+							"99": 0.0196,
+							"99.5": 0.0263
+						},
+						"ink_texels_share": 0.10173
+					},
+					"guard_left": {
+						"texels": 11495,
+						"raw_percentiles": {
+							"50": 0.0003,
+							"80": 0.0065,
+							"90": 0.0109,
+							"95": 0.0181,
+							"97": 0.0302,
+							"98": 0.0498,
+							"99": 0.0882,
+							"99.5": 0.1356
+						},
+						"ink_texels_share": 0.180948
+					},
+					"guard_right": {
+						"texels": 11149,
+						"raw_percentiles": {
+							"50": 0.0,
+							"80": 0.0046,
+							"90": 0.01,
+							"95": 0.0161,
+							"97": 0.0238,
+							"98": 0.0363,
+							"99": 0.0784,
+							"99.5": 0.1125
+						},
+						"ink_texels_share": 0.171226
 					}
 				},
 				"glint": null,
 				"clean": {
 					"before": {
-						"pieces": 1762,
-						"texels": 44292,
-						"pieces_le6": 818,
-						"texels_in_le6_share": 0.0506,
-						"median": 8.0,
-						"pieces_over20": 506
+						"pieces": 1837,
+						"texels": 35516,
+						"pieces_le6": 903,
+						"texels_in_le6_share": 0.0695,
+						"median": 7.0,
+						"pieces_over20": 441
 					},
 					"after": {
-						"pieces": 412,
-						"texels": 43384,
+						"pieces": 349,
+						"texels": 31795,
 						"pieces_le6": 0,
 						"texels_in_le6_share": 0.0,
-						"median": 62.5,
-						"pieces_over20": 410
+						"median": 58.0,
+						"pieces_over20": 347
 					},
-					"bridged_texels": 760,
-					"pieces_dropped": 1241,
-					"texels_dropped": 9288
+					"bridged_texels": 644,
+					"pieces_dropped": 1378,
+					"texels_dropped": 9974
 				},
 				"glove_lines": null,
 				"crease": {
-					"texels_on_a_crease": 36072,
+					"texels_on_a_crease": 27659,
 					"ink_share_before": 0.00237,
-					"ink_share_after": 0.1551
+					"ink_share_after": 0.11929
 				},
-				"sha256": "0a66e527f264e4e368fd3f107977ff0bf427ba18ebaee99d3235ce32a0cb7d12"
+				"sha256": "9956488286bc242da7681f3652b59badaa549fda514cf71ef82d59096bf16e4d"
 			},
 			"regions": [],
 			"region_cuts": [],
@@ -10325,5 +10367,5 @@
 		"bruiser.glb": "6ce46043bc54f302e6710de2090e98b31d49ce1120b9a58295a1cde2757532c7",
 		"bruiser_rest.glb": "24cef9843f774b777119158cab627fd0b0b3250f9cd7d6081126377150d5ec2e"
 	},
-	"hash": "ac7f5e019e81761f3ab2e6afaf905204d8675f3f6845dc3ef3a50c6d1c8e9c37"
+	"hash": "68ef6d8a2ed5d7fa4fc52cbee02f0e667ce6baf1e7b12dfef80156ab8295ddaf"
 }
