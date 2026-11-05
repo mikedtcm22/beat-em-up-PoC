@@ -1,7 +1,7 @@
 {
 	"asset": "thug",
 	"version": 2,
-	"config_sha256": "0331a6e7ba8d6f7f366848e5d90d3121a2b26a6fb34d24af6362c0ff5a02fbd0",
+	"config_sha256": "f157857b4eccea9c0df37f79fa51ec74655602537a82bd556a39cf5f71bfc6fb",
 	"steps": {
 		"inspect": {
 			"source": {
@@ -9960,9 +9960,9 @@
 			"delta_e_p95": 17.701865,
 			"pruned_swatches": [],
 			"majority_flips": 582,
-			"border_vertices": 1221,
-			"border_edges": 1232,
-			"protected_vertices": 2841,
+			"border_vertices": 1231,
+			"border_edges": 1242,
+			"protected_vertices": 2851,
 			"decimate": {
 				"invert_group": true,
 				"trials": [
@@ -9979,92 +9979,120 @@
 			"swatches_used": {
 				"7": {
 					"name": "skin_tan",
-					"area_share": 0.227103,
-					"faces": 4582
+					"area_share": 0.230317,
+					"faces": 4614
 				},
 				"38": {
 					"name": "thug_olive",
-					"area_share": 0.466971,
+					"area_share": 0.466988,
 					"faces": 5531
 				},
 				"39": {
 					"name": "thug_yellow",
-					"area_share": 0.081379,
-					"faces": 2129
+					"area_share": 0.083659,
+					"faces": 2175
 				},
 				"40": {
 					"name": "thug_black",
-					"area_share": 0.224548,
-					"faces": 2757
+					"area_share": 0.219036,
+					"faces": 2679
 				}
 			},
 			"swatch_count": 4,
 			"detail_uv": true,
 			"detail_bake": {
 				"size": 1024,
-				"texels": 352216,
-				"ink_texels_share": 0.04529,
-				"mean_ink": 0.045615,
+				"texels": 355195,
+				"ink_texels_share": 0.033477,
+				"mean_ink": 0.034113,
 				"png": "thug_detail.png",
 				"zones": {
 					"trousers": {
-						"texels": 81467,
+						"texels": 72641,
 						"raw_percentiles": {
 							"50": 0.0029,
-							"80": 0.0051,
-							"90": 0.0078,
-							"95": 0.011,
-							"97": 0.0126,
-							"98": 0.0156,
-							"99": 0.0199,
-							"99.5": 0.0263
-						},
-						"ink_texels_share": 0.011354
-					},
-					"hoodie": {
-						"texels": 84485,
-						"raw_percentiles": {
-							"50": 0.0005,
-							"80": 0.004,
+							"80": 0.0053,
 							"90": 0.0078,
 							"95": 0.0115,
-							"97": 0.0139,
-							"98": 0.0167,
-							"99": 0.023,
-							"99.5": 0.0314
+							"97": 0.0137,
+							"98": 0.0165,
+							"99": 0.0215,
+							"99.5": 0.0268
 						},
-						"ink_texels_share": 0.11389
+						"ink_texels_share": 0.008618
+					},
+					"hoodie": {
+						"texels": 45139,
+						"raw_percentiles": {
+							"50": 0.0002,
+							"80": 0.0039,
+							"90": 0.0078,
+							"95": 0.0102,
+							"97": 0.0118,
+							"98": 0.0152,
+							"99": 0.0209,
+							"99.5": 0.0283
+						},
+						"ink_texels_share": 0.083542
+					},
+					"hood_neck": {
+						"texels": 33017,
+						"raw_percentiles": {
+							"50": 0.0008,
+							"80": 0.0046,
+							"90": 0.0081,
+							"95": 0.0123,
+							"97": 0.0162,
+							"98": 0.0196,
+							"99": 0.0274,
+							"99.5": 0.0351
+						},
+						"ink_texels_share": 0.06427
+					},
+					"waist": {
+						"texels": 16647,
+						"raw_percentiles": {
+							"50": 0.0026,
+							"80": 0.0046,
+							"90": 0.0078,
+							"95": 0.0092,
+							"97": 0.0114,
+							"98": 0.0118,
+							"99": 0.0132,
+							"99.5": 0.0157
+						},
+						"ink_texels_share": 0.0
 					},
 					"face_skin": {
-						"texels": 3322,
+						"texels": 4563,
 						"raw_percentiles": {
-							"50": 0.0084,
-							"80": 0.0235,
-							"90": 0.0401,
-							"95": 0.0593,
-							"97": 0.0782,
-							"98": 0.1006,
-							"99": 0.1626,
-							"99.5": 0.2763
+							"50": 0.0052,
+							"80": 0.0195,
+							"90": 0.0362,
+							"95": 0.0547,
+							"97": 0.0748,
+							"98": 0.0921,
+							"99": 0.1413,
+							"99.5": 0.2259
 						},
-						"ink_texels_share": 0.039133
+						"ink_texels_share": 0.033092
 					},
 					"headwear": {
-						"texels": 17570,
+						"texels": 16426,
 						"raw_percentiles": {
 							"50": 0.0,
 							"80": 0.0039,
-							"90": 0.0056,
-							"95": 0.0093,
-							"97": 0.0157,
-							"98": 0.024,
-							"99": 0.0429,
-							"99.5": 0.0766
+							"90": 0.0051,
+							"95": 0.0078,
+							"97": 0.013,
+							"98": 0.0195,
+							"99": 0.039,
+							"99.5": 0.0714
 						},
-						"ink_texels_share": 0.026238
+						"ink_texels_share": 0.026969
 					},
 					"boots": {
-						"texels": 44616,
+						"texels": 45007,
 						"raw_percentiles": {
 							"50": 0.0002,
 							"80": 0.0039,
@@ -10072,101 +10100,111 @@
 							"95": 0.0078,
 							"97": 0.0078,
 							"98": 0.0091,
-							"99": 0.0111,
+							"99": 0.0112,
 							"99.5": 0.0118
 						},
-						"ink_texels_share": 0.037296
+						"ink_texels_share": 0.037616
 					},
 					"bandana": {
-						"texels": 8043,
+						"texels": 8805,
 						"raw_percentiles": {
-							"50": 0.0035,
-							"80": 0.013,
-							"90": 0.0201,
-							"95": 0.0308,
-							"97": 0.0396,
-							"98": 0.0464,
-							"99": 0.0572,
-							"99.5": 0.0867
+							"50": 0.0036,
+							"80": 0.0127,
+							"90": 0.0204,
+							"95": 0.0301,
+							"97": 0.0384,
+							"98": 0.046,
+							"99": 0.0666,
+							"99.5": 0.09
 						},
 						"ink_texels_share": 0.0
 					},
 					"buckle": {
-						"texels": 10764,
+						"texels": 10827,
 						"raw_percentiles": {
 							"50": 0.0039,
-							"80": 0.0139,
-							"90": 0.0273,
-							"95": 0.0518,
-							"97": 0.0805,
-							"98": 0.1037,
-							"99": 0.1397,
-							"99.5": 0.1736
+							"80": 0.014,
+							"90": 0.0274,
+							"95": 0.0509,
+							"97": 0.0796,
+							"98": 0.1014,
+							"99": 0.1391,
+							"99.5": 0.1752
 						},
 						"ink_texels_share": 0.0
 					},
 					"wraps": {
-						"texels": 18623,
+						"texels": 18753,
 						"raw_percentiles": {
 							"50": 0.0085,
-							"80": 0.0218,
-							"90": 0.0345,
-							"95": 0.062,
-							"97": 0.0747,
-							"98": 0.0832,
-							"99": 0.0943,
-							"99.5": 0.1037
+							"80": 0.0217,
+							"90": 0.0346,
+							"95": 0.0609,
+							"97": 0.0756,
+							"98": 0.0836,
+							"99": 0.0939,
+							"99.5": 0.1028
 						},
-						"ink_texels_share": 0.049025
+						"ink_texels_share": 0.047086
 					}
 				},
 				"glint": null,
 				"clean": {
 					"before": {
-						"pieces": 1390,
-						"texels": 22016,
-						"pieces_le6": 774,
-						"texels_in_le6_share": 0.086,
+						"pieces": 1246,
+						"texels": 16610,
+						"pieces_le6": 729,
+						"texels_in_le6_share": 0.1105,
 						"median": 5.0,
-						"pieces_over20": 285
+						"pieces_over20": 235
 					},
 					"after": {
-						"pieces": 754,
-						"texels": 25465,
-						"pieces_le6": 134,
-						"texels_in_le6_share": 0.0242,
-						"median": 16.0,
-						"pieces_over20": 311
+						"pieces": 663,
+						"texels": 19264,
+						"pieces_le6": 143,
+						"texels_in_le6_share": 0.0347,
+						"median": 15.0,
+						"pieces_over20": 255
 					},
-					"bridged_texels": 388,
-					"pieces_dropped": 534,
-					"texels_dropped": 965
+					"bridged_texels": 280,
+					"pieces_dropped": 485,
+					"texels_dropped": 906
 				},
 				"glove_lines": null,
 				"crease": {
-					"texels_on_a_crease": 15840,
-					"ink_share_before": 0.00379,
-					"ink_share_after": 0.04843
+					"texels_on_a_crease": 11777,
+					"ink_share_before": 0.00372,
+					"ink_share_after": 0.03657
 				},
 				"texel_swatch": {
-					"texels": 352216,
-					"texture_decided": 320436,
-					"differ_from_face_share": 0.00912,
-					"majority_moved": 835,
+					"texels": 355195,
+					"texture_decided": 318970,
+					"differ_from_face_share": 0.0085,
+					"majority_moved": 810,
 					"share": {
-						"38": 0.47191,
-						"39": 0.08011,
-						"40": 0.22575,
-						"7": 0.22223
+						"38": 0.47192,
+						"39": 0.08215,
+						"40": 0.22057,
+						"7": 0.22537
 					}
 				},
-				"sha256": "c947ed358c7310c17af3009b9321b226e7d258fad5b6700460f8e50aaf216e81"
+				"sha256": "18af71102c92c1776781a752dd3771b83ae3de44113f417621dbbcaaa7e0041d"
 			},
 			"regions": [
 				{
 					"name": "island_merge",
 					"min_area_m2": 0.0015,
 					"faces": 88
+				},
+				{
+					"name": "bandana_right",
+					"slot": 39,
+					"faces": 307
+				},
+				{
+					"name": "face_right",
+					"slot": 7,
+					"faces": 58
 				},
 				{
 					"name": "shin_band_low",
@@ -10221,7 +10259,7 @@
 					"triangles": 14999,
 					"budget": 15000,
 					"budget_ok": true,
-					"protected_vertices": 2841,
+					"protected_vertices": 2851,
 					"protected_position_worst_m": 0.0
 				}
 			],
@@ -10253,8 +10291,8 @@
 					"triangles": 14999,
 					"height_m": 1.815604,
 					"feet_y": -0.000897,
-					"folded_triangles": 90,
-					"folded_share": 0.006,
+					"folded_triangles": 91,
+					"folded_share": 0.006067,
 					"facing": {
 						"axis": "-Z",
 						"yaw": 0.582102,
@@ -10267,7 +10305,7 @@
 						{
 							"name": "Body",
 							"triangles": 14999,
-							"vertices": 14214,
+							"vertices": 14229,
 							"uv_layers": [
 								"UVMap",
 								"UVMap.001"
@@ -10295,8 +10333,8 @@
 						]
 					},
 					"file": "thug.glb",
-					"sha256": "d8b36edbf1de9e3c7ddc6ca67d06933ac86a7988288cb9b3712dd29b2572e58f",
-					"bytes": 1064044
+					"sha256": "2d3a77f4b232c701fc3358c58a4fb6b35e95cdca3f62a1a2152a3c1fc011572a",
+					"bytes": 1065064
 				},
 				"rest": {
 					"bones": 23,
@@ -10308,8 +10346,8 @@
 					"triangles": 14999,
 					"height_m": 1.815604,
 					"feet_y": -0.000897,
-					"folded_triangles": 120,
-					"folded_share": 0.008001,
+					"folded_triangles": 121,
+					"folded_share": 0.008067,
 					"facing": {
 						"axis": "-Z",
 						"yaw": 0.582102,
@@ -10322,7 +10360,7 @@
 						{
 							"name": "Body",
 							"triangles": 14999,
-							"vertices": 14214,
+							"vertices": 14229,
 							"uv_layers": [
 								"UVMap",
 								"UVMap.001"
@@ -10350,33 +10388,33 @@
 						]
 					},
 					"file": "thug_rest.glb",
-					"sha256": "935fd90708f8e2f24b1d9c00026d1222d868cb44181d2713fcc1f6d715dcb6ec",
-					"bytes": 1063632
+					"sha256": "560b0dc4498a1131dc7a76892a1bb14f7a044cfd7d195bf67032284dc3133592",
+					"bytes": 1064652
 				}
 			},
 			"smooth_normals": {
 				"apose": {
 					"Body": {
-						"mean_deg": 15.0455,
-						"p99_deg": 50.9528,
-						"over_15_deg_share": 0.3982
+						"mean_deg": 15.0282,
+						"p99_deg": 50.9565,
+						"over_15_deg_share": 0.3978
 					}
 				},
 				"rest": {
 					"Body": {
-						"mean_deg": 15.1282,
-						"p99_deg": 50.9015,
-						"over_15_deg_share": 0.4035
+						"mean_deg": 15.1109,
+						"p99_deg": 50.8783,
+						"over_15_deg_share": 0.4031
 					}
 				}
 			}
 		}
 	},
 	"outputs": {
-		"thug.glb": "d8b36edbf1de9e3c7ddc6ca67d06933ac86a7988288cb9b3712dd29b2572e58f",
-		"thug_rest.glb": "935fd90708f8e2f24b1d9c00026d1222d868cb44181d2713fcc1f6d715dcb6ec"
+		"thug.glb": "2d3a77f4b232c701fc3358c58a4fb6b35e95cdca3f62a1a2152a3c1fc011572a",
+		"thug_rest.glb": "560b0dc4498a1131dc7a76892a1bb14f7a044cfd7d195bf67032284dc3133592"
 	},
-	"hash": "4f06832bd5f96d5fa68e7d0bfe51e51948b34acb7e1c981a9c818ea56a3e06ef",
+	"hash": "f8502049b38f84a37c66e03b1713c1e7c5457451a38188ead248c9425ae52a43",
 	"stills": {
 		"variants": {
 			"apose": {
