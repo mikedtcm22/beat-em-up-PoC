@@ -316,24 +316,29 @@ def clean_strokes(mask, covered, cc):
 		"texels_dropped": int(dropped.sum())}
 
 
-def crease_edges(verts, tris, min_deg, spacing_m, min_chain_m=0.0):
+def crease_edges(verts, tris, min_deg, spacing_m, min_chain_m=0.0, concave=None):
 	"""The sharp edges of a triangle mesh as points: verts (n, 3), tris (m, 3) vertex indices -> (points (k, 3), angles (k,) in degrees),
 	one point every `spacing_m` along every interior edge whose two faces meet at more than `min_deg` degrees (0 = flat). The sculpt's
 	bumps make short crease fragments and a plate's edge a long run, so a run of connected crease edges (at the lowest angle asked for)
-	shorter than `min_chain_m` in all is dropped."""
+	shorter than `min_chain_m` in all is dropped. `concave` None keeps every edge (a ridge or a valley: M6 FB-DETAIL), True only the
+	valleys (the far corner of one face lies in front of the other's plane: a fold, a quilt seam), False only the ridges (M6 DETAIL-2)."""
 	a, b, c = verts[tris[:, 0]], verts[tris[:, 1]], verts[tris[:, 2]]
 	nrm = np.cross(b - a, c - a)
 	nrm /= np.maximum(np.linalg.norm(nrm, axis=1, keepdims=True), 1e-12)
 	e = np.concatenate([tris[:, [0, 1]], tris[:, [1, 2]], tris[:, [2, 0]]])
 	face = np.tile(np.arange(len(tris)), 3)
+	far = np.concatenate([tris[:, 2], tris[:, 0], tris[:, 1]])  # the corner of each face opposite the edge
 	key = np.sort(e, axis=1)
 	order = np.lexsort((key[:, 1], key[:, 0]))
-	key, face = key[order], face[order]
+	key, face, far = key[order], face[order], far[order]
 	same = np.all(key[1:] == key[:-1], axis=1)
 	first = np.nonzero(same)[0]
 	f0, f1 = face[first], face[first + 1]
 	ang = np.degrees(np.arccos(np.clip((nrm[f0] * nrm[f1]).sum(1), -1.0, 1.0)))
 	keep = ang > min_deg
+	if concave is not None:
+		valley = ((verts[far[first + 1]] - verts[key[first, 0]]) * nrm[f0]).sum(1) > 0.0
+		keep &= valley if concave else ~valley
 	ea, eb = key[first[keep], 0], key[first[keep], 1]
 	p0, p1 = verts[ea], verts[eb]
 	ang = ang[keep]
@@ -366,32 +371,44 @@ def crease_edges(verts, tris, min_deg, spacing_m, min_chain_m=0.0):
 	return np.concatenate(pts), np.concatenate(angs)
 
 
-def crease_field(pos, face_deg, verts, tris, cfg):
-	"""The crease ink at each texel: pos (n, 3) the texels' surface points, face_deg (n,) the angle each texel's zone asks for. 1 on an
-	edge, falling to 0 at `width_m` / 2 + `ramp_m`; 0 where no crease edge lies within that reach."""
+def _field_near(pos, sel, pts, width, ramp, field):
+	"""Raise `field` at the texels `sel` (indices into pos) to the ramp of their distance to the nearest of `pts`: 1 within width / 2,
+	0 at width / 2 + ramp."""
 	from mathutils import kdtree
-	width, ramp = float(cfg.get("width_m", 0.006)), float(cfg.get("ramp_m", 0.003))
+	if not len(pts) or not len(sel):
+		return
+	kd = kdtree.KDTree(len(pts))
+	for i, q in enumerate(pts):
+		kd.insert(Vector(q), i)
+	kd.balance()
 	reach = width / 2.0 + ramp
+	for i in sel:
+		d = kd.find(Vector(pos[i]))[2]
+		if d < reach:
+			field[i] = max(field[i], np.clip((reach - d) / max(ramp, 1e-6), 0.0, 1.0))
+
+
+def crease_field(pos, face_deg, verts, tris, cfg, face_valley=None):
+	"""The crease ink at each texel: pos (n, 3) the texels' surface points, face_deg (n,) the angle each texel's zone asks for. 1 on an
+	edge, falling to 0 at `width_m` / 2 + `ramp_m`; 0 where no crease edge lies within that reach. face_valley (n,), with the config's `valley`
+	({angle_deg, min_chain_m, width_m, ramp_m, spacing_m}, M6 DETAIL-2), is the angle at which each texel's zone draws the VALLEYS (concave
+	edges: the quilting, a fold, a plate's foot) on their own, lower, angle and chain length; over 180 = none."""
+	width, ramp = float(cfg.get("width_m", 0.006)), float(cfg.get("ramp_m", 0.003))
 	field = np.zeros(len(pos))
 	pts, angs = crease_edges(verts, tris, float(np.min(face_deg)), float(cfg.get("spacing_m", 0.003)), float(cfg.get("min_chain_m", 0.0)))
-	if not len(pts):
-		return field
 	for deg in np.unique(face_deg):
 		if deg > 180.0:
 			continue
-		sel = np.nonzero(face_deg == deg)[0]
-		p = pts[angs >= deg]
-		if not len(p):
-			continue
-		kd = kdtree.KDTree(len(p))
-		for i, q in enumerate(p):
-			kd.insert(Vector(q), i)
-		kd.balance()
-		for i in sel:
-			hit = kd.find(Vector(pos[i]))
-			d = hit[2]
-			if d < reach:
-				field[i] = np.clip((width / 2.0 + ramp - d) / max(ramp, 1e-6), 0.0, 1.0)
+		_field_near(pos, np.nonzero(face_deg == deg)[0], pts[angs >= deg] if len(pts) else pts, width, ramp, field)
+	vc = cfg.get("valley")
+	if vc and face_valley is not None and float(np.min(face_valley)) <= 180.0:
+		vw, vr = float(vc.get("width_m", width)), float(vc.get("ramp_m", ramp))
+		vpts, vangs = crease_edges(verts, tris, float(np.min(face_valley)), float(vc.get("spacing_m", cfg.get("spacing_m", 0.003))),
+			float(vc.get("min_chain_m", cfg.get("min_chain_m", 0.0))), concave=True)
+		for deg in np.unique(face_valley):
+			if deg > 180.0:
+				continue
+			_field_near(pos, np.nonzero(face_valley == deg)[0], vpts[vangs >= deg] if len(vpts) else vpts, vw, vr, field)
 	return field
 
 
@@ -457,8 +474,53 @@ def fill_border(values, covered, px):
 	return out
 
 
+def texel_labels(colour, idx, texel, texel_face, size, sw):
+	"""The palette slot of every baked texel (M6 DETAIL-2: the colour border follows the texture's texels, not the faces). colour (n, 3)
+	the dense texture's sRGB at each texel (blurred a little), idx (n,) the dense face each texel was baked from, texel (n, 2) its (row, col),
+	texel_face (n,) its face of the final mesh. `sw`: lab_fn (sRGB -> Lab), slots (K,), cand_lab (K, 3), dense_ok (m,) bool (the dense faces the
+	texture decides: not a fixed part, not a region), ring (m, K) bool (the slots a dense face and its neighbours carry: a texel may take
+	only one of those, so a stray patch the island merge removed stays removed), face_slot (the final mesh's slot per face), passes (the 3 x 3
+	majority passes), fill_px. Each texel takes the Lab-nearest allowed slot of its colour; a texel the texture does not decide takes its
+	face's slot. Returns ((size, size) int array: slot + 1, 0 = no code) and a report."""
+	slots = np.asarray(sw["slots"], dtype=np.int64)
+	cand_lab = np.asarray(sw["cand_lab"], dtype=np.float64)
+	lab = sw["lab_fn"](colour)
+	dist = np.linalg.norm(lab[:, None, :] - cand_lab[None, :, :], axis=2)
+	dist = np.where(np.asarray(sw["ring"])[idx], dist, np.inf)
+	dense_ok = np.asarray(sw["dense_ok"])[idx]
+	pick = slots[np.argmin(dist, axis=1)]
+	face_slot = np.asarray(sw["face_slot"], dtype=np.int64)[texel_face]
+	slot = np.where(dense_ok & np.isfinite(dist.min(axis=1)), pick, face_slot)
+	img = np.zeros((size, size), dtype=np.int32)
+	img[texel[:, 0], texel[:, 1]] = slot + 1
+	covered = np.zeros((size, size), dtype=bool)
+	covered[texel[:, 0], texel[:, 1]] = True
+	free = np.zeros((size, size), dtype=bool)  # the texels the texture decides: the majority filter moves only those
+	free[texel[dense_ok, 0], texel[dense_ok, 1]] = True
+	before = img.copy()
+	codes = [int(k) + 1 for k in slots]
+	for _ in range(int(sw.get("passes", 2))):
+		counts = np.stack([sum(shifted((img == k).astype(np.int32), dy, dx) for dy in (-1, 0, 1) for dx in (-1, 0, 1)) for k in codes])
+		total = counts.sum(axis=0)
+		top = np.argmax(counts, axis=0)
+		cur = np.zeros_like(img)
+		for i, k in enumerate(codes):
+			cur = np.where(img == k, counts[i], cur)
+		best = np.take_along_axis(counts, top[None], axis=0)[0]
+		move = free & covered & (best > cur) & (best * 2 > total)
+		img = np.where(move, np.asarray(codes)[top], img)
+	img = fill_border(img, covered, int(sw.get("fill_px", 3)))
+	face_img = np.zeros((size, size), dtype=np.int32)
+	face_img[texel[:, 0], texel[:, 1]] = face_slot + 1
+	report = {"texels": int(len(texel)), "texture_decided": int(dense_ok.sum()),
+		"differ_from_face_share": round(float((img[texel[:, 0], texel[:, 1]] != face_img[texel[:, 0], texel[:, 1]]).mean()), 5),
+		"majority_moved": int(((img != before) & covered).sum()),
+		"share": {str(int(k)): round(float((img[covered] == k + 1).mean()), 5) for k in slots}}
+	return img, report
+
+
 def bake(me, layer_name, image, dense_bvh, dense_verts, dense_tris, dense_uv, cfg, out_png, source_png=None, face_gain=None,
-		face_low=None, face_high=None, face_zone=None, zone_names=(), glint=None, face_glint=None, glove=None, hand_frames=None, face_slot=None, face_crease=None):
+		face_low=None, face_high=None, face_zone=None, zone_names=(), glint=None, face_glint=None, glove=None, hand_frames=None, face_slot=None, face_crease=None, face_valley=None, swatch=None):
 	"""Bake the mask of `me` (UV layer `layer_name`) from `image` (the dense mesh's texture) into out_png. dense_verts
 	(n, 3), dense_tris (m, 3) vertex indices, dense_uv (m, 3, 2) per-corner UVs; face_gain (one float per face of `me`, 1 = full ink, 0 = none: the lens
 	takes none) is optional. face_low / face_high (one float per face) override the smoothstep that turns the raw top-hat into ink
@@ -467,7 +529,10 @@ def bake(me, layer_name, image, dense_bvh, dense_verts, dense_tris, dense_uv, cf
 	only labels the report's percentiles of the raw top-hat per zone, the numbers the pairs are calibrated on. glint (the config's `glint`
 	dict) and face_glint (one bool per face of `me`: the lens's) write the glint gate into G, see the module doc. glove (the config's
 	`glove_lines`), hand_frames ({side: {sign, head, a, b, c}} in the mesh's frame) and face_slot (the palette slot per face) add the glove's
-	authored lines into R. face_crease (one angle per face of `me`, only with the config's `crease`) is each face's crease threshold in degrees.
+	authored lines into R. face_crease (one angle per face of `me`, only with the config's `crease`) is each face's crease threshold in degrees,
+	face_valley (with the crease's `valley`) the angle at which its zone draws valleys. swatch (M6 DETAIL-2; the config's `texel_swatch` and the
+	keys texel_labels() reads) writes each texel's palette slot + 1 into B, so the shader takes a texel's colour from the texture's border, not
+	from the face's.
 	Returns a report dict."""
 	size = int(cfg.get("size", 1024))
 	w, h = image.size
@@ -475,6 +540,9 @@ def bake(me, layer_name, image, dense_bvh, dense_verts, dense_tris, dense_uv, cf
 	image.pixels.foreach_get(pix)
 	pix = pix.reshape(h, w, 4)[:, :, :3]
 	ink = ink_raw(pix, int(cfg.get("radius_px", 5)))
+	if swatch:
+		sigma = float(cfg.get("texel_swatch", {}).get("blur_px", 1.0))
+		colour_img = np.stack([blur(pix[:, :, c].astype(np.float32), sigma) if sigma > 0.0 else pix[:, :, c] for c in range(3)], axis=-1)
 	del pix
 	# no ink within edge_margin_px of an island's border: a seam of the generated texture is not a line of the character
 	margin = int(cfg.get("edge_margin_px", 6))
@@ -517,7 +585,8 @@ def bake(me, layer_name, image, dense_bvh, dense_verts, dense_tris, dense_uv, cf
 				value[sel] = bilinear(shape(ink, lo, hi), uv[sel])
 	crease_report = None
 	if cfg.get("crease") and face_crease is not None:
-		field = crease_field(pos, np.asarray(face_crease, dtype=np.float64)[texel_face], dense_verts, dense_tris, cfg["crease"])
+		field = crease_field(pos, np.asarray(face_crease, dtype=np.float64)[texel_face], dense_verts, dense_tris, cfg["crease"],
+			None if face_valley is None else np.asarray(face_valley, dtype=np.float64)[texel_face])
 		before = float((value > 0.5).mean())
 		value = np.maximum(value, field)
 		crease_report = {"texels_on_a_crease": int((field > 0.5).sum()), "ink_share_before": round(before, 5), "ink_share_after": round(float((value > 0.5).mean()), 5)}
@@ -567,20 +636,25 @@ def bake(me, layer_name, image, dense_bvh, dense_verts, dense_tris, dense_uv, cf
 		covered[texel[lens, 0], texel[lens, 1]] = True
 		gate = fill_border(gate, covered, int(glint.get("fill_px", 2)))
 		glint_report = {"texels": int(lens.sum()), "gate_share": round(float((field[lens] > 0.5).mean()), 4) if lens.any() else 0.0}
-	_write_gray(mask, out_png, "punk_detail", gate)
+	code = None
+	swatch_report = None
+	if swatch:
+		code, swatch_report = texel_labels(np.stack([bilinear(colour_img[:, :, c], uv) for c in range(3)], axis=1), idx, texel, texel_face, size,
+			{**swatch, **{k: v for k, v in cfg.get("texel_swatch", {}).items() if k in ("passes", "fill_px")}})
+	_write_gray(mask, out_png, "punk_detail", gate, code)
 	return {"size": size, "texels": int(len(pos)), "ink_texels_share": float((value > 0.5).mean()), "mean_ink": float(value.mean()),
 		"png": out_png, "zones": zone_report, "glint": glint_report, "clean": clean_report, "glove_lines": glove_report,
-		**({"crease": crease_report} if crease_report is not None else {})}
+		**({"crease": crease_report} if crease_report is not None else {}), **({"texel_swatch": swatch_report} if swatch_report is not None else {})}
 
 
-def _write_gray(a, path, name, g=None):
-	"""a (h, w) 0..1 (row 0 the bottom) -> an 8-bit PNG with R = a, G = g (the glint gate; 0 when there is none), B = 0 (the mask), or
-	all three = a for a source picture."""
+def _write_gray(a, path, name, g=None, code=None):
+	"""a (h, w) 0..1 (row 0 the bottom) -> an 8-bit PNG with R = a, G = g (the glint gate; 0 when there is none), B = code / 255 (the palette
+	slot + 1 of each texel, M6 DETAIL-2; 0 = no code, the face's swatch) or all three = a for a source picture."""
 	h, w = a.shape
 	rgba = np.ones((h, w, 4), dtype=np.float32)
 	rgba[:, :, 0] = a
 	rgba[:, :, 1] = a if name == "detail_source" else (0.0 if g is None else g)
-	rgba[:, :, 2] = a if name == "detail_source" else 0.0
+	rgba[:, :, 2] = a if name == "detail_source" else (0.0 if code is None else code.astype(np.float32) / 255.0)
 	if name == "detail_source" and max(h, w) > 2048:
 		pass
 	img = bpy.data.images.new(name, w, h, alpha=False)

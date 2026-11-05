@@ -274,7 +274,8 @@
 					],
 					"ink_low": 0.04,
 					"ink_high": 0.11,
-					"crease_deg": 80
+					"crease_deg": 80,
+					"valley_deg": 22
 				},
 				{
 					"name": "guard_left",
@@ -328,10 +329,22 @@
 			},
 			"crease": {
 				"angle_deg": 70,
-				"width_m": 0.005,
-				"ramp_m": 0.003,
+				"width_m": 0.002,
+				"ramp_m": 0.002,
 				"spacing_m": 0.003,
-				"min_chain_m": 0.2
+				"min_chain_m": 0.2,
+				"valley": {
+					"angle_deg": 999,
+					"min_chain_m": 0.25,
+					"width_m": 0.002,
+					"ramp_m": 0.002
+				}
+			},
+			"texel_swatch": {
+				"blur_px": 1.0,
+				"passes": 2,
+				"fill_px": 3,
+				"rings": 1
 			}
 		},
 		"strap_slot": 45,

@@ -264,6 +264,9 @@ static func apply_look(material: ShaderMaterial) -> void:
 		material.set_shader_parameter(&"glint_strength", data.look_glint_strength)
 		material.set_shader_parameter(&"detail_sharp", bool(material.get_meta(_SHARP_META, false)) and data.look_detail_cut > 0.0)
 		material.set_shader_parameter(&"detail_cut", data.look_detail_cut)
+		# M6 DETAIL-2: the texel swatches of a mask that carries them (B above 0), the Bruiser's; the fade is in texels per pixel
+		material.set_shader_parameter(&"use_texel_swatch", data.look_texel_swatch)
+		material.set_shader_parameter(&"texel_swatch_fade", Vector2(data.look_texel_swatch_fade_near, maxf(data.look_texel_swatch_fade_far, data.look_texel_swatch_fade_near + 0.1)))
 
 
 ## The width of the hull line at `dist` metres from the lens, in metres, as toon_outline.gdshader
