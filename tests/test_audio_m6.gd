@@ -511,11 +511,20 @@ func test_the_audition_room_pages_through_the_banks_and_plays_variants_ahead_of_
 	room.page = room.pools.find(&"thud")
 	assert_true(room.handle_key(KEY_2))
 	assert_eq(_pools_played(), [&"thud"])
-	assert_almost_eq(_plays[0].at as Vector3, Vector3(0.0, 0.0, -AuditionRoom.AHEAD_M), Vector3.ONE * 0.001,
+	assert_almost_eq(_plays[0].at as Vector3, Vector3(0.0, 0.0, -Tuning.data.audition_ahead_m), Vector3.ONE * 0.001,
 		"in front of the listener (looking down -Z)")
 	assert_almost_eq(float(_plays[0].volume_db), Tuning.data.thud_db, 0.7, "at the pool's tuned volume")
 	assert_false(room.play_variant(9), "a variant the bank doesn't have plays nothing")
 	assert_false(room.handle_key(KEY_Q), "other keys are not the room's")
+
+
+func test_the_audition_rooms_distance_and_gap_are_tunables() -> void:
+	var room := _room()
+	Tuning.set_value(&"audition_ahead_m", 3.5)
+	room.page = room.pools.find(&"thud")
+	assert_true(room.handle_key(KEY_1))
+	assert_almost_eq(_plays[0].at as Vector3, Vector3(0.0, 0.0, -3.5), Vector3.ONE * 0.001, "the tunable sets how far ahead a take plays")
+	assert_almost_eq(Tuning.data.audition_bank_gap_s, 0.35, 0.0001, "the gap's default is the room's old 0.35 s")
 
 
 func test_the_audition_room_toggles_old_and_new() -> void:
@@ -535,7 +544,7 @@ func test_the_audition_room_plays_the_whole_bank_and_a_key_stops_it() -> void:
 	var count := room.streams().size()
 	room.handle_key(KEY_EQUAL)
 	assert_eq(_plays.size(), 1, "the first variant starts at once")
-	await get_tree().create_timer(room.streams()[0].get_length() + AuditionRoom.BANK_GAP_S + 0.2).timeout
+	await get_tree().create_timer(room.streams()[0].get_length() + Tuning.data.audition_bank_gap_s + 0.2).timeout
 	assert_eq(_plays.size(), 2, "the next follows when the first has ended")
 	room.handle_key(KEY_BRACKETRIGHT)
 	await get_tree().create_timer(2.0).timeout

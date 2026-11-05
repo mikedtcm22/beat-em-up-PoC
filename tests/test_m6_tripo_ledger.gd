@@ -29,45 +29,71 @@ func test_the_policy_names_m6_with_the_stop_and_the_floor_of_the_plan() -> void:
 	assert_gte(float(policy.balance_floor), TRIPO_FLOOR, "the floor is at least the plan's 700")
 
 
-func test_every_m6_task_finished_the_spend_is_under_the_stop_and_the_balance_never_under_the_floor() -> void:
-	var created := {}
-	var finished := {}
+## What the ledger rows say about the milestone's Tripo account: {open: the task ids created and never finished, spent: the
+## credits the finished rows consumed, lowest: the lowest balance after a task (INF with none), bad_credits: finished rows
+## without a numeric credits_consumed}. Both the real ledger test and the synthetic one below read their rows through this.
+static func audit(rows: Array[Dictionary]) -> Dictionary:
+	var open := {}
 	var spent := 0.0
-	var floor_seen := INF
-	for row: Dictionary in _rows(MILESTONE):
+	var lowest := INF
+	var bad_credits: Array[String] = []
+	for row: Dictionary in rows:
 		match String(row.get("event", "")):
 			"created":
-				created[String(row.task_id)] = true
+				open[String(row.task_id)] = true
 			"finished":
-				finished[String(row.task_id)] = true
+				open.erase(String(row.task_id))
 				var credits: Variant = row.get("credits_consumed", null)
-				assert_true(credits is float or credits is int, "%s: the real credits_consumed is logged" % row.task_id)
+				if not (credits is float or credits is int):
+					bad_credits.append(String(row.task_id))
 				spent += float(row.get("credits_consumed", 0.0))
-				floor_seen = minf(floor_seen, float(row.get("balance_after", INF)))
-	for id: String in created:
-		assert_true(finished.has(id), "task %s was created and finished (every credit is accounted for)" % id)
-	assert_lte(spent, TRIPO_STOP, "M6's Tripo spend stays at or under the 900 stop (%.0f)" % spent)
-	if not finished.is_empty():
-		assert_gte(floor_seen, TRIPO_FLOOR, "no balance under the 700 floor (lowest %.0f)" % floor_seen)
-	print("M6-LEDGER %d tasks, %.0f credits (stop %.0f, floor %.0f)" % [finished.size(), spent, TRIPO_STOP, TRIPO_FLOOR])
+				lowest = minf(lowest, float(row.get("balance_after", INF)))
+	return {open = open.keys(), spent = spent, lowest = lowest, bad_credits = bad_credits}
 
 
-func test_the_test_has_teeth_an_unfinished_task_a_spend_over_the_stop_and_a_low_balance_are_caught() -> void:
-	# The same arithmetic on synthetic rows: what the test above would fail on.
-	var rows: Array[Dictionary] = [
-		{event = "created", task_id = "a"}, {event = "finished", task_id = "b", credits_consumed = 500.0, balance_after = 1200.0},
-		{event = "finished", task_id = "c", credits_consumed = 450.0, balance_after = 650.0},
-	]
-	var spent := 0.0
-	var low := INF
-	var open := {}
+## The checks, as failure messages (an empty list passes): every created task finished with a real credits_consumed, the spend
+## is at most the stop, no balance is under the floor.
+static func violations(rows: Array[Dictionary]) -> Array[String]:
+	var report := audit(rows)
+	var out: Array[String] = []
+	for id: String in report.open:
+		out.append("task %s was created and never finished" % id)
+	for id: String in report.bad_credits:
+		out.append("%s: no real credits_consumed is logged" % id)
+	if float(report.spent) > TRIPO_STOP:
+		out.append("spend %.0f is over the %.0f stop" % [report.spent, TRIPO_STOP])
+	if float(report.lowest) < TRIPO_FLOOR:
+		out.append("a balance of %.0f is under the %.0f floor" % [report.lowest, TRIPO_FLOOR])
+	return out
+
+
+func test_every_m6_task_finished_the_spend_is_under_the_stop_and_the_balance_never_under_the_floor() -> void:
+	var rows := _rows(MILESTONE)
+	var report := audit(rows)
+	assert_eq(violations(rows), [] as Array[String], "the ledger holds the M6 policy")
+	var finished := 0
 	for row: Dictionary in rows:
-		if row.event == "created":
-			open[row.task_id] = true
-		else:
-			open.erase(row.task_id)
-			spent += float(row.credits_consumed)
-			low = minf(low, float(row.balance_after))
-	assert_true(open.has("a"), "a created task with no finished row is open")
-	assert_gt(spent, TRIPO_STOP, "950 credits is over the stop")
-	assert_lt(low, TRIPO_FLOOR, "650 is under the floor")
+		finished += 1 if row.get("event", "") == "finished" else 0
+	print("M6-LEDGER %d tasks, %.0f credits (stop %.0f, floor %.0f)" % [finished, report.spent, TRIPO_STOP, TRIPO_FLOOR])
+
+
+func test_the_helper_catches_an_unfinished_task_a_spend_over_the_stop_and_a_low_balance() -> void:
+	var good: Array[Dictionary] = [
+		{event = "created", task_id = "a"}, {event = "finished", task_id = "a", credits_consumed = 50.0, balance_after = 1200.0},
+	]
+	assert_eq(violations(good), [] as Array[String], "a clean ledger has no violation")
+	var unfinished: Array[Dictionary] = [{event = "created", task_id = "a"}]
+	assert_eq(violations(unfinished).size(), 1, "a created task with no finished row is caught")
+	var over: Array[Dictionary] = [
+		{event = "finished", task_id = "b", credits_consumed = 500.0, balance_after = 1200.0},
+		{event = "finished", task_id = "c", credits_consumed = 450.0, balance_after = 1100.0},
+	]
+	var over_found := violations(over)
+	assert_eq(over_found.size(), 1, "950 credits is over the stop (and nothing else)")
+	assert_true(over_found[0].contains("over"), over_found[0])
+	var low: Array[Dictionary] = [{event = "finished", task_id = "d", credits_consumed = 10.0, balance_after = 650.0}]
+	var low_found := violations(low)
+	assert_eq(low_found.size(), 1, "a balance of 650 is under the floor (and nothing else)")
+	assert_true(low_found[0].contains("floor"), low_found[0])
+	var no_credits: Array[Dictionary] = [{event = "finished", task_id = "e", balance_after = 1000.0}]
+	assert_eq(violations(no_credits).size(), 1, "a finished row without credits_consumed is caught")

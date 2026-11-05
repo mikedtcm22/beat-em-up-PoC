@@ -1090,6 +1090,9 @@ extends Resource
 @export_range(0.1, 3.0, 0.05) var weapon_chain_snap_m: float = 0.6
 ## The distance between two drawn links along the chain (m); the Link mesh is 0.05 m long.
 @export_range(0.02, 0.06, 0.002) var weapon_chain_link_pitch_m: float = 0.032
+## The longest step the chain sim integrates in one go (s): a longer frame is cut to it, so a hitch cannot blow the Verlet
+## points apart (the stability limit; 1/30 s).
+@export_range(0.01, 0.1, 0.001) var weapon_chain_max_dt_s: float = 1.0 / 30.0
 @export_subgroup("Prop art")
 ## How much of tuning's floor colour (weapon_floor_color) a weapon's ART takes while it lies on the floor (M6, until the
 ## floor glint replaces it): 0 keeps the art's own colours, 1 multiplies them by the floor colour outright (the steel of a
@@ -1257,6 +1260,11 @@ extends Resource
 # package only adds lines inside its own subgroup. There is no Art subgroup: its one planned
 # name, look_show_art, lives in Debug below, since presets skip that group by name and the
 # art switch is an A/B, not a look setting.
+@export_subgroup("Sound room")
+## The audition room's (debug) feel: how far in front of the listener a one-shot is played (m), and the gap left after a
+## variant when the whole bank plays (s).
+@export_range(0.5, 10.0, 0.1) var audition_ahead_m: float = 2.0
+@export_range(0.0, 2.0, 0.05) var audition_bank_gap_s: float = 0.35
 @export_group("Look")
 @export_subgroup("Toon")
 ## The middle band's brightness as a share of the lit band's (the look bible: 72%). The

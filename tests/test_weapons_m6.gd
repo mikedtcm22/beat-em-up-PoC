@@ -524,6 +524,44 @@ func test_the_chain_sim_follows_game_time_and_freezes_with_the_holders_hitstop()
 	assert_almost_eq(sim._time_scale(), 0.25, 0.0001, "slow-mo slows it")
 
 
+func test_the_multimesh_holds_the_links_of_the_smallest_pitch_the_range_allows() -> void:
+	await _setup([])
+	var sim := _chain_sim(_weapon_of(&"bike_chain"))
+	var multi := sim.find_child("Links", false, false) as MultiMeshInstance3D
+	var range_min := 0.0
+	for prop: Dictionary in TuningData.new().get_property_list():
+		if prop.name == "weapon_chain_link_pitch_m":
+			range_min = float(String(prop.hint_string).split(",")[0])
+	assert_gt(range_min, 0.0, "the range's minimum was read from the tunable itself")
+	assert_almost_eq(ChainSim.min_pitch_m(), range_min, 0.00001, "the sim sizes from that minimum, not a copy of it")
+	assert_gte(multi.multimesh.instance_count, int(floor(sim.rest_length() / range_min)),
+		"every link of the finest pitch has an instance (none is cut by mini())")
+
+
+func test_a_long_frame_is_cut_to_the_tunable_step() -> void:
+	await _setup([])
+	var weapon := _weapon_of(&"bike_chain")
+	var sim := _chain_sim(weapon)
+	weapon.freeze = true
+	weapon.global_transform = Transform3D(Basis.IDENTITY, Vector3(0.0, 1.5, 0.0))
+	assert_almost_eq(Tuning.data.weapon_chain_max_dt_s, 1.0 / 30.0, 0.0001, "the default is the old 1/30 s")
+	var swing := func(cap: float, dt: float) -> PackedVector3Array:
+		Tuning.set_value(&"weapon_chain_max_dt_s", cap)
+		weapon.global_position = Vector3(0.0, 1.5, 0.0)
+		sim.step(1.0 / 60.0)
+		weapon.global_position = Vector3(0.0, 1.5, -5.0)  # past the snap: the chain is straight again
+		sim.step(1.0 / 60.0)
+		weapon.global_position += Vector3(0.15, 0.0, 0.0)
+		sim.step(dt)
+		return sim.points_local()
+	var capped: PackedVector3Array = swing.call(0.02, 0.5)
+	var exact: PackedVector3Array = swing.call(0.02, 0.02)
+	var loose: PackedVector3Array = swing.call(0.1, 0.5)
+	var last := capped.size() - 1
+	assert_almost_eq(capped[last], exact[last], Vector3.ONE * 0.0005, "a half-second frame steps like the cap")
+	assert_gt(capped[last].distance_to(loose[last]), 0.0005, "and a different cap makes a different step: the number is the tunable's")
+
+
 func test_a_chain_that_jumps_snaps_straight_instead_of_whipping() -> void:
 	await _setup([])
 	var weapon := _weapon_of(&"bike_chain")
