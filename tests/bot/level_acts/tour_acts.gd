@@ -57,6 +57,17 @@ static func _tour(bot: Node) -> void:
 		player.rotation.y = yaw
 		player.look_yaw = yaw
 		player.look_pitch = deg_to_rad(float(pose.pitch))
-		await bot._ticks(4)
+		await settle_light(bot, section)
 		bot.log_line("TOUR %d %d %s f%d" % [n, pose.section, pose.label, Engine.get_physics_frames()])
 		await bot._ticks(int(HOLD_S * Engine.physics_ticks_per_second))
+
+
+## After a teleport into `section`: let the level notice it, then wait out the section light's blend (the level's
+## `section_light_progress()` reaching 1), so no still is cut mid-blend (final review, world-05). The wait is
+## bounded by the blend's length plus half a second, so a level that never arrives still moves on.
+static func settle_light(bot: Node, section: Node3D) -> void:
+	await bot._ticks(4)
+	var limit := int((Tuning.data.section_light_blend_s + 0.5) * Engine.physics_ticks_per_second)
+	while limit > 0 and (bot.level.current_section() != section or bot.level.section_light_progress() < 1.0):
+		await bot._ticks(1)
+		limit -= 1

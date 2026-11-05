@@ -531,12 +531,17 @@ func test_no_environment_or_prop_color_is_red_and_the_car_is_muted() -> void:
 			assert_false(_in_red_band(colors[key]), "%s is not red" % key)
 	assert_gt(seen.size(), 8, "the rooms' colors were read (walls, crates, the car, the dumpster, the street)")
 	# The car is a prop spot drawing PROPS's art on the atlas since M6 DRESS, so its flat colour is no longer
-	# among the meshes' (the twin on the visible path: test_m6_dress.gd, the art draws and the fallback colour
-	# stays inside the band); the fallback box's muted blue-grey is what must stay muted.
+	# among the meshes': the fallback box's muted blue-grey must stay muted, and so must the car's drawn swatch
+	# (slot 60 of the atlas; test_m6_dress.gd holds all four props slots and the car's hue).
 	var car: Color = PropSpot.PROPS[&"car"].color
 	assert_eq(car, Color(0.34, 0.38, 0.45), "the car's fallback is the muted blue-grey")
 	assert_lte(car.s, STREET_SATURATION_MAX, "the car is inside the look bible's street saturation")
 	assert_between(car.v, 0.25, 0.6, "and its value")
+	var atlas := (load("res://assets/export/palette/palette_atlas.png") as Texture2D).get_image()
+	var drawn := atlas.get_pixel((60 % 32) * 8 + 4, (60 / 32) * 8 + 4)
+	assert_lte(drawn.s, STREET_SATURATION_MAX, "the car's drawn swatch is muted too")
+	assert_between(drawn.v, 0.25, 0.6, "and its value")
+	assert_false(_in_red_band(drawn), "and not red")
 
 
 ## Whether `node` is part of the street (a wall, a crate, the ground, paint) and not a character or a

@@ -7,7 +7,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.abspath(os.path.join(HERE, "..", ".."))
 
-# slots: shared 1 near_black, 2 dark_grey, 3 mid_grey, 4 light_grey, 10 steel, 14 cream; props 60 car_orange, 61 dumpster_green,
+# slots: shared 1 near_black, 2 dark_grey, 3 mid_grey, 4 light_grey, 10 steel, 14 cream; props 60 car_wine, 61 dumpster_green,
 # 62 tank_blue, 63 rust_brown; weapons 28 chain_steel, 29 padlock_brass, 30 grip_tape, 31 pipe_paint.
 PROPS = {
 	"pipe": {

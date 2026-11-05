@@ -488,6 +488,7 @@
 		"go_cue_shadow_px": 6.0,
 		"kit_trim_m_per_tile": 4.0,
 		"section_light_blend_s": 2.5,
+		"section_fog_sky_affect": 0.3,
 		"sfx_volume_db": -3.0,
 		"sfx_pitch_variation": 0.08,
 		"sfx_volume_variation": 0.08,

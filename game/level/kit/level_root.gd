@@ -313,12 +313,22 @@ func _retarget_light(snap: bool) -> void:
 ## Advance the blend and put the light on the sun, the fog and the sky.
 func _step_light(delta: float) -> void:
 	_retarget_light(false)
+	_apply_fog_sky_affect()
 	if _light_t >= 1.0:
 		return
 	var seconds := Tuning.data.section_light_blend_s
 	_light_t = 1.0 if seconds <= 0.0 else minf(1.0, _light_t + delta / seconds)
 	_light_now = blend_light(_light_from, _light_to, _light_t)
 	_apply_light()
+
+
+## Keep the fog's cover of the sky at Tuning's value (live: the F1 panel moves it), written only on a change.
+func _apply_fog_sky_affect() -> void:
+	var world := get_node_or_null("WorldEnvironment") as WorldEnvironment
+	if world != null and world.environment != null:
+		var affect := Tuning.data.section_fog_sky_affect
+		if not is_equal_approx(world.environment.fog_sky_affect, affect):
+			world.environment.fog_sky_affect = affect
 
 
 func _apply_light() -> void:

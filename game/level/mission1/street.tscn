@@ -503,6 +503,7 @@ script = ExtResource("2_block")
 position = Vector3(5.2, 2, -5.05)
 size = Vector3(1, 1.2, 2.9)
 look = &"prop"
+draw_box = false
 
 [node name="Crates2" type="Node3D" parent="Geometry"]
 script = ExtResource("2_block")

@@ -1142,6 +1142,11 @@ extends Resource
 ## player enters the new section (`CombatEvents.section_entered`). 0 snaps. Each section's own light is
 ## its `LevelSection` exports (the street's dusk, the roofs' copper, the boss roof's dark drop).
 @export_range(0.0, 10.0, 0.1) var section_light_blend_s: float = 2.5
+## How much the fog covers the sky (Milestone 6, final review; Environment.fog_sky_affect): 1 paints the sky
+## the fog's colour, so a section's dusk sky (its `sky_top_color` and `sky_horizon_color`) never shows;
+## 0 leaves the sky untouched by the fog. A low value lets the skyline gaps show the dusk while the fog
+## still softens it. Every room takes it (RoomKit.build_environment; LevelRoot keeps it live).
+@export_range(0.0, 1.0, 0.05) var section_fog_sky_affect: float = 0.3
 
 @export_group("Audio")
 @export_subgroup("Mix")

@@ -84,6 +84,7 @@ static func build_environment(room: Node3D) -> void:
 	env.fog_enabled = true
 	env.fog_light_color = DEFAULT_FOG_COLOR
 	env.fog_density = DEFAULT_FOG_DENSITY
+	env.fog_sky_affect = Tuning.data.section_fog_sky_affect
 	var world_env := WorldEnvironment.new()
 	world_env.name = "WorldEnvironment"
 	world_env.environment = env
