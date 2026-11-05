@@ -51,3 +51,5 @@ Each call: the decision / the alternative not taken / why. No Tripo task (0 cred
 - A slim, thin-geometry character gains most from the crease with short chains (0.12 m) and a hard cloth zone; the concept's hood, zip and pocket come out of the geometry with 60 degrees.
 - Keep a texture-ink zone at the low pair (0.03 / 0.09) when the texture has real strokes (wraps); the flat-texture pair (0.08 / 0.2) erased them.
 - The tights and the face stay round with `crease_deg` 181, and the first recording is enough to find that out (one slot split in two zones by a box).
+
+**Full suite**: 1991 of 1991 (1983 plus the eight new), 420 s on the shared machine, no SCRIPT ERROR, SHADER ERROR or ERROR line (the done-when A12 note's own text aside).
