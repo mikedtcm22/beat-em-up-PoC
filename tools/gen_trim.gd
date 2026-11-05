@@ -18,10 +18,21 @@ extends SceneTree
 ## ink, HudStyle.INK). No ink is painted within a few px of a strip's top or bottom edge or of U = 0, so
 ## a face's border (which the edge pass draws) never doubles. Every pixel comes from an integer hash of
 ## its place, so a repaint is identical, byte for byte.
+##
+## The street's ground (M6 playtest feedback, FB-GROUND) is a second image, assets/export/kit/ground_sheet.png (2048 px over
+## `ground.tile_m` metres, 8 by default): flat tonal shapes (worn patches, tar-sealed repairs, oil stains, patched squares) and
+## bold tapered ink (branching cracks, the squares' outlines, a manhole, drain grates), every ink feature at least
+## MIN_INK_PX wide so it survives the mips. A face on a strip flagged `ground` (the asphalt) samples it in world metres
+## (game/fx/trim_body.gdshaderinc), the mips unlimited: it is not a stack of wrapped strips, so nothing can bleed into a
+## neighbour. The sheet's own asphalt strip is the fallback (the Debug switch `ground_sheet_off`). The concrete, kerb and
+## roof-tar strips get the same treatment: flat tones, bold ink, no one-texel marks.
 
 const LAYOUT := "res://assets/source/kit/trim_layout.json"
 const SHEET := "res://assets/export/kit/trim_sheet.png"
 const STRIPS := "res://assets/export/kit/trim_strips.json"
+const GROUND := "res://assets/export/kit/ground_sheet.png"
+## The thinnest ink feature (px) any strip or the ground may paint: narrower marks alias under the mips.
+const MIN_INK_PX := 5
 ## HudStyle.INK, the one ink (0.07, 0.06, 0.09).
 const INK := Color(0.07, 0.06, 0.09)
 ## The environment band the painted colours are clamped into (the look bible), with a margin for the
@@ -48,15 +59,18 @@ func _initialize() -> void:
 		quit(1)
 		return
 	var sheet := _paint(layout)
+	var ground := _paint_ground(layout.ground as Dictionary)
 	var table := _table(layout)
 	if check:
-		var ok := _check(sheet, table)
+		var ok := _check(sheet, table, ground)
 		quit(0 if ok else 1)
 		return
 	sheet.save_png(SHEET)
+	ground.save_png(GROUND)
 	_write(STRIPS, table)
 	_patch_import(SHEET)
-	print("Wrote %s and %s (%d strips)" % [SHEET, STRIPS, (layout.strips as Array).size()])
+	_patch_import(GROUND)
+	print("Wrote %s, %s and %s (%d strips)" % [SHEET, GROUND, STRIPS, (layout.strips as Array).size()])
 	quit(0)
 
 
@@ -74,8 +88,11 @@ func _table(layout: Dictionary) -> String:
 			period_m = float(entry.period_m),
 			scissor = bool(entry.get("scissor", false)),
 			ink_only = bool(entry.get("ink_only", false)),
+			ground = bool(entry.get("ground", false)),
 		})
-	return JSON.stringify({sheet_px = int(sheet_px), row_px = int(row_px), tile_m = float(layout.tile_m), strips = rows}, "\t", true)
+	var ground: Dictionary = layout.ground
+	return JSON.stringify({sheet_px = int(sheet_px), row_px = int(row_px), tile_m = float(layout.tile_m),
+			ground = {px = int(ground.px), tile_m = float(ground.tile_m)}, strips = rows}, "\t", true)
 
 
 func _write(path: String, text: String) -> void:
@@ -84,8 +101,17 @@ func _write(path: String, text: String) -> void:
 	file.close()
 
 
-func _check(sheet: Image, table: String) -> bool:
+func _check(sheet: Image, table: String, ground: Image) -> bool:
 	var ok := true
+	var ground_on_disk := Image.load_from_file(ProjectSettings.globalize_path(GROUND))
+	if ground_on_disk == null:
+		printerr("gen_trim --check: %s is missing" % GROUND)
+		ok = false
+	else:
+		ground_on_disk.convert(Image.FORMAT_RGBA8)
+		if ground_on_disk.get_data() != ground.get_data():
+			printerr("gen_trim --check: %s differs from a repaint of the layout" % GROUND)
+			ok = false
 	var committed := Image.load_from_file(ProjectSettings.globalize_path(SHEET))
 	if committed == null:
 		printerr("gen_trim --check: %s is missing" % SHEET)
@@ -195,6 +221,36 @@ func _mottled(base: Color, stain: Color, cell: int, blotch: float, grain: float)
 			_put(x, y, _band(color.h, color.s, color.v + g))
 
 
+## Flat tones: `base`, and `alt` wherever the tileable noise at `cell` px passes `threshold` (a divisor of the strip's height or
+## its multiple), with no grain, so the mips and the cut have nothing one texel wide to alias.
+func _flat_tones(base: Color, alt: Color, cell: int, threshold: float) -> void:
+	for y in _h:
+		for x in _w:
+			_put(x, y, alt if _noise(x, y, cell, 1) > threshold else base)
+
+
+## An ink disc (kept off the strip's top and bottom edges and U = 0, like _ink_rect).
+func _ink_disc(cx: float, cy: float, radius: float) -> void:
+	for yy in range(int(floor(cy - radius)), int(ceil(cy + radius)) + 1):
+		for xx in range(int(floor(cx - radius)), int(ceil(cx + radius)) + 1):
+			if yy < 6 or yy >= _h - 6 or posmod(xx, _w) < 6:
+				continue
+			if Vector2(float(xx) - cx, float(yy) - cy).length() <= radius:
+				_ink_px(xx, yy)
+
+
+## A wandering ink crack along the strip from (x, y), `length` px, `radius` px at the start tapering to MIN_INK_PX / 2.
+func _strip_crack(x: int, y: int, length: int, radius: float) -> void:
+	var fx := float(x)
+	var fy := float(y)
+	var tip := float(MIN_INK_PX) * 0.5 + 0.8
+	for step in length / 3:
+		var t := float(step) / float(length / 3)
+		_ink_disc(fx, fy, lerpf(radius, tip, t))
+		fx += 3.0
+		fy = clampf(fy + (_hash(x + step, y, 33) - 0.5) * 3.2, 16.0, float(_h) - 16.0)
+
+
 func _strip_brick() -> void:
 	_fill(_hsv_color("mortar"))
 	var course_h := _h / 2
@@ -230,53 +286,51 @@ func _strip_plaster() -> void:
 
 
 func _strip_concrete() -> void:
-	_mottled(_hsv_color("base"), _hsv_color("stain"), 128, 0.7, 0.025)
-	# Panel joints: a vertical joint every metre (offset half a panel from U = 0), a horizontal one
-	# mid-strip, and tie holes on a grid.
+	# Flat tones (a worn patch or two), then bold ink: panel joints (a vertical one every metre, half a panel off U = 0, and a
+	# horizontal one mid-strip), tie holes on a grid, and a tapered hairline crack. Nothing under MIN_INK_PX wide.
+	_flat_tones(_hsv_color("base"), _hsv_color("stain"), 128, 0.62)
 	var metre := int(_px_per_m_u)
 	for n in _w / metre:
-		_ink_rect(n * metre + metre / 2, 0, 3, _h)
-	_ink_rect(0, _h / 2, _w, 3)
+		_ink_rect(n * metre + metre / 2 - 6, 0, 12, _h)
+	_ink_rect(0, _h / 2 - 3, _w, 6)
 	for n in _w / (metre / 2):
 		for row in [_h / 4, _h * 3 / 4]:
 			var x := n * (metre / 2) + metre / 4
-			_ink_rect(x, row, 4, 4)
+			_ink_rect(x - 6, row - 4, 12, 8)
+	_strip_crack(int(_px_per_m_u * 0.7), 40, 420, 3.4)
+	_strip_crack(int(_px_per_m_u * 2.6), 98, 380, 3.2)
 
 
 func _strip_asphalt() -> void:
-	_mottled(_hsv_color("base"), _hsv_color("grain"), 32, 0.5, 0.07)
-	for crack in 3:
-		var x := int(_hash(crack, 5, 30) * float(_w))
-		var y := 30 + int(_hash(crack, 6, 30) * 60.0)
-		for step in 50:
-			x += 3 + int(_hash(crack, step, 31) * 5.0)
-			y += int(_hash(crack, step, 32) * 5.0) - 2
-			y = clampi(y, 14, _h - 14)
-			_ink_px(x, y)
+	# The strip's own paint, the fallback when the ground tile is off (Debug `ground_sheet_off`): flat tones and bold cracks.
+	_flat_tones(_hsv_color("base"), _hsv_color("grain"), 128, 0.58)
+	_strip_crack(int(_hash(1, 5, 30) * float(_w)), 40, 460, 3.6)
+	_strip_crack(int(_hash(2, 5, 30) * float(_w)), 84, 400, 3.4)
+	_strip_crack(int(_hash(3, 5, 30) * float(_w)), 62, 340, 3.2)
 
 
 func _strip_kerb() -> void:
 	var base := _hsv_color("base")
-	_mottled(base, _hsv_color("base", -0.04), 128, 0.5, 0.02)
+	_flat_tones(base, _hsv_color("base", -0.04), 128, 0.6)
 	for y in 22:
 		for x in _w:
-			_put(x, y, _hsv_color("top", (_hash(x, y, 40) - 0.5) * 0.03))
+			_put(x, y, _hsv_color("top"))
 	for y in range(_h - 20, _h):
 		for x in _w:
-			_put(x, y, _hsv_color("bottom", (_hash(x, y, 41) - 0.5) * 0.03))
+			_put(x, y, _hsv_color("bottom"))
 	var joint := int(_px_per_m_u)
 	for n in _w / joint:
-		_ink_rect(n * joint + joint / 2, 22, 3, _h - 44)
+		_ink_rect(n * joint + joint / 2 - 5, 22, 10, _h - 44)
 
 
 func _strip_roof_tar() -> void:
-	_mottled(_hsv_color("base"), _hsv_color("patch"), 64, 0.8, 0.03)
+	_flat_tones(_hsv_color("base"), _hsv_color("patch"), 128, 0.6)
 	var roll := int(_px_per_m_u)
 	for n in _w / roll:
 		var x0 := n * roll + roll / 2
-		# The lap of one roll over the next: a pale lip beside an ink seam.
-		_rect(x0 + 3, 0, 6, _h, _hsv_color("lap"))
-		_ink_rect(x0, 0, 3, _h)
+		# The lap of one roll over the next: a pale lip beside a bold ink seam.
+		_rect(x0 + 6, 0, 12, _h, _hsv_color("lap"))
+		_ink_rect(x0 - 5, 0, 10, _h)
 
 
 func _strip_gravel() -> void:
@@ -411,6 +465,169 @@ func _strip_facade() -> void:
 		_rect(x0, y0, width, height, _hsv_color("pane"))
 		_rect(x0 - 10, y0 + height + 5, width + 20, 8, _hsv_color("sill"))
 		_ink_rect(x0 + width / 2 - 2, y0, 4, height)
+
+
+# --- The ground tile ---------------------------------------------------------------------------
+
+
+## The ink layer of the ground tile (a coverage 0-1 a pixel, 0.5 at a feature's true edge), stamped by the helpers below.
+var _ink: PackedFloat32Array = PackedFloat32Array()
+var _rng := RandomNumberGenerator.new()
+
+
+## The ground tile: flat tones (base, worn patches cool and warm, dark patches, tar-sealed seams, oil stains, patched
+## squares) under bold ink (branching tapered cracks, the squares' outlines, a manhole, drain grates). Tileable both ways.
+func _paint_ground(spec: Dictionary) -> Image:
+	var size := int(spec.px)
+	_w = size
+	_h = size
+	_seed = 90001
+	_rng.seed = 424242
+	var tone := {}
+	for key: String in spec.hsv:
+		var v: Array = spec.hsv[key]
+		tone[key] = _band(float(v[0]), float(v[1]), float(v[2]))
+	var count := size * size
+	_ink = PackedFloat32Array()
+	_ink.resize(count)
+	var warp_x := PackedFloat32Array()
+	var warp_y := PackedFloat32Array()
+	warp_x.resize(count)
+	warp_y.resize(count)
+	var colors: Array[Color] = []
+	colors.resize(count)
+	for y in size:
+		for x in size:
+			var idx := y * size + x
+			var wx := float(x) + (_noise(x, y, 128, 210) - 0.5) * 36.0
+			var wy := float(y) + (_noise(x, y, 128, 211) - 0.5) * 36.0
+			warp_x[idx] = wx
+			warp_y[idx] = wy
+			var p := posmod(int(wx), size)
+			var q := posmod(int(wy), size)
+			var color: Color = tone.base
+			var worn := _noise(p, q, 256, 202)
+			if worn > 0.63:
+				# A worn patch is a cool rim round a warm core (the lamp's pool): two flat bands, not a split.
+				color = tone.worn_warm if worn > 0.69 else tone.worn
+			elif worn < 0.25:
+				color = tone.dark
+			# A tar-sealed repair: a wavy seam, wider and narrower along its length, only where the gate lets it.
+			var seam := absf(_noise(p, q, 256, 203) - 0.5)
+			if seam < 0.032 * (0.35 + _noise(x, y, 128, 207)) and _noise(x, y, 512, 206) > 0.42:
+				color = tone.tar
+			# An oil stain: a dark flat blot.
+			if _noise(p, q, 128, 204) > 0.80 and _noise(x, y, 1024, 208) > 0.40:
+				color = tone.oil
+			colors[idx] = color
+	# Patched squares: a flat tone and an inked outline, the edges wobbled by the warp.
+	for rect: Array in [[420, 520, 150, 100], [1500, 1180, 190, 120], [900, 1700, 130, 170]]:
+		_ground_rect(colors, warp_x, warp_y, tone.patch, int(rect[0]), int(rect[1]), float(rect[2]), float(rect[3]), 4.5)
+	# The manhole: a ring, an inner ring, a bar grate.
+	_ground_manhole(colors, tone.cover, 1500, 560)
+	# Drain grates (a frame and bars), one lying one way and one the other.
+	_ground_grate(colors, tone.cover, 250, 1450, 85, 50, false)
+	_ground_grate(colors, tone.cover, 1760, 1830, 48, 80, true)
+	# Branching cracks, tapered: a fat root, a thin tip, never under MIN_INK_PX wide.
+	for crack in [[120, 220, 0.25, 170, 7.5], [980, 140, -0.35, 150, 7.0], [1650, 300, 0.55, 140, 6.5], [300, 980, -0.15, 160, 7.0],
+			[1250, 900, 2.6, 130, 6.5], [1800, 1520, 3.5, 150, 7.0], [700, 1300, -0.6, 110, 6.0], [1950, 800, 1.9, 120, 6.0]]:
+		_crack(float(crack[0]), float(crack[1]), float(crack[2]), int(crack[3]), float(crack[4]), 0)
+	var bytes := PackedByteArray()
+	bytes.resize(count * 4)
+	for idx in count:
+		var color := colors[idx]
+		var a := _ink[idx]
+		if a >= 0.5:
+			color = INK
+		bytes[idx * 4] = int(round(color.r * 255.0))
+		bytes[idx * 4 + 1] = int(round(color.g * 255.0))
+		bytes[idx * 4 + 2] = int(round(color.b * 255.0))
+		bytes[idx * 4 + 3] = int(round(a * 255.0))
+	return Image.create_from_data(size, size, false, Image.FORMAT_RGBA8, bytes)
+
+
+## Coverage of a feature `distance` px from its centre line (or edge) when it is `half` px from that line to its edge:
+## 0.5 at the edge, a one-pixel ramp each side (crisp at any magnification once the shader cuts at 0.5).
+func _coverage(half: float, distance: float) -> float:
+	return clampf(0.5 + half - distance, 0.0, 1.0)
+
+
+func _ink_at(x: int, y: int, coverage: float) -> void:
+	if coverage <= 0.0:
+		return
+	var idx := posmod(y, _w) * _w + posmod(x, _w)
+	if coverage > _ink[idx]:
+		_ink[idx] = coverage
+
+
+## A disc of ink (a crack's step).
+func _stamp(cx: float, cy: float, radius: float) -> void:
+	for yy in range(int(floor(cy - radius - 1.0)), int(ceil(cy + radius + 1.0)) + 1):
+		for xx in range(int(floor(cx - radius - 1.0)), int(ceil(cx + radius + 1.0)) + 1):
+			_ink_at(xx, yy, _coverage(radius, Vector2(float(xx) + 0.5 - cx, float(yy) + 0.5 - cy).length()))
+
+
+## A crack from (x, y) heading `angle`, `steps` steps of 3 px, half-width `half0` tapering to MIN_INK_PX / 2 + 0.2; it
+## forks now and then (twice deep at most), the fork thinner and shorter.
+func _crack(x: float, y: float, angle: float, steps: int, half0: float, depth: int) -> void:
+	var half_min := float(MIN_INK_PX) * 0.5 + 0.2
+	for i in steps:
+		var t := float(i) / float(steps)
+		_stamp(x, y, lerpf(half0, half_min, pow(t, 0.8)))
+		angle += (_rng.randf() - 0.5) * 0.42
+		x += cos(angle) * 3.0
+		y += sin(angle) * 3.0
+		if depth < 2 and i > 10 and i < steps - 20 and _rng.randf() < 0.028:
+			var side := 1.0 if _rng.randf() < 0.5 else -1.0
+			_crack(x, y, angle + side * (0.5 + _rng.randf() * 0.6), int(float(steps - i) * 0.55), maxf(half0 * 0.62, half_min + 0.4), depth + 1)
+
+
+## A patched square at (cx, cy), `hw` and `hh` px half-size: its inside takes `tone`, its outline `half` px half-width ink.
+func _ground_rect(colors: Array[Color], warp_x: PackedFloat32Array, warp_y: PackedFloat32Array, tone: Color, cx: int, cy: int, hw: float, hh: float, half: float) -> void:
+	var size := _w
+	var half_size := float(size) * 0.5
+	for yy in range(cy - int(hh) - 16, cy + int(hh) + 17):
+		for xx in range(cx - int(hw) - 16, cx + int(hw) + 17):
+			var idx := posmod(yy, size) * size + posmod(xx, size)
+			var dx := absf(fposmod(warp_x[idx] - float(cx) + half_size, float(size)) - half_size)
+			var dy := absf(fposmod(warp_y[idx] - float(cy) + half_size, float(size)) - half_size)
+			var edge := maxf(dx - hw, dy - hh)
+			if edge < 0.0:
+				colors[idx] = tone
+			_ink_at(xx, yy, _coverage(half, absf(edge)))
+
+
+func _ground_manhole(colors: Array[Color], tone: Color, cx: int, cy: int) -> void:
+	for yy in range(cy - 100, cy + 101):
+		for xx in range(cx - 100, cx + 101):
+			var dx := float(xx - cx)
+			var dy := float(yy - cy)
+			var d := sqrt(dx * dx + dy * dy)
+			var idx := posmod(yy, _w) * _w + posmod(xx, _w)
+			if d < 90.0:
+				colors[idx] = tone
+			_ink_at(xx, yy, _coverage(5.5, absf(d - 90.0)))
+			_ink_at(xx, yy, _coverage(3.5, absf(d - 66.0)))
+			if d < 62.0:
+				# Horizontal bars every 24 px and one upright bar through the middle.
+				_ink_at(xx, yy, _coverage(3.5, absf(fposmod(dy + 12.0, 24.0) - 12.0)))
+				_ink_at(xx, yy, _coverage(3.5, absf(dx)))
+
+
+## A drain grate at (cx, cy), `hw` x `hh` px half-size: a frame and bars (across the long side).
+func _ground_grate(colors: Array[Color], tone: Color, cx: int, cy: int, hw: int, hh: int, vertical: bool) -> void:
+	for yy in range(cy - hh - 10, cy + hh + 11):
+		for xx in range(cx - hw - 10, cx + hw + 11):
+			var dx := absf(float(xx - cx))
+			var dy := absf(float(yy - cy))
+			var edge := maxf(dx - float(hw), dy - float(hh))
+			var idx := posmod(yy, _w) * _w + posmod(xx, _w)
+			if edge < 0.0:
+				colors[idx] = tone
+			_ink_at(xx, yy, _coverage(4.0, absf(edge)))
+			if edge < -7.0:
+				var along := float(yy - cy) if vertical else float(xx - cx)
+				_ink_at(xx, yy, _coverage(3.5, absf(fposmod(along + 11.0, 22.0) - 11.0)))
 
 
 ## A minimal .import for the sheet: lossless, mipmaps, the alpha untouched (it is the ink mask and the

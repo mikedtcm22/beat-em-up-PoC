@@ -1186,6 +1186,22 @@ extends Resource
 ## module's face. The strips are painted for 4 m; a smaller number makes the brick, the plaster and the
 ## asphalt finer, a larger one coarser. The faces' UVs are in metres, so a wall of any length fits.
 @export_range(1.0, 16.0, 0.25) var kit_trim_m_per_tile: float = 4.0
+@export_subgroup("Ground")
+## The street's ground tile (M6 playtest feedback, FB-GROUND; assets/export/kit/ground_sheet.png): the metres one side of
+## it covers. It is painted for 8; a smaller number repeats its cracks, squares and manhole more often, a larger one
+## spreads them. It is sampled in world metres, so two floor blocks butt without a seam at any value.
+@export_range(2.0, 16.0, 0.5) var ground_m_per_tile: float = 8.0
+## Where the ground's ink starts to soften with distance (the mip level at which the cut's edge begins to widen)...
+@export_range(0.0, 8.0, 0.25) var ground_ink_soft_from_lod: float = 2.0
+## ...how much it widens a level (0 = the cut stays crisp, and a crack thinner than a pixel flickers)...
+@export_range(0.0, 0.5, 0.01) var ground_ink_soft_per_lod: float = 0.12
+## ...and the most it widens (0.45: the ink then shows as the sheet's own coverage, a crack dimming with the mips).
+@export_range(0.0, 0.5, 0.01) var ground_ink_soft_max: float = 0.45
+## The strips' ink (the concrete's joints, the kerb's, the plaster's cracks) fades out between these two sizes of a
+## pixel, in texels of the 2048 px sheet: the capped mip (Look > Trim) would alias it past the first, so it is gone by the
+## second. A wall seen square at 10 m is about 9 texels a pixel, at 20 m about 17.
+@export_range(1.0, 256.0, 1.0) var ground_ink_fade_start_texels: float = 16.0
+@export_range(2.0, 512.0, 1.0) var ground_ink_fade_end_texels: float = 64.0
 @export_subgroup("Draw cost")
 ## M6 final review (perf): the largest error (m) a static prop's shadow mesh may have against the prop's own
 ## triangles. The sun's shadow pass draws a coarser mesh of a car, a tank or a dumpster (about half the triangles,
@@ -1629,6 +1645,9 @@ extends Resource
 ## DRESS's A/B (Milestone 6, D12): each section's own light (sun, fog, sky) on, or Tuning's one sun
 ## and the room's default fog everywhere, as in M5. Read live by the level. Presets never hold it.
 @export var section_light_enabled: bool = true
+## FB-GROUND's A/B: on, the street's asphalt is drawn from the sheet's own asphalt strip (a wrapped 4 x 1 m strip per
+## face, its mip capped) instead of the ground tile, as in M6's first cut. Read live. Presets never hold it.
+@export var ground_sheet_off: bool = false
 
 
 func hitstop_s(tier: CombatTypes.HitTier) -> float:

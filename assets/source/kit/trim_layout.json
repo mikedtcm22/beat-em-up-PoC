@@ -3,11 +3,17 @@
 	"row_px": 128,
 	"tile_m": 4.0,
 	"note": "One row per strip, 128 px high; a strip's V wraps every period_m, its U every tile_m (2048 px). Colours are HSV (h, s, v in 0-1) and sit inside the look bible's environment band (saturation <= 0.30, value 0.25-0.6): tools/gen_trim.gd clamps every painted pixel into it. DRESS retunes them to the moods.",
+	"ground": {
+		"px": 2048,
+		"tile_m": 8.0,
+		"note": "The street's ground (M6 playtest feedback, FB-GROUND): one 2048 px tile that covers tile_m metres each way, sampled in WORLD metres (x, -z) by every face on a strip flagged ground (the asphalt), so two floor blocks butt without a seam and the mips run all the way down (it is not a stack of wrapped strips). Flat tonal shapes in 2-3 values, bold tapered ink (cracks, patched squares, a manhole, drain grates); every ink feature is at least 5 px wide. Colours are HSV in the environment band (tools/gen_trim.gd clamps them).",
+		"hsv": {"base": [0.655, 0.10, 0.38], "worn": [0.630, 0.080, 0.43], "worn_warm": [0.090, 0.085, 0.425], "dark": [0.675, 0.11, 0.335], "patch": [0.640, 0.09, 0.42], "tar": [0.700, 0.10, 0.29], "oil": [0.700, 0.14, 0.275], "cover": [0.620, 0.08, 0.33]}
+	},
 	"strips": [
 		{"name": "brick", "row": 0, "period_m": 0.5, "hsv": {"brick": [0.045, 0.29, 0.43], "brick_alt": [0.030, 0.26, 0.37], "mortar": [0.090, 0.12, 0.52]}},
 		{"name": "plaster", "row": 1, "period_m": 1.0, "hsv": {"base": [0.09, 0.13, 0.52], "stain": [0.08, 0.16, 0.44]}},
 		{"name": "concrete", "row": 2, "period_m": 1.0, "hsv": {"base": [0.620, 0.06, 0.50], "stain": [0.600, 0.09, 0.42]}},
-		{"name": "asphalt", "row": 3, "period_m": 1.0, "hsv": {"base": [0.660, 0.10, 0.37], "grain": [0.640, 0.09, 0.43]}},
+		{"name": "asphalt", "row": 3, "period_m": 1.0, "ground": true, "hsv": {"base": [0.660, 0.10, 0.37], "grain": [0.640, 0.09, 0.43]}},
 		{"name": "kerb", "row": 4, "period_m": 0.5, "hsv": {"base": [0.62, 0.05, 0.50], "top": [0.12, 0.06, 0.57], "bottom": [0.66, 0.08, 0.40]}},
 		{"name": "roof_tar", "row": 5, "period_m": 1.0, "hsv": {"base": [0.640, 0.08, 0.38], "patch": [0.600, 0.09, 0.43], "lap": [0.620, 0.06, 0.48]}},
 		{"name": "gravel", "row": 6, "period_m": 0.5, "hsv": {"base": [0.10, 0.09, 0.42], "light": [0.11, 0.07, 0.54], "dark": [0.08, 0.10, 0.31]}},

@@ -175,7 +175,7 @@ size = Vector3(40, 14, 60)
 
 [node name="Ground" type="Node3D" parent="Geometry"]
 script = ExtResource("2_blk")
-position = Vector3(60, -12.5, -10)
+position = Vector3(60, -13, -10)
 size = Vector3(200, 1, 200)
 look = &"floor"
 solid = false

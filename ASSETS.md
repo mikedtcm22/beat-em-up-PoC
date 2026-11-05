@@ -523,6 +523,7 @@ The environment kit's trim sheet (Milestone 6, KIT; plan D2 and D10): 16 strips 
 | --- | --- | --- | --- | --- |
 | Trim sheet: brick, plaster, concrete, asphalt, kerb, roof tar, gravel, metal, shutter, chain-link (alpha scissor), wood crate, trim, ink, glass, dark interior, facade; RGB the surface, alpha the ink mask (the wire's coverage on the chain-link) | `assets/source/kit/trim_layout.json` → `assets/export/kit/trim_sheet.png` | Painted by Claude in GDScript (`tools/gen_trim.gd`) | Original, project-owned | Every painted pixel inside the look bible's environment band (saturation at most 0.30, value 0.25 to 0.6); no ink on a strip's border; imported lossless with mipmaps, alpha border fix off. Git LFS |
 | The sheet's strip table (row, period in metres, flags), read by `TrimSheet` and fed to the trim shader | `assets/export/kit/trim_strips.json` | Written by `tools/gen_trim.gd` | Original, project-owned | |
+| The street's ground tile (M6 playtest feedback, FB-GROUND): 2048 px over 8 m, flat tonal shapes (base, worn patches, tar seams, oil stains, patched squares) under bold tapered ink (branching cracks, squares' outlines, a manhole, drain grates); sampled in world metres by the asphalt, mips unlimited | `assets/source/kit/trim_layout.json` (`ground`) → `assets/export/kit/ground_sheet.png` | Painted by Claude in GDScript (`tools/gen_trim.gd`) | Original, project-owned | Inside the look bible's band; every ink feature at least 5 px wide; seamless both ways; repaint is byte-identical (`gen_trim.gd -- --check`). Git LFS |
 
 ### › Dressing
 

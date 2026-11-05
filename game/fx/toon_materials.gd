@@ -203,6 +203,7 @@ static func _trim_material(shader_path: String) -> ShaderMaterial:
 	material.set_shader_parameter(&"albedo", Color.WHITE)
 	material.set_shader_parameter(&"trim_tex", TrimSheet.texture())
 	material.set_shader_parameter(&"strips", TrimSheet.uniform_rows())
+	material.set_shader_parameter(&"ground_tex", TrimSheet.ground_texture())
 	material.set_shader_parameter(&"ink", INK)
 	material.set_shader_parameter(&"edge_tag", 1.0)
 	return _track(material)
@@ -252,6 +253,10 @@ static func apply_look(material: ShaderMaterial) -> void:
 		material.set_shader_parameter(&"tile_m", data.kit_trim_m_per_tile)
 		material.set_shader_parameter(&"ink_cut", data.look_trim_ink_cut)
 		material.set_shader_parameter(&"lod_cap", data.look_trim_lod_cap)
+		material.set_shader_parameter(&"ground_m", data.ground_m_per_tile)
+		material.set_shader_parameter(&"ground_on", not data.ground_sheet_off)
+		material.set_shader_parameter(&"ink_soft", Vector3(data.ground_ink_soft_from_lod, data.ground_ink_soft_per_lod, data.ground_ink_soft_max))
+		material.set_shader_parameter(&"ink_fade", Vector2(data.ground_ink_fade_start_texels, maxf(data.ground_ink_fade_end_texels, data.ground_ink_fade_start_texels + 1.0)))
 	# The art's own: the glint on its glossy swatches, and the sharp ink of an art that asks for it
 	# (only while the cut is above 0: 0 is the A/B).
 	if kind == Kind.ART or kind == Kind.ART_PROP:
@@ -458,7 +463,7 @@ static func _track(material: ShaderMaterial) -> ShaderMaterial:
 static func _on_tuning_changed(property: StringName) -> void:
 	# Only a Look value (or a whole-set change) moves a material; the damage tile is the damage
 	# look's, re-read when it is applied.
-	if property != &"" and not String(property).begins_with("look_") and property != &"kit_trim_m_per_tile":
+	if property != &"" and not String(property).begins_with("look_") and not String(property).begins_with("ground_") and property != &"kit_trim_m_per_tile":
 		return
 	var alive: Array[WeakRef] = []
 	for ref: WeakRef in _live:
