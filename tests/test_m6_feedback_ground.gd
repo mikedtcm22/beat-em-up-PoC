@@ -193,12 +193,6 @@ func test_a_floor_face_wears_the_asphalt_strip() -> void:
 # --- The cause: two coplanar planes ---------------------------------------------------------------
 
 
-## The smallest shared area (square metres) that counts in the two code-built rooms: their boxes come from crowd_room.gd and
-## test_room.gd (not the level's scenes, so not the InsetBlock's to fix), where only slivers of 0.3 m2 and less remain
-## (docs/milestones/M6-calls/FIX-WORLD.md, "Requests"). Everything a player could see as a flicker is far above it.
-const ROOM_MIN_AREA_M2 := 0.5
-
-
 func _scan(scene: String, min_area: float) -> Array[Dictionary]:
 	var holder := Node.new()
 	add_child_autofree(holder)
@@ -217,13 +211,57 @@ func test_no_two_drawn_faces_of_the_level_share_a_plane_over_an_area() -> void:
 	assert_eq(found.size(), 0, "no two drawn faces of the level (any module, look or thickness) share a plane (a z-fight)")
 
 
+func _holes_and_steps(scene: String) -> Array[Dictionary]:
+	var holder := Node.new()
+	add_child_autofree(holder)
+	var root := Snapshot.instantiate(scene, holder)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	var found: Array[Dictionary] = []
+	found.append_array(Scan.holes(root))
+	found.append_array(Scan.steps(root))
+	for item in found:
+		gut.p(String(item.text))
+	return found
+
+
+func test_no_block_of_the_level_leaves_a_hole_or_a_step() -> void:
+	var found: Array[Dictionary] = await _holes_and_steps(Snapshot.LEVEL)
+	assert_eq(found.size(), 0, "no rectangle a block takes out of its face is left undrawn, and no face stands a few centimetres in front of another it only partly covers (a step the edge pass inks)")
+
+
+func test_no_box_of_the_crowd_street_leaves_a_hole_or_a_step() -> void:
+	var found: Array[Dictionary] = await _holes_and_steps(Snapshot.CROWD)
+	assert_eq(found.size(), 0, "no hole and no step in the crowd street")
+
+
+func test_the_rooms_boxes_yield_their_overlaps_and_collide_as_they_did() -> void:
+	## The room's coplanar slivers (17 in the crowd street, 2 in the training room at 0.02 m2 before) are taken out of the smaller box's
+	## face, so some boxes carry what they do not draw; the colliders are tests/test_m6_colliders.gd's.
+	for scene: String in [Snapshot.CROWD, Snapshot.TRAINING]:
+		var holder := Node.new()
+		add_child_autofree(holder)
+		var root := Snapshot.instantiate(scene, holder)
+		await get_tree().physics_frame
+		var clipped := 0
+		for item in Scan.drawn_boxes(root):
+			if (item.owner as Node).has_meta(RoomKit.CLIPPED_META):
+				clipped += 1
+		assert_gt(clipped, 0, "%s: some box yields an overlap" % scene)
+
+
+func test_no_box_of_the_training_room_leaves_a_hole_or_a_step() -> void:
+	var found: Array[Dictionary] = await _holes_and_steps(Snapshot.TRAINING)
+	assert_eq(found.size(), 0, "no hole and no step in the training room")
+
+
 func test_no_two_drawn_faces_of_the_crowd_street_share_a_plane_over_an_area() -> void:
-	var found: Array[Dictionary] = await _scan(Snapshot.CROWD, ROOM_MIN_AREA_M2)
+	var found: Array[Dictionary] = await _scan(Snapshot.CROWD, Scan.MIN_AREA_M2)
 	assert_eq(found.size(), 0, "no two drawn faces of the crowd street share a plane")
 
 
 func test_no_two_drawn_faces_of_the_training_room_share_a_plane_over_an_area() -> void:
-	var found: Array[Dictionary] = await _scan(Snapshot.TRAINING, ROOM_MIN_AREA_M2)
+	var found: Array[Dictionary] = await _scan(Snapshot.TRAINING, Scan.MIN_AREA_M2)
 	assert_eq(found.size(), 0, "no two drawn faces of the training room share a plane")
 
 
@@ -254,24 +292,132 @@ func test_the_scan_finds_a_pair_it_is_given() -> void:
 	assert_eq(Scan.pairs(holder).size(), 0, "a tenth of a metre apart they no longer share a plane")
 
 
-func test_an_inset_block_draws_smaller_and_collides_as_the_box() -> void:
+## Two kit walls that end in one plane over part of it: a tall 4 x 6 x 1 m wall A (x -2 to 2, y 0 to 6, z -0.5 to `a_front`) and
+## a short 1.5 x 3 m wall B (x 0 to 1.5, y 0 to 3, z up to 0.5) beside it, on a floor, so their + z faces overlap over x 0 to 1.5, y 0 to 3 when
+## `a_front` is 0.5. Returns [A (an InsetBlock, yielding to B when `a_yields`), B].
+func _two_walls(holder: Node3D, a_yields: bool, a_front: float = 0.5) -> Array[LevelBlock]:
+	var ground := LevelBlock.new()
+	ground.size = Vector3(20.0, 1.0, 20.0)
+	ground.position = Vector3(0.0, -0.5, 0.0)
+	ground.look = &"floor"
+	holder.add_child(ground)
+	var wall_a := InsetBlock.new()
+	wall_a.size = Vector3(4.0, 6.0, a_front + 0.5)
+	wall_a.position = Vector3(0.0, 3.0, (a_front - 0.5) * 0.5)
+	holder.add_child(wall_a)
+	var wall_b := LevelBlock.new()
+	wall_b.size = Vector3(1.5, 3.0, 2.0)
+	wall_b.position = Vector3(0.75, 1.5, -0.5)
+	holder.add_child(wall_b)
+	if a_yields:
+		wall_a.yields_to = [wall_a.get_path_to(wall_b)] as Array[NodePath]
+	return [wall_a, wall_b]
+
+
+func test_an_inset_block_collides_as_the_box_and_draws_the_box_less_what_its_partner_draws() -> void:
 	var holder := Node3D.new()
 	add_child_autofree(holder)
-	var block := InsetBlock.new()
-	block.size = Vector3(4.0, 2.0, 1.0)
-	block.inset_min = Vector3(0.0, 0.0, 0.04)
-	block.inset_max = Vector3(0.02, 0.02, 0.0)
-	holder.add_child(block)
+	var walls := _two_walls(holder, true)
+	var wall_a := walls[0] as InsetBlock
 	await get_tree().physics_frame
-	var shape := block.body.get_child(0) as CollisionShape3D
-	assert_eq((shape.shape as BoxShape3D).size, Vector3(4.0, 2.0, 1.0), "the collider is the whole box")
-	var mesh := block.body.find_children("*", "MeshInstance3D", true, false)[0] as MeshInstance3D
-	var drawn: AABB = mesh.global_transform * mesh.mesh.get_aabb()
-	assert_almost_eq(drawn.position.z, -0.5 + 0.04, 0.001, "the - z face is pulled in 4 cm")
-	assert_almost_eq(drawn.end.z, 0.5, 0.001, "the + z face stays")
-	assert_almost_eq(drawn.end.y, 1.0 - 0.02, 0.001, "the top is pulled in 2 cm")
-	assert_almost_eq(drawn.end.x, 2.0 - 0.02, 0.001, "the + x face is pulled in 2 cm")
-	assert_almost_eq(drawn.position.x, -2.0, 0.001, "the - x face stays")
+	var shape := wall_a.body.get_child(0) as CollisionShape3D
+	assert_eq((shape.shape as BoxShape3D).size, Vector3(4.0, 6.0, 1.0), "the collider is the whole box")
+	var clipped := wall_a.clipped_rects(2, 1)
+	assert_eq(clipped.size(), 1, "one rectangle of the + z face is not drawn")
+	assert_eq(clipped[0], Rect2(0.0, 0.0, 1.5, 3.0), "it is the overlap with the partner's + z face: x 0 to 1.5, y 0 to 3 (the plane's (x, y))")
+	assert_eq(wall_a.clipped_rects(2, 0).size(), 0, "the - z face has no partner in its plane")
+	var mesh := wall_a.body.find_children("*", "MeshInstance3D", true, false)[0] as MeshInstance3D
+	var arrays := mesh.mesh.surface_get_arrays(0)
+	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+	var front_area := 0.0
+	for t in range(0, indices.size(), 3):
+		var a := verts[indices[t]]
+		var b := verts[indices[t + 1]]
+		var c := verts[indices[t + 2]]
+		var normal := (c - a).cross(b - a).normalized()
+		if is_equal_approx(a.z, 0.5) and is_equal_approx(b.z, 0.5) and is_equal_approx(c.z, 0.5) and normal.z > 0.9 and maxf(absf(a.x), maxf(absf(b.x), absf(c.x))) < 2.001:
+			front_area += (b - a).cross(c - a).length() * 0.5
+	assert_almost_eq(front_area, 4.0 * 6.0 - 1.5 * 3.0, 0.001, "the + z face is drawn everywhere but the overlap")
+
+
+func test_the_clipped_face_keeps_its_strips_uv_where_it_is_cut() -> void:
+	var holder := Node3D.new()
+	add_child_autofree(holder)
+	var walls := _two_walls(holder, true)
+	await get_tree().physics_frame
+	var wall_a := walls[0] as InsetBlock
+	var mesh := wall_a.body.find_children("*", "MeshInstance3D", true, false)[0] as MeshInstance3D
+	var arrays := mesh.mesh.surface_get_arrays(0)
+	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var uvs: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV]
+	var checked := 0
+	for i in verts.size():
+		if is_equal_approx(verts[i].z, 0.5) and absf(verts[i].x) < 1.999 and arrays[Mesh.ARRAY_NORMAL][i].z > 0.9:
+			# The + z face's UV is metres: u from the left edge (x = -2) along it, v up from the bottom (y = -3).
+			assert_almost_eq(uvs[i].x, verts[i].x + 2.0, 0.001, "u is the metres from the face's own left edge at %s" % verts[i])
+			assert_almost_eq(uvs[i].y, verts[i].y + 3.0, 0.001, "v is the metres up the face at %s" % verts[i])
+			checked += 1
+	assert_gt(checked, 3, "cut corners were checked")
+
+
+func test_the_scan_finds_a_pair_a_step_and_a_hole_and_passes_a_clean_yield() -> void:
+	var holder := Node3D.new()
+	add_child_autofree(holder)
+	var walls := _two_walls(holder, false)
+	var wall_a := walls[0] as InsetBlock
+	var wall_b := walls[1]
+	await get_tree().physics_frame
+	assert_eq(Scan.pairs(holder).size(), 1, "the two + z faces share a plane: a z-fight")
+	# The first fix, and the regression verify-world-01 found: A's face 2 cm behind B's.
+	wall_a.size = Vector3(4.0, 6.0, 0.98)
+	wall_a.position = Vector3(0.0, 3.0, -0.01)
+	await get_tree().physics_frame
+	assert_eq(Scan.pairs(holder).size(), 0, "2 cm apart they no longer fight")
+	var steps := Scan.steps(holder)
+	assert_eq(steps.size(), 1, "but B's top edge makes a 2 cm step across A's face: the line the edge pass inks")
+	assert_almost_eq(float(steps[0].exposed), 4.0 * 6.0 - 1.5 * 3.0, 0.01, "with the rest of A's face in view")
+	# The fix: A yields the overlap to B.
+	wall_a.size = Vector3(4.0, 6.0, 1.0)
+	wall_a.position = Vector3(0.0, 3.0, 0.0)
+	wall_a.yields_to = [wall_a.get_path_to(wall_b)] as Array[NodePath]
+	await get_tree().physics_frame
+	assert_eq(Scan.pairs(holder).size(), 0, "yielding the overlap leaves no two faces in one plane")
+	assert_eq(Scan.holes(holder).size(), 0, "and no hole: B draws it")
+	assert_eq(Scan.steps(holder).size(), 0, "and no step")
+	# Two blocks that both yield leave a hole.
+	var twin := InsetBlock.new()
+	twin.size = wall_b.size
+	twin.position = wall_b.position
+	holder.add_child(twin)
+	wall_b.queue_free()
+	await get_tree().physics_frame
+	wall_a.yields_to = [wall_a.get_path_to(twin)] as Array[NodePath]
+	twin.yields_to = [twin.get_path_to(wall_a)] as Array[NodePath]
+	await get_tree().physics_frame
+	assert_gt(Scan.holes(holder).size(), 0, "two blocks that yield to each other leave the overlap undrawn: a hole")
+
+
+func test_a_block_yields_only_what_a_kit_piece_really_draws() -> void:
+	## A cornice is three boards, each standing out further than the one below, so its bounds' end face is a staircase: a block
+	## that gave the whole rectangle up would leave a hole where the piece has no board.
+	var holder := Node3D.new()
+	add_child_autofree(holder)
+	var piece := KitPiece.new()
+	piece.kind = &"cornice"
+	piece.size = Vector3(6.0, 0.6, 0.45)
+	holder.add_child(piece)
+	var block := InsetBlock.new()
+	block.size = Vector3(2.0, 2.0, 2.0)
+	block.position = Vector3(2.0, 0.0, 0.0)
+	holder.add_child(block)
+	block.yields_to = [block.get_path_to(piece)] as Array[NodePath]
+	await get_tree().physics_frame
+	var area := 0.0
+	for rect in block.clipped_rects(0, 1):
+		area += rect.get_area()
+	assert_almost_eq(area, 0.45 * 0.2 + 0.30 * 0.2 + 0.15 * 0.2, 0.001, "the three boards' end caps (0.18 m2), not the bounds' 0.27 m2")
+	assert_eq(block.clipped_rects(0, 1).size(), 3, "one rectangle for each board's end cap")
 
 
 func test_the_boss_roofs_far_ground_is_not_solid_and_lies_below_the_street() -> void:

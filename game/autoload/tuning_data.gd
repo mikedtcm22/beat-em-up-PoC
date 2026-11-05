@@ -1250,6 +1250,13 @@ extends Resource
 ## a pixel, at 20 m about 17; a deck seen from eye height at 10 m is about 15 (46 along, 5 across).
 @export_range(1.0, 256.0, 1.0) var ground_ink_fade_start_texels: float = 16.0
 @export_range(2.0, 512.0, 1.0) var ground_ink_fade_end_texels: float = 64.0
+## Two drawn faces of one direction closer than this (m) lie in one plane (verification round, VFIX-WORLD): where a block and
+## another share one, the block that yields does not draw its face (InsetBlock, RoomKit.resolve_coplanar), so the two never fight
+## (a z-fight) and no step is left for the edge pass to ink. Read when a block or room is built.
+@export_range(0.0005, 0.05, 0.0005) var kit_coplanar_m: float = 0.004
+## How far out of a box's face (m) the kit's own standoffs go out with it when the face is taken out (a wall's plinth board
+## stands 5 cm off its face and is the same face for this purpose). Read when a block or room is built.
+@export_range(0.0, 0.5, 0.005) var kit_clip_standoff_m: float = 0.06
 @export_subgroup("Draw cost")
 ## M6 final review (perf): the largest error (m) a static prop's shadow mesh may have against the prop's own
 ## triangles. The sun's shadow pass draws a coarser mesh of a car, a tank or a dumpster (about half the triangles,

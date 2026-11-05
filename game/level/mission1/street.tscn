@@ -57,21 +57,21 @@ look = &"floor"
 
 [node name="StartWall" type="Node3D" parent="Geometry"]
 script = ExtResource("inset_blk")
-inset_max = Vector3(0, 0.02, 0)
+yields_to = Array[NodePath]([NodePath("../../DressingA1/CorniceL1"), NodePath("../LeftWall")])
 position = Vector3(0, 5, 3.5)
 size = Vector3(16, 12, 1)
 
 [node name="EndWall" type="Node3D" parent="Geometry"]
 script = ExtResource("inset_blk")
-inset_min = Vector3(0, 0, 0.02)
-inset_max = Vector3(0, 0.02, 0)
+yields_to = Array[NodePath]([NodePath("../../DressingStreet/CorniceL2"), NodePath("../Floor"), NodePath("../LeftWall5")])
 position = Vector3(-4, 5, -52.5)
 size = Vector3(8, 12, 1)
 look = &"accent"
 module = &"wall"
 
 [node name="RightWall" type="Node3D" parent="Geometry"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+yields_to = Array[NodePath]([NodePath("../StartWall")])
 position = Vector3(7, 5, 1.7)
 size = Vector3(2, 12, 3.6)
 
@@ -86,17 +86,20 @@ position = Vector3(7, 5, -18)
 size = Vector3(2, 12, 12)
 
 [node name="RightWall4" type="Node3D" parent="Geometry"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+yields_to = Array[NodePath]([NodePath("../DoorLintel2")])
 position = Vector3(7, 5, -27.55)
 size = Vector3(2, 12, 2.1)
 
 [node name="RightWall5" type="Node3D" parent="Geometry"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+yields_to = Array[NodePath]([NodePath("../DoorLintel3")])
 position = Vector3(7, 5, -32.2)
 size = Vector3(2, 12, 1.6)
 
 [node name="RightWall6" type="Node3D" parent="Geometry"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+yields_to = Array[NodePath]([NodePath("../../DressingStreet/CorniceR1")])
 position = Vector3(7, 5, -44.25)
 size = Vector3(2, 12, 17.5)
 
@@ -116,12 +119,14 @@ position = Vector3(-7, 5, -20.5)
 size = Vector3(2, 12, 1)
 
 [node name="LeftWall4" type="Node3D" parent="Geometry"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+yields_to = Array[NodePath]([NodePath("../../DressingStreet/CorniceL1")])
 position = Vector3(-7, 5, -34.25)
 size = Vector3(2, 12, 8.5)
 
 [node name="LeftWall5" type="Node3D" parent="Geometry"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+yields_to = Array[NodePath]([NodePath("../../DressingStreet/CorniceL2")])
 position = Vector3(-7, 5, -48.75)
 size = Vector3(2, 12, 8.5)
 
@@ -139,19 +144,21 @@ look = &"dark"
 
 [node name="DoorLintel" type="Node3D" parent="Geometry"]
 script = ExtResource("inset_blk")
-inset_max = Vector3(0, 0.02, 0)
+yields_to = Array[NodePath]([NodePath("../RightWall2"), NodePath("../RightWall3")])
 position = Vector3(7.5, 7.2, -10.75)
 size = Vector3(3, 7.6, 2.9)
 look = &"accent"
 
 [node name="DoorJambs" type="Node3D" parent="Geometry"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+yields_to = Array[NodePath]([NodePath("../RightWall2")])
 position = Vector3(7.5, 1.2, -9.4)
 size = Vector3(3, 4.4, 0.2)
 look = &"dark"
 
 [node name="DoorJambs2" type="Node3D" parent="Geometry"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+yields_to = Array[NodePath]([NodePath("../RightWall3")])
 position = Vector3(7.5, 1.2, -12.1)
 size = Vector3(3, 4.4, 0.2)
 look = &"dark"
@@ -170,19 +177,21 @@ look = &"dark"
 
 [node name="DoorLintel2" type="Node3D" parent="Geometry"]
 script = ExtResource("inset_blk")
-inset_max = Vector3(0, 0.02, 0)
+yields_to = Array[NodePath]([NodePath("../RightWall3")])
 position = Vector3(7.5, 7.2, -25.25)
 size = Vector3(3, 7.6, 2.9)
 look = &"accent"
 
 [node name="DoorJambs3" type="Node3D" parent="Geometry"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+yields_to = Array[NodePath]([NodePath("../RightWall3")])
 position = Vector3(7.5, 1.2, -23.9)
 size = Vector3(3, 4.4, 0.2)
 look = &"dark"
 
 [node name="DoorJambs4" type="Node3D" parent="Geometry"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+yields_to = Array[NodePath]([NodePath("../RightWall4")])
 position = Vector3(7.5, 1.2, -26.6)
 size = Vector3(3, 4.4, 0.2)
 look = &"dark"
@@ -201,19 +210,21 @@ look = &"dark"
 
 [node name="DoorLintel3" type="Node3D" parent="Geometry"]
 script = ExtResource("inset_blk")
-inset_max = Vector3(0, 0.02, 0)
+yields_to = Array[NodePath]([NodePath("../RightWall6")])
 position = Vector3(7.5, 7.2, -34.25)
 size = Vector3(3, 7.6, 2.9)
 look = &"accent"
 
 [node name="DoorJambs5" type="Node3D" parent="Geometry"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+yields_to = Array[NodePath]([NodePath("../RightWall5")])
 position = Vector3(7.5, 1.2, -32.9)
 size = Vector3(3, 4.4, 0.2)
 look = &"dark"
 
 [node name="DoorJambs6" type="Node3D" parent="Geometry"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+yields_to = Array[NodePath]([NodePath("../RightWall6")])
 position = Vector3(7.5, 1.2, -35.6)
 size = Vector3(3, 4.4, 0.2)
 look = &"dark"
@@ -232,19 +243,21 @@ look = &"dark"
 
 [node name="WarehouseLintel" type="Node3D" parent="Geometry"]
 script = ExtResource("inset_blk")
-inset_max = Vector3(0, 0.02, 0)
+yields_to = Array[NodePath]([NodePath("../LeftWall4"), NodePath("../LeftWall5")])
 position = Vector3(-7.6, 7.6, -41.5)
 size = Vector3(3.2, 6.8, 6.4)
 look = &"accent"
 
 [node name="WarehouseJambs" type="Node3D" parent="Geometry"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+yields_to = Array[NodePath]([NodePath("../LeftWall4")])
 position = Vector3(-7.6, 1.6, -38.4)
 size = Vector3(3.2, 5.2, 0.2)
 look = &"dark"
 
 [node name="WarehouseJambs2" type="Node3D" parent="Geometry"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+yields_to = Array[NodePath]([NodePath("../LeftWall5")])
 position = Vector3(-7.6, 1.6, -44.6)
 size = Vector3(3.2, 5.2, 0.2)
 look = &"dark"
@@ -340,21 +353,20 @@ look = &"dark"
 
 [node name="AlleySide" type="Node3D" parent="Geometry"]
 script = ExtResource("inset_blk")
-inset_max = Vector3(0, 0.02, 0)
+yields_to = Array[NodePath]([NodePath("../AlleyBack")])
 position = Vector3(-9.7, 3.5, -7.8)
 size = Vector3(3.4, 9, 0.4)
 look = &"dark"
 
 [node name="AlleySide2" type="Node3D" parent="Geometry"]
 script = ExtResource("inset_blk")
-inset_max = Vector3(0, 0.02, 0)
+yields_to = Array[NodePath]([NodePath("../AlleyBack")])
 position = Vector3(-9.7, 3.5, -11.2)
 size = Vector3(3.4, 9, 0.4)
 look = &"dark"
 
 [node name="AlleyLintel" type="Node3D" parent="Geometry"]
-script = ExtResource("inset_blk")
-inset_max = Vector3(0, 0.02, 0)
+script = ExtResource("2_block")
 position = Vector3(-7, 7.3, -9.5)
 size = Vector3(2, 7.4, 3)
 look = &"accent"
@@ -373,21 +385,20 @@ look = &"dark"
 
 [node name="AlleySide3" type="Node3D" parent="Geometry"]
 script = ExtResource("inset_blk")
-inset_max = Vector3(0, 0.02, 0)
+yields_to = Array[NodePath]([NodePath("../AlleyBack2")])
 position = Vector3(-9.7, 3.5, -16.8)
 size = Vector3(3.4, 9, 0.4)
 look = &"dark"
 
 [node name="AlleySide4" type="Node3D" parent="Geometry"]
 script = ExtResource("inset_blk")
-inset_max = Vector3(0, 0.02, 0)
+yields_to = Array[NodePath]([NodePath("../AlleyBack2")])
 position = Vector3(-9.7, 3.5, -20.2)
 size = Vector3(3.4, 9, 0.4)
 look = &"dark"
 
 [node name="AlleyLintel2" type="Node3D" parent="Geometry"]
-script = ExtResource("inset_blk")
-inset_max = Vector3(0, 0.02, 0)
+script = ExtResource("2_block")
 position = Vector3(-7, 7.3, -18.5)
 size = Vector3(2, 7.4, 3)
 look = &"accent"
@@ -400,7 +411,7 @@ look = &"floor"
 
 [node name="LotBack" type="Node3D" parent="Geometry"]
 script = ExtResource("inset_blk")
-inset_max = Vector3(0, 0.02, 0)
+yields_to = Array[NodePath]([NodePath("../LotSide"), NodePath("../LotSide2")])
 position = Vector3(13.2, 2.5, -1.5)
 size = Vector3(0.4, 7, 3.6)
 look = &"dark"
@@ -418,8 +429,7 @@ size = Vector3(5.4, 7, 0.4)
 look = &"dark"
 
 [node name="LotLintel" type="Node3D" parent="Geometry"]
-script = ExtResource("inset_blk")
-inset_max = Vector3(0, 0.02, 0)
+script = ExtResource("2_block")
 position = Vector3(7, 7.1, -1.5)
 size = Vector3(2, 7.8, 2.8)
 look = &"accent"
@@ -432,7 +442,7 @@ look = &"floor"
 
 [node name="LotBack2" type="Node3D" parent="Geometry"]
 script = ExtResource("inset_blk")
-inset_max = Vector3(0, 0.02, 0)
+yields_to = Array[NodePath]([NodePath("../LotSide3"), NodePath("../LotSide4")])
 position = Vector3(13.2, 2.5, -30)
 size = Vector3(0.4, 7, 3.6)
 look = &"dark"
@@ -450,8 +460,7 @@ size = Vector3(5.4, 7, 0.4)
 look = &"dark"
 
 [node name="LotLintel2" type="Node3D" parent="Geometry"]
-script = ExtResource("inset_blk")
-inset_max = Vector3(0, 0.02, 0)
+script = ExtResource("2_block")
 position = Vector3(7, 7.1, -30)
 size = Vector3(2, 7.8, 2.8)
 look = &"accent"
@@ -463,9 +472,7 @@ size = Vector3(3, 2.2, 1.8)
 look = &"prop"
 
 [node name="Barricade2" type="Node3D" parent="Geometry"]
-script = ExtResource("inset_blk")
-inset_min = Vector3(0, 0, 0.02)
-inset_max = Vector3(0, 0, 0.02)
+script = ExtResource("2_block")
 position = Vector3(-1.5, 0.75, -1.5)
 size = Vector3(3, 1.5, 1.8)
 look = &"prop"
@@ -609,7 +616,8 @@ look = &"fence"
 solid = false
 
 [node name="LandingRail2" type="Node3D" parent="Geometry"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+yields_to = Array[NodePath]([NodePath("../LandingRail")])
 position = Vector3(1.5, 5.5, -48.55)
 size = Vector3(3, 0.1, 0.1)
 look = &"fence"

@@ -1,35 +1,103 @@
 @tool
 class_name InsetBlock
 extends LevelBlock
-## A block whose drawn mesh is a little smaller than its box (Milestone 6 playtest feedback, FIX-WORLD). The collider stays the
-## box, so the walls, the navmesh and tests/test_m6_colliders.gd do not move; what is drawn is the box with each face pulled in by
-## `inset_min` (the - faces) and `inset_max` (the + faces), in metres, per axis.
+## A block that does not draw a face where another block draws the same plane (Milestone 6 playtest feedback, FIX-WORLD; reworked
+## in the verification round, VFIX-WORLD). The collider stays the box, so the walls, the navmesh and tests/test_m6_colliders.gd do
+## not move; what changes is the drawn mesh.
 ##
-## Why: two boxes that abut or overlap (a wall and the lintel over a door, two walls at a corner) often end in the same plane,
-## and two faces in one plane fight for every pixel of it: the winner swings with the camera's millimetres, which is the flashing
-## Game-boy saw. Pulling one of the two faces in by a couple of centimetres lets the other win everywhere, with a step too small
-## to see. Which block gives way, and by how much (a step of INSET_STEP_M per tier, so three faces in one plane stay apart too),
-## is found by tests/m6_coplanar_scan.gd, which holds the whole level to no two drawn faces in one plane.
+## Why: two boxes that abut or overlap (a wall and the lintel over a door, two walls at a corner) often end in the same plane, and
+## two faces in one plane fight for every pixel of it: the winner swings with the camera's millimetres, which is the flashing
+## Game-boy saw. The first answer pulled the whole face back 2 to 4 cm, which hid the fight but left a step wherever the partner
+## covered only part of that face, and the edge pass inks a step. This block takes the overlap out of its own face instead
+## (MeshClip): over the rectangle it shares with a block in `yields_to` there is only the partner's face, in the same plane, so
+## there is no fight and no step to ink; outside it the face is as it was.
+##
+## `yields_to` names the blocks (or kit pieces) that win a plane against this one, as paths from this node. Which of two blocks
+## yields is decided once, in the scenes (tools/solve_insets.gd writes it: a piece wins over a block, the bigger face over the
+## smaller); a block never yields to one that yields to it. tests/m6_coplanar_scan.gd holds the whole level to no two drawn faces
+## in one plane, to no hole where a face was taken out, and to no step.
 
-## The tier of one pulled-in face: the difference between two faces that would share a plane (metres).
-const INSET_STEP_M := 0.02
-
-## How far each - face of the drawn box (x, y, z) is pulled in, metres.
-@export var inset_min: Vector3 = Vector3.ZERO:
+## The blocks (or pieces) whose faces win a shared plane against this block's, as paths from this node. One that is not in the
+## tree (a section built alone, a path across sections to one built later) is skipped.
+@export var yields_to: Array[NodePath] = []:
 	set(value):
-		inset_min = value
-		_rebuild()
-## How far each + face of the drawn box (x, y, z) is pulled in, metres.
-@export var inset_max: Vector3 = Vector3.ZERO:
-	set(value):
-		inset_max = value
+		yields_to = value
 		_rebuild()
 
 
-## The drawn box: smaller than `size` by the insets, and moved so each face lands where it was pulled to.
+## The rectangles of this block's `side` face of `axis` (1 the + face, 0 the - face) that it does not draw, in the plane's
+## (u, v) = ((axis + 1) % 3, (axis + 2) % 3) coordinates, world space.
+func clipped_rects(axis: int, side: int) -> Array[Rect2]:
+	var out: Array[Rect2] = []
+	if not is_inside_tree():
+		return out
+	var offset := global_position
+	var u := (axis + 1) % 3
+	var v := (axis + 2) % 3
+	for rect in _clips().get(MeshClip.key(axis, side), []):
+		out.append(Rect2(rect.position + Vector2(offset[u], offset[v]), rect.size))
+	return out
+
+
+## The drawn box: the kit's module with the overlaps taken out of it. A flat box (the editor, the graybox switch) is not clipped.
 func _make_mesh(material: Material) -> MeshInstance3D:
 	var art := _art()
-	var drawn := (size - inset_min - inset_max).max(Vector3.ONE * 0.001)
-	var mesh := RoomKit.box_mesh(drawn, material, _overlay(art), art)
-	mesh.position = (inset_min - inset_max) * 0.5
+	var mesh := RoomKit.box_mesh(size, material, _overlay(art), art)
+	if not RoomKit.kit_art(art) or not (mesh.mesh is ArrayMesh):
+		return mesh
+	var clips := _clips()
+	if clips.is_empty():
+		return mesh
+	mesh.mesh = MeshClip.clip_box(mesh.mesh, size, clips, Tuning.data.kit_clip_standoff_m, Tuning.data.kit_coplanar_m)
 	return mesh
+
+
+## {"axis|side": Array[Rect2] (local (u, v) coordinates)}: the overlaps with each block this one yields to, on every face that
+## lies in the same plane as the partner's face looking the same way.
+func _clips() -> Dictionary:
+	var out := {}
+	if not is_inside_tree():
+		return out
+	var here := global_transform
+	var inverse := here.affine_inverse()
+	var mine := AABB(-size * 0.5, size)
+	for path in yields_to:
+		var partner := get_node_or_null(path) as Node3D
+		if partner == null:
+			continue
+		var found := MeshClip.overlaps(mine, _box_of(partner, inverse), Tuning.data.kit_coplanar_m)
+		for face_key: String in found:
+			var rects: Array[Rect2] = [found[face_key]]
+			var piece := partner as MeshInstance3D
+			if piece != null and piece.mesh != null:
+				rects = _covered_by(piece, inverse, face_key, found[face_key], mine)
+			if not out.has(face_key):
+				out[face_key] = [] as Array[Rect2]
+			(out[face_key] as Array[Rect2]).append_array(rects)
+	return out
+
+
+## The parts of `overlap` (this block's `face_key` plane) that a kit piece's own faces cover: a piece is not a box (a cornice is
+## three boards, each standing out further than the one below), so its bounds' face is only partly there, and a block that gave
+## the whole rectangle up would leave a hole where the piece has none.
+func _covered_by(piece: MeshInstance3D, inverse: Transform3D, face_key: String, overlap: Rect2, mine: AABB) -> Array[Rect2]:
+	var axis := int(face_key.substr(0, 1))
+	var side := int(face_key.substr(2, 1))
+	var plane: float = mine.end[axis] if side == 1 else mine.position[axis]
+	var out: Array[Rect2] = []
+	for face in MeshClip.face_rects(piece.mesh, inverse * piece.global_transform, axis, side, plane, Tuning.data.kit_coplanar_m):
+		if face.intersects(overlap):
+			out.append(face.intersection(overlap))
+	return out
+
+
+## The box a partner draws, in this block's space: a block's own box, a piece's mesh bounds.
+func _box_of(partner: Node3D, inverse: Transform3D) -> AABB:
+	var block := partner as LevelBlock
+	if block != null:
+		return inverse * block.global_transform * AABB(-block.size * 0.5, block.size)
+	var piece := partner as MeshInstance3D
+	if piece != null and piece.mesh != null:
+		return inverse * piece.global_transform * piece.mesh.get_aabb()
+	return AABB()
+

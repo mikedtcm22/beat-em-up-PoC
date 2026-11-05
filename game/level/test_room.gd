@@ -36,6 +36,7 @@ var dummies: Array[TrainingDummy] = []
 func _ready() -> void:
 	_build_environment()
 	_build_street()
+	RoomKit.resolve_coplanar(self)
 	_spawn_actors()
 	if with_presentation:
 		_build_presentation()
