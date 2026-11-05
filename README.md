@@ -88,6 +88,24 @@ Every enemy, the boss, the level and the sounds are now final art and audio, and
   - `weapon_chain_sim` (a straight chain);
   - `audio_legacy_bank` (M2's sounds).
 
+**After Game-boy's playtest (2026-11-05):**
+- **The ground no longer flashes.**
+  - The cause was a z-fight: a hidden ground slab under the boss roof sat in the same plane as the street. It now sits clear of every drawn surface.
+  - A new test scans every drawn block in the level, the crowd street and the training room for faces that share a plane. It found 85 more pairs where wall tops and corners met, and 41 blocks now draw 2 cm inside their colliders (`InsetBlock`); the colliders are unchanged.
+  - The street wears a comic ground: one 2048 px tile over 8 m of flat tones (a pale road, broad worn pools, a few ink-outlined patches) under bold tapered ink (cracks, a manhole, drain grates). It is mirrored on every other tile, so it repeats every 16 m.
+- **GO is silent** (see the departures below).
+- **You feel the hits you take** (see the departures below). The ink vignette and the head roll point where the attacker stands: a hit from the left lights the left edge, one from behind the bottom edge.
+- **Every enemy has more detail, closer to its concept.** It's all chain config, with no new models and no Tripo or Gemini spend:
+  - **Colour borders now follow the texture,** per texel, instead of snapping to 2 cm mesh faces. Small colour islands are no longer averaged away.
+  - **Ink is drawn where the model has creases and folds,** taken from the dense mesh before it's decimated, and the lines are thinner.
+  - Each character has its own fixes from the review:
+    - the Thug's face and bandana;
+    - the Kicker's eyes and mask;
+    - the Bruiser's visor slit, with the scarf beneath it; his helmet now scuffs but never bleeds;
+    - Ox's nose, mouth and jaw lines;
+    - calmer lines on the Punk's vest.
+  - `look_texel_swatch` in F1's Debug group switches the per-texel borders off.
+
 **How the done-when is proved:**
 - **`tests/test_m6_no_placeholders.gd`** counts every kind of placeholder in the level, the crowd street and the training room: primitive bodies, tints, grey boxes, cylinder weapons, a missing second weapon, generated sounds and empty sound slots. Every count is 0 (`tests/fixtures/m6/placeholder_ratchet.json`). The allowed list is short: the music loop (by pool), the shader warm-up meshes and the edge-pass quad (by node), and the edge guards. A mesh that is hidden or off the default layer (F3's debug draws, the hidden proxies) is not counted. The legacy A/B bank is in `tests/fixtures/sfx_legacy/`, outside the scanned `assets/export/sfx`.
 - **The budgets hold:** enemies 15,000 triangles, the boss and the player 30,000, props and weapons 3,000, modules 5,000, and one 2048 px trim sheet.
@@ -102,6 +120,10 @@ Every enemy, the boss, the level and the sounds are now final art and audio, and
   - **The level walk** (4 runs each) takes 10.87 ms a frame on average, against 9.43 ms for the level before the art (910448e). That is +15.3%, 0.3 points over the plan's 15% line (a mean more than 15% over is a fix item); single runs range from +14.5% to +16.4%.
   - Its p95 is 14.2 ms, inside a 60 Hz frame, and the first hit, the first spawn and the spawn hitch meet M4's soft bars.
   - The lead's check after the review's fixes measured +19.5% (vsync off, so not like for like). On the fixed poses, run the same way before and after, the perf fix took the overhead from +41% to +16%. See the trim sheet's two materials under "Where M6 departs from the plan".
+  - **After the playtest fixes (2026-11-05):**
+    - All three builds were run in turn: the pre-art level, the M6 build Game-boy played (663cafc) and the fixed head (d582d21). They ran 4 times each, with vsync on, at load 5 from other apps, so every time is higher than above.
+    - The level walk takes 16.93 ms a frame on the fixed head, against 17.03 ms on the build he played (−0.6%). The fixed poses take 16.17 ms against 16.30. The fixes cost nothing.
+    - Against the pre-art level, the art measured +9.5% this time (15.46 to 16.93 ms), where it measured +15.3% before at a lighter load. The overhead moves with the machine's load, so the 15% line is borderline rather than clearly met.
   - **The crowd room's six with ragdolls** (3 runs each) is +12.3% against M5 (10.34 to 11.61 ms). Its p95 and spawn hitch miss the soft bars, as they already did on M5.
   - The level: `tools/perf_compare.sh --vsync on --runs 4 --bot res://tests/bot/perf_level_bot.tscn --act "Perf: level walk" --act "Perf: counters" 910448e HEAD`. The crowd room: `tools/perf_compare.sh --vsync on --runs 3 main HEAD`. "Perf: counters" holds the tour's poses still, so its renderer counters compare whatever the load.
 
@@ -368,7 +390,7 @@ The characters are procedural placeholders. Real art, VFX and audio come in Mile
 - **The level walk's frame time is +15.3% over the pre-art level, 0.3 points over the plan's 15% line.** The perf fix stopped at the best result with no visible change. The levers left (occlusion culling, plain boxes for the walls, no shadows on windows or the skyline) would change what you see, or measured at 1% or less; `docs/milestones/M6-calls/fix-final-perf.md` costs each.
 
 **Automated checks:**
-- `tools/run_tests.sh` runs about 1940 tests headless in about 370 s. Among them:
+- `tools/run_tests.sh` runs about 2030 tests headless in about 415 s. Among them:
   - an end-to-end suite where a scripted player performs every combo in the real test room;
   - each milestone's done-when test (`tests/test_m3_done_when.gd`; `tests/test_m4_done_when.gd`, now run for every character in the art roster; `tests/test_m5_done_when.gd`, which plays the whole level arena by arena; `tests/test_m6_no_placeholders.gd`);
   - the level's own tests (`tests/test_m5_street.gd`, `tests/test_m5_roofs.gd`, `tests/test_level_kit.gd`, `tests/test_level_bot.gd`).

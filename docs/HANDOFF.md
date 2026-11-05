@@ -4,6 +4,30 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-05 15:30 CST: frame time measured (the fixes cost nothing); the verification round running
+- **Frame time** (`captures/m6-feedback-fix/perf/report.txt`): the three builds were run in turn, 4 runs each, vsync on. The load was 5 from Game-boy's apps, so the absolute times are high.
+  - **Level walk:**
+    - pre-art `910448e`: 15.46 ms;
+    - played `663cafc`: 17.03 ms;
+    - fixed `d582d21`: 16.93 ms.
+    - The fixes are −0.6% against the build he played. The art is +9.5% against pre-art (+15.3% at the earlier load).
+  - **Counters:** 14.79, 16.30 and 16.17 ms.
+  - The spawn hitch, first spawn and first hit came out 1-4 ms over the played build. Their ranges are wide at this load, so it's probably noise.
+  - README's frame-time lines now include these.
+- **Recorded on `d582d21`:** `captures/m6-feedback-verify/`, 20 acts, 0 errors.
+  - The review round's 18, minus dp2 and dp3.
+  - Plus `passive_mix` ("Bruiser among Punks, passive") and `passive_six` ("Six Punks, passive"). These have no god mode, and the player takes 26-30 real damaging hits from every side. The street run's pilot parries everything, and the fight is in god mode at 0 damage, so these two are the only real-play evidence for the hurt cue.
+- **Running:** `review.js` run `wf_05ec4fe8-e6f` (task `wdxg91f03`) with `docs/reviews/M6/args-review-verify.json`.
+  - Lenses: chars (Opus), world (Opus), code (Sonnet), with skeptics on highs and mediums and `partition` false.
+  - Reviewer worktrees: `.worktrees/m6-review-verify-<lens>`, detached at `d582d21`.
+  - **If cut off:** relaunch with the same args and `resumeFromRunId`, or pass `reviews` from the journal.
+- **Next:**
+  1. Read the survivors.
+  2. If any are real, one small fix pass (build.js, 1-2 Sonnet fixers), merge, then the suite.
+  3. PR #6's body.
+  4. The DM: stills (the fixers' before/after sheets plus the verify recordings) and the run command, with his two open questions (the near arm; the frame time).
+  5. Merge only on his word.
+
 ### 2026-11-05 14:35 CST: the fix wave merged (2027/2027); frame time running; a verification round next
 - **Merged into `m6/full-art-audio`** (head `d582d21`, pushed), with no conflicts:
   - FIX-FEEL (`f32acc8`);
