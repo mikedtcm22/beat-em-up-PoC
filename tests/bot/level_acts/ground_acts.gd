@@ -7,6 +7,8 @@ extends RefCounted
 ##                         artefact), `creep` (yaw 1 degree a second: a fraction of a pixel a frame), `pan` (10 degrees
 ##                         a second with the pitch swaying), `walk` (0.8 m a second along the street). Logs
 ##                         `GROUND <variant> <spot> <phase> f<first> f<last>`, the frames of the video (60 a second).
+##                         Then each of HELD (the boss roof's gap, the roofs' deck): `still` and `creep`, the same lines
+##                         (`-- --ground=held` runs only those).
 ## `-- --ground=<variant>` (after the scene's other arguments) switches one suspect off for the recording:
 ##   `control` nothing; `no_shadow` the sun casts no shadow; `hard_shadow` the sun's shadow edge is not blurred;
 ##   `no_edges` the edge pass is off; `no_ink` the trim material draws no ink; `lod_free` the trim material's mip cap
@@ -30,6 +32,15 @@ const CREEP_DEG_PER_S := 1.0
 const PAN_DEG_PER_S := 10.0
 const PAN_SWAY_DEG := 3.0
 const WALK_M_PER_S := 0.8
+
+
+## The held views that follow the drift, {label, section (index in the level), at (that section's space, the feet),
+## yaw, pitch}: the boss roof looking down into its gap (a drawn plane under the 200 m ground used to z-fight with it:
+## M6 world-02), and the roofs' tar deck looked along (the strip ink's fade, M6 code-03).
+const HELD: Array[Dictionary] = [
+	{label = "gap", section = 2, at = Vector3(8.5, 0.0, -10.5), yaw = -90.0, pitch = -38.0},
+	{label = "deck", section = 1, at = Vector3(19.0, 7.5, -8.5), yaw = 0.0, pitch = -8.0},
+]
 
 
 static func acts(bot: Node) -> Array[Dictionary]:
@@ -109,6 +120,9 @@ static func _drift(bot: Node) -> void:
 	if _variant() == "diag":
 		await _diag(bot)
 		return
+	if _variant() == "held":
+		await _held(bot)
+		return
 	if bot.level.sections.size() < 1:
 		bot.log_line("NOTE the ground drift needs the level")
 		return
@@ -131,6 +145,7 @@ static func _drift(bot: Node) -> void:
 			_place(player, at, yaw, pitch))
 		await _phase(bot, variant, spot, "walk", int(WALK_S * 60.0), func(t: float) -> void:
 			_place(player, at + Vector3(0.0, 0.0, -WALK_M_PER_S * t), yaw0, pitch0))
+	await _held(bot)
 
 
 static func _place(player: PlayerCharacter, at: Vector3, yaw: float, pitch: float) -> void:
@@ -148,3 +163,26 @@ static func _phase(bot: Node, variant: String, spot: Dictionary, phase: String, 
 		step.call(float(n) / 60.0)
 		await bot._ticks(1)
 	bot.log_line("GROUND %s %s %s f%d f%d" % [variant, spot.label, phase, first, Engine.get_physics_frames() - 1])
+
+
+## After the drift (`-- --ground=held` alone): each of HELD for `still` (60 ticks) and `creep` (1 degree a second for 3 s), logging the same
+## `GROUND` lines as the drift (`tools/ground_flicker.py` reads both).
+static func _held(bot: Node) -> void:
+	if bot.level.sections.size() < 3:
+		bot.log_line("NOTE the held ground views need the whole level")
+		return
+	bot.freeze_ai(true)
+	var player: PlayerCharacter = bot.player
+	var variant := _variant()
+	if variant != "held":
+		_apply(bot, variant)
+	for held: Dictionary in HELD:
+		var section: Node3D = bot.level.sections[int(held.section)]
+		var at: Vector3 = section.global_position + (held.at as Vector3)
+		var yaw0 := deg_to_rad(float(held.yaw))
+		var pitch0 := deg_to_rad(float(held.pitch))
+		_place(player, at, yaw0, pitch0)
+		await TourActs.settle_light(bot, section, at)
+		await _phase(bot, variant, held, "still", int(STILL_S * 60.0), func(_t: float) -> void: _place(player, at, yaw0, pitch0))
+		await _phase(bot, variant, held, "creep", int(CREEP_S * 60.0), func(t: float) -> void:
+			_place(player, at, yaw0 + deg_to_rad(CREEP_DEG_PER_S * t), pitch0))

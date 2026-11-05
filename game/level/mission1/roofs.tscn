@@ -16,6 +16,7 @@
 [ext_resource type="Script" path="res://game/level/kit/art/dressing.gd" id="90_dressing"]
 [ext_resource type="Script" path="res://game/level/kit/art/kit_piece.gd" id="91_piece"]
 [ext_resource type="Script" path="res://game/level/kit/art/prop_spot.gd" id="92_spot"]
+[ext_resource type="Script" path="res://game/level/kit/inset_block.gd" id="inset_blk"]
 
 [sub_resource type="BoxShape3D" id="Box_1"]
 size = Vector3(12.3, 5.8, 28.5)
@@ -53,7 +54,8 @@ sky_horizon_color = Color(0.82, 0.54, 0.38, 1)
 [node name="Skyline" type="Node3D" parent="Geometry"]
 
 [node name="MassFirst" type="Node3D" parent="Geometry/Terrace"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+inset_min = Vector3(0.02, 0, 0)
 position = Vector3(-3, -2.75, -7)
 size = Vector3(10, 4.5, 14)
 
@@ -77,7 +79,8 @@ look = &"floor"
 module = &"deck"
 
 [node name="EntryWall" type="Node3D" parent="Geometry/Terrace"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+inset_max = Vector3(0.02, 0, 0)
 position = Vector3(-5.75, 0.5, -0.5)
 size = Vector3(5.5, 11, 1)
 
@@ -93,19 +96,23 @@ size = Vector3(2, 5, 3)
 look = &"floor"
 
 [node name="RightABackBehind" type="Node3D" parent="Geometry/Terrace"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+inset_max = Vector3(0, 0.06, 0)
 position = Vector3(3.75, 3, -4.5)
 size = Vector3(0.5, 6, 3)
 look = &"dark"
 
 [node name="RightALintelBehind" type="Node3D" parent="Geometry/Terrace"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+inset_max = Vector3(0, 0.02, 0)
 position = Vector3(3, 4.3, -4.5)
 size = Vector3(2, 3.4, 3)
 look = &"accent"
 
 [node name="RightAWall1" type="Node3D" parent="Geometry/Terrace"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+inset_min = Vector3(0.02, 0, 0)
+inset_max = Vector3(0, 0.02, 0)
 position = Vector3(3, 0.5, -0.25)
 size = Vector3(2, 11, 0.5)
 
@@ -116,7 +123,8 @@ size = Vector3(2, 5, 2)
 look = &"floor"
 
 [node name="RightABackStair" type="Node3D" parent="Geometry/Terrace"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+inset_max = Vector3(0, 0.06, 0)
 position = Vector3(3.75, 3, -1.5)
 size = Vector3(0.5, 6, 2)
 look = &"dark"
@@ -128,7 +136,9 @@ size = Vector3(2, 3.4, 2)
 look = &"accent"
 
 [node name="RightAWallMid" type="Node3D" parent="Geometry/Terrace"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+inset_min = Vector3(0.02, 0, 0)
+inset_max = Vector3(0, 0.04, 0)
 position = Vector3(3, 0.5, -2.75)
 size = Vector3(2, 11, 0.5)
 
@@ -179,7 +189,8 @@ size = Vector3(2, 1.4, 3)
 look = &"accent"
 
 [node name="RightBWall2" type="Node3D" parent="Geometry/Terrace"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+inset_min = Vector3(0.04, 0, 0)
 position = Vector3(3, -0.5, -8.5)
 size = Vector3(2, 9, 1)
 
@@ -195,13 +206,15 @@ size = Vector3(3, 9.5, 2)
 look = &"floor"
 
 [node name="FarBackStair" type="Node3D" parent="Geometry/Terrace"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+inset_max = Vector3(0, 0.04, 0)
 position = Vector3(7, 7.3, -29.75)
 size = Vector3(3, 5.6, 0.5)
 look = &"dark"
 
 [node name="FarLintelStair" type="Node3D" parent="Geometry/Terrace"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+inset_max = Vector3(0, 0.02, 0)
 position = Vector3(7, 8.6, -29)
 size = Vector3(3, 3, 2)
 look = &"accent"
@@ -468,7 +481,8 @@ look = &"floor"
 module = &"deck"
 
 [node name="EndWall0" type="Node3D" parent="Geometry/Catwalk"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+inset_min = Vector3(0.02, 0, 0)
 position = Vector3(2.375, 2.55, -7)
 size = Vector3(0.75, 15.1, 2)
 
@@ -479,13 +493,16 @@ size = Vector3(3, 9.5, 2)
 look = &"floor"
 
 [node name="EndBackFar" type="Node3D" parent="Geometry/Catwalk"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+inset_max = Vector3(0, 0.04, 0.02)
 position = Vector3(4.25, 7.3, -6.25)
 size = Vector3(3, 5.6, 0.5)
 look = &"dark"
 
 [node name="EndLintelFar" type="Node3D" parent="Geometry/Catwalk"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+inset_min = Vector3(0, 0, 0.02)
+inset_max = Vector3(0, 0.02, 0.02)
 position = Vector3(4.25, 8.6, -7)
 size = Vector3(3, 3, 2)
 look = &"accent"
@@ -714,13 +731,15 @@ size = Vector3(3, 12.5, 2)
 look = &"floor"
 
 [node name="BackBackDoor" type="Node3D" parent="Geometry/TopRoof"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+inset_max = Vector3(0, 0.04, 0)
 position = Vector3(15.5, 10.25, -4.25)
 size = Vector3(3, 5.5, 0.5)
 look = &"dark"
 
 [node name="BackLintelDoor" type="Node3D" parent="Geometry/TopRoof"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+inset_max = Vector3(0, 0.02, 0)
 position = Vector3(15.5, 11.55, -5)
 size = Vector3(3, 2.9, 2)
 look = &"accent"
@@ -737,19 +756,22 @@ size = Vector3(3, 12.5, 2)
 look = &"floor"
 
 [node name="BackBackAccess" type="Node3D" parent="Geometry/TopRoof"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+inset_max = Vector3(0, 0.04, 0)
 position = Vector3(22.5, 10.25, -4.25)
 size = Vector3(3, 5.5, 0.5)
 look = &"dark"
 
 [node name="BackLintelAccess" type="Node3D" parent="Geometry/TopRoof"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+inset_max = Vector3(0, 0.02, 0)
 position = Vector3(22.5, 11.55, -5)
 size = Vector3(3, 2.9, 2)
 look = &"accent"
 
 [node name="BackWall2" type="Node3D" parent="Geometry/TopRoof"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+inset_max = Vector3(0.02, 0, 0)
 position = Vector3(25, 4, -5)
 size = Vector3(2, 18, 2)
 
@@ -764,7 +786,9 @@ position = Vector3(14.6, 9.75, -27.6)
 size = Vector3(4, 4.5, 3.6)
 
 [node name="PenthouseFrontWall0" type="Node3D" parent="Geometry/TopRoof"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+inset_min = Vector3(0.02, 0, 0)
+inset_max = Vector3(0, 0.06, 0.02)
 position = Vector3(12.85, 9.5, -24.8)
 size = Vector3(0.5, 5, 2)
 
@@ -776,19 +800,22 @@ look = &"floor"
 draw_box = false
 
 [node name="PenthouseFrontBackShutter" type="Node3D" parent="Geometry/TopRoof"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+inset_max = Vector3(0, 0.04, 0)
 position = Vector3(14.6, 9.75, -25.55)
 size = Vector3(3, 4.5, 0.5)
 look = &"dark"
 
 [node name="PenthouseFrontLintelShutter" type="Node3D" parent="Geometry/TopRoof"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+inset_max = Vector3(0, 0.02, 0)
 position = Vector3(14.6, 11.25, -24.8)
 size = Vector3(3, 1.5, 2)
 look = &"accent"
 
 [node name="PenthouseFrontWall1" type="Node3D" parent="Geometry/TopRoof"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+inset_max = Vector3(0.02, 0.06, 0.02)
 position = Vector3(16.35, 9.5, -24.8)
 size = Vector3(0.5, 5, 2)
 
@@ -813,7 +840,8 @@ size = Vector3(1.6, 1.6, 1.6)
 look = &"prop"
 
 [node name="CurbEast" type="Node3D" parent="Geometry/TopRoof"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+inset_min = Vector3(0, 0, 0.02)
 position = Vector3(25.85, 7.625, -18)
 size = Vector3(0.3, 0.25, 24)
 look = &"accent"

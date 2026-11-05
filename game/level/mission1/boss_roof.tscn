@@ -10,6 +10,7 @@
 [ext_resource type="Script" path="res://game/level/kit/art/dressing.gd" id="90_dressing"]
 [ext_resource type="Script" path="res://game/level/kit/art/kit_piece.gd" id="91_piece"]
 [ext_resource type="Script" path="res://game/level/kit/art/prop_spot.gd" id="92_spot"]
+[ext_resource type="Script" path="res://game/level/kit/inset_block.gd" id="inset_blk"]
 
 [sub_resource type="BoxShape3D" id="Box_lock"]
 size = Vector3(21, 8, 20.5)
@@ -118,7 +119,8 @@ size = Vector3(6, 3, 0.6)
 look = &"fence"
 
 [node name="BackCorner" type="Node3D" parent="Geometry"]
-script = ExtResource("2_blk")
+script = ExtResource("inset_blk")
+inset_max = Vector3(0.02, 0.02, 0)
 position = Vector3(-10.5, 2.5, -20.5)
 size = Vector3(1, 5, 1)
 look = &"wall"
@@ -175,7 +177,7 @@ size = Vector3(40, 14, 60)
 
 [node name="Ground" type="Node3D" parent="Geometry"]
 script = ExtResource("2_blk")
-position = Vector3(60, -13, -10)
+position = Vector3(60, -12.75, -10)
 size = Vector3(200, 1, 200)
 look = &"floor"
 solid = false

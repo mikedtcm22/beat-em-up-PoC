@@ -9,6 +9,7 @@ extends GutTest
 ## gives the sheet's own asphalt back. The colliders are unchanged (tests/test_m6_colliders.gd).
 
 const Snapshot := preload("res://tests/m6_collider_snapshot.gd")
+const Scan := preload("res://tests/m6_coplanar_scan.gd")
 ## Ink pixels thinner than this (the shorter of the pixel's two straight runs) are tips and rounding only.
 const MIN_RUN := 4
 const RUN_CAP := 12
@@ -190,38 +191,85 @@ func test_a_floor_face_wears_the_asphalt_strip() -> void:
 # --- The cause: two coplanar planes ---------------------------------------------------------------
 
 
-## Whether `block` draws a ground-like top (a floor, the dark far ground, a roof deck: a slab at most a metre thick).
-func _ground_like(block: LevelBlock) -> bool:
-	if not block.draw_box:
-		return false
-	var module: StringName = block.module if block.module != &"" else LevelBlock.MODULE_FOR_LOOK.get(block.look, &"")
-	return module in [&"floor", &"slab_dark", &"deck"] and block.size.y <= 1.0
+## The smallest shared area (square metres) that counts in the two code-built rooms: their boxes come from crowd_room.gd and
+## test_room.gd (not the level's scenes, so not the InsetBlock's to fix), where only slivers of 0.3 m2 and less remain
+## (docs/milestones/M6-calls/FIX-WORLD.md, "Requests"). Everything a player could see as a flicker is far above it.
+const ROOM_MIN_AREA_M2 := 0.5
 
 
-func test_no_two_drawn_ground_planes_of_the_level_share_a_top_over_any_area() -> void:
+func _scan(scene: String, min_area: float) -> Array[Dictionary]:
 	var holder := Node.new()
 	add_child_autofree(holder)
-	var level := Snapshot.instantiate(Snapshot.LEVEL, holder)
+	var root := Snapshot.instantiate(scene, holder)
 	await get_tree().physics_frame
-	var blocks: Array[LevelBlock] = []
-	for node: Node in level.find_children("*", "LevelBlock", true, false):
-		var block := node as LevelBlock
-		if _ground_like(block):
-			blocks.append(block)
-	assert_gt(blocks.size(), 8, "the level has ground blocks")
-	var overlaps := 0
-	for i in blocks.size():
-		for j in range(i + 1, blocks.size()):
-			var a := blocks[i].world_aabb()
-			var b := blocks[j].world_aabb()
-			if absf(a.end.y - b.end.y) > 0.01:
-				continue
-			var x := minf(a.end.x, b.end.x) - maxf(a.position.x, b.position.x)
-			var z := minf(a.end.z, b.end.z) - maxf(a.position.z, b.position.z)
-			if x > 0.01 and z > 0.01:
-				overlaps += 1
-				gut.p("coplanar tops: %s and %s overlap %.2f x %.2f m at y %.2f" % [level.get_path_to(blocks[i]), level.get_path_to(blocks[j]), x, z, a.end.y])
-	assert_eq(overlaps, 0, "no two ground planes of the level are coplanar over an area (a z-fight)")
+	await get_tree().physics_frame
+	var found := Scan.pairs(root, min_area)
+	assert_gt(Scan.drawn_boxes(root).size(), 8, "the scene draws boxes")
+	for pair in found:
+		gut.p(String(pair.text))
+	return found
+
+
+func test_no_two_drawn_faces_of_the_level_share_a_plane_over_an_area() -> void:
+	var found: Array[Dictionary] = await _scan(Snapshot.LEVEL, Scan.MIN_AREA_M2)
+	assert_eq(found.size(), 0, "no two drawn faces of the level (any module, look or thickness) share a plane (a z-fight)")
+
+
+func test_no_two_drawn_faces_of_the_crowd_street_share_a_plane_over_an_area() -> void:
+	var found: Array[Dictionary] = await _scan(Snapshot.CROWD, ROOM_MIN_AREA_M2)
+	assert_eq(found.size(), 0, "no two drawn faces of the crowd street share a plane")
+
+
+func test_no_two_drawn_faces_of_the_training_room_share_a_plane_over_an_area() -> void:
+	var found: Array[Dictionary] = await _scan(Snapshot.TRAINING, ROOM_MIN_AREA_M2)
+	assert_eq(found.size(), 0, "no two drawn faces of the training room share a plane")
+
+
+func test_the_scan_finds_a_pair_it_is_given() -> void:
+	## The guard is only worth having if it fires: two floor slabs on one top over 2 x 3 m, and a second pair that is not coplanar.
+	var holder := Node3D.new()
+	add_child_autofree(holder)
+	var floor_a := LevelBlock.new()
+	floor_a.size = Vector3(4.0, 1.0, 4.0)
+	floor_a.look = &"floor"
+	holder.add_child(floor_a)
+	var floor_b := LevelBlock.new()
+	floor_b.size = Vector3(4.0, 1.0, 4.0)
+	floor_b.look = &"floor"
+	floor_b.position = Vector3(2.0, 0.0, 1.0)
+	holder.add_child(floor_b)
+	var step := LevelBlock.new()
+	step.size = Vector3(1.0, 1.0, 1.0)
+	step.look = &"floor"
+	step.position = Vector3(-1.5, 0.1, -1.5)
+	holder.add_child(step)
+	await get_tree().physics_frame
+	var found := Scan.pairs(holder)
+	assert_eq(found.size(), 1, "one coplanar pair: the two slabs, not the stepped one")
+	assert_almost_eq(float(found[0].area), 2.0 * 3.0, 0.01, "over 2 x 3 m")
+	floor_b.position = Vector3(2.0, 0.1, 1.0)
+	await get_tree().physics_frame
+	assert_eq(Scan.pairs(holder).size(), 0, "a tenth of a metre apart they no longer share a plane")
+
+
+func test_an_inset_block_draws_smaller_and_collides_as_the_box() -> void:
+	var holder := Node3D.new()
+	add_child_autofree(holder)
+	var block := InsetBlock.new()
+	block.size = Vector3(4.0, 2.0, 1.0)
+	block.inset_min = Vector3(0.0, 0.0, 0.04)
+	block.inset_max = Vector3(0.02, 0.02, 0.0)
+	holder.add_child(block)
+	await get_tree().physics_frame
+	var shape := block.body.get_child(0) as CollisionShape3D
+	assert_eq((shape.shape as BoxShape3D).size, Vector3(4.0, 2.0, 1.0), "the collider is the whole box")
+	var mesh := block.body.find_children("*", "MeshInstance3D", true, false)[0] as MeshInstance3D
+	var drawn: AABB = mesh.global_transform * mesh.mesh.get_aabb()
+	assert_almost_eq(drawn.position.z, -0.5 + 0.04, 0.001, "the - z face is pulled in 4 cm")
+	assert_almost_eq(drawn.end.z, 0.5, 0.001, "the + z face stays")
+	assert_almost_eq(drawn.end.y, 1.0 - 0.02, 0.001, "the top is pulled in 2 cm")
+	assert_almost_eq(drawn.end.x, 2.0 - 0.02, 0.001, "the + x face is pulled in 2 cm")
+	assert_almost_eq(drawn.position.x, -2.0, 0.001, "the - x face stays")
 
 
 func test_the_boss_roofs_far_ground_is_not_solid_and_lies_below_the_street() -> void:
