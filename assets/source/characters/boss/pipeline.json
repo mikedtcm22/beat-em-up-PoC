@@ -192,7 +192,7 @@
 			"bump_m": 0.006,
 			"source": "generated",
 			"generated": {
-				"mesh": "assets/source/characters/boss/parts/fist/tripo/4a3c51c1_gen.glb",
+				"mesh": "assets/source/characters/boss/parts/fist/tripo/fix/e3c153f4_gen.glb",
 				"facing_yaw_deg": 90.0,
 				"source_side": "Right",
 				"block_top_frac": 0.6,

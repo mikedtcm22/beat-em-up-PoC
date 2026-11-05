@@ -1,0 +1,22 @@
+[
+	{
+		"out": "fist_front_a.jpg",
+		"prompt": "The reference image shows ONE deep charcoal boxing glove on a closed fist, seen from the character's left side: the thumb is sewn flat against the image's left side, the wrist at the TOP, the padded knuckle end at the BOTTOM. Draw the SAME glove after turning it 90 degrees about its vertical axis, so that we now look straight at the THUMB SIDE, the glove's FRONT. CRUCIAL SHAPE RULE: the glove stays a SOLID, STRAIGHT, UPRIGHT, chunky rounded block exactly as tall as in the reference. It does NOT bend, hook, curl, hang forward or sweep sideways: no J shape, no banana, no horn, no toe. Its outline is a plain tall rounded rectangle like a thick pillow standing upright: two almost parallel vertical sides about 10 cm apart, a fully rounded bottom (the knuckle end), and the cuff and strap on top as straight horizontal bands. The wrist cuff, strap and orange tape are centred directly above the glove, in one straight vertical line with it. Surface detail on this side: the thumb is a rounded oval bulge lying on the glove's middle, its tip pointing down toward the knuckle end, a thin stitched seam around it; the big padded glove body shows on both sides of the thumb. The strap with its velcro tab wraps across the cuff, the orange hand-wrap tape above it. Same colours as the reference (charcoal #35323b leather with slightly lighter charcoal stitching, orange #ee6a1c tape), same cuff cut and the cuff's top edge at the same height in the frame, same overall scale, centred with a clear margin all round. Strictly ORTHOGRAPHIC front elevation, like a 3D modelling turntable reference. FLAT: flat unshaded albedo colours only, no outlines of any colour around shapes, no cel shading, no gradients, no highlights, no cast shadow. Plain flat solid #d9d9d9 background. One object only: just this one glove with its wrist stump, nothing else, no text, no logos.",
+		"refs": [
+			"fist_left.jpg"
+		],
+		"model": "gemini-3-pro-image",
+		"aspect": "1:1",
+		"size": "2K"
+	},
+	{
+		"out": "fist_front_b.jpg",
+		"prompt": "The reference image shows ONE deep charcoal boxing glove on a closed fist, seen from the character's left side: the thumb is sewn flat against the image's left side, the wrist at the TOP, the padded knuckle end at the BOTTOM. Draw the SAME glove after turning it 90 degrees about its vertical axis, so that we now look straight at the THUMB SIDE, the glove's FRONT. CRUCIAL SHAPE RULE: the glove stays a SOLID, STRAIGHT, UPRIGHT, chunky rounded block exactly as tall as in the reference. It does NOT bend, hook, curl, hang forward or sweep sideways: no J shape, no banana, no horn, no toe. Its outline is a plain tall rounded rectangle like a thick pillow standing upright: two almost parallel vertical sides about 10 cm apart, a fully rounded bottom (the knuckle end), and the cuff and strap on top as straight horizontal bands. The wrist cuff, strap and orange tape are centred directly above the glove, in one straight vertical line with it. Surface detail on this side: the thumb is a rounded oval bulge lying on the glove's middle, its tip pointing down toward the knuckle end, a thin stitched seam around it; the big padded glove body shows on both sides of the thumb. The strap with its velcro tab wraps across the cuff, the orange hand-wrap tape above it. Same colours as the reference (charcoal #35323b leather with slightly lighter charcoal stitching, orange #ee6a1c tape), same cuff cut and the cuff's top edge at the same height in the frame, same overall scale, centred with a clear margin all round. Strictly ORTHOGRAPHIC front elevation, like a 3D modelling turntable reference. FLAT: flat unshaded albedo colours only, no outlines of any colour around shapes, no cel shading, no gradients, no highlights, no cast shadow. Plain flat solid #d9d9d9 background. One object only: just this one glove with its wrist stump, nothing else, no text, no logos.",
+		"refs": [
+			"fist_left.jpg"
+		],
+		"model": "gemini-3-pro-image",
+		"aspect": "1:1",
+		"size": "2K"
+	}
+]
