@@ -133,13 +133,18 @@ def run(cfg, extra):
 	L = {k: v * s + t for k, v in L.items()}
 
 	# ----- 2. soles to z = 0
-	if has_tw:
+	if has_tw and fit.get("sole_from") != "height":
 		foot_mask = dominant_mask(tw, NAMES, ["LeftFoot", "RightFoot", "LeftToes", "RightToes"])
 	else:
-		foot_mask = (co[:, 2] < 0.15)
+		# fit.sole_from "height" (M6 HEAVIES, opt-in): the lowest vertex under fit.sole_height_m is the sole, whoever owns it (a
+		# generated rig can hang a heavy boot's heel and sole on the shin, so the foot-owned vertices stop above the real sole)
+		foot_mask = (co[:, 2] < float(fit.get("sole_height_m", 0.15)))
 	if not foot_mask.any():
 		foot_mask = co[:, 2] < 0.15
 	sole_z = float(np.percentile(co[foot_mask, 2], fit.get("sole_percentile", 0.5)))
+	# fit.sole_offset_m (M6 HEAVIES, opt-in): the warp's blend of shin and foot weights can leave a heavy boot's heel a little under
+	# the floor after the fit; a negative offset puts the ankle landmarks lower in the source, which lifts the whole foot
+	sole_z += float(fit.get("sole_offset_m", 0.0))
 	for side in pc.SIDES:
 		for bone, h in (("Foot", T0[side + "Foot"][2]), ("Toes", T0[side + "Toes"][2])):
 			cur = L.get(side + bone)
@@ -350,6 +355,41 @@ def run(cfg, extra):
 			ln = np.maximum(np.linalg.norm(radial, axis=1, keepdims=True), 1e-6)
 			new_co[:, :2] += radial / ln * (weight * float(bg["amount_m"]))[:, None]
 		bulge_report.append({"name": bg.get("name", ""), "vertices": int((weight > 0.01).sum()), "amount_m": float(bg["amount_m"])})
+	# ----- 5e. sole flatten (opt-in, fit.sole_flatten; M6 HEAVIES): a generated boot can have its toe sprung up a few cm (the
+	# Bruiser's steel-capped boots) while the contract wants a flat sole (A1: the lowest band of the sole runs from heel to toe). Per
+	# foot, the underside's height is read in `bins` slices along the foot and every vertex is lowered by its slice's rise above the
+	# lowest slice, fading to nothing `height_m` above its own sole, so the uppers keep their shape and only the sole is levelled.
+	flatten_report = None
+	sf = fit.get("sole_flatten")
+	if sf:
+		h_range = float(sf.get("height_m", 0.09))
+		nb = int(sf.get("bins", 24))
+		flatten_report = {}
+		for side in (-1.0, 1.0):
+			foot = (new_co[:, 0] * side > 0.01) & (new_co[:, 2] < h_range * 2.0)
+			if not foot.any():
+				continue
+			ys = new_co[foot, 1]
+			zs = new_co[foot, 2]
+			edges = np.linspace(ys.min(), ys.max() + 1e-9, nb + 1)
+			idx = np.clip(np.digitize(ys, edges) - 1, 0, nb - 1)
+			under = np.full(nb, np.nan)
+			for i in range(nb):
+				if (idx == i).any():
+					under[i] = zs[idx == i].min()
+			centres = (edges[:-1] + edges[1:]) * 0.5
+			good = ~np.isnan(under)
+			under = np.interp(centres, centres[good], under[good])
+			under = np.convolve(np.pad(under, 1, mode="edge"), np.ones(3) / 3.0, mode="valid")
+			rise = under - under.min()
+			sel = (new_co[:, 0] * side > 0.01) & (new_co[:, 2] < h_range * 3.0)
+			d = np.interp(new_co[sel, 1], centres, rise)
+			floor_here = np.interp(new_co[sel, 1], centres, under)
+			w_fade = np.clip(1.0 - (new_co[sel, 2] - floor_here) / h_range, 0.0, 1.0)
+			new_co[sel, 2] -= d * w_fade
+			flatten_report["left" if side < 0 else "right"] = {"max_rise_m": float(rise.max()), "vertices": int(sel.sum())}
+		# (in the notes, not a report key of its own: every roster report keeps the Punk's step keys, test_art_contract)
+		notes.append("sole_flatten " + str({k: {"max_rise_m": round(v["max_rise_m"], 4), "vertices": v["vertices"]} for k, v in flatten_report.items()}))
 	pb.set_verts(me, new_co)
 	for p in me.polygons:
 		p.use_smooth = True

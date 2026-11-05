@@ -1,0 +1,20 @@
+[
+	{
+		"out": "fist_left.jpg",
+		"prompt": "Draw ONLY a single isolated boxing glove with a short wrapped wrist stump: NO boots, NO legs, NO feet, NO body, NO second glove, NOTHING below the glove. Original game asset for a stylized comic-book brawler video game: the LEFT HAND of a champion boxer, drawn as a tightly CLOSED FIST inside a classic padded boxing glove. The design: a big deep-charcoal boxing glove with a charcoal velcro strap at the wrist and orange hand-wrap tape wound round the wrist above it. Draw only this one glove, hanging straight down from the wrist like a hammer fist: the wrist at the TOP, the orange hand-wrap tape wound round the wrist for about 3 cm, then the charcoal glove's cuff with its charcoal velcro strap, ending at the top in a clean flat horizontal cut (no forearm, no sleeve, no arm above the tape), the big rounded padded glove below with the thumb sewn flat against its side, the padded knuckle end at the BOTTOM. Glove design: deep dark charcoal (#35323b, not black) leather glove, a slightly lighter charcoal stitched seam round the thumb and across the back of the hand, tan-skin (#c58b5f) wrist visible only between the tape's wraps; the orange (#ee6a1c) tape wraps with thin darker orange lines. Chunky and simple, a glove that reads at a glance. Proportions: the glove is about 12 cm wide, 13 cm tall below the cuff and 12.5 cm deep, the cuff about 8 cm across; fill about 70 percent of the image height with the whole glove and cuff, centred, with a clear margin on all sides. We see it from the character's left side: the back of the hand and the sewn thumb on the image's left. Strictly ORTHOGRAPHIC, like a 3D modelling reference: no perspective, no foreshortening. This image is the input of a 3D reconstruction, so it must be FLAT: flat unshaded albedo colours only, as if painted straight onto the surfaces under perfectly even light. No outlines of any colour around shapes, no cel shading, no shading, no gradients, no highlights, no reflections, no cast shadow, no ground shadow. Keep the glove's fine detail as thin, slightly darker lines in the glove's own colour (seams, the thumb's stitching, the strap edge), never black. Plain flat solid #d9d9d9 background. One object only, no text, no letters, no logos, no watermark. Colour palette strictly limited to deep charcoal, saturated orange and tan skin. Absolutely no red or pink anywhere. The glove is the only object in the whole image, with plain empty background all round it.",
+		"refs": [],
+		"model": "gemini-3-pro-image",
+		"aspect": "1:1",
+		"size": "2K"
+	},
+	{
+		"out": "fist_front.jpg",
+		"prompt": "The reference image shows ONE deep charcoal boxing glove on a closed fist, seen from the character's left, the thumb sewn flat against its left side. Draw the SAME single glove seen from 90 degrees round: now we look at the glove's THUMB SIDE, so the big rounded glove is narrower than in the reference (its depth, about 12 cm, instead of its width), the thumb is a long curved bulge running down the middle of the glove facing the camera, the strap at the cuff and the orange tape above it are seen from the side. The image MUST differ from the reference: a clearly different, narrower silhouette with the thumb in the centre. Draw ONLY this one glove: NO boots, NO legs, NO body, NOTHING below the glove. Same colours (charcoal #35323b, orange #ee6a1c tape), same size, same top cut, hanging straight down, plain flat solid #d9d9d9 background, flat unshaded colours, no outlines, no shading, no cast shadow, no text, orthographic.",
+		"refs": [
+			"fist_left.jpg"
+		],
+		"model": "gemini-3-pro-image",
+		"aspect": "1:1",
+		"size": "2K"
+	}
+]

@@ -1,0 +1,32 @@
+{
+	"id": "boss",
+	"slot_range": [50, 55],
+	"note": "Ox Pellerin's colours (M6 concept C: a hooded charcoal robe with orange trim, an orange champion's belt, orange hand wraps and laces, grey shorts over black tights, tan skin from the shared palette). The charcoal is darker than the concept's slate (Game-boy's note). The orange (hue 23) stays clear of the dummy's muted orange (hue 31) and of the red band. The orange scuffs but never takes blood: red on orange read as a smear (M6 D6, the Punk's yellow). The boxing gloves wear the shared dark grey (slot 2: the chain's fist decimation failed with a slot of this file as the glove). Nothing glossy.",
+	"swatches": [
+		{
+			"slot": 50,
+			"name": "boss_charcoal",
+			"srgb": "#35323b",
+			"marks": true
+		},
+		{
+			"slot": 51,
+			"name": "boss_orange",
+			"srgb": "#ee6a1c",
+			"marks": true,
+			"blood": false
+		},
+		{
+			"slot": 52,
+			"name": "boss_tights",
+			"srgb": "#1c1a21",
+			"marks": true
+		},
+		{
+			"slot": 53,
+			"name": "boss_shorts",
+			"srgb": "#78747f",
+			"marks": true
+		}
+	]
+}

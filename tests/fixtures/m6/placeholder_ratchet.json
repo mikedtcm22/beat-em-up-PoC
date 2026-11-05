@@ -1,20 +1,20 @@
 {
 	"mission1": {
-		"primitive_bodies": 4,
+		"primitive_bodies": 2,
 		"tints": 0,
 		"boxes": 0,
 		"cylinder_weapons": 0,
 		"second_weapon": 0
 	},
 	"crowd_room": {
-		"primitive_bodies": 4,
+		"primitive_bodies": 2,
 		"tints": 0,
 		"boxes": 74,
 		"cylinder_weapons": 0,
 		"second_weapon": 0
 	},
 	"test_room": {
-		"primitive_bodies": 4,
+		"primitive_bodies": 2,
 		"tints": 0,
 		"boxes": 27,
 		"cylinder_weapons": 0,

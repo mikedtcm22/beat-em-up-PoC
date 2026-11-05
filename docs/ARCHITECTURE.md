@@ -1368,7 +1368,19 @@ A rigid model (a weapon, a car, a dumpster, a tank) goes through its own small c
 
 ### The Bruiser and the boss (HEAVIES)
 
-_Filled by HEAVIES._
+Both go through the CHAIN's art chain at their own heights and wear the art on their scenes (`bruiser.tscn`, `boss.tscn`: `art = game/actors/art/<id>_art.tres`). Authored at 1.8 m like every GLB, worn at 2.05 m and 2.3 m by the rig's uniform scale (D15); the bulk is girth, clamped by the chain's `fit.girth_clamp`.
+
+- **The Bruiser** (`assets/source/characters/bruiser/`, concept A): three Gemini views on the mannequin (front, left, back; the right view is not needed, the Punk's Tripo run used the same three), Tripo multiview (H1, 30 credits, seed 6101) and rig (H1r, 25), a procedural fist. Palette `bruiser.json`, slots 44-46 (purple, steel with `blood: false`, black-violet) plus the shared cream and skin; 14999 triangles, 4 colours.
+- **Ox Pellerin** (`boss/`, concept C): the same views with the hands bare (the gloves are modelled apart), Tripo multiview with `geometry_quality detailed` (H2, 50, seed 6201) and rig (H2r, 25), a generated boxing-glove fist (H3, 50, from two Gemini views; the Punk's T9 route: `parts.fists.source generated`, a collar). Palette `boss.json`, slots 50-53 (charcoal, orange with `blood: false`, tights, shorts), the shared tan skin and slot 2 for the gloves; 29299 triangles against the roster's 30000 (SPEC section 10's Boss row). The HUD bar, the enemy scene and the catalog read "Ox Pellerin"; `EncounterSpawner.make_enemy` keeps a boss scene's own `display_name` (it used to write "Boss" over it).
+- **Chain knobs the heavies needed** (all opt-in, none changes the Punk's, the hero's or the dummy's report hash):
+  - `fit.sole_offset_m`: added to the sole height the ankle landmarks are put on; negative lifts the whole foot (the warp's blend of shin and foot weights left both heavies' heels 0.5-2.3 cm under the floor).
+  - `fit.sole_flatten {height_m, bins}`: per foot, the underside is read in slices along the foot and every vertex lowered by its slice's rise above the lowest, fading to nothing `height_m` above the sole (the Bruiser's steel-capped boots had their toes sprung 3 cm).
+  - `fit.sole_from "height"`, `fit.sole_height_m`: take the lowest vertex under that height as the sole whoever owns it (tried; not needed in the end).
+  - `rig.clamps[].below_z_m`: the mirror of `above_z_m`, moving a bone's weight onto `to` below a height (a generated rig hangs a heavy boot's heel half on the shin, which left the soles with no foot-bound vertex for A1/A4).
+  - `tools/pipeline/views_fit.py <views_dir>`: crops each generated view to its subject and scales it to the mannequin's height and feet row (stdlib and ffmpeg; the raw views are kept in `views/raw/`); no Gemini image is spent on a 3% height miss.
+- **Test rows** (CHAIN's rows run over the roster at each height): `test_m4_done_when.gd` A4 builds its walk and idle clips at `rig.rig_scale()` and A5 compares the fist with the table's box and centroid tolerance scaled by it (both were 1.8 m only; the Punk, the dummy and the hero are unchanged at scale 1). Roster files `tests/fixtures/art/roster/{bruiser,boss}.json` and strain files `tests/fixtures/strain/{bruiser,boss}.json` carry their ratchets and reasons. `tests/test_art_heavies.gd`: the rows, the boss's name (scene, catalog, spawner), the palettes (ranges, red band, no gloss, `blood: false`, the charcoal darker than the slate, the orange clear of the dummy's), and the lens rule (no art vertex in view nearer than `FPView.NEAR` in the Bruiser's smash and grab/headbutt at 0.95 m, the boss's charge, pound and grab/slam at Tuning's `boss_read_m`).
+- **Look acts**: the roster's "Look: Bruiser at 1 m" and "Look: Ox Pellerin at 1 m"; `tests/bot/acts/heavies_acts.gd` "Look: heavies beside a Punk" (the Punk, the Bruiser and the boss on an arc at 2.5, 5 and 10 m, level view).
+- **Inventory**: `primitive_bodies` 4 -> 2 in the level, the crowd room and the test room (the Kicker and the Pipe Thug remain).
 
 ### The Kicker and the Pipe Thug (CREW)
 
