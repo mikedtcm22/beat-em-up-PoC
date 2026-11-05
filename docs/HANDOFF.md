@@ -4,6 +4,53 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-05 16:20 CST: the verification round done (3 medium survive); its fix pass running (VFIX-FEEL, VFIX-WORLD, VFIX-KICKER, VFIX-HEAVIES)
+- **Verification** (run `wf_05ec4fe8-e6f`; every finding in full in `docs/reviews/M6/findings-verify.json`).
+  - **Confirmed fixed:**
+    - the Thug's face, chest and waistband;
+    - the Kicker's mask;
+    - the Bruiser's visor stripes and wedge colour, and his helmet colour at 1, 2.2 and 5 m;
+    - the Punk's vest and the veteran;
+    - Ox's mauve patches, confirmed as shading, which bruise as skin;
+    - the hurt edge for all 34 hurt-act hits and every pinned real hit in the passive acts;
+    - the finisher, blocked and burst acts;
+    - the boss roof gap (tour pose 17: 0.213 to 0.053), with the walk's flicker unchanged;
+    - the paler ground;
+    - the tunables, the scan and the colliders.
+  - **Mediums (survived the skeptics):**
+    - **verify-chars-01 and code-01:** the Kicker's merged eyes config is the build FIX-ART-A rejected (z 1.685, not 1.665). The brim is skin, and the face is blank.
+    - **verify-world-01:** the InsetBlock recesses leave 2-4 cm steps where the partner covers only part of a face. The edge pass inks them (catwalk wall, terrace pillars, penthouse side, a street pilaster, a skyline corner), dashed and crawling at distance.
+    - **verify-world-02:** `hit_bearing` uses the pitched view against the attacker's feet, so front and back swap past about 30° of pitch, as when stomping.
+  - **Lows the lead took:**
+    - the Bruiser's helmet front band still bleeds;
+    - his under-visor stair step;
+    - Ox's new face blot and jaw comma;
+    - the ground's mirrored pair;
+    - the rooms held only to 0.5 m2, and the Dressing outside the scan;
+    - the dead `INSET_STEP_M`;
+    - the Bruiser strain ratchet regenerated wholesale;
+    - stale ASSETS rows;
+    - the closure test satisfied by a string.
+  - **The lead's addition:** rear-hit strokes are faint on the pale ground (a Punk jab from behind: −9 grey levels against −55 from the front).
+  - **Left:** the Bruiser's visor slit takes blood (it's the gap in the helmet); about 1% cloth texels on Ox's skin.
+- **Running:** build.js run `wf_05b99ce4-b20` (task `w4fhgx7c7`), with `docs/reviews/M6/args-VERIFY-FIX.json` and brief `docs/reviews/M6/fix-verify.md`.
+  - Four Sonnet fixers; the two art ones on the Blender slots.
+  - Branches `m6/vfix-feel`, `m6/vfix-world`, `m6/vfix-kicker`, `m6/vfix-heavies`; worktrees `.worktrees/m6-vfix-*`.
+  - **If cut off:** rerun build.js with the same args.
+- **Next:**
+  1. Merge all four:
+     - the preset;
+     - `gen_palette.py` (VFIX-KICKER may add a slot);
+     - the Bruiser's strain fixture as VFIX-HEAVIES leaves it;
+     - every `--check`;
+     - the suite with `ART_PUNK_VARIANT_STRAIN=1`.
+  2. The lead's look:
+     - re-record the tour (diff against `captures/m6-feedback-review/tour`), hurt, `passive_six`, `r_kicker`, `r_bruiser` and `r_boss` into `captures/m6-verify-final/`;
+     - check the 5 seam sites and the pitched hurt.
+  3. PR #6's body.
+  4. The DM with the stills, the run command and his two open questions.
+  5. Merge only on his word.
+
 ### 2026-11-05 15:30 CST: frame time measured (the fixes cost nothing); the verification round running
 - **Frame time** (`captures/m6-feedback-fix/perf/report.txt`): the three builds were run in turn, 4 runs each, vsync on. The load was 5 from Game-boy's apps, so the absolute times are high.
   - **Level walk:**
