@@ -4,6 +4,46 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-05 13:15 CST: the FEEDBACK review done (2 high, 5 medium survive); the fix wave running (FIX-FEEL, FIX-WORLD, FIX-ART-A, FIX-ART-B)
+- **The review** (run `wf_17f7b1df-712`; every finding with detail, fix and verdict in `docs/reviews/M6/findings-feedback.json`):
+  - **Passes:**
+    - all five enemies are closer to their concepts than M6 at 2.5-3 m;
+    - no crawl in motion: the fight with the per-texel swatches on against off, with identical logs, gave the same change, 557,975,304 against 557,975,210 pixels;
+    - one line weight across the roster;
+    - the veteran reads at 5 m;
+    - the street ground holds still (the lead's drift: 0.017 / 0.039 against M6's 5.1).
+  - **Highs (confirmed by the lead in the code):**
+    - **world-01:** the hurt cue's bearing comes from the contact point on the player's own hurtbox, so its edge and roll are near random;
+    - **world-02:** FB-GROUND's lowered boss-roof Ground (top -0.5) is coplanar with the roofs' skyline walk strips, a new z-fight in the gap view.
+  - **Mediums:**
+    - **chars-01:** the Thug's black half-face (slot 40, no blood);
+    - **chars-02:** the Thug's chest valley scribble;
+    - **chars-03:** Ox's grey slot-53 face blotches, which take cloth damage;
+    - **world-03:** no recording of a finisher, a blocked hit or a burst landing;
+    - **code-01:** the hurt shape numbers are script literals.
+  - **Lows the lead took:**
+    - the Kicker's eyes and mask slashes;
+    - the Bruiser's visor stripes, and his purple helmet now bleeding (a new blood-false swatch);
+    - the Thug's waistband dashes;
+    - the hurt constants;
+    - the ground's camo-like busy-ness and its 8 m repeat (keep only if clearly closer to the mood);
+    - the strip ink fading early on grazing surfaces;
+    - the ASSETS rows;
+    - the vacuous detail guards.
+  - **Left:** the Punk's cap logo blot (as in M6), the Bruiser's cuff ovals, and Ox's sawtooth sleeve (in the texture).
+- **Running:** build.js run `wf_b1184dc7-5fe` (task `wzbuqd3p9`), with `docs/reviews/M6/args-FEEDBACK-FIX.json` and brief `docs/reviews/M6/fix-feedback-final.md`. Four Sonnet fixers at once, the art pair on the two Blender slots:
+  - **FIX-FEEL:** the bearing from the attacker's position, real-hit tests per side, the shape numbers into Hit feel > Hurt, and the hurt act extended with a finisher, a block, a burst, and hits from the right and behind.
+  - **FIX-WORLD:** the boss Ground clear of every drawn plane, the coplanar guard over every drawn block of the level and both rooms, the ground calmer with its repeat broken, and the strip ink fade.
+  - **FIX-ART-A:** the Thug and the Kicker, plus the guards' `_rolled_out` requiring the recipe key.
+  - **FIX-ART-B:** Ox's face region and texture face lines, the Bruiser's visor and helmet swatch, and the Punk's vest valleys.
+  - Branches `m6/fix-feel`, `m6/fix-world`, `m6/fix-art-a`, `m6/fix-art-b`. **If cut off:** rerun build.js with the same args.
+- **Next:**
+  1. Merge all four (the preset, `gen_palette.py` since FIX-ART-B adds a swatch, every `--check`, and the suite with `ART_PUNK_VARIANT_STRAIN=1`).
+  2. The lead's look at each package's stills; re-record the boss roof gap and the hurt act if needed.
+  3. Perf against `663cafc` on a quiet machine (`tools/perf_compare.sh --vsync on --runs 4 --bot res://tests/bot/perf_level_bot.tscn --act "Perf: level walk" --act "Perf: counters" 663cafc HEAD`).
+  4. README's M6 status, PR #6's body, and the DM with the stills and the run command. Merge only on his word.
+- **Usage at launch:** 5-hour 16%, weekly 39%.
+
 ### 2026-11-05 12:40 CST: FEEDBACK phase 2b merged (2006/2006); the review round's recordings running
 - **Merged into `m6/full-art-audio`:** ROLL-KICKER (`40e03ba`), ROLL-THUG (`45f9ac0`), ROLL-PUNK (`fdb9ee0`) and OX-2 (`5d21aa3`); merge head `82bab12`, pushed.
   - **Conflicts:**
