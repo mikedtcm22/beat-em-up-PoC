@@ -219,7 +219,7 @@
 		],
 		"max_swatches": 6,
 		"min_share": 0.004,
-		"majority_passes": 10,
+		"majority_passes": 6,
 		"border_relax_iterations": 5,
 		"border_relax_factor": 0.5,
 		"budget_tris": 15000,

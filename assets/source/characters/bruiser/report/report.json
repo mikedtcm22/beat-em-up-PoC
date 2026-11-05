@@ -1,7 +1,7 @@
 {
 	"asset": "bruiser",
 	"version": 2,
-	"config_sha256": "e712a3b95a6956d14003ebaf702ddf98ee56c548b56082a8b90570c3a0fc4303",
+	"config_sha256": "15d94bb651656c10c561a97f4187def3f7c67acc0765a5eb7405b5031d5f001d",
 	"steps": {
 		"inspect": {
 			"source": {
@@ -10051,7 +10051,7 @@
 					"share": 5.1e-05
 				}
 			],
-			"majority_flips": 2642,
+			"majority_flips": 1670,
 			"border_vertices": 995,
 			"border_edges": 1055,
 			"protected_vertices": 2615,
@@ -10313,5 +10313,5 @@
 		"bruiser.glb": "1ed258fd7e5ed837ce123edd9f2cffd19a19cf674d5d70e511b3f11ec22dd238",
 		"bruiser_rest.glb": "96c838bfe291d4b117e3476668c61dc9a86f027cc47edc57f68e984fd0e8013c"
 	},
-	"hash": "4cbd7308ad0ea39d6d761679127d18e7f28020075be0eafe67e0328a72551f9a"
+	"hash": "706e9531aac75131c98296c6a63f4f0caa1681960cb7932b6d524302abbf8e50"
 }
