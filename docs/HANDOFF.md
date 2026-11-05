@@ -4,6 +4,34 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-04 19:45 CST: the final review done (8 survive); the fix wave running
+- **The review** (`wf_9935c9e9-811`, about 25 minutes, 28 agents). The findings, verdicts and the lead's rulings are in `docs/reviews/M6/findings-final.json` (`2ec1110`).
+  - **Survived:**
+    - chars-01 (high): Ox's gloves read as black J-hooks curling outward. The source front view was a stretched J.
+    - world-01 (high): the roofs' drop floors are undressed slabs.
+    - chars-02: the 1 m acts cut off the heavies' heads.
+    - chars-03: the Bruiser's steel lights to a pale "bare belly", and his plates have no ink edges.
+    - chars-04: the near arm.
+    - world-02: `fog_sky_affect` defaults to 1, so the dusk sky never shows.
+    - world-03: the props' palette breaks the environment band, and the car's orange shares the enemies' orange.
+    - world-04: a crate is drawn on the dumpster's lid.
+  - **Refuted:** code-01 (the Tuning leak breaks no test), code-02 (the hero's strain ratchet is a percentile effect of the split) and code-03 (the Bruiser's bulk is the logged call H-10).
+  - **Promoted by the lead from the lows:** world-05 (the acts record mid-blend; the "pale plane" was this), world-07 (the sun's yaw sweeps), world-08 (the player's shadow at a low sun), code-01, code-04 (the heavies test leaks an EnemyDirector), code-05 items 1-4 (script numbers) and code-07 (the ledger test's teeth).
+  - **Left as they are:**
+    - chars-05: the Thug's pipe is end-on at 1 m (M5's carry, polish).
+    - chars-06: the boss's legs.
+    - chars-07: ragged swatch borders.
+    - world-06: the rails are straight; it's perspective.
+  - **Confirmed fine:** the Thug's pipe in hand, the chain, the glint at 10 m, the OX PELLERIN bar, D6 on every no-blood swatch, the veteran at 5 m, the budgets, every `--check` rebuild, the ledgers (Tripo 495/900, ElevenLabs about 4.9k/30k), no key anywhere, and LFS.
+- **Running:** the fix wave, `review.js` run `wf_6670133f-d3e` (no lenses; `findings_path` plus three packages, `fix_concurrency` 3):
+  - `art`: chars-01, -02, -03, code-04 (Tripo at most 120, Gemini 8, Blender);
+  - `world`: world-01, -02, -03, -04, -05, -07, -08, code-05 item 4;
+  - `arm`: chars-04, code-01, code-05 items 1-3, code-07 (the hero's Blender rebuild).
+  - Their worktrees are `.worktrees/m6-fix-final-<key>`, on branches `m6/fix-final-<key>`.
+  - **If cut off:** rerun with the same args (each fixer resumes from its newest `wip:` commit).
+- **The near arm:** Game-boy hasn't answered. The fix keeps it on by default, and the `look_near_arm` switch still gives M5's view.
+- **Next:** merge the three fixes (the atlas, the preset, the ratchet, the suite). Then the re-check of the changed items (send the art and arm A/B stills), perf on a quiet machine, README, the PR, and the DM.
+
 ### 2026-11-04 19:15 CST: phase 3 recorded (19 acts, 0 errors); the final review running
 - **Recorded** into `captures/m6-final/` (git-ignored): all 19 acts, with 0 error lines. The held-back runs cleared every arena: street 132 s, roofs 175 s and boss 111 s (M5: 136, 183 and 108).
 - **The lead's look:**
