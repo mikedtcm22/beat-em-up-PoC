@@ -302,7 +302,7 @@
 		"max_swatches": 6,
 		"min_share": 0.004,
 		"majority_passes": 6,
-		"border_relax_iterations": 5,
+		"border_relax_iterations": 0,
 		"border_relax_factor": 0.5,
 		"budget_tris": 30000,
 		"detail_uv": true,
@@ -319,7 +319,143 @@
 			"ink_high": 0.11,
 			"grow_px": 0,
 			"no_ink_slots": [],
-			"zones": [],
+			"zones": [
+				{
+					"name": "robe",
+					"slots": [
+						50
+					],
+					"min": [
+						-0.9,
+						-0.6,
+						0.7
+					],
+					"max": [
+						0.9,
+						0.6,
+						1.9
+					],
+					"ink_low": 0.08,
+					"ink_high": 0.2,
+					"crease_deg": 65
+				},
+				{
+					"name": "shorts",
+					"slots": [
+						53
+					],
+					"min": [
+						-0.5,
+						-0.6,
+						0.6
+					],
+					"max": [
+						0.5,
+						0.6,
+						1.05
+					],
+					"ink_low": 0.08,
+					"ink_high": 0.2,
+					"crease_deg": 60
+				},
+				{
+					"name": "boots",
+					"slots": [
+						50,
+						51
+					],
+					"min": [
+						-0.5,
+						-0.6,
+						-0.1
+					],
+					"max": [
+						0.5,
+						0.6,
+						0.3
+					],
+					"ink_low": 0.08,
+					"ink_high": 0.2,
+					"crease_deg": 55
+				},
+				{
+					"name": "belt",
+					"slots": [
+						50,
+						51
+					],
+					"min": [
+						-0.3,
+						-0.6,
+						0.95
+					],
+					"max": [
+						0.3,
+						0.6,
+						1.2
+					],
+					"ink_low": 0.08,
+					"ink_high": 0.2,
+					"crease_deg": 30
+				},
+				{
+					"name": "trim",
+					"slots": [
+						51
+					],
+					"min": [
+						-0.9,
+						-0.6,
+						0.3
+					],
+					"max": [
+						0.9,
+						0.6,
+						1.9
+					],
+					"ink_low": 0.06,
+					"ink_high": 0.16,
+					"crease_deg": 55
+				},
+				{
+					"name": "face_skin",
+					"slots": [
+						7
+					],
+					"min": [
+						-0.2,
+						-0.3,
+						1.5
+					],
+					"max": [
+						0.2,
+						0.3,
+						1.9
+					],
+					"ink_low": 0.04,
+					"ink_high": 0.1,
+					"crease_deg": 181
+				},
+				{
+					"name": "gloves",
+					"slots": [
+						54
+					],
+					"min": [
+						-0.9,
+						-0.6,
+						0.7
+					],
+					"max": [
+						0.9,
+						0.6,
+						1.0
+					],
+					"ink_low": 0.1,
+					"ink_high": 0.25,
+					"crease_deg": 181
+				}
+			],
 			"clean": {
 				"cut": 0.15,
 				"bridge_px": 1,
@@ -330,6 +466,13 @@
 				"min_texels": 24,
 				"smooth_sigma": 0.5,
 				"smooth_gain": 1.05
+			},
+			"crease": {
+				"angle_deg": 70,
+				"width_m": 0.005,
+				"ramp_m": 0.003,
+				"spacing_m": 0.003,
+				"min_chain_m": 0.2
 			}
 		},
 		"strap_slot": 17,
@@ -372,7 +515,8 @@
 					50
 				]
 			}
-		]
+		],
+		"min_island_area_m2": 0.002
 	},
 	"export": {
 		"hull_normal_digits": 5,
