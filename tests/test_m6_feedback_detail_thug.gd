@@ -189,3 +189,49 @@ func test_the_thug_config_holds_the_recipe_values() -> void:
 	assert_gt(float(zones.headwear.valley_deg), 180.0, "nor does the beanie draw valleys")
 	var report: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(REPORT)).steps.palette.detail_bake
 	assert_lt(float(report.texel_swatch.differ_from_face_share), 0.08, "few texels leave their face's swatch")
+
+## Playtest fix (feedback-chars-01): the right half of the face and the bandana are skin and yellow, not the beanie's black (slot 40
+## never bleeds or bruises). The faces between the bandana's bottom and the beanie's rim, across the front, name only 7 and 39.
+func test_the_face_and_the_bandana_carry_no_beanie_black() -> void:
+	var lo := Vector3(-0.12, 0.02, 1.51)
+	var hi := Vector3(0.06, 0.3, 1.62)
+	var faces := 0
+	var black := 0
+	for tri: int in _tris().size() / 3:
+		if not _in_box(tri, lo, hi):
+			continue
+		faces += 1
+		if _slot_of_tri(tri) == 40:
+			black += 1
+	assert_gt(faces, 40, "the face box holds faces (%d)" % faces)
+	assert_eq(black, 0, "none of them is the beanie's slot 40")
+	var cfg: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(PIPELINE))
+	var names: Array[String] = []
+	for reg: Dictionary in cfg.palette.regions:
+		assert_true(reg.has("only_from"), "%s only repaints the slots it names" % reg.name)
+		names.append(str(reg.name))
+	assert_true(names.has("face_right") and names.has("bandana_right"), "the face and the bandana have their regions")
+
+
+## Playtest fix (feedback-chars-02, -08): the hoodie keeps its valleys at the pocket and hem and draws none on the neck and chest drape;
+## the waistband draws no ring of dashes.
+func test_the_hoodie_draws_its_valleys_low_and_the_waist_is_plain() -> void:
+	var cfg: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(PIPELINE))
+	var zones: Dictionary = {}
+	for zone: Dictionary in cfg.palette.detail_bake.zones:
+		zones[zone.name] = zone
+	assert_lt(float(zones.hoodie.valley_deg), 30.0, "the hoodie's pocket and hem keep valleys")
+	assert_lte(float(zones.hoodie.max[2]), 1.4, "but only below the chest")
+	assert_gte(float(zones.hood_neck.min[2]), float(zones.hoodie.max[2]), "the neck zone starts where the hoodie's ends")
+	assert_gt(float(zones.hood_neck.valley_deg), 180.0, "the neck and chest draw no valley ink")
+	assert_lt(float(zones.hood_neck.crease_deg), 180.0, "but the hood's drape keeps its creases")
+	assert_gt(float(zones.waist.crease_deg), 180.0, "the waist draws no crease ring")
+	var names: Array[String] = []
+	for zone: Dictionary in cfg.palette.detail_bake.zones:
+		names.append(str(zone.name))
+	assert_gt(names.find("waist"), names.find("trousers"), "the waist zone comes after the trousers, so it wins")
+	var neck := _ink_share(func(tri: int) -> bool: return _slot_of_tri(tri) == 38 and _in_box(tri, Vector3(-0.2, 0.0, 1.4), Vector3(0.2, 0.3, 1.6)))
+	var hem := _ink_share(func(tri: int) -> bool: return _slot_of_tri(tri) == 38 and _in_box(tri, Vector3(-0.4, -0.4, 0.95), Vector3(0.4, 0.4, 1.3)))
+	gut.p("thug neck ink %.4f (%d faces), hem ink %.4f (%d faces)" % [neck.share, neck.faces, hem.share, hem.faces])
+	assert_gt(int(neck.faces), 20, "the neck box holds olive faces")
+	assert_lt(float(neck.share), float(hem.share), "the neck is calmer than the pocket and the hem")
