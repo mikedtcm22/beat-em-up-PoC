@@ -70,6 +70,21 @@ Flicker numbers (the same act, d1 in grey levels, before -> after):
 - No new Tuning value (the inset, the fade and the repeat are scene and tile data; `ground_ink_fade_*` and `ground_m_per_tile` only had their comments changed, so `tuning/default.json` is unchanged).
 - The deck still-view's d1 (0.146) is not a z-fight: the per-frame values vary smoothly 0.03 to 0.2 with an occasional spike (the eye's settling); the guard is clean.
 
+## 7. Perf
+
+`tools/perf_compare.sh --force --vsync on --bot res://tests/bot/perf_level_bot.tscn --act "Perf: level walk" --runs 2 82bab12 HEAD` (HEAD 70bbaa7, the code as shipped here; **the machine was busy**: load 3.3 when it started, 4.3 to 4.5 between runs, other builders running, so the absolute numbers are not a baseline, the ratio is the lead):
+
+| | 82bab12 | HEAD |
+| --- | --- | --- |
+| mean ms | 17.80 (17.77..17.84) | 18.29 (18.05..18.53), +0.49 (+2.8%) |
+| p95 ms | 24.35 | 25.25 |
+| worst ms | 43.6 | 298 (one HEAD run had a single 391 ms frame, in the first spawn's window; the other 38.5 ms) |
+| first hit / first spawn ms | 28.2 / 27.8 | 26.6 / 25.8 |
+| draws / objects per frame | 108.5 / 192.0 | 110.3 / 193.1 |
+| shadow_prims | 128 343 | 127 245 |
+
+The ground's sampling cost is unchanged by construction (one `textureGrad` read, now with a triangle wave of the tile's z and a sign: a few ALU ops); `InsetBlock` draws the same number of meshes as the block it replaces. The +1.8 draws a frame is the bot's path (the HEAD runs took 8 424 frames to the walk's 8 642: a different time in each section). The mean's +0.49 ms sits inside this machine's noise (the two HEAD runs differ by 0.48) but is not proved to be; rerun on a quiet machine before reading it as a cost.
+
 ## Requests (files not mine)
 
 - **The crowd street and the training room** (`crowd_room.gd`, `test_room.gd`) build their boxes in code, so no `.tscn` of mine can change them. The scan finds 17 and 2 coplanar slivers there (floor joins at y 0, curb and lintel tops at y 6, 8, 9, 2.4, 1 and 5; none over 0.3 m2), so their tests hold the 0.5 m2 line. To bring them to 0, build those boxes as `InsetBlock`s (or give `RoomKit.add_box` an inset) and drop `ROOM_MIN_AREA_M2` from `test_m6_feedback_ground.gd`.
