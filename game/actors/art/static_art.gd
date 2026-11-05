@@ -46,6 +46,8 @@ class ArtMesh:
 	var triangles: int = 0
 	var bounds: AABB = AABB()
 	var has_bounds: bool = false
+	## The coarser mesh the sun's shadow pass draws (null: the mesh itself casts).
+	var shadow: ArrayMesh
 
 
 static var _cache: Dictionary[int, Entry] = {}
@@ -53,6 +55,7 @@ static var _cache: Dictionary[int, Entry] = {}
 ## The material this art draws with (made in _ready, null before), and the MeshInstance3Ds it made (the repeats included).
 var material: ShaderMaterial
 var _instances: Array[MeshInstance3D] = []
+var _shadow_casters: Array[MeshInstance3D] = []
 
 
 func _ready() -> void:
@@ -128,6 +131,11 @@ func triangles() -> int:
 	return _entry(scene).triangles
 
 
+## The shadow-only twins this art made (a mesh with a coarser shadow has one), in step with `instances()` for those.
+func shadow_casters() -> Array[MeshInstance3D]:
+	return _shadow_casters
+
+
 ## The MeshInstance3Ds this art made, repeats included.
 func instances() -> Array[MeshInstance3D]:
 	return _instances
@@ -154,6 +162,19 @@ func _add(part: ArtMesh, node_name: StringName, xf: Transform3D, overlay: Shader
 	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	add_child(instance)
 	_instances.append(instance)
+	if part.shadow != null:
+		# The mesh draws without casting; a twin on the coarser mesh casts for it (the shadow pass only).
+		instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		var caster := MeshInstance3D.new()
+		caster.name = "%sShadow" % node_name
+		caster.mesh = part.shadow
+		caster.transform = xf
+		caster.material_override = material
+		caster.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY
+		# Past the sun's shadow distance (RoomKit: 40 m) and the length of a tall prop's shadow, no shadow of it is seen.
+		caster.visibility_range_end = Tuning.data.draw_prop_shadow_range_m
+		add_child(caster)
+		_shadow_casters.append(caster)
 
 
 static func _entry(model: PackedScene) -> Entry:
@@ -214,6 +235,7 @@ static func _frame_of(instance: MeshInstance3D, root: Node) -> Transform3D:
 ## hull mode 4 turns the baked smooth normal in COLOR by the shortest arc from CUSTOM1 to NORMAL, which is the identity here.
 static func _rebuild(source: ArrayMesh, part: ArtMesh, label: String, problems: PackedStringArray) -> ArrayMesh:
 	var out := ArrayMesh.new()
+	var simplified := ImporterMesh.new()
 	var custom_flags := (Mesh.ARRAY_CUSTOM_RGB_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM0_SHIFT) \
 			| (Mesh.ARRAY_CUSTOM_RGB_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM1_SHIFT)
 	for surface: int in source.get_surface_count():
@@ -246,4 +268,31 @@ static func _rebuild(source: ArrayMesh, part: ArtMesh, label: String, problems: 
 		arrays[Mesh.ARRAY_CUSTOM0] = rest_position
 		arrays[Mesh.ARRAY_CUSTOM1] = rest_normal
 		out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays, [], {}, custom_flags)
+		simplified.add_surface(Mesh.PRIMITIVE_TRIANGLES, arrays, [], {}, null, "", custom_flags)
+	if simplified.get_surface_count() > 0 and Tuning.data.draw_prop_shadow_error_m > 0.0:
+		part.shadow = _shadow_mesh(simplified, Tuning.data.draw_prop_shadow_error_m, custom_flags)
 	return out
+
+
+## The mesh the sun's shadow pass draws instead of the prop's own: the same vertices (the same format, so the same
+## material draws it) with the coarsest level of detail whose simplification error is at most `max_error_m` metres
+## (ImporterMesh's own: the GLB's import has `generate_lods` off by contract). A prop's shadow is soft and falls on
+## the floor, so a few centimetres of silhouette are not seen, and the shadow pass draws about half the triangles.
+## Null (the full mesh casts) when no level of any surface is within the error. (The renderer's own `shadow_mesh`
+## is not used: it is ignored for a material with a vertex function, which the toon shader has.)
+static func _shadow_mesh(model: ImporterMesh, max_error_m: float, custom_flags: int) -> ArrayMesh:
+	model.generate_lods(Tuning.data.draw_prop_lod_merge_deg, Tuning.data.draw_prop_lod_split_deg, [])
+	var shadow := ArrayMesh.new()
+	var simplified := false
+	for surface: int in model.get_surface_count():
+		var arrays := model.get_surface_arrays(surface)
+		var kept := PackedInt32Array()
+		for level: int in model.get_surface_lod_count(surface):
+			if model.get_surface_lod_size(surface, level) > max_error_m:
+				break
+			kept = model.get_surface_lod_indices(surface, level)
+		if not kept.is_empty():
+			arrays[Mesh.ARRAY_INDEX] = kept
+			simplified = true
+		shadow.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays, [], {}, custom_flags)
+	return shadow if simplified else null

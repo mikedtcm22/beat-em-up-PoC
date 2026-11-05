@@ -1139,6 +1139,20 @@ extends Resource
 ## module's face. The strips are painted for 4 m; a smaller number makes the brick, the plaster and the
 ## asphalt finer, a larger one coarser. The faces' UVs are in metres, so a wall of any length fits.
 @export_range(1.0, 16.0, 0.25) var kit_trim_m_per_tile: float = 4.0
+@export_subgroup("Draw cost")
+## M6 final review (perf): the largest error (m) a static prop's shadow mesh may have against the prop's own
+## triangles. The sun's shadow pass draws a coarser mesh of a car, a tank or a dumpster (about half the triangles,
+## within 0.12 m: a shadow is soft and falls on the floor), cast by a shadow-only twin of the prop's mesh; 0 draws the prop's own triangles in the shadow
+## pass too. Read when a StaticArt model is first built, so set it (a preset never holds it) before the room loads.
+@export_range(0.0, 0.5, 0.01) var draw_prop_shadow_error_m: float = 0.12
+## The distance (m) from the lens past which a prop's shadow twin is not drawn: the sun's shadows end at 40 m
+## (RoomKit.build_environment), and a car's or a tank's shadow is a few metres long, so 60 m shows no change.
+## 0 draws it at every distance. Read when a StaticArt is built.
+@export_range(0.0, 200.0, 5.0) var draw_prop_shadow_range_m: float = 60.0
+## The simplification's normal merge angle and split angle (degrees; ImporterMesh.generate_lods): the surface angle
+## under which neighbouring faces count as one surface when a level is simplified, and over which an edge stays hard.
+@export_range(0.0, 90.0, 1.0) var draw_prop_lod_merge_deg: float = 25.0
+@export_range(0.0, 90.0, 1.0) var draw_prop_lod_split_deg: float = 25.0
 @export_subgroup("Section light")
 ## How long the level's light takes to change from one section's to the next's (Milestone 6, DRESS; D12):
 ## the sun's direction, colour and energy, the fog and the sky horizon, blended from the moment the

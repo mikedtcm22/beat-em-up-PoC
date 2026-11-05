@@ -33,6 +33,9 @@
 # counts frames of 0.5 s or more per run ("stalls") and says so when a run has more than two (the one
 # or two are the first frames of a process): then run again with `--vsync on` (the frame times follow
 # the display's refresh) or with the window in front.
+# The PERF-BENCH line carries `counters` (renderer draw calls, objects, primitives, visible and shadow, and the renderer's CPU and GPU ms,
+#   means per frame): the report prints them. The act "Perf: counters" puts the player at fixed poses, so its counters compare exactly;
+#   its log has a POSE line per pose.
 # The logs of every run, the import logs and results.tsv are in --out (default captures/perf_compare/
 # <time> of this checkout; never committed). GODOT picks another binary; PERF_MAX_FRAMES caps a run
 # (default 60000 frames) so a stuck bot cannot go on for ever.
@@ -224,6 +227,21 @@ for act in order:
             a, b = means[(cols[0], key)], means[(cols[-1], key)]
             cells.append("n/a" if a is None or b is None else ("%+." + str(digits) + "f") % (b - a))
         print("".join(cells))
+    # The renderer's counters (mean per frame over the act; a ref whose bench predates them has none): they do not
+    # move with the machine's load.
+    counter_keys = ["draws", "objects", "prims", "shadow_draws", "shadow_objects", "shadow_prims", "render_cpu_ms", "render_gpu_ms"]
+    if all("counters" in rows[(act, r)][0] for r in cols):
+        print("  renderer counters, mean per frame:")
+        for key in counter_keys:
+            cells = ["  %-16s" % key]
+            vals = []
+            for r in cols:
+                v = mean([x["counters"].get(key, 0.0) for x in rows[(act, r)]])
+                vals.append(v)
+                cells.append("%-26s" % ("%.2f" % v))
+            if len(cols) > 1:
+                cells.append("%+.2f" % (vals[-1] - vals[0]))
+            print("".join(cells))
     for r in cols:
         n = len(rows[(act, r)])
         if n < runs:

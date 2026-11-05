@@ -43,6 +43,11 @@ static func index(strip_name: StringName) -> int:
 	return int(entry.index)
 
 
+## Whether `strip_name` is an alpha-scissor strip (the chain-link's): its faces wear ToonMaterials.trim_scissor().
+static func is_scissor(strip_name: StringName) -> bool:
+	return bool(strip(strip_name).get("scissor", false))
+
+
 ## Every strip's name, in row order.
 static func names() -> Array[StringName]:
 	var out: Array[StringName] = []

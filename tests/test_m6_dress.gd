@@ -78,7 +78,8 @@ func test_the_prop_fallbacks_stay_in_the_bibles_band_and_the_crowd_street_hulls_
 		var mesh_node := node as MeshInstance3D
 		if mesh_node.get_parent() is StaticBody3D and mesh_node.material_overlay != null:
 			overlays += 1  # a crate module's hull
-		if mesh_node.get_parent() is StaticArt:
+		if mesh_node.get_parent() is StaticArt and mesh_node.cast_shadow != GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY:
+			# (a shadow-only twin draws nothing, so it has no hull)
 			assert_not_null(mesh_node.material_overlay, "%s draws the prop hull" % mesh_node.name)
 	assert_eq(overlays, (room as CrowdRoom).crate_positions.size(), "each crate module wears the prop hull on its overlay")
 

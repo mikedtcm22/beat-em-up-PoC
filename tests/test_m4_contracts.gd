@@ -324,7 +324,9 @@ func test_the_trim_material_is_one_toon_lit_shader_material() -> void:
 	assert_eq(trim.get_shader_parameter(&"albedo"), Color.WHITE)
 	assert_eq(trim.get_shader_parameter(&"edge_tag"), 1.0, "ROUGHNESS 1: the edge pass keeps working on a module")
 	assert_true(trim.shader.code.contains("toon_light.gdshaderinc"), "lit by the one toon lighting")
-	assert_true(trim.shader.code.contains("ROUGHNESS = edge_tag"), "writes the edge pass's tag")
+	# The body (uniforms, vertex, fragment) is the include both trim shaders share (M6 final review, perf).
+	var body := FileAccess.get_file_as_string("res://game/fx/trim_body.gdshaderinc")
+	assert_true(trim.shader.code.contains("trim_body.gdshaderinc") and body.contains("ROUGHNESS = edge_tag"), "writes the edge pass's tag")
 
 
 func test_room_kit_materials_delegate_to_toon_materials() -> void:

@@ -21,6 +21,8 @@ const TOON_SHADER := preload("res://game/fx/toon.gdshader")
 const OUTLINE_SHADER := preload("res://game/fx/toon_outline.gdshader")
 const GRID_SHADER := "res://game/level/grid.gdshader"
 const TRIM_SHADER := "res://game/fx/trim.gdshader"
+## The trim material's alpha-scissor variant, for the chain-link's wire alone (see trim.gdshader).
+const TRIM_SCISSOR_SHADER := "res://game/fx/trim_scissor.gdshader"
 ## What a ShaderMaterial made here is, for which Look values it takes (see apply_look()).
 enum Kind { CHARACTER, ART, PROP, ENVIRONMENT, GRID, HULL, ART_PROP, TRIM }
 ## How the hull pushes a mesh out (toon_outline.gdshader's `mode`): along the normal
@@ -56,6 +58,7 @@ static var _warmed: bool = false
 static var _art_warmed: bool = false
 ## The one trim material (trim()).
 static var _trim: ShaderMaterial
+static var _trim_scissor: ShaderMaterial
 
 
 ## A character's flat-colored toon material: `color` is the paint, `takes_marks` whether the
@@ -180,16 +183,29 @@ static func grid() -> ShaderMaterial:
 ## from Tuning (kit_trim_m_per_tile, look_trim_ink_cut, look_trim_lod_cap).
 static func trim() -> ShaderMaterial:
 	if _trim == null:
-		var material := ShaderMaterial.new()
-		material.shader = load(TRIM_SHADER)
-		material.set_meta(_KIND_META, Kind.TRIM)
-		material.set_shader_parameter(&"albedo", Color.WHITE)
-		material.set_shader_parameter(&"trim_tex", TrimSheet.texture())
-		material.set_shader_parameter(&"strips", TrimSheet.uniform_rows())
-		material.set_shader_parameter(&"ink", INK)
-		material.set_shader_parameter(&"edge_tag", 1.0)
-		_trim = _track(material)
+		_trim = _trim_material(TRIM_SHADER)
 	return _trim
+
+
+## The trim material of the faces on the scissor strip (the chain-link's wire): `trim()` with the alpha scissor on.
+## Kept apart because a shader that scissors loses the depth prepass and the cheap shadow pass for every mesh it
+## draws, so only the faces that need it wear it (KitMesh makes a surface of them).
+static func trim_scissor() -> ShaderMaterial:
+	if _trim_scissor == null:
+		_trim_scissor = _trim_material(TRIM_SCISSOR_SHADER)
+	return _trim_scissor
+
+
+static func _trim_material(shader_path: String) -> ShaderMaterial:
+	var material := ShaderMaterial.new()
+	material.shader = load(shader_path)
+	material.set_meta(_KIND_META, Kind.TRIM)
+	material.set_shader_parameter(&"albedo", Color.WHITE)
+	material.set_shader_parameter(&"trim_tex", TrimSheet.texture())
+	material.set_shader_parameter(&"strips", TrimSheet.uniform_rows())
+	material.set_shader_parameter(&"ink", INK)
+	material.set_shader_parameter(&"edge_tag", 1.0)
+	return _track(material)
 
 
 ## Take the current Look values (Tuning.data) on `material`, a material made here. Called when

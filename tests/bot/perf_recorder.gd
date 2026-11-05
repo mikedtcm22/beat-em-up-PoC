@@ -26,6 +26,11 @@ var _first_finisher: float = -1.0
 var _hits: int = 0
 var _title: String = ""
 var _known: Dictionary = {}
+## Renderer counters summed over the frames (visible pass, then shadow passes): draw calls, objects and
+## primitives in the frame, and the renderer's own CPU and GPU time (ms). Deterministic where the wall time
+## is not: close() reports their means.
+var _counter_sums: Dictionary = {}
+var _counter_max: Dictionary = {}
 
 
 func _ready() -> void:
@@ -42,6 +47,9 @@ func open() -> void:
 	_hits = 0
 	_title = ""
 	_known.clear()
+	_counter_sums.clear()
+	_counter_max.clear()
+	RenderingServer.viewport_set_measure_render_time(get_viewport().get_viewport_rid(), true)
 	recording = true
 	_sample()
 
@@ -70,6 +78,7 @@ func _sample() -> void:
 		_ms.append(float(now - last) / 1000.0)
 		_stamp.append(float(now) / 1000000.0)
 		last = now
+		_count_frame()
 		if _title == "" and caption != null:
 			_title = caption.text
 		for node: Node in tree.get_nodes_in_group(&"ai_enemy"):
@@ -77,6 +86,33 @@ func _sample() -> void:
 			if not _known.has(id):
 				_known[id] = true
 				_spawn_stamps.append(float(now) / 1000000.0)
+
+
+## Add this frame's renderer counters (the last frame's, as the viewport reports them).
+func _count_frame() -> void:
+	var viewport := get_viewport()
+	var rid := viewport.get_viewport_rid()
+	var values := {
+		draws = viewport.get_render_info(Viewport.RENDER_INFO_TYPE_VISIBLE, Viewport.RENDER_INFO_DRAW_CALLS_IN_FRAME),
+		objects = viewport.get_render_info(Viewport.RENDER_INFO_TYPE_VISIBLE, Viewport.RENDER_INFO_OBJECTS_IN_FRAME),
+		prims = viewport.get_render_info(Viewport.RENDER_INFO_TYPE_VISIBLE, Viewport.RENDER_INFO_PRIMITIVES_IN_FRAME),
+		shadow_draws = viewport.get_render_info(Viewport.RENDER_INFO_TYPE_SHADOW, Viewport.RENDER_INFO_DRAW_CALLS_IN_FRAME),
+		shadow_objects = viewport.get_render_info(Viewport.RENDER_INFO_TYPE_SHADOW, Viewport.RENDER_INFO_OBJECTS_IN_FRAME),
+		shadow_prims = viewport.get_render_info(Viewport.RENDER_INFO_TYPE_SHADOW, Viewport.RENDER_INFO_PRIMITIVES_IN_FRAME),
+		render_cpu_ms = RenderingServer.viewport_get_measured_render_time_cpu(rid) + RenderingServer.get_frame_setup_time_cpu(),
+		render_gpu_ms = RenderingServer.viewport_get_measured_render_time_gpu(rid),
+	}
+	for key: String in values:
+		_counter_sums[key] = float(_counter_sums.get(key, 0.0)) + float(values[key])
+		_counter_max[key] = maxf(float(_counter_max.get(key, 0.0)), float(values[key]))
+
+
+## The means of the renderer counters over the window (rounded), keyed as `_count_frame` names them.
+func counter_means() -> Dictionary:
+	var out := {}
+	for key: String in _counter_sums:
+		out[key] = snappedf(float(_counter_sums[key]) / float(maxi(_ms.size(), 1)), 0.01)
+	return out
 
 
 ## The worst frame (ms) within HITCH_WINDOW_S after `stamp` (s); -1 when there was no such event.
@@ -123,5 +159,6 @@ func close() -> Dictionary:
 		spawns = _spawn_stamps.size(),
 		hits = _hits,
 		stalls = stalls,
+		counters = counter_means(),
 		vsync = VSYNC_NAMES[DisplayServer.window_get_vsync_mode()],
 	}
