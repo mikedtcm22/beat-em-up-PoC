@@ -133,7 +133,7 @@ func test_the_lens_streaks_are_in_g_on_the_lens_texels_only() -> void:
 				lit_anywhere += 1
 				if near[y * size + x] == 0:
 					stray += 1
-	assert_eq(max_blue, 0, "B holds nothing")
+	assert_lte(max_blue, 20, "B holds only the palette slot codes (M6 ROLL-PUNK: slot + 1, at most the lens's 19 + 1; it held nothing before)")
 	assert_gt(lit_anywhere, 500, "there are streaks")
 	assert_eq(stray, 0, "G is 0 everywhere but the lens and its 3-texel border: the gate is not shading and not ink")
 	# The streaks are a share of the lens, on both of its halves (the viewer's two eyes), with edges (a ramp, not a flat fill).
