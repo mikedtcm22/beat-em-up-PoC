@@ -2,10 +2,12 @@ extends RefCounted
 ## The Street Punk's recipe acts (Milestone 6, ROLL-PUNK). Record one act per process:
 ##   tools/capture_bot.sh res://tests/bot/crowd_bot.tscn captures/<key> "Look: Punk jacket" 6
 ##   tools/capture_bot.sh res://tests/bot/crowd_bot.tscn captures/<key> "Look: Punk beside the veteran" 6
+##   tools/capture_bot.sh res://tests/bot/crowd_bot.tscn captures/<key> "Look: Punk at 1, 2.5 and 5 m" 6
 ##
 ## | Act | Title | Shows |
 ## | dp1 | Look: Punk jacket | a Punk 1.6 m ahead, turned away from the player by 0, 90 and 150 degrees and held there, so the vest, the trousers' seams and the colour borders show where the guard hides them (the Bruiser's act, tests/bot/acts/detail2_acts.gd) |
 ## | dp2 | Look: Punk beside the veteran | a Punk and a Veteran Punk (the palette swap: a violet vest, orange trousers) side by side at 1 m and 2.5 m, level view, so the texel codes are seen to recolour with the swap |
+## | dp3 | Look: Punk at 1, 2.5 and 5 m | one Punk, level view, at the three distances of the A/B sheet |
 ## The marks are LOOK-MARK <slug> f<frame> <label> ... and end.
 
 const LookActs := preload("res://tests/bot/acts/look_acts.gd")
@@ -18,12 +20,15 @@ const HOLD_TICKS := 60
 const PAIR_DISTANCES_M: Array[float] = [1.0, 2.5]
 const PAIR_SPREAD := 0.32
 const PAIR_HOLD_TICKS := 90
+## The A/B sheet's distances (m).
+const SHEET_DISTANCES_M: Array[float] = [1.0, 2.5, 5.0]
 
 
 static func acts(bot: Node) -> Array[Dictionary]:
 	return [
 		{title = "Look: Punk jacket", cam = &"first_person", slug = &"dp1", fn = func() -> void: await _jacket(bot)},
 		{title = "Look: Punk beside the veteran", cam = &"first_person", slug = &"dp2", fn = func() -> void: await _pair(bot)},
+		{title = "Look: Punk at 1, 2.5 and 5 m", cam = &"first_person", slug = &"dp3", fn = func() -> void: await _distances(bot)},
 	]
 
 
@@ -55,3 +60,15 @@ static func _pair(bot: Node) -> void:
 		LookRect.mark(bot, "dp2", "d%s_m" % str(distance).replace(".", "_"), punk)
 		bot.log_line("DETAIL-PUNK pair d=%.1f veteran=%s" % [distance, veteran.name])
 	LookActs._end(bot, "dp2")
+
+
+static func _distances(bot: Node) -> void:
+	LookActs._begin(bot)
+	await bot._look_to(LookActs.LEVEL_PITCH_DEG, LookActs.PITCH_TICKS)
+	LookRect.mark(bot, "dp3", "start")
+	for distance: float in SHEET_DISTANCES_M:
+		bot.clear_enemies()
+		var subject: EnemyActor = bot.spawn(&"punk", Vector2(0.0, distance))
+		await bot._ticks(PAIR_HOLD_TICKS)
+		LookRect.mark(bot, "dp3", "d%s_m" % str(distance).replace(".", "_"), subject)
+	LookActs._end(bot, "dp3")

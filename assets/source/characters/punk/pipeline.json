@@ -346,7 +346,7 @@
 						1.7
 					],
 					"crease_deg": 75,
-					"valley_deg": 14
+					"valley_deg": 15
 				},
 				{
 					"name": "jeans",
@@ -633,7 +633,7 @@
 				"min_chain_m": 0.2,
 				"valley": {
 					"angle_deg": 999,
-					"min_chain_m": 0.35,
+					"min_chain_m": 0.45,
 					"width_m": 0.003,
 					"ramp_m": 0.002
 				}

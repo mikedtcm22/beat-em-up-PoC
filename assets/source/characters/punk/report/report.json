@@ -1,7 +1,7 @@
 {
 	"asset": "punk",
 	"version": 2,
-	"config_sha256": "fcbf044276280aea03c0fe623366ebb7733f7485922acc86c137643fb27f3553",
+	"config_sha256": "7f91dca749620378405562c6f08d4277976a201f3c1d78a4ab63f95d34a8e6db",
 	"steps": {
 		"inspect": {
 			"source": {
@@ -10593,8 +10593,8 @@
 			"detail_bake": {
 				"size": 1024,
 				"texels": 381989,
-				"ink_texels_share": 0.037543,
-				"mean_ink": 0.038825,
+				"ink_texels_share": 0.034307,
+				"mean_ink": 0.035622,
 				"png": "punk_detail.png",
 				"zones": {
 					"lens": {
@@ -10651,7 +10651,7 @@
 							"99": 0.0447,
 							"99.5": 0.0571
 						},
-						"ink_texels_share": 0.069794
+						"ink_texels_share": 0.06434
 					},
 					"jeans": {
 						"texels": 101122,
@@ -10665,7 +10665,7 @@
 							"99": 0.0339,
 							"99.5": 0.0467
 						},
-						"ink_texels_share": 0.052184
+						"ink_texels_share": 0.045183
 					},
 					"wraps": {
 						"texels": 6509,
@@ -10786,33 +10786,33 @@
 				},
 				"clean": {
 					"before": {
-						"pieces": 1309,
-						"texels": 20852,
-						"pieces_le6": 850,
-						"texels_in_le6_share": 0.0943,
+						"pieces": 1299,
+						"texels": 19294,
+						"pieces_le6": 863,
+						"texels_in_le6_share": 0.1027,
 						"median": 3.0,
-						"pieces_over20": 210
+						"pieces_over20": 199
 					},
 					"after": {
-						"pieces": 559,
-						"texels": 23319,
-						"pieces_le6": 118,
-						"texels_in_le6_share": 0.0221,
+						"pieces": 544,
+						"texels": 21522,
+						"pieces_le6": 122,
+						"texels_in_le6_share": 0.025,
 						"median": 15.0,
-						"pieces_over20": 229
+						"pieces_over20": 216
 					},
-					"bridged_texels": 614,
-					"pieces_dropped": 632,
-					"texels_dropped": 1158
+					"bridged_texels": 586,
+					"pieces_dropped": 638,
+					"texels_dropped": 1148
 				},
 				"glove_lines": {
 					"texels": 31521,
 					"line_texels_over_cut": 1908
 				},
 				"crease": {
-					"texels_on_a_crease": 11296,
+					"texels_on_a_crease": 10031,
 					"ink_share_before": 0.0155,
-					"ink_share_after": 0.04419
+					"ink_share_after": 0.04095
 				},
 				"texel_swatch": {
 					"texels": 381989,
@@ -10828,7 +10828,7 @@
 						"18": 0.26824
 					}
 				},
-				"sha256": "1644eb48c44b4b524a3c9650784ed9248baa8e6a4d1a03e93bc3a8c066c4b88c"
+				"sha256": "6dd2b9ec4a6a2e4016504209cb47945f1bbd724b33e9cc080673c18ba7fe8cce"
 			},
 			"regions": [
 				{
@@ -11133,5 +11133,5 @@
 		"punk.glb": "de92fa37310736b4f0b16fa21c89777957df8289893ed5453218da44210a4f27",
 		"punk_rest.glb": "6644450a4ab05c15b10f38a997bfa7c9fc68b53ea42de7fd82c468d5e4766f6e"
 	},
-	"hash": "a45178aab24f86953460b1e3d1262c1136c7e2865a52711cc8a0a3d901c0d470"
+	"hash": "f19613d6a4ac4a41117e3000929aac2a56a8ee42013ec260a0d890de3585b619"
 }
