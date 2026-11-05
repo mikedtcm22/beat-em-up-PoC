@@ -119,8 +119,7 @@ size = Vector3(6, 3, 0.6)
 look = &"fence"
 
 [node name="BackCorner" type="Node3D" parent="Geometry"]
-script = ExtResource("inset_blk")
-inset_max = Vector3(0.02, 0.02, 0)
+script = ExtResource("2_blk")
 position = Vector3(-10.5, 2.5, -20.5)
 size = Vector3(1, 5, 1)
 look = &"wall"
@@ -132,7 +131,8 @@ size = Vector3(4.5, 3.5, 0.6)
 look = &"fence"
 
 [node name="EntryFenceR" type="Node3D" parent="Geometry"]
-script = ExtResource("2_blk")
+script = ExtResource("inset_blk")
+yields_to = Array[NodePath]([NodePath("../../../Roofs/Geometry/TopRoof/CurbEast")])
 position = Vector3(6, 1.75, 0.3)
 size = Vector3(8, 3.5, 0.6)
 look = &"fence"
@@ -379,7 +379,8 @@ solid = false
 draw_box = false
 
 [node name="LipStripe0" type="Node3D" parent="Geometry"]
-script = ExtResource("2_blk")
+script = ExtResource("inset_blk")
+yields_to = Array[NodePath]([NodePath("../RailEndFar")])
 position = Vector3(9.7, 0.03, -12.5)
 size = Vector3(0.6, 0.06, 1.0)
 look = &"dark"
@@ -407,7 +408,8 @@ look = &"accent"
 solid = false
 
 [node name="LipStripe4" type="Node3D" parent="Geometry"]
-script = ExtResource("2_blk")
+script = ExtResource("inset_blk")
+yields_to = Array[NodePath]([NodePath("../RailEndNear")])
 position = Vector3(9.7, 0.03, -8.5)
 size = Vector3(0.6, 0.06, 1.0)
 look = &"dark"

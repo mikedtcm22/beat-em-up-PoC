@@ -16,18 +16,32 @@ extends RefCounted
 ##    the box), so a pair on one flat colour or on the grid is not reported. The kit's trim material is the opposite: each box
 ##    lays its own strip's UVs from its own corner, so two trim faces in one plane always differ.
 ## A box that is rotated is skipped (the street's one ramp); every other drawn box is axis-aligned.
+##
+## Second and third rules (verification round, verify-world-01): a block that does not draw its face where another does (an
+## InsetBlock's `yields_to`) must leave no hole, and no two faces of one direction may lie a few centimetres apart where one is
+## only partly in front of the other. `holes()` finds a taken-out rectangle that no other box draws in the same plane (a see-through
+## wall); `steps()` finds the 0.5 to 5 cm step (the first answer to the z-fight, pulling a whole face back 2 cm, left one wherever
+## the partner covered only part of it: the edge pass inked it, full height or in dashes that crawl at distance).
+##
+## What a box is: a `LevelBlock`'s is the box it draws (its size; an InsetBlock reports what it leaves out, `clipped_rects`), not its mesh's bounds (the kit's plinth boards
+## stand 5 cm off a wall and would make every tall wall look 5 cm bigger); anything else is its mesh's bounds, so a Dressing piece
+## (a KitPiece on a cornice, a window row) is a box too.
 
 ## Two faces closer than this (metres) lie in one plane.
 const COPLANAR_M := 0.004
 ## A shared area under this (square metres) is a sliver of a corner, not a z-fight.
 const MIN_AREA_M2 := 0.02
+## Two faces of one direction whose planes differ by STEP_MIN_M to STEP_MAX_M (metres) make a step where one stops (below it the
+## faces are one plane for the eye and the depth buffer alike, above it the step is a feature of the design).
+const STEP_MIN_M := 0.005
+const STEP_MAX_M := 0.05
 ## How far off the face (metres) the "is anything in front of it" and "is there floor below" probes are taken.
 const PROBE_OFF_M := 0.01
 const SUPPORT_OFF_M := 0.4
 const SUPPORT_DROP_M := 40.0
 
 
-## One entry per drawn box of `root`: {node: MeshInstance3D, box: AABB, owner: Node (the block or the body that owns it)}.
+## One entry per drawn box of `root`: {node: MeshInstance3D, box: AABB, owner: Node (the block, the body or the piece that owns it)}.
 static func drawn_boxes(root: Node) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	for found: Node in root.find_children("*", "MeshInstance3D", true, false):
@@ -37,12 +51,18 @@ static func drawn_boxes(root: Node) -> Array[Dictionary]:
 		var owner_node := _box_owner(mesh, root)
 		if owner_node == null or not _axis_aligned(mesh.global_transform.basis):
 			continue
-		out.append({node = mesh, box = mesh.global_transform * mesh.mesh.get_aabb(), owner = owner_node})
+		var box: AABB = mesh.global_transform * mesh.mesh.get_aabb()
+		if owner_node is LevelBlock:
+			var block := owner_node as LevelBlock
+			box = block.global_transform * AABB(-block.size * 0.5, block.size)
+		out.append({node = mesh, box = box, owner = owner_node})
 	return out
 
 
 ## The block or the world body whose box `mesh` draws, or null (an actor's or a prop's mesh).
 static func _box_owner(mesh: MeshInstance3D, root: Node) -> Node:
+	if mesh is KitPiece:
+		return mesh
 	var up := mesh.get_parent()
 	while up != null and up != root.get_parent():
 		if up is LevelBlock:
@@ -50,7 +70,7 @@ static func _box_owner(mesh: MeshInstance3D, root: Node) -> Node:
 		if up is CharacterBody3D or up is Skeleton3D:
 			return null
 		if up is StaticBody3D and (up as StaticBody3D).collision_layer & CombatTypes.bit(CombatTypes.LAYER_WORLD) != 0:
-			return up
+			return up.get_parent() if up.get_parent() is LevelBlock else up
 		up = up.get_parent()
 	if mesh.mesh is BoxMesh and mesh.get_parent() == root:
 		return mesh
@@ -135,25 +155,52 @@ static func _name(item: Dictionary) -> String:
 static func _visible_area(items: Array[Dictionary], i: int, j: int, axis: int, side: int, plane: float, a: AABB, b: AABB, space: PhysicsDirectSpaceState3D) -> float:
 	var u := (axis + 1) % 3
 	var v := (axis + 2) % 3
-	var sign_out := 1.0 if side == 1 else -1.0
-	var front := plane + sign_out * PROBE_OFF_M
-	var rects: Array[Rect2] = [Rect2(
+	var start: Array[Rect2] = [Rect2(
 			maxf(a.position[u], b.position[u]), maxf(a.position[v], b.position[v]),
 			minf(a.end[u], b.end[u]) - maxf(a.position[u], b.position[u]),
 			minf(a.end[v], b.end[v]) - maxf(a.position[v], b.position[v]))]
+	for k in [i, j]:
+		for clip in clips_of(items[k], axis, side):
+			start = _subtract(start, clip)
+	return _area(visible_rects(items, [i, j], axis, side, plane, start, space))
+
+
+## The rectangles of `item`'s `side` face of `axis` that it does not draw (an InsetBlock's yielded overlaps).
+static func clips_of(item: Dictionary, axis: int, side: int) -> Array[Rect2]:
+	var block := item.owner as InsetBlock
+	if block == null:
+		return []
+	return block.clipped_rects(axis, side)
+
+
+static func _area(rects: Array[Rect2]) -> float:
+	var area := 0.0
+	for rect in rects:
+		area += rect.get_area()
+	return area
+
+
+## `start` (rectangles in the plane's (u, v) coordinates) less what a box other than `skip` covers just outside the plane and
+## what has no world collider below a point 0.4 m off the face: the part of the face a player can see.
+static func visible_rects(items: Array[Dictionary], skip: Array, axis: int, side: int, plane: float, start: Array[Rect2], space: PhysicsDirectSpaceState3D) -> Array[Rect2]:
+	var u := (axis + 1) % 3
+	var v := (axis + 2) % 3
+	var sign_out := 1.0 if side == 1 else -1.0
+	var front := plane + sign_out * PROBE_OFF_M
+	var rects: Array[Rect2] = start
 	for k in items.size():
-		if k == i or k == j:
+		if skip.has(k):
 			continue
 		var c: AABB = items[k].box
 		if c.position[axis] < front and c.end[axis] > front:
 			rects = _subtract(rects, Rect2(c.position[u], c.position[v], c.size[u], c.size[v]))
 			if rects.is_empty():
-				return 0.0
-	var area := 0.0
+				return rects
+	var out: Array[Rect2] = []
 	for rect in rects:
 		if space == null or _has_floor(space, rect.get_center(), axis, u, v, plane + sign_out * SUPPORT_OFF_M):
-			area += rect.get_area()
-	return area
+			out.append(rect)
+	return out
 
 
 ## Whether a world collider lies below the point `(u, v)` of the plane's rectangle, taken `off` out from the plane.
@@ -183,4 +230,122 @@ static func _subtract(rects: Array[Rect2], cut: Rect2) -> Array[Rect2]:
 			out.append(Rect2(Vector2(rect.position.x, hit.position.y), Vector2(hit.position.x - rect.position.x, hit.size.y)))
 		if hit.end.x < rect.end.x:
 			out.append(Rect2(Vector2(hit.end.x, hit.position.y), Vector2(rect.end.x - hit.end.x, hit.size.y)))
+	return out
+
+
+
+## Whether a box stands in front of what it meets by design: a rail's post stands inside its curb, and a barrier's panel (a shutter,
+## a gate) hangs in front of its opening. Neither is a wall face that was meant to be flush.
+static func _stands_by_design(item: Dictionary) -> bool:
+	var block := item.owner as LevelBlock
+	if block != null and block.look == &"fence":
+		return true
+	var up: Node = item.owner
+	while up != null:
+		if up is Barrier:
+			return true
+		up = up.get_parent()
+	return false
+
+
+## Every rectangle an InsetBlock takes out of its face that no other box draws in that plane: {item, axis, side, plane, area, text}.
+## `min_area` is the smallest hole in view that counts (square metres).
+static func holes(root: Node, min_area: float = MIN_AREA_M2) -> Array[Dictionary]:
+	var items := drawn_boxes(root)
+	var space := (root as Node3D).get_world_3d().direct_space_state if root is Node3D else null
+	var out: Array[Dictionary] = []
+	for i in items.size():
+		if not items[i].owner is InsetBlock:
+			continue
+		var box: AABB = items[i].box
+		for axis in 3:
+			var u := (axis + 1) % 3
+			var v := (axis + 2) % 3
+			for side in 2:
+				var clips := clips_of(items[i], axis, side)
+				if clips.is_empty():
+					continue
+				var plane: float = box.end[axis] if side == 1 else box.position[axis]
+				var open: Array[Rect2] = clips
+				for j in items.size():
+					if j == i or items[j].owner == items[i].owner:
+						continue
+					var other: AABB = items[j].box
+					var other_plane: float = other.end[axis] if side == 1 else other.position[axis]
+					if absf(other_plane - plane) > COPLANAR_M:
+						continue
+					var drawn: Array[Rect2] = [Rect2(other.position[u], other.position[v], other.size[u], other.size[v])]
+					for clip in clips_of(items[j], axis, side):
+						drawn = _subtract(drawn, clip)
+					for rect in drawn:
+						open = _subtract(open, rect)
+				var seen := _area(visible_rects(items, [i], axis, side, plane, open, space))
+				if seen >= min_area:
+					out.append({
+						item = items[i], axis = axis, side = side, plane = plane, area = seen,
+						text = "%s: %s face at %.3f has a %.2f m2 hole in view (taken out, and no other box draws it)" % [_name(items[i]), "xyz"[axis] + ("+" if side == 1 else "-"), plane, seen],
+					})
+	return out
+
+
+## Every pair of faces of one direction a few centimetres apart (STEP_MIN_M to STEP_MAX_M) of two boxes that overlap (two solids
+## that run into each other, so the step is not a feature standing on a surface: paint, a post on a curb) where the nearer covers part of the
+## farther and leaves part of it in view: a step along the nearer's edge, which the edge pass inks. {a: the nearer, b: the farther
+## (entries of drawn_boxes), axis, side, covered: float, exposed: float, text}. Both areas must be at least `min_area` (square
+## metres): a step over a sliver is not a line.
+static func steps(root: Node, min_area: float = MIN_AREA_M2) -> Array[Dictionary]:
+	var items := drawn_boxes(root)
+	var space := (root as Node3D).get_world_3d().direct_space_state if root is Node3D else null
+	var out: Array[Dictionary] = []
+	for i in items.size():
+		for j in range(i + 1, items.size()):
+			if items[i].owner == items[j].owner or _stands_by_design(items[i]) or _stands_by_design(items[j]):
+				continue
+			var a: AABB = items[i].box
+			var b: AABB = items[j].box
+			if not a.intersects(b):
+				continue
+			for axis in 3:
+				var u := (axis + 1) % 3
+				var v := (axis + 2) % 3
+				var overlap_u := minf(a.end[u], b.end[u]) - maxf(a.position[u], b.position[u])
+				var overlap_v := minf(a.end[v], b.end[v]) - maxf(a.position[v], b.position[v])
+				if overlap_u <= 0.0 or overlap_v <= 0.0:
+					continue
+				for side in 2:
+					if axis == 1 and side == 0:
+						continue
+					var plane_a: float = a.end[axis] if side == 1 else a.position[axis]
+					var plane_b: float = b.end[axis] if side == 1 else b.position[axis]
+					var gap := absf(plane_a - plane_b)
+					if gap < STEP_MIN_M or gap > STEP_MAX_M:
+						continue
+					var a_nearer := (plane_a > plane_b) == (side == 1)
+					var near: int = i if a_nearer else j
+					var far: int = j if a_nearer else i
+					var near_box: AABB = items[near].box
+					var far_box: AABB = items[far].box
+					var covered_rect := Rect2(
+							maxf(a.position[u], b.position[u]), maxf(a.position[v], b.position[v]), overlap_u, overlap_v)
+					var near_drawn: Array[Rect2] = [Rect2(near_box.position[u], near_box.position[v], near_box.size[u], near_box.size[v])]
+					for clip in clips_of(items[near], axis, side):
+						near_drawn = _subtract(near_drawn, clip)
+					var covered_area := 0.0
+					for rect in near_drawn:
+						if rect.intersects(covered_rect):
+							covered_area += rect.intersection(covered_rect).get_area()
+					if covered_area < min_area:
+						continue
+					var open: Array[Rect2] = [Rect2(far_box.position[u], far_box.position[v], far_box.size[u], far_box.size[v])]
+					for clip in clips_of(items[far], axis, side):
+						open = _subtract(open, clip)
+					for rect in near_drawn:
+						open = _subtract(open, rect)
+					var far_plane: float = plane_b if a_nearer else plane_a
+					var exposed := _area(visible_rects(items, [far, near], axis, side, far_plane, open, space))
+					if exposed >= min_area:
+						out.append({
+							a = items[near], b = items[far], axis = axis, side = side, covered = covered_area, exposed = exposed,
+							text = "%s stands %.0f mm in front of %s (%s faces): %.2f m2 of it covers, %.2f m2 of the farther is left in view" % [_name(items[near]), gap * 1000.0, _name(items[far]), "xyz"[axis] + ("+" if side == 1 else "-"), covered_area, exposed],
+						})
 	return out
