@@ -8,7 +8,7 @@ A first-person beat-em-up proof of concept in Godot 4.7.2 (GDScript with static 
 
 ## Run, test, look
 - **Play:** `godot --path .`. The main scene is the Mission 1 level (Milestone 5); F6 cycles the crowd room, the training room and back.
-- **Tests:** `tools/run_tests.sh` runs all GUT tests headless in about 6 minutes (376 s of test time at the end of M6, 1931 tests, on the shared 8 GB machine; M5 ended at 1766 tests and 299 s), using `--fixed-fps 60` so frame-timed tests are deterministic. `-gselect=<file>` runs one file. `-gjunit_xml_file=res://captures/<name>.xml` writes the per-file times. Read the full output for `SCRIPT ERROR`, `SHADER ERROR` and `ERROR`. `ART_PUNK_VARIANT_STRAIN=1` adds the strain runs of the Punk's three locked A/B variants (about 14 s).
+- **Tests:** `tools/run_tests.sh` runs all GUT tests headless in about 6 minutes (366 s of test time at the end of M6, 1936 tests, on the shared 8 GB machine; M5 ended at 1766 tests and 299 s), using `--fixed-fps 60` so frame-timed tests are deterministic. `-gselect=<file>` runs one file. `-gjunit_xml_file=res://captures/<name>.xml` writes the per-file times. Read the full output for `SCRIPT ERROR`, `SHADER ERROR` and `ERROR`. `ART_PUNK_VARIANT_STRAIN=1` adds the strain runs of the Punk's three locked A/B variants (about 14 s).
 - **Look at it:**
   - `tools/capture_combos.sh "<act title text>" 6` records combo-bot acts (`tests/bot/combo_bot.gd`) with Movie Maker into `captures/combos.avi`, plus `captures/bot.log` with the hits per act.
   - Tile stills with `ffmpeg -i captures/combos.avi -vf "fps=6,scale=480:-1,tile=5x4" -frames:v 1 sheet.png` and view them.

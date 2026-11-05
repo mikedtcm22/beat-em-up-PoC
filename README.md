@@ -59,7 +59,7 @@ Every enemy, the boss, the level and the sounds are now final art and audio, and
   - the Kicker (concept C: a black cap over a lime mask, a lime hooded vest, wrapped forearms);
   - the Pipe Thug (B: a black beanie, a yellow bandana, an olive hoodie with a strap and buckle);
   - the Bruiser (A, 2.05 m: a purple padded jacket over steel plates and forearm guards);
-  - the boss, **Ox Pellerin**, the underground-fight champion (C, 2.3 m: a hooded charcoal robe with orange trim, a champion's belt, boxing gloves; 29,299 of his 30,000 triangles).
+  - the boss, **Ox Pellerin**, the underground-fight champion (C, 2.3 m: a hooded charcoal robe with orange trim, a champion's belt, boxing gloves; 29,298 of his 30,000 triangles).
   - The veteran Punk is a palette swap now, with a violet vest and orange trousers, instead of an orange tint. The training dummies share one padded look.
 - **Damage marks per swatch:** skin bruises and bleeds, with a hard edge to the blood. A cap, a beanie, a strap, steel or the champion's belt scuffs and darkens, but never takes blood.
 - **The near upper arm:** in the haymaker and the uppercut you see your whole upper arm, lit as one limb with the forearm, where M5 showed the cut end at the elbow.
@@ -70,7 +70,7 @@ Every enemy, the boss, the level and the sounds are now final art and audio, and
   - The crowd street and the training room wear the same kit.
   - The colliders are M5's, unchanged: the art only draws.
 - **The second weapon is a bike chain.** It lies on the top roof in A6; Pipe Thugs still drop pipes.
-  - It keeps the spec's weapon numbers: 10 a swing, a 3-hit chain, it breaks after 8 hits, and a throw does 15. It differs from the pipe in reach, arc and timing.
+  - It keeps the spec's weapon numbers: 10 a swing, a 3-hit chain, it breaks after 8 hits, and a throw does 15. It differs from the pipe in reach and timing, and swings on the pipe's three poses.
   - Its links and padlock swing in a presentation-only sim.
   - A weapon lying on the floor glints, so you can find it from 10 m (M5 drew it amber).
 - **Every sound is generated with ElevenLabs** (Game-boy's call): the hit stack, blocks, barriers, weapons, the GO and CLEAR stings, a street and a roof ambience bed, and voices for each enemy type. The music loop is still the placeholder (Spec §1).
@@ -78,7 +78,7 @@ Every enemy, the boss, the level and the sounds are now final art and audio, and
   - `]` and `[` page through the banks.
   - `1`-`9` and `0` play a take, and `=` plays the whole bank.
   - `-` swaps between the new sounds and M2's placeholders.
-  - Any take can be replaced by editing one line in `assets/source/sfx/eleven/sfx.picks.json`, then running `python3 -I tools/audio/ingest.py --picks assets/source/sfx/eleven/sfx.picks.json`.
+  - Any take can be replaced by editing one line in its picks file, then running `python3 -I tools/audio/ingest.py --picks <that file>`. The voices (grunts, efforts, KO lines, the player's grunts, the boss's phase lines) are in `assets/source/sfx/eleven/voices.picks.json`, and every other sound is in `sfx.picks.json` beside it.
 - **A/B switches** in F1's Debug group bring an older look back:
   - `look_marks_per_swatch` (M4's marks);
   - `look_near_arm` (M5's view);
@@ -89,7 +89,7 @@ Every enemy, the boss, the level and the sounds are now final art and audio, and
   - `audio_legacy_bank` (M2's sounds).
 
 **How the done-when is proved:**
-- **`tests/test_m6_no_placeholders.gd`** counts every kind of placeholder in the level, the crowd street and the training room: primitive bodies, tints, grey boxes, cylinder weapons, a missing second weapon, generated sounds and empty sound slots. Every count is 0 (`tests/fixtures/m6/placeholder_ratchet.json`). The allowed list is by name: the music loop, the shader warm-up meshes, the edge-pass quad and the legacy A/B bank.
+- **`tests/test_m6_no_placeholders.gd`** counts every kind of placeholder in the level, the crowd street and the training room: primitive bodies, tints, grey boxes, cylinder weapons, a missing second weapon, generated sounds and empty sound slots. Every count is 0 (`tests/fixtures/m6/placeholder_ratchet.json`). The allowed list is short: the music loop (by pool), the shader warm-up meshes and the edge-pass quad (by node), and the edge guards. A mesh that is hidden or off the default layer (F3's debug draws, the hidden proxies) is not counted. The legacy A/B bank is in `tests/fixtures/sfx_legacy/`, outside the scanned `assets/export/sfx`.
 - **The budgets hold:** enemies 15,000 triangles, the boss and the player 30,000, props and weapons 3,000, modules 5,000, and one 2048 px trim sheet.
 - **Every generated asset rebuilds to its hash:**
   - `run.py --check` for each character and prop, and `player_run.py --check`;
@@ -97,8 +97,13 @@ Every enemy, the boss, the level and the sounds are now final art and audio, and
   - `ingest.py --check`.
   - Every asset has an `ASSETS.md` row with its source, service and licence, and the binaries are in LFS.
 - **The paid services stayed inside the policy:** Tripo 545 of M6's 900 credits, ElevenLabs 4,843 of 30,000.
-- **The game underneath is M5's:** `tests/test_m6_colliders.gd` holds every static collider, and the M3-M5 done-when tests pass with every character's art. The held-back level run clears every arena (street 132 s, roofs 175 s, boss 111 s; M5 took 136, 183 and 108).
-- **Frame time:** FRAME_TIME_PENDING
+- **The game underneath is M5's:** `tests/test_m6_colliders.gd` holds every static collider, and the M3-M5 done-when tests pass with every character's art. The held-back level run clears every arena (street 131 s, roofs 174 s, boss 108 s; M5 took 136, 183 and 108), recorded before the final review's fixes.
+- **Frame time** (the Apple M1, windowed with vsync on, the two builds run in turn, other apps keeping the load at 3-4):
+  - **The level walk** (4 runs each) takes 10.87 ms a frame on average, against 9.43 ms for the level before the art (910448e). That is +15.3%, 0.3 points over the plan's 15% line (a mean more than 15% over is a fix item); single runs range from +14.5% to +16.4%.
+  - Its p95 is 14.2 ms, inside a 60 Hz frame, and the first hit, the first spawn and the spawn hitch meet M4's soft bars.
+  - The lead's check after the review's fixes measured +19.5% (vsync off, so not like for like). On the fixed poses, run the same way before and after, the perf fix took the overhead from +41% to +16%. See the trim sheet's two materials under "Where M6 departs from the plan".
+  - **The crowd room's six with ragdolls** (3 runs each) is +12.3% against M5 (10.34 to 11.61 ms). Its p95 and spawn hitch miss the soft bars, as they already did on M5.
+  - The level: `tools/perf_compare.sh --vsync on --runs 4 --bot res://tests/bot/perf_level_bot.tscn --act "Perf: level walk" --act "Perf: counters" 910448e HEAD`. The crowd room: `tools/perf_compare.sh --vsync on --runs 3 main HEAD`. "Perf: counters" holds the tour's poses still, so its renderer counters compare whatever the load.
 
 ## Milestone 5 status: the level blockout
 
@@ -345,10 +350,12 @@ The characters are procedural placeholders. Real art, VFX and audio come in Mile
 - **The Bruiser's chest has fewer plate edges than the concept:** the steel reads as steel, with ink seams at the shoulders, but the generated model carries few plate lines.
 - **Three concept views per character, not four:** front, left and back, the views Tripo's accepted Punk run used.
 - **The environment modules are procedural Godot meshes on the trim sheet, not Blender-scripted ones** (a change from the approved proposal's method; the 5k module budget and the 2k sheet hold).
-- **The held weapon is out of view during a first-person swing,** as M5's pipe was, so the chain's whip shows only while it lies, flies or is held still.
+- **The held weapon is out of view in first person,** as M5's pipe was, so the chain's whip shows only while it lies or flies.
+- **The trim sheet has two materials, not one (D10):** an opaque one for every block, and a variant that cuts out the chain-link's wire. A single material that cut out the wire made the renderer treat all 330 kit meshes as cut-out, with no depth prepass and the full shader in every shadow pass. The car, the tank and the dumpster cast their shadows from coarser copies of themselves, within 12 cm of the drawn shape (`draw_prop_shadow_error_m`; 0 gives the props' own triangles). The AC unit has no coarser copy within that, so it casts its own.
+- **The level walk's frame time is +15.3% over the pre-art level, 0.3 points over the plan's 15% line.** The perf fix stopped at the best result with no visible change. The levers left (occlusion culling, plain boxes for the walls, no shadows on windows or the skyline) would change what you see, or measured at 1% or less; `docs/milestones/M6-calls/fix-final-perf.md` costs each.
 
 **Automated checks:**
-- `tools/run_tests.sh` runs about 1930 tests headless in about 375 s. Among them:
+- `tools/run_tests.sh` runs about 1940 tests headless in about 370 s. Among them:
   - an end-to-end suite where a scripted player performs every combo in the real test room;
   - each milestone's done-when test (`tests/test_m3_done_when.gd`; `tests/test_m4_done_when.gd`, now run for every character in the art roster; `tests/test_m5_done_when.gd`, which plays the whole level arena by arena; `tests/test_m6_no_placeholders.gd`);
   - the level's own tests (`tests/test_m5_street.gd`, `tests/test_m5_roofs.gd`, `tests/test_level_kit.gd`, `tests/test_level_bot.gd`).
