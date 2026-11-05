@@ -30,11 +30,15 @@ func test_both_heavies_are_in_the_roster_with_their_own_heights_and_budgets() ->
 	assert_eq(int(bruiser.budget), 15000)
 	assert_eq(int(boss.budget), 30000, "SPEC section 10's Boss row")
 	assert_eq(String(boss.label), "Ox Pellerin")
+	# The actors go under a holder the test frees: an EnemyActor makes the EnemyDirector as its sibling, and one made as a child of
+	# the test node itself stayed there (GUT's "unfreed children" warning, final-code-04).
+	var holder := Node3D.new()
+	add_child_autofree(holder)
 	for id: String in ["bruiser", "boss"]:
 		assert_eq(Roster.problems(id), PackedStringArray(), "%s: the roster file is complete" % id)
 		var scene := load(String(Roster.row(id).actor_scene)) as PackedScene
 		var actor := scene.instantiate() as EnemyActor
-		add_child_autofree(actor)
+		holder.add_child(actor)
 		await get_tree().physics_frame
 		assert_true(actor.rig.has_art(), "%s: wears its art (no primitive body left)" % id)
 		assert_almost_eq(actor.rig.height, float(Roster.row(id).height_m), 0.0001, "%s: the rig is at its height" % id)
