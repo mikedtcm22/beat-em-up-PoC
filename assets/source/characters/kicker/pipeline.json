@@ -237,6 +237,26 @@
 					"valley_deg": 15
 				},
 				{
+					"name": "mask",
+					"slots": [
+						22
+					],
+					"min": [
+						-0.13,
+						0.0,
+						1.5
+					],
+					"max": [
+						0.13,
+						0.3,
+						1.65
+					],
+					"ink_low": 0.08,
+					"ink_high": 0.2,
+					"crease_deg": 181,
+					"valley_deg": 181
+				},
+				{
 					"name": "tights",
 					"slots": [
 						22
@@ -333,6 +353,27 @@
 					"crease_deg": 50
 				},
 				{
+					"name": "eyes",
+					"slots": [
+						23,
+						6
+					],
+					"min": [
+						-0.13,
+						0.0,
+						1.62
+					],
+					"max": [
+						0.13,
+						0.3,
+						1.69
+					],
+					"ink_low": 0.06,
+					"ink_high": 0.14,
+					"crease_deg": 181,
+					"valley_deg": 181
+				},
+				{
 					"name": "boots",
 					"slots": [
 						23
@@ -373,7 +414,27 @@
 			}
 		},
 		"min_island_area_m2": 0.0015,
-		"island_passes": 2
+		"island_passes": 2,
+		"regions": [
+			{
+				"name": "eyes",
+				"slot": 6,
+				"only_from": [
+					23,
+					6
+				],
+				"min": [
+					-0.13,
+					0.0,
+					1.625
+				],
+				"max": [
+					0.13,
+					0.3,
+					1.685
+				]
+			}
+		]
 	},
 	"export": {
 		"hull_normal_digits": 5,

@@ -219,3 +219,38 @@ func test_the_kickers_config_holds_the_recipe_values() -> void:
 	assert_gt(float(zones.face_skin.crease_deg), 180.0, "the face takes no crease line")
 	assert_gt(float(zones.tights.crease_deg), 180.0, "nor do the tights")
 	assert_false(zones.boots.has("valley_deg"), "the boots keep their creases only")
+
+## Playtest fix (feedback-chars-04): the eyes under the cap are skin, not slot 23's black (which scuffs and never bruises), and the
+## eyes' box draws no crease. A region repaints only the black and skin faces there.
+func test_the_eyes_are_skin_and_the_mask_is_plain() -> void:
+	var cfg: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(PIPELINE))
+	var regions: Dictionary = {}
+	for reg: Dictionary in cfg.palette.regions:
+		regions[reg.name] = reg
+	assert_true(regions.has("eyes"), "the eyes have a region")
+	assert_eq(int(regions.eyes.slot), 6, "it paints skin")
+	assert_true(regions.eyes.only_from.has(23) and not regions.eyes.only_from.has(22), "from the cap's black only, never the lime mask")
+	var faces := 0
+	var black := 0
+	for tri: int in _tris().size() / 3:
+		if _in_box(tri, Vector3(-0.12, 0.02, 1.63), Vector3(0.12, 0.3, 1.66)):
+			faces += 1
+			if _slot_of_tri(tri) == 23:
+				black += 1
+	assert_gt(faces, 20, "the eye band holds faces (%d)" % faces)
+	assert_eq(black, 0, "none of them is the cap's black")
+	var zones: Dictionary = {}
+	for zone: Dictionary in cfg.palette.detail_bake.zones:
+		zones[zone.name] = zone
+	assert_gt(float(zones.eyes.crease_deg), 180.0, "the eye band draws no crease")
+	assert_gt(float(zones.mask.crease_deg), 180.0, "the lime mask draws no crease (feedback-chars-05)")
+	assert_gt(float(zones.mask.valley_deg), 180.0, "and no valley")
+	var names: Array[String] = []
+	for zone: Dictionary in cfg.palette.detail_bake.zones:
+		names.append(str(zone.name))
+	assert_gt(names.find("mask"), names.find("vest"), "the mask zone comes after the vest, so it wins")
+	assert_gt(names.find("eyes"), names.find("headwear"), "the eyes zone comes after the headwear, so it wins")
+	var mask := _ink_share(func(tri: int) -> bool: return _slot_of_tri(tri) == 22 and _in_box(tri, Vector3(-0.11, 0.02, 1.52), Vector3(0.11, 0.3, 1.6)))
+	gut.p("kicker mask ink %.4f (%d faces)" % [mask.share, mask.faces])
+	assert_gt(int(mask.faces), 20, "the mask box holds lime faces")
+	assert_lt(float(mask.share), 0.02, "and almost no ink (%.4f)" % float(mask.share))

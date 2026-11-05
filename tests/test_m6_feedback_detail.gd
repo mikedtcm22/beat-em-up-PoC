@@ -141,10 +141,38 @@ func test_interior_ink_in_the_plate_and_jacket_zones() -> void:
 	assert_gt(int(mask_report.crease.texels_on_a_crease), 5000, "from texels on a crease of the dense mesh")
 
 
-## A character has taken the recipe when it has its own roll-out test, `tests/test_m6_feedback_detail_<id>.gd`, which then holds its keys.
+## A character has taken the recipe when it has its own roll-out test, `tests/test_m6_feedback_detail_<id>.gd`, AND its `pipeline.json`
+## really uses the recipe (`palette.detail_bake.crease`), so an empty or stale test file cannot opt it out (feedback-code-05).
 ## The guards below skip it, so each roll-out adds its own test and none edits these lists.
 func _rolled_out(id: String) -> bool:
-	return id == "bruiser" or FileAccess.file_exists("res://tests/test_m6_feedback_detail_%s.gd" % id)
+	if id != "bruiser" and not FileAccess.file_exists("res://tests/test_m6_feedback_detail_%s.gd" % id):
+		return false
+	var path := "res://assets/source/characters/%s/pipeline.json" % id
+	if not FileAccess.file_exists(path):
+		return false
+	var cfg: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+	if not cfg is Dictionary:
+		return false
+	var bake: Variant = ((cfg as Dictionary).get("palette", {}) as Dictionary).get("detail_bake", {})
+	return bake is Dictionary and (bake as Dictionary).has("crease")
+
+
+## Every roll-out test reads its own character's `pipeline.json` (the file names it), and that config holds the recipe's crease. The
+## opt-out in `_rolled_out` is then backed by the config, not by a file's existence.
+func test_every_roll_out_test_reads_its_own_pipeline_and_the_recipe() -> void:
+	var rolled := 0
+	var dir := DirAccess.open("res://tests")
+	for file: String in dir.get_files():
+		if not (file.begins_with("test_m6_feedback_detail_") and file.ends_with(".gd")):
+			continue
+		var id := file.trim_prefix("test_m6_feedback_detail_").trim_suffix(".gd")
+		var text := FileAccess.get_file_as_string("res://tests/" + file)
+		assert_string_contains(text, "characters/%s/pipeline.json" % id, "%s reads its own pipeline.json" % file)
+		assert_true(_rolled_out(id), "%s: its pipeline.json has detail_bake.crease" % id)
+		rolled += 1
+	assert_gte(rolled, 4, "the Thug, the Kicker, Ox and the Punk have roll-out tests")
+	assert_true(_rolled_out("bruiser"), "the Bruiser's pipeline.json has the recipe")
+	assert_false(_rolled_out("dummy"), "the dummy has not rolled out")
 
 
 ## No character that hasn't rolled out asks for a crease, an island merge or a border relax of 0, so its `run.py --check` hash is the M6 one.
