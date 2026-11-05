@@ -4,6 +4,23 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-04 19:15 CST: phase 3 recorded (19 acts, 0 errors); the final review running
+- **Recorded** into `captures/m6-final/` (git-ignored): all 19 acts, with 0 error lines. The held-back runs cleared every arena: street 132 s, roofs 175 s and boss 111 s (M5: 136, 183 and 108).
+- **The lead's look:**
+  - The Thug holds his pipe (`props_weapons/sheets/p3/stills/p3_f284_thug_pipe.png`).
+  - The chain reads, and the boss's bar reads OX PELLERIN.
+  - The seams are clean.
+  - One roof drop still shows a pale flat plane, and the catwalk drop is a featureless dark floor.
+  - The roofs' edge-guard stanchions lean.
+- **The lead's fix** `e8ebdad`: the help overlay names the sound room's keys as they read (`] [`, `1-9, 0 =`, `-`), and the long row is shortened.
+- **Running:** the final review, `tools/workflows/review.js` run `wf_9935c9e9-811` with `docs/reviews/M6/args-review-final.json` (base `e8ebdad`). It has three lenses, `chars` (Opus), `world` (Opus) and `code` (Sonnet), plus skeptics for high and medium findings. With `partition: false`, it returns the survivors, and the lead partitions them.
+  - **If cut off:** rerun with `resumeFromRunId` (same session) or with the same args (a new session).
+- **Next:**
+  1. Partition the survivors into at most 3 fix packages, and add the open items not raised (the unfreed children, Game-boy's near-arm answer).
+  2. Run the fix wave (`review.js` with `findings_path` and packages), then re-check the changed items.
+  3. Perf on a quiet machine: `tools/perf_compare.sh --bot res://tests/bot/level_bot.tscn --act "Perf: level walk" --runs 3 910448e HEAD`, and "Perf, six with ragdolls" against `main`.
+  4. README's M6 departures, the PR, and the DM.
+
 ### 2026-11-04 18:50 CST: phase 2 merged (1919/1919); every inventory key is 0; stills sent; phase 3 recording
 - **Phase 2 is merged** into `m6/full-art-audio` and pushed (`28b1be0`): 1919/1919 in 364 s, 0 error lines. One GUT warning: `test_art_heavies.gd` leaves 2 unfreed children (a phase 3 fix item).
   - The merge order was SFX, WEAPONS, then A6's floor weapon (`7f7c7cb`: the pickup is now `Pickups/ChainBigShutter` with `weapon_scene` = `bike_chain.tscn`); a suite there passed 1892/1892. Then HEAVIES, CREW, ARM and DRESS, merged in a scratch worktree while that suite ran, fast-forwarded, and one suite on all of it.
