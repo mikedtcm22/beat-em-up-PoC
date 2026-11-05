@@ -55,8 +55,12 @@ func _ticks(n: int) -> void:
 
 ## An enemy of `scene` `dist` m from the player at `bearing` degrees (0 ahead, positive to the left),
 ## facing him.
-func _enemy(scene: PackedScene, bearing: float, dist: float) -> EnemyActor:
+## `without_art`: the scene's art is cleared before it enters the tree, so the rig draws its primitives (M6 CREW: the Kicker used
+## to be the roster's one enemy with no art; every enemy now wears it, and the same code path is reached this way).
+func _enemy(scene: PackedScene, bearing: float, dist: float, without_art: bool = false) -> EnemyActor:
 	var enemy := scene.instantiate() as EnemyActor
+	if without_art:
+		enemy.art = null
 	var b := deg_to_rad(bearing)
 	enemy.position = _player.global_position + Vector3(-sin(b), 0.0, -cos(b)) * dist
 	var to_player := _player.global_position - enemy.position
@@ -116,8 +120,8 @@ func test_with_the_art_off_the_two_are_the_same_measure() -> void:
 
 
 func test_an_enemy_without_art_is_counted_as_it_was() -> void:
-	# The Kicker has no art: both ways see its primitives, so the two agree on it.
-	var kicker := _enemy(KICKER_SCENE, 0.0, 1.6)
+	# A Kicker whose art is cleared (the shipped one wears it since M6 CREW): both ways see its primitives, so the two agree on it.
+	var kicker := _enemy(KICKER_SCENE, 0.0, 1.6, true)
 	await _ticks(4)
 	assert_false(kicker.rig.has_art())
 	var sampler := _sampler()
@@ -195,7 +199,7 @@ func test_a_windup_behind_an_art_punk_is_hidden_drawn_and_by_the_proxies() -> vo
 
 
 func test_a_windup_behind_an_enemy_without_art_is_hidden_by_its_primitives() -> void:
-	var blocker := _enemy(KICKER_SCENE, 0.0, 1.1)
+	var blocker := _enemy(KICKER_SCENE, 0.0, 1.1, true)
 	var attacker := _enemy(PUNK_SCENE, 0.0, 2.6)
 	await _ticks(3)
 	assert_false(blocker.rig.has_art())

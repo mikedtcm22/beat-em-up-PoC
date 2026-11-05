@@ -1,8 +1,10 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://game/enemies/kicker/kicker.gd" id="1_kicker"]
+[ext_resource type="Resource" path="res://game/actors/art/kicker_art.tres" id="2_art"]
 
 [node name="Kicker" type="CharacterBody3D"]
 script = ExtResource("1_kicker")
 display_name = "Kicker"
 voice_pitch_mult = 1.12
+art = ExtResource("2_art")

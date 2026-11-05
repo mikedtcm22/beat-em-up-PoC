@@ -1,0 +1,23 @@
+{
+	"id": "kicker",
+	"slot_range": [
+		22,
+		27
+	],
+	"note": "The Kicker's own colours (M6 concept C: a hooded lime vest, bandana and leggings, a black cap, ponytail, cargo shorts and boots, cream wraps on the arms); skin and cream come from the shared palette. Lime keeps saturation above 0.5 and differs from the Punk's teal and the Thug's olive at 5 m; nothing in the red band. The black swatch (cap, hair, shorts, boots) scuffs but never takes blood (M6 D6): a red cut on near-black reads as a stain, and the cap and the ponytail are hair and cloth that should not drip.",
+	"swatches": [
+		{
+			"slot": 22,
+			"name": "kicker_lime",
+			"srgb": "#86c734",
+			"marks": true
+		},
+		{
+			"slot": 23,
+			"name": "kicker_black",
+			"srgb": "#3b3a43",
+			"marks": true,
+			"blood": false
+		}
+	]
+}

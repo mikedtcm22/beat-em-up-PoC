@@ -350,6 +350,10 @@ def run(cfg, extra):
 			# only the rear half moves, farther back (-y in the Blender frame): the hurtbox axis of a bent knee runs behind the leg
 			rear = np.clip((joint[1] - new_co[:, 1]) / max(float(bg.get("rear_ramp_m", 0.05)), 1e-6), 0.0, 1.0)
 			new_co[:, 1] -= weight * rear * float(bg["amount_m"])
+		elif bg.get("direction") == "front":
+			# the mirror of "back" (M6 CREW): only the front half moves, farther forward (+y), so a boot's toe cap reaches the rule's 0.2 m
+			front = np.clip((new_co[:, 1] - joint[1]) / max(float(bg.get("front_ramp_m", 0.05)), 1e-6), 0.0, 1.0)
+			new_co[:, 1] += weight * front * float(bg["amount_m"])
 		else:
 			radial = new_co[:, :2] - joint[:2]
 			ln = np.maximum(np.linalg.norm(radial, axis=1, keepdims=True), 1e-6)
@@ -390,6 +394,10 @@ def run(cfg, extra):
 			flatten_report["left" if side < 0 else "right"] = {"max_rise_m": float(rise.max()), "vertices": int(sel.sum())}
 		# (in the notes, not a report key of its own: every roster report keeps the Punk's step keys, test_art_contract)
 		notes.append("sole_flatten " + str({k: {"max_rise_m": round(v["max_rise_m"], 4), "vertices": v["vertices"]} for k, v in flatten_report.items()}))
+	# ----- 5f. sole lift (opt-in, fit.sole_lift_m; M6 CREW): the warp can leave a chunky boot's lugs a few mm under z = 0 (A4 holds the
+	# lowest sole vertex within 5 mm of the floor); the mesh, never the armature, is raised by this much after every other step
+	if float(fit.get("sole_lift_m", 0.0)) != 0.0:
+		new_co[:, 2] += float(fit["sole_lift_m"])
 	pb.set_verts(me, new_co)
 	for p in me.polygons:
 		p.use_smooth = True

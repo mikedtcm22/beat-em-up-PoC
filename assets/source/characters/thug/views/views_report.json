@@ -1,0 +1,182 @@
+{
+	"limits": {
+		"ground_tolerance": 18,
+		"height_rel": 0.03,
+		"feet_row_px": 32,
+		"centre_px": 60
+	},
+	"views": {
+		"front": {
+			"size": [
+				1792,
+				2400
+			],
+			"mannequin_size": [
+				1536,
+				2048
+			],
+			"ground_rgb": [
+				238,
+				238,
+				238
+			],
+			"bbox": {
+				"top": 208,
+				"bottom": 2241,
+				"left": 231,
+				"right": 1560,
+				"height": 2034,
+				"width": 1330
+			},
+			"mannequin_bbox": {
+				"top": 177,
+				"bottom": 1911,
+				"left": 46,
+				"right": 1489,
+				"height": 1735,
+				"width": 1444
+			},
+			"height_ratio_to_mannequin": 1.000391930835735,
+			"feet_row_vs_mannequin_px": 1,
+			"top_row_vs_mannequin_px": 0,
+			"centre_offset_px": -0.4266666666666667,
+			"height_frac": 0.8475,
+			"bottom_frac": 0.93375,
+			"profile": {
+				"shoulder": 536,
+				"hip": 1285,
+				"knee": 548,
+				"ankle": 679,
+				"widest": 850,
+				"ankle_gap": 224
+			},
+			"mannequin_profile": {
+				"shoulder": 579,
+				"hip": 1441,
+				"knee": 346,
+				"ankle": 312,
+				"widest": 848,
+				"ankle_gap": 110
+			},
+			"width_ratio_to_mannequin": 0.9210526315789473,
+			"problems": [],
+			"ok": true
+		},
+		"back": {
+			"size": [
+				1792,
+				2400
+			],
+			"mannequin_size": [
+				1536,
+				2048
+			],
+			"ground_rgb": [
+				238,
+				238,
+				238
+			],
+			"bbox": {
+				"top": 209,
+				"bottom": 2241,
+				"left": 231,
+				"right": 1560,
+				"height": 2033,
+				"width": 1330
+			},
+			"mannequin_bbox": {
+				"top": 177,
+				"bottom": 1911,
+				"left": 46,
+				"right": 1489,
+				"height": 1735,
+				"width": 1444
+			},
+			"height_ratio_to_mannequin": 0.9999000960614793,
+			"feet_row_vs_mannequin_px": 1,
+			"top_row_vs_mannequin_px": 1,
+			"centre_offset_px": -0.4266666666666667,
+			"height_frac": 0.8470833333333333,
+			"bottom_frac": 0.93375,
+			"profile": {
+				"shoulder": 538,
+				"hip": 1285,
+				"knee": 548,
+				"ankle": 671,
+				"widest": 849,
+				"ankle_gap": 239
+			},
+			"mannequin_profile": {
+				"shoulder": 579,
+				"hip": 1441,
+				"knee": 346,
+				"ankle": 312,
+				"widest": 848,
+				"ankle_gap": 110
+			},
+			"width_ratio_to_mannequin": 0.9210526315789473,
+			"problems": [],
+			"ok": true
+		},
+		"left": {
+			"size": [
+				1792,
+				2400
+			],
+			"mannequin_size": [
+				1536,
+				2048
+			],
+			"ground_rgb": [
+				238,
+				238,
+				238
+			],
+			"bbox": {
+				"top": 208,
+				"bottom": 2241,
+				"left": 620,
+				"right": 1045,
+				"height": 2034,
+				"width": 426
+			},
+			"mannequin_bbox": {
+				"top": 177,
+				"bottom": 1911,
+				"left": 526,
+				"right": 900,
+				"height": 1735,
+				"width": 375
+			},
+			"height_ratio_to_mannequin": 1.000391930835735,
+			"feet_row_vs_mannequin_px": 1,
+			"top_row_vs_mannequin_px": 0,
+			"centre_offset_px": -54.18666666666667,
+			"height_frac": 0.8475,
+			"bottom_frac": 0.93375,
+			"profile": {
+				"shoulder": 333,
+				"hip": 295,
+				"knee": 217,
+				"ankle": 212,
+				"widest": 364,
+				"ankle_gap": 0
+			},
+			"mannequin_profile": {
+				"shoulder": 232,
+				"hip": 238,
+				"knee": 134,
+				"ankle": 187,
+				"widest": 327,
+				"ankle_gap": 0
+			},
+			"width_ratio_to_mannequin": 1.136,
+			"problems": [],
+			"ok": true
+		}
+	},
+	"same_size": true,
+	"measures_in": "pixels of a 2048 px tall image (fractions of the image height times 2048)",
+	"ok": true,
+	"failed_views": []
+}

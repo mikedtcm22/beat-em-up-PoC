@@ -1,0 +1,31 @@
+{
+	"id": "kicker",
+	"label": "Kicker",
+	"art": "res://game/actors/art/kicker_art.tres",
+	"actor_scene": "res://game/enemies/kicker/kicker.tscn",
+	"height_m": 1.8,
+	"budget": 15000,
+	"meshes": [
+		"Body"
+	],
+	"moves": [
+		"kicker_jump_kick",
+		"kicker_sweep"
+	],
+	"ratchets": {
+		"a9_cells": 0.08,
+		"a9_lens_pp": {
+			"*": 0.04,
+			"kicker_jump_kick pitch +8": 0.07,
+			"kicker_jump_kick pitch -6": 0.075
+		},
+		"a9_strike_art_share_min": 0.1,
+		"anchor_m": {
+			"head": 0.02,
+			"torso": 0.059,
+			"leg": 0.02
+		},
+		"stretch_m": 0.033
+	},
+	"notes": "M6 CREW. The plan's bars held for the fist box (a5_extent 0.2), the hurtbox fit (A6 passes at the bar: torso 100%, legs 99%, head 99%, no axis point outside), the soles, the toes and the strain's shape; ratchets, each today's figure plus a margin (0.4-0.5 points on a share, 0.5 cm on an anchor, 5% on a length), only where the picked design differs from the proxies: a9_cells 8.0% and a9_lens_pp 7.0/7.5 points: the jump kick at 1 m, where the raised boot, the leg and the cargo shorts fill the lens differently from the proxy capsule (the Punk's cross is held at 7.0% and 5.4 points); a9_strike_art_share_min is the twin: the kicking art itself still keeps 10% of the view; anchor_m torso 5.9 cm: the contact point is clamped onto the nearest bone's follower (the Punk's is 6.5 cm); stretch_m 3.3 cm: the jump kick's right thigh at pitch +8 (the Punk's is 9 cm). The boots' toes are pushed forward 6 cm by a front bulge and the mesh is lifted 6.5 mm (fit.sole_lift_m) so A1's toe and sole rules hold; see M6-calls/CREW.md."
+}
