@@ -44,7 +44,7 @@ extends Node
 ## - **Weapons** (D22, D23): a swing whose move names an `impact_sfx` adds `weapon_<impact_sfx>_hit` to the
 ##   hit stack; pickup, throw, break and landing play `weapon_pickup|throw|break|land` where the weapon is.
 ## - **Barriers** (`barrier_moving`): `barrier_<shutter|gate|car>_<close|open>` where the barrier is.
-## - **Stings** (2D, `play_2d()`): `sting_go` on `arena_cleared`, `sting_clear` on `level_cleared`.
+## - **Stings** (2D, `play_2d()`): `sting_go` on `arena_cleared` only with Debug's `audio_sting_go` (off by default, M6 playtest), `sting_clear` on `level_cleared`.
 ## - **Ambience** (D8): one looping bed on its own players, not the pooled voices, crossfaded to the pool the
 ##   player's section names (`section_entered`, `LevelSection.ambience`), `ambience_street` with no section.
 ##   An empty pool plays nothing and logs nothing: the slots stay empty until their sounds exist.
@@ -483,9 +483,12 @@ func _play_weapon(pool: StringName, weapon: Node3D, volume_db: float) -> void:
 	play(pool, weapon.global_position, volume_db)
 
 
-## GO: the arena's table is done and its way ahead opens.
+## GO: the arena's table is done and its way ahead opens. Silent by default (Game-boy's ruling at his
+## M6 playtest: no victory sound on the GO sections); Debug's audio_sting_go brings M6's sting back.
+## The pool, its files and the audition room's entry stay.
 func _on_arena_cleared(_arena: Node3D) -> void:
-	play_2d(&"sting_go", Tuning.data.sting_go_db)
+	if Tuning.data.audio_sting_go:
+		play_2d(&"sting_go", Tuning.data.sting_go_db)
 
 
 ## CLEAR!: the level's last arena is done.

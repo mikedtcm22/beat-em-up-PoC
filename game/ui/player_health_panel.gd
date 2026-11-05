@@ -30,6 +30,9 @@ var guard_shown: bool = false
 var guard_flash_left: float = 0.0
 
 var _time: float = 0.0
+## Seconds left of the jolt a hit taken gives the panel (Tuning hurt_panel_jolt_s), and its size in pixels.
+var _jolt_left: float = 0.0
+var _jolt_px: float = 0.0
 
 
 func _ready() -> void:
@@ -58,6 +61,10 @@ static func guard_ratio_of(actor: CombatActor) -> float:
 
 ## CombatEvents.health_changed for the player: react on the same frame (flash, ghost).
 func on_health_changed(new_health: float, new_max: float) -> void:
+	if Tuning.data.hurt_feel_enabled and new_health < health:
+		# Damage taken: the panel jolts in proportion (health still holds the previous value here).
+		_jolt_px = minf((health - new_health) * Tuning.data.hurt_panel_jolt_px_per_hp, Tuning.data.hurt_panel_jolt_max_px)
+		_jolt_left = Tuning.data.hurt_panel_jolt_s
 	health = new_health
 	max_health = new_max
 	gauge.set_target(new_health / new_max if new_max > 0.0 else 0.0)
@@ -68,6 +75,7 @@ func on_health_changed(new_health: float, new_max: float) -> void:
 ## while there is no player.
 func advance(delta: float) -> void:
 	_time += delta
+	_jolt_left = maxf(_jolt_left - delta, 0.0)
 	if player == null or not is_instance_valid(player) or not player.is_inside_tree():
 		player = null
 		var found := get_tree().get_first_node_in_group(&"player") as PlayerCharacter
@@ -93,7 +101,16 @@ func advance(delta: float) -> void:
 	queue_redraw()
 
 
+## The panel's offset now (pixels): a fast rattle that dies away over hurt_panel_jolt_s.
+func jolt_offset() -> Vector2:
+	if _jolt_left <= 0.0:
+		return Vector2.ZERO
+	var fade := _jolt_left / maxf(Tuning.data.hurt_panel_jolt_s, 0.01)
+	return Vector2(sin(_time * 95.0), cos(_time * 113.0)) * _jolt_px * fade
+
+
 func _draw() -> void:
+	draw_set_transform(jolt_offset())
 	# Leave room for the border and the drop shadow inside our rect.
 	var body := Rect2(Vector2(border + 2.0, border + 2.0), size - Vector2(border * 2.0 + 12.0, border * 2.0 + 12.0))
 	HudStyle.draw_panel(self, body, slant, HudStyle.PAPER, border)

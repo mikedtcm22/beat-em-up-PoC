@@ -765,7 +765,9 @@ func test_punch_jolts_away_when_player_is_hit() -> void:
 	var contact := player.get_eye_transform().origin + Vector3(0.0, 0.0, -0.1)
 	CombatEvents.hit_landed.emit(_hit(enemy, player, CombatTypes.HitTier.FINISHER, contact,
 			Vector3.BACK))
-	assert_almost_eq(cam.trauma, Tuning.data.shake_finisher, 0.0001, "victim gets trauma too")
+	# M6 feedback: the victim's trauma is hurt_shake(tier) (was shake_finisher); the table's value for the
+	# hits he lands is pinned in test_m6_feedback_feel.gd and the switch-off twin there.
+	assert_almost_eq(cam.trauma, Tuning.data.hurt_shake(CombatTypes.HitTier.FINISHER), 0.0001, "victim gets trauma too")
 	Tuning.set_value(&"screen_shake_intensity", 0.0)
 	cam.update_camera(0.03)
 	var punch := cam.get_punch_deg()
@@ -785,6 +787,8 @@ func test_punch_jolts_away_when_player_is_hit() -> void:
 func test_blocked_hits_shake_and_punch_the_view_less() -> void:
 	# A hit the player's guard stopped (hit.blocked) still jolts the view, scaled down by
 	# blocked_feel_scale.
+	# M6's stack (a clean hit taken is bigger since the M6 playtest; blocked hits are unchanged).
+	Tuning.data.hurt_feel_enabled = false
 	var player := _make_player()
 	var cam := _make_fp(player)
 	var enemy := _make_dummy(Vector3(0.0, 0.0, -0.9))
