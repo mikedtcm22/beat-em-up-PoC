@@ -1,7 +1,7 @@
 {
 	"asset": "kicker",
 	"version": 2,
-	"config_sha256": "7356fdc39059a3d8587d9938d758588797f27bf6368a00d82948c172c49b9705",
+	"config_sha256": "d4a84636fed11e522ed6ea2c44aff0cbfd272148bcc1b19d04cb79168eddd0f2",
 	"steps": {
 		"inspect": {
 			"source": {
@@ -10125,9 +10125,9 @@
 			"delta_e_p95": 18.683639,
 			"pruned_swatches": [],
 			"majority_flips": 305,
-			"border_vertices": 620,
-			"border_edges": 624,
-			"protected_vertices": 2240,
+			"border_vertices": 640,
+			"border_edges": 652,
+			"protected_vertices": 2260,
 			"decimate": {
 				"invert_group": true,
 				"trials": [
@@ -10144,202 +10144,207 @@
 			"swatches_used": {
 				"6": {
 					"name": "skin_light",
-					"area_share": 0.111035,
-					"faces": 1728
+					"area_share": 0.103059,
+					"faces": 1512
 				},
 				"14": {
 					"name": "cream",
-					"area_share": 0.155644,
+					"area_share": 0.155844,
 					"faces": 3878
 				},
 				"22": {
 					"name": "kicker_lime",
-					"area_share": 0.34615,
-					"faces": 4528
+					"area_share": 0.346602,
+					"faces": 4532
 				},
 				"23": {
 					"name": "kicker_black",
-					"area_share": 0.387171,
-					"faces": 4865
+					"area_share": 0.390021,
+					"faces": 4938
+				},
+				"24": {
+					"name": "kicker_shade",
+					"area_share": 0.004474,
+					"faces": 139
 				}
 			},
-			"swatch_count": 4,
+			"swatch_count": 5,
 			"detail_uv": true,
 			"detail_bake": {
 				"size": 1024,
-				"texels": 336371,
-				"ink_texels_share": 0.051904,
-				"mean_ink": 0.052198,
+				"texels": 340559,
+				"ink_texels_share": 0.052611,
+				"mean_ink": 0.052746,
 				"png": "kicker_detail.png",
 				"zones": {
 					"vest": {
-						"texels": 78059,
+						"texels": 79071,
 						"raw_percentiles": {
 							"50": 0.0039,
 							"80": 0.0078,
-							"90": 0.0111,
+							"90": 0.0112,
 							"95": 0.0158,
-							"97": 0.0229,
-							"98": 0.0299,
-							"99": 0.0472,
-							"99.5": 0.0689
+							"97": 0.0231,
+							"98": 0.0304,
+							"99": 0.0465,
+							"99.5": 0.0669
 						},
-						"ink_texels_share": 0.085205
+						"ink_texels_share": 0.085341
 					},
 					"mask": {
-						"texels": 4313,
+						"texels": 4383,
 						"raw_percentiles": {
 							"50": 0.0039,
 							"80": 0.0078,
 							"90": 0.0118,
-							"95": 0.0161,
-							"97": 0.0205,
-							"98": 0.0246,
-							"99": 0.0328,
-							"99.5": 0.0559
+							"95": 0.0166,
+							"97": 0.0208,
+							"98": 0.0254,
+							"99": 0.0348,
+							"99.5": 0.0574
 						},
 						"ink_texels_share": 0.0
 					},
 					"tights": {
-						"texels": 33925,
+						"texels": 34421,
 						"raw_percentiles": {
 							"50": 0.0039,
 							"80": 0.0065,
 							"90": 0.0078,
 							"95": 0.0115,
-							"97": 0.0135,
+							"97": 0.0136,
 							"98": 0.0173,
-							"99": 0.0255,
-							"99.5": 0.0368
+							"99": 0.0254,
+							"99.5": 0.0366
 						},
-						"ink_texels_share": 0.0
+						"ink_texels_share": 5.8e-05
 					},
 					"shorts": {
-						"texels": 53634,
-						"raw_percentiles": {
-							"50": 0.0,
-							"80": 0.0039,
-							"90": 0.0077,
-							"95": 0.0087,
-							"97": 0.0118,
-							"98": 0.0159,
-							"99": 0.0279,
-							"99.5": 0.0491
-						},
-						"ink_texels_share": 0.054145
-					},
-					"wraps": {
-						"texels": 52224,
-						"raw_percentiles": {
-							"50": 0.0,
-							"80": 0.0049,
-							"90": 0.0114,
-							"95": 0.0222,
-							"97": 0.0463,
-							"98": 0.0703,
-							"99": 0.0997,
-							"99.5": 0.1194
-						},
-						"ink_texels_share": 0.062251
-					},
-					"face_skin": {
-						"texels": 3731,
-						"raw_percentiles": {
-							"50": 0.0046,
-							"80": 0.0142,
-							"90": 0.0221,
-							"95": 0.0455,
-							"97": 0.0722,
-							"98": 0.0915,
-							"99": 0.1222,
-							"99.5": 0.1448
-						},
-						"ink_texels_share": 0.030823
-					},
-					"headwear": {
-						"texels": 16905,
+						"texels": 54441,
 						"raw_percentiles": {
 							"50": 0.0,
 							"80": 0.0039,
 							"90": 0.0078,
-							"95": 0.0088,
+							"95": 0.0086,
 							"97": 0.0118,
-							"98": 0.0157,
-							"99": 0.0253,
-							"99.5": 0.0403
+							"98": 0.0158,
+							"99": 0.0286,
+							"99.5": 0.0495
 						},
-						"ink_texels_share": 0.047205
+						"ink_texels_share": 0.05494
 					},
-					"eyes": {
-						"texels": 3856,
+					"wraps": {
+						"texels": 52877,
+						"raw_percentiles": {
+							"50": 0.0,
+							"80": 0.005,
+							"90": 0.0113,
+							"95": 0.022,
+							"97": 0.0459,
+							"98": 0.0694,
+							"99": 0.0996,
+							"99.5": 0.1202
+						},
+						"ink_texels_share": 0.060423
+					},
+					"face_skin": {
+						"texels": 3986,
 						"raw_percentiles": {
 							"50": 0.0047,
-							"80": 0.0147,
-							"90": 0.0238,
-							"95": 0.0368,
-							"97": 0.0471,
-							"98": 0.0531,
-							"99": 0.0654,
-							"99.5": 0.0837
+							"80": 0.0145,
+							"90": 0.0225,
+							"95": 0.0424,
+							"97": 0.0677,
+							"98": 0.0898,
+							"99": 0.1219,
+							"99.5": 0.1433
 						},
-						"ink_texels_share": 0.002593
+						"ink_texels_share": 0.0286
+					},
+					"headwear": {
+						"texels": 18109,
+						"raw_percentiles": {
+							"50": 0.0,
+							"80": 0.0039,
+							"90": 0.0078,
+							"95": 0.0104,
+							"97": 0.0136,
+							"98": 0.0191,
+							"99": 0.03,
+							"99.5": 0.0465
+						},
+						"ink_texels_share": 0.04865
+					},
+					"eyes": {
+						"texels": 770,
+						"raw_percentiles": {
+							"50": 0.0075,
+							"80": 0.0172,
+							"90": 0.0281,
+							"95": 0.0384,
+							"97": 0.0479,
+							"98": 0.0532,
+							"99": 0.0732,
+							"99.5": 0.0988
+						},
+						"ink_texels_share": 0.002597
 					},
 					"boots": {
-						"texels": 48160,
+						"texels": 48765,
 						"raw_percentiles": {
 							"50": 0.0,
 							"80": 0.0039,
 							"90": 0.0058,
 							"95": 0.0078,
-							"97": 0.0079,
-							"98": 0.0097,
+							"97": 0.0078,
+							"98": 0.0095,
 							"99": 0.0118,
 							"99.5": 0.0118
 						},
-						"ink_texels_share": 0.047757
+						"ink_texels_share": 0.047719
 					}
 				},
 				"glint": null,
 				"clean": {
 					"before": {
-						"pieces": 1400,
-						"texels": 24020,
-						"pieces_le6": 777,
-						"texels_in_le6_share": 0.0827,
+						"pieces": 1448,
+						"texels": 24598,
+						"pieces_le6": 808,
+						"texels_in_le6_share": 0.0833,
 						"median": 5.0,
-						"pieces_over20": 306
+						"pieces_over20": 321
 					},
 					"after": {
-						"pieces": 762,
-						"texels": 27664,
-						"pieces_le6": 130,
-						"texels_in_le6_share": 0.0222,
-						"median": 16.0,
-						"pieces_over20": 342
+						"pieces": 782,
+						"texels": 28334,
+						"pieces_le6": 131,
+						"texels_in_le6_share": 0.0226,
+						"median": 17.0,
+						"pieces_over20": 351
 					},
-					"bridged_texels": 488,
-					"pieces_dropped": 554,
-					"texels_dropped": 1077
+					"bridged_texels": 480,
+					"pieces_dropped": 566,
+					"texels_dropped": 1066
 				},
 				"glove_lines": null,
 				"crease": {
-					"texels_on_a_crease": 15895,
-					"ink_share_before": 0.00493,
-					"ink_share_after": 0.0519
+					"texels_on_a_crease": 16283,
+					"ink_share_before": 0.00508,
+					"ink_share_after": 0.05261
 				},
 				"texel_swatch": {
-					"texels": 336371,
-					"texture_decided": 300758,
-					"differ_from_face_share": 0.00727,
-					"majority_moved": 716,
+					"texels": 340559,
+					"texture_decided": 306124,
+					"differ_from_face_share": 0.00752,
+					"majority_moved": 640,
 					"share": {
-						"22": 0.34669,
-						"23": 0.38827,
-						"6": 0.11042,
+						"22": 0.34698,
+						"23": 0.39156,
+						"6": 0.10234,
 						"14": 0.15462
 					}
 				},
-				"sha256": "34bb300adfa0cf68b0a25dffd514b529e620437f683080241cd66d4650a27ec6"
+				"sha256": "ea6754f8c0185b8bf6ca6da5351894801d5c4bdb17ded82ca52baaa19c7cc2e8"
 			},
 			"regions": [
 				{
@@ -10349,8 +10354,8 @@
 				},
 				{
 					"name": "eyes",
-					"slot": 6,
-					"faces": 295
+					"slot": 24,
+					"faces": 145
 				}
 			],
 			"region_cuts": [],
@@ -10370,18 +10375,18 @@
 					"triangles": 14999,
 					"budget": 15000,
 					"budget_ok": true,
-					"protected_vertices": 2240,
+					"protected_vertices": 2260,
 					"protected_position_worst_m": 0.0
 				}
 			],
 			"unfold": {
-				"folded_before": 133,
+				"folded_before": 134,
 				"folded_after": 19,
 				"passes": 6,
 				"history": [
-					133,
-					58,
-					44,
+					134,
+					60,
+					45,
 					42,
 					22,
 					21,
@@ -10406,11 +10411,11 @@
 					"triangles": 14999,
 					"height_m": 1.843102,
 					"feet_y": -0.001857,
-					"folded_triangles": 97,
-					"folded_share": 0.006467,
+					"folded_triangles": 100,
+					"folded_share": 0.006667,
 					"facing": {
 						"axis": "-Z",
-						"yaw": -0.465385,
+						"yaw": -0.469085,
 						"confidence": "high"
 					},
 					"sides_consistent": true,
@@ -10420,7 +10425,7 @@
 						{
 							"name": "Body",
 							"triangles": 14999,
-							"vertices": 13904,
+							"vertices": 13913,
 							"uv_layers": [
 								"UVMap",
 								"UVMap.001"
@@ -10448,8 +10453,8 @@
 						]
 					},
 					"file": "kicker.glb",
-					"sha256": "71816341b931f453d8f5ad845791d1febbae615eb171457896edcdc92f2f20ec",
-					"bytes": 1042980
+					"sha256": "a39757db9f8259c63068b5823ab1b221ad1f177b6ba064acf869e7aab9f578f3",
+					"bytes": 1043592
 				},
 				"rest": {
 					"bones": 23,
@@ -10461,11 +10466,11 @@
 					"triangles": 14999,
 					"height_m": 1.843102,
 					"feet_y": -0.001857,
-					"folded_triangles": 107,
-					"folded_share": 0.007134,
+					"folded_triangles": 111,
+					"folded_share": 0.0074,
 					"facing": {
 						"axis": "-Z",
-						"yaw": -0.465385,
+						"yaw": -0.469085,
 						"confidence": "high"
 					},
 					"sides_consistent": true,
@@ -10475,7 +10480,7 @@
 						{
 							"name": "Body",
 							"triangles": 14999,
-							"vertices": 13906,
+							"vertices": 13916,
 							"uv_layers": [
 								"UVMap",
 								"UVMap.001"
@@ -10503,33 +10508,33 @@
 						]
 					},
 					"file": "kicker_rest.glb",
-					"sha256": "8f36359f8b7553bc4d0bfaee8d494a29c890bcb14d81aa7827727c29bd1c29ce",
-					"bytes": 1042692
+					"sha256": "6c9e8f8637e38d8397f1553ac928449e6c8e80b627fa3b7c671f176ce851b9d0",
+					"bytes": 1043372
 				}
 			},
 			"smooth_normals": {
 				"apose": {
 					"Body": {
-						"mean_deg": 16.2296,
-						"p99_deg": 51.1026,
-						"over_15_deg_share": 0.4431
+						"mean_deg": 16.2353,
+						"p99_deg": 51.6227,
+						"over_15_deg_share": 0.4417
 					}
 				},
 				"rest": {
 					"Body": {
-						"mean_deg": 16.2163,
-						"p99_deg": 50.1396,
-						"over_15_deg_share": 0.4486
+						"mean_deg": 16.2205,
+						"p99_deg": 50.7607,
+						"over_15_deg_share": 0.4468
 					}
 				}
 			}
 		}
 	},
 	"outputs": {
-		"kicker.glb": "71816341b931f453d8f5ad845791d1febbae615eb171457896edcdc92f2f20ec",
-		"kicker_rest.glb": "8f36359f8b7553bc4d0bfaee8d494a29c890bcb14d81aa7827727c29bd1c29ce"
+		"kicker.glb": "a39757db9f8259c63068b5823ab1b221ad1f177b6ba064acf869e7aab9f578f3",
+		"kicker_rest.glb": "6c9e8f8637e38d8397f1553ac928449e6c8e80b627fa3b7c671f176ce851b9d0"
 	},
-	"hash": "52ffbe1fef3c1a621adb7bd2c8bdd2b0bdd8a5df626b7b24ea5e5069afa70940",
+	"hash": "e0b7f28480c5aa8f6a17b287fd2fc23773f333c923609e428fd757923615d80d",
 	"stills": {
 		"variants": {
 			"apose": {
@@ -10537,7 +10542,7 @@
 					"rest": {
 						"nan": false,
 						"vs_glb_rest": {
-							"edge_p999": 1.237804,
+							"edge_p999": 1.240284,
 							"edge_max": 1.653014,
 							"edge_min": 0.280652,
 							"area_under_15pct": 6.7e-05
@@ -10564,45 +10569,45 @@
 							{
 								"ratio": 1.0,
 								"at": [
+									-0.09515,
+									1.009737,
+									0.09673
+								],
+								"bones": [
+									"Hips",
+									"Hips"
+								]
+							},
+							{
+								"ratio": 1.0,
+								"at": [
+									-0.108021,
+									0.996413,
+									0.078848
+								],
+								"bones": [
+									"Hips",
+									"Hips"
+								]
+							},
+							{
+								"ratio": 1.0,
+								"at": [
+									0.119677,
+									0.048205,
+									0.085538
+								],
+								"bones": [
+									"RightFoot",
+									"RightFoot"
+								]
+							},
+							{
+								"ratio": 1.0,
+								"at": [
 									0.124257,
 									0.047943,
 									0.083362
-								],
-								"bones": [
-									"RightFoot",
-									"RightFoot"
-								]
-							},
-							{
-								"ratio": 1.0,
-								"at": [
-									0.120024,
-									0.047912,
-									0.085127
-								],
-								"bones": [
-									"RightFoot",
-									"RightFoot"
-								]
-							},
-							{
-								"ratio": 1.0,
-								"at": [
-									0.119747,
-									0.049546,
-									0.085526
-								],
-								"bones": [
-									"RightFoot",
-									"RightFoot"
-								]
-							},
-							{
-								"ratio": 1.0,
-								"at": [
-									0.11919,
-									0.048088,
-									0.08538
 								],
 								"bones": [
 									"RightFoot",
@@ -11023,7 +11028,7 @@
 					"rest": {
 						"nan": false,
 						"vs_glb_rest": {
-							"edge_p999": 1.000009,
+							"edge_p999": 1.000008,
 							"edge_max": 1.000014,
 							"edge_min": 0.999849,
 							"area_under_15pct": 0.0
@@ -11050,45 +11055,45 @@
 							{
 								"ratio": 1.0,
 								"at": [
+									-0.09515,
+									1.009737,
+									0.09673
+								],
+								"bones": [
+									"Hips",
+									"Hips"
+								]
+							},
+							{
+								"ratio": 1.0,
+								"at": [
+									-0.108021,
+									0.996413,
+									0.078848
+								],
+								"bones": [
+									"Hips",
+									"Hips"
+								]
+							},
+							{
+								"ratio": 1.0,
+								"at": [
+									0.119677,
+									0.048205,
+									0.085538
+								],
+								"bones": [
+									"RightFoot",
+									"RightFoot"
+								]
+							},
+							{
+								"ratio": 1.0,
+								"at": [
 									0.124257,
 									0.047943,
 									0.083362
-								],
-								"bones": [
-									"RightFoot",
-									"RightFoot"
-								]
-							},
-							{
-								"ratio": 1.0,
-								"at": [
-									0.120024,
-									0.047912,
-									0.085127
-								],
-								"bones": [
-									"RightFoot",
-									"RightFoot"
-								]
-							},
-							{
-								"ratio": 1.0,
-								"at": [
-									0.119747,
-									0.049546,
-									0.085526
-								],
-								"bones": [
-									"RightFoot",
-									"RightFoot"
-								]
-							},
-							{
-								"ratio": 1.0,
-								"at": [
-									0.11919,
-									0.048088,
-									0.08538
 								],
 								"bones": [
 									"RightFoot",

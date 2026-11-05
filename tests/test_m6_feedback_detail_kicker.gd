@@ -13,12 +13,14 @@ const REPORT := "res://assets/source/characters/kicker/report/report.json"
 const PIPELINE := "res://assets/source/characters/kicker/pipeline.json"
 const SWATCH_COLUMNS := 32
 const SWATCH_ROWS := 2
-## The Kicker's palette slots: lime (22), black (23), the shared skin (6) and the shared cream of the wraps (14).
+## The Kicker's palette slots: lime (22), black (23), the shade under the cap's brim (24, a darker skin), the shared skin (6) and the shared cream of the wraps (14).
 const SLOT_LIME := 22
 const SLOT_BLACK := 23
 const SLOT_SKIN := 6
+const SLOT_SHADE := 24
+const ATLAS := "res://assets/export/palette/palette_atlas.png"
 const SLOT_CREAM := 14
-const SLOTS_ALLOWED: Array[int] = [22, 23, 6, 14]
+const SLOTS_ALLOWED: Array[int] = [22, 23, 24, 6, 14]
 ## The vest, the wraps and the shorts in the authored 1.8 m frame (x across, y front/back, z up).
 const VEST_MIN := Vector3(-0.6, -0.6, 0.95)
 const VEST_MAX := Vector3(0.6, 0.6, 1.5)
@@ -30,6 +32,8 @@ const SHORTS_MAX := Vector3(0.6, 0.6, 1.05)
 const VEST_INK_MIN := 0.04
 const WRAP_INK_MIN := 0.018
 const SHORTS_INK_MIN := 0.02
+## Faces of the cap's black just above the eyes region (the brim's underside and the lower edge); today's build has 149, the first build's 1.685 had 87.
+const BRIM_FACES_MIN := 120
 ## Texels sampled per face when the ink is counted.
 const SAMPLES: Array[Vector3] = [Vector3(1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0), Vector3(0.6, 0.2, 0.2), Vector3(0.2, 0.6, 0.2), Vector3(0.2, 0.2, 0.6)]
 
@@ -220,32 +224,49 @@ func test_the_kickers_config_holds_the_recipe_values() -> void:
 	assert_gt(float(zones.tights.crease_deg), 180.0, "nor do the tights")
 	assert_false(zones.boots.has("valley_deg"), "the boots keep their creases only")
 
-## Playtest fix (feedback-chars-04): the eyes under the cap are skin, not slot 23's black (which scuffs and never bruises), and the
-## eyes' box draws no crease. A region repaints only the black and skin faces there.
+## Playtest fix (feedback-chars-04, then verify-chars-01): the eyes under the cap are the skin-class shade (slot 24: it bruises and bleeds like
+## skin, unlike slot 23's black), drawn no crease, and the region stops under the brim, so the cap keeps its brim's thickness and underside. A
+## region repaints only the black and skin faces there. The region's and the zone's top are pinned (1.665 and 1.675, FIX-ART-A's A-4): the first
+## build (1.685 and 1.69) cut 2 cm off the cap's lower edge and turned the brim's tips skin.
 func test_the_eyes_are_skin_and_the_mask_is_plain() -> void:
 	var cfg: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(PIPELINE))
 	var regions: Dictionary = {}
 	for reg: Dictionary in cfg.palette.regions:
 		regions[reg.name] = reg
 	assert_true(regions.has("eyes"), "the eyes have a region")
-	assert_eq(int(regions.eyes.slot), 6, "it paints skin")
+	assert_eq(int(regions.eyes.slot), SLOT_SHADE, "it paints the skin-class shade")
+	assert_almost_eq(float(regions.eyes.max[2]), 1.665, 0.0005, "the region's top is the settled 1.665, not the first build's 1.685")
+	assert_almost_eq(float(regions.eyes.min[2]), 1.625, 0.0005, "its bottom is 1.625")
 	var from: Array[int] = []
 	for slot: Variant in regions.eyes.only_from:
 		from.append(int(slot))  # JSON numbers are floats
 	assert_true(from.has(23) and not from.has(22), "from the cap's black only, never the lime mask")
+	# The brim's underside and the cap's lower edge stay the cap's black: faces just above the region's top.
+	var brim := 0
+	for tri: int in _tris().size() / 3:
+		if _in_box(tri, Vector3(-0.12, 0.02, 1.667), Vector3(0.12, 0.3, 1.70)) and _slot_of_tri(tri) == 23:
+			brim += 1
+	assert_gt(brim, BRIM_FACES_MIN, "the cap keeps its lower edge and the brim's underside above the band (%d faces of slot 23)" % brim)
 	var faces := 0
 	var black := 0
+	var shade := 0
 	for tri: int in _tris().size() / 3:
 		if _in_box(tri, Vector3(-0.12, 0.02, 1.63), Vector3(0.12, 0.3, 1.66)):
 			faces += 1
 			if _slot_of_tri(tri) == 23:
 				black += 1
+			elif _slot_of_tri(tri) == SLOT_SHADE:
+				shade += 1
 	assert_gt(faces, 20, "the eye band holds faces (%d)" % faces)
 	assert_eq(black, 0, "none of them is the cap's black")
+	assert_gt(shade, faces / 2, "most of them are the shade (%d of %d)" % [shade, faces])
 	var zones: Dictionary = {}
 	for zone: Dictionary in cfg.palette.detail_bake.zones:
 		zones[zone.name] = zone
 	assert_gt(float(zones.eyes.crease_deg), 180.0, "the eye band draws no crease")
+	assert_almost_eq(float(zones.eyes.max[2]), 1.675, 0.0005, "the zone's top is the settled 1.675, not the first build's 1.69")
+	assert_almost_eq(float(zones.eyes.min[2]), 1.62, 0.0005, "its bottom is 1.62")
+	assert_gte(float(zones.eyes.ink_low), 0.1, "the texture's own eye marks are drawn at the calm pair")
 	assert_gt(float(zones.mask.crease_deg), 180.0, "the lime mask draws no crease (feedback-chars-05)")
 	assert_gt(float(zones.mask.valley_deg), 180.0, "and no valley")
 	var names: Array[String] = []
@@ -257,3 +278,14 @@ func test_the_eyes_are_skin_and_the_mask_is_plain() -> void:
 	gut.p("kicker mask ink %.4f (%d faces)" % [mask.share, mask.faces])
 	assert_gt(int(mask.faces), 20, "the mask box holds lime faces")
 	assert_lt(float(mask.share), 0.02, "and almost no ink (%.4f)" % float(mask.share))
+
+
+## The shade swatch is a skin-class swatch: it takes the skin's marks (bruises, then blood), alpha 204, and is darker than the shared skin.
+func test_the_shade_is_a_skin_class_swatch() -> void:
+	var atlas := (load(ATLAS) as Texture2D).get_image()
+	if atlas.is_compressed():
+		atlas.decompress()
+	var shade := atlas.get_pixel(SLOT_SHADE % SWATCH_COLUMNS * 8 + 4, SLOT_SHADE / SWATCH_COLUMNS * 8 + 4)
+	var skin := atlas.get_pixel(SLOT_SKIN % SWATCH_COLUMNS * 8 + 4, SLOT_SKIN / SWATCH_COLUMNS * 8 + 4)
+	assert_almost_eq(shade.a, 0.8, 0.01, "the skin class (bruises and blood)")
+	assert_lt(shade.get_luminance(), skin.get_luminance() - 0.15, "and darker than the skin, the cap's shade (%.2f against %.2f)" % [shade.get_luminance(), skin.get_luminance()])
