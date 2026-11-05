@@ -164,6 +164,38 @@ func _rolled_out(id: String) -> bool:
 	return bake is Dictionary and (bake as Dictionary).has("crease")
 
 
+## What is wrong with a roll-out test file's text, or "" when it holds (VFIX-HEAVIES, verify-code-06): at least one `func test_`, and its
+## character's `characters/<id>/pipeline.json` on a line that is code (a comment or a doc line does not count), so a comment-only or
+## an empty file that merely names the path cannot keep its character out of the shared guards.
+func _roll_out_file_problem(text: String, id: String) -> String:
+	var tests := 0
+	var uses_path := false
+	for line: String in text.split("\n"):
+		var code := line.strip_edges()
+		if code.begins_with("#"):
+			continue
+		if code.begins_with("func test_"):
+			tests += 1
+		if code.contains("characters/%s/pipeline.json" % id):
+			uses_path = true
+	if tests == 0:
+		return "no `func test_`"
+	if not uses_path:
+		return "no code line names characters/%s/pipeline.json" % id
+	return ""
+
+
+## The closure test's own twin: a file with only a comment naming the path, a file with tests that never name it, and an empty file all
+## fail it; a file with a test and the path in a constant passes.
+func test_the_roll_out_closure_rejects_a_bare_string() -> void:
+	var path := "characters/thug/pipeline.json"
+	assert_ne(_roll_out_file_problem("extends GutTest\n## %s\n# %s\n" % [path, path], "thug"), "", "a comment-only file fails")
+	assert_ne(_roll_out_file_problem("extends GutTest\nfunc test_a() -> void:\n\tpass\n", "thug"), "", "tests that never name the path fail")
+	assert_ne(_roll_out_file_problem("", "thug"), "", "an empty file fails")
+	assert_ne(_roll_out_file_problem("extends GutTest\nconst P := \"res://assets/source/%s\"\n" % path, "thug"), "", "a path with no test fails")
+	assert_eq(_roll_out_file_problem("extends GutTest\nconst P := \"res://assets/source/%s\"\nfunc test_a() -> void:\n\tpass\n" % path, "thug"), "", "a test and the path in code pass")
+
+
 ## Every roll-out test reads its own character's `pipeline.json` (the file names it), and that config holds the recipe's crease. The
 ## opt-out in `_rolled_out` is then backed by the config, not by a file's existence.
 func test_every_roll_out_test_reads_its_own_pipeline_and_the_recipe() -> void:
@@ -174,7 +206,7 @@ func test_every_roll_out_test_reads_its_own_pipeline_and_the_recipe() -> void:
 			continue
 		var id := file.trim_prefix("test_m6_feedback_detail_").trim_suffix(".gd")
 		var text := FileAccess.get_file_as_string("res://tests/" + file)
-		assert_string_contains(text, "characters/%s/pipeline.json" % id, "%s reads its own pipeline.json" % file)
+		assert_eq(_roll_out_file_problem(text, id), "", "%s reads its own pipeline.json in code and has tests" % file)
 		assert_true(_rolled_out(id), "%s: its pipeline.json has detail_bake.crease" % id)
 		rolled += 1
 	assert_gte(rolled, 4, "the Thug, the Kicker, Ox and the Punk have roll-out tests")
@@ -400,9 +432,10 @@ func test_the_helmet_front_never_bleeds_and_the_scarf_still_does() -> void:
 	assert_gt(scarf, 100, "the scarf below the visor still bleeds (%d faces)" % scarf)
 
 
-## VFIX-HEAVIES (verify-chars-04): the scarf's top edge under the visor is one straight horizontal border (the region is cut along its
-## top plane), so no scarf face stands in the steel frame above it and no steel or cream face hangs in the scarf below it.
-func test_the_scarf_border_under_the_visor_is_straight() -> void:
+## VFIX-HEAVIES (verify-chars-04): the scarf under the visor is one body: no scarf purple stands in the visor's frame above it (the region
+## tops out at the frame's lower edge, 1.575, and a fill takes the texture's cream and skin wedge above it to steel) and no steel, cream or
+## skin face hangs in the scarf below it.
+func test_the_scarf_under_the_visor_has_no_wedge_in_the_frame_or_hole_below() -> void:
 	var stray_up := 0
 	var stray_down := 0
 	for tri: int in _tris().size() / 3:

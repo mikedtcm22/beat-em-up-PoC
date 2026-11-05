@@ -472,8 +472,7 @@
 					0.2,
 					0.4,
 					1.575
-				],
-				"bisect_z": true
+				]
 			},
 			{
 				"name": "helmet_front",
