@@ -23,9 +23,10 @@ uniform sampler2D albedo_tex : source_color, filter_nearest, repeat_disable;
 uniform bool use_albedo_tex = false;
 // The art's optional detail mask on UV2: R = ink lines (seams, wraps, stitching), never shading; G = the
 // glint gate, the authored streaks on a glossy swatch (the Punk's lens, 0.5 on a streak's edge); B = the texel's palette
-// slot + 1 (M6 DETAIL-2, tools/pipeline/pipe_detail.py texel_labels; 0 = none: the face's swatch). The Punk's and the hero's
-// masks have B = 0 everywhere, so they take the face's swatch as before; an art whose mask carries codes takes each texel's
-// swatch (the colour, the damage class and the gloss), so a colour border follows the texture, not the 2 cm faces.
+// slot + 1 (M6 DETAIL-2, tools/pipeline/pipe_detail.py texel_labels; 0 = none: the face's swatch), and only in a mask whose alpha
+// is 128/255 (pipe_detail.CODE_MARK; the hero's B is a grey, the rest are opaque), so every other art takes the face's swatch as before;
+// an art whose mask carries codes takes each texel's swatch (the colour, the damage class and the gloss), so a colour border follows
+// the texture, not the 2 cm faces.
 uniform sampler2D detail_tex : filter_linear_mipmap, repeat_disable;
 uniform bool use_detail_tex = false;
 // The A/B of the texel swatches (Tuning's look_texel_swatch; off = every face takes its own swatch, M6's look), and the texels per
@@ -120,8 +121,9 @@ void fragment() {
 			vec2 texels = UV2 * vec2(textureSize(detail_tex, 0));
 			// the derivatives come before the branch (they are undefined in a non-uniform one)
 			float texels_per_pixel = max(length(dFdx(texels)), length(dFdy(texels)));
-			float code = texelFetch(detail_tex, clamp(ivec2(texels), ivec2(0), textureSize(detail_tex, 0) - 1), 0).b;
-			if (code > 0.0) {
+			vec4 fetched = texelFetch(detail_tex, clamp(ivec2(texels), ivec2(0), textureSize(detail_tex, 0) - 1), 0);
+			float code = fetched.b;
+			if (fetched.a < 0.9 && code > 0.0) {
 				float slot = floor(code * 255.0 + 0.5) - 1.0;
 				vec4 texel_swatch = texture(albedo_tex, (vec2(mod(slot, ATLAS_GRID.x), floor(slot / ATLAS_GRID.x)) + 0.5) / ATLAS_GRID);
 				float w = 1.0 - smoothstep(texel_swatch_fade.x, texel_swatch_fade.y, texels_per_pixel);

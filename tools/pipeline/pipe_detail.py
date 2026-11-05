@@ -47,6 +47,12 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import pipe_blender as pb  # noqa: E402
 
 
+# The alpha of a mask that carries palette codes in B (M6 DETAIL-2): 128 / 255 (Godot's import drops an alpha of 254 or 250 and over as
+# "opaque", so the marker is well under it). toon.gdshader reads B as a code only where alpha is under 0.9, so the hero's mask (whose B is
+# a grey) and every other mask (opaque RGB) keep their face swatches.
+CODE_MARK = 128.0 / 255.0
+
+
 def _shift_max(a, r, axis):
 	out = a.copy()
 	for k in range(1, r + 1):
@@ -649,16 +655,20 @@ def bake(me, layer_name, image, dense_bvh, dense_verts, dense_tris, dense_uv, cf
 
 def _write_gray(a, path, name, g=None, code=None):
 	"""a (h, w) 0..1 (row 0 the bottom) -> an 8-bit PNG with R = a, G = g (the glint gate; 0 when there is none), B = code / 255 (the palette
-	slot + 1 of each texel, M6 DETAIL-2; 0 = no code, the face's swatch) or all three = a for a source picture."""
+	slot + 1 of each texel, M6 DETAIL-2; 0 = no code, the face's swatch) and A = CODE_MARK = 128 / 255 (an RGBA PNG; without codes an opaque RGB one), or all
+	three = a for a source picture."""
 	h, w = a.shape
 	rgba = np.ones((h, w, 4), dtype=np.float32)
 	rgba[:, :, 0] = a
 	rgba[:, :, 1] = a if name == "detail_source" else (0.0 if g is None else g)
 	rgba[:, :, 2] = a if name == "detail_source" else (0.0 if code is None else code.astype(np.float32) / 255.0)
+	if code is not None:
+		rgba[:, :, 3] = CODE_MARK  # the marker: a mask whose alpha is under 1 carries codes in B (every other mask is opaque)
 	if name == "detail_source" and max(h, w) > 2048:
 		pass
-	img = bpy.data.images.new(name, w, h, alpha=False)
+	img = bpy.data.images.new(name, w, h, alpha=code is not None)
 	img.colorspace_settings.name = "Non-Color"
+	img.alpha_mode = "STRAIGHT"
 	img.pixels.foreach_set(rgba.ravel())
 	img.filepath_raw = path
 	img.file_format = "PNG"

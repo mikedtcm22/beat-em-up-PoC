@@ -10224,7 +10224,7 @@
 						"46": 0.38932
 					}
 				},
-				"sha256": "4c61088a390ebb602a00f8b618dba739509159b68b06ae36aa66e2213c1a677b"
+				"sha256": "f2100013a25f4ff1cf4f07ac423b22a0acc9ddc2629805a27549e948f14c5f24"
 			},
 			"regions": [
 				{
@@ -10422,5 +10422,5 @@
 		"bruiser.glb": "4d3c38a3f728cfcae4963d3b6cd9e614578108d2cabb5af033f164bd749bc9f6",
 		"bruiser_rest.glb": "edf5cb438d47913fec778a030373fbee01b0e58181aac9e807eba6b003eaabc2"
 	},
-	"hash": "b2e145540344df37a0cade4ca70487e00db002408b864dad5f40e4b48b23078a"
+	"hash": "cec4deff6fe62d65d35201e1d0c1243b0eb4e0c5f3ca548ecb08864521c3c31e"
 }

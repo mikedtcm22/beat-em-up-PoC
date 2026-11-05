@@ -269,6 +269,20 @@ static func apply_look(material: ShaderMaterial) -> void:
 		material.set_shader_parameter(&"texel_swatch_fade", Vector2(data.look_texel_swatch_fade_near, maxf(data.look_texel_swatch_fade_far, data.look_texel_swatch_fade_near + 0.1)))
 
 
+## The atlas's layout, as tools/pipeline/gen_palette.py has it (COLUMNS, ROWS) and toon.gdshader's ATLAS_GRID.
+const ATLAS_COLUMNS := 32
+const ATLAS_ROWS := 2
+
+
+## The atlas UV of the swatch a detail mask's blue channel names (M6 DETAIL-2), `code8` the channel as 0-255: the slot plus 1, so 0 names
+## none and the face's own swatch stays (Vector2(-1, -1)). toon.gdshader decodes it the same way (the CPU mirror, for tests).
+static func texel_swatch_uv(code8: int) -> Vector2:
+	if code8 <= 0:
+		return Vector2(-1.0, -1.0)
+	var slot := code8 - 1
+	return Vector2((float(slot % ATLAS_COLUMNS) + 0.5) / float(ATLAS_COLUMNS), (float(slot / ATLAS_COLUMNS) + 0.5) / float(ATLAS_ROWS))
+
+
 ## The width of the hull line at `dist` metres from the lens, in metres, as toon_outline.gdshader
 ## draws it: `px` pixels at 1080p (so `viewport_h / 1080` of them on a viewport `viewport_h`
 ## high, each 2 d / (proj11 * viewport_h) metres at the clamped distance d), the same number
