@@ -24,6 +24,9 @@ const BELT_MIN := Vector3(-0.3, -0.6, 0.95)
 const BELT_MAX := Vector3(0.3, 0.6, 1.2)
 const ROBE_MIN := Vector3(-0.9, -0.6, 0.7)
 const ROBE_MAX := Vector3(0.9, 0.6, 1.9)
+## The legs' box in the authored frame (x across, y front, z up): the tights from the boots to the shorts' hem, narrower than the arms.
+const LEGS_MIN := Vector3(-0.33, -0.6, 0.1)
+const LEGS_MAX := Vector3(0.33, 0.6, 0.95)
 ## Floors the M6 export fails and today's passes (see ROLL-OX.md for the figures).
 const BELT_INK_MIN := 0.1
 const ROBE_INK_MIN := 0.03
@@ -160,3 +163,92 @@ func test_ox_config_holds_the_recipe_values() -> void:
 	assert_lt(float(off.belt), 45.0, "the belt plate's bevels are soft: a low angle")
 	assert_gt(float(off.gloves), 180.0, "the round gloves take no crease line")
 	assert_gt(float(off.face_skin), 180.0, "nor does the face")
+
+
+# --- OX-2: the recipe's part 2 (docs/milestones/M6-calls/DETAIL-2.md, "Rollout recipe, part 2"; his calls in OX-2.md) ---------------
+
+## Samples of the mask's blue channel over the mesh: how many carry a code, how many name a slot other than the face's own.
+func _codes() -> Dictionary:
+	var uv2: PackedVector2Array = _arrays[Mesh.ARRAY_TEX_UV2]
+	var idx := _tris()
+	var coded := 0
+	var differ := 0
+	var allowed := 0
+	var total := 0
+	var uncoded: Dictionary = {}
+	for tri: int in idx.size() / 3:
+		var face_slot := _slot_of_tri(tri)
+		for w: Vector3 in SAMPLES:
+			var uv: Vector2 = uv2[idx[tri * 3]] * w.x + uv2[idx[tri * 3 + 1]] * w.y + uv2[idx[tri * 3 + 2]] * w.z
+			var c := _mask.get_pixel(clampi(int(uv.x * _mask.get_width()), 0, _mask.get_width() - 1), clampi(int(uv.y * _mask.get_height()), 0, _mask.get_height() - 1))
+			var code := roundi(c.b * 255.0)
+			total += 1
+			if code > 0:
+				coded += 1
+				if SLOTS_ALLOWED.has(code - 1):
+					allowed += 1
+				if code - 1 != face_slot:
+					differ += 1
+			else:
+				uncoded[face_slot] = int(uncoded.get(face_slot, 0)) + 1
+	return {"total": total, "coded": coded, "differ": differ, "allowed": allowed, "uncoded": uncoded}
+
+
+## Ox's colour borders follow the texture: every texel the mesh uses has a code naming one of his six slots, and a few per cent
+## name a swatch other than their face's (the orange lapel and cuff edges leave the 2 cm staircase), never most of them. The mask
+## carries the marker (alpha 128 / 255) the shader reads; the M6 and phase-2a masks are opaque.
+func test_the_mask_carries_a_palette_slot_per_texel() -> void:
+	var c := _codes()
+	print("OX-2 codes: %d of %d samples coded, %d differ from the face" % [c.coded, c.total, c.differ])
+	print("OX-2 uncoded samples by the face's slot: %s" % [c.uncoded])
+	assert_gte(float(c.coded) / float(c.total), 0.94, "nearly every sample of every face has a code (%d of %d)" % [c.coded, c.total])
+	assert_eq(int(c.allowed), int(c.coded), "and each names one of 7, 50, 51, 52, 53, 54")
+	var share := float(c.differ) / float(c.total)
+	assert_gt(share, 0.002, "the codes move some borders off the faces (%.4f)" % share)
+	assert_lt(share, 0.08, "and most texels keep their face's swatch (%.4f)" % share)
+	assert_almost_eq(_mask.get_pixel(0, 0).a, 128.0 / 255.0, 0.01, "the mask carries the marker, 128 / 255")
+
+
+## The line weight is the recipe's (7.75 mm across at 1.8 m, down from the phase-2a 10.1 mm), the valley ink is configured and on
+## in the robe's zone only, and the texel codes' report holds.
+func test_the_lines_are_lighter_and_the_robe_draws_its_folds() -> void:
+	var cfg: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(PIPELINE))
+	var crease: Dictionary = cfg.palette.detail_bake.crease
+	var across := float(crease.width_m) + 1.7 * float(crease.ramp_m)
+	assert_lte(across, 0.008, "crease lines at most 8 mm across (%.4f; phase 2a's 0.0101)" % across)
+	assert_gte(across, 0.004, "and not thinner than the mask holds (%.4f)" % across)
+	assert_true(crease.has("valley"), "the valley ink is configured")
+	var zones: Dictionary = {}
+	for zone: Dictionary in cfg.palette.detail_bake.zones:
+		zones[zone.name] = zone
+	assert_lt(float(zones.robe.valley_deg), 30.0, "the robe draws shallow valleys")
+	for name: String in ["shorts", "boots", "belt", "trim", "face_skin", "gloves"]:
+		assert_false(zones[name].has("valley_deg"), "%s draws none" % name)
+	var report: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(REPORT)).steps.palette.detail_bake
+	assert_true(report.has("texel_swatch"), "the report says the texel codes were baked")
+	assert_lt(float(report.texel_swatch.differ_from_face_share), 0.08, "few texels leave their face's swatch")
+	assert_gt(int(report.crease.texels_on_a_crease), 10000, "the folds and the creases add up (%d texels)" % int(report.crease.texels_on_a_crease))
+
+
+## The texture painted a strip of skin down the back of the tights; the legs' region repaints it charcoal. No skin-coloured
+## face stands in the legs' box (the phase-2a export had several hundred), while the face, neck and forearms keep their skin.
+func test_the_tights_carry_no_skin() -> void:
+	var skin_in_legs := 0
+	var skin_elsewhere := 0
+	for tri: int in _tris().size() / 3:
+		if _slot_of_tri(tri) != SLOT_SKIN:
+			continue
+		if _in_box(tri, LEGS_MIN, LEGS_MAX):
+			skin_in_legs += 1
+		else:
+			skin_elsewhere += 1
+	print("OX-2 skin: %d faces in the legs' box, %d elsewhere" % [skin_in_legs, skin_elsewhere])
+	assert_lt(skin_in_legs, 10, "no skin on the tights (%d faces on the box edge)" % skin_in_legs)
+	assert_gt(skin_elsewhere, 1500, "the face, neck and forearms keep theirs (%d faces)" % skin_elsewhere)
+	var cfg: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(PIPELINE))
+	var named := false
+	for region: Dictionary in cfg.palette.regions:
+		if region.name == "legs_not_skin":
+			named = true
+			assert_eq(int(region.slot), SLOT_CHARCOAL, "the region paints charcoal")
+	assert_true(named, "the config names the region")

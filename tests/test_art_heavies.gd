@@ -121,8 +121,8 @@ func test_the_boss_gloves_are_their_own_darker_slot_and_the_chain_agrees() -> vo
 	assert_lt(Color.html(String(glove.srgb)).v, Color.html(String(charcoal.srgb)).v, "the glove leather is darker than the robe")
 	var cfg: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/source/characters/boss/pipeline.json"))
 	assert_eq(int(cfg.parts.fists.glove_slot), int(glove.slot), "parts.fists.glove_slot is the glove's slot")
-	var regions: Array = cfg.palette.regions
-	assert_eq(regions.size(), 2, "one glove region a hand")
+	var regions: Array = (cfg.palette.regions as Array).filter(func(r: Dictionary) -> bool: return String(r.name).begins_with("glove"))
+	assert_eq(regions.size(), 2, "one glove region a hand (OX-2 added a legs region of its own beside them)")
 	for region: Dictionary in regions:
 		assert_eq(int(region.slot), int(glove.slot), "%s labels the glove's slot" % region.name)
 	assert_eq(int(cfg.palette.strap_paint_slot), int(_swatch("boss", "boss_orange").slot), "the wrist wrap is the orange")

@@ -1,7 +1,7 @@
 {
 	"asset": "boss",
 	"version": 2,
-	"config_sha256": "609c7050eb385d8d3db58e55efdf556446e872516714216b71463604c46a5eaf",
+	"config_sha256": "2a66d3cdae359451b60bbf948b5268573efff5f2ce5fd75c4992a90faa993978",
 	"steps": {
 		"inspect": {
 			"source": {
@@ -15428,22 +15428,22 @@
 			"delta_e_p95": 23.771579,
 			"pruned_swatches": [],
 			"majority_flips": 3300,
-			"border_vertices": 2076,
-			"border_edges": 2103,
-			"protected_vertices": 1796,
+			"border_vertices": 1886,
+			"border_edges": 1906,
+			"protected_vertices": 1606,
 			"decimate": {
 				"invert_group": true,
 				"trials": [
 					{
 						"ratio": 0.9854,
-						"tris": 26599
+						"tris": 26600
 					},
 					{
 						"ratio": 0.1262,
 						"tris": 2699
 					}
 				],
-				"triangles": 29298,
+				"triangles": 29299,
 				"budget": 30000,
 				"budget_ok": true,
 				"protected_position_worst_m": 0.0
@@ -15451,27 +15451,27 @@
 			"swatches_used": {
 				"7": {
 					"name": "skin_tan",
-					"area_share": 0.067391,
-					"faces": 2809
+					"area_share": 0.050615,
+					"faces": 1652
 				},
 				"50": {
 					"name": "boss_charcoal",
-					"area_share": 0.712853,
-					"faces": 19195
+					"area_share": 0.729724,
+					"faces": 20244
 				},
 				"51": {
 					"name": "boss_orange",
-					"area_share": 0.136724,
-					"faces": 4323
+					"area_share": 0.136903,
+					"faces": 4318
 				},
 				"53": {
 					"name": "boss_shorts",
-					"area_share": 0.060822,
-					"faces": 1748
+					"area_share": 0.060516,
+					"faces": 1862
 				},
 				"54": {
 					"name": "boss_glove",
-					"area_share": 0.02221,
+					"area_share": 0.022243,
 					"faces": 1223
 				}
 			},
@@ -15479,105 +15479,105 @@
 			"detail_uv": true,
 			"detail_bake": {
 				"size": 1024,
-				"texels": 367226,
-				"ink_texels_share": 0.068887,
-				"mean_ink": 0.068868,
+				"texels": 364202,
+				"ink_texels_share": 0.069121,
+				"mean_ink": 0.068605,
 				"png": "boss_detail.png",
 				"zones": {
 					"robe": {
-						"texels": 153219,
+						"texels": 153505,
 						"raw_percentiles": {
 							"50": 0.0006,
 							"80": 0.0039,
-							"90": 0.0069,
-							"95": 0.0108,
-							"97": 0.0164,
-							"98": 0.0225,
-							"99": 0.0383,
-							"99.5": 0.0664
+							"90": 0.0073,
+							"95": 0.0111,
+							"97": 0.0165,
+							"98": 0.0227,
+							"99": 0.0387,
+							"99.5": 0.0643
 						},
-						"ink_texels_share": 0.049961
+						"ink_texels_share": 0.072402
 					},
 					"shorts": {
-						"texels": 23700,
+						"texels": 23428,
 						"raw_percentiles": {
-							"50": 0.0009,
-							"80": 0.0051,
-							"90": 0.0084,
-							"95": 0.0148,
-							"97": 0.0238,
-							"98": 0.0363,
-							"99": 0.0626,
-							"99.5": 0.0942
+							"50": 0.001,
+							"80": 0.0053,
+							"90": 0.0088,
+							"95": 0.0152,
+							"97": 0.0243,
+							"98": 0.0364,
+							"99": 0.0738,
+							"99.5": 0.1179
 						},
-						"ink_texels_share": 0.09173
+						"ink_texels_share": 0.065947
 					},
 					"boots": {
-						"texels": 48633,
+						"texels": 48460,
 						"raw_percentiles": {
-							"50": 0.0023,
-							"80": 0.0066,
-							"90": 0.0131,
-							"95": 0.0328,
-							"97": 0.0553,
-							"98": 0.0751,
-							"99": 0.1651,
-							"99.5": 0.29
+							"50": 0.0024,
+							"80": 0.007,
+							"90": 0.0146,
+							"95": 0.0366,
+							"97": 0.0611,
+							"98": 0.0855,
+							"99": 0.1949,
+							"99.5": 0.3264
 						},
-						"ink_texels_share": 0.092879
+						"ink_texels_share": 0.076063
 					},
 					"belt": {
-						"texels": 34945,
+						"texels": 34630,
 						"raw_percentiles": {
 							"50": 0.0,
-							"80": 0.0044,
-							"90": 0.0116,
-							"95": 0.0212,
+							"80": 0.0043,
+							"90": 0.0117,
+							"95": 0.0213,
 							"97": 0.0321,
-							"98": 0.0434,
-							"99": 0.0659,
-							"99.5": 0.093
+							"98": 0.0455,
+							"99": 0.0698,
+							"99.5": 0.0976
 						},
-						"ink_texels_share": 0.149378
+						"ink_texels_share": 0.139128
 					},
 					"trim": {
-						"texels": 37504,
+						"texels": 37292,
 						"raw_percentiles": {
 							"50": 0.0047,
-							"80": 0.0148,
-							"90": 0.022,
-							"95": 0.0296,
-							"97": 0.0375,
-							"98": 0.047,
-							"99": 0.0701,
-							"99.5": 0.1029
+							"80": 0.0146,
+							"90": 0.0219,
+							"95": 0.0298,
+							"97": 0.0374,
+							"98": 0.0455,
+							"99": 0.0699,
+							"99.5": 0.1019
 						},
-						"ink_texels_share": 0.070819
+						"ink_texels_share": 0.051486
 					},
 					"face_skin": {
-						"texels": 8240,
+						"texels": 8206,
 						"raw_percentiles": {
 							"50": 0.0039,
 							"80": 0.0112,
-							"90": 0.0179,
-							"95": 0.0288,
-							"97": 0.043,
-							"98": 0.0692,
-							"99": 0.1373,
-							"99.5": 0.1913
+							"90": 0.018,
+							"95": 0.0294,
+							"97": 0.0443,
+							"98": 0.0701,
+							"99": 0.1283,
+							"99.5": 0.1854
 						},
-						"ink_texels_share": 0.018932
+						"ink_texels_share": 0.019254
 					},
 					"gloves": {
-						"texels": 8139,
+						"texels": 8070,
 						"raw_percentiles": {
 							"50": 0.0,
 							"80": 0.0032,
 							"90": 0.0039,
 							"95": 0.0039,
-							"97": 0.0039,
+							"97": 0.0041,
 							"98": 0.0054,
-							"99": 0.0077,
+							"99": 0.0076,
 							"99.5": 0.0078
 						},
 						"ink_texels_share": 0.0
@@ -15586,32 +15586,45 @@
 				"glint": null,
 				"clean": {
 					"before": {
-						"pieces": 1333,
-						"texels": 32083,
-						"pieces_le6": 753,
-						"texels_in_le6_share": 0.0545,
+						"pieces": 1440,
+						"texels": 32262,
+						"pieces_le6": 836,
+						"texels_in_le6_share": 0.0619,
 						"median": 4.0,
-						"pieces_over20": 316
+						"pieces_over20": 292
 					},
 					"after": {
-						"pieces": 229,
-						"texels": 29374,
-						"pieces_le6": 1,
-						"texels_in_le6_share": 0.0,
-						"median": 74.0,
-						"pieces_over20": 227
+						"pieces": 221,
+						"texels": 29978,
+						"pieces_le6": 2,
+						"texels_in_le6_share": 0.0002,
+						"median": 73.0,
+						"pieces_over20": 219
 					},
-					"bridged_texels": 464,
-					"pieces_dropped": 1025,
-					"texels_dropped": 7104
+					"bridged_texels": 573,
+					"pieces_dropped": 1143,
+					"texels_dropped": 7448
 				},
 				"glove_lines": null,
 				"crease": {
-					"texels_on_a_crease": 23857,
-					"ink_share_before": 0.0057,
-					"ink_share_after": 0.06889
+					"texels_on_a_crease": 23665,
+					"ink_share_before": 0.00572,
+					"ink_share_after": 0.06912
 				},
-				"sha256": "87f14c5f700557701bb69152a045526168069ca63bfe7d08dd313780d2942505"
+				"texel_swatch": {
+					"texels": 364202,
+					"texture_decided": 350028,
+					"differ_from_face_share": 0.01102,
+					"majority_moved": 1748,
+					"share": {
+						"7": 0.04936,
+						"50": 0.7467,
+						"51": 0.11795,
+						"53": 0.06391,
+						"54": 0.02208
+					}
+				},
+				"sha256": "f488854c5a73df1868402f71bfaefe0bc30bdc395a59d83b94e86f285aa98014"
 			},
 			"regions": [
 				{
@@ -15628,6 +15641,11 @@
 					"name": "glove_right",
 					"slot": 54,
 					"faces": 3960
+				},
+				{
+					"name": "legs_not_skin",
+					"slot": 50,
+					"faces": 1145
 				}
 			],
 			"region_cuts": [],
@@ -15645,13 +15663,13 @@
 					"trials": [
 						{
 							"ratio": 0.9854,
-							"tris": 26599
+							"tris": 26600
 						}
 					],
-					"triangles": 26599,
+					"triangles": 26600,
 					"budget": 26600,
 					"budget_ok": true,
-					"protected_vertices": 1665,
+					"protected_vertices": 1475,
 					"protected_position_worst_m": 0.0
 				},
 				{
@@ -15671,17 +15689,26 @@
 				}
 			],
 			"unfold": {
-				"folded_before": 253,
-				"folded_after": 113,
-				"passes": 2,
+				"folded_before": 255,
+				"folded_after": 58,
+				"passes": 11,
 				"history": [
-					253,
-					158,
-					113
+					255,
+					164,
+					118,
+					106,
+					84,
+					82,
+					80,
+					78,
+					68,
+					63,
+					62,
+					58
 				]
 			},
-			"triangles": 29298,
-			"vertices": 14723
+			"triangles": 29299,
+			"vertices": 14724
 		},
 		"parts_split": {
 			"enabled": false
@@ -15695,14 +15722,14 @@
 					"unweighted": 0,
 					"max_influences": 4,
 					"over_four": 0,
-					"triangles": 29298,
+					"triangles": 29299,
 					"height_m": 1.81578,
 					"feet_y": -0.001951,
-					"folded_triangles": 161,
-					"folded_share": 0.005495,
+					"folded_triangles": 102,
+					"folded_share": 0.003481,
 					"facing": {
 						"axis": "-Z",
-						"yaw": -0.20744,
+						"yaw": -0.036191,
 						"confidence": "conflict"
 					},
 					"sides_consistent": true,
@@ -15711,8 +15738,8 @@
 					"meshes": [
 						{
 							"name": "Body",
-							"triangles": 29298,
-							"vertices": 24399,
+							"triangles": 29299,
+							"vertices": 24081,
 							"uv_layers": [
 								"UVMap",
 								"UVMap.001"
@@ -15740,8 +15767,8 @@
 						]
 					},
 					"file": "boss.glb",
-					"sha256": "5eb1edef709ca5f721771881ae254a40f3a0775cbc692ec3e0deeb0301911484",
-					"bytes": 1842368
+					"sha256": "c6a6ba75fd28b3743485ffd8fa3ae581834bc1508ab4fe83c1c6792f54d9d105",
+					"bytes": 1820752
 				},
 				"rest": {
 					"bones": 23,
@@ -15750,14 +15777,14 @@
 					"unweighted": 0,
 					"max_influences": 4,
 					"over_four": 0,
-					"triangles": 29298,
+					"triangles": 29299,
 					"height_m": 1.81578,
 					"feet_y": -0.001951,
-					"folded_triangles": 194,
-					"folded_share": 0.006622,
+					"folded_triangles": 134,
+					"folded_share": 0.004574,
 					"facing": {
 						"axis": "-Z",
-						"yaw": -0.20744,
+						"yaw": -0.036191,
 						"confidence": "conflict"
 					},
 					"sides_consistent": true,
@@ -15766,8 +15793,8 @@
 					"meshes": [
 						{
 							"name": "Body",
-							"triangles": 29298,
-							"vertices": 24402,
+							"triangles": 29299,
+							"vertices": 24079,
 							"uv_layers": [
 								"UVMap",
 								"UVMap.001"
@@ -15795,31 +15822,31 @@
 						]
 					},
 					"file": "boss_rest.glb",
-					"sha256": "e95a609e3f5cc44046f32ed0177924787c3b30445f1475bdd69541dfc6fc0f73",
-					"bytes": 1842216
+					"sha256": "be11f83bc83a3f734411a8e7129158ed34c6c416d75c4434c84ceaf3adcc8543",
+					"bytes": 1820260
 				}
 			},
 			"smooth_normals": {
 				"apose": {
 					"Body": {
-						"mean_deg": 10.6597,
-						"p99_deg": 43.1745,
-						"over_15_deg_share": 0.2338
+						"mean_deg": 10.784,
+						"p99_deg": 43.5884,
+						"over_15_deg_share": 0.2359
 					}
 				},
 				"rest": {
 					"Body": {
-						"mean_deg": 10.8585,
-						"p99_deg": 43.9031,
-						"over_15_deg_share": 0.2434
+						"mean_deg": 10.9796,
+						"p99_deg": 44.2861,
+						"over_15_deg_share": 0.2455
 					}
 				}
 			}
 		}
 	},
 	"outputs": {
-		"boss.glb": "5eb1edef709ca5f721771881ae254a40f3a0775cbc692ec3e0deeb0301911484",
-		"boss_rest.glb": "e95a609e3f5cc44046f32ed0177924787c3b30445f1475bdd69541dfc6fc0f73"
+		"boss.glb": "c6a6ba75fd28b3743485ffd8fa3ae581834bc1508ab4fe83c1c6792f54d9d105",
+		"boss_rest.glb": "be11f83bc83a3f734411a8e7129158ed34c6c416d75c4434c84ceaf3adcc8543"
 	},
-	"hash": "d22b4922b04d005e2c17a6c3879dea63f116dc33f4c6a8c62af7f86a49ff617d"
+	"hash": "1071c03e3d4491a7470d7d4b3b4d5b652129a505a927ec0178755e9f813c2695"
 }
