@@ -1488,6 +1488,14 @@ Game-boy's playtest of M6: the street's floor flashed and read as noise. **The c
 - **The look act.** `tests/bot/level_acts/ground_acts.gd`, "Look: ground drift" (`-- --ground=<variant>`: control, no_shadow, hard_shadow, no_edges, no_ink, lod_free, sheet_off, flat, dbg_strip, dbg_lod, dbg_alpha, diag, meshes), measured by `tools/ground_flicker.py`.
 
 
+**FIX-WORLD (the review's fix wave).**
+
+- **No two drawn faces in one plane, anywhere.** The boss roof's `Ground` is now at top -0.25 (y -12.75: above the roofs' skyline walk strips at -0.5, which it hides as in M6, and 0.25 m under the street's floor), clear of every drawn plane under it. `tests/m6_coplanar_scan.gd` is the guard: it takes every drawn box of a scene (a `LevelBlock`'s mesh, or the mesh of a world body a room builds), compares each pair on the five faces that can be seen (never the underside), drops what a third drawn box covers just outside the plane and what has no world collider below a point 0.4 m off the face, and reports the rest over 0.02 m2. `tests/test_m6_feedback_ground.gd` runs it over Mission 1 (no pair at all), the crowd street and the training room (over 0.5 m2: their boxes are built in `crowd_room.gd` and `test_room.gd`, see the calls file's requests).
+- **`InsetBlock`** (`game/level/kit/inset_block.gd`, a `LevelBlock`): the collider stays the box; the drawn mesh is pulled in per face by `inset_min` (the - faces) and `inset_max` (the + faces), in metres. A block in `street.tscn`, `roofs.tscn` or `boss_roof.tscn` whose face would share a plane with another's carries 0.02 m (0.04 for a third face in the plane, `INSET_STEP_M`). 41 blocks use it; `tests/test_m6_colliders.gd` is untouched.
+- **The ground tile** now has broad worn pools, a paler base, a few ink-outlined dark patches, two squares and five cracks (see the calls file), and is **mirrored on every other tile down the street** in the shader (`gtm`, a triangle wave of the tile's z with the gradient's sign turned the same way), so the manhole and grates repeat every 16 m, not 8, with no seam (a mirror is continuous at its fold).
+- **The strips' ink fade** measures the footprint by its mean side (`sqrt(|det|)` of the two gradients, `fade_texels`), not its longer side, so a roof deck's or a kerb top's seams keep their ink as far as a wall's. `ink_mask(a, texels, fade_texels, ground)`.
+- **Look act**: `ground_acts.gd`'s "Look: ground drift" also holds `HELD` views (the boss roof's gap, the roofs' deck, and the deck looked along) for `still` and `creep`; `-- --ground=held` runs only those.
+
 ### Playtest feedback: FB-DETAIL
 
 Game-boy found the Bruiser "blobby" and asked for every enemy to be upscaled toward its concept. The pilot changed the chain, not the model (the raw Tripo mesh holds the plates and quilting; the loss was in the palette and ink stages). Three opt-in config keys, each defaulting to today's behaviour (every other character's `run.py --check` is unchanged):
