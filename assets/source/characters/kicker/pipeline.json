@@ -182,7 +182,7 @@
 		"max_swatches": 6,
 		"min_share": 0.004,
 		"majority_passes": 2,
-		"border_relax_iterations": 3,
+		"border_relax_iterations": 0,
 		"border_relax_factor": 0.5,
 		"budget_tris": 15000,
 		"detail_uv": true,
@@ -217,6 +217,84 @@
 			"no_ink_slots": [],
 			"zones": [
 				{
+					"name": "vest",
+					"slots": [
+						22
+					],
+					"min": [
+						-0.6,
+						-0.6,
+						0.95
+					],
+					"max": [
+						0.6,
+						0.6,
+						1.6
+					],
+					"ink_low": 0.08,
+					"ink_high": 0.2,
+					"crease_deg": 60,
+					"valley_deg": 15
+				},
+				{
+					"name": "tights",
+					"slots": [
+						22
+					],
+					"min": [
+						-0.6,
+						-0.6,
+						0.2
+					],
+					"max": [
+						0.6,
+						0.6,
+						0.95
+					],
+					"ink_low": 0.08,
+					"ink_high": 0.2,
+					"crease_deg": 181
+				},
+				{
+					"name": "shorts",
+					"slots": [
+						23
+					],
+					"min": [
+						-0.6,
+						-0.6,
+						0.45
+					],
+					"max": [
+						0.6,
+						0.6,
+						1.05
+					],
+					"ink_low": 0.08,
+					"ink_high": 0.2,
+					"crease_deg": 55,
+					"valley_deg": 15
+				},
+				{
+					"name": "wraps",
+					"slots": [
+						14
+					],
+					"min": [
+						-0.9,
+						-0.6,
+						0.7
+					],
+					"max": [
+						0.9,
+						0.6,
+						1.5
+					],
+					"ink_low": 0.03,
+					"ink_high": 0.09,
+					"crease_deg": 60
+				},
+				{
 					"name": "face_skin",
 					"slots": [
 						6
@@ -232,7 +310,8 @@
 						1.8
 					],
 					"ink_low": 0.04,
-					"ink_high": 0.1
+					"ink_high": 0.1,
+					"crease_deg": 181
 				},
 				{
 					"name": "headwear",
@@ -250,7 +329,8 @@
 						2.0
 					],
 					"ink_low": 0.06,
-					"ink_high": 0.14
+					"ink_high": 0.14,
+					"crease_deg": 50
 				},
 				{
 					"name": "boots",
@@ -268,10 +348,32 @@
 						0.2
 					],
 					"ink_low": 0.06,
-					"ink_high": 0.14
+					"ink_high": 0.14,
+					"crease_deg": 50
 				}
-			]
-		}
+			],
+			"crease": {
+				"angle_deg": 60,
+				"width_m": 0.003,
+				"ramp_m": 0.002,
+				"spacing_m": 0.003,
+				"min_chain_m": 0.12,
+				"valley": {
+					"angle_deg": 999,
+					"min_chain_m": 0.3,
+					"width_m": 0.0025,
+					"ramp_m": 0.002
+				}
+			},
+			"texel_swatch": {
+				"blur_px": 1.0,
+				"passes": 2,
+				"fill_px": 3,
+				"rings": 1
+			}
+		},
+		"min_island_area_m2": 0.0015,
+		"island_passes": 2
 	},
 	"export": {
 		"hull_normal_digits": 5,
