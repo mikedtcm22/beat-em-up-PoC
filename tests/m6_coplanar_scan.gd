@@ -1,7 +1,7 @@
 extends RefCounted
 ## Milestone 6 playtest feedback, FIX-WORLD: the scan for two drawn faces that share a plane (a z-fight).
 ##
-## Two box faces that look the same way, lie in one plane (within COPLANAR_M) and overlap in an area fight for every pixel of it:
+## Two box faces that look the same way, lie in one plane (within Tuning kit_coplanar_m) and overlap in an area fight for every pixel of it:
 ## which one wins swings with the camera's millimetres, and that is the flashing Game-boy saw on the street and again on the
 ## boss roof. The scan takes every box the level, the crowd street or the training room draws (a `LevelBlock`'s mesh, or the mesh
 ## of a world-layer body a room builds), as an axis-aligned box in world space, and compares each pair on the six planes.
@@ -27,8 +27,6 @@ extends RefCounted
 ## stand 5 cm off a wall and would make every tall wall look 5 cm bigger); anything else is its mesh's bounds, so a Dressing piece
 ## (a KitPiece on a cornice, a window row) is a box too.
 
-## Two faces closer than this (metres) lie in one plane.
-const COPLANAR_M := 0.004
 ## A shared area under this (square metres) is a sliver of a corner, not a z-fight.
 const MIN_AREA_M2 := 0.02
 ## Two faces of one direction whose planes differ by STEP_MIN_M to STEP_MAX_M (metres) make a step where one stops (below it the
@@ -39,6 +37,11 @@ const STEP_MAX_M := 0.05
 const PROBE_OFF_M := 0.01
 const SUPPORT_OFF_M := 0.4
 const SUPPORT_DROP_M := 40.0
+
+
+## Two faces closer than this (metres) lie in one plane: the build's own tunable, so the scan and the clip never disagree.
+static func _coplanar() -> float:
+	return Tuning.data.kit_coplanar_m
 
 
 ## One entry per drawn box of `root`: {node: MeshInstance3D, box: AABB, owner: Node (the block, the body or the piece that owns it)}.
@@ -131,7 +134,7 @@ static func pairs(root: Node, min_area: float = MIN_AREA_M2) -> Array[Dictionary
 						continue
 					var plane_a: float = a.end[axis] if side == 1 else a.position[axis]
 					var plane_b: float = b.end[axis] if side == 1 else b.position[axis]
-					if absf(plane_a - plane_b) > COPLANAR_M:
+					if absf(plane_a - plane_b) > _coplanar():
 						continue
 					if _same_picture(items[i].node, items[j].node):
 						continue
@@ -187,7 +190,7 @@ static func _visible_area(items: Array[Dictionary], i: int, j: int, axis: int, s
 static func _face_rects(item: Dictionary, box: AABB, axis: int, side: int, plane: float) -> Array[Rect2]:
 	var piece := item.owner as MeshInstance3D
 	if piece != null and piece.mesh != null:
-		return MeshClip.face_rects(piece.mesh, piece.global_transform, axis, side, plane, COPLANAR_M)
+		return MeshClip.face_rects(piece.mesh, piece.global_transform, axis, side, plane, _coplanar())
 	var u := (axis + 1) % 3
 	var v := (axis + 2) % 3
 	return [Rect2(box.position[u], box.position[v], box.size[u], box.size[v])] as Array[Rect2]
@@ -265,15 +268,49 @@ static func _subtract(rects: Array[Rect2], cut: Rect2) -> Array[Rect2]:
 
 
 
-## Whether a box stands in front of what it meets by design: a rail's post stands inside its curb, and a barrier's panel (a shutter,
-## a gate) hangs in front of its opening. Neither is a wall face that was meant to be flush.
-static func _stands_by_design(item: Dictionary) -> bool:
+## Pairs of boxes that stand in front of each other by design, by name (a node of the pair's first name under one box, of the
+## second under the other): the Catwalk's shutter (`Barriers/ShutterStair3`) is a Barrier's panel hung in the opening under the
+## lintel, 40 mm wider than the lintel's end on each side. It is a door's leaf standing proud of its frame, so the ink along its
+## edge is the shutter's own outline, and the panel is the Barrier's collider-sized box (a move would touch what stops the player).
+const ACCEPTED_STEPS := [["ShutterStair3", "Lintel3"]]
+
+
+## Whether two boxes stand in front of one another by design, so that the step between their faces is not a wall's flush face that
+## went wrong: a rail's post stands inside its bar or its curb (a post is a `fence`-look block; a bar is too, a curb is named
+## `Curb...`), a barrier's panel (anything under a Barrier) hangs in front of the opening whose rail post it meets, and the pairs
+## `ACCEPTED_STEPS` names. A fence-look block against a wall, or a barrier's panel against a wall, is NOT by design: it is reported.
+static func _stands_by_design(a: Dictionary, b: Dictionary) -> bool:
+	for pair in [[a, b], [b, a]]:
+		var one: Dictionary = pair[0]
+		var other: Dictionary = pair[1]
+		if _look_of(one) == &"fence":
+			if _look_of(other) == &"fence" or _under_barrier(other) or String((other.owner as Node).name).begins_with("Curb"):
+				return true
+	for accepted in ACCEPTED_STEPS:
+		if (_path_has(a.owner, accepted[0]) and _path_has(b.owner, accepted[1])) or (_path_has(b.owner, accepted[0]) and _path_has(a.owner, accepted[1])):
+			return true
+	return false
+
+
+static func _look_of(item: Dictionary) -> StringName:
 	var block := item.owner as LevelBlock
-	if block != null and block.look == &"fence":
-		return true
+	return block.look if block != null else &""
+
+
+static func _under_barrier(item: Dictionary) -> bool:
 	var up: Node = item.owner
 	while up != null:
 		if up is Barrier:
+			return true
+		up = up.get_parent()
+	return false
+
+
+## Whether `node` or one of its ancestors is named `node_name`.
+static func _path_has(node: Node, node_name: String) -> bool:
+	var up := node
+	while up != null:
+		if String(up.name) == node_name:
 			return true
 		up = up.get_parent()
 	return false
@@ -301,12 +338,12 @@ static func holes(root: Node, min_area: float = MIN_AREA_M2) -> Array[Dictionary
 						continue
 					var other: AABB = items[j].box
 					var other_plane: float = other.end[axis] if side == 1 else other.position[axis]
-					if absf(other_plane - plane) > COPLANAR_M:
+					if absf(other_plane - plane) > _coplanar():
 						continue
 					var drawn: Array[Rect2] = [Rect2(other.position[u], other.position[v], other.size[u], other.size[v])]
 					var piece := items[j].owner as MeshInstance3D
 					if piece != null and piece.mesh != null:
-						drawn = MeshClip.face_rects(piece.mesh, piece.global_transform, axis, side, other_plane, COPLANAR_M)
+						drawn = MeshClip.face_rects(piece.mesh, piece.global_transform, axis, side, other_plane, _coplanar())
 					for clip in clips_of(items[j], axis, side):
 						drawn = _subtract(drawn, clip)
 					for rect in drawn:
@@ -316,6 +353,55 @@ static func holes(root: Node, min_area: float = MIN_AREA_M2) -> Array[Dictionary
 					out.append({
 						item = items[i], axis = axis, side = side, plane = plane, area = seen,
 						text = "%s: %s face at %.3f has a %.2f m2 hole in view (taken out, and no other box draws it)" % [_name(items[i]), "xyz"[axis] + ("+" if side == 1 else "-"), plane, seen],
+					})
+	return out
+
+
+## Every triangle a clipped box still draws in front of the rectangle it gave up: a face that stands off the plane by the kit's standoff
+## (a wall's plinth board: its top ledge and end caps) and whose centre lies inside a rectangle the box does not draw there would
+## hang in front of the partner's face as a hollow ledge. {item, axis, side, count: int, text}.
+static func orphans(root: Node) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var tolerance := _coplanar()
+	var standoff: float = Tuning.data.kit_clip_standoff_m
+	for item in drawn_boxes(root):
+		var mesh := item.node as MeshInstance3D
+		var box: AABB = item.box
+		for axis in 3:
+			var u := (axis + 1) % 3
+			var v := (axis + 2) % 3
+			for side in 2:
+				var clips := clips_of(item, axis, side)
+				if clips.is_empty():
+					continue
+				var sign_out := 1.0 if side == 1 else -1.0
+				var plane: float = box.end[axis] if side == 1 else box.position[axis]
+				var count := 0
+				for surface in mesh.mesh.get_surface_count():
+					var arrays := mesh.mesh.surface_get_arrays(surface)
+					var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+					var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+					for t in range(0, indices.size(), 3):
+						var near := true
+						var centre := Vector3.ZERO
+						for k in 3:
+							var corner := mesh.global_transform * verts[indices[t + k]]
+							var off := (corner[axis] - plane) * sign_out
+							if off < -tolerance or off > standoff + tolerance:
+								near = false
+								break
+							centre += corner / 3.0
+						if not near:
+							continue
+						for clip in clips:
+							if centre[u] > clip.position.x + tolerance and centre[u] < clip.end.x - tolerance \
+									and centre[v] > clip.position.y + tolerance and centre[v] < clip.end.y - tolerance:
+								count += 1
+								break
+				if count > 0:
+					out.append({
+						item = item, axis = axis, side = side, count = count,
+						text = "%s: %d triangles still stand in front of the %s face's cut rectangles (a hollow ledge)" % [_name(item), count, "xyz"[axis] + ("+" if side == 1 else "-")],
 					})
 	return out
 
@@ -331,7 +417,7 @@ static func steps(root: Node, min_area: float = MIN_AREA_M2) -> Array[Dictionary
 	var out: Array[Dictionary] = []
 	for i in items.size():
 		for j in range(i + 1, items.size()):
-			if items[i].owner == items[j].owner or _stands_by_design(items[i]) or _stands_by_design(items[j]):
+			if items[i].owner == items[j].owner or _stands_by_design(items[i], items[j]):
 				continue
 			var a: AABB = items[i].box
 			var b: AABB = items[j].box

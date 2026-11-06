@@ -11,7 +11,9 @@ extends RefCounted
 ## It exists because two boxes that share a plane over an overlap fight for every pixel of it, and the only answer that leaves no
 ## step for the edge pass to ink is for one of them not to draw its face there (InsetBlock).
 
-## A piece of a cut triangle smaller than this (square metres) is a rounding sliver and is dropped.
+## A numerical epsilon, not a feel number (so it is not a Tuning value): a triangle of a cut polygon smaller than this (square
+## metres, a third of a millimetre's square) is a rounding sliver or a zero-area fan triangle (collinear points the cut leaves on
+## a polygon's edge), and is dropped. It draws nothing, and the polygon's other triangles still cover it.
 const MIN_AREA_M2 := 0.0000001
 
 ## One corner of a polygon being cut: every attribute the kit's meshes carry.
@@ -20,6 +22,7 @@ class Vertex:
 	var normal: Vector3
 	var uv: Vector2
 	var color: Color
+	var tangent: Vector4
 
 	func lerped(to: Vertex, t: float) -> Vertex:
 		var out := Vertex.new()
@@ -27,6 +30,7 @@ class Vertex:
 		out.normal = normal.lerp(to.normal, t)
 		out.uv = uv.lerp(to.uv, t)
 		out.color = color.lerp(to.color, t)
+		out.tangent = tangent.lerp(to.tangent, t)
 		return out
 
 
@@ -120,7 +124,9 @@ static func as_array_mesh(mesh: Mesh) -> ArrayMesh:
 	return out
 
 
-## `mesh` with `rects` removed from its faces on the plane (see the class comment).
+## `mesh` with `rects` removed from its faces on the plane (see the class comment). A standoff board's other faces (a plinth's top
+## ledge and end caps, which stand `depth` out from the plane and look along it) are cut with the rectangle as well, so no hollow
+## ledge is left standing in front of the face the partner draws there (vfinal-code-04).
 static func clip(mesh: ArrayMesh, axis: int, side: int, plane: float, depth: float, tolerance: float, rects: Array[Rect2]) -> ArrayMesh:
 	var out := ArrayMesh.new()
 	var u := (axis + 1) % 3
@@ -128,16 +134,20 @@ static func clip(mesh: ArrayMesh, axis: int, side: int, plane: float, depth: flo
 	var sign_out := 1.0 if side == 1 else -1.0
 	for surface in mesh.get_surface_count():
 		var arrays := mesh.surface_get_arrays(surface)
+		_check_carried(mesh, surface)
 		var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
 		var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
 		var uvs: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV]
 		var colors: PackedColorArray = arrays[Mesh.ARRAY_COLOR]
+		var tangents: PackedFloat32Array = arrays[Mesh.ARRAY_TANGENT]
 		var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
 		var kept_verts := PackedVector3Array()
 		var kept_normals := PackedVector3Array()
 		var kept_uvs := PackedVector2Array()
 		var kept_colors := PackedColorArray()
+		var kept_tangents := PackedFloat32Array()
 		var has_colors := not colors.is_empty()
+		var has_tangents := not tangents.is_empty()
 		var kept_indices := PackedInt32Array()
 		for t in range(0, indices.size(), 3):
 			var corners: Array[Vertex] = []
@@ -148,13 +158,19 @@ static func clip(mesh: ArrayMesh, axis: int, side: int, plane: float, depth: flo
 				vertex.normal = normals[i]
 				vertex.uv = uvs[i] if i < uvs.size() else Vector2.ZERO
 				vertex.color = colors[i] if i < colors.size() else Color.WHITE
+				if has_tangents:
+					vertex.tangent = Vector4(tangents[i * 4], tangents[i * 4 + 1], tangents[i * 4 + 2], tangents[i * 4 + 3])
 				corners.append(vertex)
 			var polygons: Array = [corners]
-			if _on_plane(corners, axis, sign_out, plane, depth, tolerance):
+			var kind := _kind(corners, axis, sign_out, plane, depth, tolerance)
+			if kind != Kind.OTHER:
 				for rect in rects:
 					var next: Array = []
 					for polygon: Array[Vertex] in polygons:
-						next.append_array(_outside(polygon, u, v, rect))
+						if kind == Kind.BOARD_EDGE:
+							next.append_array(_outside_edge(polygon, u, v, rect, tolerance))
+						else:
+							next.append_array(_outside(polygon, u, v, rect))
 					polygons = next
 			for polygon: Array[Vertex] in polygons:
 				if polygon.size() < 3 or _area(polygon) < MIN_AREA_M2:
@@ -166,8 +182,11 @@ static func clip(mesh: ArrayMesh, axis: int, side: int, plane: float, depth: flo
 					kept_uvs.append(vertex.uv)
 					if has_colors:
 						kept_colors.append(vertex.color)
+					if has_tangents:
+						kept_tangents.append_array(PackedFloat32Array([vertex.tangent.x, vertex.tangent.y, vertex.tangent.z, vertex.tangent.w]))
 				for k in range(1, polygon.size() - 1):
-					kept_indices.append_array(PackedInt32Array([base, base + k, base + k + 1]))
+					if _area([polygon[0], polygon[k], polygon[k + 1]] as Array[Vertex]) >= MIN_AREA_M2:
+						kept_indices.append_array(PackedInt32Array([base, base + k, base + k + 1]))
 		if kept_verts.is_empty():
 			continue
 		var clipped: Array = []
@@ -177,21 +196,33 @@ static func clip(mesh: ArrayMesh, axis: int, side: int, plane: float, depth: flo
 		clipped[Mesh.ARRAY_TEX_UV] = kept_uvs
 		if has_colors:
 			clipped[Mesh.ARRAY_COLOR] = kept_colors
+		if has_tangents:
+			clipped[Mesh.ARRAY_TANGENT] = kept_tangents
 		clipped[Mesh.ARRAY_INDEX] = kept_indices
 		out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, clipped)
 		out.surface_set_material(out.get_surface_count() - 1, mesh.surface_get_material(surface))
 	return out
 
 
-## Whether a triangle looks outward from the plane and lies on it, or up to `depth` out from it.
-static func _on_plane(corners: Array[Vertex], axis: int, sign_out: float, plane: float, depth: float, tolerance: float) -> bool:
-	if corners[0].normal[axis] * sign_out < 0.99:
-		return false
+## What a triangle is to the plane being cut: FACE looks outward from it and lies on it or up to `depth` out from it (the face
+## itself and a standoff board's front); BOARD_EDGE lies there and looks along it (a standoff board's top ledge and end caps);
+## BOARD_BACK lies there and looks into it; OTHER is not near the plane, or looks some other way.
+enum Kind { OTHER, FACE, BOARD_EDGE, BOARD_BACK }
+
+
+static func _kind(corners: Array[Vertex], axis: int, sign_out: float, plane: float, depth: float, tolerance: float) -> Kind:
 	for corner in corners:
 		var out := (corner.position[axis] - plane) * sign_out
 		if out < -tolerance or out > depth:
-			return false
-	return true
+			return Kind.OTHER
+	var facing := corners[0].normal[axis] * sign_out
+	if facing >= 0.99:
+		return Kind.FACE
+	if facing <= -0.99:
+		return Kind.BOARD_BACK
+	if absf(facing) <= 0.01:
+		return Kind.BOARD_EDGE
+	return Kind.OTHER
 
 
 ## The parts of the convex `polygon` that lie outside `rect` (in the (u, v) components), as convex polygons.
@@ -214,6 +245,54 @@ static func _outside(polygon: Array[Vertex], u: int, v: int, rect: Rect2) -> Arr
 	if above.size() >= 3:
 		pieces.append(above)
 	return pieces
+
+
+## The parts of `polygon`, a face standing on edge across the plane (its normal along u or v, so it is a line in the plane's
+## (u, v) coordinates), that lie outside `rect`: an edge face in the rectangle's span (within `tolerance` of it) loses the part of
+## its length the rectangle covers, one outside it is kept whole.
+static func _outside_edge(polygon: Array[Vertex], u: int, v: int, rect: Rect2, tolerance: float) -> Array:
+	var across_u := absf(polygon[0].normal[u]) >= 0.99
+	var across_v := absf(polygon[0].normal[v]) >= 0.99
+	var pieces: Array = []
+	if across_u:
+		var at := polygon[0].position[u]
+		if at < rect.position.x - tolerance or at > rect.end.x + tolerance:
+			return [polygon]
+		var below := _half(polygon, v, rect.position.y, true)
+		var above := _half(polygon, v, rect.end.y, false)
+		if below.size() >= 3:
+			pieces.append(below)
+		if above.size() >= 3:
+			pieces.append(above)
+		return pieces
+	if across_v:
+		var at := polygon[0].position[v]
+		if at < rect.position.y - tolerance or at > rect.end.y + tolerance:
+			return [polygon]
+		var left := _half(polygon, u, rect.position.x, true)
+		var right := _half(polygon, u, rect.end.x, false)
+		if left.size() >= 3:
+			pieces.append(left)
+		if right.size() >= 3:
+			pieces.append(right)
+		return pieces
+	return [polygon]
+
+
+## Fails loudly on a source surface whose format declares an array the clip does not carry (a UV2, custom data, bones, weights): it
+## would be dropped on every clipped block with nothing to say so. The vertex, normal, tangent (Godot gives every kit mesh one),
+## UV, colour and index are carried.
+static func _check_carried(mesh: ArrayMesh, surface: int) -> void:
+	var dropped := uncarried(mesh, surface)
+	if dropped != 0:
+		push_error("MeshClip: surface %d has an array clipping does not carry (format flags %d): it would be dropped" % [surface, dropped])
+
+
+## The `Mesh.ARRAY_FORMAT_*` flags of `mesh`'s surface that clipping does not carry (0: all of it is carried).
+static func uncarried(mesh: ArrayMesh, surface: int) -> int:
+	var dropped := Mesh.ARRAY_FORMAT_TEX_UV2 | Mesh.ARRAY_FORMAT_CUSTOM0 | Mesh.ARRAY_FORMAT_CUSTOM1 | Mesh.ARRAY_FORMAT_CUSTOM2 \
+			| Mesh.ARRAY_FORMAT_CUSTOM3 | Mesh.ARRAY_FORMAT_BONES | Mesh.ARRAY_FORMAT_WEIGHTS
+	return mesh.surface_get_format(surface) & dropped
 
 
 ## The part of the convex `polygon` with component `axis` at most (`below`) or at least (not `below`) `limit`.

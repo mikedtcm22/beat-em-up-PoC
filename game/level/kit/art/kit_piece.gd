@@ -17,7 +17,14 @@ extends MeshInstance3D
 
 
 func _ready() -> void:
-	_rebuild()
+	ensure_mesh()
+
+
+## Builds the mesh if it is not built yet. A block that yields to this piece (InsetBlock) asks for the mesh in its own `_ready`,
+## which runs before the piece's when the piece comes later in the scene, so the cut does not depend on the siblings' order.
+func ensure_mesh() -> void:
+	if mesh == null:
+		_rebuild()
 
 
 func _rebuild() -> void:

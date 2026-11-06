@@ -429,3 +429,295 @@ func test_the_boss_roofs_far_ground_is_not_solid_and_lies_below_the_street() -> 
 	assert_false(ground.solid, "it draws only, so no collider moved")
 	var street := level.get_node("Sections/Street/Geometry/Floor") as LevelBlock
 	assert_lt(ground.world_aabb().end.y, street.world_aabb().end.y - 0.1, "its top lies clear below the street's")
+
+
+# --- The vfinal round's fix pass (VF2-WORLD) --------------------------------------------------------
+
+
+## Every InsetBlock under `root`, in tree order.
+func _inset_blocks(root: Node) -> Array[InsetBlock]:
+	var out: Array[InsetBlock] = []
+	for found in root.find_children("*", "InsetBlock", true, false):
+		out.append(found as InsetBlock)
+	return out
+
+
+func test_trim_wins_a_plane_against_its_wall() -> void:
+	## vfinal-world-03: the smaller trim block yielded to the bigger wall, so a jamb that shares its wall's plane showed brick where
+	## 82bab12 showed the jamb's face. Now the wall takes the overlap out of its own face, and no jamb or lintel yields to a wall.
+	var holder := Node.new()
+	add_child_autofree(holder)
+	var level := Snapshot.instantiate(Snapshot.LEVEL, holder)
+	await get_tree().physics_frame
+	var trim_blocks := 0
+	for block in level.find_children("*", "LevelBlock", true, false):
+		if not (String(block.name).contains("Jamb") or String(block.name).contains("Lintel")):
+			continue
+		trim_blocks += 1
+		var inset := block as InsetBlock
+		if inset == null:
+			continue
+		for path in inset.yields_to:
+			var partner := inset.get_node(path)
+			assert_true(partner is KitPiece or String(partner.name).contains("Jamb") or String(partner.name).contains("Lintel"),
+					"%s (trim) yields only to a kit piece or to other trim, not to the wall %s" % [inset.get_path(), partner.get_path()])
+	assert_gt(trim_blocks, 10, "the level has jambs and lintels")
+	for trim_path in ["WarehouseJambs", "WarehouseJambs2", "WarehouseLintel", "DoorJambs5", "DoorLintel3", "DoorJambs"]:
+		var trim := level.get_node("Sections/Street/Geometry/%s" % trim_path) as LevelBlock
+		assert_false(trim is InsetBlock and _any_clip(trim as InsetBlock), "%s draws every face: it is not clipped by its wall" % trim_path)
+	var wall := level.get_node("Sections/Street/Geometry/LeftWall4") as InsetBlock
+	assert_true(wall.yields_to.has(wall.get_path_to(level.get_node("Sections/Street/Geometry/WarehouseJambs"))), "the wall beside the shutter yields its overlap to the jamb")
+	var door_wall := level.get_node("Sections/Street/Geometry/RightWall5") as InsetBlock
+	assert_true(door_wall.yields_to.has(door_wall.get_path_to(level.get_node("Sections/Street/Geometry/DoorJambs5"))), "and the wall at the door reveal to its jamb")
+
+
+func _any_clip(block: InsetBlock) -> bool:
+	for axis in 3:
+		for side in 2:
+			if not block.clipped_rects(axis, side).is_empty():
+				return true
+	return false
+
+
+func test_the_solver_ranks_a_jamb_over_a_wall_whatever_their_sizes() -> void:
+	var solver := (load("res://tools/solve_insets.gd") as GDScript).new() as Node
+	autofree(solver)
+	var wall := LevelBlock.new()
+	wall.name = &"LeftWall4"
+	var jamb := LevelBlock.new()
+	jamb.name = &"WarehouseJambs"
+	var other := LevelBlock.new()
+	other.name = &"RightWall"
+	autofree(wall)
+	autofree(jamb)
+	autofree(other)
+	var big := {owner = wall, box = AABB(Vector3.ZERO, Vector3(10.0, 10.0, 1.0))}
+	var small := {owner = jamb, box = AABB(Vector3.ZERO, Vector3(0.5, 3.0, 0.5))}
+	var smaller_wall := {owner = other, box = AABB(Vector3.ZERO, Vector3(1.0, 1.0, 1.0))}
+	assert_true(solver._beats(small, big), "the jamb wins against the bigger wall")
+	assert_false(solver._beats(big, small), "and the wall does not win against it")
+	assert_true(solver._beats(big, smaller_wall), "two walls: the bigger box wins, as before")
+
+
+func _wall_mesh() -> ArrayMesh:
+	return KitMesh.build(&"wall", Vector3(6.0, 4.0, 0.6))
+
+
+## The triangles of `mesh` with a vertex more than `tolerance` out from the + z plane at `plane`.
+func _beyond(mesh: ArrayMesh, plane: float, tolerance: float) -> int:
+	var count := 0
+	for surface in mesh.get_surface_count():
+		var arrays := mesh.surface_get_arrays(surface)
+		var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+		for t in range(0, indices.size(), 3):
+			var beyond := false
+			for k in 3:
+				beyond = beyond or verts[indices[t + k]].z > plane + tolerance
+			if beyond:
+				count += 1
+	return count
+
+
+func test_clipping_a_whole_face_leaves_no_hollow_plinth_ledge() -> void:
+	## vfinal-code-04: the plinth board (5 cm off a tall wall's brick) has a front, a top ledge and two end caps. The clip took only the
+	## front, so a hollow 5 cm ledge stood in front of the partner's face: 4 triangles over a whole-face cut.
+	var mesh := _wall_mesh()
+	assert_gt(_beyond(mesh, 0.3, 0.004), 0, "the uncut wall has a plinth that stands out from its + z face")
+	var cut := MeshClip.clip_box(mesh, Vector3(6.0, 4.0, 0.6), {MeshClip.key(2, 1): [Rect2(-3.0, -2.0, 6.0, 4.0)] as Array[Rect2]}, 0.06, 0.004)
+	assert_eq(_beyond(cut, 0.3, 0.004), 0, "nothing stands in front of the cut face: the ledge and the end caps go with the front")
+
+
+func test_a_part_cut_ledge_keeps_what_the_rectangle_does_not_cover() -> void:
+	var mesh := _wall_mesh()
+	var cut := MeshClip.clip_box(mesh, Vector3(6.0, 4.0, 0.6), {MeshClip.key(2, 1): [Rect2(-1.0, -2.0, 2.0, 1.0)] as Array[Rect2]}, 0.06, 0.004)
+	var uncut_beyond := _beyond(mesh, 0.3, 0.004)
+	assert_gt(_beyond(cut, 0.3, 0.004), 0, "the board outside the rectangle is still drawn, with its ledge and caps")
+	assert_gt(uncut_beyond, 0, "the board is there to begin with")
+	var inside := 0
+	for surface in cut.get_surface_count():
+		var arrays := cut.surface_get_arrays(surface)
+		var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+		for t in range(0, indices.size(), 3):
+			var centre := (verts[indices[t]] + verts[indices[t + 1]] + verts[indices[t + 2]]) / 3.0
+			if centre.z > 0.304 and centre.x > -0.99 and centre.x < 0.99 and centre.y > -1.99 and centre.y < -0.99:
+				inside += 1
+	assert_eq(inside, 0, "no board face is left inside the rectangle")
+
+
+func test_no_clipped_block_of_the_level_or_the_rooms_has_an_orphan_standoff_face() -> void:
+	for scene: String in [Snapshot.LEVEL, Snapshot.CROWD, Snapshot.TRAINING]:
+		var holder := Node.new()
+		add_child_autofree(holder)
+		var root := Snapshot.instantiate(scene, holder)
+		await get_tree().physics_frame
+		var found := Scan.orphans(root)
+		for item in found:
+			gut.p(String(item.text))
+		assert_eq(found.size(), 0, "%s: no clipped block leaves a hollow ledge in front of a rectangle it gave up" % scene)
+
+
+func test_every_yields_to_of_the_level_resolves() -> void:
+	## vfinal-code-05: a renamed block silently brought the z-fight back. Every path resolves with all sections built (the one that
+	## crosses sections, the boss roof's fence to the roofs' curb, resolves there too).
+	var holder := Node.new()
+	add_child_autofree(holder)
+	var level := Snapshot.instantiate(Snapshot.LEVEL, holder)
+	await get_tree().physics_frame
+	var checked := 0
+	for block in _inset_blocks(level):
+		for path in block.yields_to:
+			assert_not_null(block.get_node_or_null(path), "%s yields to %s, which is a node" % [block.get_path(), path])
+			checked += 1
+		assert_eq(block.unresolved_yields().size(), 0, "%s has no dangling yield" % block.get_path())
+	assert_gt(checked, 90, "the level's yields were listed")
+
+
+func test_a_dangling_yield_is_found_and_a_cross_section_one_is_not() -> void:
+	var holder := Node3D.new()
+	add_child_autofree(holder)
+	var section := LevelSection.new()
+	holder.add_child(section)
+	var geometry := Node3D.new()
+	geometry.name = &"Geometry"
+	section.add_child(geometry)
+	var block := InsetBlock.new()
+	block.size = Vector3.ONE
+	geometry.add_child(block)
+	block.yields_to = [NodePath("../NoSuchWall"), NodePath("../../../Other/Geometry/Wall")] as Array[NodePath]
+	await get_tree().physics_frame
+	var dangling := block.unresolved_yields()
+	assert_eq(dangling.size(), 1, "the renamed sibling is reported")
+	assert_eq(String(dangling[0]), "../NoSuchWall", "and it is the sibling, not the path into another section")
+
+
+func test_a_fence_in_front_of_a_wall_is_a_step_but_a_post_in_its_bar_is_not() -> void:
+	## vfinal-code-06: every fence-look block and everything under a Barrier was exempt from steps(), which hid a fence that steps in
+	## front of a wall. Now only a post against its bar, a curb or a barrier's panel is by design.
+	var holder := Node3D.new()
+	add_child_autofree(holder)
+	var ground := LevelBlock.new()
+	ground.size = Vector3(20.0, 1.0, 20.0)
+	ground.position = Vector3(0.0, -0.5, 0.0)
+	ground.look = &"floor"
+	holder.add_child(ground)
+	var wall := LevelBlock.new()
+	wall.size = Vector3(4.0, 3.0, 1.0)
+	wall.position = Vector3(0.0, 1.5, 0.0)
+	holder.add_child(wall)
+	var fence := LevelBlock.new()
+	fence.look = &"fence"
+	fence.size = Vector3(2.0, 1.0, 0.5)
+	fence.position = Vector3(0.0, 0.5, 0.27)
+	holder.add_child(fence)
+	await get_tree().physics_frame
+	var found := Scan.steps(holder)
+	assert_gt(found.size(), 0, "a fence block whose face stands 20 mm in front of a wall's is a step the edge pass inks: %s" % [found])
+	fence.queue_free()
+	var bar := LevelBlock.new()
+	bar.look = &"fence"
+	bar.size = Vector3(2.0, 0.2, 0.2)
+	bar.position = Vector3(6.0, 1.0, 0.0)
+	holder.add_child(bar)
+	var post := LevelBlock.new()
+	post.look = &"fence"
+	post.size = Vector3(0.2, 1.2, 0.18)
+	post.position = Vector3(6.0, 0.6, 0.0)
+	holder.add_child(post)
+	await get_tree().physics_frame
+	var posts: Array[Dictionary] = []
+	for item in Scan.steps(holder):
+		if String(item.text).contains("Rail") or (item.a.owner == post or item.b.owner == post):
+			posts.append(item)
+	assert_eq(posts.size(), 0, "a post that stands in its bar is by design")
+
+
+func test_the_scan_reads_the_builds_coplanar_tolerance() -> void:
+	var before := Scan._coplanar()
+	assert_eq(before, Tuning.data.kit_coplanar_m, "one number for the clip and the scan")
+	Tuning.data.kit_coplanar_m = before * 2.0
+	assert_eq(Scan._coplanar(), before * 2.0, "tuning it moves the scan with the build")
+
+
+func test_clipping_fails_loudly_on_an_array_it_does_not_carry() -> void:
+	assert_eq(MeshClip.uncarried(_wall_mesh(), 0), 0, "the kit's meshes carry only what the clip carries")
+	var arrays: Array = []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = PackedVector3Array([Vector3.ZERO, Vector3.RIGHT, Vector3.UP])
+	arrays[Mesh.ARRAY_NORMAL] = PackedVector3Array([Vector3.BACK, Vector3.BACK, Vector3.BACK])
+	arrays[Mesh.ARRAY_TEX_UV] = PackedVector2Array([Vector2.ZERO, Vector2.RIGHT, Vector2.DOWN])
+	arrays[Mesh.ARRAY_TEX_UV2] = PackedVector2Array([Vector2.ZERO, Vector2.RIGHT, Vector2.DOWN])
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	assert_ne(MeshClip.uncarried(mesh, 0) & Mesh.ARRAY_FORMAT_TEX_UV2, 0, "a UV2 is named, so clipping would push_error rather than drop it silently")
+
+
+func test_a_clipped_block_keeps_the_kit_meshs_tangents() -> void:
+	var mesh := _wall_mesh()
+	var cut := MeshClip.clip_box(mesh, Vector3(6.0, 4.0, 0.6), {MeshClip.key(2, 1): [Rect2(-1.0, -2.0, 2.0, 1.0)] as Array[Rect2]}, 0.06, 0.004)
+	var before := mesh.surface_get_arrays(0)
+	var after := cut.surface_get_arrays(0)
+	assert_eq((before[Mesh.ARRAY_TANGENT] as PackedFloat32Array).size() / 4, (before[Mesh.ARRAY_VERTEX] as PackedVector3Array).size(), "the source has a tangent for each vertex")
+	assert_eq((after[Mesh.ARRAY_TANGENT] as PackedFloat32Array).size() / 4, (after[Mesh.ARRAY_VERTEX] as PackedVector3Array).size(), "so does the clipped copy")
+
+
+func test_the_clip_leaves_no_zero_area_triangle() -> void:
+	## vfinal-code-07: about 107 zero-area fan triangles (collinear points on a polygon's edge) came out of the level's clips.
+	var holder := Node.new()
+	add_child_autofree(holder)
+	var level := Snapshot.instantiate(Snapshot.LEVEL, holder)
+	await get_tree().physics_frame
+	var degenerate := 0
+	var checked := 0
+	for block in _inset_blocks(level):
+		if block.body == null:
+			continue
+		for found in block.body.find_children("*", "MeshInstance3D", true, false):
+			var mesh := (found as MeshInstance3D).mesh
+			for surface in mesh.get_surface_count():
+				var arrays := mesh.surface_get_arrays(surface)
+				var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+				var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+				for t in range(0, indices.size(), 3):
+					var area := (verts[indices[t + 1]] - verts[indices[t]]).cross(verts[indices[t + 2]] - verts[indices[t]]).length() * 0.5
+					checked += 1
+					if area < MeshClip.MIN_AREA_M2:
+						degenerate += 1
+	assert_gt(checked, 1000, "the clipped meshes were read")
+	assert_eq(degenerate, 0, "no triangle of the clipped blocks has no area")
+
+
+func test_a_block_clips_a_piece_that_comes_later_in_the_tree() -> void:
+	## vfinal-code-07: a block's `_ready` ran before a later sibling piece had built its mesh, so the clip found nothing. The piece now
+	## builds on demand.
+	var holder := Node3D.new()
+	add_child_autofree(holder)
+	var block := InsetBlock.new()
+	block.size = Vector3(2.0, 2.0, 2.0)
+	block.position = Vector3(2.0, 0.0, 0.0)
+	holder.add_child(block)
+	var dressing := Node3D.new()
+	holder.add_child(dressing)
+	var piece := KitPiece.new()
+	piece.kind = &"cornice"
+	piece.size = Vector3(6.0, 0.6, 0.45)
+	dressing.add_child(piece)
+	block.yields_to = [block.get_path_to(piece)] as Array[NodePath]
+	await get_tree().physics_frame
+	assert_eq(block.clipped_rects(0, 1).size(), 3, "the three boards' end caps are cut, though the piece is the block's later sibling")
+	var early := InsetBlock.new()
+	early.size = Vector3(2.0, 2.0, 2.0)
+	early.position = Vector3(2.0, 0.0, 0.0)
+	var late := KitPiece.new()
+	late.kind = &"cornice"
+	late.size = Vector3(6.0, 0.6, 0.45)
+	var order := Node3D.new()
+	add_child_autofree(order)
+	order.add_child(early)
+	early.yields_to = [NodePath("../Late")] as Array[NodePath]
+	late.name = &"Late"
+	order.add_child(late)
+	await get_tree().physics_frame
+	assert_eq(early.unresolved_yields().size(), 0, "a sibling added later is found")
+	assert_eq(early.clipped_rects(0, 1).size(), 3, "and cut, whichever was built first")
