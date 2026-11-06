@@ -164,36 +164,105 @@ func _rolled_out(id: String) -> bool:
 	return bake is Dictionary and (bake as Dictionary).has("crease")
 
 
-## What is wrong with a roll-out test file's text, or "" when it holds (VFIX-HEAVIES, verify-code-06): at least one `func test_`, and its
-## character's `characters/<id>/pipeline.json` on a line that is code (a comment or a doc line does not count), so a comment-only or
-## an empty file that merely names the path cannot keep its character out of the shared guards.
+## What is wrong with a roll-out test file's text, or "" when it holds (VFIX-HEAVIES verify-code-06, tightened by VF2-ART vfinal-code-02): at
+## least one `func test_`, and its character's `characters/<id>/pipeline.json` READ inside a test function's body: written there, or
+## named there through a `const` that holds it (or through a helper function that does). A comment, a doc line, a trailing comment after
+## code, a constant no test uses and an empty `func test_x(): pass` next to an unused path all fail, so a character cannot stay out of
+## the shared guards without a real roll-out test.
 func _roll_out_file_problem(text: String, id: String) -> String:
-	var tests := 0
-	var uses_path := false
-	for line: String in text.split("\n"):
-		var code := line.strip_edges()
-		if code.begins_with("#"):
+	var path := "characters/%s/pipeline.json" % id
+	var consts: Array[String] = []
+	var helpers: Array[String] = []
+	var current := ""
+	var current_is_test := false
+	var current_body := ""
+	var funcs: Array[Dictionary] = []
+	for raw: String in text.split("\n"):
+		var code := _strip_comment(raw)
+		if code.strip_edges().is_empty():
 			continue
-		if code.begins_with("func test_"):
-			tests += 1
-		if code.contains("characters/%s/pipeline.json" % id):
-			uses_path = true
-	if tests == 0:
+		var indented := code.begins_with("\t") or code.begins_with(" ")
+		if not indented:
+			if current != "":
+				funcs.append({"name": current, "test": current_is_test, "body": current_body})
+				current = ""
+				current_body = ""
+			if code.begins_with("func "):
+				var head := code.trim_prefix("func ")
+				current = head.substr(0, head.find("(")).strip_edges()
+				current_is_test = current.begins_with("test_")
+				var sig_end := head.find("):")
+				if sig_end < 0:
+					sig_end = head.rfind(":")
+				else:
+					sig_end += 1
+				current_body = head.substr(sig_end + 1) if sig_end >= 0 else ""
+			elif code.begins_with("const "):
+				var decl := code.trim_prefix("const ")
+				var name := decl.substr(0, decl.find("=")).split(":")[0].strip_edges() if decl.contains("=") else ""
+				var value := decl.substr(decl.find("=") + 1) if decl.contains("=") else ""
+				if name != "" and (value.contains(path) or _names_any(value, consts)):
+					consts.append(name)
+		elif current != "":
+			current_body += "\n" + code
+	if current != "":
+		funcs.append({"name": current, "test": current_is_test, "body": current_body})
+	var test_count := 0
+	for f: Dictionary in funcs:
+		if bool(f.test):
+			test_count += 1
+		elif str(f.body).contains(path) or _names_any(str(f.body), consts):
+			helpers.append(str(f.name))
+	if test_count == 0:
 		return "no `func test_`"
-	if not uses_path:
-		return "no code line names characters/%s/pipeline.json" % id
-	return ""
+	for f: Dictionary in funcs:
+		if bool(f.test) and (str(f.body).contains(path) or _names_any(str(f.body), consts) or _names_any(str(f.body), helpers)):
+			return ""
+	return "no test function reads characters/%s/pipeline.json (directly, through a const or through a helper)" % id
 
 
-## The closure test's own twin: a file with only a comment naming the path, a file with tests that never name it, and an empty file all
-## fail it; a file with a test and the path in a constant passes.
+## `line` without its trailing comment: everything from the first `#` that is outside a string literal.
+func _strip_comment(line: String) -> String:
+	var quote := ""
+	for i: int in line.length():
+		var ch := line[i]
+		if quote != "":
+			if ch == quote and (i == 0 or line[i - 1] != "\\"):
+				quote = ""
+		elif ch == "\"" or ch == "'":
+			quote = ch
+		elif ch == "#":
+			return line.substr(0, i)
+	return line
+
+
+## True when `text` uses one of `names` as a whole identifier.
+func _names_any(text: String, names: Array[String]) -> bool:
+	for n: String in names:
+		var re := RegEx.create_from_string("(^|[^A-Za-z0-9_])%s([^A-Za-z0-9_]|$)" % n)
+		if re.search(text) != null:
+			return true
+	return false
+
+
+## The closure test's own twin: a file with only a comment naming the path, a file with tests that never name it, an empty file, a path with no
+## test, an unused constant next to an empty test, and a path in a trailing comment all fail it; a path written in a test, a constant a test
+## uses and a helper a test calls pass.
 func test_the_roll_out_closure_rejects_a_bare_string() -> void:
 	var path := "characters/thug/pipeline.json"
+	var const_line := "const P := \"res://assets/source/%s\"\n" % path
 	assert_ne(_roll_out_file_problem("extends GutTest\n## %s\n# %s\n" % [path, path], "thug"), "", "a comment-only file fails")
 	assert_ne(_roll_out_file_problem("extends GutTest\nfunc test_a() -> void:\n\tpass\n", "thug"), "", "tests that never name the path fail")
 	assert_ne(_roll_out_file_problem("", "thug"), "", "an empty file fails")
-	assert_ne(_roll_out_file_problem("extends GutTest\nconst P := \"res://assets/source/%s\"\n" % path, "thug"), "", "a path with no test fails")
-	assert_eq(_roll_out_file_problem("extends GutTest\nconst P := \"res://assets/source/%s\"\nfunc test_a() -> void:\n\tpass\n" % path, "thug"), "", "a test and the path in code pass")
+	assert_ne(_roll_out_file_problem("extends GutTest\n" + const_line, "thug"), "", "a path with no test fails")
+	# vfinal-code-02: the two files the old check passed
+	assert_ne(_roll_out_file_problem("extends GutTest\n" + const_line + "func test_a() -> void:\n\tpass\n", "thug"), "", "an unused constant beside an empty test fails")
+	assert_ne(_roll_out_file_problem("extends GutTest\nfunc test_a() -> void:\n\tpass # %s\n" % path, "thug"), "", "a path in a trailing comment fails")
+	assert_ne(_roll_out_file_problem("extends GutTest\n" + const_line + "func test_x(): pass\n", "thug"), "", "a one-line empty test fails")
+	assert_ne(_roll_out_file_problem("extends GutTest\n" + const_line + "func _helper() -> void:\n\tvar x := P\nfunc test_a() -> void:\n\tpass\n", "thug"), "", "a helper no test calls fails")
+	assert_eq(_roll_out_file_problem("extends GutTest\n" + const_line + "func test_a() -> void:\n\tvar cfg := FileAccess.get_file_as_string(P)\n", "thug"), "", "a constant a test uses passes")
+	assert_eq(_roll_out_file_problem("extends GutTest\nfunc test_a() -> void:\n\tload(\"res://assets/source/%s\")\n" % path, "thug"), "", "a path written in a test passes")
+	assert_eq(_roll_out_file_problem("extends GutTest\n" + const_line + "func _cfg() -> String:\n\treturn FileAccess.get_file_as_string(P)\nfunc test_a() -> void:\n\tvar c := _cfg()\n", "thug"), "", "a helper a test calls passes")
 
 
 ## Every roll-out test reads its own character's `pipeline.json` (the file names it), and that config holds the recipe's crease. The
