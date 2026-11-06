@@ -4,6 +4,30 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-05 21:00 CST: the playtest fixes done and checked (2076/2076); PR #6 updated; DM sent; waiting on Game-boy
+- **vf2check** (run `wf_5f19da37-ce1`; `docs/reviews/M6/findings-vf2check.json`) found no medium or high on dc3ba85:
+  - the depth bound holds (a rear smash at 0.316 of the height, against 0.599);
+  - trim wins as at 82bab12;
+  - no missing or doubled Dressing piece;
+  - the rooms are identical;
+  - the Kicker's brow and Ox's jaw are fixed, and they bleed and bruise right;
+  - no regressions.
+- **Its lows, fixed inline in 43ecebc:**
+  - the floored rear comb stays jagged;
+  - the closure test blanks strings and follows helpers;
+  - `apply_yields.py` puts its ext_resource back;
+  - Ox's mask row;
+  - typed loops.
+- **Left:** the Kicker's brim-underside bar (the fixer's call); a MeshClip edge case no scene hits (a rectangle that starts exactly at a plinth top).
+- **Suite:** 2076/2076 in 416 s.
+- **PR #6's body:** a new "After Game-boy's playtest" section; the suite and frame-time lines updated.
+- **DM sent** with four stills (scratchpad `dm/*.jpg`: the enemies' faces and bodies, played against now; the ground, played against now; the hurt cue), the run command and what to try. It says plainly that the enemy detail is a config pass on the existing models, and offers new Tripo models or textures (355 credits left) if he wants more.
+- **Open questions for him:**
+  1. The near arm: keep it or turn it off.
+  2. The frame time: accept it or pick a lever.
+  3. The Kicker's shade band, or drawn eyes.
+- **Next:** wait for his word. Merge PR #6 only on his sign-off. If he wants more detail, plan a Tripo pass per character, within the 355 credits left.
+
 ### 2026-11-05 20:05 CST: VF2 merged (2076/2076); the lean vf2check round running; DM stills ready
 - **Merged** `m6/vf2-feel` (83ed0f3), `m6/vf2-world` (09b1905) and `m6/vf2-art` (78cf42b) into `m6/full-art-audio` at dc3ba85, with no conflicts. The preset needed no change, and every `--check` says YES.
 - **Suite:** 2076/2076 in 415 s, with no errors.
