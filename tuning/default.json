@@ -149,7 +149,7 @@
 			0.949999988079071
 		],
 		"hurt_overlay_bottom_ink_gain": 1.5,
-		"hurt_overlay_bottom_stroke_gain": 1.4,
+		"hurt_overlay_bottom_stroke_floor": 0.2,
 		"vfx_scale": 1.0,
 		"vfx_max_view_share": 0.25,
 		"vfx_min_view_share": 0.04,

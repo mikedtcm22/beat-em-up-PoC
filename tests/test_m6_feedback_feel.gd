@@ -307,8 +307,16 @@ func test_a_clean_hit_from_behind_is_inked_heavier_than_the_same_blow_on_another
 	behind.on_player_hit(_hit(enemy, player, CombatTypes.HitTier.LIGHT, Vector3.BACK, 6.0), Transform3D.IDENTITY)
 	var left := _overlay()
 	left.on_player_hit(_hit(enemy, player, CombatTypes.HitTier.LIGHT, Vector3.LEFT, 6.0), Transform3D.IDENTITY)
-	assert_almost_eq(behind.edge_strength(HurtOverlay.Edge.BOTTOM), left.edge_strength(HurtOverlay.Edge.LEFT) * gain, 0.0001,
-			"the same blow, the bottom edge inked by the gain")
+	# VF2-FEEL: the stored edge is the same as any struck edge's (it stays at 1 or below); the gain is the drawn
+	# strength's, on the struck share only (was: edge_strength(BOTTOM) == the left's x gain).
+	assert_almost_eq(behind.edge_strength(HurtOverlay.Edge.BOTTOM), left.edge_strength(HurtOverlay.Edge.LEFT), 0.0001,
+			"the stored edge is the same as the struck edge of any blow")
+	var even := Tuning.data.hurt_overlay_even_share
+	var struck := left.edge_strength(HurtOverlay.Edge.LEFT) - even * HurtOverlay.strength_for(6.0)
+	assert_almost_eq(behind.drawn_strength(HurtOverlay.Edge.BOTTOM),
+			left.drawn_strength(HurtOverlay.Edge.LEFT) + struck * (gain - 1.0), 0.0001,
+			"the same blow, the bottom edge drawn heavier by the gain on the struck share")
+	assert_gt(behind.drawn_strength(HurtOverlay.Edge.BOTTOM), left.drawn_strength(HurtOverlay.Edge.LEFT), "heavier on screen")
 	assert_almost_eq(behind.stroke_strength(HurtOverlay.Edge.BOTTOM), left.stroke_strength(HurtOverlay.Edge.LEFT), 0.0001,
 			"the strokes' strength is the same (their length is the gain's, in the draw)")
 	# A block stays as faint as M6: no gain, no strokes.
@@ -318,7 +326,113 @@ func test_a_clean_hit_from_behind_is_inked_heavier_than_the_same_blow_on_another
 	guarded.on_player_hit(blocked, Transform3D.IDENTITY)
 	assert_almost_eq(guarded.edge_strength(HurtOverlay.Edge.BOTTOM),
 			HurtOverlay.strength_for(6.0) * Tuning.data.hurt_overlay_blocked_scale, 0.0001, "a block's bottom edge is not boosted")
+	assert_almost_eq(guarded.drawn_strength(HurtOverlay.Edge.BOTTOM), guarded.edge_strength(HurtOverlay.Edge.BOTTOM), 0.0001,
+			"nor drawn heavier")
 	assert_almost_eq(guarded.stroke_strength(HurtOverlay.Edge.BOTTOM), 0.0, 0.0001, "no strokes on a block")
+
+
+func test_the_gain_is_on_the_struck_share_only() -> void:
+	var player := _player()
+	var enemy := _enemy()
+	# A blow from the front or a side has no struck share on the bottom edge: it is inked as any unstruck edge.
+	for from: Vector3 in [Vector3.FORWARD, Vector3.LEFT, Vector3.RIGHT]:
+		var overlay := _overlay()
+		overlay.on_player_hit(_hit(enemy, player, CombatTypes.HitTier.HEAVY, from, 15.0), Transform3D.IDENTITY)
+		assert_almost_eq(overlay.drawn_strength(HurtOverlay.Edge.BOTTOM), overlay.edge_strength(HurtOverlay.Edge.TOP), 0.0001,
+				"the bottom is no heavier than the top on a blow from %s" % str(from))
+	# Behind, the more behind the heavier: a blow a little off dead behind is inked less than one dead behind.
+	var dead := _overlay()
+	dead.on_player_hit(_hit(enemy, player, CombatTypes.HitTier.HEAVY, Vector3.BACK, 15.0), Transform3D.IDENTITY)
+	var slant := _overlay()
+	slant.on_player_hit(_hit(enemy, player, CombatTypes.HitTier.HEAVY, Vector3(0.7, 0.0, 0.7).normalized(), 15.0), Transform3D.IDENTITY)
+	assert_gt(dead.drawn_strength(HurtOverlay.Edge.BOTTOM), slant.drawn_strength(HurtOverlay.Edge.BOTTOM))
+
+
+func test_the_extra_ink_fades_with_the_edges() -> void:
+	var player := _player()
+	var overlay := _overlay()
+	overlay.on_player_hit(_hit(_enemy(), player, CombatTypes.HitTier.HEAVY, Vector3.BACK, 20.0), Transform3D.IDENTITY)
+	overlay.advance(Tuning.data.hurt_overlay_fade_s * 2.0)
+	assert_false(overlay.is_live(), "the extra ink is gone with the rest")
+	assert_almost_eq(overlay.drawn_strength(HurtOverlay.Edge.BOTTOM), 0.0, 0.0001)
+
+
+## VF2-FEEL (vfinal-world-01, -code-01): the depth was multiplied by the share of the strongest edge, and the
+## bottom edge's gain put that share at up to 1.5, so every clean heavy blow from behind deepened the vignette
+## (0.32, 0.48, 0.72, 1.08 ...) and nothing lowered it. Edge strengths and the depth stay bounded.
+func _assert_bounded_after(hits: Array[Dictionary], gap_s: float, what: String) -> void:
+	var player := _player()
+	var enemy := _enemy()
+	var overlay := _overlay()
+	var limit := Tuning.data.hurt_overlay_depth_max
+	for part: Dictionary in hits:
+		overlay.on_player_hit(_hit(enemy, player, CombatTypes.HitTier.HEAVY, part.from, part.damage), Transform3D.IDENTITY)
+		assert_lte(overlay.depth_share(), limit + 0.0001, "%s: the depth stays within depth_max" % what)
+		for edge: int in 4:
+			assert_lte(overlay.edge_strength(edge), 1.0 + 0.0001, "%s: a stored edge stays at 1 or below" % what)
+		overlay.advance(gap_s)
+
+
+func test_full_damage_hits_from_behind_leave_the_depth_within_its_maximum() -> void:
+	var hits: Array[Dictionary] = []
+	for i: int in 8:
+		hits.append({from = Vector3.BACK, damage = 20.0})
+	_assert_bounded_after(hits, 2.0, "20 damage, 2 s apart")
+	_assert_bounded_after(hits, 0.25, "20 damage, 0.25 s apart")
+	_assert_bounded_after(hits, 0.0, "20 damage, at once")
+
+
+func test_three_thug_pipe_hits_from_behind_leave_the_depth_within_its_maximum() -> void:
+	var pipe := (load("res://game/combat/moves/thug_pipe_1.tres") as MoveData).damage
+	var hits: Array[Dictionary] = []
+	for i: int in 3:
+		hits.append({from = Vector3.BACK, damage = pipe})
+	_assert_bounded_after(hits, 0.4, "the pipe, 0.4 s apart")
+
+
+func test_a_burst_from_behind_and_the_sides_leaves_the_depth_within_its_maximum() -> void:
+	var hits: Array[Dictionary] = []
+	for i: int in 4:
+		hits.append({from = Vector3.BACK, damage = 15.0})
+		hits.append({from = Vector3.LEFT, damage = 15.0})
+		hits.append({from = Vector3(0.5, 0.0, 1.0).normalized(), damage = 20.0})
+	_assert_bounded_after(hits, 0.0, "a burst")
+
+
+func test_a_heavy_blow_from_behind_is_as_deep_as_a_heavy_blow_from_the_front() -> void:
+	var player := _player()
+	var enemy := _enemy()
+	var front := _overlay()
+	front.on_player_hit(_hit(enemy, player, CombatTypes.HitTier.HEAVY, Vector3.FORWARD, 20.0), Transform3D.IDENTITY)
+	var behind := _overlay()
+	for i: int in 3:
+		behind.on_player_hit(_hit(enemy, player, CombatTypes.HitTier.HEAVY, Vector3.BACK, 20.0), Transform3D.IDENTITY)
+	assert_almost_eq(behind.depth_share(), front.depth_share(), 0.0001)
+
+
+func test_the_bottom_strokes_have_a_floor_and_a_heavy_blows_are_no_longer_than_any_edges() -> void:
+	var data := Tuning.data
+	assert_gt(data.hurt_overlay_bottom_stroke_floor, 0.0, "a light jab's teeth clear the health panel")
+	# The longest a tooth gets on any edge: the depth x the stroke's longest share, at full strength.
+	var longest := data.hurt_overlay_depth_max * (data.hurt_overlay_stroke_len_min + data.hurt_overlay_stroke_len_range)
+	assert_gt(longest, data.hurt_overlay_bottom_stroke_floor, "the floor is not what a heavy blow's teeth are")
+	var overlay := _overlay()
+	overlay.size = Vector2(1600.0, 900.0)
+	overlay.on_player_hit(_hit(_enemy(), _player(), CombatTypes.HitTier.LIGHT, Vector3.BACK, 3.0), Transform3D.IDENTITY)
+	var lengths := overlay.stroke_lengths_px(HurtOverlay.Edge.BOTTOM)
+	assert_eq(lengths.size(), data.hurt_overlay_strokes)
+	for length: float in lengths:
+		assert_gte(length, data.hurt_overlay_bottom_stroke_floor * 900.0 - 0.01, "a light jab's bottom teeth clear the panel")
+	var heavy := _overlay()
+	heavy.size = Vector2(1600.0, 900.0)
+	heavy.on_player_hit(_hit(_enemy(), _player(), CombatTypes.HitTier.HEAVY, Vector3.BACK, 20.0), Transform3D.IDENTITY)
+	var front := _overlay()
+	front.size = Vector2(1600.0, 900.0)
+	front.on_player_hit(_hit(_enemy(), _player(), CombatTypes.HitTier.HEAVY, Vector3.FORWARD, 20.0), Transform3D.IDENTITY)
+	var rear_max: float = heavy.stroke_lengths_px(HurtOverlay.Edge.BOTTOM).max()
+	assert_lte(rear_max, longest * 900.0 + 0.01, "no tooth of a heavy rear blow passes the longest of any edge")
+	assert_lte(rear_max, maxf(front.stroke_lengths_px(HurtOverlay.Edge.TOP).max(), 0.0) + data.hurt_overlay_bottom_stroke_floor * 900.0,
+			"no further than a heavy front blow's reach plus the lift")
 
 
 func test_the_strokes_have_an_ink_rim_that_is_ink_not_red() -> void:
@@ -327,8 +441,8 @@ func test_the_strokes_have_an_ink_rim_that_is_ink_not_red() -> void:
 	var rim := data.hurt_overlay_outline_color
 	assert_lt(maxf(rim.r, maxf(rim.g, rim.b)), 0.2, "dark ink")
 	assert_gt(rim.a, 0.8, "opaque enough to read on any ground")
-	assert_eq([data.hurt_overlay_outline_width, data.hurt_overlay_bottom_ink_gain, data.hurt_overlay_bottom_stroke_gain],
-			[0.007, 1.5, 1.4], "the shipped look")
+	assert_eq([data.hurt_overlay_outline_width, data.hurt_overlay_bottom_ink_gain, data.hurt_overlay_bottom_stroke_floor],
+			[0.007, 1.5, 0.2], "the shipped look")
 
 
 func test_the_overlay_fades_out_and_a_block_is_lighter() -> void:
