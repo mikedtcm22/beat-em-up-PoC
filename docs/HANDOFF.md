@@ -4,6 +4,25 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-05 18:15 CST: suite 2055/2055; the lead's look done; the vfinal review and a perf check running
+- **Suite** on 3e7084e with `ART_PUNK_VARIANT_STRAIN=1`: 2055/2055 in 422 s, with no SCRIPT, SHADER or other ERROR lines.
+- **Recordings** in `captures/m6-verify-final/`: r_kicker, r_bruiser, r_boss, dk, dj, dox, lineup, heavies, damage, hurt, passive_six, rooms, tour and drift, all with 0 errors. Also `captures/m6-feedback-verify/rooms`, newly recorded on d582d21 in `.worktrees/m6-review-verify-world` after a re-import, because its class cache was stale.
+- **The lead's look:**
+  - the five seam sites match 82bab12;
+  - looking down is right (behind lights the bottom, left the left, front the top);
+  - rear-hit strokes are taller and rimmed, so plainer, though still cream on pale ground;
+  - the rooms are unchanged from d582d21 apart from a couple of one-pixel edge shifts on far buildings.
+- **Running:**
+  - **The vfinal review:** review.js run `wf_aace1d51-bb3` (task `w4n08vbi8`) with `docs/reviews/M6/args-review-vfinal.json`. Lenses: chars (Opus), world (Opus), code (Sonnet); partition false. Worktrees are `.worktrees/m6-review-vfinal-*`. If cut off, resume with `resumeFromRunId`.
+  - **Perf:** `tools/perf_compare.sh --force --vsync on --runs 4` with the level bot, comparing d582d21 and 3e7084e, into `captures/m6-verify-final/perf/`. It runs alongside the review, so the load is noisy. If it shows a regression of more than 3%, rerun it on a quiet machine.
+  - GitHub's LFS lock endpoint gave a 500 and pushes failed for about 10 minutes, then recovered.
+- **Next:**
+  1. Read the survivors.
+  2. Fix inline or with a small pass.
+  3. README (the suite count), CLAUDE.md (the test line), PR #6's body.
+  4. The DM.
+  5. Merge only on his word.
+
 ### 2026-11-05 17:45 CST: the verification fix pass merged; the suite and the lead's look running
 - **Merged** into `m6/full-art-audio`, with no conflicts: `m6/vfix-feel` (d94b9dd), `m6/vfix-world` (7c0f7db), `m6/vfix-kicker` (18e72d9) and `m6/vfix-heavies` (3ae9709). Then the preset was regenerated with the two kit tunables (3e7084e).
   - Every `--check` passes (bruiser, boss, kicker, thug, punk, dummy, player; the palette; the trim).
