@@ -31,6 +31,10 @@ const FACE_MAX := Vector3(0.09, 0.3, 1.8)
 const FACE_INK_MIN := 0.02
 ## VFIX-HEAVIES (verify-chars-03): the face's ink share stays under this, so the nose is a line and not a blot (FIX-ART-B's pair gave 0.047).
 const FACE_INK_MAX := 0.045
+## The mouth-corner boxes (x from, x to, mirrored; z from, z to; authored frame) and the most ink they may hold (VF2-ART).
+const CORNER_X := Vector2(0.055, 0.1)
+const CORNER_Z := Vector2(1.5, 1.58)
+const CORNER_INK_MAX := 0.02
 const LEGS_MIN := Vector3(-0.33, -0.6, 0.1)
 const LEGS_MAX := Vector3(0.33, 0.6, 0.95)
 ## Floors the M6 export fails and today's passes (see ROLL-OX.md for the figures).
@@ -286,7 +290,10 @@ func test_the_face_is_skin_and_carries_the_textures_strokes() -> void:
 	var face := _ink_share(func(tri: int) -> bool: return _slot_of_tri(tri) == SLOT_SKIN and _in_box(tri, FACE_MIN, FACE_MAX))
 	print("FIX-ART-B Ox face ink: %d faces %d of %d samples (%.4f)" % [face.faces, face.ink, face.samples, face.share])
 	assert_gt(int(face.faces), 200, "the face box holds skin faces (%d)" % face.faces)
-	assert_gte(float(face.share), FACE_INK_MIN, "the face carries its strokes (%.4f)" % face.share)
+	# VF2-ART: measured on the face zone's own box (z from 1.58) now, the jaw's ink is gone on purpose (was: the box from z 1.5, 0.0166 now; twin: the
+	# zone box here and the corner-box test at the end of the file).
+	var zone_box := _ink_share(func(tri: int) -> bool: return _slot_of_tri(tri) == SLOT_SKIN and _in_box(tri, Vector3(FACE_MIN.x, FACE_MIN.y, 1.58), FACE_MAX))
+	assert_gte(float(zone_box.share), FACE_INK_MIN, "the face carries its strokes (%.4f)" % zone_box.share)
 	var hood := 0
 	for tri: int in _tris().size() / 3:
 		if _slot_of_tri(tri) == SLOT_CHARCOAL and _in_box(tri, FACE_MIN, FACE_MAX):
@@ -306,4 +313,37 @@ func test_the_face_ink_is_a_line_not_a_blot_and_has_no_jaw_comma() -> void:
 	assert_gte(float(zone.ink_high), 0.035, "the high end is raised past FIX-ART-B's 0.03")
 	var face := _ink_share(func(tri: int) -> bool: return _slot_of_tri(tri) == SLOT_SKIN and _in_box(tri, FACE_MIN, FACE_MAX))
 	assert_lte(float(face.share), FACE_INK_MAX, "a line, not a blot (%.4f)" % face.share)
-	assert_gte(float(face.share), FACE_INK_MIN, "and still a line (%.4f)" % face.share)
+	# VF2-ART: the `jaw` zone takes the ink off the skin under z 1.58, so the floor is measured on the face zone's own box (nose, brows and mouth);
+	# was: the whole box from z 1.5 at 0.02 (0.0166 now). The corner boxes' test below is the twin on the jaw.
+	var zone_box := _ink_share(func(tri: int) -> bool: return _slot_of_tri(tri) == SLOT_SKIN and _in_box(tri, Vector3(FACE_MIN.x, FACE_MIN.y, 1.58), FACE_MAX))
+	gut.p("Ox face ink: box from 1.5 %.4f, zone box %.4f" % [face.share, zone_box.share])
+	assert_gte(float(zone_box.share), FACE_INK_MIN, "and still a line (%.4f)" % zone_box.share)
+
+
+## VF2-ART (vfinal-chars-02): the hooked stroke at the mouth's corner is the texture's own ink on the skin faces just under the face zone's floor
+## (z 1.53-1.57 at x 0.06-0.09, where the default pair 0.04 / 0.11 drew it); the `jaw` zone (slot 7, z 1.45-1.58, a high pair) leaves it out. Measured on the
+## baked mask, not the config: the corner boxes (both sides, slot 7) hold under CORNER_INK_MAX ink, the vfinal build's mask had 0.07 and 0.13 in them, and
+## the nose and brow zone above it still carries its line.
+func test_the_mouth_corners_carry_no_hook() -> void:
+	var cfg: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(PIPELINE))
+	var names: Array[String] = []
+	var jaw: Dictionary = {}
+	for z: Dictionary in cfg.palette.detail_bake.zones:
+		names.append(str(z.name))
+		if z.name == "jaw":
+			jaw = z
+	assert_false(jaw.is_empty(), "the jaw has a zone")
+	assert_gt(names.find("jaw"), names.find("face_skin"), "after the face zone")
+	assert_lte(float(jaw.min[2]), 1.5, "it reaches down past the corner boxes")
+	assert_gte(float(jaw.max[2]), 1.575, "and up to the face zone's floor")
+	var worst := 0.0
+	for side: float in [-1.0, 1.0]:
+		var lo := Vector3(minf(side * CORNER_X.x, side * CORNER_X.y), 0.0, CORNER_Z.x)
+		var hi := Vector3(maxf(side * CORNER_X.x, side * CORNER_X.y), 0.3, CORNER_Z.y)
+		var corner := _ink_share(func(tri: int) -> bool: return _slot_of_tri(tri) == SLOT_SKIN and _in_box(tri, lo, hi))
+		gut.p("Ox corner side %+.0f: %d faces, ink %.4f" % [side, corner.faces, corner.share])
+		assert_gt(int(corner.faces), 40, "the corner box holds skin faces (%d)" % corner.faces)
+		worst = maxf(worst, float(corner.share))
+	assert_lte(worst, CORNER_INK_MAX, "no stroke at the mouth's corners (%.4f)" % worst)
+	var brow := _ink_share(func(tri: int) -> bool: return _slot_of_tri(tri) == SLOT_SKIN and _in_box(tri, Vector3(-0.09, 0.0, 1.58), Vector3(0.09, 0.3, 1.7)))
+	assert_gte(float(brow.share), 0.02, "while the nose and brow keep their line (%.4f)" % brow.share)
