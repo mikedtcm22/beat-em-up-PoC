@@ -17,8 +17,9 @@ extends LevelBlock
 ## smaller); a block never yields to one that yields to it. tests/m6_coplanar_scan.gd holds the whole level to no two drawn faces
 ## in one plane, to no hole where a face was taken out, and to no step.
 
-## The blocks (or pieces) whose faces win a shared plane against this block's, as paths from this node. One that is not in the
-## tree (a section built alone, a path across sections to one built later) is skipped.
+## The blocks (or pieces) whose faces win a shared plane against this block's, as paths from this node. A path across sections
+## (it climbs out of this block's section) that is not in the tree (a section built alone, one built later) is skipped; any other
+## that does not resolve is a renamed or deleted node, which brings the z-fight back, and warns.
 @export var yields_to: Array[NodePath] = []:
 	set(value):
 		yields_to = value
@@ -45,6 +46,8 @@ func _make_mesh(material: Material) -> MeshInstance3D:
 	var mesh := RoomKit.box_mesh(size, material, _overlay(art), art)
 	if not RoomKit.kit_art(art) or not (mesh.mesh is ArrayMesh):
 		return mesh
+	for path in unresolved_yields():
+		push_warning("InsetBlock '%s': yields_to '%s' is not a node, so the faces it shares with that block fight again" % [get_path(), path])
 	var clips := _clips()
 	if clips.is_empty():
 		return mesh
@@ -65,6 +68,7 @@ func _clips() -> Dictionary:
 		var partner := get_node_or_null(path) as Node3D
 		if partner == null:
 			continue
+		_ensure_built(partner)
 		var found := MeshClip.overlaps(mine, _box_of(partner, inverse), Tuning.data.kit_coplanar_m)
 		for face_key: String in found:
 			var rects: Array[Rect2] = [found[face_key]]
@@ -75,6 +79,41 @@ func _clips() -> Dictionary:
 				out[face_key] = [] as Array[Rect2]
 			(out[face_key] as Array[Rect2]).append_array(rects)
 	return out
+
+
+## The `yields_to` paths that do not resolve and do not cross sections: a renamed or deleted partner (tests/test_m6_feedback_ground.gd
+## lists them for the whole level).
+func unresolved_yields() -> Array[NodePath]:
+	var out: Array[NodePath] = []
+	if not is_inside_tree():
+		return out
+	for path in yields_to:
+		if get_node_or_null(path) == null and not _crosses_sections(path):
+			out.append(path)
+	return out
+
+
+## Whether `path` climbs out of this block's section (more ".." than the steps up to the `LevelSection`), so that a section built
+## alone cannot resolve it.
+func _crosses_sections(path: NodePath) -> bool:
+	var climbs := 0
+	for i in path.get_name_count():
+		if path.get_name(i) != &"..":
+			break
+		climbs += 1
+	var depth := 0
+	var up: Node = self
+	while up.get_parent() != null and not up is LevelSection:
+		up = up.get_parent()
+		depth += 1
+	return climbs > depth
+
+
+## A kit piece builds its mesh on demand, so the cut does not depend on whether its `_ready` has run yet.
+func _ensure_built(partner: Node) -> void:
+	var piece := partner as KitPiece
+	if piece != null:
+		piece.ensure_mesh()
 
 
 ## The parts of `overlap` (this block's `face_key` plane) that a kit piece's own faces cover: a piece is not a box (a cornice is

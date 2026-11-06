@@ -231,230 +231,220 @@ look = &"accent"
 solid = false
 
 [node name="RailFirstBar0" type="Node3D" parent="Geometry/Terrace"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+yields_to = Array[NodePath]([NodePath("../RailFirstPostA0"), NodePath("../RailFirstPostB0")])
 position = Vector3(-7.9, 0.95, -12.8)
 size = Vector3(0.1, 0.1, 1.8)
 look = &"fence"
 solid = false
 
 [node name="RailFirstPostA0" type="Node3D" parent="Geometry/Terrace"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailFirstBar0")])
+script = ExtResource("2_block")
 position = Vector3(-7.9, 0.5, -13.64)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
 solid = false
 
 [node name="RailFirstPostB0" type="Node3D" parent="Geometry/Terrace"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailFirstBar0")])
+script = ExtResource("2_block")
 position = Vector3(-7.9, 0.5, -11.96)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
 solid = false
 
 [node name="RailFirstBar1" type="Node3D" parent="Geometry/Terrace"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+yields_to = Array[NodePath]([NodePath("../RailFirstPostA1"), NodePath("../RailFirstPostB1")])
 position = Vector3(-7.9, 0.95, -10.2)
 size = Vector3(0.1, 0.1, 1.8)
 look = &"fence"
 solid = false
 
 [node name="RailFirstPostA1" type="Node3D" parent="Geometry/Terrace"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailFirstBar1")])
+script = ExtResource("2_block")
 position = Vector3(-7.9, 0.5, -11.04)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
 solid = false
 
 [node name="RailFirstPostB1" type="Node3D" parent="Geometry/Terrace"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailFirstBar1")])
+script = ExtResource("2_block")
 position = Vector3(-7.9, 0.5, -9.36)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
 solid = false
 
 [node name="RailFirstBar2" type="Node3D" parent="Geometry/Terrace"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+yields_to = Array[NodePath]([NodePath("../RailFirstPostA2"), NodePath("../RailFirstPostB2")])
 position = Vector3(-7.9, 0.95, -7.6)
 size = Vector3(0.1, 0.1, 1.8)
 look = &"fence"
 solid = false
 
 [node name="RailFirstPostA2" type="Node3D" parent="Geometry/Terrace"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailFirstBar2")])
+script = ExtResource("2_block")
 position = Vector3(-7.9, 0.5, -8.44)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
 solid = false
 
 [node name="RailFirstPostB2" type="Node3D" parent="Geometry/Terrace"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailFirstBar2")])
+script = ExtResource("2_block")
 position = Vector3(-7.9, 0.5, -6.76)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
 solid = false
 
 [node name="RailFirstBar3" type="Node3D" parent="Geometry/Terrace"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+yields_to = Array[NodePath]([NodePath("../RailFirstPostA3"), NodePath("../RailFirstPostB3")])
 position = Vector3(-7.9, 0.95, -5)
 size = Vector3(0.1, 0.1, 1.8)
 look = &"fence"
 solid = false
 
 [node name="RailFirstPostA3" type="Node3D" parent="Geometry/Terrace"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailFirstBar3")])
+script = ExtResource("2_block")
 position = Vector3(-7.9, 0.5, -5.84)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
 solid = false
 
 [node name="RailFirstPostB3" type="Node3D" parent="Geometry/Terrace"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailFirstBar3")])
+script = ExtResource("2_block")
 position = Vector3(-7.9, 0.5, -4.16)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
 solid = false
 
 [node name="RailFirstBar4" type="Node3D" parent="Geometry/Terrace"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+yields_to = Array[NodePath]([NodePath("../RailFirstPostA4"), NodePath("../RailFirstPostB4")])
 position = Vector3(-7.9, 0.95, -2.4)
 size = Vector3(0.1, 0.1, 1.8)
 look = &"fence"
 solid = false
 
 [node name="RailFirstPostA4" type="Node3D" parent="Geometry/Terrace"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailFirstBar4")])
+script = ExtResource("2_block")
 position = Vector3(-7.9, 0.5, -3.24)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
 solid = false
 
 [node name="RailFirstPostB4" type="Node3D" parent="Geometry/Terrace"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailFirstBar4")])
+script = ExtResource("2_block")
 position = Vector3(-7.9, 0.5, -1.56)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
 solid = false
 
 [node name="RailSecondBar0" type="Node3D" parent="Geometry/Terrace"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+yields_to = Array[NodePath]([NodePath("../RailSecondPostA0"), NodePath("../RailSecondPostB0")])
 position = Vector3(-7.9, 1.95, -26.8)
 size = Vector3(0.1, 0.1, 1.8)
 look = &"fence"
 solid = false
 
 [node name="RailSecondPostA0" type="Node3D" parent="Geometry/Terrace"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailSecondBar0")])
+script = ExtResource("2_block")
 position = Vector3(-7.9, 1.5, -27.64)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
 solid = false
 
 [node name="RailSecondPostB0" type="Node3D" parent="Geometry/Terrace"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailSecondBar0")])
+script = ExtResource("2_block")
 position = Vector3(-7.9, 1.5, -25.96)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
 solid = false
 
 [node name="RailSecondBar1" type="Node3D" parent="Geometry/Terrace"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+yields_to = Array[NodePath]([NodePath("../RailSecondPostA1"), NodePath("../RailSecondPostB1")])
 position = Vector3(-7.9, 1.95, -24.2)
 size = Vector3(0.1, 0.1, 1.8)
 look = &"fence"
 solid = false
 
 [node name="RailSecondPostA1" type="Node3D" parent="Geometry/Terrace"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailSecondBar1")])
+script = ExtResource("2_block")
 position = Vector3(-7.9, 1.5, -25.04)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
 solid = false
 
 [node name="RailSecondPostB1" type="Node3D" parent="Geometry/Terrace"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailSecondBar1")])
+script = ExtResource("2_block")
 position = Vector3(-7.9, 1.5, -23.36)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
 solid = false
 
 [node name="RailSecondBar2" type="Node3D" parent="Geometry/Terrace"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+yields_to = Array[NodePath]([NodePath("../RailSecondPostA2"), NodePath("../RailSecondPostB2")])
 position = Vector3(-7.9, 1.95, -21.6)
 size = Vector3(0.1, 0.1, 1.8)
 look = &"fence"
 solid = false
 
 [node name="RailSecondPostA2" type="Node3D" parent="Geometry/Terrace"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailSecondBar2")])
+script = ExtResource("2_block")
 position = Vector3(-7.9, 1.5, -22.44)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
 solid = false
 
 [node name="RailSecondPostB2" type="Node3D" parent="Geometry/Terrace"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailSecondBar2")])
+script = ExtResource("2_block")
 position = Vector3(-7.9, 1.5, -20.76)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
 solid = false
 
 [node name="RailSecondBar3" type="Node3D" parent="Geometry/Terrace"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+yields_to = Array[NodePath]([NodePath("../RailSecondPostA3"), NodePath("../RailSecondPostB3")])
 position = Vector3(-7.9, 1.95, -19)
 size = Vector3(0.1, 0.1, 1.8)
 look = &"fence"
 solid = false
 
 [node name="RailSecondPostA3" type="Node3D" parent="Geometry/Terrace"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailSecondBar3")])
+script = ExtResource("2_block")
 position = Vector3(-7.9, 1.5, -19.84)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
 solid = false
 
 [node name="RailSecondPostB3" type="Node3D" parent="Geometry/Terrace"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailSecondBar3")])
+script = ExtResource("2_block")
 position = Vector3(-7.9, 1.5, -18.16)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
 solid = false
 
 [node name="RailSecondBar4" type="Node3D" parent="Geometry/Terrace"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+yields_to = Array[NodePath]([NodePath("../RailSecondPostA4"), NodePath("../RailSecondPostB4")])
 position = Vector3(-7.9, 1.95, -16.4)
 size = Vector3(0.1, 0.1, 1.8)
 look = &"fence"
 solid = false
 
 [node name="RailSecondPostA4" type="Node3D" parent="Geometry/Terrace"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailSecondBar4")])
+script = ExtResource("2_block")
 position = Vector3(-7.9, 1.5, -17.24)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
 solid = false
 
 [node name="RailSecondPostB4" type="Node3D" parent="Geometry/Terrace"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailSecondBar4")])
+script = ExtResource("2_block")
 position = Vector3(-7.9, 1.5, -15.56)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
@@ -558,138 +548,132 @@ look = &"accent"
 solid = false
 
 [node name="RailCatwalkBar0" type="Node3D" parent="Geometry/Catwalk"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+yields_to = Array[NodePath]([NodePath("../RailCatwalkPostA0"), NodePath("../RailCatwalkPostB0")])
 position = Vector3(2.15, 5.45, -23.8)
 size = Vector3(0.1, 0.1, 1.8)
 look = &"fence"
 solid = false
 
 [node name="RailCatwalkPostA0" type="Node3D" parent="Geometry/Catwalk"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailCatwalkBar0")])
+script = ExtResource("2_block")
 position = Vector3(2.15, 5, -24.64)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
 solid = false
 
 [node name="RailCatwalkPostB0" type="Node3D" parent="Geometry/Catwalk"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailCatwalkBar0")])
+script = ExtResource("2_block")
 position = Vector3(2.15, 5, -22.96)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
 solid = false
 
 [node name="RailCatwalkBar1" type="Node3D" parent="Geometry/Catwalk"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+yields_to = Array[NodePath]([NodePath("../RailCatwalkPostA1"), NodePath("../RailCatwalkPostB1")])
 position = Vector3(2.15, 5.45, -21.2)
 size = Vector3(0.1, 0.1, 1.8)
 look = &"fence"
 solid = false
 
 [node name="RailCatwalkPostA1" type="Node3D" parent="Geometry/Catwalk"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailCatwalkBar1")])
+script = ExtResource("2_block")
 position = Vector3(2.15, 5, -22.04)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
 solid = false
 
 [node name="RailCatwalkPostB1" type="Node3D" parent="Geometry/Catwalk"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailCatwalkBar1")])
+script = ExtResource("2_block")
 position = Vector3(2.15, 5, -20.36)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
 solid = false
 
 [node name="RailCatwalkBar2" type="Node3D" parent="Geometry/Catwalk"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+yields_to = Array[NodePath]([NodePath("../RailCatwalkPostA2"), NodePath("../RailCatwalkPostB2")])
 position = Vector3(2.15, 5.45, -18.6)
 size = Vector3(0.1, 0.1, 1.8)
 look = &"fence"
 solid = false
 
 [node name="RailCatwalkPostA2" type="Node3D" parent="Geometry/Catwalk"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailCatwalkBar2")])
+script = ExtResource("2_block")
 position = Vector3(2.15, 5, -19.44)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
 solid = false
 
 [node name="RailCatwalkPostB2" type="Node3D" parent="Geometry/Catwalk"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailCatwalkBar2")])
+script = ExtResource("2_block")
 position = Vector3(2.15, 5, -17.76)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
 solid = false
 
 [node name="RailCatwalkBar3" type="Node3D" parent="Geometry/Catwalk"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+yields_to = Array[NodePath]([NodePath("../RailCatwalkPostA3"), NodePath("../RailCatwalkPostB3")])
 position = Vector3(2.15, 5.45, -16)
 size = Vector3(0.1, 0.1, 1.8)
 look = &"fence"
 solid = false
 
 [node name="RailCatwalkPostA3" type="Node3D" parent="Geometry/Catwalk"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailCatwalkBar3")])
+script = ExtResource("2_block")
 position = Vector3(2.15, 5, -16.84)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
 solid = false
 
 [node name="RailCatwalkPostB3" type="Node3D" parent="Geometry/Catwalk"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailCatwalkBar3")])
+script = ExtResource("2_block")
 position = Vector3(2.15, 5, -15.16)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
 solid = false
 
 [node name="RailCatwalkBar4" type="Node3D" parent="Geometry/Catwalk"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+yields_to = Array[NodePath]([NodePath("../RailCatwalkPostA4"), NodePath("../RailCatwalkPostB4")])
 position = Vector3(2.15, 5.45, -13.4)
 size = Vector3(0.1, 0.1, 1.8)
 look = &"fence"
 solid = false
 
 [node name="RailCatwalkPostA4" type="Node3D" parent="Geometry/Catwalk"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailCatwalkBar4")])
+script = ExtResource("2_block")
 position = Vector3(2.15, 5, -14.24)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
 solid = false
 
 [node name="RailCatwalkPostB4" type="Node3D" parent="Geometry/Catwalk"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailCatwalkBar4")])
+script = ExtResource("2_block")
 position = Vector3(2.15, 5, -12.56)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
 solid = false
 
 [node name="RailCatwalkBar5" type="Node3D" parent="Geometry/Catwalk"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+yields_to = Array[NodePath]([NodePath("../RailCatwalkPostA5"), NodePath("../RailCatwalkPostB5")])
 position = Vector3(2.15, 5.45, -10.8)
 size = Vector3(0.1, 0.1, 1.8)
 look = &"fence"
 solid = false
 
 [node name="RailCatwalkPostA5" type="Node3D" parent="Geometry/Catwalk"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailCatwalkBar5")])
+script = ExtResource("2_block")
 position = Vector3(2.15, 5, -11.64)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
 solid = false
 
 [node name="RailCatwalkPostB5" type="Node3D" parent="Geometry/Catwalk"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailCatwalkBar5")])
+script = ExtResource("2_block")
 position = Vector3(2.15, 5, -9.96)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
@@ -863,7 +847,8 @@ look = &"accent"
 solid = false
 
 [node name="RailEastBar0" type="Node3D" parent="Geometry/TopRoof"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+yields_to = Array[NodePath]([NodePath("../RailEastPostB0")])
 position = Vector3(25.85, 8.45, -28.8)
 size = Vector3(0.1, 0.1, 1.8)
 look = &"fence"
@@ -877,192 +862,183 @@ look = &"fence"
 solid = false
 
 [node name="RailEastPostB0" type="Node3D" parent="Geometry/TopRoof"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailEastBar0")])
+script = ExtResource("2_block")
 position = Vector3(25.85, 8, -27.96)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
 solid = false
 
 [node name="RailEastBar1" type="Node3D" parent="Geometry/TopRoof"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+yields_to = Array[NodePath]([NodePath("../RailEastPostA1"), NodePath("../RailEastPostB1")])
 position = Vector3(25.85, 8.45, -26.2)
 size = Vector3(0.1, 0.1, 1.8)
 look = &"fence"
 solid = false
 
 [node name="RailEastPostA1" type="Node3D" parent="Geometry/TopRoof"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailEastBar1")])
+script = ExtResource("2_block")
 position = Vector3(25.85, 8, -27.04)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
 solid = false
 
 [node name="RailEastPostB1" type="Node3D" parent="Geometry/TopRoof"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailEastBar1")])
+script = ExtResource("2_block")
 position = Vector3(25.85, 8, -25.36)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
 solid = false
 
 [node name="RailEastBar2" type="Node3D" parent="Geometry/TopRoof"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+yields_to = Array[NodePath]([NodePath("../RailEastPostA2"), NodePath("../RailEastPostB2")])
 position = Vector3(25.85, 8.45, -23.6)
 size = Vector3(0.1, 0.1, 1.8)
 look = &"fence"
 solid = false
 
 [node name="RailEastPostA2" type="Node3D" parent="Geometry/TopRoof"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailEastBar2")])
+script = ExtResource("2_block")
 position = Vector3(25.85, 8, -24.44)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
 solid = false
 
 [node name="RailEastPostB2" type="Node3D" parent="Geometry/TopRoof"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailEastBar2")])
+script = ExtResource("2_block")
 position = Vector3(25.85, 8, -22.76)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
 solid = false
 
 [node name="RailEastBar3" type="Node3D" parent="Geometry/TopRoof"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+yields_to = Array[NodePath]([NodePath("../RailEastPostA3"), NodePath("../RailEastPostB3")])
 position = Vector3(25.85, 8.45, -21)
 size = Vector3(0.1, 0.1, 1.8)
 look = &"fence"
 solid = false
 
 [node name="RailEastPostA3" type="Node3D" parent="Geometry/TopRoof"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailEastBar3")])
+script = ExtResource("2_block")
 position = Vector3(25.85, 8, -21.84)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
 solid = false
 
 [node name="RailEastPostB3" type="Node3D" parent="Geometry/TopRoof"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailEastBar3")])
+script = ExtResource("2_block")
 position = Vector3(25.85, 8, -20.16)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
 solid = false
 
 [node name="RailEastBar4" type="Node3D" parent="Geometry/TopRoof"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+yields_to = Array[NodePath]([NodePath("../RailEastPostA4"), NodePath("../RailEastPostB4")])
 position = Vector3(25.85, 8.45, -18.4)
 size = Vector3(0.1, 0.1, 1.8)
 look = &"fence"
 solid = false
 
 [node name="RailEastPostA4" type="Node3D" parent="Geometry/TopRoof"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailEastBar4")])
+script = ExtResource("2_block")
 position = Vector3(25.85, 8, -19.24)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
 solid = false
 
 [node name="RailEastPostB4" type="Node3D" parent="Geometry/TopRoof"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailEastBar4")])
+script = ExtResource("2_block")
 position = Vector3(25.85, 8, -17.56)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
 solid = false
 
 [node name="RailEastBar5" type="Node3D" parent="Geometry/TopRoof"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+yields_to = Array[NodePath]([NodePath("../RailEastPostA5"), NodePath("../RailEastPostB5")])
 position = Vector3(25.85, 8.45, -15.8)
 size = Vector3(0.1, 0.1, 1.8)
 look = &"fence"
 solid = false
 
 [node name="RailEastPostA5" type="Node3D" parent="Geometry/TopRoof"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailEastBar5")])
+script = ExtResource("2_block")
 position = Vector3(25.85, 8, -16.64)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
 solid = false
 
 [node name="RailEastPostB5" type="Node3D" parent="Geometry/TopRoof"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailEastBar5")])
+script = ExtResource("2_block")
 position = Vector3(25.85, 8, -14.96)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
 solid = false
 
 [node name="RailEastBar6" type="Node3D" parent="Geometry/TopRoof"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+yields_to = Array[NodePath]([NodePath("../RailEastPostA6"), NodePath("../RailEastPostB6")])
 position = Vector3(25.85, 8.45, -13.2)
 size = Vector3(0.1, 0.1, 1.8)
 look = &"fence"
 solid = false
 
 [node name="RailEastPostA6" type="Node3D" parent="Geometry/TopRoof"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailEastBar6")])
+script = ExtResource("2_block")
 position = Vector3(25.85, 8, -14.04)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
 solid = false
 
 [node name="RailEastPostB6" type="Node3D" parent="Geometry/TopRoof"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailEastBar6")])
+script = ExtResource("2_block")
 position = Vector3(25.85, 8, -12.36)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
 solid = false
 
 [node name="RailEastBar7" type="Node3D" parent="Geometry/TopRoof"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+yields_to = Array[NodePath]([NodePath("../RailEastPostA7"), NodePath("../RailEastPostB7")])
 position = Vector3(25.85, 8.45, -10.6)
 size = Vector3(0.1, 0.1, 1.8)
 look = &"fence"
 solid = false
 
 [node name="RailEastPostA7" type="Node3D" parent="Geometry/TopRoof"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailEastBar7")])
+script = ExtResource("2_block")
 position = Vector3(25.85, 8, -11.44)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
 solid = false
 
 [node name="RailEastPostB7" type="Node3D" parent="Geometry/TopRoof"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailEastBar7")])
+script = ExtResource("2_block")
 position = Vector3(25.85, 8, -9.76)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
 solid = false
 
 [node name="RailEastBar8" type="Node3D" parent="Geometry/TopRoof"]
-script = ExtResource("2_block")
+script = ExtResource("inset_blk")
+yields_to = Array[NodePath]([NodePath("../RailEastPostA8"), NodePath("../RailEastPostB8")])
 position = Vector3(25.85, 8.45, -8)
 size = Vector3(0.1, 0.1, 1.8)
 look = &"fence"
 solid = false
 
 [node name="RailEastPostA8" type="Node3D" parent="Geometry/TopRoof"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailEastBar8")])
+script = ExtResource("2_block")
 position = Vector3(25.85, 8, -8.84)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"
 solid = false
 
 [node name="RailEastPostB8" type="Node3D" parent="Geometry/TopRoof"]
-script = ExtResource("inset_blk")
-yields_to = Array[NodePath]([NodePath("../RailEastBar8")])
+script = ExtResource("2_block")
 position = Vector3(25.85, 8, -7.16)
 size = Vector3(0.12, 1, 0.12)
 look = &"fence"

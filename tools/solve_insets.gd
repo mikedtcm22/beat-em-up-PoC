@@ -7,8 +7,14 @@ extends Node
 ## tools/apply_yields.py writes the lines into the section scenes (`yields_to`).
 ##
 ## The rule, one total order so no two blocks yield to each other (across two sections the later one yields instead: a block can
-## only find a partner that is already in the tree when it builds): a kit piece (it cannot yield) wins over a block, then the bigger
-## box over the smaller, then the path. The loser takes the overlap out of its face (InsetBlock, MeshClip).
+## only find a partner that is already in the tree when it builds): a kit piece (it cannot yield) wins over a block, then a trim
+## block (a jamb or a lintel: its face is what the picture was drawn to show, see TRIM_NAMES) over a plain one, then the bigger box
+## over the smaller, then the path. The loser takes the overlap out of its face (InsetBlock, MeshClip). The first version ranked
+## by size alone and a jamb that shares its wall's plane lost it to the wall's brick (vfinal-world-03); at 82bab12, where the two
+## fought, the trim's face won in most frames.
+
+## A block whose name contains one of these is trim: a door's jamb or lintel. It wins a plane against a wall, whatever their sizes.
+const TRIM_NAMES: Array[String] = ["Jamb", "Lintel", "Post"]
 
 const Scan := preload("res://tests/m6_coplanar_scan.gd")
 const Snapshot := preload("res://tests/m6_collider_snapshot.gd")
@@ -74,11 +80,23 @@ func _beats(a: Dictionary, b: Dictionary) -> bool:
 	var b_piece := not b.owner is LevelBlock
 	if a_piece != b_piece:
 		return a_piece
+	var a_trim := _is_trim(a.owner)
+	var b_trim := _is_trim(b.owner)
+	if a_trim != b_trim:
+		return a_trim
 	var volume_a: float = (a.box as AABB).get_volume()
 	var volume_b: float = (b.box as AABB).get_volume()
 	if not is_equal_approx(volume_a, volume_b):
 		return volume_a > volume_b
 	return String(a.owner.get_path()) < String(b.owner.get_path())
+
+
+## Whether `block` is trim (its name says jamb or lintel).
+func _is_trim(block: Node) -> bool:
+	for word in TRIM_NAMES:
+		if String(block.name).contains(word):
+			return true
+	return false
 
 
 func _section_index(block: Node, level: Node) -> int:
