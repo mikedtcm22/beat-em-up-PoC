@@ -14,7 +14,7 @@ extends Node
 ## fought, the trim's face won in most frames.
 
 ## A block whose name contains one of these is trim: a door's jamb or lintel. It wins a plane against a wall, whatever their sizes.
-const TRIM_NAMES: Array[String] = ["Jamb", "Lintel"]
+const TRIM_NAMES: Array[String] = ["Jamb", "Lintel", "Post"]
 
 const Scan := preload("res://tests/m6_coplanar_scan.gd")
 const Snapshot := preload("res://tests/m6_collider_snapshot.gd")
