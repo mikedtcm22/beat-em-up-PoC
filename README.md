@@ -110,6 +110,15 @@ Every enemy, the boss, the level and the sounds are now final art and audio, and
   - the 2 cm recess left seam lines on five walls;
   - the hurt cue swapped front and back when looking down past about 30°.
 - **The same fix pass** restored the Bruiser's strain ratchet, which the art fixes had loosened, and tightened two guard tests. The ground's mirrored pairs stay: moving its features out of the fold made the ground crawl more at a distance.
+- **A second independent round** checked that pass and found one medium: the heavier bottom ink fed the vignette's depth, so every heavy hit from behind deepened it, with no limit (a rear Bruiser smash's spikes reached past the screen's middle). Fixed:
+  - the depth is bounded;
+  - the extra ink is drawn only on the struck share;
+  - the bottom teeth have a floor length instead of a 1.4× stretch, so a light jab from behind still clears the HP panel and a heavy one stops at about 30% of the screen's height.
+- **That pass also:**
+  - put trim back in front of walls where two share a plane (jambs, lintels and rail posts win, as at 82bab12);
+  - cut the plinth ledges a clipped wall face had left standing;
+  - turned the pale strip under the Kicker's brim into the shade;
+  - removed a hook at Ox's mouth corner.
 
 **How the done-when is proved:**
 - **`tests/test_m6_no_placeholders.gd`** counts every kind of placeholder in the level, the crowd street and the training room: primitive bodies, tints, grey boxes, cylinder weapons, a missing second weapon, generated sounds and empty sound slots. Every count is 0 (`tests/fixtures/m6/placeholder_ratchet.json`). The allowed list is short: the music loop (by pool), the shader warm-up meshes and the edge-pass quad (by node), and the edge guards. A mesh that is hidden or off the default layer (F3's debug draws, the hidden proxies) is not counted. The legacy A/B bank is in `tests/fixtures/sfx_legacy/`, outside the scanned `assets/export/sfx`.
@@ -129,6 +138,7 @@ Every enemy, the boss, the level and the sounds are now final art and audio, and
     - All three builds were run in turn: the pre-art level, the M6 build Game-boy played (663cafc) and the fixed head (d582d21). They ran 4 times each, with vsync on, at load 5 from other apps, so every time is higher than above.
     - The level walk takes 16.93 ms a frame on the fixed head, against 17.03 ms on the build he played (−0.6%). The fixed poses take 16.17 ms against 16.30. The fixes cost nothing.
     - Against the pre-art level, the art measured +9.5% this time (15.46 to 16.93 ms), where it measured +15.3% before at a lighter load. The overhead moves with the machine's load, so the 15% line is borderline rather than clearly met.
+    - The mesh clipping that replaced the 2 cm recess (3e7084e against d582d21, 4 runs each): the level walk takes 17.77 against 17.80 ms, and the fixed poses 16.57 against 16.66. Each clipped block has its own mesh, which adds about 24 draws a frame, but that doesn't show up in the frame time.
   - **The crowd room's six with ragdolls** (3 runs each) is +12.3% against M5 (10.34 to 11.61 ms). Its p95 and spawn hitch miss the soft bars, as they already did on M5.
   - The level: `tools/perf_compare.sh --vsync on --runs 4 --bot res://tests/bot/perf_level_bot.tscn --act "Perf: level walk" --act "Perf: counters" 910448e HEAD`. The crowd room: `tools/perf_compare.sh --vsync on --runs 3 main HEAD`. "Perf: counters" holds the tour's poses still, so its renderer counters compare whatever the load.
 
@@ -395,7 +405,7 @@ The characters are procedural placeholders. Real art, VFX and audio come in Mile
 - **The level walk's frame time is +15.3% over the pre-art level, 0.3 points over the plan's 15% line.** The perf fix stopped at the best result with no visible change. The levers left (occlusion culling, plain boxes for the walls, no shadows on windows or the skyline) would change what you see, or measured at 1% or less; `docs/milestones/M6-calls/fix-final-perf.md` costs each.
 
 **Automated checks:**
-- `tools/run_tests.sh` runs about 2055 tests headless in about 420 s. Among them:
+- `tools/run_tests.sh` runs about 2076 tests headless in about 415 s. Among them:
   - an end-to-end suite where a scripted player performs every combo in the real test room;
   - each milestone's done-when test (`tests/test_m3_done_when.gd`; `tests/test_m4_done_when.gd`, now run for every character in the art roster; `tests/test_m5_done_when.gd`, which plays the whole level arena by arena; `tests/test_m6_no_placeholders.gd`);
   - the level's own tests (`tests/test_m5_street.gd`, `tests/test_m5_roofs.gd`, `tests/test_level_kit.gd`, `tests/test_level_bot.gd`).
