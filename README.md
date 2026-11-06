@@ -395,7 +395,7 @@ The characters are procedural placeholders. Real art, VFX and audio come in Mile
 - **The level walk's frame time is +15.3% over the pre-art level, 0.3 points over the plan's 15% line.** The perf fix stopped at the best result with no visible change. The levers left (occlusion culling, plain boxes for the walls, no shadows on windows or the skyline) would change what you see, or measured at 1% or less; `docs/milestones/M6-calls/fix-final-perf.md` costs each.
 
 **Automated checks:**
-- `tools/run_tests.sh` runs about 2030 tests headless in about 415 s. Among them:
+- `tools/run_tests.sh` runs about 2055 tests headless in about 420 s. Among them:
   - an end-to-end suite where a scripted player performs every combo in the real test room;
   - each milestone's done-when test (`tests/test_m3_done_when.gd`; `tests/test_m4_done_when.gd`, now run for every character in the art roster; `tests/test_m5_done_when.gd`, which plays the whole level arena by arena; `tests/test_m6_no_placeholders.gd`);
   - the level's own tests (`tests/test_m5_street.gd`, `tests/test_m5_roofs.gd`, `tests/test_level_kit.gd`, `tests/test_level_bot.gd`).
