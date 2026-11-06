@@ -4,6 +4,44 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-05 18:50 CST: the vfinal review done (one medium: the hurt depth ratchet); its fix pass running (VF2-FEEL, VF2-WORLD, VF2-ART)
+- **vfinal review** (run `wf_aace1d51-bb3`; everything in `docs/reviews/M6/findings-vfinal.json`).
+  - **Confirmed fixed:**
+    - the hurt side at any pitch (11 tests fail on the old function), with the rear jab as plain as the front;
+    - all five seams; clipping is correct and calmed the old z-fights, with no hole, crack or texture jump;
+    - the rooms unchanged; the boss gap fixed;
+    - the Kicker's eyes; the Bruiser's helmet (and no wedge); Ox at a distance;
+    - the Punk, veteran and Thug pixel-identical;
+    - the strain ratchet restored.
+  - **The medium** (world and code lenses both found it; both skeptics confirmed): `hurt_overlay_bottom_ink_gain` is stored in `_edges`, so `_alive_share()` exceeds 1 and `_depth *= share` compounds on every heavy rear hit, with no clamp and no decay (0.32, 0.48, 0.72, 1.08…). In the hurt act a rear smash's spikes reach about 63% of the screen height, against 33% before.
+  - **Lows taken:**
+    - the bottom stroke lift is a factor (heavy rear teeth reach 56%);
+    - the solver's bigger box hides trim faces 82bab12 showed (a warehouse jamb, a door reveal, two pilaster strips, a rail top);
+    - hollow plinth ledges left by clipping;
+    - a dangling `yields_to` is silent;
+    - the blanket steps() exemption;
+    - rule slips;
+    - the Kicker's pale strip under the brim;
+    - Ox's mouth-corner hook (the comma, still there);
+    - the closure test is still weak;
+    - four ASSETS rows.
+  - **Left:** the Bruiser's small stair under the visor (bisect would loosen about 50 strain rows by about 60%; the reviewer agrees).
+  - **The lead's note:** the catwalk doorway floor (tour f711) has been lit since d582d21, where 82bab12 had it in shadow; it went to VF2-WORLD to trace.
+- **Perf** (`captures/m6-verify-final/perf/report.txt`, vsync on, load 3.67 plus the review running): level walk d582d21 17.80 against 3e7084e 17.77 ms; counters 16.66 against 16.57. Clipping costs nothing measurable, though draws are +24 a frame (each clipped block has its own mesh).
+- **Running:** build.js run `wf_bb35b7ba-b69` (task `wfzzl1ne7`) with `docs/reviews/M6/args-VFINAL-FIX.json` and brief `docs/reviews/M6/fix-vfinal.md`.
+  - Branches `m6/vf2-feel`, `m6/vf2-world`, `m6/vf2-art`; worktrees `.worktrees/m6-vf2-*`.
+  - **If cut off:** rerun build.js with the same args.
+- **Next:**
+  1. Merge all three:
+     - the preset;
+     - every `--check`;
+     - the suite with `ART_PUNK_VARIANT_STRAIN=1`.
+  2. The lead's look: re-record hurt (the rear run), tour (f97, f201, f305, f711, f763), r_kicker and r_boss.
+  3. README (the vfinal round), PR #6's body.
+  4. Before/after stills against the played build (663cafc; record the 1 m looks there).
+  5. The DM.
+  6. Merge only on his word.
+
 ### 2026-11-05 18:15 CST: suite 2055/2055; the lead's look done; the vfinal review and a perf check running
 - **Suite** on 3e7084e with `ART_PUNK_VARIANT_STRAIN=1`: 2055/2055 in 422 s, with no SCRIPT, SHADER or other ERROR lines.
 - **Recordings** in `captures/m6-verify-final/`: r_kicker, r_bruiser, r_boss, dk, dj, dox, lineup, heavies, damage, hurt, passive_six, rooms, tour and drift, all with 0 errors. Also `captures/m6-feedback-verify/rooms`, newly recorded on d582d21 in `.worktrees/m6-review-verify-world` after a re-import, because its class cache was stale.
