@@ -4,6 +4,29 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-05 20:05 CST: VF2 merged (2076/2076); the lean vf2check round running; DM stills ready
+- **Merged** `m6/vf2-feel` (83ed0f3), `m6/vf2-world` (09b1905) and `m6/vf2-art` (78cf42b) into `m6/full-art-audio` at dc3ba85, with no conflicts. The preset needed no change, and every `--check` says YES.
+- **Suite:** 2076/2076 in 415 s, with no errors.
+- **What the fixes did:**
+  - **Hurt:** the edges are stored at 1 or below, the bottom's extra ink is drawn only, the depth is clamped, and the gain applies to the struck share. A bottom tooth floor of 0.2 replaces the 1.4× gain. A rear smash now reaches about 30% of the screen height (53% before). There's a new act "Look: player hurt rear run".
+  - **World:**
+    - the solver ranks kit pieces, then trim by name (Jamb, Lintel, Post), then the bigger box;
+    - clipping also cuts plinth ledges and end caps, carries tangents and drops zero-area triangles;
+    - a dangling yield warns, and KitPieces build on demand;
+    - steps() exempts named pairs only;
+    - the catwalk doorway's tan patch is the ground tile's paint, so it was left.
+  - **Art:** the Kicker's `brow` region (slot 24); Ox's new `jaw` detail zone, which removes the hook (it sat under the face zone's floor); a stronger closure test; eight ASSETS rows.
+- **Recordings:**
+  - `captures/m6-vf2-final/` on dc3ba85, all 14 acts with 0 errors;
+  - `captures/m6-played/` on 663cafc (worktree `.worktrees/m6-played`), the build Game-boy played: r_* at 1 m, the lineup and the tour.
+- **DM stills** (scratchpad `dm/`): `enemies_before_after.png` (faces, played against now), `bodies_before_after.png`, `ground_before_after.png` and `hurt_now.png`.
+- **Running:** review.js run `wf_5f19da37-ce1` (task `wajexu3gp`) with `docs/reviews/M6/args-review-vf2check.json`. Lenses: feelworld (Opus), chars (Opus), code (Sonnet).
+- **Next:**
+  1. Read the survivors; fix inline if small.
+  2. PR #6's body (the draft section is the scratchpad's `pr_playtest_section.md`).
+  3. The DM: stills, the run command, and the two open questions (near arm keep or off; frame time accept or a lever). Be plain that the enemy detail is an incremental config pass, and offer the bigger lever (new models or textures, which costs paid credits) if he wants more.
+  4. Merge only on his word.
+
 ### 2026-11-05 18:50 CST: the vfinal review done (one medium: the hurt depth ratchet); its fix pass running (VF2-FEEL, VF2-WORLD, VF2-ART)
 - **vfinal review** (run `wf_aace1d51-bb3`; everything in `docs/reviews/M6/findings-vfinal.json`).
   - **Confirmed fixed:**
