@@ -281,10 +281,12 @@ extends Resource
 @export_range(0.0, 0.03, 0.001) var hurt_overlay_outline_width: float = 0.007
 @export var hurt_overlay_outline_color: Color = Color(0.05, 0.04, 0.07, 0.95)
 ## A clean hit's bottom edge (a blow from behind, which the player cannot see coming) is inked this much
-## stronger than the same blow on another edge (1 = the same; the alpha stays at most 1), and its strokes
-## are this much longer (so they rise above the health panel at the screen's bottom left).
+## stronger on the share the blow struck (the part past hurt_overlay_even_share; 1 = the same as another
+## edge; the alpha stays at most 1). Drawn only: it never enters the depth.
 @export_range(1.0, 2.0, 0.05) var hurt_overlay_bottom_ink_gain: float = 1.5
-@export_range(1.0, 2.5, 0.05) var hurt_overlay_bottom_stroke_gain: float = 1.4
+## The shortest a bottom edge's impact stroke is, as a share of the screen's height (the health panel at the
+## bottom left rises 0.16, so a light jab's teeth clear it). A heavy blow's teeth are as long as on any edge.
+@export_range(0.0, 0.5, 0.01) var hurt_overlay_bottom_stroke_floor: float = 0.2
 
 @export_group("VFX")
 ## Comic effects (Spec §6; VfxDirector, game/fx/). Sizes are meters at the contact point

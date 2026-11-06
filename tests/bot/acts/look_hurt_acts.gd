@@ -10,6 +10,9 @@ extends RefCounted
 ##    light feel of M6 (the vignette at hurt_overlay_blocked_scale, no strokes, no roll);
 ##  - "Look: player hurt burst": three Punks at once, front, right and left, the last with the shove,
 ##    real damage, the view's stack of three in a row;
+##  - "Look: player hurt rear run": VF2-FEEL: three Bruiser smashes in a row from behind, then the Thug's pipe
+##    combo from behind (three swings), each hit on a rested player: the vignette's depth must stay at the
+##    first hit's (it deepened with every rear hit before), the bottom strokes no longer than a front hit's;
 ##  - "Look: player hurt looking down": the player looks down about 45 degrees (as at a stomp) and takes a
 ##    Punk's jab from behind, the left and the front (VFIX-FEEL: the edge must follow the floor-plane side
 ##    at any pitch, the bottom edge from behind readable on the pale ground).
@@ -71,6 +74,11 @@ const AFTER_TICKS := 40
 const PITCH_DEG := -6.0
 ## The pitch of "Look: player hurt looking down": about what a stomp on a downed enemy looks at.
 const DOWN_PITCH_DEG := -45.0
+## "Look: player hurt rear run": the heavy attacks from behind, in order, with how many times each lands.
+const REAR_RUN: Array[Dictionary] = [
+	{id = &"bruiser", index = 0, distance = 1.2, label = "bruiser smash", settle = 0, times = 3},
+	{id = &"thug", index = 0, distance = 1.0, label = "thug pipe combo", settle = 120, times = 1},
+]
 ## The sides of the looking-down act: behind first (the one that read as ahead), then the left and the front.
 const DOWN_SIDES: Array[Dictionary] = [
 	{bearing = 180.0, label = "behind"},
@@ -88,6 +96,8 @@ static func acts(bot: Node) -> Array[Dictionary]:
 				fn = func() -> void: await _blocked(bot)},
 		{title = "Look: player hurt burst", cam = &"first_person", slug = &"hurt_burst",
 				fn = func() -> void: await _burst(bot)},
+		{title = "Look: player hurt rear run", cam = &"first_person", slug = &"hurt_rear",
+				fn = func() -> void: await _rear_run(bot)},
 		{title = "Look: player hurt looking down", cam = &"first_person", slug = &"hurt_down",
 				fn = func() -> void: await _looking_down(bot)},
 	]
@@ -98,6 +108,16 @@ static func _hurt(bot: Node) -> void:
 	for attack: Dictionary in ATTACKS:
 		for side: Dictionary in SIDES:
 			await _one(bot, attack, side)
+	_end(bot, log_hit)
+
+
+## Heavy blows from behind, one after another (VF2-FEEL: the vignette's depth must not compound).
+static func _rear_run(bot: Node) -> void:
+	var log_hit := await _begin(bot)
+	var behind: Dictionary = SIDES[3]
+	for attack: Dictionary in REAR_RUN:
+		for i: int in int(attack.times):
+			await _one(bot, attack, behind)
 	_end(bot, log_hit)
 
 
