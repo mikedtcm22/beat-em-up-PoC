@@ -438,6 +438,25 @@
 					"crease_deg": 181
 				},
 				{
+					"name": "jaw",
+					"slots": [
+						7
+					],
+					"min": [
+						-0.13,
+						-0.3,
+						1.45
+					],
+					"max": [
+						0.13,
+						0.3,
+						1.58
+					],
+					"ink_low": 0.05,
+					"ink_high": 0.15,
+					"crease_deg": 181
+				},
+				{
 					"name": "gloves",
 					"slots": [
 						54

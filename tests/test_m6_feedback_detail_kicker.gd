@@ -34,6 +34,9 @@ const WRAP_INK_MIN := 0.018
 const SHORTS_INK_MIN := 0.02
 ## Faces of the cap's black just above the eyes region (the brim's underside and the lower edge); today's build has 149, the first build's 1.685 had 87.
 const BRIM_FACES_MIN := 120
+## The brow strip's box in the authored frame: the region's own (x +-0.13, y 0.05 on, z 1.665-1.71), inset a little so a face centre on the edge is not counted.
+const BROW_MIN := Vector3(-0.125, 0.05, 1.667)
+const BROW_MAX := Vector3(0.125, 0.3, 1.708)
 ## Texels sampled per face when the ink is counted.
 const SAMPLES: Array[Vector3] = [Vector3(1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0), Vector3(0.6, 0.2, 0.2), Vector3(0.2, 0.6, 0.2), Vector3(0.2, 0.2, 0.6)]
 
@@ -247,6 +250,21 @@ func test_the_eyes_are_skin_and_the_mask_is_plain() -> void:
 		if _in_box(tri, Vector3(-0.12, 0.02, 1.667), Vector3(0.12, 0.3, 1.70)) and _slot_of_tri(tri) == 23:
 			brim += 1
 	assert_gt(brim, BRIM_FACES_MIN, "the cap keeps its lower edge and the brim's underside above the band (%d faces of slot 23)" % brim)
+	# The strip under the brim (vfinal-chars-01): the `brow` region paints the skin faces behind the brim's front the shade as well, so the front
+	# reads brim, shade, mask, not brim, a pale crescent, a dark bar. The vfinal build had 30-odd slot-6 faces in this box.
+	assert_true(regions.has("brow"), "the strip under the brim has a region")
+	assert_eq(int(regions.brow.slot), SLOT_SHADE, "that paints the shade")
+	assert_true(int(regions.brow.only_from[0]) == SLOT_SKIN and regions.brow.only_from.size() == 1, "from the skin only, never the cap's black or the mask")
+	var strip_skin := 0
+	var strip_shade := 0
+	for tri: int in _tris().size() / 3:
+		if _in_box(tri, BROW_MIN, BROW_MAX):
+			if _slot_of_tri(tri) == SLOT_SKIN:
+				strip_skin += 1
+			elif _slot_of_tri(tri) == SLOT_SHADE:
+				strip_shade += 1
+	assert_eq(strip_skin, 0, "no skin face shows in the strip under the brim (%d)" % strip_skin)
+	assert_gt(strip_shade, 5, "the strip is the shade (%d faces)" % strip_shade)
 	var faces := 0
 	var black := 0
 	var shade := 0

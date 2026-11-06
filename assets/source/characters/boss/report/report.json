@@ -1,7 +1,7 @@
 {
 	"asset": "boss",
 	"version": 2,
-	"config_sha256": "b99cfabb9ef93bc414e6a56bb4d79f980c0e336c3d47ab4cdcc7bf945caabbc0",
+	"config_sha256": "ee3b1c4660c02a1c068fe091d572650ded66cbc04b6fedba18d32ade52dc67e9",
 	"steps": {
 		"inspect": {
 			"source": {
@@ -15480,8 +15480,8 @@
 			"detail_bake": {
 				"size": 1024,
 				"texels": 364202,
-				"ink_texels_share": 0.070057,
-				"mean_ink": 0.069688,
+				"ink_texels_share": 0.069418,
+				"mean_ink": 0.069058,
 				"png": "boss_detail.png",
 				"zones": {
 					"robe": {
@@ -15568,6 +15568,20 @@
 						},
 						"ink_texels_share": 0.053139
 					},
+					"jaw": {
+						"texels": 5675,
+						"raw_percentiles": {
+							"50": 0.0039,
+							"80": 0.0104,
+							"90": 0.0176,
+							"95": 0.0395,
+							"97": 0.0884,
+							"98": 0.1434,
+							"99": 0.2389,
+							"99.5": 0.3165
+						},
+						"ink_texels_share": 0.025903
+					},
 					"gloves": {
 						"texels": 8070,
 						"raw_percentiles": {
@@ -15586,30 +15600,30 @@
 				"glint": null,
 				"clean": {
 					"before": {
-						"pieces": 1499,
-						"texels": 32872,
-						"pieces_le6": 878,
-						"texels_in_le6_share": 0.0635,
+						"pieces": 1501,
+						"texels": 32577,
+						"pieces_le6": 889,
+						"texels_in_le6_share": 0.0646,
 						"median": 4.0,
-						"pieces_over20": 303
+						"pieces_over20": 298
 					},
 					"after": {
-						"pieces": 229,
-						"texels": 30449,
+						"pieces": 224,
+						"texels": 30067,
 						"pieces_le6": 3,
 						"texels_in_le6_share": 0.0003,
-						"median": 73.0,
-						"pieces_over20": 226
+						"median": 72.5,
+						"pieces_over20": 221
 					},
-					"bridged_texels": 617,
-					"pieces_dropped": 1180,
-					"texels_dropped": 7711
+					"bridged_texels": 607,
+					"pieces_dropped": 1188,
+					"texels_dropped": 7712
 				},
 				"glove_lines": null,
 				"crease": {
-					"texels_on_a_crease": 23879,
-					"ink_share_before": 0.00614,
-					"ink_share_after": 0.07006
+					"texels_on_a_crease": 23656,
+					"ink_share_before": 0.00604,
+					"ink_share_after": 0.06942
 				},
 				"texel_swatch": {
 					"texels": 364202,
@@ -15624,7 +15638,7 @@
 						"54": 0.02208
 					}
 				},
-				"sha256": "355c24a42c0247938a0f84bbddb7183fdeb6d65beea3244a711f06a9c360c87d"
+				"sha256": "a0058cc19202eb2453e2eac4c2320e07fb06650e00e0182fe113194b6381dca3"
 			},
 			"regions": [
 				{
@@ -15853,5 +15867,981 @@
 		"boss.glb": "365c70a1555255e4b9a22a9b1e1545348b2a9e9f9576ef9fd487b9d95fd55834",
 		"boss_rest.glb": "bc45f75c5895f48aa9e55298d50014818441310614d6f7693eaead8a4ea9998b"
 	},
-	"hash": "f743555887bb91d40d8647c4c4996164ae0ef5bd6a6827acda1a8f32ce9ebf73"
+	"hash": "e73fb16bc8642db57561a1796e28eb45421c8fcd367bb1afb4a01fbb671ee8ea",
+	"stills": {
+		"variants": {
+			"apose": {
+				"strain": {
+					"rest": {
+						"nan": false,
+						"vs_glb_rest": {
+							"edge_p999": 1.781049,
+							"edge_max": 8.733157,
+							"edge_min": 0.397247,
+							"area_under_15pct": 0.0
+						},
+						"vs_rig_rest": {
+							"edge_p999": 1.0,
+							"edge_max": 1.0,
+							"edge_min": 1.0,
+							"area_under_15pct": 0.0
+						},
+						"worst_edges": [
+							{
+								"ratio": 1.0,
+								"at": [
+									-0.078358,
+									1.621125,
+									-0.007026
+								],
+								"bones": [
+									"Head",
+									"Head"
+								]
+							},
+							{
+								"ratio": 1.0,
+								"at": [
+									0.148039,
+									0.972586,
+									0.06635
+								],
+								"bones": [
+									"RightLowerArm",
+									"RightLowerArm"
+								]
+							},
+							{
+								"ratio": 1.0,
+								"at": [
+									0.156664,
+									0.972172,
+									0.067256
+								],
+								"bones": [
+									"RightLowerArm",
+									"RightLowerArm"
+								]
+							},
+							{
+								"ratio": 1.0,
+								"at": [
+									0.153678,
+									0.972122,
+									0.067969
+								],
+								"bones": [
+									"RightLowerArm",
+									"RightLowerArm"
+								]
+							},
+							{
+								"ratio": 1.0,
+								"at": [
+									0.132062,
+									0.048202,
+									0.072515
+								],
+								"bones": [
+									"RightFoot",
+									"RightFoot"
+								]
+							}
+						]
+					},
+					"guard": {
+						"nan": false,
+						"vs_glb_rest": {
+							"edge_p999": 2.525172,
+							"edge_max": 7.9459,
+							"edge_min": 0.080189,
+							"area_under_15pct": 0.002185
+						},
+						"vs_rig_rest": {
+							"edge_p999": 2.284886,
+							"edge_max": 4.476854,
+							"edge_min": 0.080189,
+							"area_under_15pct": 0.002082
+						},
+						"worst_edges": [
+							{
+								"ratio": 0.080189,
+								"at": [
+									-0.313775,
+									1.132935,
+									-0.03541
+								],
+								"bones": [
+									"LeftLowerArm",
+									"LeftUpperArm"
+								]
+							},
+							{
+								"ratio": 0.101289,
+								"at": [
+									-0.312457,
+									1.120509,
+									-0.04422
+								],
+								"bones": [
+									"LeftUpperArm",
+									"LeftLowerArm"
+								]
+							},
+							{
+								"ratio": 0.105384,
+								"at": [
+									0.144125,
+									1.146726,
+									-0.100136
+								],
+								"bones": [
+									"RightUpperArm",
+									"RightUpperArm"
+								]
+							},
+							{
+								"ratio": 0.155554,
+								"at": [
+									0.318312,
+									1.146235,
+									-0.035341
+								],
+								"bones": [
+									"RightUpperArm",
+									"RightUpperArm"
+								]
+							},
+							{
+								"ratio": 0.166305,
+								"at": [
+									0.307733,
+									1.136609,
+									-0.071493
+								],
+								"bones": [
+									"RightLowerArm",
+									"RightUpperArm"
+								]
+							}
+						]
+					},
+					"elbow_150": {
+						"nan": false,
+						"vs_glb_rest": {
+							"edge_p999": 2.442634,
+							"edge_max": 8.733157,
+							"edge_min": 0.084906,
+							"area_under_15pct": 0.002423
+						},
+						"vs_rig_rest": {
+							"edge_p999": 2.055734,
+							"edge_max": 3.975609,
+							"edge_min": 0.084907,
+							"area_under_15pct": 0.002423
+						},
+						"worst_edges": [
+							{
+								"ratio": 0.084907,
+								"at": [
+									-0.314377,
+									1.13081,
+									-0.012842
+								],
+								"bones": [
+									"LeftUpperArm",
+									"LeftLowerArm"
+								]
+							},
+							{
+								"ratio": 0.122204,
+								"at": [
+									-0.313775,
+									1.132935,
+									-0.03541
+								],
+								"bones": [
+									"LeftLowerArm",
+									"LeftUpperArm"
+								]
+							},
+							{
+								"ratio": 0.125688,
+								"at": [
+									0.31813,
+									1.116479,
+									-0.040288
+								],
+								"bones": [
+									"RightLowerArm",
+									"RightLowerArm"
+								]
+							},
+							{
+								"ratio": 0.128187,
+								"at": [
+									0.092203,
+									1.132994,
+									-0.038084
+								],
+								"bones": [
+									"RightLowerArm",
+									"RightLowerArm"
+								]
+							},
+							{
+								"ratio": 0.132299,
+								"at": [
+									-0.09729,
+									1.169336,
+									-0.039065
+								],
+								"bones": [
+									"LeftUpperArm",
+									"LeftUpperArm"
+								]
+							}
+						]
+					},
+					"arm_raise_140": {
+						"nan": false,
+						"vs_glb_rest": {
+							"edge_p999": 4.790134,
+							"edge_max": 25.870795,
+							"edge_min": 0.065365,
+							"area_under_15pct": 0.001263
+						},
+						"vs_rig_rest": {
+							"edge_p999": 3.704935,
+							"edge_max": 7.611386,
+							"edge_min": 0.063362,
+							"area_under_15pct": 0.001468
+						},
+						"worst_edges": [
+							{
+								"ratio": 0.063362,
+								"at": [
+									-0.138122,
+									1.23205,
+									0.036888
+								],
+								"bones": [
+									"LeftUpperArm",
+									"LeftUpperArm"
+								]
+							},
+							{
+								"ratio": 0.109141,
+								"at": [
+									-0.154681,
+									1.333304,
+									-0.096177
+								],
+								"bones": [
+									"LeftUpperArm",
+									"LeftUpperArm"
+								]
+							},
+							{
+								"ratio": 0.109586,
+								"at": [
+									-0.137433,
+									1.252829,
+									0.064945
+								],
+								"bones": [
+									"LeftUpperArm",
+									"LeftUpperArm"
+								]
+							},
+							{
+								"ratio": 0.120879,
+								"at": [
+									0.156745,
+									1.232576,
+									-0.059634
+								],
+								"bones": [
+									"RightUpperArm",
+									"RightUpperArm"
+								]
+							},
+							{
+								"ratio": 0.124137,
+								"at": [
+									0.154826,
+									1.256959,
+									-0.083522
+								],
+								"bones": [
+									"RightUpperArm",
+									"RightUpperArm"
+								]
+							}
+						]
+					},
+					"knee_m130": {
+						"nan": false,
+						"vs_glb_rest": {
+							"edge_p999": 2.545685,
+							"edge_max": 8.59361,
+							"edge_min": 0.121875,
+							"area_under_15pct": 0.000307
+						},
+						"vs_rig_rest": {
+							"edge_p999": 2.125697,
+							"edge_max": 5.742013,
+							"edge_min": 0.121875,
+							"area_under_15pct": 0.000307
+						},
+						"worst_edges": [
+							{
+								"ratio": 0.121875,
+								"at": [
+									-0.031726,
+									0.512908,
+									0.033117
+								],
+								"bones": [
+									"LeftUpperLeg",
+									"LeftLowerLeg"
+								]
+							},
+							{
+								"ratio": 0.141762,
+								"at": [
+									-0.039982,
+									0.490862,
+									0.017782
+								],
+								"bones": [
+									"LeftLowerLeg",
+									"LeftUpperLeg"
+								]
+							},
+							{
+								"ratio": 5.742013,
+								"at": [
+									0.029043,
+									0.766218,
+									-0.002428
+								],
+								"bones": [
+									"LeftUpperLeg",
+									"RightUpperLeg"
+								]
+							},
+							{
+								"ratio": 5.306224,
+								"at": [
+									0.029612,
+									0.762391,
+									-0.009912
+								],
+								"bones": [
+									"RightUpperLeg",
+									"LeftUpperLeg"
+								]
+							},
+							{
+								"ratio": 4.493775,
+								"at": [
+									-0.14268,
+									0.49881,
+									0.101394
+								],
+								"bones": [
+									"LeftLowerLeg",
+									"LeftLowerLeg"
+								]
+							}
+						]
+					},
+					"spine_twist": {
+						"nan": false,
+						"vs_glb_rest": {
+							"edge_p999": 2.496533,
+							"edge_max": 8.499732,
+							"edge_min": 0.090395,
+							"area_under_15pct": 0.000683
+						},
+						"vs_rig_rest": {
+							"edge_p999": 2.235898,
+							"edge_max": 3.631329,
+							"edge_min": 0.095194,
+							"area_under_15pct": 0.000478
+						},
+						"worst_edges": [
+							{
+								"ratio": 0.095194,
+								"at": [
+									-0.123507,
+									1.169058,
+									-0.108374
+								],
+								"bones": [
+									"Spine",
+									"Spine"
+								]
+							},
+							{
+								"ratio": 0.16275,
+								"at": [
+									-0.160219,
+									0.983598,
+									-0.026557
+								],
+								"bones": [
+									"Hips",
+									"Hips"
+								]
+							},
+							{
+								"ratio": 0.181613,
+								"at": [
+									-0.186017,
+									1.116579,
+									-0.008625
+								],
+								"bones": [
+									"Spine",
+									"Hips"
+								]
+							},
+							{
+								"ratio": 0.195176,
+								"at": [
+									-0.126985,
+									1.222551,
+									-0.001912
+								],
+								"bones": [
+									"LeftUpperArm",
+									"LeftUpperArm"
+								]
+							},
+							{
+								"ratio": 0.198905,
+								"at": [
+									-0.136475,
+									1.227225,
+									0.026277
+								],
+								"bones": [
+									"LeftUpperArm",
+									"LeftUpperArm"
+								]
+							}
+						]
+					}
+				},
+				"stills": [
+					"assets/source/characters/boss/report/stills/apose_rest_front.png",
+					"assets/source/characters/boss/report/stills/apose_rest_three_quarter.png",
+					"assets/source/characters/boss/report/stills/apose_rest_side.png",
+					"assets/source/characters/boss/report/stills/apose_guard_front.png",
+					"assets/source/characters/boss/report/stills/apose_guard_three_quarter.png",
+					"assets/source/characters/boss/report/stills/apose_guard_side.png",
+					"assets/source/characters/boss/report/stills/apose_elbow_150_front.png",
+					"assets/source/characters/boss/report/stills/apose_elbow_150_three_quarter.png",
+					"assets/source/characters/boss/report/stills/apose_elbow_150_side.png",
+					"assets/source/characters/boss/report/stills/apose_arm_raise_140_front.png",
+					"assets/source/characters/boss/report/stills/apose_arm_raise_140_three_quarter.png",
+					"assets/source/characters/boss/report/stills/apose_arm_raise_140_side.png",
+					"assets/source/characters/boss/report/stills/apose_knee_m130_front.png",
+					"assets/source/characters/boss/report/stills/apose_knee_m130_three_quarter.png",
+					"assets/source/characters/boss/report/stills/apose_knee_m130_side.png",
+					"assets/source/characters/boss/report/stills/apose_spine_twist_front.png",
+					"assets/source/characters/boss/report/stills/apose_spine_twist_three_quarter.png",
+					"assets/source/characters/boss/report/stills/apose_spine_twist_side.png"
+				]
+			},
+			"rest": {
+				"strain": {
+					"rest": {
+						"nan": false,
+						"vs_glb_rest": {
+							"edge_p999": 1.000762,
+							"edge_max": 1.002705,
+							"edge_min": 0.997138,
+							"area_under_15pct": 0.0
+						},
+						"vs_rig_rest": {
+							"edge_p999": 1.0,
+							"edge_max": 1.0,
+							"edge_min": 1.0,
+							"area_under_15pct": 0.0
+						},
+						"worst_edges": [
+							{
+								"ratio": 1.0,
+								"at": [
+									-0.078358,
+									1.621125,
+									-0.007026
+								],
+								"bones": [
+									"Head",
+									"Head"
+								]
+							},
+							{
+								"ratio": 1.0,
+								"at": [
+									0.148039,
+									0.972586,
+									0.06635
+								],
+								"bones": [
+									"RightLowerArm",
+									"RightLowerArm"
+								]
+							},
+							{
+								"ratio": 1.0,
+								"at": [
+									0.156664,
+									0.972172,
+									0.067256
+								],
+								"bones": [
+									"RightLowerArm",
+									"RightLowerArm"
+								]
+							},
+							{
+								"ratio": 1.0,
+								"at": [
+									0.153678,
+									0.972122,
+									0.067969
+								],
+								"bones": [
+									"RightLowerArm",
+									"RightLowerArm"
+								]
+							},
+							{
+								"ratio": 1.0,
+								"at": [
+									0.132062,
+									0.048202,
+									0.072515
+								],
+								"bones": [
+									"RightFoot",
+									"RightFoot"
+								]
+							}
+						]
+					},
+					"guard": {
+						"nan": false,
+						"vs_glb_rest": {
+							"edge_p999": 2.218277,
+							"edge_max": 3.989232,
+							"edge_min": 0.080189,
+							"area_under_15pct": 0.002321
+						},
+						"vs_rig_rest": {
+							"edge_p999": 2.218275,
+							"edge_max": 3.989231,
+							"edge_min": 0.080189,
+							"area_under_15pct": 0.002321
+						},
+						"worst_edges": [
+							{
+								"ratio": 0.080189,
+								"at": [
+									-0.313775,
+									1.132935,
+									-0.03541
+								],
+								"bones": [
+									"LeftLowerArm",
+									"LeftUpperArm"
+								]
+							},
+							{
+								"ratio": 0.096998,
+								"at": [
+									-0.100468,
+									1.399271,
+									-0.121778
+								],
+								"bones": [
+									"LeftShoulder",
+									"LeftShoulder"
+								]
+							},
+							{
+								"ratio": 0.101289,
+								"at": [
+									-0.312457,
+									1.120509,
+									-0.04422
+								],
+								"bones": [
+									"LeftUpperArm",
+									"LeftLowerArm"
+								]
+							},
+							{
+								"ratio": 0.105408,
+								"at": [
+									0.144125,
+									1.146726,
+									-0.100136
+								],
+								"bones": [
+									"RightUpperArm",
+									"RightUpperArm"
+								]
+							},
+							{
+								"ratio": 0.155554,
+								"at": [
+									0.318312,
+									1.146235,
+									-0.035341
+								],
+								"bones": [
+									"RightUpperArm",
+									"RightUpperArm"
+								]
+							}
+						]
+					},
+					"elbow_150": {
+						"nan": false,
+						"vs_glb_rest": {
+							"edge_p999": 2.055732,
+							"edge_max": 3.975619,
+							"edge_min": 0.084906,
+							"area_under_15pct": 0.002389
+						},
+						"vs_rig_rest": {
+							"edge_p999": 2.055731,
+							"edge_max": 3.975614,
+							"edge_min": 0.084906,
+							"area_under_15pct": 0.002389
+						},
+						"worst_edges": [
+							{
+								"ratio": 0.084906,
+								"at": [
+									-0.314377,
+									1.13081,
+									-0.012842
+								],
+								"bones": [
+									"LeftUpperArm",
+									"LeftLowerArm"
+								]
+							},
+							{
+								"ratio": 0.122204,
+								"at": [
+									-0.313775,
+									1.132935,
+									-0.03541
+								],
+								"bones": [
+									"LeftLowerArm",
+									"LeftUpperArm"
+								]
+							},
+							{
+								"ratio": 0.124581,
+								"at": [
+									-0.09729,
+									1.169336,
+									-0.039065
+								],
+								"bones": [
+									"LeftUpperArm",
+									"LeftUpperArm"
+								]
+							},
+							{
+								"ratio": 0.125688,
+								"at": [
+									0.31813,
+									1.116479,
+									-0.040288
+								],
+								"bones": [
+									"RightLowerArm",
+									"RightLowerArm"
+								]
+							},
+							{
+								"ratio": 0.128215,
+								"at": [
+									0.092204,
+									1.132994,
+									-0.038084
+								],
+								"bones": [
+									"RightLowerArm",
+									"RightLowerArm"
+								]
+							}
+						]
+					},
+					"arm_raise_140": {
+						"nan": false,
+						"vs_glb_rest": {
+							"edge_p999": 3.769992,
+							"edge_max": 6.761727,
+							"edge_min": 0.085849,
+							"area_under_15pct": 0.001707
+						},
+						"vs_rig_rest": {
+							"edge_p999": 3.769969,
+							"edge_max": 6.761744,
+							"edge_min": 0.08585,
+							"area_under_15pct": 0.001707
+						},
+						"worst_edges": [
+							{
+								"ratio": 0.08585,
+								"at": [
+									-0.138122,
+									1.23205,
+									0.036888
+								],
+								"bones": [
+									"LeftUpperArm",
+									"LeftUpperArm"
+								]
+							},
+							{
+								"ratio": 0.092644,
+								"at": [
+									-0.154681,
+									1.333304,
+									-0.096177
+								],
+								"bones": [
+									"LeftUpperArm",
+									"LeftUpperArm"
+								]
+							},
+							{
+								"ratio": 0.10811,
+								"at": [
+									0.154826,
+									1.256959,
+									-0.083522
+								],
+								"bones": [
+									"RightUpperArm",
+									"RightUpperArm"
+								]
+							},
+							{
+								"ratio": 0.112763,
+								"at": [
+									0.114748,
+									1.516291,
+									-0.03526
+								],
+								"bones": [
+									"RightShoulder",
+									"Neck"
+								]
+							},
+							{
+								"ratio": 0.13579,
+								"at": [
+									0.159398,
+									1.330767,
+									-0.113831
+								],
+								"bones": [
+									"RightUpperArm",
+									"RightUpperArm"
+								]
+							}
+						]
+					},
+					"knee_m130": {
+						"nan": false,
+						"vs_glb_rest": {
+							"edge_p999": 2.125697,
+							"edge_max": 5.741987,
+							"edge_min": 0.121875,
+							"area_under_15pct": 0.000307
+						},
+						"vs_rig_rest": {
+							"edge_p999": 2.125697,
+							"edge_max": 5.742013,
+							"edge_min": 0.121875,
+							"area_under_15pct": 0.000307
+						},
+						"worst_edges": [
+							{
+								"ratio": 0.121875,
+								"at": [
+									-0.031726,
+									0.512908,
+									0.033117
+								],
+								"bones": [
+									"LeftUpperLeg",
+									"LeftLowerLeg"
+								]
+							},
+							{
+								"ratio": 0.141762,
+								"at": [
+									-0.039982,
+									0.490862,
+									0.017782
+								],
+								"bones": [
+									"LeftLowerLeg",
+									"LeftUpperLeg"
+								]
+							},
+							{
+								"ratio": 5.742013,
+								"at": [
+									0.029043,
+									0.766218,
+									-0.002428
+								],
+								"bones": [
+									"LeftUpperLeg",
+									"RightUpperLeg"
+								]
+							},
+							{
+								"ratio": 5.306224,
+								"at": [
+									0.029612,
+									0.762391,
+									-0.009912
+								],
+								"bones": [
+									"RightUpperLeg",
+									"LeftUpperLeg"
+								]
+							},
+							{
+								"ratio": 4.493775,
+								"at": [
+									-0.14268,
+									0.49881,
+									0.101394
+								],
+								"bones": [
+									"LeftLowerLeg",
+									"LeftLowerLeg"
+								]
+							}
+						]
+					},
+					"spine_twist": {
+						"nan": false,
+						"vs_glb_rest": {
+							"edge_p999": 2.126104,
+							"edge_max": 3.89208,
+							"edge_min": 0.131784,
+							"area_under_15pct": 0.000341
+						},
+						"vs_rig_rest": {
+							"edge_p999": 2.126103,
+							"edge_max": 3.892056,
+							"edge_min": 0.131784,
+							"area_under_15pct": 0.000341
+						},
+						"worst_edges": [
+							{
+								"ratio": 0.131784,
+								"at": [
+									-0.104924,
+									1.224495,
+									0.173572
+								],
+								"bones": [
+									"Hips",
+									"Hips"
+								]
+							},
+							{
+								"ratio": 0.150044,
+								"at": [
+									-0.123507,
+									1.169058,
+									-0.108374
+								],
+								"bones": [
+									"Spine",
+									"Spine"
+								]
+							},
+							{
+								"ratio": 0.165175,
+								"at": [
+									-0.094731,
+									1.194628,
+									0.183405
+								],
+								"bones": [
+									"Hips",
+									"Hips"
+								]
+							},
+							{
+								"ratio": 0.170912,
+								"at": [
+									0.137342,
+									1.228435,
+									0.012759
+								],
+								"bones": [
+									"RightUpperArm",
+									"RightUpperArm"
+								]
+							},
+							{
+								"ratio": 0.175162,
+								"at": [
+									-0.050389,
+									1.247265,
+									0.181151
+								],
+								"bones": [
+									"Chest",
+									"Chest"
+								]
+							}
+						]
+					}
+				},
+				"stills": [
+					"assets/source/characters/boss/report/stills/rest_rest_front.png",
+					"assets/source/characters/boss/report/stills/rest_rest_three_quarter.png",
+					"assets/source/characters/boss/report/stills/rest_rest_side.png",
+					"assets/source/characters/boss/report/stills/rest_guard_front.png",
+					"assets/source/characters/boss/report/stills/rest_guard_three_quarter.png",
+					"assets/source/characters/boss/report/stills/rest_guard_side.png",
+					"assets/source/characters/boss/report/stills/rest_elbow_150_front.png",
+					"assets/source/characters/boss/report/stills/rest_elbow_150_three_quarter.png",
+					"assets/source/characters/boss/report/stills/rest_elbow_150_side.png",
+					"assets/source/characters/boss/report/stills/rest_arm_raise_140_front.png",
+					"assets/source/characters/boss/report/stills/rest_arm_raise_140_three_quarter.png",
+					"assets/source/characters/boss/report/stills/rest_arm_raise_140_side.png",
+					"assets/source/characters/boss/report/stills/rest_knee_m130_front.png",
+					"assets/source/characters/boss/report/stills/rest_knee_m130_three_quarter.png",
+					"assets/source/characters/boss/report/stills/rest_knee_m130_side.png",
+					"assets/source/characters/boss/report/stills/rest_spine_twist_front.png",
+					"assets/source/characters/boss/report/stills/rest_spine_twist_three_quarter.png",
+					"assets/source/characters/boss/report/stills/rest_spine_twist_side.png"
+				]
+			}
+		}
+	}
 }
