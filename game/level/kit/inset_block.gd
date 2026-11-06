@@ -46,7 +46,7 @@ func _make_mesh(material: Material) -> MeshInstance3D:
 	var mesh := RoomKit.box_mesh(size, material, _overlay(art), art)
 	if not RoomKit.kit_art(art) or not (mesh.mesh is ArrayMesh):
 		return mesh
-	for path in unresolved_yields():
+	for path: NodePath in unresolved_yields():
 		push_warning("InsetBlock '%s': yields_to '%s' is not a node, so the faces it shares with that block fight again" % [get_path(), path])
 	var clips := _clips()
 	if clips.is_empty():
@@ -64,7 +64,7 @@ func _clips() -> Dictionary:
 	var here := global_transform
 	var inverse := here.affine_inverse()
 	var mine := AABB(-size * 0.5, size)
-	for path in yields_to:
+	for path: NodePath in yields_to:
 		var partner := get_node_or_null(path) as Node3D
 		if partner == null:
 			continue
@@ -87,7 +87,7 @@ func unresolved_yields() -> Array[NodePath]:
 	var out: Array[NodePath] = []
 	if not is_inside_tree():
 		return out
-	for path in yields_to:
+	for path: NodePath in yields_to:
 		if get_node_or_null(path) == null and not _crosses_sections(path):
 			out.append(path)
 	return out

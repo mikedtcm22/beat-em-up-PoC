@@ -4,7 +4,9 @@
 Usage: tools/apply_yields.py <solver output file>
 
 Every block named in a line becomes an InsetBlock with its `yields_to`; an InsetBlock the output does not name goes back to a
-plain LevelBlock. Run it on scenes whose `yields_to` lines are removed (it replaces them either way).
+plain LevelBlock. Run it on scenes whose `yields_to` lines are removed (it replaces them either way). To strip the scenes for a
+fresh solve, delete the lines (`sed -i '' '/^yields_to = /d' <scene>`); don't run this tool on an empty output for that.
+The InsetBlock ext_resource is kept, or put back, whenever a block uses it.
 """
 import re
 import sys
@@ -45,8 +47,13 @@ def main() -> None:
             out.append(part)
         text = "".join(out)
         used = 'ExtResource("inset_blk")' in text
+        declared = re.search(r'(?m)^\[ext_resource [^\n]*id="inset_blk"\]\n', text) is not None
         if not used:
             text = re.sub(r'(?m)^\[ext_resource [^\n]*id="inset_blk"\]\n', "", text)
+        elif not declared:
+            # Put the declaration back after the LevelBlock one, so a scene stripped earlier still parses.
+            text = re.sub(r'(?m)^(\[ext_resource [^\n]*path="res://game/level/kit/level_block.gd"[^\n]*\]\n)',
+                    r'\1[ext_resource type="Script" path="res://game/level/kit/inset_block.gd" id="inset_blk"]\n', text, count=1)
         open(path, "w").write(text)
         print(section, sum(len(v) for v in wanted[section].values()), "yields")
 

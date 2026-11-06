@@ -423,6 +423,9 @@ func test_the_bottom_strokes_have_a_floor_and_a_heavy_blows_are_no_longer_than_a
 	assert_eq(lengths.size(), data.hurt_overlay_strokes)
 	for length: float in lengths:
 		assert_gte(length, data.hurt_overlay_bottom_stroke_floor * 900.0 - 0.01, "a light jab's bottom teeth clear the panel")
+	# vf2check-feelworld-01: lifted to the floor, the comb stays jagged instead of a row of equal teeth.
+	assert_gt(lengths.max() - lengths.min(), data.hurt_overlay_bottom_stroke_floor * 900.0 * 0.1,
+			"a light jab's bottom teeth vary in length like every other edge's")
 	var heavy := _overlay()
 	heavy.size = Vector2(1600.0, 900.0)
 	heavy.on_player_hit(_hit(_enemy(), _player(), CombatTypes.HitTier.HEAVY, Vector3.BACK, 20.0), Transform3D.IDENTITY)

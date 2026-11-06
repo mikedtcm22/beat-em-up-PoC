@@ -280,13 +280,13 @@ const ACCEPTED_STEPS := [["ShutterStair3", "Lintel3"]]
 ## `Curb...`), a barrier's panel (anything under a Barrier) hangs in front of the opening whose rail post it meets, and the pairs
 ## `ACCEPTED_STEPS` names. A fence-look block against a wall, or a barrier's panel against a wall, is NOT by design: it is reported.
 static func _stands_by_design(a: Dictionary, b: Dictionary) -> bool:
-	for pair in [[a, b], [b, a]]:
+	for pair: Array in [[a, b], [b, a]]:
 		var one: Dictionary = pair[0]
 		var other: Dictionary = pair[1]
 		if _look_of(one) == &"fence":
 			if _look_of(other) == &"fence" or _under_barrier(other) or String((other.owner as Node).name).begins_with("Curb"):
 				return true
-	for accepted in ACCEPTED_STEPS:
+	for accepted: Array in ACCEPTED_STEPS:
 		if (_path_has(a.owner, accepted[0]) and _path_has(b.owner, accepted[1])) or (_path_has(b.owner, accepted[0]) and _path_has(a.owner, accepted[1])):
 			return true
 	return false

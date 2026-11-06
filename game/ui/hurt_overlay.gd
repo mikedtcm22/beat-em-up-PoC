@@ -218,7 +218,8 @@ func _draw_vignette(edge: int, depth_px: float, color: Color, strength: float) -
 
 
 ## The teeth `edge`'s strokes draw now, in pixels, one entry each: where along the edge it stands (0..1), its
-## half-width (a share of the edge), its lean and its length. Set by this hit's seed, none shorter than `floor_px`.
+## half-width (a share of the edge), its lean and its length. Set by this hit's seed, none shorter than `floor_px`;
+## a tooth lifted to the floor keeps its own share of the spread above it, so a floored comb stays jagged.
 func _stroke_shapes(edge: int, depth_px: float, strength: float, floor_px: float) -> Array[Dictionary]:
 	var tuning := Tuning.data
 	var count := tuning.hurt_overlay_strokes
@@ -228,8 +229,10 @@ func _stroke_shapes(edge: int, depth_px: float, strength: float, floor_px: float
 	for i: int in count:
 		var along := (float(i) + 0.5 + rng.randf_range(-tuning.hurt_overlay_stroke_jitter, tuning.hurt_overlay_stroke_jitter)) / float(count)
 		var half_width := tuning.hurt_overlay_stroke_width / float(count)
-		var length := maxf(depth_px * (tuning.hurt_overlay_stroke_len_min + rng.randf() * tuning.hurt_overlay_stroke_len_range) \
-				* clampf(strength + tuning.hurt_overlay_stroke_len_floor, 0.0, 1.0), floor_px)
+		var spread := rng.randf() * tuning.hurt_overlay_stroke_len_range
+		var floored := floor_px * (1.0 + spread / (tuning.hurt_overlay_stroke_len_min + tuning.hurt_overlay_stroke_len_range))
+		var length := maxf(depth_px * (tuning.hurt_overlay_stroke_len_min + spread) \
+				* clampf(strength + tuning.hurt_overlay_stroke_len_floor, 0.0, 1.0), floored)
 		var lean := rng.randf_range(-tuning.hurt_overlay_stroke_lean, tuning.hurt_overlay_stroke_lean) * half_width
 		shapes.append({along = along, half_width = half_width, length = length, lean = lean})
 	return shapes

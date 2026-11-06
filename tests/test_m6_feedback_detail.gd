@@ -211,14 +211,48 @@ func _roll_out_file_problem(text: String, id: String) -> String:
 	for f: Dictionary in funcs:
 		if bool(f.test):
 			test_count += 1
-		elif str(f.body).contains(path) or _names_any(str(f.body), consts):
-			helpers.append(str(f.name))
 	if test_count == 0:
 		return "no `func test_`"
+	# A helper reads the config when its body writes the path or names a const or another helper that does (followed to any depth).
+	# Names are matched with string literals blanked, so a const's name inside a message string is not a read (vf2check-code-03).
+	var grew := true
+	while grew:
+		grew = false
+		for f: Dictionary in funcs:
+			if bool(f.test) or helpers.has(str(f.name)):
+				continue
+			if _reads(str(f.body), path, consts, helpers):
+				helpers.append(str(f.name))
+				grew = true
 	for f: Dictionary in funcs:
-		if bool(f.test) and (str(f.body).contains(path) or _names_any(str(f.body), consts) or _names_any(str(f.body), helpers)):
+		if bool(f.test) and _reads(str(f.body), path, consts, helpers):
 			return ""
 	return "no test function reads characters/%s/pipeline.json (directly, through a const or through a helper)" % id
+
+
+## True when a function `body` writes `path` or names one of `consts` or `helpers` outside a string literal.
+func _reads(body: String, path: String, consts: Array[String], helpers: Array[String]) -> bool:
+	var code := _without_strings(body)
+	return body.contains(path) or _names_any(code, consts) or _names_any(code, helpers)
+
+
+## `text` with every string literal's contents blanked (the quotes stay), so a name inside a string is not an identifier.
+func _without_strings(text: String) -> String:
+	var out := ""
+	var quote := ""
+	for i: int in text.length():
+		var ch := text[i]
+		if quote != "":
+			if ch == quote and (i == 0 or text[i - 1] != "\\"):
+				quote = ""
+				out += ch
+			else:
+				out += " "
+		else:
+			if ch == "\"" or ch == "'":
+				quote = ch
+			out += ch
+	return out
 
 
 ## `line` without its trailing comment: everything from the first `#` that is outside a string literal.
@@ -263,6 +297,9 @@ func test_the_roll_out_closure_rejects_a_bare_string() -> void:
 	assert_eq(_roll_out_file_problem("extends GutTest\n" + const_line + "func test_a() -> void:\n\tvar cfg := FileAccess.get_file_as_string(P)\n", "thug"), "", "a constant a test uses passes")
 	assert_eq(_roll_out_file_problem("extends GutTest\nfunc test_a() -> void:\n\tload(\"res://assets/source/%s\")\n" % path, "thug"), "", "a path written in a test passes")
 	assert_eq(_roll_out_file_problem("extends GutTest\n" + const_line + "func _cfg() -> String:\n\treturn FileAccess.get_file_as_string(P)\nfunc test_a() -> void:\n\tvar c := _cfg()\n", "thug"), "", "a helper a test calls passes")
+	# vf2check-code-03: a const named only inside a message string is not a read; a helper two calls deep is followed.
+	assert_ne(_roll_out_file_problem("extends GutTest\n" + const_line + "func test_a() -> void:\n\tassert_true(true, \"P\")\n", "thug"), "", "a const's name in a string fails")
+	assert_eq(_roll_out_file_problem("extends GutTest\n" + const_line + "func _raw() -> String:\n\treturn FileAccess.get_file_as_string(P)\nfunc _cfg() -> Variant:\n\treturn JSON.parse_string(_raw())\nfunc test_a() -> void:\n\tvar c: Variant = _cfg()\n", "thug"), "", "a helper two calls deep passes")
 
 
 ## Every roll-out test reads its own character's `pipeline.json` (the file names it), and that config holds the recipe's crease. The
