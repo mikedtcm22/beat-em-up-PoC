@@ -4,6 +4,29 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-06 23:20 CST: the weekly window at 90%; a handoff with nothing in flight; still waiting on Game-boy
+- **The watcher's warning:** the weekly all-models window is at 90% (it resets 2026-11-09 03:59 CST); the 5-hour window is at 5%.
+- **Nothing in flight:** no workflow or agent is running, and nothing is uncommitted. `m6/full-art-audio` was at 7144e64 before this entry, pushed. The worktrees under `.worktrees/` hold only merged branches and review checkouts.
+- **Game-boy launched the build** from this session's terminal on 2026-11-06. Its log shows no errors. No verdict yet.
+- **He asked what milestones remain after M6,** as part of deciding whether to move on. The answer in the chat:
+  - Only M7 (SPEC §12): the perf target (1080p at 60 fps with 6 enemies on an RTX 3060-class GPU), bugs, the Windows export. Done when he plays start to finish and answers SPEC §1's four questions.
+  - It needs from him a Windows PC with a dedicated GPU (or him running the export and sending the numbers), and a gamepad check (README's M0 table still lists the gamepad as unknown).
+  - Carried in: the frame-time levers, the first-person ladder climb (an M7 option since M5), the working title, the boss's name and design, the music loop, the hero-select menu and M4's four FP feel switches.
+  - The advice: a bigger Tripo detail pass belongs before M6 closes, since M7 measures performance on the final art.
+- **Waiting on Game-boy** (unchanged):
+  1. Sign-off of PR #6.
+  2. The near arm: keep it or turn it off.
+  3. The frame time: accept it or pick a lever.
+  4. The Kicker's shade band, or drawn eyes.
+  5. New Tripo models or not (355 credits left).
+- **Resume task:** `beat-em-up-resume-20261109-0400` fires 2026-11-09 04:10 CST.
+- **Resume steps:**
+  1. Check `get_usage`, and make sure a usage watcher is running ("Usage watcher").
+  2. Read the Slack DM (`D0AQUKX5DB6`, the thread at ts `1793931960.696509`) and the working session's chat for Game-boy's answers.
+  3. If he signed off, merge PR #6, then write the M7 proposal and wait for his go, as M6 started.
+  4. If he wants new Tripo models, plan a per-character Tripo pass within the 355 credits, and get his word on the spend before any generation.
+  5. If there's no answer yet, there's nothing to do: wait for him.
+
 ### 2026-11-05 21:00 CST: the playtest fixes done and checked (2076/2076); PR #6 updated; DM sent; waiting on Game-boy
 - **vf2check** (run `wf_5f19da37-ce1`; `docs/reviews/M6/findings-vf2check.json`) found no medium or high on dc3ba85:
   - the depth bound holds (a rear smash at 0.316 of the height, against 0.599);
