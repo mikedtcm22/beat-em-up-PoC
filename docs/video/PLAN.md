@@ -507,7 +507,7 @@ An Apple M1 with 8 GB of RAM and 19 GB of disk free on 2026-11-08.
 | # | Decision | Default |
 | --- | --- | --- |
 | D1 | Downloading the two reference MP4s (about 36 MB and 16 MB, from video.twimg.com) for frame analysis, and one SIL-OFL font for the titles. Never published or committed | Yes, if the launch prompt approves it |
-| D2 | About $2-4 of Gemini paint-overs as look-dev targets (never in the video) | Yes, if the launch prompt approves it |
+| D2 | About $2-4 of Gemini paint-overs as look-dev targets (never in the video) | **Decided: yes.** Game-boy chose to keep them on 2026-11-08 (cap $5, with the ledger) |
 | D3 | Freeing disk: deleting `captures/m5-*`, `captures/m6-feedback*`, `m6-verify-final`, `m6-worktrees`, `m4*` and `m3_evidence` (about 33 GB), and the merged and review worktrees under `.worktrees/` (about 30 GB) | Ask first. Until he answers, do look-dev at 1920×1080 and keep only the current takes; the final renders need the space |
 | D4 | The music: (a) ElevenLabs music within a cap, through a new `tools/audio/eleven_music.py` that keeps a ledger like `eleven_sfx.py`'s; (b) a licensed track he supplies; (c) effects only | Asked at Gate 3, with the animatic. Until then, (c) |
 | D5 | The end card's title and label | "FIRST-PERSON BEAT-EM-UP", with a small line: "Proof of concept. In-engine gameplay, cinematic render." (The video's look isn't the game's real-time look) |
