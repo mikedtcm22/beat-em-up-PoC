@@ -543,3 +543,13 @@ Video-only matte pictures for the cinematic trailer's world look (docs/video/P1.
 | Dusk skyline matte | `assets/video/mattes/matte_skyline_dusk.png` | `tools/video/paint_mattes.py` (code-painted) | Project asset | 2048x384 RGBA, about 13 KB. Rose and violet silhouettes with a gold rim; behind the roofs. |
 | Smoke bank matte | `assets/video/mattes/matte_smoke_bank.png` | `tools/video/paint_mattes.py` (code-painted) | Project asset | 2048x512 RGBA, about 40 KB. Billows in three dark values with an underlit orange rim; above the boss roof's fire. |
 | Fire wall matte | `assets/video/mattes/matte_fire_wall.png` | `tools/video/paint_mattes.py` (code-painted) | Project asset | 2048x384 RGBA, about 75 KB. Flame tongues in three nested values; the boss roof's horizon. |
+
+## Video: LD-INK (Phase 1)
+
+The video's palette LUTs (docs/video/PLAN.md Plan A part 5). Made by `tools/video/palette_lut.py` from a reference frame and one of our renders under the ink look (strength 0.7, the defaults); 1024x32 RGB8 strips (32 slices of 32x32: slice = blue, x = red, y = green), applied after tonemapping by `video/ink/ink_rig.gd` through `VideoInkLook.lut_path`. They are routed to LFS. The reference frames are never committed.
+
+| Asset | Path | Source / service | License | Notes |
+| --- | --- | --- | --- | --- |
+| Street at night palette LUT | `assets/video/ink/lut_street_night.png` | `palette_lut.py`: ref 2 at 42.0 s against our `street_wide` render | generated, project | 30 KB |
+| Roofs at dusk palette LUT | `assets/video/ink/lut_roofs_dusk.png` | `palette_lut.py`: ref 2 at 50.5 s against our `roof_silhouette` render | generated, project | 28 KB |
+| Boss roof palette LUT | `assets/video/ink/lut_boss_fire.png` | `palette_lut.py`: ref 1 at 5.3 s against our `ox_closeup` render | generated, project | 32 KB |

@@ -40,6 +40,8 @@ uniform vec4 key_view = vec4(0.0, 3.0, -2.0, 9.0);
 uniform vec4 rim_view = vec4(0.0, 2.0, -4.0, 5.0);
 uniform vec3 moon_dir_view = vec3(0.0, 0.7, 0.7);
 uniform float moon_share : hint_range(0.0, 1.0) = 0.3;
+// How strongly a character's creases draw (0 = silhouettes only).
+uniform float crease_gain : hint_range(0.0, 1.0) = 1.0;
 // 0 = the picture; 1 = the light factor; 2 = the line width; 3 = the lines only.
 uniform int debug_view : hint_range(0, 3) = 0;
 
@@ -154,7 +156,7 @@ void fragment() {
 				sharp = max(sharp, 1.0 - dot(n0, normalize(nq)));
 			}
 		}
-		crease_line = smoothstep(normal_threshold * 0.5, normal_threshold, sharp) * depth_gate;
+		crease_line = smoothstep(normal_threshold * 0.5, normal_threshold, sharp) * depth_gate * (character ? crease_gain : 1.0);
 	}
 
 	float fade = 1.0 - smoothstep(fade_start_m, max(fade_end_m, fade_start_m + 0.01), z0);

@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="VideoInkLook" format=3]
+
+[ext_resource type="Script" path="res://video/ink/video_ink_look.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+lut_path = "res://assets/video/ink/lut_street_night.png"
