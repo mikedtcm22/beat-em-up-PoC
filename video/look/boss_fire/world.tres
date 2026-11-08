@@ -26,11 +26,11 @@ script = ExtResource("3_emit")
 kind = 0
 points = PackedVector3Array(11, -1, -3, 11, -1, -10, 11, -1, -17)
 extents = Vector3(1.5, 0.2, 2.5)
-amount = 90
+amount = 50
 life_s = 5.0
-size_m = Vector2(0.07, 0.16)
+size_m = Vector2(0.04, 0.1)
 direction = Vector3(-0.3, 1, 0)
-color_start = Color(1, 0.42, 0.1, 1)
+color_start = Color(1, 0.34, 0.06, 1)
 color_end = Color(0.7, 0.12, 0.04, 0)
 speed = Vector2(1.0, 3.0)
 spread_deg = 50.0
@@ -41,11 +41,11 @@ preprocess_s = 6.0
 [sub_resource type="Resource" id="Matte_fire"]
 script = ExtResource("4_matte")
 texture = ExtResource("5_fire")
-position = Vector3(105, 8, -10)
-size_m = Vector2(200, 38)
+position = Vector3(90, 9, -10)
+size_m = Vector2(220, 52)
 yaw_deg = -90.0
 fade = 0.0
-energy = 1.15
+energy = 1.5
 
 [sub_resource type="Resource" id="Matte_smoke"]
 script = ExtResource("4_matte")
@@ -61,11 +61,11 @@ script = ExtResource("1_look")
 location = &"boss_fire"
 section = 2
 sun_color = Color(0.4, 0.28, 0.7, 1)
-sun_energy = 0.3
+sun_energy = 0.5
 sun_elevation_deg = 35.0
 sun_yaw_deg = 160.0
 sun_shadow = false
-ambient_color = Color(0.12, 0.06, 0.16, 1)
+ambient_color = Color(0.3, 0.1, 0.2, 1)
 toon_shadow_level = 0.07
 toon_fill_strength = 0.15
 hook_color = Color(1, 0.44, 0.12, 1)
@@ -78,14 +78,15 @@ paint = {
 &"paint_lod": 4.2,
 &"paint_bands": 3.0,
 &"paint_band_soft": 0.05,
-&"paint_shadow_tint": Color(0.3, 0.14, 0.34, 1),
-&"paint_shadow_level": 0.15,
-&"paint_mid_level": 0.4,
-&"paint_grain": 0.14,
+&"paint_shadow_tint": Color(0.5, 0.18, 0.3, 1),
+&"paint_shadow_level": 0.3,
+&"paint_mid_level": 0.55,
+&"paint_grain": 0.2,
 &"paint_break": 0.12,
 &"paint_break_scale": Vector2(3, 1.2),
 &"paint_sat": 0.9,
-&"warp_m": 0.22,
+&"warp_m": 0.3,
+&"row_jitter_m": 0.9,
 &"window_blank_p": 0.3,
 &"brick_strokes": 0.3,
 &"brick_flat": 1.0,
@@ -96,9 +97,9 @@ paint = {
 &"pool_norm": 0.8
 }
 sky = {
-&"zenith_color": Color(0.03, 0.015, 0.07, 1),
-&"mid_color": Color(0.16, 0.05, 0.12, 1),
-&"horizon_color": Color(0.7, 0.2, 0.06, 1),
+&"zenith_color": Color(0.14, 0.05, 0.16, 1),
+&"mid_color": Color(0.42, 0.1, 0.14, 1),
+&"horizon_color": Color(0.95, 0.38, 0.1, 1),
 &"below_color": Color(0.1, 0.03, 0.05, 1),
 &"mid_at": 0.22,
 &"top_at": 0.75,
@@ -110,7 +111,7 @@ sky = {
 }
 haze = {
 &"band_start_m": Vector3(12, 28, 55),
-&"band_color_1": Color(0.4, 0.1, 0.16, 0.1),
-&"band_color_2": Color(0.45, 0.1, 0.14, 0.2),
-&"band_color_3": Color(0.5, 0.12, 0.12, 0.34)
+&"band_color_1": Color(0.6, 0.18, 0.14, 0.12),
+&"band_color_2": Color(0.7, 0.2, 0.12, 0.24),
+&"band_color_3": Color(0.8, 0.26, 0.1, 0.36)
 }

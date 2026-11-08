@@ -58,14 +58,15 @@ paint = {
 &"paint_lod": 4.2,
 &"paint_bands": 3.0,
 &"paint_band_soft": 0.05,
-&"paint_shadow_tint": Color(0.36, 0.24, 0.5, 1),
-&"paint_shadow_level": 0.3,
-&"paint_mid_level": 0.62,
-&"paint_grain": 0.14,
+&"paint_shadow_tint": Color(0.5, 0.32, 0.55, 1),
+&"paint_shadow_level": 0.4,
+&"paint_mid_level": 0.72,
+&"paint_grain": 0.2,
 &"paint_break": 0.12,
 &"paint_break_scale": Vector2(3, 1.2),
 &"paint_sat": 0.9,
-&"warp_m": 0.22,
+&"warp_m": 0.3,
+&"row_jitter_m": 0.9,
 &"window_blank_p": 0.3,
 &"window_lit_p": 0.0,
 &"brick_strokes": 0.3,
@@ -73,18 +74,18 @@ paint = {
 &"brick_edge_w": 0.05
 }
 sky = {
-&"zenith_color": Color(0.2, 0.16, 0.36, 1),
-&"mid_color": Color(0.62, 0.36, 0.46, 1),
-&"horizon_color": Color(0.96, 0.7, 0.42, 1),
+&"zenith_color": Color(0.46, 0.32, 0.52, 1),
+&"mid_color": Color(0.88, 0.52, 0.46, 1),
+&"horizon_color": Color(1, 0.8, 0.46, 1),
 &"below_color": Color(0.3, 0.2, 0.3, 1),
 &"mid_at": 0.2,
 &"top_at": 0.7,
 &"band_count": 7.0,
-&"disc_radius": 0.11,
+&"disc_radius": 0.16,
 &"disc_color": Color(1, 0.96, 0.82, 1),
 &"halo_color": Color(1, 0.85, 0.5, 1),
 &"halo_rings": 3.0,
-&"halo_strength": 0.5,
+&"halo_strength": 0.7,
 &"halo_gap": 0.3,
 &"halo_wobble": 0.1,
 &"cloud_cover": 0.22,
@@ -94,7 +95,7 @@ sky = {
 sky_disc_follows_sun = true
 haze = {
 &"band_start_m": Vector3(10, 24, 46),
-&"band_color_1": Color(0.95, 0.6, 0.5, 0.1),
-&"band_color_2": Color(0.95, 0.6, 0.5, 0.2),
-&"band_color_3": Color(0.95, 0.62, 0.5, 0.32)
+&"band_color_1": Color(1, 0.7, 0.5, 0.12),
+&"band_color_2": Color(1, 0.7, 0.5, 0.24),
+&"band_color_3": Color(1, 0.72, 0.5, 0.36)
 }

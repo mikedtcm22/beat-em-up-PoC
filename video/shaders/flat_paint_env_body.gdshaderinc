@@ -68,6 +68,9 @@ uniform float paint_value_gain : hint_range(0.5, 3.0) = 1.0;
 // The domain warp of the sheet's coordinates: amplitude in metres (0: none), and the noise's frequency in 1/m.
 uniform float warp_m : hint_range(0.0, 1.0) = 0.0;
 uniform vec2 warp_freq = vec2(0.22, 0.31);
+// Each row of a strip (a floor of windows) slides sideways by a world-hashed amount up to this many metres, so the windows stop
+// standing in columns. Seamless: the strip wraps in U.
+uniform float row_jitter_m : hint_range(0.0, 3.0) = 0.0;
 // The facade strip's windows (the strip named by facade_strip): the share blanked to wall, the share lit, and the lit colour.
 uniform int facade_strip : hint_range(0, 15) = 15;
 uniform float window_blank_p : hint_range(0.0, 1.0) = 0.0;
@@ -177,6 +180,10 @@ void fragment() {
 	vec2 warp = world_warp();
 	vec2 fm = face_m + (ground ? vec2(0.0) : warp);
 	vec2 t = vec2(fm.x / tile_m, fm.y / max(row.z, 0.01));
+	if (!ground && row_jitter_m > 0.0) {
+		float plane_j = round(dot(abs(world_normal), world_pos) * 2.0);
+		t.x += (hash12(vec2(floor(t.y), plane_j * 1.3 + 11.0)) - 0.5) * 2.0 * row_jitter_m / tile_m;
+	}
 	vec2 uv = vec2(t.x, row.x + (1.0 - fract(t.y)) * row.y);
 	vec2 gx = dFdx(t) * vec2(1.0, -row.y);
 	vec2 gy = dFdy(t) * vec2(1.0, -row.y);
