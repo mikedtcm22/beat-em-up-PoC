@@ -1,0 +1,14 @@
+{
+  "milestone": "v",
+  "summary": "Phase 0 of the cinematic gameplay video (docs/video/PLAN.md): the Gate 1 stills and the style spike",
+  "plan": "docs/video/P0.md",
+  "base": "video/cinematic-trailer",
+  "read_first": ["docs/video/PLAN.md §2 (the style bible) and §6's Gate 2 rubric", "docs/video/P0.md, 'Shared by both packages'"],
+  "image_budget": 30,
+  "concurrency": 2,
+  "note": "VIDEO WORK OVERRIDES: cine (non-first-person) shots count as much as first person. Judge against docs/video/PLAN.md §2 and the reference frames, not SPEC.md. Never edit game/, tuning/ or tests/: look values go in CineLook .tres files under video/look/, not in tuning_data.gd. Instead of the full suite, run the video tests (PLAN.md §6, LD-RENDER) and `git diff --quiet origin/video/cinematic-trailer -- game tuning tests` (it must exit 0). Calls files go to docs/video/calls/<key>.md. PHASE 0: your brief is your section of docs/video/P0.md; read its 'Shared by both packages' section first. In the structured result, tests_passed and tests_total are the video tests (video/tests), not the main suite. Python only through ~/.venvs/beat-em-up-video/bin/python -I (never pip install). The reference frames are untracked files in the lead's worktree: read them, never copy them into git. This is an 8 GB machine with Game-boy's own Blender open: one Godot process at a time from you, always with --quit-after, and the capture lock for every windowed run.",
+  "packages": [
+    { "key": "P0-STILLS", "section": "§ P0-STILLS", "est": 12 },
+    { "key": "P0-SPIKE", "section": "§ P0-SPIKE", "est": 14 }
+  ]
+}
