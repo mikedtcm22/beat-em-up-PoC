@@ -25,7 +25,36 @@ static func acts(bot: Node) -> Array[Dictionary]:
 				cam = &"free_fly",
 				fn = func() -> void: await _motion(bot, shot),
 			})
+	out.append({title = "World2Dump", cam = &"free_fly", fn = func() -> void: await _dump(bot)})
 	return out
+
+
+## Prints every mesh of the level whose material is not the trim's (the props the paint has to find): path, shader, colour.
+static func _dump(bot: Node) -> void:
+	var level: Node = bot.get(&"level")
+	var seen := {}
+	for node in level.find_children("*", "MeshInstance3D", true, false):
+		var mesh := node as MeshInstance3D
+		var mats: Array[Material] = []
+		if mesh.material_override != null:
+			mats.append(mesh.material_override)
+		for i in mesh.get_surface_override_material_count():
+			var m := mesh.get_surface_override_material(i)
+			if m != null:
+				mats.append(m)
+		if mesh.mesh != null:
+			for i in mesh.mesh.get_surface_count():
+				var m2 := mesh.mesh.surface_get_material(i)
+				if m2 != null:
+					mats.append(m2)
+		for m in mats:
+			var sm := m as ShaderMaterial
+			var shader_path := sm.shader.resource_path if sm != null and sm.shader != null else m.get_class()
+			var key := "%s|%s" % [mesh.get_parent().name if mesh.get_parent() else "", shader_path]
+			if seen.has(key):
+				continue
+			seen[key] = true
+			print("DUMP %s | %s | %s | owner=%s | groups=%s | meta=%s" % [level.get_path_to(mesh), shader_path, m.resource_name, mesh.get_parent().get_class(), mesh.get_groups(), mesh.get_meta_list()])
 
 
 static func _shoot(bot: Node, shot: VideoStillShot) -> void:

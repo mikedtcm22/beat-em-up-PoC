@@ -113,8 +113,8 @@ uniform float draw_on : hint_range(0.0, 1.0) = 0.0;
 uniform float draw_ink_mul : hint_range(0.05, 0.9) = 0.34;
 uniform float draw_line_w : hint_range(0.002, 0.08) = 0.016;
 uniform float draw_wobble_m : hint_range(0.0, 0.08) = 0.02;
-uniform float draw_fade_lo : hint_range(0.02, 0.4) = 0.09;
-uniform float draw_fade_hi : hint_range(0.04, 0.6) = 0.22;
+uniform float draw_fade_lo : hint_range(0.02, 0.6) = 0.14;
+uniform float draw_fade_hi : hint_range(0.04, 0.8) = 0.36;
 // The sheet's own ink mask (cracks, manholes, grates, the joints and seams), read at a middle mip, as ink.
 uniform float draw_sheet_ink : hint_range(0.0, 1.0) = 0.9;
 uniform float draw_sheet_lod : hint_range(0.0, 6.0) = 2.0;
@@ -152,6 +152,18 @@ uniform float ground_gain : hint_range(0.3, 3.0) = 1.0;
 uniform float plank_m : hint_range(0.05, 0.6) = 0.22;
 // pool_norm for the faces that do not face up (the walls): 0 keeps a wall's own value under a lamp, so its drawn lines stay.
 uniform float pool_norm_wall : hint_range(0.0, 1.0) = 0.0;
+// How much a lamp's pool, on the ground, ignores the ground's hue (1: the pool is the lamp's colour whatever the paint is: no pink under a blue moon).
+uniform float pool_hue_norm : hint_range(0.0, 1.0) = 0.0;
+// The directional light's colour*energy that a lamp's core takes away on the ground (an up-facing face): the pool is the lamp's colour, not lamp plus moon.
+uniform vec3 pool_cancel = vec3(0.0);
+// Fire from below (the boss roof): below this world height (m) a wall takes this colour in a hard, wobbling-edged band, brighter by `fire_gain`.
+uniform float fire_top_m : hint_range(-50.0, 50.0) = -1000.0;
+uniform vec3 fire_color : source_color = vec3(1.0, 0.4, 0.1);
+uniform float fire_gain : hint_range(0.0, 3.0) = 1.2;
+uniform float fire_mix : hint_range(0.0, 1.0) = 0.55;
+// A prop (the prop variant): which pattern it is drawn with (-1 none, 0 tank, 1 dumpster, 2 car, 3 air conditioner, 4 crate) and the metres of its staves, ribs, louvres.
+uniform int prop_pattern : hint_range(-1, 8) = -1;
+uniform float prop_rib_m : hint_range(0.03, 0.8) = 0.25;
 
 varying vec2 face_m;
 varying vec2 world_m;
@@ -160,6 +172,8 @@ varying vec3 world_normal;
 varying vec3 tint;
 varying float strip_id;
 varying float base_luma;
+varying vec3 base_rgb;
+varying vec3 obj_pos;
 
 void vertex() {
 	face_m = UV;
@@ -168,6 +182,7 @@ void vertex() {
 	world_pos = wp;
 	world_normal = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
 	tint = COLOR.rgb;
+	obj_pos = MODEL_MATRIX[3].xyz;
 	strip_id = COLOR.a * 255.0;
 }
 
@@ -260,7 +275,7 @@ vec2 draw_brick(vec2 uv, vec2 key, float mpp, float weight, float ch, float bl, 
 	float vert = dline(rep_dist(u, bl), w * 0.8, mpp) * step(hb, keep_p + 0.05);
 	float line = max(horiz, vert) * dfade(ch, mpp);
 	float step_v = floor(hb * 3.0) - 1.0;
-	step_v *= step(0.35, hb) ;
+	step_v *= step(0.5, hb);
 	return vec2(line, step_v);
 }
 
@@ -281,12 +296,24 @@ float glass_at(vec2 uvp, vec2 gx, vec2 gy) {
 void fragment() {
 	vec4 row = strips[clamp(int(strip_id + 0.5), 0, 15)];
 	int sid = int(strip_id + 0.5);
+#ifdef FLAT_PAINT_PROP
+	sid = 100 + prop_pattern;
+#endif
 	bool ground = ground_on && row.w > 3.5;
 	vec2 warp = world_warp();
 	vec2 fm = face_m + (ground ? vec2(0.0) : warp);
 	float mpp_face = max(length(dFdx(face_m)), length(dFdy(face_m)));
 	float mpp_world = max(length(dFdx(world_m)), length(dFdy(world_m)));
 	float mpp = ground ? mpp_world : mpp_face;
+#ifdef FLAT_PAINT_PROP
+	{
+		vec2 rel = world_pos.xz - obj_pos.xz;
+		vec2 tng = normalize(vec2(-world_normal.z, world_normal.x) + vec2(0.0001));
+		float u_p = prop_pattern == 0 ? atan(rel.y, rel.x) * max(length(rel), 0.3) : dot(world_pos.xz, tng);
+		fm = vec2(u_p, world_pos.y);
+		mpp = max(length(dFdx(fm)), length(dFdy(fm)));
+	}
+#endif
 	float sheet_a = 0.0;
 	float glass_m = 0.0;
 	float win_frame = 0.0;
@@ -404,6 +431,7 @@ void fragment() {
 	flat_color *= 1.0 + (g - 0.5) * 2.0 * paint_grain;
 
 	base_luma = max(dot(flat_color, LUMA), 0.05);
+	base_rgb = flat_color * albedo.rgb * tint;
 	if (draw_on > 0.0) {
 		vec3 ink_c = mix(flat_color * draw_ink_mul, ink, 0.25);
 		vec2 key = vec2(round(dot(abs(world_normal), world_pos) * 2.0), float(sid) * 1.37);
@@ -431,6 +459,9 @@ void fragment() {
 			float up = world_normal.y;
 			bool wall = abs(up) < 0.6;
 			float base_t = wall ? 1.0 - smoothstep(base_h_m * 0.8, base_h_m * 1.15, face_m.y + wob(face_m * 2.0 + 5.0, 0.12)) : 0.0;
+#ifdef FLAT_PAINT_PROP
+			base_t = 0.0;
+#endif
 			wall_weight = 1.0 + 0.6 * base_t;
 			flat_color *= 1.0 - base_dark * base_t;
 			bool brick_like = sid == brick_strip || (sid == facade_strip && glass_m < 0.5 && win_frame < 0.5 && win_surround < 0.5 && win_sill < 0.5);
@@ -478,6 +509,38 @@ void fragment() {
 				float diag = dline(abs(fract((fm.x + fm.y) / 1.0) - 0.5) * 0.7, draw_line_w * 1.4, mpp);
 				lines = max(pk, diag * 0.8) * dfade(plank_m, mpp);
 				vstep = (hash12(vec2(floor(fm.x / plank_m), key.x)) - 0.5) * brick_var * 2.0;
+			} else if (sid >= 100) {
+				float r = prop_rib_m;
+				float hy = fm.y;
+				if (sid == 100) {
+					// A water tank: hoops every ~0.5 m, staves round it, rust patches.
+					float hoop = dline(rep_dist(hy, r * 1.9), draw_line_w * 1.6, mpp);
+					float stave = dline(rep_dist(fm.x, r), draw_line_w * 0.8, mpp) * dfade(r, mpp);
+					lines = max(hoop * dfade(r, mpp), stave * 0.85);
+					float rust = smoothstep(0.55, 0.62, vnoise2(fm * vec2(2.0, 1.5) + key));
+					vstep = -0.25 * rust + (hash12(vec2(floor(fm.x / r), key.x)) - 0.5) * brick_var;
+				} else if (sid == 101) {
+					// A dumpster: ribs, a lid seam, dents.
+					float rib = dline(rep_dist(fm.x, r), draw_line_w, mpp) * dfade(r, mpp);
+					float seam = dline(rep_dist(hy + 0.0, 1.25), draw_line_w * 1.3, mpp);
+					lines = max(rib * 0.8, seam);
+					vstep = (floor(vnoise2(fm * 1.3 + key) * 3.0) - 1.0) * brick_var;
+				} else if (sid == 102) {
+					// A car: door seams, a belt line, panel shading.
+					float seam = dline(rep_dist(fm.x + 0.3, 1.25), draw_line_w, mpp) * dfade(1.0, mpp);
+					float belt = max(dline(rep_dist(hy, 0.62), draw_line_w * 1.2, mpp), 0.0) * dfade(0.6, mpp);
+					lines = max(seam * 0.9, belt);
+					vstep = (floor(vnoise2(fm * 0.9 + key) * 3.0) - 1.0) * brick_var;
+				} else if (sid == 103) {
+					// An air conditioner: louvres and a panel edge.
+					float lou = dline(rep_dist(hy, r * 0.3), draw_line_w * 0.8, mpp) * dfade(r * 0.3, mpp);
+					float edge = dline(rep_dist(fm.x, r * 4.0), draw_line_w, mpp) * dfade(r, mpp);
+					lines = max(lou * 0.85, edge);
+				} else {
+					float pk = dline(rep_dist(fm.x, r), draw_line_w, mpp) * dfade(r, mpp);
+					float diag = dline(abs(fract((fm.x + hy) / 1.0) - 0.5) * 0.7, draw_line_w * 1.4, mpp);
+					lines = max(pk, diag * 0.8);
+				}
 			} else if (sid == 11) {
 				lines = dline(rep_dist(fm.y, 0.25), draw_line_w * 1.3, mpp) * dfade(0.25, mpp);
 			}
@@ -499,6 +562,13 @@ void fragment() {
 			flat_color = mix(flat_color, flat_color * 1.32, win_surround);
 			flat_color = mix(flat_color, flat_color * 1.45, win_sill);
 			lines = max(lines, win_frame);
+		}
+		if (fire_top_m > -999.0 && !ground && sid < 100) {
+			float top = fire_top_m + wob(vec2(world_pos.x + world_pos.z, 3.0) * 0.8, 1.2);
+			float band = 1.0 - smoothstep(top - 0.15, top + 0.15, world_pos.y);
+			float band2 = 1.0 - smoothstep(top * 0.45 - 0.15, top * 0.45 + 0.15, world_pos.y);
+			vec3 warm = normalize(fire_color + 0.001) * dot(flat_color, LUMA) * fire_gain * 1.6;
+			flat_color = mix(flat_color, warm, fire_mix * (0.6 * band + 0.4 * band2));
 		}
 		flat_color *= 1.0 + vstep;
 		flat_color = mix(flat_color, ink_c, clamp(lines, 0.0, 1.0) * draw_on);
@@ -533,6 +603,7 @@ void fragment() {
 // outside its edge, a dimmer ring and a bright core inside, both edges roughened.
 void light() {
 	float ndl = dot(NORMAL, LIGHT);
+	float wn_up = (INV_VIEW_MATRIX * vec4(NORMAL, 0.0)).y;
 	float lit = ndl * ATTENUATION;
 	float n = strokes(face_m, world_pos, paint_break_scale) - 0.5;
 	float to_pixels = VIEWPORT_SIZE.y / 1080.0;
@@ -564,8 +635,13 @@ void light() {
 			float near_edge = exp(-pow((lit - pool_edge) / brick_edge_w, 2.0));
 			level *= 1.0 - brick_stroke_dark * dash_mask * near_edge;
 		}
-		float pn_amount = world_normal.y > 0.6 ? pool_norm : pool_norm_wall;
-		float norm = mix(1.0, 1.0 / max(base_luma * dot(albedo.rgb * tint, LUMA), 0.08), pn_amount);
-		DIFFUSE_LIGHT += level * light_color * pool_gain * norm;
+		float pn_amount = abs(wn_up) > 0.6 ? pool_norm : pool_norm_wall;
+		float norm = mix(1.0, 1.0 / max(dot(base_rgb, LUMA), 0.08), pn_amount);
+		vec3 hue_fix = abs(wn_up) > 0.6 ? mix(vec3(1.0), vec3(dot(base_rgb, LUMA)) / max(base_rgb, vec3(0.03)), pool_hue_norm) : vec3(1.0);
+		norm *= 1.0;
+		DIFFUSE_LIGHT += level * light_color * pool_gain * norm * hue_fix;
+		if (abs(wn_up) > 0.6) {
+			DIFFUSE_LIGHT -= level * pool_cancel;
+		}
 	}
 }

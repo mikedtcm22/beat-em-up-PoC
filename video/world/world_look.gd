@@ -71,6 +71,12 @@ static var _painted: Array[StringName] = []
 @export var lens_color: Color = Color(1.0, 0.88, 0.6)
 @export var barrel_color: Color = Color(0.2, 0.12, 0.1)
 
+@export_group("Props (round 2)")
+## The game's own props (water tanks, AC units, cars, dumpsters, crates) painted like the kit: mesh node name -> {color, pattern, rib_m}. The pattern
+## numbers are flat_paint_env_body.gdshaderinc's `prop_pattern`: 0 tank, 1 dumpster, 2 car, 3 air conditioner, 4 crate. A prop keeps the hull its
+## material carried (as next_pass). Found at run time by name and by the game's toon shader, never by editing game/.
+@export var props: Dictionary = {}
+
 @export_group("Shader values")
 ## Uniform name -> value, for the flat paint (video/shaders/flat_paint_env_body.gdshaderinc), the painted sky, the haze quad and
 ## the Environment's own properties (name -> value). Plain dictionaries so a look is a data file; the tests check every name.
@@ -102,6 +108,7 @@ func apply(level: Node) -> void:
 	_build_haze(rig)
 	_build_mattes(rig)
 	_build_emitters(rig)
+	_paint_props(level)
 	rig.publish_hook()
 
 
@@ -268,3 +275,33 @@ func _build_emitters(rig: VideoWorldRig) -> void:
 	for spec in emitters:
 		for point in spec.points:
 			rig.add_child(VideoWorldParticles.build(spec, base + point))
+
+
+## The props named in `props`: each MeshInstance3D of the level with that name whose surfaces wear the game's toon material gets the prop paint
+## (its colour, its pattern) as a material override; the hull that material carried (its next_pass) goes along. Characters are never touched
+## (they are in the rig_art and view_proxy groups, and are not named here).
+func _paint_props(level: Node) -> void:
+	if props.is_empty():
+		return
+	for node in level.find_children("*", "MeshInstance3D", true, false):
+		var mesh := node as MeshInstance3D
+		if not props.has(String(mesh.name)):
+			continue
+		var spec: Dictionary = props[String(mesh.name)]
+		var material := prop_material(spec.get(&"color", Color(0.3, 0.3, 0.3)))
+		material.set_shader_parameter(&"prop_pattern", int(spec.get(&"pattern", -1)))
+		material.set_shader_parameter(&"prop_rib_m", float(spec.get(&"rib_m", 0.25)))
+		var hull: Material = null
+		if mesh.has_meta(&"world2_hull"):
+			hull = mesh.get_meta(&"world2_hull") as Material
+		else:
+			var original := mesh.material_override
+			if original == null and mesh.mesh != null and mesh.mesh.get_surface_count() > 0:
+				original = mesh.get_surface_override_material(0)
+				if original == null:
+					original = mesh.mesh.surface_get_material(0)
+			if original != null:
+				hull = original.next_pass
+			mesh.set_meta(&"world2_hull", hull)
+		material.next_pass = hull
+		mesh.material_override = material
