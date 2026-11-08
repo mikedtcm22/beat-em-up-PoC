@@ -4,6 +4,17 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-08 13:30 CST: a plan for a cinematic gameplay video, run by a second account; nothing else changed
+- **Game-boy asked** (in a planning session) for a 30-45 s cinematic gameplay video whose visual style matches two reference videos. That's his prime directive. A second account with an empty usage limit makes it: Claude painting it with code if it can (Plan A), AI video tools as the fallback.
+- **The plan:** `docs/video/PLAN.md` on branch `video/cinematic-trailer` (d8c00cd, pushed), checked out in `.worktrees/video`. It holds the launch prompt Game-boy pastes into the second account, and that account's own watcher and resume prompts.
+- **For this (the game's) session:**
+  - The video session is titled "Beat-em-up: video session". It keeps `docs/video/HANDOFF.md` and its own watcher, and never touches `m6/*`, `main` or `game/`.
+  - Never prune `.worktrees/video` or `.worktrees/mv-*`.
+  - The machine is shared. Before the suite or Movie Maker, check `pgrep -fl godot`; the video session runs at most one render at a time.
+  - It may ask Game-boy to free disk: 19 GB is free today, with 43 GB in `captures/` and 30 GB in `.worktrees/`.
+- **Waiting on Game-boy:** unchanged (the five items below), plus the plan's decisions (PLAN.md §8) when he starts the video account.
+- **Resume task** `beat-em-up-resume-20261109-0400`: unchanged.
+
 ### 2026-11-06 23:20 CST: the weekly window at 90%; a handoff with nothing in flight; still waiting on Game-boy
 - **The watcher's warning:** the weekly all-models window is at 90% (it resets 2026-11-09 03:59 CST); the 5-hour window is at 5%.
 - **Nothing in flight:** no workflow or agent is running, and nothing is uncommitted. `m6/full-art-audio` was at 7144e64 before this entry, pushed. The worktrees under `.worktrees/` hold only merged branches and review checkouts.
