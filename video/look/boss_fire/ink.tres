@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="VideoInkLook" format=3]
+
+[ext_resource type="Script" path="res://video/ink/video_ink_look.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+shadow_color = Color(0.3, 0.12, 0.32, 1)
+shadow_level = 0.26
+rim_color = Color(1, 0.5, 0.15, 1)
+rim_strength = 1.1
+key_dir_fallback = Vector3(0.1, -0.4, -0.9)
+rim_light_color = Color(1, 0.5, 0.2, 1)
+rim_light_energy = 0.9
+ink_color = Color(0.1, 0.04, 0.05, 1)
+hatch_force = 0.0
