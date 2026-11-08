@@ -52,6 +52,36 @@ JOBS = {
 	"roof_silhouette": (REF2_SUNSET, LIGHT_ROOF, ["ref2_50.5.png", "ref2_12.9.png"]),
 }
 
+# Round 2 (Game-boy at Gate 1, 2026-11-08: "the environments are maybe a bit too washed out by
+# lighting/glare in places. I'd like there to be more detail in the environments - so that people can
+# discern how the player is moving through the game... Use the first 10-15 sec of the pt5 video as a
+# reference."): the environment drawn in detail like ref 2's camp (3.5 s) and tent (4.5 s), crisp, no glare.
+ENV_STYLE = ("flat, graphic TV anime, like the reference frames. Bold, clean dark ink lines on every structure "
+	"and edge. The environment is drawn in rich detail as graphic shapes: brick courses, window frames, doors, "
+	"pipes, fire escapes, signs, cracks, puddles and paving are each drawn with ink lines and hard-edged, "
+	"angular shadow shapes, with a few painted texture strokes; flat colour fields; crisp and clear, so the "
+	"space and the path through it read at a glance. The characters are drawn the same way, with clean ink "
+	"lines and hard shadow shapes")
+ENV_LIGHT_STREET = ("Light it as a city street at night: a few orange sodium street lamps as small, contained "
+	"light sources that make hard-edged pools on the ground, cold blue moonlight as the fill, navy shadows. No "
+	"glare, no haze and no bloom: every wall, window, door, pipe, fence and paving slab stays clearly visible "
+	"and drawn")
+ENV_LIGHT_ROOF = ("Light it as a rooftop at dusk: a low sun behind the figure with a big disc and a banded halo, "
+	"a gold, rose and violet sky. The rooftop, parapet, water tanks and the buildings around stay clearly drawn, "
+	"with ink lines and hard shadow shapes, not lost in glare")
+ENV_LIGHT_BOSS = ("Light it as a rooftop at night: orange firelight from below and an orange rim light on the big "
+	"man, a violet-black sky, a few embers. No glare and no smoke wall: the rooftop, the buildings and the skyline "
+	"stay clearly drawn in detail")
+
+# still -> (style, light, style references), for --env
+ENV_JOBS = {
+	"fp_punk": (ENV_STYLE, ENV_LIGHT_STREET, ["ref2_4.5.png", "ref2_3.5.png"]),
+	"fp_kicker_lamp": (ENV_STYLE, ENV_LIGHT_STREET, ["ref2_4.5.png", "ref2_3.5.png"]),
+	"street_wide": (ENV_STYLE, ENV_LIGHT_STREET, ["ref2_3.5.png", "ref2_4.5.png"]),
+	"roof_silhouette": (ENV_STYLE, ENV_LIGHT_ROOF, ["ref2_4.5.png", "ref2_50.5.png"]),
+	"ox_low": (ENV_STYLE, ENV_LIGHT_BOSS, ["ref2_4.5.png", "ref2_8.0.png"]),
+}
+
 PROMPT = ("Repaint the first image in the exact art style of the other images: {style}. {light}. Keep the "
 	"first image's composition, camera, characters, poses, clothes and every object; change only how it is "
 	"drawn, painted and lit. Add only atmosphere (haze, smoke or steam, embers, glow); no new objects or "
@@ -66,11 +96,13 @@ def to_jpeg(src: str, dst: str) -> None:
 
 
 def main() -> None:
-	stills, refs, out = sys.argv[1], sys.argv[2], sys.argv[3]
-	only = set(sys.argv[4:])
+	argv = [a for a in sys.argv[1:] if a != "--env"]
+	table = ENV_JOBS if "--env" in sys.argv else JOBS
+	stills, refs, out = argv[0], argv[1], argv[2]
+	only = set(argv[3:])
 	os.makedirs(os.path.join(out, "in"), exist_ok=True)
 	jobs = []
-	for name, (style, light, ref_names) in JOBS.items():
+	for name, (style, light, ref_names) in table.items():
 		if only and name not in only:
 			continue
 		ours = os.path.join("in", f"{name}.jpg")
