@@ -17,3 +17,26 @@ Each call: the decision, an alternative not taken, why.
 13. **A second look replaces the first on the same level** (`apply` removes the old rig and clears the paint uniforms the old look set and the new one does not). Alternative: one look per process. The stills run all six shots in one process, and a shot list will switch location, so this keeps `apply` honest.
 14. **The act hides the game's edge pass by default (`--world-edges` keeps it).** The ink is LD-INK's; the world's paint is judged without the game's constant-width ruler lines, which are one of the blind check's tells. The characters keep their hull outline.
 15. **Embers, steam and dust are GPU particles with a fixed seed, `fixed_fps = 60` and a preprocess,** their sprites made in code (`VideoWorldSprites`, hashed, byte-identical on every run). Alternative: CPU sprites. The fire's flicker is re-rolled from the physics frame number at 12 fps, never from time.
+
+## How to run it
+- Stills: `tools/video/shoot_still.sh "World:" captures/video/world/<run>` (all six, one process; about 60 s), or one: `"World: street_wide"`. `--world-edges` (after `--`, through the bot's args) keeps the game's edge pass; `--world-look=<location>` forces a location.
+- Motion check: `"WorldMotion: street_wide"` writes 12 consecutive frames (`<key>_m00.png` ...) while the camera dollies 0.12 m and turns 0.4 degrees a frame. Looked at: textures, window rows, grain and the chain-link hold still in the world, nothing swims; the mean luminance drifts smoothly (31.96 to 34.70 over 12 frames, from the camera moving toward the lamps).
+- Determinism: two runs of `fp_kicker_lamp` are pixel-identical; `street_wide` differs by at most 7 levels in a few particle pixels (the GPU particle sim, fixed seed and `fixed_fps = 60`).
+
+## The numbers (r13, 2560x1440, against docs/video/STYLE.md's location columns; the game's edge pass hidden)
+| Shot | L* mean | dark share | light share | darks' hue | warm / cool | key hue | edge density | local std | In range? |
+| --- | ---: | ---: | ---: | ---: | --- | ---: | ---: | ---: | --- |
+| street_wide | 11.9 | 0.89 | 0.002 | 293 | 0.14 / 0.84 | 38 | 0.034 | 0.285 | all in the street column; key hue 2 under |
+| fp_punk | 16.4 | 0.68 | 0.001 | 293 | 0.25 / 0.56 | 34 | 0.028 | 0.094 | all; key hue 6 under (an orange-red lamp) |
+| fp_kicker_lamp | 18.0 | 0.67 | 0.003 | 294 | 0.22 / 0.62 | 50 | 0.027 | 0.152 | all |
+| roof_silhouette | 41.9 | 0.30 | 0.118 | 347 | 0.76 / 0.00 | 91 | 0.016 | 0.0 | all but light share (0.118, wants 0.15-0.35) |
+| ox_low | 19.9 | 0.63 | 0.008 | 8 | 0.97 / 0.00 | 48 | 0.015 | 0.012 | L* just under 20 and light share just under 0.01 (the boss column wants 20-55 and 0.01+); the rest in |
+| ox_closeup | 15.5 | 0.81 | 0.006 | 7 | 0.95 / 0.00 | 47 | 0.018 | 0.014 | in the close-up column (L* 15-30) except dark share (0.81, wants 0.45-0.75): Ox's own dark figure fills the frame |
+
+## Where it falls short (honest list)
+- The facade's windows read as a patchy mosaic up close (blanked windows are a lighter wall colour against a dark facade), not as a drawn building.
+- Pools are rounder and blobbier than the target's angular polygons; the lamp head from above is a dark cap with a glowing lens.
+- The props the game paints with the toon shader (water tanks, the AC unit, cars, crates) are not flattened by this look: they keep the game's textured toon paint, so they are the most "rendered" things left in the environment. Needs a request (below).
+- Volumetric light shafts are not built; the smoke bank matte is mostly hidden behind the fire wall; steam is cotton-like at 2560.
+- The fire wall's flames are regular spikes; the matte painter could use a second tongue pass.
+- No P1 line work: that is LD-INK's.
