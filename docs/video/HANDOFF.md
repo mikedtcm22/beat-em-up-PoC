@@ -6,6 +6,14 @@ The cinematic gameplay video's live status, kept by the video session ("Beat-em-
 
 ## Status (newest first)
 
+### 2026-11-08 15:58 CST: paused for Game-boy's app restart
+- **Game-boy:** "pause working tasks so I can restart". Nothing was running. The usage watcher and the Slack relay were told to end their loops.
+- **After the restart:**
+  1. Start a new watcher (PLAN.md §12).
+  2. Start a new relay ([slack_relay_prompt.md](slack_relay_prompt.md)).
+  3. Check whether this session now sees a Slack connector. If so, send Game-boy a short test DM.
+  4. The resume task `beat-em-up-video-resume-20261108-1720` still fires at 17:30 CST for the next wave (the 15:40 entry's steps).
+
 ### 2026-11-08 15:52 CST: handoff at the watcher's warning (86%, 90% within minutes); nothing running
 - **Game-boy (chat, 15:50):** "I've connected you to Slack. In the future please DM me (@michael) with open questions." He also asked for a heartbeat that forwards his DM replies into this session as answers to the open questions, every 20 minutes or so, only while the work runs and never while it's paused for usage. He wants to work through Slack rather than this chat window.
   - **Started:** "Beat-em-up: video Slack relay" (`local_0b0e0465-5036-4848-813f-e4877d8332c2`), Haiku at low effort, a /loop every 1200 s.
