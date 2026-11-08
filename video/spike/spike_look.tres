@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="CineSpikeLookData" format=3]
+
+[ext_resource type="Script" path="res://video/spike/spike_look_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+player_guard_ticks = 9
+moon_color = Color(0.6, 0.68, 0.88, 1)
+moon_energy = 0.1
+moon_volumetric_energy = 0.1
+lamp_offset = Vector3(-1.7, 2.9, -1.6)
+lamp_energy = 1.0
+lamp_range_m = 5.4
+lamp_attenuation = 0.8
+lamp_volumetric_energy = 2.0
+rim_offset = Vector3(-0.9, 1.9, -1.5)
+rim_energy = 0.9
+rim_range_m = 4.0
+vfog_density = 0.012
+paint_break = 0.08
+paint_break_scale = Vector2(3, 1.2)
+paint_lod = 4.6
+lamp_color = Color(1, 0.55, 0.16, 1)
