@@ -1,0 +1,39 @@
+[gd_resource type="Resource" script_class="VideoStillShot" load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://video/stage/still_shot.gd" id="1_shot"]
+[ext_resource type="Script" path="res://video/stage/still_actor.gd" id="2_actor"]
+
+[sub_resource type="Resource" id="Actor_a"]
+script = ExtResource("2_actor")
+id = &"punk"
+position = Vector3(2, 0, -22)
+facing = 1
+hold_tick = 5
+
+[sub_resource type="Resource" id="Actor_b"]
+script = ExtResource("2_actor")
+id = &"punk"
+position = Vector3(4.5, 0, -25)
+facing = 1
+hold_tick = 15
+
+[sub_resource type="Resource" id="Actor_c"]
+script = ExtResource("2_actor")
+id = &"punk"
+position = Vector3(0, 0, -26)
+facing = 1
+hold_tick = 30
+
+[resource]
+script = ExtResource("1_shot")
+key = &"street_wide"
+note = "Ref 2 at 42.0 s: an establishing wide from 6-8 m up, looking down the length of the street; three Punks small in the middle distance."
+section = 0
+player_pos = Vector3(3, 0, -2)
+player_yaw_deg = 0.0
+first_person = false
+cam_pos = Vector3(3.0, 7.0, 2.0)
+cam_look_at = Vector3(2.5, 1.0, -30.0)
+cam_fov_deg = 70.0
+actors = Array[ExtResource("2_actor")]([SubResource("Actor_a"), SubResource("Actor_b"), SubResource("Actor_c")])
+warmup_ticks = 40
