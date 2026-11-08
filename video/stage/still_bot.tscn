@@ -1,0 +1,6 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://video/stage/still_bot.gd" id="1_bot"]
+
+[node name="StillBot" type="Node"]
+script = ExtResource("1_bot")
