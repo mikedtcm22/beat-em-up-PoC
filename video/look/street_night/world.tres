@@ -182,7 +182,7 @@ paint = {
 &"puddle_color": Color(0.3, 0.42, 0.8, 1),
 &"pool_norm_wall": 0.0,
 &"base_dark": 0.25,
-&"paint_value_gain": 1.6,
+&"paint_value_gain": 1.45,
 &"pool_hue_norm": 0.8,
 &"pool_cancel": Vector3(0.3, 0.37, 0.7)
 }

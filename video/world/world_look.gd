@@ -99,7 +99,7 @@ func apply(level: Node) -> void:
 	rig.level = level
 	level.add_child(rig)
 	_tuning()
-	_paint_materials()
+	_paint_materials(rig)
 	rig.sun = level.get_node_or_null("Sun") as DirectionalLight3D
 	rig.env = LookPost.find_environment(level)
 	_apply_sun(rig)
@@ -172,7 +172,7 @@ static func apply_uniforms(material: ShaderMaterial, values: Dictionary) -> void
 
 ## The paint shaders go on the kit's shared materials (the trim, and the scissor trim of the chain-link). Each look sets every
 ## uniform again, so applying a second location after the first leaves nothing of it.
-func _paint_materials() -> void:
+func _paint_materials(rig: VideoWorldRig) -> void:
 	var trim := ToonMaterials.trim()
 	var scissor := ToonMaterials.trim_scissor()
 	if _game_trim_shader == null and trim.shader != PAINT_SHADER:
@@ -181,15 +181,19 @@ func _paint_materials() -> void:
 		_game_scissor_shader = scissor.shader
 	trim.shader = PAINT_SHADER
 	scissor.shader = PAINT_SCISSOR_SHADER
+	# Values written in a section's own space are moved to the world: the fire's height is metres above the section's floor.
+	var values := paint.duplicate()
+	if values.has(&"fire_top_m"):
+		values[&"fire_top_m"] = float(values[&"fire_top_m"]) + rig.section_origin().y
 	for key in _painted:
 		if not paint.has(key):
 			trim.set_shader_parameter(key, null)
 			scissor.set_shader_parameter(key, null)
 	_painted.clear()
-	for key: Variant in paint:
+	for key: Variant in values:
 		_painted.append(StringName(key))
-	apply_uniforms(trim, paint)
-	apply_uniforms(scissor, paint)
+	apply_uniforms(trim, values)
+	apply_uniforms(scissor, values)
 
 
 ## Give the kit's shared materials their own shaders back (a test, or a shot that ends the look).

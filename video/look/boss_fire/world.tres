@@ -60,8 +60,8 @@ energy = 0.9
 script = ExtResource("1_look")
 location = &"boss_fire"
 section = 2
-sun_color = Color(0.55, 0.4, 0.9, 1)
-sun_energy = 0.85
+sun_color = Color(0.5, 0.34, 0.8, 1)
+sun_energy = 0.7
 sun_elevation_deg = 35.0
 sun_yaw_deg = 160.0
 sun_shadow = false
@@ -122,7 +122,8 @@ paint = {
 &"pool_norm_wall": 0.0,
 &"paint_value_gain": 2.0,
 &"pool_hue_norm": 0.7,
-&"fire_top_m": 6.0,
+&"fire_top_m": 11.0,
+&"fire_mix": 0.85,
 &"fire_color": Color(1, 0.42, 0.12, 1)
 }
 sky = {

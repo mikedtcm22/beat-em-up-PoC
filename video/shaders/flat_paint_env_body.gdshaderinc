@@ -637,11 +637,9 @@ void light() {
 		}
 		float pn_amount = abs(wn_up) > 0.6 ? pool_norm : pool_norm_wall;
 		float norm = mix(1.0, 1.0 / max(dot(base_rgb, LUMA), 0.08), pn_amount);
-		vec3 hue_fix = abs(wn_up) > 0.6 ? mix(vec3(1.0), vec3(dot(base_rgb, LUMA)) / max(base_rgb, vec3(0.03)), pool_hue_norm) : vec3(1.0);
+		vec3 hue_fix = mix(vec3(1.0), vec3(dot(base_rgb, LUMA)) / max(base_rgb, vec3(0.03)), pool_hue_norm * (abs(wn_up) > 0.6 ? 1.0 : 0.85));
 		norm *= 1.0;
 		DIFFUSE_LIGHT += level * light_color * pool_gain * norm * hue_fix;
-		if (abs(wn_up) > 0.6) {
-			DIFFUSE_LIGHT -= level * pool_cancel;
-		}
+		DIFFUSE_LIGHT -= level * pool_cancel * (abs(wn_up) > 0.6 ? 1.0 : 0.5);
 	}
 }
