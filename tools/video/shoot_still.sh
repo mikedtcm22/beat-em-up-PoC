@@ -3,6 +3,7 @@
 # Usage: tools/video/shoot_still.sh "<act filter>" <out dir>
 #   tools/video/shoot_still.sh "Still:" captures/video/stills        every still
 #   tools/video/shoot_still.sh "fp_punk|ox_low" captures/video/work  two of them
+# STILL_WINDOW=1 also saves <key>_window.png, the window's own frame, for the SubViewport comparison.
 # Output: <out dir>/<key>.png and <out dir>/shoot.log (the bot's printed log). The window is a normal 1280x720
 # one (rendering needs the GPU, so never --headless); the stills are rendered by a 2560x1440 SubViewport.
 # It takes the machine-wide capture lock that tools/capture_bot.sh uses (CAPTURE_SLOTS, CAPTURE_LOCK_DIR), so
@@ -67,7 +68,7 @@ done
 status=0
 "$GODOT" --path "$ROOT" --fixed-fps 60 --resolution 1280x720 \
 	--quit-after "${SHOOT_MAX_FRAMES:-3000}" \
-	res://video/stage/still_bot.tscn -- "--level=$LEVEL" "--act=$FILTER" "--still-out=$OUT" \
+	res://video/stage/still_bot.tscn -- "--level=$LEVEL" "--act=$FILTER" "--still-out=$OUT" ${STILL_WINDOW:+--still-window} \
 	> "$OUT/shoot.log" 2>&1 || status=$?
 release
 

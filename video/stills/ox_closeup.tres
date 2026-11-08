@@ -6,7 +6,7 @@
 [sub_resource type="Resource" id="Actor_ox"]
 script = ExtResource("2_actor")
 id = &"boss"
-position = Vector3(0, 0, -10)
+position = Vector3(7, 0, -10)
 facing = 1
 anim = &"idle"
 hold_tick = 15
@@ -19,8 +19,8 @@ section = 2
 player_pos = Vector3(0, 0, -1.5)
 player_yaw_deg = 0.0
 first_person = false
-cam_pos = Vector3(0.0, 1.9, -9.3)
-cam_look_at = Vector3(0.0, 1.8, -10.0)
-cam_fov_deg = 50.0
+cam_pos = Vector3(5.8, 2.0, -10.0)
+cam_look_at = Vector3(7.0, 1.95, -10.2)
+cam_fov_deg = 70.0
 actors = Array[ExtResource("2_actor")]([SubResource("Actor_ox")])
 warmup_ticks = 40

@@ -17,10 +17,16 @@ extends Resource
 @export var player_pos: Vector3 = Vector3.ZERO
 @export_range(-180.0, 180.0) var player_yaw_deg: float = 0.0
 @export_range(-85.0, 85.0) var player_pitch_deg: float = 0.0
-## A button the player presses once the room has warmed up (&"P" a punch; empty = none) and the physics
-## ticks after the press at which the time is stopped, so the pose is held for the grab.
-@export var player_button: StringName = &""
+## What the player does once the room has warmed up, so the pose is held for the grab. `player_hold` is a
+## button held down (&"DODGE" blocks), `player_buttons` are pressed one after the other with
+## `player_button_gap_ticks` between them (&"P" a punch), and the time is stopped `player_button_ticks` ticks
+## after the last press (or, with no button, at once). All empty: the player stands as he is.
+@export var player_hold: StringName = &""
+@export var player_buttons: PackedStringArray = PackedStringArray()
+@export_range(0, 120) var player_button_gap_ticks: int = 0
 @export_range(0, 120) var player_button_ticks: int = 0
+## Stop the game's time for the grab (the pose is then held exactly). Off, the room runs on while it renders.
+@export var hold_time: bool = false
 ## First person (the game's own camera, riding the player's eyes) or a free camera.
 @export var first_person: bool = true
 ## First person: the horizontal FOV in degrees (0 leaves the game's setting).

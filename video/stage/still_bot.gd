@@ -4,7 +4,8 @@ extends "res://tests/bot/level_bot.gd"
 ## still through a VideoStillGrab at 2560x1440. Run it with tools/video/shoot_still.sh, or by hand:
 ##   godot --path . --fixed-fps 60 --resolution 1280x720 res://video/stage/still_bot.tscn -- \
 ##     --level=res://game/level/mission1/mission1.tscn --act=<filter> --still-out=<abs dir>
-## Arguments after `--`: the level bot's, plus `--still-out=<dir>` (default `captures/video/stills`).
+## Arguments after `--`: the level bot's, plus `--still-out=<dir>` (default `captures/video/stills`) and
+## `--still-window` (also save the window's own frame, to compare it with the grab).
 ## An act of a stills file calls `shoot(shot)`; the shots are data (VideoStillShot, `res://video/stills/*.tres`).
 
 ## Where the acts are read from (the base constant names the tests' directory and cannot be redeclared).
@@ -18,6 +19,8 @@ const EFFECT_SEED := 1
 const AUDIO_SEED := 1
 
 var grab: VideoStillGrab
+## `--still-window`: also write the main window's own frame (`<key>_window.png`), to compare it with the grab.
+var save_window: bool = false
 var out_dir: String = ""
 ## Actors the stage placed (they are taken out of the enemy groups, so clear_enemies() cannot free them).
 var _stage_actors: Array[Node] = []
@@ -33,6 +36,8 @@ func _ready() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--still-out="):
 			out_dir = arg.trim_prefix("--still-out=")
+		elif arg == "--still-window":
+			save_window = true
 	if out_dir == "":
 		out_dir = ProjectSettings.globalize_path(DEFAULT_OUT)
 	DirAccess.make_dir_recursive_absolute(out_dir)
@@ -177,18 +182,23 @@ func shoot(shot: VideoStillShot) -> void:
 	for _tick in shot.warmup_ticks:
 		await _ticks(1)
 		_pin_player(at, yaw, deg_to_rad(shot.player_pitch_deg), false)
-	if shot.player_button != &"":
-		player.input.push_press(shot.player_button, 2)
-		await _ticks(shot.player_button_ticks)
+	if shot.player_hold != &"":
+		player.input.push_down(shot.player_hold)
+	for n in shot.player_buttons.size():
+		player.input.push_press(StringName(shot.player_buttons[n]), 2)
+		if n < shot.player_buttons.size() - 1:
+			await _ticks(shot.player_button_gap_ticks)
+	await _ticks(shot.player_button_ticks)
+	if shot.hold_time:
 		Engine.time_scale = 0.0
-		for _frame in 3:
-			await get_tree().process_frame
-	else:
-		for _frame in 3:
-			await get_tree().process_frame
+	for _frame in 3:
+		await get_tree().process_frame
 	_log_sun()
 	var path := out_dir.path_join("%s.png" % shot.key)
 	var err := await grab.capture(path)
+	if save_window:
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png(out_dir.path_join("%s_window.png" % shot.key))
 	Engine.time_scale = 1.0
 	log_line("STILL %s %s err=%d" % [shot.key, path, err])
 

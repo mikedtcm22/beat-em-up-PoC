@@ -6,9 +6,8 @@
 [sub_resource type="Resource" id="Actor_kicker"]
 script = ExtResource("2_actor")
 id = &"kicker"
-position = Vector3(19, 7.5, -14)
-facing = 0
-yaw_deg = 90.0
+position = Vector3(12.3, 8.9, -16)
+facing = 1
 anim = &"idle"
 hold_tick = 10
 
@@ -20,8 +19,8 @@ section = 1
 player_pos = Vector3(19, 7.5, -4)
 player_yaw_deg = 0.0
 first_person = false
-cam_pos = Vector3(12, 8.0, -14)
-cam_look_at = Vector3(19, 9.5, -14)
-cam_fov_deg = 50.0
+cam_pos = Vector3(21.0, 7.6, -18.6)
+cam_look_at = Vector3(12.3, 10.6, -16.0)
+cam_fov_deg = 75.0
 actors = Array[ExtResource("2_actor")]([SubResource("Actor_kicker")])
 warmup_ticks = 40
