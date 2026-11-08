@@ -4,6 +4,12 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-08 13:55 CST: the disk cleaned up (19 GB free, now 92 GB); nothing else changed
+- **Game-boy's word** (planning session chat): "Can you help me clean up the 60 GB in old captures and worktrees you identified? anything that isn't currently required to run the latest iteration of the Beat-em-up game can go."
+- **Worktrees:** all 33 M6 worktrees under `.worktrees/` are removed. Every one was clean, with its commits pushed; their local branches stay. Only `.worktrees/video` (the video session's) is left.
+- **Captures:** `captures/` is emptied except `.gdignore` and `captures/m6-look/`, which holds two contact sheets of M6's look that the video plan uses. Every earlier recording is gone; record new ones as needed.
+- **Checked:** nothing in `game/`, `addons/`, `tuning/` or `tests/` reads `captures/`. The game runs 180 frames headless from the main checkout with no errors.
+
 ### 2026-11-08 13:30 CST: a plan for a cinematic gameplay video, run by a second account; nothing else changed
 - **Game-boy asked** (in a planning session) for a 30-45 s cinematic gameplay video whose visual style matches two reference videos. That's his prime directive. A second account with an empty usage limit makes it: Claude painting it with code if it can (Plan A), AI video tools as the fallback.
 - **The plan:** `docs/video/PLAN.md` on branch `video/cinematic-trailer` (d0a3fa0, pushed, after one Opus critic pass), checked out in `.worktrees/video`. It holds the launch prompt Game-boy pastes into the second account, and that account's own watcher and resume prompts.
@@ -11,7 +17,7 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
   - The video session is titled "Beat-em-up: video session". It keeps `docs/video/HANDOFF.md` and its own watcher, and never touches `m6/*`, `main` or `game/`.
   - Never prune, commit, push, stash or reset in `.worktrees/video` or `.worktrees/mv-*`: CLAUDE.md's handoff step "including inside `.worktrees/*`" excludes them. They belong to the video session.
   - The machine is shared. The video session's renders take the same capture slot lock as `tools/capture_bot.sh` (`CAPTURE_LOCK_DIR`). It runs at most two builders while this session is active; check `pgrep -fl godot` before the suite.
-  - It may ask Game-boy to free disk: 19 GB is free today, with 43 GB in `captures/` and 30 GB in `.worktrees/`.
+  - The disk was cleaned up the same day (the entry above).
 - **Waiting on Game-boy:** unchanged (the five items below), plus the plan's decisions (PLAN.md §8) when he starts the video account.
 - **Resume task** `beat-em-up-resume-20261109-0400`: unchanged.
 
@@ -2955,6 +2961,7 @@ Every approved spec change so far is in README.md, "Where M1 departs from the sp
   - **Moods:** street **A** (`mood_street_a.jpg`: warm brick, sodium street lamps, rust, wooden crates) and roof **C** (`mood_roof_a.jpg`, since the sheet relabels the roofs C/D: warm brick parapets, orange dusk, water tanks, ducts, skylights, AC units).
 - **The Tripo licence (2026-11-04 14:45 CST, session chat):** the key is on Tripo's **paid API platform**, with credits he bought ("Yes, paid API"). Tripo's help page gives paid users full rights to their outputs, including commercial use, and keeps rights only to free users' outputs. So ASSETS.md records each Tripo model as "Tripo API (paid credits): owned by the project, commercial use". The phase 2 gate is cleared.
 - **The prune (2026-11-04 14:50 CST):** "Yes, prune them". All 90 M3-M5 worktrees are removed, and 89 GB is free.
+- **The second prune (2026-11-08 13:50 CST, planning session chat):** "anything that isn't currently required to run the latest iteration of the Beat-em-up game can go". All 33 M6 worktrees are removed (each clean, with its commits pushed; the local branches stay), and `captures/` is emptied except `.gdignore` and `captures/m6-look/`. 92 GB is free.
 - **Every sound from ElevenLabs (2026-11-04 15:05 CST, session chat):** "Why don't we just use ElevenLabs for all sound instead? Would the 40k credits I have be enough to cover that?" This replaces option (a)'s Sonniss half.
   - The account is Starter with 40,000 credits (none used; it renews about Dec 3).
   - **The lead's estimate:**
