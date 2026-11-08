@@ -6,6 +6,32 @@ The cinematic gameplay video's live status, kept by the video session ("Beat-em-
 
 ## Status (newest first)
 
+### 2026-11-08 16:00 CST: Game-boy answered Gate 1; wave 1 merged; paused near 90% until the 17:20 reset
+- **Game-boy at Gate 1, word for word:** "The characters look pretty good, but I think the environments are maybe a bit too washed out by lighting/glare in places. I'd like there to be more detail in the environments - so that people can discern how the player is moving through the game. Can you try to render the environments with some more detail? Use the first 10-15 sec or the 'pt5' video as a reference."
+  - **Done in answer:** paint-over round 2 (`make_paintover_jobs.py --env`). Five stills were repainted with drawn environment detail and no glare, with ref 2 at 3.5 s and 4.5 s (the camp and the tent) as the references, for $0.70. The Gemini total is $1.54 of $5.
+  - The targets are in `captures/video/p0/gemini_env/target_*.jpg`. The comparison sheet, our still | round 1 | round 2, is `captures/video/p0/gate1/env/overview.png`. It was sent to Game-boy.
+  - **The decision:** his eye outranks the blind check. Environments carry drawn detail (brick courses, frames, pipes, fire escapes, paving, puddles), are crisp, and have small, contained lights.
+- **Wave 1 is merged:** `mv/ld-world` (`7d89ce4`) and `mv/ld-ink` (`af5a179`), at `1f0c7e4`. ASSETS.md had both packages' sections in conflict; both were kept. The video tests pass 39/39, and there is no diff under `game/`, `tuning/` or `tests/`.
+  - **LD-WORLD:** `VideoWorldLook` for street_night, roofs_dusk and boss_fire. It has the light rig with one shadow caster and the hard sodium pools, flat paint v2, the painted sky with a banded halo, haze bands, matte cards, embers and steam.
+    - It flattened the brick and hash-blanked windows to beat the blind check. That's the opposite of Game-boy's direction, so LD-WORLD2 undoes it.
+    - Its renders are in `.worktrees/mv-ld-world/captures/video/world/r13`.
+  - **LD-INK:** `VideoInkLook`, with cine_toon and cine_outline (width follows the key), screen ink, rim lights, the 2D cues as switches (on twos, smears, hidden comic words, flash frames and speed lines inside the render), a compositor post pass, three LUTs and `look_sweep.py`.
+    - Its builder scored P1 1.3, P2 1.8, P7 1.0 and P8 2.0. The gaps are drawn faces (LD-ASSET) and lit fills.
+    - Its renders are in `.worktrees/mv-ld-ink/captures/video/ink/`.
+  - **Requests to carry into wave 2:**
+    - LD-STAGE: set `CineInkRig.frame_source` to the 24 fps frame index; assign the rig's compositor to the SubViewport camera; hide the LookPost edge quad in every shot.
+    - LD-WORLD2: the props' materials (flat_paint_prop is ready).
+    - LD-WORLD: `shadow_blur` of 2.5 or more on the key.
+- **Wave 2 was skipped** by the usage gate (5-hour window at 81% after wave 1). It is LD-STAGE and LD-ASSET, now joined by LD-WORLD2 (the brief is P1.md's last section).
+- **Resume steps (after the 17:20 CST reset):**
+  1. `get_usage`. Make sure the watcher is running.
+  2. If Game-boy answered about round 2 since this entry, follow him. A "no" changes LD-WORLD2's brief before the launch.
+  3. Run the Workflow `scriptPath: tools/workflows/build.js` with [args-p1b.json](args-p1b.json): LD-WORLD2, LD-ASSET (Blender) and LD-STAGE, concurrency 2. It resumes from the branches' state.
+  4. When they're done, merge them. Render the Gate 2 set through LD-STAGE's `shoot.sh`: the six shots plus the 5 s moving shot.
+  5. The lead's look, then one review round (one Opus visual lens and one Sonnet code lens), and the blind check again.
+  6. Gate 2 to Game-boy, here in the chat.
+- **Usage:** the wave-1 builders cost 1.03M tokens and about 35 points of the 5-hour window, which went from 46% to 81%. Weekly is at 16%.
+
 ### 2026-11-08 15:20 CST: Gate 1 sent (here in the chat); Phase 1's wave 1 running (LD-WORLD, LD-INK)
 - **Phase 0 is done.** The builds were `mv/p0-stills` (`5fd3701`) and `mv/p0-spike` (`623459b`), merged at `4f8e1fd`. The video tests pass (10/10), and there is no diff under `game/`, `tuning/` or `tests/`.
   - **The six stills** frame well against their reference frames. They're in `.worktrees/mv-p0-stills/captures/video/p0-stills/`.
