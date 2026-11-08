@@ -6,3 +6,4 @@ Game-boy's cap: **$5** in all (D2, 2026-11-08), through `tools/gemini_image.py` 
 
 | When (CST) | Batch | Jobs | Estimate | Result | Running total (estimated) |
 | --- | --- | --- | --- | --- | --- |
+| 2026-11-08 15:05 | Gate 1 targets: the six stills repainted (`make_paintover_jobs.py`, gemini-3-pro-image, 2K, 16:9) | 6 | $0.84 | 6 images, all ok (JPEG, 2K) | $0.84 |
