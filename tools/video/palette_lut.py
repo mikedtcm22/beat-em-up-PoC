@@ -3,7 +3,7 @@
 toward theirs (Phase 0 spike, PLAN.md section 4, Plan A part 5).
 
     ~/.venvs/beat-em-up-video/bin/python -I tools/video/palette_lut.py <reference png> <our png> <out lut png> \
-        [--pre-lut <strip png>] [--strength 0.85] [--l-blend 0.5] [--keep-below 5] [--max-hue-shift 14] [--size 32] \
+        [--pre-lut <strip png>] [--strength 0.7] [--l-blend 0.5] [--keep-below 5] [--max-hue-shift 10] [--size 32] \
         [--preview <png>] [--report <json>]
 
 The output is a strip of N slices of N x N pixels (RGB8), the format of tools/gen_lut.gd and
@@ -329,10 +329,10 @@ def main():
     ap.add_argument("ours")
     ap.add_argument("out")
     ap.add_argument("--pre-lut", default=None, help="a strip the frame already went through (composed first)")
-    ap.add_argument("--strength", type=float, default=0.85)
+    ap.add_argument("--strength", type=float, default=0.7)
     ap.add_argument("--l-blend", type=float, default=0.5)
     ap.add_argument("--keep-below", type=float, default=5.0)
-    ap.add_argument("--max-hue-shift", type=float, default=14.0, help="degrees a hue may turn (smooth cap)")
+    ap.add_argument("--max-hue-shift", type=float, default=10.0, help="degrees a hue may turn (smooth cap)")
     ap.add_argument("--size", type=int, default=32)
     ap.add_argument("--preview", default=None, help="write our frame through the LUT here (full frame, no crop)")
     ap.add_argument("--report", default=None)

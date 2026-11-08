@@ -308,6 +308,8 @@ func _apply_lut() -> void:
 
 ## An ImageTexture3D from a LUT strip PNG (N slices of N x N: slice = blue, x = red, y = green), or null.
 static func load_lut(path: String) -> ImageTexture3D:
+	if not FileAccess.file_exists(path):
+		return null
 	var strip := Image.load_from_file(path)
 	if strip == null or strip.is_empty():
 		return null

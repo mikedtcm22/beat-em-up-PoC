@@ -135,6 +135,6 @@ func _act_street_punk() -> void:
 		if sun != null:
 			log_line("SPIKE sun e=%.2f c=%s rot=%s" % [sun.light_energy, sun.light_color, sun.rotation_degrees])
 		log_line("SPIKE stage %s -> %s (%s) f%d" % [letter, path, error_string(err), Engine.get_physics_frames()])
-		if window_check and (letter == "a" or letter == "e"):
+		if window_check:
 			await capture.shoot_window(ProjectSettings.globalize_path(out_dir.path_join("window_%s.png" % letter)))
 	TimeController.debug_scale = 1.0
