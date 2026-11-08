@@ -27,6 +27,13 @@ extends VideoLookPiece
 ## The painted terminator: the least band edge (pixels at 1080p), the brush noise's push on the light term.
 @export_range(0.0, 12.0) var term_soft: float = 3.0
 @export_range(0.0, 0.6) var term_wobble: float = 0.22
+## Every shadow-casting light of the level gets at least this shadow blur (the shadow map's PCF kernel), so the
+## texel steps of a cast shadow are too soft to survive the posterised bands (0 leaves the world's own).
+@export_range(0.0, 8.0) var shadow_blur_min: float = 2.5
+## The soft-shadow filter's quality (RenderingServer.ShadowQuality: 0 hard .. 5 ultra) for directional and positional
+## lights, and the directional shadow atlas size (0 leaves the project's own).
+@export_range(0, 5) var shadow_quality: int = 5
+@export_range(0, 8192) var shadow_atlas_size: int = 4096
 ## Object-space brush grain: a share of the value and cells per metre.
 @export_range(0.0, 0.6) var grain_amount: float = 0.14
 @export_range(1.0, 200.0) var grain_scale: float = 38.0
@@ -66,7 +73,7 @@ extends VideoLookPiece
 ## The ink (a warm brown-black, never pure black), the hull's width at 1080p, the weight on the shadow side
 ## and on the lit side (x the width), the thinning with distance, and the wander along the contour.
 @export var ink_color: Color = Color(0.09, 0.055, 0.05)
-@export_range(0.0, 8.0) var hull_px: float = 2.4
+@export_range(0.0, 8.0) var hull_px: float = 3.2
 @export_range(0.2, 4.0) var heavy_mult: float = 1.7
 @export_range(0.0, 2.0) var thin_mult: float = 0.25
 @export_range(0.0, 1.0) var far_thin: float = 0.45
@@ -78,8 +85,8 @@ extends VideoLookPiece
 ## 1080p) and width share, re-seeded from the output frame at `boil_fps`.
 @export var sketch_mode: bool = false
 @export_range(1, 2) var sketch_extra_passes: int = 2
-@export_range(0.0, 12.0) var sketch_jitter_px: float = 2.2
-@export_range(0.0, 1.5) var sketch_width_scale: float = 0.55
+@export_range(0.0, 12.0) var sketch_jitter_px: float = 3.2
+@export_range(0.0, 1.5) var sketch_width_scale: float = 0.7
 @export_range(1.0, 24.0) var boil_fps: float = 12.0
 
 @export_group("Screen ink")

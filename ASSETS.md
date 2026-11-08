@@ -532,3 +532,13 @@ The level's and the rooms' dressing (Milestone 6, DRESS; plan D9, D11, D12). It 
 | Asset | Path | Source / service | License | Notes |
 | --- | --- | --- | --- | --- |
 | Trim sheet, retuned to the moods (`mood_street_a.jpg` and `mood_roof_a.jpg`): warmer brick and crate planks, blue-grey asphalt, concrete, roof tar and metal, a darker facade | `assets/source/kit/trim_layout.json` → `assets/export/kit/trim_sheet.png` (the same two files as "Kit") | Repainted by `tools/gen_trim.gd` | Original, project-owned | Still inside the look bible's environment band (`tests/test_kit.gd` reads every pixel). Git LFS |
+
+## Video: LD-INK (Phase 1)
+
+The video's palette LUTs (docs/video/PLAN.md Plan A part 5). Made by `tools/video/palette_lut.py` from a reference frame and one of our renders under the ink look (strength 0.7, the defaults); 1024x32 RGB8 strips (32 slices of 32x32: slice = blue, x = red, y = green), applied after tonemapping by `video/ink/ink_rig.gd` through `VideoInkLook.lut_path`. They are routed to LFS. The reference frames are never committed.
+
+| Asset | Path | Source / service | License | Notes |
+| --- | --- | --- | --- | --- |
+| Street at night palette LUT | `assets/video/ink/lut_street_night.png` | `palette_lut.py`: ref 2 at 42.0 s against our `street_wide` render | generated, project | 30 KB |
+| Roofs at dusk palette LUT | `assets/video/ink/lut_roofs_dusk.png` | `palette_lut.py`: ref 2 at 50.5 s against our `roof_silhouette` render | generated, project | 28 KB |
+| Boss roof palette LUT | `assets/video/ink/lut_boss_fire.png` | `palette_lut.py`: ref 1 at 5.3 s against our `ox_closeup` render | generated, project | 32 KB |

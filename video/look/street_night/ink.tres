@@ -4,3 +4,4 @@
 
 [resource]
 script = ExtResource("1")
+lut_path = "res://assets/video/ink/lut_street_night.png"

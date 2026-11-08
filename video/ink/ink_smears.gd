@@ -92,6 +92,16 @@ func _process(_delta: float) -> void:
 		_watch.erase(id)
 
 
+## How many ribbons are drawn right now (for acts and tests).
+func drawing_count() -> int:
+	var count := 0
+	for key in _meshes:
+		var mesh := (_meshes[key] as MeshInstance3D).mesh as ImmediateMesh
+		if mesh != null and mesh.get_surface_count() > 0:
+			count += 1
+	return count
+
+
 ## A trail is fast when its whole length per sample interval beats the speed threshold.
 func _fast_trail(trail: Array) -> bool:
 	if trail.size() < 3:

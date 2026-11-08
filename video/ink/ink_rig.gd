@@ -65,11 +65,14 @@ func setup(level: Node) -> void:
 	if look.screen_ink:
 		_build_ink_quad()
 	_twos = CineTwos.new()
+	_twos.name = "CineTwos"
 	_twos.rig = self
 	add_child(_twos)
 	_smears = CineSmears.new()
+	_smears.name = "CineSmears"
 	add_child(_smears)
 	_cues = CineCues.new()
+	_cues.name = "CineCues"
 	_cues.look = look
 	_cues.rig = self
 	add_child(_cues)
@@ -81,7 +84,18 @@ func setup(level: Node) -> void:
 	if look.lut_path != "":
 		_lut = load_lut(look.lut_path)
 		_assign_lut()
+	_apply_shadow_quality()
 	_scan()
+
+
+## The soft-shadow filter and the directional atlas, raised: a cast shadow's texel steps are too fine for the
+## posterised bands to hide otherwise. Runtime RenderingServer settings, video only.
+func _apply_shadow_quality() -> void:
+	if look.shadow_quality > 0:
+		RenderingServer.directional_soft_shadow_filter_set_quality(look.shadow_quality as RenderingServer.ShadowQuality)
+		RenderingServer.positional_soft_shadow_filter_set_quality(look.shadow_quality as RenderingServer.ShadowQuality)
+	if look.shadow_atlas_size > 0:
+		RenderingServer.directional_shadow_atlas_set_size(look.shadow_atlas_size, true)
 
 
 ## Re-read the look's values (after a value was changed in code): the cues' options and every material.
@@ -98,6 +112,16 @@ func output_frame() -> int:
 	if frame_source.is_valid():
 		return int(frame_source.call())
 	return int(floorf(float(Engine.get_physics_frames()) * look.output_fps / float(Engine.physics_ticks_per_second)))
+
+
+## How many smear ribbons are drawn right now.
+func smears_drawing() -> int:
+	return _smears.drawing_count()
+
+
+## Fire the flash frame and speed lines at world point `at`, as a finisher's hit does.
+func trigger_cues(at: Vector3) -> void:
+	_cues.trigger(at)
 
 
 ## The hatching's current amount (0..1), for tests and the act's log.
@@ -274,6 +298,8 @@ func _scan() -> void:
 		var light := node as Light3D
 		if light != null and not String(light.name).begins_with(RIM_NAME):
 			_lights.append(light)
+			if light.shadow_enabled and look.shadow_blur_min > 0.0:
+				light.shadow_blur = maxf(light.shadow_blur, look.shadow_blur_min)
 
 
 ## The key: the point light that lights the nearest character most, or the sun.

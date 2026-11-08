@@ -13,3 +13,4 @@ rim_light_color = Color(1, 0.5, 0.2, 1)
 rim_light_energy = 0.9
 ink_color = Color(0.1, 0.04, 0.05, 1)
 hatch_force = 0.0
+lut_path = "res://assets/video/ink/lut_boss_fire.png"
