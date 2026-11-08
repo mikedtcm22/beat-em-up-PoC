@@ -1,0 +1,116 @@
+[gd_resource type="Resource" script_class="VideoWorldLook" load_steps=11 format=3]
+
+[ext_resource type="Script" path="res://video/world/world_look.gd" id="1_look"]
+[ext_resource type="Script" path="res://video/world/world_light.gd" id="2_light"]
+[ext_resource type="Script" path="res://video/world/world_emitter.gd" id="3_emit"]
+[ext_resource type="Script" path="res://video/world/matte_card.gd" id="4_matte"]
+[ext_resource type="Texture2D" path="res://assets/video/mattes/matte_fire_wall.png" id="5_fire"]
+[ext_resource type="Texture2D" path="res://assets/video/mattes/matte_smoke_bank.png" id="6_smoke"]
+
+[sub_resource type="Resource" id="Fire_low"]
+script = ExtResource("2_light")
+prop = 2
+position = Vector3(11.5, 0.9, -10)
+aim_at = Vector3(6, 1.2, -10)
+color = Color(1, 0.44, 0.12, 1)
+energy = 1.0
+range_m = 16.0
+cone_deg = 120.0
+attenuation = 0.8
+shadow = true
+flicker = 0.12
+halo = false
+
+[sub_resource type="Resource" id="Embers_a"]
+script = ExtResource("3_emit")
+kind = 0
+points = PackedVector3Array(11, -1, -3, 11, -1, -10, 11, -1, -17)
+extents = Vector3(1.5, 0.2, 2.5)
+amount = 90
+life_s = 5.0
+size_m = Vector2(0.07, 0.16)
+direction = Vector3(-0.3, 1, 0)
+color_start = Color(1, 0.42, 0.1, 1)
+color_end = Color(0.7, 0.12, 0.04, 0)
+speed = Vector2(1.0, 3.0)
+spread_deg = 50.0
+gravity = Vector3(-0.2, 0.5, 0)
+seed = 31
+preprocess_s = 6.0
+
+[sub_resource type="Resource" id="Matte_fire"]
+script = ExtResource("4_matte")
+texture = ExtResource("5_fire")
+position = Vector3(105, 8, -10)
+size_m = Vector2(200, 38)
+yaw_deg = -90.0
+fade = 0.0
+energy = 1.15
+
+[sub_resource type="Resource" id="Matte_smoke"]
+script = ExtResource("4_matte")
+texture = ExtResource("6_smoke")
+position = Vector3(112, 30, -10)
+size_m = Vector2(260, 65)
+yaw_deg = -90.0
+fade = 0.1
+energy = 0.9
+
+[resource]
+script = ExtResource("1_look")
+location = &"boss_fire"
+section = 2
+sun_color = Color(0.4, 0.28, 0.7, 1)
+sun_energy = 0.3
+sun_elevation_deg = 35.0
+sun_yaw_deg = 160.0
+sun_shadow = false
+ambient_color = Color(0.12, 0.06, 0.16, 1)
+toon_shadow_level = 0.07
+toon_fill_strength = 0.15
+hook_color = Color(1, 0.44, 0.12, 1)
+lights = Array[ExtResource("2_light")]([SubResource("Fire_low")])
+emitters = Array[ExtResource("3_emit")]([SubResource("Embers_a")])
+mattes = Array[ExtResource("4_matte")]([SubResource("Matte_fire"), SubResource("Matte_smoke")])
+prop_color = Color(0.1, 0.06, 0.12, 1)
+paint = {
+&"albedo": Color(0.9, 0.8, 0.82, 1),
+&"paint_lod": 4.2,
+&"paint_bands": 3.0,
+&"paint_band_soft": 0.05,
+&"paint_shadow_tint": Color(0.3, 0.14, 0.34, 1),
+&"paint_shadow_level": 0.15,
+&"paint_mid_level": 0.4,
+&"paint_grain": 0.14,
+&"paint_break": 0.12,
+&"paint_break_scale": Vector2(3, 1.2),
+&"paint_sat": 0.9,
+&"warp_m": 0.22,
+&"window_blank_p": 0.3,
+&"brick_strokes": 0.3,
+&"brick_flat": 1.0,
+&"brick_edge_w": 0.05,
+&"pool_edge": 0.1,
+&"pool_core": 0.36,
+&"pool_gain": 1.1,
+&"pool_norm": 0.8
+}
+sky = {
+&"zenith_color": Color(0.03, 0.015, 0.07, 1),
+&"mid_color": Color(0.16, 0.05, 0.12, 1),
+&"horizon_color": Color(0.7, 0.2, 0.06, 1),
+&"below_color": Color(0.1, 0.03, 0.05, 1),
+&"mid_at": 0.22,
+&"top_at": 0.75,
+&"band_count": 8.0,
+&"cloud_cover": 0.35,
+&"cloud_lit": Color(0.5, 0.14, 0.1, 1),
+&"cloud_shade": Color(0.06, 0.02, 0.08, 1),
+&"cloud_range": Vector2(0.03, 0.7)
+}
+haze = {
+&"band_start_m": Vector3(12, 28, 55),
+&"band_color_1": Color(0.4, 0.1, 0.16, 0.1),
+&"band_color_2": Color(0.45, 0.1, 0.14, 0.2),
+&"band_color_3": Color(0.5, 0.12, 0.12, 0.34)
+}

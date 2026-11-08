@@ -10,9 +10,9 @@ spot = false
 position = Vector3(-0.1, 0, -7)
 arm_side = 0.0
 height_m = 4.2
-color = Color(1, 0.604, 0.235, 1)
+color = Color(1, 0.55, 0.16, 1)
 energy = 1.0
-range_m = 8.5
+range_m = 7.5
 cone_deg = 100.0
 attenuation = 0.9
 shadow = true
@@ -27,9 +27,9 @@ spot = false
 position = Vector3(5.2, 0, -16)
 arm_side = -1.0
 height_m = 4.6
-color = Color(1, 0.604, 0.235, 1)
+color = Color(1, 0.55, 0.16, 1)
 energy = 1.0
-range_m = 8.5
+range_m = 7.5
 cone_deg = 100.0
 attenuation = 0.9
 halo_m = 1.3
@@ -40,9 +40,9 @@ spot = false
 position = Vector3(-5.2, 0, -25)
 arm_side = 1.0
 height_m = 4.6
-color = Color(1, 0.604, 0.235, 1)
+color = Color(1, 0.55, 0.16, 1)
 energy = 1.0
-range_m = 8.5
+range_m = 7.5
 cone_deg = 100.0
 attenuation = 0.9
 halo_m = 1.3
@@ -53,9 +53,9 @@ spot = false
 position = Vector3(5.2, 0, -35)
 arm_side = -1.0
 height_m = 4.6
-color = Color(1, 0.604, 0.235, 1)
+color = Color(1, 0.55, 0.16, 1)
 energy = 1.0
-range_m = 8.5
+range_m = 7.5
 cone_deg = 100.0
 attenuation = 0.9
 halo_m = 1.3
@@ -109,13 +109,13 @@ script = ExtResource("1_look")
 location = &"street_night"
 section = 0
 sun_color = Color(0.42, 0.52, 1, 1)
-sun_energy = 0.22
-sun_elevation_deg = 62.0
-sun_yaw_deg = 70.0
+sun_energy = 0.45
+sun_elevation_deg = 50.0
+sun_yaw_deg = 80.0
 sun_shadow = false
 ambient_color = Color(0.05, 0.06, 0.16, 1)
 toon_shadow_level = 0.07
-hook_color = Color(1, 0.604, 0.235, 1)
+hook_color = Color(1, 0.55, 0.16, 1)
 lights = Array[ExtResource("2_light")]([SubResource("Lamp_key"), SubResource("Lamp_b"), SubResource("Lamp_c"), SubResource("Lamp_d"), SubResource("Barrel_a")])
 emitters = Array[ExtResource("3_emit")]([SubResource("Embers_a"), SubResource("Steam_a")])
 prop_color = Color(0.1, 0.1, 0.17, 1)
@@ -130,16 +130,18 @@ paint = {
 &"paint_grain": 0.12,
 &"paint_break": 0.12,
 &"paint_break_scale": Vector2(3, 1.2),
-&"warp_m": 0.22,
-&"window_blank_p": 0.3,
-&"window_lit_p": 0.12,
+&"warp_m": 0.3,
+&"window_blank_p": 0.45,
+&"window_lit_p": 0.07,
 &"window_lit_color": Color(1, 0.7, 0.32, 1),
 &"window_lit_energy": 1.1,
 &"brick_strokes": 0.3,
 &"pool_edge": 0.14,
 &"pool_core": 0.4,
-&"pool_outer_level": 0.6,
-&"pool_gain": 2.2,
+&"pool_outer_level": 0.72,
+&"pool_gain": 1.1,
+&"pool_norm": 0.8,
+&"pool_break": 0.22,
 &"brick_edge_w": 0.05,
 &"brick_flat": 1.0,
 &"paint_sat": 0.85

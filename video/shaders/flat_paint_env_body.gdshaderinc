@@ -92,6 +92,9 @@ uniform float pool_outer_level : hint_range(0.0, 1.0) = 0.55;
 uniform float pool_break : hint_range(0.0, 1.0) = 0.35;
 // The pool edge's noise is this share of paint_break_scale's frequency (big, calm shapes, not torn paper).
 uniform float pool_break_freq : hint_range(0.05, 1.0) = 0.3;
+// How much the pool's brightness ignores the surface's own value (0: the albedo multiplies the lamp, 1: the pool is the lamp's colour whatever
+// the ground is): a dark asphalt still shows a bright sodium pool.
+uniform float pool_norm : hint_range(0.0, 1.0) = 0.0;
 uniform float pool_gain : hint_range(0.5, 4.0) = 1.0;
 // A fine paint-in of the shadow side by the warm key: how much a directional light's lit band tints the albedo (0: none).
 uniform float paint_lit_tint : hint_range(0.0, 1.0) = 0.0;
@@ -304,6 +307,7 @@ void light() {
 			float near_edge = exp(-pow((lit - pool_edge) / brick_edge_w, 2.0));
 			level *= 1.0 - brick_stroke_dark * dash_mask * near_edge;
 		}
-		DIFFUSE_LIGHT += level * light_color * pool_gain;
+		float norm = mix(1.0, 1.0 / max(dot(ALBEDO, LUMA), 0.08), pool_norm);
+		DIFFUSE_LIGHT += level * light_color * pool_gain * norm;
 	}
 }

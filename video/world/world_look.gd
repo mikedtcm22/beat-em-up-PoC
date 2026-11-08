@@ -26,6 +26,8 @@ const HAZE_PRIORITY := Material.RENDER_PRIORITY_MIN
 ## The shader the trim materials had before any look replaced it (kept across applications, so a second look restores it first).
 static var _game_trim_shader: Shader
 static var _game_scissor_shader: Shader
+## The paint uniforms the last look wrote, so the next one can clear what it does not set (a look leaves nothing of another).
+static var _painted: Array[StringName] = []
 
 @export_group("Location")
 ## street_night, roofs_dusk or boss_fire; and the level section its positions are in (0 street, 1 roofs, 2 boss roof).
@@ -50,6 +52,8 @@ static var _game_scissor_shader: Shader
 ## The toon light adds this share of a light's colour inside the WHOLE volume of every light, so a night wants it low (the
 ## characters are toon-lit; their paint is LD-INK's). Written through Tuning at runtime (never to a preset).
 @export_range(0.0, 0.6) var toon_shadow_level: float = 0.07
+## The toon light's camera-fixed fill (Tuning's look_fill_strength): -1 leaves it; 0 lets a character against the sun go to a silhouette.
+@export_range(-1.0, 1.5) var toon_fill_strength: float = -1.0
 ## The game's dusk grade is off (its tint is a dusk's; the palette LUT, LD-INK's post, is the grade).
 @export var grade_off: bool = true
 
@@ -106,6 +110,8 @@ func apply(level: Node) -> void:
 func _tuning() -> void:
 	Tuning.set_value(&"section_light_enabled", false)
 	Tuning.set_value(&"look_shadow_level", toon_shadow_level)
+	if toon_fill_strength >= 0.0:
+		Tuning.set_value(&"look_fill_strength", toon_fill_strength)
 	if grade_off:
 		Tuning.set_value(&"look_grade_enabled", false)
 
@@ -168,6 +174,13 @@ func _paint_materials() -> void:
 		_game_scissor_shader = scissor.shader
 	trim.shader = PAINT_SHADER
 	scissor.shader = PAINT_SCISSOR_SHADER
+	for key in _painted:
+		if not paint.has(key):
+			trim.set_shader_parameter(key, null)
+			scissor.set_shader_parameter(key, null)
+	_painted.clear()
+	for key: Variant in paint:
+		_painted.append(StringName(key))
 	apply_uniforms(trim, paint)
 	apply_uniforms(scissor, paint)
 
