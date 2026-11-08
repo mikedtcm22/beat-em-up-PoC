@@ -6,6 +6,19 @@ The cinematic gameplay video's live status, kept by the video session ("Beat-em-
 
 ## Status (newest first)
 
+### 2026-11-08 16:05 CST: Slack works; the resume task re-set in Auto mode; Game-boy told by DM
+- **Slack.** Game-boy fixed the connector, so this session has the Slack tools.
+  - The connector posts as **Arachne Dev** (`dev@arachnefinance.com`, `U0AQP0N7RC6`).
+  - Game-boy is **mchristopher** (`U0AQMKKBL93`), and the DM is `D0AQUKX5DB6`.
+  - Sent: "good to restart at the next 5-hour reset" (`p1794175491105829`, ts 1794175491.105829). Questions go there from now on. **His DM replies are his answers** (the relay forwards them).
+- **The resume task, re-set:** `beat-em-up-video-resume-20261108-1730`, firing at 17:30 CST, **saved in Auto mode**, so it won't stall on approvals. The old default-mode task `...-1720` is deleted.
+- **The relay** is stopped until the resume, because Game-boy wants it running only while work is. Its prompt in [slack_relay_prompt.md](slack_relay_prompt.md) now uses the verified identities. Its state file is seeded at the DM above, so no reply is lost before it starts.
+- **At the resume:**
+  1. Start a new usage watcher (PLAN.md §12).
+  2. Start the relay ([slack_relay_prompt.md](slack_relay_prompt.md)).
+  3. Run `build.js` with [args-p1b.json](args-p1b.json) (LD-WORLD2, LD-ASSET, LD-STAGE).
+  4. Then Gate 2, by Slack DM.
+
 ### 2026-11-08 15:58 CST: paused for Game-boy's app restart
 - **Game-boy:** "pause working tasks so I can restart". Nothing was running. The usage watcher and the Slack relay were told to end their loops.
 - **After the restart:**
