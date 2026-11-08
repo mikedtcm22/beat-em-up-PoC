@@ -6,11 +6,11 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ### 2026-11-08 13:30 CST: a plan for a cinematic gameplay video, run by a second account; nothing else changed
 - **Game-boy asked** (in a planning session) for a 30-45 s cinematic gameplay video whose visual style matches two reference videos. That's his prime directive. A second account with an empty usage limit makes it: Claude painting it with code if it can (Plan A), AI video tools as the fallback.
-- **The plan:** `docs/video/PLAN.md` on branch `video/cinematic-trailer` (d8c00cd, pushed), checked out in `.worktrees/video`. It holds the launch prompt Game-boy pastes into the second account, and that account's own watcher and resume prompts.
+- **The plan:** `docs/video/PLAN.md` on branch `video/cinematic-trailer` (d0a3fa0, pushed, after one Opus critic pass), checked out in `.worktrees/video`. It holds the launch prompt Game-boy pastes into the second account, and that account's own watcher and resume prompts.
 - **For this (the game's) session:**
   - The video session is titled "Beat-em-up: video session". It keeps `docs/video/HANDOFF.md` and its own watcher, and never touches `m6/*`, `main` or `game/`.
-  - Never prune `.worktrees/video` or `.worktrees/mv-*`.
-  - The machine is shared. Before the suite or Movie Maker, check `pgrep -fl godot`; the video session runs at most one render at a time.
+  - Never prune, commit, push, stash or reset in `.worktrees/video` or `.worktrees/mv-*`: CLAUDE.md's handoff step "including inside `.worktrees/*`" excludes them. They belong to the video session.
+  - The machine is shared. The video session's renders take the same capture slot lock as `tools/capture_bot.sh` (`CAPTURE_LOCK_DIR`). It runs at most two builders while this session is active; check `pgrep -fl godot` before the suite.
   - It may ask Game-boy to free disk: 19 GB is free today, with 43 GB in `captures/` and 30 GB in `.worktrees/`.
 - **Waiting on Game-boy:** unchanged (the five items below), plus the plan's decisions (PLAN.md §8) when he starts the video account.
 - **Resume task** `beat-em-up-resume-20261109-0400`: unchanged.
