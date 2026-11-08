@@ -6,6 +6,8 @@ extends GutTest
 
 const DATA_PATH := "res://video/spike/spike_look.tres"
 const PAINT_PATH := "res://video/shaders/flat_paint_env.gdshader"
+## LD-WORLD moved the paint shader's body into an include (the opaque and the chain-link variants share it).
+const PAINT_BODY_PATH := "res://video/shaders/flat_paint_env_body.gdshaderinc"
 const INK_PATH := "res://video/shaders/ink_screen.gdshader"
 const TRIM_INC_PATH := "res://game/fx/trim_body.gdshaderinc"
 const TRIM_PATH := "res://game/fx/trim.gdshader"
@@ -48,7 +50,7 @@ func test_data_loads_and_matches_the_brief() -> void:
 func test_paint_shader_keeps_the_trim_uniform_names() -> void:
 	var trim_names := _uniform_names(FileAccess.get_file_as_string(TRIM_INC_PATH))
 	trim_names.append_array(_uniform_names(FileAccess.get_file_as_string(TRIM_PATH)))
-	var paint_names := _uniform_names(FileAccess.get_file_as_string(PAINT_PATH))
+	var paint_names := _uniform_names(FileAccess.get_file_as_string(PAINT_PATH) + FileAccess.get_file_as_string(PAINT_BODY_PATH))
 	assert_gt(trim_names.size(), 10, "the trim uniforms were read")
 	for uniform_name in trim_names:
 		assert_true(paint_names.has(uniform_name), "flat_paint_env keeps the trim uniform '%s'" % uniform_name)
