@@ -87,14 +87,18 @@ paint = {
 &"paint_sat": 0.9,
 &"warp_m": 0.3,
 &"row_jitter_m": 0.5,
-&"window_blank_p": 0.28,
-&"brick_strokes": 0.3,
+&"window_blank_p": 0.0,
+&"brick_strokes": 0.0,
 &"brick_flat": 1.0,
 &"brick_edge_w": 0.05,
 &"pool_edge": 0.1,
 &"pool_core": 0.36,
 &"pool_gain": 1.1,
-&"pool_norm": 0.8
+&"pool_norm": 0.8,
+&"draw_on": 1.0,
+&"pipe_p": 0.4,
+&"crack_p": 0.3,
+&"pool_norm_wall": 0.0
 }
 sky = {
 &"zenith_color": Color(0.14, 0.05, 0.16, 1),

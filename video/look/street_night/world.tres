@@ -13,14 +13,14 @@ arm_side = 0.0
 height_m = 4.2
 color = Color(1, 0.62, 0.22, 1)
 energy = 1.0
-range_m = 7.5
-cone_deg = 140.0
+range_m = 6.5
+cone_deg = 120.0
 attenuation = 0.9
 shadow = true
 halo = true
-halo_m = 1.3
+halo_m = 0.55
 halo_rings = 2.0
-halo_energy = 0.8
+halo_energy = 0.5
 
 [sub_resource type="Resource" id="Lamp_b"]
 script = ExtResource("2_light")
@@ -29,10 +29,10 @@ arm_side = -1.0
 height_m = 4.6
 color = Color(1, 0.62, 0.22, 1)
 energy = 1.0
-range_m = 7.5
-cone_deg = 140.0
+range_m = 6.5
+cone_deg = 120.0
 attenuation = 0.9
-halo_m = 1.3
+halo_m = 0.55
 
 [sub_resource type="Resource" id="Lamp_c"]
 script = ExtResource("2_light")
@@ -41,10 +41,10 @@ arm_side = 1.0
 height_m = 4.6
 color = Color(1, 0.62, 0.22, 1)
 energy = 1.0
-range_m = 7.5
-cone_deg = 140.0
+range_m = 6.5
+cone_deg = 120.0
 attenuation = 0.9
-halo_m = 1.3
+halo_m = 0.55
 
 [sub_resource type="Resource" id="Lamp_d"]
 script = ExtResource("2_light")
@@ -53,10 +53,10 @@ arm_side = -1.0
 height_m = 4.6
 color = Color(1, 0.62, 0.22, 1)
 energy = 1.0
-range_m = 7.5
-cone_deg = 140.0
+range_m = 6.5
+cone_deg = 120.0
 attenuation = 0.9
-halo_m = 1.3
+halo_m = 0.55
 
 [sub_resource type="Resource" id="Barrel_a"]
 script = ExtResource("2_light")
@@ -69,7 +69,7 @@ energy = 1.0
 range_m = 6.0
 attenuation = 1.0
 flicker = 0.18
-halo_m = 1.4
+halo_m = 0.7
 halo_rings = 2.0
 halo_energy = 1.0
 
@@ -116,7 +116,7 @@ script = ExtResource("1_look")
 location = &"street_night"
 section = 0
 sun_color = Color(0.42, 0.52, 1, 1)
-sun_energy = 0.45
+sun_energy = 0.75
 sun_elevation_deg = 50.0
 sun_yaw_deg = 80.0
 sun_shadow = false
@@ -133,27 +133,35 @@ paint = {
 &"paint_bands": 3.0,
 &"paint_band_soft": 0.05,
 &"paint_shadow_tint": Color(0.22, 0.25, 0.45, 1),
-&"paint_shadow_level": 0.17,
-&"paint_mid_level": 0.4,
+&"paint_shadow_level": 0.36,
+&"paint_mid_level": 0.62,
 &"paint_grain": 0.2,
 &"paint_break": 0.12,
 &"paint_break_scale": Vector2(3, 1.2),
 &"warp_m": 0.3,
 &"row_jitter_m": 0.5,
-&"window_blank_p": 0.28,
+&"window_blank_p": 0.0,
 &"window_lit_p": 0.04,
 &"window_lit_color": Color(1, 0.7, 0.32, 1),
 &"window_lit_energy": 1.1,
-&"brick_strokes": 0.3,
+&"brick_strokes": 0.0,
 &"pool_edge": 0.14,
 &"pool_core": 0.4,
 &"pool_outer_level": 0.72,
-&"pool_gain": 1.1,
-&"pool_norm": 0.8,
+&"pool_gain": 1.5,
+&"pool_norm": 0.4,
 &"pool_break": 0.22,
 &"brick_edge_w": 0.05,
 &"brick_flat": 1.0,
-&"paint_sat": 0.85
+&"paint_sat": 0.85,
+&"draw_on": 1.0,
+&"pipe_p": 0.4,
+&"crack_p": 0.3,
+&"puddle_p": 0.2,
+&"puddle_color": Color(0.3, 0.42, 0.8, 1),
+&"pool_norm_wall": 0.0,
+&"base_dark": 0.25,
+&"paint_value_gain": 1.9
 }
 sky = {
 &"zenith_color": Color(0.015, 0.02, 0.07, 1),
@@ -169,9 +177,9 @@ sky = {
 sky_disc_follows_sun = true
 haze = {
 &"band_start_m": Vector3(12, 26, 48),
-&"band_color_1": Color(0.1, 0.14, 0.36, 0.12),
-&"band_color_2": Color(0.1, 0.14, 0.36, 0.22),
-&"band_color_3": Color(0.1, 0.14, 0.36, 0.34),
+&"band_color_1": Color(0.1, 0.14, 0.36, 0.04),
+&"band_color_2": Color(0.1, 0.14, 0.36, 0.08),
+&"band_color_3": Color(0.1, 0.14, 0.36, 0.14),
 &"mist_top": 0.6,
-&"mist_color": Color(0.1, 0.12, 0.3, 0.18)
+&"mist_color": Color(0.1, 0.12, 0.3, 0.06)
 }
