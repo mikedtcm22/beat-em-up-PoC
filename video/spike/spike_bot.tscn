@@ -1,0 +1,16 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://video/spike/spike_bot.gd" id="1"]
+[ext_resource type="Script" path="res://video/spike/spike_look.gd" id="2"]
+[ext_resource type="Script" path="res://video/spike/spike_capture.gd" id="3"]
+[ext_resource type="Resource" path="res://video/spike/spike_look.tres" id="4"]
+
+[node name="SpikeBot" type="Node"]
+script = ExtResource("1")
+
+[node name="Look" type="Node" parent="."]
+script = ExtResource("2")
+data = ExtResource("4")
+
+[node name="Capture" type="Node" parent="."]
+script = ExtResource("3")
