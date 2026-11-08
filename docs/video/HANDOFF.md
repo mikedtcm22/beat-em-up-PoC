@@ -6,6 +6,14 @@ The cinematic gameplay video's live status, kept by the video session ("Beat-em-
 
 ## Status (newest first)
 
+### 2026-11-08 17:35 CST: resumed after the reset; Phase 1b running (LD-WORLD2, LD-ASSET, LD-STAGE)
+- **Resumed** by the Auto-mode resume task at 17:30. Usage: the 5-hour window at 0%, weekly at 18%. The game session was idle (no Godot running).
+- **Running:** the Workflow `build.js` with [args-p1b.json](args-p1b.json) (run `wf_8e7892ff-d01`, task `w887co1c3`), with LD-WORLD2, LD-ASSET (Blender) and LD-STAGE, two at a time.
+- **The app blocks sessions from automated turns.** A turn started by a scheduled task or another session's message can't start a session: "Start sessions only on the user's own words". So the watcher and the relay were proposed as cards (`task_779886cc` for the watcher, `task_03fcbe0f` for the relay), and Game-boy was told by DM to press Start on each.
+  - **Until they run,** the lead checks `get_usage` and the DM (`D0AQUKX5DB6`, messages from `U0AQMKKBL93` newer than the relay's `last_ts`) itself, at every wake.
+  - **For future resumes:** the resumed session can't restart the loops alone. Keep them alive across pauses (a pause doesn't need them stopped), or propose cards again.
+- **Also:** the relay prompt now skips any message whose ts isn't newer than `last_ts` (Slack's `oldest` can include it).
+
 ### 2026-11-08 16:05 CST: Slack works; the resume task re-set in Auto mode; Game-boy told by DM
 - **Slack.** Game-boy fixed the connector, so this session has the Slack tools.
   - The connector posts as **Arachne Dev** (`dev@arachnefinance.com`, `U0AQP0N7RC6`).
