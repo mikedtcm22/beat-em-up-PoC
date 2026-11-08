@@ -91,14 +91,14 @@ script = ExtResource("3_emit")
 kind = 1
 points = PackedVector3Array(2.4, 0, -12, -3.2, 0, -19.5)
 extents = Vector3(0.25, 0.02, 0.25)
-amount = 14
+amount = 22
 life_s = 5.0
-size_m = Vector2(0.35, 0.7)
+size_m = Vector2(0.8, 1.4)
 direction = Vector3(0, 1, 0)
-speed = Vector2(0.35, 0.7)
+speed = Vector2(0.5, 0.9)
 spread_deg = 12.0
 gravity = Vector3(0, 0.08, 0)
-color_start = Color(0.45, 0.5, 0.75, 0.32)
+color_start = Color(0.62, 0.68, 0.9, 0.5)
 color_end = Color(0.3, 0.35, 0.6, 0)
 seed = 5
 
@@ -139,8 +139,8 @@ paint = {
 &"paint_break": 0.12,
 &"paint_break_scale": Vector2(3, 1.2),
 &"warp_m": 0.3,
-&"row_jitter_m": 0.9,
-&"window_blank_p": 0.45,
+&"row_jitter_m": 0.5,
+&"window_blank_p": 0.28,
 &"window_lit_p": 0.04,
 &"window_lit_color": Color(1, 0.7, 0.32, 1),
 &"window_lit_energy": 1.1,

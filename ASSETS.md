@@ -532,3 +532,14 @@ The level's and the rooms' dressing (Milestone 6, DRESS; plan D9, D11, D12). It 
 | Asset | Path | Source / service | License | Notes |
 | --- | --- | --- | --- | --- |
 | Trim sheet, retuned to the moods (`mood_street_a.jpg` and `mood_roof_a.jpg`): warmer brick and crate planks, blue-grey asphalt, concrete, roof tar and metal, a darker facade | `assets/source/kit/trim_layout.json` → `assets/export/kit/trim_sheet.png` (the same two files as "Kit") | Repainted by `tools/gen_trim.gd` | Original, project-owned | Still inside the look bible's environment band (`tests/test_kit.gd` reads every pixel). Git LFS |
+
+## Video: the world look (Milestone v, LD-WORLD)
+
+Video-only matte pictures for the cinematic trailer's world look (docs/video/P1.md). Made by code: `tools/video/paint_mattes.py` (numpy, scipy and OpenCV; deterministic). No third-party content. Re-make them with `~/.venvs/beat-em-up-video/bin/python -I tools/video/paint_mattes.py --out assets/video/mattes`.
+
+| Asset | Path | Source / service | License | Notes |
+| --- | --- | --- | --- | --- |
+| Night skyline matte | `assets/video/mattes/matte_skyline_night.png` | `tools/video/paint_mattes.py` (code-painted) | Project asset | 2048x384 RGBA, about 11 KB. Three layers of flat navy silhouettes with a rim band and sparse lit windows; hung on a card behind the street. |
+| Dusk skyline matte | `assets/video/mattes/matte_skyline_dusk.png` | `tools/video/paint_mattes.py` (code-painted) | Project asset | 2048x384 RGBA, about 13 KB. Rose and violet silhouettes with a gold rim; behind the roofs. |
+| Smoke bank matte | `assets/video/mattes/matte_smoke_bank.png` | `tools/video/paint_mattes.py` (code-painted) | Project asset | 2048x512 RGBA, about 40 KB. Billows in three dark values with an underlit orange rim; above the boss roof's fire. |
+| Fire wall matte | `assets/video/mattes/matte_fire_wall.png` | `tools/video/paint_mattes.py` (code-painted) | Project asset | 2048x384 RGBA, about 75 KB. Flame tongues in three nested values; the boss roof's horizon. |

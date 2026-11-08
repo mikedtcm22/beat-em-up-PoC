@@ -181,6 +181,8 @@ func test_applying_a_look_lays_the_rig() -> void:
 	var hook: Dictionary = level.get_meta(&"video_world_hook")
 	assert_eq(hook[&"color"], look.hook_color, "the key's colour is published for the rim")
 	assert_eq((hook[&"heads"] as PackedVector3Array).size(), look.lights.size(), "and the lights' heads")
+	assert_eq((hook[&"ranges"] as PackedFloat32Array).size(), look.lights.size(), "their ranges")
+	assert_eq((hook[&"colors"] as PackedColorArray).size(), look.lights.size(), "and their colours")
 	assert_gt(level.find_children("*", "GPUParticles3D", true, false).size(), 0, "embers and steam are in")
 
 
@@ -220,3 +222,16 @@ func test_the_flicker_comes_from_the_frame_number_not_the_clock() -> void:
 	rig._flicker()
 	assert_eq(light.light_energy, first, "the same frame gives the same flame")
 	assert_ne(first, flickering[0].get_meta(&"base_energy"), "and the flame is not at rest")
+
+
+func test_the_act_file_shoots_each_still_with_its_locations_look() -> void:
+	var acts_script := load("res://video/acts/ld_world_acts.gd")
+	var acts: Array[Dictionary] = acts_script.call(&"acts", null)
+	var world := acts.filter(func(a: Dictionary) -> bool: return String(a.title).begins_with("World: "))
+	var motion := acts.filter(func(a: Dictionary) -> bool: return String(a.title).begins_with("WorldMotion: "))
+	assert_eq(world.size(), 6, "one act for each of the six Gate 1 stills")
+	assert_eq(motion.size(), 4, "a motion check for each free-camera still")
+	for location: StringName in LOOKS:
+		assert_not_null(acts_script.call(&"look_for", location), "look_for(%s) loads" % location)
+	var locations: Array = acts_script.get(&"LOCATIONS")
+	assert_eq(locations.size(), 3, "three locations, one for each level section")

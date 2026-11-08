@@ -93,18 +93,27 @@ func _flicker() -> void:
 		light.light_energy = base_energy * (1.0 + (roll - 0.5) * 2.0 * amount)
 
 
-## The key for LD-INK's rim lights: its colour, the direction toward it, and where its practical heads are (world space).
+## The key for LD-INK's rim lights, a Dictionary: `color` (the key's), `toward` (the direction toward the key: the sun's when the look's
+## hook_from_sun, else straight up), `sun_color`, `sun_toward`, and per practical, in order: `heads` (world positions), `ranges` (m)
+## and `colors`.
 func hook() -> Dictionary:
 	var heads := PackedVector3Array()
+	var ranges := PackedFloat32Array()
+	var colors := PackedColorArray()
 	for node in practicals:
 		if is_instance_valid(node) and node.has_meta(&"head"):
 			heads.append(node.get_meta(&"head"))
+			var light: Light3D = node.get_meta(&"light")
+			ranges.append(light.spot_range if light is SpotLight3D else (light as OmniLight3D).omni_range)
+			colors.append(light.light_color)
 	return {
 		&"color": look.hook_color,
 		&"toward": sun_toward() if look.hook_from_sun else Vector3.UP,
 		&"sun_color": look.sun_color,
 		&"sun_toward": sun_toward(),
 		&"heads": heads,
+		&"ranges": ranges,
+		&"colors": colors,
 	}
 
 
