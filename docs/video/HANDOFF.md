@@ -6,6 +6,38 @@ The cinematic gameplay video's live status, kept by the video session ("Beat-em-
 
 ## Status (newest first)
 
+### 2026-11-08 15:20 CST: Gate 1 sent (here in the chat); Phase 1's wave 1 running (LD-WORLD, LD-INK)
+- **Phase 0 is done.** The builds were `mv/p0-stills` (`5fd3701`) and `mv/p0-spike` (`623459b`), merged at `4f8e1fd`. The video tests pass (10/10), and there is no diff under `game/`, `tuning/` or `tests/`.
+  - **The six stills** frame well against their reference frames. They're in `.worktrees/mv-p0-stills/captures/video/p0-stills/`.
+  - **The spike** is in `.worktrees/mv-p0-spike/captures/video/p0-spike/r7/`, renders a-e.
+    - The builder scored it about 1.6, and the lead about 1.2-1.4 (bar 2.4).
+    - The flat-paint environment was the big step. The ink was invisible at night. The Gaussian bloom and fog read as 3D.
+    - The style meter scores it 0.94 by the numbers anyway: the numbers are not the style.
+  - **The Gemini targets** are in `captures/video/p0/gemini/target_*.jpg`: 6 images, about $0.84. They make strong bars.
+  - **The sheets** for Game-boy:
+    - `captures/video/p0/gate1/targets/overview.png`: reference | our still | target, six rows;
+    - `captures/video/p0/gate1/spike.png`: the game today | the spike | ref 2 at 37.4 s.
+- **The blind check** (one Opus agent; the key is in this session's scratchpad, `blind_key_gate1.json`):
+  - It called the six reference frames drawn, and our two plain stills 3D.
+  - It called the spike 3D (0.92).
+  - **It called two of the three Gemini targets 3D** (`fp_kicker_lamp` 0.85, `roof_silhouette` 0.6). Only `ox_closeup` passed, at 0.55.
+  - The tells were our geometry: tiled brick in exact perspective, repeated window grids, chain-link, ruler-clean outlines, two parallel shadows from a multi-light rig, identical enemy copies, and exact depth fog.
+  - So Phase 1 must break mechanical regularity, not only repaint the shading (P1.md, "What Phase 0 found").
+- **Running:** the Workflow `build.js` with [args-p1.json](args-p1.json) (run `wf_6251c28d-453`, task `wupkpur9n`). The briefs are in [P1.md](P1.md).
+  - **Wave 1** is running: LD-WORLD (`mv/ld-world`) and LD-INK (`mv/ld-ink`).
+  - **Wave 2**, LD-STAGE (`mv/ld-stage`) and LD-ASSET (`mv/ld-asset`, Blender), waits for a Godot slot. Its usage gate will probably skip it until the 17:20 CST reset. Then rerun the Workflow with the same args: done packages are skipped by the Load phase.
+- **Also new:**
+  - `tools/video/style_meter.py`, with `style_targets.json` (STYLE.md's ranges);
+  - `video/look/look_piece.gd`, the look-piece interface.
+- **Decisions (the lead's):**
+  - **Phase 1 is four packages in two waves**, not PLAN.md §6's three: the world, the characters' ink, the stage, the assets. The spike showed the environment and the characters are separate big jobs.
+  - **The lead merges the builders' `mv/*` branches into `video/cinematic-trailer`,** as PLAN.md §6-7 describe. The approvals' "merging anything" is read as the final PR and anything into `main` or `m6/*`. That reading was put to Game-boy in the Gate 1 message.
+- **Usage, measured on this Team seat:**
+  - A Sonnet builder of about 350k tokens costs about 10 points of the 5-hour window. That's 3-4 times the premium seat's rate.
+  - One 5-hour point costs about 0.15 weekly points.
+  - At launch: 46% of the 5-hour window, 10% weekly.
+- **Waiting on Game-boy:** Gate 1. "Is this the style?", about the targets; his answer on the blind check's fallbacks (A2 and A+); and the merge reading.
+
 ### 2026-11-08 14:55 CST: Phase 0's two builders running (P0-STILLS, P0-SPIKE)
 - **Running:** the Workflow `tools/workflows/build.js` with [args-p0.json](args-p0.json) (run `wf_a967f29b-c57`). It has two Sonnet builders at high effort, with the briefs in [P0.md](P0.md):
   - **P0-STILLS** (branch `mv/p0-stills`, worktree `.worktrees/mv-p0-stills`): the still stage (a 2560×1440 SubViewport mirror on a level-bot subclass) and the six Gate 1 stills in the game's own look.
