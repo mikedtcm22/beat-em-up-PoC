@@ -6,6 +6,11 @@ The cinematic gameplay video's live status, kept by the video session ("Beat-em-
 
 ## Status (newest first)
 
+### 2026-11-08 16:10 CST: Game-boy approved round 2 as the environment look
+- **Game-boy, word for word:** "Yes, round 2". The round 2 targets (`captures/video/p0/gemini_env/target_*.jpg`) are now the environment bar. Environments carry drawn detail (brick courses, frames, pipes, fire escapes, paving, puddles), are crisp, and have small, contained lights with no glare.
+- It supersedes PLAN.md §4's "the environment as flat paint ... dropping the brick and grime detail", and the blind check's call to break regularity by removing detail. The note is in PLAN.md §4, part 7.
+- LD-WORLD2's brief (P1.md) already follows it. The post-reset wave (args-p1b.json) is unchanged. Resume steps are as in the 16:00 entry.
+
 ### 2026-11-08 16:00 CST: Game-boy answered Gate 1; wave 1 merged; paused near 90% until the 17:20 reset
 - **Game-boy at Gate 1, word for word:** "The characters look pretty good, but I think the environments are maybe a bit too washed out by lighting/glare in places. I'd like there to be more detail in the environments - so that people can discern how the player is moving through the game. Can you try to render the environments with some more detail? Use the first 10-15 sec or the 'pt5' video as a reference."
   - **Done in answer:** paint-over round 2 (`make_paintover_jobs.py --env`). Five stills were repainted with drawn environment detail and no glare, with ref 2 at 3.5 s and 4.5 s (the camp and the tent) as the references, for $0.70. The Gemini total is $1.54 of $5.

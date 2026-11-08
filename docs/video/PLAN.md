@@ -164,6 +164,7 @@ A video-only "cine" render profile on top of the game, in seven parts. Part 7, t
 7. **The 2D cues.** These are required look-dev items, each A/B'd at Gate 2:
    - **Characters on twos.** Each character's drawing holds for 2 frames at 24 fps (12 drawings a second), while the camera and the effects move at 24.
    - **Picked frames, no blending.** The 24 fps frames are picked from the 60 fps simulation and never blended, because blended ink ghosts. Fast limbs get anime smears or a directional blur instead.
+   - **Changed at Gate 1 (Game-boy, 2026-11-08):** the environment keeps its detail, drawn rather than dropped. Brick courses, frames, pipes, fire escapes, paving and puddles are inked with hard shadow shapes, and the lights are small, with no glare, so the player's path reads. That's like ref 2's first 15 s, and the bar is the round 2 targets (`captures/video/p0/gemini_env/`). The flat-paint rule below holds only for the value bands and the grain.
    - **The environment as flat paint.** A video-only material override per location posterizes the trim textures into 2-3 value bands, keeping the big shapes (windows, doors, shutters) and dropping the brick and grime detail. It adds object-space grain, and keeps ink only on major silhouettes.
    - **Painted mattes.** The sky, the far skyline and the smoke banks are code-painted layers on cards behind the playfield. The Kuwahara filter is allowed on these layers only, never on the 3D environment, where it would swim under a moving camera.
 
