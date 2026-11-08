@@ -513,7 +513,8 @@ func _assign_lut() -> void:
 static func load_lut(path: String) -> ImageTexture3D:
 	if not FileAccess.file_exists(path):
 		return null
-	var strip := Image.load_from_file(path)
+	# The raw file, not the imported texture: its pixels are the LUT's nodes, whatever the import does.
+	var strip := Image.load_from_file(ProjectSettings.globalize_path(path) if path.begins_with("res://") else path)
 	if strip == null or strip.is_empty():
 		return null
 	strip.convert(Image.FORMAT_RGB8)

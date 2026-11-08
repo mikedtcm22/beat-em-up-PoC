@@ -174,3 +174,14 @@ func test_the_post_files_and_compositor_exist() -> void:
 func test_the_lut_scripts_exist() -> void:
 	assert_true(FileAccess.file_exists("res://tools/video/palette_lut.py"), "palette_lut.py exists")
 	assert_true(FileAccess.file_exists("res://tools/video/look_sweep.py"), "look_sweep.py exists")
+
+
+func test_each_locations_lut_loads_into_a_cube() -> void:
+	for location in LOCATIONS:
+		var look := _look(location)
+		assert_ne(look.lut_path, "", "%s names its palette LUT" % location)
+		var texture := CineInkRig.load_lut(look.lut_path)
+		assert_not_null(texture, "%s's LUT loads" % location)
+		if texture != null:
+			assert_eq(texture.get_width(), 32, "%s: a 32 cube" % location)
+			assert_eq(texture.get_depth(), 32, "%s: 32 slices" % location)
