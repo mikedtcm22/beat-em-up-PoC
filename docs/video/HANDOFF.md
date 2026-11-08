@@ -6,6 +6,21 @@ The cinematic gameplay video's live status, kept by the video session ("Beat-em-
 
 ## Status (newest first)
 
+### 2026-11-08 15:52 CST: handoff at the watcher's warning (86%, 90% within minutes); nothing running
+- **Game-boy (chat, 15:50):** "I've connected you to Slack. In the future please DM me (@michael) with open questions." He also asked for a heartbeat that forwards his DM replies into this session as answers to the open questions, every 20 minutes or so, only while the work runs and never while it's paused for usage. He wants to work through Slack rather than this chat window.
+  - **Started:** "Beat-em-up: video Slack relay" (`local_0b0e0465-5036-4848-813f-e4877d8332c2`), Haiku at low effort, a /loop every 1200 s.
+    - It checks usage first and sleeps until the reset at 90% or more.
+    - It reads DM `D0AQUKX5DB6` for messages from `U0AQMKKBL93` newer than `last_ts` in `captures/video/slack_relay_state.json` (untracked), and sends them verbatim to "Beat-em-up: video session".
+    - It never posts to Slack. Its prompt is in this session's transcript; re-create it the same way if it isn't running.
+  - **Treat a relayed reply** as Game-boy's answer to the open question it answers. Confirm anything outside that question's scope (a deletion, a spend, a merge) here first.
+  - **Open issue:** this session's connector list has **no Slack connector** (checked 15:50). Lovable, Claude Docs, Google Drive, the vaults and Open Brain are there. Game-boy was asked to check that Slack is connected and enabled for this account. Until it's visible, questions go in the chat. The relay reports whether a new session sees the Slack tools.
+- **The state at the handoff:**
+  - Nothing is running: no workflow, and no builder.
+  - `video/cinematic-trailer` is pushed, at the commit holding this entry.
+  - The builders' branches `mv/p0-stills`, `mv/p0-spike`, `mv/ld-world` and `mv/ld-ink` are pushed and merged.
+  - **The resume task** `beat-em-up-video-resume-20261108-1720` fires at 17:30 CST. The resume steps are in the 15:40 entry: run `build.js` with `args-p1b.json` (LD-WORLD2, LD-ASSET, LD-STAGE).
+- **Waiting on Game-boy:** the Slack connector, to be visible to this account's sessions.
+
 ### 2026-11-08 15:46 CST: Game-boy approved round 2 as the environment look
 - **Game-boy, word for word:** "Yes, round 2". The round 2 targets (`captures/video/p0/gemini_env/target_*.jpg`) are now the environment bar. Environments carry drawn detail (brick courses, frames, pipes, fire escapes, paving, puddles), are crisp, and have small, contained lights with no glare.
 - It supersedes PLAN.md §4's "the environment as flat paint ... dropping the brick and grime detail", and the blind check's call to break regularity by removing detail. The note is in PLAN.md §4, part 7.
