@@ -99,7 +99,7 @@ Both videos share these eight things. Each one is a column in the Gate 2 rubric.
 - **The boss roof** (like ref 1's Mustafar): a violet-black sky, firelight from below, embers and smoke, and Ox Pellerin rim-lit in orange.
 
 ## 3. Where the game stands
-Today's look: `captures/m6-final/run_street/sheets/overview_01.png` (the street and a Punk) and `captures/m6-vf2-final/r_boss/sheets/r_boss/overview_01.png` (Ox).
+Today's look: `/Users/arachne/repos/beat-em-up-PoC/captures/m6-look/street_punk_overview.png` (the street and a Punk) and `/Users/arachne/repos/beat-em-up-PoC/captures/m6-look/boss_overview.png` (Ox). These are contact sheets of M6's last recordings, the only captures kept after the 2026-11-08 cleanup.
 - **Characters:** Tripo models of up to 30k triangles, with one shared palette atlas, shaded with M4's toon look: three flat bands and a violet shadow tint. Ox's face is faceted and simple.
 - **Lines:** an inverted-hull outline at a uniform 3.75 px, and thin edge lines on the environment.
 - **World:** a muted dusk grade, and a trim-sheet city whose brick and grime read as near-photographic texture.
@@ -275,7 +275,7 @@ The estimates are in % of a 5-hour window on the seat Game-boy has used since M5
    - the edge density.
 
    Write the numbers into `docs/video/STYLE.md`, with the times but not the images. They're the style meter's targets (Phase 1).
-6. **Record six game stills, with the HUD off,** that match six reference frames shot for shot. Existing captures carry the HUD and only first-person framing, so don't reuse them.
+6. **Record six game stills, with the HUD off,** that match six reference frames shot for shot. The old recordings were deleted in the 2026-11-08 cleanup (D3), so these are all new.
    - **First person:**
      - 7.2: a fist in the foreground with a Punk at 3 m;
      - 37.4: a Kicker beside a lamp.
@@ -478,14 +478,14 @@ He decides. Make a GitHub Release (a draft, never public) only on his word.
 - **One PR at the end;** never merge it without Game-boy's word.
 
 ### The shared machine
-An Apple M1 with 8 GB of RAM and 19 GB of disk free on 2026-11-08.
+An Apple M1 with 8 GB of RAM, and 92 GB of disk free after the 2026-11-08 cleanup (D3).
 - **The capture lock.** Every render takes the machine-wide slot lock that `tools/capture_bot.sh` uses (`CAPTURE_LOCK_DIR`). The game session's captures take it too.
 - **Builders.** At most two video builders at once while the game session is active (`pgrep -fl godot` shows its processes); three when it's idle. Builders use their Godot slots as the runners count them.
 - **One Blender process at a time,** and renders in the background under `nice -n 10`.
 - **Render hours.** Size Phase 2's renders from Gate 2's measured seconds per frame, and write the total into docs/video/HANDOFF.md before starting.
 - **The disk.**
   - The frame writer encodes as it goes and deletes its PNGs. `captures/video/` keeps only the current takes.
-  - Free space before the final renders (D3). `captures/` holds 43 GB, and `.worktrees/` holds 30 GB of merged and review checkouts.
+  - D3 is done. Keep the space: delete a shot's takes once its final is in the edit.
 - **The worktrees.** docs/HANDOFF.md tells the game session never to prune, commit, push, stash or reset in `.worktrees/video` or `.worktrees/mv-*`.
 
 ### The budget (an estimate)
@@ -508,7 +508,7 @@ An Apple M1 with 8 GB of RAM and 19 GB of disk free on 2026-11-08.
 | --- | --- | --- |
 | D1 | Downloading the two reference MP4s (about 36 MB and 16 MB, from video.twimg.com) for frame analysis, and one SIL-OFL font for the titles. Never published or committed | Yes, if the launch prompt approves it |
 | D2 | About $2-4 of Gemini paint-overs as look-dev targets (never in the video) | **Decided: yes.** Game-boy chose to keep them on 2026-11-08 (cap $5, with the ledger) |
-| D3 | Freeing disk: deleting `captures/m5-*`, `captures/m6-feedback*`, `m6-verify-final`, `m6-worktrees`, `m4*` and `m3_evidence` (about 33 GB), and the merged and review worktrees under `.worktrees/` (about 30 GB) | Ask first. Until he answers, do look-dev at 1920×1080 and keep only the current takes; the final renders need the space |
+| D3 | Freeing disk: the old captures and worktrees | **Done 2026-11-08.** Game-boy: "anything that isn't currently required to run the latest iteration of the Beat-em-up game can go." The 33 M6 worktrees are removed, and `captures/` is emptied except `captures/m6-look/`. 92 GB is free |
 | D4 | The music: (a) ElevenLabs music within a cap, through a new `tools/audio/eleven_music.py` that keeps a ledger like `eleven_sfx.py`'s; (b) a licensed track he supplies; (c) effects only | Asked at Gate 3, with the animatic. Until then, (c) |
 | D5 | The end card's title and label | "FIRST-PERSON BEAT-EM-UP", with a small line: "Proof of concept. In-engine gameplay, cinematic render." (The video's look isn't the game's real-time look) |
 | D6 | Plan B's service and spending cap | Asked at Gate 2, with a recommendation |
@@ -530,7 +530,7 @@ An Apple M1 with 8 GB of RAM and 19 GB of disk free on 2026-11-08.
   - Deferred seeding of the effects and audio RNGs, acts started through `level_bot`'s `_reset`, and a warm-up run, as the crowd test does.
   - Before relying on two cameras on one action, compare two renders of a shot frame by frame.
   - If that doesn't hold, build A2's replay recorder for those shots.
-- **The machine:** 8 GB and a nearly full disk, shared with the game session. The capture lock, at most two builders while the game session is active, a frame writer that encodes as it goes, and D3.
+- **The machine:** 8 GB, shared with the game session. The capture lock, at most two builders while the game session is active, and a frame writer that encodes as it goes.
 - **Copyright:** match the style, never use their pixels; nothing from Star Wars; licensed music.
 - **Usage limits:** the watcher, the video HANDOFF and the resume task.
 - **The game session.** This session has its own title, branch, worktree, HANDOFF and watcher, and never touches `m6/*`, `main` or the game session's worktrees.
