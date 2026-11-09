@@ -6,6 +6,22 @@ The cinematic gameplay video's live status, kept by the video session ("Beat-em-
 
 ## Status (newest first)
 
+### 2026-11-09 15:00 CST: round 5 merged; the hero plates and renders running (a Sonnet builder)
+- **The resumed run** (`wf_0571fbbc-351`) finished all three. Each branch's video tests passed (R5-SHOTS 206, R5-ART 205, R5-INK 198), and they're merged with no conflicts (`d590cc0`, `adac45c`, `2fa2a01`). The protected diff is clean.
+  - **R5-SHOTS:** 58-degree first-person lens through a view rig (lift, pull-back, roll, the off-hand hidden); fixed-point pan, tilt and zoom cameras; foreground cards; t01 a tilt-down from 6.6 m; t07 on the sun line; t10-t13 low three-quarter; t14 multiplane. The hero frames in `video/shots/hero_frames.json`: t03 and t04 (first-person street), t01 (street wide), t07 (roof against the sun), t10 (Ox wide), t12 (Ox close), t08 (first-person roof). `tools/video/shoot_hero.sh` renders them. The 14 shots weren't re-rendered at 720p.
+  - **R5-ART:** the back-lit silhouette mode (flat dark fill, a hard rim from the light most behind each figure, a moon rim at night, the face lit only below the brim, a lit band up close); the first-person arm a dark mass with a warm rim; gloves shaped in `blender_asset.py` (`shape_gloves`). `test_ld_asset_data.gd`'s "same body to 2 mm" is loosened to 12 cm for the Punk and Ox (bigger gloves), with a twin in `test_r5_art_data.gd`.
+  - **R5-INK:** the hull owns the silhouette (screen ink does creases and overlaps only), `ink_env_weight` 0 everywhere, light wrap, actor fog and a two-radius glow in the finish pass, and a chevron warning. Its pixels weren't judged after the resume.
+  - **The lead's fix** (`e2f3c93`, R5-ART's request): the roof's `fog_amount` 0.12 and `wrap_strength` 0.35 (from 0.5 and 0.9), because the Kicker washed pale against the sun.
+- **Running:** a Sonnet builder (Agent, in the background) in this worktree:
+  1. the import and the video tests;
+  2. the seven hero plates with `make_plate.sh` (**at most 11 images; the running total stays at most $4.34**);
+  3. the hero renders into `captures/video/round5/`;
+  4. fog and wrap fixes for the street and the boss if the figures wash out;
+  5. a contact sheet, then a commit and a push.
+- **Usage at 14:55:** 5-hour 19%, **weekly 83%**.
+- **Next:** read its report, look at the sheet, run the blind check (one judge if the weekly is short), and DM.
+
+
 ### 2026-11-09 14:20 CST: resumed after the 13:59 reset; R5-SHOTS, R5-ART and R5-INK resuming from their wip commits
 - **Usage:** the 5-hour window is at 0%, and **weekly at 80%** (it resets 2026-11-10 at 16:00 CST). About 10 weekly points (about 60 points of a 5-hour window) are left to finish round 5. No new DM. The watcher and the relay restarted.
 - **Running:** `tools/video/build_weekly.js`, run `wf_0571fbbc-351` (task `wr5036alr`), with [args-p1g.json](args-p1g.json) plus a budget note. Image reads are capped at 20. R5-SHOTS and R5-INK run at medium effort; R5-ART stays at high.
