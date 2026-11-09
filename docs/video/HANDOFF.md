@@ -6,7 +6,7 @@ The cinematic gameplay video's live status, kept by the video session ("Beat-em-
 
 ## Status (newest first)
 
-### 2026-11-09 05:55 CST: round 4's blind check (no movement) DM'd; round 5 planned; resume at the 08:50 reset
+### 2026-11-09 06:05 CST: round 4's blind check (no movement) DM'd; round 5 planned; handoff at 88%, resume at the 08:50 reset
 - **The blind check** (`wf_be1d93d6-8ac`, three Opus judges, 295k tokens, about 12 points): all 8 references drawn (p_3d 0.04-0.16), all 7 of ours 3D at round 3's confidence: street_wide 0.97, fp_kicker_lamp 0.95, fp_punk 0.95, moving_punk 0.95, roof_silhouette 0.91, ox_closeup 0.89, ox_low 0.88. Round 4's code changes are visible in the frames, but they did not move a judge who is looking for 3D. The full verdicts are in the workflow's journal (`subagents/workflows/wf_be1d93d6-8ac/journal.jsonl` under this session's project folder).
 - **What the judges point at now** (mostly the 3D game itself, not the shading):
   1. **Exact perspective with repeated units:** window grids with identical window textures, brick courses, chain-link, paving, stair treads, tower staves; texture-space brushwork that shrinks with distance and tiles.
@@ -25,11 +25,12 @@ The cinematic gameplay video's live status, kept by the video session ("Beat-em-
   - **R5-ART:** the first-person fist with fingers and knuckles readable from the camera, the gloves and cuffs not primitives (seams, wrinkles, lacing in the silhouette), the Punk's face not a visor block.
   - **R5-SHOTS:** the blind set from seven trailer frames (one per kind: street wide, first-person punch, first-person lamp, roof against the sun, Ox reveal, Ox close, moving), dynamic held poses with a line of action, a lower, character-led street wide instead of the overview, and the first-person fist smaller in frame.
 - **Budget:** weekly 59% at 05:42 (it resets 2026-11-10 15:59 CST). Round 5 is probably the last full round before the weekly reset.
-- **The design panel** (running at 05:58): Workflow `wf_cac31b7c-27c` (task `wjlftls1n`), three Opus lenses on the draft above: an anime background art director, an NPR technical artist, and the blind judge's adversary. Each returns ranked proposals, a top 3, a verdict on the draft, what to cut, and which frame types can't pass without Plan B. If it finished, its result is in `subagents/workflows/wf_cac31b7c-27c/journal.jsonl` under this session's project folder; read it before writing the round 5 packages.
+- **The design panel was stopped at the watcher's 88% warning (06:05),** before any of its three agents finished, so it has no result. **Re-run it first at the resume:** `Workflow({scriptPath: "/Users/arachne/.claude/projects/-Users-arachne-repos-beat-em-up-PoC--worktrees-video/d70b4cdd-2b80-49d4-94fe-8da80da776fa/workflows/scripts/video-round5-design-panel-wf_cac31b7c-27c.js"})`. It runs three Opus lenses on the draft above: an anime background art director, an NPR technical artist, and the blind judge's adversary. Each returns ranked proposals, a top 3, a verdict on the draft, what to cut, and which frame types can't pass without Plan B. Its prompt holds the whole context (the four rounds' numbers, the tells, the constraints, the draft). Expect about 6-10 points. Write the round 5 packages from its result and the draft.
+- **Handoff at 88% (06:05):** nothing is running. Every video branch and worktree is committed and pushed (`video/cinematic-trailer` at this commit; `mv/r4-*` at their final commits), and only untracked captures remain.
 - **The resume task** `beat-em-up-video-resume-20261108-2230` (Auto mode) is re-armed for 09:00 CST.
 - **Resume steps:**
   1. get_usage; restart the watcher's loop and the relay's heartbeat (they stop themselves at 90%; the watcher may still be running);
-  2. read Game-boy's DM replies (the relay forwards them) and the design panel's result if it ran (below);
+  2. read Game-boy's DM replies (the relay forwards them), then re-run the design panel (above) and read its result;
   3. write the round 5 packages into P1.md (or a P2.md) and their args (`docs/video/args-p1f.json`), and run `build.js`;
   4. merge, render the new blind set from the trailer shots, run the blind check (`blind_r4_prep.sh` and the blind workflow script, with the new frames), and DM.
 
