@@ -32,9 +32,9 @@ static func own_shot(key: StringName) -> VideoStillShot:
 	shot.key = key
 	match key:
 		&"ox_1m":
-			shot.note = "Ox's face at about 1.1 m, from a little below: the brow, the eyes under the headband, the hood."
+			shot.note = "Ox's face at about 1.7 m: the brow, the eyes under the headband, the hood."
 			shot.actors = [BASE._actor(&"boss", OX_FACE_AT)]
-			shot.cam_pos = Vector3(7.0, 1.6, -8.9)
-			shot.cam_look_at = Vector3(7.0, 1.64, -10.0)
-			shot.cam_fov_deg = 38.0
+			shot.cam_pos = Vector3(7.0, 1.95, -8.3)
+			shot.cam_look_at = Vector3(7.0, 2.0, -10.0)
+			shot.cam_fov_deg = 36.0
 	return shot
