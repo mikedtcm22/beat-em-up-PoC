@@ -1,7 +1,7 @@
 {
  "size": 4096,
- "islands_covered_texels": 6279992,
+ "islands_covered_texels": 5966353,
  "empty_texels_in_islands": 0,
  "pure_black_texels_in_islands": 0,
- "coverage_share": 0.3743
+ "coverage_share": 0.3556
 }
