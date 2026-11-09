@@ -18,7 +18,7 @@ shader_type spatial;
 //  - OBJECT-SPACE BRUSH GRAIN (the rest-pose position, so it sticks to the moving body).
 //  - HATCHING from a code-made tonal art map (hatch_tex) in the shadow band, switched on by hatch_on.
 //  - GLINTS only where the atlas says glossy (the game's per-swatch gloss), kept as the game does it.
-//  - For LD-ASSET: ink_tex (R = ink, UV0), paint_tex (painted albedo, UV0), ink_color and ink_strength.
+//  - For LD-ASSET: ink_tex (R = ink, UV2, the layout), paint_tex (painted albedo, UV2), ink_color and ink_strength.
 
 render_mode ambient_light_disabled;
 
@@ -187,7 +187,7 @@ void fragment() {
 		swatch_glint = swatch_spec;
 	}
 	if (use_paint_tex) {
-		color = texture(paint_tex, UV).rgb * albedo.rgb;
+		color = texture(paint_tex, UV2).rgb * albedo.rgb;
 	}
 	if (use_detail_tex) {
 		float ink_mask = texture(detail_tex, UV2).r;
@@ -201,7 +201,7 @@ void fragment() {
 		glint_gate = smoothstep(0.5 - streak_edge, 0.5 + streak_edge, streak);
 	}
 	if (use_ink_tex) {
-		color = mix(color, ink_color, texture(ink_tex, UV).r * ink_strength);
+		color = mix(color, ink_color, texture(ink_tex, UV2).r * ink_strength);
 	}
 	if (takes_marks > 0.0) {
 		vec3 w = abs(normalize(mark_normal));
