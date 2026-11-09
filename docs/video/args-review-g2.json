@@ -1,0 +1,33 @@
+{
+ "milestone": "v",
+ "round": "g2",
+ "summary": "Gate 2 of the cinematic gameplay video (docs/video/PLAN.md §6): Phase 1's look-dev merged (world round 2, ink, the drawn cast, the cine stage), judged against the two reference videos",
+ "base": "cb0033f",
+ "base_branch": "video/cinematic-trailer",
+ "read_first": [
+  "docs/video/PLAN.md §1-2 (the prime directive and the style bible, P1-P8) and §6's Gate 2 rubric",
+  "docs/video/P1.md, 'What Phase 0 found', 'Shared by all four packages' and § LD-WORLD2",
+  "docs/video/calls/ld-world2.md, ld-asset.md and ld-stage.md (each builder's calls and honest shortfalls)"
+ ],
+ "captures_dir": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/video/captures/video/gate2",
+ "image_budget": 30,
+ "skeptic_severities": ["high"],
+ "partition": false,
+ "no_fix": true,
+ "review_concurrency": 2,
+ "costs": { "reviewer": 12, "skeptic": 2 },
+ "common_note": "VIDEO WORK OVERRIDES: cine (non-first-person) shots count as much as first person. Judge against docs/video/PLAN.md §2 and the reference frames, not SPEC.md. Never edit game/, tuning/ or tests/: look values go in CineLook .tres files under video/look/, not in tuning_data.gd. Instead of the full suite, run the video tests (`godot --headless --fixed-fps 60 -s addons/gut/gut_cmdln.gd -gdir=res://video/tests -gexit`, 90 tests at the base) and `git diff --quiet origin/video/cinematic-trailer -- game tuning tests` (it must exit 0). GATE 2 REVIEW: the Gate 2 set is rendered at the base commit in captures_dir: <shot>/<shot>.png (2560x1440) and <shot>_mask.png for fp_punk, fp_kicker_lamp, street_wide, roof_silhouette, ox_low and ox_closeup, and moving_punk/moving_punk.mkv (5 s, 120 frames at 24 fps, yuv444p; extract frames with ffmpeg into your own scratch folder, never into the repo). The reference frames are /Users/arachne/repos/beat-em-up-PoC/.worktrees/video/captures/video/ref/frames/ref<1|2>_<seconds>.png (docs/video/STYLE.md says which frame matches which shot; ref 2's first 15 s, e.g. ref2_3.5.png and ref2_4.5.png, are Game-boy's bar for environment detail). The look-dev targets (Gemini paint-overs of our stills, bars only, never in the video): round 2 at /Users/arachne/repos/beat-em-up-PoC/.worktrees/video/captures/video/p0/gemini_env/target_<shot>.jpg, and ox_closeup's round 1 target in /Users/arachne/repos/beat-em-up-PoC/.worktrees/video/captures/video/p0/gemini/. These files are untracked: read them, never copy them into git. Game-boy's direction at Gate 1 outranks the Phase 0 blind check: environments keep drawn detail (brick, frames, pipes, paving, puddles), are crisp, and have small contained lights, no glare. Known, not findings: the other four enemies and the player's full body are not drawn yet (Phase 2); the 2D cues (smears, speed lines) are Phase 2 unless the stills show them. Don't render unless your lens says so; one Godot process at a time, always through tools/video/shoot.sh (it takes the capture lock). Fixes are the lead's call after Gate 2: report findings, don't fix.",
+ "lenses": [
+  {
+   "key": "look",
+   "est": 14,
+   "brief": "THE STYLE LENS (Opus). Score the Gate 2 set with PLAN.md §6's rubric: each pillar P1-P8 from 0 to 3, for each of the six stills against its matching reference frame and its target, and for moving_punk against both references' motion (look at a contact strip of every 6th frame and at least three frames at full resolution). Look at the whole frame at about 1000 px and at full-resolution crops of what decides a pillar: faces, hands and the first-person arm, ink edges, wall and ground detail, light pools, sky. In the summary give the score table (shots by pillars, with the means), and per still a plain call: would a viewer who hasn't been told read it as a drawn anime frame or a 3D render, and why. Findings: one per gap that holds a pillar below 2.4 on any shot, naming what differs from the reference (frame and region), the cause in our pipeline (the piece and file: video/world + flat_paint_env* (world), video/ink + cine_toon/cine_outline/ink_screen (ink), video/art + assets/video/characters (art), video/stage + video/cine (stage)), and the concrete fix. Severity: high when it keeps a pillar at 1 or less or makes the frame read as a 3D render; medium when it holds a pillar below 2; low for polish. Don't render."
+  },
+  {
+   "key": "code",
+   "model": "sonnet",
+   "est": 7,
+   "brief": "THE CODE LENS (Sonnet). Review the wave's code, `git diff a3860bd..cb0033f -- video tools/video`, for: (1) determinism: two renders of one shot differ (LD-STAGE: PSNR 50.5 dB lowest between two runs of moving_punk with the ink piece; the cause is not found; it is not the cues, rims, post, LUT, shadow filter or the rig's _process). Read cine_toon.gdshader, cine_outline.gdshader and video/ink/ for anything that can vary run to run (uninitialised values, hashes of screen position or TIME, derivatives at silhouettes, alpha-to-coverage or MSAA-dependent paths, material or uniform state set in _process) and name the likely cause with a probe that would confirm it; also the world piece's GPU particles. You may run tools/video/compare_shots.sh on fp_punk once (shoot.sh with SHOOT_ARGS='--shot-repeat=3 --shot-mask=0'), never more. (2) Coherence: pieces apply art, then world, then ink; every apply is idempotent; nodes a piece adds to the level; CineDirector restores every global it changes (Tuning FOV and shake, the HUD, the rngs). (3) CineArtRig.ensure_layout_uv: cine_toon now samples UV2 at the base, so check the patch is a no-op and that no material turns on use_paint_tex or use_ink_tex on a mesh without UV2. (4) The frame writer: the [from, to) window, the 24 fps picks of the 60 Hz simulation, chunk encoding and disk use. (5) The video test run ends with RID-leak ERROR lines at exit (206 meshes, 229 resources): are they new with this wave (static caches, rigs never freed), and do they matter for long renders? (6) Cost per frame: flag anything that would blow the render hours for 40 s at 24 fps (0.27 s a frame measured). Severity: high breaks a final render, determinism of the picture or the game; medium gives wrong output in some shots; low is polish."
+  }
+ ]
+}

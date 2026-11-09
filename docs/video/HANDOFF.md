@@ -2,9 +2,46 @@
 
 The cinematic gameplay video's live status, kept by the video session ("Beat-em-up: video session", in `.worktrees/video` on `video/cinematic-trailer`), the way docs/HANDOFF.md is kept for the game. Newest entry first. The brief is [PLAN.md](PLAN.md). A takeover session resumes from the newest entry, and takes Game-boy's approvals from the first one (at the bottom).
 
-**Paid services spent so far:** Gemini $0.00 of the $5 cap (ledger: [gemini_ledger.md](gemini_ledger.md)) · Tripo 0 credits (not approved) · ElevenLabs 0 (not approved).
+**Paid services spent so far:** Gemini about $1.54 of the $5 cap, 11 images (ledger: [gemini_ledger.md](gemini_ledger.md)) · Tripo 0 credits (not approved) · ElevenLabs 0 (not approved).
 
 ## Status (newest first)
+
+### 2026-11-08 18:55 CST: Phase 1b merged; the Gate 2 set rendered; the review round and the blind check running
+- **Merged** into `video/cinematic-trailer`:
+  - `mv/ld-world2` (47d4fbc), `mv/ld-asset` (fe0676d) and `mv/ld-stage` (109c603);
+  - then cb0033f: `cine_toon` samples `paint_tex` and `ink_tex` with UV2, the art layout (LD-ASSET's request). `CineArtRig.ensure_layout_uv()` is now a no-op.
+  - Video tests: 90/90. Nothing under `game/`, `tuning/` or `tests/` has changed since the fork from `m6/full-art-audio` (056e697).
+- **The wave's cost:** 1.19M subagent tokens. The 5-hour window went from 0% to 51%, and the weekly from 18% to 26%.
+- **The Gate 2 set** is in `captures/video/gate2/`:
+  - `<shot>/<shot>.png` for the six stills;
+  - `moving_punk/moving_punk.mkv`: 5 s, 120 frames; the 4 hits land, then the uppercut finisher and the KO;
+  - `sheets/`: reference | ours | target, rows s1-s7 and an overview;
+  - `gate2_moving_punk_1080p.mp4`, for Slack.
+- **Measured** (PLAN §6, LD-RENDER):
+  - 0.31 s a frame at 2560×1440: moving_punk's 120 frames took 37 s of wall time, encode included.
+  - 0.32 MB a frame of mezzanine, 10.8 MB raw, and 1.18 GB of VRAM.
+  - So 40 s at 24 fps (960 frames) is about 5 minutes of rendering. Render hours aren't a constraint.
+- **The lead's look,** at full resolution beside the references and the targets.
+  - **Better:**
+    - The environments carry drawn detail (brick courses, frames, fence, flagstones, puddles), and the path reads.
+    - The Punk's and Ox's faces are drawn.
+    - The roof's tanks, parapet and banded sun read as illustration.
+  - **Worst, in order:**
+    1. **The first-person arm.** Where the near plane cuts the arm there's a pure black hole, probably the inside of the inverted-hull outline showing. Its shading is faceted low-poly, and its colour a flat salmon. This is in every first-person shot and in the moving shot.
+    2. **Colour.** Saturated royal blue with magenta and red: magenta blobs on the walls, and red fence frames and props. The references are navy and indigo with desaturated darks and an orange key.
+    3. **Value.** No deep darks or silhouettes; the roof's tanks are front-lit instead of backlit.
+    4. **Line.** The environment's lines are uniformly thin, with no bold contour hierarchy. At close range, heavy black bands cover the Punk's arms.
+    5. **The boss roof.** Ox is lit violet, not warm orange. The flame spikes are regular, and the gloves near-black.
+    6. **Atmosphere.** Steam like cotton, and no haze depth.
+    7. A lens-flare glint at the sun.
+  - **Rough scores:** P1 1.5, P2 1.5, P3 1.5, P4 1.0, P5 1.0, P6 2.0, P7 2.0, P8 1.5; mean about 1.5. That's below the bar (every pillar ≥ 2, mean ≥ 2.4).
+- **Running:**
+  - **The review round:** Workflow `review.js` with [args-review-g2.json](args-review-g2.json) (run `wf_5df89f41-295`, task `w2bnz0rl3`). It has an Opus style lens with the rubric and a Sonnet code lens. Skeptics check only the high findings, because of the 90% limit; there's no partition and no fixers.
+  - **The blind check:** one Opus agent on 15 shuffled frames (8 reference frames, our six stills and moving_punk's frame 42). The key is in this session's scratchpad, `blind_key_gate2.json`.
+  - **The watcher and the relay** run again; Game-boy pressed Start on both cards.
+- **Next:**
+  - When the review and the blind check land, send Gate 2 by Slack DM: the sheets, the 1080p clip, the scores, the round 3 proposal, and the fallbacks with their costs (A2 for P1, A+ for P2 and P7, PLAN §6).
+  - Then the fix wave (look-dev round 3) on the lowest pillars, sized to the headroom. If it doesn't fit, hand off at 90% with it as the resume step.
 
 ### 2026-11-08 17:35 CST: resumed after the reset; Phase 1b running (LD-WORLD2, LD-ASSET, LD-STAGE)
 - **Resumed** by the Auto-mode resume task at 17:30. Usage: the 5-hour window at 0%, weekly at 18%. The game session was idle (no Godot running).
