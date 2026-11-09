@@ -4,7 +4,7 @@ extends Node
 ## environment, edge-line quad and colour grade) and has its own Camera3D, which copies the main viewport's
 ## active camera every frame after the game cameras moved. It renders at its own size whatever the window is,
 ## with MSAA 4x. The HUD and the 2D effect layers are CanvasLayers of the main viewport, so they never reach it.
-## This is the seed of the frame writer of Phase 1.
+## `CineFrameWriter` extends it: the frame writer of the cine stage.
 
 ## The render size and the MSAA mode (the data of the stage, not of the game).
 @export var size: Vector2i = Vector2i(2560, 1440)
@@ -46,6 +46,7 @@ func sync_camera() -> void:
 	camera.near = source.near
 	camera.far = source.far
 	camera.cull_mask = source.cull_mask
+	camera.attributes = source.attributes
 	camera.projection = source.projection
 	camera.h_offset = source.h_offset
 	camera.v_offset = source.v_offset

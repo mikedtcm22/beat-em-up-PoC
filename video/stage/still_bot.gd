@@ -29,6 +29,8 @@ var _props: Array[Node] = []
 var _free_xf: Transform3D = Transform3D.IDENTITY
 var _free_fov: float = 70.0
 var _free_on: bool = false
+## False: the stage builds no lamp posts of its own (a world look places its own, from data).
+var stage_lamps: bool = true
 
 
 func _ready() -> void:
@@ -158,6 +160,19 @@ func _clear_stage() -> void:
 
 ## Stage `shot` and write its PNG to `out_dir/<key>.png`.
 func shoot(shot: VideoStillShot) -> void:
+	await stage(shot)
+	var path := out_dir.path_join("%s.png" % shot.key)
+	var err := await grab.capture(path)
+	if save_window:
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png(out_dir.path_join("%s_window.png" % shot.key))
+	Engine.time_scale = 1.0
+	log_line("STILL %s %s err=%d" % [shot.key, path, err])
+
+
+## Stage `shot` up to the grab: the player placed and the section light settled, the lamps and the actors in,
+## the camera set, the room warmed up and the player's buttons pressed (the time stopped when the shot holds it).
+func stage(shot: VideoStillShot) -> void:
 	var section: Node3D = level.sections[shot.section]
 	var base := section.global_position
 	var yaw := deg_to_rad(shot.player_yaw_deg)
@@ -168,17 +183,15 @@ func shoot(shot: VideoStillShot) -> void:
 		tune(&"fov_deg", shot.first_person_fov_deg)
 	_pin_player(at, yaw, deg_to_rad(shot.player_pitch_deg))
 	await _settle_light(section, at, yaw, deg_to_rad(shot.player_pitch_deg))
-	_build_lamps(shot, base)
+	if stage_lamps:
+		_build_lamps(shot, base)
 	var viewer := at + Vector3.UP * player.body_height
 	if not shot.first_person:
 		viewer = base + shot.cam_pos
 	for spec in shot.actors:
 		_place_actor(spec, base, viewer)
 	if not shot.first_person:
-		var forward := (base + shot.cam_look_at) - viewer
-		_free_xf = Transform3D(Basis.looking_at(forward, Vector3.UP), viewer)
-		_free_fov = shot.cam_fov_deg
-		_free_on = true
+		_place_free_camera(shot, base, viewer)
 	for _tick in shot.warmup_ticks:
 		await _ticks(1)
 		_pin_player(at, yaw, deg_to_rad(shot.player_pitch_deg), false)
@@ -194,13 +207,23 @@ func shoot(shot: VideoStillShot) -> void:
 	for _frame in 3:
 		await get_tree().process_frame
 	_log_sun()
-	var path := out_dir.path_join("%s.png" % shot.key)
-	var err := await grab.capture(path)
-	if save_window:
-		await RenderingServer.frame_post_draw
-		get_viewport().get_texture().get_image().save_png(out_dir.path_join("%s_window.png" % shot.key))
-	Engine.time_scale = 1.0
-	log_line("STILL %s %s err=%d" % [shot.key, path, err])
+
+
+## Aim the free camera of a free-camera shot (a subclass puts its own camera here). The stage's own: the game's
+## free-fly camera, held at one pose every frame.
+func _place_free_camera(shot: VideoStillShot, base: Vector3, viewer: Vector3) -> void:
+	var look_at := shot.cam_look_at
+	var fov := shot.cam_fov_deg
+	if shot is CineShot:
+		# A cine shot's path: its first key (the cine bot plays the whole path).
+		var key := (shot as CineShot).keys()[0]
+		viewer = base + key.position
+		look_at = key.look_at
+		fov = key.fov_deg
+	var forward := (base + look_at) - viewer
+	_free_xf = Transform3D(Basis.looking_at(forward, Vector3.UP), viewer)
+	_free_fov = fov
+	_free_on = true
 
 
 ## Put the player at `at` facing `yaw` and looking `pitch`; `settled` also stops him moving.
@@ -237,11 +260,13 @@ func _place_actor(spec: VideoStillActor, base: Vector3, viewer: Vector3) -> void
 	if enemy == null:
 		log_line("STILL actor %s could not be spawned" % spec.id)
 		return
-	ShowcaseRunner.unplug(enemy)
+	if not spec.live:
+		ShowcaseRunner.unplug(enemy)
 	enemy.global_position = at
 	enemy.rotation.y = yaw
-	enemy.rig.play(spec.anim, 0.0)
-	enemy.rig.advance(float(spec.hold_tick) / float(Engine.physics_ticks_per_second))
+	if not spec.live:
+		enemy.rig.play(spec.anim, 0.0)
+		enemy.rig.advance(float(spec.hold_tick) / float(Engine.physics_ticks_per_second))
 	_stage_actors.append(enemy)
 	log_line("STILL actor %s at %s head %s" % [spec.id, at, enemy.rig.get_point_position(HEAD_POINT)])
 

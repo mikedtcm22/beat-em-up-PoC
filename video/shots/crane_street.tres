@@ -1,0 +1,66 @@
+[gd_resource type="Resource" script_class="CineShot" load_steps=10 format=3]
+
+[ext_resource type="Script" path="res://video/cine/cine_shot.gd" id="1_shot"]
+[ext_resource type="Script" path="res://video/stage/still_actor.gd" id="2_actor"]
+[ext_resource type="Script" path="res://video/cine/cine_camera_key.gd" id="3_key"]
+
+[sub_resource type="Resource" id="Actor_0"]
+script = ExtResource("2_actor")
+id = &"punk"
+position = Vector3(0.5, 0, -8)
+facing = 1
+hold_tick = 5
+
+[sub_resource type="Resource" id="Actor_1"]
+script = ExtResource("2_actor")
+id = &"punk"
+position = Vector3(3.2, 0, -10)
+facing = 1
+hold_tick = 15
+
+[sub_resource type="Resource" id="Actor_2"]
+script = ExtResource("2_actor")
+id = &"punk"
+position = Vector3(-2.2, 0, -11)
+facing = 1
+hold_tick = 30
+
+[sub_resource type="Resource" id="Key_0"]
+script = ExtResource("3_key")
+time_s = 0.0
+position = Vector3(-0.6, 8.6, 2.0)
+look_at = Vector3(0.5, 1.8, -22.0)
+fov_deg = 75.0
+focus_m = 0.0
+focus_range_m = 5.0
+
+[sub_resource type="Resource" id="Key_1"]
+script = ExtResource("3_key")
+time_s = 1.6
+position = Vector3(-0.5, 5.4, 1.0)
+look_at = Vector3(0.5, 1.7, -16.0)
+fov_deg = 68.0
+focus_m = 14.0
+focus_range_m = 5.0
+
+[sub_resource type="Resource" id="Key_2"]
+script = ExtResource("3_key")
+time_s = 3.0
+position = Vector3(0.2, 2.4, 0.0)
+look_at = Vector3(0.6, 1.5, -10.0)
+fov_deg = 60.0
+focus_m = 10.0
+focus_range_m = 5.0
+
+[resource]
+script = ExtResource("1_shot")
+key = &"crane_street"
+note = "PLAN.md section 5, shot 1 (the stage test of the camera path and the depth of field): a slow crane down from roof height to the street, three Punks idle in silhouette."
+section = 0
+player_pos = Vector3(3, 0, -2)
+first_person = false
+actors = Array[ExtResource("2_actor")]([SubResource("Actor_0"), SubResource("Actor_1"), SubResource("Actor_2")])
+warmup_ticks = 40
+window_from_s = 0.0
+window_to_s = 3.0
+camera_keys = Array[ExtResource("3_key")]([SubResource("Key_0"), SubResource("Key_1"), SubResource("Key_2")])
