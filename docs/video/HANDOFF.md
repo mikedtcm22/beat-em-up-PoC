@@ -2,13 +2,14 @@
 
 The cinematic gameplay video's live status, kept by the video session ("Beat-em-up: video session", in `.worktrees/video` on `video/cinematic-trailer`), the way docs/HANDOFF.md is kept for the game. Newest entry first. The brief is [PLAN.md](PLAN.md). A takeover session resumes from the newest entry, and takes Game-boy's approvals from the first one (at the bottom).
 
-**Paid services spent so far:** Gemini about $2.52 of the $5 cap, 18 images (round 3 used $0.98 of its $2.50; ledger: [gemini_ledger.md](gemini_ledger.md)) · Tripo 0 credits (not approved) · ElevenLabs 0 (not approved).
+**Paid services spent so far:** Gemini about $2.52 of the $5 cap, 18 images (round 3 used $0.98 of its $2.50; ledger: [gemini_ledger.md](gemini_ledger.md)); $2 more approved on 2026-11-09 for per-shot background paint-overs if round 4 still needs them · Tripo 0 credits (not approved) · ElevenLabs 0 (not approved).
 
 ## Status (newest first)
 
 ### 2026-11-09 03:55 CST: resumed after the reset; round 4 running (R4-INK, R4-ART, R4-WORLD, R4-SHOTS)
 - **The reset came at 03:40.** The 5-hour window is at 0%, and weekly at 48% (it resets 2026-11-10 15:59 CST). The resume task fired at 03:50. The watcher and the relay were asked to restart their loops; both turns started.
-- **No reply from Game-boy** in the DM (the newest message is ours, 01:06). So round 4 runs without the per-shot Gemini paint-overs, as the DM said. Plan B stays on hold.
+- **No reply from Game-boy** in the DM at the resume (the newest message was ours, 01:06), so round 4 runs without the per-shot Gemini paint-overs, as the DM said. Plan B stays on hold.
+- **04:18: Game-boy answered** by DM (the relay forwarded it; read in Slack too): "Extra $2 for Gemini use is approved if needed". The paint-overs have to be made from round 4's final set (the world's geometry and props move in R4-WORLD), so they're round 5's package (**R5-PAINT**: plates from each trailer shot's key camera with the actors hidden, a pilot of one or two images first, then the rest within $2, projected onto the set with a depth test). They run in the next window, only if round 4's blind check still calls the backgrounds 3D. The approval is in the approvals section at the bottom, and the ledger has a row for it.
 - **Round 4's packages** are in [P1.md](P1.md), from "What round 3 found" on, with [args-p1e.json](args-p1e.json):
   - **R4-INK** (`mv/r4-ink`): a brush pass that paints the world's pixels (anisotropic Kuwahara, flat values, a world-anchored hand wobble) before the lines; the delivery matched to the references by measure (`deliver_scale`); more contrast in line weight.
   - **R4-ART** (`mv/r4-art`, Blender): a designed cel shadow shape (no noise terminator), hatching along the form only in close-up shadow, Ox's face simplified, no mirrored gloves, the arm as a drawn foreground form.
@@ -393,3 +394,5 @@ Ground rules:
   1. Run look-dev round 3: yes.
   2. D7, A+: Gemini-painted backdrops (far buildings, the boss roof's sky, fire and smoke) as mattes, about $1.50-2.50 from the rest of the $5 Gemini cap: yes, with $2.50 as this round's cap.
   3. D6, Plan B: hold.
+- **Added after round 3,** 2026-11-09 04:18 CST, by Slack DM (Michael, ts 1794219494.722819), answering the round 3 question (a Gemini paint-over of every shot's background, projected onto the set, about $2): "Extra $2 for Gemini use is approved if needed".
+  - **The reading taken:** at most $2 more, for the per-shot background paint-overs, used only if round 4's code changes still read 3D in the blind check. That keeps the total at most $4.52, under the original $5 cap, so it holds under either reading of "extra".
