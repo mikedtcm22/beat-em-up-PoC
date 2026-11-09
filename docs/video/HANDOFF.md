@@ -6,6 +6,19 @@ The cinematic gameplay video's live status, kept by the video session ("Beat-em-
 
 ## Status (newest first)
 
+### 2026-11-08 22:41 CST: resumed after the reset; round 3 wave A running (LD-WORLD3, LD-ART2, SHOTS)
+- **The reset came at 22:30.** The 5-hour window is at 0%, and weekly at 33%. The relay reported it first, and the resume task (`...-2230`, Auto mode) fires at 22:40.
+- **The watcher was asked to restart its loop** with the PLAN.md §12 prompt, at its normal cadence.
+- **Running:** the Workflow `build.js` with [args-p1c.json](args-p1c.json), run `wf_92ad24ce-788` (task `wpvnx5t6a`), two at a time:
+  - LD-WORLD3 (`mv/ld-world3`), with A+ approved: Gemini backdrops at most $2.50 this round, with the ledger rows its own;
+  - LD-ART2 (`mv/ld-art2`, Blender);
+  - SHOTS (`mv/shots`), which starts when a slot frees.
+- **SHOTS moved into wave A** because it doesn't depend on the look. Wave B is LD-INK2 alone ([args-p1d.json](args-p1d.json)), run after wave A is merged, so the grade and lines are judged on the new world and cast.
+- **Next:** when wave A lands:
+  1. merge it, run the video tests and the protected diff;
+  2. launch wave B;
+  3. then render the Gate 2 set again with the delivery pass, do the lead's look, run the blind check again, and DM round 3 to Game-boy.
+
 ### 2026-11-08 19:15 CST: Gate 2 sent by Slack DM (not a match yet); handoff before the 22:29 reset
 - **Gate 2 went to Game-boy at 19:08** (DM ts 1794185684.959309), with the overview sheet and the 1080p clip. He has three questions to answer, with my defaults:
   1. Run look-dev round 3 (Plan A)? [yes]
