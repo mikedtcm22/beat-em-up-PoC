@@ -7,10 +7,11 @@ extends Node
 ## pieces); nothing here is a feel number and nothing is written to `game/`, `tuning/` or a preset.
 ## The shot clock is the physics-frame count since `start_clock()`: the same on every run, never `TIME`.
 
-## Where the pieces of a location are, and the file names: `art*.tres` (any number, by name), then `world.tres`, then `ink.tres`.
+## Where the pieces of a location are, and the file names: `art*.tres` (any number, by name), then `world.tres`, then `ink.tres`, then `plate.tres` (round 5).
 const LOOK_DIR := "res://video/look"
 const WORLD_FILE := "world.tres"
 const INK_FILE := "ink.tres"
+const PLATE_FILE := "plate.tres"
 const ART_PREFIX := "art"
 
 ## The game's floor glint of a weapon (a four-point sparkle above it, WeaponGlint) is hidden: against a sun it reads as a camera's lens flare, and
@@ -59,7 +60,7 @@ static func piece_paths(location_name: StringName) -> PackedStringArray:
 			art.append(dir_path.path_join(file_name))
 	art.sort()
 	out.append_array(art)
-	for file in [WORLD_FILE, INK_FILE]:
+	for file in [WORLD_FILE, INK_FILE, PLATE_FILE]:
 		var path := dir_path.path_join(file)
 		if ResourceLoader.exists(path):
 			out.append(path)

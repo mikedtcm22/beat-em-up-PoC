@@ -604,3 +604,14 @@ The cast's designed shading (docs/video/P1.md, "R4-ART"): a shade map per charac
 | Ox paint, ink, features (changed) | `assets/video/characters/boss/boss_paint.png`, `boss_ink.png`, `assets/source/video_art/boss/features.svg` | `art_paint.py` (flat skin, no head creases, tape, patch and scuffs on the gloves), the face's drawing cut from 54 to 20 paths and five shadow shapes | Original | As before, LFS. |
 | Player paint and ink (changed) | `assets/video/characters/player/player_paint.png`, `player_ink.png` | `art_paint.py` (lifted glove cells, scuffs, heavier knuckle lines) | Original | As before, LFS. |
 
+
+## Video: R5-PAINT (round 5)
+
+The Gemini plates of the pilot (docs/video/gemini_ledger.md has the spend). A plate is made by `tools/video/make_plate.sh`: `plate_capture.sh` (a blockout of the shot's frame from its exact camera, a depth picture, the camera as JSON), a paint-over of the blockout by `gemini-3-pro-image` (`make_plate_jobs.py`, image to image with one style swatch), and `register_plates.py` (an affine fit of the painting's edges to the blockout's depth edges). `assets/video/plates/` is outside Godot's import (`.gdignore`): the plate piece reads the files from the disk.
+
+| Asset | Path | Source | Licence | Notes |
+| --- | --- | --- | --- | --- |
+| Street wide plate | `assets/video/plates/street_wide/plate_0.png` | `gemini-3-pro-image` over `assets/source/video_plates/street_wide/plate_0_blockout.jpg` with ref 2's 42.0 s frame as the swatch (the swatch is not in the repo); registered by `register_plates.py` | Gemini output (generated; the prompt is in `prompt_plate_0_take1.txt`) | 2560x1440 RGB, about 4.9 MB, LFS. Video only: projected onto the street by `CinePlateQuad`. |
+| Street wide depth, camera | `assets/video/plates/street_wide/depth_0.png`, `plate_0.json` | `plate_capture.sh` | Project file (generated) | The 16-bit view depth in red and green (65535 the sky), and the plate camera (position, basis, FOV 83, size, registration numbers). |
+| Roof silhouette plate, depth, camera | `assets/video/plates/roof_silhouette/plate_0.png`, `depth_0.png`, `plate_0.json` | As above, with ref 2's 50.5 s frame as the swatch | Gemini output / project file | Same formats, plate about 3.9 MB, LFS. |
+| Plate sources | `assets/source/video_plates/<shot>/` | `make_plate_jobs.py`, `plate_capture.sh` | Project file / Gemini output | `jobs.json` (the Gemini job), `prompt_plate_0_take1.txt`, `plate_0_blockout.jpg` (the input, 1920 px) and `plate_0_gemini1.jpg` (the painting as Gemini returned it, 2K). LFS. |

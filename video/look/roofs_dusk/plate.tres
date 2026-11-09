@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="VideoPlateLook" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://video/paint/plate_look.gd" id="1_plate"]
+
+[resource]
+script = ExtResource("1_plate")
+live_hide_prefixes = PackedStringArray("HazeQuad", "Shaft", "Halo", "Matte_")
