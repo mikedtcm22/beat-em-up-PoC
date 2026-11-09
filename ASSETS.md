@@ -605,6 +605,15 @@ The cast's designed shading (docs/video/P1.md, "R4-ART"): a shade map per charac
 | Player paint and ink (changed) | `assets/video/characters/player/player_paint.png`, `player_ink.png` | `art_paint.py` (lifted glove cells, scuffs, heavier knuckle lines) | Original | As before, LFS. |
 
 
+## Video: R5-ART (round 5)
+
+No new files: the three characters' video art is re-made with shaped gloves (`tools/video/blender_asset.py`, `shape_gloves`; data in `assets/source/video_art/<name>/paint.json`, "gloves"), and the cine toon has a back-lit silhouette mode (docs/video/calls/r5-art.md).
+
+| Asset | Path | Source | Licence | Notes |
+| --- | --- | --- | --- | --- |
+| Gloved video meshes | `assets/video/characters/{punk,boss,player}/*_video.glb` | `make_art.sh` with the gloves block: a padded front, a thumb lobe, a knuckle ridge, a cuff that tapers | Original | Same bones, weights and UV layout as before (only vertices move); LFS. |
+| Re-baked maps | `assets/video/characters/{punk,boss,player}/*_paint.png`, `*_ink.png`, `*_shade.png` | `art_paint.py bake` on the new meshes | Original | Same size and layout; LFS. |
+
 ## Video: R5-PAINT (round 5)
 
 The Gemini plates of the pilot (docs/video/gemini_ledger.md has the spend). A plate is made by `tools/video/make_plate.sh`: `plate_capture.sh` (a blockout of the shot's frame from its exact camera, a depth picture, the camera as JSON), a paint-over of the blockout by `gemini-3-pro-image` (`make_plate_jobs.py`, image to image with one style swatch), and `register_plates.py` (an affine fit of the painting's edges to the blockout's depth edges). `assets/video/plates/` is outside Godot's import (`.gdignore`): the plate piece reads the files from the disk.

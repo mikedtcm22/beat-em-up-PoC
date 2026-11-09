@@ -69,7 +69,8 @@ func test_the_video_glbs_keep_the_contract_the_body_and_change_the_face_shading(
 		var a: AABB = game_parts[0].mesh.get_aabb()
 		var b: AABB = video_parts[0].mesh.get_aabb()
 		# The Punk and Ox: the same body to 2 mm. The player's arms are relaxed and subdivided (round 2), which pulls the fists and elbows in (the smoothing shrinks the extremes: 5 cm measured on the box).
-		var tolerance := 0.08 if id == &"player" else 0.002
+		# R5-ART shaped the gloves (a padded front, a thumb lobe: the hands grow) so the Punk's and Ox's box grows by up to 10 cm (was 2 mm; the twin is test_r5_art_data.gd's span assertions).
+		var tolerance := 0.08 if id == &"player" else 0.12
 		assert_lt(a.position.distance_to(b.position) + a.size.distance_to(b.size), tolerance, "%s: the same body, to %.0f mm" % [id, tolerance * 1000.0])
 		var game_normals: PackedVector3Array = game_parts[0].mesh.surface_get_arrays(0)[Mesh.ARRAY_NORMAL]
 		var video_normals: PackedVector3Array = video_parts[0].mesh.surface_get_arrays(0)[Mesh.ARRAY_NORMAL]

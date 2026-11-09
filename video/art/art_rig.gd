@@ -14,6 +14,15 @@ static var _layout_shader: Shader
 
 var look: VideoArtLook
 
+## The level's lights (not the ink rig's own rim lights), rescanned every SCAN_EVERY frames: R5-ART's silhouettes pick the one behind each figure.
+const SCAN_EVERY := 30
+const INK_RIM_PREFIX := "CineInkRim"
+var _lights: Array[Light3D] = []
+var _level: Node
+var _frame: int = 0
+## The silhouette values last written, by art id, for the tests: {light: Light3D or null, light_view: Vector3, ...}.
+var last_silhouette: Dictionary = {}
+
 ## Per art id: {art: CharacterArt (the video copy), entry: SkinnedArt.Entry, paint: Texture2D, ink: Texture2D}, or {} when the
 ## character has no video files or its video GLB breaks the art contract (a warning says so once).
 var _kits: Dictionary[StringName, Dictionary] = {}
@@ -21,7 +30,8 @@ var _kits: Dictionary[StringName, Dictionary] = {}
 var dressed: Dictionary[StringName, int] = {}
 
 
-func setup(_level: Node) -> void:
+func setup(level: Node) -> void:
+	_level = level
 	process_priority = -10
 	if look.layout_uv:
 		ensure_layout_uv()
@@ -29,7 +39,10 @@ func setup(_level: Node) -> void:
 
 
 func _process(_delta: float) -> void:
+	_frame += 1
 	_adopt()
+	if not look.silhouette_ids.is_empty():
+		_update_silhouettes()
 
 
 ## The shader reads `texture(paint_tex, UV)` and `texture(ink_tex, UV)`: UV is the palette's swatch. Read them with UV2, the layout.
@@ -139,3 +152,139 @@ func _rig_of(node: Node) -> HumanoidRig:
 			return up as HumanoidRig
 		up = up.get_parent()
 	return null
+
+
+# --- R5-ART: the back-lit silhouettes ----------------------------------------------------------
+
+
+func _scan_lights() -> void:
+	_lights.clear()
+	if _level == null:
+		return
+	for node in _level.find_children("*", "Light3D", true, false):
+		var light := node as Light3D
+		if light != null and not String(light.name).begins_with(INK_RIM_PREFIX):
+			_lights.append(light)
+
+
+## The light most behind `at` as seen from `eye`: for each light, its energy and luminance (and its falloff, for a lamp) times how far it lies on the far
+## side of the figure from the camera. Returns {light, to_light (world, a unit vector)}; light is null when nothing is behind the figure.
+func light_behind(at: Vector3, eye: Vector3) -> Dictionary:
+	var to_eye := (eye - at).normalized()
+	var best := 0.0
+	var best_light: Light3D
+	var best_dir := Vector3.ZERO
+	for light in _lights:
+		if not is_instance_valid(light) or not light.is_visible_in_tree() or light.light_energy <= 0.0:
+			continue
+		var to_light: Vector3
+		var falloff := 1.0
+		if light is DirectionalLight3D:
+			to_light = light.global_basis.z.normalized()
+		else:
+			var range_m := 0.0
+			if light is OmniLight3D:
+				range_m = (light as OmniLight3D).omni_range
+			elif light is SpotLight3D:
+				range_m = (light as SpotLight3D).spot_range
+			var d := light.global_position.distance_to(at)
+			if d >= range_m or d < 0.001:
+				continue
+			falloff = 1.0 - d / range_m
+			to_light = (light.global_position - at) / d
+		var behind := -to_light.dot(to_eye)
+		if behind <= 0.05:
+			continue
+		var score := light.light_color.get_luminance() * minf(light.light_energy, 4.0) * falloff * behind
+		if score > best:
+			best = score
+			best_light = light
+			best_dir = to_light
+	return {light = best_light, to_light = best_dir}
+
+
+func _update_silhouettes() -> void:
+	if _frame % SCAN_EVERY == 1:
+		_scan_lights()
+	var camera := get_viewport().get_camera_3d()
+	if camera == null:
+		return
+	var view := camera.global_transform.affine_inverse().basis
+	var sun: DirectionalLight3D
+	for light in _lights:
+		if light is DirectionalLight3D and is_instance_valid(light) and light.light_energy > 0.0:
+			sun = light as DirectionalLight3D
+			break
+	for node in get_tree().get_nodes_in_group(HumanoidRig.ART_GROUP):
+		var mesh := node as MeshInstance3D
+		if mesh == null or not mesh.is_inside_tree():
+			continue
+		var material := mesh.material_override as ShaderMaterial
+		var rig := _rig_of(mesh)
+		if material == null or rig == null or rig.art == null:
+			continue
+		var id := rig.art.id
+		var on := look.is_silhouette(id)
+		material.set_shader_parameter(&"sil_on", 1.0 if on else 0.0)
+		if not on:
+			continue
+		_push_silhouette(material, rig, id, camera, view, sun)
+
+
+## The point a figure's back light is judged for: its own middle, and for the player's first-person arms the nearest other figure (the arm's light is the
+## one that lights the subject from behind: the lamp ahead of the player), else 3 m ahead of the lens.
+func _focus_of(rig: HumanoidRig, camera: Camera3D) -> Vector3:
+	var player := get_tree().get_first_node_in_group(&"player")
+	if player == null or not player.is_ancestor_of(rig):
+		return rig.global_position + Vector3.UP * 1.0
+	var best := INF
+	var at := camera.global_position - camera.global_basis.z * 3.0
+	for node in get_tree().get_nodes_in_group(HumanoidRig.ART_GROUP):
+		var other := _rig_of(node)
+		if other == null or player.is_ancestor_of(other):
+			continue
+		var d := other.global_position.distance_to(camera.global_position)
+		if d < best:
+			best = d
+			at = other.global_position + Vector3.UP * 1.0
+	return at
+
+
+func _push_silhouette(material: ShaderMaterial, rig: HumanoidRig, id: StringName, camera: Camera3D, view: Basis, sun: DirectionalLight3D) -> void:
+	var centre := _focus_of(rig, camera)
+	var found := light_behind(centre, camera.global_position)
+	var light: Light3D = found.light
+	var to_light_world: Vector3
+	var color: Color
+	if light != null:
+		to_light_world = found.to_light
+		var c := light.light_color
+		var peak := maxf(c.r, maxf(c.g, c.b))
+		color = Color(c.r / peak, c.g / peak, c.b / peak) if peak > 0.0 else Color.WHITE
+		color *= look.sil_value_of(id, &"sil_rim_tint") as Color
+	else:
+		# Nothing behind the figure: the sun's or the moon's direction, else up and back, in the fallback colour.
+		to_light_world = sun.global_basis.z.normalized() if sun != null else (Vector3.UP * 0.6 - (camera.global_basis * Vector3(0, 0, 1)) * 0.8).normalized()
+		color = look.sil_value_of(id, &"sil_rim_fallback") as Color
+	var up_view := view * Vector3.UP
+	material.set_shader_parameter(&"sil_light_view", view * to_light_world)
+	material.set_shader_parameter(&"sil_rim_color", Color(color.r, color.g, color.b, 1.0))
+	material.set_shader_parameter(&"sil_up_view", up_view)
+	# The moon's rim: the directional light's side, else the side opposite the light behind (in view space, mirrored left to right).
+	var moon_view := view * sun.global_basis.z.normalized() if sun != null and sun != light else Vector3(-(view * to_light_world).x, 0.4, -0.3)
+	material.set_shader_parameter(&"sil_moon_view", moon_view)
+	for key: StringName in SIL_KEYS:
+		material.set_shader_parameter(key, look.sil_value_of(id, key))
+	var head := rig.skeleton.find_bone("Head") if rig.skeleton != null else -1
+	var brim := 100.0
+	if head >= 0:
+		brim = (rig.skeleton.global_transform * rig.skeleton.get_bone_global_pose(head).origin).y + float(look.sil_value_of(id, &"sil_brim_dy"))
+	material.set_shader_parameter(&"sil_brim_y", brim)
+	last_silhouette[id] = {light = light, to_light = to_light_world, color = color, brim_y = brim}
+
+
+## The VideoArtLook properties that are shader uniforms of the same name, written as they are.
+const SIL_KEYS: Array[StringName] = [
+	&"sil_fill", &"sil_fill_top", &"sil_keep", &"sil_value", &"sil_top_cut", &"sil_rim_strength", &"sil_rim_cut", &"sil_rim_key", &"sil_rim_top",
+	&"sil_rim_wobble", &"sil_rim_facing", &"sil_rim_face_cut", &"sil_rim_face_band", &"sil_moon_strength", &"sil_moon_color", &"sil_moon_cut", &"sil_face_lit", &"sil_close_lit", &"sil_close_cut", &"sil_close_dist",
+]

@@ -1,0 +1,21 @@
+# R5-ART: judgement calls (round 5)
+
+1. **The silhouette is a cine_toon mode, not a second shader.** `sil_on` per art id; fill, rim, moon, brim and close-band values in `art.tres` (`sil_*`), written by `CineArtRig` each frame. Not taken: a new shader (a second material swap per figure, the ink rig's hull and hatch lookups would need to know it).
+2. **The back light is found from the scene's lights**, scored by colour luminance x energy (capped at 4) x falloff x how far behind the figure it lies from the camera; the ink rig's own `CineInkRim*` lights are skipped. Fallback: the sun's direction, else up and back, in `sil_rim_fallback`. Not taken: reading the ink piece's key (it follows the key light, which is in front of a back-lit figure).
+3. **The first-person arm's rim is the surface that faces the light** (`sil_rim_facing = 1`), because a form foreshortened toward the lens is at a grazing angle all round and an edge rim would cover it. Not taken: the edge rim for everyone.
+4. **`sil_keep` is 0.05 in all three locations** (round 5 first cut 0.12-0.3). The painted albedo is bright once multiplied (`color` x `sil_value`), and at 0.12 the Punk's sleeves, cap and boots read pale grey; at 0.0 the figure is a black cut-out with no form. 0.05 keeps a trace of the paint. Not taken: 0.0 (flat, loses the two-tone top planes) or 0.12 (pale patches).
+5. **Rim cuts:** street 1.25 and moon 1.4, roofs 1.3, boss 1.0. At 1.0 the Fresnel x (1 + facing + up) term passed on half of a rounded figure (the hull normals are an ellipsoid), and the sleeves went grey-blue. The boss's fire is behind a huge figure, where 1.0 still gives a thin rim.
+6. **Gloves are shaped in `blender_asset.py` (`shape_gloves`), data in `paint.json`** ("gloves": a radial profile along the hand bone, a stretch, a dome on the cap, a thumb lobe, a knuckle ridge). Only vertices move, so the UV1/UV2 layout and the maps stay valid, and no new material was needed. Not taken: modelling a separate glove mesh (new UV room, a new skin) with this budget. Ox: padded front 1.65-1.7x the wrist, cuff tapering to 0.8; Punk: 1.3x; player: 1.2x.
+7. **The first-person fist silhouette** comes from the same gloves block on the player (domed cap, thumb lobe, knuckle ridge), built in the tool script, with the arm's own fill and a warm rim.
+8. **The mid-range figures** (the Punk at 7 m, the Kicker) are the same flat dark body in two tones: no hatch, no grain (`1 - sil_on` on both), no N.L.
+
+## Open with the merge (R5-INK's files, not mine)
+I rendered my tree with R5-INK's branch merged (a scratch merge, undone). One line per silhouette and the dark bodies work (Ox: one outline, dark, hood shadow). The Kicker on the roof plate still washes to pale: `fog_amount` 0.5 (far figure fogged toward the sun's glow) and `wrap_strength` 0.9 add a bright background onto a figure that is 100 px wide. Trying `fog_amount 0.12` and `wrap_strength 0.35` helped, and white patches within the torso remained (they are not mine: with `hull_px 0` and `ink_env_weight 0` the Kicker is a clean dark cut-out). For a back-lit silhouette against the sun, the fog must not lighten the fill.
+
+## Requests
+- **R5-INK / lead:** for a figure drawn as a silhouette (`sil_on` in the normal buffer's roughness tag, or by a per-location cap), fog toward the background must stay below ~0.15 where the background is brighter than the fill, and the wrap should be under ~0.4 on small figures. In `roofs_dusk/ink.tres`: `fog_amount` 0.12, `wrap_strength` 0.35 as a start.
+- **R5-INK:** the screen ink on a character should draw nothing light-coloured inside a silhouette's fill (white patches on the Kicker's torso with both the hull and the screen ink on).
+- **Lead:** run `godot --headless --import --quit` after merging R5-INK; the changed shaders render black in windowed shots until imported.
+
+## Assertions changed
+- `video/tests/test_ld_asset_data.gd`, "the same body to 2 mm" for the Punk and Ox: tolerance 0.002 -> 0.12 m (measured 5.4 cm and 9.7 cm), because the gloves are now shaped (a padded front, a thumb lobe). Twin on the visible path, `test_r5_art_data.gd`: the gloves block exists with a front wider than the wrist (>1.15x) and Ox's mesh is wider than the game's.
