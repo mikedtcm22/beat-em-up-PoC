@@ -8,6 +8,11 @@ shader_type spatial;
 //    gone on the rim side.
 //  - IT THINS WITH DISTANCE (far_thin from thin_start_m to thin_end_m), for the mid and wide shots.
 //  - IT WANDERS: a noise in the object's own space varies the width along the contour.
+//  - IT TAPERS AND BREAKS (round 3). A second, slower noise swells and pinches the width along the contour
+//    (`taper_amount`), and on the lit side the line is let go altogether where that noise is low (`break_amount`),
+//    so the line is a drawn one with a start, a swell and a lifted pen, not a constant-weight outline.
+//    `weight_mult` scales the whole line for what the hull belongs to (the rig sets it: the first-person arm is the
+//    heaviest line on screen). The noise is in the skinned object's own space: on twos it holds still with the pose.
 //  - SKETCH PASSES: a pass with jitter_px offsets the hull sideways by a smooth object-space noise that is
 //    re-seeded from boil_seed (the rig sets it from the output frame at 12 fps), so several chained
 //    passes read as overlapping, redrawn strokes. `width_scale` thins the extra passes.
@@ -36,6 +41,13 @@ uniform float thin_end_m : hint_range(1.0, 100.0) = 20.0;
 // The wander along the contour: its strength (a share of the width) and the cells per metre.
 uniform float wander : hint_range(0.0, 1.0) = 0.45;
 uniform float wander_scale : hint_range(0.5, 40.0) = 7.0;
+// The taper: how far the width swells and pinches along the contour (0 = none), the cells per metre of that noise, and
+// on the lit side how much of the line is lifted where the noise is low (0 = unbroken).
+uniform float taper_amount : hint_range(0.0, 1.0) = 0.0;
+uniform float taper_scale : hint_range(0.5, 40.0) = 3.0;
+uniform float break_amount : hint_range(0.0, 1.0) = 0.0;
+// The whole line's weight for what this hull belongs to.
+uniform float weight_mult : hint_range(0.0, 4.0) = 1.0;
 // A sketch pass: the sideways offset in pixels at 1080p, the seed (changes at 12 fps), this pass's width share.
 uniform float jitter_px : hint_range(0.0, 12.0) = 0.0;
 uniform float boil_seed : hint_range(0.0, 1000.0) = 0.0;
@@ -91,6 +103,12 @@ void vertex() {
 	// Wander along the contour, in the object's own space (the skinned vertex, so it follows the body).
 	float seed = boil_seed * 7.13 + pass_id * 19.7;
 	weight *= 1.0 + wander * (vnoise(VERTEX * wander_scale + vec3(pass_id * 3.7)) - 0.5) * 2.0;
+	// The taper: swell and pinch (two octaves), and the lit side lifted where the noise is low.
+	float swell = 0.6 * vnoise(VERTEX * taper_scale + vec3(pass_id * 5.3 + 17.0)) + 0.4 * vnoise(VERTEX * taper_scale * 2.7 + vec3(3.1, pass_id * 2.9, 8.8));
+	weight *= mix(1.0, 0.2 + 1.6 * smoothstep(0.2, 0.8, swell), taper_amount);
+	float lit_side = smoothstep(key_range.x, key_range.y, facing);
+	weight *= mix(1.0, smoothstep(0.34, 0.5, swell), break_amount * lit_side);
+	weight *= weight_mult;
 	float width_m = width_px * fp_scale * width_scale * max(weight, 0.0) * 2.0 * clamp(dist, near_m, far_m) / (1080.0 * proj_scale) * fade;
 	if (PROJECTION_MATRIX[3][3] != 0.0) {
 		width_m = 0.0;

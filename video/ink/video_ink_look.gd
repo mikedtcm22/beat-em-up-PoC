@@ -88,6 +88,16 @@ extends VideoLookPiece
 @export_range(0.0, 12.0) var sketch_jitter_px: float = 3.2
 @export_range(0.0, 1.5) var sketch_width_scale: float = 0.7
 @export_range(1.0, 24.0) var boil_fps: float = 12.0
+## The line's hierarchy (round 3). The taper swells and pinches the width along the contour (a share), over cells per
+## metre; `break_amount` lifts the line on the lit side where that noise is low (0 = unbroken). `fp_weight` scales the
+## first-person body's line (the arm is a third of the frame: the heaviest, tapered line on screen) and `char_weight`
+## every other character's; the arm's taper runs over `fp_taper_scale` cells per metre (longer swells).
+@export_range(0.0, 1.0) var taper_amount: float = 0.6
+@export_range(0.5, 40.0) var taper_scale: float = 3.0
+@export_range(0.0, 1.0) var break_amount: float = 0.7
+@export_range(0.0, 4.0) var char_weight: float = 1.0
+@export_range(0.0, 4.0) var fp_weight: float = 1.0
+@export_range(0.5, 40.0) var fp_taper_scale: float = 2.0
 
 @export_group("Screen ink")
 ## The screen-space ink pass (characters' creases and inner lines, the environment's major silhouettes only,
@@ -105,6 +115,24 @@ extends VideoLookPiece
 @export_range(0.5, 40.0) var ink_wobble_scale: float = 4.5
 ## How strongly a character's creases draw (0 = silhouettes only).
 @export_range(0.0, 1.0) var ink_crease_gain: float = 1.0
+## The hierarchy: the screen ink's weight on environment pixels (the world draws its own lines) and on a character's
+## creases against its silhouette (1 = as heavy), and the separation band: the environment's darkening within
+## `sep_px` (1080p pixels) of a figure at least `sep_min_m` from the lens, in `sep_color` at `sep_alpha` (0 = none).
+@export_range(0.0, 1.0) var ink_env_weight: float = 0.5
+@export_range(0.0, 1.0) var ink_inner_weight: float = 0.6
+## The terminator line: a thin inner line on the dark side of each paint step inside a character (the toon bands' edges), read from the
+## rendered colour: its strength (0 = none), the luminance step in stops where it starts and is full, its width (1080p pixels).
+@export_range(0.0, 1.0) var term_line: float = 1.0
+@export var term_stops: Vector2 = Vector2(0.2, 0.42)
+@export_range(0.5, 6.0) var term_px: float = 2.4
+@export_range(0.0, 4.0) var term_lod: float = 1.2
+@export var sep_color: Color = Color(0.02, 0.02, 0.06)
+@export_range(0.0, 1.0) var sep_alpha: float = 0.3
+@export_range(0.0, 60.0) var sep_px: float = 14.0
+@export_range(0.0, 10.0) var sep_min_m: float = 1.5
+
+## A debug view of the screen ink for looks and A/Bs (0 = the picture; 1 light factor; 2 line width; 3 lines only; 4 character tag; 5 terminator line).
+@export_range(0, 5) var ink_debug_view: int = 0
 
 @export_group("Cues")
 ## Characters on twos: each character's pose holds for `twos_hold` output frames (the frame writer's 24 fps,
@@ -134,6 +162,10 @@ extends VideoLookPiece
 @export_range(0.0, 1.0) var lines_alpha: float = 0.8
 @export var flash_paper: Color = Color(1.0, 0.96, 0.88)
 
+## The rear warning, drawn in the cue pass (the HUD's never reaches the render): on or off, and the burst's size as a share of the HUD's.
+@export var rear_warning: bool = true
+@export_range(0.3, 2.5) var warning_scale: float = 1.3
+
 @export_group("Post")
 ## The finish pass (a CompositorEffect): the static paper grain (a share of value), the vignette (a share of the
 ## value at the corner and where it starts), a little chromatic aberration (a fraction of the frame at the corner).
@@ -144,6 +176,27 @@ extends VideoLookPiece
 @export_range(0.0, 1.0) var post_vignette: float = 0.35
 @export_range(0.0, 1.0) var post_vignette_start: float = 0.45
 @export_range(0.0, 0.01) var post_aberration: float = 0.0008
+
+@export_group("Grade")
+## The grade, in the finish pass on the linear colour (before the LUT): the darks pushed toward `grade_dark_tint` at their own
+## luminance (a share), desaturated by `grade_dark_desat`, over the luminance range lo..hi (linear); the highlights multiplied by
+## `grade_high_tint` (a share). Night: navy and indigo with desaturated darks; the boss roof maroon-violet darks; the roofs violet.
+@export var grade_dark_tint: Color = Color(0.18, 0.2, 0.42)
+@export_range(0.0, 1.0) var grade_dark_amount: float = 0.0
+@export_range(0.0, 1.0) var grade_dark_desat: float = 0.0
+@export_range(0.0, 0.5) var grade_dark_lo: float = 0.01
+@export_range(0.001, 1.0) var grade_dark_hi: float = 0.08
+@export var grade_high_tint: Color = Color(1.0, 1.0, 1.0)
+@export_range(0.0, 1.0) var grade_high_amount: float = 0.0
+
+@export_group("Delivery")
+## The delivery pass (the references are seen through a stream: soft, with grain; ours are pixel-sharp): a sub-pixel soften (a share
+## blended toward a 3x3 kernel; a one-pixel line keeps most of its weight) and a fine grain that is new every `grain_hold` output
+## frames (on twos). `delivery_on` false switches both off for an A/B; the grade and the paper grain stay.
+@export var delivery_on: bool = true
+@export_range(0.0, 1.0) var deliver_soften: float = 0.45
+@export_range(0.0, 0.2) var deliver_grain: float = 0.035
+@export_range(1, 4) var grain_hold: int = 2
 
 @export_group("Palette")
 ## The location's palette LUT strip (tools/video/palette_lut.py; N slices of N x N: slice = blue, x = red,
