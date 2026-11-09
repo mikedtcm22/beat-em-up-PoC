@@ -56,10 +56,10 @@ label = &"name_card"
 [sub_resource type="Resource" id="Key_0"]
 script = ExtResource("4_key")
 time_s = 0
-position = Vector3(2.6, 0.45, -10.6)
-look_at = Vector3(8, 1.7, -10)
+position = Vector3(1.4, 0.4, -9.4)
+look_at = Vector3(10.87, 3.32372, -8.06908)
 target_actor = -1
-fov_deg = 58
+fov_deg = 48
 focus_m = 0
 focus_range_m = 3
 roll_deg = 0
@@ -68,10 +68,10 @@ ease = 1
 [sub_resource type="Resource" id="Key_1"]
 script = ExtResource("4_key")
 time_s = 4
-position = Vector3(4.5, 0.4, -10.2)
-look_at = Vector3(8, 2, -10)
+position = Vector3(1.4, 0.4, -9.4)
+look_at = Vector3(10.8034, 3.65568, -8.41166)
 target_actor = -1
-fov_deg = 46
+fov_deg = 38
 focus_m = 0
 focus_range_m = 3
 roll_deg = 0
@@ -80,7 +80,7 @@ ease = 1
 [resource]
 script = ExtResource("1_shot")
 key = &"t10_ox_reveal"
-note = "Shot 10 (0:21-0:25): a low angle, slow push-in on Ox Pellerin, rim-lit against fire and smoke; he raises his gloves. The name card OX PELLERIN is the edit's (mark at 2.2 s)."
+note = "Shot 10 (0:21-0:25, round 5): a low fixed camera, three-quarter on Ox Pellerin against the fire, a slow zoom in; he raises his gloves. The name card OX PELLERIN is the edit's (mark at 2.2 s)."
 section = 2
 location = &""
 number = 10

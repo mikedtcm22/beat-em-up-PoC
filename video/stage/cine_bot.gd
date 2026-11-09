@@ -21,6 +21,8 @@ const DEFAULT_LEVEL_PATH := "res://game/level/mission1/mission1.tscn"
 
 var cine: CineDirector
 var writer: CineFrameWriter
+## The first-person view of a cine shot (lift, pull-back, roll, the hidden off-hand), null in a free-camera shot.
+var view_rig: CineViewRig
 ## Pieces left out (`--shot-skip=`).
 var skip_pieces: PackedStringArray = PackedStringArray()
 ## Piece properties set for the run (`--shot-set=`).
@@ -38,6 +40,9 @@ var _tag: String = ""
 var _size: Vector2i = Vector2i.ZERO
 var events: CineEventLog
 var _script: CineScript
+## The foreground cards of the shot (CineCard): their nodes, in the shot's order, and the world position of the section they stand in.
+var _card_nodes: Array[MeshInstance3D] = []
+var _card_origin: Vector3 = Vector3.ZERO
 var _turn: Dictionary = {}
 var _pitch: Dictionary = {}
 var _faces: Array[Dictionary] = []
@@ -113,6 +118,12 @@ func _run() -> void:
 	print("=== Shot %s  location %s  pieces %s  (f%d)" % [shot.key, cine.location, _piece_names(), Engine.get_physics_frames()])
 	writer.warm_up(true)
 	await stage(shot)
+	if shot.first_person and shot is CineShot:
+		view_rig = CineViewRig.new()
+		view_rig.name = "CineViewRig"
+		add_child(view_rig)
+		view_rig.setup(shot as CineShot, player)
+	_build_cards(shot)
 	_hide_probe()
 	var moving := shot is CineShot and ((shot as CineShot).window_to_s > (shot as CineShot).window_from_s or _to_override >= 0.0)
 	writer.begin(out_dir, run_name, not moving and _repeat == 0)
@@ -132,6 +143,35 @@ func _run() -> void:
 	Engine.time_scale = 1.0
 	cine.restore()
 	await _quit()
+
+
+## The shot's foreground cards under the level, and every section's kit hidden for a multiplane shot.
+func _build_cards(p_shot: VideoStillShot) -> void:
+	_card_nodes.clear()
+	if not p_shot is CineShot:
+		return
+	var cine_shot := p_shot as CineShot
+	var section := level.sections[cine_shot.section] as Node3D
+	_card_origin = section.global_position
+	if cine_shot.hide_kit:
+		# Every section's kit (the street's skyline blocks stand in the boss roof's view too): the backdrops are the world look's own nodes.
+		for each in level.sections:
+			for node in (each as Node3D).find_children("*", "VisualInstance3D", true, false):
+				(node as VisualInstance3D).visible = false
+	for index in cine_shot.cards.size():
+		var item := cine_shot.cards[index].build(_card_origin, index)
+		if item != null:
+			level.add_child(item)
+			_card_nodes.append(item)
+
+
+## The cards' drift at the shot clock's time.
+func _step_cards() -> void:
+	if _card_nodes.is_empty():
+		return
+	var cine_shot := shot as CineShot
+	for index in _card_nodes.size():
+		cine_shot.cards[index].place(_card_nodes[index], _card_origin, cine.clock_s())
 
 
 ## `--shot-hide=`: hide the level's nodes of the named classes, or whose names contain the text, and say how many.
@@ -215,6 +255,7 @@ func _play(moving: CineShot) -> void:
 			await _ticks(1)
 		_run_beats(tick)
 		_step_turns()
+		_step_cards()
 		if CineFrameWriter.is_pick(tick, first, sim, writer.out_fps):
 			await writer.capture_frame()
 			picked += 1

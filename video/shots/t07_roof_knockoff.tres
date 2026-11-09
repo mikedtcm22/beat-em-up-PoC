@@ -8,7 +8,7 @@
 [sub_resource type="Resource" id="Actor_0"]
 script = ExtResource("2_actor")
 id = &"kicker"
-position = Vector3(3.1, 4.5, -17)
+position = Vector3(13.2, 7.5, -16)
 facing = 1
 yaw_deg = 0
 anim = &"idle"
@@ -110,37 +110,37 @@ label = &""
 [sub_resource type="Resource" id="Key_0"]
 script = ExtResource("4_key")
 time_s = 0
-position = Vector3(9, 4.9, -19.2)
-look_at = Vector3(1, 6.2, -17.2)
+position = Vector3(21, 7.6, -18.4)
+look_at = Vector3(11, 9.2, -16.8)
 target_actor = -1
-fov_deg = 60
+fov_deg = 46
 focus_m = 0
 focus_range_m = 3
-roll_deg = 0
+roll_deg = -5
 ease = 1
 
 [sub_resource type="Resource" id="Key_1"]
 script = ExtResource("4_key")
 time_s = 3.6
-position = Vector3(8, 5.2, -18.8)
-look_at = Vector3(0, 6.6, -17.2)
+position = Vector3(21, 7.6, -18.4)
+look_at = Vector3(11, 9.6, -16.2)
 target_actor = -1
-fov_deg = 52
+fov_deg = 42
 focus_m = 0
 focus_range_m = 3
-roll_deg = 0
+roll_deg = -5
 ease = 1
 
 [resource]
 script = ExtResource("1_shot")
 key = &"t07_roof_knockoff"
-note = "Shot 7 (0:14-0:17, 0.25x): a Kicker knocked off the catwalk's west edge toward the low sun (the roof's parapet is solid: a launch stops at it); the slow-motion is TimeController's."
+note = "Shot 7 (0:14-0:17, 0.25x, round 5): a Kicker knocked off the top roof's west end toward the low sun; a fixed low camera on the sun's line, one water tower in the foreground; the slow-motion is TimeController's."
 section = 1
 location = &""
 number = 7
 edit_start_s = 14
 edit_speed = 0.25
-player_pos = Vector3(4.5, 4.5, -17)
+player_pos = Vector3(14.7, 7.5, -16)
 player_yaw_deg = 90
 player_pitch_deg = 0
 first_person = false
