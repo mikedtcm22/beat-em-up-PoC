@@ -25,6 +25,7 @@ The cinematic gameplay video's live status, kept by the video session ("Beat-em-
   - **R5-ART:** the first-person fist with fingers and knuckles readable from the camera, the gloves and cuffs not primitives (seams, wrinkles, lacing in the silhouette), the Punk's face not a visor block.
   - **R5-SHOTS:** the blind set from seven trailer frames (one per kind: street wide, first-person punch, first-person lamp, roof against the sun, Ox reveal, Ox close, moving), dynamic held poses with a line of action, a lower, character-led street wide instead of the overview, and the first-person fist smaller in frame.
 - **Budget:** weekly 59% at 05:42 (it resets 2026-11-10 15:59 CST). Round 5 is probably the last full round before the weekly reset.
+- **The design panel** (running at 05:58): Workflow `wf_cac31b7c-27c` (task `wjlftls1n`), three Opus lenses on the draft above: an anime background art director, an NPR technical artist, and the blind judge's adversary. Each returns ranked proposals, a top 3, a verdict on the draft, what to cut, and which frame types can't pass without Plan B. If it finished, its result is in `subagents/workflows/wf_cac31b7c-27c/journal.jsonl` under this session's project folder; read it before writing the round 5 packages.
 - **The resume task** `beat-em-up-video-resume-20261108-2230` (Auto mode) is re-armed for 09:00 CST.
 - **Resume steps:**
   1. get_usage; restart the watcher's loop and the relay's heartbeat (they stop themselves at 90%; the watcher may still be running);
