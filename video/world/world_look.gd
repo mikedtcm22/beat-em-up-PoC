@@ -19,6 +19,8 @@ const SKY_SHADER := preload("res://video/shaders/sky_painted.gdshader")
 const HAZE_SHADER := preload("res://video/shaders/haze_band.gdshader")
 const HALO_SHADER := preload("res://video/shaders/haze_halo.gdshader")
 const MATTE_SHADER := preload("res://video/shaders/haze_matte.gdshader")
+const SHAFT_SHADER := preload("res://video/shaders/light_shaft.gdshader")
+const FLAME_SHADER := preload("res://video/shaders/flame_painted.gdshader")
 const ROOT_NAME := &"VideoWorldRig"
 ## The haze quad draws before the ink (the ink's priority is MIN + 2) and after LookPost's own edge quad (MIN + 1).
 const HAZE_PRIORITY := Material.RENDER_PRIORITY_MIN
@@ -28,6 +30,8 @@ static var _game_trim_shader: Shader
 static var _game_scissor_shader: Shader
 ## The paint uniforms the last look wrote, so the next one can clear what it does not set (a look leaves nothing of another).
 static var _painted: Array[StringName] = []
+## The paint materials of the last application (the kit's, the props', the lamp posts'): the rig writes the focus on them each frame.
+var live_materials: Array[ShaderMaterial] = []
 
 @export_group("Location")
 ## street_night, roofs_dusk or boss_fire; and the level section its positions are in (0 street, 1 roofs, 2 boss roof).
@@ -71,6 +75,22 @@ static var _painted: Array[StringName] = []
 @export var lens_color: Color = Color(1.0, 0.88, 0.6)
 @export var barrel_color: Color = Color(0.2, 0.12, 0.1)
 
+@export_group("Focus and contact shadows (round 3)")
+## Where the shot spends its detail: a world point in section space and its radius (m). With `focus_follow_m` above 0 the point instead rides the
+## camera: that many metres ahead of it (the subject is usually that far), each frame. `focus_on` (in the paint values) switches the cut on.
+@export var focus_point: Vector3 = Vector3(0.0, 1.2, -8.0)
+@export_range(1.0, 60.0) var focus_radius_m: float = 12.0
+@export_range(0.0, 40.0) var focus_follow_m: float = 7.0
+## The painted contact shadow under every character: its colour, strength (0: none), radius and stretch (m, a share), how far its edge is broken, its lift above the floor (m), and how
+## near the camera a first-person body is left without one.
+@export var contact_color: Color = Color(0.01, 0.012, 0.035)
+@export_range(0.0, 1.0) var contact_opacity: float = 0.8
+@export_range(0.1, 1.5) var contact_radius_m: float = 0.55
+@export_range(1.0, 3.0) var contact_stretch: float = 1.4
+@export_range(0.0, 0.6) var contact_broken: float = 0.28
+@export_range(0.0, 0.1) var contact_lift_m: float = 0.03
+@export_range(0.0, 3.0) var contact_skip_m: float = 1.2
+
 @export_group("Props (round 2)")
 ## The game's own props (water tanks, AC units, cars, dumpsters, crates) painted like the kit: mesh node name -> {color, pattern, rib_m}. The pattern
 ## numbers are flat_paint_env_body.gdshaderinc's `prop_pattern`: 0 tank, 1 dumpster, 2 car, 3 air conditioner, 4 crate. A prop keeps the hull its
@@ -93,6 +113,7 @@ func apply(level: Node) -> void:
 	if old != null:
 		level.remove_child(old)
 		old.queue_free()
+	live_materials.clear()
 	var rig := VideoWorldRig.new()
 	rig.name = ROOT_NAME
 	rig.look = self
@@ -109,6 +130,8 @@ func apply(level: Node) -> void:
 	_build_mattes(rig)
 	_build_emitters(rig)
 	_paint_props(level)
+	_build_contact(rig)
+	rig.start()
 	rig.publish_hook()
 
 
@@ -194,6 +217,8 @@ func _paint_materials(rig: VideoWorldRig) -> void:
 		_painted.append(StringName(key))
 	apply_uniforms(trim, values)
 	apply_uniforms(scissor, values)
+	live_materials.append(trim)
+	live_materials.append(scissor)
 
 
 ## Give the kit's shared materials their own shaders back (a test, or a shot that ends the look).
@@ -210,6 +235,7 @@ func prop_material(color: Color) -> ShaderMaterial:
 	material.shader = PAINT_PROP_SHADER
 	apply_uniforms(material, paint)
 	material.set_shader_parameter(&"albedo", color)
+	live_materials.append(material)
 	return material
 
 
@@ -260,6 +286,10 @@ func _build_mattes(rig: VideoWorldRig) -> void:
 		material.set_shader_parameter(&"haze_color", haze_color)
 		material.set_shader_parameter(&"fade", card.fade)
 		material.set_shader_parameter(&"alpha_mul", card.alpha)
+		material.set_shader_parameter(&"feather", card.feather)
+		material.set_shader_parameter(&"drift", card.drift)
+		material.set_shader_parameter(&"drift_from", card.drift_from)
+		rig.matte_materials.append(material)
 		material.set_shader_parameter(&"energy", card.energy)
 		material.set_shader_parameter(&"card_size_m", card.size_m)
 		var mesh := QuadMesh.new()
@@ -309,3 +339,12 @@ func _paint_props(level: Node) -> void:
 			mesh.set_meta(&"world2_hull", hull)
 		material.next_pass = hull
 		mesh.material_override = material
+
+
+func _build_contact(rig: VideoWorldRig) -> void:
+	if contact_opacity <= 0.0:
+		return
+	var contact := VideoWorldContact.new()
+	contact.look = self
+	contact.rig = rig
+	rig.add_child(contact)

@@ -14,6 +14,10 @@ var sky_material: ShaderMaterial
 var haze_material: ShaderMaterial
 ## The practicals built (VideoWorldPractical roots), each a Node3D with a `light` child and meta `flicker`/`base_energy`.
 var practicals: Array[Node3D] = []
+## The matte cards' materials (the rig writes the drifting smoke's phase) and the flame cards' (their 12 fps slot).
+var matte_materials: Array[ShaderMaterial] = []
+## The physics frame the look began on: every animation here counts from it, so a shot looks the same whenever it is shot.
+var _born_frame: int = 0
 
 
 func _init() -> void:
@@ -21,9 +25,50 @@ func _init() -> void:
 	process_priority = 100
 
 
+## Called by the look once everything is built: the animation's frame zero is now.
+func start() -> void:
+	_born_frame = Engine.get_physics_frames()
+	_update_focus()
+
+
 func _process(_delta: float) -> void:
 	assert_sun()
 	_flicker()
+	_update_focus()
+	_animate()
+
+
+## The frames since the look was applied (the shot's own count: never the absolute physics frame, which depends on how long the process ran).
+func shot_frame() -> int:
+	return maxi(0, Engine.get_physics_frames() - _born_frame)
+
+
+## The focus: the look's point (section space), or the spot `focus_follow_m` metres ahead of the camera, written on every paint material.
+func _update_focus() -> void:
+	if look == null:
+		return
+	var at := section_origin() + look.focus_point
+	if look.focus_follow_m > 0.0:
+		var camera := get_viewport().get_camera_3d()
+		if camera != null:
+			at = camera.global_position - camera.global_basis.z * look.focus_follow_m
+	var value := Vector4(at.x, at.y, at.z, look.focus_radius_m)
+	for material in look.live_materials:
+		if material != null:
+			material.set_shader_parameter(&"focus", value)
+
+
+## Painted flames re-roll at the flicker rate, the smoke sways: both from the shot's frame.
+func _animate() -> void:
+	var slot := float(shot_frame() * look.flicker_fps / 60)
+	for node in practicals:
+		if not is_instance_valid(node):
+			continue
+		for child in node.get_children():
+			if child.has_meta(&"flame_material"):
+				(child.get_meta(&"flame_material") as ShaderMaterial).set_shader_parameter(&"slot", slot)
+	for material in matte_materials:
+		material.set_shader_parameter(&"phase", float(shot_frame()))
 
 
 ## The level's section: the origin of the look's section-space positions.
@@ -58,7 +103,8 @@ func assert_sun() -> void:
 	sun.light_color = look.sun_color
 	sun.light_energy = look.sun_energy
 	sun.shadow_enabled = look.sun_shadow and not _a_light_casts()
-	sun.shadow_blur = look.sun_shadow_blur
+	# The larger of this look's blur and whatever another piece (LD-INK's floor) has raised it to: the last writer never lowers it.
+	sun.shadow_blur = maxf(sun.shadow_blur, look.sun_shadow_blur)
 	sun.directional_shadow_max_distance = look.sun_shadow_max_m
 	sun.light_specular = 0.0
 
@@ -82,14 +128,14 @@ func shadow_caster_count() -> int:
 
 
 func _flicker() -> void:
-	var slot := int(Engine.get_physics_frames() * look.flicker_fps / 60)
+	var slot := int(shot_frame() * look.flicker_fps / 60)
 	for node in practicals:
 		if not is_instance_valid(node) or not node.has_meta(&"flicker"):
 			continue
 		var amount: float = node.get_meta(&"flicker")
 		var light: Light3D = node.get_meta(&"light")
 		var base_energy: float = node.get_meta(&"base_energy")
-		var roll := fposmod(sin(float(slot) * 12.9898 + float(node.get_instance_id() % 97) * 78.233) * 43758.5453, 1.0)
+		var roll := fposmod(sin(float(slot) * 12.9898 + float(practicals.find(node)) * 78.233) * 43758.5453, 1.0)
 		light.light_energy = base_energy * (1.0 + (roll - 0.5) * 2.0 * amount)
 
 

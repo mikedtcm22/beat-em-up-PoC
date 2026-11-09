@@ -6,6 +6,8 @@ extends RefCounted
 static var _ember: ImageTexture
 static var _puff: ImageTexture
 static var _mote: ImageTexture
+static var _ember_atlas: ImageTexture
+static var _puff_atlas: ImageTexture
 
 
 static func build(spec: VideoWorldEmitter, at: Vector3) -> GPUParticles3D:
@@ -46,6 +48,22 @@ static func build(spec: VideoWorldEmitter, at: Vector3) -> GPUParticles3D:
 		var curve_texture := CurveTexture.new()
 		curve_texture.curve = curve
 		process.scale_curve = curve_texture
+	elif spec.kind == VideoWorldEmitter.Kind.EMBERS:
+		# An ember burns down as it rises.
+		var shrink := Curve.new()
+		shrink.add_point(Vector2(0.0, 1.0))
+		shrink.add_point(Vector2(1.0, 0.3))
+		var shrink_texture := CurveTexture.new()
+		shrink_texture.curve = shrink
+		process.scale_curve = shrink_texture
+	if spec.kind != VideoWorldEmitter.Kind.DUST:
+		# A flipbook of shapes: each particle picks its own frame (the animation offset is random, its speed zero) and turns to its own angle.
+		process.anim_speed_min = 0.0
+		process.anim_speed_max = 0.0
+		process.anim_offset_min = 0.0
+		process.anim_offset_max = 0.99
+		process.angle_min = -180.0 if spec.kind == VideoWorldEmitter.Kind.EMBERS else -12.0
+		process.angle_max = 180.0 if spec.kind == VideoWorldEmitter.Kind.EMBERS else 12.0
 	particles.process_material = process
 	var quad := QuadMesh.new()
 	quad.size = Vector2.ONE
@@ -65,17 +83,26 @@ static func _sprite_material(spec: VideoWorldEmitter) -> StandardMaterial3D:
 	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	match spec.kind:
 		VideoWorldEmitter.Kind.EMBERS:
-			if _ember == null:
-				_ember = VideoWorldSprites.ember()
-			material.albedo_texture = _ember
+			if _ember_atlas == null:
+				_ember_atlas = VideoWorldSprites.ember_atlas()
+			material.albedo_texture = _ember_atlas
+			_flipbook(material)
 			material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
 			material.albedo_color = Color(spec.energy, spec.energy, spec.energy, 1.0)
 		VideoWorldEmitter.Kind.STEAM:
-			if _puff == null:
-				_puff = VideoWorldSprites.puff()
-			material.albedo_texture = _puff
+			if _puff_atlas == null:
+				_puff_atlas = VideoWorldSprites.puff_atlas()
+			material.albedo_texture = _puff_atlas
+			_flipbook(material)
 		VideoWorldEmitter.Kind.DUST:
 			if _mote == null:
 				_mote = VideoWorldSprites.mote()
 			material.albedo_texture = _mote
 	return material
+
+
+## The material reads a flipbook of VideoWorldSprites.ATLAS_FRAMES shapes side by side; each particle's own frame comes from the process material.
+static func _flipbook(material: StandardMaterial3D) -> void:
+	material.particles_anim_h_frames = VideoWorldSprites.ATLAS_FRAMES
+	material.particles_anim_v_frames = 1
+	material.particles_anim_loop = false

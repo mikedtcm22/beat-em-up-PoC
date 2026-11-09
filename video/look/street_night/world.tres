@@ -4,7 +4,7 @@
 [ext_resource type="Script" path="res://video/world/world_light.gd" id="2_light"]
 [ext_resource type="Script" path="res://video/world/world_emitter.gd" id="3_emit"]
 [ext_resource type="Script" path="res://video/world/matte_card.gd" id="4_matte"]
-[ext_resource type="Texture2D" path="res://assets/video/mattes/matte_skyline_night.png" id="5_sky"]
+[ext_resource type="Texture2D" path="res://assets/video/mattes/matte_street_far.png" id="5_sky"]
 
 [sub_resource type="Resource" id="Lamp_key"]
 script = ExtResource("2_light")
@@ -18,45 +18,57 @@ cone_deg = 120.0
 attenuation = 0.9
 shadow = true
 halo = true
-halo_m = 0.55
+halo_m = 0.5
 halo_rings = 2.0
 halo_energy = 0.5
+halo_wobble = 0.4
+shaft = true
+shaft_len_m = 4.0
+shaft_w_m = 2.6
+shaft_energy = 0.12
 
 [sub_resource type="Resource" id="Lamp_b"]
 script = ExtResource("2_light")
 position = Vector3(5.2, 0, -16)
 arm_side = -1.0
 height_m = 4.6
-color = Color(1, 0.58, 0.1, 1)
-energy = 1.0
-range_m = 6.5
-cone_deg = 120.0
-attenuation = 0.9
-halo_m = 0.55
+color = Color(1, 0.62, 0.16, 1)
+energy = 0.9
+range_m = 6.0
+cone_deg = 104.0
+attenuation = 0.8
+halo_m = 0.42
+halo_wobble = 0.5
+shaft = true
+shaft_len_m = 4.5
+shaft_w_m = 2.2
+shaft_energy = 0.1
 
 [sub_resource type="Resource" id="Lamp_c"]
 script = ExtResource("2_light")
 position = Vector3(-5.2, 0, -25)
 arm_side = 1.0
-height_m = 4.6
-color = Color(1, 0.58, 0.1, 1)
+height_m = 4.4
+color = Color(1, 0.54, 0.08, 1)
 energy = 1.0
-range_m = 6.5
-cone_deg = 120.0
-attenuation = 0.9
-halo_m = 0.55
+range_m = 6.9
+cone_deg = 128.0
+attenuation = 1.0
+halo_m = 0.5
+halo_wobble = 0.3
 
 [sub_resource type="Resource" id="Lamp_d"]
 script = ExtResource("2_light")
 position = Vector3(5.2, 0, -35)
 arm_side = -1.0
-height_m = 4.6
-color = Color(1, 0.58, 0.1, 1)
-energy = 1.0
-range_m = 6.5
-cone_deg = 120.0
+height_m = 4.8
+color = Color(1, 0.6, 0.12, 1)
+energy = 0.85
+range_m = 5.6
+cone_deg = 100.0
 attenuation = 0.9
-halo_m = 0.55
+halo_m = 0.4
+halo_wobble = 0.35
 
 [sub_resource type="Resource" id="Barrel_a"]
 script = ExtResource("2_light")
@@ -64,22 +76,23 @@ prop = 1
 position = Vector3(4.7, 0, -11.5)
 height_m = 1.15
 spot = false
-color = Color(1, 0.42, 0.12, 1)
-energy = 1.0
-range_m = 6.0
+color = Color(1, 0.5, 0.12, 1)
+energy = 0.9
+range_m = 5.5
 attenuation = 1.0
 flicker = 0.18
-halo_m = 0.7
-halo_rings = 2.0
-halo_energy = 1.0
+halo = false
+flame = true
+flame_h_m = 1.1
+flame_w_m = 0.8
 
 [sub_resource type="Resource" id="Embers_a"]
 script = ExtResource("3_emit")
 kind = 0
 points = PackedVector3Array(4.7, 1.2, -11.5)
-amount = 40
-life_s = 3.0
-size_m = Vector2(0.03, 0.07)
+amount = 46
+life_s = 3.2
+size_m = Vector2(0.015, 0.13)
 direction = Vector3(0, 1, 0)
 speed = Vector2(0.6, 1.6)
 spread_deg = 35.0
@@ -91,42 +104,44 @@ script = ExtResource("3_emit")
 kind = 1
 points = PackedVector3Array(2.4, 0, -12, -3.2, 0, -19.5)
 extents = Vector3(0.25, 0.02, 0.25)
-amount = 22
+amount = 14
 life_s = 5.0
-size_m = Vector2(0.8, 1.4)
+size_m = Vector2(0.7, 1.3)
 direction = Vector3(0, 1, 0)
 speed = Vector2(0.5, 0.9)
 spread_deg = 12.0
 gravity = Vector3(0, 0.08, 0)
-color_start = Color(0.62, 0.68, 0.9, 0.5)
-color_end = Color(0.3, 0.35, 0.6, 0)
+color_start = Color(0.5, 0.57, 0.82, 0.8)
+color_end = Color(0.28, 0.33, 0.56, 0)
 seed = 5
 
 [sub_resource type="Resource" id="Matte_city"]
 script = ExtResource("4_matte")
 texture = ExtResource("5_sky")
-position = Vector3(0, 21, -92)
-size_m = Vector2(230, 44)
+position = Vector3(0, 24, -92)
+size_m = Vector2(170, 72)
 yaw_deg = 0.0
-fade = 0.2
-energy = 0.9
+tint = Color(0.5, 0.58, 0.9, 1)
+fade = 0.3
+energy = 0.8
+feather = Vector4(0.06, 0.06, 0, 0)
 
 [resource]
 script = ExtResource("1_look")
 location = &"street_night"
 section = 0
-sun_color = Color(0.5, 0.6, 0.98, 1)
-sun_energy = 0.65
+sun_color = Color(0.46, 0.5, 0.74, 1)
+sun_energy = 0.5
 sun_elevation_deg = 50.0
 sun_yaw_deg = 80.0
 sun_shadow = false
-ambient_color = Color(0.05, 0.06, 0.16, 1)
+ambient_color = Color(0.03, 0.032, 0.055, 1)
 toon_shadow_level = 0.07
 hook_color = Color(1, 0.58, 0.1, 1)
 lights = Array[ExtResource("2_light")]([SubResource("Lamp_key"), SubResource("Lamp_b"), SubResource("Lamp_c"), SubResource("Lamp_d"), SubResource("Barrel_a")])
 emitters = Array[ExtResource("3_emit")]([SubResource("Embers_a"), SubResource("Steam_a")])
 mattes = Array[ExtResource("4_matte")]([SubResource("Matte_city")])
-prop_color = Color(0.1, 0.1, 0.17, 1)
+prop_color = Color(0.06, 0.06, 0.1, 1)
 props = {
 "AcUnit": {
 &"color": Color(0.7, 0.72, 0.8, 1),
@@ -153,16 +168,16 @@ paint = {
 &"paint_lod": 4.2,
 &"paint_bands": 3.0,
 &"paint_band_soft": 0.05,
-&"paint_shadow_tint": Color(0.18, 0.27, 0.5, 1),
-&"paint_shadow_level": 0.36,
-&"paint_mid_level": 0.62,
+&"paint_shadow_tint": Color(0.05, 0.055, 0.085, 1),
+&"paint_shadow_level": 0.38,
+&"paint_mid_level": 0.52,
 &"paint_grain": 0.2,
 &"paint_break": 0.12,
 &"paint_break_scale": Vector2(3, 1.2),
-&"warp_m": 0.3,
+&"warp_m": 0.12,
 &"row_jitter_m": 0.5,
 &"window_blank_p": 0.0,
-&"window_lit_p": 0.04,
+&"window_lit_p": 0.07,
 &"window_lit_color": Color(1, 0.7, 0.32, 1),
 &"window_lit_energy": 1.1,
 &"brick_strokes": 0.0,
@@ -174,17 +189,40 @@ paint = {
 &"pool_break": 0.22,
 &"brick_edge_w": 0.05,
 &"brick_flat": 1.0,
-&"paint_sat": 0.85,
+&"paint_sat": 0.3,
 &"draw_on": 1.0,
 &"pipe_p": 0.4,
 &"crack_p": 0.3,
 &"puddle_p": 0.2,
-&"puddle_color": Color(0.3, 0.42, 0.8, 1),
+&"puddle_color": Color(0.11, 0.14, 0.26, 1),
 &"pool_norm_wall": 0.0,
 &"base_dark": 0.25,
-&"paint_value_gain": 1.45,
+&"paint_value_gain": 1.35,
 &"pool_hue_norm": 0.8,
-&"pool_cancel": Vector3(0.3, 0.37, 0.7)
+&"pool_cancel": Vector3(0.22, 0.26, 0.41),
+&"v3_on": 1.0,
+&"focus_on": 1.0,
+&"focus_floor": 0.4,
+&"far_m": Vector2(14, 34),
+&"mass_far_m": Vector2(16, 44),
+&"mass_far_mul": 0.5,
+&"mass_focus_mul": 0.8,
+&"sheet_gate_lo": 0.62,
+&"cluster_scale": 0.35,
+&"cluster_cover": 0.45,
+&"cluster_base": 0.5,
+&"brick_weight": 0.55,
+&"face_vary": 0.7,
+&"win_kinds": Vector4(0.08, 0.07, 0.1, 0.05),
+&"win_frame_m": 0.07,
+&"chain_holes": 0.42,
+&"chain_wire": 0.1,
+&"chain_far_m": Vector2(12, 30),
+&"pool_wobble": 0.16,
+&"pool_wall_gain": 0.5,
+&"pool_wall_hue": 0.8,
+&"pool_wall_damp": 0.25,
+&"draw_wobble_m": 0.008
 }
 sky = {
 &"zenith_color": Color(0.015, 0.02, 0.07, 1),

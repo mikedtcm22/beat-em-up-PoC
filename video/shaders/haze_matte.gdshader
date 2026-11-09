@@ -13,6 +13,13 @@ uniform float alpha_mul : hint_range(0.0, 1.0) = 1.0;
 uniform float energy : hint_range(0.0, 3.0) = 1.0;
 uniform float grain : hint_range(0.0, 0.4) = 0.06;
 uniform vec2 card_size_m = vec2(100.0, 30.0);
+// Round 3: a Gemini-painted backdrop is feathered into the sky at its edges (the share of the card's left, right, top and bottom that fades out), and
+// can drift: `phase` is the frame number's slot (the rig writes it; never time), `drift` the sway of the painted smoke in uv, `drift_from` the height
+// (uv from the bottom) above which the picture sways, so the fire stays and the smoke moves.
+uniform vec4 feather = vec4(0.0);
+uniform float phase = 0.0;
+uniform float drift : hint_range(0.0, 0.03) = 0.0;
+uniform float drift_from : hint_range(0.0, 1.0) = 0.3;
 
 float hash12(vec2 p) {
 	vec3 p3 = fract(vec3(p.xyx) * 0.1031);
@@ -28,12 +35,21 @@ float vnoise(vec2 p) {
 }
 
 void fragment() {
-	vec4 m = texture(matte, UV);
+	vec2 uvd = UV;
+	if (drift > 0.0) {
+		float up = smoothstep(drift_from, drift_from + 0.35, 1.0 - UV.y);
+		uvd.x += drift * up * (sin(UV.y * 11.0 + phase * 0.045) + 0.6 * sin(UV.x * 7.0 - phase * 0.03 + 1.7));
+		uvd.y += drift * 0.5 * up * sin(UV.x * 9.0 + phase * 0.037);
+	}
+	vec4 m = texture(matte, uvd);
 	vec3 col = m.rgb * tint;
 	vec2 metres = UV * card_size_m;
 	float g = 0.65 * vnoise(metres * vec2(0.5, 1.6)) + 0.35 * vnoise(metres * vec2(1.4, 4.1) + 9.0);
 	col *= 1.0 + (g - 0.5) * 2.0 * grain;
 	col = mix(col, haze_color, fade);
 	ALBEDO = col * energy;
-	ALPHA = m.a * alpha_mul;
+	float feather_a = smoothstep(0.0, max(feather.x, 0.0001), UV.x) * (1.0 - smoothstep(1.0 - max(feather.y, 0.0001), 1.0, UV.x))
+		* smoothstep(0.0, max(feather.z, 0.0001), UV.y) * smoothstep(0.0, max(feather.w, 0.0001), 1.0 - UV.y);
+	feather_a = mix(1.0, feather_a, step(0.0001, max(max(feather.x, feather.y), max(feather.z, feather.w))));
+	ALPHA = m.a * alpha_mul * feather_a;
 }

@@ -165,6 +165,41 @@ uniform float fire_mix : hint_range(0.0, 1.0) = 0.55;
 uniform int prop_pattern : hint_range(-1, 8) = -1;
 uniform float prop_rib_m : hint_range(0.03, 0.8) = 0.25;
 
+// Round 3 (LD-WORLD3): drawn, not tiled. v3_on is the master (0: round 2's even drawing). Detail is spent where the eye is: `focus` is a
+// world point (xyz) and its radius (w); `focus_on` (0..1) lets it cut the detail away from it down to `focus_floor`. Past `far_m.x` metres
+// from the camera the detail thins, and past `far_m.y` the wall is a flat value plane with only its big shapes. All anchored in the world.
+uniform float v3_on : hint_range(0.0, 1.0) = 0.0;
+uniform vec4 focus = vec4(0.0, 1.0, -8.0, 12.0);
+uniform float focus_on : hint_range(0.0, 1.0) = 0.0;
+uniform float focus_floor : hint_range(0.0, 1.0) = 0.4;
+uniform vec2 far_m = vec2(14.0, 34.0);
+// The value: surfaces far from the camera, and far from the focus, sink toward these multipliers (the dark masses of the frame).
+uniform vec2 mass_far_m = vec2(20.0, 48.0);
+uniform float mass_far_mul : hint_range(0.0, 1.0) = 1.0;
+uniform float mass_focus_mul : hint_range(0.0, 1.0) = 1.0;
+// Brick clusters: the size of a cluster (cycles per metre), the share of a wall's middle that holds brick, the base's bonus, and the weight of a brick line against a structure line.
+uniform float cluster_scale : hint_range(0.05, 2.0) = 0.35;
+uniform float cluster_cover : hint_range(0.0, 1.0) = 0.4;
+uniform float cluster_base : hint_range(0.0, 1.0) = 0.5;
+uniform float brick_weight : hint_range(0.1, 1.5) = 0.55;
+// How much each face differs: the spread of course height, brick length and line weight (0: all faces alike).
+uniform float face_vary : hint_range(0.0, 1.0) = 0.6;
+// The share of the sheet's own marks that stay: a tile keeps them where a world noise passes this threshold (higher: fewer).
+uniform float sheet_gate_lo : hint_range(0.0, 1.0) = 0.6;
+// Windows: the shares of blinds, a broken pane, a missing frame and a boarded window (the rest are dark panes; window_lit_p lights some).
+uniform vec4 win_kinds = vec4(0.12, 0.06, 0.1, 0.05);
+// The chain-link: the span of a panel (m), how much it sags (m), and the distance (m) over which its wires fade out (x: start, y: gone).
+uniform float chain_panel_m : hint_range(1.0, 8.0) = 3.0;
+uniform float chain_sag_m : hint_range(0.0, 0.6) = 0.25;
+uniform vec2 chain_far_m = vec2(14.0, 34.0);
+// A pool's edge wobble on top of paint_break: a low-frequency, world-anchored shape change (a painted, uneven edge) and its scale.
+uniform float pool_wobble : hint_range(0.0, 0.6) = 0.0;
+uniform float pool_wobble_freq : hint_range(0.02, 1.0) = 0.22;
+// A wall under a lamp: the share of the lamp's colour the pool puts on a wall (the ground's pool is unaffected), and the darkening of a wall's own value inside it.
+uniform float pool_wall_gain : hint_range(0.0, 1.5) = 0.8;
+uniform float pool_wall_hue : hint_range(0.0, 1.0) = 0.5;
+uniform float pool_wall_damp : hint_range(0.0, 1.0) = 1.0;
+
 varying vec2 face_m;
 varying vec2 world_m;
 varying vec3 world_pos;
@@ -279,6 +314,64 @@ vec2 draw_brick(vec2 uv, vec2 key, float mpp, float weight, float ch, float bl, 
 	return vec2(line, step_v);
 }
 
+// Round 3: brick drawn by hand, not stamped. `vary` is the face's own (course height, brick length, line weight) multipliers, `dens` the share of joints that
+// stay here (a cluster's core keeps them all, its fringe a scatter, the middle of a wall almost none). Every course runs in lines of its own length that
+// swell and thin, so a line is a stroke and not a ruler; the brick's value steps only where the brick is drawn.
+vec2 draw_brick3(vec2 uv, vec2 key, float mpp, float weight, float ch, float bl, vec3 vary, float dens) {
+	ch *= vary.x;
+	bl *= vary.y;
+	weight *= vary.z * brick_weight;
+	float v = uv.y + wob(uv * vec2(3.0, 0.0) + key, draw_wobble_m);
+	float cy = floor(v / ch);
+	float hc = hash12(vec2(cy, key.x * 0.37 + 3.0 + key.y));
+	float u = uv.x + (mod(cy, 2.0) * 0.5 + (hc - 0.5) * 0.3) * bl + wob(vec2(v * 4.0, cy), draw_wobble_m);
+	float bx = floor(u / bl);
+	float hb = hash12(vec2(bx, cy + key.x * 1.7 + key.y * 0.3));
+	float run_len = bl * (1.5 + 4.5 * hash12(vec2(cy, key.x + key.y * 0.7 + 2.0)));
+	float seg = floor(u / run_len);
+	float h_seg = hash12(vec2(seg + key.y, cy * 1.3 + key.x));
+	float keep_h = step(h_seg, dens);
+	float taper = 0.4 + 1.2 * vnoise2(vec2(u * 0.9, cy * 3.1) + key);
+	float w = draw_line_w * (0.5 + 0.9 * hash12(vec2(cy, seg + 5.0))) * weight * taper;
+	float horiz = dline(rep_dist(v, ch), w, mpp) * keep_h;
+	float vert = dline(rep_dist(u, bl), w * 0.8, mpp) * step(hb, dens * 0.8);
+	float line = max(horiz, vert) * dfade(ch, mpp);
+	float step_v = floor(hb * 3.0) - 1.0;
+	step_v *= step(0.5, hb) * step(0.15, dens);
+	return vec2(line, step_v);
+}
+
+// The share of a wall's joints that stay: clusters of low-frequency noise, richer at the base (`bonus`), and thinner as the detail amount `d` falls.
+float cluster_dens(vec2 p, vec2 key, float bonus, float d) {
+	float n = 0.65 * vnoise2(p * cluster_scale + key * 0.37) + 0.35 * vnoise2(p * cluster_scale * 2.7 + key.yx * 0.21 + 9.0);
+	float thr = 1.0 - cluster_cover * mix(0.35, 1.0, d);
+	float dens = smoothstep(thr - 0.1, thr + 0.22, n + bonus);
+	return dens * smoothstep(0.02, 0.3, d);
+}
+
+// The trim sheet's own marks (cracks, squiggles, seams) repeat every tile: in round 3 only some tiles keep them (a world-anchored low-frequency gate).
+float sheet_gate(vec2 p, vec2 key) {
+	if (v3_on <= 0.0) {
+		return 1.0;
+	}
+	return smoothstep(sheet_gate_lo, sheet_gate_lo + 0.12, vnoise2(p * 0.21 + key * 0.43 + 5.0));
+}
+
+// How much detail this spot gets, 0..1: full near the camera and at the focus, thinning with the distance and away from the focus.
+float detail_amount(float view_d, vec3 wp) {
+	float d_far = 1.0 - smoothstep(far_m.x, far_m.y, view_d);
+	float d_focus = 1.0 - smoothstep(focus.w, focus.w * 2.2, length(wp - focus.xyz));
+	return d_far * mix(1.0, mix(focus_floor, 1.0, d_focus), focus_on);
+}
+
+// A face's own multipliers: course height, brick length, line weight, from a hash of its plane and its stretch of wall.
+vec3 face_vary_v(vec2 key, float run) {
+	float h1 = hash12(vec2(key.x * 0.173 + floor(run / 9.0), key.y + 4.1));
+	float h2 = hash12(vec2(key.y * 0.31 + floor(run / 9.0) * 1.7, key.x + 8.3));
+	float h3 = hash12(vec2(floor(run / 9.0) + key.x * 0.9, key.y * 2.3 + 1.3));
+	return vec3(1.0 + (h1 - 0.5) * 0.9 * face_vary, 1.0 + (h2 - 0.5) * 1.1 * face_vary, 1.0 + (h3 - 0.5) * 0.9 * face_vary);
+}
+
 // A ridged-noise crack: a thin wandering line, sparse.
 float draw_crack(vec2 uv, vec2 key, float mpp) {
 	vec2 q = uv * 0.9 + key;
@@ -301,6 +394,10 @@ void fragment() {
 #endif
 	bool ground = ground_on && row.w > 3.5;
 	vec2 warp = world_warp();
+	float view_d = length(VERTEX);
+	float detail = v3_on > 0.0 ? detail_amount(view_d, world_pos) : 1.0;
+	float win_kind = 0.0;
+	float win_h3 = 0.0;
 	vec2 fm = face_m + (ground ? vec2(0.0) : warp);
 	float mpp_face = max(length(dFdx(face_m)), length(dFdy(face_m)));
 	float mpp_world = max(length(dFdx(world_m)), length(dFdy(world_m)));
@@ -371,6 +468,16 @@ void fragment() {
 			float plane = round(dot(abs(world_normal), world_pos) * 2.0);
 			vec2 cell = vec2(floor(t.x * 2.0) + floor(t.y) * 5.0, plane);
 			float h = hash12(cell * vec2(1.0, 0.37) + vec2(3.1, 7.7));
+			if (v3_on > 0.0) {
+				// Each window is its own: dark, lit, blinds, a broken pane, no frame, boarded up.
+				float h2 = hash12(cell * vec2(0.71, 1.9) + vec2(17.0, 5.3));
+				win_h3 = hash12(cell * vec2(1.3, 0.43) + vec2(2.7, 31.0));
+				float k1 = win_kinds.x;
+				float k2 = k1 + win_kinds.y;
+				float k3 = k2 + win_kinds.z;
+				float k4 = k3 + win_kinds.w;
+				win_kind = h2 < k1 ? 1.0 : (h2 < k2 ? 2.0 : (h2 < k3 ? 3.0 : (h2 < k4 ? 4.0 : 0.0)));
+			}
 			vec4 wall = textureGrad(trim_tex, vec2(uv.x, row.x + row.y * 0.06), gx * keep, gy * keep);
 			if (draw_on > 0.0) {
 				// The window drawn: the frame (ink) round the glass, the lintel and the jambs (a lighter band), the sill below (a lighter slab).
@@ -378,7 +485,7 @@ void fragment() {
 				vec2 gxk = gx * keep;
 				vec2 gyk = gy * keep;
 				glass_m = glass;
-				if (glass < 0.5) {
+				if (glass < 0.5 && detail > 0.45) {
 					float fr = win_frame_m;
 					float near = 0.0;
 					near = max(near, glass_at(uv + vec2(ou.x * fr, 0.0), gxk, gyk));
@@ -401,12 +508,20 @@ void fragment() {
 					sil = max(sil, glass_at(uv + vec2(ou.x * 0.1, -ou.y * sl), gxk, gyk));
 					sil = max(sil, glass_at(uv + vec2(-ou.x * 0.1, -ou.y * sl), gxk, gyk));
 					win_sill = step(0.5, sil) * (1.0 - win_frame);
+					if (win_kind == 3.0) {
+						win_frame = 0.0;
+						win_surround = 0.0;
+					}
 				}
 			}
 			if (h < window_blank_p) {
 				c.rgb = mix(c.rgb, wall.rgb, glass);
 			} else if (h < window_blank_p + window_lit_p) {
-				emit = window_lit_color * window_lit_energy * glass;
+				vec3 lit_c = window_lit_color;
+				if (v3_on > 0.0) {
+					lit_c = mix(lit_c * (0.7 + 0.5 * win_h3), vec3(0.45, 0.72, 0.95), step(0.94, win_h3));
+				}
+				emit = lit_c * window_lit_energy * glass * (win_kind == 0.0 ? 1.0 : 0.0);
 			}
 			// Brick behind the window's neighbours: the wall around the frame is the wall (flat), drawn below.
 		}
@@ -440,7 +555,12 @@ void fragment() {
 		float wall_weight = 1.0;
 		if (ground) {
 			vec2 wxz = vec2(world_m.x, -world_m.y) + warp * 0.6;
-			vec2 sb = draw_brick(wxz, key, mpp, 1.8, slab_m.y, slab_m.x, slab_keep);
+			vec2 sb;
+			if (v3_on > 0.0) {
+				sb = draw_brick3(wxz, key, mpp, 1.8 / brick_weight, slab_m.y, slab_m.x, face_vary_v(key, world_m.x), cluster_dens(wxz, key, 0.3, detail));
+			} else {
+				sb = draw_brick(wxz, key, mpp, 1.8, slab_m.y, slab_m.x, slab_keep);
+			}
 			lines = sb.x;
 			vstep = sb.y * slab_var;
 			// Puddles: low frequency blobs with a hard edge, a lighter bluish fill, an inked rim.
@@ -453,7 +573,7 @@ void fragment() {
 				flat_color = mix(flat_color, pud, inside * dfade(0.6, mpp));
 				lines = max(lines, rim * 0.9);
 			}
-			lines = max(lines, step(draw_sheet_cut, sheet_a) * draw_sheet_ink);
+			lines = max(lines, step(draw_sheet_cut, sheet_a) * draw_sheet_ink * smoothstep(0.05, 0.4, detail) * sheet_gate(world_m, key));
 			flat_color *= ground_gain;
 		} else {
 			float up = world_normal.y;
@@ -466,7 +586,13 @@ void fragment() {
 			flat_color *= 1.0 - base_dark * base_t;
 			bool brick_like = sid == brick_strip || (sid == facade_strip && glass_m < 0.5 && win_frame < 0.5 && win_surround < 0.5 && win_sill < 0.5);
 			if (brick_like) {
-				vec2 br = draw_brick(fm, key, mpp, wall_weight, brick_course_m, brick_len_m, brick_keep);
+				vec2 br;
+				if (v3_on > 0.0) {
+					float run3 = abs(world_normal.x) > 0.5 ? world_pos.z : world_pos.x;
+					br = draw_brick3(fm, key, mpp, wall_weight, brick_course_m, brick_len_m, face_vary_v(key, run3), cluster_dens(fm, key, base_t * cluster_base, detail));
+				} else {
+					br = draw_brick(fm, key, mpp, wall_weight, brick_course_m, brick_len_m, brick_keep);
+				}
 				lines = br.x;
 				vstep = br.y * brick_var;
 				if (pipe_p > 0.0 && wall) {
@@ -487,7 +613,13 @@ void fragment() {
 				}
 			} else if (sid == 2 || sid == 1) {
 				// Concrete and plaster: panel joints and a stain.
-				vec2 pb = draw_brick(fm, key, mpp, wall_weight, sid == 2 ? 1.0 : 1.4, 1.7, 0.7);
+				vec2 pb;
+				if (v3_on > 0.0) {
+					float run4 = abs(world_normal.x) > 0.5 ? world_pos.z : world_pos.x;
+					pb = draw_brick3(fm, key, mpp, wall_weight * 1.5, sid == 2 ? 1.0 : 1.4, 1.7, face_vary_v(key, run4), cluster_dens(fm, key, base_t * cluster_base, detail) * 0.8);
+				} else {
+					pb = draw_brick(fm, key, mpp, wall_weight, sid == 2 ? 1.0 : 1.4, 1.7, 0.7);
+				}
 				lines = pb.x * 0.9;
 				vstep = pb.y * brick_var * 0.5;
 			} else if (sid == 4) {
@@ -514,7 +646,7 @@ void fragment() {
 				float hy = fm.y;
 				if (sid == 100) {
 					// A water tank: hoops every ~0.5 m, staves round it, rust patches.
-					float hoop = dline(rep_dist(hy, r * 1.9), draw_line_w * 1.6, mpp);
+					float hoop = dline(rep_dist(hy + wob(vec2(fm.x * 1.3, 3.0), 0.03 * v3_on), r * 1.9), draw_line_w * 1.6, mpp);
 					float stave = dline(rep_dist(fm.x, r), draw_line_w * 0.8, mpp) * dfade(r, mpp);
 					lines = max(hoop * dfade(r, mpp), stave * 0.85);
 					float rust = smoothstep(0.55, 0.62, vnoise2(fm * vec2(2.0, 1.5) + key));
@@ -545,18 +677,43 @@ void fragment() {
 				lines = dline(rep_dist(fm.y, 0.25), draw_line_w * 1.3, mpp) * dfade(0.25, mpp);
 			}
 			if (crack_p > 0.0 && sid != 13 && sid != 12 && glass_m < 0.5) {
-				lines = max(lines, draw_crack(fm, key, mpp));
+				lines = max(lines, draw_crack(fm, key, mpp) * smoothstep(0.2, 0.6, detail));
 			}
-			lines = max(lines, step(draw_sheet_cut, sheet_a) * draw_sheet_ink * dfade(0.25, mpp));
+			lines = max(lines, step(draw_sheet_cut, sheet_a) * draw_sheet_ink * dfade(0.25, mpp) * smoothstep(0.1, 0.5, detail) * sheet_gate(fm, key) * (1.0 - max(win_surround, win_sill)));
 			// The window: a frame of ink, a lighter surround and sill, the glass with a streak and a cross.
 			if (glass_m > 0.5) {
 				flat_color *= 0.8;
-				float refl_on = step(hash12(vec2(floor(face_m.x / 1.6), key.x + floor(face_m.y / 1.4))), win_refl_p);
+				if (v3_on > 0.0) {
+					flat_color *= mix(0.7, 1.0, smoothstep(0.3, 0.7, detail));
+				}
+				float refl_on = step(hash12(vec2(floor(face_m.x / 1.6), key.x + floor(face_m.y / 1.4))), win_refl_p) * (v3_on > 0.0 ? smoothstep(0.5, 0.8, detail) : 1.0);
 				float sv = fm.x + fm.y * 0.7;
 				float streak = (1.0 - step(0.12, abs(fract(sv * 0.9) - 0.3))) + (1.0 - step(0.04, abs(fract(sv * 0.9) - 0.5)));
 				flat_color *= 1.0 + 0.55 * min(streak, 1.0) * refl_on * dfade(0.3, mpp);
 				float cross_x = rep_dist(t.x * 2.0 - 0.5, 1.0) * (tile_m * 0.5);
-				lines = max(lines, dline(cross_x, 0.02, mpp) * win_cross * dfade(0.6, mpp));
+				float cross_ok = v3_on > 0.0 ? step(win_kind, 0.5) * step(win_h3, 0.4) * smoothstep(0.5, 0.8, detail) : 1.0;
+				lines = max(lines, dline(cross_x, 0.02, mpp) * win_cross * dfade(0.6, mpp) * cross_ok);
+				if (v3_on > 0.0 && detail > 0.35) {
+					float yy = fract(t.y);
+					if (win_kind == 1.0) {
+						// Blinds: pale slats hung from the top down to this window's own level.
+						float cov = step(1.0 - (0.3 + 0.6 * win_h3), yy);
+						flat_color = mix(flat_color, flat_color * 1.5 + 0.01, cov);
+						lines = max(lines, dline(rep_dist(fm.y, 0.085), draw_line_w * 0.55, mpp) * cov * dfade(0.085, mpp));
+					} else if (win_kind == 2.0) {
+						// A broken pane: cracks running out of a point, one pane darker.
+						vec2 rel = vec2((t.x - (floor(t.x * 2.0) + 0.5) * 0.5) * tile_m, (yy - 0.5) * row.z);
+						float ang = atan(rel.y, rel.x) * 0.9549 + win_h3 * 5.0;
+						float spoke = abs(fract(ang) - 0.5) * length(rel);
+						float crack_l = dline(spoke, draw_line_w * 0.9, mpp) * (1.0 - smoothstep(0.18, 0.4, length(rel)));
+						lines = max(lines, crack_l);
+						flat_color *= mix(1.0, 0.55, step(0.0, rel.x * (win_h3 - 0.5)) * (1.0 - step(0.5, crack_l)));
+					} else if (win_kind == 4.0) {
+						// Boarded up: planks of a warm wood value with ink between them.
+						flat_color = mix(flat_color, vec3(0.34, 0.24, 0.17) * (0.55 + 0.4 * win_h3), 0.9);
+						lines = max(lines, dline(rep_dist(fm.y + win_h3, 0.17), draw_line_w * 1.1, mpp) * dfade(0.17, mpp));
+					}
+				}
 			}
 			flat_color *= 1.0 + 0.0;
 			flat_color = mix(flat_color, flat_color * 1.32, win_surround);
@@ -577,21 +734,39 @@ void fragment() {
 	if (debug_view == 1) {
 		flat_color = vec3(strip_id / 15.0);
 	}
-	ALBEDO = flat_color * albedo.rgb * tint;
+	float mass_mul = 1.0;
+	if (v3_on > 0.0) {
+		// The frame's darks gather in masses: the far end of the street, and everything away from the subject.
+		float mf = smoothstep(mass_far_m.x, mass_far_m.y, view_d);
+		float fd = smoothstep(focus.w, focus.w * 2.6, length(world_pos - focus.xyz)) * focus_on;
+		mass_mul = mix(1.0, mass_far_mul, mf) * mix(1.0, mass_focus_mul, fd);
+	}
+	ALBEDO = flat_color * albedo.rgb * tint * mass_mul;
 	EMISSION = emit;
 	ROUGHNESS = edge_tag;
 #ifdef FLAT_PAINT_SCISSOR
 	// The chain-link: a wobbling diamond lattice of few, thick wires with holes; the wire's width grows with the
 	// pixel's footprint, so far away it is a flat silhouette rather than a moire.
-	vec2 qc = (face_m + warp * 1.6) / chain_cell_m;
+	vec2 fqc = face_m + warp * 1.6;
+	float fade_t = 0.0;
+	float taper_w = 1.0;
+	if (v3_on > 0.0) {
+		// Round 3: a panel hangs between its posts and sags in the middle; the wires are strokes that swell and thin, the holes are many,
+		// and with distance whole stretches of wire go until a far fence is a few strokes, never a filled grey.
+		float pan = fract(face_m.x / chain_panel_m);
+		fqc.y += chain_sag_m * 4.0 * pan * (1.0 - pan);
+		fade_t = smoothstep(chain_far_m.x, chain_far_m.y, view_d);
+		taper_w = 0.55 + 0.9 * vnoise2(fqc * 1.7 + 4.0);
+	}
+	vec2 qc = fqc / chain_cell_m;
 	vec2 dq = abs(fract(vec2(qc.x + qc.y, qc.x - qc.y)) - 0.5);
 	float foot = max(length(dFdx(qc)), length(dFdy(qc)));
-	float wire = max(chain_wire, foot * 1.1);
+	float wire = v3_on > 0.0 ? max(chain_wire * taper_w, foot * 0.7) : max(chain_wire, foot * 1.1);
 	float on_wire = 1.0 - step(wire, min(dq.x, dq.y) * 2.0);
 	float planec = round(dot(abs(world_normal), world_pos) * 2.0);
-	float hole = step(chain_holes, hash12(floor(qc * 0.5) + planec * 1.7));
+	float hole = step(chain_holes + fade_t * 0.8, hash12(floor(qc * 0.5) + planec * 1.7));
 	float fill = smoothstep(0.5, 0.9, foot);
-	float keep_px = max(on_wire * hole, fill * 0.85 * hole);
+	float keep_px = max(on_wire * hole, v3_on > 0.0 ? 0.0 : fill * 0.85 * hole);
 	ALPHA = keep_px;
 	ALPHA_SCISSOR_THRESHOLD = 0.5;
 	ALBEDO = mix(ALBEDO, ink * 2.0, 0.6);
@@ -620,6 +795,12 @@ void light() {
 	} else {
 		float np = strokes(face_m, world_pos, paint_break_scale * pool_break_freq) - 0.5;
 		lit += np * 2.0 * paint_break * pool_break;
+		if (pool_wobble > 0.0) {
+			// A painted pool is never an ellipse: a low-frequency, world-anchored change of its shape (each lamp's own, as it stands in the street).
+			vec3 wq = world_pos * pool_wobble_freq;
+			float nw = 0.6 * vnoise3(wq + 3.1) + 0.4 * vnoise3(wq * 2.3 + 7.7) - 0.5;
+			lit += nw * 2.0 * pool_wobble;
+		}
 		float edge = clamp(0.5 * band_soft * to_pixels * fwidth(lit), 0.0005, 0.05);
 		float outer = band_step(lit - pool_edge, edge);
 		float core = band_step(lit - pool_core, edge);
@@ -637,9 +818,18 @@ void light() {
 		}
 		float pn_amount = abs(wn_up) > 0.6 ? pool_norm : pool_norm_wall;
 		float norm = mix(1.0, 1.0 / max(dot(base_rgb, LUMA), 0.08), pn_amount);
-		vec3 hue_fix = mix(vec3(1.0), vec3(dot(base_rgb, LUMA)) / max(base_rgb, vec3(0.03)), pool_hue_norm * (abs(wn_up) > 0.6 ? 1.0 : 0.85));
-		norm *= 1.0;
-		DIFFUSE_LIGHT += level * light_color * pool_gain * norm * hue_fix;
-		DIFFUSE_LIGHT -= level * pool_cancel * (abs(wn_up) > 0.6 ? 1.0 : 0.5);
+		bool on_ground = abs(wn_up) > 0.6;
+		if (v3_on > 0.0 && !on_ground) {
+			// A wall under a lamp: the lamp's colour with the paint's own hue evened out only as far as pool_wall_hue (a navy wall under orange is brown, not crimson), and
+			// none of the ground's fixed moon cancel, which turned a navy wall crimson (it took away more blue than the moon had put there).
+			vec3 wall_fix = mix(vec3(1.0), clamp(vec3(dot(base_rgb, LUMA)) / max(base_rgb, vec3(0.03)), vec3(0.5), vec3(1.6)), pool_wall_hue);
+			// The moon the wall already took (lights are summed directional first) is damped inside the pool, so the pool is the lamp's warm colour, not lamp plus blue (rose).
+			DIFFUSE_LIGHT = mix(DIFFUSE_LIGHT, DIFFUSE_LIGHT * pool_wall_damp, level);
+			DIFFUSE_LIGHT += level * light_color * pool_gain * pool_wall_gain * norm * wall_fix;
+		} else {
+			vec3 hue_fix = mix(vec3(1.0), vec3(dot(base_rgb, LUMA)) / max(base_rgb, vec3(0.03)), pool_hue_norm * (on_ground ? 1.0 : 0.85));
+			DIFFUSE_LIGHT += level * light_color * pool_gain * norm * hue_fix;
+			DIFFUSE_LIGHT -= level * pool_cancel * (on_ground ? 1.0 : 0.5);
+		}
 	}
 }
