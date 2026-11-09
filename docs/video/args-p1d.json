@@ -1,0 +1,25 @@
+{
+ "milestone": "v",
+ "summary": "Look-dev round 3, second wave (docs/video/PLAN.md): line, grade and delivery on the merged round 3 look; and SHOTS, Phase 2's acts and cameras",
+ "plan": "docs/video/P1.md",
+ "base": "video/cinematic-trailer",
+ "read_first": [
+  "docs/video/PLAN.md §2 (the style bible), §4 (Plan A) and §6's Gate 2 rubric",
+  "docs/video/P1.md, 'What Gate 2 found', 'Shared by the round 3 packages', and 'Shared by all four packages'"
+ ],
+ "image_budget": 35,
+ "concurrency": 2,
+ "note": "VIDEO WORK OVERRIDES: cine (non-first-person) shots count as much as first person. Judge against docs/video/PLAN.md §2 and the reference frames, not SPEC.md. Never edit game/, tuning/ or tests/: look values go in CineLook .tres files under video/look/, not in tuning_data.gd. Instead of the full suite, run the video tests (PLAN.md §6, LD-RENDER) and `git diff --quiet origin/video/cinematic-trailer -- game tuning tests` (it must exit 0). Calls files go to docs/video/calls/<key>.md. PHASE 1: your brief is your section of docs/video/P1.md (in P1.md, 'CineLook' is split into VideoLookPiece resources by owner). In the structured result, tests_passed and tests_total are the video tests (video/tests), not the main suite, and feel_judgement holds your honest pillar scores (PLAN.md §6 rubric) for what you built, judged at full resolution beside the reference frames and the Gemini targets, and your honest call per shot: would a viewer who hasn't been told read it as drawn or as 3D, and why. Python only through ~/.venvs/beat-em-up-video/bin/python -I (never pip install). The reference frames and targets are untracked files in other worktrees: read them, never copy them into git. This is an 8 GB machine with Game-boy's own Blender open: one Godot process at a time from you, always with --quit-after, and the capture lock for every windowed run. ROUND 3 (after Gate 2): read P1.md 'What Gate 2 found' and 'Shared by the round 3 packages' first; the Gate 2 renders and sheets are in /Users/arachne/repos/beat-em-up-PoC/.worktrees/video/captures/video/gate2/ (untracked: read, never copy into git).",
+ "packages": [
+  {
+   "key": "LD-INK2",
+   "section": "§ LD-INK2",
+   "est": 15
+  },
+  {
+   "key": "SHOTS",
+   "section": "§ SHOTS",
+   "est": 18
+  }
+ ]
+}
