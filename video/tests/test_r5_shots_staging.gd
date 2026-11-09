@@ -94,7 +94,7 @@ func test_fight_set_ups_bank_four_to_eight_degrees_alternating_and_establishing_
 	var shots := _shots()
 	var signs: Array[float] = []
 	var order: Array = shots.keys()
-	order.sort()
+	order.sort_custom(func(a: StringName, b: StringName) -> bool: return String(a) < String(b))
 	for key: StringName in order:
 		var shot: CineShot = shots[key]
 		var rolls: Array[float] = []

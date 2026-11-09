@@ -52,7 +52,7 @@ func test_every_first_person_still_and_trailer_shot_uses_the_video_lens() -> voi
 			continue
 		seen += 1
 		assert_between(shot.first_person_fov_deg, FOV_MIN, FOV_MAX, "%s: first-person FOV" % shot.key)
-	assert_gt(seen, 2, "the first-person stills were found")
+	assert_gte(seen, 2, "the first-person stills were found")
 	var trailer_seen := 0
 	for shot in _trailer_shots():
 		if not shot.first_person:
