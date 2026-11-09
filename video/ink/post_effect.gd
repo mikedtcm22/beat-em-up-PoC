@@ -1,8 +1,10 @@
 class_name CinePostEffect
 extends CompositorEffect
 ## The video's finish pass as a CompositorEffect (PLAN.md Plan A part 5; docs/video/P1.md LD-INK 4 and, in round 3, LD-INK2 2 and 3): the
-## grade (the darks toned, the highlights warmed), the delivery (a sub-pixel soften and a fine grain that changes on twos), a static
-## paper grain, a vignette and a little chromatic aberration, in one compute dispatch (video/shaders/post_finish.glsl). It runs after the transparent pass, on the resolved colour. Make a
+## grade (the darks toned, the highlights warmed), the delivery (a re-scale down and back up like a stream's upscaled master, a sub-pixel soften
+## and a fine grain that changes on twos), a static paper grain, a vignette and a little chromatic aberration, in a few compute dispatches
+## (video/shaders/post_finish.glsl). It runs after the transparent pass, on the resolved colour. (The brush pass is not a compositor effect:
+## with MSAA a pre-transparent effect's writes are lost, so it is a screen quad, video/ink/brush_quad.gd.) Make a
 ## Compositor with `CinePostEffect.make_compositor(look)` and assign it to the WorldEnvironment and to every
 ## camera that renders the shot (the frame writer's SubViewport camera as well: a camera's own compositor
 ## wins over the world's). Needs a RenderingDevice (the Forward+ renderer); in a headless run it does nothing.
@@ -10,6 +12,7 @@ extends CompositorEffect
 const SHADER_PATH := "res://video/shaders/post_finish.glsl"
 const CONTEXT := &"cine_post"
 const COPY_NAME := &"color_copy"
+const SMALL_NAME := &"deliver_small"
 const GROUP_X := 8
 
 ## The strengths (VideoInkLook's Post group sets them): grain (a share of value), vignette (a share of the
@@ -32,6 +35,8 @@ var dark_desat: float = 0.0
 var dark_range: Vector2 = Vector2(0.01, 0.08)
 var high_tint: Color = Color(1.0, 1.0, 1.0, 1.0)
 var high_share: float = 0.0
+## The delivery's re-scale: the share of the render size the picture is filtered down to and bicubic-scaled back from (1 = off).
+var deliver_scale: float = 1.0
 
 var _rd: RenderingDevice
 var _shader: RID
@@ -81,6 +86,11 @@ func _render_callback(callback_type: int, render_data: RenderData) -> void:
 			RenderingDevice.TEXTURE_USAGE_STORAGE_BIT, RenderingDevice.TEXTURE_SAMPLES_1, size, 1, 1, false, false)
 	var scale := float(size.y) / 1080.0
 	var groups := Vector3i((size.x + GROUP_X - 1) / GROUP_X, (size.y + GROUP_X - 1) / GROUP_X, 1)
+	# The delivery's re-scale: the picture box-filtered down to `deliver_scale` and bicubic-scaled back up (passes 0 and 1).
+	var rescale := deliver_scale < 0.999
+	var small_size := Vector2i(maxi(int(round(size.x * deliver_scale)), 2), maxi(int(round(size.y * deliver_scale)), 2)) if rescale else Vector2i(2, 2)
+	var small := buffers.create_texture(CONTEXT, SMALL_NAME, RenderingDevice.DATA_FORMAT_R16G16B16A16_SFLOAT,
+			RenderingDevice.TEXTURE_USAGE_STORAGE_BIT, RenderingDevice.TEXTURE_SAMPLES_1, small_size, 1, 1, false, false)
 	for view in buffers.get_view_count():
 		var color := buffers.get_color_layer(view)
 		var color_uniform := RDUniform.new()
@@ -91,15 +101,22 @@ func _render_callback(callback_type: int, render_data: RenderData) -> void:
 		temp_uniform.uniform_type = RenderingDevice.UNIFORM_TYPE_IMAGE
 		temp_uniform.binding = 1
 		temp_uniform.add_id(temp)
-		var set_rid := UniformSetCacheRD.get_cache(_shader, 0, [color_uniform, temp_uniform])
+		var small_uniform := RDUniform.new()
+		small_uniform.uniform_type = RenderingDevice.UNIFORM_TYPE_IMAGE
+		small_uniform.binding = 2
+		small_uniform.add_id(small)
+		var set_rid := UniformSetCacheRD.get_cache(_shader, 0, [color_uniform, temp_uniform, small_uniform])
 		var list := _rd.compute_list_begin()
 		_rd.compute_list_bind_compute_pipeline(list, _pipeline)
 		_rd.compute_list_bind_uniform_set(list, set_rid, 0)
-		for pass_id in 2:
+		for pass_id in 4:
+			if not rescale and pass_id < 2:
+				continue
 			var push := PackedFloat32Array([float(size.x), float(size.y), grain, vignette, vignette_start, aberration,
 					maxf(grain_cell_px * scale, 1.0), paper_seed, float(pass_id), soften, fine_grain, fine_seed,
 					dark_tint.r, dark_tint.g, dark_tint.b, dark_tint.a, dark_desat, dark_range.x, dark_range.y, high_share,
-					high_tint.r, high_tint.g, high_tint.b, 0.0])
+					high_tint.r, high_tint.g, high_tint.b, 0.0,
+					float(small_size.x), float(small_size.y), 0.0, 0.0])
 			_rd.compute_list_set_push_constant(list, push.to_byte_array(), push.size() * 4)
 			_rd.compute_list_dispatch(list, groups.x, groups.y, 1)
 			_rd.compute_list_add_barrier(list)
@@ -123,7 +140,10 @@ static func make_compositor(look: Resource) -> Compositor:
 	effect.dark_range = Vector2(look.grade_dark_lo, look.grade_dark_hi)
 	effect.high_tint = look.grade_high_tint
 	effect.high_share = look.grade_high_amount
+	if look.delivery_on:
+		effect.deliver_scale = look.deliver_scale
 	var compositor := Compositor.new()
 	var effects: Array[CompositorEffect] = [effect]
 	compositor.compositor_effects = effects
 	return compositor
+

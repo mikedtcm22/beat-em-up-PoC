@@ -166,6 +166,43 @@ extends VideoLookPiece
 @export var rear_warning: bool = true
 @export_range(0.3, 2.5) var warning_scale: float = 1.3
 
+@export_group("Brush")
+## The brush pass (round 4): an anisotropic Kuwahara filter and a soft posterize on the world's pixels, before the transparent pass (haze,
+## steam, flames and mattes draw over it, the screen ink draws its lines over it); characters and the sky are never brushed. `brush_on` false
+## switches it off for an A/B. The radius, in pixels at 1080p, is `brush_r_near` at the lens and `brush_r_far` from `brush_depth_far_m` (a smooth
+## step from `brush_depth_near_m`), plus `brush_focus_gain` far from the shot's focus and `brush_edge_gain` toward the frame's edge (from
+## `brush_edge_start` of the radius), and at most `brush_r_max`.
+@export var brush_on: bool = true
+@export_range(0.0, 16.0) var brush_r_near: float = 2.0
+@export_range(0.0, 24.0) var brush_r_far: float = 7.0
+@export_range(0.0, 60.0) var brush_depth_near_m: float = 3.0
+@export_range(0.5, 120.0) var brush_depth_far_m: float = 22.0
+@export_range(0.0, 12.0) var brush_focus_gain: float = 2.0
+@export_range(0.0, 12.0) var brush_edge_gain: float = 2.0
+@export_range(0.0, 1.0) var brush_edge_start: float = 0.55
+@export_range(1.0, 24.0) var brush_r_max: float = 10.0
+## The ellipse's roundness (1 = elongated along an edge as the structure tensor says, larger = rounder), the sector weight's exponent (larger =
+## crisper edges), and the taps from the middle to the edge of the window (the stride grows with the radius).
+@export_range(0.2, 8.0) var brush_aniso_alpha: float = 1.0
+@export_range(1.0, 16.0) var brush_sharpness: float = 8.0
+@export_range(2, 8) var brush_tap_half: int = 5
+## The mip level of the screen the structure tensor is read at (the paint's fine texture blurs out, the strokes follow the shapes).
+@export_range(0.0, 3.0) var brush_tensor_lod: float = 1.0
+## The hand wobble: pixels at 1080p and the world cell in metres of the low-frequency noise (a depth-buffer position, so it holds on the world).
+@export_range(0.0, 12.0) var brush_wobble_px: float = 3.0
+@export_range(0.2, 20.0) var brush_wobble_cell_m: float = 1.6
+## A tap across a relative depth step larger than this is not sampled: a pole's edge stays hard.
+@export_range(0.01, 1.0) var brush_depth_reject: float = 0.12
+## The soft posterize: the band in stops of luminance (0 = off), the edge softness (a share of a band), the share applied, and the world noise on the
+## band edges (a share of a band, cell in metres) so they are hand-cut, not contours.
+@export_range(0.0, 3.0) var brush_post_step: float = 0.55
+@export_range(0.0, 1.0) var brush_post_soft: float = 0.25
+@export_range(0.0, 1.0) var brush_post_mix: float = 1.0
+@export_range(0.0, 1.0) var brush_post_noise: float = 0.3
+@export_range(0.1, 20.0) var brush_post_cell_m: float = 0.9
+## A debug view (0 = the picture; 1 = the radius and anisotropy; 2 = the orientation; 3 = the wobble's noise; 4 = the tags).
+@export_range(0, 4) var brush_debug_view: int = 0
+
 @export_group("Post")
 ## The finish pass (a CompositorEffect): the static paper grain (a share of value), the vignette (a share of the
 ## value at the corner and where it starts), a little chromatic aberration (a fraction of the frame at the corner).
@@ -197,6 +234,9 @@ extends VideoLookPiece
 @export_range(0.0, 1.0) var deliver_soften: float = 0.45
 @export_range(0.0, 0.2) var deliver_grain: float = 0.035
 @export_range(1, 4) var grain_hold: int = 2
+## The delivery's re-scale (round 4): the picture is box-filtered to this share of the render size and bicubic-scaled back, so its frequency
+## content is the references' (1440p streams that look upscaled from a lower master). 1 = off. Lines stay lines.
+@export_range(0.3, 1.0) var deliver_scale: float = 0.75
 
 @export_group("Palette")
 ## The location's palette LUT strip (tools/video/palette_lut.py; N slices of N x N: slice = blue, x = red,

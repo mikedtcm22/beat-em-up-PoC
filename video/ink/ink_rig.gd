@@ -8,8 +8,8 @@ extends Node
 ##  - finds the scene's key (the lamp that lights the characters, or the sun) and writes its direction, in
 ##    view space, to the paint, the line and the screen ink every frame, with the boil seed (12 fps, from the
 ##    output frame) and the hatching's close-up fade;
-##  - adds the rim lights that follow the nearest characters, the screen-space ink quad (the game's edge quad
-##    hidden), the 2D cues (CineTwos, CineSmears, CineCues) and the finish pass's Compositor;
+##  - adds the brush pass's screen quad (round 4: the world painted, CineBrushQuad), the rim lights that follow the nearest
+##    characters, the screen-space ink quad (the game's edge quad hidden), the 2D cues (CineTwos, CineSmears, CineCues) and the finish pass's Compositor;
 ##  - assigns the location's palette LUT to the level's Environment.
 ## `frame_source` is the frame writer's output-frame counter (a Callable returning an int); without one the
 ## frame is counted from the physics frames at `output_fps`.
@@ -41,6 +41,7 @@ var _env: Environment
 var _lut: ImageTexture3D
 var _ink_material: ShaderMaterial
 var _ink_quad: MeshInstance3D
+var _brush: CineBrushQuad
 var _twos: CineTwos
 var _smears: CineSmears
 var _cues: CineCues
@@ -62,6 +63,10 @@ func setup(level: Node) -> void:
 	_env = LookPost.find_environment(level)
 	var found := level.find_children("*", "LookPost", true, false)
 	_look_post = found[0] as LookPost if not found.is_empty() else null
+	if look.brush_on:
+		_brush = CineBrushQuad.new()
+		_brush.apply_look(look)
+		add_child(_brush)
 	if look.screen_ink:
 		_build_ink_quad()
 	_twos = CineTwos.new()
@@ -101,6 +106,8 @@ func _apply_shadow_quality() -> void:
 ## Re-read the look's values (after a value was changed in code): the cues' options and every material.
 func refresh() -> void:
 	_push_options()
+	if _brush != null:
+		_brush.apply_look(look)
 	for material in _toon:
 		_push_paint(material)
 	for hull in _hulls:
@@ -158,6 +165,8 @@ func _process(_delta: float) -> void:
 			extra.set_shader_parameter(&"boil_seed", seed_value)
 	_update_rim_lights(camera)
 	_update_ink_quad(camera)
+	if _brush != null:
+		_brush.update(camera, _focus_point(camera).distance_to(camera.global_position))
 	_update_delivery()
 	if _look_post != null and is_instance_valid(_look_post):
 		_look_post.edge_quad().visible = false
