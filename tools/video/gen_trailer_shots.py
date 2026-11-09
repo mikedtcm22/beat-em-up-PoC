@@ -104,12 +104,34 @@ def prop(id, pos, yaw=0.0):
     return dict(id=id, pos=pos, yaw=yaw)
 
 
+def card(points, pos, yaw=0.0, color=(0.035, 0.03, 0.06), drift=(0.0, 0.0, 0.0)):
+    """A flat dark foreground mass (CineCard): `points` are (x right, y up) in metres in its vertical plane, `pos` the plane's origin, `yaw` its facing (0 faces +Z)."""
+    return dict(points=points, pos=pos, yaw=yaw, color=color, drift=drift)
+
+
+def facing(cam, look, dist):
+    """Where a card stands, `dist` metres along the view from `cam` toward `look`, and the yaw that turns its front toward the camera."""
+    import math
+    d = [look[i] - cam[i] for i in range(3)]
+    n = math.sqrt(sum(c * c for c in d))
+    d = [c / n for c in d]
+    pos = tuple(cam[i] + d[i] * dist for i in range(3))
+    return pos, math.degrees(math.atan2(-d[0], -d[2]))
+
+
+def aim(cam, az_deg, pitch_deg, dist=10.0):
+    """A look-at point `dist` metres from `cam` along a heading `az_deg` (0 along +X, positive toward -Z) and a pitch (degrees)."""
+    import math
+    a, p = math.radians(az_deg), math.radians(pitch_deg)
+    return (cam[0] + dist * math.cos(p) * math.cos(a), cam[1] + dist * math.sin(p), cam[2] - dist * math.cos(p) * math.sin(a))
+
+
 # ---- the writer -----------------------------------------------------------------------------------------------------
 def write_shot(s: dict) -> None:
-    ids = {"shot": "1_shot", "actor": "2_actor", "beat": "3_beat", "key": "4_key", "prop": "5_prop"}
+    ids = {"shot": "1_shot", "actor": "2_actor", "beat": "3_beat", "key": "4_key", "prop": "5_prop", "card": "6_card"}
     scripts = {"shot": "res://video/cine/cine_shot.gd", "actor": "res://video/stage/still_actor.gd",
                "beat": "res://video/cine/cine_beat.gd", "key": "res://video/cine/cine_camera_key.gd",
-               "prop": "res://video/cine/cine_prop.gd"}
+               "prop": "res://video/cine/cine_prop.gd", "card": "res://video/cine/cine_card.gd"}
     used = ["shot", "actor"]
     if s["beats"]:
         used.append("beat")
@@ -117,10 +139,12 @@ def write_shot(s: dict) -> None:
         used.append("key")
     if s.get("props"):
         used.append("prop")
+    if s.get("cards"):
+        used.append("card")
     out = []
     subs = []
     count = 1 + len(used) - 1
-    names = {"actor": [], "beat": [], "key": [], "prop": []}
+    names = {"actor": [], "beat": [], "key": [], "prop": [], "card": []}
     for i, a in enumerate(s["actors"]):
         n = "Actor_%d" % i
         names["actor"].append(n)
@@ -150,6 +174,13 @@ def write_shot(s: dict) -> None:
         subs.append('[sub_resource type="Resource" id="%s"]\nscript = ExtResource("%s")\nid = &"%s"\nposition = %s\nyaw_deg = %g\n' % (
             n, ids["prop"], p["id"], v3(p["pos"]), p["yaw"]))
 
+    for i, c in enumerate(s.get("cards", [])):
+        n = "Card_%d" % i
+        names["card"].append(n)
+        subs.append('[sub_resource type="Resource" id="%s"]\nscript = ExtResource("%s")\npoints = PackedVector2Array(%s)\nposition = %s\nyaw_deg = %g\n'
+                    'color = Color(%g, %g, %g, 1)\ndrift = %s\n' % (n, ids["card"], ", ".join("%g, %g" % tuple(p) for p in c["points"]), v3(c["pos"]),
+                                                              c["yaw"], c["color"][0], c["color"][1], c["color"][2], v3(c["drift"])))
+
     def arr(kind, ext):
         return "Array[ExtResource(\"%s\")]([%s])" % (ids[ext], ", ".join('SubResource("%s")' % n for n in names[kind]))
 
@@ -172,8 +203,17 @@ def write_shot(s: dict) -> None:
         body += "camera_keys = %s\n" % arr("key", "key")
     if s.get("props"):
         body += "props = %s\n" % arr("prop", "prop")
+    if s.get("cards"):
+        body += "cards = %s\n" % arr("card", "card")
+    if s.get("hide_kit"):
+        body += "hide_kit = true\n"
     if "shake" in s:
         body += "shake_scale = %g\n" % s["shake"]
+    if s["fp"]:
+        # Round 5: the first-person view (CineViewRig): the lens up and back, a bank, the off-hand hidden unless it strikes.
+        body += "view_lift_m = %g\nview_back_m = %g\nview_roll_deg = %g\n" % (s.get("lift", 0.0), s.get("back", 0.0), s.get("roll", 0.0))
+        if s.get("off"):
+            body += 'hide_off_hand = true\noff_hand = "%s"\n' % s["off"]
     if s.get("lamps"):
         body += "lamp_posts = PackedVector3Array(%s)\n" % ", ".join("%g, %g, %g" % tuple(p) for p in s["lamps"])
     (ROOT / "video/shots" / ("%s.tres" % s["key"])).write_text(head + body)
@@ -186,18 +226,27 @@ def write_shot(s: dict) -> None:
 # ---- the shot list (PLAN.md section 5) ------------------------------------------------------------------------------
 SHOTS = []
 
-# 1. The street at night: a slow crane down from roof height; four idle figures, none alike (a Punk, a veteran, a Thug, a Kicker).
+# 1. The street at night (round 5): a tilt-down from a fixed point 7 m up at the left side of the street, onto a fight in the lamp's pool: a three-quarter
+# view with the vanishing point off-centre, a dark foreground mass (a fire escape's corner and rail, cards), the figures small and silhouetted.
+CAM1 = (-4.9, 6.6, 0.2)
+END1 = (3.0, 1.0, -17.3)
+_c1_pos, _c1_yaw = facing(CAM1, END1, 2.4)
 SHOTS.append(dict(
     key="t01_crane_street", number=1, edit_start=0.0, section=0, fp=False, player=((3, 0, -2), 0, 0), window=(0, 3.0),
-    note="Shot 1 (0:00-0:03): a slow crane down from roof height to the street; steam, sodium lamps, a burning barrel; four idle figures in silhouette, no two alike.",
-    actors=[actor("punk", (0.5, 0, -8.5), yaw=-20),
-            actor("punk_veteran", (3.0, 0, -10.4), yaw=150, anim="taunt", hold=40, live=False),
-            actor("thug", (-2.4, 0, -11.2), yaw=60),
-            actor("kicker", (0.4, 0, -14.6), yaw=-170, anim="brace", hold=20, live=False)],
+    note="Shot 1 (0:00-0:03, round 5): a tilt-down from a fixed point 7 m up at the street's left side onto a fight in the lamp's pool; a fire escape's dark mass in the foreground, the figures small.",
+    actors=[actor("punk", (-0.6, 0, -14.6), yaw=-80, anim="block", hold=12, live=False),
+            actor("thug", (0.9, 0, -15.0), yaw=95, anim="stagger_back", hold=10, live=False),
+            actor("punk_veteran", (-2.6, 0, -17.0), yaw=120, anim="taunt", hold=40, live=False),
+            actor("kicker", (2.4, 0, -18.4), yaw=170, anim="brace", hold=20, live=False)],
     beats=[],
-    keys=[key(0.0, (-0.6, 8.6, 2.0), (0.5, 1.8, -22.0), fov=75),
-          key(1.6, (-0.5, 5.4, 1.0), (0.5, 1.7, -16.0), fov=68, focus=14, rng=5),
-          key(3.0, (0.2, 2.4, 0.0), (0.6, 1.5, -10.0), fov=60, focus=10, rng=5)]))
+    keys=[key(0.0, CAM1, (3.0, 4.6, -40.0), fov=48),
+          key(1.5, CAM1, (3.0, 2.8, -26.0), fov=46, focus=18, rng=8),
+          key(3.0, CAM1, END1, fov=44, focus=17, rng=6)],
+    cards=[card([(-1.3, -1.0), (0.05, -1.0), (-0.05, -0.9), (-0.6, -0.84), (-1.3, -0.7)], _c1_pos, _c1_yaw),
+           card([(-1.3, -0.5), (-1.3, -0.45), (-0.5, 0.25), (-0.45, 0.2)], _c1_pos, _c1_yaw),
+           card([(-1.3, -0.72), (-1.3, -0.67), (-0.22, 0.14), (-0.17, 0.09)], _c1_pos, _c1_yaw),
+           card([(-0.62, -0.84), (-0.6, -0.4), (-0.57, -0.4), (-0.56, -0.84)], _c1_pos, _c1_yaw),
+           card([(-0.3, -0.88), (-0.29, -0.5), (-0.26, -0.5), (-0.25, -0.88)], _c1_pos, _c1_yaw)]))
 
 # 2. First person: the wrapped fists come up into guard; a Punk turns, rim-lit by the key lamp behind him.
 SHOTS.append(dict(
@@ -242,15 +291,17 @@ SHOTS.append(dict(
            move(0, 1, 0.1, True), move(0, 0, 0.45, True),
            press("P", 0.1, True), press("P", 0.4, True), press("P", 0.4, True)]))
 
-# 7. The roofs at dusk, cine at 0.25x: a Kicker knocked over the west parapet of the top roof, a silhouette against the sun.
+# 7. The roofs at dusk, cine at 0.25x (round 5): a Kicker knocked up and back off the top roof's west end, against the sun. A camera fixed at the roof's east
+# edge, low, on the sun's line; the near water tower is the big foreground silhouette (the other is behind it), the parapet starts beyond.
+CAM7 = (21.0, 7.6, -18.4)
 SHOTS.append(dict(
-    key="t07_roof_knockoff", number=7, edit_start=14.0, section=1, fp=False, player=((4.5, 4.5, -17.0), 90, 0), window=(0, 3.6),
+    key="t07_roof_knockoff", number=7, edit_start=14.0, section=1, fp=False, player=((14.7, 7.5, -16.0), 90, 0), window=(0, 3.6),
     edit_speed=0.25,
-    note="Shot 7 (0:14-0:17, 0.25x): a Kicker knocked off the catwalk's west edge toward the low sun (the roof's parapet is solid: a launch stops at it); the slow-motion is TimeController's.",
-    actors=[actor("kicker", (3.1, 4.5, -17.0), yaw=None, health=60)],
+    note="Shot 7 (0:14-0:17, 0.25x, round 5): a Kicker knocked off the top roof's west end toward the low sun; a fixed low camera on the sun's line, one water tower in the foreground; the slow-motion is TimeController's.",
+    actors=[actor("kicker", (13.2, 7.5, -16.0), yaw=None, health=60)],
     beats=[press("P", 0.3), press("P", 0.4, True), press("P", 0.4, True), press("P", 0.4, True), slowmo(0.25, 2.0, 0.1, True)],
-    keys=[key(0.0, (9.0, 4.9, -19.2), (1.0, 6.2, -17.2), fov=60),
-          key(3.6, (8.0, 5.2, -18.8), (0.0, 6.6, -17.2), fov=52)]))
+    keys=[key(0.0, CAM7, (11.0, 9.2, -16.8), fov=46, roll=-5.0),
+          key(3.6, CAM7, (11.0, 9.6, -16.2), fov=42, roll=-5.0)]))
 
 # 8. First person, the roofs: the bike chain's whip on two Punks, the padlock landing last.
 SHOTS.append(dict(
@@ -268,13 +319,15 @@ SHOTS.append(dict(
     actors=[actor("punk", (-3.0, 0, -5.9), yaw=None, health=200), actor("kicker", (-3.6, 0, -11.5), yaw=None, anim="idle", live=False)],
     beats=[attack(0, 0, 0.3), press("RB", 0.0, True, trigger="ACTOR_STRIKE", lead=9)]))
 
-# 10. The boss roof, cine: low angle, slow push-in on Ox, hooded and rim-lit; he raises his gloves; the name card.
+# 10. The boss roof, cine (round 5): a low camera fixed on the roof, three-quarter on Ox against the brightest part of the fire (pitched up, so no facade is in frame),
+# a zoom in (the plate holds the camera's position) while he raises his gloves; the name card.
+CAM10 = (1.4, 0.4, -9.4)
 SHOTS.append(dict(
     key="t10_ox_reveal", number=10, edit_start=21.0, section=2, fp=False, player=((0, 0, -1.5), 0, 0), window=(0, 4.0),
-    note="Shot 10 (0:21-0:25): a low angle, slow push-in on Ox Pellerin, rim-lit against fire and smoke; he raises his gloves. The name card OX PELLERIN is the edit's (mark at 2.2 s).",
+    note="Shot 10 (0:21-0:25, round 5): a low fixed camera, three-quarter on Ox Pellerin against the fire, a slow zoom in; he raises his gloves. The name card OX PELLERIN is the edit's (mark at 2.2 s).",
     actors=[actor("boss", (8, 0, -10), yaw=None, live=False)],
     beats=[anim(0, "taunt", 1.2), mark("name_card", 1.0, True)],
-    keys=[key(0.0, (2.6, 0.45, -10.6), (8, 1.7, -10), fov=58), key(4.0, (4.5, 0.4, -10.2), (8, 2.0, -10), fov=46)]))
+    keys=[key(0.0, CAM10, aim(CAM10, -8.0, 17.0), fov=48), key(4.0, CAM10, aim(CAM10, -6.0, 19.0), fov=38)]))
 
 # 11. First person: block Ox's charge, then a perfect block, the spinning backfist (P P . P), the haymaker held and released.
 SHOTS.append(dict(
@@ -287,14 +340,16 @@ SHOTS.append(dict(
            mark("ox_down", 0.0, True, trigger="ACTOR_DOWN", timeout=2.0), pitch(-10, 0.4, 0.1, True), move(0, 1, 0.8, True), move(0, 0, 0.2, True),
            pitch(16, 0.5, 0.0, True), down("P", 0.0, True, trigger="ACTOR_FREE", timeout=4.0), up("P", 0.6, True)]))
 
-# 12. The boss roof, cine at 0.25x: the haymaker lands, a backlit silhouette of fist and head against the fire.
+# 12. The boss roof, cine at 0.25x (round 5): the haymaker lands. A three-quarter close-up from behind the player's shoulder, low, one glove a dark foreground shape,
+# Ox's face against the fire; the camera fixed, a slow zoom, a fixed bank.
+CAM12 = (2.3, 0.7, -11.2)
 SHOTS.append(dict(
     key="t12_haymaker", number=12, edit_start=31.0, section=2, fp=False, player=((4.0, 0, -10.0), -90, 0), window=(0, 3.0),
     edit_speed=0.25,
-    note="Shot 12 (0:31-0:34, 0.25x): the haymaker lands; a backlit silhouette of fist and head against the fire, the impact frame.",
+    note="Shot 12 (0:31-0:34, 0.25x, round 5): the haymaker lands; a three-quarter close-up over the player's shoulder, one glove a dark foreground shape, Ox's face against the fire.",
     actors=[actor("boss", (6.2, 0, -10.0), yaw=None, health=900)],
     beats=[down("P", 0.2), up("P", 0.55, True), slowmo(0.25, 1.8, 0.0, True)],
-    keys=[key(0.0, (2.4, 1.5, -11.2), (6.0, 1.9, -10.0), fov=52), key(3.0, (3.0, 1.55, -11.0), (6.4, 1.9, -10.0), fov=44)]))
+    keys=[key(0.0, CAM12, (6.1, 2.0, -10.0), fov=42, roll=-6.0), key(3.0, CAM12, (6.3, 2.1, -10.0), fov=36, roll=-6.0)]))
 
 # 13. First person: Ox falls (ragdoll); the embers settle; the edit cuts to black on the hit sound.
 SHOTS.append(dict(
@@ -303,16 +358,37 @@ SHOTS.append(dict(
     actors=[actor("boss", (5.8, 0, -10.0), yaw=None, health=14)],
     beats=[down("P", 0.2), up("P", 0.55, True), pitch(-16, 0.7, 0.1, True), mark("cut_to_black", 2.4, True)]))
 
-# 14. The title card's background: drifting embers over the burning skyline (the title is the edit's).
+# 14. The title card's background (round 5): pure multiplane. The world look's own backdrops (the fire, the smoke, the skyline mattes) with no 3D kit,
+# and a foreground roof-edge card with its chimney and antenna; the camera trucks slowly so the layers drift at their own speeds.
+CAM14A = (2.0, 1.6, -10.4)
+CAM14B = (2.0, 1.7, -8.4)
 SHOTS.append(dict(
     key="t14_title_embers", number=14, edit_start=37.0, section=2, fp=False, player=((0, 0, -1.5), 0, 0), window=(0, 4.0),
-    note="Shot 14 (0:37-0:41): the title card's background, a slow drift across the burning skyline with embers; the title is set in the edit.",
-    actors=[],
+    note="Shot 14 (0:37-0:41, round 5): the title card's background, a multiplane: the backdrops, no 3D kit, a foreground roof-edge card, a slow truck; the title is set in the edit.",
+    actors=[], hide_kit=True,
     beats=[mark("title_in", 0.5)],
-    keys=[key(0.0, (2.0, 1.6, -10.0), (14, 5.0, -10.0), fov=70), key(4.0, (3.0, 2.2, -10.0), (14, 6.5, -9.0), fov=64)]))
+    keys=[key(0.0, CAM14A, (14.0, 4.6, -10.4), fov=60), key(4.0, CAM14B, (14.0, 5.4, -8.4), fov=54)],
+    cards=[card([(-6.0, -1.0), (6.0, -1.0), (6.0, 1.8), (5.2, 1.85), (5.15, 2.4), (4.6, 2.42), (4.55, 1.9), (3.2, 1.95), (3.0, 1.7), (1.5, 1.7), (1.43, 2.9), (1.3, 3.0), (1.25, 3.12), (1.1, 3.12), (1.08, 3.0), (0.95, 2.9), (0.88, 1.75), (-0.4, 1.7), (-0.7, 2.1), (-1.9, 1.9), (-2.0, 1.6), (-3.6, 1.8), (-3.63, 2.4), (-3.66, 4.4), (-3.72, 2.45), (-3.9, 2.4), (-4.0, 1.9), (-5.2, 1.85), (-6.0, 1.7)], (6.0, 0.0, -9.4), -90.0, color=(0.07, 0.03, 0.07), drift=(0.0, 0.0, -0.2))]))
 
+
+# ---- round 5: the first-person view of every first-person shot (CineViewRig) ------------------------------------------
+# fov: the horizontal lens (55-60 degrees: below Tuning's floor of 75, written at run time); lift and back: the camera's own up and back (m), which
+# lower the guard fist into the bottom edge and give the opponent's framing room; roll: a fixed bank (the fight set-ups alternate in sign, the
+# establishing shot has none); off: the arm that shows only when a move strikes with it (the weapon shots hide the left one: the pipe is in the right hand).
+FP_VIEW = {
+    "t02_guard_up": dict(fov=58, lift=0.05, back=0.08, roll=0.0, off="Right"),
+    "t03_punk_combo": dict(fov=58, lift=0.05, back=0.08, roll=-5.0, off="Right"),
+    "t04_block_spin": dict(fov=58, lift=0.05, back=0.10, roll=5.0, off="Right"),
+    "t05_grab_throw": dict(fov=58, lift=0.05, back=0.08, roll=-4.0, off="Right"),
+    "t06_pipe_chain": dict(fov=58, lift=0.04, back=0.08, roll=4.0, off="Left"),
+    "t08_chain_whip": dict(fov=58, lift=0.04, back=0.08, roll=5.0, off="Left"),
+    "t09_back_elbow": dict(fov=58, lift=0.05, back=0.08, roll=-5.0, off="Right"),
+    "t11_ox_fight": dict(fov=58, lift=0.05, back=0.15, roll=5.0, off="Right"),
+    "t13_ox_falls": dict(fov=58, lift=0.04, back=0.15, roll=4.0, off="Right"),
+}
 
 if __name__ == "__main__":
     for shot in SHOTS:
+        shot.update(FP_VIEW.get(shot["key"], {}))
         write_shot(shot)
         print("wrote", shot["key"])

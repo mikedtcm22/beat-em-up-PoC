@@ -18,6 +18,10 @@ extends VideoStillShot
 @export var camera_keys: Array[CineCameraKey] = []
 ## Weapons lying on the floor when the shot starts.
 @export var props: Array[CineProp] = []
+## Flat dark foreground masses (a fire escape's rail, a roof edge), drifting or still (round 5).
+@export var cards: Array[CineCard] = []
+## Hide every section's own geometry (walls, floor, props and skyline blocks) so that only the world look's backdrops and the cards are drawn: a multiplane shot (t14, round 5).
+@export var hide_kit: bool = false
 ## The game's screen shake as a share of its own (negative leaves the game's setting). A cine shot is calmer.
 @export_range(-1.0, 3.0) var shake_scale: float = -1.0
 ## The act's number in the shot list (PLAN.md §5) and the time the edit places it at, in seconds, for the animatic's order.
@@ -28,6 +32,17 @@ extends VideoStillShot
 @export_range(0.05, 1.0) var edit_speed: float = 1.0
 ## Seed of the effect and audio directors' rngs for this shot.
 @export var rng_seed: int = 1
+
+@export_group("First-person view (round 5)")
+## First person, through the CineViewRig: the lens raised above the eye (m, along its own up axis; the guard fist then sits lower in the
+## frame and is cropped by its bottom edge), pulled back (m, along its own back axis; room for the opponent's framing), and banked (degrees,
+## about the view axis). EyePoint and the hitboxes do not move. 0 leaves the game's view.
+@export_range(-0.3, 0.6, 0.005) var view_lift_m: float = 0.0
+@export_range(-0.5, 0.6, 0.005) var view_back_m: float = 0.0
+@export_range(-15.0, 15.0, 0.5) var view_roll_deg: float = 0.0
+## First person: scale `off_hand`'s arm away in the picture unless a move strikes with it (a guard, a hold or a held weapon shows it too).
+@export var hide_off_hand: bool = false
+@export_enum("Left", "Right") var off_hand: String = "Right"
 
 
 ## The location of this shot: `location`, or the section's.

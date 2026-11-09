@@ -74,31 +74,31 @@ label = &""
 [sub_resource type="Resource" id="Key_0"]
 script = ExtResource("4_key")
 time_s = 0
-position = Vector3(2.4, 1.5, -11.2)
-look_at = Vector3(6, 1.9, -10)
+position = Vector3(2.3, 0.7, -11.2)
+look_at = Vector3(6.1, 2, -10)
 target_actor = -1
-fov_deg = 52
+fov_deg = 42
 focus_m = 0
 focus_range_m = 3
-roll_deg = 0
+roll_deg = -6
 ease = 1
 
 [sub_resource type="Resource" id="Key_1"]
 script = ExtResource("4_key")
 time_s = 3
-position = Vector3(3, 1.55, -11)
-look_at = Vector3(6.4, 1.9, -10)
+position = Vector3(2.3, 0.7, -11.2)
+look_at = Vector3(6.3, 2.1, -10)
 target_actor = -1
-fov_deg = 44
+fov_deg = 36
 focus_m = 0
 focus_range_m = 3
-roll_deg = 0
+roll_deg = -6
 ease = 1
 
 [resource]
 script = ExtResource("1_shot")
 key = &"t12_haymaker"
-note = "Shot 12 (0:31-0:34, 0.25x): the haymaker lands; a backlit silhouette of fist and head against the fire, the impact frame."
+note = "Shot 12 (0:31-0:34, 0.25x, round 5): the haymaker lands; a three-quarter close-up over the player's shoulder, one glove a dark foreground shape, Ox's face against the fire."
 section = 2
 location = &""
 number = 12

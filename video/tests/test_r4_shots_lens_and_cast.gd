@@ -4,9 +4,12 @@ extends GutTest
 
 const STILLS_DIR := "res://video/stills"
 const SHOTS_DIR := "res://video/shots"
-## The video's first-person field of view band (degrees, horizontal): about 70-75, against the game's 90.
+## The video's first-person field of view band (degrees, horizontal): about 70-75 for the stills, against the game's 90. Round 5 narrows the
+## trailer's first-person shots to 55-60 (test_r5_shots_staging.gd holds the twin assertion), set through the shot's data at run time.
 const FOV_MIN := 70.0
 const FOV_MAX := 75.0
+const TRAILER_FOV_MIN := 55.0
+const TRAILER_FOV_MAX := 60.0
 ## How far (degrees) a figure must be turned off the viewer to count as a three-quarter stance.
 const TURN_MIN_DEG := 15.0
 
@@ -44,15 +47,19 @@ func _viewer_yaw_deg(shot: VideoStillShot, actor: VideoStillActor) -> float:
 
 func test_every_first_person_still_and_trailer_shot_uses_the_video_lens() -> void:
 	var seen := 0
-	var shots: Array[VideoStillShot] = _stills()
-	for shot in _trailer_shots():
-		shots.append(shot)
-	for shot in shots:
+	for shot in _stills():
 		if not shot.first_person:
 			continue
 		seen += 1
 		assert_between(shot.first_person_fov_deg, FOV_MIN, FOV_MAX, "%s: first-person FOV" % shot.key)
-	assert_gt(seen, 8, "the first-person shots were found")
+	assert_gt(seen, 2, "the first-person stills were found")
+	var trailer_seen := 0
+	for shot in _trailer_shots():
+		if not shot.first_person:
+			continue
+		trailer_seen += 1
+		assert_between(shot.first_person_fov_deg, TRAILER_FOV_MIN, TRAILER_FOV_MAX, "%s: first-person FOV (round 5)" % shot.key)
+	assert_gt(trailer_seen, 8, "the first-person trailer shots were found")
 
 
 func test_the_video_lens_is_narrower_than_the_games() -> void:
