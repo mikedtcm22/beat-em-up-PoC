@@ -201,10 +201,9 @@ static func shoot(bot: Node, shot: VideoStillShot, variant: StringName, _unused:
 		await bot.get_tree().process_frame
 	if OS.get_environment("ART_DEBUG") == "white":
 		# Debug: every art mesh's ink mask all white, so what takes the ink texture turns to ink colour.
-		var white := ImageTexture.create_from_image(Image.create_empty(4, 4, false, Image.FORMAT_L8))
 		var image := Image.create_empty(4, 4, false, Image.FORMAT_L8)
 		image.fill(Color.WHITE)
-		white = ImageTexture.create_from_image(image)
+		var white := ImageTexture.create_from_image(image)
 		for node in bot.get_tree().get_nodes_in_group(HumanoidRig.ART_GROUP):
 			((node as MeshInstance3D).material_override as ShaderMaterial).set_shader_parameter(&"ink_tex", white)
 		await bot.get_tree().process_frame
