@@ -87,11 +87,11 @@ vec4 project_plate(sampler2D col, sampler2D dep, mat4 view, vec2 tan_half, float
 void fragment() {
 	ivec2 size = textureSize(depth_tex, 0);
 	ivec2 p = ivec2(FRAGCOORD.xy);
-	if (is_character(p, size)) {
-		discard;
-	}
 	float d0 = texelFetch(depth_tex, p, 0).r;
 	bool sky = d0 <= 0.0;
+	if (!sky && is_character(p, size)) {
+		discard;
+	}
 	vec2 texel = 1.0 / vec2(size);
 	vec2 ndc = (vec2(p) + 0.5) * texel * 2.0 - 1.0;
 	vec4 vp4 = INV_PROJECTION_MATRIX * vec4(ndc, sky ? 0.5 : d0, 1.0);

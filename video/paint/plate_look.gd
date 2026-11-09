@@ -25,11 +25,14 @@ const QUAD_NAME := &"CinePlateQuad"
 ## Nodes of the level hidden for the capture: the first-person body and every humanoid are hidden by class (CombatActor and the art group), and the
 ## nodes whose names START with one of these (steam plumes, embers, flames, contact shadows, lamp shafts and halos, the cues).
 @export var capture_hide_prefixes: PackedStringArray = PackedStringArray(["Plume_", "Emitter_", "Flame", "Contact", "Shaft", "Halo", "CineCue", "CineTwos", "CineSmears"])
-## Engine classes of node hidden for the capture, on top (every CombatActor, the player's first-person body among them, and every PickupSpot are hidden too).
+## Engine classes of node hidden for the capture, on top (every CombatActor, the player's first-person body among them, and every PickupSpot and every Weapon lying about are hidden too).
 @export var capture_hide_classes: PackedStringArray = PackedStringArray(["GPUParticles3D", "CPUParticles3D"])
 @export_group("Live")
 ## Nodes of a plated shot hidden live, by name prefix: what the plate carries (the haze quad, the lamp halos and shafts).
 @export var live_hide_prefixes: PackedStringArray = PackedStringArray(["HazeQuad", "Shaft", "Halo"])
+## A weapon lying about (not held by an actor) is a 3D object the painting does not hold, and it reads as one: hidden live on a plated shot. A shot that needs it
+## (a pickup in the action) turns this off in its location's plate.tres.
+@export var hide_loose_weapons_live: bool = true
 @export_group("Projection")
 ## The depth test: the share of the pixel's depth plus metres. A pixel whose depth differs from the plate's by more is a surface the plate never saw.
 @export_range(0.0, 0.3) var depth_tol_share: float = 0.03
@@ -118,6 +121,8 @@ func apply(level: Node) -> void:
 	level.add_child(made)
 	quad = made
 	hide_by_prefix(level, live_hide_prefixes)
+	if hide_loose_weapons_live:
+		hide_loose_weapons(level)
 	var follower := PlateQuadFollower.new()
 	follower.quad = made
 	made.add_child(follower)
@@ -136,13 +141,31 @@ static func hide_by_prefix(root: Node, prefixes: PackedStringArray) -> int:
 	return count
 
 
+## Hide every Weapon under `root` that is not held (no CombatActor above it). Returns how many.
+static func hide_loose_weapons(root: Node) -> int:
+	var count := 0
+	for node in root.find_children("*", "Weapon", true, false):
+		var item := node as Node3D
+		var held := false
+		var up := item.get_parent()
+		while up != null and up != root:
+			if up is CombatActor:
+				held = true
+				break
+			up = up.get_parent()
+		if not held:
+			item.visible = false
+			count += 1
+	return count
+
+
 ## The nodes the capture hides under `root` (what `hide_for_capture` would hide), as a list: the classes, then the name prefixes.
 func capture_hidden(root: Node) -> Array[Node3D]:
 	var out: Array[Node3D] = []
 	for node in root.find_children("*", "Node3D", true, false):
 		var item := node as Node3D
 		var hit := false
-		if item is CombatActor or item is PickupSpot:
+		if item is CombatActor or item is PickupSpot or item is Weapon:
 			hit = true
 		for cls in capture_hide_classes:
 			if not hit and item.is_class(cls):

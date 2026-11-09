@@ -113,11 +113,16 @@ func test_each_location_names_its_pieces_in_order_art_world_ink() -> void:
 		var rank := PackedInt32Array()
 		for path in paths:
 			var file := path.get_file()
-			rank.append(0 if file.begins_with("art") else (1 if file == "world.tres" else 2))
+			rank.append(0 if file.begins_with("art") else (1 if file == "world.tres" else (2 if file == "ink.tres" else 3)))
 		var sorted := rank.duplicate()
 		sorted.sort()
-		assert_eq(rank, sorted, "%s: %s apply art, then world, then ink" % [location, paths])
-		assert_eq(paths[paths.size() - 1].get_file(), "ink.tres", "%s: the ink piece applies last" % location)
+		assert_eq(rank, sorted, "%s: %s apply art, then world, then ink, then the plate" % [location, paths])
+		# Round 5 (R5-PAINT): the plate piece applies after the ink piece; the ink piece is still the last of the others (the twin: test_r5_paint_data).
+		var others: Array[String] = []
+		for path in paths:
+			if path.get_file() != "plate.tres":
+				others.append(path)
+		assert_eq(others[others.size() - 1].get_file(), "ink.tres", "%s: the ink piece applies last of the look's own pieces" % location)
 
 
 func test_every_piece_loads_as_a_look_piece() -> void:

@@ -4,3 +4,4 @@
 
 [resource]
 script = ExtResource("1_plate")
+live_hide_prefixes = PackedStringArray("HazeQuad", "Shaft", "Halo", "Matte_")
