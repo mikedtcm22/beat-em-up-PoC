@@ -19,3 +19,6 @@ enum Facing {
 ## The rig animation he plays (&"idle" is his guard) and the physics tick it is held at.
 @export var anim: StringName = &"idle"
 @export_range(0, 600) var hold_tick: int = 0
+## True: the actor stays a live enemy of the game (a hit lands on him and he reacts; the AI is held by the shot's
+## frozen AI). False: a held pose, off the game's tick.
+@export var live: bool = false
