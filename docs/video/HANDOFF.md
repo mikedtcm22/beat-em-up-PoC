@@ -6,6 +6,42 @@ The cinematic gameplay video's live status, kept by the video session ("Beat-em-
 
 ## Status (newest first)
 
+### 2026-11-09 01:20 CST: round 3 DM'd (not a match yet); handoff at 86%, nothing running; resume at the 03:40 reset
+- **The blind check** (`wf_5a5751c7-441`, three Opus judges, about 12 points, more than the estimate) ran on our frames after a streaming-like encode:
+  - all 8 references called drawn (p_3d 0.04-0.13), and all 7 of ours called 3D;
+  - the boss roof moved most: ox_closeup 0.88, ox_low 0.90 (Gate 2: 0.95-0.99). roof_silhouette 0.92; fp_punk, fp_kicker_lamp and moving_punk 0.95-0.96; street_wide 0.97;
+  - the judges read the painted fire, smoke, skylines and sky bands as drawn.
+  - Their shared tells, strongest first:
+    1. **Exact-perspective modular repetition:** windows, brick, chain-link and stair treads, with even detail at every depth.
+    2. **Geometric light:** elliptical pools, the new straight-edged constant-opacity lamp cones, ruler-straight poles.
+    3. **Particle steam:** round, blurry puffs in columns; uniform motes and embers.
+    4. **Shading by shader:** the noise-threshold terminator, crosshatch of one density over faces and gloves whatever the form, and a near-photoreal face under the hatch.
+    5. **CG primitives and copies:** the tube arm at a wide first-person lens, mitten fists, mirrored gloves, twin tanks, identical enemies, symmetric poses.
+    6. **Even outline weight.**
+    7. **Delivery:** ours are still crisper than the references, which look upscaled and compressed.
+    8. **Murky alley values:** mid-dark textured areas, with no flat dark masses and no moonlit rims or top planes.
+- **Sent to Game-boy at 01:18** (DM, file F0CG4K8KVK6 with the message, and the reel F0CG2QYUAF3): the overview sheet, the 14-shot blocking reel (`captures/video/round3/round3_trailer_blocking_720p.mp4`, 49 s, 720p), the blind result, and the round 4 plan. **One open question for him:** paint every shot's background with Gemini (a paint-over of our own frame, projected onto the set), about $2 within the $5 cap ($2.52 spent). It's a new use of Gemini, so it needs his yes. Without an answer, round 4 runs without it. Plan B stays on hold.
+- **Round 4, the plan** (Plan A, no spend; write it into P1.md, or a P2.md for round 4, as packages):
+  - **R4-INK** (ink: `video/ink/`, the post): the delivery at an internal 1920×1080 (or lower), upscaled to 2560×1440 with a soft filter, plus a stronger soften, judged against the references' softness. One designed cel shadow shape on the characters (drop the noise terminator), and hatching only in shadow and along the form.
+  - **R4-WORLD** (world):
+    - steam and smoke as drawn cel shapes (two tones plus a line, on twos) or thin painted wisps;
+    - the lamp cones painted with a falloff and brushy edges, or cut;
+    - pools hand-shaped (painted textures, not projected ellipses), and tapered poles;
+    - flat dark masses, with brick and window texture only where light falls;
+    - moonlit top planes and rims;
+    - harder breaks to the window modules (drop and vary them), and wobbled long edges.
+  - **R4-ART** (art): the arm as a drawn form (wrist taper, knuckles, a designed shadow shape), and Ox's face simplified (fewer photoreal wrinkles, designed lines).
+  - **R4-SHOTS** (stage): a narrower first-person FOV for the video (less wide-angle distortion); no identical enemies in one pose (LD-ASSET round 2 brings the other enemies).
+  - **If Game-boy says yes:** R4-PAINT, per-shot Gemini background paint-overs projected from each shot's camera (LD-WORLD3's tools: `make_matte_jobs.py`, `key_mattes.py`).
+- **The resume task:**
+  - `beat-em-up-video-resume-20261108-2230` (Auto mode) is re-armed for 03:50 CST under the title "...after the 03:40 reset";
+  - the new `...-20261109-0340` saved in the default mode, so it's disabled.
+- **Resume steps:**
+  1. get_usage; restart the watcher's loop (PLAN.md §12) and the relay's heartbeat;
+  2. read Game-boy's DM reply (the relay forwards it);
+  3. write the round 4 packages and run `build.js` in waves (R4-INK with R4-WORLD, then R4-ART with R4-SHOTS, or as the usage allows);
+  4. re-render the round 3 set as round 4, run the blind check again (three judges, the same prompt, `blind_r3_prep.sh` in the scratchpad as the model), and DM.
+
 ### 2026-11-09 01:05 CST: round 3 merged and rendered; the blind check and the trailer reel running
 - **Wave B landed** (run `wf_020e5cbf-2b7`, 421k tokens, about 12 points). It's merged (`2d5d087`), and the video tests pass, 152 of 152 with the lead's test. LD-INK2 delivered:
   - **the lines:** a tapered line hierarchy (a heavier first-person arm), terminator lines, lighter environment ink, and a separation band round the figures;
