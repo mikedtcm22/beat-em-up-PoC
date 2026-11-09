@@ -5,3 +5,6 @@
 [resource]
 script = ExtResource("1_art")
 face_fill_color = Color(1, 0.7, 0.42, 1)
+face_fill_by_id = {
+"player": 0.2
+}

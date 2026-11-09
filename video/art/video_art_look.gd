@@ -27,6 +27,9 @@ extends VideoLookPiece
 ## or a hood is never lost in the shadow band, and the drawn lines (in the albedo) stay dark on it. Set per location in the art.tres.
 @export_range(0.0, 1.5) var face_fill: float = 0.5
 @export var face_fill_color: Color = Color(1.0, 0.84, 0.68)
+## The fill of one art id instead of `face_fill` (id -> fill): the player's first-person arm carries part of the face zone (its warm skin), and at
+## night the faces' fill made it the brightest thing in the frame (the lead's call after LD-INK2, round 3). Ids not listed take `face_fill`.
+@export var face_fill_by_id: Dictionary = {}
 ## The catchlights and the lens glints (the ink map's A), drawn unlit.
 @export_range(0.0, 2.0) var catch_strength: float = 1.0
 @export var catch_color: Color = Color(1.0, 0.96, 0.86)
@@ -40,6 +43,11 @@ extends VideoLookPiece
 ## Make cine_toon.gdshader read paint_tex and ink_tex with UV2 (the UV1 of the art is the palette's swatches, the UV2 is the layout the
 ## textures are made in). A runtime edit of the loaded shader's source, until the shader itself does it (docs/video/calls/ld-asset.md).
 @export var layout_uv: bool = true
+
+
+## The face zone's fill of art `id`: its entry in `face_fill_by_id`, else `face_fill`.
+func face_fill_of(id: StringName) -> float:
+	return float(face_fill_by_id.get(String(id), face_fill))
 
 
 ## Add the art rig under `level` (once) and start it.

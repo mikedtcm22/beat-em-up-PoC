@@ -4,3 +4,6 @@
 
 [resource]
 script = ExtResource("1_art")
+face_fill_by_id = {
+"player": 0.15
+}
