@@ -1,6 +1,6 @@
 {
  "milestone": "v",
- "summary": "Look-dev round 3, second wave (docs/video/PLAN.md): line, grade and delivery on the merged round 3 look; and SHOTS, Phase 2's acts and cameras",
+ "summary": "Look-dev round 3, second wave (docs/video/PLAN.md): line, grade and delivery on the merged round 3 look",
  "plan": "docs/video/P1.md",
  "base": "video/cinematic-trailer",
  "read_first": [
@@ -15,11 +15,6 @@
    "key": "LD-INK2",
    "section": "§ LD-INK2",
    "est": 15
-  },
-  {
-   "key": "SHOTS",
-   "section": "§ SHOTS",
-   "est": 18
   }
  ]
 }

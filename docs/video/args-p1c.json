@@ -1,6 +1,6 @@
 {
  "milestone": "v",
- "summary": "Look-dev round 3 of the cinematic gameplay video (docs/video/PLAN.md), after Gate 2: the world drawn rather than tiled, and the cast without holes, with a drawn arm and faces that read",
+ "summary": "Look-dev round 3 of the cinematic gameplay video (docs/video/PLAN.md), after Gate 2: the world drawn rather than tiled (with Game-boy's approved Gemini backdrops), the cast without holes, with a drawn arm and faces that read; and SHOTS, Phase 2's acts and cameras",
  "plan": "docs/video/P1.md",
  "base": "video/cinematic-trailer",
  "read_first": [
@@ -21,6 +21,11 @@
    "section": "§ LD-ART2",
    "est": 15,
    "blender": true
+  },
+  {
+   "key": "SHOTS",
+   "section": "§ SHOTS",
+   "est": 18
   }
  ]
 }
