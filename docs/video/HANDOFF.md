@@ -6,6 +6,19 @@ The cinematic gameplay video's live status, kept by the video session ("Beat-em-
 
 ## Status (newest first)
 
+### 2026-11-09 03:55 CST: resumed after the reset; round 4 running (R4-INK, R4-ART, R4-WORLD, R4-SHOTS)
+- **The reset came at 03:40.** The 5-hour window is at 0%, and weekly at 48% (it resets 2026-11-10 15:59 CST). The resume task fired at 03:50. The watcher and the relay were asked to restart their loops; both turns started.
+- **No reply from Game-boy** in the DM (the newest message is ours, 01:06). So round 4 runs without the per-shot Gemini paint-overs, as the DM said. Plan B stays on hold.
+- **Round 4's packages** are in [P1.md](P1.md), from "What round 3 found" on, with [args-p1e.json](args-p1e.json):
+  - **R4-INK** (`mv/r4-ink`): a brush pass that paints the world's pixels (anisotropic Kuwahara, flat values, a world-anchored hand wobble) before the lines; the delivery matched to the references by measure (`deliver_scale`); more contrast in line weight.
+  - **R4-ART** (`mv/r4-art`, Blender): a designed cel shadow shape (no noise terminator), hatching along the form only in close-up shadow, Ox's face simplified, no mirrored gloves, the arm as a drawn foreground form.
+  - **R4-WORLD** (`mv/r4-world`): steam as drawn cel shapes, painted shafts or none, hand-shaped pools, tapered leaning poles, values organised by the light (detail kept, at full contrast only in the light), moonlit top planes, no twin props.
+  - **R4-SHOTS** (`mv/r4-shots`): a first-person lens of about 70-75 degrees across (from 90), asymmetric poses, no copies in one frame, the blind set kept comparable, the trailer re-rendered at 720p, t09's rear warning checked.
+- **Running:** the Workflow `build.js`, run `wf_eba65c14-c95` (task `ws0q75xtc`), two at a time in that order.
+- **Weekly budget:** a full 5-hour window costs about 15 weekly points, so this week has room for about two more windows after this one before the weekly 90%.
+- **Next:** when the builders land, merge them, run the video tests and the protected diff, render the round 3 set as round 4, look, run the blind check (three judges, the same prompt), and DM Game-boy.
+
+
 ### 2026-11-09 01:20 CST: round 3 DM'd (not a match yet); handoff at 86%, nothing running; resume at the 03:40 reset
 - **The blind check** (`wf_5a5751c7-441`, three Opus judges, about 12 points, more than the estimate) ran on our frames after a streaming-like encode:
   - all 8 references called drawn (p_3d 0.04-0.13), and all 7 of ours called 3D;
