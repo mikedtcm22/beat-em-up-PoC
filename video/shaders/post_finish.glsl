@@ -11,12 +11,13 @@
 //    when the delivery is switched off, for an A/B.
 //  - A static paper grain (fixed to the FRAME: its cells come from the pixel position and the paper seed), a vignette and a little
 //    chromatic aberration (radial, zero at the centre).
-// Two dispatches: the first writes the finished frame to a temp image reading the colour with offsets, the second copies it back.
+// Four dispatches (0 and 1 only when the re-scale is on): the first two are the delivery's re-scale; the third writes the finished frame to a temp image reading the colour with offsets, the fourth copies it back.
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 
 layout(rgba16f, set = 0, binding = 0) uniform image2D color_image;
 layout(rgba16f, set = 0, binding = 1) uniform image2D temp_image;
+layout(rgba16f, set = 0, binding = 2) uniform image2D small_image;
 
 layout(push_constant, std430) uniform Params {
 	vec2 size;
@@ -33,6 +34,7 @@ layout(push_constant, std430) uniform Params {
 	vec4 dark_tint;   // rgb the tint of the darks, a the share of it
 	vec4 dark_grade;  // x the darks' desaturation, y the luminance below which a pixel is dark, z where it is no longer, w the highlights' share
 	vec4 high_tint;   // rgb the highlights' multiplier
+	vec4 deliver;     // xy the re-scale's small size in pixels
 } p;
 
 float hash12(vec2 q) {
@@ -79,8 +81,49 @@ void main() {
 	if (id.x >= int(p.size.x) || id.y >= int(p.size.y)) {
 		return;
 	}
-	if (p.pass_id > 0.5) {
-		// Pass 2: the finished frame back into the colour.
+	if (p.pass_id < 0.5) {
+		// Pass 0 (the delivery's re-scale, down): the colour box-filtered to the small size, each small pixel the area average of the
+		// source pixels it covers.
+		if (id.x >= int(p.deliver.x) || id.y >= int(p.deliver.y)) {
+			return;
+		}
+		vec2 ratio = p.size / p.deliver.xy;
+		vec2 lo = vec2(id) * ratio;
+		vec2 hi = lo + ratio;
+		vec3 sum = vec3(0.0);
+		float wsum = 0.0;
+		for (int y = int(floor(lo.y)); y < int(ceil(hi.y)); y++) {
+			for (int x = int(floor(lo.x)); x < int(ceil(hi.x)); x++) {
+				float w = (min(float(x + 1), hi.x) - max(float(x), lo.x)) * (min(float(y + 1), hi.y) - max(float(y), lo.y));
+				sum += load_color(ivec2(x, y)) * w;
+				wsum += w;
+			}
+		}
+		imageStore(small_image, id, vec4(sum / max(wsum, 0.0001), 1.0));
+		return;
+	}
+	if (p.pass_id < 1.5) {
+		// Pass 1 (the re-scale, up): bicubic (Catmull-Rom) from the small image back into the colour.
+		vec2 u = (vec2(id) + 0.5) * p.deliver.xy / p.size - 0.5;
+		vec2 f = fract(u);
+		ivec2 i0 = ivec2(floor(u));
+		vec2 w0 = ((-0.5 * f + 1.0) * f - 0.5) * f;
+		vec2 w1 = (1.5 * f - 2.5) * f * f + 1.0;
+		vec2 w2 = ((-1.5 * f + 2.0) * f + 0.5) * f;
+		vec2 w3 = (0.5 * f - 0.5) * f * f;
+		float wx[4] = float[](w0.x, w1.x, w2.x, w3.x);
+		float wy[4] = float[](w0.y, w1.y, w2.y, w3.y);
+		vec3 sum = vec3(0.0);
+		for (int j = 0; j < 4; j++) {
+			for (int i = 0; i < 4; i++) {
+				sum += imageLoad(small_image, clamp(i0 + ivec2(i - 1, j - 1), ivec2(0), ivec2(p.deliver.xy) - 1)).rgb * (wx[i] * wy[j]);
+			}
+		}
+		imageStore(color_image, id, vec4(max(sum, vec3(0.0)), 1.0));
+		return;
+	}
+	if (p.pass_id > 2.5) {
+		// Pass 3: the finished frame back into the colour.
 		imageStore(color_image, id, imageLoad(temp_image, id));
 		return;
 	}

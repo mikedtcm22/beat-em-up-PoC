@@ -7,6 +7,7 @@ shader_type spatial;
 //    space) gets the thin width, one that faces away gets the heavy width: heavy on the shadow side, thin or
 //    gone on the rim side.
 //  - IT THINS WITH DISTANCE (far_thin from thin_start_m to thin_end_m), for the mid and wide shots.
+//  - NEAR IS HEAVY (round 4): `near_mult` at the lens falling to 1 by near_end_m, so a near figure's line is heavier in pixels than a far one's.
 //  - IT WANDERS: a noise in the object's own space varies the width along the contour.
 //  - IT TAPERS AND BREAKS (round 3). A second, slower noise swells and pinches the width along the contour
 //    (`taper_amount`), and on the lit side the line is let go altogether where that noise is low (`break_amount`),
@@ -38,6 +39,10 @@ uniform vec2 key_range = vec2(-0.25, 0.65);
 uniform float far_thin : hint_range(0.0, 1.0) = 0.45;
 uniform float thin_start_m : hint_range(0.0, 60.0) = 5.0;
 uniform float thin_end_m : hint_range(1.0, 100.0) = 20.0;
+// Near figures draw a heavier line (round 4): the multiplier at the lens, from near_start_m (full) to near_end_m (gone), on top of far_thin.
+uniform float near_mult : hint_range(0.5, 4.0) = 1.0;
+uniform float near_start_m : hint_range(0.0, 20.0) = 1.5;
+uniform float near_end_m : hint_range(0.1, 40.0) = 5.0;
 // The wander along the contour: its strength (a share of the width) and the cells per metre.
 uniform float wander : hint_range(0.0, 1.0) = 0.45;
 uniform float wander_scale : hint_range(0.5, 40.0) = 7.0;
@@ -100,6 +105,7 @@ void vertex() {
 	float facing = dot(n_view, normalize(key_dir_view));
 	float weight = mix(heavy_mult, thin_mult, smoothstep(key_range.x, key_range.y, facing));
 	weight *= mix(1.0, far_thin, smoothstep(thin_start_m, max(thin_end_m, thin_start_m + 0.01), dist));
+	weight *= mix(near_mult, 1.0, smoothstep(near_start_m, max(near_end_m, near_start_m + 0.01), dist));
 	// Wander along the contour, in the object's own space (the skinned vertex, so it follows the body).
 	float seed = boil_seed * 7.13 + pass_id * 19.7;
 	weight *= 1.0 + wander * (vnoise(VERTEX * wander_scale + vec3(pass_id * 3.7)) - 0.5) * 2.0;

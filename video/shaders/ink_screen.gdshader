@@ -57,6 +57,16 @@ uniform vec2 term_stops = vec2(0.9, 1.7);
 uniform float term_px : hint_range(0.5, 6.0) = 1.6;
 // The mip level the colour is read at (the paint's grain and brush noise blur out, the band edges stay).
 uniform float term_lod : hint_range(0.0, 4.0) = 1.2;
+// Round 4's line hierarchy on characters: a depth step where a NEAR form overlaps a FAR one draws `overlap_mult` times as wide; a character's inner
+// (crease and terminator) lines are `inner_px_scale` as wide; and the width is `near_gain` at `dist_near_m` or nearer, 1 at `dist_mid_m` and `far_gain` at
+// `dist_far_m` or beyond (a near figure's line is heavier in pixels than a far one's).
+uniform float overlap_mult : hint_range(1.0, 4.0) = 1.0;
+uniform float inner_px_scale : hint_range(0.2, 1.0) = 1.0;
+uniform float near_gain : hint_range(0.5, 4.0) = 1.0;
+uniform float far_gain : hint_range(0.2, 1.0) = 1.0;
+uniform float dist_near_m : hint_range(0.1, 10.0) = 1.5;
+uniform float dist_mid_m : hint_range(0.5, 30.0) = 5.0;
+uniform float dist_far_m : hint_range(1.0, 80.0) = 18.0;
 uniform float env_weight : hint_range(0.0, 1.0) = 1.0;
 uniform float inner_weight : hint_range(0.0, 1.0) = 1.0;
 uniform vec3 sep_color : source_color = vec3(0.02, 0.02, 0.06);
@@ -147,7 +157,12 @@ void fragment() {
 	float heavy_t = smoothstep(lit_lost, lit_full, lf);
 	float width = mix(width_thin_px, width_heavy_px, heavy_t);
 	float strength = mix(lit_floor, 1.0, heavy_t);
+	if (character) {
+		width *= mix(near_gain, 1.0, smoothstep(dist_near_m, max(dist_mid_m, dist_near_m + 0.01), z0));
+		width *= mix(1.0, far_gain, smoothstep(dist_mid_m, max(dist_far_m, dist_mid_m + 0.01), z0));
+	}
 	int k = max(1, int(round(width * scale)));
+	int k_inner = max(1, int(round(width * inner_px_scale * scale)));
 
 	// Depth lines (as edge_pass): the second difference of 1/z, on the nearer side of a step.
 	float w0 = 1.0 / z0;
@@ -163,12 +178,24 @@ void fragment() {
 	float thr = depth_threshold * (character ? 1.0 : 1.0 + z0 / env_major_m);
 	float depth_line = smoothstep(thr * 0.5, thr, near_side);
 	float depth_gate = 1.0 - smoothstep(thr * 0.5, thr, step_any);
+	// Where a near form overlaps a far one (a big step in 1/z), the line is wider: the same test with a wider tap.
+	if (character && overlap_mult > 1.0) {
+		int kw = max(k + 1, int(round(width * overlap_mult * scale)));
+		float wl2 = 1.0 / view_distance(p + ivec2(-kw, 0), size, ip);
+		float wr2 = 1.0 / view_distance(p + ivec2(kw, 0), size, ip);
+		float wu2 = 1.0 / view_distance(p + ivec2(0, -kw), size, ip);
+		float wd2 = 1.0 / view_distance(p + ivec2(0, kw), size, ip);
+		float near_side2 = max((w0 - 0.5 * (wl2 + wr2)) / w0, (w0 - 0.5 * (wu2 + wd2)) / w0);
+		// Only a big step counts (a body part in front of the background, a near arm over the torso), and only on the nearer side.
+		float big = smoothstep(0.5, 1.0, near_side2);
+		depth_line = max(depth_line, big * 0.8);
+	}
 
 	// Creases from the normals, where the depth is continuous: characters, and the world only up close.
 	float crease_line = 0.0;
 	if (has_normal && (character || z0 < env_major_m)) {
 		float sharp = 0.0;
-		ivec2 taps[2] = ivec2[](ivec2(k, 0), ivec2(0, k));
+		ivec2 taps[2] = ivec2[](ivec2(k_inner, 0), ivec2(0, k_inner));
 		for (int i = 0; i < 2; i++) {
 			ivec2 q = clamp(p + taps[i], ivec2(0), size - 1);
 			vec4 nrq = texelFetch(normal_tex, q, 0);
@@ -183,7 +210,7 @@ void fragment() {
 	// The terminator line: a paint step inside a character (both sides are the same figure, the depth continuous), drawn on its dark side.
 	float term = 0.0;
 	if (term_line > 0.0 && character) {
-		int kt = max(1, int(round(term_px * scale)));
+		int kt = max(1, int(round(term_px * inner_px_scale * scale)));
 		vec3 c0 = max(textureLod(screen_tex, (vec2(p) + 0.5) / vec2(size), term_lod).rgb, vec3(0.0005));
 		float l0 = dot(c0, vec3(0.2126, 0.7152, 0.0722));
 		ivec2 taps4[4] = ivec2[](ivec2(kt, 0), ivec2(-kt, 0), ivec2(0, kt), ivec2(0, -kt));
