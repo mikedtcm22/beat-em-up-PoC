@@ -190,6 +190,8 @@ func stage(shot: VideoStillShot) -> void:
 		viewer = base + shot.cam_pos
 	for spec in shot.actors:
 		_place_actor(spec, base, viewer)
+	if shot is CineShot:
+		_place_props(shot as CineShot, base)
 	if not shot.first_person:
 		_place_free_camera(shot, base, viewer)
 	for _tick in shot.warmup_ticks:
@@ -264,11 +266,31 @@ func _place_actor(spec: VideoStillActor, base: Vector3, viewer: Vector3) -> void
 		ShowcaseRunner.unplug(enemy)
 	enemy.global_position = at
 	enemy.rotation.y = yaw
+	if spec.health > 0.0:
+		enemy.max_health = spec.health
+		enemy.health = spec.health
+	if spec.health_share > 0.0:
+		enemy.health = enemy.max_health * spec.health_share
 	if not spec.live:
 		enemy.rig.play(spec.anim, 0.0)
 		enemy.rig.advance(float(spec.hold_tick) / float(Engine.physics_ticks_per_second))
 	_stage_actors.append(enemy)
 	log_line("STILL actor %s at %s head %s" % [spec.id, at, enemy.rig.get_point_position(HEAD_POINT)])
+
+
+## The weapons of a cine shot, lying on the floor on their sides (as the weapon acts lay them).
+func _place_props(shot: CineShot, base: Vector3) -> void:
+	for spec in shot.props:
+		var def := WeaponCatalog.get_def(spec.id)
+		if def == null:
+			log_line("STILL prop %s is not a weapon" % spec.id)
+			continue
+		var weapon := def.scene.instantiate() as Weapon
+		room.add_child(weapon)
+		weapon.global_position = base + spec.position + Vector3.UP * 0.2
+		weapon.global_rotation = Vector3(0.0, deg_to_rad(spec.yaw_deg) + PI * 0.5, PI * 0.5)
+		_props.append(weapon)
+		log_line("STILL prop %s at %s" % [spec.id, base + spec.position])
 
 
 ## Video-only lamp posts: a pole, an arm and a glowing head (the game has no lamps).

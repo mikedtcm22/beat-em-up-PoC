@@ -55,7 +55,7 @@ func test_a_shot_scene_is_a_cine_bot_with_its_shot() -> void:
 func test_every_shot_is_well_formed() -> void:
 	for scene_name in _scene_names():
 		var shot := _shot_of(scene_name)
-		assert_false(shot.actors.is_empty(), "%s: has an actor" % scene_name)
+		assert_true(not shot.actors.is_empty() or (shot is CineShot and not shot.first_person), "%s: has an actor (only a free-camera shot may be empty)" % scene_name)
 		for spec in shot.actors:
 			assert_not_null(EnemyCatalog.scene(spec.id), "%s: catalog id %s" % [scene_name, spec.id])
 		assert_true(shot.section >= 0 and shot.section <= 2, "%s: a section" % scene_name)
@@ -74,11 +74,21 @@ func test_every_shot_is_well_formed() -> void:
 				assert_lte(moving.camera_keys[0].time_s, moving.window_from_s, "%s: the path starts with the window" % scene_name)
 
 
-func test_the_moving_shot_is_five_seconds_of_first_person_punches() -> void:
+func test_the_moving_shot_is_first_person_punches_that_end_with_the_action() -> void:
 	var shot := load("res://video/shots/moving_punk.tres") as CineShot
 	assert_true(shot.first_person)
-	assert_eq(shot.window_to_s - shot.window_from_s, 5.0, "5 s")
-	assert_eq(shot.window_ticks(60), 300)
+	# SHOTS (Gate 2's finding 10): the shot was 5 s (300 ticks) with a static tail; it ends 1.1 s after the last punch (the launch and the fall).
+	assert_eq(shot.window_to_s - shot.window_from_s, 3.4, "3.4 s")
+	assert_eq(shot.window_ticks(60), 204)
+	var last_punch := 0.0
+	var tilts := 0
+	for beat in shot.beats:
+		if beat.kind == CineBeat.Kind.PRESS and beat.button == &"P":
+			last_punch = maxf(last_punch, beat.at_s)
+		if beat.kind == CineBeat.Kind.PITCH and beat.degrees > 0.0:
+			tilts += 1
+	assert_lte(shot.window_to_s - last_punch, 1.3, "the window ends soon after the last punch: no static tail")
+	assert_gte(tilts, 1, "the view tilts up as the player closes in, so the Punk's head stays in frame")
 	var punches := 0
 	for beat in shot.beats:
 		if beat.kind == CineBeat.Kind.PRESS and beat.button == &"P":

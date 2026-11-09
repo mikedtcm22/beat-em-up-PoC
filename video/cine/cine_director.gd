@@ -26,6 +26,8 @@ var _clock_start: int = 0
 var _origin: Vector3 = Vector3.ZERO
 var _actors: Array[Node3D] = []
 var _head_point: StringName = &"Head"
+## The video's frame rate (the frame writer's).
+var out_fps: int = 24
 
 
 func _init() -> void:
@@ -36,7 +38,7 @@ func _init() -> void:
 func _process(_delta: float) -> void:
 	if camera != null and is_instance_valid(camera):
 		_track_actors()
-		camera.set_time(clock_s())
+		camera.set_time(camera_time_s())
 
 
 # --- the pieces --------------------------------------------------------------------------
@@ -90,6 +92,7 @@ func direct(p_level: Node, p_shot: VideoStillShot, skip: PackedStringArray = Pac
 			piece = override_piece(piece, path.get_file(), overrides)
 			pieces.append(piece)
 			piece.apply(level)
+	remember_overlays()
 	hide_overlays(level)
 	seed_rngs(level, shot.rng_seed if shot is CineShot else 1)
 	apply_presentation()
@@ -127,6 +130,12 @@ func has_world_piece() -> bool:
 
 
 # --- the overlays, the seeds, the presentation --------------------------------------------
+
+
+## Keep the centre dot's setting (the overlays' hiding turns it off), so `restore()` puts it back.
+func remember_overlays() -> void:
+	if not _saved.has(&"show_center_dot"):
+		_saved[&"show_center_dot"] = Tuning.data.show_center_dot
 
 
 ## The HUD (every CanvasLayer of the level) and the debug draw hidden: only the world reaches a frame.
@@ -174,6 +183,18 @@ func restore() -> void:
 
 
 # --- the clock and the camera --------------------------------------------------------------
+
+
+## The time the camera path is sampled at: the exact time of the output frame the clock is in (n / out_fps), not of the tick. The
+## frame writer keeps the first tick of each output frame, and those ticks are 3 and 2 ticks apart at 24 fps (0, 3, 5, 8, 10, 13), so a
+## path sampled at the pick tick's own time steps unevenly: sampled at n / 24 it steps evenly.
+func camera_time_s() -> float:
+	return camera_time(clock_ticks(), Engine.physics_ticks_per_second, out_fps)
+
+
+## The time of the output frame tick `tick` is in (`sim_fps` ticks a second, `fps` frames).
+static func camera_time(tick: int, sim_fps: int, fps: int) -> float:
+	return float(CineFrameWriter.output_index(tick, sim_fps, fps)) / float(fps)
 
 
 ## Zero the shot clock now: the staging is over.

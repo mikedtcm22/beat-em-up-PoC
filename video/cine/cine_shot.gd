@@ -16,8 +16,16 @@ extends VideoStillShot
 @export var beats: Array[CineBeat] = []
 ## A free camera's path. Empty: one still key from `cam_pos`, `cam_look_at` and `cam_fov_deg`. Ignored in first person.
 @export var camera_keys: Array[CineCameraKey] = []
+## Weapons lying on the floor when the shot starts.
+@export var props: Array[CineProp] = []
 ## The game's screen shake as a share of its own (negative leaves the game's setting). A cine shot is calmer.
 @export_range(-1.0, 3.0) var shake_scale: float = -1.0
+## The act's number in the shot list (PLAN.md §5) and the time the edit places it at, in seconds, for the animatic's order.
+@export_range(0, 40) var number: int = 0
+@export_range(0.0, 60.0) var edit_start_s: float = 0.0
+## The simulation's time scale the shot is cut at in the edit (0.25 for the slow-motion shots), for the cut list; the slow-motion
+## itself is a SLOWMO beat, through TimeController.
+@export_range(0.05, 1.0) var edit_speed: float = 1.0
 ## Seed of the effect and audio directors' rngs for this shot.
 @export var rng_seed: int = 1
 

@@ -1,0 +1,69 @@
+[gd_resource type="Resource" script_class="CineShot" load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://video/cine/cine_shot.gd" id="1_shot"]
+[ext_resource type="Script" path="res://video/stage/still_actor.gd" id="2_actor"]
+[ext_resource type="Script" path="res://video/cine/cine_beat.gd" id="3_beat"]
+[ext_resource type="Script" path="res://video/cine/cine_camera_key.gd" id="4_key"]
+
+[sub_resource type="Resource" id="Beat_0"]
+script = ExtResource("3_beat")
+at_s = 0.5
+relative = false
+kind = 10
+trigger = 0
+timeout_s = 3
+actor = 0
+lead_ticks = 8
+button = &"P"
+hold_ticks = 2
+stick = Vector2(0, 0)
+degrees = 0
+seconds = 0
+time_scale = 0.3
+attack_index = 0
+label = &"title_in"
+
+[sub_resource type="Resource" id="Key_0"]
+script = ExtResource("4_key")
+time_s = 0
+position = Vector3(2, 1.6, -10)
+look_at = Vector3(14, 5, -10)
+target_actor = -1
+fov_deg = 70
+focus_m = 0
+focus_range_m = 3
+roll_deg = 0
+ease = 1
+
+[sub_resource type="Resource" id="Key_1"]
+script = ExtResource("4_key")
+time_s = 4
+position = Vector3(3, 2.2, -10)
+look_at = Vector3(14, 6.5, -9)
+target_actor = -1
+fov_deg = 64
+focus_m = 0
+focus_range_m = 3
+roll_deg = 0
+ease = 1
+
+[resource]
+script = ExtResource("1_shot")
+key = &"t14_title_embers"
+note = "Shot 14 (0:37-0:41): the title card's background, a slow drift across the burning skyline with embers; the title is set in the edit."
+section = 2
+location = &""
+number = 14
+edit_start_s = 37
+edit_speed = 1
+player_pos = Vector3(0, 0, -1.5)
+player_yaw_deg = 0
+player_pitch_deg = 0
+first_person = false
+actors = Array[ExtResource("2_actor")]([])
+warmup_ticks = 40
+window_from_s = 0
+window_to_s = 4
+rng_seed = 1
+beats = Array[ExtResource("3_beat")]([SubResource("Beat_0")])
+camera_keys = Array[ExtResource("4_key")]([SubResource("Key_0"), SubResource("Key_1")])

@@ -1,0 +1,85 @@
+[gd_resource type="Resource" script_class="CineShot" load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://video/cine/cine_shot.gd" id="1_shot"]
+[ext_resource type="Script" path="res://video/stage/still_actor.gd" id="2_actor"]
+[ext_resource type="Script" path="res://video/cine/cine_beat.gd" id="3_beat"]
+
+[sub_resource type="Resource" id="Actor_0"]
+script = ExtResource("2_actor")
+id = &"punk"
+position = Vector3(-3, 0, -5.9)
+facing = 1
+yaw_deg = 0
+anim = &"idle"
+hold_tick = 0
+live = true
+health = 200
+health_share = 0
+
+[sub_resource type="Resource" id="Actor_1"]
+script = ExtResource("2_actor")
+id = &"kicker"
+position = Vector3(-3.6, 0, -11.5)
+facing = 1
+yaw_deg = 0
+anim = &"idle"
+hold_tick = 0
+live = false
+health = 0
+health_share = 0
+
+[sub_resource type="Resource" id="Beat_0"]
+script = ExtResource("3_beat")
+at_s = 0.3
+relative = false
+kind = 8
+trigger = 0
+timeout_s = 3
+actor = 0
+lead_ticks = 8
+button = &"P"
+hold_ticks = 2
+stick = Vector2(0, 0)
+degrees = 0
+seconds = 0
+time_scale = 0.3
+attack_index = 0
+label = &""
+
+[sub_resource type="Resource" id="Beat_1"]
+script = ExtResource("3_beat")
+at_s = 0
+relative = true
+kind = 0
+trigger = 1
+timeout_s = 3
+actor = 0
+lead_ticks = 9
+button = &"RB"
+hold_ticks = 2
+stick = Vector2(0, 0)
+degrees = 0
+seconds = 0
+time_scale = 0.3
+attack_index = 0
+label = &""
+
+[resource]
+script = ExtResource("1_shot")
+key = &"t09_back_elbow"
+note = "Shot 9 (0:19-0:21): the rear warning flashes for a Punk behind; the back elbow turns the view 150 degrees into him."
+section = 1
+location = &""
+number = 9
+edit_start_s = 19
+edit_speed = 1
+player_pos = Vector3(-3, 0, -7)
+player_yaw_deg = 0
+player_pitch_deg = -2
+first_person = true
+actors = Array[ExtResource("2_actor")]([SubResource("Actor_0"), SubResource("Actor_1")])
+warmup_ticks = 40
+window_from_s = 0
+window_to_s = 2
+rng_seed = 1
+beats = Array[ExtResource("3_beat")]([SubResource("Beat_0"), SubResource("Beat_1")])

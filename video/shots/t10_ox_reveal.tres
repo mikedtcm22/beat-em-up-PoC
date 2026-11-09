@@ -1,0 +1,99 @@
+[gd_resource type="Resource" script_class="CineShot" load_steps=10 format=3]
+
+[ext_resource type="Script" path="res://video/cine/cine_shot.gd" id="1_shot"]
+[ext_resource type="Script" path="res://video/stage/still_actor.gd" id="2_actor"]
+[ext_resource type="Script" path="res://video/cine/cine_beat.gd" id="3_beat"]
+[ext_resource type="Script" path="res://video/cine/cine_camera_key.gd" id="4_key"]
+
+[sub_resource type="Resource" id="Actor_0"]
+script = ExtResource("2_actor")
+id = &"boss"
+position = Vector3(8, 0, -10)
+facing = 1
+yaw_deg = 0
+anim = &"idle"
+hold_tick = 0
+live = false
+health = 0
+health_share = 0
+
+[sub_resource type="Resource" id="Beat_0"]
+script = ExtResource("3_beat")
+at_s = 1.2
+relative = false
+kind = 9
+trigger = 0
+timeout_s = 3
+actor = 0
+lead_ticks = 8
+button = &"P"
+hold_ticks = 2
+stick = Vector2(0, 0)
+degrees = 0
+seconds = 0
+time_scale = 0.3
+attack_index = 0
+label = &"taunt"
+
+[sub_resource type="Resource" id="Beat_1"]
+script = ExtResource("3_beat")
+at_s = 1
+relative = true
+kind = 10
+trigger = 0
+timeout_s = 3
+actor = 0
+lead_ticks = 8
+button = &"P"
+hold_ticks = 2
+stick = Vector2(0, 0)
+degrees = 0
+seconds = 0
+time_scale = 0.3
+attack_index = 0
+label = &"name_card"
+
+[sub_resource type="Resource" id="Key_0"]
+script = ExtResource("4_key")
+time_s = 0
+position = Vector3(2.6, 0.45, -10.6)
+look_at = Vector3(8, 1.7, -10)
+target_actor = -1
+fov_deg = 58
+focus_m = 0
+focus_range_m = 3
+roll_deg = 0
+ease = 1
+
+[sub_resource type="Resource" id="Key_1"]
+script = ExtResource("4_key")
+time_s = 4
+position = Vector3(4.5, 0.4, -10.2)
+look_at = Vector3(8, 2, -10)
+target_actor = -1
+fov_deg = 46
+focus_m = 0
+focus_range_m = 3
+roll_deg = 0
+ease = 1
+
+[resource]
+script = ExtResource("1_shot")
+key = &"t10_ox_reveal"
+note = "Shot 10 (0:21-0:25): a low angle, slow push-in on Ox Pellerin, rim-lit against fire and smoke; he raises his gloves. The name card OX PELLERIN is the edit's (mark at 2.2 s)."
+section = 2
+location = &""
+number = 10
+edit_start_s = 21
+edit_speed = 1
+player_pos = Vector3(0, 0, -1.5)
+player_yaw_deg = 0
+player_pitch_deg = 0
+first_person = false
+actors = Array[ExtResource("2_actor")]([SubResource("Actor_0")])
+warmup_ticks = 40
+window_from_s = 0
+window_to_s = 4
+rng_seed = 1
+beats = Array[ExtResource("3_beat")]([SubResource("Beat_0"), SubResource("Beat_1")])
+camera_keys = Array[ExtResource("4_key")]([SubResource("Key_0"), SubResource("Key_1")])
