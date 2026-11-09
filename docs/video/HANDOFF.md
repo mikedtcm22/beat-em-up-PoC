@@ -6,6 +6,50 @@ The cinematic gameplay video's live status, kept by the video session ("Beat-em-
 
 ## Status (newest first)
 
+### 2026-11-09 16:05 CST: round 5's blind check (the first movement) DM'd; handoff at weekly 85%, resume after the weekly reset (2026-11-10 16:00 CST)
+- **The blind check** (`wf_7b259cfc-8b0`, three judges, the hero frames at crf 23): all 8 references drawn (0.05-0.15). Ours are still all called 3D, **but every frame type moved for the first time:**
+
+  | Frame type | Hero frame | Round 5 | Round 4 |
+  | --- | --- | --- | --- |
+  | Ox wide | t10 | 0.78 | 0.88 |
+  | Ox close | t12 | 0.81 | 0.89 |
+  | Roof against the sun | t07 | 0.86 | 0.91 |
+  | Street wide | t01 | 0.89 | 0.97 |
+  | First-person street | t04, t03 | 0.89, 0.92 | 0.95 |
+  | First-person roof | t08 | 0.93 | — |
+
+  - **The painted backgrounds read as drawn** ("the explosion reads as drawn ... only the figure gives the frame away").
+- **The tells now are the characters:**
+  1. rims and light wrap made by a noise threshold (jagged bands of constant width, orange flecks inside the figures, white blotches on the Kicker), not designed shapes;
+  2. faceted low-poly forms (fists, sleeves, hoods), mitten fists, faces lost in crushed black;
+  3. one outline treatment with an even jitter, doubled by a pale or orange halo at a constant offset;
+  4. in the first-person shots, details in exact perspective (the fence's X glints, windows, a car), and one brick-cluster decal repeated;
+  5. depth-graded DOF and bloom.
+- **The judges' confound,** "ours look pristine": measured with `tools/video/r4_delivery_meter.py`. **Ours are already as soft as the references, or softer** (10-90% edge widths of 3-6 px against 3.2-4.8 px). But their flat fills have **almost no high-frequency texture** (radial hf 0.002-0.016 against the references' 0.013-0.067: grain, painted texture, compression noise). A YouTube-like re-encode (to 1080p at crf 31 and back) only softens further, so the judge run for it was skipped. Round 6 should add grain and texture to the fills to the references' hf, not more softening.
+- **Sent to Game-boy at 16:00** (DM: the sheet `F0CGCB3AS7N` with the message). **One open question:** about $1.50 more of Gemini (6-10 images, beyond the $5 cap) for full-frame paint-overs, characters included, held 1-1.5 s on the close-ups' key beats (Ox's reveal, the knockout). Without an answer, round 6 is code only.
+- **Gemini:** $4.34 of the $5 cap; $0.18 is left. **Open for later:** the 7 trailer shots without a plate (t02, t05, t06, t09, t11, t13; t14 is multiplane) need about $1 of plates for the final trailer, which is a future ask.
+- **Round 6, the plan** (code; write it as packages at the resume):
+  - **R6-ART, characters designed not computed:**
+    - a clean, tapered rim on the light side only (its width a designed function of the back light, no noise threshold, no flecks inside the figure);
+    - smooth silhouettes on near forms (subdivided or smoothed normals on the near characters' arms and gloves, and on the first-person arm);
+    - faces with drawn features readable in shadow (a brow line, the eye shapes with glints, a lit lower face) instead of a black void;
+    - fists with drawn knuckles and finger breaks seen from the camera.
+  - **R6-INK:**
+    - the outline as a weight hierarchy (taper, heavier on the shadow side, lost on the light side), with no halo at a constant offset;
+    - the light wrap off, or designed;
+    - interior fold lines;
+    - grain and painted texture on the fills (characters and plates) to the references' hf, with a little banding.
+  - **R6-SHOTS:** a defocused or simplified background behind the near figures in the first-person shots (the references' close-ups blur and simplify behind the figure); the 14 shots at 720p again (R5-SHOTS skipped it).
+  - **If Game-boy says yes:** the full-frame held paint-overs.
+- **The resume task** `beat-em-up-video-resume-20261108-2230` (Auto mode) is re-armed for **2026-11-10 16:10 CST**, after the weekly reset. The watcher and the relay are stopped until then (their check-ins woke the lead at about 1.5 points a turn).
+- **Resume steps:**
+  1. get_usage; restart the watcher and the relay;
+  2. read Game-boy's DM;
+  3. write the round 6 packages (P1.md, "What round 5 found") and run `tools/video/build_weekly.js`;
+  4. merge, render the hero frames (`tools/video/shoot_hero.sh`), run the blind check (three judges; our frames at crf 23 as before), and DM.
+  - **The lead's context is about 550k tokens:** expect a compaction.
+
+
 ### 2026-11-09 15:30 CST: the hero plates made and rendered; the round 5 blind check running
 - **The plates builder** (Sonnet, `55a1dab`, pushed):
   - The video tests pass, 221 of 221, and all 7 hero frames render with problems=0 (into `captures/video/round5/`).
