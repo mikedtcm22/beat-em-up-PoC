@@ -73,7 +73,10 @@ The cinematic gameplay video's live status, kept by the video session ("Beat-em-
      - Then merge, and paste the code lens's determinism finding into § LD-INK2, item 4.
      - Wave B is [args-p1d.json](args-p1d.json): LD-INK2 and SHOTS.
      - Each wave is about 30-35% of a 5-hour window on this seat.
-  4. Confirm the watcher and the relay are running. If they aren't, start them only in a turn Game-boy typed, or propose them as cards.
+  4. **Restart the watcher's loop first.** It was stopped at 19:50 on purpose: its 5-minute checks were waking this session and driving the window from 89% to 90%.
+     - Message the session "Beat-em-up: video usage watcher" (`local_c2874de8-2c55-4e84-9a63-fad9685e32df`) to start its loop again with the PLAN.md §12 watcher prompt. Messaging an existing session works from an automated turn.
+     - The relay is on hourly wakes until 22:30, then goes back to 20 minutes by itself.
+  5. Confirm the watcher and the relay are running. If they aren't, start them only in a turn Game-boy typed, or propose them as cards.
 
 ### 2026-11-08 18:55 CST: Phase 1b merged; the Gate 2 set rendered; the review round and the blind check running
 - **Merged** into `video/cinematic-trailer`:
