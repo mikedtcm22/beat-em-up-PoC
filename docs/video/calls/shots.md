@@ -36,3 +36,15 @@ Judged at 1280x720 blocking, beside the round 2 look (the pieces on `video/cinem
 ## Requests (files this package does not own)
 - **LD-INK2:** the rear warning of shot 9 is a HUD layer, and the frame writer's SubViewport draws no CanvasLayer, so the "rear warning flashes" beat is not in the picture. The cue pass needs its own restyled draw of it from `RearWarning`'s state (read only), or the shot's first second shows no warning.
 - **LD-ART2:** the black holes in the first-person arm show in t09 (a black disc in the middle of the frame) and t03/t11 (the cuff).
+
+## How to run it
+- **The list:** `tools/video/shoot_trailer.sh [out dir] [keys...]` renders `video/shots/t*.tscn` one after the other (default: all 14, 1280x720, no mask, into `captures/video/shots_blocking/<key>/`, about 25 s a shot and 6 minutes in all). Each shot folder holds `<key>.mkv`, `<key>_events.log` (the cue sheet), `<key>_stats.json`, `<key>.sha256` and `shoot.log`. The final renders: `TRAILER_SIZE=2560x1440 TRAILER_MASK=1 tools/video/shoot_trailer.sh captures/video/shots`. One shot: `tools/video/shoot.sh t05_grab_throw` (`SHOOT_ARGS="--shot-size=1280x720 --shot-mask=0"` for the blocking size; the other `--shot-*` switches are in `cine_bot.gd`'s header).
+- **A look:** `tools/video/shot_sheet.sh <shot.mkv> <out.png> [fps] [cols] [rows] [tile px]` (one shot's frames), `tools/video/shot_strips.sh <out.png> <tiles> <px> <mkv>...` (a row a shot).
+- **Change a shot:** edit its entry in `tools/video/gen_trailer_shots.py` and run `~/.venvs/beat-em-up-video/bin/python -I tools/video/gen_trailer_shots.py`; read the cue sheet (`beat #n ... player (x, z) actor0 (x, z)` says where the action was at each beat, and `end_state` where it ended) before the sheets.
+- **The cut list for the animatic:** `trailer_acts.cut_list()` (number, key, edit start, length, speed, location, FP or cine), or the shots' `number`/`edit_start_s`/`edit_speed`.
+- **The tests:** `godot --headless --fixed-fps 60 -s addons/gut/gut_cmdln.gd -gdir=res://video/tests -gexit` (114 now; 24 are SHOTS': `test_shots_list.gd`, `test_shots_script.gd`).
+- **`shoot.sh` failing:** with `FFMPEG=/nonexistent` a run exits 5 (and prints the writer's problem), where it used to exit 0.
+
+## The numbers (1280x720, no mask, this machine, the round 2 pieces)
+- 14 shots, 1,180 frames in all (the windows add up to 49 s of 24 fps, against the plan's 41 s: the edit trims, mostly shot 11), 0.03-0.05 s a frame, 0.05-0.15 MB a frame in the mezzanine, about 25 s a shot with the process start. At 2560x1440 the Gate 2 figure was 0.31 s a frame: the whole list is about 5 minutes of render.
+- Determinism: shots 5 and 11 rendered twice give identical cue sheets and 275 of 276 identical frames (the one differing frame is the renderer noise LD-INK2 is chasing).
