@@ -78,3 +78,99 @@ static func mote() -> ImageTexture:
 			var v := 1.0 if r < 0.45 else 0.7
 			image.set_pixel(x, y, Color(v, v, v, a))
 	return ImageTexture.create_from_image(image)
+
+
+# ---- Round 3 (LD-WORLD3): painted sprites with drawn, anti-aliased edges, in flipbooks of varied shapes ----
+## The atlases' frames (side by side) and one frame's size in pixels.
+const ATLAS_FRAMES := 4
+const EMBER_ATLAS_PX := 64
+const PUFF_ATLAS_PX := 192
+
+
+## The alpha of a signed distance `d` (negative inside), edge `aa` wide: a crisp edge with no stair-step.
+static func _cover(d: float, aa: float) -> float:
+	return 1.0 - smoothstep(-aa, aa, d)
+
+
+## An ember's signed distance for shape `kind` at p in [-1, 1]: a diamond, a round bit, a slanted shard and a four-point spark.
+static func _ember_sdf(kind: int, p: Vector2) -> float:
+	match kind:
+		0:
+			return (absf(p.x) + absf(p.y) - 0.78) * 0.7071
+		1:
+			return p.length() - 0.62
+		2:
+			var rot := p.rotated(0.6)
+			return (Vector2(rot.x / 0.3, rot.y / 0.92).length() - 1.0) * 0.3
+		_:
+			return (pow(absf(p.x), 0.55) + pow(absf(p.y), 0.55) - 0.95) * 0.34
+	return 1.0
+
+
+## Four ember shapes side by side (EMBER_ATLAS_PX each): a white-hot core in a dimmer rim, edges anti-aliased. Use `particles_anim_h_frames = ATLAS_FRAMES`.
+static func ember_atlas() -> ImageTexture:
+	var size := EMBER_ATLAS_PX
+	var image := Image.create(size * ATLAS_FRAMES, size, true, Image.FORMAT_RGBA8)
+	var aa := 2.2 / float(size)
+	for k in ATLAS_FRAMES:
+		for y in size:
+			for x in size:
+				var p := Vector2((x + 0.5) / size * 2.0 - 1.0, (y + 0.5) / size * 2.0 - 1.0)
+				var d := _ember_sdf(k, p)
+				var a := _cover(d, aa)
+				var hot := _cover(d + 0.2, aa)
+				var v := 0.5 + 0.5 * hot
+				image.set_pixel(k * size + x, y, Color(v, v, v, a))
+	image.generate_mipmaps()
+	return ImageTexture.create_from_image(image)
+
+
+## The circles of steam frame `k`: a column that billows up, each lobe a circle, as (centre x, centre y, radius) in [-1, 1] (y down).
+static func _puff_circles(k: int) -> Array[Vector3]:
+	var out: Array[Vector3] = []
+	var x := (_hash(k, 1, 7) - 0.5) * 0.25
+	var count := 6 + int(_hash(k, 2, 7) * 3.0)
+	for i in count:
+		var t := float(i) / float(count - 1)
+		var r := lerpf(0.17, 0.33, t) * (0.8 + 0.4 * _hash(k, i + 10, 7))
+		x += (_hash(k, i + 30, 7) - 0.5) * 0.3
+		x = clampf(x, -0.5, 0.5)
+		var y := lerpf(0.62, -0.5, t) + (_hash(k, i + 50, 7) - 0.5) * 0.12
+		out.append(Vector3(x, y, r))
+	# A couple of small lobes standing off the column: the drawn, uneven edge.
+	for j in 2:
+		var side := -1.0 if (j + k) % 2 == 0 else 1.0
+		out.append(Vector3(side * (0.3 + 0.2 * _hash(k, j + 70, 7)), -0.15 + 0.5 * _hash(k, j + 80, 7), 0.12 + 0.07 * _hash(k, j + 90, 7)))
+	return out
+
+
+static func _circles_sdf(circles: Array[Vector3], p: Vector2, shift: Vector2, shrink: float) -> float:
+	var d := 1.0e9
+	for c in circles:
+		d = minf(d, p.distance_to(Vector2(c.x, c.y) + shift) - (c.z - shrink))
+	return d
+
+
+## Four painted steam puffs side by side (PUFF_ATLAS_PX each): a hard silhouette of lobes, two flat values (a lit side and a shaded side) and a
+## darker line along the edge; anti-aliased, never a soft cotton ball. White-ish over alpha, so the particle's colour tints it.
+static func puff_atlas() -> ImageTexture:
+	var size := PUFF_ATLAS_PX
+	var image := Image.create(size * ATLAS_FRAMES, size, true, Image.FORMAT_RGBA8)
+	var aa := 1.6 / float(size) * 2.0
+	for k in ATLAS_FRAMES:
+		var circles := _puff_circles(k)
+		for y in size:
+			for x in size:
+				var p := Vector2((x + 0.5) / size * 2.0 - 1.0, (y + 0.5) / size * 2.0 - 1.0)
+				var d := _circles_sdf(circles, p, Vector2.ZERO, 0.0)
+				if d > 0.05:
+					image.set_pixel(k * size + x, y, Color(0.0, 0.0, 0.0, 0.0))
+					continue
+				var a := _cover(d, aa)
+				var lit := _cover(_circles_sdf(circles, p, Vector2(0.07, 0.09), 0.09), aa)
+				var v := lerpf(0.58, 0.98, lit)
+				var rim := smoothstep(-0.05 - aa, -0.05 + aa, d)
+				v = lerpf(v, v * 0.55, rim)
+				image.set_pixel(k * size + x, y, Color(v, v, v, a))
+	image.generate_mipmaps()
+	return ImageTexture.create_from_image(image)

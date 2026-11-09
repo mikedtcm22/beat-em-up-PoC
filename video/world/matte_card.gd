@@ -14,3 +14,8 @@ extends Resource
 @export_range(0.0, 1.0) var fade: float = 0.0
 @export_range(0.0, 1.0) var alpha: float = 1.0
 @export_range(0.0, 3.0) var energy: float = 1.0
+## Round 3, for a Gemini-painted backdrop: the share of the card's left, right, top and bottom that feathers into the sky, the sway of the painted smoke
+## (uv; 0 still) and the height (uv from the bottom) above which it sways.
+@export var feather: Vector4 = Vector4.ZERO
+@export_range(0.0, 0.03) var drift: float = 0.0
+@export_range(0.0, 1.0) var drift_from: float = 0.3

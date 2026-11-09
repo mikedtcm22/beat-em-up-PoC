@@ -1,0 +1,79 @@
+[
+ {
+  "out": "street_far_a.png",
+  "prompt": "The far end of a city street at night, as a skyline strip of distant tall brick apartment blocks and warehouses side by side, seen from far away. Deep navy and indigo with a cold moonlit edge on the roofs; the windows are mostly dark flat shapes with a few lit warm orange and some blinds, no window frames and no brick drawn, only big simple shapes with a few water towers, chimneys and antenna masts on the roofs. The blocks vary a lot in height and width, with no repeated building. Their lower part sinks into dark haze at the bottom edge of the image. Everything above the skyline, the whole sky, is one perfectly flat, solid, pure green (#00FF00) with nothing in it: no gradient, no clouds, no stars, no glow, no haze, no lines, and it must touch the skyline cleanly so it can be keyed out.",
+  "model": "gemini-3-pro-image",
+  "aspect": "21:9",
+  "size": "2K",
+  "refs": [
+   "in/ref2_42.0.jpg",
+   "in/ref2_3.5.jpg"
+  ]
+ },
+ {
+  "out": "street_far_b.png",
+  "prompt": "The far end of a city street at night, as a skyline strip of distant tall brick apartment blocks and warehouses side by side, seen from far away. Deep navy and indigo with a cold moonlit edge on the roofs; the windows are mostly dark flat shapes with a few lit warm orange and some blinds, no window frames and no brick drawn, only big simple shapes with a few water towers, chimneys and antenna masts on the roofs. The blocks vary a lot in height and width, with no repeated building. Their lower part sinks into dark haze at the bottom edge of the image. The blocks are lower and wider than in a tower district. Everything above the skyline, the whole sky, is one perfectly flat, solid, pure green (#00FF00) with nothing in it: no gradient, no clouds, no stars, no glow, no haze, no lines, and it must touch the skyline cleanly so it can be keyed out.",
+  "model": "gemini-3-pro-image",
+  "aspect": "21:9",
+  "size": "2K",
+  "refs": [
+   "in/ref2_3.5.jpg",
+   "in/ref2_42.0.jpg"
+  ]
+ },
+ {
+  "out": "roof_far_a.png",
+  "prompt": "A far city skyline at dusk, seen from a rooftop: layered silhouettes of apartment blocks, water towers, chimneys and antenna masts in three planes, the nearest plane the darkest violet-maroon and each farther plane lighter and warmer, rose and amber, fading into the sunset haze at the horizon; a few windows catch the sun. The buildings vary a lot in height and width, with no repeated building and no drawn brick or window frames, only big simple shapes. Everything above the skyline, the whole sky, is one perfectly flat, solid, pure green (#00FF00) with nothing in it: no gradient, no clouds, no stars, no glow, no haze, no lines, and it must touch the skyline cleanly so it can be keyed out.",
+  "model": "gemini-3-pro-image",
+  "aspect": "21:9",
+  "size": "2K",
+  "refs": [
+   "in/ref2_50.5.jpg",
+   "in/ref2_42.0.jpg"
+  ]
+ },
+ {
+  "out": "roof_far_b.png",
+  "prompt": "A far city skyline at dusk, seen from a rooftop: layered silhouettes of apartment blocks, water towers, chimneys and antenna masts in three planes, the nearest plane the darkest violet-maroon and each farther plane lighter and warmer, rose and amber, fading into the sunset haze at the horizon; a few windows catch the sun. The buildings vary a lot in height and width, with no repeated building and no drawn brick or window frames, only big simple shapes. Fewer, larger blocks, with the sun's glare on their edges. Everything above the skyline, the whole sky, is one perfectly flat, solid, pure green (#00FF00) with nothing in it: no gradient, no clouds, no stars, no glow, no haze, no lines, and it must touch the skyline cleanly so it can be keyed out.",
+  "model": "gemini-3-pro-image",
+  "aspect": "21:9",
+  "size": "2K",
+  "refs": [
+   "in/ref2_50.5.jpg",
+   "in/ref2_3.5.jpg"
+  ]
+ },
+ {
+  "out": "boss_sky_a.png",
+  "prompt": "A wall of fire and smoke behind a city at night, in the style of the reference frames' painted fire: a violet-black sky at the top; billowing smoke masses painted in large hard-edged, layered shapes, lit orange and red from below, their upper sides dark violet-maroon; a glowing lava-orange and amber fire wall along the horizon with huge rolling flames and a few yellow-white hot cores; sparks and embers drifting in the air, varied in size. The fire is made of big overlapping curved shapes, never a regular row of spikes. Along the bottom edge there is a strip of dark far rooftops in silhouette. Nothing is drawn as a figure.",
+  "model": "gemini-3-pro-image",
+  "aspect": "16:9",
+  "size": "2K",
+  "refs": [
+   "in/ref1_5.3.jpg",
+   "in/ref1_24.4.jpg"
+  ]
+ },
+ {
+  "out": "boss_sky_b.png",
+  "prompt": "A wall of fire and smoke behind a city at night, in the style of the reference frames' painted fire: a violet-black sky at the top; billowing smoke masses painted in large hard-edged, layered shapes, lit orange and red from below, their upper sides dark violet-maroon; a glowing lava-orange and amber fire wall along the horizon with huge rolling flames and a few yellow-white hot cores; sparks and embers drifting in the air, varied in size. The fire is made of big overlapping curved shapes, never a regular row of spikes. Along the bottom edge there is a strip of dark far rooftops in silhouette. Nothing is drawn as a figure. The fire is lower and the smoke fills most of the frame.",
+  "model": "gemini-3-pro-image",
+  "aspect": "16:9",
+  "size": "2K",
+  "refs": [
+   "in/ref1_24.4.jpg",
+   "in/ref1_5.3.jpg"
+  ]
+ },
+ {
+  "out": "boss_sky_c.png",
+  "prompt": "A wall of fire and smoke behind a city at night, in the style of the reference frames' painted fire: a violet-black sky at the top; billowing smoke masses painted in large hard-edged, layered shapes, lit orange and red from below, their upper sides dark violet-maroon; a glowing lava-orange and amber fire wall along the horizon with huge rolling flames and a few yellow-white hot cores; sparks and embers drifting in the air, varied in size. The fire is made of big overlapping curved shapes, never a regular row of spikes. Along the bottom edge there is a strip of dark far rooftops in silhouette. Nothing is drawn as a figure. Make it darker overall: the fire is a narrow glow under heavy smoke.",
+  "model": "gemini-3-pro-image",
+  "aspect": "16:9",
+  "size": "2K",
+  "refs": [
+   "in/ref1_5.3.jpg",
+   "in/ref1_7.2.jpg"
+  ]
+ }
+]

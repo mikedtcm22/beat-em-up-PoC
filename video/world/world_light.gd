@@ -34,3 +34,13 @@ enum Prop { LAMP_POST, FIRE_BARREL, BARE }
 @export_range(0.0, 3.0) var halo_energy: float = 1.0
 @export_range(0.0, 0.5) var halo_wobble: float = 0.3
 @export_range(0.0, 2.0) var halo_ring_strength: float = 0.35
+@export_group("Shaft and flame (round 3)")
+## A painted shaft of light from the lamp head down (a flat-shape cone, not fog): its length and its width at the bottom (m), and its strength.
+@export var shaft: bool = false
+@export_range(0.5, 12.0) var shaft_len_m: float = 4.0
+@export_range(0.2, 8.0) var shaft_w_m: float = 2.4
+@export_range(0.0, 1.0) var shaft_energy: float = 0.14
+## A fire barrel burns: a painted flame (tongues in three values, re-rolled at the flicker rate) stands in the barrel; its height and width (m).
+@export var flame: bool = false
+@export_range(0.2, 2.5) var flame_h_m: float = 1.1
+@export_range(0.2, 2.0) var flame_w_m: float = 0.8
