@@ -111,6 +111,15 @@ var _derived: Dictionary = {}
 @export var haze: Dictionary = {}
 @export var environment: Dictionary = {}
 
+@export_group("Plate blockout (round 5)")
+## The blockout mode (R5-PAINT, docs/video/P1.md): the world drawn as flat masses for a Gemini plate to be painted over. `paint` takes
+## `blockout_paint`'s values over it and the paint shader's `blockout` on: one flat colour per mass, no window grids, brick, slabs, cracks,
+## puddles, grain or chain-link; the lamps' pools, the key, the dark masses and the moon's tops keep drawing as soft shapes. Set per run
+## (`--shot-set=world.tres.blockout=true`), never in a .tres a shot plays.
+@export var blockout: bool = false
+## Uniform name -> value, over `paint` while `blockout` is on (the detail's switches off, the light's shapes kept).
+@export var blockout_paint: Dictionary = {}
+
 
 ## Apply this look to `level` (a LevelRoot after its _ready). Replaces a look of this kind already on the level.
 func apply(level: Node) -> void:
@@ -198,6 +207,15 @@ static func apply_uniforms(material: ShaderMaterial, values: Dictionary) -> void
 		material.set_shader_parameter(uniform_name, values[key])
 
 
+## The paint uniforms the materials get: `paint`, and in the blockout mode `blockout_paint` over it with `blockout` on.
+func paint_values() -> Dictionary:
+	var values := paint.duplicate()
+	if blockout:
+		values.merge(blockout_paint, true)
+		values[&"blockout"] = 1.0
+	return values
+
+
 ## The paint shaders go on the kit's shared materials (the trim, and the scissor trim of the chain-link). Each look sets every
 ## uniform again, so applying a second location after the first leaves nothing of it.
 func _paint_materials(rig: VideoWorldRig) -> void:
@@ -210,7 +228,7 @@ func _paint_materials(rig: VideoWorldRig) -> void:
 	trim.shader = PAINT_SHADER
 	scissor.shader = PAINT_SCISSOR_SHADER
 	# Values written in a section's own space are moved to the world: the fire's height is metres above the section's floor.
-	var values := paint.duplicate()
+	var values := paint_values()
 	_derived = _derive_uniforms(rig)
 	if float(paint.get(&"r4_on", 0.0)) > 0.0:
 		values.merge(_derived, true)
@@ -268,7 +286,7 @@ static func restore_game_materials() -> void:
 func prop_material(color: Color) -> ShaderMaterial:
 	var material := ShaderMaterial.new()
 	material.shader = PAINT_PROP_SHADER
-	apply_uniforms(material, paint)
+	apply_uniforms(material, paint_values())
 	if float(paint.get(&"r4_on", 0.0)) > 0.0:
 		apply_uniforms(material, _derived)
 	material.set_shader_parameter(&"albedo", color)

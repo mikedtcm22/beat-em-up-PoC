@@ -249,6 +249,9 @@ uniform float puddle_rag : hint_range(0.0, 1.5) = 0.0;
 uniform float prop_seed : hint_range(0.0, 100.0) = 0.0;
 uniform float prop_base_m : hint_range(-50.0, 50.0) = 0.0;
 uniform float prop_patch : hint_range(0.0, 1.0) = 0.0;
+// Round 5 (R5-PAINT): the plate blockout. 1 = every mass one flat colour (the sheet's own average of its strip, the ground's average), no windows, brick,
+// slabs, cracks, puddles, grain or chain-link; the lights, the key, the masses and the moon's tops keep drawing as soft shapes. 0 = the look as before.
+uniform float blockout : hint_range(0.0, 1.0) = 0.0;
 
 varying vec2 face_m;
 varying vec2 world_m;
@@ -568,7 +571,7 @@ void fragment() {
 			}
 			c.rgb = mix(c.rgb, avg / 8.0, brick_flat);
 		}
-		if (sid == facade_strip && (window_blank_p > 0.0 || window_lit_p > 0.0 || draw_on > 0.0)) {
+		if (sid == facade_strip && blockout < 0.5 && (window_blank_p > 0.0 || window_lit_p > 0.0 || draw_on > 0.0)) {
 			// A window is the sheet's bluish dark rectangle. Each of the two windows a tile is one cell: a world hash
 			// decides whether it is kept, blanked to the wall's own colour, or lit from inside.
 			float glass = smoothstep(0.015, 0.045, c.b - c.r) * (1.0 - smoothstep(0.3, 0.45, dot(c.rgb, LUMA)));
@@ -634,6 +637,24 @@ void fragment() {
 			// Brick behind the window's neighbours: the wall around the frame is the wall (flat), drawn below.
 		}
 	}
+	if (blockout > 0.5) {
+		// One flat colour per mass: the strip's own average (eight taps down the mips), the ground's average; the sheet's marks (a.a) are dropped.
+		if (ground) {
+			c = vec4(textureLod(ground_tex, vec2(0.5), 9.0).rgb, 0.0);
+		}
+#ifndef FLAT_PAINT_PROP
+		else {
+			vec3 avg_b = vec3(0.0);
+			for (int bi = 0; bi < 4; bi++) {
+				for (int bj = 0; bj < 2; bj++) {
+					avg_b += textureLod(trim_tex, vec2(0.125 + 0.25 * float(bi), row.x + row.y * (0.25 + 0.5 * float(bj))), 3.5).rgb;
+				}
+			}
+			c = vec4(avg_b / 8.0, 0.0);
+		}
+#endif
+		emit = vec3(0.0);
+	}
 	vec3 color = c.rgb;
 	color = mix(color, ink, smoothstep(ink_cut - 0.1, ink_cut + 0.1, c.a) * paint_ink_keep);
 
@@ -651,11 +672,11 @@ void fragment() {
 	flat_color = clamp(flat_color, 0.0, 1.5);
 
 	float g = strokes(face_m, world_pos, paint_grain_scale);
-	flat_color *= 1.0 + (g - 0.5) * 2.0 * paint_grain;
+	flat_color *= 1.0 + (g - 0.5) * 2.0 * paint_grain * (1.0 - blockout);
 
 	base_luma = max(dot(flat_color, LUMA), 0.05);
 	base_rgb = flat_color * albedo.rgb * tint;
-	if (draw_on > 0.0) {
+	if (draw_on > 0.0 && blockout < 0.5) {
 		vec3 ink_c = mix(flat_color * draw_ink_mul, ink, 0.25);
 		vec2 key = vec2(round(dot(abs(world_normal), world_pos) * 2.0) + prop_seed, float(sid) * 1.37);
 		float lines = 0.0;
@@ -907,7 +928,7 @@ void fragment() {
 	float hole = step(chain_holes + fade_t * 0.8, hash12(floor(qc * 0.5) + planec * 1.7));
 	float fill = smoothstep(0.5, 0.9, foot);
 	float keep_px = max(on_wire * hole, v3_on > 0.0 ? 0.0 : fill * 0.85 * hole);
-	ALPHA = keep_px;
+	ALPHA = blockout > 0.5 ? 0.0 : keep_px;
 	ALPHA_SCISSOR_THRESHOLD = 0.5;
 	ALBEDO = mix(ALBEDO, ink * 2.0, 0.6);
 #endif
@@ -954,7 +975,7 @@ void light() {
 		float core = band_step(lit - pool_core, edge);
 		float level = mix(pool_outer_level * outer, 1.0, core);
 		// Dashes of brick, only just inside the pool's edge: where the light shows the wall's makeup, never in flat shade.
-		if (brick_strokes > 0.0 && int(strip_id + 0.5) == 0) {
+		if (brick_strokes > 0.0 && blockout < 0.5 && int(strip_id + 0.5) == 0) {
 			vec2 cell = vec2(floor(face_m.x / 0.5), floor(face_m.y / 0.25));
 			float h = hash12(cell + vec2(world_pos.y * 0.0, floor(dot(abs(world_normal), world_pos) * 2.0)));
 			float dash = step(1.0 - brick_strokes, h);
