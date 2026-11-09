@@ -91,7 +91,8 @@ float lum(vec3 c) {
 
 bool is_character(ivec2 q, ivec2 size) {
 	vec4 nr = texelFetch(normal_tex, clamp(q, ivec2(0), size - 1), 0);
-	return nr.a < 0.5 && length(nr.xyz * 2.0 - 1.0) > 0.5;
+	// The roughness tag alone: a character's normal buffer has stray zero-normal pixels, which are still the character.
+	return nr.a < 0.5;
 }
 
 float depth_at(ivec2 q, ivec2 size) {

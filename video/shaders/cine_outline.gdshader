@@ -46,6 +46,12 @@ uniform float near_end_m : hint_range(0.1, 40.0) = 5.0;
 // The wander along the contour: its strength (a share of the width) and the cells per metre.
 uniform float wander : hint_range(0.0, 1.0) = 0.45;
 uniform float wander_scale : hint_range(0.5, 40.0) = 7.0;
+// Round 5: a second, slower octave of the wander (its strength, a share of the width, and the cells per metre), and the under-form accent: the weight's
+// multiplier where the surface faces down in the world (the underside of a jaw, an arm, a fist), the line a hand presses hardest.
+uniform float wander2 : hint_range(0.0, 1.0) = 0.0;
+uniform float wander2_scale : hint_range(0.2, 20.0) = 2.2;
+uniform float under_mult : hint_range(1.0, 4.0) = 1.0;
+uniform vec2 under_range = vec2(-0.1, -0.6);
 // The taper: how far the width swells and pinches along the contour (0 = none), the cells per metre of that noise, and
 // on the lit side how much of the line is lifted where the noise is low (0 = unbroken).
 uniform float taper_amount : hint_range(0.0, 1.0) = 0.0;
@@ -109,6 +115,10 @@ void vertex() {
 	// Wander along the contour, in the object's own space (the skinned vertex, so it follows the body).
 	float seed = boil_seed * 7.13 + pass_id * 19.7;
 	weight *= 1.0 + wander * (vnoise(VERTEX * wander_scale + vec3(pass_id * 3.7)) - 0.5) * 2.0;
+	weight *= 1.0 + wander2 * (vnoise(VERTEX * wander2_scale + vec3(pass_id * 2.3 + 41.0)) - 0.5) * 2.0;
+	// The under-form accent: the surface's world-space normal pointing down.
+	float down = (INV_VIEW_MATRIX * vec4(n_view, 0.0)).y;
+	weight *= mix(1.0, under_mult, smoothstep(under_range.x, under_range.y, down));
 	// The taper: swell and pinch (two octaves), and the lit side lifted where the noise is low.
 	float swell = 0.6 * vnoise(VERTEX * taper_scale + vec3(pass_id * 5.3 + 17.0)) + 0.4 * vnoise(VERTEX * taper_scale * 2.7 + vec3(3.1, pass_id * 2.9, 8.8));
 	weight *= mix(1.0, 0.2 + 1.6 * smoothstep(0.2, 0.8, swell), taper_amount);

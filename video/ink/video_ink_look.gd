@@ -102,6 +102,11 @@ extends VideoLookPiece
 @export_range(0.5, 4.0) var line_near_mult: float = 1.0
 @export_range(0.0, 20.0) var line_near_start_m: float = 1.5
 @export_range(0.1, 40.0) var line_near_end_m: float = 5.0
+## Round 5: a second, slower octave of the width's wander (a share of the width, cells per metre), and the under-form accent (the multiplier where the
+## surface faces down in the world: a jaw, the underside of an arm or a fist).
+@export_range(0.0, 1.0) var wander2: float = 0.0
+@export_range(0.2, 20.0) var wander2_scale: float = 2.2
+@export_range(1.0, 4.0) var under_mult: float = 1.0
 
 @export_group("Screen ink")
 ## The screen-space ink pass (characters' creases and inner lines, the environment's major silhouettes only,
@@ -144,6 +149,10 @@ extends VideoLookPiece
 @export_range(0.0, 60.0) var sep_px: float = 14.0
 @export_range(0.0, 10.0) var sep_min_m: float = 1.5
 
+## Round 5, one line per silhouette: the share of the screen ink's depth step on a character that the hull's outline replaces (a step down to a non-character
+## is the hull's; a step onto another part of a character stays). 0 = round 4's doubled outline, 1 = one line.
+@export_range(0.0, 1.0) var ink_sil_suppress: float = 0.0
+
 ## A debug view of the screen ink for looks and A/Bs (0 = the picture; 1 light factor; 2 line width; 3 lines only; 4 character tag; 5 terminator line).
 @export_range(0, 5) var ink_debug_view: int = 0
 
@@ -178,6 +187,34 @@ extends VideoLookPiece
 ## The rear warning, drawn in the cue pass (the HUD's never reaches the render): on or off, and the burst's size as a share of the HUD's.
 @export var rear_warning: bool = true
 @export_range(0.3, 2.5) var warning_scale: float = 1.3
+
+@export_group("Actors")
+## Actors that belong to the painting (round 5; the finish pass, on a character's pixels): a light wrap (a blurred copy of what is behind, added within
+## `wrap_reach_px` of the silhouette, read from `wrap_near_px` to `wrap_far_px` out; strength 0 = off) and actor fog toward the blurred background colour
+## at the actor's screen position (`fog_amount` at most from `fog_start_m` to `fog_end_m`, the colour read `fog_blur_px` round it; 0 = off). Pixels at 1080p.
+@export_range(0.0, 2.0) var wrap_strength: float = 0.0
+@export_range(1.0, 24.0) var wrap_reach_px: float = 6.0
+@export_range(2.0, 60.0) var wrap_near_px: float = 14.0
+@export_range(4.0, 120.0) var wrap_far_px: float = 36.0
+## The wrap's reach is full out to this distance and narrows to a quarter at four times it (a far figure is small).
+@export_range(1.0, 40.0) var wrap_ref_m: float = 5.0
+@export_range(0.0, 1.0) var fog_amount: float = 0.0
+@export_range(0.0, 60.0) var fog_start_m: float = 6.0
+@export_range(1.0, 120.0) var fog_end_m: float = 30.0
+@export_range(8.0, 200.0) var fog_blur_px: float = 60.0
+## A debug view of the actors pass (0 = none; 1 = the distance and the fog; 2 = the wrap's reach; 3 = the normal buffer; 4 = its roughness; 5 = the tests; 6 = a flat dark fill
+## on every character, to judge the wrap and the fog on a back-lit silhouette).
+@export_range(0, 6) var actors_debug: int = 0
+
+@export_group("Glow")
+## The diffusion glow in the finish pass (round 5): a soft-knee bright pass that keeps the hue, at quarter size, blurred at two radii (shares of the
+## frame's width) and screened on at `glow_narrow` and `glow_wide` (0 and 0 = off). Wide and faint; it lands on lamp heads, fire, the sun and windows.
+@export_range(0.0, 0.5) var glow_narrow: float = 0.0
+@export_range(0.0, 0.5) var glow_wide: float = 0.0
+@export_range(0.001, 0.05) var glow_narrow_radius: float = 0.005
+@export_range(0.005, 0.2) var glow_wide_radius: float = 0.03
+@export_range(0.0, 4.0) var glow_threshold: float = 0.6
+@export_range(0.01, 2.0) var glow_knee: float = 0.35
 
 @export_group("Brush")
 ## The brush pass (round 4): an anisotropic Kuwahara filter and a soft posterize on the world's pixels, before the transparent pass (haze,

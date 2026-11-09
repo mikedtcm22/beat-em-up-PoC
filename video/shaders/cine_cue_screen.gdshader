@@ -6,8 +6,8 @@ shader_type spatial;
 //  - SPEED LINES: ink streaks radiating from `center` (screen uv), count and length from hashes of the
 //    streak's cell and `seed`, so they are irregular, re-seeded from the output frame (12 fps) by the rig.
 //  - THE REAR WARNING (round 3): the game's warning is a HUD burst that never reaches the render, so the cue pass draws its own from
-//    the HUD's state: a hard-edged red shard-burst with an ink outline and a paper core in the top corner it lights (`warn_left`,
-//    `warn_right`: xy the centre in screen uv, z the half height in uv, w the alpha), its spikes re-rolled by `seed` (12 fps).
+//    the HUD's state in the top corner it lights (`warn_left`, `warn_right`: xy the centre in screen uv, z the half height in uv, w the alpha). Round 5: a flat,
+//    jagged double chevron in hot red with an ink rim, pointing to the attacker's side (it was a star-burst that read as a flower), its teeth re-rolled by `seed` (12 fps).
 // No time and no screen noise: every value is a uniform the rig sets from the output frame.
 
 render_mode unshaded, depth_test_disabled, depth_draw_never, cull_disabled, skip_vertex_transform, shadows_disabled, fog_disabled;
@@ -33,29 +33,40 @@ float hash11(float x) {
 	return fract(sin(x * 127.1 + 311.7) * 43758.5453);
 }
 
-// One warning burst at `w` (centre uv, half height uv, alpha): rgb and coverage. A jagged star whose spikes differ in length and
-// angle (the hash of its cell and the seed), an ink rim, a hot fill and a paper core; the edges are smoothed by the pixel footprint.
+// One warning mark at `w` (centre uv, half height uv, alpha): rgb and coverage. A flat, jagged double chevron pointing to the attacker's side (toward
+// the screen edge its corner is on): hard edges, one hot fill, an ink rim, no gradient and no core. The two arms' edges are cut in teeth whose lengths
+// are hashes of the tooth and the seed (re-rolled at 12 fps), so it reads as drawn with a brush and not as a shape.
 vec4 warning_burst(vec2 uv, vec4 w, float aspect) {
 	if (w.w <= 0.001) {
 		return vec4(0.0);
 	}
 	vec2 d = (uv - w.xy) * vec2(aspect, 1.0) / max(w.z, 0.001);
-	float r = length(d);
-	if (r > 1.4) {
+	// u runs toward the attacker's side (the screen edge the corner is on), v across.
+	float dir = w.x < 0.5 ? -1.0 : 1.0;
+	float u = d.x * dir;
+	float v = abs(d.y);
+	if (v > 1.25 || abs(u) > 1.4) {
 		return vec4(0.0);
 	}
-	float a = atan(d.y, d.x) / TAU + 0.5;
-	float cell = floor(a * warn_spikes);
-	float h = hash11(cell * 3.1 + seed * 17.0 + w.x * 9.0);
-	float t = abs(fract(a * warn_spikes + 0.15 * h) - 0.5) * 2.0;
-	float reach = (0.62 + 0.38 * h) * mix(1.0, 0.34, smoothstep(0.0, 1.0, t));
-	float aa = fwidth(r) * 1.5;
-	float body = 1.0 - smoothstep(reach - aa, reach + aa, r);
-	float rim = 1.0 - smoothstep(reach - 0.13 - aa, reach - 0.13 + aa, r);
-	float core = 1.0 - smoothstep(0.22 - aa, 0.22 + aa, r);
+	float tooth = floor(v * warn_spikes * 0.4);
+	float h = hash11(tooth * 3.1 + seed * 17.0 + w.x * 9.0);
+	// The jagged edge: a sawtooth along the arm whose depth differs by tooth.
+	float saw = (fract(v * warn_spikes * 0.4) - 0.5) * (0.07 + 0.1 * h);
+	float aa = fwidth(u) * 1.5;
+	float cover = 0.0;
+	float rim = 0.0;
+	for (int i = 0; i < 2; i++) {
+		// A chevron's centre line: apex at (shift), the arms sweeping back by 0.9 per unit of v.
+		float shift = 0.5 - 0.85 * float(i);
+		float s = u - shift + v * 1.0 + saw;
+		float width = i == 0 ? 0.3 : 0.24;
+		float inside = (1.0 - smoothstep(0.0, aa, abs(s) - width)) * (1.0 - smoothstep(1.0 - aa * 2.0, 1.0, v / 1.0));
+		float core = (1.0 - smoothstep(0.0, aa, abs(s) - (width - 0.075))) * (1.0 - smoothstep(1.0 - aa * 2.0, 1.0, v / 1.0));
+		cover = max(cover, inside);
+		rim = max(rim, core);
+	}
 	vec3 c = mix(ink, warn_color, rim);
-	c = mix(c, paper, core);
-	return vec4(c, body * w.w);
+	return vec4(c, cover * w.w);
 }
 
 void fragment() {

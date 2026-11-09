@@ -41,7 +41,7 @@ void vertex() {
 
 bool is_character(ivec2 q, ivec2 size) {
 	vec4 nr = texelFetch(normal_tex, clamp(q, ivec2(0), size - 1), 0);
-	return nr.a < 0.5 && length(nr.xyz * 2.0 - 1.0) > 0.5;
+	return nr.a < 0.5;
 }
 
 float plate_depth_m(sampler2D dep, vec2 uv, ivec2 texel_off, float far_m) {
