@@ -10,6 +10,7 @@ extends "res://video/stage/still_bot.gd"
 ## Arguments after `--`, besides the level bot's and the still bot's: `--shot-skip=<piece file>[,...]` leaves pieces out (ink.tres, world.tres,
 ## art.tres: an A/B), `--shot-set=ink.tres.post_enabled=false;...` sets piece properties for the run (GDScript literals),
 ## `--shot-to=<seconds>` ends the window early (a quick look), `--shot-from=<seconds>` starts it later,
+## `--shot-hide=<class or node name>[,...]` hides every node of the level of that class (GPUParticles3D, Light3D, ...) or whose name contains the text, after the staging (a probe: which node draws what),
 ## `--shot-repeat=N` captures a still N more times,
 ## `--shot-size=1280x720` renders at that size (the blocking pass; the default is the writer's 2560x1440), `--shot-mask=0` writes no mask, `--shot-store=png` stores PNGs (not a raw chunk) for the encode, `--shot-window=0` stops the main window drawing, `--shot-tag=<text>` appends to the output name.
 
@@ -29,6 +30,8 @@ var _from_override: float = -1.0
 var _mask: bool = true
 ## `--shot-repeat=N`: a still is captured N more times without the game moving (a determinism probe of the renderer).
 var _repeat: int = 0
+## `--shot-hide=`: the classes and name fragments of nodes hidden after the staging.
+var _hide: PackedStringArray = PackedStringArray()
 var _store_png: bool = false
 var _window: bool = true
 var _tag: String = ""
@@ -53,6 +56,8 @@ func _ready() -> void:
 				var parts := pair.split("=", true, 1)
 				if parts.size() == 2:
 					set_pieces[parts[0]] = str_to_var(parts[1])
+		elif arg.begins_with("--shot-hide="):
+			_hide = PackedStringArray(arg.trim_prefix("--shot-hide=").split(",", false))
 		elif arg.begins_with("--shot-repeat="):
 			_repeat = int(arg.trim_prefix("--shot-repeat="))
 		elif arg.begins_with("--shot-to="):
@@ -108,6 +113,7 @@ func _run() -> void:
 	print("=== Shot %s  location %s  pieces %s  (f%d)" % [shot.key, cine.location, _piece_names(), Engine.get_physics_frames()])
 	writer.warm_up(true)
 	await stage(shot)
+	_hide_probe()
 	var moving := shot is CineShot and ((shot as CineShot).window_to_s > (shot as CineShot).window_from_s or _to_override >= 0.0)
 	writer.begin(out_dir, run_name, not moving and _repeat == 0)
 	cine.start_clock()
@@ -126,6 +132,53 @@ func _run() -> void:
 	Engine.time_scale = 1.0
 	cine.restore()
 	await _quit()
+
+
+## `--shot-hide=`: hide the level's nodes of the named classes, or whose names contain the text, and say how many.
+func _hide_probe() -> void:
+	for token in _hide:
+		if token.begins_with("probe:"):
+			_probe_pixel(token.trim_prefix("probe:"))
+			continue
+		var count := 0
+		for node in level.find_children("*", "", true, false):
+			var item := node as Node3D
+			if item != null and (item.is_class(token) or String(item.name).containsn(token)):
+				item.visible = false
+				count += 1
+		log_line("SHOT hide %s: %d nodes" % [token, count])
+
+
+## `--shot-hide=probe:<x>;<y>` (fractions of the frame): print the visual nodes whose projected box holds that point, nearest first.
+func _probe_pixel(at_text: String) -> void:
+	var camera := get_viewport().get_camera_3d()
+	var parts := at_text.split(";")
+	if camera == null or parts.size() != 2:
+		return
+	var view := get_viewport().get_visible_rect().size
+	var point := Vector2(float(parts[0]) * view.x, float(parts[1]) * view.y)
+	var found: Array[Dictionary] = []
+	for node in level.find_children("*", "VisualInstance3D", true, false):
+		var item := node as VisualInstance3D
+		if not item.is_visible_in_tree():
+			continue
+		var box := item.global_transform * item.get_aabb()
+		var low := Vector2(INF, INF)
+		var high := Vector2(-INF, -INF)
+		var behind := false
+		for corner in 8:
+			var world := box.position + box.size * Vector3(corner & 1, (corner >> 1) & 1, (corner >> 2) & 1)
+			if camera.is_position_behind(world):
+				behind = true
+				break
+			var screen := camera.unproject_position(world)
+			low = low.min(screen)
+			high = high.max(screen)
+		if not behind and Rect2(low, high - low).has_point(point):
+			found.append({node = item, d = camera.global_position.distance_to(box.get_center()), size = high - low})
+	found.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a.d < b.d)
+	for entry in found.slice(0, 40):
+		log_line("SHOT probe %s %s d=%.1f box=%s" % [(entry.node as Node).get_path(), (entry.node as Node).get_class(), entry.d, entry.size])
 
 
 ## A free camera shot's camera: the director's, from the shot's keys, following the staged actors.

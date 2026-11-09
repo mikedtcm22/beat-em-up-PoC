@@ -16,6 +16,8 @@ var include_player: bool = true
 var rig: Node
 var _poses: Dictionary[int, Array] = {}
 var _last_drawn: int = -1000
+## The output frame the last tick belonged to (a frame spans two or three 60 Hz ticks).
+var _last_frame: int = -1000
 
 
 func _init() -> void:
@@ -28,10 +30,19 @@ func _process(_delta: float) -> void:
 	var frame: int = rig.output_frame()
 	var draw := frame % maxi(hold, 1) == 0
 	var skeletons := _skeletons()
-	if draw or not _have_poses(skeletons):
+	var first_tick := frame != _last_frame
+	_last_frame = frame
+	if not _have_poses(skeletons):
 		_last_drawn = frame
 		for skeleton in skeletons:
 			_store(skeleton)
+	elif draw:
+		# One store per drawing, on the frame's first tick: the picked tick is the first one of its output
+		# frame, so the held frames must repeat that pose, not the pose a later tick of the draw frame had.
+		if first_tick:
+			_last_drawn = frame
+			for skeleton in skeletons:
+				_store(skeleton)
 	else:
 		for skeleton in skeletons:
 			_restore(skeleton)
