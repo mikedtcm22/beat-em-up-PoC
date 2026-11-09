@@ -6,6 +6,22 @@ The cinematic gameplay video's live status, kept by the video session ("Beat-em-
 
 ## Status (newest first)
 
+### 2026-11-09 11:05 CST: handoff at the watcher's 88% warning; R5-SHOTS, R5-ART and R5-INK stopped as wip; resume at the 13:59 reset
+- **Stopped at 11:00:** the run `wf_9e0eccab-216`. Each builder's work is committed as `wip:` and pushed:
+  - **`mv/r5-shots` `9b4a209`:** the view rig (lens, lift, roll, off-hand), foreground cards, the cine shots re-staged for plates, tests, `video/shots/hero_frames.json`, `tools/video/shoot_hero.sh`, and its calls file;
+  - **`mv/r5-art` `18001dc`:** the back-lit silhouette mode in cine_toon, the art rig and art.tres per location; Ox's glove rebuild in progress (`blender_asset.py`, the boss GLB and maps, `tools/video/blender_glove_probe.py`);
+  - **`mv/r5-ink` `d308747`:** one line per silhouette, light wrap, actor fog, glow, the chevron warning (a first cut; looks set). **It edits `video/shaders/plate_project.gdshader`,** R5-PAINT's file: check it at the merge.
+- **The weekly-aware runner** is now in the repo as `tools/video/build_weekly.js` (the copy of `tools/workflows/build.js` whose gate scales the weekly room by `weekly_scale`). The resume args are [args-p1g.json](args-p1g.json): R5-SHOTS, R5-ART and R5-INK only, concurrency 3, `weekly_scale` 6, and a note that they resume from their wip commits.
+- **The resume task** `beat-em-up-video-resume-20261108-2230` (Auto mode) is re-armed for 14:10 CST.
+- **Resume steps:**
+  1. get_usage; restart the watcher and the relay. **Mind the weekly window:** it was about 77% here, and it resets 2026-11-10 at 15:59 CST. Stop at 90% of either window.
+  2. Read Game-boy's DMs (the relay forwards them).
+  3. Run `Workflow({scriptPath: "/Users/arachne/repos/beat-em-up-PoC/.worktrees/video/tools/video/build_weekly.js", args: <docs/video/args-p1g.json>})`. The loader sees the three as wip, and they go on from their newest commits.
+  4. Merge R5-SHOTS, R5-ART and R5-INK; run the video tests and the protected diff.
+  5. Make the hero plates for `hero_frames.json` with `tools/video/make_plate.sh` (ledger rows; about $1.72 left of the $2; an approved plate as `--swatch` for its location).
+  6. Render the hero frames at 2560×1440; run the blind check, logging which tells each judge cites; DM.
+
+
 ### 2026-11-09 10:35 CST: R5-PAINT merged, and the pilot works; R5-SHOTS, R5-ART and R5-INK running
 - **The first round 5 run** (`wf_67882462-8a5`) built only R5-PAINT. The runner's usage gate skipped the other three: it takes `max(5-hour, weekly)` as if both were points of a 5-hour window, so a weekly at 69% left "1%" of headroom.
   - **The fix,** outside the repo: a copy of the runner, `build_weekly.js`, in this session's workflow scripts folder (`.../workflows/scripts/build_weekly.js`). Its gate scales the weekly room into 5-hour points (`args.weekly_scale`, 6 on this seat: about 6 points of the 5-hour window per weekly point).

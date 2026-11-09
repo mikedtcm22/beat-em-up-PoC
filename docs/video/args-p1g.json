@@ -1,0 +1,54 @@
+{
+ "milestone": "v",
+ "summary": "Look-dev round 5 (docs/video/PLAN.md): Gemini plates own the background (projected from the hero frames' cameras), back-lit silhouette actors and a dark first-person fist, hero frames staged for their plates, one line per silhouette and actors that belong to the painting",
+ "plan": "docs/video/P1.md",
+ "base": "video/cinematic-trailer",
+ "read_first": [
+  "docs/video/PLAN.md \u00a72 (the style bible) and \u00a76's Gate 2 rubric",
+  "docs/video/P1.md, 'What round 4 found', 'Shared by the round 5 packages', 'R5-PAINT has landed', and the shared sections they name"
+ ],
+ "image_budget": 35,
+ "concurrency": 3,
+ "note": "VIDEO WORK OVERRIDES: cine (non-first-person) shots count as much as first person. Judge against docs/video/PLAN.md \u00a72 and the reference frames, not SPEC.md. Never edit game/, tuning/ or tests/: look values go in CineLook .tres files under video/look/, not in tuning_data.gd. Instead of the full suite, run the video tests (PLAN.md \u00a76, LD-RENDER) and `git diff --quiet origin/video/cinematic-trailer -- game tuning tests` (it must exit 0). Calls files go to docs/video/calls/<key>.md. PHASE 1: your brief is your section of docs/video/P1.md (in P1.md, 'CineLook' is split into VideoLookPiece resources by owner). In the structured result, tests_passed and tests_total are the video tests (video/tests), not the main suite, and feel_judgement holds your honest pillar scores (PLAN.md \u00a76 rubric) for what you built, judged at full resolution beside the reference frames, and your honest call per shot: would a viewer who hasn't been told read it as drawn or as 3D, and why. Python only through ~/.venvs/beat-em-up-video/bin/python -I (never pip install). No paid service in this run: never run tools/gemini_image.py, Tripo or ElevenLabs (R5-PAINT's pilot is done; the hero plates are the lead's, after the merge). The reference frames are untracked files in /Users/arachne/repos/beat-em-up-PoC/.worktrees/video/captures/video/ref/frames/ (2560x1440): read them, never copy them into git. This is an 8 GB machine: one Godot process at a time from you, always with --quit-after, and the capture lock for every windowed run; three builders run at once this time, so keep headless runs short. ROUND 5 (after round 4's blind check): read P1.md 'What round 4 found', 'Shared by the round 5 packages' and 'R5-PAINT has landed' first; the round 4 renders and sheets are in /Users/arachne/repos/beat-em-up-PoC/.worktrees/video/captures/video/round4/ (untracked: read, never copy into git). The three packages of this run work in parallel on disjoint files: never edit another package's files (nor R5-PAINT's, now merged); put what you need in your calls file's requests. RESUMED after a usage handoff: your branch has wip: commits; go on from the newest one.",
+ "packages": [
+  {
+   "key": "R5-PAINT",
+   "section": "\u00a7 R5-PAINT",
+   "est": 20,
+   "read": [
+    "docs/video/calls/ld-world3.md (the matte tools and the Gemini ledger practice) and docs/video/calls/r4-world.md (the world piece you take over this round)"
+   ]
+  },
+  {
+   "key": "R5-SHOTS",
+   "section": "\u00a7 R5-SHOTS",
+   "est": 12,
+   "read": [
+    "docs/video/calls/shots.md, docs/video/calls/r4_shots.md and docs/video/calls/r5-paint.md"
+   ]
+  },
+  {
+   "key": "R5-ART",
+   "section": "\u00a7 R5-ART",
+   "est": 16,
+   "blender": true,
+   "read": [
+    "docs/video/calls/ld-art2.md, docs/video/calls/r4-art.md and docs/video/calls/r5-paint.md"
+   ]
+  },
+  {
+   "key": "R5-INK",
+   "section": "\u00a7 R5-INK",
+   "est": 12,
+   "read": [
+    "docs/video/calls/ld-ink2.md, docs/video/calls/r4-ink.md and docs/video/calls/r5-paint.md"
+   ]
+  }
+ ],
+ "weekly_scale": 6,
+ "only": [
+  "R5-SHOTS",
+  "R5-ART",
+  "R5-INK"
+ ]
+}
