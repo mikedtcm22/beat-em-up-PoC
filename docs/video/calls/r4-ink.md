@@ -30,8 +30,7 @@ Each call: the decision, an alternative not taken, why. Numbers are at 2560x1440
    a consequence: a wall spanning 2 stops gets 3. Alternative: a posterize per hue region (a k-means of the frame). Not taken: it changes with the camera and
    boils; the stop bands are a function of the pixel's own value and the world.
 6. **Radii (px at 1080p): 2.5 at the lens to 9 from 14 m, plus up to 2.5 far from the shot's focus and 2 toward the frame's edge, at most 12.** The focus is the
-   nearest figure (the rig's `_focus_point`), written every frame. The taps are an 11x11 window whose stride grows with the radius (so the cost does not). Measured:
-   `moving_punk` at 0.56 s a frame with the brush on (the whole writer, 2560x1440), no slower than round 3's.
+   nearest figure (the rig's `_focus_point`), written every frame. The taps are an 11x11 window whose stride grows with the radius (so the cost does not). Measured on `moving_punk` (the whole writer, 2560x1440, other builders on the machine): 0.56 s a frame with the brush on, 0.47 with it off (about 0.09 s for the brush, well under the brief's 0.5 s), and round 3's was 0.37 (the rest is the re-scale and the wider ink pass, and the machine's load).
 7. **The ellipse is rounder (`brush_aniso_alpha` 2.5 from 1.0).** Kyprianidis' alpha. At 1.0 the strokes ran along the walls' vertical grain and read as dry-brush streaks
    (an oil-paint filter, which the brief rules out); 2.5 gives angular facets. Alternative: no anisotropy (an isotropic generalized Kuwahara). Not taken: the
    orientation still does its job on the long edges of the roof and the window rows.
@@ -97,4 +96,4 @@ roof_silhouette 0.72 (4/10) -> 0.91 (6/10: edge density 0.027 -> 0.0173, ink_fra
 ## Not shown or not proven
 - The brush on the boss roof in motion (t10) and on the roofs in motion (t07) was not rendered.
 - The thin-line fill and the near/overlap line values were tuned on the stills; a close-up with a fast figure (t03) was not looked at.
-- The per-frame cost: `moving_punk` seconds a frame 0.56 (the whole writer); the brush's own share was not isolated.
+- The per-frame cost is from one run each of the brush on and off; the machine was shared.
