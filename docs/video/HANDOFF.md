@@ -11,7 +11,10 @@ The cinematic gameplay video's live status, kept by the video session ("Beat-em-
   1. Run look-dev round 3 (Plan A)? [yes]
   2. D7, A+: Gemini-painted backdrops (the far buildings, the boss roof's sky, fire and smoke) as mattes, about $1.50-2.50 from the $3.46 left of the $5 cap. That cap was approved for look-dev targets only, so this new use needs his go. [I recommended yes]
   3. D6, Plan B: hold? [hold]
-  - **Until he answers,** run round 3 without A+: it needs no approval. Add A+ only on his yes. Read his replies in the DM (the relay forwards them).
+  - **He answered at 20:50 CST, in the chat:** "defaults on all three open questions are approved for next reset". So:
+    - round 3 runs at the next reset;
+    - A+ is approved: Gemini backdrops, at most $2.50 this round, under the $5 total cap. It's written into P1.md § LD-WORLD3, item 8;
+    - Plan B (D6) is on hold.
 - **The blind check** (one Opus judge, 15 shuffled frames; key `blind_key_gate2.json` in this session's scratchpad): all 8 reference frames called drawn (p_3d 0.04-0.12), all 7 of ours called 3D (0.95-0.99). Its shared tells, strongest first:
   1. Surface detail tiled at one density right to the vanishing point (brick, window grids, paving, chain-link).
   2. A faceted, low-poly first-person arm and fists.
@@ -63,12 +66,12 @@ The cinematic gameplay video's live status, kept by the video session ("Beat-em-
     - **Owns:** `video/stage/`, `video/cine/`, `video/shots/` and `video/acts/shots_acts.gd`.
   - **Then:** render the Gate 2 set again, look, run the blind check again (with the delivery pass on our frames), and send round 3 to Game-boy.
 - **Usage:** 5-hour window at 87%, weekly at 32%, at 19:40. Round 3 is four Sonnet builders, about 40-48% of a window, so it starts after the 22:29 reset.
-- **The resume task** `beat-em-up-video-resume-20261108-2229` fires at 22:40 CST. The app saved it in the default permission mode, because this turn wasn't typed by Game-boy, so it may pause on a permission prompt. Game-boy has been asked by DM to set it to Auto.
+- **The resume task** is `beat-em-up-video-resume-20261108-2230`, firing at 22:40 CST. It was re-created at 20:50 in a turn Game-boy typed, so it is saved in Auto mode. The first one, `...-2229`, was saved in the default mode and is now disabled, not deleted.
 - **Resume steps:**
   1. get_usage; read the DM for Game-boy's answers (newer than ts 1794185684.959309).
   2. Get the review's remaining results: from the journal, or resume the run.
   3. The round 3 briefs are written (P1.md, from "What Gate 2 found"; commit bd0bfac).
-     - If Game-boy said yes to A+, first add an approval line to § LD-WORLD3, item 8, with the cap he gave, and a ledger row.
+     - A+ is approved, and its line is already in § LD-WORLD3, item 8; LD-WORLD3 adds the ledger rows itself.
      - Wave A is `build.js` with [args-p1c.json](args-p1c.json): LD-WORLD3 and LD-ART2 (Blender).
      - Then merge, and paste the code lens's determinism finding into § LD-INK2, item 4.
      - Wave B is [args-p1d.json](args-p1d.json): LD-INK2 and SHOTS.
@@ -271,3 +274,8 @@ Ground rules:
 - Commit early on video/cinematic-trailer and the mv/* branches ("wip:" for unfinished work), and push often. Never touch m6/* or main, or the game session's worktrees.
 - When your watcher warns at 90%, do the handoff in PLAN.md §7 at once, including the resume task.
 - Judge every look from full-resolution stills beside the reference frames, and show me what you see at each gate: side-by-side stills and the clip. DM me on Slack (Michael, U0AQMKKBL93, DM D0AQUKX5DB6) at each gate and whenever you're blocked on me, and carry on with anything that isn't blocked.
+
+- **Added at Gate 2,** 2026-11-08 20:50 CST, in the chat: "defaults on all three open questions are approved for next reset". The three questions and their defaults:
+  1. Run look-dev round 3: yes.
+  2. D7, A+: Gemini-painted backdrops (far buildings, the boss roof's sky, fire and smoke) as mattes, about $1.50-2.50 from the rest of the $5 Gemini cap: yes, with $2.50 as this round's cap.
+  3. D6, Plan B: hold.
