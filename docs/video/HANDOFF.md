@@ -35,7 +35,10 @@ The cinematic gameplay video's live status, kept by the video session ("Beat-em-
   10. **(medium) moving_punk:** the head is cropped, the last 2 s are static, and there are blood "stickers". That's for SHOTS.
   - Also noticed: brick courses that wave at close range (wobble too high), the sun half hidden behind a tank, and identical lamp colours.
   - The full result is in the run's `journal.jsonl` (the `review:look` result line).
-- **Still running at handoff:** the review's skeptics, on the style lens's high findings, and the code lens (Sonnet: determinism, coherence, the frame writer, leaks, cost per frame). If they're cut off by the limit, resume with `Workflow({scriptPath: tools/workflows/review.js, resumeFromRunId: 'wf_5df89f41-295'})` and the same args ([args-review-g2.json](args-review-g2.json)): finished agents replay from the cache.
+- **The review round finished at 19:35:** 16 agents and 1.31M tokens, taking the 5-hour window to 87%.
+  - Skeptics confirmed all five of the style lens's high findings. The skeptic for finding 1 corrected the cause: the player's first-person arm mesh has a collapsed UV2, so it isn't a padding problem.
+  - The code lens found one high: CineTwos holds the wrong pose. It also found three mediums (determinism, probably a pipeline recompile after the runtime shadow-quality change; camera judder from the uneven 24 fps picks; `shoot.sh` exits 0 when the encode fails) and three lows.
+  - Every root cause is routed to its round 3 package in P1.md ("The review's root causes, by package"; commit e68f6df). There's nothing left to resume from this run.
 - **Round 3, the plan** (write the briefs into P1.md as new sections first; every package owns disjoint files):
   - **LD-WORLD3** (world):
     - findings 2, 5, 7, 8 and 9;
@@ -59,7 +62,7 @@ The cinematic gameplay video's live status, kept by the video session ("Beat-em-
   - **SHOTS** (PLAN Phase 2; it doesn't depend on the look): the acts and cine cameras for the shot list; finding 10.
     - **Owns:** `video/stage/`, `video/cine/`, `video/shots/` and `video/acts/shots_acts.gd`.
   - **Then:** render the Gate 2 set again, look, run the blind check again (with the delivery pass on our frames), and send round 3 to Game-boy.
-- **Usage:** 5-hour window at about 77%, weekly at 30%, at 19:15. Round 3 is four Sonnet builders, about 40-48% of a window, so it starts after the 22:29 reset.
+- **Usage:** 5-hour window at 87%, weekly at 32%, at 19:40. Round 3 is four Sonnet builders, about 40-48% of a window, so it starts after the 22:29 reset.
 - **The resume task** `beat-em-up-video-resume-20261108-2229` fires at 22:40 CST. The app saved it in the default permission mode, because this turn wasn't typed by Game-boy, so it may pause on a permission prompt. Game-boy has been asked by DM to set it to Auto.
 - **Resume steps:**
   1. get_usage; read the DM for Game-boy's answers (newer than ts 1794185684.959309).
