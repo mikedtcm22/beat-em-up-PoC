@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="VideoWorldLook" load_steps=15 format=3]
+[gd_resource type="Resource" script_class="VideoWorldLook" load_steps=16 format=3]
 
 [ext_resource type="Script" path="res://video/world/world_look.gd" id="1_look"]
 [ext_resource type="Script" path="res://video/world/world_light.gd" id="2_light"]
@@ -90,29 +90,42 @@ flame_w_m = 0.8
 script = ExtResource("3_emit")
 kind = 0
 points = PackedVector3Array(4.7, 1.2, -11.5)
-amount = 46
+amount = 14
 life_s = 3.2
-size_m = Vector2(0.015, 0.13)
+size_m = Vector2(0.02, 0.07)
 direction = Vector3(0, 1, 0)
 speed = Vector2(0.6, 1.6)
 spread_deg = 35.0
 gravity = Vector3(0, 0.25, 0)
 seed = 11
 
+[sub_resource type="Resource" id="Embers_b"]
+script = ExtResource("3_emit")
+kind = 0
+points = PackedVector3Array(4.8, 1.3, -11.4)
+amount = 4
+life_s = 4.4
+size_m = Vector2(0.11, 0.2)
+direction = Vector3(0.2, 1, 0)
+speed = Vector2(0.4, 1.0)
+spread_deg = 55.0
+gravity = Vector3(0, 0.2, 0)
+seed = 23
+
 [sub_resource type="Resource" id="Steam_a"]
 script = ExtResource("3_emit")
 kind = 1
 points = PackedVector3Array(2.4, 0, -12, -3.2, 0, -19.5)
 extents = Vector3(0.25, 0.02, 0.25)
-amount = 14
-life_s = 5.0
-size_m = Vector2(0.7, 1.3)
+amount = 2
+life_s = 7.0
+size_m = Vector2(1.7, 3.8)
 direction = Vector3(0, 1, 0)
 speed = Vector2(0.5, 0.9)
 spread_deg = 12.0
 gravity = Vector3(0, 0.08, 0)
-color_start = Color(0.5, 0.57, 0.82, 0.8)
-color_end = Color(0.28, 0.33, 0.56, 0)
+color_start = Color(0.58, 0.61, 0.72, 0.8)
+color_end = Color(0.3, 0.33, 0.46, 0)
 seed = 5
 
 [sub_resource type="Resource" id="Matte_city"]
@@ -139,28 +152,44 @@ ambient_color = Color(0.03, 0.032, 0.055, 1)
 toon_shadow_level = 0.07
 hook_color = Color(1, 0.58, 0.1, 1)
 lights = Array[ExtResource("2_light")]([SubResource("Lamp_key"), SubResource("Lamp_b"), SubResource("Lamp_c"), SubResource("Lamp_d"), SubResource("Barrel_a")])
-emitters = Array[ExtResource("3_emit")]([SubResource("Embers_a"), SubResource("Steam_a")])
+emitters = Array[ExtResource("3_emit")]([SubResource("Embers_a"), SubResource("Embers_b"), SubResource("Steam_a")])
 mattes = Array[ExtResource("4_matte")]([SubResource("Matte_city")])
 prop_color = Color(0.06, 0.06, 0.1, 1)
 props = {
 "AcUnit": {
 &"color": Color(0.7, 0.72, 0.8, 1),
 &"pattern": 3,
-&"rib_m": 0.25
+&"rib_m": 0.25,
+&"vary_scale": 0.12,
+&"vary_tilt_deg": 1.5,
+&"vary_value": 0.2
 },
 "Car": {
 &"color": Color(0.75, 0.22, 0.2, 1),
-&"pattern": 2
+&"pattern": 2,
+&"vary_scale": 0.06,
+&"vary_yaw_deg": 5.0,
+&"vary_value": 0.25,
+&"vary_hue": 0.9
 },
 "Dumpster": {
 &"color": Color(0.3, 0.46, 0.36, 1),
 &"pattern": 1,
-&"rib_m": 0.22
+&"rib_m": 0.22,
+&"vary_scale": 0.08,
+&"vary_yaw_deg": 4.0,
+&"vary_value": 0.2,
+&"vary_hue": 0.12
 },
 "WaterTank": {
 &"color": Color(0.34, 0.24, 0.17, 1),
 &"pattern": 0,
-&"rib_m": 0.3
+&"rib_m": 0.3,
+&"vary_scale": 0.12,
+&"vary_tilt_deg": 3.0,
+&"vary_value": 0.3,
+&"vary_hue": 0.06,
+&"patch": 1.0
 }
 }
 paint = {
@@ -222,7 +251,27 @@ paint = {
 &"pool_wall_gain": 0.5,
 &"pool_wall_hue": 0.8,
 &"pool_wall_damp": 0.25,
-&"draw_wobble_m": 0.008
+&"draw_wobble_m": 0.008,
+&"r4_on": 1.0,
+&"mask_edge": Vector2(0.62, 1.08),
+&"mask_shape": 0.3,
+&"key_weight": 0.0,
+&"dark_mass": 0.85,
+&"mass_value": 0.56,
+&"mass_color": Color(0.82, 0.9, 1.15, 1),
+&"dark_line_k": 0.34,
+&"mass_shade": 0.5,
+&"dark_detail": 0.5,
+&"mass_follow": 0.35,
+&"mass_shade_k": 0.85,
+&"win_dark_blank": 0.6,
+&"moon_top_color": Color(0.42, 0.55, 0.9, 1),
+&"moon_top_gain": 0.28,
+&"moon_top_min": 0.7,
+&"pool_shape_amp": 0.2,
+&"pool_bites": 0.3,
+&"pool_bite_freq": 0.9,
+&"puddle_rag": 0.9
 }
 sky = {
 &"zenith_color": Color(0.015, 0.02, 0.07, 1),

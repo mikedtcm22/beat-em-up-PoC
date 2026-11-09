@@ -76,23 +76,34 @@ static func _mesh(parent: Node3D, mesh: Mesh, at: Vector3, material: Material) -
 	return instance
 
 
-## A pole, a lean-over arm, a housing and a bright lens. Returns the light's place (under the lens), relative to the feet.
+## A pole, a lean-over arm, a housing and a bright lens. Returns the light's place (under the lens), relative to the feet. The pole tapers (a stout base, a
+## thin top) and the whole post leans a little off the vertical (`spec.lean_deg`, from a hash of the lamp's place when it is zero): a ruler-straight pole is a tell.
 static func _lamp_post(look: VideoWorldLook, spec: VideoWorldLight, root: Node3D) -> Vector3:
 	var h := spec.height_m
 	var paint := look.prop_material(look.prop_color)
+	var lean := Node3D.new()
+	lean.name = "Lean"
+	lean.basis = spec.lean_basis()
+	root.add_child(lean)
 	var pole := CylinderMesh.new()
-	pole.top_radius = 0.055
-	pole.bottom_radius = 0.085
+	pole.top_radius = spec.pole_top_m
+	pole.bottom_radius = spec.pole_base_m
 	pole.height = h
-	_mesh(root, pole, Vector3(0.0, h * 0.5, 0.0), paint)
+	_mesh(lean, pole, Vector3(0.0, h * 0.5, 0.0), paint)
+	# A collar at the foot, where the pole meets the ground.
+	var collar := CylinderMesh.new()
+	collar.top_radius = spec.pole_base_m * 1.05
+	collar.bottom_radius = spec.pole_base_m * 1.5
+	collar.height = 0.3
+	_mesh(lean, collar, Vector3(0.0, 0.15, 0.0), paint)
 	var arm_x := spec.arm_side * 0.7
 	if absf(arm_x) > 0.01:
 		var arm := BoxMesh.new()
 		arm.size = Vector3(absf(arm_x), 0.07, 0.07)
-		_mesh(root, arm, Vector3(arm_x * 0.5, h, 0.0), paint)
+		_mesh(lean, arm, Vector3(arm_x * 0.5, h, 0.0), paint)
 	var cap := BoxMesh.new()
 	cap.size = Vector3(0.7, 0.05, 0.42)
-	_mesh(root, cap, Vector3(arm_x, h + 0.1, 0.0), paint)
+	_mesh(lean, cap, Vector3(arm_x, h + 0.1, 0.0), paint)
 	# The head glows: an unlit lamp-coloured box (the lens), so the lamp reads as a lit shape, not a black bar.
 	var lens_material := StandardMaterial3D.new()
 	lens_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
@@ -100,8 +111,8 @@ static func _lamp_post(look: VideoWorldLook, spec: VideoWorldLight, root: Node3D
 	lens_material.disable_fog = true
 	var lens := BoxMesh.new()
 	lens.size = Vector3(0.62, 0.14, 0.34)
-	_mesh(root, lens, Vector3(arm_x, h + 0.01, 0.0), lens_material)
-	return Vector3(arm_x, h - 0.1, 0.0)
+	_mesh(lean, lens, Vector3(arm_x, h + 0.01, 0.0), lens_material)
+	return lean.basis * Vector3(arm_x, h - 0.1, 0.0)
 
 
 ## A barrel with a flame card; the light sits in the flame. Returns the flame's place.

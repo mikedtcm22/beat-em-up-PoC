@@ -9,7 +9,8 @@ enum Kind { EMBERS, STEAM, DUST }
 ## Where it emits (section space), one emitter per point, and the box it emits from (half extents, m).
 @export var points: PackedVector3Array = PackedVector3Array()
 @export var extents: Vector3 = Vector3(0.2, 0.05, 0.2)
-## Particles per emitter, their life (s), and the sprite's size range (m).
+## Particles per emitter, their life (s), and the sprite's size range (m). For STEAM (drawn plumes, R4-WORLD): `amount` is the number of plumes at each point
+## (one or two), `size_m` the big plume's card (width, height), `life_s` the seconds a lobe takes to rise, `color_start` the light value and `color_end` the shade.
 @export_range(1, 2000) var amount: int = 40
 @export_range(0.2, 20.0) var life_s: float = 3.0
 @export var size_m: Vector2 = Vector2(0.04, 0.09)
