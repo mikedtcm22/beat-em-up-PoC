@@ -53,6 +53,27 @@ hook_from_sun = true
 emitters = Array[ExtResource("3_emit")]([SubResource("Dust_a")])
 mattes = Array[ExtResource("4_matte")]([SubResource("Matte_city")])
 prop_color = Color(0.2, 0.14, 0.22, 1)
+props = {
+"AcUnit": {
+&"color": Color(0.55, 0.56, 0.6, 1),
+&"pattern": 3,
+&"rib_m": 0.25
+},
+"Car": {
+&"color": Color(0.5, 0.14, 0.13, 1),
+&"pattern": 2
+},
+"Dumpster": {
+&"color": Color(0.14, 0.24, 0.19, 1),
+&"pattern": 1,
+&"rib_m": 0.22
+},
+"WaterTank": {
+&"color": Color(0.34, 0.24, 0.17, 1),
+&"pattern": 0,
+&"rib_m": 0.3
+}
+}
 paint = {
 &"albedo": Color(0.95, 0.88, 0.85, 1),
 &"paint_lod": 4.2,
@@ -67,11 +88,16 @@ paint = {
 &"paint_sat": 0.9,
 &"warp_m": 0.3,
 &"row_jitter_m": 0.5,
-&"window_blank_p": 0.28,
+&"window_blank_p": 0.0,
 &"window_lit_p": 0.0,
-&"brick_strokes": 0.3,
+&"brick_strokes": 0.0,
 &"brick_flat": 1.0,
-&"brick_edge_w": 0.05
+&"brick_edge_w": 0.05,
+&"draw_on": 1.0,
+&"pipe_p": 0.4,
+&"crack_p": 0.3,
+&"pool_norm_wall": 0.0,
+&"puddle_p": 0.0
 }
 sky = {
 &"zenith_color": Color(0.46, 0.32, 0.52, 1),
@@ -95,7 +121,7 @@ sky = {
 sky_disc_follows_sun = true
 haze = {
 &"band_start_m": Vector3(10, 24, 46),
-&"band_color_1": Color(1, 0.7, 0.5, 0.12),
-&"band_color_2": Color(1, 0.7, 0.5, 0.24),
-&"band_color_3": Color(1, 0.72, 0.5, 0.36)
+&"band_color_1": Color(1, 0.7, 0.5, 0.03),
+&"band_color_2": Color(1, 0.7, 0.5, 0.07),
+&"band_color_3": Color(1, 0.72, 0.5, 0.12)
 }
