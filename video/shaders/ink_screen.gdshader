@@ -14,11 +14,17 @@ shader_type spatial;
 //  - TINT: the ink is a warm brown-black (never pure black).
 //  - WOBBLE: the alpha is broken by a noise anchored in WORLD space (from the depth), so the line looks
 //    inked by hand and never swims with the camera.
+//  - A LINE HIERARCHY (round 3). The world draws its own lines now (flat_paint_env), so this pass weights them lighter
+//    on environment pixels (`env_weight`) and so they do not double; a character's inner (crease) lines are lighter
+//    than its silhouette (`inner_weight`); a TERMINATOR LINE draws a thin inner line on the dark side of every paint step inside a character
+//    (the toon band edges: where the form turns from light to shade, the line a hand draws there) from the rendered colour itself; and a SEPARATION band darkens the environment within `sep_px` of a
+//    character that is not at the lens (a value step: the figure reads against the ground behind it).
 // A character is told from the world by the edge tag (ROUGHNESS 0 on a character), as in edge_pass.
 
 render_mode unshaded, depth_test_disabled, depth_draw_never, cull_disabled, skip_vertex_transform, shadows_disabled, fog_disabled;
 
 uniform sampler2D depth_tex : hint_depth_texture, repeat_disable, filter_nearest;
+uniform sampler2D screen_tex : hint_screen_texture, repeat_disable, filter_linear_mipmap;
 uniform sampler2D normal_tex : hint_normal_roughness_texture, repeat_disable, filter_nearest;
 
 uniform vec3 ink : source_color = vec3(0.09, 0.055, 0.05);
@@ -42,8 +48,23 @@ uniform vec3 moon_dir_view = vec3(0.0, 0.7, 0.7);
 uniform float moon_share : hint_range(0.0, 1.0) = 0.3;
 // How strongly a character's creases draw (0 = silhouettes only).
 uniform float crease_gain : hint_range(0.0, 1.0) = 1.0;
-// 0 = the picture; 1 = the light factor; 2 = the line width; 3 = the lines only.
-uniform int debug_view : hint_range(0, 3) = 0;
+// The hierarchy: the weight of the line on environment pixels, of a character's creases, and the separation band
+// (the environment's darkening next to a figure: its colour, its strength, its width in pixels at 1080p, and the
+// nearest a figure may be, in metres, to cast it: the player's own arm is at the lens and casts none).
+// The terminator line: its strength (0 = off), the luminance ratio (in stops) where it starts and is full, and its width in pixels at 1080p.
+uniform float term_line : hint_range(0.0, 1.0) = 0.0;
+uniform vec2 term_stops = vec2(0.9, 1.7);
+uniform float term_px : hint_range(0.5, 6.0) = 1.6;
+// The mip level the colour is read at (the paint's grain and brush noise blur out, the band edges stay).
+uniform float term_lod : hint_range(0.0, 4.0) = 1.2;
+uniform float env_weight : hint_range(0.0, 1.0) = 1.0;
+uniform float inner_weight : hint_range(0.0, 1.0) = 1.0;
+uniform vec3 sep_color : source_color = vec3(0.02, 0.02, 0.06);
+uniform float sep_alpha : hint_range(0.0, 1.0) = 0.0;
+uniform float sep_px : hint_range(0.0, 60.0) = 14.0;
+uniform float sep_min_m : hint_range(0.0, 10.0) = 1.5;
+// 0 = the picture; 1 = the light factor; 2 = the line width; 3 = the lines only; 4 = the character tag; 5 = the terminator line.
+uniform int debug_view : hint_range(0, 5) = 0;
 
 void vertex() {
 	POSITION = vec4(VERTEX.xy, 1.0, 1.0);
@@ -156,7 +177,29 @@ void fragment() {
 				sharp = max(sharp, 1.0 - dot(n0, normalize(nq)));
 			}
 		}
-		crease_line = smoothstep(normal_threshold * 0.5, normal_threshold, sharp) * depth_gate * (character ? crease_gain : 1.0);
+		crease_line = smoothstep(normal_threshold * 0.5, normal_threshold, sharp) * depth_gate * (character ? crease_gain * inner_weight : 1.0);
+	}
+
+	// The terminator line: a paint step inside a character (both sides are the same figure, the depth continuous), drawn on its dark side.
+	float term = 0.0;
+	if (term_line > 0.0 && character) {
+		int kt = max(1, int(round(term_px * scale)));
+		vec3 c0 = max(textureLod(screen_tex, (vec2(p) + 0.5) / vec2(size), term_lod).rgb, vec3(0.0005));
+		float l0 = dot(c0, vec3(0.2126, 0.7152, 0.0722));
+		ivec2 taps4[4] = ivec2[](ivec2(kt, 0), ivec2(-kt, 0), ivec2(0, kt), ivec2(0, -kt));
+		float stops = 0.0;
+		for (int i = 0; i < 4; i++) {
+			ivec2 q = clamp(p + taps4[i], ivec2(0), size - 1);
+			vec4 nrq = texelFetch(normal_tex, q, 0);
+			if (!is_sky(q, size) && nrq.a < 0.5) {
+				vec3 cq = max(textureLod(screen_tex, (vec2(q) + 0.5) / vec2(size), term_lod).rgb, vec3(0.0005));
+				// The step in stops over the three channels (a hue step counts, as it does to the eye), on the darker side only.
+				if (dot(cq, vec3(0.2126, 0.7152, 0.0722)) > l0 * 1.04) {
+					stops = max(stops, length(log2(cq / c0)) * 0.6);
+				}
+			}
+		}
+		term = smoothstep(term_stops.x, term_stops.y, stops) * depth_gate * term_line * inner_weight;
 	}
 
 	float fade = 1.0 - smoothstep(fade_start_m, max(fade_end_m, fade_start_m + 0.01), z0);
@@ -164,9 +207,34 @@ void fragment() {
 	vec3 wp = (INV_VIEW_MATRIX * vec4(v0, 1.0)).xyz;
 	float broken = mix(1.0, 0.35 + 0.65 * smoothstep(0.25, 0.7, vnoise(wp * wobble_scale)), wobble);
 	float line = max(depth_line, crease_line);
-	float alpha = line * strength * fade * broken * alpha_max;
+	float alpha = line * strength * fade * broken * alpha_max * (character ? 1.0 : env_weight);
+	alpha = max(alpha, term * fade * broken * alpha_max);
 
+	// The separation band: an environment pixel near a figure is darkened, softly, by how many of the taps on two rings find the figure.
 	vec3 color = ink;
+	if (sep_alpha > 0.0 && !character && has_normal) {
+		float hits = 0.0;
+		float reach = sep_px * scale;
+		for (int ring = 1; ring <= 2; ring++) {
+			float r = reach * float(ring) * 0.5;
+			for (int i = 0; i < 8; i++) {
+				float a = 0.7853982 * float(i) + 0.39;
+				ivec2 q = clamp(p + ivec2(round(vec2(cos(a), sin(a)) * r)), ivec2(0), size - 1);
+				vec4 nrq = texelFetch(normal_tex, q, 0);
+				if (!is_sky(q, size) && nrq.a < 0.5 && length(nrq.xyz * 2.0 - 1.0) > 0.5) {
+					float zq = view_distance(q, size, ip);
+					hits += (zq > sep_min_m && zq < z0 - 0.15) ? 1.0 : 0.0;
+				}
+			}
+		}
+		float band = smoothstep(0.0, 5.0, hits);
+		float sep = sep_alpha * band;
+		// composite the band under the line: the line's own colour over the band's
+		float total = alpha + sep * (1.0 - alpha);
+		color = total > 0.0001 ? (ink * alpha + sep_color * sep * (1.0 - alpha)) / total : ink;
+		alpha = total;
+	}
+
 	if (debug_view == 1) {
 		color = vec3(lit);
 		alpha = 1.0;
@@ -176,6 +244,12 @@ void fragment() {
 	} else if (debug_view == 3) {
 		color = vec3(1.0);
 		alpha = line;
+	} else if (debug_view == 4) {
+		color = vec3(character ? 1.0 : 0.0, has_normal ? 1.0 : 0.0, 0.0);
+		alpha = 1.0;
+	} else if (debug_view == 5) {
+		color = vec3(term);
+		alpha = 1.0;
 	}
 	ALBEDO = color;
 	ALPHA = alpha;

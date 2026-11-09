@@ -4,4 +4,6 @@
 
 [resource]
 script = ExtResource("1_art")
+face_fill = 0.04
 face_fill_color = Color(1, 0.8, 0.6, 1)
+catch_strength = 0.25

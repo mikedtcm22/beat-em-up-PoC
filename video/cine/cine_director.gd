@@ -13,6 +13,10 @@ const WORLD_FILE := "world.tres"
 const INK_FILE := "ink.tres"
 const ART_PREFIX := "art"
 
+## The game's floor glint of a weapon (a four-point sparkle above it, WeaponGlint) is hidden: against a sun it reads as a camera's lens flare, and
+## neither reference has one. The weapon itself stays. Set it false for the game's own pickup cue.
+@export var hide_pickup_glint: bool = true
+
 var shot: VideoStillShot
 var level: Node
 var location: StringName = &"street_night"
@@ -94,6 +98,10 @@ func direct(p_level: Node, p_shot: VideoStillShot, skip: PackedStringArray = Pac
 			piece.apply(level)
 	remember_overlays()
 	hide_overlays(level)
+	if hide_pickup_glint:
+		_hide_glints(level)
+		if not get_tree().node_added.is_connected(_on_node_added):
+			get_tree().node_added.connect(_on_node_added)
 	seed_rngs(level, shot.rng_seed if shot is CineShot else 1)
 	apply_presentation()
 
@@ -175,11 +183,26 @@ func _write(property: StringName, value: Variant) -> void:
 	Tuning.set_value(property, value)
 
 
+## Hide the floor glint's sparkle of every weapon under `p_level` now (the glint shows and hides its own node, not the sparkle mesh).
+static func _hide_glints(p_level: Node) -> void:
+	for glint in p_level.find_children("*", "WeaponGlint", true, false):
+		for child in glint.get_children():
+			if child is MeshInstance3D:
+				(child as MeshInstance3D).visible = false
+
+
+func _on_node_added(node: Node) -> void:
+	if node is MeshInstance3D and node.get_parent() is WeaponGlint:
+		(node as MeshInstance3D).visible = false
+
+
 ## Put back the tunables this director wrote.
 func restore() -> void:
 	for property: StringName in _saved:
 		Tuning.set_value(property, _saved[property])
 	_saved.clear()
+	if is_inside_tree() and get_tree().node_added.is_connected(_on_node_added):
+		get_tree().node_added.disconnect(_on_node_added)
 
 
 # --- the clock and the camera --------------------------------------------------------------

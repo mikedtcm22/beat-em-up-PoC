@@ -5,6 +5,9 @@ shader_type spatial;
 //  - a FLASH FRAME: a flat paper-white fill (alpha `flash`) with the radial lines over it in ink, and
 //  - SPEED LINES: ink streaks radiating from `center` (screen uv), count and length from hashes of the
 //    streak's cell and `seed`, so they are irregular, re-seeded from the output frame (12 fps) by the rig.
+//  - THE REAR WARNING (round 3): the game's warning is a HUD burst that never reaches the render, so the cue pass draws its own from
+//    the HUD's state: a hard-edged red shard-burst with an ink outline and a paper core in the top corner it lights (`warn_left`,
+//    `warn_right`: xy the centre in screen uv, z the half height in uv, w the alpha), its spikes re-rolled by `seed` (12 fps).
 // No time and no screen noise: every value is a uniform the rig sets from the output frame.
 
 render_mode unshaded, depth_test_disabled, depth_draw_never, cull_disabled, skip_vertex_transform, shadows_disabled, fog_disabled;
@@ -17,6 +20,10 @@ uniform vec2 center = vec2(0.5, 0.5);
 uniform float seed : hint_range(0.0, 1000.0) = 0.0;
 uniform float count : hint_range(8.0, 200.0) = 72.0;
 uniform float inner : hint_range(0.0, 1.0) = 0.28;
+uniform vec4 warn_left = vec4(0.0);
+uniform vec4 warn_right = vec4(0.0);
+uniform vec3 warn_color : source_color = vec3(0.95, 0.16, 0.08);
+uniform float warn_spikes : hint_range(5.0, 16.0) = 9.0;
 
 void vertex() {
 	POSITION = vec4(VERTEX.xy, 1.0, 1.0);
@@ -24,6 +31,31 @@ void vertex() {
 
 float hash11(float x) {
 	return fract(sin(x * 127.1 + 311.7) * 43758.5453);
+}
+
+// One warning burst at `w` (centre uv, half height uv, alpha): rgb and coverage. A jagged star whose spikes differ in length and
+// angle (the hash of its cell and the seed), an ink rim, a hot fill and a paper core; the edges are smoothed by the pixel footprint.
+vec4 warning_burst(vec2 uv, vec4 w, float aspect) {
+	if (w.w <= 0.001) {
+		return vec4(0.0);
+	}
+	vec2 d = (uv - w.xy) * vec2(aspect, 1.0) / max(w.z, 0.001);
+	float r = length(d);
+	if (r > 1.4) {
+		return vec4(0.0);
+	}
+	float a = atan(d.y, d.x) / TAU + 0.5;
+	float cell = floor(a * warn_spikes);
+	float h = hash11(cell * 3.1 + seed * 17.0 + w.x * 9.0);
+	float t = abs(fract(a * warn_spikes + 0.15 * h) - 0.5) * 2.0;
+	float reach = (0.62 + 0.38 * h) * mix(1.0, 0.34, smoothstep(0.0, 1.0, t));
+	float aa = fwidth(r) * 1.5;
+	float body = 1.0 - smoothstep(reach - aa, reach + aa, r);
+	float rim = 1.0 - smoothstep(reach - 0.13 - aa, reach - 0.13 + aa, r);
+	float core = 1.0 - smoothstep(0.22 - aa, 0.22 + aa, r);
+	vec3 c = mix(ink, warn_color, rim);
+	c = mix(c, paper, core);
+	return vec4(c, body * w.w);
 }
 
 void fragment() {
@@ -47,6 +79,13 @@ void fragment() {
 	// Paper under the lines in a flash frame; the lines are ink on it, or ink on the picture without one.
 	vec3 color = mix(ink, paper, flash * (1.0 - line_alpha));
 	float alpha = clamp(max(flash, line_alpha), 0.0, 1.0);
+	// The rear warning's bursts over it.
+	vec4 wl = warning_burst(uv, warn_left, aspect);
+	vec4 wr = warning_burst(uv, warn_right, aspect);
+	color = mix(color, wl.rgb, wl.a);
+	alpha = max(alpha, wl.a);
+	color = mix(color, wr.rgb, wr.a);
+	alpha = max(alpha, wr.a);
 	ALBEDO = color;
 	ALPHA = alpha;
 }

@@ -554,9 +554,9 @@ The video's palette LUTs (docs/video/PLAN.md Plan A part 5). Made by `tools/vide
 
 | Asset | Path | Source / service | License | Notes |
 | --- | --- | --- | --- | --- |
-| Street at night palette LUT | `assets/video/ink/lut_street_night.png` | `palette_lut.py`: ref 2 at 42.0 s against our `street_wide` render | generated, project | 30 KB |
-| Roofs at dusk palette LUT | `assets/video/ink/lut_roofs_dusk.png` | `palette_lut.py`: ref 2 at 50.5 s against our `roof_silhouette` render | generated, project | 28 KB |
-| Boss roof palette LUT | `assets/video/ink/lut_boss_fire.png` | `palette_lut.py`: ref 1 at 5.3 s against our `ox_closeup` render | generated, project | 32 KB |
+| Street at night palette LUT | `assets/video/ink/lut_street_night.png` | `palette_lut.py`: ref 2 at 42.0 s against our `street_wide` render; rebuilt in round 3 on the round 3 world (LUT and grade off, strength 0.7) | generated, project | 30 KB |
+| Roofs at dusk palette LUT | `assets/video/ink/lut_roofs_dusk.png` | `palette_lut.py`: ref 2 at 50.5 s against our `roof_silhouette` render; rebuilt in round 3 (LUT and grade off, strength 0.7) | generated, project | 28 KB |
+| Boss roof palette LUT | `assets/video/ink/lut_boss_fire.png` | `palette_lut.py`: ref 1 at 5.3 s against our `ox_low` render; rebuilt in round 3 (LUT and grade off, strength 0.7) | generated, project | 32 KB |
 
 ## Video: LD-ASSET (Phase 1)
 

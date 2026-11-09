@@ -158,6 +158,7 @@ func _process(_delta: float) -> void:
 			extra.set_shader_parameter(&"boil_seed", seed_value)
 	_update_rim_lights(camera)
 	_update_ink_quad(camera)
+	_update_delivery()
 	if _look_post != null and is_instance_valid(_look_post):
 		_look_post.edge_quad().visible = false
 	if _frame % SCAN_EVERY == 2:
@@ -273,6 +274,11 @@ func _push_hull_values(material: ShaderMaterial, jitter_px: float, width_scale: 
 	material.set_shader_parameter(&"jitter_px", absf(jitter_px))
 	material.set_shader_parameter(&"width_scale", width_scale)
 	material.set_shader_parameter(&"pass_id", pass_id)
+	material.set_shader_parameter(&"taper_amount", look.taper_amount)
+	var first_person: bool = material.get_meta(&"toon_fp", false)
+	material.set_shader_parameter(&"taper_scale", look.fp_taper_scale if first_person else look.taper_scale)
+	material.set_shader_parameter(&"break_amount", look.break_amount)
+	material.set_shader_parameter(&"weight_mult", look.fp_weight if first_person else look.char_weight)
 
 
 func _push_options() -> void:
@@ -463,6 +469,17 @@ func _push_ink_values() -> void:
 	_ink_material.set_shader_parameter(&"wobble", look.ink_wobble)
 	_ink_material.set_shader_parameter(&"wobble_scale", look.ink_wobble_scale)
 	_ink_material.set_shader_parameter(&"crease_gain", look.ink_crease_gain)
+	_ink_material.set_shader_parameter(&"env_weight", look.ink_env_weight)
+	_ink_material.set_shader_parameter(&"inner_weight", look.ink_inner_weight)
+	_ink_material.set_shader_parameter(&"debug_view", look.ink_debug_view)
+	_ink_material.set_shader_parameter(&"term_line", look.term_line)
+	_ink_material.set_shader_parameter(&"term_stops", look.term_stops)
+	_ink_material.set_shader_parameter(&"term_px", look.term_px)
+	_ink_material.set_shader_parameter(&"term_lod", look.term_lod)
+	_ink_material.set_shader_parameter(&"sep_color", look.sep_color)
+	_ink_material.set_shader_parameter(&"sep_alpha", look.sep_alpha)
+	_ink_material.set_shader_parameter(&"sep_px", look.sep_px)
+	_ink_material.set_shader_parameter(&"sep_min_m", look.sep_min_m)
 
 
 ## The ink pass's lights, in view space: the key lamp (a position, or off when the key is the sun), the
@@ -488,6 +505,15 @@ func _update_ink_quad(camera: Camera3D) -> void:
 
 
 # --- the post and the palette --------------------------------------------------------------
+
+
+## The delivery grain's seed: the output frame over the hold, so the grain is new on each drawing of the characters, never from the clock.
+func _update_delivery() -> void:
+	if compositor == null or compositor.compositor_effects.is_empty():
+		return
+	var effect := compositor.compositor_effects[0] as CinePostEffect
+	if effect != null:
+		effect.fine_seed = float(floori(float(output_frame()) / float(maxi(look.grain_hold, 1))) % 997)
 
 
 ## The finish pass's compositor on the level's WorldEnvironment and on every camera in the tree that has none
