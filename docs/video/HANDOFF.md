@@ -6,6 +6,26 @@ The cinematic gameplay video's live status, kept by the video session ("Beat-em-
 
 ## Status (newest first)
 
+### 2026-11-09 10:35 CST: R5-PAINT merged, and the pilot works; R5-SHOTS, R5-ART and R5-INK running
+- **The first round 5 run** (`wf_67882462-8a5`) built only R5-PAINT. The runner's usage gate skipped the other three: it takes `max(5-hour, weekly)` as if both were points of a 5-hour window, so a weekly at 69% left "1%" of headroom.
+  - **The fix,** outside the repo: a copy of the runner, `build_weekly.js`, in this session's workflow scripts folder (`.../workflows/scripts/build_weekly.js`). Its gate scales the weekly room into 5-hour points (`args.weekly_scale`, 6 on this seat: about 6 points of the 5-hour window per weekly point).
+  - **Use it** while the weekly window is high. `tools/workflows/build.js` is unchanged (it isn't video-only code).
+- **R5-PAINT is merged** (`aa9a827`; 194 of 194 video tests on its branch; the protected diff is clean).
+  - **What's in it:** a blockout mode in the paint shader; `tools/video/plate_capture.sh`, `make_plate_jobs.py`, `register_plates.py` and `make_plate.sh`; the plate piece (`plate.tres` per location, loaded after ink) and `CinePlateQuad`; a motion check (moving_punk 30-54: a mean difference of 0.7-1.6 of 255, at most 1% torn pixels).
+  - **The pilot:** 2 Gemini images ($0.28; the ledger total is about $2.80), plates for the stills street_wide and roof_silhouette.
+  - **The result** (`.worktrees/mv-r5-paint/captures/video/plates/pilot2up.png`): **both backgrounds read as drawn.** They're brighter and cleaner than the references, with varied windows, cracks, puddles, haze, a smooth sun and painted towers. The actors are now the tell, the white, double-outlined Kicker in front of the sun above all.
+  - **Its notes:** the first-person bob shows as blurred strips at a plated frame's edges, so hold the hero cameras' position. The boss plate's matte policy is open (calls file, item 10). About $1.72 of the $2 is left (about 12 images).
+- **Sent to Game-boy at 10:30:** the pilot image with a short note (`F0CG3BVJ71U`). Nothing asked.
+- **Running:** `build_weekly.js` run `wf_9e0eccab-216` (task `wmiht0d1c`): R5-SHOTS, R5-ART and R5-INK, three at once (the capture lock still allows two renders), each cut from the base with R5-PAINT merged. A P1.md note, "R5-PAINT has landed", gives them the plated stills to judge on and R5-PAINT's requests.
+- **Usage at 10:30:** 5-hour 47%, weekly 71%. The weekly is now the binding limit until it resets on 2026-11-10 at 15:59 CST.
+- **Next:**
+  1. merge the three;
+  2. make the hero plates for `video/shots/hero_frames.json` with `tools/video/make_plate.sh` (a ledger row first, then `--run`, then `--install`; an approved plate as `--swatch` for its location; at most about 12 images);
+  3. render the hero frames at 2560×1440;
+  4. run the blind check;
+  5. DM.
+
+
 ### 2026-11-09 09:45 CST: resumed after the 08:50 reset; the design panel ran; round 5 running (R5-PAINT, R5-SHOTS, R5-ART, R5-INK)
 - **Resumed at 09:00:** the 5-hour window is at 0%, and weekly at 64% (it resets 2026-11-10 15:59 CST). The watcher and the relay restarted. No new DM.
 - **The design panel** (`wf_38255729-024`, 445k tokens) agreed with itself across all three lenses. Its result is in its journal; the summary is in P1.md, "What round 4 found".
