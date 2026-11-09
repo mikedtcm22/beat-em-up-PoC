@@ -7,16 +7,18 @@ shader_type spatial;
 //
 // toon_light.gdshaderinc is NOT included: it defines light(), and a shader has one. The toon_shade() idea
 // is kept (bands with a tinted shadow that is never black); what this adds:
-//  - A PAINTED TERMINATOR. The light term is shifted by an object-space brush noise before the bands, and
-//    the band edge is at least term_soft pixels wide, so a shadow map's stair-steps turn into a wavy,
-//    hand-edged shape (soften, then posterise).
+//  - A DESIGNED TERMINATOR (round 4, R4-ART; the round 3 brush noise on the light term is gone: judges read it as a shader). The
+//    light term is posterised with a clean, anti-aliased edge (at least term_soft pixels wide, so a shadow map's stair-steps go),
+//    and a SHADOW HINT from the character's shade map (shade_tex, R, in the UV2 layout: under the brow and the cheekbone, under the
+//    chin, the underside of a forearm) is subtracted from the light term first, so the shadow shape follows the big form.
 //  - THE SCENE'S SHADOW HUE (cine_shadow), 2 or 3 bands (cine_bands).
 //  - A POINT LIGHT ADDS NOTHING IN ITS SHADOW BAND: only the sun's (directional) light carries the shadow
 //    colour; a lamp adds (shade - shadow) so its pool has a hard edge and no flood.
 //  - A KEY-TINTED RIM in fragment(), a hard-edged band whose width follows the surface's curvature and an
 //    object-space noise, never a constant. key_dir_view / key_color come from the rig each frame.
 //  - OBJECT-SPACE BRUSH GRAIN (the rest-pose position, so it sticks to the moving body).
-//  - HATCHING from a code-made tonal art map (hatch_tex) in the shadow band, switched on by hatch_on.
+//  - HATCHING from the shade map (G: tapering strokes laid along the form; B: the depth of shadow a stroke needs), only in the
+//    shadow band, switched on by hatch_on (the ink piece's close-up fade) times hatch_gain. The ink piece's hatch_tex is unused now.
 //  - GLINTS only where the atlas says glossy (the game's per-swatch gloss), kept as the game does it.
 //  - For LD-ASSET: ink_tex (R = ink, UV2, the layout), paint_tex (painted albedo, UV2), ink_color and ink_strength.
 
@@ -104,6 +106,17 @@ uniform sampler2D hatch_tex : filter_linear_mipmap, repeat_enable;
 uniform float hatch_on : hint_range(0.0, 1.0) = 0.0;
 uniform float hatch_scale : hint_range(0.5, 12.0) = 3.2;
 uniform float hatch_dark : hint_range(0.0, 1.0) = 0.7;
+// R4-ART (video/look/<location>/art.tres): the shade map (R = shadow hint, G = hatch strokes, B = a stroke's depth threshold), the hint's
+// weight on the light term, the hatching's gain on hatch_on, and a gain on the rim for the foreground arm.
+uniform sampler2D shade_tex : filter_linear_mipmap, repeat_disable;
+uniform bool use_shade_tex = false;
+uniform float shade_hint_gain : hint_range(0.0, 1.0) = 0.4;
+uniform float hatch_gain : hint_range(0.0, 2.0) = 1.0;
+// A floor under hatch_on (the first-person arm is always close, whatever the nearest figure's distance says), and the strokes' own fade
+// with the distance of the pixel to the lens (metres): full inside hatch_near_m, gone at hatch_far_m. Close-ups only.
+uniform float hatch_floor : hint_range(0.0, 1.0) = 0.0;
+uniform vec2 hatch_dist = vec2(1.4, 3.0);
+uniform float art_rim_gain : hint_range(0.0, 2.0) = 1.0;
 // LD-ASSET's textures (UV0): off until the art ships them.
 uniform sampler2D ink_tex : filter_linear_mipmap, repeat_disable;
 uniform bool use_ink_tex = false;
@@ -123,8 +136,9 @@ varying vec3 mark_normal;
 varying float swatch_spec;
 varying float swatch_glint;
 varying float glint_gate;
-varying float paint_noise;
-varying vec4 hatch_levels;
+varying float shade_hint;
+varying vec2 hatch_stroke;
+varying float lens_dist;
 
 const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
 
@@ -240,15 +254,15 @@ void fragment() {
 	// Brush grain and the terminator's noise, both in the object's rest space.
 	float grain = vnoise(mark_pos * grain_scale * grain_stretch);
 	color *= 1.0 + (grain - 0.5) * 2.0 * grain_amount;
-	paint_noise = vnoise(mark_pos * term_noise_scale);
 
-	// Hatching strokes (a tonal art map: four cumulative densities in R, G, B, A), triplanar in rest space.
-	hatch_levels = vec4(0.0);
-	if (hatch_on > 0.0) {
-		vec3 w = abs(normalize(mark_normal));
-		w /= max(w.x + w.y + w.z, 0.0001);
-		vec3 p = mark_pos * hatch_scale;
-		hatch_levels = texture(hatch_tex, p.zy) * w.x + texture(hatch_tex, p.xz) * w.y + texture(hatch_tex, p.xy) * w.z;
+	// The shade map: the designed shadow hint, and the hatch stroke (coverage, threshold) baked along the form.
+	lens_dist = -VERTEX.z;
+	shade_hint = 0.0;
+	hatch_stroke = vec2(0.0);
+	if (use_shade_tex) {
+		vec4 sh = texture(shade_tex, UV2);
+		shade_hint = sh.r;
+		hatch_stroke = vec2(sh.g, sh.b);
 	}
 
 	// The key-tinted rim: a hard band on the silhouette side that faces the key, narrower where the
@@ -264,7 +278,7 @@ void fragment() {
 
 	ALBEDO = color;
 	ROUGHNESS = edge_tag;
-	EMISSION = flash_color * flash_amount + key_color * rim * cine_rim_strength * color
+	EMISSION = flash_color * flash_amount + key_color * rim * cine_rim_strength * art_rim_gain * color
 			+ color * face_fill_color * face_zone * face_fill + catch_color * smoothstep(0.3, 0.7, catchlight) * catch_strength;
 }
 
@@ -284,23 +298,22 @@ void light() {
 	if (LIGHT_IS_DIRECTIONAL && cine_fill > 0.0) {
 		lit = max(lit, cine_fill * dot(NORMAL, fill_dir));
 	}
-	// The painted terminator: the brush noise moves the light term before the step, and the edge is never
-	// narrower than term_soft pixels of the light's own gradient (a shadow map's steps are inside it).
+	// The designed terminator: the shadow hint pulls the light term down where an artist would put shadow, and the edge is
+	// never narrower than term_soft pixels of the light's own gradient (a shadow map's steps are inside it). No noise.
 	if (!LIGHT_IS_DIRECTIONAL) {
 		lit = clamp(lit * cine_point_gain, 0.0, 1.0);
 	}
-	lit += (paint_noise - 0.5) * term_wobble * smoothstep(0.0, 0.2, lit + term_wobble);
+	lit -= shade_hint_gain * shade_hint;
 	float edge = clamp(0.5 * term_soft * to_pixels * fwidth(lit), 0.002, 0.14);
 	vec3 shadow;
 	vec3 shade = cine_shade(lit, edge, shadow);
-	// Hatching in the shadow band, from the tonal art map: deeper in shadow, denser.
-	if (hatch_on > 0.0) {
-		float depth = clamp(1.0 - lit / max(cine_band_1, 0.001), 0.0, 1.0);
-		float t = depth * 3.0;
-		float h = mix(mix(mix(0.0, hatch_levels.r, clamp(t, 0.0, 1.0)), hatch_levels.g, clamp(t - 1.0, 0.0, 1.0)),
-				hatch_levels.b, clamp(t - 2.0, 0.0, 1.0));
-		h = max(h, hatch_levels.a * smoothstep(0.85, 1.0, depth));
-		shade *= 1.0 - hatch_on * hatch_dark * h * step(0.001, depth);
+	// Hatching below the lit band (the mid and the shadow band; depth 0 on a lit face): the baked strokes that run along the form, each drawn only where the shadow is deeper than
+	// its own threshold (so they come in as the shadow deepens), and never on a lit face (depth is 0 there).
+	float hatch_amount = clamp(max(hatch_on, hatch_floor) * hatch_gain, 0.0, 1.0) * (1.0 - smoothstep(hatch_dist.x, hatch_dist.y, lens_dist));
+	if (hatch_amount > 0.0 && use_shade_tex && LIGHT_IS_DIRECTIONAL) {
+		float depth = clamp(1.0 - lit / max(cine_band_2, 0.001), 0.0, 1.0);
+		float stroke = hatch_stroke.x * smoothstep(hatch_stroke.y - 0.04, hatch_stroke.y + 0.04, depth) * step(0.02, depth);
+		shade *= 1.0 - hatch_amount * hatch_dark * stroke;
 	}
 	vec3 light_color = min(LIGHT_COLOR / PI, vec3(1.0));
 	if (LIGHT_IS_DIRECTIONAL) {

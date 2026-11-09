@@ -7,3 +7,12 @@ script = ExtResource("1_art")
 face_fill = 0.04
 face_fill_color = Color(1, 0.8, 0.6, 1)
 catch_strength = 0.25
+value_by_id = {
+"player": 0.8
+}
+rim_gain_by_id = {
+"player": 1.4
+}
+hatch_floor_by_id = {
+"player": 1.0
+}

@@ -142,5 +142,50 @@
   "z_to": -0.02,
   "facing": 0.1,
   "half_width": 0.92
+ },
+ "shade": {
+  "size": 2048,
+  "blur_px": 14,
+  "cavity": 0.5,
+  "hint": [
+   {
+    "bones": [
+     "Head",
+     "Neck"
+    ],
+    "light": [
+     -0.3,
+     0.5,
+     0.8
+    ],
+    "from": 0.25,
+    "to": -0.35,
+    "amount": 1.0
+   },
+   {
+    "bones": [
+     "Chest",
+     "UpperChest",
+     "Spine",
+     "LeftShoulder",
+     "RightShoulder",
+     "LeftUpperArm",
+     "RightUpperArm",
+     "LeftLowerArm",
+     "RightLowerArm",
+     "LeftHand",
+     "RightHand"
+    ],
+    "light": [
+     -0.2,
+     0.3,
+     0.9
+    ],
+    "from": 0.1,
+    "to": -0.5,
+    "amount": 0.7
+   }
+  ],
+  "hatch": []
  }
 }

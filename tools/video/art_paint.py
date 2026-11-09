@@ -493,10 +493,17 @@ def bake(name, workdir, outdir):
 	albedo, ids = paint_albedo(maps, cfg, seed, meta)
 	ink_size = size
 	curv = maps["curv"].astype(np.float32)
-	ink = np.maximum(line_from_valleys(curv, cover, cfg, seed), line_from_borders(ids, cfg, seed))
+	valleys = line_from_valleys(curv, cover, cfg, seed)
+	if cfg.get("crease_skip_bones"):
+		# R4-ART: no surface creases on these bones (Ox's head: the face is drawn with designed lines, not every crease)
+		valleys = valleys * (~np.isin(maps["bone"], [meta["bones"].index(n) for n in cfg["crease_skip_bones"]]))
+	ink = np.maximum(valleys, line_from_borders(ids, cfg, seed))
 	ink = np.maximum(ink, wrap_lines(maps, meta, cfg, ids, seed))
 	ink = warp(ink, cfg.get("warp_px", 1.4) * PXS, cfg.get("warp_scale_px", 22) * PXS, seed + 41)
 	ink = np.clip(ink, 0.0, 1.0)
+	if cfg.get("marks"):
+		import art_shade
+		albedo, ink = art_shade.marks(maps, meta, ids, cfg, albedo, ink, seed, PXS)
 	glint = metal_mask(ids, cfg)
 	catch = np.zeros((size, size), np.float32)
 	face = face_zone(maps, meta, cfg)
@@ -523,6 +530,18 @@ def bake(name, workdir, outdir):
 	# The measure the tests and the review use: texels of the islands with no paint, and pure black inside them.
 	covered_px = int(cover.sum())
 	black = int(((paint[cover] * 255.0 + 0.5).astype(np.uint8).max(axis=1) == 0).sum())
+	if cfg.get("shade"):
+		import art_shade
+		hint, stroke_cov, stroke_thr = art_shade.shade_rgb(maps, meta, ids, cfg, form_curvature(maps, cfg.get("form_sigma", 3.0) * size / 2048.0), seed, PXS)
+		chans = []
+		for ch in (hint, stroke_cov, stroke_thr):
+			filled, _ = pad_and_fill(ch[..., None], cover, PAD_TEXELS, info)
+			chans.append(filled[..., 0])
+		rgb = np.stack(chans, axis=2)
+		shade_size = int(cfg["shade"].get("size", size))
+		if shade_size != size:
+			rgb = cv2.resize(rgb, (shade_size, shade_size), interpolation=cv2.INTER_AREA)
+		Image.fromarray((np.clip(rgb, 0, 1) * 255.0 + 0.5).astype(np.uint8)).save(os.path.join(outdir, name + "_shade.png"), optimize=True)
 	stats = {"size": size, "islands_covered_texels": covered_px, "empty_texels_in_islands": int(cover.sum() - (cover & padded).sum()),
 		"pure_black_texels_in_islands": black, "coverage_share": round(float(cover.mean()), 4)}
 	with open(os.path.join(CONFIG_DIR, name, "coverage.json"), "w") as f:

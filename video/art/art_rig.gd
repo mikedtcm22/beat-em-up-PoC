@@ -69,6 +69,8 @@ func kit_of(id: StringName, base: CharacterArt) -> Dictionary:
 		var ink_path := dir.path_join("%s_ink.png" % id)
 		kit["paint"] = load(paint_path) as Texture2D if ResourceLoader.exists(paint_path) else null
 		kit["ink"] = load(ink_path) as Texture2D if ResourceLoader.exists(ink_path) else null
+		var shade_path := dir.path_join("%s_shade.png" % id)
+		kit["shade"] = load(shade_path) as Texture2D if ResourceLoader.exists(shade_path) else null
 	_kits[id] = kit
 	return kit
 
@@ -116,6 +118,17 @@ func dress(mesh: MeshInstance3D, rig: HumanoidRig) -> void:
 		material.set_shader_parameter(&"catch_color", look.catch_color)
 		material.set_shader_parameter(&"spec_gain", look.plastic_spec)
 		material.set_shader_parameter(&"marks_gain", look.damage_marks)
+		var shade_tex: Texture2D = kit.get("shade")
+		material.set_shader_parameter(&"use_shade_tex", look.shade_map and shade_tex != null)
+		if shade_tex != null:
+			material.set_shader_parameter(&"shade_tex", shade_tex)
+		material.set_shader_parameter(&"shade_hint_gain", look.hint_gain_of(id))
+		material.set_shader_parameter(&"hatch_gain", look.hatch_gain)
+		material.set_shader_parameter(&"hatch_floor", float(look.hatch_floor_by_id.get(String(id), 0.0)))
+		material.set_shader_parameter(&"hatch_dist", Vector2(look.hatch_near_m, look.hatch_far_m))
+		var value := float(look.value_by_id.get(String(id), 1.0))
+		material.set_shader_parameter(&"albedo", Color(value, value, value, 1.0))
+		material.set_shader_parameter(&"art_rim_gain", float(look.rim_gain_by_id.get(String(id), 1.0)))
 	dressed[id] = dressed.get(id, 0) + 1
 
 

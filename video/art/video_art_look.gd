@@ -44,10 +44,35 @@ extends VideoLookPiece
 ## textures are made in). A runtime edit of the loaded shader's source, until the shader itself does it (docs/video/calls/ld-asset.md).
 @export var layout_uv: bool = true
 
+@export_group("Round 4 (R4-ART)")
+## The shade map (`<id>_shade.png`: R = the designed shadow hint, G and B = the hatch strokes that follow the form, tools/video/art_shade.py).
+@export var shade_map: bool = true
+## The hint's weight on the light term (0 = off): how far the designed shape (under the brow and cheekbone, under the chin, the underside of a
+## forearm) pulls the light term down before the bands. One art id can differ: `hint_gain_by_id`.
+@export_range(0.0, 1.0) var hint_gain: float = 0.4
+@export var hint_gain_by_id: Dictionary = {}
+## The hatching's gain on the ink piece's `hatch_on` (its close-up fade; 0 = no hatching, 1 = as the ink piece says). The strokes are in the
+## shade map and only draw inside the shadow band, never on a lit face.
+@export_range(0.0, 2.0) var hatch_gain: float = 1.0
+## A floor under the ink piece's `hatch_on` per art id (id -> 0..1): the first-person arm is always close, whatever the nearest figure's distance
+## says, so its hatching stays on. `hatch_near_m` and `hatch_far_m`: the strokes also fade with the pixel's distance to the lens.
+@export var hatch_floor_by_id: Dictionary = {}
+@export_range(0.2, 10.0) var hatch_near_m: float = 1.4
+@export_range(0.5, 20.0) var hatch_far_m: float = 3.0
+## A value multiplier on the albedo of one art id (id -> multiplier): the first-person arm is a foreground form, darker than the subject.
+@export var value_by_id: Dictionary = {}
+## A multiplier on the key-tinted rim of one art id (id -> multiplier): the arm's warm rim from the lamp.
+@export var rim_gain_by_id: Dictionary = {}
+
 
 ## The face zone's fill of art `id`: its entry in `face_fill_by_id`, else `face_fill`.
 func face_fill_of(id: StringName) -> float:
 	return float(face_fill_by_id.get(String(id), face_fill))
+
+
+## The hint's weight for art `id`.
+func hint_gain_of(id: StringName) -> float:
+	return float(hint_gain_by_id.get(String(id), hint_gain))
 
 
 ## Add the art rig under `level` (once) and start it.

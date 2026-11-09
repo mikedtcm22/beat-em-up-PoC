@@ -5,6 +5,18 @@
 [resource]
 script = ExtResource("1_art")
 face_fill_color = Color(1, 0.7, 0.42, 1)
+hint_gain_by_id = {
+"boss": 0.75
+}
 face_fill_by_id = {
 "player": 0.2
+}
+value_by_id = {
+"player": 0.8
+}
+rim_gain_by_id = {
+"player": 1.4
+}
+hatch_floor_by_id = {
+"player": 1.0
 }

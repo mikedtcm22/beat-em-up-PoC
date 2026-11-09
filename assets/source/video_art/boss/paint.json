@@ -67,7 +67,9 @@
     0.9412,
     0.7294,
     0.5333
-   ]
+   ],
+   "shade_amount": 0.0,
+   "light_amount": 0.0
   },
   "54": {
    "base": [
@@ -106,5 +108,147 @@
   "z_to": -0.02,
   "facing": 0.1,
   "half_width": 0.92
+ },
+ "crease_skip_bones": [
+  "Head",
+  "Neck"
+ ],
+ "marks": [
+  {
+   "type": "tape",
+   "bone": "RightHand",
+   "cell": 54,
+   "t": [
+    0.0,
+    0.6
+   ],
+   "bands": 3,
+   "band_mm": 8,
+   "gap_mm": 5,
+   "colour": [
+    0.74,
+    0.66,
+    0.5
+   ],
+   "slant": 0.2
+  },
+  {
+   "type": "patch",
+   "bone": "LeftHand",
+   "cell": 54,
+   "dir": [
+    -1,
+    0.2,
+    0.3
+   ],
+   "half_mm": [
+    22,
+    15
+   ],
+   "colour": [
+    0.62,
+    0.3,
+    0.2
+   ]
+  },
+  {
+   "type": "scuffs",
+   "bone": "LeftHand",
+   "cell": 54,
+   "amount": 0.55,
+   "colour": [
+    0.62,
+    0.46,
+    0.5
+   ],
+   "length_px": 30,
+   "angle_deg": 25
+  },
+  {
+   "type": "scuffs",
+   "bone": "RightHand",
+   "cell": 54,
+   "amount": 0.35,
+   "colour": [
+    0.55,
+    0.4,
+    0.45
+   ],
+   "length_px": 18,
+   "angle_deg": -40
+  }
+ ],
+ "shade": {
+  "size": 4096,
+  "blur_px": 14,
+  "cavity": 0.7,
+  "hint": [
+   {
+    "bones": [
+     "Head",
+     "Neck"
+    ],
+    "light": [
+     -0.3,
+     0.5,
+     0.8
+    ],
+    "from": 0.25,
+    "to": -0.35,
+    "amount": 1.0
+   },
+   {
+    "bones": [
+     "Chest",
+     "UpperChest",
+     "Spine",
+     "LeftShoulder",
+     "RightShoulder",
+     "LeftUpperArm",
+     "RightUpperArm",
+     "LeftLowerArm",
+     "RightLowerArm",
+     "LeftHand",
+     "RightHand"
+    ],
+    "light": [
+     -0.2,
+     0.3,
+     0.9
+    ],
+    "from": 0.1,
+    "to": -0.5,
+    "amount": 0.8
+   }
+  ],
+  "hatch": [
+   {
+    "bones": [
+     "Head",
+     "Neck"
+    ],
+    "cells": [
+     7
+    ],
+    "axis": [
+     0.2,
+     0.0,
+     -1.0
+    ],
+    "toward": [
+     0.0,
+     1.0,
+     0.0
+    ],
+    "spacing_mm": 3.2,
+    "width_mm": 1.0,
+    "seg_mm": [
+     14,
+     40
+    ],
+    "min_hint": 0.3,
+    "gap": 0.3
+   }
+  ]
  }
 }

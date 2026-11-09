@@ -590,3 +590,17 @@ The cast again, after Gate 2 (docs/video/P1.md): every map rebuilt in a NEW UV2 
 | Player ink map | `assets/video/characters/player/player_ink.png` | `art_paint.py`: tapered cloth folds, the knuckles and fingers drawn from `features.svg`, the arm's warm fill zone in B | Original | 4096x4096 RGBA, about 2.7 MB, LFS. |
 | Player features | `assets/source/video_art/player/features.svg` | Drawn by Claude over `tools/video/blender_view.py`'s `arm_r` render | Original | Both fists: four knuckle arcs, three finger separations, the first joints. The left is the mirror. |
 | Bake reports | `assets/source/video_art/<name>/coverage.json` | `art_paint.py bake` | Project file (generated) | Empty and pure-black texels inside the islands (both 0), read by `video/tests/test_ld_art2_data.gd`. |
+
+## Video: R4-ART (round 4)
+
+The cast's designed shading (docs/video/P1.md, "R4-ART"): a shade map per character, a re-shaped first-person forearm, different gloves for Ox, a simpler face. Made by `tools/video/make_art.sh` (`art_shade.py` is new). All routed to LFS (PNG, GLB).
+
+| Asset | Path | Source | Licence | Notes |
+| --- | --- | --- | --- | --- |
+| Punk shade map | `assets/video/characters/punk/punk_shade.png` | `tools/video/art_shade.py`: R the designed shadow hint, G the hatch strokes, B a stroke's depth threshold | Original | 2048x2048 RGB, 0.7 MB, LFS. |
+| Ox shade map | `assets/video/characters/boss/boss_shade.png` | `art_shade.py` | Original | 4096x4096 RGB, 1.4 MB, LFS. |
+| Player shade map | `assets/video/characters/player/player_shade.png` | `art_shade.py` | Original | 4096x4096 RGB, about 1.6 MB, LFS. |
+| Player video mesh (changed) | `assets/video/characters/player/player_video.glb` | `blender_asset.py` with the forearm's swell and the wrist's taper (`paint.json` "shape") | Original | LFS, about 9 MB. |
+| Ox paint, ink, features (changed) | `assets/video/characters/boss/boss_paint.png`, `boss_ink.png`, `assets/source/video_art/boss/features.svg` | `art_paint.py` (flat skin, no head creases, tape, patch and scuffs on the gloves), the face's drawing cut from 54 to 20 paths and five shadow shapes | Original | As before, LFS. |
+| Player paint and ink (changed) | `assets/video/characters/player/player_paint.png`, `player_ink.png` | `art_paint.py` (lifted glove cells, scuffs, heavier knuckle lines) | Original | As before, LFS. |
+
