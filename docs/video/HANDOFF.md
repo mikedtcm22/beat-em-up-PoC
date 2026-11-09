@@ -6,6 +6,33 @@ The cinematic gameplay video's live status, kept by the video session ("Beat-em-
 
 ## Status (newest first)
 
+### 2026-11-09 05:55 CST: round 4's blind check (no movement) DM'd; round 5 planned; resume at the 08:50 reset
+- **The blind check** (`wf_be1d93d6-8ac`, three Opus judges, 295k tokens, about 12 points): all 8 references drawn (p_3d 0.04-0.16), all 7 of ours 3D at round 3's confidence: street_wide 0.97, fp_kicker_lamp 0.95, fp_punk 0.95, moving_punk 0.95, roof_silhouette 0.91, ox_closeup 0.89, ox_low 0.88. Round 4's code changes are visible in the frames, but they did not move a judge who is looking for 3D. The full verdicts are in the workflow's journal (`subagents/workflows/wf_be1d93d6-8ac/journal.jsonl` under this session's project folder).
+- **What the judges point at now** (mostly the 3D game itself, not the shading):
+  1. **Exact perspective with repeated units:** window grids with identical window textures, brick courses, chain-link, paving, stair treads, tower staves; texture-space brushwork that shrinks with distance and tiles.
+  2. **Primitive volumes:** boxes (buildings, crates, the AC unit, the dumpster, parapet boxes), cylinders (gloves, cuffs, water towers, lamp posts), blob cars; smooth normal-driven gradients; exact shadow-map cast shadows; the first-person fist as a smooth "sausage" or "mitten", the player's other glove floating as a navy ball on a grey cuff box.
+  3. **One outline weight** with one wobble frequency, no interior lines; a doubled, offset outline down the Punk's right side in fp_punk.
+  4. **Render debris** (decisive wherever it shows): two unlit orange squares floating at the top centre of the street frames (far lit windows or lamp heads on a dark mass), an unlit pure-black slab (moving_punk), an aliased dotted wire across the sky, a four-point glint sprite and a vertical seam line on the boss roof's left facade, a dark elliptical sky-dome arc and posterised halo bands on the roof.
+  5. **No aerial perspective:** equal sharpness, darkness and detail at every depth; no diffusion glow.
+  6. **Stiff, symmetric rig poses** with no line of action (Ox's raised arms, guards with both fists at the face).
+  7. **Game-camera framing:** the huge first-person fist in a corner; street_wide's high, CCTV-like overview.
+  8. **Lighting placed, not designed:** straight-edged cones (still), flat decal pools that don't wrap onto figures, the same blue top-face highlight on every ledge, a backlit figure with fill and no rim (roof).
+  - The painted layers (fire, smoke, skylines, pools) read as drawn, and make the 3D figures and buildings in front of them read as more 3D.
+- **Sent to Game-boy at 05:50** (DM: the sheet `F0CG4T52WRF` with the message, and the clip `F0CG11TKVV4`): the result, the round 5 plan, and **one question:** if round 5 still reads 3D, is Plan B (an AI restyle of the final cut, roughly $30-100) on the table? One service and a quote before any spend. Without an answer, Plan B stays on hold.
+- **Round 5, the plan** (write it as packages at the resume; a design panel may refine it, below):
+  - **R5-PAINT** (his $2): per trailer shot, a background plate from the shot's middle camera with a wider FOV (actors, the first-person body and the steam hidden: `--shot-hide=HumanoidRig,...`), a Gemini paint-over simplified the way an anime background painter would (`make_matte_jobs.py`'s style lines as a start, plus "keep the layout; drop most windows and bricks; cheat the perspective by hand; darks as flat masses; the distance lifted and simplified"), projected onto the set. The projection is a screen quad after the brush quad: depth to world, the plate camera's projection, a depth test against the plate camera's depth rendered at the shot's start. **A pilot of two images first** (a street first-person shot and a cine shot), judged beside the references, then the rest within $2 (about 14 images in all). Ledger rows before and after.
+  - **R5-FIX:** the debris above (the squares, the slab, the wire, the glint, the seams, the doubled outline, the sky arc), and aerial perspective: the distance lifted toward the haze colour and softened, plus a gentle diffusion glow on the lights.
+  - **R5-ART:** the first-person fist with fingers and knuckles readable from the camera, the gloves and cuffs not primitives (seams, wrinkles, lacing in the silhouette), the Punk's face not a visor block.
+  - **R5-SHOTS:** the blind set from seven trailer frames (one per kind: street wide, first-person punch, first-person lamp, roof against the sun, Ox reveal, Ox close, moving), dynamic held poses with a line of action, a lower, character-led street wide instead of the overview, and the first-person fist smaller in frame.
+- **Budget:** weekly 59% at 05:42 (it resets 2026-11-10 15:59 CST). Round 5 is probably the last full round before the weekly reset.
+- **The resume task** `beat-em-up-video-resume-20261108-2230` (Auto mode) is re-armed for 09:00 CST.
+- **Resume steps:**
+  1. get_usage; restart the watcher's loop and the relay's heartbeat (they stop themselves at 90%; the watcher may still be running);
+  2. read Game-boy's DM replies (the relay forwards them) and the design panel's result if it ran (below);
+  3. write the round 5 packages into P1.md (or a P2.md) and their args (`docs/video/args-p1f.json`), and run `build.js`;
+  4. merge, render the new blind set from the trailer shots, run the blind check (`blind_r4_prep.sh` and the blind workflow script, with the new frames), and DM.
+
+
 ### 2026-11-09 05:40 CST: round 4 merged and rendered; the blind check running
 - **The build** (`wf_eba65c14-c95`, 1.34M tokens, 84 minutes, about 47 points of the 5-hour window): all four packages landed and are merged with no conflicts (`cbfe654`, `21153e4`, `a13ba19`, `9524a62`, pushed). The video tests pass, 181 of 181; the protected diff (game, tuning, tests) is clean.
   - **R4-INK:** the brush pass is a full-screen quad at the head of the transparent queue (`video/ink/brush_quad.gd`, `video/shaders/brush_screen.gdshader`). A pre-transparent CompositorEffect lost its writes under the writer's MSAA 4x, so don't move it into the compositor. It runs an anisotropic Kuwahara whose radius grows with depth, focus distance and frame edge; a thin-line fill (brick joints, seams); a soft posterize; and a world-anchored wobble. The delivery re-scale is `deliver_scale` 0.65, down then Catmull-Rom up: edge widths are 2.7-3.4 px against the references' 2.5-4.8 px (measured on PNGs, not the encode). The line hierarchy: heavier near the lens, 24x between the shadow and the lit side, overlap lines, thin inner lines, and lighter environment lines. Cost: 0.56 s a frame, against 0.47 s.
