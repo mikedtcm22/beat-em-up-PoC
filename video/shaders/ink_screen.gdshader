@@ -69,6 +69,10 @@ uniform float dist_mid_m : hint_range(0.5, 30.0) = 5.0;
 uniform float dist_far_m : hint_range(1.0, 80.0) = 18.0;
 uniform float env_weight : hint_range(0.0, 1.0) = 1.0;
 uniform float inner_weight : hint_range(0.0, 1.0) = 1.0;
+// Round 5, one line per silhouette: the character hull draws the outline (video/shaders/cine_outline.gdshader), so a depth step whose far side is NOT a
+// character (the environment, the plate, the sky) is the hull's, and this pass drops it by this share (1 = all of it; 0 = as round 4, the doubled line).
+// A step onto another part of a character (an arm over the torso) stays: that is an overlap, and this pass draws it.
+uniform float sil_suppress : hint_range(0.0, 1.0) = 0.0;
 uniform vec3 sep_color : source_color = vec3(0.02, 0.02, 0.06);
 uniform float sep_alpha : hint_range(0.0, 1.0) = 0.0;
 uniform float sep_px : hint_range(0.0, 60.0) = 14.0;
@@ -90,6 +94,15 @@ vec3 view_pos(ivec2 p, ivec2 size, mat4 inv_proj) {
 
 float view_distance(ivec2 p, ivec2 size, mat4 inv_proj) {
 	return max(-view_pos(p, size, inv_proj).z, 0.001);
+}
+
+// 1 where the tap at `q` is farther than the pixel (a relative step of 1/z over `step_rel`) and is not a character (the sky, a mass, the hull).
+float far_environment(ivec2 q, float w0, ivec2 size, mat4 inv_proj, float step_rel) {
+	q = clamp(q, ivec2(0), size - 1);
+	float wq = 1.0 / view_distance(q, size, inv_proj);
+	vec4 nrq = texelFetch(normal_tex, q, 0);
+	bool is_char = nrq.a < 0.5 && length(nrq.xyz * 2.0 - 1.0) > 0.5 && texelFetch(depth_tex, q, 0).r > 0.0;
+	return (wq < w0 * (1.0 - step_rel) && !is_char) ? 1.0 : 0.0;
 }
 
 bool is_sky(ivec2 p, ivec2 size) {
@@ -189,6 +202,19 @@ void fragment() {
 		// Only a big step counts (a body part in front of the background, a near arm over the torso), and only on the nearer side.
 		float big = smoothstep(0.5, 1.0, near_side2);
 		depth_line = max(depth_line, big * 0.8);
+	}
+
+	// One line per silhouette: on a character, a step down to a non-character is the hull's outline, not this pass's.
+	if (character && sil_suppress > 0.0) {
+		int ks = max(k, 1);
+		int kb = max(ks + 1, int(round(width * overlap_mult * scale)));
+		float sil = 0.0;
+		ivec2 dirs[4] = ivec2[](ivec2(1, 0), ivec2(-1, 0), ivec2(0, 1), ivec2(0, -1));
+		for (int i = 0; i < 4; i++) {
+			sil = max(sil, far_environment(p + dirs[i] * ks, w0, size, ip, 0.12));
+			sil = max(sil, far_environment(p + dirs[i] * kb, w0, size, ip, 0.12));
+		}
+		depth_line *= 1.0 - sil * sil_suppress;
 	}
 
 	// Creases from the normals, where the depth is continuous: characters, and the world only up close.
