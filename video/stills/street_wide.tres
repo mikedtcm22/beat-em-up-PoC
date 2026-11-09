@@ -7,22 +7,28 @@
 script = ExtResource("2_actor")
 id = &"punk"
 position = Vector3(0.5, 0, -8)
-facing = 1
+facing = 0
+yaw_deg = -25
+anim = &"idle"
 hold_tick = 5
 
 [sub_resource type="Resource" id="Actor_b"]
 script = ExtResource("2_actor")
 id = &"punk"
 position = Vector3(3.2, 0, -10)
-facing = 1
-hold_tick = 15
+facing = 0
+yaw_deg = 150
+anim = &"taunt"
+hold_tick = 40
 
 [sub_resource type="Resource" id="Actor_c"]
 script = ExtResource("2_actor")
-id = &"punk"
-position = Vector3(-2.2, 0, -11)
-facing = 1
-hold_tick = 30
+id = &"kicker"
+position = Vector3(-1.4, 0, -15.5)
+facing = 0
+yaw_deg = -170
+anim = &"brace"
+hold_tick = 20
 
 [resource]
 script = ExtResource("1_shot")

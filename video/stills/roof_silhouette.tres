@@ -7,9 +7,10 @@
 script = ExtResource("2_actor")
 id = &"kicker"
 position = Vector3(12.3, 8.9, -16)
-facing = 1
-anim = &"idle"
-hold_tick = 10
+facing = 0
+yaw_deg = 150.0
+anim = &"taunt"
+hold_tick = 40
 
 [resource]
 script = ExtResource("1_shot")

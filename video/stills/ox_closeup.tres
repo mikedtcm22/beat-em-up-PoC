@@ -7,7 +7,8 @@
 script = ExtResource("2_actor")
 id = &"boss"
 position = Vector3(7, 0, -10)
-facing = 1
+facing = 0
+yaw_deg = 128.0
 anim = &"idle"
 hold_tick = 15
 

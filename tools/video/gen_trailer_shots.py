@@ -215,11 +215,12 @@ SHOTS.append(dict(
 
 # 4. First person: a perfect block on a Kicker, then the spin kick (jump, K at the top).
 SHOTS.append(dict(
-    key="t04_block_spin", number=4, edit_start=8.0, section=0, fp=True, player=((0.2, 0, -2.0), 0, -2), window=(0, 3.0),
+    key="t04_block_spin", number=4, edit_start=8.0, section=0, fp=True, player=((0.2, 0, -2.0), 0, -2), window=(0, 2.7),
     note="Shot 4 (0:08-0:10): a perfect block on a Kicker's jump kick, then the spin kick (jump, K at the top), the view spinning with it.",
     actors=[actor("kicker", (0.2, 0, -3.9), yaw=None, health=200)],
     beats=[attack(0, 0, 0.2), down("DODGE", 0.0, False, trigger="ACTOR_STRIKE", lead=7), up("DODGE", 0.35, True),
-           press("JUMP", 0.1, True), press("K", 0.0, True, trigger="PLAYER_JUMP_PEAK", timeout=1.0)]))
+           press("JUMP", 0.1, True), press("K", 0.0, True, trigger="PLAYER_JUMP_PEAK", timeout=1.0),
+           pitch(-16, 0.5, 0.35, True)]))
 
 # 5. First person: grab a Pipe Thug, knee, knee, throw him into the crates.
 SHOTS.append(dict(
@@ -282,9 +283,9 @@ SHOTS.append(dict(
     actors=[actor("boss", (5.3, 0, -10.0), yaw=None, health=900)],
     beats=[attack(0, 0, 0.2), down("DODGE", 0.0, False, trigger="ACTOR_STRIKE", lead=22), up("DODGE", 0.8, True),
            attack(0, 0, 0.3, True), down("DODGE", 0.0, False, trigger="ACTOR_STRIKE", lead=7), up("DODGE", 0.7, True),
-           pitch(8, 0.4, 0.0, True), press("P", 0.1, True), press("P", 0.35, True), press("P", 0.8, True),
-           mark("ox_down", 0.0, True, trigger="ACTOR_DOWN", timeout=2.0), move(0, 1, 0.8, True), move(0, 0, 0.2, True),
-           down("P", 0.0, True, trigger="ACTOR_FREE", timeout=4.0), up("P", 0.6, True)]))
+           pitch(22, 0.4, 0.0, True), press("P", 0.1, True), press("P", 0.35, True), press("P", 0.8, True),
+           mark("ox_down", 0.0, True, trigger="ACTOR_DOWN", timeout=2.0), pitch(-10, 0.4, 0.1, True), move(0, 1, 0.8, True), move(0, 0, 0.2, True),
+           pitch(16, 0.5, 0.0, True), down("P", 0.0, True, trigger="ACTOR_FREE", timeout=4.0), up("P", 0.6, True)]))
 
 # 12. The boss roof, cine at 0.25x: the haymaker lands, a backlit silhouette of fist and head against the fire.
 SHOTS.append(dict(
@@ -297,10 +298,10 @@ SHOTS.append(dict(
 
 # 13. First person: Ox falls (ragdoll); the embers settle; the edit cuts to black on the hit sound.
 SHOTS.append(dict(
-    key="t13_ox_falls", number=13, edit_start=34.0, section=2, fp=True, player=((3.4, 0, -10.0), -90, -2), window=(0, 3.4),
+    key="t13_ox_falls", number=13, edit_start=34.0, section=2, fp=True, player=((3.4, 0, -10.0), -90, 14), window=(0, 3.4),
     note="Shot 13 (0:34-0:37): the haymaker puts Ox down; he falls (ragdoll), the embers settle. The cut to black is the edit's (mark at 3.0 s).",
     actors=[actor("boss", (5.8, 0, -10.0), yaw=None, health=14)],
-    beats=[down("P", 0.2), up("P", 0.55, True), mark("cut_to_black", 2.4, True)]))
+    beats=[down("P", 0.2), up("P", 0.55, True), pitch(-16, 0.7, 0.1, True), mark("cut_to_black", 2.4, True)]))
 
 # 14. The title card's background: drifting embers over the burning skyline (the title is the edit's).
 SHOTS.append(dict(

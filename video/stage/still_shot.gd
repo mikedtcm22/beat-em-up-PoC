@@ -29,8 +29,8 @@ extends Resource
 @export var hold_time: bool = false
 ## First person (the game's own camera, riding the player's eyes) or a free camera.
 @export var first_person: bool = true
-## First person: the horizontal FOV in degrees (0 leaves the game's setting).
-@export_range(0.0, 110.0) var first_person_fov_deg: float = 0.0
+## First person: the horizontal FOV in degrees, written through Tuning for the shot (0 leaves the game's setting). 75 is the video's lens (round 4: at the game's 90 the arm reads as a stretched tube).
+@export_range(0.0, 110.0) var first_person_fov_deg: float = 75.0
 ## Free camera: its position, the point it looks at and its horizontal FOV (degrees).
 @export var cam_pos: Vector3 = Vector3.ZERO
 @export var cam_look_at: Vector3 = Vector3.ZERO
