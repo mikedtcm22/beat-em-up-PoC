@@ -2,9 +2,36 @@
 
 The cinematic gameplay video's live status, kept by the video session ("Beat-em-up: video session", in `.worktrees/video` on `video/cinematic-trailer`), the way docs/HANDOFF.md is kept for the game. Newest entry first. The brief is [PLAN.md](PLAN.md). A takeover session resumes from the newest entry, and takes Game-boy's approvals from the first one (at the bottom).
 
-**Paid services spent so far:** Gemini about $1.54 of the $5 cap, 11 images (ledger: [gemini_ledger.md](gemini_ledger.md)) · Tripo 0 credits (not approved) · ElevenLabs 0 (not approved).
+**Paid services spent so far:** Gemini about $2.52 of the $5 cap, 18 images (round 3 used $0.98 of its $2.50; ledger: [gemini_ledger.md](gemini_ledger.md)) · Tripo 0 credits (not approved) · ElevenLabs 0 (not approved).
 
 ## Status (newest first)
+
+### 2026-11-09 00:10 CST: wave A merged; wave B (LD-INK2) launching
+- **Wave A landed** (run `wf_92ad24ce-788`, 1.35M tokens, about 49 points of the 5-hour window: 3% to 52%). It's merged into `video/cinematic-trailer` (`ed2ec8e`, `1219a3a`, `b7c76c6`) with no conflicts. The video tests pass, 137 of 137, and the protected diff is clean.
+  - **LD-WORLD3** (`mv/ld-world3`): the world is drawn, not tiled.
+    - Brick comes in clusters; detail falls off with distance and gathers at a per-shot focus; windows vary; the chain-link sags.
+    - The darks are navy masses, and the lamp pools are warm rust, not crimson.
+    - It adds painted lamp shafts, a barrel flame, steam and embers, and contact shadows.
+    - Seven Gemini backdrops ($0.98): the street and roof skylines, and the boss roof's fire and smoke.
+    - Not fixed: the roof's lens-flare star, which comes from the base stage (passed to LD-INK2). The darkest third's grey share is still short of 0.5 (0.22 on street_wide).
+  - **LD-ART2** (`mv/ld-art2`): no more holes (pure black 0.02-0.07% of the frame, from 5-10%).
+    - The player now has a video GLB with a smooth arm. The arm had been falling back to the game mesh because the rig's triangle budget was too low; the rig now raises the budget on its own copy.
+    - Faces read: unlit face fill, catchlights, Ox's eyes.
+    - Its own call: the first-person arm still leans 3D (one big smooth form with one line weight). It needs LD-INK2's heavier line.
+  - **SHOTS** (`mv/shots`): the trailer's 14 shots (t01-t14) render at 1280×720 into `captures/video/shots_blocking/`, each with a cue sheet (`<key>_events.log`).
+    - A beat script waits for game state.
+    - The camera is sampled at n/24 s.
+    - `shoot.sh` now fails on its own errors (exit 3-7).
+    - Departures: the shots add up to 49 s against the plan's 41; nine of 14 are first person (65% of the time, against the 70% the plan asks for); shot 11 runs 8.1 s.
+- **The lead's own changes:**
+  - `shoot.sh` now also fails on a `Parse Error` (LD-WORLD3's request).
+  - P1.md § LD-INK2 gained item 6, wave A's requests: the lens-flare star, the Kicker's silhouette (with `roofs_dusk/art.tres`'s face values), the arm's line, the rear warning, determinism, and checks on t07 and t10.
+- **Next:** launch wave B (`build.js` with [args-p1d.json](args-p1d.json), LD-INK2 alone, est 18). When it lands:
+  1. merge it;
+  2. render the Gate 2 set with the delivery pass;
+  3. the lead's look;
+  4. the blind check;
+  5. DM round 3.
 
 ### 2026-11-08 22:41 CST: resumed after the reset; round 3 wave A running (LD-WORLD3, LD-ART2, SHOTS)
 - **The reset came at 22:30.** The 5-hour window is at 0%, and weekly at 33%. The relay reported it first, and the resume task (`...-2230`, Auto mode) fires at 22:40.

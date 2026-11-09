@@ -5,7 +5,8 @@
  "base": "video/cinematic-trailer",
  "read_first": [
   "docs/video/PLAN.md §2 (the style bible), §4 (Plan A) and §6's Gate 2 rubric",
-  "docs/video/P1.md, 'What Gate 2 found', 'Shared by the round 3 packages', and 'Shared by all four packages'"
+  "docs/video/P1.md, 'What Gate 2 found', 'Shared by the round 3 packages', and 'Shared by all four packages'",
+  "docs/video/calls/ld-world3.md, ld-art2.md and shots.md (wave A's calls, shortfalls and requests; your item 6 sums up the requests)"
  ],
  "image_budget": 35,
  "concurrency": 2,
@@ -14,7 +15,7 @@
   {
    "key": "LD-INK2",
    "section": "§ LD-INK2",
-   "est": 15
+   "est": 18
   }
  ]
 }

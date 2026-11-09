@@ -108,8 +108,9 @@ if [ -s "$OUT/$KEY.mkv" ] && command -v ffprobe >/dev/null 2>&1 && ! ffprobe -v 
 	echo "shoot: FAILED, ffprobe cannot read $KEY.mkv" >&2
 	fail=6
 fi
-if grep -q -E 'SCRIPT ERROR|SHADER ERROR' "$OUT/shoot.log"; then
-	echo "shoot: FAILED, a SCRIPT ERROR or SHADER ERROR in shoot.log" >&2
+# A look .tres that fails to parse leaves its piece off with no SCRIPT ERROR, so a Parse Error fails the shot too.
+if grep -q -E 'SCRIPT ERROR|SHADER ERROR|Parse Error' "$OUT/shoot.log"; then
+	echo "shoot: FAILED, a SCRIPT ERROR, SHADER ERROR or Parse Error in shoot.log" >&2
 	fail=7
 fi
 if [ "$status" -ne 0 ]; then
