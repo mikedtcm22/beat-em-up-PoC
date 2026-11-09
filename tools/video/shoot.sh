@@ -87,4 +87,32 @@ release
 # Godot's exit-time leak report ("... leaked at exit", "never freed", "still in use") is not a problem of the shot.
 problems="$(grep -E 'SCRIPT ERROR|SHADER ERROR|^ERROR' "$OUT/shoot.log" | grep -v -E 'leaked at exit|never freed|still in use|Pages in use' | wc -l | tr -d ' ' || true)"
 echo "shoot: godot exit $status, $(grep -h '^SHOT ' "$OUT/shoot.log" | tail -1 || true) ($problems error lines in shoot.log)"
-exit "$status"
+
+# The shot's own failures are the exit status too: the writer's ffmpeg encodes, a missing output, a run that never reached its end.
+fail=0
+KEY="$(grep -h '^SHOT ' "$OUT/shoot.log" | grep -v '^SHOT window' | grep -v '^SHOT NOTE' | tail -1 | awk '{print $2}' || true)"
+[ -n "$KEY" ] || KEY="$SHOT"
+if ! grep -q "^SHOT .* frames=" "$OUT/shoot.log"; then
+	echo "shoot: FAILED, the run never reached the end of the shot (no SHOT line in shoot.log)" >&2
+	fail=3
+fi
+if grep -q 'CineFrameWriter: ffmpeg exit' "$OUT/shoot.log" || grep -q '"problems": \[$' "$OUT/${KEY}_stats.json" 2>/dev/null; then
+	echo "shoot: FAILED, the frame writer reported a problem (an ffmpeg encode or a save): see shoot.log and ${KEY}_stats.json" >&2
+	fail=4
+fi
+if [ ! -s "$OUT/$KEY.mkv" ] && [ ! -s "$OUT/$KEY.png" ]; then
+	echo "shoot: FAILED, no $KEY.mkv or $KEY.png in $OUT" >&2
+	fail=5
+fi
+if [ -s "$OUT/$KEY.mkv" ] && command -v ffprobe >/dev/null 2>&1 && ! ffprobe -v error -select_streams v:0 -show_entries stream=nb_frames -of csv=p=0 "$OUT/$KEY.mkv" >/dev/null 2>&1; then
+	echo "shoot: FAILED, ffprobe cannot read $KEY.mkv" >&2
+	fail=6
+fi
+if grep -q -E 'SCRIPT ERROR|SHADER ERROR' "$OUT/shoot.log"; then
+	echo "shoot: FAILED, a SCRIPT ERROR or SHADER ERROR in shoot.log" >&2
+	fail=7
+fi
+if [ "$status" -ne 0 ]; then
+	exit "$status"
+fi
+exit "$fail"

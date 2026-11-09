@@ -1,0 +1,181 @@
+[gd_resource type="Resource" script_class="CineShot" load_steps=13 format=3]
+
+[ext_resource type="Script" path="res://video/cine/cine_shot.gd" id="1_shot"]
+[ext_resource type="Script" path="res://video/stage/still_actor.gd" id="2_actor"]
+[ext_resource type="Script" path="res://video/cine/cine_beat.gd" id="3_beat"]
+
+[sub_resource type="Resource" id="Actor_0"]
+script = ExtResource("2_actor")
+id = &"thug"
+position = Vector3(2.1, 0, -5.4)
+facing = 1
+yaw_deg = 0
+anim = &"idle"
+hold_tick = 0
+live = true
+health = 300
+health_share = 0
+
+[sub_resource type="Resource" id="Beat_0"]
+script = ExtResource("3_beat")
+at_s = 0.2
+relative = false
+kind = 0
+trigger = 0
+timeout_s = 3
+actor = 0
+lead_ticks = 8
+button = &"P"
+hold_ticks = 2
+stick = Vector2(0, 0)
+degrees = 0
+seconds = 0
+time_scale = 0.3
+attack_index = 0
+label = &""
+
+[sub_resource type="Resource" id="Beat_1"]
+script = ExtResource("3_beat")
+at_s = 0.4
+relative = true
+kind = 0
+trigger = 0
+timeout_s = 3
+actor = 0
+lead_ticks = 8
+button = &"P"
+hold_ticks = 2
+stick = Vector2(0, 0)
+degrees = 0
+seconds = 0
+time_scale = 0.3
+attack_index = 0
+label = &""
+
+[sub_resource type="Resource" id="Beat_2"]
+script = ExtResource("3_beat")
+at_s = 0.4
+relative = true
+kind = 0
+trigger = 0
+timeout_s = 3
+actor = 0
+lead_ticks = 8
+button = &"P"
+hold_ticks = 2
+stick = Vector2(0, 0)
+degrees = 0
+seconds = 0
+time_scale = 0.3
+attack_index = 0
+label = &""
+
+[sub_resource type="Resource" id="Beat_3"]
+script = ExtResource("3_beat")
+at_s = 0
+relative = true
+kind = 0
+trigger = 6
+timeout_s = 1
+actor = 0
+lead_ticks = 8
+button = &"GRAB"
+hold_ticks = 2
+stick = Vector2(0, 0)
+degrees = 0
+seconds = 0
+time_scale = 0.3
+attack_index = 0
+label = &""
+
+[sub_resource type="Resource" id="Beat_4"]
+script = ExtResource("3_beat")
+at_s = 0.2
+relative = true
+kind = 0
+trigger = 5
+timeout_s = 1
+actor = 0
+lead_ticks = 8
+button = &"P"
+hold_ticks = 2
+stick = Vector2(0, 0)
+degrees = 0
+seconds = 0
+time_scale = 0.3
+attack_index = 0
+label = &""
+
+[sub_resource type="Resource" id="Beat_5"]
+script = ExtResource("3_beat")
+at_s = 0.35
+relative = true
+kind = 0
+trigger = 0
+timeout_s = 3
+actor = 0
+lead_ticks = 8
+button = &"P"
+hold_ticks = 2
+stick = Vector2(0, 0)
+degrees = 0
+seconds = 0
+time_scale = 0.3
+attack_index = 0
+label = &""
+
+[sub_resource type="Resource" id="Beat_6"]
+script = ExtResource("3_beat")
+at_s = 0.3
+relative = true
+kind = 3
+trigger = 0
+timeout_s = 3
+actor = 0
+lead_ticks = 8
+button = &"P"
+hold_ticks = 2
+stick = Vector2(0, 1)
+degrees = 0
+seconds = 0
+time_scale = 0.3
+attack_index = 0
+label = &""
+
+[sub_resource type="Resource" id="Beat_7"]
+script = ExtResource("3_beat")
+at_s = 0.05
+relative = true
+kind = 0
+trigger = 0
+timeout_s = 3
+actor = 0
+lead_ticks = 8
+button = &"K"
+hold_ticks = 2
+stick = Vector2(0, 0)
+degrees = 0
+seconds = 0
+time_scale = 0.3
+attack_index = 0
+label = &""
+
+[resource]
+script = ExtResource("1_shot")
+key = &"t05_grab_throw"
+note = "Shot 5 (0:10-0:12): a jab staggers a Pipe Thug, grab him, knee, knee, throw him into the crates."
+section = 0
+location = &""
+number = 5
+edit_start_s = 10
+edit_speed = 1
+player_pos = Vector3(1, 0, -5.4)
+player_yaw_deg = -90
+player_pitch_deg = -3
+first_person = true
+actors = Array[ExtResource("2_actor")]([SubResource("Actor_0")])
+warmup_ticks = 40
+window_from_s = 0
+window_to_s = 3.8
+rng_seed = 1
+beats = Array[ExtResource("3_beat")]([SubResource("Beat_0"), SubResource("Beat_1"), SubResource("Beat_2"), SubResource("Beat_3"), SubResource("Beat_4"), SubResource("Beat_5"), SubResource("Beat_6"), SubResource("Beat_7")])

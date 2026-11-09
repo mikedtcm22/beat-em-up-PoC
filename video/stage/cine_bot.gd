@@ -11,7 +11,7 @@ extends "res://video/stage/still_bot.gd"
 ## art.tres: an A/B), `--shot-set=ink.tres.post_enabled=false;...` sets piece properties for the run (GDScript literals),
 ## `--shot-to=<seconds>` ends the window early (a quick look), `--shot-from=<seconds>` starts it later,
 ## `--shot-repeat=N` captures a still N more times,
-## `--shot-mask=0` writes no mask, `--shot-store=png` stores PNGs (not a raw chunk) for the encode, `--shot-window=0` stops the main window drawing, `--shot-tag=<text>` appends to the output name.
+## `--shot-size=1280x720` renders at that size (the blocking pass; the default is the writer's 2560x1440), `--shot-mask=0` writes no mask, `--shot-store=png` stores PNGs (not a raw chunk) for the encode, `--shot-window=0` stops the main window drawing, `--shot-tag=<text>` appends to the output name.
 
 const DEFAULT_LEVEL_PATH := "res://game/level/mission1/mission1.tscn"
 
@@ -32,11 +32,14 @@ var _repeat: int = 0
 var _store_png: bool = false
 var _window: bool = true
 var _tag: String = ""
-var _beat_ticks: Array[int] = []
-var _beats: Array[CineBeat] = []
-var _next_beat: int = 0
+var _size: Vector2i = Vector2i.ZERO
+var events: CineEventLog
+var _script: CineScript
 var _turn: Dictionary = {}
 var _pitch: Dictionary = {}
+var _faces: Array[Dictionary] = []
+## Held actors playing an animation a beat gave them: their rigs advance a tick each tick (a live actor's own tick does it).
+var _advanced: Array[CombatActor] = []
 
 
 func _ready() -> void:
@@ -64,6 +67,10 @@ func _ready() -> void:
 			_window = false
 		elif arg.begins_with("--shot-tag="):
 			_tag = arg.trim_prefix("--shot-tag=")
+		elif arg.begins_with("--shot-size="):
+			var parts := arg.trim_prefix("--shot-size=").split("x")
+			if parts.size() == 2:
+				_size = Vector2i(int(parts[0]), int(parts[1]))
 	super._ready()
 
 
@@ -82,13 +89,19 @@ func _run() -> void:
 	writer.write_mask = _mask
 	writer.store_png = _store_png
 	writer.show_window = _window
+	if _size != Vector2i.ZERO:
+		writer.size = _size
 	add_child(writer)
+	events = CineEventLog.new()
+	events.name = "CineEventLog"
+	add_child(events)
 	grab = writer
 	if shot == null:
 		push_error("cine_bot: the scene names no shot")
 		await _quit()
 		return
 	await _reset(&"first_person" if shot.first_person else &"free_fly")
+	cine.out_fps = writer.out_fps
 	cine.direct(level, shot, skip_pieces, set_pieces)
 	stage_lamps = not cine.has_world_piece()
 	var run_name := "%s%s" % [shot.key, _tag]
@@ -99,6 +112,7 @@ func _run() -> void:
 	writer.begin(out_dir, run_name, not moving and _repeat == 0)
 	cine.start_clock()
 	_hook_ink_rig()
+	events.start(cine.clock_ticks, _first_tick(), writer.out_fps)
 	if moving:
 		await _play(shot as CineShot)
 	else:
@@ -106,6 +120,7 @@ func _run() -> void:
 		for _i in _repeat:
 			await writer.capture_frame()
 	var stats := writer.finish()
+	events.save(out_dir.path_join("%s_events.log" % run_name))
 	log_line("SHOT %s frames=%d s/frame=%.2f raw_mb/frame=%.2f mezz_mb/frame=%.3f problems=%d" % [run_name, stats.frames,
 			stats.seconds_per_frame, stats.png_mb_per_frame, stats.mezzanine_mb_per_frame, stats.problems.size()])
 	Engine.time_scale = 1.0
@@ -122,6 +137,14 @@ func _place_free_camera(p_shot: VideoStillShot, base: Vector3, _viewer: Vector3)
 	cine.build_camera(base, actors)
 
 
+## The window's first tick on the shot clock.
+func _first_tick() -> int:
+	if not shot is CineShot:
+		return 0
+	var from_s := _from_override if _from_override >= 0.0 else (shot as CineShot).window_from_s
+	return int(roundf(from_s * float(Engine.physics_ticks_per_second)))
+
+
 ## Play a moving shot: the beats on the shot clock, the camera along its path, a frame written on each pick of the window.
 func _play(moving: CineShot) -> void:
 	var sim := Engine.physics_ticks_per_second
@@ -130,12 +153,9 @@ func _play(moving: CineShot) -> void:
 	var first := int(roundf(from_s * float(sim)))
 	# The window is [from, to): 5 s is 120 picks, not 121.
 	var last := maxi(int(roundf(to_s * float(sim))) - 1, first)
-	_beats = moving.beats.duplicate()
-	_beats.sort_custom(func(a: CineBeat, b: CineBeat) -> bool: return a.at_s < b.at_s)
-	_beat_ticks.clear()
-	for beat in _beats:
-		_beat_ticks.append(int(roundf(beat.at_s * float(sim))))
-	_next_beat = 0
+	_script = CineScript.new(moving.beats, sim)
+	_faces.clear()
+	_advanced.clear()
 	var picked := 0
 	for tick in range(0, last + 1):
 		if tick > 0:
@@ -146,29 +166,94 @@ func _play(moving: CineShot) -> void:
 			await writer.capture_frame()
 			picked += 1
 	log_line("SHOT window ticks %d..%d, %d frames" % [first, last, picked])
+	if not _script.done():
+		log_line("SHOT NOTE %d of %d beats never fired" % [_script.remaining(), _script.beats.size()])
+	for who in _stage_actors:
+		if is_instance_valid(who) and who is CombatActor:
+			var actor := who as CombatActor
+			events.note(&"end_state", "%s at %s %s health=%.0f" % [actor.name, actor.global_position - level.sections[moving.section].global_position,
+					CombatTypes.state_name(actor.state), actor.health])
+	events.note(&"end_state", "Player at %s %s" % [player.global_position - level.sections[moving.section].global_position,
+			CombatTypes.state_name(player.state)])
 
 
+## Fire the beats that are due at `tick` (CineScript's order, waits and triggers).
 func _run_beats(tick: int) -> void:
-	while _next_beat < _beats.size() and _beat_ticks[_next_beat] <= tick:
-		var beat := _beats[_next_beat]
-		_next_beat += 1
-		match beat.kind:
-			CineBeat.Kind.PRESS:
-				player.input.push_press(beat.button, beat.hold_ticks)
-			CineBeat.Kind.DOWN:
-				player.input.push_down(beat.button)
-			CineBeat.Kind.UP:
-				player.input.push_up(beat.button)
-			CineBeat.Kind.MOVE:
-				player.input.scripted_move = beat.stick
-			CineBeat.Kind.TURN:
-				_turn = {from = player.look_yaw, by = deg_to_rad(beat.degrees), start = tick,
-						ticks = maxi(int(roundf(beat.seconds * float(Engine.physics_ticks_per_second))), 1)}
-			CineBeat.Kind.PITCH:
-				_pitch = {from = player.look_pitch, to = deg_to_rad(beat.degrees), start = tick,
-						ticks = maxi(int(roundf(beat.seconds * float(Engine.physics_ticks_per_second))), 1)}
-			CineBeat.Kind.SLOWMO:
-				TimeController.slowmo(beat.time_scale, beat.seconds)
+	_script.step(tick, _trigger_met, func(firing: CineScript.Firing) -> void:
+			_fire(firing.beat, firing.index, tick, firing.timed_out))
+
+
+func _fire(beat: CineBeat, index: int, tick: int, timed_out: bool) -> void:
+	events.note(&"beat", "#%d %s%s%s" % [index, CineBeat.Kind.keys()[beat.kind],
+			(" " + String(beat.button)) if beat.kind in [CineBeat.Kind.PRESS, CineBeat.Kind.DOWN, CineBeat.Kind.UP] else "",
+			" (trigger %s timed out)" % CineBeat.Trigger.keys()[beat.trigger] if timed_out else ""])
+	match beat.kind:
+		CineBeat.Kind.PRESS:
+			player.input.push_press(beat.button, beat.hold_ticks)
+		CineBeat.Kind.DOWN:
+			player.input.push_down(beat.button)
+		CineBeat.Kind.UP:
+			player.input.push_up(beat.button)
+		CineBeat.Kind.MOVE:
+			player.input.scripted_move = beat.stick
+		CineBeat.Kind.TURN:
+			_turn = {from = player.look_yaw, by = deg_to_rad(beat.degrees), start = tick,
+					ticks = maxi(int(roundf(beat.seconds * float(Engine.physics_ticks_per_second))), 1)}
+		CineBeat.Kind.PITCH:
+			_pitch = {from = player.look_pitch, to = deg_to_rad(beat.degrees), start = tick,
+					ticks = maxi(int(roundf(beat.seconds * float(Engine.physics_ticks_per_second))), 1)}
+		CineBeat.Kind.SLOWMO:
+			TimeController.slowmo(beat.time_scale, beat.seconds)
+		CineBeat.Kind.ACTOR_FACE:
+			var who := _actor(beat.actor)
+			if who != null:
+				var to_player := player.global_position - who.global_position
+				_faces.append({actor = who, from = who.rotation.y, to = atan2(-to_player.x, -to_player.z), start = tick,
+						ticks = maxi(int(roundf(beat.seconds * float(Engine.physics_ticks_per_second))), 1)})
+		CineBeat.Kind.ATTACK:
+			var who := _actor(beat.actor) as EnemyActor
+			if who != null:
+				who.force_attack(beat.attack_index)
+		CineBeat.Kind.ACTOR_ANIM:
+			var who := _actor(beat.actor) as CombatActor
+			if who != null:
+				who.rig.play(beat.label, 0.15)
+				if not _advanced.has(who):
+					_advanced.append(who)
+		CineBeat.Kind.MARK:
+			pass
+
+
+## The staged actor number `index`, or null.
+func _actor(index: int) -> Node3D:
+	if index < 0 or index >= _stage_actors.size() or not is_instance_valid(_stage_actors[index]):
+		return null
+	return _stage_actors[index] as Node3D
+
+
+## Whether the state `beat` waits for holds now.
+func _trigger_met(beat: CineBeat) -> bool:
+	var who := _actor(beat.actor) as CombatActor
+	var states := CombatTypes.ActorState
+	match beat.trigger:
+		CineBeat.Trigger.ACTOR_STRIKE:
+			return who != null and who.current_move != null and who.state == states.WINDUP \
+					and who.move_frame >= who.current_move.startup - beat.lead_ticks
+		CineBeat.Trigger.ACTOR_STAGGERED:
+			return who != null and who.state in [states.HITSTUN, states.STAGGER]
+		CineBeat.Trigger.ACTOR_DOWN:
+			return who != null and who.state in [states.DOWNED, states.KO]
+		CineBeat.Trigger.ACTOR_FREE:
+			return who != null and who.state == states.FREE
+		CineBeat.Trigger.PLAYER_HOLDING:
+			return player.state == states.GRABBING
+		CineBeat.Trigger.PLAYER_FREE:
+			return player.state == states.FREE and player.input.queued() == 0
+		CineBeat.Trigger.PLAYER_JUMP_PEAK:
+			return player.state == states.AIRBORNE and player.sim_velocity.y <= 0.5
+		CineBeat.Trigger.PLAYER_AIRBORNE:
+			return player.state == states.AIRBORNE
+	return true
 
 
 ## Advance a running turn or tilt of the view by one tick (evenly, like the bots' _turn_by()).
@@ -185,6 +270,15 @@ func _step_turns() -> void:
 		player.look_pitch = lerpf(float(_pitch.from), float(_pitch.to), u)
 		if u >= 1.0:
 			_pitch = {}
+	for who in _advanced:
+		if is_instance_valid(who):
+			who.rig.advance(TimeController.scale_for(who) / float(Engine.physics_ticks_per_second))
+	for face in _faces:
+		var u := clampf(float(now - int(face.start)) / float(face.ticks), 0.0, 1.0)
+		var who := face.actor as Node3D
+		if is_instance_valid(who):
+			who.rotation.y = lerp_angle(float(face.from), float(face.to), u * u * (3.0 - 2.0 * u))
+	_faces = _faces.filter(func(face: Dictionary) -> bool: return clampf(float(cine.clock_ticks() - int(face.start)) / float(face.ticks), 0.0, 1.0) < 1.0)
 
 
 ## The ink rig's frame counter is the shot clock's output frame, so the on-twos holds and the line boil match the writer's picks.

@@ -22,3 +22,7 @@ enum Facing {
 ## True: the actor stays a live enemy of the game (a hit lands on him and he reacts; the AI is held by the shot's
 ## frozen AI). False: a held pose, off the game's tick.
 @export var live: bool = false
+## A health to set (0 keeps the catalog's): a shot's victim lives through the combo, or falls on the last hit.
+@export_range(0.0, 2000.0) var health: float = 0.0
+## A damage look for the shot (a bruised or bloodied face at close range): the share of health to start at, 0 leaves it as spawned.
+@export_range(0.0, 1.0) var health_share: float = 0.0

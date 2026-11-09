@@ -1,0 +1,165 @@
+[gd_resource type="Resource" script_class="CineShot" load_steps=14 format=3]
+
+[ext_resource type="Script" path="res://video/cine/cine_shot.gd" id="1_shot"]
+[ext_resource type="Script" path="res://video/stage/still_actor.gd" id="2_actor"]
+[ext_resource type="Script" path="res://video/cine/cine_beat.gd" id="3_beat"]
+[ext_resource type="Script" path="res://video/cine/cine_prop.gd" id="5_prop"]
+
+[sub_resource type="Resource" id="Actor_0"]
+script = ExtResource("2_actor")
+id = &"punk"
+position = Vector3(-3, 0, -4.3)
+facing = 1
+yaw_deg = 0
+anim = &"idle"
+hold_tick = 0
+live = true
+health = 200
+health_share = 0
+
+[sub_resource type="Resource" id="Actor_1"]
+script = ExtResource("2_actor")
+id = &"punk_veteran"
+position = Vector3(-2.1, 0, -4.6)
+facing = 1
+yaw_deg = 0
+anim = &"idle"
+hold_tick = 0
+live = true
+health = 200
+health_share = 0
+
+[sub_resource type="Resource" id="Beat_0"]
+script = ExtResource("3_beat")
+at_s = 0.1
+relative = false
+kind = 5
+trigger = 0
+timeout_s = 3
+actor = 0
+lead_ticks = 8
+button = &"P"
+hold_ticks = 2
+stick = Vector2(0, 0)
+degrees = -45
+seconds = 0.25
+time_scale = 0.3
+attack_index = 0
+label = &""
+
+[sub_resource type="Resource" id="Beat_1"]
+script = ExtResource("3_beat")
+at_s = 0.15
+relative = true
+kind = 0
+trigger = 0
+timeout_s = 3
+actor = 0
+lead_ticks = 8
+button = &"GRAB"
+hold_ticks = 2
+stick = Vector2(0, 0)
+degrees = 0
+seconds = 0
+time_scale = 0.3
+attack_index = 0
+label = &""
+
+[sub_resource type="Resource" id="Beat_2"]
+script = ExtResource("3_beat")
+at_s = 0.3
+relative = true
+kind = 5
+trigger = 0
+timeout_s = 3
+actor = 0
+lead_ticks = 8
+button = &"P"
+hold_ticks = 2
+stick = Vector2(0, 0)
+degrees = -3
+seconds = 0.3
+time_scale = 0.3
+attack_index = 0
+label = &""
+
+[sub_resource type="Resource" id="Beat_3"]
+script = ExtResource("3_beat")
+at_s = 0.15
+relative = true
+kind = 0
+trigger = 0
+timeout_s = 3
+actor = 0
+lead_ticks = 8
+button = &"P"
+hold_ticks = 2
+stick = Vector2(0, 0)
+degrees = 0
+seconds = 0
+time_scale = 0.3
+attack_index = 0
+label = &""
+
+[sub_resource type="Resource" id="Beat_4"]
+script = ExtResource("3_beat")
+at_s = 0.4
+relative = true
+kind = 0
+trigger = 0
+timeout_s = 3
+actor = 0
+lead_ticks = 8
+button = &"P"
+hold_ticks = 2
+stick = Vector2(0, 0)
+degrees = 0
+seconds = 0
+time_scale = 0.3
+attack_index = 0
+label = &""
+
+[sub_resource type="Resource" id="Beat_5"]
+script = ExtResource("3_beat")
+at_s = 0.4
+relative = true
+kind = 0
+trigger = 0
+timeout_s = 3
+actor = 0
+lead_ticks = 8
+button = &"P"
+hold_ticks = 2
+stick = Vector2(0, 0)
+degrees = 0
+seconds = 0
+time_scale = 0.3
+attack_index = 0
+label = &""
+
+[sub_resource type="Resource" id="Prop_0"]
+script = ExtResource("5_prop")
+id = &"bike_chain"
+position = Vector3(-3, 0, -3.1)
+yaw_deg = 0
+
+[resource]
+script = ExtResource("1_shot")
+key = &"t08_chain_whip"
+note = "Shot 8 (0:17-0:19): the bike chain's three-hit whip on two Punks, the padlock landing last."
+section = 1
+location = &""
+number = 8
+edit_start_s = 17
+edit_speed = 1
+player_pos = Vector3(-3, 0, -2.4)
+player_yaw_deg = 0
+player_pitch_deg = -3
+first_person = true
+actors = Array[ExtResource("2_actor")]([SubResource("Actor_0"), SubResource("Actor_1")])
+warmup_ticks = 40
+window_from_s = 0
+window_to_s = 2.8
+rng_seed = 1
+beats = Array[ExtResource("3_beat")]([SubResource("Beat_0"), SubResource("Beat_1"), SubResource("Beat_2"), SubResource("Beat_3"), SubResource("Beat_4"), SubResource("Beat_5")])
+props = Array[ExtResource("5_prop")]([SubResource("Prop_0")])

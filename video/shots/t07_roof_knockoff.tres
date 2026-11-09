@@ -1,0 +1,153 @@
+[gd_resource type="Resource" script_class="CineShot" load_steps=13 format=3]
+
+[ext_resource type="Script" path="res://video/cine/cine_shot.gd" id="1_shot"]
+[ext_resource type="Script" path="res://video/stage/still_actor.gd" id="2_actor"]
+[ext_resource type="Script" path="res://video/cine/cine_beat.gd" id="3_beat"]
+[ext_resource type="Script" path="res://video/cine/cine_camera_key.gd" id="4_key"]
+
+[sub_resource type="Resource" id="Actor_0"]
+script = ExtResource("2_actor")
+id = &"kicker"
+position = Vector3(3.1, 4.5, -17)
+facing = 1
+yaw_deg = 0
+anim = &"idle"
+hold_tick = 0
+live = true
+health = 60
+health_share = 0
+
+[sub_resource type="Resource" id="Beat_0"]
+script = ExtResource("3_beat")
+at_s = 0.3
+relative = false
+kind = 0
+trigger = 0
+timeout_s = 3
+actor = 0
+lead_ticks = 8
+button = &"P"
+hold_ticks = 2
+stick = Vector2(0, 0)
+degrees = 0
+seconds = 0
+time_scale = 0.3
+attack_index = 0
+label = &""
+
+[sub_resource type="Resource" id="Beat_1"]
+script = ExtResource("3_beat")
+at_s = 0.4
+relative = true
+kind = 0
+trigger = 0
+timeout_s = 3
+actor = 0
+lead_ticks = 8
+button = &"P"
+hold_ticks = 2
+stick = Vector2(0, 0)
+degrees = 0
+seconds = 0
+time_scale = 0.3
+attack_index = 0
+label = &""
+
+[sub_resource type="Resource" id="Beat_2"]
+script = ExtResource("3_beat")
+at_s = 0.4
+relative = true
+kind = 0
+trigger = 0
+timeout_s = 3
+actor = 0
+lead_ticks = 8
+button = &"P"
+hold_ticks = 2
+stick = Vector2(0, 0)
+degrees = 0
+seconds = 0
+time_scale = 0.3
+attack_index = 0
+label = &""
+
+[sub_resource type="Resource" id="Beat_3"]
+script = ExtResource("3_beat")
+at_s = 0.4
+relative = true
+kind = 0
+trigger = 0
+timeout_s = 3
+actor = 0
+lead_ticks = 8
+button = &"P"
+hold_ticks = 2
+stick = Vector2(0, 0)
+degrees = 0
+seconds = 0
+time_scale = 0.3
+attack_index = 0
+label = &""
+
+[sub_resource type="Resource" id="Beat_4"]
+script = ExtResource("3_beat")
+at_s = 0.1
+relative = true
+kind = 6
+trigger = 0
+timeout_s = 3
+actor = 0
+lead_ticks = 8
+button = &"P"
+hold_ticks = 2
+stick = Vector2(0, 0)
+degrees = 0
+seconds = 2
+time_scale = 0.25
+attack_index = 0
+label = &""
+
+[sub_resource type="Resource" id="Key_0"]
+script = ExtResource("4_key")
+time_s = 0
+position = Vector3(9, 4.9, -19.2)
+look_at = Vector3(1, 6.2, -17.2)
+target_actor = -1
+fov_deg = 60
+focus_m = 0
+focus_range_m = 3
+roll_deg = 0
+ease = 1
+
+[sub_resource type="Resource" id="Key_1"]
+script = ExtResource("4_key")
+time_s = 3.6
+position = Vector3(8, 5.2, -18.8)
+look_at = Vector3(0, 6.6, -17.2)
+target_actor = -1
+fov_deg = 52
+focus_m = 0
+focus_range_m = 3
+roll_deg = 0
+ease = 1
+
+[resource]
+script = ExtResource("1_shot")
+key = &"t07_roof_knockoff"
+note = "Shot 7 (0:14-0:17, 0.25x): a Kicker knocked off the catwalk's west edge toward the low sun (the roof's parapet is solid: a launch stops at it); the slow-motion is TimeController's."
+section = 1
+location = &""
+number = 7
+edit_start_s = 14
+edit_speed = 0.25
+player_pos = Vector3(4.5, 4.5, -17)
+player_yaw_deg = 90
+player_pitch_deg = 0
+first_person = false
+actors = Array[ExtResource("2_actor")]([SubResource("Actor_0")])
+warmup_ticks = 40
+window_from_s = 0
+window_to_s = 3.6
+rng_seed = 1
+beats = Array[ExtResource("3_beat")]([SubResource("Beat_0"), SubResource("Beat_1"), SubResource("Beat_2"), SubResource("Beat_3"), SubResource("Beat_4")])
+camera_keys = Array[ExtResource("4_key")]([SubResource("Key_0"), SubResource("Key_1")])
