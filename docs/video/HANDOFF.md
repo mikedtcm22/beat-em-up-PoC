@@ -6,6 +6,67 @@ The cinematic gameplay video's live status, kept by the video session ("Beat-em-
 
 ## Status (newest first)
 
+### 2026-11-08 19:15 CST: Gate 2 sent by Slack DM (not a match yet); handoff before the 22:29 reset
+- **Gate 2 went to Game-boy at 19:08** (DM ts 1794185684.959309), with the overview sheet and the 1080p clip. He has three questions to answer, with my defaults:
+  1. Run look-dev round 3 (Plan A)? [yes]
+  2. D7, A+: Gemini-painted backdrops (the far buildings, the boss roof's sky, fire and smoke) as mattes, about $1.50-2.50 from the $3.46 left of the $5 cap. That cap was approved for look-dev targets only, so this new use needs his go. [I recommended yes]
+  3. D6, Plan B: hold? [hold]
+  - **Until he answers,** run round 3 without A+: it needs no approval. Add A+ only on his yes. Read his replies in the DM (the relay forwards them).
+- **The blind check** (one Opus judge, 15 shuffled frames; key `blind_key_gate2.json` in this session's scratchpad): all 8 reference frames called drawn (p_3d 0.04-0.12), all 7 of ours called 3D (0.95-0.99). Its shared tells, strongest first:
+  1. Surface detail tiled at one density right to the vanishing point (brick, window grids, paving, chain-link).
+  2. A faceted, low-poly first-person arm and fists.
+  3. Instanced copies (three identical Punks, two cars, four lamps, repeated decals) and perfect ellipses (light pools, tank hoops).
+  4. One outline weight everywhere, so the characters don't separate.
+  5. Marks drawn in texture space (stripes that wrap round the forearms, the face decal).
+  6. Aliased sky and spire edges, pixel steam, identical particles, the lens flare.
+  7. Computed lighting: pools that follow geometry exactly, smooth gradients, uniform fog, no contact shadows.
+  8. Detail and mid-value contrast spread evenly, where the drawn frames gather darks into masses and spend detail at the focal point.
+  - It also noted that the references carry streaming softness and compression, while ours are pixel-sharp. The final delivery pass (a slight soften, grain, H.264) belongs in round 3, so the next blind test compares like with like.
+- **The style lens** (review run `wf_5df89f41-295`, Opus): mean **1.27**, and no pillar reaches 2 across the set. Pillar means: P1 1.14, P2 1.29, P3 1.00, P4 1.29, P5 1.14, P6 1.86, P7 1.29, P8 1.14. roof_silhouette is the best shot (1.88), moving_punk the worst (1.00). Its findings (high, then medium) are the round 3 work list:
+  1. **(high) Pure #000000 holes on painted characters.** They cover 8-10% of the first-person frames and Ox's glove cuffs. **Cause:** LD-ASSET's paint maps aren't padded (empty texels), and they're sampled with UV2. The black is not the outline hull, as I first thought (the hull's ink is #170e0d). The holes first appear in LD-ASSET's art renders.
+  2. **(high) Lamp and barrel pools turn walls and fence frames crimson-magenta.** See `flat_paint_env_body.gdshaderinc:636-643` and `street_night/world.tres` (pool_hue_norm 0.8, pool_cancel, Barrel_a's colour).
+  3. **(high) The first-person arm reads as a low-poly mesh:** faceted planes, flat salmon, fingerless fists.
+  4. **(high) No eyes at close range:** the Punk's and Ox's faces lose their features in the shadow band. The cap also has a plastic highlight.
+  5. **(high) The street palette** is saturated royal blue at mid value. The darkest third's grey share is 0.03, against 0.56-0.80 in ref 2 at 3.5 and 4.5 s; the dark share is 0.66-0.71, against 0.84-0.92.
+  6. **(medium) roof_silhouette:** the Kicker is front-lit, not a silhouette, and there's a lens-flare star.
+  7. **(medium) The boss roof:** Ox is keyed by a violet directional light (`boss_fire/world.tres:63-66`), so he reads violet, not fire-lit amber.
+  8. **(medium) The environment's ink** has no hierarchy and no distance fade. Edge density is 0.12, against 0.046 in the references.
+  9. **(medium) Atmosphere:** no depth haze or lamp shafts, cotton steam, and a barrel with no fire.
+  10. **(medium) moving_punk:** the head is cropped, the last 2 s are static, and there are blood "stickers". That's for SHOTS.
+  - Also noticed: brick courses that wave at close range (wobble too high), the sun half hidden behind a tank, and identical lamp colours.
+  - The full result is in the run's `journal.jsonl` (the `review:look` result line).
+- **Still running at handoff:** the review's skeptics, on the style lens's high findings, and the code lens (Sonnet: determinism, coherence, the frame writer, leaks, cost per frame). If they're cut off by the limit, resume with `Workflow({scriptPath: tools/workflows/review.js, resumeFromRunId: 'wf_5df89f41-295'})` and the same args ([args-review-g2.json](args-review-g2.json)): finished agents replay from the cache.
+- **Round 3, the plan** (write the briefs into P1.md as new sections first; every package owns disjoint files):
+  - **LD-WORLD3** (world):
+    - findings 2, 5, 7, 8 and 9;
+    - the blind check's tells 1, 3 (window grids, decals, perfect pool ellipses), 6 (aliased sky and spire edges, lens flare, pixel steam) and 8 (detail falling off with distance, kept near the camera and at the focal point; Game-boy's drawn-detail direction stays: hand-varied clusters, not removal);
+    - painted fire and smoke on the boss roof, and the roof's wavy brick.
+    - **Owns:** `video/world/`, `video/look/*/world*.tres`, `flat_paint_env*`, `sky_*`, `haze_*`, `paint_mattes.py` and `assets/video/mattes/`. If Game-boy says yes to A+, the Gemini mattes also go here (a ledger row before each batch).
+  - **LD-ART2** (characters):
+    - findings 1, 3 and 4;
+    - the arm's two-tone cel with smooth or transferred normals, and fingers;
+    - stripes that don't wrap with the texture;
+    - no cap specular, and drawn blood marks.
+    - **Owns:** `video/art/`, `assets/video/characters/`, the art tools, `video/look/*/art*.tres` and `cine_toon.gdshader` (taken over from LD-INK).
+  - **LD-INK2** (lines, grade, delivery):
+    - the line hierarchy: a heavier, tapered silhouette line on the characters, lighter inner lines, and characters separated from the background;
+    - the grade toward navy and indigo with desaturated darks;
+    - the roof Kicker's silhouette (`roofs_dusk/ink.tres`);
+    - contact shadows, if they're screen-space;
+    - the delivery pass (soften, grain);
+    - the code lens's determinism findings for the ink.
+    - **Owns:** `video/ink/`, `cine_outline`, `ink_screen`, the post and the LUTs, and `video/look/*/ink*.tres`.
+  - **SHOTS** (PLAN Phase 2; it doesn't depend on the look): the acts and cine cameras for the shot list; finding 10.
+    - **Owns:** `video/stage/`, `video/cine/`, `video/shots/` and `video/acts/shots_acts.gd`.
+  - **Then:** render the Gate 2 set again, look, run the blind check again (with the delivery pass on our frames), and send round 3 to Game-boy.
+- **Usage:** 5-hour window at about 77%, weekly at 30%, at 19:15. Round 3 is four Sonnet builders, about 40-48% of a window, so it starts after the 22:29 reset.
+- **The resume task** `beat-em-up-video-resume-20261108-2229` fires at 22:40 CST. The app saved it in the default permission mode, because this turn wasn't typed by Game-boy, so it may pause on a permission prompt. Game-boy has been asked by DM to set it to Auto.
+- **Resume steps:**
+  1. get_usage; read the DM for Game-boy's answers (newer than ts 1794185684.959309).
+  2. Get the review's remaining results: from the journal, or resume the run.
+  3. Write the round 3 briefs (above) into P1.md, with args in `docs/video/args-p1c.json` (concurrency 2; LD-ART2 with blender:true).
+  4. Launch `build.js`, and confirm the watcher and relay are running.
+
 ### 2026-11-08 18:55 CST: Phase 1b merged; the Gate 2 set rendered; the review round and the blind check running
 - **Merged** into `video/cinematic-trailer`:
   - `mv/ld-world2` (47d4fbc), `mv/ld-asset` (fe0676d) and `mv/ld-stage` (109c603);
