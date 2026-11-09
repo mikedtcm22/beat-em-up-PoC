@@ -48,6 +48,13 @@ uniform float post_soft : hint_range(0.0, 1.0) = 0.25;
 uniform float post_mix : hint_range(0.0, 1.0) = 1.0;
 uniform float post_noise : hint_range(0.0, 1.0) = 0.3;
 uniform float post_cell_m : hint_range(0.1, 20.0) = 0.9;
+// The thin-line fill: a dark line narrower than about twice `fill_near_px` (at the lens) to `fill_far_px` (far away), in pixels at 1080p, is
+// filled with the darker of the two sides it runs between (a brick joint, a plank seam, a window mullion: the repeated detail), where a plane's
+// edge or a big dark shape is not a valley and stays. `fill_amount` is its share (0 = off).
+uniform float fill_amount : hint_range(0.0, 1.0) = 1.0;
+uniform float fill_near_px : hint_range(0.0, 12.0) = 1.5;
+uniform float fill_far_px : hint_range(0.0, 12.0) = 3.5;
+uniform float fill_gate : hint_range(0.0, 0.5) = 0.05;
 // 0 = the picture; 1 = the radius (red) and anisotropy (green); 2 = the orientation; 3 = the wobble's noise; 4 = the tags (red a character, green the world, blue the sky).
 uniform int debug_view : hint_range(0, 4) = 0;
 
@@ -91,6 +98,33 @@ float depth_at(ivec2 q, ivec2 size) {
 	return texelFetch(depth_tex, clamp(q, ivec2(0), size - 1), 0).r;
 }
 
+// The colour at `q` (encoded) with its thin dark line filled: along four orientations, a pixel darker than both sides at +-w pixels is a valley.
+vec3 filled_colour(ivec2 q, ivec2 size, float w) {
+	vec3 c = enc(texelFetch(screen_tex, clamp(q, ivec2(0), size - 1), 0).rgb);
+	if (fill_amount <= 0.0 || w < 1.0) {
+		return c;
+	}
+	float l = lum(c);
+	float best = 0.0;
+	vec3 fill = c;
+	ivec2 offs[4] = ivec2[](ivec2(1, 0), ivec2(0, 1), ivec2(1, 1), ivec2(1, -1));
+	int wi = int(round(w));
+	for (int k = 0; k < 4; k++) {
+		ivec2 o = offs[k] * wi;
+		vec3 a = enc(texelFetch(screen_tex, clamp(q + o, ivec2(0), size - 1), 0).rgb);
+		vec3 b = enc(texelFetch(screen_tex, clamp(q - o, ivec2(0), size - 1), 0).rgb);
+		float la = lum(a);
+		float lb = lum(b);
+		float depth_of_valley = min(la, lb) - l;
+		float strength = smoothstep(0.0, fill_gate, depth_of_valley);
+		if (strength > best) {
+			best = strength;
+			fill = la < lb ? a : b;
+		}
+	}
+	return mix(c, fill, best * fill_amount);
+}
+
 void fragment() {
 	ivec2 size = textureSize(depth_tex, 0);
 	ivec2 p = ivec2(FRAGCOORD.xy);
@@ -128,7 +162,8 @@ void fragment() {
 			centre = p;
 		}
 		float dc = depth_at(centre, size);
-		vec3 c0 = enc(texelFetch(screen_tex, centre, 0).rgb);
+		float fill_w = mix(fill_near_px, fill_far_px, smoothstep(depth_near_m, max(depth_far_m, depth_near_m + 0.01), z0)) * scale;
+		vec3 c0 = filled_colour(centre, size, fill_w);
 
 		// The structure tensor: a 5x5 grid of the blurred screen's luminance, the gradient at the inner 3x3, smoothed.
 		float h = exp2(tensor_lod);
@@ -188,7 +223,7 @@ void fragment() {
 				vec3 col = c0;
 				float dq = depth_at(tq, size);
 				if (dq > 0.0 && abs(dq - dc) <= depth_reject * dc && !is_character(tq, size)) {
-					col = enc(texelFetch(screen_tex, tq, 0).rgb);
+					col = filled_colour(tq, size, fill_w);
 				}
 				float g = exp(-9.0 * r2);
 				vec2 u = r2 > 0.000001 ? v * inversesqrt(r2) : vec2(1.0, 0.0);

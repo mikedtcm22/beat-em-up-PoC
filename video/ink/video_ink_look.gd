@@ -98,6 +98,10 @@ extends VideoLookPiece
 @export_range(0.0, 4.0) var char_weight: float = 1.0
 @export_range(0.0, 4.0) var fp_weight: float = 1.0
 @export_range(0.5, 40.0) var fp_taper_scale: float = 2.0
+## Near is heavy (round 4): the hull's width multiplier at the lens, from `near_start_m` (full) to `near_end_m` (gone). The first-person arm keeps `fp_weight`.
+@export_range(0.5, 4.0) var line_near_mult: float = 1.0
+@export_range(0.0, 20.0) var line_near_start_m: float = 1.5
+@export_range(0.1, 40.0) var line_near_end_m: float = 5.0
 
 @export_group("Screen ink")
 ## The screen-space ink pass (characters' creases and inner lines, the environment's major silhouettes only,
@@ -120,6 +124,15 @@ extends VideoLookPiece
 ## `sep_px` (1080p pixels) of a figure at least `sep_min_m` from the lens, in `sep_color` at `sep_alpha` (0 = none).
 @export_range(0.0, 1.0) var ink_env_weight: float = 0.5
 @export_range(0.0, 1.0) var ink_inner_weight: float = 0.6
+## Round 4's hierarchy on characters, in the screen ink: the width of a depth step where a near form overlaps a far one (a multiple), a character's inner
+## (crease and terminator) lines (a share of the width), and the width's gain at `ink_dist_near_m` or nearer, and at `ink_dist_far_m` or beyond (1 at `ink_dist_mid_m`).
+@export_range(1.0, 4.0) var ink_overlap_mult: float = 1.0
+@export_range(0.2, 1.0) var ink_inner_px_scale: float = 1.0
+@export_range(0.5, 4.0) var ink_near_gain: float = 1.0
+@export_range(0.2, 1.0) var ink_far_gain: float = 1.0
+@export_range(0.1, 10.0) var ink_dist_near_m: float = 1.5
+@export_range(0.5, 30.0) var ink_dist_mid_m: float = 5.0
+@export_range(1.0, 80.0) var ink_dist_far_m: float = 18.0
 ## The terminator line: a thin inner line on the dark side of each paint step inside a character (the toon bands' edges), read from the
 ## rendered colour: its strength (0 = none), the luminance step in stops where it starts and is full, its width (1080p pixels).
 @export_range(0.0, 1.0) var term_line: float = 1.0
@@ -173,14 +186,14 @@ extends VideoLookPiece
 ## step from `brush_depth_near_m`), plus `brush_focus_gain` far from the shot's focus and `brush_edge_gain` toward the frame's edge (from
 ## `brush_edge_start` of the radius), and at most `brush_r_max`.
 @export var brush_on: bool = true
-@export_range(0.0, 16.0) var brush_r_near: float = 2.0
-@export_range(0.0, 24.0) var brush_r_far: float = 7.0
+@export_range(0.0, 16.0) var brush_r_near: float = 2.5
+@export_range(0.0, 24.0) var brush_r_far: float = 9.0
 @export_range(0.0, 60.0) var brush_depth_near_m: float = 3.0
-@export_range(0.5, 120.0) var brush_depth_far_m: float = 22.0
-@export_range(0.0, 12.0) var brush_focus_gain: float = 2.0
+@export_range(0.5, 120.0) var brush_depth_far_m: float = 14.0
+@export_range(0.0, 12.0) var brush_focus_gain: float = 2.5
 @export_range(0.0, 12.0) var brush_edge_gain: float = 2.0
 @export_range(0.0, 1.0) var brush_edge_start: float = 0.55
-@export_range(1.0, 24.0) var brush_r_max: float = 10.0
+@export_range(1.0, 24.0) var brush_r_max: float = 12.0
 ## The ellipse's roundness (1 = elongated along an edge as the structure tensor says, larger = rounder), the sector weight's exponent (larger =
 ## crisper edges), and the taps from the middle to the edge of the window (the stride grows with the radius).
 @export_range(0.2, 8.0) var brush_aniso_alpha: float = 1.0
@@ -189,17 +202,24 @@ extends VideoLookPiece
 ## The mip level of the screen the structure tensor is read at (the paint's fine texture blurs out, the strokes follow the shapes).
 @export_range(0.0, 3.0) var brush_tensor_lod: float = 1.0
 ## The hand wobble: pixels at 1080p and the world cell in metres of the low-frequency noise (a depth-buffer position, so it holds on the world).
-@export_range(0.0, 12.0) var brush_wobble_px: float = 3.0
-@export_range(0.2, 20.0) var brush_wobble_cell_m: float = 1.6
+@export_range(0.0, 12.0) var brush_wobble_px: float = 3.5
+@export_range(0.2, 20.0) var brush_wobble_cell_m: float = 2.2
 ## A tap across a relative depth step larger than this is not sampled: a pole's edge stays hard.
 @export_range(0.01, 1.0) var brush_depth_reject: float = 0.12
 ## The soft posterize: the band in stops of luminance (0 = off), the edge softness (a share of a band), the share applied, and the world noise on the
 ## band edges (a share of a band, cell in metres) so they are hand-cut, not contours.
-@export_range(0.0, 3.0) var brush_post_step: float = 0.55
-@export_range(0.0, 1.0) var brush_post_soft: float = 0.25
+@export_range(0.0, 3.0) var brush_post_step: float = 0.7
+@export_range(0.0, 1.0) var brush_post_soft: float = 0.15
 @export_range(0.0, 1.0) var brush_post_mix: float = 1.0
 @export_range(0.0, 1.0) var brush_post_noise: float = 0.3
 @export_range(0.1, 20.0) var brush_post_cell_m: float = 0.9
+## The thin-line fill: a dark line narrower than about twice `brush_fill_near_px` (at the lens) to `brush_fill_far_px` (far away) pixels at 1080p is filled
+## with the darker of its two sides (a brick joint, a plank seam: the repeated detail), where a plane's edge or a big dark shape stays; `brush_fill` is its
+## share (0 = off) and `brush_fill_gate` the luminance step (encoded) at which a valley counts.
+@export_range(0.0, 1.0) var brush_fill: float = 1.0
+@export_range(0.0, 12.0) var brush_fill_near_px: float = 1.5
+@export_range(0.0, 12.0) var brush_fill_far_px: float = 3.5
+@export_range(0.0, 0.5) var brush_fill_gate: float = 0.05
 ## A debug view (0 = the picture; 1 = the radius and anisotropy; 2 = the orientation; 3 = the wobble's noise; 4 = the tags).
 @export_range(0, 4) var brush_debug_view: int = 0
 
@@ -231,12 +251,12 @@ extends VideoLookPiece
 ## blended toward a 3x3 kernel; a one-pixel line keeps most of its weight) and a fine grain that is new every `grain_hold` output
 ## frames (on twos). `delivery_on` false switches both off for an A/B; the grade and the paper grain stay.
 @export var delivery_on: bool = true
-@export_range(0.0, 1.0) var deliver_soften: float = 0.45
+@export_range(0.0, 1.0) var deliver_soften: float = 0.4
 @export_range(0.0, 0.2) var deliver_grain: float = 0.035
 @export_range(1, 4) var grain_hold: int = 2
 ## The delivery's re-scale (round 4): the picture is box-filtered to this share of the render size and bicubic-scaled back, so its frequency
 ## content is the references' (1440p streams that look upscaled from a lower master). 1 = off. Lines stay lines.
-@export_range(0.3, 1.0) var deliver_scale: float = 0.75
+@export_range(0.3, 1.0) var deliver_scale: float = 0.65
 
 @export_group("Palette")
 ## The location's palette LUT strip (tools/video/palette_lut.py; N slices of N x N: slice = blue, x = red,

@@ -48,6 +48,10 @@ func apply_look(look: Resource) -> void:
 	_material.set_shader_parameter(&"post_mix", look.brush_post_mix)
 	_material.set_shader_parameter(&"post_noise", look.brush_post_noise)
 	_material.set_shader_parameter(&"post_cell_m", look.brush_post_cell_m)
+	_material.set_shader_parameter(&"fill_amount", look.brush_fill)
+	_material.set_shader_parameter(&"fill_near_px", look.brush_fill_near_px)
+	_material.set_shader_parameter(&"fill_far_px", look.brush_fill_far_px)
+	_material.set_shader_parameter(&"fill_gate", look.brush_fill_gate)
 	_material.set_shader_parameter(&"debug_view", look.brush_debug_view)
 
 

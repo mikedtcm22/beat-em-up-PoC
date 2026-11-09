@@ -259,7 +259,7 @@ func _push_hull(hull: ShaderMaterial) -> void:
 			var extra := ShaderMaterial.new()
 			extra.shader = OUTLINE_SHADER
 			extra.render_priority = hull.render_priority
-			for name_text in ["near_m", "far_m", "fp_scale", "lens_fade_m", "mode"]:
+			for name_text in ["near_m", "far_m", "fp_scale", "lens_fade_m", "mode", "near_mult", "near_start_m", "near_end_m"]:
 				extra.set_shader_parameter(StringName(name_text), hull.get_shader_parameter(StringName(name_text)))
 			_push_hull_values(extra, look.sketch_jitter_px * (1.0 if i == 0 else -1.3), look.sketch_width_scale, float(i + 1))
 			previous.next_pass = extra
@@ -288,6 +288,9 @@ func _push_hull_values(material: ShaderMaterial, jitter_px: float, width_scale: 
 	material.set_shader_parameter(&"taper_scale", look.fp_taper_scale if first_person else look.taper_scale)
 	material.set_shader_parameter(&"break_amount", look.break_amount)
 	material.set_shader_parameter(&"weight_mult", look.fp_weight if first_person else look.char_weight)
+	material.set_shader_parameter(&"near_mult", 1.0 if first_person else look.line_near_mult)
+	material.set_shader_parameter(&"near_start_m", look.line_near_start_m)
+	material.set_shader_parameter(&"near_end_m", look.line_near_end_m)
 
 
 func _push_options() -> void:
@@ -480,6 +483,13 @@ func _push_ink_values() -> void:
 	_ink_material.set_shader_parameter(&"crease_gain", look.ink_crease_gain)
 	_ink_material.set_shader_parameter(&"env_weight", look.ink_env_weight)
 	_ink_material.set_shader_parameter(&"inner_weight", look.ink_inner_weight)
+	_ink_material.set_shader_parameter(&"overlap_mult", look.ink_overlap_mult)
+	_ink_material.set_shader_parameter(&"inner_px_scale", look.ink_inner_px_scale)
+	_ink_material.set_shader_parameter(&"near_gain", look.ink_near_gain)
+	_ink_material.set_shader_parameter(&"far_gain", look.ink_far_gain)
+	_ink_material.set_shader_parameter(&"dist_near_m", look.ink_dist_near_m)
+	_ink_material.set_shader_parameter(&"dist_mid_m", look.ink_dist_mid_m)
+	_ink_material.set_shader_parameter(&"dist_far_m", look.ink_dist_far_m)
 	_ink_material.set_shader_parameter(&"debug_view", look.ink_debug_view)
 	_ink_material.set_shader_parameter(&"term_line", look.term_line)
 	_ink_material.set_shader_parameter(&"term_stops", look.term_stops)
