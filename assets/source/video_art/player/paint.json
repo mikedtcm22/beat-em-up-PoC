@@ -106,6 +106,60 @@
  },
  "default": {},
  "wobble_gain": 1.0,
- "shade_pct": 9.0,
- "light_pct": 86.0
+ "shade_pct": 4.0,
+ "light_pct": 92.0,
+ "wraps": [
+  {
+   "bones": [
+    "LeftLowerArm",
+    "LeftHand"
+   ],
+   "cell": 14,
+   "pitch_mm": 22,
+   "turns": 0.5,
+   "width_mm": 3.6,
+   "strength": 0.92,
+   "fade_cut": 0.18
+  },
+  {
+   "bones": [
+    "RightLowerArm",
+    "RightHand"
+   ],
+   "cell": 14,
+   "pitch_mm": 22,
+   "turns": -0.5,
+   "width_mm": 3.6,
+   "strength": 0.92,
+   "fade_cut": 0.18
+  },
+  {
+   "kind": "meridians",
+   "bones": [
+    "LeftUpperArm",
+    "LeftLowerArm"
+   ],
+   "cell": 7,
+   "count": 7,
+   "width_mm": 3.0,
+   "strength": 0.7,
+   "fade_cut": 0.36,
+   "fade_px": 110,
+   "wobble": 0.12
+  },
+  {
+   "kind": "meridians",
+   "bones": [
+    "RightUpperArm",
+    "RightLowerArm"
+   ],
+   "cell": 7,
+   "count": 7,
+   "width_mm": 3.0,
+   "strength": 0.7,
+   "fade_cut": 0.36,
+   "fade_px": 110,
+   "wobble": 0.12
+  }
+ ]
 }

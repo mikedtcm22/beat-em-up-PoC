@@ -243,6 +243,49 @@ def line_from_borders(ids, cfg, seed):
 	return edge * cfg.get("border_strength", 0.8)
 
 
+def wrap_lines(maps, meta, cfg, ids, seed):
+	"""Bandage wraps as ink: on the texels of a material (a wrap's cream) near a limb's bones, spiral lines around the limb's axis
+	(the bones' chain), `pitch_mm` apart along the axis and turning `turns` times round per pitch, wandering by noise, fading in
+	and out. Procedural, in the surface's own space, so the strips follow the limb wherever the layout puts them."""
+	size = ids.shape[0]
+	out = np.zeros((size, size), np.float32)
+	pos = maps["pos"].astype(np.float64)
+	bone = maps["bone"]
+	for w, spec in enumerate(cfg.get("wraps", [])):
+		names = spec["bones"]
+		head = np.array(meta["bone_heads"][names[0]], np.float64)
+		tail = np.array(meta["bone_tails"][names[-1]], np.float64)
+		axis = tail - head
+		length = float(np.linalg.norm(axis))
+		axis /= length
+		e1 = np.cross(axis, [0.0, 1.0, 0.0])
+		e1 /= np.linalg.norm(e1)
+		e2 = np.cross(axis, e1)
+		idx = [meta["bones"].index(n) for n in names]
+		mask = np.isin(bone, idx) & (ids == spec["cell"])
+		v = pos - head
+		t = v @ axis
+		radial = v - t[..., None] * axis
+		phi = np.arctan2(radial @ e2, radial @ e1)
+		pitch = spec.get("pitch_mm", 24.0) / 1000.0
+		noise = (smooth_noise((size, size), spec.get("wobble_px", 30), seed + 61 + w) - 0.5) * spec.get("wobble", 0.35)
+		if spec.get("kind", "spiral") == "meridians":
+			# `count` lines along the limb (the fibres of a muscle, the run of a tendon), drifting by `slant` turns per metre.
+			circumference = 2.0 * np.pi * np.maximum(np.linalg.norm(radial, axis=2), 0.02)
+			s_param = phi / (2.0 * np.pi) * spec.get("count", 5) + t * spec.get("slant", 0.0) + noise
+			d_mm = np.abs((s_param + 0.5) % 1.0 - 0.5) * circumference * 1000.0 / spec.get("count", 5)
+		else:
+			s_param = t / pitch + phi / (2.0 * np.pi) * spec.get("turns", 0.6) + noise
+			d_mm = np.abs((s_param + 0.5) % 1.0 - 0.5) * spec.get("pitch_mm", 24.0)
+		half = spec.get("width_mm", 2.4) / 2.0
+		mm_per_texel = 1000.0 * float(np.median(np.linalg.norm(np.roll(pos, -1, 1) - pos, axis=2)[maps["cover"]]))
+		line = np.clip((half - d_mm) / max(mm_per_texel, 0.1) + 0.5, 0.0, 1.0)
+		fade = smooth_noise((size, size), spec.get("fade_px", 50), seed + 71 + w)
+		line *= np.clip((fade - spec.get("fade_cut", 0.3)) * 4.0, 0.0, 1.0)
+		out = np.maximum(out, line * mask * spec.get("strength", 0.85))
+	return out
+
+
 def bake(name, workdir, outdir):
 	maps, meta = load_maps(workdir)
 	cfg = load_config(name)
@@ -255,6 +298,7 @@ def bake(name, workdir, outdir):
 	Image.fromarray((albedo * 255.0 + 0.5).astype(np.uint8)).save(os.path.join(outdir, name + "_paint.png"), optimize=True)
 	curv = maps["curv"].astype(np.float32)
 	ink = np.maximum(line_from_valleys(curv, cover, cfg, seed), line_from_borders(ids, cfg, seed))
+	ink = np.maximum(ink, wrap_lines(maps, meta, cfg, ids, seed))
 	ink = warp(ink, cfg.get("warp_px", 1.4), cfg.get("warp_scale_px", 22), seed + 41)
 	ink_size = cfg.get("ink_size", 4096)
 	ink_big = cv2.resize(ink, (ink_size, ink_size), interpolation=cv2.INTER_CUBIC)
@@ -281,6 +325,9 @@ VIEWS = {
 	"left": (np.array([0.0, -1.0, 0.0]), np.array([0.0, 0.0, 1.0]), np.array([1.0, 0.0, 0.0])),
 	"right": (np.array([0.0, 1.0, 0.0]), np.array([0.0, 0.0, 1.0]), np.array([-1.0, 0.0, 0.0])),
 	"top": (np.array([-1.0, 0.0, 0.0]), np.array([0.0, 1.0, 0.0]), np.array([0.0, 0.0, 1.0])),
+	# the forearm's outer face (the A-pose arm slants 45 degrees down and out): looking along its normal from above and outside
+	"arm_r": (np.array([0.0, 1.0, 0.0]), np.array([-0.70710678, 0.0, 0.70710678]), np.array([0.70710678, 0.0, 0.70710678])),
+	"arm_l": (np.array([0.0, -1.0, 0.0]), np.array([0.70710678, 0.0, 0.70710678]), np.array([-0.70710678, 0.0, 0.70710678])),
 }
 
 

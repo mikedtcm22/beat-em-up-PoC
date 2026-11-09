@@ -8,6 +8,9 @@ extends Node
 const TOON_SHADER_PATH := "res://video/shaders/cine_toon.gdshader"
 const META_DONE := &"video_art"
 
+## The edited shader, kept referenced so the edit is not lost when nothing else holds the resource (the cache drops it).
+static var _layout_shader: Shader
+
 var look: VideoArtLook
 ## Per art id: {art: CharacterArt (the video copy), entry: SkinnedArt.Entry, paint: Texture2D, ink: Texture2D}, or {} when the
 ## character has no video files or its video GLB breaks the art contract (a warning says so once).
@@ -33,6 +36,7 @@ static func ensure_layout_uv() -> bool:
 	var shader := load(TOON_SHADER_PATH) as Shader
 	if shader == null:
 		return false
+	_layout_shader = shader
 	var code := shader.code
 	if code.contains("texture(paint_tex, UV)") or code.contains("texture(ink_tex, UV)"):
 		shader.code = code.replace("texture(paint_tex, UV)", "texture(paint_tex, UV2)").replace("texture(ink_tex, UV)", "texture(ink_tex, UV2)")

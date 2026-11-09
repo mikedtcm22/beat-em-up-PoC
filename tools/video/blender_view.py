@@ -40,8 +40,10 @@ AXES = {
 	"left": ((0, -1, 0), (0, 0, 1), (1, 0, 0)),
 	"right": ((0, 1, 0), (0, 0, 1), (-1, 0, 0)),
 	"top": ((-1, 0, 0), (0, 1, 0), (0, 0, 1)),
+	# the forearm's outer face: looking along the A-pose arm's normal from above and outside, up toward the shoulder
+	"arm_r": ((0, 1, 0), (-0.70710678, 0, 0.70710678), (0.70710678, 0, 0.70710678)),
+	"arm_l": ((0, -1, 0), (0.70710678, 0, 0.70710678), (-0.70710678, 0, 0.70710678)),
 }
-r, u, t = (bpy.mathutils_vec if False else None, None, None)
 from mathutils import Vector  # noqa: E402
 r, u, t = [Vector(v) for v in AXES[view]]
 centre = r * right_m + u * up_m

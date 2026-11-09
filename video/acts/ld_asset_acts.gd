@@ -199,10 +199,26 @@ static func shoot(bot: Node, shot: VideoStillShot, variant: StringName, _unused:
 	if rig != null:
 		bot.grab.camera.compositor = rig.compositor
 		await bot.get_tree().process_frame
+	if OS.get_environment("ART_DEBUG") == "white":
+		# Debug: every art mesh's ink mask all white, so what takes the ink texture turns to ink colour.
+		var white := ImageTexture.create_from_image(Image.create_empty(4, 4, false, Image.FORMAT_L8))
+		var image := Image.create_empty(4, 4, false, Image.FORMAT_L8)
+		image.fill(Color.WHITE)
+		white = ImageTexture.create_from_image(image)
+		for node in bot.get_tree().get_nodes_in_group(HumanoidRig.ART_GROUP):
+			((node as MeshInstance3D).material_override as ShaderMaterial).set_shader_parameter(&"ink_tex", white)
+		await bot.get_tree().process_frame
 	var name_text := _name(shot, variant)
 	var err: Error = await bot.grab.capture(String(bot.out_dir).path_join("%s.png" % name_text))
 	var art := bot.level.get_node_or_null(^"CineArtRig") as CineArtRig
 	bot.log_line("ASSET %s err=%d dressed %s" % [name_text, err, art.dressed if art != null else {}])
+	if OS.get_environment("ART_DEBUG") == "1":
+		for node in bot.get_tree().get_nodes_in_group(HumanoidRig.ART_GROUP):
+			var mesh := node as MeshInstance3D
+			var material := mesh.material_override as ShaderMaterial
+			bot.log_line("ASSET mesh %s vis=%s layers=%d shader=%s ink=%s paint=%s" % [mesh.get_path(), mesh.is_visible_in_tree(), mesh.layers,
+					material.shader.resource_path.get_file() if material != null and material.shader != null else "-",
+					material.get_shader_parameter(&"use_ink_tex") if material != null else "-", material.get_shader_parameter(&"use_paint_tex") if material != null else "-"])
 	Engine.time_scale = 1.0
 
 

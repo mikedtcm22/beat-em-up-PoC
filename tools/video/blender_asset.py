@@ -240,7 +240,9 @@ def main():
 	objs = pb.body_objects()
 	arm = bpy.data.objects[pb.ARMATURE]
 	bone_names = [b.name for b in arm.data.bones]
-	meta = {"name": name, "front": FRONT.tolist(), "bones": bone_names, "meshes": [o.name for o in objs]}
+	meta = {"name": name, "front": FRONT.tolist(), "bones": bone_names, "meshes": [o.name for o in objs],
+		"bone_heads": {b.name: [round(float(x), 5) for x in b.head_local] for b in arm.data.bones},
+		"bone_tails": {b.name: [round(float(x), 5) for x in b.tail_local] for b in arm.data.bones}}
 	if name != "player" and not opts["no_normals"]:
 		meta["proxy"] = transfer_face_normals(objs[0], bone_names, opts["proxy_strength"])
 	maps = bake_maps(objs, bone_names, opts["size"])
