@@ -64,8 +64,13 @@ The cinematic gameplay video's live status, kept by the video session ("Beat-em-
 - **Resume steps:**
   1. get_usage; read the DM for Game-boy's answers (newer than ts 1794185684.959309).
   2. Get the review's remaining results: from the journal, or resume the run.
-  3. Write the round 3 briefs (above) into P1.md, with args in `docs/video/args-p1c.json` (concurrency 2; LD-ART2 with blender:true).
-  4. Launch `build.js`, and confirm the watcher and relay are running.
+  3. The round 3 briefs are written (P1.md, from "What Gate 2 found"; commit bd0bfac).
+     - If Game-boy said yes to A+, first add an approval line to § LD-WORLD3, item 8, with the cap he gave, and a ledger row.
+     - Wave A is `build.js` with [args-p1c.json](args-p1c.json): LD-WORLD3 and LD-ART2 (Blender).
+     - Then merge, and paste the code lens's determinism finding into § LD-INK2, item 4.
+     - Wave B is [args-p1d.json](args-p1d.json): LD-INK2 and SHOTS.
+     - Each wave is about 30-35% of a 5-hour window on this seat.
+  4. Confirm the watcher and the relay are running. If they aren't, start them only in a turn Game-boy typed, or propose them as cards.
 
 ### 2026-11-08 18:55 CST: Phase 1b merged; the Gate 2 set rendered; the review round and the blind check running
 - **Merged** into `video/cinematic-trailer`:
