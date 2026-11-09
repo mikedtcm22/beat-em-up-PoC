@@ -255,7 +255,7 @@ SHOTS.append(dict(
 SHOTS.append(dict(
     key="t08_chain_whip", number=8, edit_start=17.0, section=1, fp=True, player=((-3.0, 0, -2.4), 0, -3), window=(0, 2.8),
     note="Shot 8 (0:17-0:19): the bike chain's three-hit whip on two Punks, the padlock landing last.",
-    actors=[actor("punk", (-3.0, 0, -4.3), yaw=None, health=200), actor("punk_veteran", (-2.1, 0, -4.6), yaw=None, health=200)],
+    actors=[actor("punk", (-3.25, 0, -4.2), yaw=None, health=200), actor("punk_veteran", (-2.55, 0, -4.4), yaw=135, health=200)],
     props=[prop("bike_chain", (-3.0, 0, -3.1), 0)],
     beats=[pitch(-45, 0.25, 0.1), press("GRAB", 0.15, True), pitch(-3, 0.3, 0.3, True),
            press("P", 0.15, True), press("P", 0.4, True), press("P", 0.4, True)]))
@@ -277,13 +277,13 @@ SHOTS.append(dict(
 
 # 11. First person: block Ox's charge, then a perfect block, the spinning backfist (P P . P), the haymaker held and released.
 SHOTS.append(dict(
-    key="t11_ox_fight", number=11, edit_start=25.0, section=2, fp=True, player=((1.5, 0, -10.0), -90, -2), window=(0, 7.7),
+    key="t11_ox_fight", number=11, edit_start=25.0, section=2, fp=True, player=((1.5, 0, -10.0), -90, -2), window=(0, 8.1),
     note="Shot 11 (0:25-0:31): block Ox's heavy, a perfect block on the next, the spinning backfist (P P . P), then the haymaker held and released as he gets up (the cut to shot 12 is on the release).",
     actors=[actor("boss", (5.3, 0, -10.0), yaw=None, health=900)],
     beats=[attack(0, 0, 0.2), down("DODGE", 0.0, False, trigger="ACTOR_STRIKE", lead=22), up("DODGE", 0.8, True),
            attack(0, 0, 0.3, True), down("DODGE", 0.0, False, trigger="ACTOR_STRIKE", lead=7), up("DODGE", 0.7, True),
            pitch(8, 0.4, 0.0, True), press("P", 0.1, True), press("P", 0.35, True), press("P", 0.8, True),
-           mark("ox_down", 0.0, True, trigger="ACTOR_DOWN", timeout=2.0),
+           mark("ox_down", 0.0, True, trigger="ACTOR_DOWN", timeout=2.0), move(0, 1, 0.8, True), move(0, 0, 0.2, True),
            down("P", 0.0, True, trigger="ACTOR_FREE", timeout=4.0), up("P", 0.6, True)]))
 
 # 12. The boss roof, cine at 0.25x: the haymaker lands, a backlit silhouette of fist and head against the fire.

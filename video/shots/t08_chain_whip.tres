@@ -8,7 +8,7 @@
 [sub_resource type="Resource" id="Actor_0"]
 script = ExtResource("2_actor")
 id = &"punk"
-position = Vector3(-3, 0, -4.3)
+position = Vector3(-3.25, 0, -4.2)
 facing = 1
 yaw_deg = 0
 anim = &"idle"
@@ -20,9 +20,9 @@ health_share = 0
 [sub_resource type="Resource" id="Actor_1"]
 script = ExtResource("2_actor")
 id = &"punk_veteran"
-position = Vector3(-2.1, 0, -4.6)
-facing = 1
-yaw_deg = 0
+position = Vector3(-2.55, 0, -4.4)
+facing = 0
+yaw_deg = 135
 anim = &"idle"
 hold_tick = 0
 live = true

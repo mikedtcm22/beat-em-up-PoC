@@ -184,9 +184,11 @@ func _run_beats(tick: int) -> void:
 
 
 func _fire(beat: CineBeat, index: int, tick: int, timed_out: bool) -> void:
-	events.note(&"beat", "#%d %s%s%s" % [index, CineBeat.Kind.keys()[beat.kind],
+	var near := _actor(0)
+	events.note(&"beat", "#%d %s%s%s player %s%s" % [index, CineBeat.Kind.keys()[beat.kind],
 			(" " + String(beat.button)) if beat.kind in [CineBeat.Kind.PRESS, CineBeat.Kind.DOWN, CineBeat.Kind.UP] else "",
-			" (trigger %s timed out)" % CineBeat.Trigger.keys()[beat.trigger] if timed_out else ""])
+			" (trigger %s timed out)" % CineBeat.Trigger.keys()[beat.trigger] if timed_out else "", _flat(player.global_position),
+			(" actor0 %s" % _flat(near.global_position)) if near != null else ""])
 	match beat.kind:
 		CineBeat.Kind.PRESS:
 			player.input.push_press(beat.button, beat.hold_ticks)
@@ -222,6 +224,11 @@ func _fire(beat: CineBeat, index: int, tick: int, timed_out: bool) -> void:
 					_advanced.append(who)
 		CineBeat.Kind.MARK:
 			pass
+
+
+## A position as "(x, z)" for the cue sheet (the section's offset is not taken off: it is the world's).
+func _flat(point: Vector3) -> String:
+	return "(%.1f, %.1f)" % [point.x, point.z]
 
 
 ## The staged actor number `index`, or null.

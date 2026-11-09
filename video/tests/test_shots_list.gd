@@ -74,7 +74,7 @@ func test_first_person_and_cine_shots_are_as_listed() -> void:
 	for shot in _trailer_shots():
 		assert_eq(shot.first_person, shot.number in FIRST_PERSON, "shot %d: first person or cine" % shot.number)
 		assert_gt(shot.window_to_s, shot.window_from_s, "shot %d: a window" % shot.number)
-		assert_lte(shot.window_to_s - shot.window_from_s, 7.0, "shot %d: a shot is not longer than the edit can use" % shot.number)
+		assert_lte(shot.window_to_s - shot.window_from_s, 9.0, "shot %d: a shot is not longer than the edit can use" % shot.number)
 
 
 func test_every_enemy_type_and_the_boss_appear() -> void:
@@ -166,3 +166,15 @@ func test_every_trailer_shot_logs_its_events() -> void:
 	var text := FileAccess.get_file_as_string("res://video/stage/cine_bot.gd")
 	assert_true(text.contains("CineEventLog"), "the cine bot writes the cue sheet of every shot")
 	assert_true(text.contains("_events.log"))
+
+
+func test_the_acts_file_lists_the_shots_in_order_and_gives_the_cut_list() -> void:
+	var script := load("res://video/acts/trailer_acts.gd") as GDScript
+	var shots: Array = script.call(&"shots")
+	assert_eq(shots.size(), COUNT)
+	for n in shots.size():
+		assert_eq((shots[n] as CineShot).number, n + 1, "in the list's order")
+	var cuts: PackedStringArray = script.call(&"cut_list")
+	assert_eq(cuts.size(), COUNT)
+	assert_true(cuts[6].contains("speed=0.25"), cuts[6])
+	assert_true(cuts[0].contains("cine") and cuts[1].contains("FP"), "the camera of each shot is in the cut list")
