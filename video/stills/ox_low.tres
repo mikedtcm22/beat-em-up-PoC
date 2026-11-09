@@ -7,9 +7,10 @@
 script = ExtResource("2_actor")
 id = &"boss"
 position = Vector3(8, 0, -10)
-facing = 1
-anim = &"idle"
-hold_tick = 15
+facing = 0
+yaw_deg = 110.0
+anim = &"haymaker_charge"
+hold_tick = 38
 
 [resource]
 script = ExtResource("1_shot")
@@ -19,7 +20,7 @@ section = 2
 player_pos = Vector3(0, 0, -1.5)
 player_yaw_deg = 0.0
 first_person = false
-cam_pos = Vector3(4.0, 0.5, -10.0)
+cam_pos = Vector3(3.2, 0.5, -10.0)
 cam_look_at = Vector3(8.0, 1.5, -10.0)
 cam_fov_deg = 60.0
 actors = Array[ExtResource("2_actor")]([SubResource("Actor_ox")])
