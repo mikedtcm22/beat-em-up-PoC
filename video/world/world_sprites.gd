@@ -125,22 +125,19 @@ static func ember_atlas() -> ImageTexture:
 	return ImageTexture.create_from_image(image)
 
 
-## The circles of steam frame `k`: a column that billows up, each lobe a circle, as (centre x, centre y, radius) in [-1, 1] (y down).
+## The circles of steam frame `k`: one billowing cluster of four or five big overlapping lobes with a couple of small ones standing off it, as
+## (centre x, centre y, radius) in [-1, 1] (y down). A plume is many such clusters, never a string of beads.
 static func _puff_circles(k: int) -> Array[Vector3]:
 	var out: Array[Vector3] = []
-	var x := (_hash(k, 1, 7) - 0.5) * 0.25
-	var count := 6 + int(_hash(k, 2, 7) * 3.0)
+	var count := 4 + int(_hash(k, 2, 7) * 2.0)
 	for i in count:
-		var t := float(i) / float(count - 1)
-		var r := lerpf(0.17, 0.33, t) * (0.8 + 0.4 * _hash(k, i + 10, 7))
-		x += (_hash(k, i + 30, 7) - 0.5) * 0.3
-		x = clampf(x, -0.5, 0.5)
-		var y := lerpf(0.62, -0.5, t) + (_hash(k, i + 50, 7) - 0.5) * 0.12
-		out.append(Vector3(x, y, r))
-	# A couple of small lobes standing off the column: the drawn, uneven edge.
+		var a := TAU * (float(i) / float(count) + _hash(k, i + 10, 7) * 0.15)
+		var spread := 0.12 + 0.2 * _hash(k, i + 30, 7)
+		var r := 0.34 + 0.18 * _hash(k, i + 50, 7)
+		out.append(Vector3(cos(a) * spread, sin(a) * spread * 0.8 + 0.05, r))
 	for j in 2:
 		var side := -1.0 if (j + k) % 2 == 0 else 1.0
-		out.append(Vector3(side * (0.3 + 0.2 * _hash(k, j + 70, 7)), -0.15 + 0.5 * _hash(k, j + 80, 7), 0.12 + 0.07 * _hash(k, j + 90, 7)))
+		out.append(Vector3(side * (0.45 + 0.15 * _hash(k, j + 70, 7)), -0.25 + 0.5 * _hash(k, j + 80, 7), 0.13 + 0.07 * _hash(k, j + 90, 7)))
 	return out
 
 

@@ -70,7 +70,7 @@ props = {
 &"rib_m": 0.22
 },
 "WaterTank": {
-&"color": Color(0.34, 0.24, 0.17, 1),
+&"color": Color(0.3, 0.15, 0.2, 1),
 &"pattern": 0,
 &"rib_m": 0.3
 }
@@ -80,9 +80,9 @@ paint = {
 &"paint_lod": 4.2,
 &"paint_bands": 3.0,
 &"paint_band_soft": 0.05,
-&"paint_shadow_tint": Color(0.5, 0.32, 0.55, 1),
-&"paint_shadow_level": 0.4,
-&"paint_mid_level": 0.72,
+&"paint_shadow_tint": Color(0.36, 0.2, 0.42, 1),
+&"paint_shadow_level": 0.3,
+&"paint_mid_level": 0.52,
 &"paint_grain": 0.2,
 &"paint_break": 0.12,
 &"paint_break_scale": Vector2(3, 1.2),
@@ -102,23 +102,28 @@ paint = {
 &"focus_on": 1.0,
 &"focus_floor": 0.45,
 &"cluster_scale": 0.35,
-&"cluster_cover": 0.45,
+&"cluster_cover": 0.5,
 &"cluster_base": 0.5,
-&"brick_weight": 0.55,
+&"brick_weight": 0.6,
+&"draw_ink_mul": 0.26,
+&"draw_line_w": 0.02,
 &"face_vary": 0.7,
 &"sheet_gate_lo": 0.62,
 &"win_frame_m": 0.07,
 &"pool_wall_gain": 0.5,
-&"pool_wall_hue": 0.5,
+&"pool_wall_hue": 0.8,
 &"pool_wall_damp": 0.25,
 &"draw_wobble_m": 0.008,
 &"win_kinds": Vector4(0.1, 0.08, 0.12, 0.05),
 &"far_m": Vector2(20, 50),
+&"mass_far_m": Vector2(10, 34),
+&"mass_far_mul": 0.55,
+&"mass_focus_mul": 0.8,
 &"puddle_p": 0.0
 }
 sky = {
-&"zenith_color": Color(0.46, 0.32, 0.52, 1),
-&"mid_color": Color(0.88, 0.52, 0.46, 1),
+&"zenith_color": Color(0.34, 0.22, 0.45, 1),
+&"mid_color": Color(0.78, 0.44, 0.42, 1),
 &"horizon_color": Color(1, 0.8, 0.46, 1),
 &"below_color": Color(0.3, 0.2, 0.3, 1),
 &"mid_at": 0.2,
@@ -138,7 +143,7 @@ sky = {
 sky_disc_follows_sun = true
 haze = {
 &"band_start_m": Vector3(10, 24, 46),
-&"band_color_1": Color(1, 0.7, 0.5, 0.03),
-&"band_color_2": Color(1, 0.7, 0.5, 0.07),
-&"band_color_3": Color(1, 0.72, 0.5, 0.12)
+&"band_color_1": Color(0.8, 0.5, 0.6, 0.03),
+&"band_color_2": Color(0.78, 0.46, 0.6, 0.07),
+&"band_color_3": Color(0.75, 0.44, 0.6, 0.12)
 }

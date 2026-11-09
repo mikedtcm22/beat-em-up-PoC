@@ -44,7 +44,7 @@ position = Vector3(100, 47, -10)
 size_m = Vector2(200, 112.5)
 yaw_deg = -90.0
 fade = 0.0
-energy = 1.0
+energy = 0.8
 feather = Vector4(0.1, 0.1, 0.12, 0)
 drift = 0.006
 drift_from = 0.3
@@ -102,6 +102,9 @@ paint = {
 &"warp_m": 0.12,
 &"row_jitter_m": 0.5,
 &"window_blank_p": 0.0,
+&"window_lit_p": 0.1,
+&"window_lit_color": Color(1, 0.55, 0.2, 1),
+&"window_lit_energy": 0.9,
 &"brick_strokes": 0.0,
 &"brick_flat": 1.0,
 &"brick_edge_w": 0.05,
@@ -119,15 +122,15 @@ paint = {
 &"focus_on": 1.0,
 &"focus_floor": 0.45,
 &"cluster_scale": 0.35,
-&"cluster_cover": 0.45,
+&"cluster_cover": 0.35,
 &"cluster_base": 0.5,
-&"brick_weight": 0.55,
+&"brick_weight": 0.4,
 &"face_vary": 0.7,
 &"sheet_gate_lo": 0.62,
 &"win_frame_m": 0.07,
 &"pool_wobble": 0.16,
 &"pool_wall_gain": 0.5,
-&"pool_wall_hue": 0.5,
+&"pool_wall_hue": 0.8,
 &"pool_wall_damp": 0.25,
 &"draw_wobble_m": 0.008,
 &"mass_far_m": Vector2(30, 70),

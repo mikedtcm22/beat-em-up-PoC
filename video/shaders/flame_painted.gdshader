@@ -33,7 +33,7 @@ float hash12(vec2 p) {
 float tongue(vec2 p, float cx, float h, float w, float lean) {
 	float y = p.y;
 	float t = clamp(y / max(h, 0.001), 0.0, 1.0);
-	float half_w = w * pow(1.0 - t, 0.75) * smoothstep(0.0, 0.08, y + 0.02);
+	float half_w = w * pow(1.0 - t, 0.55) * smoothstep(0.0, 0.08, y + 0.02);
 	float x = p.x - cx - lean * y * y;
 	float d = abs(x) - half_w;
 	return max(d, y - h);
