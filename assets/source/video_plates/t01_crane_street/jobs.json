@@ -1,0 +1,13 @@
+[
+	{
+		"out": "plate_0_gemini1.png",
+		"prompt": "Paint-over. Repaint image 1 as the finished hand-painted background of a 2D TV anime (Castlevania: Nocturne, Primal). Image 2 is a style swatch: copy its brushwork, edges and value handling, not its content. Trace, don't redesign: keep the camera, horizon, vanishing points and the outline of every large mass at the same pixel positions; add, remove or move nothing large. No people, text, steam or lens effects. Big flat shapes cut with a flat brush, freehand straight edges, no rendered gradients, specular highlights or shadow-map shadows; shadows are designed flat shapes. Detail as hand-placed clusters where light falls (some brick near a lamp, varied windows, pipes, cracks), one flat colour per plane elsewhere; never a grid or a repeated unit. Darks are deep coloured values (blue-violet, plum), never black. The distance is lighter, cooler, lower in contrast, simpler and softer-edged. A soft glow at each lamp head and no light cones. At most three to five grouped, different windows on a facade; every window differs in size, shape and light. One ground plane with a few cracks and two or three puddles reflecting the lamps. Soft warm pools of lamp light that climb the wall bases. Moonlight only on up-facing edges. The far end of the street in blue-grey haze. The fence is drawn as a few sagging strokes, never a lattice.",
+		"model": "gemini-3-pro-image",
+		"aspect": "16:9",
+		"size": "2K",
+		"refs": [
+			"plate_0_blockout.jpg",
+			"plate_0_swatch.jpg"
+		]
+	}
+]
