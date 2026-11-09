@@ -6,6 +6,18 @@ The cinematic gameplay video's live status, kept by the video session ("Beat-em-
 
 ## Status (newest first)
 
+### 2026-11-09 14:20 CST: resumed after the 13:59 reset; R5-SHOTS, R5-ART and R5-INK resuming from their wip commits
+- **Usage:** the 5-hour window is at 0%, and **weekly at 80%** (it resets 2026-11-10 at 16:00 CST). About 10 weekly points (about 60 points of a 5-hour window) are left to finish round 5. No new DM. The watcher and the relay restarted.
+- **Running:** `tools/video/build_weekly.js`, run `wf_0571fbbc-351` (task `wr5036alr`), with [args-p1g.json](args-p1g.json) plus a budget note. Image reads are capped at 20. R5-SHOTS and R5-INK run at medium effort; R5-ART stays at high.
+- **Next:**
+  1. merge the three;
+  2. make the hero plates (`make_plate.sh`, within the $1.72);
+  3. render the hero frames;
+  4. run the blind check, with **one judge if the weekly is short** (about 0.7 weekly points against 2);
+  5. DM.
+  - If the weekly reaches 90%, hand off and resume after 16:00 CST on 2026-11-10.
+
+
 ### 2026-11-09 11:05 CST: handoff at the watcher's 88% warning; R5-SHOTS, R5-ART and R5-INK stopped as wip; resume at the 13:59 reset
 - **Stopped at 11:00:** the run `wf_9e0eccab-216`. Each builder's work is committed as `wip:` and pushed:
   - **`mv/r5-shots` `9b4a209`:** the view rig (lens, lift, roll, off-hand), foreground cards, the cine shots re-staged for plates, tests, `video/shots/hero_frames.json`, `tools/video/shoot_hero.sh`, and its calls file;
