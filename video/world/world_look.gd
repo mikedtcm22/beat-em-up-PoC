@@ -21,6 +21,7 @@ const HALO_SHADER := preload("res://video/shaders/haze_halo.gdshader")
 const MATTE_SHADER := preload("res://video/shaders/haze_matte.gdshader")
 const SHAFT_SHADER := preload("res://video/shaders/light_shaft.gdshader")
 const FLAME_SHADER := preload("res://video/shaders/flame_painted.gdshader")
+const PLUME_SHADER := preload("res://video/shaders/steam_plume.gdshader")
 const ROOT_NAME := &"VideoWorldRig"
 ## The haze quad draws before the ink (the ink's priority is MIN + 2) and after LookPost's own edge quad (MIN + 1).
 const HAZE_PRIORITY := Material.RENDER_PRIORITY_MIN
@@ -28,10 +29,14 @@ const HAZE_PRIORITY := Material.RENDER_PRIORITY_MIN
 ## The shader the trim materials had before any look replaced it (kept across applications, so a second look restores it first).
 static var _game_trim_shader: Shader
 static var _game_scissor_shader: Shader
+## The lights' slots the paint shader has (flat_paint_env_body.gdshaderinc's `lamps`).
+const LAMP_SLOTS := 8
 ## The paint uniforms the last look wrote, so the next one can clear what it does not set (a look leaves nothing of another).
 static var _painted: Array[StringName] = []
 ## The paint materials of the last application (the kit's, the props', the lamp posts'): the rig writes the focus on them each frame.
 var live_materials: Array[ShaderMaterial] = []
+## The uniforms this look derives from its own data for the paint (the lights' places, the key's direction), written on every paint material it makes.
+var _derived: Dictionary = {}
 
 @export_group("Location")
 ## street_night, roofs_dusk or boss_fire; and the level section its positions are in (0 street, 1 roofs, 2 boss roof).
@@ -206,6 +211,9 @@ func _paint_materials(rig: VideoWorldRig) -> void:
 	scissor.shader = PAINT_SCISSOR_SHADER
 	# Values written in a section's own space are moved to the world: the fire's height is metres above the section's floor.
 	var values := paint.duplicate()
+	_derived = _derive_uniforms(rig)
+	if float(paint.get(&"r4_on", 0.0)) > 0.0:
+		values.merge(_derived, true)
 	if values.has(&"fire_top_m"):
 		values[&"fire_top_m"] = float(values[&"fire_top_m"]) + rig.section_origin().y
 	for key in _painted:
@@ -221,6 +229,24 @@ func _paint_materials(rig: VideoWorldRig) -> void:
 	live_materials.append(scissor)
 
 
+## What the paint needs from the look's own data (round 4): the places of its lights and the radius each lights (`lamps`, up to LAMP_SLOTS, padded with zeros), and the
+## key's direction (the sun's). The paint reads these to know which surfaces are in a light (full detail) and which are a mass.
+func _derive_uniforms(rig: VideoWorldRig) -> Dictionary:
+	var base := rig.section_origin()
+	var places := PackedVector4Array()
+	for spec in lights:
+		if places.size() >= LAMP_SLOTS:
+			break
+		var at := base + spec.position + spec.head_offset()
+		places.append(Vector4(at.x, at.y, at.z, spec.range_m * spec.mask_range_scale))
+	while places.size() < LAMP_SLOTS:
+		places.append(Vector4.ZERO)
+	return {
+		&"lamps": places,
+		&"key_dir": VideoWorldRig.toward_from_angles(sun_elevation_deg, sun_yaw_deg),
+	}
+
+
 ## Give the kit's shared materials their own shaders back (a test, or a shot that ends the look).
 static func restore_game_materials() -> void:
 	if _game_trim_shader != null:
@@ -234,6 +260,8 @@ func prop_material(color: Color) -> ShaderMaterial:
 	var material := ShaderMaterial.new()
 	material.shader = PAINT_PROP_SHADER
 	apply_uniforms(material, paint)
+	if float(paint.get(&"r4_on", 0.0)) > 0.0:
+		apply_uniforms(material, _derived)
 	material.set_shader_parameter(&"albedo", color)
 	live_materials.append(material)
 	return material
@@ -307,24 +335,55 @@ func _build_mattes(rig: VideoWorldRig) -> void:
 func _build_emitters(rig: VideoWorldRig) -> void:
 	var base := rig.section_origin()
 	for spec in emitters:
+		var index := 0
 		for point in spec.points:
-			rig.add_child(VideoWorldParticles.build(spec, base + point))
+			if spec.kind == VideoWorldEmitter.Kind.STEAM:
+				# Steam is drawn (a few big flat lobes on a card), not a column of particle puffs.
+				for card in VideoWorldPlume.build(self, spec, base + point, index):
+					rig.add_child(card)
+					rig.plume_materials.append(card.get_meta(&"plume") as ShaderMaterial)
+			else:
+				rig.add_child(VideoWorldParticles.build(spec, base + point))
+			index += 1
 
 
 ## The props named in `props`: each MeshInstance3D of the level with that name whose surfaces wear the game's toon material gets the prop paint
 ## (its colour, its pattern) as a material override; the hull that material carried (its next_pass) goes along. Characters are never touched
-## (they are in the rig_art and view_proxy groups, and are not named here).
+## (they are in the rig_art and view_proxy groups, and are not named here). Round 4: no twin props. A spec may carry `vary_hue` (the hue wheel's share the colour wanders by,
+## from a hash of the prop's place), `vary_value` (a share of the value, the sign alternating between twins), `vary_scale` and `vary_tilt_deg` (the prop's art is scaled and tilted about
+## its feet, a visual-only change of the PropSpot's art node, never of the game's files), `vary_yaw_deg`, and `patch` (a repair plate and a dent on a water tank).
 func _paint_props(level: Node) -> void:
 	if props.is_empty():
 		return
+	var ordinal := {}
 	for node in level.find_children("*", "MeshInstance3D", true, false):
 		var mesh := node as MeshInstance3D
 		if not props.has(String(mesh.name)):
 			continue
 		var spec: Dictionary = props[String(mesh.name)]
-		var material := prop_material(spec.get(&"color", Color(0.3, 0.3, 0.3)))
+		var spot := _spot_of(mesh)
+		var place := (spot.global_position if spot != null else mesh.global_position)
+		var nth: int = ordinal.get(mesh.name, 0)
+		ordinal[mesh.name] = nth + 1
+		var sign_k := 1.0 if nth % 2 == 0 else -1.0
+		var h1 := _hash01(place, 1.0)
+		var h2 := _hash01(place, 2.0)
+		var h3 := _hash01(place, 3.0)
+		var color: Color = spec.get(&"color", Color(0.3, 0.3, 0.3))
+		var vary_hue := float(spec.get(&"vary_hue", 0.0))
+		var vary_value := float(spec.get(&"vary_value", 0.0))
+		if vary_hue > 0.0:
+			color.h = fposmod(color.h + (h1 - 0.5) * vary_hue, 1.0)
+		if vary_value > 0.0:
+			color.v = clampf(color.v * (1.0 + sign_k * vary_value * (0.6 + 0.4 * h2)), 0.0, 1.0)
+		var material := prop_material(color)
 		material.set_shader_parameter(&"prop_pattern", int(spec.get(&"pattern", -1)))
 		material.set_shader_parameter(&"prop_rib_m", float(spec.get(&"rib_m", 0.25)))
+		material.set_shader_parameter(&"prop_seed", h3 * 60.0 + 1.0)
+		material.set_shader_parameter(&"prop_patch", float(spec.get(&"patch", 0.0)))
+		material.set_shader_parameter(&"prop_base_m", place.y)
+		if spot != null:
+			_vary_art(spot, spec, sign_k, h1, h2, h3)
 		var hull: Material = null
 		if mesh.has_meta(&"world2_hull"):
 			hull = mesh.get_meta(&"world2_hull") as Material
@@ -339,6 +398,43 @@ func _paint_props(level: Node) -> void:
 			mesh.set_meta(&"world2_hull", hull)
 		material.next_pass = hull
 		mesh.material_override = material
+
+
+## The PropSpot a prop mesh belongs to (its art's parent), or null.
+func _spot_of(mesh: Node) -> PropSpot:
+	var up := mesh.get_parent()
+	while up != null:
+		if up is PropSpot:
+			return up as PropSpot
+		up = up.get_parent()
+	return null
+
+
+static func _hash01(at: Vector3, salt: float) -> float:
+	return fposmod(sin(at.x * 12.9898 + at.y * 78.233 + at.z * 37.719 + salt * 4.1) * 43758.5453, 1.0)
+
+
+## A twin differs by a transform: the prop's art is scaled (the sign alternates between twins) and tilted about the PropSpot's origin, which stands on the floor at the middle of
+## the footprint, and turned a little. The art's first transform is kept in meta, so a second application starts from it. Visual only: the collider is the block it dresses.
+func _vary_art(spot: PropSpot, spec: Dictionary, sign_k: float, h1: float, h2: float, h3: float) -> void:
+	var art := spot.art
+	if art == null:
+		return
+	var vary_scale := float(spec.get(&"vary_scale", 0.0))
+	var vary_tilt := float(spec.get(&"vary_tilt_deg", 0.0))
+	var vary_yaw := float(spec.get(&"vary_yaw_deg", 0.0))
+	if vary_scale <= 0.0 and vary_tilt <= 0.0 and vary_yaw <= 0.0:
+		return
+	if not art.has_meta(&"r4_base"):
+		art.set_meta(&"r4_base", art.transform)
+	var base: Transform3D = art.get_meta(&"r4_base")
+	var grow := 1.0 + sign_k * vary_scale * (0.6 + 0.4 * h1)
+	var tall := 1.0 + sign_k * vary_scale * (0.5 + 0.5 * h2) * 0.6
+	var axis := Vector3(cos(h3 * TAU), 0.0, sin(h3 * TAU))
+	var tilt := Basis(axis, deg_to_rad(vary_tilt * sign_k * (0.5 + 0.5 * h2)))
+	var turn := Basis(Vector3.UP, deg_to_rad(vary_yaw * (h1 - 0.5) * 2.0))
+	var shape := Basis.from_scale(Vector3(grow, tall, grow))
+	art.transform = Transform3D(turn * tilt * shape, Vector3.ZERO) * base
 
 
 func _build_contact(rig: VideoWorldRig) -> void:

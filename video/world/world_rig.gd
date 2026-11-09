@@ -16,6 +16,8 @@ var haze_material: ShaderMaterial
 var practicals: Array[Node3D] = []
 ## The matte cards' materials (the rig writes the drifting smoke's phase) and the flame cards' (their 12 fps slot).
 var matte_materials: Array[ShaderMaterial] = []
+## The steam plumes' materials: each is redrawn on twos from the shot's frame at the flicker rate.
+var plume_materials: Array[ShaderMaterial] = []
 ## The physics frame the look began on: every animation here counts from it, so a shot looks the same whenever it is shot.
 var _born_frame: int = 0
 
@@ -69,6 +71,8 @@ func _animate() -> void:
 				(child.get_meta(&"flame_material") as ShaderMaterial).set_shader_parameter(&"slot", slot)
 	for material in matte_materials:
 		material.set_shader_parameter(&"phase", float(shot_frame()))
+	for material in plume_materials:
+		material.set_shader_parameter(&"slot", slot)
 
 
 ## The level's section: the origin of the look's section-space positions.

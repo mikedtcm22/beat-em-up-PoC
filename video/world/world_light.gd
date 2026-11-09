@@ -44,3 +44,37 @@ enum Prop { LAMP_POST, FIRE_BARREL, BARE }
 @export var flame: bool = false
 @export_range(0.2, 2.5) var flame_h_m: float = 1.1
 @export_range(0.2, 2.0) var flame_w_m: float = 0.8
+
+@export_group("Pole and light mask (round 4)")
+## A lamp post's pole: the radius at its top and at its foot (m): it tapers. The post leans off the vertical by `lean_deg` (1 to 3 degrees, toward `lean_yaw_deg`); 0 takes
+## a hash of the post's place, so no two lean alike and a look never repeats itself.
+@export_range(0.02, 0.15) var pole_top_m: float = 0.04
+@export_range(0.03, 0.25) var pole_base_m: float = 0.095
+@export_range(0.0, 6.0) var lean_deg: float = 0.0
+@export_range(-180.0, 180.0) var lean_yaw_deg: float = 0.0
+## How far the paint shader treats this light as lighting the world, as a share of its range (the "in the light" zone where detail draws at full contrast).
+@export_range(0.3, 2.0) var mask_range_scale: float = 1.0
+
+
+## The basis a lamp post's lean gives: a tilt of `lean_deg` (from a hash of the place when it is 0) about a horizontal axis at `lean_yaw_deg` (hashed when 0 too).
+func lean_basis() -> Basis:
+	var h1 := _hash01(position.x * 12.9898 + position.z * 78.233)
+	var h2 := _hash01(position.x * 39.346 + position.z * 11.135 + 5.0)
+	var angle := lean_deg if lean_deg > 0.0 else 1.0 + 2.0 * h1
+	var yaw := lean_yaw_deg if absf(lean_yaw_deg) > 0.001 else (h2 * 360.0 - 180.0)
+	var axis := Vector3(cos(deg_to_rad(yaw)), 0.0, sin(deg_to_rad(yaw)))
+	return Basis(axis, deg_to_rad(angle))
+
+
+static func _hash01(x: float) -> float:
+	return fposmod(sin(x) * 43758.5453, 1.0)
+
+
+## Where the light is, relative to the feet, ignoring any lean (a lamp's head, a barrel's flame, a bare light's own place).
+func head_offset() -> Vector3:
+	match prop:
+		Prop.LAMP_POST:
+			return lean_basis() * Vector3(arm_side * 0.7, height_m - 0.1, 0.0)
+		Prop.FIRE_BARREL:
+			return Vector3(0.0, height_m, 0.0)
+	return Vector3.ZERO

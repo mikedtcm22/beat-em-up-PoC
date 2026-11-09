@@ -10,9 +10,9 @@ script = ExtResource("3_emit")
 kind = 2
 points = PackedVector3Array(14, 9.5, -16)
 extents = Vector3(7, 1.5, 7)
-amount = 70
+amount = 26
 life_s = 7.0
-size_m = Vector2(0.03, 0.06)
+size_m = Vector2(0.02, 0.065)
 direction = Vector3(0, 1, 0)
 speed = Vector2(0.05, 0.25)
 spread_deg = 180.0
@@ -58,21 +58,37 @@ props = {
 "AcUnit": {
 &"color": Color(0.55, 0.56, 0.6, 1),
 &"pattern": 3,
-&"rib_m": 0.25
+&"rib_m": 0.25,
+&"vary_scale": 0.12,
+&"vary_tilt_deg": 1.5,
+&"vary_value": 0.2
 },
 "Car": {
 &"color": Color(0.5, 0.14, 0.13, 1),
-&"pattern": 2
+&"pattern": 2,
+&"vary_scale": 0.06,
+&"vary_yaw_deg": 5.0,
+&"vary_value": 0.3,
+&"vary_hue": 0.9
 },
 "Dumpster": {
 &"color": Color(0.14, 0.24, 0.19, 1),
 &"pattern": 1,
-&"rib_m": 0.22
+&"rib_m": 0.22,
+&"vary_scale": 0.08,
+&"vary_yaw_deg": 4.0,
+&"vary_value": 0.2,
+&"vary_hue": 0.12
 },
 "WaterTank": {
 &"color": Color(0.3, 0.15, 0.2, 1),
 &"pattern": 0,
-&"rib_m": 0.3
+&"rib_m": 0.3,
+&"vary_scale": 0.14,
+&"vary_tilt_deg": 3.5,
+&"vary_value": 0.35,
+&"vary_hue": 0.07,
+&"patch": 1.0
 }
 }
 paint = {
@@ -119,7 +135,27 @@ paint = {
 &"mass_far_m": Vector2(10, 34),
 &"mass_far_mul": 0.55,
 &"mass_focus_mul": 0.8,
-&"puddle_p": 0.0
+&"puddle_p": 0.0,
+&"r4_on": 1.0,
+&"mask_edge": Vector2(0.62, 1.08),
+&"mask_shape": 0.3,
+&"key_weight": 1.0,
+&"key_cut": Vector2(0.1, 0.45),
+&"dark_mass": 0.7,
+&"mass_value": 0.4,
+&"mass_color": Color(1.0, 0.82, 1.12, 1),
+&"dark_line_k": 0.45,
+&"mass_shade": 0.5,
+&"dark_detail": 0.6,
+&"mass_follow": 0.75,
+&"mass_shade_k": 0.0,
+&"win_dark_blank": 0.5,
+&"moon_top_color": Color(1, 0.72, 0.45, 1),
+&"moon_top_gain": 0.3,
+&"moon_top_min": 0.7,
+&"pool_shape_amp": 0.2,
+&"pool_bites": 0.3,
+&"puddle_rag": 0.9
 }
 sky = {
 &"zenith_color": Color(0.34, 0.22, 0.45, 1),

@@ -200,6 +200,53 @@ uniform float pool_wall_gain : hint_range(0.0, 1.5) = 0.8;
 uniform float pool_wall_hue : hint_range(0.0, 1.0) = 0.5;
 uniform float pool_wall_damp : hint_range(0.0, 1.0) = 1.0;
 
+// Round 4 (R4-WORLD): values organised by the light. r4_on is the master (0: round 3). A surface out of every light is a flat MASS (navy on the street, violet on the
+// boss roof) with its brick, windows and trim marks left only as faint shapes; in a light (a lamp, the fire, the key on a face that faces it, the moon on a top plane) the same
+// detail draws at full contrast. `lamps` are the lights' places (world xyz) and the radius (m) each lights as the paint sees it (w 0: none).
+uniform float r4_on : hint_range(0.0, 1.0) = 0.0;
+uniform vec4 lamps[8];
+// Where a lamp's light fades out, as shares of its radius (x: full, y: gone) and how far the angular noise reshapes that edge (0: a circle).
+uniform vec2 mask_edge = vec2(0.5, 1.0);
+uniform float mask_shape : hint_range(0.0, 0.8) = 0.3;
+// The key: the direction toward it, and how much a face that faces it counts as in the light (0: the moon, a light that lights only top planes); the cut of the dot product.
+uniform vec3 key_dir = vec3(0.0, 1.0, 0.0);
+uniform float key_weight : hint_range(0.0, 1.0) = 0.0;
+uniform vec2 key_cut = vec2(0.1, 0.5);
+// The fire (the boss roof): the share of a wall below `fire_top_m` that counts as lit by it.
+uniform float fire_lit : hint_range(0.0, 1.0) = 0.0;
+// The out-of-light surface: the share it flattens to the mass (value `mass_value`, colour factor `mass_color`), and how much of the drawn detail's contrast stays (0.3: faint marks).
+uniform float dark_mass : hint_range(0.0, 1.0) = 0.8;
+uniform float mass_value : hint_range(0.0, 1.5) = 0.45;
+uniform vec3 mass_color : source_color = vec3(1.0);
+uniform float dark_line_k : hint_range(0.0, 1.0) = 0.3;
+// The share of the brick (the clusters' detail) a mass keeps: fewer lines, so a dark wall is a mass with a few marks, not a field of them.
+uniform float dark_detail : hint_range(0.0, 1.0) = 0.6;
+// The toon value a mass takes from the directional light (the moon, the sun): its bands go flat to this level.
+uniform float mass_shade : hint_range(0.0, 1.0) = 0.45;
+// How far a mass takes `mass_shade` (1: the key's bands go flat: the moon, which lights nothing by itself; 0: the key's own shadow stays, as on a roof with a real sun).
+uniform float mass_shade_k : hint_range(0.0, 1.0) = 0.0;
+// A prop keeps this much of its own hue in a mass (a car stays red, a tank rust), and takes this gain on the mass value (its paint colour is dark).
+// How much of the surface's own value a mass keeps (0: every mass is `mass_value`; 1: its own), so a dark floor stays dark.
+uniform float mass_follow : hint_range(0.0, 1.0) = 0.0;
+uniform float mass_prop_hue : hint_range(0.0, 1.0) = 0.5;
+uniform float mass_prop_gain : hint_range(0.5, 5.0) = 2.2;
+// Windows: the share of the panes of a mass that are blanked to wall (lit panes stay), so a dark wall shows fewer, varied windows.
+uniform float win_dark_blank : hint_range(0.0, 1.0) = 0.0;
+// The moon on a top plane (a ledge, a sill, a roof edge, the top of a crate or a car): cool lit value, its gain, and the least up-facing normal that counts.
+uniform vec3 moon_top_color : source_color = vec3(0.35, 0.5, 0.95);
+uniform float moon_top_gain : hint_range(0.0, 3.0) = 0.0;
+uniform float moon_top_min : hint_range(0.3, 0.95) = 0.7;
+// The pool's hand-shaped edge: how far the angular noise moves it (in light units), the bites cut out of it, and their frequency (cycles per m).
+uniform float pool_shape_amp : hint_range(0.0, 0.6) = 0.0;
+uniform float pool_bites : hint_range(0.0, 0.8) = 0.0;
+uniform float pool_bite_freq : hint_range(0.1, 3.0) = 0.9;
+// The puddles' ragged edge: the domain warp of their shape.
+uniform float puddle_rag : hint_range(0.0, 1.5) = 0.0;
+// A prop's own: its seed (a hash of its place, so twins differ: a patch, a dent) and the height of its floor.
+uniform float prop_seed : hint_range(0.0, 100.0) = 0.0;
+uniform float prop_base_m : hint_range(-50.0, 50.0) = 0.0;
+uniform float prop_patch : hint_range(0.0, 1.0) = 0.0;
+
 varying vec2 face_m;
 varying vec2 world_m;
 varying vec3 world_pos;
@@ -209,6 +256,10 @@ varying float strip_id;
 varying float base_luma;
 varying vec3 base_rgb;
 varying vec3 obj_pos;
+// Set in fragment() for light(): how far out of the light this spot is (1: a mass), whether it is a lit top plane, the pool edge's hand-shaped offset (light units).
+varying float v_dark;
+varying float v_top;
+varying float v_pool_off;
 
 void vertex() {
 	face_m = UV;
@@ -381,6 +432,38 @@ float draw_crack(vec2 uv, vec2 key, float mpp) {
 	return dline(r * 0.5, w, mpp) * gate * dfade(0.3, mpp);
 }
 
+// The light's own zone at a world point: x is how lit it is by the lamps (0..1), y the pool edge's offset (light units, from the nearest lamp's angular noise and its bites).
+vec2 lamp_zone(vec3 wp, vec3 nrm) {
+	float lamp_k = 0.0;
+	float best = 1e9;
+	float best_sh = 0.0;
+	float best_id = 0.0;
+	for (int i = 0; i < 8; i++) {
+		vec4 lamp = lamps[i];
+		if (lamp.w <= 0.0) {
+			continue;
+		}
+		vec3 rel = wp - lamp.xyz;
+		float th = atan(rel.z, rel.x);
+		vec2 circ = vec2(cos(th), sin(th));
+		float id = float(i);
+		float sh = 0.65 * vnoise2(circ * 1.7 + vec2(id * 7.3, id * 3.1)) + 0.35 * vnoise2(circ * 4.6 + vec2(id * 2.1 + 9.0, id * 5.7)) - 0.5;
+		float dn = length(rel) / lamp.w;
+		float dns = dn / (1.0 + mask_shape * 2.0 * sh);
+		// A surface lit by this lamp faces it (a wall turned away from the lamp is in its own shade, however near).
+		float facing = smoothstep(-0.15, 0.3, dot(nrm, -rel / max(length(rel), 0.001)));
+		lamp_k = max(lamp_k, (1.0 - smoothstep(mask_edge.x, mask_edge.y, dns)) * facing);
+		if (dn < best) {
+			best = dn;
+			best_sh = sh;
+			best_id = id;
+		}
+	}
+	float off = best_sh * 2.0 * pool_shape_amp;
+	off -= pool_bites * smoothstep(0.62, 0.7, vnoise3(wp * pool_bite_freq + best_id * 17.0));
+	return vec2(lamp_k, off);
+}
+
 float glass_at(vec2 uvp, vec2 gx, vec2 gy) {
 	vec3 g = textureGrad(trim_tex, uvp, gx, gy).rgb;
 	return smoothstep(0.015, 0.045, g.b - g.r) * (1.0 - smoothstep(0.3, 0.45, dot(g, LUMA)));
@@ -396,6 +479,24 @@ void fragment() {
 	vec2 warp = world_warp();
 	float view_d = length(VERTEX);
 	float detail = v3_on > 0.0 ? detail_amount(view_d, world_pos) : 1.0;
+	// Round 4: how far out of the light this spot is (a mass), and whether it is a top plane the moon lights.
+	float dark_k = 0.0;
+	float contrast = 1.0;
+	float dark_d = 1.0;
+	float top_k = 0.0;
+	if (r4_on > 0.0) {
+		vec2 zone = lamp_zone(world_pos, world_normal);
+		float key_k = key_weight * smoothstep(key_cut.x, key_cut.y, dot(world_normal, key_dir));
+		float fire_k = fire_top_m > -999.0 ? fire_lit * (1.0 - smoothstep(fire_top_m - 1.5, fire_top_m + 0.5, world_pos.y)) : 0.0;
+		top_k = ground ? 0.0 : smoothstep(moon_top_min, moon_top_min + 0.15, world_normal.y);
+		float lit_k = clamp(max(max(zone.x, key_k), max(fire_k, top_k * step(0.001, moon_top_gain))), 0.0, 1.0);
+		dark_k = (1.0 - lit_k) * r4_on;
+		contrast = mix(1.0, dark_line_k, dark_k);
+		dark_d = mix(1.0, dark_detail, dark_k);
+		v_dark = dark_k;
+		v_top = top_k;
+		v_pool_off = zone.y;
+	}
 	float win_kind = 0.0;
 	float win_h3 = 0.0;
 	vec2 fm = face_m + (ground ? vec2(0.0) : warp);
@@ -514,7 +615,8 @@ void fragment() {
 					}
 				}
 			}
-			if (h < window_blank_p) {
+			float h_dark = hash12(cell * vec2(2.3, 0.9) + vec2(8.8, 1.1));
+			if (h < window_blank_p || (h_dark < win_dark_blank * dark_k && h >= window_blank_p + window_lit_p)) {
 				c.rgb = mix(c.rgb, wall.rgb, glass);
 			} else if (h < window_blank_p + window_lit_p) {
 				vec3 lit_c = window_lit_color;
@@ -549,7 +651,7 @@ void fragment() {
 	base_rgb = flat_color * albedo.rgb * tint;
 	if (draw_on > 0.0) {
 		vec3 ink_c = mix(flat_color * draw_ink_mul, ink, 0.25);
-		vec2 key = vec2(round(dot(abs(world_normal), world_pos) * 2.0), float(sid) * 1.37);
+		vec2 key = vec2(round(dot(abs(world_normal), world_pos) * 2.0) + prop_seed, float(sid) * 1.37);
 		float lines = 0.0;
 		float vstep = 0.0;
 		float wall_weight = 1.0;
@@ -557,7 +659,7 @@ void fragment() {
 			vec2 wxz = vec2(world_m.x, -world_m.y) + warp * 0.6;
 			vec2 sb;
 			if (v3_on > 0.0) {
-				sb = draw_brick3(wxz, key, mpp, 1.8 / brick_weight, slab_m.y, slab_m.x, face_vary_v(key, world_m.x), cluster_dens(wxz, key, 0.3, detail));
+				sb = draw_brick3(wxz, key, mpp, 1.8 / brick_weight, slab_m.y, slab_m.x, face_vary_v(key, world_m.x), cluster_dens(wxz, key, 0.3, detail * dark_d));
 			} else {
 				sb = draw_brick(wxz, key, mpp, 1.8, slab_m.y, slab_m.x, slab_keep);
 			}
@@ -565,7 +667,13 @@ void fragment() {
 			vstep = sb.y * slab_var;
 			// Puddles: low frequency blobs with a hard edge, a lighter bluish fill, an inked rim.
 			if (puddle_p > 0.0) {
-				float pn = vnoise2(wxz * puddle_scale + 3.7) * 0.7 + vnoise2(wxz * puddle_scale * 2.9 + 11.0) * 0.3;
+				vec2 pq = wxz * puddle_scale;
+				if (puddle_rag > 0.0) {
+					// A puddle is never an ellipse: its coordinates are warped by a finer noise and stretched along the street, so its edge wanders and bites.
+					pq += (vec2(vnoise2(pq * 2.7 + 4.0), vnoise2(pq * 2.7 + 9.0)) - 0.5) * puddle_rag;
+					pq *= vec2(1.0, 1.7);
+				}
+				float pn = vnoise2(pq + 3.7) * 0.6 + vnoise2(pq * 2.9 + 11.0) * 0.28 + vnoise2(pq * 7.3 + 5.0) * 0.12 * step(0.001, puddle_rag);
 				float thr = 1.0 - puddle_p;
 				float inside = smoothstep(thr, thr + mpp * 1.5 * puddle_scale, pn);
 				float rim = smoothstep(thr - mpp * 3.0 * puddle_scale, thr, pn) * (1.0 - inside);
@@ -589,7 +697,7 @@ void fragment() {
 				vec2 br;
 				if (v3_on > 0.0) {
 					float run3 = abs(world_normal.x) > 0.5 ? world_pos.z : world_pos.x;
-					br = draw_brick3(fm, key, mpp, wall_weight, brick_course_m, brick_len_m, face_vary_v(key, run3), cluster_dens(fm, key, base_t * cluster_base, detail));
+					br = draw_brick3(fm, key, mpp, wall_weight, brick_course_m, brick_len_m, face_vary_v(key, run3), cluster_dens(fm, key, base_t * cluster_base, detail * dark_d));
 				} else {
 					br = draw_brick(fm, key, mpp, wall_weight, brick_course_m, brick_len_m, brick_keep);
 				}
@@ -616,7 +724,7 @@ void fragment() {
 				vec2 pb;
 				if (v3_on > 0.0) {
 					float run4 = abs(world_normal.x) > 0.5 ? world_pos.z : world_pos.x;
-					pb = draw_brick3(fm, key, mpp, wall_weight * 1.5, sid == 2 ? 1.0 : 1.4, 1.7, face_vary_v(key, run4), cluster_dens(fm, key, base_t * cluster_base, detail) * 0.8);
+					pb = draw_brick3(fm, key, mpp, wall_weight * 1.5, sid == 2 ? 1.0 : 1.4, 1.7, face_vary_v(key, run4), cluster_dens(fm, key, base_t * cluster_base, detail * dark_d) * 0.8);
 				} else {
 					pb = draw_brick(fm, key, mpp, wall_weight, sid == 2 ? 1.0 : 1.4, 1.7, 0.7);
 				}
@@ -651,6 +759,18 @@ void fragment() {
 					lines = max(hoop * dfade(r, mpp), stave * 0.85);
 					float rust = smoothstep(0.55, 0.62, vnoise2(fm * vec2(2.0, 1.5) + key));
 					vstep = -0.25 * rust + (hash12(vec2(floor(fm.x / r), key.x)) - 0.5) * brick_var;
+					if (prop_patch > 0.0) {
+						// A repair patch (its own place on each tank): a lighter plate with an inked edge, and a dent (a darker, softer ellipse) elsewhere.
+						float h1 = hash12(vec2(prop_seed, 1.0));
+						float h2 = hash12(vec2(prop_seed, 2.0));
+						float h3 = hash12(vec2(prop_seed, 3.0));
+						vec2 pd = abs(vec2(fm.x - (h1 - 0.5) * 6.0, fm.y - (prop_base_m + 0.5 + h2 * 1.3))) - vec2(0.3 + 0.25 * h3, 0.22 + 0.2 * h1);
+						float inside_p = 1.0 - step(0.0, max(pd.x, pd.y));
+						vstep += prop_patch * 0.55 * inside_p;
+						lines = max(lines, dline(abs(max(pd.x, pd.y)), draw_line_w * 1.4, mpp) * prop_patch);
+						vec2 dd = vec2(fm.x - (h2 - 0.5) * 6.0, fm.y - (prop_base_m + 1.4 + h3 * 0.8)) / vec2(0.5, 0.32);
+						vstep -= prop_patch * 0.3 * (1.0 - step(1.0, length(dd)));
+					}
 				} else if (sid == 101) {
 					// A dumpster: ribs, a lid seam, dents.
 					float rib = dline(rep_dist(fm.x, r), draw_line_w, mpp) * dfade(r, mpp);
@@ -716,8 +836,8 @@ void fragment() {
 				}
 			}
 			flat_color *= 1.0 + 0.0;
-			flat_color = mix(flat_color, flat_color * 1.32, win_surround);
-			flat_color = mix(flat_color, flat_color * 1.45, win_sill);
+			flat_color = mix(flat_color, flat_color * 1.32, win_surround * contrast);
+			flat_color = mix(flat_color, flat_color * 1.45, win_sill * contrast);
 			lines = max(lines, win_frame);
 		}
 		if (fire_top_m > -999.0 && !ground && sid < 100) {
@@ -727,8 +847,16 @@ void fragment() {
 			vec3 warm = normalize(fire_color + 0.001) * dot(flat_color, LUMA) * fire_gain * 1.6;
 			flat_color = mix(flat_color, warm, fire_mix * (0.6 * band + 0.4 * band2));
 		}
-		flat_color *= 1.0 + vstep;
-		flat_color = mix(flat_color, ink_c, clamp(lines, 0.0, 1.0) * draw_on);
+		if (r4_on > 0.0) {
+			// Out of the light the surface is a flat mass: its value and its colour go to one navy (violet), and what is left of the drawn detail is a faint shape.
+			vec3 mass_c = vec3(mix(mass_value, dot(flat_color, LUMA), mass_follow)) * mass_color;
+#ifdef FLAT_PAINT_PROP
+			mass_c *= mass_prop_gain * mix(vec3(1.0), flat_color / max(dot(flat_color, LUMA), 0.001), mass_prop_hue);
+#endif
+			flat_color = mix(flat_color, mass_c, dark_mass * dark_k);
+		}
+		flat_color *= 1.0 + vstep * contrast;
+		flat_color = mix(flat_color, ink_c, clamp(lines, 0.0, 1.0) * draw_on * contrast);
 	}
 
 	if (debug_view == 1) {
@@ -742,7 +870,13 @@ void fragment() {
 		mass_mul = mix(1.0, mass_far_mul, mf) * mix(1.0, mass_focus_mul, fd);
 	}
 	ALBEDO = flat_color * albedo.rgb * tint * mass_mul;
-	EMISSION = emit;
+	if (r4_on > 0.0 && moon_top_gain > 0.0 && top_k > 0.0) {
+		// The moon on a top plane: a cool lit value, broken by a world noise so a ledge's top is a painted shape and not an even rim. Never on the ground.
+		float broken = 0.6 + 0.4 * smoothstep(0.25, 0.7, vnoise2(world_pos.xz * 1.3 + world_pos.y * 2.0));
+		float near_k = 1.0 - 0.6 * smoothstep(mass_far_m.x, mass_far_m.y, view_d);
+		EMISSION += moon_top_color * moon_top_gain * top_k * broken * near_k;
+	}
+	EMISSION += emit;
 	ROUGHNESS = edge_tag;
 #ifdef FLAT_PAINT_SCISSOR
 	// The chain-link: a wobbling diamond lattice of few, thick wires with holes; the wire's width grows with the
@@ -791,10 +925,18 @@ void light() {
 		vec3 tint_n = paint_shadow_tint / max(dot(paint_shadow_tint, LUMA), 0.001);
 		vec3 shadow = paint_shadow_level * mix(vec3(1.0), tint_n, 0.55);
 		vec3 shade = mix(mix(shadow, vec3(paint_mid_level), b1), vec3(1.0), b2);
+		if (r4_on > 0.0) {
+			// A mass takes one flat value from the key (no bands, no terminator splotches); a lit top plane keeps the moon's bands.
+			shade = mix(shade, vec3(mass_shade), mass_shade_k * v_dark);
+		}
 		DIFFUSE_LIGHT += shade * light_color;
 	} else {
 		float np = strokes(face_m, world_pos, paint_break_scale * pool_break_freq) - 0.5;
 		lit += np * 2.0 * paint_break * pool_break;
+		if (r4_on > 0.0) {
+			// The hand-shaped edge only moves where the light already reaches (a spot's cone and range still bound it).
+			lit += v_pool_off * smoothstep(0.0, 0.06, lit);
+		}
 		if (pool_wobble > 0.0) {
 			// A painted pool is never an ellipse: a low-frequency, world-anchored change of its shape (each lamp's own, as it stands in the street).
 			vec3 wq = world_pos * pool_wobble_freq;
