@@ -12,6 +12,9 @@ extends VideoLookPiece
 @export var characters: PackedStringArray = PackedStringArray(["punk", "boss", "player"])
 @export_dir var art_dir: String = "res://assets/video/characters"
 
+## The triangle budget of a video art (CharacterArt.triangle_budget, the game's 30,000 for the game's frame time): the player's arms are subdivided.
+@export var triangle_budget: int = 250000
+
 @export_group("Switches")
 ## The three parts of the upgrade, each on its own for an A/B: the meshes (the face's clean shading), the painted albedo, the ink mask.
 @export var swap_meshes: bool = true

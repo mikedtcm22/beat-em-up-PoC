@@ -62,6 +62,57 @@ def cell_ids(maps):
 	return np.where(maps["cover"], ids, -1)
 
 
+def smoothed_ids(maps, meta, cfg):
+	"""The palette cell of every texel with the material borders smoothed (paint.json "cell_smooth_mm": {"dense": mm, "other": mm}). A decimated
+	mesh's faces are labelled one by one, so the border between two materials (a glove's plate and the skin) follows the triangles'
+	edges in teeth; here each material's mask is blurred (normalised over the island, so an island's edge does not bias it) and the
+	strongest wins, which turns the teeth into one drawn curve. The blur is in millimetres: the sigma in texels follows the local
+	texel size (the dense bones of the layout's weights have small texels, the rest big ones)."""
+	ids = cell_ids(maps)
+	if "field" in maps and meta is not None and meta.get("field_cells"):
+		# the vertex fields' shares (blender_asset.vertex_fields), interpolated over the triangles: the border is a smooth curve
+		cells = np.array(meta["field_cells"])
+		field = maps["field"]
+		pick = np.zeros(ids.shape, np.int32)
+		best = np.full(ids.shape, -1.0, np.float32)
+		for j, c in enumerate(cells):
+			v = field[..., j].astype(np.float32)
+			better = v > best
+			best = np.where(better, v, best)
+			pick = np.where(better, c, pick)
+		ids = np.where((field[..., -1] > 0.5) & (ids >= 0), pick, ids)
+	spec = cfg.get("cell_smooth_mm")
+	if not spec or meta is None:
+		return ids
+	cover = maps["cover"]
+	size = cover.shape[0]
+	pos = maps["pos"]
+	step = np.linalg.norm(np.roll(pos, -1, 1).astype(np.float32) - pos.astype(np.float32), axis=2)
+	both = cover & np.roll(cover, -1, 1) & (step < 0.01)
+	mm_per_texel = {}
+	weights = cfg.get("layout", {}).get("weights", {})
+	dense = [meta["bones"].index(b) for b, w in weights.items() if float(w) >= 1.2 and b in meta["bones"]]
+	is_dense = np.isin(maps["bone"], dense)
+	for key, sel in (("dense", is_dense), ("other", ~is_dense)):
+		m = both & sel
+		mm_per_texel[key] = 1000.0 * float(np.median(step[m])) if m.any() else 1.0
+	out = ids.copy()
+	for key, sel in (("dense", is_dense), ("other", ~is_dense)):
+		sigma = max(float(spec.get(key, 0.0)) / max(mm_per_texel[key], 0.05), 0.0)
+		if sigma < 0.8:
+			continue
+		area = cv2.GaussianBlur(cover.astype(np.float32), (0, 0), sigma)
+		best = np.full(cover.shape, -1.0, np.float32)
+		pick = out.copy()
+		for cell in np.unique(ids[(ids >= 0) & sel]):
+			v = cv2.GaussianBlur((ids == cell).astype(np.float32), (0, 0), sigma) / np.maximum(area, 1e-4)
+			better = v > best
+			best = np.where(better, v, best)
+			pick = np.where(better, cell, pick)
+		out = np.where(sel & (ids >= 0), pick, out)
+	return out
+
+
 def atlas_colours():
 	"""(64, 4) the swatch colours (sRGB 0..1) and gloss alpha of the game's palette atlas."""
 	atlas = np.asarray(Image.open(ATLAS).convert("RGBA"), np.float32) / 255.0
@@ -190,9 +241,9 @@ def form_curvature(maps, sigma):
 	return np.where(weight > 1e-3, blur / np.maximum(weight, 1e-3), 0.0).astype(np.float32)
 
 
-def paint_albedo(maps, cfg, seed):
+def paint_albedo(maps, cfg, seed, meta=None):
 	"""The painted albedo (sRGB float, size x size x 3) and the cell map. Evaluated in bands of rows from per-cell tables."""
-	ids = cell_ids(maps)
+	ids = smoothed_ids(maps, meta, cfg)
 	size = ids.shape[0]
 	colours = atlas_colours()
 	curv_s = form_curvature(maps, cfg.get("form_sigma", 3.0) * size / 2048.0)
@@ -439,7 +490,7 @@ def bake(name, workdir, outdir):
 	cover = maps["cover"]
 	size = cover.shape[0]
 	PXS = size / 2048.0
-	albedo, ids = paint_albedo(maps, cfg, seed)
+	albedo, ids = paint_albedo(maps, cfg, seed, meta)
 	ink_size = size
 	curv = maps["curv"].astype(np.float32)
 	ink = np.maximum(line_from_valleys(curv, cover, cfg, seed), line_from_borders(ids, cfg, seed))

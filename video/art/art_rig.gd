@@ -1,7 +1,8 @@
 class_name CineArtRig
 extends Node
 ## The work of a VideoArtLook (video/art/video_art_look.gd): each frame, any character mesh of the art group that is new gets the
-## video mesh and its skin in place of the game's (same meshes, weights and UVs: only the face's normals differ) and the paint and
+## video mesh and its skin in place of the game's (same meshes, bones and weights; a new UV2 layout, the face's normals of the Punk and Ox, and the player's
+## arms relaxed, subdivided and smoothed: tools/video/blender_asset.py) and the paint and
 ## ink textures on its material. A character that spawns later is adopted on the next frame. The textures only show once LD-INK's
 ## cine_toon shader is on the material; on the game's own toon material the uniforms are unused.
 
@@ -12,6 +13,7 @@ const META_DONE := &"video_art"
 static var _layout_shader: Shader
 
 var look: VideoArtLook
+
 ## Per art id: {art: CharacterArt (the video copy), entry: SkinnedArt.Entry, paint: Texture2D, ink: Texture2D}, or {} when the
 ## character has no video files or its video GLB breaks the art contract (a warning says so once).
 var _kits: Dictionary[StringName, Dictionary] = {}
@@ -56,6 +58,8 @@ func kit_of(id: StringName, base: CharacterArt) -> Dictionary:
 		if ResourceLoader.exists(glb):
 			var video := base.duplicate() as CharacterArt
 			video.scene = load(glb) as PackedScene
+			# The game's budget (30,000 triangles) is for the game's frame time; the video's player arm is subdivided (about 180,000).
+			video.triangle_budget = maxi(video.triangle_budget, look.triangle_budget)
 			var entry := SkinnedArt.entry_of(video)
 			if entry.problems.is_empty():
 				kit = {art = video, entry = entry}

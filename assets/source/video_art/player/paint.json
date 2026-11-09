@@ -236,8 +236,32 @@
    "RightLowerArm",
    "RightHand"
   ],
-  "iterations": 8,
+  "iterations": 24,
   "factor": 0.5
  },
- "crease_min": 14.0
+ "crease_min": 14.0,
+ "cell_smooth": {
+  "cells": [
+   7,
+   14,
+   32,
+   35
+  ],
+  "bones": [
+   "LeftUpperArm",
+   "LeftLowerArm",
+   "LeftHand",
+   "RightUpperArm",
+   "RightLowerArm",
+   "RightHand",
+   "LeftShoulder",
+   "RightShoulder",
+   "Chest",
+   "UpperChest",
+   "Spine",
+   "Neck"
+  ],
+  "iterations": 120,
+  "field_iterations": 60
+ }
 }

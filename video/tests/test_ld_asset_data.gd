@@ -43,16 +43,24 @@ func test_the_painted_albedo_is_painted_not_the_swatches() -> void:
 		assert_gt(seen.size(), 200, "%s has far more than a palette's worth of colours (%d)" % [id, seen.size()])
 
 
+func _game_art(id: StringName) -> CharacterArt:
+	var art := (load("res://game/actors/art/%s_art.tres" % id) as CharacterArt).duplicate() as CharacterArt
+	if art.scene == null and art.has_meta(&"scene_path"):
+		art.scene = load(String(art.get_meta(&"scene_path"))) as PackedScene
+	return art
+
+
 func _video_art(id: StringName) -> CharacterArt:
-	var base := load("res://game/actors/art/%s_art.tres" % id) as CharacterArt
+	var base := _game_art(id)
 	var video := base.duplicate() as CharacterArt
 	video.scene = load("%s/%s/%s_video.glb" % [ART_DIR, id, id]) as PackedScene
+	video.triangle_budget = 250000  # the player's arms are subdivided in round 2 (the game's budget is 30,000)
 	return video
 
 
 func test_the_video_glbs_keep_the_contract_the_body_and_change_the_face_shading() -> void:
 	for id in GLB_IDS:
-		var game := load("res://game/actors/art/%s_art.tres" % id) as CharacterArt
+		var game := _game_art(id)
 		var video := _video_art(id)
 		assert_eq(SkinnedArt.check(video), PackedStringArray(), "%s: the video GLB breaks no part of the art contract" % id)
 		var game_parts := SkinnedArt.entry_of(game).meshes
@@ -60,8 +68,8 @@ func test_the_video_glbs_keep_the_contract_the_body_and_change_the_face_shading(
 		assert_eq(video_parts.size(), game_parts.size(), "%s: the same meshes" % id)
 		var a: AABB = game_parts[0].mesh.get_aabb()
 		var b: AABB = video_parts[0].mesh.get_aabb()
-		# The Punk and Ox: the same body to 2 mm. The player's arms are relaxed and subdivided (round 2), which rounds them in by a few mm.
-		var tolerance := 0.02 if id == &"player" else 0.002
+		# The Punk and Ox: the same body to 2 mm. The player's arms are relaxed and subdivided (round 2), which pulls the fists and elbows in (the smoothing shrinks the extremes: 5 cm measured on the box).
+		var tolerance := 0.08 if id == &"player" else 0.002
 		assert_lt(a.position.distance_to(b.position) + a.size.distance_to(b.size), tolerance, "%s: the same body, to %.0f mm" % [id, tolerance * 1000.0])
 		var game_normals: PackedVector3Array = game_parts[0].mesh.surface_get_arrays(0)[Mesh.ARRAY_NORMAL]
 		var video_normals: PackedVector3Array = video_parts[0].mesh.surface_get_arrays(0)[Mesh.ARRAY_NORMAL]

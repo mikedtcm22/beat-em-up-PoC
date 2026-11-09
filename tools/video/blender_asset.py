@@ -137,7 +137,7 @@ def mesh_loops(obj):
 	return uv2.reshape(-1, 2), uv1.reshape(-1, 2), nrm.reshape(-1, 3), lv
 
 
-def bake_maps(objs, bone_names, size):
+def bake_maps(objs, bone_names, size, fields=None, field_k=0):
 	"""Rasterise the meshes' triangles in UV2 space into per-texel surface attributes (see the module doc)."""
 	pos = np.zeros((size, size, 3), np.float32)
 	nrm = np.zeros((size, size, 3), np.float16)
@@ -146,6 +146,8 @@ def bake_maps(objs, bone_names, size):
 	bone = np.full((size, size), -1, np.int16)
 	mesh_id = np.full((size, size), -1, np.int8)
 	cover = np.zeros((size, size), bool)
+	# the material shares of the vertex fields (vertex_fields), K shares and a last channel: 1 where the triangle is on an active face
+	field = np.zeros((size, size, field_k + 1), np.float16) if field_k else None
 	for mi, obj in enumerate(objs):
 		me = obj.data
 		co = pb.verts(me).astype(np.float32)
@@ -158,6 +160,9 @@ def bake_maps(objs, bone_names, size):
 		tl = np.zeros(nt * 3, np.int32)
 		me.loop_triangles.foreach_get("loops", tl)
 		tl = tl.reshape(-1, 3)
+		tpoly = np.zeros(nt, np.int32)
+		me.loop_triangles.foreach_get("polygon_index", tpoly)
+		vf = fields.get(obj.name) if fields else None
 		for t in range(nt):
 			loops = tl[t]
 			p = uv2[loops].astype(np.float64)
@@ -193,7 +198,13 @@ def bake_maps(objs, bone_names, size):
 			bone[ys, xs] = dom[nearest]
 			mesh_id[ys, xs] = mi
 			cover[ys, xs] = True
-	return {"pos": pos, "nrm": nrm, "uv1": uv1, "curv": curv, "bone": bone, "mesh": mesh_id, "cover": cover}
+			if vf is not None and vf[1][tpoly[t]]:
+				field[ys, xs, :field_k] = a[:, None] * vf[0][v[0]] + b[:, None] * vf[0][v[1]] + c[:, None] * vf[0][v[2]]
+				field[ys, xs, field_k] = 1.0
+	out = {"pos": pos, "nrm": nrm, "uv1": uv1, "curv": curv, "bone": bone, "mesh": mesh_id, "cover": cover}
+	if field is not None:
+		out["field"] = field
+	return out
 
 
 def head_box(obj, bone_names):
@@ -436,6 +447,107 @@ def subdivide(objs, cfg):
 	return out
 
 
+def smooth_cells(objs, bone_names, cfg):
+	"""Smooth the material labels of the faces on `bones` (paint.json "cell_smooth": {"cells": [...], "bones": [...], "iterations": n}). The game's
+	faces are labelled one by one from a decimated mesh, so the border between the skin and a glove's plate follows its triangles' edges in
+	teeth a few centimetres wide, a zigzag that reads as a render. Each face of those cells takes the label most of its neighbours
+	have, diffused over `iterations` rounds of the face adjacency (the faces of other cells stay as they are and anchor the border), done
+	on the subdivided mesh, so the border becomes one smooth curve. The palette UV (UV1) of a relabelled face is set to its new cell's centre."""
+	spec = cfg.get("cell_smooth")
+	if not spec:
+		return {}
+	cells = [int(c) for c in spec["cells"]]
+	bones = [bone_names.index(b) for b in spec["bones"]]
+	out = {}
+	for o in objs:
+		me = o.data
+		uv, uv1, _n, lv = mesh_loops(o)
+		nf = len(me.polygons)
+		first = np.array([p.loop_start for p in me.polygons], np.int64)
+		cell = np.clip(np.floor(uv1[first, 0] * 32.0), 0, 31).astype(int) + 32 * np.clip(np.floor((1.0 - uv1[first, 1]) * 2.0), 0, 1).astype(int)
+		bw = bone_weights(o, bone_names)
+		dom = bw.argmax(axis=1)
+		fdom = dom[lv[first]]
+		active = np.isin(cell, cells) & np.isin(fdom, bones)
+		if not active.any():
+			continue
+		tv, _tp = pb.tri_arrays(me)
+		edge_faces = {}
+		for f in range(nf):
+			t = tv[f]
+			for a, b in ((t[0], t[1]), (t[1], t[2]), (t[2], t[0])):
+				edge_faces.setdefault((min(a, b), max(a, b)), []).append(f)
+		pairs = np.array([v for v in edge_faces.values() if len(v) == 2], np.int64)
+		f1 = np.concatenate([pairs[:, 0], pairs[:, 1]])
+		f2 = np.concatenate([pairs[:, 1], pairs[:, 0]])
+		degree = np.bincount(f1, minlength=nf).astype(np.float64)
+		cols = cells + [-1]
+		x = np.zeros((nf, len(cols)))
+		for j, c in enumerate(cells):
+			x[:, j] = (cell == c)
+		x[:, -1] = ~np.isin(cell, cells)
+		fixed = x.copy()
+		for _ in range(int(spec.get("iterations", 80))):
+			nx = np.stack([np.bincount(f1, weights=x[f2, j], minlength=nf) for j in range(x.shape[1])], axis=1)
+			x = (nx + x) / (degree[:, None] + 1.0)
+			x[~active] = fixed[~active]
+		pick = np.array(cells)[x[:, :len(cells)].argmax(axis=1)]
+		new = np.where(active, pick, cell)
+		changed = int((new != cell).sum())
+		uv1_new = uv1.copy()
+		for f in np.nonzero(new != cell)[0]:
+			c = int(new[f])
+			centre = ((c % 32 + 0.5) / 32.0, 1.0 - (c // 32 + 0.5) / 2.0)
+			p = me.polygons[f]
+			uv1_new[p.loop_start:p.loop_start + p.loop_total] = centre
+		me.uv_layers["palette"].data.foreach_set("uv", uv1_new.astype(np.float32).ravel())
+		me.update()
+		out[o.name] = {"faces": nf, "relabelled": changed}
+	return out
+
+
+def vertex_fields(objs, bone_names, cfg):
+	"""The smooth version of smooth_cells: per vertex, the share of each cell of paint.json "cell_smooth" among the active faces around it,
+	diffused over `field_iterations` rounds of the vertex graph. bake_maps interpolates it over each triangle, so the border between two
+	materials is cut where the interpolated shares cross, a smooth curve through the triangles rather than a staircase of them (the
+	faces are 7 mm and a first-person arm is magnified 60x). Returns {object name: (vertex shares (n, K), active vertex mask)}."""
+	spec = cfg.get("cell_smooth")
+	if not spec:
+		return {}
+	cells = [int(c) for c in spec["cells"]]
+	bones = [bone_names.index(b) for b in spec["bones"]]
+	out = {}
+	for o in objs:
+		me = o.data
+		_uv, uv1, _n, lv = mesh_loops(o)
+		nf = len(me.polygons)
+		first = np.array([p.loop_start for p in me.polygons], np.int64)
+		cell = np.clip(np.floor(uv1[first, 0] * 32.0), 0, 31).astype(int) + 32 * np.clip(np.floor((1.0 - uv1[first, 1]) * 2.0), 0, 1).astype(int)
+		dom = bone_weights(o, bone_names).argmax(axis=1)
+		active = np.isin(cell, cells) & np.isin(dom[lv[first]], bones)
+		if not active.any():
+			continue
+		tv, _tp = pb.tri_arrays(me)
+		nv = len(me.vertices)
+		k_of = {c: i for i, c in enumerate(cells)}
+		share = np.zeros((nv, len(cells)))
+		for f in np.nonzero(active)[0]:
+			for v in tv[f]:
+				share[v, k_of[int(cell[f])]] += 1.0
+		total = share.sum(axis=1)
+		mask = (total > 0).astype(np.float64)
+		share = share / np.maximum(total, 1.0)[:, None]
+		edges = np.concatenate([tv[:, [0, 1]], tv[:, [1, 2]], tv[:, [2, 0]]], axis=0)
+		edges = np.concatenate([edges, edges[:, ::-1]], axis=0)
+		for _ in range(int(spec.get("field_iterations", 40))):
+			den = np.bincount(edges[:, 0], weights=mask[edges[:, 1]], minlength=nv) + 1.0
+			nxt = np.stack([(np.bincount(edges[:, 0], weights=share[edges[:, 1], j] * mask[edges[:, 1]], minlength=nv) + share[:, j]) / den
+				for j in range(len(cells))], axis=1)
+			share = nxt * mask[:, None]
+		out[o.name] = (share.astype(np.float32), active)
+	return out
+
+
 def smooth_player_normals(objs, cfg):
 	"""The Punk's shading-normal recipe (tools/pipeline/blender_export.smooth_shading_normals) with paint.json "normals" for the values."""
 	sn = cfg.get("normals", {"iterations": 12, "crease_deg": 50.0, "falloff": 2.0, "self_weight": 1.0})
@@ -455,6 +567,7 @@ def main():
 	cfg = load_config(name)
 	meta["smooth"] = relax(objs, bone_names, cfg)
 	meta["subdivide"] = subdivide(objs, cfg)
+	meta["cell_smooth"] = smooth_cells(objs, bone_names, cfg)
 	if name != "player" and not opts["no_normals"]:
 		meta["proxy"] = transfer_face_normals(objs[0], bone_names, opts["proxy_strength"])
 	if cfg.get("normals") and not opts["no_normals"]:
@@ -462,7 +575,10 @@ def main():
 	if not opts["keep_uv2"]:
 		meta["layout"] = relayout_uv2(objs, bone_names, cfg, opts["size"])
 	meta["uv2_slivers"] = uv2_slivers(objs, opts["size"])
-	maps = bake_maps(objs, bone_names, opts["size"])
+	fields = vertex_fields(objs, bone_names, cfg)
+	field_cells = [int(c) for c in cfg["cell_smooth"]["cells"]] if fields else []
+	meta["field_cells"] = field_cells
+	maps = bake_maps(objs, bone_names, opts["size"], fields, len(field_cells))
 	np.savez_compressed(os.path.join(workdir, "maps.npz"), **maps)
 	hc, hr, _ = head_box(objs[0], bone_names) if "Head" in bone_names and name != "player" else (None, None, None)
 	if hc is not None:
