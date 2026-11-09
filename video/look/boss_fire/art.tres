@@ -21,10 +21,10 @@ hatch_floor_by_id = {
 "player": 1.0
 }
 silhouette_ids = PackedStringArray("punk", "boss", "kicker", "bruiser", "thug", "player")
-sil_fill = Color(0.08, 0.03, 0.04, 1)
-sil_fill_top = Color(0.13, 0.05, 0.05, 1)
-sil_keep = 0.3
-sil_value = 0.32
+sil_fill = Color(0.03, 0.01, 0.015, 1)
+sil_fill_top = Color(0.08, 0.03, 0.03, 1)
+sil_keep = 0.12
+sil_value = 0.25
 sil_rim_strength = 1.8
 sil_rim_cut = 1.0
 sil_rim_top = 0.3

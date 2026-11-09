@@ -461,6 +461,79 @@ def shape_limbs(objs, bone_names, meta, cfg):
 	return out
 
 
+def _ease(x):
+	x = np.clip(x, 0.0, 1.0)
+	return x * x * (3.0 - 2.0 * x)
+
+
+def glove_profile(t, pts):
+	"""Eased piecewise interpolation of control points [[t, value], ...] (t ascending), held flat outside them."""
+	t = np.asarray(t, np.float64)
+	out = np.full(t.shape, float(pts[0][1]))
+	for (t0, v0), (t1, v1) in zip(pts[:-1], pts[1:]):
+		inside = (t >= t0) & (t < t1)
+		out[inside] = v0 + (v1 - v0) * _ease((t[inside] - t0) / max(t1 - t0, 1e-9))
+	out[t >= pts[-1][0]] = float(pts[-1][1])
+	return out
+
+
+def shape_gloves(objs, bone_names, meta, cfg):
+	"""R5-ART: gloves that are not cylinders (paint.json "gloves": {"hands": [..bones..], "profile": [[t, scale], ..], "stretch_from", "stretch",
+	"dome", "dome_r", "thumb": {"dir", "t", "t_width", "angle_deg", "lift_mm"}, "ridge": {"t", "t_width", "lift_mm"}}). Each hand bone's vertices (t = 0 at the
+	wrist end of the bone, 1 at its tail) get a radial scale about the bone axis from the eased profile (the laced cuff tapering into the forearm, the
+	padded front wider than the wrist), the pad lengthened from `stretch_from` by `stretch`, the flat cap domed by `dome` (a share of the bone's length,
+	over radial distances up to `dome_r`), a thumb lobe (an outward bump toward `dir`, a world-space vector in the rest pose, around `t`) and a ridge
+	(a ring bump: the knuckles). Only vertices move: the UVs, and so the UV2 layout, are untouched. Applied after the arm's shape and before any subdivision."""
+	spec = cfg.get("gloves")
+	if not spec:
+		return {}
+	out = {}
+	for o in objs:
+		bw = bone_weights(o, bone_names)
+		co = pb.verts(o.data).astype(np.float64)
+		for hand in spec["hands"]:
+			head = np.array(meta["bone_heads"][hand], np.float64)
+			tail = np.array(meta["bone_tails"][hand], np.float64)
+			axis = tail - head
+			length = float(np.linalg.norm(axis))
+			axis /= length
+			gate = _ease((bw[:, bone_names.index(hand)] - 0.15) / 0.6)
+			rel = co - head
+			along = rel @ axis
+			t = along / length
+			radial = rel - np.outer(along, axis)
+			r = np.linalg.norm(radial, axis=1)
+			rdir = radial / np.maximum(r, 1e-9)[:, None]
+			scale = glove_profile(t, spec["profile"])
+			new_radial = radial * scale[:, None]
+			new_along = along.copy()
+			if spec.get("stretch", 1.0) != 1.0:
+				t0 = spec["stretch_from"] * length
+				new_along = np.where(along > t0, t0 + (along - t0) * spec["stretch"], along)
+			if spec.get("dome", 0.0) > 0.0:
+				dome_r = spec["dome_r"]
+				cap = _ease((t - 0.8) / 0.2)
+				new_along = new_along + spec["dome"] * length * cap * (1.0 - np.clip(r * scale / (dome_r * float(np.max(scale))), 0.0, 1.0) ** 2)
+			bump = np.zeros(len(co))
+			th = spec.get("thumb")
+			if th:
+				d = np.array(th["dir"], np.float64)
+				d -= axis * (d @ axis)
+				d /= np.linalg.norm(d)
+				cosang = rdir @ d
+				w_ang = _ease((cosang - math.cos(math.radians(th["angle_deg"]))) / (1.0 - math.cos(math.radians(th["angle_deg"]))))
+				w_t = np.exp(-(((t - th["t"]) / th["t_width"]) ** 2))
+				bump += th["lift_mm"] / 1000.0 * w_ang * w_t
+			rg = spec.get("ridge")
+			if rg:
+				bump += rg["lift_mm"] / 1000.0 * np.exp(-(((t - rg["t"]) / rg["t_width"]) ** 2))
+			moved = head + np.outer(new_along, axis) + new_radial + rdir * bump[:, None]
+			co = co + (moved - co) * gate[:, None]
+		pb.set_verts(o.data, co)
+		out[o.name] = True
+	return out
+
+
 def subdivide(objs, cfg):
 	"""One level of Catmull-Clark on each mesh (paint.json "subdivide": {"levels": 1}), applied: the first-person arm's polygonal silhouette
 	(an 8-sided forearm, a block of a fist) turns round. The weights, the UV1 and the hull-normal colour interpolate with it; the
@@ -607,6 +680,7 @@ def main():
 	cfg = load_config(name)
 	meta["smooth"] = relax(objs, bone_names, cfg)
 	meta["shape"] = shape_limbs(objs, bone_names, meta, cfg)
+	meta["gloves"] = shape_gloves(objs, bone_names, meta, cfg)
 	meta["subdivide"] = subdivide(objs, cfg)
 	meta["cell_smooth"] = smooth_cells(objs, bone_names, cfg)
 	if name != "player" and not opts["no_normals"]:

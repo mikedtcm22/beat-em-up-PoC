@@ -414,6 +414,6 @@ void light() {
 		float glint_aligned = dot(NORMAL, normalize(fill_dir + VIEW));
 		float glint_edge = max(0.5 * band_soft * to_pixels * fwidth(glint_aligned), 0.00001);
 		float glint = smoothstep(glint_cut - glint_edge, glint_cut + glint_edge, glint_aligned);
-		SPECULAR_LIGHT += glint * glint_gate * spec_strength * spec_gloss * glint_strength * light_color * (1.0 - 0.7 * sil_on);
+		SPECULAR_LIGHT += glint * glint_gate * spec_strength * spec_gloss * glint_strength * light_color * (1.0 - sil_on);
 	}
 }

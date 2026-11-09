@@ -500,5 +500,53 @@
    "length_px": 16,
    "angle_deg": -50
   }
- ]
+ ],
+ "gloves": {
+  "hands": [
+   "LeftHand",
+   "RightHand"
+  ],
+  "profile": [
+   [
+    -0.3,
+    0.95
+   ],
+   [
+    0.0,
+    1.0
+   ],
+   [
+    0.3,
+    1.1
+   ],
+   [
+    0.7,
+    1.2
+   ],
+   [
+    1.0,
+    1.1
+   ]
+  ],
+  "stretch_from": 0.3,
+  "stretch": 1.1,
+  "dome": 0.2,
+  "dome_r": 0.074,
+  "thumb": {
+   "dir": [
+    0.0,
+    1.0,
+    0.0
+   ],
+   "t": 0.4,
+   "t_width": 0.2,
+   "angle_deg": 40,
+   "lift_mm": 20
+  },
+  "ridge": {
+   "t": 0.85,
+   "t_width": 0.07,
+   "lift_mm": 9
+  }
+ }
 }
