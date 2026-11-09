@@ -572,3 +572,21 @@ The upgraded cast of the cinematic trailer (docs/video/P1.md): the Punk, Ox Pell
 | Ox ink mask | `assets/video/characters/boss/boss_ink.png` | `art_paint.py`: creases, borders, the face drawn in `features.svg` | Original | 4096x4096, 0.5 MB. |
 | Player painted albedo | `assets/video/characters/player/player_paint.png` | `art_paint.py` | Original | 2048x2048, 2.8 MB. The player's mesh is the game's own (no face in first person), so there is no video GLB. |
 | Player ink mask | `assets/video/characters/player/player_ink.png` | `art_paint.py`: creases, borders, the wraps' spiral lines and the arms' muscle lines | Original | 4096x4096, 0.7 MB. |
+
+## Video: LD-ART2 (round 3, after Gate 2)
+
+The cast again, after Gate 2 (docs/video/P1.md): every map rebuilt in a NEW UV2 layout (smart-projected, texel density weighted to the hands, the forearms and the heads, packed at 4096), padded 16 px with the mean colour beyond and the alpha as the coverage; the player gets a video mesh (relaxed and subdivided arms, smoothed shading normals). These rows replace the three characters' LD-ASSET rows above (same paths, new content). No new generated art; Blender 5.2.2 headless and numpy only.
+
+| Asset | Path | Source | Licence | Notes |
+| --- | --- | --- | --- | --- |
+| Punk video mesh | `assets/video/characters/punk/punk_video.glb` | `tools/video/blender_asset.py` on the Punk's work file (new UV2 unwrap, the head's face normals) | Original, project-owned | 1.0 MB, LFS. Same body, bones and weights; only UV2 and the face normals differ from the game's. |
+| Punk painted albedo | `assets/video/characters/punk/punk_paint.png` | `tools/video/art_paint.py` (swatches painted to 2-3 values; the shades' glass painted from `features.svg`) | Original | 4096x4096 RGBA, about 9 MB, LFS. Alpha = coverage (islands and their 16 px padding). |
+| Punk ink map | `assets/video/characters/punk/punk_ink.png` | `art_paint.py`: R ink (creases, borders, the drawn features), G the metal mask, B the face zone, A the catchlights | Original | 4096x4096 RGBA, about 1 MB, LFS. |
+| Ox video mesh | `assets/video/characters/boss/boss_video.glb` | `blender_asset.py` on Ox's work file | Original | 1.8 MB, LFS. As the Punk's. |
+| Ox painted albedo | `assets/video/characters/boss/boss_paint.png` | `art_paint.py` (the eye whites and irises painted from `features.svg`; the gloves and hood lifted off near-black) | Original | 4096x4096 RGBA, about 8 MB, LFS. |
+| Ox ink map | `assets/video/characters/boss/boss_ink.png` | `art_paint.py`, as the Punk's | Original | 4096x4096 RGBA, about 1.3 MB, LFS. |
+| Player video mesh | `assets/video/characters/player/player_video.glb` | `blender_asset.py` on the player's work file: arms relaxed (Laplacian, 8 rounds), one level of Catmull-Clark, smoothed normals (30 rounds, 100 degree crease), new UV2 | Original | 9.4 MB, LFS (180k triangles in four meshes). Video only: the game's `player.glb` is untouched. |
+| Player painted albedo | `assets/video/characters/player/player_paint.png` | `art_paint.py`: warm skin, cream cloth, no curvature blotches | Original | 4096x4096 RGBA, about 9 MB, LFS. |
+| Player ink map | `assets/video/characters/player/player_ink.png` | `art_paint.py`: tapered cloth folds, the knuckles and fingers drawn from `features.svg`, the arm's warm fill zone in B | Original | 4096x4096 RGBA, about 2.7 MB, LFS. |
+| Player features | `assets/source/video_art/player/features.svg` | Drawn by Claude over `tools/video/blender_view.py`'s `arm_r` render | Original | Both fists: four knuckle arcs, three finger separations, the first joints. The left is the mirror. |
+| Bake reports | `assets/source/video_art/<name>/coverage.json` | `art_paint.py bake` | Project file (generated) | Empty and pure-black texels inside the islands (both 0), read by `video/tests/test_ld_art2_data.gd`. |

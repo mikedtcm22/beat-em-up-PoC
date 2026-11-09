@@ -111,6 +111,12 @@ uniform sampler2D paint_tex : source_color, filter_linear_mipmap, repeat_disable
 uniform bool use_paint_tex = false;
 uniform vec3 ink_color : source_color = vec3(0.09, 0.055, 0.05);
 uniform float ink_strength : hint_range(0.0, 1.0) = 1.0;
+uniform float face_fill : hint_range(0.0, 1.5) = 0.0;
+uniform vec3 face_fill_color : source_color = vec3(1.0, 0.84, 0.68);
+uniform float catch_strength : hint_range(0.0, 2.0) = 0.0;
+uniform vec3 catch_color : source_color = vec3(1.0, 0.96, 0.86);
+uniform float spec_gain : hint_range(0.0, 1.0) = 1.0;
+uniform float marks_gain : hint_range(0.0, 1.0) = 1.0;
 
 varying vec3 mark_pos;
 varying vec3 mark_normal;
@@ -159,7 +165,7 @@ void vertex() {
 
 void fragment() {
 	vec3 color = albedo.rgb;
-	float takes_marks = marks;
+	float takes_marks = marks * marks_gain;
 	float skin_marks = 0.0;
 	float no_blood = 0.0;
 	swatch_spec = 1.0;
@@ -187,7 +193,9 @@ void fragment() {
 		swatch_glint = swatch_spec;
 	}
 	if (use_paint_tex) {
-		color = texture(paint_tex, UV2).rgb * albedo.rgb;
+		// Where the paint has no coverage (alpha 0) the swatch colour above stays: never black.
+		vec4 painted = texture(paint_tex, UV2);
+		color = mix(color, painted.rgb * albedo.rgb, step(0.5, painted.a));
 	}
 	if (use_detail_tex) {
 		float ink_mask = texture(detail_tex, UV2).r;
@@ -200,8 +208,14 @@ void fragment() {
 		float streak_edge = max(0.5 * fwidth(streak), 0.0001);
 		glint_gate = smoothstep(0.5 - streak_edge, 0.5 + streak_edge, streak);
 	}
+	float face_zone = 0.0;
+	float catchlight = 0.0;
 	if (use_ink_tex) {
-		color = mix(color, ink_color, texture(ink_tex, UV2).r * ink_strength);
+		vec4 ink_map = texture(ink_tex, UV2);
+		color = mix(color, ink_color, ink_map.r * ink_strength);
+		glint_gate = smoothstep(0.35, 0.65, ink_map.g);
+		face_zone = ink_map.b;
+		catchlight = ink_map.a;
 	}
 	if (takes_marks > 0.0) {
 		vec3 w = abs(normalize(mark_normal));
@@ -250,7 +264,8 @@ void fragment() {
 
 	ALBEDO = color;
 	ROUGHNESS = edge_tag;
-	EMISSION = flash_color * flash_amount + key_color * rim * cine_rim_strength * color;
+	EMISSION = flash_color * flash_amount + key_color * rim * cine_rim_strength * color
+			+ color * face_fill_color * face_zone * face_fill + catch_color * smoothstep(0.3, 0.7, catchlight) * catch_strength;
 }
 
 // The shade multiplier of a surface whose light term is `lit`: the shadow (hued, never black), the mid band, the lit band.
@@ -300,7 +315,7 @@ void light() {
 	float aligned = dot(NORMAL, normalize(LIGHT + VIEW));
 	float spec_edge = max(0.5 * band_soft * to_pixels * fwidth(aligned), 0.00001);
 	float spec = smoothstep(spec_cut - spec_edge, spec_cut + spec_edge, aligned);
-	SPECULAR_LIGHT += spec * spec_strength * spec_gloss * swatch_spec * step(0.0, ndl) * ATTENUATION * light_color;
+	SPECULAR_LIGHT += spec * spec_strength * spec_gloss * spec_gain * swatch_spec * step(0.0, ndl) * ATTENUATION * light_color;
 	if (LIGHT_IS_DIRECTIONAL && swatch_glint > 0.5 && glint_strength > 0.0) {
 		float glint_aligned = dot(NORMAL, normalize(fill_dir + VIEW));
 		float glint_edge = max(0.5 * band_soft * to_pixels * fwidth(glint_aligned), 0.00001);

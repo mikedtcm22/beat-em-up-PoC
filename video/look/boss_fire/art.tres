@@ -4,3 +4,4 @@
 
 [resource]
 script = ExtResource("1_art")
+face_fill_color = Color(1, 0.7, 0.42, 1)

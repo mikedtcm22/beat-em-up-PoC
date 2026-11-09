@@ -10,6 +10,9 @@ neighbouring texels), and the line is drawn between the samples in UV space, its
 falls, so a line is as wide on the face as it was drawn wherever the layout stretches it. The UV-space result is written out as
 features_uv.svg beside it (the drawing as it sits in the layout).
 
+A filled shape may also say `data-paint="#rrggbb"` (it is painted into the ALBEDO, with `opacity` as its alpha: an eye's white, an iris, the
+glass of a lens) or `data-channel="catch"` (it goes into the ink map's A: a catchlight the shader draws above the lighting).
+
 Elements (inherited from the groups): `<path d="M L C Q Z">` with `stroke-width` (mm), `opacity` (the ink's strength, 0..1),
 `data-taper="a,b"` (the shares of the length the line thins over at its start and its end), `data-wobble` (mm, the hand's wander,
 a smooth noise seeded per stroke), `fill="ink"` with `fill-opacity` for a shape (an eye's pupil, a shadow under a brow).
@@ -28,7 +31,8 @@ SUPERSAMPLE = 2
 JUMP_TEXELS = 3.5
 PX_PER_MM = 4.0
 SVG_NS = "{http://www.w3.org/2000/svg}"
-DEFAULTS = {"stroke-width": 1.0, "opacity": 1.0, "data-taper": "0.15,0.25", "data-wobble": 0.25, "fill": "none", "fill-opacity": 1.0}
+DEFAULTS = {"stroke-width": 1.0, "opacity": 1.0, "data-taper": "0.15,0.25", "data-wobble": 0.25, "fill": "none", "fill-opacity": 1.0,
+	"data-paint": "", "data-channel": "ink"}
 
 
 def parse_path(d):
@@ -226,6 +230,9 @@ def render(svg_path, maps, meta, ink_size, seed, uv_svg=None):
 	big = ink_size * SUPERSAMPLE
 	k = big / size
 	canvas = np.zeros((big, big), np.uint8)
+	catch_canvas = np.zeros((big, big), np.uint8)
+	paint_canvas = np.zeros((big, big, 3), np.uint8)
+	paint_alpha = np.zeros((big, big), np.uint8)
 	strokes = []
 	uv_lines = []
 	for view in views:
@@ -249,9 +256,9 @@ def render(svg_path, maps, meta, ink_size, seed, uv_svg=None):
 				for (x, y), tt in zip(pts, t):
 					hit = proj.project(x, y)
 					samples.append(None if hit is None else (hit[0] * k, hit[1] * k, hit[2], tt))
-				strokes.append((opacity, width, taper, fill, float(attrs["fill-opacity"]), samples, ident))
+				strokes.append((opacity, width, taper, fill, float(attrs["fill-opacity"]), samples, ident, str(attrs["data-paint"]), str(attrs["data-channel"])))
 	strokes.sort(key=lambda s: s[0] if not s[3] else s[0] * s[4])
-	for opacity, width, taper, fill, fill_opacity, samples, ident in strokes:
+	for opacity, width, taper, fill, fill_opacity, samples, ident, paint_hex, channel in strokes:
 		run = []
 		runs = []
 		prev = None
@@ -268,7 +275,16 @@ def render(svg_path, maps, meta, ink_size, seed, uv_svg=None):
 		for run in runs:
 			if fill:
 				poly = np.array([[s[0], s[1]] for s in run], np.float64)
-				cv2.fillPoly(canvas, [np.round(poly * 16).astype(np.int32)], int(round(255 * opacity * fill_opacity)), cv2.LINE_AA, 4)
+				pts16 = [np.round(poly * 16).astype(np.int32)]
+				if paint_hex:
+					rgb = tuple(int(paint_hex.lstrip("#")[i:i + 2], 16) for i in (0, 2, 4))
+					cv2.fillPoly(paint_canvas, pts16, rgb, cv2.LINE_AA, 4)
+					cv2.fillPoly(paint_alpha, pts16, int(round(255 * opacity)), cv2.LINE_AA, 4)
+					continue
+				if channel == "catch":
+					cv2.fillPoly(catch_canvas, pts16, int(round(255 * opacity * fill_opacity)), cv2.LINE_AA, 4)
+					continue
+				cv2.fillPoly(canvas, pts16, int(round(255 * opacity * fill_opacity)), cv2.LINE_AA, 4)
 				uv_lines.append((poly, 0.0, opacity * fill_opacity, True, ident))
 				continue
 			color = int(round(255 * opacity))
@@ -284,10 +300,16 @@ def render(svg_path, maps, meta, ink_size, seed, uv_svg=None):
 					color, max(int(round(px_w)), 1), cv2.LINE_AA, 4)
 			poly = np.array([[s[0], s[1]] for s in run], np.float64)
 			uv_lines.append((poly, float(np.mean([width / s[2] * k for s in run])), opacity, False, ident))
-	out = cv2.resize(canvas, (ink_size, ink_size), interpolation=cv2.INTER_AREA).astype(np.float32) / 255.0
+	def down(img):
+		return cv2.resize(img, (ink_size, ink_size), interpolation=cv2.INTER_AREA).astype(np.float32) / 255.0
+
 	if uv_svg:
 		write_uv_svg(uv_svg, uv_lines, ink_size, k)
-	return out
+	# a painted shape's colour is averaged with its alpha as the weight, so the edge does not darken
+	alpha = down(paint_alpha)
+	premult = down(paint_canvas.astype(np.uint8)) * 1.0
+	rgb = premult / np.maximum(alpha[..., None], 1e-4) if alpha.max() > 0 else premult
+	return {"ink": down(canvas), "catch": down(catch_canvas), "paint": np.clip(rgb, 0, 1), "paint_alpha": alpha}
 
 
 def write_uv_svg(path, lines, ink_size, k):

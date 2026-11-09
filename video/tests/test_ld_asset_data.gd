@@ -4,10 +4,10 @@ extends GutTest
 ## swapped, the paint and ink textures on its material, each part switchable for an A/B.
 
 const ART_DIR := "res://assets/video/characters"
-const PAINT_SIZE := 2048
+const PAINT_SIZE := 4096
 const INK_SIZE := 4096
-## The video GLBs: only a character with a face has one.
-const GLB_IDS: Array[StringName] = [&"punk", &"boss"]
+## The video GLBs: every character has one since round 2 (the new UV2 layout; the player's smoothed arm).
+const GLB_IDS: Array[StringName] = [&"punk", &"boss", &"player"]
 const ALL_IDS: Array[StringName] = [&"punk", &"boss", &"player"]
 const PUNK_SCENE := "res://game/enemies/punk/street_punk.tscn"
 
@@ -43,16 +43,24 @@ func test_the_painted_albedo_is_painted_not_the_swatches() -> void:
 		assert_gt(seen.size(), 200, "%s has far more than a palette's worth of colours (%d)" % [id, seen.size()])
 
 
+func _game_art(id: StringName) -> CharacterArt:
+	var art := (load("res://game/actors/art/%s_art.tres" % id) as CharacterArt).duplicate() as CharacterArt
+	if art.scene == null and art.has_meta(&"scene_path"):
+		art.scene = load(String(art.get_meta(&"scene_path"))) as PackedScene
+	return art
+
+
 func _video_art(id: StringName) -> CharacterArt:
-	var base := load("res://game/actors/art/%s_art.tres" % id) as CharacterArt
+	var base := _game_art(id)
 	var video := base.duplicate() as CharacterArt
 	video.scene = load("%s/%s/%s_video.glb" % [ART_DIR, id, id]) as PackedScene
+	video.triangle_budget = 250000  # the player's arms are subdivided in round 2 (the game's budget is 30,000)
 	return video
 
 
 func test_the_video_glbs_keep_the_contract_the_body_and_change_the_face_shading() -> void:
 	for id in GLB_IDS:
-		var game := load("res://game/actors/art/%s_art.tres" % id) as CharacterArt
+		var game := _game_art(id)
 		var video := _video_art(id)
 		assert_eq(SkinnedArt.check(video), PackedStringArray(), "%s: the video GLB breaks no part of the art contract" % id)
 		var game_parts := SkinnedArt.entry_of(game).meshes
@@ -60,7 +68,9 @@ func test_the_video_glbs_keep_the_contract_the_body_and_change_the_face_shading(
 		assert_eq(video_parts.size(), game_parts.size(), "%s: the same meshes" % id)
 		var a: AABB = game_parts[0].mesh.get_aabb()
 		var b: AABB = video_parts[0].mesh.get_aabb()
-		assert_lt(a.position.distance_to(b.position) + a.size.distance_to(b.size), 0.002, "%s: the same body, to 2 mm" % id)
+		# The Punk and Ox: the same body to 2 mm. The player's arms are relaxed and subdivided (round 2), which pulls the fists and elbows in (the smoothing shrinks the extremes: 5 cm measured on the box).
+		var tolerance := 0.08 if id == &"player" else 0.002
+		assert_lt(a.position.distance_to(b.position) + a.size.distance_to(b.size), tolerance, "%s: the same body, to %.0f mm" % [id, tolerance * 1000.0])
 		var game_normals: PackedVector3Array = game_parts[0].mesh.surface_get_arrays(0)[Mesh.ARRAY_NORMAL]
 		var video_normals: PackedVector3Array = video_parts[0].mesh.surface_get_arrays(0)[Mesh.ARRAY_NORMAL]
 		# Vertices were split where the new normals differ across a corner (more, never fewer), or the normals changed in place.
@@ -74,8 +84,10 @@ func test_the_video_glbs_keep_the_contract_the_body_and_change_the_face_shading(
 		assert_true(changed, "%s: the face's normals now differ from the game's" % id)
 
 
-func test_the_player_needs_no_video_mesh() -> void:
-	assert_false(ResourceLoader.exists("%s/player/player_video.glb" % ART_DIR), "the player's mesh is the game's (no face in first person)")
+func test_the_player_has_a_video_mesh_with_smooth_normals() -> void:
+	# Round 2 (old: "the player needs no video mesh", assert_false on the file): its arm is a third of a first-person frame, and the game's
+	# shading normals are lumpy at a centimetre. The twin of the old assertion is in test_ld_art2_data.gd (the contract and the layout).
+	assert_true(ResourceLoader.exists("%s/player/player_video.glb" % ART_DIR), "the player has a video mesh")
 
 
 func test_the_layout_uv_edit_makes_the_shader_read_uv2_and_is_idempotent() -> void:

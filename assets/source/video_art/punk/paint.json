@@ -84,7 +84,9 @@
     0.4314,
     0.4,
     0.4863
-   ]
+   ],
+   "shade_amount": 0.0,
+   "light_amount": 0.0
   },
   "17": {
    "base": [
@@ -124,5 +126,21 @@
  "default": {},
  "wobble_gain": 1.0,
  "shade_pct": 9.0,
- "light_pct": 86.0
+ "light_pct": 86.0,
+ "layout": {
+  "weights": {
+   "Head": 1.9,
+   "Neck": 1.2,
+   "LeftHand": 1.4,
+   "RightHand": 1.4
+  },
+  "default_weight": 1.0,
+  "margin_px": 20
+ },
+ "face": {
+  "z_from": -0.97,
+  "z_to": -0.02,
+  "facing": 0.1,
+  "half_width": 0.92
+ }
 }
