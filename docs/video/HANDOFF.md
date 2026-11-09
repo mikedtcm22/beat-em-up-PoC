@@ -6,6 +6,20 @@ The cinematic gameplay video's live status, kept by the video session ("Beat-em-
 
 ## Status (newest first)
 
+### 2026-11-09 15:30 CST: the hero plates made and rendered; the round 5 blind check running
+- **The plates builder** (Sonnet, `55a1dab`, pushed):
+  - The video tests pass, 221 of 221, and all 7 hero frames render with problems=0 (into `captures/video/round5/`).
+  - **7 plates from 11 Gemini images,** and the ledger is at **$4.34** (at most $0.18 is left of the approval).
+  - **Registration:** four plates (t01, t03, t04, t07) missed the 8 px gate at p75 and were accepted by eye on their edge overlays (`--max-px` raised). Check them in motion before the final renders. t10, t12 and t08 pass.
+  - The street's `fog_amount` is 0.12 and `wrap_strength` 0.35, the roof's values.
+- **The lead's look** (`captures/video/round5/sheets_lead/`, reference | hero frame):
+  - **A new look:** painted backgrounds, with the figures as dark silhouettes with coloured rims. Strongest: t10 (Ox against the painted fire) and t07 (the Kicker against the sun, between two dark towers).
+  - **Concerns:** the silhouettes are very dark, so the figures are hard to read in t12 (Ox close is his arms from below, no face) and t03. No close-up shows a face, while the references' close-ups are lit, drawn faces. The steam is a white cartoon cloud (t01, t04). t01's foreground cards are plain black bars, and its camera is high. The Kicker still has pale patches.
+- **Running:** the blind check, Workflow `wf_7b259cfc-8b0` (task `witcpitzn`). The same prompt, three judges, the hero frames encoded at crf 23, shuffles `blind_r5a/b/c` (seeds 51-53; the args are in `blind_r5_args.json` in this session's scratchpad).
+- **Usage at 15:25:** 5-hour 24%, **weekly 83%**.
+- **Next:** read the result (and which tells each judge cites), DM Game-boy, and hand off. The weekly has room for little more before 2026-11-10 16:00 CST.
+
+
 ### 2026-11-09 15:00 CST: round 5 merged; the hero plates and renders running (a Sonnet builder)
 - **The resumed run** (`wf_0571fbbc-351`) finished all three. Each branch's video tests passed (R5-SHOTS 206, R5-ART 205, R5-INK 198), and they're merged with no conflicts (`d590cc0`, `adac45c`, `2fa2a01`). The protected diff is clean.
   - **R5-SHOTS:** 58-degree first-person lens through a view rig (lift, pull-back, roll, the off-hand hidden); fixed-point pan, tilt and zoom cameras; foreground cards; t01 a tilt-down from 6.6 m; t07 on the sun line; t10-t13 low three-quarter; t14 multiplane. The hero frames in `video/shots/hero_frames.json`: t03 and t04 (first-person street), t01 (street wide), t07 (roof against the sun), t10 (Ox wide), t12 (Ox close), t08 (first-person roof). `tools/video/shoot_hero.sh` renders them. The 14 shots weren't re-rendered at 720p.
