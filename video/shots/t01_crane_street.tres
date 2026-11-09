@@ -8,7 +8,7 @@
 [sub_resource type="Resource" id="Actor_0"]
 script = ExtResource("2_actor")
 id = &"punk"
-position = Vector3(-0.6, 0, -14.6)
+position = Vector3(-1.6, 0, -11)
 facing = 0
 yaw_deg = -80
 anim = &"block"
@@ -20,7 +20,7 @@ health_share = 0
 [sub_resource type="Resource" id="Actor_1"]
 script = ExtResource("2_actor")
 id = &"thug"
-position = Vector3(0.9, 0, -15)
+position = Vector3(-0.1, 0, -11.3)
 facing = 0
 yaw_deg = 95
 anim = &"stagger_back"
@@ -32,7 +32,7 @@ health_share = 0
 [sub_resource type="Resource" id="Actor_2"]
 script = ExtResource("2_actor")
 id = &"punk_veteran"
-position = Vector3(-2.6, 0, -17)
+position = Vector3(-4.2, 0, -12.6)
 facing = 0
 yaw_deg = 120
 anim = &"taunt"
@@ -44,7 +44,7 @@ health_share = 0
 [sub_resource type="Resource" id="Actor_3"]
 script = ExtResource("2_actor")
 id = &"kicker"
-position = Vector3(2.4, 0, -18.4)
+position = Vector3(2.4, 0, -12.2)
 facing = 0
 yaw_deg = 170
 anim = &"brace"
@@ -69,10 +69,10 @@ ease = 1
 script = ExtResource("4_key")
 time_s = 1.5
 position = Vector3(-4.9, 6.6, 0.2)
-look_at = Vector3(3, 2.8, -26)
+look_at = Vector3(1.5, 2.2, -21)
 target_actor = -1
-fov_deg = 46
-focus_m = 18
+fov_deg = 45
+focus_m = 14
 focus_range_m = 8
 roll_deg = 0
 ease = 1
@@ -81,10 +81,10 @@ ease = 1
 script = ExtResource("4_key")
 time_s = 3
 position = Vector3(-4.9, 6.6, 0.2)
-look_at = Vector3(3, 1, -17.3)
+look_at = Vector3(-0.4, 0.8, -11.5)
 target_actor = -1
-fov_deg = 44
-focus_m = 17
+fov_deg = 42
+focus_m = 13
 focus_range_m = 6
 roll_deg = 0
 ease = 1
@@ -92,40 +92,40 @@ ease = 1
 [sub_resource type="Resource" id="Card_0"]
 script = ExtResource("6_card")
 points = PackedVector2Array(-1.3, -1, 0.05, -1, -0.05, -0.9, -0.6, -0.84, -1.3, -0.7)
-position = Vector3(-3.95202, 5.92802, -1.89995)
-yaw_deg = -24.2958
+position = Vector3(-4.11809, 5.5922, -1.83297)
+yaw_deg = -21.0375
 color = Color(0.035, 0.03, 0.06, 1)
 drift = Vector3(0, 0, 0)
 
 [sub_resource type="Resource" id="Card_1"]
 script = ExtResource("6_card")
 points = PackedVector2Array(-1.3, -0.5, -1.3, -0.45, -0.5, 0.25, -0.45, 0.2)
-position = Vector3(-3.95202, 5.92802, -1.89995)
-yaw_deg = -24.2958
+position = Vector3(-4.11809, 5.5922, -1.83297)
+yaw_deg = -21.0375
 color = Color(0.035, 0.03, 0.06, 1)
 drift = Vector3(0, 0, 0)
 
 [sub_resource type="Resource" id="Card_2"]
 script = ExtResource("6_card")
 points = PackedVector2Array(-1.3, -0.72, -1.3, -0.67, -0.22, 0.14, -0.17, 0.09)
-position = Vector3(-3.95202, 5.92802, -1.89995)
-yaw_deg = -24.2958
+position = Vector3(-4.11809, 5.5922, -1.83297)
+yaw_deg = -21.0375
 color = Color(0.035, 0.03, 0.06, 1)
 drift = Vector3(0, 0, 0)
 
 [sub_resource type="Resource" id="Card_3"]
 script = ExtResource("6_card")
 points = PackedVector2Array(-0.62, -0.84, -0.6, -0.4, -0.57, -0.4, -0.56, -0.84)
-position = Vector3(-3.95202, 5.92802, -1.89995)
-yaw_deg = -24.2958
+position = Vector3(-4.11809, 5.5922, -1.83297)
+yaw_deg = -21.0375
 color = Color(0.035, 0.03, 0.06, 1)
 drift = Vector3(0, 0, 0)
 
 [sub_resource type="Resource" id="Card_4"]
 script = ExtResource("6_card")
 points = PackedVector2Array(-0.3, -0.88, -0.29, -0.5, -0.26, -0.5, -0.25, -0.88)
-position = Vector3(-3.95202, 5.92802, -1.89995)
-yaw_deg = -24.2958
+position = Vector3(-4.11809, 5.5922, -1.83297)
+yaw_deg = -21.0375
 color = Color(0.035, 0.03, 0.06, 1)
 drift = Vector3(0, 0, 0)
 

@@ -7,6 +7,8 @@ extends RefCounted
 ## tools/video/shoot_trailer.sh runs the list.
 
 const SHOTS_DIR := "res://video/shots"
+## The blind set's seven hero frames (round 5): each entry has the shot `key`, the output `frame` (24 fps, counted from the window's start), its `kind` and a `note`.
+const HERO_FRAMES_PATH := "res://video/shots/hero_frames.json"
 
 
 static func acts(bot: Node) -> Array[Dictionary]:
@@ -34,6 +36,17 @@ static func shots() -> Array[CineShot]:
 		if shot != null:
 			out.append(shot)
 	out.sort_custom(func(a: CineShot, b: CineShot) -> bool: return a.number < b.number)
+	return out
+
+
+## The hero frames (R5-SHOTS), each {key, frame, kind, note}: the frames the plates are made for and the blind check shows.
+static func hero_frames() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(HERO_FRAMES_PATH))
+	if parsed is Dictionary:
+		for entry: Variant in (parsed as Dictionary).get("frames", []):
+			if entry is Dictionary:
+				out.append(entry as Dictionary)
 	return out
 
 

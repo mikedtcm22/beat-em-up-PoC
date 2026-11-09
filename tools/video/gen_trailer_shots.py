@@ -229,19 +229,19 @@ SHOTS = []
 # 1. The street at night (round 5): a tilt-down from a fixed point 7 m up at the left side of the street, onto a fight in the lamp's pool: a three-quarter
 # view with the vanishing point off-centre, a dark foreground mass (a fire escape's corner and rail, cards), the figures small and silhouetted.
 CAM1 = (-4.9, 6.6, 0.2)
-END1 = (3.0, 1.0, -17.3)
+END1 = (-0.4, 0.8, -11.5)
 _c1_pos, _c1_yaw = facing(CAM1, END1, 2.4)
 SHOTS.append(dict(
     key="t01_crane_street", number=1, edit_start=0.0, section=0, fp=False, player=((3, 0, -2), 0, 0), window=(0, 3.0),
     note="Shot 1 (0:00-0:03, round 5): a tilt-down from a fixed point 7 m up at the street's left side onto a fight in the lamp's pool; a fire escape's dark mass in the foreground, the figures small.",
-    actors=[actor("punk", (-0.6, 0, -14.6), yaw=-80, anim="block", hold=12, live=False),
-            actor("thug", (0.9, 0, -15.0), yaw=95, anim="stagger_back", hold=10, live=False),
-            actor("punk_veteran", (-2.6, 0, -17.0), yaw=120, anim="taunt", hold=40, live=False),
-            actor("kicker", (2.4, 0, -18.4), yaw=170, anim="brace", hold=20, live=False)],
+    actors=[actor("punk", (-1.6, 0, -11.0), yaw=-80, anim="block", hold=12, live=False),
+            actor("thug", (-0.1, 0, -11.3), yaw=95, anim="stagger_back", hold=10, live=False),
+            actor("punk_veteran", (-4.2, 0, -12.6), yaw=120, anim="taunt", hold=40, live=False),
+            actor("kicker", (2.4, 0, -12.2), yaw=170, anim="brace", hold=20, live=False)],
     beats=[],
     keys=[key(0.0, CAM1, (3.0, 4.6, -40.0), fov=48),
-          key(1.5, CAM1, (3.0, 2.8, -26.0), fov=46, focus=18, rng=8),
-          key(3.0, CAM1, END1, fov=44, focus=17, rng=6)],
+          key(1.5, CAM1, (1.5, 2.2, -21.0), fov=45, focus=14, rng=8),
+          key(3.0, CAM1, END1, fov=42, focus=13, rng=6)],
     cards=[card([(-1.3, -1.0), (0.05, -1.0), (-0.05, -0.9), (-0.6, -0.84), (-1.3, -0.7)], _c1_pos, _c1_yaw),
            card([(-1.3, -0.5), (-1.3, -0.45), (-0.5, 0.25), (-0.45, 0.2)], _c1_pos, _c1_yaw),
            card([(-1.3, -0.72), (-1.3, -0.67), (-0.22, 0.14), (-0.17, 0.09)], _c1_pos, _c1_yaw),
@@ -376,15 +376,15 @@ SHOTS.append(dict(
 # lower the guard fist into the bottom edge and give the opponent's framing room; roll: a fixed bank (the fight set-ups alternate in sign, the
 # establishing shot has none); off: the arm that shows only when a move strikes with it (the weapon shots hide the left one: the pipe is in the right hand).
 FP_VIEW = {
-    "t02_guard_up": dict(fov=58, lift=0.05, back=0.08, roll=0.0, off="Right"),
-    "t03_punk_combo": dict(fov=58, lift=0.05, back=0.08, roll=-5.0, off="Right"),
-    "t04_block_spin": dict(fov=58, lift=0.05, back=0.10, roll=5.0, off="Right"),
-    "t05_grab_throw": dict(fov=58, lift=0.05, back=0.08, roll=-4.0, off="Right"),
-    "t06_pipe_chain": dict(fov=58, lift=0.04, back=0.08, roll=4.0, off="Left"),
-    "t08_chain_whip": dict(fov=58, lift=0.04, back=0.08, roll=5.0, off="Left"),
-    "t09_back_elbow": dict(fov=58, lift=0.05, back=0.08, roll=-5.0, off="Right"),
-    "t11_ox_fight": dict(fov=58, lift=0.05, back=0.15, roll=5.0, off="Right"),
-    "t13_ox_falls": dict(fov=58, lift=0.04, back=0.15, roll=4.0, off="Right"),
+    "t02_guard_up": dict(fov=58, lift=-0.04, back=0.06, roll=0.0, off="Right"),
+    "t03_punk_combo": dict(fov=58, lift=-0.04, back=0.06, roll=-5.0, off="Right"),
+    "t04_block_spin": dict(fov=58, lift=-0.04, back=0.08, roll=5.0, off="Right"),
+    "t05_grab_throw": dict(fov=58, lift=-0.04, back=0.06, roll=-4.0, off="Right"),
+    "t06_pipe_chain": dict(fov=58, lift=-0.04, back=0.06, roll=4.0, off="Left"),
+    "t08_chain_whip": dict(fov=58, lift=-0.04, back=0.06, roll=5.0, off="Left"),
+    "t09_back_elbow": dict(fov=58, lift=-0.04, back=0.06, roll=-5.0, off="Right"),
+    "t11_ox_fight": dict(fov=58, lift=-0.03, back=0.15, roll=5.0, off="Right"),
+    "t13_ox_falls": dict(fov=58, lift=-0.03, back=0.15, roll=4.0, off="Right"),
 }
 
 if __name__ == "__main__":

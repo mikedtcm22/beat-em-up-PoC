@@ -1,0 +1,12 @@
+{
+	"note": "R5-SHOTS: the blind set's seven hero frames, picked from the trailer's shots in its proportions (two first-person street frames, a street wide, a roof against the sun, two boss frames, one more). `frame` is the output frame (24 fps) counted from the start of the shot's window; the plates are made at these frames with tools/video/make_plate.sh. tools/video/shoot_hero.sh renders them at 2560x1440.",
+	"frames": [
+		{"key": "t03_punk_combo", "frame": 10, "kind": "fp_street", "note": "First person, the jab's contact: the lead fist in the lower left, the Punk's head snapping back, the chain-link fence and the lamp behind him."},
+		{"key": "t04_block_spin", "frame": 14, "kind": "fp_street", "note": "First person, the perfect block: the Kicker's jump kick lands on the guard, the lamp's pool and the barrel behind."},
+		{"key": "t01_crane_street", "frame": 70, "kind": "street_wide", "note": "The tilt-down's end from the fixed point 6.6 m up: a fight in the lamp's pool, small, the fire escape's rail in the foreground, the vanishing point off-centre."},
+		{"key": "t07_roof_knockoff", "frame": 54, "kind": "roof_sun", "note": "The Kicker launched up against the sun, the near water tower a big foreground mass at the right, the far one pushed to the left edge."},
+		{"key": "t10_ox_reveal", "frame": 50, "kind": "boss_wide", "note": "Ox at the left third against the brightest fire, pitched-up low camera, his arm out as he raises his guard."},
+		{"key": "t12_haymaker", "frame": 48, "kind": "boss_closeup", "note": "Three-quarter over the player's shoulder after the haymaker lands: the dark foreground mass of the player and the glove, the fire behind."},
+		{"key": "t08_chain_whip", "frame": 20, "kind": "fp_roof", "note": "First person on the roof, the chain's first hit: the Punk's head and guard against the sunset, the parapet behind."}
+	]
+}
