@@ -34,7 +34,7 @@ Each call: the decision, an alternative not taken, why. (The cine stage and the 
 | The encode (crf 8, slow, yuv444p) | 21 s for 120 frames (0.17 s a frame, once a chunk) |
 | MB a frame | 10.6 raw (a 200-frame chunk is 2.1 GB, deleted after its encode), 2.2 PNG; the mezzanine 0.22 (0.18-0.25: these dark flat frames compress well), the mask 0.01 |
 | Video memory / process memory | 1.1 GB VRAM (the two SubViewports and the cache), 260 MB static |
-| A whole 40 s video (960 frames) | about 4.3 minutes of writing and 3 minutes of encoding per 700 frames, 30 minutes with the retries of a Gate 2 set |
+| A whole 40 s video (960 frames) | about 4.3 minutes of writing plus 2.7 minutes of encoding, from these numbers |
 | The seven Gate 2 shots | all render: the six stills (about 8 s each) and `moving_punk` (2.5 minutes with the staging and the encode) |
 
 ## What the determinism check found
