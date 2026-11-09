@@ -59,6 +59,7 @@ var wrap_strength: float = 0.0
 var wrap_reach_px: float = 6.0
 var wrap_near_px: float = 14.0
 var wrap_far_px: float = 36.0
+var wrap_ref_m: float = 5.0
 var fog_amount: float = 0.0
 var fog_start_m: float = 6.0
 var fog_end_m: float = 30.0
@@ -154,7 +155,7 @@ func _render_callback(callback_type: int, render_data: RenderData) -> void:
 			fog_amount, fog_start_m, fog_end_m, fog_blur_px,
 			glow_narrow, glow_wide, glow_threshold, glow_knee,
 			float(quarter.x), float(quarter.y), float(sixteenth.x), float(sixteenth.y),
-			glow_narrow_radius * float(size.x) * 0.5 / 4.0, glow_wide_radius * float(size.x) * 0.5 / 16.0, float(actors_debug), 0.0,
+			glow_narrow_radius * float(size.x) * 0.5 / 4.0, glow_wide_radius * float(size.x) * 0.5 / 16.0, float(actors_debug), wrap_ref_m,
 			projection.z.z, projection.w.z, 1.0 if actors_on else 0.0, 1.0 if glow_on else 0.0])
 	var extra_bytes := extra.to_byte_array()
 	if not _extra.is_valid():
@@ -244,6 +245,7 @@ static func make_compositor(look: Resource) -> Compositor:
 	effect.wrap_reach_px = look.wrap_reach_px
 	effect.wrap_near_px = look.wrap_near_px
 	effect.wrap_far_px = look.wrap_far_px
+	effect.wrap_ref_m = look.wrap_ref_m
 	effect.fog_amount = look.fog_amount
 	effect.fog_start_m = look.fog_start_m
 	effect.fog_end_m = look.fog_end_m

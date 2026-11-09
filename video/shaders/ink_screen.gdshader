@@ -101,7 +101,7 @@ float far_environment(ivec2 q, float w0, ivec2 size, mat4 inv_proj, float step_r
 	q = clamp(q, ivec2(0), size - 1);
 	float wq = 1.0 / view_distance(q, size, inv_proj);
 	vec4 nrq = texelFetch(normal_tex, q, 0);
-	bool is_char = nrq.a < 0.5 && length(nrq.xyz * 2.0 - 1.0) > 0.5 && texelFetch(depth_tex, q, 0).r > 0.0;
+	bool is_char = nrq.a < 0.5 && texelFetch(depth_tex, q, 0).r > 0.0;
 	return (wq < w0 * (1.0 - step_rel) && !is_char) ? 1.0 : 0.0;
 }
 
@@ -159,7 +159,8 @@ void fragment() {
 	vec4 nr0 = texelFetch(normal_tex, clamp(p, ivec2(0), size - 1), 0);
 	vec3 n0 = nr0.xyz * 2.0 - 1.0;
 	bool has_normal = !is_sky(p, size) && length(n0) > 0.5;
-	bool character = nr0.a < 0.5 && has_normal;
+	// The tag is the roughness alone: a character's normal buffer has stray pixels whose normal is the zero vector (they are still the character).
+	bool character = nr0.a < 0.5 && !is_sky(p, size);
 	n0 = has_normal ? normalize(n0) : vec3(0.0, 0.0, 1.0);
 
 	// The weight: lit surface -> thin and lost, surface facing away from every light -> heavy and full.

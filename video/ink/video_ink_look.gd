@@ -196,12 +196,15 @@ extends VideoLookPiece
 @export_range(1.0, 24.0) var wrap_reach_px: float = 6.0
 @export_range(2.0, 60.0) var wrap_near_px: float = 14.0
 @export_range(4.0, 120.0) var wrap_far_px: float = 36.0
+## The wrap's reach is full out to this distance and narrows to a quarter at four times it (a far figure is small).
+@export_range(1.0, 40.0) var wrap_ref_m: float = 5.0
 @export_range(0.0, 1.0) var fog_amount: float = 0.0
 @export_range(0.0, 60.0) var fog_start_m: float = 6.0
 @export_range(1.0, 120.0) var fog_end_m: float = 30.0
 @export_range(8.0, 200.0) var fog_blur_px: float = 60.0
-## A debug view of the actors pass (0 = none; 1 = the distance and the fog; 2 = the wrap's reach).
-@export_range(0, 5) var actors_debug: int = 0
+## A debug view of the actors pass (0 = none; 1 = the distance and the fog; 2 = the wrap's reach; 3 = the normal buffer; 4 = its roughness; 5 = the tests; 6 = a flat dark fill
+## on every character, to judge the wrap and the fog on a back-lit silhouette).
+@export_range(0, 6) var actors_debug: int = 0
 
 @export_group("Glow")
 ## The diffusion glow in the finish pass (round 5): a soft-knee bright pass that keeps the hue, at quarter size, blurred at two radii (shares of the

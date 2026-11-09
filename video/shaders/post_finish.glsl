@@ -35,7 +35,7 @@ layout(set = 0, binding = 7, std140) uniform Extra {
 	vec4 fog;      // x the actor fog's most, y the metre where it starts, z where it is full, w the radius in px of the colour it fogs toward
 	vec4 glow;     // x the narrow glow's share, y the wide glow's, z the bright pass's threshold (linear luminance), w its knee
 	vec4 glow_sz;  // xy the quarter size, zw the 1/16 size, in pixels
-	vec4 blur;     // x the narrow blur's sigma (quarter-size pixels), y the wide blur's (1/16-size pixels), z the debug view
+	vec4 blur;     // x the narrow blur's sigma (quarter-size pixels), y the wide blur's (1/16-size pixels), z the debug view, w the metres out to which the wrap has its full reach
 	vec4 proj;     // x and y the projection's A and B (reversed Z: view distance = B / (depth + A)), z actors on, w glow on
 } ex;
 
@@ -147,7 +147,7 @@ vec4 ring_background(ivec2 c, float radius, int n, float turn) {
 // Pass 4: the light wrap and the actor fog on a character's pixel.
 void actors(ivec2 id) {
 	vec3 col = load_color(id);
-	if (ex.blur.z > 2.5) {
+	if (ex.blur.z > 2.5 && ex.blur.z < 5.5) {
 		vec4 raw = texelFetch(normal_tex, id, 0);
 		imageStore(temp_image, id, vec4(ex.blur.z < 3.5 ? raw.rgb : (ex.blur.z < 4.5 ? vec3(raw.w) : vec3(texelFetch(depth_tex, id, 0).r > 0.0 ? 1.0 : 0.0, length(raw.xyz * 2.0 - 1.0) > 0.5 ? 1.0 : 0.0, decode_normal_roughness(raw).w < 0.5 ? 1.0 : 0.0)), 1.0));
 		return;
@@ -156,8 +156,14 @@ void actors(ivec2 id) {
 		imageStore(temp_image, id, vec4(col, 1.0));
 		return;
 	}
+	if (ex.blur.z > 5.5) {
+		// A stand-in for a back-lit silhouette's flat dark fill (debug 6), to judge the wrap and the fog on one.
+		col = vec3(0.02, 0.015, 0.03);
+	}
 	float scale = p.size.y / 1080.0;
-	float wrap_px = ex.wrap.y * scale;
+	float z = view_distance_m(id);
+	// The wrap's reach narrows with distance (a far figure is small: a 6 px wrap would be all of it), to a quarter at four times the reference distance.
+	float wrap_px = ex.wrap.y * scale * clamp(ex.blur.w / max(z, 0.01), 0.25, 1.0);
 	// How near the silhouette is: the nearest non-character pixel on six rings round this one.
 	float dmin = 1.0e9;
 	if (ex.wrap.x > 0.0) {
@@ -193,7 +199,6 @@ void actors(ivec2 id) {
 		}
 	}
 	// Actor fog toward the blurred background colour at this pixel, by distance.
-	float z = view_distance_m(id);
 	float f = ex.fog.x * smoothstep(ex.fog.y, max(ex.fog.z, ex.fog.y + 0.01), z);
 	if (f > 0.001) {
 		float r = ex.fog.w * scale;
