@@ -236,6 +236,9 @@ uniform float win_dark_blank : hint_range(0.0, 1.0) = 0.0;
 uniform vec3 moon_top_color : source_color = vec3(0.35, 0.5, 0.95);
 uniform float moon_top_gain : hint_range(0.0, 3.0) = 0.0;
 uniform float moon_top_min : hint_range(0.3, 0.95) = 0.7;
+// The world heights of the section's floors (up to four, -1000 for none): an up-facing surface at one of them is a floor, not a top plane, so the moon (the sun) rims no floor.
+uniform vec4 floors = vec4(-1000.0);
+uniform float floor_tol_m : hint_range(0.01, 0.5) = 0.1;
 // The pool's hand-shaped edge: how far the angular noise moves it (in light units), the bites cut out of it, and their frequency (cycles per m).
 uniform float pool_shape_amp : hint_range(0.0, 0.6) = 0.0;
 uniform float pool_bites : hint_range(0.0, 0.8) = 0.0;
@@ -489,6 +492,9 @@ void fragment() {
 		float key_k = key_weight * smoothstep(key_cut.x, key_cut.y, dot(world_normal, key_dir));
 		float fire_k = fire_top_m > -999.0 ? fire_lit * (1.0 - smoothstep(fire_top_m - 1.5, fire_top_m + 0.5, world_pos.y)) : 0.0;
 		top_k = ground ? 0.0 : smoothstep(moon_top_min, moon_top_min + 0.15, world_normal.y);
+		for (int fi = 0; fi < 4; fi++) {
+			top_k *= smoothstep(floor_tol_m * 0.5, floor_tol_m, abs(world_pos.y - floors[fi]));
+		}
 		float lit_k = clamp(max(max(zone.x, key_k), max(fire_k, top_k * step(0.001, moon_top_gain))), 0.0, 1.0);
 		dark_k = (1.0 - lit_k) * r4_on;
 		contrast = mix(1.0, dark_line_k, dark_k);

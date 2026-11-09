@@ -124,8 +124,8 @@ direction = Vector3(0, 1, 0)
 speed = Vector2(0.5, 0.9)
 spread_deg = 12.0
 gravity = Vector3(0, 0.08, 0)
-color_start = Color(0.5, 0.56, 0.74, 0.8)
-color_end = Color(0.24, 0.29, 0.46, 0)
+color_start = Color(0.58, 0.61, 0.72, 0.8)
+color_end = Color(0.3, 0.33, 0.46, 0)
 seed = 5
 
 [sub_resource type="Resource" id="Matte_city"]
@@ -257,12 +257,12 @@ paint = {
 &"mask_shape": 0.3,
 &"key_weight": 0.0,
 &"dark_mass": 0.85,
-&"mass_value": 0.42,
+&"mass_value": 0.56,
 &"mass_color": Color(0.82, 0.9, 1.15, 1),
 &"dark_line_k": 0.34,
 &"mass_shade": 0.5,
 &"dark_detail": 0.5,
-&"mass_follow": 0.2,
+&"mass_follow": 0.35,
 &"mass_shade_k": 0.85,
 &"win_dark_blank": 0.6,
 &"moon_top_color": Color(0.42, 0.55, 0.9, 1),

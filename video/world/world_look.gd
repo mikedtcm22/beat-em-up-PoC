@@ -241,7 +241,16 @@ func _derive_uniforms(rig: VideoWorldRig) -> Dictionary:
 		places.append(Vector4(at.x, at.y, at.z, spec.range_m * spec.mask_range_scale))
 	while places.size() < LAMP_SLOTS:
 		places.append(Vector4.ZERO)
+	# The section's floors, as world heights: the paint rims the tops of ledges and crates, never a floor.
+	var floors := Vector4(-1000.0, -1000.0, -1000.0, -1000.0)
+	var root := rig.level as LevelRoot
+	if root != null and section < root.sections.size():
+		var heights: Variant = root.sections[section].get(&"floor_heights")
+		if heights is PackedFloat32Array:
+			for k in mini((heights as PackedFloat32Array).size(), 4):
+				floors[k] = base.y + (heights as PackedFloat32Array)[k]
 	return {
+		&"floors": floors,
 		&"lamps": places,
 		&"key_dir": VideoWorldRig.toward_from_angles(sun_elevation_deg, sun_yaw_deg),
 	}

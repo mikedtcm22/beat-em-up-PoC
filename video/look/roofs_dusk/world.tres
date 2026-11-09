@@ -143,7 +143,7 @@ paint = {
 &"key_cut": Vector2(0.1, 0.45),
 &"dark_mass": 0.7,
 &"mass_value": 0.4,
-&"mass_color": Color(1.0, 0.82, 1.12, 1),
+&"mass_color": Color(0.9, 0.7, 1.2, 1),
 &"dark_line_k": 0.45,
 &"mass_shade": 0.5,
 &"dark_detail": 0.6,

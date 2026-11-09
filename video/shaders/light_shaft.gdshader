@@ -10,7 +10,11 @@ uniform float energy : hint_range(0.0, 1.0) = 0.14;
 uniform float top_w : hint_range(0.02, 1.0) = 0.18;
 uniform float seed = 1.0;
 uniform float wobble : hint_range(0.0, 0.4) = 0.2;
+// Near the camera a shaft is a wall of stripes in the lens: it fades out inside this distance (m, x: gone, y: full).
+uniform vec2 near_fade_m = vec2(4.0, 9.0);
 uniform int strokes : hint_range(3, 12) = 9;
+
+varying float cam_dist;
 
 void vertex() {
 	vec3 origin = MODEL_MATRIX[3].xyz;
@@ -19,6 +23,7 @@ void vertex() {
 	to_cam = normalize(to_cam + vec3(0.0001, 0.0, 0.0));
 	vec3 right = vec3(to_cam.z, 0.0, -to_cam.x);
 	vec3 world = origin + right * VERTEX.x + vec3(0.0, 1.0, 0.0) * VERTEX.y;
+	cam_dist = length(world - cam);
 	POSITION = PROJECTION_MATRIX * VIEW_MATRIX * vec4(world, 1.0);
 }
 
@@ -56,7 +61,7 @@ void fragment() {
 	float along = 1.0 - smoothstep(len * 0.35, len, v);
 	float inside = step(abs(a + rag), 1.0);
 	float head = smoothstep(0.0, 0.08, v);
-	float a_out = side * bristle * along * opacity * inside * head;
+	float a_out = side * bristle * along * opacity * inside * head * smoothstep(near_fade_m.x, near_fade_m.y, cam_dist);
 	ALBEDO = shaft_color * a_out * energy;
 	ALPHA = 1.0;
 }
