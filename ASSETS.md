@@ -553,3 +553,18 @@ The video's palette LUTs (docs/video/PLAN.md Plan A part 5). Made by `tools/vide
 | Street at night palette LUT | `assets/video/ink/lut_street_night.png` | `palette_lut.py`: ref 2 at 42.0 s against our `street_wide` render | generated, project | 30 KB |
 | Roofs at dusk palette LUT | `assets/video/ink/lut_roofs_dusk.png` | `palette_lut.py`: ref 2 at 50.5 s against our `roof_silhouette` render | generated, project | 28 KB |
 | Boss roof palette LUT | `assets/video/ink/lut_boss_fire.png` | `palette_lut.py`: ref 1 at 5.3 s against our `ox_closeup` render | generated, project | 32 KB |
+
+## Video: LD-ASSET (Phase 1)
+
+The upgraded cast of the cinematic trailer (docs/video/P1.md): the Punk, Ox Pellerin and the player's first-person arms. Made from the game's own finished meshes (`assets/source/characters/<name>/work/<name>.blend`), no new generated art and no paid service. `tools/video/make_art.sh` re-makes everything: `blender_asset.py` (headless Blender: the surface baked into the UV2 layout and the GLB with the face's normals transferred from an ellipsoid proxy), `art_paint.py` (the painted albedo and the ink mask) and `art_features.py` (the drawn features). The painting values and Claude's hand-drawn features are in `assets/source/video_art/<name>/` (`paint.json`, `features.svg`, and `features_uv.svg`, the drawing projected into the layout). All routed to LFS (PNG, GLB).
+
+| Asset | Path | Source / service | License | Notes |
+| --- | --- | --- | --- | --- |
+| Punk video mesh | `assets/video/characters/punk/punk_video.glb` | `blender_asset.py` on the Punk's work file | Original, project-owned | 1.0 MB. The game's mesh with the head's normals from an ellipsoid proxy; same 23 bones and weights. |
+| Punk painted albedo | `assets/video/characters/punk/punk_paint.png` | `art_paint.py` (palette swatches painted to 3 values, hard-edged) | Original | 2048x2048 RGB, 2.6 MB, UV2 layout. |
+| Punk ink mask | `assets/video/characters/punk/punk_ink.png` | `art_paint.py`: creases, material borders, `features.svg` | Original | 4096x4096 grey, 0.35 MB, UV2 layout. |
+| Ox video mesh | `assets/video/characters/boss/boss_video.glb` | `blender_asset.py` on Ox's work file | Original | 1.8 MB, as the Punk's. |
+| Ox painted albedo | `assets/video/characters/boss/boss_paint.png` | `art_paint.py` | Original | 2048x2048, 2.2 MB. |
+| Ox ink mask | `assets/video/characters/boss/boss_ink.png` | `art_paint.py`: creases, borders, the face drawn in `features.svg` | Original | 4096x4096, 0.5 MB. |
+| Player painted albedo | `assets/video/characters/player/player_paint.png` | `art_paint.py` | Original | 2048x2048, 2.8 MB. The player's mesh is the game's own (no face in first person), so there is no video GLB. |
+| Player ink mask | `assets/video/characters/player/player_ink.png` | `art_paint.py`: creases, borders, the wraps' spiral lines and the arms' muscle lines | Original | 4096x4096, 0.7 MB. |

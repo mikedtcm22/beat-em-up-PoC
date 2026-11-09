@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-140 -150 280 300">
+<!-- The Street Punk's head, drawn by Claude over tools/video/blender_view.py's front render (punk, centre -0.016 / 1.68 m,
+     3.5 px/mm): the cap's seams, brim and patch, the frames of the shades, the nose and the folds under the mask cloth, hatching
+     on the shadow side. Millimetres, x to the viewer's right, y down; see tools/video/art_features.py. -->
+<g data-view="front" data-origin="-0.016 1.68" data-px="5">
+	<!-- the cap: panel seams from the button, the brim's edge and its stitching, the patch on the front -->
+	<g stroke-width="1.3" opacity="0.7" data-taper="0.15,0.3" data-wobble="0.4">
+		<path id="seam_1" d="M -4 -142 C -14 -110, -28 -70, -36 -24"/>
+		<path id="seam_2" d="M 6 -142 C 24 -110, 46 -70, 66 -30"/>
+		<path id="seam_3" d="M -2 -144 C -40 -118, -78 -80, -104 -30"/>
+		<path id="seam_4" d="M 8 -144 C 50 -120, 90 -86, 112 -44"/>
+	</g>
+	<g stroke-width="2.4" opacity="0.95" data-taper="0.05,0.15" data-wobble="0.35">
+		<path id="brim_edge" d="M -138 54 C -102 32, -60 16, -10 11 C 32 8, 74 12, 104 26"/>
+	</g>
+	<g stroke-width="1.0" opacity="0.55" data-taper="0.1,0.2" data-wobble="0.35">
+		<path id="brim_stitch" d="M -124 40 C -92 22, -56 8, -8 3 C 30 0, 68 4, 98 14"/>
+		<path id="brim_under" d="M -96 58 C -60 40, -30 30, 10 27"/>
+	</g>
+	<g stroke-width="1.5" opacity="0.85" data-taper="0.1,0.1" data-wobble="0.3">
+		<path id="patch" d="M -16 -50 C 0 -64, 40 -64, 58 -52 C 62 -40, 56 -30, 40 -26 C 14 -24, -8 -28, -18 -38 Z"/>
+	</g>
+	<g stroke-width="1.8" opacity="0.8" data-taper="0.2,0.2" data-wobble="0.3">
+		<path id="patch_mark_1" d="M 4 -48 C 14 -54, 26 -54, 34 -46"/>
+		<path id="patch_mark_2" d="M 10 -38 C 20 -42, 32 -42, 42 -38"/>
+	</g>
+	<!-- the shades: both frames, the bridge, the brow line above them -->
+	<g stroke-width="1.7" opacity="0.95" data-taper="0.05,0.05" data-wobble="0.25">
+		<path id="lens_l" d="M -64 18 C -60 12, -22 10, -8 16 C -6 26, -10 36, -24 38 C -44 40, -60 36, -66 28 Z"/>
+		<path id="lens_r" d="M 10 16 C 26 10, 62 12, 72 20 C 72 30, 66 38, 52 40 C 32 40, 14 36, 10 26 Z"/>
+	</g>
+	<g stroke-width="2.0" opacity="0.9" data-taper="0.1,0.1" data-wobble="0.2">
+		<path id="bridge" d="M -9 18 C -4 14, 4 14, 10 18"/>
+		<path id="temple_l" d="M -66 22 C -80 22, -92 26, -104 32"/>
+		<path id="temple_r" d="M 72 24 C 86 24, 98 28, 110 34"/>
+	</g>
+	<!-- the mask cloth: the nose under it, the mouth, the fold of the jaw -->
+	<g stroke-width="1.3" opacity="0.65" data-taper="0.25,0.3" data-wobble="0.4">
+		<path id="nose_l" d="M -8 42 C -10 56, -14 70, -24 84"/>
+		<path id="nose_r" d="M 14 42 C 14 56, 20 70, 30 82"/>
+		<path id="mouth" d="M -50 92 C -34 100, -14 102, 4 100 C 24 100, 44 94, 60 84"/>
+		<path id="jaw" d="M -68 76 C -62 100, -40 116, -4 120 C 30 122, 56 110, 70 90"/>
+		<path id="fold_a" d="M -46 56 C -40 62, -34 70, -32 80"/>
+		<path id="fold_b" d="M 44 52 C 50 62, 54 70, 52 80"/>
+	</g>
+	<g stroke-width="0.95" opacity="0.55" data-taper="0.35,0.4" data-wobble="0.25">
+		<path id="h0" d="M 62.4 92.6 Q 59.9 96.6 56.9 99.8"/>
+		<path id="h1" d="M 31.5 80.5 Q 29.5 84.3 26.8 89.0"/>
+		<path id="h2" d="M 54.4 70.8 Q 52.1 74.0 50.9 77.7"/>
+		<path id="h3" d="M 44.5 100.3 Q 43.7 104.2 42.2 108.8"/>
+		<path id="h4" d="M 62.1 65.6 Q 60.4 67.3 59.2 69.7"/>
+		<path id="h5" d="M 81.1 98.4 Q 79.1 101.1 77.1 103.5"/>
+		<path id="h6" d="M 40.6 101.4 Q 38.4 104.5 35.4 108.1"/>
+		<path id="h7" d="M 48.8 67.3 Q 47.9 70.2 47.5 72.9"/>
+		<path id="h8" d="M 30.2 89.8 Q 29.4 93.0 27.9 96.1"/>
+		<path id="h9" d="M 46.4 81.2 Q 46.0 84.9 44.6 89.5"/>
+		<path id="h10" d="M 69.0 97.2 Q 67.5 99.4 66.2 101.4"/>
+		<path id="h11" d="M 30.5 62.1 Q 28.4 64.6 26.9 66.7"/>
+		<path id="h12" d="M -32.3 98.6 Q -30.9 102.0 -29.5 104.7"/>
+		<path id="h13" d="M -58.5 94.0 Q -58.2 98.8 -57.0 102.8"/>
+		<path id="h14" d="M -59.1 84.2 Q -58.7 88.6 -57.9 92.1"/>
+		<path id="h15" d="M -44.6 83.5 Q -43.4 86.0 -41.4 89.3"/>
+		<path id="h16" d="M -39.9 99.9 Q -37.9 102.4 -36.8 104.8"/>
+		<path id="h17" d="M -49.0 81.7 Q -48.3 85.5 -47.5 89.5"/>
+		<path id="h18" d="M 62.5 -36.7 Q 61.2 -33.3 59.3 -29.1"/>
+		<path id="h19" d="M 92.2 -34.0 Q 88.9 -29.0 86.4 -23.8"/>
+		<path id="h20" d="M 66.6 -42.4 Q 65.3 -37.5 63.0 -33.3"/>
+		<path id="h21" d="M 102.9 -73.7 Q 100.3 -69.1 97.8 -64.1"/>
+		<path id="h22" d="M 77.8 -98.3 Q 75.3 -93.9 71.9 -89.8"/>
+		<path id="h23" d="M 82.0 -82.9 Q 81.0 -78.5 79.5 -74.8"/>
+		<path id="h24" d="M 75.9 -47.1 Q 73.2 -41.2 70.1 -35.9"/>
+		<path id="h25" d="M 76.0 -53.6 Q 74.4 -49.0 72.3 -44.7"/>
+		<path id="h26" d="M 72.9 -34.4 Q 70.0 -28.9 68.0 -23.5"/>
+	</g>
+</g>
+</svg>

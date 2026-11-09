@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-140 -150 280 300">
+<!-- Ox Pellerin's face, drawn by Claude over tools/video/blender_view.py's front render (boss, centre 0 / 1.62 m, 3.5 px/mm).
+     Units are millimetres, x to the viewer's right, y down, 0 at the origin below. tools/video/art_features.py projects it
+     onto the mesh and bakes it into boss_ink.png; features_uv.svg is the result in the UV2 layout. Heavy lines on the shadow
+     side, thin on the lit side, hatching on the jaw (ref 1 at 0.9 s), nothing symmetrical. -->
+<g data-view="front" data-origin="0 1.62" data-px="5">
+	<!-- the brow ridge: two heavy strokes that frown toward the nose, a lighter stroke over each -->
+	<g stroke-width="2.6" opacity="0.95" data-taper="0.12,0.4" data-wobble="0.3">
+		<path id="brow_l" d="M -50 -26 C -42 -33, -28 -35, -12 -28"/>
+		<path id="brow_r" d="M 10 -28 C 22 -35, 38 -34, 52 -25"/>
+	</g>
+	<g stroke-width="1.1" opacity="0.6" data-taper="0.3,0.3" data-wobble="0.35">
+		<path id="brow_l2" d="M -46 -34 C -38 -39, -28 -40, -18 -36"/>
+		<path id="brow_r2" d="M 16 -36 C 26 -40, 38 -39, 46 -33"/>
+		<path id="furrow_1" d="M -4 -38 C -5 -33, -5 -29, -4 -25"/>
+		<path id="furrow_2" d="M 5 -38 C 6 -33, 5 -30, 4 -26"/>
+	</g>
+	<!-- the eyes: a heavy upper lid, a lighter lower lid, the lid's crease, the dark of the iris -->
+	<g stroke-width="1.7" opacity="0.95" data-taper="0.1,0.3" data-wobble="0.2">
+		<path id="lid_l" d="M -48 -17 C -42 -23, -30 -24, -18 -17"/>
+		<path id="lid_r" d="M 14 -17 C 22 -24, 36 -24, 46 -18"/>
+	</g>
+	<g stroke-width="1.1" opacity="0.7" data-taper="0.3,0.3" data-wobble="0.2">
+		<path id="low_l" d="M -43 -13 C -36 -10, -27 -10, -21 -13"/>
+		<path id="low_r" d="M 18 -13 C 25 -10, 34 -10, 41 -13"/>
+		<path id="crease_l" d="M -45 -27 C -37 -30, -28 -29, -21 -24"/>
+		<path id="crease_r" d="M 17 -24 C 26 -29, 35 -30, 43 -26"/>
+		<path id="bag_l" d="M -40 -6 C -34 -2, -27 -2, -22 -5"/>
+		<path id="bag_r" d="M 19 -5 C 25 -2, 33 -2, 38 -6"/>
+	</g>
+	<path id="iris_l" fill="ink" fill-opacity="0.95" opacity="1" d="M -36 -19 C -33 -22, -28 -22, -26 -19 C -28 -15, -33 -15, -36 -19 Z"/>
+	<path id="iris_r" fill="ink" fill-opacity="0.95" opacity="1" d="M 22 -19 C 25 -22, 30 -22, 32 -19 C 30 -15, 25 -15, 22 -19 Z"/>
+	<path id="socket_l" fill="ink" fill-opacity="0.3" opacity="1" d="M -50 -24 C -40 -30, -28 -30, -16 -22 C -26 -18, -40 -16, -50 -17 Z"/>
+	<path id="socket_r" fill="ink" fill-opacity="0.3" opacity="1" d="M 12 -23 C 24 -30, 38 -30, 50 -24 C 42 -17, 28 -17, 12 -20 Z"/>
+	<!-- the nose: the two lines of the bridge, the wings, the nostrils, the shadow under the tip -->
+	<g stroke-width="1.3" opacity="0.8" data-taper="0.25,0.25" data-wobble="0.3">
+		<path id="bridge_l" d="M -9 -24 C -11 -12, -12 2, -17 14"/>
+		<path id="bridge_r" d="M 8 -24 C 10 -12, 12 2, 17 14"/>
+		<path id="wing_l" d="M -27 12 C -29 21, -20 29, -9 28"/>
+		<path id="wing_r" d="M 26 12 C 28 21, 19 29, 8 28"/>
+	</g>
+	<path id="nostril_l" fill="ink" fill-opacity="0.95" opacity="1" d="M -13 25 C -10 27, -6 27, -4 25 C -7 23, -11 23, -13 25 Z"/>
+	<path id="nostril_r" fill="ink" fill-opacity="0.95" opacity="1" d="M 4 25 C 6 27, 10 27, 13 25 C 11 23, 7 23, 4 25 Z"/>
+	<path id="nose_shadow" stroke-width="1.5" opacity="0.7" data-taper="0.3,0.3" d="M -9 32 C -4 35, 4 35, 9 32"/>
+	<!-- the mouth and its folds -->
+	<g stroke-width="2.2" opacity="0.95" data-taper="0.1,0.12" data-wobble="0.3">
+		<path id="mouth" d="M -26 60 C -17 56, -8 59, 0 61 C 9 60, 17 56, 27 59"/>
+	</g>
+	<g stroke-width="1.1" opacity="0.65" data-taper="0.3,0.3" data-wobble="0.3">
+		<path id="lip_low" d="M -15 70 C -7 73, 7 73, 15 70"/>
+		<path id="corner_l" d="M -29 56 C -31 59, -31 62, -28 65"/>
+		<path id="corner_r" d="M 30 55 C 32 58, 32 62, 29 64"/>
+		<path id="fold_l" d="M -30 30 C -37 42, -38 54, -33 66"/>
+		<path id="fold_r" d="M 30 30 C 37 42, 38 54, 34 66"/>
+		<path id="chin_dimple" d="M -7 82 C 0 85, 7 83, 8 81"/>
+		<path id="cheek_l" d="M -52 18 C -48 28, -46 40, -46 52"/>
+		<path id="cheek_r" d="M 54 18 C 50 28, 48 40, 49 52"/>
+	</g>
+	<!-- hatching: the stubble of the jaw and the hollow of the cheeks (short strokes, none alike) -->
+	<g stroke-width="0.95" opacity="0.55" data-taper="0.35,0.4" data-wobble="0.25">
+		<path id="h0" d="M -39.3 80.6 Q -37.9 84.5 -36.4 88.2"/>
+		<path id="h1" d="M -46.8 79.3 Q -46.4 82.6 -45.4 86.2"/>
+		<path id="h2" d="M -49.5 87.1 Q -47.1 90.5 -45.5 93.2"/>
+		<path id="h3" d="M -33.7 82.0 Q -32.2 83.8 -30.9 86.3"/>
+		<path id="h4" d="M -46.7 72.3 Q -45.9 74.7 -45.0 76.6"/>
+		<path id="h5" d="M -37.5 82.6 Q -36.6 85.6 -35.7 88.9"/>
+		<path id="h6" d="M -24.1 91.9 Q -23.3 95.5 -22.1 99.5"/>
+		<path id="h7" d="M -43.9 67.8 Q -42.2 71.2 -41.0 74.8"/>
+		<path id="h8" d="M -25.2 88.0 Q -23.8 90.0 -23.1 92.0"/>
+		<path id="h9" d="M 21.2 85.2 Q 21.3 87.4 21.0 89.9"/>
+		<path id="h10" d="M -16.3 84.0 Q -17.0 87.9 -17.1 92.3"/>
+		<path id="h11" d="M -15.8 79.1 Q -15.0 82.8 -14.3 86.6"/>
+		<path id="h12" d="M -12.0 91.2 Q -12.4 93.6 -12.2 96.2"/>
+		<path id="h13" d="M -11.1 82.9 Q -11.7 87.3 -12.0 91.2"/>
+		<path id="h14" d="M -11.2 85.1 Q -11.6 89.4 -11.4 93.0"/>
+		<path id="h15" d="M 29.5 68.7 Q 28.4 72.0 27.6 76.0"/>
+		<path id="h16" d="M 26.3 77.2 Q 25.2 79.6 24.2 82.2"/>
+		<path id="h17" d="M 48.9 74.6 Q 47.0 77.2 45.5 80.4"/>
+		<path id="h18" d="M 47.6 83.3 Q 47.3 86.3 46.5 88.7"/>
+		<path id="h19" d="M 29.1 86.7 Q 27.5 90.1 26.0 94.1"/>
+		<path id="h20" d="M 25.0 87.0 Q 23.6 89.7 22.6 91.9"/>
+		<path id="h21" d="M 39.5 69.6 Q 38.0 71.7 37.2 74.3"/>
+		<path id="h22" d="M 38.5 84.2 Q 38.0 87.3 36.9 90.9"/>
+		<path id="h23" d="M 24.4 69.0 Q 23.8 72.0 23.6 75.2"/>
+		<path id="h24" d="M -42.8 -1.1 Q -41.2 2.0 -40.4 4.9"/>
+		<path id="h25" d="M -40.9 8.9 Q -39.6 11.3 -37.4 13.2"/>
+		<path id="h26" d="M -40.8 17.2 Q -39.6 19.6 -38.5 21.7"/>
+		<path id="h27" d="M -46.9 18.0 Q -45.4 20.6 -44.3 22.6"/>
+		<path id="h28" d="M 51.3 13.5 Q 48.6 16.8 46.2 19.9"/>
+		<path id="h29" d="M 54.2 17.2 Q 52.6 19.9 50.3 22.6"/>
+		<path id="h30" d="M 49.2 6.4 Q 47.0 9.6 45.3 12.6"/>
+		<path id="h31" d="M 55.9 17.4 Q 54.2 20.9 52.2 24.4"/>
+	</g>
+</g>
+</svg>
