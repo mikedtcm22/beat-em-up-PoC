@@ -6,6 +6,26 @@ The cinematic gameplay video's live status, kept by the video session ("Beat-em-
 
 ## Status (newest first)
 
+### 2026-11-09 09:45 CST: resumed after the 08:50 reset; the design panel ran; round 5 running (R5-PAINT, R5-SHOTS, R5-ART, R5-INK)
+- **Resumed at 09:00:** the 5-hour window is at 0%, and weekly at 64% (it resets 2026-11-10 15:59 CST). The watcher and the relay restarted. No new DM.
+- **The design panel** (`wf_38255729-024`, 445k tokens) agreed with itself across all three lenses. Its result is in its journal; the summary is in P1.md, "What round 4 found".
+  - **Gemini plates own the background:** painted from each hero frame's own camera, from a de-textured blockout (our current look anchors Gemini to the grids), with a "trace, don't redesign" prompt. They're projected with a depth test, and plate pixels are never brushed or inked.
+  - **Staging:** plated shots move by pan, tilt and zoom. The hero frames are staged for their plates.
+  - **Actors:** back-lit silhouettes on the painting; the first-person fist a dark, cropped foreground mass, with the off-hand hidden; one line source per silhouette; light wrap, actor fog and a faint glow.
+  - **Its forecast:** the wides can plausibly flip; the first-person street and the boss close-up are unlikely to without Plan B.
+  - **Its middle path,** for Game-boy only after round 5 shows the wides flipping: full-frame Gemini paint-overs of 2-3 held hero frames, characters included. That's outside the $2 background approval.
+- **Round 5's packages** are in [P1.md](P1.md), from "What round 4 found" on, with [args-p1f.json](args-p1f.json). The Workflow `build.js` is run `wf_67882462-8a5` (task `wmkorx2j5`), two at a time:
+  - **R5-PAINT** (`mv/r5-paint`; it also owns the world's files this round, and the `plate.tres` loading in `cine_director.gd`): the capture, the blockout, the Gemini jobs, registration, the plate quad, the plate piece, and a motion check with an unpainted capture. The pilot is two plates for the stills street_wide and roof_silhouette, **at most four images (about $0.56)**. The hand-off tool `tools/video/make_plate.sh` makes the hero plates.
+  - **R5-SHOTS** (`mv/r5-shots`): seven hero frames in `video/shots/hero_frames.json` in the trailer's proportions; t01 a tilt-down to a low three-quarter street wide; the roofs low with the figure on the sun; the boss low against the fire with no facades; t14 multiplane; the first-person view at 55-60 degrees with the fist cropped and the off-hand hidden.
+  - **R5-ART** (`mv/r5-art`): back-lit silhouette actors (flat dark fill, a noise-broken rim from the light behind, faces in brim or hood shadow), the first-person arm as a dark mass with a warm rim, boxing-glove shapes for Ox and the Punk.
+  - **R5-INK** (`mv/r5-ink`): the hull owns character silhouettes (the doubled outline), environment screen lines off, light wrap, actor fog, a diffusion glow, and the rear warning as a burst.
+- **Next, after the merge:**
+  1. the hero plates for `hero_frames.json` with `make_plate.sh`, within the rest of the $2 (about 10 images; the ledger keeps the total at most $4.52);
+  2. render the hero frames at 2560×1440 and the trailer at 720p;
+  3. the blind check on the hero frames, logging which tells each judge cites per frame;
+  4. DM Game-boy.
+
+
 ### 2026-11-09 06:05 CST: round 4's blind check (no movement) DM'd; round 5 planned; handoff at 88%, resume at the 08:50 reset
 - **The blind check** (`wf_be1d93d6-8ac`, three Opus judges, 295k tokens, about 12 points): all 8 references drawn (p_3d 0.04-0.16), all 7 of ours 3D at round 3's confidence: street_wide 0.97, fp_kicker_lamp 0.95, fp_punk 0.95, moving_punk 0.95, roof_silhouette 0.91, ox_closeup 0.89, ox_low 0.88. Round 4's code changes are visible in the frames, but they did not move a judge who is looking for 3D. The full verdicts are in the workflow's journal (`subagents/workflows/wf_be1d93d6-8ac/journal.jsonl` under this session's project folder).
 - **What the judges point at now** (mostly the 3D game itself, not the shading):
