@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="CineShot" load_steps=20 format=3]
+[gd_resource type="Resource" script_class="CineShot" load_steps=22 format=3]
 
 [ext_resource type="Script" path="res://video/cine/cine_shot.gd" id="1_shot"]
 [ext_resource type="Script" path="res://video/stage/still_actor.gd" id="2_actor"]
@@ -136,7 +136,7 @@ lead_ticks = 8
 button = &"P"
 hold_ticks = 2
 stick = Vector2(0, 0)
-degrees = 8
+degrees = 22
 seconds = 0.4
 time_scale = 0.3
 attack_index = 0
@@ -216,6 +216,24 @@ label = &"ox_down"
 
 [sub_resource type="Resource" id="Beat_11"]
 script = ExtResource("3_beat")
+at_s = 0.1
+relative = true
+kind = 5
+trigger = 0
+timeout_s = 3
+actor = 0
+lead_ticks = 8
+button = &"P"
+hold_ticks = 2
+stick = Vector2(0, 0)
+degrees = -10
+seconds = 0.4
+time_scale = 0.3
+attack_index = 0
+label = &""
+
+[sub_resource type="Resource" id="Beat_12"]
+script = ExtResource("3_beat")
 at_s = 0.8
 relative = true
 kind = 3
@@ -232,7 +250,7 @@ time_scale = 0.3
 attack_index = 0
 label = &""
 
-[sub_resource type="Resource" id="Beat_12"]
+[sub_resource type="Resource" id="Beat_13"]
 script = ExtResource("3_beat")
 at_s = 0.2
 relative = true
@@ -250,7 +268,25 @@ time_scale = 0.3
 attack_index = 0
 label = &""
 
-[sub_resource type="Resource" id="Beat_13"]
+[sub_resource type="Resource" id="Beat_14"]
+script = ExtResource("3_beat")
+at_s = 0
+relative = true
+kind = 5
+trigger = 0
+timeout_s = 3
+actor = 0
+lead_ticks = 8
+button = &"P"
+hold_ticks = 2
+stick = Vector2(0, 0)
+degrees = 16
+seconds = 0.5
+time_scale = 0.3
+attack_index = 0
+label = &""
+
+[sub_resource type="Resource" id="Beat_15"]
 script = ExtResource("3_beat")
 at_s = 0
 relative = true
@@ -268,7 +304,7 @@ time_scale = 0.3
 attack_index = 0
 label = &""
 
-[sub_resource type="Resource" id="Beat_14"]
+[sub_resource type="Resource" id="Beat_16"]
 script = ExtResource("3_beat")
 at_s = 0.6
 relative = true
@@ -304,4 +340,4 @@ warmup_ticks = 40
 window_from_s = 0
 window_to_s = 8.1
 rng_seed = 1
-beats = Array[ExtResource("3_beat")]([SubResource("Beat_0"), SubResource("Beat_1"), SubResource("Beat_2"), SubResource("Beat_3"), SubResource("Beat_4"), SubResource("Beat_5"), SubResource("Beat_6"), SubResource("Beat_7"), SubResource("Beat_8"), SubResource("Beat_9"), SubResource("Beat_10"), SubResource("Beat_11"), SubResource("Beat_12"), SubResource("Beat_13"), SubResource("Beat_14")])
+beats = Array[ExtResource("3_beat")]([SubResource("Beat_0"), SubResource("Beat_1"), SubResource("Beat_2"), SubResource("Beat_3"), SubResource("Beat_4"), SubResource("Beat_5"), SubResource("Beat_6"), SubResource("Beat_7"), SubResource("Beat_8"), SubResource("Beat_9"), SubResource("Beat_10"), SubResource("Beat_11"), SubResource("Beat_12"), SubResource("Beat_13"), SubResource("Beat_14"), SubResource("Beat_15"), SubResource("Beat_16")])
