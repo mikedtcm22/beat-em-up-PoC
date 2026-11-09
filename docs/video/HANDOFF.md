@@ -26,7 +26,7 @@ The cinematic gameplay video's live status, kept by the video session ("Beat-em-
 - **The lead's own changes:**
   - `shoot.sh` now also fails on a `Parse Error` (LD-WORLD3's request).
   - P1.md § LD-INK2 gained item 6, wave A's requests: the lens-flare star, the Kicker's silhouette (with `roofs_dusk/art.tres`'s face values), the arm's line, the rear warning, determinism, and checks on t07 and t10.
-- **Next:** launch wave B (`build.js` with [args-p1d.json](args-p1d.json), LD-INK2 alone, est 18). When it lands:
+- **Running since 00:12:** wave B, `build.js` with [args-p1d.json](args-p1d.json), LD-INK2 alone (est 18), run `wf_020e5cbf-2b7` (task `w0ozj0yeh`), on `mv/ld-ink2`. If it's cut off, launch it again with the same args; `build.js` resumes from the branch. When it lands:
   1. merge it;
   2. render the Gate 2 set with the delivery pass;
   3. the lead's look;
