@@ -16,3 +16,28 @@ rim_gain_by_id = {
 hatch_floor_by_id = {
 "player": 1.0
 }
+silhouette_ids = PackedStringArray("punk", "boss", "kicker", "bruiser", "thug", "player")
+sil_fill = Color(0.07, 0.04, 0.07, 1)
+sil_fill_top = Color(0.11, 0.06, 0.09, 1)
+sil_keep = 0.25
+sil_value = 0.3
+sil_rim_strength = 1.7
+sil_rim_cut = 1.0
+sil_rim_top = 0.3
+sil_rim_fallback = Color(1, 0.72, 0.4, 1)
+sil_moon_strength = 0.0
+sil_face_lit = 0.3
+sil_close_lit = 0.4
+sil_by_id = {
+"player": {
+"sil_fill": Color(0.09, 0.05, 0.07, 1),
+"sil_fill_top": Color(0.14, 0.08, 0.1, 1),
+"sil_keep": 0.4,
+"sil_value": 0.22,
+"sil_rim_strength": 1.8,
+"sil_rim_facing": 1.0,
+"sil_rim_face_cut": 0.8,
+"sil_face_lit": 0.0,
+"sil_close_lit": 0.0
+}
+}

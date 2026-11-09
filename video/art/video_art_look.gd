@@ -64,6 +64,61 @@ extends VideoLookPiece
 ## A multiplier on the key-tinted rim of one art id (id -> multiplier): the arm's warm rim from the lamp.
 @export var rim_gain_by_id: Dictionary = {}
 
+@export_group("Round 5 (R5-ART)")
+## The back-lit silhouette (docs/video/P1.md, R5-ART): the art ids drawn as one flat dark fill with a hard rim from the light behind the figure
+## (cine_toon's `sil_*` uniforms). Empty = off, as in the rounds before. The first-person arm ("player") is one of them: a dark foreground mass.
+@export var silhouette_ids: PackedStringArray = PackedStringArray()
+@export_subgroup("Fill")
+## The body's fill and the lighter tone of its top planes, the share of the painted albedo (its drawn lines and local colour) kept in the fill, and the
+## albedo's value multiplier. Per location: they sit with the painting's dark mass.
+@export var sil_fill: Color = Color(0.035, 0.04, 0.08)
+@export var sil_fill_top: Color = Color(0.06, 0.07, 0.13)
+@export_range(0.0, 1.0) var sil_keep: float = 0.3
+@export_range(0.0, 1.0) var sil_value: float = 0.3
+## The cut on n.up above which the lighter top tone starts (1 = never, -1 = everywhere).
+@export_range(-1.0, 1.0) var sil_top_cut: float = 0.45
+@export_subgroup("Rim")
+## The hard rim from the light behind the figure, in that light's own colour times `sil_rim_tint`: its strength, the cut on the rim value, the share the
+## key's facing adds, the extra on the top planes, and the edge's noise.
+@export_range(0.0, 3.0) var sil_rim_strength: float = 1.4
+@export_range(0.3, 1.5) var sil_rim_cut: float = 1.0
+@export_range(0.0, 1.0) var sil_rim_key: float = 0.5
+@export_range(0.0, 1.0) var sil_rim_top: float = 0.5
+## 1 = the rim is the surface facing the light (n.l above `sil_rim_face_cut`), for a form foreshortened toward the lens (the first-person arm); 0 = the silhouette's edge.
+@export_range(0.0, 1.0) var sil_rim_facing: float = 0.0
+@export_range(0.3, 1.2) var sil_rim_face_cut: float = 0.88
+## The band's width on n.l: the rim is a thin contour of the lit shape, not the whole lit shape.
+@export_range(0.005, 0.5) var sil_rim_face_band: float = 0.06
+@export_range(0.0, 0.5) var sil_rim_wobble: float = 0.16
+@export var sil_rim_tint: Color = Color(1.0, 1.0, 1.0)
+## The colour of the rim when no light is behind the figure (the key colour of the ink piece is not read here).
+@export var sil_rim_fallback: Color = Color(1.0, 0.6, 0.24)
+## The thin cool rim from the opposite side (the moon at night; 0 = none), its colour and its cut.
+@export_range(0.0, 3.0) var sil_moon_strength: float = 0.0
+@export var sil_moon_color: Color = Color(0.35, 0.5, 0.95)
+@export_range(0.3, 1.5) var sil_moon_cut: float = 1.1
+@export_subgroup("Faces and hands")
+## The face's lit share below the brim line, and the brim line's height over the head bone (metres): eyes and above are in the cap's or the hood's shadow.
+@export_range(0.0, 1.5) var sil_face_lit: float = 0.35
+@export var sil_brim_dy: float = 0.1
+## The lit band near the lens (hands, gloves, a face in a close-up): strength, the cut on n.key, how far it reaches.
+@export_range(0.0, 1.0) var sil_close_lit: float = 0.0
+@export_range(0.3, 1.0) var sil_close_cut: float = 0.72
+@export var sil_close_dist: Vector2 = Vector2(1.2, 2.6)
+## Overrides of any of the above for one art id (id -> {property name: value}), for example the arm's own fill and rim.
+@export var sil_by_id: Dictionary = {}
+
+
+## Whether art `id` is drawn as a back-lit silhouette.
+func is_silhouette(id: StringName) -> bool:
+	return silhouette_ids.has(String(id))
+
+
+## The value of silhouette property `key` for art `id`: its entry in `sil_by_id`, else this look's own.
+func sil_value_of(id: StringName, key: StringName) -> Variant:
+	var by_id: Dictionary = sil_by_id.get(String(id), {})
+	return by_id.get(String(key), get(key))
+
 
 ## The face zone's fill of art `id`: its entry in `face_fill_by_id`, else `face_fill`.
 func face_fill_of(id: StringName) -> float:

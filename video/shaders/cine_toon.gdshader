@@ -20,6 +20,11 @@ shader_type spatial;
 //  - HATCHING from the shade map (G: tapering strokes laid along the form; B: the depth of shadow a stroke needs), only in the
 //    shadow band, switched on by hatch_on (the ink piece's close-up fade) times hatch_gain. The ink piece's hatch_tex is unused now.
 //  - GLINTS only where the atlas says glossy (the game's per-swatch gloss), kept as the game does it.
+//  - R5-ART, THE BACK-LIT SILHOUETTE (sil_on; video/art/art_rig.gd sets it per location and per art id): the body is one flat dark fill in two tones
+//    (the top planes a little lighter), no N.L gradient and no hatch. A hard rim from the light behind the figure (sil_light_view, found per figure),
+//    broken by noise, wider on the top planes and masked by the shadow hint. A thin cool second rim (the moon). The face keeps a small lit band under
+//    a brim line (sil_brim_y, a world height) so the upper face sits in the cap's or the hood's shadow with only the eyes' glints; and a small lit band
+//    close to the lens (hands, gloves) that fades out with the distance. The first-person arm uses the same mode with its own values.
 //  - For LD-ASSET: ink_tex (R = ink, UV2, the layout), paint_tex (painted albedo, UV2), ink_color and ink_strength.
 
 render_mode ambient_light_disabled;
@@ -117,6 +122,41 @@ uniform float hatch_gain : hint_range(0.0, 2.0) = 1.0;
 uniform float hatch_floor : hint_range(0.0, 1.0) = 0.0;
 uniform vec2 hatch_dist = vec2(1.4, 3.0);
 uniform float art_rim_gain : hint_range(0.0, 2.0) = 1.0;
+// --- R5-ART: the back-lit silhouette (video/look/<location>/art.tres; the rig writes them) ---
+uniform float sil_on : hint_range(0.0, 1.0) = 0.0;
+uniform vec3 sil_fill : source_color = vec3(0.04, 0.04, 0.08);
+uniform vec3 sil_fill_top : source_color = vec3(0.07, 0.07, 0.13);
+// The share of the painted albedo (its drawn lines, its local colour) that stays in the fill, and the albedo's value multiplier.
+uniform float sil_keep : hint_range(0.0, 1.0) = 0.25;
+uniform float sil_value : hint_range(0.0, 1.0) = 0.25;
+// The sky side (view space) and the cut on n.up above which the lighter top tone starts.
+uniform vec3 sil_up_view = vec3(0.0, 1.0, 0.0);
+uniform float sil_top_cut : hint_range(-1.0, 1.0) = 0.45;
+// The light behind the figure (view space, to the light) and its colour, and the rim: strength, the cut on the rim value, the width the
+// key's facing adds, the extra on top planes, the share of the shadow hint that masks it.
+uniform vec3 sil_light_view = vec3(0.0, 0.5, -0.8);
+uniform vec3 sil_rim_color : source_color = vec3(1.0, 0.6, 0.24);
+uniform float sil_rim_strength : hint_range(0.0, 3.0) = 1.4;
+uniform float sil_rim_cut : hint_range(0.3, 1.5) = 1.0;
+uniform float sil_rim_key : hint_range(0.0, 1.0) = 0.5;
+uniform float sil_rim_top : hint_range(0.0, 1.0) = 0.5;
+uniform float sil_rim_facing : hint_range(0.0, 1.0) = 0.0;
+uniform float sil_rim_face_cut : hint_range(0.3, 1.2) = 0.88;
+uniform float sil_rim_face_band : hint_range(0.005, 0.5) = 0.06;
+uniform float sil_rim_wobble : hint_range(0.0, 0.5) = 0.16;
+uniform float sil_rim_hint_mask : hint_range(0.0, 1.0) = 0.8;
+// The thin cool rim from the opposite side (the moon at night; strength 0 = off).
+uniform vec3 sil_moon_view = vec3(0.6, 0.5, -0.4);
+uniform vec3 sil_moon_color : source_color = vec3(0.35, 0.5, 0.95);
+uniform float sil_moon_strength : hint_range(0.0, 3.0) = 0.0;
+uniform float sil_moon_cut : hint_range(0.3, 1.5) = 1.1;
+// The face: the world height of the brim (eyes and above stay in shadow), the share of the face colour below it, and the lit band
+// near the lens (hands, gloves): its strength, its cut on n.key and how far it reaches.
+uniform float sil_brim_y : hint_range(-10.0, 10.0) = 100.0;
+uniform float sil_face_lit : hint_range(0.0, 1.5) = 0.35;
+uniform float sil_close_lit : hint_range(0.0, 1.0) = 0.0;
+uniform float sil_close_cut : hint_range(0.3, 1.0) = 0.72;
+uniform vec2 sil_close_dist = vec2(1.2, 2.6);
 // LD-ASSET's textures (UV0): off until the art ships them.
 uniform sampler2D ink_tex : filter_linear_mipmap, repeat_disable;
 uniform bool use_ink_tex = false;
@@ -139,6 +179,7 @@ varying float glint_gate;
 varying float shade_hint;
 varying vec2 hatch_stroke;
 varying float lens_dist;
+varying float world_y;
 
 const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
 
@@ -253,10 +294,11 @@ void fragment() {
 	}
 	// Brush grain and the terminator's noise, both in the object's rest space.
 	float grain = vnoise(mark_pos * grain_scale * grain_stretch);
-	color *= 1.0 + (grain - 0.5) * 2.0 * grain_amount;
+	color *= 1.0 + (grain - 0.5) * 2.0 * grain_amount * (1.0 - sil_on);
 
 	// The shade map: the designed shadow hint, and the hatch stroke (coverage, threshold) baked along the form.
 	lens_dist = -VERTEX.z;
+	world_y = (INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).y;
 	shade_hint = 0.0;
 	hatch_stroke = vec2(0.0);
 	if (use_shade_tex) {
@@ -276,10 +318,49 @@ void fragment() {
 	float rim_edge = max(fwidth(rim_v), 0.002);
 	float rim = smoothstep(cine_rim_cut - rim_edge, cine_rim_cut + rim_edge, rim_v) * smoothstep(-0.05, 0.25, facing);
 
-	ALBEDO = color;
+	// R5-ART: the back-lit silhouette. A flat dark fill in two tones, the key's hard rim from the light behind, the moon's thin rim, the face's lit
+	// band under the brim, a small lit band near the lens. Nothing here reads the lights (light() adds nothing in this mode).
+	vec3 sil_emit = vec3(0.0);
+	if (sil_on > 0.0) {
+		vec3 body = mix(sil_fill, color * sil_value, sil_keep);
+		vec3 top_tone = mix(sil_fill_top, color * sil_value * 1.5, sil_keep);
+		float up = dot(n, normalize(sil_up_view));
+		float top_v = up + (vnoise(mark_pos * 6.0 + vec3(1.3, 7.1, 2.9)) - 0.5) * 0.35;
+		float top_edge = max(fwidth(top_v), 0.002);
+		float top = smoothstep(sil_top_cut - top_edge, sil_top_cut + top_edge, top_v);
+		vec3 tone = mix(body, top_tone, top * (1.0 - smoothstep(0.3, 0.7, shade_hint)));
+		float mask = 1.0 - sil_rim_hint_mask * smoothstep(0.3, 0.6, shade_hint);
+		float facing_l = dot(n, normalize(sil_light_view));
+		float rim_noise = (vnoise(mark_pos * 9.0 + vec3(3.1, 1.7, 5.3)) - 0.5) * 2.0 * sil_rim_wobble;
+		float rim_l = fres * (1.0 + sil_rim_key * max(facing_l, 0.0) + sil_rim_top * max(up, 0.0)) - cine_rim_curve * clamp(curve, 0.0, 0.4) + rim_noise;
+		float rim_l_edge = max(fwidth(rim_l), 0.002);
+		float rim_by_edge = smoothstep(sil_rim_cut - rim_l_edge, sil_rim_cut + rim_l_edge, rim_l) * smoothstep(0.1, 0.45, facing_l);
+		// Foreshortened forms (the first-person arm, a limb toward the lens) are at a grazing angle all round: their rim is the surface that faces the light.
+		float rim_f = facing_l + rim_noise * 0.12;
+		float rim_f_edge = max(fwidth(rim_f), 0.002);
+		float rim_by_face = smoothstep(sil_rim_face_cut - rim_f_edge, sil_rim_face_cut + rim_f_edge, rim_f)
+				* (1.0 - smoothstep(sil_rim_face_cut + sil_rim_face_band - rim_f_edge, sil_rim_face_cut + sil_rim_face_band + rim_f_edge, rim_f));
+		float sil_rim = mix(rim_by_edge, rim_by_face, sil_rim_facing) * mask;
+		sil_emit = tone + sil_rim_color * sil_rim * sil_rim_strength;
+		if (sil_moon_strength > 0.0) {
+			float facing_m = dot(n, normalize(sil_moon_view));
+			float rim_m = fres * (1.0 + 0.5 * max(facing_m, 0.0)) + rim_noise;
+			float rim_m_edge = max(fwidth(rim_m), 0.002);
+			sil_emit += sil_moon_color * sil_moon_strength * smoothstep(sil_moon_cut - rim_m_edge, sil_moon_cut + rim_m_edge, rim_m) * smoothstep(0.0, 0.3, facing_m) * mask;
+		}
+		float below_brim = 1.0 - smoothstep(sil_brim_y - 0.006, sil_brim_y + 0.006, world_y);
+		sil_emit += color * face_fill_color * face_zone * sil_face_lit * below_brim;
+		float close = 1.0 - smoothstep(sil_close_dist.x, sil_close_dist.y, lens_dist);
+		float key_face = dot(n, normalize(key_dir_view)) + (vnoise(mark_pos * 7.0 + vec3(5.1, 2.3, 8.7)) - 0.5) * 0.25;
+		float key_edge = max(fwidth(key_face), 0.002);
+		sil_emit += color * face_fill_color * sil_close_lit * close * smoothstep(sil_close_cut - key_edge, sil_close_cut + key_edge, key_face);
+	}
+	float lit_off = 1.0 - sil_on;
+
+	ALBEDO = color * lit_off;
 	ROUGHNESS = edge_tag;
-	EMISSION = flash_color * flash_amount + key_color * rim * cine_rim_strength * art_rim_gain * color
-			+ color * face_fill_color * face_zone * face_fill + catch_color * smoothstep(0.3, 0.7, catchlight) * catch_strength;
+	EMISSION = flash_color * flash_amount + lit_off * (key_color * rim * cine_rim_strength * art_rim_gain * color
+			+ color * face_fill_color * face_zone * face_fill) + sil_on * sil_emit + catch_color * smoothstep(0.3, 0.7, catchlight) * catch_strength;
 }
 
 // The shade multiplier of a surface whose light term is `lit`: the shadow (hued, never black), the mid band, the lit band.
@@ -319,20 +400,20 @@ void light() {
 	if (LIGHT_IS_DIRECTIONAL) {
 		float peak = max(light_color.r, max(light_color.g, light_color.b));
 		light_color = light_color / max(peak, 0.0001) * mix(cine_dir_floor, 1.0, peak) * step(0.0001, peak);
-		DIFFUSE_LIGHT += shade * light_color;
+		DIFFUSE_LIGHT += shade * light_color * (1.0 - sil_on);
 	} else {
 		// A lamp adds only what rises above the shadow: nothing in its shadow band.
-		DIFFUSE_LIGHT += max(shade - shadow, vec3(0.0)) * light_color;
+		DIFFUSE_LIGHT += max(shade - shadow, vec3(0.0)) * light_color * (1.0 - sil_on);
 	}
 	// One hard highlight, lit side only, on the glossy swatches.
 	float aligned = dot(NORMAL, normalize(LIGHT + VIEW));
 	float spec_edge = max(0.5 * band_soft * to_pixels * fwidth(aligned), 0.00001);
 	float spec = smoothstep(spec_cut - spec_edge, spec_cut + spec_edge, aligned);
-	SPECULAR_LIGHT += spec * spec_strength * spec_gloss * spec_gain * swatch_spec * step(0.0, ndl) * ATTENUATION * light_color;
+	SPECULAR_LIGHT += spec * spec_strength * spec_gloss * spec_gain * swatch_spec * step(0.0, ndl) * ATTENUATION * light_color * (1.0 - sil_on);
 	if (LIGHT_IS_DIRECTIONAL && swatch_glint > 0.5 && glint_strength > 0.0) {
 		float glint_aligned = dot(NORMAL, normalize(fill_dir + VIEW));
 		float glint_edge = max(0.5 * band_soft * to_pixels * fwidth(glint_aligned), 0.00001);
 		float glint = smoothstep(glint_cut - glint_edge, glint_cut + glint_edge, glint_aligned);
-		SPECULAR_LIGHT += glint * glint_gate * spec_strength * spec_gloss * glint_strength * light_color;
+		SPECULAR_LIGHT += glint * glint_gate * spec_strength * spec_gloss * glint_strength * light_color * (1.0 - 0.7 * sil_on);
 	}
 }
