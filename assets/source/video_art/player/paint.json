@@ -263,5 +263,162 @@
   ],
   "iterations": 120,
   "field_iterations": 60
+ },
+ "shape": {
+  "lower": [
+   "LeftLowerArm",
+   "RightLowerArm"
+  ],
+  "hand": [
+   "LeftHand",
+   "RightHand"
+  ],
+  "swell": 0.06,
+  "swell_at": 0.3,
+  "swell_width": 0.3,
+  "wrist": 0.78,
+  "wrist_from": 0.5,
+  "fist_at": 1.2
+ },
+ "shade": {
+  "size": 4096,
+  "blur_px": 3,
+  "cavity": 0.0,
+  "hint": [
+   {
+    "bones": [
+     "LeftShoulder",
+     "LeftUpperArm",
+     "LeftLowerArm",
+     "LeftHand"
+    ],
+    "light": [
+     -0.7,
+     0.1,
+     0.7
+    ],
+    "from": 0.35,
+    "to": -0.45,
+    "amount": 1.0
+   },
+   {
+    "bones": [
+     "RightShoulder",
+     "RightUpperArm",
+     "RightLowerArm",
+     "RightHand"
+    ],
+    "light": [
+     0.7,
+     0.1,
+     0.7
+    ],
+    "from": 0.35,
+    "to": -0.45,
+    "amount": 1.0
+   }
+  ],
+  "hatch": [
+   {
+    "bones": [
+     "LeftLowerArm",
+     "LeftHand"
+    ],
+    "cells": [
+     7,
+     14
+    ],
+    "axis": "bone:LeftLowerArm",
+    "toward": [
+     0.7,
+     -0.1,
+     -0.7
+    ],
+    "spacing_mm": 3.1500000000000004,
+    "width_mm": 1.2,
+    "seg_mm": [
+     22,
+     70
+    ],
+    "min_hint": 0.3,
+    "gap": 0.2
+   },
+   {
+    "bones": [
+     "RightLowerArm",
+     "RightHand"
+    ],
+    "cells": [
+     7,
+     14
+    ],
+    "axis": "bone:RightLowerArm",
+    "toward": [
+     -0.7,
+     -0.1,
+     -0.7
+    ],
+    "spacing_mm": 3.1500000000000004,
+    "width_mm": 1.2,
+    "seg_mm": [
+     22,
+     70
+    ],
+    "min_hint": 0.3,
+    "gap": 0.2
+   },
+   {
+    "bones": [
+     "LeftUpperArm",
+     "LeftShoulder"
+    ],
+    "cells": [
+     7,
+     14,
+     32,
+     35
+    ],
+    "axis": "bone:LeftUpperArm",
+    "toward": [
+     0.7,
+     -0.1,
+     -0.7
+    ],
+    "spacing_mm": 3.75,
+    "width_mm": 1.4,
+    "seg_mm": [
+     26,
+     80
+    ],
+    "min_hint": 0.3,
+    "gap": 0.2
+   },
+   {
+    "bones": [
+     "RightUpperArm",
+     "RightShoulder"
+    ],
+    "cells": [
+     7,
+     14,
+     32,
+     35
+    ],
+    "axis": "bone:RightUpperArm",
+    "toward": [
+     -0.7,
+     -0.1,
+     -0.7
+    ],
+    "spacing_mm": 3.75,
+    "width_mm": 1.4,
+    "seg_mm": [
+     26,
+     80
+    ],
+    "min_hint": 0.3,
+    "gap": 0.2
+   }
+  ]
  }
 }

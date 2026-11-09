@@ -421,6 +421,46 @@ def relax(objs, bone_names, cfg):
 	return {"iterations": spec.get("iterations", 6)}
 
 
+def shape_limbs(objs, bone_names, meta, cfg):
+	"""R4-ART: the forearm's silhouette (paint.json "shape": {"lower": [..bones..], "hand": [..], "swell", "swell_at", "swell_width",
+	"wrist", "wrist_from", "fist_at"}). A radial scale about each forearm's bone axis, by the vertex's position along it (t = 0 at the
+	elbow, 1 at the wrist): a swell near the elbow end, then a taper to the wrist, and the hand's vertices ease back from the wrist's
+	scale to 1 by `fist_at` (the fist is wider than the wrist). Gated by the arm bones' weights so the torso is untouched. Applied after
+	the relaxation and before the subdivision, so the Catmull-Clark rounds it."""
+	spec = cfg.get("shape")
+	if not spec:
+		return {}
+	out = {}
+	for o in objs:
+		bw = bone_weights(o, bone_names)
+		co = pb.verts(o.data).astype(np.float64)
+		for lower, hand in zip(spec["lower"], spec["hand"]):
+			head = np.array(meta["bone_heads"][lower], np.float64)
+			tail = np.array(meta["bone_tails"][lower], np.float64)
+			axis = tail - head
+			length = float(np.linalg.norm(axis))
+			axis /= length
+			w_arm = np.clip(bw[:, bone_names.index(lower)] + bw[:, bone_names.index(hand)], 0.0, 1.0)
+			rel = co - head
+			along = rel @ axis
+			t = along / length
+			radial = rel - np.outer(along, axis)
+			swell = 1.0 + spec["swell"] * np.exp(-(((t - spec["swell_at"]) / spec["swell_width"]) ** 2))
+			sm = np.clip((t - spec["wrist_from"]) / max(1.0 - spec["wrist_from"], 1e-6), 0.0, 1.0)
+			sm = sm * sm * (3.0 - 2.0 * sm)
+			f = swell * (1.0 + (spec["wrist"] - 1.0) * sm)
+			wrist_f = spec["wrist"]
+			ease = np.clip((t - 1.0) / max(spec["fist_at"] - 1.0, 1e-6), 0.0, 1.0)
+			ease = ease * ease * (3.0 - 2.0 * ease)
+			f = np.where(t > 1.0, wrist_f + (1.0 - wrist_f) * ease, f)
+			gate = w_arm * np.clip((t + 0.15) / 0.15, 0.0, 1.0)
+			scale = 1.0 + (f - 1.0) * gate
+			co = head + np.outer(along, axis) + radial * scale[:, None]
+		pb.set_verts(o.data, co)
+		out[o.name] = True
+	return out
+
+
 def subdivide(objs, cfg):
 	"""One level of Catmull-Clark on each mesh (paint.json "subdivide": {"levels": 1}), applied: the first-person arm's polygonal silhouette
 	(an 8-sided forearm, a block of a fist) turns round. The weights, the UV1 and the hull-normal colour interpolate with it; the
@@ -566,6 +606,7 @@ def main():
 		"bone_tails": {b.name: [round(float(x), 5) for x in b.tail_local] for b in arm.data.bones}}
 	cfg = load_config(name)
 	meta["smooth"] = relax(objs, bone_names, cfg)
+	meta["shape"] = shape_limbs(objs, bone_names, meta, cfg)
 	meta["subdivide"] = subdivide(objs, cfg)
 	meta["cell_smooth"] = smooth_cells(objs, bone_names, cfg)
 	if name != "player" and not opts["no_normals"]:
