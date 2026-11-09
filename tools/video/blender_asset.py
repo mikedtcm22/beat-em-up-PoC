@@ -15,8 +15,17 @@ UV2 "detail", its custom shading normals and its hull normals; the sources stay 
 	               face) so a face's light and shadow is one clean big shape, not the decimated mesh's facets. Same meshes, same
 	               weights, same UVs and hull normals as the shipped GLB (export through tools/pipeline/blender_export.export_glb).
 
-Options: --size N (map size, default 2048), --no-normals (export the mesh as it is), --proxy-strength S (0..1, default 0.85),
---only-maps (skip the export). Video only: the game's files are never written. Never the Blender MCP.
+Round 2 (LD-ART2, docs/video/P1.md, after Gate 2): the UV2 layout the textures are made in is NEW. The game's UV2 ("detail") is the layout of
+its detail mask: islands of a few hundred texels, a quarter of the player's arm triangles collapsed to slivers or to a point (no texel
+to paint: the black holes of Gate 2). The video GLB carries a fresh unwrap in the same "detail" layer (Blender's smart project, every
+island rescaled so the texel density follows assets/source/video_art/<name>/paint.json "layout" weights: the hands, the forearms and
+the head get more, then packed at --size). The game's detail mask no longer matches it, so CineArtRig turns the game's mask off for
+a character that has video art. The player also gets smoothed shading normals (paint.json "normals", the Punk's recipe), where
+the game's own are lumpy at a centimetre: the toon bands read as facets on the first-person arm.
+
+Options: --size N (map size, default 4096), --no-normals (export the mesh as it is), --proxy-strength S (0..1, default 0.85),
+--keep-uv2 (do not unwrap: the game's layout), --only-maps (skip the export). Video only: the game's files are never written.
+Never the Blender MCP.
 """
 import json
 import math
@@ -40,7 +49,7 @@ CURVATURE_CLIP = 60.0
 
 def arguments():
 	args = sys.argv[sys.argv.index("--") + 1:]
-	opts = {"size": 2048, "no_normals": False, "proxy_strength": 0.85, "only_maps": False}
+	opts = {"size": 4096, "keep_uv2": False, "no_normals": False, "proxy_strength": 0.85, "only_maps": False}
 	pos = []
 	i = 0
 	while i < len(args):
@@ -53,6 +62,8 @@ def arguments():
 			i += 1
 		elif a == "--no-normals":
 			opts["no_normals"] = True
+		elif a == "--keep-uv2":
+			opts["keep_uv2"] = True
 		elif a == "--only-maps":
 			opts["only_maps"] = True
 		else:
@@ -233,6 +244,204 @@ def transfer_face_normals(obj, bone_names, strength):
 	return {"centre": [round(float(x), 4) for x in centre], "radii": [round(float(x), 4) for x in radii]}
 
 
+def uv2_slivers(objs, size):
+	"""Per mesh: the triangles whose UV2 area is under half a texel (nothing to bake: they would sample padding) and their share."""
+	out = {}
+	for o in objs:
+		me = o.data
+		uv, _a, _b, _c = mesh_loops(o)
+		me.calc_loop_triangles()
+		tl = np.zeros(len(me.loop_triangles) * 3, np.int32)
+		me.loop_triangles.foreach_get("loops", tl)
+		p = uv[tl.reshape(-1, 3)].astype(np.float64) * size
+		area = 0.5 * np.abs((p[:, 1, 0] - p[:, 0, 0]) * (p[:, 2, 1] - p[:, 0, 1]) - (p[:, 2, 0] - p[:, 0, 0]) * (p[:, 1, 1] - p[:, 0, 1]))
+		out[o.name] = {"triangles": int(len(area)), "under_half_texel": int((area < 0.5).sum())}
+	return out
+
+
+def load_config(name):
+	with open(os.path.join("assets", "source", "video_art", name, "paint.json")) as f:
+		return json.load(f)
+
+
+def triangle_islands(obj):
+	"""(island index per polygon, island count): polygons joined where two corners share a vertex and a UV2 position."""
+	me = obj.data
+	n = len(me.polygons)
+	parent = list(range(n))
+
+	def find(a):
+		while parent[a] != a:
+			parent[a] = parent[parent[a]]
+			a = parent[a]
+		return a
+
+	uv, _uv1, _nrm, lv = mesh_loops(obj)
+	loop_poly = np.zeros(len(me.loops), np.int32)
+	for p in me.polygons:
+		loop_poly[p.loop_start:p.loop_start + p.loop_total] = p.index
+	seen = {}
+	key = np.round(uv * 20000.0).astype(np.int64)
+	for li in range(len(me.loops)):
+		k = (int(lv[li]), int(key[li, 0]), int(key[li, 1]))
+		pi = int(loop_poly[li])
+		other = seen.get(k)
+		if other is None:
+			seen[k] = pi
+		else:
+			a, b = find(pi), find(other)
+			if a != b:
+				parent[a] = b
+	roots = np.array([find(i) for i in range(n)])
+	_u, inverse = np.unique(roots, return_inverse=True)
+	return inverse, len(_u)
+
+
+def relayout_uv2(objs, bone_names, cfg, size):
+	"""Replace the "detail" (UV2) layer of `objs` with a new unwrap packed in one atlas (see the module doc). Returns a report."""
+	layout = cfg.get("layout", {})
+	weights_by_bone = layout.get("weights", {})
+	default_weight = float(layout.get("default_weight", 1.0))
+	margin_px = float(layout.get("margin_px", 20))
+	bpy.ops.object.mode_set(mode="OBJECT") if bpy.context.object and bpy.context.object.mode != "OBJECT" else None
+	bpy.ops.object.select_all(action="DESELECT")
+	for o in objs:
+		o.select_set(True)
+		o.data.uv_layers.active = o.data.uv_layers["detail"]
+	bpy.context.view_layer.objects.active = objs[0]
+	bpy.ops.object.mode_set(mode="EDIT")
+	bpy.ops.mesh.select_all(action="SELECT")
+	bpy.ops.uv.smart_project(angle_limit=math.radians(float(layout.get("angle_deg", 66.0))), island_margin=0.002, area_weight=0.0,
+		correct_aspect=True, scale_to_bounds=False)
+	bpy.ops.object.mode_set(mode="OBJECT")
+	# the density of every island against the median, then the weights
+	infos = []
+	for oi, o in enumerate(objs):
+		me = o.data
+		co = pb.verts(me)
+		tv, _tp = pb.tri_arrays(me)
+		me.calc_loop_triangles()
+		bw = bone_weights(o, bone_names)
+		dom = bw.argmax(axis=1)
+		uv, _uv1, _n, lv = mesh_loops(o)
+		isl, count = triangle_islands(o)
+		area3 = np.zeros(count)
+		areaz = np.zeros(count)
+		wsum = np.zeros(count)
+		cnt = np.zeros(count)
+		centre = np.zeros((count, 2))
+		for p in me.polygons:
+			vs = [lv[p.loop_start + k] for k in range(p.loop_total)]
+			a3 = 0.5 * np.linalg.norm(np.cross(co[vs[1]] - co[vs[0]], co[vs[2]] - co[vs[0]]))
+			q = uv[p.loop_start:p.loop_start + 3].astype(np.float64)
+			az = 0.5 * abs((q[1, 0] - q[0, 0]) * (q[2, 1] - q[0, 1]) - (q[2, 0] - q[0, 0]) * (q[1, 1] - q[0, 1]))
+			i = isl[p.index]
+			area3[i] += a3
+			areaz[i] += az
+			w = np.mean([float(weights_by_bone.get(bone_names[dom[v]], default_weight)) for v in vs])
+			wsum[i] += w * a3
+			cnt[i] += a3
+			centre[i] += q.mean(axis=0) * a3
+		infos.append((isl, area3, areaz, wsum / np.maximum(cnt, 1e-12), centre / np.maximum(area3, 1e-12)[:, None], uv))
+	dens = np.concatenate([np.sqrt(i[2] / np.maximum(i[1], 1e-12)) for i in infos])
+	area_all = np.concatenate([i[1] for i in infos])
+	ok = area_all > 1e-8
+	ref = float(np.median(dens[ok]))
+	for o, (isl, area3, areaz, wt, cen, uv) in zip(objs, infos):
+		d = np.sqrt(areaz / np.maximum(area3, 1e-12))
+		scale = np.where(area3 > 1e-8, wt * ref / np.maximum(d, 1e-9), 1.0)
+		scale = np.clip(scale, 0.05, 20.0)
+		me = o.data
+		new = uv.copy()
+		for p in me.polygons:
+			i = isl[p.index]
+			sl = slice(p.loop_start, p.loop_start + p.loop_total)
+			new[sl] = cen[i] + (uv[sl] - cen[i]) * scale[i]
+		me.uv_layers["detail"].data.foreach_set("uv", new.astype(np.float32).ravel())
+		me.update()
+	bpy.ops.object.select_all(action="DESELECT")
+	for o in objs:
+		o.select_set(True)
+	bpy.context.view_layer.objects.active = objs[0]
+	bpy.ops.object.mode_set(mode="EDIT")
+	bpy.ops.mesh.select_all(action="SELECT")
+	props = bpy.ops.uv.pack_islands.get_rna_type().properties.keys()
+	kw = dict(rotate=True, margin=margin_px / size)
+	if "margin_method" in props:
+		kw["margin_method"] = "ADD"
+	if "shape_method" in props:
+		kw["shape_method"] = layout.get("shape", "CONCAVE")
+	if "scale" in props:
+		kw["scale"] = True
+	bpy.ops.uv.pack_islands(**kw)
+	bpy.ops.object.mode_set(mode="OBJECT")
+	rep = {"islands": int(sum(i[1].shape[0] for i in infos)), "ref_density": ref}
+	return rep
+
+
+def relax(objs, bone_names, cfg):
+	"""Laplacian smoothing of the positions of the vertices weighted to `bones` (paint.json "smooth": {"bones": [...], "iterations", "factor"}):
+	the decimated mesh's lumps and dents (a notch on the forearm that reads as an arrow) go, the limb becomes one round form. A Smooth
+	modifier through a vertex group of those bones' summed weights, applied before the subdivision. The weights and UVs are untouched."""
+	spec = cfg.get("smooth")
+	if not spec:
+		return {}
+	for o in objs:
+		bw = bone_weights(o, bone_names)
+		w = np.clip(bw[:, [bone_names.index(b) for b in spec["bones"]]].sum(axis=1), 0.0, 1.0)
+		co = pb.verts(o.data)
+		tv, _tp = pb.tri_arrays(o.data)
+		edges = np.concatenate([tv[:, [0, 1]], tv[:, [1, 2]], tv[:, [2, 0]]], axis=0)
+		edges = np.concatenate([edges, edges[:, ::-1]], axis=0)
+		count = np.bincount(edges[:, 0], minlength=len(co)).astype(np.float64)
+		# the open boundary of a cut mesh is held (a smoothed boundary shrinks away from the mesh it meets)
+		key = np.sort(np.concatenate([tv[:, [0, 1]], tv[:, [1, 2]], tv[:, [2, 0]]], axis=0), axis=1)
+		_u, inv, cnt = np.unique(key, axis=0, return_inverse=True, return_counts=True)
+		boundary = np.zeros(len(co), bool)
+		for e in _u[cnt == 1]:
+			boundary[e] = True
+		hold = np.where(boundary, 0.0, 1.0)
+		for _ in range(int(spec.get("iterations", 6))):
+			acc = np.zeros_like(co)
+			np.add.at(acc, edges[:, 0], co[edges[:, 1]])
+			avg = acc / np.maximum(count, 1.0)[:, None]
+			co = co + (float(spec.get("factor", 0.5)) * w * hold)[:, None] * (avg - co)
+		pb.set_verts(o.data, co)
+	return {"iterations": spec.get("iterations", 6)}
+
+
+def subdivide(objs, cfg):
+	"""One level of Catmull-Clark on each mesh (paint.json "subdivide": {"levels": 1}), applied: the first-person arm's polygonal silhouette
+	(an 8-sided forearm, a block of a fist) turns round. The weights, the UV1 and the hull-normal colour interpolate with it; the
+	open boundary loops (a cut cap) stay where they were (boundary smoothing off). Done before the normals and the unwrap."""
+	spec = cfg.get("subdivide")
+	if not spec:
+		return {}
+	out = {}
+	for o in objs:
+		bpy.context.view_layer.objects.active = o
+		before = len(o.data.polygons)
+		mod = o.modifiers.new("video_subdivide", "SUBSURF")
+		mod.levels = int(spec.get("levels", 1))
+		mod.render_levels = mod.levels
+		mod.subdivision_type = "CATMULL_CLARK"
+		mod.boundary_smooth = "PRESERVE_CORNERS"
+		mod.uv_smooth = "PRESERVE_BOUNDARIES"
+		mod.use_creases = False
+		bpy.ops.object.modifier_apply(modifier=mod.name)
+		tri = o.modifiers.new("video_triangulate", "TRIANGULATE")
+		tri.quad_method = "BEAUTY"
+		bpy.ops.object.modifier_apply(modifier=tri.name)
+		out[o.name] = [before, len(o.data.polygons)]
+	return out
+
+
+def smooth_player_normals(objs, cfg):
+	"""The Punk's shading-normal recipe (tools/pipeline/blender_export.smooth_shading_normals) with paint.json "normals" for the values."""
+	sn = cfg.get("normals", {"iterations": 12, "crease_deg": 50.0, "falloff": 2.0, "self_weight": 1.0})
+	return be.smooth_shading_normals(objs, sn)
+
+
 def main():
 	name, workdir, opts = arguments()
 	os.makedirs(workdir, exist_ok=True)
@@ -243,8 +452,16 @@ def main():
 	meta = {"name": name, "front": FRONT.tolist(), "bones": bone_names, "meshes": [o.name for o in objs],
 		"bone_heads": {b.name: [round(float(x), 5) for x in b.head_local] for b in arm.data.bones},
 		"bone_tails": {b.name: [round(float(x), 5) for x in b.tail_local] for b in arm.data.bones}}
+	cfg = load_config(name)
+	meta["smooth"] = relax(objs, bone_names, cfg)
+	meta["subdivide"] = subdivide(objs, cfg)
 	if name != "player" and not opts["no_normals"]:
 		meta["proxy"] = transfer_face_normals(objs[0], bone_names, opts["proxy_strength"])
+	if cfg.get("normals") and not opts["no_normals"]:
+		meta["normals"] = smooth_player_normals(objs, cfg)
+	if not opts["keep_uv2"]:
+		meta["layout"] = relayout_uv2(objs, bone_names, cfg, opts["size"])
+	meta["uv2_slivers"] = uv2_slivers(objs, opts["size"])
 	maps = bake_maps(objs, bone_names, opts["size"])
 	np.savez_compressed(os.path.join(workdir, "maps.npz"), **maps)
 	hc, hr, _ = head_box(objs[0], bone_names) if "Head" in bone_names and name != "player" else (None, None, None)

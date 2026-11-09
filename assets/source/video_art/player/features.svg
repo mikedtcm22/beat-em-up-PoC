@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-130 -180 260 360">
+<!-- The player's fists, drawn by Claude over tools/video/blender_view.py's arm_r render (player, centre 0.09 / 0.30 m, 3 px/mm): the
+     knuckles, the finger separations and the first joint of each finger. The left hand is the mirror (the arm_l view). Millimetres,
+     x to the viewer's right, y down; see tools/video/art_features.py. -->
+<g data-view="arm_r" data-origin="0.09 0.30" data-px="3">
+	<!-- knuckles: four arcs along the front edge of the fist, each bulging toward the wrist, heavier on the outer two -->
+	<g stroke-width="1.9" opacity="0.9" data-taper="0.12,0.3" data-wobble="0.5">
+		<path id="knuckle_0" d="M -1 127 C 2 116, 15 113, 21 119 C 23 122, 25 125, 26 129"/>
+		<path id="knuckle_1" d="M 29 127 C 32 116, 45 113, 51 119 C 53 122, 55 125, 56 129"/>
+		<path id="knuckle_2" d="M 59 127 C 62 116, 75 113, 81 119 C 83 122, 85 125, 86 129"/>
+		<path id="knuckle_3" d="M 87 127 C 90 116, 103 113, 109 119 C 111 122, 113 125, 114 129"/>
+	</g>
+	<!-- finger separations: three short lines from the knuckle edge up the back of the hand, tapering -->
+	<g stroke-width="1.5" opacity="0.8" data-taper="0.05,0.55" data-wobble="0.45">
+		<path id="finger_0" d="M 27 127 C 25.5 118, 28.5 108, 27.5 93"/>
+		<path id="finger_1" d="M 57 127 C 55.5 118, 58.5 108, 57.5 97"/>
+		<path id="finger_2" d="M 86 127 C 84.5 118, 87.5 108, 86.5 91"/>
+	</g>
+	<g stroke-width="1.1" opacity="0.55" data-taper="0.25,0.4" data-wobble="0.4">
+		<path id="phalanx_0" d="M 2 101 C 7 97, 17 97, 22 101"/>
+		<path id="phalanx_1" d="M 32 101 C 37 97, 47 97, 52 101"/>
+		<path id="phalanx_2" d="M 62 101 C 67 97, 77 97, 82 101"/>
+		<path id="phalanx_3" d="M 90 101 C 95 97, 105 97, 110 101"/>
+	</g>
+</g>
+<g data-view="arm_l" data-origin="-0.09 0.30" data-px="3">
+	<!-- knuckles: four arcs along the front edge of the fist, each bulging toward the wrist, heavier on the outer two -->
+	<g stroke-width="1.9" opacity="0.9" data-taper="0.12,0.3" data-wobble="0.5">
+		<path id="knuckle_0" d="M 1 127 C -2 116, -15 113, -21 119 C -23 122, -25 125, -26 129"/>
+		<path id="knuckle_1" d="M -29 127 C -32 116, -45 113, -51 119 C -53 122, -55 125, -56 129"/>
+		<path id="knuckle_2" d="M -59 127 C -62 116, -75 113, -81 119 C -83 122, -85 125, -86 129"/>
+		<path id="knuckle_3" d="M -87 127 C -90 116, -103 113, -109 119 C -111 122, -113 125, -114 129"/>
+	</g>
+	<!-- finger separations: three short lines from the knuckle edge up the back of the hand, tapering -->
+	<g stroke-width="1.5" opacity="0.8" data-taper="0.05,0.55" data-wobble="0.45">
+		<path id="finger_0" d="M -27 127 C -25.5 118, -28.5 108, -27.5 93"/>
+		<path id="finger_1" d="M -57 127 C -55.5 118, -58.5 108, -57.5 97"/>
+		<path id="finger_2" d="M -86 127 C -84.5 118, -87.5 108, -86.5 91"/>
+	</g>
+	<g stroke-width="1.1" opacity="0.55" data-taper="0.25,0.4" data-wobble="0.4">
+		<path id="phalanx_0" d="M -2 101 C -7 97, -17 97, -22 101"/>
+		<path id="phalanx_1" d="M -32 101 C -37 97, -47 97, -52 101"/>
+		<path id="phalanx_2" d="M -62 101 C -67 97, -77 97, -82 101"/>
+		<path id="phalanx_3" d="M -90 101 C -95 97, -105 97, -110 101"/>
+	</g>
+</g>
+</svg>

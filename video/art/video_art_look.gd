@@ -19,6 +19,21 @@ extends VideoLookPiece
 @export var ink: bool = true
 ## The ink mask's strength on the paint (1 = the mask's own weight).
 @export_range(0.0, 1.0) var ink_strength: float = 1.0
+@export_group("Round 2 (LD-ART2)")
+## The face zone's fill: a share of the albedo added unlit where the ink map's B says face (0 = off), in `face_fill_color`: a face under a cap
+## or a hood is never lost in the shadow band, and the drawn lines (in the albedo) stay dark on it. Set per location in the art.tres.
+@export_range(0.0, 1.5) var face_fill: float = 0.5
+@export var face_fill_color: Color = Color(1.0, 0.84, 0.68)
+## The catchlights and the lens glints (the ink map's A), drawn unlit.
+@export_range(0.0, 2.0) var catch_strength: float = 1.0
+@export var catch_color: Color = Color(1.0, 0.96, 0.86)
+## The soft highlight's share (0 = none: no plastic sheen on a cap, a glove, a mask; the glints of the metal are separate).
+@export_range(0.0, 1.0) var plastic_spec: float = 0.0
+## The game's damage decals (the blood and scuff textures, triplanar) read as stickers on a painted figure: 0 = off for the video.
+@export_range(0.0, 1.0) var damage_marks: float = 0.0
+## The game's detail mask (its UV2 layout: creases, glint streaks, a texel swatch) is off on a character that has the video paint and ink: the
+## video's UV2 is a new layout, and the ink map draws its own creases.
+@export var game_detail_off: bool = true
 ## Make cine_toon.gdshader read paint_tex and ink_tex with UV2 (the UV1 of the art is the palette's swatches, the UV2 is the layout the
 ## textures are made in). A runtime edit of the loaded shader's source, until the shader itself does it (docs/video/calls/ld-asset.md).
 @export var layout_uv: bool = true

@@ -104,6 +104,14 @@ func dress(mesh: MeshInstance3D, rig: HumanoidRig) -> void:
 		if ink_tex != null:
 			material.set_shader_parameter(&"ink_tex", ink_tex)
 		material.set_shader_parameter(&"ink_strength", look.ink_strength)
+		if look.game_detail_off and look.paint and paint_tex != null:
+			material.set_shader_parameter(&"use_detail_tex", false)
+		material.set_shader_parameter(&"face_fill", look.face_fill)
+		material.set_shader_parameter(&"face_fill_color", look.face_fill_color)
+		material.set_shader_parameter(&"catch_strength", look.catch_strength)
+		material.set_shader_parameter(&"catch_color", look.catch_color)
+		material.set_shader_parameter(&"spec_gain", look.plastic_spec)
+		material.set_shader_parameter(&"marks_gain", look.damage_marks)
 	dressed[id] = dressed.get(id, 0) + 1
 
 
