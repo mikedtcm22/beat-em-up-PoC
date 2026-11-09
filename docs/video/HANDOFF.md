@@ -6,6 +6,31 @@ The cinematic gameplay video's live status, kept by the video session ("Beat-em-
 
 ## Status (newest first)
 
+### 2026-11-09 01:05 CST: round 3 merged and rendered; the blind check and the trailer reel running
+- **Wave B landed** (run `wf_020e5cbf-2b7`, 421k tokens, about 12 points). It's merged (`2d5d087`), and the video tests pass, 152 of 152 with the lead's test. LD-INK2 delivered:
+  - **the lines:** a tapered line hierarchy (a heavier first-person arm), terminator lines, lighter environment ink, and a separation band round the figures;
+  - **the grade**, with the three LUTs rebuilt;
+  - **the delivery pass** (`delivery_on`): a sub-pixel soften, and grain that changes on twos;
+  - **CineTwos** now stores once per drawing;
+  - **the roof's lens-flare star** was the weapon-pickup glint. `CineDirector.hide_pickup_glint` hides it, so t06's and t08's pickups lose their floor glint;
+  - **the Kicker** is a silhouette;
+  - **the rear warning** is drawn in the cue pass, but no frame has shown it yet;
+  - **determinism:** not reproduced, so no change.
+- **The lead's call** (`851a0b2`): `VideoArtLook.face_fill_by_id`. The first-person arm's fill is 0.15 at night and 0.2 on the boss roof, while the faces keep 0.5. LD-INK2 asked for this: the arm was the brightest thing in the night frame. Lowering the fill for every face would also have dimmed Ox's close-up.
+- **The set is in `captures/video/round3/`** (untracked):
+  - the stills, with `pre_fill/` holding the arm at 0.5;
+  - `sheets/` (ref | Gate 2 | round 3 | target, plus overview.jpg);
+  - `round3_moving_punk_1080p.mp4`;
+  - the A/Bs (`ab_fill015/`, `ab_nodeliver/`).
+  - **The style meter:** street 0.96-0.99 (cool share low on the first-person shots), roofs 0.72 (edge density and ink too high, warm share low), boss 0.88, close-up 0.88.
+- **The lead's look:**
+  - **Fixed since Gate 2:** no holes, no crimson; the darks are navy masses; the fire and smoke on the boss roof are painted; Ox's face is hatched, with eyes; the Kicker is a silhouette; the star is gone.
+  - **Still 3D:** the first-person arm (one large smooth tube, now not faceted), the cotton-ball steam puffs, and the perspective-exact brick.
+- **Running:**
+  - the blind check, Workflow `wf_5a5751c7-441` (task `w4byk3z9u`). Three judges get the Gate 2 prompt, each on its own shuffle (`blind_r3a/b/c` and the `blind_r3_key_*.json` keys in this session's scratchpad). Our frames went through a streaming-like encode (H.264, yuv420p, crf 23) to compare like with like;
+  - the 14 trailer shots at 1280×720 in the round 3 look, into `captures/video/round3/shots/` (`shoot_trailer.sh`), for a blocking reel.
+- **Next:** read the blind check, make the reel, DM round 3 to Game-boy (sheets, the clip, the reel, the blind result), then plan round 4 or Phase 2 from what's left.
+
 ### 2026-11-09 00:10 CST: wave A merged; wave B (LD-INK2) launching
 - **Wave A landed** (run `wf_92ad24ce-788`, 1.35M tokens, about 49 points of the 5-hour window: 3% to 52%). It's merged into `video/cinematic-trailer` (`ed2ec8e`, `1219a3a`, `b7c76c6`) with no conflicts. The video tests pass, 137 of 137, and the protected diff is clean.
   - **LD-WORLD3** (`mv/ld-world3`): the world is drawn, not tiled.
