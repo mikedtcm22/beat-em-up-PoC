@@ -212,9 +212,17 @@ func stage(shot: VideoStillShot) -> void:
 ## Aim the free camera of a free-camera shot (a subclass puts its own camera here). The stage's own: the game's
 ## free-fly camera, held at one pose every frame.
 func _place_free_camera(shot: VideoStillShot, base: Vector3, viewer: Vector3) -> void:
-	var forward := (base + shot.cam_look_at) - viewer
+	var look_at := shot.cam_look_at
+	var fov := shot.cam_fov_deg
+	if shot is CineShot:
+		# A cine shot's path: its first key (the cine bot plays the whole path).
+		var key := (shot as CineShot).keys()[0]
+		viewer = base + key.position
+		look_at = key.look_at
+		fov = key.fov_deg
+	var forward := (base + look_at) - viewer
 	_free_xf = Transform3D(Basis.looking_at(forward, Vector3.UP), viewer)
-	_free_fov = shot.cam_fov_deg
+	_free_fov = fov
 	_free_on = true
 
 
