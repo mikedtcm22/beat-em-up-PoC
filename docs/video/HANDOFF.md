@@ -6,6 +6,24 @@ The cinematic gameplay video's live status, kept by the video session ("Beat-em-
 
 ## Status (newest first)
 
+### 2026-11-09 21:20 CST: the Plan B test running in the second account (t03 restyled, t11 at Runway)
+- **This session** ("Beat-em-up: video session", the second account) started at 21:00. Its watcher is "Beat-em-up: video usage watcher" (Haiku, PLAN.md §12's prompt). **No Slack connector in this account,** so no relay: reports go in the chat (PLAN_B_TEST.md allows it).
+- **The Runway key** is in the main checkout's `.env` as `RUNWAY_API_KEY` (not `RUNWAYML_API_SECRET`); the tool reads either. The project holds 5000 credits ($50); the test's cap stays $15.
+- **The tool,** `tools/video/runway_restyle.py` (stdlib only): ephemeral uploads, `POST /v1/video_to_video` with `aleph2` and timed keyframes, polling, the download, and the hard cap through [runway_ledger.md](runway_ledger.md) (a row before each submit, the task's charged `cost` after). `--dry-run`, `--poll <job>` (resume a submitted job) and `--balance`. A review workflow (`wf_a50c80a3-5d4`: key safety, cap and ledger) was running at this entry.
+- **What Aleph 2.0 is** (docs.dev.runwayml.com, 2026-11-09): "edit one frame and it carries the edit through the video". The keyframe is an edited still of the shot at a timestamp (up to 5); `promptText` is optional guidance. Inputs 2-30 s, at most 30 fps and 1080p; the output keeps the input's size and frame count.
+- **The inputs** (`captures/video/planb/`): t03 and t11 rendered at 2560×1440 (problems=0), encoded to 1080p MP4 (`inputs/`). Keyframes are Gemini paint-overs of each shot's first frame (`keyframes/`):
+  - **t03:** `t03_key_b` (style ref2_37.4; navy night, a drawn face and gloves; 2.7 px off at p75). `t03_key_a` (ref2_10.0) drew a wire across the face.
+  - **t11:** `t11_key_d` ("trace image 1" prompt, ref1_5.3; Ox's pose, hood, crossed arms, drawn face and fists in sketch ink with hatching, lit as a readable mid-tone; 2.9 px off). `t11_key_a` and `_c` changed his pose or build. ref1_0.9 is refused by Gemini (PROHIBITED_CONTENT: an actor's likeness).
+  - **Gemini:** 6 images, the ledger at **$5.04** (the test allows $5.34).
+- **t03_r1** (seed 11, one keyframe at 0 s): SUCCEEDED in 71 s, **84 credits ($0.84)**. The lead's look:
+  - **Drawn:** the Punk's face (mouth, chin, stubble), gloves with knuckles and fingers, clean orange rims, flat navy shading; the design holds from frame 0 to 30.
+  - **Weak:** two smeared frames on the hits (32, 38). The last second's white steam column became a dark slab by the car.
+  - **No flicker:** the frame-to-frame second difference matches ours (median 13.3 against 13.4; on the hits 21.6 against 32.8).
+  - Side by side: `compare/t03_r1_side_by_side_{3840,1920}.mp4`.
+- **Running:** `t11_r1` (task `cabced9c-1003-47be-af7c-82a8f1ce18e0`, Runway's estimate 224 credits). If this session stops, resume it with `python3 -I tools/video/runway_restyle.py captures/video/planb/restyle/jobs.json --poll t11_r1`.
+- **Next:** look at t11_r1. Then the blind check: one judge, the round 3 script `video-blind-check-r3-wf_5a5751c7-441.js` (in the first account's session folder under `~/.claude/projects/-Users-arachne-repos-beat-em-up-PoC--worktrees-video/`) with `args.sets`; the prep is `blind_pb_prep.sh` in this session's scratchpad (crf 23, 1600×788, the same 8 references). Then the report to Game-boy in the chat, with the go question for the full cut.
+- **Usage at 21:16:** 5-hour 66% (resets 00:50 CST), weekly 8%.
+
 ### 2026-11-09 20:30 CST: the Plan B test moves to a second Claude account; start from PLAN_B_TEST.md
 - **Game-boy, in the chat,** answering "Go ahead with the Runway two-shot test, capped at $15?": "Let's set this up to run in a 2nd account (i.e. update handoff docs). Also: where (what site) do I need to add credits to make this work?" The test is approved as quoted: at most $15 of Runway credits, and at most $1 of Gemini keyframes beyond the $5 cap. The full cut needs his go after the test. (The approvals section at the bottom has it word for word.)
 - **The brief is [PLAN_B_TEST.md](PLAN_B_TEST.md):** the tool (`tools/video/runway_restyle.py`, REST through urllib, a hard $15 cap, `docs/video/runway_ledger.md`), the inputs (t11 and t03 at 2560×1440, then 1080p MP4s), the Gemini keyframes, the restyle (Aleph 2.0, up to three passes a shot), the judging (side by side, a one-judge blind check), and the DM.
