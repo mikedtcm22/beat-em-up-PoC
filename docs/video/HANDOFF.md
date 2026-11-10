@@ -6,6 +6,21 @@ The cinematic gameplay video's live status, kept by the video session ("Beat-em-
 
 ## Status (newest first)
 
+### 2026-11-09 20:15 CST: Plan B priced at Game-boy's request (in the chat); waiting on his go
+- **Game-boy, in the chat:** the characters are "still WELL off" the references, so rather than more $1-2 rounds of Gemini, what would a significant leap take? The routes compared:
+  1. an AI video restyle of the character shots;
+  2. rebuilding the characters as "drawn" 3D (the Guilty Gear Xrd method);
+  3. hand-drawn animation.
+  He asked for route 1 to be priced now.
+- **The quote** (web prices checked 2026-11-09; the sources are in the chat answer):
+  - **Recommended: Runway Aleph 2.0** (official API, `aleph2`): 28 credits a second at $0.01 a credit, so **$0.28 a second**, with a 56-credit minimum per generation, up to 30 s and 1080p per generation. Its restyle takes a reference frame showing the target look and carries it through the clip. Our keyframe would be a Gemini paint-over of one frame of the shot, characters included.
+  - **The test,** t11 (8.1 s) and t03 (3.4 s), 11.5 s: $3.23 a pass, three passes about $9.70, plus 4 Gemini keyframes ($0.56). **About $10, capped at $15.**
+  - **The cut,** the 13 character shots, about 40 s with handles: $11.20 a pass, about 2.5 passes about $28, plus about 20 Gemini keyframes ($2.80). **About $31, capped at $40.** If the test passes, the total is about $41 (capped at $55).
+  - **Fallbacks:** Luma Modify Video (Ray 3.2; adhere, flex and reimagine modes, a first-frame input; about $0.17 a second at 720p from resellers; Luma prices in credits); Kling O1 video edit (an anime style mode; about $0.17-0.22 a second from resellers).
+- **What Game-boy would do:** create a Runway developer account (dev.runwayml.com), add credits, and put the key in the repo's `.env` as `RUNWAYML_API_SECRET` (next to `GEMINI_API_KEY`). The lead can't create accounts or enter payment details.
+- **What the lead would do:** write `tools/video/runway_restyle.py`, with jobs, a hard dollar cap and a ledger, never printing the key.
+
+
 ### 2026-11-09 16:05 CST: round 5's blind check (the first movement) DM'd; handoff at weekly 85%, resume after the weekly reset (2026-11-10 16:00 CST)
 - **The blind check** (`wf_7b259cfc-8b0`, three judges, the hero frames at crf 23): all 8 references drawn (0.05-0.15). Ours are still all called 3D, **but every frame type moved for the first time:**
 
