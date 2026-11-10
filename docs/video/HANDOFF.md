@@ -6,6 +6,50 @@ The cinematic gameplay video's live status, kept by the video session ("Beat-em-
 
 ## Status (newest first)
 
+### 2026-11-09 21:30 CST: the Plan B test, pass 1 done for both shots; still read as 3D by the blind judge, so spending stopped; asked Game-boy in the chat; handoff at 86%
+- **The spend:** Runway **308 credits ($3.08 of the $15 cap):** t03_r1 84, t11_r1 224 (Runway bills whole seconds rounded down; the tool's estimate rounds up). Gemini at **$5.04** (the test allows $5.34). Ledgers: [runway_ledger.md](runway_ledger.md), [gemini_ledger.md](gemini_ledger.md).
+- **t11_r1** (seed 11, `t11_key_d` at 0 s): SUCCEEDED in 222 s. **The lead's look:**
+  - The black wall is gone. The point-blank torso, the round chest plate, the huge gloves and the face close-up are drawn and readable in sketch ink with hatching, and Ox's design holds over the 8 s.
+  - The hatching boils from frame to frame. On the point-blank section the second difference has a median of 23 against our 3.7, partly because ours is near-black there.
+  - The knock-back's whip pan (frames 98-101) becomes a soft, painterly fire smear.
+- **The blind check** (one judge, the round 3 prompt, run `wf_7f2e9611-372`; set `blind_pba`, seed 61; our frames at crf 23; the same 8 references). All 8 references were called drawn (0.05-0.22). **Ours are all still called 3D, about 0.1 lower than round 5:**
+
+  | Shot | Frames | Pass 1 p_3d | Round 5, same type |
+  | --- | --- | --- | --- |
+  | t11 (Ox) | wide f13, face f52, arms f120, chest f170 | 0.64, 0.68, 0.72, 0.74 | Ox wide 0.78, Ox close 0.81 |
+  | t03 (first-person street) | guard f8, point-blank f20, knock-back f48 | 0.80, 0.72, 0.90 | 0.89-0.92 |
+
+- **The judge's tells, strongest first:**
+  1. a two-sided rim of constant width with soft falloff (our source's rim, kept), and airbrush gradients;
+  2. primitive geometry under the paint: fists as rounded boxes, arms as cylinders, the chest plate read as an octagonal "muzzle", window grids;
+  3. depth of field and motion blur where drawn animation uses smears;
+  4. sets in exact perspective;
+  5. centred, mirrored staging and idle stances;
+  6. restyle artifacts: even hatching, ghosted contours, smeared faces.
+- **The reading:** Aleph keeps the source's geometry, camera and light by design ("changes only what you ask for"), so most remaining tells are ours. The restyle fixed the surfaces (drawn faces, gloves, ink), not the structure.
+- **Per PLAN_B_TEST.md** ("if the characters still read as 3D ... stop spending and report"), **no retakes were run.** About $11.92 of the test's $15 is unspent.
+- **Reported to Game-boy in the chat** (no Slack in this account). The files:
+  - `captures/video/planb/compare/planb_test_ours_vs_restyle.mp4` (both shots, ours left, 1920×540);
+  - `t03_r1_side_by_side_3840.mp4` and `t11_r1_side_by_side_3840.mp4` (1080p each side);
+  - `planb_test_stills.jpg`.
+- **The question:** which next? **The lead recommends:**
+  - **(a) Retakes within the test's remaining $11.92,** one change each, at the inherited tells:
+    1. re-render t11 with no depth of field or motion blur and a one-sided key rim (code in the CineLook; no spend), and restyle again;
+    2. then a bolder keyframe (simplified, wobbly shapes, cel shadows, articulated fists).
+    - If the judge doesn't move clearly toward drawn (under about 0.5), stop Plan B.
+  - (b) The full cut as it stands (about $31, capped at $40): not recommended on these numbers.
+  - (c) Stop Plan B and take a fallback (route 2, "drawn 3D", or Luma or Kling); each needs his go.
+- **The tool review** (`wf_a50c80a3-5d4`, stopped at 86% after its two review lenses and before the verifiers; `--resumeFromRunId` replays them). **Fix before any more spend:**
+  1. A 5xx answer to the submit is written REJECTED and counts 0, though Runway may have made the task. Count it as UNKNOWN at its estimate (only a 4xx is REJECTED).
+  2. No lock: two runs started together can both pass the cap check and drop rows. Hold an `fcntl.flock` on a lock file beside the ledger for the whole run.
+  3. Minor: honour `RUNWAY_LEDGER` only with `--dry-run`; refuse a key with whitespace in it without echoing it; harden the over-estimate cancel path.
+- **Resume steps** (after the 00:50 CST reset):
+  1. get_usage; check that the watcher runs.
+  2. Read Game-boy's answer in the chat.
+  3. Fix the tool (the review's points above).
+  4. Then do what he chose. For (a): the t11 re-render with the source fixes (`tools/video/shoot.sh t11_ox_fight captures/video/planb/renders/t11_ox_fight_r2`, after the CineLook change), the 1080p encode, a `t11_r2` job in `captures/video/planb/restyle/jobs.json` (same keyframe, same seed, same prompt), and the blind check again: blind sets `blind_pb_prep.sh` and `video-blind-check-pb.js` in this session's scratchpad, judges b and c (seeds 62 and 63) are already built.
+- **Usage at 21:27:** 5-hour 86% (resets 00:50 CST), weekly 12%. Nothing is running. The resume task `beat-em-up-video-resume-20261110-0050` fires at 01:00 CST.
+
 ### 2026-11-09 21:20 CST: the Plan B test running in the second account (t03 restyled, t11 at Runway)
 - **This session** ("Beat-em-up: video session", the second account) started at 21:00. Its watcher is "Beat-em-up: video usage watcher" (Haiku, PLAN.md §12's prompt). **No Slack connector in this account,** so no relay: reports go in the chat (PLAN_B_TEST.md allows it).
 - **The Runway key** is in the main checkout's `.env` as `RUNWAY_API_KEY` (not `RUNWAYML_API_SECRET`); the tool reads either. The project holds 5000 credits ($50); the test's cap stays $15.

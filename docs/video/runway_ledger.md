@@ -12,4 +12,4 @@ Game-boy's cap for the Plan B test: **$15** of Runway credits (2026-11-09, in th
 | When (CST) | Job | Task | Input s | Estimate (credits) | Status | Charged (credits) | Counted total (credits) |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 2026-11-09 21:12:34 | t03_r1 | a868cd90-4e5f-44fa-8433-4248d1e2ab54 | 3.42 | 112 | SUCCEEDED | 84 | 84 |
-| 2026-11-09 21:14:09 | t11_r1 | cabced9c-1003-47be-af7c-82a8f1ce18e0 | 8.12 | 252 | PENDING | - | 336 |
+| 2026-11-09 21:14:09 | t11_r1 | cabced9c-1003-47be-af7c-82a8f1ce18e0 | 8.12 | 252 | SUCCEEDED | 224 | 308 |
