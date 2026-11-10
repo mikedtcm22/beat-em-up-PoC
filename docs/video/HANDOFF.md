@@ -6,6 +6,17 @@ The cinematic gameplay video's live status, kept by the video session ("Beat-em-
 
 ## Status (newest first)
 
+### 2026-11-09 20:30 CST: the Plan B test moves to a second Claude account; start from PLAN_B_TEST.md
+- **Game-boy, in the chat,** answering "Go ahead with the Runway two-shot test, capped at $15?": "Let's set this up to run in a 2nd account (i.e. update handoff docs). Also: where (what site) do I need to add credits to make this work?" The test is approved as quoted: at most $15 of Runway credits, and at most $1 of Gemini keyframes beyond the $5 cap. The full cut needs his go after the test. (The approvals section at the bottom has it word for word.)
+- **The brief is [PLAN_B_TEST.md](PLAN_B_TEST.md):** the tool (`tools/video/runway_restyle.py`, REST through urllib, a hard $15 cap, `docs/video/runway_ledger.md`), the inputs (t11 and t03 at 2560×1440, then 1080p MP4s), the Gemini keyframes, the restyle (Aleph 2.0, up to three passes a shot), the judging (side by side, a one-judge blind check), and the DM.
+- **Game-boy's setup:**
+  1. Runway's developer portal, dev.runwayml.com: credits in the project's Billing tab (a minimum of $10; $15 covers the test);
+  2. an API key;
+  3. the line `RUNWAYML_API_SECRET=...` in the main checkout's git-ignored `/Users/arachne/repos/beat-em-up-PoC/.env`, next to `GEMINI_API_KEY`.
+- **The first account stands down:** its resume task `beat-em-up-video-resume-20261108-2230` is **disabled**, so the two accounts don't both resume; its watcher and relay are stopped. The second account's session starts its own watcher and relay (PLAN.md §12), and arms its own resume tasks at its handoffs.
+- **State to resume from** (all pushed): round 5 merged on `video/cinematic-trailer`. The 7 hero plates are installed (Gemini $4.34). The reel is `captures/video/round5/round5_trailer_blocking_720p.mp4`, and the round 6 plan (code) is in the 16:05 entry below. Plan B doesn't replace the painted backgrounds: it restyles the character shots on top of them.
+
+
 ### 2026-11-09 20:15 CST: Plan B priced at Game-boy's request (in the chat); waiting on his go
 - **Game-boy, in the chat:** the characters are "still WELL off" the references, so rather than more $1-2 rounds of Gemini, what would a significant leap take? The routes compared:
   1. an AI video restyle of the character shots;
@@ -598,4 +609,6 @@ Ground rules:
   3. D6, Plan B: hold.
 - **Added after round 3,** 2026-11-09 04:18 CST, by Slack DM (Michael, ts 1794219494.722819), answering the round 3 question (a Gemini paint-over of every shot's background, projected onto the set, about $2): "Extra $2 for Gemini use is approved if needed".
   - **The reading taken:** at most $2 more, for the per-shot background paint-overs, used only if round 4's code changes still read 3D in the blind check. That keeps the total at most $4.52, under the original $5 cap, so it holds under either reading of "extra".
+- **The Plan B test,** 2026-11-09 about 20:20 CST, in the chat, answering "Go ahead with the Runway two-shot test, capped at $15?" (the quote: Runway Aleph 2.0 at $0.28 a second; the test, t11 and t03, about $10, capped at $15, including about $0.56 of Gemini keyframes; the full cut about $31, capped at $40): "Let's set this up to run in a 2nd account (i.e. update handoff docs). Also: where (what site) do I need to add credits to make this work?"
+  - **The reading taken:** the two-shot test is approved: at most $15 of Runway credits, plus at most $1 of Gemini keyframes beyond the $5 cap. The full cut needs his go after the test. Brief: [PLAN_B_TEST.md](PLAN_B_TEST.md).
 - **Plan B after round 4,** 2026-11-09 06:22 CST, by Slack DM, answering "If round 5 still reads 3D, is Plan B (an AI restyle of the final cut, roughly $30-100) on the table?": "Let's keep it on hold for now.  The progress on graphics is heartening so far, and interested to see what a $2 overlay from Gemini can accomplish."
