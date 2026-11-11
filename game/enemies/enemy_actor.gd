@@ -327,11 +327,24 @@ func _apply_variant_look() -> void:
 	var art_material := rig.paint.base_art_material() as ShaderMaterial
 	if variant.palette != null and art_material != null:
 		art_material.set_shader_parameter(&"albedo_tex", variant.palette)
+	_apply_trailer_paint(rig.worn_art())
+	if not rig.art_swapped.is_connected(_apply_trailer_paint):
+		rig.art_swapped.connect(_apply_trailer_paint)
 	if variant.tint.a <= 0.0:
 		return
 	rig.body_color = Color(variant.tint, 1.0)
 	if art_material != null:
 		art_material.set_shader_parameter(&"albedo", Color(variant.tint, 1.0))
+
+
+## M7 (T12): the variant's recoloured paint map on the worn art's painted material (the trailer profile's counterpart of the palette swap),
+## now and after each live art swap (the rig makes a worn art's material once, on first use). Nothing for an unpainted art or a variant with none.
+func _apply_trailer_paint(worn: CharacterArt) -> void:
+	if variant == null or rig == null or variant.trailer_paint() == null or not ToonMaterials.is_painted(worn):
+		return
+	var painted := rig.paint.art_material() as ShaderMaterial
+	if painted != null:
+		painted.set_shader_parameter(&"paint_tex", variant.trailer_paint())
 
 
 ## The reach_m of the attack it will throw next (0 = it has none).

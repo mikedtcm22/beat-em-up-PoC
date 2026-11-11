@@ -1622,6 +1622,8 @@ The trailer profile's surface language for a character (T11). It is a second mat
 
 **No compile mid-fight.** All of it is uniforms of two new shaders (the painted material and its hull); `warm_up_with()` draws a painted copy of the skeleton with a blank paint, ink and painted hull in the load-time pass (any real painted variant is also drawn by its own throwaway rig, `RoomKit.build_warm_rigs()`), so flipping to the trailer profile compiles nothing in a fight. The Tuning group is "Painted look (M7)", before Audio.
 
+**The trailer Punk (M7, T12).** `game/actors/art/punk_art.tres` carries `metadata/trailer` = `punk_trailer_art.tres`: the Punk's own mesh and rig in `assets/export/characters/punk/trailer/punk_trailer.glb` (same bones and bounds, a fresh UV2) with `punk_paint.png` and `punk_ink.png` (2048, to the contract above). `tools/pipeline/make_trailer_art.sh <name>` makes such an art from `assets/source/trailer_art/<name>/paint.json` (regions by palette cell, bone and box; shadow shapes; folds; hull weight; `features.svg` for the drawn face) through `trailer_asset.py` (Blender) and `trailer_paint.py`; T13 and T14 reuse it. A variant's recolour of the same maps is `metadata/trailer_paint` on its `EnemyVariant` (`EnemyVariant.trailer_paint()`), put on the worn painted material by `EnemyActor._apply_trailer_paint()` now and after every art swap. Notes: `docs/milestones/M7-calls/t12.md`.
+
 ## Ownership (Milestones 1-3)
 
 | Area | Files |
