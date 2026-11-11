@@ -76,7 +76,8 @@ func _material_of(art: CharacterArt) -> ShaderMaterial:
 	if _art_materials.has(key):
 		return _art_materials[key]
 	# The hero's art says so (metadata/detail_sharp in player_art.tres) when its mask's ink is to be sharp.
-	var made := ToonMaterials.art(art.palette, art.detail_mask, bool(art.get_meta(&"detail_sharp", false)))
+	# M7 (T11): an art that carries a paint map and an ink map is painted (ToonMaterials.art_for()); every other art as before.
+	var made := ToonMaterials.art_for(art)
 	if not _art_materials.is_empty():
 		var other: ShaderMaterial = _art_materials.values()[0]
 		made.set_shader_parameter(&"flash_color", other.get_shader_parameter(&"flash_color"))
@@ -90,9 +91,10 @@ func _material_of(art: CharacterArt) -> ShaderMaterial:
 
 ## The inverted-hull outline for the skinned art's `material_overlay` (ToonMaterials.outline():
 ## shared, always on): the thinner variant when the rig is the player's own body
-## (`first_person_body`, read when the art is attached, like the primitives' hulls).
-func outline_material() -> Material:
-	return ToonMaterials.outline(_rig.first_person_body)
+## (`first_person_body`, read when the art is attached, like the primitives' hulls). `art` (M7): the art being attached, whose
+## painted hull (its ink map's weight) it gets when painted; null or an unpainted art: the shared hull.
+func outline_material(art: CharacterArt = null) -> Material:
+	return ToonMaterials.outline_for_art(art, _rig.first_person_body)
 
 
 ## The outline for the primitive `part`'s `material_overlay`: the hull of its shape, thinner on
