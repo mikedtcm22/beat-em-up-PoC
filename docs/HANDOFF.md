@@ -4,6 +4,15 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-11 17:10: M7 Gate 1 sent to Game-boy; the slice fails both measured gates
+- `m7/trailer-look` holds the slice plus one fix wave (F1 character colour, F2 paint and faces, F3 light shapes). 2150 tests; the full suite was not re-run after the last preset fix (`test_tuning_panel.gd` re-run alone, 28/28).
+- **Blind judge (captures/m7-slice/judge2, keys in judge2_keys):** street 0.80, arms 0.92, Punk turnaround 0.88. Same shuffle: trailer 0.35 (0.12 to 0.55), references 0.12, M6 0.94. The gate (inside the trailer's spread) is missed by a wide margin.
+- **Frame time (captures/m7-slice/perf2/report.txt):** M6 11.05 ms, trailer 13.55 ms, +22.6% against a +10% gate.
+- **Arm B** (new Tripo Punk) is on `m7/t13`, not merged: better fists and vest, worse cap. Tunable `trailer_punk_arm`. The A or B pick is open.
+- **Known faults:** translucent grey and purple blotches (damage marks) on full-health Punks; star-edged ground pools; exact window grids and chain-link; the training room and dummy are still plain toon under the trailer profile; kit sheets and character paint are procedural stand-ins (Gemini was out of credit until 15:53, now +$35).
+- **Waiting on Game-boy:** go, adjust or stop (Slack DM and chat, reel in captures/m7-slice/gate1/). Nothing is running. Resume: act on his answer; if adjust, the next round is in the chat summary (blotch bug, frame time, Gemini-painted sheets and faces, arm pick).
+
+
 ### 2026-11-11 17:15 CST: the fix wave F1-F3 merged (2150/2150); slice re-recorded; frame time +22.6%; blind judge sets ready (T20)
 - **Merged** (`--no-ff`, no conflicts): F1 paint keeps local colour (628937d), F3 street FX (54bb1c3), F2 painted face, folds and glove ink (773c6f2). The merge left F3's five tunables out of `tuning/default.json`; regenerated (a309682). Suite: 2150 tests; the one failure (the preset) fixed and its file re-run green.
 - **Slice:** `captures/m7-slice/merged2/` (`INDEX.md`; same commands and frames as `merged/`; every bot log matches; m6 stills unchanged but for random impact words).
