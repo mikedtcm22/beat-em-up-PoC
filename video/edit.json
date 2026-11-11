@@ -1,0 +1,27 @@
+{
+ "about": "Plan B's trailer edit (docs/video/PLAN.md section 6, Phase 3). in/out are frames of each shot at 24 fps, out exclusive. The source is the shot's newest Runway take (captures/video/planb/restyle/<tNN>_r<N>/) unless 'take' names one, or our 1080p render when 'source' is 'render'. The trims follow the event logs: they keep each shot's beats and drop dead or point-blank stretches (t11 ends before its long point-blank run; t12 shows the haymaker land).",
+ "fps": 24,
+ "size": [1920, 1080],
+ "fade_in_frames": 6,
+ "fade_out_frames": 12,
+ "shots": [
+  {"key": "t01_crane_street", "in": 0, "out": 72},
+  {"key": "t02_guard_up", "in": 0, "out": 48},
+  {"key": "t03_punk_combo", "in": 0, "out": 62},
+  {"key": "t04_block_spin", "in": 0, "out": 50},
+  {"key": "t05_grab_throw", "in": 20, "out": 80},
+  {"key": "t06_pipe_chain", "in": 0, "out": 44},
+  {"key": "t07_roof_knockoff", "in": 0, "out": 87},
+  {"key": "t08_chain_whip", "in": 0, "out": 54},
+  {"key": "t09_back_elbow", "in": 0, "out": 48},
+  {"key": "t10_ox_reveal", "in": 0, "out": 96,
+   "overlay": {"image": "ox_name_card.png", "in": 24, "out": 84, "fade": 6}},
+  {"key": "t11_ox_fight", "in": 0, "out": 110},
+  {"key": "t12_haymaker", "in": 0, "out": 72},
+  {"key": "t13_ox_falls", "in": 0, "out": 72, "black_after": 6},
+  {"key": "t14_title_embers", "in": 0, "out": 96, "source": "render",
+   "overlay": {"image": "end_title.png", "in": 12, "out": 96, "fade": 12}}
+ ],
+ "audio": {"lufs": -14.0, "true_peak_db": -1.0, "encode_margin_db": 0.5, "pre_gain_db": 14, "limit": 0.75, "edge_fade_ms": 8},
+ "export": {"video_bitrate": "35M", "maxrate": "40M", "bufsize": "80M", "audio_bitrate": "320k"}
+}
