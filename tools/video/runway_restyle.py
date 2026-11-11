@@ -12,7 +12,8 @@ plus optional "model" (only "aleph2"), "output_format" ("mp4", the default) and 
 <the jobs file's folder>/<name>). Paths are relative to the jobs file's folder. The result is <out>/<name>.mp4, with the task's
 record in <out>/<name>_task.json.
 
-The cap: Game-boy approved at most $15 of Runway credits for the test, at $0.01 a credit. Before each submit the tool estimates
+The cap: Game-boy approved $15 of Runway credits for the test, then $40 more for the full cut, at $0.01 a credit (CAP_CREDITS
+holds the total). Only one spending run at a time (captures/video/runway_restyle.lock). Before each submit the tool estimates
 the job from the price list (docs.dev.runwayml.com/guides/pricing.md: aleph2 is 28 credits a second, at least 56 a generation),
 with the input's seconds rounded up, and refuses it if docs/video/runway_ledger.md's counted total plus the estimate would pass
 CAP_CREDITS. It writes the ledger row before the submit and the result after: the task's charged credits (its "cost"), else the
@@ -23,6 +24,7 @@ The key is RUNWAYML_API_SECRET (the SDKs' name) or RUNWAY_API_KEY, from the envi
 linked worktree) the main checkout's .env. It goes only in the Authorization header to api.dev.runwayml.com (never to the
 upload or download hosts, and never across a redirect), and is never printed or written. Downloads are data: saved, never run.
 """
+import fcntl
 import json
 import math
 import mimetypes
@@ -43,9 +45,10 @@ API_VERSION = "2024-11-06"
 # RUNWAY_LEDGER points the tool at another ledger (for testing the cap); the real one is docs/video/runway_ledger.md.
 LEDGER = os.environ.get("RUNWAY_LEDGER") or os.path.join(REPO, "docs", "video", "runway_ledger.md")
 KEY_NAMES = ("RUNWAYML_API_SECRET", "RUNWAY_API_KEY")
-# Game-boy's approval of 2026-11-09 ($15 at $0.01 a credit), and the price list of the same day: credits a second, and the
-# minimum a generation. Non-mp4 outputs add a surcharge a second.
-CAP_CREDITS = 1500
+# Game-boy's approvals, at $0.01 a credit: the test, $15 (2026-11-09; it spent 308 credits), then the full cut, $40 on top
+# ("Yes, full cut", 2026-11-10): the ledger's total stays at most 308 + 4000. The price list of 2026-11-09: credits a second,
+# and the minimum a generation. Non-mp4 outputs add a surcharge a second.
+CAP_CREDITS = 4308
 RATES = {"aleph2": (28, 56)}
 FORMAT_SURCHARGE = {"mp4": 0, "prores": 5, "png_sequence": 5}
 # Aleph 2.0's input limits (docs: 2-30 s, at most 30 fps, at most 1080p).
@@ -63,6 +66,7 @@ SUBMIT_WAIT_ON_429_S = 30
 LEDGER_HEADER = "| When (CST) | Job | Task | Input s | Estimate (credits) | Status | Charged (credits) | Counted total (credits) |"
 LEDGER_RULE = "| --- | --- | --- | --- | --- | --- | --- | --- |"
 TERMINAL = ("SUCCEEDED", "FAILED", "CANCELLED")
+_LOCK = None
 
 
 # --- The key ---------------------------------------------------------------------------------------------------------------
@@ -84,7 +88,7 @@ def env_files() -> list:
 def read_key() -> str:
 	for name in KEY_NAMES:
 		if os.environ.get(name, "").strip():
-			return os.environ[name].strip()
+			return checked_key(os.environ[name].strip())
 	for path in env_files():
 		if not os.path.isfile(path):
 			continue
@@ -95,8 +99,15 @@ def read_key() -> str:
 				if line.startswith(name + "="):
 					value = line.split("=", 1)[1].strip().strip('"').strip("'")
 					if value:
-						return value
+						return checked_key(value)
 	sys.exit("No Runway key: set RUNWAYML_API_SECRET (or RUNWAY_API_KEY) in the environment or the main checkout's .env")
+
+
+def checked_key(key: str) -> str:
+	"""The key, refused (never echoed) if it holds whitespace: a header with a line break would fail and print it."""
+	if any(c.isspace() for c in key):
+		sys.exit("The Runway key holds whitespace (two keys pasted together?); fix it in .env. It isn't printed.")
+	return key
 
 
 # --- The API -----------------------------------------------------------------------------------------------------------------
@@ -386,7 +397,9 @@ def run_job(job: dict, base: str, key: str, dry_run: bool) -> bool:
 				print(f"{name}: rate limited (429); trying again in {SUBMIT_WAIT_ON_429_S} s", flush=True)
 				time.sleep(SUBMIT_WAIT_ON_429_S)
 				continue
-			row[5] = f"REJECTED {e}"
+			# A 4xx refused the request, so no task was made. A 5xx may come from a gateway after the task was made: the row
+			# keeps counting its estimate until it's checked by hand.
+			row[5] = f"REJECTED {e}" if e.code < 500 else f"UNKNOWN: {e} on the submit; a task may exist, check the portal"
 			save_row(row)
 			print(f"{name}: {row[5]}", flush=True)
 			return False
@@ -407,8 +420,8 @@ def run_job(job: dict, base: str, key: str, dry_run: bool) -> bool:
 			try:
 				api(key, "DELETE", f"/v1/tasks/{task_id}")
 				row[5] = f"CANCELLED: the API's estimate ({api_est}) would pass the cap"
-			except ApiError as e:
-				row[5] = f"OVER THE CAP: the API's estimate ({api_est}); the cancel failed ({e})"
+			except (ApiError, urllib.error.URLError, socket.timeout, ConnectionError) as e:
+				row[5] = f"OVER THE CAP: the API's estimate ({api_est}); the cancel failed ({clean(str(e), 120)})"
 			save_row(row)
 			print(f"{name}: {row[5]}", flush=True)
 			return False
@@ -491,8 +504,24 @@ def resume(job: dict, base: str, key: str) -> bool:
 	return finish(job, base, key, rows[-1], None, body)
 
 
+def hold_lock() -> None:
+	"""One spending run at a time: an exclusive lock beside the ledger, held until the process ends."""
+	global _LOCK
+	path = os.path.join(REPO, "captures", "video", "runway_restyle.lock")
+	os.makedirs(os.path.dirname(path), exist_ok=True)
+	_LOCK = open(path, "w")
+	try:
+		fcntl.flock(_LOCK, fcntl.LOCK_EX | fcntl.LOCK_NB)
+	except OSError:
+		sys.exit(f"Another runway_restyle.py run holds {path}; wait for it to finish")
+
+
 def main() -> None:
 	args = sys.argv[1:]
+	if os.environ.get("RUNWAY_LEDGER") and "--dry-run" not in args:
+		sys.exit("RUNWAY_LEDGER (a scratch ledger) is only for --dry-run tests; real runs use docs/video/runway_ledger.md")
+	if "--dry-run" not in args and args != ["--balance"]:
+		hold_lock()
 	if args == ["--balance"]:
 		key = read_key()
 		org = api_retry(key, "GET", "/v1/organization")
