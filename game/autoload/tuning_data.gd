@@ -1726,6 +1726,15 @@ extends Resource
 ## face, its mip capped) instead of the ground tile, as in M6's first cut. Read live. Presets never hold it.
 @export var ground_sheet_off: bool = false
 
+@export_group("Trailer kit")
+## The trailer look profile's kit (Milestone 7, T15): how many alternates a module has. Each block or piece on the street takes
+## one by a stable hash of its position (TrimSheet.variant_for), and a variant moves every face on the sheet (a U and V offset,
+## a mirror, a slight tint), so no two neighbouring walls or windows are the same picture. M6's profile has none.
+@export_range(1, 64, 1) var trailer_kit_variants: int = 12
+## How far a variant may nudge a face's tint (rgb) about white, warm or cool, in the strips that allow it (the walls, the
+## concrete, the facade): the slight non-uniformity of hand-painted planes.
+@export_range(0.0, 0.3, 0.005) var trailer_kit_tint_jitter: float = 0.07
+
 
 func hitstop_s(tier: CombatTypes.HitTier) -> float:
 	match tier:

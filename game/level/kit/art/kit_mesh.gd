@@ -43,16 +43,20 @@ const PLINTH_MIN_HEIGHT_M := 3.0
 static var _cache: Dictionary = {}
 
 
-## The mesh of `kind` at `size`, or null for `&"box"`, `&""` and a kind that does not exist.
-static func build(kind: StringName, size: Vector3) -> ArrayMesh:
+## The mesh of `kind` at `size`, or null for `&"box"`, `&""` and a kind that does not exist. Under the trailer profile the
+## faces' UVs follow its sheet (`u_m` per strip) and `variant` (TrimSheet.variant_for, -1 for none) moves each face on it; under
+## M6's profile `variant` is ignored and the mesh is M6's, the very object a call without it returns.
+static func build(kind: StringName, size: Vector3, variant: int = -1) -> ArrayMesh:
 	if not KINDS.has(kind):
 		return null
 	size = size.max(Vector3(0.001, 0.001, 0.001))
 	var key := "%s|%.3f|%.3f|%.3f" % [kind, size.x, size.y, size.z]
+	var b := Builder.new(variant)
+	if b.trailer:
+		key += "|t%d" % variant
 	var cached: ArrayMesh = _cache.get(key)
 	if cached != null:
 		return cached
-	var b := Builder.new()
 	match kind:
 		&"wall":
 			_wall(b, size)
@@ -99,10 +103,12 @@ static func build(kind: StringName, size: Vector3) -> ArrayMesh:
 ## collider steps): `size` is (width, rise, run), the mesh centred on that box.
 static func build_stairs(width: float, rise: float, run: float, count: int) -> ArrayMesh:
 	var key := "stairs|%.3f|%.3f|%.3f|%d" % [width, rise, run, count]
+	var b := Builder.new()
+	if b.trailer:
+		key += "|t"
 	var cached: ArrayMesh = _cache.get(key)
 	if cached != null:
 		return cached
-	var b := Builder.new()
 	_stairs(b, Vector3(width, rise, run), maxi(count, 1))
 	var mesh := b.finish()
 	_cache[key] = mesh
@@ -282,6 +288,16 @@ class Builder:
 	## material of their own (see finish()).
 	var _opaque := Buffer.new()
 	var _wire := Buffer.new()
+	## Under the trailer profile: the sheet's own U scale per strip, and `variant` (-1: none) moving each face (TrimSheet.variation).
+	var trailer: bool = false
+	var variant: int = -1
+	var _face_n: int = 0
+	var _tile_m: float = 4.0
+
+	func _init(variant_id: int = -1) -> void:
+		trailer = TrimSheet.is_trailer()
+		variant = variant_id if trailer else -1
+		_tile_m = Tuning.data.kit_trim_m_per_tile
 
 	## A quad whose bottom-left corner is `origin`, running `width` along `right` and `height` along
 	## `up` (unit vectors; the face looks along right x up), with its UV at the corner `uv0` and one
@@ -290,6 +306,18 @@ class Builder:
 		if width <= 0.0 or height <= 0.0:
 			return
 		var normal := right.cross(up)
+		var u_step := 1.0
+		if trailer:
+			# The trailer's sheet: one repeat of a strip covers its own `u_m`, not Tuning's tile; a variant moves the face on it
+			# (an offset of U and V, a mirror of U, a tint).
+			var scale := _tile_m / float(TrimSheet.strip(strip).get("u_m", _tile_m))
+			var moved := TrimSheet.variation(strip, variant, _face_n)
+			_face_n += 1
+			var dir := -1.0 if bool(moved.flip) else 1.0
+			uv0 = Vector2((float(moved.u) + dir * uv0.x) * scale, uv0.y + float(moved.v))
+			u_step = dir * scale
+			var shift: Color = moved.tint
+			tint = Color(tint.r * shift.r, tint.g * shift.g, tint.b * shift.b)
 		var color := Color(tint.r, tint.g, tint.b, float(TrimSheet.index(strip)) / 255.0)
 		var buffer := _wire if TrimSheet.is_scissor(strip) else _opaque
 		var base := buffer.verts.size()
@@ -298,8 +326,8 @@ class Builder:
 		buffer.verts.append(origin + right * width + up * height)
 		buffer.verts.append(origin + up * height)
 		buffer.uvs.append(uv0)
-		buffer.uvs.append(uv0 + Vector2(width, 0.0))
-		buffer.uvs.append(uv0 + Vector2(width, height))
+		buffer.uvs.append(uv0 + Vector2(width * u_step, 0.0))
+		buffer.uvs.append(uv0 + Vector2(width * u_step, height))
 		buffer.uvs.append(uv0 + Vector2(0.0, height))
 		for i in 4:
 			buffer.normals.append(normal)
@@ -331,6 +359,7 @@ class Builder:
 	## is two (its frame and its wire).
 	func finish() -> ArrayMesh:
 		var mesh := ArrayMesh.new()
+		TrimSheet.ensure_wired()
 		for pair: Array in [[_opaque, ToonMaterials.trim()], [_wire, ToonMaterials.trim_scissor()]]:
 			var buffer: Buffer = pair[0]
 			if buffer.verts.is_empty():

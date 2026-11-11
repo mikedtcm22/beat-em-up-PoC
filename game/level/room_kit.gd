@@ -242,12 +242,12 @@ static func kit_art(art: StringName) -> bool:
 
 
 ## A box mesh of `size` in `material`; with a kit `art` kind (see add_box) the module's mesh on the
-## shared trim material instead, `material` unused.
+## shared trim material instead, `material` unused. `variant` is the trailer profile's alternate (TrimSheet.variant_for; -1 none).
 static func box_mesh(size: Vector3, material: Material, overlay: Material = null,
-		art: StringName = &"") -> MeshInstance3D:
+		art: StringName = &"", variant: int = -1) -> MeshInstance3D:
 	var mesh := MeshInstance3D.new()
 	if kit_art(art):
-		mesh.mesh = KitMesh.build(art, size)
+		mesh.mesh = KitMesh.build(art, size, variant)
 		mesh.material_overlay = overlay
 		return mesh
 	var box := BoxMesh.new()
