@@ -91,9 +91,13 @@ func _material_of(art: CharacterArt) -> ShaderMaterial:
 
 ## The inverted-hull outline for the skinned art's `material_overlay` (ToonMaterials.outline():
 ## shared, always on): the thinner variant when the rig is the player's own body
-## (`first_person_body`, read when the art is attached, like the primitives' hulls). `art` (M7): the art being attached, whose
-## painted hull (its ink map's weight) it gets when painted; null or an unpainted art: the shared hull.
-func outline_material(art: CharacterArt = null) -> Material:
+## (`first_person_body`, read when the art is attached, like the primitives' hulls).
+func outline_material() -> Material:
+	return ToonMaterials.outline(_rig.first_person_body)
+
+
+## The hull for `art`'s meshes (M7, T11): the painted hull of its ink map when the art is painted, else outline_material().
+func outline_material_of(art: CharacterArt) -> Material:
 	return ToonMaterials.outline_for_art(art, _rig.first_person_body)
 
 

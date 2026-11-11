@@ -243,8 +243,8 @@ func test_the_painted_hull_takes_the_profile_ink_width_scale() -> void:
 func test_m6_materials_have_exactly_their_old_uniforms_and_the_trim_grain_is_trailer_only() -> void:
 	for kind: String in ["trim", "scissor"]:
 		var material := ToonMaterials.trim() if kind == "trim" else ToonMaterials.trim_scissor()
-		assert_null(material.get_shader_parameter(&"grain_amount"), "%s: no grain under m6 (unset)" % kind)
-		assert_null(material.get_shader_parameter(&"grain_cells"))
+		assert_null(material.get_shader_parameter(&"grain_amount"), "%s: no grain uniform of its own, under m6 or not" % kind)
+	assert_eq(ToonMaterials.trim_grain.x, 0.0, "no grain under m6")
 	var before := {
 		trim = _uniforms(ToonMaterials.trim()), scissor = _uniforms(ToonMaterials.trim_scissor()),
 		art = _uniforms(ToonMaterials.art(load(ATLAS) as Texture2D)), hull = _uniforms(ToonMaterials.outline()),
@@ -252,9 +252,10 @@ func test_m6_materials_have_exactly_their_old_uniforms_and_the_trim_grain_is_tra
 		environment = _uniforms(ToonMaterials.environment(Color.GRAY, true)),
 	}
 	Tuning.set_value(&"look_profile", LookProfile.Id.TRAILER)
-	assert_eq(ToonMaterials.trim().get_shader_parameter(&"grain_amount"), Tuning.data.look_paint_trim_grain)
-	assert_eq(ToonMaterials.trim_scissor().get_shader_parameter(&"grain_cells"), Tuning.data.look_paint_trim_grain_cells)
+	assert_eq(ToonMaterials.trim_grain, Vector2(Tuning.data.look_paint_trim_grain, Tuning.data.look_paint_trim_grain_cells), "the trailer profile's grain")
+	assert_eq(_uniforms(ToonMaterials.trim()), before.trim, "and the trim material's own uniforms did not move")
 	Tuning.set_value(&"look_profile", LookProfile.Id.M6)
+	assert_eq(ToonMaterials.trim_grain.x, 0.0, "flipped back: no grain")
 	assert_eq(_uniforms(ToonMaterials.trim()), before.trim, "trim: m6's uniforms again")
 	assert_eq(_uniforms(ToonMaterials.trim_scissor()), before.scissor)
 	assert_eq(_uniforms(ToonMaterials.outline()), before.hull, "the shared hull is untouched by the painted one")

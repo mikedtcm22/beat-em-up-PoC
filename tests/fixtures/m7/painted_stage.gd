@@ -41,6 +41,10 @@ func _ready() -> void:
 	(floor_mesh.mesh as PlaneMesh).size = Vector2(20, 20)
 	floor_mesh.material_override = ToonMaterials.environment(Color(0.2, 0.2, 0.26))
 	add_child(floor_mesh)
+	var wall := MeshInstance3D.new()
+	wall.mesh = KitMesh.build(&"wall", Vector3(6.0, 3.0, 0.3))
+	wall.position = Vector3(0.0, 0.0, -2.5)
+	add_child(wall)
 	var base := load(BASE) as CharacterArt
 	var xs := [-1.2, 0.0, 1.2]
 	for i in 3:
@@ -61,6 +65,7 @@ func _ready() -> void:
 	var tag := "" if is_equal_approx(_key_yaw, 60.0) else "_key%d" % int(_key_yaw)
 	await _shoot("wide" + tag, Vector3(0.0, 1.3, 4.2), Vector3(0.0, 1.0, 0.0))
 	await _shoot("close_painted" + tag, Vector3(-0.6, 1.4, 1.6), Vector3(-1.2, 1.2, 0.0))
+	await _shoot("wall" + tag, Vector3(0.0, 1.6, 0.0), Vector3(0.0, 1.4, -2.5))
 	await _shoot("far" + tag, Vector3(0.0, 1.5, 9.0), Vector3(0.0, 1.0, 0.0))
 	get_tree().quit()
 

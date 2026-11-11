@@ -29,10 +29,10 @@ uniform float scissor_cut : hint_range(0.05, 0.95) = 0.35;
 // The edge pass's tag, written as ROUGHNESS: 1 on the world, so its lines draw on a module.
 uniform float edge_tag : hint_range(0.0, 1.0) = 1.0;
 
-// The trailer profile's grain on the flat fills (Milestone 7, T11; paint_grain.gdshaderinc): a share of the value (0 = none, and
-// ToonMaterials leaves it unset under the m6 profile) and the cells per metre. Under the ink: a drawn seam or crack stays clean.
-uniform float grain_amount : hint_range(0.0, 0.3) = 0.0;
-uniform float grain_cells : hint_range(10.0, 400.0) = 90.0;
+// The trailer profile's grain on the flat fills (Milestone 7, T11; paint_grain.gdshaderinc): x a share of the value (0 under the m6
+// profile: none), y the cells per metre. A GLOBAL uniform (project.godot [shader_globals]; ToonMaterials.apply_look() sets it), so
+// no trim material's own uniforms differ between the profiles. Under the ink: a drawn seam or crack stays clean.
+global uniform vec2 paint_trim_grain;
 
 // A debug view of the sampling (FB-GROUND): 0 the picture; 1 the strip index; 2 the mip level the footprint wants (log2 of the
 // texels a pixel covers, 0 to 12 as black to white); 3 the ink mask; 4 the sheet's alpha as it is sampled.
@@ -97,11 +97,11 @@ void fragment() {
 		c = textureGrad(trim_tex, uv, gx * keep, gy * keep);
 	}
 	vec3 color = c.rgb;
-	if (grain_amount > 0.0) {
-		vec2 gp = (ground ? world_m : face_m) * grain_cells;
+	if (paint_trim_grain.x > 0.0) {
+		vec2 gp = (ground ? world_m : face_m) * paint_trim_grain.y;
 		float cell = length(fwidth(gp));
 		float g = paint_grain_noise(vec3(gp, 0.0));
-		color *= 1.0 + (g - 0.5) * 2.0 * grain_amount * (1.0 - smoothstep(0.35, 0.9, cell));
+		color *= 1.0 + (g - 0.5) * 2.0 * paint_trim_grain.x * (1.0 - smoothstep(0.35, 0.9, cell));
 	}
 #ifdef TRIM_SCISSOR
 	if (row.w > 0.5 && row.w < 1.5) {

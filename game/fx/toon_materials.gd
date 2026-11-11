@@ -71,6 +71,8 @@ static var _art_warmed: bool = false
 ## The painted hulls, one per ink map and first-person flag (outline_painted()), and the area's own shadow hue and rim colour
 ## (set_area_look(); unset: the Tuning defaults).
 static var _painted_hulls: Dictionary[int, ShaderMaterial] = {}
+## The value of the trim's global grain uniform as last set (apply_trim_grain()): what a test reads.
+static var trim_grain: Vector2 = Vector2.ZERO
 static var _area_look_set: bool = false
 static var _area_shadow_hue: Color = Color.WHITE
 static var _area_rim_color: Color = Color.WHITE
@@ -359,14 +361,7 @@ static func apply_look(material: ShaderMaterial) -> void:
 		material.set_shader_parameter(&"ground_on", not data.ground_sheet_off)
 		material.set_shader_parameter(&"ink_soft", Vector3(data.ground_ink_soft_from_lod, data.ground_ink_soft_per_lod, data.ground_ink_soft_max))
 		material.set_shader_parameter(&"ink_fade", Vector2(data.ground_ink_fade_start_texels, maxf(data.ground_ink_fade_end_texels, data.ground_ink_fade_start_texels + 1.0)))
-		# The trailer profile's grain on the flat fills; under m6 the two uniforms are unset (null: the shader's own defaults), so
-		# an m6 trim material has exactly the uniforms it had before.
-		if LookProfile.current() == LookProfile.Id.TRAILER:
-			material.set_shader_parameter(&"grain_amount", data.look_paint_trim_grain)
-			material.set_shader_parameter(&"grain_cells", data.look_paint_trim_grain_cells)
-		else:
-			material.set_shader_parameter(&"grain_amount", null)
-			material.set_shader_parameter(&"grain_cells", null)
+		apply_trim_grain()
 	# The art's own: the glint on its glossy swatches, and the sharp ink of an art that asks for it
 	# (only while the cut is above 0: 0 is the A/B).
 	if kind == Kind.ART or kind == Kind.ART_PROP:
@@ -377,6 +372,15 @@ static func apply_look(material: ShaderMaterial) -> void:
 		# M6 DETAIL-2: the texel swatches of a mask that carries them (B above 0), the Bruiser's; the fade is in texels per pixel
 		material.set_shader_parameter(&"use_texel_swatch", data.look_texel_swatch)
 		material.set_shader_parameter(&"texel_swatch_fade", Vector2(data.look_texel_swatch_fade_near, maxf(data.look_texel_swatch_fade_far, data.look_texel_swatch_fade_near + 0.1)))
+
+
+## The trim's grain, a global shader uniform (`paint_trim_grain`: x the share of the value, y the cells per metre): the Tuning values under the
+## trailer profile, 0 under m6, so no material's own uniforms differ between the profiles. Called with every trim material's look.
+static func apply_trim_grain() -> void:
+	var data := Tuning.data
+	var on := LookProfile.current() == LookProfile.Id.TRAILER
+	trim_grain = Vector2(data.look_paint_trim_grain if on else 0.0, data.look_paint_trim_grain_cells)
+	RenderingServer.global_shader_parameter_set(&"paint_trim_grain", trim_grain)
 
 
 static func _apply_painted(material: ShaderMaterial, data: TuningData) -> void:

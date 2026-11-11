@@ -79,7 +79,7 @@ static func attach(rig: HumanoidRig, art: CharacterArt) -> Array[MeshInstance3D]
 		push_warning("SkinnedArt: %s does not attach: %s" % [art.id, "; ".join(entry.problems)])
 		return out
 	var material := rig.paint.art_material()
-	var outline := rig.paint.outline_material(art)
+	var outline := rig.paint.outline_material_of(art)
 	for part: ArtMesh in entry.meshes:
 		var mesh_instance := MeshInstance3D.new()
 		mesh_instance.name = "Art%s" % part.node_name

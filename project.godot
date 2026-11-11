@@ -71,6 +71,13 @@ world/region_use_async_iterations=false
 common/physics_ticks_per_second=60
 common/max_physics_steps_per_frame=8
 
+[shader_globals]
+
+paint_trim_grain={
+"type": "vec2",
+"value": Vector2(0, 90)
+}
+
 [rendering]
 
 textures/vram_compression/import_etc2_astc=true
