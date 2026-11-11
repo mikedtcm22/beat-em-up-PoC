@@ -22,3 +22,8 @@ extends Resource
 ## the body (the jacket of a primitive body, the whole skinned art's palette). Alpha 0 = no tint.
 ## No shipped variant sets one (tests/test_m6_no_placeholders.gd counts a tint as a placeholder).
 @export var tint: Color = Color(0.0, 0.0, 0.0, 0.0)
+
+## M7 (T12): the paint map a trailer-profile painted art wears for this variant (`metadata/trailer_paint` in the .tres, a Texture2D on the
+## same UV2 as the art's own paint map: the same drawing recoloured, so the ink, the face and the hull are the archetype's). Null = none.
+func trailer_paint() -> Texture2D:
+	return get_meta(&"trailer_paint") as Texture2D if has_meta(&"trailer_paint") else null

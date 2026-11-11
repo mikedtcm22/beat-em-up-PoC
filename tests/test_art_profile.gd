@@ -7,7 +7,8 @@ extends GutTest
 ## with an inverted palette, so there is no new art.
 
 const BASE_PATH := "res://tests/fixtures/m7/dummy_with_trailer_art.tres"
-const PUNK_ART := "res://game/actors/art/punk_art.tres"
+## An art that ships no trailer variant (the Punk itself got one in M7 T12, so the arms-down smoke Punk stands in).
+const PUNK_ART := "res://game/actors/art/punk_rest_art.tres"
 const INVERTED := "res://tests/fixtures/m7/inverted_palette.png"
 const ATLAS := "res://assets/export/palette/palette_atlas.png"
 const DUMMY_SCENE := "res://game/enemies/dummy/training_dummy.tscn"
