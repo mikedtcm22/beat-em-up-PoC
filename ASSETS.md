@@ -532,3 +532,14 @@ The level's and the rooms' dressing (Milestone 6, DRESS; plan D9, D11, D12). It 
 | Asset | Path | Source / service | License | Notes |
 | --- | --- | --- | --- | --- |
 | Trim sheet, retuned to the moods (`mood_street_a.jpg` and `mood_roof_a.jpg`): warmer brick and crate planks, blue-grey asphalt, concrete, roof tar and metal, a darker facade | `assets/source/kit/trim_layout.json` → `assets/export/kit/trim_sheet.png` (the same two files as "Kit") | Repainted by `tools/gen_trim.gd` | Original, project-owned | Still inside the look bible's environment band (`tests/test_kit.gd` reads every pixel). Git LFS |
+
+## Trailer references (Milestone 7, P0)
+
+Source art for the trailer's look, kept out of Godot's import by `assets/source/.gdignore`. Folder counts and origins are in `assets/source/trailer_ref/README.md`.
+
+| Asset | Path | Source / service | License | Notes |
+| --- | --- | --- | --- | --- |
+| Trailer stills, one per second | `assets/source/trailer_ref/frames/t_01.jpg` to `t_34.jpg` | Extracted by ffmpeg from the project's own `gameplay-trailer.mp4` | Project-owned | 34 frames, 1920x1080, JPEG quality 2. |
+| Trailer key frames (picked) | `assets/source/trailer_ref/keyframes/t*_key_pick.jpg` | Google Gemini API (paid), keyframes of the trailer | Gemini's terms give the output to the user (Google claims no ownership); outputs carry an invisible SynthID watermark. Check the account's terms before anything ships. | 10 full-size key frames, shots 01, 02, 04, 05, 06, 07, 08, 10, 12, 13. |
+| Trailer hero plates | `assets/source/trailer_ref/plates/t*_plate_0_gemini.jpg` | Google Gemini API (paid), paint-over of each shot's blockout | Gemini's terms give the output to the user (Google claims no ownership); outputs carry an invisible SynthID watermark. Check the account's terms before anything ships. | 7 plates, one per shot (01, 03, 04, 07, 08, 10, 12), highest take. |
+| Trailer reference stills | `assets/source/trailer_ref/ref/ref1_*.png`, `ref2_*.png` | Captured from the project's own trailer work (video worktree) | Project-owned | 18 stills. |
