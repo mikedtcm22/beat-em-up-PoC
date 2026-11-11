@@ -11,7 +11,7 @@
   { "key": "t01_crane_street", "in": 0, "out": 72},
   { "key": "t02_guard_up", "in": 14, "out": 40},
   { "key": "t03_punk_combo", "in": 0, "out": 62},
-  { "key": "t04_block_spin", "in": 0, "out": 36},
+  { "key": "t04_block_spin", "in": 0, "out": 32},
   { "key": "t05_grab_throw", "in": 20, "out": 80},
   { "key": "t06_pipe_chain", "in": 20, "out": 56, "audio_fade_out_ms": 60},
   { "key": "t07_roof_knockoff", "in": 30, "out": 87},

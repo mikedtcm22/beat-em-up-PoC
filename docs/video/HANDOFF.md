@@ -6,6 +6,26 @@ The cinematic gameplay video's live status, kept by the video session ("Beat-em-
 
 ## Status (newest first)
 
+### 2026-11-10 22:05 CST: Gate 4, the finished trailer DM'd; waiting on the music question
+- **The review round** (`wf_6a8b1d75-3f0`, the brief's three lenses):
+  - **style:** about 75% of the screen time reads drawn; the boss roof is closest to ref1_5.3; the worst tells were t05's smeared clinch, t11's whip-pan smear and the white steam cut-outs;
+  - **legibility:** t03, t05, t06 and t11 didn't read; trims suggested for t02, t07, t09, t10, t12 and t13;
+  - **technical:** the encode was right; the second loudnorm went dynamic and swung the bed about 13 dB; the true peak was -0.95 dBTP after AAC.
+- **The fix round** (`974c232`, plus t04's last trim):
+  - **the edit:** 33.6 s; the in/out frames are in `video/edit.json`, and 12 black frames before the title;
+  - **the sound:** a fixed gain into a -2 dBFS limiter with end fades; AudioToolbox AAC at 320 kbit/s; BT.709 tags;
+  - **the titles:** the end title resized;
+  - **round 3 retakes** (seed 23, `RESTYLE_R3`): t01 (the steam fixed), t05 (the street palette back), t03, t02 and t06 (about the same). Runway is at **1848 of 4308 credits; the cut's own spend is $15.40 of $40**.
+- **The final:** `captures/video/planb/final/planb_trailer_final_1080p.mp4` (33.56 s, H.264 High at 35.5 Mbit/s, **-13.8 LUFS, -1.6 dBTP**), `_720p_labelled.mp4` and `_edl.txt`, and `planb_style_proof.jpg` (four frames above four references).
+- **Gate 4, by DM** (ts `1794368905.453139`): the three files, where it stands, and the end line ("AI-restyled"). **The one question is music (D4):**
+  - (a) ElevenLabs music, which needs his go and a cap. The DM's "about $2-5 for one 35 s track" is a rough guess: **check ElevenLabs' current price before quoting a cap**;
+  - (b) a track he supplies;
+  - (c) effects only.
+- **Then (Phase 4):** `docs/video/LEARNINGS.md`, and the PR for the video tooling (never merged without his word). A GitHub Release (a draft) only on his word.
+- **Resume:**
+  1. read the DM after ts `1794368905.453139` for Michael's reply;
+  2. act on it. For music (a): write `tools/audio/eleven_music.py` with a ledger like `eleven_sfx.py`'s, within his cap; mix it under the effects in `assemble.py`.
+
 ### 2026-11-10 21:30 CST: the finish (Game-boy: "Yes, finish it"); the cut assembled; the review round running
 - **Game-boy, in the chat,** answering "is this the look to finish the trailer in?": "Yes, finish it". So the finish: the edit, titles and sound, plus prompt retakes inside the $40. Music (D4) is still effects only (the default); ask him at the next gate, with the videos.
 - **The finish** (all pushed, `f0ee08d`):
