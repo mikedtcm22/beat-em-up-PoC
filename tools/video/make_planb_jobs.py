@@ -9,7 +9,7 @@ Usage (from the video worktree):
   python3 -I tools/video/make_planb_jobs.py sheet [shot ...]     a sheet of those frames, to check the picks
   python3 -I tools/video/make_planb_jobs.py gemini [shot ...] [--take b]   write keyframes/jobs_cut_<take>.json (gemini_image.py)
   python3 -I tools/video/make_planb_jobs.py pick <shot> <take>   install keyframes/<take> as the shot's 1080p keyframe
-  python3 -I tools/video/make_planb_jobs.py restyle [shot ...]   add the shots' jobs to restyle/jobs.json (named <short>_r1)
+  python3 -I tools/video/make_planb_jobs.py restyle [shot ...]   add the shots' jobs to restyle/jobs.json (named <short>_r1)\n  python3 -I tools/video/make_planb_jobs.py restyle2 [shot ...]  round 2's prompt retakes (RESTYLE_R2), named <short>_r2
 Paths are under captures/video/planb/: inputs/<key>_1080.mp4 (the encoded render), keyframes/, restyle/.
 """
 import json
@@ -90,6 +90,27 @@ RETAKE_NOTES = {
 		"rooftop, the water tower and the sky.",
 	"t13_ox_falls": "This is a close-up: Ox's head, shoulders and huge gloves fill the frame exactly as in image 1, his face near "
 		"the top centre; do not show his whole body.",
+}
+
+# Round 2 of the restyle (the review, run wf_2b775833-71b, 2026-11-10): prompt levers only, the same seed. (keyframe kept?, prompt)
+RESTYLE_R2 = {
+	"t03_punk_combo": (True, "Restyle the whole video to match the keyframe: hand-drawn 2D anime, flat cel shadow shapes, tapered dark "
+		"ink outlines, a navy night palette with orange street-lamp light. The street punk keeps his grey cap and a drawn face with "
+		"readable features in every frame; his gloves and the player's fists stay solid drawn gloved shapes even in fast motion; "
+		"the white hit burst stays. Keep the camera motion, composition, character actions and timing exactly."),
+	"t05_grab_throw": (False, "Restyle the whole video as hand-drawn 2D anime: flat cel shadow shapes, tapered dark ink outlines, a "
+		"navy night palette with low orange street-lamp light. The big thug has a drawn face with readable features, short dark "
+		"hair and dark leather gloves; the player's gloved hands grab him and throw him over the shoulder onto a dumpster; every "
+		"body stays a solid drawn shape in fast motion. Keep the camera motion, composition, character actions and timing exactly."),
+	"t09_back_elbow": (False, "Restyle the whole video as hand-drawn 2D anime: flat cel shadow shapes, tapered dark ink outlines, a "
+		"flat lilac-and-peach dusk palette with the low sun behind and a painted sky without photographic clouds. The kicker wears "
+		"a charcoal grey hoodie, a black cap and orange goggles, with a drawn face; no green clothes. The enemy hit by the elbow is "
+		"dark-clad with normal skin. No on-screen chevrons or interface. Keep the camera motion, composition, character actions and "
+		"timing exactly."),
+	"t13_ox_falls": (True, "Restyle the whole video to match the keyframe: hand-drawn 2D anime with sketchy ink, at night: the city "
+		"burning behind, red-orange firelight across the roof, a dark purple smoky sky with embers, no daylight; a warm orange rim "
+		"light on Ox's armour. Ox keeps the keyframe's design as he falls. Keep the camera motion, composition, character actions "
+		"and timing exactly."),
 }
 
 PROMPT = ("Trace image 1 and ink and paint it as a hand-drawn 2D anime frame in the art style of image 2 ({style}). This is a "
@@ -190,6 +211,27 @@ def cmd_restyle(keys: list) -> None:
 		json.dump(jobs, f, indent=1)
 
 
+def cmd_restyle_r2(keys: list) -> None:
+	path = os.path.join(PLANB, "restyle", "jobs.json")
+	with open(path) as f:
+		jobs = json.load(f)
+	for key in keys:
+		if key not in RESTYLE_R2:
+			continue
+		keep, prompt = RESTYLE_R2[key]
+		name = f"{short(key)}_r2"
+		job = {"name": name, "video": f"../inputs/{key}_1080.mp4", "out": name, "seed": SEED, "prompt": prompt}
+		if keep:
+			# t03's keyframe is the test's (t03_key_b, frame 0); the others are the full cut's picks.
+			image = "t03_key_b_1080.jpg" if key == "t03_punk_combo" else f"{short(key)}_key_1080.jpg"
+			at = 0.0 if key == "t03_punk_combo" else round(SHOTS[key][0] / FPS, 3)
+			job["keyframes"] = [{"image": f"../keyframes/{image}", "seconds": at}]
+		jobs = [j for j in jobs if j["name"] != name] + [job]
+		print(f"{name}: " + ("keyframe kept" if keep else "the prompt alone") + f", {len(prompt)} characters")
+	with open(path, "w") as f:
+		json.dump(jobs, f, indent=1)
+
+
 def main() -> None:
 	if len(sys.argv) < 2:
 		sys.exit(__doc__)
@@ -205,6 +247,9 @@ def main() -> None:
 	keys = [k for k in SHOTS if not rest or k in rest or short(k) in rest]
 	if cmd == "gemini":
 		cmd_gemini(keys, take)
+		return
+	if cmd == "restyle2":
+		cmd_restyle_r2([k for k in RESTYLE_R2 if not rest or k in rest or short(k) in rest])
 		return
 	{"frames": cmd_frames, "sheet": cmd_sheet, "restyle": cmd_restyle}[cmd](keys)
 
