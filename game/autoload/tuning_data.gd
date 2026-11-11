@@ -1773,3 +1773,18 @@ func cam_punch_deg(tier: CombatTypes.HitTier) -> float:
 		CombatTypes.HitTier.FINISHER:
 			return cam_punch_finisher_deg
 	return cam_punch_light_deg
+
+
+@export_group("Night street (T10)")
+## The trailer look profile's night street (NightLook, game/level/look/): live multipliers on what its data authors. Presentation
+## only; under the m6 profile none of it is built.
+## A multiplier on every lamp's and barrel's light energy.
+@export_range(0.0, 3.0, 0.05) var night_lamp_energy: float = 1.0
+## A multiplier on the painted ground pools' opacity.
+@export_range(0.0, 2.0, 0.05) var night_pool_opacity: float = 1.0
+## A multiplier on the halos' energy (the part of the picture that blooms).
+@export_range(0.0, 3.0, 0.05) var night_halo_energy: float = 1.0
+## A multiplier on the haze bands' and the mist's strength.
+@export_range(0.0, 3.0, 0.05) var night_haze_scale: float = 1.0
+## A multiplier on the contact shadows' opacity.
+@export_range(0.0, 2.0, 0.05) var night_contact_opacity: float = 1.0

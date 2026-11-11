@@ -1,0 +1,6 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://tests/bot/t10_street_bot.gd" id="1_bot"]
+
+[node name="T10StreetBot" type="Node"]
+script = ExtResource("1_bot")

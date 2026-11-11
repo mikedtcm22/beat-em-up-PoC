@@ -114,6 +114,7 @@ func _ready() -> void:
 	_place_pickups()
 	if with_presentation:
 		RoomKit.build_presentation(self)
+		add_child(TrailerLook.new())
 	_index_route()
 	if start_arena > 0:
 		start_at_arena(start_arena)
@@ -273,9 +274,19 @@ func section_light_progress() -> float:
 
 ## The light `section` calls for.
 func light_for(section: LevelSection) -> Dictionary:
+	var light: Dictionary
 	if section != null and section.light_enabled and Tuning.data.section_light_enabled:
-		return LookProfile.resolve_light(section.light())
-	return LookProfile.resolve_light(default_light())
+		light = LookProfile.resolve_light(section.light())
+	else:
+		light = LookProfile.resolve_light(default_light())
+	# The trailer profile's own place looks (M7, T10): the profile's rows that are not a light are dropped, and the
+	# section's night look, when it has one, lays its colour script over the light.
+	light = NightLook.strip_rows(light)
+	var look := NightLook.for_location(section.look_location) if section != null else null
+	if look != null:
+		light = light.duplicate()
+		light.merge(look.light(), true)
+	return light
 
 
 ## The blend of two lights at `t` (0 to 1, eased): colours and numbers lerp, the sun's yaw the short way.

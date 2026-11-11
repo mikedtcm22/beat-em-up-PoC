@@ -684,7 +684,12 @@
 		"look_motion_hip_roll_deg": 4.0,
 		"look_motion_counter_swing_deg": 5.0,
 		"look_motion_overlap_s": 0.025,
-		"look_motion_overshoot": 0.15
+		"look_motion_overshoot": 0.15,
+		"night_lamp_energy": 1.0,
+		"night_pool_opacity": 1.0,
+		"night_halo_energy": 1.0,
+		"night_haze_scale": 1.0,
+		"night_contact_opacity": 1.0
 	},
 	"moves": {}
 }

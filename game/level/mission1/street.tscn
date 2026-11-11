@@ -28,6 +28,7 @@ size = Vector3(18, 10, 23)
 script = ExtResource("1_sect")
 floor_heights = PackedFloat32Array(0, 4.5)
 ambience = &"ambience_street"
+look_location = &"street_night"
 light_enabled = true
 sun_elevation_deg = 38.0
 sun_yaw_deg = -50.0
