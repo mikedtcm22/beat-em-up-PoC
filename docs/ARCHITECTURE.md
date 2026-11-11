@@ -1596,6 +1596,32 @@ For now `trailer.tres` differs from M6 in one marker alone, three colours in `li
 - The first-person camera caches the player's arm and torso meshes (`set_player()` clears the cache); no shipped player art has a variant yet, so it does not listen to `art_swapped`: whoever gives the hero a variant wires that.
 - Proof: `tests/test_art_profile.gd` with a fixture under `tests/fixtures/m7/` (the Dummy's GLB twice, the variant with an inverted palette: no new art).
 
+## The painted material (M7)
+
+The trailer profile's surface language for a character (T11). It is a second material path beside the palette atlas's, chosen by the art, never by a shader switch, and it exists only for an art that carries paint: m6's materials, shaders and uniforms are untouched (`tests/test_toon_painted.gd` compares every m6 material's uniforms across a flip and back).
+
+**The art contract (what T12 to T14 build to).** A trailer variant `CharacterArt` is painted when its `.tres` carries two metadata textures, `metadata/paint_tex` and `metadata/ink_tex` (`ToonMaterials.PAINT_META`, `INK_META`; `ToonMaterials.is_painted()`). Both are **2048 px, on UV2** (the mesh's second UV set, one island per part, no overlap), imported **lossless, mipmaps on, `detect_3d/compress_to` 0 and `fix_alpha_border` off for the ink map** (a compressed or colour-bled ink map breaks the class bytes). `ToonMaterials.art_for(art)` makes the material and `ToonMaterials.outline_for_art(art)` the hull; `RigPaint` and `SkinnedArt.attach()` call them, so a painted variant needs no other code.
+
+| File | Channel | Meaning |
+| --- | --- | --- |
+| `paint.png` | RGB (sRGB) | the flat local colour with the shadow shapes drawn in (a designed shadow, one per form); no lighting, no lines |
+| `ink.png` | R | the line: inner folds, seams, faces (cut at `look_paint_line_cut` with a one-pixel edge, so it stays crisp; the outer line is the hull's) |
+| | G | the damage class, as the palette atlas's alpha bytes: **255** clothes (scuffs, then blood), **230** clothes without blood, **204** skin (bruises, then blood), **128** none; read at texel precision (nearest), so a class border never blends |
+| | B | gloss: **255** where the hard highlight and the glint may show (the lens's streaks), 0 elsewhere; at or above one half is glossy, and the value gates the glint (a soft edge is cut at 0.5) |
+| | A | the hull's line weight hint, 0 (the thinnest, `look_paint_hull_weight_min`) to 1 (the heaviest, `weight_max`): taper ends toward 0. **A must be equal on both sides of a UV seam** (the hull's two vertices of a seam share a position and must share a width, or the shell cracks); it is read per vertex at mip `look_paint_hull_weight_lod` |
+
+`tests/fixtures/m7/` holds a generated placeholder pair at 512 px (`gen_painted_fixture.gd`) on the Punk's GLB (`punk_with_painted_art.tres`); `painted_stage.tscn` photographs it.
+
+**Shading (`toon_painted.gdshader`, ported from the video branch's `cine_toon.gdshader`).** Two flat tones, no mid band: the paint above `look_paint_cut` of the light term, below it a shadow tone (`look_paint_shadow_level` of the paint, pulled toward a **per-area hue** by `look_paint_shadow_hue_amount`, luminance kept, so never black), the edge at least `look_paint_term_soft_px` wide so a shadow map's steps are inside it. **At night nothing is added inside the shadow band:** a directional light carries the shadow tone itself (at no less than `look_paint_dir_floor` of a full light, in its hue, so a dim moon never drops the paint to black), and a lamp (a point or spot light, its term times `look_paint_point_gain`) adds only `max(shade - shadow, 0)`, so its pool has a hard edge and floods nothing (`ToonMaterials.painted_lamp_add()` mirrors it). **The rim** is one-sided: from the directional (key) light alone, a hard band on the grazing angle plus `look_paint_rim_key` times the key's facing, narrowed by `look_paint_rim_curve` times the screen-space turn of the normal (so its width follows the form's curvature, with no noise), in the area's warm colour, nothing on the side that turns from the key. **Grain** on the flat fill (never on a line) is a value noise in the rest-pose position (`look_paint_grain`, `look_paint_grain_cells`), gone where a cell is under a pixel. The flash, the damage look (`DamageLook.apply_art`: the same uniform names, the classes from the ink map's G), the edge tag, the hard highlight and the glint keep the atlas material's names and tunables, so every rig path treats it as the atlas art.
+
+**The area's colours.** `ToonMaterials.set_area_look(shadow_hue, rim_color)` gives every painted material (live and future) the area's shadow hue and warm rim colour, `clear_area_look()` returns to Tuning's `look_paint_shadow_hue` and `look_paint_rim_color`. The level's light code (T10) calls it when it applies an area's light (shadow hue: the sky's indigo, plum or lilac; rim: the lamp, the sun or the fire).
+
+**The hull (`toon_outline_painted.gdshader`).** The m6 hull's mode 4 with: the ink map's A as the weight, ink that weighs under a form (`look_paint_hull_under_bias`: heavier where the surface faces down, so the line changes along any bending limb with no map at all), and a distance gain, heavier than m6 near the lens (`look_paint_hull_near_gain` at `look_outline_near_m`, back to 1 by `boost_to_m`) and thinning from `thin_from_m` to `look_paint_hull_far_gain` at `look_outline_far_m`. One hull per ink map and first-person flag (`ToonMaterials.outline_painted()`); it takes the profile's `ink_width_scale` like the m6 hull. `ToonMaterials.painted_hull_width_m()` mirrors the width.
+
+**The trim's grain.** Under the trailer profile `trim()` and `trim_scissor()` get `grain_amount` and `grain_cells` (`look_paint_trim_grain`, `look_paint_trim_grain_cells`), a fine noise on the flat fill under the ink; under m6 the two uniforms are left unset, so an m6 trim material has exactly the uniforms it had.
+
+**No compile mid-fight.** All of it is uniforms of two new shaders (the painted material and its hull); `warm_up_with()` draws a painted copy of the skeleton with a blank paint, ink and painted hull in the load-time pass (any real painted variant is also drawn by its own throwaway rig, `RoomKit.build_warm_rigs()`), so flipping to the trailer profile compiles nothing in a fight. The Tuning group is "Painted look (M7)", before Audio.
+
 ## Ownership (Milestones 1-3)
 
 | Area | Files |
