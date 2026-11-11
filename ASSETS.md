@@ -544,6 +544,12 @@ Source art for the trailer's look, kept out of Godot's import by `assets/source/
 | Trailer hero plates | `assets/source/trailer_ref/plates/t*_plate_0_gemini.jpg` | Google Gemini API (paid), paint-over of each shot's blockout | Gemini's terms give the output to the user (Google claims no ownership); outputs carry an invisible SynthID watermark. Check the account's terms before anything ships. | 7 plates, one per shot (01, 03, 04, 07, 08, 10, 12), highest take. |
 | Trailer reference stills | `assets/source/trailer_ref/ref/ref1_*.png`, `ref2_*.png` | Captured from the project's own trailer work (video worktree) | Project-owned | 18 stills. |
 
+## Trailer night street (Milestone 7, T10)
+
+| Asset | Path | Source / service | License | Notes |
+| --- | --- | --- | --- | --- |
+| Street far-skyline matte | `assets/export/look/trailer/street_far_matte.png` | Copied from the video session's finished plate (`assets/video/mattes/matte_street_far.png` on `video/cinematic-trailer`): Google Gemini API (paid; job `street_far_a` in `assets/source/video_mattes/jobs.json`), keyed by `tools/video/key_mattes.py`. No new call for M7 | Gemini's terms give the output to the user (Google claims no ownership); outputs carry an invisible SynthID watermark. Check the account's terms before anything ships. | 2048x869 RGBA: dark navy blocks with a few lit windows, the sky keyed to alpha; a card behind the street's far end under the trailer profile (`NightLook` mattes). Git LFS |
+
 ## Trailer kit (Milestone 7, T15)
 
 The trailer look profile's sheets, selected by `TrimSheet` while `look_profile` is `trailer`; M6's sheets above are untouched.

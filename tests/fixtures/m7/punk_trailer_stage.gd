@@ -22,7 +22,9 @@ var _key: DirectionalLight3D
 
 
 func _ready() -> void:
-	Tuning.set_value(&"look_profile", LookProfile.Id.TRAILER)
+	# `-- --profile=m6` shows the same stage under the m6 look (the A/B); the default is the trailer.
+	var profile := LookProfile.Id.M6 if OS.get_cmdline_user_args().has("--profile=m6") else LookProfile.Id.TRAILER
+	Tuning.set_value(&"look_profile", profile)
 	var env := Environment.new()
 	env.background_mode = Environment.BG_COLOR
 	env.background_color = Color(0.42, 0.3, 0.34)
