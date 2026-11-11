@@ -1,0 +1,183 @@
+extends GutTest
+## Milestone 7, T15: the trailer look profile's kit. A second trim sheet and ground tile (tools/gen_trailer_kit.py) the profile
+## selects through TrimSheet, with the same 16 strips as M6's; per-block variants (a stable hash of the block's position
+## moves every face on the sheet) so no two walls or windows repeat; M6's sheet, meshes and colliders unchanged under the
+## "m6" profile, and the colliders unchanged under "trailer".
+
+const Snapshot := preload("res://tests/m6_collider_snapshot.gd")
+const FIXTURE := "res://tests/fixtures/m6/m5_colliders.json"
+const LEVEL_PATH := "res://game/level/mission1/mission1.tscn"
+const SIZES := {&"wall": Vector3(11.5, 12.0, 2.0), &"window": Vector3(1.3, 1.9, 0.3), &"skyline": Vector3(20.0, 25.0, 54.0)}
+
+
+func before_each() -> void:
+	Tuning.reset_to_default()
+	KitMesh.clear_cache()
+
+
+func after_each() -> void:
+	Tuning.reset_to_default()
+	KitMesh.clear_cache()
+
+
+func _trailer() -> void:
+	Tuning.set_value(&"look_profile", LookProfile.Id.TRAILER)
+
+
+func _uvs(mesh: ArrayMesh) -> PackedVector2Array:
+	return mesh.surface_get_arrays(0)[Mesh.ARRAY_TEX_UV]
+
+
+func test_the_two_tables_name_the_same_sixteen_strips() -> void:
+	var m6 := TrimSheet.table()
+	_trailer()
+	var trailer := TrimSheet.table()
+	assert_eq((trailer.strips as Array).size(), TrimSheet.ROWS)
+	for i in TrimSheet.ROWS:
+		var a: Dictionary = m6.strips[i]
+		var b: Dictionary = trailer.strips[i]
+		assert_eq(b.name, a.name, "row %d is the same strip" % i)
+		assert_eq(b.index, a.index)
+		assert_eq(b.scissor, a.scissor, "%s keeps its scissor flag" % a.name)
+		assert_eq(b.ground, a.ground, "%s keeps its ground flag" % a.name)
+
+
+func test_the_trailer_strips_fill_the_sheet_without_gaps_or_overlap() -> void:
+	_trailer()
+	var at := 0.0
+	for entry: Dictionary in TrimSheet.table().strips:
+		assert_almost_eq(float(entry.v0), at, 0.00001, "%s starts where the last one ended" % entry.name)
+		at += float(entry.vh)
+		assert_gt(float(entry.u_m), 0.0)
+		assert_gt(float(entry.period_m), 0.0)
+	assert_almost_eq(at, 1.0, 0.00001, "the strips fill the 2048 px")
+
+
+func test_the_profile_selects_the_sheets_and_flipping_back_restores_the_m6_ones() -> void:
+	var trim := ToonMaterials.trim()
+	var wire := ToonMaterials.trim_scissor()
+	KitMesh.build(&"slab", Vector3.ONE)
+	var m6_tex: Texture2D = trim.get_shader_parameter(&"trim_tex")
+	var m6_ground: Texture2D = trim.get_shader_parameter(&"ground_tex")
+	var m6_rows: PackedVector4Array = trim.get_shader_parameter(&"strips")
+	assert_eq(m6_tex.resource_path, TrimSheet.SHEET_PATH)
+	_trailer()
+	for material: ShaderMaterial in [trim, wire]:
+		assert_eq((material.get_shader_parameter(&"trim_tex") as Texture2D).resource_path, TrimSheet.TRAILER_SHEET_PATH)
+		assert_eq((material.get_shader_parameter(&"ground_tex") as Texture2D).resource_path, TrimSheet.TRAILER_GROUND_PATH)
+	assert_ne(trim.get_shader_parameter(&"strips"), m6_rows, "the strip rows are the trailer's")
+	assert_eq(TrimSheet.texture().get_width(), 2048)
+	assert_eq(TrimSheet.ground_texture().get_width(), 2048)
+	Tuning.set_value(&"look_profile", LookProfile.Id.M6)
+	assert_same(trim.get_shader_parameter(&"trim_tex"), m6_tex)
+	assert_same(trim.get_shader_parameter(&"ground_tex"), m6_ground)
+	assert_eq(trim.get_shader_parameter(&"strips"), m6_rows)
+
+
+func test_m6_meshes_ignore_the_variant_and_stay_the_same_object() -> void:
+	var plain := KitMesh.build(&"wall", Vector3(4.0, 5.0, 2.0))
+	assert_same(KitMesh.build(&"wall", Vector3(4.0, 5.0, 2.0), 5), plain, "no variation under M6")
+	assert_eq(TrimSheet.variant_for(Vector3(1.0, 2.0, 3.0)), -1)
+	var uv := _uvs(plain)
+	assert_eq(uv[0], Vector2.ZERO, "M6's UVs start at the corner, in metres")
+
+
+func test_variants_are_stable_and_spread_over_the_street() -> void:
+	_trailer()
+	var seen := {}
+	for z in 60:
+		var pos := Vector3(7.0, 5.0, -1.0 - float(z) * 1.7)
+		var v := TrimSheet.variant_for(pos)
+		assert_eq(TrimSheet.variant_for(pos), v, "the same position, the same variant")
+		assert_true(v >= 0 and v < Tuning.data.trailer_kit_variants)
+		seen[v] = true
+	assert_gte(seen.size(), 6, "sixty blocks take at least six of the variants")
+
+
+func test_a_variant_moves_the_faces_on_the_sheet() -> void:
+	_trailer()
+	var wall := SIZES[&"wall"] as Vector3
+	var a := KitMesh.build(&"wall", wall, 0)
+	var b := KitMesh.build(&"wall", wall, 1)
+	assert_ne(a, b, "each variant is its own mesh")
+	assert_same(KitMesh.build(&"wall", wall, 0), a, "cached per variant")
+	assert_ne(_uvs(a), _uvs(b), "another variant, other UVs")
+	assert_eq(KitMesh.triangle_count(a), KitMesh.triangle_count(b))
+	assert_eq(a.get_aabb(), b.get_aabb(), "the shape is the same")
+	# brick covers 8 m of U on the trailer sheet: a metre of face is a quarter of what M6's 4 m tile gave
+	var plain := KitMesh.build(&"wall", wall)
+	var uv := _uvs(plain)
+	var spread := absf(uv[1].x - uv[0].x)
+	assert_almost_eq(spread, wall.x * 0.5, 0.01, "a face's U runs at half the metres: one repeat is 8 m")
+
+
+func test_window_panes_land_on_whole_cells_of_the_glass_strip() -> void:
+	_trailer()
+	var cells := {}
+	for variant in 12:
+		for face in 4:
+			var moved := TrimSheet.variation(&"glass", variant, face)
+			var u := float(moved.u)
+			assert_almost_eq(u, roundf(u), 0.0001, "a pane starts on a cell edge")
+			assert_false(bool(moved.flip), "a pane is never mirrored")
+			assert_eq(float(moved.v), 0.0)
+			cells[roundi(u)] = true
+	assert_gte(cells.size(), 4, "lit and dark panes both come up across the variants")
+
+
+func test_variation_is_deterministic_and_keeps_the_chainlink_lattice() -> void:
+	_trailer()
+	assert_eq(TrimSheet.variation(&"brick", 3, 2), TrimSheet.variation(&"brick", 3, 2))
+	assert_ne(TrimSheet.variation(&"brick", 3, 2), TrimSheet.variation(&"brick", 4, 2))
+	var wire := TrimSheet.variation(&"chainlink", 7, 1)
+	assert_false(bool(wire.flip))
+	assert_eq(wire.tint, Color.WHITE)
+	var none := TrimSheet.variation(&"brick", -1, 0)
+	assert_eq(float(none.u), 0.0)
+	assert_eq(none.tint, Color.WHITE)
+
+
+func test_the_tint_stays_near_white() -> void:
+	_trailer()
+	var jitter := Tuning.data.trailer_kit_tint_jitter
+	for variant in 12:
+		var tint: Color = TrimSheet.variation(&"brick", variant, 0).tint
+		for channel in [tint.r, tint.g, tint.b]:
+			assert_almost_eq(float(channel), 1.0, jitter * 2.0 + 0.001)
+
+
+func test_the_street_flips_without_moving_a_collider() -> void:
+	var holder := Node.new()
+	add_child_autofree(holder)
+	var node := Snapshot.instantiate(LEVEL_PATH, holder)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	var before := Snapshot.snapshot(node)
+	_trailer()
+	await get_tree().physics_frame
+	var trailer := Snapshot.snapshot(node)
+	assert_eq(trailer.size(), before.size())
+	var keys := {}
+	for entry: Dictionary in before:
+		keys[Snapshot.key(entry)] = true
+	for entry: Dictionary in trailer:
+		assert_true(keys.has(Snapshot.key(entry)), "a collider moved under the trailer profile: %s" % Snapshot.key(entry))
+	# the blocks drew the trailer's meshes (a variant each), and flipping back draws M6's
+	var blocks := node.find_children("*", "Node3D", true, false).filter(func(n: Node) -> bool: return n is LevelBlock)
+	var variants := {}
+	for block: LevelBlock in blocks:
+		if block._mesh_node != null and block.module == &"":
+			variants[block._variant()] = true
+	assert_gte(variants.size(), 2, "the street's blocks take different variants")
+	Tuning.set_value(&"look_profile", LookProfile.Id.M6)
+	await get_tree().physics_frame
+	var back := Snapshot.snapshot(node)
+	assert_eq(back.size(), before.size())
+
+
+func test_the_street_stretch_has_no_two_neighbouring_walls_on_the_same_variant() -> void:
+	_trailer()
+	var a := TrimSheet.variant_for(Vector3(7.0, 5.0, 1.7))
+	var b := TrimSheet.variant_for(Vector3(7.0, 5.0, -6.2))
+	var c := TrimSheet.variant_for(Vector3(7.0, 5.0, -18.0))
+	assert_true(a != b or b != c, "the right wall's first blocks are not all alike")
