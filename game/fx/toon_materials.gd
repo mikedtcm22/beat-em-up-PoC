@@ -215,7 +215,7 @@ static func apply_look(material: ShaderMaterial) -> void:
 	var data := Tuning.data
 	var kind: int = material.get_meta(_KIND_META, -1)
 	if kind == Kind.HULL:
-		material.set_shader_parameter(&"width_px", data.look_outline_px)
+		material.set_shader_parameter(&"width_px", data.look_outline_px * LookProfile.ink_width_scale())
 		material.set_shader_parameter(&"near_m", data.look_outline_near_m)
 		material.set_shader_parameter(&"far_m", maxf(data.look_outline_far_m, data.look_outline_near_m + 0.1))
 		material.set_shader_parameter(&"lens_fade_m", data.look_outline_lens_fade_m)
@@ -373,7 +373,16 @@ static func hull_direction(mode: int, vertex: Vector3, normal: Vector3) -> Vecto
 ## turn until its own first update) and a holder put by it would stand under the floor behind
 ## the view, where the renderer culls it and builds nothing. It stays hidden until then, and is
 ## scaled down to the camera's near distance when it shows: only the draw is wanted.
+## `variants` (M7, warm_up_with()): more art instances, each a skinned Node3D wearing its own art's material, drawn
+## in the same holder in the same pass: the trailer profile's art, whose mesh format (a UV2) or
+## material may not be the m6 art's, so a profile flip compiles nothing mid-fight. They keep their
+## own materials and hulls, and are drawn with `skinned`, once.
 static func warm_up(parent: Node, skinned: Node3D = null) -> void:
+	warm_up_with(parent, skinned, [] as Array[Node3D])
+
+
+## warm_up() with the trailer profile's art drawn too (see its `variants`).
+static func warm_up_with(parent: Node, skinned: Node3D, variants: Array[Node3D]) -> void:
 	if parent == null or not parent.is_inside_tree() or DisplayServer.get_name() == "headless":
 		return
 	var boxes := not _warmed
@@ -414,6 +423,9 @@ static func warm_up(parent: Node, skinned: Node3D = null) -> void:
 			var mesh := node as MeshInstance3D
 			mesh.material_override = atlas
 			mesh.material_overlay = outline()
+		for other: Node3D in variants:
+			if other != null:
+				holder.add_child(other.duplicate() as Node3D)
 	# Two frames for the camera to be placed (see above), then it is read and the holder stands
 	# in its view, shown, for two more.
 	await parent.get_tree().process_frame

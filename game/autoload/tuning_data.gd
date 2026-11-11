@@ -1285,6 +1285,13 @@ extends Resource
 ## still softens it. Every room takes it (RoomKit.build_environment; LevelRoot keeps it live).
 @export_range(0.0, 1.0, 0.05) var section_fog_sky_affect: float = 0.3
 
+@export_group("Look profile")
+## Which look the presentation draws (Milestone 7): 0 = m6 (Milestone 6's, the default), 1 = trailer. F7 flips it
+## live. Each profile is a LookProfileData in game/fx/look_profiles/ (light overrides, grade LUT, whether bloom is
+## allowed, an ink width scale, the effect art folder, the HUD style); LookProfile hands them to the post pass,
+## the materials and the level's light. Presentation only: simulation never reads it.
+@export_range(0, 1, 1) var look_profile: int = 0
+
 @export_group("Audio")
 @export_subgroup("Mix")
 ## Volume of every sound effect, in dB: the SFX bus limiter's pre-gain, so turning it down

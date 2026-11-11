@@ -86,6 +86,13 @@ extends Node3D
 ## The skinned art this rig wears, or null for the placeholder primitives alone (exactly the
 ## 41 meshes, 45 with wrapped_hands). Set before build(), by CombatActor._configure_art().
 @export var art: CharacterArt
+## M7: whether the rig wears the variant of `art` the running look profile asks for (ArtLook, set
+## before build()) and swaps live when the profile flips. The load-time warm-up rigs turn it off:
+## each wears exactly the art it was given, so both profiles' art are drawn once.
+var art_follows_look: bool = true
+## Emitted after swap_art() has put another art's meshes on the skeleton: a camera that holds
+## the old meshes drops them.
+signal art_swapped(worn: CharacterArt)
 ## Player only: put the meshes PlaceholderBody.is_fp_hidden() names (head, neck, chest,
 ## shoulder balls and the shoulder end of each upper arm) on CombatTypes.VIS_FP_HIDDEN.
 @export var first_person_body: bool = false:
@@ -179,6 +186,8 @@ var _head_meshes: Array[MeshInstance3D] = []
 var _body_meshes: Array[MeshInstance3D] = []
 ## The skinned art's meshes, once SkinnedArt.attach() has added them.
 var _art_meshes: Array[MeshInstance3D] = []
+## The art those meshes are of: `art` or its variant for the running profile (worn_art()).
+var _worn: CharacterArt
 var _current: StringName = &""
 ## The body flurry alternates its leading fist on consecutive plays.
 var _flurry_mirrored: bool = false
@@ -427,6 +436,36 @@ func set_shown(shown: bool) -> void:
 ## failed to attach keeps drawing its primitives and counts as having none.
 func has_art() -> bool:
 	return not _art_meshes.is_empty()
+
+
+## The art the rig draws now: `art`, or its variant under the running look profile (before the
+## build, `art`).
+func worn_art() -> CharacterArt:
+	return _worn if _worn != null else art
+
+
+## Dress the body in `new_art` (a CharacterArt of the same 23-bone humanoid, `art`'s variant),
+## live: the old art's meshes go, the new art's go on the same skeleton, so the pose carries on
+## exactly; the new art's material starts in the flash and damage look the rig has, the hull is
+## the shared one, and the layers and the art/primitives A/B are re-applied. False (nothing
+## changed) when the rig has no art on, `new_art` is already worn, or it breaks the art contract
+## (SkinnedArt.check(), warned). Called by the rig itself when the look profile flips (ArtLook).
+func swap_art(new_art: CharacterArt) -> bool:
+	if not _built or new_art == null or _art_meshes.is_empty() or new_art == worn_art():
+		return false
+	var problems := SkinnedArt.check(new_art)
+	if not problems.is_empty():
+		push_warning("HumanoidRig: %s does not swap in: %s" % [new_art.id, "; ".join(problems)])
+		return false
+	for mesh_instance: MeshInstance3D in _art_meshes:
+		mesh_instance.get_parent().remove_child(mesh_instance)
+		mesh_instance.free()
+	_worn = new_art
+	_art_meshes = SkinnedArt.attach(self, new_art)
+	_apply_layers()
+	set_art_shown(Tuning.data.look_show_art)
+	art_swapped.emit(new_art)
+	return true
 
 
 ## The skinned art's meshes (read only); empty on a rig without art.
@@ -854,7 +893,8 @@ func _build_meshes() -> void:
 			_body_meshes.append(mesh_instance)
 	_apply_layers()
 	if art != null:
-		_art_meshes = SkinnedArt.attach(self, art)
+		_worn = _pick_art()
+		_art_meshes = SkinnedArt.attach(self, _worn)
 		_apply_layers()
 		set_art_shown(Tuning.data.look_show_art)
 		if has_art():
@@ -866,6 +906,17 @@ func _build_meshes() -> void:
 func _on_tuning_changed(property: StringName) -> void:
 	if property == &"look_show_art" or property == &"":
 		set_art_shown(Tuning.data.look_show_art)
+	if ArtLook.is_profile_change(property):
+		swap_art(_pick_art())
+
+
+## The art this rig should wear: its variant for the running look profile when it follows the
+## look and that variant keeps the contract, else `art`.
+func _pick_art() -> CharacterArt:
+	if not art_follows_look:
+		return art
+	var picked := ArtLook.worn(art)
+	return picked if picked == art or SkinnedArt.check(picked).is_empty() else art
 
 
 func _make_mesh(part: PlaceholderBody.Part) -> Mesh:

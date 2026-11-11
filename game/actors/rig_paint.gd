@@ -27,8 +27,10 @@ static var _flash_warm_box: MeshInstance3D
 var materials: Dictionary[int, ShaderMaterial] = {}
 
 var _rig: HumanoidRig
-## The skinned art's material, made on first use (art_material()).
-var _art_material: ShaderMaterial
+## The skinned art's materials, one per art the rig has worn (the base art's, and its trailer
+## variant's once the rig has swapped to it), made on first use and kept so a swap back restores
+## the very same material. Keyed by the art's instance id.
+var _art_materials: Dictionary[int, ShaderMaterial] = {}
 
 
 func _init(rig: HumanoidRig) -> void:
@@ -52,16 +54,38 @@ func material(paint: int) -> Material:
 	return materials[paint]
 
 
-## The skinned art's toon material: the palette atlas (and the detail mask), one per rig, or
-## null on a rig without art. Like the primitives', its flash is a uniform.
+## The skinned art's toon material: the palette atlas (and the detail mask), one per rig and
+## per art worn, or null on a rig without art. This is the one of the art the rig wears now
+## (HumanoidRig.worn_art()). Like the primitives', its flash is a uniform.
 func art_material() -> Material:
-	var art := _rig.art
+	return _material_of(_rig.worn_art())
+
+
+## The material of the rig's own `art`, whichever variant is worn: what an enemy's palette swap
+## or tint (EnemyActor._apply_variant_look()) belongs on, since it recolours that art's atlas.
+func base_art_material() -> Material:
+	return _material_of(_rig.art)
+
+
+## The art material of `art`, made on first use. A material made after the first one starts in the
+## state the rig is in: the flash the others show, and the damage look.
+func _material_of(art: CharacterArt) -> ShaderMaterial:
 	if art == null:
 		return null
-	if _art_material == null:
-		# The hero's art says so (metadata/detail_sharp in player_art.tres) when its mask's ink is to be sharp.
-		_art_material = ToonMaterials.art(art.palette, art.detail_mask, bool(art.get_meta(&"detail_sharp", false)))
-	return _art_material
+	var key := art.get_instance_id()
+	if _art_materials.has(key):
+		return _art_materials[key]
+	# The hero's art says so (metadata/detail_sharp in player_art.tres) when its mask's ink is to be sharp.
+	var made := ToonMaterials.art(art.palette, art.detail_mask, bool(art.get_meta(&"detail_sharp", false)))
+	if not _art_materials.is_empty():
+		var other: ShaderMaterial = _art_materials.values()[0]
+		made.set_shader_parameter(&"flash_color", other.get_shader_parameter(&"flash_color"))
+		made.set_shader_parameter(&"flash_amount", other.get_shader_parameter(&"flash_amount"))
+		made.next_pass = other.next_pass
+	if not _art_materials.is_empty() or _rig.damage_look != DamageLook.Level.CLEAN:
+		DamageLook.apply_art(made, _rig.damage_look)
+	_art_materials[key] = made
+	return made
 
 
 ## The inverted-hull outline for the skinned art's `material_overlay` (ToonMaterials.outline():
@@ -121,18 +145,18 @@ func show_flash_overlay(on: bool, overlay: Material) -> void:
 func set_damage_look(level: int) -> void:
 	for paint: int in materials:
 		DamageLook.apply(materials[paint], paint, level)
-	if _art_material != null:
-		DamageLook.apply_art(_art_material, level)
+	for mat: ShaderMaterial in _art_materials.values():
+		DamageLook.apply_art(mat, level)
 
 
-## Every material the body's surfaces draw with: the primitives' per paint, then the art's if
-## the rig has art and it has been asked for.
+## Every material the body's surfaces draw with: the primitives' per paint, then each art's
+## (every variant worn so far, so a flash or a damage look reaches the one not shown too).
 func base_materials() -> Array[Material]:
 	var out: Array[Material] = []
 	for mat: ShaderMaterial in materials.values():
 		out.append(mat)
-	if _art_material != null:
-		out.append(_art_material)
+	for mat: ShaderMaterial in _art_materials.values():
+		out.append(mat)
 	return out
 
 

@@ -46,6 +46,8 @@ var _environment: Environment
 var _graded: PackedByteArray = PackedByteArray()
 var _identity: PackedByteArray = PackedByteArray()
 var _lut_size: int = 0
+## The path the LUT bytes above were read from (the running look profile's).
+var _lut_path: String = ""
 var _lut_texture: ImageTexture3D
 var _lut_strength: float = -1.0
 var _viewport: Viewport
@@ -141,6 +143,7 @@ static func depth_only_shader() -> Shader:
 ## Push every Look > Edges, Grade and AA tunable to the quad, the Environment and the viewport.
 func apply() -> void:
 	_apply_sun()
+	_apply_room_light()
 	_apply_edges()
 	_apply_grade()
 	_apply_aa()
@@ -181,6 +184,16 @@ func _apply_sun() -> void:
 	RoomKit.apply_sun(sun)
 
 
+## A room without a LevelRoot's light blend (the crowd street, the training room) takes the running
+## profile's sky, fog and sun colour: RoomKit's defaults with the profile's overrides on them, written
+## only where they differ. A LevelRoot does this itself (its blend carries the profile; level_root.gd).
+func _apply_room_light() -> void:
+	var room := get_parent()
+	if room == null or room.has_method(&"current_light"):
+		return
+	RoomKit.apply_room_light(room, LookProfile.resolve_light(RoomKit.default_room_light()))
+
+
 func _apply_edges() -> void:
 	var t := Tuning.data
 	_quad.visible = t.look_edges_enabled
@@ -188,7 +201,7 @@ func _apply_edges() -> void:
 	if _material.shader != wanted:
 		_material.shader = wanted
 	_material.set_shader_parameter(&"ink", HudStyle.INK)
-	_material.set_shader_parameter(&"width_px", t.look_edge_px)
+	_material.set_shader_parameter(&"width_px", t.look_edge_px * LookProfile.ink_width_scale())
 	_material.set_shader_parameter(&"depth_threshold", t.look_edge_depth_threshold)
 	_material.set_shader_parameter(&"normal_threshold", t.look_edge_normal_threshold)
 	_material.set_shader_parameter(&"fade_start_m", t.look_edge_fade_start_m)
@@ -203,6 +216,13 @@ func _apply_grade() -> void:
 		return
 	var t := Tuning.data
 	_environment.tonemap_mode = tonemap_mode(t.look_tonemap)
+	var bloom := LookProfile.bloom_allowed()
+	if _environment.glow_enabled != bloom:
+		_environment.glow_enabled = bloom
+	# The profile's LUT: another profile's file is read and the texture rebuilt from it.
+	if LookProfile.grade_lut_path() != _lut_path:
+		_read_lut()
+		_lut_texture = null
 	if not t.look_grade_enabled or _lut_size == 0:
 		_environment.adjustment_enabled = false
 		return
@@ -226,9 +246,10 @@ func _apply_aa() -> void:
 ## Read the LUT strip and keep its bytes, slice after slice, with the identity beside it.
 func _read_lut() -> void:
 	_lut_size = 0
-	if not ResourceLoader.exists(LUT_PATH):
+	_lut_path = LookProfile.grade_lut_path()
+	if not ResourceLoader.exists(_lut_path):
 		return
-	var texture := load(LUT_PATH) as Texture2D
+	var texture := load(_lut_path) as Texture2D
 	if texture == null:
 		return
 	var strip := texture.get_image()
@@ -239,7 +260,7 @@ func _read_lut() -> void:
 	strip.convert(Image.FORMAT_RGB8)
 	var n := strip.get_height()
 	if n < 2 or strip.get_width() != n * n:
-		push_warning("LookPost: %s is not a strip of N slices of N x N" % LUT_PATH)
+		push_warning("LookPost: %s is not a strip of N slices of N x N" % _lut_path)
 		return
 	_graded = PackedByteArray()
 	for b in n:

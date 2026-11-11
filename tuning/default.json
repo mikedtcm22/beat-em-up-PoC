@@ -556,6 +556,7 @@
 		"draw_prop_lod_split_deg": 25.0,
 		"section_light_blend_s": 2.5,
 		"section_fog_sky_affect": 0.3,
+		"look_profile": 0,
 		"sfx_volume_db": -3.0,
 		"sfx_pitch_variation": 0.08,
 		"sfx_volume_variation": 0.08,

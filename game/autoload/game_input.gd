@@ -32,6 +32,7 @@ const BINDINGS := {
 	&"help": [KEY_H],
 	&"sparring": [KEY_F5],  # toggle sparring on every training dummy
 	&"switch_room": [KEY_F6],  # Mission 1 -> the crowd street -> the training room (Milestone 5)
+	&"look_profile": [KEY_F7],  # flip the look profile: M6's look / the trailer's (Milestone 7)
 	# Free-fly debug camera (keeps WASD/mouse for the player).
 	&"fly_forward": [KEY_UP],
 	&"fly_back": [KEY_DOWN],
@@ -171,6 +172,9 @@ static func room_after(scene_path: String) -> String:
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed(&"switch_room"):
 		switch_room()
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed(&"look_profile"):
+		LookProfile.cycle()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed(&"pause"):
 		set_paused(not paused)

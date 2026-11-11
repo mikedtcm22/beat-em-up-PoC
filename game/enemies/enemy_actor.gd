@@ -324,7 +324,7 @@ func set_variant(value: EnemyVariant) -> void:
 func _apply_variant_look() -> void:
 	if variant == null or rig == null:
 		return
-	var art_material := rig.paint.art_material() as ShaderMaterial
+	var art_material := rig.paint.base_art_material() as ShaderMaterial
 	if variant.palette != null and art_material != null:
 		art_material.set_shader_parameter(&"albedo_tex", variant.palette)
 	if variant.tint.a <= 0.0:
