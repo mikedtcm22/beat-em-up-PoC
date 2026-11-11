@@ -1294,6 +1294,50 @@ extends Resource
 ## concrete, the facade): the slight non-uniformity of hand-painted planes.
 @export_range(0.0, 0.3, 0.005) var trailer_kit_tint_jitter: float = 0.07
 
+@export_group("Trailer street FX")
+## M7 T16a: the trailer profile's 2D street effects (outlined steam, grey wisps, the burn barrel's flame, embers),
+## drawn by StreetFx under look profile "trailer" only. Drawings per second the effects hold on (the trailer's twos).
+@export_range(4.0, 30.0, 1.0) var tfx_twos_hz: float = 12.0
+## How far a steam lobe's life a drawing moves it (one plume's life is 1 / (rate x twos_hz) seconds).
+@export_range(0.002, 0.05, 0.001) var tfx_steam_rate: float = 0.012
+## Steam plume card size (m): width, height. Grey wisp card size (m): width, height.
+@export_range(0.5, 4.0, 0.05) var tfx_steam_card_w_m: float = 1.6
+@export_range(0.5, 6.0, 0.05) var tfx_steam_card_h_m: float = 3.2
+@export_range(0.5, 4.0, 0.05) var tfx_wisp_card_w_m: float = 1.4
+@export_range(0.5, 6.0, 0.05) var tfx_wisp_card_h_m: float = 2.6
+## Opacity of the steam's light and dark tones, and of the wisps' tones.
+@export_range(0.0, 1.0, 0.01) var tfx_steam_alpha: float = 0.95
+@export_range(0.0, 1.0, 0.01) var tfx_wisp_alpha: float = 0.38
+## The burn barrel: radius and height (m), the flame card's width and height (m) and its brightness.
+@export_range(0.2, 0.6, 0.01) var tfx_barrel_radius_m: float = 0.34
+@export_range(0.5, 1.4, 0.01) var tfx_barrel_height_m: float = 0.95
+@export_range(0.2, 2.0, 0.05) var tfx_flame_card_w_m: float = 0.85
+@export_range(0.2, 2.0, 0.05) var tfx_flame_card_h_m: float = 1.1
+@export_range(0.0, 3.0, 0.05) var tfx_flame_energy: float = 1.3
+## Embers per barrel, their size (m), how high they climb (m) and how far they sway (m).
+@export_range(0, 40, 1) var tfx_embers_per_barrel: int = 14
+@export_range(0.01, 0.2, 0.005) var tfx_ember_size_m: float = 0.055
+@export_range(0.5, 6.0, 0.1) var tfx_ember_rise_m: float = 2.6
+@export_range(0.0, 1.5, 0.05) var tfx_ember_sway_m: float = 0.35
+## Embers' life in seconds, and the barrel's ground glow: width (m) and opacity.
+@export_range(0.5, 6.0, 0.1) var tfx_ember_life_s: float = 2.2
+@export_range(0.5, 6.0, 0.1) var tfx_pool_m: float = 3.2
+@export_range(0.0, 1.0, 0.01) var tfx_pool_alpha: float = 0.5
+
+@export_group("Night street (T10)")
+## The trailer look profile's night street (NightLook, game/level/look/): live multipliers on what its data authors. Presentation
+## only; under the m6 profile none of it is built.
+## A multiplier on every lamp's and barrel's light energy.
+@export_range(0.0, 3.0, 0.05) var night_lamp_energy: float = 1.0
+## A multiplier on the painted ground pools' opacity.
+@export_range(0.0, 2.0, 0.05) var night_pool_opacity: float = 1.0
+## A multiplier on the halos' energy (the part of the picture that blooms).
+@export_range(0.0, 3.0, 0.05) var night_halo_energy: float = 1.0
+## A multiplier on the haze bands' and the mist's strength.
+@export_range(0.0, 3.0, 0.05) var night_haze_scale: float = 1.0
+## A multiplier on the contact shadows' opacity.
+@export_range(0.0, 2.0, 0.05) var night_contact_opacity: float = 1.0
+
 @export_group("Look profile")
 ## Which look the presentation draws (Milestone 7): 0 = m6 (Milestone 6's, the default), 1 = trailer. F7 flips it
 ## live. Each profile is a LookProfileData in game/fx/look_profiles/ (light overrides, grade LUT, whether bloom is
@@ -1836,18 +1880,3 @@ func cam_punch_deg(tier: CombatTypes.HitTier) -> float:
 		CombatTypes.HitTier.FINISHER:
 			return cam_punch_finisher_deg
 	return cam_punch_light_deg
-
-
-@export_group("Night street (T10)")
-## The trailer look profile's night street (NightLook, game/level/look/): live multipliers on what its data authors. Presentation
-## only; under the m6 profile none of it is built.
-## A multiplier on every lamp's and barrel's light energy.
-@export_range(0.0, 3.0, 0.05) var night_lamp_energy: float = 1.0
-## A multiplier on the painted ground pools' opacity.
-@export_range(0.0, 2.0, 0.05) var night_pool_opacity: float = 1.0
-## A multiplier on the halos' energy (the part of the picture that blooms).
-@export_range(0.0, 3.0, 0.05) var night_halo_energy: float = 1.0
-## A multiplier on the haze bands' and the mist's strength.
-@export_range(0.0, 3.0, 0.05) var night_haze_scale: float = 1.0
-## A multiplier on the contact shadows' opacity.
-@export_range(0.0, 2.0, 0.05) var night_contact_opacity: float = 1.0
