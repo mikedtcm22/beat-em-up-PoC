@@ -16,6 +16,8 @@ uniform float rim_r : hint_range(0.2, 1.0) = 0.95;
 uniform float core_r : hint_range(0.1, 0.9) = 0.5;
 uniform float broken : hint_range(0.0, 0.6) = 0.22;
 uniform float bite_freq : hint_range(0.5, 8.0) = 2.4;
+// How soft the edges are, as a share of the card's half-size (the painted wash fades out; 0 is the hard cut-out).
+uniform float soft : hint_range(0.0, 0.6) = 0.2;
 // The ground direction the pool is pushed along (away from the lamp's pole) and by how much (share of the half-size).
 uniform vec2 push = vec2(0.0, 0.0);
 uniform float seed = 1.0;
@@ -37,11 +39,14 @@ void fragment() {
 	vec2 p = (UV * 2.0 - 1.0) - push;
 	float r = length(p);
 	float ang = atan(p.y, p.x);
-	float n = 0.6 * vnoise(vec2(ang * bite_freq + seed * 7.3, seed * 1.7)) + 0.4 * vnoise(vec2(ang * bite_freq * 2.9 + seed * 3.1, 2.0 + seed)) - 0.5;
+	float n = 0.7 * vnoise(vec2(ang * bite_freq + seed * 7.3, seed * 1.7)) + 0.3 * vnoise(vec2(ang * bite_freq * 2.9 + seed * 3.1, 2.0 + seed)) - 0.5;
 	float rr = r + n * broken * 2.0;
 	float aa = max(fwidth(r) * 1.3, 0.004);
-	float rim = 1.0 - smoothstep(rim_r - aa, rim_r + aa, rr);
-	float core = 1.0 - smoothstep(core_r - aa, core_r + aa, rr + 0.08 * n);
+	// The rim fades out over `soft`; the core's edge is a little tighter, so two tones still read inside the wash.
+	float rim_f = max(aa, soft);
+	float core_f = max(aa, soft * 0.6);
+	float rim = 1.0 - smoothstep(rim_r - rim_f * 1.6, rim_r, rr);
+	float core = 1.0 - smoothstep(core_r - core_f, core_r + core_f * 0.4, rr + 0.08 * n);
 	vec3 col = mix(rim_color, core_color, core);
 	ALBEDO = col;
 	ALPHA = clamp(mix(rim * rim_alpha, core_alpha, core) * opacity, 0.0, 1.0);

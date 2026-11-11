@@ -14,12 +14,24 @@ extends Node3D
 const SET_SUFFIX := "_street_fx.tres"
 const BARREL_SCENE := "res://game/level/props/burn_barrel.tscn"
 const STEAM_SHADER := "res://game/fx/street_steam.gdshader"
+## Every effect shader the street draws (with a drum's ink hull, a StandardMaterial3D, besides): the first flip to the trailer would
+## compile each on its first drawn frame, so a window draws each once, tiny, at load (see `_show_warm()`).
+const WARM_SHADERS: Array[String] = [
+	"res://game/fx/street_steam.gdshader", "res://game/fx/street_flame.gdshader", "res://game/fx/street_ember.gdshader",
+	"res://game/fx/street_pool.gdshader", "res://game/fx/street_barrel.gdshader",
+]
+## The warm-up stand-ins sit this far ahead of the camera and are this big (m): in the view, so they are drawn, but under a pixel.
+## Technical values, not feel (as VfxDirector's).
+const WARM_DISTANCE_M := 1.0
+const WARM_SIZE_M := 0.0005
 
 var _clock: float = 0.0
 var _slot: int = 0
 var _steam_mats: Array[ShaderMaterial] = []
 var _barrels: Array[BurnBarrel] = []
 var _built: bool = false
+var _warm_pending: bool = false
+var _warm_nodes: Array[Node] = []
 
 
 func _init() -> void:
@@ -38,10 +50,98 @@ func _exit_tree() -> void:
 
 func _ready() -> void:
 	refresh()
+	begin_warm_up()
 
 
 func _process(delta: float) -> void:
 	advance(delta)
+	_step_warm_up()
+
+
+## Schedule the first-use warm-up, once the viewport has a camera and `windowed` (a window is open: headless has no renderer to warm,
+## so the tests' frames stay as they are; `_ready()` calls this itself). Godot builds a shader's pipeline the first time a surface with
+## it is drawn, which put a hitch on the first F7 flip to the trailer, when the street's five effect shaders first appeared. So, once and
+## for one rendered frame, a tiny stand-in of each (the same mesh kind and instancing as the real one) is drawn in front of the camera,
+## then freed. Nothing is visible and nothing stays in the tree under m6 (the stand-ins hang on the camera, not on this node).
+## Returns `windowed`.
+func begin_warm_up(windowed: bool = DisplayServer.get_name() != "headless") -> bool:
+	_warm_pending = windowed
+	return windowed
+
+
+## Whether the warm-up stand-ins are on screen now (tests).
+func warming() -> bool:
+	return not _warm_nodes.is_empty()
+
+
+func _step_warm_up() -> void:
+	for node: Node in _warm_nodes:
+		if is_instance_valid(node):
+			node.queue_free()
+	_warm_nodes.clear()
+	if not _warm_pending or not is_inside_tree():
+		return
+	var camera := get_viewport().get_camera_3d()
+	if camera != null:
+		_warm_pending = false
+		_show_warm(camera)
+
+
+## One tiny stand-in per effect material kind, hung on `camera` straight ahead of it.
+func _show_warm(camera: Camera3D) -> void:
+	var at := Vector3(0.0, 0.0, -WARM_DISTANCE_M)
+	var quad := QuadMesh.new()
+	quad.size = Vector2(WARM_SIZE_M, WARM_SIZE_M)
+	for path in WARM_SHADERS:
+		var mat := ShaderMaterial.new()
+		mat.shader = load(path) as Shader
+		var node: Node3D
+		if path == STEAM_SHADER or path.ends_with("street_flame.gdshader"):
+			node = BurnBarrel.one_mesh(quad, mat)
+		elif path.ends_with("street_ember.gdshader"):
+			node = _warm_embers(mat, quad)
+		elif path.ends_with("street_pool.gdshader"):
+			var pool := QuadMesh.new()
+			pool.size = Vector2(WARM_SIZE_M, WARM_SIZE_M)
+			pool.orientation = PlaneMesh.FACE_Y
+			node = BurnBarrel.one_mesh(pool, mat)
+		else:
+			var drum := CylinderMesh.new()
+			drum.top_radius = WARM_SIZE_M
+			drum.bottom_radius = WARM_SIZE_M
+			drum.height = WARM_SIZE_M
+			node = BurnBarrel.one_mesh(drum, mat)
+		_hang(camera, node, at)
+	# The drum's ink hull is a StandardMaterial3D, front faces culled.
+	var hull_mat := StandardMaterial3D.new()
+	hull_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	hull_mat.cull_mode = BaseMaterial3D.CULL_FRONT
+	var hull := CylinderMesh.new()
+	hull.top_radius = WARM_SIZE_M
+	hull.bottom_radius = WARM_SIZE_M
+	hull.height = WARM_SIZE_M
+	_hang(camera, BurnBarrel.one_mesh(hull, hull_mat), at)
+
+
+func _warm_embers(mat: ShaderMaterial, quad: QuadMesh) -> MultiMeshInstance3D:
+	var multi := MultiMesh.new()
+	multi.transform_format = MultiMesh.TRANSFORM_3D
+	multi.use_custom_data = true
+	multi.mesh = quad
+	multi.instance_count = 1
+	multi.set_instance_transform(0, Transform3D.IDENTITY)
+	multi.set_instance_custom_data(0, Color(0.0, 0.0, 0.0, 0.0))
+	var node := MultiMeshInstance3D.new()
+	node.multimesh = multi
+	node.material_override = mat
+	node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return node
+
+
+func _hang(camera: Camera3D, node: Node3D, at: Vector3) -> void:
+	camera.add_child(node)
+	node.position = at
+	_warm_nodes.append(node)
 
 
 ## Whether the effects are built now.
@@ -149,6 +249,7 @@ func _steam_material(wisp: bool, seed_no: int) -> ShaderMaterial:
 		mat.set_shader_parameter(&"light_alpha", t.tfx_wisp_alpha)
 		mat.set_shader_parameter(&"dark_alpha", t.tfx_wisp_alpha)
 		mat.set_shader_parameter(&"line_share", 0.0)
+		mat.set_shader_parameter(&"min_line_px", 0.0)
 		mat.set_shader_parameter(&"line_m", 0.005)
 		mat.set_shader_parameter(&"lobes", 4)
 		mat.set_shader_parameter(&"lobe_r_m", 0.5)
@@ -157,6 +258,7 @@ func _steam_material(wisp: bool, seed_no: int) -> ShaderMaterial:
 		mat.set_shader_parameter(&"light_alpha", t.tfx_steam_alpha)
 		mat.set_shader_parameter(&"dark_alpha", t.tfx_steam_alpha)
 		mat.set_shader_parameter(&"line_share", 1.0)
+		mat.set_shader_parameter(&"min_line_px", t.tfx_line_min_px)
 	_steam_mats.append(mat)
 	return mat
 

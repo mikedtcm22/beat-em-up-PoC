@@ -27,6 +27,9 @@ uniform float bump : hint_range(0.0, 0.5) = 0.2;
 uniform float shade_m : hint_range(0.02, 0.5) = 0.15;
 uniform float line_m : hint_range(0.005, 0.1) = 0.03;
 uniform float line_share : hint_range(0.0, 1.0) = 0.55;
+// The ink line is never thinner than this many pixels, so a plume far down the street still reads as outlined steam (0: the line is
+// only its width in metres).
+uniform float min_line_px : hint_range(0.0, 6.0) = 1.8;
 
 void vertex() {
 	vec3 origin = MODEL_MATRIX[3].xyz;
@@ -89,8 +92,11 @@ void fragment() {
 	float under = dot(n, normalize(vec2(0.55, -0.85)));
 	float run = under + (hash11(floor(atan(n.y, n.x) * 2.4) + seed * 5.0 + floor(near_c.y * 3.0)) - 0.5) * 1.1;
 	float gate = smoothstep(1.0 - 2.0 * line_share - 0.2, 1.0 - 2.0 * line_share + 0.3, run + 0.5);
-	float w = line_m * gate;
-	float line = smoothstep(-w - aa, -w + aa, d) * body * step(0.0005, w);
+	float on = step(0.0005, line_m * gate);
+	// The pixel's size in metres on the card, from the card's own coordinates (smooth, unlike the distance field's slope at its creases).
+	float pixel_m = max(fwidth(q.x), fwidth(q.y));
+	float w = max(line_m, pixel_m * min_line_px) * gate;
+	float line = smoothstep(-w - aa, -w + aa, d) * body * on;
 	vec3 fill = mix(dark_color, light_color, lit);
 	float fill_a = mix(dark_alpha, light_alpha, lit);
 	ALBEDO = mix(fill, line_color, line);

@@ -13,6 +13,9 @@ uniform float rings : hint_range(0.0, 6.0) = 3.0;
 uniform float ring_strength : hint_range(0.0, 2.0) = 0.5;
 uniform float wobble : hint_range(0.0, 0.5) = 0.2;
 uniform float seed = 1.0;
+// How soft each ring's edge is, as a share of the ring's own width (0: the hard painted band, 1: each tone melts into the next).
+// The outermost tone always fades to nothing before the card's edge, so no halo is ever a flat disc with a rim.
+uniform float soft : hint_range(0.0, 1.0) = 0.6;
 uniform float energy : hint_range(0.0, 4.0) = 1.0;
 
 void vertex() {
@@ -37,21 +40,25 @@ void fragment() {
 	vec2 p = UV * 2.0 - 1.0;
 	float r = length(p);
 	float phi = atan(p.y, p.x);
-	float edge = max(fwidth(r) * 1.3, 0.004);
-	vec3 col = vec3(0.0);
 	float n_rings = floor(rings);
+	float band = (1.0 - core) / max(n_rings, 1.0);
+	float edge = max(fwidth(r) * 1.3, 0.004);
+	float feather = max(edge, soft * 0.5 * band);
+	vec3 col = vec3(0.0);
 	for (int k = 6; k >= 1; k--) {
 		if (float(k) <= n_rings) {
 			float fk = float(k);
 			float wob = (vnoise(vec2(phi * 1.4 + fk * 5.3 + seed * 11.0, fk * 2.9 + seed)) - 0.5) * 2.0 * wobble;
-			float rk = (core + (1.0 - core) * fk / n_rings) * (1.0 + wob * 0.5);
-			float inside = 1.0 - smoothstep(rk - edge, rk + edge, r);
+			float rk = (core + (1.0 - core) * fk / n_rings) * (1.0 + wob * 0.5) * 0.8;
+			float inside = 1.0 - smoothstep(rk - feather, rk + feather, r);
 			col = max(col, ring_color * ring_strength * inside * (1.0 - 0.8 * (fk - 1.0) / max(n_rings, 1.0)));
 		}
 	}
 	float rc = core * (1.0 + (vnoise(vec2(phi * 2.0 + seed, 4.1)) - 0.5) * wobble * 0.4);
-	float inside_core = 1.0 - smoothstep(rc - edge, rc + edge, r);
+	float core_feather = max(edge, soft * 0.5 * core);
+	float inside_core = 1.0 - smoothstep(rc - core_feather, rc + core_feather, r);
 	col = mix(col, core_color, inside_core);
+	col *= 1.0 - smoothstep(0.7, 1.0, r);
 	ALBEDO = col * energy;
 	ALPHA = clamp(max(col.r, max(col.g, col.b)) * 4.0, 0.0, 1.0);
 }
