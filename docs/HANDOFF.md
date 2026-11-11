@@ -4,6 +4,13 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-10 22:20 CST: a plan to make the trailer's look playable (proposed Milestone 7); waiting on Game-boy's review
+- **Game-boy asked** (working session chat) for the finished trailer's graphics to be made playable in the game, planned with `/cfo-plan`, Fable for high-level decisions only, and a plan for his review before any work.
+- **The plan:** `docs/milestones/M7-trailer-look-plan.md` (reasoning, gates, five questions for him) and `.claude/cfo/plan.md` (31 rows with model, effort and done-when; follow its Execute section). Written from five read-only scouts and revised after two critics. Nothing is built; no branch is made.
+- **The route:** the trailer is offline AI restyle, so the drawing moves into assets (painted textures, faces, skies, flipbooks) behind a `look_profile` switch that leaves M6's look and tests alone. A slice first (Punk in two arms, the player's arms, one night-street stretch), judged blind against the trailer's own score, then the roll-out in two waves.
+- **Waiting on Game-boy:** the plan's go and §5's five questions (milestone order and branch base, canonical designs, the look bible's two limits, Gemini and Tripo spend, what "the same standard" means). The five M6 items below are unchanged.
+- **Resume steps:** read his answer in the Slack DM (`D0AQUKX5DB6`) or the session chat. On a go, start at T00 in `.claude/cfo/plan.md`. Without one, wait.
+
 ### 2026-11-08 13:55 CST: the disk cleaned up (19 GB free, now 92 GB); nothing else changed
 - **Game-boy's word** (planning session chat): "Can you help me clean up the 60 GB in old captures and worktrees you identified? anything that isn't currently required to run the latest iteration of the Beat-em-up game can go."
 - **Worktrees:** all 33 M6 worktrees under `.worktrees/` are removed. Every one was clean, with its commits pushed; their local branches stay. Only `.worktrees/video` (the video session's) is left.
