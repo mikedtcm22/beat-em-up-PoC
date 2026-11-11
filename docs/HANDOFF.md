@@ -4,6 +4,15 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-11 15:55 CST: M7 Phase 1 merged on `m7/trailer-look` (2149/2149); the slice recorded under both profiles (T17)
+- **Merged** (`--no-ff`, in order): T11 painted material, T10 night street, T15 trailer kit (8a52933), T16a street FX (d337cce), T12 trailer Punk (0f43afd), T14 hero arms (9e3a7fb). T13 not merged (blocked on Gemini credit, docs only). Conflicts were text only (ARCHITECTURE, ASSETS, tuning_data); T10's "Night street (T10)" tuning group had landed after Debug and now sits before "Look profile"; `tuning/default.json` regenerated.
+- **Glue and fixes** (d59cac1, a1378b8): the night street calls `ToonMaterials.set_area_look()` (NightLook `paint_shadow_hue`, `paint_rim_color`) and clears it on leaving; TrailerLook puts the level's light back on the procedural sky on a flip back (m6's sky kept the night colours); ASSETS row for T10's street matte; `combo_bot.gd --clean` (no caption, combat log, sound-room line); the Punk stage takes `--profile=m6`.
+- **Tests edited (the lead's decision):** `test_look_profile.gd` (the marker-only and "street sun stays" pins replaced: trailer changes sky, light, kit sheets and art; back restores m6 exactly, now including every light and the shaders), `test_toon_painted.gd` (under trailer the trim's own uniforms hold except T15's `trim_tex`, `ground_tex`, `strips`). Suite: 2149 tests, all pass, 0 SCRIPT/SHADER ERROR (486 s).
+- **Trailer as the default:** a run with the TuningData default set to 1 (reverted) fails 41 of 2149, all tests written to start from m6 (m6 meshes, sheets, art, "flip to trailer"); no cheap switch exists. In it the M5 level run took 158 s against its 120 s budget (headless): worth a perf look.
+- **Recording:** `captures/m7-slice/merged/` (`INDEX.md`; `m6/` and `trailer/` stills and 2 s clips at 1600x900, same moments; `raw/` the AVIs and A/B sheets).
+- **Open:** T14's ask (trailer arms and Punk skin come out salmon and electric blue outside the night street: the shadow hue and rim on the roof and training room); the barrel's halo reads as a flat orange disc behind it; T15's emissive window strip flag and T10's lamp attenuation request to T11; T16a shaders not warmed up (first-flip hitch); T13 waits on credit.
+- **Next:** T18 to T21 in `.claude/cfo/plan.md`.
+
 ### 2026-11-11 13:45 CST: M7 Phase 0 merged (2095/2095); the bar is set; Phase 1's slice builders running
 - **Phase 0 is merged** on `m7/trailer-look` (e2da1b7): the trailer reference set (`assets/source/trailer_ref/`), the judge and style meter (`tools/look/`, baseline in `tools/look/baseline.md`), the look profile switch (F7; `game/fx/look_profile.gd`) and the per-profile art swap (`game/fx/art_look.gd`, variant on `metadata/trailer`). The look target is `docs/milestones/M7-look-target.md`.
 - **The bar:** blind p_3d, trailer 0.09 (0.05 to 0.14), references 0.07, M6 0.93. The gate is a median at or below 0.19 and frame time at most +10% over M6.
