@@ -1353,19 +1353,23 @@ extends Resource
 ## The light value above which a painted surface shows its flat paint; below it, the shadow tone (two tones, no mid band).
 @export_range(0.05, 0.95, 0.01) var look_paint_cut: float = 0.42
 ## The shadow tone's brightness, a share of the paint.
-@export_range(0.1, 1.0, 0.01) var look_paint_shadow_level: float = 0.58
+@export_range(0.1, 1.0, 0.01) var look_paint_shadow_level: float = 0.5
 ## The hue the shadow tone is pulled toward when the area gives none (an area sets its own: ToonMaterials.set_area_look()).
 @export var look_paint_shadow_hue: Color = Color(0.24, 0.24, 0.55)
 ## How far the shadow tone moves toward that hue, brightness kept.
-@export_range(0.0, 1.0, 0.01) var look_paint_shadow_hue_amount: float = 0.75
+@export_range(0.0, 1.0, 0.01) var look_paint_shadow_hue_amount: float = 0.08
 ## The terminator's edge width in pixels at 1080p, never narrower (a shadow map's stair-steps are inside it).
 @export_range(0.0, 12.0, 0.1) var look_paint_term_soft_px: float = 3.0
 ## A directional light lights a painted surface at no less than this share of full, in its hue: a dim night moon never drops the paint to black.
 @export_range(0.0, 1.0, 0.01) var look_paint_dir_floor: float = 0.5
+## How much of a light's own colour a painted surface keeps (0 = the light only brightens it). A figure keeps its local colour under a blue moon or an orange lamp; only the shadow tone carries the area's hue.
+@export_range(0.0, 1.0, 0.01) var look_paint_light_tint: float = 0.1
+## A fully lit painted surface shows this share of its paint under a directional light (the trailer's mid tone is a little under the flat swatch; the shadow tone is a share of this).
+@export_range(0.2, 1.5, 0.01) var look_paint_lit_level: float = 0.72
 ## A lamp's light term is multiplied by this before the cut (a point light's falloff keeps its term low). A lamp adds nothing in its own shadow band.
 @export_range(0.5, 6.0, 0.05) var look_paint_point_gain: float = 2.2
 ## The camera-fixed fill's share of a full light (0 = none: a figure that faces away from the key is one shadow tone with its rim).
-@export_range(0.0, 1.5, 0.01) var look_paint_fill: float = 0.0
+@export_range(0.0, 1.5, 0.01) var look_paint_fill: float = 1.0
 @export_subgroup("Ink and grain")
 ## The cut on the ink map's R above which a pixel is ink (an edge one pixel wide, so a line stays crisp).
 @export_range(0.05, 0.95, 0.01) var look_paint_line_cut: float = 0.3
@@ -1382,9 +1386,9 @@ extends Resource
 ## (on the grazing angle plus the key's facing), how much the key's facing widens it and how much curvature narrows it.
 @export var look_paint_rim_color: Color = Color(1.0, 0.56, 0.22)
 @export_range(0.0, 2.0, 0.01) var look_paint_rim_strength: float = 0.9
-@export_range(0.3, 1.0, 0.01) var look_paint_rim_cut: float = 0.72
-@export_range(0.0, 1.0, 0.01) var look_paint_rim_key: float = 0.42
-@export_range(0.0, 4.0, 0.05) var look_paint_rim_curve: float = 1.2
+@export_range(0.3, 1.0, 0.01) var look_paint_rim_cut: float = 0.93
+@export_range(0.0, 1.0, 0.01) var look_paint_rim_key: float = 0.3
+@export_range(0.0, 4.0, 0.05) var look_paint_rim_curve: float = 1.5
 @export_subgroup("Hull")
 ## The painted hull's line, a multiplier on look_outline_px: near the lens it is this much heavier (at look_outline_near_m), back to 1 by
 ## boost_to_m, then from thin_from_m out to look_outline_far_m thinning to far_gain.

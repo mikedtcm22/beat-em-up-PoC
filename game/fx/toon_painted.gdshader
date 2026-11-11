@@ -41,6 +41,10 @@ uniform vec3 paint_shadow_hue : source_color = vec3(0.24, 0.24, 0.55);
 uniform float paint_shadow_hue_amount : hint_range(0.0, 1.0) = 0.75;
 uniform float term_soft : hint_range(0.0, 12.0) = 3.0;
 uniform float dir_floor : hint_range(0.0, 1.0) = 0.5;
+// How much of a light's own hue a painted surface keeps (0: the light only brightens, 1: the light's full colour). A figure keeps its local colour.
+// A fully lit painted surface shows this share of its paint (the trailer's mid tone sits a little under the flat swatch).
+uniform float paint_lit_level : hint_range(0.2, 1.5) = 0.72;
+uniform float paint_light_tint : hint_range(0.0, 1.0) = 0.2;
 uniform float point_gain : hint_range(0.5, 6.0) = 2.2;
 uniform float fill_strength : hint_range(0.0, 1.5) = 0.0;
 uniform vec3 fill_dir = vec3(-0.45, 0.55, 0.70);
@@ -159,9 +163,13 @@ void light() {
 	vec3 shadow = paint_shadow_level * mix(vec3(1.0), hue, paint_shadow_hue_amount);
 	vec3 shade = mix(shadow, vec3(1.0), smoothstep(paint_cut - edge, paint_cut + edge, lit));
 	vec3 light_color = min(LIGHT_COLOR / PI, vec3(1.0));
+	// The light's hue is clamped: its brightness stays, its colour is pulled to neutral (paint_light_tint of it kept), so a blue moon
+	// or an orange lamp never recolours the paint; the shadow tone alone carries the area's hue, and gently.
+	float light_luma = max(dot(light_color, LUMA), 0.0001);
+	vec3 light_tint = mix(vec3(1.0), light_color / light_luma, paint_light_tint);
 	if (LIGHT_IS_DIRECTIONAL) {
 		float peak = max(light_color.r, max(light_color.g, light_color.b));
-		light_color = light_color / max(peak, 0.0001) * mix(dir_floor, 1.0, peak) * step(0.0001, peak);
+		light_color = light_tint * mix(dir_floor, 1.0, peak) * paint_lit_level * step(0.0001, peak);
 		DIFFUSE_LIGHT += shade * light_color;
 		// The rim, from the key (the directional light) alone: the grazing angle plus the key's facing, narrowed by the
 		// curvature (how fast the normal turns across a pixel), cut hard. One side: nothing where the surface turns from the key.
@@ -175,7 +183,7 @@ void light() {
 		SPECULAR_LIGHT += paint_rim_color * paint_rim_strength * rim;
 	} else {
 		// A lamp adds what rises above the shadow tone, so nothing inside the shadow band.
-		DIFFUSE_LIGHT += max(shade - shadow, vec3(0.0)) * light_color;
+		DIFFUSE_LIGHT += max(shade - shadow, vec3(0.0)) * light_tint * light_luma;
 	}
 	// One hard highlight, lit side only, on the glossy texels.
 	float aligned = dot(NORMAL, normalize(LIGHT + VIEW));
