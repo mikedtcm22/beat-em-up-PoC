@@ -6,6 +6,27 @@ The cinematic gameplay video's live status, kept by the video session ("Beat-em-
 
 ## Status (newest first)
 
+### 2026-11-10 21:30 CST: the finish (Game-boy: "Yes, finish it"); the cut assembled; the review round running
+- **Game-boy, in the chat,** answering "is this the look to finish the trailer in?": "Yes, finish it". So the finish: the edit, titles and sound, plus prompt retakes inside the $40. Music (D4) is still effects only (the default); ask him at the next gate, with the videos.
+- **The finish** (all pushed, `f0ee08d`):
+  - **`video/edit.json`, the cut** (40.7 s). It drops dead and point-blank stretches:
+    - t03 ends after the landing (62);
+    - t04 ends at the knockdown (50);
+    - t05 runs 20-80;
+    - t06 ends after two swings (44);
+    - t08 ends at 54;
+    - t11 keeps only 0-110 (t12 shows the haymaker land);
+    - t13 ends at 72, then 6 black frames before t14's title.
+  - **`tools/video/assemble.py`:** trims each shot's newest take, overlays the titles with alpha fades, and mixes the effects stems. Gain into a limiter (0.75), then two-pass loudnorm, gives **-14.3 LUFS and -1.0 dBTP measured on the encode**. H.264 High at 35 Mbit/s, AAC; 1080p, Runway's native size, so there is no 1440p master. It also writes a labelled 720p copy and the EDL. `--reuse-picture` redoes only the sound.
+  - **`tools/video/planb_sound.py`** (a Sonnet builder): the game's SFX from the event logs, after `audio_director.gd` and the move files; a street bed and a roof bed (the bank has no fire sound); no panning (the logs have no positions).
+  - **`tools/video/planb_titles.py`** (a Sonnet builder): Anton (OFL, in `~/.cache/beat-em-up-video/fonts/anton/`, never committed). It makes "OX PELLERIN" over t10 (frames 24-84) and the end title "FIRST-PERSON BEAT-EM-UP / Proof of concept · In-engine gameplay, AI-restyled" over t14. **The end line says "AI-restyled" instead of D5's "cinematic render", to be honest about Plan B; flag it to Game-boy.**
+- **The output:** `captures/video/planb/final/planb_trailer_final_1080p.mp4`, `_720p_labelled.mp4` and `_edl.txt`.
+- **Running:** the review round, `wf_6a8b1d75-3f0`, the brief's three lenses (style Opus, legibility and feel Opus, technical Sonnet). Its material is in `captures/video/planb/final/review/`.
+- **Next:**
+  1. one fix wave from the review (edit, prompt retakes, sound, titles);
+  2. rebuild;
+  3. Gate 4: DM the fresh videos (the final at 1080p, the labelled copy, a style proof sheet of our frames beside the references), the music question, and the end-line wording.
+
 ### 2026-11-10 20:35 CST: the Plan B trailer v2 sent to Game-boy by Slack DM; waiting on his answer
 - **Round 2** (308 credits; the ledger at **1456 of 4308**, the cut's own spend **$11.48 of $40**):
   - t09_r2 fixed the kicker (t04's charcoal jacket, cap and goggles; flat lilac dusk; no chevrons);
