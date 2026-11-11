@@ -1292,6 +1292,60 @@ extends Resource
 ## the materials and the level's light. Presentation only: simulation never reads it.
 @export_range(0, 1, 1) var look_profile: int = 0
 
+@export_group("Painted look (M7)")
+## The trailer profile's surface language (Milestone 7, T11): the painted character material (toon_painted.gdshader, an
+## albedo paint map and an ink map on UV2), its hull (toon_outline_painted.gdshader) and the grain on the trim. Only the
+## painted materials and the trim under the trailer profile read these; the m6 look never does.
+@export_subgroup("Tones")
+## The light value above which a painted surface shows its flat paint; below it, the shadow tone (two tones, no mid band).
+@export_range(0.05, 0.95, 0.01) var look_paint_cut: float = 0.42
+## The shadow tone's brightness, a share of the paint.
+@export_range(0.1, 1.0, 0.01) var look_paint_shadow_level: float = 0.58
+## The hue the shadow tone is pulled toward when the area gives none (an area sets its own: ToonMaterials.set_area_look()).
+@export var look_paint_shadow_hue: Color = Color(0.24, 0.24, 0.55)
+## How far the shadow tone moves toward that hue, brightness kept.
+@export_range(0.0, 1.0, 0.01) var look_paint_shadow_hue_amount: float = 0.75
+## The terminator's edge width in pixels at 1080p, never narrower (a shadow map's stair-steps are inside it).
+@export_range(0.0, 12.0, 0.1) var look_paint_term_soft_px: float = 3.0
+## A directional light lights a painted surface at no less than this share of full, in its hue: a dim night moon never drops the paint to black.
+@export_range(0.0, 1.0, 0.01) var look_paint_dir_floor: float = 0.5
+## A lamp's light term is multiplied by this before the cut (a point light's falloff keeps its term low). A lamp adds nothing in its own shadow band.
+@export_range(0.5, 6.0, 0.05) var look_paint_point_gain: float = 2.2
+## The camera-fixed fill's share of a full light (0 = none: a figure that faces away from the key is one shadow tone with its rim).
+@export_range(0.0, 1.5, 0.01) var look_paint_fill: float = 0.0
+@export_subgroup("Ink and grain")
+## The cut on the ink map's R above which a pixel is ink (an edge one pixel wide, so a line stays crisp).
+@export_range(0.05, 0.95, 0.01) var look_paint_line_cut: float = 0.3
+## How much of the ink colour the map's lines take.
+@export_range(0.0, 1.0, 0.01) var look_paint_line_strength: float = 1.0
+## The grain on a painted flat fill, a share of the value, and its cells per metre (object space, so it sticks to the moving body).
+@export_range(0.0, 0.3, 0.005) var look_paint_grain: float = 0.07
+@export_range(10.0, 400.0, 1.0) var look_paint_grain_cells: float = 140.0
+## The grain on the trim's flat fills (trailer profile only), a share of the value, and its cells per metre.
+@export_range(0.0, 0.3, 0.005) var look_paint_trim_grain: float = 0.05
+@export_range(10.0, 400.0, 1.0) var look_paint_trim_grain_cells: float = 90.0
+@export_subgroup("Rim")
+## The one-sided rim on the key light's side, in the area's warm colour (an area sets its own), its strength, where it starts
+## (on the grazing angle plus the key's facing), how much the key's facing widens it and how much curvature narrows it.
+@export var look_paint_rim_color: Color = Color(1.0, 0.56, 0.22)
+@export_range(0.0, 2.0, 0.01) var look_paint_rim_strength: float = 0.9
+@export_range(0.3, 1.0, 0.01) var look_paint_rim_cut: float = 0.72
+@export_range(0.0, 1.0, 0.01) var look_paint_rim_key: float = 0.42
+@export_range(0.0, 4.0, 0.05) var look_paint_rim_curve: float = 1.2
+@export_subgroup("Hull")
+## The painted hull's line, a multiplier on look_outline_px: near the lens it is this much heavier (at look_outline_near_m), back to 1 by
+## boost_to_m, then from thin_from_m out to look_outline_far_m thinning to far_gain.
+@export_range(1.0, 4.0, 0.05) var look_paint_hull_near_gain: float = 1.6
+@export_range(0.5, 20.0, 0.1) var look_paint_hull_boost_to_m: float = 3.0
+@export_range(0.5, 40.0, 0.5) var look_paint_hull_thin_from_m: float = 6.0
+@export_range(0.1, 1.0, 0.01) var look_paint_hull_far_gain: float = 0.55
+## The ink map's A is a line weight hint: 0 gives weight_min times the line, 1 weight_max times it. A is read at this mip level in the vertex stage.
+@export_range(0.05, 1.0, 0.01) var look_paint_hull_weight_min: float = 0.3
+@export_range(0.5, 3.0, 0.01) var look_paint_hull_weight_max: float = 1.5
+@export_range(0.0, 6.0, 0.1) var look_paint_hull_weight_lod: float = 3.0
+## Ink weighs under a form: the line is this much heavier where the surface faces down than where it faces up (0 = even).
+@export_range(0.0, 0.9, 0.01) var look_paint_hull_under_bias: float = 0.5
+
 @export_group("Audio")
 @export_subgroup("Mix")
 ## Volume of every sound effect, in dB: the SFX bus limiter's pre-gain, so turning it down

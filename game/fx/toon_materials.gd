@@ -23,13 +23,25 @@ const GRID_SHADER := "res://game/level/grid.gdshader"
 const TRIM_SHADER := "res://game/fx/trim.gdshader"
 ## The trim material's alpha-scissor variant, for the chain-link's wire alone (see trim.gdshader).
 const TRIM_SCISSOR_SHADER := "res://game/fx/trim_scissor.gdshader"
+## The painted character material and its hull (M7, T11): the trailer profile's surface language.
+const PAINTED_SHADER := preload("res://game/fx/toon_painted.gdshader")
+const PAINTED_OUTLINE_SHADER := preload("res://game/fx/toon_outline_painted.gdshader")
+## A CharacterArt's painted maps (metadata/paint_tex and metadata/ink_tex in the .tres, like detail_sharp): the paint map (RGB the flat
+## local colour with the shadow shapes drawn in) and the ink map (R line, G damage class, B gloss, A hull weight hint), both on UV2.
+## An art that carries both is painted (is_painted()); the contract is docs/ARCHITECTURE.md "The painted material (M7)".
+const PAINT_META := &"paint_tex"
+const INK_META := &"ink_tex"
 ## What a ShaderMaterial made here is, for which Look values it takes (see apply_look()).
-enum Kind { CHARACTER, ART, PROP, ENVIRONMENT, GRID, HULL, ART_PROP, TRIM }
+enum Kind { CHARACTER, ART, PROP, ENVIRONMENT, GRID, HULL, ART_PROP, TRIM, PAINTED }
 ## How the hull pushes a mesh out (toon_outline.gdshader's `mode`): along the normal
 ## (spheres, capsules), by sign(VERTEX) per axis (boxes), radially plus sign(y) (cylinders),
 ## from the sphere's centre (a hemisphere's open rim), by the skinned art's baked smooth normal.
 enum Hull { NORMAL, BOX, CYLINDER, RADIAL, ART }
 
+## The damage class an ink map's G byte names (the palette atlas's alpha classes: 255, 230, 204, 128).
+enum PaintClass { NONE, SKIN, CLOTHES_NO_BLOOD, CLOTHES }
+
+const _PAINTED_HULL_META := &"toon_painted_hull"
 const _KIND_META := &"toon_kind"
 const _GLOSSY_META := &"toon_glossy"
 const _FP_META := &"toon_fp"
@@ -56,6 +68,14 @@ static var _wired: bool = false
 ## separately, by the room's load).
 static var _warmed: bool = false
 static var _art_warmed: bool = false
+## The painted hulls, one per ink map and first-person flag (outline_painted()), and the area's own shadow hue and rim colour
+## (set_area_look(); unset: the Tuning defaults).
+static var _painted_hulls: Dictionary[int, ShaderMaterial] = {}
+## The value of the trim's global grain uniform as last set (apply_trim_grain()): what a test reads.
+static var trim_grain: Vector2 = Vector2.ZERO
+static var _area_look_set: bool = false
+static var _area_shadow_hue: Color = Color.WHITE
+static var _area_rim_color: Color = Color.WHITE
 ## The one trim material (trim()).
 static var _trim: ShaderMaterial
 static var _trim_scissor: ShaderMaterial
@@ -114,6 +134,78 @@ static func art_prop(atlas: Texture2D, tint: Color = Color.WHITE) -> ShaderMater
 	material.set_shader_parameter(&"ink", INK)
 	material.set_shader_parameter(&"edge_tag", 0.0)
 	return _track(material)
+
+
+## Whether `art` is painted (M7): it carries both a paint map and an ink map (metadata/paint_tex, metadata/ink_tex).
+static func is_painted(art: CharacterArt) -> bool:
+	return art != null and art.has_meta(PAINT_META) and art.has_meta(INK_META) \
+			and art.get_meta(PAINT_META) is Texture2D and art.get_meta(INK_META) is Texture2D
+
+
+## The skinned art's material for `art`: the painted one when the art is painted (painted()), else art() with its palette, detail
+## mask and sharp-ink flag, as RigPaint always made it.
+static func art_for(art: CharacterArt) -> ShaderMaterial:
+	if is_painted(art):
+		return painted(art.get_meta(PAINT_META) as Texture2D, art.get_meta(INK_META) as Texture2D)
+	return ToonMaterials.art(art.palette, art.detail_mask, bool(art.get_meta(&"detail_sharp", false)))
+
+
+## The hull for `art`'s `material_overlay`: the painted hull of its ink map when painted, else the shared outline().
+static func outline_for_art(art: CharacterArt, first_person: bool = false) -> ShaderMaterial:
+	if is_painted(art):
+		return outline_painted(art.get_meta(INK_META) as Texture2D, first_person)
+	return outline(first_person)
+
+
+## The painted character material (M7, toon_painted.gdshader): the `paint` map (RGB, UV2) and the `ink` map (UV2: R line, G damage
+## class, B gloss, A hull weight hint), lit in two flat tones with the area's shadow hue and a one-sided rim. `tint` multiplies the
+## paint (a palette swap). Damage marks, the flash and the edge tag are the art's own uniforms, so DamageLook and RigPaint treat it
+## as they treat art(); the hull is outline_painted().
+static func painted(paint: Texture2D, ink_map: Texture2D, tint: Color = Color.WHITE) -> ShaderMaterial:
+	var material := _make(Kind.PAINTED, true, PAINTED_SHADER)
+	material.set_shader_parameter(&"albedo", tint)
+	material.set_shader_parameter(&"paint_tex", paint)
+	material.set_shader_parameter(&"ink_tex", ink_map)
+	material.set_shader_parameter(&"ink", INK)
+	material.set_shader_parameter(&"use_rest_custom", true)
+	material.set_shader_parameter(&"marks", 1.0)
+	material.set_shader_parameter(&"damage_tex", VfxArt.clear_detail())
+	material.set_shader_parameter(&"damage_scale", 1.0 / maxf(Tuning.data.vfx_damage_tile_m, 0.01))
+	material.set_shader_parameter(&"edge_tag", 0.0)
+	return _track(material)
+
+
+## The painted hull for `ink_map`'s art (toon_outline_painted.gdshader): the ink map's A is its line weight. One per map and flag.
+static func outline_painted(ink_map: Texture2D, first_person: bool = false) -> ShaderMaterial:
+	var key := ink_map.get_instance_id() * 2 + (1 if first_person else 0)
+	var hull := _painted_hulls.get(key) as ShaderMaterial
+	if hull == null:
+		hull = ShaderMaterial.new()
+		hull.shader = PAINTED_OUTLINE_SHADER
+		hull.set_meta(_KIND_META, Kind.HULL)
+		hull.set_meta(_FP_META, first_person)
+		hull.set_meta(_PAINTED_HULL_META, true)
+		hull.set_shader_parameter(&"ink", INK)
+		hull.set_shader_parameter(&"ink_tex", ink_map)
+		_painted_hulls[key] = hull
+		_track(hull)
+	return hull
+
+
+## Give the painted materials the AREA's colours (T10's light code calls it when the area's light is applied): the hue of the shadow
+## tone and the warm colour of the rim. Until it is called, and after clear_area_look(), the Tuning defaults
+## (look_paint_shadow_hue, look_paint_rim_color) apply.
+static func set_area_look(shadow_hue: Color, rim_color: Color) -> void:
+	_area_look_set = true
+	_area_shadow_hue = shadow_hue
+	_area_rim_color = rim_color
+	_apply_all()
+
+
+## Back to the Tuning defaults for the painted materials' hue and rim.
+static func clear_area_look() -> void:
+	_area_look_set = false
+	_apply_all()
 
 
 ## The hull of the skinned art, for its `material_overlay`: the baked smooth normal, carried
@@ -220,6 +312,18 @@ static func apply_look(material: ShaderMaterial) -> void:
 		material.set_shader_parameter(&"far_m", maxf(data.look_outline_far_m, data.look_outline_near_m + 0.1))
 		material.set_shader_parameter(&"lens_fade_m", data.look_outline_lens_fade_m)
 		material.set_shader_parameter(&"fp_scale", data.look_outline_fp_scale if material.get_meta(_FP_META, false) else 1.0)
+		if material.get_meta(_PAINTED_HULL_META, false):
+			material.set_shader_parameter(&"near_gain", data.look_paint_hull_near_gain)
+			material.set_shader_parameter(&"boost_to_m", data.look_paint_hull_boost_to_m)
+			material.set_shader_parameter(&"thin_from_m", data.look_paint_hull_thin_from_m)
+			material.set_shader_parameter(&"far_gain", data.look_paint_hull_far_gain)
+			material.set_shader_parameter(&"weight_min", data.look_paint_hull_weight_min)
+			material.set_shader_parameter(&"weight_max", maxf(data.look_paint_hull_weight_max, data.look_paint_hull_weight_min))
+			material.set_shader_parameter(&"weight_lod", data.look_paint_hull_weight_lod)
+			material.set_shader_parameter(&"under_bias", data.look_paint_hull_under_bias)
+		return
+	if kind == Kind.PAINTED:
+		_apply_painted(material, data)
 		return
 	var room_surface := kind == Kind.ENVIRONMENT or kind == Kind.GRID or kind == Kind.TRIM
 	material.set_shader_parameter(&"band_1", data.look_band_1)
@@ -257,6 +361,7 @@ static func apply_look(material: ShaderMaterial) -> void:
 		material.set_shader_parameter(&"ground_on", not data.ground_sheet_off)
 		material.set_shader_parameter(&"ink_soft", Vector3(data.ground_ink_soft_from_lod, data.ground_ink_soft_per_lod, data.ground_ink_soft_max))
 		material.set_shader_parameter(&"ink_fade", Vector2(data.ground_ink_fade_start_texels, maxf(data.ground_ink_fade_end_texels, data.ground_ink_fade_start_texels + 1.0)))
+		apply_trim_grain()
 	# The art's own: the glint on its glossy swatches, and the sharp ink of an art that asks for it
 	# (only while the cut is above 0: 0 is the A/B).
 	if kind == Kind.ART or kind == Kind.ART_PROP:
@@ -267,6 +372,91 @@ static func apply_look(material: ShaderMaterial) -> void:
 		# M6 DETAIL-2: the texel swatches of a mask that carries them (B above 0), the Bruiser's; the fade is in texels per pixel
 		material.set_shader_parameter(&"use_texel_swatch", data.look_texel_swatch)
 		material.set_shader_parameter(&"texel_swatch_fade", Vector2(data.look_texel_swatch_fade_near, maxf(data.look_texel_swatch_fade_far, data.look_texel_swatch_fade_near + 0.1)))
+
+
+## The trim's grain, a global shader uniform (`paint_trim_grain`: x the share of the value, y the cells per metre): the Tuning values under the
+## trailer profile, 0 under m6, so no material's own uniforms differ between the profiles. Called with every trim material's look.
+static func apply_trim_grain() -> void:
+	var data := Tuning.data
+	var on := LookProfile.current() == LookProfile.Id.TRAILER
+	trim_grain = Vector2(data.look_paint_trim_grain if on else 0.0, data.look_paint_trim_grain_cells)
+	RenderingServer.global_shader_parameter_set(&"paint_trim_grain", trim_grain)
+
+
+static func _apply_painted(material: ShaderMaterial, data: TuningData) -> void:
+	material.set_shader_parameter(&"paint_cut", data.look_paint_cut)
+	material.set_shader_parameter(&"paint_shadow_level", data.look_paint_shadow_level)
+	material.set_shader_parameter(&"paint_shadow_hue", _area_shadow_hue if _area_look_set else data.look_paint_shadow_hue)
+	material.set_shader_parameter(&"paint_shadow_hue_amount", data.look_paint_shadow_hue_amount)
+	material.set_shader_parameter(&"term_soft", data.look_paint_term_soft_px)
+	material.set_shader_parameter(&"dir_floor", data.look_paint_dir_floor)
+	material.set_shader_parameter(&"point_gain", data.look_paint_point_gain)
+	material.set_shader_parameter(&"fill_strength", data.look_paint_fill)
+	material.set_shader_parameter(&"fill_dir", fill_direction(data.look_fill_yaw_deg, data.look_fill_pitch_deg))
+	material.set_shader_parameter(&"paint_line_cut", data.look_paint_line_cut)
+	material.set_shader_parameter(&"paint_line_strength", data.look_paint_line_strength)
+	material.set_shader_parameter(&"paint_grain", data.look_paint_grain)
+	material.set_shader_parameter(&"paint_grain_cells", data.look_paint_grain_cells)
+	material.set_shader_parameter(&"paint_rim_color", _area_rim_color if _area_look_set else data.look_paint_rim_color)
+	material.set_shader_parameter(&"paint_rim_strength", data.look_paint_rim_strength)
+	material.set_shader_parameter(&"paint_rim_cut", data.look_paint_rim_cut)
+	material.set_shader_parameter(&"paint_rim_key", data.look_paint_rim_key)
+	material.set_shader_parameter(&"paint_rim_curve", data.look_paint_rim_curve)
+	material.set_shader_parameter(&"band_soft", data.look_band_soft)
+	material.set_shader_parameter(&"spec_cut", data.look_spec_cut)
+	material.set_shader_parameter(&"spec_strength", data.look_spec_strength)
+	material.set_shader_parameter(&"spec_gloss", data.look_spec_gloss)
+	material.set_shader_parameter(&"glint_cut", data.look_glint_cut)
+	material.set_shader_parameter(&"glint_strength", data.look_glint_strength)
+
+
+## The damage class an ink map's G value `g` (0 to 1) names, as toon_painted.gdshader reads it: the palette atlas's alpha classes
+## (255 clothes, 230 clothes without blood, 204 skin, 128 none) by the same 0.95, 0.85 and 0.75 cuts.
+static func painted_class(g: float) -> PaintClass:
+	if g > 0.95:
+		return PaintClass.CLOTHES
+	if g > 0.85:
+		return PaintClass.CLOTHES_NO_BLOOD
+	if g > 0.75:
+		return PaintClass.SKIN
+	return PaintClass.NONE
+
+
+## Whether an ink map's B value `b` marks a glossy texel (at or above one half); the shader cuts the same value for the glint's gate.
+static func painted_glossy(b: float) -> bool:
+	return b >= 0.5
+
+
+## The painted shade multiplier of a surface whose light is `lit`: the shadow tone below `cut` (`shadow_level` of the paint, pulled
+## toward `hue` by `hue_amount`, luminance kept), 1 above, the edge smoothstepped over `edge`. toon_painted.gdshader's light().
+static func painted_shade(lit: float, edge: float, cut: float, shadow_level: float, hue: Color, hue_amount: float) -> Color:
+	var luma := maxf(hue.r * 0.2126 + hue.g * 0.7152 + hue.b * 0.0722, 0.001)
+	var unit := Color(hue.r / luma, hue.g / luma, hue.b / luma)
+	var shadow := Color.WHITE.lerp(unit, hue_amount) * shadow_level
+	shadow.a = 1.0
+	var out := shadow.lerp(Color.WHITE, smoothstep(cut - edge, cut + edge, lit))
+	out.a = 1.0
+	return out
+
+
+## What a lamp (a point or spot light) adds to a painted surface, before the lamp's colour: only what rises above the shadow tone,
+## so nothing at all inside the shadow band (`shade` is painted_shade() and `shadow` the same call at a light of 0).
+static func painted_lamp_add(shade: Color, shadow: Color) -> Color:
+	return Color(maxf(shade.r - shadow.r, 0.0), maxf(shade.g - shadow.g, 0.0), maxf(shade.b - shadow.b, 0.0), 1.0)
+
+
+## The painted hull's width at `dist` metres from the lens, in metres, as toon_outline_painted.gdshader draws it: outline_width_m()
+## times the distance gain (`near_gain` at `near_m`, 1 from `boost_to_m`, then thinning to `far_gain` between `thin_from_m` and
+## `far_m`), the ink map's weight (`hint` 0 to 1, between `weight_min` and `weight_max`) and the weight under a form (`facing_down`
+## 1 for a surface facing straight down, -1 up, times `under_bias`).
+static func painted_hull_width_m(dist: float, px: float, proj11: float, viewport_h: float, near_m: float, far_m: float,
+		lens_fade_m: float, fp_scale: float, near_gain: float, boost_to_m: float, thin_from_m: float, far_gain: float,
+		hint: float, weight_min: float, weight_max: float, facing_down: float, under_bias: float) -> float:
+	var gain := lerpf(near_gain, 1.0, smoothstep(near_m, boost_to_m, dist)) \
+			* lerpf(1.0, far_gain, smoothstep(thin_from_m, maxf(far_m, thin_from_m + 0.1), dist))
+	var weight := lerpf(weight_min, weight_max, hint)
+	var under := 1.0 + under_bias * clampf(facing_down, -1.0, 1.0)
+	return outline_width_m(dist, px, proj11, viewport_h, near_m, far_m, lens_fade_m, fp_scale) * gain * weight * under
 
 
 ## The atlas's layout, as tools/pipeline/gen_palette.py has it (COLUMNS, ROWS) and toon.gdshader's ATLAS_GRID.
@@ -423,6 +613,15 @@ static func warm_up_with(parent: Node, skinned: Node3D, variants: Array[Node3D])
 			var mesh := node as MeshInstance3D
 			mesh.material_override = atlas
 			mesh.material_overlay = outline()
+		# The painted material and its hull (M7): their pipelines too, on the same skeleton, whichever art is painted yet.
+		var blank := ImageTexture.create_from_image(Image.create_empty(2, 2, true, Image.FORMAT_RGBA8))
+		var painted_copy := skinned.duplicate() as Node3D
+		holder.add_child(painted_copy)
+		var painted_material := painted(blank, blank)
+		for node: Node in painted_copy.find_children("*", "MeshInstance3D", true, false):
+			var mesh := node as MeshInstance3D
+			mesh.material_override = painted_material
+			mesh.material_overlay = outline_painted(blank)
 		for other: Node3D in variants:
 			if other != null:
 				holder.add_child(other.duplicate() as Node3D)
@@ -443,9 +642,9 @@ static func warm_up_with(parent: Node, skinned: Node3D, variants: Array[Node3D])
 		holder.queue_free()
 
 
-static func _make(kind: int, glossy: bool) -> ShaderMaterial:
+static func _make(kind: int, glossy: bool, shader: Shader = TOON_SHADER) -> ShaderMaterial:
 	var material := ShaderMaterial.new()
-	material.shader = TOON_SHADER
+	material.shader = shader
 	material.set_meta(_KIND_META, kind)
 	material.set_meta(_GLOSSY_META, glossy)
 	# Every uniform a rig or a test reads back is set from the start (a ShaderMaterial hands back
@@ -487,6 +686,16 @@ static func _track(material: ShaderMaterial) -> ShaderMaterial:
 		Tuning.changed.connect(_on_tuning_changed)
 	apply_look(material)
 	return material
+
+
+static func _apply_all() -> void:
+	var alive: Array[WeakRef] = []
+	for ref: WeakRef in _live:
+		var material := ref.get_ref() as ShaderMaterial
+		if material != null:
+			apply_look(material)
+			alive.append(ref)
+	_live = alive
 
 
 static func _on_tuning_changed(property: StringName) -> void:

@@ -76,7 +76,8 @@ func _material_of(art: CharacterArt) -> ShaderMaterial:
 	if _art_materials.has(key):
 		return _art_materials[key]
 	# The hero's art says so (metadata/detail_sharp in player_art.tres) when its mask's ink is to be sharp.
-	var made := ToonMaterials.art(art.palette, art.detail_mask, bool(art.get_meta(&"detail_sharp", false)))
+	# M7 (T11): an art that carries a paint map and an ink map is painted (ToonMaterials.art_for()); every other art as before.
+	var made := ToonMaterials.art_for(art)
 	if not _art_materials.is_empty():
 		var other: ShaderMaterial = _art_materials.values()[0]
 		made.set_shader_parameter(&"flash_color", other.get_shader_parameter(&"flash_color"))
@@ -93,6 +94,11 @@ func _material_of(art: CharacterArt) -> ShaderMaterial:
 ## (`first_person_body`, read when the art is attached, like the primitives' hulls).
 func outline_material() -> Material:
 	return ToonMaterials.outline(_rig.first_person_body)
+
+
+## The hull for `art`'s meshes (M7, T11): the painted hull of its ink map when the art is painted, else outline_material().
+func outline_material_of(art: CharacterArt) -> Material:
+	return ToonMaterials.outline_for_art(art, _rig.first_person_body)
 
 
 ## The outline for the primitive `part`'s `material_overlay`: the hull of its shape, thinner on

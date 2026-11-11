@@ -25,4 +25,5 @@ shader_type spatial;
 render_mode ambient_light_disabled;
 
 #include "res://game/fx/toon_light.gdshaderinc"
+#include "res://game/fx/paint_grain.gdshaderinc"
 #include "res://game/fx/trim_body.gdshaderinc"
