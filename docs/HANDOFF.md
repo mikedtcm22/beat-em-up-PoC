@@ -4,6 +4,13 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-11 13:45 CST: M7 Phase 0 merged (2095/2095); the bar is set; Phase 1's slice builders running
+- **Phase 0 is merged** on `m7/trailer-look` (e2da1b7): the trailer reference set (`assets/source/trailer_ref/`), the judge and style meter (`tools/look/`, baseline in `tools/look/baseline.md`), the look profile switch (F7; `game/fx/look_profile.gd`) and the per-profile art swap (`game/fx/art_look.gd`, variant on `metadata/trailer`). The look target is `docs/milestones/M7-look-target.md`.
+- **The bar:** blind p_3d, trailer 0.09 (0.05 to 0.14), references 0.07, M6 0.93. The gate is a median at or below 0.19 and frame time at most +10% over M6.
+- **Running:** workflow `m7-phase1-slice` (run `wf_846b53e2-463`; script under this session's `workflows/scripts/`). Wave 1: T10 light (`m7/t10`), T11 shaders (`m7/t11`), T15 surfaces (`m7/t15`), T16a effects (`m7/t16a`), each in `.worktrees/m7-<key>`. Then T12 Punk arm A on T11's branch, then T13 Punk arm B (Tripo, 55 credits, hard cap) and T14 player arms on T12's branch. Builders log paid spend in `docs/milestones/M7-calls/<key>.md`.
+- **Usage at launch:** 5-hour 7%, weekly 2%.
+- **Resume steps:** a branch is done when it has a commit starting "M7 T<n>:"; otherwise restart that builder from its newest `wip:` commit with the brief in the workflow script. When all seven are done: T17 in `.claude/cfo/plan.md` (merge T11 first, suite under both profiles, record the slice once), then T18 to T21.
+
 ### 2026-11-11 09:15 CST: Game-boy approved the M7 plan; PR #6 merged; Phase 0 running on `m7/trailer-look`
 - **His answers** (Slack DM, 08:52 CST; recorded in README, "Where M7 departs from the spec"): reorder approved and PR #6 merged as M6's completion; designs approved but **Ox keeps his M6 colouring**; both look-bible limits lifted for the `trailer` profile; spend approved (DM him if Gemini or Tripo needs credit); the bar is as written.
 - **M6 is closed.** Its four open questions (near arm, frame time, Kicker's eyes, new Tripo models) are overtaken by M7's art work; frame time moves to M8.
