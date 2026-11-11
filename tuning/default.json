@@ -684,7 +684,33 @@
 		"look_motion_hip_roll_deg": 4.0,
 		"look_motion_counter_swing_deg": 5.0,
 		"look_motion_overlap_s": 0.025,
-		"look_motion_overshoot": 0.15
+		"look_motion_overshoot": 0.15,
+		"tfx_twos_hz": 12.0,
+		"tfx_steam_rate": 0.012,
+		"tfx_steam_card_m": [
+			1.60000002384186,
+			3.20000004768372
+		],
+		"tfx_wisp_card_m": [
+			1.39999997615814,
+			2.59999990463257
+		],
+		"tfx_steam_alpha": 0.95,
+		"tfx_wisp_alpha": 0.38,
+		"tfx_barrel_radius_m": 0.34,
+		"tfx_barrel_height_m": 0.95,
+		"tfx_flame_card_m": [
+			0.850000023841858,
+			1.10000002384186
+		],
+		"tfx_flame_energy": 1.3,
+		"tfx_embers_per_barrel": 14,
+		"tfx_ember_size_m": 0.055,
+		"tfx_ember_rise_m": 2.6,
+		"tfx_ember_sway_m": 0.35,
+		"tfx_ember_life_s": 2.2,
+		"tfx_pool_m": 3.2,
+		"tfx_pool_alpha": 0.5
 	},
 	"moves": {}
 }
