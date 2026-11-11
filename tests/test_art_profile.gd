@@ -42,14 +42,14 @@ func _palette_of(rig: HumanoidRig) -> Texture2D:
 
 
 func test_the_fixture_is_the_dummy_with_another_palette() -> void:
-	assert_not_null(_base.trailer, "the fixture's art carries a trailer variant")
+	assert_not_null(_base.trailer_art(), "the fixture's art carries a trailer variant")
 	assert_eq(_base.variant(&"m6"), _base)
-	assert_eq(_base.variant(&"trailer"), _base.trailer)
-	assert_eq(_base.trailer.scene, _base.scene, "the same GLB")
+	assert_eq(_base.variant(&"trailer"), _base.trailer_art())
+	assert_eq(_base.trailer_art().scene, _base.scene, "the same GLB")
 	assert_eq(_base.palette.resource_path, ATLAS)
-	assert_eq(_base.trailer.palette.resource_path, INVERTED)
-	assert_ne(_base.palette.get_image().get_pixel(0, 0), _base.trailer.palette.get_image().get_pixel(0, 0), "visibly another palette")
-	assert_true(SkinnedArt.check(_base.trailer).is_empty(), "the variant keeps the art contract")
+	assert_eq(_base.trailer_art().palette.resource_path, INVERTED)
+	assert_ne(_base.palette.get_image().get_pixel(0, 0), _base.trailer_art().palette.get_image().get_pixel(0, 0), "visibly another palette")
+	assert_true(SkinnedArt.check(_base.trailer_art()).is_empty(), "the variant keeps the art contract")
 
 
 func test_a_spawned_actor_swaps_on_flip() -> void:
@@ -64,7 +64,7 @@ func test_a_spawned_actor_swaps_on_flip() -> void:
 	var old_mat := old_mesh.material_override as ShaderMaterial
 	assert_eq(old_mat.get_shader_parameter(&"albedo_tex").resource_path, ATLAS)
 	_flip(LookProfile.Id.TRAILER)
-	assert_eq(rig.worn_art(), _base.trailer, "the actor wears the variant")
+	assert_eq(rig.worn_art(), _base.trailer_art(), "the actor wears the variant")
 	assert_eq(rig.art, _base, "its own art is still the m6 one")
 	assert_false(is_instance_valid(old_mesh), "the old mesh instance is gone")
 	assert_eq(rig.art_meshes().size(), 1)
@@ -139,7 +139,7 @@ func test_a_rig_built_after_a_flip_wears_the_running_profile() -> void:
 	dummy.art = _base
 	add_child_autofree(dummy)
 	await get_tree().physics_frame
-	assert_eq(dummy.rig.worn_art(), _base.trailer, "spawned into the trailer look")
+	assert_eq(dummy.rig.worn_art(), _base.trailer_art(), "spawned into the trailer look")
 	assert_eq(_palette_of(dummy.rig).resource_path, INVERTED)
 	assert_eq(dummy.rig.art_meshes().size(), 1)
 	_flip(LookProfile.Id.M6)
@@ -193,7 +193,7 @@ func test_an_enemys_palette_swap_stays_on_its_m6_art() -> void:
 
 func test_a_character_without_a_variant_keeps_its_m6_art() -> void:
 	var punk_art := load(PUNK_ART) as CharacterArt
-	assert_null(punk_art.trailer, "no shipped art has a variant yet")
+	assert_null(punk_art.trailer_art(), "no shipped art has a variant yet")
 	var rig := _rig(punk_art)
 	var mesh := rig.art_meshes()[0]
 	var material := mesh.material_override
@@ -207,7 +207,7 @@ func test_a_character_without_a_variant_keeps_its_m6_art() -> void:
 
 func test_a_variant_that_breaks_the_contract_is_not_worn() -> void:
 	var art := _base.duplicate() as CharacterArt
-	art.trailer = CharacterArt.new()
+	art.set_meta(&"trailer", CharacterArt.new())
 	var rig := _rig(art)
 	_flip(LookProfile.Id.TRAILER)
 	assert_eq(rig.worn_art(), art, "the rig keeps its m6 art")
@@ -219,14 +219,14 @@ func test_a_variant_that_breaks_the_contract_is_not_worn() -> void:
 func test_the_warm_up_draws_both_profiles_art() -> void:
 	var room := Node3D.new()
 	add_child_autofree(room)
-	assert_eq(RoomKit.variant_arts_of([_base, null]), [_base.trailer] as Array[CharacterArt])
-	assert_eq(RoomKit.variant_arts_of([_base, _base.trailer]).size(), 0, "a variant already in the set is not added again")
+	assert_eq(RoomKit.variant_arts_of([_base, null]), [_base.trailer_art()] as Array[CharacterArt])
+	assert_eq(RoomKit.variant_arts_of([_base, _base.trailer_art()]).size(), 0, "a variant already in the set is not added again")
 	for profile: int in [LookProfile.Id.M6, LookProfile.Id.TRAILER]:
 		_flip(profile)
 		var rigs := RoomKit.build_warm_rigs(room, _base)
 		assert_eq(rigs.size(), 2, "the art and its variant (profile %d)" % profile)
 		assert_eq(rigs[0].worn_art(), _base, "the first wears the m6 art whatever the profile")
-		assert_eq(rigs[1].worn_art(), _base.trailer, "the second wears the variant")
+		assert_eq(rigs[1].worn_art(), _base.trailer_art(), "the second wears the variant")
 		assert_eq(_palette_of(rigs[0]).resource_path, ATLAS)
 		assert_eq(_palette_of(rigs[1]).resource_path, INVERTED)
 		for rig: HumanoidRig in rigs:
@@ -234,13 +234,13 @@ func test_the_warm_up_draws_both_profiles_art() -> void:
 			assert_not_null(rig.skeleton)
 			assert_not_null(rig.art_meshes()[0].material_overlay, "with its hull")
 			rig.free()
-	assert_not_null(SkinnedArt.entry_of(_base.trailer), "the variant's GLB is read")
+	assert_not_null(SkinnedArt.entry_of(_base.trailer_art()), "the variant's GLB is read")
 	assert_eq(RoomKit.build_warm_rigs(room).size() >= 1, true, "the Punk's warm-up rig, with a variant for each catalog art that has one")
 	# Headless the draw itself is skipped; it accepts the variants all the same.
-	ToonMaterials.warm_up(room, null, [] as Array[Node3D])
+	ToonMaterials.warm_up_with(room, null, [] as Array[Node3D])
 	var catalog := RoomKit.warm_catalog_arts()
 	for art: CharacterArt in RoomKit.catalog_arts():
 		assert_true(catalog.has(art))
-		if art.trailer != null:
-			assert_true(catalog.has(art.trailer), "a catalog art's variant is read and held too")
+		if art.trailer_art() != null:
+			assert_true(catalog.has(art.trailer_art()), "a catalog art's variant is read and held too")
 	RoomKit.release_catalog_arts()

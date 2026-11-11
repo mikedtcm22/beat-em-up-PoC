@@ -332,7 +332,7 @@ static func warm_up_art(room: Node3D) -> void:
 	var variants: Array[Node3D] = []
 	for extra: HumanoidRig in rigs.slice(1):
 		variants.append(extra.skeleton)
-	ToonMaterials.warm_up(room, rigs[0].skeleton, variants)
+	ToonMaterials.warm_up_with(room, rigs[0].skeleton, variants)
 	for rig: HumanoidRig in rigs:
 		rig.queue_free()
 
@@ -366,13 +366,13 @@ static func catalog_arts() -> Array[CharacterArt]:
 	return out
 
 
-## The trailer variants (CharacterArt.trailer, M7) of `arts`, each once: the art the other look profile
+## The trailer variants (CharacterArt.trailer_art(), M7) of `arts`, each once: the art the other look profile
 ## draws, which the warm-up draws and holds too so a profile flip compiles and reads nothing mid-fight.
 static func variant_arts_of(arts: Array[CharacterArt]) -> Array[CharacterArt]:
 	var out: Array[CharacterArt] = []
 	for art: CharacterArt in arts:
-		if art != null and art.trailer != null and not out.has(art.trailer) and not arts.has(art.trailer):
-			out.append(art.trailer)
+		if art != null and art.trailer_art() != null and not out.has(art.trailer_art()) and not arts.has(art.trailer_art()):
+			out.append(art.trailer_art())
 	return out
 
 

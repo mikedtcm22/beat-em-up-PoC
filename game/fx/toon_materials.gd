@@ -373,11 +373,16 @@ static func hull_direction(mode: int, vertex: Vector3, normal: Vector3) -> Vecto
 ## turn until its own first update) and a holder put by it would stand under the floor behind
 ## the view, where the renderer culls it and builds nothing. It stays hidden until then, and is
 ## scaled down to the camera's near distance when it shows: only the draw is wanted.
-## `variants` (M7): more art instances, each a skinned Node3D wearing its own art's material, drawn
+## `variants` (M7, warm_up_with()): more art instances, each a skinned Node3D wearing its own art's material, drawn
 ## in the same holder in the same pass: the trailer profile's art, whose mesh format (a UV2) or
 ## material may not be the m6 art's, so a profile flip compiles nothing mid-fight. They keep their
 ## own materials and hulls, and are drawn with `skinned`, once.
-static func warm_up(parent: Node, skinned: Node3D = null, variants: Array[Node3D] = []) -> void:
+static func warm_up(parent: Node, skinned: Node3D = null) -> void:
+	warm_up_with(parent, skinned, [] as Array[Node3D])
+
+
+## warm_up() with the trailer profile's art drawn too (see its `variants`).
+static func warm_up_with(parent: Node, skinned: Node3D, variants: Array[Node3D]) -> void:
 	if parent == null or not parent.is_inside_tree() or DisplayServer.get_name() == "headless":
 		return
 	var boxes := not _warmed

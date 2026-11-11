@@ -11,4 +11,4 @@ id = &"dummy_fixture"
 scene = ExtResource("2_scene")
 palette = ExtResource("3_atlas")
 triangle_budget = 15000
-trailer = ExtResource("4_trailer")
+metadata/trailer = ExtResource("4_trailer")

@@ -20,14 +20,17 @@ extends Resource
 ## a mesh above it.
 @export var triangle_budget: int = 0
 ## M7: the art this character wears under the trailer look profile, or null (it keeps this art
-## under every profile). A CharacterArt of its own: its own GLB (a different mesh, even a new
-## UV2, bound to the same 23 bones), palette, detail mask and triangle budget, so its material
-## is its own. Its own `trailer` is never read. A rig swaps between the two live
-## (HumanoidRig.swap_art(), driven by ArtLook), keeping its pose, damage look and outline.
-@export var trailer: CharacterArt
+## under every profile). Kept as metadata (`metadata/trailer` in the .tres, like `detail_sharp`), so
+## the M4 contract's pinned fields stay as they were. A CharacterArt of its own: its own GLB (a
+## different mesh, even a new UV2, bound to the same 23 bones), palette, detail mask and triangle
+## budget, so its material is its own. Its own variant is never read. A rig swaps between the two
+## live (HumanoidRig.swap_art(), driven by ArtLook), keeping its pose, damage look and outline.
+func trailer_art() -> CharacterArt:
+	return get_meta(&"trailer") as CharacterArt if has_meta(&"trailer") else null
 
 
-## The art to wear under the look profile named `profile` (LookProfile.NAMES): `trailer` for
-## &"trailer" when it has one, else this art.
+## The art to wear under the look profile named `profile` (&"m6" or &"trailer"): the trailer variant
+## for &"trailer" when it has one, else this art.
 func variant(profile: StringName) -> CharacterArt:
-	return trailer if profile == &"trailer" and trailer != null else self
+	var other := trailer_art()
+	return other if profile == &"trailer" and other != null else self
