@@ -390,6 +390,8 @@ static func _apply_painted(material: ShaderMaterial, data: TuningData) -> void:
 	material.set_shader_parameter(&"paint_shadow_hue_amount", data.look_paint_shadow_hue_amount)
 	material.set_shader_parameter(&"term_soft", data.look_paint_term_soft_px)
 	material.set_shader_parameter(&"dir_floor", data.look_paint_dir_floor)
+	material.set_shader_parameter(&"paint_light_tint", data.look_paint_light_tint)
+	material.set_shader_parameter(&"paint_lit_level", data.look_paint_lit_level)
 	material.set_shader_parameter(&"point_gain", data.look_paint_point_gain)
 	material.set_shader_parameter(&"fill_strength", data.look_paint_fill)
 	material.set_shader_parameter(&"fill_dir", fill_direction(data.look_fill_yaw_deg, data.look_fill_pitch_deg))
