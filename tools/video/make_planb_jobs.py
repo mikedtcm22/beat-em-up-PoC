@@ -9,7 +9,7 @@ Usage (from the video worktree):
   python3 -I tools/video/make_planb_jobs.py sheet [shot ...]     a sheet of those frames, to check the picks
   python3 -I tools/video/make_planb_jobs.py gemini [shot ...] [--take b]   write keyframes/jobs_cut_<take>.json (gemini_image.py)
   python3 -I tools/video/make_planb_jobs.py pick <shot> <take>   install keyframes/<take> as the shot's 1080p keyframe
-  python3 -I tools/video/make_planb_jobs.py restyle [shot ...]   add the shots' jobs to restyle/jobs.json (named <short>_r1)\n  python3 -I tools/video/make_planb_jobs.py restyle2 [shot ...]  round 2's prompt retakes (RESTYLE_R2), named <short>_r2
+  python3 -I tools/video/make_planb_jobs.py restyle [shot ...]   add the shots' jobs to restyle/jobs.json (named <short>_r1)\n  python3 -I tools/video/make_planb_jobs.py restyle2 [shot ...]  round 2's prompt retakes (RESTYLE_R2), named <short>_r2\n  python3 -I tools/video/make_planb_jobs.py restyle3 [shot ...]  round 3's retakes (RESTYLE_R3, a new seed), named <short>_r3
 Paths are under captures/video/planb/: inputs/<key>_1080.mp4 (the encoded render), keyframes/, restyle/.
 """
 import json
@@ -111,6 +111,28 @@ RESTYLE_R2 = {
 		"burning behind, red-orange firelight across the roof, a dark purple smoky sky with embers, no daylight; a warm orange rim "
 		"light on Ox's armour. Ox keeps the keyframe's design as he falls. Keep the camera motion, composition, character actions "
 		"and timing exactly."),
+}
+
+# Round 3 (the final review, run wf_6a8b1d75-3f0, 2026-11-10): a new seed and targeted prompts; the keyframes kept.
+# (keyframe image, its seconds, prompt)
+SEED_R3 = 23
+_STREET = ("Restyle the whole video to match the keyframe: hand-drawn 2D anime, flat cel shadow shapes, hard tapered dark ink outlines, a navy night palette with orange street-lamp light and an orange rim light on the figures; no motion blur, no painterly smear. ")
+RESTYLE_R3 = {
+	"t01_crane_street": ("t01_key_1080.jpg", 2.917, _STREET + "The steam is faint translucent painted wisps with the street and the "
+		"fence visible through it, never solid white shapes. Keep the camera motion, composition, character actions and timing exactly."),
+	"t02_guard_up": ("t02_key_1080.jpg", 1.125, _STREET + "The street punk keeps his cap and a drawn face with readable features. The "
+		"steam is faint translucent painted wisps with the fence visible through it, never solid white shapes. Keep the camera motion, "
+		"composition, character actions and timing exactly."),
+	"t03_punk_combo": ("t03_key_b_1080.jpg", 0.0, _STREET + "The player's gloved fists show clearly in the foreground on every punch; "
+		"the punk's head snaps sideways on the hook and the uppercut lifts him up and back off his feet. Every body stays a solid "
+		"drawn shape. The punk keeps his grey cap and drawn face. Keep the camera motion, composition, character actions and timing "
+		"exactly."),
+	"t05_grab_throw": ("t05_key_1080.jpg", 1.5, _STREET + "The big thug has a drawn face and dark leather gloves. In the clinch the two "
+		"bodies stay clearly separate solid shapes, each knee rises into his torso, then he is flipped over the shoulder onto the "
+		"dumpster. Keep the camera motion, composition, character actions and timing exactly."),
+	"t06_pipe_chain": ("t06_key_1080.jpg", 0.0, _STREET + "The bruiser wears padded armour and goggles. The orange pipe in the player's "
+		"hands crosses the frame clearly on each swing and the bruiser recoils from each hit. The steam is translucent painted wisps. "
+		"Keep the camera motion, composition, character actions and timing exactly."),
 }
 
 PROMPT = ("Trace image 1 and ink and paint it as a hand-drawn 2D anime frame in the art style of image 2 ({style}). This is a "
@@ -232,6 +254,21 @@ def cmd_restyle_r2(keys: list) -> None:
 		json.dump(jobs, f, indent=1)
 
 
+def cmd_restyle_r3(keys: list) -> None:
+	path = os.path.join(PLANB, "restyle", "jobs.json")
+	with open(path) as f:
+		jobs = json.load(f)
+	for key in keys:
+		image, at, prompt = RESTYLE_R3[key]
+		name = f"{short(key)}_r3"
+		job = {"name": name, "video": f"../inputs/{key}_1080.mp4", "out": name, "seed": SEED_R3, "prompt": prompt,
+			"keyframes": [{"image": f"../keyframes/{image}", "seconds": at}]}
+		jobs = [j for j in jobs if j["name"] != name] + [job]
+		print(f"{name}: keyframe {image} at {at} s, seed {SEED_R3}, {len(prompt)} characters")
+	with open(path, "w") as f:
+		json.dump(jobs, f, indent=1)
+
+
 def main() -> None:
 	if len(sys.argv) < 2:
 		sys.exit(__doc__)
@@ -247,6 +284,9 @@ def main() -> None:
 	keys = [k for k in SHOTS if not rest or k in rest or short(k) in rest]
 	if cmd == "gemini":
 		cmd_gemini(keys, take)
+		return
+	if cmd == "restyle3":
+		cmd_restyle_r3([k for k in RESTYLE_R3 if not rest or k in rest or short(k) in rest])
 		return
 	if cmd == "restyle2":
 		cmd_restyle_r2([k for k in RESTYLE_R2 if not rest or k in rest or short(k) in rest])

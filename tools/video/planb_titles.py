@@ -88,7 +88,7 @@ def ox_card() -> Image.Image:
 
 def end_card() -> Image.Image:
 	card = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-	font = load_font(150)
+	font = load_font(128)
 	track = 8
 	text = "FIRST-PERSON BEAT-EM-UP"
 	tw = spaced_width(font, text, track)
@@ -100,11 +100,11 @@ def end_card() -> Image.Image:
 	card.alpha_composite(shadow_of(title, 38, (255, 120, 40), 0.55))
 	card.alpha_composite(shadow_of(title, 12, (255, 170, 90), 0.35))
 	card.alpha_composite(title)
-	sub_font = load_font(34)
+	sub_font = load_font(50)
 	sub = "Proof of concept · In-engine gameplay, AI-restyled"
 	stw = spaced_width(sub_font, sub, 3)
 	sy = y + font.getbbox("F")[3] + 56
-	subl = text_layer((W - stw) / 2, sy, sub, sub_font, 3, (236, 226, 214, 235))
+	subl = text_layer((W - stw) / 2, sy, sub, sub_font, 3, (252, 246, 236, 255))
 	card.alpha_composite(shadow_of(subl, 5, (0, 0, 0), 0.9, (0, 2)))
 	card.alpha_composite(subl)
 	return card

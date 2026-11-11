@@ -66,9 +66,11 @@ def video_segments(edit: dict, work: str) -> tuple:
 			start = ov["in"] - shot["in"]
 			dur = (ov["out"] - ov["in"]) / fps
 			fade = ov["fade"] / fps
+			fade_out = ov.get("fade_out", ov["fade"]) / fps
 			inputs += ["-loop", "1", "-framerate", str(fps), "-i", image]
 			chain += (f";[1:v]format=rgba,trim=end_frame={n},setpts=PTS-STARTPTS,"
-				f"fade=t=in:st={start / fps}:d={fade}:alpha=1,fade=t=out:st={start / fps + dur - fade}:d={fade}:alpha=1[o];"
+				f"fade=t=in:st={start / fps}:d={fade}:alpha=1" + (f",fade=t=out:st={start / fps + dur - fade_out}:d={fade_out}:alpha=1"
+				if fade_out > 0 else "") + "[o];"
 				f"[v][o]overlay=0:0:shortest=1:format=auto,format=yuv420p[v]")
 		run(["ffmpeg", "-v", "error", "-y", *inputs, "-filter_complex", chain, "-map", "[v]", "-frames:v", str(n),
 			"-c:v", "libx264", "-crf", "10", "-preset", "medium", "-an", out])
@@ -99,9 +101,10 @@ def audio_track(edit: dict, work: str, total_frames: int) -> str:
 		stem = os.path.join(PLANB, "audio", f"{shot['key']}.wav")
 		start, dur = shot["in"] / fps, (shot["out"] - shot["in"]) / fps
 		out = os.path.join(work, f"{i:02d}_{shot['key']}.wav")
+		fade_out = shot.get("audio_fade_out_ms", edit["audio"]["edge_fade_ms"]) / 1000
 		if os.path.isfile(stem):
 			run(["ffmpeg", "-v", "error", "-y", "-i", stem, "-af", f"atrim=start={start}:duration={dur},asetpts=PTS-STARTPTS,"
-				f"apad=whole_dur={dur},afade=t=in:d={fade},afade=t=out:st={max(0.0, dur - fade)}:d={fade},aresample=48000",
+				f"apad=whole_dur={dur},afade=t=in:d={fade},afade=t=out:st={max(0.0, dur - fade_out)}:d={fade_out},aresample=48000",
 				"-ac", "2", "-c:a", "pcm_s24le", out])
 		else:
 			print(f"  {shot['key']}: no stem, silence")
@@ -121,8 +124,9 @@ def audio_track(edit: dict, work: str, total_frames: int) -> str:
 	run(["ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", listing, "-t", str(total_frames / fps),
 		"-c:a", "pcm_s24le", raw])
 	# Effects alone are short hits over a quiet bed: their peaks sit about 20 dB over their loudness, and -14 LUFS under -1 dBTP
-	# allows about 13. So, as trailers are mixed: gain into a brick-wall limiter first, then loudnorm in two passes (measure,
-	# then apply with the measured values; linear when it can be), aiming the true peak a little lower for the AAC encode.
+	# allows about 13. So, as trailers are mixed: gain into a brick-wall limiter, measure, then one fixed gain to the target into
+	# a final limiter at the true-peak ceiling less a margin for the AAC encode. (loudnorm's second pass fell back to dynamic
+	# mode and swung the ambience bed about 13 dB from shot to shot.) Then fades at both ends, to go with the picture's.
 	a = edit["audio"]
 	target, tp = a["lufs"], a["true_peak_db"] - a["encode_margin_db"]
 	dyn = os.path.join(work, "audio_dyn.wav")
@@ -132,11 +136,14 @@ def audio_track(edit: dict, work: str, total_frames: int) -> str:
 		"-f", "null", "-"], capture_output=True, text=True).stderr
 	m = json.loads(probe[probe.rindex("{"):probe.rindex("}") + 1])
 	final = os.path.join(work, "audio_final.wav")
+	gain = target - float(m["input_i"])
+	ceiling = 10 ** (tp / 20)
+	dur = total_frames / edit["fps"]
 	run(["ffmpeg", "-v", "error", "-y", "-i", dyn, "-af",
-		f"loudnorm=I={target}:TP={tp}:LRA=11:measured_I={m['input_i']}:measured_TP={m['input_tp']}:measured_LRA={m['input_lra']}:"
-		f"measured_thresh={m['input_thresh']}:offset={m['target_offset']}:linear=true,aresample=48000",
+		f"volume={gain:.2f}dB,alimiter=limit={ceiling:.4f}:attack=1:release=60:level=false,"
+		f"afade=t=in:d={a['fade_in_s']},afade=t=out:st={dur - a['fade_out_s']:.3f}:d={a['fade_out_s']},aresample=48000",
 		"-c:a", "pcm_s24le", final])
-	print(f"  sound: measured {m['input_i']} LUFS, true peak {m['input_tp']} dBTP; normalised to {target} LUFS")
+	print(f"  sound: {m['input_i']} LUFS after the limiter; {gain:+.2f} dB to {target} LUFS, ceiling {tp} dBFS")
 	return final
 
 
@@ -165,12 +172,14 @@ def main() -> None:
 	ex = edit["export"]
 	out = os.path.join(final_dir, f"{args.name}_1080p.mp4")
 	enc = ["-c:v", "libx264", "-profile:v", "high", "-b:v", ex["video_bitrate"], "-maxrate", ex["maxrate"], "-bufsize", ex["bufsize"],
-		"-preset", "slow", "-pix_fmt", "yuv420p", "-movflags", "+faststart"]
+		"-preset", "slow", "-pix_fmt", "yuv420p", "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709",
+		"-color_range", "tv", "-movflags", "+faststart"]
 	if args.no_audio:
 		run(["ffmpeg", "-v", "error", "-y", "-i", picture, *enc, "-an", out])
 	else:
 		sound = audio_track(edit, work, total)
-		run(["ffmpeg", "-v", "error", "-y", "-i", picture, "-i", sound, "-map", "0:v", "-map", "1:a", *enc, "-c:a", "aac",
+		run(["ffmpeg", "-v", "error", "-y", "-i", picture, "-i", sound, "-map", "0:v", "-map", "1:a", *enc, "-c:a",
+			ex.get("audio_codec", "aac"),
 			"-b:a", ex["audio_bitrate"], "-ar", "48000", "-shortest", out])
 	# The labelled 720p copy for notes: each shot's key over its stretch (PIL labels; this ffmpeg has no drawtext).
 	from PIL import Image, ImageDraw, ImageFont
