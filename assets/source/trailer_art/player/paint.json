@@ -60,50 +60,52 @@
   },
   "cuff": {
    "base": [
-    52,
-    46,
-    62
+    64,
+    58,
+    76
    ],
    "shade": [
-    30,
-    27,
-    42
-   ]
+    40,
+    35,
+    56
+   ],
+   "class": 128
   },
   "strap": {
    "base": [
-    30,
-    28,
-    42
+    40,
+    36,
+    54
    ],
    "shade": [
-    18,
-    16,
-    28
-   ]
+    26,
+    23,
+    40
+   ],
+   "class": 128
   },
   "glove": {
    "base": [
-    62,
-    54,
-    70
+    78,
+    70,
+    90
    ],
    "shade": [
-    34,
-    30,
-    48
+    48,
+    42,
+    66
    ]
   },
   "pad": {
    "base": [
-    78,
-    68,
-    86
+    90,
+    80,
+    100
    ],
    "shade": [
-    42,
-    36,
-    56
+    54,
+    46,
+    72
    ]
   },
   "vest": {
@@ -357,15 +359,15 @@
   }
  ],
  "shadows": {
-  "wobble_px": 26,
-  "wobble_gain": 0.5,
+  "wobble_px": 70,
+  "wobble_gain": 0.16,
   "shadow_cut": 0.42,
-  "edge": 0.05,
+  "edge": 0.035,
   "fold_pct": 6.0,
-  "fold_amount": 0.8,
+  "fold_amount": 0.0,
   "form_sigma": 3.0,
-  "blur_px": 14,
-  "cavity": 0.5,
+  "blur_px": 20,
+  "cavity": 0.3,
   "hint": [
    {
     "bones": [
@@ -379,7 +381,7 @@
      "RightHand"
     ],
     "light": [
-     -0.2,
+     0.2,
      0.3,
      0.9
     ],
@@ -397,7 +399,7 @@
      "Head"
     ],
     "light": [
-     -0.2,
+     0.2,
      0.3,
      0.9
     ],
@@ -417,7 +419,7 @@
      "RightToes"
     ],
     "light": [
-     -0.2,
+     0.2,
      0.3,
      0.9
     ],
@@ -429,11 +431,18 @@
   "hatch": []
  },
  "ink": {
-  "crease_skip_bones": [],
-  "crease_strength": 0.9,
-  "border_px": 3,
-  "border_strength": 0.9,
-  "warp_px": 1.2
+  "crease_skip_bones": [
+   "LeftHand",
+   "RightHand",
+   "LeftLowerArm",
+   "RightLowerArm"
+  ],
+  "crease_strength": 0.95,
+  "border_px": 1,
+  "border_strength": 0.0,
+  "warp_px": 1.2,
+  "border_fade_cut": 0.08,
+  "crease_min": 3.0
  },
  "hull": {
   "base": 0.62,
@@ -455,14 +464,14 @@
     "LeftLowerArm"
    ],
    "region": "sleeve",
-   "count": 15,
+   "count": 16,
    "angle_deg": 38,
-   "angle_spread_deg": 16,
+   "angle_spread_deg": 12,
    "length_mm": [
-    40,
-    90
+    60,
+    130
    ],
-   "width_mm": 4.5,
+   "width_mm": 8.0,
    "strength": 0.95
   },
   {
@@ -471,14 +480,14 @@
     "RightLowerArm"
    ],
    "region": "sleeve",
-   "count": 15,
+   "count": 16,
    "angle_deg": 38,
-   "angle_spread_deg": 16,
+   "angle_spread_deg": 12,
    "length_mm": [
-    40,
-    90
+    60,
+    130
    ],
-   "width_mm": 4.5,
+   "width_mm": 8.0,
    "strength": 0.95
   }
  ],

@@ -13,99 +13,99 @@
  "regions": {
   "skin": {
    "base": [
-    128,
-    140,
-    174
+    150,
+    144,
+    148
    ],
    "shade": [
-    82,
+    96,
     92,
-    134
+    108
    ],
    "class": 204
   },
   "cap": {
    "base": [
-    96,
-    110,
-    142
+    104,
+    112,
+    132
    ],
    "shade": [
-    60,
-    70,
-    106
+    66,
+    72,
+    96
    ]
   },
   "cap_patch": {
    "base": [
-    66,
-    78,
-    110
+    72,
+    80,
+    102
    ],
    "shade": [
-    44,
+    46,
     52,
-    82
+    74
    ]
   },
   "vest": {
    "base": [
+    30,
     36,
-    44,
-    70
+    58
    ],
    "shade": [
+    16,
     20,
-    26,
-    46
+    36
    ]
   },
   "top": {
    "base": [
-    18,
-    22,
-    38
+    14,
+    16,
+    26
    ],
    "shade": [
-    10,
-    12,
-    24
+    8,
+    9,
+    16
    ]
   },
   "sleeve": {
    "base": [
-    120,
-    136,
-    170
+    118,
+    126,
+    144
    ],
    "shade": [
-    78,
-    90,
-    128
+    76,
+    82,
+    104
    ]
   },
   "glove": {
    "base": [
-    44,
-    48,
-    72
+    40,
+    42,
+    58
    ],
    "shade": [
-    26,
-    28,
-    48
+    22,
+    24,
+    38
    ]
   },
   "jeans": {
    "base": [
-    114,
     128,
-    160
+    138,
+    158
    ],
    "shade": [
-    74,
     84,
-    122
+    92,
+    118
    ]
   },
   "shoe": {
@@ -134,14 +134,14 @@
   },
   "hair": {
    "base": [
-    112,
+    116,
     118,
-    138
+    130
    ],
    "shade": [
-    72,
     76,
-    100
+    78,
+    94
    ]
   }
  },
@@ -294,15 +294,15 @@
   }
  ],
  "shadows": {
-  "wobble_px": 26,
-  "wobble_gain": 0.5,
+  "wobble_px": 70,
+  "wobble_gain": 0.16,
   "shadow_cut": 0.42,
-  "edge": 0.05,
+  "edge": 0.035,
   "fold_pct": 6.0,
-  "fold_amount": 0.8,
+  "fold_amount": 0.0,
   "form_sigma": 3.0,
-  "blur_px": 14,
-  "cavity": 0.5,
+  "blur_px": 20,
+  "cavity": 0.3,
   "hint": [
    {
     "bones": [
@@ -310,7 +310,7 @@
      "Neck"
     ],
     "light": [
-     -0.3,
+     0.3,
      0.5,
      0.8
     ],
@@ -334,7 +334,7 @@
      "RightHand"
     ],
     "light": [
-     -0.2,
+     0.2,
      0.3,
      0.9
     ],
@@ -354,7 +354,7 @@
      "RightToes"
     ],
     "light": [
-     -0.2,
+     0.2,
      0.3,
      0.9
     ],
@@ -369,7 +369,7 @@
   "crease_skip_bones": [
    "Head"
   ],
-  "crease_strength": 0.9,
+  "crease_strength": 0.4,
   "border_px": 3,
   "border_strength": 0.9,
   "warp_px": 1.2
@@ -394,14 +394,14 @@
     "LeftLowerArm"
    ],
    "region": "sleeve",
-   "count": 15,
+   "count": 5,
    "angle_deg": 38,
-   "angle_spread_deg": 16,
+   "angle_spread_deg": 12,
    "length_mm": [
-    40,
-    90
+    70,
+    140
    ],
-   "width_mm": 4.5,
+   "width_mm": 7.0,
    "strength": 0.95
   },
   {
@@ -410,14 +410,14 @@
     "LeftLowerLeg"
    ],
    "region": "jeans",
-   "count": 13,
+   "count": 4,
    "angle_deg": 30,
    "angle_spread_deg": 16,
    "length_mm": [
-    40,
-    100
+    80,
+    160
    ],
-   "width_mm": 3.5999999999999996,
+   "width_mm": 6.0,
    "strength": 0.95
   },
   {
@@ -426,14 +426,14 @@
     "RightLowerArm"
    ],
    "region": "sleeve",
-   "count": 15,
+   "count": 5,
    "angle_deg": 38,
-   "angle_spread_deg": 16,
+   "angle_spread_deg": 12,
    "length_mm": [
-    40,
-    90
+    70,
+    140
    ],
-   "width_mm": 4.5,
+   "width_mm": 7.0,
    "strength": 0.95
   },
   {
@@ -442,14 +442,14 @@
     "RightLowerLeg"
    ],
    "region": "jeans",
-   "count": 13,
+   "count": 4,
    "angle_deg": 30,
    "angle_spread_deg": 16,
    "length_mm": [
-    40,
-    100
+    80,
+    160
    ],
-   "width_mm": 3.5999999999999996,
+   "width_mm": 6.0,
    "strength": 0.95
   },
   {
@@ -458,14 +458,14 @@
     "Chest"
    ],
    "region": "vest",
-   "count": 24,
+   "count": 5,
    "angle_deg": 70,
    "angle_spread_deg": 22,
    "length_mm": [
-    50,
-    110
+    90,
+    170
    ],
-   "width_mm": 4.5,
+   "width_mm": 6.5,
    "strength": 0.95,
    "match_bones": [
     "Spine",
@@ -484,14 +484,14 @@
    "regions": {
     "vest": {
      "base": [
-      22,
-      26,
-      44
+      20,
+      24,
+      40
      ],
      "shade": [
+      10,
       12,
-      14,
-      28
+      24
      ]
     },
     "cap": {
