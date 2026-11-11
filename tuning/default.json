@@ -556,6 +556,8 @@
 		"draw_prop_lod_split_deg": 25.0,
 		"section_light_blend_s": 2.5,
 		"section_fog_sky_affect": 0.3,
+		"trailer_kit_variants": 12,
+		"trailer_kit_tint_jitter": 0.07,
 		"look_profile": 0,
 		"sfx_volume_db": -3.0,
 		"sfx_pitch_variation": 0.08,
@@ -684,9 +686,7 @@
 		"look_motion_hip_roll_deg": 4.0,
 		"look_motion_counter_swing_deg": 5.0,
 		"look_motion_overlap_s": 0.025,
-		"look_motion_overshoot": 0.15,
-		"trailer_kit_variants": 12,
-		"trailer_kit_tint_jitter": 0.07
+		"look_motion_overshoot": 0.15
 	},
 	"moves": {}
 }
