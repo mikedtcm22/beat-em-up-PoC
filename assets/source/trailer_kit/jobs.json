@@ -1,0 +1,94 @@
+[
+ {
+  "out": "wall_a.png",
+  "prompt": "Hand-painted 2D animation background texture, in the exact art style of the reference images (flat colour planes with a faint painterly grain, thin confident dark-navy ink outlines that vary slightly in weight, sparse hand-drawn detail). Flat orthographic front view, no perspective, no lighting, no cast shadows, no glow, no vignette, no gradient sky, no text, no people. Paint it as plain albedo in neutral daylight colours at mid values (the game lights it later), muted and desaturated. Keep the outer 8 percent of the image border plain flat base colour with no ink lines touching the border, so tiles can be joined. A tall section of dusty blue-grey painted plaster wall, one flat base colour with two soft slightly different tone patches. One irregular patch of exposed red-brown brick where plaster has fallen away, with only about a dozen sparsely drawn brick outlines, not a full brick grid. A vertical grey metal drainpipe running the whole height with two bracket clamps. One thin hairline crack. Portrait format, the wall about 2 metres wide and 3 metres tall.",
+  "aspect": "2:3",
+  "size": "2K",
+  "refs": [
+   "../trailer_ref/frames/t_02.jpg",
+   "../trailer_ref/frames/t_05.jpg",
+   "../trailer_ref/frames/t_06.jpg",
+   "../trailer_ref/plates/t01_crane_street_plate_0_gemini.jpg"
+  ]
+ },
+ {
+  "out": "wall_b.png",
+  "prompt": "Hand-painted 2D animation background texture, in the exact art style of the reference images (flat colour planes with a faint painterly grain, thin confident dark-navy ink outlines that vary slightly in weight, sparse hand-drawn detail). Flat orthographic front view, no perspective, no lighting, no cast shadows, no glow, no vignette, no gradient sky, no text, no people. Paint it as plain albedo in neutral daylight colours at mid values (the game lights it later), muted and desaturated. Keep the outer 8 percent of the image border plain flat base colour with no ink lines touching the border, so tiles can be joined. A tall section of warm ochre-cream painted plaster wall, flat colour, with a large fallen-plaster patch low on the wall showing a few brick outlines in dull brown, and one long diagonal crack with small branches. No pipes. A faint horizontal paint line two thirds up. Portrait format, the wall about 2 metres wide and 3 metres tall.",
+  "aspect": "2:3",
+  "size": "2K",
+  "refs": [
+   "../trailer_ref/frames/t_02.jpg",
+   "../trailer_ref/frames/t_05.jpg",
+   "../trailer_ref/frames/t_06.jpg",
+   "../trailer_ref/plates/t01_crane_street_plate_0_gemini.jpg"
+  ]
+ },
+ {
+  "out": "wall_c.png",
+  "prompt": "Hand-painted 2D animation background texture, in the exact art style of the reference images (flat colour planes with a faint painterly grain, thin confident dark-navy ink outlines that vary slightly in weight, sparse hand-drawn detail). Flat orthographic front view, no perspective, no lighting, no cast shadows, no glow, no vignette, no gradient sky, no text, no people. Paint it as plain albedo in neutral daylight colours at mid values (the game lights it later), muted and desaturated. Keep the outer 8 percent of the image border plain flat base colour with no ink lines touching the border, so tiles can be joined. A tall section of slate-teal grey painted wall, flat colour with a slightly darker band at the bottom third. Two small corner patches of sparse brick-outline hints, an old rusty wall bracket with a cable looping down from it, a short crack. Nothing else. Portrait format, the wall about 2 metres wide and 3 metres tall.",
+  "aspect": "2:3",
+  "size": "2K",
+  "refs": [
+   "../trailer_ref/frames/t_02.jpg",
+   "../trailer_ref/frames/t_05.jpg",
+   "../trailer_ref/frames/t_06.jpg",
+   "../trailer_ref/plates/t01_crane_street_plate_0_gemini.jpg"
+  ]
+ },
+ {
+  "out": "wall_d.png",
+  "prompt": "Hand-painted 2D animation background texture, in the exact art style of the reference images (flat colour planes with a faint painterly grain, thin confident dark-navy ink outlines that vary slightly in weight, sparse hand-drawn detail). Flat orthographic front view, no perspective, no lighting, no cast shadows, no glow, no vignette, no gradient sky, no text, no people. Paint it as plain albedo in neutral daylight colours at mid values (the game lights it later), muted and desaturated. Keep the outer 8 percent of the image border plain flat base colour with no ink lines touching the border, so tiles can be joined. A tall section of faded rust-brown brick wall painted as mostly flat colour; only a few courses of bricks are actually outlined (irregular, sparse, hand-drawn), the rest left as plain flat brown. A grey downpipe with an elbow bend near the bottom. A vertical hairline crack. Portrait format, the wall about 2 metres wide and 3 metres tall.",
+  "aspect": "2:3",
+  "size": "2K",
+  "refs": [
+   "../trailer_ref/frames/t_02.jpg",
+   "../trailer_ref/frames/t_05.jpg",
+   "../trailer_ref/frames/t_06.jpg",
+   "../trailer_ref/plates/t01_crane_street_plate_0_gemini.jpg"
+  ]
+ },
+ {
+  "out": "glass_grid.png",
+  "prompt": "Hand-painted 2D animation background texture, in the exact art style of the reference images (flat colour planes with a faint painterly grain, thin confident dark-navy ink outlines that vary slightly in weight, sparse hand-drawn detail). Flat orthographic front view, no perspective, no lighting, no cast shadows, no glow, no vignette, no gradient sky, no text, no people. Paint it as plain albedo in neutral daylight colours at mid values (the game lights it later), muted and desaturated. A clean grid of eight separate window panes, four columns by two rows, each pane in its own equal portrait cell (2 wide by 3 tall) separated by a plain dark-navy gap, every cell filled edge to edge with its pane. Panes (no frames, no mullions, just the glass area), all different: a glowing warm orange lit window with a curtain edge; a lit window with half-drawn blinds; a lit window with a person-less silhouette of a lamp; a dark blue window with one pale diagonal reflection streak; a dark window with a cracked corner; a dark window with a flat curtain; a dim lit window with plants on the sill; a black empty window with a faint reflection.",
+  "aspect": "4:3",
+  "size": "2K",
+  "refs": [
+   "../trailer_ref/frames/t_02.jpg",
+   "../trailer_ref/frames/t_05.jpg",
+   "../trailer_ref/frames/t_06.jpg"
+  ]
+ },
+ {
+  "out": "facade.png",
+  "prompt": "Hand-painted 2D animation background texture, in the exact art style of the reference images (flat colour planes with a faint painterly grain, thin confident dark-navy ink outlines that vary slightly in weight, sparse hand-drawn detail). Flat orthographic front view, no perspective, no lighting, no cast shadows, no glow, no vignette, no gradient sky, no text, no people. Paint it as plain albedo in neutral daylight colours at mid values (the game lights it later), muted and desaturated. Keep the outer 8 percent of the image border plain flat base colour with no ink lines touching the border, so tiles can be joined. A wide flat strip of an apartment building front seen straight on, two storeys, painted in dark plum and slate with flat tones. A row of about eight windows per storey, irregularly spaced; about one third are lit warm orange, the rest dark navy, some with half-drawn blinds, none identical to its neighbour. Thin ink outlines, a few drawn sills. Sparse brick hints only.",
+  "aspect": "21:9",
+  "size": "2K",
+  "refs": [
+   "../trailer_ref/frames/t_02.jpg",
+   "../trailer_ref/frames/t_05.jpg",
+   "../trailer_ref/frames/t_06.jpg"
+  ]
+ },
+ {
+  "out": "ground_a.png",
+  "prompt": "Hand-painted 2D animation background texture in the style of the reference images. Straight top-down orthographic view of an asphalt street surface, filling the whole square. Flat muted blue-grey asphalt in three or four flat tone patches with soft painted edges (worn, patched), thin dark-navy ink crack lines that branch and taper, a few rectangular patched squares with a thin ink outline, and two flat-filled irregular puddle shapes in a paler cool blue-teal with a thin dark outline each. Absolutely no noise, no grain, no gravel speckle, no photo texture, no tire marks, no text, no lighting, no shadows, no glow. Mid values. Keep the outer 8 percent of the image border plain flat asphalt colour with no cracks touching the border. Cracks mostly run diagonally.",
+  "aspect": "1:1",
+  "size": "2K",
+  "refs": [
+   "../trailer_ref/frames/t_02.jpg",
+   "../trailer_ref/frames/t_05.jpg",
+   "../trailer_ref/frames/t_06.jpg"
+  ]
+ },
+ {
+  "out": "ground_b.png",
+  "prompt": "Hand-painted 2D animation background texture in the style of the reference images. Straight top-down orthographic view of an asphalt street surface, filling the whole square. Flat muted blue-grey asphalt in three or four flat tone patches with soft painted edges (worn, patched), thin dark-navy ink crack lines that branch and taper, a few rectangular patched squares with a thin ink outline, and two flat-filled irregular puddle shapes in a paler cool blue-teal with a thin dark outline each. Absolutely no noise, no grain, no gravel speckle, no photo texture, no tire marks, no text, no lighting, no shadows, no glow. Mid values. Keep the outer 8 percent of the image border plain flat asphalt colour with no cracks touching the border. Cracks mostly run along the street, left to right, with one big puddle centre-left.",
+  "aspect": "1:1",
+  "size": "2K",
+  "refs": [
+   "../trailer_ref/frames/t_02.jpg",
+   "../trailer_ref/frames/t_05.jpg",
+   "../trailer_ref/frames/t_06.jpg"
+  ]
+ }
+]

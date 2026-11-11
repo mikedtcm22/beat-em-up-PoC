@@ -1285,6 +1285,15 @@ extends Resource
 ## still softens it. Every room takes it (RoomKit.build_environment; LevelRoot keeps it live).
 @export_range(0.0, 1.0, 0.05) var section_fog_sky_affect: float = 0.3
 
+@export_group("Trailer kit")
+## The trailer look profile's kit (Milestone 7, T15): how many alternates a module has. Each block or piece on the street takes
+## one by a stable hash of its position (TrimSheet.variant_for), and a variant moves every face on the sheet (a U and V offset,
+## a mirror, a slight tint), so no two neighbouring walls or windows are the same picture. M6's profile has none.
+@export_range(1, 64, 1) var trailer_kit_variants: int = 12
+## How far a variant may nudge a face's tint (rgb) about white, warm or cool, in the strips that allow it (the walls, the
+## concrete, the facade): the slight non-uniformity of hand-painted planes.
+@export_range(0.0, 0.3, 0.005) var trailer_kit_tint_jitter: float = 0.07
+
 @export_group("Look profile")
 ## Which look the presentation draws (Milestone 7): 0 = m6 (Milestone 6's, the default), 1 = trailer. F7 flips it
 ## live. Each profile is a LookProfileData in game/fx/look_profiles/ (light overrides, grade LUT, whether bloom is
