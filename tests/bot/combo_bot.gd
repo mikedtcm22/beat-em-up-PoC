@@ -23,12 +23,16 @@ var dummies: Array[TrainingDummy] = []
 var director: Node
 var caption: Label
 var log_lines: PackedStringArray = []
+## `--clean` (after `--`): no caption, combat log or sound-room line on screen, for review stills; the log still prints.
+var clean: bool = false
 
 
 func _ready() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--act="):
 			act_filter = arg.trim_prefix("--act=")
+		elif arg == "--clean":
+			clean = true
 		elif arg.begins_with("--tune="):
 			# `--tune=<TuningData property>=<number>`: record with a tunable changed (A/B sheets).
 			var pair := arg.trim_prefix("--tune=").split("=")
@@ -650,3 +654,22 @@ func _build_caption() -> void:
 	caption.position = Vector2(560, 120)
 	layer.add_child(caption)
 	add_child(layer)
+	if clean:
+		layer.visible = false
+		var sweep := Timer.new()
+		sweep.wait_time = 0.1
+		sweep.autostart = true
+		sweep.timeout.connect(_hide_debug_text)
+		add_child(sweep)
+
+
+## `--clean`: the HUD's combat log and the sound room's line are hidden (again after a room is rebuilt).
+func _hide_debug_text() -> void:
+	if room == null:
+		return
+	for node: Node in room.find_children("*", "", true, false):
+		if node.has_method(&"set_combat_log_visible"):
+			node.call(&"set_combat_log_visible", false)
+		elif node is AuditionRoom:
+			for layer: Node in node.find_children("*", "CanvasLayer", true, false):
+				(layer as CanvasLayer).visible = false

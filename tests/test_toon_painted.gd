@@ -253,7 +253,14 @@ func test_m6_materials_have_exactly_their_old_uniforms_and_the_trim_grain_is_tra
 	}
 	Tuning.set_value(&"look_profile", LookProfile.Id.TRAILER)
 	assert_eq(ToonMaterials.trim_grain, Vector2(Tuning.data.look_paint_trim_grain, Tuning.data.look_paint_trim_grain_cells), "the trailer profile's grain")
-	assert_eq(_uniforms(ToonMaterials.trim()), before.trim, "and the trim material's own uniforms did not move")
+	# The trailer kit (T15) puts its own sheets on the trim (trim_tex, ground_tex, strips: the lead's decision at the Phase 1
+	# merge); every other uniform of the trim's own is untouched by the grain.
+	var trailer_trim := _uniforms(ToonMaterials.trim())
+	var m6_trim: Dictionary = (before.trim as Dictionary).duplicate()
+	for sheet: String in ["trim_tex", "ground_tex", "strips"]:
+		trailer_trim.erase(sheet)
+		m6_trim.erase(sheet)
+	assert_eq(trailer_trim, m6_trim, "and the trim material's own uniforms did not move but the kit's sheets")
 	Tuning.set_value(&"look_profile", LookProfile.Id.M6)
 	assert_eq(ToonMaterials.trim_grain.x, 0.0, "flipped back: no grain")
 	assert_eq(_uniforms(ToonMaterials.trim()), before.trim, "trim: m6's uniforms again")

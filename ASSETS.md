@@ -544,6 +544,23 @@ Source art for the trailer's look, kept out of Godot's import by `assets/source/
 | Trailer hero plates | `assets/source/trailer_ref/plates/t*_plate_0_gemini.jpg` | Google Gemini API (paid), paint-over of each shot's blockout | Gemini's terms give the output to the user (Google claims no ownership); outputs carry an invisible SynthID watermark. Check the account's terms before anything ships. | 7 plates, one per shot (01, 03, 04, 07, 08, 10, 12), highest take. |
 | Trailer reference stills | `assets/source/trailer_ref/ref/ref1_*.png`, `ref2_*.png` | Captured from the project's own trailer work (video worktree) | Project-owned | 18 stills. |
 
+## Trailer night street (Milestone 7, T10)
+
+| Asset | Path | Source / service | License | Notes |
+| --- | --- | --- | --- | --- |
+| Street far-skyline matte | `assets/export/look/trailer/street_far_matte.png` | Copied from the video session's finished plate (`assets/video/mattes/matte_street_far.png` on `video/cinematic-trailer`): Google Gemini API (paid; job `street_far_a` in `assets/source/video_mattes/jobs.json`), keyed by `tools/video/key_mattes.py`. No new call for M7 | Gemini's terms give the output to the user (Google claims no ownership); outputs carry an invisible SynthID watermark. Check the account's terms before anything ships. | 2048x869 RGBA: dark navy blocks with a few lit windows, the sky keyed to alpha; a card behind the street's far end under the trailer profile (`NightLook` mattes). Git LFS |
+
+## Trailer kit (Milestone 7, T15)
+
+The trailer look profile's sheets, selected by `TrimSheet` while `look_profile` is `trailer`; M6's sheets above are untouched.
+
+| Asset | Path | Source / service | License | Notes |
+| --- | --- | --- | --- | --- |
+| Trailer trim sheet: the same 16 strips as M6's on a 2048 px sheet, laid out for the trailer's painting (brick row = four wall bays of flat plane with sparse brick hints, cracks, a drainpipe, a bracket and cable; glass row = eight different panes, lit and dark; facade row = two storeys of irregularly lit windows; a bold chain-link lattice; flat tones with bold joints for the rest). RGB the surface at mid values, alpha the ink mask (the wire's coverage on the chain-link) | `assets/export/kit/trailer_trim_sheet.png` | Painted by Claude in Python (`tools/gen_trailer_kit.py`, Pillow, fixed seeds). Gemini was out of credit (HTTP 402) when this was made, so nothing is Gemini-painted yet | Original, project-owned | No noise, no photo texture; ink features at least 5 px; imported lossless with mipmaps, alpha border fix off. `--check` repaints byte-identically. Git LFS |
+| The trailer sheet's strip table (row, period in metres, flags, and per strip `u_m`, `u_snap_m`, `flip`, `vary_v`, `vary_tint`: what a variant may move) | `assets/export/kit/trailer_trim_strips.json` | Written by `tools/gen_trailer_kit.py` | Original, project-owned | Same strip names and rows as `trim_strips.json` |
+| The trailer street's ground tile: 2048 px over 8 m, flat tone patches, patched squares, three puddles (flat pale fill, thin outline), six tapered branching cracks, a manhole, two drain grates; wrap-drawn, so it is seamless and mirrors without a seam | `assets/export/kit/trailer_ground_sheet.png` | Painted by Claude in Python (`tools/gen_trailer_kit.py`) | Original, project-owned | No grain; imported with mipmaps. Git LFS |
+| Gemini job file for the tiles the generator would take when credit returns (four wall bays, a pane grid, a facade, two ground tiles, with the trailer frames as style references): not run, nothing generated | `assets/source/trailer_kit/jobs.json` | `tools/gemini_image.py` input | Project-owned | $0 spent |
+
 ## Trailer Punk (Milestone 7, T12)
 
 The canonical trailer Punk painted onto the current Punk mesh, the Punk's trailer variant (`metadata/trailer` of `game/actors/art/punk_art.tres`). Made by `tools/pipeline/make_trailer_art.sh`; no paid service (no Gemini, no Tripo): the colours are drawn in `assets/source/trailer_art/punk/paint.json` from the trailer's frames.
@@ -555,3 +572,14 @@ The canonical trailer Punk painted onto the current Punk mesh, the Punk's traile
 | Trailer Punk ink map | `assets/export/characters/punk/trailer/punk_ink.png` | Same script; the face and cap seams are `assets/source/trailer_art/punk/features.svg` (drawn by Claude over a front sheet of the mesh, projected onto the UV2 layout by `tools/pipeline/trailer_features.py`) | Project-owned | 2048x2048 RGBA: R the line (folds, seams, the drawn face), G damage class, B gloss (none), A hull weight. Imported lossless, mipmaps on. |
 | Veteran Punk trailer paint | `assets/export/characters/punk/trailer/punk_veteran_paint.png` | Same script, `paint.json` "variants" "veteran" | Project-owned | The same maps recoloured: darker vest and top, a dusky plum cap. Named by `metadata/trailer_paint` in `game/enemies/variants/punk_veteran.tres`. |
 | Trailer Punk sources | `assets/source/trailer_art/punk/paint.json`, `features.svg`, `features_uv.svg` | Written by hand and by `trailer_features.py` | Project-owned | `features_uv.svg` is generated (the drawing as it sits in the layout). |
+
+## Trailer hero (Milestone 7, T14)
+
+The hero's first-person arms and gloves in the trailer look, the hero's trailer variant (`metadata/trailer` of `game/actors/art/player_art.tres`). Made by `tools/pipeline/make_trailer_player.sh`; no paid service (no Gemini, no Tripo): the colours are drawn in `assets/source/trailer_art/player/paint.json` from the trailer's frames (`t_06.jpg`).
+
+| Asset | Path | Source / service | License | Notes |
+| --- | --- | --- | --- | --- |
+| Trailer hero GLB | `assets/export/characters/player/trailer/player_trailer.glb` | Headless Blender (5.2) from `assets/source/characters/player/work/player.blend` through `tools/pipeline/trailer_player_asset.py` (T12's `trailer_asset.py` plus the video session's arm relax) | Derived from the project's Tripo-made hero mesh; same note as the hero's GLB | The hero's four parts (Body, `__fp_hidden`, `__fp_torso`, `__fp_arm`), the same triangles, weights, UV1 and hull normals; the upper arms and the forearms' upper part relaxed (Taubin, the girth kept), smoothed shading normals (heavy on the arms, light on the fists), a fresh UV2 with no slivers (26 % of the m6 arm part's triangles were), packed at 2048. |
+| Trailer hero paint map | `assets/export/characters/player/trailer/player_paint.png` | `tools/pipeline/trailer_player_paint.py bake` (T12's paint step with an "along" region rule) from `paint.json` | Project-owned | 2048x2048 RGB on UV2: grey sleeves with fold lines, a dark leather cuff with a darker wrist strap, dark leather gloves, the tank, vest, jeans and shoes. |
+| Trailer hero ink map | `assets/export/characters/player/trailer/player_ink.png` | Same script; the gloves' knuckle creases, finger lines, stitching and the strap's buckle are `assets/source/trailer_art/player/features.svg` (generated by `tools/pipeline/trailer_player_features.py`, projected by `trailer_features.py`) | Project-owned | 2048x2048 RGBA: R the line, G damage class, B gloss (none), A hull weight. Imported lossless, mipmaps on. |
+| Trailer hero sources | `assets/source/trailer_art/player/paint.json`, `features.svg`, `features_uv.svg` | Written by hand and by script | Project-owned | `features_uv.svg` is generated. |

@@ -67,10 +67,14 @@ const COLORS := {
 ## The collider (null when not solid), for tests.
 var body: StaticBody3D
 var _visual: Node3D
+## The drawn module's MeshInstance3D (null when nothing is drawn), so a flip of the look profile can swap its mesh alone.
+var _mesh_node: MeshInstance3D
 
 
 func _ready() -> void:
 	_rebuild()
+	if not Engine.is_editor_hint() and not Tuning.changed.is_connected(_on_look_profile_changed):
+		Tuning.changed.connect(_on_look_profile_changed)
 
 
 ## The box in world space (its centre and size, no rotation assumed beyond the node's).
@@ -87,6 +91,7 @@ func _rebuild() -> void:
 	if _visual != null:
 		_visual.queue_free()
 		_visual = null
+	_mesh_node = null
 	if size.x <= 0.0 or size.y <= 0.0 or size.z <= 0.0:
 		return
 	var material := _material()
@@ -95,6 +100,7 @@ func _rebuild() -> void:
 		add_child(body)
 	elif _show_mesh():
 		_visual = _make_mesh(material)
+		_mesh_node = _visual as MeshInstance3D
 		add_child(_visual)
 
 
@@ -119,14 +125,34 @@ func _make_body(material: Material) -> StaticBody3D:
 	shape.shape = box
 	out.add_child(shape)
 	if _drawn() and _show_mesh():
-		out.add_child(_make_mesh(material))
+		_mesh_node = _make_mesh(material)
+		out.add_child(_mesh_node)
 	return out
 
 
 ## The drawn mesh: the kit's module (the editor and the graybox switch draw the plain box).
 func _make_mesh(material: Material) -> MeshInstance3D:
 	var art := _art()
-	return RoomKit.box_mesh(size, material, _overlay(art), art)
+	return RoomKit.box_mesh(size, material, _overlay(art), art, _variant())
+
+
+## The trailer profile's alternate of this block's module (a stable hash of its position in its parent), -1 under any other
+## profile and in the editor.
+func _variant() -> int:
+	return -1 if Engine.is_editor_hint() else TrimSheet.variant_for(position)
+
+
+## A flip of the look profile (Tuning's `look_profile`): the module's mesh is the new profile's (its sheet's UVs and this block's
+## variant), swapped in place. The collider and the body are untouched.
+func _on_look_profile_changed(property: StringName) -> void:
+	if property != &"" and property != &"look_profile":
+		return
+	if _mesh_node == null or not is_instance_valid(_mesh_node):
+		return
+	var fresh := _make_mesh(_material())
+	_mesh_node.mesh = fresh.mesh
+	_mesh_node.material_overlay = fresh.material_overlay
+	fresh.free()
 
 
 ## Whether the mesh is drawn: `draw_box`, and always in the editor and under the graybox switch.

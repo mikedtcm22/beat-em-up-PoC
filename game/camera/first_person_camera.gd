@@ -174,7 +174,9 @@ func _process(delta: float) -> void:
 ## Ride `value` from now on, jumping straight to its eye on the next update.
 func set_player(value: PlayerCharacter) -> void:
 	_restore_torso()
+	_listen_to_rig(false)
 	player = value
+	_listen_to_rig(true)
 	_ko_view = 0.0
 	_ko_pose = KoPose.NONE
 	_ko_was_out = false
@@ -184,6 +186,29 @@ func set_player(value: PlayerCharacter) -> void:
 	_arm_meshes.clear()
 	set_cull_mask_value(CombatTypes.VIS_FP_HIDDEN, false)
 	snap()
+
+
+## Connect (or disconnect) the player's rig's art_swapped: a look profile flip (F7) puts the trailer variant's meshes on the skeleton and frees
+## the old ones, so every mesh this camera cached (the torso, the upper arms, the head layer's) is stale.
+func _listen_to_rig(connect_it: bool) -> void:
+	if player == null or not is_instance_valid(player) or player.rig == null:
+		return
+	var callback := Callable(self, &"_on_art_swapped")
+	if connect_it and not player.rig.art_swapped.is_connected(callback):
+		player.rig.art_swapped.connect(callback)
+	elif not connect_it and player.rig.art_swapped.is_connected(callback):
+		player.rig.art_swapped.disconnect(callback)
+
+
+## The player's art was swapped (HumanoidRig.swap_art() has already freed the old meshes, so there is nothing to put back): forget what was
+## cached and what was lifted, the next update finds the new art's meshes.
+func _on_art_swapped(_worn: CharacterArt) -> void:
+	_torso_meshes.clear()
+	_torso_layers.clear()
+	_arm_meshes.clear()
+	_arm_layers.clear()
+	_arm_materials.clear()
+	_head_meshes.clear()
 
 
 ## Jump straight to the eye point on the next update instead of easing toward it.

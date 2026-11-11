@@ -1,9 +1,9 @@
 extends GutTest
-## Milestone 7, T05a: the look profile switch. The default is M6's; the trailer profile differs by its marker
-## (a sky, horizon and fog colour set held in game/fx/look_profiles/trailer.tres) and nothing else yet; a flip
-## (Tuning `look_profile`, F7) re-applies the light, sky, fog, post and materials live, and flipping back
-## restores every M6 value exactly, on the Mission 1 street section and on the crowd street; and no simulation
-## code reads the profile.
+## Milestone 7, T05a: the look profile switch. The default is M6's. A flip (Tuning `look_profile`, F7) re-applies the
+## light, sky, fog, post and materials live, and flipping back restores every M6 value exactly, on the Mission 1 street
+## section and on the crowd street; and no simulation code reads the profile. Since Phase 1 (T10 to T16a) the trailer
+## profile really changes the street: its night light and painted sky, the trailer kit sheets and the characters' painted
+## art (the lead's decision at the Phase 1 merge replaced P0's "the trailer differs by the marker alone" pins).
 
 const LEVEL_PATH := "res://game/level/mission1/mission1.tscn"
 const CROWD_PATH := "res://game/level/crowd_room.tscn"
@@ -37,8 +37,9 @@ func _build(path: String) -> Node:
 	return root
 
 
-## Every value the profile could touch under `room`: the Environment and its sky, the sun, LookPost's edge
-## material and every ShaderMaterial the room's meshes draw with (all uniforms), keyed by the material's id.
+## Every value the profile could touch under `room`: the Environment and its sky (the sky material object itself, and a
+## procedural sky's colours), the glow, the sun, every other light, LookPost's edge material, every ShaderMaterial the
+## room's meshes draw with (all uniforms), keyed by the material's id, and the shaders those materials use.
 func _snapshot(room: Node) -> Dictionary:
 	var out := {}
 	var env := (room.get_node("WorldEnvironment") as WorldEnvironment).environment
@@ -46,18 +47,37 @@ func _snapshot(room: Node) -> Dictionary:
 	out.environment = {
 		tonemap = env.tonemap_mode, fog_color = env.fog_light_color, fog_density = env.fog_density,
 		fog_sky_affect = env.fog_sky_affect, ambient = env.ambient_light_energy, glow = env.glow_enabled,
+		glow_threshold = env.glow_hdr_threshold, glow_intensity = env.glow_intensity,
+		glow_strength = env.glow_strength, glow_bloom = env.glow_bloom,
 		adjustment = env.adjustment_enabled, lut = env.adjustment_color_correction,
-		sky_top = sky.sky_top_color, sky_horizon = sky.sky_horizon_color,
-		ground_horizon = sky.ground_horizon_color, ground_bottom = sky.ground_bottom_color,
+		sky_material = env.sky.sky_material,
+		sky_top = sky.sky_top_color if sky != null else null,
+		sky_horizon = sky.sky_horizon_color if sky != null else null,
+		ground_horizon = sky.ground_horizon_color if sky != null else null,
+		ground_bottom = sky.ground_bottom_color if sky != null else null,
 	}
 	var sun := room.get_node("Sun") as DirectionalLight3D
 	out.sun = {
 		rotation = sun.rotation_degrees, color = sun.light_color, energy = sun.light_energy, blur = sun.shadow_blur,
+		shadow = sun.shadow_enabled,
 	}
+	var lights: Dictionary = {}
+	for node: Node in room.find_children("*", "Light3D", true, false):
+		if node == sun or node.is_queued_for_deletion():
+			continue
+		var light := node as Light3D
+		lights[String(room.get_path_to(light))] = {
+			type = light.get_class(), color = light.light_color, energy = light.light_energy, shadow = light.shadow_enabled,
+			visible = light.is_visible_in_tree(),
+		}
+	out.lights = lights
 	var post := room.get_node("LookPost") as LookPost
 	out.edge = _uniforms(post.edge_material())
 	var materials: Dictionary = {}
+	var shaders: Dictionary = {}
 	for node: Node in room.find_children("*", "MeshInstance3D", true, false):
+		if node.is_queued_for_deletion():
+			continue
 		var mesh_node := node as MeshInstance3D
 		var found: Array[Material] = [mesh_node.material_override, mesh_node.material_overlay]
 		if mesh_node.mesh != null:
@@ -67,7 +87,10 @@ func _snapshot(room: Node) -> Dictionary:
 			var shader_material := material as ShaderMaterial
 			if shader_material != null:
 				materials[shader_material.get_instance_id()] = _uniforms(shader_material)
+				if shader_material.shader != null:
+					shaders[shader_material.shader.resource_path] = true
 	out.materials = materials
+	out.shaders = shaders
 	return out
 
 
@@ -128,34 +151,45 @@ func test_the_trailer_profile_holds_its_marker_as_data() -> void:
 	assert_eq(LookProfile.current(), LookProfile.Id.TRAILER, "out of range clamps")
 
 
-func test_the_trailer_flip_changes_only_the_marker_on_the_street_and_back_restores_m6_exactly() -> void:
+func test_the_trailer_flip_changes_the_street_and_back_restores_m6_exactly() -> void:
 	var level := await _build(LEVEL_PATH)
 	assert_not_null(level.get_node_or_null("LookPost"), "the level has its post pass")
 	var m6 := _snapshot(level)
 	assert_eq((m6.materials as Dictionary).size() > 5, true, "the street draws with shader materials")
+	var trim := ToonMaterials.trim()
+	var m6_trim := {}
+	for uniform: StringName in [&"trim_tex", &"ground_tex", &"strips"]:
+		m6_trim[uniform] = trim.get_shader_parameter(uniform)
 	Tuning.set_value(&"look_profile", LookProfile.Id.TRAILER)
 	await _ticks(2)
 	var trailer := _snapshot(level)
-	var overrides := LookProfile.data().light_overrides
-	assert_eq(trailer.environment.sky_top, overrides[&"sky_top"], "the sky took the marker at once")
-	assert_eq(trailer.environment.sky_horizon, overrides[&"sky_horizon"])
-	assert_eq(trailer.environment.fog_color, overrides[&"fog_color"])
-	assert_ne(trailer.environment.sky_top, m6.environment.sky_top)
-	# Nothing else moved: the marker is the three colours.
-	var expected := m6.duplicate(true)
-	expected.environment.sky_top = overrides[&"sky_top"]
-	expected.environment.sky_horizon = overrides[&"sky_horizon"]
-	expected.environment.fog_color = overrides[&"fog_color"]
-	assert_eq(trailer.environment, expected.environment, "the environment differs by the marker alone")
-	assert_eq(trailer.sun, m6.sun, "the sun")
-	assert_eq(trailer.edge, m6.edge, "the edge pass")
-	assert_eq(trailer.materials, m6.materials, "every material's uniforms")
+	# The night light and the painted sky.
+	assert_ne(trailer.environment.sky_material, m6.environment.sky_material, "the sky is the painted one")
+	assert_eq((trailer.environment.sky_material as ShaderMaterial).shader.resource_path,
+		"res://game/fx/sky_painted.gdshader")
+	assert_ne(trailer.environment.fog_color, m6.environment.fog_color, "the night fog")
+	assert_ne(trailer.sun, m6.sun, "the sun is the night look's moon")
+	assert_gt((trailer.lights as Dictionary).size(), (m6.lights as Dictionary).size(), "the street lamps light")
+	# The trailer kit's sheets on the shared trim.
+	for uniform: StringName in m6_trim:
+		assert_ne(trim.get_shader_parameter(uniform), m6_trim[uniform], "the trim's %s is the trailer's" % uniform)
+	assert_ne(trailer.materials[trim.get_instance_id()], m6.materials[trim.get_instance_id()], "the street's trim")
+	# The characters' painted art (the hero's arms on the street).
+	for path: String in ["res://game/fx/toon_painted.gdshader", "res://game/fx/toon_outline_painted.gdshader"]:
+		assert_false((m6.shaders as Dictionary).has(path), "m6 draws nothing with %s" % path)
+		assert_true((trailer.shaders as Dictionary).has(path), "the trailer's swapped art draws with %s" % path)
+	var new_materials := (trailer.materials as Dictionary).keys().filter(
+		func(id: int) -> bool: return not (m6.materials as Dictionary).has(id))
+	assert_gt(new_materials.size(), 0, "the swapped art draws with its own materials")
+	# Back: m6 exactly, every value and every material object.
 	Tuning.set_value(&"look_profile", LookProfile.Id.M6)
 	await _ticks(2)
 	var back := _snapshot(level)
 	assert_eq(back.environment, m6.environment, "the environment is M6's again")
 	assert_eq(back.sun, m6.sun, "the sun is M6's again")
+	assert_eq(back.lights, m6.lights, "every light is M6's again")
 	assert_eq(back.edge, m6.edge, "the edge pass is M6's again")
+	assert_eq(back.shaders, m6.shaders, "the same shaders as M6's")
 	assert_eq(back.materials, m6.materials, "every material's uniforms are M6's again")
 
 
@@ -165,9 +199,13 @@ func test_the_flip_follows_a_section_with_its_own_light() -> void:
 	assert_eq(level.current_light().sky_top, street.sky_top, "M6: the street's own sky")
 	Tuning.set_value(&"look_profile", LookProfile.Id.TRAILER)
 	assert_eq(level.section_light_progress(), 1.0, "the flip is not a blend")
-	var overrides := LookProfile.data().light_overrides
-	assert_eq(level.current_light().sky_top, overrides[&"sky_top"])
-	assert_eq(level.current_light().sun_color, street.sun_color, "the street's sun stays")
+	var look := NightLook.for_location(level.sections[0].look_location)
+	assert_not_null(look, "the street has the trailer's night look")
+	var night := look.light()
+	for key: StringName in night:
+		assert_eq(level.current_light()[key], night[key], "the night look's %s" % key)
+	assert_ne(level.current_light().sun_color, street.sun_color, "the street's sun is the moon")
+	assert_false(level.current_light().has(NightLook.KEY), "the look row is not a light")
 	Tuning.set_value(&"look_profile", LookProfile.Id.M6)
 	assert_eq(level.current_light().sky_top, street.sky_top, "and back to the street's own sky")
 	assert_eq(level.current_light(), LookProfile.resolve_light(street))

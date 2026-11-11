@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" path="res://game/actors/character_art.gd" id="1_art"]
 [ext_resource type="Texture2D" path="res://assets/export/palette/palette_atlas.png" id="2_atlas"]
+[ext_resource type="Resource" path="res://game/actors/art/player_trailer_art.tres" id="3_trailer"]
 
 [resource]
 script = ExtResource("1_art")
@@ -11,3 +12,4 @@ triangle_budget = 30000
 metadata/scene_path = "res://assets/export/characters/player/player.glb"
 metadata/detail_mask_path = "res://assets/export/characters/player/player_detail.png"
 metadata/detail_sharp = true
+metadata/trailer = ExtResource("3_trailer")

@@ -110,6 +110,7 @@ func _init() -> void:
 	impact_frame.name = &"ImpactFrame"
 	flash_layer.add_child(impact_frame)
 	add_child(flash_layer)
+	add_child(StreetFx.new())
 
 
 func _ready() -> void:
