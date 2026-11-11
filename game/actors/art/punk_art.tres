@@ -5,6 +5,7 @@
 [ext_resource type="Texture2D" path="res://assets/export/palette/palette_atlas.png" id="3_atlas"]
 [ext_resource type="Texture2D" path="res://assets/export/characters/punk/punk_detail.png" id="4_detail"]
 [ext_resource type="Resource" path="res://game/actors/art/punk_trailer_art.tres" id="5_trailer"]
+[ext_resource type="Resource" path="res://game/actors/art/punk_trailer_b.tres" id="6_trailer_b"]
 
 [resource]
 script = ExtResource("1_art")
@@ -15,3 +16,4 @@ detail_mask = ExtResource("4_detail")
 triangle_budget = 15000
 metadata/detail_sharp = true
 metadata/trailer = ExtResource("5_trailer")
+metadata/trailer_b = ExtResource("6_trailer_b")

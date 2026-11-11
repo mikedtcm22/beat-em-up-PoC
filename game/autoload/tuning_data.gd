@@ -1345,6 +1345,12 @@ extends Resource
 ## the materials and the level's light. Presentation only: simulation never reads it.
 @export_range(0, 1, 1) var look_profile: int = 0
 
+@export_group("Trailer Punk arm")
+## M7 T13: which model the Punk wears under the trailer look profile, to compare the two in stills. 0 = arm A (T12: the current Punk
+## mesh painted to the trailer design, the default), 1 = arm B (a new Tripo mesh of the trailer design, with its own articulated
+## gloved fists). Read by CharacterArt.trailer_art() and EnemyVariant.trailer_paint(); the m6 look never reads it.
+@export_range(0, 1, 1) var trailer_punk_arm: int = 0
+
 @export_group("Painted look (M7)")
 ## The trailer profile's surface language (Milestone 7, T11): the painted character material (toon_painted.gdshader, an
 ## albedo paint map and an ink map on UV2), its hull (toon_outline_painted.gdshader) and the grain on the trim. Only the

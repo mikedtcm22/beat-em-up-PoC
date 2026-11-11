@@ -25,5 +25,8 @@ extends Resource
 
 ## M7 (T12): the paint map a trailer-profile painted art wears for this variant (`metadata/trailer_paint` in the .tres, a Texture2D on the
 ## same UV2 as the art's own paint map: the same drawing recoloured, so the ink, the face and the hull are the archetype's). Null = none.
+## T13: `metadata/trailer_paint_b` is the same recolour on arm B's UV2, worn when Tuning `trailer_punk_arm` is 1.
 func trailer_paint() -> Texture2D:
+	if has_meta(&"trailer_paint_b") and Tuning.data.trailer_punk_arm == 1:
+		return get_meta(&"trailer_paint_b") as Texture2D
 	return get_meta(&"trailer_paint") as Texture2D if has_meta(&"trailer_paint") else null

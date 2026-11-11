@@ -25,7 +25,10 @@ extends Resource
 ## different mesh, even a new UV2, bound to the same 23 bones), palette, detail mask and triangle
 ## budget, so its material is its own. Its own variant is never read. A rig swaps between the two
 ## live (HumanoidRig.swap_art(), driven by ArtLook), keeping its pose, damage look and outline.
+## M7 T13: an art with `metadata/trailer_b` (the Punk's arm B) wears it instead when Tuning `trailer_punk_arm` is 1.
 func trailer_art() -> CharacterArt:
+	if has_meta(&"trailer_b") and Tuning.data.trailer_punk_arm == 1:
+		return get_meta(&"trailer_b") as CharacterArt
 	return get_meta(&"trailer") as CharacterArt if has_meta(&"trailer") else null
 
 
