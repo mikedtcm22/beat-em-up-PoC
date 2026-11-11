@@ -4,6 +4,14 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-11 17:15 CST: the fix wave F1-F3 merged (2150/2150); slice re-recorded; frame time +22.6%; blind judge sets ready (T20)
+- **Merged** (`--no-ff`, no conflicts): F1 paint keeps local colour (628937d), F3 street FX (54bb1c3), F2 painted face, folds and glove ink (773c6f2). The merge left F3's five tunables out of `tuning/default.json`; regenerated (a309682). Suite: 2150 tests; the one failure (the preset) fixed and its file re-run green.
+- **Slice:** `captures/m7-slice/merged2/` (`INDEX.md`; same commands and frames as `merged/`; every bot log matches; m6 stills unchanged but for random impact words).
+- **Still reads as 3D (lead's look):** the Punk's vest and arms carry big translucent grey/purple blotches (the damage marks) and a purple smear over the face; the dummy and roof in the training room are plain m6-ish toon; the far facades are exact window grids and the chain-link is exact perspective; ground pools keep a star edge; the turnaround's shadow is a crisp shadow map.
+- **Frame time** (Mission 1 level walk, `perf_level_bot`, vsync on, interleaved m6/trailer, 4 runs each, load 2.9-4.9; `captures/m7-slice/perf2/report.txt`): m6 median 11.05 ms, trailer 13.55 ms, **+22.6%** (p95 14.89 to 17.08). Over the +10% gate.
+- **Judge sets:** `captures/m7-slice/judge2/run{1,2,3}` (seeds 101/202/303; 73 images each: trailer 25, refs 8, cand_street 8, cand_arms 8, cand_punk 8, m6 16; 13 contact sheets each). Keys and inputs in `captures/m7-slice/judge2_keys/` (judges must not open it).
+- **Next:** T21 in `.claude/cfo/plan.md` (judge the sets, score them).
+
 ### 2026-11-11 15:55 CST: M7 Phase 1 merged on `m7/trailer-look` (2149/2149); the slice recorded under both profiles (T17)
 - **Merged** (`--no-ff`, in order): T11 painted material, T10 night street, T15 trailer kit (8a52933), T16a street FX (d337cce), T12 trailer Punk (0f43afd), T14 hero arms (9e3a7fb). T13 not merged (blocked on Gemini credit, docs only). Conflicts were text only (ARCHITECTURE, ASSETS, tuning_data); T10's "Night street (T10)" tuning group had landed after Debug and now sits before "Look profile"; `tuning/default.json` regenerated.
 - **Glue and fixes** (d59cac1, a1378b8): the night street calls `ToonMaterials.set_area_look()` (NightLook `paint_shadow_hue`, `paint_rim_color`) and clears it on leaving; TrailerLook puts the level's light back on the procedural sky on a flip back (m6's sky kept the night colours); ASSETS row for T10's street matte; `combo_bot.gd --clean` (no caption, combat log, sound-room line); the Punk stage takes `--profile=m6`.
