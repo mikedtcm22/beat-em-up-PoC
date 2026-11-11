@@ -1,0 +1,52 @@
+{
+ "_doc": "The style meter's ranges, from docs/video/STYLE.md's 'Targets for our locations' table. Each rule is a list of [lo, hi] ranges (any one passes); hue ranges with lo > hi wrap through 0. 'any_of' passes if any of its alternatives does. Keep this file and STYLE.md's table in step.",
+ "street_night": {
+  "L_mean": [[8, 25]],
+  "frac_dark": [[0.55, 0.95]],
+  "frac_light": [[0, 0.07]],
+  "dark_hue": [[255, 330]],
+  "dark_frac_grey": [[0, 0.9]],
+  "key_hue": [[40, 70], [250, 320]],
+  "cool_share": [[0.5, 1]],
+  "warm_share": [[0.05, 1]],
+  "edge_density": [[0.01, 0.04]],
+  "ink_frac": [[0.001, 0.02]],
+  "local_std_p50": [[0, 0.4]]
+ },
+ "roofs_dusk": {
+  "L_mean": [[35, 55]],
+  "frac_dark": [[0.15, 0.4]],
+  "frac_light": [[0.15, 0.35]],
+  "dark_hue": [[300, 340]],
+  "dark_frac_grey": [[0, 0.3]],
+  "key_hue": [[60, 100]],
+  "warm_share": [[0.7, 1]],
+  "edge_density": [[0.003, 0.015]],
+  "ink_frac": [[0, 0.004]],
+  "local_std_p50": [[0, 0.3]]
+ },
+ "boss_fire": {
+  "L_mean": [[20, 55]],
+  "frac_dark": [[0.15, 0.65]],
+  "frac_light": [[0.01, 0.55]],
+  "dark_hue": [[300, 30]],
+  "dark_frac_grey": [[0, 0.4]],
+  "key_hue": [[30, 90]],
+  "warm_share": [[0.75, 1]],
+  "edge_density": [[0.008, 0.025]],
+  "ink_frac": [[0.001, 0.006]],
+  "local_std_p50": [[0, 0.6]]
+ },
+ "closeup": {
+  "L_mean": [[15, 30]],
+  "frac_dark": [[0.45, 0.75]],
+  "frac_light": [[0, 0.08]],
+  "dark_hue": [[290, 20]],
+  "dark_frac_grey": [[0, 0.6]],
+  "key_hue": [[35, 60], [200, 240]],
+  "any_of": [{"warm_share": [[0.4, 1]]}, {"cool_share": [[0.3, 1]]}],
+  "edge_density": [[0.012, 0.06]],
+  "ink_frac": [[0.002, 0.03]],
+  "local_std_p50": [[0, 0.4]]
+ }
+}
