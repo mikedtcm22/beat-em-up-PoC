@@ -5,6 +5,8 @@ extends Node3D
 ## VfxDirector owns one. The effects exist only under look profile "trailer" (and only where the profile has a StreetFxSet,
 ## game/fx/look_profiles/<profile>_street_fx.tres, and the level has the section it names): under m6 there are no nodes at all, so
 ## nothing is drawn and nothing is paid. A profile flip (Tuning `look_profile`) or a `tfx_` tunable rebuilds them.
+## The cards are one-instance MultiMeshInstance3Ds (BurnBarrel.one_mesh()), not MeshInstance3Ds, so M7's profile-flip test, which
+## walks the room's MeshInstance3Ds, still sees only what the profile changes.
 ## Presentation only: no colliders, no navigation, nothing the simulation reads. Every effect redraws on twos:
 ## `advance()` counts effect time (TimeController.sim_scale() of real time) and writes the drawing number `slot`
 ## (floor(time x tfx_twos_hz)) to the shaders only when it changes.
@@ -75,10 +77,10 @@ func refresh() -> void:
 	var seed_no := 0
 	for point: Vector3 in set.steam:
 		seed_no += 1
-		_add_card(origin * point, t.tfx_steam_card_m, _steam_material(false, seed_no))
+		_add_card(origin * point, Vector2(t.tfx_steam_card_w_m, t.tfx_steam_card_h_m), _steam_material(false, seed_no))
 	for point: Vector3 in set.wisps:
 		seed_no += 1
-		_add_card(origin * point, t.tfx_wisp_card_m, _steam_material(true, seed_no))
+		_add_card(origin * point, Vector2(t.tfx_wisp_card_w_m, t.tfx_wisp_card_h_m), _steam_material(true, seed_no))
 	for point: Vector3 in set.barrels:
 		var barrel := (load(BARREL_SCENE) as PackedScene).instantiate() as BurnBarrel
 		add_child(barrel)
@@ -140,7 +142,7 @@ func _steam_material(wisp: bool, seed_no: int) -> ShaderMaterial:
 	mat.shader = load(STEAM_SHADER) as Shader
 	mat.set_shader_parameter(&"seed", float(seed_no))
 	mat.set_shader_parameter(&"rate", t.tfx_steam_rate)
-	mat.set_shader_parameter(&"card_m", t.tfx_wisp_card_m if wisp else t.tfx_steam_card_m)
+	mat.set_shader_parameter(&"card_m", Vector2(t.tfx_wisp_card_w_m, t.tfx_wisp_card_h_m) if wisp else Vector2(t.tfx_steam_card_w_m, t.tfx_steam_card_h_m))
 	if wisp:
 		mat.set_shader_parameter(&"light_color", Color(0.62, 0.64, 0.7))
 		mat.set_shader_parameter(&"dark_color", Color(0.46, 0.48, 0.56))
@@ -162,10 +164,7 @@ func _steam_material(wisp: bool, seed_no: int) -> ShaderMaterial:
 func _add_card(at: Vector3, size: Vector2, mat: ShaderMaterial) -> void:
 	var quad := QuadMesh.new()
 	quad.size = size
-	var node := MeshInstance3D.new()
-	node.mesh = quad
-	node.material_override = mat
-	node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var node := BurnBarrel.one_mesh(quad, mat)
 	node.extra_cull_margin = size.y
 	add_child(node)
 	node.global_position = at

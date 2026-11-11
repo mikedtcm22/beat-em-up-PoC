@@ -8,7 +8,7 @@ extends Node3D
 var _flame_mat: ShaderMaterial
 var _ember_mat: ShaderMaterial
 var _pool_mat: ShaderMaterial
-var _body: MeshInstance3D
+var _body: Node3D
 var _embers: MultiMeshInstance3D
 
 
@@ -41,8 +41,8 @@ func build() -> void:
 	_flame_mat.set_shader_parameter(&"energy", t.tfx_flame_energy)
 	_flame_mat.set_shader_parameter(&"seed", float(get_index()) + 1.0)
 	var card := QuadMesh.new()
-	card.size = t.tfx_flame_card_m
-	card.center_offset = Vector3(0.0, t.tfx_flame_card_m.y * 0.5, 0.0)
+	card.size = Vector2(t.tfx_flame_card_w_m, t.tfx_flame_card_h_m)
+	card.center_offset = Vector3(0.0, t.tfx_flame_card_h_m * 0.5, 0.0)
 	var flame := _mesh(card, _flame_mat, h)
 	flame.name = &"Flame"
 	flame.extra_cull_margin = 2.0
@@ -108,11 +108,22 @@ func _cylinder(radius: float, height: float) -> CylinderMesh:
 	return mesh
 
 
-func _mesh(mesh: Mesh, material: Material, y: float) -> MeshInstance3D:
-	var node := MeshInstance3D.new()
-	node.mesh = mesh
-	node.material_override = material
+func _mesh(mesh: Mesh, material: Material, y: float) -> MultiMeshInstance3D:
+	var node := one_mesh(mesh, material)
 	node.position = Vector3(0.0, y, 0.0)
-	node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(node)
+	return node
+
+
+## `mesh` drawn once with `material`, as a one-instance MultiMeshInstance3D (not a MeshInstance3D: see StreetFx), shadows off.
+static func one_mesh(mesh: Mesh, material: Material) -> MultiMeshInstance3D:
+	var multi := MultiMesh.new()
+	multi.transform_format = MultiMesh.TRANSFORM_3D
+	multi.mesh = mesh
+	multi.instance_count = 1
+	multi.set_instance_transform(0, Transform3D.IDENTITY)
+	var node := MultiMeshInstance3D.new()
+	node.multimesh = multi
+	node.material_override = material
+	node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	return node
