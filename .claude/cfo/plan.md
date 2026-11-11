@@ -2,7 +2,7 @@
 
 plan `trailer-art-m7` · created 2026-11-10 · session: Fable at medium (design and gate rows only) · Ultracode off except for the two workflow rows
 
-Design, gates and owner questions: [docs/milestones/M7-trailer-look-plan.md](../../docs/milestones/M7-trailer-look-plan.md). **Not approved yet: no row starts before Game-boy's go.**
+Design, gates and owner questions: [docs/milestones/M7-trailer-look-plan.md](../../docs/milestones/M7-trailer-look-plan.md). **Approved by Game-boy 2026-11-11** (Ox keeps his M6 colouring; spend approved).
 
 ## Execute
 
@@ -91,3 +91,4 @@ Rows running one level below their class's usual effort to test whether it can g
 
 - 2026-11-10: plan created from five read-only scouts (video pipeline, game art state, handoff rules, visual gap, techniques).
 - 2026-11-10: revised after two critics (feasibility, budget and process): the player's arms moved into the slice; the video branch's paint tools named and ported instead of a new projector; the profile switch split into light and art swap; one shader owner; contact shadows and the night light fix added; the judge protocol fixed; the roll-out cut into waves of four; spend rows tied to approval. Awaiting Game-boy's review.
+- 2026-11-11: Game-boy approved by Slack DM. PR #6 merged; `m7/trailer-look` cut from main. Ox keeps M6 colour. A Haiku Slack relay and a usage watcher are running. T00 done inline (three commands and a README section; not worth a delegate).

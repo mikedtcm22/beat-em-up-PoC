@@ -4,6 +4,13 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-11 09:15 CST: Game-boy approved the M7 plan; PR #6 merged; Phase 0 running on `m7/trailer-look`
+- **His answers** (Slack DM, 08:52 CST; recorded in README, "Where M7 departs from the spec"): reorder approved and PR #6 merged as M6's completion; designs approved but **Ox keeps his M6 colouring**; both look-bible limits lifted for the `trailer` profile; spend approved (DM him if Gemini or Tripo needs credit); the bar is as written.
+- **M6 is closed.** Its four open questions (near arm, frame time, Kicker's eyes, new Tripo models) are overtaken by M7's art work; frame time moves to M8.
+- **New standing rule (Game-boy, 2026-11-11, chat):** a low-effort heartbeat forwards his Slack DMs into the working session, and they count as decisions made in chat. Session "Beat-em-up: Slack relay" (Haiku, low, 20 minutes; state `captures/slack_relay_state.json`). Restart it with the watcher at every takeover. Only one session may be titled "Beat-em-up: working session".
+- **Running:** the usage watcher, the Slack relay, and Phase 0 of `.claude/cfo/plan.md` (T02 to T05b in `.worktrees/m7-ref` and `.worktrees/m7-profile`; T01, the look target sheet, by the lead).
+- **Resume steps:** read `.claude/cfo/plan.md`: rows without a tick are open, in order. Merge any finished `m7/p0-*` branch into `m7/trailer-look` after the suite passes.
+
 ### 2026-11-10 22:20 CST: a plan to make the trailer's look playable (proposed Milestone 7); waiting on Game-boy's review
 - **Game-boy asked** (working session chat) for the finished trailer's graphics to be made playable in the game, planned with `/cfo-plan`, Fable for high-level decisions only, and a plan for his review before any work.
 - **The plan:** `docs/milestones/M7-trailer-look-plan.md` (reasoning, gates, five questions for him) and `.claude/cfo/plan.md` (31 rows with model, effort and done-when; follow its Execute section). Written from five read-only scouts and revised after two critics. Nothing is built; no branch is made.

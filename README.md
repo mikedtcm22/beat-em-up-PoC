@@ -417,6 +417,13 @@ The characters are procedural placeholders. Real art, VFX and audio come in Mile
   - The bot's held-back pilot never jumps, so the boss's unblockable Ground Pound always lands. Its A7 damage and time are higher than a human's.
 - `tools/check_m3_log.py <bot.log>` reads a crowd bot log and exits 1 if a warning corner is missing or wrong, a token count goes over the cap, a hard metric fails or the log has a script error. `tools/capture_bot.sh` writes `bot.log` next to the recording.
 
+**Where M7 departs from the spec and the look bible (approved by Game-boy, Slack DM 2026-11-11 08:52 CST):**
+- **The milestones are reordered.** Milestone 7 is now "the trailer's look, playable" ([docs/milestones/M7-trailer-look-plan.md](docs/milestones/M7-trailer-look-plan.md)). SPEC §12's M7 (the performance target, bugs, the Windows export) becomes Milestone 8. His words: "Ok to reorder the milestones and merge the current PR as milestone 6's completion."
+- **Character designs follow the trailer:** the Punk's grey cap and dark puffy vest, the player's grey sleeves and dark gloves, the Kicker's flat cap and vest. **Ox keeps his M6 colouring,** not the trailer's all-grey: "one thing I didn't like in the trailer was that Ox had NO color. I'd like to try and keep his coloring from the previous milestone".
+- **Two look-bible limits are lifted for the `trailer` look profile only:** the environment saturation cap of 0.30, and bloom on VFX only. ("OK")
+- **The bar:** a game still should be hard to tell from a trailer still; in motion the game is steadier than the trailer. ("Yes")
+- **Spend approved:** Gemini up to $35; Tripo 55 credits for the slice and a top-up if the new-model route wins. He asked for a DM if either account needs more credit.
+
 ## Repo layout
 
 ```
