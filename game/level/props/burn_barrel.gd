@@ -40,6 +40,7 @@ func build() -> void:
 	_flame_mat.shader = load("res://game/fx/street_flame.gdshader") as Shader
 	_flame_mat.set_shader_parameter(&"energy", t.tfx_flame_energy)
 	_flame_mat.set_shader_parameter(&"seed", float(get_index()) + 1.0)
+	_flame_mat.set_shader_parameter(&"min_line_px", t.tfx_line_min_px)
 	var card := QuadMesh.new()
 	card.size = Vector2(t.tfx_flame_card_w_m, t.tfx_flame_card_h_m)
 	card.center_offset = Vector3(0.0, t.tfx_flame_card_h_m * 0.5, 0.0)
@@ -75,6 +76,8 @@ func build() -> void:
 	_pool_mat = ShaderMaterial.new()
 	_pool_mat.shader = load("res://game/fx/street_pool.gdshader") as Shader
 	_pool_mat.set_shader_parameter(&"alpha", t.tfx_pool_alpha)
+	_pool_mat.set_shader_parameter(&"soft", t.tfx_pool_soft)
+	_pool_mat.set_shader_parameter(&"seed", float(get_index()) + 1.0)
 	var pool_quad := QuadMesh.new()
 	pool_quad.size = Vector2(t.tfx_pool_m, t.tfx_pool_m)
 	pool_quad.orientation = PlaneMesh.FACE_Y

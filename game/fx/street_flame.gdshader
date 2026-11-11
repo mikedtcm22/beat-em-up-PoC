@@ -13,6 +13,8 @@ uniform vec3 line_color : source_color = vec3(0.35, 0.06, 0.03);
 uniform float slot = 0.0;
 uniform float seed = 1.0;
 uniform float energy : hint_range(0.0, 3.0) = 1.4;
+// The dark line round the flame is never thinner than this many pixels, so a far barrel's fire keeps its outline.
+uniform float min_line_px : hint_range(0.0, 6.0) = 1.8;
 
 void vertex() {
 	vec3 origin = MODEL_MATRIX[3].xyz;
@@ -63,7 +65,9 @@ void fragment() {
 	float a_outer = 1.0 - smoothstep(-aa, aa, d_outer);
 	float a_mid = 1.0 - smoothstep(-aa, aa, d_mid);
 	float a_core = 1.0 - smoothstep(-aa, aa, d_core);
-	float rim = (1.0 - smoothstep(-0.07 - aa, -0.07 + aa, d_outer)) ;
+	float pixel_p = max(fwidth(p.x), fwidth(p.y));
+	float rim_w = max(0.07, pixel_p * min_line_px);
+	float rim = 1.0 - smoothstep(-rim_w - aa, -rim_w + aa, d_outer);
 	vec3 col = mix(line_color, outer_color, rim);
 	col = mix(col, mid_color, a_mid);
 	col = mix(col, core_color, a_core);

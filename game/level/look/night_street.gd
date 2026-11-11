@@ -14,14 +14,11 @@ const MATTE_SHADER := preload("res://game/fx/matte_card.gdshader")
 const CONTACT_SHADER := preload("res://game/fx/contact_shadow.gdshader")
 ## The contact shadow's own plane, in metres (the shader reads its extent as 0.8 either side of the centre).
 const CONTACT_PLANE_M := 1.6
-## Pole and arm section, the head slab (x along the arm, y, z) and a barrel (radius, height), in metres.
+## Pole and arm section, and the head slab (x along the arm, y, z), in metres.
 const POLE_M := 0.14
 const ARM_M := 0.1
 const HEAD_SIZE := Vector3(0.7, 0.12, 0.38)
-const BARREL_R_M := 0.3
-const BARREL_H_M := 1.0
 const POLE_COLOR := Color(0.07, 0.07, 0.12)
-const BARREL_COLOR := Color(0.1, 0.09, 0.12)
 const SIDE_WALL_X := 6.0
 
 var section: LevelSection
@@ -69,10 +66,13 @@ func apply_scales() -> void:
 		(rig.light as OmniLight3D).light_energy = rig.base_energy
 		if rig.halo != null:
 			(rig.halo as ShaderMaterial).set_shader_parameter(&"energy", lamp.halo_energy * t.night_halo_energy)
+			(rig.halo as ShaderMaterial).set_shader_parameter(&"soft", t.night_halo_soft)
 		if rig.pool != null:
 			(rig.pool as ShaderMaterial).set_shader_parameter(&"opacity", t.night_pool_opacity)
+			(rig.pool as ShaderMaterial).set_shader_parameter(&"soft", t.night_pool_soft)
 		if rig.wall != null:
 			(rig.wall as ShaderMaterial).set_shader_parameter(&"opacity", t.night_pool_opacity)
+			(rig.wall as ShaderMaterial).set_shader_parameter(&"soft", t.night_wall_soft)
 	for material in _prop_contacts:
 		material.set_shader_parameter(&"opacity", look.contact_opacity * t.night_contact_opacity)
 
@@ -94,10 +94,10 @@ func flicker(tick: int) -> void:
 func _build_lamp(lamp: NightLamp, index: int) -> void:
 	var rig := {lamp = lamp, index = index, halo = null, pool = null, wall = null, shaft = null, base_energy = lamp.energy}
 	var head := lamp.head_position()
+	# A barrel's body, flame, embers and pool are StreetFx's BurnBarrel (the street's FX set names its spot): only the light, halo and
+	# glow are built here.
 	if lamp.kind == NightLamp.Kind.LAMP:
 		_build_pole(lamp, head)
-	else:
-		_build_barrel(lamp)
 	var light := OmniLight3D.new()
 	light.name = "LampLight%d" % index
 	light.position = head - Vector3(0.0, 0.15, 0.0)
@@ -214,25 +214,7 @@ func _build_pole(lamp: NightLamp, head: Vector3) -> void:
 	add_child(lamp_head)
 
 
-func _build_barrel(lamp: NightLamp) -> void:
-	var body := RoomKit.box_mesh(Vector3(BARREL_R_M * 2.0, BARREL_H_M, BARREL_R_M * 2.0), RoomKit.prop_material(BARREL_COLOR))
-	body.name = "Barrel"
-	body.position = lamp.position + Vector3(0.0, BARREL_H_M * 0.5, 0.0)
-	add_child(body)
-	var coals := MeshInstance3D.new()
-	coals.name = "BarrelCoals"
-	var disc := CylinderMesh.new()
-	disc.top_radius = BARREL_R_M * 0.85
-	disc.bottom_radius = BARREL_R_M * 0.85
-	disc.height = 0.02
-	coals.mesh = disc
-	coals.position = lamp.position + Vector3(0.0, BARREL_H_M + 0.01, 0.0)
-	coals.material_override = _glow_material(lamp)
-	coals.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	add_child(coals)
-
-
-## A hot emissive surface in the lamp's colour: black albedo, so only the emission shows, and HDR so it blooms.
+## A hot emissive surface in the lamp's colour (a lamp head): black albedo, so only the emission shows, and HDR so it blooms.
 func _glow_material(lamp: NightLamp) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
 	material.albedo_color = Color.BLACK

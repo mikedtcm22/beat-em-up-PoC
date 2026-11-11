@@ -55,7 +55,7 @@ func test_built_under_trailer_and_gone_again() -> void:
 	Tuning.set_value(&"look_profile", 1)
 	assert_true(fx.is_built())
 	assert_eq(fx.counts().cards, 4)
-	assert_eq(fx.counts().barrels, 1)
+	assert_eq(fx.counts().barrels, 2)
 	assert_gt(fx.materials().size(), 4)
 	Tuning.set_value(&"look_profile", 0)
 	assert_false(fx.is_built())
@@ -100,3 +100,24 @@ func test_not_in_the_crowd_room() -> void:
 	var fx := _fx(room)
 	assert_not_null(fx)
 	assert_false(fx.is_built(), "the set names Mission 1's street; no other room draws it")
+
+
+func test_warm_up_draws_stand_ins_on_the_camera_then_frees_them() -> void:
+	var room := await _build(LEVEL_PATH)
+	var fx := _fx(room)
+	var camera := Camera3D.new()
+	add_child_autofree(camera)
+	camera.make_current()
+	var before := camera.get_child_count()
+	fx.begin_warm_up(true)
+	# process_frame fires before the frame's _process calls: one await lets the director's _process run, a second sees its result.
+	await get_tree().process_frame
+	await get_tree().process_frame
+	assert_true(fx.warming(), "the stand-ins are up for a frame")
+	assert_gt(camera.get_child_count(), before)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	assert_false(fx.warming())
+	assert_eq(camera.get_child_count(), before, "nothing is left on the camera")
+	assert_eq(fx.get_child_count(), 0, "m6 keeps no node under StreetFx")
+	assert_false(fx.begin_warm_up(false), "headless: no warm-up")
