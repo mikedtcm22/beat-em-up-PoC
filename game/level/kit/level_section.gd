@@ -16,6 +16,9 @@ extends Node3D
 ## The ambience bed's pool while the player is in this section (Milestone 6, D8), for example
 ## `&"ambience_street"` or `&"ambience_roof"`. Empty: the AudioDirector's default bed.
 @export var ambience: StringName = &""
+## The place this section is for the trailer look profile (Milestone 7, T10): a `NightLook` whose `location` is this one lights
+## and dresses the section under that profile (`&"street_night"`). Empty: the profile's marker alone. Not read under `m6`.
+@export var look_location: StringName = &""
 @export_group("Light")
 ## The section has its own light (Milestone 6, DRESS; D12): `LevelRoot` blends the level's sun, fog and
 ## sky horizon to these over Tuning's `section_light_blend_s` when the player enters the section. Off:
