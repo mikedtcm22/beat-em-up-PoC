@@ -133,6 +133,7 @@ func _activate() -> void:
 		return
 	_swap_sky()
 	_apply_glow(base)
+	ToonMaterials.set_area_look(base.paint_shadow_hue, base.paint_rim_color)
 	_build_haze(base)
 	var sun := _sun()
 	if sun != null:
@@ -159,6 +160,13 @@ func _deactivate() -> void:
 	if env != null:
 		if _sky_material_before != null and env.sky != null and env.sky.sky_material == _sky_material:
 			env.sky.sky_material = _sky_material_before
+			# The level wrote its light to the sky while the painted one was in place (or before this ran): the procedural
+			# sky takes the level's light now, so m6's sky is m6's whichever handler of the flip ran first.
+			var procedural := _sky_material_before as ProceduralSkyMaterial
+			var light := _level.current_light()
+			if procedural != null and light.has(&"sky_top"):
+				procedural.sky_top_color = light.sky_top
+				procedural.sky_horizon_color = light.sky_horizon
 		for property: StringName in _glow_before:
 			env.set(property, _glow_before[property])
 	_glow_before.clear()
@@ -167,6 +175,8 @@ func _deactivate() -> void:
 	var sun := _sun()
 	if sun != null:
 		sun.shadow_enabled = _sun_shadow_before
+	if _contact_look != null:
+		ToonMaterials.clear_area_look()
 	_contact_look = null
 	set_physics_process(false)
 

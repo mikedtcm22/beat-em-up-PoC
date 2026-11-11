@@ -85,6 +85,12 @@ const KEY := &"t10_night_street"
 @export_range(0.0, 1.0, 0.01) var glow_strength: float = 0.9
 @export_range(0.0, 1.0, 0.01) var glow_bloom: float = 0.0
 
+@export_group("Painted characters")
+## The area's colours for the painted (trailer) character materials, given to ToonMaterials.set_area_look() while the look is
+## on: the hue their shadow tone is pulled toward (the street's indigo) and their one-sided rim (the sodium lamps' orange).
+@export var paint_shadow_hue: Color = Color(0.2, 0.2, 0.5)
+@export var paint_rim_color: Color = Color(1.0, 0.62, 0.2)
+
 
 ## The light dictionary this look gives its section (LevelSection.light()'s keys): LevelRoot lays it over the profile's.
 func light() -> Dictionary:
