@@ -1,0 +1,398 @@
+{
+	"clips": {
+		"block": {
+			"bad": 0,
+			"high": 4.8753,
+			"low": 0.314,
+			"max": 11.3274,
+			"min": 0.1432
+		},
+		"block_hit": {
+			"bad": 0,
+			"high": 4.8753,
+			"low": 0.2946,
+			"max": 11.3274,
+			"min": 0.0927
+		},
+		"brace": {
+			"bad": 0,
+			"high": 3.3626,
+			"low": 0.22,
+			"max": 7.8143,
+			"min": 0.0484
+		},
+		"bruiser_grab": {
+			"bad": 0,
+			"high": 5.1206,
+			"low": 0.2241,
+			"max": 12.6843,
+			"min": 0.0616
+		},
+		"bruiser_headbutt": {
+			"bad": 0,
+			"high": 4.2143,
+			"low": 0.2601,
+			"max": 10.8523,
+			"min": 0.0346
+		},
+		"bruiser_smash": {
+			"bad": 0,
+			"high": 7.2576,
+			"low": 0.2217,
+			"max": 19.9423,
+			"min": 0.0779
+		},
+		"dodge_back": {
+			"bad": 0,
+			"high": 2.965,
+			"low": 0.2361,
+			"max": 6.2149,
+			"min": 0.0881
+		},
+		"dodge_forward": {
+			"bad": 0,
+			"high": 3.0486,
+			"low": 0.2083,
+			"max": 7.721,
+			"min": 0.0722
+		},
+		"dodge_left": {
+			"bad": 0,
+			"high": 2.9975,
+			"low": 0.1956,
+			"max": 6.2146,
+			"min": 0.0971
+		},
+		"dodge_right": {
+			"bad": 0,
+			"high": 3.1452,
+			"low": 0.2075,
+			"max": 7.4968,
+			"min": 0.0785
+		},
+		"downed_back": {
+			"bad": 0,
+			"high": 2.7514,
+			"low": 0.4879,
+			"max": 7.1969,
+			"min": 0.1326
+		},
+		"downed_front": {
+			"bad": 0,
+			"high": 5.2676,
+			"low": 0.2917,
+			"max": 17.555,
+			"min": 0.0484
+		},
+		"fall": {
+			"bad": 0,
+			"high": 3.642,
+			"low": 0.1787,
+			"max": 9.1415,
+			"min": 0.0488
+		},
+		"flex: arm raise 140": {
+			"bad": 442,
+			"high": 5.9718,
+			"low": 0.1995,
+			"max": 16.1763,
+			"min": 0.0931
+		},
+		"flex: elbow 150": {
+			"bad": 345,
+			"high": 2.0571,
+			"low": 0.2226,
+			"max": 3.0198,
+			"min": 0.0455
+		},
+		"flex: guard": {
+			"bad": 445,
+			"high": 2.965,
+			"low": 0.2452,
+			"max": 6.2144,
+			"min": 0.1076
+		},
+		"flex: knee -130": {
+			"bad": 140,
+			"high": 1.606,
+			"low": 0.2578,
+			"max": 6.6434,
+			"min": 0.1236
+		},
+		"flex: lying": {
+			"bad": 1,
+			"high": 1.0029,
+			"low": 0.9976,
+			"max": 1.0159,
+			"min": 0.9892
+		},
+		"flex: spine twist": {
+			"bad": 179,
+			"high": 3.2279,
+			"low": 0.4572,
+			"max": 14.1386,
+			"min": 0.1654
+		},
+		"flinch_gut": {
+			"bad": 0,
+			"high": 2.965,
+			"low": 0.2198,
+			"max": 6.2146,
+			"min": 0.0276
+		},
+		"flinch_head_front": {
+			"bad": 0,
+			"high": 2.965,
+			"low": 0.2452,
+			"max": 6.2146,
+			"min": 0.0671
+		},
+		"flinch_head_left": {
+			"bad": 0,
+			"high": 2.965,
+			"low": 0.2424,
+			"max": 6.2146,
+			"min": 0.1076
+		},
+		"flinch_head_right": {
+			"bad": 0,
+			"high": 2.9667,
+			"low": 0.2452,
+			"max": 6.4477,
+			"min": 0.0775
+		},
+		"flinch_legs": {
+			"bad": 0,
+			"high": 2.965,
+			"low": 0.22,
+			"max": 6.2146,
+			"min": 0.0733
+		},
+		"getup_back": {
+			"bad": 0,
+			"high": 3.1043,
+			"low": 0.1653,
+			"max": 7.2142,
+			"min": 0.058
+		},
+		"getup_front": {
+			"bad": 0,
+			"high": 5.1889,
+			"low": 0.1734,
+			"max": 17.2404,
+			"min": 0.0484
+		},
+		"grab": {
+			"bad": 0,
+			"high": 4.482,
+			"low": 0.2452,
+			"max": 11.3852,
+			"min": 0.0648
+		},
+		"guard_break": {
+			"bad": 0,
+			"high": 5.4087,
+			"low": 0.2618,
+			"max": 16.4515,
+			"min": 0.0882
+		},
+		"haymaker_charge": {
+			"bad": 0,
+			"high": 3.9963,
+			"low": 0.2452,
+			"max": 13.3969,
+			"min": 0.0668
+		},
+		"held": {
+			"bad": 0,
+			"high": 2.8814,
+			"low": 0.2779,
+			"max": 9.0153,
+			"min": 0.1168
+		},
+		"held_collar": {
+			"bad": 0,
+			"high": 2.191,
+			"low": 0.3211,
+			"max": 4.6171,
+			"min": 0.0697
+		},
+		"held_lift": {
+			"bad": 0,
+			"high": 2.1712,
+			"low": 0.314,
+			"max": 4.6163,
+			"min": 0.0697
+		},
+		"hold": {
+			"bad": 0,
+			"high": 3.5049,
+			"low": 0.2786,
+			"max": 8.1252,
+			"min": 0.061
+		},
+		"hold_collar": {
+			"bad": 0,
+			"high": 4.2384,
+			"low": 0.2863,
+			"max": 10.8523,
+			"min": 0.055
+		},
+		"idle": {
+			"bad": 0,
+			"high": 3.0147,
+			"low": 0.2312,
+			"max": 6.5172,
+			"min": 0.1073
+		},
+		"jump": {
+			"bad": 0,
+			"high": 3.9771,
+			"low": 0.192,
+			"max": 10.0394,
+			"min": 0.0408
+		},
+		"knockdown_back": {
+			"bad": 0,
+			"high": 3.5246,
+			"low": 0.2823,
+			"max": 9.8429,
+			"min": 0.0722
+		},
+		"knockdown_forward": {
+			"bad": 0,
+			"high": 5.2921,
+			"low": 0.2535,
+			"max": 17.6376,
+			"min": 0.0484
+		},
+		"ko_back": {
+			"bad": 0,
+			"high": 4.1303,
+			"low": 0.2823,
+			"max": 10.6262,
+			"min": 0.0722
+		},
+		"ko_front": {
+			"bad": 0,
+			"high": 3.9414,
+			"low": 0.2423,
+			"max": 10.0371,
+			"min": 0.0722
+		},
+		"land": {
+			"bad": 0,
+			"high": 3.0027,
+			"low": 0.1998,
+			"max": 6.2098,
+			"min": 0.0554
+		},
+		"launched": {
+			"bad": 0,
+			"high": 6.3469,
+			"low": 0.247,
+			"max": 18.6932,
+			"min": 0.0295
+		},
+		"pickup": {
+			"bad": 0,
+			"high": 3.4038,
+			"low": 0.2072,
+			"max": 8.0752,
+			"min": 0.0818
+		},
+		"recoil": {
+			"bad": 0,
+			"high": 3.8589,
+			"low": 0.2565,
+			"max": 10.7203,
+			"min": 0.0417
+		},
+		"run_forward": {
+			"bad": 0,
+			"high": 3.3349,
+			"low": 0.2272,
+			"max": 8.6058,
+			"min": 0.0339
+		},
+		"stagger_back": {
+			"bad": 0,
+			"high": 2.965,
+			"low": 0.2452,
+			"max": 7.2117,
+			"min": 0.0492
+		},
+		"stagger_forward": {
+			"bad": 0,
+			"high": 2.965,
+			"low": 0.2452,
+			"max": 6.2146,
+			"min": 0.0859
+		},
+		"stagger_left": {
+			"bad": 0,
+			"high": 2.965,
+			"low": 0.2452,
+			"max": 6.8393,
+			"min": 0.0543
+		},
+		"stagger_right": {
+			"bad": 0,
+			"high": 2.965,
+			"low": 0.2452,
+			"max": 8.2735,
+			"min": 0.097
+		},
+		"taunt": {
+			"bad": 0,
+			"high": 3.1654,
+			"low": 0.2452,
+			"max": 7.7372,
+			"min": 0.1044
+		},
+		"thrown": {
+			"bad": 0,
+			"high": 6.4553,
+			"low": 0.2386,
+			"max": 16.9556,
+			"min": 0.0264
+		},
+		"walk_back": {
+			"bad": 0,
+			"high": 2.9969,
+			"low": 0.207,
+			"max": 6.5817,
+			"min": 0.0804
+		},
+		"walk_forward": {
+			"bad": 0,
+			"high": 2.9969,
+			"low": 0.207,
+			"max": 6.5817,
+			"min": 0.0804
+		},
+		"walk_left": {
+			"bad": 0,
+			"high": 2.9969,
+			"low": 0.2256,
+			"max": 6.5817,
+			"min": 0.0892
+		},
+		"walk_right": {
+			"bad": 0,
+			"high": 2.9969,
+			"low": 0.2264,
+			"max": 6.5817,
+			"min": 0.0764
+		}
+	},
+	"id": "bruiser",
+	"whole": {
+		"flex_share_max": 0.0302,
+		"high_max": 8.65,
+		"in_bar_min": 1.0,
+		"low_min": 0.160,
+		"max_max": 32.67,
+		"min_min": 0.0185
+	}
+}

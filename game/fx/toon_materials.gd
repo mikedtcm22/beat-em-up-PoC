@@ -20,8 +20,11 @@ const INK := HudStyle.INK
 const TOON_SHADER := preload("res://game/fx/toon.gdshader")
 const OUTLINE_SHADER := preload("res://game/fx/toon_outline.gdshader")
 const GRID_SHADER := "res://game/level/grid.gdshader"
+const TRIM_SHADER := "res://game/fx/trim.gdshader"
+## The trim material's alpha-scissor variant, for the chain-link's wire alone (see trim.gdshader).
+const TRIM_SCISSOR_SHADER := "res://game/fx/trim_scissor.gdshader"
 ## What a ShaderMaterial made here is, for which Look values it takes (see apply_look()).
-enum Kind { CHARACTER, ART, PROP, ENVIRONMENT, GRID, HULL }
+enum Kind { CHARACTER, ART, PROP, ENVIRONMENT, GRID, HULL, ART_PROP, TRIM }
 ## How the hull pushes a mesh out (toon_outline.gdshader's `mode`): along the normal
 ## (spheres, capsules), by sign(VERTEX) per axis (boxes), radially plus sign(y) (cylinders),
 ## from the sphere's centre (a hemisphere's open rim), by the skinned art's baked smooth normal.
@@ -32,6 +35,8 @@ const _GLOSSY_META := &"toon_glossy"
 const _FP_META := &"toon_fp"
 const _SHARP_META := &"toon_sharp_detail"
 const _WARM_NAME := "ToonWarmUp"
+## The static prop the warm-up draws once so StaticArt's pipeline is built at load (smallest of the four).
+const WARM_PROP := "res://game/level/props/ac_unit.tscn"
 ## Where the warm-up's holder stands from the camera: this far ahead and this far below it, so
 ## a body drawn on it (feet at the holder) is in view.
 const WARM_DISTANCE_M := 2.5
@@ -51,6 +56,9 @@ static var _wired: bool = false
 ## separately, by the room's load).
 static var _warmed: bool = false
 static var _art_warmed: bool = false
+## The one trim material (trim()).
+static var _trim: ShaderMaterial
+static var _trim_scissor: ShaderMaterial
 
 
 ## A character's flat-colored toon material: `color` is the paint, `takes_marks` whether the
@@ -90,6 +98,20 @@ static func art(atlas: Texture2D, detail: Texture2D = null, sharp_detail: bool =
 	material.set_shader_parameter(&"marks", 1.0)
 	material.set_shader_parameter(&"damage_tex", VfxArt.clear_detail())
 	material.set_shader_parameter(&"damage_scale", 1.0 / maxf(Tuning.data.vfx_damage_tile_m, 0.01))
+	material.set_shader_parameter(&"edge_tag", 0.0)
+	return _track(material)
+
+
+## A static art prop's material (M6, StaticArt): the palette `atlas` read per swatch like the skinned art's, with no
+## skin, no damage marks, no rim and no fill (the sun lights it like the room), and `tint` multiplying the swatches (a weapon
+## on the floor takes the floor colour). The hard highlight and the glint land on the atlas's glossy swatches only. Its hull is
+## outline(): the baked smooth normal in COLOR, read from the rest normal StaticArt puts in CUSTOM1.
+static func art_prop(atlas: Texture2D, tint: Color = Color.WHITE) -> ShaderMaterial:
+	var material := _make(Kind.ART_PROP, true)
+	material.set_shader_parameter(&"albedo", tint)
+	material.set_shader_parameter(&"albedo_tex", atlas)
+	material.set_shader_parameter(&"use_albedo_tex", atlas != null)
+	material.set_shader_parameter(&"ink", INK)
 	material.set_shader_parameter(&"edge_tag", 0.0)
 	return _track(material)
 
@@ -154,6 +176,39 @@ static func grid() -> ShaderMaterial:
 	return _track(material)
 
 
+## The environment kit's ONE material (Milestone 6, KIT; D10): the trim shader with the sheet and its
+## strip table, shared by every module, dressing piece and barrier panel (the same object on every
+## call, so the draw count follows the mesh count only). Lit like the room, two bands and matte; it
+## keeps the flat `albedo` tint (white) a test can read, and takes the sheet's tiling and its ink cut
+## from Tuning (kit_trim_m_per_tile, look_trim_ink_cut, look_trim_lod_cap).
+static func trim() -> ShaderMaterial:
+	if _trim == null:
+		_trim = _trim_material(TRIM_SHADER)
+	return _trim
+
+
+## The trim material of the faces on the scissor strip (the chain-link's wire): `trim()` with the alpha scissor on.
+## Kept apart because a shader that scissors loses the depth prepass and the cheap shadow pass for every mesh it
+## draws, so only the faces that need it wear it (KitMesh makes a surface of them).
+static func trim_scissor() -> ShaderMaterial:
+	if _trim_scissor == null:
+		_trim_scissor = _trim_material(TRIM_SCISSOR_SHADER)
+	return _trim_scissor
+
+
+static func _trim_material(shader_path: String) -> ShaderMaterial:
+	var material := ShaderMaterial.new()
+	material.shader = load(shader_path)
+	material.set_meta(_KIND_META, Kind.TRIM)
+	material.set_shader_parameter(&"albedo", Color.WHITE)
+	material.set_shader_parameter(&"trim_tex", TrimSheet.texture())
+	material.set_shader_parameter(&"strips", TrimSheet.uniform_rows())
+	material.set_shader_parameter(&"ground_tex", TrimSheet.ground_texture())
+	material.set_shader_parameter(&"ink", INK)
+	material.set_shader_parameter(&"edge_tag", 1.0)
+	return _track(material)
+
+
 ## Take the current Look values (Tuning.data) on `material`, a material made here. Called when
 ## one is made and on every `Tuning.changed`.
 static func apply_look(material: ShaderMaterial) -> void:
@@ -166,7 +221,7 @@ static func apply_look(material: ShaderMaterial) -> void:
 		material.set_shader_parameter(&"lens_fade_m", data.look_outline_lens_fade_m)
 		material.set_shader_parameter(&"fp_scale", data.look_outline_fp_scale if material.get_meta(_FP_META, false) else 1.0)
 		return
-	var room_surface := kind == Kind.ENVIRONMENT or kind == Kind.GRID
+	var room_surface := kind == Kind.ENVIRONMENT or kind == Kind.GRID or kind == Kind.TRIM
 	material.set_shader_parameter(&"band_1", data.look_band_1)
 	material.set_shader_parameter(&"band_2", data.look_band_2)
 	material.set_shader_parameter(&"band_soft", data.look_band_soft)
@@ -194,13 +249,38 @@ static func apply_look(material: ShaderMaterial) -> void:
 	var dots := data.look_halftone_env if room_surface else data.look_halftone_chars
 	material.set_shader_parameter(&"halftone_strength", data.look_halftone_strength if dots else 0.0)
 	material.set_shader_parameter(&"halftone_cell_px", data.look_halftone_cell_px)
+	if kind == Kind.TRIM:
+		material.set_shader_parameter(&"tile_m", data.kit_trim_m_per_tile)
+		material.set_shader_parameter(&"ink_cut", data.look_trim_ink_cut)
+		material.set_shader_parameter(&"lod_cap", data.look_trim_lod_cap)
+		material.set_shader_parameter(&"ground_m", data.ground_m_per_tile)
+		material.set_shader_parameter(&"ground_on", not data.ground_sheet_off)
+		material.set_shader_parameter(&"ink_soft", Vector3(data.ground_ink_soft_from_lod, data.ground_ink_soft_per_lod, data.ground_ink_soft_max))
+		material.set_shader_parameter(&"ink_fade", Vector2(data.ground_ink_fade_start_texels, maxf(data.ground_ink_fade_end_texels, data.ground_ink_fade_start_texels + 1.0)))
 	# The art's own: the glint on its glossy swatches, and the sharp ink of an art that asks for it
 	# (only while the cut is above 0: 0 is the A/B).
-	if kind == Kind.ART:
+	if kind == Kind.ART or kind == Kind.ART_PROP:
 		material.set_shader_parameter(&"glint_cut", data.look_glint_cut)
 		material.set_shader_parameter(&"glint_strength", data.look_glint_strength)
 		material.set_shader_parameter(&"detail_sharp", bool(material.get_meta(_SHARP_META, false)) and data.look_detail_cut > 0.0)
 		material.set_shader_parameter(&"detail_cut", data.look_detail_cut)
+		# M6 DETAIL-2: the texel swatches of a mask that carries them (B above 0), the Bruiser's; the fade is in texels per pixel
+		material.set_shader_parameter(&"use_texel_swatch", data.look_texel_swatch)
+		material.set_shader_parameter(&"texel_swatch_fade", Vector2(data.look_texel_swatch_fade_near, maxf(data.look_texel_swatch_fade_far, data.look_texel_swatch_fade_near + 0.1)))
+
+
+## The atlas's layout, as tools/pipeline/gen_palette.py has it (COLUMNS, ROWS) and toon.gdshader's ATLAS_GRID.
+const ATLAS_COLUMNS := 32
+const ATLAS_ROWS := 2
+
+
+## The atlas UV of the swatch a detail mask's blue channel names (M6 DETAIL-2), `code8` the channel as 0-255: the slot plus 1, so 0 names
+## none and the face's own swatch stays (Vector2(-1, -1)). toon.gdshader decodes it the same way (the CPU mirror, for tests).
+static func texel_swatch_uv(code8: int) -> Vector2:
+	if code8 <= 0:
+		return Vector2(-1.0, -1.0)
+	var slot := code8 - 1
+	return Vector2((float(slot % ATLAS_COLUMNS) + 0.5) / float(ATLAS_COLUMNS), (float(slot / ATLAS_COLUMNS) + 0.5) / float(ATLAS_ROWS))
 
 
 ## The width of the hull line at `dist` metres from the lens, in metres, as toon_outline.gdshader
@@ -244,12 +324,12 @@ static func band_shade(lit: float, edge: float, band_1: float, band_2: float, mi
 
 
 ## Whether the atlas alpha `alpha` (0 to 1) marks a glossy swatch, as toon.gdshader's swatch_gloss()
-## decodes it: a damage class's alpha (1.0 clothes, 0.8 skin, 0.5 none, as 255, 204, 128 of 255)
-## minus exactly one 8-bit step (any other alpha is matte). gen_palette.py writes it from a swatch's
+## decodes it: a damage class's alpha (1.0 clothes, 0.9 clothes without blood, 0.8 skin, 0.5 none, as 255,
+## 230, 204, 128 of 255) minus exactly one 8-bit step (any other alpha is matte). gen_palette.py writes it from a swatch's
 ## `"gloss": true`.
 static func swatch_glossy(alpha: float) -> bool:
 	var a8 := floorf(alpha * 255.0 + 0.5)
-	var class_a8 := 255.0 if alpha > 0.9 else (204.0 if alpha > 0.75 else 128.0)
+	var class_a8 := 255.0 if alpha > 0.95 else (230.0 if alpha > 0.85 else (204.0 if alpha > 0.75 else 128.0))
 	return absf(class_a8 - a8 - 1.0) < 0.5
 
 
@@ -315,6 +395,17 @@ static func warm_up(parent: Node, skinned: Node3D = null) -> void:
 			box.material_override = color
 			box.material_overlay = _hull(mode, mode == Hull.NORMAL)
 			holder.add_child(box)
+		# The kit's trim material, on a module, so its pipeline is built here and not on a frame.
+		var module := MeshInstance3D.new()
+		module.mesh = KitMesh.build(&"wall", Vector3.ONE * 1.2)
+		module.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+		holder.add_child(module)
+		# A static prop (M6 D27): StaticArt's pipeline (art_prop on a mesh with CUSTOM0/1 and COLOR and no
+		# skin, with the baked-normal hull on its overlay) is not one the skinned warm-up builds.
+		if ResourceLoader.exists(WARM_PROP):
+			var prop := (load(WARM_PROP) as PackedScene).instantiate() as Node3D
+			if prop != null:
+				holder.add_child(prop)
 	if variant:
 		var copy := skinned.duplicate() as Node3D
 		holder.add_child(copy)
@@ -389,7 +480,7 @@ static func _track(material: ShaderMaterial) -> ShaderMaterial:
 static func _on_tuning_changed(property: StringName) -> void:
 	# Only a Look value (or a whole-set change) moves a material; the damage tile is the damage
 	# look's, re-read when it is applied.
-	if property != &"" and not String(property).begins_with("look_"):
+	if property != &"" and not String(property).begins_with("look_") and not String(property).begins_with("ground_") and property != &"kit_trim_m_per_tile":
 		return
 	var alive: Array[WeakRef] = []
 	for ref: WeakRef in _live:

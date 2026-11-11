@@ -111,6 +111,8 @@ var player: PlayerCharacter
 var spawner: EncounterSpawner
 var director: EnemyDirector
 var geometry: Node3D
+## The non-solid dressing beside the geometry (the car and the dumpster as `PropSpot`s, M6 DRESS), or null.
+var dressing: Dressing
 var nav_region: NavigationRegion3D
 ## Microseconds the navmesh bake took (parse + bake + roof filter), for tests and the log.
 var nav_bake_usec: int = 0
@@ -205,16 +207,17 @@ func _build_geometry() -> void:
 	_build_south(accent, dark)
 	_build_props()
 	_build_backdrop(wall, accent)
+	RoomKit.resolve_coplanar(geometry)
 
 
 func _build_lane() -> void:
 	var size := Vector3(lane_half_length * 2.0, 1.0, lane_half_width * 2.0)
-	RoomKit.add_box(geometry, Vector3(0.0, -0.5, 0.0), size, RoomKit.grid_material())
+	RoomKit.add_box(geometry, Vector3(0.0, -0.5, 0.0), size, RoomKit.grid_material(), null, &"floor")
 	# The dashed centre line.
 	var paint := RoomKit.flat_material(Color(0.6, 0.58, 0.52))
 	var x := -lane_half_length + 1.0
 	while x < lane_half_length - 1.0:
-		RoomKit.add_visual_box(geometry, Vector3(x + 0.75, 0.005, 0.0), Vector3(1.5, 0.01, 0.15), paint)
+		RoomKit.add_visual_box(geometry, Vector3(x + 0.75, 0.005, 0.0), Vector3(1.5, 0.01, 0.15), paint, null, &"slab")
 		x += 3.0
 
 
@@ -235,7 +238,7 @@ func _build_north(wall: Material, accent: Material, door: Material) -> void:
 		var height := front_heights[block % front_heights.size()]
 		var material := wall if block % 2 == 0 else accent
 		RoomKit.add_box(geometry, Vector3((x0 + x1) * 0.5, height * 0.5, z_face - front_depth * 0.5),
-				Vector3(x1 - x0, height, front_depth), material)
+				Vector3(x1 - x0, height, front_depth), material, null, &"wall")
 		_add_windows(x0, x1, z_face, height, window)
 		block += 1
 	var back := front_depth - door_depth
@@ -243,13 +246,13 @@ func _build_north(wall: Material, accent: Material, door: Material) -> void:
 	for i in door_xs.size():
 		var x := door_xs[i]
 		# The recess: floor, a dark back wall and a lintel over the opening.
-		RoomKit.add_box(geometry, Vector3(x, -0.5, z_face - door_depth * 0.5), Vector3(door_width, 1.0, door_depth), floor_material)
+		RoomKit.add_box(geometry, Vector3(x, -0.5, z_face - door_depth * 0.5), Vector3(door_width, 1.0, door_depth), floor_material, null, &"floor")
 		RoomKit.add_box(geometry, Vector3(x, door_height * 0.5, z_face - front_depth + back * 0.5),
-				Vector3(door_width, door_height, back), door)
+				Vector3(door_width, door_height, back), door, null, &"slab_dark")
 		var top := maxf(front_heights[i % front_heights.size()], front_heights[(i + 1) % front_heights.size()])
 		var lintel_height := top - door_height
 		RoomKit.add_box(geometry, Vector3(x, door_height + lintel_height * 0.5, z_face - front_depth * 0.5),
-				Vector3(door_width, lintel_height, front_depth), accent)
+				Vector3(door_width, lintel_height, front_depth), accent, null, &"slab")
 
 
 func _add_windows(x0: float, x1: float, z_face: float, height: float, material: Material) -> void:
@@ -263,7 +266,7 @@ func _add_windows(x0: float, x1: float, z_face: float, height: float, material: 
 		for c in columns:
 			var window := RoomKit.add_visual_box(geometry,
 					Vector3(start + float(c) * window_pitch_m, y, z_face + window_proud_m - window_depth_m * 0.5),
-					Vector3(window_size.x, window_size.y, window_depth_m), material)
+					Vector3(window_size.x, window_size.y, window_depth_m), material, null, &"window")
 			window.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		y += window_row_m
 
@@ -280,21 +283,21 @@ func _build_ends(wall: Material, dark: Material) -> void:
 		# The wall either side of the alley mouth.
 		for pair: Vector2 in [Vector2(z_north, -half_gap), Vector2(half_gap, z_south)]:
 			RoomKit.add_box(geometry, Vector3(x_wall, base + height * 0.5, (pair.x + pair.y) * 0.5),
-					Vector3(end_wall_thickness, height, pair.y - pair.x), wall)
+					Vector3(end_wall_thickness, height, pair.y - pair.x), wall, null, &"wall")
 		# The alley floor (a little into the lane so no seam opens), its side walls and its end.
 		var x_in := sign_x * (lane_half_length - 0.1)
 		var x_out := sign_x * (lane_half_length + alley_length)
 		RoomKit.add_box(geometry, Vector3((x_in + x_out) * 0.5, -0.5, 0.0),
-				Vector3(absf(x_out - x_in), 1.0, alley_width), RoomKit.grid_material())
+				Vector3(absf(x_out - x_in), 1.0, alley_width), RoomKit.grid_material(), null, &"floor")
 		var x_a := sign_x * (lane_half_length + end_wall_thickness)
 		var x_b := sign_x * (lane_half_length + alley_length + alley_wall_thickness)
 		for sign_z: float in [-1.0, 1.0]:
 			RoomKit.add_box(geometry,
 					Vector3((x_a + x_b) * 0.5, base + height * 0.5, sign_z * (half_gap + alley_wall_thickness * 0.5)),
-					Vector3(absf(x_b - x_a), height, alley_wall_thickness), dark)
+					Vector3(absf(x_b - x_a), height, alley_wall_thickness), dark, null, &"slab_dark")
 		RoomKit.add_box(geometry,
 				Vector3(sign_x * (lane_half_length + alley_length + alley_wall_thickness * 0.5), base + height * 0.5, 0.0),
-				Vector3(alley_wall_thickness, height, alley_width + alley_wall_thickness * 2.0), dark)
+				Vector3(alley_wall_thickness, height, alley_width + alley_wall_thickness * 2.0), dark, null, &"slab_dark")
 
 
 ## The low curb with the side alley, an invisible barrier above it (a jump would otherwise
@@ -305,14 +308,14 @@ func _build_south(curb: Material, fence: Material) -> void:
 	for pair: Vector2 in [Vector2(-lane_half_length, side_alley_x - half_gap), Vector2(side_alley_x + half_gap, lane_half_length)]:
 		var length := pair.y - pair.x
 		var x := (pair.x + pair.y) * 0.5
-		RoomKit.add_box(geometry, Vector3(x, curb_height * 0.5, z_curb), Vector3(length, curb_height, curb_thickness), curb)
+		RoomKit.add_box(geometry, Vector3(x, curb_height * 0.5, z_curb), Vector3(length, curb_height, curb_thickness), curb, null, &"curb")
 		var barrier := curb_barrier_height - curb_height
 		RoomKit.add_box(geometry, Vector3(x, curb_height + barrier * 0.5, z_curb), Vector3(length, barrier, curb_thickness), null)
 	# The side alley: floor, two fences and a blind end.
 	var z_in := lane_half_width - 0.1
 	var z_out := lane_half_width + side_alley_length
 	RoomKit.add_box(geometry, Vector3(side_alley_x, -0.5, (z_in + z_out) * 0.5),
-			Vector3(side_alley_width, 1.0, z_out - z_in), RoomKit.grid_material())
+			Vector3(side_alley_width, 1.0, z_out - z_in), RoomKit.grid_material(), null, &"floor")
 	var z_a := lane_half_width + curb_thickness
 	var z_b := z_out + alley_wall_thickness
 	var base := -1.0
@@ -320,21 +323,47 @@ func _build_south(curb: Material, fence: Material) -> void:
 	for sign_x: float in [-1.0, 1.0]:
 		RoomKit.add_box(geometry,
 				Vector3(side_alley_x + sign_x * (side_alley_width + alley_wall_thickness) * 0.5, base + height * 0.5, (z_a + z_b) * 0.5),
-				Vector3(alley_wall_thickness, height, z_b - z_a), fence)
+				Vector3(alley_wall_thickness, height, z_b - z_a), fence, null, &"slab_dark")
 	RoomKit.add_box(geometry, Vector3(side_alley_x, base + height * 0.5, z_out + alley_wall_thickness * 0.5),
-			Vector3(side_alley_width + alley_wall_thickness * 2.0, height, alley_wall_thickness), fence)
+			Vector3(side_alley_width + alley_wall_thickness * 2.0, height, alley_wall_thickness), fence, null, &"slab_dark")
 
 
 func _build_props() -> void:
+	# A prop box wears the inverted hull: in M5 on its material, over a kit module on the mesh's overlay.
 	var crate := RoomKit.prop_material(Color(0.5, 0.44, 0.35))
 	for p in crate_positions:
-		RoomKit.add_box(geometry, Vector3(p.x, crate_size * 0.5, p.z), Vector3(crate_size, crate_size, crate_size), crate)
-	# A muted blue-grey: red is only for blood, the warning and finisher accents (M4-plan A13), and the
-	# street's own colors stay under the look bible's saturation of 0.30.
+		RoomKit.add_box(geometry, Vector3(p.x, crate_size * 0.5, p.z), Vector3(crate_size, crate_size, crate_size),
+				crate, _hull_overlay(&"crate"), &"crate")
+	# The car and the dumpster are `PropSpot`s (M6 D13) over a collider with no mesh of its own; with the
+	# kit's graybox switch on they are the M5 muted boxes. A muted blue-grey: red is only for blood, the
+	# warning and finisher accents (M4-plan A13), and the street's own colors stay under the look
+	# bible's saturation of 0.30.
+	var graybox := Tuning.data.kit_draw_graybox
 	RoomKit.add_box(geometry, car_position + Vector3.UP * car_size.y * 0.5, car_size,
-			RoomKit.prop_material(Color(0.34, 0.38, 0.45)))
+			RoomKit.prop_material(Color(0.34, 0.38, 0.45)) if graybox else null)
 	RoomKit.add_box(geometry, dumpster_position + Vector3.UP * dumpster_size.y * 0.5, dumpster_size,
-			RoomKit.prop_material(Color(0.28, 0.4, 0.34)))
+			RoomKit.prop_material(Color(0.28, 0.4, 0.34)) if graybox else null)
+	_add_prop_spot(&"car", car_position, car_size)
+	_add_prop_spot(&"dumpster", dumpster_position, dumpster_size)
+
+
+## The hull a prop module wears on its overlay, or null while the plain box (whose material has its own).
+func _hull_overlay(art: StringName) -> Material:
+	return ToonMaterials.outline_for_part(PlaceholderBody.Shape.BOX) if RoomKit.kit_art(art) else null
+
+
+## A `PropSpot` of `prop_id` standing on the floor at `at` (the box's centre; its y is ignored), filling `box`.
+func _add_prop_spot(prop_id: StringName, at: Vector3, box: Vector3) -> void:
+	if dressing == null:
+		dressing = Dressing.new()
+		dressing.name = "Dressing"
+		add_child(dressing)
+	var spot := PropSpot.new()
+	spot.name = String(prop_id).capitalize()
+	spot.prop_id = prop_id
+	spot.size = box
+	spot.position = Vector3(at.x, 0.0, at.z)
+	dressing.add_child(spot)
 
 
 ## Drawn only: the ground beyond the near curb and a skyline on it, so looking across the street
@@ -342,9 +371,9 @@ func _build_props() -> void:
 func _build_backdrop(wall: Material, accent: Material) -> void:
 	var ground := RoomKit.flat_material(Color(0.24, 0.23, 0.26))
 	RoomKit.add_visual_box(geometry, Vector3(0.0, -0.55, lane_half_width + curb_thickness + 30.0),
-			Vector3(160.0, 1.0, 60.0), ground)
+			Vector3(160.0, 1.0, 60.0), ground, null, &"slab_dark")
 	for i in skyline.size():
 		var block := skyline[i]
 		var height := skyline_heights[i % skyline_heights.size()]
 		RoomKit.add_visual_box(geometry, Vector3(block.x, height * 0.5 - 0.05, block.y),
-				Vector3(block.z, height, skyline_depth), wall if i % 2 == 0 else accent)
+				Vector3(block.z, height, skyline_depth), wall if i % 2 == 0 else accent, null, &"skyline")

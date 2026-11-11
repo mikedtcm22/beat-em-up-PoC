@@ -1,0 +1,101 @@
+{
+	"group": "sfx_barriers",
+	"jobs": [
+		{
+			"id": "barrier_shutter_close_v1",
+			"pool": "barrier_shutter_close",
+			"text": "A metal rolling shutter door dropping fast: clattering slats rushing down and a hard bang as it hits the ground. Single isolated sound effect, no music, no voices, no background noise, dry close-microphone recording with no reverb and no echo tail, punchy comic action-game style, ends cleanly.",
+			"duration_seconds": 1.0,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "barrier_shutter_close_v2",
+			"pool": "barrier_shutter_close",
+			"text": "A corrugated steel shutter slamming shut: a quick rattling rush, a heavy metallic crash at the bottom. Single isolated sound effect, no music, no voices, no background noise, dry close-microphone recording with no reverb and no echo tail, punchy comic action-game style, ends cleanly.",
+			"duration_seconds": 1.0,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "barrier_shutter_open_v1",
+			"pool": "barrier_shutter_open",
+			"text": "A metal rolling shutter door rattling quickly upward, slats clattering and winding, ending with a soft clunk. Single isolated sound effect, no music, no voices, no background noise, dry close-microphone recording with no reverb and no echo tail, punchy comic action-game style, ends cleanly.",
+			"duration_seconds": 1.2,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "barrier_shutter_open_v2",
+			"pool": "barrier_shutter_open",
+			"text": "A steel shutter being hauled up: a fast rattling clatter of slats and a short metallic rumble. Single isolated sound effect, no music, no voices, no background noise, dry close-microphone recording with no reverb and no echo tail, punchy comic action-game style, ends cleanly.",
+			"duration_seconds": 1.2,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "barrier_gate_close_v1",
+			"pool": "barrier_gate_close",
+			"text": "A chain-link fence gate sliding shut on its rail: a metallic rattle and rumble ending with a clang of the latch. Single isolated sound effect, no music, no voices, no background noise, dry close-microphone recording with no reverb and no echo tail, punchy comic action-game style, ends cleanly.",
+			"duration_seconds": 1.0,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "barrier_gate_close_v2",
+			"pool": "barrier_gate_close",
+			"text": "A heavy wire gate rolled across fast: rattling chain-link, wheels on a track and a loud clang as it stops. Single isolated sound effect, no music, no voices, no background noise, dry close-microphone recording with no reverb and no echo tail, punchy comic action-game style, ends cleanly.",
+			"duration_seconds": 1.0,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "barrier_gate_open_v1",
+			"pool": "barrier_gate_open",
+			"text": "A chain-link gate sliding open on a rail: a rattle and low rumble with a short clank at the end. Single isolated sound effect, no music, no voices, no background noise, dry close-microphone recording with no reverb and no echo tail, punchy comic action-game style, ends cleanly.",
+			"duration_seconds": 1.2,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "barrier_gate_open_v2",
+			"pool": "barrier_gate_open",
+			"text": "A wire fence gate pushed aside: a quick rattling slide, wheels on a track and a soft metallic thump. Single isolated sound effect, no music, no voices, no background noise, dry close-microphone recording with no reverb and no echo tail, punchy comic action-game style, ends cleanly.",
+			"duration_seconds": 1.2,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "barrier_car_close_v1",
+			"pool": "barrier_car_close",
+			"text": "A parked car rolling across a street to block it: tyres on asphalt, a low engine growl, a brake squeal and a heavy settling thump. Single isolated sound effect, no music, no voices, no background noise, dry close-microphone recording with no reverb and no echo tail, punchy comic action-game style, ends cleanly.",
+			"duration_seconds": 1.4,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "barrier_car_close_v2",
+			"pool": "barrier_car_close",
+			"text": "A car engine revving once as the car lurches sideways into place: gravel crunch under tyres, a short brake squeak and a body thud. Single isolated sound effect, no music, no voices, no background noise, dry close-microphone recording with no reverb and no echo tail, punchy comic action-game style, ends cleanly.",
+			"duration_seconds": 1.4,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "barrier_car_open_v1",
+			"pool": "barrier_car_open",
+			"text": "A car starting and rolling away down an alley: an engine turning over and tyres rolling on asphalt, fading quickly. Single isolated sound effect, no music, no voices, no background noise, dry close-microphone recording with no reverb and no echo tail, punchy comic action-game style, ends cleanly.",
+			"duration_seconds": 1.4,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "barrier_car_open_v2",
+			"pool": "barrier_car_open",
+			"text": "A car rolling backwards out of the way: a rumbling engine, tyres on gravel and a short creak of suspension. Single isolated sound effect, no music, no voices, no background noise, dry close-microphone recording with no reverb and no echo tail, punchy comic action-game style, ends cleanly.",
+			"duration_seconds": 1.4,
+			"candidates": 3,
+			"prompt_influence": 0.5
+		}
+	]
+}

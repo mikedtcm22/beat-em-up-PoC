@@ -72,6 +72,11 @@ extends Resource
 ## (the eyes' facing, EyePoint): 1 for 360-degree spins, so the view spins with the body
 ## and lands back on the heading. Times Tuning.cam_spin_follow_mult.
 @export_range(0.0, 1.0, 0.05) var camera_spin_follow: float = 0.0
+## First-person view (M6 D7): while this move runs, the hero's upper arms are drawn in the lens
+## (his art's Body__fp_arm mesh, the shoulder half of each upper arm, hidden from the lens
+## otherwise), so the arm comes in from the shoulder instead of starting at the elbow's dome.
+## Only the haymaker and the uppercut set it. Off with Tuning.look_near_arm.
+@export var fp_show_upper_arm: bool = false
 
 @export_group("Combo")
 @export var branches: Array[ComboBranch] = []
@@ -82,6 +87,11 @@ extends Resource
 ## Started automatically when this move's recovery ends with no continuation chosen,
 ## or when repeats are exhausted (flurry -> shove).
 @export var auto_next: MoveData
+
+@export_group("Audio")
+## The weapon-hit pool for this move (Milestone 6, D22): a landed hit plays
+## `weapon_<impact_sfx>_hit`. Empty for fists and feet, which keep the tier's hit stack.
+@export var impact_sfx: StringName = &""
 
 
 func get_anim() -> StringName:

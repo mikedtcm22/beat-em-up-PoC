@@ -314,6 +314,21 @@ func test_toon_material_factories_return_the_toon_materials() -> void:
 	assert_eq(get_child_count(), children, "warming up is a no-op without a window")
 
 
+## M6 KIT (D10): the kit's one trim material is a toon-lit ShaderMaterial of its own shader, the same
+## object on every call, with the flat `albedo` tint a test can read and the edge pass's tag.
+func test_the_trim_material_is_one_toon_lit_shader_material() -> void:
+	var trim := ToonMaterials.trim()
+	assert_true(trim is ShaderMaterial)
+	assert_eq(trim.shader, load(ToonMaterials.TRIM_SHADER), "the trim shader (the grid's precedent: its own shader, the same lighting)")
+	assert_same(ToonMaterials.trim(), trim, "one shared material, not one per call (the room's flat materials are one per call)")
+	assert_eq(trim.get_shader_parameter(&"albedo"), Color.WHITE)
+	assert_eq(trim.get_shader_parameter(&"edge_tag"), 1.0, "ROUGHNESS 1: the edge pass keeps working on a module")
+	assert_true(trim.shader.code.contains("toon_light.gdshaderinc"), "lit by the one toon lighting")
+	# The body (uniforms, vertex, fragment) is the include both trim shaders share (M6 final review, perf).
+	var body := FileAccess.get_file_as_string("res://game/fx/trim_body.gdshaderinc")
+	assert_true(trim.shader.code.contains("trim_body.gdshaderinc") and body.contains("ROUGHNESS = edge_tag"), "writes the edge pass's tag")
+
+
 func test_room_kit_materials_delegate_to_toon_materials() -> void:
 	var flat := RoomKit.flat_material(Color(0.42, 0.4, 0.44))
 	# P1-toon: the toon shader's material (was today's StandardMaterial3D recipe, rough 0.9).
@@ -327,6 +342,8 @@ func test_room_kit_materials_delegate_to_toon_materials() -> void:
 
 
 func test_the_pipe_takes_its_material_and_overlay_from_toon_materials() -> void:
+	# M6 (D28): the amber is the Debug switch `weapon_floor_amber`'s now; the glint is the default (twin below).
+	Tuning.set_value(&"weapon_floor_amber", true)
 	var weapon := Weapon.new()
 	weapon.color = Color(0.2, 0.3, 0.4)
 	add_child_autofree(weapon)
@@ -342,6 +359,11 @@ func test_the_pipe_takes_its_material_and_overlay_from_toon_materials() -> void:
 	# P1-toon (A7): the pipe has a hull (was: no overlay), and its material is the toon shader's
 	# (was rough 0.5 / metal 0.4).
 	assert_eq((mesh.material_overlay as ShaderMaterial).shader, ToonMaterials.OUTLINE_SHADER, "the pipe's hull")
+	Tuning.set_value(&"weapon_floor_amber", false)
+	# The twin on the default path: no amber, the pipe's own colour, and the glint instead.
+	weapon.refresh_look()
+	assert_eq(mat.get_shader_parameter(&"albedo"), weapon.color, "lying with the amber off: its own colour")
+	assert_true(weapon.find_child("Glint", false, false).visible, "and the glint shows")
 
 
 # --- Tuning: the Look group --------------------------------------------------------------------
@@ -370,6 +392,7 @@ func test_every_look_subgroup_has_a_documented_seed() -> void:
 		"Outline": [&"look_outline_px", &"look_hull_on_placeholders"],
 		"Edges": [&"look_edges_enabled"],
 		"Grade": [&"look_grade_enabled"],
+		"Trim": [&"look_trim_ink_cut"],
 		"FP feel": [&"fp_knockdown_hide_torso"],
 		"Motion": [&"look_motion_breath_deg"],
 	}
@@ -387,7 +410,7 @@ func test_every_look_subgroup_has_a_documented_seed() -> void:
 		assert_ne(docs.get(StringName(info.name), ""), "", "%s is documented" % info.name)
 		if int(info.type) == TYPE_FLOAT or int(info.type) == TYPE_INT:
 			assert_eq(int(info.hint), PROPERTY_HINT_RANGE, "%s is a slider" % info.name)
-	assert_eq(order, PackedStringArray(["Toon", "Outline", "Edges", "Grade", "FP feel", "Motion"]), "the owners' subgroups, in order")
+	assert_eq(order, PackedStringArray(["Toon", "Outline", "Edges", "Grade", "Trim", "FP feel", "Motion"]), "the owners' subgroups, in order")
 	for sub: String in seeds:
 		for name: StringName in seeds[sub]:
 			assert_has(found.get(sub, []), name)

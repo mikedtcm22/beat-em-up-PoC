@@ -656,7 +656,8 @@ func test_the_art_material_flashes_and_takes_the_damage_look_by_texture_swaps_al
 	declared.merge(_uniforms(LIGHT_PATH))
 	var before := {}
 	for name: String in declared:
-		if name != "damage_tex" and name != "damage_skin_tex" and name != "damage_scale":
+		# the look's own uniforms (M6 D6 added the no-blood scuffs and the blood's hard edge to the swap)
+		if not ["damage_tex", "damage_skin_tex", "damage_scuff_tex", "blood_edge", "damage_scale"].has(name):
 			before[name] = art.get_shader_parameter(name)
 	for level: int in [DamageLook.Level.BRUISED, DamageLook.Level.BLOODIED, DamageLook.Level.CLEAN, DamageLook.Level.BRUISED]:
 		rig.set_damage_look(level)
@@ -666,12 +667,18 @@ func test_the_art_material_flashes_and_takes_the_damage_look_by_texture_swaps_al
 			DamageLook.Level.CLEAN:
 				assert_eq(tex, VfxArt.clear_detail())
 				assert_eq(skin_tex, VfxArt.clear_detail())
+				assert_eq(art.get_shader_parameter(&"damage_scuff_tex"), VfxArt.clear_detail(), "clean: no scuffs on the cap either")
+				assert_eq(art.get_shader_parameter(&"blood_edge"), 0.0)
 			DamageLook.Level.BRUISED:
 				assert_eq(tex, VfxArt.texture(&"damage_scuffed"), "the clothes' tile (the swatches' alpha class picks it)")
 				assert_eq(skin_tex, VfxArt.texture(&"damage_bruised"), "the skin's tile, the primitives' bruises")
+				assert_eq(art.get_shader_parameter(&"damage_scuff_tex"), VfxArt.texture(&"damage_scuffed"), "the cap scuffs too")
+				assert_eq(art.get_shader_parameter(&"blood_edge"), 0.0, "no blood yet, so no cut")
 			DamageLook.Level.BLOODIED:
 				assert_eq(tex, VfxArt.texture(&"damage_blood"))
 				assert_eq(skin_tex, VfxArt.texture(&"damage_bloodied"))
+				assert_eq(art.get_shader_parameter(&"damage_scuff_tex"), VfxArt.texture(&"damage_scuffed"), "the cap keeps its scuffs, never the blood")
+				assert_eq(art.get_shader_parameter(&"blood_edge"), Tuning.data.vfx_blood_edge_cut, "and the blood has its hard edge")
 		assert_eq(art.shader, ToonMaterials.TOON_SHADER, "a look swaps textures only: the same shader")
 		for name: String in before:
 			assert_eq(art.get_shader_parameter(name), before[name], "level %d leaves %s alone" % [level, name])
@@ -884,24 +891,28 @@ func _palette_swatches() -> Array[Dictionary]:
 		var pal: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("%s/%s" % [PALETTE_DIR, file]))
 		for sw: Dictionary in pal.swatches:
 			out.append({file = file, slot = int(sw.slot), name = String(sw.name), gloss = bool(sw.get("gloss", false)),
-					marks = bool(sw.get("marks", true)), skin = bool(sw.get("skin", false))})
+					marks = bool(sw.get("marks", true)), skin = bool(sw.get("skin", false)), blood = bool(sw.get("blood", true))})
 	return out
 
 
 func test_a_glossy_swatch_is_one_8_bit_step_below_its_damage_class() -> void:
-	# 255 clothes, 204 skin, 128 none; the glossy ones 254, 203, 127: the class thresholds (0.9, 0.75) read all six as before.
-	for pair: Array in [[255, false], [254, true], [204, false], [203, true], [128, false], [127, true], [0, false], [64, false]]:
+	# 255 clothes, 230 clothes without blood (M6 D6), 204 skin, 128 none; the glossy ones 254, 229, 203, 127: the class
+	# thresholds (0.95, 0.85, 0.75) read all eight as before.
+	for pair: Array in [[255, false], [254, true], [230, false], [229, true], [204, false], [203, true], [128, false], [127, true],
+			[0, false], [64, false]]:
 		var alpha := float(pair[0]) / 255.0
 		assert_eq(ToonMaterials.swatch_glossy(alpha), pair[1], "alpha %d" % pair[0])
 	for a8: int in [255, 254]:
-		assert_gte(float(a8) / 255.0, 0.9, "a glossy clothes swatch is still the clothes' class")
+		assert_gte(float(a8) / 255.0, 0.95, "a glossy clothes swatch is still the clothes' class")
+	for a8: int in [230, 229]:
+		assert_between(float(a8) / 255.0, 0.85, 0.95, "and a glossy no-blood swatch the scuffs-only class")
 	for a8: int in [204, 203]:
-		assert_between(float(a8) / 255.0, 0.75, 0.9, "and a glossy skin swatch the skin's")
+		assert_between(float(a8) / 255.0, 0.75, 0.85, "and a glossy skin swatch the skin's")
 	for a8: int in [128, 127]:
 		assert_lt(float(a8) / 255.0, 0.75, "and a glossy none swatch takes no marks")
 	var shader := _source(TOON_PATH)
 	assert_string_contains(shader, "float a8 = floor(alpha * 255.0 + 0.5);", "the shader's decode is the mirror's")
-	assert_string_contains(shader, "float class_a8 = alpha > 0.9 ? 255.0 : (alpha > 0.75 ? 204.0 : 128.0);")
+	assert_string_contains(shader, "float class_a8 = alpha > 0.95 ? 255.0 : (alpha > 0.85 ? 230.0 : (alpha > 0.75 ? 204.0 : 128.0));")
 	assert_string_contains(shader, "return 1.0 - step(0.5, abs(class_a8 - a8 - 1.0));")
 
 
@@ -916,7 +927,8 @@ func test_the_atlas_marks_the_lens_glossy_and_every_other_swatch_matte() -> void
 			glossy.append(sw.name)
 		# The damage class survives the step (test_art_contract pins the classes themselves).
 		assert_eq(alpha >= 0.75, sw.marks, "%s: the shader still reads 'takes marks' from the alpha" % sw.name)
-		assert_eq(alpha >= 0.75 and alpha < 0.9, sw.skin, "%s: and 'skin'" % sw.name)
+		assert_eq(alpha >= 0.75 and alpha < 0.85, sw.skin, "%s: and 'skin'" % sw.name)
+		assert_eq(alpha >= 0.85 and alpha < 0.95, sw.marks and not sw.blood, "%s: and 'no blood'" % sw.name)
 	assert_eq(glossy, ["punk_lens"] as Array[String], "the shades' lens is the only glossy swatch: the vest, jeans, cap, laces, tank, gloves, skin, wraps and boots are matte")
 
 
@@ -1060,6 +1072,6 @@ func test_the_art_fixture_draws_with_the_art_material_and_its_mask_headless() ->
 	assert_string_contains(_source(TOON_PATH), "takes_marks *= step(0.75, swatch.a)")
 	# The skin class (slice-g2-07): the alpha under 0.9 picks damage_skin_tex over damage_tex in the triplanar, and the
 	# unset skin texture is transparent, so a material nobody filled shows a clean skin.
-	assert_string_contains(_source(TOON_PATH), "skin_marks = 1.0 - step(0.9, swatch.a)")
-	assert_string_contains(_source(TOON_PATH), "d = mix(d, d_skin, skin_marks)")
+	assert_string_contains(_source(TOON_PATH), "skin_marks = 1.0 - step(0.85, swatch.a)")
+	assert_string_contains(_source(TOON_PATH), "d = damage_triplanar(damage_skin_tex, p, w, dpdx, dpdy);")
 	assert_string_contains(_uniforms(TOON_PATH)["damage_skin_tex"], "hint_default_transparent")

@@ -1,0 +1,391 @@
+{
+  "round": "feedback",
+  "base": "82bab12",
+  "findings": [
+    {
+      "id": "feedback-chars-01",
+      "lens": "chars",
+      "severity": "medium",
+      "title": "Thug at 1 m: black slot-40 patch over the right half of the face and bandana, sharper and larger than M6, and that skin never bruises or bleeds",
+      "detail": "Confirms the lead's item and sharpens it. The patch is in the face labels as well as the texel codes: it is still there in the fight with look_texel_swatch=0 (f940.png, right). Per texel, it now also runs down the bandana's right edge to the chin with a ragged fringe, and the neck below it goes dark olive (heads_tk.png: M6 top left, now top right). Slot 40 (thug_black) is blood false, so at BLOODIED half the face stays clean while the other cheek and the hoodie bleed (f940.png, left). The skin rule breaks there.",
+      "evidence": "captures/m6-feedback-review/r_thug/sheets/r_thug/stills/r_thug_f49_face_t000.png (head rect 592,149 408x408); heads_tk.png top row; fight bot.avi frame 940, swatches on vs off (captures/review/f940.png); palette/thug.json slot 40 blood false; blender_palette.py:315-325 and 692 (region faces are excluded from texel decisions)",
+      "repro": "tools/capture_bot.sh res://tests/bot/crowd_bot.tscn <out> \"Look: Thug\" (r_thug), mark face_t000; or the 'Mixed six, fight' frame 940",
+      "suggested_fix": "assets/source/characters/thug/pipeline.json palette.regions: add 'face_right' {slot 7, only_from [40, 7], min [-0.15, 0.0, 1.50], max [0.15, 0.3, z of the beanie's rim, about 1.66]} and 'bandana_right' {slot 39, only_from [40, 39], same x and y, z 1.42 to the rim}. Take the rim's z from 06_split.blend so the beanie keeps slot 40. Region faces take their face slot for every texel, so the per-texel fringe goes too. Then check differ_from_face_share and the 1 m still.",
+      "files": [
+        "assets/source/characters/thug/pipeline.json"
+      ],
+      "spec_change": false,
+      "skeptic": [
+        {
+          "refuted": false,
+          "confidence": "medium",
+          "reason": "Confirmed in f940.png: the right half of the Thug's face and bandana is dark slate in both the swatches-on and swatches-off frames, and the left (bloodied) frame shows blood on the left cheek and hoodie but not on the dark patch. The patch is in the face labels, so look_texel_swatch=0 does not remove it. Slot 40 (thug_black) is blood:false in assets/source/palette/thug.json, so any skin labelled 40 never bleeds or bruises. I did not re-run the capture or check the face and beanie z-values.",
+          "evidence": "captures/review/f940.png (dark right half of face/bandana with swatches off). assets/source/palette/thug.json slot 40 blood:false. assets/source/characters/thug/pipeline.json palette.regions holds only shin_band_low and shin_band_high, so nothing recolours face or bandana faces mislabelled as 40. blender_palette.py ~l.315-325 and ~692: region faces are painted with their slot (region_set) and excluded from texel decisions (dense_ok = need & ~region_set).",
+          "root_cause": "The dense-mesh to slot labelling puts part of the right face and bandana into slot 40 (beanie/boots black). Nothing in pipeline.json corrects it, and the per-texel swatch step then adds a ragged fringe along the boundary. Slot 40 has blood:false, so that skin neither bleeds nor bruises.",
+          "files_to_change": [
+            "assets/source/characters/thug/pipeline.json"
+          ],
+          "fix_needs_spec_change": false
+        }
+      ],
+      "survives": true
+    },
+    {
+      "id": "feedback-chars-02",
+      "lens": "chars",
+      "severity": "medium",
+      "title": "Thug at 1 m: the hoodie's valley ink scribbles across the neck and chest; the concept draws only the hood's drape there",
+      "detail": "Confirms the lead's item. The 'hoodie' zone (slot 38, z 0.95-1.8, valley_deg 15) gives the hood's soft drape at the neckline a hatch of short black valley strokes. At 2.5 m it reads fine (lineup.png); at 1 m and in a bloodied close fight it is scribble (f940.png, heads_tk.png top right). The pocket and the hem, where the valleys earn their place, are below z 1.3.",
+      "evidence": "heads_tk.png top right (chest under the bandana); body4.png top right; f940.png; thug pipeline.json zones: hoodie {crease 60, valley 15, z 0.95-1.8}",
+      "repro": "r_thug act, mark face_t000 and body_t000, 1 m",
+      "suggested_fix": "thug pipeline.json: split 'hoodie' by height. Keep 'hoodie' at z 0.95-1.35 (valley 15) and add 'hood_neck' {slots [38], z 1.35-1.8, crease_deg 60, valley_deg 181} after it, so the later zone wins. Simpler alternative: raise the hoodie's valley_deg to 20-22 (ROLL-THUG T-4 used the same zone split for the trousers).",
+      "files": [
+        "assets/source/characters/thug/pipeline.json"
+      ],
+      "spec_change": false,
+      "skeptic": [
+        {
+          "refuted": false,
+          "confidence": "medium",
+          "reason": "Confirmed from heads_tk.png (top right, 1 m). Black valley strokes hatch the olive hoodie under the bandana, across the neck and upper chest, and read as scribble. This is not an approved departure. ROLL-THUG T-4 deliberately gave the hoodie valley ink for the drape, pocket and hem. It did not intend the neck and chest scribble. The fix stays inside the call's own approach: split a cloth slot by height, as T-4 did for the trousers. I did not re-run the repro, so I did not measure the ink share after a split.",
+          "evidence": "assets/source/characters/thug/pipeline.json defines the \"hoodie\" zone with slots [38], z 0.95-1.8, crease_deg 60 and valley_deg 15. tools/pipeline/blender_palette.py (around lines 640-660) applies zones in list order, setting face_valley per face from each zone's valley_deg. Later zones overwrite earlier ones, so a narrower zone listed after \"hoodie\" wins on its faces. docs/milestones/M6-calls/ROLL-THUG.md T-4 records that the trousers scribbled at 15 degrees and were split off by height. It does not mention the neck and chest scribble. heads_tk.png top right shows the black hatching across the chest and neckline at 1 m.",
+          "root_cause": "The single \"hoodie\" zone gives every olive face from z 0.95 to 1.8 a 15-degree valley threshold. At the neck and upper chest, the hood's soft drape and the mesh's shallow concavities exceed that threshold in short bursts. The ink is baked into the texture, so it shows as hatching at 1 m. The pocket and hem folds that justify the valleys sit below about z 1.3.",
+          "files_to_change": [
+            "assets/source/characters/thug/pipeline.json",
+            "tests/test_m6_feedback_detail_thug.gd"
+          ],
+          "fix_needs_spec_change": false
+        }
+      ],
+      "survives": true
+    },
+    {
+      "id": "feedback-chars-03",
+      "lens": "chars",
+      "severity": "medium",
+      "title": "Ox at 1 m: the face is a flat tan with grey slot-53 (boss_shorts) blotches at the nose, mouth and chin, and those blotches take the cloth damage tile",
+      "detail": "Sharpens the lead's 'flat tan face'. Ox's only skin slot is 7. The texture's face shading is Lab-nearest to boss_shorts #78747f, so texel_swatch paints grey-mauve islands on the face (the report gives slot 53 a 6.4% share of texels). The shader picks the skin tile only for skin alphas (toon.gdshader:133-135), so these islands take the cloth scuffs and blood instead of bruises. M6 had soft mauve patches here too; now they have hard edges. The face_skin zone has crease_deg 181 and the texture pair 0.04/0.1, so no brow, nose or mouth line is drawn either.",
+      "evidence": "heads3.png middle row (M6 left, now right); r_boss_f49_face_t000 (cmp_f49_face_t000_1.png, bottom right); assets/source/characters/boss/report/report.json texel_swatch.share {'7': 0.049, '53': 0.064}",
+      "repro": "r_boss act ('Look: Ox ... at 1 m'), mark face_t000",
+      "suggested_fix": "assets/source/characters/boss/pipeline.json palette.regions: add 'face_lock' {slot 7, only_from [7, 53, 50], min [-0.15, 0.0, 1.5], max [0.15, 0.3, 1.8] inside the hood}. It marks those faces as region faces, so their texels keep slot 7. For a drawn face, lower face_skin's ink_low/ink_high (the Punk's face lines come from texture strokes) rather than turning the crease on.",
+      "files": [
+        "assets/source/characters/boss/pipeline.json"
+      ],
+      "spec_change": false,
+      "skeptic": [
+        {
+          "refuted": false,
+          "confidence": "medium",
+          "reason": "The recording confirms it: in the r_boss face_t000 comparison the face is flat tan with grey-mauve hard-edged patches at nose, mouth and chin. The report gives slot 53 (boss_shorts) 6.4% of texels, and the face_skin zone has crease_deg 181 so it draws no crease lines. It is a real defect, not a logged call or approved departure.",
+          "evidence": "The 6.4% share for slot 53 in report.json texel_swatch is for the whole body, so it shows 53 exists but not how much of it is on the face. The face evidence is the comparison image. toon.gdshader sets skin_marks = 1 - step(0.85, swatch.a), so a cloth-alpha swatch such as 53 on the face gets cloth scuffs, not the skin tile. Two reads were not run: I did not check how much of slot 53 lies inside the face box, and I did not run a build with the suggested face_lock region.",
+          "root_cause": "In blender_palette.py the per-texel swatch step (config texel_swatch) picks the Lab-nearest slot among the candidate slots, which are all slots present in dense_label. For face faces, the face shading is nearest to boss_shorts #78747f, so those texels get slot 53. Only faces painted by a palette.regions entry are excluded (dense_ok = need & ~region_set), and Ox has no face region, so nothing keeps the face texels on slot 7. The grey islands also take cloth damage because slot 53 has a cloth alpha.",
+          "files_to_change": [
+            "assets/source/characters/boss/pipeline.json"
+          ],
+          "fix_needs_spec_change": false
+        }
+      ],
+      "survives": true
+    },
+    {
+      "id": "feedback-chars-04",
+      "lens": "chars",
+      "severity": "low",
+      "title": "Kicker at 1 m: the eyes under the cap are now a ragged black bar with ink scratches (slot 23), harsher than M6, and that skin scuffs instead of bruising",
+      "detail": "Not on the lead's list. In M6 the band under the brim was a soft dark grey with skin showing (heads_tk.png, bottom left). Now the per-texel codes choose kicker_black (slot 23, blood false) across the eye sockets. The 'headwear' zone (slot 23, z 1.6-2.0, crease 50) also draws creases along the sockets, so the face reads as a black blindfold with scratches (bottom right). The concept shows eyes in the cap's shade. At 2.5 m it reads like sunglasses, as in M6.",
+      "evidence": "heads_tk.png bottom row; cmp_f49_face_t000_0.png top row; kicker pipeline.json zones headwear {slots [23], z 1.6-2.0, crease 50}; palette/kicker.json slot 23 blood false",
+      "repro": "r_kicker act, mark face_t000 at 1 m",
+      "suggested_fix": "kicker pipeline.json palette.regions: add 'eyes' {slot 6, only_from [23, 6], x within 0.1, y 0.0-0.3, z from the mask's top to just under the brim}. Also, or instead, add a zone 'eyes' {slots [23], same box, crease_deg 181} after 'headwear'.",
+      "files": [
+        "assets/source/characters/kicker/pipeline.json"
+      ],
+      "spec_change": false,
+      "survives": null
+    },
+    {
+      "id": "feedback-chars-05",
+      "lens": "chars",
+      "severity": "low",
+      "title": "Kicker at 1 m: two diagonal ink slashes on the lime face mask, which the concept draws plain",
+      "detail": "The 'vest' zone (slot 22, z 0.95-1.6, crease 60, valley 15) also covers the lower half of the mask, which is the same lime slot. Its creases and valleys draw two slashes across the mask (heads_tk.png, bottom right; M6 had none). The 'face_skin' zone covers only slot 6, so nothing turns ink off on the mask.",
+      "evidence": "heads_tk.png bottom right (mask centre); kicker pipeline.json vest zone max z 1.6",
+      "repro": "r_kicker act, face_t000",
+      "suggested_fix": "kicker pipeline.json detail_bake.zones: add 'mask' {slots [22], min [-0.2, -0.2, 1.45], max [0.2, 0.3, 1.85], crease_deg 181, valley_deg 181} after 'vest'.",
+      "files": [
+        "assets/source/characters/kicker/pipeline.json"
+      ],
+      "spec_change": false,
+      "survives": null
+    },
+    {
+      "id": "feedback-chars-06",
+      "lens": "chars",
+      "severity": "low",
+      "title": "Bruiser at 1 m: the visor slit is two or three parallel black stripes, with a stair-stepped cream wedge under it",
+      "detail": "M6 drew one clean black slit. Now the default crease (70 degrees, which covers the visor's slots 45 and 46: no zone covers them) adds lines along the visor frame's bevels next to the texture's slit, so it reads as hatching. Under the visor, the per-texel codes put cream or skin (slots 14 and 6) in a stepped pyramid where the concept has the purple scarf.",
+      "evidence": "heads3.png top row (M6 left, now right); cmp_f49_face_t000_1.png top right",
+      "repro": "r_bruiser act, face_t000 at 1 m",
+      "suggested_fix": "bruiser pipeline.json: add a zone 'visor' {slots [45, 46], y > 0.02, z 1.6-1.75, crease_deg 181 (the texture's slit and the hull line stay)}, and a region 'under_visor' {slot 44, only_from [6, 14, 44], front, z 1.55-1.64}.",
+      "files": [
+        "assets/source/characters/bruiser/pipeline.json"
+      ],
+      "spec_change": false,
+      "survives": null
+    },
+    {
+      "id": "feedback-chars-07",
+      "lens": "chars",
+      "severity": "low",
+      "title": "Bruiser: the helmet's back and top, repainted purple (DETAIL-2 E-3), now take blood where M6's steel patches only scuffed",
+      "detail": "E-3 paints slot 44 (bruiser_purple, blood true) over the helmet's back and sides. Hard headgear now bleeds at BLOODIED, while the brief's damage rule says a cap, beanie, strap or steel scuffs but never bleeds. In the fight frame at 0.5 m the helmet already carries the cloth tile's scratches (f1990.png). The concept paints the helmet purple, so the colour is right; only the damage class is off. This needs a ruling, not a rebuild by default.",
+      "evidence": "bruiser pipeline.json regions helmet_back and helmet_top (slot 44); palette/bruiser.json 44 blood true, 45 blood false; captures/review/f1990.png",
+      "repro": "Bloody the Bruiser to 20% health and look at his helmet at 1 m",
+      "suggested_fix": "Either add a 'bruiser_helmet' swatch, the same purple with \"blood\": false, in assets/source/palette/bruiser.json and point the two helmet regions at it (gen_palette, then rebuild the Bruiser), or accept and note it.",
+      "files": [
+        "assets/source/characters/bruiser/pipeline.json",
+        "assets/source/palette/bruiser.json"
+      ],
+      "spec_change": false,
+      "survives": null
+    },
+    {
+      "id": "feedback-chars-08",
+      "lens": "chars",
+      "severity": "low",
+      "title": "Thug: the trouser waistband reads as a dotted line of short black dashes at 1.6-3 m",
+      "detail": "The trousers zone (crease 70, z under 0.95) inks a ring of short edges at the waist (the waistband or belt loops under the hoodie's hem). At 2.5-3 m it shows as a row of dots (lineup.png top, the Thug's waist), and from behind as dashes (back4.png top right). The concept shows no belt there. Cosmetic.",
+      "evidence": "lineup.png top (Thug waist); back4.png top right",
+      "repro": "lineup act t000; dt act yaw150",
+      "suggested_fix": "thug pipeline.json: add a zone 'waist' {slots [38], z 0.88-1.0, crease_deg 181} after 'trousers', or raise the trousers' crease_deg to 80.",
+      "files": [
+        "assets/source/characters/thug/pipeline.json"
+      ],
+      "spec_change": false,
+      "survives": null
+    },
+    {
+      "id": "feedback-world-01",
+      "lens": "world",
+      "severity": "high",
+      "title": "The hurt cue points the wrong way: bearing taken from a contact point on the player's own hurtbox",
+      "detail": "FirstPersonCamera.hit_bearing() measures the contact point against the lens. It falls back to the push direction only when the contact is within HURT_SIDE_MIN_M (0.05 m) horizontally. Real contacts are on the hurtbox surface (hit_detector.gd:197), 0.1-0.33 m from the lens and often behind it, so the bearing is close to noise. The overlay's strokes and the camera's roll both use this bearing. Probe of all 9 hurt-act hits ('PROBE' print in on_player_hit): Punk jab from the front 0 deg (right); Punk jab from the left -144 / -140 deg (reads as behind); Kicker jump kick from the front -86 deg (strokes on the LEFT edge); Kicker from the left -150 deg; Bruiser smash from the front +121 deg (strokes on the RIGHT and bottom, and a roll as if struck from the right); Bruiser from the left -101 deg (right). In the burst probe, a Thug straight ahead hits at -125, +164 and -141 deg, so all three show bottom strokes, as if from behind. hit.direction (the push) is correct in every case: z+ for front hits, x+ for left hits. Game-boy's check 'it says where the hit came from' fails for most frontal hits. In a crowd, nearly every hit lights the bottom edge. The unit tests pass only because they put the contact 0.4 m out along the attack direction (tests/test_m6_feedback_feel.gd:81), which real hits never do.",
+      "evidence": "Stills: front_wrong.png (hurt/bot.avi f275 Punk from the left: bottom and left strokes; f625 Kicker straight ahead: left-edge strokes; f1083 Bruiser straight ahead: right-edge strokes). hurt_sheet.png row 2 (left jab: bottom strokes). Probe log /Users/arachne/repos/beat-em-up-PoC/.worktrees/m6-review-feedback-world/captures/review/hurt_probe/bot.log, e.g. 'HURT kicker jump kick front / PROBE bearing -86.2 local (-0.116, -0.194, -0.008) dir (0, -0.10, 0.99)' and 'HURT bruiser smash front / PROBE bearing 120.8 local (0.142, -0.136, 0.085)'. Burst probe: captures/review/burst/bot.log, Thug1 bearings -124.6 / 164.3 / -141.4. Code: game/camera/first_person_camera.gd:823-827.",
+      "repro": "In the review worktree, add a print of rad_to_deg(bearing) in HurtOverlay.on_player_hit and run tools/capture_bot.sh res://tests/bot/crowd_bot.tscn captures/review/hurt_probe \"Look: player hurt\". Or watch 'Look: player hurt' at f623 (Kicker straight ahead) and f1080 (Bruiser straight ahead): the strokes are on the side and bottom edges, not the top.",
+      "suggested_fix": "In hit_bearing(), use the attacker's position against the view as the primary bearing (hit.attacker.global_position), with -hit.direction as the fallback. Or use the contact only when it is more than about 0.5 m from the lens. Add a test that takes a real hit from HitDetector (a Punk at 1 m to the left, a Kicker straight ahead) and checks which edge and roll sign result. Move HURT_SIDE_MIN_M into Tuning (see the low finding).",
+      "files": [
+        "game/camera/first_person_camera.gd",
+        "game/ui/hurt_overlay.gd",
+        "tests/test_m6_feedback_feel.gd"
+      ],
+      "spec_change": false,
+      "skeptic": [
+        {
+          "refuted": false,
+          "confidence": "high",
+          "reason": "Confirmed. The probe log shows real contacts 0.1-0.33 m from the lens, with bearings that disagree with the attacker side. FB-FEEL's call 4 and fix-feedback.md line 58 intend the overlay to say where the hit came from, and a fix does not change the spec. It only changes the source of the bearing.",
+          "evidence": "The probe log (captures/review/hurt_probe/bot.log) has real hits with `PROBE bearing -86.2 local (-0.116,-0.194,-0.008) dir (0,-0.10,0.99)` for a Kicker straight ahead, `120.8` for a Bruiser straight ahead, and `-143.8` / `-139.5` for a Punk jab from the left, where the push dir is +x. The contact is `center + (sample-center).limit_length(radius)` (hit_detector.gd:197), so it sits on the player's own hurtbox, within about 0.35 m of the lens. A hurtbox centre offset from the eye by 0.1-0.3 m pushes it past the 0.05 m threshold in hit_bearing (first_person_camera.gd:823-827), so the fallback to the push direction never fires. `hit.direction` is the attacker-to-victim horizontal radial (hit_detector.gd:~200), so it is accurate. The unit-test helper (tests/test_m6_feedback_feel.gd:~75-82) puts the contact 0.4 m out along the attack direction, which real hits never do, so the tests pass anyway.",
+          "root_cause": "hit_bearing() reads hit.contact_point against the lens. For hits on the player that point lies on the player's own hurtbox surface, a few tenths of a metre from the camera and often behind it, so the bearing is nearly random. The push-direction fallback only triggers within 0.05 m, which essentially never happens. Both the overlay strokes (hurt_overlay.gd:105) and the camera roll (_roll_away) use this bearing.",
+          "files_to_change": [
+            "game/camera/first_person_camera.gd",
+            "game/ui/hurt_overlay.gd",
+            "game/autoload/tuning_data.gd",
+            "tests/test_m6_feedback_feel.gd"
+          ],
+          "fix_needs_spec_change": false
+        }
+      ],
+      "survives": true
+    },
+    {
+      "id": "feedback-world-02",
+      "lens": "world",
+      "severity": "high",
+      "title": "New z-fight on the boss roof: the lowered 200 m Ground (top -0.5) is coplanar with the roofs' skyline sidewalks",
+      "detail": "FB-GROUND moved BossRoof/Geometry/Ground from a top of 0 to a top of -0.5 (boss_roof.tscn, position y -13). That is exactly the top of three 75 m drawn strips of the roofs' skyline street: Roofs/Geometry/Skyline/WestWalkRoof (3.4 m wide), EastWalkFacade (4 m) and EastWalkRoof (2.5 m), all look 'accent', at roofs.tscn local y -5.15 with size y 0.3. They overlap the Ground over their full 75 m. On the boss roof's gap-down view, still frames now alternate between two pictures: d1 swings between 0.03 and 0.30 frame to frame, and the near sidewalk strip with its joints appears and vanishes. In M6's before tour the same pose was steady at 0.03-0.09. FB-GROUND's own after_tour has the identical toggle, so the fix introduced it. This is the flashing Game-boy reported, now on the boss roof whenever he looks into the gap. test_no_two_drawn_ground_planes_of_the_level_share_a_top_over_any_area misses it because _ground_like() keeps only the floor, slab_dark and deck modules.",
+      "evidence": "review tour/bot.avi pose 17 boss_gap_down, f1191-1237 d1: '0.07 0.24 0.19 0.20 0.06 0.30 0.31 0.08 0.32 0.06 0.30 ...'; M6 before_tour (.worktrees/m6-fb-ground/captures/ground/before_tour) same pose: 0.03-0.09 steady; FB-GROUND after_tour: same 0.03/0.33 alternation. crop_gap.png: frames 1206/1207 at full resolution, with the sidewalk strip present in one and gone in the next; diff_gap.png locates it as a band across the full width. Coplanar probe: 'COPLANAR axis y + at -0.500 overlap 75.00 x 3.40 : Roofs/Geometry/Skyline/WestWalkRoof | BossRoof/Geometry/Ground' (and EastWalkFacade 75 x 4.0, EastWalkRoof 75 x 2.5). tests/test_m6_feedback_ground.gd:194-198 filter.",
+      "repro": "Record 'Look: arena tour' with level_bot and run the per-frame d1 over pose 17 (TOUR 17 boss_gap_down, about 50 frames): it alternates about 0.03 / 0.30. Or stand on the boss roof at section-local (8.5, 0, -10.5), yaw -90, pitch -38, and watch the near sidewalk below.",
+      "suggested_fix": "Drop the Ground's top below the skyline road (top -0.8): boss_roof.tscn Ground position y from -13 to -13.5 (top -1.0). It has no collider, so test_m6_colliders.gd is unaffected. Or clip its footprint off the roofs' skyline street. Broaden the coplanar test to every drawn LevelBlock (any module, any thickness) so accent strips count, and add a tour still-pose check for pose 17.",
+      "files": [
+        "game/level/mission1/boss_roof.tscn",
+        "game/level/mission1/roofs.tscn",
+        "tests/test_m6_feedback_ground.gd"
+      ],
+      "spec_change": false,
+      "skeptic": [
+        {
+          "refuted": false,
+          "confidence": "high",
+          "reason": "Confirmed. The boss roof Ground (200 m, top -0.5 in world coordinates) shares its top with three 75 m accent strips in the roofs section, so the same flashing returns on the boss roof gap-down view. The coplanar test misses these strips because it only looks at ground-like modules. This is a real defect, not an approved departure.",
+          "evidence": "I did not re-run the probe or the tour recording; this rests on the scene files and the reviewer's recordings. In game/level/mission1/boss_roof.tscn the Ground block (module slab_dark, solid=false) sits at position y -13 with size y 1. In game/level/mission1/roofs.tscn the strips Geometry/Skyline/WestWalkRoof (size 3.4 x 0.3 x 75), EastWalkFacade (4 x 0.3 x 75) and EastWalkRoof (2.5 x 0.3 x 75), all look accent, solid=false, sit at y -5.15, so their top is -5.0 local. WestWalkFacade, a fourth strip of the same kind, was not in the finding. Section offsets are not in mission1.tscn and I did not read them. The reviewer's probe puts both tops at world -0.5, which is consistent with the section offsets implied by the earlier Ground top of 0. tests/test_m6_feedback_ground.gd:194-198 `_ground_like` keeps only the floor, slab_dark and deck modules with size.y <= 1.0, and `block.module` is empty for these accent blocks, so it skips them. The reviewer's recordings show d1 alternating 0.03 / 0.30 on pose 17, where M6's before tour was steady at 0.03-0.09.",
+          "root_cause": "FB-GROUND lowered BossRoof/Geometry/Ground by 0.5 (position y from -12.5 to -13 in the scene). That put its top exactly on the top of the roofs' skyline walk strips, which are drawn boxes 75 m long that sit directly under it. The two coplanar drawn surfaces z-fight. The guard test did not catch it because `_ground_like` excludes the accent-look strips.",
+          "files_to_change": [
+            "game/level/mission1/boss_roof.tscn",
+            "tests/test_m6_feedback_ground.gd"
+          ],
+          "fix_needs_spec_change": false
+        }
+      ],
+      "survives": true
+    },
+    {
+      "id": "feedback-world-03",
+      "lens": "world",
+      "severity": "medium",
+      "title": "No recording shows a finisher, or unblocked crowd hits, landing on the player",
+      "detail": "The brief's hurt act asks for a Punk, a Kicker and a Bruiser to land a light, a heavy and a finisher each, from three sides. look_hurt_acts.gd's ATTACKS throws one attack per archetype (index 0): the Punk jab and cross (LIGHT), the Kicker jump kick (LIGHT) and the Bruiser smash (HEAVY). No FINISHER-tier hit is ever taken, so the 7-degree finisher roll (hurt_roll_finisher_deg), the trauma cap of 1.0 and the overlay's full strength are never seen in first person. 'Mixed six, fight' and 'Run: held back' run in god mode: every hit taken is 0 dmg and mostly PERFECT (parried), so the panel jolt and a real crowd burst are absent from them too. Three of the brief's checks are unjudged by this round's recordings: 'not nauseating in a crowd (several hits in a row, the 7-degree finisher roll)', 'blocked hits still feel as in M6', and 'unmistakable from the side and behind' at heavy and finisher tiers. My burst probe (6 light hits in 66 frames, 100 to 50 HP) was not nauseating. It had no finisher either: the Thug's index-0 chain landed three LIGHT hits.",
+      "evidence": "hurt/bot.log: HURT-HIT tiers are LIGHT x7 and HEAVY x3, no FINISHER. fight/bot.log and run_street/bot.log: every 'Player:' line is '0.0 dmg', 11 of 13 PERFECT. tests/bot/acts/look_hurt_acts.gd ATTACKS (3 entries, all index 0). Probe burst: /Users/arachne/repos/beat-em-up-PoC/.worktrees/m6-review-feedback-world/captures/review/burst/bot.avi, burst_sheet.png.",
+      "repro": "grep HURT-HIT captures/m6-feedback-review/hurt/bot.log; grep 'Player:' captures/m6-feedback-review/fight/bot.log",
+      "suggested_fix": "Extend ATTACKS in tests/bot/acts/look_hurt_acts.gd with a finisher-tier attack: the Thug's or Ox's chain that ends in pipe_swing_3 or chain_swing_3 (FINISHER in tools/gen_moves.gd), or a Punk Shove. Add a blocked case and a 3-attacker burst with real damage. Re-record and judge the roll and nausea from a 12 fps sheet.",
+      "files": [
+        "tests/bot/acts/look_hurt_acts.gd"
+      ],
+      "spec_change": false,
+      "skeptic": [
+        {
+          "refuted": false,
+          "confidence": "high",
+          "reason": "Confirmed. The brief (fix-feedback.md line 68) asks that a Punk, Kicker and Bruiser each land a light, a heavy and a finisher on the standing player from front, left and behind. The act throws only one index-0 attack per archetype, so no FINISHER-tier hit is ever recorded. This is a recording/coverage gap in the act, not a game defect, and it is not a ruled departure or a logged call.",
+          "evidence": "tests/bot/acts/look_hurt_acts.gd lines 12-16: ATTACKS has 3 entries (punk jab, kicker jump kick, bruiser smash), all index 0. captures/m6-feedback-review/hurt/bot.log has 24 HURT-HIT lines: 18 LIGHT (12 at 6, 6 at 8) and 6 HEAVY at 15; 0 FINISHER. captures/m6-feedback-review/fight/bot.log 'Player:' lines are all '0.0 dmg' (god mode), mostly PERFECT. FINISHER-tier moves exist in tools/gen_moves.gd (uppercut, shove, haymaker, spinning_heel, stomp_kick, push_kick, pipe_swing_3, chain_swing_3), so a finisher can be thrown by an attacker.",
+          "root_cause": "look_hurt_acts.gd's ATTACKS table holds a single index-0 attack per archetype, and the act never exercises a finisher, a blocked hit or a multi-attacker burst with real damage. Unjudged are the 7-degree finisher roll, the trauma cap, the full overlay, blocked-hit feel and nausea in a crowd. Fight and run_street cover none of this because they run in god mode with PERFECT parries.",
+          "files_to_change": [
+            "tests/bot/acts/look_hurt_acts.gd"
+          ],
+          "fix_needs_spec_change": false
+        }
+      ],
+      "survives": true
+    },
+    {
+      "id": "feedback-world-04",
+      "lens": "world",
+      "severity": "low",
+      "title": "Hurt feel thresholds are script constants",
+      "detail": "HURT_SIDE_MIN_M (0.05 m) and HURT_FRONTAL_SINE (0.1) decide which side a hit reads from and when it counts as frontal (the half-roll to alternating sides). Those are feel numbers. CLAUDE.md says feel numbers are never script constants and belong in Tuning ('Hit feel > Hurt'). HURT_SIDE_MIN_M is also the threshold behind the high finding.",
+      "evidence": "game/camera/first_person_camera.gd:88 'const HURT_SIDE_MIN_M := 0.05', :90 'const HURT_FRONTAL_SINE := 0.1'",
+      "repro": "grep -n HURT_ game/camera/first_person_camera.gd",
+      "suggested_fix": "Move both into tuning_data.gd's Hit feel > Hurt subgroup as @export_range values with ## docs (or remove HURT_SIDE_MIN_M when the bearing comes from the attacker), then regenerate tuning/default.json.",
+      "files": [
+        "game/camera/first_person_camera.gd",
+        "game/autoload/tuning_data.gd"
+      ],
+      "spec_change": false,
+      "survives": null
+    },
+    {
+      "id": "feedback-world-05",
+      "lens": "world",
+      "severity": "low",
+      "title": "The ground's tone patches read a little camouflage-like and darker than the mood board; the 8 m grates repeat visibly",
+      "detail": "Against mood_street_a.jpg (broad, pale, warm washes with sparse ink), the street floor is a dark blue-grey covered in many lumpy flat blobs of 2-3 values, mostly without outlines, so it reads busy, close to camouflage. It reads better than M6's noise but not like the concept's open ground. In the A2 walk of the drift, a drain grate and a manhole appear at the same spot in every 8 m tile, so the repeat shows when you look down the street. This is taste, not a defect: it does not flicker.",
+      "evidence": "drift6.png (drift/bot.avi f40, f300, f500, f700, f950, f1150): blob patches across the whole floor, with grates at a regular spacing in the bottom row. cmp_mood.png (mood board beside tour f100).",
+      "repro": "Watch 'Look: ground drift' a2 walk (f1039-1218), or view tour pose 0 street_start.",
+      "suggested_fix": "In tools/gen_trim.gd's ground tile, use fewer and larger tone patches and lift the base value toward the mood's pale asphalt (the ground.hsv band in trim_layout.json). Give a few patches an ink outline. Vary the manhole and grate placement between tiles (for example a 16 m pattern, or offsets by world cell). Then rerun gen_trim.gd --check.",
+      "files": [
+        "tools/gen_trim.gd",
+        "game/level/kit/art/trim_layout.json"
+      ],
+      "spec_change": false,
+      "survives": null
+    },
+    {
+      "id": "feedback-code-01",
+      "lens": "code",
+      "severity": "medium",
+      "title": "Hurt feel numbers are script literals, against the 'feel numbers are never script constants' rule",
+      "detail": "HurtOverlay hardcodes the vignette's gradient stops (0.4 of depth, 0.4 alpha), the stroke geometry (0.55 + 0.7 length, 0.4/count half-width, +-0.6 lean, +-0.3 jitter, strength*1.5, +0.3), the top-stroke threshold (cos-0.5)*2, and the blocked-depth factor feel*2.0. PlayerHealthPanel.jolt_offset hardcodes the rattle frequencies 95 and 113. The camera adds two script constants, HURT_SIDE_MIN_M and HURT_FRONTAL_SINE. These shape what the player feels and are not reachable from the Tuning panel, though the other hurt_* values are. Game-boy cannot tune the stroke length or the jolt rate without a code edit.",
+      "evidence": "game/ui/hurt_overlay.gd:112,117,180,184,187,197,199-202; game/ui/player_health_panel.gd:109; game/camera/first_person_camera.gd:88,90",
+      "repro": "grep the literals in the listed lines. Open Tuning > Hit feel > Hurt: there is no row for stroke length, the gradient falloff or the jolt frequency.",
+      "suggested_fix": "Move the stroke length range, the gradient mid-stop and the jolt frequency into the Hurt subgroup as @export_range values (for example hurt_overlay_stroke_len_min/max, hurt_overlay_mid_stop, hurt_panel_jolt_hz). Update tuning/default.json, and the Hit feel row count in test_tuning_panel (36) moves with them.",
+      "files": [
+        "game/ui/hurt_overlay.gd",
+        "game/ui/player_health_panel.gd",
+        "game/camera/first_person_camera.gd",
+        "game/autoload/tuning_data.gd",
+        "tests/test_tuning_panel.gd"
+      ],
+      "spec_change": false,
+      "skeptic": [
+        {
+          "refuted": false,
+          "confidence": "high",
+          "reason": "The literals are all present as described and break the project rule that feel numbers are never script constants. No logged call or spec ruling approves them. Severity is low rather than medium: the main hurt values (colour, depth, strength, jolt px and seconds, roll degrees) are tunable, and the leftovers are shape constants.",
+          "evidence": "Read at 82bab12. game/ui/hurt_overlay.gd: gradient mid-stop uses 0.4 for both depth and alpha (~lines 180-186). Stroke geometry has 0.55 + randf*0.7 length, 0.4/count half-width, \u00b10.6 lean, \u00b10.3 jitter, strength*1.5 and +0.3 (~197-202). Top-stroke threshold is (cos-0.5)*2 (~112). Blocked-depth factor is feel*2.0 (~117). game/ui/player_health_panel.gd:109 has sin(_time*95), cos(_time*113). game/camera/first_person_camera.gd:88,90 define const HURT_SIDE_MIN_M=0.05 and HURT_FRONTAL_SINE=0.1. game/autoload/tuning_data.gd:215-242 has the hurt_overlay_* and hurt_panel_jolt_* exports but none for stroke length, gradient mid-stop or jolt frequency. M6-calls/FB-FEEL.md does not mention these literals as a deliberate call. HURT_SIDE_MIN_M is a degenerate-geometry epsilon and HURT_FRONTAL_SINE is a dead-zone threshold, so the camera pair is the weakest part of the finding.",
+          "root_cause": "The FB-FEEL builder exposed the headline hurt values as tunables but left shape and rhythm constants inline in the overlay draw code, the health panel and the camera.",
+          "files_to_change": [
+            "game/autoload/tuning_data.gd",
+            "game/ui/hurt_overlay.gd",
+            "game/ui/player_health_panel.gd",
+            "game/camera/first_person_camera.gd",
+            "tuning/default.json",
+            "tests/test_tuning_panel.gd"
+          ],
+          "fix_needs_spec_change": false
+        }
+      ],
+      "survives": true
+    },
+    {
+      "id": "feedback-code-02",
+      "lens": "code",
+      "severity": "low",
+      "title": "The Ground fix puts the far Ground's top coplanar with three drawn Skyline walkway slabs; the new guard test misses it",
+      "detail": "Ground (BossRoof, 200x200 m, slab_dark) now has its top at world y -0.5. Roofs/Skyline's WestWalkRoof (3.4x75 m), EastWalkRoof (2.5x75 m) and EastWalkFacade (4x75 m) are 'accent' slabs drawn with solid=false, with their tops also at y -0.5 (z -120..-45). Before the fix the Ground sat at y 0 above them, so they were hidden. A probe over all 299 drawn blocks lists these three pairs as coplanar tops. test_no_two_drawn_ground_planes_of_the_level_share_a_top filters to modules floor, slab_dark and deck, and the slabs resolve to the accent look, so it passes. A still from over the skyline (shot_b.png, crop_b2.png) shows faint banding on that surface and no visible flicker, so this is geometric, not seen moving. The skyline lane dashes (top y -0.76) stay buried under the Ground, as before the fix.",
+      "evidence": "game/level/mission1/boss_roof.tscn:178 (Ground y -13, height 1); game/level/mission1/roofs.tscn:1120-1139 (slabs at y -5.15, height 0.3, tops at world -0.5); probe output 'COPLANAR Skyline/WestWalkRoof vs BossRoof/Geometry/Ground 3.40x75.00 at y -0.50 top' (also EastWalkRoof 2.5x75, EastWalkFacade 4x75); tests/test_m6_feedback_ground.gd _ground_like",
+      "repro": "Instantiate mission1.tscn, take every LevelBlock with draw_box true, and compare world_aabb().end.y pairs within 0.01 m with an xz overlap over 0.8 m2. Then view the Skyline area from above the roofs section, for example a camera at (-7, 9, -62) looking at (-7, -0.5, -80).",
+      "suggested_fix": "Drop the Ground a further 0.2 m (y -13.2) or turn off draw_box on the three slabs. Widen _ground_like to any drawn block at most 1 m thick, not only three modules.",
+      "files": [
+        "game/level/mission1/boss_roof.tscn",
+        "game/level/mission1/roofs.tscn",
+        "tests/test_m6_feedback_ground.gd"
+      ],
+      "spec_change": false,
+      "survives": null
+    },
+    {
+      "id": "feedback-code-03",
+      "lens": "code",
+      "severity": "low",
+      "title": "The new strip-ink fade uses the max-axis footprint, so ink on grazing strip surfaces (roof decks, kerb tops) fades within about 6 to 10 m, not the 20 m the tunable's comment suggests",
+      "detail": "ink_mask() fades every non-ground trim strip by smoothstep(ink_fade.x, ink_fade.y, texels), with texels = max(length(gx), length(gy)), the larger axis. The comment says 'a wall seen square at 10 m is about 9 texels a pixel, at 20 m about 17'. That holds for walls. For a horizontal surface seen from eye height 1.6 m, the footprint along the view direction is about pixel_rad*r^2/h. With a 75 degree vertical FOV at 1080p that is about 17 texels at 6 m and about 46 at 10 m on a U-aligned 512 texel/m strip. Seam and joint ink on concrete and roof-tar decks, and kerb tops, therefore starts to fade near 6 m and is mostly gone by 10 m (about 68% faded at 10 m). The calls file (FB-GROUND item 3) sets the 16 to 64 range without a grazing case. It also affects brick, plaster and facade strips, which the repaint did not touch.",
+      "evidence": "game/fx/trim_body.gdshaderinc ink_mask() (non-ground branch) and the texels calculation; Tuning ground_ink_fade_start_texels 16 and ground_ink_fade_end_texels 64; docs/milestones/M6-calls/FB-GROUND.md item 3. The footprint figures are computed by hand, not measured in a recording.",
+      "repro": "Stand on a roof deck (roof_tar strip) and look along it. The lap seams lose their ink about 8 to 10 m away, where the near-field kerb and joint ink is bold. Compare with ground_ink_fade_start_texels raised to 64 in the Tuning panel.",
+      "suggested_fix": "Measure the fade by the min-axis footprint, or by the geometric mean of the two axes, or raise the defaults (for example 48 to 160) if roof decks should keep their seams to 15 m. Capture a roof-deck look act before deciding.",
+      "files": [
+        "game/fx/trim_body.gdshaderinc",
+        "game/autoload/tuning_data.gd"
+      ],
+      "spec_change": false,
+      "survives": null
+    },
+    {
+      "id": "feedback-code-04",
+      "lens": "code",
+      "severity": "low",
+      "title": "ASSETS.md rows do not mention the round's changes to the trim sheet, or the Thug and Ox chain reports",
+      "detail": "The trim sheet row (line 524) was not touched, though gen_trim repainted the concrete, kerb, roof-tar and asphalt strips as flat tones with bold ink and trim_sheet.png and trim_strips.json changed (a ground flag and a ground block). The Thug chain row (line 404) and the Boss chain row (line 468) say nothing about the no-relax, island merge, crease and texel-swatch config, while the Kicker's row was updated. Mask rows are right: Kicker, Thug, Bruiser, Ox, Punk and the new ground_sheet.png row.",
+      "evidence": "ASSETS.md:524, 404, 468; git diff 663cafc...82bab12 -- ASSETS.md touches only 15 lines",
+      "repro": "Read ASSETS.md lines 404, 468 and 524 against the diff's assets/ changes.",
+      "suggested_fix": "Add one clause each: the strips' flat-tone repaint (FB-GROUND) on the trim row, and the recipe keys on the Thug and Ox chain rows, as the Kicker row has.",
+      "files": [
+        "ASSETS.md"
+      ],
+      "spec_change": false,
+      "survives": null
+    },
+    {
+      "id": "feedback-code-05",
+      "lens": "code",
+      "severity": "low",
+      "title": "The shared 'no other character' guards are now mostly vacuous, and a test file's mere existence opts a character out",
+      "detail": "_rolled_out(id) returns true for the Bruiser and for any character with a tests/test_m6_feedback_detail_<id>.gd. All four other enemies now have one, so test_no_other_character_uses_the_pilots_keys, test_no_other_character_uses_the_valley_or_texel_keys and the enemy half of test_no_other_mask_has_codes check nothing but the dummy and the player. That is by design, and the guards still check the player mask. The opt-out is by filename, so an empty or stale test file would disable a guard silently.",
+      "evidence": "tests/test_m6_feedback_detail.gd:_rolled_out, test_no_other_character_uses_the_pilots_keys, test_no_other_mask_has_codes; ls tests/test_m6_feedback_detail_*.gd shows 4 files",
+      "repro": "Run -gselect=test_m6_feedback_detail.gd: the loops skip every enemy.",
+      "suggested_fix": "Have _rolled_out also require that the character's pipeline.json holds the key. Alternatively, add a test that every character's per-character test file has at least one test that reads its own pipeline.json.",
+      "files": [
+        "tests/test_m6_feedback_detail.gd"
+      ],
+      "spec_change": false,
+      "survives": null
+    }
+  ]
+}

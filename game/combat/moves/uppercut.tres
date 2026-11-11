@@ -19,3 +19,4 @@ knockback = Vector3(0, 6, 3)
 reaction = 4
 tier = 2
 hitboxes = Array[ExtResource("hitbox_spec_gd")]([SubResource("hitbox_0")])
+fp_show_upper_arm = true

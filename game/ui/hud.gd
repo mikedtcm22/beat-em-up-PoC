@@ -4,7 +4,7 @@ extends CanvasLayer
 ## paused (process_mode ALWAYS). Presentation only: it subscribes to CombatEvents,
 ## GameInput and the camera director, reads actors, and never writes simulation state.
 ##
-## Layout (1920x1080 canvas): player health (and guard meter) bottom-left, boss bar
+## Layout (1920x1080 canvas): the hurt vignette (HurtOverlay, the edges, under everything), player health (and guard meter) bottom-left, boss bar
 ## bottom-center, combat log right-middle, camera toast and pause caption top-center, help
 ## left-middle, the PARRY / GUARD BREAK callout just below the center (drawn over the log
 ## and the help, which "GUARD BREAK!" reaches into), over-head enemy bars and the center dot
@@ -23,6 +23,7 @@ extends CanvasLayer
 ## Time spent paused does not count.
 @export var help_startup_seconds: float = 8.0
 
+@onready var hurt_overlay: HurtOverlay = $HurtOverlay
 @onready var player_panel: PlayerHealthPanel = $PlayerHealthPanel
 @onready var boss_bar: BossHealthBar = $BossHealthBar
 @onready var enemy_bars: EnemyHealthBars = $EnemyHealthBars
@@ -86,6 +87,7 @@ func advance(delta: float) -> void:
 		_help_auto_hide_left -= game_delta
 		if _help_auto_hide_left <= 0.0:
 			help_overlay.visible = false
+	hurt_overlay.advance(game_delta)
 	player_panel.advance(delta)
 	_follow_boss()
 	boss_bar.advance(delta)

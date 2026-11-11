@@ -1,0 +1,54 @@
+# FB-GROUND: judgement calls and numbers
+
+Game-boy: "the ground in the first few areas doesn't seem to have a clear texture and blinks/flashes constantly ... try to get it so it looks like a comic book texture of some kind instead of a glitchy computer-scape".
+
+## The cause, with evidence
+
+Method: the act "Look: ground drift" (`tests/bot/level_acts/ground_acts.gd`) puts the player at street A1 and A2 (lens pitched down 14 degrees so the floor fills the lower half) and holds `still` (60 ticks), `creep` (1 degree a second), `pan` (10 degrees a second, the pitch swaying) and `walk` (0.8 m a second). It was recorded at 1600x900 (Movie Maker) once per suspect (`-- --ground=<variant>`). `tools/ground_flicker.py` cuts the floor (480,560 620x320, clear of the HUD) to grey and takes, with ffmpeg's own filters, **d1** the mean |I(t) - I(t-1)| and **d2** the mean second temporal difference. On `still` nothing moves, so d1 above 0 is the picture changing by itself.
+
+| Suspect | Switched off by | d1 `still` a1 (grey levels) | d1 `pan` a1 | Verdict |
+| --- | --- | --- | --- | --- |
+| none (M6 as shipped) | control | 5.11 | 5.76 | on a still view the floor swings between two pictures, frame to frame |
+| 1 the one-texel ink plus the capped mip | `no_ink` (ink cut above 1) | 5.11 | 5.76 | not the cause |
+| 2 the mip cap on the mottle | `lod_free` (cap 12) | 5.11 | 5.76 | not the cause |
+| 3 the edge pass | `no_edges` | 5.11 | 5.76 | not the cause |
+| 4a shadow edge dither | `hard_shadow` (blur 0) | 5.11 | 5.76 | not the cause |
+| 4b the sun's shadow | `no_shadow` | 8.40 | 9.50 | not the cause (worse: the sunlit picture is brighter) |
+| 4c the section light moving the sun | `diag` (the sun's rotation, energy, shadow flag every tick of a still) | the sun is (-38, -50), energy 1.2, constant over 40 ticks; the blend is at 1 | | not the cause |
+| 5 coplanar faces | `flat` (the sheet is one colour) | 0.0004 | 0.0146 | gone when both faces are one colour: two faces of different textures |
+| 5 coplanar faces | `meshes` (every mesh whose box reaches the plane over the street) | | | `Street/Geometry/Floor` (top y 0) **and `BossRoof/Geometry/Ground`** (a 200 x 200 m slab, top y 0, covering x -18..182, z -193..7) |
+| the fix | `Ground` 0.5 m lower | 0.14 | 0.87 (still the M6 texture) | the flashing is gone |
+
+The tell: the debug view that paints the strip index flashed, the debug view that paints the mip level did not (the second does not depend on which of two coplanar faces wins), and `flat` hid it because both faces then gave the same colour. Four of the suspects the brief listed were measured to the same four digits as the control, so the repaint below is for the look and for what was left (a fine crawl of the one-texel ink and the grain under the mip cap: d1 `pan` 0.87 on the M6 texture against 0.38 on the new tile, both after the fix), not for the flashing. Movie Maker reproduces what he describes: his "blinks" are this z-fight, which swings with the camera's millimetres (the eye's own settling moves it between frames).
+
+After the repaint and the fix (the same act, a1 / a2): still 0.017 / 0.039, creep 0.094 / 0.152, pan 0.382 / 0.630, walk 0.574 / 0.932, against 5.11 / 4.47, 5.62 / 4.78, 5.76 / 5.38, 5.84 / 4.84 before. The floor in `flat` is 0.0004 / 0.015 (nothing but the camera), so what is left is the new ink and tone edges sliding under a moving camera. The remaining `still` value is the eye settling by a millimetre or two (the camera's y moved 1.452 to 1.4506 over 40 ticks).
+
+## Calls
+
+1. **The z-fight is fixed in the scenes, not in a shader.** Decision: `boss_roof.tscn`'s `Ground` (non-solid, drawn only, `slab_dark`) goes from y -12.5 to -13 (world top 0 to -0.5; no collider, so `tests/test_m6_colliders.gd` is untouched), and `roofs.tscn`'s `PenthouseFrontFloorShutter` (an asphalt slab whose top lay in the top roof deck's plane over 3 x 2 m, found by the test below) stops drawing, its collider kept (`draw_box = false`). Not taken: a depth bias or `sorting_offset` on the floor (it hides a coplanar pair only at some distances and the pair would still be wrong in the shadow pass); shrinking the 200 m ground (the boss roof's far drop reads against it); a Debug switch to give M6's position back (a scene's number, reachable by git; a switch would need a script on the section). New test: `test_no_two_drawn_ground_planes_of_the_level_share_a_top_over_any_area` instantiates Mission 1 and compares every ground-like drawn block (floor, deck or `slab_dark`, at most 1 m thick) with every other: none may share a top plane over an area.
+2. **The ground is its own picture, not a strip of the sheet.** Decision: `ground_sheet.png`, 2048 px over 8 m, sampled in world metres by every face on the asphalt strip. Why: the strip is 128 px high and wraps every 1 m (a 4 x 1 m tile, 512 px a metre one way and 128 the other), too small for patched squares and a manhole, and the sheet's mip cap (`look_trim_lod_cap`) exists only because a stack of wrapped strips bleeds into its neighbour; one picture needs no cap, and with the mips unlimited nothing under a pixel aliases. World metres also make two floor blocks (each one's UVs start at its own corner) butt without a seam. Not taken: a taller strip (the sheet is full: 16 rows of 128 px); a texture array (a second sampler anyway, and a different material); keeping the strip and fading the ink (what the concrete and the kerb do, see 5: it cannot give a 4 m repeat any variety). The asphalt strip stays as the fallback (`ground_sheet_off`) and is repainted in the same style.
+3. **Which way the ink is kept still: both.** On the ground the mips run, and the ink cut's edge widens with the mip level (`ground_ink_soft_*`), so a thin crack dims along with the mips and never pops in or out as it crosses a pixel. On the strips, where the cap stays, the ink fades out between 16 and 64 texels a pixel (`ground_ink_fade_*`), past which the capped mip would alias it. Not taken: only letting the mips run on the strips (the neighbouring strip bleeds in); only fading (the ground would lose its cracks at 10 m for nothing).
+4. **What the ground is.** From `mood_street_a.jpg`: pale flat shapes with a few ink ticks, no noise. Base asphalt with worn patches (a warm core inside a cool rim, the lamp pools), dark patches, tar seams and oil stains as flat shapes (2-3 values, `ground.hsv` in `trim_layout.json`, inside the band), then ink at 5 px and wider: eight cracks that fork twice and taper, three patched squares with wobbled outlines, a manhole (ring, inner ring, bar grate) and two drain grates, one per 8 m tile. Not taken: a stipple or hatch (the optional item: the shapes already read at 10 m and a dot pattern would be the first thing to alias); lane lines (not asked).
+5. **The concrete, kerb, roof tar and the sheet's asphalt get the same treatment**: flat tones (no grain), joints 10 to 12 px wide (were 3), tie holes 12 x 8 (were 4 x 4), cracks 6.6 px wide tapering to 6.6 (a crack's radius is 3.4 to 4 px, its tip 3.3), the kerb's top and bottom bands flat. Not changed: plaster, metal, shutter, crate, trim and facade (their ink is not on the street; the strip ink fade covers their far shimmer).
+6. **The thinnest ink is a test, not a hope.** `MIN_INK_PX = 5` in `gen_trim.gd`; `test_the_ground_tile_has_ink_and_its_ink_is_never_thin` (and the same for the four strips) scans the alpha: each ink pixel's narrower straight run must be 4 px or more, with 4% allowed for the rounding of tips. Old -> new: the old concrete joint was 3 px, the old crack 1 px.
+7. **`debug_view` in the trim shader** (0 picture, 1 strip, 2 wanted mip, 4 sampled alpha) is a uniform set by the act (`dbg_strip`, `dbg_lod`, `dbg_alpha`), not a Tuning value: it is how the cause was seen, and it costs one comparison.
+8. **Test changes.** None weakened. New: `tests/test_m6_feedback_ground.gd` (12 tests: the ink width, the band and the one ink, flat tones, seamless both ways, the table's flag, the material's world-space and uncapped sampling, the tunables live, the switch, the floor face's strip, the coplanar scan, the boss ground's place). `tools/gen_trim.gd --check` rebuilds both PNGs and the table byte for byte.
+
+## Numbers
+
+The level walk, `tools/perf_compare.sh --force --vsync on --bot res://tests/bot/perf_level_bot.tscn --act "Perf: level walk" --runs 2 663cafc HEAD` (HEAD fd20724, the code as shipped; the machine was busy, load 3 to 7, so the absolute numbers are not a baseline, the ratio is what compares):
+
+| | 663cafc | HEAD |
+|---|---|---|
+| mean ms | 17.22 (17.02..17.41) | 17.01 (16.90..17.12), -1.2% |
+| p95 ms | 22.62 | 22.41 |
+| first hit ms | 25.6 | 25.9 |
+| first finisher ms | 27.0 | 26.5 |
+| draws / objects (mean per frame) | 108.5 / 191.7 | 108.1 / 191.2 |
+| primitives, visible / shadow | 142 333 / 127 842 | 142 414 / 128 268 |
+
+Not slower: the ground adds one sampler read on the asphalt's faces only (the same fetch the strip made), and the shader's other work is two multiplies on the ink. One HEAD run had a single 1 s stall (a Metal drawable, the tool's known one; the other had none) and is the "worst ms" of 528 in the table. The soft bars of A16 (16.7 ms p95) are missed by both refs on this loaded machine.
+
+Full suite: 1948 tests, 1948 passing after the act list's expected titles gained "Look: ground drift" (one run: 1946, the other failure was the ASSETS row, written while it ran), no SCRIPT ERROR, SHADER ERROR or ERROR line; 412 s. `gen_trim.gd -- --check` matches.
+
+Recordings (not committed, `captures/ground/` of the worktree): `before_*` and `final_*` of the drift per suspect, `before_tour` and `after_tour` of "Look: arena tour" with `tour/sheet_street.png` and `tour/sheet_roofs.png` (before | after), and the 6-frame full-resolution strips `drift_strip_before_control.png` (the floor swinging between two pictures, a stair-stepped edge) and `drift_strip_final_control.png` (the same six frames: still).

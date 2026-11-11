@@ -12,7 +12,7 @@ chain_joints). Weights, config rig.weights:
 Optional rig.smooth_iterations / rig.smooth_factor: Laplacian smoothing of the weights over the mesh's edges before the limit
 (the slice gate's contingency against candy-wrap at the shoulder, off by default).
 Optional rig.clamps (F-punk, the slice gate's named weight clamps: shoulder, collar, waist): a list of
-{name, bones, above_z_m, ramp_m, to}: the listed bones' weights above a height (Blender z, metres in the rig's 1.8 m space)
+{name, bones, above_z_m (or below_z_m, M6), ramp_m, to}: the listed bones' weights above a height (Blender z, metres in the rig's 1.8 m space)
 move onto bone `to`, smoothstep over ramp_m (0 at above_z_m, all of it beyond), so a waistband that Tripo's rig hangs on the
 thigh bone follows the hips instead (the waist of a jeans mesh stretched 40x when a leg lifted, and the hurtbox fit missed it).
 Optional rig.torso_blend (F-punk, the same contingency): the vertices a generated rig puts wholly on the trunk bones
@@ -88,7 +88,11 @@ def run(cfg, extra):
 	clamp_report = []
 	for c in rigc.get("clamps", []):
 		cols = [NAMES.index(b) for b in c["bones"]]
-		t = np.clip((co[:, 2] - float(c["above_z_m"])) / max(float(c.get("ramp_m", 0.05)), 1e-6), 0.0, 1.0)
+		if "below_z_m" in c:
+			# below_z_m (M6 HEAVIES, opt-in): the mirror of above_z_m, for a boot's sole and heel that a generated rig hangs half on the shin
+			t = np.clip((float(c["below_z_m"]) - co[:, 2]) / max(float(c.get("ramp_m", 0.05)), 1e-6), 0.0, 1.0)
+		else:
+			t = np.clip((co[:, 2] - float(c["above_z_m"])) / max(float(c.get("ramp_m", 0.05)), 1e-6), 0.0, 1.0)
 		t = t * t * (3.0 - 2.0 * t)
 		moved = w[:, cols].sum(axis=1) * t
 		w[:, cols] *= (1.0 - t)[:, None]

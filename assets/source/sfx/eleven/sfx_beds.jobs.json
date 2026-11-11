@@ -1,0 +1,23 @@
+{
+	"group": "sfx_beds",
+	"jobs": [
+		{
+			"id": "ambience_street_v1",
+			"pool": "ambience_street",
+			"text": "Night city street ambience: a low hum of distant traffic, a faint far-off siren now and then, light wind and the buzz of a street lamp. Seamless ambient loop only, steady and unobtrusive, no music, no voices, no sudden loud events.",
+			"duration_seconds": 25.0,
+			"candidates": 3,
+			"prompt_influence": 0.4,
+			"loop": true
+		},
+		{
+			"id": "ambience_roof_v1",
+			"pool": "ambience_roof",
+			"text": "Rooftop at night ambience: steady wind, a distant hum of city traffic far below, a faint air-conditioner fan drone and a rattle of loose sheet metal now and then. Seamless ambient loop only, steady and unobtrusive, no music, no voices, no sudden loud events.",
+			"duration_seconds": 25.0,
+			"candidates": 3,
+			"prompt_influence": 0.4,
+			"loop": true
+		}
+	]
+}

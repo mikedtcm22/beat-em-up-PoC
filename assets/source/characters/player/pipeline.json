@@ -156,13 +156,15 @@
 					"dir": "out",
 					"depth_m": 0.04,
 					"rings": 8,
-					"ring_verts": 32
+					"ring_verts": 32,
+					"inset_m": 0.006
 				},
 				"RightUpperArm": {
 					"dir": "out",
 					"depth_m": 0.04,
 					"rings": 8,
-					"ring_verts": 32
+					"ring_verts": 32,
+					"inset_m": 0.006
 				},
 				"Hips": {
 					"dir": "in",
@@ -218,11 +220,28 @@
 						"rings": 6,
 						"ring_verts": 48
 					}
+				},
+				"Body__fp_arm": {
+					"default": {
+						"dir": "in",
+						"depth_m": 0.03,
+						"rings": 2,
+						"ring_verts": 20,
+						"wall_normals": true
+					}
 				}
 			},
 			"torso": {
 				"enabled": true,
 				"low_bone": "LeftUpperLeg"
+			},
+			"arm": {
+				"enabled": true,
+				"push_m": 0.004,
+				"elbow_ramp_m": 0.008,
+				"shoulder_ramp_m": 0.015,
+				"hull_ramp_m": 0.012,
+				"skin_only": true
 			}
 		}
 	},
@@ -445,7 +464,8 @@
 				"RightLowerLeg": 1.5,
 				"LeftUpperLeg": 1.2,
 				"RightUpperLeg": 1.2,
-				"part:Body__fp_torso": 1.0
+				"part:Body__fp_torso": 1.0,
+				"part:Body__fp_arm": 0.5
 			}
 		},
 		"crease": {

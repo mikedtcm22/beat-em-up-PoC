@@ -4,6 +4,11 @@ extends GutTest
 ## way the game wears them. The [W] rows (L1-L3, L5; L4 is the lead's perf run) are windowed: tests/bot/look_probe.gd prints them
 ## (tests/bot/acts/look_final_acts.gd, one run, look.json), so they are listed here and never asserted.
 ##
+## M6 (CHAIN, plan D26): the characters are the ROSTER (tests/fixtures/art/roster/<id>.json, tests/art_roster.gd): every row
+## below loops over the roster's characters at each one's height, with its own moves and its own ratchets; a new character adds
+## its file and changes nothing here. The Punk's M4 numbers moved into punk.json unchanged. The hero is not in the roster: his row
+## and the *_PLAYER constants below stay verbatim (ARM changes them).
+##
 ## This file is the one place that shows every row's state. A row whose bar the shipped art meets is asserted at the bar ("PASS").
 ## A row it does not meet yet (A7's strain, A9's 3% of the cells, A11's anchor on the torso and legs, A6 and the rest of what the
 ## art fixers are working on) is asserted at a RATCHET, what the art does today with a margin so that a fix only makes it better,
@@ -35,10 +40,9 @@ const LookTuneActs := preload("res://tests/bot/acts/look_tune_acts.gd")
 const LookActs := preload("res://tests/bot/acts/look_acts.gd")
 const LookFinalActs := preload("res://tests/bot/acts/look_final_acts.gd")
 const ArtPlayerTest := preload("res://tests/test_art_player.gd")
+const Roster := preload("res://tests/art_roster.gd")
 
-const PUNK_ART := "res://game/actors/art/punk_art.tres"
 const PLAYER_ART := "res://game/actors/art/player_art.tres"
-const PUNK_SCENE := "res://game/enemies/punk/street_punk.tscn"
 const CROWD_ROOM := "res://game/level/crowd_room.tscn"
 const TRAINING_ROOM := "res://game/level/test_room.tscn"
 const JOINTS_PATH := "res://tools/pipeline/joints.json"
@@ -53,8 +57,7 @@ const FRAME := 1.0 / 60.0
 const SOLE_TOLERANCE_M := 0.005
 const PLANTED_FLOOR_M := -0.015
 const SLIDE_M := 0.02
-## A2: the budgets (SPEC §10).
-const TRIANGLES_PUNK := 15000
+## A2: the budgets (SPEC §10): the roster files carry each character's (15000 for an enemy, the boss 30000); the hero's is here.
 const TRIANGLES_PLAYER := 30000
 ## A3: 4-6 flat colours, the palette atlas's geometry, and the red band (hue 345-15 degrees, saturation above 0.5).
 const SWATCH_MIN := 4
@@ -100,30 +103,18 @@ const SLIDE_RATCHET_PLAYER_M := 2.4
 ## outside the art (today none).
 const FIT_RATCHET_PLAYER := {"torso": 0.985, "legs": 0.88, "head": 0.975}
 const AXIS_OUTSIDE_RATCHET_PLAYER := 0
-## A9: the Punk at the 1 m acts' poses: cells that differ (today 6.5% at the cross); the lens share is held at the bar.
-const FRAMING_RATCHET_PUNK_DIFFER := 0.07
-## A9: the Punk's wrist cuff follows the concept (F-cuff, the lead's call), so the jab and the cross at +8 degrees miss the 4 pp bar:
-## their share gaps are ratcheted (worst over the four GLBs 4.78 and 5.09 pp, plus 0.3; test_art_punk's FRAMING_SHARE_RATCHET_PP). F-fist-turn
-## (the fists turned palm-in): the jab's gap is 5.25-5.32 pp, so its ratchet is 0.056, with the art's own share held at STRIKE_ART_SHARE_MIN.
-const FRAMING_RATCHET_PUNK_SHARE := {
-	"punk_jab pitch +8": 0.056,
-	"punk_cross pitch +8": 0.054,
-}
-const STRIKE_ART_SHARE_MIN := 0.27
+## A9, A7's visible stretch and A11's anchor, for the Punk: M4's ratchets (cells 0.07; the jab's and the cross's +8 degree lens gaps
+## 0.056 and 0.054 with the twin STRIKE_ART_SHARE_MIN 0.27, F-cuff and F-fist-turn; stretch 0.09; anchors head 2, torso 6.5, leg 3.2 cm)
+## moved unchanged into tests/fixtures/art/roster/punk.json, where each has its reason.
 ## A9: the hero over the 15 first-person poses is held to test_art_player's own HERO_* constants (HERO_DIFFER_MAX, HERO_SHARE_MAX,
 ## HERO_NEAREST_MAX_M: read, not copied, so this row cannot be looser than the test it mirrors): cells that differ (today 8.4%, the
 ## block), the lens share's gap (8.4 points, the block), the nearest the art stands to the lens against its proxies (8.1 cm, the front kick).
-## A7, the Punk's visible stretch: the longest growth of an edge in view (today 8.4 cm, the waist hem in the cross's twist, F-punk).
-const VISIBLE_STRETCH_RATCHET_M := 0.09
-## A11: the flash anchor to the skinned surface, by region (today the Punk's head 1.4 cm, torso 6.0 cm, leg 2.7 cm).
-const ANCHOR_RATCHET_M := {"head": 0.02, "torso": 0.065, "leg": 0.032}
 ## A11, the hero: the same (today head 2.8 cm, torso 4.6 cm, leg 4.7 cm).
 const ANCHOR_RATCHET_PLAYER_M := {"head": 0.033, "torso": 0.051, "leg": 0.052}
 
 ## The first-person framing's own geometry: the player's eye height in the crowd room, and the 1 m acts' two views.
 const EYE_Y := 1.656
 const PUNK_VIEW_PITCHES: Array[float] = [8.0, -6.0]
-const PUNK_MOVES: Array[String] = ["punk_jab", "punk_cross", "punk_shove"]
 
 ## Row id -> the notes the row's test left: {ok, text}. `ok` is whether the plan's bar was met. after_all() prints them.
 var _notes: Dictionary = {}
@@ -153,17 +144,39 @@ func after_all() -> void:
 # --- Harness ------------------------------------------------------------------------------------
 
 
-## The shipped art under test: `{name, art, player, budget, glb}`. The hero's CharacterArt names his GLB in metadata and is made
-## ready to wear by PlayerCharacter.worn_art(), as the game does it.
+## The shipped art under test: `{name, art, player, budget, glb, height, meshes, moves, ratchets}`. The roster's characters (each
+## at its height, with its own moves and ratchets: tests/art_roster.gd), then the hero, whose row and ratchets are the constants
+## above. The hero's CharacterArt names his GLB in metadata and is made ready to wear by PlayerCharacter.worn_art(), as the game does it.
 func _arts() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
-	out.append({name = "punk", art = load(PUNK_ART) as CharacterArt, player = false, budget = TRIANGLES_PUNK,
-			glb = "res://assets/export/characters/punk/punk.glb"})
+	for id: String in Roster.ids():
+		var r := Roster.row(id)
+		assert_eq(Roster.problems(id), PackedStringArray(), "%s: the roster file is well formed" % id)
+		out.append({name = id, art = load(r.art) as CharacterArt, player = false, budget = int(r.budget), glb = Roster.glb_of(r),
+				height = float(r.height_m), meshes = r.meshes, moves = r.moves, ratchets = r.ratchets})
 	var hero := PlayerCharacter.worn_art(load(PLAYER_ART) as CharacterArt)
 	assert_not_null(hero, "the hero's art is worn: assets/export/characters/player/player.glb is shipped")
 	if hero != null:
 		out.append({name = "player", art = hero, player = true, budget = TRIANGLES_PLAYER,
-				glb = "res://assets/export/characters/player/player.glb"})
+				glb = "res://assets/export/characters/player/player.glb", height = 1.8, meshes = ["Body", "Body__fp_hidden", "Body__fp_torso", "Body__fp_arm"],
+				moves = [], ratchets = {a5_extent = FIST_EXTENT}})
+	return out
+
+
+## The row named `name` of _arts().
+func _row(name: String) -> Dictionary:
+	for row: Dictionary in _arts():
+		if row.name == name:
+			return row
+	return {}
+
+
+## The roster characters' rows (every row but the hero's).
+func _enemy_rows() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for row: Dictionary in _arts():
+		if not row.player:
+			out.append(row)
 	return out
 
 
@@ -174,7 +187,7 @@ func _rig(row: Dictionary, hurtboxes: bool = false) -> HumanoidRig:
 		var dresser := PlayerCharacter.new()
 		dresser._configure_rig(rig)
 		dresser.free()
-	rig.height = 1.8
+	rig.height = row.height
 	rig.build_hurtboxes = hurtboxes
 	rig.art = row.art
 	add_child_autofree(rig)
@@ -280,9 +293,11 @@ func test_a1_the_glb_contract_holds_on_the_shipped_art() -> void:
 		for part: SkinnedArt.ArtMesh in entry.meshes:
 			names.append(String(part.node_name))
 		names.sort()
-		# The hero is three meshes since F-player-fix (test_art_contract: the belly and belt are their own
-		# Body__fp_torso, so fp_knockdown_hide_torso hides only them).
-		var want := PackedStringArray(["Body"]) if not row.player else PackedStringArray(["Body", "Body__fp_hidden", "Body__fp_torso"])
+		# The hero is four meshes since M6 ARM (test_art_contract): the belly and belt are their own Body__fp_torso, so
+		# fp_knockdown_hide_torso hides only them (F-player-fix), and the shoulder half of each upper arm is Body__fp_arm, which
+		# fp_show_upper_arm lifts into the lens for the haymaker and the uppercut.
+		var want := PackedStringArray(row.meshes)
+		want.sort()
 		assert_eq(names, want, "%s: the meshes the pipeline contract names" % row.name)
 		var rig := _rig(row)
 		assert_true(rig.has_art(), "%s: the rig wears it (check() passed)" % row.name)
@@ -394,16 +409,16 @@ func test_a4_the_soles_stand_on_the_floor_and_the_walks_plant_them() -> void:
 		var worst_slide := 0.0
 		var worst_low := INF
 		for id: StringName in walks:
-			var clip := PlaceholderAnims.build_named(id, 1.0, stance, PlaceholderAnims.Life.new())
+			var clip := PlaceholderAnims.build_named(id, rig.rig_scale(), stance, PlaceholderAnims.Life.new())
 			# The enemies' walks at the probe's 120 Hz, as test_motion_m4; the hero's, whose slide is metres, at 60 Hz.
 			var result := MotionProbe.walk_slide(mi, rig, clip, sole, walks[id], Tuning.data.move_speed, FRAME if row.player else FRAME / 2.0)
 			worst_slide = maxf(worst_slide, result.slide)
 			worst_low = minf(worst_low, result.lowest)
 			assert_gt(result.runs, 10, "%s %s: planted steps to measure" % [row.name, id])
-			assert_lt(result.slide, SLIDE_M if not row.player else SLIDE_RATCHET_PLAYER_M,
-					"%s %s: a planted step slides at most %.2f cm (%.2f cm)" % [row.name, id, (SLIDE_M if not row.player else SLIDE_RATCHET_PLAYER_M) * 100.0, result.slide * 100.0])
+			var slide_bar: float = SLIDE_RATCHET_PLAYER_M if row.player else float(row.ratchets.slide_m)
+			assert_lt(result.slide, slide_bar, "%s %s: a planted step slides at most %.2f cm (%.2f cm)" % [row.name, id, slide_bar * 100.0, result.slide * 100.0])
 			assert_gt(result.lowest, PLANTED_FLOOR_M, "%s %s: no sole vertex under -15 mm (%.1f mm)" % [row.name, id, result.lowest * 1000.0])
-		var idle := PlaceholderAnims.build_named(&"idle", 1.0, stance, PlaceholderAnims.Life.new())
+		var idle := PlaceholderAnims.build_named(&"idle", rig.rig_scale(), stance, PlaceholderAnims.Life.new())
 		var idle_low := INF
 		for step: int in 13:
 			var posed := SkinnedView.skin_vertices(mi, rig, MotionProbe.clip_globals(rig, idle, idle.length * float(step) / 12.0))
@@ -459,15 +474,15 @@ func test_a5_the_fists_fill_the_fist_box() -> void:
 				continue
 			centroid /= area
 			var c: Array = box.center_rest_global
-			var gap := centroid.distance_to(Vector3(c[0], c[1], c[2]))
-			assert_lt(gap, FIST_CENTROID_M, "%s: the %s fist's centroid is %.1f mm from the fist box" % [row.name, box.side, gap * 1000.0])
+			var gap := centroid.distance_to(Vector3(c[0], c[1], c[2]) * rig.rig_scale())  # the box is the 1.8 m table's; the rig is scaled (M6 HEAVIES)
+			assert_lt(gap / rig.rig_scale(), FIST_CENTROID_M, "%s: the %s fist's centroid is %.1f mm from the fist box (%.1f mm in the 1.8 m table's frame, the bar)" % [row.name, box.side, gap * 1000.0, gap / rig.rig_scale() * 1000.0])
 			var size: Array = box.size
 			var ext := hi - lo
 			var ratios := PackedStringArray()
 			for axis: int in 3:
-				var ratio := ext[axis] / float(size[axis])
+				var ratio := ext[axis] / (float(size[axis]) * rig.rig_scale())
 				ratios.append("%.2f" % ratio)
-				assert_between(ratio, 1.0 - FIST_EXTENT, 1.0 + FIST_EXTENT, "%s: the %s fist's extent on axis %d is x%.2f of the box" % [row.name, box.side, axis, ratio])
+				assert_between(ratio, 1.0 - float(row.ratchets.a5_extent), 1.0 + float(row.ratchets.a5_extent), "%s: the %s fist's extent on axis %d is x%.2f of the box" % [row.name, box.side, axis, ratio])
 			summary.append("%s %.1f mm, extents x%s" % [box.side, gap * 1000.0, "/".join(ratios)])
 		_note("A5", true, "%s: fist centroid off the box by %s" % [row.name, "; ".join(summary)])
 
@@ -520,6 +535,17 @@ func _fit(rig: HumanoidRig) -> Dictionary:
 	}
 
 
+## The shares row A6 holds `row`'s vertices to: the hero's constants, a roster file's `a6` ratchet, or the plan's 95%.
+func _fit_ratchet(row: Dictionary) -> Dictionary:
+	if row.player:
+		return FIT_RATCHET_PLAYER
+	if row.ratchets.a6 is Dictionary:
+		var own: Dictionary = {torso = FIT_SHARE, legs = FIT_SHARE, head = FIT_SHARE}
+		own.merge(row.ratchets.a6, true)
+		return own
+	return {torso = FIT_SHARE, legs = FIT_SHARE, head = FIT_SHARE}
+
+
 func test_a6_the_hurtboxes_sit_inside_the_art_at_idle() -> void:
 	# Source: test_art_punk::test_the_hurtbox_fit_of_every_glb_is_printed_and_the_passing_bars_hold (the Punk, asserted at the bar)
 	# and test_skinned_art::test_the_hurtboxes_sit_inside_the_art_at_idle. The hero is held to a ratchet and printed.
@@ -545,15 +571,28 @@ func test_a6_the_hurtboxes_sit_inside_the_art_at_idle() -> void:
 				axis.size(), ("  (plan's bar missed: %s)" % "; ".join(misses)) if not misses.is_empty() else "", held])
 		assert_gt(fit.counts.torso, 100, "%s: the torso vertices were counted" % row.name)
 		for region: String in ["torso", "legs", "head"]:
-			var floor_share: float = FIT_SHARE if not row.player else float(FIT_RATCHET_PLAYER[region])
+			var floor_share: float = float(_fit_ratchet(row)[region])
 			assert_gte(float(fit[region]), floor_share, "%s: the %s vertices hug their hurtbox (%.1f%%, held at %.1f%%)" % [row.name, region, float(fit[region]) * 100.0, floor_share * 100.0])
+		var axis_ratchet := AXIS_OUTSIDE_RATCHET_PLAYER
 		if not row.player:
+			axis_ratchet = int((row.ratchets.a6 as Dictionary).get("axis_outside", 0)) if row.ratchets.a6 is Dictionary else 0
+		if not row.player and axis_ratchet == 0:
 			assert_eq(axis, [], "%s: every hurtbox axis point is inside the art" % row.name)
 		else:
-			assert_lte(axis.size(), AXIS_OUTSIDE_RATCHET_PLAYER, "%s: at most %d axis points outside the art (%s)" % [row.name, AXIS_OUTSIDE_RATCHET_PLAYER, axis])
+			assert_lte(axis.size(), axis_ratchet, "%s: at most %d axis points outside the art (%s)" % [row.name, axis_ratchet, axis])
 
 
 # --- A7: deformation ---------------------------------------------------------------------------------
+
+
+## The strain ratchet row (ArtStrain.SHIPPED's shape) of `row`: the hero's from ArtStrain, a roster character's from its strain file.
+func _shipped_row(row: Dictionary) -> Dictionary:
+	for shipped: Dictionary in ArtStrain.SHIPPED:
+		if shipped.name == row.name:
+			return shipped
+	var own := Roster.shipped_row(row.name)
+	assert_false(own.is_empty(), "%s: tests/fixtures/strain/%s.json holds its whole-run figures (run gen_strain_ratchet.tscn)" % [row.name, row.name])
+	return own
 
 
 func test_a7_the_strain_of_every_animation_and_move_is_held_at_its_ratchet() -> void:
@@ -564,12 +603,12 @@ func test_a7_the_strain_of_every_animation_and_move_is_held_at_its_ratchet() -> 
 	# ArtStrain.SHIPPED's, the bar is the GATE line.
 	var started := Time.get_ticks_msec()
 	for row: Dictionary in _arts():
-		var shipped := ArtStrain.SHIPPED.filter(func(s: Dictionary) -> bool: return s.name == row.name)[0] as Dictionary
+		var shipped := _shipped_row(row)
 		var run := ArtStrain.cached(shipped.path)
 		if run.is_empty():
 			var moves: Array[MoveData] = []
 			if not row.player:
-				moves = ArtStrain.punk_moves()
+				moves = ArtStrain.roster_moves(row.name)
 			run = ArtStrain.keep(shipped.path, ArtStrain.run(_rig(row), moves))
 		var share := ArtStrain.worst_flex_share(run)
 		var over := ArtStrain.flexes_over_bar(run)
@@ -579,7 +618,7 @@ func test_a7_the_strain_of_every_animation_and_move_is_held_at_its_ratchet() -> 
 		# peak flexes' share and every clip's own figures held to today's plus a margin. A count of problem lines is not held: it
 		# saturates at two a sample, so no regression could raise it.
 		var table := ArtStrain.load_table(row.name)
-		assert_false(table.is_empty(), "%s: the per-clip strain figures are shipped (tests/fixtures/strain/strain_ratchet.json)" % row.name)
+		assert_false(table.is_empty(), "%s: the per-clip strain figures are shipped (tests/fixtures/strain/<id>.json, the hero's strain_ratchet.json)" % row.name)
 		var broken := ArtStrain.ratchet_problems(run, shipped, table)
 		assert_eq(broken.size(), 0, "%s: every strain ratchet holds: %s" % [row.name, broken.slice(0, 6)])
 		_note("A7", run.problems.is_empty() and over.is_empty(), "%s: %d samples, %d with every number inside the bars, worst p99.9 %.2f, %d problem lines %s; peak flexes over the %d-triangle bar: %s (worst %.2f%% of the triangles; the plan's bar is 0.5%%); %s" % [
@@ -617,61 +656,62 @@ func _seen_from(soup: SkinnedView.Soup, origin: Vector3, point: Vector3) -> bool
 	return hit.is_empty() or origin.distance_to(hit.position) >= dist - 0.015
 
 
-func test_a7_no_edge_the_lens_sees_of_the_punk_grows_more_than_its_ratchet_at_the_one_metre_poses() -> void:
+func test_a7_no_edge_the_lens_sees_of_a_roster_character_grows_more_than_its_ratchet_at_the_one_metre_poses() -> void:
 	# Source: test_art_punk::test_no_edge_in_view_grows_more_than_2_cm_in_the_one_metre_acts_poses (the slice gate's contingency 4,
-	# the visible-stretch test). At the 1 m acts' poses (idle and the Punk's three moves at their first active frame) from the
+	# the visible-stretch test). At the 1 m acts' poses (idle and the character's own moves at their first active frame) from the
 	# face and the body views, every deforming edge the lens sees (both ends in the view, facing it, the first surface along their
 	# ray) grows at most 2 cm over its length in the skinned rest. The Punk misses the 2 cm bar (the waist hem in the cross's
 	# twist: weight smoothing, a torso height blend and the heat-map weights were tried, M4-calls/F-punk.md): held at a ratchet.
-	var rig := _rig(_arts()[0])
-	rig.global_position = Vector3(0.0, 0.0, -1.0)
-	rig.rotation.y = PI
-	var moves: Array[MoveData] = [null]
-	for id: String in PUNK_MOVES:
-		moves.append(_move_file(id))
-	var worst := 0.0
-	var worst_label := ""
-	var edges_seen := 0
-	for pitch: float in PUNK_VIEW_PITCHES:
-		var cam := _view(pitch)
-		for move: MoveData in moves:
-			_pose(rig, &"idle", 0.3)
-			if move != null:
-				rig.play_move(move)
-				for i: int in move.startup + 1:
-					rig.advance(FRAME)
-			for mi: MeshInstance3D in rig.art_meshes():
-				var data := SkinnedView._mesh_data(mi.mesh as ArrayMesh)
-				SkinnedView._prepare_strain(data)
-				var rest := SkinnedView.skin_vertices(mi, rig, SkinnedView.rest_pose(rig))
-				var posed := SkinnedView.skin_vertices(mi, rig)
-				var world := mi.global_transform * posed
-				var normals := SkinnedView.skin_normals(mi, rig)
-				var world_normals := PackedVector3Array()
-				world_normals.resize(normals.size())
-				for v: int in normals.size():
-					world_normals[v] = mi.global_transform.basis * normals[v]
-				var in_frustum := _in_view(world, world_normals, cam)
-				var soup := SkinnedView._soup(mi, rig, cam)
-				for e: int in data.edge_a.size():
-					var a := data.edge_a[e]
-					var b := data.edge_b[e]
-					if in_frustum[a] == 0 or in_frustum[b] == 0:
-						continue
-					edges_seen += 1
-					var grow := posed[a].distance_to(posed[b]) - rest[a].distance_to(rest[b])
-					if grow <= worst:
-						continue
-					if not (_seen_from(soup, cam.origin, world[a]) and _seen_from(soup, cam.origin, world[b])):
-						continue
-					worst = grow
-					worst_label = "%s pitch %+.0f, bones %s/%s" % [move.id if move != null else &"idle", pitch,
-							SkinnedView._dominant_bone(data, mi.skin, [a]), SkinnedView._dominant_bone(data, mi.skin, [b])]
-	assert_gt(edges_seen, 1000, "the poses were measured (%d edges in view)" % edges_seen)
-	assert_lte(worst, VISIBLE_STRETCH_RATCHET_M, "no edge in view grows more than the ratchet's %.0f cm (%.1f cm, %s)" % [VISIBLE_STRETCH_RATCHET_M * 100.0, worst * 100.0, worst_label])
-	_note("A7", worst <= VISIBLE_STRETCH_M, "punk visible stretch (slice gate contingency 4): %d edges in view over the 1 m poses, the longest growth %.1f cm (%s); bar %.0f cm, ratchet %.0f cm (margin %.1f cm)" % [
-			edges_seen, worst * 100.0, worst_label, VISIBLE_STRETCH_M * 100.0, VISIBLE_STRETCH_RATCHET_M * 100.0,
-			(VISIBLE_STRETCH_RATCHET_M - worst) * 100.0])
+	for row: Dictionary in _enemy_rows():
+		var rig := _rig(row)
+		rig.global_position = Vector3(0.0, 0.0, -1.0)
+		rig.rotation.y = PI
+		var moves: Array[MoveData] = [null]
+		for id: String in row.moves:
+			moves.append(_move_file(id))
+		var worst := 0.0
+		var worst_label := ""
+		var edges_seen := 0
+		var stretch_bar := float(row.ratchets.stretch_m)
+		for pitch: float in PUNK_VIEW_PITCHES:
+			var cam := _view(pitch)
+			for move: MoveData in moves:
+				_pose(rig, &"idle", 0.3)
+				if move != null:
+					rig.play_move(move)
+					for i: int in move.startup + 1:
+						rig.advance(FRAME)
+				for mi: MeshInstance3D in rig.art_meshes():
+					var data := SkinnedView._mesh_data(mi.mesh as ArrayMesh)
+					SkinnedView._prepare_strain(data)
+					var rest := SkinnedView.skin_vertices(mi, rig, SkinnedView.rest_pose(rig))
+					var posed := SkinnedView.skin_vertices(mi, rig)
+					var world := mi.global_transform * posed
+					var normals := SkinnedView.skin_normals(mi, rig)
+					var world_normals := PackedVector3Array()
+					world_normals.resize(normals.size())
+					for v: int in normals.size():
+						world_normals[v] = mi.global_transform.basis * normals[v]
+					var in_frustum := _in_view(world, world_normals, cam)
+					var soup := SkinnedView._soup(mi, rig, cam)
+					for e: int in data.edge_a.size():
+						var a := data.edge_a[e]
+						var b := data.edge_b[e]
+						if in_frustum[a] == 0 or in_frustum[b] == 0:
+							continue
+						edges_seen += 1
+						var grow := posed[a].distance_to(posed[b]) - rest[a].distance_to(rest[b])
+						if grow <= worst:
+							continue
+						if not (_seen_from(soup, cam.origin, world[a]) and _seen_from(soup, cam.origin, world[b])):
+							continue
+						worst = grow
+						worst_label = "%s pitch %+.0f, bones %s/%s" % [move.id if move != null else &"idle", pitch,
+								SkinnedView._dominant_bone(data, mi.skin, [a]), SkinnedView._dominant_bone(data, mi.skin, [b])]
+		assert_gt(edges_seen, 1000, "the poses were measured (%d edges in view)" % edges_seen)
+		assert_lte(worst, stretch_bar, "%s: no edge in view grows more than the ratchet's %.0f cm (%.1f cm, %s)" % [row.name, stretch_bar * 100.0, worst * 100.0, worst_label])
+		_note("A7", worst <= VISIBLE_STRETCH_M, "%s visible stretch (slice gate contingency 4): %d edges in view over the 1 m poses, the longest growth %.1f cm (%s); bar %.0f cm, ratchet %.0f cm (margin %.1f cm)" % [
+				row.name, edges_seen, worst * 100.0, worst_label, VISIBLE_STRETCH_M * 100.0, stretch_bar * 100.0, (stretch_bar - worst) * 100.0])
 
 
 # --- A8: ragdoll ---------------------------------------------------------------------------------------
@@ -826,39 +866,42 @@ func test_a9_the_art_frames_like_its_proxies_at_the_one_metre_poses_and_in_the_p
 	# (the hero). The plan's bars: at most 3% of the 48x27 cells differ, the lens share within 4 points, the player's art never 2 cm
 	# or more nearer the lens than its proxies, the guard's forearms and hands 0.3 m from the lens. The Punk's lens share is held
 	# at the bar (the binding one, M4-slice-gate.md) and its cells at a ratchet; the hero is held to ratchets on all three.
-	var punk := _arts()[0]
-	var rig := _rig(punk)
-	rig.global_position = Vector3(0.0, 0.0, -1.0)
-	rig.rotation.y = PI
-	var worst_differ := 0.0
-	var worst_share := 0.0
-	var poses := 0
-	var moves: Array[MoveData] = [null]
-	for id: String in PUNK_MOVES:
-		moves.append(_move_file(id))
-	for pitch: float in PUNK_VIEW_PITCHES:
-		var cam := _view(pitch)
-		for move: MoveData in moves:
-			_pose(rig, &"idle", 0.3)
-			if move != null:
-				rig.play_move(move)
-				for i: int in move.startup + 1:
-					rig.advance(FRAME)
-			var cmp := SkinnedView.compare_with_proxies(rig, cam)
-			var label := "punk %s pitch %+.0f" % [move.id if move != null else &"idle", pitch]
-			var share_bar: float = FRAMING_RATCHET_PUNK_SHARE.get("%s pitch %+.0f" % [move.id if move != null else &"idle", pitch], FRAMING_SHARE)
-			worst_differ = maxf(worst_differ, cmp.differ_share)
-			worst_share = maxf(worst_share, absf(cmp.art_share - cmp.proxy_share))
-			poses += 1
-			assert_gt(cmp.art_share, 0.03, "%s: the art fills the view at 1 m" % label)
-			assert_lte(absf(cmp.art_share - cmp.proxy_share), share_bar, "%s: the lens share is within %.1f points of the proxies'" % [label, share_bar * 100.0])
-			if FRAMING_RATCHET_PUNK_SHARE.has("%s pitch %+.0f" % [move.id if move != null else &"idle", pitch]):
-				assert_gt(cmp.art_share, STRIKE_ART_SHARE_MIN, "%s: the striking art itself keeps at least %.0f%% of the view" % [label, STRIKE_ART_SHARE_MIN * 100.0])
-			assert_lte(cmp.differ_share, FRAMING_RATCHET_PUNK_DIFFER, "%s: cells that differ stay under the ratchet (%.1f%%)" % [label, cmp.differ_share * 100.0])
-	_note("A9", worst_differ <= FRAMING_DIFFER and worst_share <= FRAMING_SHARE, "punk, %d poses at 1 m: worst cells differ %.1f%% (bar 3%%, ratchet %.1f%%, margin %.1f points), worst lens share gap %.1f points (bar 4; the jab and the cross at +8 degrees are ratcheted exactly, F-cuff)" % [
-			poses, worst_differ * 100.0, FRAMING_RATCHET_PUNK_DIFFER * 100.0, (FRAMING_RATCHET_PUNK_DIFFER - worst_differ) * 100.0,
-			worst_share * 100.0])
-	var hero := _arts()[1]
+	for row: Dictionary in _enemy_rows():
+		var rig := _rig(row)
+		rig.global_position = Vector3(0.0, 0.0, -1.0)
+		rig.rotation.y = PI
+		var worst_differ := 0.0
+		var worst_share := 0.0
+		var poses := 0
+		var moves: Array[MoveData] = [null]
+		for id: String in row.moves:
+			moves.append(_move_file(id))
+		var differ_bar := float(row.ratchets.a9_cells)
+		var strike_min := float(row.ratchets.a9_strike_art_share_min)
+		var lens_bars: Variant = row.ratchets.a9_lens_pp
+		for pitch: float in PUNK_VIEW_PITCHES:
+			var cam := _view(pitch)
+			for move: MoveData in moves:
+				_pose(rig, &"idle", 0.3)
+				if move != null:
+					rig.play_move(move)
+					for i: int in move.startup + 1:
+						rig.advance(FRAME)
+				var cmp := SkinnedView.compare_with_proxies(rig, cam)
+				var key := "%s pitch %+.0f" % [move.id if move != null else &"idle", pitch]
+				var label := "%s %s" % [row.name, key]
+				var share_bar := Roster.lens_bar(row, key)
+				worst_differ = maxf(worst_differ, cmp.differ_share)
+				worst_share = maxf(worst_share, absf(cmp.art_share - cmp.proxy_share))
+				poses += 1
+				assert_gt(cmp.art_share, 0.03, "%s: the art fills the view at 1 m" % label)
+				assert_lte(absf(cmp.art_share - cmp.proxy_share), share_bar, "%s: the lens share is within %.1f points of the proxies'" % [label, share_bar * 100.0])
+				if lens_bars is Dictionary and (lens_bars as Dictionary).has(key):
+					assert_gt(cmp.art_share, strike_min, "%s: the striking art itself keeps at least %.0f%% of the view" % [label, strike_min * 100.0])
+				assert_lte(cmp.differ_share, differ_bar, "%s: cells that differ stay under the ratchet (%.1f%%)" % [label, cmp.differ_share * 100.0])
+		_note("A9", worst_differ <= FRAMING_DIFFER and worst_share <= FRAMING_SHARE, "%s, %d poses at 1 m: worst cells differ %.1f%% (bar 3%%, ratchet %.1f%%, margin %.1f points), worst lens share gap %.1f points (bar 4; a pose with its own lens ratchet in the roster file is held to it exactly)" % [
+				row.name, poses, worst_differ * 100.0, differ_bar * 100.0, (differ_bar - worst_differ) * 100.0, worst_share * 100.0])
+	var hero := _row("player")
 	var hero_rig := _rig(hero)
 	var hero_differ := 0.0
 	var hero_share := 0.0
@@ -935,7 +978,7 @@ func test_a10_the_marks_stick_to_the_bind_pose_and_a_damage_look_swaps_textures_
 			for label: String in ["idle", "jab", "knockdown_back"]:
 				_pose(rig, &"idle", 0.2)
 				if label == "jab":
-					var jab := _move_file(PUNK_MOVES[0]) if not row.player else _move(&"jab_1", 4, 3, 10)
+					var jab := _move_file(row.moves[0]) if not row.player and not row.moves.is_empty() else _move(&"jab_1", 4, 3, 10)
 					rig.play_move(jab)
 					for i: int in jab.startup + 1:
 						rig.advance(FRAME)
@@ -1000,7 +1043,7 @@ func test_a11_the_flash_shows_for_hit_flash_frames_and_sits_on_the_skinned_surfa
 	var shown_by_frames := {}
 	for frames: int in [2, 1, 3]:
 		Tuning.data.hit_flash_frames = frames
-		var punk := (load(PUNK_SCENE) as PackedScene).instantiate() as StreetPunk
+		var punk := (load(Roster.row("punk").actor_scene) as PackedScene).instantiate() as StreetPunk
 		var stage := Node3D.new()
 		add_child_autofree(stage)
 		stage.add_child(punk)
@@ -1043,7 +1086,7 @@ func test_a11_the_flash_shows_for_hit_flash_frames_and_sits_on_the_skinned_surfa
 		_pose(rig, &"idle", 0.3)
 		var gaps := PackedStringArray()
 		var misses := PackedStringArray()
-		var ratchet: Dictionary = ANCHOR_RATCHET_PLAYER_M if row.player else ANCHOR_RATCHET_M
+		var ratchet: Dictionary = ANCHOR_RATCHET_PLAYER_M if row.player else row.ratchets.anchor_m
 		for label: String in points:
 			rig.flash_at(points[label], 1.0, 0.5, 0.5)
 			var anchor: Vector3 = rig.flash_overlay().get_shader_parameter(&"flash_point")
@@ -1095,7 +1138,7 @@ func test_a12_the_suite_count_only_rises_and_look_show_art_off_is_the_primitives
 		var late := _rig(row)
 		assert_false(late.art_meshes()[0].visible, "%s: a rig built while it is off starts with the primitives" % row.name)
 		Tuning.set_value(&"look_show_art", true)
-	_note("A12", true, "%d test functions in %d files against M3's %d; look_show_art off shows the primitives of both characters (the full run's SCRIPT/SHADER/ERROR count is the lead's read of tools/run_tests.sh)" % [count, files, SUITE_COUNT_MIN])
+	_note("A12", true, "%d test functions in %d files against M3's %d; look_show_art off shows the primitives of every roster character and the hero (the full run's SCRIPT/SHADER/ERROR count is the lead's read of tools/run_tests.sh)" % [count, files, SUITE_COUNT_MIN])
 
 
 # --- A13: assets and money ------------------------------------------------------------------------------
@@ -1235,11 +1278,11 @@ func test_the_players_art_hull_is_toon_materials_first_person_outline_and_an_ene
 	# P3-int step 1: RigPaint.outline_material() hands the rig's first_person_body to ToonMaterials.outline(first_person), so the
 	# player's art needs no PlayerCharacter._wear_first_person_hull() (deleted) and no call of ToonMaterials' private _hull(). No look
 	# change: the same two shared materials as before (M4-calls/P3-int.md C1 has the before and after of the player's hull width).
-	var hero := _rig(_arts()[1])
+	var hero := _rig(_row("player"))
 	for mi: MeshInstance3D in hero.art_meshes():
 		assert_same(mi.material_overlay, ToonMaterials.outline(true), "%s wears the first-person variant" % mi.name)
 		assert_same(mi.material_overlay, hero.paint.outline_material(), "and it is what RigPaint hands out for the player's own body")
-	var punk := _rig(_arts()[0])
+	var punk := _rig(_row("punk"))
 	for mi: MeshInstance3D in punk.art_meshes():
 		assert_same(mi.material_overlay, ToonMaterials.outline(false), "%s wears the full-width one" % mi.name)
 	assert_same(ToonMaterials.outline(), ToonMaterials.outline(false), "no argument is the full-width hull")

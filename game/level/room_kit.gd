@@ -19,6 +19,12 @@ const WARM_ART := "res://game/actors/art/punk_art.tres"
 ## the Punk's, which the throwaway rig builds: the Bruiser's and the boss's bodies are other sizes, so
 ## their first spawn would build one (26 to 31 ms with the Motion polish, about 17 ms more than M3).
 const WARM_LIBRARY_ENEMIES: Array[StringName] = [&"bruiser", &"boss"]
+## The rooms' default sky and fog (build_environment()), which a level section with no light of its own keeps
+## (LevelRoot.default_light(), M6 D12).
+const DEFAULT_SKY_TOP := Color(0.36, 0.42, 0.56)
+const DEFAULT_SKY_HORIZON := Color(0.72, 0.62, 0.55)
+const DEFAULT_FOG_COLOR := Color(0.6, 0.56, 0.55)
+const DEFAULT_FOG_DENSITY := 0.008
 
 ## The warm-up's CharacterArt (warm_art()), held for the run. SkinnedArt's cache holds an art only
 ## weakly (an Entry dies with its CharacterArt), and the throwaway rig is the only thing that
@@ -27,6 +33,8 @@ const WARM_LIBRARY_ENEMIES: Array[StringName] = [&"bruiser", &"boss"]
 ## PlayerCharacter's hero art. Not a hold on the cache: a Punk's art still drops out of it when
 ## nothing wears it.
 static var _warm_art: CharacterArt
+## The art of every enemy in EnemyCatalog, held for the run by warm_catalog_arts() (M6 D27).
+static var _catalog_arts: Array[CharacterArt] = []
 
 
 ## The player's avoidance obstacle (RVO): without it enemies walk straight through the player's
@@ -64,8 +72,8 @@ static func build_environment(room: Node3D) -> void:
 	env.background_mode = Environment.BG_SKY
 	var sky := Sky.new()
 	var sky_mat := ProceduralSkyMaterial.new()
-	sky_mat.sky_top_color = Color(0.36, 0.42, 0.56)
-	sky_mat.sky_horizon_color = Color(0.72, 0.62, 0.55)
+	sky_mat.sky_top_color = DEFAULT_SKY_TOP
+	sky_mat.sky_horizon_color = DEFAULT_SKY_HORIZON
 	sky_mat.ground_horizon_color = Color(0.4, 0.37, 0.38)
 	sky_mat.ground_bottom_color = Color(0.2, 0.2, 0.22)
 	sky.sky_material = sky_mat
@@ -74,8 +82,9 @@ static func build_environment(room: Node3D) -> void:
 	env.ambient_light_energy = 0.7
 	env.tonemap_mode = LookPost.tonemap_mode(Tuning.data.look_tonemap)
 	env.fog_enabled = true
-	env.fog_light_color = Color(0.6, 0.56, 0.55)
-	env.fog_density = 0.008
+	env.fog_light_color = DEFAULT_FOG_COLOR
+	env.fog_density = DEFAULT_FOG_DENSITY
+	env.fog_sky_affect = Tuning.data.section_fog_sky_affect
 	var world_env := WorldEnvironment.new()
 	world_env.name = "WorldEnvironment"
 	world_env.environment = env
@@ -97,11 +106,14 @@ static func apply_sun(sun: DirectionalLight3D) -> void:
 	sun.shadow_blur = Tuning.data.look_sun_shadow_blur
 
 
-## A solid box centred at `pos` (world layer, no mask), with a mesh when `material` is given,
-## added to `parent`. Parent it under the room's geometry node: that node is what the navmesh
-## bakes from. `overlay` goes on the mesh's `material_overlay` (a prop's hull).
+## A solid box centred at `pos` (world layer, no mask), with a mesh when `material` is given (or
+## `art` is a kit kind), added to `parent`. Parent it under the room's geometry node: that node is
+## what the navmesh bakes from. `overlay` goes on the mesh's `material_overlay` (a prop's hull).
+## `art` (Milestone 6, KIT; D9): the KitMesh kind drawn instead of the plain box, on the trim
+## material, over the same collider. `&""` and `&"box"` are M5's look, and so is every kind while
+## Tuning's `kit_draw_graybox` is on.
 static func add_box(parent: Node, pos: Vector3, size: Vector3, material: Material = null,
-		overlay: Material = null) -> StaticBody3D:
+		overlay: Material = null, art: StringName = &"") -> StaticBody3D:
 	var body := StaticBody3D.new()
 	body.position = pos
 	body.collision_layer = CombatTypes.bit(CombatTypes.LAYER_WORLD)
@@ -111,23 +123,101 @@ static func add_box(parent: Node, pos: Vector3, size: Vector3, material: Materia
 	box.size = size
 	shape.shape = box
 	body.add_child(shape)
-	if material:
-		body.add_child(box_mesh(size, material, overlay))
+	if material or kit_art(art):
+		body.add_child(box_mesh(size, material, overlay, art))
 	parent.add_child(body)
 	return body
 
 
+## The meta key under which a box of a code-built room keeps what it does not draw: {MeshClip.key(axis, side): Array[Rect2]}, world
+## space, in the plane's (u, v) coordinates (tests/m6_coplanar_scan.gd reads it).
+const CLIPPED_META := &"clipped_rects"
+
+
+## Makes no two drawn faces of the solid boxes under `geometry` (the ones `add_box` made) share a plane (Milestone 6 playtest
+## verification, VFIX-WORLD; the level's blocks do it with `yields_to`, a room builds its boxes in loops, so it is decided here,
+## once the room's boxes are all in): where two boxes' faces look the same way in one plane, the smaller box (then the later
+## one) does not draw its face over the overlap (MeshClip), so there is only the other's, with no fight and no step. The colliders
+## and the navmesh never change. A box with no kit mesh (the graybox switch) is left as it is.
+static func resolve_coplanar(geometry: Node) -> void:
+	var boxes: Array[Dictionary] = []
+	for child in geometry.get_children():
+		var body := child as StaticBody3D
+		if body == null or body.collision_layer != CombatTypes.bit(CombatTypes.LAYER_WORLD):
+			continue
+		var shape := body.get_child(0) as CollisionShape3D if body.get_child_count() > 0 else null
+		var mesh := body.get_child(1) as MeshInstance3D if body.get_child_count() > 1 else null
+		if shape == null or mesh == null or not (shape.shape is BoxShape3D) or not (mesh.mesh is ArrayMesh):
+			continue
+		var size := (shape.shape as BoxShape3D).size
+		boxes.append({body = body, mesh = mesh, size = size, box = AABB(body.position - size * 0.5, size), clips = {}})
+	var coplanar: float = Tuning.data.kit_coplanar_m
+	for i in boxes.size():
+		for j in range(i + 1, boxes.size()):
+			var found := MeshClip.overlaps(boxes[i].box, boxes[j].box, coplanar)
+			if found.is_empty():
+				continue
+			var i_wins := _wins(boxes[i], boxes[j])
+			var loser: Dictionary = boxes[j] if i_wins else boxes[i]
+			var winner: Dictionary = boxes[i] if i_wins else boxes[j]
+			var overlaps := MeshClip.overlaps(loser.box, winner.box, coplanar)
+			for face_key: String in overlaps:
+				var rects: Array = (loser.clips as Dictionary).get(face_key, [])
+				rects.append(overlaps[face_key])
+				(loser.clips as Dictionary)[face_key] = rects
+	for entry in boxes:
+		var clips: Dictionary = entry.clips
+		if clips.is_empty():
+			continue
+		var local := {}
+		var world := {}
+		var body: StaticBody3D = entry.body
+		for face_key: String in clips:
+			var axis := int(face_key.substr(0, 1))
+			var u := (axis + 1) % 3
+			var v := (axis + 2) % 3
+			var shifts: Array[Rect2] = []
+			var shifted: Array[Rect2] = []
+			for rect: Rect2 in clips[face_key]:
+				shifted.append(rect)
+				shifts.append(Rect2(rect.position - Vector2(body.position[u], body.position[v]), rect.size))
+			world[face_key] = shifted
+			local[face_key] = shifts
+		var mesh: MeshInstance3D = entry.mesh
+		mesh.mesh = MeshClip.clip_box(mesh.mesh, entry.size, local, Tuning.data.kit_clip_standoff_m, coplanar)
+		body.set_meta(CLIPPED_META, world)
+
+
+## Whether box `a` of resolve_coplanar wins a shared plane against `b`: the bigger one, then the earlier.
+static func _wins(a: Dictionary, b: Dictionary) -> bool:
+	var volume_a: float = (a.box as AABB).get_volume()
+	var volume_b: float = (b.box as AABB).get_volume()
+	return volume_a >= volume_b
+
+
 ## A box that is only drawn (paint, the far skyline): no collision, and the navmesh ignores it.
 static func add_visual_box(parent: Node, pos: Vector3, size: Vector3, material: Material,
-		overlay: Material = null) -> MeshInstance3D:
-	var mesh := box_mesh(size, material, overlay)
+		overlay: Material = null, art: StringName = &"") -> MeshInstance3D:
+	var mesh := box_mesh(size, material, overlay, art)
 	mesh.position = pos
 	parent.add_child(mesh)
 	return mesh
 
 
-static func box_mesh(size: Vector3, material: Material, overlay: Material = null) -> MeshInstance3D:
+## Whether `art` names a kit module that is drawn now: a KitMesh kind, with the graybox switch off.
+static func kit_art(art: StringName) -> bool:
+	return art != &"" and art != &"box" and KitMesh.KINDS.has(art) and not Tuning.data.kit_draw_graybox
+
+
+## A box mesh of `size` in `material`; with a kit `art` kind (see add_box) the module's mesh on the
+## shared trim material instead, `material` unused.
+static func box_mesh(size: Vector3, material: Material, overlay: Material = null,
+		art: StringName = &"") -> MeshInstance3D:
 	var mesh := MeshInstance3D.new()
+	if kit_art(art):
+		mesh.mesh = KitMesh.build(art, size)
+		mesh.material_overlay = overlay
+		return mesh
 	var box := BoxMesh.new()
 	box.size = size
 	box.material = material
@@ -203,6 +293,7 @@ static func warm_up_art(room: Node3D) -> void:
 	if DisplayServer.get_name() == "headless":
 		return
 	warm_up_libraries()
+	warm_catalog_arts()
 	var rig := build_warm_rig(room)
 	if rig == null:
 		return
@@ -218,6 +309,46 @@ static func warm_art() -> CharacterArt:
 	if _warm_art == null and ResourceLoader.exists(WARM_ART):
 		_warm_art = load(WARM_ART) as CharacterArt
 	return _warm_art
+
+
+## The CharacterArt of every enemy scene in EnemyCatalog.available(), read from the scene's root `art` (a scene with no art, the
+## primitives, adds none), once each. The catalog is the one list of what can spawn, so a new character's art is warmed by adding
+## its scene there and nothing else (M6 D27).
+static func catalog_arts() -> Array[CharacterArt]:
+	var out: Array[CharacterArt] = []
+	for entry: Dictionary in EnemyCatalog.available():
+		var packed := load(entry.scene) as PackedScene
+		if packed == null:
+			continue
+		var state := packed.get_state()
+		for i: int in state.get_node_property_count(0):
+			if state.get_node_property_name(0, i) != &"art":
+				continue
+			var art := state.get_node_property_value(0, i) as CharacterArt
+			if art != null and not out.has(art):
+				out.append(art)
+	return out
+
+
+## Read and hold the art of every catalog enemy (catalog_arts()): SkinnedArt's entry for each is made now, off the spawn frame, and
+## held by this class's reference to the CharacterArt (the cache holds an art only weakly, see _warm_art). A cold GLB read costs
+## 17 to 19 ms against 1 to 4 warm (fix-final-punk-spawn-cache C3), which is a dropped frame at the first Kicker or Bruiser of a
+## run. Callable headless: it reads and draws nothing. Returns the arts held.
+static func warm_catalog_arts() -> Array[CharacterArt]:
+	_catalog_arts = catalog_arts()
+	for art: CharacterArt in _catalog_arts:
+		SkinnedArt.entry_of(art)
+	return _catalog_arts
+
+
+## The arts warm_catalog_arts() holds (empty before its first call).
+static func held_catalog_arts() -> Array[CharacterArt]:
+	return _catalog_arts
+
+
+## Let go of the catalog's arts, as release_warm_art() does the Punk's. For tests that count the cache's reads.
+static func release_catalog_arts() -> void:
+	_catalog_arts = []
 
 
 ## Whether the warm-up's art is loaded and held (warm_art() has run). For the look act that checks

@@ -114,8 +114,13 @@ static func make_enemy(scene: PackedScene, id: StringName, serials: Dictionary) 
 	var number := int(serials.get(label, 0)) + 1
 	serials[label] = number
 	enemy.name = "%s%d" % [label, number]
-	# The boss is one of a kind: its HUD bar reads "BOSS", not "BOSS 1".
-	enemy.display_name = label if enemy.archetype == &"boss" else "%s %d" % [label, number]
+	# The boss is one of a kind: its HUD bar reads its own name (the scene's display_name, "Ox Pellerin"), or "BOSS" when the
+	# scene names none, never "BOSS 1".
+	if enemy.archetype == &"boss":
+		if enemy.display_name == "" or enemy.display_name == "Actor":
+			enemy.display_name = label
+	else:
+		enemy.display_name = "%s %d" % [label, number]
 	EnemyCatalog.apply_variant(enemy, id)
 	return enemy
 

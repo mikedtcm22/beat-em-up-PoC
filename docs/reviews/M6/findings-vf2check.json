@@ -1,0 +1,290 @@
+{
+ "round": "vf2check",
+ "base": "dc3ba85",
+ "run": "wf_5f19da37-ce1",
+ "reviews": {
+  "feelworld": {
+   "summary": "I checked the vfinal fix pass at dc3ba85 for feel and world. Both claims hold. The hurt vignette's depth is now bounded. The rear Bruiser smash at hurt f2186-2188 tops out at 0.316 of the screen height, against 0.599 at 3e7084e. The three rear pipe hits (f3682/3714/3748) peak at 0.227, 0.236 and 0.229, against 0.36, 0.43 and 0.47 before. In the new rear run the smashes give 0.20, 0.30 and 0.30 and the pipes 0.24, 0.21 and 0.25, so the depth does not climb from hit to hit. The front smash is pixel-identical (0.311). A probe of 400 random hits never pushed the depth past 0.320 or any stored edge past 0.973. Putting the old ratchet back makes 6 of the 49 feel tests fail; the head passes 49/49.\n\nThe world changes match the 82bab12 look bar wherever trim now wins: the warehouse jamb (f201), the a2 lintel (f97), the skyline_up pilaster edge and door reveal (f305), and the catwalk rail top (f763). The skyline reveal is now a steady dark face; 82bab12 showed dark there in 29 of 39 held frames. Held-pose flicker matches 3e7084e at all 20 tour poses, and ground_flicker on the drift recording gives identical numbers. The rooms are pixel-identical. No Dressing piece went missing or doubled, and no clipped face's shading changed.\n\nThere is one new cosmetic low. The bottom-teeth floor turns a light rear hit's spikes into a regular row of seven equal teeth, where every other edge, and 3e7084e's bottom edge, draws jagged teeth of varied length.",
+   "checked": [
+    "Code diff 3e7084e..dc3ba85 of game/ui/hurt_overlay.gd, tuning_data.gd (Hit feel > Hurt), tuning/default.json",
+    "Rear Bruiser smash hurt f2186-2194: tallest bottom tooth (cream run from the edge) after vs 3e7084e",
+    "Third rear pipe hit f3748, and f3682/f3714, after vs 3e7084e",
+    "Front smash f1403 top teeth after vs 3e7084e (unchanged)",
+    "Rear run act f6456/f6717/f6978/f7227/f7259/f7293: teeth per hit",
+    "Rear jab f618 vs front jab f99: share of the 15% band changed by more than 20 grey vs frame hit-2 at +2/+4/+8; also the look-down rear jab f7646",
+    "Light rear hits' teeth against the HP panel (f618, f1246, f2844, rear-run frames)",
+    "Side and front hits' bottom-band darkening (left smash f1664, front smash f1403) after vs 3e7084e",
+    "Looking down: rear, left and front hits (f7649/f7822/f7995) light the right edges",
+    "Blocked hits f4768/f5175: no strokes, faint vignette; no red anywhere",
+    "passive_six: per-edge teeth at all 15 real hits, after vs 3e7084e",
+    "Burst acts f5679-f6049 per-edge teeth after vs 3e7084e",
+    "GUT probe: tooth-length distribution for 6/10/15/20 dmg rear vs front, grazing hits at 92-135 deg, even share on front, side and rear bearings, 400 random hits bounding depth and edges, heavy front then light rear",
+    "Reintroduced the ratchet in a scratch edit: the new depth tests fail (6 failing), then restored; head feel file 49/49",
+    "solve_insets.gd trim ranking (TRIM_NAMES), the cross-section swap; scanned every scene: no Jamb/Lintel/Post still yields to a plain block",
+    "Tour per-pose diff (pose+30) against 3e7084e and 82bab12 at all 20 poses; crops with x4 diff at f45, f97, f201, f305 (reveal and pilaster), f659, f763",
+    "Held-pose flicker (permille >20 grey frame to frame, pose+8..+46) at all 20 tour poses after vs 3e7084e",
+    "tools/ground_flicker.py on drift after vs 3e7084e",
+    "Drift full-frame diff every 150 frames against 3e7084e (only door faces changed, now matching 82bab12)",
+    "Rooms: per-pose diff and flicker at 10 poses against 3e7084e",
+    "MeshClip BOARD_EDGE/BOARD_BACK classification and _outside_edge, tangent carry, uncarried() check, MIN_AREA_M2 fan drop",
+    "KitPiece.ensure_mesh and InsetBlock._ensure_built; no KitPiece in street/roofs/boss_roof stores a mesh (63+17+3 pieces), so lazy build cannot keep a stale mesh",
+    "Wall feet at the jamb feet (f201, f45) at 2x: no hole, open end or line",
+    "tests/test_m6_feedback_ground.gd: 36/36 (the two dangling-yield warnings come from its synthetic cases)",
+    "Stale references to hurt_overlay_bottom_stroke_gain: only in ARCHITECTURE.md history entries"
+   ],
+   "passes": [
+    "vfinal-world-01/code-01 fixed: the rear smash's tallest tooth is 0.316 of the height at hurt f2186-2188 (3e7084e: 0.579-0.599); front smash f1403 unchanged at 0.311 (smash4.png)",
+    "Rear pipe run bounded: f3682/f3714/f3748 at 0.227/0.236/0.229 (3e7084e 0.360/0.431/0.470)",
+    "Rear run act holds the depth: smashes 0.20/0.30/0.30, pipes 0.24/0.21/0.25, no climb (run4.png)",
+    "Depth bound in code and tests: probe of 400 random hits gives max depth 0.320 = depth_max, max stored edge 0.973; with the ratchet put back, 6 feel tests fail (3 depth-bound tests among them); head 49/49",
+    "Rear jab as plain as front jab (share of the 15% band changed by >20 grey vs hit-2): rear f618 65/55/49 % at +2/+4/+8, front f99 48/65/64 %, 3e7084e rear 68/57/48; look-down rear jab f7646 62/56/52",
+    "Light rear teeth clear the HP panel: tips at 0.187-0.200 of the height (panel top about 0.172) at f618, f1246, f2844, f6456",
+    "Even share: unit probe at 20 dmg gives front L/R/T/B 0.30 each, left 1.00/0.30/0.30/0.30; recording: left smash bottom band dims 12 grey (3e7084e 25), front smash bottom 11 (3e7084e 18)",
+    "Looking down lights the attacker's edge: rear to bottom, left to left, front to top (misc6.png); blocked hits draw no strokes and a faint vignette; no red",
+    "passive_six: per-edge teeth identical to 3e7084e at all 15 real hits (one detector blip on a Punk's shoe at f782, checked visually); burst acts unchanged",
+    "vfinal-world-03 fixed: warehouse jamb f201, a2 lintel f97, skyline_up pilaster edge f305 and catwalk rail top f763 match 82bab12 (g1.png, g2.png, p305.png); skyline_up reveal is a steady dark 47 where 82bab12 showed dark in 29 of 39 held frames",
+    "Terrace rail tops f659: plain olive reads no worse than 82bab12's occasional dark dash (a z-fight artefact)",
+    "Plinth ledges (vfinal-code-04): ground test 36/36 (orphans 0); no hole, open end or line at the jamb feet (f201, f45 at 2x) or at any tour pose (no diff outside the trim regions)",
+    "KitPieces: no missing or doubled piece; tour diff against 3e7084e is 0.00-0.02 permille at every pose outside the trim regions; rooms 0.00 at all 10 poses; no shading change from the carried tangents",
+    "Flicker: held tour poses equal 3e7084e within 0.01 permille at all 20 poses; ground_flicker on drift identical to 3e7084e; rooms flicker identical"
+   ],
+   "also_noticed": [
+    "Tour f45 (street_start) also changed against 3e7084e, though VF2-WORLD.md says no other pose moved. The StartWall doorway now shows a steady grey door face (grey 71) where 3e7084e had brick (90) and 82bab12 flickered between 71 and 91. This follows the trim ranking and is the more usual of 82bab12's two looks, so it is not a defect.",
+    "The new floor makes faint grazing bottom teeth full length. In the probe, a Punk jab at 110 degrees (side, slightly behind) draws bottom teeth 0.20 of the height tall at 0.30 alpha; at 3e7084e they were about 0.05-0.12 tall. None of the recorded acts shows such a hit.",
+    "With the floor, a fading bottom tooth keeps its 0.20 length while its alpha fades, so it no longer shrinks as it fades.",
+    "Light rear teeth clear the HP panel's top by only about 15-25 px at their tips (1600x900). Clear, but only just."
+   ],
+   "sheets": [
+    "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m6-review-vf2check-feelworld/captures/review/rear_jab_comb.png",
+    "/private/tmp/claude-501/-Users-arachne-repos-beat-em-up-PoC/21dfb0ac-e45b-4ac0-bc13-2a0a12b0eada/scratchpad/fw/smash4.png",
+    "/private/tmp/claude-501/-Users-arachne-repos-beat-em-up-PoC/21dfb0ac-e45b-4ac0-bc13-2a0a12b0eada/scratchpad/fw/run4.png",
+    "/private/tmp/claude-501/-Users-arachne-repos-beat-em-up-PoC/21dfb0ac-e45b-4ac0-bc13-2a0a12b0eada/scratchpad/fw/misc6.png",
+    "/private/tmp/claude-501/-Users-arachne-repos-beat-em-up-PoC/21dfb0ac-e45b-4ac0-bc13-2a0a12b0eada/scratchpad/fw/g1.png",
+    "/private/tmp/claude-501/-Users-arachne-repos-beat-em-up-PoC/21dfb0ac-e45b-4ac0-bc13-2a0a12b0eada/scratchpad/fw/g2.png",
+    "/private/tmp/claude-501/-Users-arachne-repos-beat-em-up-PoC/21dfb0ac-e45b-4ac0-bc13-2a0a12b0eada/scratchpad/fw/p305.png",
+    "/private/tmp/claude-501/-Users-arachne-repos-beat-em-up-PoC/21dfb0ac-e45b-4ac0-bc13-2a0a12b0eada/scratchpad/fw/g4.png"
+   ]
+  },
+  "chars": {
+   "summary": "I checked the chars lens of the vf2check round on dc3ba85, judging from the lead's m6-vf2-final recordings against m6-verify-final (3e7084e), plus my own bloodied probe of the Kicker and Ox at 1 m (captures/review/zp). The probe is an uncommitted act file in my worktree. A copy is at /Users/arachne/repos/beat-em-up-PoC/.worktrees/m6-review-vf2check-chars/captures/review/zprobe_acts.gd.txt. The original file has been removed.\n\nVerdicts:\n- vfinal-chars-01 (the Kicker's pale strip under the brim) is FIXED. The crescent is now the brown shade at 1 m, at 1.6 m turned 0, 90 and 150 degrees, and at about 2.5 m in the lineup. The brim stays thick. At 20% health the new brown band bleeds red and bruises purple like skin, and matches 3e7084e's bloodied look.\n- vfinal-chars-02 (Ox's mouth-corner hook) is FIXED. The hook is gone at 1 m and 1.6 m. At 2.5 and 5 m Ox matches 3e7084e. Bloodied, the jaw and face still bruise and bleed. I checked the new corner-box test: with 3e7084e's boss_detail.png put back it fails (corner ink 0.0738 and 0.1336 against a 0.02 limit). With the shipped mask it passes at 0.0000.\n\nRegressions: none.\n- Thug: pixel-identical to m6-feedback-verify.\n- Bruiser: pixel-identical to 3e7084e.\n- Punk: the damage act is pixel-identical to 3e7084e. Against the played build it differs only by the known vest change and the ground.\n- Lineup: the head and body crops are identical. On the full frames, every changed pixel is on the Kicker.\n- The Kicker's re-decimation rebaked his whole detail atlas. His body at 1 m and his back at yaw 150 show no visible change.\n\nTwo low items:\n1. The cap-black bar under the brim, which the fixer kept, still reads as a separate slate bar with a sawtooth lower edge. It splits the brown shade, so the face reads brim, thin brown, bar, brown with eyes, mask. The fixer chose this on purpose. Recommend leaving it.\n2. The ASSETS row for Ox's mask still says \"seven zones\". The bake now has eight.",
+   "checked": [
+    "Kicker at 1 m (r_kicker f49 face, f209 body view) before/after head crops",
+    "Kicker at 1.6 m yaw 0, 90, 150 (dk f79, f139, f199) before/after",
+    "Kicker at about 2.5 m in the lineup (c7 f49): diff overlay and a zoomed crop, before and after",
+    "Kicker brow strip full-resolution zoom: before, after, clean probe, 20% probe",
+    "Kicker bloodied at 20% health at 1 m: my probe zp f119 against the vfinal reviewer's pb3 f119 (3e7084e), same framing",
+    "Kicker temple streaks at 1 m (front) and at yaw 90",
+    "Kicker body at 1 m: re-decimation and atlas rebake (kicker_detail.png changed all over, chain report border_vertices 640->635)",
+    "Ox at 1 m (r_boss f49): mouth-corner zoom at full resolution, before/after",
+    "Ox at 1.6 m (dox f89), 2.5 m (f159), 5 m (f229) before/after",
+    "Ox bloodied at 20% at 1 m (zp f249) against clean (zp f189)",
+    "boss_detail.png diff vs 3e7084e: 941 texels changed, R (ink) channel only; boss.glb not in the diff",
+    "Thug r_thug vs m6-feedback-verify: all stills and crops max diff <=3",
+    "Bruiser r_bruiser vs 3e7084e: 0 changed pixels",
+    "Punk: damage act vs 3e7084e 0 changed pixels; r_punk vs m6-played: vest and ground only (viewed)",
+    "git diff 3e7084e..dc3ba85 assets/export: only kicker.glb, kicker_rest.glb, kicker_detail.png, boss_detail.png",
+    "Ran test_m6_feedback_detail_kicker.gd (10/10), test_m6_feedback_detail_boss.gd (12/12), test_m6_feedback_detail.gd (19/19): 0 SCRIPT/SHADER/ERROR lines",
+    "Swapped in 3e7084e's boss_detail.png: the corner test fails at 0.1336 (restored afterwards, worktree clean)",
+    "Kicker palette slot 24 kicker_shade has skin:true, marks:true",
+    "Ox face-ink floor assertion moved to the zone box (z from 1.58, 0.0332); the whole box is 0.0166 now; documented in V2-3",
+    "ASSETS rows for the Kicker GLBs, the Kicker mask, the Bruiser rest GLB, the veteran atlas and Ox's mask"
+   ],
+   "passes": [
+    "vfinal-chars-01 FIXED: at 1 m, 3e7084e shows a pale crescent under the brim; dc3ba85 shows the brown shade there (kick_brow_zoom.png, top row). Same at dk yaw 0 and 90 (kick_1m.png, bottom row).",
+    "Brim stays thick at 1 m and 1.6 m, and at 2.5 m it reads as cap then shade then mask (lineup_cmp.png).",
+    "Bloodied Kicker at 20% health, 1 m: the brow band takes red blood and purple bruise like the skin around it, the same as 3e7084e (blood_kick.png; kick_brow_zoom.png, bottom right).",
+    "vfinal-chars-02 FIXED: the thick hooked stroke at Ox's mouth's left corner at 1 m is gone (ox_mouth.png, top row) and gone at 1.6 m (ox_cmp.png). At 2.5 and 5 m Ox matches 3e7084e (dox diffs at most 0.75% of the head crop's pixels, viewed).",
+    "Ox's mouth still reads at 1 m. The mauve lip shape carries it, with a broken hairline inside. Fainter than before, but clearly a mouth.",
+    "Bloodied Ox at 20% health, 1 m: the jaw zone bruises purple and bleeds, and the face, brows and gloves bleed (ox_blood_pair.png).",
+    "The corner-box test bites: it fails at 0.1336 on 3e7084e's mask and passes at 0.0000 on the shipped mask.",
+    "Kicker, boss and closure test files pass (10, 12, 19), with 0 SCRIPT/SHADER/ERROR lines.",
+    "Thug identical to m6-feedback-verify (max pixel diff 3); Bruiser identical to 3e7084e (0); Punk damage act identical to 3e7084e (0).",
+    "Lineup: on the full frames, every changed pixel is on the Kicker (magenta overlay in lineup_cmp.png); the Punk, Thug and Bruiser are untouched.",
+    "Kicker's body at 1 m and his back at yaw 150 are unchanged to the eye after the re-decimation (kick_body.png)."
+   ],
+   "also_noticed": [
+    "Kicker at 1 m: a few small black ink dashes from the rebaked detail mask sit in the new brown brow strip, at its left. They read as shadow scribbles, not a defect.",
+    "Kicker temple streaks (left on purpose): pale slivers at both edges of the face beside the mask's top at 1 m, and a pale patch on the side of the face at yaw 90. Both read as the side of the face; already in 3e7084e.",
+    "A dark curved stroke on Ox's neck under the chin at 1 m is in both 3e7084e and dc3ba85; it is not from this pass.",
+    "The Kicker detail bake's mask zone now has an ink share of 0.000229 (it was 0). This is a few texels and not visible.",
+    "The `jaw` zone takes all ink off Ox's skin from z 1.45 to 1.58. The silhouette outline still draws the jaw line at 2.5 m, so nothing is lost there.",
+    "A Godot process (pid 90050) was running at the end. It is not from this worktree; all my runs had exited."
+   ],
+   "sheets": [
+    "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m6-review-vf2check-chars/captures/review/kick_1m.png",
+    "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m6-review-vf2check-chars/captures/review/kick_brow_zoom.png",
+    "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m6-review-vf2check-chars/captures/review/blood_kick.png",
+    "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m6-review-vf2check-chars/captures/review/ox_cmp.png",
+    "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m6-review-vf2check-chars/captures/review/ox_mouth.png",
+    "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m6-review-vf2check-chars/captures/review/ox_blood_pair.png",
+    "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m6-review-vf2check-chars/captures/review/lineup_cmp.png",
+    "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m6-review-vf2check-chars/captures/review/punk_cmp.png"
+   ]
+  },
+  "code": {
+   "summary": "The vfinal fix pass holds on dc3ba85. I found no medium or high defect. vfinal-code-01, -03, -04, -05, -06 and -07 are closed, and the checks I ran against them pass. vfinal-code-02 is closed for its two named repro files but still passes a const whose name only appears inside a string. There are three latent or ledger lows: a clip edge case no scene hits, a trap in apply_yields.py, and stale test counts in CLAUDE.md and README. I rebuilt the old logic, old assets and old cut rules in scratch copies; every new guard fails when the old behaviour is put back. Nothing is committed and the worktree is clean.",
+   "checked": [
+    "vfinal-code-01 hurt_overlay.gd: stored edges stay at 1 or below, _alive_share is clamped to 1, the depth is clamped to depth_max, and the bottom extra is the struck share only ((weights[BOTTOM] - even_share) * strength * (gain - 1)). It is not added for blocked hits and no longer enters the depth.",
+    "Mutation in a scratch copy: I put the ink gain back into _edges and removed both clamps. test_m6_feedback_feel.gd then fails dozens of assertions, including the stored-edge bound and the depth reaching 0.48, 0.72 and so on. The restored file passes 49/49.",
+    "Every reader of edge_strength, drawn_strength and stroke_lengths_px (grep over game, tests, tools, docs): only HurtOverlay._draw and the feel test read them, so nothing else consumes a value above 1.",
+    "hurt_overlay_bottom_stroke_floor is in the Hit feel group, Hurt subgroup (tuning_data.gd:289). Re-running tools/gen_default_preset.gd leaves tuning/default.json byte-identical to the committed file. hurt_overlay_bottom_stroke_gain is gone from every script, test and preset (it remains only in historical calls and ARCHITECTURE text).",
+    "vfinal-code-04 MeshClip BOARD_EDGE: with the edge cut disabled, the orphan test and the whole-face ledge test both fail. A probe over all 198 edge triangles cut in the level found none whose cut sits on a rectangle boundary except at box corners, so no over-cut and no hole there.",
+    "vfinal-code-04 latent over-cut: a rectangle that starts exactly at the plinth top (y = -1.4 on KitMesh wall 6x4x0.6) deletes the plinth's top ledge although the plinth front below it stays. No scene triggers it (see findings).",
+    "vfinal-code-05 InsetBlock.unresolved_yields() and the push_warning: all 97 level yields resolve, a synthetic dangling path is reported, and a path that climbs out of the section is not. The level loads with no yields_to warning. The warning itself is not asserted by a test, only unresolved_yields().",
+    "vfinal-code-06 steps(): the fence-in-front-of-a-wall case is now reported (synthetic test passes), a post inside its bar is exempt, and ACCEPTED_STEPS lists only ShutterStair3 against Lintel3. The level scan reports 0 steps.",
+    "vfinal-code-07: MIN_AREA_M2 is documented as a numerical epsilon, the scan reads Tuning.kit_coplanar_m (the test moves with it), and zero-area triangles are dropped (test_the_clip_leaves_no_zero_area_triangle passes).",
+    "vfinal-code-02 closure test: I ran extra cases through _roll_out_file_problem. An unused const beside an empty test, a path in a trailing comment, a path in a helper no test calls, and a one-line empty test all fail as intended. A const read by a test, a path written in a test, and a const read via a helper a test calls all pass, and a real roll-out file passes. Residual holes are in the findings.",
+    "vfinal-code-03 ASSETS rows: kicker.glb, kicker_rest.glb, kicker_detail.png, boss_detail.png, the Kicker config row, the Boss config row, the Bruiser arms-down row and the Veteran Punk atlas row all carry dated VFIX or VF2 text. The claim that boss.glb is byte-identical matches the diff. The Boss .blend row has no date (trivial).",
+    "tools/solve_insets.gd: with yields_to lines deleted from the three scenes the solver emits 97 YIELD lines, 0 unsolved, and is deterministic (two runs identical). Re-applying them with apply_yields.py leaves the committed scenes with zero diff, so the committed yields are current.",
+    "Trim ranking by block name (Jamb, Lintel, Post): it is deterministic and tested, but name-coupled. The level test checks only Jamb and Lintel names, and no test ties the committed yields to a solver run.",
+    "KitPiece.ensure_mesh(): idempotent (builds only when mesh is null, no second build, nothing leaked). I reversed the child order of street, roofs and boss_roof scenes: 0 of 55 InsetBlocks change their clipped rectangles. Sibling order no longer matters. test_a_block_clips_a_piece_that_comes_later_in_the_tree passes.",
+    "MeshClip tangents: all 2898 vertices of the clipped level meshes have |w| = 1, unit-length tangents perpendicular to the normal. Tangents are lerped at cut vertices, which is safe because every triangle's corners share w. uncarried()/_check_carried push_error on UV2/custom/bones/weights; the synthetic UV2 mesh is named, and the level raises no such error.",
+    "Colliders unchanged: test_m6_colliders.gd 3/3 pass.",
+    "Art configs: kicker/pipeline.json has the brow region (slot 24, only_from [6], z 1.665-1.71) and boss/pipeline.json has the jaw zone (slot 7, z 1.45-1.58, ink pair 0.05/0.15). run.py --asset kicker --check and --asset boss --check both say reproducible YES (hashes match the committed ones).",
+    "Kicker brow test against 3e7084e's GLB (LFS-smudged): fails with 22 skin faces in the strip and 0 shade faces. It passes on the merged GLB. Boss corner test against 3e7084e's mask: fails with ink 0.1336 in the corner boxes. On the merged mask the corners hold 0.0000 ink on 61 and 58 faces, and the nose-and-brow zone keeps 0.0332.",
+    "Rule checks: no secrets or keys in the diff, no new Tripo or Gemini spend rows, no camera reads in simulation code, no new feel numbers in scripts. Remaining literals are geometric epsilons (0.99 and 0.01 normal thresholds, the 0.01 division guard in hurt_overlay), documented as such.",
+    "Single-file test runs: test_m6_feedback_ground 36/36, test_m6_feedback_feel 49/49, test_m6_feedback_detail 19/19, test_m6_feedback_detail_boss 12/12, test_m6_colliders 3/3. I did not rerun the whole suite, as instructed, and I took no image reads."
+   ],
+   "passes": [
+    "vfinal-code-01 closed: stored edges at 1 or below, depth clamped to depth_max, _alive_share at most 1, gain on the struck share only; the 14 new assertions fail on the old logic (mutation run); tunable present in the right group; default.json regenerates identically; the removed tunable is gone from code, tests and presets.",
+    "vfinal-code-04 closed for the level: 198 edge triangles cut, none at an interior rectangle boundary; the orphan test and the whole-face ledge test fail when the edge cut is disabled.",
+    "vfinal-code-05 closed: unresolved yields are listed and warned, cross-section paths are skipped, all 97 level yields resolve.",
+    "vfinal-code-06 closed: the narrowed exemption reports a fence in front of a wall; ACCEPTED_STEPS names the single shutter pair.",
+    "vfinal-code-07 closed: epsilon documented, scan reads kit_coplanar_m, zero-area triangles dropped.",
+    "vfinal-code-03 closed: every changed binary and the four rows named by the vfinal round have dated ledger text.",
+    "Solver: deterministic and current. 97 yields and 0 unsolved from scenes with the yields_to lines deleted, identical to the committed lines.",
+    "KitPiece.ensure_mesh() is idempotent and the clip is independent of sibling order in the real scenes (0 of 55 InsetBlocks differ).",
+    "MeshClip tangents are carried with valid w signs; uncarried() and the push_error work; the colliders are unchanged.",
+    "Kicker brow and Ox jaw configs: run.py --check YES for both; both new tests fail on 3e7084e's assets and pass on the merged ones."
+   ],
+   "also_noticed": [
+    "The Boss jaw zone's min y is -0.3, so the box covers the back of the head and neck as well as the mouth. The zone only touches slot-7 skin, so any ink on the back of the neck under z 1.58 goes too. Nothing tests it and it is not visible in first person.",
+    "FACE_INK_MIN was relaxed in two Boss tests: the floor is now measured on a box from z 1.58 (0.0332) because the whole box from z 1.5 is 0.0166, under the old 0.02. The call and the twin corner test document the reason, and it is the intended effect of the jaw zone, so I do not report it as a defect.",
+    "The synthetic test that builds a dangling-yield InsetBlock logs a push_warning for '../Late' in the later-sibling test. This is test noise only: the yields_to setter rebuilds before Late is added. The real level raises no yields_to warning.",
+    "A part-covered plinth cut leaves the cut end of the board open (no end cap), the same as the front was before. VF2-WORLD records it, and it is too small to see in first person.",
+    "New code uses untyped loop variables in several places (for path in unresolved_yields(), for pair in [[a, b], [b, a]], for accepted in ACCEPTED_STEPS), against the static-typing-everywhere rule. This is cosmetic.",
+    "The Boss A-pose work-file row in ASSETS.md has no date even though boss.blend changed in this pass (trivial)."
+   ],
+   "sheets": []
+  }
+ },
+ "findings": [
+  {
+   "severity": "low",
+   "title": "The bottom-stroke floor makes a light rear hit's spikes a regular row of seven equal teeth",
+   "detail": "VF2-FEEL replaced the 1.4x bottom stroke gain with a per-tooth floor: length = maxf(natural, hurt_overlay_bottom_stroke_floor * size.y). For a Punk's 6-damage hit from behind (the most common rear blow in a crowd), every tooth's natural length (0.18 x (0.55..1.25) x 0.95 = 0.09-0.21 of the height) falls under the 0.20 floor. So all seven teeth are drawn exactly 0.20 tall: a flat picket instead of the jagged comic spikes that every other edge draws, and that the bottom drew at 3e7084e (0.12-0.24, varied). The front jab's top teeth on the same frame stay varied. The hit still reads as plainly (the band metric is unchanged), so this is cosmetic. Heavy rear hits keep their variation, because their natural lengths mostly exceed the floor.",
+   "evidence": "Probe GUT test on dc3ba85 (200 seeded hits each): rear 6 dmg, the tallest tooth at p10/p50/p90 is 0.200/0.200/0.208 and all teeth sit at the floor in 85% of hits; front 6 dmg top teeth at p10/p50/p90 0.183/0.204/0.213, varied. Recording: captures/m6-vf2-final/hurt/bot.avi f619 against captures/m6-verify-final/hurt/bot.avi f619 (rear jab bottom strip), with the front jab f100 top strip below (/Users/arachne/repos/beat-em-up-PoC/.worktrees/m6-review-vf2check-feelworld/captures/review/rear_jab_comb.png). The same flat row shows at f7649 (look-down rear jab) and f2846 (rear shove). Code: game/ui/hurt_overlay.gd _stroke_shapes(), the maxf(..., floor_px) on the length.",
+   "repro": "Play the hurt act's 'punk jab behind' (or let any Punk jab you from behind) and look at the bottom edge: seven identical triangles. Unit test: HurtOverlay at 1600x900, on_player_hit with damage 6 and direction (0,0,-1), then stroke_lengths_px(Edge.BOTTOM) returns seven equal values of 180 px.",
+   "suggested_fix": "In game/ui/hurt_overlay.gd _stroke_shapes(), keep the comb's variation while lifting it. Scale the whole bottom comb by k = maxf(1.0, floor_px / tallest_natural_length), so the tallest tooth reaches the floor and the others keep their proportions. Or floor each tooth at floor_px times its own random share (len_min + r * len_range) / (len_min + len_range), so the shortest stays near the floor and the rest spread above it. No new tunable is needed. Re-pin the 'a light jab's bottom teeth are at least the floor' test to 'the tallest bottom tooth is at least the floor'.",
+   "files": [
+    "game/ui/hurt_overlay.gd",
+    "tests/test_m6_feedback_feel.gd"
+   ],
+   "spec_change": false,
+   "id": "vf2check-feelworld-01",
+   "survives": false,
+   "votes": [],
+   "lens": "feelworld"
+  },
+  {
+   "severity": "low",
+   "title": "Kicker at 1-1.6 m: the brim's underside still reads as a separate slate bar splitting the brown shade (brim / thin brown / bar / brown with eyes / mask)",
+   "detail": "The pale crescent is gone, but the slot-23 faces at z 1.66-1.67 that the fixer kept show as a slate band. It is lighter than the cap black and has a sawtooth lower edge. Above it is a thin strip of the new brown `brow` shade, and below it is the brown eyes band. So at 1 m and 1.6 m (yaw 0) the face still has five layers rather than the concept's brim over shaded eyes. It reads as a bar, a second lower brim, not as a scribble. By 2.5 m it merges into the brim shadow. This is the fixer's documented call (VF2-ART V2-1: painting it would flatten the brim), and fix-vfinal.md only asked to judge it. Recommend leaving it unless Game-boy remarks on it.",
+   "evidence": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m6-review-vf2check-chars/captures/review/kick_brow_zoom.png (BEF r_kicker f49 from m6-verify-final against AFT f49 from m6-vf2-final, crop 160,260-660,480 of the head crop; the slate band runs across the middle of both); kick_1m.png (dk f79 yaw0 AFT).",
+   "repro": "Open captures/m6-vf2-final/r_kicker/sheets/r_kicker/crops/r_kicker_f49_head.png and look between the brim and the mask's top.",
+   "suggested_fix": "If wanted: in assets/source/characters/kicker/pipeline.json, add a region after `brow` with slot 24, only_from [23], x +-0.12, y 0.05-0.15 (behind the brim's front at y 0.168), z 1.655-1.672. That turns the bar into shade while the brim's front faces stay black. Rebuild with run.py --asset kicker, and lower BRIM_FACES_MIN in tests/test_m6_feedback_detail_kicker.gd only if the count of brim front faces holds. Otherwise leave it.",
+   "files": [
+    "assets/source/characters/kicker/pipeline.json",
+    "tests/test_m6_feedback_detail_kicker.gd"
+   ],
+   "spec_change": false,
+   "id": "vf2check-chars-01",
+   "survives": false,
+   "votes": [],
+   "lens": "chars"
+  },
+  {
+   "severity": "low",
+   "title": "ASSETS.md: Ox's detail-mask row still says 'seven zones'; the bake has eight since the `jaw` zone",
+   "detail": "VF2-ART added a `jaw` zone to Ox's detail_bake. The zones are now robe, shorts, boots, belt, trim, face_skin, jaw and gloves. The ASSETS row's description still says the texture's scribbles are in seven zones. It also still credits face_skin with the 'mouth corner, jaw' strokes, which the jaw zone now removes. The VF2-ART line appended to the row is otherwise accurate.",
+   "evidence": "ASSETS.md:472 ('the texture's scribbles in seven zones'); python count of assets/source/characters/boss/pipeline.json palette.detail_bake.zones = 8.",
+   "repro": "grep -n 'Ox Pellerin detail mask' ASSETS.md; count the zones in pipeline.json.",
+   "suggested_fix": "ASSETS.md row 'Ox Pellerin detail mask': change 'seven zones' to 'eight zones', and reword the FIX-ART-B sentence so the jaw's strokes are taken off by the `jaw` zone.",
+   "files": [
+    "ASSETS.md"
+   ],
+   "spec_change": false,
+   "id": "vf2check-chars-02",
+   "survives": false,
+   "votes": [],
+   "lens": "chars"
+  },
+  {
+   "severity": "low",
+   "title": "BOARD_EDGE cut also removes a plinth's top ledge when the rectangle starts exactly at the plinth top",
+   "detail": "MeshClip._outside_edge keeps an edge face only if its coordinate lies outside the rectangle's span plus or minus tolerance. A ledge at v equal to rect.position.y (a partner whose face starts exactly where the plinth ends and continues upward) is therefore cut across the rectangle's u span. The plinth front below it (v below the rectangle) is kept, so the plinth is left with an open top, which back-face culling shows as a hole. The same logic is correct when the rectangle ends at the plinth top. No scene in the level triggers it: a probe over all 198 cut edge triangles found none at an interior boundary. It is a latent edge case in the new rule. The orphan scan cannot see it, because it only counts triangles left inside a clipped rectangle.",
+   "evidence": "game/level/kit/mesh_clip.gd _outside_edge, the `at < rect.position.x - tolerance or at > rect.end.x + tolerance` test. Probe on KitMesh.build(&\"wall\", Vector3(6,4,0.6)), whose ledge is at y = -1.4: clip_box with Rect2(-3, -1.4, 6, 3.4) on the +z face takes the ledge from 2 triangles to 0 while the board's front stays.",
+   "repro": "In a GUT test, mesh = KitMesh.build(&\"wall\", Vector3(6,4,0.6)); cut = MeshClip.clip_box(mesh, Vector3(6,4,0.6), {MeshClip.key(2,1): [Rect2(-3.0, -1.4, 6.0, 3.4)] as Array[Rect2]}, 0.06, 0.004); count triangles with a y normal near y = -1.4 and z above 0.304: 2 before, 0 after, with the board's front face still present.",
+   "suggested_fix": "Keep an edge face whose coordinate lies on the rectangle's lower bound when the board's front face below it is kept. Cut only edge faces strictly inside the span, plus those on the upper bound or on a side the rectangle covers on both sides. Add a unit test for a rectangle that starts at the plinth top.",
+   "files": [
+    "game/level/kit/mesh_clip.gd",
+    "tests/test_m6_feedback_ground.gd"
+   ],
+   "spec_change": false,
+   "id": "vf2check-code-01",
+   "survives": false,
+   "votes": [],
+   "lens": "code"
+  },
+  {
+   "severity": "low",
+   "title": "tools/apply_yields.py breaks the section scenes when run on an empty or stripped output (it deletes the inset_blk ext_resource and cannot re-add it)",
+   "detail": "apply_yields.py removes the `inset_blk` ext_resource line when no block uses it, and it only swaps script references, it never adds the declaration back. Running it once with a solver output that has no YIELD lines, to strip the scenes the way the docstring invites, deletes that ext_resource. A second run with the real output then writes 97 `ExtResource(\"inset_blk\")` references without a declaration, and street, roofs and boss_roof all fail to parse. Stripping the yields_to lines by hand (the documented step) and re-running the solver and the apply tool works, with zero diff against the committed scenes. This is a trap in a tool, not in the shipped build.",
+   "evidence": "I ran `python3 tools/apply_yields.py empty.txt`, then the solver, then `apply_yields.py solve.txt`. Godot then fails with `Parse Error ... street.tscn:58`, `roofs.tscn:85` and `boss_roof.tscn:133`, and street.tscn holds 17 `ExtResource(\"inset_blk\")` references and 0 `id=\"inset_blk\"` declarations. The tool's code is the `used = ...` / `re.sub` ext_resource removal near the end of main().",
+   "repro": "git checkout the scenes; python3 tools/apply_yields.py <empty file>; run tools/solve_insets.tscn; python3 tools/apply_yields.py <its output>; godot --headless --import --quit and load the level.",
+   "suggested_fix": "Re-insert the ext_resource declaration when a block needs it (or never delete it), and say in the docstring that the strip step is `sed '/^yields_to = /d'`, not running the tool on empty input.",
+   "files": [
+    "tools/apply_yields.py"
+   ],
+   "spec_change": false,
+   "id": "vf2check-code-02",
+   "survives": false,
+   "votes": [],
+   "lens": "code"
+  },
+  {
+   "severity": "low",
+   "title": "Roll-out closure test still accepts a const named only inside a string or assigned to an unused variable",
+   "detail": "The two repro files of vfinal-code-02 now fail. The tightened `_roll_out_file_problem` still lets a character through if a test body merely mentions the const's name as a whole word, including inside a string literal (`assert_true(true, \"P\")`) or in `var x := P`. A helper that only another helper calls (a two-level chain) is not followed, so the check is stricter than needed there. The character is still kept out of the shared guards only by a test that mentions its config, not one that must read it.",
+   "evidence": "tests/test_m6_feedback_detail.gd `_names_any` (a regex word match on the raw body, strings not stripped). I ran `_roll_out_file_problem` on a file with `const P := \".../characters/thug/pipeline.json\"` and `func test_a(): assert_true(true, \"P\")`; it returned an empty string (pass). `func test_t(): var x := _b()` where `_b` only calls `_a`, which reads P, returned a failure (a false negative).",
+   "repro": "Load the test script, instantiate it, and call _roll_out_file_problem(\"extends GutTest\\nconst P := \\\"res://assets/source/characters/thug/pipeline.json\\\"\\nfunc test_a() -> void:\\n\\tassert_true(true, \\\"P\\\")\\n\", \"thug\").",
+   "suggested_fix": "Blank string literals before the identifier match, and follow helpers transitively. Optionally require a FileAccess, load or JSON call with the const.",
+   "files": [
+    "tests/test_m6_feedback_detail.gd"
+   ],
+   "spec_change": false,
+   "id": "vf2check-code-03",
+   "survives": false,
+   "votes": [],
+   "lens": "code"
+  },
+  {
+   "severity": "low",
+   "title": "CLAUDE.md and README still quote the old suite size (2055 tests, 422 s) while the merged head runs 2076 in 415 s",
+   "detail": "The fix pass added tests and the lead's note gives 2076/2076 in 415 s, but the commit that changed CLAUDE.md in this range set it to 2055 and 422 s. The README line says 'about 2055'. A ledger inconsistency only; it can mislead the next session's expectations for the timing and count.",
+   "evidence": "CLAUDE.md line 11 (`422 s ... 2055 tests`), README.md line 398 (`about 2055 tests ... 420 s`), docs/HANDOFF.md line 46 (2055/2055 in 422 s). The lead's recorded suite on dc3ba85 is 2076/2076 in 415 s.",
+   "repro": "grep -n '2055' CLAUDE.md README.md docs/HANDOFF.md",
+   "suggested_fix": "Update the count and time to 2076 and 415 s in CLAUDE.md, the README and HANDOFF.md.",
+   "files": [
+    "CLAUDE.md",
+    "README.md",
+    "docs/HANDOFF.md"
+   ],
+   "spec_change": false,
+   "id": "vf2check-code-04",
+   "survives": false,
+   "votes": [],
+   "lens": "code"
+  }
+ ]
+}

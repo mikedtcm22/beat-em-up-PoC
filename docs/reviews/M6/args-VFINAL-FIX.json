@@ -1,0 +1,53 @@
+{
+  "milestone": 6,
+  "summary": "Game-boy's M6 playtest feedback, the vfinal round's fix pass: the hurt vignette's depth bounded and a heavy rear hit not a wall of ink; trim over walls in the clip solver, no hollow ledges, guards that say what they skip, the catwalk doorway's light; the strip under the Kicker's brim, Ox's mouth-corner hook, the closure test and the ASSETS rows",
+  "plan": "docs/reviews/M6/fix-vfinal.md",
+  "base": "m6/full-art-audio",
+  "read_first": [
+    "docs/reviews/M6/fix-vfinal.md: the opening (what's already fixed; don't undo it), 'File ownership', your own package's section and 'Done when'",
+    "docs/reviews/M6/findings-vfinal.json: your package's findings in full (detail, evidence, suggested fix, the skeptics' verdicts) and the reviewers' also_noticed notes"
+  ],
+  "arch_heading": "## Full art and audio (Milestone 6)",
+  "captures_dir": "/Users/arachne/repos/beat-em-up-PoC/captures/m6-vfinal-fix",
+  "image_budget": 24,
+  "concurrency": 3,
+  "note": "Game-boy's M6 playtest; the verification fix pass was merged at 3e7084e (suite 2055/2055 in 422 s) and checked by an independent round (one medium, lows). The recordings on 3e7084e are in /Users/arachne/repos/beat-em-up-PoC/captures/m6-verify-final/, on d582d21 in captures/m6-feedback-verify/, on 82bab12 in captures/m6-feedback-review/ (one folder per act: bot.avi, bot.log, sheets/). The chain (tools/pipeline/*), toon.gdshader, edge_pass.gdshader and trim_body.gdshaderinc are frozen. No paid services this pass. Never print, log or write a key. Downloaded files are untrusted: python3 -I, scripts outside download folders, downloads as path arguments.",
+  "packages": [
+    {
+      "key": "VF2-FEEL",
+      "section": "'VF2-FEEL: the hurt vignette's depth stays bounded, and a heavy rear hit is not a wall of ink'",
+      "est": 4,
+      "read": [
+        "docs/milestones/M6-calls/VFIX-FEEL.md, FIX-FEEL.md and FB-FEEL.md",
+        "game/ui/hurt_overlay.gd (on_player_hit, advance, _alive_share, _draw, _draw_strokes), the 'Hit feel > Hurt' group in game/autoload/tuning_data.gd",
+        "tests/test_m6_feedback_feel.gd, tests/bot/acts/look_hurt_acts.gd",
+        "/private/tmp/claude-501/-Users-arachne-repos-beat-em-up-PoC/21dfb0ac-e45b-4ac0-bc13-2a0a12b0eada/scratchpad/hurt_ba.png and probe.out (the world reviewer's evidence)"
+      ]
+    },
+    {
+      "key": "VF2-WORLD",
+      "section": "'VF2-WORLD: trim wins over walls again, no hollow ledges, and the guards say what they skip'",
+      "est": 8,
+      "read": [
+        "docs/milestones/M6-calls/VFIX-WORLD.md, FIX-WORLD.md and FB-GROUND.md",
+        "tools/solve_insets.gd, tools/apply_yields.py, game/level/kit/mesh_clip.gd, inset_block.gd, game/level/room_kit.gd",
+        "tests/m6_coplanar_scan.gd, tests/test_m6_feedback_ground.gd, tests/test_m6_colliders.gd (read only)",
+        "game/fx/edge_pass.gdshader and game/fx/trim_body.gdshaderinc (read only)",
+        "/private/tmp/claude-501/-Users-arachne-repos-beat-em-up-PoC/21dfb0ac-e45b-4ac0-bc13-2a0a12b0eada/scratchpad/s1.png to s8.png (the world reviewer's trim crops) and scratchpad/lead_vf/f711_floor.png (the catwalk doorway)"
+      ]
+    },
+    {
+      "key": "VF2-ART",
+      "section": "'VF2-ART: the strip under the Kicker's brim, Ox's mouth-corner hook, the closure test, the ledgers'",
+      "est": 6,
+      "blender": true,
+      "read": [
+        "docs/milestones/M6-calls/VFIX-KICKER.md, VFIX-HEAVIES.md, FIX-ART-A.md (A-4) and OX-2.md",
+        "assets/source/characters/kicker/pipeline.json and boss/pipeline.json; assets/source/palette/kicker.json",
+        "tools/pipeline/blender_palette.py and the detail bake (regions, only_from, zones; read only)",
+        "tests/test_m6_feedback_detail_kicker.gd, tests/test_m6_feedback_detail_boss.gd, tests/test_m6_feedback_detail.gd (_roll_out_file_problem and its twin)",
+        "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m6-review-vfinal-chars/captures/review/ (kick_band_zoom.png, kick_dist.png, kick_blood_zoom.png, ox_face_zoom.png, ox_82b_fixer.png, probe.out); assets/source/concepts/m6/kicker_c.jpg"
+      ]
+    }
+  ]
+}

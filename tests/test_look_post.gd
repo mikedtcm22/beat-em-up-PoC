@@ -460,7 +460,10 @@ func test_the_training_room_floor_and_boxes_use_roomkits_materials() -> void:
 		if body == null:
 			continue
 		var mesh := body.get_child(1) as MeshInstance3D
-		var material: Material = (mesh.mesh as BoxMesh).material
+		if mesh == null:
+			continue
+		# A box (M5's look) or a kit module (M6 KIT, D9): the room's material either way.
+		var material: Material = (mesh.mesh as BoxMesh).material if mesh.mesh is BoxMesh else (mesh.mesh as ArrayMesh).surface_get_material(0)
 		kinds[material.get_class()] = true
 	assert_true(kinds.has("ShaderMaterial"), "the grid floor")
 	assert_gt(kinds.size(), 0)
@@ -509,6 +512,8 @@ func _mesh_colors(root: Node) -> Dictionary[String, Color]:
 			material = mesh.mesh.surface_get_material(0) if mesh.mesh.get_surface_count() > 0 else null
 			if material == null and mesh.mesh is PrimitiveMesh:
 				material = (mesh.mesh as PrimitiveMesh).material
+		if material == ToonMaterials.trim():
+			continue  # a kit module has no one colour: its sheet is read by test_kit.gd against the same bible
 		var color: Variant = _albedo(material)
 		if color is Color:
 			out["%s %s" % [mesh.get_path(), color]] = color
@@ -525,10 +530,18 @@ func test_no_environment_or_prop_color_is_red_and_the_car_is_muted() -> void:
 			seen[colors[key]] = true
 			assert_false(_in_red_band(colors[key]), "%s is not red" % key)
 	assert_gt(seen.size(), 8, "the rooms' colors were read (walls, crates, the car, the dumpster, the street)")
-	assert_true(seen.has(Color(0.34, 0.38, 0.45)), "the car is the muted blue-grey")
-	var car := Color(0.34, 0.38, 0.45)
+	# The car is a prop spot drawing PROPS's art on the atlas since M6 DRESS, so its flat colour is no longer
+	# among the meshes': the fallback box's muted blue-grey must stay muted, and so must the car's drawn swatch
+	# (slot 60 of the atlas; test_m6_dress.gd holds all four props slots and the car's hue).
+	var car: Color = PropSpot.PROPS[&"car"].color
+	assert_eq(car, Color(0.34, 0.38, 0.45), "the car's fallback is the muted blue-grey")
 	assert_lte(car.s, STREET_SATURATION_MAX, "the car is inside the look bible's street saturation")
 	assert_between(car.v, 0.25, 0.6, "and its value")
+	var atlas := (load("res://assets/export/palette/palette_atlas.png") as Texture2D).get_image()
+	var drawn := atlas.get_pixel((60 % 32) * 8 + 4, (60 / 32) * 8 + 4)
+	assert_lte(drawn.s, STREET_SATURATION_MAX, "the car's drawn swatch is muted too")
+	assert_between(drawn.v, 0.25, 0.6, "and its value")
+	assert_false(_in_red_band(drawn), "and not red")
 
 
 ## Whether `node` is part of the street (a wall, a crate, the ground, paint) and not a character or a
@@ -546,17 +559,22 @@ func test_every_street_surface_is_inside_the_bibles_saturation_and_value() -> vo
 	var crowd := await _crowd(false)
 	var training := await _training(false)
 	var checked := 0
+	var kit := 0
 	for room: Node in [crowd, training]:
 		for node: Node in room.find_children("*", "MeshInstance3D", true, false):
 			if not _is_street(node):
 				continue
-			var color: Variant = _albedo((node as MeshInstance3D).mesh.material if (node as MeshInstance3D).mesh is PrimitiveMesh else null)
+			var street_mesh := (node as MeshInstance3D).mesh
+			if street_mesh is ArrayMesh and (street_mesh as ArrayMesh).surface_get_material(0) == ToonMaterials.trim():
+				kit += 1  # a kit module: its sheet's pixels are checked against this band in test_kit.gd
+				continue
+			var color: Variant = _albedo(street_mesh.material if street_mesh is PrimitiveMesh else null)
 			if color is Color:
 				var c: Color = color
 				checked += 1
 				assert_lte(c.s, STREET_SATURATION_MAX + 0.005, "%s %s: saturation at most 0.30 (the dumpster was 0.52, the crates 0.45)" % [node.get_path(), c])
 				assert_between(c.v, 0.25 - 0.005, 0.6 + 0.005, "%s %s: value 0.25 to 0.6" % [node.get_path(), c])
-	assert_gt(checked, 20, "the walls, crates, paint, windows and the ground were read")
+	assert_gt(checked + kit, 20, "the walls, crates, paint, windows and the ground were read (a box by its colour, a kit module by its sheet)")
 
 
 func test_no_paint_of_an_enemy_the_dummies_or_the_player_is_red() -> void:
@@ -575,9 +593,15 @@ func test_no_paint_of_an_enemy_the_dummies_or_the_player_is_red() -> void:
 			assert_false(_in_red_band(color), "%s paint %d %s is not red" % [path.get_file(), paint, color])
 			checked += 1
 	assert_gt(checked, 30)
+	# M6 CHAIN (D17): the dummies' own colours (orange, green, violet) are gone; the one padded look is the dummy art's four
+	# swatches, which the roster's A3 holds out of the red band. What replaces the old per-colour check is the visible path: each
+	# dummy of the training room wears that art, and nothing multiplies it.
 	var training := await _training(false)
-	for dummy_color: Color in training.get(&"dummy_colors"):
-		assert_false(_in_red_band(dummy_color), "the training room's dummy %s" % dummy_color)
+	assert_null(training.get(&"dummy_colors"), "the training room has no per-dummy colours any more")
+	for dummy: TrainingDummy in training.get(&"dummies"):
+		assert_true(dummy.rig.has_art(), "%s wears the dummy art" % dummy.name)
+		for mi: MeshInstance3D in dummy.rig.art_meshes():
+			assert_eq(mi.material_override.get_shader_parameter(&"albedo"), Color.WHITE, "%s: the art is drawn untinted" % dummy.name)
 
 
 # --- The probe's measurements ------------------------------------------------------------------

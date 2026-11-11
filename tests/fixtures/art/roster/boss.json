@@ -1,0 +1,36 @@
+{
+	"id": "boss",
+	"label": "Ox Pellerin",
+	"art": "res://game/actors/art/boss_art.tres",
+	"actor_scene": "res://game/enemies/boss/boss.tscn",
+	"height_m": 2.3,
+	"budget": 30000,
+	"meshes": [
+		"Body"
+	],
+	"moves": [
+		"boss_charge",
+		"boss_pound",
+		"boss_grab",
+		"boss_slam"
+	],
+	"ratchets": {
+		"a9_cells": 0.145,
+		"a9_lens_pp": {
+			"*": 0.04,
+			"boss_charge pitch +8": 0.086,
+			"boss_charge pitch -6": 0.06
+		},
+		"a9_strike_art_share_min": 0.39,
+		"anchor_m": {
+			"head": 0.067,
+			"torso": 0.026,
+			"leg": 0.02
+		},
+		"stretch_m": 0.075,
+		"a6": {
+			"legs": 0.949
+		}
+	},
+	"notes": "Ox Pellerin (M6 HEAVIES), 2.3 m, a generated glove fist, 30000 triangles (SPEC 10's Boss row). Today's figure plus a few tenths; the plan's bars still printed as GATE; a ratchet only moves down. a6 holds the plan's 95% on all three regions (thigh/shin clamps 0.077/0.067). a9_cells 14.5%: the grab at 1 m (the art fills 84%, as its proxies do 84%; the robe's sleeves and the belt differ from the primitive's boxes) and the charge. a9_lens_pp: the charge's wind-up (the art keeps 40% of the view against the proxies' 46-49%: the proxies' raised arms are boxes, the robe's sleeves fall away); a9_strike_art_share_min is its twin. anchor_m head 6.7 cm and torso 2.6 cm: the hood's top stands 12 cm above the head capsule and the belt plate 3 cm off the torso capsule. stretch_m 0.075: the robe's wide sleeve over the upper arm in the grab (the Punk's is 0.09). a5_extent holds the default 20%: the boxing glove is the generated glove fitted to the same fist box as every fist (no ratchet). ROLL-OX (the pilot's recipe: no border relax, island merge, crease ink, seven zones) moved two bars DOWN, old -> new: a6.legs 0.95 -> 0.949 (measured 0.94985: the unrelaxed colour borders leave the tights' mesh a hair off the leg capsule); the strain file's whole min_min 0.028 -> 0.016 (deepest compression today x0.0170, in knockdown_forward and ko_front, old x0.0295 whole-run); every other whole-run figure kept (worst p99.9 4.61 under 4.72, p0.1 0.229 over 0.224, stretch x9.8 under x14). OX-2 (texel colour borders, a lighter line, the robe's valley ink and a legs region for the skin strip down the tights) moved no roster bar; the strain file's per-clip min moved down for run_forward 0.053 -> 0.0288, dodge_forward 0.057 -> 0.0477 and getup_front 0.0715 -> 0.0563 (the whole-run bars hold)."
+}

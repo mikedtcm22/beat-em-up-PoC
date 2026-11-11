@@ -1,0 +1,258 @@
+{
+	"slots": {
+		"sting_go": {
+			"long": true
+		},
+		"sting_clear": {
+			"long": true
+		},
+		"ambience_street": {
+			"min_variants": 1,
+			"long": true,
+			"loop": true,
+			"space": "2d"
+		},
+		"ambience_roof": {
+			"min_variants": 1,
+			"long": true,
+			"loop": true,
+			"space": "2d"
+		}
+	},
+	"defaults": {
+		"peak_db": -1.0
+	},
+	"pools": {
+		"whoosh": {
+			"takes": [
+				"sfx_hits/whoosh_v1_04",
+				"sfx_hits/whoosh_v2_01",
+				"sfx_hits/whoosh_v3_03"
+			],
+			"peak_db": -1.0,
+			"max_s": 0.6,
+			"notes": "one take per prompt, the lowest score of its candidates for the pool's role (active length, spectral centroid, peak time, tail, flat top)"
+		},
+		"thud": {
+			"takes": [
+				"sfx_hits/thud_v1_01",
+				"sfx_hits/thud_v2_01",
+				"sfx_hits/thud_v3_03",
+				"sfx_hits/thud_v4_04"
+			],
+			"peak_db": -1.0,
+			"max_s": 0.5,
+			"notes": "one take per prompt, the lowest score of its candidates for the pool's role (active length, spectral centroid, peak time, tail, flat top)"
+		},
+		"crack": {
+			"takes": [
+				"sfx_hits/crack_v1_04",
+				"sfx_hits/crack_v2_01",
+				"sfx_hits/crack_v3_01"
+			],
+			"peak_db": -1.0,
+			"max_s": 0.5,
+			"notes": "one take per prompt, the lowest score of its candidates for the pool's role (active length, spectral centroid, peak time, tail, flat top)"
+		},
+		"crunch": {
+			"takes": [
+				"sfx_hits/crunch_v1_02",
+				"sfx_hits/crunch_v2_01",
+				"sfx_hits/crunch_v3_02"
+			],
+			"peak_db": -1.0,
+			"max_s": 0.8,
+			"notes": "one take per prompt, the lowest score of its candidates for the pool's role (active length, spectral centroid, peak time, tail, flat top)"
+		},
+		"body_fall": {
+			"takes": [
+				"sfx_hits/body_fall_v1_01",
+				"sfx_hits/body_fall_v2_03",
+				"sfx_hits/body_fall_v3_03"
+			],
+			"peak_db": -1.0,
+			"max_s": 1.0,
+			"notes": "one take per prompt, the lowest score of its candidates for the pool's role (active length, spectral centroid, peak time, tail, flat top)"
+		},
+		"sub_thump": {
+			"takes": [
+				"sfx_hits/sub_thump_v1_04",
+				"sfx_hits/sub_thump_v2_02",
+				"sfx_hits/sub_thump_v3_01"
+			],
+			"peak_db": -1.0,
+			"max_s": 0.8,
+			"notes": "one take per prompt, the lowest score of its candidates for the pool's role (active length, spectral centroid, peak time, tail, flat top)"
+		},
+		"block_clack": {
+			"takes": [
+				"sfx_blocks/block_clack_v1_03",
+				"sfx_blocks/block_clack_v2_03",
+				"sfx_blocks/block_clack_v3_03"
+			],
+			"peak_db": -1.0,
+			"max_s": 0.5,
+			"notes": "one take per prompt, the lowest score of its candidates for the pool's role (active length, spectral centroid, peak time, tail, flat top)"
+		},
+		"parry_ting": {
+			"takes": [
+				"sfx_blocks/parry_ting_v1_01",
+				"sfx_blocks/parry_ting_v2_03",
+				"sfx_blocks/parry_ting_v3_02"
+			],
+			"peak_db": -1.0,
+			"max_s": 0.8,
+			"notes": "one take per prompt, the lowest score of its candidates for the pool's role (active length, spectral centroid, peak time, tail, flat top)"
+		},
+		"guard_break": {
+			"takes": [
+				"sfx_blocks/guard_break_v1_01",
+				"sfx_blocks/guard_break_v2_02",
+				"sfx_blocks/guard_break_v3_03"
+			],
+			"peak_db": -1.0,
+			"max_s": 1.0,
+			"notes": "one take per prompt, the lowest score of its candidates for the pool's role (active length, spectral centroid, peak time, tail, flat top)"
+		},
+		"barrier_shutter_close": {
+			"takes": [
+				"sfx_barriers/barrier_shutter_close_v1_01",
+				"sfx_barriers/barrier_shutter_close_v2_02"
+			],
+			"peak_db": -1.0,
+			"max_s": 1.4,
+			"notes": "one take per prompt, the lowest score of its candidates for the pool's role (active length, spectral centroid, peak time, tail, flat top)"
+		},
+		"barrier_shutter_open": {
+			"takes": [
+				"sfx_barriers/barrier_shutter_open_v1_03",
+				"sfx_barriers/barrier_shutter_open_v2_01"
+			],
+			"peak_db": -1.0,
+			"max_s": 1.4,
+			"notes": "one take per prompt, the lowest score of its candidates for the pool's role (active length, spectral centroid, peak time, tail, flat top)"
+		},
+		"barrier_gate_close": {
+			"takes": [
+				"sfx_barriers/barrier_gate_close_v1_03",
+				"sfx_barriers/barrier_gate_close_v2_01"
+			],
+			"peak_db": -1.0,
+			"max_s": 1.4,
+			"notes": "one take per prompt, the lowest score of its candidates for the pool's role (active length, spectral centroid, peak time, tail, flat top)"
+		},
+		"barrier_gate_open": {
+			"takes": [
+				"sfx_barriers/barrier_gate_open_v1_03",
+				"sfx_barriers/barrier_gate_open_v2_01"
+			],
+			"peak_db": -1.0,
+			"max_s": 1.4,
+			"notes": "one take per prompt, the lowest score of its candidates for the pool's role (active length, spectral centroid, peak time, tail, flat top)"
+		},
+		"barrier_car_close": {
+			"takes": [
+				"sfx_barriers/barrier_car_close_v1_02",
+				"sfx_barriers/barrier_car_close_v2_03"
+			],
+			"peak_db": -1.0,
+			"max_s": 1.4,
+			"notes": "one take per prompt, the lowest score of its candidates for the pool's role (active length, spectral centroid, peak time, tail, flat top)"
+		},
+		"barrier_car_open": {
+			"takes": [
+				"sfx_barriers/barrier_car_open_v1_03",
+				"sfx_barriers/barrier_car_open_v2_03"
+			],
+			"peak_db": -1.0,
+			"max_s": 1.4,
+			"notes": "one take per prompt, the lowest score of its candidates for the pool's role (active length, spectral centroid, peak time, tail, flat top)"
+		},
+		"weapon_pickup": {
+			"takes": [
+				"sfx_weapons/weapon_pickup_v1_02",
+				"sfx_weapons/weapon_pickup_v2_02"
+			],
+			"peak_db": -1.0,
+			"max_s": 0.7,
+			"notes": "one take per prompt, the lowest score of its candidates for the pool's role (active length, spectral centroid, peak time, tail, flat top)"
+		},
+		"weapon_throw": {
+			"takes": [
+				"sfx_weapons/weapon_throw_v1_02",
+				"sfx_weapons/weapon_throw_v2_03"
+			],
+			"peak_db": -1.0,
+			"max_s": 0.8,
+			"notes": "one take per prompt, the lowest score of its candidates for the pool's role (active length, spectral centroid, peak time, tail, flat top)"
+		},
+		"weapon_break": {
+			"takes": [
+				"sfx_weapons/weapon_break_v1_01",
+				"sfx_weapons/weapon_break_v3_03"
+			],
+			"peak_db": -1.0,
+			"max_s": 1.2,
+			"notes": "one take per prompt, the lowest score of its candidates for the pool's role (active length, spectral centroid, peak time, tail, flat top)"
+		},
+		"weapon_land": {
+			"takes": [
+				"sfx_weapons/weapon_land_v1_01",
+				"sfx_weapons/weapon_land_v2_02"
+			],
+			"peak_db": -1.0,
+			"max_s": 0.8,
+			"notes": "one take per prompt, the lowest score of its candidates for the pool's role (active length, spectral centroid, peak time, tail, flat top)"
+		},
+		"weapon_pipe_hit": {
+			"takes": [
+				"sfx_weapons/weapon_pipe_hit_v1_01",
+				"sfx_weapons/weapon_pipe_hit_v2_01"
+			],
+			"peak_db": -1.0,
+			"max_s": 0.7,
+			"notes": "one take per prompt, the lowest score of its candidates for the pool's role (active length, spectral centroid, peak time, tail, flat top)"
+		},
+		"weapon_bike_chain_hit": {
+			"takes": [
+				"sfx_weapons/weapon_bike_chain_hit_v2_02",
+				"sfx_weapons/weapon_bike_chain_hit_v3_03"
+			],
+			"peak_db": -1.0,
+			"max_s": 0.8,
+			"notes": "one take per prompt, the lowest score of its candidates for the pool's role (active length, spectral centroid, peak time, tail, flat top)"
+		},
+		"sting_go": {
+			"takes": [
+				"sfx_stings/sting_go_v1_03"
+			],
+			"peak_db": -1.0,
+			"max_s": 1.8,
+			"notes": "one take per prompt, the lowest score of its candidates for the pool's role (active length, spectral centroid, peak time, tail, flat top)"
+		},
+		"sting_clear": {
+			"takes": [
+				"sfx_stings/sting_clear_v1_02"
+			],
+			"peak_db": -1.0,
+			"max_s": 2.0,
+			"notes": "one take per prompt, the lowest score of its candidates for the pool's role (active length, spectral centroid, peak time, tail, flat top)"
+		},
+		"ambience_street": {
+			"takes": [
+				"sfx_beds/ambience_street_v1_03"
+			],
+			"lufs": -20.0,
+			"loop_xfade_ms": 1000.0,
+			"notes": "the take with the steadiest levels, no events and the closest seam; the loop is crossfaded over 1000 ms"
+		},
+		"ambience_roof": {
+			"takes": [
+				"sfx_beds/ambience_roof_v1_02"
+			],
+			"lufs": -20.0,
+			"loop_xfade_ms": 1000.0,
+			"notes": "the take with the steadiest levels, no events and the closest seam; the loop is crossfaded over 1000 ms"
+		}
+	}
+}

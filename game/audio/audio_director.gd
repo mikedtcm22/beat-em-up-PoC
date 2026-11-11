@@ -37,6 +37,19 @@ extends Node
 ##   (the grip knocked off and the holder shoved away) and the holder's grunt, `grab_break_db`
 ##   louder: the player's reward for the mash.
 ## - **Music:** a placeholder loop while `Tuning.music_enabled` (off by default).
+## - **Voices per archetype** (Milestone 6, D20): a grunt, an effort or a KO line comes from the pool
+##   `<base>_<archetype>` (`grunt_bruiser`) when the actor has an `archetype` and that pool has files, else
+##   from the shared `<base>` pool. A KO (`ko`) plays the enemy's own KO line (and cuts its grunt); the boss's
+##   phase change plays `boss_phase`.
+## - **Weapons** (D22, D23): a swing whose move names an `impact_sfx` adds `weapon_<impact_sfx>_hit` to the
+##   hit stack; pickup, throw, break and landing play `weapon_pickup|throw|break|land` where the weapon is.
+## - **Barriers** (`barrier_moving`): `barrier_<shutter|gate|car>_<close|open>` where the barrier is.
+## - **Stings** (2D, `play_2d()`): `sting_go` on `arena_cleared` only with Debug's `audio_sting_go` (off by default, M6 playtest), `sting_clear` on `level_cleared`.
+## - **Ambience** (D8): one looping bed on its own players, not the pooled voices, crossfaded to the pool the
+##   player's section names (`section_entered`, `LevelSection.ambience`), `ambience_street` with no section.
+##   An empty pool plays nothing and logs nothing: the slots stay empty until their sounds exist.
+## - **Debug `audio_legacy_bank`:** every pool the Milestone 2 placeholders had plays from them instead
+##   (tests/fixtures/sfx_legacy/), for the audition room's old / new A/B.
 ##
 ## Every one-shot takes a random variant of its pool, never the pool's last one, with its
 ## pitch and volume varied by up to `sfx_pitch_variation` / `sfx_volume_variation` (±8%).
@@ -56,11 +69,25 @@ extends Node
 
 ## Emitted for every one-shot played: its pool and the pooled voice it plays on.
 signal played(pool: StringName, voice: AudioStreamPlayer3D)
+## Emitted for every 2D one-shot (play_2d()): its pool and the player it plays on.
+signal played_2d(pool: StringName, player: AudioStreamPlayer)
+## Emitted when the bed changes: the new pool (empty for silence).
+signal ambience_changed(pool: StringName)
 
 const SFX_BUS := &"SFX"
 const REAR_BUS := &"SFX Rear"
 const MUSIC_BUS := &"Music"
 const MUSIC_POOL := &"music_loop"
+## The bed with no section (the crowd and training rooms) or a section that names none.
+const AMBIENCE_DEFAULT := &"ambience_street"
+## The placeholders' folder, the audition room's "old".
+const LEGACY_DIR := "res://tests/fixtures/sfx_legacy/"
+## Barrier.Kind in order, as the pool names spell it.
+const BARRIER_KINDS: Array[StringName] = [&"shutter", &"gate", &"car"]
+## Second players for the bed: one fading out while the next fades in.
+const BED_PLAYERS := 2
+## Short stings and other non-positional one-shots (play_2d()).
+const STING_PLAYERS := 4
 
 ## The pools layered on a clean hit of each tier (Spec §6).
 const TIER_LAYERS: Dictionary = {
@@ -96,9 +123,20 @@ const LAYER_DB: Dictionary = {
 @export var listen_from_player: bool = true
 
 var bank: SfxBank
+## The Milestone 2 placeholders, loaded the first time Debug `audio_legacy_bank` is on.
+var legacy_bank: SfxBank
 var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var listener: AudioListener3D
 var music: AudioStreamPlayer
+## The bed players (the pool each plays, its fade share 0..1 and where it is heading) and the pool the
+## bed should be (what set_ambience() last asked for).
+var ambience: StringName = &""
+var _bed: Array[AudioStreamPlayer] = []
+var _bed_pool: Array[StringName] = []
+var _bed_level: Array[float] = []
+var _bed_target: Array[float] = []
+var _stings: Array[AudioStreamPlayer] = []
+var _next_sting: int = 0
 
 var _voices: Array[AudioStreamPlayer3D] = []
 ## Each voice's volume before the distance fall-off (its layer's, varied).
@@ -121,6 +159,8 @@ var _music_on: bool = false
 var _clock_s: float = 0.0
 ## Actor instance id -> _clock_s of its last grunt.
 var _last_grunt_s: Dictionary[int, float] = {}
+## Actor instance id -> the voice its last grunt plays on (a KO line cuts it).
+var _grunt_voice: Dictionary[int, AudioStreamPlayer3D] = {}
 var _player: PlayerCharacter
 
 
@@ -156,19 +196,46 @@ func _ready() -> void:
 	music.bus = MUSIC_BUS
 	music.stream = bank.pick(MUSIC_POOL, rng)
 	add_child(music)
+	for i in BED_PLAYERS:
+		var bed := AudioStreamPlayer.new()
+		bed.name = "Bed%d" % i
+		bed.bus = SFX_BUS
+		add_child(bed)
+		_bed.append(bed)
+		_bed_pool.append(&"")
+		_bed_level.append(0.0)
+		_bed_target.append(0.0)
+	for i in STING_PLAYERS:
+		var sting := AudioStreamPlayer.new()
+		sting.name = "Sting%d" % i
+		sting.bus = SFX_BUS
+		add_child(sting)
+		_stings.append(sting)
 	CombatEvents.hit_landed.connect(_on_hit_landed)
 	CombatEvents.attack_whiffed.connect(_on_attack_whiffed)
 	CombatEvents.windup_started.connect(_on_windup_started)
 	CombatEvents.windup_ended.connect(_on_windup_ended)
 	CombatEvents.grab_escaped.connect(_on_grab_escaped)
+	CombatEvents.ko.connect(_on_ko)
+	CombatEvents.boss_phase_changed.connect(_on_boss_phase_changed)
+	CombatEvents.barrier_moving.connect(_on_barrier_moving)
+	CombatEvents.weapon_picked_up.connect(_on_weapon_picked_up)
+	CombatEvents.weapon_thrown.connect(_on_weapon_thrown)
+	CombatEvents.weapon_broke.connect(_on_weapon_broke)
+	CombatEvents.weapon_landed.connect(_on_weapon_landed)
+	CombatEvents.arena_cleared.connect(_on_arena_cleared)
+	CombatEvents.level_cleared.connect(_on_level_cleared)
+	CombatEvents.section_entered.connect(_on_section_entered)
 	_follow_player()
 	_apply_mix()
+	set_ambience(AMBIENCE_DEFAULT)
 
 
 func _process(delta: float) -> void:
 	_clock_s += delta
 	_follow_player()
 	_apply_mix()
+	_step_bed(delta)
 	for i in _voices.size():
 		if _voices[i].playing:
 			_voices[i].volume_db = _base_db[i] + distance_db(_voices[i].global_position)
@@ -179,13 +246,19 @@ func _process(delta: float) -> void:
 ## ±sfx_pitch_variation, quieter with distance (distance_db()). Returns the voice it plays
 ## on, or null when the pool is empty or `at` is beyond Tuning.sfx_max_distance_m.
 func play(pool: StringName, at: Vector3, volume_db: float, pitch: float = 1.0) -> AudioStreamPlayer3D:
-	var tuning := Tuning.data
-	var far := tuning.sfx_max_distance_m
+	var far := Tuning.data.sfx_max_distance_m
 	if far > 0.0 and listener_transform().origin.distance_to(at) > far:
 		return null
-	var stream := bank.pick(pool, rng)
+	var stream := _pick(pool)
 	if stream == null:
 		return null
+	return play_stream(pool, stream, at, volume_db, pitch)
+
+
+## `play()` for a stream already chosen (the audition room's digit keys pick a variant): the same voice
+## taking, variation, rear muffle and distance fall-off, and `played` for `pool`.
+func play_stream(pool: StringName, stream: AudioStream, at: Vector3, volume_db: float, pitch: float = 1.0) -> AudioStreamPlayer3D:
+	var tuning := Tuning.data
 	var index := _take_voice()
 	var voice := _voices[index]
 	_plays += 1
@@ -202,6 +275,46 @@ func play(pool: StringName, at: Vector3, volume_db: float, pitch: float = 1.0) -
 	voice.play()
 	played.emit(pool, voice)
 	return voice
+
+
+## A non-positional one-shot (a GO or CLEAR sting): a random variant of `pool` at `volume_db`, never
+## the pool's last one, on the SFX bus, on one of STING_PLAYERS players (the oldest gives way). Returns
+## the player, or null when the pool is empty. Not one of the pooled voices.
+func play_2d(pool: StringName, volume_db: float) -> AudioStreamPlayer:
+	var stream := _pick(pool)
+	if stream == null:
+		return null
+	return play_stream_2d(pool, stream, volume_db)
+
+
+## `play_2d()` for a stream already chosen.
+func play_stream_2d(pool: StringName, stream: AudioStream, volume_db: float) -> AudioStreamPlayer:
+	var player := _stings[_next_sting]
+	_next_sting = (_next_sting + 1) % _stings.size()
+	player.stream = stream
+	player.volume_db = volume_db
+	player.pitch_scale = 1.0
+	player.play()
+	played_2d.emit(pool, player)
+	return player
+
+
+## A variant of `pool` the way play() would take it: from the placeholders while Debug
+## `audio_legacy_bank` is on and they have the pool, else from the bank. Null for an empty pool.
+func _pick(pool: StringName) -> AudioStream:
+	var source := bank_for(pool)
+	return source.pick(pool, rng)
+
+
+## The bank a pool plays from: the placeholders (Debug `audio_legacy_bank`) when they have it, else the
+## real one.
+func bank_for(pool: StringName) -> SfxBank:
+	if Tuning.data.audio_legacy_bank:
+		if legacy_bank == null:
+			legacy_bank = SfxBank.new(LEGACY_DIR)
+		if legacy_bank.count(pool) > 0:
+			return legacy_bank
+	return bank
 
 
 ## Where sounds are heard from: the listener riding the player, else the active camera.
@@ -262,6 +375,8 @@ func _on_hit_landed(hit: HitInfo) -> void:
 		if pool in SWING_LAYERS and not first:
 			continue
 		play(pool, at, layer_db(pool) + gain)
+	if hit.move != null and hit.move.impact_sfx != &"":
+		play(weapon_hit_pool(hit.move.impact_sfx), at, tuning.weapon_hit_db + gain)
 	_grunt(hit.victim)
 
 
@@ -278,7 +393,7 @@ func _on_windup_started(attacker: Node3D, move: MoveData) -> void:
 	var id := attacker.get_instance_id()
 	# Each cue is tagged as the attacker's wind-up the moment it starts, so the next one cannot
 	# take it over.
-	var effort := play(&"effort", _voice_position(attacker), tuning.windup_db, voice_pitch(attacker))
+	var effort := play(voice_pool(&"effort", attacker), _voice_position(attacker), tuning.windup_db, voice_pitch(attacker))
 	if effort:
 		_windup_of[_voices.find(effort)] = id
 	var whoosh := play(&"whoosh", _strike_position(attacker, move), tuning.windup_db)
@@ -314,6 +429,140 @@ func _on_grab_escaped(_victim: Node3D, holder: Node3D) -> void:
 	_grunt(holder)
 
 
+## A KO: the enemy's own KO line at its eyes, cutting the grunt of the blow that did it (the player and
+## the dummy, whose archetype is empty, have no KO pool: `ko` has no files).
+func _on_ko(victim: Node3D, _hit: HitInfo) -> void:
+	if victim == null or not is_instance_valid(victim) or not victim.is_in_group(&"enemy"):
+		return
+	var grunt: AudioStreamPlayer3D = _grunt_voice.get(victim.get_instance_id())
+	var pool := voice_pool(&"ko", victim)
+	if bank_for(pool).count(pool) == 0:
+		return
+	if grunt != null and is_instance_valid(grunt) and grunt.playing:
+		grunt.stop()
+	play(pool, _voice_position(victim), Tuning.data.ko_db, voice_pitch(victim))
+
+
+## The boss entering phase 2: its roar (`boss_phase`, one line a phase), at its eyes.
+func _on_boss_phase_changed(boss: Node3D, _phase: int) -> void:
+	if boss == null or not is_instance_valid(boss):
+		return
+	play(&"boss_phase", _voice_position(boss), Tuning.data.boss_line_db)
+
+
+func _on_barrier_moving(barrier: Node3D, closing: bool) -> void:
+	if barrier == null or not is_instance_valid(barrier):
+		return
+	var kind := int(barrier.get(&"kind"))
+	var shape := BARRIER_KINDS[kind] if kind >= 0 and kind < BARRIER_KINDS.size() else BARRIER_KINDS[0]
+	var pool := StringName("barrier_%s_%s" % [shape, "close" if closing else "open"])
+	var height: Variant = barrier.get(&"height_m")
+	var at := barrier.global_position + Vector3.UP * (float(height) * 0.5 if height is float else 0.0)
+	play(pool, at, Tuning.data.barrier_db)
+
+
+func _on_weapon_picked_up(_actor: Node3D, weapon: Node3D) -> void:
+	_play_weapon(&"weapon_pickup", weapon, Tuning.data.weapon_pickup_db)
+
+
+func _on_weapon_thrown(_actor: Node3D, weapon: Node3D) -> void:
+	_play_weapon(&"weapon_throw", weapon, Tuning.data.weapon_throw_db)
+
+
+func _on_weapon_broke(_actor: Node3D, weapon: Node3D) -> void:
+	_play_weapon(&"weapon_break", weapon, Tuning.data.weapon_break_db)
+
+
+func _on_weapon_landed(weapon: Node3D) -> void:
+	_play_weapon(&"weapon_land", weapon, Tuning.data.weapon_land_db)
+
+
+func _play_weapon(pool: StringName, weapon: Node3D, volume_db: float) -> void:
+	if weapon == null or not is_instance_valid(weapon):
+		return
+	play(pool, weapon.global_position, volume_db)
+
+
+## GO: the arena's table is done and its way ahead opens. Silent by default (Game-boy's ruling at his
+## M6 playtest: no victory sound on the GO sections); Debug's audio_sting_go brings M6's sting back.
+## The pool, its files and the audition room's entry stay.
+func _on_arena_cleared(_arena: Node3D) -> void:
+	if Tuning.data.audio_sting_go:
+		play_2d(&"sting_go", Tuning.data.sting_go_db)
+
+
+## CLEAR!: the level's last arena is done.
+func _on_level_cleared(_level: Node3D) -> void:
+	play_2d(&"sting_clear", Tuning.data.sting_clear_db)
+
+
+func _on_section_entered(section: Node3D) -> void:
+	var pool: Variant = section.get(&"ambience") if section != null else null
+	set_ambience(StringName(pool) if (pool is StringName or pool is String) and str(pool) != "" else AMBIENCE_DEFAULT)
+
+
+# --- The bed -----------------------------------------------------------------------------
+
+
+## Crossfades the bed to `pool` over Tuning.ambience_fade_s: the current bed fades out as the new one
+## fades in. The same pool again changes nothing; an empty pool (no files) fades the bed out and plays
+## nothing. The bed loops, whatever the file's import says.
+func set_ambience(pool: StringName) -> void:
+	if pool == ambience:
+		return
+	ambience = pool
+	var stream := _pick(pool) if pool != &"" else null
+	var now: int = _bed_pool.find(pool) if stream != null else -1
+	for i in _bed.size():
+		_bed_target[i] = 1.0 if i == now else 0.0
+	if stream != null and now < 0:
+		# Take the quietest player (a fully faded one when there is one) for the new bed.
+		var free := 0
+		for i in _bed.size():
+			if _bed_level[i] < _bed_level[free]:
+				free = i
+		_bed_pool[free] = pool
+		_bed[free].stop()
+		_bed[free].stream = _looped(stream)
+		_bed_level[free] = 0.0
+		_bed_target[free] = 1.0
+		_bed[free].volume_db = -80.0
+		_bed[free].play()
+	ambience_changed.emit(pool if stream != null else &"")
+
+
+## `stream` with a forward loop over its whole length (a bed is a file that loops; the music loop's
+## .import sets its own).
+func _looped(stream: AudioStream) -> AudioStream:
+	var wav := stream as AudioStreamWAV
+	if wav != null and wav.loop_mode == AudioStreamWAV.LOOP_DISABLED:
+		wav.loop_mode = AudioStreamWAV.LOOP_FORWARD
+		wav.loop_begin = 0
+		wav.loop_end = int(wav.get_length() * wav.mix_rate)
+	return stream
+
+
+func _step_bed(delta: float) -> void:
+	var tuning := Tuning.data
+	var step := delta / maxf(Engine.time_scale, 0.01) / maxf(tuning.ambience_fade_s, 0.01)
+	for i in _bed.size():
+		_bed_level[i] = move_toward(_bed_level[i], _bed_target[i], step)
+		if _bed[i].playing:
+			_bed[i].volume_db = tuning.ambience_db + linear_to_db(maxf(_bed_level[i], 0.0001))
+			if _bed_level[i] <= 0.0 and _bed_target[i] <= 0.0:
+				_bed[i].stop()
+				_bed_pool[i] = &""
+
+
+## The pool the bed is settled on (the player in a section, or the default): the one whose player is
+## audible and heading up; empty when silent.
+func bed_pool() -> StringName:
+	for i in _bed.size():
+		if _bed_target[i] >= 1.0 and _bed[i].playing:
+			return _bed_pool[i]
+	return &""
+
+
 # --- Helpers -----------------------------------------------------------------------------
 
 
@@ -346,6 +595,64 @@ static func layer_db(pool: StringName) -> float:
 	return float(Tuning.data.get(LAYER_DB[pool]))
 
 
+## The pool of `actor`'s `base` voice (&"grunt", &"effort", &"ko"): `<base>_<archetype>` when the actor has an
+## `archetype` and that pool has files, else `base` itself (the dummy's archetype is empty, a bare Node3D has
+## none: both use the shared pool).
+func voice_pool(base: StringName, actor: Node) -> StringName:
+	var archetype: Variant = actor.get(&"archetype")
+	if (archetype is StringName or archetype is String) and str(archetype) != "":
+		var specific := StringName("%s_%s" % [base, archetype])
+		if bank_for(specific).count(specific) > 0:
+			return specific
+	return base
+
+
+## The pool of a weapon's impact layer: `weapon_<impact_sfx>_hit`.
+static func weapon_hit_pool(impact_sfx: StringName) -> StringName:
+	return StringName("weapon_%s_hit" % impact_sfx)
+
+
+## The tuned volume in dB of any pool the director plays, by its name: a hit or block layer, a voice (the
+## archetype's pools share the base's), a world sound, a sting or the bed. The audition room plays every
+## bank at it.
+static func pool_db(pool: StringName) -> float:
+	var tuning := Tuning.data
+	var key := str(pool)
+	if LAYER_DB.has(pool):
+		return layer_db(pool)
+	if key == "player_grunt":
+		return tuning.player_grunt_db
+	if key == "boss_phase":
+		return tuning.boss_line_db
+	if key.begins_with("grunt"):
+		return tuning.grunt_db
+	if key.begins_with("effort"):
+		return tuning.windup_db
+	if key.begins_with("ko"):
+		return tuning.ko_db
+	if key.begins_with("barrier_"):
+		return tuning.barrier_db
+	if key.begins_with("weapon_"):
+		if key.ends_with("_hit"):
+			return tuning.weapon_hit_db
+		match key:
+			"weapon_pickup":
+				return tuning.weapon_pickup_db
+			"weapon_throw":
+				return tuning.weapon_throw_db
+			"weapon_break":
+				return tuning.weapon_break_db
+			"weapon_land":
+				return tuning.weapon_land_db
+	if key == "sting_go":
+		return tuning.sting_go_db
+	if key == "sting_clear":
+		return tuning.sting_clear_db
+	if key.begins_with("ambience"):
+		return tuning.ambience_db
+	return 0.0
+
+
 ## `actor`'s voice pitch: 1 plus a fixed share (from its name) of ±voice_pitch_spread, times
 ## its `voice_pitch_mult` when it has one (a Bruiser's or the boss's deeper voice).
 static func voice_pitch(actor: Node) -> float:
@@ -375,11 +682,14 @@ func _grunt(actor: Node3D) -> void:
 	for other: int in _last_grunt_s.keys():
 		if _clock_s - _last_grunt_s[other] >= interval_s:
 			_last_grunt_s.erase(other)
+			_grunt_voice.erase(other)
 	_last_grunt_s[id] = _clock_s
 	if is_player:
 		play(&"player_grunt", _voice_position(actor), tuning.player_grunt_db, voice_pitch(actor))
 	else:
-		play(&"grunt", _voice_position(actor), tuning.grunt_db, voice_pitch(actor))
+		var voice := play(voice_pool(&"grunt", actor), _voice_position(actor), tuning.grunt_db, voice_pitch(actor))
+		if voice != null:
+			_grunt_voice[id] = voice
 
 
 ## Where `actor`'s voice comes from: its eyes.

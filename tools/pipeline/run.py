@@ -20,6 +20,11 @@ Steps (each is one headless Blender process, never the Blender MCP; one at a tim
 	stills        blender_stills.py    Workbench stills and strain numbers at the probe poses
 then the atlas (gen_palette.py) is rebuilt and Godot imports the new files (.import patched per the contract).
 
+	python3 -I tools/pipeline/run.py --asset <id> --kind prop    assets/source/props/<id>/pipeline.json (M6 PROPS)
+The static-prop path: inspect (blender_prop_inspect.py: import a Tripo GLB or script the model, orient, scale, ground), palette
+(blender_palette.py, no armature: the same labelling, pruning and border-protected decimation) and export (blender_export_prop.py: one
+or more named meshes, UV1 on the atlas, the hull normal in COLOR, no skin) into assets/export/props/<id>/<id>.glb, with a report.
+
 The report: <paths.report>/report.json = {asset, version, config_sha256, steps, outputs, hash}. The hash covers the config
 (minus paths), every step's report and the sha256 of each exported file, and nothing that varies between runs (no time, no
 absolute path), so a rerun on the same input gives the same hash. Reads only the repo; the source model is untrusted data
@@ -49,6 +54,13 @@ STEPS = [
 	("stills", "blender_stills.py", []),
 ]
 STEP_NAMES = [s[0] for s in STEPS]
+# the static-prop path (M6 PROPS, --kind prop): no fit, rig, parts or armature. inspect scripts or imports the model, scales and
+# grounds it and writes the file the palette step reads; the palette step is the characters'; export writes the rigid GLB
+PROP_STEPS = [
+	("inspect", "blender_prop_inspect.py", []),
+	("palette", "blender_palette.py", []),
+	("export", "blender_export_prop.py", []),
+]
 
 GLB_PARAMS = {"meshes/generate_lods": "false", "meshes/create_shadow_meshes": "true", "skins/use_named_skins": "true", "animation/import": "false"}
 # a detail mask (F-punk, A18) is sampled by a mipmapped sampler and holds ink lines only: keep the lossless mode and make mipmaps
@@ -120,9 +132,14 @@ def apply_overrides(cfg, sets):
 	return cfg
 
 
+def steps_of(kind):
+	"""The step table of an asset kind: "character" (STEPS) or "prop" (PROP_STEPS)."""
+	return PROP_STEPS if kind == "prop" else STEPS
+
+
 def build_report(cfg, steps_done):
 	steps = {}
-	for name in STEP_NAMES:
+	for name in [s[0] for s in steps_of(cfg.get("kind", "character"))]:
 		path = pc.step_report_path(cfg, name)
 		if os.path.exists(path) and name != "stills":
 			steps[name] = pc.load_json(path)
@@ -144,20 +161,21 @@ def build_report(cfg, steps_done):
 
 def usage():
 	"""The one-line usage printed on a bad step name or a missing value."""
-	return ("usage: run.py (--asset <id> | --config <pipeline.json>) [--from STEP | --only STEP] [--no-stills] [--no-import] "
-		"[--set a.b=JSON] [--check] [--list]\nsteps: " + ", ".join(STEP_NAMES) + "\n(the reproducibility command is --check, not a step)")
+	return ("usage: run.py (--asset <id> [--kind prop] | --config <pipeline.json>) [--from STEP | --only STEP] [--no-stills] [--no-import] "
+		"[--set a.b=JSON] [--check] [--list]\nsteps: " + ", ".join(STEP_NAMES) + "\nprop steps (--kind prop, assets/source/props/<id>/pipeline.json): "
+		+ ", ".join(s[0] for s in PROP_STEPS) + "\n(the reproducibility command is --check, not a step)")
 
 
 def main(argv):
 	if "--list" in argv:
-		for name, script, extra in STEPS:
+		for name, script, extra in steps_of("prop" if "prop" in argv else "character"):
 			print("%-14s %s %s" % (name, script, " ".join(extra)))
 		return 0
-	opts = {"from": None, "only": None, "config": None, "asset": None, "sets": [], "stills": True, "import": True, "check": False}
+	opts = {"from": None, "only": None, "config": None, "asset": None, "kind": "character", "sets": [], "stills": True, "import": True, "check": False}
 	i = 0
 	while i < len(argv):
 		a = argv[i]
-		if a in ("--from", "--only", "--config", "--asset", "--set"):
+		if a in ("--from", "--only", "--config", "--asset", "--set", "--kind"):
 			if i + 1 >= len(argv):
 				print("%s needs a value\n%s" % (a, usage()))
 				return 2
@@ -177,19 +195,27 @@ def main(argv):
 			print("unknown argument " + a)
 			return 2
 		i += 1
-	# a step name is checked before anything is written (the atlas, the effective config, a check's scratch folder)
-	for key in ("from", "only"):
-		if opts[key] is not None and opts[key] not in STEP_NAMES:
-			print("unknown step %r for --%s\n%s" % (opts[key], key, usage()))
-			return 2
+	if opts["kind"] not in ("character", "prop"):
+		print("unknown --kind %r\n%s" % (opts["kind"], usage()))
+		return 2
 	if opts["asset"]:
-		cfg_path = os.path.join(pc.REPO, "assets", "source", "characters", opts["asset"], "pipeline.json")
+		folder = "props" if opts["kind"] == "prop" else "characters"
+		cfg_path = os.path.join(pc.REPO, "assets", "source", folder, opts["asset"], "pipeline.json")
 	elif opts["config"]:
 		cfg_path = pc.repo_path(opts["config"])
 	else:
 		print(__doc__)
 		return 2
 	cfg = apply_overrides(pc.load_config(cfg_path), opts["sets"])
+	steps = steps_of("prop" if opts["kind"] == "prop" else cfg.get("kind", "character"))
+	step_names = [s[0] for s in steps]
+	# a step name is checked before anything is written (the atlas, the effective config, a check's scratch folder)
+	for key in ("from", "only"):
+		if opts[key] is not None and opts[key] not in step_names:
+			print("unknown step %r for --%s\n%s" % (opts[key], key, usage()))
+			return 2
+	if opts["kind"] == "prop":
+		cfg["kind"] = "prop"
 	committed = None
 	if opts["check"]:
 		rj = cfg["paths"].get("report_json")
@@ -211,16 +237,16 @@ def main(argv):
 	gen_palette_ok = gen_palette.main([]) == 0
 	if not gen_palette_ok:
 		return 1
-	names = STEP_NAMES
+	names = step_names
 	if opts["only"]:
 		names = [opts["only"]]
 	elif opts["from"]:
-		names = STEP_NAMES[STEP_NAMES.index(opts["from"]):]
+		names = step_names[step_names.index(opts["from"]):]
 	if not opts["stills"] and "stills" in names:
 		names = [n for n in names if n != "stills"]
 	print("pipeline %s: %s" % (cfg["id"], " > ".join(names)))
 	for name in names:
-		script, extra = next((s[1], s[2]) for s in STEPS if s[0] == name)
+		script, extra = next((s[1], s[2]) for s in steps if s[0] == name)
 		if name == "stills" and "stills" not in cfg:
 			continue
 		code, out, dt = run_blender(script, eff, extra, os.path.join(pc.cfg_dir(cfg, "work"), "logs", name + ".log"))

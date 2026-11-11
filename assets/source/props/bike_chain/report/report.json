@@ -1,0 +1,217 @@
+{
+	"asset": "bike_chain",
+	"version": 1,
+	"config_sha256": "fd7eb10365317eaf3b84ccc8d7823ef4fb01e40897bb56850df0715a56f21f26",
+	"steps": {
+		"inspect": {
+			"source": {
+				"mesh": "assets/source/props/bike_chain/tripo/270451cc_gen.glb",
+				"sha256": "c015d798a571ca05fcf340f09367f3e918d1ea4e31374a4d2e26a4757ae540ca",
+				"vertices_before_weld": 6435,
+				"triangles": 10835
+			},
+			"scale": [
+				0.15,
+				0.15,
+				0.15
+			],
+			"bbox_m": {
+				"min": [
+					-0.048523,
+					-0.036755,
+					0.275
+				],
+				"max": [
+					0.048523,
+					0.036755,
+					0.425
+				],
+				"size": [
+					0.097046,
+					0.07351,
+					0.15
+				]
+			},
+			"orient": {
+				"rotate_x_deg": 180.0,
+				"yaw_deg": 90.0
+			},
+			"target": {
+				"axis": "y",
+				"size_m": 0.15,
+				"origin": "center",
+				"offset_m": [
+					0.0,
+					0.35,
+					0.0
+				]
+			},
+			"triangles": 10835
+		},
+		"palette": {
+			"source_image": "removed",
+			"faces_dense": 10835,
+			"textured_faces": 10835,
+			"override_faces": 0,
+			"delta_e_mean": 14.890431,
+			"delta_e_p95": 39.702096,
+			"pruned_swatches": [],
+			"majority_flips": 572,
+			"border_vertices": 753,
+			"border_edges": 844,
+			"protected_vertices": 102,
+			"decimate": {
+				"invert_group": true,
+				"trials": [
+					{
+						"ratio": 0.1384,
+						"tris": 1499
+					}
+				],
+				"triangles": 1499,
+				"budget": 1500,
+				"budget_ok": true,
+				"protected_position_worst_m": 0.0
+			},
+			"swatches_used": {
+				"1": {
+					"name": "near_black",
+					"area_share": 0.080676,
+					"faces": 277
+				},
+				"10": {
+					"name": "steel",
+					"area_share": 0.219678,
+					"faces": 488
+				},
+				"29": {
+					"name": "padlock_brass",
+					"area_share": 0.699646,
+					"faces": 734
+				}
+			},
+			"swatch_count": 3,
+			"detail_uv": false,
+			"detail_bake": null,
+			"regions": [],
+			"region_cuts": [],
+			"fist_band": null,
+			"fist_border_thinned": 651,
+			"fist_strap_cuts": [],
+			"decimate_parts": [
+				{
+					"part": "body",
+					"invert_group": true,
+					"trials": [
+						{
+							"ratio": 0.1384,
+							"tris": 1499
+						}
+					],
+					"triangles": 1499,
+					"budget": 1500,
+					"budget_ok": true,
+					"protected_vertices": 102,
+					"protected_position_worst_m": 0.0
+				}
+			],
+			"unfold": {
+				"folded_before": 45,
+				"folded_after": 14,
+				"passes": 2,
+				"history": [
+					45,
+					17,
+					14
+				]
+			},
+			"triangles": 1499,
+			"vertices": 750
+		},
+		"export": {
+			"variants": {
+				"prop": {
+					"file": "bike_chain.glb",
+					"sha256": "0a6f21f5d8c230a0a2cb09cb8b8857a09192e3eb29639c52bae5ef7e4b40253d",
+					"bytes": 74164,
+					"triangles": 1895,
+					"folded_triangles": 9,
+					"meshes": [
+						{
+							"name": "Lock",
+							"triangles": 1499,
+							"vertices": 750,
+							"bbox_godot": {
+								"min": [
+									-0.048385,
+									0.274877,
+									0.036793
+								],
+								"max": [
+									0.048479,
+									0.42497,
+									-0.036662
+								]
+							}
+						},
+						{
+							"name": "Grip",
+							"triangles": 252,
+							"vertices": 140,
+							"bbox_godot": {
+								"min": [
+									-0.037091,
+									-0.425,
+									0.039
+								],
+								"max": [
+									0.037091,
+									-0.181,
+									-0.039
+								]
+							}
+						},
+						{
+							"name": "Link",
+							"triangles": 144,
+							"vertices": 72,
+							"bbox_godot": {
+								"min": [
+									-0.01399,
+									-0.024315,
+									0.003897
+								],
+								"max": [
+									0.01399,
+									0.024315,
+									-0.003897
+								]
+							}
+						}
+					],
+					"bbox_godot": {
+						"min": [
+							-0.048385,
+							-0.425,
+							-0.039
+						],
+						"max": [
+							0.048479,
+							0.42497,
+							0.039
+						],
+						"size": [
+							0.096865,
+							0.84997,
+							0.078
+						]
+					}
+				}
+			}
+		}
+	},
+	"outputs": {
+		"bike_chain.glb": "0a6f21f5d8c230a0a2cb09cb8b8857a09192e3eb29639c52bae5ef7e4b40253d"
+	},
+	"hash": "c01196953ee2442b1ab13fa62596468b989d57820d26c099b9441f47afabeff8"
+}

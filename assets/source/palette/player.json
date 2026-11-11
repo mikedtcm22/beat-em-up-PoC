@@ -2,7 +2,7 @@
 	"id": "player",
 	"slot_range": [
 		32,
-		47
+		37
 	],
 	"note": "The hero's own colours (concept C, martial: a dark navy sleeveless top, slate training trousers, brown hair, black gloves, belt and shoes). Skin tan and cream (the wraps, socks and soles) come from the shared palette. The concept's blacks are one charcoal, value 0.35 (the slice gate's lesson: a near-black glove reads as a canister, so bands and ink must read on it) and lighter than the navy so the Lab-nearest labelling keeps the top and the blacks apart. Six swatches in all (A3); nothing in the red band.",
 	"swatches": [

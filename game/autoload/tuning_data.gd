@@ -194,6 +194,100 @@ extends Resource
 ## Share of hit_flash_radius_m flashing at full strength before the smooth fade to nothing.
 @export_range(0.0, 1.0, 0.05) var hit_flash_core: float = 0.5
 
+@export_subgroup("Hurt")
+## What the player feels when he is the one hit (M6 playtest, Game-boy's ruling: a Punk's jab went by
+## unnoticed). SPEC §6's table (shake_* and cam_punch_*) still holds for the hits he lands and for
+## the ones his guard stops; these scale and add to it for a clean hit he takes. Every part goes off
+## together with Debug's hurt_feel_enabled.
+## Trauma of a hit taken = the tier's shake_* times this, and never less than hurt_shake_min.
+@export_range(0.0, 10.0, 0.1) var hurt_shake_mult: float = 2.5
+## The least trauma any clean hit taken adds (a light jab: 0.1 x 2.5 would be a quarter).
+@export_range(0.0, 1.0, 0.01) var hurt_shake_min: float = 0.3
+## The camera punch (the kick the way the blow pushes) of a hit taken = the tier's cam_punch_*_deg times this.
+@export_range(0.0, 10.0, 0.1) var hurt_punch_mult: float = 2.5
+## The head's roll, away from the side the blow came from, per tier, in degrees (it uses the punch's
+## snap-and-settle). A blow from straight ahead or behind rolls the head to alternating sides.
+@export_range(0.0, 20.0, 0.5) var hurt_roll_light_deg: float = 2.0
+@export_range(0.0, 20.0, 0.5) var hurt_roll_heavy_deg: float = 4.0
+@export_range(0.0, 20.0, 0.5) var hurt_roll_finisher_deg: float = 7.0
+## How much of the roll a blow from dead ahead or behind still gets (1 = as much as one from the side).
+@export_range(0.0, 1.0, 0.05) var hurt_roll_frontal_share: float = 0.5
+## The edge vignette (game/ui/hurt_overlay.gd, drawn under the HUD's panels). Its colour is the ink,
+## not red: SPEC §10 keeps red for blood, the rear warning and the finisher accents. Alpha is the
+## strongest it gets (a finisher, or a hit of hurt_overlay_full_damage).
+@export var hurt_overlay_color: Color = Color(0.05, 0.04, 0.07, 0.8)
+## The comic impact strokes along the struck edge (spikes pointing in), and their colour.
+@export var hurt_overlay_stroke_color: Color = Color(0.97, 0.94, 0.85, 0.9)
+## How many impact strokes a hit draws on its edge (0 = a plain vignette).
+@export_range(0, 16, 1) var hurt_overlay_strokes: int = 7
+## Seconds the vignette and the strokes take to fade out.
+@export_range(0.1, 1.5, 0.05) var hurt_overlay_fade_s: float = 0.45
+## How deep the vignette reaches in from the edge, as a share of the screen's height: at a hit of
+## no damage, and at hurt_overlay_full_damage or more.
+@export_range(0.0, 0.6, 0.01) var hurt_overlay_depth_min: float = 0.12
+@export_range(0.0, 0.6, 0.01) var hurt_overlay_depth_max: float = 0.32
+## The damage at which the vignette is at its deepest and strongest; below it, in proportion.
+@export_range(1.0, 100.0, 1.0) var hurt_overlay_full_damage: float = 20.0
+## The weakest a hit's vignette is, as a share of the strongest (so a 3-damage jab still shows).
+@export_range(0.0, 1.0, 0.05) var hurt_overlay_min_strength: float = 0.5
+## The share of a hit's vignette every edge gets whichever way it came; the rest is on the side
+## it came from (left, right, or the bottom edge for a blow from behind).
+@export_range(0.0, 1.0, 0.05) var hurt_overlay_even_share: float = 0.3
+## A blocked hit's vignette, as a share of a clean hit's (0 = none), and no strokes.
+@export_range(0.0, 1.0, 0.05) var hurt_overlay_blocked_scale: float = 0.2
+## The health panel's jolt on damage: its offset in canvas pixels per point of damage taken (capped
+## at hurt_panel_jolt_max_px), and the seconds it takes to settle.
+@export_range(0.0, 20.0, 0.1) var hurt_panel_jolt_px_per_hp: float = 1.2
+@export_range(0.0, 60.0, 1.0) var hurt_panel_jolt_max_px: float = 22.0
+@export_range(0.05, 1.0, 0.05) var hurt_panel_jolt_s: float = 0.25
+## The rattle's two rates, in radians per second (x and y; unequal so the offset traces a loop, not a line).
+@export_range(10.0, 300.0, 1.0) var hurt_panel_jolt_rate_x: float = 95.0
+@export_range(10.0, 300.0, 1.0) var hurt_panel_jolt_rate_y: float = 113.0
+## Which way a hit came from is the attacker's position against the view (the contact point is on the
+## player's own hurtbox, a few tenths of a metre from the lens). An attacker nearer the lens than this
+## horizontally (metres) has no side: the push direction stands in.
+@export_range(0.0, 1.0, 0.01) var hurt_bearing_min_m: float = 0.05
+## A blow whose bearing has a sine smaller than this (nearly dead ahead or behind) counts as frontal: the
+## roll alternates sides instead of keeping one.
+@export_range(0.0, 0.5, 0.01) var hurt_roll_frontal_sine: float = 0.1
+## The vignette's gradient: the band's mid-stop sits at this share of the depth, at this share of the
+## edge's alpha (it then falls to nothing at the depth).
+@export_range(0.05, 0.95, 0.05) var hurt_overlay_mid_stop: float = 0.4
+@export_range(0.0, 1.0, 0.05) var hurt_overlay_mid_alpha: float = 0.4
+## One impact stroke's length: this share of the vignette's depth at least, plus up to this much more
+## (random per stroke), then scaled by the strength (see hurt_overlay_stroke_len_floor).
+@export_range(0.1, 2.0, 0.05) var hurt_overlay_stroke_len_min: float = 0.55
+@export_range(0.0, 2.0, 0.05) var hurt_overlay_stroke_len_range: float = 0.7
+## The length scale of a stroke is the hit's strength plus this, up to 1 (so a weak hit's strokes are
+## not stubs).
+@export_range(0.0, 1.0, 0.05) var hurt_overlay_stroke_len_floor: float = 0.3
+## The strokes' width across the edge, as a share of the edge's length shared by all of them (0.4 = the
+## strokes' bases cover 40% of it).
+@export_range(0.05, 1.0, 0.05) var hurt_overlay_stroke_width: float = 0.4
+## How far a stroke's tip leans off the straight-in line, as a share of its half-width, either way.
+@export_range(0.0, 3.0, 0.05) var hurt_overlay_stroke_lean: float = 0.6
+## How far a stroke's place along the edge is jittered, as a share of the spacing, either way.
+@export_range(0.0, 0.5, 0.05) var hurt_overlay_stroke_jitter: float = 0.3
+## The strokes' opacity is the hit's strength times this (up to 1): the strokes reach full opacity before the vignette does.
+@export_range(1.0, 4.0, 0.1) var hurt_overlay_stroke_gain: float = 1.5
+## A blow from ahead lights the top edge's strokes only when its cosine against the view is over this
+## (0 = any blow in the front half; the top edge's strength then rises to full at dead ahead).
+@export_range(0.0, 0.95, 0.05) var hurt_overlay_top_threshold: float = 0.5
+## A blocked hit's vignette is shallower than a clean hit's: its depth is the clean depth times
+## hurt_overlay_blocked_scale times this, at most the clean depth (a block's edge stays thin).
+@export_range(1.0, 10.0, 0.5) var hurt_overlay_blocked_depth_gain: float = 2.0
+## Every impact stroke has an ink rim, so it reads on any ground (the pale street, a bright sky): its
+## width, as a share of the screen's height, and its colour.
+@export_range(0.0, 0.03, 0.001) var hurt_overlay_outline_width: float = 0.007
+@export var hurt_overlay_outline_color: Color = Color(0.05, 0.04, 0.07, 0.95)
+## A clean hit's bottom edge (a blow from behind, which the player cannot see coming) is inked this much
+## stronger on the share the blow struck (the part past hurt_overlay_even_share; 1 = the same as another
+## edge; the alpha stays at most 1). Drawn only: it never enters the depth.
+@export_range(1.0, 2.0, 0.05) var hurt_overlay_bottom_ink_gain: float = 1.5
+## The shortest a bottom edge's impact stroke is, as a share of the screen's height (the health panel at the
+## bottom left rises 0.16, so a light jab's teeth clear it). A heavy blow's teeth are as long as on any edge.
+@export_range(0.0, 0.5, 0.01) var hurt_overlay_bottom_stroke_floor: float = 0.2
+
 @export_group("VFX")
 ## Comic effects (Spec §6; VfxDirector, game/fx/). Sizes are meters at the contact point
 ## (a word's or a burst's width); times are seconds of sim time, so slow-mo stretches them.
@@ -345,6 +439,10 @@ extends Resource
 @export_range(0.0, 1.0, 0.01) var vfx_bruised_at: float = 0.66
 @export_range(0.0, 1.0, 0.01) var vfx_bloodied_at: float = 0.33
 @export_range(0.05, 2.0, 0.05) var vfx_damage_tile_m: float = 0.4
+## The blood's hard edge (M6 D6): the bloodied look's alpha is cut at this value with an edge one
+## pixel wide, so a blob is red and ink and nothing between (a soft alpha over the yellow cap read
+## orange). 0 keeps M4's soft blend. Off with `look_marks_per_swatch`.
+@export_range(0.0, 0.95, 0.05) var vfx_blood_edge_cut: float = 0.5
 
 @export_group("Ragdoll")
 ## Victim reactions (Spec §6, the tier table's "Victim reaction" row; game/actors/ragdoll.gd):
@@ -1055,6 +1153,45 @@ extends Resource
 @export var weapon_floor_color: Color = Color(0.96, 0.7, 0.1)
 ## How much thicker a weapon is drawn while it lies on the floor (the collision does not change).
 @export_range(1.0, 4.0, 0.1) var weapon_floor_radius_scale: float = 1.6
+## The floor glint (M6, D28), the look of a weapon lying on the floor now that the amber is retired: a small four-point
+## sparkle that floats above it, drawn facing the lens and never smaller than `weapon_glint_min_angle_deg` on screen
+## (so it still shows from across a street), pulsing at `weapon_glint_pulse_hz`. Gone while the weapon is held or flying.
+@export_range(0.0, 1.5, 0.05) var weapon_glint_height_m: float = 0.45
+## The glint's drawn size (m) when it is near; far away the angular floor below takes over.
+@export_range(0.1, 1.0, 0.05) var weapon_glint_size_m: float = 0.35
+## The smallest angle the glint covers on screen (degrees): 3 is about 35 px of a 900 px frame at any distance (the
+## first recording at 1.6 left a 12 px star at 10 m, which hardly read).
+@export_range(0.5, 6.0, 0.1) var weapon_glint_min_angle_deg: float = 3.0
+@export_range(0.2, 4.0, 0.1) var weapon_glint_pulse_hz: float = 1.1
+## How far the glint dims at the bottom of a pulse (0 = steady, 1 = out).
+@export_range(0.0, 1.0, 0.05) var weapon_glint_pulse_depth: float = 0.35
+## Degrees a second the four points turn, so the sparkle twinkles.
+@export_range(0.0, 180.0, 5.0) var weapon_glint_spin_dps: float = 30.0
+@export_range(0.2, 3.0, 0.1) var weapon_glint_intensity: float = 1.6
+## A warm white: no red (SPEC section 10) and not the retired amber.
+@export var weapon_glint_color: Color = Color(1.0, 0.96, 0.78)
+## The bike chain's links (M6, a presentation-only sim; docs/ARCHITECTURE.md, WEAPONS): Verlet points pinned at the grip and
+## drawn as a MultiMesh of the art's `Link`, a point to the tip's nominal line. It never touches a hit or a body.
+@export_range(3, 16, 1) var weapon_chain_points: int = 8
+@export_range(1, 10, 1) var weapon_chain_iterations: int = 4
+## How hard each point is pulled back to the straight line from the grip (1/s): high keeps the chain near the weapon's axis
+## (the padlock stays under the hitbox), low lets it trail and whip.
+@export_range(0.0, 120.0, 1.0) var weapon_chain_follow_rate: float = 30.0
+@export_range(0.0, 30.0, 0.5) var weapon_chain_gravity: float = 9.8
+## The share of speed each point loses a step.
+@export_range(0.0, 0.5, 0.01) var weapon_chain_damping: float = 0.04
+## A grip that moves further than this in one step (m: a pick-up, a reparent) snaps the chain straight rather than whipping it.
+@export_range(0.1, 3.0, 0.05) var weapon_chain_snap_m: float = 0.6
+## The distance between two drawn links along the chain (m); the Link mesh is 0.05 m long.
+@export_range(0.02, 0.06, 0.002) var weapon_chain_link_pitch_m: float = 0.032
+## The longest step the chain sim integrates in one go (s): a longer frame is cut to it, so a hitch cannot blow the Verlet
+## points apart (the stability limit; 1/30 s).
+@export_range(0.01, 0.1, 0.001) var weapon_chain_max_dt_s: float = 1.0 / 30.0
+@export_subgroup("Prop art")
+## How much of tuning's floor colour (weapon_floor_color) a weapon's ART takes while it lies on the floor (M6, until the
+## floor glint replaces it): 0 keeps the art's own colours, 1 multiplies them by the floor colour outright (the steel of a
+## chain goes near black), so a weapon reads against the floor and its palette still shows.
+@export_range(0.0, 1.0, 0.05) var weapon_art_floor_tint: float = 0.45
 @export_subgroup("Drop-offs")
 ## The invisible guard along every open edge (physics layer 9): the player can never walk or be
 ## knocked off, a standing enemy never walks off. Off, the player can fall (the fall rule below).
@@ -1091,6 +1228,62 @@ extends Resource
 @export_range(0.0, 100.0, 1.0) var go_cue_pad_y_px: float = 18.0
 ## The panel shadow's offset (px).
 @export_range(0.0, 20.0, 0.5) var go_cue_shadow_px: float = 6.0
+@export_subgroup("Kit")
+## The trim sheet's tiling (Milestone 6, KIT): the metres one width of the sheet (2048 px) covers on a
+## module's face. The strips are painted for 4 m; a smaller number makes the brick, the plaster and the
+## asphalt finer, a larger one coarser. The faces' UVs are in metres, so a wall of any length fits.
+@export_range(1.0, 16.0, 0.25) var kit_trim_m_per_tile: float = 4.0
+@export_subgroup("Ground")
+## The street's ground tile (M6 playtest feedback, FB-GROUND; assets/export/kit/ground_sheet.png): the metres one side of
+## it covers. It is painted for 8; a smaller number repeats its cracks, squares and manhole more often, a larger one
+## spreads them. It is sampled in world metres, so two floor blocks butt without a seam at any value. The tile is mirrored on
+## every other tile along the street's length, so its manhole and grates repeat down the street every twice this.
+@export_range(2.0, 16.0, 0.5) var ground_m_per_tile: float = 8.0
+## Where the ground's ink starts to soften with distance (the mip level at which the cut's edge begins to widen)...
+@export_range(0.0, 8.0, 0.25) var ground_ink_soft_from_lod: float = 2.0
+## ...how much it widens a level (0 = the cut stays crisp, and a crack thinner than a pixel flickers)...
+@export_range(0.0, 0.5, 0.01) var ground_ink_soft_per_lod: float = 0.12
+## ...and the most it widens (0.45: the ink then shows as the sheet's own coverage, a crack dimming with the mips).
+@export_range(0.0, 0.5, 0.01) var ground_ink_soft_max: float = 0.45
+## The strips' ink (the concrete's joints, the kerb's, the plaster's cracks) fades out between these two sizes of a
+## pixel, in texels of the 2048 px sheet, measured as the mean of the pixel's two sides (FIX-WORLD: the longer side alone
+## faded a roof deck's or a kerb top's seams within 6 to 10 m, where the eye sees them at a graze): the capped mip
+## (Look > Trim) would alias it past the first, so it is gone by the second. A wall seen square at 10 m is about 9 texels
+## a pixel, at 20 m about 17; a deck seen from eye height at 10 m is about 15 (46 along, 5 across).
+@export_range(1.0, 256.0, 1.0) var ground_ink_fade_start_texels: float = 16.0
+@export_range(2.0, 512.0, 1.0) var ground_ink_fade_end_texels: float = 64.0
+## Two drawn faces of one direction closer than this (m) lie in one plane (verification round, VFIX-WORLD): where a block and
+## another share one, the block that yields does not draw its face (InsetBlock, RoomKit.resolve_coplanar), so the two never fight
+## (a z-fight) and no step is left for the edge pass to ink. Read when a block or room is built.
+@export_range(0.0005, 0.05, 0.0005) var kit_coplanar_m: float = 0.004
+## How far out of a box's face (m) the kit's own standoffs go out with it when the face is taken out (a wall's plinth board
+## stands 5 cm off its face and is the same face for this purpose). Read when a block or room is built.
+@export_range(0.0, 0.5, 0.005) var kit_clip_standoff_m: float = 0.06
+@export_subgroup("Draw cost")
+## M6 final review (perf): the largest error (m) a static prop's shadow mesh may have against the prop's own
+## triangles. The sun's shadow pass draws a coarser mesh of a car, a tank or a dumpster (about half the triangles,
+## within 0.12 m: a shadow is soft and falls on the floor), cast by a shadow-only twin of the prop's mesh; 0 draws the prop's own triangles in the shadow
+## pass too. Read when a StaticArt model is first built, so set it (a preset never holds it) before the room loads.
+@export_range(0.0, 0.5, 0.01) var draw_prop_shadow_error_m: float = 0.12
+## The distance (m) from the lens past which a prop's shadow twin is not drawn: the sun's shadows end at 40 m
+## (RoomKit.build_environment), and a car's or a tank's shadow is a few metres long, so 60 m shows no change.
+## 0 draws it at every distance. Read when a StaticArt is built.
+@export_range(0.0, 200.0, 5.0) var draw_prop_shadow_range_m: float = 60.0
+## The simplification's normal merge angle and split angle (degrees; ImporterMesh.generate_lods): the surface angle
+## under which neighbouring faces count as one surface when a level is simplified, and over which an edge stays hard.
+@export_range(0.0, 90.0, 1.0) var draw_prop_lod_merge_deg: float = 25.0
+@export_range(0.0, 90.0, 1.0) var draw_prop_lod_split_deg: float = 25.0
+@export_subgroup("Section light")
+## How long the level's light takes to change from one section's to the next's (Milestone 6, DRESS; D12):
+## the sun's direction, colour and energy, the fog and the sky horizon, blended from the moment the
+## player enters the new section (`CombatEvents.section_entered`). 0 snaps. Each section's own light is
+## its `LevelSection` exports (the street's dusk, the roofs' copper, the boss roof's dark drop).
+@export_range(0.0, 10.0, 0.1) var section_light_blend_s: float = 2.5
+## How much the fog covers the sky (Milestone 6, final review; Environment.fog_sky_affect): 1 paints the sky
+## the fog's colour, so a section's dusk sky (its `sky_top_color` and `sky_horizon_color`) never shows;
+## 0 leaves the sky untouched by the fog. A low value lets the skyline gaps show the dusk while the fog
+## still softens it. Every room takes it (RoomKit.build_environment; LevelRoot keeps it live).
+@export_range(0.0, 1.0, 0.05) var section_fog_sky_affect: float = 0.3
 
 @export_group("Audio")
 @export_subgroup("Mix")
@@ -1101,6 +1294,10 @@ extends Resource
 @export_range(0.0, 0.3, 0.01) var sfx_pitch_variation: float = 0.08
 ## ...and its volume (as amplitude) by up to plus or minus this share (Spec §6: 8%).
 @export_range(0.0, 0.3, 0.01) var sfx_volume_variation: float = 0.08
+## The sound audition room's (debug) feel: how far in front of the listener a one-shot is played (m), and the gap left after a
+## variant when the whole bank plays (s).
+@export_range(0.5, 10.0, 0.1) var audition_ahead_m: float = 2.0
+@export_range(0.0, 2.0, 0.05) var audition_bank_gap_s: float = 0.35
 @export_subgroup("Tiers")
 ## Every one-shot of a hit (its layers, or a blocked hit's clack, ting or crash) is this many
 ## dB louder per tier, so the tiers rank in loudness as well as in layers.
@@ -1114,29 +1311,52 @@ extends Resource
 ## Layer volumes in dB (every sample is normalized to the same peak). Light hits play whoosh
 ## + thud, heavy hits add the crack, finishers play whoosh + thud + crunch + body fall + sub
 ## thump (Spec §6).
-@export_range(-40.0, 12.0, 0.5) var whoosh_db: float = -10.0
-@export_range(-40.0, 12.0, 0.5) var thud_db: float = -8.0
-@export_range(-40.0, 12.0, 0.5) var crack_db: float = -7.0
-@export_range(-40.0, 12.0, 0.5) var crunch_db: float = -10.0
+@export_range(-40.0, 12.0, 0.5) var whoosh_db: float = -8.0
+@export_range(-40.0, 12.0, 0.5) var thud_db: float = -5.0
+@export_range(-40.0, 12.0, 0.5) var crack_db: float = -4.0
+@export_range(-40.0, 12.0, 0.5) var crunch_db: float = -11.0
 @export_range(-40.0, 12.0, 0.5) var body_fall_db: float = -12.0
-@export_range(-40.0, 12.0, 0.5) var sub_thump_db: float = -10.0
+@export_range(-40.0, 12.0, 0.5) var sub_thump_db: float = -12.0
 ## A missed swing's whoosh (attack_whiffed): no impact and no hitstop.
 @export_range(-40.0, 12.0, 0.5) var whiff_db: float = -6.0
 @export_subgroup("Voices")
 ## An enemy hit cleanly grunts; the player grunts too, at the listener.
-@export_range(-40.0, 12.0, 0.5) var grunt_db: float = -9.0
-@export_range(-40.0, 12.0, 0.5) var player_grunt_db: float = -13.0
+@export_range(-40.0, 12.0, 0.5) var grunt_db: float = -14.0
+@export_range(-40.0, 12.0, 0.5) var player_grunt_db: float = -17.0
 ## An actor grunts at most once per this many ms (a body-blow flurry lands every few frames).
 @export_range(0.0, 1000.0, 10.0) var grunt_min_interval_ms: float = 300.0
 ## Each actor's voice is pitched up or down by up to this share, the same every time.
 @export_range(0.0, 0.3, 0.01) var voice_pitch_spread: float = 0.1
 ## An enemy's wind-up: an effort grunt and a whoosh at the attacker (Spec §8's audio cue,
 ## on while rear_warning_audio).
-@export_range(-40.0, 12.0, 0.5) var windup_db: float = -10.0
+@export_range(-40.0, 12.0, 0.5) var windup_db: float = -12.0
+## An enemy's KO line (Milestone 6), played at its eyes as it goes down.
+@export_range(-40.0, 12.0, 0.5) var ko_db: float = -15.0
+## The boss's roar as it enters phase 2.
+@export_range(-40.0, 12.0, 0.5) var boss_line_db: float = -10.0
 @export_subgroup("Blocks")
 @export_range(-40.0, 12.0, 0.5) var block_clack_db: float = -2.5
 @export_range(-40.0, 12.0, 0.5) var parry_ting_db: float = -6.0
 @export_range(-40.0, 12.0, 0.5) var guard_break_db: float = -1.0
+@export_subgroup("World")
+## The world's sounds (Milestone 6, D23), in dB at the listener's unit distance: a barrier closing or
+## opening (shutter, gate or car), a weapon picked up, thrown, breaking or landing, and a weapon's own
+## impact layered on the hit stack of a swing that names one (`MoveData.impact_sfx`).
+@export_range(-40.0, 12.0, 0.5) var barrier_db: float = -5.0
+@export_range(-40.0, 12.0, 0.5) var weapon_pickup_db: float = -8.0
+@export_range(-40.0, 12.0, 0.5) var weapon_throw_db: float = -8.0
+@export_range(-40.0, 12.0, 0.5) var weapon_break_db: float = -4.0
+@export_range(-40.0, 12.0, 0.5) var weapon_land_db: float = -8.0
+@export_range(-40.0, 12.0, 0.5) var weapon_hit_db: float = -8.0
+@export_subgroup("Stings")
+## The 2D cues: GO when an arena opens its way, CLEAR! at the end of the level.
+@export_range(-40.0, 12.0, 0.5) var sting_go_db: float = -8.0
+@export_range(-40.0, 12.0, 0.5) var sting_clear_db: float = -8.0
+@export_subgroup("Ambience")
+## The looping bed under the level (street hum, roof wind), in dB, and how long a crossfade to
+## the next section's bed takes.
+@export_range(-60.0, 0.0, 0.5) var ambience_db: float = -22.0
+@export_range(0.1, 10.0, 0.1) var ambience_fade_s: float = 1.5
 @export_subgroup("Distance")
 ## Sounds play at their layer's volume within this distance (m) of the listener (the
 ## player's eyes), 6 dB quieter at twice it, and so on.
@@ -1272,6 +1492,15 @@ extends Resource
 ## breaks them into dashes). 0 is the soft linear mix for every art (the A/B).
 @export_range(0.0, 0.9, 0.01) var look_detail_cut: float = 0.15
 
+## M6 DETAIL-2: an art whose detail mask carries a palette slot per texel (the Bruiser's) takes each
+## texel's swatch, so a colour border follows the texture, not the 2 cm faces. A border at texel
+## resolution (about 4 mm) is exact up close but crawls once a texel is smaller than a pixel, so the
+## swatch fades to the face's between this many texels per pixel (below it every texel is its own;
+## the Bruiser's texels are about 4 mm, so 1 is about 3 m) and `look_texel_swatch_fade_far`.
+@export_range(0.1, 8.0, 0.1) var look_texel_swatch_fade_near: float = 1.0
+## The texels per pixel at and beyond which a texel takes its face's swatch (about 10 m at 3).
+@export_range(0.2, 16.0, 0.1) var look_texel_swatch_fade_far: float = 3.0
+
 @export_subgroup("Outline")
 ## The inverted-hull outline's width in pixels at 1080p (the look bible: 3.5 to 4 px at 1 to
 ## 3 m, never above 4.5).
@@ -1326,6 +1555,17 @@ extends Resource
 @export var look_grade_enabled: bool = true
 ## How much of the grade shows: 0 = the picture as it is, 1 = the whole LUT.
 @export_range(0.0, 1.0, 0.05) var look_grade_strength: float = 1.0
+
+@export_subgroup("Trim")
+## The trim material's ink (the painted seams and joints of the sheet, its alpha) is cut at this level,
+## with an edge one pixel wide (as toon.gdshader's detail_cut does for the characters), so a seam
+## stays a crisp line under the sheet's mipmaps. Lower: thicker lines. 1 would show no line.
+@export_range(0.05, 0.95, 0.01) var look_trim_ink_cut: float = 0.5
+## The sharpest mip level (0 = the sheet's full 2048 px) the trim material may read when a surface
+## runs away from the lens. A strip is a 128 px band that wraps, so a level past about 4 (16 px)
+## would blend one band into its neighbour; the cap keeps a far wall's detail from smearing into
+## the next strip. Higher: a calmer far wall, and a blend between strips.
+@export_range(1.0, 7.0, 0.25) var look_trim_lod_cap: float = 4.0
 
 @export_subgroup("FP feel")
 ## First-person feel alternative: the non-KO knockdown hides the torso slab that fills the
@@ -1391,6 +1631,13 @@ extends Resource
 
 @export_group("Debug")
 @export var god_mode: bool = false
+## The player feels the hits he takes (M6 playtest): the larger shake and punch, the head's roll, the
+## edge vignette and the health panel's jolt (Tuning > Hit feel > Hurt). Off gives M6's view back,
+## where a hit taken felt as one landed. Presets never hold it.
+@export var hurt_feel_enabled: bool = true
+## M6's GO sting: on plays `sting_go` when an arena's table finishes, as M6 did; off (Game-boy's
+## ruling at his playtest) is silent. The level's CLEAR! sting is not affected. Presets never hold it.
+@export var audio_sting_go: bool = false
 ## A/B switch for Milestone 5's attack arcs: on brings back all of M3's director (the even spread
 ## round the player, a token to any waiter, the blind-spot roll for any enemy, no engage line).
 ## Presets never hold it.
@@ -1426,6 +1673,51 @@ extends Resource
 ## Motion's A/B (read when a named-clip library is built): off builds the M3 clips, with linear
 ## keys and no life, so a capture can pair an M3 and an M4 recording of one act.
 @export var look_motion_polish: bool = true
+## A/B for M6's damage marks per swatch (D6): on, a swatch that says "blood": false (the Punk's cap,
+## laces and strap) scuffs but never takes blood, and blood has a hard edge (`vfx_blood_edge_cut`);
+## off brings back M4's: every clothes swatch takes the blood tile, soft-edged. Read at each look
+## change. Presets never hold it.
+@export var look_marks_per_swatch: bool = true
+## A/B of M6 DETAIL-2's texel swatches: on, an art whose detail mask has palette codes in its blue
+## channel (the Bruiser's) takes each texel's swatch; off, every face takes its own, as M6 did. Read
+## when a material is made or refreshed. Presets never hold it.
+@export var look_texel_swatch: bool = true
+## A/B of D14 (M6 PROPS): a static prop's baked-smooth-normal hull (on) or the screen edge pass's
+## lines alone (off). Read when a StaticArt is built, so set it (a preset never holds it) before the
+## room loads.
+@export var prop_art_hull: bool = true
+## KIT's A/B (Milestone 6, D1): every block, barrier panel, stair flight and room box draws as M5's
+## graybox (a flat colour box, the grid floor, plain barrier boxes), the kit's modules, dressing and
+## prop spots hidden. The colliders are the same either way. Read when a block is built, so set it
+## (a preset never holds it) before the level loads.
+@export var kit_draw_graybox: bool = false
+## Milestone 6's audio A/B: every pool the Milestone 2 placeholders had plays from them
+## (tests/fixtures/sfx_legacy/) instead of the final sounds. The training room's audition room
+## toggles it with the minus key. Presets never hold it.
+@export var audio_legacy_bank: bool = false
+## A/B switch for the floor glint (M6, D28): on brings back M5's look, a weapon on the floor coloured `weapon_floor_color`
+## and drawn thicker (its art tinted), and no glint. Presets never hold it.
+@export var weapon_floor_amber: bool = false
+## A/B switch for the bike chain's sim: off draws StaticArt's straight repeats of the link instead. Presets never hold it.
+@export var weapon_chain_sim: bool = true
+## ARM's A/B (Milestone 6, D7): the hero's upper arms are drawn in the first-person lens during the
+## haymaker and the uppercut (the moves that say fp_show_upper_arm: his art's Body__fp_arm mesh goes
+## on the default layer while they run), or off, M5's view where the arm starts at the elbow's dome.
+## Read every frame. Presets never hold it.
+@export var look_near_arm: bool = true
+## How the near upper arm is lit while it is drawn (M6 fix-final-arm): the toon bands of its material copy, so it reads as one limb
+## with the forearm. The sun and the fill light a raised arm's underside below band_1 (a violet tube beside the lit forearm); the arm
+## takes these instead: shadow only below `look_near_arm_band_1` (0 = only a surface turned right away from the light), full light
+## above `look_near_arm_band_2`, and the mid band at `look_near_arm_mid_level` between. The toon values (Look > Toon) are the forearm's.
+@export_range(0.0, 0.5, 0.01) var look_near_arm_band_1: float = 0.0
+@export_range(0.0, 1.0, 0.01) var look_near_arm_band_2: float = 0.35
+@export_range(0.3, 1.0, 0.01) var look_near_arm_mid_level: float = 0.86
+## DRESS's A/B (Milestone 6, D12): each section's own light (sun, fog, sky) on, or Tuning's one sun
+## and the room's default fog everywhere, as in M5. Read live by the level. Presets never hold it.
+@export var section_light_enabled: bool = true
+## FB-GROUND's A/B: on, the street's asphalt is drawn from the sheet's own asphalt strip (a wrapped 4 x 1 m strip per
+## face, its mip capped) instead of the ground tile, as in M6's first cut. Read live. Presets never hold it.
+@export var ground_sheet_off: bool = false
 
 
 func hitstop_s(tier: CombatTypes.HitTier) -> float:
@@ -1444,6 +1736,27 @@ func shake(tier: CombatTypes.HitTier) -> float:
 		CombatTypes.HitTier.FINISHER:
 			return shake_finisher
 	return shake_light
+
+
+## Trauma a clean hit of `tier` adds to the view of the player it hits (hurt_feel_enabled): the tier's
+## shake times hurt_shake_mult, never under hurt_shake_min.
+func hurt_shake(tier: CombatTypes.HitTier) -> float:
+	return clampf(maxf(shake(tier) * hurt_shake_mult, hurt_shake_min), 0.0, 1.0)
+
+
+## Camera punch, in degrees, of a clean hit of `tier` on the player (hurt_feel_enabled).
+func hurt_punch_deg(tier: CombatTypes.HitTier) -> float:
+	return cam_punch_deg(tier) * hurt_punch_mult
+
+
+## Head roll, in degrees, of a clean hit of `tier` on the player (hurt_feel_enabled).
+func hurt_roll_deg(tier: CombatTypes.HitTier) -> float:
+	match tier:
+		CombatTypes.HitTier.HEAVY:
+			return hurt_roll_heavy_deg
+		CombatTypes.HitTier.FINISHER:
+			return hurt_roll_finisher_deg
+	return hurt_roll_light_deg
 
 
 func cam_punch_deg(tier: CombatTypes.HitTier) -> float:

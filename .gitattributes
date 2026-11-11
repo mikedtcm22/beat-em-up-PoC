@@ -39,3 +39,6 @@ assets/export/palette/palette_atlas.png filter=lfs diff=lfs merge=keep-ours -tex
 
 # The Tripo ledger is append-only and written from several worktrees: a merge keeps both sides' lines.
 assets/source/tripo_ledger.jsonl merge=union
+
+# The ElevenLabs ledger likewise (AUDIO and SFX append to it from their worktrees).
+assets/source/sfx/eleven_ledger.jsonl merge=union

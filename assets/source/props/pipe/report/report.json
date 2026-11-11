@@ -1,0 +1,222 @@
+{
+	"asset": "pipe",
+	"version": 1,
+	"config_sha256": "7a79cd40628d5803bf6469ccc473d9d68922dd4ae14e01dfe7ec53adb793cc76",
+	"steps": {
+		"inspect": {
+			"source": {
+				"builder": "pipe",
+				"triangles": 264
+			},
+			"scale": [
+				1.0,
+				1.0,
+				1.0
+			],
+			"bbox_m": {
+				"min": [
+					-0.0416,
+					-0.0416,
+					-0.425
+				],
+				"max": [
+					0.0416,
+					0.0416,
+					0.425
+				],
+				"size": [
+					0.0832,
+					0.0832,
+					0.85
+				]
+			},
+			"orient": {},
+			"target": {
+				"origin": "keep"
+			},
+			"triangles": 264
+		},
+		"palette": {
+			"source_image": null,
+			"faces_dense": 264,
+			"textured_faces": 0,
+			"override_faces": 264,
+			"delta_e_mean": 0.0,
+			"delta_e_p95": 0.0,
+			"pruned_swatches": [],
+			"majority_flips": 0,
+			"border_vertices": 0,
+			"border_edges": 0,
+			"protected_vertices": 144,
+			"decimate": {
+				"invert_group": true,
+				"trials": [
+					{
+						"ratio": 1.0,
+						"tris": 264
+					},
+					{
+						"ratio": 3.7879,
+						"tris": 264
+					},
+					{
+						"ratio": 14.348,
+						"tris": 264
+					},
+					{
+						"ratio": 54.3486,
+						"tris": 264
+					},
+					{
+						"ratio": 205.8658,
+						"tris": 264
+					},
+					{
+						"ratio": 779.7949,
+						"tris": 264
+					},
+					{
+						"ratio": 2953.7684,
+						"tris": 264
+					}
+				],
+				"triangles": 264,
+				"budget": 1000,
+				"budget_ok": true,
+				"protected_position_worst_m": 0.0
+			},
+			"swatches_used": {
+				"1": {
+					"name": "near_black",
+					"area_share": 0.202323,
+					"faces": 45
+				},
+				"2": {
+					"name": "dark_grey",
+					"area_share": 0.128949,
+					"faces": 87
+				},
+				"31": {
+					"name": "pipe_paint",
+					"area_share": 0.557997,
+					"faces": 44
+				},
+				"63": {
+					"name": "rust_brown",
+					"area_share": 0.110732,
+					"faces": 88
+				}
+			},
+			"swatch_count": 4,
+			"detail_uv": false,
+			"detail_bake": null,
+			"regions": [],
+			"region_cuts": [],
+			"fist_band": null,
+			"fist_border_thinned": 0,
+			"fist_strap_cuts": [],
+			"decimate_parts": [
+				{
+					"part": "body",
+					"invert_group": true,
+					"trials": [
+						{
+							"ratio": 1.0,
+							"tris": 264
+						},
+						{
+							"ratio": 3.7879,
+							"tris": 264
+						},
+						{
+							"ratio": 14.348,
+							"tris": 264
+						},
+						{
+							"ratio": 54.3486,
+							"tris": 264
+						},
+						{
+							"ratio": 205.8658,
+							"tris": 264
+						},
+						{
+							"ratio": 779.7949,
+							"tris": 264
+						},
+						{
+							"ratio": 2953.7684,
+							"tris": 264
+						}
+					],
+					"triangles": 264,
+					"budget": 1000,
+					"budget_ok": true,
+					"protected_vertices": 144,
+					"protected_position_worst_m": 0.0
+				}
+			],
+			"unfold": {
+				"folded_before": 0,
+				"folded_after": 0,
+				"passes": 0,
+				"history": [
+					0
+				]
+			},
+			"triangles": 264,
+			"vertices": 144
+		},
+		"export": {
+			"variants": {
+				"prop": {
+					"file": "pipe.glb",
+					"sha256": "2fbd403228102abbf9a83f608cf44e20d25922466a1ae2224397bf685786977c",
+					"bytes": 14800,
+					"triangles": 264,
+					"folded_triangles": 0,
+					"meshes": [
+						{
+							"name": "Pipe",
+							"triangles": 264,
+							"vertices": 144,
+							"bbox_godot": {
+								"min": [
+									-0.0416,
+									-0.425,
+									0.0416
+								],
+								"max": [
+									0.0416,
+									0.425,
+									-0.0416
+								]
+							}
+						}
+					],
+					"bbox_godot": {
+						"min": [
+							-0.0416,
+							-0.425,
+							-0.0416
+						],
+						"max": [
+							0.0416,
+							0.425,
+							0.0416
+						],
+						"size": [
+							0.0832,
+							0.85,
+							0.0832
+						]
+					}
+				}
+			}
+		}
+	},
+	"outputs": {
+		"pipe.glb": "2fbd403228102abbf9a83f608cf44e20d25922466a1ae2224397bf685786977c"
+	},
+	"hash": "5fb3d0e579df509cc2b49116a2b76690b192c4b5e3dbf5fb0ec0409a79e08756"
+}

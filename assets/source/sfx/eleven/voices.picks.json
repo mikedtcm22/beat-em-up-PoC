@@ -1,0 +1,295 @@
+{
+	"slots": {
+		"grunt_punk": {
+			"min_variants": 3,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"effort_punk": {
+			"min_variants": 2,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"ko_punk": {
+			"min_variants": 1,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"grunt_kicker": {
+			"min_variants": 3,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"effort_kicker": {
+			"min_variants": 2,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"ko_kicker": {
+			"min_variants": 1,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"grunt_thug": {
+			"min_variants": 3,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"effort_thug": {
+			"min_variants": 2,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"ko_thug": {
+			"min_variants": 1,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"grunt_bruiser": {
+			"min_variants": 3,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"effort_bruiser": {
+			"min_variants": 2,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"ko_bruiser": {
+			"min_variants": 1,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"grunt_boss": {
+			"min_variants": 3,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"effort_boss": {
+			"min_variants": 2,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"ko_boss": {
+			"min_variants": 1,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"grunt": {
+			"min_variants": 3,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"effort": {
+			"min_variants": 2,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"player_grunt": {
+			"min_variants": 2,
+			"long": false,
+			"loop": false,
+			"space": "3d"
+		},
+		"boss_phase": {
+			"min_variants": 1,
+			"long": true,
+			"loop": false,
+			"space": "3d"
+		}
+	},
+	"defaults": {
+		"rms_db": -16.0,
+		"peak_cap_db": -1.0
+	},
+	"pools": {
+		"grunt_punk": {
+			"takes": [
+				"voices/grunt_punk_v1_01",
+				"voices/grunt_punk_v2_02",
+				"voices/grunt_punk_v3_03",
+				"voices/grunt_punk_v4_02"
+			],
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"max_s": 1.0
+		},
+		"effort_punk": {
+			"takes": [
+				"voices/effort_punk_v1_02",
+				"voices/effort_punk_v2_02",
+				"voices/effort_punk_v3_03"
+			],
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"max_s": 0.6
+		},
+		"ko_punk": {
+			"takes": [
+				"voices/ko_punk_v1_03",
+				"voices/ko_punk_v2_02"
+			],
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"max_s": 1.4
+		},
+		"grunt_kicker": {
+			"takes": [
+				"voices/grunt_kicker_v1_03",
+				"voices/grunt_kicker_v2_01",
+				"voices/grunt_kicker_v3_01",
+				"voices/grunt_kicker_v4_01"
+			],
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"max_s": 1.0
+		},
+		"effort_kicker": {
+			"takes": [
+				"voices/effort_kicker_v1_01",
+				"voices/effort_kicker_v2_02",
+				"voices/effort_kicker_v3_02"
+			],
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"max_s": 0.6
+		},
+		"ko_kicker": {
+			"takes": [
+				"voices/ko_kicker_v1_01",
+				"voices/ko_kicker_v2_02"
+			],
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"max_s": 1.4
+		},
+		"grunt_thug": {
+			"takes": [
+				"voices/grunt_thug_v1_03",
+				"voices/grunt_thug_v2_02",
+				"voices/grunt_thug_v3_03",
+				"voices/grunt_thug_v4_02"
+			],
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"max_s": 1.0
+		},
+		"effort_thug": {
+			"takes": [
+				"voices/effort_thug_v1_03",
+				"voices/effort_thug_v2_02",
+				"voices/effort_thug_v3_03"
+			],
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"max_s": 0.6
+		},
+		"ko_thug": {
+			"takes": [
+				"voices/ko_thug_v1_01",
+				"voices/ko_thug_v2_01"
+			],
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"max_s": 1.4
+		},
+		"grunt_bruiser": {
+			"takes": [
+				"voices/grunt_bruiser_v1_03",
+				"voices/grunt_bruiser_v2_01",
+				"voices/grunt_bruiser_v3_03",
+				"voices/grunt_bruiser_v4_01"
+			],
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"max_s": 1.2
+		},
+		"effort_bruiser": {
+			"takes": [
+				"voices/effort_bruiser_v1_02",
+				"voices/effort_bruiser_v2_03",
+				"voices/effort_bruiser_v3_03"
+			],
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"max_s": 0.8
+		},
+		"ko_bruiser": {
+			"takes": [
+				"voices/ko_bruiser_v1_03",
+				"voices/ko_bruiser_v2_01"
+			],
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"max_s": 1.4
+		},
+		"grunt_boss": {
+			"takes": [
+				"voices/grunt_boss_v1_01",
+				"voices/grunt_boss_v2_02",
+				"voices/grunt_boss_v3_02",
+				"voices/grunt_boss_v4_02"
+			],
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"max_s": 1.2
+		},
+		"effort_boss": {
+			"takes": [
+				"voices/effort_boss_v1_03",
+				"voices/effort_boss_v2_03",
+				"voices/effort_boss_v3_03"
+			],
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"max_s": 0.8
+		},
+		"ko_boss": {
+			"takes": [
+				"voices/ko_boss_v1_03",
+				"voices/ko_boss_v2_02"
+			],
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"max_s": 1.4
+		},
+		"grunt": {
+			"takes": [
+				"voices/grunt_v1_03",
+				"voices/grunt_v2_02",
+				"voices/grunt_v3_03",
+				"voices/grunt_v4_03"
+			],
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"max_s": 1.0
+		},
+		"effort": {
+			"takes": [
+				"voices/effort_v1_03",
+				"voices/effort_v2_03",
+				"voices/effort_v3_03"
+			],
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"max_s": 0.6
+		},
+		"player_grunt": {
+			"takes": [
+				"voices/player_grunt_v1_02",
+				"voices/player_grunt_v2_03",
+				"voices/player_grunt_v3_02"
+			],
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"max_s": 0.8
+		},
+		"boss_phase": {
+			"takes": [
+				"voices/boss_phase_v1_03",
+				"voices/boss_phase_v2_03"
+			],
+			"notes": "one take per prompt, chosen by active length near the target, peak, rms and crest",
+			"max_s": 2.0
+		}
+	}
+}

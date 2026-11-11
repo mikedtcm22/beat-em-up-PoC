@@ -22,7 +22,7 @@ replace: reads work/03_rig.blend, writes work/04_parts.blend and work/04a_fists_
 	  The dense, textured pieces are kept in work/04a_fists_dense.blend for the detail mask (player_detail.py).
 
 split: reads work/05_palette.blend, writes work/06_split.blend. The first-person body (parts.split_fp): Body__fp_hidden = Chest
-	and above, both Shoulders and the shoulder half of each upper arm; the visible Body keeps everything else and EVERY open loop
+	and above and both Shoulders (and, when parts.split_fp.arm.enabled is off, the shoulder half of each upper arm too); the visible Body keeps everything else and EVERY open loop
 	of it is closed with an inward rounded cap. Differences from blender_parts.py: the horizontal cut is made through every face
 	that can be hidden (the shoulder zone too), so the hidden part never reaches below the Chest joint (a shoulder-zone face
 	hung below it in the first run); the generated mesh's pinholes, slits and non-manifold edges are cut out and patched (the contract
@@ -31,6 +31,11 @@ split: reads work/05_palette.blend, writes work/06_split.blend. The first-person
 	faces that are not an arm's, between the Chest joint's plane and the plane of parts.split_fp.torso.low_bone's joint, are separated
 	into it after the hidden part (split_fp; the shipped player.glb has Body, Body__fp_hidden and Body__fp_torso, and test_art_contract
 	asserts the three). The step before this one wrote the first two only (M4-calls/F-player-art.md C14); F-player-fix added the third.
+A fourth mesh Body__fp_arm (M6 D7, ARM) IS built when parts.split_fp.arm.enabled: the shoulder half of each upper arm (the faces
+the upper arm owns on the shoulder side of the cut at upper_arm_cut), separated from the hidden part after its defects are patched.
+It is first-person-hidden like the hidden part and FirstPersonCamera lifts it for the moves that say fp_show_upper_arm (the haymaker
+and the uppercut), so the lens sees the arm come in from the shoulder. Its loop on the shoulder side is closed with an inward cap
+(a hollow tube would show the lens the inside of the sleeve); the loop on the elbow side lies on Body's dome, which closes it.
 """
 import math
 import os
@@ -811,7 +816,8 @@ def add_caps(obj, sc, heal_max=0.0):
 	"""Close every open loop of a mesh with a rounded cap and return the cap report. A loop's cap is built from the settings
 	cap_spec() finds for the bone that owns most of its vertices: `dir` "in" puts the dome inside the mesh (the waist, the leg tops:
 	nothing the lens meets), "out" puts it on the cut's outer side (the upper arm's end, so it reads as M3's Elbow capsule: a
-	convex dome, tangent to the arm at the ring, with smooth normals); `depth_m` is its height and `rings` its steps. The whole cap
+	convex dome, tangent to the arm at the ring, with smooth normals); `depth_m` is its height and `rings` its steps; `inset_m` sinks its
+	rings below the wall they are tangent to (zero at the cut, the full amount from about 15 degrees up the dome). The whole cap
 	takes the loop's commonest palette swatch (the skin's, on an arm), so no border of two colours crosses it; its UV2 is (0, 0), which
 	is empty (no ink); its faces carry CAP_ATTR (1; 2 when the spec says `wall_normals`: a cap nobody sees, whose ring then takes the wall's
 	shading normal, see player_normals.py) so the hull's smooth normal ignores them."""
@@ -847,6 +853,7 @@ def add_caps(obj, sc, heal_max=0.0):
 		owner = names_by_group.get(max(acc, key=acc.get), "") if acc else ""
 		spec = cap_spec(sc, owner, obj.name)
 		depth, rings = float(spec["depth_m"]), int(spec["rings"])
+		inset = float(spec.get("inset_m", 0.0))
 		n_cap = n_in if spec["dir"] == "in" else -n_in
 		# the loop's commonest swatch (the faces next to the cut): the cap wears it whole
 		votes = {}
@@ -880,7 +887,12 @@ def add_caps(obj, sc, heal_max=0.0):
 			phi = math.pi / 2 * k / rings
 			ring = []
 			for j2 in range(m):
-				q = bm.verts.new(tuple(c + n_cap * depth * math.sin(phi) + (coarse_pts[j2] - c) * math.cos(phi)))
+				radial = coarse_pts[j2] - c
+				pos = c + n_cap * depth * math.sin(phi) + radial * math.cos(phi)
+				if inset > 0.0:
+					# sunk below the wall the dome is tangent to (spec `inset_m`, the upper arms': Body__fp_arm's wall lies over it and must hide it)
+					pos = pos - radial / max(np.linalg.norm(radial), 1e-9) * inset * float(smoothstep01(math.sin(phi) / 0.25))
+				q = bm.verts.new(tuple(pos))
 				a_i, b_i, f2 = coarse_src[j2]
 				wa, wb = dict(verts[a_i][dl].items()), dict(verts[b_i][dl].items())
 				for gi in set(wa) | set(wb):
@@ -954,11 +966,136 @@ def separate_faces(body, mask, name):
 	bpy.ops.object.mode_set(mode="EDIT")
 	bpy.ops.mesh.separate(type="SELECTED")
 	bpy.ops.object.mode_set(mode="OBJECT")
-	new = [o for o in bpy.data.objects if o.type == "MESH" and o != body and o.name not in ("Body", "Body__fp_hidden")]
+	new = [o for o in bpy.data.objects if o.type == "MESH" and o != body and o.name not in ("Body", "Body__fp_hidden", "Body__fp_torso", "Body__fp_arm")]
 	part = new[-1]
 	part.name = name
 	part.data.name = name
 	return part
+
+
+def smoothstep01(x):
+	x = np.clip(x, 0.0, 1.0)
+	return x * x * (3.0 - 2.0 * x)
+
+
+def push_arm_out(arm, arm_axes, cut_t, ac):
+	"""Swell the upper-arm piece radially by ac.push_m (M6 D7): Body's convex dome at the cut reaches into the piece (it is tangent to the arm
+	at the cut's ring, so it lies a millimetre inside the piece's wall there), and the generated wall dips by more than that in places: with
+	both on screen the dome showed through in ragged patches with edge lines. The push is zero at the cut's ring and ramps up over
+	ac.elbow_ramp_m (so the join with Body stays closed), and zero again at the piece's shoulder-side loop (ac.shoulder_ramp_m: the hidden
+	part's edge there must stay on the piece's). Returns a report."""
+	push = float(ac.get("push_m", 0.0))
+	if push <= 0.0:
+		return {"push_m": 0.0}
+	bm = bmesh.new()
+	bm.from_mesh(arm.data)
+	bm.verts.ensure_lookup_table()
+	co = np.array([tuple(v.co) for v in bm.verts])
+	boundary = np.array([any(e.is_boundary for e in v.link_edges) for v in bm.verts])
+	best_side, axial, radial = [], np.zeros(len(co)), np.zeros_like(co)
+	sides = list(arm_axes.keys())
+	d_side = []
+	for side in sides:
+		ua, axis, length = arm_axes[side]
+		rel = co - ua
+		t = rel @ (axis / length)
+		perp = rel - np.outer(t, axis / length)
+		d_side.append((np.linalg.norm(perp, axis=1), t, perp))
+	pick = np.argmin(np.stack([d[0] for d in d_side]), axis=0)
+	for i in range(len(co)):
+		dist, t, perp = d_side[pick[i]]
+		axial[i] = t[i] - arm_axes[sides[pick[i]]][2] * cut_t  # metres past the cut toward the elbow (negative on the shoulder side)
+		radial[i] = perp[i] / max(dist[i], 1e-9)
+	on_ring = boundary & (np.abs(axial) < 0.001)
+	on_shoulder = boundary & ~on_ring
+	w = np.ones(len(co))
+	if on_ring.any():
+		d_ring = np.min(np.linalg.norm(co[:, None, :] - co[on_ring][None, :, :], axis=2), axis=1)
+		w = np.minimum(w, smoothstep01(d_ring / float(ac.get("elbow_ramp_m", 0.008))))
+	if on_shoulder.any():
+		d_sh = np.min(np.linalg.norm(co[:, None, :] - co[on_shoulder][None, :, :], axis=2), axis=1)
+		w = np.minimum(w, smoothstep01(d_sh / float(ac.get("shoulder_ramp_m", 0.015))))
+	moved = radial * (push * w)[:, None]
+	for i, v in enumerate(bm.verts):
+		v.co = tuple(co[i] + moved[i])
+	bm.to_mesh(arm.data)
+	bm.free()
+	arm.data.update()
+	return {"push_m": push, "ring_vertices": int(on_ring.sum()), "shoulder_vertices": int(on_shoulder.sum()), "max_moved_m": float(np.linalg.norm(moved, axis=1).max())}
+
+
+def arm_axial(arm, arm_axes, cut_t):
+	"""For the vertices of the upper-arm piece: (coordinates, the arm each belongs to, metres past the cut toward the elbow,
+	the unit axis of that arm pointing toward the elbow). Left and right are told apart by the nearer axis."""
+	co = pb.verts(arm.data)
+	sides = list(arm_axes.keys())
+	dist, ts = [], []
+	for side in sides:
+		ua, axis, length = arm_axes[side]
+		rel = co - ua
+		t = rel @ (axis / length)
+		dist.append(np.linalg.norm(rel - np.outer(t, axis / length), axis=1))
+		ts.append(t)
+	pick = np.argmin(np.stack(dist), axis=0)
+	axial = np.zeros(len(co))
+	unit = np.zeros_like(co)
+	for i in range(len(co)):
+		ua, axis, length = arm_axes[sides[pick[i]]]
+		axial[i] = ts[pick[i]][i] - length * cut_t
+		unit[i] = axis / length
+	return co, axial, unit
+
+
+def mark_arm_hull(arm, arm_axes, cut_t, ac):
+	"""Let the upper-arm piece's hull outline stop at the cut (M6 fix-final-arm): its ink is the back faces pushed out along the smooth
+	normal, and at the loop on the elbow side that pushed a jagged ink line out over the forearm's skin (the piece is a hair higher than
+	Body's wall there). The vertices within ac.hull_ramp_m of that loop get a point weight (pb.HULL_W_ATTR, a smoothstep) and the direction
+	along the arm toward the shoulder (pb.HULL_DIR_ATTR), which blender_export.write_hull_normals turns the hull normal toward: the ink there
+	lies inside the arm. The shoulder-side loop keeps its outline (it is the piece's silhouette against the world). Returns a report."""
+	ramp = float(ac.get("hull_ramp_m", 0.0))
+	if ramp <= 0.0:
+		return {"hull_ramp_m": 0.0}
+	co, axial, unit = arm_axial(arm, arm_axes, cut_t)
+	me = arm.data
+	count = len(co)
+	w = (1.0 - smoothstep01(np.abs(axial) / ramp)) * ((axial > -ramp) & (axial < 0.002))
+	for name, kind, dom in ((pb.HULL_W_ATTR, "FLOAT", "POINT"), (pb.HULL_DIR_ATTR, "FLOAT_VECTOR", "POINT")):
+		if name in me.attributes:
+			me.attributes.remove(me.attributes[name])
+		me.attributes.new(name, kind, dom)
+	me.attributes[pb.HULL_W_ATTR].data.foreach_set("value", w.astype(np.float32))
+	me.attributes[pb.HULL_DIR_ATTR].data.foreach_set("vector", (-unit).astype(np.float32).ravel())
+	me.update()
+	return {"hull_ramp_m": ramp, "vertices_bent": int((w > 0.01).sum()), "vertices": count}
+
+
+def arm_skin_only(arm, cfg):
+	"""Paint every face of the upper-arm piece the hero's skin swatch (M6 fix-final-arm): the generated mesh scatters the navy of the
+	top, the charcoal and the hair colour over the upper arm in patches, which the near lens showed as a dark shard at the shoulder end
+	in the uppercut. The forearm below it is bare skin, so the piece is too: each face whose swatch is not a skin swatch (palette.slots,
+	gen_palette's `skin` flag) takes the first skin swatch's centre in the `palette` UV layer. Returns a report."""
+	me = arm.data
+	swatches = gp.swatches()
+	slots = list(cfg["palette"]["slots"])
+	skin = [s for s in slots if swatches[s].get("skin")]
+	if not skin:
+		return {"skin_only": False}
+	uv = me.uv_layers["palette"]
+	start, total, _lv = pb.poly_arrays(me)
+	uvs = np.zeros((len(me.loops), 2), dtype=np.float64)
+	uv.data.foreach_get("uv", uvs.ravel())
+	target_u, target_v = gp.uv_of_slot(skin[0])
+	changed = 0
+	for f in range(len(start)):
+		sl = slice(int(start[f]), int(start[f] + total[f]))
+		cu, cv = uvs[sl].mean(axis=0)
+		if gp.slot_of_uv(cu, 1.0 - cv) in skin:
+			continue
+		uvs[sl] = (target_u, 1.0 - target_v)
+		changed += 1
+	uv.data.foreach_set("uv", uvs.ravel())
+	me.update()
+	return {"skin_only": True, "skin_slot": skin[0], "faces_repainted": changed, "faces": len(start)}
 
 
 def split_fp(cfg, extra):
@@ -1071,6 +1208,23 @@ def split_fp(cfg, extra):
 	bm.free()
 	hid.data.update()
 
+	# ----- the shoulder half of each upper arm (M6 D7): the faces of the hidden part the upper arm owns, on the shoulder side of the cut
+	arm = None
+	arm_report = {"enabled": False}
+	if sc.get("arm", {}).get("enabled", False):
+		w3 = pb.weights_matrix(hid, NAMES)
+		dom3 = dominant_per_face(hid.data, w3)
+		centers3 = pb.face_centers(hid.data)
+		in_arm = np.zeros(len(hid.data.polygons), dtype=bool)
+		for side in pc.SIDES:
+			ua, axis, length = arm_axes[side]
+			t3 = ((centers3 - ua) @ axis) / (length * length)
+			in_arm |= (dom3 == col[side + "UpperArm"]) & (t3 < cut_t)
+		arm = separate_faces(hid, in_arm, pb.BODY_ARM)
+		hid = bpy.data.objects[pb.BODY_HIDDEN]
+		arm_report = {"enabled": True, "faces": int(in_arm.sum())}
+		arm_report["push"] = push_arm_out(arm, arm_axes, cut_t, sc["arm"])
+
 	# ----- inward rounded caps on every open loop of the visible parts
 	heal = float(sc.get("heal_edge_max_m", 0.0))
 	cap_report = {"Body": add_caps(body, sc, heal)}
@@ -1078,6 +1232,14 @@ def split_fp(cfg, extra):
 	if torso is not None:
 		cap_report[pb.BODY_TORSO] = add_caps(torso, sc, heal)
 		parts.append(torso)
+	if arm is not None:
+		cap_report[pb.BODY_ARM] = add_caps(arm, sc, heal)
+		arm_report["hull"] = mark_arm_hull(arm, arm_axes, cut_t, sc["arm"])
+		if sc["arm"].get("skin_only", False):
+			arm_report["skin"] = arm_skin_only(arm, cfg)
+		parts.append(arm)
+		ac = pb.verts(arm.data)
+		arm_report.update({"triangles": pb.triangle_count(arm.data), "bbox": {"min": ac.min(axis=0).tolist(), "max": ac.max(axis=0).tolist()}})
 	over_four = 0
 	for o in parts:
 		pb.attach_armature(o, bpy.data.objects[pb.ARMATURE])
@@ -1092,7 +1254,7 @@ def split_fp(cfg, extra):
 	if torso is not None:
 		tc_ = pb.verts(torso.data)
 		torso_report.update({"z_low_m": z_low, "triangles": pb.triangle_count(torso.data), "bbox": {"min": tc_.min(axis=0).tolist(), "max": tc_.max(axis=0).tolist()}})
-	return {"enabled": True, "torso": torso_report, "open_edges_before_weld": open_before, "open_edges_after_weld": open_after, "hole_faces_filled": filled, "slit_edges_collapsed": healed, "defect_faces_cut_out": cut_out, "defect_faces_patched": patched, "open_edges_after_fill": open_after_fill, "z_cut_m": z_cut, "upper_arm_cut": cut_t, "hidden_faces": int(hidden.sum()), "visible_triangles": pb.triangle_count(body.data),
+	return {"enabled": True, "torso": torso_report, "arm": arm_report, "open_edges_before_weld": open_before, "open_edges_after_weld": open_after, "hole_faces_filled": filled, "slit_edges_collapsed": healed, "defect_faces_cut_out": cut_out, "defect_faces_patched": patched, "open_edges_after_fill": open_after_fill, "z_cut_m": z_cut, "upper_arm_cut": cut_t, "hidden_faces": int(hidden.sum()), "visible_triangles": pb.triangle_count(body.data),
 		"hidden_triangles": pb.triangle_count(hid.data), "hidden_defect_faces_cut_out": hid_cut, "hidden_defect_faces_patched": hid_patched,
 		"vertices_over_four_influences_before_limit": over_four, "caps": cap_report,
 		"hidden_bbox": {"min": hc.min(axis=0).tolist(), "max": hc.max(axis=0).tolist()}}

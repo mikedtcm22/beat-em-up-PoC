@@ -13,6 +13,12 @@ extends Resource
 @export var label: String = ""
 ## The attack arc (degrees) of this variant. -1 keeps the archetype's own (Tuning "Attack arcs").
 @export_range(-1.0, 360.0, 5.0) var arc_deg: float = -1.0
-## The graybox marker: a color that tints the body (the jacket of a primitive body, the whole skinned
-## art's palette). Alpha 0 = no tint.
+## A palette swap (Milestone 6, D4): an atlas that stands in for the archetype's on the skinned art's
+## material (`albedo_tex`), built by tools/pipeline/gen_palette.py from assets/source/palette/variants/<id>.json
+## to assets/export/palette/<id>_atlas.png. It recolours some swatches and keeps every alpha, so the
+## marks, the gloss and the silhouette are the archetype's. Null = the archetype's own atlas.
+@export var palette: Texture2D
+## The graybox marker, retired by the palette swap and kept for a graybox variant: a color that tints
+## the body (the jacket of a primitive body, the whole skinned art's palette). Alpha 0 = no tint.
+## No shipped variant sets one (tests/test_m6_no_placeholders.gd counts a tint as a placeholder).
 @export var tint: Color = Color(0.0, 0.0, 0.0, 0.0)

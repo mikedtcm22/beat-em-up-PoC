@@ -1,0 +1,171 @@
+{
+	"ground": {
+		"px": 2048,
+		"tile_m": 8.0
+	},
+	"row_px": 128,
+	"sheet_px": 2048,
+	"strips": [
+		{
+			"ground": false,
+			"index": 0,
+			"ink_only": false,
+			"name": "brick",
+			"period_m": 0.5,
+			"scissor": false,
+			"v0": 0.0,
+			"vh": 0.0625
+		},
+		{
+			"ground": false,
+			"index": 1,
+			"ink_only": false,
+			"name": "plaster",
+			"period_m": 1.0,
+			"scissor": false,
+			"v0": 0.0625,
+			"vh": 0.0625
+		},
+		{
+			"ground": false,
+			"index": 2,
+			"ink_only": false,
+			"name": "concrete",
+			"period_m": 1.0,
+			"scissor": false,
+			"v0": 0.125,
+			"vh": 0.0625
+		},
+		{
+			"ground": true,
+			"index": 3,
+			"ink_only": false,
+			"name": "asphalt",
+			"period_m": 1.0,
+			"scissor": false,
+			"v0": 0.1875,
+			"vh": 0.0625
+		},
+		{
+			"ground": false,
+			"index": 4,
+			"ink_only": false,
+			"name": "kerb",
+			"period_m": 0.5,
+			"scissor": false,
+			"v0": 0.25,
+			"vh": 0.0625
+		},
+		{
+			"ground": false,
+			"index": 5,
+			"ink_only": false,
+			"name": "roof_tar",
+			"period_m": 1.0,
+			"scissor": false,
+			"v0": 0.3125,
+			"vh": 0.0625
+		},
+		{
+			"ground": false,
+			"index": 6,
+			"ink_only": false,
+			"name": "gravel",
+			"period_m": 0.5,
+			"scissor": false,
+			"v0": 0.375,
+			"vh": 0.0625
+		},
+		{
+			"ground": false,
+			"index": 7,
+			"ink_only": false,
+			"name": "metal",
+			"period_m": 0.5,
+			"scissor": false,
+			"v0": 0.4375,
+			"vh": 0.0625
+		},
+		{
+			"ground": false,
+			"index": 8,
+			"ink_only": false,
+			"name": "shutter",
+			"period_m": 0.25,
+			"scissor": false,
+			"v0": 0.5,
+			"vh": 0.0625
+		},
+		{
+			"ground": false,
+			"index": 9,
+			"ink_only": false,
+			"name": "chainlink",
+			"period_m": 0.25,
+			"scissor": true,
+			"v0": 0.5625,
+			"vh": 0.0625
+		},
+		{
+			"ground": false,
+			"index": 10,
+			"ink_only": false,
+			"name": "crate",
+			"period_m": 0.5,
+			"scissor": false,
+			"v0": 0.625,
+			"vh": 0.0625
+		},
+		{
+			"ground": false,
+			"index": 11,
+			"ink_only": false,
+			"name": "trim",
+			"period_m": 0.25,
+			"scissor": false,
+			"v0": 0.6875,
+			"vh": 0.0625
+		},
+		{
+			"ground": false,
+			"index": 12,
+			"ink_only": true,
+			"name": "ink",
+			"period_m": 1.0,
+			"scissor": false,
+			"v0": 0.75,
+			"vh": 0.0625
+		},
+		{
+			"ground": false,
+			"index": 13,
+			"ink_only": false,
+			"name": "glass",
+			"period_m": 1.0,
+			"scissor": false,
+			"v0": 0.8125,
+			"vh": 0.0625
+		},
+		{
+			"ground": false,
+			"index": 14,
+			"ink_only": false,
+			"name": "dark",
+			"period_m": 1.0,
+			"scissor": false,
+			"v0": 0.875,
+			"vh": 0.0625
+		},
+		{
+			"ground": false,
+			"index": 15,
+			"ink_only": false,
+			"name": "facade",
+			"period_m": 3.2,
+			"scissor": false,
+			"v0": 0.9375,
+			"vh": 0.0625
+		}
+	],
+	"tile_m": 4.0
+}

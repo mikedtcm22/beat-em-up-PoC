@@ -161,6 +161,7 @@ const STANCE_RELAXED := &"relaxed"
 const _HOLD_MOVES: Array[StringName] = [&"knee", &"throw"]
 const _WEAPON_MOVES: Array[StringName] = [
 	&"pipe_swing_1", &"pipe_swing_2", &"pipe_swing_3", &"weapon_throw",
+	&"chain_swing_1", &"chain_swing_2", &"chain_swing_3", &"chain_throw",
 ]
 ## Air moves start and end in the air guard (_air_guard()): legs tucked.
 const _AIR_MOVES: Array[StringName] = [&"flying_kick", &"spin_kick"]
@@ -173,6 +174,7 @@ const _FREE_ARM: Dictionary[StringName, StringName] = {
 	&"jab_1": &"Right", &"jab_2": &"Left", &"hook": &"Right", &"uppercut": &"Left",
 	&"haymaker": &"Left", &"back_elbow": &"Left", &"spinning_backfist": &"Left", &"pipe_swing_1": &"Left",
 	&"pipe_swing_2": &"Left", &"pipe_swing_3": &"Left",
+	&"chain_swing_1": &"Left", &"chain_swing_2": &"Left", &"chain_swing_3": &"Left",
 }
 ## Moves whose wind-up keeps its authored free arm in the relaxed stance: the haymaker's
 ## wind-up is the charge pose held while P is held, and its lead hand reaching out on the
@@ -1208,13 +1210,14 @@ static func _recipe(id: StringName, g: Dictionary[StringName, Vector3],
 			return _throw(g)
 		&"stomp":
 			return _stomp(g)
-		&"pipe_swing_1":
+		# The bike chain swings on the pipe's three recipes (WEAPONS, D5): its own timing and hitbox are the move data's.
+		&"pipe_swing_1", &"chain_swing_1":
 			return _pipe_swing_1(wg)
-		&"pipe_swing_2":
+		&"pipe_swing_2", &"chain_swing_2":
 			return _pipe_swing_2(wg)
-		&"pipe_swing_3":
+		&"pipe_swing_3", &"chain_swing_3":
 			return _pipe_swing_3(wg)
-		&"weapon_throw":
+		&"weapon_throw", &"chain_throw":
 			return _weapon_throw(wg)
 		&"impact_body_knockdown", &"impact_body_stagger":
 			return _mp(g, g, g)

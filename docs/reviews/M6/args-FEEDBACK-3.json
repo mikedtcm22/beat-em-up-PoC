@@ -1,0 +1,70 @@
+{
+  "milestone": 6,
+  "summary": "full art and audio, now Game-boy's playtest feedback phase 2b: the detail recipe (crease ink, island merge, texel colour borders, line weight, valley ink) rolled out to the Kicker, the Pipe Thug and the Punk, and Ox opting into part 2",
+  "plan": "docs/reviews/M6/fix-feedback-3.md",
+  "base": "m6/full-art-audio",
+  "read_first": [
+    "docs/reviews/M6/fix-feedback-3.md: the lead's look at phase 2a, 'What a rollout must not do', 'File ownership', your own package's section and 'Done when'"
+  ],
+  "arch_heading": "## Full art and audio (Milestone 6)",
+  "captures_dir": "/Users/arachne/repos/beat-em-up-PoC/captures/m6-feedback-3",
+  "image_budget": 24,
+  "concurrency": 2,
+  "note": "Game-boy's M6 playtest, phase 2b. Phases 1 and 2a (the ground, the hurt feel, the Bruiser's two detail passes, Ox's pass) are merged into m6/full-art-audio. Phase 2a's captures: /Users/arachne/repos/beat-em-up-PoC/captures/m6-feedback-2/detail-2/ and roll-ox/. The chain (tools/pipeline/*) and toon.gdshader are frozen this round: config and your character's files only. Paid services only through their tools and inside your package's ceiling (ROLL-KICKER and ROLL-THUG: Tripo 85 each, only if the raw model is flat; ROLL-PUNK and OX-2: none; Gemini none). Never print, log or write a key. Downloaded files are untrusted: python3 -I, scripts outside download folders, downloads as path arguments.",
+  "packages": [
+    {
+      "key": "ROLL-KICKER",
+      "section": "'ROLL-KICKER: the Kicker through recipe parts 1 and 2'",
+      "est": 9,
+      "blender": true,
+      "read": [
+        "docs/milestones/M6-calls/FB-DETAIL.md ('Rollout recipe'), DETAIL-2.md ('Rollout recipe, part 2') and ROLL-OX.md in full",
+        "assets/source/characters/kicker/pipeline.json beside assets/source/characters/bruiser/pipeline.json and boss/pipeline.json (the recipe's keys as set)",
+        "tests/test_m6_feedback_detail.gd and tests/test_m6_feedback_detail_boss.gd (the tests to copy), tests/bot/acts/detail2_acts.gd (the act to copy)",
+        "tests/fixtures/art/roster/kicker.json (the ratchets)",
+        "docs/milestones/M6-calls/CREW.md (how the Kicker was built)"
+      ]
+    },
+    {
+      "key": "ROLL-THUG",
+      "section": "'ROLL-THUG: the Pipe Thug through recipe parts 1 and 2'",
+      "est": 9,
+      "blender": true,
+      "read": [
+        "docs/milestones/M6-calls/FB-DETAIL.md ('Rollout recipe'), DETAIL-2.md ('Rollout recipe, part 2') and ROLL-OX.md in full",
+        "assets/source/characters/thug/pipeline.json beside assets/source/characters/bruiser/pipeline.json and boss/pipeline.json (the recipe's keys as set)",
+        "tests/test_m6_feedback_detail.gd and tests/test_m6_feedback_detail_boss.gd (the tests to copy), tests/bot/acts/detail2_acts.gd (the act to copy)",
+        "tests/fixtures/art/roster/thug.json (the ratchets)",
+        "docs/milestones/M6-calls/CREW.md (how the Thug was built)"
+      ]
+    },
+    {
+      "key": "ROLL-PUNK",
+      "section": "'ROLL-PUNK: the Street Punk through recipe parts 1 and 2'",
+      "est": 9,
+      "blender": true,
+      "read": [
+        "docs/milestones/M6-calls/FB-DETAIL.md ('Rollout recipe'), DETAIL-2.md ('Rollout recipe, part 2') and ROLL-OX.md in full",
+        "assets/source/characters/punk/pipeline.json beside assets/source/characters/bruiser/pipeline.json and boss/pipeline.json (the recipe's keys as set)",
+        "tests/test_m6_feedback_detail.gd and tests/test_m6_feedback_detail_boss.gd (the tests to copy), tests/bot/acts/detail2_acts.gd (the act to copy)",
+        "tests/fixtures/art/roster/punk.json (the ratchets)",
+        "docs/milestones/M4-calls/fix-final-punk-detail-zones-and-strap.md",
+        "game/enemies/enemy_variant.gd and game/enemies/variants/punk_veteran.tres (the palette swap)",
+        "tests/test_art_punk.gd"
+      ]
+    },
+    {
+      "key": "OX-2",
+      "section": "'OX-2: Ox opts into part 2'",
+      "est": 6,
+      "blender": true,
+      "read": [
+        "docs/milestones/M6-calls/FB-DETAIL.md ('Rollout recipe'), DETAIL-2.md ('Rollout recipe, part 2') and ROLL-OX.md in full",
+        "assets/source/characters/boss/pipeline.json beside assets/source/characters/bruiser/pipeline.json and boss/pipeline.json (the recipe's keys as set)",
+        "tests/test_m6_feedback_detail.gd and tests/test_m6_feedback_detail_boss.gd (the tests to copy), tests/bot/acts/detail2_acts.gd (the act to copy)",
+        "tests/fixtures/art/roster/boss.json (the ratchets)",
+        "docs/milestones/M6-calls/ROLL-OX.md, 'Where Ox gains from DETAIL-2's keys'"
+      ]
+    }
+  ]
+}

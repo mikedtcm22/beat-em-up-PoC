@@ -1,0 +1,152 @@
+# M6 playtest feedback: the vfinal round's fix pass (VF2-FEEL, VF2-WORLD, VF2-ART)
+
+The verification round's fix pass (VFIX-FEEL, VFIX-WORLD, VFIX-KICKER, VFIX-HEAVIES) was merged at `3e7084e`. Then an independent round checked it from fresh recordings (`review.js` run `wf_aace1d51-bb3`). Every finding in full, with its detail, evidence and suggested fix, is in `docs/reviews/M6/findings-vfinal.json`. The reviewers' summaries, passes and side notes are in its `reviews` block.
+
+**What the vfinal round found fixed (don't undo it):**
+- **The hurt cue's side** is right at any pitch. Looking down 45°, a hit from behind lights the bottom, from the left the left, from the front the top. Restoring d582d21's `hit_bearing` makes 11 tests fail. Every real hit in `passive_six` lights the attacker's side. A jab from behind is now as plain as one from the front: 94, 89 and 71% of the bottom band changed at +2, +4 and +8 frames, against 58, 72 and 69% for the top on a front jab.
+- **The seams:** all five sites match 82bab12. Mesh clipping calmed the old z-fights (street_skyline_up from 3.88 to 0.21 changed pixels per mille, a2_doors from 1.81 to 0.31, the warehouse from 0.97 to 0.17). It made no hole, crack, texture jump or shading break. The boss roof gap stays fixed. The rooms are unchanged against d582d21.
+- **Clipping's correctness:** winding, UV, normal and colour are carried, and the colliders are untouched. The solver is deterministic, and the scan's `steps()` and `holes()` can fail.
+- **The Kicker's eyes:** the settled config is pinned by a test. The brim is back, and the band under it is a brown shade that reads as the cap's shadow at 2.5 and 5 m. It bruises and bleeds as skin.
+- **The Bruiser:** his helmet is one purple dome that never bleeds, and his face and scarf still do. The cream wedge is gone.
+- **Ox:** no blot at 2.5 and 5 m, and the face reads.
+- **The Punk, the veteran and the Thug** are pixel-identical to d582d21. Only slot 24's cell changed in the atlases.
+- **The strain ratchet** is back at 2afbe4d's figures except one logged row.
+- **Frame time** (the lead's run, vsync on, d582d21 against 3e7084e, 4 runs each): the level walk is 17.80 against 17.77 ms, and the fixed poses 16.66 against 16.57. Clipping costs nothing measurable. Draws went up by about 24 a frame, because each clipped block has its own mesh.
+
+**What this pass fixes:**
+- one medium, which both the world and code lenses found and both skeptics confirmed;
+- the lows the lead took;
+- a few of the reviewers' side notes.
+
+The Bruiser's small stair under the visor stays: both the fixer and the reviewer judged it not worth loosening about 50 stretch rows.
+
+**Recordings:**
+- **The head before this pass (`3e7084e`):** `/Users/arachne/repos/beat-em-up-PoC/captures/m6-verify-final/<slug>/`. It holds r_kicker, r_bruiser, r_boss, dk, dj, dox, lineup, heavies, damage, hurt, passive_six, rooms, tour and drift.
+- **The pass before (`d582d21`):** `/Users/arachne/repos/beat-em-up-PoC/captures/m6-feedback-verify/<slug>/`.
+- **Before the first wave (`82bab12`), the look bar for the world:** `/Users/arachne/repos/beat-em-up-PoC/captures/m6-feedback-review/<slug>/`.
+- **The reviewers' sheets:** `/Users/arachne/repos/beat-em-up-PoC/.worktrees/m6-review-vfinal-{chars,world,code}/captures/review/`.
+- **The world reviewer's frame crops:** `/private/tmp/claude-501/-Users-arachne-repos-beat-em-up-PoC/21dfb0ac-e45b-4ac0-bc13-2a0a12b0eada/scratchpad/` (`hurt_ba.png`, `hurt4.png`, `s1.png`-`s8.png`, `probe.out`).
+
+## File ownership
+
+| Package | Owns |
+| --- | --- |
+| VF2-FEEL | `game/ui/hurt_overlay.gd`; Tuning's "Hit feel > Hurt" subgroup in `game/autoload/tuning_data.gd`; `tests/test_m6_feedback_feel.gd`; `tests/test_tuning_panel.gd` (the Hit feel row count only); `tests/bot/acts/look_hurt_acts.gd` |
+| VF2-WORLD | `tools/solve_insets.gd`, `tools/solve_insets.tscn`, `tools/apply_yields.py`; `game/level/mission1/street.tscn`, `roofs.tscn`, `boss_roof.tscn` (drawn-only properties and `yields_to`, never a collider); `game/level/kit/mesh_clip.gd`, `inset_block.gd`, the KitPiece builder if needed (`level_block.gd` only if unavoidable); `game/level/room_kit.gd`, `crowd_room.gd`, `test_room.gd` (drawn boxes only); `tests/m6_coplanar_scan.gd`; `tests/test_m6_feedback_ground.gd` |
+| VF2-ART | `assets/source/characters/{kicker,boss}/**`, `assets/export/characters/{kicker,boss}/**`, `assets/source/palette/kicker.json`, the Kicker's and Ox's roster and strain files, `tests/test_m6_feedback_detail_kicker.gd`, `tests/test_m6_feedback_detail_boss.gd`, `tests/test_m6_feedback_detail.gd` (the roll-out closure test and its twin only), `ASSETS.md` (all rows this round names) |
+
+- **Frozen:** the chain (`tools/pipeline/*`), `toon.gdshader`, `edge_pass.gdshader` and `trim_body.gdshaderinc`. If one of them needs a change, list it in your requests.
+- **Shared files:** `tuning/default.json`, `assets/export/palette/*.png` and the ratchet JSONs are regenerated by the lead on merge, so conflicts there are fine. Regenerate them in your own worktree to look and to run your tests.
+- **Tunables:** VF2-WORLD adds none. A numerical epsilon that is not a feel number may stay a documented `const`; say so in a comment.
+- **ARCHITECTURE.md:** add to the existing headings if a contract changed, and only there:
+  - VF2-FEEL to FB-FEEL's;
+  - VF2-WORLD to FB-GROUND's;
+  - VF2-ART to its characters'.
+- **Calls:** write them to `docs/milestones/M6-calls/<your key>.md`.
+- **No paid services.** No Tripo, Gemini or ElevenLabs this pass.
+
+## VF2-FEEL: the hurt vignette's depth stays bounded, and a heavy rear hit is not a wall of ink
+
+Findings: **vfinal-world-01 and vfinal-code-01 (medium, both skeptics confirmed)**, vfinal-world-02 (low), and the world reviewer's side note on the even share.
+
+1. **The depth ratchet (medium).**
+   - **The bug:** VFIX-FEEL stores the bottom edge as weight × strength × `hurt_overlay_bottom_ink_gain` (1.5). `on_player_hit` then sets `_depth = maxf(_depth * _alive_share(), base)`, and `_alive_share()` is the max of `_edges` and `_strokes`, read after the new hit is stored, so it can reach 1.5. Nothing ever lowers `_depth`. Each clean rear hit of about 7 damage or more therefore multiplies the depth. 20-damage hits from behind, 2 s apart, give 0.32, 0.48, 0.72, 1.08, 1.62 and 2.43 of the screen height, where `hurt_overlay_depth_max` is 0.32.
+   - **What it looks like in the hurt act:** the Bruiser smash from behind (f2189) raises the bottom strokes to about 63% of the screen height, where d582d21 reached about 33%. The third pipe hit from behind (f3751) reaches 40-45%, against about 25%.
+   - **The fix:** keep the stored edge strengths at 1 or below and apply the ink gain only when drawing, where the alpha is already clamped. `_alive_share()` must be at most 1, and `_depth` at most `hurt_overlay_depth_max`, as belt and braces.
+   - **The tests:**
+     - N full-damage hits from behind leave `depth_share()` at most `hurt_overlay_depth_max`;
+     - a run of three Thug pipe hits from behind;
+     - the same for the burst.
+     - Each must fail on 3e7084e.
+2. **The stroke lift is a factor (low).**
+   - **The bug:** `reach = depth_px * hurt_overlay_bottom_stroke_gain` (1.4) scales the whole depth, so a full-damage rear hit's teeth reach about 56% of the screen height even without the ratchet. A light jab needs the lift to clear the HP panel; a heavy hit does not.
+   - **The fix:** lift the bottom teeth by a fixed share of the screen height, as a new tunable in "Hit feel > Hurt" sized to the HP panel's height. Or cap the reach. A heavy rear hit's teeth should reach no further up than a heavy front hit's reach down, plus the lift.
+3. **The even share (side note).**
+   - **The bug:** the ink gain also applies to the even-share part of the bottom edge on every clean hit, so frontal and side hits ink the bottom 1.5× harder than the other edges that weren't struck.
+   - **The fix:** apply the gain to the struck share only, so it grows with how far behind the attacker stands.
+4. **A bare epsilon (low, vfinal-code-07 part):** `maxf(color.a, 0.01)` in the rim's alpha. Document it as a numerical guard or move it.
+5. **Look:**
+   - Re-record the hurt acts (all five) and `Six Punks, passive`.
+   - Add an act that lands three heavy hits from behind in a row (Bruiser smashes or Thug pipes), so the bound can be seen.
+   - Compare against `captures/m6-verify-final/hurt` at f2189 and f3751, and at d582d21's same frames.
+   - **Targets:**
+     - the rear smash's bottom strokes no higher than about 35-40% of the screen height;
+     - the rear jab still as plain as a front jab (measure the band change as the world reviewer did: the share of the bottom band changed at +2, +4 and +8 frames);
+     - blocked hits as light as before;
+     - no red.
+
+## VF2-WORLD: trim wins over walls again, no hollow ledges, and the guards say what they skip
+
+Findings: vfinal-world-03, vfinal-code-04, -05, -06 and -07 (all low), and the reviewers' side notes.
+
+1. **The bigger box wins over trim (vfinal-world-03).**
+   - **The bug:** `tools/solve_insets.gd` makes the smaller block yield, so a jamb, lintel or pilaster that shares a plane with its wall now shows the wall's brick where 82bab12 showed the trim's face:
+     - (a) street_warehouse: the jamb left of the shutter (WarehouseJambs yields to LeftWall4), tour f201 at about x 1020-1040;
+     - (b) street_skyline_up: a door reveal low on the right wall (DoorJambs5, DoorLintel3, z about -32.8), f305;
+     - (c) street_a2_doors: about 17 px of the lintel's darker edge, f97;
+     - (d) skyline_up: about 10 px of a pilaster's edge, f305.
+     - The rail top at f763 (RailCatwalkBar against RailCatwalkPost at y 5.5) now holds steady on the dark slash, the less usual of its two old looks.
+   - **The fix:** rank trim over walls. A jamb, lintel, pilaster or rail block whose face was meant to show wins, and the wall yields the overlap. Then rerun `apply_yields.py` and the scan.
+   - **Look:** re-record the tour and diff against 82bab12 at f97, f201, f305 and f763.
+2. **Hollow ledges (vfinal-code-04).**
+   - **The bug:** MeshClip removes only faces whose normal points out of the plane. Where a clipped rectangle covers a wall's 5 cm plinth board, its top ledge and end caps are left standing in front of the partner's face. The probe counts 5 blocks (StartWall 6 triangles, EndWall 17, RightWall 5, Terrace/RightAWall0 8, Catwalk/EndWall0 8).
+   - **The fix:** also drop standoff-board faces (every vertex within the standoff of the plane) whose centroid projects inside a clipped rectangle.
+   - **Look:** the wall feet at those blocks in the tour.
+   - **Test:** a test that counts them (0).
+3. **A dangling yield is silent (vfinal-code-05).**
+   - **The bug:** `_clips()` skips a `yields_to` path that does not resolve, so a renamed block brings the z-fight back with no warning.
+   - **The fix:** `push_warning` when a path doesn't resolve and isn't the known cross-section case, and have the ground test list every unresolved path in the level.
+4. **The steps() exemption is blanket (vfinal-code-06).**
+   - **The bug:** `_stands_by_design()` drops every pair with a fence-look block or anything under a Barrier. That also hides the ShutterStair3 shutter, which stands 40 mm in front of Catwalk/Lintel3.
+   - **The fix:** narrow it to the pair types that need it (a fence block against its curb or rail, a Barrier panel against its own frame), or list the accepted pairs by name. Decide the shutter (accept it by name, or fix it) and say why.
+5. **Rule slips and robustness (vfinal-code-07 and the code reviewer's notes):**
+   - `MIN_AREA_M2` in mesh_clip.gd: a documented numerical epsilon is fine. Use it to drop the about 107 zero-area fan triangles clipping leaves.
+   - The scan's `COPLANAR_M` should read `Tuning.kit_coplanar_m`.
+   - MeshClip carries only vertex, normal, UV, colour and index. Make it fail loudly (`push_error`) on a source surface with any other array, so a future UV2 or tangent isn't lost silently.
+   - The Dressing order: a block that yields to a Dressing piece clips only if the piece's mesh is already built when the block's `_ready` runs. Make the clip independent of sibling order (build the piece's mesh on demand when its faces are asked for, or clip deferred once the section is ready).
+6. **The catwalk doorway's floor (the world reviewer's note).**
+   - **The change:** at tour f711 (roofs_catwalk), the floor patch in the doorway between the pillars (about x 1385-1440, y 605-640 of the 1600×900 frame) is lit and tan on d582d21 and on 3e7084e, where 82bab12 had it in shadow. The lead's crop is at `/private/tmp/claude-501/-Users-arachne-repos-beat-em-up-PoC/21dfb0ac-e45b-4ac0-bc13-2a0a12b0eada/scratchpad/lead_vf/f711_floor.png` (82bab12 | d582d21 | 3e7084e).
+   - **Find out why:** a shadow leak through a recessed or clipped face, a different z-fight winner, or the wave's ground paint.
+   - Restore 82bab12's look if it's a fault, and say which it was.
+7. **Optional, only if cheap:** clipping added about 24 draws a frame, because no clipped block shares its mesh. Frame time did not move, so this is not a target. Share identical clipped meshes only if it takes a few lines.
+8. **Look:**
+   - Re-record the tour, drift and rooms.
+   - Diff against 3e7084e (`captures/m6-verify-final/`) and 82bab12 at every pose.
+   - Nothing may get worse. The z-fight calm the vfinal round measured must hold.
+
+## VF2-ART: the strip under the Kicker's brim, Ox's mouth-corner hook, the closure test, the ledgers
+
+Findings: vfinal-chars-01 and -02, vfinal-code-02 and -03 (all low), and the chars reviewer's notes.
+
+1. **The Kicker's brow strip (vfinal-chars-01).**
+   - **The bug:** slot-6 skin faces at z 1.66-1.70 (y up to 0.145), behind the brim's front, show at 1 and 1.2 m as a pale crescent under the brim. The slot-23 faces below them read as a dark bar across the eyes. So the front reads brim, skin, dark bar, brown, mask; the concept (`assets/source/concepts/m6/kicker_c.jpg`) puts the brim directly over the shaded eyes. At 20% health the strip bleeds under the brim.
+   - **The fix:** add a region after `eyes`, for example `brow` {slot 24, only_from [6], min [-0.13, 0.05, 1.665], max [0.13, 0.3, 1.71]}, so the strip joins the shade.
+   - **Judge it:** at 1 m at yaw 0 and 90, and bloodied. Read the dark bar too: does it still read as a bar once the strip is shade?
+   - **Test:** extend the Kicker test so it finds no slot-6 faces in that box.
+   - **Optional:** the light tan streaks at the temples (slot-6 faces at z 1.61-1.62, below the region's floor). Fix them only if a bounded region does it without touching the mask's top.
+2. **Ox's mouth-corner hook (vfinal-chars-02).**
+   - **The bug:** a thick hooked stroke still runs down-left from the mouth's left corner at 1 and 1.6 m: the verify round's comma, where it was. The fixer's own `ox_a.png` shows it. 82bab12 had neither mark.
+   - **The fix:** in `face_skin`, narrow x from ±0.09 to about ±0.06 so the corner ticks fall outside, or raise `ink_high` to about 0.05. Check that the nose and mouth still read at 2.5 m. If neither gives a clean line, go back to the pre-wave pair, as fix-verify.md said: no blot is better than a blot.
+   - **Test:** make the boss test measure the ink in a box at the mouth corners on the baked mask, not only the config keys.
+3. **The closure test (vfinal-code-02).**
+   - **The bug:** `_roll_out_file_problem` still passes a file whose `func test_x(): pass` never reads the path, and a path in a trailing comment after code.
+   - **The fix:** require the path to be read inside a test function's body (directly, or through a const used inside one), and strip trailing comments before matching. Flip the twin test's last assertion to expect a failure there.
+4. **ASSETS rows (vfinal-code-03):**
+   - the Kicker A-pose GLB, the Kicker arms-down GLB, the Bruiser arms-down GLB and the veteran Punk atlas (slot 24) each say what changed and when;
+   - the Kicker mask row gets the calm-ink rebake and its date;
+   - add rows for this pass's rebakes.
+5. **The Bruiser's held clip (the code reviewer's note).**
+   - **The concern:** `held.min` was loosened 22% (0.1489 to 0.1168), and nobody looked at whether his stiff idle's squash pinches.
+   - **The check:** record his held pose at 1 m (front and profile) and say whether anything pinches. Report only; the Bruiser's files are not yours this pass.
+
+## Done when (each package)
+
+- **Tests:** every finding in your package is fixed at its root, with a test that fails without the fix wherever it's testable.
+- **Looking:** for visual or feel fixes, you recorded only the affected acts (into your worktree's `captures/fix/`), looked at them before and after at the distances named above, and say what you saw. Label each sheet, and read back every sheet you cite.
+- **The suite:** the full run passes (`tools/run_tests.sh`; VF2-ART with `ART_PUNK_VARIANT_STRAIN=1`), with no SCRIPT ERROR, SHADER ERROR or ERROR lines. Rerun the full suite after any change that comes after it.
+- **Checks:** every `--check` for what you touched says YES:
+  - `run.py --asset <id> --check` for each character you rebuilt;
+  - `gen_palette.py --check`;
+  - `gen_trim.gd -- --check`.
+- **Ledgers:** the calls file is written, along with the ASSETS rows and your ARCHITECTURE heading if a contract moved.
+- **Commits:** a final commit whose subject is `M6 <KEY>: <short list>`, pushed.

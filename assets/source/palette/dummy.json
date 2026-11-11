@@ -1,0 +1,34 @@
+{
+	"id": "dummy",
+	"slot_range": [
+		56,
+		59
+	],
+	"note": "The padded training dummy's own colours (M6 D17, one look for every dummy): a canvas-cream head, orange padding on the trunk and the mitts, brown padded limbs, charcoal straps and feet. Four colours, none in the red band (hue 345-15 degrees with saturation above 0.5): red stays blood's. The old per-dummy orange, green and violet multiplies are gone.",
+	"swatches": [
+		{
+			"slot": 56,
+			"name": "dummy_charcoal",
+			"srgb": "#2e2a2a",
+			"marks": true
+		},
+		{
+			"slot": 57,
+			"name": "dummy_padding",
+			"srgb": "#cf7f2e",
+			"marks": true
+		},
+		{
+			"slot": 58,
+			"name": "dummy_limb",
+			"srgb": "#8f5a2c",
+			"marks": true
+		},
+		{
+			"slot": 59,
+			"name": "dummy_canvas",
+			"srgb": "#e3d3b0",
+			"marks": true
+		}
+	]
+}

@@ -47,3 +47,13 @@ signal arena_cleared(arena: Node3D)
 signal level_cleared(level: Node3D)
 ## An enemy entered a HazardVolume and was KO'd at once.
 signal hazard_ko(actor: Node3D, hazard: Node3D)
+## The player is now in this LevelSection (Milestone 6, D12): LevelRoot fires it once at the start
+## and whenever the section owning the route point nearest the player changes. Section light and
+## the ambience bed follow it.
+signal section_entered(section: Node3D)
+## A barrier has started to move (Milestone 6, D23): `closing` true for a close, false for an
+## open. It fires only when the barrier's state changes, never for a call that changes nothing.
+signal barrier_moving(barrier: Node3D, closing: bool)
+## A thrown or dropped weapon touched something for the first time since it left a hand
+## (Milestone 6, D23).
+signal weapon_landed(weapon: Node3D)

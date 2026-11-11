@@ -13,6 +13,7 @@ low-poly body whose every face sits on one swatch:
 	3. majority filter: palette.majority_passes passes, a face flips to the label most of its neighbours share;
 	4. relax the border loops: the vertices where two labels meet are smoothed along the border (iterations, factor), so a
 	   colour edge is not a staircase; fist vertices stay put;
+	   (M6 FB-DETAIL: palette.min_island_area_m2, a patch of one label smaller than that takes its neighbours' label);
 	5. decimate (Collapse) to palette.budget_tris with the border vertices and the part-replacement vertices PROTECTED, so
 	   the colour borders keep their resolution and the fists their shape (a protected-position survival check is reported);
 	6. relabel every face of the decimated mesh from the nearest face of the dense one (BVH), then give every face its swatch
@@ -31,7 +32,10 @@ F-punk's additions (all opt-in by config, so the probe and the player run as bef
 	palette.detail_bake: the 1k ink-only detail mask on UV2 baked from the dense texture (pipe_detail.bake, plan A18; G holds the lens's
 	  glint-gate streaks when `glint` is set, and the glove's authored lines when `glove_lines` is); its
 	  no_ink_slots (the lens) get no ink, and so does a zone with "no_ink": true (the Punk's laces and cap: the generated
-	  texture's noise there is not a line, and the colour border already gives the shape).
+	  texture's noise there is not a line, and the colour border already gives the shape);
+	palette.detail_bake.crease (M6 FB-DETAIL): the dense mesh's sharp edges as ink (pipe_detail.crease_field), a zone's crease_deg per face;
+	its `valley` (M6 DETAIL-2) draws the concave edges (quilting, folds) at their own angle and chain length, a zone's valley_deg per face.
+	palette.detail_bake.texel_swatch (M6 DETAIL-2): a palette slot per texel in the mask's B (pipe_detail.texel_labels), so colour borders follow the texture.
 """
 import math
 import os
@@ -131,7 +135,7 @@ def decimate_trial(body, ratio, group, invert):
 
 def run(cfg, extra):
 	pc_cfg = cfg["palette"]
-	pb.open_blend(pc.work_path(cfg, "04_parts.blend"))
+	pb.open_blend(pc.work_path(cfg, "04_parts.blend"))  # the static-prop path's inspect step writes this name too
 	body = bpy.data.objects[pb.BODY]
 	me = body.data
 	bm = bmesh.new()
@@ -245,6 +249,42 @@ def run(cfg, extra):
 				flipped += 1
 		label_slot = new
 
+	# ----- 3-island. M6 FB-DETAIL: a connected patch of one label under palette.min_island_area_m2 takes the label its border
+	# shares most (the texture's purple on a steel plate is a stray patch, not a jacket; the majority filter only trims a patch's rim)
+	island_flips = None
+	if float(pc_cfg.get("min_island_area_m2", 0.0)) > 0.0:
+		island_flips = 0
+		limit = float(pc_cfg["min_island_area_m2"])
+		for _ in range(int(pc_cfg.get("island_passes", 2))):
+			seen = np.zeros(n_faces, dtype=bool)
+			changed = 0
+			for f0 in np.nonzero(need)[0]:
+				if seen[f0]:
+					continue
+				comp, stack = [], [int(f0)]
+				seen[f0] = True
+				while stack:
+					f = stack.pop()
+					comp.append(f)
+					for g in nb[f]:
+						if need[g] and not seen[g] and label_slot[g] == label_slot[f0]:
+							seen[g] = True
+							stack.append(g)
+				if areas[comp].sum() >= limit:
+					continue
+				votes = {}
+				inside = set(comp)
+				for f in comp:
+					for g in nb[f]:
+						if g not in inside and need[g]:
+							votes[label_slot[g]] = votes.get(label_slot[g], 0.0) + 1.0
+				if votes:
+					label_slot[comp] = max(votes, key=votes.get)
+					changed += len(comp)
+			island_flips += changed
+			if not changed:
+				break
+
 	# ----- 3a. the generated fists' strap: exactly the faces between its two planes (pipe_band) are the strap's paint slot, and a
 	# fist face outside them that the texture called strap-coloured (palette.strap_slot) is the glove's (no stray spikes of yellow
 	# above or below the ring). F-punk-fix: palette.strap_paint_slot (default: the strap's own slot) is what the band is painted
@@ -270,6 +310,9 @@ def run(cfg, extra):
 
 	# ----- 3b. regions: faces of one slot inside a box take another slot
 	region_report = []
+	if island_flips is not None:  # an entry of the always-present list, so the shared report keys stay the Punk's (test_art_contract's guard)
+		region_report.append({"name": "island_merge", "min_area_m2": float(pc_cfg["min_island_area_m2"]), "faces": int(island_flips)})
+	region_set = np.zeros(n_faces, dtype=bool)  # the dense faces a region painted: the texture does not decide their texels (M6 DETAIL-2)
 	if pc_cfg.get("regions"):
 		centers_dense = pb.face_centers(me)
 		for reg in pc_cfg["regions"]:
@@ -279,6 +322,7 @@ def run(cfg, extra):
 				inside &= np.isin(label_slot, reg["only_from"])
 			sel = inside & need
 			label_slot[sel] = int(reg["slot"])
+			region_set |= sel
 			region_report.append({"name": reg.get("name", ""), "slot": int(reg["slot"]), "faces": int(sel.sum())})
 
 	# ----- 4. relax the border loops
@@ -321,6 +365,19 @@ def run(cfg, extra):
 	protected = set(border_nb) | fixed_verts
 	cell = float(pc_cfg.get("fist_border_cell_m", 0.0))
 	thinned = 0
+	# the static-prop path (M6 PROPS): the same thinning for every colour border of the body (a rust patch's border at the dense
+	# mesh's millimetres would hold more triangles than a prop's budget), one protected vertex per palette.border_cell_m
+	body_cell = float(pc_cfg.get("border_cell_m", 0.0))
+	if body_cell > 0.0:
+		seen_body = set()
+		for v in sorted(border_nb):
+			if v not in fixed_verts:
+				key = tuple(np.floor(co[v] / body_cell).astype(int))
+				if key in seen_body:
+					protected.discard(v)
+					thinned += 1
+				else:
+					seen_body.add(key)
 	if cell > 0.0 and fist_mask.any():
 		# a colour border of a generated fist is thinned to one protected vertex per `cell` metres (a ring at the dense
 		# mesh's 1.5 mm would hold most of the fists' budget); the decimator closes the gaps with straight edges
@@ -582,6 +639,8 @@ def run(cfg, extra):
 		zone_high = np.full(len(me.polygons), float(db.get("ink_high", 0.12)))
 		zone_id = np.zeros(len(me.polygons), dtype=np.int32)
 		zone_names = []
+		face_crease = np.full(len(me.polygons), float((db.get("crease") or {}).get("angle_deg", 60.0)))
+		face_valley = np.full(len(me.polygons), float(((db.get("crease") or {}).get("valley") or {}).get("angle_deg", 999.0)))
 		for zi, zone in enumerate(db.get("zones", []), start=1):
 			zsel = np.ones(len(me.polygons), dtype=bool)
 			if zone.get("slots"):
@@ -592,6 +651,10 @@ def run(cfg, extra):
 			zone_high[zsel] = float(zone.get("ink_high", db.get("ink_high", 0.12)))
 			if zone.get("no_ink"):
 				gain[zsel] = 0.0
+			if "crease_deg" in zone:
+				face_crease[zsel] = float(zone["crease_deg"])
+			if "valley_deg" in zone:
+				face_valley[zsel] = float(zone["valley_deg"])
 			zone_id[zsel] = zi
 			zone_names.append(zone.get("name", "zone%d" % zi))
 		# the glint gate (rescore-rs-01): the faces of the glossy slots (the lens) get the authored streaks in G
@@ -609,8 +672,27 @@ def run(cfg, extra):
 				out_dir = np.array([sign, 0.0, 0.0]) - axis * sign * axis[0]
 				out_dir /= np.linalg.norm(out_dir)
 				frames[side] = {"sign": sign, "head": head, "a": axis, "b": out_dir, "c": np.cross(axis, out_dir)}
+		# M6 DETAIL-2, config `texel_swatch`: each baked texel also gets its palette slot (B), taken from the texture's own colour among the
+		# slots the texel's dense face and its neighbours carry (`rings` rings of faces), so a colour border follows the texture, not the faces
+		swatch = None
+		ts = db.get("texel_swatch")
+		if ts:
+			cand = [int(sl) for sl in slots if (dense_label == sl).any()]
+			col_of = {sl: i for i, sl in enumerate(cand)}
+			ring = np.zeros((n_faces, len(cand)), dtype=bool)
+			for f in range(n_faces):
+				if int(dense_label[f]) in col_of:
+					ring[f, col_of[int(dense_label[f])]] = True
+			for _ in range(int(ts.get("rings", 1))):
+				grown = ring.copy()
+				for f in range(n_faces):
+					for g in nb[f]:
+						grown[f] |= ring[g]
+				ring = grown
+			swatch = {"lab_fn": srgb_to_lab, "slots": cand, "cand_lab": cand_lab[[slots.index(sl) for sl in cand]], "dense_ok": need & ~region_set,
+				"ring": ring, "face_slot": new_label}
 		bake_report = pipe_detail.bake(me, "detail", image, bvh, dense_verts_np, tri_idx, corner_uv, db, out_png, pc.work_path(cfg, "detail_source.png"), gain,
-			zone_low, zone_high, zone_id, zone_names, glint_cfg, face_glint, glove_cfg, frames, new_label)
+			zone_low, zone_high, zone_id, zone_names, glint_cfg, face_glint, glove_cfg, frames, new_label, face_crease, face_valley, swatch)
 		bake_report["png"] = os.path.basename(out_png)  # the folder differs in a --check rebuild; the content must not
 		bake_report["sha256"] = pc.sha256_file(out_png)
 	me.materials.clear()
@@ -621,7 +703,8 @@ def run(cfg, extra):
 			bpy.data.images.remove(img)
 	for p in me.polygons:
 		p.use_smooth = True
-	pb.attach_armature(body, bpy.data.objects[pb.ARMATURE])
+	if pc_cfg.get("armature", True) and pb.ARMATURE in bpy.data.objects:  # the static-prop path (M6 PROPS) has none
+		pb.attach_armature(body, bpy.data.objects[pb.ARMATURE])
 	pb.set_scene_prop("pipe_face_slots", [int(s) for s in new_label])
 	pb.save_blend(pc.work_path(cfg, "05_palette.blend"))
 

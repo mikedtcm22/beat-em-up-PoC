@@ -1,0 +1,30 @@
+{
+	"id": "thug",
+	"slot_range": [
+		38,
+		43
+	],
+	"note": "The Pipe Thug's own colours (M6 concept B: an olive hoodie and trousers, yellow bandana, wrist wraps, buckle and shin bands, a black beanie, chest strap and boots); skin comes from the shared palette. The yellow (slot 39) is greener than the Punk's cap yellow (#e8bd2e) and sits on an olive body, so the two read apart at 5 m. Nothing in the red band. The yellow and the black scuff but never take blood (M6 D6): the red landed on the Punk's yellow as orange, and the beanie and the strap are not skin or cloth that should bleed.",
+	"swatches": [
+		{
+			"slot": 38,
+			"name": "thug_olive",
+			"srgb": "#7b7a3e",
+			"marks": true
+		},
+		{
+			"slot": 39,
+			"name": "thug_yellow",
+			"srgb": "#e0d83c",
+			"marks": true,
+			"blood": false
+		},
+		{
+			"slot": 40,
+			"name": "thug_black",
+			"srgb": "#3b3a43",
+			"marks": true,
+			"blood": false
+		}
+	]
+}

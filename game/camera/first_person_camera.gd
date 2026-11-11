@@ -70,6 +70,9 @@ enum KoPose { NONE = -1, RIGHT, LEFT, FEET }
 const TORSO_BONES: Array[StringName] = [&"Hips", &"Spine"]
 ## The name ending of the skinned art's torso mesh (the GLB's Body__fp_torso, attached as ArtBody__fp_torso).
 const FP_TORSO_SUFFIX := "__fp_torso"
+## The name ending of the skinned art's upper-arm mesh (the GLB's Body__fp_arm, attached as ArtBody__fp_arm): hidden from this
+## lens like the head, lifted onto the default layer while a move that says fp_show_upper_arm runs (_update_arm()).
+const FP_ARM_SUFFIX := SkinnedArt.FP_ARM_SUFFIX
 ## How many times _ko_room() halves the reach to find the lens's place clear of everything.
 const KO_ROOM_STEPS := 6
 ## How far below EyePoint lens_floor_y() looks for the floor of a player off the ground: the lens
@@ -117,10 +120,20 @@ var _head_meshes: Array[MeshInstance3D] = []
 ## while it is hidden from this lens (_update_torso(); empty when none is).
 var _torso_meshes: Array[MeshInstance3D] = []
 var _torso_layers: Dictionary[MeshInstance3D, int] = {}
+## The player's upper-arm meshes (found when a move first shows them) and the layers each had while it is lifted (_update_arm()).
+var _arm_meshes: Array[MeshInstance3D] = []
+var _arm_layers: Dictionary[MeshInstance3D, int] = {}
+## The material each lifted arm mesh had before its lit copy went on (_update_arm()): null where it had none.
+var _arm_materials: Dictionary[MeshInstance3D, Material] = {}
 ## The view before punch and shake: where the player is looking.
 var _view: Transform3D = Transform3D.IDENTITY
 ## Live punches: x = pitch kick and y = yaw kick at the peak (radians), z = age (seconds).
 var _punches: Array[Vector3] = []
+## Live head rolls (a hit taken): x = peak in radians (positive tips the head to its left), y = age in
+## seconds. They use the punch's envelope and duration; the strongest one's size is the most they sum to.
+var _rolls: Array[Vector2] = []
+## Which side a blow from dead ahead or behind rolls the head to next (alternates, so it never sticks).
+var _roll_flip: float = 1.0
 var _shake_time: float = 0.0
 var _noise: FastNoiseLite = FastNoiseLite.new()
 
@@ -167,6 +180,8 @@ func set_player(value: PlayerCharacter) -> void:
 	_ko_was_out = false
 	_head_meshes.clear()
 	_torso_meshes.clear()
+	_restore_arm()
+	_arm_meshes.clear()
 	set_cull_mask_value(CombatTypes.VIS_FP_HIDDEN, false)
 	snap()
 
@@ -183,6 +198,7 @@ func update_camera(delta: float) -> void:
 	if _player_ok():
 		_view = _ko_view_mix(delta, _follow(delta))
 		_update_torso()
+		_update_arm()
 	_advance_effects(delta)
 	global_transform = _view * _effects_transform()
 
@@ -238,9 +254,22 @@ func get_punch_deg() -> Vector2:
 	return Vector2(rad_to_deg(punch.x), rad_to_deg(punch.y))
 
 
-## True when no punch is running and trauma is zero.
+## Start a head roll that peaks at `roll_deg` (positive tips the head to its left, the way it goes away
+## from a blow that came from the right) and eases back like a punch.
+func add_roll(roll_deg: float) -> void:
+	if is_zero_approx(roll_deg):
+		return
+	_rolls.append(Vector2(deg_to_rad(roll_deg), 0.0))
+
+
+## Current head roll in degrees (positive: tipped to the left).
+func get_roll_deg() -> float:
+	return rad_to_deg(_roll_rad())
+
+
+## True when no punch or roll is running and trauma is zero.
 func is_settled() -> bool:
-	return trauma <= 0.0 and _punches.is_empty()
+	return trauma <= 0.0 and _punches.is_empty() and _rolls.is_empty()
 
 
 func _player_ok() -> bool:
@@ -439,6 +468,69 @@ func _restore_torso() -> void:
 	_torso_layers.clear()
 
 
+## True while the move the player is running says fp_show_upper_arm (the haymaker, the uppercut) and Tuning.look_near_arm is on.
+func _arm_move_running() -> bool:
+	if not Tuning.data.look_near_arm or player.current_move == null:
+		return false
+	var state := player.state
+	return (state == CombatTypes.ActorState.ATTACK or state == CombatTypes.ActorState.WINDUP) and player.current_move.fp_show_upper_arm
+
+
+## Draw the upper arms in this lens for a move that shows them (fp_show_upper_arm), or put their layers back. The mesh goes onto the
+## default layer the lens draws; done only while this camera is current, so the side view and free fly (which draw every layer) are
+## untouched. Checked every update while lifted, so a rig that resets its layers meanwhile is lifted again, and a hit that ends the
+## move, a camera switch or a respawn puts them back at once.
+func _update_arm() -> void:
+	if not (current and _arm_move_running()):
+		_restore_arm()
+		return
+	if _arm_meshes.is_empty():
+		_arm_meshes = _find_arm_meshes()
+	var default_layer := CombatTypes.bit(CombatTypes.VIS_DEFAULT)
+	for mesh: MeshInstance3D in _arm_meshes:
+		if not is_instance_valid(mesh):
+			continue
+		if not _arm_layers.has(mesh):
+			_arm_layers[mesh] = mesh.layers
+			_arm_materials[mesh] = mesh.material_override
+			mesh.material_override = _arm_lit_copy(mesh.material_override)
+		mesh.layers = default_layer
+
+
+## Give every upper-arm mesh the layers it had before _update_arm() lifted it.
+func _restore_arm() -> void:
+	for mesh: MeshInstance3D in _arm_layers:
+		if is_instance_valid(mesh):
+			mesh.layers = _arm_layers[mesh]
+			mesh.material_override = _arm_materials.get(mesh)
+	_arm_layers.clear()
+	_arm_materials.clear()
+
+
+## A copy of the arm's toon material whose bands are the near arm's own (Tuning's look_near_arm_*), so the arm lights like the lit
+## forearm instead of falling into the shadow band under the shoulder. The copy is made when the arm is lifted (it carries the damage
+## look and tint of that moment) and dropped when the arm goes back; any other material is returned as it is.
+func _arm_lit_copy(material: Material) -> Material:
+	var shader_material := material as ShaderMaterial
+	if shader_material == null:
+		return material
+	var copy := shader_material.duplicate() as ShaderMaterial
+	copy.set_shader_parameter(&"band_1", Tuning.data.look_near_arm_band_1)
+	copy.set_shader_parameter(&"band_2", Tuning.data.look_near_arm_band_2)
+	copy.set_shader_parameter(&"mid_level", Tuning.data.look_near_arm_mid_level)
+	return copy
+
+
+## The player's skinned-art meshes named `*__fp_arm` (none on the probe body, an older GLB or the primitives).
+func _find_arm_meshes() -> Array[MeshInstance3D]:
+	var out: Array[MeshInstance3D] = []
+	for node: Node in player.rig.find_children("*", "MeshInstance3D", true, false):
+		var mesh := node as MeshInstance3D
+		if mesh.is_in_group(HumanoidRig.ART_GROUP) and String(mesh.name).ends_with(FP_ARM_SUFFIX):
+			out.append(mesh)
+	return out
+
+
 ## The player's torso meshes: the primitives on the Hips and Spine bones (the pelvis, belt, belly and
 ## belly top; the chest and above are on the head layer already), and on skinned art the mesh named
 ## `*__fp_torso` (the belly and belt: Spine and Hips; the legs and forearms are the art's other
@@ -628,12 +720,19 @@ func _advance_effects(delta: float) -> void:
 			_punches.remove_at(i)
 		else:
 			_punches[i] = punch
+	for i: int in range(_rolls.size() - 1, -1, -1):
+		var roll := _rolls[i]
+		roll.y += delta
+		if roll.y >= punch_duration_s:
+			_rolls.remove_at(i)
+		else:
+			_rolls[i] = roll
 
 
 ## Punch and shake as a transform in the view's local space.
 func _effects_transform() -> Transform3D:
 	var punch := _punch_rad()
-	var rotation_rad := Vector3(punch.x, punch.y, 0.0)
+	var rotation_rad := Vector3(punch.x, punch.y, _roll_rad())
 	var offset := Vector3.ZERO
 	var amount := trauma * trauma * Tuning.data.screen_shake_intensity
 	if amount > 0.0:
@@ -658,6 +757,16 @@ func _punch_rad() -> Vector2:
 	return total.limit_length(strongest)
 
 
+## Sum of the live head rolls in radians, no larger than the strongest one's peak.
+func _roll_rad() -> float:
+	var total := 0.0
+	var strongest := 0.0
+	for roll: Vector2 in _rolls:
+		total += roll.x * _punch_envelope(roll.y / punch_duration_s)
+		strongest = maxf(strongest, absf(roll.x))
+	return clampf(total, -strongest, strongest)
+
+
 ## Smooth noise in -1..1, one independent channel per shake axis.
 func _shake_noise(channel: int) -> float:
 	var sample := _noise.get_noise_2d(_shake_time * shake_frequency_hz, float(channel) * 37.0)
@@ -680,9 +789,17 @@ func _on_hit_landed(hit: HitInfo) -> void:
 	if not is_attacker and hit.victim != player:
 		return
 	var feel := blocked_feel_scale if hit.blocked else 1.0
-	add_trauma(Tuning.data.shake(hit.tier) * feel)
+	var tuning := Tuning.data
+	if not is_attacker and tuning.hurt_feel_enabled and not hit.blocked:
+		# The player takes a clean hit (M6 playtest): the victim's larger stack, the head rolling away
+		# from the blow's side. SPEC §6's table still holds for the hits he lands and the ones he blocks.
+		add_trauma(tuning.hurt_shake(hit.tier))
+		add_punch(_away(hit) * tuning.hurt_punch_deg(hit.tier))
+		add_roll(_roll_away(hit) * tuning.hurt_roll_deg(hit.tier))
+		return
+	add_trauma(tuning.shake(hit.tier) * feel)
 	var direction := _toward(hit.contact_point) if is_attacker else _away(hit)
-	add_punch(direction * Tuning.data.cam_punch_deg(hit.tier) * feel)
+	add_punch(direction * tuning.cam_punch_deg(hit.tier) * feel)
 
 
 ## Unit kick (x = pitch up, y = yaw left) that turns the view toward `point`. A contact at
@@ -694,6 +811,38 @@ func _toward(point: Vector3) -> Vector2:
 	if angles.length() < PUNCH_CENTER_RAD:
 		return Vector2(-1.0, 0.0)
 	return angles.normalized()
+
+
+## Where a hit on the player came from, as an angle off the view's forward in radians: 0 = ahead,
+## +PI/2 = from the right, PI = from behind. It is measured on the floor plane, from the view's yaw only:
+## the attacker's origin is at floor level, 1.6 m under the lens, so a pitched view would read a Punk behind
+## a player who looks down at a stomp as ahead of him (and the roll and kick a last hit left on the camera
+## would skew the next bearing). It reads the attacker's position (the contact point is on the player's own
+## hurtbox, a few tenths of a metre from the lens, and says nothing about the side). With no attacker in the
+## tree, or one within hurt_bearing_min_m of the lens horizontally, the way the hit pushes stands in.
+## Read-only: it never writes the attacker.
+static func hit_bearing(view: Transform3D, hit: HitInfo) -> float:
+	var yaw := Basis(Vector3.UP, view.basis.get_euler(EULER_ORDER_YXZ).y)
+	var local := Vector3.ZERO
+	var attacker := hit.attacker
+	if attacker != null and is_instance_valid(attacker) and attacker.is_inside_tree():
+		local = yaw.inverse() * (attacker.global_position - view.origin)
+	local.y = 0.0
+	if Vector2(local.x, local.z).length() < Tuning.data.hurt_bearing_min_m:
+		local = yaw.inverse() * (-hit.direction)
+	return atan2(local.x, -local.z)
+
+
+## Signed roll unit for a hit on the player (positive tips the head to its left, away from a blow on the
+## right): the sine of the bearing, at least hurt_roll_frontal_share of full, its sign flipping each
+## time for a blow from straight ahead or behind.
+func _roll_away(hit: HitInfo) -> float:
+	var lateral := sin(hit_bearing(_view, hit))
+	var sign_of := signf(lateral)
+	if absf(lateral) < Tuning.data.hurt_roll_frontal_sine:
+		_roll_flip = -_roll_flip
+		sign_of = _roll_flip
+	return sign_of * maxf(absf(lateral), Tuning.data.hurt_roll_frontal_share)
 
 
 ## Unit kick (x = pitch up, y = yaw left) that jolts the view the way the hit pushes the

@@ -20,6 +20,12 @@ import pipe_common as pc  # noqa: E402
 BODY = "Body"
 BODY_HIDDEN = "Body__fp_hidden"
 BODY_TORSO = "Body__fp_torso"
+BODY_ARM = "Body__fp_arm"
+# point attributes a part can carry to bend its inverted-hull outline direction (blender_export.write_hull_normals): a weight 0..1 and a
+# unit direction (Blender axes); the hull normal of a vertex turns from the smooth normal toward the direction by the weight. M6 ARM:
+# the near upper arm's loop on the elbow side turns along the arm, so its hull stays inside the arm and draws no ink line over the forearm
+HULL_W_ATTR = "pipe_hull_w"
+HULL_DIR_ATTR = "pipe_hull_dir"
 ARMATURE = "Armature"
 PREVIEW_COLLECTION = "Preview"
 
@@ -68,9 +74,9 @@ def set_scene_prop(name, value):
 
 
 def body_objects():
-	"""The character's mesh objects, Body first, then the first-person hidden upper body and the torso (the belly and belt, which
-	fp_knockdown_hide_torso hides) when they exist."""
-	out = [bpy.data.objects[n] for n in (BODY, BODY_HIDDEN, BODY_TORSO) if n in bpy.data.objects]
+	"""The character's mesh objects, Body first, then the first-person hidden upper body, the torso (the belly and belt, which
+	fp_knockdown_hide_torso hides) and the shoulder half of each upper arm (which fp_show_upper_arm shows) when they exist."""
+	out = [bpy.data.objects[n] for n in (BODY, BODY_HIDDEN, BODY_TORSO, BODY_ARM) if n in bpy.data.objects]
 	return out
 
 

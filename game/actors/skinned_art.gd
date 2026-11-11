@@ -18,9 +18,13 @@ extends RefCounted
 ## and the binds reduce to translations: one code path serves both routes.
 
 ## A GLB mesh named with this suffix is the first-person-hidden part (head, neck, chest,
-## shoulders, the shoulder half of each upper arm): it goes on CombatTypes.VIS_FP_HIDDEN on a
-## first_person_body rig, like the primitives PlaceholderBody.is_fp_hidden() names.
+## shoulders): it goes on CombatTypes.VIS_FP_HIDDEN on a first_person_body rig, like the
+## primitives PlaceholderBody.is_fp_hidden() names.
 const FP_HIDDEN_SUFFIX := "__fp_hidden"
+## A GLB mesh named with this suffix is the shoulder half of each upper arm (M6 D7). It is
+## first-person-hidden like the part above, so it takes the same layer and the same meta;
+## FirstPersonCamera lifts it onto the default layer for the moves that say fp_show_upper_arm.
+const FP_ARM_SUFFIX := "__fp_arm"
 ## Set on the meshes attach() makes for a FP-hidden GLB mesh (HumanoidRig._apply_layers()).
 const FP_HIDDEN_META := &"fp_hidden"
 ## The GLB's joints sit within this of the table chained through the swing (A3, row A1).
@@ -240,7 +244,7 @@ static func _read_mesh(node: MeshInstance3D, problems: PackedStringArray) -> Art
 		return null
 	var part := ArtMesh.new()
 	part.node_name = node.name
-	part.fp_hidden = label.ends_with(FP_HIDDEN_SUFFIX)
+	part.fp_hidden = label.ends_with(FP_HIDDEN_SUFFIX) or label.ends_with(FP_ARM_SUFFIX)
 	var skeleton := node.get_node_or_null(node.skeleton) as Skeleton3D
 	var origins: Dictionary[StringName, Vector3] = {}
 	var seen: Dictionary[StringName, bool] = {}

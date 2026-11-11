@@ -30,9 +30,11 @@ const UNCONDITIONAL_REPORT_STEPS: Array[String] = ["inspect", "fit", "rig", "pal
 const HERO_GLB := "res://assets/export/characters/player/player.glb"
 const HERO_MASK := "res://assets/export/characters/player/player_detail.png"
 const HERO_ART := "res://game/actors/art/player_art.tres"
-const HERO_MESHES: Array[String] = ["Body", "Body__fp_hidden", "Body__fp_torso"]
-## Budgets per character id (SPEC §10: 15,000 enemy, 30,000 player); the probe bodies stand in for the player.
-const BUDGETS: Dictionary[String, int] = {"punk": 15000, "player": 30000, "probe_body": 30000}
+const HERO_MESHES: Array[String] = ["Body", "Body__fp_hidden", "Body__fp_torso", "Body__fp_arm"]
+## Budgets of the characters that are not in the roster (the hero's is SPEC §10's 30,000; the probe bodies stand in for the player).
+## Every roster character's (tests/fixtures/art/roster/<id>.json, M6 CHAIN) comes from its file: budgets().
+const BUDGETS: Dictionary[String, int] = {"player": 30000, "probe_body": 30000}
+const Roster := preload("res://tests/art_roster.gd")
 const TOLERANCE_JOINT := 0.001
 const FIST_CENTROID_TOLERANCE := 0.015
 const FIST_EXTENT_TOLERANCE := 0.2
@@ -40,8 +42,10 @@ const SOLE_TOLERANCE := 0.005
 ## The mean dot of a mesh's decoded hull normal (COLOR) with its NORMAL: the right axes measure 0.92-0.96 on the smoke Punk
 ## and the probe bodies (a normal baked in Blender's Z-up axes measured 0.31-0.34).
 const HULL_AGREE_MIN := 0.85
-## The atlas alpha classes (tools/pipeline/gen_palette.py; game/fx/toon.gdshader decodes them with step(0.75) and step(0.9)).
+## The atlas alpha classes (tools/pipeline/gen_palette.py; game/fx/toon.gdshader decodes them with step(0.75), step(0.85) and step(0.95)).
 const ALPHA_CLOTHES := 1.0
+## The clothes that scuff and never take blood (`"blood": false`, M6 D6).
+const ALPHA_NO_BLOOD := 0.9
 const ALPHA_SKIN := 0.8
 const ALPHA_NONE := 0.5
 const SWATCH_MIN := 4
@@ -148,12 +152,20 @@ func _glbs() -> Array[String]:
 	return out
 
 
+## Budgets per character id: the roster's, then BUDGETS' (SPEC §10: 15,000 enemy, 30,000 player, the boss's 30,000 in its file).
+func budgets() -> Dictionary[String, int]:
+	var out: Dictionary[String, int] = BUDGETS.duplicate()
+	for id: String in Roster.ids():
+		out[id] = int(Roster.row(id).budget)
+	return out
+
+
 ## The character id a GLB path stands for: tests/fixtures/art/probe_body_rest.glb -> probe_body, .../punk/punk_rest.glb -> punk.
 func _id_of(path: String) -> String:
 	var base: String = path.get_file().get_basename()
 	if base.ends_with("_rest"):
 		base = base.trim_suffix("_rest")
-	for id: String in BUDGETS:
+	for id: String in budgets():
 		if base == id or base.begins_with(id + "_"):
 			return id
 	return base
@@ -248,16 +260,18 @@ func test_every_art_glb_loads_and_has_a_body() -> void:
 		var names: Array = (f.meshes as Dictionary).keys()
 		names.sort()
 		for n: String in names:
-			assert_true(n in ["Body", "Body__fp_hidden", "Body__fp_torso"], "%s: mesh %s is named Body, Body__fp_hidden or Body__fp_torso" % [path, n])
+			assert_true(n in HERO_MESHES, "%s: mesh %s is named Body, Body__fp_hidden, Body__fp_torso or Body__fp_arm" % [path, n])
 			assert_eq((f.meshes[n] as Dictionary).surfaces, 1, "%s %s: one surface" % [path, n])
 			assert_true(((f.meshes[n] as Dictionary).xf as Transform3D).is_equal_approx(Transform3D.IDENTITY), "%s %s: at the skeleton's origin" % [path, n])
 		assert_true("Body" in names, "%s has a Body" % path)
-		if _id_of(path) == "punk":
-			assert_eq(names, ["Body"], "%s: the Punk is one mesh" % path)
+		if Roster.ids().has(_id_of(path)):
+			var want_meshes: Array = Roster.row(_id_of(path)).meshes.duplicate()
+			want_meshes.sort()
+			assert_eq(names, want_meshes, "%s: the meshes its roster file names" % path)
 		if _id_of(path) == "probe_body":
 			assert_eq(names, ["Body", "Body__fp_hidden"], "%s: the probe stands in for the player: visible and first-person-hidden parts" % path)
 		if _id_of(path) == "player":
-			assert_eq(names, ["Body", "Body__fp_hidden", "Body__fp_torso"], "%s: the hero is the visible body, the first-person-hidden upper body and the torso (the belly and belt: fp_knockdown_hide_torso hides only that)" % path)
+			assert_eq(names, ["Body", "Body__fp_arm", "Body__fp_hidden", "Body__fp_torso"], "%s: the hero is the visible body, the first-person-hidden upper body, the torso (the belly and belt: fp_knockdown_hide_torso hides only that) and the shoulder half of each upper arm (fp_show_upper_arm shows only that)" % path)
 
 
 func test_the_skeleton_has_the_23_table_bones_and_no_neutral_bone() -> void:
@@ -387,7 +401,7 @@ func test_triangle_budgets() -> void:
 		var total := 0
 		for n: String in (f.meshes as Dictionary):
 			total += _triangles(f.meshes[n])
-		var budget: int = BUDGETS.get(_id_of(path), 15000)
+		var budget: int = budgets().get(_id_of(path), 15000)
 		assert_true(total <= budget, "%s: %d triangles against its budget %d" % [path, total, budget])
 		assert_gt(total, 500, "%s: not an empty mesh" % path)
 
@@ -456,7 +470,13 @@ func test_hull_normals_and_the_detail_uv_are_there() -> void:
 			var agree := 0.0
 			var agree_z_up := 0.0
 			var agree_z_down := 0.0
+			var counted := 0
 			for i: int in verts.size():
+				# M6 fix-final-arm: the upper-arm piece's hull turns along the arm within ARM_HULL_RAMP_M of the cut (blender_export.bend_hull_normals),
+				# so no ink is drawn over the forearm: those vertices are meant to differ from NORMAL and from Body's dome ring they share a position with
+				if n == "Body__fp_arm" and _on_arm_cut(f, verts[i]):
+					continue
+				counted += 1
 				var c := colors[i]
 				var nrm := Vector3(c.r * 2.0 - 1.0, c.g * 2.0 - 1.0, c.b * 2.0 - 1.0)
 				if i % 97 == 0:
@@ -472,15 +492,36 @@ func test_hull_normals_and_the_detail_uv_are_there() -> void:
 					agree += dir.dot(normals[i])
 					agree_z_up += Vector3(dir.x, dir.z, -dir.y).dot(normals[i])
 					agree_z_down += Vector3(dir.x, -dir.z, dir.y).dot(normals[i])
-			if normals.size() == verts.size() and not verts.is_empty():
-				agree /= verts.size()
-				agree_z_up /= verts.size()
-				agree_z_down /= verts.size()
+			if normals.size() == verts.size() and counted > 0:
+				agree /= counted
+				agree_z_up /= counted
+				agree_z_down /= counted
 				gut.p("ART-CONTRACT hull axis: %s %s: mean dot(COLOR, NORMAL) as read %.3f (read as Blender Z-up %.3f, as Z-down %.3f)" % [path.get_file(), n, agree, agree_z_up, agree_z_down])
 				assert_gt(agree, HULL_AGREE_MIN, "%s %s: the hull normal (COLOR) agrees with NORMAL on average, so it is in the same Y-up axes (baked in Blender's Z-up it measures 0.3)" % [path, n])
 				assert_gt(agree, agree_z_up, "%s %s: COLOR reads better as (x, y, z) than as Blender's Z-up axes (x, z, -y)" % [path, n])
 				assert_gt(agree, agree_z_down, "%s %s: COLOR reads better as (x, y, z) than as (x, -z, y)" % [path, n])
 		assert_lt(worst_split, 0.03, "%s: vertices at one position share one hull normal, across both parts too (no cracks)" % path)
+
+
+## The width of the hull's turn at the upper-arm piece's elbow-side loop (parts.split_fp.arm.hull_ramp_m, 0.012 m; a millimetre of slack on each side).
+const ARM_HULL_RAMP_M := 0.013
+
+
+## Whether `v` (a vertex of the hero's Body__fp_arm) lies within the hull's turn of the cut plane of either upper arm.
+func _on_arm_cut(facts: Dictionary, v: Vector3) -> bool:
+	var rests: Dictionary[String, Vector3] = facts.bone_rests
+	if not rests.has("LeftUpperArm"):
+		return false
+	for side: String in ["Left", "Right"]:
+		var ua: Vector3 = rests[side + "UpperArm"]
+		var axis: Vector3 = rests[side + "LowerArm"] - ua
+		var length := axis.length()
+		if (v.x - ua.x) * signf(ua.x) < -0.25 * length or (v - ua).length() > length:
+			continue
+		var past := (v - ua).dot(axis / length) - length * 0.5
+		if past > -ARM_HULL_RAMP_M and past < 0.003:
+			return true
+	return false
 
 
 ## F-punk (M4-plan A18): the Punk's detail mask is a 1k PNG with ink in R only (lines, never shading), G the glint gate (the lens's two
@@ -506,7 +547,9 @@ func test_the_punk_detail_mask_is_a_1k_ink_only_png_on_the_punks_uv2() -> void:
 				ink += 1
 	var mean := sum / (512.0 * 512.0)
 	print("ART-CONTRACT punk_detail.png: mean ink %.4f, %d of 262144 sampled texels over 0.5" % [mean, ink])
-	assert_lt(blue, 0.01, "B holds nothing (R is the ink, G the lens's glint gate)")
+	# M6 ROLL-PUNK: B was nothing (0.01) and now holds the palette slot per texel (slot + 1, at most 20 = the lens's 19), the mask's alpha is the marker
+	# 128 / 255 (tests/test_m6_feedback_detail_punk.gd reads the codes and checks that each names one of the Punk's slots).
+	assert_lte(blue, 20.0 / 255.0 + 0.001, "B holds only the palette slot codes (R is the ink, G the lens's glint gate)")
 	assert_gt(gate, 50, "G holds the lens's streaks (the glint gate)")
 	assert_lt(gate, 3000, "and only the lens's (a few thousand texels at full resolution, a few hundred sampled here)")
 	assert_gt(ink, 500, "there are lines")
@@ -808,7 +851,8 @@ const STROKE_CUT_8BIT := 38
 const STROKE_SMALL_TEXELS := 6
 const STROKE_SMALL_SHARE_MAX := 0.12
 const STROKE_MEDIAN_MIN := 6
-const STROKE_PIECES_MAX := 600
+## 600 until M6 ROLL-PUNK; 800 now (654 measured): the vest's and the trousers' crease lines are new pieces; the dots test (share and median) is unchanged and the 1,144 dotted pieces of the bake before the cleanup still fail.
+const STROKE_PIECES_MAX := 800
 
 
 func test_the_punks_strokes_are_lines_not_dots() -> void:
@@ -1305,6 +1349,78 @@ func test_the_upper_arm_cut_is_a_dome_that_bulges_toward_the_shoulder() -> void:
 			assert_lt(reach, cut - DOME_MIN_M, "%s: the %s upper arm's visible part reaches %.3f m along the arm, the cut is at %.3f: a dome of at least %.0f mm bulges toward the shoulder" % [path, side.to_lower(), reach, cut, DOME_MIN_M * 1000.0])
 
 
+## The hero's Body__fp_arm (M6 D7) is the shoulder half of each upper arm: closed on its own (the shoulder-side loop has its inward cap
+## and the elbow-side loop one that sits inside Body's dome, so a lens that sees only this mesh and Body finds no hollow), on the
+## shoulder side of the cut plane (it reaches the plane, never past it), and one piece for each arm.
+func test_the_upper_arm_mesh_is_closed_and_ends_at_the_cut() -> void:
+	for path: String in _glbs():
+		if _id_of(path) != "player":
+			continue
+		var f := _facts(path)
+		if not f.ok or not (f.meshes as Dictionary).has("Body__fp_arm"):
+			assert_true(f.ok and (f.meshes as Dictionary).has("Body__fp_arm"), "%s has Body__fp_arm" % path)
+			continue
+		var arm: Dictionary = f.meshes["Body__fp_arm"]
+		assert_eq(_open_edges(arm), 0, "%s: Body__fp_arm has no open loop: its shoulder side is capped and so is its elbow side" % path)
+		var rests: Dictionary[String, Vector3] = f.bone_rests
+		var verts: PackedVector3Array = arm.arrays[Mesh.ARRAY_VERTEX]
+		for side: String in ["Left", "Right"]:
+			var ua: Vector3 = rests[side + "UpperArm"]
+			var axis: Vector3 = rests[side + "LowerArm"] - ua
+			var length := axis.length()
+			axis /= length
+			var cut := length * 0.5
+			var far := -INF
+			var count := 0
+			for v: Vector3 in verts:
+				# the arm's own half of the mesh: the side its upper-arm joint is on
+				if (v.x - ua.x) * signf(ua.x) < -0.25 * length or (v - ua).length() > length:
+					continue
+				count += 1
+				far = maxf(far, (v - ua).dot(axis))
+			assert_gt(count, 100, "%s: Body__fp_arm holds the %s arm (%d vertices)" % [path, side.to_lower(), count])
+			assert_lt(far, cut + 0.003, "%s: the %s arm piece stops at the cut (%.3f m along the arm, the cut is at %.3f)" % [path, side.to_lower(), far, cut])
+			assert_gt(far, cut - 0.003, "%s: and reaches it, so Body's dome closes the join (%.3f of %.3f)" % [path, far, cut])
+
+
+## M6 fix-final-arm: Body__fp_arm is bare skin (one swatch: the generated top's navy and charcoal patches made a dark shard at the
+## shoulder end in the uppercut), and its hull outline turns along the arm at the elbow-side loop, so no ink line is drawn over the
+## forearm: the COLOR (hull normal) of the vertices on the cut's plane points at the shoulder, not out of the wall.
+func test_the_upper_arm_mesh_is_one_skin_swatch_and_its_hull_stays_inside_at_the_cut() -> void:
+	for path: String in _glbs():
+		if _id_of(path) != "player":
+			continue
+		var f := _facts(path)
+		if not f.ok or not (f.meshes as Dictionary).has("Body__fp_arm"):
+			assert_true(f.ok and (f.meshes as Dictionary).has("Body__fp_arm"), "%s has Body__fp_arm" % path)
+			continue
+		var arm: Dictionary = f.meshes["Body__fp_arm"]
+		var uvs: PackedVector2Array = arm.arrays[Mesh.ARRAY_TEX_UV]
+		var slots := {}
+		for uv: Vector2 in uvs:
+			slots[int(uv.y * 2.0) * 32 + int(uv.x * 32.0)] = true
+		assert_eq(slots.size(), 1, "%s: Body__fp_arm uses one palette swatch (%s)" % [path, str(slots.keys())])
+		var verts: PackedVector3Array = arm.arrays[Mesh.ARRAY_VERTEX]
+		var colors: PackedColorArray = arm.arrays[Mesh.ARRAY_COLOR]
+		var rests: Dictionary[String, Vector3] = f.bone_rests
+		var on_cut := 0
+		for side: String in ["Left", "Right"]:
+			var ua: Vector3 = rests[side + "UpperArm"]
+			var axis: Vector3 = rests[side + "LowerArm"] - ua
+			var length := axis.length()
+			axis /= length
+			for i in verts.size():
+				var v := verts[i]
+				if (v.x - ua.x) * signf(ua.x) < -0.25 * length or (v - ua).length() > length:
+					continue
+				if absf((v - ua).dot(axis) - length * 0.5) > 0.0015:
+					continue
+				on_cut += 1
+				var hull := Vector3(colors[i].r, colors[i].g, colors[i].b) * 2.0 - Vector3.ONE
+				assert_gt(hull.normalized().dot(-axis), 0.9, "%s: the hull of a vertex on the %s cut points along the arm to the shoulder" % [path, side.to_lower()])
+		assert_gt(on_cut, 40, "%s: the cut's loops were found (%d vertices)" % [path, on_cut])
+
+
 ## Boundary edges of a mesh (an edge used by one triangle), counting vertices at one position as one vertex.
 func _open_edges(mesh: Dictionary) -> int:
 	var verts: PackedVector3Array = mesh.arrays[Mesh.ARRAY_VERTEX]
@@ -1332,7 +1448,8 @@ func _open_edges(mesh: Dictionary) -> int:
 
 
 ## The palette atlas is the shared palette JSON made real: 256x16, every swatch at its slot's centre, alpha the damage class:
-## 1.0 clothes marks, 0.8 skin marks (`"skin": true`, slots 6-9), 0.5 none (slice-g2-07).
+## 1.0 clothes marks, 0.9 clothes scuffs without blood (`"blood": false`, M6 D6), 0.8 skin marks (`"skin": true`,
+## slots 6-9), 0.5 none (slice-g2-07).
 func test_the_palette_atlas_is_the_palette_json_made_real() -> void:
 	var atlas := _atlas_image()
 	assert_not_null(atlas, "the atlas imports")
@@ -1361,12 +1478,17 @@ func test_the_palette_atlas_is_the_palette_json_made_real() -> void:
 			var skin := bool(sw.get("skin", false))
 			var takes := bool(sw.get("marks", true))
 			assert_false(skin and not takes, "%s slot %d: a skin swatch takes marks" % [file, slot])
-			var want_alpha := ALPHA_NONE if not takes else ALPHA_SKIN if skin else ALPHA_CLOTHES
+			var blood := bool(sw.get("blood", true))
+			assert_false(skin and not blood, "%s slot %d: a skin swatch always takes blood" % [file, slot])
+			assert_false(not takes and not blood, "%s slot %d: blood: false means something only where marks land" % [file, slot])
+			var want_alpha := ALPHA_NONE if not takes else ALPHA_SKIN if skin else ALPHA_CLOTHES if blood else ALPHA_NO_BLOOD
 			var alpha := _swatch_alpha(atlas, slot)
-			assert_almost_eq(alpha, want_alpha, 0.01, "%s slot %d: alpha 1.0 takes the clothes' marks, 0.8 the skin's, 0.5 none" % [file, slot])
-			# the shader's own decode (toon.gdshader: takes_marks *= step(0.75, a); skin_marks = 1 - step(0.9, a)) gives the same classes
+			assert_almost_eq(alpha, want_alpha, 0.01, "%s slot %d: alpha 1.0 takes the clothes' marks, 0.9 the scuffs only, 0.8 the skin's, 0.5 none" % [file, slot])
+			# the shader's own decode (toon.gdshader: takes_marks *= step(0.75, a); skin_marks = 1 - step(0.85, a);
+			# no_blood = step(0.85, a) * (1 - step(0.95, a))) gives the same classes
 			assert_eq(alpha >= 0.75, takes, "%s slot %d: the shader reads 'takes marks' from the alpha" % [file, slot])
-			assert_eq(alpha >= 0.75 and alpha < 0.9, skin, "%s slot %d: the shader reads 'skin' from the alpha" % [file, slot])
+			assert_eq(alpha >= 0.75 and alpha < 0.85, skin, "%s slot %d: the shader reads 'skin' from the alpha" % [file, slot])
+			assert_eq(alpha >= 0.85 and alpha < 0.95, takes and not blood, "%s slot %d: the shader reads 'no blood' from the alpha" % [file, slot])
 			assert_false(_in_red_band(want), "%s slot %d (%s) is in the red band" % [file, slot, sw.srgb])
 	assert_gt(seen.size(), 10, "the shared palette is there")
 
@@ -1452,21 +1574,28 @@ func test_each_character_report_names_the_glbs_it_exported() -> void:
 ## data (a swatch per slot, a snap per bone).
 func test_the_probe_report_has_the_step_report_keys_the_punks_report_has() -> void:
 	assert_true(FileAccess.file_exists(PUNK_REPORT), "the Punk's chain report is committed")
-	var probe: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(PROBE_REPORT))
 	var punk: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(PUNK_REPORT))
-	for step: String in UNCONDITIONAL_REPORT_STEPS:
-		assert_true((probe.steps as Dictionary).has(step), "the probe report has the %s step" % step)
-		assert_true((punk.steps as Dictionary).has(step), "the Punk's report has the %s step" % step)
-		if not (probe.steps as Dictionary).has(step) or not (punk.steps as Dictionary).has(step):
-			continue
-		var probe_keys: Array = (probe.steps[step] as Dictionary).keys()
-		var punk_keys: Array = (punk.steps[step] as Dictionary).keys()
-		probe_keys.sort()
-		punk_keys.sort()
-		var missing: Array = punk_keys.filter(func(k: Variant) -> bool: return not probe_keys.has(k))
-		var extra: Array = probe_keys.filter(func(k: Variant) -> bool: return not punk_keys.has(k))
-		assert_eq(missing, [], "steps.%s: keys the Punk's report has and the probe's lacks (rerun python3 -I tools/pipeline/make_probe_body.py: the GLBs come out unchanged, the report and its hash move)" % step)
-		assert_eq(extra, [], "steps.%s: keys the probe's report has and the Punk's lacks (the Punk's report is the stale one: run.py --asset punk)" % step)
+	# The probe's report, and (M6) every other roster character's: a new character's chain report has the same keys.
+	var reports: Dictionary[String, String] = {"the probe": PROBE_REPORT}
+	for id: String in Roster.ids():
+		if id != "punk":
+			reports["the %s" % id] = "res://assets/source/characters/%s/report/report.json" % id
+	for who: String in reports:
+		assert_true(FileAccess.file_exists(reports[who]), "%s's chain report is committed" % who)
+		var probe: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(reports[who]))
+		for step: String in UNCONDITIONAL_REPORT_STEPS:
+			assert_true((probe.steps as Dictionary).has(step), "%s's report has the %s step" % [who, step])
+			assert_true((punk.steps as Dictionary).has(step), "the Punk's report has the %s step" % step)
+			if not (probe.steps as Dictionary).has(step) or not (punk.steps as Dictionary).has(step):
+				continue
+			var probe_keys: Array = (probe.steps[step] as Dictionary).keys()
+			var punk_keys: Array = (punk.steps[step] as Dictionary).keys()
+			probe_keys.sort()
+			punk_keys.sort()
+			var missing: Array = punk_keys.filter(func(k: Variant) -> bool: return not probe_keys.has(k))
+			var extra: Array = probe_keys.filter(func(k: Variant) -> bool: return not punk_keys.has(k))
+			assert_eq(missing, [], "%s steps.%s: keys the Punk's report has and its lacks (rerun python3 -I tools/pipeline/make_probe_body.py, and run.py --asset dummy: the GLBs come out unchanged, the report and its hash move)" % [who, step])
+			assert_eq(extra, [], "%s steps.%s: keys its report has and the Punk's lacks (the Punk's report is the stale one: run.py --asset punk)" % [who, step])
 
 
 ## M4-plan A18 for the hero (Spec §10: "palette atlas + 1k detail mask"; the most-seen asset of the milestone): his mask is a
@@ -1584,3 +1713,91 @@ func _swatch_alpha(atlas: Image, slot: int) -> float:
 func _in_red_band(c: Color) -> bool:
 	var hue := c.h * 360.0
 	return (hue >= 345.0 or hue <= 15.0) and c.s > 0.5
+
+
+# --- Variant atlases (M6 D4, LOOKS) -----------------------------------------------------------
+
+
+## The slots a GLB's faces sit on (the UV1 swatch centres of every mesh).
+func _slots_used_by(path: String) -> Dictionary:
+	var slots: Dictionary = {}
+	var f := _facts(path)
+	if not f.ok:
+		return slots
+	for n: String in (f.meshes as Dictionary):
+		var uvs: PackedVector2Array = ((f.meshes[n] as Dictionary).arrays as Array)[Mesh.ARRAY_TEX_UV]
+		for uv: Vector2 in uvs:
+			slots[int(roundf(uv.y * SWATCH_ROWS - 0.5)) * SWATCH_COLUMNS + int(roundf(uv.x * SWATCH_COLUMNS - 0.5))] = true
+	return slots
+
+
+func _variant_atlas(id: String) -> Image:
+	var tex := load("res://assets/export/palette/%s_atlas.png" % id) as Texture2D
+	if tex == null:
+		return null
+	var img := tex.get_image()
+	if img.is_compressed():
+		img.decompress()
+	return img
+
+
+func _hue_gap(a: Color, b: Color) -> float:
+	var gap := absf(a.h - b.h) * 360.0
+	return minf(gap, 360.0 - gap)
+
+
+## A variant atlas is the shared atlas with a few slots recoloured: every alpha is the base's (the damage class and the gloss), every
+## other swatch is the base's colour, the recoloured ones are the variant JSON's, saturated, not red, and clear of the Punk's teal and
+## the player's navy; the Punk's body still uses 4-6 colours under it (A3).
+func test_a_variant_atlas_recolours_swatches_and_keeps_every_alpha() -> void:
+	var base := _atlas_image()
+	var dir := DirAccess.open(PALETTE_DIR + "/variants")
+	assert_not_null(dir, "assets/source/palette/variants exists")
+	if dir == null:
+		return
+	var teal := _swatch_color(base, 16)
+	var navy := _swatch_color(base, 32)
+	var checked := 0
+	for file: String in dir.get_files():
+		if not file.ends_with(".json"):
+			continue
+		var v: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("%s/variants/%s" % [PALETTE_DIR, file]))
+		var img := _variant_atlas(String(v.id))
+		assert_not_null(img, "%s: the atlas is built (python3 -I tools/pipeline/gen_palette.py)" % file)
+		if img == null:
+			continue
+		checked += 1
+		assert_eq(img.get_size(), base.get_size(), "%s: the same 256x16" % file)
+		var changed: Dictionary = {}
+		for sw: Dictionary in v.swatches:
+			changed[int(sw.slot)] = Color.html(sw.srgb)
+			for key: String in ["marks", "skin", "gloss", "blood"]:
+				assert_false(sw.has(key), "%s slot %d: a variant keeps its swatch's damage class (no %s)" % [file, sw.slot, key])
+		for slot in 64:
+			assert_eq(_swatch_alpha(img, slot), _swatch_alpha(base, slot), "%s slot %d: the alpha (damage class, gloss) is the base's" % [file, slot])
+			var got := _swatch_color(img, slot)
+			if changed.has(slot):
+				var want: Color = changed[slot]
+				assert_almost_eq(got.r, want.r, 0.005, "%s slot %d red" % [file, slot])
+				assert_almost_eq(got.g, want.g, 0.005, "%s slot %d green" % [file, slot])
+				assert_almost_eq(got.b, want.b, 0.005, "%s slot %d blue" % [file, slot])
+				assert_ne(got.to_html(false), _swatch_color(base, slot).to_html(false), "%s slot %d: really recoloured" % [file, slot])
+				assert_gte(got.s, 0.5, "%s slot %d: an enemy's main colour keeps saturation of 0.5 (look bible)" % [file, slot])
+				assert_false(_in_red_band(got), "%s slot %d: not red" % [file, slot])
+				assert_gte(_hue_gap(got, teal), 40.0, "%s slot %d: clear of the Punk's teal" % [file, slot])
+				assert_gte(_hue_gap(got, navy), 40.0, "%s slot %d: clear of the player's navy" % [file, slot])
+			else:
+				assert_eq(got.to_html(false), _swatch_color(base, slot).to_html(false), "%s slot %d: the base's colour" % [file, slot])
+		for path: String in _glbs():
+			if _id_of(path) != String(v.base):
+				continue
+			var colours: Dictionary = {}
+			var slots := _slots_used_by(path)
+			for slot: int in slots:
+				colours[_swatch_color(img, slot).to_html(false)] = true
+				assert_false(_in_red_band(_swatch_color(img, slot)), "%s under %s: slot %d is not red" % [path.get_file(), file, slot])
+			assert_between(colours.size(), SWATCH_MIN, SWATCH_MAX, "%s under %s: %d flat colours used" % [path.get_file(), file, colours.size()])
+			if path.get_file() == "%s.glb" % v.base:
+				for slot: int in changed:
+					assert_true(slots.has(slot), "%s: the swatch %d the variant recolours is on the body" % [path.get_file(), slot])
+	assert_gt(checked, 0, "at least one variant atlas (the veteran Punk's)")

@@ -1,7 +1,9 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://game/enemies/thug/pipe_thug.gd" id="1_thug"]
+[ext_resource type="Resource" path="res://game/actors/art/thug_art.tres" id="2_art"]
 
 [node name="PipeThug" type="CharacterBody3D"]
 script = ExtResource("1_thug")
 display_name = "Thug"
+art = ExtResource("2_art")

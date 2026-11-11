@@ -1,0 +1,222 @@
+{
+	"id": "dummy",
+	"version": 1,
+	"note": "The padded training dummy (M6 CHAIN, D17): the chain's own probe mannequin re-run into the shipped folders with its own palette (slots 56-59). No credits. The source is built by python3 -I tools/pipeline/make_probe_body.py --source --regions assets/source/characters/dummy/regions.json --out assets/source/characters/dummy/source --name dummy. Facing, swing, proportions and the rig are not the table's: the chain fits it.",
+	"paths": {
+		"work": "assets/source/_cache/dummy/work",
+		"report": "assets/source/characters/dummy/report",
+		"export_dir": "assets/export/characters/dummy",
+		"export_name": "dummy"
+	},
+	"source": {
+		"mesh": "assets/source/characters/dummy/source/dummy_source.glb",
+		"rig": "same",
+		"facing_yaw_deg": null,
+		"sides": "auto"
+	},
+	"target": {
+		"head_top_m": 1.82
+	},
+	"fit": {
+		"landmarks": "rig",
+		"regularize": [
+			"Spine",
+			"Chest",
+			"UpperChest"
+		],
+		"bone_map": {},
+		"swing": "measure",
+		"default_swing_deg": 45.0,
+		"warp_weights": "tripo",
+		"residual_limit_m": 0.01,
+		"sole_percentile": 0.0
+	},
+	"rig": {
+		"weights": "auto",
+		"max_influences": 4,
+		"variants": [
+			"apose",
+			"rest"
+		]
+	},
+	"parts": {
+		"fists": {
+			"enabled": true,
+			"glove_slot": 57,
+			"strap_slot": 56,
+			"strap_height_m": 0.03,
+			"cuff_margin_m": 0.008,
+			"cuff_over_m": 0.035,
+			"cuff_below_wrist_m": 0.012,
+			"bevel_m": 0.022,
+			"bump_m": 0.006
+		},
+		"split_fp": {
+			"enabled": false
+		}
+	},
+	"palette": {
+		"mode": "fixed",
+		"slots": [
+			56,
+			57,
+			58,
+			59
+		],
+		"max_swatches": 4,
+		"min_share": 0.004,
+		"majority_passes": 2,
+		"border_relax_iterations": 3,
+		"border_relax_factor": 0.5,
+		"budget_tris": 15000,
+		"detail_uv": true
+	},
+	"export": {
+		"hull_normal_digits": 5
+	},
+	"stills": {
+		"views": [
+			"front",
+			"three_quarter",
+			"side"
+		],
+		"poses": {
+			"rest": {},
+			"guard": {
+				"Spine": [
+					-3.0,
+					0.0,
+					0.0
+				],
+				"Chest": [
+					-3.0,
+					0.0,
+					0.0
+				],
+				"Neck": [
+					4.0,
+					0.0,
+					0.0
+				],
+				"Head": [
+					2.0,
+					0.0,
+					0.0
+				],
+				"LeftUpperArm": [
+					43.5,
+					-22.0,
+					-13.5
+				],
+				"LeftLowerArm": [
+					130.0,
+					0.0,
+					0.0
+				],
+				"RightUpperArm": [
+					40.0,
+					22.5,
+					13.0
+				],
+				"RightLowerArm": [
+					134.5,
+					0.0,
+					0.0
+				],
+				"LeftUpperLeg": [
+					16.0,
+					0.0,
+					-4.0
+				],
+				"LeftLowerLeg": [
+					-24.0,
+					0.0,
+					0.0
+				],
+				"LeftFoot": [
+					8.0,
+					0.0,
+					4.0
+				],
+				"RightUpperLeg": [
+					-6.0,
+					0.0,
+					5.0
+				],
+				"RightLowerLeg": [
+					-16.0,
+					0.0,
+					0.0
+				],
+				"RightFoot": [
+					22.0,
+					0.0,
+					-5.0
+				]
+			},
+			"elbow_150": {
+				"LeftLowerArm": [
+					150.0,
+					0.0,
+					0.0
+				],
+				"RightLowerArm": [
+					150.0,
+					0.0,
+					0.0
+				]
+			},
+			"arm_raise_140": {
+				"LeftUpperArm": [
+					140.0,
+					0.0,
+					0.0
+				],
+				"RightUpperArm": [
+					140.0,
+					0.0,
+					0.0
+				]
+			},
+			"knee_m130": {
+				"LeftUpperLeg": [
+					40.0,
+					0.0,
+					0.0
+				],
+				"LeftLowerLeg": [
+					-130.0,
+					0.0,
+					0.0
+				],
+				"RightUpperLeg": [
+					-10.0,
+					0.0,
+					0.0
+				]
+			},
+			"spine_twist": {
+				"Spine": [
+					0.0,
+					30.0,
+					0.0
+				],
+				"Chest": [
+					0.0,
+					30.0,
+					0.0
+				],
+				"UpperChest": [
+					0.0,
+					20.0,
+					0.0
+				],
+				"Neck": [
+					0.0,
+					-20.0,
+					0.0
+				]
+			}
+		}
+	}
+}

@@ -37,9 +37,13 @@ const DEBUG_ROWS: Array[Array] = [
 	["Restart (while paused)", &"restart"],
 ]
 
-## [label, keycode] debug keys that are not input-map actions: the overlays' own.
+## [label, keycode] debug keys that are not input-map actions: the overlays' own. An optional third
+## entry is the key text, when the keycode's own name doesn't read ("BracketRight").
 const KEY_ROWS: Array[Array] = [
 	["Combat log on / off", CombatLogOverlay.TOGGLE_KEY],
+	AuditionRoom.HELP_ROWS[0],
+	AuditionRoom.HELP_ROWS[1],
+	AuditionRoom.HELP_ROWS[2],
 ]
 
 ## [inputs, result] (Spec §4 combos). "·" is the pause branch.
@@ -169,7 +173,7 @@ func _build() -> void:
 		debug_keys.add_child(_label(HelpOverlay.binding_text([row[1]], false), key))
 		debug_keys.add_child(_label(str(row[0]), body))
 	for row: Array in HelpOverlay.KEY_ROWS:
-		debug_keys.add_child(_label(OS.get_keycode_string(row[1] as Key), key))
+		debug_keys.add_child(_label(str(row[2]) if row.size() > 2 else OS.get_keycode_string(row[1] as Key), key))
 		debug_keys.add_child(_label(str(row[0]), body))
 	var spacer := Control.new()
 	spacer.custom_minimum_size = Vector2(0.0, 14.0)

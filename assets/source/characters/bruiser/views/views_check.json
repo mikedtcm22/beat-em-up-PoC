@@ -1,0 +1,27 @@
+{
+	"ground_rgb": [
+		217,
+		217,
+		217
+	],
+	"limits": {
+		"ground_tolerance": 18,
+		"height_rel": 0.03,
+		"feet_row_px": 32,
+		"centre_px": 60
+	},
+	"views": {
+		"front": {
+			"image": "view_front.jpg",
+			"mannequin": "../../../mannequin/mannequin_front.png"
+		},
+		"back": {
+			"image": "view_back.jpg",
+			"mannequin": "../../../mannequin/mannequin_back.png"
+		},
+		"left": {
+			"image": "view_left.jpg",
+			"mannequin": "../../../mannequin/mannequin_left.png"
+		}
+	}
+}

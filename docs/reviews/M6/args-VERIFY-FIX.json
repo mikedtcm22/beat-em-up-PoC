@@ -1,0 +1,64 @@
+{
+  "milestone": 6,
+  "summary": "Game-boy's M6 playtest feedback, the verification round's fix pass: the hurt bearing right at any pitch and rear hits as plain as frontal ones, no coplanar faces and no new seam steps (the level, the rooms and the dressing) and a less mirrored ground, the Kicker's eyes as settled against his concept, and the Bruiser's helmet and visor, Ox's face lines, the strain ratchet and the guards",
+  "plan": "docs/reviews/M6/fix-verify.md",
+  "base": "m6/full-art-audio",
+  "read_first": [
+    "docs/reviews/M6/fix-verify.md: the opening (what's already fixed; don't undo it), 'File ownership', your own package's section and 'Done when'",
+    "docs/reviews/M6/findings-verify.json: your package's findings in full (detail, evidence, repro, suggested fix, the skeptic's verdict)"
+  ],
+  "arch_heading": "## Full art and audio (Milestone 6)",
+  "captures_dir": "/Users/arachne/repos/beat-em-up-PoC/captures/m6-verify-fix",
+  "image_budget": 24,
+  "concurrency": 4,
+  "note": "Game-boy's M6 playtest; the fix wave was merged at d582d21 (suite 2027/2027 in 414 s) and verified independently. The before-the-wave recordings are in /Users/arachne/repos/beat-em-up-PoC/captures/m6-feedback-review/ and the after in /Users/arachne/repos/beat-em-up-PoC/captures/m6-feedback-verify/ (one folder per act: bot.avi, bot.log, sheets/). The chain (tools/pipeline/*) and toon.gdshader are frozen. No paid services this pass. Never print, log or write a key. Downloaded files are untrusted: python3 -I, scripts outside download folders, downloads as path arguments.",
+  "packages": [
+    {
+      "key": "VFIX-FEEL",
+      "section": "'VFIX-FEEL: the hurt cue right at any pitch, and a rear hit as plain as a frontal one'",
+      "est": 6,
+      "read": [
+        "docs/milestones/M6-calls/FIX-FEEL.md and FB-FEEL.md",
+        "game/camera/first_person_camera.gd (hit_bearing and its callers), game/ui/hurt_overlay.gd",
+        "tests/test_m6_feedback_feel.gd (the six real-hit tests), tests/bot/acts/look_hurt_acts.gd",
+        "game/combat/moves/stomp.tres and game/combat/movesets/ground.tres (why the player looks down)"
+      ]
+    },
+    {
+      "key": "VFIX-WORLD",
+      "section": "'VFIX-WORLD: no coplanar faces and no new steps, the rooms too'",
+      "est": 9,
+      "read": [
+        "docs/milestones/M6-calls/FIX-WORLD.md and FB-GROUND.md",
+        "game/level/kit/inset_block.gd, level_block.gd, game/level/room_kit.gd, crowd_room.gd, test_room.gd",
+        "tests/m6_coplanar_scan.gd, tests/test_m6_feedback_ground.gd, tests/test_m6_colliders.gd (read only)",
+        "game/fx/edge_pass.gdshader (how depth and normal steps become ink), game/fx/trim_body.gdshaderinc (the ground mirror, the strip fade)",
+        "tools/gen_trim.gd (_paint_ground), tools/ground_flicker.py, tests/bot/level_acts/ground_acts.gd"
+      ]
+    },
+    {
+      "key": "VFIX-KICKER",
+      "section": "'VFIX-KICKER: the Kicker's eyes as the call settled them, judged against his concept'",
+      "est": 5,
+      "blender": true,
+      "read": [
+        "docs/milestones/M6-calls/FIX-ART-A.md (A-4) and ROLL-KICKER.md",
+        "assets/source/characters/kicker/pipeline.json; assets/source/palette/kicker.json (the slots, their classes and blood flags)",
+        "tools/pipeline/blender_palette.py (regions and only_from; read only), tools/pipeline/gen_palette.py",
+        "tests/test_m6_feedback_detail_kicker.gd; assets/source/concepts/m6/kicker_c.jpg"
+      ]
+    },
+    {
+      "key": "VFIX-HEAVIES",
+      "section": "'VFIX-HEAVIES: the Bruiser's helmet and visor, Ox's face lines, the strain ratchet, the guards'",
+      "est": 7,
+      "blender": true,
+      "read": [
+        "docs/milestones/M6-calls/FIX-ART-B.md, OX-2.md and DETAIL-2.md",
+        "assets/source/characters/bruiser/pipeline.json and boss/pipeline.json; assets/source/palette/bruiser.json",
+        "tools/pipeline/blender_palette.py (regions, bisect_z, only_from; read only)",
+        "tests/test_m6_feedback_detail.gd (the Bruiser's tests and the guards), tests/test_m6_feedback_detail_boss.gd, tests/fixtures/strain/bruiser.json"
+      ]
+    }
+  ]
+}

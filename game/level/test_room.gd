@@ -10,6 +10,7 @@ extends Node3D
 const PLAYER_SCENE := "res://game/player/player.tscn"
 const DUMMY_SCENE := "res://game/enemies/dummy/training_dummy.tscn"
 const PIPE_SCENE := "res://game/weapons/pipe.tscn"
+const CHAIN_SCENE := "res://game/weapons/bike_chain.tscn"
 
 @export var street_length: float = 40.0
 @export var street_width: float = 14.0
@@ -20,10 +21,9 @@ const PIPE_SCENE := "res://game/weapons/pipe.tscn"
 @export var dummy_positions: Array[Vector3] = [
 	Vector3(-0.8, 0.0, -1.8), Vector3(-0.5, 0.0, 0.0), Vector3(-0.8, 0.0, 1.8)
 ]
-@export var dummy_colors: Array[Color] = [
-	Color(0.86, 0.5, 0.16), Color(0.5, 0.72, 0.2), Color(0.62, 0.32, 0.72)
-]
 @export var pipe_position: Vector3 = Vector3(-3.0, 0.15, 2.6)
+## The bike chain (Milestone 6, the second weapon), two metres from the pipe so neither is in reach of the other.
+@export var chain_position: Vector3 = Vector3(-1.0, 0.15, 2.6)
 ## Indices of the dummies that spar from the start (Dummy 2, the centre one).
 @export var sparring_dummies: Array[int] = [1]
 ## Build the presentation layer (cameras, HUD). Tests can turn this off.
@@ -36,6 +36,7 @@ var dummies: Array[TrainingDummy] = []
 func _ready() -> void:
 	_build_environment()
 	_build_street()
+	RoomKit.resolve_coplanar(self)
 	_spawn_actors()
 	if with_presentation:
 		_build_presentation()
@@ -62,7 +63,7 @@ func _build_environment() -> void:
 
 
 func _build_street() -> void:
-	_add_box(Vector3(0.0, -0.5, 0.0), Vector3(street_length + 20.0, 1.0, street_width + 20.0), RoomKit.grid_material())
+	_add_box(Vector3(0.0, -0.5, 0.0), Vector3(street_length + 20.0, 1.0, street_width + 20.0), RoomKit.grid_material(), &"floor")
 
 	var wall_mat := RoomKit.flat_material(Color(0.42, 0.4, 0.44))
 	var accent_mat := RoomKit.flat_material(Color(0.5, 0.46, 0.4))
@@ -74,23 +75,24 @@ func _build_street() -> void:
 	while x < half_l:
 		var w := 5.0 + float(i % 3) * 1.5
 		var h := 5.0 + float((i * 7) % 4) * 1.5
-		_add_box(Vector3(x + w * 0.5, h * 0.5, -half_w - 1.0), Vector3(w, h, 2.0), wall_mat if i % 2 == 0 else accent_mat)
+		_add_box(Vector3(x + w * 0.5, h * 0.5, -half_w - 1.0), Vector3(w, h, 2.0), wall_mat if i % 2 == 0 else accent_mat,
+				&"wall" if i % 2 == 0 else &"slab")
 		x += w
 		i += 1
 	# Street ends.
-	_add_box(Vector3(-half_l - 1.0, 2.5, 0.0), Vector3(2.0, 5.0, street_width + 2.0), wall_mat)
-	_add_box(Vector3(half_l + 1.0, 2.5, 0.0), Vector3(2.0, 5.0, street_width + 2.0), wall_mat)
+	_add_box(Vector3(-half_l - 1.0, 2.5, 0.0), Vector3(2.0, 5.0, street_width + 2.0), wall_mat, &"wall")
+	_add_box(Vector3(half_l + 1.0, 2.5, 0.0), Vector3(2.0, 5.0, street_width + 2.0), wall_mat, &"wall")
 	# Near side (+Z) stays low so the side-view debug camera can see the street.
-	_add_box(Vector3(0.0, 0.3, half_w + 0.25), Vector3(street_length, 0.6, 0.5), accent_mat)
+	_add_box(Vector3(0.0, 0.3, half_w + 0.25), Vector3(street_length, 0.6, 0.5), accent_mat, &"curb")
 	# Crates for spatial reference and cover.
 	var crate_mat := RoomKit.prop_material(Color(0.5, 0.44, 0.35))
 	for p: Vector3 in [Vector3(-7.0, 0.5, -4.5), Vector3(-6.0, 0.5, -5.2), Vector3(8.0, 0.5, 4.5)]:
-		_add_box(p, Vector3(1.0, 1.0, 1.0), crate_mat)
+		_add_box(p, Vector3(1.0, 1.0, 1.0), crate_mat, &"crate")
 	# Dashed center line along the street.
 	var paint := RoomKit.flat_material(Color(0.6, 0.58, 0.52))
 	var dash := -half_l + 1.0
 	while dash < half_l:
-		_add_visual_box(Vector3(dash + 0.75, 0.005, -2.0), Vector3(1.5, 0.01, 0.15), paint)
+		_add_visual_box(Vector3(dash + 0.75, 0.005, -2.0), Vector3(1.5, 0.01, 0.15), paint, &"slab")
 		dash += 3.0
 
 
@@ -104,7 +106,6 @@ func _spawn_actors() -> void:
 		var dummy := (load(DUMMY_SCENE) as PackedScene).instantiate() as TrainingDummy
 		dummy.name = "Dummy%d" % (n + 1)
 		dummy.display_name = "Dummy %d" % (n + 1)
-		dummy.color = dummy_colors[n % dummy_colors.size()]
 		dummy.position = dummy_positions[n]
 		var to_player := player_start - dummy_positions[n]
 		dummy.rotation.y = atan2(-to_player.x, -to_player.z)  # face the player start
@@ -115,17 +116,29 @@ func _spawn_actors() -> void:
 	pipe.position = pipe_position
 	pipe.rotation_degrees = Vector3(0.0, 30.0, 90.0)
 	add_child(pipe)
+	var chain := (load(CHAIN_SCENE) as PackedScene).instantiate() as Weapon
+	chain.position = chain_position
+	chain.rotation_degrees = Vector3(0.0, -20.0, 90.0)
+	add_child(chain)
 
 
 ## Cameras, HUD, the F1 tuning panel and F4 cheat menu, the VFX, audio and rumble directors
-## and the look's post pass: RoomKit.build_presentation(), the crowd room's too.
+## and the look's post pass: RoomKit.build_presentation(), the crowd room's too, then the sound
+## audition room (game/audio/audition_room.gd).
 func _build_presentation() -> void:
 	RoomKit.build_presentation(self)
+	# The sound audition room (Milestone 6): the bracket, digit, minus and equals keys.
+	add_child(AuditionRoom.new())
 
 
-func _add_box(pos: Vector3, size: Vector3, material: Material) -> StaticBody3D:
-	return RoomKit.add_box(self, pos, size, material)
+## A solid box; `art` is the kit module it draws as (M6 D9; a crate wears the prop hull on its overlay, as a
+## kit module has no hull of its own).
+func _add_box(pos: Vector3, size: Vector3, material: Material, art: StringName = &"") -> StaticBody3D:
+	var overlay: Material = null
+	if art == &"crate" and RoomKit.kit_art(art):
+		overlay = ToonMaterials.outline_for_part(PlaceholderBody.Shape.BOX)
+	return RoomKit.add_box(self, pos, size, material, overlay, art)
 
 
-func _add_visual_box(pos: Vector3, size: Vector3, material: Material) -> void:
-	RoomKit.add_visual_box(self, pos, size, material)
+func _add_visual_box(pos: Vector3, size: Vector3, material: Material, art: StringName = &"") -> void:
+	RoomKit.add_visual_box(self, pos, size, material, null, art)

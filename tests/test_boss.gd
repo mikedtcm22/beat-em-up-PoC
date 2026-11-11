@@ -165,7 +165,7 @@ func test_the_boss_is_the_plans_body_groups_and_attacks() -> void:
 	assert_true(boss.heavy, "the heavy wind-up floor and the larger rear-warning burst")
 	assert_eq(boss.max_health, 300.0)
 	assert_eq(boss.health, 300.0)
-	assert_eq(boss.display_name, "Boss")
+	assert_eq(boss.display_name, "Ox Pellerin", "the champion's name (M6 HEAVIES; was \"Boss\"), shown by the HUD bar")
 	assert_almost_eq(boss.voice_pitch_mult, 0.7, 0.0001, "a deep voice")
 	for group: StringName in [&"actor", &"enemy", &"ai_enemy", &"boss"]:
 		assert_true(boss.is_in_group(group), "in group %s" % group)

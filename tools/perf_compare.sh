@@ -1,9 +1,15 @@
 #!/usr/bin/env bash
 # Compare frame times of a perf act across git refs, windowed with vsync off, on a quiet machine.
-# Usage: tools/perf_compare.sh [--act "<title text>"]... [--runs N] [--vsync on|off] [--force] [--keep] [--out DIR] <ref> [<ref>...]
+# Usage: tools/perf_compare.sh [--bot <res:// bot scene>] [--act "<title text>"]... [--runs N] [--vsync on|off] [--force] [--keep] [--out DIR] <ref> [<ref>...]
 #   tools/perf_compare.sh afdb39e m4/art-pipeline
 #   tools/perf_compare.sh --act "Perf, six with ragdolls" --act "Look: Perf, six art Punks" --runs 3 afdb39e HEAD
 #   tools/perf_compare.sh --force --runs 1 HEAD        # one ref: a smoke run of the tool, no delta
+#   tools/perf_compare.sh --bot res://tests/bot/perf_level_bot.tscn --act "Perf: level walk" 92c90e2 HEAD   # the level walk (M6 D29)
+# --bot picks the bench's bot scene (default res://tests/bot/perf_bot.tscn, the crowd room). The level
+#   walk's is tests/bot/perf_level_bot.tscn with the act "Perf: level walk" (level_acts/perf_acts.gd);
+#   with --bot and no --act that act is the default. The bench's files (tests/bot/perf_*, and the level
+#   bot and its acts for a level bot) are copied from this checkout into each ref's worktree, so a ref
+#   from before the act existed can still be measured.
 # What it does:
 #   1. Refuses to start while the 1-minute load average is above PERF_MAX_LOAD (default 2.0), unless
 #      --force. A load above that says the numbers mean nothing (the codemap's contaminated run had 7.45).
@@ -27,6 +33,9 @@
 # counts frames of 0.5 s or more per run ("stalls") and says so when a run has more than two (the one
 # or two are the first frames of a process): then run again with `--vsync on` (the frame times follow
 # the display's refresh) or with the window in front.
+# The PERF-BENCH line carries `counters` (renderer draw calls, objects, primitives, visible and shadow, and the renderer's CPU and GPU ms,
+#   means per frame): the report prints them. The act "Perf: counters" puts the player at fixed poses, so its counters compare exactly;
+#   its log has a POSE line per pose.
 # The logs of every run, the import logs and results.tsv are in --out (default captures/perf_compare/
 # <time> of this checkout; never committed). GODOT picks another binary; PERF_MAX_FRAMES caps a run
 # (default 60000 frames) so a stuck bot cannot go on for ever.
@@ -42,8 +51,10 @@ P95_MAX_MS=16.7
 SPAWN_MAX_MS=33
 FIRST_DELTA_MS=2
 DEFAULT_ACT="Perf, six with ragdolls"
+BOT="res://tests/bot/perf_bot.tscn"
 
 RUNS=3
+BOT_GIVEN=0
 VSYNC=off
 FORCE=0
 KEEP=0
@@ -52,6 +63,7 @@ ACTS=()
 REFS=()
 while [ $# -gt 0 ]; do
 	case "$1" in
+		--bot) BOT="$2"; BOT_GIVEN=1; shift 2 ;;
 		--act) ACTS+=("$2"); shift 2 ;;
 		--runs) RUNS="$2"; shift 2 ;;
 		--vsync) VSYNC="$2"; shift 2 ;;
@@ -63,8 +75,10 @@ while [ $# -gt 0 ]; do
 		*) REFS+=("$1"); shift ;;
 	esac
 done
-[ ${#REFS[@]} -ge 1 ] || { echo "usage: tools/perf_compare.sh [--act \"<title text>\"]... [--runs N] [--vsync on|off] [--force] [--keep] [--out DIR] <ref> [<ref>...]" >&2; exit 2; }
+[ ${#REFS[@]} -ge 1 ] || { echo "usage: tools/perf_compare.sh [--bot <scene>] [--act \"<title text>\"]... [--runs N] [--vsync on|off] [--force] [--keep] [--out DIR] <ref> [<ref>...]" >&2; exit 2; }
+[ "$BOT_GIVEN" -eq 0 ] || DEFAULT_ACT="Perf: level walk"
 [ ${#ACTS[@]} -ge 1 ] || ACTS=("$DEFAULT_ACT")
+case "$BOT" in res://*.tscn) ;; *) echo "perf_compare: --bot wants a res:// scene path" >&2; exit 2 ;; esac
 case "$VSYNC" in on|off) ;; *) echo "perf_compare: --vsync wants on or off" >&2; exit 2 ;; esac
 case "$RUNS" in ''|*[!0-9]*|0) echo "perf_compare: --runs wants a positive number" >&2; exit 2 ;; esac
 
@@ -115,7 +129,12 @@ for ref in "${REFS[@]}"; do
 	git -C "$MAIN" worktree add --detach "$dir" "$sha" >"$OUT/checkout-$short.log" 2>&1 || { cat "$OUT/checkout-$short.log" >&2; exit 2; }
 	DIRS+=("$dir")
 	[ "$n" -eq 1 ] && SHORTS+=("$short") || SHORTS+=("$short-$n")
-	cp "$ROOT/tests/bot/perf_bot.gd" "$ROOT/tests/bot/perf_bot.tscn" "$dir/tests/bot/"
+	for f in "$ROOT"/tests/bot/perf_*.gd "$ROOT"/tests/bot/perf_*.tscn; do cp "$f" "$dir/tests/bot/"; done
+	if [ "$BOT_GIVEN" -eq 1 ]; then
+		# The level bot, its acts and the bot bases are the ref's own; only the bench's files go in.
+		mkdir -p "$dir/tests/bot/level_acts"
+		cp "$ROOT/tests/bot/level_acts/perf_acts.gd" "$dir/tests/bot/level_acts/"
+	fi
 	echo "perf_compare: importing $short (the first import of a checkout takes a minute or two)"
 	( cd "$dir" && "$GODOT" --headless --import --quit ) >"$OUT/import-${SHORTS[$((${#SHORTS[@]} - 1))]}.log" 2>&1 || true
 done
@@ -133,7 +152,7 @@ for act in "${ACTS[@]}"; do
 			status=0
 			vsync_args=(--disable-vsync)
 			[ "$VSYNC" = on ] && vsync_args=()
-			"$GODOT" --path "${DIRS[$i]}" ${vsync_args[@]+"${vsync_args[@]}"} --quit-after "$MAX_FRAMES" res://tests/bot/perf_bot.tscn -- "--act=$act" "--vsync=$VSYNC" >"$log" 2>&1 || status=$?
+			"$GODOT" --path "${DIRS[$i]}" ${vsync_args[@]+"${vsync_args[@]}"} --quit-after "$MAX_FRAMES" "$BOT" -- "--act=$act" "--vsync=$VSYNC" >"$log" 2>&1 || status=$?
 			problems="$(grep -c -E 'SCRIPT ERROR|SHADER ERROR|^ERROR' "$log" || true)"
 			line="$(grep '^PERF-BENCH ' "$log" | tail -1 | sed 's/^PERF-BENCH //' || true)"
 			if [ -n "$line" ]; then
@@ -208,6 +227,21 @@ for act in order:
             a, b = means[(cols[0], key)], means[(cols[-1], key)]
             cells.append("n/a" if a is None or b is None else ("%+." + str(digits) + "f") % (b - a))
         print("".join(cells))
+    # The renderer's counters (mean per frame over the act; a ref whose bench predates them has none): they do not
+    # move with the machine's load.
+    counter_keys = ["draws", "objects", "prims", "shadow_draws", "shadow_objects", "shadow_prims", "render_cpu_ms", "render_gpu_ms"]
+    if all("counters" in rows[(act, r)][0] for r in cols):
+        print("  renderer counters, mean per frame:")
+        for key in counter_keys:
+            cells = ["  %-16s" % key]
+            vals = []
+            for r in cols:
+                v = mean([x["counters"].get(key, 0.0) for x in rows[(act, r)]])
+                vals.append(v)
+                cells.append("%-26s" % ("%.2f" % v))
+            if len(cols) > 1:
+                cells.append("%+.2f" % (vals[-1] - vals[0]))
+            print("".join(cells))
     for r in cols:
         n = len(rows[(act, r)])
         if n < runs:

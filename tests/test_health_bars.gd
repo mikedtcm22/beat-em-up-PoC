@@ -6,6 +6,7 @@ extends GutTest
 ## before. (A KO'd body's bar: tests/test_ko_blink.gd.)
 
 const ROOM := preload("res://game/level/test_room.tscn")
+const SkinnedView := preload("res://tests/skinned_view.gd")
 const FAR := Vector3(30.0, 0.0, -30.0)
 ## How far the bar's bottom may reach into the drawn body on the side camera's screen
 ## (rounding, and a part's vertices that stick out between two joints).
@@ -99,10 +100,17 @@ func _silhouette(d: CombatActor) -> Dictionary:
 		var mesh := node as MeshInstance3D
 		if not mesh.is_visible_in_tree() or mesh.mesh == null:
 			continue
-		if not _vertices.has(mesh.mesh):
-			_vertices[mesh.mesh] = mesh.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
 		var to_world := mesh.global_transform
-		for v: Vector3 in _vertices[mesh.mesh]:
+		var points: PackedVector3Array
+		if mesh.is_in_group(HumanoidRig.ART_GROUP):
+			# M6 CHAIN: the training dummy wears art, whose mesh holds its bind pose, not the drawn one: the drawn body is the art
+			# skinned in the rig's current pose (the primitives' parts follow their bones, so their own vertices are the drawn ones).
+			points = SkinnedView.skin_vertices(mesh, d.rig)
+		else:
+			if not _vertices.has(mesh.mesh):
+				_vertices[mesh.mesh] = mesh.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+			points = _vertices[mesh.mesh]
+		for v: Vector3 in points:
 			var p := camera.unproject_position(to_world * v)
 			top = minf(top, p.y)
 			left = minf(left, p.x)

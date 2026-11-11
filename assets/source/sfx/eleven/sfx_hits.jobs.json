@@ -1,0 +1,165 @@
+{
+	"group": "sfx_hits",
+	"jobs": [
+		{
+			"id": "whoosh_v1",
+			"pool": "whoosh",
+			"text": "A fast sharp whoosh of a fist swung through the air, at full loudness from the very first instant, a short tight swish that fades out quickly. Single isolated sound effect, no music, no voices, no background noise, dry close-microphone recording with no reverb and no echo tail, punchy comic action-game style, ends cleanly.",
+			"duration_seconds": 0.6,
+			"candidates": 4,
+			"prompt_influence": 0.6
+		},
+		{
+			"id": "whoosh_v2",
+			"pool": "whoosh",
+			"text": "A quick airy swish of a jab cutting the air, abrupt attack with no build-up, short and snappy. Single isolated sound effect, no music, no voices, no background noise, dry close-microphone recording with no reverb and no echo tail, punchy comic action-game style, ends cleanly.",
+			"duration_seconds": 0.6,
+			"candidates": 4,
+			"prompt_influence": 0.6
+		},
+		{
+			"id": "whoosh_v3",
+			"pool": "whoosh",
+			"text": "A heavier whoosh of a wide haymaker swing, loudest right at the start and then dying away fast, no swell. Single isolated sound effect, no music, no voices, no background noise, dry close-microphone recording with no reverb and no echo tail, punchy comic action-game style, ends cleanly.",
+			"duration_seconds": 0.6,
+			"candidates": 4,
+			"prompt_influence": 0.6
+		},
+		{
+			"id": "whoosh_v4",
+			"pool": "whoosh",
+			"text": "A crisp high swish of a kick slicing through the air, instant onset, brief and sharp. Single isolated sound effect, no music, no voices, no background noise, dry close-microphone recording with no reverb and no echo tail, punchy comic action-game style, ends cleanly.",
+			"duration_seconds": 0.6,
+			"candidates": 4,
+			"prompt_influence": 0.6
+		},
+		{
+			"id": "thud_v1",
+			"pool": "thud",
+			"text": "The body of a heavy punch landing on a muscular torso alone: a dull low thump with a short thick body and no ring. Single isolated sound effect, no music, no voices, no background noise, dry close-microphone recording with no reverb and no echo tail, punchy comic action-game style, ends cleanly.",
+			"duration_seconds": 0.5,
+			"candidates": 4,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "thud_v2",
+			"pool": "thud",
+			"text": "A fist hitting a padded jacket over a ribcage: a thick low thud, flesh and cloth, tight and punchy. Single isolated sound effect, no music, no voices, no background noise, dry close-microphone recording with no reverb and no echo tail, punchy comic action-game style, ends cleanly.",
+			"duration_seconds": 0.5,
+			"candidates": 4,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "thud_v3",
+			"pool": "thud",
+			"text": "A hard punch into a stomach: a punchy mid-low thump with a little flesh slap, very short. Single isolated sound effect, no music, no voices, no background noise, dry close-microphone recording with no reverb and no echo tail, punchy comic action-game style, ends cleanly.",
+			"duration_seconds": 0.5,
+			"candidates": 4,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "thud_v4",
+			"pool": "thud",
+			"text": "A heavy fist into a shoulder: a tight low thunk, solid and dry. Single isolated sound effect, no music, no voices, no background noise, dry close-microphone recording with no reverb and no echo tail, punchy comic action-game style, ends cleanly.",
+			"duration_seconds": 0.5,
+			"candidates": 4,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "crack_v1",
+			"pool": "crack",
+			"text": "A single dry bone snap alone: a sharp crack like a thick dry branch breaking, short, with no thud under it. Single isolated sound effect, no music, no voices, no background noise, dry close-microphone recording with no reverb and no echo tail, punchy comic action-game style, ends cleanly.",
+			"duration_seconds": 0.5,
+			"candidates": 4,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "crack_v2",
+			"pool": "crack",
+			"text": "A sharp high-pitched knuckle crack, a crisp whip-like snap, very short. Single isolated sound effect, no music, no voices, no background noise, dry close-microphone recording with no reverb and no echo tail, punchy comic action-game style, ends cleanly.",
+			"duration_seconds": 0.5,
+			"candidates": 4,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "crack_v3",
+			"pool": "crack",
+			"text": "A crisp dry wooden stick snapping with a hint of bone, bright and brief. Single isolated sound effect, no music, no voices, no background noise, dry close-microphone recording with no reverb and no echo tail, punchy comic action-game style, ends cleanly.",
+			"duration_seconds": 0.5,
+			"candidates": 4,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "crunch_v1",
+			"pool": "crunch",
+			"text": "A crunchy crushing impact alone, like a heavy boot stamping on a bag of crisp snacks and gristle, short and brutal. Single isolated sound effect, no music, no voices, no background noise, dry close-microphone recording with no reverb and no echo tail, punchy comic action-game style, ends cleanly.",
+			"duration_seconds": 0.8,
+			"candidates": 4,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "crunch_v2",
+			"pool": "crunch",
+			"text": "A wet bone-and-cartilage crunch of a finishing blow, a dense grinding crunch, brief. Single isolated sound effect, no music, no voices, no background noise, dry close-microphone recording with no reverb and no echo tail, punchy comic action-game style, ends cleanly.",
+			"duration_seconds": 0.8,
+			"candidates": 4,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "crunch_v3",
+			"pool": "crunch",
+			"text": "A hard crunch of a skull-cracking knockout, gritty crunching grains with a low squish. Single isolated sound effect, no music, no voices, no background noise, dry close-microphone recording with no reverb and no echo tail, punchy comic action-game style, ends cleanly.",
+			"duration_seconds": 0.8,
+			"candidates": 4,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "body_fall_v1",
+			"pool": "body_fall",
+			"text": "A heavy body dropping flat onto hard concrete: a dull low flump with a limb slap and a cloth rustle, then silence. Single isolated sound effect, no music, no voices, no background noise, dry close-microphone recording with no reverb and no echo tail, punchy comic action-game style, ends cleanly.",
+			"duration_seconds": 1.0,
+			"candidates": 4,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "body_fall_v2",
+			"pool": "body_fall",
+			"text": "A big man falling onto a street: a heavy low thump and a scuff of clothes sliding on pavement, short. Single isolated sound effect, no music, no voices, no background noise, dry close-microphone recording with no reverb and no echo tail, punchy comic action-game style, ends cleanly.",
+			"duration_seconds": 1.0,
+			"candidates": 4,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "body_fall_v3",
+			"pool": "body_fall",
+			"text": "A body collapsing onto the ground after a knockout: a thick flump, a soft slap, a final small thud. Single isolated sound effect, no music, no voices, no background noise, dry close-microphone recording with no reverb and no echo tail, punchy comic action-game style, ends cleanly.",
+			"duration_seconds": 1.0,
+			"candidates": 4,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "sub_thump_v1",
+			"pool": "sub_thump",
+			"text": "A single deep sub-bass drop impact, a cinematic low boom at the moment of a knockout blow, tight, with a very short decay and no tail. Single isolated sound effect, no music, no voices, no background noise, dry close-microphone recording with no reverb and no echo tail, punchy comic action-game style, ends cleanly.",
+			"duration_seconds": 0.8,
+			"candidates": 4,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "sub_thump_v2",
+			"pool": "sub_thump",
+			"text": "A short punchy low-frequency thump like a huge kick drum hit felt in the chest, fast decay. Single isolated sound effect, no music, no voices, no background noise, dry close-microphone recording with no reverb and no echo tail, punchy comic action-game style, ends cleanly.",
+			"duration_seconds": 0.8,
+			"candidates": 4,
+			"prompt_influence": 0.5
+		},
+		{
+			"id": "sub_thump_v3",
+			"pool": "sub_thump",
+			"text": "A deep saturated sub-bass boom with a quick pitch drop, one hit, ends cleanly. Single isolated sound effect, no music, no voices, no background noise, dry close-microphone recording with no reverb and no echo tail, punchy comic action-game style, ends cleanly.",
+			"duration_seconds": 0.8,
+			"candidates": 4,
+			"prompt_influence": 0.5
+		}
+	]
+}

@@ -1,0 +1,39 @@
+[gd_resource type="Resource" script_class="MoveSet" format=3 uid="uid://2igp7v46afd7"]
+
+[ext_resource type="Resource" uid="uid://k2f77fya3t7" path="res://game/combat/moves/back_elbow.tres" id="back_elbow"]
+[ext_resource type="Resource" uid="uid://b0a761bl2x75x" path="res://game/combat/moves/chain_swing_1.tres" id="chain_swing_1"]
+[ext_resource type="Script" uid="uid://c7u6g52wmmok0" path="res://game/combat/combo_branch.gd" id="combo_branch_gd"]
+[ext_resource type="Resource" uid="uid://buruwqunh4ty0" path="res://game/combat/moves/front_kick.tres" id="front_kick"]
+[ext_resource type="Script" uid="uid://dn23gy67ktucq" path="res://game/combat/move_set.gd" id="move_set_gd"]
+[ext_resource type="Resource" uid="uid://bql1qfsjfou22" path="res://game/combat/moves/stomp.tres" id="stomp"]
+
+[sub_resource type="Resource" id="interrupt_0"]
+script = ExtResource("combo_branch_gd")
+input = &"RB"
+move = ExtResource("back_elbow")
+
+[sub_resource type="Resource" id="root_0"]
+script = ExtResource("combo_branch_gd")
+move = ExtResource("chain_swing_1")
+
+[sub_resource type="Resource" id="root_1"]
+script = ExtResource("combo_branch_gd")
+input = &"K"
+move = ExtResource("stomp")
+require = &"downed_target_near"
+
+[sub_resource type="Resource" id="root_2"]
+script = ExtResource("combo_branch_gd")
+input = &"K"
+move = ExtResource("front_kick")
+
+[sub_resource type="Resource" id="root_3"]
+script = ExtResource("combo_branch_gd")
+input = &"RB"
+move = ExtResource("back_elbow")
+
+[resource]
+script = ExtResource("move_set_gd")
+id = &"bike_chain"
+root_branches = Array[ExtResource("combo_branch_gd")]([SubResource("root_0"), SubResource("root_1"), SubResource("root_2"), SubResource("root_3")])
+interrupt_branches = Array[ExtResource("combo_branch_gd")]([SubResource("interrupt_0")])

@@ -71,6 +71,22 @@ def to_gltf_axes(n):
 	return np.stack([n[:, 0], n[:, 2], -n[:, 1]], axis=1)
 
 
+def bend_hull_normals(me, n):
+	"""Turn the hull normals of the vertices a part marks (pb.HULL_W_ATTR weight, pb.HULL_DIR_ATTR direction) from the smooth normal
+	toward the direction by the weight (a part with no such attribute is returned as it is)."""
+	if pb.HULL_W_ATTR not in me.attributes or pb.HULL_DIR_ATTR not in me.attributes:
+		return n
+	count = len(me.vertices)
+	w = np.zeros(count, dtype=np.float32)
+	me.attributes[pb.HULL_W_ATTR].data.foreach_get("value", w)
+	d = np.zeros(count * 3, dtype=np.float32)
+	me.attributes[pb.HULL_DIR_ATTR].data.foreach_get("vector", d)
+	d = d.reshape(-1, 3).astype(np.float64)
+	out = (1.0 - w[:, None]) * n + w[:, None] * d
+	length = np.linalg.norm(out, axis=1)
+	return np.where(length[:, None] > 1e-9, out / np.maximum(length, 1e-9)[:, None], n)
+
+
 def write_hull_normals(meshes, digits):
 	"""Bake the smooth normal into the COLOR attribute "hull_normal" (n * 0.5 + 0.5), in glTF Y-up axes (see the module doc)."""
 	cos, tris, keeps, lvs = [], [], [], []
@@ -88,6 +104,7 @@ def write_hull_normals(meshes, digits):
 	normals = pb.smooth_vertex_normals(cos, tris, keep=keeps, digits=digits)
 	for m, n, lv in zip(meshes, normals, lvs):
 		me = m.data
+		n = bend_hull_normals(me, n)
 		for attr in list(me.color_attributes):
 			me.color_attributes.remove(attr)
 		attr = me.color_attributes.new("hull_normal", "FLOAT_COLOR", "CORNER")

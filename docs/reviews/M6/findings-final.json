@@ -1,0 +1,603 @@
+{
+ "round": "final",
+ "base": "e8ebdad",
+ "findings": [
+  {
+   "id": "final-chars-01",
+   "lens": "chars",
+   "severity": "high",
+   "title": "Ox Pellerin's boxing gloves read as black curled hooks (J shape, curl facing outward), not gloves",
+   "detail": "R3 (critical) fails for the boss. The generated glove fist is an elongated 'J': a tall black shaft with a curl at the end. In the guard at 2.5 m and at 1 m, each glove stands up beside his head like a curled horn or an elf-shoe toe, and both curls point outward, away from the centre line, so the palms appear to face out. The source is the cause: the front view Tripo was given (parts/fist/views/fist_front.jpg) is itself a stretched J in profile, and the Tripo preview copies it. The left view (fist_left.jpg) is a normal round glove. This goes beyond the lead's note that the gloves are smaller than the concept's: the shape and orientation are wrong. The glove also uses glove_slot 50, the robe's charcoal, so it merges with the sleeves; HEAVIES' H-6 says slot 2.",
+   "evidence": "captures/m6-final/heavies/sheets/h1/stills/h1_f109_d2_5_m.png (gloves at about x 1030-1100 and 1200-1270, y 230-330); captures/review/rv1f/f811.png (boss 1.0 m, view 30 degrees up) and its crop captures/review/boss_close.png; source captures/review/glove_src.png (4a3c51c1_preview.webp, fist_front.jpg, fist_left.jpg); pipeline.json parts.fists.generated: facing_yaw_deg 90, source_side Right, glove_slot 50",
+   "repro": "tools/capture_bot.sh res://tests/bot/crowd_bot.tscn <dir> \"Look: heavies beside a Punk\" 6, then view frame 109; or spawn the boss 1 m ahead and pitch the view 30 degrees up.",
+   "suggested_fix": "Option 1: regenerate the glove from a round side or front view (fist_left.jpg's shape) and check the facing yaw and source_side so the curl, the palm, faces in. That costs one Tripo glove run, 50 credits; HEAVIES used 180 of 350. Option 2: fall back to the chain's procedural block fist with the orange strap, D16's no-credit route. Either way, use a glove slot lighter than the robe (slot 2, as H-6 intended) and rebuild with tools/pipeline/run.py boss (--check).",
+   "files": [
+    "assets/source/characters/boss/parts/fist/views/fist_front.jpg",
+    "assets/source/characters/boss/parts/fist/tripo/4a3c51c1_gen.glb",
+    "assets/source/characters/boss/pipeline.json",
+    "assets/export/characters/boss/boss.glb",
+    "assets/export/characters/boss/boss_detail.png",
+    "tests/fixtures/art/roster/boss.json",
+    "docs/milestones/M6-calls/HEAVIES.md"
+   ],
+   "spec_change": false,
+   "skeptics": [
+    {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "Reproduced from the recorded still captures/review/boss_close.png (boss at 1.0 m, undamaged and damaged). Both gloves read as tall black curled horns with the curl pointing outward, not as boxing gloves. This is a real defect against the picked concept and R3 (a readable fist), not a logged call. HEAVIES.md only logs the size (H-11); the shape and the slot were not accepted.",
+     "evidence": "captures/review/glove_src.png shows the Tripo preview (left) and fist_front.jpg (middle) as the same stretched J, with the thumb or curl hooked at the bottom of a tall shaft. fist_left.jpg (right) is a normal round glove. assets/source/characters/boss/pipeline.json parts.fists.generated has mesh tripo/4a3c51c1_gen.glb, facing_yaw_deg 90, source_side Right and glove_slot 50 / strap_slot 51 in the fists block, so the shape and the facing come from the J-profile source. The same file's palette block says glove_slot 2 / strap_slot 17, and HEAVIES H-6 says slot 2 was used. The fists block is 50/51, which is inconsistent with H-6. I did not open the render to check which slot the gloves actually use. The gloves look dark charcoal and close to the robe.",
+     "root_cause": "The generation input fist_front.jpg (the Gemini view) was a J-shaped profile, so Tripo's glove (4a3c51c1_gen.glb) is a long shaft with an outward curl. The chain's facing_yaw_deg 90 and source_side Right then place the curl pointing outward. Nothing checked the glove's silhouette before the credits were spent.",
+     "files_to_change": [
+      "assets/source/characters/boss/parts/fist/views/fist_front.jpg",
+      "assets/source/characters/boss/parts/fist/tripo/ (a new glove .glb)",
+      "assets/source/characters/boss/pipeline.json (parts.fists.generated mesh, facing_yaw_deg and source_side; glove_slot 50 -> 2 and strap_slot 51 to match H-6)",
+      "assets/source/characters/boss/parts/fist/fist_jobs.json",
+      "the rebuilt boss art in assets/characters/boss/ (run tools/pipeline/run.py boss --check)",
+      "tests/fixtures/m6 (the boss art test and ledger, if the triangle count or slots change)"
+     ],
+     "fix_needs_spec_change": false
+    }
+   ]
+  },
+  {
+   "id": "final-chars-02",
+   "lens": "chars",
+   "severity": "medium",
+   "title": "The 1 m look acts cut off the heavies' heads: the boss's sign-off stills show only his chin and neck",
+   "detail": "roster_acts.gd uses the Punk's fixed face pitch, 8 degrees up, for every roster character. For Ox Pellerin at 2.3 m, the 'face' stills at 1 m show his chin, neck and a necklace line. His hood, the orange visor band, his face and his gloves never enter the frame. The head rect is clipped to 163 of about 486 px, and the hands rect sits at y 0. The Bruiser's head is clipped too (356 of 448 px). Done-when row 8 has Game-boy judge 'the characters at 1 m at the Punk's bar', and R2 and R3 for both heavies cannot be judged from these stills.",
+   "evidence": "captures/m6-final/r_boss/bot.log: 'LOOK-RECT r_boss f49 head 552 0 486 163' and 'hands 350 0 913 119'; r_bruiser: 'head 576 0 448 356' (the Punk, Kicker, Thug and Dummy heads are whole: y 145-149, 408 px); captures/review/boss_head.png (crop of r_boss_f49_face_t000.png)",
+   "repro": "tools/capture_bot.sh res://tests/bot/crowd_bot.tscn <dir> \"Look: Ox Pellerin at 1 m\" 6, then view r_boss_f49_face_t000.png.",
+   "suggested_fix": "Pitch the face view from the subject's head height: atan((head_top - 0.15 - eye_y) / 1 m), about +22 to +30 degrees for the boss and about +14 for the Bruiser. Keep 8 degrees for the 1.8 m rows. Either add a per-row face_pitch_deg to the roster JSON or compute it from body_height in roster_acts.gd.",
+   "files": [
+    "tests/bot/acts/roster_acts.gd",
+    "tests/bot/acts/look_acts.gd",
+    "tests/fixtures/art/roster/boss.json",
+    "tests/fixtures/art/roster/bruiser.json"
+   ],
+   "spec_change": false,
+   "skeptics": [
+    {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "Confirmed. The roster look acts use the Punk's fixed face pitch (+8 deg) for every character. The boss's head sits well above the frame at 1 m, so the face stills show only chin and neck. This is a defect in the capture rig, not in the game.",
+     "evidence": "tests/bot/acts/roster_acts.gd `_look` calls `bot._look_to(LookActs.FACE_PITCH_DEG, ...)`, and tests/bot/acts/look_acts.gd:61 sets `FACE_PITCH_DEG := 8.0`. There is no per-row override. The roster_acts.gd header says it is 'the same framing for every character'. captures/m6-final/r_boss/bot.log has 'LOOK-RECT r_boss f49 head 552 0 486 163' and 'hands 350 0 913 119': both rects start at y=0, so the head is clipped. The same lines repeat at f109 and f169. I read captures/review/boss_head.png: it shows the chin, neck and necklace line, with the orange shoulder pads at the sides. There is no hood, visor or face. The body marks use -6 deg, so the head is out of frame in them too. The plan's done-when row 8 has Game-boy judge the characters at 1 m at the Punk's bar, so the heavies' head and face (R2, R3) cannot be judged from the current stills.",
+     "root_cause": "The look act applies the Punk's camera pitch (+8 deg up, a number tuned for a roughly 1.8 m body) to every roster character. The boss is taller (about 2.3 m), so at 1 m the head top lies above the view's upper edge. The Bruiser's head is clipped less (356 of 448 px). The framing needs the subject's head height, which `_look` never reads.",
+     "files_to_change": [
+      "tests/bot/acts/roster_acts.gd",
+      "tests/art_roster.gd",
+      "tests/fixtures/art/roster/ (the roster rows' JSON, if a per-row face_pitch_deg is added)",
+      "tests/bot/acts/look_acts.gd (only if FACE_PITCH_DEG moves or gains a helper)"
+     ],
+     "fix_needs_spec_change": false
+    }
+   ]
+  },
+  {
+   "id": "final-chars-03",
+   "lens": "chars",
+   "severity": "medium",
+   "title": "The Bruiser's steel chest plate reads as a pale bare belly in the smash wind-up at 1 m (sharpens the known steel/purple item)",
+   "detail": "With his arms raised for the smash, the torso is one near-white lilac area from neck to belt. It has no plate edges or segments, and the only ink is a navel-like tick and a short dash, so the Bruiser reads as shirtless in an open purple jacket, not armoured as in bruiser_a.jpg's segmented mid-grey plate. Two things cause it. Steel #9aa4c0 (slot 45) lights to almost white in the lit band. The labelling also leaves purple islands inside the plates and steel islands in the jacket (H-4: labelled by nearest colour from the delit Tripo texture), which become mottled patches at 1-1.5 m. D6 holds: the steel scuffs and does not bleed.",
+   "evidence": "captures/review/bsmash/bot.avi frames 198 and 216 (captures/review/bsmash_2.png); captures/review/rv1f/f431.png and f551.png (Bruiser at 1.5 m, clean and at 15%); concept assets/source/concepts/m6/bruiser_a.jpg",
+   "repro": "tools/capture_bot.sh res://tests/bot/crowd_bot.tscn <dir> \"Bruiser smash\" and view frames 190-220 of the first act.",
+   "suggested_fix": "Darken the steel toward the concept's mid blue-grey (about #7a839e; check the gap from the purple). Give the plate edges ink lines through palette.detail_bake.zones. Re-run the labelling with more majority_passes or border_relax, or with region hints for the plates, to remove the purple and steel islands. Then rebuild with gen_palette.py and run.py bruiser (--check).",
+   "files": [
+    "assets/source/palette/bruiser.json",
+    "assets/source/characters/bruiser/pipeline.json",
+    "assets/export/characters/bruiser/bruiser.glb",
+    "assets/export/characters/bruiser/bruiser_detail.png",
+    "tools/pipeline/gen_palette.py (re-run only)"
+   ],
+   "spec_change": false,
+   "skeptics": [
+    {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "Reproduced from captures/review/bsmash_2.png: in the smash wind-up the Bruiser's torso is one pale grey-lilac area with no plate edges. The only ink is a navel-like tick and a short dash, plus a few lilac and violet patches. At 1 m he reads as shirtless under an open purple jacket, not as segmented mid-grey plate. It is not an approved departure. H-4 in HEAVIES.md logs the purple choice, not a pale steel or empty ink zones.",
+     "evidence": "I viewed bsmash_2.png (left: frame 198, right: frame 216). The torso is a near-white lilac mass with violet and blue patches mixed in. Steel is #9aa4c0 (slot 45) in assets/source/palette/bruiser.json, a light value that lights to almost white. In assets/source/characters/bruiser/pipeline.json, detail_bake.zones is [] (line 240), so no plate-edge ink is baked. The labelling uses majority_passes 6, border_relax_iterations 5 and factor 0.5 (lines 222-224), and the nearest-colour labelling of the delit texture (H-4) leaves the purple and steel islands. I did not re-run the pipeline or measure the lit value.",
+     "root_cause": "The steel swatch is too light and is lit to near-white. No ink defines the plate edges, because detail_bake.zones is empty. The nearest-colour labelling of the delit Tripo texture mixes purple and steel on the torso, and the plates and jacket overlap in space (H-4). Together these remove the plate segmentation.",
+     "files_to_change": [
+      "assets/source/palette/bruiser.json",
+      "assets/source/characters/bruiser/pipeline.json",
+      "tools/pipeline/gen_palette.py",
+      "assets/source/characters/bruiser (regenerated textures, via tools/pipeline/run.py bruiser --check)"
+     ],
+     "fix_needs_spec_change": false
+    }
+   ]
+  },
+  {
+   "id": "final-chars-04",
+   "lens": "chars",
+   "severity": "medium",
+   "title": "Near upper arm (D7): a violet tube with a jagged ink step at the cut, and a navy shard in the uppercut (confirms the known item)",
+   "detail": "In the haymaker and the uppercut, the upper arm comes in from the lower right in the shadow band (mauve-violet), with a saw-tooth ink edge where it meets the lit forearm. It reads as a separate sleeve. ARM's call 1 says the jagged loop is never seen by the lens, but the visible step is at the cut. The uppercut also shows a dark navy shoulder shard with a serrated outline at the bottom-right corner. Game-boy is asked whether to keep the arm; as it stands, it would draw his eye in two of the five strikes.",
+   "evidence": "/Users/arachne/repos/beat-em-up-PoC/.worktrees/m6-arm/captures/arm/ab/haymaker_new.png and uppercut_new.png, region x 850-1600, y 350-900 (captures/review/arm_crop.png); docs/milestones/M6-calls/ARM.md call 11",
+   "repro": "Run the haymaker or uppercut in first person with look_near_arm on (the default); compare with --tune=look_near_arm=0.",
+   "suggested_fix": "Follow ARM's own cure: keep Body__fp_arm out of the self-shadow (or lift it to the forearm's band) and blend the normals across the cut; fill the elbow-side loop's cap so no ink step shows; drop the shoulder faces that make the navy shard. Or ship look_near_arm off, if Game-boy prefers M5's view.",
+   "files": [
+    "tools/pipeline/player_parts.py",
+    "tools/pipeline/pipe_blender.py",
+    "assets/export/characters/player/",
+    "game/player/first_person_camera.gd"
+   ],
+   "spec_change": false,
+   "skeptics": [
+    {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "Confirmed from the A/B montage (captures/review/arm_ab.png): the \"new\" panels show a mauve-violet upper-arm patch with a serrated ink edge against the lit forearm. The uppercut also shows a dark navy shard at the bottom right. ARM.md call 11 itself records both as left for Game-boy's A/B. D7 requires the arm only to show during the haymaker and uppercut, behind the look_near_arm switch. So it is not a done-when break and it is switchable. It is still a visible look defect that Game-boy would notice, hence medium rather than high. I did not run the repro or probe the code path beyond locating the files.",
+     "evidence": "captures/review/arm_ab.png in the review worktree, plus docs/milestones/M6-calls/ARM.md line 13 (call 11): \"reads as a separate sleeve... dark navy shoulder shard... Left for Game-boy's A/B\". The visibility switch is Tuning.look_near_arm, read at game/camera/first_person_camera.gd:453. The mesh is Body__fp_arm, built in tools/pipeline/player_parts.py (around line 34) and named in tools/pipeline/pipe_blender.py:23.",
+     "root_cause": "Body__fp_arm sits under the head and shoulder, so the toon shader puts it in the shadow band and it renders violet. Its normals are not blended into the forearm's across the cut. A hard ink step follows, with serrated outline loops. The shoulder faces left on the mesh form the navy shard in the uppercut. This comes from the arm split and the cap geometry in the Blender chain, plus the shadow and outline treatment applied to that mesh in the first-person camera and material setup.",
+     "files_to_change": [
+      "tools/pipeline/player_parts.py",
+      "tools/pipeline/pipe_normals.py",
+      "tools/pipeline/player_normals.py",
+      "game/camera/first_person_camera.gd",
+      "game/autoload/tuning_data.gd"
+     ],
+     "fix_needs_spec_change": false
+    }
+   ]
+  },
+  {
+   "id": "final-chars-05",
+   "lens": "chars",
+   "severity": "low",
+   "title": "The Thug's pipe reads as a black disc at 1 m: the guard points it end-on at the lens",
+   "detail": "In the Thug's idle guard at 1 m, the held pipe points straight at the player from his right fist, so the only part visible is a dark circle, about 110 px across, over the fist. At 1.2 m it is a short dark stub with a yellow end. R3 asks for the weapon to read as a weapon at the chin. The pipe reads well in other angles (the lead's p3_f284_thug_pipe.png). The carry direction is M5's (Weapon._attach_deferred aims the pipe at WeaponTip), so this is polish, not a regression.",
+   "evidence": "captures/m6-final/r_thug/sheets/r_thug/stills/r_thug_f49_face_t000.png (disc at about x 590, y 530); captures/review/rv1f/f241.png",
+   "repro": "tools/capture_bot.sh res://tests/bot/crowd_bot.tscn <dir> \"Look: Thug at 1 m\" 6",
+   "suggested_fix": "Angle the pipe in the Thug's guard and idle (move the WeaponTip point up and out in his guard pose, so the pipe rests diagonally or on the shoulder), keeping the swing poses unchanged.",
+   "files": [
+    "game/enemies/thug/pipe_thug.gd",
+    "game/weapons/weapon.gd",
+    "game/characters/placeholder_poses.gd"
+   ],
+   "spec_change": false,
+   "skeptics": []
+  },
+  {
+   "id": "final-chars-06",
+   "lens": "chars",
+   "severity": "low",
+   "title": "Ox Pellerin's legs are the Punk's proportions scaled up, so he reads tall and lanky rather than heavy",
+   "detail": "D15 gives the heavies their bulk from girth, but the boss's leg girth clamps are 0.077/0.067 m at the authored 1.8 m, slightly thinner than the Punk's 0.078/0.068. Under the uniform 1.28 scale, his legs are a scaled Punk's: at 2.5 m his legs are barely wider than the Punk's while he stands 28% taller. The Bruiser (0.085/0.075, plus the puffer jacket) does read bigger.",
+   "evidence": "captures/m6-final/heavies/sheets/h1/stills/h1_f109_d2_5_m.png; assets/source/characters/{boss,punk,bruiser}/pipeline.json fit.girth_clamp; tests/fixtures/art/roster/boss.json notes ('thigh/shin clamps 0.077/0.067')",
+   "repro": "View the heavies act at 2.5 m and compare leg widths against height.",
+   "suggested_fix": "Raise the boss's thigh and shin clamps (to about 0.09/0.08) and take an A6 legs ratchet with a logged reason, as D15 allows.",
+   "files": [
+    "assets/source/characters/boss/pipeline.json",
+    "tests/fixtures/art/roster/boss.json",
+    "assets/export/characters/boss/boss.glb"
+   ],
+   "spec_change": false,
+   "skeptics": []
+  },
+  {
+   "id": "final-chars-07",
+   "lens": "chars",
+   "severity": "low",
+   "title": "Ragged swatch borders on the heavies at 1 m (R6 clean borders)",
+   "detail": "The boss's orange cuffs and trim have saw-tooth edges against the charcoal, which look like torn cloth at 1 m. The Bruiser's purple and steel break into blotches. The Punk's M4 borders are clean. This comes from the nearest-colour labelling of the Tripo texture.",
+   "evidence": "captures/review/boss_close.png (cuff edges); captures/review/rv1f/f431.png; compare captures/review/faces.png (Punk)",
+   "repro": "View r_boss and r_bruiser at 1 m, or the rv1 probe frames.",
+   "suggested_fix": "Increase palette.border_relax_iterations and majority_passes, or the detail_bake.clean smoothing, for boss and bruiser, then rebuild.",
+   "files": [
+    "assets/source/characters/boss/pipeline.json",
+    "assets/source/characters/bruiser/pipeline.json"
+   ],
+   "spec_change": false,
+   "skeptics": []
+  },
+  {
+   "id": "final-world-01",
+   "lens": "world",
+   "severity": "high",
+   "title": "Catwalk drop is an undressed plane: one dark slab 10 m down, nothing else",
+   "detail": "Confirms and sharpens the lead's item. From catwalk_lip_down (roofs (-14.5,4.5,-31), looking -X, pitch -40) the whole view is roofs.tscn Geometry/Skyline/GroundWest: a non-solid LevelBlock, look 'dark', 74.7 x 0.5 x 75 m at y -5.55. There is no kerb, no lane mark, no car, no facade base and no lip in view, so it reads as a dark floor, not a 10 m fall. DRESS dressed the boss drop as a street canyon (call 4: slab_dark ground, six car spots, facades, darker fog), but did nothing equivalent for the roofs' drop.",
+   "evidence": "captures/review/drops.png tile 6 (drops bot.avi f400); the lead's drops/sheets/overview_01.png tiles 11-15; roofs.tscn:1053-1065 (GroundWest/GroundEast, the only geometry below)",
+   "repro": "ffmpeg -i captures/m6-final/drops/bot.avi -vf select=eq(n\\,400) -frames:v 1 x.png",
+   "suggested_fix": "Dress the ground under the catwalk the way boss_roof.tscn was dressed: an asphalt deck module with a kerb and lane marks on GroundWest, one or two car PropSpots, and facade bases on the Skyline blocks that rise from it. Keep it visual only (D1). Then re-record 'Look: drops'.",
+   "files": [
+    "game/level/mission1/roofs.tscn"
+   ],
+   "spec_change": false,
+   "skeptics": [
+    {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "Confirmed. In drops.png tile 6 (the catwalk lip, looking down) the frame is a uniform dark slab with no kerb, lane marks, cars or facade base. The boss-roof drop in tile 3 reads as a street canyon. The roofs' drop got none of DRESS call 4. Severity high is arguable: GroundWest is probably as undressed as it was in M5, so this may not be a regression. It still misses the plan's intent that drops read as drops.",
+     "evidence": "roofs.tscn lines 1053-1065: GroundWest and GroundEast are the only geometry at y -5.55, both look=&\"dark\", solid=false, 74.7x0.5x75 and 51x0.5x75, with no module. Skyline Block1-6 rise from that plane (Block1 bottom is -5.3, flush with the slab top), so facades exist but are out of the downward view. roofs.tscn has no Car or PropSpot nodes and its environment fog is (0.5,0.42,0.46) at density 0.011. boss_roof.tscn has a Ground node, Car1-6, and fog (0.31,0.29,0.4) at 0.015. docs/milestones/M6-calls/DRESS.md call 4 only dressed the boss roof. drops.png tile 6 shows the featureless dark floor and tile 3 shows the dressed boss canyon for contrast. I did not re-record. I judged from the existing capture.",
+     "root_cause": "DRESS dressed only the boss roof's street canyon. In roofs.tscn, GroundWest and GroundEast are bare dark LevelBlocks with no ground module, kerb or lane marks, no car PropSpots, and no facade-base detail. The skyline facade blocks sit at the slab's edges, so the downward view from the catwalk lip sees only the slab.",
+     "files_to_change": [
+      "game/level/mission1/roofs.tscn",
+      "docs/milestones/M6-calls/DRESS.md"
+     ],
+     "fix_needs_spec_change": false
+    }
+   ]
+  },
+  {
+   "id": "final-world-02",
+   "lens": "world",
+   "severity": "medium",
+   "title": "The dusk sky never shows: fog covers the sky completely, so sky_top and sky_horizon are dead",
+   "detail": "RoomKit.build_environment turns fog on but never sets Environment.fog_sky_affect, which defaults to 1.0. The sky therefore renders as pure fog colour. Each section exports a dusk sky_top and sky_horizon (DRESS call 1: 'the mood's dusk sky is half the picture'): street top (0.22,0.28,0.42), roofs horizon orange (0.82,0.54,0.38), boss top (0.2,0.2,0.34). None of them reach the screen. Sampled sky pixels equal each section's fog colour instead: street #7e7b8e against fog (0.52,0.5,0.6); roofs #756771 against fog (0.5,0.42,0.46); boss #484660 against fog (0.31,0.29,0.4). The level reads as one lavender haze against mood_street_a and mood_roof_a, where a deep blue sky and an orange horizon carry the mood. The crowd street and the training room get the same flat beige sky, which is most of why they look paler.",
+   "evidence": "tour bot.avi f315 (street skyline), f775 (roofs), f1031 (boss): 40x20 px top-centre averages 7e7b8e / 756771 / 484660; room_kit.gd:69-90 (no fog_sky_affect); street.tscn:35-38, roofs.tscn:38-41, boss_roof.tscn:26-29",
+   "repro": "ffmpeg -i captures/m6-final/tour/bot.avi -vf \"select=eq(n\\,315),crop=40:20:800:10,scale=1:1\" -f rawvideo -pix_fmt rgb24 - | xxd -p, then compare with the section's fog_color",
+   "suggested_fix": "Add a Tuning value such as look_fog_sky_affect (@export_range 0-1, about 0.15-0.3) and set env.fog_sky_affect from it in RoomKit.build_environment, and in LookPost if it applies the environment. Check the boss gap and the skylines again afterwards: a darker sky behind the facades also separates the drop from the horizon.",
+   "files": [
+    "game/level/room_kit.gd",
+    "game/autoload/tuning_data.gd",
+    "game/level/kit/level_root.gd"
+   ],
+   "spec_change": false,
+   "skeptics": [
+    {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "Confirmed. Nothing sets Environment.fog_sky_affect, which defaults to 1.0 in Godot 4. Fog is enabled, so the sky renders as fog colour. DRESS call 1 intends the sky to show through the skyline gaps. No logged call or departure covers this.",
+     "evidence": "I did not re-run the ffmpeg pixel sampling. I read the code and the DRESS call. A grep of game/ and tests/ for fog_sky_affect returns no hits. RoomKit.build_environment (game/level/room_kit.gd:69-90) sets fog_enabled, fog_light_color and fog_density and never touches the sky-affect value. LevelRoot._apply_light (game/level/kit/level_root.gd:322-338) blends fog_light_color, fog_density and the ProceduralSkyMaterial top and horizon colours per frame, also without setting it. The sections export distinct dusk sky colours: street.tscn:37-38, roofs.tscn:40-41, boss_roof.tscn:28-29. DRESS.md call 1 says the sky shows through the skyline gaps and 'the mood's dusk sky is half the picture'. The reviewer's sampled pixels equal each section's fog colour, which is what full fog-on-sky produces.",
+     "root_cause": "Environment.fog_sky_affect is left at its default of 1.0, so fog fully overrides the procedural sky. The per-section sky_top and sky_horizon colours are blended and applied (level_root.gd:337-338) but never visible. RoomKit.build_environment is shared with the crowd street and the training room, so they get the same flat sky.",
+     "files_to_change": [
+      "game/level/room_kit.gd",
+      "game/autoload/tuning_data.gd",
+      "game/level/kit/level_root.gd",
+      "tests/test_m6_dress.gd"
+     ],
+     "fix_needs_spec_change": false
+    }
+   ]
+  },
+  {
+   "id": "final-world-03",
+   "lens": "world",
+   "severity": "medium",
+   "title": "Prop palette breaks the bible's environment band; orange car shares the enemies' orange",
+   "detail": "The M4 look bible caps environment colour at saturation 0.30 and value 0.25-0.6, and cites the crowd room's car as a case that had to be recoloured (A13). The M6 prop slots break that band: car_orange #b9692f (S 0.75, V 0.73), tank_blue #5b7894 (S 0.39), rust_brown #8a5733 (S 0.63). The car is the most saturated object in the crowd street, at A2 and on the boss street (rooms f220/f272/f324; props p1_f60, pixel b56830). It sits in the same hue family as the veteran Punk's trousers #b8651b (near-identical), the training dummy's #cf7f2e and Ox Pellerin's #ee6a1c, so a parked car competes with a fighter. DRESS moved test_look_post.gd's 'the car is muted' assertion onto PropSpot.PROPS[car].color, the fallback box that never draws, so nothing holds the drawn colours any more.",
+   "evidence": "assets/source/palette/props.json slots 60/62/63; docs/milestones/M4-look-bible.md:34-36; M6-calls/DRESS.md test-change note on test_look_post.gd; LOOKS.md call 5 (#b8651b); captures/review/rooms.png tiles 3,4,6",
+   "repro": "Open the crowd street (F6), or look at captures/m6-final/rooms/bot.avi f220. The orange car out-saturates every enemy jacket except the veteran's matching trousers.",
+   "suggested_fix": "Bring slots 60, 62 and 63 inside S <= 0.30 and V <= 0.6 (a dusty rust such as about #8a6a55), regenerate the atlas (tools/pipeline/gen_palette.py and the prop exports), and make the test read the props' atlas swatches rather than the fallback colour. If the lead wants the saturated orange car, that is a departure from the bible and needs Game-boy's approval and a README entry.",
+   "files": [
+    "assets/source/palette/props.json",
+    "tools/pipeline/gen_palette.py",
+    "tests/test_look_post.gd",
+    "tests/test_m6_dress.gd"
+   ],
+   "spec_change": false,
+   "skeptics": [
+    {
+     "refuted": false,
+     "confidence": "medium",
+     "reason": "Confirmed against the bible, with one caveat. Props slots 60, 62 and 63 sit well outside the look bible's environment band, and no logged call or plan decision approves that as a departure. The caveat is that PROPS chose these colours deliberately to follow mood_street_a.jpg and mood_roof_a.jpg, and the plan never says whether the band applies to props. The bible's table row says \"Environment\", but its Red row names the crowd room's car as a case that had to be recoloured, and DRESS applies the band to its fallback colours. So the car was explicitly held to the band.",
+     "evidence": "I read the code, palette and docs at e8ebdad. I did not run the repro or look at the captures.\n- assets/source/palette/props.json: car_orange #b9692f is S 0.75, V 0.73; tank_blue #5b7894 is S 0.39; rust_brown #8a5733 is S 0.63. All exceed the bible's cap of S <= 0.30 and V 0.25-0.6 (docs/milestones/M4-look-bible.md Colour table).\n- M4-look-bible.md Red row: the crowd room's car is cited as a case that breaks the bible and gets recoloured (A13).\n- PROPS's note in props.json says the colours follow the mood images. The plan's palette-slots section (M6-plan.md:152-156) sets no saturation limit for prop slots. M6-plan.md:345 requires trim-aware checks to read the sheet's pixels against S <= 0.30, V 0.25-0.6.\n- DRESS.md call 12 and the surrounding notes say the bible's cap is the bible's and that the warmth comes from the sun colour. DRESS.md note on test_look_post.gd: the car is \"atlas art now, orange, outside the flat-colour read\".\n- tests/test_look_post.gd:523-538, test_no_environment_or_prop_color_is_red_and_the_car_is_muted, now asserts the muted blue-grey on PropSpot.PROPS[&\"car\"].color, the fallback box that never draws. Nothing checks the drawn atlas swatches, so the break is unguarded.\n- No README departure entry and no Game-boy approval exist for the saturated props.",
+     "root_cause": "PROPS authored slots 60, 62 and 63 to match the mood concept images instead of the bible's environment band. DRESS then moved the band assertion from the drawn car onto the never-drawn fallback colour, so no test reads the props' atlas swatches. The orange car (#b9692f) lands in the same hue family as the veteran Punk's trousers (#b8651b), the training dummy's #cf7f2e and Ox Pellerin's #ee6a1c.",
+     "files_to_change": [
+      "assets/source/palette/props.json",
+      "assets/export/palette (regenerated atlas for the props slots, via tools/pipeline/gen_palette.py)",
+      "assets/export/props/car, water_tank and dumpster (re-export if the pipeline bakes swatch colours, via tools/pipeline/run.py --kind prop)",
+      "tests/test_look_post.gd (read the car's drawn atlas swatch, not the PropSpot.PROPS fallback colour)",
+      "tests/test_m6_dress.gd (add an atlas-swatch band check for slots 60-63)",
+      "docs/milestones/M6-calls/PROPS.md (log the recolour; or log a departure in README.md plus Game-boy's approval if the orange car is kept)"
+     ],
+     "fix_needs_spec_change": false
+    }
+   ]
+  },
+  {
+   "id": "final-world-04",
+   "lens": "world",
+   "severity": "medium",
+   "title": "Crate drawn on the dumpster lid, clipping it, in the level's first shot",
+   "detail": "The DumpsterSpot dresses the lower block of a two-crate stack (Crates, 1.6 x 1.4 x 2.3 at y 0.7, draw_box=false). The upper block, CratesTop (1.0 x 1.2 x 2.9 at y 2.0), is still drawn as a crate. The result is a 2.9 m crate balanced on a 2.3 m dumpster: it overhangs the ends, and the lid's bulge pierces the crate's underside. Ac1 hangs 0.4 m above the crate, so the corner reads as a junk pile. This is the first thing seen at the level start (tour street_start). It is the only PropSpot/drawn-block overlap in the three sections.",
+   "evidence": "captures/review/start_crop.png (tour bot.avi f55, crop 900,0 700x700); street.tscn DumpsterSpot (position 5.2,0,-5.05) vs Geometry/CratesTop (5.2,2.0,-5.05; size 1.0,1.2,2.9) and Crates (draw_box=false)",
+   "repro": "Start Mission 1 and look right at the first wall (tour pose street_start (3,0,0.8), yaw 0).",
+   "suggested_fix": "Put the dumpster on a block with nothing stacked on it and give Crates back its crate look. Alternatively, keep the spot here and swap the stack's top for a block the dumpster can carry, such as a low, lid-sized crate sitting inside the lid's footprint. Do not leave an undrawn CratesTop collider floating over the lid (D1).",
+   "files": [
+    "game/level/mission1/street.tscn"
+   ],
+   "spec_change": false,
+   "skeptics": [
+    {
+     "refuted": false,
+     "confidence": "high",
+     "reason": "Confirmed. The scene data and the capture both show the crate drawn over the dumpster lid, overhanging it.",
+     "evidence": "In street.tscn, Geometry/Crates (5.2, 0.7, -5.05; 1.6x1.4x2.3; draw_box=false) is dressed by DumpsterSpot at (5.2, 0, -5.05) with size 2.3x1.4x1.6. Geometry/CratesTop (5.2, 2.0, -5.05; 1.0x1.2x2.9; look=prop) still draws as a crate with no draw_box=false. It spans y 1.4 to 2.6 and is 2.9 m long on a 2.3 m dumpster, so it overhangs the ends by about 0.3 m each. captures/review/start_crop.png shows the wooden crate sitting on the green dumpster's lid and overhanging it on both sides, with the AC unit above it. DRESS.md call 6 and KIT.md call 6 describe the dumpster spot over the Crates block, but neither mentions that the stacked CratesTop was left drawn. The only other blocks named CratesTop (CratesTop2 at z -16.3, CratesTop3 at z -36.2) have no PropSpot over them. Visual spot-check was one image read; I did not rerun Godot.",
+     "root_cause": "When DRESS turned the lower block into a dumpster PropSpot (draw_box=false), it left the stacked CratesTop block drawn. CratesTop was authored for a crate stack and is longer than the dumpster. The spot and the stack were never reconciled.",
+     "files_to_change": [
+      "game/level/mission1/street.tscn",
+      "tests/test_m6_dress.gd (only if a crate-count or hull-count assertion covers CratesTop)"
+     ],
+     "fix_needs_spec_change": false
+    }
+   ]
+  },
+  {
+   "id": "final-world-05",
+   "lens": "world",
+   "severity": "low",
+   "title": "Drops and tour acts record first poses mid-blend: the 'pale plane' is an artifact",
+   "detail": "The drop and tour acts teleport into a section and record within 1 s, so their first poses are captured mid-blend. The blend from the street's pale fog (0.52,0.5,0.6) to the boss roof's dark fog takes section_light_blend_s = 2.5 s (150 ticks). The drop act's poses land at f15, f79 and f143, before the blend completes at about f161. With sky = fog (finding 2), boss_gap_level and boss_gap_wide therefore show a pale lavender void below and beyond the gap. Once blended (f198 onwards), the canyon reads. The tour's roofs_terrace_start and roofs_terrace_doors stills are likewise half-blended: grey floor against the olive of the finished roof light at f523.",
+   "evidence": "drops bot.log DROP f15/f79/f143; the lead's drops overview_01 tiles 1-5 against my drops.png tile 3 (f198); tour_a.png tiles 7-8 against tile 9",
+   "repro": "Compare drops bot.avi f70 (pale) with f198 (canyon reads).",
+   "suggested_fix": "After teleporting into a section, wait section_light_blend_s before the first LOG line, or snap the light from the act (LevelRoot._retarget_light(true) through a bot helper). Then re-record drops and tour before judging the boss gap's far field.",
+   "files": [
+    "tests/bot/level_acts/drop_acts.gd",
+    "tests/bot/level_acts/tour_acts.gd"
+   ],
+   "spec_change": false,
+   "skeptics": []
+  },
+  {
+   "id": "final-world-06",
+   "lens": "world",
+   "severity": "low",
+   "title": "Rail posts not bent: perspective plus the metal band's streak on 0.12 m faces",
+   "detail": "This refutes the 'bent' reading in part. The edge-guard posts are straight 0.12 x 1 x 0.12 m boxes (roofs.tscn RailCatwalkPost*, look fence -> KitMesh 'rail' = one box, all metal, kit_mesh.gd:72). In the catwalk_drop still the right-hand post leans because of 90-degree FOV perspective with a downward pitch, from about 0.6 m away. What makes the posts read as twisted or bent is the trim's metal band: its lit streak is mapped in metres across a 0.12 m face and runs diagonally down the post and along the bar.",
+   "evidence": "captures/review/stanchion.png (tour bot.avi f627, crop 250,0 1100x600); roofs.tscn:540-552",
+   "repro": "ffmpeg -i captures/m6-final/tour/bot.avi -vf \"select=eq(n\\,627)\" -frames:v 1 x.png",
+   "suggested_fix": "In KitMesh's rail kind, map faces narrower than about 0.2 m to a flat, streak-free texel of the metal band (or use the 'dark' strip), so thin posts read as solid painted steel.",
+   "files": [
+    "game/level/kit/art/kit_mesh.gd"
+   ],
+   "spec_change": false,
+   "skeptics": []
+  },
+  {
+   "id": "final-world-07",
+   "lens": "world",
+   "severity": "low",
+   "title": "Section blend sweeps the shadows visibly as the player walks into the boss roof",
+   "detail": "The colour blend is smooth, but the sun's yaw also blends: -68 -> -100 degrees from the roofs to the boss roof (32 degrees), with elevation 27 -> 24, over 2.5 s just after the A6 gate. The probe shows the floor shadows rotating while the player walks (switch at z -84, f1290; done at f1440). Street -> roofs swings 18 degrees on the terrace. It reads as a smear of crawling shadows rather than a pop.",
+   "evidence": "captures/review/seamwalk.png bottom row (seamwalk/bot.avi f1270-f1445); seamwalk/bot.log 'WALK roofs_to_boss ... t=' lines; boss_roof.tscn:23, roofs.tscn:35",
+   "repro": "CAPTURE_ARGS=\"--level=res://game/level/mission1/mission1.tscn\" tools/capture_bot.sh res://tests/bot/level_bot.tscn <out> \"Probe: seam walk\", using the act at captures/review/zz_seamwalk_acts.gd.txt copied into tests/bot/level_acts/",
+   "suggested_fix": "Keep the sections' sun yaw within about 10 degrees of each other (for example boss -75), or blend only colour, fog and energy while snapping the direction. Taste call for the lead.",
+   "files": [
+    "game/level/mission1/boss_roof.tscn",
+    "game/level/mission1/roofs.tscn",
+    "game/level/kit/level_root.gd"
+   ],
+   "spec_change": false,
+   "skeptics": []
+  },
+  {
+   "id": "final-world-08",
+   "lens": "world",
+   "severity": "low",
+   "title": "At the boss roof's 24-degree sun the player's own shadow shows as a large silhouette",
+   "detail": "The section light drops the sun from M5's 45 degrees to 24 degrees on the boss roof (27 on the roofs). The first-person body's shadow becomes a 2-3 m silhouette with raised-fist 'ears' that lies in front of the view, or covers the gap wall when looking over the rail. It can read as an unexplained dark figure at the bottom of the screen.",
+   "evidence": "tour_b.png tile 7 (tour f887, boss_cars_gap); lead's drops overview_01 tiles 8-9 (boss_rail_down); drops.png tile 2 bottom",
+   "repro": "Stand on the boss roof with the sun behind you (yaw -100) and look ahead or down over the rail.",
+   "suggested_fix": "Raise the boss roof and roofs elevations a few degrees, or have the player's body cast a shadow without the guard-pose arms (a shadow-only proxy). Taste call.",
+   "files": [
+    "game/level/mission1/boss_roof.tscn",
+    "game/level/mission1/roofs.tscn",
+    "game/player/player.gd"
+   ],
+   "spec_change": false,
+   "skeptics": []
+  },
+  {
+   "id": "final-code-01",
+   "lens": "code",
+   "severity": "medium",
+   "title": "test_damage_look.gd leaves three Tuning values changed for every later test script, including M6's per-swatch default being switched off",
+   "detail": "The file has no before_each or after_each and never resets Tuning. test_rig_damage_look... sets vfx_damage_tile_m to 0.5, and the per-swatch test sets vfx_blood_edge_cut to 0.7 and look_marks_per_swatch to false (M6's new default is true). Tuning is an autoload that persists across scripts. The scripts that sort after test_damage_look.gd and do not reset first (test_toon.gd resets only in its own after_each, so its first test inherits the leak; the test_enemy_*, test_hit_*, test_kit, test_ko_* and test_m4_*/test_m5_* families the same way) therefore run with M4's marks look and a 0.5 m tile instead of the shipped defaults. Any later test that meant to check the shipped per-swatch look would pass or fail on the wrong mode.",
+   "evidence": "tests/test_damage_look.gd:162 (vfx_damage_tile_m = 0.5), :282 (vfx_blood_edge_cut = 0.7), :286 (look_marks_per_swatch = false); no func before_each/after_each in the file (grep). TuningData defaults: look_marks_per_swatch true, vfx_blood_edge_cut 0.5.",
+   "repro": "Read tests/test_damage_look.gd: grep -n 'Tuning' shows the three writes and no restore. To observe it, run test_damage_look.gd followed by any script that prints Tuning.data.look_marks_per_swatch without resetting.",
+   "suggested_fix": "Add `func after_each() -> void: Tuning.apply(TuningData.new())` (the pattern test_toon.gd and test_art_player.gd use) to test_damage_look.gd. Better, also reset Tuning in a shared after_all hook. Replace the hand-written defaults in test_m6_dress.gd's after_each (2.5 and true) with Tuning.apply(TuningData.new()) for the same reason.",
+   "files": [
+    "tests/test_damage_look.gd",
+    "tests/test_m6_dress.gd"
+   ],
+   "spec_change": false,
+   "skeptics": [
+    {
+     "refuted": true,
+     "confidence": "high",
+     "reason": "The leak exists: test_damage_look.gd never restores the three Tuning values. But I found no later test it affects, and the finding's own example, test_toon.gd, is wrong. It is a hygiene nit, not the medium finding as written.",
+     "evidence": "1. Leak confirmed. test_damage_look.gd writes vfx_damage_tile_m = 0.5 (line 162), vfx_blood_edge_cut = 0.7 (line 282) and look_marks_per_swatch = false (line 286). It has no before_each or after_each, and no Tuning.apply.\n2. The claim \"test_toon.gd resets only in its own after_each, so its first test inherits the leak\" is false. test_toon.gd:29-30 has a before_each that calls Tuning.apply(TuningData.new()). The first test therefore starts clean.\n3. The only code that reads look_marks_per_swatch is game/fx/damage_look.gd, test_damage_look.gd and tests/bot/acts/looks_acts.gd. The only code that reads vfx_blood_edge_cut is damage_look.gd, test_damage_look.gd and a toon.gdshader comment. test_toon.gd:681 reads vfx_blood_edge_cut, but only after its own reset.\n4. vfx_damage_tile_m is read in toon_materials.gd:71 and :97 and in damage_look.gd:118. I grepped every test file that sorts after test_damage_look and touches the damage look or tile size (test_hit_flash, test_ko_blink, test_m4_contracts, test_m4_done_when, test_showcase, test_vfx, test_toon). None asserts on damage_scale, damage_scuff_tex or blood_edge. test_showcase.gd resets with Tuning.reset_to_default(), and test_vfx.gd only lists texture names.\n5. The enemy_*, hit_*, kit and ko_* families named in the finding assert on no leaked value, so nothing passes or fails on the wrong mode.\n6. test_damage_look.gd:272 is the last test in its file, so nothing inside the file is affected after the leak either.\n7. The leak is also not a done-when item or a plan decision. It is a latent test-isolation risk only.",
+     "root_cause": "test_damage_look.gd mutates the shared Tuning autoload without restoring it. The consequence is purely latent: no test that runs after it reads the leaked values without resetting first.",
+     "files_to_change": [
+      "tests/test_damage_look.gd (optional, low: add func after_each() -> void: Tuning.apply(TuningData.new()))",
+      "tests/test_m6_dress.gd (optional, low: replace the hand-written defaults in after_each with Tuning.apply(TuningData.new()))"
+     ],
+     "fix_needs_spec_change": false
+    }
+   ]
+  },
+  {
+   "id": "final-code-02",
+   "lens": "code",
+   "severity": "medium",
+   "title": "The player's strain ratchet was loosened (high_max 9.1 to 11.8) and the per-clip table rose up to 2.3x, explained by a statistic, not looked at, and the worst clip is the near arm",
+   "detail": "ARM split the shoulder half of each upper arm into Body__fp_arm. The strain run reports the worst of each mesh's own percentiles, so the same triangles now set the p99.9 of a 1,764-triangle mesh. The calls file and the art_strain.gd comment give this as the whole reason, and note that the figures do not move with the caps. The regenerated per-clip table shows what moved: flex: arm raise 140 high 4.79 to 11.24 (max 19.5 to 21.2); thrown 5.69 to 10.52; stagger_left 3.91 to 9.62; block, block_hit and guard_break 4.09/4.34 to 9.59; grab 3.99 to 8.04; hold_collar 4.37 to 8.24; knockdown_forward 5.38 to 8.86; launched 6.71 to 9.75. The Punk's ceiling is 4.23, so these are 2 to 2.7x the Punk's worst clip. The arm raise at 11.2x is the pose the haymaker and uppercut use, and the lead already sees a navy shard in the uppercut and an ink step at the cut. The new ceiling (11.8) now passes that look. The strain test can no longer catch a regression of the arm's rubber-band triangles until the ceiling is above 11.",
+   "evidence": "tests/art_strain.gd:47-55 (PLAYER_ROW high_max 11.8, low_min 0.097); tests/fixtures/strain/strain_ratchet.json against main (the per-clip diff above, computed by loading both files); docs/milestones/M6-calls/ARM.md item 9.",
+   "repro": "git show main:tests/fixtures/strain/strain_ratchet.json vs the working file: player.'flex: arm raise 140'.high is 4.7899 on main and 11.2437 now.",
+   "suggested_fix": "Before signing off, find the arm mesh's worst edges in the uppercut and haymaker (the clips with the highest 'high', per mesh) and fix the weights or the cut's cap in the chain config (tools/pipeline/player_*.py, the Body__fp_arm region), then re-run player_run.py --check and regenerate the table so the ceiling moves back down. If the shard is not strain, re-measure the arm mesh alone and give it its own, tighter row (the same split the run already does) so the hidden part's old 9.1 holds for the rest.",
+   "files": [
+    "tests/art_strain.gd",
+    "tests/fixtures/strain/strain_ratchet.json",
+    "tools/pipeline/player_run.py",
+    "tools/pipeline/player_parts.py",
+    "docs/milestones/M6-calls/ARM.md"
+   ],
+   "spec_change": false,
+   "skeptics": [
+    {
+     "refuted": true,
+     "confidence": "medium",
+     "reason": "The p99.9 rise is mostly a percentile effect of the split, which is logged in ARM.md item 9 and in the art_strain.gd comment, and the extreme-edge figures barely move. The claim that the loosened ceiling hides a defect is not supported. The navy shard and ink step are the lead's visual finding, and a strain figure does not decide them.",
+     "evidence": "I diffed the player's per-clip table, main against e8ebdad. The high figures rise as claimed (flex: arm raise 140 4.79 to 11.24, stagger_left 3.91 to 9.62, block 4.09 to 9.59). The extreme edge (max) is identical in about 95% of the clips, including block, block_hit, guard_break, thrown, launched and knockdown_forward. The global max_max (39.1) and flex_share_max (0.0066) are unchanged. It also did not worsen everywhere: min for flex: arm raise 140 rose from 0.069 to 0.086, so the worst compression eased. A few clips do show a small real rise in max (arm raise 19.48 to 21.24, stagger_left 14.95 to 15.56, grab 14.0 to 15.3, hold_collar 13.6 to 14.8). All of them are arm-raise-type poses and stay well below the 39.1 ceiling. The mesh with the clip's worst percentile now also holds the cut and cap edges. The ratchet is not gone: the per-clip table (CLIP_MARGIN 0.10) still fails if any of these clips gets worse than today. I did not run the suite or inspect the arm mesh's per-mesh edges.",
+     "root_cause": "ARM split the shoulder half of each upper arm into Body__fp_arm (1,764 triangles). The strain run reports the worst of each mesh's own percentiles, so the same stretched triangles that were diluted in the 4,820-triangle hidden mesh now set p99.9 and p0.1 of a small mesh. The p99.9 rise is a measurement change. The small max increases come from the new boundary edges at the cut.",
+     "files_to_change": [],
+     "fix_needs_spec_change": false
+    }
+   ]
+  },
+  {
+   "id": "final-code-03",
+   "lens": "code",
+   "severity": "medium",
+   "title": "The Bruiser's art is far bulkier than its hit proxies at 1 m: 5x the lens-share bar, ratcheted instead of fitted",
+   "detail": "D1 says the art only draws and the proxies are M5's. The Bruiser's roster ratchets accept a9_lens_pp of 0.145 to 0.219 for the smash, grab and headbutt (the plan's bar is 0.04) and a9_cells 0.26 (against the Punk's 0.07). The roster note says the art fills 65 to 88% of the view against the proxies' 60 to 82%, and a6.legs is 0.895 (below the 95% bar). That means at 1 m the visible jacket, plates and guards extend past the hurtboxes by up to about 22 points of the view, so a punch that visibly lands on the shoulder or the jacket edge can miss, and a hit can land where the art is empty. Game-boy judges the heavies at 1 m. This is also why the 'Bruiser steel and purple patch at 1 m' reads so large. The ratchets are logged with a reason, but the reason is the mismatch itself.",
+   "evidence": "tests/fixtures/art/roster/bruiser.json ratchets (a9_lens_pp: bruiser_grab pitch -6 0.219, pitch +8 0.152; bruiser_smash 0.188/0.177; a9_cells 0.26; a6.legs 0.895) and its notes field; the HEAVIES.md calls.",
+   "repro": "Open tests/fixtures/art/roster/bruiser.json and compare each a9_lens_pp value with the 0.04 bar in tests/art_roster.gd's default ratchets.",
+   "suggested_fix": "Either shrink the art's bulk in the chain config (the jacket and plate girth clamps) toward the proxy sizes so the gaps drop to about 0.08, or, if the bulk is the picked design, scale the Bruiser's hurtbox proxies and the M5 colliders in test_m6_colliders together with Game-boy's knowledge (a spec change). At minimum, record the departure in README's 'Where M6 departs from the spec' so he rules on it.",
+   "files": [
+    "tests/fixtures/art/roster/bruiser.json",
+    "assets/source/characters/bruiser/pipeline.json",
+    "game/enemies/bruiser/bruiser.tscn",
+    "docs/milestones/M6-calls/HEAVIES.md"
+   ],
+   "spec_change": true,
+   "skeptics": [
+    {
+     "refuted": true,
+     "confidence": "medium",
+     "reason": "The numbers are real, but this is a deliberate logged call (HEAVIES H-10), and the plan allows ratchets with a logged reason. D1 and D15 also say the Bruiser gets its bulk from girth. The ratchets are not the evidence of a defect. They are the roster file's recorded measurement. I did not reproduce the hit-mismatch consequence (a visible hit that misses, or a hit on empty art). I only compared the logged figures with the 0.04 bar.",
+     "evidence": "tests/fixtures/art/roster/bruiser.json in the review worktree has a9_lens_pp up to 0.219 (bruiser_grab pitch -6), a9_cells 0.26 and a6.legs 0.895. Its notes field gives the reason: the padded jacket, plates and guards against primitive-body proxies, 65-88% of the view against 60-82%. tests/art_roster.gd line 29 sets the default a9_lens_pp bar to 0.04, and line 131 reads per-move overrides from the roster file. The roster schema in plan line 142 lists a9_cells and a9_lens_pp as ratchetable. Plan line 467 allows an A6 ratchet \"only with a logged reason\", and the plan's A9 text (line 469) names only the tests, not a ratchet rule. HEAVIES.md H-10 logs the alternative \"slimming the heavies to the proxies\" as rejected, because the arms and plates are the character. HEAVIES.md line 44 lists the bulk as an open risk for Game-boy's feel. I did not run any test. The M5 colliders and proxies are held by test_m6_colliders.gd, and D1 puts them out of scope for art.",
+     "root_cause": "The Bruiser's art (padded jacket, plates and guards, built with girth clamps from a 1.8 m base) is bulkier than M5's primitive-box proxies. The builder accepted the gap as a ratchet instead of fitting the art or resizing the proxies. The gap is a design choice, not a code bug. The one real gap is documentation: no entry in README's \"Where M6 departs from the spec\" records the Bruiser's lens-share and cell ratchets for Game-boy to rule on. I did not confirm that section exists yet. The latest heading in README is M5's, at lines 252 and 262.",
+     "files_to_change": [
+      "README.md"
+     ],
+     "fix_needs_spec_change": true
+    }
+   ]
+  },
+  {
+   "id": "final-code-04",
+   "lens": "code",
+   "severity": "low",
+   "title": "test_art_heavies.gd leaves an EnemyDirector child on the test node (the 'unfreed children' GUT warning)",
+   "detail": "Cause found by listing the test node's children at after_all: an EnemyDirector (res://game/enemies/enemy_director.gd) and GUT's own awaiter. The EnemyDirector is created lazily by the first EnemyActor added in test_both_heavies_are_in_the_roster_with_their_own_heights_and_budgets, which adds each actor straight under the test script with add_child_autofree, so the director becomes the test's sibling child and nothing frees it. The other 2 'children' in the warning are that director and the awaiter, so it is a single real leak. The director persists for the rest of the script and could carry its roster into later tests of the same file.",
+   "evidence": "tests/test_art_heavies.gd:37 (add_child_autofree(actor) under the test node); after_all dump: 'KID EnemyDirector Node res://game/enemies/enemy_director.gd' and 'KID @Node@12 ... awaiter.gd'.",
+   "repro": "godot --headless --fixed-fps 60 -s addons/gut/gut_cmdln.gd -gconfig=res://.gutconfig.json -gselect=test_art_heavies.gd and read the GUT WARNING line.",
+   "suggested_fix": "Add the actors under a Node3D holder that the test frees (the way _arena() does with its stage), or free the director in after_each (get_tree().get_first_node_in_group of its group, or by name).",
+   "files": [
+    "tests/test_art_heavies.gd"
+   ],
+   "spec_change": false,
+   "skeptics": []
+  },
+  {
+   "id": "final-code-05",
+   "lens": "code",
+   "severity": "low",
+   "title": "A few feel or art numbers are script constants or duplicated literals",
+   "detail": "None changes a game number, but they are the sort the rule asks to be tunables or single-sourced. (1) ChainSim.MIN_PITCH_M = 0.02 duplicates the minimum of weapon_chain_link_pitch_m's @export_range; if the range minimum ever drops, the MultiMesh instance_count is too small and links are silently truncated by mini(). (2) ChainSim.step caps dt at 1.0/30.0, a stability limit that is a hidden feel number. (3) AuditionRoom.AHEAD_M = 2.0 and BANK_GAP_S = 0.35 are the debug room's feel. (4) LevelSection's default fog and sky colours and density repeat RoomKit.DEFAULT_FOG_COLOR, DEFAULT_FOG_DENSITY, DEFAULT_SKY_TOP and DEFAULT_SKY_HORIZON literally, so changing one leaves a section on stale colours. (5) The alpha class thresholds 0.75, 0.85 and 0.95 appear in toon.gdshader, ToonMaterials (294) and DamageLook.art_tile_for_alpha with no shared constant (the CPU mirror is tested against the real atlas, which limits the risk). (6) KitMesh's FRAME_M, PLINTH_M and STEP_RISE_M are art dimensions rather than feel.",
+   "evidence": "game/weapons/chain_sim.gd:18, :58, :112; game/audio/audition_room.gd:27-28; game/level/kit/level_section.gd:32-36 against game/level/room_kit.gd:24-27; game/fx/toon_materials.gd:294, game/fx/damage_look.gd:107-111, game/fx/toon.gdshader (class_a8).",
+   "repro": "grep -n for the constants above.",
+   "suggested_fix": "Derive MIN_PITCH_M from the tunable (read the property's range via TuningData's property list, or size the MultiMesh from Tuning.data.weapon_chain_link_pitch_m with a floor), move the dt cap and AuditionRoom constants to tuning_data.gd, and have LevelSection's exports default to RoomKit's constants (or the reverse).",
+   "files": [
+    "game/weapons/chain_sim.gd",
+    "game/audio/audition_room.gd",
+    "game/level/kit/level_section.gd",
+    "game/level/room_kit.gd",
+    "game/autoload/tuning_data.gd"
+   ],
+   "spec_change": false,
+   "skeptics": []
+  },
+  {
+   "id": "final-code-06",
+   "lens": "code",
+   "severity": "low",
+   "title": "README has no Milestone 6 status or departures section yet, and CLAUDE.md still quotes M5's suite numbers",
+   "detail": "CLAUDE.md requires approved departures to be recorded in README.md as one section per milestone. The only README change on the branch is the ELEVEN_LABS_API_KEY row. M6 has departures that need a section for Game-boy to rule on: D19 (ElevenLabs for every sound), D25 (the music loop stays a placeholder), the loosened roster and strain ratchets, Ox Pellerin's gloves being the chain's standard fist box, and the heavies' heights. The plan lists this as close step 9, so it is a reminder, not a miss.",
+   "evidence": "README.md headings: no 'Milestone 6 status'; 'Where M5 departs from the spec' is the last (README.md:252, :262). CLAUDE.md run section still says '299 s, 1766 tests'. Suite now 1919 tests and 376-380 s.",
+   "repro": "grep -n 'M6\\|Milestone 6' README.md.",
+   "suggested_fix": "Add the 'Milestone 6 status' and 'Where M6 departs from the spec' sections at close, and update CLAUDE.md's test count and time.",
+   "files": [
+    "README.md",
+    "CLAUDE.md"
+   ],
+   "spec_change": false,
+   "skeptics": []
+  },
+  {
+   "id": "final-code-07",
+   "lens": "code",
+   "severity": "low",
+   "title": "The Tripo ledger test's 'has teeth' case tests no code",
+   "detail": "test_the_test_has_teeth_an_unfinished_task_a_spend_over_the_stop_and_a_low_balance_are_caught re-implements the arithmetic on three synthetic rows inside the test and asserts on its own variables. It cannot fail if the real test above it is broken. The real test (every created task finished, spend at most 900, no balance under 700) is sound and passes at 495 credits, lowest balance 1210.",
+   "evidence": "tests/test_m6_tripo_ledger.gd:55-73.",
+   "repro": "Read the test body: no call to anything outside the test.",
+   "suggested_fix": "Factor the three checks into a static helper that takes a row list, call it from both the real test and the synthetic case, and assert the synthetic one fails.",
+   "files": [
+    "tests/test_m6_tripo_ledger.gd"
+   ],
+   "spec_change": false,
+   "skeptics": []
+  },
+  {
+   "id": "final-perf-01",
+   "lens": "perf",
+   "severity": "medium",
+   "title": "Level walk frame time +19.5% mean against KIT's pre-art baseline 910448e (12.23 -> 14.61 ms; p95 16.14 -> 18.82; first hit +4.9 ms)",
+   "detail": "The plan's §4 step 8 makes a mean more than 15% over a fix item. tools/perf_compare.sh --bot res://tests/bot/perf_level_bot.tscn --act 'Perf: level walk' --runs 3 910448e HEAD (HEAD 752de4e), interleaved, windowed, vsync off, 0 stalls: mean 12.23 (12.00..12.51) -> 14.61 (14.43..14.95) ms, p95 16.14 -> 18.82, worst 51.5 -> 61.8, spawn hitch 29.2 -> 32.9, first spawn 22.6 -> 22.6, first hit 18.3 -> 23.1, first finisher 18.2 -> 23.0. Soft bars for HEAD: p95 <= 16.7 MISS, first hit <= baseline + 2 MISS. The machine was loaded by other apps (load 3.4-6.6) through both refs; DRESS's earlier run at load 3-6 measured +16.5% (10.04 -> 11.70), so the cost is consistent. 'Perf, six with ragdolls' (the crowd room) against main is +12.7% (14.73 -> 16.60), inside the 15%.",
+   "evidence": "captures/perf_compare/20261104-203356/report.txt and results.tsv (level walk); captures/perf_compare/20261104-205011/report.txt (six with ragdolls); docs/milestones/M6-calls/DRESS.md (the earlier run).",
+   "repro": "tools/perf_compare.sh --force --bot res://tests/bot/perf_level_bot.tscn --act 'Perf: level walk' --runs 3 910448e HEAD",
+   "suggested_fix": "Find where M6's art costs frames in the level walk and take it back without a visible change. Measure with deterministic counters first (RenderingServer.get_rendering_info: draw calls, objects and primitives in frame, at fixed poses of the walk, baseline against HEAD), since the machine's load makes wall time noisy. Likely contributors: one MeshInstance3D per kit piece and dressing piece (windows, cornices, frames, skyline facades), shadow casting on dressing and far skyline, no visibility ranges on far dressing, the props' hull passes, the glint's per-frame _process, the chain sim, section-light per-frame writes. Then the first-hit and first-finisher hitches (+4.9 ms): something first used at a hit (a sound stream's first decode or a new pool, a damage-look material, a VFX) that the warm-up misses.",
+   "files": [
+    "game/level/kit/",
+    "game/level/kit/art/",
+    "game/actors/art/static_art.gd",
+    "game/fx/toon_materials.gd",
+    "game/audio/audio_director.gd",
+    "game/weapons/weapon_glint.gd",
+    "game/autoload/tuning_data.gd"
+   ],
+   "spec_change": false,
+   "skeptics": []
+  }
+ ],
+ "lead_overrides": {
+  "final-chars-01": "Fix the shape, not only the size. Regenerate the boss's glove from a front view that is a round boxing glove (knuckles forward, the thumb tucked along the side, a wrapped cuff), not the stretched J of parts/fist/views/fist_front.jpg; fist_left.jpg already reads as a glove and can anchor the new view. Face it so the palm side points inward (toward the boss's centre line) in his guard. Make it read as a glove beside his charcoal sleeve: its own slot of boss.json (a near-black glove leather, darker than the robe, with the orange wrap at the cuff, as boss_c.jpg), and make pipeline.json, the palette and docs/milestones/M6-calls/HEAVIES.md H-6 agree. A bigger glove than the standard fist box is welcome if the chain allows it (D16 allows an a5_extent ratchet for the boss, logged with its reason). Paid services: Tripo at most 120 credits for this package through tools/pipeline/tripo.py with --label FIX-ART and --spend (a glove generation is 50); Gemini at most 8 images through tools/gemini_image.py job files. Never print, log or write a key. Never use the Blender MCP tools (mcp__blender__*): Blender only headless through the pipeline's run.py. Stay inside 30000 triangles. Judge it at 1 m and 2.5 m in first person from your own recording.",
+  "final-chars-02": "Fix the capture rig, not the game: the roster's 1 m look acts frame each character's head from its height (the roster row's height_m, or the rig's head point), so the face mark shows the head and face of the Bruiser (2.05 m) and Ox Pellerin (2.3 m) as the Punk's shows his. The Punk's own frames (1.8 m, +8 and -6 degrees) must stay byte-identical in framing, so the M4 comparison holds. Re-record r_bruiser and r_boss and look.",
+  "final-chars-03": "Make the plates read as steel plates at 1 m: a darker, mid-value steel swatch in bruiser.json (it lights to near white now), plate-edge ink through detail_bake zones (pipeline.json's zones is empty), and fewer purple islands on the steel (the labelling passes). Rebuild with run.py --asset bruiser --check; move any roster or strain ratchet only with a logged reason (old -> new). Judge it in the smash wind-up and the guard at 1 m.",
+  "final-chars-04": "Game-boy has not ruled yet; the lead's default is keep it and fix it, so look_near_arm stays on by default and keeps M5's view reachable. Make the upper arm light as one limb with the forearm: no shadow-band violet tube and no ink step at the cut (for example normals blended or transferred across the cut in the player build, or the cut's cap faces kept out of the hull), and remove the navy shoulder shard in the uppercut. Rebuild with player_run.py --check; the hero stays under 30000 triangles; move a strain ratchet only with a logged reason. Report A/B stills of the haymaker and the uppercut (new against M5, at the same frames as ARM's captures/arm/ab/) by absolute path, for Game-boy.",
+  "final-world-01": "Dress the roofs' drop floors (roofs.tscn GroundWest and GroundEast) the way DRESS dressed the boss roof's canyon: a street surface with kerbs and lane marks, a few parked cars as car PropSpots, and the facades' bases reaching the floor, so the terrace and catwalk drops read as a street far below. Visual only (D1): no collider changes.",
+  "final-world-02": "Add a tunable for Environment.fog_sky_affect in Level > Section light (a per-section override only if the moods need it), applied by RoomKit.build_environment and kept by LevelRoot's blend, with a default that lets each section's dusk sky show through the skyline gaps while the fog still softens it. Check the crowd street and the training room too, and recapture the tour.",
+  "final-world-03": "Follow the look bible: every props.json swatch inside the environment band (saturation at most 0.30, value 0.25-0.6), and the car's hue moved off orange and away from every character's main colour (the Punk's teal, the player's blue, the dummy's orange, the veteran's violet and orange, the Kicker's lime, the Thug's olive and yellow, the Bruiser's purple, the boss's charcoal and orange). Restore a test that holds props.json in the band (the one DRESS repointed to the fallback colour). Regenerate the atlas with python3 -I tools/pipeline/gen_palette.py. No prop rebuild is needed (the props read the atlas).",
+  "final-world-04": "Stop drawing the CratesTop block over the dumpster spot (draw_box false, or move or remove its drawing), keeping its collider as it is (D1).",
+  "final-world-05": "Promoted by the lead. The level acts (tour, drops) wait out the section-light blend (or snap the light) after each teleport before their first mark, so no still is taken mid-blend.",
+  "final-world-07": "Promoted by the lead. Keep adjacent sections' sun yaw within about 12 degrees of each other (roofs and boss roof especially), so the blend doesn't sweep the shadows across the floor; colours, fog and energy still blend.",
+  "final-world-08": "Promoted by the lead. Raise the roofs' and the boss roof's sun elevation (at least about 35 degrees; M5 had 45) so the player's own shadow no longer lies as a large silhouette in the lower view; keep the moods' colours.",
+  "final-code-01": "Promoted by the lead as hygiene (the skeptic found no test it breaks today): test_damage_look.gd restores every Tuning value it sets (a before_each or after_each with Tuning.apply(TuningData.new()), as test_toon.gd does).",
+  "final-code-04": "Promoted by the lead: free the EnemyDirector the heavies' roster test creates (add the actors under a holder the test frees, as _arena() does), so the GUT 'unfreed children' warning goes.",
+  "final-code-05": "Promoted by the lead, items 1-4 only: (1) ChainSim sizes its MultiMesh from the tunable's range or the live value, not a duplicated MIN_PITCH_M; (2) its dt cap is a tunable in Level > Weapon look; (3) AuditionRoom's AHEAD_M and BANK_GAP_S are tunables (Audio or Debug); (4) LevelSection's default fog and sky values come from RoomKit's constants, single-sourced. Item 5 (the alpha thresholds across the shader, ToonMaterials and gen_palette.py) stays as it is.",
+  "final-code-07": "Promoted by the lead: the Tripo ledger checks become one static helper taking a row list, called by the real test and by the synthetic case, which asserts the helper catches each bad row.",
+  "final-perf-01": "Bring the level walk's mean within 15% of 910448e and the first-hit hitch within 2 ms of it, with no visible change in first person (compare stills of the tour and a run before and after, same frames). Measure deterministic counters first, at fixed poses, and report them old -> new; then confirm with an interleaved perf_compare run (use --force: the machine is loaded by other apps; report the load). Preferred levers, in order: shadow casting off where a caster's shadow can't be seen (far skyline, dressing on walls, roof-edge trim); visibility ranges for far dressing and skyline (tunables in Level > Kit); merging static kit and dressing meshes per section and material into fewer instances (the trim material is one, D10); the glint's _process only while in view; warming whatever the first hit and finisher use (D27). Never change a collider (test_m6_colliders.gd), a game number or the look's tunables. New numbers are tunables in your own subgroup (Level > Kit, or a new 'Level > Draw cost'). If 15% cannot be reached without a visible change, stop at the best invisible result and report the numbers and what the rest would cost."
+ },
+ "packages": {
+  "packages": [
+   {
+    "key": "perf",
+    "title": "The level walk's frame time back within 15% of the pre-art baseline",
+    "finding_ids": [
+     "final-perf-01"
+    ],
+    "files": [
+     "game/level/kit/",
+     "game/level/kit/art/",
+     "game/level/room_kit.gd",
+     "game/actors/art/static_art.gd",
+     "game/fx/toon_materials.gd",
+     "game/audio/audio_director.gd",
+     "game/weapons/weapon_glint.gd",
+     "game/autoload/tuning_data.gd (a Level > Kit or Level > Draw cost subgroup only)",
+     "tests/test_kit.gd",
+     "tests/test_m6_dress.gd",
+     "tests/test_static_art.gd",
+     "tests/test_m6_perf.gd (new)",
+     "tools/perf_compare.sh (only if it needs a counters mode)",
+     "tests/bot/perf_level_bot.gd and tests/bot/perf_recorder.gd (only to add counters)"
+    ],
+    "notes": "Nothing else is running: the Mac is yours, but other apps keep the load at 3-6, so trust counters over wall time and interleave every timing run. No paid services, no Blender. The tour stills to compare are in /Users/arachne/repos/beat-em-up-PoC/captures/m6-final/tour (before the fix wave; the world fixer's after-fix tour is /Users/arachne/repos/beat-em-up-PoC/.worktrees/m6-fix-final-world/captures/fix/tour). Record your own before and after on the same base."
+   }
+  ]
+ }
+}

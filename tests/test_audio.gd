@@ -85,6 +85,13 @@ func _pools(exclude_voices: bool = true) -> Array:
 	return out
 
 
+## The manifest's slots (assets/source/sfx/manifest.json): pool name -> {min_variants, long, loop, space}.
+static func _slots() -> Dictionary:
+	var text := FileAccess.get_file_as_string("res://assets/source/sfx/manifest.json")
+	var manifest: Variant = JSON.parse_string(text)
+	return (manifest as Dictionary).get("slots", {}) if manifest is Dictionary else {}
+
+
 func _frames(n: int) -> void:
 	for i in n:
 		await get_tree().process_frame
@@ -140,6 +147,21 @@ func test_bank_has_every_pool_the_brief_asks_for() -> void:
 	assert_null(bank.pick(&"no_such_pool", RandomNumberGenerator.new()))
 
 
+## The one-shot cap holds for every pool the bank has, except the ones the manifest declares long (the
+## boss's roars, the beds) or a loop (the beds, the music): a voice or a sting over 1.5 s would hold a
+## pooled voice too long.
+func test_every_one_shot_pool_is_under_the_cap_unless_the_manifest_says_long() -> void:
+	var bank := SfxBank.new()
+	var slots := _slots()
+	assert_gt(slots.size(), 0, "the manifest has slots")
+	for pool: StringName in bank.pools:
+		var slot: Dictionary = slots.get(str(pool), {})
+		var exempt: bool = bool(slot.get("long", false)) or bool(slot.get("loop", false))
+		for stream: AudioStream in bank.pools[pool]:
+			if not exempt:
+				assert_lt(stream.get_length(), 1.5, "%s is a one-shot" % pool)
+
+
 func test_bank_never_picks_the_same_variant_twice_in_a_row() -> void:
 	var bank := SfxBank.new()
 	var rng := RandomNumberGenerator.new()
@@ -181,7 +203,7 @@ func test_the_audio_tuning_group_sits_before_debug() -> void:
 	]:
 		assert_has(audio_props, prop_name)
 	# Subgroup headings, so the panel doesn't show some 45 sliders as one flat list.
-	assert_eq(subgroups, ["Mix", "Tiers", "Layers", "Voices", "Blocks", "Distance", "Music", "Rumble"])
+	assert_eq(subgroups, ["Mix", "Tiers", "Layers", "Voices", "Blocks", "World", "Stings", "Ambience", "Distance", "Music", "Rumble"])
 
 
 ## The swing's whoosh plays at the contact frame (a hit) or as the active frames end (a whiff),
@@ -207,8 +229,10 @@ func test_whooshes_are_loudest_right_away() -> void:
 ## voices' breath noise did).
 func test_one_shots_start_and_end_without_a_click() -> void:
 	var bank := SfxBank.new()
+	var slots := _slots()
 	for pool: StringName in bank.pools:
-		if pool == &"music_loop":
+		# A loop (the music, the beds) starts and ends mid-sound by design: it ends where it begins.
+		if pool == &"music_loop" or bool(slots.get(str(pool), {}).get("loop", false)):
 			continue
 		for i in bank.count(pool):
 			var pcm := _pcm("%s_%02d.wav" % [pool, i + 1])

@@ -4,6 +4,793 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-10 22:20 CST: a plan to make the trailer's look playable (proposed Milestone 7); waiting on Game-boy's review
+- **Game-boy asked** (working session chat) for the finished trailer's graphics to be made playable in the game, planned with `/cfo-plan`, Fable for high-level decisions only, and a plan for his review before any work.
+- **The plan:** `docs/milestones/M7-trailer-look-plan.md` (reasoning, gates, five questions for him) and `.claude/cfo/plan.md` (31 rows with model, effort and done-when; follow its Execute section). Written from five read-only scouts and revised after two critics. Nothing is built; no branch is made.
+- **The route:** the trailer is offline AI restyle, so the drawing moves into assets (painted textures, faces, skies, flipbooks) behind a `look_profile` switch that leaves M6's look and tests alone. A slice first (Punk in two arms, the player's arms, one night-street stretch), judged blind against the trailer's own score, then the roll-out in two waves.
+- **Waiting on Game-boy:** the plan's go and §5's five questions (milestone order and branch base, canonical designs, the look bible's two limits, Gemini and Tripo spend, what "the same standard" means). The five M6 items below are unchanged.
+- **Resume steps:** read his answer in the Slack DM (`D0AQUKX5DB6`) or the session chat. On a go, start at T00 in `.claude/cfo/plan.md`. Without one, wait.
+
+### 2026-11-08 13:55 CST: the disk cleaned up (19 GB free, now 92 GB); nothing else changed
+- **Game-boy's word** (planning session chat): "Can you help me clean up the 60 GB in old captures and worktrees you identified? anything that isn't currently required to run the latest iteration of the Beat-em-up game can go."
+- **Worktrees:** all 33 M6 worktrees under `.worktrees/` are removed. Every one was clean, with its commits pushed; their local branches stay. Only `.worktrees/video` (the video session's) is left.
+- **Captures:** `captures/` is emptied except `.gdignore` and `captures/m6-look/`, which holds two contact sheets of M6's look that the video plan uses. Every earlier recording is gone; record new ones as needed.
+- **Checked:** nothing in `game/`, `addons/`, `tuning/` or `tests/` reads `captures/`. The game runs 180 frames headless from the main checkout with no errors.
+
+### 2026-11-08 13:30 CST: a plan for a cinematic gameplay video, run by a second account; nothing else changed
+- **Game-boy asked** (in a planning session) for a 30-45 s cinematic gameplay video whose visual style matches two reference videos. That's his prime directive. A second account with an empty usage limit makes it: Claude painting it with code if it can (Plan A), AI video tools as the fallback.
+- **The plan:** `docs/video/PLAN.md` on branch `video/cinematic-trailer` (d0a3fa0, pushed, after one Opus critic pass), checked out in `.worktrees/video`. It holds the launch prompt Game-boy pastes into the second account, and that account's own watcher and resume prompts.
+- **For this (the game's) session:**
+  - The video session is titled "Beat-em-up: video session". It keeps `docs/video/HANDOFF.md` and its own watcher, and never touches `m6/*`, `main` or `game/`.
+  - Never prune, commit, push, stash or reset in `.worktrees/video` or `.worktrees/mv-*`: CLAUDE.md's handoff step "including inside `.worktrees/*`" excludes them. They belong to the video session.
+  - The machine is shared. The video session's renders take the same capture slot lock as `tools/capture_bot.sh` (`CAPTURE_LOCK_DIR`). It runs at most two builders while this session is active; check `pgrep -fl godot` before the suite.
+  - The disk was cleaned up the same day (the entry above).
+- **Waiting on Game-boy:** unchanged (the five items below), plus the plan's decisions (PLAN.md §8) when he starts the video account.
+- **Resume task** `beat-em-up-resume-20261109-0400`: unchanged.
+
+### 2026-11-06 23:20 CST: the weekly window at 90%; a handoff with nothing in flight; still waiting on Game-boy
+- **The watcher's warning:** the weekly all-models window is at 90% (it resets 2026-11-09 03:59 CST); the 5-hour window is at 5%.
+- **Nothing in flight:** no workflow or agent is running, and nothing is uncommitted. `m6/full-art-audio` was at 7144e64 before this entry, pushed. The worktrees under `.worktrees/` hold only merged branches and review checkouts.
+- **Game-boy launched the build** from this session's terminal on 2026-11-06. Its log shows no errors. No verdict yet.
+- **He asked what milestones remain after M6,** as part of deciding whether to move on. The answer in the chat:
+  - Only M7 (SPEC §12): the perf target (1080p at 60 fps with 6 enemies on an RTX 3060-class GPU), bugs, the Windows export. Done when he plays start to finish and answers SPEC §1's four questions.
+  - It needs from him a Windows PC with a dedicated GPU (or him running the export and sending the numbers), and a gamepad check (README's M0 table still lists the gamepad as unknown).
+  - Carried in: the frame-time levers, the first-person ladder climb (an M7 option since M5), the working title, the boss's name and design, the music loop, the hero-select menu and M4's four FP feel switches.
+  - The advice: a bigger Tripo detail pass belongs before M6 closes, since M7 measures performance on the final art.
+- **Waiting on Game-boy** (unchanged):
+  1. Sign-off of PR #6.
+  2. The near arm: keep it or turn it off.
+  3. The frame time: accept it or pick a lever.
+  4. The Kicker's shade band, or drawn eyes.
+  5. New Tripo models or not (355 credits left).
+- **Resume task:** `beat-em-up-resume-20261109-0400` fires 2026-11-09 04:10 CST.
+- **Resume steps:**
+  1. Check `get_usage`, and make sure a usage watcher is running ("Usage watcher").
+  2. Read the Slack DM (`D0AQUKX5DB6`, the thread at ts `1793931960.696509`) and the working session's chat for Game-boy's answers.
+  3. If he signed off, merge PR #6, then write the M7 proposal and wait for his go, as M6 started.
+  4. If he wants new Tripo models, plan a per-character Tripo pass within the 355 credits, and get his word on the spend before any generation.
+  5. If there's no answer yet, there's nothing to do: wait for him.
+
+### 2026-11-05 21:00 CST: the playtest fixes done and checked (2076/2076); PR #6 updated; DM sent; waiting on Game-boy
+- **vf2check** (run `wf_5f19da37-ce1`; `docs/reviews/M6/findings-vf2check.json`) found no medium or high on dc3ba85:
+  - the depth bound holds (a rear smash at 0.316 of the height, against 0.599);
+  - trim wins as at 82bab12;
+  - no missing or doubled Dressing piece;
+  - the rooms are identical;
+  - the Kicker's brow and Ox's jaw are fixed, and they bleed and bruise right;
+  - no regressions.
+- **Its lows, fixed inline in 43ecebc:**
+  - the floored rear comb stays jagged;
+  - the closure test blanks strings and follows helpers;
+  - `apply_yields.py` puts its ext_resource back;
+  - Ox's mask row;
+  - typed loops.
+- **Left:** the Kicker's brim-underside bar (the fixer's call); a MeshClip edge case no scene hits (a rectangle that starts exactly at a plinth top).
+- **Suite:** 2076/2076 in 416 s.
+- **PR #6's body:** a new "After Game-boy's playtest" section; the suite and frame-time lines updated.
+- **DM sent** with four stills (scratchpad `dm/*.jpg`: the enemies' faces and bodies, played against now; the ground, played against now; the hurt cue), the run command and what to try. It says plainly that the enemy detail is a config pass on the existing models, and offers new Tripo models or textures (355 credits left) if he wants more.
+- **Open questions for him:**
+  1. The near arm: keep it or turn it off.
+  2. The frame time: accept it or pick a lever.
+  3. The Kicker's shade band, or drawn eyes.
+- **Next:** wait for his word. Merge PR #6 only on his sign-off. If he wants more detail, plan a Tripo pass per character, within the 355 credits left.
+
+### 2026-11-05 20:05 CST: VF2 merged (2076/2076); the lean vf2check round running; DM stills ready
+- **Merged** `m6/vf2-feel` (83ed0f3), `m6/vf2-world` (09b1905) and `m6/vf2-art` (78cf42b) into `m6/full-art-audio` at dc3ba85, with no conflicts. The preset needed no change, and every `--check` says YES.
+- **Suite:** 2076/2076 in 415 s, with no errors.
+- **What the fixes did:**
+  - **Hurt:** the edges are stored at 1 or below, the bottom's extra ink is drawn only, the depth is clamped, and the gain applies to the struck share. A bottom tooth floor of 0.2 replaces the 1.4× gain. A rear smash now reaches about 30% of the screen height (53% before). There's a new act "Look: player hurt rear run".
+  - **World:**
+    - the solver ranks kit pieces, then trim by name (Jamb, Lintel, Post), then the bigger box;
+    - clipping also cuts plinth ledges and end caps, carries tangents and drops zero-area triangles;
+    - a dangling yield warns, and KitPieces build on demand;
+    - steps() exempts named pairs only;
+    - the catwalk doorway's tan patch is the ground tile's paint, so it was left.
+  - **Art:** the Kicker's `brow` region (slot 24); Ox's new `jaw` detail zone, which removes the hook (it sat under the face zone's floor); a stronger closure test; eight ASSETS rows.
+- **Recordings:**
+  - `captures/m6-vf2-final/` on dc3ba85, all 14 acts with 0 errors;
+  - `captures/m6-played/` on 663cafc (worktree `.worktrees/m6-played`), the build Game-boy played: r_* at 1 m, the lineup and the tour.
+- **DM stills** (scratchpad `dm/`): `enemies_before_after.png` (faces, played against now), `bodies_before_after.png`, `ground_before_after.png` and `hurt_now.png`.
+- **Running:** review.js run `wf_5f19da37-ce1` (task `wajexu3gp`) with `docs/reviews/M6/args-review-vf2check.json`. Lenses: feelworld (Opus), chars (Opus), code (Sonnet).
+- **Next:**
+  1. Read the survivors; fix inline if small.
+  2. PR #6's body (the draft section is the scratchpad's `pr_playtest_section.md`).
+  3. The DM: stills, the run command, and the two open questions (near arm keep or off; frame time accept or a lever). Be plain that the enemy detail is an incremental config pass, and offer the bigger lever (new models or textures, which costs paid credits) if he wants more.
+  4. Merge only on his word.
+
+### 2026-11-05 18:50 CST: the vfinal review done (one medium: the hurt depth ratchet); its fix pass running (VF2-FEEL, VF2-WORLD, VF2-ART)
+- **vfinal review** (run `wf_aace1d51-bb3`; everything in `docs/reviews/M6/findings-vfinal.json`).
+  - **Confirmed fixed:**
+    - the hurt side at any pitch (11 tests fail on the old function), with the rear jab as plain as the front;
+    - all five seams; clipping is correct and calmed the old z-fights, with no hole, crack or texture jump;
+    - the rooms unchanged; the boss gap fixed;
+    - the Kicker's eyes; the Bruiser's helmet (and no wedge); Ox at a distance;
+    - the Punk, veteran and Thug pixel-identical;
+    - the strain ratchet restored.
+  - **The medium** (world and code lenses both found it; both skeptics confirmed): `hurt_overlay_bottom_ink_gain` is stored in `_edges`, so `_alive_share()` exceeds 1 and `_depth *= share` compounds on every heavy rear hit, with no clamp and no decay (0.32, 0.48, 0.72, 1.08…). In the hurt act a rear smash's spikes reach about 63% of the screen height, against 33% before.
+  - **Lows taken:**
+    - the bottom stroke lift is a factor (heavy rear teeth reach 56%);
+    - the solver's bigger box hides trim faces 82bab12 showed (a warehouse jamb, a door reveal, two pilaster strips, a rail top);
+    - hollow plinth ledges left by clipping;
+    - a dangling `yields_to` is silent;
+    - the blanket steps() exemption;
+    - rule slips;
+    - the Kicker's pale strip under the brim;
+    - Ox's mouth-corner hook (the comma, still there);
+    - the closure test is still weak;
+    - four ASSETS rows.
+  - **Left:** the Bruiser's small stair under the visor (bisect would loosen about 50 strain rows by about 60%; the reviewer agrees).
+  - **The lead's note:** the catwalk doorway floor (tour f711) has been lit since d582d21, where 82bab12 had it in shadow; it went to VF2-WORLD to trace.
+- **Perf** (`captures/m6-verify-final/perf/report.txt`, vsync on, load 3.67 plus the review running): level walk d582d21 17.80 against 3e7084e 17.77 ms; counters 16.66 against 16.57. Clipping costs nothing measurable, though draws are +24 a frame (each clipped block has its own mesh).
+- **Running:** build.js run `wf_bb35b7ba-b69` (task `wfzzl1ne7`) with `docs/reviews/M6/args-VFINAL-FIX.json` and brief `docs/reviews/M6/fix-vfinal.md`.
+  - Branches `m6/vf2-feel`, `m6/vf2-world`, `m6/vf2-art`; worktrees `.worktrees/m6-vf2-*`.
+  - **If cut off:** rerun build.js with the same args.
+- **Next:**
+  1. Merge all three:
+     - the preset;
+     - every `--check`;
+     - the suite with `ART_PUNK_VARIANT_STRAIN=1`.
+  2. The lead's look: re-record hurt (the rear run), tour (f97, f201, f305, f711, f763), r_kicker and r_boss.
+  3. README (the vfinal round), PR #6's body.
+  4. Before/after stills against the played build (663cafc; record the 1 m looks there).
+  5. The DM.
+  6. Merge only on his word.
+
+### 2026-11-05 18:15 CST: suite 2055/2055; the lead's look done; the vfinal review and a perf check running
+- **Suite** on 3e7084e with `ART_PUNK_VARIANT_STRAIN=1`: 2055/2055 in 422 s, with no SCRIPT, SHADER or other ERROR lines.
+- **Recordings** in `captures/m6-verify-final/`: r_kicker, r_bruiser, r_boss, dk, dj, dox, lineup, heavies, damage, hurt, passive_six, rooms, tour and drift, all with 0 errors. Also `captures/m6-feedback-verify/rooms`, newly recorded on d582d21 in `.worktrees/m6-review-verify-world` after a re-import, because its class cache was stale.
+- **The lead's look:**
+  - the five seam sites match 82bab12;
+  - looking down is right (behind lights the bottom, left the left, front the top);
+  - rear-hit strokes are taller and rimmed, so plainer, though still cream on pale ground;
+  - the rooms are unchanged from d582d21 apart from a couple of one-pixel edge shifts on far buildings.
+- **Running:**
+  - **The vfinal review:** review.js run `wf_aace1d51-bb3` (task `w4n08vbi8`) with `docs/reviews/M6/args-review-vfinal.json`. Lenses: chars (Opus), world (Opus), code (Sonnet); partition false. Worktrees are `.worktrees/m6-review-vfinal-*`. If cut off, resume with `resumeFromRunId`.
+  - **Perf:** `tools/perf_compare.sh --force --vsync on --runs 4` with the level bot, comparing d582d21 and 3e7084e, into `captures/m6-verify-final/perf/`. It runs alongside the review, so the load is noisy. If it shows a regression of more than 3%, rerun it on a quiet machine.
+  - GitHub's LFS lock endpoint gave a 500 and pushes failed for about 10 minutes, then recovered.
+- **Next:**
+  1. Read the survivors.
+  2. Fix inline or with a small pass.
+  3. README (the suite count), CLAUDE.md (the test line), PR #6's body.
+  4. The DM.
+  5. Merge only on his word.
+
+### 2026-11-05 17:45 CST: the verification fix pass merged; the suite and the lead's look running
+- **Merged** into `m6/full-art-audio`, with no conflicts: `m6/vfix-feel` (d94b9dd), `m6/vfix-world` (7c0f7db), `m6/vfix-kicker` (18e72d9) and `m6/vfix-heavies` (3ae9709). Then the preset was regenerated with the two kit tunables (3e7084e).
+  - Every `--check` passes (bruiser, boss, kicker, thug, punk, dummy, player; the palette; the trim).
+- **What each fixer did:**
+  - **VFIX-FEEL:**
+    - `hit_bearing` works on the floor plane from the yaw alone;
+    - HurtOverlay reads `view_transform()`, which leaves out the kick;
+    - the strokes have an ink rim, and the bottom edge is inked ×1.5 with strokes ×1.4 longer;
+    - new act "Look: player hurt looking down";
+    - 11 new tests fail on d582d21.
+  - **VFIX-WORLD:**
+    - InsetBlock now cuts the shared overlap out of its mesh (`yields_to`, new `MeshClip`), with no recess;
+    - `tools/solve_insets.gd` and `tools/apply_yields.py` wrote 97 yields on 89 blocks;
+    - `RoomKit.resolve_coplanar` does the same for the rooms;
+    - the scan has `holes()` and `steps()` (27 steps on d582d21, 0 now) and covers the KitPieces.
+    - The ground's mirror move was tried and dropped, because it made A2 drift worse. The near-deck fade is unchanged.
+  - **VFIX-KICKER:**
+    - the eyes region is back at z 1.625-1.665 and the zone at 1.62-1.675;
+    - new slot 24 `kicker_shade` (skin class);
+    - eye ink 0.1/0.22, A/B option c1.
+  - **VFIX-HEAVIES:**
+    - the Bruiser's `helmet_front` (slot 47) and a new `visor_fill`;
+    - `under_visor` at z 1.5-1.575 with no bisect, since bisect would loosen the stretch ratchets by about 60%; a small stair remains;
+    - Ox's `face_skin` zone from z 1.58, with ink 0.012/0.04;
+    - the strain ratchet back to 2afbe4d's figures except one row (held.min);
+    - the closure test needs a `func test_` and the path on a code line.
+- **The lead's look at the fixers' sheets:** the seams match 82bab12; looking down, a hit from behind lights the bottom edge; the Kicker has his brim back and a shaded band; the Bruiser's helmet is one dome; Ox has no blot.
+- **README** has the verification round's notes (the suite count is still to fill in).
+- **Running:**
+  - the suite (`ART_PUNK_VARIANT_STRAIN=1`), logging to the scratchpad's `suite_vfix.log`;
+  - next, the scratchpad's `record_final.sh` into `captures/m6-verify-final/`.
+- **Next:**
+  1. Read the suite's result.
+  2. Record, and check the 5 seam sites, the pitched hurt and the three characters.
+  3. A perf check against d582d21, because each InsetBlock now has its own mesh.
+  4. README, CLAUDE.md, PR #6's body.
+  5. The DM.
+  6. Merge only on his word.
+
+### 2026-11-05 16:20 CST: the verification round done (3 medium survive); its fix pass running (VFIX-FEEL, VFIX-WORLD, VFIX-KICKER, VFIX-HEAVIES)
+- **Verification** (run `wf_05ec4fe8-e6f`; every finding in full in `docs/reviews/M6/findings-verify.json`).
+  - **Confirmed fixed:**
+    - the Thug's face, chest and waistband;
+    - the Kicker's mask;
+    - the Bruiser's visor stripes and wedge colour, and his helmet colour at 1, 2.2 and 5 m;
+    - the Punk's vest and the veteran;
+    - Ox's mauve patches, confirmed as shading, which bruise as skin;
+    - the hurt edge for all 34 hurt-act hits and every pinned real hit in the passive acts;
+    - the finisher, blocked and burst acts;
+    - the boss roof gap (tour pose 17: 0.213 to 0.053), with the walk's flicker unchanged;
+    - the paler ground;
+    - the tunables, the scan and the colliders.
+  - **Mediums (survived the skeptics):**
+    - **verify-chars-01 and code-01:** the Kicker's merged eyes config is the build FIX-ART-A rejected (z 1.685, not 1.665). The brim is skin, and the face is blank.
+    - **verify-world-01:** the InsetBlock recesses leave 2-4 cm steps where the partner covers only part of a face. The edge pass inks them (catwalk wall, terrace pillars, penthouse side, a street pilaster, a skyline corner), dashed and crawling at distance.
+    - **verify-world-02:** `hit_bearing` uses the pitched view against the attacker's feet, so front and back swap past about 30° of pitch, as when stomping.
+  - **Lows the lead took:**
+    - the Bruiser's helmet front band still bleeds;
+    - his under-visor stair step;
+    - Ox's new face blot and jaw comma;
+    - the ground's mirrored pair;
+    - the rooms held only to 0.5 m2, and the Dressing outside the scan;
+    - the dead `INSET_STEP_M`;
+    - the Bruiser strain ratchet regenerated wholesale;
+    - stale ASSETS rows;
+    - the closure test satisfied by a string.
+  - **The lead's addition:** rear-hit strokes are faint on the pale ground (a Punk jab from behind: −9 grey levels against −55 from the front).
+  - **Left:** the Bruiser's visor slit takes blood (it's the gap in the helmet); about 1% cloth texels on Ox's skin.
+- **Running:** build.js run `wf_05b99ce4-b20` (task `w4fhgx7c7`), with `docs/reviews/M6/args-VERIFY-FIX.json` and brief `docs/reviews/M6/fix-verify.md`.
+  - Four Sonnet fixers; the two art ones on the Blender slots.
+  - Branches `m6/vfix-feel`, `m6/vfix-world`, `m6/vfix-kicker`, `m6/vfix-heavies`; worktrees `.worktrees/m6-vfix-*`.
+  - **If cut off:** rerun build.js with the same args.
+- **Next:**
+  1. Merge all four:
+     - the preset;
+     - `gen_palette.py` (VFIX-KICKER may add a slot);
+     - the Bruiser's strain fixture as VFIX-HEAVIES leaves it;
+     - every `--check`;
+     - the suite with `ART_PUNK_VARIANT_STRAIN=1`.
+  2. The lead's look:
+     - re-record the tour (diff against `captures/m6-feedback-review/tour`), hurt, `passive_six`, `r_kicker`, `r_bruiser` and `r_boss` into `captures/m6-verify-final/`;
+     - check the 5 seam sites and the pitched hurt.
+  3. PR #6's body.
+  4. The DM with the stills, the run command and his two open questions.
+  5. Merge only on his word.
+
+### 2026-11-05 15:30 CST: frame time measured (the fixes cost nothing); the verification round running
+- **Frame time** (`captures/m6-feedback-fix/perf/report.txt`): the three builds were run in turn, 4 runs each, vsync on. The load was 5 from Game-boy's apps, so the absolute times are high.
+  - **Level walk:**
+    - pre-art `910448e`: 15.46 ms;
+    - played `663cafc`: 17.03 ms;
+    - fixed `d582d21`: 16.93 ms.
+    - The fixes are −0.6% against the build he played. The art is +9.5% against pre-art (+15.3% at the earlier load).
+  - **Counters:** 14.79, 16.30 and 16.17 ms.
+  - The spawn hitch, first spawn and first hit came out 1-4 ms over the played build. Their ranges are wide at this load, so it's probably noise.
+  - README's frame-time lines now include these.
+- **Recorded on `d582d21`:** `captures/m6-feedback-verify/`, 20 acts, 0 errors.
+  - The review round's 18, minus dp2 and dp3.
+  - Plus `passive_mix` ("Bruiser among Punks, passive") and `passive_six` ("Six Punks, passive"). These have no god mode, and the player takes 26-30 real damaging hits from every side. The street run's pilot parries everything, and the fight is in god mode at 0 damage, so these two are the only real-play evidence for the hurt cue.
+- **Running:** `review.js` run `wf_05ec4fe8-e6f` (task `wdxg91f03`) with `docs/reviews/M6/args-review-verify.json`.
+  - Lenses: chars (Opus), world (Opus), code (Sonnet), with skeptics on highs and mediums and `partition` false.
+  - Reviewer worktrees: `.worktrees/m6-review-verify-<lens>`, detached at `d582d21`.
+  - **If cut off:** relaunch with the same args and `resumeFromRunId`, or pass `reviews` from the journal.
+- **Next:**
+  1. Read the survivors.
+  2. If any are real, one small fix pass (build.js, 1-2 Sonnet fixers), merge, then the suite.
+  3. PR #6's body.
+  4. The DM: stills (the fixers' before/after sheets plus the verify recordings) and the run command, with his two open questions (the near arm; the frame time).
+  5. Merge only on his word.
+
+### 2026-11-05 14:35 CST: the fix wave merged (2027/2027); frame time running; a verification round next
+- **Merged into `m6/full-art-audio`** (head `d582d21`, pushed), with no conflicts:
+  - FIX-FEEL (`f32acc8`);
+  - FIX-WORLD (`33ca985`);
+  - FIX-ART-A (`f837a44`);
+  - FIX-ART-B (`0c1c1ac`).
+  - The preset is unchanged after the regeneration (FIX-FEEL wrote its 15 values). The atlas is current; every `run.py --check`, `player_run.py --asset player --check` and `gen_trim --check` is YES.
+  - Suite 2027/2027 in 414 s with `ART_PUNK_VARIANT_STRAIN=1`, 0 error lines, the same 3 expected warnings.
+  - No paid service spent in the wave.
+- **What each did** (calls in `docs/milestones/M6-calls/FIX-*.md`):
+  - **FIX-FEEL:**
+    - the hurt bearing comes from the attacker's position, with `-hit.direction` as the fallback;
+    - 15 shape numbers moved into Hit feel > Hurt;
+    - six real-hit tests; with the old bearing put back, five fail;
+    - `look_hurt_acts.gd` hits from four sides, plus the acts "finishers" (a synthetic FINISHER-tier hit, since no enemy move is FINISHER), "blocked" and "burst".
+  - **FIX-WORLD:**
+    - the BossRoof Ground's top is at -0.25, clear of the skyline strips at -0.5;
+    - `tests/m6_coplanar_scan.gd` found 85 more wall-top and corner pairs, fixed by `InsetBlock` (the drawn mesh 2 cm in, the collider unchanged) on 41 blocks;
+    - a calmer, paler ground tile, mirrored to a 16 m repeat;
+    - the strip ink fade by the mean footprint.
+    - Its A1 drift rose a little (still 0.0165 -> 0.0291), against M6's 5.1.
+  - **FIX-ART-A:**
+    - the Thug's `face_right` and `bandana_right` regions (only from slot 40), a `hood_neck` zone (creases only above z 1.35) and a plain waist;
+    - the Kicker's `eyes` region and plain eyes and mask zones;
+    - `_rolled_out` needs `detail_bake.crease`.
+  - **FIX-ART-B:**
+    - Ox's `face_lock` region (slots 7 and 53; 50 turned the hood lining tan) and `face_skin` at ink 0.012 / 0.03. The mauve patches are the toon shadow band, not slot 53: answered, not fixed.
+    - The Bruiser's `visor` zone and `under_visor` region, and slot 47 `bruiser_helmet` (purple, blood false).
+    - The Punk's vest valleys: `min_chain_m` 0.45 -> 0.6 (the brief said 0.55), `valley_deg` 18.
+    - The Bruiser's strain fixture regenerated (held clip min 0.1489 -> 0.088).
+- **The lead's look** (the fixers' stills):
+  - the hurt edge matches the side for the Bruiser smash from all four sides;
+  - the ground is calmer and opener;
+  - the Thug's half-face and the Bruiser's cream wedge are gone;
+  - Ox has a nose, a mouth corner and a jaw line;
+  - the Kicker's eyes are a plain skin band, calmer but no longer shades.
+- **README:** "After Game-boy's playtest (2026-11-05)" is under the M6 status (uncommitted until the verification round).
+- **Running:** `tools/perf_compare.sh --force --vsync on --runs 4 --bot res://tests/bot/perf_level_bot.tscn --act "Perf: level walk" --act "Perf: counters" --out captures/m6-feedback-fix/perf 910448e 663cafc HEAD`.
+  - It runs at load 3.5-4, from Game-boy's own apps (App Store agent, ChatGPT), so it has to be forced, as M6's numbers were.
+  - **If cut off:** rerun it.
+- **Next:**
+  1. Record the verification acts on `d582d21`, after perf so the machine stays quiet: `bash <scratchpad>/record_verify.sh`, the review round's 18 acts into `captures/m6-feedback-verify/` (the script is `record_feedback.sh` with the folder changed and dp2/dp3 dropped).
+  2. A verification round: `review.js` with `docs/reviews/M6/args-review-verify.json` (chars and world on Opus, code on Sonnet, skeptics on highs and mediums, `partition` false). Independent reviewers check each finding the wave took, against before (`captures/m6-feedback-review/`) and after.
+  3. If anything survives, one small fix pass; then README's frame-time lines, PR #6's body, and the DM with the stills and the run command. Merge only on his word.
+
+### 2026-11-05 13:15 CST: the FEEDBACK review done (2 high, 5 medium survive); the fix wave running (FIX-FEEL, FIX-WORLD, FIX-ART-A, FIX-ART-B)
+- **The review** (run `wf_17f7b1df-712`; every finding with detail, fix and verdict in `docs/reviews/M6/findings-feedback.json`):
+  - **Passes:**
+    - all five enemies are closer to their concepts than M6 at 2.5-3 m;
+    - no crawl in motion: the fight with the per-texel swatches on against off, with identical logs, gave the same change, 557,975,304 against 557,975,210 pixels;
+    - one line weight across the roster;
+    - the veteran reads at 5 m;
+    - the street ground holds still (the lead's drift: 0.017 / 0.039 against M6's 5.1).
+  - **Highs (confirmed by the lead in the code):**
+    - **world-01:** the hurt cue's bearing comes from the contact point on the player's own hurtbox, so its edge and roll are near random;
+    - **world-02:** FB-GROUND's lowered boss-roof Ground (top -0.5) is coplanar with the roofs' skyline walk strips, a new z-fight in the gap view.
+  - **Mediums:**
+    - **chars-01:** the Thug's black half-face (slot 40, no blood);
+    - **chars-02:** the Thug's chest valley scribble;
+    - **chars-03:** Ox's grey slot-53 face blotches, which take cloth damage;
+    - **world-03:** no recording of a finisher, a blocked hit or a burst landing;
+    - **code-01:** the hurt shape numbers are script literals.
+  - **Lows the lead took:**
+    - the Kicker's eyes and mask slashes;
+    - the Bruiser's visor stripes, and his purple helmet now bleeding (a new blood-false swatch);
+    - the Thug's waistband dashes;
+    - the hurt constants;
+    - the ground's camo-like busy-ness and its 8 m repeat (keep only if clearly closer to the mood);
+    - the strip ink fading early on grazing surfaces;
+    - the ASSETS rows;
+    - the vacuous detail guards.
+  - **Left:** the Punk's cap logo blot (as in M6), the Bruiser's cuff ovals, and Ox's sawtooth sleeve (in the texture).
+- **Running:** build.js run `wf_b1184dc7-5fe` (task `wzbuqd3p9`), with `docs/reviews/M6/args-FEEDBACK-FIX.json` and brief `docs/reviews/M6/fix-feedback-final.md`. Four Sonnet fixers at once, the art pair on the two Blender slots:
+  - **FIX-FEEL:** the bearing from the attacker's position, real-hit tests per side, the shape numbers into Hit feel > Hurt, and the hurt act extended with a finisher, a block, a burst, and hits from the right and behind.
+  - **FIX-WORLD:** the boss Ground clear of every drawn plane, the coplanar guard over every drawn block of the level and both rooms, the ground calmer with its repeat broken, and the strip ink fade.
+  - **FIX-ART-A:** the Thug and the Kicker, plus the guards' `_rolled_out` requiring the recipe key.
+  - **FIX-ART-B:** Ox's face region and texture face lines, the Bruiser's visor and helmet swatch, and the Punk's vest valleys.
+  - Branches `m6/fix-feel`, `m6/fix-world`, `m6/fix-art-a`, `m6/fix-art-b`. **If cut off:** rerun build.js with the same args.
+- **Next:**
+  1. Merge all four (the preset, `gen_palette.py` since FIX-ART-B adds a swatch, every `--check`, and the suite with `ART_PUNK_VARIANT_STRAIN=1`).
+  2. The lead's look at each package's stills; re-record the boss roof gap and the hurt act if needed.
+  3. Perf against `663cafc` on a quiet machine (`tools/perf_compare.sh --vsync on --runs 4 --bot res://tests/bot/perf_level_bot.tscn --act "Perf: level walk" --act "Perf: counters" 663cafc HEAD`).
+  4. README's M6 status, PR #6's body, and the DM with the stills and the run command. Merge only on his word.
+- **Usage at launch:** 5-hour 16%, weekly 39%.
+
+### 2026-11-05 12:40 CST: FEEDBACK phase 2b merged (2006/2006); the review round's recordings running
+- **Merged into `m6/full-art-audio`:** ROLL-KICKER (`40e03ba`), ROLL-THUG (`45f9ac0`), ROLL-PUNK (`fdb9ee0`) and OX-2 (`5d21aa3`); merge head `82bab12`, pushed.
+  - **Conflicts:**
+    - ARCHITECTURE.md, with every heading kept;
+    - ASSETS.md, where the Thug's builder had overwritten the **Kicker's** mask row with Thug text; the lead kept the Kicker's own row.
+  - Preset 631 values (unchanged), atlas current, every `run.py --check`, `player_run.py --asset player --check` and `gen_trim --check` YES.
+  - Suite 2006/2006 in 407 s with `ART_PUNK_VARIANT_STRAIN=1`, 0 error lines.
+  - No Tripo or Gemini spent in phase 2b: every raw model held its detail.
+- **What each did** (calls in `docs/milestones/M6-calls/<KEY>.md`; A/B sheets copied to `captures/m6-feedback-3/ab/`):
+  - **Kicker:** relax 0, island 0.0015, crease 60°, valleys on the vest and shorts, texel swatches, seven zones. The hood, drawstrings, zip, pocket and hem are inked now. Strain `min_min` moved 0.0367 -> 0.0183 (one edge in walk clips).
+  - **Thug:** relax 0, island 0.0015, crease 60°, hoodie valleys 15° (none on the trousers, which scribbled), texel swatches, `hoodie` and `trousers` zones.
+  - **Punk:** crease and valley ink, plus texel swatches. He has no island merge (it broke the cap's strap arch) and keeps relax 3 and M4's seven zones. The mesh is byte-identical and the veteran swap recolours unchanged. Shared tests loosened for his blue channel: `test_art_contract.gd` (B <= 20/255, `STROKE_PIECES_MAX` 600 -> 800) and `test_toon_glint.gd`.
+  - **OX-2:** texel swatches, lines 0.0035/0.0025, robe valleys 12°, and the region `legs_not_skin`, which repaints the tan streak down his tights. `test_art_heavies.gd`'s region filter is narrowed to glove regions.
+- **The lead's look:**
+  - **The Kicker** is a clear win.
+  - **The Thug** has two regressions:
+    - a hard black patch over the right half of his face and bandana at 1 m (a dark texture patch the texel borders now show sharply);
+    - valley scribbles across his chest.
+  - **The Punk** changed only a little.
+  - **Ox** is modest: cleaner trim, the leg streak gone, but his face is still a flat tan shape at 1 m.
+- **Recorded** (all 20 acts `exit=0 errors=0`) into `captures/m6-feedback-review/`. The lead's look: the ground's still-view change is 0.017 / 0.039 grey levels at A1 / A2 (M6 5.1), and the walk reads as one steady comic street.
+- **Running:** review.js run `wf_17f7b1df-712` (task `wnmelu5xp`) with `docs/reviews/M6/args-review-feedback.json`. **If cut off:** rerun it with `resumeFromRunId`, or with `reviews`/`verdicts` from the journal.
+- **The recordings** (for reference; the script was `<scratchpad>/record_feedback.sh`):
+  - **crowd lane:** r_kicker, r_thug, r_bruiser, r_boss, lineup, heavies, dj, dk, dt, dp1, dp2, dp3, dox, damage, hurt, fight;
+  - **level lane:** drift, tour, walk (perf_level_bot), run_street (arenas 0-2).
+  - **If cut off:** the script is lost with the scratchpad. Rerun the same `tools/record_acts.sh` lines (the act list is in `args-review-feedback.json`'s common note).
+- **Next:**
+  1. When the recordings are done (check each `exit=0 errors=0` line), run `tools/workflows/review.js` with `docs/reviews/M6/args-review-feedback.json`: lenses chars and world (Opus), code (Sonnet), skeptics on highs and mediums, `partition: false`.
+  2. The lead partitions the survivors, plus the Thug's face and chest, the Punk's vest valleys and Ox's face, into at most 3 fix packages. One fix wave.
+  3. The suite, and perf against `663cafc` on a quiet machine.
+  4. README's M6 status (the ground, the detail), PR #6's body, and the DM with the stills and the run command. Merge only on his word.
+- **Usage:** 5-hour 9%, weekly 38%. Phase 2b's four builders took 55 min.
+
+### 2026-11-05 11:25 CST: FEEDBACK phase 2a merged (1983/1983); stills sent; phase 2b building (Kicker, Thug, Punk, Ox opt-in)
+- **Merged into `m6/full-art-audio`:**
+  - DETAIL-2 (branch `m6/detail-2`, `dff8d47`) and ROLL-OX (`m6/roll-ox`, `426e820`); merge head `8bf750f`.
+  - The only conflict was ARCHITECTURE.md, with both headings kept.
+  - Preset 631 values, atlas current, every character's `run.py --check` and `player_run.py --asset player --check` YES.
+  - Suite 1983/1983 in 389 s, 0 error lines.
+  - Then `b454424`: the detail guards in `tests/test_m6_feedback_detail.gd` now skip any character that has its own `tests/test_m6_feedback_detail_<id>.gd` (`_rolled_out()`), so rollouts don't edit shared lists. 13/13 alone.
+- **DETAIL-2:**
+  - **Texel swatches:** the mask's B carries a palette slot per texel (RGBA, alpha 128/255 is the marker); `toon.gdshader` does a `texelFetch` and fades back to the face swatch from 1 to 3 texels per pixel (Look > Toon `look_texel_swatch_fade_near/far`; Debug `look_texel_swatch`).
+  - **Valley ink** on the cloth (`crease.valley`, zone `valley_deg`); lines 7.8 mm; the helmet painted purple by regions.
+  - **20k bought nothing visible**, so 15k ships and there's no ruling to ask.
+  - **The quilting is folds only:** the mesh has no stitching.
+  - **Not checked:** the texel fade in motion at 5-10 m, and perf on a quiet machine (+0.11 ms mean on a loaded one).
+  - The recipe's part 2 is in DETAIL-2.md.
+- **ROLL-OX:**
+  - config only: relax 0, island 0.0004 (0.002 ate the laces), crease 70°, and seven ink zones;
+  - no Tripo (the raw model holds the detail);
+  - two ratchets moved (strain `min_min` 0.028 -> 0.016 in one floored-pose edge, A6 legs 0.95 -> 0.949).
+- **The lead's look:**
+  - **The Bruiser** at 2.5 m reads as armour with clean borders.
+  - **Ox** is cleaner but modest. His orange trim still steps until OX-2.
+  - **The A/B sheet `ab_bruiser_2.png` is mislabelled** (the builder didn't read it back), so the 20k sheet went to Game-boy instead.
+  - Captures are copied to `captures/m6-feedback-2/{detail-2,roll-ox}/`.
+- **Sent to Game-boy:** `bruiser_15k_20k.jpg` and `ox_ab.jpg`, the plan for phase 2b, and the run command. Nothing is waiting on him from this round. Still unanswered from M6: the near-arm keep/off and the frame-time accept-or-lever.
+- **Running:** build.js run `wf_11fac342-cd2` (task `w1b8z5qea`), with `docs/reviews/M6/args-FEEDBACK-3.json` and brief `docs/reviews/M6/fix-feedback-3.md`.
+  - Four builders on the two Blender slots, so two waves: ROLL-KICKER and ROLL-THUG (Tripo 85 each, only if the model is flat), then ROLL-PUNK (veteran swap and the M4 variants guarded; no Tripo) and OX-2 (texel swatches, line weight, robe valleys).
+  - The chain and `toon.gdshader` are frozen this round.
+  - Branches `m6/roll-kicker`, `m6/roll-thug`, `m6/roll-punk`, `m6/ox-2`.
+  - **If cut off:** rerun build.js with the same args.
+- **Next:**
+  1. Merge all four (preset, atlas, every `--check`, the suite).
+  2. The lead's look at each `ab_<id>.png` and the lineup.
+  3. One review round (chars and world/feel on Opus, code on Sonnet), one fix wave, the suite, and perf against `663cafc` on a quiet machine.
+  4. README's M6 status (the ground, the detail), PR #6's body, and the DM with stills and the run command. Merge only on his word.
+- **Usage at launch:** 5-hour 3% (just reset), weekly 37%. Phase 2a's two builders took 57 min.
+
+### 2026-11-05 10:20 CST: FEEDBACK phase 1 merged (1970/1970); stills sent; phase 2a building (DETAIL-2, ROLL-OX)
+- **Merged into `m6/full-art-audio`:** FB-FEEL (`a40ede2`), FB-GROUND (`3967fc9`) and FB-DETAIL (`4f2e0f3`). The only conflicts were in ARCHITECTURE.md, where all three headings were kept.
+  - The preset is regenerated (629 values), the atlas is current, and `gen_trim --check` passes.
+  - Suite: 1970/1970 in 391 s, with 0 error lines.
+  - Pushed at `aca0c10`, which adds README's "ruled by Game-boy at his playtest (2026-11-05)" section (the hurt feel, no GO sting) and the phase 2a brief.
+- **What each found and built** (calls in `docs/milestones/M6-calls/FB-*.md`; captures copied to `captures/m6-feedback/fb-*/`):
+  - **FB-GROUND:** the flashing was a **z-fight**: `boss_roof.tscn`'s drawn-only 200 m Ground had its top at world y 0, the street Floor's plane. Ink, the mip cap, shadows and the section light each changed the drift metric by 0.0.
+    - The Ground is now 0.5 m lower, and roofs' PenthouseFrontFloorShutter no longer draws. Both colliders are unchanged.
+    - New: a comic `ground_sheet.png` (8 m world-space tile), bold ink on the strips, the "Level > Ground" tunables and `tools/ground_flicker.py`.
+    - Open: it's a little busy (camo-like patches), and the manhole repeats every 8 m.
+  - **FB-FEEL:**
+    - `audio_sting_go` (default off);
+    - the "Hit feel > Hurt" stack on the player as victim (shake ×2.5 with a 0.3 floor, punch ×2.5, a roll of 2/4/7°);
+    - `HurtOverlay` (ink, with paper strokes, on the struck edge) and the HP panel jolt;
+    - `hurt_feel_enabled` gives M6 back.
+  - **FB-DETAIL:** the loss was the palette's border relax smearing the plate borders, plus a flat delit Tripo texture with no lines to find. It added three opt-in keys and tuned them on the Bruiser (15k kept):
+    - crease ink (`detail_bake.crease`, per-zone `crease_deg`);
+    - the island merge (`palette.min_island_area_m2`);
+    - border relax 0.
+
+    The rollout recipe is in FB-DETAIL.md.
+- **The lead's look:** the ground and the hurt feel are good. The Bruiser is a clear step (visor frame, plate seams, buckle, guard straps) but still short of concept A:
+  - the quilting reads as flat purple;
+  - the colour borders are ragged face steps, with purple blotches on the steel and knee pads;
+  - the lines are about 1 cm at 1 m, heavier than the Punk's.
+- **Sent to Game-boy** (Slack DM, 3 files): the ground A/B, the hurt vignette, and the Bruiser A/B with the plan and the run command. He's told a 20k-versus-15k ruling for the Bruiser is coming. No ruling is pending from him yet on this round. The near-arm keep/off and the frame-time accept-or-lever are still unanswered from M6.
+- **Running:** build.js run `wf_2522a6a1-11d` (task `wb0g2enm8`), with `docs/reviews/M6/args-FEEDBACK-2.json` and brief `docs/reviews/M6/fix-feedback-2.md`. Each builder holds one of the two Blender slots:
+  - **`DETAIL-2`** (branch `m6/detail-2`):
+    - quilt and soft-seam ink from the dense mesh's valleys;
+    - colour borders that follow the texture, opt-in per art, with the damage marks following them;
+    - the Punk's line weight;
+    - a 20k variant's stills for Game-boy's ruling (15k ships);
+    - a "Rollout recipe, part 2". No paid services.
+  - **`ROLL-OX`** (branch `m6/roll-ox`): the pilot's recipe on Ox, plus the Punk's kind of texture ink zones (he has none). Tripo ceiling 85.
+  - **If cut off:** rerun build.js with the same args.
+- **Next:**
+  1. Merge both, regenerating the preset, the atlas and the ratchet, then the suite.
+  2. The lead's look. Send Game-boy `ab_bruiser_2.png`, `ab_boss.png` and the 20k question.
+  3. **Phase 2b:** the Kicker, the Pipe Thug and the Punk on recipe parts 1+2, one builder each (2 Blender slots, so 2 then 1), plus Ox opting into DETAIL-2's keys. Tripo left: 355 within the stop.
+  4. One review round (chars and world/feel on Opus, code on Sonnet), one fix wave, the suite and perf against `663cafc`.
+  5. README's M6 status for the ground and detail, PR #6's body, and the DM. Merge only on his word.
+- **Usage at launch:** 5-hour 14%, weekly 36%. Phase 1's three builders took about 10% of the 5-hour window in 70 min.
+
+### 2026-11-05 09:30 CST: Game-boy played M6; four fixes from him; phase 1 of FEEDBACK building (FB-FEEL, FB-GROUND, FB-DETAIL)
+- **His four items**, word for word in `docs/reviews/M6/fix-feedback.md`:
+  1. The street's ground has no clear texture and blinks or flashes constantly. Make it a comic-book texture.
+  2. Lose the victory sound on the GO sections.
+  3. The player's view should react more when he's hit ("knocked down to almost half-health without even realizing").
+  4. Upscale every enemy's detail toward its concept: too blobby, the Bruiser worst.
+- **The lead's diagnosis:**
+  - **Item 1:** the asphalt strip is a soft mottle with ink cracks one texel wide, and the trim shader caps the mip level at 4 (`lod_cap`). That's the lead suspect. The before recording is `captures/m6-feedback/before/walk/` (0 error lines).
+  - **Item 2:** `sting_go` plays on `arena_cleared`.
+  - **Item 3:** the player gets the same SPEC §6 shake and punch whether he lands a hit or takes it (a light hit is 0.1 trauma), and there is no overlay.
+  - **Item 4:** the Bruiser's raw Tripo model already holds concept A's detail (quilting, separate plates, visor, guards). The loss is in our chain:
+    - per-face swatches with ragged borders;
+    - few interior ink lines (the Punk has 7 ink zones, the Bruiser 1 and Ox 0);
+    - 12 iterations of normal smoothing;
+    - 15k triangles (from 20k).
+- **Running:** `tools/workflows/build.js`, run `wf_36bffae8-16c` (task `wwlmg4jui`), with `docs/reviews/M6/args-FEEDBACK.json`. Three Sonnet builders:
+  - `FB-FEEL`: items 2 and 3, plus the act "Look: player hurt";
+  - `FB-GROUND`: item 1, find the cause with numbers, then a comic ground, plus the act "Look: ground drift";
+  - `FB-DETAIL`: item 4's pilot on the Bruiser, stage-by-stage attribution, the levers, and a "Rollout recipe" in its calls file. Tripo ceiling 85, Gemini 4.
+  - Their worktrees are `.worktrees/m6-fb-<key>`, on branches `m6/fb-<key>`.
+  - **If cut off:** rerun build.js with the same args (each builder resumes from its newest `wip:` commit).
+- **Next:**
+  1. Merge each package as it lands (the preset, the atlas and the ratchet), then the lead's look at its captures.
+  2. Send Game-boy the Bruiser's A/B stills.
+  3. Phase 2: roll the recipe out to the Kicker, the Thug, Ox and the Punk, one builder each, owning only its own character's files.
+  4. One review round (chars and world/feel on Opus, code on Sonnet), one fix wave, the suite and perf.
+  5. README's "ruled by Game-boy at his M6 playtest", update PR #6, and the DM with the run command.
+  6. Merge only on his word.
+- **Usage at launch:** 5-hour 0%, weekly 34%. The watcher `local_a81a721f` is alive.
+
+### 2026-11-05 03:05 CST: Milestone 6 delivered; PR #6 open; waiting on Game-boy's play and sign-off
+- **The perf fix is merged** (`c2b68c1`, branch `m6/fix-final-perf`). The cause was the trim shader writing `ALPHA_SCISSOR_THRESHOLD` on one branch, which made all 330 kit meshes alpha-clip: no depth prepass, and the full fragment in every shadow cascade.
+  - It is now split: an opaque `trim()`, and `trim_scissor()` for the chain-link's wire alone.
+  - The car, the tank and the dumpster cast their shadow from a coarser shadow-only copy (new group Level > Draw cost).
+  - The bench gains renderer counters and the acts "Perf: counters" and "Perf: inventory".
+  - The tour stills before and after are pixel-identical at 15 of 20 poses. The lead's look at the chain-link fence and the car confirms it.
+  - The calls are in `docs/milestones/M6-calls/fix-final-perf.md`.
+- **Suite:** 1936/1936 in 366 s, with 0 error lines and every ratchet key at 0. The preset is regenerated (603 values), and the atlas is current.
+- **Frame time** (interleaved, vsync on, load 3-4; reports in `captures/perf_compare/20261105-022216` and `-024739`):
+  - **The level walk** against 910448e: 9.43 to 10.87 ms, **+15.3%**, 0.3 points over the plan's 15% line. p95 14.16, and every soft bar is ok.
+  - **"Perf: counters"**: +15.4%.
+  - **Six with ragdolls** against main: +12.3%.
+  - **For Game-boy:** accept it, or pick a visible lever (the costs are in the calls doc).
+- **A fact-check** of README, the PR body and ARCHITECTURE (workflow `wf_d59b1d6d-d29`, 16 Sonnet agents) checked 162 claims and found 13 errors; the skeptics refuted none. All are corrected (`30191a8`):
+  - the boss is 29,298 triangles, and his gloves are slot 54;
+  - the arena clear times are 131/174/108 s (the "132/175/111" in the 19:15 entry are the movie lengths);
+  - the voices' picks file;
+  - the placeholder allow list;
+  - the chain swings on the pipe's poses;
+  - the held weapon is out of view in first person;
+  - Gemini used 55 images in all (19 of them concepts).
+- **PR #6** (https://github.com/mikedtcm22/beat-em-up-PoC/pull/6) is open, mergeable, with no CI. **Never merge it without Game-boy's sign-off.**
+- **The worktrees are pruned** (all 23). Their local captures are in `captures/m6-worktrees/<name>/` (3.4 GB, never committed). Every branch is on origin.
+- **Sent to Game-boy** (Slack, about 03:10): the run command, the audition keys, the PR, the judgement calls, and two open questions: keep the near arm, and accept the frame time.
+- **Usage at this point:** 5-hour 7%, weekly 33%. The watcher `local_a81a721f` is alive (last active 07:49Z).
+- **Next:** wait for Game-boy's play. Then act on his rulings (a FEEDBACK package as in M5, if needed), and merge only on his word.
+
+### 2026-11-04 20:55 CST: the fix wave merged (1931/1931); perf over the bar, its fixer running; README written
+- **The fix wave is merged** (`752de4e`): 1931/1931 in 376 s, 0 error lines, and the GUT warning is gone. The only conflict was the atlas, which was regenerated.
+  - **art:**
+    - Ox's gloves are now round, from a redrawn front view (2 Gemini images, 1 Tripo glove of 50 credits), in their own near-black slot 54 with the orange wrap.
+    - The Bruiser's steel is `#7a839e`, with a plate ink zone. This one is *partial*: his chest has fewer plate edges than the concept. His strain ratchet moved slightly (logged B-1r).
+    - The 1 m acts frame each head by height (`LookActs.framed_pitch_deg`).
+    - The heavies test frees its director.
+  - **world:**
+    - The roofs' drop floors are dressed: asphalt, sidewalks, lane dashes and 11 car spots.
+    - `section_fog_sky_affect` is 0.3, so the dusk sky shows.
+    - The props are inside the environment band (the car is `car_wine #765a62`).
+    - CratesTop's `draw_box` is off.
+    - The acts settle the light before their first mark.
+    - Sun yaw: street -50, roofs -60, boss -70. Elevation: 38, 36, 35.
+    - LevelSection's defaults come from RoomKit.
+  - **arm:**
+    - The lifted arm gets its own band copy (`look_near_arm_band_1/_2/_mid_level`, Debug).
+    - The hull normals bend at the cut.
+    - The upper arm's stray navy and hair patches are repainted as skin.
+    - Hygiene: `test_damage_look` resets Tuning; ChainSim's and AuditionRoom's numbers are tunables; the ledger test's checks are one shared helper.
+  - **The lead's re-check** from the fixers' captures: the gloves read as gloves, the faces are framed, the sky shows, the drop reads as a street, and the arm is one tan limb.
+  - The paid services in all: Tripo 545 of 900 (balance 1160); ElevenLabs 4,843 of 30,000; Gemini 36 images.
+- **Perf** (§4 step 8; the machine was busy throughout with other apps, at load 3.4-9.2, but every comparison was interleaved):
+  - **The level walk** against `910448e`: mean 12.23 to 14.61 ms (**+19.5%**), p95 16.14 to 18.82, first hit 18.3 to 23.1 ms. Over the 15% line, so it's fix item `final-perf-01`.
+  - **"Perf, six with ragdolls"** against `main`: mean 14.73 to 16.60 ms (+12.7%). Within the line.
+  - The reports are in `captures/perf_compare/20261104-203356` and `20261104-205011`.
+- **Running:** the perf fixer, `review.js` run `wf_21d1d394-f48` (package `perf`, branch `m6/fix-final-perf`). It measures render counters first, takes back draw cost with no visible change, and warms whatever the first hit uses.
+  - **If cut off:** rerun with the same args (`docs/reviews/M6/findings-final.json` now holds only the `perf` package).
+- **README:** the M6 status section and its departures are written (`329b9de`). Its "Frame time" line reads `FRAME_TIME_PENDING`, to fill once perf lands. CLAUDE.md quotes M6's suite numbers.
+- **Sent to Game-boy** (Slack, 21:15): the fixes, plus stills of Ox, the near arm A/B and the world. The near-arm keep/off question is still open: the arm is on by default, and `look_near_arm` gives M5's view.
+- **Next:**
+  1. Merge perf, then the suite and an interleaved perf run.
+  2. Fill README's frame-time line.
+  3. Open the PR (never merge it without sign-off).
+  4. Send the DM with the run command and the audition keys.
+  5. Rewrite HANDOFF's takeover prompt for M6, and prune the worktrees.
+
+### 2026-11-04 19:45 CST: the final review done (8 survive); the fix wave running
+- **The review** (`wf_9935c9e9-811`, about 25 minutes, 28 agents). The findings, verdicts and the lead's rulings are in `docs/reviews/M6/findings-final.json` (`2ec1110`).
+  - **Survived:**
+    - chars-01 (high): Ox's gloves read as black J-hooks curling outward. The source front view was a stretched J.
+    - world-01 (high): the roofs' drop floors are undressed slabs.
+    - chars-02: the 1 m acts cut off the heavies' heads.
+    - chars-03: the Bruiser's steel lights to a pale "bare belly", and his plates have no ink edges.
+    - chars-04: the near arm.
+    - world-02: `fog_sky_affect` defaults to 1, so the dusk sky never shows.
+    - world-03: the props' palette breaks the environment band, and the car's orange shares the enemies' orange.
+    - world-04: a crate is drawn on the dumpster's lid.
+  - **Refuted:** code-01 (the Tuning leak breaks no test), code-02 (the hero's strain ratchet is a percentile effect of the split) and code-03 (the Bruiser's bulk is the logged call H-10).
+  - **Promoted by the lead from the lows:** world-05 (the acts record mid-blend; the "pale plane" was this), world-07 (the sun's yaw sweeps), world-08 (the player's shadow at a low sun), code-01, code-04 (the heavies test leaks an EnemyDirector), code-05 items 1-4 (script numbers) and code-07 (the ledger test's teeth).
+  - **Left as they are:**
+    - chars-05: the Thug's pipe is end-on at 1 m (M5's carry, polish).
+    - chars-06: the boss's legs.
+    - chars-07: ragged swatch borders.
+    - world-06: the rails are straight; it's perspective.
+  - **Confirmed fine:** the Thug's pipe in hand, the chain, the glint at 10 m, the OX PELLERIN bar, D6 on every no-blood swatch, the veteran at 5 m, the budgets, every `--check` rebuild, the ledgers (Tripo 495/900, ElevenLabs about 4.9k/30k), no key anywhere, and LFS.
+- **Running:** the fix wave, `review.js` run `wf_6670133f-d3e` (no lenses; `findings_path` plus three packages, `fix_concurrency` 3):
+  - `art`: chars-01, -02, -03, code-04 (Tripo at most 120, Gemini 8, Blender);
+  - `world`: world-01, -02, -03, -04, -05, -07, -08, code-05 item 4;
+  - `arm`: chars-04, code-01, code-05 items 1-3, code-07 (the hero's Blender rebuild).
+  - Their worktrees are `.worktrees/m6-fix-final-<key>`, on branches `m6/fix-final-<key>`.
+  - **If cut off:** rerun with the same args (each fixer resumes from its newest `wip:` commit).
+- **The near arm:** Game-boy hasn't answered. The fix keeps it on by default, and the `look_near_arm` switch still gives M5's view.
+- **Next:** merge the three fixes (the atlas, the preset, the ratchet, the suite). Then the re-check of the changed items (send the art and arm A/B stills), perf on a quiet machine, README, the PR, and the DM.
+
+### 2026-11-04 19:15 CST: phase 3 recorded (19 acts, 0 errors); the final review running
+- **Recorded** into `captures/m6-final/` (git-ignored): all 19 acts, with 0 error lines. The held-back runs cleared every arena: street 132 s, roofs 175 s and boss 111 s (M5: 136, 183 and 108).
+- **The lead's look:**
+  - The Thug holds his pipe (`props_weapons/sheets/p3/stills/p3_f284_thug_pipe.png`).
+  - The chain reads, and the boss's bar reads OX PELLERIN.
+  - The seams are clean.
+  - One roof drop still shows a pale flat plane, and the catwalk drop is a featureless dark floor.
+  - The roofs' edge-guard stanchions lean.
+- **The lead's fix** `e8ebdad`: the help overlay names the sound room's keys as they read (`] [`, `1-9, 0 =`, `-`), and the long row is shortened.
+- **Running:** the final review, `tools/workflows/review.js` run `wf_9935c9e9-811` with `docs/reviews/M6/args-review-final.json` (base `e8ebdad`). It has three lenses, `chars` (Opus), `world` (Opus) and `code` (Sonnet), plus skeptics for high and medium findings. With `partition: false`, it returns the survivors, and the lead partitions them.
+  - **If cut off:** rerun with `resumeFromRunId` (same session) or with the same args (a new session).
+- **Next:**
+  1. Partition the survivors into at most 3 fix packages, and add the open items not raised (the unfreed children, Game-boy's near-arm answer).
+  2. Run the fix wave (`review.js` with `findings_path` and packages), then re-check the changed items.
+  3. Perf on a quiet machine: `tools/perf_compare.sh --bot res://tests/bot/level_bot.tscn --act "Perf: level walk" --runs 3 910448e HEAD`, and "Perf, six with ragdolls" against `main`.
+  4. README's M6 departures, the PR, and the DM.
+
+### 2026-11-04 18:50 CST: phase 2 merged (1919/1919); every inventory key is 0; stills sent; phase 3 recording
+- **Phase 2 is merged** into `m6/full-art-audio` and pushed (`28b1be0`): 1919/1919 in 364 s, 0 error lines. One GUT warning: `test_art_heavies.gd` leaves 2 unfreed children (a phase 3 fix item).
+  - The merge order was SFX, WEAPONS, then A6's floor weapon (`7f7c7cb`: the pickup is now `Pickups/ChainBigShutter` with `weapon_scene` = `bike_chain.tscn`); a suite there passed 1892/1892. Then HEAVIES, CREW, ARM and DRESS, merged in a scratch worktree while that suite ran, fast-forwarded, and one suite on all of it.
+  - The conflicts, all kept both sides:
+    - `tuning_data.gd`'s Debug tail;
+    - `roofs.tscn`'s ext_resources (the chain and DRESS's scripts);
+    - `blender_fit.py`: HEAVIES's sole flatten is step 5e, CREW's sole lift 5f;
+    - the ratchet: the lower numbers, then re-measured;
+    - the veteran atlas: regenerated.
+  - **The ratchet:** every key is 0 in mission1, crowd_room and test_room, and globally (generated_sfx 0, empty_slots 0). Done-when row 1 holds.
+  - **The paid services:**
+    - Tripo: M6 has spent 495 of its 900 stop (PROPS 150, HEAVIES 180, CREW 165), and the balance is 1210 (floor 700).
+    - ElevenLabs: 4843 credits on the ledger, of the 30,000 stop.
+    - Gemini: 34 images.
+  - Phase 2 cost about 22 points of the 5-hour window (21% to 43%), against its estimate of 71.
+- **Sent to Game-boy** (Slack DM, 18:48):
+  - stills: the four characters beside their concepts, two lineups, the near-arm A/B, and the street and roof tours;
+  - the audition room's keys and the run command.
+  - **He is asked one thing: the near arm.** Keep it and fix the shading (the lead leans this way), or turn it off for M5's view (`look_near_arm`). The arm sits in the shadow band: violet, with an ink step at the cut, and a navy shoulder shard in the uppercut.
+- **The lead's look** (from the packages' stills):
+  - The Kicker and the Thug read as their concepts.
+  - The Bruiser's steel and purple blotch at 1 m, and his head is out of frame at 1 m.
+  - Ox Pellerin reads, but his gloves are smaller than the concept's. The 1 m act's bar read "BOSS", recorded before the rename; the lineup reads "OX PELLERIN", and every spawn path goes through `make_enemy`.
+  - The four silhouettes are distinct in the lineups.
+  - The tours read as a dusk street and copper roofs; the tanks' rust is blotchy.
+  - The near arm: as above.
+- **Items for phase 3's review and fix wave** (from the builders and the lead):
+  - the help overlay's "BracketRight"/"Minus" and its overflowing line;
+  - the Bruiser's blotches; the boss's small gloves;
+  - the held weapon is out of view in first-person swings (as the pipe always was), so the chain's whip is unseen in hand;
+  - DRESS:
+    - the rooms keep Tuning's grey sun;
+    - the facade has no lit windows;
+    - the boss deck reads flat;
+    - the roofs have no AC units;
+    - the section-light blend in motion is unjudged;
+  - frame time: +16.5% mean (10.04 to 11.70 ms) against `910448e`, on a loaded machine, so re-measure quietly;
+  - `test_art_heavies.gd`'s unfreed children.
+- **Running:** the phase 3 recording (§4 step 5), `bash <scratchpad>/record_final.sh`, into `captures/m6-final/`.
+  - Two lanes: the crowd bot's acts (the six "Look: <label> at 1 m", lineup, heavies, weapons, props, props weapons, own limbs, rooms tour) and the level bot's acts (tour, drops, seams, and "Run: held back" 0-2, 3-5, 6).
+  - The lanes log to `captures/m6-final/lane_*.log`.
+  - **If cut off:** rerun the missing slugs with `tools/record_acts.sh` (the script's lines are in this entry's commit message).
+- **Next** (§4 steps 6-9):
+  1. The lead's look at `captures/m6-final`.
+  2. Write `docs/reviews/M6/args-review-final.json` (lenses `chars`, `world`, `code`; the items above in `common_note`) and run `tools/workflows/review.js`.
+  3. One fix wave and a re-check.
+  4. Perf on a quiet machine.
+  5. README's M6 departures, the PR, and the DM.
+- **Usage now:** 5-hour 44% (it resets at 19:50 CST), weekly 22%.
+
+### 2026-11-04 16:40 CST: phase 1 merged (1872/1872); stills and the audition room sent; phase 2 running
+- **Phase 1 is merged** into `m6/full-art-audio` and pushed (`56b960c`): 1872/1872 in 324 s, 0 error lines.
+  - The merge order was LOOKS, CHAIN (`5e8e757`), PROPS (`a337809`), KIT (`d342e02`) and AUDIO (`56b960c`). After each merge: the atlas, the preset, the ratchet and the full suite.
+  - The lead's fixes at merge:
+    - `test_m6_no_placeholders.gd` skips a hidden proxy cylinder, so `cylinder_weapons` fell to 0.
+    - `test_kit.gd` sees PROPS's art: the trim-material count skips StaticArt, and the fallback test uses an id with no scene.
+    - `.gitattributes` gives the ElevenLabs ledger a union merge.
+  - The ratchet now: mission1 primitive_bodies 4, tints 1, boxes 0 (was 489), cylinder_weapons 0, second_weapon 1; crowd_room 4, 0, 74, 0, 0; test_room 4, 1, 27, 0, 0; global generated_sfx 9, empty_slots 16 (AUDIO declared the slots, and SFX takes them to 0).
+  - The paid services: Tripo 150 credits (PROPS; the balance is 1555, and M6 has spent 150 of its 900 stop); ElevenLabs 1649 of 40,000. **The ElevenLabs rate is measured at 10 credits a second, not 40.** Gemini: 5 images.
+  - The phase 1 worktrees `.worktrees/m6-{chain,kit,props,audio,looks}` still hold their captures; prune them after M6.
+- **Sent to Game-boy** (Slack DM, 16:35): the cap's blood A/B, the veteran, street A1's kit and the props, weapons and dummy; the audition room's keys (training room: `]`/`[` page the banks, `1`-`9` play a take, `=` plays the bank, `-` swaps old and new) and the run command. Nothing waits on him.
+- **The lead's look** (from the packages' stills):
+  - The cap keeps its yellow, and the blood is hard-edged.
+  - The veteran reads at 1 m and 5 m.
+  - A1's brick, windows, cornices and chain-link read as a street; the bricks are chunky.
+  - The car and the tank read at 5 m, but are faceted at 1 m. The AC unit is pale.
+  - The Thug's pipe in hand isn't confirmed in any capture (end-on only).
+  - For the phase 3 review: the audition rows in the help overlay show "BracketRight" and "Minus", and one line runs past the panel's edge.
+- **Running:** phase 2, `tools/workflows/build.js` run `wf_6b1bdf77-3ee` with `docs/reviews/M6/args-P2.json` (SFX, HEAVIES, CREW, DRESS, WEAPONS, ARM; 3 Godot slots, and HEAVIES, CREW and ARM take the Blender slots).
+  - The args now carry phase 1's handover: each package's requests from the calls files, the alpha classes and the measured ElevenLabs rate.
+  - **If cut off:** rerun build.js with the same args (the file). Each builder resumes from its newest `wip:` commit, and a finished package is skipped.
+- **Next** (the plan's §4 step 4):
+  1. Merge each P2 package as it finishes; after each, the atlas, the preset, the ratchet and the full suite.
+  2. After WEAPONS: set `Pickups/PipeBigShutter`'s `weapon_scene` to `bike_chain.tscn` (`roofs.tscn:1117-1119`), rerun `test_m5_roofs.gd`, and lower `second_weapon`.
+  3. After ARM, send its stills. After SFX, send the audition room again. After HEAVIES and CREW, send the four characters at 1 m beside their concepts.
+  4. One post-merge fixer (Sonnet) if needed; HANDOFF; then phase 3 (§4 steps 5-9).
+- **Usage at launch:** 5-hour 21% (it resets at 19:50 CST), weekly 18%. Phase 1 cost about 16 points of the 5-hour window, against its estimate of 44.
+
+### 2026-11-04 15:15 CST: step 0 merged (1766/1766); phase 1 running
+- **Step 0** (`b995e56`): 1766/1766 in 321 s, 0 error lines. `8ef8b28` is the ElevenLabs-only plan change.
+- **Running:** phase 1, `tools/workflows/build.js` run `wf_fa4aea82-d60` with `docs/reviews/M6/args-P1.json` (CHAIN, KIT, PROPS, AUDIO, LOOKS; 3 Godot slots, and CHAIN and PROPS share the 2 Blender slots).
+  - The worktrees are `.worktrees/m6-<key>`, on branches `m6/<key>`.
+  - **If cut off:** rerun build.js with the same args. Each builder resumes from its newest `wip:` commit, and a finished package (its "M6 <KEY>:" commit) is skipped.
+- **Next** (the plan's §4 step 2):
+  1. Merge each package, in any order. After each: `godot --headless -s tools/gen_default_preset.gd`, `python3 -I tools/pipeline/gen_palette.py`, re-measure the placeholder ratchet, and run the full suite.
+  2. Send LOOKS's A/B stills.
+  3. Play the audition room after AUDIO, and send its run command.
+  4. Then phase 2 (`args-P2.json`: SFX, HEAVIES, CREW, DRESS, WEAPONS, ARM).
+- **Usage at launch:** 5-hour 3% (it resets at 19:50 CST), weekly 15%.
+
+### 2026-11-04 15:00 CST: the M6 plan is written; step 0 done (suite running); phase 1 launches next
+- **The plan:** [milestones/M6-plan.md](milestones/M6-plan.md) (649 lines), committed `49914b4` with its four codemaps (`docs/milestones/M6-codemap/`) and the args `docs/reviews/M6/args-P1.json`, `args-P2.json` and `args-P2b.json`.
+  - It came from workflow `wf_8346b955-f3c`: four Sonnet readers, an Opus planner, an Opus critic (17 issues, 4 high) and an Opus xhigh synthesis that applied them all. About 1.65M sub-agent tokens.
+  - The lead read the whole plan, and it stands as written.
+- **The packages** (their estimate in % of a 5-hour window):
+  - **Phase 1:** CHAIN 10 (the roster: M4's tests and chain per character; the dummy), KIT 10, PROPS 9 (the static-prop path; the pipe, the bike chain's parts, the car, dumpster, AC unit and water tank; Tripo at most 270), AUDIO 8 (ingest, manifest, ElevenLabs voices at most 6000 credits, the audition room), LOOKS 7 (D6 blood per swatch, D4 the veteran's palette, `test_m6_no_placeholders.gd`).
+  - **Phase 2:** HEAVIES 13 (Tripo at most 350), CREW 12 (250), DRESS 12, WEAPONS 8, ARM 6.
+  - **SFX 6** (phase 2, after AUDIO): every sound effect that isn't a voice, from ElevenLabs (ceiling 20,000; Game-boy's call at 15:05).
+  - **All of M6:** about 175% of a 5-hour window (three windows), 17-21 weekly points.
+- **Changes from the approved proposal** (method, not spec):
+  - D2: the kit modules are Godot-procedural `ArrayMesh`es, not Blender-scripted;
+  - new packages PROPS and ARM;
+  - D7 (the near arm) moved to phase 2's ARM.
+  - Game-boy is told.
+- **Step 0** (the lead), not yet committed: the full suite runs first, into `captures/m6-step0/suite.out`.
+  - The signals `section_entered`, `barrier_moving` (emitted only when a barrier's state changes) and `weapon_landed`.
+  - `LevelSection.ambience`, `MoveData.impact_sfx`.
+  - `punk.json` narrowed to 16-21 and `player.json` to 32-37 (`gen_palette.py --check` says the atlas is current).
+  - The ARCHITECTURE.md section "Full art and audio (Milestone 6)" with every package's heading, and the ASSETS.md headings.
+- **Next:**
+  1. The suite green: commit step 0 and push.
+  2. `get_usage`.
+  3. Launch P1: `tools/workflows/build.js` with `docs/reviews/M6/args-P1.json` (3 Godot slots; CHAIN and PROPS take the Blender slots).
+  4. Merge each package as it finishes (the plan's §4 step 2).
+- **Usage:** a new 5-hour window, 2% (it resets at 19:50 CST); weekly 15%.
+
+### 2026-11-04 14:25 CST: CONCEPTS merged; the pick sent; the plan workflow still running
+- **CONCEPTS** (`448496f`, merge `c24da33`, about 0.21M sub-agent tokens) made 19 Gemini images with no retries.
+  - The sheets are in `assets/source/concepts/m6/sheets/`: kicker, thug, bruiser, boss (with the names), weapon, moods.
+  - Its calls are in `docs/milestones/M6-calls/CONCEPTS.md`. The flaws it kept:
+    - Kicker A's eyes show skin;
+    - the boss's charcoal reads as light slate in all three;
+    - boss A reads as a puffy suit.
+- **The lead's look:** the frames, A-poses and colour identities hold, and there's no red. No boss copies the reference's masked, bare-chested heavy.
+- **The pick went out** at 14:25 CST, in the session chat (the six sheets) and on Slack (DM `D0AQUKX5DB6`, one stacked image, file `F0CEWQPH38E`). It asks for:
+  1. a design per type;
+  2. the boss's name;
+  3. the weapon;
+  4. a street mood (A/B) and a roof mood (C/D).
+  - Also asked: the prune and the Tripo account type.
+  - **Never pick for him.**
+- **Still running:** the plan workflow `wf_8346b955-f3c`.
+
+### 2026-11-04 14:05 CST: Game-boy said go; CONCEPTS and the plan workflow are running
+- **Game-boy's answers** (session chat):
+  - "OK we're ready to begin": the proposal is approved.
+  - **Audio option (a):** Sonniss for the hit stack and the world sounds, ElevenLabs for the voices.
+  - **ElevenLabs Starter** ($1, a commercial licence, 30,000 credits a month). The key is `ELEVEN_LABS_API_KEY`, and it works.
+  - **Tripo** is topped up to 1,705.
+  - **Ultracode** is on.
+- **Committed** (`ddb0a06`):
+  - `tripo_prices.json`'s policy is now M6: start 1705, floor 700, stop 900;
+  - README's key row and `.env.example`;
+  - `docs/reviews/M6/brief-CONCEPTS.md` and `args-P0.json`.
+- **Running:**
+  1. **CONCEPTS:** `build.js` run `wf_29312051-0d8` with `args-P0.json`, worktree `.worktrees/m6-concepts`, branch `m6/concepts`, Gemini images only (at most 30). It makes:
+     - 3 concepts each for the Kicker, Thug, Bruiser and boss;
+     - 3 boss names;
+     - 3 weapons;
+     - 2 street moods and 2 roof moods;
+     - the sheets and a DM draft.
+     - **If cut off:** rerun build.js with the same args.
+  2. **The plan workflow** `wf_8346b955-f3c` (script `m6-plan`):
+     - four Sonnet readers write `docs/milestones/M6-codemap/` (art-chain, audio, level-env, weapons-looks);
+     - an Opus planner writes `docs/milestones/M6-plan.md` and `docs/reviews/M6/args-P1.json`/`args-P2.json`;
+     - then an Opus critic, then the Opus xhigh synthesis.
+     - **If cut off:** in this session, rerun its script with `resumeFromRunId`. In a new session, finish the plan from whatever codemaps exist.
+- **The lead's correction for the plan:** the Sonniss bundle (tens of GB) must live **outside the repo** (say `~/sfx-library/sonniss/`, the path read from an env var or an argument). Inside it, Godot would import every WAV and git would see it. Only the picked, trimmed files are committed.
+- **Asked of Game-boy:**
+  - prune the 90 M3-M5 worktrees (62 GB). All their HEADs are on origin, and the only uncommitted files are reviewer scratch, a stray log, M4's chain report stills and M4's throwaway act edit;
+  - download the Sonniss bundle (28 GB free before the prune);
+  - the Tripo account type (it gates phase 2's Tripo tasks).
+- **Next:**
+  1. CONCEPTS done: look at the sheets, then send the DM (Slack D0AQUKX5DB6, and in the session chat).
+  2. The plan done: review it, commit, and launch phase 1 with `args-P1.json`.
+  3. Rewrite the takeover prompt for M6.
+
+### 2026-11-04 13:30 CST: M6 working session started; the proposal is written; waiting on Game-boy's sign-off and four answers
+- **This session** is titled "Beat-em-up: working session". The M5 session is "Beat-em-up: M5 (signed off)". The watcher [Beat-em-up: usage watcher](#local_5fa6c438-0fb3-4c35-b5b8-9f561074267b) is still running.
+- **Branch:** `m6/full-art-audio`, cut from `main` at `78223dc`.
+- **The proposal:** [milestones/M6-proposal.md](milestones/M6-proposal.md).
+  - What's still placeholder.
+  - The phases:
+    - 0: concepts and one DM;
+    - 1: KIT, AUDIO and LOOKS, which need no picks;
+    - 2: CREW, HEAVIES, DRESS and WEAPONS, after the picks;
+    - 3: the review round.
+  - Decisions D1-D9, and the checkable done-when.
+- **Waiting on Game-boy:**
+  1. sign-off;
+  2. the audio source (Sonniss plus ElevenLabs for the voices is recommended);
+  3. Tripo: about 700-900 credits. The live balance is 1,205, and M4's floor of 700 leaves only 505, so he either lowers the floor to 250 or tops up. The licence (account type) is still open;
+  4. Ultracode on.
+- **Next on his yes:**
+  1. The lead writes `docs/milestones/M6-plan.md` (self-contained briefs), and one Opus critic at medium reviews it.
+  2. Args go in `docs/reviews/M6/`.
+  3. Launch CONCEPTS, then phase 1.
+  4. Rewrite the takeover prompt for M6.
+- **Usage at start:** 2% of the 5-hour window (it resets at 14:50 CST) and 12% weekly (it resets 11-09 04:00 CST).
+
 ### 2026-11-04 13:45 CST: Game-boy signed off Milestone 5; PR #5 merged; M6 waits for his go
 - **Game-boy (session chat):** "Signed off". He played the build with his two playtest changes in.
 - **README:** M5's "decided by default" departures now read "accepted by Game-boy with M5's sign-off, 2026-11-04". His two playtest rulings (the Kicker's opportunistic flank, and behind spawns that don't wait) are in their own section.
@@ -2167,6 +2954,28 @@ Every approved spec change so far is in README.md, "Where M1 departs from the sp
 - **Milestone 4 toolchain (2026-10-26):** skip Mixamo for now and assess later (Tripo auto-rig first); Tripo for 3D generation; Google Gemini for images; Blender installed from the command line (5.2.2 LTS).
 - **M4 concept pick (2026-10-27 09:00 CDT, in the session chat):** Street Punk A and Hero C. His words: "Eventually, I'll want to allow for selecting from a menu of hero options, but for this demo, let's go with Hero C. I like Street Punk A, as well." The hero menu is a later milestone's feature; M4 builds Hero C only, with everything hero-specific in files.
 - **Process:** at each usage limit, hand off to Game-boy's second Claude account. Never assume the same session resumes.
+- **Milestone 6 go (2026-11-04 14:00 CST, session chat):** "OK we're ready to begin". Approved: `docs/milestones/M6-proposal.md`, and his answers:
+  - **Audio option (a):** the Sonniss GDC bundle for the hit stack and the world sounds; ElevenLabs for the voices.
+  - **ElevenLabs:** upgraded to Starter, "if for nothing else than not having to deal with re-doing sounds not licensed for commercial use". Key `ELEVEN_LABS_API_KEY`.
+  - **Tripo** topped up to 1,705 credits.
+  - **Ultracode** on.
+- **M6 picks (2026-11-04 14:35 CST, session chat), word for word:** "Kicker: C / Pipe-Thug: B / Bruiser: A / Boss: C / Boss Name: C / Second Weapon: A / Moods: A and C". That is (sheets in `assets/source/concepts/m6/sheets/`):
+  - **Kicker C** (`kicker_c.jpg`): a hooded lime vest, a lime bandana, a black cap, a ponytail, wrapped forearms, black cargo shorts over lime leggings, black boots.
+  - **Pipe Thug B** (`thug_b.jpg`): a black beanie, a yellow-patterned bandana, a sleeveless olive hoodie with a black chest strap and a yellow buckle, yellow wrist wraps, olive trousers with yellow bands, black boots.
+  - **Bruiser A** (`bruiser_a.jpg`): a purple hood with a steel visor and a purple mask, a padded purple jacket over steel chest plates, steel forearm guards and knee pads, a cream belt, black trousers, steel-capped boots.
+  - **Boss C** (`boss_c.jpg`), named **Ox Pellerin**, the underground-fight champion: a hooded charcoal robe with orange trim, an orange champion's belt, boxing gloves with orange wraps, shorts over black tights, laced boots. Darken the charcoal: it rendered as light slate. A web check found no game or film character of that name.
+  - **Second weapon A** (`weapon_a.jpg`): a bike chain and padlock. A short sideways whip, the padlock landing last, medium reach.
+  - **Moods:** street **A** (`mood_street_a.jpg`: warm brick, sodium street lamps, rust, wooden crates) and roof **C** (`mood_roof_a.jpg`, since the sheet relabels the roofs C/D: warm brick parapets, orange dusk, water tanks, ducts, skylights, AC units).
+- **The Tripo licence (2026-11-04 14:45 CST, session chat):** the key is on Tripo's **paid API platform**, with credits he bought ("Yes, paid API"). Tripo's help page gives paid users full rights to their outputs, including commercial use, and keeps rights only to free users' outputs. So ASSETS.md records each Tripo model as "Tripo API (paid credits): owned by the project, commercial use". The phase 2 gate is cleared.
+- **The prune (2026-11-04 14:50 CST):** "Yes, prune them". All 90 M3-M5 worktrees are removed, and 89 GB is free.
+- **The second prune (2026-11-08 13:50 CST, planning session chat):** "anything that isn't currently required to run the latest iteration of the Beat-em-up game can go". All 33 M6 worktrees are removed (each clean, with its commits pushed; the local branches stay), and `captures/` is emptied except `.gdignore` and `captures/m6-look/`. 92 GB is free.
+- **Every sound from ElevenLabs (2026-11-04 15:05 CST, session chat):** "Why don't we just use ElevenLabs for all sound instead? Would the 40k credits I have be enough to cover that?" This replaces option (a)'s Sonniss half.
+  - The account is Starter with 40,000 credits (none used; it renews about Dec 3).
+  - **The lead's estimate:**
+    - every pool comes to about 160 s of audio per take (the voices about 46 s, the hit stack and blocks about 16 s, the weapons about 11 s, the barriers about 24 s, the stings about 3 s, the two beds about 60 s);
+    - at 40 credits a second that's about 6,400 credits a take, about 19,000 with 3 candidates per clip, and about 24,000 with a redo round after his audition.
+  - **The plan:** SONNISS became SFX (phase 2, ceiling 20,000). D19 is rewritten, and the M6 ElevenLabs stop is 30,000 (`max_call` 1200). AUDIO's tools are made general. `args-P2b.json` is gone.
+- **Still open:** nothing.
 
 ## Usage watcher
 A separate low-cost Claude Code session, "Beat-em-up: usage watcher". Start it from the working session with `start_session`: initiation `user_asked`, `model` claude-haiku-5-5, `effort` low, `use_worktree` false, and the prompt below verbatim.
@@ -2205,9 +3014,9 @@ Otherwise say nothing beyond one short line: the two percentages and the next ch
 **Resume after a limit.** The working session creates the resume task itself as the last step of a handoff (the watcher's step 3 is the fallback when it was cut off first): `mcp__scheduled-tasks__create_scheduled_task` with the fields in the watcher's step 3, firing 10 minutes after the window that stopped work resets. The task wakes the working session if it still exists, which keeps its context, or else starts a takeover. Its prompt, verbatim:
 
 RESUME-PROMPT-START
-Resume the beat-em-up Milestone 5 work after a usage reset. The project is /Users/arachne/repos/beat-em-up-PoC (Godot 4.7.2, GitHub mikedtcm22/beat-em-up-PoC). Game-boy (the owner) asked for the work to continue across usage limits without waiting for him, until Milestone 5 is done.
+Resume the beat-em-up Milestone 6 work after a usage reset. The project is /Users/arachne/repos/beat-em-up-PoC (Godot 4.7.2, GitHub mikedtcm22/beat-em-up-PoC). Game-boy (the owner) asked for the work to continue across usage limits without waiting for him, until Milestone 6 is done.
 1. Call mcp__ccd_session_mgmt__get_usage (load it with ToolSearch). If either the "5-hour limit" or the "Weekly · all models" window is still at 90% or more, create a copy of this task with mcp__scheduled-tasks__create_scheduled_task (a new taskId starting "beat-em-up-resume-", fireAt that window's resetsAt plus 10 minutes, the same prompt) and stop.
-2. Call mcp__ccd_session_mgmt__list_sessions (load it with ToolSearch). If a session titled exactly "Beat-em-up: working session" is listed and not archived, send it with mcp__ccd_session_mgmt__send_message: "Scheduled resume: the usage window has reset. Check get_usage, make sure a usage watcher is running (docs/HANDOFF.md, 'Usage watcher'), then resume Milestone 5 from the newest entry in docs/HANDOFF.md." If the result says "delivered" or "queued", you're done: say so in one line and stop.
+2. Call mcp__ccd_session_mgmt__list_sessions (load it with ToolSearch). If a session titled exactly "Beat-em-up: working session" is listed and not archived, send it with mcp__ccd_session_mgmt__send_message: "Scheduled resume: the usage window has reset. Check get_usage, make sure a usage watcher is running (docs/HANDOFF.md, 'Usage watcher'), then resume Milestone 6 from the newest entry in docs/HANDOFF.md." If the result says "delivered" or "queued", you're done: say so in one line and stop.
 3. Otherwise you are the new working session: follow the takeover prompt in docs/HANDOFF.md (the "Takeover prompt" section) exactly, starting with renaming this session "Beat-em-up: working session".
 RESUME-PROMPT-END
 
@@ -2277,43 +3086,30 @@ If no watcher is running, for example after an account switch, start one with th
 Game-boy pastes this into a new account's session. Keep the "Next steps" list current at every handoff; the rest changes rarely.
 
 ```
-You're the new working session for a Godot 4.7.2 project: a first-person beat-em-up proof of concept at /Users/arachne/repos/beat-em-up-PoC (GitHub: mikedtcm22/beat-em-up-PoC). I'm Game-boy, the owner. Milestones 1-4 are signed off and merged into main. Earlier sessions did that work and handed off; the repo is the source of truth. This session runs Milestone 5 (SPEC §12): the level blockout.
+You're the new working session for a Godot 4.7.2 project: a first-person beat-em-up proof of concept at /Users/arachne/repos/beat-em-up-PoC (GitHub: mikedtcm22/beat-em-up-PoC). I'm Game-boy, the owner. Milestones 1-5 are signed off and merged into main. Earlier sessions did that work and handed off; the repo is the source of truth. This session continues Milestone 6 (SPEC §12): full art and audio, done when no placeholder assets remain.
 
 Start by doing these, in order:
 1. Rename this session to "Beat-em-up: working session" (mcp__ccd_session_mgmt__set_session_title); the usage watcher finds you by that title.
-2. Read CLAUDE.md, then the newest entries of docs/HANDOFF.md (newest at the top) and its section "Model, effort and process rules from Milestone 5 on". Then read docs/milestones/M5-inputs.md (my calls for M5) and docs/SPEC.md §7, §9 and §12. Look at the level reference images in reference/dd2-nes-mission1/. Search docs/ARCHITECTURE.md for what you need rather than reading it whole.
+2. Read CLAUDE.md, then the newest entries of docs/HANDOFF.md (newest at the top): its newest "Next" list is where you pick up. Then read docs/milestones/M6-plan.md §1 (the decisions), §4 (merge order and phase 3) and §5 (the done-when). Search docs/ARCHITECTURE.md ("## Full art and audio (Milestone 6)") for what you need rather than reading it whole.
 3. If no usage watcher is running (list your sessions), start one exactly as docs/HANDOFF.md describes under "Usage watcher".
 4. Check usage (mcp__ccd_session_mgmt__get_usage) before every launch.
 
-HOW TO SPEND THE WEEK (I want to get as far through the milestones as this week's limit allows, at M4's quality):
-- Follow HANDOFF's "Model, effort and process rules from Milestone 5 on" table:
-  - Opus at high effort for you, the plan and the visual review lenses;
-  - Sonnet at high for builders, fixers and the code/test/pipeline lenses;
-  - Sonnet at medium for skeptics, only on medium and high findings;
-  - Haiku at low for gates.
-  - Extra effort only for the plan's final synthesis.
-- Use the runners tools/workflows/build.js and tools/workflows/review.js (milestone: 5); keep args files in docs/reviews/M5/.
-- Your own look first, then at most 3 review lenses, one fix wave, and a targeted re-check of only what changed.
-- Record once per round with tools/record_acts.sh and pass it as captures_dir. Keep image budgets. Write self-contained briefs with their own reading lists, and batch small fixes into one fixer.
-- Ultracode (if I turn it on) doesn't lift those caps.
+HOW TO WORK (as in M5):
+- Follow HANDOFF's "Model, effort and process rules from Milestone 5 on": Opus at high for you and the visual lenses; Sonnet at high for builders, fixers and code lenses; Sonnet at medium for skeptics; Haiku at low for gates.
+- The runners are tools/workflows/build.js and tools/workflows/review.js (milestone: 6); the args and findings files are in docs/reviews/M6/. Record once per round with tools/record_acts.sh.
 - Work up to the watcher's 90% handoff; size each launch to the headroom below 90%.
 
-MILESTONE 5:
-- Work on branch m5/level-blockout: it's already cut from main, and its first commit is the M5 setup (the usage rules, the runners, tools/record_acts.sh). One PR into main at the end; never merge it until I've played it and signed it off.
-- Plan with one Opus planner and one Opus critic, into a short docs/milestones/M5-plan.md where each package's brief is self-contained.
-- The first package is the attack-arc director change in M5-inputs.md:
-  - a per-archetype attack arc fixed when the enemy engages, after about a 0.5 s grace period;
-  - a full arc means waiting back from the fray inside it;
-  - wider arcs for trickier types and for later variants.
-  - Re-measure M3's readability metrics and the rear warning's tests.
-- Then the encounter plan, which needs my approval (SPEC §12): DM it to me on Slack (Michael, U0AQMKKBL93, DM D0AQUKX5DB6). It should show the difficulty progression level by level, with easy narrow-arc grunts early and mostly all-angle enemies later. Ask me the open rear-warning question in M5-inputs.md with it.
-- Then the graybox level from the reference (SPEC §9): arena locks, spawns, pickups, hazards and the boss arena. Done when the level plays from start to boss.
-- At the end, give me a run command that opens the game in Godot (godot --path /Users/arachne/repos/beat-em-up-PoC) as a code block; GitHub links 404 for me. Add a digest of the key judgement calls, each with the alternative not taken.
+MILESTONE 6:
+- Branch m6/full-art-audio; one PR into main; never merge it until I've played it and signed it off.
+- Paid services only through their tools and inside the policy (plan §3; the ledgers say what's spent): Tripo through tools/pipeline/tripo.py (M6 stop 900 credits, balance floor 700), Gemini through tools/gemini_image.py job files, ElevenLabs through tools/audio/eleven_sfx.py (M6 stop 30000). Never print, log or write a key. Never use the Blender MCP tools (mcp__blender__*): they drive my own open Blender; the pipeline runs Blender headless.
+- Downloaded files are untrusted: run Python on them with python3 -I, keep scripts outside download folders, pass downloads as path arguments.
+- Never pick concepts for me.
+- At the end, give me a run command (godot --path /Users/arachne/repos/beat-em-up-PoC) as a code block, the audition room's keys, and a digest of the key judgement calls, each with the alternative not taken.
 
 Ground rules:
-- Any change to the spec needs my approval. Build the reading that departs least, keep the spec's value reachable as a tunable, and list it in README as decided by default, for my ruling at sign-off.
+- Any change to the spec needs my approval. Build the reading that departs least, keep the spec's value reachable as a tunable, and list it in README ("Where M6 departs from the spec") for my ruling at sign-off.
 - Commit early on branches ("wip:" for unfinished work), push often, and update docs/HANDOFF.md at every phase boundary.
-- When the watcher warns, do the handoff in CLAUDE.md at once, including the resume task. DM me only if something blocks on me.
+- When the watcher warns, do the handoff in CLAUDE.md at once, including the resume task. DM me (Michael, U0AQMKKBL93, DM D0AQUKX5DB6) only if something blocks on me.
 - Judge visual and feel work from recorded first-person captures, not just tests, and show me what you saw.
 - Keep me posted briefly: what's done, what's running, what you need from me.
 ```

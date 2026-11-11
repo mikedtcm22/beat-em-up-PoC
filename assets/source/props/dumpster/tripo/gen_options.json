@@ -1,0 +1,11 @@
+{
+	"model": "v3.1-20260211",
+	"texture": true,
+	"pbr": false,
+	"texture_quality": "standard",
+	"texture_version": "v3.5-20260815",
+	"delight": true,
+	"orientation": "align_image",
+	"face_limit": 12000,
+	"model_seed": 6003
+}

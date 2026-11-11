@@ -8,7 +8,7 @@ One playable level that tests whether a first-person beat-em-up feels good to pl
 godot --path .
 ```
 
-This opens Mission 1 (`game/level/mission1/mission1.tscn`), the graybox level from start to boss: a street, three rooftops and the boss roof, with seven fights in all (the table is in [reference/encounters.md](reference/encounters.md)).
+This opens Mission 1 (`game/level/mission1/mission1.tscn`), the level from start to boss: a street, three rooftops and the boss roof, with seven fights in all (the table is in [reference/encounters.md](reference/encounters.md)).
 - Each fight shuts the way ahead and behind until its last enemy is down. Then the barrier opens and a "GO" arrow points the way on.
 - Stairs take you from the street up to the roofs. You can't fall off an edge, but an enemy you knock over one is out.
 - The boss waits on the top roof and calls in two Punks at half health. "CLEAR!" ends the level.
@@ -16,7 +16,7 @@ This opens Mission 1 (`game/level/mission1/mission1.tscn`), the graybox level fr
 
 F6 cycles the rooms: the level, then the Milestone 3 crowd street, then the Milestone 2 training room, and back to the level.
 - **The crowd street** (`game/level/crowd_room.tscn`) is a 30 m lane with doorways, alleys, a parked car and crates. Waves of up to six mixed enemies repeat for as long as you live, about a third of each from outside your view, and the boss comes in alone after every fourth wave.
-- **The training room** has the player, three training dummies and a pipe. The centre dummy spars: come within 1.7 m in front of it and it steps in and throws a telegraphed jab every couple of seconds, to block (or dodge, or hit it out of its wind-up). To open the editor instead, run `godot --path . -e`.
+- **The training room** has the player, three training dummies, a pipe, a bike chain and the sound audition room (see Milestone 6 below). The centre dummy spars: come within 1.7 m in front of it and it steps in and throws a telegraphed jab every couple of seconds, to block (or dodge, or hit it out of its wind-up). To open the editor instead, run `godot --path . -e`.
 
 | Action | Gamepad (Xbox) | Keyboard + mouse |
 | --- | --- | --- |
@@ -44,13 +44,103 @@ The tuning panel and the cheat menu take every key while open, and the player st
 
 **Combos:** P P P P · P (pause) P, then mash (body-blow flurry into the shove) · P P (pause) P (spinning backfist) · K K K · K (pause) K · P P K · hold P, then release (haymaker). The pause means waiting about a quarter second after a hit finishes before pressing again.
 
-**Other moves:** Jump + K (flying kick), Jump + K at the top of the jump (spin kick), K next to a downed enemy (stomp), LB next to any standing enemy (not while its strike is out; a Bruiser only while it is staggered or its armor is broken, and never the boss), then P (knee) or K (throw). LB over a weapon on the floor picks it up: the Pipe Thug drops its pipe when it is knocked down, and a small "LB" cue shows when you can take it.
+**Other moves:** Jump + K (flying kick), Jump + K at the top of the jump (spin kick), K next to a downed enemy (stomp), LB next to any standing enemy (not while its strike is out; a Bruiser only while it is staggered or its armor is broken, and never the boss), then P (knee) or K (throw). LB over a weapon on the floor picks it up: the Pipe Thug drops its pipe when it is knocked down, a bike chain lies on the top roof, a weapon on the floor glints so you can find it, and a small "LB" cue shows when you can take it.
 
 **Enemy grabs:** a Bruiser's or the boss's grab is telegraphed, and a dodge or a jump gets out of it. Once it has you, mash P or K (8 presses) before its headbutt or slam lands: the holder staggers away and you can't be hit for a third of a second.
 
 **The rear warning:** when an enemy outside your view starts winding up an attack, a red-orange burst flashes in the top-left corner (it is behind you on the left), the top-right (behind on the right), or both (directly behind). It stays until the attack lands or is stopped, so turn, dodge or block.
 
 **Blocking:** hold B (Shift) with no direction to put the guard up; it stops hits from the front (within 60° of where you look) for a little chip damage and drains the guard meter under your health bar. Raise it on reaction to an attacker's wind-up, up to about a quarter second before the hit, for a perfect block ("PARRY!"): no damage, and the attacker staggers, so you can let go of B and grab it. An empty guard meter breaks the guard. P or K out of the guard attacks at once; pressed while a blocked hit pushes you back, it attacks as soon as the push-back ends. Holding B keeps the block: after a hit, a guard break or an attack out of the guard, the guard comes back up while B is still held (a perfect block needs a fresh press of B). Jump and LB do nothing while the guard is up.
+
+## Milestone 6 status: full art and audio
+
+Every enemy, the boss, the level and the sounds are now final art and audio, and nothing in the game is a placeholder except the music loop. Milestone 6 is done when no placeholder assets remain (Spec §12).
+- **The characters** all come through M4's art chain: Gemini concept views, a Tripo model and rig, the headless Blender fit to the game's skeleton, and one shared palette atlas. Each comes from Game-boy's pick:
+  - the Kicker (concept C: a black cap over a lime mask, a lime hooded vest, wrapped forearms);
+  - the Pipe Thug (B: a black beanie, a yellow bandana, an olive hoodie with a strap and buckle);
+  - the Bruiser (A, 2.05 m: a purple padded jacket over steel plates and forearm guards);
+  - the boss, **Ox Pellerin**, the underground-fight champion (C, 2.3 m: a hooded charcoal robe with orange trim, a champion's belt, boxing gloves; 29,298 of his 30,000 triangles).
+  - The veteran Punk is a palette swap now, with a violet vest and orange trousers, instead of an orange tint. The training dummies share one padded look.
+- **Damage marks per swatch:** skin bruises and bleeds, with a hard edge to the blood. A cap, a beanie, a strap, steel or the champion's belt scuffs and darkens, but never takes blood.
+- **The near upper arm:** in the haymaker and the uppercut you see your whole upper arm, lit as one limb with the forearm, where M5 showed the cut end at the elbow.
+- **The level is dressed** after Game-boy's moods, a dusk street and copper roofs:
+  - Every block wears one 2048 px trim sheet: brick, windows, cornices, door frames, roller shutters, chain-link, roof decking and a skyline of facades. The drops look down on a street with parked cars.
+  - The hero props are generated through Tripo: a parked car, a dumpster, AC units and water tanks. The barrier cars are the same car.
+  - Each section has its own sun, fog and sky: the street at dusk, the roofs copper, the boss roof dark violet. They blend over 2.5 s as you cross a seam.
+  - The crowd street and the training room wear the same kit.
+  - The colliders are M5's, unchanged: the art only draws.
+- **The second weapon is a bike chain.** It lies on the top roof in A6; Pipe Thugs still drop pipes.
+  - It keeps the spec's weapon numbers: 10 a swing, a 3-hit chain, it breaks after 8 hits, and a throw does 15. It differs from the pipe in reach and timing, and swings on the pipe's three poses.
+  - Its links and padlock swing in a presentation-only sim.
+  - A weapon lying on the floor glints, so you can find it from 10 m (M5 drew it amber).
+- **Every sound is generated with ElevenLabs** (Game-boy's call): the hit stack, blocks, barriers, weapons, the GO and CLEAR stings, a street and a roof ambience bed, and voices for each enemy type. The music loop is still the placeholder (Spec §1).
+- **The audition room** is in the training room (F6 twice):
+  - `]` and `[` page through the banks.
+  - `1`-`9` and `0` play a take, and `=` plays the whole bank.
+  - `-` swaps between the new sounds and M2's placeholders.
+  - Any take can be replaced by editing one line in its picks file, then running `python3 -I tools/audio/ingest.py --picks <that file>`. The voices (grunts, efforts, KO lines, the player's grunts, the boss's phase lines) are in `assets/source/sfx/eleven/voices.picks.json`, and every other sound is in `sfx.picks.json` beside it.
+- **A/B switches** in F1's Debug group bring an older look back:
+  - `look_marks_per_swatch` (M4's marks);
+  - `look_near_arm` (M5's view);
+  - `kit_draw_graybox` (the graybox);
+  - `section_light_enabled` (one sun);
+  - `weapon_floor_amber` (M5's amber weapons);
+  - `weapon_chain_sim` (a straight chain);
+  - `audio_legacy_bank` (M2's sounds).
+
+**After Game-boy's playtest (2026-11-05):**
+- **The ground no longer flashes.**
+  - The cause was a z-fight: a hidden ground slab under the boss roof sat in the same plane as the street. It now sits clear of every drawn surface.
+  - A new test scans every drawn block in the level, the crowd street and the training room for faces that share a plane. It found 85 more pairs where wall tops and corners met. Where two blocks meet in one plane, one of them now cuts the shared part out of its own drawn mesh (`InsetBlock.yields_to`: 97 cuts on 89 blocks, written by `tools/solve_insets.gd`), and the rooms do the same as they build. The colliders are unchanged. The first fix pulled those faces 2 cm in instead, and the edge ink drew the small steps it left as seam lines; the verification round caught that, and the test now fails on any step too.
+  - The street wears a comic ground: one 2048 px tile over 8 m of flat tones (a pale road, broad worn pools, a few ink-outlined patches) under bold tapered ink (cracks, a manhole, drain grates). It is mirrored on every other tile, so it repeats every 16 m.
+- **GO is silent** (see the departures below).
+- **You feel the hits you take** (see the departures below). The ink vignette and the head roll point where the attacker stands: a hit from the left lights the left edge, one from behind the bottom edge. The side is measured on the floor plane, so it stays right when you look down at a stomp. Each stroke has an ink rim, and the bottom edge is inked heavier, so a hit from behind reads on the pale ground.
+- **Every enemy has more detail, closer to its concept.** It's all chain config, with no new models and no Tripo or Gemini spend:
+  - **Colour borders now follow the texture,** per texel, instead of snapping to 2 cm mesh faces. Small colour islands are no longer averaged away.
+  - **Ink is drawn where the model has creases and folds,** taken from the dense mesh before it's decimated, and the lines are thinner.
+  - Each character has its own fixes from the review:
+    - the Thug's face and bandana;
+    - the Kicker's mask, and a shaded band under his cap's brim with his eyes in it, as in his concept;
+    - the Bruiser's visor slit, with the scarf beneath it; his helmet is one purple dome that scuffs but never bleeds;
+    - Ox's nose, mouth and jaw lines, without the blot under the nose;
+    - calmer lines on the Punk's vest.
+  - `look_texel_swatch` in F1's Debug group switches the per-texel borders off.
+- **An independent verification round** re-recorded every act on the fixes and confirmed most of them. It found three problems, now fixed:
+  - the Kicker's eyes had shipped from a build his fixer had rejected, which turned his brim to skin;
+  - the 2 cm recess left seam lines on five walls;
+  - the hurt cue swapped front and back when looking down past about 30°.
+- **The same fix pass** restored the Bruiser's strain ratchet, which the art fixes had loosened, and tightened two guard tests. The ground's mirrored pairs stay: moving its features out of the fold made the ground crawl more at a distance.
+- **A second independent round** checked that pass and found one medium: the heavier bottom ink fed the vignette's depth, so every heavy hit from behind deepened it, with no limit (a rear Bruiser smash's spikes reached past the screen's middle). Fixed:
+  - the depth is bounded;
+  - the extra ink is drawn only on the struck share;
+  - the bottom teeth have a floor length instead of a 1.4× stretch, so a light jab from behind still clears the HP panel and a heavy one stops at about 30% of the screen's height.
+- **That pass also:**
+  - put trim back in front of walls where two share a plane (jambs, lintels and rail posts win, as at 82bab12);
+  - cut the plinth ledges a clipped wall face had left standing;
+  - turned the pale strip under the Kicker's brim into the shade;
+  - removed a hook at Ox's mouth corner.
+
+**How the done-when is proved:**
+- **`tests/test_m6_no_placeholders.gd`** counts every kind of placeholder in the level, the crowd street and the training room: primitive bodies, tints, grey boxes, cylinder weapons, a missing second weapon, generated sounds and empty sound slots. Every count is 0 (`tests/fixtures/m6/placeholder_ratchet.json`). The allowed list is short: the music loop (by pool), the shader warm-up meshes and the edge-pass quad (by node), and the edge guards. A mesh that is hidden or off the default layer (F3's debug draws, the hidden proxies) is not counted. The legacy A/B bank is in `tests/fixtures/sfx_legacy/`, outside the scanned `assets/export/sfx`.
+- **The budgets hold:** enemies 15,000 triangles, the boss and the player 30,000, props and weapons 3,000, modules 5,000, and one 2048 px trim sheet.
+- **Every generated asset rebuilds to its hash:**
+  - `run.py --check` for each character and prop, and `player_run.py --check`;
+  - `gen_palette.py --check` and `gen_trim.gd --check`;
+  - `ingest.py --check`.
+  - Every asset has an `ASSETS.md` row with its source, service and licence, and the binaries are in LFS.
+- **The paid services stayed inside the policy:** Tripo 545 of M6's 900 credits, ElevenLabs 4,843 of 30,000.
+- **The game underneath is M5's:** `tests/test_m6_colliders.gd` holds every static collider, and the M3-M5 done-when tests pass with every character's art. The held-back level run clears every arena (street 131 s, roofs 174 s, boss 108 s; M5 took 136, 183 and 108), recorded before the final review's fixes.
+- **Frame time** (the Apple M1, windowed with vsync on, the two builds run in turn, other apps keeping the load at 3-4):
+  - **The level walk** (4 runs each) takes 10.87 ms a frame on average, against 9.43 ms for the level before the art (910448e). That is +15.3%, 0.3 points over the plan's 15% line (a mean more than 15% over is a fix item); single runs range from +14.5% to +16.4%.
+  - Its p95 is 14.2 ms, inside a 60 Hz frame, and the first hit, the first spawn and the spawn hitch meet M4's soft bars.
+  - The lead's check after the review's fixes measured +19.5% (vsync off, so not like for like). On the fixed poses, run the same way before and after, the perf fix took the overhead from +41% to +16%. See the trim sheet's two materials under "Where M6 departs from the plan".
+  - **After the playtest fixes (2026-11-05):**
+    - All three builds were run in turn: the pre-art level, the M6 build Game-boy played (663cafc) and the fixed head (d582d21). They ran 4 times each, with vsync on, at load 5 from other apps, so every time is higher than above.
+    - The level walk takes 16.93 ms a frame on the fixed head, against 17.03 ms on the build he played (−0.6%). The fixed poses take 16.17 ms against 16.30. The fixes cost nothing.
+    - Against the pre-art level, the art measured +9.5% this time (15.46 to 16.93 ms), where it measured +15.3% before at a lighter load. The overhead moves with the machine's load, so the 15% line is borderline rather than clearly met.
+    - The mesh clipping that replaced the 2 cm recess (3e7084e against d582d21, 4 runs each): the level walk takes 17.77 against 17.80 ms, and the fixed poses 16.57 against 16.66. Each clipped block has its own mesh, which adds about 24 draws a frame, but that doesn't show up in the frame time.
+  - **The crowd room's six with ragdolls** (3 runs each) is +12.3% against M5 (10.34 to 11.61 ms). Its p95 and spawn hitch miss the soft bars, as they already did on M5.
+  - The level: `tools/perf_compare.sh --vsync on --runs 4 --bot res://tests/bot/perf_level_bot.tscn --act "Perf: level walk" --act "Perf: counters" 910448e HEAD`. The crowd room: `tools/perf_compare.sh --vsync on --runs 3 main HEAD`. "Perf: counters" holds the tour's poses still, so its renderer counters compare whatever the load.
 
 ## Milestone 5 status: the level blockout
 
@@ -285,10 +375,39 @@ The characters are procedural placeholders. Real art, VFX and audio come in Mile
   - The veteran Punk is marked by an orange tint over the whole Punk art.
   - A weapon lying on the floor is drawn amber and thicker (`weapon_floor_color`, `weapon_floor_radius_scale`), so it can be found on the grey floor. A held or thrown weapon keeps its look.
 
+**Where M6 departs from the spec, ruled by Game-boy at his playtest (2026-11-05):**
+- **You feel the hits you take (Spec §6 gives every hit one camera stack):**
+  - When a clean hit lands on you:
+    - the view shakes 2.5 times as hard, with at least 0.3 trauma;
+    - it kicks 2.5 times as far;
+    - the head rolls away from the blow (2°, 4° and 7° by tier).
+  - An ink vignette with white comic strokes flashes on the side the hit came from, scaled by its damage, and the HP panel jolts.
+  - His words: "I got knocked down to almost half-health without even realizing anything was happening to my character."
+  - Blocked hits and the hits you land keep Spec §6's values.
+  - The vignette is ink and paper, not red: the style rules keep red for blood, the rear warning and finishers (`hurt_overlay_color` changes it).
+  - `hurt_feel_enabled` off gives M6's view.
+- **No sting on GO** (a plan item, not a spec rule): an arena's GO is silent, and the CLEAR sting after the boss stays. `audio_sting_go` on brings it back.
+
+**Where M6 departs from the spec, for Game-boy to rule on:**
+- **M4's departures now cover every character:**
+  - **Rig and animation (Spec §10, pipeline steps 4-6):** the Kicker, the Pipe Thug, the Bruiser and Ox Pellerin are rigged by Tripo and fitted to the game's own skeleton, and they play the game's own animation set, as the Punk does. No Mixamo or mocap clip is used. Their telegraph timings are M3's.
+  - **A 1k ink-detail mask on every enemy (Spec §10's table gives enemies and the boss the shared palette atlas only):** each character's seams, straps, wraps and face lines are thin ink in its own mask, as the Punk's are. Their colours are still flat palette swatches, 4-6 each.
+- **Performance is still measured on the Apple M1, not an RTX 3060 (Spec §10):** see "Frame time" above.
+
+**Where M6 departs from the plan or the look bible (decided by default; none is a spec rule):**
+- **Some of the plan's measured bars are held as ratchets,** as in M4: first-person framing (A9), the hit flash's anchor (A11), visible stretch (A7) and the Bruiser's legs inside his hurtboxes (A6, 90% against the 95% bar). Each ratchet is in that character's roster file (`tests/fixtures/art/roster/<id>.json`) with its reason. The Bruiser's art fills more of the view than his hit-test shapes in the smash and the grab (65-88% against 60-82%); slimming him to the shapes would have lost the plates and guards.
+- **The Bruiser's purple is a little duller than the look bible asks for an enemy's main colour** (saturation 0.44 against 0.5). The pipeline labels his texture by the nearest palette colour, and Tripo's violet is dull.
+- **The Bruiser's chest has fewer plate edges than the concept:** the steel reads as steel, with ink seams at the shoulders, but the generated model carries few plate lines.
+- **Three concept views per character, not four:** front, left and back, the views Tripo's accepted Punk run used.
+- **The environment modules are procedural Godot meshes on the trim sheet, not Blender-scripted ones** (a change from the approved proposal's method; the 5k module budget and the 2k sheet hold).
+- **The held weapon is out of view in first person,** as M5's pipe was, so the chain's whip shows only while it lies or flies.
+- **The trim sheet has two materials, not one (D10):** an opaque one for every block, and a variant that cuts out the chain-link's wire. A single material that cut out the wire made the renderer treat all 330 kit meshes as cut-out, with no depth prepass and the full shader in every shadow pass. The car, the tank and the dumpster cast their shadows from coarser copies of themselves, within 12 cm of the drawn shape (`draw_prop_shadow_error_m`; 0 gives the props' own triangles). The AC unit has no coarser copy within that, so it casts its own.
+- **The level walk's frame time is +15.3% over the pre-art level, 0.3 points over the plan's 15% line.** The perf fix stopped at the best result with no visible change. The levers left (occlusion culling, plain boxes for the walls, no shadows on windows or the skyline) would change what you see, or measured at 1% or less; `docs/milestones/M6-calls/fix-final-perf.md` costs each.
+
 **Automated checks:**
-- `tools/run_tests.sh` runs about 1770 tests headless in about 300 s. Among them:
+- `tools/run_tests.sh` runs about 2076 tests headless in about 415 s. Among them:
   - an end-to-end suite where a scripted player performs every combo in the real test room;
-  - each milestone's done-when test (`tests/test_m3_done_when.gd`, `tests/test_m4_done_when.gd`, `tests/test_m5_done_when.gd`, which plays the whole level arena by arena);
+  - each milestone's done-when test (`tests/test_m3_done_when.gd`; `tests/test_m4_done_when.gd`, now run for every character in the art roster; `tests/test_m5_done_when.gd`, which plays the whole level arena by arena; `tests/test_m6_no_placeholders.gd`);
   - the level's own tests (`tests/test_m5_street.gd`, `tests/test_m5_roofs.gd`, `tests/test_level_kit.gd`, `tests/test_level_bot.gd`).
 - `tools/capture_combos.sh` records the combo bot with Movie Maker to `captures/combos.avi`, writes a hit log to `captures/bot.log`, and extracts stills for review. Pass text to run only matching acts, for example `tools/capture_combos.sh "haymaker"`. `tests/bot/ragdoll_bot.tscn` and `tests/bot/vfx_bot.tscn` play the ragdoll and VFX acts the same way (record them with Movie Maker, `--write-movie`).
 - `tests/bot/crowd_bot.tscn` plays the crowd street the same way: its acts are in `tests/bot/acts/` (one file per area, such as `crowd_acts.gd` for the mixed six, the waves to the boss, the mixed waves, the boss wave held back and the rear warning for every archetype). Pass text to run matching acts and `--seed=<n>` to repeat one with other seeds, for example `tools/capture_bot.sh res://tests/bot/crowd_bot.tscn captures/crowd "Mixed six" 6`. A probed act runs the readability probe, which writes `readability.json` (15 metrics, five of them hard) next to the recording, and the warning oracle, which checks the HUD's corners against Spec §8 at every wind-up. The perf act is recorded windowed, not with Movie Maker: `godot --path . res://tests/bot/crowd_bot.tscn -- --act="Perf, six with ragdolls"`.
@@ -334,6 +453,7 @@ Keys go in `.env` at the repo root. `.env` is git-ignored. `.env.example` lists 
 | --- | --- | --- |
 | `GEMINI_API_KEY` | Google Gemini, image generation (concepts and the character views) | yes, since 2026-10-26, on a billed (Tier 1) project; sent in the `x-goog-api-key` header by `tools/gemini_image.py` |
 | `TRIPO_API_KEY` | Tripo, 3D generation and auto-rigging | yes, since 2026-10-26; every paid call goes through `tools/pipeline/tripo.py --spend <credits>`, logged in `assets/source/tripo_ledger.jsonl` |
+| `ELEVEN_LABS_API_KEY` | ElevenLabs, the sound-effects API (Milestone 6's voices: efforts, pain grunts, the boss) | yes, since 2026-11-04, on the Starter plan (commercial licence, 30,000 credits a month). The name is Game-boy's; the SDK's standard name is `ELEVENLABS_API_KEY`, and the M6 audio tools read either |
 
 ## Toolchain status (Milestone 0)
 

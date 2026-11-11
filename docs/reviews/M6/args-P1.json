@@ -1,0 +1,138 @@
+{
+  "milestone": 6,
+  "summary": "full art and audio: every enemy and the boss through the M4 pipeline, environment modules and set dressing, final SFX, the second weapon and M4's two carried looks; done when no placeholder assets remain",
+  "base": "m6/full-art-audio",
+  "plan": "docs/milestones/M6-plan.md",
+  "read_first": [
+    "docs/milestones/M6-plan.md §0, §1 (only the decisions your brief names) and §2 'File ownership', 'Shared files', 'Tuning' and 'ASSETS.md'"
+  ],
+  "arch_heading": "## Full art and audio (Milestone 6)",
+  "captures_dir": "/Users/arachne/repos/beat-em-up-PoC/captures/m5-final",
+  "image_budget": 25,
+  "concurrency": 3,
+  "note": "Phase 1. Every package needs only step 0, which is on the base: the ARCHITECTURE.md section with one '### <title> (<KEY>)' per package, the ASSETS.md headings, the narrowed palette ranges (plan §2 'Palette slots'), the signals CombatEvents.section_entered, barrier_moving and weapon_landed with Barrier's two emit lines, LevelSection.ambience and MoveData.impact_sfx. Every sound comes from ElevenLabs (Game-boy, 2026-11-04, plan D19): there is no Sonniss bundle. Game-boy's pick and the Tripo licence are both answered (HANDOFF d2a0cba, 0d6a5c9). PROPS is the only phase 1 package that uses the pick: weapon A = bike_chain (assets/source/concepts/m6/weapon_a.jpg) and the moods mood_street_a.jpg and mood_roof_a.jpg (the roof C). ASSETS rows for Tripo models read 'Tripo API (paid credits): owned by the project, commercial use'. Shared files are edited by region only, appending and never reordering (plan §2 'Shared files'): room_kit.gd (CHAIN the warm-up; KIT add_box, add_visual_box, box_mesh, build_environment), toon_materials.gd (the Kind enum: KIT and PROPS append; warm_up: CHAIN; swatch_glossy: LOOKS; art_prop: PROPS; trim: KIT), test_room.gd (CHAIN the dummies; AUDIO the audition room), test_art_contract.gd (CHAIN BUDGETS, _id_of and the report tests; LOOKS the palette tests), test_look_post.gd (KIT the environment checks; CHAIN lines 578-580), tuning_data.gd (your own subgroup; Debug lines appended at the group's end), weapon.gd (PROPS: art_scene and the floor tint on the art only). A package that adds or changes a palette JSON regenerates the atlas on its branch (python3 -I tools/pipeline/gen_palette.py). The lead merges each package as it finishes and regenerates the default preset, the atlas and the placeholder ratchet, so conflicts there are expected and fine. tests/fixtures/m6/placeholder_ratchet.json exists only on LOOKS's branch in this phase: every other package writes the inventory drop it expects (per scene and category, plan §2 'Placeholder inventory') in its calls file, and the lead sets the ratchet at merge. Paid services in this phase: Tripo and Gemini for PROPS only (Tripo ceiling 270 credits; the M6 ledger stop is 900, the floor 700); ElevenLabs for AUDIO only (ceiling 6000 credits). captures_dir holds M5's final recordings (street, roofs, boss, seams): the 'before' for every look.",
+  "packages": [
+    {
+      "key": "CHAIN",
+      "section": "§3 'CHAIN: The art chain for every character'",
+      "est": 10,
+      "blender": true,
+      "read": [
+        "docs/milestones/M6-codemap/art-chain.md §1-§6 and §8",
+        "docs/milestones/M6-plan.md §1 D15-D17, D26-D27, §2 'Art roster', 'Palette slots', 'Placeholder inventory'",
+        "tools/pipeline/run.py lines 1-60 and 180-215",
+        "tools/pipeline/make_probe_body.py lines 1-40, 170-190 and 275-285",
+        "tests/fixtures/art/probe_pipeline.json",
+        "tests/test_m4_done_when.gd (grep 'func test_a|_arts|_rig|PUNK_MOVES|RATCHET|_PLAYER'; lines 90-130 and 170-185)",
+        "tests/test_art_contract.gd lines 28-40, 136-160 and 1415-1470",
+        "tests/test_art_punk.gd (grep 'func test_|_rig|const ')",
+        "tests/art_strain.gd lines 40-60",
+        "tests/fixtures/strain/gen_strain_ratchet.gd lines 1-20",
+        "game/level/room_kit.gd lines 200-260",
+        "game/actors/character_art.gd and game/actors/skinned_art.gd (headers, check())",
+        "game/fx/toon_materials.gd lines 296-342",
+        "game/enemies/dummy/training_dummy.gd lines 20-50 and 120-130",
+        "game/level/test_room.gd lines 20-30 and 95-115",
+        "tests/test_look_post.gd lines 570-582",
+        "tests/bot/acts/look_acts.gd lines 1-30 and 195-225",
+        "tools/pipeline/tripo.py lines 500-530"
+      ],
+      "note": "Move the Punk's M4 numbers into the roster unchanged (byte-identical values). The hero keeps his own tests: carry his mesh list (test_m4_done_when.gd:285) and the *_PLAYER constants (:96-121) over verbatim, because ARM changes them in phase 2. The dummy is the roster's proof: no Tripo, no Gemini; make_probe_body.py's --regions keeps its defaults so the probe report's hash holds. Your 1 m stills: compare 'Look: Punk at 1 m' with captures/m4 (unchanged) and judge 'Look: Dummy at 1 m' on its own."
+    },
+    {
+      "key": "KIT",
+      "section": "§3 'KIT: The environment kit'",
+      "est": 10,
+      "read": [
+        "docs/milestones/M6-codemap/level-env.md",
+        "docs/milestones/M6-plan.md §1 D1-D2, D9-D13, D29, §2 'Kit', 'Static props', 'Tuning', 'Acts', 'Placeholder inventory'",
+        "docs/milestones/M4-look-bible.md",
+        "docs/SPEC.md lines 287-335",
+        "game/level/kit/level_block.gd, barrier.gd, level_section.gd, level_root.gd, level_stairs.gd",
+        "game/level/room_kit.gd lines 60-160",
+        "game/fx/toon_materials.gd lines 20-30, 130-200 and 343-360",
+        "game/level/grid.gdshader",
+        "game/fx/look_post.gd lines 150-200",
+        "tools/gen_fx.gd (header and one _tile function)",
+        "tests/bot/perf_bot.gd lines 1-30",
+        "tools/perf_compare.sh lines 1-50",
+        "tests/test_look_post.gd lines 445-470 and 515-562",
+        "tests/test_m4_contracts.gd lines 300-326",
+        "tests/test_level_kit.gd lines 205-216"
+      ],
+      "note": "Your FIRST commit adds only 'Perf: level walk' and perf_compare.sh's --bot option, before any art: write its sha in M6-calls/KIT.md (it is the M5 baseline ref). Then the collider snapshot from the unchanged level. No Blender: modules are KitMesh builders (D2). Section light is DRESS's (phase 2): you only emit section_entered (D12's rule) and test it. PropSpot draws game/level/props/<id>.tscn when it exists; PROPS builds those in parallel, so test with the fallback box. Prove the kit on street A1 only; DRESS dresses the rest. The sheet's colours start inside the look bible's environment band (saturation <= 0.30, value 0.25-0.6)."
+    },
+    {
+      "key": "PROPS",
+      "section": "§3 'PROPS: The static-prop path and every rigid model'",
+      "est": 9,
+      "blender": true,
+      "read": [
+        "docs/milestones/M6-codemap/art-chain.md §1, §7 and §8",
+        "docs/milestones/M6-codemap/weapons-looks.md §1-§3",
+        "docs/milestones/M6-plan.md §1 D5, D13-D14, §2 'Static props', 'Palette slots', 'Placeholder inventory'",
+        "tools/pipeline/run.py lines 1-60 and 180-215",
+        "tools/pipeline/blender_palette.py lines 1-40 and 600-624",
+        "tools/pipeline/blender_export.py lines 1-60",
+        "tools/pipeline/tripo.py lines 1-40 and tools/pipeline/tripo_prices.json",
+        "assets/source/characters/punk/views/views_jobs.json (the Gemini job pattern)",
+        "game/weapons/weapon.gd lines 1-90",
+        "game/enemies/thug/pipe_thug.gd lines 25-35 and 85-91",
+        "game/fx/toon_materials.gd lines 79-160 and game/fx/toon_outline.gdshader lines 40-55",
+        "game/level/kit/barrier.gd lines 195-220 and game/level/crowd_room.gd lines 320-340 (the car and the dumpster)",
+        "the concepts assets/source/concepts/m6/weapon_a.jpg, mood_street_a.jpg and mood_roof_a.jpg"
+      ],
+      "note": "Tripo ceiling 270 credits (every tripo.py call needs --label and --spend, priced from tripo_prices.json; a static prop needs no rig, so a generation at standard is 30), Gemini at most 16 images, only through tools/gemini_image.py job files. Prove the path on the Blender-scripted _fixture crate before any Tripo call. The pick: weapon A, the bike chain and padlock (weapon_a.jpg: a short sideways whip, the padlock landing last); the props' colours follow mood_street_a.jpg (warm brick, sodium lamps, rust, wooden crates) and mood_roof_a.jpg (warm brick parapets, orange dusk, water tanks, ducts, AC units), with no red. In weapon.gd add only art_scene and the floor tint on the art; WEAPONS owns the rest in phase 2."
+    },
+    {
+      "key": "AUDIO",
+      "section": "§3 'AUDIO: Ingest, manifest, voices and the audition room'",
+      "est": 8,
+      "read": [
+        "docs/milestones/M6-codemap/audio.md",
+        "docs/milestones/M6-plan.md §1 D8, D18-D25, §2 'Audio', 'Tuning', 'Placeholder inventory'",
+        "game/audio/audio_director.gd and game/audio/sfx_bank.gd",
+        "game/autoload/combat_events.gd (the step 0 signals)",
+        "tools/gen_sfx.gd lines 1-40",
+        "tests/test_audio.gd (grep 'func test_'; lines 77-103, 124-243 and 390-445)",
+        "tests/test_audio_crowd.gd lines 150-195",
+        "tools/pipeline/tripo.py (header, the ledger and policy functions: the ledger pattern)",
+        "tools/gemini_image.py lines 1-45 (the .env loader and its worktree fallback)",
+        "game/level/test_room.gd",
+        "game/ui/help_overlay.gd lines 35-50",
+        "game/autoload/game_input.gd lines 1-50",
+        "game/enemies/enemy_actor.gd lines 58-70"
+      ],
+      "note": "ElevenLabs is the only paid service you may call: tools/audio/eleven_sfx.py, ceiling 6000 credits for this package, policy stop 30000 for M6 (eleven_policy.json max_call 1200, so a 30 s bed fits one call; the account is Starter with 40,000 credits). Never print, log or write the key (ELEVEN_LABS_API_KEY or ELEVENLABS_API_KEY in .env; in a worktree read the main checkout's .env as tools/gemini_image.py does), never put it in a URL. Your first call is one 0.5 s job to measure the real cost; write the rate in M6-calls/AUDIO.md, then apply your brief's projection rule before the batch. Downloads are untrusted: each job's MP3s go into a new empty folder and reach ffmpeg as path arguments. You can't hear: choose by measured features and leave judgement to Game-boy's audition. Every sound comes from ElevenLabs (Game-boy, 2026-11-04; plan D19): there is no Sonniss bundle, so ingest.py needs no Sonniss or SONNISS_DIR support. SFX (phase 2) fills the hit stack and the world slots with your eleven_sfx.py and ingest.py after you merge, so make both general: any pool, a loop flag, 2D or 3D, and a jobs file per group."
+    },
+    {
+      "key": "LOOKS",
+      "section": "§3 'LOOKS: Damage classes, the veteran's palette, the inventory'",
+      "est": 7,
+      "read": [
+        "docs/milestones/M6-codemap/weapons-looks.md §4 and §6",
+        "docs/milestones/M6-codemap/art-chain.md §5",
+        "docs/milestones/M6-plan.md §1 D4, D6, D17, D24-D25, §2 'Palette slots', 'Placeholder inventory'",
+        "tools/pipeline/gen_palette.py lines 1-140",
+        "game/fx/toon.gdshader lines 50-125",
+        "game/fx/damage_look.gd",
+        "game/fx/toon_materials.gd lines 245-260",
+        "game/enemies/enemy_actor.gd lines 315-330, game/enemies/enemy_variant.gd and game/enemies/enemy_catalog.gd",
+        "game/level/encounter_spawner.gd lines 40-60 and 95-160",
+        "game/enemies/boss/boss.gd lines 400-430",
+        "game/level/test_room.gd and game/level/crowd_room.gd (grep 'spawner|wave|dummy|add_box')",
+        "game/fx/look_post.gd lines 145-160 and game/weapons/weapon.gd lines 15-66",
+        "tests/test_attack_arcs.gd lines 315-345",
+        "the tests that name punk_veteran (grep -l punk_veteran tests)"
+      ],
+      "note": "No Blender and no hero work: D7 is ARM's, in phase 2. D6 needs no Punk rebuild: slot 17 (cap, laces, strap) takes blood: false. The inventory counts enemies from the encounter tables, the crowd waves, the boss's adds and the catalog, not from the built scene (enemies spawn at runtime): read plan §2 'Placeholder inventory' closely, including the allowed list. Write its measured counts, per scene and category, to tests/fixtures/m6/placeholder_ratchet.json. Your A/B stills (the cap's marks, the veteran) go to the lead for Game-boy: name their paths in the result."
+    }
+  ],
+  "only": [
+    "CHAIN",
+    "KIT",
+    "PROPS",
+    "AUDIO",
+    "LOOKS"
+  ]
+}

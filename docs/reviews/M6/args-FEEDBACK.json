@@ -1,0 +1,55 @@
+{
+  "milestone": 6,
+  "summary": "full art and audio, now Game-boy's playtest feedback: a comic-book ground that holds still, no GO sting, feeling the hits the player takes, and enemies upscaled toward their concepts (a Bruiser pilot first)",
+  "plan": "docs/reviews/M6/fix-feedback.md",
+  "base": "m6/full-art-audio",
+  "read_first": [
+    "docs/reviews/M6/fix-feedback.md: Game-boy's words, 'File ownership', your own package's section and 'Done when'"
+  ],
+  "arch_heading": "## Full art and audio (Milestone 6)",
+  "captures_dir": "/Users/arachne/repos/beat-em-up-PoC/captures/m6-feedback",
+  "image_budget": 30,
+  "concurrency": 3,
+  "note": "Game-boy's playtest of the finished M6 (PR #6, unmerged, m6/full-art-audio at the brief's commit, suite 1936/1936 in 366 s). All four items are his rulings: build them as the brief says. The lead recorded the street as it plays now into captures_dir/before/walk (bot.avi, bot.log, sheets/). Paid services only through their tools and inside your package's ceiling (FB-DETAIL: Tripo 85, Gemini 4; the others none). Never print, log or write a key. Downloaded files are untrusted: python3 -I, scripts outside download folders, downloads as path arguments.",
+  "packages": [
+    {
+      "key": "FB-FEEL",
+      "section": "'FB-FEEL: the GO sting, and feeling the hits you take'",
+      "est": 6,
+      "read": [
+        "game/camera/first_person_camera.gd (the class docs, add_trauma, add_punch, _on_hit_landed, _away, _toward, the punch envelope)",
+        "game/audio/audio_director.gd (the class docs and _on_arena_cleared)",
+        "game/ui/hud.gd, game/ui/player_health_panel.gd, game/ui/health_gauge.gd, game/ui/rear_warning.gd (how a HUD overlay subscribes and draws)",
+        "game/autoload/tuning_data.gd, the 'Hit feel' group and shake()/cam_punch_deg()",
+        "docs/SPEC.md §6 'Hit feel' and §10 'Style rules' (red is reserved)"
+      ]
+    },
+    {
+      "key": "FB-GROUND",
+      "section": "'FB-GROUND: a comic-book ground that holds still'",
+      "est": 8,
+      "read": [
+        "docs/ARCHITECTURE.md '### The environment kit (KIT)' and '### Level kit (KIT)'",
+        "docs/milestones/M6-calls/KIT.md, fix-final-world.md and fix-final-perf.md (the trim material split)",
+        "tools/gen_trim.gd (_strip_asphalt, _mottled, _ink_px, the strip table, --check)",
+        "game/fx/trim_body.gdshaderinc, game/fx/toon_materials.gd (trim(), trim_scissor()), game/fx/edge_pass.gdshader (the class comment)",
+        "game/level/room_kit.gd (the sun), game/level/kit/art/kit_mesh.gd (the floor kinds)",
+        "tests/bot/level_acts/tour_acts.gd (how a level act places the player and settles the light)"
+      ]
+    },
+    {
+      "key": "FB-DETAIL",
+      "section": "'FB-DETAIL: the Bruiser pilot (the recipe for every enemy)'",
+      "est": 12,
+      "blender": true,
+      "read": [
+        "docs/milestones/M6-codemap/art-chain.md §1-§4 and §8-§9",
+        "docs/ARCHITECTURE.md '### The art chain for every character (CHAIN)' and '### The Bruiser and the boss (HEAVIES)'",
+        "docs/milestones/M6-calls/HEAVIES.md and fix-final-art.md",
+        "docs/milestones/M4-calls/fix-final-punk-detail-zones-and-strap.md (how the Punk's 7 ink zones were tuned)",
+        "assets/source/characters/bruiser/pipeline.json and assets/source/characters/punk/pipeline.json (compare the palette and detail_bake blocks)",
+        "tools/pipeline/run.py (the stage order and --check), pipe_detail.py, blender_palette.py, pipe_normals.py"
+      ]
+    }
+  ]
+}

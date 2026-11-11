@@ -317,13 +317,19 @@ func set_variant(value: EnemyVariant) -> void:
 	_apply_variant_look()
 
 
-## Paint the variant's tint on the body: the primitives' jacket and the skinned art's whole palette
-## (the toon shader multiplies its albedo into the swatch). Nothing without a variant tint or a rig.
+## Dress the body as the variant says. Its palette swap (D4) is the atlas on the skinned art's own
+## material (`albedo_tex`, one material per rig, so no other enemy changes); a graybox tint, which
+## no shipped variant has any more, is the primitives' jacket and the art's whole palette (the toon
+## shader multiplies its albedo into the swatch). Nothing without a variant or a rig.
 func _apply_variant_look() -> void:
-	if variant == null or variant.tint.a <= 0.0 or rig == null:
+	if variant == null or rig == null:
+		return
+	var art_material := rig.paint.art_material() as ShaderMaterial
+	if variant.palette != null and art_material != null:
+		art_material.set_shader_parameter(&"albedo_tex", variant.palette)
+	if variant.tint.a <= 0.0:
 		return
 	rig.body_color = Color(variant.tint, 1.0)
-	var art_material := rig.paint.art_material() as ShaderMaterial
 	if art_material != null:
 		art_material.set_shader_parameter(&"albedo", Color(variant.tint, 1.0))
 
