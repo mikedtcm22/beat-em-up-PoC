@@ -1,7 +1,7 @@
 {
 	"asset": "punk_b",
 	"version": 2,
-	"config_sha256": "49e2157e9f6989395565197f2c51b82b002f0e96be08ff861d72059425928fb7",
+	"config_sha256": "1a08fc320c88ec8802716c2c11eaf3585fb1038209f904c3b01ec2fb6eecb9ec",
 	"steps": {
 		"inspect": {
 			"source": {
@@ -10445,8 +10445,8 @@
 			"detail_bake": {
 				"size": 1024,
 				"texels": 474005,
-				"ink_texels_share": 0.034019,
-				"mean_ink": 0.034183,
+				"ink_texels_share": 0.003574,
+				"mean_ink": 0.004071,
 				"png": "punk_b_detail.png",
 				"zones": {
 					"skin_body": {
@@ -10489,7 +10489,7 @@
 							"99": 0.0184,
 							"99.5": 0.0246
 						},
-						"ink_texels_share": 0.064334
+						"ink_texels_share": 0.001702
 					},
 					"jeans": {
 						"texels": 137830,
@@ -10503,7 +10503,7 @@
 							"99": 0.0112,
 							"99.5": 0.0132
 						},
-						"ink_texels_share": 0.024704
+						"ink_texels_share": 0.000254
 					},
 					"face_skin": {
 						"texels": 9211,
@@ -10545,7 +10545,7 @@
 							"99": 0.039,
 							"99.5": 0.0555
 						},
-						"ink_texels_share": 0.021565
+						"ink_texels_share": 0.002421
 					},
 					"boots": {
 						"texels": 51908,
@@ -10559,52 +10559,33 @@
 							"99": 0.0149,
 							"99.5": 0.0187
 						},
-						"ink_texels_share": 0.029629
+						"ink_texels_share": 0.000173
 					}
 				},
 				"glint": null,
 				"clean": {
 					"before": {
-						"pieces": 836,
-						"texels": 21859,
-						"pieces_le6": 461,
-						"texels_in_le6_share": 0.0518,
-						"median": 5.0,
-						"pieces_over20": 209
+						"pieces": 352,
+						"texels": 2754,
+						"pieces_le6": 283,
+						"texels_in_le6_share": 0.203,
+						"median": 2.0,
+						"pieces_over20": 31
 					},
 					"after": {
-						"pieces": 441,
-						"texels": 24867,
-						"pieces_le6": 61,
-						"texels_in_le6_share": 0.0121,
-						"median": 21.0,
-						"pieces_over20": 227
+						"pieces": 98,
+						"texels": 2825,
+						"pieces_le6": 24,
+						"texels_in_le6_share": 0.04,
+						"median": 11.0,
+						"pieces_over20": 32
 					},
-					"bridged_texels": 316,
-					"pieces_dropped": 334,
-					"texels_dropped": 639
+					"bridged_texels": 97,
+					"pieces_dropped": 212,
+					"texels_dropped": 350
 				},
 				"glove_lines": null,
-				"crease": {
-					"texels_on_a_crease": 14566,
-					"ink_share_before": 0.00357,
-					"ink_share_after": 0.03402
-				},
-				"texel_swatch": {
-					"texels": 474005,
-					"texture_decided": 474005,
-					"differ_from_face_share": 0.00451,
-					"majority_moved": 1017,
-					"share": {
-						"2": 0.12439,
-						"6": 0.02838,
-						"14": 0.10952,
-						"16": 0.28611,
-						"17": 0.04708,
-						"18": 0.40453
-					}
-				},
-				"sha256": "5a76f1f8b83ddadedb37fc45e0e9a900daff5462784319063ddccc05c01eafa1"
+				"sha256": "5b19c9061db8b599d98dce6a07b96ef60f432a3b111846fd855bf31bc0b49db2"
 			},
 			"regions": [
 				{
@@ -10793,5 +10774,5 @@
 		"punk_b.glb": "a636fdcee4ce86320da6c847a920f5bfdefdddefb951c781606520c6260edec6",
 		"punk_b_rest.glb": "7099bace3887a537561121d1f0feaa59ee82416c42dfd094df300c365e5d5594"
 	},
-	"hash": "dbd54ef6c0f5535f9ad6c1be5dc9f66152a182ebcfab51b09f8c58f1a158343d"
+	"hash": "ff32efbe6c0f1172cd2d02cd2b939ca4ddb239b74358f3d9a979ac750de2b4f2"
 }

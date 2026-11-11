@@ -5,8 +5,8 @@
 	"paths": {
 		"work": "assets/source/_cache/punk_b/work",
 		"blend_dir": "assets/source/characters/punk_b/work",
-		"report": "assets/source/characters/punk_b/report",
-		"export_dir": "assets/export/characters/punk_b",
+		"report": "assets/source/characters/punk_b/chain_report",
+		"export_dir": "assets/source/characters/punk_b/export",
 		"export_name": "punk_b"
 	},
 	"source": {
@@ -223,8 +223,7 @@
 						0.5,
 						1.7
 					],
-					"crease_deg": 75,
-					"valley_deg": 18
+					"crease_deg": 75
 				},
 				{
 					"name": "jeans",
@@ -241,8 +240,7 @@
 						0.5,
 						1.1
 					],
-					"crease_deg": 75,
-					"valley_deg": 18
+					"crease_deg": 75
 				},
 				{
 					"name": "wraps",
@@ -349,26 +347,7 @@
 				"smooth_sigma": 0.5,
 				"smooth_gain": 1.05
 			},
-			"collar_in_unwrap": true,
-			"texel_swatch": {
-				"blur_px": 1.0,
-				"passes": 2,
-				"fill_px": 3,
-				"rings": 1
-			},
-			"crease": {
-				"angle_deg": 70,
-				"width_m": 0.0035,
-				"ramp_m": 0.0025,
-				"spacing_m": 0.003,
-				"min_chain_m": 0.2,
-				"valley": {
-					"angle_deg": 999,
-					"min_chain_m": 0.6,
-					"width_m": 0.003,
-					"ramp_m": 0.002
-				}
-			}
+			"collar_in_unwrap": true
 		},
 		"regions": [
 			{
