@@ -6,6 +6,46 @@ The cinematic gameplay video's live status, kept by the video session ("Beat-em-
 
 ## Status (newest first)
 
+### 2026-11-10 20:35 CST: the Plan B trailer v2 sent to Game-boy by Slack DM; waiting on his answer
+- **Round 2** (308 credits; the ledger at **1456 of 4308**, the cut's own spend **$11.48 of $40**):
+  - t09_r2 fixed the kicker (t04's charcoal jacket, cap and goggles; flat lilac dusk; no chevrons);
+  - t05_r2 gave the thug a drawn face and a throw you can follow;
+  - t13_r2 keeps the firelit night in its late frames;
+  - t03_r2 barely changed (the hit-frame smear needs more than a prompt).
+- **The fresh set** (`tools/video/planb_trailer.sh planb_trailer_v2`; each shot's newest take; t14 is our render): `captures/video/planb/planb_trailer_v2_1080p.mp4`, `planb_trailer_v2_side_by_side.mp4`, `planb_trailer_v2_720p_labelled.mp4`.
+- **The DM** (D0AQUKX5DB6, ts `1794362991.948099`): the three videos, where it stands, the spend, and **one question: "is this the look to finish the trailer in?"**
+  - **If yes:** the edit (trim the point-blank stretches, pacing), titles and sound, plus a few prompt retakes inside the $40.
+  - **If not:** his changes.
+- **The relay isn't running.** The app refused to start a session from an automated turn. This session reads the DM on each of the watcher's wakes instead. The relay's state file is set to the DM's ts, so it can be started from a user turn.
+- **Resume steps:**
+  1. read the DM after ts `1794362991.948099` for Michael's (`U0AQMKKBL93`) reply;
+  2. act on it.
+  - For more retakes: add them to `RESTYLE_R2` (or an R3 table) in `make_planb_jobs.py`, run them through `runway_restyle.py`, then rebuild with `planb_trailer.sh`.
+  - **No more Gemini without his go** ($7.28 of $7.34).
+
+### 2026-11-10 20:20 CST: the full cut restyled (840 credits); the review; round 2's prompt retakes running
+- **Round 1:** all 11 restyles SUCCEEDED, **840 credits ($8.40)**, so the ledger is at 1148 of 4308. The trailer (`tools/video/planb_trailer.sh`) is in `captures/video/planb/`:
+  - `planb_trailer_1080p.mp4` (48.9 s);
+  - `planb_trailer_side_by_side.mp4` (our render left, the restyle right);
+  - `planb_trailer_720p_labelled.mp4`.
+- **The lead's look:** the whole cut reads as drawn. The street palette holds from t01 to t06, the roof at dusk, the boss roof in sketch ink and fire. Ox, the punk and the player keep their designs.
+- **The review** (run `wf_2b775833-71b`: two Opus visual lenses, Sonnet skeptics on each retake):
+  - **Retake:** t03 (the punk's face and cap dissolve on the hits) and t05 (a faceless thug, a mushy throw), both confirmed by the skeptics; t09 and t13, flagged by both lenses (the skeptics' cap of 6 left them unchecked).
+    - **t09:** made from the prompt alone, the kicker came out lime green with a mask, under a photographic gold sky.
+    - **t13:** turns to daylight between two firelit shots.
+  - **Brief, not worth a retake** (the skeptics): t04's lost cap for a frame, t06's head scribble, t07's missing impact lines, t08's whip smear.
+  - **Notes for later, all cross-shot:**
+    - Ox and the player are flat grey with no warm firelight (t10-t13; ref1_5.3 has a warm rim);
+    - the white cut-out steam on the street;
+    - modular CG buildings;
+    - the point-blank first-person framing is the strongest remaining tell, and only the edit (trimming) fixes it.
+- **Running: round 2,** prompt retakes only, the same seed (`RESTYLE_R2` in `make_planb_jobs.py`; `captures/video/planb/restyle/cut_r2.log`): t03_r2 and t13_r2 keep their keyframes, t05_r2 and t09_r2 are prompt only. About 308 credits.
+- **Next:**
+  1. rebuild the trailer (`planb_trailer.sh` takes each shot's newest `_rN`) and look at the four retakes;
+  2. DM Game-boy the fresh set of videos and one question;
+  3. start the Slack relay for his reply.
+  - The round 1 uploads to Slack (files `F0CGLPC50J2`, `F0CGLPC81PG`, `F0CGHDR9E4V`) were never shared: they're superseded.
+
 ### 2026-11-10 19:50 CST: the Plan B full cut running (Game-boy: "Yes, full cut")
 - **The sample trailer first.** Game-boy asked for "a new sample trailer" rather than an essay. It's round 5's reel with t03 and t11 swapped for the restyles (`captures/video/planb/planb_trailer_sample_720p.mp4`). After it he approved the full cut, word for word in the approvals at the bottom: Runway $40 more (the ledger at most 4308 credits), Gemini $2 more (at most $7.34).
 - **Slack is connected in this account now.** Game-boy, 19:15 in the chat: "Please message me via DM in slack when you need a decision (@michael)." He is Michael, `U0AQMKKBL93`; the connector posts as Arachne Dev, `U0AQP0N7RC6`. At a decision, DM him and start the relay (`docs/video/slack_relay_prompt.md`) to forward his reply.
