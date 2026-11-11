@@ -6,6 +6,22 @@ The cinematic gameplay video's live status, kept by the video session ("Beat-em-
 
 ## Status (newest first)
 
+### 2026-11-10 19:50 CST: the Plan B full cut running (Game-boy: "Yes, full cut")
+- **The sample trailer first.** Game-boy asked for "a new sample trailer" rather than an essay. It's round 5's reel with t03 and t11 swapped for the restyles (`captures/video/planb/planb_trailer_sample_720p.mp4`). After it he approved the full cut, word for word in the approvals at the bottom: Runway $40 more (the ledger at most 4308 credits), Gemini $2 more (at most $7.34).
+- **Slack is connected in this account now.** Game-boy, 19:15 in the chat: "Please message me via DM in slack when you need a decision (@michael)." He is Michael, `U0AQMKKBL93`; the connector posts as Arachne Dev, `U0AQP0N7RC6`. At a decision, DM him and start the relay (`docs/video/slack_relay_prompt.md`) to forward his reply.
+- **The tool's fixes** (`c7e48c7`): the cap is 4308 credits; one run at a time (`captures/video/runway_restyle.lock`); a 5xx on the submit is counted; a scratch ledger is allowed only with `--dry-run`; a key with whitespace in it is refused.
+- **Renders:** the other 11 shots at 2560×1440 (problems=0), encoded to 1080p in `captures/video/planb/inputs/`. t14 too (it isn't restyled).
+- **Keyframes** (`tools/video/make_planb_jobs.py`, the per-shot table; `planb_register.py` measures each against its frame; 16 Gemini images, **$7.28 of $7.34, so none more without his go**):
+  - **Picks:** t01_a, t02_a, t04_a (sets the kicker's design), t05_b, t06_a, t07_c, t08_a, t10_b, t12_a (sets the player's), t13_b. All register within 5 px except t05 (16 px) and t08 (12 px).
+  - **Lessons:** a character reference can drag its whole figure and pose into a frame (t10_a, t12_b, t13_a). The fix is the line "it is only for how he looks; take his pose, size, place and framing from image 1 alone", plus a note per retake.
+  - **t09 has no keyframe:** its take drew the player in, because my table had t09 wrong (it's first person: the kicker faces the camera). It's restyled from the prompt alone.
+- **Running:** the 11 restyles, one `runway_restyle.py` run (`captures/video/planb/restyle/cut_r1.log`; estimate 980 credits). If it's cut off, poll each job whose ledger row has a task (`--poll <job>`), then run the jobs that have no row.
+- **Next:**
+  1. `tools/video/planb_trailer.sh` (14 shots, the newest restyle of each, a clean 1080p and a labelled 720p);
+  2. the lead's look;
+  3. DM Game-boy the trailer with one question;
+  4. start the Slack relay.
+
 ### 2026-11-09 21:30 CST: the Plan B test, pass 1 done for both shots; still read as 3D by the blind judge, so spending stopped; asked Game-boy in the chat; handoff at 86%
 - **The spend:** Runway **308 credits ($3.08 of the $15 cap):** t03_r1 84, t11_r1 224 (Runway bills whole seconds rounded down; the tool's estimate rounds up). Gemini at **$5.04** (the test allows $5.34). Ledgers: [runway_ledger.md](runway_ledger.md), [gemini_ledger.md](gemini_ledger.md).
 - **t11_r1** (seed 11, `t11_key_d` at 0 s): SUCCEEDED in 222 s. **The lead's look:**
