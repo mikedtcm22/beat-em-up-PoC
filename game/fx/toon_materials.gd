@@ -373,7 +373,11 @@ static func hull_direction(mode: int, vertex: Vector3, normal: Vector3) -> Vecto
 ## turn until its own first update) and a holder put by it would stand under the floor behind
 ## the view, where the renderer culls it and builds nothing. It stays hidden until then, and is
 ## scaled down to the camera's near distance when it shows: only the draw is wanted.
-static func warm_up(parent: Node, skinned: Node3D = null) -> void:
+## `variants` (M7): more art instances, each a skinned Node3D wearing its own art's material, drawn
+## in the same holder in the same pass: the trailer profile's art, whose mesh format (a UV2) or
+## material may not be the m6 art's, so a profile flip compiles nothing mid-fight. They keep their
+## own materials and hulls, and are drawn with `skinned`, once.
+static func warm_up(parent: Node, skinned: Node3D = null, variants: Array[Node3D] = []) -> void:
 	if parent == null or not parent.is_inside_tree() or DisplayServer.get_name() == "headless":
 		return
 	var boxes := not _warmed
@@ -414,6 +418,9 @@ static func warm_up(parent: Node, skinned: Node3D = null) -> void:
 			var mesh := node as MeshInstance3D
 			mesh.material_override = atlas
 			mesh.material_overlay = outline()
+		for other: Node3D in variants:
+			if other != null:
+				holder.add_child(other.duplicate() as Node3D)
 	# Two frames for the camera to be placed (see above), then it is read and the holder stands
 	# in its view, shown, for two more.
 	await parent.get_tree().process_frame

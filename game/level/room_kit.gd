@@ -326,11 +326,15 @@ static func warm_up_art(room: Node3D) -> void:
 		return
 	warm_up_libraries()
 	warm_catalog_arts()
-	var rig := build_warm_rig(room)
-	if rig == null:
+	var rigs := build_warm_rigs(room)
+	if rigs.is_empty():
 		return
-	ToonMaterials.warm_up(room, rig.skeleton)
-	rig.queue_free()
+	var variants: Array[Node3D] = []
+	for extra: HumanoidRig in rigs.slice(1):
+		variants.append(extra.skeleton)
+	ToonMaterials.warm_up(room, rigs[0].skeleton, variants)
+	for rig: HumanoidRig in rigs:
+		rig.queue_free()
 
 
 ## The art the warm-up wears (WARM_ART), loaded once and held for the run, so that the cache entry
@@ -362,12 +366,23 @@ static func catalog_arts() -> Array[CharacterArt]:
 	return out
 
 
+## The trailer variants (CharacterArt.trailer, M7) of `arts`, each once: the art the other look profile
+## draws, which the warm-up draws and holds too so a profile flip compiles and reads nothing mid-fight.
+static func variant_arts_of(arts: Array[CharacterArt]) -> Array[CharacterArt]:
+	var out: Array[CharacterArt] = []
+	for art: CharacterArt in arts:
+		if art != null and art.trailer != null and not out.has(art.trailer) and not arts.has(art.trailer):
+			out.append(art.trailer)
+	return out
+
+
 ## Read and hold the art of every catalog enemy (catalog_arts()): SkinnedArt's entry for each is made now, off the spawn frame, and
 ## held by this class's reference to the CharacterArt (the cache holds an art only weakly, see _warm_art). A cold GLB read costs
 ## 17 to 19 ms against 1 to 4 warm (fix-final-punk-spawn-cache C3), which is a dropped frame at the first Kicker or Bruiser of a
 ## run. Callable headless: it reads and draws nothing. Returns the arts held.
 static func warm_catalog_arts() -> Array[CharacterArt]:
 	_catalog_arts = catalog_arts()
+	_catalog_arts.append_array(variant_arts_of(_catalog_arts))
 	for art: CharacterArt in _catalog_arts:
 		SkinnedArt.entry_of(art)
 	return _catalog_arts
@@ -398,17 +413,41 @@ static func release_warm_art() -> void:
 ## The throwaway rig of warm_up_art(), built under `room`: a HumanoidRig with no hurtboxes wearing
 ## warm_art(), the art read and its meshes attached. The caller frees it. Null without the art.
 ## No window needed (a test drives it headless); warm_up_art() is the windowed caller.
-static func build_warm_rig(room: Node3D) -> HumanoidRig:
-	var art := warm_art()
-	if art == null:
+## `art` (null: warm_art()) is worn exactly, whatever the look profile.
+static func build_warm_rig(room: Node3D, art: CharacterArt = null) -> HumanoidRig:
+	var worn := art if art != null else warm_art()
+	if worn == null:
 		return null
 	var rig := HumanoidRig.new()
 	rig.name = "WarmUpRig"
 	rig.build_hurtboxes = false
-	rig.art = art
+	rig.art_follows_look = false
+	rig.art = worn
 	room.add_child(rig)
 	rig.build()
 	return rig
+
+
+## The throwaway rigs of the windowed warm-up, built under `room`: the first wears `base` (null: the
+## warm-up's Punk art) and one more per trailer variant (variant_arts_of()) of it and of every catalog
+## art (when `base` is null), each in its own art whatever the look profile, so both profiles' meshes and
+## materials are drawn. Empty without the art. The caller frees them. No window needed.
+static func build_warm_rigs(room: Node3D, base: CharacterArt = null) -> Array[HumanoidRig]:
+	var out: Array[HumanoidRig] = []
+	var first := build_warm_rig(room, base)
+	if first == null:
+		return out
+	out.append(first)
+	var arts: Array[CharacterArt] = [first.art]
+	if base == null:
+		for art: CharacterArt in catalog_arts():
+			if not arts.has(art):
+				arts.append(art)
+	for variant: CharacterArt in variant_arts_of(arts):
+		var rig := build_warm_rig(room, variant)
+		if rig != null:
+			out.append(rig)
+	return out
 
 
 ## Build the boxer named animation library of each WARM_LIBRARY_ENEMIES body's size now
