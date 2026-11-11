@@ -215,7 +215,7 @@ static func apply_look(material: ShaderMaterial) -> void:
 	var data := Tuning.data
 	var kind: int = material.get_meta(_KIND_META, -1)
 	if kind == Kind.HULL:
-		material.set_shader_parameter(&"width_px", data.look_outline_px)
+		material.set_shader_parameter(&"width_px", data.look_outline_px * LookProfile.ink_width_scale())
 		material.set_shader_parameter(&"near_m", data.look_outline_near_m)
 		material.set_shader_parameter(&"far_m", maxf(data.look_outline_far_m, data.look_outline_near_m + 0.1))
 		material.set_shader_parameter(&"lens_fade_m", data.look_outline_lens_fade_m)

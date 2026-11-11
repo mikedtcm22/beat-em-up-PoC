@@ -98,6 +98,38 @@ static func build_environment(room: Node3D) -> void:
 	room.add_child(sun)
 
 
+## The light of a room with no level sections (the crowd street, the training room), in LevelSection.light()'s
+## keys but for the sun's direction and energy, which are Tuning's (apply_sun()): what build_environment()
+## builds. LookPost puts it on the room, with the running look profile's overrides (LookProfile.resolve_light()).
+static func default_room_light() -> Dictionary:
+	return {
+		sun_color = Color.WHITE, fog_color = DEFAULT_FOG_COLOR, fog_density = DEFAULT_FOG_DENSITY,
+		sky_top = DEFAULT_SKY_TOP, sky_horizon = DEFAULT_SKY_HORIZON,
+	}
+
+
+## Put the sky, fog and sun colour of `light` (default_room_light()'s keys) on `room`'s WorldEnvironment and "Sun", where
+## the room has them and a value differs.
+static func apply_room_light(room: Node, light: Dictionary) -> void:
+	var sun := room.get_node_or_null("Sun") as DirectionalLight3D
+	if sun != null and sun.light_color != light.sun_color:
+		sun.light_color = light.sun_color
+	var world := room.get_node_or_null("WorldEnvironment") as WorldEnvironment
+	if world == null or world.environment == null:
+		return
+	var env := world.environment
+	if env.fog_light_color != light.fog_color:
+		env.fog_light_color = light.fog_color
+	if not is_equal_approx(env.fog_density, float(light.fog_density)):
+		env.fog_density = float(light.fog_density)
+	var sky := env.sky.sky_material as ProceduralSkyMaterial if env.sky != null else null
+	if sky != null:
+		if sky.sky_top_color != light.sky_top:
+			sky.sky_top_color = light.sky_top
+		if sky.sky_horizon_color != light.sky_horizon:
+			sky.sky_horizon_color = light.sky_horizon
+
+
 ## Put `sun` where Tuning's Look > Toon says: its height above the horizon, the direction it comes
 ## from and its energy (LookPost calls this again when one changes).
 static func apply_sun(sun: DirectionalLight3D) -> void:

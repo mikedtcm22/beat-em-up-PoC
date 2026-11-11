@@ -1568,6 +1568,26 @@ The Street Punk takes the recipe's parts 1 and 2 (`docs/milestones/M6-calls/FB-D
 
 Ox opts into DETAIL-2's keys (`docs/milestones/M6-calls/DETAIL-2.md`, "Rollout recipe, part 2") with no chain change. `assets/source/characters/boss/pipeline.json` adds `palette.detail_bake.texel_swatch` (`blur_px` 1, `passes` 2, `fill_px` 3, `rings` 1: the mask becomes RGBA, B holds the slot per texel, alpha 128/255 marks it, so the orange lapels, cuffs, belt and hood trim follow the texture's edge; the report says 1.1% of texels differ from their face), a lighter line (`crease.width_m` 0.0035, `ramp_m` 0.0025: 7.75 mm across at 1.8 m, from 10.1 mm), `crease.valley` (angle 999 = off) with `valley_deg` 12 on the `robe` zone only (the folds of the robe and the sleeves; no other zone has one), and one region, `legs_not_skin` (box x within 0.33, z 0.1-0.95 in the authored frame, slot 50, only from slot 7), which repaints the strip of skin the texture put down the tights. The island merge (0.0004), the 30,000 budget and the round gloves are as ROLL-OX left them. Contract: no new API and no tunable; `tests/bot/acts/detail_boss_acts.gd` is the look act ("Look: Ox robe": Ox at 1, 2.5 and 5 m, then turned 0, 90 and 150 degrees at 1.6 m). Tests: `tests/test_m6_feedback_detail_boss.gd` (3 new). Ratchets and calls: `docs/milestones/M6-calls/OX-2.md`. FIX-ART-B (Ox's face): the region `face_lock` keeps slot 7 where the texture's shading was nearest the shorts' grey (slots 7 and 53 inside the hood's box; slot 50 is left alone, it is the hood's lining) and the zone `face_skin` is now a box inside the hood (x within 0.09) at the ink pair 0.012 / 0.03, so the texture's own faint strokes (nose, mouth corner, jaw) are drawn; the crease stays off on the face. No API change.
 
+## Look profiles (M7)
+
+A look profile is one complete look the presentation can draw: `m6` (Milestone 6's, the default and the one every M6 test pins) or `trailer` (the look of the cinematic trailer, which Milestone 7 builds up in data). The switch is Tuning's `look_profile` (group "Look profile", before Audio: 0 = m6, 1 = trailer), and **F7** flips it live (`GameInput` action `look_profile`, listed in the help overlay), so any build is a side-by-side. The default becomes `trailer` only at sign-off.
+
+**Data.** Each profile is a `LookProfileData` resource (`game/fx/look_profile_data.gd`) in `game/fx/look_profiles/<name>.tres`, named by `LookProfile.NAMES`. Its defaults are M6's values, so `m6.tres` is empty and a profile lists only what it changes:
+
+| Field | What it drives | Consumer |
+| --- | --- | --- |
+| `light_overrides` | entries of a light (`LevelSection.light()`'s keys: sun elevation, yaw, colour, energy, fog colour and density, sky top and horizon) that replace the section's own, the room's default, or the crowd street's and training room's sky and fog | `LevelRoot.light_for()`, `LookPost._apply_room_light()` |
+| `grade_lut_path` | the grade LUT | `LookPost._apply_grade()` (re-reads the strip when the path changes) |
+| `bloom_allowed` | the Environment's `glow_enabled` | `LookPost._apply_grade()` |
+| `ink_width_scale` | a multiplier on `look_outline_px` (the hull) and `look_edge_px` (the edge line) | `ToonMaterials.apply_look()`, `LookPost._apply_edges()` |
+| `vfx_art_dir`, `hud_style` | the effect art folder and the HUD style set | accessors only so far; `VfxArt` and `HudStyle` are not wired to them yet |
+
+For now `trailer.tres` differs from M6 in one marker alone, three colours in `light_overrides` (a deep blue sky top, an orange horizon, a plum fog), which proves the path end to end; later builders add data to it (and wire the two accessors), not script constants.
+
+**Code.** `LookProfile` (`game/fx/look_profile.gd`) is the one helper the presentation asks: `current()`, `profile_name()`, `data()`, `resolve_light(light)` (the light with the overrides on it, the same dictionary when there are none), `cycle()` and one accessor per field. A flip is `Tuning.set_value(&"look_profile", n)`: `look_` names already make `LookPost` re-apply (edge pass, grade, bloom, the room light) and `ToonMaterials` re-apply every live material, and `LevelRoot` snaps its light blend to the new profile's light (no 2.5 s blend, no reload). Flipping back restores every M6 value exactly (`tests/test_look_profile.gd` compares the Environment, the sky, the sun and every shader uniform of every material on Mission 1's street, and the whole crowd street).
+
+**Layer rule.** The profile is presentation: simulation code (`game/combat`, `actors`, `enemies`, `player`) never reads `LookProfile` or `look_profile`, and a test scans for it.
+
 ## Ownership (Milestones 1-3)
 
 | Area | Files |

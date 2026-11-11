@@ -32,6 +32,7 @@ const DEBUG_ROWS: Array[Array] = [
 	["Cheats", &"cheats"],
 	["Sparring dummies on / off", &"sparring"],
 	["Switch room: level / crowd street / training", &"switch_room"],
+	["Look profile: M6 / trailer", &"look_profile"],
 	["Help", &"help"],
 	["Pause", &"pause"],
 	["Restart (while paused)", &"restart"],
