@@ -1411,6 +1411,47 @@ extends Resource
 @export_range(0.0, 6.0, 0.1) var look_paint_hull_weight_lod: float = 3.0
 ## Ink weighs under a form: the line is this much heavier where the surface faces down than where it faces up (0 = even).
 @export_range(0.0, 0.9, 0.01) var look_paint_hull_under_bias: float = 0.5
+@export_subgroup("Drawn line (G1)")
+## A painted surface takes this share of the key's shadow map (0 = none: the shadow map's self-shadows, ragged grey patches between the legs
+## and under the brim, never show; the paint carries the designed shadow shapes). 1 gives the real shadow back.
+@export_range(0.0, 1.0, 0.01) var look_paint_cast_shadow: float = 0.0
+## The beat of the drawn line's wobble, steps per second: 12 holds each shape for two frames of a 24 fps cadence.
+@export_range(1.0, 30.0, 1.0) var look_paint_wobble_hz: float = 12.0
+## The inner ink (the ink map's R): how far the cut swings with an object-space noise (the line swells and tapers), the noise's cells per
+## metre, how much heavier the line gets on the side away from the key, and the wobble of the line against the fill, in ink-map texels.
+@export_range(0.0, 0.3, 0.005) var look_paint_line_vary: float = 0.12
+@export_range(1.0, 60.0, 0.5) var look_paint_line_vary_cells: float = 9.0
+@export_range(0.0, 0.3, 0.005) var look_paint_line_shadow: float = 0.06
+@export_range(0.0, 6.0, 0.1) var look_paint_line_wobble_texels: float = 1.6
+## Where the inner ink faces the key it breaks: the share of cells that drop the line (0 = never) and the cells per metre.
+@export_range(0.0, 1.0, 0.01) var look_paint_line_gap: float = 0.3
+@export_range(2.0, 80.0, 0.5) var look_paint_line_gap_cells: float = 16.0
+## The hull: how far the width swings with an object-space noise (a share of it) and the noise's cells per metre; how much heavier it is on the
+## shadow side than the lit side (0 = even); the wobble in pixels (steps on the beat) and its cells per metre.
+@export_range(0.0, 0.9, 0.01) var look_paint_hull_vary: float = 0.45
+@export_range(1.0, 40.0, 0.5) var look_paint_hull_vary_cells: float = 6.0
+@export_range(0.0, 2.0, 0.01) var look_paint_hull_shadow: float = 0.7
+@export_range(0.0, 4.0, 0.05) var look_paint_hull_wobble_px: float = 1.1
+@export_range(1.0, 60.0, 0.5) var look_paint_hull_wobble_cells: float = 11.0
+## The hull breaks where it faces the key: the share of cells that drop the line and the cells per metre.
+@export_range(0.0, 1.0, 0.01) var look_paint_hull_gap: float = 0.4
+@export_range(2.0, 80.0, 0.5) var look_paint_hull_gap_cells: float = 14.0
+## The rim is broken into patches by a noise: its cells per metre and the cut (a higher cut leaves fewer, smaller patches; 1 = no rim).
+@export_range(1.0, 30.0, 0.5) var look_paint_rim_patch_cells: float = 4.5
+@export_range(0.0, 1.0, 0.01) var look_paint_rim_patch_cut: float = 0.62
+@export_subgroup("Frame finish (G1)")
+## The trailer's frame finish, 1 = on, 0 = the plain edge pass and the full 3D resolution (the A/B). It reads no screen copy (that cost about 3 ms): the
+## 3D view renders at `look_finish_scale` of the window and is upscaled bilinearly (the trailer is soft, like video; the HUD stays sharp, and the
+## smaller frame is cheaper); the edge quad's lines wobble by `look_finish_wobble_px` pixels (cells of `look_finish_wobble_cell_px`) and break in places
+## (`look_finish_line_break`: the share of the line the coarse noise thins or drops); a paper grain of `look_finish_grain` (a share of the value,
+## cells of `look_finish_grain_px` pixels) lies over the frame. The wobble, the breaks and the grain are new on each beat (look_paint_wobble_hz: twos).
+@export_range(0, 1, 1) var look_finish_on: int = 1
+@export_range(0.5, 1.0, 0.01) var look_finish_scale: float = 0.85
+@export_range(0.0, 0.2, 0.002) var look_finish_grain: float = 0.032
+@export_range(1.0, 6.0, 0.5) var look_finish_grain_px: float = 2.0
+@export_range(0.0, 3.0, 0.05) var look_finish_wobble_px: float = 1.0
+@export_range(20.0, 400.0, 5.0) var look_finish_wobble_cell_px: float = 120.0
+@export_range(0.0, 1.0, 0.01) var look_finish_line_break: float = 0.25
 
 @export_group("Audio")
 @export_subgroup("Mix")
