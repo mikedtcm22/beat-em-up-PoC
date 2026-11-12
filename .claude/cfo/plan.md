@@ -56,6 +56,17 @@ Owned files are exclusive within a phase. **T11 is the only row that edits `game
 | T20 | One fix wave from T18 and T19 | feature | parallel | sonnet | high | | T18, T19 | each finding re-checked in a new still; suite green | |
 | T21 | Gate 1: side-by-side reel and the run command to Game-boy. If arm B won, ask for the Tripo top-up here | verify | inline | session | medium | | T20 | user: plays the slice; go, adjust or stop | |
 
+### Phase 1b: the adjust round (Game-boy, 2026-11-11: "Adjust: one more round")
+
+| ID | Task | Class | Mode | Model | Effort | Pkt | Depends | Done when | ✓ |
+|---|---|---|---|---|---|---|---|---|---|
+| T22 | Four packages in their own worktrees: G1 shader owner (damage-blotch bug, hand-drawn line and rim, post wobble and softness), G2 character paint with Gemini (faces, folds; arm A), G3 street surfaces with Gemini (sheets, brick, chain-link), G4 light shapes (pools, windows, wisp) and the arms acts moved to the street | feature | workflow | sonnet | high | | T21 | each finding re-checked in a new still beside the trailer frame; Gemini ledger rows | |
+| T23 | Merge G1-G4; full suite under m6 | integration | workflow | opus | high | | T22 | suite green; pushed | |
+| T24 | Frame-time pass on the merged branch: measure per feature, cut to at most +10% over M6 | feature | workflow | sonnet | high | | T23 | interleaved 4-run medians within +10%; touched tests pass | |
+| T25 | Re-record the slice into `captures/m7-slice/merged3/`, final frame time, three blind judge sets, HANDOFF | integration | workflow | sonnet | high | | T24 | stills, clips, INDEX, `judge3/run1..3`, keys moved out | |
+| T26 | Blind judge x3 and scoring | verify | workflow | opus | medium | | T25 | per-group medians and tells | |
+| T27 | Gate 1b: reel and numbers to Game-boy; if the judge is still near M6, propose stopping the painted route | verify | inline | session | medium | | T26 | user: go or stop | |
+
 ### Phase 2: the roll-out (after Gate 1)
 
 Run through `tools/workflows/build.js` with `concurrency: 4`. Check `get_usage` before each wave; each wave ends in wip commits and a HANDOFF update.

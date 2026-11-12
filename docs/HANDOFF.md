@@ -4,6 +4,15 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-11 21:50: Game-boy answered Gate 1 with "Adjust: one more round"; the adjust round is running
+
+- **Decision (chat, 2026-11-11):** "Adjust: one more round". Arm A (the existing Punk mesh) is the lead's pick; `m7/t13` (arm B) stays unmerged. No Tripo spend this round; Gemini capped at $27 of the $35 (G2 $12, G3 $15).
+- **Running:** workflow `m7-adjust-round`, run `wf_6cc60e60-9df`, script `~/.claude/projects/-Users-arachne-repos-beat-em-up-PoC/4532b8a7-9eb5-41f2-9651-88f769f37f0b/workflows/scripts/m7-adjust-round-wf_6cc60e60-9df.js`. CFO rows T22 to T26 (started), T27 is the gate.
+  - Fix, four Sonnet builders in `.worktrees/m7-g1..g4` on `m7/g1..g4`: G1 shader owner (damage blotches at full health, drawn line and rim, post softness and grain), G2 Gemini-painted Punk face and player gloves, G3 Gemini-painted street sheets, sparse brick, hand-drawn fence card, G4 light pools, window rows, wisp outline, rooms under the trailer look, a night-street arms act (`docs/milestones/M7-calls/g4.md`).
+  - Then an Opus merge (order g1, g3, g4, g2; full suite), a Sonnet frame-time pass (`captures/m7-slice/perf3/`), a Sonnet re-record into `captures/m7-slice/merged3/` with judge sets in `judge3/` (keys in `judge3_keys/`) and a reel in `gate1b/`, then three blind Opus judges and scoring.
+- **Resume if cut off:** re-invoke the Workflow tool with that `scriptPath` and `resumeFromRunId: "wf_6cc60e60-9df"` in the same session; in a new session, check which of `m7/g1..g4` carry an "M7 G" commit, re-run only the missing packages from the script's briefs, then the later stages in order.
+- **Next (T27):** send Game-boy the reel and the numbers. If the judge still sits near M6's 0.94, recommend stopping the painted-asset route.
+
 ### 2026-11-11 17:10: M7 Gate 1 sent to Game-boy; the slice fails both measured gates
 - `m7/trailer-look` holds the slice plus one fix wave (F1 character colour, F2 paint and faces, F3 light shapes). 2150 tests; the full suite was not re-run after the last preset fix (`test_tuning_panel.gd` re-run alone, 28/28).
 - **Blind judge (captures/m7-slice/judge2, keys in judge2_keys):** street 0.80, arms 0.92, Punk turnaround 0.88. Same shuffle: trailer 0.35 (0.12 to 0.55), references 0.12, M6 0.94. The gate (inside the trailer's spread) is missed by a wide margin.
