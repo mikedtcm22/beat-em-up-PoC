@@ -4,6 +4,12 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-12 01:30: adjust round merged (G1-G4 plus the perf cut); slice re-recorded; the blind judge is running (T25)
+- Merged on `m7/trailer-look` (b6a53a3): G1, G3, G4, G2 and the perf cut. Full suite 2172/2172 in 452 s, no SCRIPT or SHADER ERROR.
+- Frame time (perf3, interleaved, 4 runs each): m6 10.90 ms, trailer 10.15 ms, -6.9% (was +22.6%). Report: `captures/m7-slice/perf3/report.txt`.
+- Stills and clips: `captures/m7-slice/merged3/{m6,trailer}/` (INDEX.md there; arms use the new night-street act). Owner reel: `captures/m7-slice/gate1b/`.
+- Judge sets: `captures/m7-slice/judge3/run1..3` (73 images and 13 sheets each); keys moved to `captures/m7-slice/judge3_keys/run<N>.json`. The judge is running; score with `tools/look/score_judge.py` against those keys.
+
 ### 2026-11-11 21:50: Game-boy answered Gate 1 with "Adjust: one more round"; the adjust round is running
 
 - **Decision (chat, 2026-11-11):** "Adjust: one more round". Arm A (the existing Punk mesh) is the lead's pick; `m7/t13` (arm B) stays unmerged. No Tripo spend this round; Gemini capped at $27 of the $35 (G2 $12, G3 $15).
