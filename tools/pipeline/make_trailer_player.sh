@@ -18,6 +18,10 @@ if [ -z "${ART_SKIP_BLENDER:-}" ]; then
 		| grep -E "T14-ASSET|Error|Traceback" || true
 	cp "$WORK/${name}_trailer.glb" "$out/${name}_trailer.glb"
 fi
+# the drawn glove sheets (Gemini, assets/source/trailer_art/<name>/sheets.json) warped onto the mesh's views, for the bake to project
+if [ -f "assets/source/trailer_art/$name/sheets.json" ]; then
+	"$PY" -I tools/pipeline/trailer_sheets.py align "$name" "$WORK" "assets/source/trailer_art/$name/sheets.json" "$WORK/sheets" | tail -1
+fi
 "$PY" -I tools/pipeline/trailer_player_paint.py bake "$name" "$WORK" "$out"
 # the ink map is read as data: lossless, mipmaps on, no 3D compression, no alpha border bleed (docs/ARCHITECTURE.md "The painted material (M7)")
 for f in "$out/${name}_ink.png" "$out/${name}_paint.png"; do

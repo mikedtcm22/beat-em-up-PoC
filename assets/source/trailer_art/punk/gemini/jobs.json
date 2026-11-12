@@ -1,0 +1,95 @@
+[
+ {
+  "out": "face_front.png",
+  "aspect": "4:5",
+  "size": "2K",
+  "refs": [
+   "ref_punk.png",
+   "ref_face.png",
+   "in_head_+0.png"
+  ],
+  "prompt": "Image 1 and 2 are the style reference: a frame from a hand-drawn 2D animated trailer (flat colour fills, a few heavy confident ink lines, no gradients, no texture, no photo detail). Image 3 is a grey 3D render of a character's head (a grey baseball cap, a neck) seen from the front, with no face yet. Redraw image 3 as a finished face drawing in exactly the style of images 1 and 2, in the SAME pose, framing, head shape and silhouette, the cap in the same place, the head the same size and position in the frame, same lens (orthographic front view, no perspective). The man is a weary, hard, middle-aged street fighter: heavy flat brows low over the eyes, the cap brim casting ONE flat dark shape across the eyes and upper face, narrow eyes with dark irises, one bold nose side line, a set straight mouth, deep cheek lines, a jaw shadow as one flat shape under the chin. Skin is a muted warm GREY (desaturated, not pink), the cap grey-slate, flat. Light is soft flat front light: NO rim light, NO orange, NO strong cast shadows except the brim shadow and one jaw shadow. Ink is near-black, thick (at least 4 px lines at this size). Plain flat mid-grey background. No text, no extra characters."
+ },
+ {
+  "out": "face_q45.png",
+  "aspect": "4:5",
+  "size": "2K",
+  "refs": [
+   "ref_punk.png",
+   "ref_face.png",
+   "in_head_+45.png"
+  ],
+  "prompt": "Image 1 and 2 are the style reference: a frame from a hand-drawn 2D animated trailer (flat colour fills, a few heavy confident ink lines, no gradients, no texture). Image 3 is a grey 3D render of a character's head (grey baseball cap) turned three-quarters, with no face yet. Redraw image 3 as a finished drawing in exactly the style of images 1 and 2, in the SAME pose, framing, head shape and silhouette, the cap and brim in the same place. The same weary hard middle-aged street fighter: heavy flat brows, the cap brim casting ONE flat dark shape across the eyes, narrow eyes with dark irises, a bold nose side line, a set straight mouth, deep cheek line, a jaw shadow as one flat shape. Skin a muted warm GREY (not pink), cap grey-slate. Flat soft front light: no rim light, no orange, no gradients. Ink near-black, thick (at least 4 px lines). Plain flat mid-grey background. No text."
+ },
+ {
+  "out": "face_qm45.png",
+  "aspect": "4:5",
+  "size": "2K",
+  "refs": [
+   "ref_punk.png",
+   "face_front.jpg",
+   "in_head_-45.png"
+  ],
+  "prompt": "Image 1 is the style reference: a frame from a hand-drawn 2D animated trailer (flat colour fills, heavy confident ink lines, no gradients). Image 2 is the finished front drawing of one man's face. Image 3 is a grey 3D render of the same man's head (grey baseball cap) turned three-quarters, with no face yet. Draw the SAME man (identical face, brows, eyes, nose, mouth, cap, line weight, flat colours and shadow shapes as image 2) in the three-quarter pose of image 3, in the SAME framing, head shape, silhouette and cap/brim placement as image 3. One flat dark brim-shadow shape across the eyes, one flat jaw shadow shape. Skin muted warm GREY, cap grey-slate, flat soft front light, no rim light, no orange, no gradients, thick near-black ink. Plain flat mid-grey background, no text."
+ },
+ {
+  "out": "body_front.png",
+  "aspect": "3:4",
+  "size": "2K",
+  "refs": [
+   "ref_punk.png",
+   "in_body_front.png"
+  ],
+  "prompt": "Image 1 is the style reference: a frame from a hand-drawn 2D animated trailer (flat colour fills, a few heavy confident ink lines, no gradients, no texture, no photo detail); it shows the same man's costume. Image 2 is a plain grey 3D render of one character standing in an A-pose, seen from the front. Redraw image 2 as a finished flat-lit costume drawing in exactly the style of image 1, keeping the SAME pose, framing, proportions, silhouette and every garment edge of image 2 exactly where it is (it will be projected back onto the 3D model, so nothing may move). Add the drawn detail: the puffy near-black navy vest with 4-6 bold ink fold lines and ONE flat designed shadow shape; the black top; grey-slate sleeves with 3-4 bold crease lines at the elbow and shoulder and ONE flat shadow shape along the underside of each arm; light grey-blue jeans with a few bold folds at the knees, thighs and over the boots; dark gloves with finger separations and knuckle creases and a wrist strap line; dark boots with laces. Skin muted warm grey, flat. Lighting: flat soft front light, NO rim light, NO orange, NO gradients, NO photographic shading; only flat local colours plus one or two flat shadow shapes per form. Ink near-black, at least 5 px thick, confident, tapering. Plain flat mid-grey background, no text, no ground shadow."
+ },
+ {
+  "out": "body_back.png",
+  "aspect": "3:4",
+  "size": "2K",
+  "refs": [
+   "ref_punk.png",
+   "in_body_back.png"
+  ],
+  "prompt": "Image 1 is the style reference: a frame from a hand-drawn 2D animated trailer (flat colour fills, a few heavy confident ink lines, no gradients, no texture, no photo detail); it shows the same man's costume. Image 2 is a plain grey 3D render of one character standing in an A-pose, seen from the BACK (the back of the vest, the back of the cap). Redraw image 2 as a finished flat-lit costume drawing in exactly the style of image 1, keeping the SAME pose, framing, proportions, silhouette and every garment edge of image 2 exactly where it is (it will be projected back onto the 3D model, so nothing may move). Add the drawn detail: the puffy near-black navy vest with 4-6 bold ink fold lines and ONE flat designed shadow shape; the black top; grey-slate sleeves with 3-4 bold crease lines at the elbow and shoulder and ONE flat shadow shape along the underside of each arm; light grey-blue jeans with a few bold folds at the knees, thighs and over the boots; dark gloves with finger separations and knuckle creases and a wrist strap line; dark boots with laces. Skin muted warm grey, flat. Lighting: flat soft front light, NO rim light, NO orange, NO gradients, NO photographic shading; only flat local colours plus one or two flat shadow shapes per form. Ink near-black, at least 5 px thick, confident, tapering. Plain flat mid-grey background, no text, no ground shadow."
+ },
+ {
+  "out": "hand_+0.png",
+  "aspect": "1:1",
+  "size": "2K",
+  "refs": [
+   "ref_punk.png",
+   "in_hand_+0.png"
+  ],
+  "prompt": "Image 1 is the style reference: a frame from a hand-drawn 2D animated trailer (flat colour fills, a few heavy confident ink lines, no gradients, no texture); the two men wear dark leather boxing-style gloves with a cuff. Image 2 is a plain 3D render of one such glove (a closed fist with a short cuff, a grey sleeve above it), seen from the front. Redraw image 2 as a finished flat-lit drawing in exactly the style of image 1, keeping the SAME pose, framing, size, silhouette and every edge of image 2 exactly where it is (it will be projected back onto the 3D model, so nothing may move). The glove is dark near-black blue leather (flat), the sleeve grey-slate. Draw bold ink detail: three or four curved knuckle crease lines, the finger separations as three clear lines down the fingers, a thumb crease, the cuff edge and a wrist strap line, two or three leather folds, and ONE flat designed shadow shape on the underside; no gradients, no highlights, no rim light, no orange, no photographic shading. Ink near-black but the glove is dark so draw the lines LIGHTER where needed: use a mid blue-grey line colour for the creases on the dark leather so they read, thick (at least 6 px). Plain flat mid-grey background, no text."
+ },
+ {
+  "out": "hand_+90.png",
+  "aspect": "1:1",
+  "size": "2K",
+  "refs": [
+   "ref_punk.png",
+   "in_hand_+90.png"
+  ],
+  "prompt": "Image 1 is the style reference: a frame from a hand-drawn 2D animated trailer (flat colour fills, a few heavy confident ink lines, no gradients, no texture); the two men wear dark leather boxing-style gloves with a cuff. Image 2 is a plain 3D render of one such glove (a closed fist with a short cuff, a grey sleeve above it), seen from one side. Redraw image 2 as a finished flat-lit drawing in exactly the style of image 1, keeping the SAME pose, framing, size, silhouette and every edge of image 2 exactly where it is (it will be projected back onto the 3D model, so nothing may move). The glove is dark near-black blue leather (flat), the sleeve grey-slate. Draw bold ink detail: three or four curved knuckle crease lines, the finger separations as three clear lines down the fingers, a thumb crease, the cuff edge and a wrist strap line, two or three leather folds, and ONE flat designed shadow shape on the underside; no gradients, no highlights, no rim light, no orange, no photographic shading. Ink near-black but the glove is dark so draw the lines LIGHTER where needed: use a mid blue-grey line colour for the creases on the dark leather so they read, thick (at least 6 px). Plain flat mid-grey background, no text."
+ },
+ {
+  "out": "hand_+180.png",
+  "aspect": "1:1",
+  "size": "2K",
+  "refs": [
+   "ref_punk.png",
+   "in_hand_+180.png"
+  ],
+  "prompt": "Image 1 is the style reference: a frame from a hand-drawn 2D animated trailer (flat colour fills, a few heavy confident ink lines, no gradients, no texture); the two men wear dark leather boxing-style gloves with a cuff. Image 2 is a plain 3D render of one such glove (a closed fist with a short cuff, a grey sleeve above it), seen from behind. Redraw image 2 as a finished flat-lit drawing in exactly the style of image 1, keeping the SAME pose, framing, size, silhouette and every edge of image 2 exactly where it is (it will be projected back onto the 3D model, so nothing may move). The glove is dark near-black blue leather (flat), the sleeve grey-slate. Draw bold ink detail: three or four curved knuckle crease lines, the finger separations as three clear lines down the fingers, a thumb crease, the cuff edge and a wrist strap line, two or three leather folds, and ONE flat designed shadow shape on the underside; no gradients, no highlights, no rim light, no orange, no photographic shading. Ink near-black but the glove is dark so draw the lines LIGHTER where needed: use a mid blue-grey line colour for the creases on the dark leather so they read, thick (at least 6 px). Plain flat mid-grey background, no text."
+ },
+ {
+  "out": "hand_-90.png",
+  "aspect": "1:1",
+  "size": "2K",
+  "refs": [
+   "ref_punk.png",
+   "in_hand_-90.png"
+  ],
+  "prompt": "Image 1 is the style reference: a frame from a hand-drawn 2D animated trailer (flat colour fills, a few heavy confident ink lines, no gradients, no texture); the two men wear dark leather boxing-style gloves with a cuff. Image 2 is a plain 3D render of one such glove (a closed fist with a short cuff, a grey sleeve above it), seen from the other side. Redraw image 2 as a finished flat-lit drawing in exactly the style of image 1, keeping the SAME pose, framing, size, silhouette and every edge of image 2 exactly where it is (it will be projected back onto the 3D model, so nothing may move). The glove is dark near-black blue leather (flat), the sleeve grey-slate. Draw bold ink detail: three or four curved knuckle crease lines, the finger separations as three clear lines down the fingers, a thumb crease, the cuff edge and a wrist strap line, two or three leather folds, and ONE flat designed shadow shape on the underside; no gradients, no highlights, no rim light, no orange, no photographic shading. Ink near-black but the glove is dark so draw the lines LIGHTER where needed: use a mid blue-grey line colour for the creases on the dark leather so they read, thick (at least 6 px). Plain flat mid-grey background, no text."
+ }
+]

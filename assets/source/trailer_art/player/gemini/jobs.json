@@ -1,0 +1,42 @@
+[
+ {
+  "out": "hand_+0.png",
+  "aspect": "1:1",
+  "size": "2K",
+  "refs": [
+   "ref_glove.png",
+   "in_hand_+0.png"
+  ],
+  "prompt": "Image 1 is the style reference: a frame from a hand-drawn 2D animated trailer showing the hero's first-person arms: grey sleeves, dark leather gloves with a flat dark local colour, a few bold ink lines (knuckle creases, a wrist strap), flat colour fills, no gradients. Image 2 is a plain 3D render of the hero's glove and wrist, seen from the front: a closed fist in a dark leather glove, a short cuff, a wrist strap band, a grey sleeve above it. Redraw image 2 as a finished flat-lit drawing in exactly the style of image 1, keeping the SAME pose, framing, size, silhouette and every edge of image 2 exactly where it is (it will be projected back onto the 3D model, so nothing may move). The glove is dark leather (flat, a blue-black), the sleeve grey-slate, the strap near-black. Draw bold detail: three or four curved knuckle crease lines over the knuckles, the finger separations as three clear lines down the fingers, a thumb crease, the cuff edge, TWO clean parallel strap-edge lines of the wrist strap, two leather folds, and ONE flat designed shadow shape on the underside; no stray marks or dashes; no gradients, no highlights, no rim light, no orange, no photographic shading. Draw the creases and strap edges in a LIGHTER mid blue-grey line colour on the dark leather so they read, thick (at least 6 px). Plain flat mid-grey background, no text."
+ },
+ {
+  "out": "hand_+90.png",
+  "aspect": "1:1",
+  "size": "2K",
+  "refs": [
+   "ref_glove.png",
+   "in_hand_+90.png"
+  ],
+  "prompt": "Image 1 is the style reference: a frame from a hand-drawn 2D animated trailer showing the hero's first-person arms: grey sleeves, dark leather gloves with a flat dark local colour, a few bold ink lines (knuckle creases, a wrist strap), flat colour fills, no gradients. Image 2 is a plain 3D render of the hero's glove and wrist, seen from one side: a closed fist in a dark leather glove, a short cuff, a wrist strap band, a grey sleeve above it. Redraw image 2 as a finished flat-lit drawing in exactly the style of image 1, keeping the SAME pose, framing, size, silhouette and every edge of image 2 exactly where it is (it will be projected back onto the 3D model, so nothing may move). The glove is dark leather (flat, a blue-black), the sleeve grey-slate, the strap near-black. Draw bold detail: three or four curved knuckle crease lines over the knuckles, the finger separations as three clear lines down the fingers, a thumb crease, the cuff edge, TWO clean parallel strap-edge lines of the wrist strap, two leather folds, and ONE flat designed shadow shape on the underside; no stray marks or dashes; no gradients, no highlights, no rim light, no orange, no photographic shading. Draw the creases and strap edges in a LIGHTER mid blue-grey line colour on the dark leather so they read, thick (at least 6 px). Plain flat mid-grey background, no text."
+ },
+ {
+  "out": "hand_+180.png",
+  "aspect": "1:1",
+  "size": "2K",
+  "refs": [
+   "ref_glove.png",
+   "in_hand_+180.png"
+  ],
+  "prompt": "Image 1 is the style reference: a frame from a hand-drawn 2D animated trailer showing the hero's first-person arms: grey sleeves, dark leather gloves with a flat dark local colour, a few bold ink lines (knuckle creases, a wrist strap), flat colour fills, no gradients. Image 2 is a plain 3D render of the hero's glove and wrist, seen from behind: a closed fist in a dark leather glove, a short cuff, a wrist strap band, a grey sleeve above it. Redraw image 2 as a finished flat-lit drawing in exactly the style of image 1, keeping the SAME pose, framing, size, silhouette and every edge of image 2 exactly where it is (it will be projected back onto the 3D model, so nothing may move). The glove is dark leather (flat, a blue-black), the sleeve grey-slate, the strap near-black. Draw bold detail: three or four curved knuckle crease lines over the knuckles, the finger separations as three clear lines down the fingers, a thumb crease, the cuff edge, TWO clean parallel strap-edge lines of the wrist strap, two leather folds, and ONE flat designed shadow shape on the underside; no stray marks or dashes; no gradients, no highlights, no rim light, no orange, no photographic shading. Draw the creases and strap edges in a LIGHTER mid blue-grey line colour on the dark leather so they read, thick (at least 6 px). Plain flat mid-grey background, no text."
+ },
+ {
+  "out": "hand_-90.png",
+  "aspect": "1:1",
+  "size": "2K",
+  "refs": [
+   "ref_glove.png",
+   "in_hand_-90.png"
+  ],
+  "prompt": "Image 1 is the style reference: a frame from a hand-drawn 2D animated trailer showing the hero's first-person arms: grey sleeves, dark leather gloves with a flat dark local colour, a few bold ink lines (knuckle creases, a wrist strap), flat colour fills, no gradients. Image 2 is a plain 3D render of the hero's glove and wrist, seen from the other side: a closed fist in a dark leather glove, a short cuff, a wrist strap band, a grey sleeve above it. Redraw image 2 as a finished flat-lit drawing in exactly the style of image 1, keeping the SAME pose, framing, size, silhouette and every edge of image 2 exactly where it is (it will be projected back onto the 3D model, so nothing may move). The glove is dark leather (flat, a blue-black), the sleeve grey-slate, the strap near-black. Draw bold detail: three or four curved knuckle crease lines over the knuckles, the finger separations as three clear lines down the fingers, a thumb crease, the cuff edge, TWO clean parallel strap-edge lines of the wrist strap, two leather folds, and ONE flat designed shadow shape on the underside; no stray marks or dashes; no gradients, no highlights, no rim light, no orange, no photographic shading. Draw the creases and strap edges in a LIGHTER mid blue-grey line colour on the dark leather so they read, thick (at least 6 px). Plain flat mid-grey background, no text."
+ }
+]
