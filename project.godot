@@ -77,6 +77,10 @@ paint_trim_grain={
 "type": "vec2",
 "value": Vector2(0, 90)
 }
+paint_key_dir={
+"type": "vec3",
+"value": Vector3(0.4, 0.8, 0.45)
+}
 
 [rendering]
 

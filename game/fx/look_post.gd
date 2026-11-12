@@ -26,6 +26,8 @@ const EDGE_SHADER := preload("res://game/fx/edge_pass.gdshader")
 const LUT_PATH := "res://assets/export/look/grade_lut.png"
 ## Prepended to the edge shader's source for the depth-only fallback.
 const DEPTH_ONLY_DEFINE := "#define EDGE_DEPTH_ONLY\n"
+## Prepended for the trailer profile's finish (M7 G1): the pass also softens, wobbles and grains the frame (edge_pass.gdshader).
+const FINISH_DEFINE := "#define EDGE_FINISH\n"
 ## Just above the contact flash (Material.RENDER_PRIORITY_MIN), below every comic sprite.
 const EDGE_RENDER_PRIORITY := Material.RENDER_PRIORITY_MIN + 1
 ## The quad is never culled: it is a screen, not a thing in the world.
@@ -38,6 +40,7 @@ const BYTE_MAX := 255.0
 enum AaMode { MSAA_4X, FXAA, OFF }
 
 static var _depth_only_shader: Shader
+static var _finish_shaders: Dictionary[bool, Shader] = {}
 
 var _quad: MeshInstance3D
 var _material: ShaderMaterial
@@ -51,6 +54,10 @@ var _lut_path: String = ""
 var _lut_texture: ImageTexture3D
 var _lut_strength: float = -1.0
 var _viewport: Viewport
+var _sun: DirectionalLight3D
+var _scale_before: float = -1.0
+var _mode_before: int = Viewport.SCALING_3D_MODE_BILINEAR
+var _key_published: Vector3 = Vector3.ZERO
 var _aa_before: Dictionary = {}
 var _aa_applied: Dictionary = {}
 
@@ -69,7 +76,30 @@ func _ready() -> void:
 	Tuning.changed.connect(_on_tuning_changed)
 
 
+func _process(_delta: float) -> void:
+	_publish_key_dir()
+
+
+## The key's direction (towards the light) for the painted hull and ink (the global uniform `paint_key_dir`): the room's Sun, read every frame
+## under the trailer profile (a level section's light turns it as it blends).
+func _publish_key_dir() -> void:
+	if LookProfile.current() != LookProfile.Id.TRAILER:
+		return
+	if _sun == null or not is_instance_valid(_sun):
+		var room := get_parent()
+		_sun = room.get_node_or_null("Sun") as DirectionalLight3D if room != null else null
+		if _sun == null:
+			return
+	var to_light := _sun.global_transform.basis.z.normalized()
+	if not to_light.is_equal_approx(_key_published):
+		_key_published = to_light
+		RenderingServer.global_shader_parameter_set(&"paint_key_dir", to_light)
+
+
 func _exit_tree() -> void:
+	if _viewport != null and is_instance_valid(_viewport) and _scale_before > 0.0:
+		_viewport.scaling_3d_scale = _scale_before
+		_viewport.scaling_3d_mode = _mode_before
 	if Tuning.changed.is_connected(_on_tuning_changed):
 		Tuning.changed.disconnect(_on_tuning_changed)
 	# Give the viewport its mode back, unless something else has set one since.
@@ -140,6 +170,20 @@ static func depth_only_shader() -> Shader:
 	return _depth_only_shader
 
 
+## The edge shader with the finish on (M7 G1), with or without the depth-only fallback.
+static func finish_shader(depth_only: bool = false) -> Shader:
+	if not _finish_shaders.has(depth_only):
+		var shader := Shader.new()
+		shader.code = FINISH_DEFINE + (DEPTH_ONLY_DEFINE if depth_only else "") + EDGE_SHADER.code
+		_finish_shaders[depth_only] = shader
+	return _finish_shaders[depth_only]
+
+
+## Whether the frame's finish is on: the trailer profile only.
+static func finish_on() -> bool:
+	return LookProfile.current() == LookProfile.Id.TRAILER and Tuning.data.look_finish_on == 1
+
+
 ## Push every Look > Edges, Grade and AA tunable to the quad, the Environment and the viewport.
 func apply() -> void:
 	_apply_sun()
@@ -147,6 +191,7 @@ func apply() -> void:
 	_apply_edges()
 	_apply_grade()
 	_apply_aa()
+	_apply_finish_scale()
 
 
 func _build_quad() -> void:
@@ -197,9 +242,17 @@ func _apply_room_light() -> void:
 func _apply_edges() -> void:
 	var t := Tuning.data
 	_quad.visible = t.look_edges_enabled
-	var wanted: Shader = depth_only_shader() if t.look_edge_depth_only else EDGE_SHADER
+	var finish := finish_on()
+	var wanted: Shader = finish_shader(t.look_edge_depth_only) if finish else (depth_only_shader() if t.look_edge_depth_only else EDGE_SHADER)
 	if _material.shader != wanted:
 		_material.shader = wanted
+	if finish:
+		_material.set_shader_parameter(&"line_break", t.look_finish_line_break)
+		_material.set_shader_parameter(&"grain", t.look_finish_grain)
+		_material.set_shader_parameter(&"grain_px", t.look_finish_grain_px)
+		_material.set_shader_parameter(&"wobble_px", t.look_finish_wobble_px)
+		_material.set_shader_parameter(&"wobble_cell_px", t.look_finish_wobble_cell_px)
+		_material.set_shader_parameter(&"beat_hz", t.look_paint_wobble_hz)
 	_material.set_shader_parameter(&"ink", HudStyle.INK)
 	_material.set_shader_parameter(&"width_px", t.look_edge_px * LookProfile.ink_width_scale())
 	_material.set_shader_parameter(&"depth_threshold", t.look_edge_depth_threshold)
@@ -231,6 +284,25 @@ func _apply_grade() -> void:
 		_lut_strength = t.look_grade_strength
 	_environment.adjustment_color_correction = _lut_texture
 	_environment.adjustment_enabled = true
+
+
+## The trailer's softening: the 3D view at `look_finish_scale` of the window, bilinear (nothing else under m6, which gets the viewport back as it
+## was). Only a change is written: a viewport re-makes its render buffers when its scale moves.
+func _apply_finish_scale() -> void:
+	var wanted := Tuning.data.look_finish_scale if finish_on() else 1.0
+	if _scale_before < 0.0:
+		_scale_before = _viewport.scaling_3d_scale
+		_mode_before = _viewport.scaling_3d_mode
+	if finish_on():
+		if _viewport.scaling_3d_mode != Viewport.SCALING_3D_MODE_BILINEAR:
+			_viewport.scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR
+		if not is_equal_approx(_viewport.scaling_3d_scale, wanted):
+			_viewport.scaling_3d_scale = wanted
+	else:
+		if not is_equal_approx(_viewport.scaling_3d_scale, _scale_before):
+			_viewport.scaling_3d_scale = _scale_before
+		if _viewport.scaling_3d_mode != _mode_before:
+			_viewport.scaling_3d_mode = _mode_before
 
 
 func _apply_aa() -> void:

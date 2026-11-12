@@ -15,6 +15,10 @@ shader_type spatial;
 //   (zero) normal, which is how it is told from a character and counted as 1.
 // - Everything is in whole pixels, scaled by the viewport height over 1080.
 //
+// With EDGE_FINISH defined (look_post.gd, the trailer profile only; M7 G1) the same pass is also the frame's finish, still with no screen
+// read: its lines wobble by a pixel or so and break in places, and a grain is laid over the frame through the quad's own alpha, all new on each
+// beat (twos); see edge_finish.gdshaderinc.
+//
 // With EDGE_DEPTH_ONLY defined (look_post.gd prepends it for the cheap fallback) the shader
 // reads no normal buffer: the renderer then makes none, and there are no creases and no mask.
 
@@ -23,6 +27,10 @@ render_mode unshaded, depth_test_disabled, depth_draw_never, cull_disabled, skip
 uniform sampler2D depth_tex : hint_depth_texture, repeat_disable, filter_nearest;
 #ifndef EDGE_DEPTH_ONLY
 uniform sampler2D normal_tex : hint_normal_roughness_texture, repeat_disable, filter_nearest;
+#endif
+
+#ifdef EDGE_FINISH
+#include "res://game/fx/edge_finish.gdshaderinc"
 #endif
 
 // The one ink (HudStyle.INK); every number below is fed from Tuning by look_post.gd.
@@ -67,8 +75,11 @@ float roughness_at(ivec2 p, ivec2 size) {
 
 void fragment() {
 	ivec2 size = textureSize(depth_tex, 0);
-	ivec2 p = ivec2(FRAGCOORD.xy);
 	float scale = VIEWPORT_SIZE.y / 1080.0;
+	ivec2 p = ivec2(FRAGCOORD.xy);
+#ifdef EDGE_FINISH
+	p += edge_finish_shift(FRAGCOORD.xy, TIME, scale);
+#endif
 	int k = max(1, int(round(width_px * scale)));
 	mat4 ip = INV_PROJECTION_MATRIX;
 
@@ -160,6 +171,14 @@ void fragment() {
 		color = vec3(1.0, 0.0, 1.0);
 		alpha = crease_line * fade;
 	}
+#ifdef EDGE_FINISH
+	if (debug_view == 0) {
+		alpha *= edge_finish_break(FRAGCOORD.xy, TIME, scale);
+		vec4 finished = edge_finish(FRAGCOORD.xy, TIME, scale, color, alpha);
+		color = finished.rgb;
+		alpha = finished.a;
+	}
+#endif
 	ALBEDO = color;
 	ALPHA = alpha;
 }

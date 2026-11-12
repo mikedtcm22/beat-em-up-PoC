@@ -33,6 +33,18 @@ uniform float paint_line_cut : hint_range(0.05, 0.95) = 0.3;
 uniform float paint_line_strength : hint_range(0.0, 1.0) = 1.0;
 uniform float paint_grain : hint_range(0.0, 0.3) = 0.07;
 uniform float paint_grain_cells : hint_range(10.0, 400.0) = 140.0;
+// The drawn line (M7 G1): the inner ink swells and tapers with an object-space noise, is heavier away from the key, breaks where it faces the
+// key, and sits a little off the fill on a beat (twos), so it reads as a hand's line and not a rasterised one.
+global uniform vec3 paint_key_dir;
+uniform float paint_wobble_hz : hint_range(1.0, 30.0) = 12.0;
+uniform float line_vary : hint_range(0.0, 0.3) = 0.12;
+uniform float line_vary_cells : hint_range(1.0, 60.0) = 9.0;
+uniform float line_shadow : hint_range(0.0, 0.3) = 0.06;
+uniform float line_wobble_texels : hint_range(0.0, 6.0) = 1.6;
+uniform float line_gap : hint_range(0.0, 1.0) = 0.3;
+uniform float line_gap_cells : hint_range(2.0, 80.0) = 16.0;
+// The key's shadow map on a painted surface (0: none, so no ragged self-shadow; the paint has the shadow shapes drawn in).
+uniform float paint_cast_shadow : hint_range(0.0, 1.0) = 0.0;
 
 // --- the tones and the lights ---
 uniform float paint_cut : hint_range(0.05, 0.95) = 0.42;
@@ -55,6 +67,8 @@ uniform float paint_rim_strength : hint_range(0.0, 2.0) = 0.9;
 uniform float paint_rim_cut : hint_range(0.3, 1.0) = 0.72;
 uniform float paint_rim_key : hint_range(0.0, 1.0) = 0.42;
 uniform float paint_rim_curve : hint_range(0.0, 4.0) = 1.2;
+uniform float paint_rim_patch_cells : hint_range(1.0, 30.0) = 4.5;
+uniform float paint_rim_patch_cut : hint_range(0.0, 1.0) = 0.62;
 
 // --- the hard highlight (the art's own, as toon_light.gdshaderinc has it) ---
 uniform float band_soft : hint_range(0.0, 8.0) = 1.2;
@@ -81,6 +95,7 @@ varying vec3 mark_normal;
 varying float swatch_spec;
 varying float swatch_glint;
 varying float glint_gate;
+varying float rim_patch;
 
 const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
 
@@ -101,11 +116,31 @@ void vertex() {
 
 void fragment() {
 	vec3 color = texture(paint_tex, UV2).rgb * albedo.rgb;
-	// The ink map: the line (filtered, cut crisp) and the class and gloss bytes (the texel itself, never a blend of two classes).
-	float line_raw = texture(ink_tex, UV2).r;
-	float line_edge = max(0.5 * fwidth(line_raw), 0.0001);
-	float line = smoothstep(paint_line_cut - line_edge, paint_line_cut + line_edge, line_raw) * paint_line_strength;
 	ivec2 size = textureSize(ink_tex, 0);
+	// The beat: the drawn line's shapes hold for whole steps (twos), then move.
+	float beat = floor(TIME * paint_wobble_hz);
+	vec3 rp = mark_pos;
+	// Where this surface turns from the key (-1) or to it (1), in the view space the normal is in.
+	float facing = dot(normalize(NORMAL), normalize((VIEW_MATRIX * vec4(paint_key_dir, 0.0)).xyz));
+	// The ink map: the line (filtered, cut crisp) and the class and gloss bytes (the texel itself, never a blend of two classes). The line is read
+	// a texel or two off its place, new on each beat, so it never sits exactly on the fill; its cut swings with the noise (swell and taper) and
+	// drops lower (heavier) away from the key.
+	vec2 jitter = vec2(paint_grain_noise(rp * 23.0 + vec3(beat * 3.7, 0.0, 1.0)), paint_grain_noise(rp * 23.0 + vec3(0.0, beat * 5.3, 9.0))) - 0.5;
+	vec2 line_uv = UV2 + jitter * 2.0 * line_wobble_texels / vec2(size);
+	float line_raw = texture(ink_tex, line_uv).r;
+	float swell = paint_grain_noise(rp * line_vary_cells + vec3(4.0, 7.0, 2.0)) - 0.5;
+	float cut = clamp(paint_line_cut + swell * 2.0 * line_vary - line_shadow * (0.5 - 0.5 * clamp(facing * 2.0, -1.0, 1.0)), 0.1, 0.85);
+	float line_edge = max(0.5 * fwidth(line_raw), 0.0001);
+	float line = smoothstep(cut - line_edge, cut + line_edge, line_raw) * paint_line_strength;
+	// Breaks on the lit side: whole cells of the noise drop the line, hard-edged, only where a cell is wide enough to read as a break.
+	float gap_noise = paint_grain_noise(rp * line_gap_cells + vec3(13.0, 5.0, 21.0));
+	float gap_cell = line_gap_cells * length(fwidth(rp));
+	float broken = smoothstep(0.05, 0.4, facing) * step(1.0 - line_gap, gap_noise) * (1.0 - smoothstep(0.2, 0.5, gap_cell));
+	line *= 1.0 - broken;
+	// The rim's patches: a low-frequency noise cut hard, so the rim is a few shapes on a form and not a band round it.
+	float patch_noise = paint_grain_noise(rp * paint_rim_patch_cells + vec3(2.0, 17.0, 5.0));
+	float patch_edge = max(fwidth(patch_noise), 0.004);
+	rim_patch = smoothstep(paint_rim_patch_cut - patch_edge, paint_rim_patch_cut + patch_edge, patch_noise);
 	vec4 mask = texelFetch(ink_tex, clamp(ivec2(UV2 * vec2(size)), ivec2(0), size - 1), 0);
 	float klass = mask.g;
 	float takes_marks = marks * step(0.75, klass);
@@ -149,7 +184,8 @@ void fragment() {
 void light() {
 	float to_pixels = VIEWPORT_SIZE.y / 1080.0;
 	float ndl = dot(NORMAL, LIGHT);
-	float lit = ndl * ATTENUATION;
+	// A directional light's shadow map is mixed in by paint_cast_shadow only: at 0 a figure never shades itself with ragged map shadow.
+	float lit = ndl * (LIGHT_IS_DIRECTIONAL ? mix(1.0, ATTENUATION, paint_cast_shadow) : ATTENUATION);
 	if (LIGHT_IS_DIRECTIONAL) {
 		if (fill_strength > 0.0) {
 			lit = max(lit, fill_strength * dot(NORMAL, fill_dir));
@@ -179,7 +215,7 @@ void light() {
 		float curve = length(fwidth(n)) / max(to_pixels, 0.001);
 		float rim_v = fres + paint_rim_key * facing - paint_rim_curve * clamp(curve, 0.0, 0.4);
 		float rim_edge = max(fwidth(rim_v), 0.002);
-		float rim = smoothstep(paint_rim_cut - rim_edge, paint_rim_cut + rim_edge, rim_v) * smoothstep(-0.05, 0.25, facing);
+		float rim = smoothstep(paint_rim_cut - rim_edge, paint_rim_cut + rim_edge, rim_v) * smoothstep(-0.05, 0.25, facing) * rim_patch;
 		SPECULAR_LIGHT += paint_rim_color * paint_rim_strength * rim;
 	} else {
 		// A lamp adds what rises above the shadow tone, so nothing inside the shadow band.

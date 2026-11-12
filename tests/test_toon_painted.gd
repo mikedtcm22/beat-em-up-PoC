@@ -294,3 +294,86 @@ func test_the_painted_tunables_sit_in_their_own_group_before_audio() -> void:
 			assert_eq(group, "Painted look (M7)", String(info.name))
 	assert_gt(found, 20)
 	assert_lt(groups.find("Painted look (M7)"), groups.find("Audio"))
+
+
+# --- M7 G1: no mark at full health, the drawn line, the broken rim, no ragged self-shadow ---
+
+func _alpha_of(tex: Texture2D) -> float:
+	var image := tex.get_image()
+	var most := 0.0
+	for y in image.get_height():
+		for x in image.get_width():
+			most = maxf(most, image.get_pixel(x, y).a)
+	return most
+
+
+func test_a_painted_character_at_full_health_shows_no_damage_mark_and_a_hurt_one_does() -> void:
+	# The grey and purple patches seen on full-health Punks were the key's shadow map shading the figure (the next test), not the damage
+	# look: marks are pinned here. All three damage tiles of a fresh painted material, and of one set to CLEAN, are fully transparent.
+	var material := ToonMaterials.art_for(_base.trailer_art())
+	for name: StringName in [&"damage_tex", &"damage_skin_tex", &"damage_scuff_tex"]:
+		var tex := material.get_shader_parameter(name) as Texture2D
+		assert_not_null(tex, "%s is set from the start" % name)
+		assert_eq(_alpha_of(tex), 0.0, "%s draws nothing on a fresh figure" % name)
+	assert_true(material.get_shader_parameter(&"blood_edge") in [null, 0.0], "no blood edge cut either")
+	var rig := _rig(_base)
+	Tuning.set_value(&"look_profile", LookProfile.Id.TRAILER)
+	var worn := rig.art_meshes()[0].material_override as ShaderMaterial
+	rig.set_damage_look(DamageLook.Level.CLEAN)
+	for name: StringName in [&"damage_tex", &"damage_skin_tex", &"damage_scuff_tex"]:
+		assert_eq(_alpha_of(worn.get_shader_parameter(name) as Texture2D), 0.0, "%s clean on the worn painted material" % name)
+	# Hurt: the marks are the M6 tiles, with alpha to show.
+	rig.set_damage_look(DamageLook.Level.BLOODIED)
+	assert_gt(_alpha_of(worn.get_shader_parameter(&"damage_tex") as Texture2D), 0.0, "blood on the clothes")
+	assert_gt(_alpha_of(worn.get_shader_parameter(&"damage_skin_tex") as Texture2D), 0.0, "and on the skin")
+	rig.set_damage_look(DamageLook.Level.CLEAN)
+	assert_eq(_alpha_of(worn.get_shader_parameter(&"damage_skin_tex") as Texture2D), 0.0, "healed back to nothing")
+
+
+func test_a_painted_figure_takes_no_shadow_map_from_the_key_by_default() -> void:
+	# The shadow map's self-shadow (between the legs, under the cap's brim) is ragged and reads as a translucent blotch; the paint has its own
+	# designed shadows. The share is a tunable at 0, and the shader mixes ATTENUATION in by it for a directional light only.
+	assert_eq(Tuning.data.look_paint_cast_shadow, 0.0)
+	var material := ToonMaterials.art_for(_base.trailer_art())
+	assert_eq(material.get_shader_parameter(&"paint_cast_shadow"), 0.0)
+	Tuning.set_value(&"look_paint_cast_shadow", 1.0)
+	assert_eq(material.get_shader_parameter(&"paint_cast_shadow"), 1.0, "live, and 1 gives the shadow map back")
+	var code := (load(PAINTED_SHADER_PATH) as Shader).code
+	assert_true(code.contains("LIGHT_IS_DIRECTIONAL ? mix(1.0, ATTENUATION, paint_cast_shadow) : ATTENUATION"), "only a directional light's map is mixed")
+
+
+func test_the_drawn_line_tunables_reach_the_painted_material_and_its_hull() -> void:
+	var data := Tuning.data
+	var material := ToonMaterials.art_for(_base.trailer_art())
+	var hull := ToonMaterials.outline_painted(_base.trailer_art().get_meta(ToonMaterials.INK_META) as Texture2D)
+	var wanted := {
+		&"line_vary": data.look_paint_line_vary, &"line_vary_cells": data.look_paint_line_vary_cells,
+		&"line_shadow": data.look_paint_line_shadow, &"line_wobble_texels": data.look_paint_line_wobble_texels,
+		&"line_gap": data.look_paint_line_gap, &"line_gap_cells": data.look_paint_line_gap_cells,
+		&"paint_wobble_hz": data.look_paint_wobble_hz, &"paint_rim_patch_cells": data.look_paint_rim_patch_cells,
+		&"paint_rim_patch_cut": data.look_paint_rim_patch_cut,
+	}
+	for name: StringName in wanted:
+		assert_eq(material.get_shader_parameter(name), wanted[name], "the paint's %s" % name)
+	var hull_wanted := {
+		&"hull_vary": data.look_paint_hull_vary, &"hull_vary_cells": data.look_paint_hull_vary_cells,
+		&"hull_shadow": data.look_paint_hull_shadow, &"hull_wobble_px": data.look_paint_hull_wobble_px,
+		&"hull_wobble_cells": data.look_paint_hull_wobble_cells, &"hull_gap": data.look_paint_hull_gap,
+		&"hull_gap_cells": data.look_paint_hull_gap_cells, &"paint_wobble_hz": data.look_paint_wobble_hz,
+	}
+	for name: StringName in hull_wanted:
+		assert_eq(hull.get_shader_parameter(name), hull_wanted[name], "the hull's %s" % name)
+	Tuning.set_value(&"look_paint_hull_gap", 0.2)
+	assert_eq(hull.get_shader_parameter(&"hull_gap"), 0.2, "live")
+	# The wobble holds on twos: 12 steps a second is a new shape every other frame of a 24 fps cadence.
+	assert_eq(data.look_paint_wobble_hz, 12.0)
+
+
+func test_the_drawn_line_is_built_in_object_space_and_steps_on_the_beat() -> void:
+	# No per-frame shimmer: the wobble is a noise of the rest pose seeded by floor(TIME * hz), and no TIME reaches it otherwise.
+	for path: String in [PAINTED_SHADER_PATH, PAINTED_HULL_PATH]:
+		var code := (load(path) as Shader).code
+		assert_true(code.contains("floor(TIME * paint_wobble_hz)"), "%s steps on the beat" % path)
+	var hull := (load(PAINTED_HULL_PATH) as Shader).code
+	assert_true(hull.contains("CUSTOM0"), "the hull's noise is in the rest pose, so it sticks to the body")
+	assert_true(hull.contains("discard"), "and it breaks on the lit side")
