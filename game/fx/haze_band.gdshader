@@ -54,20 +54,32 @@ void fragment() {
 	vec3 wp = (INV_VIEW_MATRIX * vec4(view, 1.0)).xyz;
 	vec4 result = vec4(0.0);
 	if (!sky) {
-		float n = vnoise3(wp * edge_scale) - 0.5;
-		// G4: a brushed edge: a blocky hash of the world (cells of 0.4 m, so one hash and no extra noise) bites each band's edge, so it is a stroke's edge, not a contour.
-		float brush = hash13(floor(wp * vec3(2.5, 1.0, 2.5))) - 0.5;
-		float d = dist + n * 2.0 * edge_wobble_m + brush * edge_brush_m - clear_m;
 		float soft = max(edge_soft_m, 0.0001);
-		vec4 colors[3] = vec4[3](band_color_1, band_color_2, band_color_3);
-		float starts[3] = float[3](band_start_m.x, band_start_m.y, band_start_m.z);
+		// Early-outs that change nothing: a band's tint is zero where the wobbled distance cannot reach its start (the noise moves a
+		// distance by at most edge_wobble_m and half edge_brush_m), and the mist's is zero above its wobbled top; most of a street
+		// view is out of both, and the two noises are most of this pass.
+		float first_start = 1.0e9;
 		for (int i = 0; i < 3; i++) {
-			if (starts[i] > 0.0) {
-				float k = smoothstep(starts[i] - soft, starts[i] + soft, d);
-				result = mix(result, vec4(colors[i].rgb, colors[i].a), k * step(0.0001, colors[i].a));
+			float start_i = i == 0 ? band_start_m.x : (i == 1 ? band_start_m.y : band_start_m.z);
+			if (start_i > 0.0) {
+				first_start = min(first_start, start_i);
 			}
 		}
-		if (mist_top > -999.0) {
+		if (dist + edge_wobble_m + 0.5 * edge_brush_m - clear_m + soft > first_start) {
+			float n = vnoise3(wp * edge_scale) - 0.5;
+			// G4: a brushed edge: a blocky hash of the world (cells of 0.4 m, so one hash and no extra noise) bites each band's edge, so it is a stroke's edge, not a contour.
+			float brush = hash13(floor(wp * vec3(2.5, 1.0, 2.5))) - 0.5;
+			float d = dist + n * 2.0 * edge_wobble_m + brush * edge_brush_m - clear_m;
+			vec4 colors[3] = vec4[3](band_color_1, band_color_2, band_color_3);
+			float starts[3] = float[3](band_start_m.x, band_start_m.y, band_start_m.z);
+			for (int i = 0; i < 3; i++) {
+				if (starts[i] > 0.0) {
+					float k = smoothstep(starts[i] - soft, starts[i] + soft, d);
+					result = mix(result, vec4(colors[i].rgb, colors[i].a), k * step(0.0001, colors[i].a));
+				}
+			}
+		}
+		if (mist_top > -999.0 && wp.y - 0.1 < mist_top + mist_wobble_m) {
 			float m = vnoise3(wp * vec3(edge_scale * 1.7, edge_scale * 0.6, edge_scale * 1.7) + 9.0) - 0.5;
 			float top = mist_top + m * 2.0 * mist_wobble_m;
 			float k = 1.0 - smoothstep(top - 0.03, top + 0.03, wp.y + (hash13(floor(wp * vec3(3.0, 5.0, 3.0))) - 0.5) * 0.14);

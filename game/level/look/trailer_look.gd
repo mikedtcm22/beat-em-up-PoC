@@ -29,6 +29,9 @@ var _room: Node3D
 var _active: bool = false
 var _streets: Array[NightStreet] = []
 var _sky_material: ShaderMaterial
+## The values last written to the painted sky's uniforms: a sky material that is written to is a changed sky (the renderer re-renders its
+## radiance map and the ambient light from it), so a tick writes only what moved.
+var _sky_written: Dictionary = {}
 var _sky_before: Sky = null
 var _sky_material_before: Material = null
 var _glow_before: Dictionary = {}
@@ -218,6 +221,7 @@ func _swap_sky() -> void:
 		return
 	_sky_material_before = env.sky.sky_material
 	_sky_material = ShaderMaterial.new()
+	_sky_written.clear()
 	_sky_material.shader = SKY_SHADER
 	env.sky.sky_material = _sky_material
 
@@ -308,20 +312,28 @@ func _tick_sky() -> void:
 	var base := _contact_look
 	var top: Color = light.sky_top
 	var horizon: Color = light.sky_horizon
-	_sky_material.set_shader_parameter(&"zenith_color", top)
-	_sky_material.set_shader_parameter(&"horizon_color", horizon)
-	_sky_material.set_shader_parameter(&"mid_color", horizon.lerp(top, base.sky_mid_mix))
-	_sky_material.set_shader_parameter(&"below_color", top * base.sky_below_mul)
+	_write_sky(&"zenith_color", top)
+	_write_sky(&"horizon_color", horizon)
+	_write_sky(&"mid_color", horizon.lerp(top, base.sky_mid_mix))
+	_write_sky(&"below_color", top * base.sky_below_mul)
 	var here := _look_here()
-	_sky_material.set_shader_parameter(&"disc_radius", here.sky_disc_radius if here != null else 0.0)
-	_sky_material.set_shader_parameter(&"star_cover", here.sky_star_cover if here != null else 0.0)
+	_write_sky(&"disc_radius", here.sky_disc_radius if here != null else 0.0)
+	_write_sky(&"star_cover", here.sky_star_cover if here != null else 0.0)
 	var shown := here if here != null else base
-	_sky_material.set_shader_parameter(&"disc_color", shown.sky_disc_color)
-	_sky_material.set_shader_parameter(&"halo_color", shown.sky_halo_color)
-	_sky_material.set_shader_parameter(&"halo_strength", shown.sky_halo_strength)
+	_write_sky(&"disc_color", shown.sky_disc_color)
+	_write_sky(&"halo_color", shown.sky_halo_color)
+	_write_sky(&"halo_strength", shown.sky_halo_strength)
 	var sun := _sun()
 	if sun != null:
-		_sky_material.set_shader_parameter(&"disc_dir", sun.global_transform.basis.z)
+		_write_sky(&"disc_dir", sun.global_transform.basis.z)
+
+
+## One of the painted sky's uniforms, written only when it differs from what the material already holds (a write dirties the sky).
+func _write_sky(param: StringName, value: Variant) -> void:
+	if _sky_written.has(param) and _sky_written[param] == value:
+		return
+	_sky_written[param] = value
+	_sky_material.set_shader_parameter(param, value)
 
 
 ## A room's light: RoomKit's keys (sun colour, fog, sky) from the room's night look.

@@ -173,7 +173,10 @@ void fragment() {
 	}
 #ifdef EDGE_FINISH
 	if (debug_view == 0) {
-		alpha *= edge_finish_break(FRAGCOORD.xy, TIME, scale);
+		// Only a pixel with a line has one to break (the noise is the costly part, and most pixels have no line).
+		if (alpha > 0.0) {
+			alpha *= edge_finish_break(FRAGCOORD.xy, TIME, scale);
+		}
 		vec4 finished = edge_finish(FRAGCOORD.xy, TIME, scale, color, alpha);
 		color = finished.rgb;
 		alpha = finished.a;

@@ -16,7 +16,7 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 ### 2026-11-11 17:10: M7 Gate 1 sent to Game-boy; the slice fails both measured gates
 - `m7/trailer-look` holds the slice plus one fix wave (F1 character colour, F2 paint and faces, F3 light shapes). 2150 tests; the full suite was not re-run after the last preset fix (`test_tuning_panel.gd` re-run alone, 28/28).
 - **Blind judge (captures/m7-slice/judge2, keys in judge2_keys):** street 0.80, arms 0.92, Punk turnaround 0.88. Same shuffle: trailer 0.35 (0.12 to 0.55), references 0.12, M6 0.94. The gate (inside the trailer's spread) is missed by a wide margin.
-- **Frame time (captures/m7-slice/perf2/report.txt):** M6 11.05 ms, trailer 13.55 ms, +22.6% against a +10% gate.
+- **Frame time (captures/m7-slice/perf3/report.txt, T24; perf2 was before the merge):** M6 10.90 ms, trailer 10.15 ms, **-6.9%** against a +10% gate (it was +9.7% at 7f8528a). Calls: docs/milestones/M7-calls/t24.md.
 - **Arm B** (new Tripo Punk) is on `m7/t13`, not merged: better fists and vest, worse cap. Tunable `trailer_punk_arm`. The A or B pick is open.
 - **Known faults:** translucent grey and purple blotches (damage marks) on full-health Punks; star-edged ground pools; exact window grids and chain-link; the training room and dummy are still plain toon under the trailer profile; kit sheets and character paint are procedural stand-ins (Gemini was out of credit until 15:53, now +$35).
 - **Waiting on Game-boy:** go, adjust or stop (Slack DM and chat, reel in captures/m7-slice/gate1/). Nothing is running. Resume: act on his answer; if adjust, the next round is in the chat summary (blotch bug, frame time, Gemini-painted sheets and faces, arm pick).
