@@ -38,6 +38,16 @@ global uniform vec2 paint_trim_grain;
 // texels a pixel covers, 0 to 12 as black to white); 3 the ink mask; 4 the sheet's alpha as it is sampled.
 uniform int debug_view : hint_range(0, 4) = 0;
 
+#ifdef TRIM_SCISSOR
+// The trailer profile's fence (Milestone 7, G3): with fence_on the chain-link faces draw this painted alpha card (a loose hand-drawn
+// fence, torn open in places, enlarged so it never moires) instead of the sheet's lattice. The card covers fence_card.x by
+// fence_card.y metres in the face's own metres (u along the face, v up it from its bottom, the card's top on the face's top: KitMesh
+// aligns it), repeating along u. 0 under the m6 profile: the lattice is drawn as before.
+uniform sampler2D fence_tex : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
+uniform float fence_on = 0.0;
+uniform vec2 fence_card = vec2(8.0, 4.0);
+#endif
+
 varying vec2 face_m;
 varying vec2 world_m;
 varying vec3 tint;
@@ -105,7 +115,13 @@ void fragment() {
 	}
 #ifdef TRIM_SCISSOR
 	if (row.w > 0.5 && row.w < 1.5) {
-		ALPHA = c.a;
+		if (fence_on > 0.5) {
+			vec4 f = texture(fence_tex, vec2(face_m.x / fence_card.x, 1.0 - face_m.y / fence_card.y));
+			color = f.rgb;
+			ALPHA = f.a;
+		} else {
+			ALPHA = c.a;
+		}
 		ALPHA_SCISSOR_THRESHOLD = scissor_cut;
 	} else {
 		color = mix(color, ink, ink_mask(c.a, texels, fade_texels, ground));

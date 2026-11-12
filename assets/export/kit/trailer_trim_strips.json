@@ -13,12 +13,12 @@
 			"name": "brick",
 			"period_m": 3.0,
 			"scissor": false,
-			"u_m": 8.0,
+			"u_m": 12.0,
 			"u_snap_m": 0.0,
 			"v0": 0.0,
 			"vary_tint": true,
 			"vary_v": true,
-			"vh": 0.28125
+			"vh": 0.25
 		},
 		{
 			"flip": true,
@@ -28,9 +28,9 @@
 			"name": "plaster",
 			"period_m": 0.5,
 			"scissor": false,
-			"u_m": 4.0,
+			"u_m": 8.0,
 			"u_snap_m": 0.0,
-			"v0": 0.28125,
+			"v0": 0.25,
 			"vary_tint": true,
 			"vary_v": false,
 			"vh": 0.015625
@@ -43,9 +43,9 @@
 			"name": "concrete",
 			"period_m": 1.0,
 			"scissor": false,
-			"u_m": 4.0,
+			"u_m": 8.0,
 			"u_snap_m": 0.0,
-			"v0": 0.296875,
+			"v0": 0.265625,
 			"vary_tint": true,
 			"vary_v": false,
 			"vh": 0.03125
@@ -60,7 +60,7 @@
 			"scissor": false,
 			"u_m": 4.0,
 			"u_snap_m": 0.0,
-			"v0": 0.328125,
+			"v0": 0.296875,
 			"vary_tint": false,
 			"vary_v": false,
 			"vh": 0.015625
@@ -73,9 +73,9 @@
 			"name": "kerb",
 			"period_m": 0.5,
 			"scissor": false,
-			"u_m": 4.0,
+			"u_m": 8.0,
 			"u_snap_m": 0.0,
-			"v0": 0.34375,
+			"v0": 0.3125,
 			"vary_tint": true,
 			"vary_v": false,
 			"vh": 0.03125
@@ -88,9 +88,9 @@
 			"name": "roof_tar",
 			"period_m": 1.0,
 			"scissor": false,
-			"u_m": 4.0,
+			"u_m": 8.0,
 			"u_snap_m": 0.0,
-			"v0": 0.375,
+			"v0": 0.34375,
 			"vary_tint": true,
 			"vary_v": false,
 			"vh": 0.03125
@@ -105,7 +105,7 @@
 			"scissor": false,
 			"u_m": 4.0,
 			"u_snap_m": 0.0,
-			"v0": 0.40625,
+			"v0": 0.375,
 			"vary_tint": true,
 			"vary_v": false,
 			"vh": 0.015625
@@ -120,7 +120,7 @@
 			"scissor": false,
 			"u_m": 4.0,
 			"u_snap_m": 0.0,
-			"v0": 0.421875,
+			"v0": 0.390625,
 			"vary_tint": false,
 			"vary_v": false,
 			"vh": 0.03125
@@ -135,7 +135,7 @@
 			"scissor": false,
 			"u_m": 4.0,
 			"u_snap_m": 0.0,
-			"v0": 0.453125,
+			"v0": 0.421875,
 			"vary_tint": false,
 			"vary_v": false,
 			"vh": 0.03125
@@ -150,7 +150,7 @@
 			"scissor": true,
 			"u_m": 4.0,
 			"u_snap_m": 0.0,
-			"v0": 0.484375,
+			"v0": 0.453125,
 			"vary_tint": false,
 			"vary_v": false,
 			"vh": 0.078125
@@ -163,9 +163,9 @@
 			"name": "crate",
 			"period_m": 0.5,
 			"scissor": false,
-			"u_m": 4.0,
+			"u_m": 8.0,
 			"u_snap_m": 0.0,
-			"v0": 0.5625,
+			"v0": 0.53125,
 			"vary_tint": true,
 			"vary_v": false,
 			"vh": 0.03125
@@ -180,7 +180,7 @@
 			"scissor": false,
 			"u_m": 4.0,
 			"u_snap_m": 0.0,
-			"v0": 0.59375,
+			"v0": 0.5625,
 			"vary_tint": false,
 			"vary_v": false,
 			"vh": 0.03125
@@ -195,7 +195,7 @@
 			"scissor": false,
 			"u_m": 4.0,
 			"u_snap_m": 0.0,
-			"v0": 0.625,
+			"v0": 0.59375,
 			"vary_tint": false,
 			"vary_v": false,
 			"vh": 0.015625
@@ -210,7 +210,7 @@
 			"scissor": false,
 			"u_m": 8.0,
 			"u_snap_m": 1.0,
-			"v0": 0.640625,
+			"v0": 0.609375,
 			"vary_tint": false,
 			"vary_v": false,
 			"vh": 0.1875
@@ -225,7 +225,7 @@
 			"scissor": false,
 			"u_m": 4.0,
 			"u_snap_m": 0.0,
-			"v0": 0.828125,
+			"v0": 0.796875,
 			"vary_tint": false,
 			"vary_v": false,
 			"vh": 0.015625
@@ -238,12 +238,12 @@
 			"name": "facade",
 			"period_m": 5.0,
 			"scissor": false,
-			"u_m": 16.0,
+			"u_m": 24.0,
 			"u_snap_m": 0.0,
-			"v0": 0.84375,
+			"v0": 0.8125,
 			"vary_tint": true,
 			"vary_v": true,
-			"vh": 0.15625
+			"vh": 0.1875
 		}
 	]
 }
