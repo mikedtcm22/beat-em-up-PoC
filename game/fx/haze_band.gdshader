@@ -15,6 +15,8 @@ uniform vec4 band_color_3 : source_color = vec4(0.1, 0.12, 0.3, 0.5);
 uniform float edge_wobble_m : hint_range(0.0, 20.0) = 3.0;
 uniform float edge_scale : hint_range(0.01, 2.0) = 0.12;
 uniform float edge_soft_m : hint_range(0.01, 4.0) = 0.25;
+// G4: how far the fine brush noise bites a band's edge (metres).
+uniform float edge_brush_m : hint_range(0.0, 6.0) = 1.2;
 // Sky pixels (no depth): which share of the farthest band they take (0: the sky is left alone).
 uniform float sky_share : hint_range(0.0, 1.0) = 0.0;
 // The ground mist: below `mist_top` metres (world y; wobbling), a flat tint of this colour and alpha.
@@ -53,7 +55,9 @@ void fragment() {
 	vec4 result = vec4(0.0);
 	if (!sky) {
 		float n = vnoise3(wp * edge_scale) - 0.5;
-		float d = dist + n * 2.0 * edge_wobble_m - clear_m;
+		// G4: a brushed edge: a blocky hash of the world (cells of 0.4 m, so one hash and no extra noise) bites each band's edge, so it is a stroke's edge, not a contour.
+		float brush = hash13(floor(wp * vec3(2.5, 1.0, 2.5))) - 0.5;
+		float d = dist + n * 2.0 * edge_wobble_m + brush * edge_brush_m - clear_m;
 		float soft = max(edge_soft_m, 0.0001);
 		vec4 colors[3] = vec4[3](band_color_1, band_color_2, band_color_3);
 		float starts[3] = float[3](band_start_m.x, band_start_m.y, band_start_m.z);
@@ -66,7 +70,7 @@ void fragment() {
 		if (mist_top > -999.0) {
 			float m = vnoise3(wp * vec3(edge_scale * 1.7, edge_scale * 0.6, edge_scale * 1.7) + 9.0) - 0.5;
 			float top = mist_top + m * 2.0 * mist_wobble_m;
-			float k = 1.0 - smoothstep(top - 0.12, top + 0.12, wp.y);
+			float k = 1.0 - smoothstep(top - 0.03, top + 0.03, wp.y + (hash13(floor(wp * vec3(3.0, 5.0, 3.0))) - 0.5) * 0.14);
 			vec4 mc = vec4(mist_color.rgb, mist_color.a * k);
 			result = vec4(mix(result.rgb, mc.rgb, mc.a / max(mc.a + result.a * (1.0 - mc.a), 0.0001)), mc.a + result.a * (1.0 - mc.a));
 		}

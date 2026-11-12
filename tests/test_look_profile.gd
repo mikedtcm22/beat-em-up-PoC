@@ -217,9 +217,15 @@ func test_a_room_without_sections_flips_too() -> void:
 	assert_eq(m6.environment.sky_top, RoomKit.DEFAULT_SKY_TOP)
 	Tuning.set_value(&"look_profile", LookProfile.Id.TRAILER)
 	var trailer := _snapshot(room)
-	assert_eq(trailer.environment.sky_top, LookProfile.data().light_overrides[&"sky_top"])
-	assert_eq(trailer.environment.fog_color, LookProfile.data().light_overrides[&"fog_color"])
-	assert_eq(trailer.sun, m6.sun)
+	# G4: a room under the trailer profile is lit by the room night look (TrailerLook.ROOM_LOOK): the painted sky in the street's
+	# indigo, its fog, the moon's colour on the sun; the sun's direction, energy and blur stay Tuning's.
+	var night := TrailerLook.ROOM_LOOK
+	assert_true(trailer.environment.sky_material is ShaderMaterial, "the painted sky")
+	assert_eq((trailer.environment.sky_material as ShaderMaterial).get_shader_parameter(&"zenith_color"), night.sky_top)
+	assert_eq(trailer.environment.fog_color, night.fog_color)
+	assert_eq(trailer.sun.color, night.sun_color)
+	assert_eq(trailer.sun.rotation, m6.sun.rotation)
+	assert_eq(trailer.sun.energy, m6.sun.energy)
 	Tuning.set_value(&"look_profile", LookProfile.Id.M6)
 	assert_eq(_snapshot(room), m6, "the crowd street is M6's again, whole")
 

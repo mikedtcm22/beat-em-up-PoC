@@ -15,3 +15,7 @@ extends Resource
 @export_range(0.0, 3.0) var energy: float = 0.8
 ## The share of the card's left, right, top and bottom that feathers into the sky.
 @export var feather: Vector4 = Vector4(0.06, 0.06, 0.0, 0.0)
+## G4: how far a low-frequency wobble bends the painted rows (a share of the card), and the share of the plate's lit windows that are
+## painted out, so the far windows are never an exact grid.
+@export_range(0.0, 0.03, 0.0005) var warp: float = 0.006
+@export_range(0.0, 1.0, 0.01) var drop_share: float = 0.35

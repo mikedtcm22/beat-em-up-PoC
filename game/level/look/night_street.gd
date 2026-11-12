@@ -10,6 +10,7 @@ const HALO_SHADER := preload("res://game/fx/haze_halo.gdshader")
 const SHAFT_SHADER := preload("res://game/fx/light_shaft.gdshader")
 const POOL_SHADER := preload("res://game/fx/light_pool.gdshader")
 const WINDOW_SHADER := preload("res://game/fx/window_glow.gdshader")
+const WASH_SHADER := preload("res://game/fx/skyline_wash.gdshader")
 const MATTE_SHADER := preload("res://game/fx/matte_card.gdshader")
 const CONTACT_SHADER := preload("res://game/fx/contact_shadow.gdshader")
 ## The contact shadow's own plane, in metres (the shader reads its extent as 0.8 either side of the centre).
@@ -21,7 +22,8 @@ const HEAD_SIZE := Vector3(0.7, 0.12, 0.38)
 const POLE_COLOR := Color(0.07, 0.07, 0.12)
 const SIDE_WALL_X := 6.0
 
-var section: LevelSection
+## The node the dressing is built under and in the space of: a level section, or (the crowd and training rooms) the room itself.
+var section: Node3D
 var look: NightLook
 
 ## One entry per lamp: {lamp, light, halo (ShaderMaterial or null), pool, shaft, base_energy}.
@@ -32,13 +34,14 @@ var _prop_contact_alpha: float = 1.0
 
 
 ## Builds the dressing of `for_section` from `for_look`.
-func build(for_section: LevelSection, for_look: NightLook) -> void:
+func build(for_section: Node3D, for_look: NightLook) -> void:
 	name = "NightStreet"
 	section = for_section
 	look = for_look
 	for i in look.lamps.size():
 		_build_lamp(look.lamps[i], i)
 	_build_windows()
+	_build_skyline_wash()
 	_build_mattes()
 	_build_prop_shadows()
 	apply_scales()
@@ -228,7 +231,8 @@ func _glow_material(lamp: NightLamp) -> StandardMaterial3D:
 # --- Windows, cards, props -----------------------------------------------------------------
 
 
-## A warm glow card in the pane of a share of the section's kit windows (a seeded pick, so the same ones every run).
+## A warm glow card in the pane of a share of the section's kit windows (a seeded pick, so the same ones every run). No two cards are
+## alike: each has its own size, offset, tilt, uneven corners and mullion strokes (a seeded draw per window).
 func _build_windows() -> void:
 	if look.window_lit_share <= 0.0:
 		return
@@ -237,29 +241,93 @@ func _build_windows() -> void:
 	var inverse := section.global_transform.affine_inverse()
 	var count := 0
 	for node: Node in section.find_children("*", "MeshInstance3D", true, false):
+		# A kit window piece, or (the crowd room's, which are plain meshes) a mesh that says it is a window: meta `kit_window`, its size.
+		var win_size := Vector3.ZERO
 		var piece := node as KitPiece
-		if piece == null or piece.kind != &"window":
+		if piece != null and piece.kind == &"window":
+			win_size = piece.size
+		elif node.has_meta(&"kit_window"):
+			win_size = node.get_meta(&"kit_window") as Vector3
+		else:
 			continue
 		if rng.randf() >= look.window_lit_share:
 			continue
 		var card := MeshInstance3D.new()
 		card.name = "WindowGlow%d" % count
 		var quad := QuadMesh.new()
-		quad.size = Vector2(piece.size.x * look.window_card_share.x, piece.size.y * look.window_card_share.y)
+		var jitter := look.window_size_jitter
+		var share := Vector2(
+				look.window_card_share.x * (1.0 + (rng.randf() * 2.0 - 1.0) * jitter),
+				look.window_card_share.y * (1.0 + (rng.randf() * 2.0 - 1.0) * jitter))
+		quad.size = Vector2(win_size.x * share.x, win_size.y * share.y)
 		card.mesh = quad
-		var front := Vector3(0.0, 0.0, piece.size.z * 0.5 - look.window_inset_m)
-		card.transform = inverse * piece.global_transform * Transform3D(Basis.IDENTITY, front)
+		var slide := Vector2(rng.randf() * 2.0 - 1.0, rng.randf() * 2.0 - 1.0) * look.window_offset_jitter
+		var front := Vector3(win_size.x * slide.x, win_size.y * slide.y, win_size.z * 0.5 - look.window_inset_m)
+		var tilt := Basis(Vector3.BACK, deg_to_rad((rng.randf() * 2.0 - 1.0) * look.window_tilt_deg))
+		card.transform = inverse * (node as Node3D).global_transform * Transform3D(tilt, front)
 		card.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		var material := ShaderMaterial.new()
 		material.shader = WINDOW_SHADER
 		material.set_shader_parameter(&"glow_color", look.window_color)
 		material.set_shader_parameter(&"deep_color", look.window_deep_color)
+		material.set_shader_parameter(&"mullion_color", look.window_mullion_color)
 		material.set_shader_parameter(&"energy", look.window_energy)
-		material.set_shader_parameter(&"grid", Vector2.ONE)
-		material.set_shader_parameter(&"mullion", 0.0)
+		material.set_shader_parameter(&"grid", Vector2(2.0, 2.0) if rng.randf() < 0.6 else Vector2(1.0 + float(rng.randi() % 2), 3.0))
+		material.set_shader_parameter(&"mullion", look.window_mullion)
 		material.set_shader_parameter(&"margin", 0.0)
-		material.set_shader_parameter(&"seed", float(count))
-		material.set_shader_parameter(&"lit_share", 1.0)
+		material.set_shader_parameter(&"uneven", look.window_uneven)
+		material.set_shader_parameter(&"seed", float(count) + 1.0)
+		material.set_shader_parameter(&"lit_share", 0.9)
+		card.material_override = material
+		add_child(card)
+		count += 1
+
+
+## A painted wash on the street-facing face of each kit skyline block (a level's `LevelBlock` with module `skyline`, or a room's mesh
+## with meta `kit_skyline`: its size), so the far facades' window rows are broken by irregular patches.
+func _build_skyline_wash() -> void:
+	if look.skyline_wash_cover <= 0.0:
+		return
+	var inverse := section.global_transform.affine_inverse()
+	var faces: Array[Dictionary] = []
+	if section.has_method(&"blocks"):
+		for block: LevelBlock in section.call(&"blocks"):
+			if block.module == &"skyline":
+				faces.append({centre = inverse * block.global_position, size = block.size, toward_z = false})
+	for node: Node in section.find_children("*", "MeshInstance3D", true, false):
+		if node.has_meta(&"kit_skyline"):
+			faces.append({centre = inverse * (node as Node3D).global_position, size = node.get_meta(&"kit_skyline") as Vector3, toward_z = true})
+	var count := 0
+	for face in faces:
+		var centre: Vector3 = face.centre
+		var size: Vector3 = face.size
+		var card := MeshInstance3D.new()
+		card.name = "SkylineWash%d" % count
+		var plane := QuadMesh.new()
+		var lift := look.skyline_wash_lift_m
+		if face.toward_z:
+			# A room's backdrop block: its -z face, toward the lane.
+			plane.size = Vector2(size.x, size.y)
+			card.position = centre - Vector3(0.0, 0.0, size.z * 0.5 + lift)
+		elif size.x > size.z * 3.0:
+			# A far block: its +z face, facing the player at the street's start.
+			plane.size = Vector2(size.x, size.y)
+			card.position = centre + Vector3(0.0, 0.0, size.z * 0.5 + lift)
+		else:
+			# A side block: its face toward the street's middle, turned to face it.
+			var toward := -signf(centre.x) if absf(centre.x) > 0.01 else 1.0
+			plane.size = Vector2(size.z, size.y)
+			card.position = centre + Vector3(toward * (size.x * 0.5 + lift), 0.0, 0.0)
+			card.rotation.y = PI * 0.5 * toward
+		card.mesh = plane
+		card.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		var material := ShaderMaterial.new()
+		material.shader = WASH_SHADER
+		material.set_shader_parameter(&"wash_color", look.skyline_wash_color)
+		material.set_shader_parameter(&"card_m", plane.size)
+		material.set_shader_parameter(&"patch_m", look.skyline_wash_patch_m)
+		material.set_shader_parameter(&"cover", look.skyline_wash_cover)
+		material.set_shader_parameter(&"seed", float(count) + 1.0)
 		card.material_override = material
 		add_child(card)
 		count += 1
@@ -287,6 +355,8 @@ func _build_mattes() -> void:
 		material.set_shader_parameter(&"energy", matte.energy)
 		material.set_shader_parameter(&"card_size_m", matte.size_m)
 		material.set_shader_parameter(&"feather", matte.feather)
+		material.set_shader_parameter(&"warp", matte.warp)
+		material.set_shader_parameter(&"drop_share", matte.drop_share)
 		card.material_override = material
 		add_child(card)
 
@@ -295,7 +365,9 @@ func _build_mattes() -> void:
 func _build_prop_shadows() -> void:
 	var inverse := section.global_transform.affine_inverse()
 	var count := 0
-	for block in section.blocks():
+	if not section.has_method(&"blocks"):
+		return
+	for block: LevelBlock in section.call(&"blocks"):
 		if block.look != &"prop" or not block.solid:
 			continue
 		var centre: Vector3 = inverse * block.global_position

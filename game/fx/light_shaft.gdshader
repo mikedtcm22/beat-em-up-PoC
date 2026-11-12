@@ -55,10 +55,13 @@ void fragment() {
 	float h_op = hash12(vec2(id + 7.0, seed * 2.7));
 	float len = mix(0.45, 1.0, h_len);
 	float opacity = mix(0.18, 0.75, h_op * h_op);
-	// A stroke: soft on its sides, brushed by streaks along its length, ending where its own length does.
-	float side = smoothstep(0.0, 0.3, f) * (1.0 - smoothstep(0.6, 1.0, f));
-	float bristle = 0.55 + 0.45 * vnoise(vec2(a * 17.0 + seed * 4.0, v * 2.2));
-	float along = 1.0 - smoothstep(len * 0.35, len, v);
+	// A stroke: crisp on its sides, brushed by streaks along its length, ending where its own length does.
+	// G4: stepped, not melted: a stroke is a flat tone with a brushed edge (a bristle noise bites its side), and its length fades in three
+	// flat steps, not a gradient.
+	float bite = (vnoise(vec2(a * 17.0 + seed * 4.0, v * 2.2)) - 0.5) * 0.3;
+	float side = step(0.12 + bite, f) * step(f, 0.9 - bite);
+	float bristle = 0.55 + 0.45 * step(0.5, vnoise(vec2(a * 17.0 + seed * 4.0, v * 2.2)));
+	float along = floor((1.0 - smoothstep(len * 0.35, len, v)) * 3.0 + 0.999) / 3.0;
 	float inside = step(abs(a + rag), 1.0);
 	float head = smoothstep(0.0, 0.08, v);
 	float a_out = side * bristle * along * opacity * inside * head * smoothstep(near_fade_m.x, near_fade_m.y, cam_dist);

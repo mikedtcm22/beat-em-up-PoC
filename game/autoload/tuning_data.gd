@@ -1326,12 +1326,15 @@ extends Resource
 @export_range(0.0, 1.5, 0.05) var tfx_ember_sway_m: float = 0.35
 ## Embers' life in seconds, and the barrel's ground glow: width (m) and opacity.
 @export_range(0.5, 6.0, 0.1) var tfx_ember_life_s: float = 2.2
-@export_range(0.5, 6.0, 0.1) var tfx_pool_m: float = 3.2
-@export_range(0.0, 1.0, 0.01) var tfx_pool_alpha: float = 0.5
+@export_range(0.5, 6.0, 0.1) var tfx_pool_m: float = 4.2
+@export_range(0.0, 1.0, 0.01) var tfx_pool_alpha: float = 0.85
 ## M7 F3: how soft the barrel pool's edge is (a share of its half-size), and the thinnest the steam's and flame's ink line may get,
 ## in pixels (a far plume keeps its outline).
-@export_range(0.0, 0.6, 0.01) var tfx_pool_soft: float = 0.25
+@export_range(0.0, 0.6, 0.01) var tfx_pool_soft: float = 0.12
 @export_range(0.0, 6.0, 0.1) var tfx_line_min_px: float = 1.8
+## M7 G4: the grey wisp's ink line, as the plume's: the share of its edge that gets a line (1: all round) and the line's width (m).
+@export_range(0.0, 1.0, 0.01) var tfx_wisp_line_share: float = 0.9
+@export_range(0.005, 0.1, 0.005) var tfx_wisp_line_m: float = 0.02
 
 @export_group("Night street (T10)")
 ## The trailer look profile's night street (NightLook, game/level/look/): live multipliers on what its data authors. Presentation
@@ -1342,11 +1345,11 @@ extends Resource
 @export_range(0.0, 2.0, 0.05) var night_pool_opacity: float = 1.0
 ## A multiplier on the halos' energy (the part of the picture that blooms).
 @export_range(0.0, 3.0, 0.05) var night_halo_energy: float = 1.0
-## M7 F3: how soft the halos' ring edges are (0: hard painted bands, 1: each tone melts into the next), and how soft the ground
-## pools' and the wall glows' edges are (a share of the card's half-size).
-@export_range(0.0, 1.0, 0.01) var night_halo_soft: float = 0.6
-@export_range(0.0, 0.6, 0.01) var night_pool_soft: float = 0.22
-@export_range(0.0, 0.6, 0.01) var night_wall_soft: float = 0.4
+## M7 F3, G4: how soft the halos' ring edges are (0: hard painted bands; a hair at 0.15, a sixth of a ring at 1), and how far the ground
+## pools' and the wall glows' outer wash fades (a share of the card's half-size; their inner tones are always crisp).
+@export_range(0.0, 1.0, 0.01) var night_halo_soft: float = 0.15
+@export_range(0.0, 0.6, 0.01) var night_pool_soft: float = 0.12
+@export_range(0.0, 0.6, 0.01) var night_wall_soft: float = 0.2
 ## A multiplier on the haze bands' and the mist's strength.
 @export_range(0.0, 3.0, 0.05) var night_haze_scale: float = 1.0
 ## A multiplier on the contact shadows' opacity.
