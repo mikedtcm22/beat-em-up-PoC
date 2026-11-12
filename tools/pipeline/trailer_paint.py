@@ -32,6 +32,8 @@ CELL_PX = 8
 PAD_TEXELS = 16
 ## The line and noise sizes are in texels of a 2048 map; multiplied by size / 2048 for the map being baked.
 PXS = 1.0
+## The work directory of the bake in progress (trailer_sheets.py align wrote its aligned sheets into <workdir>/sheets).
+WORKDIR = "."
 
 
 def load_config(name):
@@ -452,10 +454,85 @@ def class_bytes(ids, names, cfg):
 	return table[ids] / 255.0
 
 
+def apply_sheets(name, maps, meta, cfg, ids, names, paint, ink, size):
+	"""paint.json "sheets": {"groups": {<group>: {...}}}: the Gemini drawings aligned by trailer_sheets.py, projected (trailer_project.sheet_layers). Per group
+	("views" names the sheets, "bones" the body parts it paints): where a view sees a texel squarely the drawing's lines replace the procedural ones on the
+	regions "ink_regions" (and a margin round them); "tones" gives the flat tone classes of regions (base, shade, deep: the drawing's brightness against its
+	region's light tone, each a flat shape, never a gradient)."""
+	import trailer_project as tp
+	d = os.path.join(CONFIG_DIR, name)
+	reg = cfg["regions"]
+	for gname, spec in cfg["sheets"]["groups"].items():
+		ink_t, flat_t, best = tp.sheet_layers(maps, meta, spec, os.path.join(d, "sheets.json"), os.path.join(WORKDIR, "sheets"), size)
+		# the lines need a view that sees the surface squarely (a stretched stroke is a smear); the tone shapes are wide and forgive a grazing view
+		lo, hi = spec.get("ink_conf", [0.3, 0.55])
+		conf = np.clip((best - lo) / max(hi - lo, 1e-3), 0.0, 1.0)
+		lo, hi = spec.get("tone_conf", [0.1, 0.3])
+		conf_tone = cv2.GaussianBlur(np.clip((best - lo) / max(hi - lo, 1e-3), 0.0, 1.0), (0, 0), 1.0 * PXS)
+		lum = flat_t @ np.array([0.2126, 0.7152, 0.0722], np.float32)
+		# the views meet with a little stipple where the splat's visibility is noisy: a median first, then a blur, then the masks lose their specks
+		_d, _i = ndimage.distance_transform_edt(best <= 0.0, return_indices=True)
+		lum = lum[_i[0], _i[1]]
+		lum = cv2.medianBlur(np.clip(lum * 255.0, 0, 255).astype(np.uint8), 2 * int(spec.get("tone_median_px", 4) * PXS) + 1).astype(np.float32) / 255.0
+		lum = cv2.GaussianBlur(lum, (0, 0), spec.get("tone_blur_px", 2.2) * PXS)
+		speck = int(spec.get("tone_speck_px", 120) * PXS * PXS)
+
+		def clean(mask):
+			mask = mask.astype(np.uint8)
+			for flip in (0, 1):
+				m = (mask if not flip else 1 - mask).astype(np.uint8)
+				n, lab, stats, _c = cv2.connectedComponentsWithStats(m, connectivity=4)
+				small = np.zeros(n, bool)
+				small[1:] = stats[1:, cv2.CC_STAT_AREA] < speck
+				m = np.where(small[lab], 0, m)
+				mask = m if not flip else 1 - m
+			return mask.astype(np.float32)
+
+		def soft(x):
+			return np.clip((x - 0.5) / 0.12 + 0.5, 0.0, 1.0)
+
+		for rname, tone in spec.get("tones", {}).items():
+			ri = names.index(rname)
+			m = (ids == ri) & (conf > 0.6)
+			if m.sum() < 500:
+				continue
+			ref = float(np.percentile(lum[m], tone.get("ref_pct", 75)))
+			base = np.array(reg[rname]["base"], np.float32) / 255.0
+			shade = np.array(reg[rname]["shade"], np.float32) / 255.0
+			deep = np.array(tone.get("deep", (shade * tone.get("deep_mul", 0.78)) * 255), np.float32) / 255.0
+			sh = soft(cv2.GaussianBlur(clean(lum < ref * tone.get("shade_ratio", 0.88)), (0, 0), 1.2 * PXS))
+			dp = soft(cv2.GaussianBlur(clean(lum < ref * tone.get("deep_ratio", 0.0)), (0, 0), 1.2 * PXS)) if tone.get("deep_ratio", 0.0) > 0 else 0.0 * sh
+			col = base[None, None] * (1 - sh[..., None]) + shade[None, None] * sh[..., None]
+			col = col * (1 - dp[..., None]) + deep[None, None] * dp[..., None]
+			w = ((ids == ri) * conf_tone)[..., None]
+			paint = paint * (1 - w) + col * w
+		# a line at the middle of the range would flicker at the shader's cut (0.5): make the lines solid with a one-texel soft edge
+		ink_t = cv2.GaussianBlur(ink_t, (0, 0), spec.get("ink_smooth_px", 1.6) * PXS)
+		lo, hi = spec.get("ink_solid", [0.3, 0.6])
+		ink_t = np.clip((ink_t - lo) / max(hi - lo, 1e-3), 0.0, 1.0)
+		# the projected lines lose the specks the views' stipple leaves (a drawn line is many texels long)
+		sp = int(spec.get("ink_speck_px", 60) * PXS * PXS)
+		if sp > 0:
+			n, lab, stats, _c = cv2.connectedComponentsWithStats((ink_t > 0.5).astype(np.uint8), connectivity=8)
+			keep = np.zeros(n, bool)
+			keep[1:] = stats[1:, cv2.CC_STAT_AREA] >= sp
+			ink_t = ink_t * cv2.dilate(keep[lab].astype(np.float32), np.ones((3, 3), np.uint8))
+		# the drawn lines go on the named regions only (and a margin round them: the brow under the brim); the drawing's other parts do not match the mesh's
+		on = np.zeros(ids.shape, np.float32)
+		for rn in spec.get("ink_regions", []):
+			on = np.maximum(on, (ids == names.index(rn)).astype(np.float32))
+		margin = max(int(round(spec.get("ink_margin_mm", 2.5) * 0.77 * PXS)), 1)
+		near = cv2.GaussianBlur(cv2.dilate(on, np.ones((margin * 2 + 1,) * 2, np.uint8)), (0, 0), 1.0 * PXS)
+		w = np.clip(cv2.GaussianBlur(conf, (0, 0), 1.0 * PXS) * 1.2, 0.0, 1.0) * near
+		ink = ink * (1.0 - w) + np.clip(ink_t, 0.0, 1.0) * w
+	return paint, ink
+
+
 def bake(name, workdir, outdir, variant=None):
 	"""Bake <name>_paint.png and <name>_ink.png into `outdir`. With `variant` (a key of paint.json "variants": {"veteran": {"regions": {name:
 	{"base": .., "shade": ..}}}}): the same maps recoloured, only <name>_<variant>_paint.png is written (the ink is the same file)."""
-	global PXS
+	global PXS, WORKDIR
+	WORKDIR = workdir
 	maps, meta = load_maps(workdir)
 	cfg = load_config(name)
 	if variant:
@@ -482,13 +559,22 @@ def bake(name, workdir, outdir, variant=None):
 	valleys = line_from_valleys(curv, cover, ink_cfg, seed)
 	skip = [meta["bones"].index(n) for n in ink_cfg.get("crease_skip_bones", []) if n in meta["bones"]]
 	valleys = valleys * (~np.isin(maps["bone"], skip)) * ink_cfg.get("crease_strength", 0.8)
-	ink = np.maximum(valleys, line_from_borders(ids, ink_cfg, seed))
+	merge = {names.index(a): names.index(b) for a, b in ink_cfg.get("merge_for_borders", {}).items() if a in names and b in names}
+	ids_b = ids.copy()
+	for a, b in merge.items():
+		ids_b[ids == a] = b
+	ink = np.maximum(valleys, line_from_borders(ids_b, ink_cfg, seed))
 	ink = np.maximum(ink, fold_set(maps, meta, cfg, ids, names, seed))
 	ink = np.clip(warp(ink, ink_cfg.get("warp_px", 1.2) * PXS, ink_cfg.get("warp_scale_px", 22) * PXS, seed + 41), 0.0, 1.0)
+	for rn in ink_cfg.get("clear_regions", []):
+		ink = ink * (ids != names.index(rn)).astype(np.float32)
+	sheets = cfg.get("sheets")
+	if sheets:
+		paint, ink = apply_sheets(name, maps, meta, cfg, ids, names, paint, ink, size)
 	features = os.path.join(CONFIG_DIR, name, "features.svg")
 	if os.path.exists(features):
 		import trailer_features
-		drawn = trailer_features.render(features, maps, meta, size, seed, os.path.join(CONFIG_DIR, name, "features_uv.svg"))
+		drawn = trailer_features.render(features, maps, meta, size, seed, os.path.join(CONFIG_DIR, name, "features_uv.svg"), cfg.get("features_skip", ()))
 		ink = np.maximum(ink, drawn["ink"])
 		a = drawn["paint_alpha"][..., None]
 		paint = paint * (1.0 - a) + drawn["paint"] * a

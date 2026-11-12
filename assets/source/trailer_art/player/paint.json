@@ -506,5 +506,57 @@
  "cuff_t": [
   0.6,
   0.8
+ ],
+ "sheets": {
+  "groups": {
+   "hands": {
+    "views": [
+     "hand_r+0",
+     "hand_r+90",
+     "hand_r+180",
+     "hand_r-90",
+     "hand_l+0",
+     "hand_l+90",
+     "hand_l+180",
+     "hand_l-90"
+    ],
+    "bones": [
+     "LeftHand",
+     "RightHand",
+     "LeftLowerArm",
+     "RightLowerArm"
+    ],
+    "ink_both": true,
+    "ink_grow_mm": 1.0,
+    "min_line_mm2": 50,
+    "edge_cut_mm": 3.0,
+    "power": 8,
+    "abs_dark_lum": 0.0,
+    "ink_regions": [
+     "cuff",
+     "strap",
+     "glove"
+    ],
+    "ink_margin_mm": 1.5,
+    "tones": {
+     "glove": {
+      "shade_ratio": 0.8
+     },
+     "cuff": {
+      "shade_ratio": 0.8
+     }
+    },
+    "ink_speck_px": 120,
+    "tone_speck_px": 500,
+    "tone_median_px": 6
+   }
+  }
+ },
+ "features_skip": [
+  "knuckle_",
+  "finger_",
+  "phalanx_",
+  "panel_",
+  "crease_"
  ]
 }

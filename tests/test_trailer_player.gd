@@ -231,3 +231,15 @@ func test_a_player_spawned_in_the_trailer_profile_wears_it_and_the_camera_follow
 	Tuning.set_value(&"look_profile", LookProfile.Id.M6)
 	assert_true(cam._arm_meshes.is_empty(), "the camera listens to the player it rides now")
 	assert_eq(q.rig.worn_art().id, &"player", "m6 again")
+
+
+func test_the_gloves_are_drawn_from_sheets_whose_sources_are_kept() -> void:
+	# G2: the gloves' knuckle creases, finger separations and strap lines are Gemini drawings (t_06 as style reference) projected onto the maps
+	var f := FileAccess.open("res://assets/source/trailer_art/player/sheets.json", FileAccess.READ)
+	assert_not_null(f)
+	var spec := JSON.parse_string(f.get_as_text()) as Dictionary
+	var count := 0
+	for sheet: Dictionary in spec["sheets"]:
+		assert_true(FileAccess.file_exists("res://assets/source/trailer_art/player/" + String(sheet["src"])), "missing %s" % sheet["src"])
+		count += 1
+	assert_eq(count, 8, "four views of each glove (the left mirrored from the right)")

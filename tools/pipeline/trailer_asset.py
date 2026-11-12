@@ -298,6 +298,35 @@ def triangle_islands(obj):
 	return inverse, len(_u)
 
 
+def planar_front(objs, bone_names, spec):
+	"""layout "planar_front" {"bones": [...], "min_ny": n}: the polygons of those bones that face the front (normal.y above `min_ny`) get a planar UV2 from the
+	front (u = -x, v = z), one coherent island: the drawn face and cap front are painted on one piece (no seams through the eyes and the mouth)
+	and the face is the same from the front whatever the unwrap's angle limit would have cut."""
+	if not spec:
+		return
+	want = [bone_names.index(b) for b in spec.get("bones", ["Head"])]
+	min_ny = float(spec.get("min_ny", 0.45))
+	for o in objs:
+		me = o.data
+		co = pb.verts(me)
+		uv, _uv1, _n, lv = mesh_loops(o)
+		dom = bone_weights(o, bone_names).argmax(axis=1)
+		new = uv.copy()
+		count = 0
+		for p in me.polygons:
+			vs = [lv[p.loop_start + k] for k in range(p.loop_total)]
+			if not all(dom[v] in want for v in vs):
+				continue
+			if p.normal[1] < min_ny:
+				continue
+			for k, v in enumerate(vs):
+				new[p.loop_start + k] = (-co[v][0], co[v][2])
+			count += 1
+		me.uv_layers["detail"].data.foreach_set("uv", new.astype(np.float32).ravel())
+		me.update()
+		print("T12-ASSET planar front polygons:", count)
+
+
 def relayout_uv2(objs, bone_names, cfg, size):
 	"""Replace the "detail" (UV2) layer of `objs` with a new unwrap packed in one atlas (see the module doc). Returns a report."""
 	layout = cfg.get("layout", {})
@@ -315,6 +344,7 @@ def relayout_uv2(objs, bone_names, cfg, size):
 	bpy.ops.uv.smart_project(angle_limit=math.radians(float(layout.get("angle_deg", 66.0))), island_margin=0.002, area_weight=0.0,
 		correct_aspect=True, scale_to_bounds=False)
 	bpy.ops.object.mode_set(mode="OBJECT")
+	planar_front(objs, bone_names, layout.get("planar_front"))
 	# the density of every island against the median, then the weights
 	infos = []
 	for oi, o in enumerate(objs):

@@ -197,3 +197,45 @@ func test_a_spawned_veteran_wears_it_and_a_plain_punk_does_not() -> void:
 	Tuning.set_value(&"look_profile", LookProfile.Id.M6)
 	Tuning.set_value(&"look_profile", LookProfile.Id.TRAILER)
 	assert_eq((vet.rig.paint.art_material() as ShaderMaterial).get_shader_parameter(&"paint_tex"), variant.trailer_paint(), "after a flip back and forth")
+
+
+func _sheets_json(path: String) -> Dictionary:
+	var f := FileAccess.open(path, FileAccess.READ)
+	assert_not_null(f, path)
+	return JSON.parse_string(f.get_as_text()) as Dictionary
+
+
+func test_the_paint_comes_from_drawn_sheets_whose_sources_are_kept() -> void:
+	# G2: the face, torso and gloves are Gemini drawings (the trailer's frames as style reference) projected onto the maps; the sources stay in the repo
+	var spec := _sheets_json("res://assets/source/trailer_art/punk/sheets.json")
+	var names: Array = []
+	for sheet: Dictionary in spec["sheets"]:
+		names.append(sheet["name"])
+		assert_true(FileAccess.file_exists("res://assets/source/trailer_art/punk/" + String(sheet["src"])), "missing %s" % sheet["src"])
+	for want: String in ["front", "q45", "qm45", "body_front", "body_back", "hand_r+0", "hand_l+0"]:
+		assert_true(names.has(want), "sheet %s" % want)
+
+
+func test_the_face_is_drawn_in_heavy_lines_on_a_muted_warm_grey_skin() -> void:
+	var ink := (_trailer().get_meta(ToonMaterials.INK_META) as Texture2D).get_image()
+	var paint := (_trailer().get_meta(ToonMaterials.PAINT_META) as Texture2D).get_image()
+	for image: Image in [ink, paint]:
+		if image.is_compressed():
+			image.decompress()
+	var skin := 0
+	var skin_lines := 0
+	var sat := 0.0
+	for y in range(0, MAP_SIZE, 2):
+		for x in range(0, MAP_SIZE, 2):
+			var c := ink.get_pixel(x, y)
+			if roundi(c.g * 255.0) != 204:
+				continue
+			skin += 1
+			if c.r > 0.5:
+				skin_lines += 1
+			var p := paint.get_pixel(x, y)
+			sat += (maxf(p.r, maxf(p.g, p.b)) - minf(p.r, minf(p.g, p.b))) / maxf(maxf(p.r, maxf(p.g, p.b)), 0.001)
+	assert_gt(skin, 20000, "the skin class has texels")
+	assert_gt(float(skin_lines) / float(skin), 0.02, "the face carries bold ink (brows, eyes, nose, mouth, jaw)")
+	assert_lt(float(skin_lines) / float(skin), 0.3, "and is not a mask of black")
+	assert_lt(sat / float(skin), 0.22, "skin is a muted grey, not pink")

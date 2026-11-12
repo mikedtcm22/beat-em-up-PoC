@@ -1,0 +1,161 @@
+{
+ "origin": [
+  0,
+  0
+ ],
+ "landmarks_mm": {},
+ "sheets": [
+  {
+   "name": "hand_r+0",
+   "src": "gemini/hand_+0.jpg",
+   "yaw": 0,
+   "mirror": false,
+   "identity": true,
+   "bones": [
+    "RightHand",
+    "RightLowerArm"
+   ],
+   "window": [
+    -0.7428,
+    -0.4428,
+    0.8206,
+    1.1206
+   ],
+   "ppm": 4,
+   "points": {}
+  },
+  {
+   "name": "hand_r+90",
+   "src": "gemini/hand_+90.jpg",
+   "yaw": 90,
+   "mirror": false,
+   "identity": true,
+   "bones": [
+    "RightHand",
+    "RightLowerArm"
+   ],
+   "window": [
+    -0.2552,
+    0.0448,
+    0.8206,
+    1.1206
+   ],
+   "ppm": 4,
+   "points": {}
+  },
+  {
+   "name": "hand_r+180",
+   "src": "gemini/hand_+180.jpg",
+   "yaw": 180,
+   "mirror": false,
+   "identity": true,
+   "bones": [
+    "RightHand",
+    "RightLowerArm"
+   ],
+   "window": [
+    0.4428,
+    0.7428,
+    0.8206,
+    1.1206
+   ],
+   "ppm": 4,
+   "points": {}
+  },
+  {
+   "name": "hand_r-90",
+   "src": "gemini/hand_-90.jpg",
+   "yaw": -90,
+   "mirror": false,
+   "identity": true,
+   "bones": [
+    "RightHand",
+    "RightLowerArm"
+   ],
+   "window": [
+    -0.0448,
+    0.2552,
+    0.8206,
+    1.1206
+   ],
+   "ppm": 4,
+   "points": {}
+  },
+  {
+   "name": "hand_l+0",
+   "src": "gemini/hand_+0.jpg",
+   "yaw": 0,
+   "mirror": true,
+   "identity": true,
+   "bones": [
+    "LeftHand",
+    "LeftLowerArm"
+   ],
+   "window": [
+    0.4385,
+    0.7385,
+    0.8144,
+    1.1144
+   ],
+   "ppm": 4,
+   "points": {}
+  },
+  {
+   "name": "hand_l+90",
+   "src": "gemini/hand_+90.jpg",
+   "yaw": -90,
+   "mirror": true,
+   "identity": true,
+   "bones": [
+    "LeftHand",
+    "LeftLowerArm"
+   ],
+   "window": [
+    -0.0541,
+    0.2459,
+    0.8144,
+    1.1144
+   ],
+   "ppm": 4,
+   "points": {}
+  },
+  {
+   "name": "hand_l+180",
+   "src": "gemini/hand_+180.jpg",
+   "yaw": -180,
+   "mirror": true,
+   "identity": true,
+   "bones": [
+    "LeftHand",
+    "LeftLowerArm"
+   ],
+   "window": [
+    -0.7385,
+    -0.4385,
+    0.8144,
+    1.1144
+   ],
+   "ppm": 4,
+   "points": {}
+  },
+  {
+   "name": "hand_l-90",
+   "src": "gemini/hand_-90.jpg",
+   "yaw": 90,
+   "mirror": true,
+   "identity": true,
+   "bones": [
+    "LeftHand",
+    "LeftLowerArm"
+   ],
+   "window": [
+    -0.2459,
+    0.0541,
+    0.8144,
+    1.1144
+   ],
+   "ppm": 4,
+   "points": {}
+  }
+ ]
+}

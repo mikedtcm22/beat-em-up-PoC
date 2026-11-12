@@ -1,0 +1,411 @@
+{
+ "origin": [
+  -0.016,
+  1.68
+ ],
+ "bones": [
+  "Head",
+  "Neck"
+ ],
+ "landmarks_mm": {
+  "eye_l": [
+   -42,
+   56
+  ],
+  "eye_r": [
+   42,
+   56
+  ],
+  "nose": [
+   0,
+   102
+  ],
+  "mouth_c": [
+   0,
+   122
+  ],
+  "mouth_l": [
+   -38,
+   128
+  ],
+  "mouth_r": [
+   38,
+   128
+  ],
+  "chin": [
+   0,
+   150
+  ],
+  "jaw": [
+   0,
+   166
+  ],
+  "brim_c": [
+   0,
+   12
+  ],
+  "brim_l": [
+   -104,
+   22
+  ],
+  "brim_r": [
+   104,
+   22
+  ],
+  "crown": [
+   0,
+   -146
+  ]
+ },
+ "sheets": [
+  {
+   "name": "front",
+   "src": "gemini/face_front.jpg",
+   "yaw": 0,
+   "mirror": false,
+   "window": [
+    -0.156,
+    0.124,
+    1.505,
+    1.855
+   ],
+   "ppm": 4,
+   "points": {
+    "eye_l": [
+     0.357,
+     0.495
+    ],
+    "eye_r": [
+     0.686,
+     0.503
+    ],
+    "nose": [
+     0.521,
+     0.67
+    ],
+    "mouth_c": [
+     0.528,
+     0.75
+    ],
+    "mouth_l": [
+     0.385,
+     0.76
+    ],
+    "mouth_r": [
+     0.67,
+     0.748
+    ],
+    "chin": [
+     0.521,
+     0.795
+    ],
+    "jaw": [
+     0.528,
+     0.905
+    ],
+    "brim_c": [
+     0.528,
+     0.4
+    ],
+    "brim_l": [
+     0.161,
+     0.487
+    ],
+    "brim_r": [
+     0.894,
+     0.492
+    ],
+    "crown": [
+     0.528,
+     0.058
+    ]
+   }
+  },
+  {
+   "name": "q45",
+   "src": "gemini/face_q45.jpg",
+   "yaw": -45,
+   "mirror": false,
+   "window": [
+    -0.172,
+    0.168,
+    1.43,
+    1.855
+   ],
+   "ppm": 4,
+   "points": {
+    "eye_l": [
+     0.447,
+     0.403
+    ],
+    "eye_r": [
+     0.686,
+     0.4
+    ],
+    "nose": [
+     0.615,
+     0.565
+    ],
+    "mouth_c": [
+     0.58,
+     0.639
+    ],
+    "mouth_l": [
+     0.481,
+     0.65
+    ],
+    "mouth_r": [
+     0.683,
+     0.629
+    ],
+    "chin": [
+     0.596,
+     0.678
+    ],
+    "jaw": [
+     0.596,
+     0.795
+    ],
+    "brim_c": [
+     0.559,
+     0.345
+    ]
+   }
+  },
+  {
+   "name": "qm45",
+   "src": "gemini/face_q45.jpg",
+   "yaw": 45,
+   "mirror": true,
+   "window": [
+    -0.172,
+    0.168,
+    1.43,
+    1.855
+   ],
+   "ppm": 4,
+   "points": {
+    "eye_l": [
+     0.447,
+     0.403
+    ],
+    "eye_r": [
+     0.686,
+     0.4
+    ],
+    "nose": [
+     0.615,
+     0.565
+    ],
+    "mouth_c": [
+     0.58,
+     0.639
+    ],
+    "mouth_l": [
+     0.481,
+     0.65
+    ],
+    "mouth_r": [
+     0.683,
+     0.629
+    ],
+    "chin": [
+     0.596,
+     0.678
+    ],
+    "jaw": [
+     0.596,
+     0.795
+    ],
+    "brim_c": [
+     0.559,
+     0.345
+    ]
+   }
+  },
+  {
+   "name": "body_front",
+   "src": "gemini/body_front.jpg",
+   "yaw": 0,
+   "mirror": false,
+   "bones": "all",
+   "window": [
+    -0.7,
+    0.7,
+    -0.03,
+    1.835
+   ],
+   "ppm": 1.5,
+   "points": {},
+   "identity": true
+  },
+  {
+   "name": "body_back",
+   "src": "gemini/body_back.jpg",
+   "yaw": 180,
+   "mirror": false,
+   "bones": "all",
+   "window": [
+    -0.7,
+    0.7,
+    -0.03,
+    1.835
+   ],
+   "ppm": 1.5,
+   "points": {},
+   "identity": true
+  },
+  {
+   "name": "hand_r+0",
+   "src": "gemini/hand_+0.jpg",
+   "yaw": 0,
+   "mirror": false,
+   "identity": true,
+   "bones": [
+    "RightHand",
+    "RightLowerArm"
+   ],
+   "window": [
+    -0.7056,
+    -0.4056,
+    0.7769,
+    1.0769
+   ],
+   "ppm": 4,
+   "points": {}
+  },
+  {
+   "name": "hand_r+90",
+   "src": "gemini/hand_+90.jpg",
+   "yaw": 90,
+   "mirror": false,
+   "identity": true,
+   "bones": [
+    "RightHand",
+    "RightLowerArm"
+   ],
+   "window": [
+    -0.1616,
+    0.1384,
+    0.7769,
+    1.0769
+   ],
+   "ppm": 4,
+   "points": {}
+  },
+  {
+   "name": "hand_r+180",
+   "src": "gemini/hand_+180.jpg",
+   "yaw": 180,
+   "mirror": false,
+   "identity": true,
+   "bones": [
+    "RightHand",
+    "RightLowerArm"
+   ],
+   "window": [
+    0.4056,
+    0.7056,
+    0.7769,
+    1.0769
+   ],
+   "ppm": 4,
+   "points": {}
+  },
+  {
+   "name": "hand_r-90",
+   "src": "gemini/hand_-90.jpg",
+   "yaw": -90,
+   "mirror": false,
+   "identity": true,
+   "bones": [
+    "RightHand",
+    "RightLowerArm"
+   ],
+   "window": [
+    -0.1384,
+    0.1616,
+    0.7769,
+    1.0769
+   ],
+   "ppm": 4,
+   "points": {}
+  },
+  {
+   "name": "hand_l+0",
+   "src": "gemini/hand_+0.jpg",
+   "yaw": 0,
+   "mirror": true,
+   "identity": true,
+   "bones": [
+    "LeftHand",
+    "LeftLowerArm"
+   ],
+   "window": [
+    0.401,
+    0.701,
+    0.7734,
+    1.0734
+   ],
+   "ppm": 4,
+   "points": {}
+  },
+  {
+   "name": "hand_l+90",
+   "src": "gemini/hand_+90.jpg",
+   "yaw": -90,
+   "mirror": true,
+   "identity": true,
+   "bones": [
+    "LeftHand",
+    "LeftLowerArm"
+   ],
+   "window": [
+    -0.1433,
+    0.1567,
+    0.7734,
+    1.0734
+   ],
+   "ppm": 4,
+   "points": {}
+  },
+  {
+   "name": "hand_l+180",
+   "src": "gemini/hand_+180.jpg",
+   "yaw": -180,
+   "mirror": true,
+   "identity": true,
+   "bones": [
+    "LeftHand",
+    "LeftLowerArm"
+   ],
+   "window": [
+    -0.701,
+    -0.401,
+    0.7734,
+    1.0734
+   ],
+   "ppm": 4,
+   "points": {}
+  },
+  {
+   "name": "hand_l-90",
+   "src": "gemini/hand_-90.jpg",
+   "yaw": 90,
+   "mirror": true,
+   "identity": true,
+   "bones": [
+    "LeftHand",
+    "LeftLowerArm"
+   ],
+   "window": [
+    -0.1567,
+    0.1433,
+    0.7734,
+    1.0734
+   ],
+   "ppm": 4,
+   "points": {}
+  }
+ ]
+}

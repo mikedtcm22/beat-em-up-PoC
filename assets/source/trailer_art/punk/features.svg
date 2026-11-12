@@ -3,61 +3,11 @@
      the torso sheet (centre 0 / 1.30 m) and the gloves over the side sheets of the hands. Millimetres, x to the viewer's right, y down.
      Shadow shapes are painted (data-paint) into the albedo, lines go into the ink. See tools/pipeline/trailer_features.py. -->
 <g data-view="front" data-origin="-0.016 1.68" data-px="4">
-	<path id="brim_shadow" fill="ink" data-paint="#363a52" opacity="0.7" d="M -106 8 C -60 14, 60 14, 106 6 C 108 24, 104 34, 98 40 C 60 33, -60 33, -98 40 C -104 34, -108 24, -106 8 Z"/>
-	<path id="jaw_shadow" fill="ink" data-paint="#2c3046" opacity="0.72" d="M -88 144 C -66 172, 66 172, 88 144 C 60 158, -60 158, -88 144 Z"/>
-	<path id="cheek_shadow" fill="ink" data-paint="#4a4e66" opacity="0.5" d="M -96 70 C -80 84, -76 112, -60 134 C -76 140, -92 126, -98 100 Z"/>
-	<g stroke-width="2.2" opacity="0.9" data-taper="0.15,0.3" data-wobble="0.5">
+	<g stroke-width="2.6" opacity="0.9" data-taper="0.15,0.3" data-wobble="0.5">
 		<path id="seam_1" d="M -4 -142 C -14 -110, -28 -70, -36 -22"/>
 		<path id="seam_2" d="M 6 -142 C 24 -110, 46 -70, 66 -26"/>
 		<path id="seam_3" d="M -2 -144 C -40 -118, -78 -80, -104 -28"/>
 		<path id="seam_4" d="M 8 -144 C 50 -120, 90 -86, 112 -40"/>
-	</g>
-	<g stroke-width="2.4" opacity="0.9" data-taper="0.1,0.2" data-wobble="0.4">
-		<path id="band" d="M -112 -2 C -70 6, -30 8, 10 8 C 50 8, 90 4, 118 -4"/>
-		<path id="patch" d="M -16 -62 C 0 -66, 40 -66, 56 -58 C 58 -42, 52 -28, 38 -24 C 14 -22, -8 -26, -16 -38 Z"/>
-	</g>
-	<g stroke-width="11" opacity="1" data-taper="0.06,0.5" data-wobble="0.3">
-		<path id="brow_l" d="M -78 22 C -60 14, -32 18, -8 36"/>
-		<path id="brow_r" d="M 78 22 C 60 14 32 18 8 36"/>
-	</g>
-	<path id="eye_l_white" fill="ink" data-paint="#d6dae6" opacity="0.92" d="M -64 56 C -54 43, -30 43, -20 56 C -30 64, -54 65, -64 56 Z"/>
-	<path id="eye_r_white" fill="ink" data-paint="#d6dae6" opacity="0.92" d="M 64 56 C 54 43, 30 43, 20 56 C 30 64, 54 65, 64 56 Z"/>
-	<path id="iris_l" fill="ink" opacity="1" d="M -47 48 C -40 47, -32 50, -32 56 C -33 61, -40 63, -46 61 C -50 57, -50 52, -47 48 Z"/>
-	<path id="iris_r" fill="ink" opacity="1" d="M 32 48 C 39 47, 47 50, 46 56 C 45 61, 38 63, 32 61 C 28 57, 28 52, 32 48 Z"/>
-	<g stroke-width="2.8" opacity="1" data-taper="0.08,0.2" data-wobble="0.2">
-		<path id="lid_l" d="M -68 55 C -56 38, -30 38, -16 56"/>
-		<path id="lid_r" d="M 68 55 C 56 38 30 38 16 56"/>
-	</g>
-	<g stroke-width="1.8" opacity="0.6" data-taper="0.25,0.3" data-wobble="0.3">
-		<path id="bag_l" d="M -60 70 C -50 76, -32 76, -22 70"/>
-		<path id="bag_r" d="M 60 70 C 50 76 32 76 22 70"/>
-	</g>
-	<g stroke-width="3.6" opacity="0.95" data-taper="0.15,0.3" data-wobble="0.3">
-		<path id="nose_l" d="M -10 48 C -13 68, -15 84, -23 96"/>
-		<path id="nose_r" d="M 10 54 C 13 70, 15 84, 23 95"/>
-	</g>
-	<g stroke-width="3.0" opacity="0.95" data-taper="0.2,0.2" data-wobble="0.3">
-		<path id="nose_base" d="M -24 99 C -10 108, 10 108, 24 99"/>
-	</g>
-	<path id="nostril_l" fill="ink" opacity="0.95" d="M -18 100 C -13 97, -8 98, -7 102 C -11 105, -16 105, -18 100 Z"/>
-	<path id="nostril_r" fill="ink" opacity="0.95" d="M 18 100 C 13 97, 8 98, 7 102 C 11 105, 16 105, 18 100 Z"/>
-	<g stroke-width="3.0" opacity="0.9" data-taper="0.2,0.4" data-wobble="0.35">
-		<path id="naso_l" d="M -42 98 C -54 112, -56 128, -48 144"/>
-		<path id="naso_r" d="M 42 98 C 54 112 56 128 48 144"/>
-	</g>
-	<g stroke-width="5.2" opacity="1" data-taper="0.08,0.08" data-wobble="0.25">
-		<path id="mouth" d="M -38 128 C -18 120, 18 120, 38 128"/>
-	</g>
-	<g stroke-width="3.2" opacity="0.95" data-taper="0.05,0.5" data-wobble="0.2">
-		<path id="corner_l" d="M -38 128 C -43 133, -45 140, -42 148"/>
-		<path id="corner_r" d="M 38 128 C 43 133 45 140 42 148"/>
-	</g>
-	<g stroke-width="2.2" opacity="0.7" data-taper="0.3,0.3" data-wobble="0.2">
-		<path id="chin" d="M -16 146 C -4 150, 6 150, 16 146"/>
-	</g>
-	<g stroke-width="2.6" opacity="0.8" data-taper="0.1,0.5" data-wobble="0.3">
-		<path id="jaw_l" d="M -90 108 C -92 134, -74 156, -40 162"/>
-		<path id="jaw_r" d="M 90 108 C 92 134 74 156 40 162"/>
 	</g>
 </g>
 <g data-view="back" data-origin="0.016 1.68" data-px="4">

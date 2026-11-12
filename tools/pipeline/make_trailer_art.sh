@@ -19,6 +19,10 @@ for name in "${names[@]}"; do
 			| grep -E "T12-ASSET|Error|Traceback" || true
 		cp "$WORK/$name/${name}_trailer.glb" "$out/${name}_trailer.glb"
 	fi
+	# the drawn sheets (Gemini, assets/source/trailer_art/<name>/sheets.json) warped onto the mesh's views, for the bake to project
+	if [ -f "assets/source/trailer_art/$name/sheets.json" ]; then
+		"$PY" -I tools/pipeline/trailer_sheets.py align "$name" "$WORK/$name" "assets/source/trailer_art/$name/sheets.json" "$WORK/$name/sheets" | tail -1
+	fi
 	"$PY" -I tools/pipeline/trailer_paint.py bake "$name" "$WORK/$name" "$out"
 	for variant in $("$PY" -I -c "import json,sys;print(' '.join(json.load(open('assets/source/trailer_art/$name/paint.json')).get('variants',{})))"); do
 		"$PY" -I tools/pipeline/trailer_paint.py bake "$name" "$WORK/$name" "$out" "$variant"

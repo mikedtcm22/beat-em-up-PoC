@@ -221,7 +221,7 @@ class Projector:
 		return c + 0.5 + off[0], r + 0.5 + off[1], max(mm, 0.05)
 
 
-def render(svg_path, maps, meta, ink_size, seed, uv_svg=None):
+def render(svg_path, maps, meta, ink_size, seed, uv_svg=None, skip=()):
 	"""The features as a float image (ink_size x ink_size, 0..1): see the module doc."""
 	tree = ET.parse(svg_path)
 	views = []
@@ -240,6 +240,8 @@ def render(svg_path, maps, meta, ink_size, seed, uv_svg=None):
 			continue
 		proj = Projector(maps, view)
 		for n, (attrs, subs, ident) in enumerate(view["paths"]):
+			if skip and any(ident.startswith(p) for p in skip):
+				continue
 			for si, sub in enumerate(subs):
 				width = float(attrs["stroke-width"])
 				opacity = float(attrs["opacity"])
