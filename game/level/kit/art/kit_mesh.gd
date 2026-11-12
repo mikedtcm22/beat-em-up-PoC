@@ -40,7 +40,11 @@ const STEP_RISE_M := 0.18
 const PLINTH_MIN_WIDTH_M := 1.0
 const PLINTH_MIN_HEIGHT_M := 3.0
 
+## The trailer profile's painted fence (M7 G3; tools/gen_trailer_kit.py): an alpha card the chain-link faces draw in place of the sheet's lattice.
+const FENCE_CARD_PATH := "res://assets/export/kit/trailer_fence_card.png"
+
 static var _cache: Dictionary = {}
+static var _fence_wired: bool = false
 
 
 ## The mesh of `kind` at `size`, or null for `&"box"`, `&""` and a kind that does not exist. Under the trailer profile the
@@ -53,7 +57,7 @@ static func build(kind: StringName, size: Vector3, variant: int = -1) -> ArrayMe
 	var key := "%s|%.3f|%.3f|%.3f" % [kind, size.x, size.y, size.z]
 	var b := Builder.new(variant)
 	if b.trailer:
-		key += "|t%d" % variant
+		key += "|t%d|%.2f" % [variant, Tuning.data.trailer_fence_card_h_m]
 	var cached: ArrayMesh = _cache.get(key)
 	if cached != null:
 		return cached
@@ -113,6 +117,26 @@ static func build_stairs(width: float, rise: float, run: float, count: int) -> A
 	var mesh := b.finish()
 	_cache[key] = mesh
 	return mesh
+
+
+## Puts the running profile's chain-link on the wire material (`ToonMaterials.trim_scissor()`): under the trailer profile the painted fence card
+## and its size in metres, under M6's the sheet's lattice (`fence_on` 0). `finish()` calls it for every mesh it builds, and a flip of the profile
+## (or of the card's size) calls it again, so cached meshes of either profile draw right after a flip.
+static func sync_fence() -> void:
+	var wire := ToonMaterials.trim_scissor()
+	var on := TrimSheet.is_trailer()
+	wire.set_shader_parameter(&"fence_on", 1.0 if on else 0.0)
+	if on:
+		wire.set_shader_parameter(&"fence_tex", load(FENCE_CARD_PATH) as Texture2D)
+		wire.set_shader_parameter(&"fence_card", Vector2(Tuning.data.trailer_fence_card_w_m, Tuning.data.trailer_fence_card_h_m))
+	if not _fence_wired:
+		_fence_wired = true
+		Tuning.changed.connect(_on_tuning_changed)
+
+
+static func _on_tuning_changed(property: StringName) -> void:
+	if property == &"" or property == &"look_profile" or property == &"trailer_fence_card_w_m" or property == &"trailer_fence_card_h_m":
+		sync_fence()
 
 
 ## The triangles of a mesh.
@@ -318,6 +342,9 @@ class Builder:
 			u_step = dir * scale
 			var shift: Color = moved.tint
 			tint = Color(tint.r * shift.r, tint.g * shift.g, tint.b * shift.b)
+			if TrimSheet.is_scissor(strip):
+				# the fence card's top sits on the face's top (the shader reads v up from the face's bottom)
+				uv0.y += Tuning.data.trailer_fence_card_h_m - height
 		var color := Color(tint.r, tint.g, tint.b, float(TrimSheet.index(strip)) / 255.0)
 		var buffer := _wire if TrimSheet.is_scissor(strip) else _opaque
 		var base := buffer.verts.size()
@@ -360,6 +387,7 @@ class Builder:
 	func finish() -> ArrayMesh:
 		var mesh := ArrayMesh.new()
 		TrimSheet.ensure_wired()
+		KitMesh.sync_fence()
 		for pair: Array in [[_opaque, ToonMaterials.trim()], [_wire, ToonMaterials.trim_scissor()]]:
 			var buffer: Buffer = pair[0]
 			if buffer.verts.is_empty():

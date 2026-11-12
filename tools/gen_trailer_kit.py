@@ -4,6 +4,7 @@ Usage: python3 tools/gen_trailer_kit.py [--check]   (Pillow; not -I, which hides
 Writes (from the project folder):
 	assets/export/kit/trailer_trim_sheet.png     2048 x 2048 RGBA, the trim sheet of the "trailer" look profile
 	assets/export/kit/trailer_ground_sheet.png   2048 x 2048 RGBA, the street's ground tile (8 m a side)
+	assets/export/kit/trailer_fence_card.png     2048 x 1024 RGBA, the loose hand-drawn fence card (alpha = the strokes), 8 m x 4 m
 	assets/export/kit/trailer_trim_strips.json   the strip table the game reads (TrimSheet)
 `--check` repaints in memory and compares with the committed files (exit 1 when they differ).
 
@@ -20,9 +21,13 @@ for `period_m` metres of V. KitMesh reads `u_m` (it scales a face's U so one rep
 Tuning's kit_trim_m_per_tile), `u_snap_m` (the U offset a variant takes is a multiple of it: one window pane),
 `flip` (a variant may mirror U), `vary_v` (a variant may shift V) and `vary_tint` (a variant may nudge the tint): see TrimSheet.variation().
 
-Painting: Gemini was out of credit when this was made (HTTP 402, no image generated), so every tile is drawn here,
-by hand-written shapes (Pillow only, at 2x and filtered down, all from fixed seeds: a repaint is identical). Where
-a Gemini tile exists in assets/source/trailer_kit/ the same layout would take it instead; none does yet.
+Painting (M7 G3): the walls, the facade, the ground tile and the fence card are Gemini paintings in the trailer's style
+(assets/source/trailer_art/kit/src/, made by that folder's make_jobs.py from the trailer frames), turned into sheet cells
+here with Pillow alone: the ink mask is the dark lines (grown a little so a line survives the mips), the colour layer under it
+is the painting with the lines filled in, tones are flattened a little and matched to the profile's albedo, bays and tiles are
+joined with soft blends so no seam shows, and the facade's floors are cut from several paintings so no two windows line up.
+The fence is a Gemini lattice warped and torn by hand-written shapes. The small flat strips (kerb, concrete, tar, crate, metal)
+stay drawn here, with irregular joints. Everything is deterministic: a repaint is identical.
 """
 import json
 import math
@@ -30,12 +35,14 @@ import os
 import random
 import sys
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageMath, ImageStat
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "assets", "export", "kit")
 SHEET = os.path.join(OUT, "trailer_trim_sheet.png")
 GROUND = os.path.join(OUT, "trailer_ground_sheet.png")
+FENCE = os.path.join(OUT, "trailer_fence_card.png")
+KIT_SRC = os.path.join(ROOT, "assets", "source", "trailer_art", "kit", "src")
 TABLE = os.path.join(OUT, "trailer_trim_strips.json")
 
 W = 2048
@@ -85,22 +92,22 @@ PUDDLE_HI = (160, 182, 206)
 # The sheet's rows, top to bottom: (name, rows px, period_m, u_m, flags). 2048 px in all.
 # The M6 rows' order is kept; `u_snap_m`, `flip`, `vary_v` say how a variant may move a face on the strip.
 STRIPS = [
-	{"name": "brick", "px": 576, "period_m": 3.0, "u_m": 8.0, "flip": True, "vary_v": True, "vary_tint": True},
-	{"name": "plaster", "px": 32, "period_m": 0.5, "u_m": 4.0, "flip": True, "vary_v": False, "vary_tint": True},
-	{"name": "concrete", "px": 64, "period_m": 1.0, "u_m": 4.0, "flip": True, "vary_v": False, "vary_tint": True},
+	{"name": "brick", "px": 512, "period_m": 3.0, "u_m": 12.0, "flip": True, "vary_v": True, "vary_tint": True},
+	{"name": "plaster", "px": 32, "period_m": 0.5, "u_m": 8.0, "flip": True, "vary_v": False, "vary_tint": True},
+	{"name": "concrete", "px": 64, "period_m": 1.0, "u_m": 8.0, "flip": True, "vary_v": False, "vary_tint": True},
 	{"name": "asphalt", "px": 32, "period_m": 1.0, "u_m": 4.0, "flip": False, "vary_v": False, "ground": True, "vary_tint": False},
-	{"name": "kerb", "px": 64, "period_m": 0.5, "u_m": 4.0, "flip": True, "vary_v": False, "vary_tint": True},
-	{"name": "roof_tar", "px": 64, "period_m": 1.0, "u_m": 4.0, "flip": True, "vary_v": False, "vary_tint": True},
+	{"name": "kerb", "px": 64, "period_m": 0.5, "u_m": 8.0, "flip": True, "vary_v": False, "vary_tint": True},
+	{"name": "roof_tar", "px": 64, "period_m": 1.0, "u_m": 8.0, "flip": True, "vary_v": False, "vary_tint": True},
 	{"name": "gravel", "px": 32, "period_m": 0.5, "u_m": 4.0, "flip": True, "vary_v": False, "vary_tint": True},
 	{"name": "metal", "px": 64, "period_m": 0.5, "u_m": 4.0, "flip": True, "vary_v": False, "vary_tint": False},
 	{"name": "shutter", "px": 64, "period_m": 0.5, "u_m": 4.0, "flip": True, "vary_v": False, "vary_tint": False},
 	{"name": "chainlink", "px": 160, "period_m": 0.5, "u_m": 4.0, "flip": False, "vary_v": False, "scissor": True, "vary_tint": False},
-	{"name": "crate", "px": 64, "period_m": 0.5, "u_m": 4.0, "flip": True, "vary_v": False, "vary_tint": True},
+	{"name": "crate", "px": 64, "period_m": 0.5, "u_m": 8.0, "flip": True, "vary_v": False, "vary_tint": True},
 	{"name": "trim", "px": 64, "period_m": 0.25, "u_m": 4.0, "flip": True, "vary_v": False, "vary_tint": False},
 	{"name": "ink", "px": 32, "period_m": 1.0, "u_m": 4.0, "flip": False, "vary_v": False, "ink_only": True, "vary_tint": False},
 	{"name": "glass", "px": 384, "period_m": 1.6, "u_m": 8.0, "u_snap_m": 1.0, "flip": False, "vary_v": False, "vary_tint": False},
 	{"name": "dark", "px": 32, "period_m": 1.0, "u_m": 4.0, "flip": False, "vary_v": False, "vary_tint": False},
-	{"name": "facade", "px": 320, "period_m": 5.0, "u_m": 16.0, "flip": True, "vary_v": True, "vary_tint": True},
+	{"name": "facade", "px": 384, "period_m": 5.0, "u_m": 24.0, "flip": True, "vary_v": True, "vary_tint": True},
 ]
 
 
@@ -188,109 +195,287 @@ def wobble(rng: random.Random, pts, amount: float):
 	return [(x + (rng.random() - 0.5) * amount, y + (rng.random() - 0.5) * amount) for x, y in pts]
 
 
-def crack(rng: random.Random, c: Canvas, x: float, y: float, angle: float, length: float, w0: float, w1: float, branches: int, depth: int = 0) -> None:
-	"""A tapered, kinked crack, with `branches` thinner children."""
-	pts = [(x, y)]
-	steps = max(int(length / 22), 3)
-	px, py, a = x, y, angle
-	for _ in range(steps):
-		a += (rng.random() - 0.5) * 0.7
-		px += math.cos(a) * length / steps
-		py += math.sin(a) * length / steps
-		pts.append((px, py))
-	c.tapered(pts, w0, w1)
-	for k in range(branches):
-		j = 1 + int(rng.random() * (len(pts) - 2))
-		side = 1.0 if rng.random() < 0.5 else -1.0
-		if depth < 1:
-			crack(rng, c, pts[j][0], pts[j][1], a + side * (0.6 + rng.random() * 0.5), length * (0.25 + rng.random() * 0.2), max(w1 * 1.2, 5.0), 5.0, 0, depth + 1)
+# --- Gemini paintings into sheet cells (M7 G3) ----------------------------------------------------
 
 
-def brick_patch(rng: random.Random, c: Canvas, cx: float, cy: float, cols: int, rows: int, bw: float, bh: float, fill, fill_alt, fill_ratio: float = 0.55) -> None:
-	"""Sparse brick hints: an irregular patch of courses, about half its bricks filled, every one outlined."""
-	for r in range(rows):
-		off = (bw * 0.5) if r % 2 else 0.0
-		for k in range(cols):
-			# a ragged edge: some bricks of a course are missing at either end
-			if (k == 0 and rng.random() < 0.5) or (k == cols - 1 and rng.random() < 0.5):
-				continue
-			x0 = cx - cols * bw * 0.5 + k * bw + off + (rng.random() - 0.5) * 3
-			y0 = cy - rows * bh * 0.5 + r * bh + (rng.random() - 0.5) * 2
-			if rng.random() < fill_ratio:
-				c.rect(x0, y0, x0 + bw - 3, y0 + bh - 3, fill=(fill if rng.random() < 0.6 else fill_alt), wrap=False)
-			outline = [(x0, y0), (x0 + bw - 3, y0 + (rng.random() - 0.5) * 2), (x0 + bw - 3, y0 + bh - 3), (x0 + (rng.random() - 0.5) * 2, y0 + bh - 3), (x0, y0)]
-			c.line(outline, 5.5, wrap=False)
+def source(name: str, box=(0.0, 0.0, 1.0, 1.0), width: int = 0) -> Image.Image:
+	"""A Gemini painting from assets/source/trailer_art/kit/src/, cropped to `box` (fractions of its size) and, with `width`, resized to it."""
+	im = Image.open(os.path.join(KIT_SRC, name + ".jpg")).convert("RGB")
+	w, h = im.size
+	im = im.crop((round(box[0] * w), round(box[1] * h), round(box[2] * w), round(box[3] * h)))
+	if width:
+		im = im.resize((width, round(im.height * width / im.width)), Image.LANCZOS)
+	return im
 
 
-def pipe(c: Canvas, x: float, y0: float, y1: float, width: float, clamps) -> None:
-	"""A vertical drainpipe: a lit body, a darker side, ink outline, bracket clamps."""
-	c.rect(x - width / 2, y0, x + width / 2, y1, fill=PIPE, wrap=False)
-	c.rect(x + width * 0.12, y0, x + width / 2, y1, fill=(104, 112, 130), wrap=False)
-	c.line([(x - width / 2, y0), (x - width / 2, y1)], 6.0, wrap=False)
-	c.line([(x + width / 2, y0), (x + width / 2, y1)], 6.0, wrap=False)
-	for cy in clamps:
-		c.rect(x - width * 0.72, cy - 9, x + width * 0.72, cy + 9, fill=(118, 126, 144), wrap=False)
-		c.line([(x - width * 0.72, cy - 9), (x + width * 0.72, cy - 9)], 5.0, wrap=False)
-		c.line([(x - width * 0.72, cy + 9), (x + width * 0.72, cy + 9)], 5.0, wrap=False)
+def ink_of(img: Image.Image, solid: int, none: int, grow: int = 3, soften: float = 0.0) -> Image.Image:
+	"""The ink mask of a painting: full where a pixel is darker than `solid`, none above `none`, grown by `grow` px (odd) so a line survives the mips."""
+	table = [255 if v <= solid else 0 if v >= none else int(255 * (none - v) / float(none - solid)) for v in range(256)]
+	mask = img.convert("L").point(table)
+	if grow > 1:
+		mask = mask.filter(ImageFilter.MaxFilter(grow))
+	if soften > 0:
+		mask = mask.filter(ImageFilter.GaussianBlur(soften))
+	return mask
+
+
+def under_ink(img: Image.Image, ink: Image.Image) -> Image.Image:
+	"""The colour layer: the painting with the inked pixels filled from their bright neighbours (the shader draws the ink over it)."""
+	cover = ink.point(lambda v: 255 if v > 20 else 0).filter(ImageFilter.MaxFilter(5))
+	fill = img.filter(ImageFilter.MaxFilter(9)).filter(ImageFilter.GaussianBlur(3))
+	return Image.composite(fill, img, cover)
+
+
+def flatten(img: Image.Image, keep: float, radius: float) -> Image.Image:
+	"""Less of the big soft tonal patches (the trailer's walls and ground are flatter than a painter's wash): the low frequencies scaled to `keep` about the mean."""
+	low = img.filter(ImageFilter.GaussianBlur(radius))
+	mean = ImageStat.Stat(img).mean
+	out = []
+	for c in range(3):
+		a = img.getchannel(c).convert("F")
+		b = low.getchannel(c).convert("F")
+		m = mean[c]
+		out.append(ImageMath.lambda_eval(lambda args, m=m: args["a"] - (args["b"] - m) * (1.0 - keep), a=a, b=b).convert("L"))
+	return Image.merge("RGB", out)
+
+
+def match_luma(img: Image.Image, target: float) -> Image.Image:
+	"""The whole painting scaled (hue kept) to a mean luminance of `target`."""
+	mean = ImageStat.Stat(img.convert("L")).mean[0]
+	gain = target / max(mean, 1.0)
+	return img.point(lambda v: min(255, int(v * gain + 0.5)))
+
+
+def luma(rgb) -> float:
+	return 0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]
+
+
+def smooth(t: float) -> float:
+	t = max(0.0, min(1.0, t))
+	return t * t * (3.0 - 2.0 * t)
+
+
+def edge_ramp(length: int, lo: float, hi: float) -> Image.Image:
+	"""A 1 px column (or row) of `length` levels, 255 in the middle and 0 at both ends: e = |2i/length - 1| runs 0 to 1, the ramp from `lo` to `hi`."""
+	vals = []
+	for i in range(length):
+		e = abs((i + 0.5) * 2.0 / length - 1.0)
+		vals.append(int(255 * (1.0 - smooth((e - lo) / (hi - lo)))))
+	return vals
+
+
+def seamless(rgb: Image.Image, ink: Image.Image, x: bool, y: bool, lo: float = 0.86, hi: float = 1.0) -> tuple:
+	"""Makes the colour layer tile along the chosen axes (the middle of the painting rolled to the edges and blended in over the
+	last stretch next to them) and fades the ink out at those edges (a line that crosses a seam would be cut)."""
+	w, h = rgb.size
+	if x:
+		rolled = ImageChops.offset(rgb, w // 2, 0)
+		mask = Image.new("L", (w, 1))
+		mask.putdata(edge_ramp(w, lo, hi))
+		rgb = Image.composite(rgb, rolled, mask.resize((w, h)))
+		ink = ImageChops.multiply(ink, mask.resize((w, h)).point(lambda v: 255 if v > 250 else v * 255 // 250))
+	if y:
+		rolled = ImageChops.offset(rgb, 0, h // 2)
+		mask = Image.new("L", (1, h))
+		mask.putdata(edge_ramp(h, lo, hi))
+		rgb = Image.composite(rgb, rolled, mask.resize((w, h)))
+		ink = ImageChops.multiply(ink, mask.resize((w, h)).point(lambda v: 255 if v > 250 else v * 255 // 250))
+	return rgb, ink
+
+
+def blend_junction(rgb: Image.Image, ink: Image.Image, at: int, zone: int) -> tuple:
+	"""Dissolves the colour layers of two neighbouring cells over 2 x `zone` px about column `at` (each side mirrored past the join, so
+	both are continuous at it) and rubs the ink out there. The strip wraps, so `at` may be its width."""
+	w, h = rgb.size
+	dx = w // 2 - at
+	rgb = ImageChops.offset(rgb, dx, 0)
+	ink = ImageChops.offset(ink, dx, 0)
+	mid = w // 2
+	left = rgb.crop((mid - zone, 0, mid, h))
+	right = rgb.crop((mid, 0, mid + zone, h))
+	a_zone = Image.new("RGB", (2 * zone, h))
+	a_zone.paste(left, (0, 0))
+	a_zone.paste(left.transpose(Image.FLIP_LEFT_RIGHT), (zone, 0))
+	b_zone = Image.new("RGB", (2 * zone, h))
+	b_zone.paste(right.transpose(Image.FLIP_LEFT_RIGHT), (0, 0))
+	b_zone.paste(right, (zone, 0))
+	ramp = Image.new("L", (2 * zone, 1))
+	ramp.putdata([int(255 * smooth((i + 0.5) / (2.0 * zone))) for i in range(2 * zone)])
+	rgb.paste(Image.composite(b_zone, a_zone, ramp.resize((2 * zone, h))), (mid - zone, 0))
+	clear = Image.new("L", (2 * zone, 1))
+	clear.putdata([int(255 * smooth(abs((i + 0.5) / zone - 1.0) * 1.6 - 0.2)) for i in range(2 * zone)])
+	ink.paste(ImageChops.multiply(ink.crop((mid - zone, 0, mid + zone, h)), clear.resize((2 * zone, h))), (mid - zone, 0))
+	return ImageChops.offset(rgb, -dx, 0), ImageChops.offset(ink, -dx, 0)
+
+
+def finish_cell(rgb: Image.Image, ink: Image.Image) -> Image.Image:
+	out = rgb.convert("RGBA")
+	out.putalpha(ink)
+	return out
+
+
+# Which paintings make the wall strip's four 3 m bays, how much of each to keep (the border Gemini sometimes draws is cropped
+# off), and the albedo each is matched to: one flat wall colour, a few drawn brick patches, cracks, a pipe, a bracket.
+WALL_BAYS = [("wall_b", 0.06, WALL_A), ("wall_c", 0.012, WALL_C), ("wall_e", 0.012, WALL_B), ("wall_f", 0.012, WALL_D)]
 
 
 def paint_brick() -> Image.Image:
-	"""Four bays of wall, each 512 px (2 m) of an 8 m strip, in related tones, joined by soft blends."""
-	h = 576
-	rng = random.Random(1101)
-	c = Canvas(W, h, WALL_A)
-	bays = [WALL_A, WALL_B, WALL_C, WALL_D]
-	for k, col in enumerate(bays):
-		x0 = k * 512
-		c.rect(x0, 0, x0 + 512, h, fill=col)
-	# soft joins between bays (and the wrap): 36 px ramps of stepped tones, painted flat, not a gradient
-	for k in range(4):
-		a = bays[k]
-		b = bays[(k + 1) % 4]
-		x = (k + 1) * 512
-		for s in range(6):
-			t = (s + 0.5) / 6.0
-			col = tuple(int(a[i] + (b[i] - a[i]) * t) for i in range(3))
-			c.rect(x - 18 + s * 6, 0, x - 18 + (s + 1) * 6, h, fill=col)
-	# flat tone patches (damp, repaint), no outline
-	for k in range(7):
-		x = 40 + rng.random() * (W - 80)
-		y = 60 + rng.random() * (h - 120)
-		rx = 60 + rng.random() * 110
-		ry = 30 + rng.random() * 60
-		base = bays[int(x // 512) % 4]
-		shade = tuple(max(0, min(255, int(v * (0.93 if rng.random() < 0.6 else 1.06)))) for v in base)
-		c.poly(wobble(rng, [(x - rx, y), (x - rx * 0.4, y - ry), (x + rx * 0.5, y - ry * 0.8), (x + rx, y + ry * 0.2), (x + rx * 0.2, y + ry), (x - rx * 0.6, y + ry * 0.7)], 14), fill=shade, wrap=False)
-	# bay 0: brick patch where the plaster fell, a downpipe, a hairline crack
-	brick_patch(rng, c, 190, 400, 5, 6, 56, 26, BRICK_FILL, BRICK_FILL_ALT)
-	pipe(c, 452, 0, h, 34, [100, 290, 470])
-	crack(rng, c, 110, 90, 0.9, 150, 5.5, 5.0, 1)
-	# bay 1: a big fallen patch low on the wall, a long diagonal crack
-	c.poly(wobble(rng, [(560, 470), (640, 380), (760, 360), (870, 410), (900, 520), (700, 540)], 10), fill=(140, 124, 112), wrap=False)
-	brick_patch(rng, c, 730, 450, 6, 5, 52, 24, BRICK_FILL_ALT, BRICK_FILL, 0.4)
-	crack(rng, c, 800, 70, 1.5, 260, 6.5, 5.0, 2)
-	# bay 2: a rusty bracket with a cable looping from it, two corner brick hints
-	c.rect(1130, 150, 1190, 176, fill=(120, 84, 64), wrap=False)
-	c.line([(1130, 150), (1190, 150), (1190, 176), (1130, 176), (1130, 150)], 5.5, wrap=False)
-	c.line([(1190, 163), (1240, 200), (1262, 300), (1230, 400), (1250, 470)], 5.5, wrap=False)
-	brick_patch(rng, c, 1100, 470, 4, 3, 52, 24, BRICK_FILL, BRICK_FILL_ALT, 0.35)
-	brick_patch(rng, c, 1400, 90, 3, 3, 52, 24, BRICK_FILL_ALT, BRICK_FILL, 0.3)
-	# bay 3: a few courses of brick drawn in an otherwise flat wall, a bent pipe, a vertical crack
-	for r in range(3):
-		y0 = 250 + r * 28
-		x = 1600 + (r % 2) * 22
-		while x < 1900:
-			if rng.random() < 0.8:
-				c.line([(x, y0), (x + 52, y0 + (rng.random() - 0.5) * 2), (x + 52, y0 + 25), (x, y0 + 25), (x, y0)], 5.5, wrap=False)
-				if rng.random() < 0.5:
-					c.rect(x, y0, x + 52, y0 + 25, fill=BRICK_FILL_ALT, wrap=False)
-			x += 56 + rng.random() * 8
-	c.line([(1960, 0), (1960, 330), (1930, 360)], 6.0, rgb=PIPE, wrap=False)
-	c.line([(1960, 330), (1930, 360), (1850, 360)], 8.0, rgb=PIPE, wrap=False)
-	c.line([(1960, 0), (1960, 330), (1930, 360), (1850, 360)], 14.0, wrap=False)
-	c.line([(1960, 0), (1960, 330), (1930, 360), (1850, 360)], 8.0, ink=False, rgb=PIPE, wrap=False)
-	crack(rng, c, 1700, 480, -1.7, 150, 6.0, 5.0, 1)
-	return c.done()
+	"""The wall strip: four 3 m bays painted by Gemini, 512 px square each (170 px/m), dissolved into each other, tiling both ways."""
+	h = 512
+	work = 1024
+	rgb = Image.new("RGB", (W, h))
+	ink = Image.new("L", (W, h), 0)
+	for k, (name, crop, target) in enumerate(WALL_BAYS):
+		im = source(name, (crop, crop, 1.0 - crop, 1.0 - crop), work)
+		bay_ink = ink_of(im, 52, 92, grow=5, soften=0.8)
+		bay = under_ink(im, bay_ink)
+		bay = match_luma(flatten(bay, 0.5, work / 10.0), luma(target))
+		rgb.paste(bay.resize((512, h), Image.LANCZOS), (k * 512, 0))
+		ink.paste(bay_ink.resize((512, h), Image.LANCZOS), (k * 512, 0))
+	for k in range(len(WALL_BAYS)):
+		rgb, ink = blend_junction(rgb, ink, (k + 1) * 512, 40)
+	rgb, ink = seamless(rgb, ink, False, True, 0.88, 1.0)
+	return finish_cell(rgb, ink)
+
+
+def paint_facade() -> Image.Image:
+	"""A far facade, 24 m x 5 m (two floors): each floor is three whole bands cut from two Gemini facades, joined with dissolves, the
+	second floor rolled sideways and every band nudged up or down, so no window lines up with the next."""
+	h = 384
+	floor_h = 192
+	edges = [0, 683, 1366, W]
+	rng = random.Random(1303)
+	# (painting, left, right, top, bottom) of one floor's band in it, fractions: the windows sit inside the building's edge lines
+	cuts = [("facade_a", 0.095, 0.905, 0.00, 0.47), ("facade_a", 0.095, 0.905, 0.47, 0.94), ("facade_b", 0.075, 0.935, 0.00, 0.47), ("facade_b", 0.075, 0.935, 0.47, 0.94)]
+	rgb = Image.new("RGB", (W, h))
+	ink = Image.new("L", (W, h), 0)
+	order = [[0, 3, 2], [1, 0, 3]]
+	for floor in range(2):
+		row_rgb = Image.new("RGB", (W, floor_h))
+		row_ink = Image.new("L", (W, floor_h), 0)
+		for k, which in enumerate(order[floor]):
+			name, x0, x1, y0, y1 = cuts[which]
+			bw = edges[k + 1] - edges[k]
+			im = source(name, (x0, y0, x1, y1)).resize((bw, floor_h), Image.LANCZOS)
+			if rng.random() < 0.5:
+				im = im.transpose(Image.FLIP_LEFT_RIGHT)
+			band_ink = ink_of(im, 34, 66, grow=3, soften=0.6)
+			# up or down a little: the wall colour above and below is a flat field, so the band's rows are shifted and wrapped
+			shift = rng.randint(-14, 14)
+			im = ImageChops.offset(im, 0, shift)
+			band_ink = ImageChops.offset(band_ink, 0, shift)
+			row_rgb.paste(under_ink(im, band_ink), (edges[k], 0))
+			row_ink.paste(band_ink, (edges[k], 0))
+		for k in range(3):
+			row_rgb, row_ink = blend_junction(row_rgb, row_ink, edges[k + 1], 22)
+		roll = rng.randint(200, 900) * floor
+		row_rgb = ImageChops.offset(row_rgb, roll, 0)
+		row_ink = ImageChops.offset(row_ink, roll, 0)
+		# a third of the windows are gone (bricked up, painted over): found by the ink along the columns, covered with the wall's colour
+		profile = list(row_ink.resize((W, 1), Image.BOX).getdata())
+		x = 0
+		while x < W:
+			if profile[x] > 30:
+				x1 = x
+				gap = 0
+				while x1 < W and gap < 18:
+					gap = 0 if profile[x1] > 30 else gap + 1
+					x1 += 1
+				x1 -= gap
+				if x1 - x > 40 and rng.random() < 0.34:
+					wall = row_rgb.getpixel(((x + x1) // 2, 3))
+					row_rgb.paste(wall, (max(x - 8, 0), 14, min(x1 + 8, W), floor_h - 6))
+					row_ink.paste(0, (max(x - 8, 0), 14, min(x1 + 8, W), floor_h - 6))
+				x = x1 + 1
+			else:
+				x += 1
+		rgb.paste(row_rgb, (0, floor * floor_h))
+		ink.paste(row_ink, (0, floor * floor_h))
+	rgb = match_luma(rgb, 100.0)
+	rgb, ink = seamless(rgb, ink, False, True, 0.9, 1.0)
+	return finish_cell(rgb, ink)
+
+
+def paint_ground() -> Image.Image:
+	"""The street's ground, 8 m a side (256 px/m): a Gemini painting of flat asphalt tones, tapering ink cracks, puddle shapes with a
+	highlight, a manhole, a patched square and a grate; the tones flattened, matched to the asphalt albedo and tiled along x (z is
+	mirrored by the shader, so its edges meet themselves)."""
+	im = source("ground_a")
+	ink = ink_of(im, 56, 98, grow=5, soften=0.8)
+	rgb = match_luma(flatten(under_ink(im, ink), 0.7, 200.0), luma(ASPHALT))
+	rgb, ink = seamless(rgb, ink, True, False, 0.8, 1.0)
+	return finish_cell(rgb, ink)
+
+
+FENCE_W = 2048
+FENCE_H = 1024
+# The fence card's ink and wire colour: a dark blue-grey, so a line reads as drawn ink against the lit street behind it.
+FENCE_RGB = (58, 66, 92)
+
+
+def ragged(rng: random.Random, cx: float, cy: float, rx: float, ry: float, n: int = 16):
+	"""A torn-edged blob: `n` points round an ellipse, each pushed out or in."""
+	pts = []
+	for s in range(n):
+		a = s / float(n) * math.tau
+		r = 0.7 + rng.random() * 0.6
+		pts.append((cx + math.cos(a) * rx * r, cy + math.sin(a) * ry * r))
+	return pts
+
+
+def paint_fence() -> Image.Image:
+	"""The loose hand-drawn fence card, 8 m x 4 m (256 px/m), the trailer profile's chain-link: a Gemini drawing of a lattice, enlarged
+	(a diamond about 0.9 m, so it does not moire), its lines pushed off parallel by a coarse warp, torn open in places (one tear straddles
+	the wrap, so the card tiles along x), under a thick sagging top line drawn here. The alpha is the strokes; the RGB one dark colour."""
+	rng = random.Random(4409)
+	im = source("fence_a", (300 / 2048.0, 130 / 1143.0, 1580 / 2048.0, 770 / 1143.0)).resize((FENCE_W, FENCE_H), Image.LANCZOS)
+	ink = ImageChops.invert(im.convert("L")).point(lambda v: 0 if v < 70 else 255 if v > 150 else int(255 * (v - 70) / 80.0))
+	# a coarse mesh warp: the inner nodes of an 8 x 4 grid move by up to 22 px, so no two diagonals are parallel
+	cols = 8
+	rows = 4
+	nodes = {}
+	for j in range(rows + 1):
+		for i in range(cols + 1):
+			edge = i in (0, cols) or j in (0, rows)
+			nodes[(i, j)] = (i * FENCE_W / cols + (0 if edge else (rng.random() - 0.5) * 44), j * FENCE_H / rows + (0 if edge else (rng.random() - 0.5) * 44))
+	mesh = []
+	for j in range(rows):
+		for i in range(cols):
+			box = (round(i * FENCE_W / cols), round(j * FENCE_H / rows), round((i + 1) * FENCE_W / cols), round((j + 1) * FENCE_H / rows))
+			a, b, c, d = nodes[(i, j)], nodes[(i, j + 1)], nodes[(i + 1, j + 1)], nodes[(i + 1, j)]
+			mesh.append((box, (a[0], a[1], b[0], b[1], c[0], c[1], d[0], d[1])))
+	ink = ink.transform((FENCE_W, FENCE_H), Image.MESH, mesh, Image.BICUBIC)
+	# torn open: the first blob straddles the wrap (drawn at both ends), the others sit about the card
+	tears = Image.new("L", (FENCE_W, FENCE_H), 0)
+	td = ImageDraw.Draw(tears)
+	blobs = [(0, 520, 230, 360), (760, 800, 150, 200), (1330, 270, 210, 140), (1710, 900, 170, 130), (1090, 560, 120, 170)]
+	for cx, cy, rx, ry in blobs:
+		pts = ragged(rng, cx, cy, rx, ry)
+		for off in (-FENCE_W, 0, FENCE_W):
+			td.polygon([(x + off, y) for x, y in pts], fill=255)
+	ink = ImageChops.multiply(ink, ImageChops.invert(tears))
+	# the sagging top line: a thick stroke whose width and height wander (periodic along x), and a thinner second pass that drops out
+	def top_y(x: float) -> float:
+		return 46 + 20 * math.sin(math.tau * x / FENCE_W + 0.6) + 9 * math.sin(math.tau * 3 * x / FENCE_W + 2.0)
+	def top_w(x: float) -> float:
+		return 22 + 7 * math.sin(math.tau * 2 * x / FENCE_W + 1.0)
+	above = Image.new("L", (FENCE_W, FENCE_H), 0)
+	ad = ImageDraw.Draw(above)
+	ad.polygon([(0, 0)] + [(x, top_y(x)) for x in range(0, FENCE_W + 1, 16)] + [(FENCE_W, 0)], fill=255)
+	ink = ImageChops.multiply(ink, ImageChops.invert(above))
+	idraw = ImageDraw.Draw(ink)
+	step = 8
+	for x in range(0, FENCE_W, step):
+		x1 = x + step
+		y0, y1 = top_y(x), top_y(x1)
+		w = (top_w(x) + top_w(x1)) * 0.5
+		idraw.polygon([(x, y0 - w / 2), (x1, y1 - w / 2), (x1, y1 + w / 2), (x, y0 + w / 2)], fill=255)
+		if 0.18 < (x / FENCE_W) < 0.46 or 0.62 < (x / FENCE_W) < 0.9:
+			idraw.polygon([(x, y0 + w / 2 + 10), (x1, y1 + w / 2 + 10), (x1, y1 + w / 2 + 19), (x, y0 + w / 2 + 19)], fill=255)
+	ink = ink.filter(ImageFilter.MaxFilter(3)).filter(ImageFilter.GaussianBlur(0.9))
+	out = Image.new("RGBA", (FENCE_W, FENCE_H), FENCE_RGB + (0,))
+	out.putalpha(ink)
+	return out
 
 
 def pane(c: Canvas, x0: int, h: int, kind: int) -> None:
@@ -342,41 +527,6 @@ def paint_glass() -> Image.Image:
 	return c.done()
 
 
-def paint_facade() -> Image.Image:
-	h = 320
-	rng = random.Random(1303)
-	c = Canvas(W, h, FACADE)
-	for k in range(9):
-		x = rng.random() * W
-		c.rect(x, 0, x + 120 + rng.random() * 200, h, fill=(FACADE_ALT if k % 2 == 0 else (96, 90, 122)))
-	for floor in range(2):
-		top = floor * 160
-		x = 24.0
-		while x < W - 90:
-			wpx = 84 + rng.random() * 18
-			hpx = 92 + rng.random() * 12
-			y = top + 30 + rng.random() * 8
-			roll = rng.random()
-			if roll < 0.34:
-				fill = LIT if rng.random() < 0.6 else (200, 138, 66)
-			elif roll < 0.48:
-				fill = (150, 112, 68)
-			else:
-				fill = DARK_PANE if rng.random() < 0.7 else DARK_DEEP
-			c.rect(x, y, x + wpx, y + hpx, fill=fill, wrap=False)
-			if roll < 0.48 and rng.random() < 0.6:
-				c.rect(x, y, x + wpx, y + hpx * (0.25 + rng.random() * 0.3), fill=LIT_DEEP, wrap=False)
-			c.line([(x, y), (x + wpx, y), (x + wpx, y + hpx), (x, y + hpx), (x, y)], 5.5, wrap=False)
-			c.line([(x + wpx / 2, y), (x + wpx / 2, y + hpx)], 3.0, ink=False, rgb=DARK_DEEP, wrap=False)
-			c.rect(x - 6, y + hpx, x + wpx + 6, y + hpx + 9, fill=(120, 112, 136), wrap=False)
-			x += wpx + 34 + rng.random() * 56
-	for k in range(5):
-		cx = 80 + rng.random() * (W - 160)
-		cy = 40 + rng.random() * 240
-		brick_patch(rng, c, cx, cy, 3, 2, 44, 20, (118, 84, 82), (106, 78, 80), 0.4)
-	return c.done()
-
-
 def paint_chainlink() -> Image.Image:
 	"""Bold wire: a rhombic lattice, 128 x 80 px a diamond, 8 px wires, the alpha is the wire's coverage."""
 	h = 160
@@ -414,24 +564,34 @@ def paint_flat(name: str, h: int) -> Image.Image:
 		x = rng.random() * W
 		w = 140 + rng.random() * 380
 		c.rect(x, 0, x + w, h, fill=alt)
+	def scatter(count: int, min_gap: float) -> list:
+		"""`count` x positions on the strip, at least `min_gap` px apart, wrapped: joints that fall where they fall, never on a pitch."""
+		xs = []
+		while len(xs) < count:
+			x = rng.random() * W
+			if all(min(abs(x - o), W - abs(x - o)) >= min_gap for o in xs):
+				xs.append(x)
+		return sorted(xs)
+
+	def joint(x: float, y0: float, y1: float, w0: float = 6.0, w1: float = 4.5) -> None:
+		"""A hand-drawn joint: a tapered, slightly kinked stroke."""
+		mid = (y0 + y1) * 0.5
+		c.tapered([(x, y0), (x + (rng.random() - 0.5) * 14, mid), (x + (rng.random() - 0.5) * 10, y1)], w0, w1)
+
 	if name == "concrete":
-		for k in range(4):
-			x = 100 + k * 500 + rng.random() * 120
-			c.line([(x, 14), (x + (rng.random() - 0.5) * 8, h - 14)], 6.0)
+		for x in scatter(3, 420):
+			joint(x, 14, h - 14)
 	elif name == "kerb":
 		c.rect(0, 0, W, 14, fill=KERB_TOP)
-		for k in range(3):
-			x = 180 + k * 640 + rng.random() * 100
-			c.line([(x, 18), (x, h - 6)], 6.0)
+		for x in scatter(3, 480):
+			joint(x, 18, h - 6)
 	elif name == "roof_tar":
-		for k in range(4):
-			x = 80 + k * 500 + rng.random() * 100
-			c.line([(x, 8), (x, h - 8)], 5.5)
-		c.line([(0, h // 2), (W, h // 2)], 5.5)
+		for x in scatter(3, 420):
+			joint(x, 8, h - 8, 5.5, 4.5)
+		c.tapered([(0, h // 2), (W * 0.31, h // 2 + 5), (W * 0.62, h // 2 - 4), (W, h // 2)], 5.5, 5.5)
 	elif name == "metal":
-		for k in range(8):
-			x = 128 + k * 256
-			c.ellipse(x, h // 2, 6, 6, (84, 92, 110), 0)
+		for x in scatter(5, 220):
+			c.ellipse(x, h // 2 + (rng.random() - 0.5) * 8, 6, 6, (84, 92, 110), 0)
 		c.line([(0, 6), (W, 6)], 5.5)
 	elif name == "shutter":
 		for k in range(4):
@@ -439,15 +599,13 @@ def paint_flat(name: str, h: int) -> Image.Image:
 			c.line([(0, y), (W, y)], 5.0)
 	elif name == "crate":
 		c.line([(0, h // 2), (W, h // 2)], 6.0)
-		for k in range(4):
-			x = 200 + k * 512
-			c.line([(x, 4), (x, h - 4)], 6.0)
+		for x in scatter(3, 480):
+			joint(x, 4, h - 4)
 	elif name == "trim":
 		c.line([(0, h // 2), (W, h // 2)], 5.0, ink=False, rgb=(98, 94, 96))
 	elif name == "plaster":
-		for k in range(3):
-			x = 200 + k * 700 + rng.random() * 100
-			c.line([(x, 8), (x + 30, h - 8)], 5.0)
+		for x in scatter(2, 600):
+			joint(x, 8, h - 8, 5.0, 4.5)
 	return c.done()
 
 
@@ -499,58 +657,6 @@ def assemble() -> tuple:
 	return sheet, table
 
 
-def paint_ground() -> Image.Image:
-	"""The street's ground, 8 m a side: flat tone patches, patched squares, puddles and tapered cracks, no grain."""
-	rng = random.Random(3307)
-	c = Canvas(W, W, ASPHALT)
-	# broad flat tone patches (worn and repaired asphalt)
-	for k in range(9):
-		x = rng.random() * W
-		y = rng.random() * W
-		rx = 160 + rng.random() * 360
-		ry = 120 + rng.random() * 260
-		col = ASPHALT_B if k % 3 else ASPHALT_C
-		pts = []
-		for s in range(10):
-			a = s / 10.0 * math.tau
-			r = 0.75 + rng.random() * 0.5
-			pts.append((x + math.cos(a) * rx * r, y + math.sin(a) * ry * r))
-		c.poly(pts, fill=col)
-	# patched squares: a flat tone and a bold outline
-	for k in range(4):
-		x = 100 + rng.random() * (W - 500)
-		y = 100 + rng.random() * (W - 500)
-		w = 220 + rng.random() * 220
-		h = 180 + rng.random() * 200
-		c.rect(x, y, x + w, y + h, fill=ASPHALT_C if k % 2 else ASPHALT_B)
-		c.line(wobble(rng, [(x, y), (x + w, y), (x + w, y + h), (x, y + h), (x, y)], 6), 7.0)
-	# tapered, branching cracks (the trailer's ground line), six of them crossing the tile
-	for k in range(6):
-		crack(rng, c, rng.random() * W, rng.random() * W, rng.random() * math.tau, 420 + rng.random() * 520, 12.0, 5.0, 2)
-	# a manhole
-	c.ellipse(1480, 520, 120, 120, (74, 80, 100), 8.0)
-	c.ellipse(1480, 520, 78, 78, (84, 90, 112), 6.0)
-	for k in range(-2, 3):
-		c.line([(1480 - 58, 520 + k * 22), (1480 + 58, 520 + k * 22)], 6.0)
-	# puddles: a flat pale fill, a thin ink outline, one lighter shape inside
-	for cx, cy, rx, ry in [(560, 1260, 270, 130), (1560, 1500, 190, 100), (1100, 300, 150, 70)]:
-		pts = []
-		for s in range(14):
-			a = s / 14.0 * math.tau
-			r = 0.78 + rng.random() * 0.42
-			pts.append((cx + math.cos(a) * rx * r, cy + math.sin(a) * ry * r))
-		c.poly(pts, fill=PUDDLE, ink=0)
-		c.line(pts + [pts[0]], 6.0)
-		c.poly([(cx - rx * 0.4, cy - ry * 0.2), (cx + rx * 0.1, cy - ry * 0.45), (cx + rx * 0.35, cy - ry * 0.1), (cx - rx * 0.1, cy + ry * 0.05)], fill=PUDDLE_HI)
-	# two drain grates
-	for gx, gy in [(300, 640), (1700, 1100)]:
-		c.rect(gx, gy, gx + 150, gy + 90, fill=(70, 76, 96))
-		c.line([(gx, gy), (gx + 150, gy), (gx + 150, gy + 90), (gx, gy + 90), (gx, gy)], 7.0)
-		for k in range(1, 5):
-			c.line([(gx + k * 30, gy + 8), (gx + k * 30, gy + 82)], 6.0)
-	return c.done()
-
-
 def encode(img: Image.Image, path: str) -> bytes:
 	import io
 	buf = io.BytesIO()
@@ -562,9 +668,11 @@ def main() -> int:
 	check = "--check" in sys.argv[1:]
 	sheet, table = assemble()
 	ground = paint_ground()
+	fence = paint_fence()
 	files = {
 		SHEET: encode(sheet, SHEET),
 		GROUND: encode(ground, GROUND),
+		FENCE: encode(fence, FENCE),
 		TABLE: (json.dumps(table, indent="\t", sort_keys=True) + "\n").encode(),
 	}
 	bad = 0

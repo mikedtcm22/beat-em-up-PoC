@@ -104,11 +104,12 @@ func test_a_variant_moves_the_faces_on_the_sheet() -> void:
 	assert_ne(_uvs(a), _uvs(b), "another variant, other UVs")
 	assert_eq(KitMesh.triangle_count(a), KitMesh.triangle_count(b))
 	assert_eq(a.get_aabb(), b.get_aabb(), "the shape is the same")
-	# brick covers 8 m of U on the trailer sheet: a metre of face is a quarter of what M6's 4 m tile gave
+	# brick covers its own u_m of U on the trailer sheet (12 m since G3): a metre of face is that much less than M6's 4 m tile gave
 	var plain := KitMesh.build(&"wall", wall)
 	var uv := _uvs(plain)
 	var spread := absf(uv[1].x - uv[0].x)
-	assert_almost_eq(spread, wall.x * 0.5, 0.01, "a face's U runs at half the metres: one repeat is 8 m")
+	var u_m := float(TrimSheet.strip(&"brick").u_m)
+	assert_almost_eq(spread, wall.x * Tuning.data.kit_trim_m_per_tile / u_m, 0.01, "a face's U runs at 4 / u_m of the metres: one repeat is u_m metres")
 
 
 func test_window_panes_land_on_whole_cells_of_the_glass_strip() -> void:
@@ -181,3 +182,65 @@ func test_the_street_stretch_has_no_two_neighbouring_walls_on_the_same_variant()
 	var b := TrimSheet.variant_for(Vector3(7.0, 5.0, -6.2))
 	var c := TrimSheet.variant_for(Vector3(7.0, 5.0, -18.0))
 	assert_true(a != b or b != c, "the right wall's first blocks are not all alike")
+
+
+# --- G3: the street's surfaces ------------------------------------------------------------------------
+
+
+func _alpha_share(path: String, rect: Rect2i) -> float:
+	var image: Image = (load(path) as Texture2D).get_image()
+	if image.is_compressed():
+		image.decompress()
+	var count := 0
+	var total := 0
+	for y in range(rect.position.y, rect.end.y, 2):
+		for x in range(rect.position.x, rect.end.x, 2):
+			total += 1
+			if image.get_pixel(x, y).a > 0.5:
+				count += 1
+	return float(count) / float(maxi(total, 1))
+
+
+func test_the_trailer_walls_are_mostly_flat_with_a_few_drawn_hints() -> void:
+	_trailer()
+	var brick := TrimSheet.strip(&"brick")
+	var rect := Rect2i(0, roundi(float(brick.v0) * 2048.0), 2048, roundi(float(brick.vh) * 2048.0))
+	var share := _alpha_share(TrimSheet.TRAILER_SHEET_PATH, rect)
+	assert_gt(share, 0.004, "some ink: cracks, a pipe, a few brick outlines")
+	assert_lt(share, 0.06, "but the wall is not an all-over pattern of ink")
+	assert_gte(float(brick.u_m), 12.0, "a long strip, so neighbouring walls differ")
+
+
+func test_the_fence_card_is_torn_and_loose_not_a_lattice() -> void:
+	var path := KitMesh.FENCE_CARD_PATH
+	var share := _alpha_share(path, Rect2i(0, 0, 2048, 1024))
+	assert_gt(share, 0.06, "strokes are there")
+	assert_lt(share, 0.3, "and a good part of the card is open")
+	# the tear that straddles the wrap: the card's left and right edges are mostly open, so it tiles along the fence
+	var edge := _alpha_share(path, Rect2i(0, 150, 24, 700)) + _alpha_share(path, Rect2i(2024, 150, 24, 700))
+	assert_lt(edge, 0.12, "the wrap is a gap, not a cut lattice")
+
+
+func test_the_fence_card_replaces_the_lattice_under_trailer_only() -> void:
+	var wire := ToonMaterials.trim_scissor()
+	KitMesh.build(&"chainlink", Vector3(6.0, 3.5, 0.2))
+	assert_eq(float(wire.get_shader_parameter(&"fence_on")), 0.0, "M6 draws the lattice")
+	_trailer()
+	assert_eq(float(wire.get_shader_parameter(&"fence_on")), 1.0, "a flip to the trailer switches the card on")
+	assert_not_null(wire.get_shader_parameter(&"fence_tex"))
+	var card: Vector2 = wire.get_shader_parameter(&"fence_card")
+	assert_eq(card.x, Tuning.data.trailer_fence_card_w_m)
+	Tuning.set_value(&"look_profile", LookProfile.Id.M6)
+	assert_eq(float(wire.get_shader_parameter(&"fence_on")), 0.0, "and back off again")
+
+
+func test_the_fence_card_sits_on_the_top_of_the_fence() -> void:
+	_trailer()
+	var height := 3.5
+	var mesh := KitMesh.build(&"chainlink", Vector3(6.0, height, 0.2), 3)
+	var wire_surface := mesh.get_surface_count() - 1
+	var uvs: PackedVector2Array = mesh.surface_get_arrays(wire_surface)[Mesh.ARRAY_TEX_UV]
+	var top := -INF
+	for uv in uvs:
+		top = maxf(top, uv.y)
+	assert_almost_eq(top, Tuning.data.trailer_fence_card_h_m, 0.01, "the face's top is the card's top")
