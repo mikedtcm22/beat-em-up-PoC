@@ -15,6 +15,10 @@ uniform float grain : hint_range(0.0, 0.4) = 0.06;
 uniform vec2 card_size_m = vec2(100.0, 30.0);
 // A Gemini-painted backdrop is feathered into the sky at its edges: the share of the card's left, right, top and bottom that fades out.
 uniform vec4 feather = vec4(0.0);
+// G4: a low-frequency wobble that bends the plate's rows (a share of the card), and the share of its lit windows painted out, so the far
+// windows are never an exact grid. 0 leaves the plate as painted.
+uniform float warp : hint_range(0.0, 0.03) = 0.0;
+uniform float drop_share : hint_range(0.0, 1.0) = 0.0;
 
 float hash12(vec2 p) {
 	vec3 p3 = fract(vec3(p.xyx) * 0.1031);
@@ -30,7 +34,15 @@ float vnoise(vec2 p) {
 }
 
 void fragment() {
-	vec4 m = texture(matte, UV);
+	// The rows wander: the plate is read through a slow noise of its own coordinates (finer in x than in y, as a hand's rows drift).
+	vec2 wobble = vec2(vnoise(UV * vec2(23.0, 11.0) + 3.7), vnoise(UV * vec2(17.0, 29.0) + 11.3)) - 0.5;
+	vec2 uv = UV + wobble * 2.0 * warp * vec2(1.0, 1.6);
+	vec4 m = texture(matte, uv);
+	// A lit window (warm, bright) is painted out in some cells of a coarse grid, a hash picking which: the rest stay lit.
+	float lit = step(0.45, m.r) * step(m.b, m.r * 0.95);
+	vec2 cell = floor(uv * vec2(36.0, 17.0));
+	float out_ = step(hash12(cell + 5.3), drop_share) * lit;
+	m.rgb = mix(m.rgb, m.rgb * vec3(0.18, 0.2, 0.34), out_);
 	vec3 col = m.rgb * tint;
 	vec2 metres = UV * card_size_m;
 	float g = 0.65 * vnoise(metres * vec2(0.5, 1.6)) + 0.35 * vnoise(metres * vec2(1.4, 4.1) + 9.0);

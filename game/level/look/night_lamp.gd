@@ -31,10 +31,10 @@ enum Kind { LAMP, BARREL }
 @export_range(0.0, 0.5, 0.01) var halo_wobble: float = 0.3
 @export_group("Pool")
 ## The painted ground pool's diameter in metres (0: none) and how far it is pushed from the pole toward the street's middle.
-@export var pool_m: float = 4.4
+@export var pool_m: float = 6.0
 @export_range(0.0, 1.0, 0.01) var pool_push: float = 0.25
 ## The painted glow on the wall nearest the lamp: its diameter in metres (0: none) and its height above the lamp head's.
-@export var wall_glow_m: float = 3.8
+@export var wall_glow_m: float = 4.8
 @export var wall_glow_rise_m: float = -0.4
 @export_group("Shaft")
 @export var shaft: bool = false

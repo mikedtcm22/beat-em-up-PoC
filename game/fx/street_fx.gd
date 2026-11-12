@@ -235,7 +235,7 @@ func _find_section(section_path: String) -> LevelSection:
 	return null
 
 
-## A steam plume (white, two tones, ink line round the edge) or a wisp (grey, one soft tone, no line).
+## A steam plume (white, two tones, ink line round the edge) or a wisp (grey, one tone, the same ink line, thinner).
 func _steam_material(wisp: bool, seed_no: int) -> ShaderMaterial:
 	var t := Tuning.data
 	var mat := ShaderMaterial.new()
@@ -248,9 +248,10 @@ func _steam_material(wisp: bool, seed_no: int) -> ShaderMaterial:
 		mat.set_shader_parameter(&"dark_color", Color(0.46, 0.48, 0.56))
 		mat.set_shader_parameter(&"light_alpha", t.tfx_wisp_alpha)
 		mat.set_shader_parameter(&"dark_alpha", t.tfx_wisp_alpha)
-		mat.set_shader_parameter(&"line_share", 0.0)
-		mat.set_shader_parameter(&"min_line_px", 0.0)
-		mat.set_shader_parameter(&"line_m", 0.005)
+		# G4: the wisp is outlined as the plume is (the same ink, held on twos with the rest of the drawing), a thinner line.
+		mat.set_shader_parameter(&"line_share", t.tfx_wisp_line_share)
+		mat.set_shader_parameter(&"min_line_px", t.tfx_line_min_px)
+		mat.set_shader_parameter(&"line_m", t.tfx_wisp_line_m)
 		mat.set_shader_parameter(&"lobes", 4)
 		mat.set_shader_parameter(&"lobe_r_m", 0.5)
 		mat.set_shader_parameter(&"rate", t.tfx_steam_rate * 0.6)

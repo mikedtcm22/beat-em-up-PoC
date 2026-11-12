@@ -136,6 +136,8 @@ func _ready() -> void:
 		spawner.set_waves_enabled(false)
 	if with_presentation:
 		RoomKit.build_presentation(self)
+		# The trailer profile's night look (the same layer a level has; nothing at all under m6).
+		add_child(TrailerLook.new())
 
 
 ## The AI enemies in the room (members of "ai_enemy"), dead and alive.
@@ -268,6 +270,8 @@ func _add_windows(x0: float, x1: float, z_face: float, height: float, material: 
 					Vector3(start + float(c) * window_pitch_m, y, z_face + window_proud_m - window_depth_m * 0.5),
 					Vector3(window_size.x, window_size.y, window_depth_m), material, null, &"window")
 			window.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			# The trailer look's lit-window cards find the windows by this (NightStreet).
+			window.set_meta(&"kit_window", Vector3(window_size.x, window_size.y, window_depth_m))
 		y += window_row_m
 
 
@@ -375,5 +379,7 @@ func _build_backdrop(wall: Material, accent: Material) -> void:
 	for i in skyline.size():
 		var block := skyline[i]
 		var height := skyline_heights[i % skyline_heights.size()]
-		RoomKit.add_visual_box(geometry, Vector3(block.x, height * 0.5 - 0.05, block.y),
+		var face := RoomKit.add_visual_box(geometry, Vector3(block.x, height * 0.5 - 0.05, block.y),
 				Vector3(block.z, height, skyline_depth), wall if i % 2 == 0 else accent, null, &"skyline")
+		# The trailer look's facade wash finds the blocks by this (NightStreet).
+		face.set_meta(&"kit_skyline", Vector3(block.z, height, skyline_depth))

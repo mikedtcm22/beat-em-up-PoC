@@ -38,12 +38,12 @@ const KEY := &"t10_night_street"
 @export var halo_core_color: Color = Color(1.0, 0.95, 0.8)
 @export var pool_rim_color: Color = Color(0.9, 0.38, 0.08)
 @export var pool_core_color: Color = Color(1.0, 0.62, 0.2)
-@export_range(0.0, 1.0, 0.01) var pool_rim_alpha: float = 0.32
-@export_range(0.0, 1.0, 0.01) var pool_core_alpha: float = 0.38
+@export_range(0.0, 1.0, 0.01) var pool_rim_alpha: float = 0.5
+@export_range(0.0, 1.0, 0.01) var pool_core_alpha: float = 0.62
 ## How far above the floor the pool cards lie (m).
 @export_range(0.005, 0.2, 0.005) var pool_lift_m: float = 0.03
 ## The wall glow's alphas (rim, core), and how far in front of the wall it lies (m).
-@export var wall_glow_alpha: Vector2 = Vector2(0.1, 0.16)
+@export var wall_glow_alpha: Vector2 = Vector2(0.16, 0.26)
 @export_range(0.005, 0.2, 0.005) var wall_lift_m: float = 0.03
 
 @export_group("Windows")
@@ -56,6 +56,15 @@ const KEY := &"t10_night_street"
 ## The glow card's size as a share of the window piece's, and how far behind the piece's front face it lies (m).
 @export var window_card_share: Vector2 = Vector2(0.72, 0.8)
 @export_range(0.0, 0.3, 0.005) var window_inset_m: float = 0.03
+## G4, no two windows alike: how far a glow card's size may differ from the rule above (a share, either way), how far it may sit off the
+## piece's middle (a share of the piece), how far it may tilt (degrees), how far each corner of its quad is pulled in (a share), a mullion
+## stroke's width (a share) and the stroke's and frame's colour.
+@export_range(0.0, 0.4, 0.01) var window_size_jitter: float = 0.2
+@export_range(0.0, 0.3, 0.01) var window_offset_jitter: float = 0.08
+@export_range(0.0, 12.0, 0.5) var window_tilt_deg: float = 3.0
+@export_range(0.0, 0.3, 0.01) var window_uneven: float = 0.1
+@export_range(0.0, 0.3, 0.005) var window_mullion: float = 0.09
+@export var window_mullion_color: Color = Color(0.1, 0.06, 0.1)
 
 @export_group("Haze")
 ## Start distances (m) of the three flat haze bands, their colours (alpha is the strength), the mist's top (world y) and colour.
@@ -68,6 +77,15 @@ const KEY := &"t10_night_street"
 
 @export_group("Cards")
 @export var mattes: Array[NightMatte] = []
+
+@export_group("Skyline wash")
+## G4: a painted wash laid on the street-facing face of each kit skyline block (the far facades), irregular flat patches in two stepped
+## tones that paint out part of the window rows: its colour (alpha is its strength), the share of the face it covers, the size of a patch
+## (m) and how far in front of the face it lies (m). Cover 0 builds none.
+@export var skyline_wash_color: Color = Color(0.2, 0.18, 0.42, 0.7)
+@export_range(0.0, 1.0, 0.01) var skyline_wash_cover: float = 0.42
+@export_range(1.0, 20.0, 0.5) var skyline_wash_patch_m: float = 5.0
+@export_range(0.02, 0.5, 0.01) var skyline_wash_lift_m: float = 0.15
 
 @export_group("Contact shadows")
 @export var contact_color: Color = Color(0.01, 0.012, 0.035)

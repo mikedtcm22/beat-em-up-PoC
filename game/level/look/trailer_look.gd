@@ -7,11 +7,15 @@ extends Node
 ## in) and puts a contact shadow under every actor. Flipping back to m6 frees everything and restores what it changed (the
 ## sky material object, the glow settings, the sun's shadow), so the old light is exactly the old light.
 ## A child of the LevelRoot (it builds the layer in `_ready`); presentation only: it reads Tuning, the level and the actors
-## and never writes game state.
+## and never writes game state. G4: it also serves the crowd room and the training room (a child of the room, no LevelRoot): the room
+## is then one section of its own, dressed from ROOM_LOOK (room_night.tres: lamps, pools, halos, windows, the skyline plate) and
+## lit with that look's night light, so no first-person still of a trailer-profile room shows M6's dusk and plain walls.
 
 const SKY_SHADER := preload("res://game/fx/sky_painted.gdshader")
 const HAZE_SHADER := preload("res://game/fx/haze_band.gdshader")
 const CONTACT_SHADER := preload("res://game/fx/contact_shadow.gdshader")
+## The night look of a room that is not a level (the crowd room, the training room).
+const ROOM_LOOK := preload("res://game/level/look/room_night.tres")
 ## Just above the contact flash (-128), with the edge pass (-127): the haze lies under the ink.
 const HAZE_RENDER_PRIORITY := Material.RENDER_PRIORITY_MIN
 const HAZE_CULL_MARGIN := 16384.0
@@ -20,6 +24,8 @@ const CONTACT_PLANE_M := 1.6
 const ACTOR_GROUP := &"ai_enemy"
 
 var _level: LevelRoot
+## The room this layer dresses when it hangs under a room, not a level (else null).
+var _room: Node3D
 var _active: bool = false
 var _streets: Array[NightStreet] = []
 var _sky_material: ShaderMaterial
@@ -40,6 +46,8 @@ func _init() -> void:
 
 func _ready() -> void:
 	_level = get_parent() as LevelRoot
+	if _level == null:
+		_room = get_parent() as Node3D
 	Tuning.changed.connect(_on_tuning_changed)
 	_sync()
 
@@ -48,7 +56,7 @@ func _exit_tree() -> void:
 	if Tuning.changed.is_connected(_on_tuning_changed):
 		Tuning.changed.disconnect(_on_tuning_changed)
 	if _active:
-		_deactivate()
+		_deactivate(true)
 
 
 ## Whether the trailer look is built now.
@@ -85,24 +93,30 @@ func _on_tuning_changed(property: StringName) -> void:
 
 
 func _sync() -> void:
-	var wanted := LookProfile.current() == LookProfile.Id.TRAILER and _level != null
+	var wanted := LookProfile.current() == LookProfile.Id.TRAILER and (_level != null or _room != null)
 	if wanted and not _active:
 		_activate()
 	elif not wanted and _active:
 		_deactivate()
 
 
+func _host() -> Node3D:
+	return _level if _level != null else _room
+
+
 func _environment() -> Environment:
-	var world := _level.get_node_or_null("WorldEnvironment") as WorldEnvironment
+	var world := _host().get_node_or_null("WorldEnvironment") as WorldEnvironment
 	return world.environment if world != null else null
 
 
 func _sun() -> DirectionalLight3D:
-	return _level.get_node_or_null("Sun") as DirectionalLight3D
+	return _host().get_node_or_null("Sun") as DirectionalLight3D
 
 
 ## The first night look of the level's sections (what is global to the layer: the sky's settings, the bloom, the haze).
 func _any_look() -> NightLook:
+	if _level == null:
+		return ROOM_LOOK
 	for section in _level.sections:
 		var found := NightLook.for_location(section.look_location)
 		if found != null:
@@ -112,6 +126,8 @@ func _any_look() -> NightLook:
 
 ## The look of the section the player is in, or null.
 func _look_here() -> NightLook:
+	if _level == null:
+		return ROOM_LOOK
 	var section := _level.current_section()
 	return NightLook.for_location(section.look_location) if section != null else null
 
@@ -119,14 +135,20 @@ func _look_here() -> NightLook:
 func _activate() -> void:
 	_active = true
 	var base := _any_look()
-	for section in _level.sections:
-		var section_look := NightLook.for_location(section.look_location)
-		if section_look == null:
-			continue
-		var street := NightStreet.new()
-		section.add_child(street)
-		street.build(section, section_look)
-		_streets.append(street)
+	if _level == null:
+		var room_street := NightStreet.new()
+		_room.add_child(room_street)
+		room_street.build(_room, ROOM_LOOK)
+		_streets.append(room_street)
+	else:
+		for section in _level.sections:
+			var section_look := NightLook.for_location(section.look_location)
+			if section_look == null:
+				continue
+			var street := NightStreet.new()
+			section.add_child(street)
+			street.build(section, section_look)
+			_streets.append(street)
 	_contact_look = base
 	if base == null:
 		set_physics_process(false)
@@ -142,11 +164,14 @@ func _activate() -> void:
 	_tick()
 
 
-func _deactivate() -> void:
+## Free what the layer built and put back what it changed. `leaving`: the layer's own tree is being torn down (its parent is busy), so
+## the dressing is only queued to be freed, not taken out of its parent by hand.
+func _deactivate(leaving: bool = false) -> void:
 	_active = false
 	for street in _streets:
 		if is_instance_valid(street):
-			street.get_parent().remove_child(street)
+			if not leaving:
+				street.get_parent().remove_child(street)
 			street.queue_free()
 	_streets.clear()
 	for entry in _actor_shadows:
@@ -161,12 +186,15 @@ func _deactivate() -> void:
 		if _sky_material_before != null and env.sky != null and env.sky.sky_material == _sky_material:
 			env.sky.sky_material = _sky_material_before
 			# The level wrote its light to the sky while the painted one was in place (or before this ran): the procedural
-			# sky takes the level's light now, so m6's sky is m6's whichever handler of the flip ran first.
+			# sky takes the level's light now, so m6's sky is m6's whichever handler of the flip ran first. (A room's is
+			# the running profile's: RoomKit's defaults, since the flip back is to m6.)
 			var procedural := _sky_material_before as ProceduralSkyMaterial
-			var light := _level.current_light()
+			var light := _level.current_light() if _level != null else LookProfile.resolve_light(RoomKit.default_room_light())
 			if procedural != null and light.has(&"sky_top"):
 				procedural.sky_top_color = light.sky_top
 				procedural.sky_horizon_color = light.sky_horizon
+		if _room != null:
+			RoomKit.apply_room_light(_room, LookProfile.resolve_light(RoomKit.default_room_light()))
 		for property: StringName in _glow_before:
 			env.set(property, _glow_before[property])
 	_glow_before.clear()
@@ -251,8 +279,11 @@ func _physics_process(_delta: float) -> void:
 
 
 func _tick() -> void:
-	if not _active or _level == null:
+	if not _active or (_level == null and _room == null):
 		return
+	if _room != null:
+		# The room's light is the night look's (LookPost writes the profile's dusk on every look change; this lays the night over it).
+		RoomKit.apply_room_light(_room, _room_light())
 	_tick_sky()
 	var sun := _sun()
 	var here := _look_here()
@@ -271,7 +302,7 @@ func _tick() -> void:
 func _tick_sky() -> void:
 	if _sky_material == null:
 		return
-	var light := _level.current_light()
+	var light := _level.current_light() if _level != null else _room_light()
 	if light.is_empty():
 		return
 	var base := _contact_look
@@ -291,6 +322,11 @@ func _tick_sky() -> void:
 	var sun := _sun()
 	if sun != null:
 		_sky_material.set_shader_parameter(&"disc_dir", sun.global_transform.basis.z)
+
+
+## A room's light: RoomKit's keys (sun colour, fog, sky) from the room's night look.
+func _room_light() -> Dictionary:
+	return ROOM_LOOK.light()
 
 
 ## A contact shadow card under each live enemy, stretched away from the nearest lamp; cards of enemies that are gone are freed.
