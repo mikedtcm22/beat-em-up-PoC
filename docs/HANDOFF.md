@@ -4,6 +4,12 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-12 02:00: adjust round done; frame time passes, the blind judge still fails; waiting on Game-boy (T27)
+
+- Judge (`captures/m7-slice/judge3/`): cand_street 0.80 (was 0.80), cand_arms 0.80 (was 0.92), cand_punk 0.95 (was 0.88); trailer 0.35 (0.10-0.55), m6 0.90. Gate is 0.19. Frame time: m6 10.90 ms, trailer 10.15 ms, -6.9% (`perf3/report.txt`). Suite 2172/2172 at b6a53a3.
+- Still wrong: purple blotch on Punk faces (not the damage look, not the key's cast shadow; look in paint_tex and the shade term), chain-link still a regular lattice, window rows, even outlines, shadow-map cast shadows.
+- The lead told Game-boy: two rounds moved the judge by almost nothing, so the painted-asset route will not reach the trailer; recommend stopping it. Options put to him: keep the slice as an optional look (F7) and close M7 here, or try a different route. **Start nothing until he answers.** Reel: `captures/m7-slice/gate1b/`.
+
 ### 2026-11-12 01:30: adjust round merged (G1-G4 plus the perf cut); slice re-recorded; the blind judge is running (T25)
 - Merged on `m7/trailer-look` (b6a53a3): G1, G3, G4, G2 and the perf cut. Full suite 2172/2172 in 452 s, no SCRIPT or SHADER ERROR.
 - Frame time (perf3, interleaved, 4 runs each): m6 10.90 ms, trailer 10.15 ms, -6.9% (was +22.6%). Report: `captures/m7-slice/perf3/report.txt`.
