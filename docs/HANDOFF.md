@@ -4,6 +4,11 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-13 (fix wave): T48 look done, T49 fix wave running (workflow `m7-comic-fix-wave`, run `wf_66e4d171-9fa`)
+- T41 to T47 are done (T47 logged fail: frame time +13.3% at full scale; suite 2206 green). The lead's look: fence, flat fills, clean arms and the thin rim are right.
+- Fix list (also in the plan Log): D1 bruise style under the trailer profile (small hard maroon shapes on skin only, same thresholds) and no shadow-map shadow on figures, branch `m7/d1`; D2 frame time under +10% at full scale (fallback scale 0.93 only if stills are indistinguishable) and a calmer lamp halo, `m7/d2`, runs alone after the other two; D3 cards redrawn from new-look stills (Gemini cap $2) and thinner glove ink, `m7/d3`. Then an Opus merge, suite, perf, re-record into `captures/m7-comic/slice2/`.
+- Resume: if the workflow died, re-run its script with `resumeFromRunId`; otherwise check `slice2/`, close T49 with `cfo.py done`, then T50 (Gate 3: reel, sheet and `godot --path .` to Game-boy, Slack DM). Do not start 3b without his answer.
+
 ### 2026-11-13 (T47 done): the clean slice is merged and recorded; frame time misses the gate at full scale
 
 - **Merged** into `m7/trailer-look`: m7/c1 (7484df3), c4 (23539a7), c5 (5317800), c3 (2f5be1b), then e19c303: the Punk's skin and eye band warmed (T41's paint fix, which T43 had not applied; maps regenerated), the "Cut-ins (M7)" group moved before Audio (the Audio, Look, Debug tail is pinned), the fence uniforms unset under m6 (exact round trip), ASSETS rows for each card, test_street_fx runs with cards off.
