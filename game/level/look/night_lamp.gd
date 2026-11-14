@@ -24,11 +24,11 @@ enum Kind { LAMP, BARREL }
 ## Flicker amplitude as a share of the energy (a barrel's fire), held on twos of the 60 Hz tick.
 @export_range(0.0, 0.5, 0.01) var flicker: float = 0.0
 @export_group("Halo")
-## The halo card's diameter in metres (0: none), its energy (HDR: only this and the fire may bloom), rings and ring wobble.
+## The halo card's diameter in metres (0: none), its energy (HDR: only this and the fire may bloom), rings (C4: three stepped tones) and ring wobble.
 @export var halo_m: float = 1.6
 @export_range(0.0, 8.0, 0.1) var halo_energy: float = 1.6
-@export_range(0.0, 6.0, 1.0) var halo_rings: float = 2.0
-@export_range(0.0, 0.5, 0.01) var halo_wobble: float = 0.3
+@export_range(0.0, 6.0, 1.0) var halo_rings: float = 3.0
+@export_range(0.0, 0.5, 0.01) var halo_wobble: float = 0.4
 @export_group("Pool")
 ## The painted ground pool's diameter in metres (0: none) and how far it is pushed from the pole toward the street's middle.
 @export var pool_m: float = 6.0

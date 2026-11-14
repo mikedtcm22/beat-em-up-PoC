@@ -18,7 +18,7 @@ uniform float seed = 1.0;
 // before the card's edge, so no halo is ever a flat disc with a rim.
 uniform float soft : hint_range(0.0, 1.0) = 0.15;
 // How far the brush bites a ring's edge (a share of the card's radius).
-uniform float brush : hint_range(0.0, 0.1) = 0.025;
+uniform float brush : hint_range(0.0, 0.1) = 0.05;
 uniform float energy : hint_range(0.0, 4.0) = 1.0;
 
 void vertex() {
@@ -41,28 +41,34 @@ float vnoise(vec2 p) {
 
 void fragment() {
 	vec2 p = UV * 2.0 - 1.0;
-	float r = length(p);
 	float phi = atan(p.y, p.x);
 	float n_rings = floor(rings);
 	float band = (1.0 - core) / max(n_rings, 1.0);
-	float edge = max(fwidth(r) * 1.3, 0.004);
+	float edge = max(fwidth(length(p)) * 1.3, 0.004);
 	float feather = max(edge, soft * 0.16 * band);
 	vec3 col = vec3(0.0);
 	for (int k = 6; k >= 1; k--) {
 		if (float(k) <= n_rings) {
 			float fk = float(k);
+			// Each ring is its own lopsided shape: its centre pushed off the lamp by a seed and the ring's own wobble (never concentric
+			// discs), and a brushed edge, a slow bite plus a fast bristle, so no ring is a tidy circle.
+			vec2 centre = (vec2(vnoise(vec2(fk * 3.7 + seed * 2.1, 1.3)), vnoise(vec2(fk * 5.1 + seed * 1.7, 7.9))) - 0.5) * 0.16 * fk / max(n_rings, 1.0);
+			float r = length(p - centre);
 			float wob = (vnoise(vec2(phi * 1.4 + fk * 5.3 + seed * 11.0, fk * 2.9 + seed)) - 0.5) * 2.0 * wobble;
-			float bite = (vnoise(vec2(phi * 11.0 + fk * 3.3 + seed * 5.0, fk + 0.5)) - 0.5) * 2.0 * brush;
-			float rk = (core + (1.0 - core) * fk / n_rings) * (1.0 + wob * 0.5) * 0.8 + bite;
+			float bite = (vnoise(vec2(phi * 7.0 + fk * 3.3 + seed * 5.0, fk + 0.5)) - 0.5) * 2.0 * brush;
+			float bristle = (vnoise(vec2(phi * 31.0 + fk * 9.1 + seed * 3.0, fk * 1.7)) - 0.5) * 2.0 * brush * 0.45;
+			float rk = (core + (1.0 - core) * fk / n_rings) * (1.0 + wob * 0.5) * 0.74 + bite + bristle;
 			float inside = 1.0 - smoothstep(rk - feather, rk + feather, r);
+			// Stepped tones: each ring outside the first is a clear step fainter than the one inside it.
 			col = max(col, ring_color * ring_strength * inside * (1.0 - 0.8 * (fk - 1.0) / max(n_rings, 1.0)));
 		}
 	}
+	float r0 = length(p);
 	float rc = core * (1.0 + (vnoise(vec2(phi * 2.0 + seed, 4.1)) - 0.5) * wobble * 0.4);
 	float core_feather = max(edge, soft * 0.16 * core);
-	float inside_core = 1.0 - smoothstep(rc - core_feather, rc + core_feather, r);
+	float inside_core = 1.0 - smoothstep(rc - core_feather, rc + core_feather, r0);
 	col = mix(col, core_color, inside_core);
-	col *= 1.0 - step(0.98, r);
+	col *= 1.0 - step(0.98, r0);
 	ALBEDO = col * energy;
 	ALPHA = clamp(max(col.r, max(col.g, col.b)) * 4.0, 0.0, 1.0);
 }

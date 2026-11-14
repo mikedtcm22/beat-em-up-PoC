@@ -1293,9 +1293,8 @@ extends Resource
 ## How far a variant may nudge a face's tint (rgb) about white, warm or cool, in the strips that allow it (the walls, the
 ## concrete, the facade): the slight non-uniformity of hand-painted planes.
 @export_range(0.0, 0.3, 0.005) var trailer_kit_tint_jitter: float = 0.07
-## M7 G3: the trailer profile's painted fence card (assets/export/kit/trailer_fence_card.png) replaces the chain-link lattice. The metres
-## it covers, along the fence and up it (the card's top sits on the fence's top; one diamond is about a ninth of the width), so it is
-## drawn larger than life and never moires.
+## M7 G3, C4: the trailer profile's drawn fence card (assets/export/kit/trailer_fence_card.png: posts, two rails and uneven boards) replaces
+## the chain-link lattice. The metres it covers, along the fence and up it (the card's top sits on the fence's top).
 @export_range(2.0, 16.0, 0.25) var trailer_fence_card_w_m: float = 8.0
 @export_range(1.0, 8.0, 0.25) var trailer_fence_card_h_m: float = 4.0
 

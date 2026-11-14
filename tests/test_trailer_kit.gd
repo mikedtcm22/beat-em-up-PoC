@@ -211,14 +211,86 @@ func test_the_trailer_walls_are_mostly_flat_with_a_few_drawn_hints() -> void:
 	assert_gte(float(brick.u_m), 12.0, "a long strip, so neighbouring walls differ")
 
 
-func test_the_fence_card_is_torn_and_loose_not_a_lattice() -> void:
+func _runs(image: Image, y: int) -> Array[int]:
+	## The lengths (px) of the opaque runs along row `y`.
+	var out: Array[int] = []
+	var length := 0
+	for x in image.get_width():
+		if image.get_pixel(x, y).a > 0.5:
+			length += 1
+		elif length > 0:
+			out.append(length)
+			length = 0
+	if length > 0:
+		out.append(length)
+	return out
+
+
+func test_the_fence_card_is_uneven_boards_with_gaps_not_a_lattice() -> void:
 	var path := KitMesh.FENCE_CARD_PATH
 	var share := _alpha_share(path, Rect2i(0, 0, 2048, 1024))
-	assert_gt(share, 0.06, "strokes are there")
-	assert_lt(share, 0.3, "and a good part of the card is open")
-	# the tear that straddles the wrap: the card's left and right edges are mostly open, so it tiles along the fence
-	var edge := _alpha_share(path, Rect2i(0, 150, 24, 700)) + _alpha_share(path, Rect2i(2024, 150, 24, 700))
-	assert_lt(edge, 0.12, "the wrap is a gap, not a cut lattice")
+	assert_gt(share, 0.45, "boards, rails and posts are there")
+	assert_lt(share, 0.85, "and there are gaps")
+	# the first post straddles the wrap, so the card tiles along the fence without a cut board
+	var edge := _alpha_share(path, Rect2i(0, 150, 20, 700)) + _alpha_share(path, Rect2i(2028, 150, 20, 700))
+	assert_gt(edge, 1.8, "the post covers the wrap")
+	# no pitch: along a row the board widths differ (a lattice or a picket fence repeats one width)
+	var image: Image = (load(path) as Texture2D).get_image()
+	if image.is_compressed():
+		image.decompress()
+	for y in [80, 400, 900]:
+		var runs := _runs(image, y)
+		assert_gte(runs.size(), 8, "a run of boards at y=%d" % y)
+		var mean := 0.0
+		for r in runs:
+			mean += float(r)
+		mean /= float(runs.size())
+		var spread := 0.0
+		for r in runs:
+			spread += (float(r) - mean) * (float(r) - mean)
+		spread = sqrt(spread / float(runs.size()))
+		assert_gt(spread / mean, 0.4, "board widths are uneven at y=%d" % y)
+
+
+func test_the_far_facade_has_no_even_window_row() -> void:
+	_trailer()
+	var strip := TrimSheet.strip(&"facade")
+	var image: Image = (load(TrimSheet.TRAILER_SHEET_PATH) as Texture2D).get_image()
+	if image.is_compressed():
+		image.decompress()
+	var y0 := roundi(float(strip.v0) * 2048.0)
+	var rows := roundi(float(strip.vh) * 2048.0)
+	# the windows' ink outlines, by column: runs of columns that hold ink are windows, the runs between them are wall
+	var ink_cols: Array[bool] = []
+	for x in 2048:
+		var has := false
+		for y in range(y0, y0 + rows, 2):
+			if image.get_pixel(x, y).a > 0.5:
+				has = true
+				break
+		ink_cols.append(has)
+	var widths: Array[float] = []
+	var gaps: Array[float] = []
+	var length := 0
+	var state := ink_cols[0]
+	for has in ink_cols:
+		if has == state:
+			length += 1
+		else:
+			(widths if state else gaps).append(float(length))
+			state = has
+			length = 1
+	assert_gte(widths.size(), 10, "a good number of windows along the strip")
+	for series: Array[float] in [widths, gaps]:
+		var mean := 0.0
+		for v in series:
+			mean += v
+		mean /= float(series.size())
+		var spread := 0.0
+		for v in series:
+			spread += (v - mean) * (v - mean)
+		spread = sqrt(spread / float(series.size()))
+		assert_gt(spread / mean, 0.3, "windows and the wall between them are uneven: no pitch")
 
 
 func test_the_fence_card_replaces_the_lattice_under_trailer_only() -> void:
