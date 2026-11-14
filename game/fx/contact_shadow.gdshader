@@ -14,6 +14,8 @@ uniform float stretch : hint_range(1.0, 3.0) = 1.4;
 uniform float broken : hint_range(0.0, 0.6) = 0.28;
 uniform float body_r : hint_range(0.2, 1.0) = 0.62;
 uniform float core_r : hint_range(0.1, 0.8) = 0.34;
+// 1 = one soft dark blob (a figure's: a round falloff along the stretch, no noise, no hard core; M7 C1), 0 = the drawn two-value shape above.
+uniform float soft_blob : hint_range(0.0, 1.0) = 0.0;
 
 varying vec2 rel;
 
@@ -45,6 +47,9 @@ void fragment() {
 	float aa = max(fwidth(r) * 1.2, 0.003);
 	float body = 1.0 - smoothstep(body_r - aa, body_r + aa, r);
 	float core = 1.0 - smoothstep(core_r - aa, core_r + aa, r + 0.06 * n);
+	// The blob: a smooth falloff from the centre to the body's edge, on the same stretched ground axes and with no noise.
+	float blob = 1.0 - smoothstep(0.0, body_r, length(q));
+	blob = min(blob * 1.6, 1.0);
 	ALBEDO = shade_color;
-	ALPHA = (body * 0.55 + core * 0.45) * opacity;
+	ALPHA = mix(body * 0.55 + core * 0.45, blob, soft_blob) * opacity;
 }
