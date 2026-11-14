@@ -239,3 +239,34 @@ func test_the_face_is_drawn_in_heavy_lines_on_a_muted_warm_grey_skin() -> void:
 	assert_gt(float(skin_lines) / float(skin), 0.02, "the face carries bold ink (brows, eyes, nose, mouth, jaw)")
 	assert_lt(float(skin_lines) / float(skin), 0.3, "and is not a mask of black")
 	assert_lt(sat / float(skin), 0.22, "skin is a muted grey, not pink")
+
+
+## C3 (the clean look): flat fills, a few bold lines and a face drawn once (the drawing's front view on the head's planar island, never blended with the
+## three-quarter views, so no ghost eyes): a guard against the grain, hatch patches and line crackle coming back.
+func test_the_maps_are_flat_fills_and_a_few_bold_lines() -> void:
+	var paint := load("res://assets/export/characters/punk/trailer/punk_paint.png") as Texture2D
+	var ink := load("res://assets/export/characters/punk/trailer/punk_ink.png") as Texture2D
+	var pimg := paint.get_image()
+	var iimg := ink.get_image()
+	if pimg.is_compressed():
+		pimg.decompress()
+	if iimg.is_compressed():
+		iimg.decompress()
+	var size := pimg.get_width()
+	var steps := 0
+	var total := 0
+	var lines := 0
+	for y in range(0, size - 2, 2):
+		for x in range(0, size - 2, 2):
+			var c := pimg.get_pixel(x, y)
+			var cx := pimg.get_pixel(x + 2, y)
+			var cy := pimg.get_pixel(x, y + 2)
+			if maxf(maxf(absf(c.r - cx.r), absf(c.g - cx.g)), absf(c.b - cx.b)) > 8.0 / 255.0:
+				steps += 1
+			if maxf(maxf(absf(c.r - cy.r), absf(c.g - cy.g)), absf(c.b - cy.b)) > 8.0 / 255.0:
+				steps += 1
+			total += 2
+			if x % 4 == 0 and y % 4 == 0 and iimg.get_pixel(x, y).r > 0.5:
+				lines += 1
+	assert_lt(float(steps) / float(total), 0.075, "flat fills: no grain, hatch or scribble patches")
+	assert_lt(lines, 16000, "a few bold lines, not a scribble (%d sampled line texels)" % lines)

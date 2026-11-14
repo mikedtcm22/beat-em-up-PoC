@@ -50,26 +50,32 @@ def render_view(maps, rgb, yaw_deg, window, ppm, mask=None):
 	return ap.splat_view(mm, rgb, name, window, ppm)
 
 
-def project_views(maps, views, mask, size):
+def project_views(maps, views, mask, size, winner_k=0.0, vis_ppm=1.5):
 	"""views: list of dicts {yaw, window, ppm, image (h, w, C float 0..1), power}. Returns (value (size, size, C), weight (size, size), best facing (size, size)): per texel the
-	facing-weighted average of every view that sees it (visible = nearest at its pixel, facing the lens)."""
+	facing-weighted average of every view that sees it (visible = nearest at its pixel, facing the lens). With `winner_k` > 0 the views do not average: a texel takes the view
+	that faces it most squarely, the others weighing exp(k * (their facing - the best facing)), so two drawings of one face never ghost into each other (a narrow seam, not a
+	double image). The visibility splat runs at `vis_ppm` at most (a texel is larger than a pixel of a finer splat, and the surface behind then shows through the gaps of the
+	front one: the stipple bands of the first bake)."""
 	cover = maps["cover"] & mask
 	pos = maps["pos"]
 	nrm = maps["nrm"].astype(np.float32)
 	channels = views[0]["image"].shape[2]
-	acc = np.zeros((size, size, channels), np.float32)
-	wsum = np.zeros((size, size), np.float32)
-	best = np.zeros((size, size), np.float32)
 	dummy = np.zeros((size, size, 3), np.float32)
+	samples = []
+	fmax = np.zeros((size, size), np.float32)
 	for v in views:
 		right, up, toward = view_basis(v["yaw"])
-		_img, index = render_view(maps, dummy, v["yaw"], v["window"], v["ppm"], mask)
+		vis_win = v["window"]
+		vp = min(v["ppm"], vis_ppm)
+		_img, index = render_view(maps, dummy, v["yaw"], vis_win, vp, mask)
 		visible = np.zeros(size * size, bool)
 		idx = index[index >= 0]
 		visible[idx] = True
 		visible = visible.reshape(size, size) & cover
 		facing = np.clip(nrm @ toward.astype(np.float32), 0.0, 1.0)
 		ok = visible & (facing > 0.12)
+		if v.get("allow") is not None:
+			ok &= v["allow"]
 		ys, xs = np.nonzero(ok)
 		p = pos[ys, xs]
 		w0, w1, z0, z1 = v["window"]
@@ -80,15 +86,42 @@ def project_views(maps, views, mask, size):
 		inside = (px >= 0) & (px < w - 1) & (py >= 0) & (py < h - 1)
 		ys, xs, px, py = ys[inside], xs[inside], px[inside], py[inside]
 		samp = np.stack([ndimage.map_coordinates(img[..., c], [py - 0.5, px - 0.5], order=1, mode='nearest') for c in range(channels)], axis=1)
-		wt = (facing[ys, xs] ** v.get("power", 2.0)) * v.get("gain", 1.0)
+		f = facing[ys, xs]
 		if "edge" in v:
-			# fade out toward the view's silhouette: a drawing's contour is not the surface's
-			wt = wt * np.clip((facing[ys, xs] - v["edge"][0]) / max(v["edge"][1] - v["edge"][0], 1e-3), 0.0, 1.0)
+			f = f * np.clip((f - v["edge"][0]) / max(v["edge"][1] - v["edge"][0], 1e-3), 0.0, 1.0) if winner_k > 0 else f
+		samples.append((ys, xs, samp, f, v))
+		fmax[ys, xs] = np.maximum(fmax[ys, xs], f)
+	acc = np.zeros((size, size, channels), np.float32)
+	wsum = np.zeros((size, size), np.float32)
+	best = np.zeros((size, size), np.float32)
+	for ys, xs, samp, f, v in samples:
+		if winner_k > 0:
+			wt = np.exp(winner_k * (f - fmax[ys, xs])) * (f > 0.12)
+		else:
+			wt = (f ** v.get("power", 2.0)) * v.get("gain", 1.0)
+			if "edge" in v:
+				# fade out toward the view's silhouette: a drawing's contour is not the surface's
+				wt = wt * np.clip((f - v["edge"][0]) / max(v["edge"][1] - v["edge"][0], 1e-3), 0.0, 1.0)
 		acc[ys, xs] += samp * wt[:, None]
 		wsum[ys, xs] += wt
-		best[ys, xs] = np.maximum(best[ys, xs], facing[ys, xs] * (1.0 if "edge" not in v else 1.0))
+		best[ys, xs] = np.maximum(best[ys, xs], f)
 	value = acc / np.maximum(wsum[..., None], 1e-6)
 	return value, wsum, best
+
+
+def planar_island(maps, meta, bones, min_ny, grow_px=3):
+	"""The texels of trailer_asset.planar_front's island (the front-facing polygons of `bones` got one planar UV2 island, u = -x, v = z): the largest connected piece
+	of those bones' texels whose normal faces the front (`min_ny`), closed and grown by `grow_px`. A drawing made from the front can be laid on it with no stretch."""
+	sel = maps["cover"] & np.isin(maps["bone"], [meta["bones"].index(b) for b in bones]) & (maps["nrm"][..., 1] > min_ny)
+	sel = ndimage.binary_closing(sel, iterations=2)
+	lab, n = ndimage.label(sel)
+	if n == 0:
+		return np.zeros_like(sel)
+	sizes = ndimage.sum(sel, lab, range(1, n + 1))
+	island = lab == (1 + int(np.argmax(sizes)))
+	if grow_px > 0:
+		island = ndimage.binary_dilation(island, iterations=int(grow_px)) & maps["cover"]
+	return island
 
 
 def load_rgb(path, size=None):
@@ -143,9 +176,17 @@ def sheet_layers(maps, meta, spec, sheets_json, sheet_dir, size, group=None):
 	sj = json.load(open(sheets_json))
 	bones = spec.get("bones", ["Head", "Neck"])
 	mask = maps["cover"].copy() if bones == "all" else np.isin(maps["bone"], [meta["bones"].index(b) for b in bones])
+	if spec.get("z_range"):
+		# only the texels between these heights (rest pose, metres): a drawing's jaw and neck do not sit where the mesh's do, so they are left to the flat paint
+		z = maps["pos"][..., 2]
+		mask &= (z >= spec["z_range"][0]) & (z <= spec["z_range"][1])
 	if spec.get("not_bones"):
 		mask &= ~np.isin(maps["bone"], [meta["bones"].index(b) for b in spec["not_bones"]])
 	views = []
+	island = None
+	if spec.get("island"):
+		isl = spec["island"]
+		island = planar_island(maps, meta, isl.get("bones", ["Head"]), float(isl.get("min_ny", 0.45)), int(isl.get("grow_px", 3)))
 	grow_mm = float(spec.get("ink_grow_mm", 1.6))
 	for s in sj["sheets"]:
 		if spec.get("views") and s["name"] not in spec["views"]:
@@ -176,6 +217,12 @@ def sheet_layers(maps, meta, spec, sheets_json, sheet_dir, size, group=None):
 			ink = cv2.dilate(ink, k)
 			ink = cv2.GaussianBlur(ink, (0, 0), 0.8)
 		img = np.concatenate([ink[..., None], flat], axis=2)
-		views.append({"yaw": s["yaw"], "window": tuple(s["window"]), "ppm": s["ppm"], "image": img, "power": float(spec.get("power", 6.0))})
-	value, _w, best = project_views(maps, views, mask, size)
+		allow = None
+		if island is not None:
+			if s["name"] in spec["island"].get("views_in", []):
+				allow = island
+			elif s["name"] in spec["island"].get("views_out", []):
+				allow = ~island
+		views.append({"yaw": s["yaw"], "window": tuple(s["window"]), "ppm": s["ppm"], "image": img, "power": float(spec.get("power", 6.0)), "allow": allow})
+	value, _w, best = project_views(maps, views, mask, size, float(spec.get("winner_k", 0.0)), float(spec.get("vis_ppm", 1.5)))
 	return value[..., 0], value[..., 1:4], (best * (maps["cover"] & mask)).astype(np.float32)

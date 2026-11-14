@@ -437,12 +437,13 @@
    "LeftLowerArm",
    "RightLowerArm"
   ],
-  "crease_strength": 0.95,
-  "border_px": 1,
-  "border_strength": 0.0,
-  "warp_px": 1.2,
-  "border_fade_cut": 0.08,
-  "crease_min": 3.0
+  "crease_strength": 0.0,
+  "border_px": 3,
+  "border_strength": 0.9,
+  "warp_px": 0.0,
+  "border_fade_cut": 0.0,
+  "crease_min": 3.0,
+  "fade_cut": 0.0
  },
  "hull": {
   "base": 0.62,
@@ -464,15 +465,19 @@
     "LeftLowerArm"
    ],
    "region": "sleeve",
-   "count": 16,
-   "angle_deg": 38,
-   "angle_spread_deg": 12,
+   "count": 3,
+   "angle_deg": 52,
+   "angle_spread_deg": 8,
    "length_mm": [
-    60,
-    130
+    38,
+    64
    ],
-   "width_mm": 8.0,
-   "strength": 0.95
+   "width_mm": 4.2,
+   "strength": 0.95,
+   "t_frac": [
+    0.4,
+    0.62
+   ]
   },
   {
    "bones": [
@@ -480,19 +485,23 @@
     "RightLowerArm"
    ],
    "region": "sleeve",
-   "count": 16,
-   "angle_deg": 38,
-   "angle_spread_deg": 12,
+   "count": 3,
+   "angle_deg": 52,
+   "angle_spread_deg": 8,
    "length_mm": [
-    60,
-    130
+    38,
+    64
    ],
-   "width_mm": 8.0,
-   "strength": 0.95
+   "width_mm": 4.2,
+   "strength": 0.95,
+   "t_frac": [
+    0.4,
+    0.62
+   ]
   }
  ],
  "glossy": [],
- "grain": 0.03,
+ "grain": 0.0,
  "hand_normals": {
   "iterations": 6,
   "crease_deg": 60.0,
@@ -526,37 +535,26 @@
      "LeftLowerArm",
      "RightLowerArm"
     ],
-    "ink_both": true,
+    "ink_both": false,
     "ink_grow_mm": 1.0,
-    "min_line_mm2": 50,
+    "min_line_mm2": 95,
     "edge_cut_mm": 3.0,
     "power": 8,
     "abs_dark_lum": 0.0,
-    "ink_regions": [
-     "cuff",
-     "strap",
-     "glove"
-    ],
+    "ink_regions": [],
     "ink_margin_mm": 1.5,
-    "tones": {
-     "glove": {
-      "shade_ratio": 0.8
-     },
-     "cuff": {
-      "shade_ratio": 0.8
-     }
-    },
-    "ink_speck_px": 120,
+    "tones": {},
+    "ink_speck_px": 260,
     "tone_speck_px": 500,
     "tone_median_px": 6
    }
   }
  },
  "features_skip": [
-  "knuckle_",
-  "finger_",
   "phalanx_",
   "panel_",
-  "crease_"
+  "crease_",
+  "cuff_seam",
+  "strap_edge"
  ]
 }

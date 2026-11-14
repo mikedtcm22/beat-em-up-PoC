@@ -28,7 +28,8 @@
     92,
     108
    ],
-   "class": 204
+   "class": 204,
+   "shadow": 0.0
   },
   "cap": {
    "base": [
@@ -40,7 +41,8 @@
     66,
     72,
     96
-   ]
+   ],
+   "shadow": 0.0
   },
   "vest": {
    "base": [
@@ -64,7 +66,8 @@
     8,
     9,
     16
-   ]
+   ],
+   "shadow": 0.0
   },
   "sleeve": {
    "base": [
@@ -76,7 +79,8 @@
     76,
     82,
     104
-   ]
+   ],
+   "shadow": 0.0
   },
   "glove": {
    "base": [
@@ -88,7 +92,8 @@
     30,
     32,
     50
-   ]
+   ],
+   "shadow": 0.0
   },
   "jeans": {
    "base": [
@@ -100,7 +105,8 @@
     84,
     92,
     118
-   ]
+   ],
+   "shadow": 0.0
   },
   "shoe": {
    "base": [
@@ -112,7 +118,8 @@
     30,
     34,
     58
-   ]
+   ],
+   "shadow": 0.0
   },
   "laces": {
    "base": [
@@ -124,19 +131,35 @@
     104,
     112,
     146
-   ]
+   ],
+   "shadow": 0.0
   },
   "hair": {
    "base": [
-    116,
-    118,
-    130
+    78,
+    74,
+    86
    ],
    "shade": [
-    76,
-    78,
-    94
-   ]
+    58,
+    54,
+    68
+   ],
+   "shadow": 0.0
+  },
+  "jaw": {
+   "base": [
+    100,
+    95,
+    108
+   ],
+   "shade": [
+    96,
+    92,
+    108
+   ],
+   "class": 204,
+   "shadow": 0.0
   }
  },
  "rules": [
@@ -285,6 +308,28 @@
     "RightLowerLeg"
    ],
    "region": "laces"
+  },
+  {
+   "bones": [
+    "Head",
+    "Neck"
+   ],
+   "cells": [
+    2,
+    6,
+    14,
+    17,
+    19
+   ],
+   "region": "jaw",
+   "box": [
+    null,
+    null,
+    [
+     1.2,
+     1.506
+    ]
+   ]
   }
  ],
  "shadows": {
@@ -363,16 +408,18 @@
   "crease_skip_bones": [
    "Head"
   ],
-  "crease_strength": 0.4,
+  "crease_strength": 0.0,
   "border_px": 3,
-  "border_strength": 0.9,
-  "warp_px": 1.2,
+  "border_strength": 0.95,
+  "warp_px": 0.0,
   "merge_for_borders": {
    "hair": "cap"
   },
   "clear_regions": [
    "cap"
-  ]
+  ],
+  "border_fade_cut": 0.0,
+  "fade_cut": 0.0
  },
  "hull": {
   "base": 0.62,
@@ -394,14 +441,14 @@
     "LeftLowerArm"
    ],
    "region": "sleeve",
-   "count": 5,
+   "count": 3,
    "angle_deg": 38,
    "angle_spread_deg": 12,
    "length_mm": [
-    70,
-    140
+    45,
+    90
    ],
-   "width_mm": 7.0,
+   "width_mm": 4.6,
    "strength": 0.95
   },
   {
@@ -410,14 +457,14 @@
     "LeftLowerLeg"
    ],
    "region": "jeans",
-   "count": 4,
+   "count": 3,
    "angle_deg": 30,
    "angle_spread_deg": 16,
    "length_mm": [
-    80,
-    160
+    45,
+    90
    ],
-   "width_mm": 6.0,
+   "width_mm": 4.6,
    "strength": 0.95
   },
   {
@@ -426,14 +473,14 @@
     "RightLowerArm"
    ],
    "region": "sleeve",
-   "count": 5,
+   "count": 3,
    "angle_deg": 38,
    "angle_spread_deg": 12,
    "length_mm": [
-    70,
-    140
+    45,
+    90
    ],
-   "width_mm": 7.0,
+   "width_mm": 4.6,
    "strength": 0.95
   },
   {
@@ -442,14 +489,14 @@
     "RightLowerLeg"
    ],
    "region": "jeans",
-   "count": 4,
+   "count": 3,
    "angle_deg": 30,
    "angle_spread_deg": 16,
    "length_mm": [
-    80,
-    160
+    45,
+    90
    ],
-   "width_mm": 6.0,
+   "width_mm": 4.6,
    "strength": 0.95
   },
   {
@@ -458,14 +505,14 @@
     "Chest"
    ],
    "region": "vest",
-   "count": 5,
+   "count": 4,
    "angle_deg": 70,
    "angle_spread_deg": 22,
    "length_mm": [
-    90,
-    170
+    45,
+    90
    ],
-   "width_mm": 6.5,
+   "width_mm": 4.6,
    "strength": 0.95,
    "match_bones": [
     "Spine",
@@ -478,7 +525,7 @@
   }
  ],
  "glossy": [],
- "grain": 0.03,
+ "grain": 0.0,
  "variants": {
   "veteran": {
    "regions": {
@@ -528,14 +575,14 @@
      "Head",
      "Neck"
     ],
-    "ink_grow_mm": 0.9,
+    "ink_grow_mm": 0.2,
     "power": 6,
     "conf_from": 0.3,
     "conf_to": 0.55,
     "tones": {
      "skin": {
-      "shade_ratio": 0.86,
-      "deep_ratio": 0.62
+      "posterize": 5,
+      "tone_median_px": 5
      }
     },
     "min_line_mm2": 45,
@@ -547,6 +594,33 @@
     ],
     "ink_regions": [
      "skin"
+    ],
+    "winner_k": 30,
+    "ink_conf": [
+     0.5,
+     0.7
+    ],
+    "tone_conf": [
+     0.4,
+     0.55
+    ],
+    "island": {
+     "bones": [
+      "Head"
+     ],
+     "min_ny": 0.45,
+     "grow_px": 3,
+     "views_in": [
+      "front"
+     ],
+     "views_out": [
+      "q45",
+      "qm45"
+     ]
+    },
+    "z_range": [
+     1.542,
+     3.0
     ]
    },
    "body": {
@@ -574,23 +648,7 @@
      "shoe"
     ],
     "ink_margin_mm": 2.0,
-    "tones": {
-     "vest": {
-      "shade_ratio": 0.66
-     },
-     "top": {
-      "shade_ratio": 0.6
-     },
-     "sleeve": {
-      "shade_ratio": 0.85
-     },
-     "jeans": {
-      "shade_ratio": 0.88
-     },
-     "shoe": {
-      "shade_ratio": 0.8
-     }
-    },
+    "tones": {},
     "abs_dark_lum": 0.0
    },
    "hands": {
@@ -612,20 +670,16 @@
     ],
     "ink_both": true,
     "ink_grow_mm": 0.9,
-    "min_line_mm2": 50,
+    "min_line_mm2": 140,
     "edge_cut_mm": 3.0,
     "power": 8,
     "ink_regions": [
      "glove"
     ],
     "ink_margin_mm": 1.5,
-    "tones": {
-     "glove": {
-      "shade_ratio": 0.8
-     }
-    },
+    "tones": {},
     "abs_dark_lum": 0.0,
-    "ink_speck_px": 120,
+    "ink_speck_px": 380,
     "tone_speck_px": 500,
     "tone_median_px": 6
    }
