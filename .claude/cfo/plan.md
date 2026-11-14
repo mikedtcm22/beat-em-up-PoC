@@ -66,6 +66,8 @@ Owned files are exclusive within a phase. **T11 is the only row that edits `game
 | T25 | Re-record the slice into `captures/m7-slice/merged3/`, final frame time, three blind judge sets, HANDOFF | integration | workflow | sonnet | high | | T24 | stills, clips, INDEX, `judge3/run1..3`, keys moved out |✓ |
 | T26 | Blind judge x3 and scoring | verify | workflow | opus | medium | | T25 | per-group medians and tells | |
 | T27 | Gate 1b: reel and numbers to Game-boy; if the judge is still near M6, propose stopping the painted route | verify | inline | session | medium | | T26 | user: go or stop | |
+| T28 | Route spikes after Game-boy's "Propose a new route" (2026-11-13): S0 full-frame Gemini repaint (the trailer's own method, the ceiling), S1 drawn sprite characters and arms, S2 camera-projected painted street, S3 = S1 + S2; same four moments each; branches `m7/spike-s1`, `m7/spike-s2`, not merged | media | workflow | sonnet | high | | T27 | four stills per route in `captures/m7-slice/spikes/`, a walk-cycle clip for S1, an off-vantage still for S2 | |
+| T29 | Blind judge x3 on the spikes and scoring; the lead's route proposal with samples | verify | workflow | opus | medium | | T28 | per-route medians; user: picks a route or stops | |
 
 ### Phase 2: the roll-out (after Gate 1)
 

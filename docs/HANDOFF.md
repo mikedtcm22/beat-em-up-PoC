@@ -4,6 +4,16 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-13: Game-boy chose "Propose a new route"; route spikes are running (T28, T29)
+
+- **Decision (chat, 2026-11-13):** "Propose a new route". The painted-texture route is parked; the slice stays on `m7/trailer-look` behind F7.
+- **Running:** workflow `m7-route-spikes`, run `wf_e65c0eaa-df9` (script under `~/.claude/projects/-Users-arachne-repos-beat-em-up-PoC/4532b8a7-9eb5-41f2-9651-88f769f37f0b/workflows/scripts/`). Same four moments per route (street_03, street_05, arms_03, arms_05), outputs in `captures/m7-slice/spikes/`:
+  - S0: full-frame Gemini repaint of game stills (the trailer's own method; the ceiling).
+  - S1: enemies and first-person arms as hand-drawn cut-outs on cards (`.worktrees/m7-s1`, `m7/spike-s1`), plus an 8-pose walk cycle to test frame-to-frame consistency.
+  - S2: Gemini-painted views projected onto the street geometry (`.worktrees/m7-s2`, `m7/spike-s2`), plus an off-axis still and a walk clip.
+  - S3: S1 over S2. Then blind judge sets in `judge4/` (keys in `judge4_keys/`), three Opus judges, scoring. Gemini cap $4 per spike. Spike branches are not to be merged.
+- **Next:** the lead sends Game-boy `spikes/routes_sheet.jpg`, the reel and a short proposal (route, cost, what is lost), then waits. Start no build until he picks.
+
 ### 2026-11-12 02:00: adjust round done; frame time passes, the blind judge still fails; waiting on Game-boy (T27)
 
 - Judge (`captures/m7-slice/judge3/`): cand_street 0.80 (was 0.80), cand_arms 0.80 (was 0.92), cand_punk 0.95 (was 0.88); trailer 0.35 (0.10-0.55), m6 0.90. Gate is 0.19. Frame time: m6 10.90 ms, trailer 10.15 ms, -6.9% (`perf3/report.txt`). Suite 2172/2172 at b6a53a3.
