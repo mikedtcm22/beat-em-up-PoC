@@ -33,6 +33,14 @@ func _ready() -> void:
 			act_filter = arg.trim_prefix("--act=")
 		elif arg == "--clean":
 			clean = true
+		elif arg.begins_with("--hide_rigs"):
+			# M7 spike S1: record the world without any character (plates for the drawn-sprite composite);
+			# `--hide_rigs=player` hides only the player's rig (the first-person arms).
+			hide_player_only = arg == "--hide_rigs=player" or arg == "--hide_rigs=player_meshes" or arg == "--hide_rigs=meshes"
+			hide_meshes_only = arg.ends_with("meshes")
+			if arg == "--hide_rigs=meshes":
+				hide_player_only = false
+			get_tree().node_added.connect(_hide_if_rig)
 		elif arg.begins_with("--tune="):
 			# `--tune=<TuningData property>=<number>`: record with a tunable changed (A/B sheets).
 			var pair := arg.trim_prefix("--tune=").split("=")
@@ -661,6 +669,26 @@ func _build_caption() -> void:
 		sweep.autostart = true
 		sweep.timeout.connect(_hide_debug_text)
 		add_child(sweep)
+
+
+var hide_player_only: bool = false
+var hide_meshes_only: bool = false
+
+
+func _hide_if_rig(node: Node) -> void:
+	if node is HumanoidRig and (not hide_player_only or node.get_parent() is PlayerCharacter):
+		if hide_meshes_only:
+			# Keep the rig (and its skeleton, camera follow, effects) running; only its meshes vanish.
+			for mesh: Node in node.find_children("*", "MeshInstance3D", true, false):
+				(mesh as Node3D).visible = false
+		else:
+			(node as Node3D).visible = false
+
+
+func _process(_delta: float) -> void:
+	if get_tree().node_added.is_connected(_hide_if_rig):
+		for node: Node in get_tree().root.find_children("*", "HumanoidRig", true, false):
+			_hide_if_rig(node)
 
 
 ## `--clean`: the HUD's combat log and the sound room's line are hidden (again after a room is rebuilt).
