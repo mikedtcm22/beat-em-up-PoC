@@ -4,6 +4,12 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-13 (later): route spikes done; proposal sent, waiting on Game-boy
+
+- Outputs: `captures/m7-slice/spikes/` (`routes_sheet.jpg`: now | S1 | S2 | S3 | S0; `routes_reel.mp4`; `s0..s3/`). Judge `judge4/`: now 0.78, S0 0.72, S1 0.73, S2 0.75, S3 0.73; trailer 0.40, m6 0.90. The judge cannot rank the routes: even the trailer's own repaint method on our frames fails. Suspected confound: the HP panel and first-person framing in every game frame.
+- By eye: S1's drawn cut-out Punks read as cels and the 8-pose walk holds face, cap and vest; first-person arms as sprites failed (arms_05). S2's projected street reads painted on-axis but smears and seams at 25 degrees and loses dynamic light.
+- Proposal put to Game-boy: a playable slice with the Punk as drawn sprites (3D skeleton and hits kept underneath, 3D arms and current street kept), about $25 Gemini, to judge in motion; or stop and keep the F7 look. **Start nothing until he answers.** `m7/spike-s1`, `m7/spike-s2` are pushed and not to be merged.
+
 ### 2026-11-13: Game-boy chose "Propose a new route"; route spikes are running (T28, T29)
 
 - **Decision (chat, 2026-11-13):** "Propose a new route". The painted-texture route is parked; the slice stays on `m7/trailer-look` behind F7.
