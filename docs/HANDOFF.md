@@ -4,6 +4,10 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-14 (roll-out): Gate 3 passed ("Go, roll out"); Phase 3b T51 and T52 are running as workflow `m7-comic-rollout`
+- Order: recipe step on `m7/r0` (worktree `.worktrees/m7-r0`), wave 1 on `m7/e-thug`, `e-bruiser`, `e-kicker`, `e-ox`, `e-street` (branched from `m7/r0`), an Opus merge into `m7/trailer-look`, wave 2 on `m7/e-roofs`, `e-bossroof`, `e-rooms`, `e-cards`, `e-hud`, then the T52 merge with suite, frame time and recordings into `captures/m7-comic/rollout/`.
+- Resume: if the workflow died, re-run its script (session workflows/scripts, `m7-comic-rollout-*.js`) with `resumeFromRunId`. After it: T53 (new look default, tests that assume m6 start), T54 review workflow, T55 fix wave, T56 docs, T57 Gate 4. Gemini cap for T51 is $14.
+
 ### 2026-11-14 (Gate 3): the clean slice is with Game-boy; waiting on go, adjust or stop
 - T49 is closed (pass). Reel `captures/m7-comic/slice2/reel_m6_old_new.mp4`, sheet `slice2/sheet_old_new.jpg` and `captures/m7-comic/cards_sheet2.jpg` were sent in-app, with a Slack DM.
 - Do not start Phase 3b (T51 to T57) without his answer. On "go": run T51 as planned and carry the known leftovers (plan Log, 2026-11-14) into the Punk recipe first.
