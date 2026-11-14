@@ -908,6 +908,7 @@ func _on_tuning_changed(property: StringName) -> void:
 		set_art_shown(Tuning.data.look_show_art)
 	if ArtLook.is_profile_change(property):
 		swap_art(_pick_art())
+		SkinnedArt.apply_shadow(_art_meshes)
 
 
 ## The art this rig should wear: its variant for the running look profile when it follows the

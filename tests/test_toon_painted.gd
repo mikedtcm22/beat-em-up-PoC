@@ -388,3 +388,51 @@ func test_the_clean_cel_defaults_draw_no_grain_wobble_breaks_or_rim_patches() ->
 		assert_eq(d.get(key), 0.0, "%s defaults to none" % key)
 	assert_eq(d.get(&"look_finish_scale"), 1.0, "the 3D view renders at full scale")
 	assert_gt(d.get(&"look_paint_hull_shadow"), 0.0, "the hull still swells on the shadow side")
+
+
+# --- M7 D1: flat bruises under the ink, no figure shadow-map shadow ---
+
+func test_the_damage_mark_tunables_reach_the_painted_material_live() -> void:
+	var data := Tuning.data
+	var material := ToonMaterials.art_for(_base.trailer_art())
+	var wanted := {
+		&"bruise_density": data.look_paint_bruise_density, &"bruise_cut": data.look_paint_bruise_cut,
+		&"bruise_keep": data.look_paint_bruise_keep, &"bruise_cells": data.look_paint_bruise_cells,
+		&"bruise_darken": data.look_paint_bruise_darken, &"bruise_hue": data.look_paint_bruise_hue,
+		&"bruise_hue_amount": data.look_paint_bruise_hue_amount, &"blood_color": data.look_paint_blood_color,
+	}
+	for name: StringName in wanted:
+		assert_eq(material.get_shader_parameter(name), wanted[name], "the paint's %s" % name)
+	Tuning.set_value(&"look_paint_bruise_keep", 0.2)
+	assert_eq(material.get_shader_parameter(&"bruise_keep"), 0.2, "live")
+	# A hard-edged flat shape: the cut is high, and the maroon is muted (no channel far above the others, never a saturated violet).
+	assert_gte(data.look_paint_bruise_cut, 0.5)
+	var hue := data.look_paint_bruise_hue
+	assert_gt(hue.r, hue.b, "maroon, not violet")
+	assert_lt(hue.s, 0.65, "muted")
+
+
+func test_the_marks_are_drawn_under_the_ink_and_never_wash_or_land_on_cloth() -> void:
+	var code := (load(PAINTED_SHADER_PATH) as Shader).code
+	var marks_at := code.find("color = mix(color, mix(bruise, blood_color, bloody)")
+	var ink_at := code.find("color = mix(color, ink, line);")
+	assert_gt(marks_at, 0, "the flat bruise colour is written")
+	assert_gt(ink_at, marks_at, "after the marks: the ink line lies over them")
+	assert_true(code.contains("smoothstep(bruise_cut - mark_edge, bruise_cut + mark_edge, shape)"), "the shape is cut hard, never a translucent wash")
+	assert_true(code.contains("mix(1.0, bloody, 1.0 - skin_marks)"), "cloth takes the blood's spots only, no bruise")
+	assert_true(code.contains("no_blood < 0.5"), "the cap and the laces take nothing")
+	assert_false(code.contains("color = mix(color, d.rgb, d.a * takes_marks)"), "the M6 soft tile mix is gone from the painted shader")
+
+
+func test_the_trailer_profile_art_casts_no_shadow_map_shadow_and_m6_still_does() -> void:
+	Tuning.set_value(&"look_profile", LookProfile.Id.TRAILER)
+	var rig := _rig(_base)
+	assert_true(rig.has_art())
+	for mesh_instance: MeshInstance3D in rig.art_meshes():
+		assert_eq(mesh_instance.cast_shadow, GeometryInstance3D.SHADOW_CASTING_SETTING_OFF, "trailer: no map shadow from %s" % mesh_instance.name)
+	Tuning.set_value(&"look_profile", LookProfile.Id.M6)
+	for mesh_instance: MeshInstance3D in rig.art_meshes():
+		assert_eq(mesh_instance.cast_shadow, GeometryInstance3D.SHADOW_CASTING_SETTING_ON, "m6 keeps its shadow on %s" % mesh_instance.name)
+	Tuning.set_value(&"look_profile", LookProfile.Id.TRAILER)
+	for mesh_instance: MeshInstance3D in rig.art_meshes():
+		assert_eq(mesh_instance.cast_shadow, GeometryInstance3D.SHADOW_CASTING_SETTING_OFF, "and off again on the flip back")

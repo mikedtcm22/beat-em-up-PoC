@@ -89,12 +89,19 @@ static func attach(rig: HumanoidRig, art: CharacterArt) -> Array[MeshInstance3D]
 		mesh_instance.skeleton = NodePath("..")
 		mesh_instance.material_override = material
 		mesh_instance.material_overlay = outline
-		mesh_instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+		mesh_instance.cast_shadow = ArtLook.shadow_setting()
 		mesh_instance.add_to_group(HumanoidRig.ART_GROUP)
 		if part.fp_hidden:
 			mesh_instance.set_meta(FP_HIDDEN_META, true)
 		out.append(mesh_instance)
 	return out
+
+
+## Re-apply ArtLook.shadow_setting() to `meshes` (a rig's art meshes after a profile flip that kept the same art).
+static func apply_shadow(meshes: Array[MeshInstance3D]) -> void:
+	var setting := ArtLook.shadow_setting()
+	for mesh_instance: MeshInstance3D in meshes:
+		mesh_instance.cast_shadow = setting
 
 
 ## The contract violations of `art`; empty = ok. A bind name outside PlaceholderBody.BONE_NAMES

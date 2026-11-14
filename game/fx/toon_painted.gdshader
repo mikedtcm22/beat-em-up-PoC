@@ -89,6 +89,16 @@ uniform float damage_scale : hint_range(0.1, 20.0) = 2.5;
 uniform float marks : hint_range(0.0, 1.0) = 0.0;
 uniform bool use_rest_custom = true;
 uniform float edge_tag : hint_range(0.0, 1.0) = 0.0;
+// The marks' own style (M7 D1): the three damage tiles supply only their SHAPES (their alpha, cut hard); the colour is the skin paint darkened toward a muted
+// maroon, or a flat dark red for blood; skin only (cloth takes blood's spots and nothing else), drawn under the ink so the face drawing stays readable.
+uniform float bruise_density : hint_range(0.5, 8.0) = 4.0;
+uniform float bruise_cut : hint_range(0.05, 0.99) = 0.8;
+uniform float bruise_keep : hint_range(0.0, 1.0) = 0.68;
+uniform float bruise_cells : hint_range(1.0, 40.0) = 7.0;
+uniform float bruise_darken : hint_range(0.1, 1.0) = 0.4;
+uniform vec3 bruise_hue : source_color = vec3(0.34, 0.12, 0.15);
+uniform float bruise_hue_amount : hint_range(0.0, 1.0) = 0.45;
+uniform vec3 blood_color : source_color = vec3(0.45, 0.06, 0.08);
 
 varying vec3 mark_pos;
 varying vec3 mark_normal;
@@ -156,27 +166,34 @@ void fragment() {
 	float cell = paint_grain_cells * length(fwidth(mark_pos));
 	float grain = paint_grain_noise(mark_pos * paint_grain_cells);
 	color *= 1.0 + (grain - 0.5) * 2.0 * paint_grain * (1.0 - line) * (1.0 - smoothstep(0.35, 0.9, cell));
-	color = mix(color, ink, line);
-	if (takes_marks > 0.0) {
+	// The damage marks go UNDER the ink: flat, hard-edged shapes, a few, on skin (and blood's spots on cloth), never a wash. A class that takes no
+	// blood (the cap, the laces) shows nothing at all.
+	if (takes_marks > 0.0 && no_blood < 0.5) {
 		vec3 w = abs(normalize(mark_normal));
 		w /= max(w.x + w.y + w.z, 0.0001);
-		vec3 p = mark_pos * damage_scale;
+		vec3 p = mark_pos * damage_scale * bruise_density;
 		vec3 dpdx = dFdx(p);
 		vec3 dpdy = dFdy(p);
 		vec4 d;
 		if (skin_marks > 0.5) {
 			d = damage_triplanar(damage_skin_tex, p, w, dpdx, dpdy);
-		} else if (no_blood > 0.5) {
-			d = damage_triplanar(damage_scuff_tex, p, w, dpdx, dpdy);
 		} else {
 			d = damage_triplanar(damage_tex, p, w, dpdx, dpdy);
 		}
-		if (blood_edge > 0.0 && no_blood < 0.5) {
-			float edge = max(0.5 * fwidth(d.a), 0.0001);
-			d.a = smoothstep(blood_edge - edge, blood_edge + edge, d.a);
-		}
-		color = mix(color, d.rgb, d.a * takes_marks);
+		// Blood is red; the bruise tile's purples and the cloth's scuffs are not. Cloth takes the blood only.
+		float bloody = smoothstep(0.15, 0.35, d.r - max(d.g, d.b));
+		float shape = d.a * mix(1.0, bloody, 1.0 - skin_marks);
+		float gate_noise = paint_grain_noise(mark_pos * bruise_cells + vec3(7.0, 3.0, 11.0));
+		float gate_edge = max(fwidth(gate_noise), 0.004);
+		float keep = bruise_keep >= 1.0 ? 1.0 : smoothstep(1.0 - bruise_keep - gate_edge, 1.0 - bruise_keep + gate_edge, gate_noise);
+		float mark_edge = max(0.5 * fwidth(shape), 0.0001);
+		float on = smoothstep(bruise_cut - mark_edge, bruise_cut + mark_edge, shape) * keep;
+		vec3 tone = color * bruise_darken;
+		float maroon_luma = max(dot(bruise_hue, LUMA), 0.001);
+		vec3 bruise = mix(tone, bruise_hue * (dot(tone, LUMA) / maroon_luma), bruise_hue_amount);
+		color = mix(color, mix(bruise, blood_color, bloody), on * takes_marks);
 	}
+	color = mix(color, ink, line);
 	ALBEDO = color;
 	ROUGHNESS = edge_tag;
 	EMISSION = flash_color * flash_amount;
