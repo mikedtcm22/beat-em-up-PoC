@@ -206,7 +206,7 @@ def pad_and_fill(img, cover, texels, info=None):
 
 def fold_lines(pos, bone, idx, ids, spec, axis, head, e1, e2, seed, cover):
 	"""A cloth's fold lines on the texels of a material around a limb: `count` strokes, each a short curve in the limb's (along, around) plane,
-	slanted by `angle_deg` (+- a spread) and `length_mm` long, heavy at its start and tapering to a point, placed at random (seeded)
+	slanted by `angle_deg` (+- a spread) and `length_mm` long, heavy at its start and tapering to a point, placed at random (seeded; `t_frac` [a, b] keeps them to that share of the limb's length, an elbow's, say)
 	so no two are alike and none are evenly spaced; not stripes round the limb, but the few creases where the cloth turns."""
 	size = ids.shape[0]
 	mask = np.isin(bone, idx) & (ids == spec["cell"])
@@ -228,7 +228,8 @@ def fold_lines(pos, bone, idx, ids, spec, axis, head, e1, e2, seed, cover):
 	l0, l1 = spec.get("length_mm", [30.0, 70.0])
 	w0 = spec.get("width_mm", 2.6) / 1000.0
 	for k in range(int(spec.get("count", 8))):
-		tc = rng.uniform(t_lo, t_hi)
+		tf = spec.get("t_frac", [0.0, 1.0])
+		tc = rng.uniform(t_lo + tf[0] * (t_hi - t_lo), t_lo + tf[1] * (t_hi - t_lo))
 		sc = rng.uniform(-circ / 2, circ / 2)
 		length = rng.uniform(l0, l1) / 1000.0
 		th = np.radians(spec.get("angle_deg", 28.0) + rng.normal(0.0, spec.get("angle_spread_deg", 16.0))) * rng.choice([-1.0, 1.0])
@@ -353,7 +354,8 @@ def region_map(maps, meta, cfg):
 	"""(region index per texel, -1 where nothing is mapped; the region names). paint.json "regions" names them with their colours and "rules" assigns
 	them: the rules run in order, each sets the region of the texels that match ALL of its keys, so a later rule overrides an earlier one:
 	  "cells": palette cells of the game's atlas (the mesh's own material labels), "bones": dominant bone names, "box": [[x0, x1], [y0, y1], [z0, z1]]
-	  (metres, rest pose, any axis may be null), "region": the name it sets."""
+	  (metres, rest pose, any axis may be null), "nx"/"ny"/"nz": [lo, hi] of the shading normal's component (C3: the underside of a brim is "nz": [-1, -0.15]),
+  "region": the name it sets."""
 	ids = cell_ids(maps)
 	names = list(cfg["regions"].keys())
 	out = np.full(ids.shape, -1, np.int32)
@@ -369,6 +371,9 @@ def region_map(maps, meta, cfg):
 			if span is None:
 				continue
 			m &= (pos[..., axis] >= span[0]) & (pos[..., axis] <= span[1])
+		for axis, key in enumerate(("nx", "ny", "nz")):
+			if key in rule:
+				m &= (maps["nrm"][..., axis] >= rule[key][0]) & (maps["nrm"][..., axis] <= rule[key][1])
 		out[m] = names.index(rule["region"])
 	return out, names
 
@@ -495,6 +500,29 @@ def apply_sheets(name, maps, meta, cfg, ids, names, paint, ink, size):
 			ri = names.index(rname)
 			m = (ids == ri) & (conf > 0.6)
 			if m.sum() < 500:
+				continue
+			if tone.get("posterize"):
+				# C3 (the clean look): the drawing's own few flat colours (skin, the brim's shadow, the jaw's shadow, the eye white, ...), k of them, each a flat shape
+				# (labels ordered by brightness and median-filtered, so a shape has a clean edge); the lightest big class is put on the region's base colour, the rest keep
+				# their ratio to it, so the face and the neck are one skin and the shadow shapes are the drawing's, never a threshold's
+				k = int(tone["posterize"])
+				sm = cv2.GaussianBlur(flat_t, (0, 0), tone.get("flat_blur_px", 1.2) * PXS)
+				lab, centres = tp.posterize(sm, m, k)
+				order = np.argsort(centres @ np.array([0.2126, 0.7152, 0.0722], np.float32))
+				rank = np.zeros(k, np.int32)
+				rank[order] = np.arange(k)
+				lab = np.where(lab >= 0, rank[np.maximum(lab, 0)], 0)
+				cs = centres[order]
+				lab8 = cv2.medianBlur(np.clip(lab * (255 // max(k - 1, 1)), 0, 255).astype(np.uint8), 2 * int(tone.get("tone_median_px", 5) * PXS) + 1)
+				lab = np.clip(np.rint(lab8.astype(np.float32) / (255 // max(k - 1, 1))), 0, k - 1).astype(np.int32)
+				counts = np.bincount(lab[m], minlength=k).astype(np.float32)
+				ref_k = int(max((i for i in range(k) if counts[i] > 0.12 * counts.sum()), default=k - 1))
+				base = np.array(reg[rname]["base"], np.float32) / 255.0
+				gain = np.clip(base / np.maximum(cs[ref_k], 1e-3), 0.5, 1.6)
+				col = np.clip(cs[lab] * gain[None, None], 0.0, 1.0)
+				col = cv2.GaussianBlur(col, (0, 0), 0.6 * PXS)
+				w = ((ids == ri) * conf_tone)[..., None]
+				paint = paint * (1 - w) + col * w
 				continue
 			ref = float(np.percentile(lum[m], tone.get("ref_pct", 75)))
 			base = np.array(reg[rname]["base"], np.float32) / 255.0

@@ -38,6 +38,9 @@ def region_map(maps, meta, cfg):
 			if span is None:
 				continue
 			m &= (pos[..., axis] >= span[0]) & (pos[..., axis] <= span[1])
+		for axis, key in enumerate(("nx", "ny", "nz")):
+			if key in rule:
+				m &= (maps["nrm"][..., axis] >= rule[key][0]) & (maps["nrm"][..., axis] <= rule[key][1])
 		if "along" in rule:
 			head = np.array(meta["bone_heads"][rule["along"]["bone"]], np.float64)
 			tail = np.array(meta["bone_tails"][rule["along"]["bone"]], np.float64)

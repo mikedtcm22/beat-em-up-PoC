@@ -243,3 +243,33 @@ func test_the_gloves_are_drawn_from_sheets_whose_sources_are_kept() -> void:
 		assert_true(FileAccess.file_exists("res://assets/source/trailer_art/player/" + String(sheet["src"])), "missing %s" % sheet["src"])
 		count += 1
 	assert_eq(count, 8, "four views of each glove (the left mirrored from the right)")
+
+
+## C3 (the clean look): the maps are flat fills and a few bold lines. A guard against the scribbles coming back: no grain or hatch in the fills (few steps of
+## colour between neighbouring texels) and the ink map's lines are few (the sleeve's long slashes, the glove's leaf network and the strap's wedges all raised it).
+func test_the_maps_are_flat_fills_and_a_few_bold_lines() -> void:
+	var paint := load(PAINT) as Texture2D
+	var ink := load(INK) as Texture2D
+	var pimg := paint.get_image()
+	var iimg := ink.get_image()
+	if pimg.is_compressed():
+		pimg.decompress()
+	if iimg.is_compressed():
+		iimg.decompress()
+	var steps := 0
+	var total := 0
+	var lines := 0
+	for y in range(0, MAP_SIZE - 2, 2):
+		for x in range(0, MAP_SIZE - 2, 2):
+			var c := pimg.get_pixel(x, y)
+			var cx := pimg.get_pixel(x + 2, y)
+			var cy := pimg.get_pixel(x, y + 2)
+			if maxf(maxf(absf(c.r - cx.r), absf(c.g - cx.g)), absf(c.b - cx.b)) > 8.0 / 255.0:
+				steps += 1
+			if maxf(maxf(absf(c.r - cy.r), absf(c.g - cy.g)), absf(c.b - cy.b)) > 8.0 / 255.0:
+				steps += 1
+			total += 2
+			if x % 4 == 0 and y % 4 == 0 and iimg.get_pixel(x, y).r > 0.5:
+				lines += 1
+	assert_lt(float(steps) / float(total), 0.075, "flat fills: no grain, hatch or scribble patches")
+	assert_lt(lines, 9000, "a few bold lines, not a scribble (%d sampled line texels)" % lines)
