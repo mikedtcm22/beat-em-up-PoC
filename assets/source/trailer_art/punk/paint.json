@@ -19,14 +19,14 @@
  "regions": {
   "skin": {
    "base": [
-    156,
-    141,
-    130
+    206,
+    152,
+    118
    ],
    "shade": [
-    110,
-    93,
-    86
+    150,
+    100,
+    84
    ],
    "class": 204,
    "shadow": 0.0
@@ -149,14 +149,14 @@
   },
   "jaw": {
    "base": [
-    100,
-    95,
-    108
+    206,
+    152,
+    118
    ],
    "shade": [
-    96,
-    92,
-    108
+    150,
+    100,
+    84
    ],
    "class": 204,
    "shadow": 0.0
@@ -311,6 +311,23 @@
   },
   {
    "bones": [
+    "Head"
+   ],
+   "box": [
+    null,
+    [
+     0.04,
+     1.0
+    ],
+    [
+     1.5,
+     1.65
+    ]
+   ],
+   "region": "skin"
+  },
+  {
+   "bones": [
     "Head",
     "Neck"
    ],
@@ -402,7 +419,47 @@
     "amount": 0.95
    }
   ],
-  "hatch": []
+  "hatch": [],
+  "designed": [
+   {
+    "region": [
+     "skin",
+     "jaw"
+    ],
+    "shape": {
+     "at_mm": [
+      0,
+      12
+     ],
+     "r_mm": [
+      106,
+      66
+     ],
+     "depth_mm": 70,
+     "soft": 0.1,
+     "wobble": 0.06,
+     "wobble_mm": 30
+    }
+   },
+   {
+    "region": [
+     "skin",
+     "jaw"
+    ],
+    "shape": {
+     "at_mm": [
+      0,
+      188
+     ],
+     "r_mm": [
+      80,
+      42
+     ],
+     "depth_mm": 90,
+     "soft": 0.1
+    }
+   }
+  ]
  },
  "ink": {
   "crease_skip_bones": [
@@ -413,7 +470,8 @@
   "border_strength": 0.95,
   "warp_px": 0.0,
   "merge_for_borders": {
-   "hair": "cap"
+   "hair": "cap",
+   "jaw": "skin"
   },
   "clear_regions": [
    "cap"
@@ -579,12 +637,7 @@
     "power": 6,
     "conf_from": 0.3,
     "conf_to": 0.55,
-    "tones": {
-     "skin": {
-      "posterize": 5,
-      "tone_median_px": 5
-     }
-    },
+    "tones": {},
     "min_line_mm2": 45,
     "ink_cut": 0.55,
     "views": [
@@ -621,6 +674,44 @@
     "z_range": [
      1.542,
      3.0
+    ],
+    "ink_allow": [
+     {
+      "at_mm": [
+       0,
+       45
+      ],
+      "r_mm": [
+       90,
+       38
+      ],
+      "depth_mm": 70,
+      "soft": 0.1
+     },
+     {
+      "at_mm": [
+       0,
+       85
+      ],
+      "r_mm": [
+       36,
+       34
+      ],
+      "depth_mm": 60,
+      "soft": 0.1
+     },
+     {
+      "at_mm": [
+       0,
+       127
+      ],
+      "r_mm": [
+       62,
+       17
+      ],
+      "depth_mm": 60,
+      "soft": 0.1
+     }
     ]
    },
    "body": {
@@ -687,5 +778,84 @@
   "knuck_",
   "cuff2",
   "crease"
+ ],
+ "marks": [
+  {
+   "channel": "R",
+   "shape": {
+    "at_mm": [
+     -62,
+     94
+    ],
+    "r_mm": [
+     24,
+     15
+    ],
+    "angle_deg": -30,
+    "depth_mm": 45,
+    "soft": 0.12,
+    "wobble": 0.22,
+    "wobble_mm": 16
+   }
+  },
+  {
+   "channel": "G",
+   "shape": {
+    "at_mm": [
+     46,
+     77
+    ],
+    "r_mm": [
+     23,
+     9
+    ],
+    "angle_deg": 8,
+    "depth_mm": 45,
+    "soft": 0.12,
+    "wobble": 0.2,
+    "wobble_mm": 14,
+    "seed": 5
+   }
+  },
+  {
+   "channel": "B",
+   "shape": {
+    "at_mm": [
+     -12,
+     135
+    ],
+    "r_mm": [
+     14,
+     6
+    ],
+    "angle_deg": 4,
+    "depth_mm": 45,
+    "soft": 0.12,
+    "wobble": 0.18,
+    "wobble_mm": 10,
+    "seed": 7
+   }
+  }
+ ],
+ "normals": [
+  {
+   "bones": [
+    "LeftUpperLeg",
+    "RightUpperLeg",
+    "LeftLowerLeg",
+    "RightLowerLeg"
+   ],
+   "rings": 10,
+   "strength": 1.0
+  },
+  {
+   "bones": [
+    "Spine",
+    "Chest",
+    "UpperChest"
+   ],
+   "rings": 8,
+   "strength": 0.85
+  }
  ]
 }

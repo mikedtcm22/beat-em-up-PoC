@@ -245,6 +245,50 @@ def transfer_face_normals(obj, bone_names, strength):
 	return {"centre": [round(float(x), 4) for x in centre], "radii": [round(float(x), 4) for x in radii]}
 
 
+def smooth_normals(objs, bone_names, specs):
+	"""paint.json "normals": [{"bones": [...], "rings": n, "strength": s}]: the shading normals of the vertices dominated by those bones are blurred over `rings` rings of
+	the edge graph and blended in by `strength` (0..1), so the painted material's one terminator (a quantised light term) runs as a clean edge across a form (a trouser leg, a vest)
+	and not along every crease the mesh's normals carry. The face keeps its proxy normals (transfer_face_normals), a bone not named keeps its own. Custom normals are set
+	per corner, so the GLB carries them."""
+	for spec in specs or []:
+		want = [bone_names.index(b) for b in spec["bones"] if b in bone_names]
+		rings = int(spec.get("rings", 6))
+		strength = float(spec.get("strength", 1.0))
+		for o in objs:
+			me = o.data
+			nl = len(me.loops)
+			corner = np.zeros(nl * 3, np.float32)
+			me.corner_normals.foreach_get("vector", corner)
+			corner = corner.reshape(-1, 3)
+			lv = np.zeros(nl, np.int32)
+			me.loops.foreach_get("vertex_index", lv)
+			nv = len(me.vertices)
+			vn = np.zeros((nv, 3), np.float64)
+			np.add.at(vn, lv, corner)
+			vn /= np.maximum(np.linalg.norm(vn, axis=1, keepdims=True), 1e-9)
+			ea = np.zeros(len(me.edges) * 2, np.int32)
+			me.edges.foreach_get("vertices", ea)
+			ea = ea.reshape(-1, 2)
+			count = np.zeros(nv)
+			np.add.at(count, ea[:, 0], 1.0)
+			np.add.at(count, ea[:, 1], 1.0)
+			sm = vn.copy()
+			for _ in range(rings):
+				acc = sm.copy()
+				np.add.at(acc, ea[:, 0], sm[ea[:, 1]])
+				np.add.at(acc, ea[:, 1], sm[ea[:, 0]])
+				sm = acc / (count + 1.0)[:, None]
+			sm /= np.maximum(np.linalg.norm(sm, axis=1, keepdims=True), 1e-9)
+			dom = bone_weights(o, bone_names).argmax(axis=1)
+			sel = np.isin(dom, want)[lv]
+			new = corner.astype(np.float64).copy()
+			blend = corner[sel] * (1.0 - strength) + sm[lv[sel]] * strength
+			new[sel] = blend / np.maximum(np.linalg.norm(blend, axis=1, keepdims=True), 1e-9)
+			me.normals_split_custom_set(new.astype(np.float32).tolist())
+			me.update()
+			print("T12-ASSET smoothed normals: %s %d corners of %s" % ("+".join(spec["bones"][:2]), int(sel.sum()), o.name))
+
+
 def uv2_slivers(objs, size):
 	"""Per mesh: the triangles whose UV2 area is under half a texel (nothing to bake: they would sample padding) and their share."""
 	out = {}
@@ -425,6 +469,7 @@ def main():
 	cfg = load_config(name)
 	if not opts["no_normals"]:
 		meta["proxy"] = transfer_face_normals(objs[0], bone_names, opts["proxy_strength"])
+	smooth_normals(objs, bone_names, cfg.get("normals"))
 	if not opts["keep_uv2"]:
 		meta["layout"] = relayout_uv2(objs, bone_names, cfg, opts["size"])
 	meta["uv2_slivers"] = uv2_slivers(objs, opts["size"])

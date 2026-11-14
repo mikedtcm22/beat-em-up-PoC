@@ -125,7 +125,7 @@ def main():
 	base = os.path.dirname(sheets_json)
 	os.makedirs(outdir, exist_ok=True)
 	if cmd == "render":
-		cfg = ap.load_config(name)
+		cfg = ap.prepare_config(ap.load_config(name), maps)
 		ids, names = ap.region_map(maps, meta, cfg)
 		tab = np.array([cfg["regions"][n]["base"] for n in names] + [[0, 0, 0]], np.float32) / 255.0
 		lit = ap.lit(maps, tab[ids])

@@ -216,7 +216,7 @@ func test_the_paint_comes_from_drawn_sheets_whose_sources_are_kept() -> void:
 		assert_true(names.has(want), "sheet %s" % want)
 
 
-func test_the_face_is_drawn_in_heavy_lines_on_a_muted_warm_grey_skin() -> void:
+func test_the_face_is_drawn_in_heavy_lines_on_one_warm_skin_tone() -> void:
 	var ink := (_trailer().get_meta(ToonMaterials.INK_META) as Texture2D).get_image()
 	var paint := (_trailer().get_meta(ToonMaterials.PAINT_META) as Texture2D).get_image()
 	for image: Image in [ink, paint]:
@@ -225,6 +225,7 @@ func test_the_face_is_drawn_in_heavy_lines_on_a_muted_warm_grey_skin() -> void:
 	var skin := 0
 	var skin_lines := 0
 	var sat := 0.0
+	var warm := 0
 	for y in range(0, MAP_SIZE, 2):
 		for x in range(0, MAP_SIZE, 2):
 			var c := ink.get_pixel(x, y)
@@ -235,10 +236,15 @@ func test_the_face_is_drawn_in_heavy_lines_on_a_muted_warm_grey_skin() -> void:
 				skin_lines += 1
 			var p := paint.get_pixel(x, y)
 			sat += (maxf(p.r, maxf(p.g, p.b)) - minf(p.r, minf(p.g, p.b))) / maxf(maxf(p.r, maxf(p.g, p.b)), 0.001)
+			if p.r > p.g and p.g > p.b:
+				warm += 1
 	assert_gt(skin, 20000, "the skin class has texels")
 	assert_gt(float(skin_lines) / float(skin), 0.02, "the face carries bold ink (brows, eyes, nose, mouth, jaw)")
 	assert_lt(float(skin_lines) / float(skin), 0.3, "and is not a mask of black")
-	assert_lt(sat / float(skin), 0.22, "skin is a muted grey, not pink")
+	# M7 r0: one warm skin tone with the brim's shadow and the chin's (the slice's grey face read as a mask), not a grey and not a pink
+	assert_gt(sat / float(skin), 0.25, "skin is warm, not grey")
+	assert_lt(sat / float(skin), 0.55, "and not a saturated pink")
+	assert_gt(float(warm) / float(skin), 0.9, "red over green over blue on the whole face: one warm hue")
 
 
 ## C3 (the clean look): flat fills, a few bold lines and a face drawn once (the drawing's front view on the head's planar island, never blended with the

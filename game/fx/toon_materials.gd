@@ -31,6 +31,9 @@ const PAINTED_OUTLINE_SHADER := preload("res://game/fx/toon_outline_painted.gdsh
 ## An art that carries both is painted (is_painted()); the contract is docs/ARCHITECTURE.md "The painted material (M7)".
 const PAINT_META := &"paint_tex"
 const INK_META := &"ink_tex"
+## Optional (M7 r0): the art's mark map (metadata/marks_tex, RGBA on UV2, written by tools/pipeline/trailer_paint.py from paint.json "marks"): where the skin's bruises and blood sit,
+## as designed shapes. An art without it keeps the damage tiles' scatter. Not part of is_painted().
+const MARKS_META := &"marks_tex"
 ## What a ShaderMaterial made here is, for which Look values it takes (see apply_look()).
 enum Kind { CHARACTER, ART, PROP, ENVIRONMENT, GRID, HULL, ART_PROP, TRIM, PAINTED }
 ## How the hull pushes a mesh out (toon_outline.gdshader's `mode`): along the normal
@@ -146,7 +149,8 @@ static func is_painted(art: CharacterArt) -> bool:
 ## mask and sharp-ink flag, as RigPaint always made it.
 static func art_for(art: CharacterArt) -> ShaderMaterial:
 	if is_painted(art):
-		return painted(art.get_meta(PAINT_META) as Texture2D, art.get_meta(INK_META) as Texture2D)
+		var marks: Texture2D = art.get_meta(MARKS_META) as Texture2D if art.has_meta(MARKS_META) else null
+		return painted(art.get_meta(PAINT_META) as Texture2D, art.get_meta(INK_META) as Texture2D, Color.WHITE, marks)
 	return ToonMaterials.art(art.palette, art.detail_mask, bool(art.get_meta(&"detail_sharp", false)))
 
 
@@ -160,13 +164,16 @@ static func outline_for_art(art: CharacterArt, first_person: bool = false) -> Sh
 ## The painted character material (M7, toon_painted.gdshader): the `paint` map (RGB, UV2) and the `ink` map (UV2: R line, G damage
 ## class, B gloss, A hull weight hint), lit in two flat tones with the area's shadow hue and a one-sided rim. `tint` multiplies the
 ## paint (a palette swap). Damage marks, the flash and the edge tag are the art's own uniforms, so DamageLook and RigPaint treat it
-## as they treat art(); the hull is outline_painted().
-static func painted(paint: Texture2D, ink_map: Texture2D, tint: Color = Color.WHITE) -> ShaderMaterial:
+## as they treat art(); the hull is outline_painted(). `marks_map` (optional) is the art's placed-mark map (MARKS_META).
+static func painted(paint: Texture2D, ink_map: Texture2D, tint: Color = Color.WHITE, marks_map: Texture2D = null) -> ShaderMaterial:
 	var material := _make(Kind.PAINTED, true, PAINTED_SHADER)
 	material.set_shader_parameter(&"albedo", tint)
 	material.set_shader_parameter(&"paint_tex", paint)
 	material.set_shader_parameter(&"ink_tex", ink_map)
 	material.set_shader_parameter(&"ink", INK)
+	if marks_map != null:
+		material.set_shader_parameter(&"marks_tex", marks_map)
+		material.set_shader_parameter(&"marks_on", 1.0)
 	material.set_shader_parameter(&"use_rest_custom", true)
 	material.set_shader_parameter(&"marks", 1.0)
 	# A full-health figure shows no mark: all three damage tiles start as the transparent texture (DamageLook.apply_art keeps them so at CLEAN).
@@ -416,6 +423,8 @@ static func _apply_painted(material: ShaderMaterial, data: TuningData) -> void:
 	material.set_shader_parameter(&"paint_rim_key", data.look_paint_rim_key)
 	material.set_shader_parameter(&"paint_rim_patch_cells", data.look_paint_rim_patch_cells)
 	material.set_shader_parameter(&"paint_rim_patch_cut", data.look_paint_rim_patch_cut)
+	material.set_shader_parameter(&"paint_rim_dark_px", data.look_paint_rim_dark_px)
+	material.set_shader_parameter(&"paint_rim_dark_luma", data.look_paint_rim_dark_luma)
 	material.set_shader_parameter(&"paint_cast_shadow", data.look_paint_cast_shadow)
 	material.set_shader_parameter(&"paint_wobble_hz", data.look_paint_wobble_hz)
 	material.set_shader_parameter(&"line_vary", data.look_paint_line_vary)

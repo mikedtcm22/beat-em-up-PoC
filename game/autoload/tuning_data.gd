@@ -1450,6 +1450,10 @@ extends Resource
 ## The rim can be broken into patches by a noise: its cells per metre and the cut (a higher cut leaves fewer, smaller patches; 0 = no patches, one clean line, the default).
 @export_range(1.0, 30.0, 0.5) var look_paint_rim_patch_cells: float = 4.5
 @export_range(0.0, 1.0, 0.01) var look_paint_rim_patch_cut: float = 0.0
+## The rim's width cap on large dark forms (a vest, a black top; M7 r0): where the paint is darker than `look_paint_rim_dark_luma` (a share of white) the rim is
+## at most `look_paint_rim_dark_px` pixels wide at 1080p, so the key's warm line stays a line on a big dark form and not a band. 0 px = no cap.
+@export_range(0.0, 12.0, 0.1) var look_paint_rim_dark_px: float = 1.2
+@export_range(0.02, 0.6, 0.01) var look_paint_rim_dark_luma: float = 0.2
 @export_subgroup("Ground contact (C1)")
 ## A figure's contact shadow under the trailer profile: 1 = one soft dark blob (no noise, no hard core), 0 = the drawn two-value shape with a broken edge (props keep that).
 @export_range(0.0, 1.0, 0.01) var look_paint_contact_soft: float = 1.0
