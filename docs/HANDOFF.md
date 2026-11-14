@@ -4,6 +4,16 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-13 (build): Game-boy approved Phase 3 ("Approve, start"); the clean slice is building
+
+- **Decision (chat, 2026-11-13):** "Approve, start": the comic-book 3D plan as written, including the cut-in cards and the new look as default at the end. Target: `docs/milestones/M7-comic-3d.md` (T40 done, README departures added).
+- **Running:** workflow `m7-comic-slice`, run `wf_c099416d-3c4` (script under `~/.claude/projects/-Users-arachne-repos-beat-em-up-PoC/4532b8a7-9eb5-41f2-9651-88f769f37f0b/workflows/scripts/`). CFO rows T41 to T47 are started.
+  - `m7/c1` in `.worktrees/m7-c1`: T41 (Opus, the purple face blotch) then T42 (Sonnet, figure shader cleanup).
+  - `m7/c3`: T43 Punk and arms repainted clean, face from the S1 spike. `m7/c4`: T44 drawn fence, broken window rows, stepped halos. `m7/c5`: T45 cut-in system then T46 the four drawn cards.
+  - T47 (Opus): merge c1, c4, c5, c3; suite; frame time; record into `captures/m7-comic/slice/` with `reel_m6_old_new.mp4` and `sheet_old_new.jpg`.
+- **Resume if cut off:** same session: Workflow with that `scriptPath` and `resumeFromRunId`. New session: see which of `m7/c1`, `c3`, `c4`, `c5` carry an "M7 C" commit, re-run the missing briefs from the script, then T47.
+- **Next:** T48 the lead's look and a fix list of at most three, T49 one fix wave, T50 Gate 3 (reel and run command to Game-boy).
+
 ### 2026-11-13 (plan): comic-book 3D replan written, waiting on Game-boy's approval
 
 - Game-boy did not pick the sprite Punk. He asked for the best trade of art and feasibility with the exact style relaxed, then for the plan. It is `.claude/cfo/plan.md`, "Phase 3: comic-book 3D" (T40 to T57); Phase 2 (T30 to T39) is superseded and was never run.
