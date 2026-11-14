@@ -29,6 +29,10 @@ uniform sampler2D depth_tex : hint_depth_texture, repeat_disable, filter_nearest
 uniform sampler2D normal_tex : hint_normal_roughness_texture, repeat_disable, filter_nearest;
 #endif
 
+#ifdef EDGE_FINISH_QUIET
+#undef EDGE_FINISH
+#endif
+
 #ifdef EDGE_FINISH
 #include "res://game/fx/edge_finish.gdshaderinc"
 #endif

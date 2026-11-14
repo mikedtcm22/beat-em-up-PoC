@@ -99,6 +99,11 @@ void fragment() {
 	float line = smoothstep(-w - aa, -w + aa, d) * body * on;
 	vec3 fill = mix(dark_color, light_color, lit);
 	float fill_a = mix(dark_alpha, light_alpha, lit);
+	float alpha = body * mix(fill_a, 0.95, line);
+	// M7 D2: a pixel of the card with no steam writes nothing (no blend for a zero alpha; the card is a big quad, mostly empty).
+	if (alpha <= 0.0) {
+		discard;
+	}
 	ALBEDO = mix(fill, line_color, line);
-	ALPHA = body * mix(fill_a, 0.95, line);
+	ALPHA = alpha;
 }

@@ -89,6 +89,10 @@ void fragment() {
 	} else if (sky_share > 0.0) {
 		result = vec4(band_color_3.rgb, band_color_3.a * sky_share);
 	}
+	// Most of a view takes no tint (the near ground, the sky): those pixels write nothing (M7 D2: no blend for a zero alpha).
+	if (result.a <= 0.0) {
+		discard;
+	}
 	ALBEDO = result.rgb;
 	ALPHA = result.a;
 }

@@ -74,6 +74,11 @@ void fragment() {
 	vec3 col = mix(mix(rim_color, mid_color, mid), core_color, core);
 	float a_mid = mix(rim_alpha, core_alpha, 0.5);
 	float a = mix(mix(rim_alpha * wash, a_mid, mid), core_alpha, core);
+	float alpha = clamp(a * opacity, 0.0, 1.0);
+	// M7 D2: outside the blob nothing is written (the pool and wall cards are big quads, mostly empty).
+	if (alpha <= 0.0) {
+		discard;
+	}
 	ALBEDO = col;
-	ALPHA = clamp(a * opacity, 0.0, 1.0);
+	ALPHA = alpha;
 }

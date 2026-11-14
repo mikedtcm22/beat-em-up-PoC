@@ -1349,6 +1349,10 @@ extends Resource
 @export_range(0.0, 1.0, 0.01) var night_halo_soft: float = 0.15
 @export_range(0.0, 0.6, 0.01) var night_pool_soft: float = 0.12
 @export_range(0.0, 0.6, 0.01) var night_wall_soft: float = 0.2
+## M7 D2: the lamps' and barrels' lights fade out from this distance to the camera (m; 0 = never) over the next `night_lamp_fade_len_m`
+## and are not drawn beyond: a light far down the street costs frame time on every surface its clusters touch and lights nothing you see.
+@export_range(0.0, 80.0, 1.0) var night_lamp_fade_m: float = 20.0
+@export_range(1.0, 40.0, 1.0) var night_lamp_fade_len_m: float = 6.0
 ## A multiplier on the haze bands' and the mist's strength.
 @export_range(0.0, 3.0, 0.05) var night_haze_scale: float = 1.0
 ## A multiplier on the contact shadows' opacity.

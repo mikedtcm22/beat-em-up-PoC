@@ -67,6 +67,10 @@ func apply_scales() -> void:
 		var lamp: NightLamp = rig.lamp
 		rig.base_energy = lamp.energy * t.night_lamp_energy
 		(rig.light as OmniLight3D).light_energy = rig.base_energy
+		var omni := rig.light as OmniLight3D
+		omni.distance_fade_enabled = t.night_lamp_fade_m > 0.0
+		omni.distance_fade_begin = t.night_lamp_fade_m
+		omni.distance_fade_length = t.night_lamp_fade_len_m
 		if rig.halo != null:
 			(rig.halo as ShaderMaterial).set_shader_parameter(&"energy", lamp.halo_energy * t.night_halo_energy)
 			(rig.halo as ShaderMaterial).set_shader_parameter(&"soft", t.night_halo_soft)
