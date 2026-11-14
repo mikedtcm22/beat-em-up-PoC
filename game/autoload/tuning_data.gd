@@ -1449,6 +1449,21 @@ extends Resource
 @export_subgroup("Ground contact (C1)")
 ## A figure's contact shadow under the trailer profile: 1 = one soft dark blob (no noise, no hard core), 0 = the drawn two-value shape with a broken edge (props keep that).
 @export_range(0.0, 1.0, 0.01) var look_paint_contact_soft: float = 1.0
+@export_subgroup("Damage marks (D1)")
+## The damage marks under the trailer profile (m6 keeps its soft tiles): a few small, hard-edged, flat shapes on SKIN only, drawn under the ink; none on cloth or
+## gloves except the blood's spots. `look_paint_bruise_density` is the tile's tiles per metre against vfx_damage_tile_m (higher = smaller shapes, fewer on a face),
+## `look_paint_bruise_cut` the tile alpha above which a shape is drawn (a hard edge, no translucent wash), `look_paint_bruise_keep` the share of shapes kept
+## (a noise gate over object-space cells of `look_paint_bruise_cells` per metre).
+@export_range(0.5, 8.0, 0.05) var look_paint_bruise_density: float = 4.0
+@export_range(0.05, 0.99, 0.01) var look_paint_bruise_cut: float = 0.8
+@export_range(0.0, 1.0, 0.01) var look_paint_bruise_keep: float = 0.68
+@export_range(1.0, 40.0, 0.5) var look_paint_bruise_cells: float = 7.0
+## A bruise's colour: the skin paint darkened (`look_paint_bruise_darken`, a share of its value) and pulled toward a muted maroon by `look_paint_bruise_hue_amount`,
+## luminance kept. Blood stays a flat dark red.
+@export_range(0.1, 1.0, 0.01) var look_paint_bruise_darken: float = 0.4
+@export var look_paint_bruise_hue: Color = Color(0.34, 0.12, 0.15)
+@export_range(0.0, 1.0, 0.01) var look_paint_bruise_hue_amount: float = 0.45
+@export var look_paint_blood_color: Color = Color(0.45, 0.06, 0.08)
 @export_subgroup("Frame finish (G1)")
 ## The trailer's frame finish, 1 = on, 0 = the plain edge pass and the full 3D resolution (the A/B). It reads no screen copy (that cost about 3 ms): the
 ## 3D view renders at `look_finish_scale` of the window and is upscaled bilinearly (the trailer is soft, like video; the HUD stays sharp, and the

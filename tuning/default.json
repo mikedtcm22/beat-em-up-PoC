@@ -649,6 +649,24 @@
 		"look_paint_rim_patch_cells": 4.5,
 		"look_paint_rim_patch_cut": 0.0,
 		"look_paint_contact_soft": 1.0,
+		"look_paint_bruise_density": 4.0,
+		"look_paint_bruise_cut": 0.8,
+		"look_paint_bruise_keep": 0.68,
+		"look_paint_bruise_cells": 7.0,
+		"look_paint_bruise_darken": 0.4,
+		"look_paint_bruise_hue": [
+			0.340000003576279,
+			0.119999997317791,
+			0.150000005960464,
+			1.0
+		],
+		"look_paint_bruise_hue_amount": 0.45,
+		"look_paint_blood_color": [
+			0.449999988079071,
+			0.0599999986588955,
+			0.0799999982118607,
+			1.0
+		],
 		"look_finish_on": 1,
 		"look_finish_scale": 1.0,
 		"look_finish_grain": 0.0,

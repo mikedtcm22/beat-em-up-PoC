@@ -430,6 +430,14 @@ static func _apply_painted(material: ShaderMaterial, data: TuningData) -> void:
 	material.set_shader_parameter(&"spec_gloss", data.look_spec_gloss)
 	material.set_shader_parameter(&"glint_cut", data.look_glint_cut)
 	material.set_shader_parameter(&"glint_strength", data.look_glint_strength)
+	material.set_shader_parameter(&"bruise_density", data.look_paint_bruise_density)
+	material.set_shader_parameter(&"bruise_cut", data.look_paint_bruise_cut)
+	material.set_shader_parameter(&"bruise_keep", data.look_paint_bruise_keep)
+	material.set_shader_parameter(&"bruise_cells", data.look_paint_bruise_cells)
+	material.set_shader_parameter(&"bruise_darken", data.look_paint_bruise_darken)
+	material.set_shader_parameter(&"bruise_hue", data.look_paint_bruise_hue)
+	material.set_shader_parameter(&"bruise_hue_amount", data.look_paint_bruise_hue_amount)
+	material.set_shader_parameter(&"blood_color", data.look_paint_blood_color)
 
 
 ## The damage class an ink map's G value `g` (0 to 1) names, as toon_painted.gdshader reads it: the palette atlas's alpha classes

@@ -18,3 +18,11 @@ static func worn(art: CharacterArt) -> CharacterArt:
 ## flipped it): the rigs re-pick their art then.
 static func is_profile_change(property: StringName) -> bool:
 	return property == &"" or property == &"look_profile"
+
+
+## The shadow-map setting a figure's art meshes take under the running profile: off under the trailer profile (the figure's ground contact is the
+## soft blob, so no map shadow anywhere, M7 D1), on under m6 as always.
+static func shadow_setting() -> GeometryInstance3D.ShadowCastingSetting:
+	if LookProfile.current() == LookProfile.Id.TRAILER:
+		return GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return GeometryInstance3D.SHADOW_CASTING_SETTING_ON
