@@ -39,8 +39,8 @@ global uniform vec2 paint_trim_grain;
 uniform int debug_view : hint_range(0, 4) = 0;
 
 #ifdef TRIM_SCISSOR
-// The trailer profile's fence (Milestone 7, G3): with fence_on the chain-link faces draw this painted alpha card (a loose hand-drawn
-// fence, torn open in places, enlarged so it never moires) instead of the sheet's lattice. The card covers fence_card.x by
+// The trailer profile's fence (Milestone 7, G3): with fence_on the chain-link faces draw this painted alpha card (a simple drawn fence: posts, two rails,
+// uneven boards with gaps and a few broken ones) instead of the sheet's lattice. The card covers fence_card.x by
 // fence_card.y metres in the face's own metres (u along the face, v up it from its bottom, the card's top on the face's top: KitMesh
 // aligns it), repeating along u. 0 under the m6 profile: the lattice is drawn as before.
 uniform sampler2D fence_tex : source_color, filter_linear_mipmap_anisotropic, repeat_enable;

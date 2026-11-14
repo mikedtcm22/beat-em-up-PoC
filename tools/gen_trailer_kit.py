@@ -11,22 +11,22 @@ Writes (from the project folder):
 The M6 sheets (trim_sheet.png, ground_sheet.png, trim_strips.json) and tools/gen_trim.gd are not touched: this is
 a second sheet the look profile selects. Same 16 strips under the same names and rows as M6's (so KitMesh's strip
 indices hold under both profiles), but laid out for the trailer's painting: flat wall planes with sparse hand-drawn
-brick hints, cracks and drainpipes, a row of eight different window panes (lit and dark), a facade of irregularly
-lit windows, a bold chain-link, and a ground of crack lines and puddles, no noise anywhere. The RGB is the surface
+brick hints, cracks and drainpipes, a row of eight different window panes (lit, dark, boarded, curtained), a facade of irregular
+windows, and a ground of crack lines and puddles, no noise anywhere. The RGB is the surface
 (an albedo at mid values: the profile's lights make the night); the ALPHA is the ink mask (cut by the trim shader),
-and on the chain-link the wire's coverage.
+and on the fence card the boards' coverage.
 
 A strip is 2048 px wide, `u_m` metres of U (so px per metre differs per strip: the table says), and `rows` px high
 for `period_m` metres of V. KitMesh reads `u_m` (it scales a face's U so one repeat covers `u_m` instead of
 Tuning's kit_trim_m_per_tile), `u_snap_m` (the U offset a variant takes is a multiple of it: one window pane),
 `flip` (a variant may mirror U), `vary_v` (a variant may shift V) and `vary_tint` (a variant may nudge the tint): see TrimSheet.variation().
 
-Painting (M7 G3): the walls, the facade, the ground tile and the fence card are Gemini paintings in the trailer's style
+Painting (M7 G3, C4): the walls and the ground tile are Gemini paintings in the trailer's style
 (assets/source/trailer_art/kit/src/, made by that folder's make_jobs.py from the trailer frames), turned into sheet cells
 here with Pillow alone: the ink mask is the dark lines (grown a little so a line survives the mips), the colour layer under it
 is the painting with the lines filled in, tones are flattened a little and matched to the profile's albedo, bays and tiles are
 joined with soft blends so no seam shows, and the facade's floors are cut from several paintings so no two windows line up.
-The fence is a Gemini lattice warped and torn by hand-written shapes. The small flat strips (kerb, concrete, tar, crate, metal)
+The facade (C4: irregular lit, dark, curtained and boarded windows, no wash) and the fence card (C4: uneven boards, two rails and posts, no lattice) are drawn here from shapes. The small flat strips (kerb, concrete, tar, crate, metal)
 stay drawn here, with irregular joints. Everything is deterministic: a repaint is identical.
 """
 import json
@@ -338,62 +338,70 @@ def paint_brick() -> Image.Image:
 	return finish_cell(rgb, ink)
 
 
+def tilt(rng: random.Random, pts, amount: float):
+	"""A drawn shape's corners pushed about a little: no window or board is a true rectangle."""
+	return [(x + (rng.random() - 0.5) * amount, y + (rng.random() - 0.5) * amount) for x, y in pts]
+
+
 def paint_facade() -> Image.Image:
-	"""A far facade, 24 m x 5 m (two floors): each floor is three whole bands cut from two Gemini facades, joined with dissolves, the
-	second floor rolled sideways and every band nudged up or down, so no window lines up with the next."""
+	"""A far facade, 24 m x 5 m (two floors), drawn here as flat wall with windows that never make a row: each floor is its own run of
+	windows, every one of its own width, height and place on the wall, with a gap of its own before it, and one of lit, dark, curtained
+	or boarded (a few are bricked up and left out). Flat fills and a bold ink outline, no noise and no painted wash: at any distance
+	the windows read as a street's windows, never as a grid. The strip tiles both ways (the windows wrap round its edges)."""
 	h = 384
-	floor_h = 192
-	edges = [0, 683, 1366, W]
 	rng = random.Random(1303)
-	# (painting, left, right, top, bottom) of one floor's band in it, fractions: the windows sit inside the building's edge lines
-	cuts = [("facade_a", 0.095, 0.905, 0.00, 0.47), ("facade_a", 0.095, 0.905, 0.47, 0.94), ("facade_b", 0.075, 0.935, 0.00, 0.47), ("facade_b", 0.075, 0.935, 0.47, 0.94)]
-	rgb = Image.new("RGB", (W, h))
-	ink = Image.new("L", (W, h), 0)
-	order = [[0, 3, 2], [1, 0, 3]]
-	for floor in range(2):
-		row_rgb = Image.new("RGB", (W, floor_h))
-		row_ink = Image.new("L", (W, floor_h), 0)
-		for k, which in enumerate(order[floor]):
-			name, x0, x1, y0, y1 = cuts[which]
-			bw = edges[k + 1] - edges[k]
-			im = source(name, (x0, y0, x1, y1)).resize((bw, floor_h), Image.LANCZOS)
-			if rng.random() < 0.5:
-				im = im.transpose(Image.FLIP_LEFT_RIGHT)
-			band_ink = ink_of(im, 34, 66, grow=3, soften=0.6)
-			# up or down a little: the wall colour above and below is a flat field, so the band's rows are shifted and wrapped
-			shift = rng.randint(-14, 14)
-			im = ImageChops.offset(im, 0, shift)
-			band_ink = ImageChops.offset(band_ink, 0, shift)
-			row_rgb.paste(under_ink(im, band_ink), (edges[k], 0))
-			row_ink.paste(band_ink, (edges[k], 0))
-		for k in range(3):
-			row_rgb, row_ink = blend_junction(row_rgb, row_ink, edges[k + 1], 22)
-		roll = rng.randint(200, 900) * floor
-		row_rgb = ImageChops.offset(row_rgb, roll, 0)
-		row_ink = ImageChops.offset(row_ink, roll, 0)
-		# a third of the windows are gone (bricked up, painted over): found by the ink along the columns, covered with the wall's colour
-		profile = list(row_ink.resize((W, 1), Image.BOX).getdata())
-		x = 0
-		while x < W:
-			if profile[x] > 30:
-				x1 = x
-				gap = 0
-				while x1 < W and gap < 18:
-					gap = 0 if profile[x1] > 30 else gap + 1
-					x1 += 1
-				x1 -= gap
-				if x1 - x > 40 and rng.random() < 0.34:
-					wall = row_rgb.getpixel(((x + x1) // 2, 3))
-					row_rgb.paste(wall, (max(x - 8, 0), 14, min(x1 + 8, W), floor_h - 6))
-					row_ink.paste(0, (max(x - 8, 0), 14, min(x1 + 8, W), floor_h - 6))
-				x = x1 + 1
-			else:
-				x += 1
-		rgb.paste(row_rgb, (0, floor * floor_h))
-		ink.paste(row_ink, (0, floor * floor_h))
-	rgb = match_luma(rgb, 100.0)
-	rgb, ink = seamless(rgb, ink, False, True, 0.9, 1.0)
-	return finish_cell(rgb, ink)
+	c = Canvas(W, h, FACADE)
+	# a drainpipe or two: the wall's only other mark
+	for px in (rng.randint(150, 700), rng.randint(1100, 1900)):
+		c.tapered([(px, 0), (px + 3, h * 0.5), (px - 2, h)], 7.0, 7.0, ink=False, rgb=PIPE)
+	# two bands of unequal height (a tall floor of tall windows, a low floor of small ones): the strip's 5 m period then never reads as a
+	# row of equal floors
+	bands = [(0, 236, 1.2), (236, 148, 0.8)]
+	for top, band_h, size in bands:
+		x = rng.random() * 120.0
+		while x < W - 40:
+			w = (0.55 + rng.random() * 0.8) * size * 85.0
+			if rng.random() < 0.12:
+				w *= 1.9  # a wide shop-style pane
+			wh = (0.7 + rng.random() * 0.9) * size * 77.0
+			wh = min(wh, band_h - 24)
+			y = top + 12 + rng.random() * (band_h - wh - 24)
+			kind = rng.choices(["lit", "dark", "curtain", "boarded", "gone"], [0.36, 0.26, 0.16, 0.12, 0.10])[0]
+			gap = (0.2 + rng.random() * 0.5) * 85.0 if rng.random() < 0.7 else (0.9 + rng.random() * 1.3) * 85.0
+			if kind == "gone":
+				x += w + gap
+				continue
+			quad = tilt(rng, [(x, y), (x + w, y), (x + w, y + wh), (x, y + wh)], 3.0)
+			if kind == "lit":
+				c.poly(quad, fill=LIT if rng.random() < 0.6 else (190, 130, 70))
+				cut = y + wh * (0.35 + rng.random() * 0.4)  # a deeper lower part, the split anywhere
+				c.poly([(x + 2, cut), (x + w - 2, cut + rng.uniform(-5, 5)), (x + w - 2, y + wh - 2), (x + 2, y + wh - 2)], fill=LIT_DEEP)
+			elif kind in ("dark", "boarded"):
+				c.poly(quad, fill=DARK_PANE if rng.random() < 0.6 else DARK_DEEP)
+				if kind == "dark":  # a pale streak
+					sx = x + w * (0.2 + rng.random() * 0.4)
+					c.poly([(sx, y + 3), (sx + w * 0.22, y + 3), (sx + w * 0.05, y + wh * 0.6), (sx - w * 0.1, y + wh * 0.6)], fill=STREAK)
+			else:  # curtained: a flat curtain across a side or the top of a lit or dark pane
+				lit = rng.random() < 0.5
+				c.poly(quad, fill=LIT_DEEP if lit else DARK_PANE)
+				cur = (150, 80, 70) if lit else (84, 78, 120)
+				if rng.random() < 0.5:
+					c.poly([(x + 2, y + 2), (x + w * (0.4 + rng.random() * 0.4), y + 2), (x + w * 0.3, y + wh - 2), (x + 2, y + wh - 2)], fill=cur)
+				else:
+					c.poly([(x + 2, y + 2), (x + w - 2, y + 2), (x + w - 2, y + wh * (0.35 + rng.random() * 0.35)), (x + 2, y + wh * 0.4)], fill=cur)
+			c.line(quad + [quad[0]], 4.0)
+			if kind != "boarded" and rng.random() < 0.4:  # a mullion off the middle
+				mx = x + w * (0.35 + rng.random() * 0.3)
+				c.line([(mx, y), (mx + rng.uniform(-3, 3), y + wh)], 3.0)
+			if kind == "boarded":  # three planks at their own slants
+				for k in range(3):
+					py = y + wh * (0.1 + 0.3 * k + rng.random() * 0.08)
+					slant = rng.uniform(-14, 14)
+					plank = tilt(rng, [(x - 6, py), (x + w + 6, py + slant), (x + w + 6, py + slant + 13), (x - 6, py + 13)], 2.0)
+					c.poly(plank, fill=(112, 92, 82))
+					c.line(plank + [plank[0]], 3.0)
+			x += w + gap
+	return c.done()
 
 
 def paint_ground() -> Image.Image:
@@ -409,93 +417,92 @@ def paint_ground() -> Image.Image:
 
 FENCE_W = 2048
 FENCE_H = 1024
-# The fence card's ink and wire colour: a dark blue-grey, so a line reads as drawn ink against the lit street behind it.
-FENCE_RGB = (58, 66, 92)
-
-
-def ragged(rng: random.Random, cx: float, cy: float, rx: float, ry: float, n: int = 16):
-	"""A torn-edged blob: `n` points round an ellipse, each pushed out or in."""
-	pts = []
-	for s in range(n):
-		a = s / float(n) * math.tau
-		r = 0.7 + rng.random() * 0.6
-		pts.append((cx + math.cos(a) * rx * r, cy + math.sin(a) * ry * r))
-	return pts
+# The fence's boards, rails and posts: three flat dark fills and one bold ink, so it reads as drawn against the lit street behind it.
+FENCE_FILLS = [(62, 70, 98), (54, 62, 90), (72, 78, 108)]
+FENCE_INK = (16, 18, 32)
+FENCE_LINE = 9  # the outline's width in card px (256 px a metre)
 
 
 def paint_fence() -> Image.Image:
-	"""The loose hand-drawn fence card, 8 m x 4 m (256 px/m), the trailer profile's chain-link: a Gemini drawing of a lattice, enlarged
-	(a diamond about 0.9 m, so it does not moire), its lines pushed off parallel by a coarse warp, torn open in places (one tear straddles
-	the wrap, so the card tiles along x), under a thick sagging top line drawn here. The alpha is the strokes; the RGB one dark colour."""
+	"""The hand-drawn fence card, 8 m x 4 m (256 px/m), the trailer profile's fence: a run of uneven vertical boards (each of its own width,
+	some pointed, some tilted, a few gone, two snapped off short) behind two rails, with three posts at uneven spacing, every shape a flat
+	dark fill inside a bold ink outline. No lattice and no repeating pattern: board widths and gaps are drawn at random, so no two
+	neighbours match. The alpha is the shapes' coverage (opaque boards, open gaps); the card tiles along x (the first post straddles the
+	wrap and the boards stop short of it)."""
 	rng = random.Random(4409)
-	im = source("fence_a", (300 / 2048.0, 130 / 1143.0, 1580 / 2048.0, 770 / 1143.0)).resize((FENCE_W, FENCE_H), Image.LANCZOS)
-	ink = ImageChops.invert(im.convert("L")).point(lambda v: 0 if v < 70 else 255 if v > 150 else int(255 * (v - 70) / 80.0))
-	# a coarse mesh warp: the inner nodes of an 8 x 4 grid move by up to 22 px, so no two diagonals are parallel
-	cols = 8
-	rows = 4
-	nodes = {}
-	for j in range(rows + 1):
-		for i in range(cols + 1):
-			edge = i in (0, cols) or j in (0, rows)
-			nodes[(i, j)] = (i * FENCE_W / cols + (0 if edge else (rng.random() - 0.5) * 44), j * FENCE_H / rows + (0 if edge else (rng.random() - 0.5) * 44))
-	mesh = []
-	for j in range(rows):
-		for i in range(cols):
-			box = (round(i * FENCE_W / cols), round(j * FENCE_H / rows), round((i + 1) * FENCE_W / cols), round((j + 1) * FENCE_H / rows))
-			a, b, c, d = nodes[(i, j)], nodes[(i, j + 1)], nodes[(i + 1, j + 1)], nodes[(i + 1, j)]
-			mesh.append((box, (a[0], a[1], b[0], b[1], c[0], c[1], d[0], d[1])))
-	ink = ink.transform((FENCE_W, FENCE_H), Image.MESH, mesh, Image.BICUBIC)
-	# torn open: the first blob straddles the wrap (drawn at both ends), the others sit about the card
-	tears = Image.new("L", (FENCE_W, FENCE_H), 0)
-	td = ImageDraw.Draw(tears)
-	blobs = [(0, 520, 230, 360), (760, 800, 150, 200), (1330, 270, 210, 140), (1710, 900, 170, 130), (1090, 560, 120, 170)]
-	for cx, cy, rx, ry in blobs:
-		pts = ragged(rng, cx, cy, rx, ry)
+	rgb = Image.new("RGB", (FENCE_W * SS, FENCE_H * SS), FENCE_INK)
+	alpha = Image.new("L", (FENCE_W * SS, FENCE_H * SS), 0)
+	dr = ImageDraw.Draw(rgb)
+	da = ImageDraw.Draw(alpha)
+
+	def shape(pts, fill) -> None:
 		for off in (-FENCE_W, 0, FENCE_W):
-			td.polygon([(x + off, y) for x, y in pts], fill=255)
-	ink = ImageChops.multiply(ink, ImageChops.invert(tears))
-	# the sagging top line: a thick stroke whose width and height wander (periodic along x), and a thinner second pass that drops out
-	def top_y(x: float) -> float:
-		return 46 + 20 * math.sin(math.tau * x / FENCE_W + 0.6) + 9 * math.sin(math.tau * 3 * x / FENCE_W + 2.0)
-	def top_w(x: float) -> float:
-		return 22 + 7 * math.sin(math.tau * 2 * x / FENCE_W + 1.0)
-	above = Image.new("L", (FENCE_W, FENCE_H), 0)
-	ad = ImageDraw.Draw(above)
-	ad.polygon([(0, 0)] + [(x, top_y(x)) for x in range(0, FENCE_W + 1, 16)] + [(FENCE_W, 0)], fill=255)
-	ink = ImageChops.multiply(ink, ImageChops.invert(above))
-	idraw = ImageDraw.Draw(ink)
-	step = 8
-	for x in range(0, FENCE_W, step):
-		x1 = x + step
-		y0, y1 = top_y(x), top_y(x1)
-		w = (top_w(x) + top_w(x1)) * 0.5
-		idraw.polygon([(x, y0 - w / 2), (x1, y1 - w / 2), (x1, y1 + w / 2), (x, y0 + w / 2)], fill=255)
-		if 0.18 < (x / FENCE_W) < 0.46 or 0.62 < (x / FENCE_W) < 0.9:
-			idraw.polygon([(x, y0 + w / 2 + 10), (x1, y1 + w / 2 + 10), (x1, y1 + w / 2 + 19), (x, y0 + w / 2 + 19)], fill=255)
-	ink = ink.filter(ImageFilter.MaxFilter(3)).filter(ImageFilter.GaussianBlur(0.9))
-	out = Image.new("RGBA", (FENCE_W, FENCE_H), FENCE_RGB + (0,))
-	out.putalpha(ink)
+			p = [((x + off) * SS, y * SS) for x, y in pts]
+			dr.polygon(p, fill=fill, outline=FENCE_INK, width=FENCE_LINE * SS)
+			da.polygon(p, fill=255)
+
+	posts = [0.0, 700.0, 1405.0]
+	# boards: from just past the first post to just before the wrap, widths and gaps at random
+	x = 44.0
+	index = 0
+	snapped = {7, 19}
+	while True:
+		w = 36.0 + rng.random() * 46.0
+		if x + w > FENCE_W - 44:
+			break
+		gap = 2.0 + rng.random() * 6.0 if rng.random() < 0.78 else 24.0 + rng.random() * 60.0
+		top = 6.0 + rng.random() * 44.0
+		lean = (rng.random() - 0.5) * 14.0
+		bottom = FENCE_H
+		missing = rng.random() < 0.07
+		if not missing:
+			if index in snapped:  # snapped off: a jagged break, the board gone above it
+				top = 250.0 + rng.random() * 300.0
+				pts = [(x, top + 30), (x + w * 0.3, top), (x + w * 0.55, top + 40), (x + w * 0.8, top + 6), (x + w, top + 34), (x + w, bottom), (x, bottom)]
+			elif rng.random() < 0.3:  # a picket: pointed top
+				pts = [(x + lean, top + 26), (x + w * 0.5 + lean, top - 8), (x + w + lean, top + 26), (x + w, bottom), (x, bottom)]
+			else:
+				pts = [(x + lean, top), (x + w + lean, top + (rng.random() - 0.5) * 8), (x + w, bottom), (x, bottom)]
+			shape(pts, FENCE_FILLS[rng.randrange(3)])
+		x += w + gap
+		index += 1
+	# two rails across the boards: slightly sagging, drawn over them
+	for y0, sag in ((190.0, 9.0), (716.0, -7.0)):
+		pts = [(0.0, y0), (FENCE_W * 0.33, y0 + sag), (FENCE_W * 0.7, y0 + sag * 0.3), (float(FENCE_W), y0)]
+		top_edge = pts
+		bottom_edge = [(px, py + 50.0) for px, py in reversed(pts)]
+		shape(top_edge + bottom_edge, (86, 94, 124))
+	# a board hung by one nail across the lower rail
+	hang = tilt(rng, [(1010, 560), (1062, 540), (1190, 840), (1138, 858)], 4.0)
+	shape(hang, FENCE_FILLS[1])
+	for px in posts:
+		shape([(px - 30, 0), (px + 30, 0), (px + 28, FENCE_H), (px - 28, FENCE_H)], (96, 104, 134))
+	rgb = rgb.resize((FENCE_W, FENCE_H), Image.LANCZOS)
+	alpha = alpha.resize((FENCE_W, FENCE_H), Image.LANCZOS)
+	out = rgb.convert("RGBA")
+	out.putalpha(alpha)
 	return out
 
 
 def pane(c: Canvas, x0: int, h: int, kind: int) -> None:
-	"""One 1 m x 1.6 m window pane (256 x h px), the bottom of the cell at the bottom of the row."""
+	"""One 1 m x 1.6 m window pane (256 x h px), the bottom of the cell at the bottom of the row. The eight differ in what they show and
+	where: lit with a blind part-drawn, lit and mullioned off the middle, lit with a lamp, dark and streaked, boarded, curtained, a narrow
+	lit slot beside a curtain, and a dark one with a lit lower sash."""
 	w = 256
 	y0 = 0
-	cell_bg = {0: LIT, 1: LIT, 2: LIT, 3: DARK_PANE, 4: DARK_PANE, 5: DARK_PANE, 6: (170, 130, 76), 7: DARK_DEEP}[kind]
+	cell_bg = {0: LIT, 1: LIT, 2: LIT, 3: DARK_PANE, 4: DARK_PANE, 5: DARK_PANE, 6: DARK_PANE, 7: DARK_DEEP}[kind]
 	c.rect(x0, y0, x0 + w, y0 + h, fill=cell_bg, wrap=False)
 	# a 7 px frame of dark (the kit's own frame boards cover the border on a window piece)
 	for rect in [(x0, 0, x0 + 7, h), (x0 + w - 7, 0, x0 + w, h), (x0, 0, x0 + w, 7), (x0, h - 7, x0 + w, h)]:
 		c.rect(*rect, fill=DARK_DEEP, wrap=False)
-	if kind == 0:  # lit, the curtain's edge down one side and a hot centre
-		c.poly([(x0 + 20, 14), (x0 + 120, 14), (x0 + 100, 260), (x0 + 20, 330)], fill=LIT_DEEP, wrap=False)
-		c.ellipse(x0 + 168, 160, 52, 90, LIT_HOT)
-		c.line([(x0 + 120, 14), (x0 + 100, 260)], 3.0, ink=False, rgb=(120, 70, 40), wrap=False)
-	elif kind == 1:  # lit with the blinds half drawn
-		for k in range(9):
-			y = 14 + k * 22
-			c.rect(x0 + 10, y, x0 + w - 10, y + 12, fill=LIT_DEEP, wrap=False)
-		c.rect(x0 + 10, 190, x0 + w - 10, h - 10, fill=LIT_HOT, wrap=False)
+	if kind == 0:  # lit, a blind drawn down from the top to an uneven edge, a deeper lower part
+		c.poly([(x0 + 7, h * 0.52), (x0 + w - 7, h * 0.58), (x0 + w - 7, h - 7), (x0 + 7, h - 7)], fill=LIT_DEEP, wrap=False)
+		c.poly([(x0 + 7, 7), (x0 + w - 7, 7), (x0 + w - 7, 118), (x0 + 130, 138), (x0 + 7, 112)], fill=(150, 90, 56), wrap=False)
+		c.line([(x0 + 7, 112), (x0 + 130, 138), (x0 + w - 7, 118)], 3.0, wrap=False)
+	elif kind == 1:  # lit, a mullion cross well off the middle
+		c.poly([(x0 + 7, 250), (x0 + w - 7, 236), (x0 + w - 7, h - 7), (x0 + 7, h - 7)], fill=LIT_DEEP, wrap=False)
+		c.line([(x0 + 92, 7), (x0 + 98, h - 7)], 6.0, wrap=False)
+		c.line([(x0 + 7, 150), (x0 + w - 7, 160)], 6.0, wrap=False)
 	elif kind == 2:  # lit, a lamp's silhouette on the sill
 		c.ellipse(x0 + 128, 150, 80, 110, LIT_HOT)
 		c.poly([(x0 + 100, 40), (x0 + 156, 40), (x0 + 170, 110), (x0 + 86, 110)], fill=(118, 72, 44), wrap=False)
@@ -504,19 +511,22 @@ def pane(c: Canvas, x0: int, h: int, kind: int) -> None:
 	elif kind == 3:  # dark, two pale reflection streaks
 		c.poly([(x0 + 40, 14), (x0 + 90, 14), (x0 + 30, 200), (x0 + 12, 200)], fill=STREAK, wrap=False)
 		c.poly([(x0 + 110, 14), (x0 + 130, 14), (x0 + 70, 200), (x0 + 56, 200)], fill=STREAK, wrap=False)
-	elif kind == 4:  # dark, a cracked corner
-		c.poly([(x0 + 7, 7), (x0 + 120, 7), (x0 + 7, 150)], fill=(66, 80, 116), wrap=False)
-		c.tapered([(x0 + 140, 8), (x0 + 120, 80), (x0 + 150, 140), (x0 + 110, 220), (x0 + 90, 300)], 4.0, 1.5, ink=False, rgb=(150, 164, 196), wrap=False)
+	elif kind == 4:  # boarded: three planks at their own slants across a dark pane
+		for top, slant, thick in ((40, 30, 52), (150, -26, 56), (262, 20, 50)):
+			plank = [(x0 + 2, top), (x0 + w - 2, top + slant), (x0 + w - 2, top + slant + thick), (x0 + 2, top + thick)]
+			c.poly(plank, fill=(112, 92, 82), wrap=False)
+			c.line(plank + [plank[0]], 5.0, wrap=False)
 	elif kind == 5:  # dark, a flat curtain drawn across
 		c.poly([(x0 + 7, 7), (x0 + w - 7, 7), (x0 + w - 7, 230), (x0 + 130, 250), (x0 + 7, 220)], fill=(84, 78, 120), wrap=False)
 		c.line([(x0 + 70, 10), (x0 + 60, 230)], 3.0, ink=False, rgb=(60, 56, 92), wrap=False)
 		c.line([(x0 + 150, 10), (x0 + 156, 245)], 3.0, ink=False, rgb=(60, 56, 92), wrap=False)
-	elif kind == 6:  # dim lit, plants on the sill
-		c.ellipse(x0 + 128, 130, 90, 120, (196, 150, 90))
-		for px, ph in [(60, 90), (96, 60), (160, 100), (196, 70)]:
-			c.poly([(x0 + px - 14, 10), (x0 + px, 10 + ph), (x0 + px + 14, 10)], fill=(70, 100, 78), wrap=False)
-	else:  # black, a faint streak
-		c.poly([(x0 + 150, 14), (x0 + 180, 14), (x0 + 110, 210), (x0 + 92, 210)], fill=(52, 60, 92), wrap=False)
+	elif kind == 6:  # a narrow lit slot on the right beside a flat curtain that fills the rest
+		c.poly([(x0 + 150, 7), (x0 + w - 7, 7), (x0 + w - 7, h - 7), (x0 + 140, h - 7)], fill=LIT, wrap=False)
+		c.poly([(x0 + 7, 7), (x0 + 150, 7), (x0 + 140, h - 7), (x0 + 7, h - 7)], fill=(150, 80, 70), wrap=False)
+		c.line([(x0 + 150, 7), (x0 + 140, h - 7)], 4.0, wrap=False)
+	else:  # dark above, the lower sash raised and lit at an uneven height
+		c.poly([(x0 + 7, 190), (x0 + w - 7, 206), (x0 + w - 7, h - 7), (x0 + 7, h - 7)], fill=LIT, wrap=False)
+		c.line([(x0 + 7, 190), (x0 + w - 7, 206)], 5.0, wrap=False)
 
 
 def paint_glass() -> Image.Image:
@@ -528,18 +538,9 @@ def paint_glass() -> Image.Image:
 
 
 def paint_chainlink() -> Image.Image:
-	"""Bold wire: a rhombic lattice, 128 x 80 px a diamond, 8 px wires, the alpha is the wire's coverage."""
-	h = 160
-	c = Canvas(W, h, WIRE)
-	for row in range(3):
-		for k in range(-1, 18):
-			cx = 128 * k + (64 if row % 2 else 0)
-			cy = 40 + 80 * row - 80
-			pts = [(cx, cy - 40), (cx + 64, cy), (cx, cy + 40), (cx - 64, cy), (cx, cy - 40)]
-			c.line(pts, 9.0)
-	img = c.done()
-	# the wire's RGB is a lit grey with a darker underside: the same lattice drawn once more, offset, into the RGB
-	return img
+	"""The sheet's scissor row. The trailer profile draws its fence from the card (paint_fence), never from this row, and a drawn lattice
+	is what that profile no longer has: the row is a plain opaque fill of the fence's board colour."""
+	return Image.new("RGBA", (W, 160), FENCE_FILLS[0] + (255,))
 
 
 def paint_flat(name: str, h: int) -> Image.Image:

@@ -40,7 +40,7 @@ const STEP_RISE_M := 0.18
 const PLINTH_MIN_WIDTH_M := 1.0
 const PLINTH_MIN_HEIGHT_M := 3.0
 
-## The trailer profile's painted fence (M7 G3; tools/gen_trailer_kit.py): an alpha card the chain-link faces draw in place of the sheet's lattice.
+## The trailer profile's drawn fence (M7 G3, C4; tools/gen_trailer_kit.py): an alpha card of posts, rails and boards the chain-link faces draw in place of the sheet's lattice.
 const FENCE_CARD_PATH := "res://assets/export/kit/trailer_fence_card.png"
 
 static var _cache: Dictionary = {}
