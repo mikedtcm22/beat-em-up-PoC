@@ -71,6 +71,10 @@ void fragment() {
 	vec3 col = mix(line_color, outer_color, rim);
 	col = mix(col, mid_color, a_mid);
 	col = mix(col, core_color, a_core);
+	// M7 D2: a pixel outside the flame writes nothing (the card is a big quad, mostly empty).
+	if (a_outer <= 0.0) {
+		discard;
+	}
 	ALBEDO = col * energy;
 	ALPHA = a_outer;
 }

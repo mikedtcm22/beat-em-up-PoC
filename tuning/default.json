@@ -590,6 +590,8 @@
 		"night_halo_soft": 0.15,
 		"night_pool_soft": 0.12,
 		"night_wall_soft": 0.2,
+		"night_lamp_fade_m": 20.0,
+		"night_lamp_fade_len_m": 6.0,
 		"night_haze_scale": 1.0,
 		"night_contact_opacity": 1.0,
 		"look_profile": 0,

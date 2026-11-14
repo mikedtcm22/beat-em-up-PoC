@@ -56,6 +56,11 @@ void fragment() {
 	float mid = cover(length(q - vec2(0.06, -0.04)) - 0.72 * (shape * 0.96 + lump * 0.3), aa);
 	float core = cover(length(q + vec2(0.05, 0.05)) - 0.46 * (shape * 0.92 + lump * 0.5 + bite * brush), aa);
 	vec3 mid_color = mix(outer_color, inner_color, 0.5);
+	float a = mix(mix(wash * 0.8, 0.94, mid), 1.0, core) * alpha;
+	// M7 D2: outside the blob nothing is written (the card is a big quad, mostly empty).
+	if (a <= 0.0) {
+		discard;
+	}
 	ALBEDO = mix(mix(outer_color, mid_color, mid), inner_color, core);
-	ALPHA = mix(mix(wash * 0.8, 0.94, mid), 1.0, core) * alpha;
+	ALPHA = a;
 }
