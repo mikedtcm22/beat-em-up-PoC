@@ -1807,6 +1807,24 @@ extends Resource
 ## Overlap: how far the head overshoots the hit pose before it settles (share of the snap).
 @export_range(0.0, 0.5, 0.01) var look_motion_overshoot: float = 0.15
 
+@export_group("Cut-ins (M7)")
+## The drawn cards (Milestone 7, Phase 3; game/ui/cut_in.gd): full-screen stills at the mission title, an enemy type's first
+## appearance, an arena's knockout and the mission's end. They show only under the trailer look profile (never under m6),
+## and only with this on; a card with no art assigned is skipped. While one is up the simulation holds (TimeController).
+@export var cutins_enabled: bool = true
+## How long the mission title card holds (s).
+@export_range(0.2, 5.0, 0.05) var cutin_title_hold_s: float = 1.5
+## How long an enemy's entrance card holds (s): the first time each type appears in the mission, and Ox at the boss intro.
+@export_range(0.2, 5.0, 0.05) var cutin_entrance_hold_s: float = 0.9
+## How long an arena's knockout panel holds (s).
+@export_range(0.1, 3.0, 0.05) var cutin_ko_hold_s: float = 0.5
+## The mission end card waits for a button; it takes none for this long (s), so a mashed attack cannot dismiss it unseen.
+@export_range(0.0, 3.0, 0.05) var cutin_end_lock_s: float = 0.5
+## The fade in and out of a card (s); 0 cuts.
+@export_range(0.0, 0.5, 0.01) var cutin_fade_s: float = 0.1
+## The lettering's size on a card, a multiplier on the HUD's comic lettering (mission name, enemy name).
+@export_range(0.5, 2.0, 0.05) var cutin_lettering_size: float = 1.0
+
 @export_group("Debug")
 @export var god_mode: bool = false
 ## The player feels the hits he takes (M6 playtest): the larger shake and punch, the head's roll, the

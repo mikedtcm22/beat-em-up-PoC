@@ -35,6 +35,8 @@ extends CanvasLayer
 @onready var pickup_cue: PickupCue = $PickupCue
 ## The "GO" arrow and "CLEAR!" of the level (Milestone 5); built in _ready(), a child like the others.
 var go_cue: GoCue
+## The drawn cards of the trailer look (Milestone 7, Phase 3): built in _ready(), the topmost child, off under the m6 profile.
+var cut_in: CutIn
 @onready var camera_toast: CameraModeToast = $CameraToast
 @onready var help_overlay: HelpOverlay = $HelpOverlay
 @onready var pause_overlay: PauseOverlay = $PauseOverlay
@@ -52,6 +54,8 @@ func _ready() -> void:
 	process_priority = HudStyle.PROCESS_PRIORITY
 	go_cue = GoCue.new()
 	add_child(go_cue)
+	cut_in = CutIn.new()
+	add_child(cut_in)
 	CombatEvents.hit_landed.connect(_on_hit_landed)
 	CombatEvents.attack_started.connect(combat_log.on_attack_started)
 	CombatEvents.attack_whiffed.connect(combat_log.add_whiff)
@@ -103,6 +107,8 @@ func advance(delta: float) -> void:
 	pickup_cue.advance(game_delta)
 	# So does the level's "GO" arrow (and "CLEAR!").
 	go_cue.advance(game_delta)
+	# The drawn cards (trailer look only) count game time too, and go last: they hold the simulation while up.
+	cut_in.advance(game_delta)
 
 
 ## Show the bottom-center boss bar for `actor` (the HUD shows it by itself for the live
