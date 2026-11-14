@@ -68,5 +68,55 @@
    "refs/punk_street.png",
    "refs/punk_arms.png"
   ]
+ },
+ {
+  "out": "title_b.png",
+  "prompt": "Hand-drawn comic book panel, 16:9. Flat colour fills, bold varied ink outlines (thick and thin), designed graphic shadow shapes, dramatic framing, night palette of indigo and violet with warm orange lamp and fire light. NO text, NO letters, NO numbers, NO HUD, NO health bars, NO UI, NO captions, NO sound-effect words anywhere. The first reference image is the game still: keep its night alley looking down the route, burning oil-drum barrels, brick walls, lit windows, and the fence across the far end (redrawn as a drawn fence of posts, rails and uneven boards, never chain-link). Any fence is a simple hand-built drawn fence: vertical posts, two horizontal rails and uneven wooden boards or bars of different heights with a few gaps between them. ABSOLUTELY NO chain-link, NO diamond lattice, NO wire mesh anywhere in the image. Composition for lettering the game adds later: the BOTTOM-LEFT third of the frame is calm, dark and low-contrast (deep indigo shadow and plain asphalt, no bright shapes there); the barrel fire glows right of centre. The whole frame is full detailed picture; no empty flat dark band along the top or anywhere. No characters. NO graffiti, NO writing, NO scrawl or lettering-like marks on any wall or surface.",
+  "aspect": "16:9",
+  "size": "2K",
+  "refs": [
+   "refs_new/new_street.png",
+   "refs_new/new_empty.png"
+  ]
+ },
+ {
+  "out": "mission_end_b.png",
+  "prompt": "Hand-drawn comic book panel, 16:9. Flat colour fills, bold varied ink outlines (thick and thin), designed graphic shadow shapes, dramatic framing, night palette of indigo and violet with warm orange lamp and fire light. NO text, NO letters, NO numbers, NO HUD, NO health bars, NO UI, NO captions, NO sound-effect words anywhere. The first reference image is the game still: keep its empty night alley, burn barrel with fire and smoke, lamp, brick walls and the drawn fence of posts, rails and uneven boards. Any fence is a simple hand-built drawn fence: vertical posts, two horizontal rails and uneven wooden boards or bars of different heights with a few gaps between them. ABSOLUTELY NO chain-link, NO diamond lattice, NO wire mesh anywhere in the image. First-person view: the player's two gloved hands lowered at the very bottom corners of the frame, one low in the bottom-left corner and one low in the bottom-right corner, only knuckles and cuffs entering the frame, quiet and calm. The player's arm is a clean, flat, light grey sleeve with at most two thin fold lines, and a dark glove drawn simply. NO black slash marks, NO cracks, NO scribbles or hatching on the sleeve. Keep the whole centre of the frame, a wide band from the middle of the picture down to the bottom edge between the hands, free of hands and objects: only the street, so lettering can sit there. ",
+  "aspect": "16:9",
+  "size": "2K",
+  "refs": [
+   "refs_new/new_empty.png",
+   "refs_new/new_street.png"
+  ]
+ },
+ {
+  "out": "ko_punk_1_b.png",
+  "prompt": "Hand-drawn comic book panel, 16:9. Flat colour fills, bold varied ink outlines (thick and thin), designed graphic shadow shapes, dramatic framing, night palette of indigo and violet with warm orange lamp and fire light. NO text, NO letters, NO numbers, NO HUD, NO health bars, NO UI, NO captions, NO sound-effect words anywhere. The first reference image is the game still: first-person, the player's fist landing on the Punk's jaw; keep that composition, the fist arriving from the lower left, the Punk head snapping to the right, a bold white impact star at the contact, bold speed lines radiating from the fist, the drawn fence behind. Any fence is a simple hand-built drawn fence: vertical posts, two horizontal rails and uneven wooden boards or bars of different heights with a few gaps between them. ABSOLUTELY NO chain-link, NO diamond lattice, NO wire mesh anywhere in the image. The player's arm is a clean, flat, light grey sleeve with at most two thin fold lines, and a dark glove drawn simply. NO black slash marks, NO cracks, NO scribbles or hatching on the sleeve. The Punk: a light grey baseball cap whose brim throws one flat dark shadow across his eyes, with his heavy dark eyebrows and the glint of his eyes visible in that shadow; he wears NO sunglasses, NO visor, NO goggles, NO mask; square jaw, light stubble, set mouth; dark puffy vest over a black tank top; light grey sleeves with at most two simple fold lines; dark gloves drawn very simply, one outline, three short finger lines and one cuff line per glove, no scribble. Match the face and design of the Punk in the last reference image exactly. ",
+  "aspect": "16:9",
+  "size": "2K",
+  "refs": [
+   "refs_new/new_jab.png",
+   "refs/t_15.jpg"
+  ]
+ },
+ {
+  "out": "ko_punk_2_b.png",
+  "prompt": "Hand-drawn comic book panel, 16:9. Flat colour fills, bold varied ink outlines (thick and thin), designed graphic shadow shapes, dramatic framing, night palette of indigo and violet with warm orange lamp and fire light. NO text, NO letters, NO numbers, NO HUD, NO health bars, NO UI, NO captions, NO sound-effect words anywhere. The first reference image is the game still: the Punk reeling backward after a knockout punch. Draw him falling backward at a tilt, arms flung out, his light grey cap flying off his head into the air above him (so his short dark hair shows), motion lines, dust puff, the drawn fence and a burn barrel behind. Any fence is a simple hand-built drawn fence: vertical posts, two horizontal rails and uneven wooden boards or bars of different heights with a few gaps between them. ABSOLUTELY NO chain-link, NO diamond lattice, NO wire mesh anywhere in the image. The Punk: a light grey baseball cap whose brim throws one flat dark shadow across his eyes, with his heavy dark eyebrows and the glint of his eyes visible in that shadow; he wears NO sunglasses, NO visor, NO goggles, NO mask; square jaw, light stubble, set mouth; dark puffy vest over a black tank top; light grey sleeves with at most two simple fold lines; dark gloves drawn very simply, one outline, three short finger lines and one cuff line per glove, no scribble. Match the face and design of the Punk in the last reference image exactly. ",
+  "aspect": "16:9",
+  "size": "2K",
+  "refs": [
+   "refs_new/new_after.png",
+   "ko_punk_1_b.jpg"
+  ]
+ },
+ {
+  "out": "punk_entrance_b.png",
+  "prompt": "Hand-drawn comic book panel, 16:9. Flat colour fills, bold varied ink outlines (thick and thin), designed graphic shadow shapes, dramatic framing, night palette of indigo and violet with warm orange lamp and fire light. NO text, NO letters, NO numbers, NO HUD, NO health bars, NO UI, NO captions, NO sound-effect words anywhere. The first reference image is the game still: the Punk in a guard stance with fists raised, seen from low and slightly below, a street lamp glowing behind him, burn barrel and the drawn fence behind. Keep the lower centre of the frame as plain vest and shadow (no bright details) because lettering is added there. Any fence is a simple hand-built drawn fence: vertical posts, two horizontal rails and uneven wooden boards or bars of different heights with a few gaps between them. ABSOLUTELY NO chain-link, NO diamond lattice, NO wire mesh anywhere in the image. The Punk: a light grey baseball cap whose brim throws one flat dark shadow across his eyes, with his heavy dark eyebrows and the glint of his eyes visible in that shadow; he wears NO sunglasses, NO visor, NO goggles, NO mask; square jaw, light stubble, set mouth; dark puffy vest over a black tank top; light grey sleeves with at most two simple fold lines; dark gloves drawn very simply, one outline, three short finger lines and one cuff line per glove, no scribble. Match the face and design of the Punk in the last reference image exactly. ",
+  "aspect": "16:9",
+  "size": "2K",
+  "refs": [
+   "refs_new/new_guard.png",
+   "ko_punk_1_b.jpg"
+  ]
  }
 ]

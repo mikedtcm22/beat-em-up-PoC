@@ -673,9 +673,7 @@
     "min_line_mm2": 140,
     "edge_cut_mm": 3.0,
     "power": 8,
-    "ink_regions": [
-     "glove"
-    ],
+    "ink_regions": [],
     "ink_margin_mm": 1.5,
     "tones": {},
     "abs_dark_lum": 0.0,
@@ -684,5 +682,10 @@
     "tone_median_px": 6
    }
   }
- }
+ },
+ "features_skip": [
+  "knuck_",
+  "cuff2",
+  "crease"
+ ]
 }
