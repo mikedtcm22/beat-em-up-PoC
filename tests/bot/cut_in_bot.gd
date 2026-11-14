@@ -5,7 +5,8 @@ extends Node
 ## It writes `C5-BOT` lines (each card at its frame, the simulation's scale while it is up, PASS / FAIL checks) and quits.
 ## Record it with tools/capture_bot.sh (docs/milestones/M7-calls/c5.md has the command and the stills):
 ##   tools/capture_bot.sh res://tests/bot/cut_in_bot.tscn captures/m7-comic/c5 "" 3
-## `--profile=m6` runs the same script with the cards off (no card should appear); `--tune=<property>=<number>` is as in the other bots.
+## `--profile=m6` runs the same script with the cards off (no card should appear); `--tune=<property>=<number>` is as in the other bots;
+## `--full-entrance` lets the Punk's entrance card hold its full time instead of skipping it with a punch.
 
 const LEVEL_PATH := "res://game/level/mission1/mission1.tscn"
 ## A frame count that outlasts any card's hold at the default tunables (the title holds longest, 1.5 s = 90 frames).
@@ -17,12 +18,16 @@ var _cut_in: CutIn
 var _cards: Array = []
 var _fails: int = 0
 var _profile: int = 1
+## `--full-entrance`: let the Punk's entrance card run its whole hold instead of punching through it (for recordings).
+var _full_entrance: bool = false
 
 
 func _ready() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--profile="):
 			_profile = 0 if arg.ends_with("m6") else 1
+		elif arg == "--full-entrance":
+			_full_entrance = true
 		elif arg.begins_with("--tune="):
 			var pair := arg.trim_prefix("--tune=").split("=")
 			if pair.size() == 2:
@@ -103,9 +108,13 @@ func _run() -> void:
 	var punk := _spawn(&"punk", Vector3(0.0, 0.0, -4.0))
 	await _ticks(SETTLE)
 	_check(_cut_in.is_showing() == on, "the first Punk's entrance card is up")
-	_press(&"punch")
-	await _ticks(4)
-	_check(not _cut_in.is_showing(), "a punch skips it")
+	if _full_entrance:
+		await _ticks(LONG_WAIT)
+		_check(not _cut_in.is_showing(), "it went down by itself after its hold")
+	else:
+		_press(&"punch")
+		await _ticks(4)
+		_check(not _cut_in.is_showing(), "a punch skips it")
 	var second := _spawn(&"punk", Vector3(1.5, 0.0, -6.0))
 	var thug := _spawn(&"thug", Vector3(-1.5, 0.0, -7.0))
 	await _ticks(SETTLE)
