@@ -153,6 +153,10 @@ func _activate() -> void:
 			street.build(section, section_look)
 			_streets.append(street)
 	_contact_look = base
+	if S2Proj.mode() != "" and get_node_or_null("S2Proj") == null:
+		var s2 := S2Proj.new()
+		s2.name = "S2Proj"
+		add_child(s2)
 	if base == null:
 		set_physics_process(false)
 		return

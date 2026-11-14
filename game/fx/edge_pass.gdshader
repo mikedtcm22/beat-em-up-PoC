@@ -42,6 +42,8 @@ uniform float fade_start_m : hint_range(1.0, 200.0) = 25.0;
 uniform float fade_end_m : hint_range(2.0, 300.0) = 60.0;
 uniform float mask_px : hint_range(0.0, 16.0) = 6.0;
 uniform bool character_mask = true;
+// S2 spike: 0 draws no line on the world (a painting carries its own).
+uniform float world_lines = 1.0;
 // 0 = the picture; 1 roughness; 2 normals; 3 distance; 4 character mask; 5 depth lines; 6 creases.
 uniform int debug_view : hint_range(0, 6) = 0;
 
@@ -143,6 +145,10 @@ void fragment() {
 #endif
 	if (mask > 0.5) {
 		depth_line = 0.0;
+	}
+	if (mask < 0.5) {
+		depth_line *= world_lines;
+		crease_line *= world_lines;
 	}
 	float fade = 1.0 - smoothstep(fade_start_m, max(fade_end_m, fade_start_m + 0.01), z0);
 
