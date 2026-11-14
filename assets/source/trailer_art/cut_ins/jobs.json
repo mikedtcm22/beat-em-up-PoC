@@ -1,0 +1,72 @@
+[
+ {
+  "out": "title_a.png",
+  "prompt": "Hand-drawn comic book panel, 16:9. Flat colour fills, bold varied ink outlines (thick and thin), designed graphic shadow shapes, dramatic framing, night palette of indigo and violet with warm orange lamp and fire light. NO text, NO letters, NO HUD, NO health bars, NO UI. Style and character reference: the other images (a drawn comic look; the Punk character: grey baseball cap, dark puffy vest over black tank top, light grey sleeves, dark gloves; the first image after this prompt is the game still for composition). The night street looking down the route with a burning oil-drum barrel, fences, brick walls, lit windows; leave a calm dark area across the top fifth for title lettering. No characters in focus.",
+  "aspect": "16:9",
+  "size": "2K",
+  "refs": [
+   "refs/game_street.png",
+   "refs/t_15.jpg",
+   "refs/t_06.jpg",
+   "refs/t_02.jpg",
+   "refs/punk_street.png",
+   "refs/punk_arms.png"
+  ]
+ },
+ {
+  "out": "punk_entrance_a.png",
+  "prompt": "Hand-drawn comic book panel, 16:9. Flat colour fills, bold varied ink outlines (thick and thin), designed graphic shadow shapes, dramatic framing, night palette of indigo and violet with warm orange lamp and fire light. NO text, NO letters, NO HUD, NO health bars, NO UI. Style and character reference: the other images (a drawn comic look; the Punk character: grey baseball cap, dark puffy vest over black tank top, light grey sleeves, dark gloves; the first image after this prompt is the game still for composition). The Punk in a guard stance, low angle looking up, cap brim casting a deep shadow over his eyes, a street lamp glowing behind him, fists raised.",
+  "aspect": "16:9",
+  "size": "2K",
+  "refs": [
+   "refs/game_guard.png",
+   "refs/t_15.jpg",
+   "refs/t_06.jpg",
+   "refs/t_02.jpg",
+   "refs/punk_street.png",
+   "refs/punk_arms.png"
+  ]
+ },
+ {
+  "out": "ko_punk_1_a.png",
+  "prompt": "Hand-drawn comic book panel, 16:9. Flat colour fills, bold varied ink outlines (thick and thin), designed graphic shadow shapes, dramatic framing, night palette of indigo and violet with warm orange lamp and fire light. NO text, NO letters, NO HUD, NO health bars, NO UI. Style and character reference: the other images (a drawn comic look; the Punk character: grey baseball cap, dark puffy vest over black tank top, light grey sleeves, dark gloves; the first image after this prompt is the game still for composition). First-person: the player's gloved fist in a light grey sleeve landing on the Punk's jaw, head snapping, impact, bold speed lines radiating from the fist.",
+  "aspect": "16:9",
+  "size": "2K",
+  "refs": [
+   "refs/game_jab.png",
+   "refs/t_15.jpg",
+   "refs/t_06.jpg",
+   "refs/t_02.jpg",
+   "refs/punk_street.png",
+   "refs/punk_arms.png"
+  ]
+ },
+ {
+  "out": "ko_punk_2_a.png",
+  "prompt": "Hand-drawn comic book panel, 16:9. Flat colour fills, bold varied ink outlines (thick and thin), designed graphic shadow shapes, dramatic framing, night palette of indigo and violet with warm orange lamp and fire light. NO text, NO letters, NO HUD, NO health bars, NO UI. Style and character reference: the other images (a drawn comic look; the Punk character: grey baseball cap, dark puffy vest over black tank top, light grey sleeves, dark gloves; the first image after this prompt is the game still for composition). The Punk falling backward after a knockout punch, arms flailing, grey cap flying off his head in the air, motion lines, street background.",
+  "aspect": "16:9",
+  "size": "2K",
+  "refs": [
+   "refs/game_after.png",
+   "refs/t_15.jpg",
+   "refs/t_06.jpg",
+   "refs/t_02.jpg",
+   "refs/punk_street.png",
+   "refs/punk_arms.png"
+  ]
+ },
+ {
+  "out": "mission_end_a.png",
+  "prompt": "Hand-drawn comic book panel, 16:9. Flat colour fills, bold varied ink outlines (thick and thin), designed graphic shadow shapes, dramatic framing, night palette of indigo and violet with warm orange lamp and fire light. NO text, NO letters, NO HUD, NO health bars, NO UI. Style and character reference: the other images (a drawn comic look; the Punk character: grey baseball cap, dark puffy vest over black tank top, light grey sleeves, dark gloves; the first image after this prompt is the game still for composition). First-person: the player's gloved hands lowered at the bottom of the frame, before an empty night street with burn barrel and a lamp, quiet and calm.",
+  "aspect": "16:9",
+  "size": "2K",
+  "refs": [
+   "refs/game_empty.png",
+   "refs/t_15.jpg",
+   "refs/t_06.jpg",
+   "refs/t_02.jpg",
+   "refs/punk_street.png",
+   "refs/punk_arms.png"
+  ]
+ }
+]
