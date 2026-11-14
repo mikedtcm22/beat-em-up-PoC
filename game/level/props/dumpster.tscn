@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" path="res://game/actors/art/static_art.gd" id="1_art"]
 [ext_resource type="PackedScene" path="res://assets/export/props/dumpster/dumpster.glb" id="2_glb"]
+[ext_resource type="Script" path="res://game/level/props/trailer_prop.gd" id="9_tp"]
 [ext_resource type="Texture2D" path="res://assets/export/palette/palette_atlas.png" id="3_atlas"]
 
 [node name="Dumpster" type="Node3D"]
@@ -9,3 +10,7 @@ script = ExtResource("1_art")
 scene = ExtResource("2_glb")
 palette = ExtResource("3_atlas")
 hull = true
+
+[node name="TrailerProp" type="Node" parent="."]
+script = ExtResource("9_tp")
+tint = Color(1.0, 1.0, 0.85, 1)

@@ -2,9 +2,9 @@ shader_type spatial;
 // A banded halo card on a light source (LD-WORLD; PLAN.md section 4 part 4) in place of Godot's smooth glow: a camera-facing
 // quad whose rings are hard bands, the white core and two or three fainter coloured rings, each a flat tone with a calm, tight brushed
 // edge (M7 D2: near-round, only a hair off-centre and a few per cent off true, so the halo reads as stepped painted tones, not a puffy cloud).
-// Added to the picture, behind nothing but
-// the depth test, so a pillar in front of a lamp hides it.
-render_mode unshaded, blend_add, depth_draw_never, cull_disabled, fog_disabled, shadows_disabled;
+// Laid over the picture (M7 e-street: mixed, not added, so the wall's ink and cracks no longer show through as hatching: each ring is a flat
+// opaque tone), behind nothing but the depth test, so a pillar in front of a lamp hides it.
+render_mode unshaded, blend_mix, depth_draw_never, cull_disabled, fog_disabled, shadows_disabled;
 
 uniform vec3 core_color : source_color = vec3(1.0, 0.95, 0.8);
 uniform vec3 ring_color : source_color = vec3(1.0, 0.6, 0.2);
@@ -47,7 +47,11 @@ void fragment() {
 	float band = (1.0 - core) / max(n_rings, 1.0);
 	float edge = max(fwidth(length(p)) * 1.3, 0.004);
 	float feather = max(edge, soft * 0.16 * band);
-	vec3 col = vec3(0.0);
+	// The night's own ground under a tone: a ring is the night's blue plus the ring's warm light, laid flat (what the additive halo showed).
+	vec3 night = vec3(0.05, 0.05, 0.12);
+	// The outermost ring's tone is the card's ground, so a ring's soft edge never mixes toward black.
+	vec3 col = night + ring_color * ring_strength * (1.0 - 0.8 * (max(n_rings, 1.0) - 1.0) / max(n_rings, 1.0)) * energy;
+	float cover = 0.0;
 	for (int k = 6; k >= 1; k--) {
 		if (float(k) <= n_rings) {
 			float fk = float(k);
@@ -61,20 +65,22 @@ void fragment() {
 			float rk = (core + (1.0 - core) * fk / n_rings) * (1.0 + wob * 0.4) * 0.74 + bite + bristle;
 			float inside = 1.0 - smoothstep(rk - feather, rk + feather, r);
 			// Stepped tones: each ring outside the first is a clear step fainter than the one inside it.
-			col = max(col, ring_color * ring_strength * inside * (1.0 - 0.8 * (fk - 1.0) / max(n_rings, 1.0)));
+			vec3 tone = night + ring_color * ring_strength * (1.0 - 0.8 * (fk - 1.0) / max(n_rings, 1.0)) * energy;
+			col = mix(col, tone, inside);
+			cover = max(cover, inside);
 		}
 	}
 	float r0 = length(p);
 	float rc = core * (1.0 + (vnoise(vec2(phi * 2.0 + seed, 4.1)) - 0.5) * wobble * 0.4);
 	float core_feather = max(edge, soft * 0.16 * core);
 	float inside_core = 1.0 - smoothstep(rc - core_feather, rc + core_feather, r0);
-	col = mix(col, core_color, inside_core);
-	col *= 1.0 - step(0.98, r0);
-	float alpha = clamp(max(col.r, max(col.g, col.b)) * 4.0, 0.0, 1.0);
-	// M7 D2: outside the rings nothing is added (the card is a quad, mostly empty).
-	if (alpha <= 0.0) {
+	col = mix(col, core_color * energy, inside_core);
+	cover = max(cover, inside_core);
+	cover *= 1.0 - step(0.98, r0);
+	// M7 D2: outside the rings nothing is drawn (the card is a quad, mostly empty).
+	if (cover <= 0.0) {
 		discard;
 	}
-	ALBEDO = col * energy;
-	ALPHA = alpha;
+	ALBEDO = clamp(col, 0.0, 1.0);
+	ALPHA = cover;
 }

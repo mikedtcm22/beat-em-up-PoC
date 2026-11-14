@@ -316,3 +316,35 @@ func test_the_fence_card_sits_on_the_top_of_the_fence() -> void:
 	for uv in uvs:
 		top = maxf(top, uv.y)
 	assert_almost_eq(top, Tuning.data.trailer_fence_card_h_m, 0.01, "the face's top is the card's top")
+
+
+func test_a_tall_trailer_facade_is_bands_that_do_not_repeat_a_window_row() -> void:
+	var size: Vector3 = SIZES[&"skyline"]
+	var m6 := KitMesh.build(&"skyline", size)
+	_trailer()
+	var mesh := KitMesh.build(&"skyline", size, 2)
+	assert_gt(KitMesh.triangle_count(mesh), KitMesh.triangle_count(m6), "stacked bands, not one box")
+	assert_lte(KitMesh.triangle_count(mesh), KitMesh.MAX_TRIANGLES)
+	var period := TrimSheet.period_m(&"facade")
+	var uvs := _uvs(mesh)
+	# The first band's +Z side face starts at V 0 and every band's does (the strip does not vary V), but their U starts differ.
+	var starts := {}
+	for i in range(0, uvs.size(), 4):
+		if is_zero_approx(uvs[i].y) and is_equal_approx(uvs[i + 2].y, period) and not is_equal_approx(uvs[i].x, uvs[i + 1].x):
+			starts[snappedf(uvs[i].x, 0.001)] = true
+	assert_gte(starts.size(), 3, "the bands' faces start at different places along the strip")
+
+
+func test_the_street_props_lift_under_the_trailer_profile_only() -> void:
+	var car := preload("res://game/level/props/car.tscn").instantiate() as Node3D
+	add_child_autofree(car)
+	await wait_physics_frames(2)
+	var prop := car.get_node("TrailerProp") as TrailerProp
+	var art := car as StaticArt
+	assert_eq(art.material.get_shader_parameter(&"albedo"), Color.WHITE, "M6: the palette as it is")
+	_trailer()
+	var lifted: Color = art.material.get_shader_parameter(&"albedo")
+	assert_almost_eq(lifted.r, prop.tint.r * Tuning.data.trailer_prop_lift, 0.001)
+	assert_gt(lifted.g, 1.0, "a lifted fill")
+	Tuning.set_value(&"look_profile", LookProfile.Id.M6)
+	assert_eq(art.material.get_shader_parameter(&"albedo"), Color.WHITE, "and back to white")

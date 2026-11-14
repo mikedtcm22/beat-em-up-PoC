@@ -189,7 +189,17 @@ static func _crate(b: Builder, size: Vector3) -> void:
 
 
 static func _skyline(b: Builder, size: Vector3) -> void:
-	b.box(Vector3.ZERO, size, {sides = &"facade", top = &"concrete", bottom = &"concrete"})
+	var period := TrimSheet.period_m(&"facade")
+	if b.trailer and size.y > period * 1.5:
+		# e-street: a tall facade is stacked bands of one strip period, each its own box so its face takes its own U offset and
+		# mirror (the strip does not vary V), and no two floors repeat the same window row.
+		var count := ceili(size.y / period - 0.0001)
+		for i in count:
+			var y0 := -size.y * 0.5 + period * i
+			var band := minf(period, size.y - period * i)
+			b.box(Vector3(0.0, y0 + band * 0.5, 0.0), Vector3(size.x, band, size.z), {sides = &"facade", top = &"concrete", bottom = &"concrete"})
+	else:
+		b.box(Vector3.ZERO, size, {sides = &"facade", top = &"concrete", bottom = &"concrete"})
 	var cap := 0.5
 	b.box(Vector3(0.0, size.y * 0.5 + cap * 0.5, 0.0), Vector3(size.x + 0.4, cap, size.z + 0.4), {all = &"trim"})
 

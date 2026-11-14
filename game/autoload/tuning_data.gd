@@ -1297,6 +1297,9 @@ extends Resource
 ## the chain-link lattice. The metres it covers, along the fence and up it (the card's top sits on the fence's top).
 @export_range(2.0, 16.0, 0.25) var trailer_fence_card_w_m: float = 8.0
 @export_range(1.0, 8.0, 0.25) var trailer_fence_card_h_m: float = 4.0
+## M7 e-street: the street props' flat fill under the trailer profile is lifted by this much (TrailerProp: the cars, the dumpsters and the
+## AC units were near black in the night light, so their shade edge and hull line read against nothing). 1 leaves the palette as it is.
+@export_range(0.5, 3.0, 0.05) var trailer_prop_lift: float = 1.5
 
 @export_group("Trailer street FX")
 ## M7 T16a: the trailer profile's 2D street effects (outlined steam, grey wisps, the burn barrel's flame, embers),
