@@ -1,0 +1,520 @@
+{
+ "seed": 21,
+ "layout": {
+  "weights": {
+   "Head": 2.4,
+   "Neck": 1.2,
+   "LeftHand": 1.4,
+   "RightHand": 1.4
+  },
+  "default_weight": 1.0,
+  "margin_px": 12,
+  "planar_front": {
+   "bones": [
+    "Head"
+   ],
+   "min_ny": 0.45
+  }
+ },
+ "regions": {
+  "skin": {
+   "base": [
+    214,
+    162,
+    126
+   ],
+   "shade": [
+    156,
+    106,
+    88
+   ],
+   "class": 204,
+   "shadow": 0.0
+  },
+  "mask": {
+   "base": [
+    88,
+    132,
+    72
+   ],
+   "shade": [
+    48,
+    78,
+    56
+   ],
+   "class": 255,
+   "shadow": 0.0
+  },
+  "vest": {
+   "base": [
+    84,
+    126,
+    66
+   ],
+   "shade": [
+    46,
+    74,
+    54
+   ],
+   "class": 255,
+   "shadow": 0.0
+  },
+  "shin": {
+   "base": [
+    70,
+    108,
+    64
+   ],
+   "shade": [
+    40,
+    64,
+    52
+   ],
+   "class": 255,
+   "shadow": 0.0
+  },
+  "shorts": {
+   "base": [
+    60,
+    66,
+    100
+   ],
+   "shade": [
+    36,
+    40,
+    68
+   ],
+   "class": 255,
+   "shadow": 0.0
+  },
+  "shoe": {
+   "base": [
+    34,
+    36,
+    54
+   ],
+   "shade": [
+    20,
+    22,
+    36
+   ],
+   "class": 255,
+   "shadow": 0.0
+  },
+  "cap": {
+   "base": [
+    62,
+    64,
+    90
+   ],
+   "shade": [
+    38,
+    40,
+    62
+   ],
+   "class": 255,
+   "shadow": 0.0
+  },
+  "hair": {
+   "base": [
+    36,
+    34,
+    48
+   ],
+   "shade": [
+    22,
+    20,
+    32
+   ],
+   "class": 230,
+   "shadow": 0.0
+  },
+  "wrap": {
+   "base": [
+    190,
+    184,
+    172
+   ],
+   "shade": [
+    126,
+    124,
+    140
+   ],
+   "class": 255,
+   "shadow": 0.0
+  },
+  "sole": {
+   "base": [
+    76,
+    80,
+    108
+   ],
+   "shade": [
+    52,
+    55,
+    80
+   ],
+   "class": 255,
+   "shadow": 0.0
+  }
+ },
+ "rules": [
+  {
+   "cells": [
+    6,
+    24
+   ],
+   "region": "skin"
+  },
+  {
+   "cells": [
+    14
+   ],
+   "region": "wrap"
+  },
+  {
+   "cells": [
+    22
+   ],
+   "region": "vest"
+  },
+  {
+   "cells": [
+    22
+   ],
+   "bones": [
+    "Head"
+   ],
+   "region": "mask"
+  },
+  {
+   "cells": [
+    22
+   ],
+   "bones": [
+    "Neck"
+   ],
+   "box": [
+    null,
+    null,
+    [
+     1.46,
+     1.6
+    ]
+   ],
+   "region": "mask"
+  },
+  {
+   "cells": [
+    22
+   ],
+   "bones": [
+    "LeftLowerLeg",
+    "RightLowerLeg",
+    "LeftFoot",
+    "RightFoot",
+    "LeftToes",
+    "RightToes",
+    "LeftUpperLeg",
+    "RightUpperLeg"
+   ],
+   "region": "shin"
+  },
+  {
+   "cells": [
+    23
+   ],
+   "region": "shorts"
+  },
+  {
+   "cells": [
+    23
+   ],
+   "bones": [
+    "LeftFoot",
+    "RightFoot",
+    "LeftToes",
+    "RightToes",
+    "LeftLowerLeg",
+    "RightLowerLeg"
+   ],
+   "region": "shoe"
+  },
+  {
+   "cells": [
+    23
+   ],
+   "bones": [
+    "Head",
+    "Neck"
+   ],
+   "region": "hair"
+  },
+  {
+   "cells": [
+    23
+   ],
+   "bones": [
+    "Head"
+   ],
+   "box": [
+    null,
+    null,
+    [
+     1.667,
+     3.0
+    ]
+   ],
+   "region": "cap"
+  },
+  {
+   "cells": [
+    23
+   ],
+   "bones": [
+    "LeftFoot",
+    "RightFoot",
+    "LeftToes",
+    "RightToes"
+   ],
+   "box": [
+    null,
+    null,
+    [
+     -1,
+     0.05
+    ]
+   ],
+   "region": "sole"
+  }
+ ],
+ "shadows": {
+  "wobble_px": 70,
+  "wobble_gain": 0.16,
+  "shadow_cut": 0.42,
+  "edge": 0.035,
+  "fold_pct": 6.0,
+  "fold_amount": 0.0,
+  "form_sigma": 3.0,
+  "blur_px": 20,
+  "cavity": 0.3,
+  "hint": [],
+  "designed": [
+   {
+    "region": [
+     "skin"
+    ],
+    "shape": {
+     "c": [
+      0.003,
+      0.13,
+      1.68
+     ],
+     "r": [
+      0.1,
+      0.07,
+      0.02
+     ],
+     "soft": 0.1,
+     "wobble": 0.06,
+     "wobble_mm": 30
+    }
+   }
+  ]
+ },
+ "ink": {
+  "crease_skip_bones": [
+   "Head"
+  ],
+  "crease_strength": 0.0,
+  "border_px": 3,
+  "border_strength": 0.95,
+  "warp_px": 0.0,
+  "merge_for_borders": {},
+  "clear_regions": [
+   "cap"
+  ],
+  "border_fade_cut": 0.0,
+  "fade_cut": 0.0
+ },
+ "hull": {
+  "base": 0.62,
+  "variation": 0.3,
+  "noise_m": 0.18,
+  "taper_ends": [
+   "LeftHand",
+   "RightHand",
+   "LeftToes",
+   "RightToes"
+  ],
+  "taper": 0.55,
+  "taper_m": 0.07
+ },
+ "folds": [
+  {
+   "bones": [
+    "LeftUpperLeg"
+   ],
+   "region": "shorts",
+   "count": 2,
+   "angle_deg": 28,
+   "angle_spread_deg": 14,
+   "length_mm": [
+    60,
+    110
+   ],
+   "width_mm": 4.6,
+   "strength": 0.95
+  },
+  {
+   "bones": [
+    "RightUpperLeg"
+   ],
+   "region": "shorts",
+   "count": 2,
+   "angle_deg": 28,
+   "angle_spread_deg": 14,
+   "length_mm": [
+    60,
+    110
+   ],
+   "width_mm": 4.6,
+   "strength": 0.95
+  },
+  {
+   "bones": [
+    "LeftLowerLeg"
+   ],
+   "region": "shin",
+   "count": 1,
+   "angle_deg": 30,
+   "angle_spread_deg": 10,
+   "length_mm": [
+    60,
+    100
+   ],
+   "width_mm": 4.2,
+   "strength": 0.9
+  },
+  {
+   "bones": [
+    "RightLowerLeg"
+   ],
+   "region": "shin",
+   "count": 1,
+   "angle_deg": 30,
+   "angle_spread_deg": 10,
+   "length_mm": [
+    60,
+    100
+   ],
+   "width_mm": 4.2,
+   "strength": 0.9
+  },
+  {
+   "bones": [
+    "Spine",
+    "Chest"
+   ],
+   "region": "vest",
+   "count": 3,
+   "angle_deg": 70,
+   "angle_spread_deg": 22,
+   "length_mm": [
+    45,
+    90
+   ],
+   "width_mm": 4.6,
+   "strength": 0.95,
+   "match_bones": [
+    "Spine",
+    "Chest",
+    "UpperChest",
+    "Hips",
+    "LeftShoulder",
+    "RightShoulder"
+   ]
+  }
+ ],
+ "glossy": [],
+ "grain": 0.0,
+ "marks": [
+  {
+   "channel": "R",
+   "shape": {
+    "c": [
+     0.074,
+     0.07,
+     1.642
+    ],
+    "r": [
+     0.02,
+     0.05,
+     0.011
+    ],
+    "soft": 0.12,
+    "wobble": 0.2,
+    "wobble_mm": 10
+   }
+  },
+  {
+   "channel": "G",
+   "shape": {
+    "c": [
+     -0.06,
+     0.09,
+     1.65
+    ],
+    "r": [
+     0.017,
+     0.05,
+     0.009
+    ],
+    "soft": 0.12,
+    "wobble": 0.2,
+    "wobble_mm": 10,
+    "seed": 5
+   }
+  },
+  {
+   "channel": "B",
+   "shape": {
+    "c": [
+     0.003,
+     0.14,
+     1.656
+    ],
+    "r": [
+     0.01,
+     0.05,
+     0.006
+    ],
+    "soft": 0.12,
+    "wobble": 0.18,
+    "wobble_mm": 8,
+    "seed": 7
+   }
+  }
+ ],
+ "normals": [
+  {
+   "bones": [
+    "LeftUpperLeg",
+    "RightUpperLeg",
+    "LeftLowerLeg",
+    "RightLowerLeg"
+   ],
+   "rings": 10,
+   "strength": 1.0
+  },
+  {
+   "bones": [
+    "Spine",
+    "Chest",
+    "UpperChest"
+   ],
+   "rings": 8,
+   "strength": 0.85
+  }
+ ]
+}
