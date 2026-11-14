@@ -10,6 +10,8 @@ const SETTLE_FRAMES := 4
 func before_each() -> void:
 	Tuning.reset_to_default()
 	Tuning.set_value(&"waves_enabled", false)
+	# the trailer profile's drawn cards hold the simulation (M7 C5); these tests time the effects, so they run without them
+	Tuning.set_value(&"cutins_enabled", false)
 
 
 func after_each() -> void:

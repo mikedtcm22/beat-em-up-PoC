@@ -129,6 +129,10 @@ static func sync_fence() -> void:
 	if on:
 		wire.set_shader_parameter(&"fence_tex", load(FENCE_CARD_PATH) as Texture2D)
 		wire.set_shader_parameter(&"fence_card", Vector2(Tuning.data.trailer_fence_card_w_m, Tuning.data.trailer_fence_card_h_m))
+	else:
+		# back to M6's: the card's uniforms unset, so the material is M6's exactly (test_look_profile's round trip)
+		wire.set_shader_parameter(&"fence_tex", null)
+		wire.set_shader_parameter(&"fence_card", null)
 	if not _fence_wired:
 		_fence_wired = true
 		Tuning.changed.connect(_on_tuning_changed)

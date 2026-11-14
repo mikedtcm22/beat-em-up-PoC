@@ -405,14 +405,16 @@ func test_an_entry_picks_in_turn_and_wraps() -> void:
 	assert_null(CutInEntry.new().pick(), "no art, no card")
 
 
-func test_the_group_is_declared_before_debug() -> void:
+func test_the_group_is_declared_before_audio_look_and_debug() -> void:
+	# the tail Audio, Look, Debug is pinned (test_audio, test_m4_contracts): the group sits just before it, after the painted look
 	var groups: Array[String] = []
 	for info in Tuning.data.get_property_list():
 		if info.usage & PROPERTY_USAGE_GROUP:
 			groups.append(info.name)
-	assert_true(groups.has("Cut-ins (M7)"))
+	assert_eq(groups.count("Cut-ins (M7)"), 1)
 	assert_eq(groups.back(), "Debug", "Debug stays last")
-	assert_eq(groups[groups.size() - 2], "Cut-ins (M7)")
+	assert_eq(groups[groups.find("Cut-ins (M7)") + 1], "Audio")
+	assert_eq(groups[groups.find("Cut-ins (M7)") - 1], "Painted look (M7)")
 
 
 # --- In the game ---------------------------------------------------------------------------------------------
