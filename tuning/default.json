@@ -783,7 +783,14 @@
 		"look_motion_hip_roll_deg": 4.0,
 		"look_motion_counter_swing_deg": 5.0,
 		"look_motion_overlap_s": 0.025,
-		"look_motion_overshoot": 0.15
+		"look_motion_overshoot": 0.15,
+		"cutins_enabled": true,
+		"cutin_title_hold_s": 1.5,
+		"cutin_entrance_hold_s": 0.9,
+		"cutin_ko_hold_s": 0.5,
+		"cutin_end_lock_s": 0.5,
+		"cutin_fade_s": 0.1,
+		"cutin_lettering_size": 1.0
 	},
 	"moves": {}
 }
