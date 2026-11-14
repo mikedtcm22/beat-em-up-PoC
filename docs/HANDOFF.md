@@ -4,6 +4,10 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-14 (Gate 3): the clean slice is with Game-boy; waiting on go, adjust or stop
+- T49 is closed (pass). Reel `captures/m7-comic/slice2/reel_m6_old_new.mp4`, sheet `slice2/sheet_old_new.jpg` and `captures/m7-comic/cards_sheet2.jpg` were sent in-app, with a Slack DM.
+- Do not start Phase 3b (T51 to T57) without his answer. On "go": run T51 as planned and carry the known leftovers (plan Log, 2026-11-14) into the Punk recipe first.
+
 ### 2026-11-14 (T49 done): D1-D3 merged; suite green; frame time +8.8% at full scale (gate passes); slice re-recorded in `slice2/`
 - **Merged** into `m7/trailer-look`: m7/d1 (b151cd9), d2 (9e447d7), d3 (cd4d7b8); a18e426 regenerates `tuning/default.json` (the merge dropped D2's `night_lamp_fade_m`/`_len_m`); b7a4aa0 adds `cut_in_bot --full-entrance` (the entrance card runs its whole hold, for recordings).
 - **Suite:** 2209/2209, no SCRIPT or SHADER ERROR (`captures/m7-comic/slice2/tests.log`).
