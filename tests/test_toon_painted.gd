@@ -83,7 +83,7 @@ func test_a_painted_material_is_the_painted_shader_with_its_maps() -> void:
 	var data := Tuning.data
 	assert_eq(material.get_shader_parameter(&"paint_cut"), data.look_paint_cut)
 	assert_eq(material.get_shader_parameter(&"paint_grain"), data.look_paint_grain)
-	assert_eq(material.get_shader_parameter(&"paint_rim_curve"), data.look_paint_rim_curve)
+	assert_eq(material.get_shader_parameter(&"paint_rim_px"), data.look_paint_rim_px)
 	# A tunable moves it live, like the rest of the Look values.
 	Tuning.set_value(&"look_paint_cut", 0.5)
 	assert_eq(material.get_shader_parameter(&"paint_cut"), 0.5)
@@ -377,3 +377,14 @@ func test_the_drawn_line_is_built_in_object_space_and_steps_on_the_beat() -> voi
 	var hull := (load(PAINTED_HULL_PATH) as Shader).code
 	assert_true(hull.contains("CUSTOM0"), "the hull's noise is in the rest pose, so it sticks to the body")
 	assert_true(hull.contains("discard"), "and it breaks on the lit side")
+
+
+func test_the_clean_cel_defaults_draw_no_grain_wobble_breaks_or_rim_patches() -> void:
+	# M7 C1: the trailer figure is flat fills, one clean line and a thin rim; the noise tunables stay, at zero.
+	var d := Tuning.defaults()
+	for key: StringName in [&"look_paint_grain", &"look_paint_line_vary", &"look_paint_line_wobble_texels", &"look_paint_line_gap",
+			&"look_paint_hull_vary", &"look_paint_hull_wobble_px", &"look_paint_hull_gap", &"look_paint_rim_patch_cut",
+			&"look_finish_grain", &"look_finish_wobble_px", &"look_finish_line_break"]:
+		assert_eq(d.get(key), 0.0, "%s defaults to none" % key)
+	assert_eq(d.get(&"look_finish_scale"), 1.0, "the 3D view renders at full scale")
+	assert_gt(d.get(&"look_paint_hull_shadow"), 0.0, "the hull still swells on the shadow side")

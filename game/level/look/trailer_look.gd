@@ -369,6 +369,7 @@ func _tick_actor_shadows() -> void:
 		var material: ShaderMaterial = entry.material
 		material.set_shader_parameter(&"dir", away)
 		material.set_shader_parameter(&"opacity", opacity)
+		material.set_shader_parameter(&"soft_blob", Tuning.data.look_paint_contact_soft)
 
 
 func _shadow_of(actor: CombatActor) -> Dictionary:
@@ -389,6 +390,7 @@ func _new_actor_shadow(actor: CombatActor) -> Dictionary:
 	card.top_level = true
 	card.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	var material := NightStreet.contact_material(_contact_look, float(get_instance_id() % 97) + float(_actor_shadows.size()), Vector2(0.0, 1.0))
+	material.set_shader_parameter(&"soft_blob", Tuning.data.look_paint_contact_soft)
 	card.material_override = material
 	add_child(card)
 	return {actor = actor, card = card, material = material}

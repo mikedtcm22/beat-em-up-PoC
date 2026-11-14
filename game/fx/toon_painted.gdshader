@@ -12,9 +12,9 @@ shader_type spatial;
 //  - A lamp (a point or spot light) adds only what rises above the shadow tone: nothing inside the shadow band, so a night
 //    street's lamps do not flood the figures (the video's P1: the toon light() floods a night scene). A directional
 //    light carries the shadow tone itself, at no less than dir_floor of a full light, in its hue.
-//  - A one-sided rim, in the area's warm colour, on the side the directional (key) light comes from, its width narrowed
-//    where the surface curves fast (screen-space change of the normal) and widened where the key faces it: no noise.
-//  - A little grain on flat fills, in the rest-pose position, so it sticks to the body and never touches a drawn line.
+//  - A one-sided rim, in the area's warm colour, on the side the directional (key) light comes from: a hard line a set number of pixels
+//    wide just inside the silhouette (M7 C1), no noise.
+//  - A little grain on flat fills, in the rest-pose position, so it sticks to the body and never touches a drawn line (0 by default).
 // Every uniform the game writes to the art's toon material by name (the flash, the damage look, the edge tag, the ink, the
 // fill and the hard highlight's) keeps its name and type, so RigPaint, DamageLook and ToonMaterials.apply_look need no
 // second path; everything else here is a uniform too, so a flip of profile, an area or a damage look never compiles a
@@ -64,9 +64,9 @@ uniform vec3 fill_dir = vec3(-0.45, 0.55, 0.70);
 // --- the rim ---
 uniform vec3 paint_rim_color : source_color = vec3(1.0, 0.56, 0.22);
 uniform float paint_rim_strength : hint_range(0.0, 2.0) = 0.9;
-uniform float paint_rim_cut : hint_range(0.3, 1.0) = 0.72;
-uniform float paint_rim_key : hint_range(0.0, 1.0) = 0.42;
-uniform float paint_rim_curve : hint_range(0.0, 4.0) = 1.2;
+// The rim's width in pixels at 1080p, measured inward from the silhouette; the key side only: the key's facing must pass paint_rim_key.
+uniform float paint_rim_px : hint_range(0.5, 12.0) = 2.5;
+uniform float paint_rim_key : hint_range(0.0, 1.0) = 0.15;
 uniform float paint_rim_patch_cells : hint_range(1.0, 30.0) = 4.5;
 uniform float paint_rim_patch_cut : hint_range(0.0, 1.0) = 0.62;
 
@@ -140,7 +140,8 @@ void fragment() {
 	// The rim's patches: a low-frequency noise cut hard, so the rim is a few shapes on a form and not a band round it.
 	float patch_noise = paint_grain_noise(rp * paint_rim_patch_cells + vec3(2.0, 17.0, 5.0));
 	float patch_edge = max(fwidth(patch_noise), 0.004);
-	rim_patch = smoothstep(paint_rim_patch_cut - patch_edge, paint_rim_patch_cut + patch_edge, patch_noise);
+	// A cut of 0 is no patches: the rim is one clean line.
+	rim_patch = paint_rim_patch_cut <= 0.0 ? 1.0 : smoothstep(paint_rim_patch_cut - patch_edge, paint_rim_patch_cut + patch_edge, patch_noise);
 	vec4 mask = texelFetch(ink_tex, clamp(ivec2(UV2 * vec2(size)), ivec2(0), size - 1), 0);
 	float klass = mask.g;
 	float takes_marks = marks * step(0.75, klass);
@@ -207,15 +208,14 @@ void light() {
 		float peak = max(light_color.r, max(light_color.g, light_color.b));
 		light_color = light_tint * mix(dir_floor, 1.0, peak) * paint_lit_level * step(0.0001, peak);
 		DIFFUSE_LIGHT += shade * light_color;
-		// The rim, from the key (the directional light) alone: the grazing angle plus the key's facing, narrowed by the
-		// curvature (how fast the normal turns across a pixel), cut hard. One side: nothing where the surface turns from the key.
+		// The rim, from the key (the directional light) alone: a hard line paint_rim_px wide just inside the silhouette. The distance to the
+		// silhouette in pixels is read from how fast the view-facing term changes (u / fwidth(u) is twice the distance for a round form), so the
+		// width holds on a thin limb and a fat one alike. One side: nothing where the surface turns from the key. No noise.
 		vec3 n = normalize(NORMAL);
-		float fres = 1.0 - clamp(dot(n, normalize(VIEW)), 0.0, 1.0);
+		float u = clamp(dot(n, normalize(VIEW)), 0.0, 1.0);
+		float to_edge_px = 0.5 * u / max(fwidth(u), 0.0001) / max(to_pixels, 0.001);
 		float facing = dot(n, normalize(LIGHT));
-		float curve = length(fwidth(n)) / max(to_pixels, 0.001);
-		float rim_v = fres + paint_rim_key * facing - paint_rim_curve * clamp(curve, 0.0, 0.4);
-		float rim_edge = max(fwidth(rim_v), 0.002);
-		float rim = smoothstep(paint_rim_cut - rim_edge, paint_rim_cut + rim_edge, rim_v) * smoothstep(-0.05, 0.25, facing) * rim_patch;
+		float rim = (1.0 - smoothstep(paint_rim_px - 0.5, paint_rim_px + 0.5, to_edge_px)) * smoothstep(paint_rim_key - 0.1, paint_rim_key + 0.1, facing) * rim_patch;
 		SPECULAR_LIGHT += paint_rim_color * paint_rim_strength * rim;
 	} else {
 		// A lamp adds what rises above the shadow tone, so nothing inside the shadow band.

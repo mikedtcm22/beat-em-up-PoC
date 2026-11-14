@@ -1374,7 +1374,7 @@ extends Resource
 ## The hue the shadow tone is pulled toward when the area gives none (an area sets its own: ToonMaterials.set_area_look()).
 @export var look_paint_shadow_hue: Color = Color(0.24, 0.24, 0.55)
 ## How far the shadow tone moves toward that hue, brightness kept.
-@export_range(0.0, 1.0, 0.01) var look_paint_shadow_hue_amount: float = 0.08
+@export_range(0.0, 1.0, 0.01) var look_paint_shadow_hue_amount: float = 0.25
 ## The terminator's edge width in pixels at 1080p, never narrower (a shadow map's stair-steps are inside it).
 @export_range(0.0, 12.0, 0.1) var look_paint_term_soft_px: float = 3.0
 ## A directional light lights a painted surface at no less than this share of full, in its hue: a dim night moon never drops the paint to black.
@@ -1393,19 +1393,19 @@ extends Resource
 ## How much of the ink colour the map's lines take.
 @export_range(0.0, 1.0, 0.01) var look_paint_line_strength: float = 1.0
 ## The grain on a painted flat fill, a share of the value, and its cells per metre (object space, so it sticks to the moving body).
-@export_range(0.0, 0.3, 0.005) var look_paint_grain: float = 0.07
+@export_range(0.0, 0.3, 0.005) var look_paint_grain: float = 0.0
 @export_range(10.0, 400.0, 1.0) var look_paint_grain_cells: float = 140.0
 ## The grain on the trim's flat fills (trailer profile only), a share of the value, and its cells per metre.
 @export_range(0.0, 0.3, 0.005) var look_paint_trim_grain: float = 0.05
 @export_range(10.0, 400.0, 1.0) var look_paint_trim_grain_cells: float = 90.0
 @export_subgroup("Rim")
-## The one-sided rim on the key light's side, in the area's warm colour (an area sets its own), its strength, where it starts
-## (on the grazing angle plus the key's facing), how much the key's facing widens it and how much curvature narrows it.
+## The one-sided rim on the key light's side, in the area's warm colour (an area sets its own), its strength, its width in pixels at 1080p
+## (a hard line just inside the silhouette, the same on a thin limb and a fat one) and how far a surface must face the key to take it (0 = anywhere
+## on the key's half; nothing on the side that turns from the key).
 @export var look_paint_rim_color: Color = Color(1.0, 0.56, 0.22)
 @export_range(0.0, 2.0, 0.01) var look_paint_rim_strength: float = 0.9
-@export_range(0.3, 1.0, 0.01) var look_paint_rim_cut: float = 0.93
-@export_range(0.0, 1.0, 0.01) var look_paint_rim_key: float = 0.3
-@export_range(0.0, 4.0, 0.05) var look_paint_rim_curve: float = 1.5
+@export_range(0.5, 12.0, 0.1) var look_paint_rim_px: float = 2.5
+@export_range(0.0, 1.0, 0.01) var look_paint_rim_key: float = 0.15
 @export_subgroup("Hull")
 ## The painted hull's line, a multiplier on look_outline_px: near the lens it is this much heavier (at look_outline_near_m), back to 1 by
 ## boost_to_m, then from thin_from_m out to look_outline_far_m thinning to far_gain.
@@ -1427,26 +1427,29 @@ extends Resource
 @export_range(1.0, 30.0, 1.0) var look_paint_wobble_hz: float = 12.0
 ## The inner ink (the ink map's R): how far the cut swings with an object-space noise (the line swells and tapers), the noise's cells per
 ## metre, how much heavier the line gets on the side away from the key, and the wobble of the line against the fill, in ink-map texels.
-@export_range(0.0, 0.3, 0.005) var look_paint_line_vary: float = 0.12
+@export_range(0.0, 0.3, 0.005) var look_paint_line_vary: float = 0.0
 @export_range(1.0, 60.0, 0.5) var look_paint_line_vary_cells: float = 9.0
 @export_range(0.0, 0.3, 0.005) var look_paint_line_shadow: float = 0.06
-@export_range(0.0, 6.0, 0.1) var look_paint_line_wobble_texels: float = 1.6
+@export_range(0.0, 6.0, 0.1) var look_paint_line_wobble_texels: float = 0.0
 ## Where the inner ink faces the key it breaks: the share of cells that drop the line (0 = never) and the cells per metre.
-@export_range(0.0, 1.0, 0.01) var look_paint_line_gap: float = 0.3
+@export_range(0.0, 1.0, 0.01) var look_paint_line_gap: float = 0.0
 @export_range(2.0, 80.0, 0.5) var look_paint_line_gap_cells: float = 16.0
 ## The hull: how far the width swings with an object-space noise (a share of it) and the noise's cells per metre; how much heavier it is on the
 ## shadow side than the lit side (0 = even); the wobble in pixels (steps on the beat) and its cells per metre.
-@export_range(0.0, 0.9, 0.01) var look_paint_hull_vary: float = 0.45
+@export_range(0.0, 0.9, 0.01) var look_paint_hull_vary: float = 0.0
 @export_range(1.0, 40.0, 0.5) var look_paint_hull_vary_cells: float = 6.0
 @export_range(0.0, 2.0, 0.01) var look_paint_hull_shadow: float = 0.7
-@export_range(0.0, 4.0, 0.05) var look_paint_hull_wobble_px: float = 1.1
+@export_range(0.0, 4.0, 0.05) var look_paint_hull_wobble_px: float = 0.0
 @export_range(1.0, 60.0, 0.5) var look_paint_hull_wobble_cells: float = 11.0
 ## The hull breaks where it faces the key: the share of cells that drop the line and the cells per metre.
-@export_range(0.0, 1.0, 0.01) var look_paint_hull_gap: float = 0.4
+@export_range(0.0, 1.0, 0.01) var look_paint_hull_gap: float = 0.0
 @export_range(2.0, 80.0, 0.5) var look_paint_hull_gap_cells: float = 14.0
-## The rim is broken into patches by a noise: its cells per metre and the cut (a higher cut leaves fewer, smaller patches; 1 = no rim).
+## The rim can be broken into patches by a noise: its cells per metre and the cut (a higher cut leaves fewer, smaller patches; 0 = no patches, one clean line, the default).
 @export_range(1.0, 30.0, 0.5) var look_paint_rim_patch_cells: float = 4.5
-@export_range(0.0, 1.0, 0.01) var look_paint_rim_patch_cut: float = 0.62
+@export_range(0.0, 1.0, 0.01) var look_paint_rim_patch_cut: float = 0.0
+@export_subgroup("Ground contact (C1)")
+## A figure's contact shadow under the trailer profile: 1 = one soft dark blob (no noise, no hard core), 0 = the drawn two-value shape with a broken edge (props keep that).
+@export_range(0.0, 1.0, 0.01) var look_paint_contact_soft: float = 1.0
 @export_subgroup("Frame finish (G1)")
 ## The trailer's frame finish, 1 = on, 0 = the plain edge pass and the full 3D resolution (the A/B). It reads no screen copy (that cost about 3 ms): the
 ## 3D view renders at `look_finish_scale` of the window and is upscaled bilinearly (the trailer is soft, like video; the HUD stays sharp, and the
@@ -1454,12 +1457,12 @@ extends Resource
 ## (`look_finish_line_break`: the share of the line the coarse noise thins or drops); a paper grain of `look_finish_grain` (a share of the value,
 ## cells of `look_finish_grain_px` pixels) lies over the frame. The wobble, the breaks and the grain are new on each beat (look_paint_wobble_hz: twos).
 @export_range(0, 1, 1) var look_finish_on: int = 1
-@export_range(0.5, 1.0, 0.01) var look_finish_scale: float = 0.85
-@export_range(0.0, 0.2, 0.002) var look_finish_grain: float = 0.032
+@export_range(0.5, 1.0, 0.01) var look_finish_scale: float = 1.0
+@export_range(0.0, 0.2, 0.002) var look_finish_grain: float = 0.0
 @export_range(1.0, 6.0, 0.5) var look_finish_grain_px: float = 2.0
-@export_range(0.0, 3.0, 0.05) var look_finish_wobble_px: float = 1.0
+@export_range(0.0, 3.0, 0.05) var look_finish_wobble_px: float = 0.0
 @export_range(20.0, 400.0, 5.0) var look_finish_wobble_cell_px: float = 120.0
-@export_range(0.0, 1.0, 0.01) var look_finish_line_break: float = 0.25
+@export_range(0.0, 1.0, 0.01) var look_finish_line_break: float = 0.0
 
 @export_group("Audio")
 @export_subgroup("Mix")
