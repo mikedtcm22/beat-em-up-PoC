@@ -69,7 +69,7 @@ Owned files are exclusive within a phase. **T11 is the only row that edits `game
 | T28 | Route spikes after Game-boy's "Propose a new route" (2026-11-13): S0 full-frame Gemini repaint (the trailer's own method, the ceiling), S1 drawn sprite characters and arms, S2 camera-projected painted street, S3 = S1 + S2; same four moments each; branches `m7/spike-s1`, `m7/spike-s2`, not merged | media | workflow | sonnet | high | | T27 | four stills per route in `captures/m7-slice/spikes/`, a walk-cycle clip for S1, an off-vantage still for S2 | |
 | T29 | Blind judge x3 on the spikes and scoring; the lead's route proposal with samples | verify | workflow | opus | medium | | T28 | per-route medians; user: picks a route or stops | |
 
-### Phase 2: the roll-out (after Gate 1)
+### Phase 2: the roll-out (after Gate 1) — SUPERSEDED 2026-11-13, not run; replaced by Phase 3
 
 Run through `tools/workflows/build.js` with `concurrency: 4`. Check `get_usage` before each wave; each wave ends in wip commits and a HANDOFF update.
 
@@ -86,11 +86,45 @@ Run through `tools/workflows/build.js` with `concurrency: 4`. Check `get_usage` 
 | T38 | README departures completed, ASSETS rows, look bible addendum | content | delegate | sonnet | medium | | T37 | `--check` rebuilds pass; every new asset has its row | |
 | T39 | HANDOFF, PR, Gate 2: reel and run command to Game-boy | verify | inline | session | medium | | T38 | user: plays Mission 1 in the trailer look and signs off | |
 
+### Phase 3: comic-book 3D (replan 2026-11-13, awaiting Game-boy's approval)
+
+The bar changes. Not "a still can't be told from the trailer", which nothing playable reached, but: a clean cel-shaded 3D brawler with the trailer's night mood, and real drawn art at the moments where the camera is fixed. The gate is Game-boy's eye on a side-by-side reel and a play session; the blind judge is retired (it could not rank any route). Characters stay 3D (ragdoll, 60 Hz animation, damage marks kept). Ox keeps his M6 colours. No Tripo. Gemini at most $24 of the about $26 left. Builders work in hand-made worktrees `.worktrees/m7-c<N>` on `m7/c<N>`, disjoint files, one godot recording at a time.
+
+#### 3a: the clean slice (the Punk, the player's arms, Mission 1's first street arena)
+
+| ID | Task | Class | Mode | Model | Effort | Pkt | Depends | Done when | ✓ |
+|---|---|---|---|---|---|---|---|---|---|
+| T40 | Target note `docs/milestones/M7-comic-3d.md` (one page): the character recipe (flat fills, one hard shadow shape per form, bold face, thin warm rim on the key side, no grain on figures), the list of drawn-card moments, the fence and window choice; README "Where M7 departs from the spec" updated with what Game-boy approved | design | inline | session | high | | go | the note and README section exist; each departure quotes his approval | |
+| T41 | Find why Punks' faces show a purple blotch under the trailer profile (ruled out: the damage look, the key light's cast shadow). Fix it and pin it with a test | debug | delegate | opus | high | | go | cause named; `street_05` and `punk_turn_01` re-recorded with no blotch; test added | |
+| T42 | Shader cleanup, sole owner of `toon_painted*`, `paint_grain`, `edge_finish`, `toon_materials.gd`: drop grain and line breaks on figures, quantise the shade term to one hard edge, keep swelling line weight, thin warm rim on the key side only, blob contact shadow in place of the crisp cast shadow on figures | feature | parallel | sonnet | high | | T41 | stills at `street_05`, `arms_03`, `punk_turn_01..08` show flat clean fills and one shadow edge; M6 profile pixel-identical; touched tests pass | |
+| T43 | Punk and player-arm maps repainted clean: flat local colour, the face taken from the S1 spike's drawings (`captures/m7-slice/spikes/s1/work/gem`) projected front and three-quarter, scribble shadow patches and sleeve dashes removed, gloves with clear finger lines. Gemini at most $4 | media | parallel | sonnet | high | | go | face readable at fight distance and at 45 degrees; `test_trailer_punk`, `test_trailer_player` pass; ASSETS ledger row | |
+| T44 | Street tells: the chain-link lattice swapped (trailer profile only) for a simple drawn fence of bars or boards with a few painted gaps; window rows broken up in the trim sheet itself (lit, dark, boarded, offset); lamp halos stepped. Gemini at most $3 | content | parallel | sonnet | high | | go | `street_01..08` show no regular lattice and no even window row; colliders fixture passes; `gen_trailer_kit --check` ok | |
+| T45 | Cut-in system (presentation layer only): a `CutIn` node that shows a full-screen drawn card for a tunable hold on four events: mission title, enemy type's first entrance, arena-clearing knockout, mission end. Reads `CombatEvents`, uses `TimeController` for the hold, skippable, off under the M6 profile; placeholder images | feature | parallel | sonnet | high | | go | each card fires once at its event in a bot act; no game state written; tests for trigger, hold, skip and the M6-off case pass | |
+| T46 | The slice's drawn cards by Gemini repaint of game stills (the method that worked on single frames): mission title card, Punk entrance card, two knockout panels. 1600x900, HUD-free. At most $3 | media | delegate | sonnet | medium | | T45 | four cards load through T45; ASSETS ledger row; a sheet of the four for the lead | |
+| T47 | Merge c-branches (T42 first); full suite under M6; frame time by the perf3 method; record the slice once as a three-way reel: M6, the old trailer look (`merged3`), the new look; HANDOFF updated | integration | delegate | opus | high | | T42-T46 | suite green; trailer profile within +10% of M6; `captures/m7-comic/slice/` holds stills, clips, reel | |
+| T48 | Lead's look at full-size stills and the reel; fix list of at most 3 packages | design | inline | session | medium | | T47 | list in the Log | |
+| T49 | One fix wave from T48 | feature | parallel | sonnet | high | | T48 | each item re-checked in a new still; suite green; reel re-cut | |
+| T50 | Gate 3: the reel and the run command to Game-boy | verify | inline | session | medium | | T49 | user: plays the slice with F7; go, adjust or stop | |
+
+#### 3b: the roll-out (after Gate 3)
+
+One workflow row, run in two waves of five so the 8 GB machine records one at a time. Check `get_usage` before each wave; each wave ends in pushed commits and a HANDOFF update.
+
+| ID | Task | Class | Mode | Model | Effort | Pkt | Depends | Done when | ✓ |
+|---|---|---|---|---|---|---|---|---|---|
+| T51 | Ten pieces. Wave 1: (a) Thug, (b) Bruiser, (c) Kicker, each through the T43 recipe; (d) Ox, cleanup and bold face only, M6 colours kept; (e) the rest of the street and its props. Wave 2: (f) dusk roofs, light and painted sky; (g) boss roof with fire wall and embers; (h) crowd room, training room and dummy; (i) the full card set: entrance cards for Thug, Bruiser, Kicker, Ox's name card, knockout panels per type, mission end card; (j) HUD restyled to match, debug line removed. Gemini at most $14 in all | media | workflow | sonnet | high | | T50 | each piece loads under the trailer profile, its tests pass, stills attached, ledger rows added | |
+| T52 | Merge both waves; full suite under M6; frame time on street, roofs and boss roof; record Mission 1 end to end once | integration | delegate | opus | high | | T51 | suite green; each area within +10% of M6; `captures/m7-comic/final/` recorded | |
+| T53 | Make the new look the default and keep M6 on F7: fix the tests that assume an M6 start (41 failed when last tried) without weakening them | integration | delegate | sonnet | high | | T52 | suite green starting in either profile | |
+| T54 | Review through `tools/workflows/review.js`: 2 Opus visual lenses (characters and cards; world, light and effects), 1 Sonnet code lens, Sonnet skeptics on medium and high findings only; image budget 24 | verify | workflow | opus | high | | T53 | findings file in `docs/reviews/M7/` | |
+| T55 | Lead's triage and one fix wave, at most 3 packages | feature | parallel | sonnet | high | | T54 | no medium or high finding left; each re-checked in a new still; suite green | |
+| T56 | README departures, ASSETS rows, ARCHITECTURE notes for the cut-in system and the look default | content | delegate | sonnet | medium | | T55 | every new asset has its row; `--check` rebuilds pass | |
+| T57 | Gate 4: HANDOFF, PR, the Mission 1 reel and the run command to Game-boy | verify | inline | session | medium | | T56 | user: plays Mission 1 and signs off | |
+
 ## Probes
 
 Rows running one level below their class's usual effort to test whether it can get cheaper.
 
-- none (no class has graded history yet; this plan's rows build it)
+- Phase 3: T48 (design, inline) runs at medium, the probe level the rates table offers for design; T46 (media) runs at medium against the class's graded history at high, because repainting stills is the one media step that already worked first time.
 
 ## Budget notes
 
@@ -99,6 +133,11 @@ Rows running one level below their class's usual effort to test whether it can g
 - Estimates, in % of a 5-hour window, from HANDOFF's measured 4 to 7% per Sonnet builder and 5 to 7% per Opus reviewer: Phase 0 about 15%; Phase 1 50 to 70% (seven builders 30 to 45%, merge and judges 15 to 20%, fix wave up to 15%), with a planned handoff point at T17; Phase 2 two to three windows (each wave 20 to 28%, the review round 25 to 35%, fixes and re-check 20%).
 - Outside spend: Gemini at most $35 (slice at most $8); Tripo 55 credits in the slice, about 500 more than the 355 left if arm B wins (asked at Gate 1); Runway none.
 - Waiting on Game-boy's judgment: T01 (target sheet), T21 (Gate 1), T39 (Gate 2), plus the five questions in the milestone plan §5.
+
+- **Phase 3 (replan 2026-11-13).** 18 rows: 4 inline on Fable (the target note, the lead's look, two gates), 3 Opus rows (the blotch debug, two merges) plus the review workflow, 2 workflow rows, the rest Sonnet. Fable writes no code.
+- Phase 3 cost, from what the last two rounds measured (the eleven-agent adjust round moved the weekly meter about 3 points, the eight-agent spikes about 1): 3a about 4 to 5 points of the week, 3b about 8 to 10. The dear rows are T51 (ten builders) and T54 (the review); T53 is the one with unknown size.
+- Phase 3 outside spend: Gemini at most $24 (3a $10, 3b $14) of the about $26 left; no Tripo; nothing else.
+- Phase 3 waits on Game-boy at: this plan's approval and its three questions, T50 (Gate 3), T57 (Gate 4).
 
 ## Log
 
@@ -109,3 +148,4 @@ Rows running one level below their class's usual effort to test whether it can g
 - 2026-11-11: Phase 1 merged with one fix wave (F1 colour, F2 paint, F3 light shapes). Gate 1 measures FAIL: blind judge cand_street 0.80, cand_arms 0.92, cand_punk 0.88; in the same shuffle trailer 0.35 (0.12-0.55), refs 0.12, m6 0.94. Frame time +22.6% (m6 11.05 ms, trailer 13.55 ms; gate +10%). Arm B built on m7/t13 (55 Tripo credits, $0.42 Gemini), not merged; pick open. Gemini topped up by $35 at 15:53. Top tells: flat mapped faces, ruler-clean outlines, exact chain-link, constant-width rim, tiled brick and windows. Known bug: translucent damage blotches on full-health Punks. Sent to Game-boy for go, adjust or stop.
 - 2026-11-12: adjust round (T22-T26) merged, 2172/2172. Frame time now passes: m6 10.90 ms, trailer 10.15 ms (-6.9%). Blind judge still FAILS: cand_street 0.80 (was 0.80), cand_arms 0.80 (was 0.92), cand_punk 0.95 (was 0.88); trailer 0.35, m6 0.90. Top tells: exact chain-link 48, flat mapped faces 43, window rows 30, ruler-clean outlines 20, shadow-map terminators 16. The purple face blotch survives (not damage, not the key's cast shadow). Gemini spend this round about $3.50. Lead's recommendation at T27: stop the painted-asset route.
 - 2026-11-13: route spikes (T28, T29). Blind judge: now 0.78, S0 full repaint 0.72, S1 sprites 0.73, S2 projected street 0.75, S3 both 0.73; trailer 0.40, m6 0.90. Even the trailer's own method on our frames fails, so the judge is reading something every game frame shares (HUD panel, first-person framing, street layout) and cannot rank routes. By eye S1 and S3 characters read as drawn. Gemini about $4.6 this step (about $8.5 of $35 so far). Lead's proposal: a playable drawn-sprite Punk slice; waiting on Game-boy.
+- 2026-11-13: Game-boy asked what the best trade of art quality and feasibility is if the exact trailer style is relaxed, then asked to see the plan. Phase 2 superseded by Phase 3, comic-book 3D: keep the night street and 3D characters, clean the figures, drawn cards at fixed-camera moments, gate by his eye. Not started; awaiting approval and three answers (the bar, the cut-in cards, the default look).

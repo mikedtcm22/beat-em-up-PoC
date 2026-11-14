@@ -4,6 +4,12 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-13 (plan): comic-book 3D replan written, waiting on Game-boy's approval
+
+- Game-boy did not pick the sprite Punk. He asked for the best trade of art and feasibility with the exact style relaxed, then for the plan. It is `.claude/cfo/plan.md`, "Phase 3: comic-book 3D" (T40 to T57); Phase 2 (T30 to T39) is superseded and was never run.
+- Open questions put to him: (1) the new bar and gate by his eye, (2) adding cut-in cards (title, enemy entrances, knockouts, end), a spec change, (3) the new look as default with M6 on F7.
+- **Start nothing until he approves.** First rows on approval: T40 inline, then T41 (Opus debug of the purple face blotch), then T42 to T46 in parallel worktrees.
+
 ### 2026-11-13 (later): route spikes done; proposal sent, waiting on Game-boy
 
 - Outputs: `captures/m7-slice/spikes/` (`routes_sheet.jpg`: now | S1 | S2 | S3 | S0; `routes_reel.mp4`; `s0..s3/`). Judge `judge4/`: now 0.78, S0 0.72, S1 0.73, S2 0.75, S3 0.73; trailer 0.40, m6 0.90. The judge cannot rank the routes: even the trailer's own repaint method on our frames fails. Suspected confound: the HP panel and first-person framing in every game frame.
