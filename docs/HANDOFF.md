@@ -4,6 +4,15 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-13 (T47 done): the clean slice is merged and recorded; frame time misses the gate at full scale
+
+- **Merged** into `m7/trailer-look`: m7/c1 (7484df3), c4 (23539a7), c5 (5317800), c3 (2f5be1b), then e19c303: the Punk's skin and eye band warmed (T41's paint fix, which T43 had not applied; maps regenerated), the "Cut-ins (M7)" group moved before Audio (the Audio, Look, Debug tail is pinned), the fence uniforms unset under m6 (exact round trip), ASSETS rows for each card, test_street_fx runs with cards off.
+- **Suite:** 2206/2206, no SCRIPT or SHADER ERROR (`captures/m7-comic/slice/tests2.log`).
+- **Frame time (`captures/m7-comic/slice/perf.txt`):** m6 10.95 ms, trailer 12.40 ms, **+13.3% (gate +10%: MISS)**, p95 +10.7%. The whole cost is the full-scale 3D view the target asks for (look_finish_scale 1.0): at 0.85 the same tree is 9.88 ms. Two cheap cuts (edge-finish early-outs, half-res sky) gained nothing and were reverted. Needs the lead's call: a per-feature probe at full scale, or a scale between.
+- **For the owner:** `captures/m7-comic/slice/reel_m6_old_new.mp4` (m6 | old | new, then the cards), `sheet_old_new.jpg`, stills and clips in `new/`, `INDEX.md`.
+- **Still off the target:** the bruise marks on the street Punks at f640 (0.6 health, as M6) read as big violet and grey blotches over face, vest and gloves; the gloves carry too much ink; the stage Punk still casts a shadow-map shadow; the lamp halos are puffy; the far windows are dim; the cards still show the old chain-link fence and the old slashed arm, and the entrance card's Punk wears sunglasses.
+- **Next:** T48, the lead's look and a fix list of at most three.
+
 ### 2026-11-13 (build): Game-boy approved Phase 3 ("Approve, start"); the clean slice is building
 
 - **Decision (chat, 2026-11-13):** "Approve, start": the comic-book 3D plan as written, including the cut-in cards and the new look as default at the end. Target: `docs/milestones/M7-comic-3d.md` (T40 done, README departures added).
