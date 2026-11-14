@@ -4,6 +4,14 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-14 (T49 done): D1-D3 merged; suite green; frame time +8.8% at full scale (gate passes); slice re-recorded in `slice2/`
+- **Merged** into `m7/trailer-look`: m7/d1 (b151cd9), d2 (9e447d7), d3 (cd4d7b8); a18e426 regenerates `tuning/default.json` (the merge dropped D2's `night_lamp_fade_m`/`_len_m`); b7a4aa0 adds `cut_in_bot --full-entrance` (the entrance card runs its whole hold, for recordings).
+- **Suite:** 2209/2209, no SCRIPT or SHADER ERROR (`captures/m7-comic/slice2/tests.log`).
+- **Frame time (`captures/m7-comic/slice2/perf.txt`):** m6 10.98 ms, trailer 11.95 ms, **+8.8% (PASS)**, p95 +8.6%, full scale (no 0.93 fallback). Thin margin: one trailer run alone was +11.7%.
+- **For the owner:** `captures/m7-comic/slice2/reel_m6_old_new.mp4`, `sheet_old_new.jpg`, `new/stills/` (incl. card_f*.png), `INDEX.md`.
+- **Still off the target:** Punk face reads grey, with a hard light band across mouth and chin and a stray ink stroke on the cheek; about six scattered maroon bruise patches at f640; jeans carry blue painted patches (not two flat tones); orange rim reads as a band on the vest edge; lamp halos are flat orange discs with a rim; far towers' window grid still repeats evenly; the cards' Punk (dark hair, stubble) does not match the in-game Punk (blond sides).
+- **Next:** close T49 with `cfo.py done`, then T50 (Gate 3 to Game-boy).
+
 ### 2026-11-13 (fix wave): T48 look done, T49 fix wave running (workflow `m7-comic-fix-wave`, run `wf_66e4d171-9fa`)
 - T41 to T47 are done (T47 logged fail: frame time +13.3% at full scale; suite 2206 green). The lead's look: fence, flat fills, clean arms and the thin rim are right.
 - Fix list (also in the plan Log): D1 bruise style under the trailer profile (small hard maroon shapes on skin only, same thresholds) and no shadow-map shadow on figures, branch `m7/d1`; D2 frame time under +10% at full scale (fallback scale 0.93 only if stills are indistinguishable) and a calmer lamp halo, `m7/d2`, runs alone after the other two; D3 cards redrawn from new-look stills (Gemini cap $2) and thinner glove ink, `m7/d3`. Then an Opus merge, suite, perf, re-record into `captures/m7-comic/slice2/`.
