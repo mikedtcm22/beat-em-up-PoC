@@ -1135,6 +1135,23 @@ extends Resource
 @export_range(-200.0, 200.0, 1.0) var hud_m7_offset_y: float = 0.0
 ## The combat log (the HUD's debug line) shows from the start under the trailer profile; off, L still brings it up.
 @export var hud_m7_log_visible: bool = false
+## The empty part of a bar (the trough): dark ink, as m6's, so lost health reads against the cream panel.
+@export var hud_m7_trough: Color = Color(0.22, 0.2, 0.27)
+## The damage chunk's ink edge (px) and how much further than that the corners grow it, the share of its fall it fades over the end of, and
+## the share of the gauge's damage flash that turns the fill toward white.
+@export_range(0.0, 8.0, 0.1) var hud_m7_chunk_edge_px: float = 2.5
+@export_range(1.0, 3.0, 0.05) var hud_m7_chunk_edge_grow: float = 1.4
+@export_range(0.05, 1.0, 0.05) var hud_m7_chunk_fade_share: float = 0.3
+@export_range(0.0, 1.0, 0.05) var hud_m7_flash_share: float = 0.7
+## How far an inked outline may stray, as a share of the shorter side of its box (a thin bar stays a clean shape), and the stray under which it
+## stays the plain quad (px).
+@export_range(0.0, 0.5, 0.01) var hud_m7_wobble_max_share: float = 0.12
+@export_range(0.0, 1.0, 0.01) var hud_m7_wobble_min_px: float = 0.05
+## The boss bar's drawn box: the padding (px) around its name and bar, and the name's lettering size (px).
+@export_range(0.0, 40.0, 1.0) var hud_m7_boss_box_pad_px: float = 10.0
+@export_range(12.0, 48.0, 1.0) var hud_m7_boss_name_px: float = 26.0
+## The hit words and bursts keep clear of the player's panel and the boss bar by this much (px) under the trailer profile.
+@export_range(0.0, 80.0, 1.0) var hud_m7_pop_clear_px: float = 14.0
 
 @export_group("Sparring")
 ## Seconds from the start of one of a sparring dummy's jabs to the next (varied a little).
@@ -1613,6 +1630,24 @@ extends Resource
 @export_range(0.0, 0.5, 0.01) var cutin_fade_s: float = 0.1
 ## The lettering's size on a card, a multiplier on the HUD's comic lettering (mission name, enemy name).
 @export_range(0.5, 2.0, 0.05) var cutin_lettering_size: float = 1.0
+## A card's caption box: the big and the small line (px at 1920 x 1080, before the lettering size), the padding around them (px), the shear, the
+## ink border and the drop shadow (px). The box sits bottom-left, this share of the frame in from the left and up from the bottom, clear of the subject.
+@export_range(24, 200, 1) var cutin_label_px: int = 64
+@export_range(12, 120, 1) var cutin_sub_px: int = 30
+@export_range(0.0, 100.0, 1.0) var cutin_pad_x_px: float = 30.0
+@export_range(0.0, 100.0, 1.0) var cutin_pad_y_px: float = 16.0
+@export_range(0.0, 0.4, 0.01) var cutin_slant: float = 0.14
+@export_range(0.0, 20.0, 0.5) var cutin_border_px: float = 5.0
+@export_range(0.0, 24.0, 0.5) var cutin_shadow_px: float = 7.0
+@export_range(0.0, 0.3, 0.005) var cutin_margin_x: float = 0.035
+@export_range(0.0, 0.3, 0.005) var cutin_margin_y: float = 0.06
+## At most this many cards wait behind the one showing; further ones (never the end card) are dropped.
+@export_range(0, 10, 1) var cutin_max_waiting: int = 3
+## The first step of game time a card is given after it goes up counts at most this long (s): the frame that first draws it also carries
+## the level's load and the shader compiles, which must not eat its hold. 0 turns the cap off.
+@export_range(0.0, 0.2, 0.005) var cutin_first_step_cap_s: float = 0.033
+## A restart (or any scene load) shows the mission title and the enemy entrances again; off, each shows once per run of the game.
+@export var cutin_replay_on_restart: bool = false
 
 @export_group("Audio")
 @export_subgroup("Mix")

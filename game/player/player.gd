@@ -187,7 +187,9 @@ static func worn_art(scene_art: CharacterArt, probe: bool = false) -> CharacterA
 
 
 func _physics_process(delta: float) -> void:
-	var frame := input.poll()
+	# While a card holds the simulation (or on the first tick after it lets go) the presses are not for it: the press that skipped
+	# the card must not throw a punch, and nothing pressed behind the card waits to replay. Releases still go through.
+	var frame := input.poll(TimeController.swallows_input())
 	_move_input = frame.move
 	# Within one poll presses come before releases (a same-tick tap is press, release).
 	for button in frame.pressed:

@@ -13,12 +13,16 @@ var _texture: Texture2D
 
 func before_each() -> void:
 	Tuning.reset_to_default()
+	# The first-step cap and the once-per-run memory have their own tests; the rest drive advance() with whole holds at once.
+	Tuning.set_value(&"cutin_first_step_cap_s", 0.0)
+	CutIn.forget_run()
 	TimeController.clear()
 	_texture = ImageTexture.create_from_image(Image.create(4, 4, false, Image.FORMAT_RGBA8))
 
 
 func after_each() -> void:
 	Tuning.reset_to_default()
+	CutIn.forget_run()
 	TimeController.clear()
 
 
@@ -41,17 +45,25 @@ func _card_set() -> CutInSet:
 	return set
 
 
-## A CutIn on `set`, with the trailer profile on unless `trailer` is false; `with_level` puts a level_root in the tree first.
-func _cut_in(trailer: bool = true, with_level: bool = false, card_set: CutInSet = null) -> CutIn:
+## A CutIn on `set`, with the trailer profile on unless `trailer` is false. `with_level` puts a level_root in the tree first (the title
+## then fires on the first frame); otherwise one joins the scene after the CutIn is up, unless `in_mission` is false (a room: no cards).
+func _cut_in(trailer: bool = true, with_level: bool = false, card_set: CutInSet = null, in_mission: bool = true) -> CutIn:
 	Tuning.set_value(&"look_profile", 1 if trailer else 0)
 	if with_level:
-		var level := Node.new()
-		level.add_to_group(LevelRoot.GROUP)
-		add_child_autofree(level)
+		_level()
 	var cut_in := CutIn.new()
 	cut_in.cards = card_set if card_set != null else _card_set()
 	add_child_autofree(cut_in)
+	if in_mission and not with_level:
+		_level()
 	return cut_in
+
+
+func _level() -> Node:
+	var level := Node.new()
+	level.add_to_group(LevelRoot.GROUP)
+	add_child_autofree(level)
+	return level
 
 
 func _enemy(archetype: StringName) -> EnemyActor:
@@ -106,7 +118,7 @@ func test_the_title_fires_once_on_the_first_frame_of_play() -> void:
 
 
 func test_no_title_without_a_level() -> void:
-	var cut_in := _cut_in(true, false)
+	var cut_in := _cut_in(true, false, null, false)
 	cut_in.advance(0.0)
 	assert_false(cut_in.is_showing(), "the rooms have no mission")
 
@@ -251,6 +263,7 @@ func test_any_attack_or_confirm_input_skips_a_card() -> void:
 		TimeController.clear()
 		var cut_in := _cut_in()
 		cut_in._seen.clear()
+		CutIn.forget_run()
 		var enemy := StubEnemy.new()
 		enemy.archetype = &"punk"
 		add_child_autofree(enemy)
@@ -437,6 +450,12 @@ func test_mission_1_under_the_trailer_profile_opens_on_the_title_and_holds() -> 
 	add_child_autofree(level)
 	await get_tree().physics_frame
 	var cut_in := _hud_of(level).cut_in
+	assert_eq(TimeController.sim_scale(), 0.0, "the street waits while the set loads, and then for the card")
+	# The set loads on a thread: the title goes up on the first step after it has arrived.
+	for i in 900:
+		if not cut_in.history.is_empty():
+			break
+		await get_tree().process_frame
 	assert_eq(cut_in.history[0].kind, CutIn.Kind.TITLE, "the first card is the mission title")
 	assert_eq(TimeController.sim_scale(), 0.0, "the street holds while it is up")
 	cut_in.skip()
@@ -454,3 +473,207 @@ func test_mission_1_under_m6_shows_no_card() -> void:
 	assert_eq(cut_in.history.size(), 0)
 	assert_false(cut_in.visible)
 	assert_eq(TimeController.sim_scale(), 1.0)
+
+
+# --- x-cutin fixes ---------------------------------------------------------------------------------------------
+
+
+func _heard(player: PlayerCharacter, action: StringName) -> bool:
+	var button: StringName = PlayerInput.BUTTONS[action]
+	return player.parser.is_held(button) or player.parser.has_buffered(button)
+
+
+func test_input_during_a_hold_and_the_skip_press_never_reach_the_player() -> void:
+	var player := PlayerCharacter.new()
+	add_child_autofree(player)
+	await get_tree().physics_frame
+	TimeController.hold_sim(self, true)
+	Input.action_press(&"punch")
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	assert_false(_heard(player, &"punch"), "a press made behind a card is not the simulation's")
+	Input.action_release(&"punch")
+	await get_tree().physics_frame
+	# The card is skipped by a press (CutIn._input lets the hold go) that is still "just pressed" on the very tick the hold has gone:
+	# the Input singleton reports a press one tick after it was made, so the hold lets go a tick after the press here.
+	Input.action_press(&"kick")
+	await get_tree().physics_frame
+	TimeController.hold_sim(self, false)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	assert_false(_heard(player, &"kick"), "the press that skipped the card is not thrown as a kick")
+	assert_false(_heard(player, &"punch"), "and nothing replays when the hold ends")
+	Input.action_release(&"kick")
+	await get_tree().physics_frame
+	# Control: a press after that is heard.
+	Input.action_press(&"punch")
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	assert_true(_heard(player, &"punch"), "the next press is the simulation's again")
+	Input.action_release(&"punch")
+
+
+func test_swallows_input_while_held_and_for_one_tick_after() -> void:
+	assert_false(TimeController.swallows_input())
+	TimeController.hold_sim(self, true)
+	assert_true(TimeController.swallows_input())
+	assert_true(TimeController.swallows_input(), "all the time it holds")
+	TimeController.hold_sim(self, false)
+	assert_true(TimeController.swallows_input(), "the tick after it lets go")
+	assert_false(TimeController.swallows_input(), "and then input is the simulation's again")
+
+
+func test_the_player_input_drops_presses_when_asked() -> void:
+	var input := PlayerInput.new()
+	Input.action_press(&"punch")
+	assert_eq(input.poll(true).pressed.size(), 0, "dropped")
+	var frame := input.poll(false)
+	assert_eq(frame.pressed.size(), 1, "and not remembered as held: a later poll still sees the press")
+	Input.action_release(&"punch")
+
+
+func test_a_hold_stops_the_slow_mo_and_hitstop_clocks() -> void:
+	var victim := _node()
+	TimeController.hitstop([victim], 0.1)
+	TimeController.slowmo(0.3, 0.25, 0.05)
+	TimeController.hold_sim(self, true)
+	var ticks := int(Engine.physics_ticks_per_second * 0.5)
+	for i in ticks:
+		await get_tree().physics_frame
+	assert_eq(TimeController.sim_scale(), 0.0, "held")
+	TimeController.hold_sim(self, false)
+	assert_false(TimeController.is_slowmo(), "the delayed slow-mo has not started behind the card")
+	# After the card: the hitstop is still to play, then the slow-mo starts.
+	var froze := false
+	var slowed := false
+	for i in 40:
+		await get_tree().physics_frame
+		froze = froze or TimeController.is_in_hitstop(victim)
+		slowed = slowed or TimeController.is_slowmo()
+	assert_true(froze, "the hitstop plays after the card")
+	assert_true(slowed, "and the slow-mo after it")
+
+
+func test_a_loose_weapon_stays_put_during_a_hold() -> void:
+	var weapon := Weapon.new()
+	add_child_autofree(weapon)
+	weapon.global_position = Vector3(0.0, 5.0, 0.0)
+	weapon.linear_velocity = Vector3(2.0, 0.0, 0.0)
+	await get_tree().physics_frame
+	TimeController.hold_sim(self, true)
+	await get_tree().physics_frame
+	var at := weapon.global_position
+	for i in 30:
+		await get_tree().physics_frame
+	assert_eq(weapon.global_position, at, "frozen while the card is up")
+	TimeController.hold_sim(self, false)
+	await get_tree().physics_frame
+	assert_false(weapon.freeze, "free again")
+	assert_almost_eq(weapon.linear_velocity.x, 2.0, 0.5, "with the velocity it had")
+
+
+func test_the_boss_knockout_card_shows_when_the_level_clear_is_announced_first() -> void:
+	var cut_in := _cut_in(true, false, _boss_set())
+	var victim := _enemy(&"boss")
+	cut_in.skip()
+	CombatEvents.ko.emit(victim, HitInfo.new())
+	var arena := _node()
+	# The game's order for the last arena: the level's clear, then the arena's.
+	CombatEvents.level_cleared.emit(_node())
+	CombatEvents.arena_cleared.emit(arena)
+	assert_eq(cut_in.current_kind(), CutIn.Kind.KO, "the knockout panel is up first")
+	assert_eq(TimeController.sim_scale(), 0.0)
+	cut_in.skip()
+	assert_eq(cut_in.current_kind(), CutIn.Kind.END, "then the end card")
+	assert_eq(_kinds(cut_in), [CutIn.Kind.ENTRANCE, CutIn.Kind.KO, CutIn.Kind.END])
+
+
+func _boss_set() -> CutInSet:
+	var set := _card_set()
+	set.ko_panels.append(_entry(&"boss", "", 1))
+	return set
+
+
+func test_the_real_last_arena_clear_gives_the_knockout_then_the_end_card() -> void:
+	var cut_in := _cut_in(true, false, _boss_set())
+	var victim := _enemy(&"boss")
+	cut_in.skip()
+	CombatEvents.ko.emit(victim, HitInfo.new())
+	var arena := Arena.new()
+	add_child_autofree(arena)
+	# What LevelRoot does for its last arena: answer the arena's own signal with the level's clear.
+	arena.cleared.connect(func() -> void: CombatEvents.level_cleared.emit(arena))
+	arena.clear()
+	assert_eq(cut_in.history.map(func(h: Dictionary) -> int: return h.kind), [CutIn.Kind.ENTRANCE, CutIn.Kind.KO])
+	cut_in.skip()
+	assert_eq(cut_in.current_kind(), CutIn.Kind.END)
+
+
+func test_no_card_fires_outside_a_mission() -> void:
+	var cut_in := _cut_in(true, false, _boss_set(), false)
+	_enemy(&"punk")
+	assert_false(cut_in.is_showing(), "no entrance in the crowd room")
+	var victim := _enemy(&"punk")
+	CombatEvents.ko.emit(victim, HitInfo.new())
+	CombatEvents.arena_cleared.emit(_node())
+	CombatEvents.level_cleared.emit(_node())
+	assert_eq(cut_in.history.size(), 0, "no knockout panel or end card either")
+
+
+func test_a_restart_does_not_replay_the_title_and_entrances() -> void:
+	var first := _cut_in(true, true)
+	first.advance(0.0)
+	assert_eq(first.current_kind(), CutIn.Kind.TITLE)
+	first.skip()
+	_enemy(&"punk")
+	assert_eq(first.current_kind(), CutIn.Kind.ENTRANCE)
+	first.skip()
+	first.get_parent().remove_child(first)
+	first.free()
+	# The scene reloads: a new HUD, a new CutIn.
+	var second := _cut_in(true, false)
+	second.advance(0.0)
+	_enemy(&"punk")
+	assert_false(second.is_showing(), "seen this run: not again")
+	Tuning.set_value(&"cutin_replay_on_restart", true)
+	var third := _cut_in(true, true)
+	third.advance(0.0)
+	assert_eq(third.current_kind(), CutIn.Kind.TITLE, "unless the tunable asks for them")
+
+
+func test_the_first_step_of_a_card_counts_at_most_the_cap() -> void:
+	Tuning.set_value(&"cutin_first_step_cap_s", 0.05)
+	var cut_in := _cut_in(true, true)
+	cut_in.advance(0.0)
+	cut_in.advance(0.9)
+	assert_almost_eq(cut_in.age(), 0.05, 0.0001, "the load hitch of the first frame is not part of the hold")
+	cut_in.advance(0.5)
+	assert_almost_eq(cut_in.age(), 0.55, 0.0001, "later steps count whole")
+
+
+func test_no_set_is_loaded_under_m6_and_the_shipped_one_loads_once_under_trailer() -> void:
+	Tuning.set_value(&"look_profile", 0)
+	var m6 := CutIn.new()
+	add_child_autofree(m6)
+	m6.advance(0.016)
+	assert_null(m6.cards, "m6 never loads the cards")
+	Tuning.set_value(&"look_profile", 1)
+	for i in 900:
+		m6.advance(0.016)
+		if m6.cards != null:
+			break
+		await get_tree().process_frame
+	assert_not_null(m6.cards, "flipped to the trailer look it loads on a thread")
+	var other := CutIn.new()
+	add_child_autofree(other)
+	other.advance(0.016)
+	assert_same(other.cards, m6.cards, "kept for the run: the next HUD finds it ready")
+
+
+func test_the_caption_numbers_are_tunables_and_sit_bottom_left() -> void:
+	var source := FileAccess.get_file_as_string(CUT_IN_SCRIPT)
+	for needle in ["Vector2(48.0", "label_font_size", "size.y * 0.78", "size.y * 0.82", "MAX_WAITING"]:
+		assert_false(source.contains(needle), "%s is no longer in the script" % needle)
+	assert_lt(Tuning.data.cutin_label_px, 120, "the caption is smaller than the first one")
+	assert_lt(Tuning.data.cutin_margin_x, 0.2)
+	assert_lt(Tuning.data.cutin_margin_y, 0.2)

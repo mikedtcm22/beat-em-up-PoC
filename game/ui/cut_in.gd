@@ -9,6 +9,9 @@ extends Control
 ## | Knockout panel | CombatEvents.arena_cleared, one per arena, from the last enemy KO'd  | cutin_ko_hold_s      |
 ## | Mission end    | CombatEvents.level_cleared                                           | until a button       |
 ##
+## Cards only fire inside a mission (a LevelRoot in the scene); the crowd room and the training room show none. The mission title and
+## each entrance show once per run of the game unless cutin_replay_on_restart is on. When the level's clear is announced before the last
+## arena's (it is), the knockout panel still goes first and the end card follows.
 ## Cards show only under the trailer look profile with cutins_enabled on, and a card with no texture is skipped
 ## silently, so the m6 profile, the bots and the tests never see one. A punch, kick, back attack, grab or confirm press skips
 ## the card up (the end card takes none for cutin_end_lock_s). Cards queue (a knockout panel is dropped when another card
@@ -26,18 +29,17 @@ enum Kind { TITLE, ENTRANCE, KO, END }
 const DEFAULT_SET := "res://game/ui/cut_ins/mission1.tres"
 ## The inputs that skip a card.
 const SKIP_ACTIONS: Array[StringName] = [&"punch", &"kick", &"back_attack", &"grab", &"ui_accept"]
-## At most this many cards wait behind the one showing; further ones (never the end card) are dropped.
-const MAX_WAITING := 3
+## The caption box's look (sizes, padding, shear, border, shadow, place) and the queue length are the "Cut-ins (M7)" tunables.
 
-## Font sizes (pixels at 1920 x 1080, before cutin_lettering_size) of the big line and the small one.
-@export var label_font_size: int = 120
-@export var sub_font_size: int = 52
-## Panel look: the shear, the ink border and the drop shadow, as the GO cue's.
-@export var slant: float = 0.14
-@export var border: float = 6.0
-@export var shadow_px: float = 8.0
+## Cards only cost anything under the trailer profile, so the set (about 25 MB of PNGs) is loaded then: threaded, the first time it is
+## wanted, and kept for the run of the game (a restart or F6 finds it ready). Never loaded under m6.
+static var _held_set: CutInSet
+static var _set_requested: bool = false
+## What this run of the game has shown already (the title as &"title", enemy archetypes): a restart does not replay them
+## unless cutin_replay_on_restart is on.
+static var _run_seen: Dictionary[StringName, bool] = {}
 
-## The set in use (loaded from DEFAULT_SET when none is assigned).
+## The set in use (the shipped one, DEFAULT_SET, when none is assigned: it loads when the trailer profile first runs).
 var cards: CutInSet
 ## Every card that went up, in order: {kind, key}. For bots and tests.
 var history: Array[Dictionary] = []
@@ -45,6 +47,7 @@ var history: Array[Dictionary] = []
 var _queue: Array[Dictionary] = []
 var _current: Dictionary = {}
 var _age: float = 0.0
+var _stepped: bool = false
 var _title_pending: bool = false
 var _seen: Dictionary[StringName, bool] = {}
 var _cleared: Dictionary[int, bool] = {}
@@ -61,8 +64,6 @@ func _init() -> void:
 
 
 func _ready() -> void:
-	if cards == null and ResourceLoader.exists(DEFAULT_SET):
-		cards = load(DEFAULT_SET) as CutInSet
 	CombatEvents.ko.connect(_on_ko)
 	CombatEvents.arena_cleared.connect(_on_arena_cleared)
 	CombatEvents.level_cleared.connect(_on_level_cleared)
@@ -80,6 +81,11 @@ func _exit_tree() -> void:
 		CombatEvents.level_cleared.disconnect(_on_level_cleared)
 	if is_inside_tree() and get_tree().node_added.is_connected(_on_node_added):
 		get_tree().node_added.disconnect(_on_node_added)
+
+
+## Forget what this run of the game has shown (the title and the entrances), as a fresh start of the game would.
+static func forget_run() -> void:
+	_run_seen.clear()
 
 
 ## True when cards may show: the trailer look profile and the cutins_enabled tunable.
@@ -118,11 +124,18 @@ func skip() -> void:
 		_finish(true)
 
 
-## Step `delta` seconds of game time: the title waits for the first frame, the card up counts its hold down.
+## Step `delta` seconds of game time: the title waits for the first frame (and for the set to be loaded), the card up counts its hold down.
+## The first step a card gets counts at most cutin_first_step_cap_s: that frame also carries the load of the level.
 func advance(delta: float) -> void:
-	if _title_pending:
+	_ensure_cards()
+	if _title_pending and cards == null and is_enabled() and ResourceLoader.exists(DEFAULT_SET):
+		# The set is still loading: the street waits for the title (nothing happens behind it), as it will for the card.
+		TimeController.hold_sim(self, true)
+	elif _title_pending:
 		_title_pending = false
-		if is_enabled() and cards != null:
+		TimeController.hold_sim(self, false)
+		if is_enabled() and cards != null and not _was_seen(&"title"):
+			_mark_seen(&"title")
 			_enqueue(Kind.TITLE, &"title", cards.title, cards.title.pick() if cards.title else null)
 	if is_showing() and not is_enabled():
 		_queue.clear()
@@ -130,6 +143,11 @@ func advance(delta: float) -> void:
 		return
 	if not is_showing():
 		return
+	var cap: float = Tuning.data.cutin_first_step_cap_s
+	if not _stepped and cap > 0.0 and delta > 0.0:
+		delta = minf(delta, cap)
+	if delta > 0.0:
+		_stepped = true
 	_age += delta
 	var hold: float = _current.hold
 	if hold > 0.0 and _age >= hold:
@@ -150,6 +168,41 @@ func _input(event: InputEvent) -> void:
 			return
 
 
+## Take the set when it is wanted (the trailer profile is on): the held one, else the threaded load of DEFAULT_SET (polled each step).
+func _ensure_cards() -> void:
+	if cards != null or not is_enabled():
+		return
+	if _held_set == null:
+		if not ResourceLoader.exists(DEFAULT_SET):
+			return
+		if not _set_requested:
+			_set_requested = true
+			ResourceLoader.load_threaded_request(DEFAULT_SET)
+		match ResourceLoader.load_threaded_get_status(DEFAULT_SET):
+			ResourceLoader.THREAD_LOAD_LOADED, ResourceLoader.THREAD_LOAD_FAILED, ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+				_held_set = ResourceLoader.load_threaded_get(DEFAULT_SET) as CutInSet
+				if _held_set == null:
+					# The threaded load did not give it: load it here, once.
+					_held_set = load(DEFAULT_SET) as CutInSet
+			_:
+				return
+	cards = _held_set
+
+
+## True inside a mission (a LevelRoot is in the scene): the rooms show no cards.
+func _in_mission() -> bool:
+	return get_tree() != null and get_tree().get_first_node_in_group(LevelRoot.GROUP) != null
+
+
+func _was_seen(key: StringName) -> bool:
+	return _seen.has(key) or (not Tuning.data.cutin_replay_on_restart and _run_seen.has(key))
+
+
+func _mark_seen(key: StringName) -> void:
+	_seen[key] = true
+	_run_seen[key] = true
+
+
 func _on_node_added(node: Node) -> void:
 	var enemy := node as EnemyActor
 	if enemy == null:
@@ -162,11 +215,11 @@ func _on_node_added(node: Node) -> void:
 
 
 func _on_enemy_ready(enemy: EnemyActor) -> void:
-	if enemy.archetype == &"" or cards == null or not is_enabled():
+	if enemy.archetype == &"" or cards == null or not is_enabled() or not _in_mission():
 		return
-	if _seen.has(enemy.archetype):
+	if _was_seen(enemy.archetype):
 		return
-	_seen[enemy.archetype] = true
+	_mark_seen(enemy.archetype)
 	var entry := cards.entrance_for(enemy.archetype)
 	if entry != null:
 		_enqueue(Kind.ENTRANCE, enemy.archetype, entry, entry.pick())
@@ -179,7 +232,7 @@ func _on_ko(victim: Node3D, _hit: HitInfo) -> void:
 
 
 func _on_arena_cleared(arena: Node3D) -> void:
-	if cards == null or not is_enabled() or arena == null:
+	if cards == null or not is_enabled() or arena == null or not _in_mission():
 		return
 	var id := arena.get_instance_id()
 	if _cleared.has(id):
@@ -194,7 +247,7 @@ func _on_arena_cleared(arena: Node3D) -> void:
 
 
 func _on_level_cleared(_level: Node3D) -> void:
-	if cards == null or not is_enabled() or cards.mission_end == null:
+	if cards == null or not is_enabled() or cards.mission_end == null or not _in_mission():
 		return
 	_enqueue(Kind.END, &"mission_end", cards.mission_end, cards.mission_end.pick())
 
@@ -203,13 +256,34 @@ func _on_level_cleared(_level: Node3D) -> void:
 func _enqueue(kind: int, key: StringName, entry: CutInEntry, texture: Texture2D) -> void:
 	if entry == null or texture == null:
 		return
-	if kind == Kind.KO and (is_showing() or not _queue.is_empty()):
-		return
-	if kind != Kind.END and _queue.size() >= MAX_WAITING:
+	if kind == Kind.KO:
+		if _end_just_started():
+			# The last arena of the level: the level's clear (the end card) was announced before the arena's. The panel is first.
+			_queue.push_front({kind = kind, key = key, entry = entry, texture = texture, hold = _hold_for(kind)})
+			_take_back_end()
+			return
+		if is_showing() or not _queue.is_empty():
+			return
+	if kind != Kind.END and _queue.size() >= Tuning.data.cutin_max_waiting:
 		return
 	_queue.append({kind = kind, key = key, entry = entry, texture = texture, hold = _hold_for(kind)})
 	if not is_showing():
 		_start_next()
+
+
+## True when the end card went up this very step and has not been drawn yet.
+func _end_just_started() -> bool:
+	return current_kind() == Kind.END and _age == 0.0 and _queue.is_empty()
+
+
+## Put the end card, just started, back at the front of the queue (it was never drawn), and start the card that was put ahead of it.
+func _take_back_end() -> void:
+	var end := _current
+	_current = {}
+	history.pop_back()
+	card_ended.emit(end.kind, end.key, false)
+	_queue.insert(1, end)
+	_start_next()
 
 
 func _hold_for(kind: int) -> float:
@@ -231,6 +305,7 @@ func _start_next() -> void:
 		return
 	_current = _queue.pop_front()
 	_age = 0.0
+	_stepped = false
 	visible = true
 	TimeController.hold_sim(self, true)
 	history.append({kind = _current.kind, key = _current.key})
@@ -267,26 +342,22 @@ func _draw() -> void:
 	var kind: int = _current.kind
 	if kind == Kind.KO or entry.label == "":
 		return
-	var scale_by: float = Tuning.data.cutin_lettering_size
-	var big := roundi(label_font_size * scale_by)
-	var small := roundi(sub_font_size * scale_by)
+	var d := Tuning.data
+	var scale_by: float = d.cutin_lettering_size
+	var big := roundi(d.cutin_label_px * scale_by)
+	var small := roundi(d.cutin_sub_px * scale_by)
 	var font := HudStyle.bold_font()
 	var big_size := font.get_string_size(entry.label, HORIZONTAL_ALIGNMENT_LEFT, -1.0, big)
 	var sub_text := entry.sub_label
-	if kind == Kind.END and _age >= Tuning.data.cutin_end_lock_s:
+	if kind == Kind.END and _age >= d.cutin_end_lock_s:
 		sub_text = cards.end_prompt if cards else ""
 	var sub_size := font.get_string_size(sub_text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, small) if sub_text != "" else Vector2.ZERO
-	var pad := Vector2(48.0, 28.0) * scale_by
+	var pad := Vector2(d.cutin_pad_x_px, d.cutin_pad_y_px) * scale_by
 	var panel_size := Vector2(maxf(big_size.x, sub_size.x), big_size.y + sub_size.y) + pad * 2.0
-	# The title sits low left (the art's subject is up and right), an entrance low centre, the end card centred.
-	var centre := Vector2(size.x * 0.5, size.y * 0.5)
-	match kind:
-		Kind.TITLE:
-			centre = Vector2(panel_size.x * 0.5 + size.x * 0.06, size.y * 0.78)
-		Kind.ENTRANCE:
-			centre = Vector2(size.x * 0.5, size.y * 0.82)
-	var panel := Rect2(centre - panel_size * 0.5, panel_size)
-	HudStyle.draw_panel(self, panel, slant, HudStyle.PAPER, border, Vector2.ONE * shadow_px, alpha)
+	# Every caption is tucked into the bottom-left corner, the shadow and the border inside the frame, clear of the subject.
+	var corner := Vector2(size.x * d.cutin_margin_x + d.cutin_border_px, size.y * (1.0 - d.cutin_margin_y) - d.cutin_shadow_px - d.cutin_border_px)
+	var panel := Rect2(Vector2(corner.x, corner.y - panel_size.y), panel_size)
+	HudStyle.draw_panel(self, panel, d.cutin_slant, HudStyle.PAPER, d.cutin_border_px, Vector2.ONE * d.cutin_shadow_px, alpha)
 	var ink := HudStyle.with_alpha(HudStyle.INK, alpha)
 	var x := panel.position.x + pad.x
 	var y := panel.position.y + pad.y + (big_size.y + font.get_ascent(big) - font.get_descent(big)) * 0.5
