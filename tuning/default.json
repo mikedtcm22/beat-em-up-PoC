@@ -686,6 +686,8 @@
 		"cutin_end_lock_s": 0.5,
 		"cutin_fade_s": 0.1,
 		"cutin_lettering_size": 1.0,
+		"rooms_key_follow_look": false,
+		"rooms_key_energy": 1.0,
 		"sfx_volume_db": -3.0,
 		"sfx_pitch_variation": 0.08,
 		"sfx_volume_variation": 0.08,

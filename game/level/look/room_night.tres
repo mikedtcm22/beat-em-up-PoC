@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="NightLook" load_steps=11 format=3]
+[gd_resource type="Resource" script_class="NightLook" load_steps=12 format=3]
 
 [ext_resource type="Script" path="res://game/level/look/night_look.gd" id="1_look"]
 [ext_resource type="Script" path="res://game/level/look/night_lamp.gd" id="2_lamp"]
@@ -7,45 +7,60 @@
 
 [sub_resource type="Resource" id="Lamp_a"]
 script = ExtResource("2_lamp")
-position = Vector3(2.5, 0, -5.7)
+position = Vector3(2.5, 0, -4.4)
 arm_side = -1.0
 height_m = 4.4
+pool_m = 7.5
 pool_push = 0.0
 wall_glow_m = 0.0
 shaft = true
 
 [sub_resource type="Resource" id="Lamp_b"]
 script = ExtResource("2_lamp")
-position = Vector3(9.0, 0, 5.7)
+position = Vector3(9.0, 0, 4.4)
 arm_side = 1.0
 height_m = 4.4
+pool_m = 7.5
 pool_push = 0.0
 wall_glow_m = 0.0
 shaft = false
 
 [sub_resource type="Resource" id="Lamp_c"]
 script = ExtResource("2_lamp")
-position = Vector3(-8.0, 0, -5.7)
+position = Vector3(-8.0, 0, -4.4)
 arm_side = 1.0
 height_m = 4.4
+pool_m = 7.5
 pool_push = 0.0
 wall_glow_m = 0.0
 shaft = false
 
 [sub_resource type="Resource" id="Lamp_d"]
 script = ExtResource("2_lamp")
-position = Vector3(-14.0, 0, 5.7)
+position = Vector3(-14.0, 0, 4.4)
 arm_side = -1.0
 height_m = 4.4
+pool_m = 7.5
 pool_push = 0.0
 wall_glow_m = 0.0
 shaft = false
 
 [sub_resource type="Resource" id="Lamp_e"]
 script = ExtResource("2_lamp")
-position = Vector3(14.0, 0, -5.7)
+position = Vector3(14.0, 0, -4.4)
 arm_side = -1.0
 height_m = 4.4
+pool_m = 7.5
+pool_push = 0.0
+wall_glow_m = 0.0
+shaft = false
+
+[sub_resource type="Resource" id="Lamp_f"]
+script = ExtResource("2_lamp")
+position = Vector3(-3.0, 0, 4.4)
+arm_side = 1.0
+height_m = 4.4
+pool_m = 7.5
 pool_push = 0.0
 wall_glow_m = 0.0
 shaft = false
@@ -70,5 +85,5 @@ sun_color = Color(0.2, 0.44, 0.78, 1)
 sun_energy = 1.3
 window_lit_share = 0.3
 window_energy = 1.0
-lamps = Array[ExtResource("2_lamp")]([SubResource("Lamp_a"), SubResource("Lamp_b"), SubResource("Lamp_c"), SubResource("Lamp_d"), SubResource("Lamp_e")])
+lamps = Array[ExtResource("2_lamp")]([SubResource("Lamp_a"), SubResource("Lamp_b"), SubResource("Lamp_c"), SubResource("Lamp_d"), SubResource("Lamp_e"), SubResource("Lamp_f")])
 mattes = Array[ExtResource("3_matte")]([SubResource("Matte_north"), SubResource("Matte_east")])

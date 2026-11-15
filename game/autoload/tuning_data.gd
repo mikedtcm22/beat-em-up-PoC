@@ -1507,6 +1507,15 @@ extends Resource
 ## The lettering's size on a card, a multiplier on the HUD's comic lettering (mission name, enemy name).
 @export_range(0.5, 2.0, 0.05) var cutin_lettering_size: float = 1.0
 
+@export_group("Rooms (M7)")
+## The crowd room and the training room under the trailer look profile (game/level/look/room_night.tres, TrailerLook): the room's
+## sun takes the night look's key (its height and direction), one calm key light, instead of the dusk's; off, the room keeps
+## the sun direction of Tuning's Look > Toon (the default, which tests/test_look_profile.gd pins: "the sun's direction, energy and
+## blur stay Tuning's"; turn it on to light the rooms from the street's key).
+@export var rooms_key_follow_look: bool = false
+## A multiplier on the night look's key energy in the rooms (1: as authored).
+@export_range(0.0, 3.0, 0.05) var rooms_key_energy: float = 1.0
+
 @export_group("Audio")
 @export_subgroup("Mix")
 ## Volume of every sound effect, in dB: the SFX bus limiter's pre-gain, so turning it down

@@ -198,6 +198,8 @@ func _deactivate(leaving: bool = false) -> void:
 				procedural.sky_horizon_color = light.sky_horizon
 		if _room != null:
 			RoomKit.apply_room_light(_room, LookProfile.resolve_light(RoomKit.default_room_light()))
+			if _sun() != null:
+				RoomKit.apply_sun(_sun())
 		for property: StringName in _glow_before:
 			env.set(property, _glow_before[property])
 	_glow_before.clear()
@@ -288,6 +290,7 @@ func _tick() -> void:
 	if _room != null:
 		# The room's light is the night look's (LookPost writes the profile's dusk on every look change; this lays the night over it).
 		RoomKit.apply_room_light(_room, _room_light())
+		_tick_room_key()
 	_tick_sky()
 	var sun := _sun()
 	var here := _look_here()
@@ -299,6 +302,20 @@ func _tick() -> void:
 	for street in _streets:
 		street.flicker(ticks)
 	_tick_actor_shadows()
+
+
+## M7 e-rooms: a room's sun is the night look's key, one calm light (its height, direction and energy), not the dusk's; Tuning's
+## `rooms_key_follow_look` off leaves the sun to LookPost.
+func _tick_room_key() -> void:
+	var sun := _sun()
+	if sun == null or not Tuning.data.rooms_key_follow_look:
+		return
+	var turn := Vector3(-ROOM_LOOK.sun_elevation_deg, ROOM_LOOK.sun_yaw_deg, 0.0)
+	if not sun.rotation_degrees.is_equal_approx(turn):
+		sun.rotation_degrees = turn
+	var energy := ROOM_LOOK.sun_energy * Tuning.data.rooms_key_energy
+	if not is_equal_approx(sun.light_energy, energy):
+		sun.light_energy = energy
 
 
 ## The sky follows the level's blended light: the top and the horizon colour, the middle band between them; the moon's disc and the
