@@ -378,7 +378,7 @@ func test_simulation_code_does_not_read_the_cards() -> void:
 # --- The shipped data ----------------------------------------------------------------------------------------
 
 
-func test_the_shipped_set_has_the_five_placeholder_cards() -> void:
+func test_the_shipped_set_has_every_mission_1_card() -> void:
 	var set := load(CutIn.DEFAULT_SET) as CutInSet
 	assert_not_null(set)
 	assert_not_null(set.title.pick(), "title")
@@ -390,8 +390,12 @@ func test_the_shipped_set_has_the_five_placeholder_cards() -> void:
 	for texture: Texture2D in [set.title.pick(), set.mission_end.pick()]:
 		assert_eq(texture.get_size(), Vector2(1600, 900), "cards are 1600x900")
 	for key: StringName in [&"thug", &"bruiser", &"kicker", &"boss"]:
-		assert_not_null(set.entrance_for(key), "%s has an entry for the art that comes next" % key)
-		assert_null(set.entrance_for(key).pick(), "%s has no art yet" % key)
+		assert_not_null(set.entrance_for(key), "%s has an entrance entry" % key)
+		assert_not_null(set.entrance_for(key).pick(), "%s has its entrance card (Ox: his name card)" % key)
+		assert_not_null(set.ko_for(key), "%s has a knockout panel entry" % key)
+		assert_not_null(set.ko_for(key).pick(0), "%s has his knockout panel" % key)
+		for texture: Texture2D in [set.entrance_for(key).pick(), set.ko_for(key).pick(0)]:
+			assert_eq(texture.get_size(), Vector2(1600, 900), "%s cards are 1600x900" % key)
 
 
 func test_an_entry_picks_in_turn_and_wraps() -> void:
