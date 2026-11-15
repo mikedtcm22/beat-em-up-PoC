@@ -6,6 +6,7 @@ extends GutTest
 ## captures), the flash and the damage look on toon, set_shown() and the first-person layers
 ## over the hulls, and the detail mask on UV2.
 
+const LookProfileHelper := preload("res://tests/look_profile_helper.gd")
 const TOON_PATH := "res://game/fx/toon.gdshader"
 const LIGHT_PATH := "res://game/fx/toon_light.gdshaderinc"
 const OUTLINE_PATH := "res://game/fx/toon_outline.gdshader"
@@ -28,6 +29,7 @@ const SWEEP_FROM := -0.2007
 
 func before_each() -> void:
 	Tuning.apply(TuningData.new())
+	LookProfileHelper.use_m6()
 
 
 func after_each() -> void:

@@ -5,6 +5,7 @@ extends GutTest
 ## contract (grey sleeves with folds, dark leather gloves with knuckle creases, stitching and a wrist strap). FirstPersonCamera drops the meshes it
 ## cached when the art swaps (F7); the m6 hero is untouched.
 
+const LookProfileHelper := preload("res://tests/look_profile_helper.gd")
 const HERO_ART := "res://game/actors/art/player_art.tres"
 const PLAYER_SCENE := "res://game/player/player.tscn"
 const PAINT := "res://assets/export/characters/player/trailer/player_paint.png"
@@ -21,6 +22,7 @@ var _art: CharacterArt
 
 func before_each() -> void:
 	Tuning.reset_to_default()
+	LookProfileHelper.use_m6()
 	SkinnedArt.clear_cache()
 	_art = load(HERO_ART) as CharacterArt
 

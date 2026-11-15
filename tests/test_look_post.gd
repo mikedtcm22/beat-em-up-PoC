@@ -4,6 +4,7 @@ extends GutTest
 ## the rooms and the paints (A13: red is reserved). The pixels themselves (the lines, the mask)
 ## are windowed: tests/bot/look_probe.gd and tests/bot/acts/look_post_acts.gd.
 
+const LookProfileHelper := preload("res://tests/look_profile_helper.gd")
 const GenLut := preload("res://tools/gen_lut.gd")
 const LookProbe := preload("res://tests/bot/look_probe.gd")
 const LookPostActs := preload("res://tests/bot/acts/look_post_acts.gd")
@@ -38,6 +39,7 @@ class QuietBot extends "res://tests/bot/crowd_bot.gd":
 
 func before_each() -> void:
 	Tuning.reset_to_default()
+	LookProfileHelper.use_m6()
 	Tuning.set_value(&"waves_enabled", false)
 	TimeController.clear()
 	GameInput.menu_open = false

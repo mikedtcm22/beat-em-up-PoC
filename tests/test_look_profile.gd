@@ -1,10 +1,12 @@
 extends GutTest
-## Milestone 7, T05a: the look profile switch. The default is M6's. A flip (Tuning `look_profile`, F7) re-applies the
+## Milestone 7, T05a: the look profile switch. The default is the trailer's (the comic look, since T53; the M6 pins here set m6 in
+## their setup). A flip (Tuning `look_profile`, F7) re-applies the
 ## light, sky, fog, post and materials live, and flipping back restores every M6 value exactly, on the Mission 1 street
 ## section and on the crowd street; and no simulation code reads the profile. Since Phase 1 (T10 to T16a) the trailer
 ## profile really changes the street: its night light and painted sky, the trailer kit sheets and the characters' painted
 ## art (the lead's decision at the Phase 1 merge replaced P0's "the trailer differs by the marker alone" pins).
 
+const LookProfileHelper := preload("res://tests/look_profile_helper.gd")
 const LEVEL_PATH := "res://game/level/mission1/mission1.tscn"
 const CROWD_PATH := "res://game/level/crowd_room.tscn"
 const SETTLE_FRAMES := 4
@@ -16,6 +18,7 @@ const SIMULATION_DIRS: Array[String] = [
 
 func before_each() -> void:
 	Tuning.reset_to_default()
+	LookProfileHelper.use_m6()
 	Tuning.set_value(&"waves_enabled", false)
 
 
@@ -103,9 +106,20 @@ func _uniforms(material: ShaderMaterial) -> Dictionary:
 	return values
 
 
-func test_the_default_profile_is_m6() -> void:
-	assert_eq(TuningData.new().look_profile, 0, "the shipped default")
-	assert_eq(Tuning.data.look_profile, 0)
+func test_the_default_profile_is_the_comic_look_with_cards_on_and_f7_gives_m6() -> void:
+	var fresh := TuningData.new()
+	assert_eq(fresh.look_profile, LookProfile.Id.TRAILER, "the shipped default")
+	assert_true(fresh.cutins_enabled, "the cut-in cards are on by default")
+	Tuning.reset_to_default()
+	assert_eq(Tuning.data.look_profile, LookProfile.Id.TRAILER, "tuning/default.json agrees")
+	assert_eq(LookProfile.current(), LookProfile.Id.TRAILER)
+	assert_eq(LookProfile.profile_name(), &"trailer")
+	assert_eq(LookProfile.cycle(), LookProfile.Id.M6, "F7 shows M6")
+	assert_eq(LookProfile.cycle(), LookProfile.Id.TRAILER, "and back")
+
+
+func test_the_m6_profile_is_the_empty_one() -> void:
+	assert_eq(Tuning.data.look_profile, LookProfile.Id.M6)
 	assert_eq(LookProfile.current(), LookProfile.Id.M6)
 	assert_eq(LookProfile.profile_name(), &"m6")
 	var m6 := LookProfile.data()

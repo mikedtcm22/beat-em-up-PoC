@@ -3,6 +3,7 @@ extends GutTest
 ## appearance, an arena's clear, the level's clear), holds for its tunable, skips on input and writes no game state; they are
 ## off under the m6 profile and behind cutins_enabled, and a card with no art is skipped silently.
 
+const LookProfileHelper := preload("res://tests/look_profile_helper.gd")
 const StubEnemy := preload("res://tests/fixtures/stub_enemy.gd")
 const LEVEL_PATH := "res://game/level/mission1/mission1.tscn"
 const CUT_IN_SCRIPT := "res://game/ui/cut_in.gd"
@@ -443,6 +444,7 @@ func test_mission_1_under_the_trailer_profile_opens_on_the_title_and_holds() -> 
 
 
 func test_mission_1_under_m6_shows_no_card() -> void:
+	LookProfileHelper.use_m6()
 	Tuning.set_value(&"waves_enabled", false)
 	var level := (load(LEVEL_PATH) as PackedScene).instantiate()
 	level.set(&"waves_enabled_on_start", false)

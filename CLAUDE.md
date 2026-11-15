@@ -7,7 +7,7 @@ A first-person beat-em-up proof of concept in Godot 4.7.2 (GDScript with static 
 2. Then read the current milestone plan in `docs/milestones/` and the parts of ARCHITECTURE.md your task touches.
 
 ## Run, test, look
-- **Play:** `godot --path .`. The main scene is the Mission 1 level (Milestone 5); F6 cycles the crowd room, the training room and back.
+- **Play:** `godot --path .`. The main scene is the Mission 1 level (Milestone 5); F6 cycles the crowd room, the training room and back. The comic look (M7's trailer look profile, with the drawn cut-in cards) is the default; **F7** shows the M6 look and back (`--tune=look_profile=0` starts in M6). Tests that pin M6 pixels set the m6 profile in their setup (`tests/look_profile_helper.gd`).
 - **Tests:** `tools/run_tests.sh` runs all GUT tests headless in about 7 minutes (415 s of test time after M6's playtest and verification fixes, 2076 tests, on the shared 8 GB machine; M6 first ended at 1936 tests and 366 s, M5 at 1766 and 299 s), using `--fixed-fps 60` so frame-timed tests are deterministic. `-gselect=<file>` runs one file. `-gjunit_xml_file=res://captures/<name>.xml` writes the per-file times. Read the full output for `SCRIPT ERROR`, `SHADER ERROR` and `ERROR`. `ART_PUNK_VARIANT_STRAIN=1` adds the strain runs of the Punk's three locked A/B variants (about 14 s).
 - **Look at it:**
   - `tools/capture_combos.sh "<act title text>" 6` records combo-bot acts (`tests/bot/combo_bot.gd`) with Movie Maker into `captures/combos.avi`, plus `captures/bot.log` with the hits per act.

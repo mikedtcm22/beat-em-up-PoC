@@ -6,6 +6,7 @@ extends GutTest
 ## use real Punks. The attack arcs' numbers (90, 140, 180, 270, 360, the 0.5 s grace) are written
 ## out here by hand, never read from the tunables, so a changed default is a failing test.
 
+const LookProfileHelper := preload("res://tests/look_profile_helper.gd")
 const STUB_ENEMY := preload("res://tests/fixtures/stub_enemy.tscn")
 const StubEnemy := preload("res://tests/fixtures/stub_enemy.gd")
 const PUNK_SCENE := preload("res://game/enemies/punk/street_punk.tscn")
@@ -25,6 +26,7 @@ var _player: PlayerCharacter
 
 func before_each() -> void:
 	Tuning.reset_to_default()
+	LookProfileHelper.use_m6()
 	Tuning.data.ai_frozen = false
 	Tuning.data.director_even_spread = false  # a Debug value: reset_to_default() leaves it
 	TimeController.clear()

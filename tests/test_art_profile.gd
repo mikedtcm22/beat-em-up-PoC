@@ -6,6 +6,7 @@ extends GutTest
 ## warm-up draws both profiles' art. The fixture (tests/fixtures/m7) is the Dummy's GLB twice, the variant
 ## with an inverted palette, so there is no new art.
 
+const LookProfileHelper := preload("res://tests/look_profile_helper.gd")
 const BASE_PATH := "res://tests/fixtures/m7/dummy_with_trailer_art.tres"
 ## An art that ships no trailer variant (the Punk itself got one in M7 T12, so the arms-down smoke Punk stands in).
 const PUNK_ART := "res://game/actors/art/punk_rest_art.tres"
@@ -18,6 +19,7 @@ var _base: CharacterArt
 
 func before_each() -> void:
 	Tuning.reset_to_default()
+	LookProfileHelper.use_m6()
 	_base = load(BASE_PATH) as CharacterArt
 
 

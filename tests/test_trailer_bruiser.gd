@@ -4,6 +4,7 @@ extends GutTest
 ## contract (docs/ARCHITECTURE.md "The painted material (M7)"), the M6 palette's colours muted to the night as flat fills; the m6 Bruiser is untouched.
 ## The generic checks are in test_trailer_art.gd; these pin the Bruiser's own.
 
+const LookProfileHelper := preload("res://tests/look_profile_helper.gd")
 const BRUISER_ART := "res://game/actors/art/bruiser_art.tres"
 const PAINT := "res://assets/export/characters/bruiser/trailer/bruiser_paint.png"
 const INK := "res://assets/export/characters/bruiser/trailer/bruiser_ink.png"
@@ -16,6 +17,7 @@ var _art: CharacterArt
 
 func before_each() -> void:
 	Tuning.reset_to_default()
+	LookProfileHelper.use_m6()
 	_art = load(BRUISER_ART) as CharacterArt
 
 

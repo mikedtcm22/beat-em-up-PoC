@@ -3,12 +3,14 @@ extends GutTest
 ## contact shadows on the street, swaps in the painted sky and sets the glow; flipping back to m6 frees them and puts the old
 ## sky object, glow, sun shadow, light and fog back exactly. The m6 profile builds none of it.
 
+const LookProfileHelper := preload("res://tests/look_profile_helper.gd")
 const LEVEL_PATH := "res://game/level/mission1/mission1.tscn"
 const SETTLE_FRAMES := 4
 
 
 func before_each() -> void:
 	Tuning.reset_to_default()
+	LookProfileHelper.use_m6()
 	Tuning.set_value(&"waves_enabled", false)
 
 

@@ -19,6 +19,7 @@ extends GutTest
 ## nearer would move the fist point by more than the centimetre the hits allow. So the palm is held to two bars: as far down as the
 ## forearm lets it be (ROLL_ERROR_MAX_DEG, the roll left over), and within PALM_DOWN_MAX_DEG of straight down.
 
+const LookProfileHelper := preload("res://tests/look_profile_helper.gd")
 const SkinnedView := preload("res://tests/skinned_view.gd")
 const ArtStrain := preload("res://tests/art_strain.gd")
 const MotionProbe := preload("res://tests/fixtures/motion/motion_probe.gd")
@@ -82,10 +83,16 @@ var _hero_cache: Dictionary = {}
 var _fingers_cache: Dictionary[String, Vector3] = {}
 
 
+## The hero is built once and kept for the whole script: the m6 profile is held for all of it (a live flip would re-dress him).
+func before_all() -> void:
+	LookProfileHelper.use_m6()
+
+
 func after_all() -> void:
 	if _hero_cache.has("rig") and is_instance_valid(_hero_cache.rig):
 		(_hero_cache.rig as HumanoidRig).free()
 	_hero_cache.clear()
+	LookProfileHelper.restore()
 
 
 # --- Helpers ---------------------------------------------------------------------------

@@ -2,11 +2,13 @@ extends GutTest
 ## The HUD under the trailer look profile (Milestone 7, e-hud): the comic caption boxes, the flat bars with a dropping damage chunk,
 ## the debug line away by default. Under m6 every helper gives what it always gave (the pixel check is in the e-hud stills).
 
+const LookProfileHelper := preload("res://tests/look_profile_helper.gd")
 const HUD_SCENE := preload("res://game/ui/hud.tscn")
 
 
 func before_each() -> void:
 	Tuning.reset_to_default()
+	LookProfileHelper.use_m6()
 
 
 func after_each() -> void:

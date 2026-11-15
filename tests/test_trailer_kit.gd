@@ -4,6 +4,7 @@ extends GutTest
 ## moves every face on the sheet) so no two walls or windows repeat; M6's sheet, meshes and colliders unchanged under the
 ## "m6" profile, and the colliders unchanged under "trailer".
 
+const LookProfileHelper := preload("res://tests/look_profile_helper.gd")
 const Snapshot := preload("res://tests/m6_collider_snapshot.gd")
 const FIXTURE := "res://tests/fixtures/m6/m5_colliders.json"
 const LEVEL_PATH := "res://game/level/mission1/mission1.tscn"
@@ -12,6 +13,7 @@ const SIZES := {&"wall": Vector3(11.5, 12.0, 2.0), &"window": Vector3(1.3, 1.9, 
 
 func before_each() -> void:
 	Tuning.reset_to_default()
+	LookProfileHelper.use_m6()
 	KitMesh.clear_cache()
 
 

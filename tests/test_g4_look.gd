@@ -4,6 +4,7 @@ extends GutTest
 ## plume is, no light shape melts (the shaders carry no Gaussian falloff), and the crowd room and the training room get the night
 ## look the street has (lamps, pools, a painted sky) while m6 gets none of it. And the bot's arms act exists.
 
+const LookProfileHelper := preload("res://tests/look_profile_helper.gd")
 const LEVEL_PATH := "res://game/level/mission1/mission1.tscn"
 const CROWD_PATH := "res://game/level/crowd_room.tscn"
 const TEST_ROOM_PATH := "res://game/level/test_room.tscn"
@@ -16,6 +17,7 @@ const SHAPE_SHADERS: Array[String] = [
 
 func before_each() -> void:
 	Tuning.reset_to_default()
+	LookProfileHelper.use_m6()
 	Tuning.set_value(&"waves_enabled", false)
 
 

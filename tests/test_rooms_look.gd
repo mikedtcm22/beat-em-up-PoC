@@ -3,6 +3,7 @@ extends GutTest
 ## by the room's sun), stepped lamp pools that fall inside the lane, no painted wall glow (soft gradient), the training dummy's trailer
 ## art (flat fills, a drawn face and bullseye, placed bruises on its head), and none of it under m6.
 
+const LookProfileHelper := preload("res://tests/look_profile_helper.gd")
 const CROWD_PATH := "res://game/level/crowd_room.tscn"
 const TEST_ROOM_PATH := "res://game/level/test_room.tscn"
 const DUMMY_ART := "res://game/actors/art/dummy_art.tres"
@@ -13,6 +14,7 @@ const DUMMY_FEATURES := "res://assets/source/trailer_art/dummy/features.svg"
 
 func before_each() -> void:
 	Tuning.reset_to_default()
+	LookProfileHelper.use_m6()
 	Tuning.set_value(&"waves_enabled", false)
 
 

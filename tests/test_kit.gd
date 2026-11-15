@@ -4,6 +4,7 @@ extends GutTest
 ## `draw_box`, the dressing and the prop spots, the barrier panels and the stair flight, the
 ## graybox switch, and `section_entered`. The colliders are held to M5 in test_m6_colliders.gd.
 
+const LookProfileHelper := preload("res://tests/look_profile_helper.gd")
 const LEVEL_PATH := "res://game/level/mission1/mission1.tscn"
 const STREET_PATH := "res://game/level/mission1/street.tscn"
 
@@ -33,6 +34,7 @@ const CENSUS := {
 
 func before_each() -> void:
 	Tuning.reset_to_default()
+	LookProfileHelper.use_m6()
 	Tuning.set_value(&"kit_draw_graybox", false)
 	TimeController.clear()
 

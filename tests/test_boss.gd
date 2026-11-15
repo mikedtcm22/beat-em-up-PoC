@@ -12,6 +12,7 @@ extends GutTest
 ## first-person lens when its strikes land. Flat-floor tests have no navmesh (it steers straight, as
 ## in the training room); every tick is one physics frame.
 
+const LookProfileHelper := preload("res://tests/look_profile_helper.gd")
 const BOSS_SCENE := preload("res://game/enemies/boss/boss.tscn")
 const HUD_SCENE := preload("res://game/ui/hud.tscn")
 const StubDirector := preload("res://tests/fixtures/stub_director.gd")
@@ -1318,6 +1319,8 @@ func test_the_pound_landing_keeps_the_boss_clear_of_the_lens() -> void:
 
 
 func test_the_boss_wave_brings_the_boss_in_the_crowd_room_with_its_bar() -> void:
+	# The trailer look's entrance card (Ox's name card) holds the simulation while it shows; this test counts frames, so it runs without cards.
+	LookProfileHelper.no_cards()
 	var room := (load(ROOM_PATH) as PackedScene).instantiate() as CrowdRoom
 	room.with_presentation = true
 	room.waves_enabled_on_start = false

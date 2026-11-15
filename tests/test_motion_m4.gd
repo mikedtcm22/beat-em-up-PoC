@@ -12,6 +12,7 @@ extends GutTest
 ##   beside the M3 clips'.
 ## The numbers it prints are `MOTION ...` lines.
 
+const LookProfileHelper := preload("res://tests/look_profile_helper.gd")
 const ClipHash := preload("res://tests/fixtures/motion/clip_hash.gd")
 const MotionProbe := preload("res://tests/fixtures/motion/motion_probe.gd")
 const SkinnedView := preload("res://tests/skinned_view.gd")
@@ -78,6 +79,7 @@ func before_all() -> void:
 
 func before_each() -> void:
 	Tuning.apply(TuningData.new())
+	LookProfileHelper.use_m6()
 	HumanoidRig._named_libraries.clear()
 	SkinnedArt.clear_cache()
 	SkinnedView.clear_cache()

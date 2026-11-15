@@ -3,6 +3,7 @@ extends GutTest
 ## `metadata/trailer`: its own GLB (the same mesh and rig, a fresh UV2), a 2048 paint map and ink map to the painted material's contract
 ## (docs/ARCHITECTURE.md "The painted material (M7)"), the veteran's recolour of the same maps; the m6 Punk is untouched.
 
+const LookProfileHelper := preload("res://tests/look_profile_helper.gd")
 const PUNK_ART := "res://game/actors/art/punk_art.tres"
 const M6_GLB := "res://assets/export/characters/punk/punk.glb"
 const PAINT := "res://assets/export/characters/punk/trailer/punk_paint.png"
@@ -16,6 +17,7 @@ var _art: CharacterArt
 
 func before_each() -> void:
 	Tuning.reset_to_default()
+	LookProfileHelper.use_m6()
 	_art = load(PUNK_ART) as CharacterArt
 
 

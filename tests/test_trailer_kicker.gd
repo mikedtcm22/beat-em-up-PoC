@@ -3,6 +3,7 @@ extends GutTest
 ## `metadata/trailer`: its own GLB (the same mesh and rig, a fresh UV2), a 2048 paint map, ink map and mark map to the painted material's contract
 ## (docs/ARCHITECTURE.md "The painted material (M7)"); the m6 Kicker is untouched. The generic checks live in test_trailer_art.gd.
 
+const LookProfileHelper := preload("res://tests/look_profile_helper.gd")
 const KICKER_ART := "res://game/actors/art/kicker_art.tres"
 const M6_GLB := "res://assets/export/characters/kicker/kicker.glb"
 const PAINT := "res://assets/export/characters/kicker/trailer/kicker_paint.png"
@@ -16,6 +17,7 @@ var _art: CharacterArt
 
 func before_each() -> void:
 	Tuning.reset_to_default()
+	LookProfileHelper.use_m6()
 	_art = load(KICKER_ART) as CharacterArt
 
 
