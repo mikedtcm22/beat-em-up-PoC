@@ -77,7 +77,7 @@ func test_the_trailer_flip_builds_the_street_and_back_restores_m6_exactly() -> v
 	await _ticks(3)
 	var look := _look(level)
 	assert_true(look.is_active())
-	assert_eq(look.streets().size(), 1, "one street")
+	assert_eq(look.streets().size(), 2, "one street and the roofs'")
 	var row := NightLook.for_location(&"street_night")
 	var street := look.streets()[0]
 	assert_eq(street.lights().size(), row.lamps.size(), "a light per lamp")

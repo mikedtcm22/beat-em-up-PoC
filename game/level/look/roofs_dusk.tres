@@ -1,0 +1,85 @@
+[gd_resource type="Resource" script_class="DuskLook" load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://game/level/look/dusk_look.gd" id="1_look"]
+[ext_resource type="Script" path="res://game/level/look/night_matte.gd" id="2_matte"]
+[ext_resource type="Texture2D" path="res://assets/export/kit/trailer_roofs_skyline_a.png" id="3_a"]
+[ext_resource type="Texture2D" path="res://assets/export/kit/trailer_roofs_skyline_b.png" id="4_b"]
+[ext_resource type="Texture2D" path="res://assets/export/kit/trailer_roofs_skyline_c.png" id="5_c"]
+
+[sub_resource type="Resource" id="Matte_far"]
+script = ExtResource("2_matte")
+texture = ExtResource("3_a")
+position = Vector3(5, 22, -95)
+size_m = Vector2(190, 59.375)
+tint = Color(1, 1, 1, 1)
+fade = 0.2
+haze_color = Color(0.72, 0.36, 0.44, 1)
+energy = 1.0
+feather = Vector4(0.04, 0.04, 0, 0)
+warp = 0.003
+drop_share = 0.2
+
+[sub_resource type="Resource" id="Matte_east"]
+script = ExtResource("2_matte")
+texture = ExtResource("4_b")
+position = Vector3(95, 22, -14)
+size_m = Vector2(190, 59.375)
+yaw_deg = -90.0
+tint = Color(1, 1, 1, 1)
+fade = 0.2
+haze_color = Color(0.72, 0.36, 0.44, 1)
+energy = 1.0
+feather = Vector4(0.04, 0.04, 0, 0)
+warp = 0.003
+drop_share = 0.2
+
+[sub_resource type="Resource" id="Matte_west"]
+script = ExtResource("2_matte")
+texture = ExtResource("5_c")
+position = Vector3(-95, 22, -14)
+size_m = Vector2(190, 59.375)
+yaw_deg = 90.0
+tint = Color(1, 1, 1, 1)
+fade = 0.2
+haze_color = Color(0.72, 0.36, 0.44, 1)
+energy = 1.0
+feather = Vector4(0.04, 0.04, 0, 0)
+warp = 0.003
+drop_share = 0.2
+
+[resource]
+script = ExtResource("1_look")
+location = &"roofs_dusk"
+sun_elevation_deg = 22.0
+sun_yaw_deg = 125.0
+sun_color = Color(1, 0.74, 0.56, 1)
+sun_energy = 1.0
+sun_shadow = true
+fog_color = Color(0.5, 0.26, 0.46, 1)
+fog_density = 0.008
+sky_top = Color(0.2, 0.12, 0.52, 1)
+sky_horizon = Color(0.98, 0.44, 0.2, 1)
+sky_mid_mix = 0.45
+sky_below_mul = 1.8
+sky_disc_radius = 0.05
+sky_disc_color = Color(1, 0.86, 0.6, 1)
+sky_halo_color = Color(1, 0.5, 0.26, 1)
+sky_halo_strength = 0.5
+sky_star_cover = 0.0
+window_lit_share = 0.3
+window_seed = 11
+window_color = Color(1, 0.72, 0.38, 1)
+window_deep_color = Color(0.9, 0.46, 0.18, 1)
+window_energy = 1.0
+haze_color_1 = Color(0.6, 0.3, 0.5, 0.04)
+haze_color_2 = Color(0.62, 0.3, 0.5, 0.08)
+haze_color_3 = Color(0.66, 0.34, 0.5, 0.14)
+haze_mist_color = Color(0.5, 0.25, 0.46, 0.06)
+mattes = Array[ExtResource("2_matte")]([SubResource("Matte_far"), SubResource("Matte_east"), SubResource("Matte_west")])
+skyline_wash_color = Color(0.36, 0.16, 0.44, 0.88)
+skyline_wash_cover = 0.8
+skyline_wash_patch_m = 4.0
+contact_color = Color(0.1, 0.04, 0.14, 1)
+contact_opacity = 0.7
+paint_shadow_hue = Color(0.3, 0.2, 0.56, 1)
+paint_rim_color = Color(1, 0.6, 0.34, 1)

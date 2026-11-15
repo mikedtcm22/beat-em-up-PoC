@@ -1361,6 +1361,20 @@ extends Resource
 ## A multiplier on the contact shadows' opacity.
 @export_range(0.0, 2.0, 0.05) var night_contact_opacity: float = 1.0
 
+@export_group("Dusk roofs (M7)")
+## The trailer look profile's dusk on Mission 1's roofs (DuskLook, game/level/look/): live multipliers on what its data authors. Presentation
+## only; under the m6 profile none of it is built.
+## A multiplier on the cloud banks' sky cover (0: a clear sky).
+@export_range(0.0, 2.0, 0.05) var dusk_cloud_scale: float = 1.0
+## A multiplier on the low sun disc's radius (0: no disc).
+@export_range(0.0, 2.0, 0.05) var dusk_sun_disc_scale: float = 1.0
+## A multiplier on the far skyline plates' brightness.
+@export_range(0.0, 2.0, 0.05) var dusk_skyline_energy: float = 1.0
+## A multiplier on the lit windows' glow.
+@export_range(0.0, 3.0, 0.05) var dusk_window_energy: float = 1.0
+## A multiplier on the haze bands' strength on the roofs.
+@export_range(0.0, 3.0, 0.05) var dusk_haze_scale: float = 1.0
+
 @export_group("Look profile")
 ## Which look the presentation draws (Milestone 7): 0 = m6 (Milestone 6's, the default), 1 = trailer. F7 flips it
 ## live. Each profile is a LookProfileData in game/fx/look_profiles/ (light overrides, grade LUT, whether bloom is

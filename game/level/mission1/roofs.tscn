@@ -31,6 +31,7 @@ size = Vector3(14, 6.2, 25.5)
 script = ExtResource("1_section")
 floor_heights = PackedFloat32Array(0, 1, 4.5, 7.5)
 ambience = &"ambience_roof"
+look_location = &"roofs_dusk"
 light_enabled = true
 sun_elevation_deg = 36.0
 sun_yaw_deg = -60.0

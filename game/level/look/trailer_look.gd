@@ -20,6 +20,8 @@ const ROOM_LOOK := preload("res://game/level/look/room_night.tres")
 const HAZE_RENDER_PRIORITY := Material.RENDER_PRIORITY_MIN
 const HAZE_CULL_MARGIN := 16384.0
 const CONTACT_PLANE_M := 1.6
+## The painted sky shader's own band count (what a look with no dusk keeps).
+const SKY_DEFAULT_BANDS := 6.0
 ## The actor groups the contact shadows follow (the player's own feet are never in his view).
 const ACTOR_GROUP := &"ai_enemy"
 
@@ -41,6 +43,11 @@ var _haze_material: ShaderMaterial
 ## The actors' contact shadow cards: {actor, card, material}.
 var _actor_shadows: Array[Dictionary] = []
 var _contact_look: NightLook
+## The look the painted characters' area colours and the haze are blending from and to (a section with no look of its own keeps the
+## first look's): the blend follows the level's light blend (M7 e-roofs, so the dusk roofs have their own shadow hue, rim and haze).
+var _area_from: NightLook
+var _area_to: NightLook
+var _area_t: float = -1.0
 
 
 func _init() -> void:
@@ -92,6 +99,9 @@ func _on_tuning_changed(property: StringName) -> void:
 	elif _active and String(property).begins_with("night_"):
 		for street in _streets:
 			street.apply_scales()
+		_apply_haze_scale()
+	elif _active and String(property).begins_with("dusk_"):
+		_apply_dusk_scales()
 		_apply_haze_scale()
 
 
@@ -159,7 +169,11 @@ func _activate() -> void:
 	_swap_sky()
 	_apply_glow(base)
 	ToonMaterials.set_area_look(base.paint_shadow_hue, base.paint_rim_color)
+	_area_from = base
+	_area_to = base
+	_area_t = -1.0
 	_build_haze(base)
+	_apply_dusk_scales()
 	var sun := _sun()
 	if sun != null:
 		_sun_shadow_before = sun.shadow_enabled
@@ -209,6 +223,8 @@ func _deactivate(leaving: bool = false) -> void:
 	if _contact_look != null:
 		ToonMaterials.clear_area_look()
 	_contact_look = null
+	_area_from = null
+	_area_to = null
 	set_physics_process(false)
 
 
@@ -259,16 +275,67 @@ func _build_haze(look: NightLook) -> void:
 	_apply_haze_scale()
 
 
-## The haze's colours are the look's, their alphas scaled by Tuning's `night_haze_scale`.
+## The haze's colours are the look's (blended from the look the player left to the one he is in), their alphas scaled by Tuning's
+## `night_haze_scale` (and a dusk look's by `dusk_haze_scale`).
 func _apply_haze_scale() -> void:
 	if _haze_material == null or _contact_look == null:
 		return
-	var scale := Tuning.data.night_haze_scale
-	var look := _contact_look
-	_haze_material.set_shader_parameter(&"band_color_1", _scaled(look.haze_color_1, scale))
-	_haze_material.set_shader_parameter(&"band_color_2", _scaled(look.haze_color_2, scale))
-	_haze_material.set_shader_parameter(&"band_color_3", _scaled(look.haze_color_3, scale))
-	_haze_material.set_shader_parameter(&"mist_color", _scaled(look.haze_mist_color, scale))
+	var from := _area_from if _area_from != null else _contact_look
+	var to := _area_to if _area_to != null else _contact_look
+	var e := smoothstep(0.0, 1.0, clampf(_area_t, 0.0, 1.0)) if _area_t >= 0.0 else 1.0
+	var from_scale := Tuning.data.night_haze_scale * (Tuning.data.dusk_haze_scale if from is DuskLook else 1.0)
+	var to_scale := Tuning.data.night_haze_scale * (Tuning.data.dusk_haze_scale if to is DuskLook else 1.0)
+	_haze_material.set_shader_parameter(&"band_start_m", from.haze_start_m.lerp(to.haze_start_m, e))
+	_haze_material.set_shader_parameter(&"mist_top", lerpf(from.haze_mist_top, to.haze_mist_top, e))
+	_haze_material.set_shader_parameter(&"band_color_1", _scaled(from.haze_color_1, from_scale).lerp(_scaled(to.haze_color_1, to_scale), e))
+	_haze_material.set_shader_parameter(&"band_color_2", _scaled(from.haze_color_2, from_scale).lerp(_scaled(to.haze_color_2, to_scale), e))
+	_haze_material.set_shader_parameter(&"band_color_3", _scaled(from.haze_color_3, from_scale).lerp(_scaled(to.haze_color_3, to_scale), e))
+	_haze_material.set_shader_parameter(&"mist_color", _scaled(from.haze_mist_color, from_scale).lerp(_scaled(to.haze_mist_color, to_scale), e))
+
+
+## The dusk look's live multipliers (Tuning's "Dusk roofs (M7)" group) on what its section's dressing built: the far plates' energy
+## and the lit windows' glow.
+func _apply_dusk_scales() -> void:
+	var t := Tuning.data
+	for street in _streets:
+		var dusk := street.look as DuskLook
+		if dusk == null:
+			continue
+		for i in dusk.mattes.size():
+			var card := street.get_node_or_null("Matte%d" % i) as MeshInstance3D
+			if card != null:
+				(card.material_override as ShaderMaterial).set_shader_parameter(&"energy", dusk.mattes[i].energy * t.dusk_skyline_energy)
+		for node: Node in street.find_children("WindowGlow*", "MeshInstance3D", false, false):
+			((node as MeshInstance3D).material_override as ShaderMaterial).set_shader_parameter(&"energy", dusk.window_energy * t.dusk_window_energy)
+
+
+## The other looks' far skyline plates (the street's, hung far down its own end) show only while the player is not on a dusk look's
+## section: from the roofs they would hang in the dusk's sky.
+func _show_far_cards(shown: bool) -> void:
+	for street in _streets:
+		if street.look is DuskLook:
+			continue
+		for card: Node in street.find_children("Matte*", "MeshInstance3D", false, false):
+			(card as MeshInstance3D).visible = shown
+
+
+## The painted characters' shadow hue and rim colour and the haze follow the look of the section the player is in, blended as the
+## level's light is: a section with no look of its own keeps the first look's.
+func _tick_area(here: NightLook) -> void:
+	var target := here if here != null else _contact_look
+	if target != _area_to:
+		_area_from = _area_to if _area_to != null else target
+		_area_to = target
+		_area_t = -1.0
+		_show_far_cards(not here is DuskLook)
+	var progress := _level.section_light_progress() if _level != null else 1.0
+	if progress == _area_t:
+		return
+	_area_t = progress
+	var e := smoothstep(0.0, 1.0, clampf(progress, 0.0, 1.0))
+	ToonMaterials.set_area_look(_area_from.paint_shadow_hue.lerp(_area_to.paint_shadow_hue, e),
+			_area_from.paint_rim_color.lerp(_area_to.paint_rim_color, e))
+	_apply_haze_scale()
 
 
 static func _scaled(color: Color, factor: float) -> Color:
@@ -291,6 +358,8 @@ func _tick() -> void:
 	_tick_sky()
 	var sun := _sun()
 	var here := _look_here()
+	if _level != null:
+		_tick_area(here)
 	if sun != null:
 		var shadow := here.sun_shadow if here != null else _sun_shadow_before
 		if sun.shadow_enabled != shadow:
@@ -314,18 +383,36 @@ func _tick_sky() -> void:
 	var horizon: Color = light.sky_horizon
 	_write_sky(&"zenith_color", top)
 	_write_sky(&"horizon_color", horizon)
-	_write_sky(&"mid_color", horizon.lerp(top, base.sky_mid_mix))
-	_write_sky(&"below_color", top * base.sky_below_mul)
 	var here := _look_here()
-	_write_sky(&"disc_radius", here.sky_disc_radius if here != null else 0.0)
-	_write_sky(&"star_cover", here.sky_star_cover if here != null else 0.0)
 	var shown := here if here != null else base
+	_write_sky(&"mid_color", horizon.lerp(top, shown.sky_mid_mix))
+	_write_sky(&"below_color", top * shown.sky_below_mul)
+	var disc_scale := Tuning.data.dusk_sun_disc_scale if here is DuskLook else 1.0
+	_write_sky(&"disc_radius", here.sky_disc_radius * disc_scale if here != null else 0.0)
+	_write_sky(&"star_cover", here.sky_star_cover if here != null else 0.0)
+	_write_sky_clouds(here as DuskLook)
 	_write_sky(&"disc_color", shown.sky_disc_color)
 	_write_sky(&"halo_color", shown.sky_halo_color)
 	_write_sky(&"halo_strength", shown.sky_halo_strength)
 	var sun := _sun()
 	if sun != null:
 		_write_sky(&"disc_dir", sun.global_transform.basis.z)
+
+
+## The sky's cloud banks and band count: a dusk look's (the banks fade in as the level's light arrives), none under any other (the
+## shader's own defaults).
+func _write_sky_clouds(dusk: DuskLook) -> void:
+	if dusk == null:
+		_write_sky(&"cloud_cover", 0.0)
+		_write_sky(&"band_count", SKY_DEFAULT_BANDS)
+		return
+	var arrive := _level.section_light_progress() if _level != null else 1.0
+	_write_sky(&"cloud_cover", dusk.cloud_cover * Tuning.data.dusk_cloud_scale * arrive)
+	_write_sky(&"cloud_lit", dusk.cloud_lit)
+	_write_sky(&"cloud_shade", dusk.cloud_shade)
+	_write_sky(&"cloud_range", dusk.cloud_range)
+	_write_sky(&"cloud_scale", dusk.cloud_scale)
+	_write_sky(&"band_count", dusk.sky_band_count)
 
 
 ## One of the painted sky's uniforms, written only when it differs from what the material already holds (a write dirties the sky).
