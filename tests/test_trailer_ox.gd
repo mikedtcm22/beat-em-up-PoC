@@ -13,8 +13,13 @@ const CELL_PX := 8
 const COAT_CELL := 50
 const ORANGE_CELL := 51
 const SKIN_CELL := 7
+## The grey cells (trousers, belt-cloth) and the near-black one (the coat's trim) that the first version had warmed to brown.
+const TROUSER_CELL := 53
+const DARK_CELL := 54
+## How far the paint's red may lead its blue beyond the swatch's own lead (0..1).
+const NEUTRAL_LEAD := 0.04
 ## What the m6 look shows of a swatch: the swatch times the warm key light of the stage the m6 captures are made on (the same stage and key as
-## tests/fixtures/m7/trailer_stage.gd). The coat's swatch is a near-neutral cool grey, and m6 shows it brown: the trailer paint must carry that warmth.
+## tests/fixtures/m7/trailer_stage.gd). (The coat's swatch is a near-neutral cool grey; the first trailer version warmed it to brown to match this stage, and the level's m6 look is grey, so only the orange and the skin are held to the key's hue.)
 const M6_KEY := Color(1.0, 0.62, 0.34)
 ## How far (0..1 of the hue circle) the trailer colour's hue may sit from what m6 shows: about 14 degrees.
 const HUE_TOLERANCE := 0.04
@@ -105,7 +110,8 @@ func test_his_trailer_colours_keep_the_hue_m6_shows_in_three_body_regions() -> v
 	if atlas.is_compressed():
 		atlas.decompress()
 	var by_cell := _paint_by_cell()
-	for region: Array in [["coat", COAT_CELL], ["orange trim", ORANGE_CELL], ["skin", SKIN_CELL]]:
+	# the orange and the skin keep the hue the m6 look shows (the swatch times the warm key)
+	for region: Array in [["orange trim", ORANGE_CELL], ["skin", SKIN_CELL]]:
 		var cell: int = region[1]
 		assert_true(by_cell.has(cell), "%s: the mesh uses palette cell %d" % [region[0], cell])
 		var swatch := _swatch(atlas, cell)
@@ -113,22 +119,27 @@ func test_his_trailer_colours_keep_the_hue_m6_shows_in_three_body_regions() -> v
 		var trailer: Color = by_cell[cell]
 		assert_lt(_hue_gap(trailer.h, m6.h), HUE_TOLERANCE, "%s: trailer hue %.3f vs m6 %.3f" % [region[0], trailer.h, m6.h])
 		assert_gt(trailer.s, swatch.s * MIN_SATURATION_SHARE, "%s: the trailer paint is not drained (s %.2f of the swatch's %.2f)" % [region[0], trailer.s, swatch.s])
-	assert_gt(_hue_gap((by_cell[COAT_CELL] as Color).h, _swatch(atlas, COAT_CELL).h), 0.1, "the coat is warm, not the swatch's cool grey")
+	# x-chars: the coat, the trousers and the belt-cloth are the palette's neutral greys (the m6 level shows grey trousers and a near-black coat), never a warm brown:
+	# the paint's red-over-blue lead stays within a few steps of the swatch's own
+	for cell: int in [COAT_CELL, TROUSER_CELL, DARK_CELL]:
+		assert_true(by_cell.has(cell), "the mesh uses palette cell %d" % cell)
+		var swatch := _swatch(atlas, cell)
+		var trailer: Color = by_cell[cell]
+		assert_lt(trailer.r - trailer.b, maxf(swatch.r - swatch.b, 0.0) + NEUTRAL_LEAD, "cell %d is neutral grey, not brown (r %.2f b %.2f)" % [cell, trailer.r, trailer.b])
+		assert_lt(trailer.s, swatch.s + 0.12, "cell %d is not warmed" % cell)
 
 
-## His orange is exactly the palette's; his skin is the palette's tone pulled a little warmer, because the trailer's cool night grade shows it paler than m6 does.
-func test_his_orange_and_skin_are_his_own_swatches() -> void:
+## x-chars: his orange is not darkened to burnt rust. The shared lit level shows the paint at a fraction of itself, so the paint carries at least the swatch's own
+## value and saturation (the review found the boss roof showing the m6 safety orange as brown).
+func test_his_orange_keeps_the_m6_saturation_and_value() -> void:
 	var atlas := (load(ATLAS) as Texture2D).get_image()
 	if atlas.is_compressed():
 		atlas.decompress()
-	var by_cell := _paint_by_cell()
-	for cell: int in [ORANGE_CELL, SKIN_CELL]:
-		var trailer: Color = by_cell[cell]
-		var swatch := _swatch(atlas, cell)
-		var slack := 0.04 if cell == ORANGE_CELL else 0.1
-		assert_almost_eq(trailer.r, swatch.r, slack, "cell %d red is the palette's" % cell)
-		assert_almost_eq(trailer.g, swatch.g, slack, "cell %d green" % cell)
-		assert_almost_eq(trailer.b, swatch.b, slack, "cell %d blue" % cell)
+	var paint: Color = _paint_by_cell()[ORANGE_CELL]
+	var swatch := _swatch(atlas, ORANGE_CELL)
+	assert_gte(paint.v, swatch.v - 0.01, "orange value %.2f vs swatch %.2f" % [paint.v, swatch.v])
+	assert_gte(paint.s, swatch.s - 0.02, "orange saturation %.2f vs swatch %.2f" % [paint.s, swatch.s])
+	assert_lt(_hue_gap(paint.h, swatch.h), 0.025, "orange hue %.3f vs swatch %.3f" % [paint.h, swatch.h])
 
 
 func test_he_has_a_drawn_face_and_placed_marks() -> void:
