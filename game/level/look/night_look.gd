@@ -118,19 +118,27 @@ func light() -> Dictionary:
 	}
 
 
-## The running profile's night look for a section whose `look_location` is `where`, or null (m6, another place, no row).
+## The running profile's night look for a section whose `look_location` is `where`, or null (m6, another place, no row). The profile
+## holds one row per place in its `light_overrides` (the street's under `KEY`, a later place's under a key of its own: any value that
+## is a NightLook).
 static func for_location(where: StringName) -> NightLook:
 	if where == &"":
 		return null
-	var row: Variant = LookProfile.data().light_overrides.get(KEY)
-	var look := row as NightLook
-	return look if look != null and look.location == where else null
+	for row: Variant in LookProfile.data().light_overrides.values():
+		if row is NightLook and (row as NightLook).location == where:
+			return row as NightLook
+	return null
 
 
 ## `light` without the keys that are not a light's (the look rows a profile's `light_overrides` may carry).
 static func strip_rows(light: Dictionary) -> Dictionary:
-	if not light.has(KEY):
+	var rows: Array = []
+	for key: Variant in light:
+		if light[key] is NightLook:
+			rows.append(key)
+	if rows.is_empty():
 		return light
 	var out := light.duplicate()
-	out.erase(KEY)
+	for key: Variant in rows:
+		out.erase(key)
 	return out

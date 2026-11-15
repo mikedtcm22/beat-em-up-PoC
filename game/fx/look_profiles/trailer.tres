@@ -1,7 +1,8 @@
-[gd_resource type="Resource" script_class="LookProfileData" load_steps=3 format=3]
+[gd_resource type="Resource" script_class="LookProfileData" load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://game/fx/look_profile_data.gd" id="1_data"]
 [ext_resource type="Resource" path="res://game/level/look/street_night.tres" id="2_night"]
+[ext_resource type="Resource" path="res://game/level/look/roofs_dusk.tres" id="3_dusk"]
 
 [resource]
 script = ExtResource("1_data")
@@ -9,6 +10,7 @@ light_overrides = {
 &"fog_color": Color(0.36, 0.2, 0.3, 1),
 &"sky_horizon": Color(0.98, 0.42, 0.16, 1),
 &"sky_top": Color(0.06, 0.14, 0.4, 1),
-&"t10_night_street": ExtResource("2_night")
+&"t10_night_street": ExtResource("2_night"),
+&"t51_roofs_dusk": ExtResource("3_dusk")
 }
 bloom_allowed = true
