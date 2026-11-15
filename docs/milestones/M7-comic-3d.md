@@ -44,3 +44,23 @@ Rules: presentation layer only (subscribes to `CombatEvents`, writes no game sta
 ## At the end
 
 The new look becomes the default and M6 stays on F7 (T53), after Gate 3 and the roll-out. Gates: T50 (the slice) and T57 (Mission 1), both Game-boy's.
+
+## Result (2026-11-15)
+
+**What shipped.** The comic look is the default (`look_profile` 1; F7 shows M6 and back). All five enemies (Punk, Pipe Thug, Bruiser, Kicker, Ox) and the player's arms wear painted trailer art; the street, the dusk roofs and the boss roof have their own look pieces; the crowd room and the training room wear it too. 13 drawn cut-in cards (the title, five entrances with Ox's name card, six knockout panels, the mission end) and the comic HUD.
+
+**Tests.** 2309 of 2309 pass (about 670 s on the shared machine).
+
+**Review.** 23 confirmed findings: 15 cured, 7 partly.
+
+**Open points.**
+- Bruises read soft pink.
+- The Kicker's eyes are small.
+- The player's upper arm is flat.
+- A soft lavender glow block and the lamp haze on the street.
+- Blotchy glows on the roofs.
+- The Punk and Thug knockout cards and the Bruiser entrance card are set in the street, though they can fire on the roofs.
+- Two numbers are left as literals in `bossroof_fx`.
+- Frame time (below).
+
+**Frame time.** Against M6, CPU work is +2% on the street, +3% on the roofs and +12% on the boss roof. The wall frame is +15%, +20% and +25% (street, roofs, boss roof), with 2 to 4% of frames missing a refresh against 0.2 to 0.4% under M6, measured on a machine whose GPU was 93 to 99% busy with other processes. The full table is in `captures/m7-comic/final/perf.txt`, which is not committed. The +10% frame-time gate is met by CPU work on the street and the roofs, and not met by wall time (nor by CPU on the boss roof). That is for Game-boy to rule on at Gate 4.

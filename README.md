@@ -405,7 +405,7 @@ The characters are procedural placeholders. Real art, VFX and audio come in Mile
 - **The level walk's frame time is +15.3% over the pre-art level, 0.3 points over the plan's 15% line.** The perf fix stopped at the best result with no visible change. The levers left (occlusion culling, plain boxes for the walls, no shadows on windows or the skyline) would change what you see, or measured at 1% or less; `docs/milestones/M6-calls/fix-final-perf.md` costs each.
 
 **Automated checks:**
-- `tools/run_tests.sh` runs about 2076 tests headless in about 415 s. Among them:
+- `tools/run_tests.sh` runs 2309 tests headless in about 670 s on the shared machine (M6 ended at 2076 tests and 415 s). Among them:
   - an end-to-end suite where a scripted player performs every combo in the real test room;
   - each milestone's done-when test (`tests/test_m3_done_when.gd`; `tests/test_m4_done_when.gd`, now run for every character in the art roster; `tests/test_m5_done_when.gd`, which plays the whole level arena by arena; `tests/test_m6_no_placeholders.gd`);
   - the level's own tests (`tests/test_m5_street.gd`, `tests/test_m5_roofs.gd`, `tests/test_level_kit.gd`, `tests/test_level_bot.gd`).
@@ -430,6 +430,7 @@ The characters are procedural placeholders. Real art, VFX and audio come in Mile
 - **The chain-link fence becomes a drawn bar-and-board fence** under the `trailer` look only; collision is unchanged.
 - **The new look is the default** (done, T53): the game starts with `look_profile` = 1 (the comic look, cut-in cards on); F7 shows the M6 look and back, and `--tune=look_profile=0` starts in M6.
 - **Spend:** Gemini at most $24 more, inside the $35 already approved; no Tripo.
+- **Open at Gate 4 (not yet approved): the frame-time gate (+10% over M6).** Met by CPU work on the street (+2%) and the roofs (+3%); not met on the boss roof by CPU (+12%) nor by wall time (wall frame +15% street, +20% roofs, +25% boss roof, with 2 to 4% of frames missing a refresh against 0.2 to 0.4% under M6), measured on a machine whose GPU was 93 to 99% busy with other processes. Game-boy rules on it at Gate 4.
 
 ## Repo layout
 
