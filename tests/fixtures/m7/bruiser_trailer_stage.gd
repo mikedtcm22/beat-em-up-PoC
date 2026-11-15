@@ -3,7 +3,8 @@ extends Node
 ## tests/bot/t10_street_bot.gd: the level with the waves off and the AI frozen, the player at one spot, a Bruiser (and a Punk for scale) in
 ## front at fight distances and angles. Record it with Movie Maker and cut a still near the end of each station (STATION_FRAMES):
 ##   godot --path . --write-movie out.avi --fixed-fps 60 --resolution 1600x900 --quit-after 240 res://tests/fixtures/m7/bruiser_trailer_stage.tscn
-## `--profile=m6` shows the same shots under the m6 look.
+## `--profile=m6` shows the same shots under the m6 look. `--enemy=<id>` (thug, punk, kicker, boss) puts that enemy where the Bruiser
+## stands, for the roll-out's like-for-like fight-distance stills of every enemy type.
 const LEVEL_PATH := "res://game/level/mission1/mission1.tscn"
 const STATION_FRAMES := 60
 ## The player's spot (section space) and the stations: {enemies: [{id, at, yaw}]}; the Bruiser at 2.0 m, then three-quarter at 1.6 m beside a
@@ -19,9 +20,13 @@ const STATIONS: Array[Dictionary] = [
 var _level: LevelRoot
 var _frame: int = 0
 var _spawned: Array[Node] = []
+var _enemy: StringName = &"bruiser"
 
 
 func _ready() -> void:
+	for a: String in OS.get_cmdline_user_args():
+		if a.begins_with("--enemy="):
+			_enemy = StringName(a.trim_prefix("--enemy="))
 	var profile := 0 if OS.get_cmdline_user_args().has("--profile=m6") else 1
 	Tuning.set_value(&"waves_enabled", false)
 	Tuning.set_value(&"god_mode", true)
@@ -63,6 +68,7 @@ func _go(station: Dictionary) -> void:
 	player.look_yaw = deg_to_rad(PLAYER_YAW)
 	player.look_pitch = deg_to_rad(float(station.pitch))
 	for entry: Dictionary in station.enemies:
-		var enemy := _level.spawner.spawn_enemy(entry.id, street.to_global(entry.at), deg_to_rad(float(entry.yaw)))
+		var id: StringName = _enemy if entry.id == &"bruiser" else entry.id
+		var enemy := _level.spawner.spawn_enemy(id, street.to_global(entry.at), deg_to_rad(float(entry.yaw)))
 		if enemy != null:
 			_spawned.append(enemy)
