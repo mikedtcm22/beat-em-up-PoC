@@ -1,0 +1,35 @@
+[
+ {
+  "out": "face_front.png",
+  "aspect": "4:5",
+  "size": "2K",
+  "refs": [
+   "ref_punk.png",
+   "ref_face.png",
+   "in_front.png"
+  ],
+  "prompt": "Image 1 and 2 are the style reference: a frame from a hand-drawn 2D animated trailer (flat colour fills, a few heavy confident ink lines, no gradients, no texture, no photo detail). Image 3 is a flat 3D render of a different character's head seen from the front, orthographic, coloured by region: a navy-black knit beanie (top), a dark hair fringe below it, a narrow band of skin across the eyes, a yellow bandana pulled up over the nose and mouth, a green hood below. Redraw image 3 as a finished face drawing in exactly the style of images 1 and 2, in the SAME pose, framing, head shape and silhouette, every region edge (beanie, hair fringe, skin band, bandana, hood) in the same place, the head the same size and position, orthographic front view. This is a young, hard, angry street thug: very heavy flat black brows pulled low and angled sharply inward, narrow glaring eyes with dark irises and a heavy upper lid line, one bold line for the bridge of the nose where the bandana rises over it, two or three bold curved fold lines across the yellow bandana, a bold outline where the bandana meets the skin, the knot of the bandana with two short tails at the viewer's right, the hair fringe as a few jagged flat dark points with bold outline, the beanie with a rolled cuff drawn as one bold line. Skin is ONE flat warm tan tone (muted, desaturated orange-brown, not pink, not grey) with one flat darker shadow shape under the beanie across the brow and upper eyelids. Bandana flat muted mustard yellow; beanie flat dark navy. Flat soft front light: NO rim light, NO gradients, NO texture. Ink near-black, thick (at least 4 px lines at this size). Plain flat mid-grey background. No text, no extra characters."
+ },
+ {
+  "out": "face_q45.png",
+  "aspect": "4:5",
+  "size": "2K",
+  "refs": [
+   "ref_punk.png",
+   "face_front.jpg",
+   "in_q45.png"
+  ],
+  "prompt": "Image 1 is the style reference: a frame from a hand-drawn 2D animated trailer (flat colour fills, heavy confident ink lines, no gradients, no texture). Image 2 is the finished front drawing of one young angry street thug's face (beanie, hair fringe, narrow band of skin with heavy brows and glaring eyes, mustard bandana over the nose and mouth, green hood). Image 3 is a flat 3D render of the SAME man's head turned three-quarters, coloured by region (navy beanie, dark hair, skin band, yellow bandana, green hood below). Draw the SAME man (identical brows, eyes, bandana with fold lines, beanie with rolled cuff, hair points, line weight, flat colours, one flat brow shadow shape) in EXACTLY the pose of image 3: the face is turned toward the RIGHT side of the picture, the beanie's crown sits at the upper left of the head, and the far (left) side of the face is the larger one in view. Do NOT mirror or flip the pose of image 3. Keep the SAME framing, head shape, silhouette and every region edge as image 3. The bandana knot is on the hidden side behind the head: no knot and no bandana tails are visible. Skin ONE flat warm tan tone (muted orange-brown), bandana flat muted mustard yellow, beanie flat dark navy, hood flat green. Flat soft light, no rim light, no gradients, no texture, thick near-black ink (at least 4 px). Plain flat mid-grey background, no text."
+ },
+ {
+  "out": "face_qm45.png",
+  "aspect": "4:5",
+  "size": "2K",
+  "refs": [
+   "ref_punk.png",
+   "face_front.jpg",
+   "in_qm45.png"
+  ],
+  "prompt": "Image 1 is the style reference: a frame from a hand-drawn 2D animated trailer (flat colour fills, heavy confident ink lines, no gradients). Image 2 is the finished front drawing of one thug's face. Image 3 is a flat 3D render of the same man's head turned three-quarters to the other side, coloured by region. Draw the SAME man (identical brows, eyes, bandana folds, beanie, hair points, line weight, flat colours and shadow shapes as image 2) in the three-quarter pose of image 3, in the SAME framing, head shape, silhouette and region edges as image 3. Skin ONE flat warm tan tone, bandana flat muted mustard yellow, beanie flat dark navy, one flat darker shadow shape under the beanie across the brow. Flat soft light, no rim light, no gradients, thick near-black ink. Plain flat mid-grey background, no text."
+ }
+]
