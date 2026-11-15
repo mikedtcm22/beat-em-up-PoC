@@ -650,6 +650,8 @@
 		"look_paint_hull_gap_cells": 14.0,
 		"look_paint_rim_patch_cells": 4.5,
 		"look_paint_rim_patch_cut": 0.0,
+		"look_paint_rim_dark_px": 1.2,
+		"look_paint_rim_dark_luma": 0.2,
 		"look_paint_contact_soft": 1.0,
 		"look_paint_bruise_density": 4.0,
 		"look_paint_bruise_cut": 0.8,

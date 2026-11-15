@@ -69,6 +69,10 @@ uniform float paint_rim_px : hint_range(0.5, 12.0) = 2.5;
 uniform float paint_rim_key : hint_range(0.0, 1.0) = 0.15;
 uniform float paint_rim_patch_cells : hint_range(1.0, 30.0) = 4.5;
 uniform float paint_rim_patch_cut : hint_range(0.0, 1.0) = 0.62;
+// Large dark forms (a vest, a black top): the rim's estimated width is only as good as the form is round, and on a big form it reads as a band, so
+// where the paint is darker than paint_rim_dark_luma the rim's width is capped at paint_rim_dark_px (0 = no cap).
+uniform float paint_rim_dark_px : hint_range(0.0, 12.0) = 0.0;
+uniform float paint_rim_dark_luma : hint_range(0.02, 0.6) = 0.2;
 
 // --- the hard highlight (the art's own, as toon_light.gdshaderinc has it) ---
 uniform float band_soft : hint_range(0.0, 8.0) = 1.2;
@@ -99,6 +103,12 @@ uniform float bruise_darken : hint_range(0.1, 1.0) = 0.4;
 uniform vec3 bruise_hue : source_color = vec3(0.34, 0.12, 0.15);
 uniform float bruise_hue_amount : hint_range(0.0, 1.0) = 0.45;
 uniform vec3 blood_color : source_color = vec3(0.45, 0.06, 0.08);
+// Placed marks (M7 r0): a character whose art carries a mark map (metadata/marks_tex, on UV2; ToonMaterials.painted() sets marks_on) shows its skin damage as
+// two or three designed shapes, not the tile's scatter: R a bruise shown from the bruised look up, G a bruise shown from the bloodied look, B a flat blood shape
+// shown from the bloodied look. damage_level is DamageLook.Level (0 clean, 1 bruised, 2 bloodied), written by DamageLook.apply_art().
+uniform sampler2D marks_tex : filter_linear_mipmap, repeat_disable, hint_default_transparent;
+uniform float marks_on : hint_range(0.0, 1.0) = 0.0;
+uniform float damage_level : hint_range(0.0, 2.0) = 0.0;
 
 varying vec3 mark_pos;
 varying vec3 mark_normal;
@@ -106,6 +116,7 @@ varying float swatch_spec;
 varying float swatch_glint;
 varying float glint_gate;
 varying float rim_patch;
+varying float rim_dark;
 
 const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
 
@@ -126,6 +137,8 @@ void vertex() {
 
 void fragment() {
 	vec3 color = texture(paint_tex, UV2).rgb * albedo.rgb;
+	// 1 on a dark paint (the rim's width cap), 0 on a light one.
+	rim_dark = 1.0 - smoothstep(paint_rim_dark_luma * 0.6, paint_rim_dark_luma, dot(color, LUMA));
 	ivec2 size = textureSize(ink_tex, 0);
 	// The beat: the drawn line's shapes hold for whole steps (twos), then move.
 	float beat = floor(TIME * paint_wobble_hz);
@@ -169,6 +182,23 @@ void fragment() {
 	// The damage marks go UNDER the ink: flat, hard-edged shapes, a few, on skin (and blood's spots on cloth), never a wash. A class that takes no
 	// blood (the cap, the laces) shows nothing at all.
 	if (takes_marks > 0.0 && no_blood < 0.5) {
+		vec3 tone = color * bruise_darken;
+		float maroon_luma = max(dot(bruise_hue, LUMA), 0.001);
+		vec3 bruise = mix(tone, bruise_hue * (dot(tone, LUMA) / maroon_luma), bruise_hue_amount);
+		if (marks_on > 0.5 && skin_marks > 0.5) {
+			// The placed shapes: each channel is a soft ramp baked on UV2, cut at one half with a one-pixel edge, so the shape is crisp at any size.
+			vec3 m = texture(marks_tex, UV2).rgb;
+			float bruised = step(0.5, damage_level);
+			float bloodied = step(1.5, damage_level);
+			float b_cut = max(m.r * bruised, m.g * bloodied);
+			float b_edge = max(0.5 * fwidth(b_cut), 0.0001);
+			float bl_cut = m.b * bloodied;
+			float bl_edge = max(0.5 * fwidth(bl_cut), 0.0001);
+			float b_on = smoothstep(0.5 - b_edge, 0.5 + b_edge, b_cut);
+			float bl_on = smoothstep(0.5 - bl_edge, 0.5 + bl_edge, bl_cut);
+			color = mix(color, bruise, b_on * takes_marks);
+			color = mix(color, blood_color, bl_on * takes_marks);
+		} else {
 		vec3 w = abs(normalize(mark_normal));
 		w /= max(w.x + w.y + w.z, 0.0001);
 		vec3 p = mark_pos * damage_scale * bruise_density;
@@ -188,10 +218,8 @@ void fragment() {
 		float keep = bruise_keep >= 1.0 ? 1.0 : smoothstep(1.0 - bruise_keep - gate_edge, 1.0 - bruise_keep + gate_edge, gate_noise);
 		float mark_edge = max(0.5 * fwidth(shape), 0.0001);
 		float on = smoothstep(bruise_cut - mark_edge, bruise_cut + mark_edge, shape) * keep;
-		vec3 tone = color * bruise_darken;
-		float maroon_luma = max(dot(bruise_hue, LUMA), 0.001);
-		vec3 bruise = mix(tone, bruise_hue * (dot(tone, LUMA) / maroon_luma), bruise_hue_amount);
 		color = mix(color, mix(bruise, blood_color, bloody), on * takes_marks);
+		}
 	}
 	color = mix(color, ink, line);
 	ALBEDO = color;
@@ -232,7 +260,8 @@ void light() {
 		float u = clamp(dot(n, normalize(VIEW)), 0.0, 1.0);
 		float to_edge_px = 0.5 * u / max(fwidth(u), 0.0001) / max(to_pixels, 0.001);
 		float facing = dot(n, normalize(LIGHT));
-		float rim = (1.0 - smoothstep(paint_rim_px - 0.5, paint_rim_px + 0.5, to_edge_px)) * smoothstep(paint_rim_key - 0.1, paint_rim_key + 0.1, facing) * rim_patch;
+		float rim_px = paint_rim_dark_px > 0.0 ? mix(paint_rim_px, min(paint_rim_px, paint_rim_dark_px), rim_dark) : paint_rim_px;
+		float rim = (1.0 - smoothstep(rim_px - 0.5, rim_px + 0.5, to_edge_px)) * smoothstep(paint_rim_key - 0.1, paint_rim_key + 0.1, facing) * rim_patch;
 		SPECULAR_LIGHT += paint_rim_color * paint_rim_strength * rim;
 	} else {
 		// A lamp adds what rises above the shadow tone, so nothing inside the shadow band.

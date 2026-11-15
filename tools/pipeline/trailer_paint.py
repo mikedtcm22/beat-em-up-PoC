@@ -350,6 +350,32 @@ def cell_colours(maps):
 	return np.where((ids >= 0)[..., None], atlas_colours()[np.maximum(ids, 0)][..., :3], 0.0).astype(np.float32)
 
 
+def prepare_config(cfg, maps):
+	"""paint.json "regions_from_atlas": {"shade": 0.7, "tint": [r, g, b]} (a character that KEEPS its M6 colours, Ox): one region per palette cell the mesh uses, its base colour the
+	swatch of the game's atlas (so the paint map is the M6 albedo as flat fills, no repaint), its shade the swatch darkened by `shade` and pulled a little toward `tint` (0..255),
+	its damage class the atlas alpha (255 clothes, 230 clothes without blood, 204 skin, 128 none). The cell rules come FIRST, so the file's own "regions" and "rules" override any
+	cell (a bold face, a bruise region). Without the key the config is returned as it is."""
+	spec = cfg.get("regions_from_atlas")
+	if not spec:
+		return cfg
+	cfg = json.loads(json.dumps(cfg))
+	colours = atlas_colours()
+	ids = cell_ids(maps)
+	mul = float(spec.get("shade", 0.7))
+	tint = np.array(spec.get("tint", [60, 60, 120]), np.float32)
+	regions, rules = {}, []
+	for cell in sorted(int(c) for c in np.unique(ids) if c >= 0):
+		base = np.rint(colours[cell][:3] * 255.0)
+		shade = np.rint(np.clip(base * mul * 0.85 + tint * (1.0 - mul) * 0.15 * (base.mean() / 255.0 + 0.2), 0, 255))
+		klass = min((255, 230, 204, 128), key=lambda k: abs(k - colours[cell][3] * 255.0))
+		regions["cell_%d" % cell] = {"base": [int(v) for v in base], "shade": [int(v) for v in shade], "class": int(klass)}
+		rules.append({"cells": [cell], "region": "cell_%d" % cell})
+	regions.update(cfg["regions"])
+	cfg["regions"] = regions
+	cfg["rules"] = rules + cfg.get("rules", [])
+	return cfg
+
+
 def region_map(maps, meta, cfg):
 	"""(region index per texel, -1 where nothing is mapped; the region names). paint.json "regions" names them with their colours and "rules" assigns
 	them: the rules run in order, each sets the region of the texels that match ALL of its keys, so a later rule overrides an earlier one:
@@ -411,6 +437,123 @@ def hull_weight(maps, meta, cfg, seed):
 		d = np.linalg.norm(pos.astype(np.float64) - tail, axis=-1)
 		w = w * (1.0 - float(spec.get("taper", 0.55)) * np.exp(-((d / float(spec.get("taper_m", 0.07))) ** 2)))
 	return np.clip(w, 0.0, 1.0).astype(np.float32)
+
+
+def sheet_origin(name):
+	"""(right_m, up_m) of the millimetre grid of a character's drawn sheets (assets/source/trailer_art/<name>/sheets.json "origin"), or None."""
+	path = os.path.join(CONFIG_DIR, name, "sheets.json")
+	if not os.path.exists(path):
+		return None
+	with open(path) as f:
+		return json.load(f).get("origin")
+
+
+ORIGIN = None
+
+
+def shape_mask(maps, meta, spec):
+	"""A designed shape on the surface, 0..1 per texel (0.5 on its edge, a ramp `soft` wide in units of its own size: crisp once the shader cuts it at one half).
+	An ellipsoid, given either in the sheets' millimetre grid (what the face drawing and `trailer_paint.py sheet` show) or in the rest pose:
+	  {"at_mm": [x, y], "r_mm": [rx, ry], "depth_mm": d, "angle_deg": a, "soft": s, "bones": [...]}
+	     x right and y DOWN of the sheets' origin (sheets.json "origin"), as features.svg has them; the centre sits on the front-most surface of `bones` (default
+	     Head) at that point, the third radius `depth_mm` (default 40) runs along the view, `angle_deg` turns the ellipse in the view's plane;
+	  {"c": [x, y, z], "r": [rx, ry, rz], "soft": s}   metres, rest pose, axes x, y (front), z (up).
+	Either form may add "wobble": w (the edge wanders by up to w of the shape's size, noise cells "wobble_mm" wide, "seed").
+	Only texels of `bones` (when given) are inside."""
+	pos = maps["pos"].astype(np.float32)
+	cover = maps["cover"]
+	soft = float(spec.get("soft", 0.08))
+	bones_ok = np.ones(cover.shape, bool)
+	if "bones" in spec:
+		bones_ok = np.isin(maps["bone"], [meta["bones"].index(b) for b in spec["bones"]])
+	if "at_mm" in spec:
+		ox, oz = ORIGIN if ORIGIN is not None else (0.0, 0.0)
+		cx = -(ox + spec["at_mm"][0] / 1000.0)
+		cz = oz - spec["at_mm"][1] / 1000.0
+		head_ok = np.isin(maps["bone"], [meta["bones"].index(b) for b in spec.get("bones", ["Head"])]) & cover
+		near = head_ok & (np.abs(pos[..., 0] - cx) < 0.008) & (np.abs(pos[..., 2] - cz) < 0.008)
+		cy = float(pos[..., 1][near].max()) if near.any() else float(meta.get("head", {}).get("centre", [0, 0, 0])[1])
+		rx, ry = spec["r_mm"][0] / 1000.0, spec["r_mm"][1] / 1000.0
+		rz = spec.get("depth_mm", 40.0) / 1000.0
+		a = np.radians(spec.get("angle_deg", 0.0))
+		dx = -(pos[..., 0] - cx)  # screen right
+		dy = pos[..., 2] - cz     # screen up
+		u = dx * np.cos(a) + dy * np.sin(a)
+		v = -dx * np.sin(a) + dy * np.cos(a)
+		d2 = (u / rx) ** 2 + (v / ry) ** 2 + ((pos[..., 1] - cy) / rz) ** 2
+	else:
+		c = np.array(spec["c"], np.float32)
+		r = np.array(spec["r"], np.float32)
+		d2 = (((pos - c) / r) ** 2).sum(axis=2)
+	dist = np.sqrt(d2)
+	if spec.get("wobble"):
+		# an edge that wanders a little (a bruise is never an ellipse): a smooth 3D noise of the position, `wobble` the share of the shape's size it moves the edge
+		n = value_noise3(pos, float(spec.get("wobble_mm", 18.0)) / 1000.0, int(spec.get("seed", 3)))
+		dist = dist * (1.0 + float(spec["wobble"]) * (n * 2.0 - 1.0))
+	m = np.clip((1.0 - dist) / max(soft, 1e-3) + 0.5, 0.0, 1.0)
+	return (m * cover * bones_ok).astype(np.float32)
+
+
+def union_masks(maps, meta, specs):
+	out = np.zeros(maps["cover"].shape, np.float32)
+	for sp in specs:
+		out = np.maximum(out, shape_mask(maps, meta, sp))
+	return out
+
+
+def match_rule(maps, meta, ids, rule):
+	"""The texels a rule's keys all match (the keys of region_map's rules: cells, bones, box, nx, ny, nz)."""
+	m = maps["cover"].copy()
+	if "cells" in rule:
+		m &= np.isin(cell_ids(maps), rule["cells"])
+	if "bones" in rule:
+		m &= np.isin(maps["bone"], [meta["bones"].index(b) for b in rule["bones"]])
+	for axis, span in enumerate(rule.get("box", [])):
+		if span is None:
+			continue
+		m &= (maps["pos"][..., axis] >= span[0]) & (maps["pos"][..., axis] <= span[1])
+	for axis, key in enumerate(("nx", "ny", "nz")):
+		if key in rule:
+			m &= (maps["nrm"][..., axis] >= rule[key][0]) & (maps["nrm"][..., axis] <= rule[key][1])
+	return m
+
+
+def designed_shadows(maps, meta, cfg, ids, names, size):
+	"""paint.json "shadows" "designed": [{"region": "skin" (or a list of regions), "shape": {..shape_mask..} | rule keys (bones, box, nz, ..), "amount": 1.0}]: shadow shapes drawn on purpose (the brim's
+	shadow across the eyes, the chin's under the jaw), on the texels of `region` whatever that region's own "shadow" gate says. A rule's edge is blurred one texel and a half."""
+	out = np.zeros(ids.shape, np.float32)
+	for spec in cfg.get("designed", []):
+		if "shape" in spec:
+			m = shape_mask(maps, meta, spec["shape"])
+			m = np.clip((m - 0.5) / max(spec["shape"].get("soft", 0.08) * 0.5, 0.02) + 0.5, 0.0, 1.0) if spec.get("crisp", True) else m
+		else:
+			m = cv2.GaussianBlur(match_rule(maps, meta, ids, spec).astype(np.float32), (0, 0), 1.5 * PXS)
+		if "region" in spec:
+			regions = spec["region"] if isinstance(spec["region"], list) else [spec["region"]]
+			m = m * np.isin(ids, [names.index(r) for r in regions])
+		out = np.maximum(out, m * float(spec.get("amount", 1.0)))
+	return out
+
+
+def marks_map(maps, meta, cfg, ids, names):
+	"""paint.json "marks": [{"channel": "R"|"G"|"B", "shape": {..shape_mask..}}] -> the mark map, RGBA at half the paint map's size (the shapes are broad), on UV2 with the
+	islands padded: the ramp of each channel (0.5 on a shape's edge) is what toon_painted.gdshader cuts. R a bruise shown from the bruised look up, G a bruise shown from the
+	bloodied look, B a flat blood shape shown from the bloodied look. Only on the regions with damage class 204 (skin)."""
+	size = ids.shape[0]
+	skin = [i for i, n in enumerate(names) if int(cfg["regions"][n].get("class", 255)) == 204]
+	on = np.isin(ids, skin).astype(np.float32)
+	ch = {"R": np.zeros((size, size), np.float32), "G": np.zeros((size, size), np.float32), "B": np.zeros((size, size), np.float32)}
+	for spec in cfg["marks"]:
+		ch[spec["channel"]] = np.maximum(ch[spec["channel"]], shape_mask(maps, meta, spec["shape"]) * on)
+	info = ndimage.distance_transform_edt(~maps["cover"], return_indices=True)
+	planes = []
+	for k in "RGB":
+		filled, pad = pad_and_fill(ch[k][..., None], maps["cover"], PAD_TEXELS, info)
+		planes.append(np.where(pad, filled[..., 0], 0.0))
+	planes.append(np.ones((size, size), np.float32))
+	rgba = np.stack(planes, axis=2)
+	half = size // 2
+	return cv2.resize(rgba, (half, half), interpolation=cv2.INTER_AREA)
 
 
 def shadow_shapes(maps, meta, cfg, ids, seed, size):
@@ -534,6 +677,10 @@ def apply_sheets(name, maps, meta, cfg, ids, names, paint, ink, size):
 			col = col * (1 - dp[..., None]) + deep[None, None] * dp[..., None]
 			w = ((ids == ri) * conf_tone)[..., None]
 			paint = paint * (1 - w) + col * w
+		# "ink_allow": the drawing's lines survive only inside these shapes (the face keeps its brows, eyes, nose and mouth, and loses the drawing's cheek creases and ear lines)
+		if spec.get("ink_allow"):
+			allow = cv2.GaussianBlur(np.clip((union_masks(maps, meta, spec["ink_allow"]) - 0.4) * 4.0, 0.0, 1.0), (0, 0), 1.0 * PXS)
+			ink_t = ink_t * allow
 		# a line at the middle of the range would flicker at the shader's cut (0.5): make the lines solid with a one-texel soft edge
 		ink_t = cv2.GaussianBlur(ink_t, (0, 0), spec.get("ink_smooth_px", 1.6) * PXS)
 		lo, hi = spec.get("ink_solid", [0.3, 0.6])
@@ -559,10 +706,11 @@ def apply_sheets(name, maps, meta, cfg, ids, names, paint, ink, size):
 def bake(name, workdir, outdir, variant=None):
 	"""Bake <name>_paint.png and <name>_ink.png into `outdir`. With `variant` (a key of paint.json "variants": {"veteran": {"regions": {name:
 	{"base": .., "shade": ..}}}}): the same maps recoloured, only <name>_<variant>_paint.png is written (the ink is the same file)."""
-	global PXS, WORKDIR
+	global PXS, WORKDIR, ORIGIN
 	WORKDIR = workdir
+	ORIGIN = sheet_origin(name)
 	maps, meta = load_maps(workdir)
-	cfg = load_config(name)
+	cfg = prepare_config(load_config(name), maps)
 	if variant:
 		for region, colours in cfg["variants"][variant]["regions"].items():
 			cfg["regions"][region].update(colours)
@@ -577,6 +725,7 @@ def bake(name, workdir, outdir, variant=None):
 	shadow, _hint = shadow_shapes(maps, meta, cfg.get("shadows", {}), ids, seed, size)
 	gate = np.array([float(reg[n].get("shadow", 1.0)) for n in names] + [0.0], np.float32)[ids]
 	shadow = np.clip(shadow * gate, 0.0, 1.0)
+	shadow = np.maximum(shadow, designed_shadows(maps, meta, cfg.get("shadows", {}), ids, names, size))
 	paint = base_t[ids] * (1.0 - shadow[..., None]) + shade_t[ids] * shadow[..., None]
 	# the grain of a brush in the fill: a faint value change inside a flat region, never a gradient
 	grain = strokes_noise((size, size), 14 * PXS, max(int(2 * PXS), 1), 62, seed + 5) - 0.5
@@ -618,6 +767,9 @@ def bake(name, workdir, outdir, variant=None):
 	if variant:
 		print("T12-PAINT %s %s: recoloured" % (name, variant))
 		return
+	if cfg.get("marks"):
+		mk = marks_map(maps, meta, cfg, ids, names)
+		Image.fromarray((np.clip(mk, 0, 1) * 255.0 + 0.5).astype(np.uint8)).save(os.path.join(outdir, name + "_marks.png"), optimize=True)
 	chans = []
 	for ch, outside in ((ink, 0.0), (klass, 128.0 / 255.0), (gloss, 0.0), (hull, 0.5)):
 		filled, pad = pad_and_fill(ch[..., None], cover, PAD_TEXELS, info)
@@ -641,7 +793,7 @@ def regions_preview(name, workdir, png, view, window, px_per_mm, grid=None, pain
 			line = np.asarray(Image.open(ink_png).convert("RGBA"), np.float32)[..., 0:1] / 255.0
 			rgb = rgb * (1.0 - np.clip((line - 0.3) * 2.0, 0.0, 1.0) * 0.92)
 	else:
-		cfg = load_config(name)
+		cfg = prepare_config(load_config(name), maps)
 		ids, names = region_map(maps, meta, cfg)
 		table = np.array([cfg["regions"][n]["base"] for n in names] + [[0, 0, 0]], np.float32) / 255.0
 		rgb = table[ids]
