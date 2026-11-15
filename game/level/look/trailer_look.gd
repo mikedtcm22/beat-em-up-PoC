@@ -156,7 +156,7 @@ func _activate() -> void:
 	else:
 		for section in _level.sections:
 			var section_look := NightLook.for_location(section.look_location)
-			if section_look == null:
+			if section_look == null or not section_look.builds_street():
 				continue
 			var street := NightStreet.new()
 			section.add_child(street)
@@ -327,7 +327,9 @@ func _tick_area(here: NightLook) -> void:
 		_area_from = _area_to if _area_to != null else target
 		_area_to = target
 		_area_t = -1.0
-		_show_far_cards(not here is DuskLook)
+		# On a dusk section the street's far plates would hang in the dusk's sky; on a section whose look builds no street (the boss
+		# roof's) they hang inside its arena, and BossroofFx hides them there too.
+		_show_far_cards(here == null or (not here is DuskLook and here.builds_street()))
 	var progress := _level.section_light_progress() if _level != null else 1.0
 	if progress == _area_t:
 		return

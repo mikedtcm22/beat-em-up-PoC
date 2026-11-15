@@ -1521,6 +1521,27 @@ extends Resource
 ## The lettering's size on a card, a multiplier on the HUD's comic lettering (mission name, enemy name).
 @export_range(0.5, 2.0, 0.05) var cutin_lettering_size: float = 1.0
 
+@export_group("Boss roof (M7)")
+## The boss roof under the trailer look profile (BossroofFx, game/fx/bossroof_fx.gd; the area's colours and cards are BossroofLook, game/level/look/bossroof_look.tres): the
+## fire wall, its flame cards and the drifting embers. Presentation only; under the m6 profile none of it is built.
+## How many drawings a second the fire, flames and embers are redrawn at (held on twos of the 60 Hz tick).
+@export_range(4.0, 30.0, 1.0) var bossroof_twos_hz: float = 12.0
+## A multiplier on the fire cloud's colours, and on its hot core (HDR: only the core blooms).
+@export_range(0.0, 3.0, 0.05) var bossroof_fire_energy: float = 1.0
+@export_range(0.0, 6.0, 0.1) var bossroof_core_energy: float = 2.0
+## How much of the wall's height the fire's columns reach.
+@export_range(0.1, 1.0, 0.01) var bossroof_fire_reach: float = 0.62
+## The street's flame cards at the foot of the wall: their energy.
+@export_range(0.0, 3.0, 0.05) var bossroof_flame_energy: float = 1.3
+## The dark line round the flames and the fire is never thinner than this many pixels.
+@export_range(0.0, 6.0, 0.1) var bossroof_line_px: float = 2.0
+## The embers: how many drift over the roof (0: none), their size (m), how far they climb (m), how far they sway (m) and how long one lives (s).
+@export_range(0, 120, 1) var bossroof_embers: int = 64
+@export_range(0.02, 0.5, 0.01) var bossroof_ember_size_m: float = 0.32
+@export_range(2.0, 40.0, 0.5) var bossroof_ember_rise_m: float = 18.0
+@export_range(0.0, 6.0, 0.1) var bossroof_ember_sway_m: float = 2.0
+@export_range(1.0, 12.0, 0.1) var bossroof_ember_life_s: float = 6.0
+
 @export_group("Audio")
 @export_subgroup("Mix")
 ## Volume of every sound effect, in dB: the SFX bus limiter's pre-gain, so turning it down

@@ -110,6 +110,12 @@ const KEY := &"t10_night_street"
 @export var paint_rim_color: Color = Color(1.0, 0.62, 0.2)
 
 
+## Whether TrailerLook builds a NightStreet from this look. An area look with a builder of its own (the boss roof's BossroofFx) says no
+## and builds its lamps itself.
+func builds_street() -> bool:
+	return true
+
+
 ## The light dictionary this look gives its section (LevelSection.light()'s keys): LevelRoot lays it over the profile's.
 func light() -> Dictionary:
 	return {

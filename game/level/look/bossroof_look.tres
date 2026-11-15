@@ -1,0 +1,97 @@
+[gd_resource type="Resource" script_class="BossroofLook" load_steps=12 format=3]
+
+[ext_resource type="Script" path="res://game/level/look/bossroof_look.gd" id="1_look"]
+[ext_resource type="Script" path="res://game/level/look/night_lamp.gd" id="2_lamp"]
+[ext_resource type="Script" path="res://game/level/look/bossroof_wall.gd" id="3_wall"]
+
+[sub_resource type="Resource" id="Fire_back"]
+script = ExtResource("2_lamp")
+kind = 1
+position = Vector3(0, 0, -20)
+height_m = 0.8
+color = Color(1, 0.38, 0.1, 1)
+energy = 2.4
+range_m = 26.0
+falloff = 1.0
+head_glow = 0.0
+flicker = 0.15
+halo_m = 0.0
+pool_m = 22.0
+pool_push = 0.0
+wall_glow_m = 0.0
+
+[sub_resource type="Resource" id="Fire_edge"]
+script = ExtResource("2_lamp")
+kind = 1
+position = Vector3(11, 0, -10)
+height_m = 0.6
+color = Color(1, 0.38, 0.1, 1)
+energy = 1.2
+range_m = 22.0
+falloff = 1.0
+head_glow = 0.0
+flicker = 0.15
+halo_m = 0.0
+pool_m = 0.0
+pool_push = 0.0
+wall_glow_m = 0.0
+
+[sub_resource type="Resource" id="Wall_back_plate"]
+script = ExtResource("3_wall")
+kind = 1
+position = Vector3(20, -14, -44)
+size_m = Vector2(170, 56)
+roof_m = Vector2(14, 28)
+seed = 3.0
+
+[sub_resource type="Resource" id="Wall_back_fire"]
+script = ExtResource("3_wall")
+position = Vector3(20, -14, -90)
+size_m = Vector2(170, 90)
+seed = 1.0
+flames = 5
+flame_size_m = Vector2(26, 34)
+
+[sub_resource type="Resource" id="Wall_edge_plate"]
+script = ExtResource("3_wall")
+kind = 1
+position = Vector3(108, -14, -10)
+size_m = Vector2(150, 56)
+roof_m = Vector2(14, 28)
+yaw_deg = -90.0
+seed = 5.0
+
+[sub_resource type="Resource" id="Wall_edge_fire"]
+script = ExtResource("3_wall")
+position = Vector3(140, -14, -10)
+size_m = Vector2(170, 90)
+yaw_deg = -90.0
+seed = 2.0
+flames = 5
+flame_size_m = Vector2(26, 34)
+
+[resource]
+script = ExtResource("1_look")
+location = &"boss_roof"
+sun_elevation_deg = 40.0
+sun_yaw_deg = 200.0
+sun_color = Color(0.4, 0.45, 0.85, 1)
+sun_energy = 0.45
+fog_color = Color(0.32, 0.1, 0.14, 1)
+fog_density = 0.01
+sky_top = Color(0.1, 0.035, 0.16, 1)
+sky_horizon = Color(0.78, 0.2, 0.1, 1)
+sky_disc_radius = 0.0
+sky_halo_strength = 0.0
+sky_star_cover = 0.003
+lamps = Array[ExtResource("2_lamp")]([SubResource("Fire_back"), SubResource("Fire_edge")])
+pool_rim_color = Color(0.7, 0.12, 0.06, 1)
+pool_core_color = Color(1, 0.4, 0.1, 1)
+pool_rim_alpha = 0.4
+pool_core_alpha = 0.5
+window_lit_share = 0.0
+skyline_wash_cover = 0.0
+contact_color = Color(0.03, 0.01, 0.05, 1)
+paint_shadow_hue = Color(0.24, 0.1, 0.34, 1)
+paint_rim_color = Color(0.55, 0.75, 1, 1)
+walls = Array[ExtResource("3_wall")]([SubResource("Wall_back_plate"), SubResource("Wall_back_fire"), SubResource("Wall_edge_plate"), SubResource("Wall_edge_fire")])

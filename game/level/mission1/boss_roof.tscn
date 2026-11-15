@@ -11,6 +11,7 @@
 [ext_resource type="Script" path="res://game/level/kit/art/kit_piece.gd" id="91_piece"]
 [ext_resource type="Script" path="res://game/level/kit/art/prop_spot.gd" id="92_spot"]
 [ext_resource type="Script" path="res://game/level/kit/inset_block.gd" id="inset_blk"]
+[ext_resource type="Script" path="res://game/fx/bossroof_fx.gd" id="93_fx"]
 
 [sub_resource type="BoxShape3D" id="Box_lock"]
 size = Vector3(21, 8, 20.5)
@@ -19,6 +20,7 @@ size = Vector3(21, 8, 20.5)
 script = ExtResource("1_sect")
 floor_heights = PackedFloat32Array(0)
 ambience = &"ambience_roof"
+look_location = &"boss_roof"
 light_enabled = true
 sun_elevation_deg = 35.0
 sun_yaw_deg = -70.0
@@ -529,3 +531,6 @@ position = Vector3(33, -12, 16)
 rotation = Vector3(0, 1.5708, 0)
 prop_id = &"car"
 size = Vector3(4.4, 1.4, 1.9)
+
+[node name="BossroofFx" type="Node3D" parent="."]
+script = ExtResource("93_fx")
