@@ -194,6 +194,47 @@ func test_the_area_gives_the_shadow_hue_and_the_rim_colour() -> void:
 	assert_eq(material.get_shader_parameter(&"paint_shadow_hue"), Tuning.data.look_paint_shadow_hue)
 
 
+func test_a_cold_rim_in_a_lamp_lit_area_follows_the_lamp_and_a_warm_one_is_kept() -> void:
+	var fire := Color(1.0, 0.38, 0.1)
+	var cold := Color(0.55, 0.75, 1.0)
+	assert_eq(ToonMaterials.rim_for(cold, fire, true), fire, "the boss roof's cold rim is the fire's")
+	assert_eq(ToonMaterials.rim_for(cold, fire, false), cold, "off: the area's own")
+	assert_eq(ToonMaterials.rim_for(cold, Color(0.0, 0.0, 0.0, 0.0), true), cold, "no lamp: the area's own")
+	var warm := Color(1.0, 0.6, 0.34)
+	assert_eq(ToonMaterials.rim_for(warm, fire, true), warm, "a warm rim stays")
+	var material := ToonMaterials.art_for(_base.trailer_art())
+	ToonMaterials.set_area_look(Color(0.24, 0.1, 0.34), cold, fire)
+	assert_eq(material.get_shader_parameter(&"paint_rim_color"), fire, "a live material wears the lamp's colour")
+	assert_eq(ToonMaterials._area_rim_color, cold, "the area's own colour is kept as given")
+	ToonMaterials.clear_area_look()
+
+
+func test_the_area_tint_on_a_figure_is_capped_and_the_near_rim_and_marks_reach_the_material() -> void:
+	var material := ToonMaterials.art_for(_base.trailer_art())
+	Tuning.set_value(&"look_paint_shadow_hue_amount", 0.9)
+	Tuning.set_value(&"look_paint_area_tint_max", 0.15)
+	assert_eq(material.get_shader_parameter(&"paint_shadow_hue_amount"), 0.15, "the shadow hue's pull is capped")
+	Tuning.set_value(&"look_paint_light_tint", 0.6)
+	assert_eq(material.get_shader_parameter(&"paint_light_tint"), 0.15, "and so is the light's hue")
+	for name: StringName in [&"paint_rim_near_m", &"paint_rim_near_gain", &"mark_ink_px"]:
+		assert_not_null(material.get_shader_parameter(name), "%s reaches the material" % name)
+	assert_lt(Tuning.data.look_paint_rim_near_gain, 1.0, "a near form takes a thinner rim")
+	assert_lte(Tuning.data.look_paint_bruise_density, 1.0, "the marks are M6's size or bigger")
+	assert_eq(Tuning.data.look_paint_bruise_keep, 1.0, "at M6's coverage")
+
+
+func test_the_hit_flash_is_a_hard_flat_shape_under_trailer_and_the_soft_radial_under_m6() -> void:
+	Tuning.set_value(&"look_profile", LookProfile.Id.TRAILER)
+	ToonMaterials.apply_trim_grain()
+	assert_gt(ToonMaterials.flash_hard.x, 0.0, "trailer: a hard shape")
+	assert_lt(ToonMaterials.flash_hard.y, 1.0, "of a flat tone the face shows through")
+	Tuning.set_value(&"look_profile", LookProfile.Id.M6)
+	ToonMaterials.apply_trim_grain()
+	assert_eq(ToonMaterials.flash_hard, Vector2.ZERO, "m6: the soft radial, as it was")
+	var code := (load("res://game/fx/hit_flash.gdshader") as Shader).code
+	assert_true(code.contains("paint_flash_hard"), "the shader reads the global")
+
+
 # --- the hull ---
 
 func _width(dist: float, hint: float = 1.0, facing_down: float = 0.0) -> float:

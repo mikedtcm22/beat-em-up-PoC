@@ -79,6 +79,10 @@ static var trim_grain: Vector2 = Vector2.ZERO
 static var _area_look_set: bool = false
 static var _area_shadow_hue: Color = Color.WHITE
 static var _area_rim_color: Color = Color.WHITE
+## The colour of the area's brightest lamp (alpha 0: none given): what a cold rim colour is replaced by (look_paint_rim_follow_lamps).
+static var _area_key_color: Color = Color(0.0, 0.0, 0.0, 0.0)
+## The value of the hit flash's global hardness uniform as last set (apply_trim_grain()): what a test reads.
+static var flash_hard: Vector2 = Vector2.ZERO
 ## The one trim material (trim()).
 static var _trim: ShaderMaterial
 static var _trim_scissor: ShaderMaterial
@@ -205,16 +209,27 @@ static func outline_painted(ink_map: Texture2D, first_person: bool = false) -> S
 ## Give the painted materials the AREA's colours (T10's light code calls it when the area's light is applied): the hue of the shadow
 ## tone and the warm colour of the rim. Until it is called, and after clear_area_look(), the Tuning defaults
 ## (look_paint_shadow_hue, look_paint_rim_color) apply.
-static func set_area_look(shadow_hue: Color, rim_color: Color) -> void:
+## `key_color` (optional, alpha 0 = none) is the colour of the area's brightest lamp, its key by the figures' rim: see rim_for().
+static func set_area_look(shadow_hue: Color, rim_color: Color, key_color: Color = Color(0.0, 0.0, 0.0, 0.0)) -> void:
 	_area_look_set = true
 	_area_shadow_hue = shadow_hue
 	_area_rim_color = rim_color
+	_area_key_color = key_color
 	_apply_all()
+
+
+## The rim colour a painted material wears: the area's own, except that a COLD one (its blue above its red: the boss roof's sky) in an area lit by warm
+## lamps (a `key_color` whose red is above its blue: the fire) is the lamp's colour, so a figure's rim is never a cold line where the key is fire.
+static func rim_for(rim_color: Color, key_color: Color, follow_lamps: bool) -> Color:
+	if follow_lamps and key_color.a > 0.0 and rim_color.b > rim_color.r and key_color.r > key_color.b:
+		return Color(key_color.r, key_color.g, key_color.b, 1.0)
+	return rim_color
 
 
 ## Back to the Tuning defaults for the painted materials' hue and rim.
 static func clear_area_look() -> void:
 	_area_look_set = false
+	_area_key_color = Color(0.0, 0.0, 0.0, 0.0)
 	_apply_all()
 
 
@@ -399,16 +414,20 @@ static func apply_trim_grain() -> void:
 	var on := LookProfile.current() == LookProfile.Id.TRAILER
 	trim_grain = Vector2(data.look_paint_trim_grain if on else 0.0, data.look_paint_trim_grain_cells)
 	RenderingServer.global_shader_parameter_set(&"paint_trim_grain", trim_grain)
+	# The hit flash is a hard-edged flat shape under the trailer profile, the soft radial of m6 otherwise.
+	flash_hard = Vector2(data.look_paint_flash_hard_share, data.look_paint_flash_hard_alpha) if on and data.look_paint_flash_hard != 0 else Vector2.ZERO
+	RenderingServer.global_shader_parameter_set(&"paint_flash_hard", flash_hard)
 
 
 static func _apply_painted(material: ShaderMaterial, data: TuningData) -> void:
 	material.set_shader_parameter(&"paint_cut", data.look_paint_cut)
 	material.set_shader_parameter(&"paint_shadow_level", data.look_paint_shadow_level)
 	material.set_shader_parameter(&"paint_shadow_hue", _area_shadow_hue if _area_look_set else data.look_paint_shadow_hue)
-	material.set_shader_parameter(&"paint_shadow_hue_amount", data.look_paint_shadow_hue_amount)
+	# A figure keeps its local colour: the area's tint (its shadow hue, a light's hue) is capped, however an area asks.
+	material.set_shader_parameter(&"paint_shadow_hue_amount", minf(data.look_paint_shadow_hue_amount, data.look_paint_area_tint_max))
 	material.set_shader_parameter(&"term_soft", data.look_paint_term_soft_px)
 	material.set_shader_parameter(&"dir_floor", data.look_paint_dir_floor)
-	material.set_shader_parameter(&"paint_light_tint", data.look_paint_light_tint)
+	material.set_shader_parameter(&"paint_light_tint", minf(data.look_paint_light_tint, data.look_paint_area_tint_max))
 	material.set_shader_parameter(&"paint_lit_level", data.look_paint_lit_level)
 	material.set_shader_parameter(&"point_gain", data.look_paint_point_gain)
 	material.set_shader_parameter(&"fill_strength", data.look_paint_fill)
@@ -417,7 +436,9 @@ static func _apply_painted(material: ShaderMaterial, data: TuningData) -> void:
 	material.set_shader_parameter(&"paint_line_strength", data.look_paint_line_strength)
 	material.set_shader_parameter(&"paint_grain", data.look_paint_grain)
 	material.set_shader_parameter(&"paint_grain_cells", data.look_paint_grain_cells)
-	material.set_shader_parameter(&"paint_rim_color", _area_rim_color if _area_look_set else data.look_paint_rim_color)
+	material.set_shader_parameter(&"paint_rim_color", rim_for(_area_rim_color, _area_key_color, data.look_paint_rim_follow_lamps != 0) if _area_look_set else data.look_paint_rim_color)
+	material.set_shader_parameter(&"paint_rim_near_m", data.look_paint_rim_near_m)
+	material.set_shader_parameter(&"paint_rim_near_gain", data.look_paint_rim_near_gain)
 	material.set_shader_parameter(&"paint_rim_strength", data.look_paint_rim_strength)
 	material.set_shader_parameter(&"paint_rim_px", data.look_paint_rim_px)
 	material.set_shader_parameter(&"paint_rim_key", data.look_paint_rim_key)
@@ -447,6 +468,7 @@ static func _apply_painted(material: ShaderMaterial, data: TuningData) -> void:
 	material.set_shader_parameter(&"bruise_hue", data.look_paint_bruise_hue)
 	material.set_shader_parameter(&"bruise_hue_amount", data.look_paint_bruise_hue_amount)
 	material.set_shader_parameter(&"blood_color", data.look_paint_blood_color)
+	material.set_shader_parameter(&"mark_ink_px", data.look_paint_mark_ink_px)
 
 
 ## The damage class an ink map's G value `g` (0 to 1) names, as toon_painted.gdshader reads it: the palette atlas's alpha classes
