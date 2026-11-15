@@ -4,6 +4,15 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-15 (T55 done): fix wave merged, suite green, final perf and recordings in `captures/m7-comic/final/`
+- `m7/trailer-look` at ed87ec4 has t53 and all six fix branches merged, default.json regenerated (d71626e), and the LookProfile.data() reload fix (ed87ec4: the +1 ms physics cost).
+- **Suite:** 2309 of 2309 passed, 670 s, no SCRIPT or SHADER ERROR (`final/suite.log`).
+- **Frame time (`final/perf.txt`, T54 method):** comic vs m6 CPU work +2% street, +3% roofs, +12% boss roof (T54: +20/+20/+23); wall +15/+20/+25%; missed refreshes 2.2/2.0/4.1% (m6 0.2-0.4%, T54 4.1/4.0/4.3). By CPU it holds 60 fps everywhere; by wall time it does not, the cost now all on the GPU/present side of a GPU other processes keep 93-99% busy. The boss roof's remaining +0.4 ms of physics is not probed.
+- **For the owner:** `final/reel_mission1.mp4` (43.6 s, m6 | comic, street, roofs, Ox, then every card), `final/sheet.jpg`, `final/stills/`, `final/m6_stills/`, `final/enemies/`, `final/INDEX.md`.
+- **Review findings (rollout/review.json):** 16 cured, 7 partly, none not. Partly: #1 bruises still soft pink (blood cured), #2 Kicker's face small and dark at 2 m (Bruiser cured), #4 player sleeve has few folds, #7 roofs have warm accents but airbrushed blotchy wall glows, #8 a pale lavender glow block on the right wall in street_01 and soft lamp glows, #12 Punk and Thug KO panels still the street, #19 bossroof_fx keeps the roof centre (-10) and FACE_LIFT_M in script. Ox (#3) is back at M6 orange; his warm rim was not judged at this size.
+- **Gemini, fix wave:** x-cards 6 images, about $0.80 (no other branch spent).
+- **Next:** T56 docs (README departures, ARCHITECTURE, milestone doc, PR description), T57 Gate 4 to Game-boy.
+
 ### 2026-11-15 (fix wave): T53 and T54 done; T55 fix wave running as workflow `m7-comic-fix-wave-2`
 - `m7/t53` (not yet merged) makes the comic look the default; suite 2285 green there. Review findings: `captures/m7-comic/rollout/review.json` (23 confirmed). Perf by engine counters: `captures/m7-comic/rollout/perf2.txt`.
 - T55 branches: `m7/x-shader`, `x-chars`, `x-roofs`, `x-street`, `x-cards`, `x-cutin`; then an Opus merge (t53 first), an Opus debug of the +1 ms physics-time cost under the trailer profile, then suite, perf and recordings into `captures/m7-comic/final/`.
