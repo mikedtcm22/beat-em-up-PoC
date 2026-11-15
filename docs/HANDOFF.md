@@ -4,6 +4,11 @@ Update this file at every phase boundary and before every usage limit (see CLAUD
 
 ## Status (newest first)
 
+### 2026-11-15 (fix wave): T53 and T54 done; T55 fix wave running as workflow `m7-comic-fix-wave-2`
+- `m7/t53` (not yet merged) makes the comic look the default; suite 2285 green there. Review findings: `captures/m7-comic/rollout/review.json` (23 confirmed). Perf by engine counters: `captures/m7-comic/rollout/perf2.txt`.
+- T55 branches: `m7/x-shader`, `x-chars`, `x-roofs`, `x-street`, `x-cards`, `x-cutin`; then an Opus merge (t53 first), an Opus debug of the +1 ms physics-time cost under the trailer profile, then suite, perf and recordings into `captures/m7-comic/final/`.
+- Resume: re-run the workflow script with `resumeFromRunId` if it died. After it: T56 docs (README departures, ARCHITECTURE, milestone doc, PR description), T57 Gate 4 to Game-boy (reel, sheet, `godot --path .`, Slack DM). Never merge the PR before his sign-off.
+
 ### 2026-11-14 (T52 done): Mission 1 roll-out merged and recorded; frame time misses the gate by today's method (see the control)
 - **Merged** into `m7/trailer-look` (wave 2): e-roofs 6730209, e-bossroof df9501e (conflicts: trailer.tres keeps both area rows; trailer_look.gd keeps e-roofs' blended area look, which also follows the boss roof, and hides the street's far plates on a section whose look builds no street), e-rooms 51f5ce7 ("Boss roof (M7)" and "Rooms (M7)" groups moved before "Look profile" so the pinned tail holds), e-hud da9107a, e-cards f4c1c9a; ea0fe8b regenerates `tuning/default.json`; a511b57 fixes ASSETS.md full paths, adapts test_bossroof_look to the merge (two TrailerLook streets, none on the boss roof; the rim check waits out the section light blend) and adds perf acts "Perf: roofs walk" and "Perf: boss roof".
 - **Suite:** 2284 tests; the first full run had 5 failures (all merge fallout), the five files pass after a511b57; no SCRIPT or SHADER ERROR (`captures/m7-comic/rollout/suite.log`, `rerun_*.log`).
