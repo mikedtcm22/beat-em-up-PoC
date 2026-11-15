@@ -1,18 +1,25 @@
 shader_type spatial;
-// A lamp's shaft, painted (LD-WORLD3, redrawn in R4-WORLD; P1.md, "Light drawn, not computed"): a wedge of a few brush strokes fanning out of the lamp head, each its own length
-// and opacity, with a broken edge, fading out before the ground - never a straight-edged cone of constant opacity and never a volumetric fog. A cylindrical billboard
-// (turns about the vertical to face the camera), added to the picture, hidden by the depth test behind real geometry. The edge is anti-aliased.
-render_mode unshaded, blend_add, depth_draw_never, cull_disabled, shadows_disabled, fog_disabled;
+// A lamp's shaft, drawn as two flat wedges (M7 x-street, redrawn from the old fan of soft brush strokes): the see-through fan with a
+// soft falloff broke the no-soft-gradient rule, so the shaft is now two flat tones, a wide outer wedge and a narrower brighter core, each
+// a straight-sided triangle fanning out of the lamp head with a hard brushed edge (a streak noise bites its sides and its far end, never
+// a fade), ending in a flat cut before the ground. Mixed over the picture in a flat warm tone, hidden by the depth test behind real
+// geometry. A cylindrical billboard (turns about the vertical to face the camera). Presentation only (the trailer profile).
+render_mode unshaded, blend_mix, depth_draw_never, cull_disabled, shadows_disabled, fog_disabled;
 
 uniform vec3 shaft_color : source_color = vec3(1.0, 0.6, 0.2);
 uniform float energy : hint_range(0.0, 1.0) = 0.14;
+// The two wedges' flat opacity (the core's is over the outer's), the core's half-width as a share of the wedge's, and where each ends (v).
+uniform float outer_alpha : hint_range(0.0, 1.0) = 0.09;
+uniform float core_alpha : hint_range(0.0, 1.0) = 0.15;
+uniform float core_w : hint_range(0.1, 1.0) = 0.45;
+uniform float outer_len : hint_range(0.2, 1.0) = 0.7;
+uniform float core_len : hint_range(0.2, 1.0) = 0.5;
 // The half-width at the lamp as a share of the card's half-width (the cone opens to the full width at the bottom).
 uniform float top_w : hint_range(0.02, 1.0) = 0.18;
 uniform float seed = 1.0;
 uniform float wobble : hint_range(0.0, 0.4) = 0.2;
 // Near the camera a shaft is a wall of stripes in the lens: it fades out inside this distance (m, x: gone, y: full).
 uniform vec2 near_fade_m = vec2(4.0, 9.0);
-uniform int strokes : hint_range(3, 12) = 9;
 
 varying float cam_dist;
 
@@ -41,30 +48,23 @@ float vnoise(vec2 p) {
 }
 
 void fragment() {
-	// A wedge painted in a few strokes fanning out of the lamp head: each stroke has its own length and opacity, its edges are broken by a noise, and
-	// the whole fades out well before the ground. Nothing is a straight edge of constant opacity.
+	// Two wedges: both open from the lamp head (v 0) to the card's foot (v 1); the core is the narrower and ends sooner. Each side is a straight
+	// line with a brushed bite, each far end a flat cut with a bite of its own: no fade anywhere.
 	float v = UV.y;
 	float half_w = mix(top_w, 1.0, v);
 	float a = (UV.x - 0.5) * 2.0 / half_w;
-	float rag = (vnoise(vec2(v * 2.2 + seed * 3.0, a * 3.5 + seed)) - 0.5) * wobble * 2.0;
-	float pos = (a + rag) * 0.5 + 0.5;
-	float strokes_n = float(strokes);
-	float id = floor(pos * strokes_n);
-	float f = fract(pos * strokes_n);
-	float h_len = hash12(vec2(id, seed * 1.9));
-	float h_op = hash12(vec2(id + 7.0, seed * 2.7));
-	float len = mix(0.45, 1.0, h_len);
-	float opacity = mix(0.18, 0.75, h_op * h_op);
-	// A stroke: crisp on its sides, brushed by streaks along its length, ending where its own length does.
-	// G4: stepped, not melted: a stroke is a flat tone with a brushed edge (a bristle noise bites its side), and its length fades in three
-	// flat steps, not a gradient.
-	float bite = (vnoise(vec2(a * 17.0 + seed * 4.0, v * 2.2)) - 0.5) * 0.3;
-	float side = step(0.12 + bite, f) * step(f, 0.9 - bite);
-	float bristle = 0.55 + 0.45 * step(0.5, vnoise(vec2(a * 17.0 + seed * 4.0, v * 2.2)));
-	float along = floor((1.0 - smoothstep(len * 0.35, len, v)) * 3.0 + 0.999) / 3.0;
-	float inside = step(abs(a + rag), 1.0);
-	float head = smoothstep(0.0, 0.08, v);
-	float a_out = side * bristle * along * opacity * inside * head * smoothstep(near_fade_m.x, near_fade_m.y, cam_dist);
-	ALBEDO = shaft_color * a_out * energy;
-	ALPHA = 1.0;
+	float bite = (vnoise(vec2(a * 9.0 + seed * 4.0, v * 3.0)) - 0.5) * wobble * 0.5;
+	float bristle = (vnoise(vec2(a * 37.0 + seed * 2.0, v * 5.0)) - 0.5) * wobble * 0.12;
+	float edge = bite + bristle;
+	float outer = step(abs(a) + edge, 1.0) * step(v + edge * 0.6, outer_len);
+	float core = step(abs(a) + edge * 0.7, core_w) * step(v + edge * 0.6, core_len);
+	float cover = max(outer, core);
+	float head = smoothstep(0.0, 0.04, v);
+	float fade = smoothstep(near_fade_m.x, near_fade_m.y, cam_dist);
+	float alpha = mix(outer_alpha, core_alpha, core) * cover * fade * head;
+	if (alpha <= 0.0) {
+		discard;
+	}
+	ALBEDO = shaft_color;
+	ALPHA = alpha * energy / 0.12;
 }

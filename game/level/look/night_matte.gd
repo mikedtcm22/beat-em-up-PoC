@@ -19,3 +19,6 @@ extends Resource
 ## painted out, so the far windows are never an exact grid.
 @export_range(0.0, 0.03, 0.0005) var warp: float = 0.006
 @export_range(0.0, 1.0, 0.01) var drop_share: float = 0.35
+## M7 x-street: draw the card's picture mirrored left to right. A ring of cards round a room alternates plain and mirrored so each join
+## shows the same edge of the plate on both sides (no cut-off building, no gap).
+@export var mirror: bool = false

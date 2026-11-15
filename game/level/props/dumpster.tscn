@@ -14,3 +14,4 @@ hull = true
 [node name="TrailerProp" type="Node" parent="."]
 script = ExtResource("9_tp")
 tint = Color(1.0, 1.0, 0.85, 1)
+flat_color = Color(0.2, 0.33, 0.28, 1)

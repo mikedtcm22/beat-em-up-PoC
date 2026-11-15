@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="NightLook" load_steps=12 format=3]
+[gd_resource type="Resource" script_class="NightLook" load_steps=14 format=3]
 
 [ext_resource type="Script" path="res://game/level/look/night_look.gd" id="1_look"]
 [ext_resource type="Script" path="res://game/level/look/night_lamp.gd" id="2_lamp"]
@@ -68,15 +68,35 @@ shaft = false
 [sub_resource type="Resource" id="Matte_north"]
 script = ExtResource("3_matte")
 texture = ExtResource("4_tex")
-position = Vector3(0, 24, -92)
-size_m = Vector2(170, 72)
+position = Vector3(0, 27, -92)
+size_m = Vector2(184, 78)
+feather = Vector4(0, 0, 0, 0)
 
 [sub_resource type="Resource" id="Matte_east"]
 script = ExtResource("3_matte")
 texture = ExtResource("4_tex")
-position = Vector3(92, 24, 0)
-size_m = Vector2(170, 72)
+position = Vector3(92, 27, 0)
+size_m = Vector2(184, 78)
 yaw_deg = -90.0
+feather = Vector4(0, 0, 0, 0)
+mirror = true
+
+[sub_resource type="Resource" id="Matte_south"]
+script = ExtResource("3_matte")
+texture = ExtResource("4_tex")
+position = Vector3(0, 27, 92)
+size_m = Vector2(184, 78)
+yaw_deg = 180.0
+feather = Vector4(0, 0, 0, 0)
+
+[sub_resource type="Resource" id="Matte_west"]
+script = ExtResource("3_matte")
+texture = ExtResource("4_tex")
+position = Vector3(-92, 27, 0)
+size_m = Vector2(184, 78)
+yaw_deg = 90.0
+feather = Vector4(0, 0, 0, 0)
+mirror = true
 
 [resource]
 script = ExtResource("1_look")
@@ -86,4 +106,4 @@ sun_energy = 1.3
 window_lit_share = 0.3
 window_energy = 1.0
 lamps = Array[ExtResource("2_lamp")]([SubResource("Lamp_a"), SubResource("Lamp_b"), SubResource("Lamp_c"), SubResource("Lamp_d"), SubResource("Lamp_e"), SubResource("Lamp_f")])
-mattes = Array[ExtResource("3_matte")]([SubResource("Matte_north"), SubResource("Matte_east")])
+mattes = Array[ExtResource("3_matte")]([SubResource("Matte_north"), SubResource("Matte_east"), SubResource("Matte_south"), SubResource("Matte_west")])

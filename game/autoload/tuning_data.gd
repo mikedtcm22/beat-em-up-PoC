@@ -1332,6 +1332,12 @@ extends Resource
 ## M7 e-street: the street props' flat fill under the trailer profile is lifted by this much (TrailerProp: the cars, the dumpsters and the
 ## AC units were near black in the night light, so their shade edge and hull line read against nothing). 1 leaves the palette as it is.
 @export_range(0.5, 3.0, 0.05) var trailer_prop_lift: float = 1.5
+## M7 x-street: the street props' middle light band, as a share of the lit one, under the trailer profile (1: two flat tones, one shade edge; the
+## M6 art has three bands).
+@export_range(0.5, 1.0, 0.01) var trailer_prop_mid_level: float = 1.0
+## The shade tone's level under the trailer profile (the prop's models are lumpy: a deep shade cuts them into blotches, so the shade edge is a
+## faint one; 1 is no shade at all).
+@export_range(0.4, 1.0, 0.01) var trailer_prop_shadow_level: float = 0.8
 
 @export_group("Trailer street FX")
 ## M7 T16a: the trailer profile's 2D street effects (outlined steam, grey wisps, the burn barrel's flame, embers),
@@ -1346,7 +1352,7 @@ extends Resource
 @export_range(0.5, 6.0, 0.05) var tfx_wisp_card_h_m: float = 2.6
 ## Opacity of the steam's light and dark tones, and of the wisps' tones.
 @export_range(0.0, 1.0, 0.01) var tfx_steam_alpha: float = 0.95
-@export_range(0.0, 1.0, 0.01) var tfx_wisp_alpha: float = 0.38
+@export_range(0.0, 1.0, 0.01) var tfx_wisp_alpha: float = 0.9
 ## The burn barrel: radius and height (m), the flame card's width and height (m) and its brightness.
 @export_range(0.2, 0.6, 0.01) var tfx_barrel_radius_m: float = 0.34
 @export_range(0.5, 1.4, 0.01) var tfx_barrel_height_m: float = 0.95
@@ -1383,11 +1389,12 @@ extends Resource
 ## pools' and the wall glows' outer wash fades (a share of the card's half-size; their inner tones are always crisp).
 @export_range(0.0, 1.0, 0.01) var night_halo_soft: float = 0.15
 @export_range(0.0, 0.6, 0.01) var night_pool_soft: float = 0.12
-@export_range(0.0, 0.6, 0.01) var night_wall_soft: float = 0.2
+@export_range(0.0, 0.6, 0.01) var night_wall_soft: float = 0.0
+## M7 x-street: 9 m (was 20): the toon light adds its shade level to every surface in range, so a far lamp left a pale ghost disc on a wall with no lamp near it.
 ## M7 D2: the lamps' and barrels' lights fade out from this distance to the camera (m; 0 = never) over the next `night_lamp_fade_len_m`
 ## and are not drawn beyond: a light far down the street costs frame time on every surface its clusters touch and lights nothing you see.
-@export_range(0.0, 80.0, 1.0) var night_lamp_fade_m: float = 20.0
-@export_range(1.0, 40.0, 1.0) var night_lamp_fade_len_m: float = 6.0
+@export_range(0.0, 80.0, 1.0) var night_lamp_fade_m: float = 9.0
+@export_range(1.0, 40.0, 1.0) var night_lamp_fade_len_m: float = 4.0
 ## A multiplier on the haze bands' and the mist's strength.
 @export_range(0.0, 3.0, 0.05) var night_haze_scale: float = 1.0
 ## A multiplier on the contact shadows' opacity.
