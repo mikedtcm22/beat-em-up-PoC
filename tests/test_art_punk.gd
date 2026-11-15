@@ -16,6 +16,7 @@ extends GutTest
 ## suite; the strain runs of the three locked A/B variants (about 14 s) are opt-in: set
 ## ART_PUNK_VARIANT_STRAIN=1 (VARIANT_STRAIN_ENV).
 
+const LookProfileHelper := preload("res://tests/look_profile_helper.gd")
 const SkinnedView := preload("res://tests/skinned_view.gd")
 const FPView := preload("res://tests/fp_view.gd")
 const ArtStrain := preload("res://tests/art_strain.gd")
@@ -79,6 +80,7 @@ func before_each() -> void:
 	TimeController.clear()
 	TimeController.debug_scale = 1.0
 	Tuning.apply(TuningData.new())
+	LookProfileHelper.use_m6()
 	SkinnedArt.clear_cache()
 	SkinnedView.clear_cache()
 

@@ -663,7 +663,7 @@
 		"bossroof_ember_life_s": 6.0,
 		"rooms_key_follow_look": false,
 		"rooms_key_energy": 1.0,
-		"look_profile": 0,
+		"look_profile": 1,
 		"look_paint_cut": 0.42,
 		"look_paint_shadow_level": 0.5,
 		"look_paint_shadow_hue": [

@@ -18,6 +18,7 @@ extends GutTest
 ## passes them; where it does not, the figure is printed with "GATE" and re-run on the real GLB:
 ## the probe is a mannequin whose proportions are a voxel remesh's, not the hero's.
 
+const LookProfileHelper := preload("res://tests/look_profile_helper.gd")
 const SkinnedView := preload("res://tests/skinned_view.gd")
 const FPView := preload("res://tests/fp_view.gd")
 const ROOM := preload("res://game/level/test_room.tscn")
@@ -79,6 +80,7 @@ func before_each() -> void:
 	TimeController.clear()
 	TimeController.debug_scale = 1.0
 	Tuning.apply(TuningData.new())
+	LookProfileHelper.use_m6()
 	Tuning.data.dummy_health = 500.0
 	SkinnedArt.clear_cache()
 	SkinnedView.clear_cache()

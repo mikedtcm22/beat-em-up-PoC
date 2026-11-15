@@ -4,6 +4,7 @@ extends GutTest
 ## (tests/fixtures/m7/gen_painted_fixture.gd), worn as the trailer variant of a base Punk art. Shader maths is read through the
 ## CPU mirrors in ToonMaterials, as the M4 tests read the toon lighting.
 
+const LookProfileHelper := preload("res://tests/look_profile_helper.gd")
 const BASE_PATH := "res://tests/fixtures/m7/punk_with_painted_art.tres"
 const INK_PATH := "res://tests/fixtures/m7/painted_ink.png"
 const ATLAS := "res://assets/export/palette/palette_atlas.png"
@@ -15,6 +16,7 @@ var _base: CharacterArt
 
 func before_each() -> void:
 	Tuning.reset_to_default()
+	LookProfileHelper.use_m6()
 	ToonMaterials.clear_area_look()
 	_base = load(BASE_PATH) as CharacterArt
 

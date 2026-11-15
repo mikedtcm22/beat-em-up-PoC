@@ -2,6 +2,7 @@ extends GutTest
 ## Milestone 7, T16a: the trailer street's 2D effects (StreetFx under VfxDirector). They exist only under look profile "trailer" in
 ## Mission 1's street, are absent under m6, hold on twos, and carry no collider or navigation.
 
+const LookProfileHelper := preload("res://tests/look_profile_helper.gd")
 const LEVEL_PATH := "res://game/level/mission1/mission1.tscn"
 const CROWD_PATH := "res://game/level/crowd_room.tscn"
 const SETTLE_FRAMES := 4
@@ -9,6 +10,7 @@ const SETTLE_FRAMES := 4
 
 func before_each() -> void:
 	Tuning.reset_to_default()
+	LookProfileHelper.use_m6()
 	Tuning.set_value(&"waves_enabled", false)
 	# the trailer profile's drawn cards hold the simulation (M7 C5); these tests time the effects, so they run without them
 	Tuning.set_value(&"cutins_enabled", false)

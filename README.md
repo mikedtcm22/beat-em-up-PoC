@@ -428,7 +428,7 @@ The characters are procedural placeholders. Real art, VFX and audio come in Mile
 - **The bar above is replaced:** a clean cel-shaded 3D brawler with the trailer's night mood, judged by his eye on a reel and a play session. The blind "drawn or 3D" judge is retired. Characters stay 3D; Ox keeps his M6 colouring.
 - **Drawn cut-in cards are added** (not in the spec): a mission title card, a card at each enemy type's first entrance and Ox's name card, a knockout panel when an arena is cleared, and a mission end card. They hold the game briefly through `TimeController`, are skippable, and are off under the M6 look.
 - **The chain-link fence becomes a drawn bar-and-board fence** under the `trailer` look only; collision is unchanged.
-- **The new look becomes the default** at the end of the milestone, with the M6 look kept on F7.
+- **The new look is the default** (done, T53): the game starts with `look_profile` = 1 (the comic look, cut-in cards on); F7 shows the M6 look and back, and `--tune=look_profile=0` starts in M6.
 - **Spend:** Gemini at most $24 more, inside the $35 already approved; no Tripo.
 
 ## Repo layout

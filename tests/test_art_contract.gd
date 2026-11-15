@@ -9,6 +9,7 @@ extends GutTest
 ## step reports' keys the characters' reports show), and the hero's 1k detail mask (R-only ink on a UV2 every vertex has, worn
 ## by player_art.tres).
 
+const LookProfileHelper := preload("res://tests/look_profile_helper.gd")
 const JOINTS_PATH := "res://tools/pipeline/joints.json"
 const PALETTE_DIR := "res://assets/source/palette"
 const ATLAS_PATH := "res://assets/export/palette/palette_atlas.png"
@@ -134,6 +135,15 @@ var _table: Dictionary = {}
 
 func before_all() -> void:
 	_table = JSON.parse_string(FileAccess.get_file_as_string(JOINTS_PATH))
+
+
+func before_each() -> void:
+	Tuning.reset_to_default()
+	LookProfileHelper.use_m6()
+
+
+func after_each() -> void:
+	Tuning.reset_to_default()
 
 
 ## Every character GLB under test: the fixtures, then every assets/export/characters/<id>/*.glb.

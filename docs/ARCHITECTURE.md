@@ -1570,7 +1570,7 @@ Ox opts into DETAIL-2's keys (`docs/milestones/M6-calls/DETAIL-2.md`, "Rollout r
 
 ## Look profiles (M7)
 
-A look profile is one complete look the presentation can draw: `m6` (Milestone 6's, the default and the one every M6 test pins) or `trailer` (the look of the cinematic trailer, which Milestone 7 builds up in data). The switch is Tuning's `look_profile` (group "Look profile", before Audio: 0 = m6, 1 = trailer), and **F7** flips it live (`GameInput` action `look_profile`, listed in the help overlay), so any build is a side-by-side. The default becomes `trailer` only at sign-off.
+A look profile is one complete look the presentation can draw: `m6` (Milestone 6's, the one every M6 test pins: those tests set it in their setup) or `trailer` (the comic look, the look of the cinematic trailer, which Milestone 7 builds up in data, and **the default**). The switch is Tuning's `look_profile` (group "Look profile", before Audio: 0 = m6, 1 = trailer), and **F7** flips it live (`GameInput` action `look_profile`, listed in the help overlay), so any build is a side-by-side. The game starts with `look_profile` = 1 (trailer, cut-ins on); F7 shows M6 and back, and `--tune=look_profile=0` starts in M6.
 
 **Data.** Each profile is a `LookProfileData` resource (`game/fx/look_profile_data.gd`) in `game/fx/look_profiles/<name>.tres`, named by `LookProfile.NAMES`. Its defaults are M6's values, so `m6.tres` is empty and a profile lists only what it changes:
 

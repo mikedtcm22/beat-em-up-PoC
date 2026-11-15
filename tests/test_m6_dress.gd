@@ -4,6 +4,7 @@ extends GutTest
 ## than the walls round it and nothing dressing overhangs into a spawn, each section has its own light and the
 ## level blends to it over Tuning's `section_light_blend_s`, and LookPost leaves the sun to it.
 
+const LookProfileHelper := preload("res://tests/look_profile_helper.gd")
 const LEVEL_PATH := "res://game/level/mission1/mission1.tscn"
 const CROWD_PATH := "res://game/level/crowd_room.tscn"
 const TRAINING_PATH := "res://game/level/test_room.tscn"
@@ -24,7 +25,12 @@ const CAR_SLOT := 60
 const FIGHTER_HUES_DEG: Array[float] = [180.0, 215.0, 28.0, 280.0, 75.0, 60.0, 50.0]
 
 
+func before_each() -> void:
+	LookProfileHelper.use_m6()
+
+
 func after_each() -> void:
+	LookProfileHelper.restore()
 	Tuning.data.section_light_blend_s = 2.5
 	Tuning.data.section_light_enabled = true
 	Tuning.data.section_fog_sky_affect = TuningData.new().section_fog_sky_affect

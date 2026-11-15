@@ -4,6 +4,7 @@ extends GutTest
 ## skyline plates, windows, wash) and the dusk sky (cloud banks, low sun) while the player is on the roofs, and hides the street's far
 ## plate there; M6 builds none of it. The plates are the generator's: flat silhouettes under a transparent sky.
 
+const LookProfileHelper := preload("res://tests/look_profile_helper.gd")
 const LEVEL_PATH := "res://game/level/mission1/mission1.tscn"
 const ROOFS := 1
 const PLATES: Array[String] = [
@@ -15,6 +16,7 @@ const SETTLE_FRAMES := 4
 
 func before_each() -> void:
 	Tuning.reset_to_default()
+	LookProfileHelper.use_m6()
 	Tuning.set_value(&"waves_enabled", false)
 	Tuning.set_value(&"section_light_blend_s", 0.0)
 

@@ -4,12 +4,14 @@ extends GutTest
 ## silhouette over each kit skyline block, the embers and the fire's lamps; flipping back to m6 frees all of it and shows the street's matte
 ## cards again. Nothing is built, and nothing is drawn, under m6. The effects hold on twos and the street's effect shaders are used unedited.
 
+const LookProfileHelper := preload("res://tests/look_profile_helper.gd")
 const LEVEL_PATH := "res://game/level/mission1/mission1.tscn"
 const SETTLE_FRAMES := 4
 
 
 func before_each() -> void:
 	Tuning.reset_to_default()
+	LookProfileHelper.use_m6()
 	Tuning.set_value(&"waves_enabled", false)
 
 

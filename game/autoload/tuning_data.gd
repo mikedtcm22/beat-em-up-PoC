@@ -1438,11 +1438,11 @@ extends Resource
 @export_range(0.0, 3.0, 0.05) var rooms_key_energy: float = 1.0
 
 @export_group("Look profile")
-## Which look the presentation draws (Milestone 7): 0 = m6 (Milestone 6's, the default), 1 = trailer. F7 flips it
-## live. Each profile is a LookProfileData in game/fx/look_profiles/ (light overrides, grade LUT, whether bloom is
+## Which look the presentation draws (Milestone 7): 0 = m6 (Milestone 6's), 1 = trailer (the comic look, the default). F7 flips
+## it live. Each profile is a LookProfileData in game/fx/look_profiles/ (light overrides, grade LUT, whether bloom is
 ## allowed, an ink width scale, the effect art folder, the HUD style); LookProfile hands them to the post pass,
 ## the materials and the level's light. Presentation only: simulation never reads it.
-@export_range(0, 1, 1) var look_profile: int = 0
+@export_range(0, 1, 1) var look_profile: int = 1
 
 @export_group("Painted look (M7)")
 ## The trailer profile's surface language (Milestone 7, T11): the painted character material (toon_painted.gdshader, an

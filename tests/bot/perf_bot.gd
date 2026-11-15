@@ -15,6 +15,8 @@ extends "res://tests/bot/crowd_bot.gd"
 ##   first_hit_ms (the first hit of anyone) and first_finisher_ms (the first finisher-tier hit);
 ##   -1 when the event did not happen. Plus the act's title, the spawn and hit counts, `stalls` (frames of
 ##   STALL_MS or more) and the vsync mode.
+## The bench measures the M6 look unless `--tune=look_profile=1` asks for the comic one: the baselines and the older refs perf_compare.sh
+## compares against are M6's, and the comic look is the game's default since M7 T53.
 ## Options after `--`: `--vsync=on` (default off), `--max-fps=<n>` (default 0, no cap). On this Mac an
 ## unvsynced window that is not being presented stalls for 1.0 s every few seconds (stalls > 2 says so);
 ## with vsync on it does not, and the frame times then follow the display's refresh.
@@ -38,8 +40,19 @@ func _ready() -> void:
 	Engine.max_fps = max_fps
 	_recorder = PerfRecorder.new()
 	add_child(_recorder)
+	_use_m6_look_unless_tuned()
 	super._ready()
 	_recorder.caption = caption
+
+
+## The bench's look: M6's unless `--tune=look_profile=<n>` is given (a ref from before M7 has no such tunable: left alone).
+func _use_m6_look_unless_tuned() -> void:
+	if not &"look_profile" in Tuning.data:
+		return
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--tune=look_profile="):
+			return
+	Tuning.set_value(&"look_profile", 0)
 
 
 ## The act is about to start: close the last window (an act of its own) and open the next.

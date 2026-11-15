@@ -19,6 +19,7 @@ extends GutTest
 ## 34 enemies. Only the tests that load a lone section on purpose tolerate fewer. The seams are walked
 ## in tests/test_m5_seams.gd.
 
+const LookProfileHelper := preload("res://tests/look_profile_helper.gd")
 const LEVEL_PATH := "res://game/level/mission1/mission1.tscn"
 const BOSS_ROOF := "res://game/level/mission1/boss_roof.tscn"
 const Probe := preload("res://tests/bot/readability_probe.gd")
@@ -77,6 +78,11 @@ func _reset_tuning() -> void:
 	Tuning.set_value(&"god_mode", false)
 	Tuning.set_value(&"one_hit_ko", false)
 	Tuning.set_value(&"waves_enabled", false)
+	# This is the arena flow of the real level, timed against a wall budget, and the M6 look is what the budget was set under (the run takes
+	# 17 s there; headless under the trailer look it takes about 130 s, which the windowed frame times of the roll-out do not show). The trailer
+	# look's cut-in cards would also hold the simulation, so they are off as well.
+	LookProfileHelper.use_m6()
+	LookProfileHelper.no_cards()
 	TimeController.clear()
 	GameInput.menu_open = false
 
