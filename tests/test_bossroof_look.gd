@@ -104,7 +104,10 @@ func test_the_trailer_flip_builds_the_dressing_and_back_frees_it() -> void:
 	assert_eq(counts.embers, Tuning.data.bossroof_embers)
 	assert_eq(fx.street().lights().size(), row.lamps.size(), "a light per fire lamp")
 	assert_eq(level.sections[2].find_children("*", "OmniLight3D", true, false).size(), row.lamps.size())
-	assert_eq(_look_streets(level), 1, "TrailerLook builds the street's dressing only: the boss roof's is BossroofFx's")
+	# The street and the dusk roofs each get a NightStreet from TrailerLook (M7 e-roofs); the boss roof's dressing is BossroofFx's.
+	assert_eq(_look_streets(level), 2, "TrailerLook builds the street's and the roofs' dressing only: the boss roof's is BossroofFx's")
+	for built: NightStreet in (level.get_node("TrailerLook") as TrailerLook).streets():
+		assert_ne(built.get_parent(), level.sections[2], "no TrailerLook street on the boss roof")
 	Tuning.set_value(&"look_profile", LookProfile.Id.M6)
 	await _ticks(3)
 	assert_false(fx.is_built())
@@ -182,6 +185,7 @@ func test_the_painted_characters_take_the_areas_rim_on_the_boss_roof() -> void:
 	var roof := NightLook.for_location(&"boss_roof")
 	assert_eq(ToonMaterials._area_rim_color, street.paint_rim_color, "the street's lamps' rim while in the street")
 	_put_player_on_roof(level)
-	await _ticks(SETTLE_FRAMES + 4)
+	# The area colours follow the level's light blend into the section (M7 e-roofs): wait it out.
+	await _ticks(SETTLE_FRAMES + 4 + ceili(Tuning.data.section_light_blend_s * Engine.physics_ticks_per_second))
 	assert_eq(ToonMaterials._area_rim_color, roof.paint_rim_color, "the sky's cold rim on the boss roof")
 	assert_eq(ToonMaterials._area_shadow_hue, roof.paint_shadow_hue)

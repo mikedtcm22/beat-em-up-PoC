@@ -171,4 +171,4 @@ func test_the_act_files_list_the_run_acts_the_seam_look_and_the_kits_acts() -> v
 	var titles: Array[String] = []
 	for act in _bot._collect_acts():
 		titles.append(act.title)
-	assert_eq(titles, ["Look: drops", "Look: street walk", "Look: ground drift", "Look: kit strip", "Perf: level walk", "Perf: counters", "Perf: inventory", "Run: held back", "Run: knock-off", "Run: timing", "Look: seams", "Look: arena tour"] as Array[String])
+	assert_eq(titles, ["Look: drops", "Look: street walk", "Look: ground drift", "Look: kit strip", "Perf: level walk", "Perf: counters", "Perf: inventory", "Perf: roofs walk", "Perf: boss roof", "Run: held back", "Run: knock-off", "Run: timing", "Look: seams", "Look: arena tour"] as Array[String])
