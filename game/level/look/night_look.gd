@@ -110,6 +110,12 @@ const KEY := &"t10_night_street"
 @export var paint_rim_color: Color = Color(1.0, 0.62, 0.2)
 
 
+## Whether TrailerLook builds a NightStreet from this look. An area look with a builder of its own (the boss roof's BossroofFx) says no
+## and builds its lamps itself.
+func builds_street() -> bool:
+	return true
+
+
 ## The light dictionary this look gives its section (LevelSection.light()'s keys): LevelRoot lays it over the profile's.
 func light() -> Dictionary:
 	return {
@@ -118,19 +124,29 @@ func light() -> Dictionary:
 	}
 
 
-## The running profile's night look for a section whose `look_location` is `where`, or null (m6, another place, no row).
+## The running profile's night look for a section whose `look_location` is `where`, or null (m6, another place, no row). The street's
+## row is under `KEY`; an area look of its own (a NightLook subclass, the boss roof's) is another row of `light_overrides`, found by
+## its `location`.
 static func for_location(where: StringName) -> NightLook:
 	if where == &"":
 		return null
-	var row: Variant = LookProfile.data().light_overrides.get(KEY)
-	var look := row as NightLook
-	return look if look != null and look.location == where else null
+	var overrides := LookProfile.data().light_overrides
+	for key: Variant in overrides:
+		var value: Variant = overrides[key]
+		if value is NightLook and (value as NightLook).location == where:
+			return value as NightLook
+	return null
 
 
 ## `light` without the keys that are not a light's (the look rows a profile's `light_overrides` may carry).
 static func strip_rows(light: Dictionary) -> Dictionary:
-	if not light.has(KEY):
+	var rows: Array = []
+	for key: Variant in light:
+		if light[key] is NightLook:
+			rows.append(key)
+	if rows.is_empty():
 		return light
 	var out := light.duplicate()
-	out.erase(KEY)
+	for key: Variant in rows:
+		out.erase(key)
 	return out

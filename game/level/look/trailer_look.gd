@@ -41,6 +41,8 @@ var _haze_material: ShaderMaterial
 ## The actors' contact shadow cards: {actor, card, material}.
 var _actor_shadows: Array[Dictionary] = []
 var _contact_look: NightLook
+## The look whose painted-character colours (shadow hue, rim) are on the materials now: the area the player is in (else the first look).
+var _area_applied: NightLook
 
 
 func _init() -> void:
@@ -146,7 +148,7 @@ func _activate() -> void:
 	else:
 		for section in _level.sections:
 			var section_look := NightLook.for_location(section.look_location)
-			if section_look == null:
+			if section_look == null or not section_look.builds_street():
 				continue
 			var street := NightStreet.new()
 			section.add_child(street)
@@ -159,6 +161,7 @@ func _activate() -> void:
 	_swap_sky()
 	_apply_glow(base)
 	ToonMaterials.set_area_look(base.paint_shadow_hue, base.paint_rim_color)
+	_area_applied = base
 	_build_haze(base)
 	var sun := _sun()
 	if sun != null:
@@ -209,6 +212,7 @@ func _deactivate(leaving: bool = false) -> void:
 	if _contact_look != null:
 		ToonMaterials.clear_area_look()
 	_contact_look = null
+	_area_applied = null
 	set_physics_process(false)
 
 
@@ -291,6 +295,11 @@ func _tick() -> void:
 	_tick_sky()
 	var sun := _sun()
 	var here := _look_here()
+	# A section with a look of its own (the boss roof's) gives the painted characters its shadow hue and rim colour while the player is in it.
+	var area := here if here != null else _contact_look
+	if area != null and area != _area_applied and _level != null:
+		_area_applied = area
+		ToonMaterials.set_area_look(area.paint_shadow_hue, area.paint_rim_color)
 	if sun != null:
 		var shadow := here.sun_shadow if here != null else _sun_shadow_before
 		if sun.shadow_enabled != shadow:
