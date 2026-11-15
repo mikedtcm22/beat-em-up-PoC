@@ -75,8 +75,8 @@ GRAVEL = (116, 108, 104)
 METAL = (104, 114, 134)
 METAL_LIGHT = (136, 146, 164)
 SHUTTER = (118, 124, 142)
-CRATE = (150, 112, 74)
-CRATE_ALT = (136, 100, 68)
+CRATE = (178, 128, 82)
+CRATE_ALT = (160, 114, 74)
 TRIM = (150, 142, 132)
 TRIM_MID = (128, 122, 118)
 DARK = (44, 40, 62)
@@ -107,7 +107,7 @@ STRIPS = [
 	{"name": "ink", "px": 32, "period_m": 1.0, "u_m": 4.0, "flip": False, "vary_v": False, "ink_only": True, "vary_tint": False},
 	{"name": "glass", "px": 384, "period_m": 1.6, "u_m": 8.0, "u_snap_m": 1.0, "flip": False, "vary_v": False, "vary_tint": False},
 	{"name": "dark", "px": 32, "period_m": 1.0, "u_m": 4.0, "flip": False, "vary_v": False, "vary_tint": False},
-	{"name": "facade", "px": 384, "period_m": 5.0, "u_m": 24.0, "flip": True, "vary_v": True, "vary_tint": True},
+	{"name": "facade", "px": 384, "period_m": 5.0, "u_m": 24.0, "flip": True, "vary_v": False, "vary_tint": True},
 ]
 
 
@@ -351,9 +351,10 @@ def paint_facade() -> Image.Image:
 	h = 384
 	rng = random.Random(1303)
 	c = Canvas(W, h, FACADE)
-	# a drainpipe or two: the wall's only other mark
-	for px in (rng.randint(150, 700), rng.randint(1100, 1900)):
-		c.tapered([(px, 0), (px + 3, h * 0.5), (px - 2, h)], 7.0, 7.0, ink=False, rgb=PIPE)
+	# (e-street: no drainpipes. KitMesh stacks a tall facade in bands of one period, each band shifted along the strip, so a pipe
+	# would break at every band; the rng draws stay, so the windows are the windows of the sheet before.)
+	rng.randint(150, 700)
+	rng.randint(1100, 1900)
 	# two bands of unequal height (a tall floor of tall windows, a low floor of small ones): the strip's 5 m period then never reads as a
 	# row of equal floors
 	bands = [(0, 236, 1.2), (236, 148, 0.8)]

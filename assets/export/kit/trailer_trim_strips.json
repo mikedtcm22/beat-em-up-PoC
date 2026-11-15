@@ -242,7 +242,7 @@
 			"u_snap_m": 0.0,
 			"v0": 0.8125,
 			"vary_tint": true,
-			"vary_v": true,
+			"vary_v": false,
 			"vh": 0.1875
 		}
 	]
