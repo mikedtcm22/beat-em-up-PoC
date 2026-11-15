@@ -131,16 +131,7 @@ static func _binding_label(binding: Variant, gamepad: bool) -> String:
 
 
 func _build() -> void:
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(HudStyle.INK, 0.88)
-	style.border_color = HudStyle.PAPER
-	style.set_border_width_all(4)
-	style.skew = Vector2(0.03, 0.0)
-	style.set_content_margin_all(20.0)
-	style.shadow_color = Color(0.0, 0.0, 0.0, 0.45)
-	style.shadow_offset = Vector2(8.0, 8.0)
-	style.shadow_size = 1
-	add_theme_stylebox_override(&"panel", style)
+	apply_look()
 
 	var title := HudStyle.label_settings(title_size, HudStyle.HEALTH, true, 6)
 	var header := HudStyle.label_settings(row_size - 2, HudStyle.MUTED, true)
@@ -185,6 +176,29 @@ func _build() -> void:
 	for row: Array in COMBO_ROWS:
 		combos.add_child(_label(str(row[0]), key))
 		combos.add_child(_label(str(row[1]), body))
+
+
+## The overlay's box for the running look: m6's ink panel with a soft shadow, or under the trailer profile (M7) the same panel with the
+## caption boxes' bold cream border and hard solid shadow. GameHud calls it when the profile flips.
+func apply_look() -> void:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(HudStyle.INK, 0.88)
+	style.border_color = HudStyle.PAPER
+	style.set_border_width_all(4)
+	style.skew = Vector2(0.03, 0.0)
+	style.set_content_margin_all(20.0)
+	style.shadow_color = Color(0.0, 0.0, 0.0, 0.45)
+	style.shadow_offset = Vector2(8.0, 8.0)
+	style.shadow_size = 1
+	if HudStyle.comic():
+		var d := Tuning.data
+		style.bg_color = Color(d.hud_m7_ink, 0.94)
+		style.border_color = d.hud_m7_paper
+		style.set_border_width_all(roundi(4.0 * d.hud_m7_border_scale))
+		style.shadow_color = Color(d.hud_m7_ink, 1.0)
+		style.shadow_offset = Vector2.ONE * d.hud_m7_shadow_px
+		style.shadow_size = 0
+	add_theme_stylebox_override(&"panel", style)
 
 
 func _column(parent: Control) -> VBoxContainer:

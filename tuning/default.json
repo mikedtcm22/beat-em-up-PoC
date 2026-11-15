@@ -485,6 +485,56 @@
 		"perfect_block_window_frames": 14,
 		"perfect_block_stagger_frames": 30,
 		"parry_flash_frames": 8,
+		"hud_m7_paper": [
+			0.980000019073486,
+			0.930000007152557,
+			0.779999971389771,
+			1.0
+		],
+		"hud_m7_paper_shade": [
+			0.819999992847443,
+			0.75,
+			0.579999983310699,
+			1.0
+		],
+		"hud_m7_ink": [
+			0.0599999986588955,
+			0.0500000007450581,
+			0.0900000035762787,
+			1.0
+		],
+		"hud_m7_health": [
+			1.0,
+			0.800000011920929,
+			0.140000000596046,
+			1.0
+		],
+		"hud_m7_boss": [
+			0.720000028610229,
+			0.400000005960464,
+			0.949999988079071,
+			1.0
+		],
+		"hud_m7_chunk": [
+			1.0,
+			0.5,
+			0.180000007152557,
+			1.0
+		],
+		"hud_m7_border_scale": 1.2,
+		"hud_m7_wobble_px": 1.8,
+		"hud_m7_shadow_px": 8.0,
+		"hud_m7_slant_scale": 0.25,
+		"hud_m7_bar_outline_scale": 1.0,
+		"hud_m7_text_shadow_px": 3.0,
+		"hud_m7_chunk_hold_s": 0.3,
+		"hud_m7_chunk_fall_s": 0.55,
+		"hud_m7_chunk_drop_px": 110.0,
+		"hud_m7_chunk_spin_deg": 22.0,
+		"hud_m7_scale": 1.0,
+		"hud_m7_offset_x": 0.0,
+		"hud_m7_offset_y": 0.0,
+		"hud_m7_log_visible": false,
 		"sparring_interval_s": 2.0,
 		"sparring_jitter_s": 0.3,
 		"sparring_range": 1.7,
